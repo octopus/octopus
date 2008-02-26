@@ -20,7 +20,6 @@
 #include "global.h"
 
 module derivatives_m
-  use c_pointer_m
   use datasets_m
   use global_m
   use lalg_adv_m

@@ -149,8 +149,8 @@ module hamiltonian_m
     logical :: oct_exchange
     type(states_t), pointer :: oct_st
 
-    ! NBC_Handles for the calculation of the kinetic energy in parallel.
-    type(c_pointer_t), pointer :: handles(:)
+    ! Handles for the calculation of the kinetic energy in parallel.
+    type(pv_handle_t), pointer :: handles(:)
 
     CMPLX, pointer :: phase(:, :)
   end type hamiltonian_t
@@ -190,13 +190,11 @@ contains
     h%theory_level = theory_level
     call states_dim_copy(h%d, states_dim)
 
-    ! Allocate NBC_Handle.
+    ! Allocate handles
     ALLOCATE(h%handles(h%d%dim), h%d%dim)
-#if defined(HAVE_LIBNBC)
     do i = 1, h%d%dim
-      call NBCF_Newhandle(h%handles(i))
+      call pv_handle_init(h%handles(i))
     end do
-#endif
 
     ! initialize variables
     h%epot = M_ZERO
@@ -409,20 +407,16 @@ contains
     type(grid_t),        intent(in)    :: gr
     type(geometry_t),    intent(inout) :: geo
 
-#if defined(HAVE_LIBNBC)
     integer :: ii
-#endif
 
     call push_sub('h.hamiltonian_end')
 
     if(associated(h%phase)) deallocate(h%phase)
 
     if(associated(h%handles)) then
-#if defined(HAVE_LIBNBC)
       do ii = 1, h%d%dim
-        call NBCF_Freehandle(h%handles(ii))
+        call pv_handle_end(h%handles(ii))
       end do
-#endif
       deallocate(h%handles)
       nullify(h%handles)
     end if

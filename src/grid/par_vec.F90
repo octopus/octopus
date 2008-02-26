@@ -137,6 +137,18 @@ module par_vec_m
                                              ! ghost points.
   end type pv_t
 
+  type pv_handle_t
+    private
+    type(c_pointer_t) :: nbc_h
+  end type pv_handle_t
+
+  public ::              &
+    pv_handle_t,         &
+    pv_handle_init,      &
+    pv_handle_test,      &
+    pv_handle_wait,      &
+    pv_handle_end
+
 #if defined(HAVE_MPI)
   public ::              &
     vec_init,            &
@@ -167,8 +179,11 @@ module par_vec_m
     dvec_integrate,      &
     zvec_integrate,      &
     ivec_integrate
+#endif
 
 contains
+
+#if defined(HAVE_MPI)
 
   ! Initializes a pv_type object (parallel vector).
   ! It computes the local to global and global to local index tables
@@ -525,7 +540,6 @@ contains
 
   end subroutine vec_end
 
-
 #include "undef.F90"
 #include "complex.F90"
 #include "par_vec_inc.F90"
@@ -539,6 +553,35 @@ contains
 #include "par_vec_inc.F90"
 
 #endif
+
+  subroutine pv_handle_init(this)
+    type(pv_handle_t), intent(out) :: this
+#if defined(HAVE_LIBNBC)
+    call NBCF_Newhandle(this%nbc_h)
+#endif    
+  end subroutine pv_handle_init
+
+  subroutine pv_handle_end(this)
+    type(pv_handle_t), intent(inout) :: this
+#if defined(HAVE_LIBNBC)
+    call NBCF_Freehandle(this%nbc_h)
+#endif
+  end subroutine pv_handle_end
+
+  subroutine pv_handle_test(this)
+    type(pv_handle_t), intent(inout) :: this
+#if defined(HAVE_LIBNBC)
+    call NBCF_Test(this%nbc_h, mpi_err)
+#endif
+  end subroutine pv_handle_test
+
+  subroutine pv_handle_wait(this)
+    type(pv_handle_t), intent(inout) :: this
+#if defined(HAVE_LIBNBC)
+    call NBCF_Wait(this%nbc_h, mpi_err)
+#endif
+  end subroutine pv_handle_wait
+
 end module par_vec_m
 
 !! Local Variables:

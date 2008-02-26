@@ -45,7 +45,7 @@ end subroutine X(derivatives_laplt)
 ! ---------------------------------------------------------
 subroutine X(derivatives_lapl_start)(der, handle, f, lapl, ghost_update, set_bc)
   type(der_discr_t),         intent(in)    :: der
-  type(c_pointer_t),         intent(inout) :: handle
+  type(pv_handle_t),         intent(inout) :: handle
   R_TYPE,                    intent(inout) :: f(:)     ! f(m%np_part)
   R_TYPE,                    intent(out)   :: lapl(:)  ! lapl(m%np)
   logical, optional,         intent(in)    :: ghost_update
@@ -84,7 +84,7 @@ end subroutine X(derivatives_lapl_start)
 ! ---------------------------------------------------------
 subroutine X(derivatives_lapl_keep_going)(der, handle, f, lapl, ghost_update, set_bc)
   type(der_discr_t),         intent(in)    :: der
-  type(c_pointer_t),         intent(inout) :: handle
+  type(pv_handle_t),         intent(inout) :: handle
   R_TYPE,                    intent(inout) :: f(:)     ! f(m%np_part)
   R_TYPE,                    intent(inout) :: lapl(:)  ! lapl(m%np)
   logical, optional,         intent(in)    :: ghost_update
@@ -100,7 +100,7 @@ subroutine X(derivatives_lapl_keep_going)(der, handle, f, lapl, ghost_update, se
   if(present(ghost_update)) update = ghost_update
   
   if(der%overlap .and. der%m%parallel_in_domains .and. update) then
-    call NBCF_Test(handle, mpi_err)
+    call pv_handle_test(handle)
   end if
 
 #endif
@@ -111,7 +111,7 @@ end subroutine X(derivatives_lapl_keep_going)
 ! ---------------------------------------------------------
 subroutine X(derivatives_lapl_finish)(der, handle, f, lapl, ghost_update, set_bc)
   type(der_discr_t),         intent(in)    :: der
-  type(c_pointer_t),         intent(inout) :: handle
+  type(pv_handle_t),         intent(inout) :: handle
   R_TYPE,                    intent(inout) :: f(:)     ! f(m%np_part)
   R_TYPE,                    intent(inout) :: lapl(:)  ! lapl(m%np)
   logical, optional,         intent(in)    :: ghost_update
@@ -127,7 +127,7 @@ subroutine X(derivatives_lapl_finish)(der, handle, f, lapl, ghost_update, set_bc
 
   if(der%overlap .and. der%m%parallel_in_domains .and. update) then
 
-    call NBCF_Wait(handle, mpi_err)
+    call pv_handle_wait(handle)
     call X(nl_operator_operate) (der%lapl, f, lapl, ghost_update = .false., points = OP_OUTER)
     
     call pop_sub()
@@ -147,18 +147,14 @@ subroutine X(derivatives_lapl)(der, f, lapl, ghost_update, set_bc)
   logical, optional,         intent(in)    :: ghost_update
   logical, optional,         intent(in)    :: set_bc
 
-  type(c_pointer_t) :: handle
+  type(pv_handle_t) :: handle
 
   call push_sub('derivatives_inc.Xderivatives_lapl')
 
-#ifdef HAVE_LIBNBC
-  call NBCF_Newhandle(handle)
-#endif
+  call pv_handle_init(handle)
   call X(derivatives_lapl_start) (der, handle, f, lapl, ghost_update, set_bc)
   call X(derivatives_lapl_finish)(der, handle, f, lapl, ghost_update, set_bc)
-#ifdef HAVE_LIBNBC
-  call NBCF_Freehandle(handle)
-#endif
+  call pv_handle_end(handle)
         
   call pop_sub()
 end subroutine X(derivatives_lapl)

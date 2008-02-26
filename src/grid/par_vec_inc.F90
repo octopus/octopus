@@ -278,7 +278,7 @@ end subroutine X(vec_ghost_update)
 subroutine X(vec_ighost_update)(vp, v_local, handle)
   type(pv_t), intent(in)    :: vp
   R_TYPE,     intent(inout) :: v_local(:)
-  type(c_pointer_t),  intent(in)    :: handle
+  type(pv_handle_t),  intent(in)  :: handle
 
   integer, pointer :: sdispls(:), rdispls(:) ! Displacements for
                                              ! NBC_Alltoallv.
@@ -293,7 +293,7 @@ subroutine X(vec_ighost_update)(vp, v_local, handle)
 
   call NBCF_Ialltoallv(ghost_send, vp%np_ghost_neigh(1, vp%partno), sdispls(1),          &
     R_MPITYPE, v_local(vp%np_local(vp%partno)+1), recvcounts(1), rdispls(1), R_MPITYPE, &
-    vp%comm, handle, mpi_err)
+    vp%comm, handle%nbc_h, mpi_err)
 
   call X(vec_ghost_update_finish)(sdispls, rdispls, recvcounts, ghost_send)
 
