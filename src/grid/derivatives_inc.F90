@@ -45,33 +45,34 @@ end subroutine X(derivatives_laplt)
 ! ---------------------------------------------------------
 subroutine X(derivatives_lapl_start)(der, handle, f, lapl, ghost_update, set_bc)
   type(der_discr_t),         intent(in)    :: der
-  type(pv_handle_t),         intent(inout) :: handle
-  R_TYPE,                    intent(inout) :: f(:)     ! f(m%np_part)
-  R_TYPE,                    intent(out)   :: lapl(:)  ! lapl(m%np)
+  type(der_handle_t),        intent(inout) :: handle
+  R_TYPE,  target,           intent(inout) :: f(:)     ! f(m%np_part)
+  R_TYPE,  target,           intent(inout) :: lapl(:)  ! lapl(m%np)
   logical, optional,         intent(in)    :: ghost_update
   logical, optional,         intent(in)    :: set_bc
 
-  logical :: set_bc_, update
+  logical :: set_bc_
 
   call push_sub('derivatives_inc.Xderivatives_lapl_start')
 
   ASSERT(ubound(f,    DIM=1) == der%m%np_part)
   ASSERT(ubound(lapl, DIM=1) >= der%m%np)
 
+  handle%X(f) => f 
+  handle%X(lapl) => lapl
+
+  handle%ghost_update = .true.
+  if(present(ghost_update)) handle%ghost_update = ghost_update
+
   set_bc_ = .true.
   if(present(set_bc)) set_bc_ = set_bc
-  if(set_bc_) call X(set_bc)(der, f)
+  if(set_bc_) call X(set_bc)(der, handle%X(f))
 
 #ifdef HAVE_MPI
-  
-  update = .true.
-  if(present(ghost_update)) update = ghost_update
-  
-  if(der%overlap .and. der%m%parallel_in_domains .and. update) then
-    call X(vec_ighost_update)(der%m%vp, f, handle)
-    call X(nl_operator_operate)(der%lapl, f, lapl, ghost_update = .false., points = OP_INNER)
+  if(der%overlap .and. der%m%parallel_in_domains .and. handle%ghost_update) then
+    call X(vec_ighost_update)(der%m%vp,  handle%X(f), handle%pv_h)
+    call X(nl_operator_operate)(der%lapl,  handle%X(f), handle%X(lapl), ghost_update = .false., points = OP_INNER)
   end if
-
 #endif
 
   call pop_sub()
@@ -82,60 +83,40 @@ end subroutine X(derivatives_lapl_start)
 ! This improves the obverlap but is only necessary due to deficiencies
 ! in MPI implementations.
 ! ---------------------------------------------------------
-subroutine X(derivatives_lapl_keep_going)(der, handle, f, lapl, ghost_update, set_bc)
+subroutine X(derivatives_lapl_keep_going)(der, handle)
   type(der_discr_t),         intent(in)    :: der
-  type(pv_handle_t),         intent(inout) :: handle
-  R_TYPE,                    intent(inout) :: f(:)     ! f(m%np_part)
-  R_TYPE,                    intent(inout) :: lapl(:)  ! lapl(m%np)
-  logical, optional,         intent(in)    :: ghost_update
-  logical, optional,         intent(in)    :: set_bc
-
-  logical :: set_bc_, update
+  type(der_handle_t),        intent(inout) :: handle
 
   call push_sub('derivatives_inc.Xderivatives_lapl_keep_going')
 
 #ifdef HAVE_MPI
-  
-  update = .true.
-  if(present(ghost_update)) update = ghost_update
-  
-  if(der%overlap .and. der%m%parallel_in_domains .and. update) then
-    call pv_handle_test(handle)
+  if(der%overlap .and. der%m%parallel_in_domains .and. handle%ghost_update) then
+    call pv_handle_test(handle%pv_h)
   end if
-
 #endif
 
   call pop_sub()
 end subroutine X(derivatives_lapl_keep_going)
 
 ! ---------------------------------------------------------
-subroutine X(derivatives_lapl_finish)(der, handle, f, lapl, ghost_update, set_bc)
+subroutine X(derivatives_lapl_finish)(der, handle)
   type(der_discr_t),         intent(in)    :: der
-  type(pv_handle_t),         intent(inout) :: handle
-  R_TYPE,                    intent(inout) :: f(:)     ! f(m%np_part)
-  R_TYPE,                    intent(inout) :: lapl(:)  ! lapl(m%np)
-  logical, optional,         intent(in)    :: ghost_update
-  logical, optional,         intent(in)    :: set_bc
-
-  logical :: set_bc_, update
+  type(der_handle_t),        intent(inout) :: handle
 
   call push_sub('derivatives_inc.Xderivatives_lapl_finish')
 
 #ifdef HAVE_MPI
-  update = .true.
-  if(present(ghost_update)) update = ghost_update
+  if(der%overlap .and. der%m%parallel_in_domains .and. handle%ghost_update) then
 
-  if(der%overlap .and. der%m%parallel_in_domains .and. update) then
-
-    call pv_handle_wait(handle)
-    call X(nl_operator_operate) (der%lapl, f, lapl, ghost_update = .false., points = OP_OUTER)
+    call pv_handle_wait(handle%pv_h)
+    call X(nl_operator_operate) (der%lapl, handle%X(f), handle%X(lapl), ghost_update = .false., points = OP_OUTER)
     
     call pop_sub()
     return
   end if
 #endif
 
-  call X(nl_operator_operate) (der%lapl, f, lapl, ghost_update = ghost_update)
+  call X(nl_operator_operate) (der%lapl, handle%X(f), handle%X(lapl), ghost_update = handle%ghost_update)
   call pop_sub()
 end subroutine X(derivatives_lapl_finish)
 
@@ -147,14 +128,14 @@ subroutine X(derivatives_lapl)(der, f, lapl, ghost_update, set_bc)
   logical, optional,         intent(in)    :: ghost_update
   logical, optional,         intent(in)    :: set_bc
 
-  type(pv_handle_t) :: handle
+  type(der_handle_t) :: handle
 
   call push_sub('derivatives_inc.Xderivatives_lapl')
 
-  call pv_handle_init(handle, der%m%vp)
+  call der_handle_init(handle, der%m)
   call X(derivatives_lapl_start) (der, handle, f, lapl, ghost_update, set_bc)
-  call X(derivatives_lapl_finish)(der, handle, f, lapl, ghost_update, set_bc)
-  call pv_handle_end(handle)
+  call X(derivatives_lapl_finish)(der, handle)
+  call der_handle_end(handle)
         
   call pop_sub()
 end subroutine X(derivatives_lapl)

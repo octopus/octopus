@@ -364,7 +364,7 @@ subroutine X(kinetic_keep_going)(h, gr, psi, lapl)
   ASSERT(associated(lapl))
 
   do idim = 1, h%d%dim
-    call X(derivatives_lapl_keep_going)(gr%f_der%der_discr, h%handles(idim), psi(:, idim), lapl(:, idim), set_bc = .false.)
+    call X(derivatives_lapl_keep_going)(gr%f_der%der_discr, h%handles(idim))
   end do
 
   call pop_sub()
@@ -412,7 +412,7 @@ subroutine X(kinetic_finish) (h, gr, psi, lapl, hpsi)
   ASSERT(associated(lapl))
 
   do idim = 1, h%d%dim
-    call X(derivatives_lapl_finish)(gr%f_der%der_discr, h%handles(idim), psi(:, idim), lapl(:, idim), set_bc = .false.)
+    call X(derivatives_lapl_finish)(gr%f_der%der_discr, h%handles(idim))
     call lalg_axpy(NP, -M_HALF/h%mass, lapl(:, idim), hpsi(:, idim))
   end do
   

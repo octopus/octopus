@@ -66,7 +66,10 @@ module derivatives_m
     zderivatives_div,       &
     zderivatives_curl,      &
     zset_bc,                &
-    stencil_extent
+    stencil_extent,         &
+    der_handle_t,           &
+    der_handle_init,        &
+    der_handle_end
 
   integer, parameter ::     &
     DER_BC_ZERO_F    = 0,   &  ! function is zero at the boundaries
@@ -104,6 +107,17 @@ module derivatives_m
 #endif
   end type der_discr_t
 
+  type der_handle_t
+    private
+#ifdef HAVE_MPI
+    type(pv_handle_t) :: pv_h
+#endif
+    FLOAT, pointer :: df(:)
+    CMPLX, pointer :: zf(:)
+    FLOAT, pointer :: dlapl(:)
+    CMPLX, pointer :: zlapl(:)
+    logical :: ghost_update
+  end type der_handle_t
 
 contains
 
@@ -378,7 +392,7 @@ contains
 
     integer, allocatable :: polynomials(:,:)
     FLOAT,   allocatable :: rhs(:,:)
-    integer :: i, j, k, up
+    integer :: i
     logical :: const_w_, cmplx_op_, split_
 
     type(nl_operator_t) :: auxop
@@ -592,6 +606,27 @@ contains
 
     call pop_sub()
   end subroutine make_discretization
+
+  subroutine der_handle_init(this, mesh)
+    type(der_handle_t), intent(out) :: this
+    type(mesh_t),       intent(in)  :: mesh
+
+    nullify(this%df, this%zf)
+    nullify(this%dlapl, this%zlapl)
+#ifdef HAVE_MPI    
+    call pv_handle_init(this%pv_h, mesh%vp)
+#endif
+  end subroutine der_handle_init
+
+  subroutine der_handle_end(this)
+    type(der_handle_t), intent(inout) :: this
+
+    nullify(this%df, this%zf)
+    nullify(this%dlapl, this%zlapl)
+#ifdef HAVE_MPI    
+    call pv_handle_end(this%pv_h)
+#endif
+  end subroutine der_handle_end
 
 #include "undef.F90"
 #include "real.F90"

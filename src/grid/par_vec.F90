@@ -143,6 +143,8 @@ module par_vec_m
 
   end type pv_t
 
+#if defined(HAVE_MPI)
+
   integer :: SEND = 1, RECV = 2
 
   type pv_handle_t
@@ -163,7 +165,6 @@ module par_vec_m
     pv_handle_wait,      &
     pv_handle_end
 
-#if defined(HAVE_MPI)
   public ::              &
     vec_init,            &
     vec_end,             &
@@ -191,11 +192,8 @@ module par_vec_m
     dvec_integrate,      &
     zvec_integrate,      &
     ivec_integrate
-#endif
 
 contains
-
-#if defined(HAVE_MPI)
 
   ! Initializes a pv_type object (parallel vector).
   ! It computes the local to global and global to local index tables
@@ -620,6 +618,43 @@ contains
 
   end subroutine vec_end
 
+  subroutine pv_handle_init(this, vp)
+    type(pv_handle_t), intent(out) :: this
+    type(pv_t),        intent(in)  :: vp
+#if defined(HAVE_LIBNBC)
+    call NBCF_Newhandle(this%nbc_h)
+#else
+    this%nnb = vp%nnb
+    ALLOCATE(this%requests(1:this%nnb, 1:2), this%nnb*2)
+    ALLOCATE(this%status(MPI_STATUS_SIZE, 1:this%nnb, 1:2), this%nnb*2)
+#endif
+  end subroutine pv_handle_init
+
+  subroutine pv_handle_end(this)
+    type(pv_handle_t), intent(inout) :: this
+#if defined(HAVE_LIBNBC)
+    call NBCF_Freehandle(this%nbc_h)
+#else
+    deallocate(this%requests, this%status)
+#endif
+  end subroutine pv_handle_end
+
+  subroutine pv_handle_test(this)
+    type(pv_handle_t), intent(inout) :: this
+#if defined(HAVE_LIBNBC)
+    call NBCF_Test(this%nbc_h, mpi_err)
+#endif
+  end subroutine pv_handle_test
+
+  subroutine pv_handle_wait(this)
+    type(pv_handle_t), intent(inout) :: this
+#if defined(HAVE_LIBNBC)
+    call NBCF_Wait(this%nbc_h, mpi_err)
+#else
+    call MPI_Waitall(this%nnb*2, this%requests(1,1), this%status(1, 1, 1), mpi_err)
+#endif
+  end subroutine pv_handle_wait
+
 #include "undef.F90"
 #include "complex.F90"
 #include "par_vec_inc.F90"
@@ -633,50 +668,6 @@ contains
 #include "par_vec_inc.F90"
 
 #endif
-
-  subroutine pv_handle_init(this, vp)
-    type(pv_handle_t), intent(out) :: this
-    type(pv_t),        intent(in)  :: vp
-#ifdef HAVE_MPI
-#if defined(HAVE_LIBNBC)
-    call NBCF_Newhandle(this%nbc_h)
-#else
-    this%nnb = vp%nnb
-    ALLOCATE(this%requests(1:this%nnb, 1:2), this%nnb*2)
-    ALLOCATE(this%status(MPI_STATUS_SIZE, 1:this%nnb, 1:2), this%nnb*2)
-#endif
-#endif
-  end subroutine pv_handle_init
-
-  subroutine pv_handle_end(this)
-    type(pv_handle_t), intent(inout) :: this
-#ifdef HAVE_MPI
-#if defined(HAVE_LIBNBC)
-    call NBCF_Freehandle(this%nbc_h)
-#else
-    deallocate(this%requests, this%status)
-#endif
-#endif
-  end subroutine pv_handle_end
-
-  subroutine pv_handle_test(this)
-    type(pv_handle_t), intent(inout) :: this
-#if defined(HAVE_LIBNBC)
-    call NBCF_Test(this%nbc_h, mpi_err)
-#endif
-  end subroutine pv_handle_test
-
-  subroutine pv_handle_wait(this)
-    type(pv_handle_t), intent(inout) :: this
-#ifdef HAVE_MPI
-#if defined(HAVE_LIBNBC)
-    call NBCF_Wait(this%nbc_h, mpi_err)
-#else
-    call MPI_Waitall(this%nnb*2, this%requests(1,1), this%status(1, 1, 1), mpi_err)
-#endif
-#endif
-  end subroutine pv_handle_wait
-
 end module par_vec_m
 
 !! Local Variables:

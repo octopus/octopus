@@ -20,7 +20,6 @@
 #include "global.h"
 
 module hamiltonian_m
-  use c_pointer_m
   use datasets_m
   use derivatives_m
   use functions_m
@@ -33,7 +32,6 @@ module hamiltonian_m
   use external_pot_m
   use messages_m
   use mpi_m
-  use par_vec_m
   use profiling_m
   use projector_m
   use simul_box_m
@@ -150,7 +148,7 @@ module hamiltonian_m
     type(states_t), pointer :: oct_st
 
     ! Handles for the calculation of the kinetic energy in parallel.
-    type(pv_handle_t), pointer :: handles(:)
+    type(der_handle_t), pointer :: handles(:)
 
     CMPLX, pointer :: phase(:, :)
   end type hamiltonian_t
@@ -193,7 +191,7 @@ contains
     ! Allocate handles
     ALLOCATE(h%handles(h%d%dim), h%d%dim)
     do i = 1, h%d%dim
-      call pv_handle_init(h%handles(i), gr%m%vp)
+      call der_handle_init(h%handles(i), gr%m)
     end do
 
     ! initialize variables
@@ -415,7 +413,7 @@ contains
 
     if(associated(h%handles)) then
       do ii = 1, h%d%dim
-        call pv_handle_end(h%handles(ii))
+        call der_handle_end(h%handles(ii))
       end do
       deallocate(h%handles)
       nullify(h%handles)
