@@ -193,7 +193,7 @@ contains
     ! Allocate handles
     ALLOCATE(h%handles(h%d%dim), h%d%dim)
     do i = 1, h%d%dim
-      call pv_handle_init(h%handles(i))
+      call pv_handle_init(h%handles(i), gr%m%vp)
     end do
 
     ! initialize variables

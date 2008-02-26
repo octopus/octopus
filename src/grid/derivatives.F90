@@ -99,7 +99,7 @@ module derivatives_m
     type(nl_operator_t), pointer :: grad(:)
 
     type(nl_operator_t) :: laplt ! The transpose of the Laplacian.
-#if defined(HAVE_LIBNBC)
+#if defined(HAVE_MPI)
     logical :: overlap
 #endif
   end type der_discr_t
@@ -177,7 +177,7 @@ contains
     !%End
     call loct_parse_int(check_inp('DerivativesOrder'), 4, der%order)
 
-#ifdef HAVE_LIBNBC
+#ifdef HAVE_MPI
     !%Variable OverlapDerivatives
     !%Type logical
     !%Default yes

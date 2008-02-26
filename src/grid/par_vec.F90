@@ -33,8 +33,7 @@ module par_vec_m
   !   boundary points.
   ! - np ist the total number of inner points.
   !
-  ! When working with non-periodic boundary conditions
-  ! a globally defined vector v has two parts:
+  ! A globally defined vector v has two parts:
   ! - v(1:np) are the inner points
   ! - v(np+1:np_part) are the boundary points
   ! In the typical case of zero boundary conditions
@@ -105,6 +104,13 @@ module par_vec_m
     integer          :: rank                 ! Our rank in the communicator.
     integer          :: partno               ! Partition number of the
                                              ! current node
+    integer          :: nnb                  ! Number of processes we
+                                             ! have to send and recv
+
+    integer, pointer :: isend_type(:)        ! The datatypes to send
+    integer, pointer :: dsend_type(:)        ! ghost points
+    integer, pointer :: zsend_type(:)
+
     ! The following members are set independent of the nodes.
     integer          :: p                    ! Number of partitions.
     integer          :: root                 ! The master node.
@@ -134,12 +140,20 @@ module par_vec_m
     integer, pointer :: xghost(:)            ! Like xlocal.
     integer, pointer :: xghost_neigh(:, :)   ! Like xghost for neighbours.
     integer, pointer :: ghost(:)             ! Global indices of all local
-                                             ! ghost points.
+
   end type pv_t
+
+  integer :: SEND = 1, RECV = 2
 
   type pv_handle_t
     private
+#if defined(HAVE_LIBNBC)
     type(c_pointer_t) :: nbc_h
+#else
+    integer          :: nnb
+    integer, pointer :: requests(:, :)
+    integer, pointer :: status(:, :, :)
+#endif
   end type pv_handle_t
 
   public ::              &
@@ -171,11 +185,9 @@ module par_vec_m
     dvec_ghost_update,   &
     zvec_ghost_update,   &
     ivec_ghost_update,   &
-#if defined(HAVE_LIBNBC)
     dvec_ighost_update,  &
     zvec_ighost_update,  &
     ivec_ighost_update,  &
-#endif
     dvec_integrate,      &
     zvec_integrate,      &
     ivec_integrate
@@ -473,7 +485,57 @@ contains
     vp%p      = p
     vp%part   = part
 
+    call init_mpi_datatypes
+
     call pop_sub()
+
+  contains
+    
+    subroutine init_mpi_datatypes
+      integer, allocatable :: blocklengths(:), displacements(:)
+      integer :: ii, kk, ipart, total, ierr
+
+      ALLOCATE(vp%isend_type(1:vp%p), vp%p)
+      ALLOCATE(vp%dsend_type(1:vp%p), vp%p)
+      ALLOCATE(vp%zsend_type(1:vp%p), vp%p)
+
+      vp%nnb = 0
+      ! Iterate over all possible receivers.
+      do ipart = 1, vp%p
+        total = vp%np_ghost_neigh(ipart, vp%partno)
+
+        if(total == 0) cycle
+
+        ALLOCATE(blocklengths(total), total)
+        ALLOCATE(displacements(total), total)
+        
+        blocklengths = 1
+      
+        ! Collect all local points that have to be sent to neighbours.
+        
+        ! Iterate over all ghost points that ipart wants.
+        do ii = 0, vp%np_ghost_neigh(ipart, vp%partno) - 1
+          ! Get global number kk of i-th ghost point.
+          kk = vp%ghost(vp%xghost_neigh(ipart, vp%partno) + ii)
+          ! Lookup up local number of point kk
+          displacements(ii + 1) = vp%global(kk, vp%partno) - 1
+        end do
+        
+        call MPI_Type_indexed(total, blocklengths, displacements, MPI_INTEGER, vp%isend_type(ipart), ierr)
+        call MPI_Type_indexed(total, blocklengths, displacements, MPI_FLOAT,   vp%dsend_type(ipart), ierr)
+        call MPI_Type_indexed(total, blocklengths, displacements, MPI_CMPLX,   vp%zsend_type(ipart), ierr)
+        
+        call MPI_Type_commit(vp%isend_type(ipart), ierr)
+        call MPI_Type_commit(vp%dsend_type(ipart), ierr)
+        call MPI_Type_commit(vp%zsend_type(ipart), ierr)
+
+        deallocate(blocklengths, displacements)
+        
+        vp%nnb = vp%nnb + 1
+      end do
+
+    end subroutine init_mpi_datatypes
+
   end subroutine vec_init
 
 
@@ -481,7 +543,25 @@ contains
   subroutine vec_end(vp)
     type(pv_t), intent(inout) :: vp
 
+    integer :: ipart
+
     call push_sub('par_vec.vec_end')
+    
+    if(associated(vp%isend_type)) then
+
+      do ipart = 1, vp%p
+        if(vp%np_ghost_neigh(ipart, vp%partno) == 0) cycle
+        call MPI_Type_free(vp%isend_type(ipart), mpi_err)
+        call MPI_Type_free(vp%dsend_type(ipart), mpi_err)
+        call MPI_Type_free(vp%zsend_type(ipart), mpi_err)
+      end do
+      deallocate(vp%isend_type)
+      deallocate(vp%dsend_type)
+      deallocate(vp%zsend_type)
+      nullify(vp%isend_type)
+      nullify(vp%dsend_type)
+      nullify(vp%zsend_type)
+    end if
 
     if(associated(vp%part)) then
       deallocate(vp%part)
@@ -554,17 +634,28 @@ contains
 
 #endif
 
-  subroutine pv_handle_init(this)
+  subroutine pv_handle_init(this, vp)
     type(pv_handle_t), intent(out) :: this
+    type(pv_t),        intent(in)  :: vp
+#ifdef HAVE_MPI
 #if defined(HAVE_LIBNBC)
     call NBCF_Newhandle(this%nbc_h)
-#endif    
+#else
+    this%nnb = vp%nnb
+    ALLOCATE(this%requests(1:this%nnb, 1:2), this%nnb*2)
+    ALLOCATE(this%status(MPI_STATUS_SIZE, 1:this%nnb, 1:2), this%nnb*2)
+#endif
+#endif
   end subroutine pv_handle_init
 
   subroutine pv_handle_end(this)
     type(pv_handle_t), intent(inout) :: this
+#ifdef HAVE_MPI
 #if defined(HAVE_LIBNBC)
     call NBCF_Freehandle(this%nbc_h)
+#else
+    deallocate(this%requests, this%status)
+#endif
 #endif
   end subroutine pv_handle_end
 
@@ -577,8 +668,12 @@ contains
 
   subroutine pv_handle_wait(this)
     type(pv_handle_t), intent(inout) :: this
+#ifdef HAVE_MPI
 #if defined(HAVE_LIBNBC)
     call NBCF_Wait(this%nbc_h, mpi_err)
+#else
+    call MPI_Waitall(this%nnb*2, this%requests(1,1), this%status(1, 1, 1), mpi_err)
+#endif
 #endif
   end subroutine pv_handle_wait
 

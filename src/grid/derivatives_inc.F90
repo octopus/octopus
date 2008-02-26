@@ -62,7 +62,7 @@ subroutine X(derivatives_lapl_start)(der, handle, f, lapl, ghost_update, set_bc)
   if(present(set_bc)) set_bc_ = set_bc
   if(set_bc_) call X(set_bc)(der, f)
 
-#ifdef HAVE_LIBNBC
+#ifdef HAVE_MPI
   
   update = .true.
   if(present(ghost_update)) update = ghost_update
@@ -94,7 +94,7 @@ subroutine X(derivatives_lapl_keep_going)(der, handle, f, lapl, ghost_update, se
 
   call push_sub('derivatives_inc.Xderivatives_lapl_keep_going')
 
-#ifdef HAVE_LIBNBC
+#ifdef HAVE_MPI
   
   update = .true.
   if(present(ghost_update)) update = ghost_update
@@ -121,7 +121,7 @@ subroutine X(derivatives_lapl_finish)(der, handle, f, lapl, ghost_update, set_bc
 
   call push_sub('derivatives_inc.Xderivatives_lapl_finish')
 
-#ifdef HAVE_LIBNBC
+#ifdef HAVE_MPI
   update = .true.
   if(present(ghost_update)) update = ghost_update
 
@@ -151,7 +151,7 @@ subroutine X(derivatives_lapl)(der, f, lapl, ghost_update, set_bc)
 
   call push_sub('derivatives_inc.Xderivatives_lapl')
 
-  call pv_handle_init(handle)
+  call pv_handle_init(handle, der%m%vp)
   call X(derivatives_lapl_start) (der, handle, f, lapl, ghost_update, set_bc)
   call X(derivatives_lapl_finish)(der, handle, f, lapl, ghost_update, set_bc)
   call pv_handle_end(handle)
