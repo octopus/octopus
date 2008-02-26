@@ -49,6 +49,7 @@ module derivatives_m
     dderivatives_lapl,      &
     dderivatives_lapl_start,&
     dderivatives_lapl_finish,&
+    dderivatives_lapl_keep_going,&
     derivatives_lapl_diag,  &
     dderivatives_laplt,     &
     dderivatives_grad,      &
@@ -59,6 +60,7 @@ module derivatives_m
     zderivatives_lapl,      &
     zderivatives_lapl_start,&
     zderivatives_lapl_finish,&
+    zderivatives_lapl_keep_going,&
     zderivatives_laplt,     &
     zderivatives_grad,      &
     zderivatives_oper,      &

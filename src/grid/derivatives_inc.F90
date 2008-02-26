@@ -77,12 +77,43 @@ subroutine X(derivatives_lapl_start)(der, handle, f, lapl, ghost_update, set_bc)
   call pop_sub()
 end subroutine X(derivatives_lapl_start)
 
+! --------------------------------------------------------
+! Call NBC_Test to give MPI a chance to process pending messages.
+! This improves the obverlap but is only necessary due to deficiencies
+! in MPI implementations.
+! ---------------------------------------------------------
+subroutine X(derivatives_lapl_keep_going)(der, handle, f, lapl, ghost_update, set_bc)
+  type(der_discr_t),         intent(in)    :: der
+  type(c_pointer_t),         intent(inout) :: handle
+  R_TYPE,                    intent(inout) :: f(:)     ! f(m%np_part)
+  R_TYPE,                    intent(inout) :: lapl(:)  ! lapl(m%np)
+  logical, optional,         intent(in)    :: ghost_update
+  logical, optional,         intent(in)    :: set_bc
+
+  logical :: set_bc_, update
+
+  call push_sub('derivatives_inc.Xderivatives_lapl_keep_going')
+
+#ifdef HAVE_LIBNBC
+  
+  update = .true.
+  if(present(ghost_update)) update = ghost_update
+  
+  if(der%overlap .and. der%m%parallel_in_domains .and. update) then
+    call NBCF_Test(handle, mpi_err)
+  end if
+
+#endif
+
+  call pop_sub()
+end subroutine X(derivatives_lapl_keep_going)
+
 ! ---------------------------------------------------------
 subroutine X(derivatives_lapl_finish)(der, handle, f, lapl, ghost_update, set_bc)
   type(der_discr_t),         intent(in)    :: der
   type(c_pointer_t),         intent(inout) :: handle
   R_TYPE,                    intent(inout) :: f(:)     ! f(m%np_part)
-  R_TYPE,                    intent(out)   :: lapl(:)  ! lapl(m%np)
+  R_TYPE,                    intent(inout) :: lapl(:)  ! lapl(m%np)
   logical, optional,         intent(in)    :: ghost_update
   logical, optional,         intent(in)    :: set_bc
 

@@ -73,7 +73,7 @@ contains
     type(grid_t),         intent(inout) :: gr
     type(geometry_t),     intent(in)    :: geo
     type(states_t),       intent(in)    :: st
-    type(hamiltonian_t),  intent(in)    :: h
+    type(hamiltonian_t),  intent(inout) :: h
 
     integer :: ia, norbs, n
 

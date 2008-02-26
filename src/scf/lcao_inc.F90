@@ -147,7 +147,7 @@ subroutine X(lcao_init) (lcao_data, gr, geo, h, norbs)
   type(lcao_t), target, intent(inout) :: lcao_data
   type(grid_t),         intent(inout) :: gr
   type(geometry_t),     intent(in)    :: geo
-  type(hamiltonian_t),  intent(in)    :: h
+  type(hamiltonian_t),  intent(inout) :: h
   integer,              intent(in)    :: norbs
 
   type(states_t), pointer :: st
@@ -182,7 +182,7 @@ subroutine X(lcao_init) (lcao_data, gr, geo, h, norbs)
     do n1 = 1, st%nst
 
       hpsi(1:NP_PART, 1:st%d%dim) = M_ZERO
-      call X(kinetic) (h, gr, st%X(psi)(:, :, n1, ik), hpsi(:, :), ik)
+      call X(kinetic) (h, gr, st%X(psi)(:, :, n1, ik), hpsi(:, :))
 
       do n2 = n1, st%nst
         lcao_data%X(k)(n1, n2, ik) = X(states_dotp)(gr%m, st%d%dim, hpsi, st%X(psi)(:, : ,n2, ik))

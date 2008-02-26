@@ -62,7 +62,7 @@ subroutine X(hpsi) (h, gr, psi, hpsi, ist, ik, t)
 
   integer :: idim
 
-  R_TYPE, pointer :: epsi(:,:)
+  R_TYPE, pointer :: epsi(:,:), lapl(:, :)
   type(profile_t), save :: phase_prof
 
   call profiling_in(C_PROFILING_HPSI)
@@ -102,30 +102,17 @@ subroutine X(hpsi) (h, gr, psi, hpsi, ist, ik, t)
     hpsi(:, idim) = M_ZERO
     !$omp end parallel workshare
   end do
-  
-#if defined(HAVE_LIBNBC)
-  if(gr%m%parallel_in_domains) then
-    call X(kinetic_prepare)(h, gr, epsi)
-    
-    call X(vlpsi)(h, gr%m, epsi, hpsi, ik)
-    call X(kinetic_keep_going)(h)
-    if(h%ep%nvnl > 0) then
-      call X(vnlpsi)(h, gr, epsi, hpsi, ik)
-      call X(kinetic_keep_going)(h)
-    end if
-    if(present(t)) call X(vlasers)(gr, h, epsi, hpsi, ik, t)
-    
-    call X(kinetic_wait)(h)
-    call X(kinetic_calculate)(h, gr, epsi, hpsi, ik)
-  else
-#endif
-    call X(kinetic)(h, gr, epsi, hpsi, ik)
-    call X(vlpsi)(h, gr%m, epsi, hpsi, ik)
-    if(h%ep%nvnl > 0) call X(vnlpsi)(h, gr, epsi, hpsi, ik)
-    if(present(t)) call X(vlasers)(gr, h, epsi, hpsi, ik, t)
-#if defined(HAVE_LIBNBC)
+
+  nullify(lapl)
+  call X(kinetic_start)(h, gr, epsi, lapl)
+  call X(vlpsi)(h, gr%m, epsi, hpsi, ik)
+  call X(kinetic_keep_going)(h, gr, epsi, lapl)
+  if(h%ep%nvnl > 0) then
+    call X(vnlpsi)(h, gr, epsi, hpsi, ik)
+    call X(kinetic_keep_going)(h, gr, epsi, lapl)
   end if
-#endif
+  if(present(t)) call X(vlasers)(gr, h, epsi, hpsi, ik, t)
+  call X(kinetic_finish)(h, gr, epsi, lapl, hpsi)
   
   if(h%theory_level==HARTREE.or.h%theory_level==HARTREE_FOCK) then
     call X(exchange_operator)(h, gr, epsi, hpsi, ist, ik)
@@ -273,7 +260,7 @@ end subroutine X(oct_exchange_operator)
 
 ! ---------------------------------------------------------
 subroutine X(magnus) (h, gr, psi, hpsi, ik, vmagnus)
-  type(hamiltonian_t), intent(in)    :: h
+  type(hamiltonian_t), intent(inout) :: h
   type(grid_t),        intent(inout) :: gr
   integer,             intent(in)    :: ik
   R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
@@ -290,7 +277,7 @@ subroutine X(magnus) (h, gr, psi, hpsi, ik, vmagnus)
   ALLOCATE( auxpsi(NP_PART, h%d%dim), NP_PART*h%d%dim)
   ALLOCATE(aux2psi(NP,      h%d%dim), NP*h%d%dim)
 
-  call X(kinetic) (h, gr, psi, hpsi, ik)
+  call X(kinetic) (h, gr, psi, hpsi)
 
   auxpsi = hpsi
   if (h%ep%nvnl > 0) call X(vnlpsi)  (h, gr, psi, auxpsi, ik)
@@ -315,7 +302,7 @@ subroutine X(magnus) (h, gr, psi, hpsi, ik, vmagnus)
       auxpsi(1:NP, 1) = vmagnus(1:NP, 2, 1)*psi(1:NP, 1)
     end if
   end select
-  call X(kinetic) (h, gr, auxpsi, aux2psi, ik)
+  call X(kinetic) (h, gr, auxpsi, aux2psi)
   if (h%ep%nvnl > 0) call X(vnlpsi)  (h, gr, auxpsi, aux2psi, ik)
   hpsi(1:NP, 1) = hpsi(1:NP, 1) + M_zI*aux2psi(1:NP, 1)
 
@@ -343,119 +330,98 @@ end subroutine X(magnus)
 
 ! ---------------------------------------------------------
 ! Exchange the ghost points and write the boundary points.
-subroutine X(kinetic_prepare)(h, gr, psi)
-  type(hamiltonian_t), intent(in)    :: h
+subroutine X(kinetic_start)(h, gr, psi, lapl)
+  type(hamiltonian_t), intent(inout) :: h
   type(grid_t),        intent(inout) :: gr
-  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
+  R_TYPE,              intent(inout) :: psi(:,:)
+  R_TYPE,              pointer       :: lapl(:,:)
 
   integer :: idim
 
-  call push_sub('h_inc.Xkinetic_prepare')
+  call push_sub('h_inc.Xkinetic_start')
+
+  ASSERT(.not. associated(lapl))
+  
+  ALLOCATE(lapl(1:NP, 1:h%d%dim), NP*h%d%dim)
 
   do idim = 1, h%d%dim
-    if(gr%m%parallel_in_domains) then
-#if defined(HAVE_MPI)
-#if defined(HAVE_LIBNBC)
-      call X(vec_ighost_update)(gr%m%vp, psi(:, idim), h%handles(idim))
-#else
-      call X(vec_ghost_update)(gr%m%vp, psi(:, idim))
-#endif
-#endif
-    end if
+    call X(derivatives_lapl_start)(gr%f_der%der_discr, h%handles(idim), psi(:, idim), lapl(:, idim), set_bc = .false.)
   end do
 
   call pop_sub()
-end subroutine X(kinetic_prepare)
+end subroutine X(kinetic_start)
 
-! ---------------------------------------------------------
-! Call NBC_Test to give MPI a chance to process pending messages.
-! This improves the obverlap but is only necessary due to deficiencies
-! in MPI implementations.
-#if defined(HAVE_LIBNBC)
-subroutine X(kinetic_keep_going)(h)
-  type(hamiltonian_t), intent(in) :: h
+subroutine X(kinetic_keep_going)(h, gr, psi, lapl)
+  type(hamiltonian_t), intent(inout) :: h
+  type(grid_t),        intent(inout) :: gr
+  R_TYPE,              intent(inout) :: psi(:,:)
+  R_TYPE,              pointer       :: lapl(:,:)
 
   integer :: idim
 
-  call push_sub('h_inc.Xkinetic_wait')
+  call push_sub('h_inc.Xkinetic_keep_going')
+
+  ASSERT(associated(lapl))
 
   do idim = 1, h%d%dim
-    call NBCF_Test(h%handles(idim), mpi_err)
+    call X(derivatives_lapl_keep_going)(gr%f_der%der_discr, h%handles(idim), psi(:, idim), lapl(:, idim), set_bc = .false.)
   end do
 
   call pop_sub()
 end subroutine X(kinetic_keep_going)
-#endif
 
 
 ! ---------------------------------------------------------
-! Wait for ghost point exchange to finish.
-#if defined(HAVE_LIBNBC)
-subroutine X(kinetic_wait)(h)
-  type(hamiltonian_t), intent(in) :: h
-
-  integer :: idim
-
-  call push_sub('h_inc.Xkinetic_wait')
-
-  do idim = 1, h%d%dim
-    call NBCF_Wait(h%handles(idim), mpi_err)
-  end do
-
-  call pop_sub()
-end subroutine X(kinetic_wait)
-#endif
-
-
-! ---------------------------------------------------------
-subroutine X(kinetic) (h, gr, psi, hpsi, ik)
-  type(hamiltonian_t), intent(in)    :: h
+subroutine X(kinetic) (h, gr, psi, hpsi)
+  type(hamiltonian_t), intent(inout) :: h
   type(grid_t),        intent(inout) :: gr
-  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
-  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, h%d%dim)
-  integer,             intent(in)    :: ik
+  R_TYPE,              intent(inout) :: psi(:,:)
+  R_TYPE,              intent(inout) :: hpsi(:,:) 
+
+  R_TYPE, pointer :: lapl(:, :)
+  integer :: idim
 
   call push_sub('h_inc.Xkinetic')
 
-  call X(kinetic_prepare)(h, gr, psi)
-#if defined(HAVE_LIBNBC)
-  if(gr%m%parallel_in_domains) then
-    call X(kinetic_wait)(h)
-  end if
-#endif
-  call X(kinetic_calculate) (h, gr, psi, hpsi, ik)
+  nullify(lapl)
+
+  do idim = 1, h%d%dim
+    call X(set_bc)(gr%f_der%der_discr, psi(:, idim))
+  end do
+
+  call X(kinetic_start)(h, gr, psi, lapl)
+  call X(kinetic_finish) (h, gr, psi, lapl, hpsi)
 
   call pop_sub()
 end subroutine X(kinetic)
 
 
 ! ---------------------------------------------------------
-subroutine X(kinetic_calculate) (h, gr, psi, hpsi, ik)
-  type(hamiltonian_t), intent(in)    :: h
+subroutine X(kinetic_finish) (h, gr, psi, lapl, hpsi)
+  type(hamiltonian_t), intent(inout) :: h
   type(grid_t),        intent(inout) :: gr
-  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
-  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, h%d%dim)
-  integer,             intent(in)    :: ik
+  R_TYPE,              intent(inout) :: psi(:,:)
+  R_TYPE,              pointer       :: lapl(:,:)
+  R_TYPE,              intent(inout) :: hpsi(:,:)
 
   integer             :: idim
-  R_TYPE, allocatable :: lapl(:, :)
 
   call profiling_in(C_PROFILING_KINETIC)
-  call push_sub('h_inc.Xkinetic_calculate')
+  call push_sub('h_inc.Xkinetic_finish')
 
-  ALLOCATE(lapl(gr%m%np, h%d%dim), gr%m%np*h%d%dim)
+  ASSERT(associated(lapl))
 
   do idim = 1, h%d%dim
-    call X(f_laplacian) (gr%sb, gr%f_der, psi(:, idim), lapl(:, idim), &
-         cutoff_ = M_TWO*h%cutoff, ghost_update =.false., set_bc = .false.)
+    call X(derivatives_lapl_finish)(gr%f_der%der_discr, h%handles(idim), psi(:, idim), lapl(:, idim), set_bc = .false.)
     call lalg_axpy(NP, -M_HALF/h%mass, lapl(:, idim), hpsi(:, idim))
   end do
   
   deallocate(lapl)
+  nullify(lapl)
 
   call pop_sub()
   call profiling_out(C_PROFILING_KINETIC)
-end subroutine X(kinetic_calculate)
+end subroutine X(kinetic_finish)
 
 ! ---------------------------------------------------------
 ! Here we the terms arising from the presence of a possible static external
@@ -1138,7 +1104,7 @@ FLOAT function X(electronic_kinetic_energy)(h, gr, st) result(t0)
   do ik = 1, st%d%nik
     do ist = st%st_start, st%st_end
       tpsi = R_TOTYPE(M_ZERO)
-      call X(kinetic) (h, gr, st%X(psi)(:, :, ist, ik), tpsi, ik)
+      call X(kinetic) (h, gr, st%X(psi)(:, :, ist, ik), tpsi)
       t(ist, ik) = X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), tpsi)
     end do
   end do

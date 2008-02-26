@@ -149,10 +149,9 @@ module hamiltonian_m
     logical :: oct_exchange
     type(states_t), pointer :: oct_st
 
-#if defined(HAVE_LIBNBC)
     ! NBC_Handles for the calculation of the kinetic energy in parallel.
     type(c_pointer_t), pointer :: handles(:)
-#endif
+
     CMPLX, pointer :: phase(:, :)
   end type hamiltonian_t
 
@@ -191,9 +190,9 @@ contains
     h%theory_level = theory_level
     call states_dim_copy(h%d, states_dim)
 
-#if defined(HAVE_LIBNBC)
     ! Allocate NBC_Handle.
     ALLOCATE(h%handles(h%d%dim), h%d%dim)
+#if defined(HAVE_LIBNBC)
     do i = 1, h%d%dim
       call NBCF_Newhandle(h%handles(i))
     end do
@@ -418,15 +417,15 @@ contains
 
     if(associated(h%phase)) deallocate(h%phase)
 
-#if defined(HAVE_LIBNBC)
     if(associated(h%handles)) then
+#if defined(HAVE_LIBNBC)
       do ii = 1, h%d%dim
         call NBCF_Freehandle(h%handles(ii))
       end do
+#endif
       deallocate(h%handles)
       nullify(h%handles)
     end if
-#endif
     if(associated(h%vhartree)) then
       deallocate(h%vhartree)
       nullify(h%vhartree)
@@ -585,7 +584,7 @@ contains
   ! ---------------------------------------------------------
   subroutine hamiltonian_set_oct_exchange(h, st)
     type(hamiltonian_t), intent(inout) :: h
-    type(states_t), target, intent(in) :: st
+    type(states_t),      intent(in)    :: st
     ! In this release, no non-local part for the QOCT Hamiltonian.
     nullify(h%oct_st)
     h%oct_exchange = .false.
