@@ -187,7 +187,12 @@ contains
     !% When enabled, and if libnbc is available, the calculation of
     !% derivatives is overlapped with the update of ghost points.
     !%End
-    call loct_parse_logical(check_inp('OverlapDerivatives'), .true., der%overlap)      
+    if ( der%dim > 1) then
+      call loct_parse_logical(check_inp('OverlapDerivatives'), .true., der%overlap)
+    else
+      ! for the moment we can't do this for 1D
+      der%overlap = .false.
+    end if
 #endif
 
     ! construct lapl and grad structures

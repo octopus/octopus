@@ -351,6 +351,8 @@ contains
     if(present(split)) split_ = split 
 
     if(split_) then
+      !NOTE: this separation is not correctly done for 1D
+
       !now build the arrays required to apply the nl_operator by parts
 
       !count points
