@@ -19,7 +19,6 @@ Spacing = 0.47
 CurvMethod = curv_gygi
 CurvGygiA = 0.80
 
-DerivativesSpace = real_space
 DerivativesStencil = stencil_starplus
 DerivativesOrder = 3
 
