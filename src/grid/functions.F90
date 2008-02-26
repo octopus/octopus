@@ -66,8 +66,6 @@ module functions_m
   type f_der_t
     type(mesh_t), pointer :: m            ! a pointer to mesh
 
-    integer               :: space        ! derivatives calculated in real or fourier space
-
     ! derivatives in real space
     integer               :: n_ghost(3)   ! ghost points to add in each dimension
     type(der_discr_t)     :: der_discr    ! discretization of the derivatives
@@ -85,37 +83,8 @@ contains
     type(simul_box_t), intent(in)  :: sb
     logical,           intent(in)  :: use_curvlinear
 
-    call push_sub('f.f_der_init')
+    call derivatives_init(sb, f_der%der_discr, f_der%n_ghost, use_curvlinear)
 
-    !%Variable DerivativesSpace
-    !%Type integer
-    !%Default real_space
-    !%Section Mesh::Derivatives
-    !%Description
-    !% Defines in which space the gradients and the Laplacian are calculated.
-    !%Option real_space 0
-    !% Derivatives are calculated in real-space using finite differences.
-    !%Option fourier_space 1
-    !% Derivatives are calculated in
-    !% reciprocal space. Obviously this case implies cyclic boundary conditions,
-    !% so be careful.
-    !%End
-    call loct_parse_int(check_inp('DerivativesSpace'), REAL_SPACE, f_der%space)
-    if(.not.varinfo_valid_option('DerivativesSpace', f_der%space)) call input_error('DerivativesSpace')
-
-    call messages_print_var_option(stdout, "DerivativesSpace", f_der%space)
-
-    if(f_der%space == REAL_SPACE) then
-      call derivatives_init(sb, f_der%der_discr, f_der%n_ghost, use_curvlinear)
-    else
-      if(use_curvlinear) then
-        message(1) = "When using curvilinear coordinates you must use"
-        message(2) = "DerivativesSpace = real_space"
-        call write_fatal(2)
-      end if
-    end if
-
-    call pop_sub()
   end subroutine f_der_init
 
 
@@ -128,18 +97,7 @@ contains
     call push_sub('f.f_der_build')
 
     f_der%m => m ! keep a working pointer to the underlying mesh
-
-    if(f_der%space == REAL_SPACE) then
-      call derivatives_build(m, f_der%der_discr)
-    else
-      call dcf_new(m%l, f_der%dcf_der)
-      call dcf_fft_init(f_der%dcf_der, sb)
-      call dcf_new_from(f_der%dcf_aux, f_der%dcf_der)
-
-      call zcf_new(m%l, f_der%zcf_der)
-      call zcf_fft_init(f_der%zcf_der, sb)
-      call zcf_new_from(f_der%zcf_aux, f_der%zcf_der)
-    end if
+    call derivatives_build(m, f_der%der_discr)
 
     call pop_sub()
   end subroutine f_der_build
@@ -152,18 +110,8 @@ contains
     call push_sub('f.f_der_end')
 
     ASSERT(associated(f_der%m))
-    ASSERT(f_der%space==REAL_SPACE.or.f_der%space==FOURIER_SPACE)
 
-    if(f_der%space == REAL_SPACE) then
-      call derivatives_end(f_der%der_discr)
-    else
-      call dcf_free(f_der%dcf_der)
-      call zcf_free(f_der%zcf_der)
-      call dcf_free(f_der%dcf_aux)
-      call zcf_free(f_der%zcf_aux)
-    end if
-
-    nullify(f_der%m)
+     call derivatives_end(f_der%der_discr)
 
     call pop_sub()
   end subroutine f_der_end
@@ -177,17 +125,8 @@ contains
     FLOAT,             intent(out)   :: lapl_diag(:)  ! lapl_diag(m%np)
 
     call push_sub('f_inc.Xf_laplacian')
-
-    ASSERT(f_der%space==REAL_SPACE.or.f_der%space==FOURIER_SPACE)
-
-    select case(f_der%space)
-    case(REAL_SPACE)
-      call derivatives_lapl_diag (f_der%der_discr, lapl_diag)
-
-    case(FOURIER_SPACE)
-      message(1) = "Can not calculate diagonal of the laplacian in Fourier space"
-      call write_fatal(1)
-    end select
+    
+    call derivatives_lapl_diag (f_der%der_discr, lapl_diag)
 
     call pop_sub()
   end subroutine f_laplacian_diag
