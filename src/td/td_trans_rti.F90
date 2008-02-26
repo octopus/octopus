@@ -75,6 +75,7 @@ module td_trans_rti_m
     integer, pointer :: sp2full_map(:)        ! the mapping indices from sparse to full matrices
     CMPLX, pointer   :: src_mem_u(:, :)       ! t, il     u(m)
     CMPLX, pointer   :: src_factor(:)         ! iter
+    CMPLX, pointer   :: diag(:, :, :)         ! h
     CMPLX, pointer   :: offdiag(:, :, :)      ! hopping operator V^T (np,np,nleads)
     CMPLX, pointer   :: mem_s(:, :, :, :)     ! the matrices to diagonalize coeff0
 
@@ -187,7 +188,7 @@ contains
     call td_trans_rti_write_info(trans, st, max_iter, gr%f_der%der_discr%order, trans%mem_type)
 
     call memory_init(trans%intface, dt/M_TWO, max_iter, gr%f_der%der_discr%lapl,&
-                      trans%mem_coeff, trans%mem_sp_coeff, trans%mem_s, trans%offdiag, gr%sb%dim, &
+                      trans%mem_coeff, trans%mem_sp_coeff, trans%mem_s, trans%diag, trans%offdiag, gr%sb%dim, &
                       gr%sb%h(1), trans%mem_type, gr%f_der%der_discr%order, trans%sp2full_map)
 
     ! FIXME  to be set in the inp file (fermie-energy)
@@ -254,7 +255,7 @@ contains
     call intface_end(trans%intface)
     call lead_end(trans%lead)
     call source_end(trans%src_factor, trans%st_sincos, trans%st_phase)
-    call memory_end(trans%mem_coeff, trans%mem_sp_coeff, trans%offdiag, trans%mem_s, trans%sp2full_map)
+    call memory_end(trans%mem_coeff, trans%mem_sp_coeff, trans%diag, trans%offdiag, trans%mem_s, trans%sp2full_map)
 
     call pop_sub()
   end subroutine cn_src_mem_end
@@ -310,52 +311,43 @@ contains
     call pop_sub()
   end subroutine td_trans_rti_write_info
 
+!  subroutine calculate_green_function()
+!  end subroutine calculate_green_function
+
   ! ---------------------------------------------------------
   ! calculate phase shift at interface
-  subroutine calculate_phase_shift(order, np, dx, lsize, st, u, phase_shift)
+  subroutine calculate_phase_shift(order, np, q, st, u, der_coeff, phase_shift)
     integer,         intent(in)  :: order
     integer,         intent(in)  :: np
-    FLOAT,           intent(in)  :: dx
-    FLOAT,           intent(in)  :: lsize
+    FLOAT,           intent(in)  :: q
     type(states_t),  intent(in)  :: st
     FLOAT,           intent(in)  :: u(:) ! the lead potential at time 0
+    FLOAT,           intent(in)  :: der_coeff(:, :) ! weights of the derivative
     FLOAT,           intent(inout) :: phase_shift(:, :, :) ! nst, nik, NLEADS
 
     integer         :: lshift, length, ik, ist
-    FLOAT           :: q, denom, energy
-    FLOAT, allocatable :: coeffs(:,:) ! the weights
+    FLOAT           :: denom, energy
 
     call push_sub('td_transport.calculate_phase_shift')
-
-  ! Matching algorithm
-  ! 2. calculate phaseshift of the lead eigenfunction (eq. (41) in paper)
-  ! 2.1 calculate the second derivatives at the boundaries
-  !write(*,*) 'vorher'
 
     ! the number of derivative coefficients
     length = 2*order+1
     ! with increasing order the interface boundary shifts towards the center
     lshift = order-1
-    ALLOCATE(coeffs(length, NLEADS),length*NLEADS)
 
-    q = M_PI/(lsize-lshift*dx)
+    ! no tight binding yet
     energy = M_HALF*q**2
-
-    call deriv_coeffs(order, dx, coeffs(:,LEFT), +1)
-    call deriv_coeffs(order, dx, coeffs(:,RIGHT), -1)
-    !write(*,*) 'left stencil weights', coeffs(:,LEFT)
-    !write(*,*) 'right stencil weights', coeffs(:,RIGHT)
 
     do ik = 1, st%d%nik
       do ist = st%st_start, st%st_end
         ! left lead
-        if (abs(st%zpsi(1+lshift, 1, ist, ik)).lt.CNST(1e-15)) then
+        if (abs(st%zpsi(1+lshift, 1, ist, ik)).lt.M_EPSILON) then
           phase_shift(ist, ik, LEFT) = M_ZERO
         else
-          ! FIXME: use a two-sided but asymmetric derivative (exacter)
-          ! calculate the forward derivative
-          denom = sum(log(abs(st%zpsi(1+lshift:length+lshift, 1, ist, ik))**2)*coeffs(:, LEFT))
-          if (abs(denom).lt.CNST(1e-15)) then
+          ! FIXME: use a two-sided but asymmetric derivative
+          ! for now, calculate the forward derivative
+          denom = sum(log(abs(st%zpsi(1+lshift:length+lshift, 1, ist, ik))**2)*der_coeff(:, LEFT))
+          if (abs(denom).lt.M_EPSILON) then
             phase_shift(ist, ik, LEFT) = M_HALF*M_PI
           else
             ! no tight binding yet
@@ -364,13 +356,13 @@ contains
         end if
 
         ! right lead
-        if (abs(st%zpsi(np-lshift, 1, ist, ik)).lt.CNST(1e-15)) then
+        if (abs(st%zpsi(np-lshift, 1, ist, ik)).lt.M_EPSILON) then
           phase_shift(ist, ik, RIGHT) = M_ZERO
         else
-          ! FIXME: use a two-sided but asymmetric derivative (exacter)
+          ! FIXME: use a two-sided but asymmetric derivative smaller error
           ! calculate the backward derivative
-            denom = sum(log(abs(st%zpsi(np-length+1-lshift:np-lshift, 1, ist, ik))**2)*coeffs(:, RIGHT))
-          if (abs(denom).lt.CNST(1e-15)) then
+            denom = sum(log(abs(st%zpsi(np-length+1-lshift:np-lshift, 1, ist, ik))**2)*der_coeff(:, RIGHT))
+          if (abs(denom).lt.M_EPSILON) then
             phase_shift(ist, ik, RIGHT) = sign(M_HALF*M_PI, denom)
           else
             ! no tight binding yet
@@ -380,19 +372,289 @@ contains
       end do
     end do
 
-!  st_phase = M_ZERO
-    deallocate(coeffs)
-
     call pop_sub()
   end subroutine calculate_phase_shift
 
+  ! ---------------------------------------------------------
+  ! calculate scaling factor for matching the central wave function
+  ! to the lead wave function of the form sqrt(2)*sin(q*x+delta)
+  FLOAT function scaling_factor(phase, zpsi, np, lshift, der_coeff, length, q)
+    FLOAT,      intent(in) :: phase(:)   ! NLEADS; phase shift at each interface
+    CMPLX,      intent(in) :: zpsi(:)! np
+    integer,    intent(in) :: np     ! number of gridpoints
+    integer,    intent(in) :: lshift   ! shift (discr.-order dependent)
+    FLOAT,      intent(in) :: der_coeff(:, :) ! derivative coefficients
+    integer,    intent(in) :: length ! size of the coeffs array
+    FLOAT,      intent(in) :: q   ! q = sqrt(2*(en-u))
+
+    FLOAT   :: l_fac, r_fac
+    call push_sub('td_transport.scaling_factor')
+
+    l_fac = M_ONE
+    r_fac = M_ONE
+
+    ! left lead
+    if (abs(zpsi(lshift)).gt.M_EPSILON) then ! scale to match 1st derivatives
+      l_fac = sqrt(M_TWO)*abs(sin(phase(LEFT))/zpsi(lshift))
+    end if
+! TODO: check if all is correct when zpsi==0
+    ! right lead
+    if (abs(zpsi(np-lshift)).gt.M_EPSILON) then
+       r_fac = sqrt(M_TWO)*abs(sin(phase(RIGHT))/zpsi(np-lshift))
+    end if
+
+    scaling_factor = sqrt(l_fac**2 + r_fac**2)
+
+    call pop_sub()
+  end function scaling_factor
   
+  ! ---------------------------------------------------------
+  ! compute the semi-infinite surface green function (half) analyticly
+  ! returns V^T * g * V
+  ! only the diagonalization process is numerical done
+  subroutine green_lead(energy, diag, offdiag, np, il, green)
+    FLOAT,               intent(in)  :: energy
+    CMPLX,               intent(in)  :: diag(:, :)
+    CMPLX,               intent(in)  :: offdiag(:, :)
+    integer,             intent(in)  :: np ! number of interface points
+    integer,             intent(in)  :: il
+    CMPLX,               intent(out) :: green(:, :)
+
+    integer             :: i
+    CMPLX, allocatable  :: x(:,:), s(:,:), sub_o(:,:), sub_d(:,:), d(:), tmp(:,:)
+    FLOAT               :: det
+
+    call push_sub('td_trans_mem.green_lead')
+
+    ALLOCATE(x(2*np,2*np),4*np**2)
+    ALLOCATE(s(2*np,2*np),4*np**2)
+    ALLOCATE(sub_o(np,np),np**2)
+    ALLOCATE(sub_d(np,np),np**2)
+    ALLOCATE(tmp(np,np),np**2)
+    ALLOCATE(d(2*np),2*np)
+
+    ! Algorithm taken from A. Umerski, Closed-form solutions to surface Green's functions
+    ! 1. create matrix x ( x = {{0,offdiag^(-1)},{-offdiag^T,(energy-diag)*offdiag}} )
+    ! 2. compute diagonalization matrix s, s^(-1)*x*s = d
+    ! 3. extract submatrices ( s = {{o1,o2},{o3,o4}}; d = {{d1,0},{0,d2}} )
+    ! 4. calculate g = o2*(offdiag*o2*d2)^(-1) for left lead or
+    !              g = o1*d1*(o1*offdiag^(T))^(-1) for right lead
+    ! 5. calculate offdiag^(T)*g*offdiag
+
+    ! 1. create matrix x ( x = {{0,offdiag^(-1)},{-offdiag^T,(energy-diag)*offdiag^(-1)}} )
+    x(1:np,1:np) = M_z0
+    ! use sub_o as tmp variable
+    sub_o = offdiag
+    if (il.eq.LEFT) then
+      call lalg_invert_upper_triangular(np,  sub_o)
+    else
+      call lalg_invert_lower_triangular(np,  sub_o)
+    end if
+    x(1:np,np+1:2*np) = sub_o
+    do i=1, np
+      x(np+i,1:np) = -offdiag(:,i)
+    end do
+    ! use sub_d as tmp variable
+    sub_d = -diag
+    do i=1, np
+      sub_d(i,i) = sub_d(i,i) + energy
+    end do
+    if (il.eq.LEFT) then
+      call lalg_trmm(np,np,'U','N','R',M_z1,sub_o,sub_d)
+    else
+      call lalg_trmm(np,np,'L','N','R',M_z1,sub_o,sub_d)
+    end if
+    x(np+1:2*np,np+1:2*np) = sub_d
+
+    ! 2. compute diagonalization matrix s, s^(-1)*x*s = d
+    s = x
+    call lalg_geneigensolve_nonh(2*np, s, d)
+
+    ! 3. extract submatrices ( S = {{o1,o2},{o3,o4}}; D = {{d1,0},{0,d2}} )
+    sub_d = M_z0
+    if (il.eq.LEFT) then ! left side --> o2, d2
+      sub_o = s(1:np,np+1:2*np)
+      do i=1, np
+        sub_d(i,i) = d(np+i)
+      end do
+    else ! right side --> o1, d1
+      sub_o = s(1:np,1:np)
+      do i=1, np
+        sub_d(i,i) = d(i)
+      end do
+    end if
+
+    ! 4. calculate offdiag^(T)*g*offdiag
+    if (il.eq.LEFT) then ! offdiag^(T)*g*offdiag = offdiag^(T)*o2*(o2*d2)^(-1)
+      call zsymm('R','U',np,np,M_z1,sub_d,np,sub_o,np,M_z0,tmp,np)
+      det = lalg_inverter(np, tmp, invert = .true.)
+      call zgemm('N','N',np,np,np,M_z1,sub_o,np,tmp,np,M_z0,green,np)
+      call lalg_trmm(np,np,'U','T','L',M_z1,offdiag,green)
+    else ! offdiag^(T)*g*offdiag = offdiag^(T)*o1*d1*o1^(-1)
+      call zsymm('R','U',np,np,M_z1,sub_d,np,sub_o,np,M_z0,tmp,np)
+      det = lalg_inverter(np, sub_o, invert = .true.)
+      call zgemm('N','N',np,np,np,M_z1,tmp,np,sub_o,np,M_z0,green,np)
+      call lalg_trmm(np,np,'L','T','L',M_z1,offdiag,green)
+    end if
+
+    deallocate(x, s, sub_o, sub_d, d, tmp)
+    call pop_sub()
+  end subroutine green_lead
+
+  ! ---------------------------------------------------------
+  ! check if the matrix is not just real valued
+  logical function is_complex(matrix, np)
+    CMPLX,          intent(in) :: matrix(np, np)
+    integer,        intent(in) :: np
+
+    integer :: i,j
+    call push_sub('td_transport.is_complex')
+
+    is_complex = .false.
+    mat_loop: do j=1,np
+      do i=1,np
+        if (abs(aimag(matrix(j,i))).gt.M_EPSILON) then
+          is_complex = .true.
+          exit mat_loop
+        end if
+      end do
+    end do mat_loop
+    call pop_sub()
+  end function is_complex
+
+
+  ! ---------------------------------------------------------
+  ! compute the extended eigenstate(s) with imaginary part of the green function
+  ! needs much memory: matrix do diagonalize has the size np**2 
+  subroutine ext_eigenst_imag_green(gr, np, diag, offdiag, order, energy, lead_pot, dx, st, phase)
+    type(grid_t),   intent(in)      :: gr
+    integer,        intent(in)      :: np                      ! number of interface points
+    CMPLX,          intent(in)      :: diag(np, np, NLEADS)    ! lead hamiltonian (diagonal part)
+    CMPLX,          intent(in)      :: offdiag(np, np, NLEADS) ! hopping operator V^T
+    integer,        intent(in)      :: order                   ! discretization order
+    FLOAT,          intent(in)      :: energy                  ! total energy
+    FLOAT,          intent(in)      :: lead_pot(NLEADS)        ! lead potential at t=0
+    FLOAT,          intent(in)      :: dx                      ! spacing
+    type(states_t), intent(inout)   :: st                      ! states
+    FLOAT,          intent(inout)   :: phase(:, :, :)          ! phaseshift at interface
+
+    FLOAT, allocatable :: der_coeff(:, :) ! the weights of the derivative
+    CMPLX, allocatable :: green_l(:,:,:)
+    CMPLX, allocatable :: g_cc(:,:)
+    FLOAT, allocatable :: im_g_cc(:, :) ! imag of g_cc
+    integer            :: i
+    FLOAT              :: eta, dos
+
+    call push_sub('td_trans_mem.ext_eigenst_imag_green')
+
+    ALLOCATE(der_coeff(2*order+1, NLEADS),(2*order+1)*NLEADS)
+    ALLOCATE(green_l(np, np, NLEADS),np**2*NLEADS)
+    ALLOCATE(g_cc(NP, NP),NP**2)
+    ALLOCATE(im_g_cc(NP, NP),NP**2)
+
+    ! 0. prepare some stuff for later
+    call deriv_coeffs(order, dx, der_coeff(:,LEFT),  +1)
+    call deriv_coeffs(order, dx, der_coeff(:,RIGHT), -1)
+    !write(*,*) 'left stencil weights', der_coeff(:,LEFT)
+    !write(*,*) 'right stencil weights', der_coeff(:,RIGHT)
+
+    ! 1. calculate the extended eigenstate (unbounded)
+    ! 1.1 calculate the retarded green function
+    call green_lead(energy, diag(:,:,LEFT), offdiag(:,:,LEFT), np, LEFT, green_l(:,:,LEFT))
+    call green_lead(energy, diag(:,:,RIGHT), offdiag(:,:,RIGHT), np, RIGHT, green_l(:,:,RIGHT))
+    ! 1.2 calculate the green function for the central region
+    g_cc = M_z0
+    call nl_operator_op_to_matrix_cmplx(gr%f_der%der_discr%lapl, g_cc)
+    g_cc = M_HALF*g_cc ! -H_cc
+    if (is_complex(green_l(:,:,LEFT),np).or.is_complex(green_l(:,:,RIGHT),np)) then
+      eta = M_z0
+    else
+      eta = CNST(1E-7) ! check if not to small
+      message(1) = 'Green function has no imaginary part.'
+      message(2) = 'Try smaller spacing, lower energy or higher discretization order.'
+      call write_warning(2)
+    end if
+    do i=1, NP
+      g_cc(i,i) = energy + M_zI*eta
+    end do
+    g_cc(1:np,1:np) = g_cc(1:np,1:np) - green_l(1:np,1:np,LEFT)
+    g_cc(NP-np+1:NP,NP-np+1:NP) = g_cc(NP-np+1:NP,NP-np+1:NP) - green_l(1:np,1:np,RIGHT)
+    call lalg_sym_inverter('U', NP, g_cc)
+    call make_symmetric(g_cc, NP)
+    ! 1.3 take the imaginary part
+    im_g_cc = aimag(g_cc)
+    ! 1.4 calculate the density of states (without factor)
+    dos = M_ZERO
+    do i=1, NP
+     dos = dos + im_g_cc(i,i)
+    end do
+    if (dos.eq.M_ZERO) then
+      message(1) = 'Density of states for Im(G_cc) is zero, can not continue!'
+      call write_fatal(1)
+    end if
+    ! 1.5 diagonalize
+    ! 1.6 take the physical important eigenvalues and their corresponding eigenvectors = ext. eigenstates
+
+    ! 2. calculate phase shift of the plane waves in the leads (eq. (41) in paper)
+    !q = M_PI/(gr%sb%lsize(1)-(order-1)*dx)
+    !call calculate_phase_shift(order, NP, q, st, u(0,:), der_coeff, phase)
+
+    ! 3. calculate the scaling to match to the lead eigenstates
+    !fac = scaling_factor(st_phase(st%st_start, 1, :), st%zpsi(:,1,st%st_start,1), np, order-1, der_coeff, 2*order+1, q)
+    !write(6,*) fac
+
+  ! 3.1 calculate the derivatives at the boundaries
+!  write(*,*) 'vorher'
+!      write(*,*) phase(LEFT), sin(phase(LEFT))**2, abs(st%zpsi(1, 1, ist, ik))**2
+!      write(*,*) phase(RIGHT), sin(phase(RIGHT))**2, log(abs(st%zpsi(np, 1, ist, ik))**2)
+!      c = M_ONE/sqrt(dx+abs(st%zpsi(1, 1, ist, ik))**2/(M_TWO*q)+abs(st%zpsi(np, 1, ist, ik))**2/(M_TWO*q))
+!write(*,*) c
+!      st%zpsi(:, :, ist, ik) = c*st%zpsi(:, :, ist, ik)
+
+!  st_phase(:) = M_ZERO ! FIXME
+
+    deallocate(der_coeff, green_l, g_cc, im_g_cc)
+    call pop_sub()
+  end subroutine ext_eigenst_imag_green
+
+  ! ---------------------------------------------------------
+  ! compute the extended eigenstate(s)
+  subroutine calculate_ext_eigenstate(gr, np, diag, offdiag, order, energy, lead_pot, dx, st, phase)
+    type(grid_t),   intent(in)      :: gr
+    integer,        intent(in)      :: np                      ! number of interface points
+    CMPLX,          intent(in)      :: diag(np, np, NLEADS)    ! lead hamiltonian (diagonal part)
+    CMPLX,          intent(in)      :: offdiag(np, np, NLEADS) ! hopping operator V^T
+    integer,        intent(in)      :: order                   ! discretization order
+    FLOAT,          intent(in)      :: energy                  ! total energy
+    FLOAT,          intent(in)      :: lead_pot(NLEADS)        ! lead potential at t=0
+    FLOAT,          intent(in)      :: dx                      ! spacing
+    type(states_t), intent(inout)   :: st                      ! states
+    FLOAT,          intent(out)     :: phase(:, :, :)          ! phaseshift at interface
+
+    integer  :: eigenstate_type
+
+    call push_sub('td_trans_mem.calculate_extended_eigenstate')
+
+    eigenstate_type = 1
+
+    select case(eigenstate_type)
+    case(1) ! reference implementation, only feasible in 1D (maybe 2D)
+      call ext_eigenst_imag_green(gr, np, diag, offdiag, order, energy, lead_pot, dx, st, phase)
+    case(2) ! method by Florian Lorenzen and Heiko Appel
+      !call ext_eigenstate_lippmann_schwinger(h, np, gr_np, diag, offdiag, order, energy, lead_pot, dx, st, phase)
+    case(3) ! method by Gianluca Stefannuci
+     !call ext_eigenstate_stefanucci(h, np, gr_np, diag, offdiag, order, energy, lead_pot, dx, st, phase)
+    end select
+
+    call pop_sub()
+  end subroutine calculate_ext_eigenstate
+
   ! ---------------------------------------------------------
   ! Crank-Nicholson timestep with source and memory.
   ! Only non-interacting electrons for the moment, so no
   ! predictor-corrector scheme.
   subroutine cn_src_mem_dt(intf, mem_type, mem, sp_mem, st_intf, ks, h, st, gr, dt,  &
-    t, max_iter, sm_u, u, timestep, src_factor, offdiag, st_sincos, st_phase, mem_s, &
+    t, max_iter, sm_u, u, timestep, src_factor, diag, offdiag, st_sincos, st_phase, mem_s, &
     additional_terms, mapping)
     type(intface_t), target,     intent(in)    :: intf
     type(states_t),              intent(inout) :: st
@@ -410,6 +672,7 @@ contains
     FLOAT, target,               intent(in)    :: u(0:max_iter, NLEADS)
     integer,                     intent(in)    :: timestep
     CMPLX, target,               intent(in)    :: src_factor(0:max_iter) ! max_iter
+    CMPLX, target,               intent(in)    :: diag(intf%np, intf%np, NLEADS)
     CMPLX, target,               intent(in)    :: offdiag(intf%np, intf%np, NLEADS)   ! hopping operator V^T
     CMPLX, target,               intent(in)    :: st_sincos(:, :, :) ! sin & cos vectors
     FLOAT, target,               intent(inout) :: st_phase(:, :, :)   ! phaseshift at interface
@@ -419,7 +682,7 @@ contains
 
     integer            :: il, it, m, cg_iter, j, order
     integer, target    :: ist, ik
-    FLOAT              :: tol, q, energy, c
+    FLOAT              :: energy
     CMPLX              :: factor
     CMPLX, allocatable :: tmp(:, :), tmp_wf(:), tmp_mem(:, :)
 
@@ -454,24 +717,11 @@ contains
     m = timestep-1
     cg_iter = cg_max_iter
 
-! FIXME: this does NOT belong here, since the extended groundstate has to be calculated and not set as it is now
 if (m.eq.0) then
-  ! 1. calculate the extended eigenstate (unbounded)
+! FIXME: this does NOT belong here
+  energy = M_TWO/M_TEN
+  call calculate_ext_eigenstate(gr, intf%np, diag, offdiag, order, energy, u(0,:), gr%sb%h(1), st, st_phase)
 
-  ! 2. calculate phase shift of the plane waves in the leads
-  call calculate_phase_shift(order, NP, gr%sb%h(1), gr%sb%lsize(1), st, u(0,:), st_phase)
-
-  ! Matching algorithm
-  ! 2. calculate phaseshift of the lead eigenfunction (eq. (41) in paper)
-  ! 2.1 calculate the second derivatives at the boundaries
-!  write(*,*) 'vorher'
-!      write(*,*) st_phase(LEFT), sin(st_phase(LEFT))**2, abs(st%zpsi(1, 1, ist, ik))**2
-!      write(*,*) st_phase(RIGHT), sin(st_phase(RIGHT))**2, log(abs(st%zpsi(NP, 1, ist, ik))**2)
-!      c = M_ONE/sqrt(gr%sb%h(1)+abs(st%zpsi(1, 1, ist, ik))**2/(M_TWO*q)+abs(st%zpsi(NP, 1, ist, ik))**2/(M_TWO*q))
-!write(*,*) c
-!      st%zpsi(:, :, ist, ik) = c*st%zpsi(:, :, ist, ik)
-
-!  st_phase(:) = M_ZERO ! FIXME
 end if
 !write(*,*) 'left  center', st%zpsi(1, 1, 1, 1)
 !write(*,*) 'right center', st%zpsi(NP, 1, 1, 1)
@@ -574,11 +824,16 @@ end if
     integer,   intent(in)  :: np
     integer            :: i, j
 
+    character(len=10) :: c_np
+    write(c_np,'(i10)') np*2
     do j = 1, np
-      do i = 1, np
-        write(*,'(a,i3,a,i3,a,2e20.9)') "m(",j,",",i,")=",matr(j,i)
-      end do
+      write(*,'(a,i3,a,'//trim(c_np)//'e20.9)') "m(",j,",i)=",matr(j,1:np)
     end do
+!    do j = 1, np
+!      do i = 1, np
+!        write(*,'(a,i3,a,i3,a,2e20.9)') "m(",j,",",i,")=",matr(j,i)
+!      end do
+!    end do
    end subroutine write_matrix
 
 

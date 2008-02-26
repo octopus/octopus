@@ -55,7 +55,8 @@ module nl_operator_m
     nl_operator_skewadjoint,    &
     nl_operator_selfadjoint,    &
     nl_operator_get_index,      &
-    nl_operator_write
+    nl_operator_write,          &
+    nl_operator_op_to_matrix_cmplx
 
   type nl_operator_index_t
     private
@@ -814,6 +815,56 @@ contains
   ! ---------------------------------------------------------
 #endif
 
+
+  ! ---------------------------------------------------------
+  ! When running in parallel only the root node
+  ! creates the matrix. But all nodes have to
+  ! call this routine because the distributed operator has
+  ! to be collected.
+  subroutine nl_operator_op_to_matrix_cmplx(op, a)
+    type(nl_operator_t), target, intent(in) :: op
+    CMPLX, intent(out)                      :: a(:, :)
+
+    integer          :: i, j, k, index
+
+    type(nl_operator_t), pointer :: opg
+
+    call push_sub('nl_operator.nl_operator_op_to_matrix')
+
+    if(op%m%parallel_in_domains) then
+#if defined(HAVE_MPI)
+      ALLOCATE(opg, 1)
+      call nl_operator_gather(op, opg)
+#else
+      ASSERT(.false.)
+#endif
+    else
+      opg => op
+    end if
+
+    if(mpi_grp_is_root(op%m%mpi_grp)) then
+      k = 1
+      do i = 1, op%m%np_global
+        if(.not.op%const_w) k = i
+        do j = 1, op%n
+          index = nl_operator_get_index(opg, j, i)
+          if(index <= op%m%np_global) then
+            a(i, index) = opg%w_re(j, k)
+            if (op%cmplx_op) a(i, index) = a(i, index) + opg%w_im(j, k)
+          end if
+        end do
+      end do
+      
+      if(op%m%parallel_in_domains) then 
+        call nl_operator_end(opg)
+        deallocate(opg)
+      end if
+    end if
+    if(in_debug_mode) call write_debug_newlines(2)
+
+    call pop_sub()
+
+  end subroutine nl_operator_op_to_matrix_cmplx
 
   ! ---------------------------------------------------------
   ! When running in parallel only the root node

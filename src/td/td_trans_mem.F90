@@ -17,7 +17,7 @@
 !!
 !! $Id: td_transport.F90 3030 2007-06-25 16:45:05Z marques $
 
-! Calculation of the memory coefficients for the modified Crank-Nicholson propgator.
+! Calculation of the memory coefficients for the modified Crank-Nicholson propagator.
 
 #include "global.h"
 
@@ -40,11 +40,15 @@ module td_trans_mem_m
   implicit none
 
   private
-  public ::             &
-    mbytes_memory_term, &
-    memory_init,        &
-    memory_end,         &
-    make_full_matrix
+  public ::                 &
+    mbytes_memory_term,     &
+    memory_init,            &
+    memory_end,             &
+    make_full_matrix,       &
+    make_symmetric,         &
+    make_symmetric_average, &
+    apply_coupling
+    
 
   integer :: mem_iter
   FLOAT   :: mem_tolerance
@@ -223,7 +227,7 @@ contains
   ! Allocate (machine) memory for the memory coefficents and
   ! calculate them.
   subroutine memory_init(intface, delta, max_iter, op, coeff, sp_coeff, mem_s, &
-                          offdiag, dim, spacing, mem_type, order, sp2full_map)
+                          diag, offdiag, dim, spacing, mem_type, order, sp2full_map)
     type(intface_t),     intent(in) :: intface
     FLOAT,               intent(in) :: delta
     integer,             intent(in) :: max_iter
@@ -231,6 +235,7 @@ contains
     CMPLX,               pointer    :: coeff(:, :, :, :)
     CMPLX,               pointer    :: sp_coeff(:, :, :)
     CMPLX,               pointer    :: mem_s(:, :, :, :)
+    CMPLX,               pointer    :: diag(:, :, :)
     CMPLX,               pointer    :: offdiag(:, :, :)
     integer,             intent(in) :: dim
     FLOAT,               intent(in) :: spacing
@@ -239,12 +244,11 @@ contains
     integer,             pointer    :: sp2full_map(:)
 
     integer            :: il, np, saved_iter, ii
-    CMPLX, allocatable :: diag(:, :)
 
     call push_sub('td_trans_mem.memory_coeff')
 
     np = intface%np
-    ALLOCATE(diag(np, np), np**2)
+    ALLOCATE(diag(np, np, NLEADS), np**2*NLEADS)
     ALLOCATE(offdiag(np, np, NLEADS), np**2*NLEADS)
     if (mem_type.eq.1) then
       ALLOCATE(coeff(np, np, 0:max_iter, NLEADS), np**2*(max_iter+1)*NLEADS)
@@ -298,7 +302,7 @@ contains
 
     do il = 1, NLEADS
       ! Get diagonal matrix.
-      call calculate_diag(op, intface, il, diag)
+      call calculate_diag(op, intface, il, diag(:, :, il))
       ! Get offdiagonal matrix.
       call calculate_offdiag(op, intface, il, offdiag(:, :, il))
 !write(message(1),'(a, i3)') 'Info: Number of threads ', mc%nthreads
@@ -321,16 +325,16 @@ contains
 
         if (saved_iter.eq.0) then 
           ! Get anchor for recursion.
-          call approx_coeff0(intface, delta, il, diag, offdiag(:, :, il), coeff(:, :, 0, il), &
+          call approx_coeff0(intface, delta, il, diag(:, :, il), offdiag(:, :, il), coeff(:, :, 0, il), &
                              sp_coeff(:, 0, il), mem_s(:,:,:,il), order, mem_type, sp2full_map)
           call loct_progress_bar(1, max_iter+1)
         end if
         ! Calculate the subsequent coefficients by the recursive relation.
         if (mem_type.eq.1) then
-          call calculate_coeffs(il, saved_iter+1, max_iter, delta, intface, diag, &
+          call calculate_coeffs(il, saved_iter+1, max_iter, delta, intface, diag(:, :, il), &
                      offdiag(:, :, il), coeff(:, :, :, il))
         else ! FIXME: yet only 2D
-          call calculate_sp_coeffs(il, saved_iter+1, max_iter, delta, intface, diag, &
+          call calculate_sp_coeffs(il, saved_iter+1, max_iter, delta, intface, diag(:, :, il), &
                      offdiag(:, :, il), sp_coeff(:, :, il), mem_s(:,:,:,il),np*order,order,dim,sp2full_map)
         end if
 
@@ -350,7 +354,6 @@ contains
 
     end do
 
-    deallocate(diag)
     call pop_sub()
   end subroutine memory_init
 
@@ -411,14 +414,13 @@ contains
 
     integer            :: i, j, np
     CMPLX              :: det
-    CMPLX, allocatable :: q0(:, :), q0_old(:, :)
+    CMPLX, allocatable :: q0(:, :)
     FLOAT              :: norm, old_norm
 
 
     call push_sub('td_trans_mem.approx_coeff0')
 
     np = intface%np
-    ALLOCATE(q0_old(np, np), np**2)
     ALLOCATE(q0(np, np), np**2)
 
     ! Truncating the continued fraction is the same as iterating the
@@ -431,8 +433,6 @@ contains
     old_norm = M_ZERO
 
     do i = 1, mem_iter
-      q0_old = q0
-
       ! Calculate 1 + i*delta*h + delta^2*coeff0_old
       q0 = M_zI*delta*diag + delta**2*q0
       do j = 1, np
@@ -445,7 +445,7 @@ contains
 
       ! Apply coupling matrices.
       call apply_coupling(q0, offdiag, q0, np, il)
-      call make_symmetric_average(q0, intface%np)
+      call make_symmetric_average(q0, np)
       norm = infinity_norm(q0)
       if(abs(norm-old_norm).lt.mem_tolerance) then
         exit
@@ -466,13 +466,13 @@ contains
     else
       ! diagonalization procedure
       mem_s(:, :, 1) = q0(:, :)
-      call lalg_geneigensolve_nonh(intface%np, mem_s(:, :, 1), mem_s(:, 1, 2))
+      call lalg_geneigensolve_nonh(np, mem_s(:, :, 1), mem_s(:, 1, 2))
       mem_s(:, :, 2) = mem_s(:, :, 1)
-      norm = lalg_inverter(intface%np, mem_s(:, :, 2), invert = .true.)
-      call make_sparse_matrix(intface%np, order, 2, q0, mem_s, sp_coeff0, mapping)
+      norm = lalg_inverter(np, mem_s(:, :, 2), invert = .true.)
+      call make_sparse_matrix(np, order, 2, q0, mem_s, sp_coeff0, mapping)
     end if
 
-    deallocate(q0, q0_old)
+    deallocate(q0)
     call pop_sub()
   end subroutine approx_coeff0
 
@@ -1166,9 +1166,10 @@ contains
 
   ! ---------------------------------------------------------
   ! Free arrays.
-  subroutine memory_end(coeff, sp_coeff, offdiag, mem_s, sp2full_map)
+  subroutine memory_end(coeff, sp_coeff, diag, offdiag, mem_s, sp2full_map)
     CMPLX, pointer   :: coeff(:, :, :, :)
     CMPLX, pointer   :: sp_coeff(:, :, :)
+    CMPLX, pointer   :: diag(:, :, :)
     CMPLX, pointer   :: offdiag(:, :, :)
     CMPLX, pointer   :: mem_s(:, :, :, :)
     integer, pointer :: sp2full_map(:)
@@ -1183,6 +1184,11 @@ contains
     if(associated(sp_coeff)) then
       deallocate(sp_coeff)
       nullify(sp_coeff)
+    end if
+
+    if(associated(diag)) then
+      deallocate(diag)
+      nullify(diag)
     end if
 
     if(associated(offdiag)) then

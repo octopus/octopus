@@ -103,12 +103,13 @@ contains
 
     CMPLX     :: qlr, factor
     integer   :: im, id, length
-    FLOAT     :: en, spacing, x
+    FLOAT     :: en, spacing, x, sqrt2
     integer, pointer :: lxyz(:,:)
     FLOAT :: lsize(3)
     FLOAT, allocatable :: coeffs(:,:)
     call push_sub('td_trans_src.source_init')
 
+    sqrt2 = sqrt(M_TWO)
     length = 2*order+1
     ALLOCATE(src_factor(0:max_iter), max_iter+1)
     ALLOCATE(st_sincos(1:inp, 4, NLEADS), inp*4*NLEADS)
@@ -146,19 +147,19 @@ contains
     do im=1, inp
       ! LEFT interface: shift to the right interface for easier calculation
       x = (lxyz(NP-inp+im,1)-1)*spacing - lsize(1)
-      st_sincos(im, 1, LEFT) = sin(qx*x)
-      st_sincos(im, 2, LEFT) = cos(qx*x)
+      st_sincos(im, 1, LEFT) = sqrt2*sin(qx*x)
+      st_sincos(im, 2, LEFT) = sqrt2*cos(qx*x)
       x = lxyz(im,1)*spacing + lsize(1)
-      st_sincos(im, 3, LEFT) = sin(qx*x)
-      st_sincos(im, 4, LEFT) = cos(qx*x)
+      st_sincos(im, 3, LEFT) = sqrt2*sin(qx*x)
+      st_sincos(im, 4, LEFT) = sqrt2*cos(qx*x)
       ! RIGHT interface: shift to the left interface for easier calculation
       x = (lxyz(im,1)+1)*spacing + lsize(1)
-      st_sincos(im, 1, RIGHT) = sin(qx*x)
-      st_sincos(im, 2, RIGHT) = cos(qx*x)
+      st_sincos(im, 1, RIGHT) = sqrt2*sin(qx*x)
+      st_sincos(im, 2, RIGHT) = sqrt2*cos(qx*x)
       ! in front of the interface
       x = lxyz(NP-inp+im,1)*spacing - lsize(1)
-      st_sincos(im, 3, RIGHT) = sin(qx*x)
-      st_sincos(im, 4, RIGHT) = cos(qx*x)
+      st_sincos(im, 3, RIGHT) = sqrt2*sin(qx*x)
+      st_sincos(im, 4, RIGHT) = sqrt2*cos(qx*x)
       ! now multiply the other seperated wavefunction(s) (f(y)*g(z) or f(y,z))
       do id=2, gr%sb%dim ! for box-sized leads
         qlr = M_PI/(M_TWO*lsize(id))
