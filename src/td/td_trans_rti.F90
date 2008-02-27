@@ -457,7 +457,7 @@ contains
     ! use sub_d as tmp variable
     sub_d = -diag
     do i=1, np
-      sub_d(i,i) = sub_d(i,i) + energy
+      sub_d(i,i) = sub_d(i,i) + energy + M_TEN*M_EPSILON*M_zI
     end do
     if (il.eq.LEFT) then
       call lalg_trmm(np,np,'U','N','R',M_z1,sub_o,sub_d)
@@ -542,6 +542,7 @@ contains
     CMPLX, allocatable :: green_l(:,:,:)
     CMPLX, allocatable :: g_cc(:,:)
     FLOAT, allocatable :: im_g_cc(:, :) ! imag of g_cc
+    FLOAT, allocatable :: eigenvalues(:)
     integer            :: i
     FLOAT              :: eta, dos
 
@@ -551,6 +552,7 @@ contains
     ALLOCATE(green_l(np, np, NLEADS),np**2*NLEADS)
     ALLOCATE(g_cc(NP, NP),NP**2)
     ALLOCATE(im_g_cc(NP, NP),NP**2)
+    ALLOCATE(eigenvalues(NP),NP)
 
     ! 0. prepare some stuff for later
     call deriv_coeffs(order, dx, der_coeff(:,LEFT),  +1)
@@ -566,6 +568,7 @@ contains
     g_cc = M_z0
     call nl_operator_op_to_matrix_cmplx(gr%f_der%der_discr%lapl, g_cc)
     g_cc = M_HALF*g_cc ! -H_cc
+! FIXME: add potential
     if (is_complex(green_l(:,:,LEFT),np).or.is_complex(green_l(:,:,RIGHT),np)) then
       eta = M_z0
     else
@@ -593,6 +596,8 @@ contains
       call write_fatal(1)
     end if
     ! 1.5 diagonalize
+    im_g_cc(i,i) = im_g_cc(i,i) / dos
+    call lalg_eigensolve(NP, im_g_cc, im_g_cc, eigenvalues)
     ! 1.6 take the physical important eigenvalues and their corresponding eigenvectors = ext. eigenstates
 
     ! 2. calculate phase shift of the plane waves in the leads (eq. (41) in paper)
