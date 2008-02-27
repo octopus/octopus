@@ -648,11 +648,16 @@ contains
 
   subroutine pv_handle_wait(this)
     type(pv_handle_t), intent(inout) :: this
+
+    type(profile_t), save :: prof
+    
+    call profiling_in(prof, "MPI_WAIT")
 #if defined(HAVE_LIBNBC)
     call NBCF_Wait(this%nbc_h, mpi_err)
 #else
     call MPI_Waitall(this%nnb*2, this%requests(1,1), this%status(1, 1, 1), mpi_err)
 #endif
+    call profiling_out(prof)
   end subroutine pv_handle_wait
 
 #include "undef.F90"
