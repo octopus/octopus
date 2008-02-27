@@ -311,18 +311,18 @@ subroutine X(nl_operator_operate)(op, fi, fo, ghost_update, profile, points)
       nri_loc = nri
 #endif
 
-!      select case(op%X(function))
-!      case(OP_FORTRAN)
-!        call X(operate)(op%n, nri, op%w_re(:, 1), ri, imin, imax, fi, fo)
-!      case(OP_C)
-!        call X(operate_ri)(op%n, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), imax(ini), fi(1), fo(1))
-!      case(OP_VEC)
-!        call X(operate_ri_vec)(op%n, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), imax(ini), fi(1), fo(1))
-!      case(OP_AS)
+      select case(op%X(function))
+      case(OP_FORTRAN)
+        call X(operate)(op%n, nri, op%w_re(:, 1), ri, imin, imax, fi, fo)
+      case(OP_C)
+        call X(operate_ri)(op%n, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), imax(ini), fi(1), fo(1))
+      case(OP_VEC)
+        call X(operate_ri_vec)(op%n, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), imax(ini), fi(1), fo(1))
+      case(OP_AS)
         nns(1) = op%n
         nns(2) = nri_loc
         call X(operate_as)(nns, op%w_re(1, 1), ri(1, ini), imin(ini), imax(ini), fi(1), fo(1), ws(1))
-!      end select
+      end select
       !$omp end parallel
 
     end if
