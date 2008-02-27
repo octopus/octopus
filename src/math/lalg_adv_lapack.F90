@@ -286,16 +286,21 @@ subroutine zgeneigensolve_nonh(n, a, e, err_code)
 
   lwork = -1
   ALLOCATE(work(1), 1)
-  call ZLAPACK(geev) ('N', 'V', n, a(1, 1), n, e(1), vl(1,1), 1, vr(1,1), n, work(1), lwork, rwork(1), info)
+  ALLOCATE(vl(1, 1), 1)
+  ALLOCATE(vr(1, 1), 1)
+  ALLOCATE(rwork(1), 1)
+  call ZLAPACK(geev) ('N', 'V', n, a(1, 1), n, e(1), vl(1, 1), 1, vr(1, 1), n, work(1), lwork, rwork(1), info)
   lwork = int(real(work(1)))
-  deallocate(work)
+  deallocate(work, vl, vr, rwork)
+  
 
   ALLOCATE(vr(n,n), n*n)
   ALLOCATE(work(lwork), lwork)
   ALLOCATE(rwork(max(1, 2*n)), max(1, 2*n))
-  call ZLAPACK(geev) ('N', 'V', n, a(1, 1), n, e(1), vl(1,1), 1, vr(1,1), n, work(1), lwork, rwork(1), info)
+  ALLOCATE(vl(1, 1), 1)
+  call ZLAPACK(geev) ('N', 'V', n, a(1, 1), n, e(1), vl(1, 1), 1, vr(1,1), n, work(1), lwork, rwork(1), info)
   a(:, :) = vr(:, :)
-  deallocate(work, rwork, vr)
+  deallocate(work, rwork, vr, vl)
 
   if(info.ne.0) then
     write(message(1),'(a,i5)') 'In zgeneigensolve_nonh, LAPACK Xgeev returned error message ', info
