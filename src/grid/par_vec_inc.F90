@@ -232,16 +232,13 @@ subroutine X(vec_ghost_update)(vp, v_local)
   type(pv_t), intent(in)    :: vp
   R_TYPE,     intent(inout) :: v_local(:)
 
-  integer, pointer :: sdispls(:), rdispls(:) ! Displacements for
-                                             ! MPI_Alltoallv.
   R_TYPE,  pointer :: ghost_send(:)          ! Send buffer.
-  integer, pointer :: recvcounts(:)
 
   call profiling_in(C_PROFILING_GHOST_UPDATE)
 
   call push_sub('par_vec.Xvec_ghost_update')
 
-  call X(vec_ghost_update_prepare)(vp, v_local, sdispls, rdispls, recvcounts, ghost_send)
+  call X(vec_ghost_update_prepare)(vp, v_local, ghost_send)
 
   ! Bring it on the way.
   ! It has to examined whether it is better to use several point to
@@ -258,12 +255,12 @@ subroutine X(vec_ghost_update)(vp, v_local)
   ! way. So only touch this code if profiling with many processors
   ! shows this spot is a serious bottleneck.
   call mpi_debug_in(vp%comm, C_MPI_ALLTOALLV)
-  call MPI_Alltoallv(ghost_send, vp%np_ghost_neigh(1, vp%partno), sdispls(1),           &
-    R_MPITYPE, v_local(vp%np_local(vp%partno)+1), recvcounts(1), rdispls(1), R_MPITYPE, &
+  call MPI_Alltoallv(ghost_send, vp%np_ghost_neigh(1, vp%partno), vp%sdispls(1),           &
+    R_MPITYPE, v_local(vp%np_local(vp%partno)+1), vp%rcounts(1), vp%rdispls(1), R_MPITYPE, &
     vp%comm, mpi_err)
   call mpi_debug_out(vp%comm, C_MPI_ALLTOALLV)
 
-  call X(vec_ghost_update_finish)(sdispls, rdispls, recvcounts, ghost_send)
+  call X(vec_ghost_update_finish)(ghost_send)
 
   call pop_sub()
 
@@ -279,10 +276,6 @@ subroutine X(vec_ighost_update)(vp, v_local, handle)
   R_TYPE,     intent(inout) :: v_local(:)
   type(pv_handle_t),  intent(in)  :: handle
 
-  integer, pointer :: sdispls(:), rdispls(:) ! Displacements for
-                                             ! NBC_Alltoallv.
-  integer, pointer :: recvcounts(:)
-
 #ifdef HAVE_LIBNBC
   R_TYPE,  pointer :: ghost_send(:)          ! Send buffer.
 #else
@@ -296,18 +289,16 @@ subroutine X(vec_ighost_update)(vp, v_local, handle)
 #if defined(HAVE_LIBNBC)
   ! use a collective non-blocking call
 
-  call X(vec_ghost_update_prepare)(vp, v_local, sdispls, rdispls, recvcounts, ghost_send)
+  call X(vec_ghost_update_prepare)(vp, v_local, ghost_send)
 
-  call NBCF_Ialltoallv(ghost_send, vp%np_ghost_neigh(1, vp%partno), sdispls(1),          &
-       R_MPITYPE, v_local(vp%np_local(vp%partno)+1), recvcounts(1), rdispls(1), R_MPITYPE, &
+  call NBCF_Ialltoallv(ghost_send, vp%np_ghost_neigh(1, vp%partno), vp%sdispls(1),          &
+       R_MPITYPE, v_local(vp%np_local(vp%partno)+1), vp%rcounts(1), vp%rdispls(1), R_MPITYPE, &
        vp%comm, handle%nbc_h, mpi_err)
 
-  call X(vec_ghost_update_finish)(sdispls, rdispls, recvcounts, ghost_send)
+  call X(vec_ghost_update_finish)(ghost_send)
  
 #else
   ! use a series of p2p non-blocking calls
-
-  call X(vec_ghost_update_prepare)(vp, v_local, sdispls, rdispls, recvcounts)
 
   inb = 1
   do ipart = 1, vp%p
@@ -317,16 +308,14 @@ subroutine X(vec_ighost_update)(vp, v_local, handle)
     call MPI_Isend(v_local(1), 1, vp%X(send_type)(ipart), ipart - 1, 0, &
          vp%comm, handle%requests(inb, SEND), mpi_err)
 
-    pos = vp%np_local(vp%partno) + 1 + rdispls(ipart)
-    call MPI_Irecv(v_local(pos), recvcounts(ipart), R_MPITYPE, ipart - 1, 0, &
+    pos = vp%np_local(vp%partno) + 1 + vp%rdispls(ipart)
+    call MPI_Irecv(v_local(pos), vp%rcounts(ipart), R_MPITYPE, ipart - 1, 0, &
          vp%comm, handle%requests(inb, RECV), mpi_err)
 
     inb = inb + 1
   end do
 
   ASSERT(inb == vp%nnb + 1)
-
-  call X(vec_ghost_update_finish)(sdispls, rdispls, recvcounts)
 
 #endif
 
@@ -336,14 +325,10 @@ subroutine X(vec_ighost_update)(vp, v_local, handle)
 
 end subroutine X(vec_ighost_update)
 
-subroutine X(vec_ghost_update_prepare) &
-  (vp, v_local, sdispls, rdispls, recvcounts, ghost_send)
+subroutine X(vec_ghost_update_prepare) (vp, v_local, ghost_send)
   type(pv_t),       intent(in)    :: vp
-  R_TYPE,           intent(inout) :: v_local(:)
-  integer, pointer                :: sdispls(:), rdispls(:) ! Displacements for
-                                                            ! Alltoallv.
-  integer, pointer                :: recvcounts(:)
-  R_TYPE,  pointer, optional      :: ghost_send(:)          ! Send buffer.
+  R_TYPE,           intent(in)    :: v_local(:)
+  R_TYPE,           pointer       :: ghost_send(:)          ! Send buffer.
 
 
   integer :: i, j, k, r ! Counters.
@@ -351,71 +336,36 @@ subroutine X(vec_ghost_update_prepare) &
 
   call push_sub('par_vec.Xvec_ghost_update_prepare')
 
-  ! Send and receive displacements.
-  ! Send displacement cannot directly be calculated
-  ! from vp%xghost_neigh because those are indices for
-  ! vp%np_ghost_neigh(vp%partno, :) and not
-  ! vp%np_ghost_neigh(:, vp%partno) (rank being fixed).
-  ! So what gets done is to pick out the number of ghost points
-  ! each partition r wants to have from the current partiton
-  ! vp%partno.
-  ALLOCATE(sdispls(vp%p), vp%p)
-  sdispls(1) = 0
-  do r = 2, vp%p
-    sdispls(r) = sdispls(r-1)+vp%np_ghost_neigh(r-1, vp%partno)
-  end do
-
-  ! This is like in vec_scatter/gather.
-  ALLOCATE(rdispls(vp%p), vp%p)
-  rdispls = vp%xghost_neigh(vp%partno, :)-vp%xghost(vp%partno)
-
-  ALLOCATE(recvcounts(1:vp%p), vp%p)
-  recvcounts(1:vp%p) = vp%np_ghost_neigh(vp%partno, 1:vp%p)
-
-  if(present(ghost_send)) then
-    
-    ! Calculate number of ghost points current node
-    ! has to send to neighbours and allocate send buffer.
-    total = sum(vp%np_ghost_neigh(:, vp%partno))
-    ALLOCATE(ghost_send(total), total)
-    
-    ! Collect all local points that have to be sent to neighbours.
-    j = 1
-    ! Iterate over all possible receivers.
-    do r = 1, vp%p
-      ! Iterate over all ghost points that r wants.
-      do i = 0, vp%np_ghost_neigh(r, vp%partno)-1
-        ! Get global number k of i-th ghost point.
-        k = vp%ghost(vp%xghost_neigh(r, vp%partno)+i)
-        ! Lookup up local number of point k and put
-        ! value from v_local to send buffer.
-        ghost_send(j) = v_local(vp%global(k, vp%partno))
-        j             = j + 1
-      end do
+  
+  ! Calculate number of ghost points current node
+  ! has to send to neighbours and allocate send buffer.
+  total = sum(vp%np_ghost_neigh(:, vp%partno))
+  ALLOCATE(ghost_send(total), total)
+  
+  ! Collect all local points that have to be sent to neighbours.
+  j = 1
+  ! Iterate over all possible receivers.
+  do r = 1, vp%p
+    ! Iterate over all ghost points that r wants.
+    do i = 0, vp%np_ghost_neigh(r, vp%partno)-1
+      ! Get global number k of i-th ghost point.
+      k = vp%ghost(vp%xghost_neigh(r, vp%partno)+i)
+      ! Lookup up local number of point k and put
+      ! value from v_local to send buffer.
+      ghost_send(j) = v_local(vp%global(k, vp%partno))
+      j             = j + 1
     end do
-    
-  end if
-
+  end do
+  
   call pop_sub()
 end subroutine X(vec_ghost_update_prepare)
 
+subroutine X(vec_ghost_update_finish)(ghost_send)
+  R_TYPE,  pointer :: ghost_send(:)          ! Send buffer.
 
-subroutine X(vec_ghost_update_finish) &
-  (sdispls, rdispls, recvcounts, ghost_send)
-  integer, pointer :: sdispls(:), rdispls(:) ! Displacements for
-                                             ! Alltoallv.
-  integer, pointer :: recvcounts(:)
-  R_TYPE,  pointer, optional :: ghost_send(:)          ! Send buffer.
+  deallocate(ghost_send)
 
-
-  call push_sub('par_vec.Xvec_ghost_update_finish')
-
-  deallocate(recvcounts, sdispls, rdispls)
-  if(present(ghost_send)) deallocate(ghost_send)
-
-  call pop_sub()
 end subroutine X(vec_ghost_update_finish)
-
 
 ! Sums over all elements of a vector v which was
 ! scattered to several v_local with vec_scatter.

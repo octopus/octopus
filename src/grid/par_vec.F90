@@ -110,6 +110,9 @@ module par_vec_m
     integer, pointer :: isend_type(:)        ! The datatypes to send
     integer, pointer :: dsend_type(:)        ! ghost points
     integer, pointer :: zsend_type(:)
+    integer, pointer :: rdispls(:)
+    integer, pointer :: sdispls(:)
+    integer, pointer :: rcounts(:)
 
     ! The following members are set independent of the nodes.
     integer          :: p                    ! Number of partitions.
@@ -532,6 +535,29 @@ contains
         vp%nnb = vp%nnb + 1
       end do
 
+      ! Send and receive displacements.
+      ! Send displacement cannot directly be calculated
+      ! from vp%xghost_neigh because those are indices for
+      ! vp%np_ghost_neigh(vp%partno, :) and not
+      ! vp%np_ghost_neigh(:, vp%partno) (rank being fixed).
+      ! So what gets done is to pick out the number of ghost points
+      ! each partition r wants to have from the current partiton
+      ! vp%partno.
+      
+      ALLOCATE(vp%sdispls(1:vp%p), vp%p)
+      ALLOCATE(vp%rdispls(1:vp%p), vp%p)
+      ALLOCATE(vp%rcounts(1:vp%p), vp%p)
+
+      vp%sdispls(1) = 0
+      do ipart = 2, vp%p
+        vp%sdispls(ipart) = vp%sdispls(ipart - 1) + vp%np_ghost_neigh(ipart - 1, vp%partno)
+      end do
+
+      ! This is like in vec_scatter/gather.
+      vp%rdispls(1:vp%p) = vp%xghost_neigh(vp%partno, 1:vp%p) - vp%xghost(vp%partno)
+      
+      vp%rcounts(1:vp%p) = vp%np_ghost_neigh(vp%partno, 1:vp%p)
+
     end subroutine init_mpi_datatypes
 
   end subroutine vec_init
@@ -544,7 +570,11 @@ contains
     integer :: ipart
 
     call push_sub('par_vec.vec_end')
-    
+
+    deallocate(vp%rdispls)
+    deallocate(vp%sdispls)
+    deallocate(vp%rcounts)
+
     if(associated(vp%isend_type)) then
 
       do ipart = 1, vp%p
