@@ -203,17 +203,15 @@ contains
   end subroutine nl_operator_equal
 
   ! ---------------------------------------------------------
-  subroutine nl_operator_build(m, op, np, const_w, cmplx_op, split)
+  subroutine nl_operator_build(m, op, np, const_w, cmplx_op)
     type(mesh_t), target, intent(in)    :: m
     type(nl_operator_t),  intent(inout) :: op
     integer,              intent(in)    :: np       ! Number of (local) points.
     logical, optional,    intent(in)    :: const_w  ! are the weights constant (independent of the point)
     logical, optional,    intent(in)    :: cmplx_op ! do we have complex weights?
-    logical, optional,    intent(in)    :: split
 
     integer :: ii, jj, ir, ip, p1(MAX_DIM), time, current, maxp, iinner, iouter
     integer, allocatable :: st1(:), st2(:)
-    logical :: split_
 
     call push_sub('nl_operator.nl_operator_build')
 
@@ -348,10 +346,7 @@ contains
     nullify(op%inner%imin, op%inner%imax, op%inner%ri)
     nullify(op%outer%imin, op%outer%imax, op%inner%ri)
 
-    split_ = .false.
-    if(present(split)) split_ = split 
-
-    if(split_) then
+    if(op%m%parallel_in_domains) then
       !NOTE: this separation is not correctly done for 1D
 
       !now build the arrays required to apply the nl_operator by parts

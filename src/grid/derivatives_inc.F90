@@ -147,7 +147,11 @@ subroutine X(derivatives_grad)(der, f, grad, ghost_update)
   R_TYPE,            intent(out)   :: grad(:,:)  ! grad(m%np, m%sb%dim)
   logical, optional, intent(in)    :: ghost_update
 
-  integer :: i
+  integer :: idir
+#ifdef HAVE_MPI
+  type(pv_handle_t) :: pv_h
+  logical :: ghost_update_
+#endif
 
   call push_sub('derivatives_inc.Xderivatives_grad')
   
@@ -157,8 +161,33 @@ subroutine X(derivatives_grad)(der, f, grad, ghost_update)
 
   call X(set_bc)(der, f)
 
-  do i = 1, der%m%sb%dim
-    call X(nl_operator_operate) (der%grad(i), f, grad(:,i), ghost_update=ghost_update)
+#ifdef HAVE_MPI
+  ghost_update_ = .true.
+  if(present(ghost_update)) ghost_update_ = ghost_update
+
+  if(der%overlap .and. der%m%parallel_in_domains .and. ghost_update_) then
+
+    call pv_handle_init(pv_h, der%m%vp)
+    call X(vec_ighost_update)(der%m%vp, f, pv_h)
+
+    do idir = 1, der%m%sb%dim
+      call X(nl_operator_operate)(der%grad(idir), f, grad(:, idir), ghost_update = .false., points = OP_INNER)
+    end do
+
+    call pv_handle_wait(pv_h)
+    call pv_handle_end(pv_h)
+
+    do idir = 1, der%m%sb%dim
+      call X(nl_operator_operate)(der%grad(idir), f, grad(:, idir), ghost_update = .false., points = OP_OUTER)
+    end do
+
+    call pop_sub()
+    return
+  end if
+#endif
+
+  do idir = 1, der%m%sb%dim
+    call X(nl_operator_operate) (der%grad(idir), f, grad(:, idir), ghost_update = ghost_update)
   end do
 
   call pop_sub()
