@@ -48,45 +48,50 @@ mov r2 = ar.lc
 #define ARG_WW r66
 #define NR r67
 #define ARG_RI r68
-#define ARG_RM r69
-#define ARG_FI r70
-#define ARG_FO r71
-#define ARG_WS r72
+#define ARG_RM r69	
+#define ARG_MX r70
+#define ARG_FI r71
+#define ARG_FO r72
+#define ARG_WS r73
 
+#define LL r80
+#define II r81
+#define WW r82
+#define MAXII r83
+#define RILL r84
+#define WS r85
+#define WS2 r86
+#define MAXUNRII r87
+#define NNM1 r88
+#define FO_BASE r89
+		
 //copy or load input arguments
-ld4 NN = [r32]
+ld4 NN = [r32],4
+;;
+ld4 NR = [r32]
 mov ARG_WW = r33
-ld4 NR = [r34]
-mov ARG_RI = r35
-mov ARG_RM = r36
+mov ARG_RI = r34
+mov ARG_RM = r35
+mov ARG_MX = r36	
 mov ARG_FI = r37
-mov ARG_FO = r38
+mov FO_BASE = r38
 mov ARG_WS = r39;;
-
-#define LL r73
-#define II r74
-#define WW r75
-#define MAXII r77
-#define RILL r78
-#define WS r79
-#define WS2 r80
-#define MAXUNRII r81
-#define NNM1 r82
 
 cmp4.le p9,p0 = NR, r0;;
 (p9) br.cond.spnt.few .dend_LL //if (ll == NR) do nothing
 
 mov LL = r0
-LDI II = [ARG_RM],ISIZE // II = ARG_RM[LL]
 lfetch.nt1 [ARG_WW];;
-shladd ARG_FO = II,FSHIFT, ARG_FO
 adds NNM1 = -1, NN
 
 .dloop_NR:
 adds LL = 1, LL;;
 cmp4.ne p2,p3 = LL, NR;;
 
-LDI MAXII = [ARG_RM],ISIZE // MAXII = ARG_RM[LL+1]
+LDI II = [ARG_RM],ISIZE            // II = ARG_RM[LL++]
+shladd ARG_FO = II,FSHIFT, FO_BASE
+	
+LDI MAXII = [ARG_MX],ISIZE         // MAXII = ARG_MX[LL++]
 
 //calculate WS[1:NN] = FI + II + ARG_RI[1:NN, LL]
 mov RILL = ARG_RI
@@ -283,44 +288,49 @@ mov r2 = ar.lc
 #define NR r67
 #define ARG_RI r68
 #define ARG_RM r69
-#define ARG_FI r70
-#define ARG_FO r71
-#define ARG_WS r72
+#define ARG_MX r70	
+#define ARG_FI r71
+#define ARG_FO r72
+#define ARG_WS r73
 
+#define LL r80
+#define II r81
+#define WW r82
+#define MAXII r83
+#define RILL r84
+#define WS r85
+#define WS2 r86
+#define MAXUNRII r87
+#define NNM1 r88
+#define FO_BASE r89	
+
+	
 //copy or load input arguments
-ld4 NN = [r32]
+ld4 NN = [r32],4
+ld4 NR = [r32]
 mov ARG_WW = r33
-ld4 NR = [r34]
-mov ARG_RI = r35
-mov ARG_RM = r36
+mov ARG_RI = r34
+mov ARG_RM = r35
+mov ARG_MX = r36	
 mov ARG_FI = r37
-mov ARG_FO = r38
+mov FO_BASE = r38
 mov ARG_WS = r39;;
-
-#define LL r73
-#define II r74
-#define WW r75
-#define MAXII r77
-#define RILL r78
-#define WS r79
-#define WS2 r80
-#define MAXUNRII r81
-#define NNM1 r82
 
 cmp4.le p9,p0 = NR,r0;;
 (p9) br.cond.spnt.few .zend_LL //if (ll == 0) goto end
 
 mov LL = r0
-LDI II = [ARG_RM],ISIZE // II = ARG_RM[LL++]
+
 lfetch.nt1 [ARG_WW];;
-shladd ARG_FO = II,FSHIFT+1, ARG_FO
 adds NNM1 = -1, NN;;
 
 .zloop_NR:
 adds LL = 1, LL;;
 cmp4.ne p2,p3 = LL, NR;;
 
-LDI MAXII = [ARG_RM],ISIZE // MAXII = ARG_RM[LL++]
+LDI II = [ARG_RM],ISIZE                 // II = ARG_RM[LL++]
+shladd ARG_FO = II,FSHIFT+1, FO_BASE
+LDI MAXII = [ARG_MX],ISIZE              // MAXII = ARG_MX[LL++]
 
 //calculate WS[1:NN] = FI + II + ARG_RI[1:NN, LL]
 mov RILL = ARG_RI
