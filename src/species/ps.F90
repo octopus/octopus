@@ -115,11 +115,12 @@ contains
 
   ! ---------------------------------------------------------
   subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
-    type(ps_t),        intent(out) :: ps
-    character(len=10), intent(in)  :: label
-    integer,           intent(in)  :: flavour
-    integer,           intent(in)  :: lmax, lloc, ispin
-    FLOAT,             intent(in)  :: z
+    type(ps_t),        intent(out)   :: ps
+    character(len=10), intent(in)    :: label
+    integer,           intent(in)    :: flavour
+    integer,           intent(inout) :: lmax
+    integer,           intent(in)    :: lloc, ispin
+    FLOAT,             intent(in)    :: z
 
     type(ps_psf_t) :: ps_psf ! SIESTA pseudopotential
     type(ps_cpi_t) :: ps_cpi ! Fritz-haber pseudopotential
@@ -211,6 +212,7 @@ contains
       ps%z      = z
       ps%conf%z = z
       ps%kbc    = ps_upf%kb_nc
+      lmax      = ps_upf%l_max
       ps%l_max  = ps_upf%l_max
       ps%l_loc  = ps_upf%l_local
 
