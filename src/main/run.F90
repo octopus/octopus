@@ -37,6 +37,7 @@ module run_prog_m
   use phonons_lr_m
   use pol_lr_m
   use pulpo_m
+  use raman_m
   use restart_m
   use static_pol_m
   use system_m
@@ -112,6 +113,8 @@ contains
       call casida_run(sys, h, fromScratch)
     case(M_TD_TRANSPORT)
       call td_transport_run(sys, h, fromScratch)
+    case(M_RAMAN)
+      call raman_run(sys, h, fromscratch)
     case(M_PULPO_A_FEIRA)
       call pulpo_print()
     end select

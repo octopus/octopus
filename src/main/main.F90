@@ -108,6 +108,8 @@ program octopus
   !% Calculate van der Waals coefficients
   !%Option vib_modes 12
   !% Calculation of the vibrational modes.
+  !%Option raman 13
+  !% Calculation of Raman response properties
   !%Option recipe 99
   !% Prints out a tasty recipe
   !%End

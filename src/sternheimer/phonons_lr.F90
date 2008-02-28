@@ -54,7 +54,8 @@ module phonons_lr_m
   private
   public :: &
        phonons_lr_run,    &
-       phn_nm_wfs_tag
+       phn_nm_wfs_tag,    &
+       read_wfs
   
 contains
 

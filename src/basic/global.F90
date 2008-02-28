@@ -112,6 +112,7 @@ module global_m
     M_TD_TRANSPORT       =  10,  &
     M_VDW                =  11,  &
     M_PHONONS_LR         =  12,  &
+    M_RAMAN              =  13,  &
     M_PULPO_A_FEIRA      =  99
 
   ! the standard input and output
