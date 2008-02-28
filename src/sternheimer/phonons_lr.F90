@@ -58,16 +58,17 @@ module phonons_lr_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine phonons_lr_run(sys, h)
+  subroutine phonons_lr_run(sys, h, fromscratch)
     type(system_t),         intent(inout) :: sys
     type(hamiltonian_t),    intent(inout) :: h
+    logical,                intent(in)    :: fromscratch
 
     type(sternheimer_t) :: sh
     type(lr_t)          :: lr(1:1)
     type(phonons_t)     :: ph
     type(pert_t)        :: perturbation, dipole
 
-    integer :: natoms, ndim, iatom, idir, jatom, jdir, imat, jmat, iunit
+    integer :: natoms, ndim, iatom, idir, jatom, jdir, imat, jmat, iunit, ierr
     FLOAT, allocatable   :: infrared(:,:)
     FLOAT :: lir(1:MAX_DIM+1)
 
@@ -103,6 +104,13 @@ contains
 
     do iatom = 1, natoms
       do idir = 1, ndim
+
+        if (.not. fromscratch) then
+          message(1) = "Loading restart wave functions for linear response."
+          call write_info(1)
+          call restart_read(trim(tmpdir)//'vib_modes/'//trim(phn_wfs_tag(iatom, idir))//'_1',&
+               sys%st, sys%gr, sys%geo, ierr, lr = lr(1))
+        end if
 
         imat = phn_idx(ph, iatom, idir)
 
@@ -288,7 +296,7 @@ contains
     st%occ      = M_ZERO
 
     ! load wave-functions
-    call restart_read(trim(tmpdir)//'gs', st, gr, geo, ierr)  
+    call restart_read(trim(tmpdir)//'gs', st, gr, geo, ierr)
     if(ierr.ne.0) then
       message(1) = "Could not read KS orbitals from '"//trim(tmpdir)//"gs'"
       message(2) = "Please run a calculation of the ground state first!"
