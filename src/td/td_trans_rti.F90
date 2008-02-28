@@ -513,7 +513,7 @@ contains
     is_complex = .false.
     mat_loop: do j=1,np
       do i=1,np
-        if (abs(aimag(matrix(j,i))).gt.CNST(1-e10)) then
+        if (abs(aimag(matrix(j,i))).gt.CNST(1e-10)) then
           is_complex = .true.
           exit mat_loop
         end if
