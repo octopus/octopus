@@ -53,8 +53,9 @@ module phonons_lr_m
 
   private
   public :: &
-       phonons_lr_run
-
+       phonons_lr_run,    &
+       phn_nm_wfs_tag
+  
 contains
 
   ! ---------------------------------------------------------
@@ -69,11 +70,13 @@ contains
     type(pert_t)        :: perturbation, dipole
 
     integer :: natoms, ndim, iatom, idir, jatom, jdir, imat, jmat, iunit, ierr
+    integer :: nnm
     FLOAT, allocatable   :: infrared(:,:)
-    FLOAT :: lir(1:MAX_DIM+1)
 
     natoms = sys%geo%natoms
     ndim = sys%NDIM
+
+    nnm = natoms*ndim
 
     !CONSTRUCT
 
@@ -123,7 +126,7 @@ contains
 
         do jatom = 1, natoms
           do jdir = 1, ndim
-            
+
             jmat = phn_idx(ph, jatom, jdir)
 
             call pert_setup_atom(perturbation, jatom, iatom)
@@ -133,10 +136,10 @@ contains
                  -dpert_expectation_value(perturbation,sys%gr,sys%geo,h,sys%st, lr(1)%ddl_psi, sys%st%dpsi)&
                  -dpert_expectation_value(perturbation,sys%gr,sys%geo,h,sys%st, sys%st%dpsi, lr(1)%ddl_psi)&
                  -dpert_expectation_value(perturbation,sys%gr,sys%geo,h,sys%st, sys%st%dpsi, sys%st%dpsi, pert_order = 2)
-                     
+
           end do
         end do
-        
+
         do jdir = 1, ndim
           call pert_setup_dir(dipole, jdir)
           infrared(imat, jdir) = &
@@ -146,42 +149,23 @@ contains
 
       end do
     end do
-    
+
     call pert_end(perturbation)
     call pert_end(dipole)
 
     call phonons_normalize_dm(ph, sys%geo)
     call phonons_diagonalize_dm(ph)
     call phonons_output(ph, "_lr")
+    call calc_infrared
 
-    !calculate infrared intensities
-
-    iunit = io_open('phonons/infrared', action='write')
-
-    write(iunit, '(a)') '#   freq [cm^-1]     <x>           <y>           <z>           average'
-
-    do iatom = 1, natoms
-      do idir = 1, ndim
-        
-        imat = phn_idx(ph, iatom, idir)
-
-         do jdir = 1, ndim
-           lir(jdir) = dot_product(infrared(:, jdir), ph%vec(:, imat))
-         end do
-         lir(ndim+1) = sqrt(sum(lir(1:ndim)**2))
-         
-         write(iunit, '(5f14.5)') sqrt(abs(ph%freq(imat)))*hartree_to_cm_inv, lir(1:ndim+1)
-      end do
-    end do
-
-    call io_close(iunit)
+    call vib_modes_wavefunctions
 
     !DESTRUCT
 
     deallocate(infrared)
 
     call lr_dealloc(lr(1))
-    
+
     call phonons_end(ph)
 
     call sternheimer_end(sh)
@@ -194,64 +178,132 @@ contains
 
     ! ---------------------------------------------------------
     subroutine parse_input()
-      
+
       call push_sub('phonons_lr.parse_input')
 
       call pop_sub()
 
     end subroutine parse_input
-    
+
     subroutine build_ionic_dm()
       FLOAT :: ac, xi(1:MAX_DIM), xj(1:MAX_DIM), xk(1:MAX_DIM), r2
       integer :: katom
 
       do iatom = 1, natoms
         do idir = 1, sys%NDIM
-          
+
           do jatom = 1, natoms
             do jdir = 1, sys%NDIM         
-              
+
               xi(1:MAX_DIM) = sys%geo%atom(iatom)%x(1:MAX_DIM)
 
               !ion - ion
               if( iatom == jatom) then 
-                
+
                 ac = M_ZERO
                 do katom = 1, natoms
                   if ( katom == iatom ) cycle
-                  
+
                   xk(1:MAX_DIM) = sys%geo%atom(katom)%x(1:MAX_DIM)
                   r2 = sum((xi(1:sys%NDIM) - xk(1:sys%NDIM))**2)
-                  
+
                   ac = ac + sys%geo%atom(iatom)%spec%Z_val * sys%geo%atom(katom)%spec%Z_val &
                        /(r2**CNST(1.5)) *(&
                        -ddelta(idir, jdir) + &
                        (M_THREE*(xi(idir)-xk(idir))*(xi(jdir)-xk(jdir)))/r2 &
                        )
-                  
+
                 end do
 
               else ! iatom /= jatom
-                
+
                 xj(1:MAX_DIM) = sys%geo%atom(jatom)%x(1:MAX_DIM)
-                
+
                 r2 = sum((xi(1:sys%NDIM) - xj(1:sys%NDIM))**2)
                 ac = sys%geo%atom(iatom)%spec%Z_val * sys%geo%atom(jatom)%spec%Z_val &
                      /(r2**CNST(1.5))*(&
                      ddelta(idir, jdir) - (M_THREE*(xi(idir)-xj(idir))*(xi(jdir)-xj(jdir)))/r2)
 
               end if
-                
-            
+
+
               ph%dm(phn_idx(ph, iatom, idir), phn_idx(ph, jatom, jdir)) = -ac
 
             end do
           end do
         end do
       end do
-      
+
     end subroutine build_ionic_dm
-    
+
+    subroutine calc_infrared
+      FLOAT :: lir(1:MAX_DIM+1)
+
+      !calculate infrared intensities
+
+      iunit = io_open('phonons/infrared', action='write')
+
+      write(iunit, '(a)') '#   freq [cm^-1]     <x>           <y>           <z>           average'
+
+      do iatom = 1, natoms
+        do idir = 1, ndim
+
+          imat = phn_idx(ph, iatom, idir)
+
+          do jdir = 1, ndim
+            lir(jdir) = dot_product(infrared(:, jdir), ph%vec(:, imat))
+          end do
+          lir(ndim+1) = sqrt(sum(lir(1:ndim)**2))
+
+          write(iunit, '(5f14.5)') sqrt(abs(ph%freq(imat)))*hartree_to_cm_inv, lir(1:ndim+1)
+        end do
+      end do
+
+      call io_close(iunit)
+
+    end subroutine calc_infrared
+
+    subroutine vib_modes_wavefunctions
+      ! now calculate the wavefunction associated to each normal mode
+      type(lr_t) :: lrtmp
+      integer :: ik, ist, idim, inm
+
+      call lr_init(lrtmp)
+      call lr_allocate(lrtmp, sys%st, sys%gr%m)
+
+      lr(1)%ddl_psi = M_ZERO
+
+      do inm = 1, nnm
+
+        do iatom = 1, natoms
+          do idir = 1, ndim
+
+            imat = phn_idx(ph, iatom, idir)
+
+            call restart_read(trim(tmpdir)//'vib_modes/'//trim(phn_wfs_tag(iatom, idir))//'_1',&
+                 sys%st, sys%gr, sys%geo, ierr, lr = lrtmp)
+            
+            do ik = 1, sys%st%d%nik
+              do ist = sys%st%st_start, sys%st%st_end
+                do idim = 1, sys%st%d%dim
+
+                  call lalg_axpy(sys%gr%m%np, ph%vec(imat, inm), lrtmp%ddl_psi(:, idim, ist, ik), lr(1)%ddl_psi(:, idim, ist, ik))
+                  
+                end do
+              end do
+            end do
+
+          end do
+        end do
+        
+        call restart_write(trim(tmpdir)//'vib_modes/'//trim(phn_nm_wfs_tag(inm))//'_1',&
+             sys%st, sys%gr, ierr, lr = lr(1))
+        
+      end do
+
+      call lr_dealloc(lrtmp)
+
+    end subroutine vib_modes_wavefunctions
 
   end subroutine phonons_lr_run
 
@@ -312,7 +364,7 @@ contains
     
     call push_sub('phonons_lr.phn_rho_tag')
     
-    write(str, '(a,i1,a,i1)') 'phn_rho_', iatom, '_',  dir
+    write(str, '(a,i4.4,a,i1)') 'phn_rho_', iatom, '_',  dir
 
     call pop_sub()
 
@@ -323,11 +375,22 @@ contains
 
     call push_sub('phonons_lr.phn_wfs_tag')
 
-    write(str, '(a,i1,a,i1)') "phn_wfs_", iatom, "_", dir
+    write(str, '(a,i4.4,a,i1)') "phn_wfs_", iatom, "_", dir
 
     call pop_sub()
     
   end function phn_wfs_tag
+
+  character(len=100) function phn_nm_wfs_tag(inm) result(str)
+    integer, intent(in) :: inm
+
+    call push_sub('phonons_lr.phn_wfs_tag')
+
+    write(str, '(a,i5.5)') "phn_nm_wfs_", inm
+
+    call pop_sub()
+    
+  end function phn_nm_wfs_tag
 
 end module phonons_lr_m
 
