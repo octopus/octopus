@@ -203,7 +203,7 @@ contains
     if ( der%dim > 1) then
       call loct_parse_logical(check_inp('OverlapDerivatives'), .true., der%overlap)
     else
-      ! for the moment we can't do this for 1D
+      ! for the moment we cannot do this for 1D
       der%overlap = .false.
     end if
 #endif

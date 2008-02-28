@@ -433,7 +433,7 @@ contains
     ALLOCATE(tmp(np,np),np**2)
     ALLOCATE(d(2*np),2*np)
 
-    ! Algorithm taken from A. Umerski, Closed-form solutions to surface Green's functions
+    ! Algorithm taken from A. Umerski, Closed-form solutions to surface Green`s functions
     ! 1. create matrix x ( x = {{0,offdiag^(-1)},{-offdiag^T,(energy-diag)*offdiag}} )
     ! 2. compute diagonalization matrix s, s^(-1)*x*s = d
     ! 3. extract submatrices ( s = {{o1,o2},{o3,o4}}; d = {{d1,0},{0,d2}} )
