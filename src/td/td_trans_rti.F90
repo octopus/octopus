@@ -457,7 +457,7 @@ contains
     ! use sub_d as tmp variable
     sub_d = -diag
     do i=1, np
-      sub_d(i,i) = sub_d(i,i) + energy + M_TEN*M_EPSILON*M_zI
+      sub_d(i,i) = sub_d(i,i) + energy + CNST(1e-10)*M_zI
     end do
     if (il.eq.LEFT) then
       call lalg_trmm(np,np,'U','N','R',M_z1,sub_o,sub_d)
@@ -513,7 +513,7 @@ contains
     is_complex = .false.
     mat_loop: do j=1,np
       do i=1,np
-        if (abs(aimag(matrix(j,i))).gt.M_EPSILON) then
+        if (abs(aimag(matrix(j,i))).gt.CNST(1-e10)) then
           is_complex = .true.
           exit mat_loop
         end if
@@ -596,7 +596,7 @@ contains
       call write_fatal(1)
     end if
     ! 1.5 diagonalize
-    im_g_cc(i,i) = im_g_cc(i,i) / dos
+    im_g_cc(:, :) = im_g_cc(:, :) / dos
     call lalg_eigensolve(NP, im_g_cc, im_g_cc, eigenvalues)
     ! 1.6 take the physical important eigenvalues and their corresponding eigenvectors = ext. eigenstates
 
