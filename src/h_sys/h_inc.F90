@@ -168,7 +168,7 @@ subroutine X(exchange_operator) (h, gr, psi, hpsi, ist, ik)
       if(h%st%occ(j, ik) <= M_ZERO) cycle
 
       ! in Hartree we just remove the self-interaction
-      if(h%theory_level==HARTREE.and.j.ne.ist) cycle
+      if(h%theory_level == HARTREE .and. j .ne. ist) cycle
 
       pot = M_ZERO
       do k = 1, gr%m%np
@@ -185,7 +185,7 @@ subroutine X(exchange_operator) (h, gr, psi, hpsi, ist, ik)
       if(h%st%occ(j, ik) <= M_ZERO) cycle
 
       ! in Hartree we just remove the self-interaction
-      if(h%theory_level==HARTREE.and.j.ne.ist) cycle
+      if(h%theory_level == HARTREE .and. j .ne. ist) cycle
 
       pot = M_ZERO
       do k = 1, gr%m%np
@@ -560,29 +560,33 @@ subroutine X(vlpsi) (h, m, psi, hpsi, ik)
   R_TYPE,              intent(in)    :: psi(:,:)  ! psi(NP_PART, h%d%dim)
   R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, h%d%dim)
 
-  integer :: idim
+  integer :: idim, ip
 
   call profiling_in(C_PROFILING_VLPSI)
   call push_sub('h_inc.Xvlpsi')
 
   select case(h%d%ispin)
   case(UNPOLARIZED)
-    !$omp parallel workshare
-    hpsi(1:m%np, 1) = hpsi(1:m%np, 1) + (h%vhxc(1:m%np, 1) + h%ep%vpsl(1:m%np))*psi(1:m%np, 1)
-    !$omp end parallel workshare
+    !$omp parallel do
+    do ip = 1, m%np
+      hpsi(ip, 1) = hpsi(ip, 1) + (h%vhxc(ip, 1) + h%ep%vpsl(ip))*psi(ip, 1)
+    end do
+    !$omp end parallel do
   case(SPIN_POLARIZED)
     if(modulo(ik+1, 2) == 0) then ! we have a spin down
-      hpsi(1:m%np, 1) = hpsi(1:m%np, 1) + (h%vhxc(1:m%np, 1) + h%ep%vpsl(1:m%np))*psi(1:m%np, 1)
+      do ip = 1, m%np
+        hpsi(ip, 1) = hpsi(ip, 1) + (h%vhxc(ip, 1) + h%ep%vpsl(ip))*psi(ip, 1)
+      end do
     else
-      hpsi(1:m%np, 1) = hpsi(1:m%np, 1) + (h%vhxc(1:m%np, 2) + h%ep%vpsl(1:m%np))*psi(1:m%np, 1)
+      do ip = 1, m%np
+        hpsi(ip, 1) = hpsi(ip, 1) + (h%vhxc(ip, 2) + h%ep%vpsl(ip))*psi(ip, 1)
+      end do
     end if
   case(SPINORS)
-    hpsi(1:m%np, 1) = hpsi(1:m%np, 1) + (h%vhxc(1:m%np, 1) + &
-      h%ep%vpsl(1:m%np))*psi(1:m%np, 1) +                    &
-      (h%vhxc(1:m%np, 3) + M_zI*h%vhxc(1:m%np, 4))*psi(1:m%np, 2)
-    hpsi(1:m%np, 2) = hpsi(1:m%np, 2) + (h%vhxc(1:m%np, 2) + &
-      h%ep%vpsl(1:m%np))*psi(1:m%np, 2) +                    &
-      (h%vhxc(1:m%np, 3) - M_zI*h%vhxc(1:m%np, 4))*psi(1:m%np, 1)
+    do ip = 1, m%np
+      hpsi(ip, 1) = hpsi(ip, 1) + (h%vhxc(ip, 1) + h%ep%vpsl(ip))*psi(ip, 1) + (h%vhxc(ip, 3) + M_zI*h%vhxc(ip, 4))*psi(ip, 2)
+      hpsi(ip, 2) = hpsi(ip, 2) + (h%vhxc(ip, 2) + h%ep%vpsl(ip))*psi(ip, 2) + (h%vhxc(ip, 3) - M_zI*h%vhxc(ip, 4))*psi(ip, 1)
+    end do
   end select
 
   if (associated(h%ep%E_field)) then
