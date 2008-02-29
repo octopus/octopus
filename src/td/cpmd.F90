@@ -91,12 +91,12 @@ contains
 
     nullify(this%doldpsi, this%zoldpsi)
 
-    size = gr%m%np * st%d%dim * st%lnst * st%d%nik
+    size = gr%m%np_part * st%d%dim * st%lnst * st%d%nik
 
     if(wfs_are_real(st)) then
-      ALLOCATE(this%doldpsi(gr%m%np, st%d%dim, st%st_start:st%st_end, st%d%nik), size)
+      ALLOCATE(this%doldpsi(gr%m%np_part, st%d%dim, st%st_start:st%st_end, st%d%nik), size)
     else
-      ALLOCATE(this%zoldpsi(gr%m%np, st%d%dim, st%st_start:st%st_end, st%d%nik), size)
+      ALLOCATE(this%zoldpsi(gr%m%np_part, st%d%dim, st%st_start:st%st_end, st%d%nik), size)
     end if
 
     call pop_sub()
