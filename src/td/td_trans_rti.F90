@@ -83,6 +83,7 @@ module td_trans_rti_m
 
     CMPLX, pointer   :: st_intface(:, :, :, :, :) ! np_intf, nst, nik, nleads, max_iter
     CMPLX, pointer   :: st_sincos(:, :, :) ! np, (sin=1;cos=2,modsin=3,modcos=4), nleads
+    CMPLX, pointer   :: st_psi0(:, :, :, :, :, :) ! np, ndim, nst, nik, nleads, (lead=1;center=2)
     FLOAT, pointer   :: st_phase(:, :, :)   ! nst, nik, nleads; phaseshift of lead eigenfunction at the interface
 
     type(trans_lead_t) :: lead
@@ -208,9 +209,9 @@ contains
       energy = energy + M_HALF*(M_PI/(M_TWO*(gr%sb%lsize(id)+gr%sb%h(id))))**2
 !      energy = energy + M_ONE-cos(M_PI/(M_TWO*(gr%sb%lsize(id)+gr%sb%h(id))))
     end do
-
-    call source_init(trans%src_factor, trans%st_sincos, trans%st_phase, dt, energy, q, &
-                     max_iter, trans%intface%np, st%nst, st%d%nik, gr, gr%f_der%der_discr%order)
+energy = 0.2
+    call source_init(st, trans%src_factor, trans%st_sincos, trans%st_psi0, trans%st_phase, dt, energy, q, &
+                     max_iter, trans%intface%np, st%nst, st%d%nik, gr, gr%f_der%der_discr%order, NP)
 
     !call calculate_initial_states() in init_wfs()
     !call match_initial_states_to_lead() in cn_src_mem_dt
@@ -254,7 +255,7 @@ contains
 
     call intface_end(trans%intface)
     call lead_end(trans%lead)
-    call source_end(trans%src_factor, trans%st_sincos, trans%st_phase)
+    call source_end(trans%src_factor, trans%st_sincos, trans%st_phase, trans%st_psi0)
     call memory_end(trans%mem_coeff, trans%mem_sp_coeff, trans%diag, trans%offdiag, trans%mem_s, trans%sp2full_map)
 
     call pop_sub()
@@ -526,7 +527,8 @@ contains
   ! ---------------------------------------------------------
   ! compute the extended eigenstate(s) with imaginary part of the green function
   ! needs much memory: matrix do diagonalize has the size np**2 
-  subroutine ext_eigenst_imag_green(gr, np, diag, offdiag, order, energy, lead_pot, dx, st, phase)
+  subroutine ext_eigenst_imag_green(h, gr, np, diag, offdiag, order, energy, lead_pot, dx, st, phase, ik)
+    type(hamiltonian_t), intent(in) :: h
     type(grid_t),   intent(in)      :: gr
     integer,        intent(in)      :: np                      ! number of interface points
     CMPLX,          intent(in)      :: diag(np, np, NLEADS)    ! lead hamiltonian (diagonal part)
@@ -537,6 +539,7 @@ contains
     FLOAT,          intent(in)      :: dx                      ! spacing
     type(states_t), intent(inout)   :: st                      ! states
     FLOAT,          intent(inout)   :: phase(:, :, :)          ! phaseshift at interface
+    integer,        intent(in)      :: ik                      ! the index of the k-point
 
     FLOAT, allocatable :: der_coeff(:, :) ! the weights of the derivative
     CMPLX, allocatable :: green_l(:,:,:)
@@ -544,7 +547,7 @@ contains
     FLOAT, allocatable :: im_g_cc(:, :) ! imag of g_cc
     FLOAT, allocatable :: eigenvalues(:)
     integer            :: i
-    FLOAT              :: eta, dos
+    FLOAT              :: eta, dos, q, fac
 
     call push_sub('td_trans_mem.ext_eigenst_imag_green')
 
@@ -568,13 +571,16 @@ contains
     g_cc = M_z0
     call nl_operator_op_to_matrix_cmplx(gr%f_der%der_discr%lapl, g_cc)
     g_cc = M_HALF*g_cc ! -H_cc
-! FIXME: add potential
+! FIXME: add all potentials
+    do i=1, NP
+      g_cc(i,i) = g_cc(i,i) -  h%vhxc(i, ik) - h%ep%vpsl(i)
+    end do
     if (is_complex(green_l(:,:,LEFT),np).or.is_complex(green_l(:,:,RIGHT),np)) then
       eta = M_z0
     else
-      eta = CNST(1E-7) ! check if not to small
-      message(1) = 'Green function has no imaginary part.'
-      message(2) = 'Try smaller spacing, lower energy or higher discretization order.'
+      eta = CNST(1E-10) ! check if not to small
+      message(1) = 'Green function has no imaginary part!'
+      message(2) = 'Energy probably to low or to high.'
       call write_warning(2)
     end if
     do i=1, NP
@@ -592,20 +598,36 @@ contains
      dos = dos + im_g_cc(i,i)
     end do
     if (dos.eq.M_ZERO) then
-      message(1) = 'Density of states for Im(G_cc) is zero, can not continue!'
-      call write_fatal(1)
+      message(1) = 'Error in calculating the extended eigenstate:'
+      message(2) = 'Density of states for Im(G_cc) is zero, can not continue!'
+      call write_fatal(2)
     end if
     ! 1.5 diagonalize
     im_g_cc(:, :) = im_g_cc(:, :) / dos
     call lalg_eigensolve(NP, im_g_cc, im_g_cc, eigenvalues)
     ! 1.6 take the physical important eigenvalues and their corresponding eigenvectors = ext. eigenstates
+    ! since the lead potentials must both be equal at t=0, the number of states is always 2 (or 0)
+    if (abs(eigenvalues(NP)+eigenvalues(NP-1)-M_ONE).gt.CNST(1e-10)) then
+      message(1) = 'Error in calculating the extended eigenstate:'
+      message(2) = 'The two largest eigenvalues do not add up to 1!'
+      call write_fatal(2)
+    end if
+    ! yet only tight binding
+    st%zpsi(:,1,st%st_start,ik) = im_g_cc(:,NP)
+    st%zpsi(:,1,st%st_start+1,ik) = im_g_cc(:,NP-1)
 
+write(*,*) 'state 1', st%zpsi(:,1,st%st_start,ik)
+write(*,*) 'state 2', st%zpsi(:,1,st%st_start+1,ik)
     ! 2. calculate phase shift of the plane waves in the leads (eq. (41) in paper)
-    !q = M_PI/(gr%sb%lsize(1)-(order-1)*dx)
-    !call calculate_phase_shift(order, NP, q, st, u(0,:), der_coeff, phase)
+    q = sqrt(M_TWO*(energy-lead_pot(LEFT)))
+!    q = M_PI/(gr%sb%lsize(1)-(order-1)*dx)
+    call calculate_phase_shift(order, NP, q, st, lead_pot, der_coeff, phase)
 
     ! 3. calculate the scaling to match to the lead eigenstates
-    !fac = scaling_factor(st_phase(st%st_start, 1, :), st%zpsi(:,1,st%st_start,1), np, order-1, der_coeff, 2*order+1, q)
+    fac = scaling_factor(phase(st%st_start, 1, :), st%zpsi(:,1,st%st_start,ik), np, order-1, der_coeff, 2*order+1, q)
+    st%zpsi(:,1,st%st_start,ik) = fac*st%zpsi(:,1,st%st_start,ik)
+    fac = scaling_factor(phase(st%st_start+1, 1, :), st%zpsi(:,1,st%st_start,ik), np, order-1, der_coeff, 2*order+1, q)
+    st%zpsi(:,1,st%st_start,ik) = fac*st%zpsi(:,1,st%st_start,ik)
     !write(6,*) fac
 
   ! 3.1 calculate the derivatives at the boundaries
@@ -624,7 +646,8 @@ contains
 
   ! ---------------------------------------------------------
   ! compute the extended eigenstate(s)
-  subroutine calculate_ext_eigenstate(gr, np, diag, offdiag, order, energy, lead_pot, dx, st, phase)
+  subroutine calculate_ext_eigenstate(h, gr, np, diag, offdiag, order, energy, lead_pot, dx, st, phase, ik)
+    type(hamiltonian_t), intent(in) :: h
     type(grid_t),   intent(in)      :: gr
     integer,        intent(in)      :: np                      ! number of interface points
     CMPLX,          intent(in)      :: diag(np, np, NLEADS)    ! lead hamiltonian (diagonal part)
@@ -635,6 +658,7 @@ contains
     FLOAT,          intent(in)      :: dx                      ! spacing
     type(states_t), intent(inout)   :: st                      ! states
     FLOAT,          intent(out)     :: phase(:, :, :)          ! phaseshift at interface
+    integer,        intent(in)      :: ik                      ! the index of the k-point
 
     integer  :: eigenstate_type
 
@@ -644,11 +668,11 @@ contains
 
     select case(eigenstate_type)
     case(1) ! reference implementation, only feasible in 1D (maybe 2D)
-      call ext_eigenst_imag_green(gr, np, diag, offdiag, order, energy, lead_pot, dx, st, phase)
+      call ext_eigenst_imag_green(h, gr, np, diag, offdiag, order, energy, lead_pot, dx, st, phase, ik)
     case(2) ! method by Florian Lorenzen and Heiko Appel
-      !call ext_eigenstate_lippmann_schwinger(h, np, gr_np, diag, offdiag, order, energy, lead_pot, dx, st, phase)
+      !call ext_eigenstate_lippmann_schwinger(h, np, gr_np, diag, offdiag, order, energy, lead_pot, dx, st, phase, ik)
     case(3) ! method by Gianluca Stefannuci
-     !call ext_eigenstate_stefanucci(h, np, gr_np, diag, offdiag, order, energy, lead_pot, dx, st, phase)
+     !call ext_eigenstate_stefanucci(h, np, gr_np, diag, offdiag, order, energy, lead_pot, dx, st, phase, ik)
     end select
 
     call pop_sub()
@@ -659,7 +683,7 @@ contains
   ! Only non-interacting electrons for the moment, so no
   ! predictor-corrector scheme.
   subroutine cn_src_mem_dt(intf, mem_type, mem, sp_mem, st_intf, ks, h, st, gr, dt,  &
-    t, max_iter, sm_u, u, timestep, src_factor, diag, offdiag, st_sincos, st_phase, mem_s, &
+    t, max_iter, sm_u, u, timestep, src_factor, diag, offdiag, st_sincos, st_psi0, st_phase, mem_s, &
     additional_terms, mapping)
     type(intface_t), target,     intent(in)    :: intf
     type(states_t),              intent(inout) :: st
@@ -680,6 +704,7 @@ contains
     CMPLX, target,               intent(in)    :: diag(intf%np, intf%np, NLEADS)
     CMPLX, target,               intent(in)    :: offdiag(intf%np, intf%np, NLEADS)   ! hopping operator V^T
     CMPLX, target,               intent(in)    :: st_sincos(:, :, :) ! sin & cos vectors
+    CMPLX, target,               intent(in)    :: st_psi0(:, :, :, :, :, :)
     FLOAT, target,               intent(inout) :: st_phase(:, :, :)   ! phaseshift at interface
     CMPLX, target,               intent(in)    :: mem_s(intf%np, intf%np, 2, NLEADS)
     integer,                     intent(in)    :: additional_terms
@@ -725,8 +750,9 @@ contains
 if (m.eq.0) then
 ! FIXME: this does NOT belong here
   energy = M_TWO/M_TEN
-  call calculate_ext_eigenstate(gr, intf%np, diag, offdiag, order, energy, u(0,:), gr%sb%h(1), st, st_phase)
-
+  do ik = 1, st%d%nik
+    !call calculate_ext_eigenstate(h, gr, intf%np, diag, offdiag, order, energy, u(0,:), gr%sb%h(1), st, st_phase, ik)
+  end do
 end if
 !write(*,*) 'left  center', st%zpsi(1, 1, 1, 1)
 !write(*,*) 'right center', st%zpsi(NP, 1, 1, 1)
@@ -753,8 +779,10 @@ end if
           ! 2. Add source term
           if(iand(additional_terms, src_term_flag).ne.0) then
             if (mem_type.eq.1) then
-              call calc_source_wf(max_iter, m, il, st_phase(ist, ik, il), offdiag(:, :, il), src_factor(:), &
-                mem(:, :, :, il), dt, intf%np, st_sincos(:, :, il), tmp_wf(:))
+!              call calc_source_wf(max_iter, m, il, st_phase(ist, ik, il), offdiag(:, :, il), src_factor(:), &
+!                mem(:, :, :, il), dt, intf%np, st_sincos(:, :, il), tmp_wf(:))
+              call calc_source_wf_new(max_iter, m, il, offdiag(:, :, il), src_factor(:), &
+                mem(:, :, :, il), dt, intf%np, st_psi0(:,1,ist,ik,:,il), tmp_wf(:))
             else
               ! TODO
             end if

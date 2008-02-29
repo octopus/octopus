@@ -46,6 +46,7 @@ module td_trans_src_m
     source_init,        &
     source_end,         &
     calc_source_wf,     &
+    calc_source_wf_new, &
     deriv_coeffs
 
 contains
@@ -93,28 +94,36 @@ contains
 
   ! ---------------------------------------------------------
   ! Allocate memory for extended groundstate and calculate eigenstates of the lead
-  subroutine source_init(src_factor, st_sincos, st_phase, dt, energy, qx, max_iter, inp, nst, nik, gr, order)
-    CMPLX, pointer      :: src_factor(:)   ! max_iter
-    CMPLX, pointer      :: st_sincos(:, :, :)   ! inp, (sin=1;cos=2;ext_sin=3;ext_cos=4), nleads
+  subroutine source_init(st, src_factor, st_sincos, st_psi0, st_phase, dt, energy, qx, max_iter, inp, nst, nik, gr, order, np)
+    type(states_t),  intent(in)  :: st
+    CMPLX, pointer      :: src_factor(:)       ! max_iter
+    CMPLX, pointer      :: st_sincos(:, :, :)  ! np, (sin=1;cos=2;ext_sin=3;ext_cos=4), nleads
+    CMPLX, pointer      :: st_psi0(:, :, :, :, : ,:)  ! np, ndim, nst, nik, nleads, (lead=1;center=2), nleads 
     FLOAT, pointer      :: st_phase(:, :, :)   ! nleads, phase at the interface
-    FLOAT, intent(in)   :: dt, energy, qx ! timestep, energy
-    integer, intent(in) :: max_iter, inp, nst, nik, order
+    FLOAT, intent(in)   :: dt, energy, qx      ! timestep, energy
+    integer, intent(in) :: max_iter, inp, nst, nik, order, np
     type(grid_t),  intent(in)  :: gr
 
     CMPLX     :: qlr, factor
     integer   :: im, id, length
-    FLOAT     :: en, spacing, x, sqrt2
+    FLOAT     :: en, spacing, x, sqrt2, tmp
     integer, pointer :: lxyz(:,:)
     FLOAT :: lsize(3)
     FLOAT, allocatable :: coeffs(:,:)
+    CMPLX, allocatable :: ext_psi0(:,:)
+    integer     :: ierr
+
     call push_sub('td_trans_src.source_init')
 
     sqrt2 = sqrt(M_TWO)
     length = 2*order+1
     ALLOCATE(src_factor(0:max_iter), max_iter+1)
     ALLOCATE(st_sincos(1:inp, 4, NLEADS), inp*4*NLEADS)
+    ALLOCATE(st_psi0(1:inp, 1, st%st_start:st%st_end, st%d%nik, NLEADS, 2), inp*1*(st%st_end-st%st_start)*st%d%nik*2 )
+    ALLOCATE(ext_psi0(np+2, 1) , np+2)
     ALLOCATE(st_phase(nst, nik, NLEADS), NLEADS*nst*nik)
     ALLOCATE(coeffs(length,NLEADS),length*NLEADS)
+    
     lxyz => gr%m%lxyz
     lsize = gr%sb%lsize
     spacing = gr%sb%h(1)
@@ -126,6 +135,12 @@ contains
     do im=1, max_iter
       src_factor(im) = src_factor(im-1) * factor
     end do
+    st_psi0 = M_z0
+    call read_binary(NP+2, ext_psi0, 3, ierr, '/home/nitsche/octopus_n/oct_extended_initial_state.obf')
+    st_psi0(1, 1, 1, 1, 1 ,1) = ext_psi0(1,1) ! np, ndim, nst, nik, nleads, (lead=1;center=2), nleads 
+    st_psi0(1, 1, 1, 1, 2 ,1) = ext_psi0(2,1) ! np, ndim, nst, nik, nleads, (lead=1;center=2), nleads 
+    st_psi0(1, 1, 1, 1, 1 ,2) = ext_psi0(np+2,1) ! np, ndim, nst, nik, nleads, (lead=1;center=2), nleads 
+    st_psi0(1, 1, 1, 1, 2 ,2) = ext_psi0(np+1,1) ! np, ndim, nst, nik, nleads, (lead=1;center=2), nleads 
 
     ! now generate the extended eigenstate with separated x-wavefunction
     ! yet only for a box psi=psi(x)*psi(y)*psi(z)
@@ -179,7 +194,7 @@ contains
     ! 1.1 calculate the derivatives at the boundaries
     ! 2. match at interface in order to rescale the central wave function
 
-    deallocate(coeffs)
+    deallocate(coeffs, ext_psi0)
     call pop_sub()
   end subroutine source_init
 
@@ -227,13 +242,55 @@ contains
     call pop_sub()
   end subroutine calc_source_wf
 
+  ! ---------------------------------------------------------
+  ! calculates the source-wavefunction for the source-term
+  ! f(m)*offdiag*psi_lead + i dt/2 sum[k=0,m](f(m-k)(mem(k)+mem(k-1))psi_c(0))
+  subroutine calc_source_wf_new(max_iter, m, il, offdiag, factor, mem, dt, np, psi0, src_wf)
+    integer, intent(in)   :: max_iter ! the maximum timestep
+    integer, intent(in)   :: m    ! the m-th timestep
+    integer, intent(in)   :: np   ! intf%np, the size of the wave functions
+    integer, intent(in)   :: il   ! which lead
+    CMPLX,   intent(in)   :: offdiag(:, :) ! the matrix V^T
+    CMPLX,   intent(in)   :: factor(0:np) ! factor(m) = (1 - i dt/2 en)^m / (1 + i dt/2 en)^(m+1)
+    CMPLX,   intent(in)   :: mem(1:np, 1:np, 0:max_iter) ! the memory coefficients
+    FLOAT,   intent(in)   :: dt ! time step
+    CMPLX,   intent(in)   :: psi0(:, :)! np, (lead=1; center=2)
+    CMPLX,   intent(out)  :: src_wf(:) ! the resulting wave function
+    
+    CMPLX,   allocatable   :: temp(:)
+    integer                :: k
+
+    call push_sub('td_trans_src.calc_source_wf_new')
+
+    ALLOCATE(temp(np), np)
+! FIXME: use recursive relation
+    ! factor(m)*V^T*psi_lead -> src_wf
+    src_wf(:) = factor(m)*psi0(:,1)
+    if (il.eq.LEFT) then
+      call ztrmv('U','N','N',np,offdiag,np,src_wf,1)
+    else
+      call ztrmv('L','N','N',np,offdiag,np,src_wf,1)
+    end if
+    temp(:) = M_zI*M_HALF*dt*psi0(:,2)
+    do k=0, m
+      call zsymv('U', np, factor(m-k), mem(:,:,k), np, temp, 1, M_z1, src_wf, 1)
+      if (k.gt.0) then
+        call zsymv('U', np, factor(m-k), mem(:,:,k-1), np, temp, 1, M_z1, src_wf, 1)
+      end if
+    end do
+
+    deallocate(temp)
+    call pop_sub()
+  end subroutine calc_source_wf_new
+
 
   ! ---------------------------------------------------------
   ! Free arrays.
-  subroutine source_end(src_factor, st_sincos, st_phase)
+  subroutine source_end(src_factor, st_sincos, st_phase, st_psi0)
     CMPLX, pointer :: src_factor(:)   ! max_iter
     CMPLX, pointer :: st_sincos(:, :, :)
     FLOAT, pointer :: st_phase(:, :, :)
+    CMPLX, pointer :: st_psi0(:, :, :, :, :, :)
 
     call push_sub('td_trans_src.source_end')
 
@@ -250,6 +307,11 @@ contains
     if(associated(st_phase)) then
       deallocate(st_phase)
       nullify(st_phase)
+    end if
+
+    if(associated(st_psi0)) then
+      deallocate(st_psi0)
+      nullify(st_psi0)
     end if
 
     call pop_sub()
