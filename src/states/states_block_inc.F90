@@ -24,8 +24,8 @@
 subroutine X(states_blockt_mul)(mesh, st, psi1, psi2, res, xpsi1, xpsi2, symm)
   type(mesh_t),      intent(in)  :: mesh
   type(states_t),    intent(in)  :: st
-  R_TYPE, target,    intent(in)  :: psi1(mesh%np_part, st%d%dim, st%st_start:st%st_end)
-  R_TYPE, target,    intent(in)  :: psi2(mesh%np_part, st%d%dim, st%st_start:st%st_end)
+  R_TYPE,            intent(in)  :: psi1(mesh%np_part, st%d%dim, st%st_start:st%st_end)
+  R_TYPE,            intent(in)  :: psi2(mesh%np_part, st%d%dim, st%st_start:st%st_end)
   R_TYPE,            intent(out) :: res(:, :)
   integer, optional, intent(in)  :: xpsi1(:)
   integer, optional, intent(in)  :: xpsi2(:)

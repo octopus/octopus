@@ -817,7 +817,7 @@ subroutine dsym_inverter(uplo, n, a)
     end subroutine DLAPACK(sytri)
   end interface
 
-  integer :: info, i
+  integer :: info
   integer, allocatable :: ipiv(:)
   FLOAT, allocatable :: work(:)
 
@@ -866,7 +866,7 @@ subroutine zsym_inverter(uplo, n, a)
     end subroutine ZLAPACK(sytri)
   end interface
 
-  integer :: info, i
+  integer :: info
   integer, allocatable :: ipiv(:)
   CMPLX, allocatable :: work(:)
 

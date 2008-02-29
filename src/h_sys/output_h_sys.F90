@@ -404,8 +404,8 @@ contains
   contains
     ! ---------------------------------------------------------
     subroutine out_basins(ff, filename)
-      FLOAT, intent(in) :: ff(:)
-      character(len=*)  :: filename
+      FLOAT,            intent(in)    :: ff(:)
+      character(len=*), intent(in)    :: filename
 
       character(len=256) :: fname
       type(basins_t)     :: basins

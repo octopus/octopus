@@ -147,7 +147,7 @@ contains
   end subroutine sternheimer_init
 
   subroutine sternheimer_end(this)
-    type(sternheimer_t) :: this
+    type(sternheimer_t), intent(inout) :: this
 
     call linear_solver_end(this%solver)
     call scf_tol_end(this%scftol)
@@ -196,17 +196,17 @@ contains
 
 
   logical function sternheimer_add_fxc(this) result(r)
-    type(sternheimer_t) :: this
+    type(sternheimer_t), intent(in) :: this
     r = this%add_fxc
   end function sternheimer_add_fxc
 
   logical function sternheimer_add_hartree(this) result(r)
-    type(sternheimer_t) :: this
+    type(sternheimer_t), intent(in) :: this
     r = this%add_hartree
   end function sternheimer_add_hartree
 
   logical function sternheimer_has_converged(this) result(r)
-    type(sternheimer_t) :: this
+    type(sternheimer_t), intent(in) :: this
     r = this%ok
   end function sternheimer_has_converged
 

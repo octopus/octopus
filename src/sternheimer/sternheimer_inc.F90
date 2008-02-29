@@ -235,8 +235,8 @@ end subroutine X(sternheimer_solve)
 
 subroutine X(sternheimer_calc_hvar)(this, sys, h, lr, nsigma, hvar)
   type(sternheimer_t),    intent(inout) :: this
-  type(system_t), target, intent(inout) :: sys
-  type(hamiltonian_t), target, intent(inout) :: h
+  type(system_t),         intent(inout) :: sys
+  type(hamiltonian_t),    intent(inout) :: h
   type(lr_t),             intent(inout) :: lr(:) 
   integer,                intent(in)    :: nsigma 
   R_TYPE,                 intent(out)   :: hvar(:,:,:)

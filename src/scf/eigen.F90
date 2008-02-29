@@ -98,8 +98,6 @@ contains
     type(states_t),       intent(in)    :: st
     integer,              intent(in)    :: max_iter_default
 
-    integer :: default_es
-
     call push_sub('eigen.eigen_solver_init')
 
     !%Variable EigenSolver

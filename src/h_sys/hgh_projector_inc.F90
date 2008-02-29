@@ -36,7 +36,10 @@ subroutine X(hgh_project)(mesh, sm, hgh_p, dim, psi, ppsi, reltype)
   R_TYPE,                intent(out) :: ppsi(:, :) ! ppsi(hgh%n_s, dim)
   integer,               intent(in)  :: reltype
 
-  integer :: n_s, i, j, k, idim
+  integer :: n_s, i, j, idim
+#ifdef R_TCOMPLEX
+  integer :: k
+#endif
   R_TYPE :: uvpsi
 #ifdef R_TCOMPLEX
   CMPLX, allocatable :: lp_psi(:, :, :)

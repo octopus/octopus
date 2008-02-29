@@ -60,7 +60,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine vdw_run(sys, h, fromScratch)
-    type(system_t), target, intent(inout) :: sys
+    type(system_t),          intent(inout) :: sys
     type(hamiltonian_t),    intent(inout) :: h
     logical,                intent(inout) :: fromScratch
 

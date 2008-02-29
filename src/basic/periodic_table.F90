@@ -133,7 +133,7 @@ module periodic_table_m
 
 contains
   integer function pt_number_from_symbol(s) result(z)
-    character(len=3) :: s
+    character(len=3), intent(in)    :: s
 
     integer :: i
 

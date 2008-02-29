@@ -80,8 +80,8 @@ contains
     type(atom_t),          intent(in)    :: a
     integer,               intent(in)    :: l, lm
 
-    integer :: is, k, i
-    FLOAT :: v, dv(3), x(MAX_DIM), r
+    integer :: is, i
+    FLOAT :: v, dv(3), x(MAX_DIM)
 
     call push_sub('hgh_projector.hgh_projector_init')
 
@@ -91,7 +91,6 @@ contains
 
     do is = 1, hgh_p%n_s
 
-      r = sm%x(is, 0)
       x(1:MAX_DIM) = sm%x(is, 1:MAX_DIM)
 
       do i = 1, 3
