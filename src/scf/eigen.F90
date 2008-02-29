@@ -89,6 +89,8 @@ module eigen_solver_m
   integer                      :: ik_
   integer                      :: ist_
 
+  type(profile_t),     save    :: diagon_prof
+
 contains
 
   ! ---------------------------------------------------------
@@ -288,7 +290,13 @@ contains
           call write_fatal(5)
         end if
       end select
-      call deigen_diagon_subspace(gr, st, h)
+
+      if(st%parallel_in_states) then 
+        call deigen_diagon_subspace_par_states(gr, st, h)
+      else
+        call deigen_diagon_subspace(gr, st, h)
+      end if
+
     else
       select case(eigens%es_type)
       case(RS_CG_NEW)
@@ -316,7 +324,12 @@ contains
         end if
       end select
 
-      call zeigen_diagon_subspace(gr, st, h)
+      if(st%parallel_in_states) then 
+        call zeigen_diagon_subspace_par_states(gr, st, h)
+      else
+        call zeigen_diagon_subspace(gr, st, h)
+      end if
+
     end if
 
     eigens%matvec = maxiter

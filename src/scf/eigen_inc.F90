@@ -17,10 +17,100 @@
 !!
 !! $Id$
 
-
 ! ---------------------------------------------------------
 ! This routine diagonalises the Hamiltonian in the subspace defined by the states.
 subroutine X(eigen_diagon_subspace)(gr, st, h, diff)
+  type(grid_t),        intent(inout) :: gr
+  type(states_t),      intent(inout) :: st
+  type(hamiltonian_t), intent(inout) :: h
+  FLOAT, optional,     intent(out)   :: diff(1:st%nst,1:st%d%nik)
+
+  R_TYPE, allocatable :: h_subspace(:, :), vec(:, :), f(:, :), psiold(:)
+  R_TYPE :: aa
+  integer             :: ist, ik, ip, idim, jst
+  FLOAT               :: nrm2
+#if defined(HAVE_MPI)
+  integer             :: tmp
+  FLOAT               :: ldiff(st%lnst)
+#endif
+
+  call push_sub('eigen_inc.Xeigen_diagon_subspace')
+  call profiling_in(diagon_prof, "SUBSPACE_DIAG")
+
+#ifdef HAVE_MPI
+  ASSERT(.not. st%parallel_in_states)
+#endif
+
+  ALLOCATE(h_subspace(st%nst, st%nst), st%nst*st%nst)
+  ALLOCATE(vec(st%nst, st%nst), st%nst*st%nst)
+  ALLOCATE(f(NP, st%d%dim), NP*st%d%dim)
+  ALLOCATE(psiold(st%st_start:st%st_end), st%lnst)
+
+  ik_loop: do ik = 1, st%d%nik
+
+    ! Calculate the matrix representation of the Hamiltonian in the subspace <psi|H|psi>.
+    do ist = st%st_start, st%st_end
+      call X(hpsi)(h, gr, st%X(psi)(:, :, ist, ik), f, ist, ik)
+      h_subspace(ist, ist) = st%eigenval(ist, ik)
+      do jst = ist + 1, st%st_end
+        h_subspace(ist, jst) = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, jst, ik), f)
+        h_subspace(jst, ist) = R_CONJ(h_subspace(ist, jst))
+      end do
+    end do
+    
+    ! Diagonalize the hamiltonian in the subspace.
+    call lalg_eigensolve(st%nst, h_subspace, vec, st%eigenval(:, ik))
+
+    ! Calculate the new eigenfunctions as a linear combination of the
+    ! old ones. This code could be optimized using blocks.
+    do ip = 1, NP
+      do idim = 1, st%d%dim
+
+        psiold(st%st_start:st%st_end) = st%X(psi)(ip, idim, st%st_start:st%st_end, ik)
+
+        do ist = st%st_start, st%st_end
+          aa = M_ZERO
+          do jst = st%st_start, st%st_end
+            aa = aa + vec(jst, ist)*psiold(jst)
+          end do
+          st%X(psi)(ip, idim, ist, ik) = aa
+        end do
+
+      end do
+    end do
+
+    ! Renormalize.
+    do ist = st%st_start, st%st_end
+      nrm2 = X(states_nrm2)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik))
+      !$omp parallel workshare
+      st%X(psi)(1:NP, 1:st%d%dim, ist, ik) = st%X(psi)(1:NP, 1:st%d%dim, ist, ik)/nrm2
+      !$omp end parallel workshare
+    end do
+
+    ! Recalculate the residues if requested by the diff argument.
+    if(present(diff)) then 
+      do ist = st%st_start, st%st_end
+        call X(Hpsi)(h, gr, st%X(psi)(:, :, ist, ik) , f, ist, ik)
+        diff(ist, ik) = X(states_residue)(gr%m, st%d%dim, f, st%eigenval(ist, ik), st%X(psi)(:, :, ist, ik))
+      end do
+    end if
+
+  end do ik_loop
+
+  deallocate(f, h_subspace, vec, psiold)
+
+  call profiling_out(diagon_prof)
+  call pop_sub()
+end subroutine X(eigen_diagon_subspace)
+
+
+! --------------------------------------------------------- 
+! This routine diagonalises the Hamiltonian in the subspace defined by
+! the states, this version is aware of parallelization in states but
+! consumes more memory.
+!
+
+subroutine X(eigen_diagon_subspace_par_states)(gr, st, h, diff)
   type(grid_t),        intent(inout) :: gr
   type(states_t),      intent(inout) :: st
   type(hamiltonian_t), intent(inout) :: h
@@ -35,6 +125,7 @@ subroutine X(eigen_diagon_subspace)(gr, st, h, diff)
 #endif
 
   call push_sub('eigen_inc.Xeigen_diagon_subspace')
+  call profiling_in(diagon_prof, "SUBSPACE_DIAG")
 
   ALLOCATE(h_subspace(st%nst, st%nst), st%nst*st%nst)
   ALLOCATE(vec(st%nst, st%nst), st%nst*st%nst)
@@ -84,9 +175,10 @@ subroutine X(eigen_diagon_subspace)(gr, st, h, diff)
 
   deallocate(f, h_subspace, vec)
 
+  call profiling_out(diagon_prof)
   call pop_sub()
-end subroutine X(eigen_diagon_subspace) 
 
+end subroutine X(eigen_diagon_subspace_par_states) 
 
 !! Local Variables:
 !! mode: f90
