@@ -72,14 +72,10 @@ subroutine X(cpmd_propagate)(this, gr, h, st, iter, dt)
       call profiling_in(cpmd_orth, "CP_ORTHOGONALIZATION")
 
       call calc_lambda
-      
-      do ist1 = st%st_start, st%st_end
-        do ist2 = 1, st%nst
-          do idim = 1, ddim
-            call lalg_axpy(np, xx(ist1, ist2), this%X(oldpsi)(:, idim, ist2, ik), st%X(psi)(:, idim, ist1, ik)) !(4.3)
-          end do
-        end do
-      end do
+
+      ! psi <= psi + X * oldpsi
+      call states_block_matr_mul_add(gr%m, st, R_TOTYPE(M_ONE), this%X(oldpsi)(:, :, :, ik), xx, &
+           R_TOTYPE(M_ONE), st%X(psi)(:, :, :, ik)) !(4.3)
       
       call profiling_out(cpmd_orth)
 
@@ -106,10 +102,11 @@ subroutine X(cpmd_propagate)(this, gr, h, st, iter, dt)
       do ist1 = 1, st%nst
         do ist2 = 1, st%nst
           ii(ist1, ist2) = ddelta(ist1, ist2)
-          aa(ist1, ist2) = X(states_dotp)(gr%m, ddim,      st%X(psi)(:, :, ist1, ik), st%X(psi)(:, :, ist2, ik))
-          bb(ist1, ist2) = X(states_dotp)(gr%m, ddim, this%X(oldpsi)(:, :, ist1, ik), st%X(psi)(:, :, ist2, ik))
         end do
       end do
+
+      call states_blockt_mul(gr%m, st,      st%X(psi)(:, :, :, ik),  st%X(psi)(:, :, :, ik), aa, symm=.true.)
+      call states_blockt_mul(gr%m, st, this%X(oldpsi)(:, :, :, ik),  st%X(psi)(:, :, :, ik), bb, symm=.false.)
       
       xx = M_HALF*(ii - aa) !(4.6)
       

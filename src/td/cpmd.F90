@@ -39,6 +39,7 @@ module cpmd_m
   use restart_m
   use scf_m
   use states_m
+  use states_block_m
   use system_m
   use v_ks_m
   use grid_m
