@@ -39,4 +39,4 @@ em_resp.o : em_resp.F90 em_resp_inc.F90 sternheimer.o em_resp_calc.o
 vdW.o : vdW.F90 em_resp.o sternheimer.o em_resp_calc.o 
 phonons.o : phonons.F90 
 phonons_lr.o : phonons_lr.F90 sternheimer.o phonons.o 
-raman.o : raman.F90 phonons_lr.F90
+raman.o : raman.F90 phonons_lr.o sternheimer.o
