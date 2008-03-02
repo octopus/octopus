@@ -19,13 +19,11 @@
 
 #include "global.h"
 
-module phonons_m
+module vibrations_m
   use geometry_m
   use global_m
-  use grid_m
   use io_m
   use lalg_adv_m
-  use mesh_m
   use messages_m
   use simul_box_m
   use units_m
@@ -34,78 +32,81 @@ module phonons_m
 
   private
   public :: &
-       phonons_t, &
-       phonons_init, &
-       phonons_end,  &
-       phonons_normalize_dm, &
-       phonons_diagonalize_dm, &
-       phn_idx, &
-       phonons_output
+       vibrations_t, &
+       vibrations_init, &
+       vibrations_end,  &
+       vibrations_normalize_dyn_matrix, &
+       vibrations_diagonalize_dyn_matrix, &
+       vibrations_get_index, &
+       vibrations_output
   
-  type phonons_t
+  type vibrations_t
     integer :: dim
     integer :: ndim
     integer :: natoms
-    FLOAT, pointer :: dm(:,:), vec(:,:), freq(:)
+    FLOAT, pointer :: dyn_matrix(:,:), normal_mode(:,:), freq(:)
 
     FLOAT :: disp
     FLOAT :: total_mass
-  end type phonons_t
+  end type vibrations_t
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine phonons_init(ph, geo, sb)
-    type(phonons_t),     intent(out) :: ph
+  subroutine vibrations_init(this, geo, sb)
+    type(vibrations_t),     intent(out) :: this
     type(geometry_t),    intent(inout) :: geo
     type(simul_box_t),   intent(inout) :: sb
 
     integer :: iatom
 
-    ph%ndim = sb%dim
-    ph%natoms = geo%natoms
-    ph%dim = geo%natoms*sb%dim
-    ALLOCATE(ph%dm(ph%dim, ph%dim), ph%dim*ph%dim)
-    ALLOCATE(ph%vec(ph%dim, ph%dim), ph%dim*ph%dim)
-    ALLOCATE(ph%freq(ph%dim), ph%dim)
+    this%ndim = sb%dim
+    this%natoms = geo%natoms
+    this%dim = geo%natoms*sb%dim
+    ALLOCATE(this%dyn_matrix(this%dim, this%dim), this%dim*this%dim)
+    ALLOCATE(this%normal_mode(this%dim, this%dim), this%dim*this%dim)
+    ALLOCATE(this%freq(this%dim), this%dim)
 
-    ph%total_mass = M_ZERO
+    this%total_mass = M_ZERO
     do iatom = 1, geo%natoms
-      ph%total_mass = ph%total_mass + geo%atom(iatom)%spec%weight
+      this%total_mass = this%total_mass + geo%atom(iatom)%spec%weight
     end do
 
-  end subroutine phonons_init
+  end subroutine vibrations_init
 
 
   ! ---------------------------------------------------------
-  subroutine phonons_end(ph)
-    type(phonons_t),     intent(inout) :: ph
+  subroutine vibrations_end(this)
+    type(vibrations_t),     intent(inout) :: this
 
-    deallocate(ph%dm)
-    deallocate(ph%freq)
-    deallocate(ph%vec)
+    deallocate(this%dyn_matrix)
+    deallocate(this%freq)
+    deallocate(this%normal_mode)
 
-  end subroutine phonons_end
+  end subroutine vibrations_end
 
   ! ---------------------------------------------------------
 
-  subroutine phonons_normalize_dm(ph, geo)
-    type(phonons_t),      intent(inout) :: ph
+  subroutine vibrations_normalize_dyn_matrix(this, geo)
+    type(vibrations_t),      intent(inout) :: this
     type(geometry_t),     intent(inout) :: geo
 
     FLOAT :: factor
-    integer :: iatom, idir, jatom, jdir
+    integer :: iatom, idir, jatom, jdir, imat, jmat
 
-    do iatom = 1, ph%natoms
-      do idir = 1, ph%ndim
+    do iatom = 1, this%natoms
+      do idir = 1, this%ndim
         
-        do jatom = 1, ph%natoms
-          do jdir = 1, ph%ndim
+        imat = vibrations_get_index(this, iatom, idir)
 
-            factor = ph%total_mass/sqrt(geo%atom(iatom)%spec%weight)/sqrt(geo%atom(jatom)%spec%weight)
+        do jatom = 1, this%natoms
+          do jdir = 1, this%ndim
             
-            ph%dm(phn_idx(ph, iatom, idir), phn_idx(ph, jatom, jdir)) = &
-                 ph%dm(phn_idx(ph, iatom, idir), phn_idx(ph, jatom, jdir)) * factor
+            jmat = vibrations_get_index(this, jatom, jdir)
+
+            factor = this%total_mass/sqrt(geo%atom(iatom)%spec%weight)/sqrt(geo%atom(jatom)%spec%weight)
+            
+            this%dyn_matrix(imat, jmat) = this%dyn_matrix(imat, jmat) * factor
 
           end do
         end do
@@ -113,48 +114,50 @@ contains
       end do
     end do
 
-  end subroutine phonons_normalize_dm
+  end subroutine vibrations_normalize_dyn_matrix
 
-  subroutine phonons_diagonalize_dm(ph)
-    type(phonons_t),      intent(inout) :: ph
+  subroutine vibrations_diagonalize_dyn_matrix(this)
+    type(vibrations_t),      intent(inout) :: this
     
-    ph%vec = M_ZERO
+    this%normal_mode = M_ZERO
     
-    ! diagonalize DM
-    call lalg_eigensolve(ph%dim, ph%dm, ph%vec, ph%freq)
+    ! diagonalize DYN_MATRIX
+    call lalg_eigensolve(this%dim, this%dyn_matrix, this%normal_mode, this%freq)
 
-    ph%freq(1:ph%dim) = ph%freq(1:ph%dim) / ph%total_mass
+    this%freq(1:this%dim) = this%freq(1:this%dim) / this%total_mass
 
-  end subroutine phonons_diagonalize_dm
+  end subroutine vibrations_diagonalize_dyn_matrix
 
-  integer function phn_idx(ph, iatom, idim)
-    type(phonons_t), intent(in) :: ph
+  integer function vibrations_get_index(this, iatom, idim)
+    type(vibrations_t), intent(in) :: this
     integer,         intent(in) :: iatom, idim
-    phn_idx = (iatom-1)*ph%ndim + idim
-  end function phn_idx
+    vibrations_get_index = (iatom-1)*this%ndim + idim
+  end function vibrations_get_index
 
-  subroutine phonons_output(ph, suffix)
-    type(phonons_t),   intent(in) :: ph
+  subroutine vibrations_output(this, suffix)
+    type(vibrations_t),   intent(in) :: this
     character (len=*), intent(in) :: suffix
     
-    integer :: iunit, i, j, iatom, jatom, idir, jdir
+    integer :: iunit, i, j, iatom, jatom, idir, jdir, imat, jmat
 
 
     ! create directory for output
-    call io_mkdir('phonons')
+    call io_mkdir('vibrations')
 
     ! output dynamic matrix
     call io_assign(iunit)
-    iunit = io_open('phonons/DM'//trim(suffix), action='write')
+    iunit = io_open('vibrations/dynamical_matrix'//trim(suffix), action='write')
 
-    do iatom = 1, ph%natoms
-      do idir = 1, ph%ndim
+    do iatom = 1, this%natoms
+      do idir = 1, this%ndim
 
-        do jatom = 1, ph%natoms
-          do jdir = 1, ph%ndim
+        imat = vibrations_get_index(this, iatom, idir)
+
+        do jatom = 1, this%natoms
+          do jdir = 1, this%ndim
             
-            write(iunit, '(f14.3)', advance='no') &
-                 ph%dm(phn_idx(ph, iatom, idir), phn_idx(ph, jatom, jdir)) * hartree_to_cm_inv ! output cm^-1
+            jmat = vibrations_get_index(this, jatom, jdir)
+            write(iunit, '(f14.3)', advance='no') this%dyn_matrix(imat, jmat) * hartree_to_cm_inv ! output cm^-1
           end do
         end do
         write(iunit, '(1x)')
@@ -163,27 +166,27 @@ contains
 
     call io_close(iunit)
 
-    ! output phonon frequencies and eigenvectors
-    iunit = io_open('phonons/freq'//trim(suffix), action='write')
-    do i = 1, ph%dim
-      write(iunit, *) i, sqrt(abs(ph%freq(i))) * hartree_to_cm_inv ! output cm^-1
+    ! output thisonon frequencies and eigenvectors
+    iunit = io_open('vibrations/normal_frequencies'//trim(suffix), action='write')
+    do i = 1, this%dim
+      write(iunit, *) i, sqrt(abs(this%freq(i))) * hartree_to_cm_inv ! output cm^-1
     end do
     call io_close(iunit)
 
-    ! output phonon eigenvectors
-    iunit = io_open('phonons/vec'//trim(suffix), action='write')
-    do i = 1, ph%dim
+    ! output thisonon eigenvectors
+    iunit = io_open('vibrations/normal_modes'//trim(suffix), action='write')
+    do i = 1, this%dim
       write(iunit, '(i6)', advance='no') i
-      do j = 1, ph%dim
-        write(iunit, '(es14.5)', advance='no') ph%vec(j, i)
+      do j = 1, this%dim
+        write(iunit, '(es14.5)', advance='no') this%normal_mode(j, i)
       end do
       write(iunit, '(1x)')
     end do
     call io_close(iunit)
     
-  end subroutine phonons_output
+  end subroutine vibrations_output
 
-end module phonons_m
+end module vibrations_m
 
 !! Local Variables:
 !! mode: f90

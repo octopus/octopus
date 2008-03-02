@@ -33,7 +33,7 @@ module phonons_fd_m
   use messages_m
   use multicomm_m
   use h_sys_output_m
-  use phonons_m
+  use vibrations_m
   use restart_m
   use scf_m
   use states_m
@@ -53,7 +53,7 @@ contains
     type(system_t),      intent(inout) :: sys
     type(hamiltonian_t), intent(inout) :: h
 
-    type(phonons_t) :: ph
+    type(vibrations_t) :: vib
     integer :: ierr
 
     call init_()
@@ -70,7 +70,7 @@ contains
     call write_info(1)
     call system_h_setup(sys, h)
 
-    call phonons_init(ph, sys%geo, sys%gr%sb)
+    call vibrations_init(vib, sys%geo, sys%gr%sb)
 
     !%Variable Displacement
     !%Type float
@@ -81,15 +81,15 @@ contains
     !% <tt>Displacement</tt> controls how much the atoms are to be moved in order to calculate the 
     !% dynamical matrix.
     !%End
-    call loct_parse_float(check_inp('Displacement'), CNST(0.01)/units_inp%length%factor, ph%disp)
-    ph%disp = ph%disp*units_inp%length%factor
+    call loct_parse_float(check_inp('Displacement'), CNST(0.01)/units_inp%length%factor, vib%disp)
+    vib%disp = vib%disp*units_inp%length%factor
 
     ! calculate dynamical matrix
-    call get_dm(sys%gr, sys%geo, sys%mc, sys%st, sys%ks, h, sys%outp, ph)
+    call get_dyn_matrix(sys%gr, sys%geo, sys%mc, sys%st, sys%ks, h, sys%outp, vib)
 
-    call phonons_output(ph, "_fd")
+    call vibrations_output(vib, "_fd")
     
-    call phonons_end(ph)
+    call vibrations_end(vib)
 
     call end_()
 
@@ -114,7 +114,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine get_dm(gr, geo, mc, st, ks, h, outp, ph)
+  subroutine get_dyn_matrix(gr, geo, mc, st, ks, h, outp, vib)
     type(grid_t), target, intent(inout) :: gr
     type(geometry_t),     intent(inout) :: geo
     type(multicomm_t),    intent(in)    :: mc
@@ -122,7 +122,7 @@ contains
     type(v_ks_t),         intent(inout) :: ks
     type(hamiltonian_t),  intent(inout) :: h
     type(h_sys_output_t), intent(in)    :: outp
-    type(phonons_t),      intent(inout) :: ph
+    type(vibrations_t),      intent(inout) :: vib
 
     type(scf_t)               :: scf
     type(mesh_t),     pointer :: m
@@ -144,7 +144,7 @@ contains
         call write_info(1)
 
         ! move atom i in direction alpha by dist
-        geo%atom(i)%x(alpha) = geo%atom(i)%x(alpha) + ph%disp
+        geo%atom(i)%x(alpha) = geo%atom(i)%x(alpha) + vib%disp
 
         ! first force
         call epot_generate(h%ep, gr, geo, mc, st)
@@ -156,7 +156,7 @@ contains
           forces0(j, :) = geo%atom(j)%f(:)
         end do
 
-        geo%atom(i)%x(alpha) = geo%atom(i)%x(alpha) - M_TWO*ph%disp
+        geo%atom(i)%x(alpha) = geo%atom(i)%x(alpha) - M_TWO*vib%disp
 
         ! second force
         call epot_generate(h%ep, gr, geo, mc, st)
@@ -168,12 +168,12 @@ contains
           forces(j, :) = geo%atom(j)%f(:)
         end do
 
-        geo%atom(i)%x(alpha) = geo%atom(i)%x(alpha) + ph%disp
+        geo%atom(i)%x(alpha) = geo%atom(i)%x(alpha) + vib%disp
 
         do j = 1, geo%natoms
           do beta = 1, NDIM
-            ph%dm(phn_idx(ph, i, alpha), phn_idx(ph, j, beta)) = &
-              (forces0(j, beta) - forces(j, beta)) / (M_TWO*ph%disp )
+            vib%dyn_matrix(vibrations_get_index(vib, i, alpha), vibrations_get_index(vib, j, beta)) = &
+              (forces0(j, beta) - forces(j, beta)) / (M_TWO*vib%disp )
           end do
         end do
 
@@ -182,10 +182,10 @@ contains
     deallocate(forces0, forces)
     call scf_end(scf)
 
-    call phonons_normalize_dm(ph, geo)
-    call phonons_diagonalize_dm(ph)
+    call vibrations_normalize_dyn_matrix(vib, geo)
+    call vibrations_diagonalize_dyn_matrix(vib)
 
-  end subroutine get_dm
+  end subroutine get_dyn_matrix
 
 end module phonons_fd_m
 
