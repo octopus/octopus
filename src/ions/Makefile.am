@@ -17,9 +17,30 @@
 ## Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 ## 02111-1307, USA.
 ##
-## $Id$
+## $Id: Makefile.am 2995 2007-06-13 17:49:22Z xavier $
 
-SUBDIRS = include basic math beak species ions grid poisson states \
-	xc h_sys scf td opt_control sternheimer main utils
+noinst_LIBRARIES = libions.a
 
+libions_a_SOURCES =    \
+	xyz_file.F90   \
+	geometry.F90   \
+	xyz_adjust.F90 \
+	simul_box.F90  \
+	solids.F90     \
+	vibrations.F90 \
+	crystal.F90
 
+noinst_HEADERS =
+
+include $(srcdir)/../common-rules.make
+
+depend:
+	@makedepf90 $(libions_a_SOURCES)
+
+xyz_file.o : xyz_file.F90 
+geometry.o : geometry.F90 xyz_file.o
+xyz_adjust.o : xyz_adjust.F90 geometry.o 
+solids.o: solids.F90 simul_box.o
+simul_box.o : simul_box.F90 geometry.o
+vibrations.o : vibrations.F90 simul_box.o geometry.o
+crystal.o : crystal.F90 

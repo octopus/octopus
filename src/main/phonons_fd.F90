@@ -70,7 +70,7 @@ contains
     call write_info(1)
     call system_h_setup(sys, h)
 
-    call phonons_init(ph, sys)
+    call phonons_init(ph, sys%geo, sys%gr%sb)
 
     !%Variable Displacement
     !%Type float

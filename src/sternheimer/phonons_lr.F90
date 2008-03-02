@@ -91,7 +91,7 @@ contains
 
     call system_h_setup(sys, h)
     call sternheimer_init(sh, sys, h, "VM")
-    call phonons_init(ph, sys)
+    call phonons_init(ph, sys%geo, sys%gr%sb)
 
     call lr_init(lr(1))
     call lr_allocate(lr(1), sys%st, sys%gr%m)

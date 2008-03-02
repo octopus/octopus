@@ -27,8 +27,7 @@ module phonons_m
   use lalg_adv_m
   use mesh_m
   use messages_m
-  use h_sys_output_m
-  use system_m
+  use simul_box_m
   use units_m
 
   implicit none
@@ -56,22 +55,23 @@ module phonons_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine phonons_init(ph, sys)
+  subroutine phonons_init(ph, geo, sb)
     type(phonons_t),     intent(out) :: ph
-    type(system_t),      intent(inout) :: sys
+    type(geometry_t),    intent(inout) :: geo
+    type(simul_box_t),   intent(inout) :: sb
 
     integer :: iatom
 
-    ph%ndim = sys%gr%sb%dim
-    ph%natoms = sys%geo%natoms
-    ph%dim = sys%geo%natoms*sys%gr%sb%dim
+    ph%ndim = sb%dim
+    ph%natoms = geo%natoms
+    ph%dim = geo%natoms*sb%dim
     ALLOCATE(ph%dm(ph%dim, ph%dim), ph%dim*ph%dim)
     ALLOCATE(ph%vec(ph%dim, ph%dim), ph%dim*ph%dim)
     ALLOCATE(ph%freq(ph%dim), ph%dim)
 
     ph%total_mass = M_ZERO
-    do iatom = 1, sys%geo%natoms
-      ph%total_mass = ph%total_mass + sys%geo%atom(iatom)%spec%weight
+    do iatom = 1, geo%natoms
+      ph%total_mass = ph%total_mass + geo%atom(iatom)%spec%weight
     end do
 
   end subroutine phonons_init
