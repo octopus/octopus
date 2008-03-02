@@ -61,40 +61,48 @@ contains
 
   ! ---------------------------------------------------------
   subroutine phonons_lr_run(sys, h, fromscratch)
-    type(system_t),         intent(inout) :: sys
+    type(system_t), target, intent(inout) :: sys
     type(hamiltonian_t),    intent(inout) :: h
     logical,                intent(in)    :: fromscratch
 
     type(sternheimer_t) :: sh
     type(lr_t)          :: lr(1:1)
-    type(vibrations_t)     :: vib
-    type(pert_t)        :: perturbation, dipole
+    type(vibrations_t)  :: vib
+    type(pert_t)        :: ionic_pert, electric_pert
+
+    type(geometry_t), pointer :: geo
+    type(states_t),   pointer :: st
+    type(grid_t),     pointer :: gr
 
     integer :: natoms, ndim, iatom, idir, jatom, jdir, imat, jmat, iunit, ierr
     integer :: nnm
     FLOAT, allocatable   :: infrared(:,:)
 
-    natoms = sys%geo%natoms
-    ndim = sys%NDIM
+    !some shorcuts
 
-    nnm = natoms*ndim
+    geo => sys%geo
+    st  => sys%st
+    gr  => sys%gr
+
+    natoms = geo%natoms
+    ndim = NDIM
 
     !CONSTRUCT
 
     call push_sub('phonons_lr.phonons_lr_run')
 
     call parse_input()
-    call read_wfs(sys%st, sys%gr, sys%geo, .false.)
+    call read_wfs(st, gr, geo, .false.)
 
     message(1) = 'Info: Setting up Hamiltonian for linear response'
     call write_info(1)
 
     call system_h_setup(sys, h)
     call sternheimer_init(sh, sys, h, "VM")
-    call vibrations_init(vib, sys%geo, sys%gr%sb)
+    call vibrations_init(vib, geo, gr%sb)
 
     call lr_init(lr(1))
-    call lr_allocate(lr(1), sys%st, sys%gr%m)
+    call lr_allocate(lr(1), st, gr%m)
 
     ALLOCATE(infrared(natoms*ndim, ndim), natoms*ndim**2)
 
@@ -103,58 +111,53 @@ contains
     !the ionic contribution
     call build_ionic_dyn_matrix()
 
-    call pert_init(perturbation, PERTURBATION_IONIC, sys%gr, sys%geo)
-    call pert_init(dipole, PERTURBATION_ELECTRIC, sys%gr, sys%geo)
+    call pert_init(ionic_pert, PERTURBATION_IONIC, gr, geo)
+    call pert_init(electric_pert, PERTURBATION_ELECTRIC, gr, geo)
 
-    do iatom = 1, natoms
-      do idir = 1, ndim
-
-        if (.not. fromscratch) then
-          message(1) = "Loading restart wave functions for linear response."
-          call write_info(1)
-          call restart_read(trim(tmpdir)//'vib_modes/'//trim(phn_wfs_tag(iatom, idir))//'_1',&
-               sys%st, sys%gr, sys%geo, ierr, lr = lr(1))
-        end if
-
-        imat = vibrations_get_index(vib, iatom, idir)
-
-        call pert_setup_atom(perturbation, iatom)
-        call pert_setup_dir(perturbation, idir)
-
-        call dsternheimer_solve(sh, sys, h, lr, 1, M_ZERO, perturbation, &
-             RESTART_DIR, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir))
-
-
-        do jatom = 1, natoms
-          do jdir = 1, ndim
-
-            jmat = vibrations_get_index(vib, jatom, jdir)
-
-            call pert_setup_atom(perturbation, jatom, iatom)
-            call pert_setup_dir(perturbation, jdir, idir)
-
-            vib%dyn_matrix(imat, jmat) = vib%dyn_matrix(imat, jmat) &
-                 -dpert_expectation_value(perturbation,sys%gr,sys%geo,h,sys%st, lr(1)%ddl_psi, sys%st%dpsi)&
-                 -dpert_expectation_value(perturbation,sys%gr,sys%geo,h,sys%st, sys%st%dpsi, lr(1)%ddl_psi)&
-                 -dpert_expectation_value(perturbation,sys%gr,sys%geo,h,sys%st, sys%st%dpsi, sys%st%dpsi, pert_order = 2)
-
-          end do
-        end do
-
-        do jdir = 1, ndim
-          call pert_setup_dir(dipole, jdir)
-          infrared(imat, jdir) = &
-               dpert_expectation_value(dipole, sys%gr, sys%geo, h, sys%st, lr(1)%ddl_psi, sys%st%dpsi) + &
-               dpert_expectation_value(dipole, sys%gr, sys%geo, h, sys%st, sys%st%dpsi, lr(1)%ddl_psi)
-        end do
-
+    do imat = 1, vib%num_modes
+      iatom = vibrations_get_atom(vib, imat)
+      idir  = vibrations_get_dir (vib, imat)
+      
+      if (.not. fromscratch) then
+        message(1) = "Loading restart wave functions for linear response."
+        call write_info(1)
+        call restart_read(trim(tmpdir)//'vib_modes/'//trim(phn_wfs_tag(iatom, idir))//'_1',&
+          st, gr, geo, ierr, lr = lr(1))
+      end if
+      
+      call pert_setup_atom(ionic_pert, iatom)
+      call pert_setup_dir(ionic_pert, idir)
+      
+      call dsternheimer_solve(sh, sys, h, lr, 1, M_ZERO, ionic_pert, &
+        RESTART_DIR, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir))
+      
+      do jmat = 1, vib%num_modes
+        jatom = vibrations_get_atom(vib, jmat)
+        jdir  = vibrations_get_dir (vib, jmat)
+        
+        call pert_setup_atom(ionic_pert, jatom, iatom)
+        call pert_setup_dir(ionic_pert, jdir, idir)
+        
+        vib%dyn_matrix(imat, jmat) = vib%dyn_matrix(imat, jmat) &
+          -dpert_expectation_value(ionic_pert, gr, geo, h, st, lr(1)%ddl_psi, st%dpsi)&
+          -dpert_expectation_value(ionic_pert, gr, geo, h, st, st%dpsi, lr(1)%ddl_psi)&
+          -dpert_expectation_value(ionic_pert, gr, geo, h, st, st%dpsi, st%dpsi, pert_order = 2)
+        
       end do
+      
+      do jdir = 1, ndim
+        call pert_setup_dir(electric_pert, jdir)
+        infrared(imat, jdir) = &
+          dpert_expectation_value(electric_pert, gr, geo, h, st, lr(1)%ddl_psi, st%dpsi) + &
+          dpert_expectation_value(electric_pert, gr, geo, h, st, st%dpsi, lr(1)%ddl_psi)
+      end do
+
     end do
 
-    call pert_end(perturbation)
-    call pert_end(dipole)
+    call pert_end(ionic_pert)
+    call pert_end(electric_pert)
 
-    call vibrations_normalize_dyn_matrix(vib, sys%geo)
+    call vibrations_normalize_dyn_matrix(vib, geo)
     call vibrations_diagonalize_dyn_matrix(vib)
     call vibrations_output(vib, "_lr")
     call calc_infrared
@@ -171,7 +174,7 @@ contains
 
     call sternheimer_end(sh)
 
-    call states_deallocate_wfns(sys%st)
+    call states_deallocate_wfns(st)
 
     call pop_sub()
 
@@ -191,12 +194,12 @@ contains
       integer :: katom
 
       do iatom = 1, natoms
-        do idir = 1, sys%NDIM
+        do idir = 1, NDIM
 
           do jatom = 1, natoms
-            do jdir = 1, sys%NDIM         
+            do jdir = 1, NDIM         
 
-              xi(1:MAX_DIM) = sys%geo%atom(iatom)%x(1:MAX_DIM)
+              xi(1:MAX_DIM) = geo%atom(iatom)%x(1:MAX_DIM)
 
               !ion - ion
               if( iatom == jatom) then 
@@ -205,10 +208,10 @@ contains
                 do katom = 1, natoms
                   if ( katom == iatom ) cycle
 
-                  xk(1:MAX_DIM) = sys%geo%atom(katom)%x(1:MAX_DIM)
-                  r2 = sum((xi(1:sys%NDIM) - xk(1:sys%NDIM))**2)
+                  xk(1:MAX_DIM) = geo%atom(katom)%x(1:MAX_DIM)
+                  r2 = sum((xi(1:NDIM) - xk(1:NDIM))**2)
 
-                  ac = ac + sys%geo%atom(iatom)%spec%Z_val * sys%geo%atom(katom)%spec%Z_val &
+                  ac = ac + geo%atom(iatom)%spec%Z_val * geo%atom(katom)%spec%Z_val &
                        /(r2**CNST(1.5)) *(&
                        -ddelta(idir, jdir) + &
                        (M_THREE*(xi(idir)-xk(idir))*(xi(jdir)-xk(jdir)))/r2 &
@@ -218,10 +221,10 @@ contains
 
               else ! iatom /= jatom
 
-                xj(1:MAX_DIM) = sys%geo%atom(jatom)%x(1:MAX_DIM)
+                xj(1:MAX_DIM) = geo%atom(jatom)%x(1:MAX_DIM)
 
-                r2 = sum((xi(1:sys%NDIM) - xj(1:sys%NDIM))**2)
-                ac = sys%geo%atom(iatom)%spec%Z_val * sys%geo%atom(jatom)%spec%Z_val &
+                r2 = sum((xi(1:NDIM) - xj(1:NDIM))**2)
+                ac = geo%atom(iatom)%spec%Z_val * geo%atom(jatom)%spec%Z_val &
                      /(r2**CNST(1.5))*(&
                      ddelta(idir, jdir) - (M_THREE*(xi(idir)-xj(idir))*(xi(jdir)-xj(jdir)))/r2)
 
@@ -242,7 +245,7 @@ contains
 
       !calculate infrared intensities
 
-      iunit = io_open('phonons/infrared', action='write')
+      iunit = io_open('vibrations/infrared', action='write')
 
       write(iunit, '(a)') '#   freq [cm^-1]     <x>           <y>           <z>           average'
 
@@ -270,11 +273,11 @@ contains
       integer :: ik, ist, idim, inm
 
       call lr_init(lrtmp)
-      call lr_allocate(lrtmp, sys%st, sys%gr%m)
+      call lr_allocate(lrtmp, st, gr%m)
 
       lr(1)%ddl_psi = M_ZERO
 
-      do inm = 1, nnm
+      do inm = 1, vib%num_modes
 
         do iatom = 1, natoms
           do idir = 1, ndim
@@ -282,13 +285,13 @@ contains
             imat = vibrations_get_index(vib, iatom, idir)
 
             call restart_read(trim(tmpdir)//'vib_modes/'//trim(phn_wfs_tag(iatom, idir))//'_1',&
-                 sys%st, sys%gr, sys%geo, ierr, lr = lrtmp)
+                 st, gr, geo, ierr, lr = lrtmp)
             
-            do ik = 1, sys%st%d%nik
-              do ist = sys%st%st_start, sys%st%st_end
-                do idim = 1, sys%st%d%dim
+            do ik = 1, st%d%nik
+              do ist = st%st_start, st%st_end
+                do idim = 1, st%d%dim
 
-                  call lalg_axpy(sys%gr%m%np, vib%normal_mode(imat, inm), &
+                  call lalg_axpy(gr%m%np, vib%normal_mode(imat, inm), &
                     lrtmp%ddl_psi(:, idim, ist, ik), lr(1)%ddl_psi(:, idim, ist, ik))
                   
                 end do
@@ -299,7 +302,7 @@ contains
         end do
         
         call restart_write(trim(tmpdir)//'vib_modes/'//trim(phn_nm_wfs_tag(inm))//'_1',&
-             sys%st, sys%gr, ierr, lr = lr(1))
+             st, gr, ierr, lr = lr(1))
         
       end do
 

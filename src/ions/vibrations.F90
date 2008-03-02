@@ -38,10 +38,12 @@ module vibrations_m
        vibrations_normalize_dyn_matrix, &
        vibrations_diagonalize_dyn_matrix, &
        vibrations_get_index, &
+       vibrations_get_atom,  &
+       vibrations_get_dir,   &
        vibrations_output
   
   type vibrations_t
-    integer :: dim
+    integer :: num_modes
     integer :: ndim
     integer :: natoms
     FLOAT, pointer :: dyn_matrix(:,:), normal_mode(:,:), freq(:)
@@ -62,10 +64,10 @@ contains
 
     this%ndim = sb%dim
     this%natoms = geo%natoms
-    this%dim = geo%natoms*sb%dim
-    ALLOCATE(this%dyn_matrix(this%dim, this%dim), this%dim*this%dim)
-    ALLOCATE(this%normal_mode(this%dim, this%dim), this%dim*this%dim)
-    ALLOCATE(this%freq(this%dim), this%dim)
+    this%num_modes = geo%natoms*sb%dim
+    ALLOCATE(this%dyn_matrix(this%num_modes, this%num_modes), this%num_modes**2)
+    ALLOCATE(this%normal_mode(this%num_modes, this%num_modes), this%num_modes**2)
+    ALLOCATE(this%freq(this%num_modes), this%num_modes)
 
     this%total_mass = M_ZERO
     do iatom = 1, geo%natoms
@@ -89,7 +91,7 @@ contains
 
   subroutine vibrations_normalize_dyn_matrix(this, geo)
     type(vibrations_t),      intent(inout) :: this
-    type(geometry_t),     intent(inout) :: geo
+    type(geometry_t),        intent(inout) :: geo
 
     FLOAT :: factor
     integer :: iatom, idir, jatom, jdir, imat, jmat
@@ -122,21 +124,37 @@ contains
     this%normal_mode = M_ZERO
     
     ! diagonalize DYN_MATRIX
-    call lalg_eigensolve(this%dim, this%dyn_matrix, this%normal_mode, this%freq)
+    call lalg_eigensolve(this%num_modes, this%dyn_matrix, this%normal_mode, this%freq)
 
-    this%freq(1:this%dim) = this%freq(1:this%dim) / this%total_mass
+    this%freq(1:this%num_modes) = this%freq(1:this%num_modes) / this%total_mass
 
   end subroutine vibrations_diagonalize_dyn_matrix
 
-  integer function vibrations_get_index(this, iatom, idim)
+  integer pure function vibrations_get_index(this, iatom, idim)
     type(vibrations_t), intent(in) :: this
-    integer,         intent(in) :: iatom, idim
-    vibrations_get_index = (iatom-1)*this%ndim + idim
+    integer,            intent(in) :: iatom
+    integer,            intent(in) :: idim
+
+    vibrations_get_index = (iatom - 1)*this%ndim + idim
   end function vibrations_get_index
+
+  integer pure function vibrations_get_atom(this, index)
+    type(vibrations_t), intent(in) :: this
+    integer,            intent(in) :: index
+
+    vibrations_get_atom = 1 + (index - 1)/ this%ndim 
+  end function vibrations_get_atom
+
+  integer pure function vibrations_get_dir(this, index)
+    type(vibrations_t), intent(in) :: this
+    integer,            intent(in) :: index
+
+    vibrations_get_dir =  1 + mod(index - 1, this%ndim)
+  end function vibrations_get_dir
 
   subroutine vibrations_output(this, suffix)
     type(vibrations_t),   intent(in) :: this
-    character (len=*), intent(in) :: suffix
+    character (len=*),    intent(in) :: suffix
     
     integer :: iunit, i, j, iatom, jatom, idir, jdir, imat, jmat
 
@@ -168,16 +186,16 @@ contains
 
     ! output thisonon frequencies and eigenvectors
     iunit = io_open('vibrations/normal_frequencies'//trim(suffix), action='write')
-    do i = 1, this%dim
+    do i = 1, this%num_modes
       write(iunit, *) i, sqrt(abs(this%freq(i))) * hartree_to_cm_inv ! output cm^-1
     end do
     call io_close(iunit)
 
     ! output thisonon eigenvectors
     iunit = io_open('vibrations/normal_modes'//trim(suffix), action='write')
-    do i = 1, this%dim
+    do i = 1, this%num_modes
       write(iunit, '(i6)', advance='no') i
-      do j = 1, this%dim
+      do j = 1, this%num_modes
         write(iunit, '(es14.5)', advance='no') this%normal_mode(j, i)
       end do
       write(iunit, '(1x)')
