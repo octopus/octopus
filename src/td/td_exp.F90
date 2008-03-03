@@ -20,11 +20,12 @@
 #include "global.h"
 
 module td_exp_m
+  use cube_function_m
   use datasets_m
   use lalg_basic_m
   use loct_math_m
   use loct_parser_m
-  use cube_function_m
+  use profiling_m
   use td_exp_split_m
   use varinfo_m
 
@@ -233,8 +234,10 @@ contains
     FLOAT,     optional, intent(in)    :: vmagnus(NP, h%d%nspin, 2)
 
     logical :: apply_magnus
-    
+    type(profile_t), save :: exp_prof
+
     call push_sub('td_exp.td_exp_td')
+    call profiling_in(exp_prof, "EXPONENTIAL")
 
     apply_magnus = .false.
     if(present(vmagnus)) apply_magnus = .true.
@@ -248,6 +251,7 @@ contains
     case(CHEBYSHEV);         call cheby
     end select
 
+    call profiling_out(exp_prof)
     call pop_sub()
   contains
 
@@ -369,60 +373,80 @@ contains
     subroutine lanczos
       integer ::  korder, n, k, iflag, lwsp, ns, i, j, l, iexph, idim
       integer, allocatable :: ipiv(:)
-      CMPLX, allocatable :: hm(:,:), v(:,:,:), expo(:,:), wsp(:)
+      CMPLX, allocatable :: hm(:,:), v(:,:,:), expo(:,:), wsp(:), tmp(:, :)
       FLOAT :: beta, res, tol !, nrm
 
       call push_sub('td_exp.lanczos')
 
       tol    = te%lanczos_tol
-      ALLOCATE( v(NP_PART, h%d%dim, te%exp_order+1), NP_PART*h%d%dim*(te%exp_order+1))
-      ALLOCATE(  hm(te%exp_order+1, te%exp_order+1), (te%exp_order+1)*(te%exp_order+1))
+
+      ALLOCATE(v(NP, h%d%dim, te%exp_order+1), NP*h%d%dim*(te%exp_order+1))
+      ALLOCATE(tmp(NP, h%d%dim), NP*h%d%dim)
+      ALLOCATE(hm(te%exp_order+1, te%exp_order+1), (te%exp_order+1)*(te%exp_order+1))
       ALLOCATE(expo(te%exp_order+1, te%exp_order+1), (te%exp_order+1)*(te%exp_order+1))
-      v = M_z0; hm = M_z0; expo = M_z0
+
+      hm = M_z0
+      expo = M_z0
 
       lwsp = 4*(te%exp_order+1)**2+7
       ALLOCATE(wsp(lwsp), lwsp)
       ALLOCATE(ipiv(te%exp_order+1), (te%exp_order+1))
 
+
       ! Normalize input vector, and put it into v(:, :, 1)
       beta = zstates_nrm2(gr%m, h%d%dim, zpsi)
-      v(1:NP, :, 1) = zpsi(1:NP, :)/beta
+      v(1:NP, 1:h%d%dim, 1) = zpsi(1:NP, 1:h%d%dim)/beta
 
       ! This is the Lanczos loop...
       do n = 1, te%exp_order
-        call operate(v(:,:, n), v(:, :, n+1))
+
+        !copy v(:, :, n) to an array of size 1:NP_PART
+        do idim = 1, h%d%dim
+          call lalg_copy(NP, v(:, idim, n), zpsi(:, idim))
+        end do
+
+        !to apply the hamiltonian
+        call operate(zpsi, v(:, :, n + 1))
+        
         korder = n
 
         if(hamiltonian_hermitean(h)) then
-          l = max(1, n-1)
+          l = max(1, n - 1)
         else
           l = 1
         end if
+
         do k = l, n
-          hm(k, n) = zstates_dotp(gr%m, h%d%dim, v(:, :, k), v(:, :, n+1))
+          hm(k, n) = zstates_dotp(gr%m, h%d%dim, v(:, :, k), v(:, :, n + 1))
           do idim = 1, h%d%dim
-            call lalg_axpy(NP, -hm(k, n), v(:, idim, k), v(:, idim, n+1))
+            call lalg_axpy(NP, -hm(k, n), v(:, idim, k), v(:, idim, n + 1))
           end do
         end do
-        hm(n+1, n) = zstates_nrm2(gr%m, h%d%dim, v(:, :, n+1))
+
+        hm(n + 1, n) = zstates_nrm2(gr%m, h%d%dim, v(:, :, n + 1))
+
         do idim = 1, h%d%dim
-          call lalg_scal(NP, M_z1/hm(n+1, n), v(:, idim, n+1)) 
+          call lalg_scal(NP, M_ONE/real(hm(n + 1, n)), v(:, idim, n + 1)) 
         end do
+
+        !calculate the exponential of the dense matrix using expokit
         if(hamiltonian_hermitean(h)) then
           call zhpadm(6, n, timestep, -M_zI*hm(1:n, 1:n), n, wsp, lwsp, ipiv(1:n), iexph, ns, iflag)
         else
           call zgpadm(6, n, timestep, -M_zI*hm(1:n, 1:n), n, wsp, lwsp, ipiv(1:n), iexph, ns, iflag)
         end if
+
         k = 0
         do i = 1, n
           do j = 1, n
-            expo(j, i) = wsp(iexph + k); k = k + 1
+            expo(j, i) = wsp(iexph + k)
+            k = k + 1
           end do
         end do
 
         res = abs(hm(n+1, n)*abs(expo(n, 1)))
-        if(abs(hm(n+1, n)) < CNST(1.0e-12)) exit ! (very unlikely) happy breakdown!!! Yuppi!!!
-        if(n>2 .and. res<tol) exit
+        if(abs(hm(n+1, n)) < CNST(1.0e4)*M_EPSILON) exit ! (very unlikely) happy breakdown!!! Yuppi!!!
+        if(n > 2 .and. res < tol) exit
       end do
 
       if(res > tol) then ! Here one should consider the possibility of the happy breakdown.
@@ -430,22 +454,28 @@ contains
         call write_warning(1)
       end if
 
-      call zgpadm(6, korder+1, timestep, -M_zI*hm(1:korder+1, 1:korder+1), korder+1, wsp, &
-        lwsp, ipiv(1:korder+1), iexph, ns, iflag)
+      call zgpadm(6, korder + 1, timestep, -M_zI*hm(1:korder + 1, 1:korder + 1), korder + 1, wsp, &
+        lwsp, ipiv(1:korder + 1), iexph, ns, iflag)
+
       k = 0
       do i = 1, korder+1
         do j = 1, korder+1
-          expo(j, i) = wsp( iexph + k); k = k + 1
+          expo(j, i) = wsp( iexph + k)
+          k = k + 1
         end do
       end do
-      do i = 1, korder + 1
-        v(NP+1:NP_PART, 1:h%d%dim, i) = M_Z0
-      end do
+
       ! zpsi = nrm * V * expo(1:korder, 1) = nrm * V * expo * V^(T) * zpsi
-      call lalg_gemv(NP_PART, h%d%dim, korder+1, M_z1*beta, v, expo(1:korder+1, 1), M_z0, zpsi)
+      call lalg_gemv(NP, h%d%dim, korder + 1, M_z1*beta, v, expo(1:korder + 1, 1), M_z0, tmp)
+
+      do idim = 1, h%d%dim
+        call lalg_copy(NP, tmp(:, idim), zpsi(:, idim))
+      end do
 
       if(present(order)) order = korder
-      deallocate(v, hm, expo, ipiv, wsp)
+
+      deallocate(v, hm, expo, ipiv, wsp, tmp)
+
       call pop_sub()
     end subroutine lanczos
 

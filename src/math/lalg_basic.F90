@@ -220,7 +220,7 @@ module lalg_basic_m
   end interface
 #endif
 
-  type(profile_t), save :: axpy_profile, copy_profile
+  type(profile_t), save :: axpy_profile, copy_profile, gemv_profile
 
 contains
 

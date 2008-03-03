@@ -422,7 +422,9 @@ subroutine FNAME(gemv_1)(m, n, alpha, a, x, beta, y)
   TYPE1,   intent(in)    :: x(:)
   TYPE1,   intent(inout) :: y(:)
 
+  call profiling_in(gemv_profile, "BLAS_GEMV")
   call blas_gemv('N', m, n, alpha, a(1,1), m, x(1), 1, beta, y(1), 1)
+  call profiling_out(gemv_profile)
 
 end subroutine FNAME(gemv_1)
 
@@ -433,7 +435,9 @@ subroutine FNAME(gemv_2)(m1, m2, n, alpha, a, x, beta, y)
   TYPE1,   intent(in)    :: x(:)
   TYPE1,   intent(inout) :: y(:,:)
 
+  call profiling_in(gemv_profile, "BLAS_GEMV")
   call blas_gemv('N', m1*m2, n, alpha, a(1,1,1), m1*m2, x(1), 1, beta, y(1,1), 1)
+  call profiling_out(gemv_profile)
 
 end subroutine FNAME(gemv_2)
 
