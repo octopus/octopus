@@ -270,6 +270,7 @@ contains
       CMPLX :: zfact
       CMPLX, allocatable :: zpsi1(:,:), hzpsi1(:,:)
       integer :: i, idim
+      logical :: zfact_is_real
 
       call push_sub('td_exp.taylor_series')
 
@@ -277,21 +278,34 @@ contains
       ALLOCATE(hzpsi1(NP,      h%d%dim), NP     *h%d%dim)
 
       zfact = M_z1
-      do idim = 1, h%d%dim
-        call lalg_copy(NP, zpsi(:, idim), zpsi1(:, idim))
-      end do
+      zfact_is_real = .true.
 
       do i = 1, te%exp_order
         zfact = zfact*(-M_zI*timestep)/i
-        call operate(zpsi1, hzpsi1)
-        do idim = 1, h%d%dim
-          call lalg_axpy(NP, zfact, hzpsi1(:, idim), zpsi(:, idim))
-        end do
+        zfact_is_real = .not. zfact_is_real
+        
+        if (i == 1) then
+          call operate(zpsi, hzpsi1)
+        else
+          call operate(zpsi1, hzpsi1)
+        end if
+
+        if(zfact_is_real) then
+          do idim = 1, h%d%dim
+            call lalg_axpy(NP, real(zfact), hzpsi1(:, idim), zpsi(:, idim))
+          end do
+        else
+          do idim = 1, h%d%dim
+            call lalg_axpy(NP, zfact, hzpsi1(:, idim), zpsi(:, idim))
+          end do
+        end if
+
         if(i .ne. te%exp_order) then
           do idim = 1, h%d%dim
             call lalg_copy(NP, hzpsi1(:, idim), zpsi1(:, idim))
           end do
         end if
+
       end do
       deallocate(zpsi1, hzpsi1)
 
