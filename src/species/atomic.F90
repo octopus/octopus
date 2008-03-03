@@ -18,6 +18,7 @@
 !! $Id$
 
 #include "global.h"
+#define R_TOPREC(x) real(x, REAL_PRECISION)
 
 module atomic_m
   use global_m
@@ -265,10 +266,12 @@ contains
 
   logical :: GGA
   integer :: IN, IN1, IN2, IR, IS, JN
-  REAL_DOUBLE :: AUX(MAXR), D(NSPIN), DECDD(NSPIN), DECDGD(3,NSPIN),             &
-     DEXDD(NSPIN), DEXDGD(3,NSPIN),                                  &
+  REAL_DOUBLE :: AUX(MAXR), D(NSPIN),                                   &
      DGDM(-NN:NN), DGIDFJ(-NN:NN), DRDM, DVOL,                       &
-     EPSC, EPSX, F1, F2, GD(3,NSPIN), sigma(3), vxsigma(3), vcsigma(3)
+     F1, F2, GD(3,NSPIN)
+  FLOAT :: sigma(3), vxsigma(3), vcsigma(3), &
+    EPSX, EPSC, D_f(NSPIN),  &
+    DEXDD(NSPIN), DEXDGD(3,NSPIN), DECDD(NSPIN), DECDGD(3,NSPIN)
   type(xc_func_t) :: x_conf, c_conf
   type(xc_info_t) :: x_info, c_info
 
@@ -390,20 +393,21 @@ contains
 
      ! The xc_f90_gga routines need as input these combinations of 
      ! the gradient of the densities.
-     sigma(1) = gd(3, 1)*gd(3, 1)
+     sigma(1) = R_TOPREC(gd(3, 1)*gd(3, 1))
      if(NSPIN > 1) then
-       sigma(2) = gd(3, 1) * gd(3, 2)
-       sigma(3) = gd(3, 2) * gd(3, 2)
+       sigma(2) = R_TOPREC(gd(3, 1) * gd(3, 2))
+       sigma(3) = R_TOPREC(gd(3, 2) * gd(3, 2))
      end if
 
 !    Find exchange and correlation energy densities and their
 !    derivatives with respect to density and density gradient
+     D_f(:) = R_TOPREC(D(:))
      IF (GGA) THEN
-       call xc_f90_gga(x_conf, D(1), sigma(1), EPSX, DEXDD(1), vxsigma(1))
-       call xc_f90_gga(c_conf, D(1), sigma(1), EPSC, DECDD(1), vcsigma(1))
+       call xc_f90_gga(x_conf, D_f(1), sigma(1), EPSX, DEXDD(1), vxsigma(1))
+       call xc_f90_gga(c_conf, D_f(1), sigma(1), EPSC, DECDD(1), vcsigma(1))
      ELSE
-       call xc_f90_lda_vxc(x_conf, D(1), EPSX, DEXDD(1))
-       call xc_f90_lda_vxc(c_conf, D(1), EPSC, DECDD(1))
+       call xc_f90_lda_vxc(x_conf, D_f(1), EPSX, DEXDD(1))
+       call xc_f90_lda_vxc(c_conf, D_f(1), EPSC, DECDD(1))
      ENDIF
 
      ! The derivatives of the exchange and correlation energies per particle with
