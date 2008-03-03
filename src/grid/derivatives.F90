@@ -409,10 +409,7 @@ contains
     cmplx_op_ = .false.
 
     ! need non-constant weights for curvlinear and scattering meshes
-    if ( m%use_curvlinear .or. m%sb%scattering_box) const_w_ = .false.
-
-    ! we need complex weights for a scattering calculation
-    if ( m%sb%scattering_box ) cmplx_op_ = .true.
+    if(m%use_curvlinear) const_w_ = .false.
 
     ! build operators
     do i = 1, der%dim+1

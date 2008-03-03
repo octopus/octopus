@@ -187,7 +187,7 @@ static inline int check_header(header_t * h, int * correct_endianness){
 }
 
 
-void FC_FUNC_(write_binary, WRITE_BINARY)
+void FC_FUNC_(write_binary,WRITE_BINARY)
      (int * np, void * f, int * type, int * ierr, STR_F_TYPE fname STR_ARG1)
 {
   header_t * h;
@@ -236,7 +236,7 @@ void FC_FUNC_(write_binary, WRITE_BINARY)
   free(h);
 
 }
-
+ 
 void FC_FUNC_(read_binary,READ_BINARY)
      (int * np, byte * f, int * output_type, int * ierr, STR_F_TYPE fname STR_ARG1)
 {

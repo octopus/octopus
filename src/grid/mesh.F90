@@ -54,9 +54,8 @@ module mesh_m
     mesh_nearest_point,        &
     mesh_subset_indices,       &
     mesh_periodic_point,       &
-    translate_point,           &
-    translate_by_asympt_ucell, &
-    scatt_box_index
+    translate_point
+
 
   ! Describes mesh distribution to nodes.
 
@@ -338,38 +337,6 @@ contains
 
 
    !--------------------------------------------------------------
-   integer function translate_by_asympt_ucell(mesh, index, tfactors) result (tindex)
-     type(mesh_t), intent(in) :: mesh
-     integer,      intent(in) :: index
-     integer,      intent(in) :: tfactors(:)
-
-     integer :: ixyz(MAX_DIM), id
-     
-     call push_sub('mesh.translate_by_asympt_ucell')
-
-     ASSERT(index >= 1 .and. index <= mesh%np)
-     
-     ixyz(:) = mesh%Lxyz(index, :)
-
-     do id = 1, mesh%sb%dim
-       ixyz(id) = ixyz(id) + tfactors(id) *                           &
-         (mesh%sb%asympt_uc_nr(2, id) - mesh%sb%asympt_uc_nr(1, id) + 1)
-     end do
-
-     tindex = mesh_index(mesh%sb%dim, mesh%nr, mesh%Lxyz_inv, ixyz)
-
-     ! check if the translated point is still inside the domain and return
-     ! a negative index otherwise to indicate that the requested translation
-     ! is not valid
-     if (tindex < 1 .or. tindex > mesh%np) then
-       tindex = -1
-     end if
-
-     call pop_sub()
-   end function translate_by_asympt_ucell
-
-
-   !--------------------------------------------------------------
    integer function translate_point(mesh, index, tdist) result (tindex)
      type(mesh_t), intent(in) :: mesh
      integer,      intent(in) :: index
@@ -398,37 +365,6 @@ contains
 
      call pop_sub()
    end function translate_point
-
-
-   ! --------------------------------------------------------------
-   ! the function takes an index of the asymptotic unit cell as input
-   ! and returns the corresponding index inside the scattering box
-   ! (given the start index for the placement of the unit cell)
-   ! --------------------------------------------------------------
-   integer function scatt_box_index(mesh, index, box_start) result (sb_index)
-     type(mesh_t), intent(in) :: mesh
-     integer,      intent(in) :: index
-     integer,      intent(in) :: box_start
-
-     integer :: ixyz(MAX_DIM), ixyz_box_start(MAX_DIM)
-
-     call push_sub('mesh.scatt_box_index')
-
-     ASSERT(index >= 1 .and. index <= mesh%np)
-     
-     ixyz_box_start(:) = mesh%Lxyz(box_start, :)
-     ixyz(:) = mesh%sb%asympt_uc_Lxyz(index, :) - mesh%sb%asympt_uc_Lxyz(1, :)
-
-     ! get new index
-     sb_index = mesh_index(mesh%sb%dim, mesh%nr, mesh%Lxyz_inv, ixyz + ixyz_box_start) 
-
-     ! consistency check as in translate_point
-     if (sb_index < 1 .or. sb_index > mesh%np) then
-       sb_index = -1
-     end if
-
-     call pop_sub()
-   end function scatt_box_index
 
 
    ! --------------------------------------------------------------
