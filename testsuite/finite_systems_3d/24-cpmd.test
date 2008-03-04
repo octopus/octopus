@@ -11,7 +11,7 @@ Enabled    : Yes
 #This test checks the time propagation
 
 # ground state
-Processors : 4
+Processors : 1
 Input      : 24-cpmd.01-gs.inp
 Match ; Initial Energy   ; sed -n '/^Energy/{n\;p\;}' static/info ; \s*Total\s*=\s*-11.032
 
