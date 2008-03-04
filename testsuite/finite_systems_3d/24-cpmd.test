@@ -1,0 +1,44 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: 24-cpmd.test 3344 2007-10-13 13:38:03Z acastro $
+
+Test       : Car-Parrinello Molecular Dynamics
+Author     : Xavier
+Release    : 3.1.0pre1
+Programs   : octopus_mpi; octopus
+TestGroups : short-run
+Enabled    : Yes
+
+#This test checks the time propagation
+
+# ground state
+Processors : 4
+Input      : 24-cpmd.01-gs.inp
+Match ; Initial Energy   ; sed -n '/^Energy/{n\;p\;}' static/info ; \s*Total\s*=\s*-11.032
+
+Processors : 4
+Input      : 24-cpmd.02-verlet.inp
+Match ; Energy [step 1]  ; tail -21 td.general/energy | head -1 ; \s*-1.101
+Match ; Energy [step 5]  ; tail -16 td.general/energy | head -1 ; \s*-1.101
+Match ; Energy [step 10] ; tail -11 td.general/energy | head -1 ; \s*-1.101
+Match ; Energy [step 15] ; tail -6 td.general/energy  | head -1 ; \s*-1.101
+Match ; Energy [step 20] ; tail -1 td.general/energy  | head -1 ; \s*-1.101
+
+Match ; Forces [step 1]  ; tail -21 td.general/coordinates | head -1 | cut -b 270-288; \s*5.481
+Match ; Forces [step 5]  ; tail -16 td.general/coordinates | head -1 | cut -b 270-288; \s*5.189
+Match ; Forces [step 10] ; tail -11 td.general/coordinates | head -1 | cut -b 270-288; \s*5.363
+Match ; Forces [step 15] ; tail -6  td.general/coordinates | head -1 | cut -b 270-288; \s*5.219
+Match ; Forces [step 20] ; tail -1  td.general/coordinates | head -1 | cut -b 270-288; \s*5.055
+
+Processors : 4
+Input      : 24-cpmd.03-vel_verlet.inp
+Match ; Energy [step 1]  ; tail -21 td.general/energy | head -1 ; \s*-1.101
+Match ; Energy [step 5]  ; tail -16 td.general/energy | head -1 ; \s*-1.101
+Match ; Energy [step 10] ; tail -11 td.general/energy | head -1 ; \s*-1.101
+Match ; Energy [step 15] ; tail -6 td.general/energy  | head -1 ; \s*-1.101
+Match ; Energy [step 20] ; tail -1 td.general/energy  | head -1 ; \s*-1.101
+
+Match ; Forces [step 1]  ; tail -21 td.general/coordinates | head -1 | cut -b 270-288; \s*5.481
+Match ; Forces [step 5]  ; tail -16 td.general/coordinates | head -1 | cut -b 270-288; \s*5.189
+Match ; Forces [step 10] ; tail -11 td.general/coordinates | head -1 | cut -b 270-288; \s*5.363
+Match ; Forces [step 15] ; tail -6  td.general/coordinates | head -1 | cut -b 270-288; \s*5.219
+Match ; Forces [step 20] ; tail -1  td.general/coordinates | head -1 | cut -b 270-288; \s*5.055
