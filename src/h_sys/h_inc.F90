@@ -292,7 +292,10 @@ subroutine X(magnus) (h, gr, psi, hpsi, ik, vmagnus)
 
   call X(kinetic) (h, gr, psi, hpsi, ik)
 
-  auxpsi = hpsi
+  do idim = 1, h%d%dim
+    call lalg_copy(NP, hpsi(:, idim), auxpsi(:, idim))
+  end do
+
   if (h%ep%nvnl > 0) call X(vnlpsi)  (h, gr, psi, auxpsi, ik)
   select case(h%d%ispin)
   case(UNPOLARIZED)
