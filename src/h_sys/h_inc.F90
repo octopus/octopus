@@ -279,8 +279,12 @@ subroutine X(magnus) (h, gr, psi, hpsi, ik, vmagnus)
 
   call X(kinetic) (h, gr, psi, hpsi)
 
-  auxpsi = hpsi
+  do idim = 1, h%d%dim
+    call lalg_copy(NP, hpsi(:, idim), auxpsi(:, idim))
+  end do
+
   if (h%ep%nvnl > 0) call X(vnlpsi)  (h, gr, psi, auxpsi, ik)
+
   select case(h%d%ispin)
   case(UNPOLARIZED)
     hpsi(1:NP, 1) = hpsi(1:NP, 1) -  M_zI*vmagnus(1:NP, 1, 1)*auxpsi(1:NP, 1)
@@ -302,8 +306,11 @@ subroutine X(magnus) (h, gr, psi, hpsi, ik, vmagnus)
       auxpsi(1:NP, 1) = vmagnus(1:NP, 2, 1)*psi(1:NP, 1)
     end if
   end select
+
   call X(kinetic) (h, gr, auxpsi, aux2psi)
+
   if (h%ep%nvnl > 0) call X(vnlpsi)  (h, gr, auxpsi, aux2psi, ik)
+
   hpsi(1:NP, 1) = hpsi(1:NP, 1) + M_zI*aux2psi(1:NP, 1)
 
   do idim = 1, h%d%dim
@@ -320,7 +327,9 @@ subroutine X(magnus) (h, gr, psi, hpsi, ik, vmagnus)
       hpsi(1:NP, 1) = hpsi(1:NP, 1) + vmagnus(1:NP, 2, 2)*psi(1:NP, 1)
     end if
   end select
+
   if (h%ep%nvnl > 0) call X(vnlpsi)  (h, gr, psi, Hpsi, ik)
+
   call X(vborders) (gr, h, psi, hpsi)
 
   deallocate(auxpsi, aux2psi)
