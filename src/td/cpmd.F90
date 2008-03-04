@@ -54,7 +54,9 @@ module cpmd_m
     cpmd_restart_read,      &
     cpmd_restart_write,     &
     dcpmd_propagate,        & 
-    zcpmd_propagate
+    zcpmd_propagate,        &
+    dcpmd_propagate_vel,    & 
+    zcpmd_propagate_vel
 
   type cpmd_t
     private

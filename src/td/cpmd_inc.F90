@@ -15,7 +15,7 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! $Id: td.F90 3694 2008-02-15 13:37:54Z marques $
+!! $Id: cpmd_inc.F90 3694 2008-02-15 13:37:54Z marques $
 
 subroutine X(cpmd_propagate)(this, gr, h, st, iter, dt)
   type(cpmd_t), target, intent(inout) :: this
@@ -31,7 +31,7 @@ subroutine X(cpmd_propagate)(this, gr, h, st, iter, dt)
 
   integer :: ik, ist1, ddim, idim, np
 
-  R_TYPE, allocatable :: hpsi(:, :), psi(:, :), xx(:, :), yy(:, :)
+  R_TYPE, allocatable :: hpsi(:, :), psi(:, :), xx(:, :)
   R_TYPE, pointer     :: oldpsi(:, :, :)
   R_TYPE, parameter   :: one = R_TOTYPE(M_ONE)
 
@@ -39,7 +39,6 @@ subroutine X(cpmd_propagate)(this, gr, h, st, iter, dt)
 
   np = gr%m%np
   ddim = st%d%dim
-
 
   ALLOCATE(xx(1:st%nst, 1:st%nst), st%nst**2)
   ALLOCATE(hpsi(1:gr%m%np, 1:st%d%dim), gr%m%np*st%d%dim)
@@ -91,7 +90,6 @@ subroutine X(cpmd_propagate)(this, gr, h, st, iter, dt)
     case(VEL_VERLET)
 
       ALLOCATE(oldpsi(1:gr%m%np_part, 1:st%d%dim, st%st_start:st%st_end), gr%m%np_part*st%d%dim*st%lnst)
-      ALLOCATE(yy(1:st%nst, 1:st%nst), st%nst**2)
 
       do ist1 = st%st_start, st%st_end
         
@@ -101,24 +99,6 @@ subroutine X(cpmd_propagate)(this, gr, h, st, iter, dt)
         if(iter == 1) then 
           ! give the initial conditions
           this%X(psi2)(1:np, 1:ddim, ist1, ik) = M_ZERO
-        else 
-
-          ! we have to complete the propagation of psi2 from the previous step
-
-          this%X(psi2)(1:np, 1:ddim, ist1, ik) = this%X(psi2)(1:np, 1:ddim, ist1, ik) + &
-            dt*M_HALF/this%emass*(-st%occ(ist1, ik)*hpsi(1:np, 1:ddim)) !(4.9) 2nd part
-
-          call profiling_in(cpmd_orth, "CP_ORTHOGONALIZATION")          
-
-          call calc_yy
-
-          ! psi2 <= psi2 + Y * psi
-          call states_block_matr_mul_add(gr%m, st, one, this%X(psi2)(:, :, :, ik), yy, one, st%X(psi)(:, :, :, ik)) !(4.11)
-
-          call profiling_out(cpmd_orth)
-
-          this%ecorr = this%ecorr + this%emass*X(states_nrm2)(gr%m, ddim, this%X(psi2)(:, :, ist1, ik))**2 !(2.11)
-
         end if
 
         oldpsi(1:np, 1:ddim, ist1) = st%X(psi)(1:np, 1:ddim, ist1, ik)
@@ -143,7 +123,7 @@ subroutine X(cpmd_propagate)(this, gr, h, st, iter, dt)
 
       call profiling_out(cpmd_orth)
       
-      deallocate(oldpsi, yy)
+      deallocate(oldpsi)
       
     end select
 
@@ -188,6 +168,68 @@ contains
 
   end subroutine calc_xx
 
+end subroutine X(cpmd_propagate)
+
+subroutine X(cpmd_propagate_vel)(this, gr, h, st, iter, dt)
+  type(cpmd_t),         intent(inout) :: this
+  type(grid_t),         intent(inout) :: gr
+  type(hamiltonian_t),  intent(inout) :: h
+  type(states_t),       intent(inout) :: st
+  integer,              intent(in)    :: iter
+  FLOAT,                intent(in)    :: dt
+
+  integer :: ik, ist1, ddim, np
+
+  R_TYPE, allocatable :: hpsi(:, :), yy(:, :)
+  R_TYPE, parameter   :: one = R_TOTYPE(M_ONE)
+
+  if ( this%method == VERLET ) return
+
+  call profiling_in(cpmd_prop, "CP_PROPAGATION")
+
+  np = gr%m%np
+  ddim = st%d%dim
+
+  ALLOCATE(hpsi(1:gr%m%np, 1:st%d%dim), gr%m%np*st%d%dim)
+  ALLOCATE(yy(1:st%nst, 1:st%nst), st%nst**2)
+
+  this%ecorr = M_ZERO
+
+  do ik = 1, st%d%nik
+
+    do ist1 = st%st_start, st%st_end
+
+      ! calculate the "force"
+      call X(hpsi)(h, gr, st%X(psi)(:, :, ist1, ik), hpsi, ist1, ik)
+
+      ! we have to complete the propagation of psi2 from the previous step
+      this%X(psi2)(1:np, 1:ddim, ist1, ik) = &
+        this%X(psi2)(1:np, 1:ddim, ist1, ik) + dt*M_HALF/this%emass*(-st%occ(ist1, ik)*hpsi(1:np, 1:ddim)) !(4.9) 2nd part
+
+      this%ecorr = this%ecorr + this%emass*X(states_nrm2)(gr%m, ddim, this%X(psi2)(:, :, ist1, ik))**2 !(2.11)
+
+    end do
+
+    call profiling_in(cpmd_orth, "CP_ORTHOGONALIZATION")          
+
+    call calc_yy
+
+    ! psi2 <= psi2 + Y * psi
+    call states_block_matr_mul_add(gr%m, st, one, st%X(psi)(:, :, :, ik), yy, one, this%X(psi2)(:, :, :, ik)) !(4.11)
+
+    call calc_yy
+
+    call profiling_out(cpmd_orth)
+
+
+  end do
+
+  deallocate(hpsi, yy)
+
+  call profiling_out(cpmd_prop)
+
+contains
+
   subroutine calc_yy
     R_TYPE, allocatable :: cc(:, :)
 
@@ -201,7 +243,7 @@ contains
 
   end subroutine calc_yy
 
-end subroutine X(cpmd_propagate)
+end subroutine X(cpmd_propagate_vel)
 
 !! Local Variables:
 !! mode: f90

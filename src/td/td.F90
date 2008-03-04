@@ -242,6 +242,14 @@ contains
       ! Get the energies.
       call hamiltonian_energy(h, sys%gr, sys%geo, st, -1)
 
+      if (td%dynamics == CP) then
+        if(wfs_are_real(st)) then
+          call dcpmd_propagate_vel(td%cp_propagator, sys%gr, h, st, i, td%dt)
+        else
+          call zcpmd_propagate_vel(td%cp_propagator, sys%gr, h, st, i, td%dt)
+        end if
+      end if
+
       ! Recalculate forces, update velocities...
       if(td%move_ions > 0) then
         call epot_forces(gr, sys%geo, h%ep, st, i*td%dt)
