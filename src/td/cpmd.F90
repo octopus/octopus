@@ -31,7 +31,6 @@ module cpmd_m
   use math_m
   use messages_m
   use mesh_m
-  use external_pot_m
   use geometry_m
   use hamiltonian_m
   use loct_m
@@ -41,7 +40,7 @@ module cpmd_m
   use states_m
   use states_block_m
   use system_m
-  use v_ks_m
+  use varinfo_m
   use grid_m
 
   implicit none
@@ -59,11 +58,20 @@ module cpmd_m
 
   type cpmd_t
     private
+    integer        :: method
     FLOAT          :: emass
     FLOAT          :: ecorr
-    FLOAT, pointer :: doldpsi(:, :, :, :)
-    CMPLX, pointer :: zoldpsi(:, :, :, :)
+
+    !for verlet, this store the previous wfs
+    !for vel_verlet, the time derivative of the wfs
+    FLOAT, pointer :: dpsi2(:, :, :, :)
+    CMPLX, pointer :: zpsi2(:, :, :, :)
+    
   end type cpmd_t
+
+  integer, parameter ::   &
+    VEL_VERLET = 1,       &
+    VERLET     = 2
 
   type(profile_t), save :: cpmd_prop, cpmd_orth
 
@@ -84,19 +92,36 @@ contains
     !%Section Time Dependent::Propagation
     !%Description
     !% The fictious electronic mass used to propagate the electronic
-    !% wavefunctions in the Carr-Parrinelo formalism.
+    !% wavefunctions in the Car-Parrinelo formalism.
     !%End
     
     call loct_parse_float(check_inp('CPElectronicMass'), CNST(1.0), this%emass)
 
-    nullify(this%doldpsi, this%zoldpsi)
+    !%Variable CPMethod
+    !%Type integer
+    !%Default verlet
+    !%Section Time Dependent::Propagation
+    !%Description
+    !% This variable defines how to integrate the Car-Parrinello
+    !% equations. The default is verlet.
+    !%Option verlet 2
+    !% Standard verlet.
+    !%Option vel_verlet 1
+    !% RATTLE/Velocity Verlet integrator.
+    !%End
+
+    call loct_parse_int(check_inp('CPMethod'), VERLET, this%method)
+    if(.not.varinfo_valid_option('CPMethod', this%method)) call input_error('CPMethod')
+    call messages_print_var_option(stdout, 'CPMethod', this%method)
+    
+    nullify(this%dpsi2, this%zpsi2)
 
     size = gr%m%np_part * st%d%dim * st%lnst * st%d%nik
 
     if(wfs_are_real(st)) then
-      ALLOCATE(this%doldpsi(gr%m%np_part, st%d%dim, st%st_start:st%st_end, st%d%nik), size)
+      ALLOCATE(this%dpsi2(gr%m%np_part, st%d%dim, st%st_start:st%st_end, st%d%nik), size)
     else
-      ALLOCATE(this%zoldpsi(gr%m%np_part, st%d%dim, st%st_start:st%st_end, st%d%nik), size)
+      ALLOCATE(this%zpsi2(gr%m%np_part, st%d%dim, st%st_start:st%st_end, st%d%nik), size)
     end if
 
     call pop_sub()
@@ -108,8 +133,8 @@ contains
 
     call push_sub('cpmd.cpmd_end')
 
-    if(associated(this%doldpsi)) deallocate(this%doldpsi)
-    if(associated(this%zoldpsi)) deallocate(this%zoldpsi)
+    if(associated(this%dpsi2)) deallocate(this%dpsi2)
+    if(associated(this%zpsi2)) deallocate(this%zpsi2)
 
     call pop_sub()
 
@@ -142,9 +167,9 @@ contains
           if (ist < st%st_start .or.  ist > st%st_end) cycle
           write(filename,'(i10.10)') ii
           if(wfs_are_real(st)) then
-            call drestart_write_function(trim(tmpdir)//'td/cpmd', filename, gr, this%doldpsi(:, idim, ist, ik), err, gr%m%np)
+            call drestart_write_function(trim(tmpdir)//'td/cpmd', filename, gr, this%dpsi2(:, idim, ist, ik), err, gr%m%np)
           else
-            call zrestart_write_function(trim(tmpdir)//'td/cpmd', filename, gr, this%zoldpsi(:, idim, ist, ik), err, gr%m%np)
+            call zrestart_write_function(trim(tmpdir)//'td/cpmd', filename, gr, this%zpsi2(:, idim, ist, ik), err, gr%m%np)
           end if
         end do
       end do
@@ -175,9 +200,9 @@ contains
           if (ist < st%st_start .or.  ist > st%st_end) cycle
           write(filename,'(i10.10)') ii
           if(wfs_are_real(st)) then
-            call drestart_read_function(trim(tmpdir)//'td/cpmd', filename, gr%m, this%doldpsi(:, idim, ist, ik), ierr)
+            call drestart_read_function(trim(tmpdir)//'td/cpmd', filename, gr%m, this%dpsi2(:, idim, ist, ik), ierr)
           else
-            call zrestart_read_function(trim(tmpdir)//'td/cpmd', filename, gr%m, this%zoldpsi(:, idim, ist, ik), ierr)
+            call zrestart_read_function(trim(tmpdir)//'td/cpmd', filename, gr%m, this%zpsi2(:, idim, ist, ik), ierr)
           end if
           if(ierr /= 0) return
         end do

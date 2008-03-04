@@ -18,52 +18,62 @@
 !! $Id: td.F90 3694 2008-02-15 13:37:54Z marques $
 
 subroutine X(cpmd_propagate)(this, gr, h, st, iter, dt)
-  type(cpmd_t),        intent(inout) :: this
-  type(grid_t),        intent(inout) :: gr
-  type(hamiltonian_t), intent(inout) :: h
-  type(states_t),      intent(inout) :: st
-  integer,             intent(in)    :: iter
-  FLOAT,               intent(in)    :: dt
-  
+  type(cpmd_t), target, intent(inout) :: this
+  type(grid_t),         intent(inout) :: gr
+  type(hamiltonian_t),  intent(inout) :: h
+  type(states_t),       intent(inout) :: st
+  integer,              intent(in)    :: iter
+  FLOAT,                intent(in)    :: dt
+
   ! this integration is based on Tuckermann and Parrinello, JCP 101
-  ! 1302 (1994), using the verlet algorithm described in page 1306,
-  ! eqs 4.2 to 4.7.
-  
-  integer :: ik, ist1, ist2, ddim, idim, np
-  
-  R_TYPE, allocatable :: hpsi(:, :), psi(:, :), xx(:, :)
-  
+  ! 1302 (1994), using the verlet and velocity verlet algorithms
+  ! described on page 1306
+
+  integer :: ik, ist1, ddim, idim, np
+
+  R_TYPE, allocatable :: hpsi(:, :), psi(:, :), xx(:, :), yy(:, :)
+  R_TYPE, pointer     :: oldpsi(:, :, :)
+  R_TYPE, parameter   :: one = R_TOTYPE(M_ONE)
+
   call profiling_in(cpmd_prop, "CP_PROPAGATION")
-  
+
   np = gr%m%np
   ddim = st%d%dim
-  
+
+
   ALLOCATE(xx(1:st%nst, 1:st%nst), st%nst**2)
   ALLOCATE(hpsi(1:gr%m%np, 1:st%d%dim), gr%m%np*st%d%dim)
   ALLOCATE(psi(1:gr%m%np, 1:st%d%dim), gr%m%np*st%d%dim)
-  
+
   this%ecorr = M_ZERO
-  
+
   do ik = 1, st%d%nik
-    do ist1 = st%st_start, st%st_end
-      
-      ! give the initial conditions
-      if(iter == 1) this%X(oldpsi)(1:np, 1:ddim, ist1, ik) = st%X(psi)(1:np, 1:ddim, ist1, ik)
+
+    select case(this%method)
+
+    case(VERLET)
+
+      oldpsi => this%X(psi2)(:, :, :, ik)
+
+      do ist1 = st%st_start, st%st_end
+
+        ! give the initial conditions
+        if(iter == 1) this%X(psi2)(1:np, 1:ddim, ist1, ik) = st%X(psi)(1:np, 1:ddim, ist1, ik)
 
         ! calculate the "force"
         call X(hpsi)(h, gr, st%X(psi)(:, :, ist1, ik), hpsi, ist1, ik)
-        
+
         ! propagate the wavefunctions
-        psi(1:np, 1:ddim) = M_TWO*st%X(psi)(1:np, 1:ddim, ist1, ik) - this%X(oldpsi)(1:np, 1:ddim, ist1, ik) &
-             + dt**2/this%emass*(-st%occ(ist1, ik)*hpsi(1:np, 1:ddim)) !(4.2)
-        
+        psi(1:np, 1:ddim) = M_TWO*st%X(psi)(1:np, 1:ddim, ist1, ik) - this%X(psi2)(1:np, 1:ddim, ist1, ik) &
+          + dt**2/this%emass*(-st%occ(ist1, ik)*hpsi(1:np, 1:ddim)) !(4.2)
+
         ! calculate the velocity and the fictitious electronic energy
-        hpsi(1:np, 1:ddim) = abs(psi(1:np, 1:ddim) - this%X(oldpsi)(1:np, 1:ddim, ist1, ik))/(M_TWO*dt) !(4.7)
+        hpsi(1:np, 1:ddim) = abs(psi(1:np, 1:ddim) - this%X(psi2)(1:np, 1:ddim, ist1, ik))/(M_TWO*dt) !(4.7)
         this%ecorr = this%ecorr + this%emass*X(states_nrm2)(gr%m, ddim, hpsi)**2 !(2.11)
 
         do idim = 1, ddim
           ! store the old wavefunctions
-          call lalg_copy(np, st%X(psi)(:, idim, ist1, ik), this%X(oldpsi)(:, idim, ist1, ik))
+          call lalg_copy(np, st%X(psi)(:, idim, ist1, ik), this%X(psi2)(:, idim, ist1, ik))
           call lalg_copy(np, psi(:, idim), st%X(psi)(:, idim, ist1, ik))
         end do
 
@@ -71,55 +81,125 @@ subroutine X(cpmd_propagate)(this, gr, h, st, iter, dt)
 
       call profiling_in(cpmd_orth, "CP_ORTHOGONALIZATION")
 
-      call calc_lambda
+      call calc_xx
 
-      ! psi <= psi + X * oldpsi
-      call states_block_matr_mul_add(gr%m, st, R_TOTYPE(M_ONE), this%X(oldpsi)(:, :, :, ik), xx, &
-           R_TOTYPE(M_ONE), st%X(psi)(:, :, :, ik)) !(4.3)
-      
+      ! psi <= psi + X * psi2
+      call states_block_matr_mul_add(gr%m, st, one, this%X(psi2)(:, :, :, ik), xx, one, st%X(psi)(:, :, :, ik)) !(4.3)
+
       call profiling_out(cpmd_orth)
 
+    case(VEL_VERLET)
+
+      ALLOCATE(oldpsi(1:gr%m%np_part, 1:st%d%dim, st%st_start:st%st_end), gr%m%np_part*st%d%dim*st%lnst)
+      ALLOCATE(yy(1:st%nst, 1:st%nst), st%nst**2)
+
+      do ist1 = st%st_start, st%st_end
+        
+        ! calculate the "force"
+        call X(hpsi)(h, gr, st%X(psi)(:, :, ist1, ik), hpsi, ist1, ik)
+        
+        if(iter == 1) then 
+          ! give the initial conditions
+          this%X(psi2)(1:np, 1:ddim, ist1, ik) = M_ZERO
+        else 
+
+          ! we have to complete the propagation of psi2 from the previous step
+
+          this%X(psi2)(1:np, 1:ddim, ist1, ik) = this%X(psi2)(1:np, 1:ddim, ist1, ik) + &
+            dt*M_HALF/this%emass*(-st%occ(ist1, ik)*hpsi(1:np, 1:ddim)) !(4.9) 2nd part
+
+          call profiling_in(cpmd_orth, "CP_ORTHOGONALIZATION")          
+
+          call calc_yy
+
+          ! psi2 <= psi2 + Y * psi
+          call states_block_matr_mul_add(gr%m, st, one, this%X(psi2)(:, :, :, ik), yy, one, st%X(psi)(:, :, :, ik)) !(4.11)
+
+          call profiling_out(cpmd_orth)
+
+          this%ecorr = this%ecorr + this%emass*X(states_nrm2)(gr%m, ddim, this%X(psi2)(:, :, ist1, ik))**2 !(2.11)
+
+        end if
+
+        oldpsi(1:np, 1:ddim, ist1) = st%X(psi)(1:np, 1:ddim, ist1, ik)
+
+        !(4.8)
+        this%X(psi2)(1:np, 1:ddim, ist1, ik) = &
+          this%X(psi2)(1:np, 1:ddim, ist1, ik) + dt*M_HALF/this%emass*(-st%occ(ist1, ik)*hpsi(1:np, 1:ddim))
+
+        st%X(psi)(1:np, 1:ddim, ist1, ik) = st%X(psi)(1:np, 1:ddim, ist1, ik) + dt*this%X(psi2)(1:np, 1:ddim, ist1, ik)
+
+      end do
+
+      call profiling_in(cpmd_orth, "CP_ORTHOGONALIZATION")
+      
+      call calc_xx
+
+      ! psi <= psi + X * oldpsi
+      call states_block_matr_mul_add(gr%m, st, one, oldpsi, xx, one, st%X(psi)(:, :, :, ik)) !(4.3)
+
+      ! psi2 <= psi2 + 1/dt * X * oldpsi
+      call states_block_matr_mul_add(gr%m, st, one/dt, oldpsi, xx, one, this%X(psi2)(:, :, :, ik)) !(4.9) 1st part
+
+      call profiling_out(cpmd_orth)
+      
+      deallocate(oldpsi, yy)
+      
+    end select
+
+  end do
+  
+  deallocate(hpsi, psi, xx)
+
+  call profiling_out(cpmd_prop)
+
+contains
+
+  subroutine calc_xx
+    integer :: ist1, ist2, it
+    FLOAT   :: res
+    FLOAT,  allocatable :: ii(:, :)
+    R_TYPE, allocatable :: aa(:, :), bb(:, :), xxi(:, :)
+
+    ALLOCATE(aa(1:st%nst, 1:st%nst), st%nst**2)
+    ALLOCATE(bb(1:st%nst, 1:st%nst), st%nst**2)
+    ALLOCATE(ii(1:st%nst, 1:st%nst), st%nst**2)
+    ALLOCATE(xxi(1:st%nst, 1:st%nst), st%nst**2)
+
+    do ist1 = 1, st%nst
+      do ist2 = 1, st%nst
+        ii(ist1, ist2) = ddelta(ist1, ist2)
+      end do
     end do
 
-    deallocate(hpsi, psi, xx)
+    call states_blockt_mul(gr%m, st, st%X(psi)(:, :, :, ik), st%X(psi)(:, :, :, ik), aa, symm=.true.)
+    call states_blockt_mul(gr%m, st, oldpsi,                 st%X(psi)(:, :, :, ik), bb, symm=.false.)
 
-    call profiling_out(cpmd_prop)
+    xx = M_HALF*(ii - aa) !(4.6)
 
-  contains
+    do it = 1, 10
+      xxi = M_HALF*(ii - aa + matmul(xx, ii - bb) + matmul(ii - transpose(bb), xx) - matmul(xx, xx)) !(4.5)
+      res = maxval(abs(xxi - xx))
+      xx = xxi
+      if (res < CNST(1e-5)) exit
+    end do
 
-    subroutine calc_lambda
-      !this routine should be modified for states parallelization
-      integer :: ist1, ist2, it
-      FLOAT   :: res
-      FLOAT,  allocatable :: ii(:, :)
-      R_TYPE, allocatable :: aa(:, :), bb(:, :), xxi(:, :)
-      
-      ALLOCATE(aa(1:st%nst, 1:st%nst), st%nst**2)
-      ALLOCATE(bb(1:st%nst, 1:st%nst), st%nst**2)
-      ALLOCATE(ii(1:st%nst, 1:st%nst), st%nst**2)
-      ALLOCATE(xxi(1:st%nst, 1:st%nst), st%nst**2)
-            
-      do ist1 = 1, st%nst
-        do ist2 = 1, st%nst
-          ii(ist1, ist2) = ddelta(ist1, ist2)
-        end do
-      end do
+    deallocate(aa, bb, ii, xxi)
 
-      call states_blockt_mul(gr%m, st,      st%X(psi)(:, :, :, ik),  st%X(psi)(:, :, :, ik), aa, symm=.true.)
-      call states_blockt_mul(gr%m, st, this%X(oldpsi)(:, :, :, ik),  st%X(psi)(:, :, :, ik), bb, symm=.false.)
-      
-      xx = M_HALF*(ii - aa) !(4.6)
-      
-      do it = 1, 10
-        xxi = M_HALF*(ii - aa + matmul(xx, ii - bb) + matmul(ii - transpose(bb), xx) - matmul(xx, xx)) !(4.5)
-        res = maxval(abs(xxi - xx))
-        xx = xxi
-        if (res < CNST(1e-5)) exit
-      end do
+  end subroutine calc_xx
 
-      deallocate(aa, bb, ii, xxi)
+  subroutine calc_yy
+    R_TYPE, allocatable :: cc(:, :)
 
-    end subroutine calc_lambda
+    ALLOCATE(cc(1:st%nst, 1:st%nst), st%nst**2)
+
+    call states_blockt_mul(gr%m, st, this%X(psi2)(:, :, :, ik), st%X(psi)(:, :, :, ik), cc, symm=.false.)
+
+    yy = -M_HALF*(cc + transpose(cc))
+
+    deallocate(cc)
+
+  end subroutine calc_yy
 
 end subroutine X(cpmd_propagate)
 
