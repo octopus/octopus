@@ -23,7 +23,7 @@ module xc_functl_m
   use datasets_m
   use global_m
   use loct_parser_m
-  use libxc_m
+  use XC_F90(lib_m)
   use messages_m
 
   implicit none
@@ -50,8 +50,8 @@ module xc_functl_m
 
     integer         :: spin_channels     ! XC_UNPOLARIZED | XC_POLARIZED
 
-    type(xc_func_t) :: conf              ! the pointer used to call the library
-    type(xc_info_t) :: info              ! information about the functional
+    type(XC_F90(func_t)) :: conf         ! the pointer used to call the library
+    type(XC_F90(info_t)) :: info         ! information about the functional
 
     integer         :: LB94_modified     ! should I use a special version of LB94 that
     FLOAT           :: LB94_threshold    ! needs to be handled specially
@@ -102,7 +102,7 @@ contains
 
     case(XC_LCA_OMC, XC_LCA_LCH)
       functl%family = XC_FAMILY_LCA
-      call xc_f90_lca_init(functl%conf, functl%info, functl%id, &
+      call XC_F90(lca_init)(functl%conf, functl%info, functl%id, &
         spin_channels)
 
     case default
@@ -132,7 +132,7 @@ contains
 
     if(functl%id.ne.0) then
       ! get the family of the functional
-      functl%family = xc_f90_family_from_id(functl%id)
+      functl%family = XC_F90(family_from_id)(functl%id)
 
       if(functl%family == XC_FAMILY_UNKNOWN) then
         if(functl%id == XC_OEP_X) then
@@ -146,28 +146,28 @@ contains
     ! initialize
     select case(functl%family)
     case(XC_FAMILY_LDA)
-      call xc_f90_lda_init(functl%conf, functl%info, XC_LDA_X, &
+      call XC_F90(lda_init)(functl%conf, functl%info, XC_LDA_X, &
          spin_channels, ndim, XC_NON_RELATIVISTIC)
 
     case(XC_FAMILY_GGA)
-      call xc_f90_gga_init(functl%conf, functl%info, functl%id, spin_channels)
+      call XC_F90(gga_init)(functl%conf, functl%info, functl%id, spin_channels)
       if(functl%id == XC_GGA_XC_LB) then
         call loct_parse_int  (check_inp('LB94_modified'),             0, functl%LB94_modified)
         call loct_parse_float(check_inp('LB94_threshold'), CNST(1.0e-6), functl%LB94_threshold)
       end if
 
     case(XC_FAMILY_HYB_GGA)
-      call xc_f90_hyb_gga_init(functl%conf, functl%info, functl%id, spin_channels)
+      call XC_F90(hyb_gga_init)(functl%conf, functl%info, functl%id, spin_channels)
       
     case(XC_FAMILY_MGGA)
-      call xc_f90_mgga_init(functl%conf, functl%info, functl%id, spin_channels)
+      call XC_F90(mgga_init)(functl%conf, functl%info, functl%id, spin_channels)
 
     end select
 
     if(functl%family == XC_FAMILY_OEP) then
       functl%type = XC_EXCHANGE
     else if(functl%family .ne. XC_FAMILY_NONE) then
-      functl%type = xc_f90_info_kind(functl%info)
+      functl%type = XC_F90(info_kind)(functl%info)
     else
       functl%type = -1
     end if
@@ -194,7 +194,7 @@ contains
 
     if(functl%id.ne.0) then
       ! get the family of the functional
-      functl%family = xc_f90_family_from_id(functl%id)
+      functl%family = XC_F90(family_from_id)(functl%id)
 
       if(functl%family == XC_FAMILY_UNKNOWN) then
         call input_error('XCFunctional')
@@ -211,26 +211,26 @@ contains
       end if
 
       if(functl%id.ne.XC_LDA_C_XALPHA) then
-        call xc_f90_lda_init(functl%conf, functl%info, functl%id, spin_channels)
+        call XC_F90(lda_init)(functl%conf, functl%info, functl%id, spin_channels)
       else
         call loct_parse_float(check_inp('Xalpha'), M_ONE, alpha)
-        call xc_f90_lda_init(functl%conf, functl%info, XC_LDA_C_XALPHA, &
+        call XC_F90(lda_init)(functl%conf, functl%info, XC_LDA_C_XALPHA, &
           spin_channels, ndim, alpha)
       end if
 
     case(XC_FAMILY_GGA)
-      call xc_f90_gga_init(functl%conf, functl%info, functl%id, spin_channels)
+      call XC_F90(gga_init)(functl%conf, functl%info, functl%id, spin_channels)
 
     case(XC_FAMILY_HYB_GGA)
-      call xc_f90_hyb_gga_init(functl%conf, functl%info, functl%id, spin_channels)
+      call XC_F90(hyb_gga_init)(functl%conf, functl%info, functl%id, spin_channels)
 
     case(XC_FAMILY_MGGA)
-      call xc_f90_mgga_init(functl%conf, functl%info, functl%id, spin_channels)
+      call XC_F90(mgga_init)(functl%conf, functl%info, functl%id, spin_channels)
 
     end select
 
     if(functl%family.ne.XC_FAMILY_NONE) then
-      functl%type = xc_f90_info_kind(functl%info)
+      functl%type = XC_F90(info_kind)(functl%info)
     else
       functl%type = -1
     end if
@@ -244,11 +244,11 @@ contains
     type(xc_functl_t), intent(inout) :: functl
 
     select case(functl%family)
-    case(XC_FAMILY_LDA);      call xc_f90_lda_end     (functl%conf)
-    case(XC_FAMILY_GGA);      call xc_f90_gga_end     (functl%conf)
-    case(XC_FAMILY_HYB_GGA);  call xc_f90_hyb_gga_end (functl%conf)
-    case(XC_FAMILY_MGGA);     call xc_f90_mgga_end    (functl%conf)
-    case(XC_FAMILY_LCA);      call xc_f90_lca_end     (functl%conf)
+    case(XC_FAMILY_LDA);      call XC_F90(lda_end)     (functl%conf)
+    case(XC_FAMILY_GGA);      call XC_F90(gga_end)     (functl%conf)
+    case(XC_FAMILY_HYB_GGA);  call XC_F90(hyb_gga_end) (functl%conf)
+    case(XC_FAMILY_MGGA);     call XC_F90(mgga_end)    (functl%conf)
+    case(XC_FAMILY_LCA);      call XC_F90(lca_end)     (functl%conf)
     end select
 
   end subroutine xc_functl_end
@@ -285,7 +285,7 @@ contains
         write(message(1), '(2x,a)') 'Exchange-correlation'
       end select
 
-      call xc_f90_info_name  (functl%info, s1)
+      call XC_F90(info_name)  (functl%info, s1)
       select case(functl%family)
         case (XC_FAMILY_LDA);      write(s2,'(a)') "LDA"
         case (XC_FAMILY_GGA);      write(s2,'(a)') "GGA"
@@ -297,11 +297,11 @@ contains
       call write_info(2, iunit)
       
       i = 1; str = 0
-      call xc_f90_info_ref(functl%info, str, s1)
+      call XC_F90(info_ref)(functl%info, str, s1)
       do while(str >= 0)
         write(message(1), '(4x,a,i1,2a)') '[', i, '] ', trim(s1)
         call write_info(1, iunit)
-        call xc_f90_info_ref(functl%info, str, s1)
+        call XC_F90(info_ref)(functl%info, str, s1)
         i = i + 1
       end do
     end if

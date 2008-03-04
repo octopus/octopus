@@ -74,6 +74,7 @@
 #  define MPI_CMPLX 	 MPI_COMPLEX
 #  define PREC(x)   	 s ## x
 #  define CNST(x)   	 x ## _4
+#  define XC_F90(x)      xc_s_f90_ ## x
 #else
 #  define REAL_PRECISION 8
 #  define FLOAT          real(8)
@@ -82,6 +83,7 @@
 #  define MPI_CMPLX 	 MPI_DOUBLE_COMPLEX
 #  define PREC(x)   	 d ## x
 #  define CNST(x)   	 x ## _8
+#  define XC_F90(x)      xc_f90_ ## x
 #endif
 
 #define   TOFLOAT(x) real(x, REAL_PRECISION)

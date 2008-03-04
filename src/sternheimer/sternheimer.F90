@@ -27,7 +27,7 @@ module sternheimer_m
   use io_m
   use lalg_basic_m
   use loct_parser_m
-  use libxc_m
+  use XC_F90(lib_m)
   use linear_solver_m
   use linear_response_m
   use math_m

@@ -26,7 +26,7 @@ module xc_OEP_m
   use hamiltonian_m
   use lalg_adv_m
   use loct_parser_m
-  use libxc_m
+  use XC_F90(lib_m)
   use linear_response_m
   use linear_solver_m
   use mesh_function_m

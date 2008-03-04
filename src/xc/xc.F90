@@ -26,7 +26,7 @@ module xc_m
   use grid_m
   use lalg_basic_m
   use loct_parser_m
-  use libxc_m
+  use XC_F90(lib_m)
   use mesh_function_m
   use mesh_m
   use messages_m
@@ -162,7 +162,7 @@ contains
 
         ! get the mixing coefficient for hybrids
         if(iand(xcs%functl(2,1)%family, XC_FAMILY_HYB_GGA).ne.0) then
-          call xc_f90_hyb_gga_exx_coef(xcs%functl(2,1)%conf, xcs%exx_coef)
+          call XC_F90(hyb_gga_exx_coef)(xcs%functl(2,1)%conf, xcs%exx_coef)
         else
           ! we are doing Hartree-Fock plus possibly a correlation functional
           xcs%exx_coef = M_ONE

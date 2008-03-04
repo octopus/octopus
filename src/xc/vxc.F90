@@ -84,27 +84,27 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
 
       select case(functl(ixc)%family)
       case(XC_FAMILY_LDA)
-        call xc_f90_lda_vxc(functl(ixc)%conf, l_dens(1), e, l_dedd(1))
+        call XC_F90(lda_vxc)(functl(ixc)%conf, l_dens(1), e, l_dedd(1))
 
       case(XC_FAMILY_GGA)
         if(functl(ixc)%id == XC_GGA_XC_LB) then
           call mesh_r(gr%m, jj, r)
-          call xc_f90_gga_lb_modified(functl(ixc)%conf, l_dens(1), l_sigma(1), &
+          call XC_F90(gga_lb_modified)(functl(ixc)%conf, l_dens(1), l_sigma(1), &
             r, l_dedd(1))
           e = M_ZERO; l_vsigma = M_ZERO
         else
-          call xc_f90_gga(functl(ixc)%conf, l_dens(1), l_sigma(1), &
+          call XC_F90(gga)(functl(ixc)%conf, l_dens(1), l_sigma(1), &
             e, l_dedd(1), l_vsigma(1))
         end if
 
       case(XC_FAMILY_HYB_GGA)
-        call xc_f90_hyb_gga(functl(ixc)%conf, l_dens(1), l_sigma(1), &
+        call XC_F90(hyb_gga)(functl(ixc)%conf, l_dens(1), l_sigma(1), &
           e, l_dedd(1), l_vsigma(1))
 
       case(XC_FAMILY_MGGA)
         message(1) = 'Meta-GGAs are currently disabled.'
         call write_fatal(1)
-        ! call xc_f90_mgga(functl(ixc)%conf, l_dens(1), l_gdens(1,1), l_tau(1), &
+        ! call XC_F90(mgga)(functl(ixc)%conf, l_dens(1), l_gdens(1,1), l_tau(1), &
         !   e, l_dedd(1), l_dedgd(1,1), l_dedtau(1))
 
       case default
@@ -261,7 +261,7 @@ contains
 
     do ii = 1, 2
       if(functl(ii)%id == XC_GGA_XC_LB) then
-        call xc_f90_gga_lb_set_params(functl(ii)%conf, &
+        call XC_F90(gga_lb_set_params)(functl(ii)%conf, &
           functl(ii)%LB94_modified, functl(ii)%LB94_threshold, ip, qtot)
       end if
     end do

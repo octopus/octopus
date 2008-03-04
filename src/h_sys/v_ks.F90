@@ -25,7 +25,7 @@ module v_ks_m
   use grid_m
   use hamiltonian_m
   use loct_parser_m
-  use libxc_m
+  use XC_F90(lib_m)
   use mesh_function_m
   use messages_m
   use mpi_m
