@@ -623,6 +623,9 @@ contains
       !this has to be optimized so the poisson solution is made once
       !for all species, perhaps even include it in the hartree term
       call specie_get_density(a%spec, a%x, gr, geo, rho)
+
+      vl(1:NP) = M_ZERO   ! vl has to be initialized before entering routine
+                          ! and our best guess for the potential is zero
       call dpoisson_solve(gr, vl, rho)
 
       deallocate(rho)

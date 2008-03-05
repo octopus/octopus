@@ -910,7 +910,7 @@ subroutine dlinsyssolve(n, nhrs, a, b, x)
     end subroutine DLAPACK(gesvx)
   end interface
 
-  integer :: info
+  integer :: info, i, j
   integer, allocatable :: ipiv(:), iwork(:)
   FLOAT :: rcond
   FLOAT, allocatable :: ferr(:), berr(:), work(:), r(:), c(:), af(:,:)
@@ -929,7 +929,7 @@ subroutine dlinsyssolve(n, nhrs, a, b, x)
     rcond, ferr(1), berr(1), work(1), iwork(1), info)
 
   if(info /= 0) then
-    write(message(1), '(a, i3)') 'In dlinsyssolve, LAPACK dgesvx returned info = ', info
+    write(message(1), '(a, i3)') 'In dlinsyssolve, LAPACK (d|s)gesvx returned info = ', info
     call write_fatal(1)
   end if
 

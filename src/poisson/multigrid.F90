@@ -338,7 +338,7 @@ contains
 
       do l = cl, fl, -1
         ! postsmoothing
-        call multigrid_relax(this, gr, gr%mgrid%level(l)%m,gr%mgrid%level(l)%f_der, &
+        call multigrid_relax(this, gr, gr%mgrid%level(l)%m, gr%mgrid%level(l)%f_der, &
           phi(l)%p, tau(l)%p , this%poststeps)
 
         if(l /= fl) then
@@ -360,7 +360,7 @@ contains
   end subroutine poisson_multigrid_solver
 
   ! ---------------------------------------------------------
-  subroutine multigrid_relax(this, gr, m,f_der,pot,rho,steps)
+  subroutine multigrid_relax(this, gr, m, f_der, pot, rho, steps)
     type(mg_solver_t), intent(in) :: this
 
     type(grid_t),          intent(in)    :: gr
@@ -424,7 +424,8 @@ contains
     case(CONJUGATE_GRADIENTS)
       iter = steps
       mesh_pointer => m ; der_pointer => f_der%der_discr
-      call dconjugate_gradients(m%np, pot(1:m%np), rho(1:m%np), op, dotp, iter, threshold=CNST(1.0e-12))
+      call dconjugate_gradients(m%np, pot(1:m%np), rho(1:m%np), &
+        internal_laplacian_op, internal_dotp, iter, threshold=CNST(1.0e-12))
       nullify(mesh_pointer) ; nullify(der_pointer)
 
     end select

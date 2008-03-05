@@ -91,7 +91,8 @@ contains
     mesh_pointer => m
     pk = zk
     iter = 400
-    call dconjugate_gradients(m%np_part, pk, zk, op, dotp, iter, res, threshold)
+    call dconjugate_gradients(m%np_part, pk, zk, &
+      internal_laplacian_op, internal_dotp, iter, res, threshold)
     if(res >= threshold) then
       message(1) = 'Conjugate gradients Poisson solver did not converge.'
       write(message(2), '(a,i8)')    '  Iter = ',iter
@@ -126,11 +127,16 @@ contains
 
     ALLOCATE(rhs(m%np_part), m%np_part)
     ALLOCATE(x(m%np_part), m%np_part)
-    rhs = M_ZERO; x = M_ZERO
 
-    rhs(1:m%np) = - M_FOUR*M_PI*rho(1:m%np)
-    x(1:m%np)   = pot(1:m%np)
-    call dconjugate_gradients(m%np_part, x, rhs, op, dotp, iter, res, threshold)
+    rhs(1:m%np)         = - M_FOUR*M_PI*rho(1:m%np)
+    rhs(m%np:m%np_part) = M_ZERO
+
+    x(1:m%np)           = pot(1:m%np)
+    x(m%np:m%np_part)   = M_ZERO
+    
+    call dconjugate_gradients(m%np_part, x, rhs, &
+      internal_laplacian_op, internal_dotp, iter, res, threshold)
+
     if(res >= threshold) then
       message(1) = 'Conjugate gradients Poisson solver did not converge.'
       write(message(2), '(a,i8)')    '  Iter = ',iter

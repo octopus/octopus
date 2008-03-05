@@ -39,7 +39,8 @@ module poisson_corrections_m
     poisson_corr_t
 
   public ::                   &
-    op, dotp,                 &
+    internal_laplacian_op,    &
+    internal_dotp,            &
     der_pointer,              &
     mesh_pointer
 
@@ -238,26 +239,24 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine op(x, y)
+  subroutine internal_laplacian_op(x, y)
     FLOAT, intent(inout) :: x(:)
     FLOAT, intent(out)   :: y(:)
 
-    call push_sub('poisson_corrections.op')
-
+    call push_sub('poisson_corrections.internal_laplacian_op')
     call dderivatives_lapl(der_pointer, x, y)
-
     call pop_sub()
 
-  end subroutine op
+  end subroutine internal_laplacian_op
 
 
   ! ---------------------------------------------------------
-  FLOAT function dotp(x, y) result(res)
+  FLOAT function internal_dotp(x, y) result(res)
     FLOAT, intent(inout) :: x(:)
     FLOAT, intent(in)    :: y(:)
 
-    res     = dmf_dotp(mesh_pointer, x, y)
-  end function dotp
+    res = dmf_dotp(mesh_pointer, x, y)
+  end function internal_dotp
 
 
   ! ---------------------------------------------------------
