@@ -151,9 +151,17 @@ contains
     end do
 
     !Minimize
-    ierr = loct_minimize(g_opt%method, 3*geo%natoms, x(1), real(g_opt%step, 8),&
-         real(g_opt%tolgrad, 8), real(g_opt%toldr, 8), g_opt%max_iter, &
-         calc_point, write_iter_info, energy)
+    select case(g_opt%method)
+    case(MINMETHOD_NMSIMPLEX)
+      ierr = loct_minimize_direct(g_opt%method, 3*geo%natoms, x(1), real(g_opt%step, 8),&
+           real(g_opt%toldr, 8), g_opt%max_iter, &
+           calc_point_ng, write_iter_info_ng, energy)
+    case default
+      ierr = loct_minimize(g_opt%method, 3*geo%natoms, x(1), real(g_opt%step, 8),&
+           real(g_opt%tolgrad, 8), real(g_opt%toldr, 8), g_opt%max_iter, &
+           calc_point, write_iter_info, energy)
+    end select
+
     if (ierr /= 0) then
       message(1) = "Error occurred during the GSL minimization procedure:"
       call loct_strerror(ierr, message(2))
@@ -214,6 +222,12 @@ contains
       !% The bfgs2 version of this minimizer is the most efficient version available, 
       !% and is a faithful implementation of the line minimization scheme described in 
       !% Fletcher, _Practical Methods of Optimization_, Algorithms 2.6.2 and 2.6.4.
+      !%Option simplex 6
+      !% This is experimental, and in fact, *not* recommended unless you just want to
+      !% fool around. It is the Nead-Melder simplex algorithm, as implemented in the
+      !% GNU Scientific Library (GSL). It does not make use of the gradients (i.e., the
+      !% forces) which makes it more inefficient than other schemes. It is included here
+      !% for completeness, since it is free.
       !%End
       call loct_parse_int(check_inp('GOMethod'), MINMETHOD_STEEPEST_DESCENT, g_opt%method)
       if(.not.varinfo_valid_option('GOMethod', g_opt%method)) call input_error('GOMethod')
@@ -239,9 +253,12 @@ contains
       !% Convergence criterium to stop the minimization. In units of length; minimization
       !% is stopped when all species coordinates change less than GOMinimumMove.
       !% Used in conjunction with GOTolerance. If GOMinimumMove = 0, this criterium is ignored.
+      !%
+      !% Note that if you use GOMethod = simplex, then you must supply a non-zero GOMinimumMove.
       !%End
       call loct_parse_float(check_inp('GOMinimumMove'), CNST(0.0)/units_inp%length%factor, g_opt%toldr)
       g_opt%toldr = g_opt%toldr*units_inp%length%factor
+      if(g_opt%method == MINMETHOD_NMSIMPLEX .and. g_opt%toldr <= M_ZERO) call input_error('GOMinimumMove')
       
       !%Variable GOStep
       !%Type float
@@ -283,6 +300,7 @@ contains
   end subroutine geom_opt_run
 
 
+  ! ---------------------------------------------------------
   subroutine calc_point(n, x, f, getgrad, df)
     integer, intent(in)  :: n
     real(8), intent(in)  :: x(n)
@@ -324,6 +342,40 @@ contains
     call pop_sub()
   end subroutine calc_point
 
+
+  ! ---------------------------------------------------------
+  ! Same as calc_point, but without the gradients.
+  subroutine calc_point_ng(n, x, f)
+    integer, intent(in)  :: n
+    real(8), intent(in)  :: x(n)
+    real(8), intent(out) :: f
+    
+    integer :: i
+
+    call push_sub("geom_opt.calc_point")
+
+    do i = 0, geo%natoms - 1
+      geo%atom(i+1)%x(1) = x(3*i + 1)
+      geo%atom(i+1)%x(2) = x(3*i + 2)
+      geo%atom(i+1)%x(3) = x(3*i + 3)
+    end do
+
+    call atom_write_xyz(".", "work-geom", geo)
+
+    call epot_generate(hamilt%ep, syst%gr, syst%geo, syst%mc, syst%st)
+    call states_calc_dens(st, m%np, st%rho)
+    call v_ks_calc(syst%gr, syst%ks, hamilt, st, calc_eigenval=.true.)
+    call hamiltonian_energy(hamilt, syst%gr, geo, st, -1)
+
+    ! do scf calculation
+    call scf_run(scfv, syst%gr, geo, st, syst%ks, hamilt, syst%outp, verbosity = VERB_COMPACT)
+
+    ! store results
+    f = hamilt%etot
+
+    call pop_sub()
+  end subroutine calc_point_ng
+
   subroutine write_iter_info(geom_iter, n, energy, maxdx, maxdf, x)
     integer, intent(in) :: geom_iter, n
     real(8), intent(in) :: energy, maxdx, maxdf
@@ -359,6 +411,43 @@ contains
 
     call pop_sub()
   end subroutine write_iter_info
+
+  ! ---------------------------------------------------------
+  ! Same as write_iter_info_ng, but without the gradients.
+  subroutine write_iter_info_ng(geom_iter, n, energy, maxdx, x)
+    integer, intent(in) :: geom_iter, n
+    real(8), intent(in) :: energy, maxdx
+    real(8), intent(in) :: x(n)
+
+    integer :: i
+    character(len=256) :: c_geom_iter, title
+
+    call push_sub("geom_opt.write_iter_info")
+    
+    write(c_geom_iter, '(a,i4.4)') "go.", geom_iter
+    write(title, '(f16.10)') energy/units_out%energy%factor
+    call atom_write_xyz("geom", trim(c_geom_iter), geo, trim(title))
+
+    do i = 0, geo%natoms - 1
+      geo%atom(i+1)%x(1) = x(3*i + 1)
+      geo%atom(i+1)%x(2) = x(3*i + 2)
+      geo%atom(i+1)%x(3) = x(3*i + 3)
+    end do
+
+    message(1) = ""
+    message(2) = ""
+    message(3) = "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+    write(message(4),'("+++++++++++++++++++++ MINIMIZATION ITER #: ",I4," ++++++++++++++++++++++")') geom_iter
+    write(message(5), '(2x,2(a,f16.10))') "Energy    = ", energy/units_out%energy%factor
+    write(message(6),'(2X,2(a,f16.10))')  "Max dr    = ", maxdx/units_out%length%factor
+    message(7) = message(3)
+    message(8) = message(3)
+    message(9) = ""
+    message(10) = ""
+    call write_info(10)
+
+    call pop_sub()
+  end subroutine write_iter_info_ng
 
 end module geom_opt_m
 
