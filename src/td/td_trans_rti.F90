@@ -812,10 +812,10 @@ end if
         ! 4. Solve linear system (1 + i \delta H_{eff}) st%zpsi = tmp.
         tmp(1:NP, 1) = st%zpsi(1:NP, 1, ist, ik)
         if (mem_type.eq.1) then
-          call zconjugate_gradients(NP, st%zpsi(1:NP, 1, ist, ik), tmp(1:NP, 1), &
+          call zconjugate_gradients(NP, st%zpsi(:, 1, ist, ik), tmp(:, 1), &
             h_eff_backward, h_eff_backwardt, zmf_dotp_aux, cg_iter, threshold=cg_tol)
         else
-          call zconjugate_gradients(NP, st%zpsi(1:NP, 1, ist, ik), tmp(1:NP, 1), &
+          call zconjugate_gradients(NP, st%zpsi(:, 1, ist, ik), tmp(1:NP, 1), &
             h_eff_backward_sp, h_eff_backwardt_sp, zmf_dotp_aux, cg_iter, threshold=cg_tol)
         end if
         ! Write warning if BiCG did not converge.
@@ -880,7 +880,7 @@ end if
     CMPLX, allocatable :: tmp(:, :)
     call push_sub('td_trans_rti.h_eff_backward')
     
-    ALLOCATE(tmp(gr_p%m%np, 1),gr_p%m%np)
+    ALLOCATE(tmp(gr_p%m%np_part, 1),gr_p%m%np_part)
     ! Propagate backward.
     call lalg_copy(gr_p%m%np, x, tmp(:, 1))
     call apply_h_eff(h_p, gr_p, mem_p, intf_p, M_ONE, dt_p, t_p, ist_p, ik_p, tmp)
@@ -900,7 +900,7 @@ end if
     CMPLX, allocatable :: tmp(:, :)
     call push_sub('td_trans_rti.h_eff_backward')
     
-    ALLOCATE(tmp(gr_p%m%np, 1),gr_p%m%np)
+    ALLOCATE(tmp(gr_p%m%np_part, 1),gr_p%m%np_part)
     ! Propagate backward.
     call lalg_copy(gr_p%m%np, x, tmp(:, 1))
     call apply_h_eff_sp(h_p, gr_p, sp_mem_p, intf_p, M_ONE, dt_p, t_p, ist_p, ik_p, tmp, mem_s_p, mapping_p)
@@ -921,7 +921,7 @@ end if
     CMPLX, allocatable :: tmp(:, :)
     call push_sub('td_trans_rti.h_eff_backwardt')
     
-    ALLOCATE(tmp(gr_p%m%np, 1),gr_p%m%np)
+    ALLOCATE(tmp(gr_p%m%np_part, 1),gr_p%m%np_part)
     ! Propagate backward.
     ! To act with the Hermitian conjugate of H_{eff} on the wavefunction
     ! we apply H_{eff} to the conjugate of psi and conjugate the
@@ -945,7 +945,7 @@ end if
     CMPLX, allocatable :: tmp(:, :)
     call push_sub('td_trans_rti.h_eff_backwardt')
     
-    ALLOCATE(tmp(gr_p%m%np, 1),gr_p%m%np)
+    ALLOCATE(tmp(gr_p%m%np_part, 1), gr_p%m%np_part)
     ! Propagate backward.
     ! To act with the Hermitian conjugate of H_{eff} on the wavefunction
     ! we apply H_{eff} to the conjugate of psi and conjugate the
