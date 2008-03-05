@@ -582,6 +582,7 @@ contains
     integer, optional, intent(in) :: wfs_type
 
     integer :: n, ik, ist, idim
+    logical :: force
 
     call push_sub('states.states_allocate_wfns')
 
@@ -589,6 +590,23 @@ contains
       ASSERT(wfs_type == M_REAL .or. wfs_type == M_CMPLX)
       st%wfs_type = wfs_type
     end if
+
+    !%Variable ForceComplex
+    !%Type logical
+    !%Default no
+    !%Section States
+    !%Description
+    !% Normally Octopus determines automatically the type necessary
+    !% for the wave functions. When set to yes this variable will
+    !% force the use of complex wavefunctions. 
+    !%
+    !% Warning: This variable is designed for testing and
+    !% benchmarching and normal users need not use it.
+    !%
+    !%End
+    call loct_parse_logical(check_inp('ForceComplex'), .false., force)
+    
+    if(force) st%wfs_type = M_CMPLX
 
     n = m%np_part * st%d%dim * st%lnst * st%d%nik
     if (st%wfs_type == M_REAL) then
