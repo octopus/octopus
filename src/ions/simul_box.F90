@@ -102,7 +102,7 @@ contains
 
     ! some local stuff
     FLOAT :: def_h, def_rsize
-    integer :: i, ix, iy, iz
+    integer :: i
 
     call push_sub('simul_box.simul_box_init')
 
@@ -121,10 +121,6 @@ contains
 
     !--------------------------------------------------------------
     subroutine read_misc()
-
-      integer :: iunit, ierr, ip, id
-      type(block_t) :: blk
-      character(len=256) :: tmp_str
 
       call push_sub('simul_box.read_misc')
 
@@ -888,7 +884,7 @@ contains
   subroutine simul_box_copy(sbout, sbin)
     type(simul_box_t), intent(out) :: sbout
     type(simul_box_t), intent(in)  :: sbin
-    integer :: n1, n2
+
     sbout%box_shape               = sbin%box_shape
     sbout%h                       = sbin%h
     sbout%box_offset              = sbin%box_offset

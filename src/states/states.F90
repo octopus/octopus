@@ -684,7 +684,7 @@ contains
 
     type(block_t) :: blk
     integer   :: ip, id, is, ik, nstates, state_from, ierr, ncols
-    integer   :: ib, idim, inst, inik, input_format, normalize
+    integer   :: ib, idim, inst, inik, normalize
     FLOAT     :: x(MAX_DIM), r, psi_re, psi_im
     character(len=150) :: filename
 

@@ -75,7 +75,6 @@ contains
     type(grid_t),     pointer :: gr
 
     integer :: natoms, ndim, iatom, idir, jatom, jdir, imat, jmat, iunit, ierr
-    integer :: nnm
     FLOAT, allocatable   :: infrared(:,:)
 
     !some shorcuts
