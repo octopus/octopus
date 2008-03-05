@@ -53,13 +53,6 @@ module geom_opt_m
     integer  :: max_iter
   end type geom_opt_t
 
-  integer, parameter ::             &
-    MINMETHOD_STEEPEST_DESCENT = 1, &
-    MINMETHOD_FR_CG            = 2, &
-    MINMETHOD_PR_CG            = 3, &
-    MINMETHOD_BFGS             = 4, &
-    MINMETHOD_BFGS2            = 5
-
   type(geometry_t),    pointer :: geo
   type(hamiltonian_t), pointer :: hamilt
   type(system_t),      pointer :: syst

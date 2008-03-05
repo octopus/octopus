@@ -45,7 +45,16 @@ module loct_math_m
     loct_ran_gaussian,       &
     loct_fft_optimize,       &
     loct_1dminimize,         &
-    loct_minimize
+    loct_minimize,           &
+    loct_minimize_direct
+
+  integer, public, parameter ::     &
+    MINMETHOD_STEEPEST_DESCENT = 1, &
+    MINMETHOD_FR_CG            = 2, &
+    MINMETHOD_PR_CG            = 3, &
+    MINMETHOD_BFGS             = 4, &
+    MINMETHOD_BFGS2            = 5, &
+    MINMETHOD_NMSIMPLEX        = 6
 
   ! ---------------------------------------------------------
   ! Special functions
@@ -242,6 +251,33 @@ module loct_math_m
         end subroutine write_iter_info
       end interface
     end function oct_minimize
+  end interface
+
+  interface loct_minimize_direct
+    function oct_minimize_direct(method, dim, x, step, toldr, maxiter, f, write_iter_info, minimum)
+      integer :: oct_minimize_direct
+      integer, intent(in)    :: method
+      integer, intent(in)    :: dim
+      real(8), intent(inout) :: x
+      real(8), intent(in)    :: step
+      integer, intent(in)    :: maxiter
+      real(8), intent(in)    :: toldr
+      real(8), intent(out)   :: minimum
+      interface
+        subroutine f(n, x, val)
+          integer, intent(in) :: n
+          real(8), intent(in) :: x(n)
+          real(8), intent(out) :: val
+        end subroutine f
+        subroutine write_iter_info(iter, n, val, maxdr, x)
+          integer, intent(in) :: iter
+          integer, intent(in) :: n
+          real(8), intent(in) :: val
+          real(8), intent(in) :: maxdr
+          real(8), intent(in) :: x(n)
+        end subroutine write_iter_info
+      end interface
+    end function oct_minimize_direct
   end interface
 
   interface loct_fft_optimize
