@@ -265,15 +265,14 @@ subroutine X(ls_solver_multigrid) (ls, h, gr, st, ist, ik, x, y, omega)
   type(hamiltonian_t), intent(inout) :: h
   type(grid_t),        intent(inout) :: gr
   type(states_t),      intent(in)    :: st
-  integer,                intent(in)    :: ist
-  integer,                intent(in)    :: ik
-  R_TYPE,                 intent(inout) :: x(:,:)   ! x(NP, st%d%dim)
-  R_TYPE,                 intent(in)    :: y(:,:)   ! y(NP, st%d%dim)
-  R_TYPE,                 intent(in)    :: omega
+  integer,             intent(in)    :: ist
+  integer,             intent(in)    :: ik
+  R_TYPE,              intent(inout) :: x(:,:)   ! x(NP, st%d%dim)
+  R_TYPE,              intent(in)    :: y(:,:)   ! y(NP, st%d%dim)
+  R_TYPE,              intent(in)    :: omega
 
   R_TYPE, allocatable :: diag(:,:), hx(:,:), res(:,:)
-  integer :: iter, idim
-  R_TYPE  :: proj
+  integer :: iter
 
   ALLOCATE(diag(NP, st%d%dim), NP*st%d%dim)
   ALLOCATE(hx(NP, st%d%dim), NP*st%d%dim)
@@ -283,27 +282,52 @@ subroutine X(ls_solver_multigrid) (ls, h, gr, st, ist, ik, x, y, omega)
 
   diag(1:NP, 1:st%d%dim) = diag(1:NP, 1:st%d%dim) + omega
 
-  do iter = 1, 10*ls%max_iter
+  do iter = 1, ls%max_iter
+
+    call smoothing(3)
+
+    call smoothing(3)
+
+    !calculate the residue
     call X(Hpsi)(h, gr, x, hx, ist, ik)
     res(1:NP, 1:st%d%dim) = hx(1:NP, 1:st%d%dim) + omega*x(1:NP, 1:st%d%dim) - y(1:NP, 1:st%d%dim)
     ls%abs_psi = X(states_nrm2)(gr%m, st%d%dim, res)
+
     if( ls%abs_psi < ls%tol) exit
 
-    if(in_debug_mode .and. mod(iter, 100) == 0 ) then 
+    if(in_debug_mode) then 
       write(message(1), *)  "Multigrid: iter ", iter,  ls%abs_psi, abs(X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), x))
       call write_info(1)
     end if
 
-    x(1:NP, 1:st%d%dim) = x(1:NP, 1:st%d%dim) - CNST(0.666666) * res(1:NP, 1:st%d%dim) / diag(1:NP, 1:st%d%dim)
-    proj = X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), x)
-
-    do idim = 1, st%d%dim
-      call lalg_axpy(NP, -proj, st%X(psi)(:, idim, ist, ik), x(:, idim))
-    end do
-
   end do
 
   ls%iter = iter
+
+contains 
+
+  subroutine smoothing(steps)
+    integer, intent(in) :: steps
+
+    integer :: ii, ip, idim
+    R_TYPE  :: rr
+
+    do ii = 1, steps
+
+      call X(Hpsi)(h, gr, x, hx, ist, ik)
+
+      do idim = 1, st%d%dim
+        do ip = 1, gr%m%np
+          rr = hx(ip, idim) + omega*x(ip, idim) - y(ip, idim)
+          x(ip, idim) = x(ip, idim) - CNST(0.666666) * rr / diag(ip, idim)
+        end do
+      end do
+
+    end do
+
+    call X(lr_orth_vector)(gr%m, st, x, ik)
+
+  end subroutine smoothing
 
 end subroutine X(ls_solver_multigrid)
 

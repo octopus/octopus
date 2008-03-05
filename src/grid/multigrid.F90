@@ -39,7 +39,11 @@ module multigrid_m
     multigrid_end,              &
     multigrid_mesh_half,        &
     multigrid_fine2coarse,      &
-    multigrid_coarse2fine
+    multigrid_coarse2fine,      &
+    mg_float_pointer,           &
+    gridhier_init,              &
+    gridhier_end
+
 
   integer, parameter, public :: &
     INJECTION  = 1,             &
@@ -63,6 +67,9 @@ module multigrid_m
     type(multigrid_level_t), pointer :: level(:)
   end type multigrid_t
 
+  type mg_float_pointer
+    FLOAT, pointer :: p(:)
+  end type mg_float_pointer
 
 contains
 
@@ -90,7 +97,7 @@ contains
     !% the grid been used. Default is the maximum number of levels for
     !% the grid.
     !%Option max_levels 0
-    !% Calculate the optimous number of levels for the grid.
+    !% Calculate the optimus number of levels for the grid.
     !%End
 
     call loct_parse_int(check_inp('MultigridLevels'), 0, n_levels)
@@ -475,6 +482,51 @@ contains
 
     call pop_sub()
   end subroutine multigrid_coarse2fine
+
+  ! ---------------------------------------------------------
+  subroutine gridhier_init(a, mgrid, add_points_for_boundaries)
+    type(mg_float_pointer), pointer :: a(:)
+    type(multigrid_t),      pointer :: mgrid
+    logical,             intent(in) :: add_points_for_boundaries
+
+    integer :: cl, l
+    call push_sub('poisson_multigrid.gridhier_init')
+
+    cl = mgrid%n_levels
+
+    ALLOCATE(a(0:cl), cl+1)
+
+    do l = 0, cl
+      if(add_points_for_boundaries) then
+        ALLOCATE(a(l)%p(1:mgrid%level(l)%m%np_part), mgrid%level(l)%m%np_part)
+        a(l)%p(1:mgrid%level(l)%m%np_part) = M_ZERO
+      else
+        ALLOCATE(a(l)%p(1:mgrid%level(l)%m%np), mgrid%level(l)%m%np)
+        a(l)%p(1:mgrid%level(l)%m%np) = M_ZERO
+      end if
+    end do
+
+    call pop_sub()
+  end subroutine gridhier_init
+
+
+  ! ---------------------------------------------------------
+  subroutine gridhier_end(a, mgrid)
+    type(mg_float_pointer), pointer :: a(:)
+    type(multigrid_t),      pointer :: mgrid
+
+    integer :: cl, l
+    call push_sub('poisson_multigrid.gridhier_end')
+
+    cl = mgrid%n_levels
+
+    do l = 0, cl
+      deallocate(a(l)%p)
+    end do
+    deallocate(a)
+
+    call pop_sub()
+  end subroutine gridhier_end
 
 end module multigrid_m
 

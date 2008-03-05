@@ -26,6 +26,7 @@ module linear_solver_m
   use grid_m
   use hamiltonian_m
   use lalg_basic_m
+  use linear_response_m
   use loct_m
   use loct_parser_m
   use mesh_m

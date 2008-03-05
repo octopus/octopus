@@ -47,9 +47,6 @@ module poisson_multigrid_m
     poisson_multigrid_solver, &
     poisson_multigrid_init,   &
     poisson_multigrid_end,    &
-    mg_float_pointer,         &
-    gridhier_init,            &
-    gridhier_end,             &
     mg_solver_t
 
   type mg_solver_t
@@ -68,10 +65,6 @@ module poisson_multigrid_m
      type(poisson_corr_t) :: corrector
      
   end type mg_solver_t
-
-  type mg_float_pointer
-    FLOAT, pointer :: p(:)
-  end type mg_float_pointer
 
 contains
 
@@ -433,51 +426,6 @@ contains
     call pop_sub()
 
   end subroutine multigrid_relax
-
-  ! ---------------------------------------------------------
-  subroutine gridhier_init(a, mgrid, add_points_for_boundaries)
-    type(mg_float_pointer), pointer :: a(:)
-    type(multigrid_t),      pointer :: mgrid
-    logical,             intent(in) :: add_points_for_boundaries
-
-    integer :: cl, l
-    call push_sub('poisson_multigrid.gridhier_init')
-
-    cl = mgrid%n_levels
-
-    ALLOCATE(a(0:cl), cl+1)
-
-    do l = 0, cl
-      if(add_points_for_boundaries) then
-        ALLOCATE(a(l)%p(1:mgrid%level(l)%m%np_part), mgrid%level(l)%m%np_part)
-        a(l)%p(1:mgrid%level(l)%m%np_part) = M_ZERO
-      else
-        ALLOCATE(a(l)%p(1:mgrid%level(l)%m%np), mgrid%level(l)%m%np)
-        a(l)%p(1:mgrid%level(l)%m%np) = M_ZERO
-      end if
-    end do
-
-    call pop_sub()
-  end subroutine gridhier_init
-
-
-  ! ---------------------------------------------------------
-  subroutine gridhier_end(a, mgrid)
-    type(mg_float_pointer), pointer :: a(:)
-    type(multigrid_t),      pointer :: mgrid
-
-    integer :: cl, l
-    call push_sub('poisson_multigrid.gridhier_end')
-
-    cl = mgrid%n_levels
-
-    do l = 0, cl
-      deallocate(a(l)%p)
-    end do
-    deallocate(a)
-
-    call pop_sub()
-  end subroutine gridhier_end
 
 end module poisson_multigrid_m
 
