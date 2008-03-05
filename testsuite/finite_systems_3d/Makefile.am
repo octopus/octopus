@@ -92,6 +92,10 @@ dist_share_DATA = \
 	22-time_propagation.05-td_fast_md.inp        \
 	22-time_propagation.test                     \
 	23-go-na2.test                               \
-	23-go-na2.01-steep.inp
+	23-go-na2.01-steep.inp                       \
+        24-cpmd.test              \
+        24-cpmd.01-gs.inp         \
+        24-cpmd.02-verlet.inp     \
+        24-cpmd.03-vel_verlet.inp 
 
 CLEANFILES = *~ *.bak
