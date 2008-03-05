@@ -309,7 +309,7 @@ double fn(const gsl_vector *v, void * params)
 
 typedef void (*print_f_fn_ptr)(const int*, const int*, const double*, const double*, const double*);
 
-int FC_FUNC(oct_minimize_direct, OCT_MINIMIZE_DIRECT)
+int FC_FUNC_(oct_minimize_direct, OCT_MINIMIZE_DIRECT)
      (const int *method, const int *dim, double *point, const double *step, 
       const double *toldr, const int *maxiter, funcn f, 
       const print_f_fn_ptr write_info, double *minimum)
