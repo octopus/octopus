@@ -910,7 +910,7 @@ subroutine dlinsyssolve(n, nhrs, a, b, x)
     end subroutine DLAPACK(gesvx)
   end interface
 
-  integer :: info, i, j
+  integer :: info
   integer, allocatable :: ipiv(:), iwork(:)
   FLOAT :: rcond
   FLOAT, allocatable :: ferr(:), berr(:), work(:), r(:), c(:), af(:,:)

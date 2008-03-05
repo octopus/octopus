@@ -346,8 +346,8 @@ module loct_gsl_spline_m
 
     real(8) function oct_spline_eval_integ(spl, a, b, acc)
       use c_pointer_m
-      type(c_pointer_t) :: spl, acc
-      real(8) :: a, b
+      type(c_pointer_t), intent(in) :: spl, acc
+      real(8),           intent(in) :: a, b
     end function oct_spline_eval_integ
   end interface
 

@@ -311,7 +311,7 @@ contains
   ! ---------------------------------------------------------
   subroutine scalar_mesh_write(sm, filename)
     type(scalar_mesh_t), intent(in) :: sm
-    character(len=*)                :: filename
+    character(len=*),    intent(in) :: filename
 
     integer :: i, iunit
 

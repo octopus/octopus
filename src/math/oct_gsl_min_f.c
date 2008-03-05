@@ -319,7 +319,7 @@ int FC_FUNC_(oct_minimize_direct, OCT_MINIMIZE_DIRECT)
 
   const gsl_multimin_fminimizer_type *T = NULL;
   gsl_multimin_fminimizer *s = NULL;
-  gsl_vector *x, *absdr, *ss;
+  gsl_vector *x, *ss;
   gsl_multimin_function my_func;
 
   param_fn_t p;
