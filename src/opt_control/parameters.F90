@@ -29,6 +29,7 @@ module opt_control_parameters_m
   use loct_parser_m
   use loct_math_m
   use filter_m
+  use lasers_m
   use external_pot_m
   use tdf_m
   use mesh_m
@@ -50,6 +51,7 @@ module opt_control_parameters_m
             parameters_apply_envelope,    &
             parameters_set_fluence,       &
             parameters_change_rep,        &
+            parameters_set_initial,       &
             laser_fluence,                &
             j2_functional
 
@@ -76,6 +78,42 @@ module opt_control_parameters_m
   type(mix_t), public :: parameters_mix
 
 contains
+
+
+  ! ---------------------------------------------------------
+  subroutine parameters_set_initial(par, ep, m, dt, max_iter, targetfluence, omegamax)
+    type(oct_control_parameters_t), intent(inout) :: par
+    type(epot_t), intent(inout)                   :: ep
+    type(mesh_t), intent(inout)                   :: m
+    FLOAT, intent(in)                             :: dt
+    integer, intent(in)                           :: max_iter
+    FLOAT, intent(in)                             :: targetfluence
+    FLOAT, intent(in)                             :: omegamax
+
+    integer :: i
+
+    ! Initial guess for the laser: read from the input file.
+    call laser_init(ep%no_lasers, ep%lasers, m)
+
+    ! Check that the laser polarizations are not imaginary.
+    do i = 1, ep%no_lasers
+      if(any(aimag(ep%lasers(i)%pol(:)) .ne. M_ZERO)) then
+        write(message(1),'(a)') 'For optimal control runs, you cannot specify an initial field guess'
+        write(message(2),'(a)') 'with complex polarization direction'
+        call write_fatal(2)
+      end if
+    end do
+
+    do i = 1, ep%no_lasers
+      call laser_to_numerical(ep%lasers(i), dt, max_iter)
+    end do
+
+    call parameters_init(par, ep%no_lasers, dt, max_iter, targetfluence, omegamax)
+    call parameters_set(par, ep)
+    call parameters_apply_envelope(par)
+
+  end subroutine parameters_set_initial
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
@@ -458,30 +496,10 @@ contains
     FLOAT :: t
     call push_sub('parameters.laser_fluence')
 
-    select case(par%representation)
-    case(ctr_parameter_real_space)
-      ! WARNING: This is probably very inefficient; there should be functions in
-      ! the tdf module taken care of integrating functions.
-      laser_fluence = M_ZERO
-      do j = 1, par%no_parameters
-        do i = 1, par%ntiter+1
-          t = (i-1) * par%dt
-          do k = 1, MAX_DIM
-            laser_fluence = laser_fluence + real( par%pol(k, j) * tdf(par%f(j), i) )**2
-          end do
-        end do
-      end do
-      laser_fluence = laser_fluence * par%dt
-
-    case(ctr_parameter_frequency_space)
-      stop 'Error'
-      laser_fluence = M_ZERO
-      do j = 1, par%no_parameters
-        nfreqs = tdf_nfreqs(par%f(j))
-        do k = 1, nfreqs
-        end do
-      end do 
-    end select
+    laser_fluence = M_ZERO
+    do j = 1, par%no_parameters
+      laser_fluence = laser_fluence + tdf_dot_product(par%f(j), par%f(j))
+    end do
 
     call pop_sub()
   end function laser_fluence

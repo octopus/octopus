@@ -49,6 +49,7 @@ module tdf_m
             tdf_set_numerical,           &
             tdf_to_numerical,            &
             tdf,                         &
+            tdf_dot_product,             &
             tdf_scalar_multiply,         &
             tdf_fft_forward,             &
             tdf_fft_backward,            &
@@ -717,24 +718,43 @@ module tdf_m
 
 
   !------------------------------------------------------------
-  ! Nullifies pointers (without deallocation); sets numerical values to scalar variables.
-  subroutine tdf_null(f)
-    type(tdf_t), intent(inout) :: f
+  ! Returns the dot product of f and g, defined as:
+  !    < f | g > = \int_0^T dt f^*(t) g(t)
+  ! It assumes that both f and m are in the same mode, otherwise
+  ! it will fail and stop the code.
+  !------------------------------------------------------------
+  CMPLX function tdf_dot_product(f, g) result (fg)
+    type(tdf_t), intent(in) :: f, g
+    integer :: i
+    FLOAT :: t
 
-    f%t0     = CNST(0.0)
-    f%tau0   = CNST(0.0)
-    f%tau1   = CNST(0.0)
-    f%dt     = CNST(0.0)
-    f%a0     = CNST(0.0)
-    f%omega0 = CNST(0.0)
-    f%niter  = 0
-    f%nfreqs = 0
-    f%mode = -1
-    nullify(f%val)
-    nullify(f%coeffs)
+    fg = M_z0
 
-  end subroutine tdf_null
+    ! For the moment, we will just assume that f and g are of the same type.
+    ASSERT(f%mode .eq. g%mode)
 
+    select case(f%mode)
+    case(TDF_NUMERICAL)
+      ! We assume that the grid is the same for both functions.
+      do i = 1, f%niter + 1
+        fg = fg + conjg( f%val(i) ) * g%val(i)
+      end do
+      fg = fg * f%dt
+
+    case(TDF_SINE_SERIES)
+      ! We assume that the frequencies grid is the same for both functions
+      do i = 1, f%nfreqs
+        fg = fg + f%coeffs(i) * g%coeffs(i)
+      end do
+    case default
+      do i = 1, f%niter + 1
+        t = (i-1) * f%dt
+        fg = fg + conjg( tdf(f, i) ) * tdf(g, i)
+      end do
+
+    end select
+
+  end function tdf_dot_product
 
 
 end module tdf_m

@@ -98,16 +98,8 @@ contains
 
     call oct_read_inp(oct)
 
-    ! Initial guess for the laser: read from the input file.
-    call laser_init(h%ep%no_lasers, h%ep%lasers, sys%gr%m)
-
-    do i = 1, h%ep%no_lasers
-      call laser_to_numerical(h%ep%lasers(i), td%dt, td%max_iter)
-    end do
-
-    call parameters_init(par, h%ep%no_lasers, td%dt, td%max_iter, oct%targetfluence, oct%par_omegamax)
-    call parameters_set(par, h%ep)
-    call parameters_apply_envelope(par)
+    call parameters_set_initial(par, h%ep, sys%gr%m, td%dt, td%max_iter, &
+                                oct%targetfluence, oct%par_omegamax)
 
     ! Moving to the sine-Fourier space.
     if(oct%par_representation .eq. oct_par_sfourier_space) then
