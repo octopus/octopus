@@ -66,7 +66,7 @@ module external_pot_m
     epot_forces,               &
     dconmut_vnl_r,             &
     zconmut_vnl_r,             &
-    build_local_part_in_real_space
+    epot_local_potential
 
 
   type epot_t
@@ -121,7 +121,7 @@ contains
     type(geometry_t), intent(inout) :: geo
     integer,          intent(in)    :: ispin
 
-    integer :: i, nvl
+    integer :: i
     type(block_t) :: blk
     FLOAT, allocatable :: x(:)
     logical :: filter
@@ -338,10 +338,7 @@ contains
 #endif
 
     ! The projectors
-    ep%nvnl = geometry_nvnl(geo, nvl)
-
-    !also the local potential
-    ep%nvnl = ep%nvnl + nvl
+    ep%nvnl = geometry_nvnl(geo)
     
     nullify(ep%p)
     
@@ -478,55 +475,47 @@ contains
     ! Local.
     ep%vpsl = M_ZERO
     do ia = 1, geo%natoms
-      call build_local_part_in_real_space(ep, gr, geo, geo%atom(ia), ep%vpsl, time_, st%rho_core)
+      call epot_local_potential(ep, gr, geo, geo%atom(ia), ep%vpsl, time_, st%rho_core)
     end do
 
     ! we assume that we need to recalculate the ion_ion energy
     call ion_ion_interaction(ep, gr, sb, geo)
 
-    ! Local.
-    ! the pseudo potential part.
-    iproj = 1
-    do ia = 1, geo%natoms
-      atm => geo%atom(ia)
+    if(ep%nvnl > 0) then
+      ! Local.
+      ! the pseudo potential part.
+      iproj = 1
+      do ia = 1, geo%natoms
+        atm => geo%atom(ia)
 
-      if(.not. specie_is_ps(atm%spec)) cycle
+        if(.not. specie_is_ps(atm%spec)) cycle
 
-      ep%atomproj(1, ia) = iproj
-      
-      call submesh_init_sphere(nl_sphere, sb, m, atm%x, atm%spec%ps%rc_max + m%h(1))
+        ep%atomproj(1, ia) = iproj
 
-      do l = 0, atm%spec%ps%l_max
-        if(atm%spec%ps%l_loc == l) cycle
-        do lm = -l, l
+        call submesh_init_sphere(nl_sphere, sb, m, atm%x, atm%spec%ps%rc_max + m%h(1))
 
-          call projector_end(ep%p(iproj))
-          call submesh_copy(nl_sphere, ep%p(iproj)%sphere)
-          call projector_init(ep%p(iproj), atm, ep%reltype, l, lm)
+        do l = 0, atm%spec%ps%l_max
+          if(atm%spec%ps%l_loc == l) cycle
+          do lm = -l, l
 
-          if(simul_box_is_periodic(sb)) &
-            call projector_init_phases(ep%p(iproj), gr%m, st%d%nik, st%d%kpoints)
+            call projector_end(ep%p(iproj))
+            call submesh_copy(nl_sphere, ep%p(iproj)%sphere)
+            call projector_init(ep%p(iproj), atm, ep%reltype, l, lm)
 
-          ep%p(iproj)%iatom = ia
-          iproj = iproj + 1
+            if(simul_box_is_periodic(sb)) &
+              call projector_init_phases(ep%p(iproj), gr%m, st%d%nik, st%d%kpoints)
+
+            ep%p(iproj)%iatom = ia
+            iproj = iproj + 1
+          end do
         end do
+
+        call submesh_end(nl_sphere)
+
+        ep%atomproj(2, ia) = iproj - 1
+
       end do
-
-      call submesh_end(nl_sphere)
-
-      !the local-localized part
-      ep%p(iproj)%iatom = ia
-      
-      call projector_end(ep%p(iproj))
-      call submesh_init_sphere(ep%p(iproj)%sphere, &
-        sb, m, atm%x, double_grid_get_rmax(gr%dgrid, atm%spec, m) + m%h(1))
-      call projector_init(ep%p(iproj), atm, force_type = M_LOCAL)
-
-      iproj = iproj + 1
-      
-      ep%atomproj(2, ia) = iproj - 1
-
-    end do
+    end if
 
     call projector_build_all
 
@@ -541,10 +530,10 @@ contains
 
     subroutine projector_build_all
 #ifdef HAVE_MPI
-      integer :: rank, size, ini, fin, mpi_err
+      integer :: rank, size, ini, fin
       integer, allocatable :: rep(:)
 #endif
-      
+
       call profiling_in(projector_build_prof, "PROJECTOR_BUILD")
 
 #ifdef HAVE_MPI      
@@ -554,43 +543,43 @@ contains
         do iproj = 1, ep%nvnl
           call projector_build(ep%p(iproj), gr, geo%atom(ep%p(iproj)%iatom))
         end do
-        
+
 #ifdef HAVE_MPI
       else
-        
+
         size = mc%group_sizes(P_STRATEGY_STATES)
-        
+
         ALLOCATE(rep(1:ep%nvnl), ep%nvnl)
-        
+
         do rank = 0, size-1
           ini = rank * ep%nvnl / size + 1
           fin = min((rank + 1 )* ep%nvnl / size, ep%nvnl)
           rep(ini:fin) = rank
         end do
-        
+
         rank = mc%who_am_i(P_STRATEGY_STATES)
-        
+
         do iproj = 1, ep%nvnl
           if ( rep(iproj) == rank ) then 
             call projector_build(ep%p(iproj), gr, geo%atom(ep%p(iproj)%iatom))
           end if
         end do
-        
+
         do iproj = 1, ep%nvnl
           call projector_broadcast(ep%p(iproj), gr, mc, geo%atom(ep%p(iproj)%iatom), rep(iproj))
         end do
-        
-      deallocate(rep)
 
-    end if
+        deallocate(rep)
+
+      end if
 
 #endif
-    call profiling_out(projector_build_prof)
+      call profiling_out(projector_build_prof)
     end subroutine projector_build_all
 
   end subroutine epot_generate
 
-  subroutine build_local_part_in_real_space(ep, gr, geo, a, vpsl, time, rho_core)
+  subroutine epot_local_potential(ep, gr, geo, a, vpsl, time, rho_core)
     type(epot_t),             intent(in)    :: ep
     type(grid_t),             intent(inout) :: gr
     type(geometry_t),         intent(in)    :: geo
@@ -598,12 +587,13 @@ contains
     FLOAT,                    intent(inout) :: vpsl(:)
     FLOAT,                    intent(in)    :: time
     FLOAT,          optional, pointer       :: rho_core(:)
- 
-    integer :: i
-    FLOAT :: x(MAX_DIM)
-    FLOAT, allocatable  :: rho(:), vl(:)
 
-    call push_sub('epot.build_local_part_in_real_space')
+    integer :: i
+    FLOAT :: x(MAX_DIM), radius
+    FLOAT, allocatable  :: rho(:), vl(:)
+    type(submesh_t)  :: sphere
+
+    call push_sub('epot.epot_local_potential')
 
     ALLOCATE(vl(1:NP_PART), NP_PART)
 #ifdef USE_OMP
@@ -625,7 +615,7 @@ contains
       call specie_get_density(a%spec, a%x, gr, geo, rho)
 
       vl(1:NP) = M_ZERO   ! vl has to be initialized before entering routine
-                          ! and our best guess for the potential is zero
+      ! and our best guess for the potential is zero
       call dpoisson_solve(gr, vl, rho)
 
       deallocate(rho)
@@ -641,6 +631,21 @@ contains
     vpsl(1:NP) = vpsl(1:NP) + vl(1:NP)
     !$omp end parallel workshare
 
+    !the localized part
+    if(specie_is_ps(a%spec)) then
+
+      radius = double_grid_get_rmax(gr%dgrid, a%spec, gr%m) + gr%m%h(1)
+
+      call submesh_init_sphere(sphere, gr%sb, gr%m, a%x, radius)
+      call double_grid_apply_local(gr%dgrid, a%spec, gr%m, sphere, a%x, vl(1:sphere%ns))
+
+      vpsl(sphere%jxyz(1:sphere%ns)) = vpsl(sphere%jxyz(1:sphere%ns)) + vl(1:sphere%ns)
+      call submesh_end(sphere)
+
+    end if
+
+    deallocate(vl)
+
     !Non-local core corrections
     if(present(rho_core) .and. a%spec%nlcc .and. specie_is_ps(a%spec)) then
       do i = 1, NP
@@ -649,10 +654,8 @@ contains
       end do
     end if
 
-    deallocate(vl)
-
     call pop_sub()
-  end subroutine build_local_part_in_real_space
+  end subroutine epot_local_potential
 
 
   ! ---------------------------------------------------------

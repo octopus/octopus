@@ -90,7 +90,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
     vloc(1:NP) = M_ZERO
     !$omp end parallel workshare
     
-    call build_local_part_in_real_space(ep, gr, geo, geo%atom(iatom), vloc, time)
+    call epot_local_potential(ep, gr, geo, geo%atom(iatom), vloc, time)
     
     do idir = 1, NDIM
       force(idir, iatom) = force(idir, iatom) - dmf_dotp(gr%m, grho(1:NP, idir), vloc(1:NP))
@@ -141,8 +141,6 @@ subroutine X(conmut_vnl_r)(gr, geo, ep, dim, idir, iatom, psi, cpsi, ik)
   cpsi(1:gr%m%np, 1:dim) = M_ZERO
 
   do ipj = ep%atomproj(1, iatom), ep%atomproj(2, iatom)
-    
-    if (ep%p(ipj)%type == M_LOCAL ) cycle
     
     n_s = ep%p(ipj)%sphere%ns
     jxyz => ep%p(ipj)%sphere%jxyz

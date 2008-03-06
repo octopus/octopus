@@ -47,7 +47,6 @@ module projector_m
 
   private
   public ::                       &
-       local_t,                   &
        projector_t,               &
        projector_null,            &
        projector_init,            &
@@ -67,13 +66,7 @@ module projector_m
   integer, public, parameter ::  &
        M_HGH = 1, &
        M_KB  = 2, &
-       M_RKB = 3, &
-       M_LOCAL = 4
-
-  ! an oximoronic local projector type
-  type local_t
-     FLOAT, pointer :: v(:)
-  end type local_t
+       M_RKB = 3
 
   ! The projector data type is intended to hold the local and
   ! non-local parts of the pseudopotentials. The definition of the
@@ -101,7 +94,6 @@ module projector_m
     type(hgh_projector_t)  :: hgh_p
     type(kb_projector_t)   :: kb_p
     type(rkb_projector_t)  :: rkb_p
-    type(local_t)          :: local_p
     CMPLX, pointer         :: phase(:, :)
   end type projector_t
 
@@ -117,40 +109,35 @@ contains
   end subroutine projector_null
 
   !---------------------------------------------------------
-  subroutine projector_init(p, a, reltype, l, lm, force_type)
+  subroutine projector_init(p, a, reltype, l, lm)
     type(projector_t), intent(inout) :: p
     type(atom_t),      intent(in)    :: a
-    integer, optional, intent(in)    :: reltype
-    integer, optional, intent(in)    :: l, lm
-    integer, optional, intent(in)    :: force_type
+    integer,           intent(in)    :: reltype
+    integer,           intent(in)    :: l, lm
 
     call push_sub('projector.projector_init')
 
     nullify(p%phase)
-    if(present(l)) p%l = l
-    if(present(lm)) p%lm = lm
+    p%l = l
+    p%lm = lm
 
-    if(present(force_type)) then 
-      p%type = force_type
-    else 
-      select case (a%spec%ps%kbc)
-      case (1)
+    select case (a%spec%ps%kbc)
+    case (1)
+      p%type = M_KB
+      if (reltype == 1) then
+        write(message(1),'(a,a,a)') "Spin-orbit coupling for specie ", trim(a%spec%label), " is not available."
+        call write_warning(1)
+      end if
+    case (2)
+      if (l == 0 .or. reltype == 0) then
         p%type = M_KB
-        if (reltype == 1) then
-          write(message(1),'(a,a,a)') "Spin-orbit coupling for specie ", trim(a%spec%label), " is not available."
-          call write_warning(1)
-        end if
-      case (2)
-        if (l == 0 .or. reltype == 0) then
-          p%type = M_KB
-        else
-          p%type = M_RKB
-        end if
-      case (3)
-        p%type = M_HGH
-      end select
-    end if
-
+      else
+        p%type = M_RKB
+      end if
+    case (3)
+      p%type = M_HGH
+    end select
+    
     call pop_sub()
   end subroutine projector_init
 
@@ -183,7 +170,7 @@ contains
     type(grid_t),      intent(in)    :: gr
     type(atom_t),      intent(in)    :: a
 
-    integer :: ns, l, lm
+    integer :: l, lm
 
     call push_sub('projector.projector_build')
 
@@ -191,11 +178,6 @@ contains
     lm = p%lm
 
     select case (p%type)
-
-    case(M_LOCAL)
-      ns =  p%sphere%ns
-      ALLOCATE(p%local_p%v(1:ns), ns)
-      call double_grid_apply_local(gr%dgrid, a%spec, gr%m, p%sphere, a%x, p%local_p%v)
 
     case (M_HGH)
       call hgh_projector_null(p%hgh_p)
@@ -223,7 +205,7 @@ contains
     type(atom_t),      intent(in)    :: a
     integer,           intent(in)    :: root
 
-    integer :: ns, l, lm, mpi_err, rank
+    integer :: l, lm, rank
 
     call push_sub('projector.projector_broadcast')
     
@@ -232,13 +214,6 @@ contains
     rank = mc%who_am_i(P_STRATEGY_STATES)
 
     select case (p%type)
-    case(M_LOCAL)
-      ns =  p%sphere%ns
-      if ( rank /= root) then
-        ALLOCATE(p%local_p%v(1:ns), ns)
-      end if
-      call MPI_Bcast(p%local_p%v, ns, MPI_FLOAT, root, mc%group_comm(P_STRATEGY_STATES), mpi_err)
-
     case (M_HGH)
       if ( rank /= root) then      
         call hgh_projector_null(p%hgh_p)
@@ -271,8 +246,6 @@ contains
     call submesh_end(p%sphere)
 
     select case(p%type)
-    case(M_LOCAL)
-      deallocate(p%local_p%v)
     case(M_HGH)
       call hgh_projector_end(p%hgh_p)
     case(M_KB)

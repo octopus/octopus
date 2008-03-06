@@ -40,7 +40,7 @@ subroutine X(project_psi)(mesh, pj, dim, psi, ppsi, reltype, ik)
   ALLOCATE(plpsi(n_s, dim), n_s*dim)
 
   do idim = 1, dim
-    if(simul_box_is_periodic(mesh%sb) .and. pj%type /= M_LOCAL) then
+    if(simul_box_is_periodic(mesh%sb)) then
       lpsi(1:n_s, idim) = psi(pj%sphere%jxyz(1:n_s), idim) * pj%phase(1:n_s, ik)
     else
       lpsi(1:n_s, idim) = psi(pj%sphere%jxyz(1:n_s), idim)
@@ -50,7 +50,7 @@ subroutine X(project_psi)(mesh, pj, dim, psi, ppsi, reltype, ik)
   call X(project_sphere)(mesh, pj, dim, lpsi, plpsi, reltype)
 
   do idim = 1, dim
-    if(simul_box_is_periodic(mesh%sb) .and. pj%type /= M_LOCAL) then
+    if(simul_box_is_periodic(mesh%sb)) then
       ppsi(pj%sphere%jxyz(1:n_s), idim) = ppsi(pj%sphere%jxyz(1:n_s), idim)&
         + plpsi(1:n_s, idim)*conjg(pj%phase(1:n_s, ik))
     else
@@ -86,7 +86,7 @@ R_TYPE function X(psia_project_psib)(mesh, pj, dim, psia, psib, reltype, ik) res
   ALLOCATE(plpsi(n_s, dim), n_s*dim)
 
   do idim = 1, dim
-    if(simul_box_is_periodic(mesh%sb) .and. pj%type /= M_LOCAL) then
+    if(simul_box_is_periodic(mesh%sb)) then
       lpsi(1:n_s, idim) = psib(pj%sphere%jxyz(1:n_s), idim) * pj%phase(1:n_s, ik)
     else
       lpsi(1:n_s, idim) = psib(pj%sphere%jxyz(1:n_s), idim)
@@ -97,7 +97,7 @@ R_TYPE function X(psia_project_psib)(mesh, pj, dim, psia, psib, reltype, ik) res
 
   apb = M_ZERO
   do idim = 1, dim
-    if(simul_box_is_periodic(mesh%sb) .and. pj%type /= M_LOCAL) then
+    if(simul_box_is_periodic(mesh%sb)) then
       plpsi(1:n_s, idim) = R_CONJ(psia(pj%sphere%jxyz(1:n_s), idim))*plpsi(1:n_s, idim)*conjg(pj%phase(1:n_s, ik))
     else
       plpsi(1:n_s, idim) = R_CONJ(psia(pj%sphere%jxyz(1:n_s), idim))*plpsi(1:n_s, idim)
@@ -118,34 +118,20 @@ subroutine X(project_sphere)(mesh, pj, dim, psi, ppsi, reltype)
   R_TYPE,            intent(inout) :: ppsi(:, :)  ! ppsi(1:n_s, dim)
   integer,           intent(in)    :: reltype
 
-  integer :: n_s, idim
-
   call push_sub('projector_inc.project_sphere')
 
-  n_s = pj%sphere%ns
-
-  if(pj%type == M_LOCAL) then
-
-    do idim = 1, dim
-      ppsi(1:n_s, idim) = pj%local_p%v(1:n_s) * psi(1:n_s, idim)
-    end do
-
-  else
-
-    select case (pj%type)
-    case (M_HGH)
-      call X(hgh_project)(mesh, pj%sphere, pj%hgh_p, dim, psi, ppsi, reltype)
-    case (M_KB)
-      call X(kb_project)(mesh, pj%sphere, pj%kb_p, dim, psi, ppsi)
-    case (M_RKB)
+  select case (pj%type)
+  case (M_HGH)
+    call X(hgh_project)(mesh, pj%sphere, pj%hgh_p, dim, psi, ppsi, reltype)
+  case (M_KB)
+    call X(kb_project)(mesh, pj%sphere, pj%kb_p, dim, psi, ppsi)
+  case (M_RKB)
 #ifdef R_TCOMPLEX
-      !This can only be aplied to complex spinor wave-functions
-      call rkb_project(mesh, pj%sphere, pj%rkb_p, psi, ppsi)
+    !This can only be aplied to complex spinor wave-functions
+    call rkb_project(mesh, pj%sphere, pj%rkb_p, psi, ppsi)
 #endif
-    end select
-
-  end if
-
+  end select
+  
   call pop_sub()
 end subroutine X(project_sphere)
 

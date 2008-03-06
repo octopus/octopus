@@ -1226,22 +1226,7 @@ subroutine X(vnlpsi_diag) (h, m, hpsi)
   type(mesh_t),        intent(in)    :: m
   R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, h%d%dim)
 
-  integer :: ipj
-  R_TYPE, allocatable :: psi(:, :)
-
   call push_sub('h_inc.Xvnlpsi')
-
-  ALLOCATE(psi(1:m%np, 1:h%d%dim), m%np*h%d%dim)
-
-  psi = M_ONE
-
-  do ipj = 1, h%ep%nvnl
-    if( h%ep%p(ipj)%type == M_LOCAL) then 
-      call X(project_psi)(m, h%ep%p(ipj), h%d%dim, psi, hpsi, h%ep%reltype, ik = 1)
-    end if
-  end do
-
-  deallocate(psi)
 
   call pop_sub()
 end subroutine X(vnlpsi_diag)

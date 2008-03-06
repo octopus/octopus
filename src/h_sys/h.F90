@@ -407,22 +407,13 @@ contains
     type(hamiltonian_t), intent(inout) :: h
     type(grid_t),        intent(inout) :: gr
 
-    integer :: level, ipj, ns
-    type(projector_t), pointer :: pj
+    integer :: level
 
     call push_sub('epot.epot_mg_init')
 
     call gridhier_init(h%coarse_v, gr%mgrid, add_points_for_boundaries=.false.)
 
     h%coarse_v(0)%p(1:NP) = h%ep%vpsl(1:NP) + h%vhxc(1:NP, 1)
-
-    do ipj = 1, h%ep%nvnl
-      pj => h%ep%p(ipj)
-      if(pj%type == M_LOCAL) then
-        ns = pj%sphere%ns
-        h%coarse_v(0)%p(pj%sphere%jxyz(1:ns)) = h%coarse_v(0)%p(pj%sphere%jxyz(1:ns)) + pj%local_p%v(1:ns)
-      end if
-    end do
 
     do level = 1, gr%mgrid%n_levels
       call multigrid_fine2coarse(gr%mgrid, level, h%coarse_v(level - 1)%p, h%coarse_v(level)%p, INJECTION)
