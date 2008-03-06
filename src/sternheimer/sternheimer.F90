@@ -34,6 +34,7 @@ module sternheimer_m
   use mesh_function_m
   use mesh_m
   use messages_m
+  use multigrid_m
   use mix_m
   use h_sys_output_m
   use poisson_m
@@ -81,11 +82,11 @@ module sternheimer_m
 contains
   
   subroutine sternheimer_init(this, sys, h, prefix, hermitian)
-    type(sternheimer_t), intent(out) :: this
-    type(system_t),    intent(inout) :: sys
-    type(hamiltonian_t), intent(in)  :: h
-    character(len=*),  intent(in)    :: prefix
-    logical, optional, intent(in)    :: hermitian
+    type(sternheimer_t), intent(out)   :: this
+    type(system_t),      intent(inout) :: sys
+    type(hamiltonian_t), intent(inout) :: h
+    character(len=*),    intent(in)    :: prefix
+    logical, optional,   intent(in)    :: hermitian
 
     integer :: ham_var
 
@@ -139,6 +140,14 @@ contains
     call write_info(1)
 
     call linear_solver_init(this%solver, sys%gr, prefix)
+
+    if(this%solver%solver == LS_MULTIGRID) then
+      if(.not. associated(sys%gr%mgrid)) then
+        ALLOCATE(sys%gr%mgrid, 1)
+        call multigrid_init(sys%geo, sys%gr%cv, sys%gr%m, sys%gr%f_der, sys%gr%mgrid)
+      end if
+      call hamiltonian_mg_init(h, sys%gr)
+    end if
 
     call scf_tol_init(this%scftol, prefix)
 

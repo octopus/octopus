@@ -67,10 +67,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine linear_solver_init(this, gr, prefix, def_solver)
-    type(linear_solver_t),        intent(out)   :: this
-    type(grid_t),      intent(inout) :: gr
-    character(len=*),  intent(in)    :: prefix
-    integer, optional, intent(in)    :: def_solver
+    type(linear_solver_t),  intent(out)   :: this
+    type(grid_t),           intent(inout) :: gr
+    character(len=*),       intent(in)    :: prefix
+    integer, optional,      intent(in)    :: def_solver
 
     integer :: fsolver
     integer :: defsolver_ 
@@ -171,6 +171,9 @@ contains
 
       case(LS_BICGSTAB)
         message(1)='Linear Solver: Biconjugated Gradients Stabilized'
+
+      case(LS_MULTIGRID)
+        message(1)='Multigrid (currently only gauss-jacobi - EXPERIMENTAL)'
 
     end select
 

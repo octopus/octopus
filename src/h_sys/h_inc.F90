@@ -146,6 +146,33 @@ end subroutine X(hpsi)
 
 
 ! ---------------------------------------------------------
+! a "diluted" hamiltonian to apply in the coarse grids
+subroutine X(hpsi_mg) (h, mgr, psi, hpsi, mg_level)
+  type(hamiltonian_t),       intent(inout) :: h
+  type(multigrid_level_t),   intent(inout) :: mgr
+  R_TYPE,                    intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
+  R_TYPE,                    intent(out)   :: hpsi(:,:) ! hpsi(NP, h%d%dim)
+  integer,                   intent(in)    :: mg_level
+
+  integer :: idim
+
+  call profiling_in(C_PROFILING_HPSI)
+  call push_sub('h_inc.Xhpsi_mg')
+
+  do idim = 1, h%d%dim
+    call X(derivatives_lapl)(mgr%f_der%der_discr, psi(:, idim), hpsi(:, idim))
+  end do
+
+  ASSERT(h%d%dim == 1)
+  
+  hpsi(1:mgr%m%np, 1) = -M_HALF/h%mass*hpsi(1:mgr%m%np, 1) + (h%coarse_v(mg_level)%p(1:mgr%m%np))*psi(1:mgr%m%np, 1)
+  
+  call pop_sub()
+  call profiling_out(C_PROFILING_HPSI)
+end subroutine X(hpsi_mg)
+
+
+! ---------------------------------------------------------
 subroutine X(exchange_operator) (h, gr, psi, hpsi, ist, ik)
   type(hamiltonian_t), intent(inout) :: h
   type(grid_t),        intent(inout) :: gr

@@ -32,6 +32,7 @@ module hamiltonian_m
   use external_pot_m
   use messages_m
   use mpi_m
+  use multigrid_m
   use profiling_m
   use projector_m
   use simul_box_m
@@ -47,6 +48,7 @@ module hamiltonian_m
   public ::                &
     hamiltonian_t,         &
     hamiltonian_init,      &
+    hamiltonian_mg_init,   &
     hamiltonian_end,       &
     hamiltonian_energy,    &
     hamiltonian_span,      &
@@ -151,6 +153,9 @@ module hamiltonian_m
     type(der_handle_t), pointer :: handles(:)
 
     CMPLX, pointer :: phase(:, :)
+
+    type(mg_float_pointer), pointer :: coarse_v(:)
+
   end type hamiltonian_t
 
   integer, public, parameter :: &
@@ -398,6 +403,32 @@ contains
     
   end subroutine hamiltonian_init
 
+  subroutine hamiltonian_mg_init(h, gr)
+    type(hamiltonian_t), intent(inout) :: h
+    type(grid_t),        intent(inout) :: gr
+
+    integer :: level, ipj, ns
+    type(projector_t), pointer :: pj
+
+    call push_sub('epot.epot_mg_init')
+
+    call gridhier_init(h%coarse_v, gr%mgrid, add_points_for_boundaries=.false.)
+
+    h%coarse_v(0)%p(1:NP) = h%ep%vpsl(1:NP) + h%vhxc(1:NP, 1)
+
+    do ipj = 1, h%ep%nvnl
+      pj => h%ep%p(ipj)
+      if(pj%type == M_LOCAL) then
+        ns = pj%sphere%ns
+        h%coarse_v(0)%p(pj%sphere%jxyz(1:ns)) = h%coarse_v(0)%p(pj%sphere%jxyz(1:ns)) + pj%local_p%v(1:ns)
+      end if
+    end do
+
+    do level = 1, gr%mgrid%n_levels
+      call multigrid_fine2coarse(gr%mgrid, level, h%coarse_v(level - 1)%p, h%coarse_v(level)%p, INJECTION)
+    end do
+
+  end subroutine hamiltonian_mg_init
 
   ! ---------------------------------------------------------
   subroutine hamiltonian_end(h, gr, geo)
@@ -408,6 +439,10 @@ contains
     integer :: ii
 
     call push_sub('h.hamiltonian_end')
+
+    if(associated(h%coarse_v)) then
+      call gridhier_end(h%coarse_v, gr%mgrid)
+    end if
 
     if(associated(h%phase)) deallocate(h%phase)
 
