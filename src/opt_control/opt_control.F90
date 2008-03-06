@@ -105,16 +105,29 @@ contains
       call laser_to_numerical(h%ep%lasers(i), td%dt, td%max_iter)
     end do
 
-    call parameters_init(par, h%ep%no_lasers, td%dt, td%max_iter, oct%targetfluence)
+    call parameters_init(par, h%ep%no_lasers, td%dt, td%max_iter, oct%targetfluence, oct%par_omegamax)
     call parameters_set(par, h%ep)
     call parameters_apply_envelope(par)
+
+    ! Moving to the sine-Fourier space.
+    if(oct%par_representation .eq. oct_par_sfourier_space) then
+      message(1) = "Info: The control function will be represented as a sine-Fourier series."
+      call write_info(1)
+      call parameters_change_rep(par)
+    end if
 
     if(oct%fix_initial_fluence) then
       if(oct%targetfluence < M_ZERO) then
         oct%targetfluence = laser_fluence(par) 
+        write(0, *) 'LASER_FLUENCE 2', laser_fluence(par)
       else
         call parameters_set_fluence(par, oct%targetfluence)
       end if
+    end if
+
+    ! Moving back to the time rep.
+    if(oct%par_representation .eq. oct_par_sfourier_space) then
+      call parameters_change_rep(par)
     end if
 
     call parameters_to_h(par, h%ep)

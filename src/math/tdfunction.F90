@@ -37,28 +37,32 @@ module tdf_m
   implicit none
 
   private
-  public :: tdf_t,                &
-            tdf_init,             &
-            tdf_init_cw,          &
-            tdf_init_gaussian,    &
-            tdf_init_cosinoidal,  &
-            tdf_init_trapezoidal, &
-            tdf_init_fromfile,    &
-            tdf_init_fromexpr,    &
-            tdf_init_numerical,   &
-            tdf_set_numerical,    &
-            tdf_to_numerical,     &
-            tdf,                  &
-            tdf_scalar_multiply,  &
-            tdf_fft_forward,      &
-            tdf_fft_backward,     &
-            tdf_fourier_grid,     &
-            tdf_write,            &
-            tdf_niter,            &
-            tdf_dt,               &
-            tdf_copy,             &
-            tdf_end,              &
+  public :: tdf_t,                       &
+            tdf_init,                    &
+            tdf_init_cw,                 &
+            tdf_init_gaussian,           &
+            tdf_init_cosinoidal,         &
+            tdf_init_trapezoidal,        &
+            tdf_init_fromfile,           &
+            tdf_init_fromexpr,           &
+            tdf_init_numerical,          &
+            tdf_set_numerical,           &
+            tdf_to_numerical,            &
+            tdf,                         &
+            tdf_scalar_multiply,         &
+            tdf_fft_forward,             &
+            tdf_fft_backward,            &
+            tdf_sineseries_to_numerical, &
+            tdf_numerical_to_sineseries, &
+            tdf_fourier_grid,            &
+            tdf_write,                   &
+            tdf_niter,                   &
+            tdf_nfreqs,                  &
+            tdf_dt,                      &
+            tdf_copy,                    &
+            tdf_end,                     &
             assignment(=)
+
 
   integer, parameter ::      &
     TDF_EMPTY         =  10001,  &
@@ -68,27 +72,25 @@ module tdf_m
     TDF_TRAPEZOIDAL   =  10005,  &
     TDF_FROM_FILE     =  10006,  &
     TDF_NUMERICAL     =  10007,  &
-    TDF_FROMEXPR      =  10008
+    TDF_FROMEXPR      =  10008,  &
+    TDF_SINE_SERIES   =  10009
 
   type tdf_t
     private
     integer :: mode
-
     FLOAT   :: t0     ! the time at the maximum of the pulse
     FLOAT   :: tau0   ! the width of the pulse
     FLOAT   :: tau1   ! for the ramped shape, the length of the "ramping" intervals
-
     FLOAT   :: a0
     FLOAT   :: omega0
-
     type(loct_spline_t) :: amplitude
-
     character(len=200) :: expression
-
     FLOAT   :: dt     ! the time-discretization value.
     FLOAT   :: init_time, final_time
     integer :: niter
-    CMPLX, pointer :: val(:)
+    CMPLX, pointer :: val(:) => NULL()
+    integer :: nfreqs
+    FLOAT, pointer :: coeffs(:) => NULL()
   end type tdf_t
 
   interface tdf_set_numerical
@@ -115,6 +117,13 @@ module tdf_m
 
 
   !------------------------------------------------------------
+  integer function tdf_nfreqs(f)
+    type(tdf_t), intent(in) :: f
+    tdf_nfreqs = f%nfreqs
+  end function tdf_nfreqs
+
+
+  !------------------------------------------------------------
   FLOAT function tdf_dt(f)
     type(tdf_t), intent(in) :: f
     tdf_dt = f%dt
@@ -128,6 +137,7 @@ module tdf_m
     f%niter = 0
     f%dt = M_ZERO
     nullify(f%val)
+    nullify(f%coeffs)
   end subroutine tdf_init
 
 
@@ -142,6 +152,7 @@ module tdf_m
     f%a0 = a0
     f%omega0 = omega0
     nullify(f%val)
+    nullify(f%coeffs)
 
     call pop_sub()
   end subroutine tdf_init_cw
@@ -160,6 +171,7 @@ module tdf_m
     f%t0 = t0
     f%tau0 = tau0
     nullify(f%val)
+    nullify(f%coeffs)
 
     call pop_sub()
   end subroutine tdf_init_gaussian
@@ -178,6 +190,7 @@ module tdf_m
     f%t0 = t0
     f%tau0 = tau0
     nullify(f%val)
+    nullify(f%coeffs)
 
     call pop_sub()
   end subroutine tdf_init_cosinoidal
@@ -197,6 +210,7 @@ module tdf_m
     f%tau0 = tau0
     f%tau1 = tau1
     nullify(f%val)
+    nullify(f%coeffs)
 
     call pop_sub()
   end subroutine tdf_init_trapezoidal
@@ -212,6 +226,7 @@ module tdf_m
     f%mode = TDF_FROMEXPR
     f%expression = trim(expression)
     nullify(f%val)
+    nullify(f%coeffs)
     
     call pop_sub()
   end subroutine tdf_init_fromexpr
@@ -260,6 +275,7 @@ module tdf_m
     call loct_spline_fit(lines, t, am, f%amplitude)
 
     nullify(f%val)
+    nullify(f%coeffs)
     deallocate(t, am)
     call pop_sub()
   end subroutine tdf_init_fromfile
@@ -285,6 +301,7 @@ module tdf_m
     end if
     f%dt = dt
 
+    nullify(f%coeffs)
     call pop_sub()
   end subroutine tdf_init_numerical
 
@@ -424,6 +441,76 @@ module tdf_m
   end subroutine tdf_to_numerical
 
 
+  !------------------------------------------------------------
+  subroutine tdf_numerical_to_sineseries(f, omegamax)
+    type(tdf_t), intent(inout) :: f
+    FLOAT, intent(in) :: omegamax
+
+    integer :: j, k, nfreqs
+    FLOAT :: bigt, t, omega
+
+    ASSERT(f%mode .eq. TDF_NUMERICAL)
+
+    bigt = f%final_time - f%init_time
+
+    if(omegamax > M_ZERO) then
+      nfreqs = int(bigt * omegamax / M_PI) + 1
+    else
+      nfreqs = f%niter
+    end if
+
+    write(0, *) 'NFREQS = ', nfreqs, f%niter, omegamax
+
+    f%nfreqs = nfreqs
+    ALLOCATE(f%coeffs(nfreqs), nfreqs)
+
+    do j = 1, nfreqs
+      omega = (M_PI/bigt) * j
+      f%coeffs(j) = M_ZERO
+      do k = 2, f%niter
+        t = (k-1)*f%dt
+        f%coeffs(j) = f%coeffs(j) + sin(omega*t) * tdf(f, k)
+      end do
+      f%coeffs(j) = sqrt(M_TWO/bigt) * f%coeffs(j) * f%dt
+    end do
+
+    deallocate(f%val); nullify(f%val)
+    f%mode = TDF_SINE_SERIES
+
+  end subroutine tdf_numerical_to_sineseries
+  !------------------------------------------------------------
+
+
+  !------------------------------------------------------------
+  subroutine tdf_sineseries_to_numerical(f)
+    type(tdf_t), intent(inout) :: f
+
+    FLOAT :: bigt, t, omega
+    integer :: j, k
+
+    ASSERT(f%mode .eq. TDF_SINE_SERIES)
+
+    ALLOCATE(f%val(f%niter+1), f%niter+1)
+
+    bigt = f%final_time - f%init_time
+
+    do k = 1, f%niter + 1
+      t = (k-1)*f%dt
+      f%val(k) = M_ZERO
+      do j = 1, f%nfreqs
+        omega = (M_PI/bigt) * j
+        f%val(k) = f%val(k) + sin(omega*t) * f%coeffs(j)
+      end do
+      f%val(k) = f%val(k) * sqrt(M_TWO/bigt)
+    end do
+
+    deallocate(f%coeffs); nullify(f%coeffs)
+    f%mode = TDF_NUMERICAL
+
+  end subroutine tdf_sineseries_to_numerical
+  !------------------------------------------------------------
+
+
 
   !------------------------------------------------------------
   CMPLX function tdfi(f, i) result(y)
@@ -516,6 +603,8 @@ module tdf_m
       call loct_spline_end(f%amplitude)
     case(TDF_NUMERICAL)
       deallocate(f%val); nullify(f%val)
+    case(TDF_SINE_SERIES)
+      deallocate(f%coeffs); nullify(f%coeffs)
     end select
     f%mode = TDF_EMPTY
 
@@ -528,8 +617,8 @@ module tdf_m
     type(tdf_t), intent(inout) :: fout
     type(tdf_t), intent(in)  :: fin
 
-    ASSERT( (fin%mode >= TDF_EMPTY)  .and. (fin%mode <= TDF_FROMEXPR) )
-    ASSERT( (fout%mode >= TDF_EMPTY)  .and. (fout%mode <= TDF_FROMEXPR) )
+    ASSERT( (fin%mode >= TDF_EMPTY)  .and. (fin%mode <= TDF_SINE_SERIES) )
+    ASSERT( (fout%mode >= TDF_EMPTY)  .and. (fout%mode <= TDF_SINE_SERIES) )
 
     call tdf_end(fout)
     call tdf_init(fout)
@@ -544,12 +633,17 @@ module tdf_m
     fout%final_time = fin%final_time
     fout%init_time  = fin%init_time
     fout%expression = fin%expression
+    fout%nfreqs     = fin%nfreqs
     if(fin%mode .eq. TDF_FROM_FILE) then
       fout%amplitude = fin%amplitude
     end if
     if(fin%mode .eq. TDF_NUMERICAL) then
       ALLOCATE(fout%val(fout%niter+1), fout%niter+1)
       fout%val  = fin%val
+    end if
+    if(fin%mode .eq. TDF_SINE_SERIES) then
+      ALLOCATE(fout%coeffs(fout%nfreqs), fout%nfreqs)
+      fout%coeffs = fin%coeffs
     end if
     fout%mode   = fin%mode
 
@@ -634,8 +728,10 @@ module tdf_m
     f%a0     = CNST(0.0)
     f%omega0 = CNST(0.0)
     f%niter  = 0
+    f%nfreqs = 0
     f%mode = -1
     nullify(f%val)
+    nullify(f%coeffs)
 
   end subroutine tdf_null
 

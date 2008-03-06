@@ -180,6 +180,34 @@
     !%End
     call loct_parse_int(check_inp('OCTNumberCheckPoints'), 0, oct%number_checkpoints)
 
+    !%Variable OCTParameterRepresentation
+    !%Type integer
+    !%Section Optimal Control
+    !%Default control_parameter_real_space
+    !%Description
+    !%
+    !%Option control_parameters_real_space 1
+    !%
+    !%Option control_parameters_fourier_space 2
+    !%
+    !%End
+    call loct_parse_int(check_inp('OCTParameterRepresentation'), oct_par_real_space, oct%par_representation)
+    if(.not.varinfo_valid_option('OCTParameterRepresentation', oct%par_representation)) &
+      call input_error('OCTParameterRepresentation')
+
+    !%Variable OCTParameterOmegaMax
+    !%Type float
+    !%Section Optimal Control
+    !%Default -1.0
+    !%Description
+    !%
+    !%End
+    if(oct%par_representation .eq. oct_par_sfourier_space) then
+      call loct_parse_float(check_inp('OCTParameterOmegaMax'), -M_ONE, oct%par_omegamax)
+    else
+      oct%par_omegamax = -M_ONE
+    end if
+
     call pop_sub()
   end subroutine oct_read_inp
 

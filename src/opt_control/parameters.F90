@@ -49,8 +49,14 @@ module opt_control_parameters_m
             parameters_diff,              &
             parameters_apply_envelope,    &
             parameters_set_fluence,       &
+            parameters_change_rep,        &
             laser_fluence,                &
             j2_functional
+
+  integer, parameter ::                 &
+    ctr_parameter_real_space       = 1, &
+    ctr_parameter_frequency_space  = 2
+
 
   type oct_control_parameters_t
     integer :: no_parameters
@@ -62,11 +68,36 @@ module opt_control_parameters_m
                                 ! necessary to calculate the fluence.
     FLOAT, pointer :: alpha(:)
     type(tdf_t), pointer :: td_penalty(:)
+
+    integer :: representation
+    FLOAT   :: omegamax
   end type oct_control_parameters_t
 
   type(mix_t), public :: parameters_mix
 
 contains
+
+
+  ! ---------------------------------------------------------
+  subroutine parameters_change_rep(par)
+    type(oct_control_parameters_t), intent(inout) :: par
+
+    integer :: j
+
+    if(par%representation .eq. ctr_parameter_real_space) then
+      do j = 1, par%no_parameters
+        call tdf_numerical_to_sineseries(par%f(j), par%omegamax)
+      end do
+      par%representation = ctr_parameter_frequency_space
+    else
+      do j = 1, par%no_parameters
+        call tdf_sineseries_to_numerical(par%f(j))
+      end do
+      par%representation = ctr_parameter_real_space
+    end if
+
+  end subroutine parameters_change_rep
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
@@ -132,15 +163,20 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_init(cp, no_parameters, dt, ntiter, targetfluence)
+  subroutine parameters_init(cp, no_parameters, dt, ntiter, targetfluence, omegamax)
     type(oct_control_parameters_t), intent(inout) :: cp
     integer, intent(in) :: no_parameters   
     FLOAT, intent(in) :: dt
     integer, intent(in) :: ntiter
     FLOAT, intent(in) :: targetfluence
+    FLOAT, intent(in) :: omegamax
+
     integer :: j
 
     call push_sub('parameters.parameters_init')
+
+    cp%representation = ctr_parameter_real_space
+    cp%omegamax = omegamax
 
     cp%no_parameters = no_parameters
     cp%dt = dt
@@ -247,21 +283,34 @@ contains
   ! ---------------------------------------------------------
   subroutine parameters_write(filename, cp, fourier)
     character(len=*), intent(in) :: filename
-    type(oct_control_parameters_t), intent(in) :: cp
+    type(oct_control_parameters_t), intent(in), target :: cp
     logical, optional, intent(in) :: fourier
 
     type(tdf_t) :: g
     integer :: i, j, iunit
+    logical :: change_rep
     FLOAT :: t
     FLOAT, allocatable :: wgrid(:)
     character(len=2) :: digit
+    type(oct_control_parameters_t), pointer :: par
 
     call push_sub('parameters.parameters_write')
 
     call io_mkdir(trim(filename))
 
+    ! First, check that we are in the real space representation.
+    if(cp%representation .eq. ctr_parameter_frequency_space) then
+      ALLOCATE(par, 1)
+      call parameters_copy(par, cp)
+      call parameters_change_rep(par)
+      change_rep = .true.
+    else
+      par => cp
+      change_rep = .false.
+    end if
+
     iunit = io_open(trim(filename)//'/Fluence', action='write')
-    write(iunit, '(a,es20.8e3)') 'Fluence = ', laser_fluence(cp)
+    write(iunit, '(a,es20.8e3)') 'Fluence = ', laser_fluence(par)
     call io_close(iunit)
 
     do j = 1, cp%no_parameters
@@ -273,7 +322,7 @@ contains
       end if
       do i = 1, cp%ntiter + 1
         t = (i-1)*cp%dt
-        write(iunit, '(3es20.8e3)') t, tdf(cp%f(j), t)
+        write(iunit, '(3es20.8e3)') t, tdf(par%f(j), t)
       end do
       call io_close(iunit)
     end do
@@ -288,7 +337,7 @@ contains
           iunit = io_open(trim(filename)//'/cpw', action='write')
         end if
         call tdf_init(g)
-        call tdf_copy(g, cp%f(j))
+        call tdf_copy(g, par%f(j))
         call tdf_fft_forward(g)
         ALLOCATE(wgrid(0:cp%ntiter), cp%ntiter+1)
         call tdf_fourier_grid(g, wgrid)
@@ -300,6 +349,12 @@ contains
         call io_close(iunit)
       end do
     end if
+    end if
+
+    if(change_rep) then 
+      call parameters_end(par)
+    else
+      nullify(par)
     end if
 
     call pop_sub()
@@ -399,22 +454,34 @@ contains
   ! ---------------------------------------------------------
   FLOAT function laser_fluence(par)
     type(oct_control_parameters_t), intent(in) :: par
-    integer :: i, j, k
+    integer :: i, j, k, nfreqs
     FLOAT :: t
     call push_sub('parameters.laser_fluence')
 
-    ! WARNING: This is probably very inefficient; there should be functions in
-    ! the tdf module taken care of integrating functions.
-    laser_fluence = M_ZERO
-    do j = 1, par%no_parameters
-      do i = 1, par%ntiter+1
-        t = (i-1) * par%dt
-        do k = 1, MAX_DIM
-          laser_fluence = laser_fluence + real( par%pol(k, j) * tdf(par%f(j), i) )**2
+    select case(par%representation)
+    case(ctr_parameter_real_space)
+      ! WARNING: This is probably very inefficient; there should be functions in
+      ! the tdf module taken care of integrating functions.
+      laser_fluence = M_ZERO
+      do j = 1, par%no_parameters
+        do i = 1, par%ntiter+1
+          t = (i-1) * par%dt
+          do k = 1, MAX_DIM
+            laser_fluence = laser_fluence + real( par%pol(k, j) * tdf(par%f(j), i) )**2
+          end do
         end do
       end do
-    end do
-    laser_fluence = laser_fluence * par%dt
+      laser_fluence = laser_fluence * par%dt
+
+    case(ctr_parameter_frequency_space)
+      stop 'Error'
+      laser_fluence = M_ZERO
+      do j = 1, par%no_parameters
+        nfreqs = tdf_nfreqs(par%f(j))
+        do k = 1, nfreqs
+        end do
+      end do 
+    end select
 
     call pop_sub()
   end function laser_fluence
@@ -470,6 +537,8 @@ contains
     cp_out%dt = cp_in%dt
     cp_out%ntiter = cp_in%ntiter
     cp_out%targetfluence = cp_in%targetfluence
+    cp_out%representation = cp_in%representation
+    cp_out%omegamax = cp_in%omegamax
     ALLOCATE(cp_out%f(cp_out%no_parameters), cp_out%no_parameters)
     ALLOCATE(cp_out%alpha(cp_out%no_parameters), cp_out%no_parameters)
     ALLOCATE(cp_out%td_penalty(cp_out%no_parameters), cp_out%no_parameters)

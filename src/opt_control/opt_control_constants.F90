@@ -33,6 +33,8 @@ module opt_control_constants_m
     logical :: oct_double_check
     logical :: dump_intermediate
     integer :: number_checkpoints
+    integer :: par_representation
+    FLOAT   :: par_omegamax
   end type oct_t
 
   integer, parameter ::  &
@@ -62,5 +64,9 @@ module opt_control_constants_m
   integer, parameter ::  &
     oct_targetmode_static = 0,     &
     oct_targetmode_td     = 1
+
+  integer, parameter ::         &
+    oct_par_real_space     = 1, &
+    oct_par_sfourier_space = 2
   
 end module opt_control_constants_m
