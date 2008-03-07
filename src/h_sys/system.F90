@@ -74,6 +74,7 @@ contains
 
     call parallel_init()
 
+    call geometry_partition(sys%geo, sys%mc)
     call grid_init_stage_2(sys%gr, sys%mc, sys%geo)
     call states_densities_init(sys%st, sys%gr, sys%geo)
     call h_sys_output_init(sys%gr%sb, sys%outp)

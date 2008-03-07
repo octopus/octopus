@@ -27,6 +27,7 @@ module geometry_m
   use loct_math_m
   use loct_parser_m
   use messages_m
+  use multicomm_m
   use mpi_m
   use specie_m
   use string_m
@@ -45,6 +46,7 @@ module geometry_m
     geometry_init_xyz,     &
     geometry_init_vel,     &
     geometry_init_species, &
+    geometry_partition,    &
     geometry_nvnl,         &
     geometry_end,          &
     kinetic_energy,        &
@@ -74,6 +76,9 @@ module geometry_m
 
   type geometry_t
     integer :: natoms
+    integer :: atoms_start
+    integer :: atoms_end
+    integer :: nlatoms
     type(atom_t), pointer :: atom(:)
 
     integer :: ncatoms              ! For QM+MM calculations
@@ -88,6 +93,9 @@ module geometry_m
 
     logical :: nlpp                 ! is any species having non-local pp
     logical :: nlcc                 ! is any species having non-local core corrections?
+
+    logical :: parallel_in_atoms
+    type(mpi_grp_t) :: mpi_grp
   end type geometry_t
 
   interface assignment (=)
@@ -98,7 +106,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine geometry_init(geo)
-    type(geometry_t), intent(inout) :: geo
+    type(geometry_t),            intent(inout) :: geo
 
     call push_sub('geometry.geometry_init')
 
@@ -106,6 +114,14 @@ contains
     call geometry_init_xyz(geo)
     call geometry_init_species(geo)
     call geometry_init_vel(geo)
+
+    geo%parallel_in_atoms = .false.
+
+    geo%atoms_start = 1
+    geo%atoms_end   = geo%natoms
+    geo%nlatoms     = geo%natoms
+
+    call mpi_grp_init(geo%mpi_grp, -1)
 
     call pop_sub()
   end subroutine geometry_init
@@ -428,6 +444,55 @@ contains
 
     call pop_sub()
   end subroutine geometry_init_species
+
+  subroutine geometry_partition(geo, mc)
+    type(geometry_t),            intent(inout) :: geo
+    type(multicomm_t),           intent(in)    :: mc
+
+#ifdef HAVE_MPI
+    integer :: size, rank, kk
+    integer, allocatable :: start(:), end(:), lsize(:)
+
+    call push_sub('geometry.geometry_partition')
+
+    ! for the atoms we use the parallelization in states
+
+    if(multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)) then
+
+      geo%parallel_in_atoms = .true.
+
+      call mpi_grp_init(geo%mpi_grp, mc%group_comm(P_STRATEGY_STATES))
+
+      size = mc%group_sizes(P_STRATEGY_STATES)
+      rank = mc%who_am_i(P_STRATEGY_STATES)
+
+      ALLOCATE(start(1:size), size)
+      ALLOCATE(  end(1:size), size)
+      ALLOCATE(lsize(1:size), size)
+
+      call multicomm_divide_range(geo%natoms, size, start, end, lsize)
+
+      message(1) = 'Info: Parallelization in atoms:'
+        call write_info(1)
+      do kk = 1, size
+        write(message(1),'(a,i4,a,i4,a,i4)') 'Info: Nodes in states-group ', kk - 1, &
+          ' will manage atoms', start(kk), " - ", end(kk)
+        call write_info(1)
+        if(rank + 1 .eq. kk) then
+          geo%atoms_start = start(kk)
+          geo%atoms_end   = end(kk)
+          geo%nlatoms     = lsize(kk)
+        endif
+        
+      end do
+      
+      deallocate(start, end, lsize)
+
+    end if
+
+    call pop_sub()
+#endif
+  end subroutine geometry_partition
 
   ! ---------------------------------------------------------
   subroutine loadPDB(iunit, geo)

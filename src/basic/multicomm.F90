@@ -62,9 +62,7 @@
   private
 
   public ::                          &
-#if defined(USE_OMP)
-    divide_range,                    &
-#endif
+    multicomm_divide_range,          &
 #if defined(HAVE_MPI)
     multicomm_create_all_pairs,      &
 #endif
@@ -582,26 +580,37 @@ contains
 #endif
 
 
-#if defined(USE_OMP)
   !---------------------------------------------------
   ! Function to divide the range of numbers from 1 to nn
   ! between size processors.
-  ! This is used by OpenMP parallelization
-  subroutine divide_range(nn, rank, size, ini, nn_loc)
+  subroutine multicomm_divide_range(nn, size, start, end, lsize)
     integer, intent(in)    :: nn
-    integer, intent(in)    :: rank
     integer, intent(in)    :: size
-    integer, intent(out)   :: ini
-    integer, intent(out)   :: nn_loc
+    integer, intent(out)   :: start(:)
+    integer, intent(out)   :: end(:)
+    integer, intent(out)   :: lsize(:)
+
+    integer :: ii, jj, rank
+
+    do rank = 0, size - 1
+      jj = nn / size
+      ii = nn - jj*size
+      if(ii > 0 .and. rank < ii) then
+        jj = jj + 1
+        start(rank + 1) = rank*jj + 1
+        end(rank + 1)   = start(rank + 1) + jj - 1
+      else
+        end(rank + 1)   = nn - (size - rank - 1)*jj
+        start(rank + 1) = end(rank + 1) - jj + 1
+      end if
+    end do
+
+    lsize = end - start + 1
     
-    nn_loc = nn / size + 1
-    ini = nn_loc * rank
-    nn_loc = min(nn - ini, nn_loc)
+    ASSERT(sum(lsize) == nn)
 
-    ini = ini + 1
+  end subroutine multicomm_divide_range
 
-  end subroutine divide_range
-#endif
 end module multicomm_m
 
 

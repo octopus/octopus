@@ -101,9 +101,6 @@ module external_pot_m
     FLOAT :: eii
     FLOAT, pointer :: fii(:, :)
 
-#ifdef HAVE_MPI
-    logical :: parallel_generate
-#endif
   end type epot_t
 
   integer, public, parameter :: &
@@ -323,20 +320,6 @@ contains
     end if
     call messages_print_var_option(stdout, "RelativisticCorrection", ep%reltype)
     
-#ifdef HAVE_MPI
-    !%Variable ParallelPotentialGeneration
-    !%Type logical
-    !%Default false
-    !%Section Generalities::Parallel
-    !%Description
-    !% If <tt>true</tt> and parallelization in states is used, the
-    !% generation of the potential it is done in parallel. This is
-    !% still expertimental so it is disabled dy default.
-    !%End
-
-    call loct_parse_logical(check_inp('ParallelPotentialGeneration'), .false., ep%parallel_generate)
-#endif
-
     ! The projectors
     ep%nvnl = geometry_nvnl(geo)
     
@@ -461,7 +444,12 @@ contains
     type(mesh_t),      pointer :: m
     type(simul_box_t), pointer :: sb
     type(submesh_t)  :: nl_sphere
-    type(profile_t), save :: projector_build_prof, epot_generate_prof
+    type(profile_t), save :: epot_generate_prof
+
+#ifdef HAVE_MPI
+    FLOAT,    allocatable :: vpsltmp(:)
+    type(profile_t), save :: epot_reduce
+#endif
 
     call profiling_in(epot_generate_prof, "EPOT_GENERATE")
     call push_sub('epot.epot_generate')
@@ -474,9 +462,20 @@ contains
 
     ! Local.
     ep%vpsl = M_ZERO
-    do ia = 1, geo%natoms
+    do ia = geo%atoms_start, geo%atoms_end
       call epot_local_potential(ep, gr, geo, geo%atom(ia), ep%vpsl, time_, st%rho_core)
     end do
+
+#ifdef HAVE_MPI
+    call profiling_in(epot_reduce, "EPOT_REDUCE")
+    if(geo%parallel_in_atoms) then
+      ALLOCATE(vpsltmp(1:NP), NP)
+      call MPI_Allreduce(ep%vpsl, vpsltmp, NP, MPI_FLOAT, MPI_SUM, geo%mpi_grp%comm, mpi_err)
+      call lalg_copy(NP, vpsltmp, ep%vpsl)
+      deallocate(vpsltmp)
+    end if
+    call profiling_out(epot_reduce)
+#endif
 
     ! we assume that we need to recalculate the ion_ion energy
     call ion_ion_interaction(ep, gr, sb, geo)
@@ -517,7 +516,9 @@ contains
       end do
     end if
 
-    call projector_build_all
+    do iproj = 1, ep%nvnl
+      call projector_build(ep%p(iproj), gr, geo%atom(ep%p(iproj)%iatom))
+    end do
 
     if (ep%classic_pot > 0) then
       ep%vpsl(1:m%np) = ep%vpsl(1:m%np) + ep%vclassic(1:m%np)
@@ -525,57 +526,6 @@ contains
 
     call pop_sub()
     call profiling_out(epot_generate_prof)
-
-  contains
-
-    subroutine projector_build_all
-#ifdef HAVE_MPI
-      integer :: rank, size, ini, fin
-      integer, allocatable :: rep(:)
-#endif
-
-      call profiling_in(projector_build_prof, "PROJECTOR_BUILD")
-
-#ifdef HAVE_MPI      
-      if (.not. (ep%parallel_generate .and. multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES))) then
-#endif
-
-        do iproj = 1, ep%nvnl
-          call projector_build(ep%p(iproj), gr, geo%atom(ep%p(iproj)%iatom))
-        end do
-
-#ifdef HAVE_MPI
-      else
-
-        size = mc%group_sizes(P_STRATEGY_STATES)
-
-        ALLOCATE(rep(1:ep%nvnl), ep%nvnl)
-
-        do rank = 0, size-1
-          ini = rank * ep%nvnl / size + 1
-          fin = min((rank + 1 )* ep%nvnl / size, ep%nvnl)
-          rep(ini:fin) = rank
-        end do
-
-        rank = mc%who_am_i(P_STRATEGY_STATES)
-
-        do iproj = 1, ep%nvnl
-          if ( rep(iproj) == rank ) then 
-            call projector_build(ep%p(iproj), gr, geo%atom(ep%p(iproj)%iatom))
-          end if
-        end do
-
-        do iproj = 1, ep%nvnl
-          call projector_broadcast(ep%p(iproj), gr, mc, geo%atom(ep%p(iproj)%iatom), rep(iproj))
-        end do
-
-        deallocate(rep)
-
-      end if
-
-#endif
-      call profiling_out(projector_build_prof)
-    end subroutine projector_build_all
 
   end subroutine epot_generate
 
@@ -592,8 +542,10 @@ contains
     FLOAT :: x(MAX_DIM), radius
     FLOAT, allocatable  :: rho(:), vl(:)
     type(submesh_t)  :: sphere
-
+    type(profile_t), save :: prof
+    
     call push_sub('epot.epot_local_potential')
+    call profiling_in(prof, "EPOT_LOCAL")
 
     ALLOCATE(vl(1:NP_PART), NP_PART)
 #ifdef USE_OMP
@@ -654,6 +606,7 @@ contains
       end do
     end if
 
+    call profiling_out(prof)
     call pop_sub()
   end subroutine epot_local_potential
 
