@@ -96,13 +96,7 @@ contains
 
     call oct_read_inp(oct)
 
-    call parameters_set_initial(par, h%ep, sys%gr%m, td%dt, td%max_iter)
-
-    if (par%targetfluence .ne. M_ZERO) then
-      oct%mode_fixed_fluence = .true.
-    else
-      oct%mode_fixed_fluence = .false.
-    end if
+    call parameters_set_initial(par, h%ep, sys%gr%m, td%dt, td%max_iter, oct%mode_fixed_fluence)
 
     call oct_iterator_init(iterator, par)
 
@@ -397,9 +391,8 @@ contains
       call parameters_set_fluence(parp)
     end if
 
-    do j = 1, par%no_parameters
-      par%f(j) = parp%f(j)
-    end do
+    call parameters_end(par)
+    call parameters_copy(par, parp)
     call parameters_apply_envelope(par)
 
     call states_end(psi)

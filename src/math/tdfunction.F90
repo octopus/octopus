@@ -378,7 +378,12 @@ module tdf_m
     CMPLX,       intent(in) :: values(:)
     call push_sub("tdfunction.tdf_set_numerical") 
 
-    f%val(1:f%niter+1) = values(1:f%niter+1)
+    select case(f%mode)
+    case(TDF_NUMERICAL)
+      f%val(1:f%niter+1) = values(1:f%niter+1)
+    case(TDF_SINE_SERIES)
+      f%coeffs(1:f%nfreqs) = values(1:f%nfreqs)
+    end select
 
     call pop_sub()
   end subroutine tdf_set_numericalc
@@ -390,7 +395,12 @@ module tdf_m
     FLOAT,       intent(in) :: values(:)
     call push_sub("tdfunction.tdf_set_numerical") 
 
-    f%val(1:f%niter+1) = values(1:f%niter+1)
+    select case(f%mode)
+    case(TDF_NUMERICAL)
+      f%val(1:f%niter+1) = values(1:f%niter+1)
+    case(TDF_SINE_SERIES)
+      f%coeffs(1:f%nfreqs) = values(1:f%nfreqs)
+    end select
 
     call pop_sub()
   end subroutine tdf_set_numericalr
@@ -401,7 +411,12 @@ module tdf_m
     type(tdf_t), intent(inout) :: f
     integer, intent(in) :: index
     CMPLX,       intent(in) :: value
-    f%val(index) = value
+    select case(f%mode)
+    case(TDF_NUMERICAL)
+      f%val(index) = value
+    case(TDF_SINE_SERIES)
+      f%coeffs(index) = value
+    end select
   end subroutine tdf_set_numericalc1
 
 
@@ -410,7 +425,12 @@ module tdf_m
     type(tdf_t), intent(inout) :: f
     integer, intent(in) :: index
     FLOAT,       intent(in) :: value
-    f%val(index) = value
+    select case(f%mode)
+    case(TDF_NUMERICAL)
+      f%val(index) = value
+    case(TDF_SINE_SERIES)
+      f%coeffs(index) = value
+    end select
   end subroutine tdf_set_numericalr1
 
 
@@ -524,7 +544,6 @@ module tdf_m
   !------------------------------------------------------------
 
 
-
   !------------------------------------------------------------
   CMPLX function tdfi(f, i) result(y)
     type(tdf_t), intent(in) :: f
@@ -532,12 +551,13 @@ module tdf_m
 
     ! Maybe there should be a grid for any kind of function, so
     ! that a meaningul number is produced in any case.
-    if(f%mode.ne.TDF_NUMERICAL) then
-      y = M_z0
-      return
-    else
+    y = M_z0
+    select case(f%mode)
+    case(TDF_NUMERICAL)
       y = f%val(i)
-    end if
+    case(TDF_SINE_SERIES)
+      y = f%coeffs(i)
+    end select
     
   end function tdfi
 

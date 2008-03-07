@@ -84,12 +84,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_set_initial(par, ep, m, dt, max_iter)
+  subroutine parameters_set_initial(par, ep, m, dt, max_iter, mode_fixed_fluence)
     type(oct_control_parameters_t), intent(inout) :: par
     type(epot_t), intent(inout)                   :: ep
     type(mesh_t), intent(inout)                   :: m
     FLOAT, intent(in)                             :: dt
     integer, intent(in)                           :: max_iter
+    logical, intent(out)                          :: mode_fixed_fluence
 
     integer :: i
     FLOAT :: targetfluence, omegamax
@@ -202,6 +203,12 @@ contains
     call messages_print_stress(stdout)
     call parameters_write('opt-control/initial_laser', par)
 
+    if (par%targetfluence .ne. M_ZERO) then
+      mode_fixed_fluence = .true.
+    else
+      mode_fixed_fluence = .false.
+    end if
+
   end subroutine parameters_set_initial
   ! ---------------------------------------------------------
 
@@ -288,28 +295,55 @@ contains
     type(oct_control_parameters_t), intent(in) :: par_in, par_out
     type(oct_control_parameters_t), intent(inout) :: par_new
 
-    integer :: i, j
+    integer :: i, j, nfreqs
     FLOAT, allocatable :: e_in(:, :, :), e_out(:, :, :), e_new(:, :, :)
     call push_sub('parameters.parameters_mixing')
 
+    ! First, some sanity checks:
+    ASSERT(par_in%representation .eq. par_out%representation)
+    ASSERT(par_in%representation .eq. par_new%representation)
+    ASSERT(par_in%representation .eq. par_in%current_representation)
+    ASSERT(par_out%representation .eq. par_out%current_representation)
+    ASSERT(par_new%representation .eq. par_new%current_representation)
 
-    ALLOCATE(e_in (par_in%ntiter+1, par_in%no_parameters, 1), (par_in%ntiter+1)*par_in%no_parameters)
-    ALLOCATE(e_out(par_in%ntiter+1, par_in%no_parameters, 1), (par_in%ntiter+1)*par_in%no_parameters)
-    ALLOCATE(e_new(par_in%ntiter+1, par_in%no_parameters, 1), (par_in%ntiter+1)*par_in%no_parameters)
 
-    do i = 1, par_in%no_parameters
-      do j = 1, par_in%ntiter + 1
-        e_in (j, i, 1) = tdf(par_in%f(i), j)
-        e_out(j, i, 1) = tdf(par_out%f(i), j)
+    select case(par_in%representation)
+    case(ctr_parameter_real_space)
+
+      ALLOCATE(e_in (par_in%ntiter+1, par_in%no_parameters, 1), (par_in%ntiter+1)*par_in%no_parameters)
+      ALLOCATE(e_out(par_in%ntiter+1, par_in%no_parameters, 1), (par_in%ntiter+1)*par_in%no_parameters)
+      ALLOCATE(e_new(par_in%ntiter+1, par_in%no_parameters, 1), (par_in%ntiter+1)*par_in%no_parameters)
+      do i = 1, par_in%no_parameters
+        do j = 1, par_in%ntiter + 1
+          e_in (j, i, 1) = tdf(par_in%f(i), j)
+          e_out(j, i, 1) = tdf(par_out%f(i), j)
+        end do
       end do
-    end do
-    e_new = M_ZERO
+      e_new = M_ZERO
+      call dmixing(parameters_mix, iter, e_in, e_out, e_new, parameters_dotp)
+      do i = 1, par_out%no_parameters
+        call tdf_set_numerical(par_new%f(i), e_new(:, i, 1))
+      end do
 
-    call dmixing(parameters_mix, iter, e_in, e_out, e_new, parameters_dotp)
+    case(ctr_parameter_frequency_space)
 
-    do i = 1, par_out%no_parameters
-      call tdf_set_numerical(par_new%f(i), e_new(:, i, 1))
-    end do
+      nfreqs = tdf_nfreqs(par_in%f(1))
+      ALLOCATE(e_in (nfreqs, par_in%no_parameters, 1), nfreqs*par_in%no_parameters)
+      ALLOCATE(e_out(nfreqs, par_in%no_parameters, 1), nfreqs*par_in%no_parameters)
+      ALLOCATE(e_new(nfreqs, par_in%no_parameters, 1), nfreqs*par_in%no_parameters)
+      do i = 1, par_in%no_parameters
+        do j = 1, nfreqs
+          e_in (j, i, 1) = tdf(par_in%f(i), j)
+          e_out(j, i, 1) = tdf(par_out%f(i), j)
+        end do
+      end do
+      e_new = M_ZERO
+      call dmixing(parameters_mix, iter, e_in, e_out, e_new, parameters_dotp)
+      do i = 1, par_out%no_parameters
+        call tdf_set_numerical(par_new%f(i), e_new(:, i, 1))
+      end do
+
+    end select
 
     deallocate(e_in, e_out, e_new)
     call pop_sub()
