@@ -53,7 +53,6 @@ module opt_control_m
   use external_pot_m
   use restart_m
   use tdf_m
-  use mix_m
   use opt_control_constants_m
   use opt_control_propagation_m
   use opt_control_parameters_m
@@ -83,7 +82,6 @@ contains
     logical :: stop_loop
     FLOAT   :: j1
     type(oct_prop_t) :: prop_chi, prop_psi;
-    integer :: i
 
     call push_sub('opt_control.opt_control_run')
 
@@ -106,15 +104,9 @@ contains
       oct%mode_fixed_fluence = .false.
     end if
 
-    call parameters_to_h(par, h%ep)
-    call messages_print_stress(stdout, "TD ext. fields after envelope and/or fixing initial fluence")
-    call laser_write_info(h%ep%no_lasers, h%ep%lasers, sys%gr%sb, td%dt, td%max_iter, stdout)
-    call messages_print_stress(stdout)
-    call parameters_write('opt-control/initial_laser', par)
-
     call oct_iterator_init(iterator, par)
 
-    if(oct%use_mixing) call mix_init(parameters_mix, td%max_iter + 1, par%no_parameters, 1)
+    if(oct%use_mixing) call parameters_mixing_init(par)
 
     call filter_init(td%max_iter, td%dt, filter)
     call filter_write(filter)
@@ -169,7 +161,7 @@ contains
     ! clean up
     call parameters_end(par)
     call oct_iterator_end(iterator)
-    if(oct%use_mixing) call mix_end(parameters_mix)
+    if(oct%use_mixing) call parameters_mixing_end()
     call filter_end(filter)
     call td_end(td)
     call states_end(psi)
@@ -181,9 +173,8 @@ contains
   contains
 
 
-     ! ---------------------------------------------------------
+    ! ---------------------------------------------------------
     subroutine scheme_straight_iteration
-      integer :: j
       call push_sub('opt_control.scheme_mt03')
 
       call oct_prop_init(prop_chi, "chi", td%max_iter, oct%number_checkpoints)
@@ -251,7 +242,7 @@ contains
       call oct_prop_init(prop_psi, "psi", td%max_iter, oct%number_checkpoints)
 
       if (oct%mode_fixed_fluence) then
-        par%alpha(1) = (M_ONE/sqrt(par%targetfluence)) * sqrt ( laser_fluence(par) )
+        par%alpha(1) = (M_ONE/sqrt(par%targetfluence)) * sqrt ( parameters_fluence(par) )
       end if
 
       call parameters_copy(par_new, par)      
@@ -398,7 +389,7 @@ contains
 
     ! recalc field
     if (oct%mode_fixed_fluence) then
-      fluence = laser_fluence(parp) 
+      fluence = parameters_fluence(parp) 
       old_penalty = par%alpha(1)
       new_penalty = sqrt( fluence * old_penalty**2 / par%targetfluence )
       par%alpha(:) = new_penalty

@@ -47,12 +47,14 @@ module opt_control_parameters_m
             parameters_to_h_val,          &
             parameters_write,             &
             parameters_mixing,            &
+            parameters_mixing_init,       &
+            parameters_mixing_end,        &
             parameters_diff,              &
             parameters_apply_envelope,    &
             parameters_set_fluence,       &
             parameters_change_rep,        &
             parameters_set_initial,       &
-            laser_fluence,                &
+            parameters_fluence,                &
             j2_functional
 
   integer, parameter ::                 &
@@ -76,7 +78,7 @@ module opt_control_parameters_m
     FLOAT   :: omegamax
   end type oct_control_parameters_t
 
-  type(mix_t), public :: parameters_mix
+  type(mix_t) :: parameters_mix
 
 contains
 
@@ -149,10 +151,6 @@ contains
     !%End
     call loct_parse_logical(check_inp('OCTFixInitialFluence'), .true., fix_initial_fluence)
 
-
-    ! Initial guess for the laser: read from the input file.
-    call laser_init(ep%no_lasers, ep%lasers, m)
-
     ! Check that the laser polarizations are not imaginary.
     do i = 1, ep%no_lasers
       if(any(aimag(ep%lasers(i)%pol(:)) .ne. M_ZERO)) then
@@ -162,12 +160,18 @@ contains
       end if
     end do
 
+    ! Note that in QOCT runs, it is not acceptable to have complex time-dependent functions.
     do i = 1, ep%no_lasers
-      call laser_to_numerical(ep%lasers(i), dt, max_iter)
+      call laser_to_numerical(ep%lasers(i), dt, max_iter, real_part = .true.)
     end do
 
     call parameters_init(par, ep%no_lasers, dt, max_iter, targetfluence, omegamax)
     call parameters_set(par, ep)
+
+    ! This prints the initial control parameters, exactly as described in the inp file,
+    ! that is, without applying any envelope or filter.
+    call parameters_write('opt-control/initial_laser_inp', par)
+
     call parameters_apply_envelope(par)
 
     ! Moving to the sine-Fourier space.
@@ -180,8 +184,8 @@ contains
     if(par%targetfluence .ne. M_ZERO) then
       if(fix_initial_fluence) then
         if(par%targetfluence < M_ZERO) then
-          par%targetfluence = laser_fluence(par) 
-          write(0, *) 'LASER_FLUENCE 2', laser_fluence(par)
+          par%targetfluence = parameters_fluence(par) 
+          write(0, *) 'LASER_FLUENCE 2', parameters_fluence(par)
         else
           call parameters_set_fluence(par)
         end if
@@ -191,6 +195,12 @@ contains
     if(par%representation .eq. ctr_parameter_frequency_space) then
       call parameters_change_rep(par)
     end if
+
+    call parameters_to_h(par, ep)
+    call messages_print_stress(stdout, "TD ext. fields after processing")
+    call laser_write_info(ep%no_lasers, ep%lasers, dt, max_iter, stdout)
+    call messages_print_stress(stdout)
+    call parameters_write('opt-control/initial_laser', par)
 
   end subroutine parameters_set_initial
   ! ---------------------------------------------------------
@@ -244,6 +254,32 @@ contains
     
     res = sum(x(:)*y(:))
   end function parameters_dotp
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine parameters_mixing_init(par)
+    type(oct_control_parameters_t), intent(in) :: par
+
+    integer :: nfreqs
+
+    select case(par%representation)
+    case(ctr_parameter_real_space)
+      call mix_init(parameters_mix, par%ntiter + 1, par%no_parameters, 1)
+    case(ctr_parameter_frequency_space)
+      nfreqs = tdf_nfreqs(par%f(1))
+      call mix_init(parameters_mix, nfreqs, par%no_parameters, 1)
+    end select
+
+  end subroutine parameters_mixing_init
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine parameters_mixing_end
+    call mix_end(parameters_mix)
+  end subroutine parameters_mixing_end
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
@@ -278,6 +314,7 @@ contains
     deallocate(e_in, e_out, e_new)
     call pop_sub()
   end subroutine parameters_mixing
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
@@ -312,6 +349,7 @@ contains
 
     call pop_sub()
   end subroutine parameters_init
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
@@ -324,12 +362,13 @@ contains
 
     do j = 1, cp%no_parameters
       call tdf_end(cp%f(j))
-      cp%f(j) = ep%lasers(j)%f
+      call tdf_copy(cp%f(j), ep%lasers(j)%f)
       cp%pol(1:MAX_DIM, j) = ep%lasers(j)%pol(1:MAX_DIM)
     end do
 
     call pop_sub()
   end subroutine parameters_set
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
@@ -350,6 +389,7 @@ contains
 
     call pop_sub()
   end subroutine parameters_apply_envelope
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
@@ -364,6 +404,8 @@ contains
     end do
     call pop_sub()
   end subroutine parameters_to_h
+  ! ---------------------------------------------------------
+
 
   ! ---------------------------------------------------------
   subroutine parameters_to_h_val(cp, ep, val)
@@ -375,6 +417,7 @@ contains
         call tdf_set_numerical(ep%lasers(j)%f, val, tdf(cp%f(j), val))
     end do
   end subroutine parameters_to_h_val
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
@@ -399,6 +442,7 @@ contains
 
     call pop_sub()
   end subroutine parameters_end
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
@@ -431,7 +475,7 @@ contains
     end if
 
     iunit = io_open(trim(filename)//'/Fluence', action='write')
-    write(iunit, '(a,es20.8e3)') 'Fluence = ', laser_fluence(par)
+    write(iunit, '(a,es20.8e3)') 'Fluence = ', parameters_fluence(par)
     call io_close(iunit)
 
     do j = 1, cp%no_parameters
@@ -480,6 +524,7 @@ contains
 
     call pop_sub()
   end subroutine parameters_write
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
@@ -567,25 +612,26 @@ contains
 
     call pop_sub()
   end subroutine parameters_penalty_init
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
   ! Gets the fluence of the laser field, defined as:
-  ! laser_fluence = \sum_i^{no_parameters} \integrate_0^T |epsilon(t)|^2
+  ! parameters_fluence = \sum_i^{no_parameters} \integrate_0^T |epsilon(t)|^2
   ! ---------------------------------------------------------
-  FLOAT function laser_fluence(par)
+  FLOAT function parameters_fluence(par)
     type(oct_control_parameters_t), intent(in) :: par
-    integer :: i, j, k, nfreqs
-    FLOAT :: t
-    call push_sub('parameters.laser_fluence')
+    integer :: j
+    call push_sub('parameters.parameters_fluence')
 
-    laser_fluence = M_ZERO
+    parameters_fluence = M_ZERO
     do j = 1, par%no_parameters
-      laser_fluence = laser_fluence + tdf_dot_product(par%f(j), par%f(j))
+      parameters_fluence = parameters_fluence + tdf_dot_product(par%f(j), par%f(j))
     end do
 
     call pop_sub()
-  end function laser_fluence
+  end function parameters_fluence
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
@@ -618,7 +664,7 @@ contains
     FLOAT   :: old_fluence
     integer :: j
 
-    old_fluence = laser_fluence(par) 
+    old_fluence = parameters_fluence(par) 
     do j = 1, par%no_parameters
       call tdf_scalar_multiply( sqrt(par%targetfluence/old_fluence) , par%f(j) )
     end do
@@ -655,6 +701,7 @@ contains
     end do
 
   end subroutine parameters_copy
+  ! ---------------------------------------------------------
 
 end module opt_control_parameters_m
 

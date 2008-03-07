@@ -140,7 +140,7 @@ contains
     
     stoploop = .false.
 
-    fluence = laser_fluence(par)
+    fluence = parameters_fluence(par)
     j2 = j2_functional(par)
     jfunctional = j1 + j2
 

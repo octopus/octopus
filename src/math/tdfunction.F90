@@ -48,6 +48,7 @@ module tdf_m
             tdf_init_numerical,          &
             tdf_set_numerical,           &
             tdf_to_numerical,            &
+            tdf_numerical_keep_real,     &
             tdf,                         &
             tdf_dot_product,             &
             tdf_scalar_multiply,         &
@@ -411,6 +412,17 @@ module tdf_m
     FLOAT,       intent(in) :: value
     f%val(index) = value
   end subroutine tdf_set_numericalr1
+
+
+  !------------------------------------------------------------
+  subroutine tdf_numerical_keep_real(f)
+    type(tdf_t), intent(inout) :: f
+
+    if(f%mode .ne. TDF_NUMERICAL) return
+
+    f%val(:) = real(f%val(:), REAL_PRECISION)
+
+  end subroutine tdf_numerical_keep_real
 
 
   !------------------------------------------------------------

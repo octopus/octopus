@@ -60,7 +60,7 @@ module lasers_m
 
   type laser_t
     integer :: field
-    CMPLX :: pol(MAX_DIM) ! the polarization of the laser
+    CMPLX :: pol(MAX_DIM) = M_z0 ! the polarization of the laser
     type(tdf_t) :: f
 
     FLOAT, pointer :: v(:)
@@ -71,14 +71,19 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine laser_to_numerical(l, dt, max_iter)
-    type(laser_t), intent(inout) :: l
-    FLOAT,         intent(in)    :: dt
-    integer,       intent(in)    :: max_iter
+  subroutine laser_to_numerical(l, dt, max_iter, real_part)
+    type(laser_t), intent(inout)  :: l
+    FLOAT,         intent(in)     :: dt
+    integer,       intent(in)     :: max_iter
+    logical, optional, intent(in) :: real_part
 
     call push_sub('lasers.lasers_to_numerical')
 
     call tdf_to_numerical(l%f, M_ZERO, max_iter, dt)
+
+    if(present(real_part)) then
+      if(real_part) call tdf_numerical_keep_real(l%f)
+    end if
 
     call pop_sub()
   end subroutine laser_to_numerical
@@ -420,10 +425,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine laser_write_info(no_l, l, sb, dt, max_iter, iunit)
+  subroutine laser_write_info(no_l, l, dt, max_iter, iunit)
     integer,       intent(in) :: no_l
     type(laser_t), intent(in) :: l(no_l)
-    type(simul_box_t), intent(in) :: sb
     FLOAT,         intent(in) :: dt
     integer,       intent(in) :: max_iter
     integer,       intent(in) :: iunit
@@ -460,7 +464,7 @@ contains
           t = j * dt
           amp = tdf(l(i)%f, t)
           intensity = M_ZERO
-          do k = 1, sb%dim
+          do k = 1, MAX_DIM
             intensity = intensity + CNST(5.4525289841210) * real(amp*l(i)%pol(k))**2
           end do
           fluence = fluence + intensity
