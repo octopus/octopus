@@ -183,7 +183,7 @@ contains
           par%targetfluence = laser_fluence(par) 
           write(0, *) 'LASER_FLUENCE 2', laser_fluence(par)
         else
-          call parameters_set_fluence(par, par%targetfluence)
+          call parameters_set_fluence(par)
         end if
       end if
     end if
@@ -612,16 +612,15 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_set_fluence(par, fluence)
+  subroutine parameters_set_fluence(par)
     type(oct_control_parameters_t), intent(inout) :: par
-    FLOAT, intent(in)                             :: fluence
 
     FLOAT   :: old_fluence
     integer :: j
 
     old_fluence = laser_fluence(par) 
     do j = 1, par%no_parameters
-      call tdf_scalar_multiply( sqrt(fluence/old_fluence) , par%f(j) )
+      call tdf_scalar_multiply( sqrt(par%targetfluence/old_fluence) , par%f(j) )
     end do
 
   end subroutine parameters_set_fluence

@@ -661,6 +661,8 @@ module tdf_m
       f%a0 = alpha*f%a0
     case(TDF_NUMERICAL)
       f%val = alpha*f%val
+    case(TDF_SINE_SERIES)
+      f%coeffs = alpha*f%coeffs
     case(TDF_FROM_FILE)
       call loct_spline_times(alpha, f%amplitude)
     end select

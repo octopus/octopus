@@ -183,7 +183,6 @@ contains
 
      ! ---------------------------------------------------------
     subroutine scheme_straight_iteration
-      FLOAT :: previous_fluence
       integer :: j
       call push_sub('opt_control.scheme_mt03')
 
@@ -200,12 +199,7 @@ contains
         if(oct%use_mixing) then
           call parameters_mixing(iterator%ctr_iter, par_prev, par, par_new)
           call parameters_copy(par, par_new)
-          if(oct%mode_fixed_fluence) then
-            previous_fluence = laser_fluence(par)
-            do j = 1, par%no_parameters
-              call tdf_scalar_multiply( (sqrt(par%targetfluence/previous_fluence)), par%f(j))
-            end do
-          end if
+          if(oct%mode_fixed_fluence) call parameters_set_fluence(par)
         end if
       end do ctr_loop
 
@@ -407,11 +401,9 @@ contains
       fluence = laser_fluence(parp) 
       old_penalty = par%alpha(1)
       new_penalty = sqrt( fluence * old_penalty**2 / par%targetfluence )
-      do j = 1, parp%no_parameters
-        par%alpha(j) = new_penalty
-        parp%alpha(j) = new_penalty
-        call tdf_scalar_multiply( old_penalty / new_penalty , parp%f(j) )
-      end do
+      par%alpha(:) = new_penalty
+      parp%alpha(:) = new_penalty
+      call parameters_set_fluence(parp)
     end if
 
     do j = 1, par%no_parameters
@@ -448,7 +440,6 @@ contains
     FLOAT, intent(out)                            :: j1
 
     integer :: j
-    FLOAT :: previous_fluence
     type(states_t) :: chi
     type(oct_control_parameters_t) :: par_chi
 
@@ -476,12 +467,7 @@ contains
     end do
 
     ! Fix the fluence, in case it is needed.
-    if(oct%mode_fixed_fluence) then
-      previous_fluence = laser_fluence(par_chi)
-      do j = 1, par_chi%no_parameters
-        call tdf_scalar_multiply( sqrt(par%targetfluence) / sqrt(previous_fluence), par_chi%f(j) )
-      end do
-    end if
+    if(oct%mode_fixed_fluence) call parameters_set_fluence(par_chi)
 
     ! Copy par_chi to par
     call parameters_end(par)
