@@ -72,6 +72,7 @@ module opt_control_parameters_m
     type(tdf_t), pointer :: td_penalty(:)
 
     integer :: representation
+    integer :: current_representation
     FLOAT   :: omegamax
   end type oct_control_parameters_t
 
@@ -81,16 +82,73 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_set_initial(par, ep, m, dt, max_iter, targetfluence, omegamax)
+  subroutine parameters_set_initial(par, ep, m, dt, max_iter)
     type(oct_control_parameters_t), intent(inout) :: par
     type(epot_t), intent(inout)                   :: ep
     type(mesh_t), intent(inout)                   :: m
     FLOAT, intent(in)                             :: dt
     integer, intent(in)                           :: max_iter
-    FLOAT, intent(in)                             :: targetfluence
-    FLOAT, intent(in)                             :: omegamax
 
     integer :: i
+    FLOAT :: targetfluence, omegamax
+    logical :: fix_initial_fluence
+
+    !%Variable OCTFixFluenceTo
+    !%Type float
+    !%Section Optimal Control
+    !%Default 0.0
+    !%Description
+    !% The algorithm tries to obtain the specified fluence for the laser field. 
+    !% This works only in conjunction with either the WG05 or the straight iteration scheme.
+    !%
+    !% If this variable is not present in the input file, by default the code will not
+    !% attempt a fixed-fluence QOCT run. The same holds if the value given to this
+    !% variable is exactly zero.
+    !%
+    !% If this variable is given a negative value, then the target fluence will be that of
+    !% the initial laser pulse given as guess in the input file. Note, however, that
+    !% first the code applies the envelope provided by the "OCTLaserEnvelope" input
+    !% option, and afterwards it calculates the fluence.
+    !%End
+    call loct_parse_float(check_inp('OCTFixFluenceTo'), M_ZERO, targetfluence)
+
+
+    !%Variable OCTParameterOmegaMax
+    !%Type float
+    !%Section Optimal Control
+    !%Default -1.0
+    !%Description
+    !%
+    !%End
+    call loct_parse_float(check_inp('OCTParameterOmegaMax'), -M_ONE, omegamax)
+
+    !%Variable OCTParameterRepresentation
+    !%Type integer
+    !%Section Optimal Control
+    !%Default control_parameter_real_space
+    !%Description
+    !%
+    !%Option control_parameters_real_space 1
+    !%
+    !%Option control_parameters_fourier_space 2
+    !%
+    !%End
+    call loct_parse_int(check_inp('OCTParameterRepresentation'), ctr_parameter_real_space, par%representation)
+    if(.not.varinfo_valid_option('OCTParameterRepresentation', par%representation)) &
+      call input_error('OCTParameterRepresentation')
+
+    !%Variable OCTFixInitialFluence
+    !%Type logical
+    !%Section Optimal Control
+    !%Default yes
+    !%Description
+    !% By default, when asking for a fixed-fluence optimization ("OCTFixFluenceTo = whatever"), 
+    !% the initial laser guess provided in the input file is scaled to match this
+    !% fluence. However, you can force the program to use that initial laser as the initial
+    !% guess, no matter the fluence, by setting "OCTFixInitialFluence = no".
+    !%End
+    call loct_parse_logical(check_inp('OCTFixInitialFluence'), .true., fix_initial_fluence)
+
 
     ! Initial guess for the laser: read from the input file.
     call laser_init(ep%no_lasers, ep%lasers, m)
@@ -112,6 +170,28 @@ contains
     call parameters_set(par, ep)
     call parameters_apply_envelope(par)
 
+    ! Moving to the sine-Fourier space.
+    if(par%representation .eq. ctr_parameter_frequency_space) then
+      message(1) = "Info: The control function will be represented as a sine-Fourier series."
+      call write_info(1)
+      call parameters_change_rep(par)
+    end if
+
+    if(par%targetfluence .ne. M_ZERO) then
+      if(fix_initial_fluence) then
+        if(par%targetfluence < M_ZERO) then
+          par%targetfluence = laser_fluence(par) 
+          write(0, *) 'LASER_FLUENCE 2', laser_fluence(par)
+        else
+          call parameters_set_fluence(par, par%targetfluence)
+        end if
+      end if
+    end if
+
+    if(par%representation .eq. ctr_parameter_frequency_space) then
+      call parameters_change_rep(par)
+    end if
+
   end subroutine parameters_set_initial
   ! ---------------------------------------------------------
 
@@ -122,16 +202,16 @@ contains
 
     integer :: j
 
-    if(par%representation .eq. ctr_parameter_real_space) then
+    if(par%current_representation .eq. ctr_parameter_real_space) then
       do j = 1, par%no_parameters
         call tdf_numerical_to_sineseries(par%f(j), par%omegamax)
       end do
-      par%representation = ctr_parameter_frequency_space
+      par%current_representation = ctr_parameter_frequency_space
     else
       do j = 1, par%no_parameters
         call tdf_sineseries_to_numerical(par%f(j))
       end do
-      par%representation = ctr_parameter_real_space
+      par%current_representation = ctr_parameter_real_space
     end if
 
   end subroutine parameters_change_rep
@@ -213,7 +293,7 @@ contains
 
     call push_sub('parameters.parameters_init')
 
-    cp%representation = ctr_parameter_real_space
+    cp%current_representation = ctr_parameter_real_space
     cp%omegamax = omegamax
 
     cp%no_parameters = no_parameters
@@ -259,11 +339,14 @@ contains
 
     call push_sub('parameters.parameters_apply_envelope')
 
-    do j = 1, cp%no_parameters
-      do i = 1, cp%ntiter + 1
-        call tdf_set_numerical(cp%f(j), i, tdf(cp%f(j), i) / tdf(cp%td_penalty(j), i) )
+    ! Do not apply the envelope if the parameters are represented as a sine Fourier series.
+    if(cp%representation .eq. ctr_parameter_real_space) then
+      do j = 1, cp%no_parameters
+        do i = 1, cp%ntiter + 1
+          call tdf_set_numerical(cp%f(j), i, tdf(cp%f(j), i) / tdf(cp%td_penalty(j), i) )
+        end do
       end do
-    end do
+    end if
 
     call pop_sub()
   end subroutine parameters_apply_envelope
@@ -337,7 +420,7 @@ contains
     call io_mkdir(trim(filename))
 
     ! First, check that we are in the real space representation.
-    if(cp%representation .eq. ctr_parameter_frequency_space) then
+    if(cp%current_representation .eq. ctr_parameter_frequency_space) then
       ALLOCATE(par, 1)
       call parameters_copy(par, cp)
       call parameters_change_rep(par)
@@ -551,11 +634,13 @@ contains
     type(oct_control_parameters_t), intent(in)    :: cp_in
     integer :: j
 
+    cp_out%targetfluence = cp_in%targetfluence
     cp_out%no_parameters = cp_in%no_parameters
     cp_out%dt = cp_in%dt
     cp_out%ntiter = cp_in%ntiter
     cp_out%targetfluence = cp_in%targetfluence
     cp_out%representation = cp_in%representation
+    cp_out%current_representation = cp_in%current_representation
     cp_out%omegamax = cp_in%omegamax
     ALLOCATE(cp_out%f(cp_out%no_parameters), cp_out%no_parameters)
     ALLOCATE(cp_out%alpha(cp_out%no_parameters), cp_out%no_parameters)

@@ -26,44 +26,6 @@
 
     call push_sub('opt_control_read.oct_read_inp')  
 
-    !%Variable OCTFixFluenceTo
-    !%Type float
-    !%Section Optimal Control
-    !%Default 0.0
-    !%Description
-    !% The algorithm tries to obtain the specified fluence for the laser field. 
-    !% This works only in conjunction with either the WG05 or the straight iteration scheme.
-    !%
-    !% If this variable is not present in the input file, by default the code will not
-    !% attempt a fixed-fluence QOCT run. The same holds if the value given to this
-    !% variable is exactly zero.
-    !%
-    !% If this variable is given a negative value, then the target fluence will be that of
-    !% the initial laser pulse given as guess in the input file. Note, however, that
-    !% first the code applies the envelope provided by the "OCTLaserEnvelope" input
-    !% option, and afterwards it calculates the fluence.
-    !%End
-    oct%mode_fixed_fluence = .false.
-    call loct_parse_float(check_inp('OCTFixFluenceTo'), M_ZERO, oct%targetfluence)
-    if (oct%targetfluence .ne. M_ZERO) oct%mode_fixed_fluence = .true.
-
-    if(oct%mode_fixed_fluence) then
-      !%Variable OCTFixInitialFluence
-      !%Type logical
-      !%Section Optimal Control
-      !%Default yes
-      !%Description
-      !% By default, when asking for a fixed-fluence optimization ("OCTFixFluenceTo = whatever"), 
-      !% the initial laser guess provided in the input file is scaled to match this
-      !% fluence. However, you can force the program to use that initial laser as the initial
-      !% guess, no matter the fluence, by setting "OCTFixInitialFluence = no".
-      !%End
-      call loct_parse_logical(check_inp('OCTFixInitialFluence'), .true., oct%fix_initial_fluence)
-    else
-      oct%fix_initial_fluence = .false.
-    end if
-
-      
     !%Variable OCTScheme
     !%Type integer
     !%Section Optimal Control
@@ -179,34 +141,6 @@
     !% forward (or backward) propation, the code will emit a warning.
     !%End
     call loct_parse_int(check_inp('OCTNumberCheckPoints'), 0, oct%number_checkpoints)
-
-    !%Variable OCTParameterRepresentation
-    !%Type integer
-    !%Section Optimal Control
-    !%Default control_parameter_real_space
-    !%Description
-    !%
-    !%Option control_parameters_real_space 1
-    !%
-    !%Option control_parameters_fourier_space 2
-    !%
-    !%End
-    call loct_parse_int(check_inp('OCTParameterRepresentation'), oct_par_real_space, oct%par_representation)
-    if(.not.varinfo_valid_option('OCTParameterRepresentation', oct%par_representation)) &
-      call input_error('OCTParameterRepresentation')
-
-    !%Variable OCTParameterOmegaMax
-    !%Type float
-    !%Section Optimal Control
-    !%Default -1.0
-    !%Description
-    !%
-    !%End
-    if(oct%par_representation .eq. oct_par_sfourier_space) then
-      call loct_parse_float(check_inp('OCTParameterOmegaMax'), -M_ONE, oct%par_omegamax)
-    else
-      oct%par_omegamax = -M_ONE
-    end if
 
     call pop_sub()
   end subroutine oct_read_inp

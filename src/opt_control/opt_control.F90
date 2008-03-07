@@ -98,28 +98,12 @@ contains
 
     call oct_read_inp(oct)
 
-    call parameters_set_initial(par, h%ep, sys%gr%m, td%dt, td%max_iter, &
-                                oct%targetfluence, oct%par_omegamax)
+    call parameters_set_initial(par, h%ep, sys%gr%m, td%dt, td%max_iter)
 
-    ! Moving to the sine-Fourier space.
-    if(oct%par_representation .eq. oct_par_sfourier_space) then
-      message(1) = "Info: The control function will be represented as a sine-Fourier series."
-      call write_info(1)
-      call parameters_change_rep(par)
-    end if
-
-    if(oct%fix_initial_fluence) then
-      if(oct%targetfluence < M_ZERO) then
-        oct%targetfluence = laser_fluence(par) 
-        write(0, *) 'LASER_FLUENCE 2', laser_fluence(par)
-      else
-        call parameters_set_fluence(par, oct%targetfluence)
-      end if
-    end if
-
-    ! Moving back to the time rep.
-    if(oct%par_representation .eq. oct_par_sfourier_space) then
-      call parameters_change_rep(par)
+    if (par%targetfluence .ne. M_ZERO) then
+      oct%mode_fixed_fluence = .true.
+    else
+      oct%mode_fixed_fluence = .false.
     end if
 
     call parameters_to_h(par, h%ep)
@@ -219,7 +203,7 @@ contains
           if(oct%mode_fixed_fluence) then
             previous_fluence = laser_fluence(par)
             do j = 1, par%no_parameters
-              call tdf_scalar_multiply( (sqrt(oct%targetfluence/previous_fluence)), par%f(j))
+              call tdf_scalar_multiply( (sqrt(par%targetfluence/previous_fluence)), par%f(j))
             end do
           end if
         end if
@@ -273,7 +257,7 @@ contains
       call oct_prop_init(prop_psi, "psi", td%max_iter, oct%number_checkpoints)
 
       if (oct%mode_fixed_fluence) then
-        par%alpha(1) = (M_ONE/sqrt(oct%targetfluence)) * sqrt ( laser_fluence(par) )
+        par%alpha(1) = (M_ONE/sqrt(par%targetfluence)) * sqrt ( laser_fluence(par) )
       end if
 
       call parameters_copy(par_new, par)      
@@ -422,7 +406,7 @@ contains
     if (oct%mode_fixed_fluence) then
       fluence = laser_fluence(parp) 
       old_penalty = par%alpha(1)
-      new_penalty = sqrt( fluence * old_penalty**2 / oct%targetfluence )
+      new_penalty = sqrt( fluence * old_penalty**2 / par%targetfluence )
       do j = 1, parp%no_parameters
         par%alpha(j) = new_penalty
         parp%alpha(j) = new_penalty
@@ -495,7 +479,7 @@ contains
     if(oct%mode_fixed_fluence) then
       previous_fluence = laser_fluence(par_chi)
       do j = 1, par_chi%no_parameters
-        call tdf_scalar_multiply( sqrt(oct%targetfluence) / sqrt(previous_fluence), par_chi%f(j) )
+        call tdf_scalar_multiply( sqrt(par%targetfluence) / sqrt(previous_fluence), par_chi%f(j) )
       end do
     end if
 
