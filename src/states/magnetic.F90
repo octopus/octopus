@@ -140,7 +140,7 @@ contains
     call push_sub('magnetic.calc_physical_current')
 
     ! Paramagnetic contribution to the physical current
-    call states_calc_tau_jp_gn(gr, st, jp=st%j)
+    call states_calc_tau_jp_gn(gr, st, jp = j)
 
     ! TODO
     ! Diamagnetic contribution to the physical current
