@@ -22,9 +22,6 @@
 module lalg_basic_m
   use blas_m
   use multicomm_m
-#ifdef USE_OMP
-  use omp_lib
-#endif
   use profiling_m
 
   implicit none

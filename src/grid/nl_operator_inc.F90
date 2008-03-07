@@ -305,7 +305,7 @@ subroutine X(nl_operator_operate)(op, fi, fo, ghost_update, profile, points)
 
       !$omp parallel private(ini, nri_loc, ws)
 #ifdef USE_OMP
-      call divide_range(nri, omp_get_thread_num(), omp_get_num_threads(), ini, nri_loc)
+      call multicomm_divide_range_omp(nri, ini, nri_loc)
 #else 
       ini = 1
       nri_loc = nri

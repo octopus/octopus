@@ -33,9 +33,6 @@ module nl_operator_m
   use mpi_m
   use par_vec_m
   use profiling_m
-#ifdef USE_OMP
-  use omp_lib
-#endif
 
   implicit none
 

@@ -63,6 +63,9 @@
 
   public ::                          &
     multicomm_divide_range,          &
+#ifdef USE_OMP
+    multicomm_divide_range_omp,      &
+#endif
 #if defined(HAVE_MPI)
     multicomm_create_all_pairs,      &
 #endif
@@ -88,6 +91,8 @@
     "par_kpoints",                   &
     "par_other  "                    &
     /)
+
+  integer, public, parameter :: MAX_OMP_THREADS = 16
 
   ! Stores all communicators and groups
   type multicomm_t
@@ -245,6 +250,10 @@ contains
       mc%nthreads = omp_get_num_threads()
       !$omp end master
       !$omp end parallel
+      if(mc%nthreads > MAX_OMP_THREADS) then
+        message(1) = "Number of threads requested is larger than MAX_OMP_THREADS"
+        call write_fatal(1)
+      end if
 #endif
 
       if(mc%par_strategy == P_STRATEGY_SERIAL .and. mc%nthreads == 1) then
@@ -605,11 +614,28 @@ contains
       end if
     end do
 
-    lsize = end - start + 1
+    lsize(1:size) = end(1:size) - start(1:size) + 1
     
-    ASSERT(sum(lsize) == nn)
+    ASSERT(sum(lsize(1:size)) == nn)
 
   end subroutine multicomm_divide_range
+
+#ifdef USE_OMP
+  subroutine multicomm_divide_range_omp(nn, ini, nn_loc)
+    integer, intent(in)    :: nn
+    integer, intent(out)   :: ini
+    integer, intent(out)   :: nn_loc
+    
+    integer :: start(MAX_OMP_THREADS), end(MAX_OMP_THREADS), lsize(MAX_OMP_THREADS), rank
+
+    call multicomm_divide_range(nn, omp_get_num_threads(), start, end, lsize)
+
+    rank   = 1 + omp_get_thread_num()
+    ini    = start(rank)
+    nn_loc = lsize(rank)
+
+  end subroutine multicomm_divide_range_omp
+#endif
 
 end module multicomm_m
 

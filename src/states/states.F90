@@ -2117,27 +2117,16 @@ contains
      ALLOCATE(st%st_range(2, 0:st%mpi_grp%size-1), 2*st%mpi_grp%size)
      ALLOCATE(st%st_num(0:st%mpi_grp%size-1), st%mpi_grp%size)
 
-     do k = 0, st%mpi_grp%size-1
-       i = st%nst / st%mpi_grp%size
-       ii = st%nst - i*st%mpi_grp%size
-       if(ii > 0 .and. k < ii) then
-         i = i + 1
-         st_start = k*i + 1
-         st_end = st_start + i - 1
-       else
-         st_end = st%nst - (st%mpi_grp%size - k - 1)*i
-         st_start = st_end - i + 1
-       end if
+     call multicomm_divide_range(st%nst, st%mpi_grp%size, st%st_range(1, :), st%st_range(2, :), st%st_num)
+
+     do k = 0, st%mpi_grp%size - 1
        write(message(1),'(a,i4,a,i4,a,i4)') 'Info: Nodes in states-group ', k, &
-         ' will manage states', st_start, " - ", st_end
+         ' will manage states', st%st_range(1, k), " - ", st%st_range(2, k)
        call write_info(1)
-       st%st_range(1, k) = st_start
-       st%st_range(2, k) = st_end
-       st%st_num(k)      = st_end-st_start+1
        if(st%mpi_grp%rank .eq. k) then
-         st%st_start = st_start
-         st%st_end   = st_end
-         st%lnst     = st_end-st_start+1
+         st%st_start = st%st_range(1, k)
+         st%st_end   = st%st_range(2, k)
+         st%lnst     = st%st_num(k)
        endif
      end do
 

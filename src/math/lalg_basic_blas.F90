@@ -103,7 +103,7 @@ subroutine FNAME(scal_1)(n1, da, dx)
   if(n1 < 1) return
 
 !$omp parallel private(ini, nn_loc)
-  call divide_range(n1, omp_get_thread_num(), omp_get_num_threads(), ini, nn_loc)
+  call multicomm_divide_range_omp(n1, ini, nn_loc)
   call blas_scal(nn_loc, da, dx(ini), 1)
 !$omp end parallel
 #else
@@ -181,7 +181,7 @@ subroutine FNAME(axpy_1)(n1, da, dx, dy)
 
 #ifdef USE_OMP
 !$omp parallel private(ini, nn_loc)
-  call divide_range(n1, omp_get_thread_num(), omp_get_num_threads(), ini, nn_loc)
+  call multicomm_divide_range_omp(n1, ini, nn_loc)
   call blas_axpy(nn_loc, da, dx(ini), 1, dy(ini), 1)
 !$omp end parallel
 #else
@@ -255,7 +255,7 @@ subroutine FNAME(axpy_5)(n1, da, dx, dy)
 
 #ifdef USE_OMP  
   !$omp parallel private(ini, nn_loc)
-  call divide_range(n1, omp_get_thread_num(), omp_get_num_threads(), ini, nn_loc)
+  call multicomm_divide_range_omp(n1, ini, nn_loc)
   call blas_axpy(nn_loc, da, dx(ini), dy(ini))
   !$omp end parallel
 #else
@@ -286,7 +286,7 @@ subroutine FNAME(copy_1)(n1, dx, dy)
 
 #ifdef USE_OMP
   !$omp parallel private(ini, nn_loc)
-  call divide_range(n1, omp_get_thread_num(), omp_get_num_threads(), ini, nn_loc)
+  call multicomm_divide_range_omp(n1, ini, nn_loc)
   call blas_copy(nn_loc, dx(ini), 1, dy(ini), 1)
   !$omp end parallel
 #else
@@ -360,7 +360,7 @@ TYPE1 function FNAME(dot) (n, dx, dy) result(dot)
 
 #ifdef USE_OMP  
   !$omp parallel private(ini, nn_loc, dot_loc)
-  call divide_range(n, omp_get_thread_num(), omp_get_num_threads(), ini, nn_loc)
+  call multicomm_divide_range_omp(n, ini, nn_loc)
   dot_loc = blas_dot(nn_loc, dx(ini), 1, dy(ini), 1)
 
   !$omp atomic
@@ -392,7 +392,7 @@ TYPE2 function FNAME(nrm2)(n, dx) result(nrm2)
 
 #ifdef USE_OMP
   !$omp parallel private(ini, nn_loc, nrm2_loc)
-  call divide_range(n, omp_get_thread_num(), omp_get_num_threads(), ini, nn_loc)
+  call multicomm_divide_range_omp(n, ini, nn_loc)
   nrm2_loc = blas_nrm2(nn_loc, dx(ini), 1)
 
   !$omp critical
