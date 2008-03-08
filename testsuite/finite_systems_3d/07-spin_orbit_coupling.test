@@ -12,13 +12,13 @@ Enabled    : Yes
 
 
 Input: 07-spin_orbit_coupling.01-hgh.inp
-Match ; Eigenvalue  1 ; grep '1   --   -28.092656' static/info | awk '{print $3" "$7" "$4}' ; \s*-28.0926\d*\s*0.500\d*\s*1.00
-Match ; Eigenvalue  3 ; grep '3   --   -27.1514'   static/info | awk '{print $3" "$7" "$4}' ; \s*-27.1514\d*\s*0.500\d*\s*1.00
-Match ; Eigenvalue  5 ; grep '5   --   -17.9915' static/info | awk '{print $3" "$7" "$4}' ; \s*-17.9915\d*\s*0.476\d*\s*1.00
-Match ; Eigenvalue  7 ; grep '7   --   -16.4023' static/info | awk '{print $3" "$7" "$4}' ; \s*-16.4023\d*\s*0.143\d*\s*1.00
-Match ; Eigenvalue  9 ; grep '9   --   -15.2893' static/info | awk '{print $3" "$7" "$4}' ; \s*-15.2893\d*\s*-0.080\d*\s*1.00
-Match ; Eigenvalue 11 ; grep '11   --   -15.2878' static/info | awk '{print $3" "$7" "$4}' ; \s*-15.2878\d*\s*0.135\d*\s*1.00
-Match ; Eigenvalue 13 ; grep '13   --   -14.4567' static/info | awk '{print $3" "$7" "$4}' ; \s*-14.4567\d*\s*-0.110\d*\s*1.00
+Match ; Eigenvalue  1 ; grep '1   --   -28.09' static/info | awk '{print $3" "$7" "$4}' ; \s*-28.0926\d*\s*0.500\d*\s*1.00
+Match ; Eigenvalue  3 ; grep '3   --   -27.15'   static/info | awk '{print $3" "$7" "$4}' ; \s*-27.1513\d*\s*0.500\d*\s*1.00
+Match ; Eigenvalue  5 ; grep '5   --   -17.99' static/info | awk '{print $3" "$7" "$4}' ; \s*-17.9914\d*\s*0.476\d*\s*1.00
+Match ; Eigenvalue  7 ; grep '7   --   -16.40' static/info | awk '{print $3" "$7" "$4}' ; \s*-16.4023\d*\s*0.143\d*\s*1.00
+Match ; Eigenvalue  9 ; grep '9   --   -15.28' static/info | awk '{print $3" "$7" "$4}' ; \s*-15.2893\d*\s*-0.080\d*\s*1.00
+Match ; Eigenvalue 11 ; grep '11   --   -15.28' static/info | awk '{print $3" "$7" "$4}' ; \s*-15.2878\d*\s*0.135\d*\s*1.00
+Match ; Eigenvalue 13 ; grep '13   --   -14.45' static/info | awk '{print $3" "$7" "$4}' ; \s*-14.4567\d*\s*-0.110\d*\s*1.00
 Match ; Force         ; sed -n '/^Forces on/{n\;n\;p\;}' static/info ; \s*2.545\d*
 
 

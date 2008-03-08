@@ -193,6 +193,24 @@ double FC_FUNC_(oct_spline_eval, OCT_SPLINE_EVAL)
 }
 
 
+void FC_FUNC_(oct_spline_eval_array, OCT_SPLINE_EVAL_ARRAY)
+  (int * nn, double *xf, void **spl, void **acc)
+{
+  int ii;
+  for(ii = 0; ii < *nn; ii++){
+    xf[ii] = gsl_spline_eval((gsl_spline *)(*spl), xf[ii], (gsl_interp_accel *)(*acc));
+  }
+}
+
+void FC_FUNC_(oct_spline_eval_array4, OCT_SPLINE_EVAL_ARRAY)
+  (int * nn, float *xf, void **spl, void **acc)
+{
+  int ii;
+  for(ii = 0; ii < *nn; ii++){
+    xf[ii] = (float) gsl_spline_eval((gsl_spline *)(*spl), (double) xf[ii], (gsl_interp_accel *)(*acc));
+  }
+}
+
 /* This function returns the number of points with which a spline
 	 was constructed (the size component of the gsl_spline struct). */
 int FC_FUNC_(oct_spline_npoints, OCT_SPLINE_NPOINTS)

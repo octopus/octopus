@@ -231,6 +231,7 @@ module loct_gsl_spline_m
     loct_spline_end,      & ! [2]
     loct_spline_fit,      & ! [3]
     loct_splint,          & ! [4]
+    loct_splint_vec,      & ! [4]
     loct_spline_sum,      & ! [5]
     loct_spline_times,    & ! [6]
     loct_spline_integral, & ! [7]
@@ -260,9 +261,15 @@ module loct_gsl_spline_m
     module procedure spline_fit4
     module procedure spline_fit8
   end interface
+
   interface loct_splint
     module procedure splint4
     module procedure splint8
+  end interface
+
+  interface loct_splint_vec
+    module procedure splint4_array
+    module procedure splint8_array
   end interface
 
   ! The integral may be done with or without integration limits, but
@@ -314,6 +321,22 @@ module loct_gsl_spline_m
       real(8), intent(in) :: x
       type(c_pointer_t), intent(in) :: spl, acc
     end function oct_spline_eval
+
+    subroutine oct_splice_eval_array(nn, xf, spl, acc)
+      use c_pointer_m
+      integer, intent(in)    :: nn
+      real(8), intent(inout) :: xf
+      type(c_pointer_t), intent(in) :: spl
+      type(c_pointer_t), intent(in) :: acc  
+    end subroutine oct_splice_eval_array
+
+    subroutine oct_splice_eval_array4(nn, xf, spl, acc)
+      use c_pointer_m
+      integer, intent(in)    :: nn
+      real(4), intent(inout) :: xf
+      type(c_pointer_t), intent(in) :: spl
+      type(c_pointer_t), intent(in) :: acc  
+    end subroutine oct_splice_eval_array4
 
     real(8) function oct_spline_eval_der(x, spl, acc)
       use c_pointer_m
@@ -461,6 +484,22 @@ contains
 
     splint4 = real(oct_spline_eval(real(x, kind=8), spl%spl, spl%acc), kind=4)
   end function splint4
+
+  subroutine splint8_array(spl, nn, xf)
+    type(loct_spline_t), intent(in)    :: spl
+    integer,             intent(in)    :: nn
+    real(8),             intent(inout) :: xf(:)
+
+    call oct_spline_eval_array(nn, xf(1), spl%spl, spl%acc)
+  end subroutine splint8_array
+
+  subroutine splint4_array(spl, nn, xf)
+    type(loct_spline_t), intent(in)    :: spl
+    integer,             intent(in)    :: nn
+    real(4),             intent(inout) :: xf(:)
+
+    call oct_spline_eval_array4(nn, xf(1), spl%spl, spl%acc)
+  end subroutine splint4_array
 
   subroutine loct_spline_sum(spl1, spl2, splsum)
     type(loct_spline_t), intent(in)  :: spl1, spl2

@@ -41,6 +41,7 @@ module specie_pot_m
   use solids_m
   use submesh_m
   use poisson_m
+  use profiling_m
   use ps_m
   use units_m
   use varinfo_m
@@ -595,8 +596,12 @@ contains
     FLOAT, optional, intent(in) :: time
 
     FLOAT :: a1, a2, Rb2 ! for jellium
-    FLOAT :: xx(MAX_DIM), r, pot_re, pot_im, time_
+    FLOAT :: xx(MAX_DIM), r, pot_re, pot_im, time_, r2
     integer :: ip
+
+    type(profile_t), save :: prof
+
+    call profiling_in(prof, "SPECIE_GET_LOCAL")
 
     time_ = M_ZERO
 
@@ -640,12 +645,17 @@ contains
         end do
         
       case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
-        call dmf_put_radial_spline(gr%m, s%ps%vlr, x_atom, vl)
+        do ip = 1, gr%m%np
+          vl(ip) = sum((gr%m%x(ip, 1:MAX_DIM) - x_atom(1:MAX_DIM))**2)
+        end do
+        call loct_splint_vec(s%ps%vlr_sq, NP, vl)
         
       case(SPEC_ALL_E)
         vl(1:gr%m%np) = M_ZERO
         
       end select
+
+      call profiling_out(prof)
       
   end subroutine specie_get_local
 

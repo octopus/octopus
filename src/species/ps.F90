@@ -99,6 +99,8 @@ module ps_m
     logical :: has_long_range
 
     type(loct_spline_t) :: vlr         ! the long range part of the local potential
+    type(loct_spline_t) :: vlr_sq      ! the long range part of the
+                                       ! local potential in terms of r^2, to avoid the sqrt
     type(loct_spline_t) :: nlr         ! the charge density associated to the long range part
     
     FLOAT :: sigma_erf                 ! the a constant in erf(r/(sqrt(2)*sigma))/r
@@ -284,7 +286,7 @@ contains
   subroutine ps_separate(ps)
     type(ps_t),        intent(out) :: ps
 
-    FLOAT, allocatable :: vsr(:), vlr(:), nlr(:), vion(:)
+    FLOAT, allocatable :: vsr(:), vlr(:), nlr(:), vion(:), r2ofi(:)
     FLOAT :: r
     integer :: ii
     
@@ -297,11 +299,13 @@ contains
     ALLOCATE(vlr(ps%g%nrval), ps%g%nrval)
     ALLOCATE(nlr(ps%g%nrval), ps%g%nrval)
     ALLOCATE(vion(ps%g%nrval), ps%g%nrval)
+    ALLOCATE(r2ofi(ps%g%nrval), ps%g%nrval)
     
     vlr(1) = -ps%z_val*M_TWO/(sqrt(M_TWO*M_PI)*ps%sigma_erf)
 
     do ii = 1, ps%g%nrval
       r = ps%g%rofi(ii)
+      r2ofi(ii) = r**2
       if ( ii > 1) then
         vlr(ii)  = -ps%z_val*loct_erf(r/(ps%sigma_erf*sqrt(M_TWO)))/r
         vion(ii) = -ps%z_val/r - vlr(ii)
@@ -312,6 +316,9 @@ contains
     
     call loct_spline_init(ps%vlr)
     call loct_spline_fit(ps%g%nrval, ps%g%rofi, vlr, ps%vlr)
+
+    call loct_spline_init(ps%vlr_sq)
+    call loct_spline_fit(ps%g%nrval, r2ofi, vlr, ps%vlr_sq)
     
     call loct_spline_init(ps%nlr)
     call loct_spline_fit(ps%g%nrval, ps%g%rofi, nlr, ps%nlr)
@@ -334,7 +341,7 @@ contains
     call loct_spline_init(ps%dvion)
     call loct_spline_der(ps%vion, ps%dvion)
 
-    deallocate(vsr, vlr, nlr, vion)
+    deallocate(vsr, vlr, nlr, vion, r2ofi)
     
   end subroutine ps_separate
   
@@ -507,6 +514,7 @@ contains
     call loct_spline_end(ps%ur)
 
     call loct_spline_end(ps%vlr)
+    call loct_spline_end(ps%vlr_sq)
     call loct_spline_end(ps%nlr)
 
     call loct_spline_end(ps%vl)
