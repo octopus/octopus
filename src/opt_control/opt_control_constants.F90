@@ -25,6 +25,7 @@ module opt_control_constants_m
 
   type oct_t
     logical :: mode_fixed_fluence
+    logical :: mode_basis_set
     integer :: algorithm_type
     FLOAT   :: eta, delta  ! The parameters defined by Maday and Turinici.
     logical :: use_mixing

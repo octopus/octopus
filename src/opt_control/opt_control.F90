@@ -96,7 +96,8 @@ contains
 
     call oct_read_inp(oct)
 
-    call parameters_set_initial(par, h%ep, sys%gr%m, td%dt, td%max_iter, oct%mode_fixed_fluence)
+    call parameters_set_initial(par, h%ep, sys%gr%m, td%dt, td%max_iter, &
+                                oct%mode_fixed_fluence, oct%mode_basis_set)
 
     call oct_iterator_init(iterator, par)
 
@@ -174,6 +175,7 @@ contains
       call oct_prop_init(prop_chi, "chi", td%max_iter, oct%number_checkpoints)
       call oct_prop_init(prop_psi, "psi", td%max_iter, oct%number_checkpoints)
 
+      call parameters_set_rep(par)
       call parameters_copy(par_new, par)
       ctr_loop: do
         call parameters_copy(par_prev, par)
@@ -427,6 +429,8 @@ contains
     type(states_t) :: chi
     type(oct_control_parameters_t) :: par_chi
 
+    call parameters_to_realtime(par)
+
     call parameters_copy(par_chi, par)
 
     ! First, a forward propagation with the input field.
@@ -445,6 +449,8 @@ contains
     ! Backward propagation, while at the same time finding the output field, 
     ! which is placed at par_chi
     call bwd_step_2(oct, sys, td, h, target, par, par_chi, chi, prop_chi, prop_psi)
+
+    call parameters_set_rep(par_chi)
 
     do j = 1, par_chi%no_parameters
       call filter_apply(par_chi%f(j), filter)

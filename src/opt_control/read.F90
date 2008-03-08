@@ -150,11 +150,11 @@
   ! Tries to avoid ill defined combinations of run modes.
   ! ---------------------------------------------------------
   subroutine check_faulty_runmodes(oct, sys, h, target, tr)
-    type(oct_t), intent(inout) :: oct
-    type(system_t), target, intent(in) :: sys
-    type(hamiltonian_t),    intent(in) :: h
-    type(target_t),         intent(in) :: target
-    type(td_rti_t),         intent(in) :: tr
+    type(oct_t),                    intent(inout) :: oct
+    type(system_t), target,         intent(in)    :: sys
+    type(hamiltonian_t),            intent(in)    :: h
+    type(target_t),                 intent(in)    :: target
+    type(td_rti_t),                 intent(in)    :: tr
 
     integer :: no_electrons, n_filled, n_partially_filled, n_half_filled
     call push_sub('read.check_faulty_runmodes')
@@ -165,6 +165,7 @@
       call write_fatal(1)
     end if
 
+    ! No QOCT runs with periodic boundary conditions.
     if(simul_box_is_periodic(sys%gr%sb)) then
       write(message(1), '(a)') 'No QOCT runs with periodic boundary conditions. '
       call write_fatal(1)
@@ -286,9 +287,19 @@
       if(sys%st%d%ispin .eq. SPIN_POLARIZED) then
         write(message(1), '(a)') 'If "OCTTargetOperator = oct_tg_exclude_state", you can only do'
         write(message(2), '(a)') 'runs in spin restricted, or in spinors mode (spin-polarized is'
-        writE(message(3), '(a)') 'is not allowed.'
+        write(message(3), '(a)') 'is not allowed.'
         call write_fatal(3)
       end if
+    end if
+
+    if(oct%mode_basis_set) then
+      if(oct%algorithm_type .ne. oct_algorithm_str_iter) then
+        write(message(1), '(a)') 'If the control parameters are to be represented with a basis set'
+        write(message(2), '(a)') '(i.e. "OCTParameterRepresentation = control_parameters_fourier_space"),'
+        write(message(3), '(a)') 'the only acceptable algorithm is:'
+        write(message(4), '(a)') '"OCTScheme = oct_algorithm_straight_iteration".'
+        call write_fatal(4)
+      endif
     end if
       
     call pop_sub()      

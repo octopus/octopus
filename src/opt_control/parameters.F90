@@ -52,9 +52,10 @@ module opt_control_parameters_m
             parameters_diff,              &
             parameters_apply_envelope,    &
             parameters_set_fluence,       &
-            parameters_change_rep,        &
+            parameters_set_rep,           &
+            parameters_to_realtime,       &
             parameters_set_initial,       &
-            parameters_fluence,                &
+            parameters_fluence,           &
             j2_functional
 
   integer, parameter ::                 &
@@ -84,13 +85,15 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_set_initial(par, ep, m, dt, max_iter, mode_fixed_fluence)
+  subroutine parameters_set_initial(par, ep, m, dt, max_iter, &
+                                    mode_fixed_fluence, mode_basis_set)
     type(oct_control_parameters_t), intent(inout) :: par
     type(epot_t), intent(inout)                   :: ep
     type(mesh_t), intent(inout)                   :: m
     FLOAT, intent(in)                             :: dt
     integer, intent(in)                           :: max_iter
     logical, intent(out)                          :: mode_fixed_fluence
+    logical, intent(out)                          :: mode_basis_set
 
     integer :: i
     FLOAT :: targetfluence, omegamax
@@ -175,12 +178,8 @@ contains
 
     call parameters_apply_envelope(par)
 
-    ! Moving to the sine-Fourier space.
-    if(par%representation .eq. ctr_parameter_frequency_space) then
-      message(1) = "Info: The control function will be represented as a sine-Fourier series."
-      call write_info(1)
-      call parameters_change_rep(par)
-    end if
+    ! Move to the sine-Fourier space if required.
+    call parameters_set_rep(par)
 
     if(par%targetfluence .ne. M_ZERO) then
       if(fix_initial_fluence) then
@@ -193,45 +192,66 @@ contains
       end if
     end if
 
-    if(par%representation .eq. ctr_parameter_frequency_space) then
-      call parameters_change_rep(par)
-    end if
-
+    call parameters_to_realtime(par)
     call parameters_to_h(par, ep)
     call messages_print_stress(stdout, "TD ext. fields after processing")
     call laser_write_info(ep%no_lasers, ep%lasers, dt, max_iter, stdout)
     call messages_print_stress(stdout)
     call parameters_write('opt-control/initial_laser', par)
 
-    if (par%targetfluence .ne. M_ZERO) then
-      mode_fixed_fluence = .true.
-    else
-      mode_fixed_fluence = .false.
-    end if
+    mode_fixed_fluence = .false.
+    if (par%targetfluence .ne. M_ZERO) mode_fixed_fluence = .true.
+
+    mode_basis_set = .false.
+    if(par%representation .ne. ctr_parameter_real_space ) mode_basis_set = .true.
 
   end subroutine parameters_set_initial
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_change_rep(par)
+  ! Transforms the control function to frequency space, if
+  ! this is the space in which the functions are defined (and it
+  ! is necessary to perform the transformation). 
+  ! And, transforms the control function to real-time space, if
+  ! this is the space in which the functions are defined (and it
+  ! is necessary to perform the transformation). 
+  ! ---------------------------------------------------------
+  subroutine parameters_set_rep(par)
     type(oct_control_parameters_t), intent(inout) :: par
-
     integer :: j
 
-    if(par%current_representation .eq. ctr_parameter_real_space) then
-      do j = 1, par%no_parameters
-        call tdf_numerical_to_sineseries(par%f(j), par%omegamax)
-      end do
-      par%current_representation = ctr_parameter_frequency_space
-    else
+    if(par%current_representation .eq. par%representation) return
+
+    select case(par%current_representation)
+    case(ctr_parameter_frequency_space)
       do j = 1, par%no_parameters
         call tdf_sineseries_to_numerical(par%f(j))
       end do
-      par%current_representation = ctr_parameter_real_space
-    end if
+    case(ctr_parameter_real_space)
+      do j = 1, par%no_parameters
+        call tdf_numerical_to_sineseries(par%f(j), par%omegamax)
+      end do
+    end select
+    par%current_representation = par%representation
 
-  end subroutine parameters_change_rep
+  end subroutine parameters_set_rep
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine parameters_to_realtime(par)
+    type(oct_control_parameters_t), intent(inout) :: par
+    integer :: j
+
+    if(par%current_representation .eq. ctr_parameter_real_space) return
+
+    do j = 1, par%no_parameters
+      call tdf_sineseries_to_numerical(par%f(j))
+    end do
+    par%current_representation = ctr_parameter_real_space
+
+  end subroutine parameters_to_realtime
   ! ---------------------------------------------------------
 
 
@@ -240,15 +260,33 @@ contains
     type(oct_control_parameters_t), intent(in) :: p, q
     integer :: i, j
     FLOAT, allocatable :: delta(:)
+    integer :: nfreqs
 
-    res = M_ZERO
-    ALLOCATE(delta(p%ntiter + 1), p%ntiter +1)
-    do i = 1, p%no_parameters
-      do j = 1, p%ntiter + 1
-        delta(j) = abs(tdf(p%f(i), j) - tdf(q%f(i), j))**2
+    ASSERT(p%current_representation .eq. q%current_representation)
+
+    select case(p%current_representation)
+    case(ctr_parameter_real_space)
+      res = M_ZERO
+      ALLOCATE(delta(p%ntiter + 1), p%ntiter +1)
+      do i = 1, p%no_parameters
+        do j = 1, p%ntiter + 1
+          delta(j) = abs(tdf(p%f(i), j) - tdf(q%f(i), j))**2
+        end do
+        res = res + sum(delta)*p%dt
       end do
-      res = res + sum(delta)*p%dt
-    end do
+
+    case(ctr_parameter_frequency_space)
+      nfreqs = tdf_nfreqs(p%f(1))
+      res = M_ZERO
+      ALLOCATE(delta(nfreqs), nfreqs +1)
+      do i = 1, p%no_parameters
+        do j = 1, nfreqs
+          delta(j) = abs(tdf(p%f(i), j) - tdf(q%f(i), j))**2
+        end do
+        res = res + sum(delta)
+      end do
+
+    end select
 
     deallocate(delta)
   end function parameters_diff
@@ -501,7 +539,7 @@ contains
     if(cp%current_representation .eq. ctr_parameter_frequency_space) then
       ALLOCATE(par, 1)
       call parameters_copy(par, cp)
-      call parameters_change_rep(par)
+      call parameters_to_realtime(par)
       change_rep = .true.
     else
       par => cp
@@ -673,20 +711,41 @@ contains
   ! by a penalty function.
   ! ---------------------------------------------------------
   FLOAT function j2_functional(par) result(j2)
-    type(oct_control_parameters_t), intent(in) :: par
+    type(oct_control_parameters_t), target, intent(in) :: par
+    type(oct_control_parameters_t), pointer :: par_
     integer :: i, j, k
+    FLOAT :: t, integral
+    logical :: change_rep
 
-    FLOAT :: t
-    j2 = M_ZERO
-    do j = 1, par%no_parameters
-      do i = 1, par%ntiter + 1
-        t = (i-1) * par%dt
+    ASSERT(par%current_representation .eq. par%representation)
+
+    if(par%current_representation .eq. ctr_parameter_frequency_space) then
+      ALLOCATE(par_, 1)
+      call parameters_copy(par_, par)
+      call parameters_to_realtime(par_)
+      change_rep = .true.
+    else
+      par_ => par
+      change_rep = .false.
+    end if
+
+    integral = M_ZERO
+    do j = 1, par_%no_parameters
+      do i = 1, par_%ntiter + 1
+        t = (i-1) * par_%dt
         do k = 1, MAX_DIM
-          j2 = j2 + tdf(par%td_penalty(j), i) * real( par%pol(k, j) * tdf(par%f(j), i) )**2 
+          integral = integral + tdf(par_%td_penalty(j), i) * real( par_%pol(k, j) * tdf(par_%f(j), i) )**2 
         end do
       end do
     end do
-    j2 = - par%alpha(1) * (j2 * par%dt - par%targetfluence)
+    integral = integral * par_%dt
+    j2 = - par_%alpha(1) * (integral - par%targetfluence)
+
+    if(change_rep) then
+      call parameters_end(par_)
+    else
+      nullify(par_)
+    end if
   end function j2_functional
   ! ---------------------------------------------------------
 
