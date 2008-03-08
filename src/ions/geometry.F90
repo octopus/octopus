@@ -76,9 +76,6 @@ module geometry_m
 
   type geometry_t
     integer :: natoms
-    integer :: atoms_start
-    integer :: atoms_end
-    integer :: nlatoms
     type(atom_t), pointer :: atom(:)
 
     integer :: ncatoms              ! For QM+MM calculations
@@ -95,7 +92,15 @@ module geometry_m
     logical :: nlcc                 ! is any species having non-local core corrections?
 
     logical :: parallel_in_atoms
+
     type(mpi_grp_t) :: mpi_grp
+
+    integer :: atoms_start
+    integer :: atoms_end
+    integer :: nlatoms
+    
+    integer, pointer :: atoms_range(:, :)
+    integer, pointer :: atoms_num(:)
   end type geometry_t
 
   interface assignment (=)
@@ -120,6 +125,8 @@ contains
     geo%atoms_start = 1
     geo%atoms_end   = geo%natoms
     geo%nlatoms     = geo%natoms
+
+    nullify(geo%atoms_range, geo%atoms_num)
 
     call mpi_grp_init(geo%mpi_grp, -1)
 
@@ -451,7 +458,6 @@ contains
 
 #ifdef HAVE_MPI
     integer :: size, rank, kk
-    integer, allocatable :: start(:), end(:), lsize(:)
 
     call push_sub('geometry.geometry_partition')
 
@@ -466,28 +472,25 @@ contains
       size = mc%group_sizes(P_STRATEGY_STATES)
       rank = mc%who_am_i(P_STRATEGY_STATES)
 
-      ALLOCATE(start(1:size), size)
-      ALLOCATE(  end(1:size), size)
-      ALLOCATE(lsize(1:size), size)
+      ALLOCATE(geo%atoms_range(2, 0:size - 1), 2*size)
+      ALLOCATE(geo%atoms_num(0:size - 1), size)
 
-      call multicomm_divide_range(geo%natoms, size, start, end, lsize)
+      call multicomm_divide_range(geo%natoms, size, geo%atoms_range(1, :), geo%atoms_range(2, :), geo%atoms_num)
 
       message(1) = 'Info: Parallelization in atoms:'
         call write_info(1)
       do kk = 1, size
         write(message(1),'(a,i4,a,i4,a,i4)') 'Info: Nodes in states-group ', kk - 1, &
-          ' will manage atoms', start(kk), " - ", end(kk)
+          ' will manage atoms', geo%atoms_range(1, kk - 1), " - ", geo%atoms_range(2, kk - 1)
         call write_info(1)
-        if(rank + 1 .eq. kk) then
-          geo%atoms_start = start(kk)
-          geo%atoms_end   = end(kk)
-          geo%nlatoms     = lsize(kk)
+        if(rank .eq. kk - 1) then
+          geo%atoms_start = geo%atoms_range(1, kk - 1)
+          geo%atoms_end   = geo%atoms_range(2, kk - 1)
+          geo%nlatoms     = geo%atoms_num(kk - 1)
         endif
         
       end do
       
-      deallocate(start, end, lsize)
-
     end if
 
     call pop_sub()
@@ -556,6 +559,11 @@ contains
     type(geometry_t), intent(inout) :: geo
 
     call push_sub('geometry.geometry_end')
+
+    if(associated(geo%atoms_range)) then
+      deallocate(geo%atoms_range, geo%atoms_num)
+      nullify(geo%atoms_range, geo%atoms_num)
+    end if
 
     if(associated(geo%atom)) then ! sanity check
       deallocate(geo%atom); nullify(geo%atom)
