@@ -141,7 +141,7 @@ contains
     stoploop = .false.
 
     fluence = parameters_fluence(par)
-    j2 = j2_functional(par)
+    j2 = parameters_j2(par)
     jfunctional = j1 + j2
 
     iterator%convergence(1, iterator%ctr_iter) = jfunctional

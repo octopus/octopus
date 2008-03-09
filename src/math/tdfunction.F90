@@ -284,17 +284,20 @@ module tdf_m
 
 
   !------------------------------------------------------------
-  subroutine tdf_init_numerical(f, niter, dt, initval)
+  subroutine tdf_init_numerical(f, niter, dt, initval, omegamax)
     type(tdf_t), intent(inout) :: f
     integer, intent(in) :: niter
     FLOAT, intent(in)   :: dt
     CMPLX, intent(in), optional :: initval
+    FLOAT, intent(in), optional :: omegamax
+
+    FLOAT :: bigt
 
     call push_sub("tdfunction.tdf_init_numerical")
 
     f%mode = TDF_NUMERICAL
     f%niter = niter
-    ! WARNING: this weird allocataion scheme should be changed in the future:
+    ! WARNING: this weird allocation scheme should be changed in the future:
     ALLOCATE(f%val(niter+1), niter+1)
     if(present(initval)) then
       f%val = initval
@@ -302,6 +305,17 @@ module tdf_m
       f%val = M_z0
     end if
     f%dt = dt
+
+    f%init_time = M_ZERO
+    f%final_time = f%dt * f%niter
+
+    f%nfreqs = f%niter
+    if(present(omegamax)) then
+      if(omegamax > M_ZERO) then
+        bigt = f%final_time - f%init_time
+        f%nfreqs = int(bigt * omegamax / M_PI) + 1
+      end if
+    end if
 
     nullify(f%coeffs)
     call pop_sub()
@@ -491,8 +505,6 @@ module tdf_m
     else
       nfreqs = f%niter
     end if
-
-    write(0, *) 'NFREQS = ', nfreqs, f%niter, omegamax
 
     f%nfreqs = nfreqs
     ALLOCATE(f%coeffs(nfreqs), nfreqs)

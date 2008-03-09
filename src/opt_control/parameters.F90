@@ -26,6 +26,7 @@ module opt_control_parameters_m
   use global_m
   use messages_m
   use io_m
+  use units_m
   use loct_parser_m
   use loct_math_m
   use filter_m
@@ -56,7 +57,7 @@ module opt_control_parameters_m
             parameters_to_realtime,       &
             parameters_set_initial,       &
             parameters_fluence,           &
-            j2_functional
+            parameters_j2
 
   integer, parameter ::                 &
     ctr_parameter_real_space       = 1, &
@@ -67,6 +68,7 @@ module opt_control_parameters_m
     integer :: no_parameters
     FLOAT   :: dt
     integer :: ntiter
+    integer :: nfreqs
     FLOAT   :: targetfluence
     type(tdf_t), pointer :: f(:)
     CMPLX, pointer :: pol(:, :) ! the polarization of the field, this is
@@ -99,6 +101,45 @@ contains
     FLOAT :: targetfluence, omegamax
     logical :: fix_initial_fluence
 
+    !%Variable OCTParameterRepresentation
+    !%Type integer
+    !%Section Optimal Control
+    !%Default control_parameter_real_space
+    !%Description
+    !%
+    !%Option control_parameters_real_space 1
+    !%
+    !%Option control_parameters_fourier_space 2
+    !%
+    !%End
+    call loct_parse_int(check_inp('OCTParameterRepresentation'), ctr_parameter_real_space, par%representation)
+    if(.not.varinfo_valid_option('OCTParameterRepresentation', par%representation)) &
+      call input_error('OCTParameterRepresentation')
+    select case(par%representation)
+    case(ctr_parameter_real_space)
+      write(message(1), '(a)') 'Info: The OCT control functions will be represented in real time.'
+      call write_info(1)
+    case(ctr_parameter_frequency_space)
+      write(message(1), '(a)') 'Info: The OCT control functions will be represented as a sine '
+      write(message(2), '(a)') '      Fourier series.'
+      call write_info(2)
+    end select
+
+    !%Variable OCTParameterOmegaMax
+    !%Type float
+    !%Section Optimal Control
+    !%Default -1.0
+    !%Description
+    !%
+    !%End
+    call loct_parse_float(check_inp('OCTParameterOmegaMax'), M_ONE / units_inp%energy%factor, omegamax)
+    if(par%representation .eq. ctr_parameter_frequency_space) then
+      write(message(1), '(a)')         'Info: The representation of the OCT control parameters as a sine'
+      write(message(2), '(a,f10.5,a)') '      Fourier series will be done with a cut-off of ', &
+        omegamax / units_out%energy%factor, ' ['//trim(units_out%energy%abbrev) // ']'
+      call write_info(2)
+    end if
+
     !%Variable OCTFixFluenceTo
     !%Type float
     !%Section Optimal Control
@@ -117,31 +158,6 @@ contains
     !% option, and afterwards it calculates the fluence.
     !%End
     call loct_parse_float(check_inp('OCTFixFluenceTo'), M_ZERO, targetfluence)
-
-
-    !%Variable OCTParameterOmegaMax
-    !%Type float
-    !%Section Optimal Control
-    !%Default -1.0
-    !%Description
-    !%
-    !%End
-    call loct_parse_float(check_inp('OCTParameterOmegaMax'), -M_ONE, omegamax)
-
-    !%Variable OCTParameterRepresentation
-    !%Type integer
-    !%Section Optimal Control
-    !%Default control_parameter_real_space
-    !%Description
-    !%
-    !%Option control_parameters_real_space 1
-    !%
-    !%Option control_parameters_fourier_space 2
-    !%
-    !%End
-    call loct_parse_int(check_inp('OCTParameterRepresentation'), ctr_parameter_real_space, par%representation)
-    if(.not.varinfo_valid_option('OCTParameterRepresentation', par%representation)) &
-      call input_error('OCTParameterRepresentation')
 
     !%Variable OCTFixInitialFluence
     !%Type logical
@@ -180,16 +196,23 @@ contains
 
     ! Move to the sine-Fourier space if required.
     call parameters_set_rep(par)
+    if(par%representation .eq. ctr_parameter_frequency_space) then
+      write(message(1), '(a)')      'Info: The expansion of the control parameters in a sine Fourier series'
+      write(message(2), '(a,i6,a)') '      expansion implies the use of ', par%nfreqs, ' basis set functions.'
+      call write_info(2)
+    end if
 
     if(par%targetfluence .ne. M_ZERO) then
-      if(fix_initial_fluence) then
-        if(par%targetfluence < M_ZERO) then
-          par%targetfluence = parameters_fluence(par) 
-          write(0, *) 'LASER_FLUENCE 2', parameters_fluence(par)
-        else
-          call parameters_set_fluence(par)
-        end if
+      if(par%targetfluence < M_ZERO) then
+        par%targetfluence = parameters_fluence(par) 
+        write(message(1), '(a)')         'Info: The QOCT run will attempt to find a solution with the same'
+        write(message(2), '(a,f10.5,a)') '      fluence as the input external fields: F = ', par%targetfluence, ' a.u.'
+      else
+        write(message(1), '(a)')         'Info: The QOCT run will attempt to find a solution with a predefined'
+        write(message(2), '(a,f10.5,a)') '      fluence: F = ', par%targetfluence, ' a.u.2'
       end if
+      call write_info(2)
+      if(fix_initial_fluence) call parameters_set_fluence(par)
     end if
 
     call parameters_to_realtime(par)
@@ -414,10 +437,15 @@ contains
     ALLOCATE(cp%pol(MAX_DIM, cp%no_parameters), MAX_DIM*cp%no_parameters)
     cp%alpha = M_ZERO
     do j = 1, cp%no_parameters
-      call tdf_init_numerical(cp%f(j), cp%ntiter, cp%dt)
+      call tdf_init_numerical(cp%f(j), cp%ntiter, cp%dt, omegamax = cp%omegamax)
     end do
 
     call parameters_penalty_init(cp)
+
+    cp%nfreqs = 0
+    if(cp%representation .eq. ctr_parameter_frequency_space) then
+      cp%nfreqs = tdf_nfreqs(cp%f(1))
+    end if
 
     call pop_sub()
   end subroutine parameters_init
@@ -710,7 +738,7 @@ contains
   ! Gets the J2 functional (which is the fluence, but weighted
   ! by a penalty function.
   ! ---------------------------------------------------------
-  FLOAT function j2_functional(par) result(j2)
+  FLOAT function parameters_j2(par) result(j2)
     type(oct_control_parameters_t), target, intent(in) :: par
     type(oct_control_parameters_t), pointer :: par_
     integer :: i, j, k
@@ -746,7 +774,7 @@ contains
     else
       nullify(par_)
     end if
-  end function j2_functional
+  end function parameters_j2
   ! ---------------------------------------------------------
 
 
@@ -776,6 +804,7 @@ contains
     cp_out%no_parameters = cp_in%no_parameters
     cp_out%dt = cp_in%dt
     cp_out%ntiter = cp_in%ntiter
+    cp_out%nfreqs = cp_in%nfreqs
     cp_out%targetfluence = cp_in%targetfluence
     cp_out%representation = cp_in%representation
     cp_out%current_representation = cp_in%current_representation

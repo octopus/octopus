@@ -44,7 +44,7 @@
 
     j1 = j1_functional(sys%gr, psi, target)
     fluence = parameters_fluence(par)
-    j2 = j2_functional(par)
+    j2 = parameters_j2(par)
     jfunctional = j1 + j2
 
     write(message(1), '(a)') 'Final propagation with the best field'
