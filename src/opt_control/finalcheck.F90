@@ -38,9 +38,13 @@
     end if
 
     psi = initial_st
+
+    call parameters_to_realtime(par)
     
     call parameters_to_h(par, h%ep)
     call propagate_forward(sys, h, td, target, psi, write_iter = .true.)
+
+    call parameters_set_rep(par)
 
     j1 = j1_functional(sys%gr, psi, target)
     fluence = parameters_fluence(par)

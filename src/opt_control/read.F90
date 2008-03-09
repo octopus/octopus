@@ -73,6 +73,8 @@
     !% iteration, both with the same control field. An output field is calculated with the
     !% resulting wave functions. Note that this scheme typically does not converge, unless
     !% some mixing ("OCTMixing = yes") is used.
+    !%Option oct_algorithm_direct 7
+    !% Direct optimization
     !%End
     call loct_parse_int(check_inp('OCTScheme'), oct_algorithm_zr98, oct%algorithm_type)
     if(.not.varinfo_valid_option('OCTScheme', oct%algorithm_type)) call input_error('OCTScheme')
@@ -210,12 +212,19 @@
     end if
 
     if((oct%mode_fixed_fluence)) then
-      if( (oct%algorithm_type.ne.oct_algorithm_wg05) .and. &
-          (oct%algorithm_type.ne.oct_algorithm_str_iter) ) then
+      if( (oct%algorithm_type.ne.oct_algorithm_wg05)     .and. &
+          (oct%algorithm_type.ne.oct_algorithm_str_iter) .and. &
+          (oct%algorithm_type.ne.oct_algorithm_direct) ) then
         write(message(1),'(a)') "Cannot optimize to a given fluence with the chosen algorithm."
         write(message(2),'(a)') "Switching to scheme WG05."         
         call write_info(2)
         oct%algorithm_type = oct_algorithm_wg05
+      end if
+    else
+      if( oct%algorithm_type.eq.oct_algorithm_direct) then
+        write(message(1),'(a)') 'The direct QOCT optimization can be only done in fixed-fluence '
+        write(message(2),'(a)') 'mode (i.e. use "OCTFixFluenceTo" input variable).'
+        call write_fatal(2)
       end if
     end if
 
@@ -293,12 +302,14 @@
     end if
 
     if(oct%mode_basis_set) then
-      if(oct%algorithm_type .ne. oct_algorithm_str_iter) then
+      if( (oct%algorithm_type .ne. oct_algorithm_str_iter)  .and.  &
+          (oct%algorithm_type .ne. oct_algorithm_direct) ) then
         write(message(1), '(a)') 'If the control parameters are to be represented with a basis set'
         write(message(2), '(a)') '(i.e. "OCTParameterRepresentation = control_parameters_fourier_space"),'
-        write(message(3), '(a)') 'the only acceptable algorithm is:'
-        write(message(4), '(a)') '"OCTScheme = oct_algorithm_straight_iteration".'
-        call write_fatal(4)
+        write(message(3), '(a)') 'the only acceptable algorithms are:'
+        write(message(4), '(a)') ' (1) "OCTScheme = oct_algorithm_straight_iteration".'
+        write(message(5), '(a)') ' (2) "OCTScheme = oct_algorithm_direct".'
+        call write_fatal(5)
       endif
     end if
       

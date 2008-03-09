@@ -362,7 +362,9 @@ int FC_FUNC_(oct_minimize_direct, OCT_MINIMIZE_DIRECT)
       write_info(&iter, dim, minimum, &size, point);
 
     }
-  while (status == GSL_CONTINUE && iter <= *maxiter);
+  while (status == GSL_CONTINUE && iter < *maxiter);
+
+  if(status == GSL_CONTINUE) status = 1025;
 
   gsl_vector_free(x); 
   gsl_vector_free(ss);

@@ -24,6 +24,7 @@
 module opt_control_m
   use lalg_basic_m
   use lalg_adv_m
+  use loct_math_m
   use excited_states_m
   use datasets_m
   use varinfo_m
@@ -65,23 +66,35 @@ module opt_control_m
   private
   public :: opt_control_run
 
+  ! For the algorithm_direct scheme:
+  type(oct_control_parameters_t) :: par_
+  type(system_t), pointer :: sys_
+  type(hamiltonian_t), pointer :: h_
+  type(td_t), pointer :: td_
+  type(target_t), pointer :: target_
+  type(states_t), pointer :: psi_
+  type(oct_iterator_t), pointer :: iterator_
+  type(oct_t), pointer :: oct_
+
 contains
 
   ! ---------------------------------------------------------
   subroutine opt_control_run(sys, h)
-    type(system_t), target, intent(inout) :: sys
-    type(hamiltonian_t),    intent(inout) :: h
+    type(system_t), target,      intent(inout) :: sys
+    type(hamiltonian_t), target, intent(inout) :: h
 
-    type(oct_t)                :: oct
-    type(oct_iterator_t)       :: iterator
-    type(td_t)                 :: td
-    type(states_t)             :: psi, initial_st
-    type(target_t)             :: target
-    type(filter_t)             :: filter
+    type(oct_t), target            :: oct
+    type(oct_iterator_t), target   :: iterator
+    type(td_t), target             :: td
+    type(states_t)                 :: psi
+    type(states_t), target         :: initial_st
+    type(target_t), target         :: target
+    type(filter_t)                 :: filter
     type(oct_control_parameters_t) :: par, par_new, par_prev
-    logical :: stop_loop
-    FLOAT   :: j1
-    type(oct_prop_t) :: prop_chi, prop_psi;
+    logical                        :: stop_loop
+    FLOAT                          :: j1
+    type(oct_prop_t)               :: prop_chi, prop_psi;
+    external                       :: calc_point, write_iter_info
 
     call push_sub('opt_control.opt_control_run')
 
@@ -143,6 +156,10 @@ contains
         message(1) = "Info: Starting OCT iterations using scheme: STRAIGHT ITERATION"
         call write_info(1)
         call scheme_straight_iteration
+      case(oct_algorithm_direct)
+        message(1) = "Info: Starting OCT iterations using scheme: DIRECT OPTIMIZATION"
+        call write_info(1)
+        call scheme_direct
     case default
       call input_error('OCTScheme')
     end select
@@ -264,7 +281,6 @@ contains
 
     ! ---------------------------------------------------------
     subroutine scheme_zbr98
-
       call push_sub('opt_control.scheme_zbr98')
 
       call oct_prop_init(prop_chi, "chi", td%max_iter, oct%number_checkpoints)
@@ -299,7 +315,153 @@ contains
     end subroutine scheme_zbr98
     ! ---------------------------------------------------------
 
+
+    ! ---------------------------------------------------------
+    subroutine scheme_direct
+      integer :: ierr, j
+      FLOAT :: minvalue, fluence, j2, jfunctional, step
+      FLOAT, allocatable :: x(:)
+      call push_sub('opt_control.scheme_direct')
+
+      call parameters_set_rep(par)
+
+      ALLOCATE(x(par%nfreqs), par%nfreqs)
+
+      ! Set the module pointers, so that the calc_point and write_iter_info routines
+      ! can use them.
+      call parameters_copy(par_, par)
+      sys_      => sys
+      h_        => h
+      td_       => td
+      target_   => target
+      psi_      => initial_st
+      iterator_ => iterator
+      oct_      => oct
+
+      ! Do a zero iteration, with the input field.
+      ! (This could be removed in a final version, since the minimization algorithm itself
+      ! has to repeat this run. Now it stays for clarity).
+      call states_copy(psi, initial_st)
+      call parameters_to_h(par, h%ep)
+      call propagate_forward(sys, h, td, target, psi)
+      j1 = j1_functional(sys%gr, psi, target)
+      if(oct%dump_intermediate) call iterator_write(iterator, psi, par, sys%gr, sys%outp)
+
+      ! WARNING
+      ! This shold be moved into the iter module, in some way.
+        fluence = parameters_fluence(par)
+        j2 = parameters_j2(par)
+        jfunctional = j1 + j2
+
+        write(message(1), '(a,i5)') 'Optimal control iteration #', iterator%ctr_iter
+        call messages_print_stress(stdout, trim(message(1)))
+
+        write(message(1), '(6x,a,f12.5)')  " => J1       = ", j1
+        write(message(2), '(6x,a,f12.5)')  " => J        = ", jfunctional
+        write(message(3), '(6x,a,f12.5)')  " => J2       = ", j2
+        write(message(4), '(6x,a,f12.5)')  " => Fluence  = ", fluence
+        call write_info(4)
+        call messages_print_stress(stdout)
+        !stop
+        iterator%ctr_iter = iterator%ctr_iter + 1
+
+      do j =  1, par%nfreqs
+        x(j) = tdf(par_%f(1), j)
+      end do
+
+      step = CNST(0.5) * sqrt(par%targetfluence / par%nfreqs)
+      ierr = loct_minimize_direct(MINMETHOD_NMSIMPLEX, par%nfreqs, x(1), step,&
+               iterator%eps, iterator%ctr_iter_max, &
+               calc_point, write_iter_info, minvalue)
+
+      if(ierr.ne.0) then
+        if(ierr <= 1024) then
+          message(1) = "Error occurred during the GSL minimization procedure:"
+          call loct_strerror(ierr, message(2))
+          call write_fatal(2)
+        else
+          message(1) = "The OCT direct optimization did not meet the convergence criterion."
+          call write_info(1)
+        end if
+      end if
+
+      call tdf_set_numerical(par%f(1), x)
+      call parameters_copy(iterator%best_par, par)
+
+      deallocate(x)
+      call pop_sub()
+    end subroutine scheme_direct
+    ! ---------------------------------------------------------
+
   end subroutine opt_control_run
+
+
+  ! ---------------------------------------------------------
+  subroutine calc_point(n, x, f)
+    integer, intent(in)  :: n
+    real(8), intent(in)  :: x(n)
+    real(8), intent(out) :: f
+
+    integer :: j
+    FLOAT :: j1, fluence
+    type(states_t) :: psi
+
+    call tdf_set_numerical(par_%f(1), x)
+
+    call parameters_to_realtime(par_)
+    call parameters_to_h(par_, h_%ep)
+    call states_copy(psi, psi_)
+    call propagate_forward(sys_, h_, td_, target_, psi_)
+    call parameters_set_rep(par_)
+
+    j1 = j1_functional(sys_%gr, psi_, target_)
+    fluence = parameters_fluence(par_)
+
+    f = - j1 + par_%alpha(1) * (fluence - par_%targetfluence)**2
+
+    call states_end(psi)
+  end subroutine calc_point
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  ! Same as write_iter_info_ng, but without the gradients.
+  subroutine write_iter_info(geom_iter, n, energy, maxdx, x)
+    integer, intent(in) :: geom_iter, n
+    real(8), intent(in) :: energy, maxdx
+    real(8), intent(in) :: x(n)
+
+    FLOAT :: fluence, j, j1, j2
+
+    call tdf_set_numerical(par_%f(1), x)
+
+
+    iterator_%ctr_iter = geom_iter
+
+      ! WARNING
+      ! This shold be moved into the iter module, in some way.
+        fluence = parameters_fluence(par_)
+        j1 = -energy + par_%alpha(1) * (fluence - par_%targetfluence)**2
+        j2 = parameters_j2(par_)
+        j = j1 + j2
+
+        write(message(1), '(a,i5)') 'Optimal control iteration #', iterator_%ctr_iter
+        call messages_print_stress(stdout, trim(message(1)))
+
+        write(message(1), '(6x,a,f12.5)')  " => J1       = ", j1
+        write(message(2), '(6x,a,f12.5)')  " => J        = ", j
+        write(message(3), '(6x,a,f12.5)')  " => J2       = ", j2
+        write(message(4), '(6x,a,f12.5)')  " => Fluence  = ", fluence
+        write(message(5), '(6x,a,f12.5)')  " => G        = ", energy
+        write(message(6), '(6x,a,f12.5)')  " => Delta    = ", maxdx
+        call write_info(6)
+        call messages_print_stress(stdout)
+
+        if(oct_%dump_intermediate) call iterator_write(iterator_, psi_, par_, sys_%gr, sys_%outp)
+
+
+  end subroutine write_iter_info
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
