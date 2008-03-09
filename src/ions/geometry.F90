@@ -101,6 +101,7 @@ module geometry_m
     
     integer, pointer :: atoms_range(:, :)
     integer, pointer :: atoms_num(:)
+    integer, pointer :: atoms_node(:)
   end type geometry_t
 
   interface assignment (=)
@@ -474,13 +475,14 @@ contains
 
       ALLOCATE(geo%atoms_range(2, 0:size - 1), 2*size)
       ALLOCATE(geo%atoms_num(0:size - 1), size)
+      ALLOCATE(geo%atoms_node(1:geo%natoms), geo%natoms)
 
       call multicomm_divide_range(geo%natoms, size, geo%atoms_range(1, :), geo%atoms_range(2, :), geo%atoms_num)
 
       message(1) = 'Info: Parallelization in atoms:'
         call write_info(1)
       do kk = 1, size
-        write(message(1),'(a,i4,a,i4,a,i4)') 'Info: Nodes in states-group ', kk - 1, &
+        write(message(1),'(a,i4,a,i4,a,i4)') 'Info: Node in states-group ', kk - 1, &
           ' will manage atoms', geo%atoms_range(1, kk - 1), " - ", geo%atoms_range(2, kk - 1)
         call write_info(1)
         if(rank .eq. kk - 1) then
@@ -489,6 +491,8 @@ contains
           geo%nlatoms     = geo%atoms_num(kk - 1)
         endif
         
+        geo%atoms_node(geo%atoms_range(1, kk - 1):geo%atoms_range(2, kk - 1)) = kk -1
+
       end do
       
     end if
@@ -561,8 +565,8 @@ contains
     call push_sub('geometry.geometry_end')
 
     if(associated(geo%atoms_range)) then
-      deallocate(geo%atoms_range, geo%atoms_num)
-      nullify(geo%atoms_range, geo%atoms_num)
+      deallocate(geo%atoms_range, geo%atoms_num, geo%atoms_node)
+      nullify(geo%atoms_range, geo%atoms_num, geo%atoms_node)
     end if
 
     if(associated(geo%atom)) then ! sanity check
