@@ -327,11 +327,17 @@ contains
     
     if(ep%nvnl > 0) then
       ALLOCATE(ep%p(ep%nvnl), ep%nvnl)
-      ALLOCATE(ep%atomproj(1:2, geo%natoms), 2*geo%natoms)
+
       do i = 1, ep%nvnl
         call projector_null(ep%p(i))
       end do
+
     end if
+    
+    ALLOCATE(ep%atomproj(1:2, geo%natoms), 2*geo%natoms)
+    
+    ep%atomproj(1, :) = 0
+    ep%atomproj(2, :) = -1
 
     ALLOCATE(ep%fii(1:MAX_DIM, 1:geo%natoms), MAX_DIM*geo%natoms)
 
@@ -387,8 +393,9 @@ contains
 
       ASSERT(associated(ep%p))
       deallocate(ep%p)
-      deallocate(ep%atomproj)
     end if
+
+    deallocate(ep%atomproj)
 
     call pop_sub()
 

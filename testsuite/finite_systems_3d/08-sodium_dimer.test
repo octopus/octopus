@@ -13,8 +13,8 @@ Enabled    : Yes
 
 Input: 08-sodium_dimer.01-ground_state.inp
 Match ; Total energy ; sed -n '/^Energy/{n\;p\;}' static/info ; \s*Total\s*=\s*-0.4178
-Match ; Eigenvalues  ; sed -n '/Eigenvalues \[/{n\;n\;p\;}' static/info ; \s*-0.1189\d*\s*2.0000\d* 
+Match ; Eigenvalues  ; sed -n '/Eigenvalues \[/{n\;n\;p\;}' static/info ; \s*-0.1190\d*\s*2.0000\d* 
 
 Input: 08-sodium_dimer.02-phonons.inp
-Match ; Vibrational Frequency ; head -1 phonons/freq_lr ; \s*167.52
+Match ; Vibrational Frequency ; head -1 vibrations/normal_frequencies_lr ; \s*167.32
 
