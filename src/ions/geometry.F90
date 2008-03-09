@@ -619,12 +619,11 @@ contains
   FLOAT function kinetic_energy(geo)
     type(geometry_t), intent(in) :: geo
 
-    integer :: i
+    integer :: iatom
 
     kinetic_energy = M_ZERO
-    do i = 1, geo%natoms
-      kinetic_energy = kinetic_energy + &
-        M_HALF*geo%atom(i)%spec%weight*sum(geo%atom(i)%v(:)**2)
+    do iatom = 1, geo%natoms
+      kinetic_energy = kinetic_energy + M_HALF*geo%atom(iatom)%spec%weight*sum(geo%atom(iatom)%v(1:MAX_DIM)**2)
     end do
 
   end function kinetic_energy

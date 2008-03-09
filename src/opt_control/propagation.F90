@@ -25,6 +25,7 @@ module opt_control_propagation_m
   use global_m
   use loct_m
   use io_m
+  use ion_dynamics_m
   use messages_m
   use units_m
   use grid_m
@@ -102,8 +103,7 @@ module opt_control_propagation_m
     gr => sys%gr
 
     if(write_iter_) then
-      call td_write_init(write_handler, gr, sys%st, sys%geo, &
-        (td%move_ions>0), h%ep%with_gauge_field, td%iter, td%dt)
+      call td_write_init(write_handler, gr, sys%st, sys%geo, ion_dynamics_ions_move(td%ions), h%ep%with_gauge_field, td%iter, td%dt)
       call td_write_data(write_handler, gr, psi, h, sys%outp, sys%geo, 0)
     end if
 

@@ -35,6 +35,7 @@ module timedep_m
   use ground_state_m
   use h_sys_output_m
   use hamiltonian_m
+  use ion_dynamics_m
   use loct_m
   use profiling_m
   use scf_m
@@ -64,33 +65,29 @@ module timedep_m
     td_end
 
   ! Parameters.
-  integer, parameter ::   &
-    STATIC_IONS     = 0,  &
-    VELOCITY_VERLET = 1
-
   integer, parameter :: &
        EHRENFEST = 1,   &
        BO        = 2,   &
        CP        = 3
   
-  type td_t
-    type(td_rti_t)    :: tr             ! contains the details of the time evolution
-    type(scf_t)       :: scf
-    FLOAT             :: dt             ! time step
-    integer           :: max_iter       ! maximum number of iterations to perform
-    integer           :: iter           ! the actual iteration
-    integer           :: move_ions      ! how do we move the ions?
-    logical           :: recalculate_gs ! Recalculate ground-state along the evolution.
+  type td_t 
+    type(td_rti_t)       :: tr             ! contains the details of the time evolution
+    type(scf_t)          :: scf
+    type(ion_dynamics_t) :: ions
+    type(cpmd_t)         :: cp_propagator
+    FLOAT                :: dt             ! time step
+    integer              :: max_iter       ! maximum number of iterations to perform
+    integer              :: iter           ! the actual iteration
+    logical              :: recalculate_gs ! Recalculate ground-state along the evolution.
     
     ! The *kick* used in "linear response in the time domain" calculations.
-    type(kick_t)      :: kick
+    type(kick_t)         :: kick
 
 #if !defined(DISABLE_PES)
-    type(PES_t)       :: PESv
+    type(PES_t)          :: PESv
 #endif
-    FLOAT             :: mu
-    integer           :: dynamics
-    type(cpmd_t)      :: cp_propagator
+    FLOAT                :: mu
+    integer              :: dynamics
   end type td_t
 
 
@@ -108,12 +105,12 @@ contains
     type(states_t),   pointer :: st
     type(geometry_t), pointer :: geo
     logical                   :: stopping
-    integer                   :: i, ii, j, ik, ierr
+    integer                   :: i, ii, ik, ierr
     real(8)                   :: etime
-    type(atom_t), allocatable :: atom1(:)
     FLOAT, allocatable        :: A_gauge_tmp(:)
     FLOAT, allocatable        :: A_gauge_dot_tmp(:)
     FLOAT, allocatable        :: A_gauge_ddot_tmp(:)
+    type(ion_state_t)         :: ions_state
 
     call push_sub('td.td_run')
 
@@ -121,6 +118,8 @@ contains
     gr  => sys%gr
     geo => sys%geo
     st  => sys%st
+
+    call ion_dynamics_init(td%ions, sys%geo)
 
     call td_init(sys, h, td)
 
@@ -139,19 +138,18 @@ contains
 
     call init_wfs()
 
-    call td_write_init(write_handler, gr, st, geo, (td%move_ions>0), h%ep%with_gauge_field, td%iter, td%dt )
+    call td_write_init(write_handler, gr, st, geo, ion_dynamics_ions_move(td%ions), h%ep%with_gauge_field, td%iter, td%dt)
 
     ! Calculate initial forces and kinetic energy
-    if(td%move_ions > 0) then
+    if(ion_dynamics_ions_move(td%ions)) then
       if(td%iter > 0) then
         call td_read_coordinates()
         call epot_generate(h%ep, gr, geo, sys%mc, st)
       end if
 
       call epot_forces(gr, geo, h%ep, st, td%iter*td%dt)
-      geo%kinetic_energy = kinetic_energy(geo)
 
-      call init_verlet()
+      geo%kinetic_energy = kinetic_energy(geo)
 
     end if
           
@@ -190,11 +188,16 @@ contains
       if(clean_stop()) stopping = .true.
       call profiling_in(C_PROFILING_TIME_STEP)
       
-      if( (td%move_ions > 0 .and. td%dynamics == EHRENFEST ) .or. h%ep%with_gauge_field) then
+      if( (ion_dynamics_ions_move(td%ions) .and. td%dynamics == EHRENFEST ) .or. h%ep%with_gauge_field) then
+
+        call ion_dynamics_save_state(td%ions, sys%geo, ions_state)
+
         ! Move the ions: only half step, to obtain the external potential 
         ! in the middle of the time slice.
-        if( td%move_ions > 0 ) call apply_verlet_1(td%dt*M_HALF)
-	if( h%ep%with_gauge_field ) call apply_verlet_gauge_field_1(td%dt*M_HALF)
+        call ion_dynamics_propagate(td%ions, sys%geo, M_HALF*td%dt)
+
+	if( h%ep%with_gauge_field ) call apply_verlet_gauge_field_1(M_HALF*td%dt)
+
         call epot_generate(h%ep, gr, sys%geo, sys%mc, st, time = i*td%dt)
 
         ! Calculate the gauge vector potential at half step
@@ -220,12 +223,17 @@ contains
       ! update density
       call states_calc_dens(st, NP, st%rho)
 
-      if(td%move_ions > 0 .or. h%ep%with_gauge_field) then
+      if(ion_dynamics_ions_move(td%ions) .or. h%ep%with_gauge_field) then
+
         ! Now really move the full time step, from the original positions.
-        if( td%move_ions > 0 ) then
-          if(td%dynamics == EHRENFEST) geo%atom(1:geo%natoms) = atom1(1:geo%natoms)
-          call apply_verlet_1(td%dt)
+        if( ion_dynamics_ions_move(td%ions) ) then
+
+          if(td%dynamics == EHRENFEST) call ion_dynamics_restore_state(td%ions, sys%geo, ions_state)
+
+          call ion_dynamics_propagate(td%ions, sys%geo, td%dt)
+
 	end if
+
 	if( h%ep%with_gauge_field ) then
 	  h%ep%A_gauge(1:NDIM) = A_gauge_tmp(1:NDIM)
 	  h%ep%A_gauge_dot(1:NDIM) = A_gauge_dot_tmp(1:NDIM)
@@ -251,9 +259,11 @@ contains
       end if
 
       ! Recalculate forces, update velocities...
-      if(td%move_ions > 0) then
+      if(ion_dynamics_ions_move(td%ions)) then
         call epot_forces(gr, sys%geo, h%ep, st, i*td%dt)
-        call apply_verlet_2
+
+        call ion_dynamics_propagate_velocities(td%ions, sys%geo)
+
         geo%kinetic_energy = kinetic_energy(geo)
       end if
 
@@ -307,7 +317,7 @@ contains
         ii = 1
         call td_save_restart(i)
         call td_write_data(write_handler, gr, st, h, sys%outp, geo, i)
-        if( (td%move_ions > 0) .and. td%recalculate_gs) then
+        if( (ion_dynamics_ions_move(td%ions)) .and. td%recalculate_gs) then
           call messages_print_stress(stdout, 'Recalculating the ground state.')
           fromScratch = .false.
           call ground_state_run(sys, h, fromScratch)
@@ -323,52 +333,6 @@ contains
         end if
       end if
     end subroutine check_point
-
-    ! ---------------------------------------------------------
-    subroutine init_verlet
-      select case(td%move_ions)
-      case(VELOCITY_VERLET)
-        ALLOCATE(atom1(geo%natoms), geo%natoms)
-        atom1(1:geo%natoms) = geo%atom(1:geo%natoms)
-      end select
-    end subroutine init_verlet
-
-    ! ---------------------------------------------------------
-    subroutine end_verlet
-      select case(td%move_ions)
-      case(VELOCITY_VERLET)
-        deallocate(atom1)
-      end select
-    end subroutine end_verlet
-
-    ! ---------------------------------------------------------
-    subroutine apply_verlet_1(tau)
-      FLOAT, intent(in) :: tau
-      select case(td%move_ions)
-      case(VELOCITY_VERLET)
-        atom1(1:geo%natoms) = geo%atom(1:geo%natoms)
-        do j=1, geo%natoms
-          if(geo%atom(j)%move) then
-            geo%atom(j)%x(:) = geo%atom(j)%x(:) +  tau*geo%atom(j)%v(:) + &
-              M_HALF*tau**2/geo%atom(j)%spec%weight * geo%atom(j)%f(:)
-          end if
-        end do
-      end select
-    end subroutine apply_verlet_1
-
-    ! ---------------------------------------------------------
-    subroutine apply_verlet_2
-      select case(td%move_ions)
-      case(VELOCITY_VERLET)      
-        do j = 1, geo%natoms
-          if(geo%atom(j)%move) then
-            geo%atom(j)%v(:) = geo%atom(j)%v(:) + &
-              td%dt/(M_TWO*geo%atom(j)%spec%weight) * &
-              (atom1(j)%f(:) + geo%atom(j)%f(:))
-          end if
-        end do
-      end select
-    end subroutine apply_verlet_2
 
     ! ---------------------------------------------------------
     subroutine init_verlet_gauge_field
@@ -406,7 +370,7 @@ contains
       ! free memory
       if(td%dynamics == CP) call cpmd_end(td%cp_propagator)
       call states_deallocate_wfns(st)
-      if(td%move_ions>0) call end_verlet
+      call ion_dynamics_end(td%ions)
       if (h%ep%with_gauge_field) call end_verlet_gauge_field
       call td_end(td)
       call pop_sub()
@@ -653,7 +617,7 @@ contains
         ! the nuclei velocity will be changed by
         ! Delta v_z = ( Z*e*E_0 / M) = - ( Z*k*\hbar / M)
         ! where M and Z are the ionic mass and charge, respectively.
-        if(td%move_ions > 0  .and. k%delta_strength .ne. M_ZERO) then
+        if(ion_dynamics_ions_move(td%ions)  .and. k%delta_strength .ne. M_ZERO) then
           do i = 1, geo%natoms
             geo%atom(i)%v(1:NDIM) = geo%atom(i)%v(1:NDIM) - &
               k%delta_strength_mode*k%pol(1:NDIM, k%pol_dir)*geo%atom(i)%spec%z_val / geo%atom(i)%spec%weight

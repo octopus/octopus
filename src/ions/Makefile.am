@@ -28,7 +28,8 @@ libions_a_SOURCES =    \
 	simul_box.F90  \
 	solids.F90     \
 	vibrations.F90 \
-	crystal.F90
+	crystal.F90    \
+	dynamics.F90
 
 noinst_HEADERS =
 
@@ -44,3 +45,4 @@ solids.o: solids.F90 simul_box.o
 simul_box.o : simul_box.F90 geometry.o
 vibrations.o : vibrations.F90 simul_box.o geometry.o
 crystal.o : crystal.F90 
+dynamics.o : dynamics.F90 geometry.o

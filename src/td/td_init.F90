@@ -111,24 +111,6 @@ subroutine td_init(sys, h, td)
   call PES_init(td%PESv, sys%gr%m, sys%gr%sb, sys%st, dummy, sys%outp%iter)
 #endif
 
-  !%Variable MoveIons
-  !%Type integer
-  !%Default static_ions
-  !%Section Time Dependent::Propagation
-  !%Description
-  !% This variable specifies how to treat the dynamic of the ions
-  !% during a time-dependent run. By default they will remain static.
-  !%Option static_ions 0
-  !% Do not move the ions.
-  !%Option vel_verlet 1
-  !% Newtonian dynamics using the velocity Verlet integrator.
-  !%End
-
-  call loct_parse_int(check_inp('MoveIons'), STATIC_IONS, td%move_ions)
-  if(.not.varinfo_valid_option('MoveIons', td%move_ions)) call input_error('MoveIons')
-  call messages_print_var_option(stdout, 'MoveIons', td%move_ions)
-
-
   !%Variable TDDynamics
   !%Type integer
   !%Default 1
@@ -144,14 +126,9 @@ subroutine td_init(sys, h, td)
   !% Carr-Parrinelo molecular dynamics.
   !%End
 
-  if (td%move_ions /= 0 ) then
-    call loct_parse_int(check_inp('TDDynamics'), EHRENFEST, td%dynamics)
-    if(.not.varinfo_valid_option('TDDynamics', td%dynamics)) call input_error('TDDynamics')
-    call messages_print_var_option(stdout, 'TDDynamics', td%dynamics)
-  else
-    td%dynamics =  EHRENFEST
-  end if
- 
+  call loct_parse_int(check_inp('TDDynamics'), EHRENFEST, td%dynamics)
+  if(.not.varinfo_valid_option('TDDynamics', td%dynamics)) call input_error('TDDynamics')
+  call messages_print_var_option(stdout, 'TDDynamics', td%dynamics)
 
   !%Variable RecalculateGSDuringEvolution
   !%Type logical
