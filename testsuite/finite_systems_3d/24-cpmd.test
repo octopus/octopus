@@ -24,7 +24,7 @@ Match ; Energy [step 15] ; tail -6 td.general/energy  | head -1 ; \s*-1.101
 Match ; Energy [step 20] ; tail -1 td.general/energy  | head -1 ; \s*-1.101
 
 Match ; Forces [step 1]  ; tail -21 td.general/coordinates | head -1 | cut -b 270-288; \s*5.481
-Match ; Forces [step 5]  ; tail -16 td.general/coordinates | head -1 | cut -b 270-288; \s*5.189
+Match ; Forces [step 5]  ; tail -16 td.general/coordinates | head -1 | cut -b 270-288; \s*5.188
 Match ; Forces [step 10] ; tail -11 td.general/coordinates | head -1 | cut -b 270-288; \s*5.363
 Match ; Forces [step 15] ; tail -6  td.general/coordinates | head -1 | cut -b 270-288; \s*5.219
 Match ; Forces [step 20] ; tail -1  td.general/coordinates | head -1 | cut -b 270-288; \s*5.055
@@ -38,7 +38,7 @@ Match ; Energy [step 15] ; tail -6 td.general/energy  | head -1 ; \s*-1.101
 Match ; Energy [step 20] ; tail -1 td.general/energy  | head -1 ; \s*-1.101
 
 Match ; Forces [step 1]  ; tail -21 td.general/coordinates | head -1 | cut -b 270-288; \s*5.481
-Match ; Forces [step 5]  ; tail -16 td.general/coordinates | head -1 | cut -b 270-288; \s*5.189
+Match ; Forces [step 5]  ; tail -16 td.general/coordinates | head -1 | cut -b 270-288; \s*5.188
 Match ; Forces [step 10] ; tail -11 td.general/coordinates | head -1 | cut -b 270-288; \s*5.363
 Match ; Forces [step 15] ; tail -6  td.general/coordinates | head -1 | cut -b 270-288; \s*5.219
 Match ; Forces [step 20] ; tail -1  td.general/coordinates | head -1 | cut -b 270-288; \s*5.055
