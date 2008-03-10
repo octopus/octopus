@@ -61,7 +61,7 @@ module global_m
   integer, public, parameter :: M_CMPLX = 2
 
   ! some mathematical constants
-  FLOAT, public, parameter :: M_Pi        = CNST(3.141592653589793)
+  FLOAT, public, parameter :: M_Pi        = CNST(3.14159265358979323846)
   FLOAT, public, parameter :: M_ZERO      = CNST(0.0)
   FLOAT, public, parameter :: M_ONE       = CNST(1.0)
   FLOAT, public, parameter :: M_TWO       = CNST(2.0)
@@ -86,15 +86,12 @@ module global_m
   FLOAT, public, parameter :: M_HUGE      =  huge(M_ONE)
 
   ! some physical constants
-  FLOAT, public, parameter :: P_Ang =  M_ONE / CNST(0.529177)
-  FLOAT, public, parameter :: P_eV  =  M_ONE / CNST(13.60580)
-  FLOAT, public, parameter :: P_E   =  CNST(3.79470065)        ! (electron charge)
-  FLOAT, public, parameter :: P_M   =  CNST(0.13123)           ! (electrons mass)
-  FLOAT, public, parameter :: P_E2  =  CNST(14.399753)         ! = 2/(Ang*eV)
-  FLOAT, public, parameter :: P_a_B =  CNST(0.529177)
-  FLOAT, public, parameter :: P_Ry  =  CNST(13.6058)
-  FLOAT, public, parameter :: P_Kb  =  CNST(3.166815104e-6)    ! Boltzmann constant in Ha/K
-  FLOAT, public, parameter :: P_c   =  CNST(137.036)
+  FLOAT, public, parameter :: P_a_B =  CNST(0.52917720859)
+  FLOAT, public, parameter :: P_Ang =  M_ONE / P_a_B
+  FLOAT, public, parameter :: P_Ry  =  CNST(13.60569193)
+  FLOAT, public, parameter :: P_eV  =  M_ONE / P_Ry
+  FLOAT, public, parameter :: P_Kb  =  CNST(8.617343e-5)/(M_TWO*P_Ry)  ! Boltzmann constant in Ha/K
+  FLOAT, public, parameter :: P_c   =  CNST(137.035999679)
   FLOAT, public, parameter :: P_g   =  CNST(2.0023193043768)   ! Electron gyromagnetic ratio
 
   integer, public  :: calc_dim

@@ -704,21 +704,27 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine atom_write_xyz(dir, fname, geo, movie)
+  subroutine atom_write_xyz(dir, fname, geo, append, comment)
     character(len=*),    intent(in) :: dir, fname
     type(geometry_t),    intent(in) :: geo
-    character(len=*),    intent(in), optional :: movie
+    logical,             intent(in), optional :: append
+    character(len=*),    intent(in), optional :: comment
 
     integer i, iunit
+    character(len=6) position
 
     if( .not. mpi_grp_is_root(mpi_world)) return
 
     call io_mkdir(dir)
-    iunit = io_open(trim(dir)//'/'//trim(fname)//'.xyz', action='write')
+    position = 'asis'
+    if(present(append)) then
+      if(append) position = 'append'
+    end if
+    iunit = io_open(trim(dir)//'/'//trim(fname)//'.xyz', action='write', position=position)
 
     write(iunit, '(i4)') geo%natoms
-    if (present(movie)) then
-      write(iunit, '(1x,a)') movie
+    if (present(comment)) then
+      write(iunit, '(1x,a)') comment
     else
       write(iunit, '(1x)')
     endif
@@ -728,7 +734,7 @@ contains
     call io_close(iunit)
 
     if(geo%ncatoms > 0) then
-      iunit = io_open(trim(dir)//'/'//trim(fname), action='write')
+      iunit = io_open(trim(dir)//'/'//trim(fname)//'_classical.xyz', action='write', position=position)
       write(iunit, '(i4)') geo%ncatoms
       write(iunit, '(1x)')
       do i = 1, geo%ncatoms

@@ -283,6 +283,8 @@ contains
         call write_fatal(1)
       end if
 
+      call loct_rm("./work-geom.xyz")
+
       call pop_sub()
     end subroutine init_
 
@@ -318,7 +320,7 @@ contains
       geo%atom(i+1)%x(3) = x(3*i + 3)
     end do
 
-    call atom_write_xyz(".", "work-geom", geo)
+    call atom_write_xyz(".", "work-geom", geo, append=.true.)
 
     call epot_generate(hamilt%ep, syst%gr, syst%geo, syst%mc, syst%st)
     call states_calc_dens(st, m%np, st%rho)
@@ -360,7 +362,7 @@ contains
       geo%atom(i+1)%x(3) = x(3*i + 3)
     end do
 
-    call atom_write_xyz(".", "work-geom", geo)
+    call atom_write_xyz(".", "work-geom", geo, append=.true.)
 
     call epot_generate(hamilt%ep, syst%gr, syst%geo, syst%mc, syst%st)
     call states_calc_dens(st, m%np, st%rho)
@@ -388,7 +390,7 @@ contains
     
     write(c_geom_iter, '(a,i4.4)') "go.", geom_iter
     write(title, '(f16.10)') energy/units_out%energy%factor
-    call atom_write_xyz("geom", trim(c_geom_iter), geo, trim(title))
+    call atom_write_xyz("geom", trim(c_geom_iter), geo, comment=trim(title))
 
     do i = 0, geo%natoms - 1
       geo%atom(i+1)%x(1) = x(3*i + 1)
@@ -426,7 +428,7 @@ contains
     
     write(c_geom_iter, '(a,i4.4)') "go.", geom_iter
     write(title, '(f16.10)') energy/units_out%energy%factor
-    call atom_write_xyz("geom", trim(c_geom_iter), geo, trim(title))
+    call atom_write_xyz("geom", trim(c_geom_iter), geo, comment=trim(title))
 
     do i = 0, geo%natoms - 1
       geo%atom(i+1)%x(1) = x(3*i + 1)

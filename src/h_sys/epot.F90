@@ -125,6 +125,20 @@ contains
 
     call push_sub('epot.epot_init')
 
+    !%Variable FilterPotentials
+    !%Type integer
+    !%Default no
+    !%Section Hamiltonian
+    !%Description
+    !% If set to yes, octopus filters the pseudopotentials so that they no
+    !% longer contain Fourier components larger than the mesh itself. This is
+    !% very useful to decrease the egg-box effect, and so should be used in
+    !% all instances where atoms move.
+    !%Option yes 1
+    !% Turn on filtering of the pseudopotentials
+    !%Option no 0
+    !% Turn off filtering of the pseudopotentials
+    !%End
     call loct_parse_logical(check_inp('FilterPotentials'), .false., filter)
 
     if(filter) then

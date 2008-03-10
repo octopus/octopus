@@ -115,10 +115,10 @@ contains
     !%Section SCF::Convergence
     !%Description
     !% Absolute convergence of the density: 
-    !% <math>\epsilon = \int {\rm d}^3r (\rho^{out}(\bf r) -\rho^{inp}(\bf r))^2</math>.
+    !% <math>\epsilon = \int {\rm d}^3r \vert \rho^{out}(\bf r) -\rho^{inp}(\bf r) \vert</math>.
     !% A zero value means do not use this criterion.
     !%End
-    call loct_parse_float(check_inp('ConvAbsDens'), CNST(1e-5), scf%conv_abs_dens)
+    call loct_parse_float(check_inp('ConvAbsDens'), CNST(1e-3), scf%conv_abs_dens)
 
     !%Variable ConvRelDens
     !%Type float
@@ -126,7 +126,7 @@ contains
     !%Section SCF::Convergence
     !%Description
     !% Relative convergence of the density:
-    !% <math>\epsilon = {1\over N} \int {\rm d}^3r (\rho^{out}(\bf r) -\rho^{inp}(\bf r))^2</math>.
+    !% <math>\epsilon = {1\over N} ConvAbsDens</math>.
     !% <i>N</i> is the total number of electrons in the problem.
     !% A zero value means do not use this criterion.
     !%End
@@ -142,6 +142,7 @@ contains
     !% A zero value means do not use this criterion.
     !%End
     call loct_parse_float(check_inp('ConvAbsEv'), M_ZERO, scf%conv_abs_ev)
+    scf%conv_rel_dens = scf%conv_rel_dens * units_inp%energy%factor
 
     !%Variable ConvRelEv
     !%Type float
@@ -149,8 +150,8 @@ contains
     !%Section SCF::Convergence
     !%Description
     !% Relative convergence of the eigenvalues:
-    !% <math>\epsilon = {1 \over N} \sum_{j=1}^{N_{occ}} \vert \epsilon_j^{out}-\epsilon_j^{inp}\vert</math>.
-    !% <i>N</i> is the total number of electrons. A zero value means do not use this criterion.
+    !% <math>\epsilon = {1 \over E} \sum_{j=1}^{N_{occ}} \vert \epsilon_j^{out}-\epsilon_j^{inp}\vert</math>.
+    !% <i>E</i> is the sum of the eigenvalues. A zero value means do not use this criterion.
     !%End
     call loct_parse_float(check_inp('ConvRelEv'), M_ZERO, scf%conv_rel_ev)
 
@@ -164,6 +165,7 @@ contains
     !% A zero value means do not use this criterion.
     !%End
     call loct_parse_float(check_inp('ConvAbsForce'), M_ZERO, scf%conv_abs_force)
+    scf%conv_abs_force = scf%conv_abs_force * units_inp%force%factor
 
     !%Variable ConvRelForce
     !%Type float
@@ -371,14 +373,14 @@ contains
       evsum_out = states_eigenvalues_sum(st)
 
       ! recalculate total energy
-      call hamiltonian_energy(h, gr, geo, st, 0)
+      call hamiltonian_energy(h, gr, geo, st, iunit = 0)
 
       ! compute convergence criteria
       scf%abs_dens = M_ZERO
       ALLOCATE(tmp(NP), NP)
       do is = 1, nspin
         do idim = 1, dim
-          tmp = (rhoin(1:NP, idim, is) - rhoout(1:NP, idim, is))**2
+          tmp = abs(rhoin(1:NP, idim, is) - rhoout(1:NP, idim, is))
           scf%abs_dens = scf%abs_dens + dmf_integrate(gr%m, tmp)
         end do
       end do
