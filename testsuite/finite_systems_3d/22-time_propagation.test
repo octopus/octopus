@@ -46,7 +46,7 @@ Match ; Energy [step 15] ; tail -6 td.general/energy  | head -1 ; \s*-3.7910
 Match ; Energy [step 20] ; tail -1 td.general/energy  | head -1 ; \s*-3.7910
 
 Match ; Forces [step 1]  ; tail -21 td.general/coordinates | head -1 | cut -b 1610-1630; \s*-1.460
-Match ; Forces [step 5]  ; tail -16 td.general/coordinates | head -1 | cut -b 1610-1630; \s*-8.024
+Match ; Forces [step 5]  ; tail -16 td.general/coordinates | head -1 | cut -b 1610-1630; \s*-8.028
 Match ; Forces [step 10] ; tail -11 td.general/coordinates | head -1 | cut -b 1610-1630; \s*-9.729
 Match ; Forces [step 15] ; tail -6  td.general/coordinates | head -1 | cut -b 1610-1630; \s*-1.079
-Match ; Forces [step 20] ; tail -1  td.general/coordinates | head -1 | cut -b 1610-1630; \s*-9.802
+Match ; Forces [step 20] ; tail -1  td.general/coordinates | head -1 | cut -b 1610-1630; \s*-9.800
