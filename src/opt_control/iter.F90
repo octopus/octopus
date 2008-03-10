@@ -34,10 +34,11 @@ module opt_control_iter_m
   implicit none
 
   private
-  public :: oct_iterator_t,    &
-            oct_iterator_init, &
-            oct_iterator_end,  &
-            iteration_manager, &
+  public :: oct_iterator_t,           &
+            oct_iterator_init,        &
+            oct_iterator_end,         &
+            iteration_manager,        &
+            iteration_manager_direct, &
             iterator_write
 
   type oct_iterator_t
@@ -111,6 +112,7 @@ contains
 
     call pop_sub()
   end subroutine oct_iterator_init
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
@@ -125,6 +127,7 @@ contains
 
     call pop_sub()
   end subroutine oct_iterator_end
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
@@ -196,6 +199,64 @@ contains
     
     call pop_sub()
   end function iteration_manager
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine iteration_manager_direct(g, par, iterator, dx)
+    FLOAT, intent(in) :: g
+    type(oct_control_parameters_t), intent(in)  :: par
+    type(oct_iterator_t), intent(inout) :: iterator
+    FLOAT, optional, intent(in) :: dx
+
+
+    FLOAT :: j, j1, j2, fluence
+    call push_sub('opt_control.iteration_manager_direct')
+
+    fluence = parameters_fluence(par)
+    j1 = -g + par%alpha(1) * (fluence - par%targetfluence)**2
+    j2 = - par%alpha(1) * (fluence - par%targetfluence)
+    j  = j1 + j2
+
+    iterator%convergence(1, iterator%ctr_iter) = j
+    iterator%convergence(2, iterator%ctr_iter) = j1
+    iterator%convergence(3, iterator%ctr_iter) = j2
+    ! WARNING: this does not consider the possibility of different 
+    ! alphas for different control parameters.
+    iterator%convergence(4, iterator%ctr_iter) = par%alpha(1)
+    if(present(dx)) then
+      iterator%convergence(5, iterator%ctr_iter) = dx
+    else
+      iterator%convergence(5, iterator%ctr_iter) = M_ZERO
+    end if
+
+    write(message(1), '(a,i5)') 'Optimal control iteration #', iterator%ctr_iter
+    call messages_print_stress(stdout, trim(message(1)))
+
+    write(message(1), '(6x,a,f12.5)')    " => G        = ", g
+    write(message(2), '(6x,a,f12.5)')    " => J1       = ", j1
+    write(message(3), '(6x,a,f12.5)')    " => J2       = ", j2
+    write(message(4), '(6x,a,f12.5)')    " => Fluence  = ", fluence
+    call write_info(4)
+    if(present(dx)) then
+      write(message(1), '(6x,a,f12.5)')  " => Delta    = ", dx
+      call write_info(1)
+    end if
+    call messages_print_stress(stdout)
+
+    ! store field with best J1
+    if(j1 > iterator%bestJ1) then
+      iterator%bestJ1          = j1
+      iterator%bestJ1_J        = j
+      iterator%bestJ1_fluence  = fluence       
+      iterator%bestJ1_ctr_iter = iterator%ctr_iter
+      call parameters_end(iterator%best_par)
+      call parameters_copy(iterator%best_par, par)
+    end if
+
+    call pop_sub()
+  end subroutine iteration_manager_direct
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------

@@ -94,7 +94,7 @@ contains
     logical                        :: stop_loop
     FLOAT                          :: j1
     type(oct_prop_t)               :: prop_chi, prop_psi;
-    external                       :: calc_point, write_iter_info
+    external                       :: direct_opt_calc, direct_opt_write_info
 
     call push_sub('opt_control.opt_control_run')
 
@@ -319,7 +319,7 @@ contains
     ! ---------------------------------------------------------
     subroutine scheme_direct
       integer :: ierr, j
-      FLOAT :: minvalue, fluence, j2, jfunctional, step
+      FLOAT :: minvalue, fluence, j2, jfunctional, step, g
       FLOAT, allocatable :: x(:)
       call push_sub('opt_control.scheme_direct')
 
@@ -341,38 +341,25 @@ contains
       ! Do a zero iteration, with the input field.
       ! (This could be removed in a final version, since the minimization algorithm itself
       ! has to repeat this run. Now it stays for clarity).
+      call parameters_to_realtime(par)
       call states_copy(psi, initial_st)
       call parameters_to_h(par, h%ep)
       call propagate_forward(sys, h, td, target, psi)
-      j1 = j1_functional(sys%gr, psi, target)
+      call parameters_set_rep(par)
       if(oct%dump_intermediate) call iterator_write(iterator, psi, par, sys%gr, sys%outp)
 
-      ! WARNING
-      ! This shold be moved into the iter module, in some way.
-        fluence = parameters_fluence(par)
-        j2 = parameters_j2(par)
-        jfunctional = j1 + j2
-
-        write(message(1), '(a,i5)') 'Optimal control iteration #', iterator%ctr_iter
-        call messages_print_stress(stdout, trim(message(1)))
-
-        write(message(1), '(6x,a,f12.5)')  " => J1       = ", j1
-        write(message(2), '(6x,a,f12.5)')  " => J        = ", jfunctional
-        write(message(3), '(6x,a,f12.5)')  " => J2       = ", j2
-        write(message(4), '(6x,a,f12.5)')  " => Fluence  = ", fluence
-        call write_info(4)
-        call messages_print_stress(stdout)
-        !stop
-        iterator%ctr_iter = iterator%ctr_iter + 1
+      j1 = j1_functional(sys%gr, psi, target)
+      fluence = parameters_fluence(par)
+      g = - j1 + par%alpha(1) * (fluence - par%targetfluence)**2
+      call iteration_manager_direct(g, par, iterator)
 
       do j =  1, par%nfreqs
-        x(j) = tdf(par_%f(1), j)
+        x(j) = tdf(par%f(1), j)
       end do
-
       step = CNST(0.5) * sqrt(par%targetfluence / par%nfreqs)
       ierr = loct_minimize_direct(MINMETHOD_NMSIMPLEX, par%nfreqs, x(1), step,&
                iterator%eps, iterator%ctr_iter_max, &
-               calc_point, write_iter_info, minvalue)
+               direct_opt_calc, direct_opt_write_info, minvalue)
 
       if(ierr.ne.0) then
         if(ierr <= 1024) then
@@ -385,9 +372,6 @@ contains
         end if
       end if
 
-      call tdf_set_numerical(par%f(1), x)
-      call parameters_copy(iterator%best_par, par)
-
       deallocate(x)
       call pop_sub()
     end subroutine scheme_direct
@@ -397,7 +381,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine calc_point(n, x, f)
+  subroutine direct_opt_calc(n, x, f)
     integer, intent(in)  :: n
     real(8), intent(in)  :: x(n)
     real(8), intent(out) :: f
@@ -411,22 +395,21 @@ contains
     call parameters_to_realtime(par_)
     call parameters_to_h(par_, h_%ep)
     call states_copy(psi, psi_)
-    call propagate_forward(sys_, h_, td_, target_, psi_)
+    call propagate_forward(sys_, h_, td_, target_, psi)
     call parameters_set_rep(par_)
 
-    j1 = j1_functional(sys_%gr, psi_, target_)
+    j1 = j1_functional(sys_%gr, psi, target_)
     fluence = parameters_fluence(par_)
-
     f = - j1 + par_%alpha(1) * (fluence - par_%targetfluence)**2
 
     call states_end(psi)
-  end subroutine calc_point
+  end subroutine direct_opt_calc
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
   ! Same as write_iter_info_ng, but without the gradients.
-  subroutine write_iter_info(geom_iter, n, energy, maxdx, x)
+  subroutine direct_opt_write_info(geom_iter, n, energy, maxdx, x)
     integer, intent(in) :: geom_iter, n
     real(8), intent(in) :: energy, maxdx
     real(8), intent(in) :: x(n)
@@ -435,32 +418,11 @@ contains
 
     call tdf_set_numerical(par_%f(1), x)
 
-
     iterator_%ctr_iter = geom_iter
+    call iteration_manager_direct(energy, par_, iterator_, maxdx)
+    if(oct_%dump_intermediate) call iterator_write(iterator_, psi_, par_, sys_%gr, sys_%outp)
 
-      ! WARNING
-      ! This shold be moved into the iter module, in some way.
-        fluence = parameters_fluence(par_)
-        j1 = -energy + par_%alpha(1) * (fluence - par_%targetfluence)**2
-        j2 = parameters_j2(par_)
-        j = j1 + j2
-
-        write(message(1), '(a,i5)') 'Optimal control iteration #', iterator_%ctr_iter
-        call messages_print_stress(stdout, trim(message(1)))
-
-        write(message(1), '(6x,a,f12.5)')  " => J1       = ", j1
-        write(message(2), '(6x,a,f12.5)')  " => J        = ", j
-        write(message(3), '(6x,a,f12.5)')  " => J2       = ", j2
-        write(message(4), '(6x,a,f12.5)')  " => Fluence  = ", fluence
-        write(message(5), '(6x,a,f12.5)')  " => G        = ", energy
-        write(message(6), '(6x,a,f12.5)')  " => Delta    = ", maxdx
-        call write_info(6)
-        call messages_print_stress(stdout)
-
-        if(oct_%dump_intermediate) call iterator_write(iterator_, psi_, par_, sys_%gr, sys_%outp)
-
-
-  end subroutine write_iter_info
+  end subroutine direct_opt_write_info
   ! ---------------------------------------------------------
 
 

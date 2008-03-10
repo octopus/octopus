@@ -312,6 +312,15 @@
         call write_fatal(5)
       endif
     end if
+
+    if(oct%algorithm_type .eq. oct_algorithm_direct) then
+      if(.not.oct%mode_basis_set) then
+        write(message(1), '(a)') 'If you want to use "OCTScheme = oct_algorithm_direct", then you'
+        write(message(2), '(a)') 'must represent the control parameters with a basis set (i.e.'
+        write(message(3), '(a)') '"OCTParameterRepresentation = control_parameters_fourier_space"'
+        call write_fatal(3)
+      end if
+    end if
       
     call pop_sub()      
   end subroutine check_faulty_runmodes
