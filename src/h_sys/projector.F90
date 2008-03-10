@@ -52,9 +52,6 @@ module projector_m
        projector_init,            &
        projector_init_phases,     &
        projector_build,           &
-#ifdef HAVE_MPI
-       projector_broadcast,       &
-#endif
        projector_end,             &
        dproject_psi,              &
        zproject_psi,              &
@@ -157,7 +154,7 @@ contains
 
     do ik = 1, nkpoints
       do is = 1, ns
-        kr = sum(kpoints(1:MAX_DIM, ik)*(this%sphere%x(is, 1:MAX_DIM)-m%x(this%sphere%jxyz(is), 1:MAX_DIM)))
+        kr = sum(kpoints(1:MAX_DIM, ik)*(this%sphere%x(is, 1:MAX_DIM) - m%x(this%sphere%jxyz(is), 1:MAX_DIM)))
         this%phase(is, ik) = exp(-M_zI*kr)
       end do
     end do
@@ -195,47 +192,6 @@ contains
 
     call pop_sub()
   end subroutine projector_build
-
-#ifdef HAVE_MPI
-  !---------------------------------------------------------
-  subroutine projector_broadcast(p, gr, mc, a, root)
-    type(projector_t), intent(inout) :: p
-    type(grid_t),      intent(in)    :: gr
-    type(multicomm_t), intent(in)    :: mc
-    type(atom_t),      intent(in)    :: a
-    integer,           intent(in)    :: root
-
-    integer :: l, lm, rank
-
-    call push_sub('projector.projector_broadcast')
-    
-    l = p%l
-    lm = p%lm
-    rank = mc%who_am_i(P_STRATEGY_STATES)
-
-    select case (p%type)
-    case (M_HGH)
-      if ( rank /= root) then      
-        call hgh_projector_null(p%hgh_p)
-        !for the moment it is not copied but initialized
-        call hgh_projector_init(p%hgh_p, p%sphere, gr, a, l, lm)
-      end if
-    case (M_KB)
-      if ( rank /= root) then
-        call kb_projector_null(p%kb_p)
-      end if
-      call kb_projector_broadcast(p%kb_p, p%sphere, gr, mc, a, l, lm, root)
-    case (M_RKB)
-      if ( rank /= root) then
-        call rkb_projector_null(p%rkb_p)
-        !for the moment it is not copied but initialized
-        call rkb_projector_init(p%rkb_p, p%sphere, gr, a, l, lm)
-      end if
-    end select
-
-    call pop_sub()
-  end subroutine projector_broadcast
-#endif
 
   !---------------------------------------------------------
   subroutine projector_end(p)

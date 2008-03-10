@@ -58,6 +58,98 @@ subroutine X(kb_project)(mesh, sm, kb_p, dim, psi, ppsi)
   call pop_sub()
 end subroutine X(kb_project)
 
+subroutine X(kb_project_bra)(mesh, sm, kb_p, dim, psi, uvpsi, phase)
+  type(mesh_t),         intent(in)  :: mesh
+  type(submesh_t),      intent(in)  :: sm
+  type(kb_projector_t), intent(in)  :: kb_p
+  integer,              intent(in)  :: dim
+  R_TYPE,               intent(in)  :: psi(:, :)  ! psi(1:NP, 1:dim)
+  R_TYPE,               intent(out) :: uvpsi(1:2)
+  CMPLX, optional,      intent(in)  :: phase(:)
+
+  integer :: ic, idim, ns, ip, is
+  R_TYPE, allocatable :: kp(:, :)
+
+  call push_sub('kb_projector_inc.kb_project')
+
+  ns = kb_p%n_s
+
+  ALLOCATE(kp(1:ns, 1:2), ns*2)
+
+  kp = M_ZERO
+
+  if(mesh%use_curvlinear) then
+    do ic = 1, kb_p%n_c
+      kp(1:ns, ic) = kb_p%p(1:ns, ic)*mesh%vol_pp(sm%jxyz(1:ns))
+    end do
+  else
+    do ic = 1, kb_p%n_c
+      kp(1:ns, ic) = kb_p%p(1:ns, ic)*mesh%vol_pp(1)
+    end do
+  end if
+
+  if(present(phase)) then
+    do ic = 1, kb_p%n_c
+      kp(1:ns, ic) = kp(1:ns, ic)*phase(1:ns)
+    end do
+  end if
+            
+  uvpsi = M_ZERO
+
+  do idim = 1, dim
+    do is = 1, ns
+      ip = sm%jxyz(is)
+      uvpsi(1) = uvpsi(1) + psi(ip, idim)*kp(is, 1)
+      uvpsi(2) = uvpsi(2) + psi(ip, idim)*kp(is, 2)
+    end do
+  end do
+
+  deallocate(kp)
+
+  call pop_sub()
+end subroutine X(kb_project_bra)
+
+subroutine X(kb_project_ket)(mesh, sm, kb_p, dim, uvpsi, psi, phase)
+  type(mesh_t),         intent(in)    :: mesh
+  type(submesh_t),      intent(in)    :: sm
+  type(kb_projector_t), intent(in)    :: kb_p
+  integer,              intent(in)    :: dim
+  R_TYPE,               intent(in)    :: uvpsi(1:2)
+  R_TYPE,               intent(inout) :: psi(:, :) ! psi(1:NP, 1:dim)
+  CMPLX, optional,      intent(in)    :: phase(:)
+
+  integer :: ic, idim, ns, ip, is
+
+  call push_sub('kb_projector_inc.kb_project')
+
+  ns = kb_p%n_s
+
+  if(present(phase)) then
+
+    do idim = 1, dim
+      do is = 1, ns
+        ip = sm%jxyz(is)
+        do ic = 1, kb_p%n_c
+          psi(ip, idim) = psi(ip, idim) + uvpsi(ic)*kb_p%p(is, ic)*conjg(phase(is))
+        end do
+      end do
+    end do
+  
+  else
+
+    do idim = 1, dim
+      do is = 1, ns
+        ip = sm%jxyz(is)
+        do ic = 1, kb_p%n_c
+          psi(ip, idim) = psi(ip, idim) + uvpsi(ic)*kb_p%p(is, ic)
+        end do
+      end do
+    end do
+
+  end if
+
+  call pop_sub()
+end subroutine X(kb_project_ket)
 
 !! Local Variables:
 !! mode: f90
