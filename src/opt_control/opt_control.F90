@@ -79,6 +79,51 @@ module opt_control_m
 contains
 
   ! ---------------------------------------------------------
+  subroutine direct_opt_calc(n, x, f)
+    integer, intent(in)  :: n
+    real(8), intent(in)  :: x(n)
+    real(8), intent(out) :: f
+
+    integer :: j
+    FLOAT :: j1, fluence
+    type(states_t) :: psi
+
+    call tdf_set_numerical(par_%f(1), x)
+
+    call parameters_to_realtime(par_)
+    call parameters_to_h(par_, h_%ep)
+    call states_copy(psi, psi_)
+    call propagate_forward(sys_, h_, td_, target_, psi)
+    call parameters_set_rep(par_)
+
+    j1 = j1_functional(sys_%gr, psi, target_)
+    fluence = parameters_fluence(par_)
+    f = - j1 + par_%alpha(1) * (fluence - par_%targetfluence)**2
+
+    call states_end(psi)
+  end subroutine direct_opt_calc
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  ! Same as write_iter_info_ng, but without the gradients.
+  subroutine direct_opt_write_info(geom_iter, n, energy, maxdx, x)
+    integer, intent(in) :: geom_iter, n
+    real(8), intent(in) :: energy, maxdx
+    real(8), intent(in) :: x(n)
+
+    FLOAT :: fluence, j, j1, j2
+
+    call tdf_set_numerical(par_%f(1), x)
+
+    iterator_%ctr_iter = geom_iter
+    call iteration_manager_direct(energy, par_, iterator_, maxdx)
+    if(oct_%dump_intermediate) call iterator_write(iterator_, psi_, par_, sys_%gr, sys_%outp)
+
+  end subroutine direct_opt_write_info
+
+
+  ! ---------------------------------------------------------
   subroutine opt_control_run(sys, h)
     type(system_t), target,      intent(inout) :: sys
     type(hamiltonian_t), target, intent(inout) :: h
@@ -94,7 +139,6 @@ contains
     logical                        :: stop_loop
     FLOAT                          :: j1
     type(oct_prop_t)               :: prop_chi, prop_psi;
-    external                       :: direct_opt_calc, direct_opt_write_info
 
     call push_sub('opt_control.opt_control_run')
 
@@ -378,52 +422,6 @@ contains
     ! ---------------------------------------------------------
 
   end subroutine opt_control_run
-
-
-  ! ---------------------------------------------------------
-  subroutine direct_opt_calc(n, x, f)
-    integer, intent(in)  :: n
-    real(8), intent(in)  :: x(n)
-    real(8), intent(out) :: f
-
-    integer :: j
-    FLOAT :: j1, fluence
-    type(states_t) :: psi
-
-    call tdf_set_numerical(par_%f(1), x)
-
-    call parameters_to_realtime(par_)
-    call parameters_to_h(par_, h_%ep)
-    call states_copy(psi, psi_)
-    call propagate_forward(sys_, h_, td_, target_, psi)
-    call parameters_set_rep(par_)
-
-    j1 = j1_functional(sys_%gr, psi, target_)
-    fluence = parameters_fluence(par_)
-    f = - j1 + par_%alpha(1) * (fluence - par_%targetfluence)**2
-
-    call states_end(psi)
-  end subroutine direct_opt_calc
-  ! ---------------------------------------------------------
-
-
-  ! ---------------------------------------------------------
-  ! Same as write_iter_info_ng, but without the gradients.
-  subroutine direct_opt_write_info(geom_iter, n, energy, maxdx, x)
-    integer, intent(in) :: geom_iter, n
-    real(8), intent(in) :: energy, maxdx
-    real(8), intent(in) :: x(n)
-
-    FLOAT :: fluence, j, j1, j2
-
-    call tdf_set_numerical(par_%f(1), x)
-
-    iterator_%ctr_iter = geom_iter
-    call iteration_manager_direct(energy, par_, iterator_, maxdx)
-    if(oct_%dump_intermediate) call iterator_write(iterator_, psi_, par_, sys_%gr, sys_%outp)
-
-  end subroutine direct_opt_write_info
-  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
