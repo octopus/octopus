@@ -25,8 +25,8 @@ Enabled    : Yes
 # It would be nice to investigate the reason for the small
 # discrepancy...
 Input: 01-carbon_atom.01-ground_state.inp
-Match ; Total Energy       ; sed -n '/^Energy/{n\;p\;}' static/info ; \s*Total\s*=\s*-146.743
-Match ; Eigenvalue   [1up] ; sed -n '/^Eigenvalues \[/{n\;n\;p\;}' static/info ; \s*-14.462\d*\s*1.0000\d*
+Match ; Total Energy       ; sed -n '/^Energy/{n\;p\;}' static/info ; \s*Total\s*=\s*-146.741
+Match ; Eigenvalue   [1up] ; sed -n '/^Eigenvalues \[/{n\;n\;p\;}' static/info ; \s*-14.461\d*\s*1.0000\d*
 Match ; Eigenvalue [4down] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;n\;n\;n\;n\;n\;n\;p\;}' static/info ; \s*-3.682\d*\s*0.000000\d*
 
 # Now we repeat the calculation but making use of the l=1 component
@@ -38,6 +38,6 @@ Match ; Eigenvalue [4down] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;n\;n\;n\;n\;n\;n
 
 #The same using double grid
 Input: 01-carbon_atom.03-ground_state_double_grid.inp
-Match ; Total Energy       ; sed -n '/^Energy/{n\;p\;}' static/info ; \s*Total\s*=\s*-146.663
+Match ; Total Energy       ; sed -n '/^Energy/{n\;p\;}' static/info ; \s*Total\s*=\s*-146.662
 Match ; Eigenvalue   [1up] ; sed -n '/^Eigenvalues \[/{n\;n\;p\;}' static/info ; \s*-14.418\d*\s*1.0000\d*
 Match ; Eigenvalue [4down] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;n\;n\;n\;n\;n\;n\;p\;}' static/info ; \s*-3.694\d*\s*0.000000\d*
