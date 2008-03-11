@@ -44,52 +44,11 @@ typedef struct{
   func_d func;
 } param_fdf_t;
 
-double my_f (const gsl_vector *v, void * params)
-{
-  double val;
-  double *x, *gradient = NULL;
-  int i, dim, getgrad;
-  param_fdf_t * p;
-
-  p = (param_fdf_t *) params;
-
-  dim = v->size;
-  x = (double *)malloc(dim*sizeof(double));
-
-  for(i=0; i<dim; i++) x[i] = gsl_vector_get(v, i);
-  getgrad = 0;
-  p->func(&dim, x, &val, &getgrad, gradient);
-
-  free(x);
-  return val;
-}
-
-/* The gradient of f, df = (df/dx, df/dy). */
-void my_df (const gsl_vector *v, void * params, gsl_vector *df)
-{
-  double val;
-  double *x, *gradient;
-  int i, dim, getgrad;
-  param_fdf_t * p;
-
-  p = (param_fdf_t *) params;
-
-  dim = v->size;
-  x = (double *)malloc(dim*sizeof(double));
-  gradient = (double *)malloc(dim*sizeof(double));
-
-  for(i=0; i<dim; i++) x[i] = gsl_vector_get(v, i);
-  getgrad = 1;
-  p->func(&dim, x, &val, &getgrad, gradient);
-  for(i=0; i<dim; i++) gsl_vector_set(df, i, gradient[i]);
-
-  free(x); free(gradient);
-}
-
 /* Compute both f and df together. */
-void my_fdf (const gsl_vector *v, void * params, double *f, gsl_vector *df)
+static void
+my_fdf (const gsl_vector *v, void *params, double *f, gsl_vector *df)
 {
-  double *x, *gradient;
+  double *x, *gradient, ff2;
   int i, dim, getgrad;
   param_fdf_t * p;
 
@@ -100,11 +59,35 @@ void my_fdf (const gsl_vector *v, void * params, double *f, gsl_vector *df)
   gradient = (double *)malloc(dim*sizeof(double));
 
   for(i=0; i<dim; i++) x[i] = gsl_vector_get(v, i);
-  getgrad = 1;
-  p->func(&dim, x, f, &getgrad, gradient);
-  for(i=0; i<dim; i++) gsl_vector_set(df, i, gradient[i]);
+  getgrad = (df == NULL) ? 0 : 1;
+
+  p->func(&dim, x, &ff2, &getgrad, gradient);
+
+  if(f != NULL)
+    *f = ff2;
+      
+  if(df != NULL){
+    for(i=0; i<dim; i++)
+      gsl_vector_set(df, i, gradient[i]);
+  }
 
   free(x); free(gradient);
+}
+
+static double
+my_f (const gsl_vector *v, void *params)
+{
+  double val;
+
+  my_fdf(v, params, &val, NULL);
+  return val;
+}
+
+/* The gradient of f, df = (df/dx, df/dy). */
+static void
+my_df (const gsl_vector *v, void *params, gsl_vector *df)
+{
+  my_fdf(v, params, NULL, df);
 }
 
 typedef void (*print_f_ptr)(const int*, const int*, const double*, const double*, const double*, const double*);
@@ -116,7 +99,7 @@ int FC_FUNC_(oct_minimize, OCT_MINIMIZE)
 {
   int iter = 0;
   int status;
-  double maxgrad, maxdr;
+  double maxgrad, maxdr, tol;
   int i;
   double * oldpoint;
   double * grad;
@@ -148,6 +131,7 @@ int FC_FUNC_(oct_minimize, OCT_MINIMIZE)
   absgrad = gsl_vector_alloc (*dim);
   absdr = gsl_vector_alloc (*dim);
 
+  tol = 0.1;
   switch(*method){
   case 1: 
     T = gsl_multimin_fdfminimizer_steepest_descent;
@@ -168,7 +152,7 @@ int FC_FUNC_(oct_minimize, OCT_MINIMIZE)
 
   s = gsl_multimin_fdfminimizer_alloc (T, *dim);
 
-  gsl_multimin_fdfminimizer_set (s, &my_func, x, *step, 0.1);
+  gsl_multimin_fdfminimizer_set (s, &my_func, x, *step, tol);
   do
     {
       iter++;
