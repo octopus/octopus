@@ -801,12 +801,15 @@ write(*,*) 'ey = ',M_HALF*(n(2)*q(2))**2
     end do
     ! calculate right hand side (e-T-V(lead)-sum(a)[H_ca*g_a*H_ac]
     call zkinetic(h, gr, st%zpsi(:, :, 1, ik), tmp(:,:))
-    tmp(1:NP, :) = energy*st%zpsi(1:NP, :, 1, ik) - tmp(1:NP,:)
+    tmp(1:NP, :) = energy*st%zpsi(1:NP, :, 1, ik) - tmp(1:NP, :)
     ! TODO: the static potential of the lead
-    call green_lead(energy, diag(:,:,LEFT), offdiag(:,:,LEFT), np, LEFT, green_l(:,:,LEFT))
-    call zsymv('U', np, -M_z1, green_l(:,:,LEFT), np, st%zpsi(1:np, 1, 1, 1), 1, M_z1, tmp(1:np,1), 1)
-    call green_lead(energy, diag(:,:,RIGHT), offdiag(:,:,RIGHT), np, RIGHT, green_l(:,:,RIGHT))
-    call zsymv('U', np, -M_z1, green_l(:,:,RIGHT), np, st%zpsi(NP-np+1:NP, 1, 1, 1), 1, M_z1, tmp(NP-np+1:NP,1), 1)
+    call green_lead(energy, diag(:, :, LEFT), offdiag(:, :, LEFT), np, LEFT, green_l(:, :, LEFT))
+    call zsymv('U', np, -M_z1, green_l(:, :, LEFT), np, st%zpsi(1:np, 1, 1, 1), 1, M_z1, tmp(1:np, 1), 1)
+    call green_lead(energy, diag(:, :, RIGHT), offdiag(:, :, RIGHT), np, RIGHT, green_l(:, :, RIGHT))
+
+    call zsymv('U', np, -M_z1, green_l(:, :, RIGHT), np, &
+      st%zpsi(NP - np + 1:NP, 1, 1, 1), 1, M_z1, tmp(NP - np + 1:NP, 1), 1)
+
     ! now solve the equation
     green_l_p => green_l
     ! set the unperturbed state as initial guess
