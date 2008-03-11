@@ -515,7 +515,7 @@ contains
       end if
 
       do idim = 1, sb%dim
-        norm = lalg_nrm2(sb%dim, sb%rlattice(1:sb%dim, idim))
+        norm = sqrt(sum(sb%rlattice(1:sb%dim, idim)**2))
         do jdim = 1, sb%dim
           sb%rlattice(jdim, idim) = sb%rlattice(jdim, idim) / norm
         end do

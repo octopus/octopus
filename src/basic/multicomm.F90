@@ -592,29 +592,38 @@ contains
   !---------------------------------------------------
   ! Function to divide the range of numbers from 1 to nn
   ! between size processors.
-  subroutine multicomm_divide_range(nn, size, start, end, lsize)
+  subroutine multicomm_divide_range(nn, size, start, final, lsize)
     integer, intent(in)    :: nn
     integer, intent(in)    :: size
     integer, intent(out)   :: start(:)
-    integer, intent(out)   :: end(:)
+    integer, intent(out)   :: final(:)
     integer, intent(out)   :: lsize(:)
 
     integer :: ii, jj, rank
+    
+    if(size <= nn ) then
+      
+      do rank = 0, size - 1
+        jj = nn / size
+        ii = nn - jj*size
+        if(ii > 0 .and. rank < ii) then
+          jj = jj + 1
+          start(rank + 1) = rank*jj + 1
+          final(rank + 1) = start(rank + 1) + jj - 1
+        else
+          final(rank + 1) = nn - (size - rank - 1)*jj
+          start(rank + 1) = final(rank + 1) - jj + 1
+        end if
+      end do
 
-    do rank = 0, size - 1
-      jj = nn / size
-      ii = nn - jj*size
-      if(ii > 0 .and. rank < ii) then
-        jj = jj + 1
-        start(rank + 1) = rank*jj + 1
-        end(rank + 1)   = start(rank + 1) + jj - 1
-      else
-        end(rank + 1)   = nn - (size - rank - 1)*jj
-        start(rank + 1) = end(rank + 1) - jj + 1
-      end if
-    end do
+    else
+      start = 1
+      final = 0
+      start(1) = 1
+      final(1) = nn
+    end if
 
-    lsize(1:size) = end(1:size) - start(1:size) + 1
+    lsize(1:size) = final(1:size) - start(1:size) + 1
     
     ASSERT(sum(lsize(1:size)) == nn)
 
