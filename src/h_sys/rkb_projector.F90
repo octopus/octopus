@@ -42,6 +42,8 @@ module rkb_projector_m
        rkb_projector_null, &
        rkb_projector_init, &
        rkb_project,        &
+       rkb_project_bra,    &
+       rkb_project_ket,    &
        rkb_projector_end
 
   ! The rkb_projector data type holds the KB projectors build with total angular
@@ -187,6 +189,100 @@ contains
     
     call pop_sub()
   end subroutine rkb_project
+
+
+  ! ---------------------------------------------------------
+  subroutine rkb_project_bra(mesh, sm, rkb_p, psi, uvpsi, phase)
+    type(mesh_t),          intent(in)  :: mesh
+    type(submesh_t),       intent(in)  :: sm
+    type(rkb_projector_t), intent(in)  :: rkb_p
+    CMPLX,                 intent(in)  :: psi(:, :)
+    CMPLX,                 intent(out) :: uvpsi(1:2, 1:2)    
+    CMPLX, optional,       intent(in)  :: phase(:)
+
+    integer :: idim, n_s, ip, is
+
+    CMPLX, allocatable :: bra(:, :)
+
+    call push_sub('rkb_projector.rkb_project_bra')
+
+    uvpsi = M_ZERO
+
+    n_s = rkb_p%n_s
+
+    ALLOCATE(bra(1:n_s, 2), n_s*2)
+
+    if(mesh%use_curvlinear) then
+      bra(1:n_s, 1) = rkb_p%bra(1:n_s, 1)*mesh%vol_pp(sm%jxyz(1:n_s))
+      bra(1:n_s, 2) = rkb_p%bra(1:n_s, 2)*mesh%vol_pp(sm%jxyz(1:n_s))
+    else
+      bra(1:n_s, 1:2) = rkb_p%bra(1:n_s, 1:2)*mesh%vol_pp(1)
+    end if
+
+    if(present(phase)) then
+      bra(1:n_s, 1) = bra(1:n_s, 1)*phase(1:n_s)
+      bra(1:n_s, 2) = bra(1:n_s, 2)*phase(1:n_s)
+    end if
+
+    do idim = 1, 2
+      do is = 1, n_s
+        ip = sm%jxyz(is)
+        uvpsi(idim, 1) = uvpsi(idim, 1) + psi(ip, idim)*bra(is, 1)
+        uvpsi(idim, 2) = uvpsi(idim, 2) + psi(ip, idim)*bra(is, 2)
+      end do
+    end do
+
+    deallocate(bra)
+  end subroutine rkb_project_bra
+
+  ! ---------------------------------------------------------
+  subroutine rkb_project_ket(mesh, sm, rkb_p, uvpsi, psi, phase)
+    type(mesh_t),          intent(in)    :: mesh
+    type(submesh_t),       intent(in)    :: sm
+    type(rkb_projector_t), intent(in)    :: rkb_p
+    CMPLX,                 intent(in)    :: uvpsi(1:2, 1:2)
+    CMPLX,                 intent(inout) :: psi(:, :)
+    CMPLX, optional,       intent(in)    :: phase(:)
+
+    integer :: idim, jdim, n_s, ip, is
+    CMPLX :: aa
+
+    call push_sub('rkb_projector.rkb_project_bra')
+
+    n_s = rkb_p%n_s
+
+    if(.not. present(phase)) then
+      
+      do jdim = 1, 2
+        do is = 1, n_s
+          ip = sm%jxyz(is)
+          aa = M_z0
+          do idim = 1, 2
+            aa = aa + rkb_p%f(1, jdim, idim)*uvpsi(idim, 1)*rkb_p%ket(is, 1, jdim, idim)
+            aa = aa + rkb_p%f(2, jdim, idim)*uvpsi(idim, 2)*rkb_p%ket(is, 2, jdim, idim)
+          end do
+          psi(ip, jdim) = psi(ip, jdim) + aa
+        end do
+      end do
+      
+    else
+      
+      do jdim = 1, 2
+        do is = 1, n_s
+          ip = sm%jxyz(is)
+          aa = M_z0
+          do idim = 1, 2
+            aa = aa + rkb_p%f(1, jdim, idim)*uvpsi(idim, 1)*rkb_p%ket(is, 1, jdim, idim)
+            aa = aa + rkb_p%f(2, jdim, idim)*uvpsi(idim, 2)*rkb_p%ket(is, 2, jdim, idim)
+          end do
+          psi(ip, jdim) = psi(ip, jdim) + aa*conjg(phase(is))
+        end do
+      end do
+
+    end if
+    
+    call pop_sub()
+  end subroutine rkb_project_ket
   
 end module rkb_projector_m
 
