@@ -194,7 +194,7 @@ contains
 
         ! Move the ions: only half step, to obtain the external potential 
         ! in the middle of the time slice.
-        call ion_dynamics_propagate(td%ions, sys%geo, M_HALF*td%dt)
+        call ion_dynamics_propagate(td%ions, sys%gr%sb, sys%geo, M_HALF*td%dt)
 
 	if( h%ep%with_gauge_field ) call apply_verlet_gauge_field_1(M_HALF*td%dt)
 
@@ -230,7 +230,7 @@ contains
 
           if(td%dynamics == EHRENFEST) call ion_dynamics_restore_state(td%ions, sys%geo, ions_state)
 
-          call ion_dynamics_propagate(td%ions, sys%geo, td%dt)
+          call ion_dynamics_propagate(td%ions, sys%gr%sb, sys%geo, td%dt)
 
 	end if
 

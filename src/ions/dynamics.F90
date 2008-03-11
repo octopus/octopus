@@ -29,6 +29,7 @@ module ion_dynamics_m
   use messages_m
   use geometry_m
   use loct_m
+  use simul_box_m
   use profiling_m
   use varinfo_m
   use math_m
@@ -105,8 +106,9 @@ contains
 
   end subroutine ion_dynamics_end
 
-  subroutine ion_dynamics_propagate(this, geo, dt)
+  subroutine ion_dynamics_propagate(this, sb, geo, dt)
     type(ion_dynamics_t), intent(inout) :: this
+    type(simul_box_t),    intent(in)    :: sb
     type(geometry_t),     intent(inout) :: geo
     FLOAT,                intent(in)    :: dt
     
@@ -126,6 +128,8 @@ contains
 
     end do
 
+    call simul_box_atoms_in_box(sb, geo)
+    
   end subroutine ion_dynamics_propagate
 
   subroutine ion_dynamics_propagate_velocities(this, geo)
