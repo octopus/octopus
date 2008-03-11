@@ -574,16 +574,11 @@ subroutine X(vnlpsi) (h, gr, psi, hpsi, ik)
   R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, h%d%dim)
   integer,             intent(in)    :: ik
 
-  integer :: ipj
-  
-
   call profiling_in(C_PROFILING_VNLPSI)
   call push_sub('h_inc.Xvnlpsi')
 
-  do ipj = 1, h%ep%nvnl
-    call X(project_psi)(gr%m, h%ep%p(ipj), h%d%dim, psi, hpsi, h%ep%reltype, ik)
-  end do
-
+  call X(project_psi)(gr%m, h%ep%p, h%ep%nvnl, h%d%dim, psi, hpsi, h%ep%reltype, ik)
+    
   call pop_sub()
   call profiling_out(C_PROFILING_VNLPSI)
 end subroutine X(vnlpsi)

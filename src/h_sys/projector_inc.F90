@@ -20,58 +20,94 @@
 !------ -----------------------------------------------------------------------
 ! X(project_psi) calculates the action of a projector on the psi wavefunction.
 ! The result is summed up to ppsi
-subroutine X(project_psi)(mesh, pj, dim, psi, ppsi, reltype, ik)
+subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, reltype, ik)
   type(mesh_t),      intent(in)    :: mesh
-  type(projector_t), intent(in)    :: pj
+  type(projector_t), intent(in)    :: pj(:)
+  integer,           intent(in)    :: npj
   integer,           intent(in)    :: dim
   R_TYPE,            intent(in)    :: psi(:, :)   ! psi(1:mesh%np, dim)
   R_TYPE,            intent(inout) :: ppsi(:, :)  ! ppsi(1:mesh%np, dim)
   integer,           intent(in)    :: reltype
   integer,           intent(in)    :: ik
 
-  R_TYPE :: uvpsi(1:MAX_REDUCE_SIZE)
   CMPLX, pointer :: phase(:)
+  integer :: ipj, nreduce, ii
+  R_TYPE, allocatable :: reduce_buffer(:)
 #if defined(HAVE_MPI)
-  R_TYPE :: uvpsi_tmp(1:MAX_REDUCE_SIZE)
+  R_TYPE, allocatable :: reduce_buffer_dest(:)
 #endif
+  integer, allocatable :: ireduce(:)
 
   call push_sub('projector_inc.project_psi')
 
-  nullify(phase)
-  if(simul_box_is_periodic(mesh%sb)) phase => pj%phase(:, ik)
+  ALLOCATE(ireduce(1:npj), npj)
+
+  ! generate the reduce buffer and related structures
+  nreduce = 0
+  do ipj = 1, npj
+    ireduce(ipj) = 1 + nreduce
+    nreduce = nreduce + pj(ipj)%reduce_size
+  end do
+
+  ALLOCATE(reduce_buffer(1:nreduce), nreduce)
+#if defined(HAVE_MPI)
+  ALLOCATE(reduce_buffer_dest(1:nreduce), nreduce)
+#endif
 
   ! calculate <p|psi>
-  select case(pj%type)
-  case(M_KB)
-    call X(kb_project_bra)(mesh, pj%sphere, pj%kb_p, dim, psi, uvpsi, phase)
-  case(M_RKB)
+  do ipj = 1, npj
+
+    ii = ireduce(ipj)
+    nullify(phase)
+    if(simul_box_is_periodic(mesh%sb)) phase => pj(ipj)%phase(:, ik)
+
+    select case(pj(ipj)%type)
+    case(M_KB)
+      call X(kb_project_bra)(mesh, pj(ipj)%sphere, pj(ipj)%kb_p, dim, psi, reduce_buffer(ii:), phase)
+    case(M_RKB)
 #ifdef R_TCOMPLEX
-    call rkb_project_bra(mesh, pj%sphere, pj%rkb_p, psi, uvpsi, phase)
+      call rkb_project_bra(mesh, pj(ipj)%sphere, pj(ipj)%rkb_p, psi, reduce_buffer(ii:), phase)
 #endif
-  case(M_HGH)
-    call X(hgh_project_bra)(mesh, pj%sphere, pj%hgh_p, dim, reltype, psi, uvpsi, phase)
-  end select
+    case(M_HGH)
+      call X(hgh_project_bra)(mesh, pj(ipj)%sphere, pj(ipj)%hgh_p, dim, reltype, psi, reduce_buffer(ii:), phase)
+    end select
+
+  end do
 
   ! reduce <p|psi>
 #if defined(HAVE_MPI)
   if(mesh%parallel_in_domains) then
-    call MPI_Allreduce(uvpsi, uvpsi_tmp, pj%reduce_size, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
-    uvpsi(1:pj%reduce_size) = uvpsi_tmp(1:pj%reduce_size)
+    call MPI_Allreduce(reduce_buffer, reduce_buffer_dest, nreduce, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
+    reduce_buffer = reduce_buffer_dest
   end if
 #endif
-  
+
   ! calculate |ppsi> += |p><p|psi>
-  select case(pj%type)
-  case(M_KB)
-    uvpsi(1:2) = uvpsi(1:2)*pj%kb_p%e(1:2)
-    call X(kb_project_ket)(mesh, pj%sphere, pj%kb_p, dim, uvpsi, ppsi, phase)
-  case(M_RKB)
+  do ipj = 1, npj
+
+    ii = ireduce(ipj)
+    nullify(phase)
+    if(simul_box_is_periodic(mesh%sb)) phase => pj(ipj)%phase(:, ik)
+
+    select case(pj(ipj)%type)
+    case(M_KB)
+      reduce_buffer(ii:ii + 1) = reduce_buffer(ii:ii + 1)*pj(ipj)%kb_p%e(1:2)
+      call X(kb_project_ket)(mesh, pj(ipj)%sphere, pj(ipj)%kb_p, dim, reduce_buffer(ii:), ppsi, phase)
+    case(M_RKB)
 #ifdef R_TCOMPLEX
-    call rkb_project_ket(mesh, pj%sphere, pj%rkb_p, uvpsi, ppsi, phase)
+      call rkb_project_ket(mesh, pj(ipj)%sphere, pj(ipj)%rkb_p, reduce_buffer(ii:), ppsi, phase)
 #endif
-  case(M_HGH)
-    call X(hgh_project_ket)(mesh, pj%sphere, pj%hgh_p, dim, reltype, uvpsi, ppsi, phase)
-  end select
+    case(M_HGH)
+      call X(hgh_project_ket)(mesh, pj(ipj)%sphere, pj(ipj)%hgh_p, dim, reltype, reduce_buffer(ii:), ppsi, phase)
+    end select
+
+  end do
+
+  deallocate(reduce_buffer, ireduce)
+
+#ifdef HAVE_MPI
+  deallocate(reduce_buffer_dest)
+#endif
 
   call pop_sub()
 end subroutine X(project_psi)
