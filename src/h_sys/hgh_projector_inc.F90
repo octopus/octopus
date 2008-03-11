@@ -98,6 +98,130 @@ subroutine X(hgh_project)(mesh, sm, hgh_p, dim, psi, ppsi, reltype)
   
 end subroutine X(hgh_project)
 
+subroutine X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi, phase)
+  type(mesh_t),          intent(in)  :: mesh
+  type(submesh_t),       intent(in)  :: sm
+  type(hgh_projector_t), intent(in)  :: hgh_p
+  integer,               intent(in)  :: dim
+  integer,               intent(in)  :: reltype
+  R_TYPE,                intent(in)  :: psi(:, :)
+  R_TYPE,                intent(out) :: uvpsi(1:2, 1:4, 1:3)
+  CMPLX, optional,       intent(in)  :: phase(:)
+
+  integer :: n_s, jj, idim, kk
+  R_TYPE, allocatable :: bra(:, :, :)
+
+#ifndef R_TCOMPLEX
+  ASSERT(reltype == 0)
+#endif
+
+  n_s = hgh_p%n_s
+  uvpsi = M_ZERO
+
+  ALLOCATE(bra(1:n_s, 1:4, 1:3), n_s*4*3)
+
+  bra = M_ZERO
+
+  if(mesh%use_curvlinear) then
+    do jj = 1, 3
+      if(reltype == 1) then
+        do kk = 1, 3
+          bra(1:n_s, kk, jj) = hgh_p%lp(1:n_s, kk, jj)*mesh%vol_pp(sm%jxyz(1:n_s))
+        end do
+      end if
+      bra(1:n_s, 4, jj) = hgh_p%p(1:n_s, jj)*mesh%vol_pp(sm%jxyz(1:n_s))
+    end do
+  else
+    if(reltype == 1) bra(1:n_s, 1:3, 1:3) = hgh_p%lp(1:n_s, 1:3, 1:3)*mesh%vol_pp(1)
+    bra(1:n_s, 4, 1:3) = hgh_p%p(1:n_s, 1:3)*mesh%vol_pp(1)
+  end if
+
+  if(present(phase)) then
+    do kk = 1, 4
+      do jj = 1, 3
+        bra(1:n_s, kk, jj) = bra(1:n_s, kk, jj)*phase(1:n_s)
+      end do
+    end do
+  end if
+
+  do idim = 1, dim
+    do kk = 1, 4
+      do jj = 1, 3
+        uvpsi(idim, kk, jj) = sum(psi(sm%jxyz(1:n_s), idim)*bra(1:n_s, kk, jj))
+      end do
+    end do
+  end do
+
+  deallocate(bra)
+
+end subroutine X(hgh_project_bra)
+
+subroutine X(hgh_project_ket)(mesh, sm, hgh_p, dim, reltype, uvpsi, ppsi, phase)
+  type(mesh_t),          intent(in)    :: mesh
+  type(submesh_t),       intent(in)    :: sm
+  type(hgh_projector_t), intent(in)    :: hgh_p
+  integer,               intent(in)    :: dim
+  integer,               intent(in)    :: reltype
+  R_TYPE,                intent(in)    :: uvpsi(1:2, 1:4, 1:3)
+  R_TYPE,                intent(inout) :: ppsi(:, :)
+  CMPLX, optional,       intent(in)    :: phase(:)
+
+  integer :: n_s, ii, jj, idim
+  integer :: kk
+  CMPLX, allocatable :: lp_psi(:, :, :)
+
+  n_s = hgh_p%n_s
+
+  do idim = 1, dim
+    do jj = 1, 3
+      do ii = 1, 3
+        if(.not. present(phase)) then
+          ppsi(sm%jxyz(1:n_s), idim) = ppsi(sm%jxyz(1:n_s), idim) + hgh_p%h(ii, jj)*uvpsi(idim, 4, jj)*hgh_p%p(1:n_s, ii)
+        else
+          ppsi(sm%jxyz(1:n_s), idim) = ppsi(sm%jxyz(1:n_s), idim) &
+            + hgh_p%h(ii, jj)*uvpsi(idim, 4, jj)*hgh_p%p(1:n_s, ii)*conjg(phase(1:n_s))
+        end if
+        end do
+      end do
+    end do
+
+
+
+  if (reltype == 1) then
+
+    ALLOCATE(lp_psi(n_s, 3, dim), n_s*3*dim)
+    lp_psi = M_Z0
+
+    do idim = 1, dim
+      do kk = 1, 3
+        do jj = 1, 3
+          do ii = 1, 3
+            lp_psi(1:n_s, kk, idim) = lp_psi(1:n_s, kk, idim) + hgh_p%k(ii, jj) * uvpsi(idim, kk, jj) * hgh_p%p(1:n_s, ii)
+          end do
+        end do
+      end do
+    end do
+    
+    if(present(phase)) then
+      do idim = 1, dim
+        do kk = 1, 3
+          lp_psi(1:n_s, kk, idim) = lp_psi(1:n_s, kk, idim)*conjg(phase(1:n_s))
+        end do
+      end do
+    end if
+
+    ppsi(sm%jxyz(1:n_s), 1) = ppsi(sm%jxyz(1:n_s), 1) &
+      + M_zI*M_HALF*( lp_psi(1:n_s, 3, 1) + lp_psi(1:n_s, 1, 2) - M_zI*lp_psi(1:n_s, 2, 2))
+    
+    ppsi(sm%jxyz(1:n_s), 2) = ppsi(sm%jxyz(1:n_s), 2) &
+      + M_zI*M_HALF*(-lp_psi(1:n_s, 3, 2) + lp_psi(1:n_s, 1, 1) + M_zI*lp_psi(1:n_s, 2, 1))
+    
+    deallocate(lp_psi)
+   
+  end if
+  
+end subroutine X(hgh_project_ket)
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

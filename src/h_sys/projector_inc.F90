@@ -31,99 +31,88 @@ subroutine X(project_psi)(mesh, pj, dim, psi, ppsi, reltype, ik)
 
   integer :: n_s, idim
   R_TYPE, allocatable :: lpsi(:, :), plpsi(:,:)
-  R_TYPE :: uvpsi(1:2), ruvpsi(1:2, 1:2)
+  R_TYPE :: kb_uvpsi(1:2), rkb_uvpsi(1:2, 1:2), hgh_uvpsi(1:2, 1:4, 1:3)
 #if defined(HAVE_MPI)
-  R_TYPE :: uvpsi_tmp(1:2), ruvpsi_tmp(1:2, 1:2)
+  R_TYPE :: kb_uvpsi_tmp(1:2), rkb_uvpsi_tmp(1:2, 1:2), hgh_uvpsi_tmp(1:2, 1:4, 1:3)
 #endif
 
   call push_sub('projector_inc.project_psi')
 
-  ! KB
-  if(pj%type == M_KB) then
-
+  select case(pj%type)
+    
+  case(M_KB)
+    
     ! <p|psi>
     if(simul_box_is_periodic(mesh%sb)) then
-      call X(kb_project_bra)(mesh, pj%sphere, pj%kb_p, dim, psi, uvpsi, phase = pj%phase(:, ik))
+      call X(kb_project_bra)(mesh, pj%sphere, pj%kb_p, dim, psi, kb_uvpsi, phase = pj%phase(:, ik))
     else
-      call X(kb_project_bra)(mesh, pj%sphere, pj%kb_p, dim, psi, uvpsi)
+      call X(kb_project_bra)(mesh, pj%sphere, pj%kb_p, dim, psi, kb_uvpsi)
     end if
 
 #if defined(HAVE_MPI)
     if(mesh%parallel_in_domains) then
-      call MPI_Allreduce(uvpsi, uvpsi_tmp, 2, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
-      uvpsi = uvpsi_tmp
+      call MPI_Allreduce(kb_uvpsi, kb_uvpsi_tmp, 2, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
+      kb_uvpsi = kb_uvpsi_tmp
     end if
 #endif
 
-    uvpsi(1:2) = uvpsi(1:2)*pj%kb_p%e(1:2)
+    kb_uvpsi(1:2) = kb_uvpsi(1:2)*pj%kb_p%e(1:2)
 
     ! |ppsi> += |p><p|psi>
     if(simul_box_is_periodic(mesh%sb)) then
-      call X(kb_project_ket)(mesh, pj%sphere, pj%kb_p, dim, uvpsi, ppsi, phase = pj%phase(:, ik))
+      call X(kb_project_ket)(mesh, pj%sphere, pj%kb_p, dim, kb_uvpsi, ppsi, phase = pj%phase(:, ik))
     else
-      call X(kb_project_ket)(mesh, pj%sphere, pj%kb_p, dim, uvpsi, ppsi)
+      call X(kb_project_ket)(mesh, pj%sphere, pj%kb_p, dim, kb_uvpsi, ppsi)
     end if
 
 
-    call pop_sub()
-    return
-  end if
+  case(M_RKB)
 
-  ! RKB
 #ifdef R_TCOMPLEX
-  if(pj%type == M_RKB) then
 
     if(simul_box_is_periodic(mesh%sb)) then
-      call rkb_project_bra(mesh, pj%sphere, pj%rkb_p, psi, ruvpsi, phase = pj%phase(:, ik))
+      call rkb_project_bra(mesh, pj%sphere, pj%rkb_p, psi, rkb_uvpsi, phase = pj%phase(:, ik))
     else
-      call rkb_project_bra(mesh, pj%sphere, pj%rkb_p, psi, ruvpsi)
+      call rkb_project_bra(mesh, pj%sphere, pj%rkb_p, psi, rkb_uvpsi)
     end if
 
 #if defined(HAVE_MPI)
     if(mesh%parallel_in_domains) then
-      call MPI_Allreduce(ruvpsi, ruvpsi_tmp, 4, MPI_CMPLX, MPI_SUM, mesh%vp%comm, mpi_err)
-      ruvpsi = ruvpsi_tmp
+      call MPI_Allreduce(rkb_uvpsi, rkb_uvpsi_tmp, 4, MPI_CMPLX, MPI_SUM, mesh%vp%comm, mpi_err)
+      rkb_uvpsi = rkb_uvpsi_tmp
     end if
 #endif
 
     if(simul_box_is_periodic(mesh%sb)) then
-      call rkb_project_ket(mesh, pj%sphere, pj%rkb_p, ruvpsi, ppsi, phase = pj%phase(:, ik))
+      call rkb_project_ket(mesh, pj%sphere, pj%rkb_p, rkb_uvpsi, ppsi, phase = pj%phase(:, ik))
     else
-      call rkb_project_ket(mesh, pj%sphere, pj%rkb_p, ruvpsi, ppsi)
+      call rkb_project_ket(mesh, pj%sphere, pj%rkb_p, rkb_uvpsi, ppsi)
     end if
 
-    call pop_sub()
-    return
-
-  end if
 #endif
 
-  n_s = pj%sphere%ns
+  case(M_HGH)
 
-  ALLOCATE(lpsi(n_s, dim),  n_s*dim)
-  ALLOCATE(plpsi(n_s, dim), n_s*dim)
-
-  do idim = 1, dim
     if(simul_box_is_periodic(mesh%sb)) then
-      lpsi(1:n_s, idim) = psi(pj%sphere%jxyz(1:n_s), idim) * pj%phase(1:n_s, ik)
+      call X(hgh_project_bra)(mesh, pj%sphere, pj%hgh_p, dim, reltype, psi, hgh_uvpsi, phase = pj%phase(:, ik))
     else
-      lpsi(1:n_s, idim) = psi(pj%sphere%jxyz(1:n_s), idim)
+      call X(hgh_project_bra)(mesh, pj%sphere, pj%hgh_p, dim, reltype, psi, hgh_uvpsi)
     end if
-  end do
 
-  call X(project_sphere)(mesh, pj, dim, lpsi, plpsi, reltype)
+#if defined(HAVE_MPI)
+    if(mesh%parallel_in_domains) then
+      call MPI_Allreduce(hgh_uvpsi, hgh_uvpsi_tmp, 24, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
+      hgh_uvpsi = hgh_uvpsi_tmp
+    end if
+#endif
 
-  do idim = 1, dim
     if(simul_box_is_periodic(mesh%sb)) then
-      ppsi(pj%sphere%jxyz(1:n_s), idim) = ppsi(pj%sphere%jxyz(1:n_s), idim)&
-        + plpsi(1:n_s, idim)*conjg(pj%phase(1:n_s, ik))
+      call X(hgh_project_ket)(mesh, pj%sphere, pj%hgh_p, dim, reltype, hgh_uvpsi, ppsi, phase = pj%phase(:, ik))
     else
-      ppsi(pj%sphere%jxyz(1:n_s), idim) = ppsi(pj%sphere%jxyz(1:n_s), idim) + plpsi(1:n_s, idim)
+      call X(hgh_project_ket)(mesh, pj%sphere, pj%hgh_p, dim, reltype, hgh_uvpsi, ppsi)
     end if
-  end do
 
-  if(allocated(lpsi))   deallocate(lpsi)
-  if(allocated(plpsi))  deallocate(plpsi)
+  end select
 
   call pop_sub()
 end subroutine X(project_psi)

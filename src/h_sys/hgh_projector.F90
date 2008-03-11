@@ -42,6 +42,10 @@ module hgh_projector_m
        hgh_projector_null,           &
        hgh_projector_init,           &
        dhgh_project, zhgh_project,   &
+       dhgh_project_bra,             &
+       zhgh_project_bra,             &
+       dhgh_project_ket,             &
+       zhgh_project_ket,             &
        hgh_projector_end
 
   
