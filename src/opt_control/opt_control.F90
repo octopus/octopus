@@ -88,8 +88,7 @@ contains
     FLOAT :: j1, fluence
     type(states_t) :: psi
 
-    call tdf_set_numerical(par_%f(1), x)
-
+    call parameters_x_to_par(par_, x)
     call parameters_to_realtime(par_)
     call parameters_to_h(par_, h_%ep)
     call states_copy(psi, psi_)
@@ -106,7 +105,6 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Same as write_iter_info_ng, but without the gradients.
   subroutine direct_opt_write_info(geom_iter, n, energy, maxdx, x)
     integer, intent(in) :: geom_iter, n
     real(8), intent(in) :: energy, maxdx
@@ -114,13 +112,14 @@ contains
 
     FLOAT :: fluence, j, j1, j2
 
-    call tdf_set_numerical(par_%f(1), x)
+    call parameters_x_to_par(par_, x)
 
     iterator_%ctr_iter = geom_iter
     call iteration_manager_direct(energy, par_, iterator_, maxdx)
     if(oct_%dump_intermediate) call iterator_write(iterator_, psi_, par_, sys_%gr, sys_%outp)
 
   end subroutine direct_opt_write_info
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
@@ -175,7 +174,7 @@ contains
     call states_copy(psi, initial_st)
 
     ! mode switcher
-    select case(oct%algorithm_type)
+    select case(oct%algorithm)
       case(oct_algorithm_zbr98)
         message(1) = "Info: Starting OCT iteration using scheme: ZBR98"
         call write_info(1)
@@ -397,10 +396,8 @@ contains
       g = - j1 + par%alpha(1) * (fluence - par%targetfluence)**2
       call iteration_manager_direct(g, par, iterator)
 
-      do j =  1, par%nfreqs
-        x(j) = tdf(par%f(1), j)
-      end do
-      step = CNST(0.5) * sqrt(par%targetfluence / par%nfreqs)
+      call parameters_par_to_x(par, x)
+      step = oct%direct_step * sqrt(par%targetfluence / par%nfreqs)
       ierr = loct_minimize_direct(MINMETHOD_NMSIMPLEX, par%nfreqs, x(1), step,&
                iterator%eps, iterator%ctr_iter_max, &
                direct_opt_calc, direct_opt_write_info, minvalue)

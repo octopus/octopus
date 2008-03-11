@@ -575,7 +575,7 @@ module opt_control_propagation_m
     end do
 
     d1 = M_z1
-    if(oct%algorithm_type .eq. oct_algorithm_zbr98) d1 = zstates_mpdotp(gr%m, psi, chi)
+    if(oct%algorithm .eq. oct_algorithm_zbr98) d1 = zstates_mpdotp(gr%m, psi, chi)
 
     select case(dir)
       case('f')

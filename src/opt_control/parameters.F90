@@ -57,7 +57,9 @@ module opt_control_parameters_m
             parameters_to_realtime,       &
             parameters_set_initial,       &
             parameters_fluence,           &
-            parameters_j2
+            parameters_j2,                &
+            parameters_par_to_x,          &
+            parameters_x_to_par
 
   integer, parameter ::                 &
     ctr_parameter_real_space       = 1, &
@@ -128,7 +130,7 @@ contains
     !%Variable OCTParameterOmegaMax
     !%Type float
     !%Section Optimal Control
-    !%Default -1.0
+    !%Default 1.0
     !%Description
     !%
     !%End
@@ -824,6 +826,32 @@ contains
 
   end subroutine parameters_copy
   ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine parameters_par_to_x(par, x)
+    type(oct_control_parameters_t), intent(in)    :: par
+    FLOAT,                          intent(inout) :: x(:)
+    integer :: j
+    ASSERT(par%nfreqs .eq. size(x))
+    ASSERT(par%current_representation .eq. ctr_parameter_frequency_space)
+    do j =  1, par%nfreqs
+      x(j) = tdf(par%f(1), j)
+    end do
+  end subroutine parameters_par_to_x
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine parameters_x_to_par(par, x)
+    type(oct_control_parameters_t), intent(inout) :: par
+    FLOAT,                          intent(in)    :: x(:)
+    ASSERT(par%nfreqs .eq. size(x))
+    ASSERT(par%current_representation .eq. ctr_parameter_frequency_space)
+    call tdf_set_numerical(par%f(1), x)
+  end subroutine parameters_x_to_par
+  ! ---------------------------------------------------------
+
 
 end module opt_control_parameters_m
 

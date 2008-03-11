@@ -81,6 +81,7 @@ contains
     !% necessarily a maximum, and not necessarily the global maximum). 
     !%End
     call loct_parse_float(check_inp('OCTEps'), CNST(1.0e-6), iterator%eps)
+    if(iterator%eps < M_ZERO) iterator%eps = tiny(CNST(1.0))
 
     !%Variable OCTMaxIter
     !%Type integer

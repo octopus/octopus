@@ -76,9 +76,9 @@
     !%Option oct_algorithm_direct 7
     !% Direct optimization
     !%End
-    call loct_parse_int(check_inp('OCTScheme'), oct_algorithm_zr98, oct%algorithm_type)
-    if(.not.varinfo_valid_option('OCTScheme', oct%algorithm_type)) call input_error('OCTScheme')
-    select case(oct%algorithm_type)
+    call loct_parse_int(check_inp('OCTScheme'), oct_algorithm_zr98, oct%algorithm)
+    if(.not.varinfo_valid_option('OCTScheme', oct%algorithm)) call input_error('OCTScheme')
+    select case(oct%algorithm)
     case(oct_algorithm_mt03)
       oct%delta = M_TWO; oct%eta = M_ZERO
     case(oct_algorithm_zr98)
@@ -114,6 +114,15 @@
     !% to work in many cases, but your mileage may vary.
     !%End
     call loct_parse_logical(check_inp('OCTMixing'), .false., oct%use_mixing)
+
+    !%Variable OCTDirectStep
+    !%Type float
+    !%Section Optimal Control
+    !%Default 0.25
+    !%Description 
+    !%
+    !%End
+    call loct_parse_float(check_inp('OCTDirectStep'), CNST(0.25), oct%direct_step)
 
     !%Variable OCTDumpIntermediate
     !%Type logical
@@ -212,23 +221,23 @@
     end if
 
     if((oct%mode_fixed_fluence)) then
-      if( (oct%algorithm_type.ne.oct_algorithm_wg05)     .and. &
-          (oct%algorithm_type.ne.oct_algorithm_str_iter) .and. &
-          (oct%algorithm_type.ne.oct_algorithm_direct) ) then
+      if( (oct%algorithm.ne.oct_algorithm_wg05)     .and. &
+          (oct%algorithm.ne.oct_algorithm_str_iter) .and. &
+          (oct%algorithm.ne.oct_algorithm_direct) ) then
         write(message(1),'(a)') "Cannot optimize to a given fluence with the chosen algorithm."
         write(message(2),'(a)') "Switching to scheme WG05."         
         call write_info(2)
-        oct%algorithm_type = oct_algorithm_wg05
+        oct%algorithm = oct_algorithm_wg05
       end if
     else
-      if( oct%algorithm_type.eq.oct_algorithm_direct) then
+      if( oct%algorithm.eq.oct_algorithm_direct) then
         write(message(1),'(a)') 'The direct QOCT optimization can be only done in fixed-fluence '
         write(message(2),'(a)') 'mode (i.e. use "OCTFixFluenceTo" input variable).'
         call write_fatal(2)
       end if
     end if
 
-    if(oct%algorithm_type .eq. oct_algorithm_zbr98) then
+    if(oct%algorithm .eq. oct_algorithm_zbr98) then
       if( (target%type .ne. oct_tg_groundstate) .and. &
           (target%type .ne. oct_tg_gstransformation) ) then
         write(message(1), '(a)') 'The scheme "OCTScheme = oct_algorithm_zbr98 can only be used if'
@@ -244,7 +253,7 @@
     if(target%type .eq. oct_tg_local .or. &
        target%type .eq. oct_tg_density .or. &
        target%type .eq. oct_tg_td_local) then
-      if(oct%algorithm_type .eq. oct_algorithm_zbr98) then
+      if(oct%algorithm .eq. oct_algorithm_zbr98) then
         write(message(1), '(a)') 'Cannot use ZBR98 OCT scheme if the target is oct_tg_density,'
         write(message(2), '(a)') 'oct_tg_local or oct_tg_td_local.'
         call write_fatal(2)
@@ -302,8 +311,8 @@
     end if
 
     if(oct%mode_basis_set) then
-      if( (oct%algorithm_type .ne. oct_algorithm_str_iter)  .and.  &
-          (oct%algorithm_type .ne. oct_algorithm_direct) ) then
+      if( (oct%algorithm .ne. oct_algorithm_str_iter)  .and.  &
+          (oct%algorithm .ne. oct_algorithm_direct) ) then
         write(message(1), '(a)') 'If the control parameters are to be represented with a basis set'
         write(message(2), '(a)') '(i.e. "OCTParameterRepresentation = control_parameters_fourier_space"),'
         write(message(3), '(a)') 'the only acceptable algorithms are:'
@@ -313,7 +322,7 @@
       endif
     end if
 
-    if(oct%algorithm_type .eq. oct_algorithm_direct) then
+    if(oct%algorithm .eq. oct_algorithm_direct) then
       if(.not.oct%mode_basis_set) then
         write(message(1), '(a)') 'If you want to use "OCTScheme = oct_algorithm_direct", then you'
         write(message(2), '(a)') 'must represent the control parameters with a basis set (i.e.'

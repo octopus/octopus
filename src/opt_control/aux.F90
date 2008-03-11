@@ -262,7 +262,7 @@
       olap = zstates_mpdotp(gr%m, target%st, psi_in)
       do ik = 1, psi_in%d%nik
         do p  = psi_in%st_start, psi_in%st_end
-          select case(oct%algorithm_type)
+          select case(oct%algorithm)
             case(oct_algorithm_zbr98)
               chi_out%zpsi(:, :, p, ik) = target%st%zpsi(:, :, p, ik)
             case default
