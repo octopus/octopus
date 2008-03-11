@@ -256,7 +256,7 @@ subroutine states_choose_kpoints(d, sb, geo)
   
   ! double d%nik and copy points for spin polarized calc
   select case(d%ispin)
-  case(1)
+  case(UNPOLARIZED, SPINORS)
     d%nik = nk
     ALLOCATE(d%kpoints(3, d%nik), 3*d%nik)
     ALLOCATE(d%kweights  (d%nik),   d%nik)
@@ -264,7 +264,7 @@ subroutine states_choose_kpoints(d, sb, geo)
       d%kpoints(i, 1:d%nik) = kp(i, 1:d%nik)*sb%klattice(i,i)
     end do
     d%kweights(1:d%nik) = kw(1:d%nik)
-  case(2)
+  case(SPIN_POLARIZED)
     d%nik = 2 * nk
     ALLOCATE(d%kpoints(3, d%nik), 3*d%nik)
     ALLOCATE(d%kweights  (d%nik),   d%nik)
