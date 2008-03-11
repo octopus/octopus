@@ -65,7 +65,7 @@ subroutine X(kb_project_bra)(mesh, sm, kb_p, dim, psi, uvpsi, phase)
   integer,              intent(in)  :: dim
   R_TYPE,               intent(in)  :: psi(:, :)  ! psi(1:NP, 1:dim)
   R_TYPE,               intent(out) :: uvpsi(1:2)
-  CMPLX, optional,      intent(in)  :: phase(:)
+  CMPLX,                pointer     :: phase(:)
 
   integer :: ic, idim, ns, ip, is
   R_TYPE, allocatable :: kp(:, :)
@@ -88,7 +88,7 @@ subroutine X(kb_project_bra)(mesh, sm, kb_p, dim, psi, uvpsi, phase)
     end do
   end if
 
-  if(present(phase)) then
+  if(associated(phase)) then
     do ic = 1, kb_p%n_c
       kp(1:ns, ic) = kp(1:ns, ic)*phase(1:ns)
     end do
@@ -116,7 +116,7 @@ subroutine X(kb_project_ket)(mesh, sm, kb_p, dim, uvpsi, psi, phase)
   integer,              intent(in)    :: dim
   R_TYPE,               intent(in)    :: uvpsi(1:2)
   R_TYPE,               intent(inout) :: psi(:, :) ! psi(1:NP, 1:dim)
-  CMPLX, optional,      intent(in)    :: phase(:)
+  CMPLX,                pointer       :: phase(:)
 
   integer :: ic, idim, ns, ip, is
 
@@ -124,7 +124,7 @@ subroutine X(kb_project_ket)(mesh, sm, kb_p, dim, uvpsi, psi, phase)
 
   ns = kb_p%n_s
 
-  if(present(phase)) then
+  if(associated(phase)) then
 
     do idim = 1, dim
       do is = 1, ns

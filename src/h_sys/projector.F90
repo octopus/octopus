@@ -65,6 +65,8 @@ module projector_m
        M_KB  = 2, &
        M_RKB = 3
 
+  integer, parameter :: MAX_REDUCE_SIZE = 24
+
   ! The projector data type is intended to hold the local and
   ! non-local parts of the pseudopotentials. The definition of the
   ! action of a projector (which is done through the X(project)
@@ -78,6 +80,7 @@ module projector_m
 
   type projector_t
     integer :: type
+    integer :: reduce_size
     integer :: iatom
     integer :: l
     integer :: lm
@@ -135,6 +138,15 @@ contains
       p%type = M_HGH
     end select
     
+    select case(p%type)
+    case(M_KB)
+      p%reduce_size = 2
+    case(M_RKB)
+      p%reduce_size = 4
+    case(M_HGH)
+      p%reduce_size = 24
+    end select
+
     call pop_sub()
   end subroutine projector_init
 

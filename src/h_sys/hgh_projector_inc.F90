@@ -106,7 +106,7 @@ subroutine X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi, phase)
   integer,               intent(in)  :: reltype
   R_TYPE,                intent(in)  :: psi(:, :)
   R_TYPE,                intent(out) :: uvpsi(1:2, 1:4, 1:3)
-  CMPLX, optional,       intent(in)  :: phase(:)
+  CMPLX,                 pointer     :: phase(:)
 
   integer :: n_s, jj, idim, kk
   R_TYPE, allocatable :: bra(:, :, :)
@@ -136,7 +136,7 @@ subroutine X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi, phase)
     bra(1:n_s, 4, 1:3) = hgh_p%p(1:n_s, 1:3)*mesh%vol_pp(1)
   end if
 
-  if(present(phase)) then
+  if(associated(phase)) then
     do kk = 1, 4
       do jj = 1, 3
         bra(1:n_s, kk, jj) = bra(1:n_s, kk, jj)*phase(1:n_s)
@@ -164,7 +164,7 @@ subroutine X(hgh_project_ket)(mesh, sm, hgh_p, dim, reltype, uvpsi, ppsi, phase)
   integer,               intent(in)    :: reltype
   R_TYPE,                intent(in)    :: uvpsi(1:2, 1:4, 1:3)
   R_TYPE,                intent(inout) :: ppsi(:, :)
-  CMPLX, optional,       intent(in)    :: phase(:)
+  CMPLX,                 pointer       :: phase(:)
 
   integer :: n_s, ii, jj, idim
   integer :: kk
@@ -175,7 +175,7 @@ subroutine X(hgh_project_ket)(mesh, sm, hgh_p, dim, reltype, uvpsi, ppsi, phase)
   do idim = 1, dim
     do jj = 1, 3
       do ii = 1, 3
-        if(.not. present(phase)) then
+        if(.not. associated(phase)) then
           ppsi(sm%jxyz(1:n_s), idim) = ppsi(sm%jxyz(1:n_s), idim) + hgh_p%h(ii, jj)*uvpsi(idim, 4, jj)*hgh_p%p(1:n_s, ii)
         else
           ppsi(sm%jxyz(1:n_s), idim) = ppsi(sm%jxyz(1:n_s), idim) &
@@ -202,7 +202,7 @@ subroutine X(hgh_project_ket)(mesh, sm, hgh_p, dim, reltype, uvpsi, ppsi, phase)
       end do
     end do
     
-    if(present(phase)) then
+    if(associated(phase)) then
       do idim = 1, dim
         do kk = 1, 3
           lp_psi(1:n_s, kk, idim) = lp_psi(1:n_s, kk, idim)*conjg(phase(1:n_s))

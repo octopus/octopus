@@ -17,7 +17,7 @@
 !!
 !! $Id$
 
-!------------------------------------------------------------------------------
+!------ -----------------------------------------------------------------------
 ! X(project_psi) calculates the action of a projector on the psi wavefunction.
 ! The result is summed up to ppsi
 subroutine X(project_psi)(mesh, pj, dim, psi, ppsi, reltype, ik)
@@ -29,89 +29,48 @@ subroutine X(project_psi)(mesh, pj, dim, psi, ppsi, reltype, ik)
   integer,           intent(in)    :: reltype
   integer,           intent(in)    :: ik
 
-  integer :: n_s, idim
-  R_TYPE, allocatable :: lpsi(:, :), plpsi(:,:)
-  R_TYPE :: kb_uvpsi(1:2), rkb_uvpsi(1:2, 1:2), hgh_uvpsi(1:2, 1:4, 1:3)
+  R_TYPE :: uvpsi(1:MAX_REDUCE_SIZE)
+  CMPLX, pointer :: phase(:)
 #if defined(HAVE_MPI)
-  R_TYPE :: kb_uvpsi_tmp(1:2), rkb_uvpsi_tmp(1:2, 1:2), hgh_uvpsi_tmp(1:2, 1:4, 1:3)
+  R_TYPE :: uvpsi_tmp(1:MAX_REDUCE_SIZE)
 #endif
 
   call push_sub('projector_inc.project_psi')
 
+  nullify(phase)
+  if(simul_box_is_periodic(mesh%sb)) phase => pj%phase(:, ik)
+
+  ! calculate <p|psi>
   select case(pj%type)
-    
   case(M_KB)
-    
-    ! <p|psi>
-    if(simul_box_is_periodic(mesh%sb)) then
-      call X(kb_project_bra)(mesh, pj%sphere, pj%kb_p, dim, psi, kb_uvpsi, phase = pj%phase(:, ik))
-    else
-      call X(kb_project_bra)(mesh, pj%sphere, pj%kb_p, dim, psi, kb_uvpsi)
-    end if
-
-#if defined(HAVE_MPI)
-    if(mesh%parallel_in_domains) then
-      call MPI_Allreduce(kb_uvpsi, kb_uvpsi_tmp, 2, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
-      kb_uvpsi = kb_uvpsi_tmp
-    end if
-#endif
-
-    kb_uvpsi(1:2) = kb_uvpsi(1:2)*pj%kb_p%e(1:2)
-
-    ! |ppsi> += |p><p|psi>
-    if(simul_box_is_periodic(mesh%sb)) then
-      call X(kb_project_ket)(mesh, pj%sphere, pj%kb_p, dim, kb_uvpsi, ppsi, phase = pj%phase(:, ik))
-    else
-      call X(kb_project_ket)(mesh, pj%sphere, pj%kb_p, dim, kb_uvpsi, ppsi)
-    end if
-
-
+    call X(kb_project_bra)(mesh, pj%sphere, pj%kb_p, dim, psi, uvpsi, phase)
   case(M_RKB)
-
 #ifdef R_TCOMPLEX
-
-    if(simul_box_is_periodic(mesh%sb)) then
-      call rkb_project_bra(mesh, pj%sphere, pj%rkb_p, psi, rkb_uvpsi, phase = pj%phase(:, ik))
-    else
-      call rkb_project_bra(mesh, pj%sphere, pj%rkb_p, psi, rkb_uvpsi)
-    end if
-
-#if defined(HAVE_MPI)
-    if(mesh%parallel_in_domains) then
-      call MPI_Allreduce(rkb_uvpsi, rkb_uvpsi_tmp, 4, MPI_CMPLX, MPI_SUM, mesh%vp%comm, mpi_err)
-      rkb_uvpsi = rkb_uvpsi_tmp
-    end if
+    call rkb_project_bra(mesh, pj%sphere, pj%rkb_p, psi, uvpsi, phase)
 #endif
-
-    if(simul_box_is_periodic(mesh%sb)) then
-      call rkb_project_ket(mesh, pj%sphere, pj%rkb_p, rkb_uvpsi, ppsi, phase = pj%phase(:, ik))
-    else
-      call rkb_project_ket(mesh, pj%sphere, pj%rkb_p, rkb_uvpsi, ppsi)
-    end if
-
-#endif
-
   case(M_HGH)
+    call X(hgh_project_bra)(mesh, pj%sphere, pj%hgh_p, dim, reltype, psi, uvpsi, phase)
+  end select
 
-    if(simul_box_is_periodic(mesh%sb)) then
-      call X(hgh_project_bra)(mesh, pj%sphere, pj%hgh_p, dim, reltype, psi, hgh_uvpsi, phase = pj%phase(:, ik))
-    else
-      call X(hgh_project_bra)(mesh, pj%sphere, pj%hgh_p, dim, reltype, psi, hgh_uvpsi)
-    end if
-
+  ! reduce <p|psi>
 #if defined(HAVE_MPI)
-    if(mesh%parallel_in_domains) then
-      call MPI_Allreduce(hgh_uvpsi, hgh_uvpsi_tmp, 24, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
-      hgh_uvpsi = hgh_uvpsi_tmp
-    end if
+  if(mesh%parallel_in_domains) then
+    call MPI_Allreduce(uvpsi, uvpsi_tmp, pj%reduce_size, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
+    uvpsi(1:pj%reduce_size) = uvpsi_tmp(1:pj%reduce_size)
+  end if
 #endif
-
-    if(simul_box_is_periodic(mesh%sb)) then
-      call X(hgh_project_ket)(mesh, pj%sphere, pj%hgh_p, dim, reltype, hgh_uvpsi, ppsi, phase = pj%phase(:, ik))
-    else
-      call X(hgh_project_ket)(mesh, pj%sphere, pj%hgh_p, dim, reltype, hgh_uvpsi, ppsi)
-    end if
-
+  
+  ! calculate |ppsi> += |p><p|psi>
+  select case(pj%type)
+  case(M_KB)
+    uvpsi(1:2) = uvpsi(1:2)*pj%kb_p%e(1:2)
+    call X(kb_project_ket)(mesh, pj%sphere, pj%kb_p, dim, uvpsi, ppsi, phase)
+  case(M_RKB)
+#ifdef R_TCOMPLEX
+    call rkb_project_ket(mesh, pj%sphere, pj%rkb_p, uvpsi, ppsi, phase)
+#endif
+  case(M_HGH)
+    call X(hgh_project_ket)(mesh, pj%sphere, pj%hgh_p, dim, reltype, uvpsi, ppsi, phase)
   end select
 
   call pop_sub()
@@ -134,19 +93,18 @@ R_TYPE function X(psia_project_psib)(mesh, pj, dim, psia, psib, reltype, ik) res
 #if defined(HAVE_MPI)
   R_TYPE :: uvpsi_tmp(1:2, 1:2)
 #endif
+  CMPLX, pointer :: phase(:)
 
   call push_sub('projector_inc.psia_project_psib')
 
   if(pj%type == M_KB) then
 
+    nullify(phase)
+    if(simul_box_is_periodic(mesh%sb)) phase => pj%phase(:, ik)
+    
     ! <p|psia> and <p|psib>
-    if(simul_box_is_periodic(mesh%sb)) then
-      call X(kb_project_bra)(mesh, pj%sphere, pj%kb_p, dim, psia, uvpsi(:, 1), phase = pj%phase(:, ik))
-      call X(kb_project_bra)(mesh, pj%sphere, pj%kb_p, dim, psib, uvpsi(:, 2), phase = pj%phase(:, ik))
-    else
-      call X(kb_project_bra)(mesh, pj%sphere, pj%kb_p, dim, psia, uvpsi(:, 1))
-      call X(kb_project_bra)(mesh, pj%sphere, pj%kb_p, dim, psib, uvpsi(:, 2))
-    end if
+    call X(kb_project_bra)(mesh, pj%sphere, pj%kb_p, dim, psia, uvpsi(:, 1), phase)
+    call X(kb_project_bra)(mesh, pj%sphere, pj%kb_p, dim, psib, uvpsi(:, 2), phase)
 
 #if defined(HAVE_MPI)
     if(mesh%parallel_in_domains) then

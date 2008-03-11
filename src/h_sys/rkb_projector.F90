@@ -198,7 +198,7 @@ contains
     type(rkb_projector_t), intent(in)  :: rkb_p
     CMPLX,                 intent(in)  :: psi(:, :)
     CMPLX,                 intent(out) :: uvpsi(1:2, 1:2)    
-    CMPLX, optional,       intent(in)  :: phase(:)
+    CMPLX,                 pointer     :: phase(:)
 
     integer :: idim, n_s, ip, is
 
@@ -219,7 +219,7 @@ contains
       bra(1:n_s, 1:2) = rkb_p%bra(1:n_s, 1:2)*mesh%vol_pp(1)
     end if
 
-    if(present(phase)) then
+    if(associated(phase)) then
       bra(1:n_s, 1) = bra(1:n_s, 1)*phase(1:n_s)
       bra(1:n_s, 2) = bra(1:n_s, 2)*phase(1:n_s)
     end if
@@ -242,7 +242,7 @@ contains
     type(rkb_projector_t), intent(in)    :: rkb_p
     CMPLX,                 intent(in)    :: uvpsi(1:2, 1:2)
     CMPLX,                 intent(inout) :: psi(:, :)
-    CMPLX, optional,       intent(in)    :: phase(:)
+    CMPLX,                 pointer       :: phase(:)
 
     integer :: idim, jdim, n_s, ip, is
     CMPLX :: aa
@@ -251,7 +251,7 @@ contains
 
     n_s = rkb_p%n_s
 
-    if(.not. present(phase)) then
+    if(.not. associated(phase)) then
       
       do jdim = 1, 2
         do is = 1, n_s
