@@ -27,6 +27,8 @@ module math_m
   use lalg_basic_m
   use loct_math_m
   use messages_m
+  use loct_m
+  use blas_m
 
   implicit none
 
@@ -34,6 +36,7 @@ module math_m
   public ::                     &
     dconjugate_gradients,       &
     zconjugate_gradients,       &
+    zqmr_sym,                   &
     dparker_traub,              &
     zparker_traub,              &
     dmatrix_newton_raphson,     &
@@ -753,6 +756,159 @@ contains
 
     call pop_sub()
   end function member
+
+! ---------------------------------------------------------
+! QMR (quasi-minimal residual) algorithm for complex symmetric matrices
+subroutine zqmr_sym(np, x, b, op, prec, iter, residue, threshold, showprogress)
+  integer, intent(in)             :: np
+  CMPLX,  intent(inout)           :: x(:)
+  CMPLX,  intent(in)              :: b(:)
+  interface
+    subroutine op(x, y)
+      CMPLX, intent(in)           :: x(:)
+      CMPLX, intent(out)          :: y(:)
+    end subroutine op
+  end interface
+  interface
+    subroutine prec(x, y)
+      CMPLX, intent(in)           :: x(:)
+      CMPLX, intent(out)          :: y(:)
+    end subroutine prec
+  end interface
+  integer,          intent(inout) :: iter
+  FLOAT, optional, intent(out)    :: residue
+  FLOAT, optional,  intent(in)    :: threshold
+  logical, optional, intent(in)   :: showprogress
+
+  CMPLX, allocatable  :: r(:), v(:), z(:), q(:), p(:), deltax(:), deltar(:)
+  CMPLX               :: eta, delta, epsilon, beta
+  FLOAT               :: rho, xsi, gamma, alpha, theta, threshold_, res, oldtheta, oldgamma, oldrho
+  integer             :: max_iter, err
+  logical             :: showprogress_
+
+  call push_sub('math_cg_inc.zqmr_sym_x')
+
+  if(present(threshold)) then
+    threshold_ = threshold
+  else
+    threshold_ = CNST(1.0e-6)
+  end if
+
+  if(present(showprogress)) then
+    showprogress_ = showprogress
+  else
+    showprogress_ = .false.
+  end if
+
+  ALLOCATE( r(np), np)
+  ALLOCATE( v(np), np)
+  ALLOCATE( z(np), np)
+  ALLOCATE( q(np), np)
+  ALLOCATE( p(np), np)
+  ALLOCATE( deltax(np), np)
+  ALLOCATE( deltar(np), np)
+
+  x(:) = M_z0
+  call lalg_copy(np, b, r)
+  call lalg_copy(np, b, v)
+  rho = lalg_nrm2(np, b)
+  call prec(b, z)
+  xsi = lalg_nrm2(np, z)
+  gamma = M_ONE
+  eta = -M_z1
+  alpha = M_ONE
+  
+  ! initialize progress bar
+  if (showprogress_) call loct_progress_bar(-1, iter)
+
+  max_iter = iter
+  iter     = 1
+  err = 0
+  do while(iter < max_iter)
+    if((abs(rho) < M_EPSILON) .or. (abs(xsi) < M_EPSILON)) then
+      err = 1
+      exit
+    end if
+    alpha = alpha*xsi/rho
+    call lalg_scal(np, M_z1/rho, v)
+    call lalg_scal(np, M_z1/xsi, z)
+    delta = blas_dotu(np, v(1), 1, z(1), 1)
+    if (abs(delta) < M_EPSILON) then
+      err = 2
+      exit
+    end if
+    if (iter == 1) then
+      call lalg_copy(np, z, q)
+    else
+      call lalg_scal(np, -rho*delta/epsilon, q)
+      call lalg_axpy(np, M_z1, z, q)
+    end if
+    call op(q, p)
+    call lalg_scal(np, alpha, p)
+    epsilon = blas_dotu(np, q(1), 1, p(1), 1)
+    if (abs(epsilon) < M_EPSILON) then
+      err = 3
+      exit
+    end if
+    beta = epsilon/delta
+    call lalg_scal(np, -beta, v)
+    call lalg_axpy(np, M_z1, p, v)
+    oldrho = rho
+    rho = lalg_nrm2(np, v)
+    call prec(v, z)
+    call lalg_scal(np, M_z1/alpha, z)
+    xsi = lalg_nrm2(np, z)
+    oldtheta = theta
+    theta = rho/(gamma*abs(beta))
+    oldgamma = gamma
+    gamma = M_ONE/sqrt(M_ONE+theta**2)
+    if (abs(gamma) < M_EPSILON) then
+      err = 4
+      exit
+    end if
+    eta = -eta*oldrho*gamma**2/(beta*oldgamma**2)
+    if (iter == 1) then
+      call lalg_copy(np, q, deltax)
+      call lalg_scal(np, eta*alpha, deltax)
+      call lalg_copy(np, p, deltar)
+      call lalg_scal(np, eta, deltar)
+    else
+      call lalg_scal(np, (oldtheta*gamma)**2, deltax)
+      call lalg_axpy(np, eta, q, deltax)
+      call lalg_scal(np, (oldtheta*gamma)**2, deltar)
+      call lalg_axpy(np, eta, p, deltar)
+    end if
+    call lalg_axpy(np, M_z1, deltax, x)
+    call lalg_axpy(np, -M_z1, deltar, r)
+    res = lalg_nrm2(np,r)/lalg_nrm2(np,x)
+    if (res < threshold_) exit
+    iter = iter + 1
+    if (showprogress_)  call loct_progress_bar(iter, max_iter)
+  end do
+
+  select case(err)
+  case(0)
+    ! converged
+  case(1)
+    write(message(1), '(a)') "QMR failure, can't continue: b or P*b is the zero vector!"
+    call write_fatal(1)
+  case(2)
+    write(message(1), '(a)') "QMR failure, can't continue: v^T*z is zero!"
+    call write_fatal(1)
+  case(3)
+    write(message(1), '(a)') "QMR failure, can't continue: q^T*p is zero!"
+    call write_fatal(1)
+  case(4)
+    write(message(1), '(a)') "QMR failure, can't continue: gamma is zero"
+    call write_fatal(1)
+  end select
+
+  if(present(residue)) residue = res
+
+  deallocate(r, v, z, q, p, deltax, deltar)
+
+  call pop_sub()
+end subroutine zqmr_sym
 
 
 

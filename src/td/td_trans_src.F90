@@ -93,12 +93,38 @@ contains
   end subroutine deriv_coeffs
 
   ! ---------------------------------------------------------
+  ! Read extended states for time t=0
+  subroutine read_psi0_ext(dir, st, psi0, np, gr)
+    character(len=*), intent(in) :: dir ! directory with the extended states
+    type(states_t),   intent(in) :: st  ! states
+    CMPLX,     intent(out)   :: psi0(:, :, :, :, :, :) ! np, (lead=1;center=2), ndim, nst, nik, NLEADS
+    integer,   intent(in)    :: np      ! length of the extended block
+    type(grid_t),  intent(in):: gr
+
+    CMPLX, allocatable :: tmp(:,:,:,:) ! NP+2*np, ndim, nst, nik
+    integer :: ierr
+
+    call push_sub('td_trans_src.read_psi0_ext')
+    ALLOCATE(tmp(NP+2*np, st%d%dim, st%st_start:st%st_end,  st%d%nik), (NP+2*np)*st%d%dim*st%lnst*st%d%nik*NLEADS )
+
+    ! try to read from file
+    psi0 = M_z0
+    call read_binary(NP+2*np, tmp, 3, ierr, trim(dir))
+    psi0(1:np, 1, 1, 1, 1, LEFT)  = tmp(1:np,1,1,1) ! np, (lead=1;center=2), ndim, nst, nik
+    psi0(1:np, 2, 1, 1, 1, LEFT)  = tmp(np+1:2*np,1,1,1) ! np, (lead=1;center=2), ndim, nst, nik
+    psi0(1:np, 1, 1, 1, 1, RIGHT) = tmp(NP+np+1:NP+2*np,1,1,1) ! np, (lead=1;center=2), ndim, nst, nik
+    psi0(1:np, 2, 1, 1, 1, RIGHT) = tmp(NP+1:NP+np,1,1,1) ! np, (lead=1;center=2), ndim, nst, nik 
+
+    call pop_sub()
+  end subroutine read_psi0_ext
+
+  ! ---------------------------------------------------------
   ! Allocate memory for extended groundstate and calculate eigenstates of the lead
   subroutine source_init(st, src_factor, st_sincos, st_psi0, st_phase, dt, energy, qx, max_iter, inp, nst, nik, gr, order, np)
     type(states_t),  intent(in)  :: st
     CMPLX, pointer      :: src_factor(:)       ! max_iter
     CMPLX, pointer      :: st_sincos(:, :, :)  ! np, (sin=1;cos=2;ext_sin=3;ext_cos=4), nleads
-    CMPLX, pointer      :: st_psi0(:, :, :, :, : ,:)  ! np, ndim, nst, nik, nleads, (lead=1;center=2), nleads 
+    CMPLX, pointer      :: st_psi0(:, :, :, :, : ,:)  ! np, (lead=1;center=2), ndim, nst, nik, nleads, nleads 
     FLOAT, pointer      :: st_phase(:, :, :)   ! nleads, phase at the interface
     FLOAT, intent(in)   :: dt, energy, qx      ! timestep, energy
     integer, intent(in) :: max_iter, inp, nst, nik, order, np
@@ -118,8 +144,8 @@ contains
     sqrt2 = sqrt(M_TWO)
     length = 2*order+1
     ALLOCATE(src_factor(0:max_iter), max_iter+1)
-    ALLOCATE(st_sincos(1:inp, 4, NLEADS), inp*4*NLEADS)
-    ALLOCATE(st_psi0(1:inp, 1, st%st_start:st%st_end, st%d%nik, NLEADS, 2), inp*1*(st%st_end-st%st_start)*st%d%nik*2 )
+    ALLOCATE(st_sincos(inp, 4, NLEADS), inp*4*NLEADS)
+    ALLOCATE(st_psi0(inp, 2, 1, st%st_start:st%st_end, st%d%nik, NLEADS), inp*2*1*st%lnst*st%d%nik*NLEADS )
     ALLOCATE(ext_psi0(np+2, 1) , np+2)
     ALLOCATE(st_phase(nst, nik, NLEADS), NLEADS*nst*nik)
     ALLOCATE(coeffs(length,NLEADS),length*NLEADS)
@@ -135,12 +161,15 @@ contains
     do im=1, max_iter
       src_factor(im) = src_factor(im-1) * factor
     end do
+    ! read the extended blocks of the wave funtion
+    ! left block
     st_psi0 = M_z0
-    call read_binary(NP+2, ext_psi0, 3, ierr, '/home/nitsche/octopus_n/oct_extended_initial_state.obf')
-    st_psi0(1, 1, 1, 1, 1 ,1) = ext_psi0(1,1) ! np, ndim, nst, nik, nleads, (lead=1;center=2), nleads 
-    st_psi0(1, 1, 1, 1, 2 ,1) = ext_psi0(2,1) ! np, ndim, nst, nik, nleads, (lead=1;center=2), nleads 
-    st_psi0(1, 1, 1, 1, 1 ,2) = ext_psi0(np+2,1) ! np, ndim, nst, nik, nleads, (lead=1;center=2), nleads 
-    st_psi0(1, 1, 1, 1, 2 ,2) = ext_psi0(np+1,1) ! np, ndim, nst, nik, nleads, (lead=1;center=2), nleads 
+    !call read_binary(NP+2, ext_psi0, 3, ierr, '/home/nitsche/octopus_n/oct_extended_initial_state.obf')
+    !call read_psi0_ext('/home/nitsche/octopus_n/oct_extended_initial_state.obf', st, st_psi0, inp, gr)
+    !st_psi0(1, 1, 1, 1, 1 ,1) = ext_psi0(1,1) ! np, ndim, nst, nik, nleads, (lead=1;center=2), nleads 
+    !st_psi0(1, 2, 1, 1, 1 ,1) = ext_psi0(2,1) ! np, ndim, nst, nik, nleads, (lead=1;center=2), nleads 
+    !st_psi0(1, 1, 1, 1, 1 ,2) = ext_psi0(np+2,1) ! np, ndim, nst, nik, nleads, (lead=1;center=2), nleads 
+    !st_psi0(1, 2, 1, 1, 1 ,2) = ext_psi0(np+1,1) ! np, ndim, nst, nik, nleads, (lead=1;center=2), nleads 
 
     ! now generate the extended eigenstate with separated x-wavefunction
     ! yet only for a box psi=psi(x)*psi(y)*psi(z)
@@ -151,7 +180,8 @@ contains
     ! subtract the transversal energy from the total energy to get the longitudinal part
     ! which is the energy used for the transport
     do id=2, gr%sb%dim ! FIXME: when the last gridpoint is not the border, recalculate transversal energy
-      en = en - M_HALF*(M_PI/(M_TWO*(lsize(id)+spacing)))**2
+      en = en - M_HALF*(M_PI/(M_TWO*(lsize(id))))**2
+      !en = en - M_HALF*(M_PI/(M_TWO*(lsize(id)+spacing)))**2
       !en = en - (M_ONE-cos(M_PI/(M_TWO*(lsize(id)+spacing))))
     end do
     if(en.le.M_ZERO) then

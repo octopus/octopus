@@ -260,13 +260,14 @@ end subroutine zgeneigensolve
 
 
 ! ---------------------------------------------------------
-! Computes all the eigenvalues and the eigenvectors of a complex
+! Computes all the eigenvalues and the right (left) eigenvectors of a complex
 ! generalized (non hermitian) eigenproblem, of the form  A*x=(lambda)*x
-subroutine zgeneigensolve_nonh(n, a, e, err_code)
-  integer,           intent(in)    :: n
-  CMPLX,             intent(inout) :: a(n,n)
-  CMPLX,             intent(out)   :: e(n)
-  integer, optional, intent(out)   :: err_code
+subroutine zgeneigensolve_nonh(n, a, e, err_code, side)
+  integer,           intent(in)      :: n
+  CMPLX,             intent(inout)   :: a(n,n)
+  CMPLX,             intent(out)     :: e(n)
+  integer, optional, intent(out)     :: err_code
+  character(1), optional, intent(in) :: side ! which eigenvectors ('L' or 'R')
 
   interface
     subroutine ZLAPACK(geev) (jobvl, jobvr, n, a, lda, w, vl, ldvl, vr, ldvr, work, lwork, rwork, info)
@@ -283,6 +284,13 @@ subroutine zgeneigensolve_nonh(n, a, e, err_code)
   integer            :: info, lwork
   FLOAT, allocatable :: rwork(:)
   CMPLX, allocatable :: work(:), vl(:, :) ,vr(:, :)
+  character(1)       :: side_
+
+  if (present(side)) then
+    side_ = side
+  else
+    side_ = 'R'
+  end if
 
   lwork = -1
   ALLOCATE(work(1), 1)
@@ -290,15 +298,22 @@ subroutine zgeneigensolve_nonh(n, a, e, err_code)
   ALLOCATE(vr(1, 1), 1)
   ALLOCATE(rwork(1), 1)
   call ZLAPACK(geev) ('N', 'V', n, a(1, 1), n, e(1), vl(1, 1), 1, vr(1, 1), n, work(1), lwork, rwork(1), info)
+    
   lwork = int(real(work(1)))
   deallocate(work, vl, vr, rwork)
   
 
-  ALLOCATE(vr(n,n), n*n)
   ALLOCATE(work(lwork), lwork)
   ALLOCATE(rwork(max(1, 2*n)), max(1, 2*n))
-  ALLOCATE(vl(1, 1), 1)
-  call ZLAPACK(geev) ('N', 'V', n, a(1, 1), n, e(1), vl(1, 1), 1, vr(1,1), n, work(1), lwork, rwork(1), info)
+  if (side_.eq.'L'.or.side_.eq.'l') then
+      ALLOCATE(vl(n,n), n*n)
+      ALLOCATE(vr(1, 1), 1)
+      call ZLAPACK(geev) ('V', 'N', n, a(1, 1), n, e(1), vl(1, 1), n, vr(1,1), 1, work(1), lwork, rwork(1), info)
+  else
+      ALLOCATE(vl(1, 1), 1)
+      ALLOCATE(vr(n,n), n*n)
+      call ZLAPACK(geev) ('N', 'V', n, a(1, 1), n, e(1), vl(1, 1), 1, vr(1,1), n, work(1), lwork, rwork(1), info)
+  end if
   a(:, :) = vr(:, :)
   deallocate(work, rwork, vr, vl)
 

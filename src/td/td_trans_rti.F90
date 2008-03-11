@@ -32,7 +32,6 @@ module td_trans_rti_m
   use math_m
   use mesh_function_m
   use messages_m
-  use sparskit_m
   use states_m
   use td_exp_m
   use td_trans_mem_m
@@ -55,9 +54,9 @@ module td_trans_rti_m
   ! Pointers for the h_eff_backward(t) operator for the iterative linear solver.
   type(hamiltonian_t), pointer :: h_p
   type(grid_t), pointer        :: gr_p
-  CMPLX, pointer               :: mem_p(:, :, :), sp_mem_p(:, :), mem_s_p(:, :, :, :)
+  CMPLX, pointer               :: mem_p(:, :, :), sp_mem_p(:, :), mem_s_p(:, :, :, :), green_l_p(:, :, :)
   type(intface_t), pointer     :: intf_p
-  FLOAT, pointer               :: dt_p, t_p
+  FLOAT, pointer               :: dt_p, t_p, energy_p
   integer, pointer             :: ist_p, ik_p, mem_type_p, mapping_p(:)
 
   public ::          &
@@ -83,7 +82,7 @@ module td_trans_rti_m
 
     CMPLX, pointer   :: st_intface(:, :, :, :, :) ! np_intf, nst, nik, nleads, max_iter
     CMPLX, pointer   :: st_sincos(:, :, :) ! np, (sin=1;cos=2,modsin=3,modcos=4), nleads
-    CMPLX, pointer   :: st_psi0(:, :, :, :, :, :) ! np, ndim, nst, nik, nleads, (lead=1;center=2)
+    CMPLX, pointer   :: st_psi0(:, :, :, :, :, :) ! np, (lead=1;center=2), ndim, nst, nik, nleads
     FLOAT, pointer   :: st_phase(:, :, :)   ! nst, nik, nleads; phaseshift of lead eigenfunction at the interface
 
     type(trans_lead_t) :: lead
@@ -273,7 +272,7 @@ energy = 0.2
 
     character(len=64) :: terms, mem_type_name
 
-    call push_sub('td_transport.td_transport_write_info')
+    call push_sub('td_trans_rti.td_transport_write_info')
 
     call messages_print_stress(stdout, 'Transport')
 
@@ -329,7 +328,7 @@ energy = 0.2
     integer         :: lshift, length, ik, ist
     FLOAT           :: denom, energy
 
-    call push_sub('td_transport.calculate_phase_shift')
+    call push_sub('td_trans_rti.calculate_phase_shift')
 
     ! the number of derivative coefficients
     length = 2*order+1
@@ -389,7 +388,7 @@ energy = 0.2
     FLOAT,      intent(in) :: q   ! q = sqrt(2*(en-u))
 
     FLOAT   :: l_fac, r_fac
-    call push_sub('td_transport.scaling_factor')
+    call push_sub('td_trans_rti.scaling_factor')
 
     l_fac = M_ONE
     r_fac = M_ONE
@@ -425,7 +424,7 @@ energy = 0.2
     CMPLX, allocatable  :: x(:,:), s(:,:), sub_o(:,:), sub_d(:,:), d(:), tmp(:,:)
     FLOAT               :: det
 
-    call push_sub('td_trans_mem.green_lead')
+    call push_sub('td_trans_rti.green_lead')
 
     ALLOCATE(x(2*np,2*np),4*np**2)
     ALLOCATE(s(2*np,2*np),4*np**2)
@@ -497,6 +496,15 @@ energy = 0.2
       call zgemm('N','N',np,np,np,M_z1,tmp,np,sub_o,np,M_z0,green,np)
       call lalg_trmm(np,np,'L','T','L',M_z1,offdiag,green)
     end if
+    ! now check if we have the correct solution: Im(Tr(g))<0
+    ! if this is not the case just take the conjugate
+    det = aimag(green(1,1))
+    do i=2,np
+      det = det + aimag(green(i,i))
+    end do
+    if (det.gt.M_ZERO) then
+      green = conjg(green)
+    end if
 
     deallocate(x, s, sub_o, sub_d, d, tmp)
     call pop_sub()
@@ -509,7 +517,7 @@ energy = 0.2
     integer,        intent(in) :: np
 
     integer :: i,j
-    call push_sub('td_transport.is_complex')
+    call push_sub('td_trans_rti.is_complex')
 
     is_complex = .false.
     mat_loop: do j=1,np
@@ -549,7 +557,7 @@ energy = 0.2
     integer            :: i
     FLOAT              :: eta, dos, q, fac
 
-    call push_sub('td_trans_mem.ext_eigenst_imag_green')
+    call push_sub('td_trans_rti.ext_eigenst_imag_green')
 
     ALLOCATE(der_coeff(2*order+1, NLEADS),(2*order+1)*NLEADS)
     ALLOCATE(green_l(np, np, NLEADS),np**2*NLEADS)
@@ -645,10 +653,179 @@ write(*,*) 'state 2', st%zpsi(:,1,st%st_start+1,ik)
   end subroutine ext_eigenst_imag_green
 
   ! ---------------------------------------------------------
+  ! the left side of the Lippmann-Schwinger equation
+  ! e-H_cc+V(lead)-sum(a)[H_ca*g_a*H_ac]
+  ! Used by the iterative linear solver.
+  subroutine h_eff_lip_sch(x, y)
+    CMPLX, intent(in)  :: x(:)
+    CMPLX, intent(out) :: y(:)
+
+    CMPLX, allocatable :: tmpx(:, :)
+    CMPLX, allocatable :: tmpy(:, :)
+    integer            :: inp, np
+
+    call push_sub('td_trans_rti.h_eff_lip_sch')
+
+    ALLOCATE(tmpx(gr_p%m%np_part, 1),gr_p%m%np_part)
+    ALLOCATE(tmpy(gr_p%m%np_part, 1),gr_p%m%np_part)
+    inp = intf_p%np
+    np = gr_p%m%np
+
+    call lalg_copy(np, x, tmpx(:, 1))
+    ! calculate right hand side (e-T-V(lead)-sum(a)[H_ca*g_a*H_ac]
+    call zhpsi(h_p, gr_p, tmpx, tmpy, 1, 1)
+
+    y(1:np) = energy_p*x(1:np) - tmpy(1:np,1)
+    ! TODO: the static potential of the lead
+    call zsymv('U', inp, -M_z1, green_l_p(:,:,LEFT), inp, x(1:inp), 1, M_z1, y(1:inp), 1)
+    call zsymv('U', inp, -M_z1, green_l_p(:,:,RIGHT), inp, x(np-inp+1:np), &
+               1, M_z1, y(np-inp+1:np), 1)
+
+
+    deallocate(tmpx, tmpy)
+    call pop_sub()
+  end subroutine h_eff_lip_sch
+
+  ! ---------------------------------------------------------
+  ! the left side of the Lippmann-Schwinger equation (daggered)
+  ! e-H_cc+V(lead)-sum(a)[H_ca*g_a*H_ac]
+  ! Used by the iterative linear solver.
+  subroutine h_eff_lip_sch_t(x, y)
+    CMPLX, intent(in)  :: x(:)
+    CMPLX, intent(out) :: y(:)
+
+    CMPLX, allocatable :: tmpx(:, :)
+    CMPLX, allocatable :: tmpy(:, :)
+    integer            :: np, inp
+
+    call push_sub('td_trans_rti.h_eff_lip_sch_t')
+
+    ALLOCATE(tmpx(gr_p%m%np_part, 1),gr_p%m%np_part)
+    ALLOCATE(tmpy(gr_p%m%np_part, 1),gr_p%m%np_part)
+    np = gr_p%m%np
+    inp = intf_p%np
+    tmpx(1:np, 1) = conjg(x(1:np))
+    call zhpsi(h_p, gr_p, tmpx, tmpy, 1, 1)
+    tmpy(1:np,1) = energy_p*tmpx(1:np, 1) - tmpy(1:np,1)
+    ! TODO: the static potential of the lead
+    call zsymv('U', inp, -M_z1, green_l_p(:,:,LEFT), inp, tmpx(1:inp,1), 1, M_z1, tmpy(1:inp,1), 1)
+    call zsymv('U', inp, -M_z1, green_l_p(:,:,RIGHT), inp, tmpx(np-inp+1:np,1), &
+               1, M_z1, tmpy(np-inp+1:np,1), 1)
+    y(1:np) = conjg(tmpy(1:np,1))
+
+    deallocate(tmpx, tmpy)
+    call pop_sub()
+  end subroutine h_eff_lip_sch_t
+
+  ! ---------------------------------------------------------
+  subroutine preconditioner(x, y)
+    CMPLX, intent(in)  :: x(:)
+    CMPLX, intent(out) :: y(:)
+
+    call push_sub('td_rti.preconditioner')
+    y(:) = x(:)
+
+    call pop_sub()
+  end subroutine preconditioner
+
+  ! ---------------------------------------------------------
+  ! compute the extended eigenstate(s) 
+  subroutine ext_eigenstate_lippmann_schwinger(h, gr, np, diag, offdiag, order, energy, lead_pot, dx, st, phase, ik)
+    type(hamiltonian_t), intent(inout) :: h
+    type(grid_t),   intent(inout)      :: gr
+    integer,        intent(in)      :: np                      ! number of interface points
+    CMPLX,          intent(in)      :: diag(np, np, NLEADS)    ! lead hamiltonian (diagonal part)
+    CMPLX,          intent(in)      :: offdiag(np, np, NLEADS) ! hopping operator V^T
+    integer,        intent(in)      :: order                   ! discretization order
+    FLOAT, target,  intent(in)      :: energy                  ! total energy
+    FLOAT,          intent(in)      :: lead_pot(NLEADS)        ! lead potential at t=0
+    FLOAT,          intent(in)      :: dx                      ! spacing
+    type(states_t), intent(inout)   :: st                      ! states
+    FLOAT,          intent(inout)   :: phase(:, :, :)          ! phaseshift at interface
+    integer,        intent(in)      :: ik                      ! the index of the k-point
+
+    CMPLX, target, allocatable :: green_l(:,:,:)
+    CMPLX, allocatable :: tmp(:, :)
+    integer            :: i, id, iter, n(3)
+    integer, pointer   :: lxyz(:,:)
+    FLOAT              :: en, lsize(3), q(3)
+    FLOAT              :: dres
+    CMPLX              :: cres
+
+    call push_sub('td_trans_rti.ext_eigenstate_lippmann_schwinger')
+
+    ALLOCATE(green_l(np, np, NLEADS),np**2*NLEADS)
+    ALLOCATE(tmp(NP_PART, 1), NP_PART)
+
+    ! now generate the extended eigenstate with separated x-wavefunction
+    ! yet only for a box psi=psi(x)*psi(y)*psi(z)
+    ! e_tot = e_x + e_y + e_z, we need e_x for q (for box-sized leads)
+    ! FIXME: (probably) run trough all possible linear combinations
+    ! yet only the highest state of the separated function is multiplied
+
+    ! 1. compute the unpertubed eigenstates
+    ! for now set manually psi(x)*phi(y,z)
+    energy_p => energy
+    lxyz => gr%m%lxyz
+    lsize = gr%sb%lsize
+    en = energy
+    ! TODO: run over all states
+    ! subtract the transversal energy from the total energy to get the longitudinal part
+    ! which is the energy used for the transport
+    do id=2, gr%sb%dim ! FIXME: when the last gridpoint is not the border, recalculate transversal energy
+      q(id) = M_PI/(M_TWO*(lsize(id)+gr%sb%h(1)))
+      n(id) = sqrt(M_TWO*en)/q(id) ! use for now the largest transversal energy
+      en = en - M_HALF*(n(id)*q(id))**2
+    end do
+write(*,*) 'n  = ',n(2)
+write(*,*) 'ex = ',en
+write(*,*) 'ey = ',M_HALF*(n(2)*q(2))**2
+    ! FIXME: tight binding approximation
+    q(1) = sqrt(M_TWO*en)
+    ! the rest is the energy for the transport direction
+    if(en.le.M_ZERO) then
+      write(message(1), '(a,f14.6,a)') "The input energy : '", energy, &
+                  "' is smaller than the groundstate energy for the given system."
+      call write_fatal(1)
+    end if
+    n(1) = 1
+    do i=1,NP
+      st%zpsi(i, 1, 1, ik) = exp(M_zI*n(1)*q(1)*lxyz(i,1)*gr%sb%h(1))
+      do id=2, gr%sb%dim
+        if (mod(n(id),2).eq.0) then
+          st%zpsi(i, 1, 1, ik) = st%zpsi(i, 1, 1, ik)*sin(n(id)*q(id)*lxyz(i,id)*gr%sb%h(id))
+        else
+          st%zpsi(i, 1, 1, ik) = st%zpsi(i, 1, 1, ik)*cos(n(id)*q(id)*lxyz(i,id)*gr%sb%h(id))
+        end if
+      end do
+    end do
+    ! calculate right hand side (e-T-V(lead)-sum(a)[H_ca*g_a*H_ac]
+    call zkinetic(h, gr, st%zpsi(:, :, 1, ik), tmp(:,:))
+    tmp(1:NP, :) = energy*st%zpsi(1:NP, :, 1, ik) - tmp(1:NP,:)
+    ! TODO: the static potential of the lead
+    call green_lead(energy, diag(:,:,LEFT), offdiag(:,:,LEFT), np, LEFT, green_l(:,:,LEFT))
+    call zsymv('U', np, -M_z1, green_l(:,:,LEFT), np, st%zpsi(1:np, 1, 1, 1), 1, M_z1, tmp(1:np,1), 1)
+    call green_lead(energy, diag(:,:,RIGHT), offdiag(:,:,RIGHT), np, RIGHT, green_l(:,:,RIGHT))
+    call zsymv('U', np, -M_z1, green_l(:,:,RIGHT), np, st%zpsi(NP-np+1:NP, 1, 1, 1), 1, M_z1, tmp(NP-np+1:NP,1), 1)
+    ! now solve the equation
+    green_l_p => green_l
+    ! set the unperturbed state as initial guess
+    iter = 10000
+    call zqmr_sym(NP, st%zpsi(:, 1, 1, ik), tmp(:, 1), h_eff_lip_sch, preconditioner, &
+                    iter, residue=dres, threshold=cg_tol, showprogress = .true.)
+    write(*,*) 'iter =',iter, 'residue =', dres
+!    call zconjugate_gradients(NP, st%zpsi(:, 1, 1, ik), tmp(:, 1), &
+!      h_eff_lip_sch, h_eff_lip_sch_t, zmf_dotp_aux, iter, residue=cres, threshold=cg_tol)
+!    write(*,*) iter, cres
+    deallocate(green_l, tmp)
+    call pop_sub()
+  end subroutine ext_eigenstate_lippmann_schwinger
+
+  ! ---------------------------------------------------------
   ! compute the extended eigenstate(s)
   subroutine calculate_ext_eigenstate(h, gr, np, diag, offdiag, order, energy, lead_pot, dx, st, phase, ik)
-    type(hamiltonian_t), intent(in) :: h
-    type(grid_t),   intent(in)      :: gr
+    type(hamiltonian_t), intent(inout) :: h
+    type(grid_t),   intent(inout)      :: gr
     integer,        intent(in)      :: np                      ! number of interface points
     CMPLX,          intent(in)      :: diag(np, np, NLEADS)    ! lead hamiltonian (diagonal part)
     CMPLX,          intent(in)      :: offdiag(np, np, NLEADS) ! hopping operator V^T
@@ -662,17 +839,17 @@ write(*,*) 'state 2', st%zpsi(:,1,st%st_start+1,ik)
 
     integer  :: eigenstate_type
 
-    call push_sub('td_trans_mem.calculate_extended_eigenstate')
+    call push_sub('td_trans_rti.calculate_extended_eigenstate')
 
-    eigenstate_type = 1
+    eigenstate_type = 2
 
     select case(eigenstate_type)
     case(1) ! reference implementation, only feasible in 1D (maybe 2D)
       call ext_eigenst_imag_green(h, gr, np, diag, offdiag, order, energy, lead_pot, dx, st, phase, ik)
     case(2) ! method by Florian Lorenzen and Heiko Appel
-      !call ext_eigenstate_lippmann_schwinger(h, np, gr_np, diag, offdiag, order, energy, lead_pot, dx, st, phase, ik)
+      call ext_eigenstate_lippmann_schwinger(h, gr, np, diag, offdiag, order, energy, lead_pot, dx, st, phase, ik)
     case(3) ! method by Gianluca Stefannuci
-     !call ext_eigenstate_stefanucci(h, np, gr_np, diag, offdiag, order, energy, lead_pot, dx, st, phase, ik)
+     !call ext_eigenstate_stefanucci(h, gr, np, diag, offdiag, order, energy, lead_pot, dx, st, phase, ik)
     end select
 
     call pop_sub()
@@ -747,13 +924,15 @@ write(*,*) 'state 2', st%zpsi(:,1,st%st_start+1,ik)
     m = timestep-1
     cg_iter = cg_max_iter
 
-if (m.eq.0) then
+!if (m.eq.0) then
 ! FIXME: this does NOT belong here
-  energy = M_TWO/M_TEN
+  energy = (timestep/M_TEN+3.85)*(M_PI/(gr%sb%lsize(2)+gr%sb%h(2)))**2/M_EIGHT !M_TWO/M_TEN
+!  energy = (timestep/M_TEN+1.25)*(M_PI/(gr%sb%lsize(2)+gr%sb%h(2)))**2/M_EIGHT !M_TWO/M_TEN
+!write(*,*) energy
   do ik = 1, st%d%nik
     !call calculate_ext_eigenstate(h, gr, intf%np, diag, offdiag, order, energy, u(0,:), gr%sb%h(1), st, st_phase, ik)
   end do
-end if
+!end if
 !write(*,*) 'left  center', st%zpsi(1, 1, 1, 1)
 !write(*,*) 'right center', st%zpsi(NP, 1, 1, 1)
 
@@ -779,10 +958,10 @@ end if
           ! 2. Add source term
           if(iand(additional_terms, src_term_flag).ne.0) then
             if (mem_type.eq.1) then
-!              call calc_source_wf(max_iter, m, il, st_phase(ist, ik, il), offdiag(:, :, il), src_factor(:), &
-!                mem(:, :, :, il), dt, intf%np, st_sincos(:, :, il), tmp_wf(:))
-              call calc_source_wf_new(max_iter, m, il, offdiag(:, :, il), src_factor(:), &
-                mem(:, :, :, il), dt, intf%np, st_psi0(:,1,ist,ik,:,il), tmp_wf(:))
+              call calc_source_wf(max_iter, m, il, st_phase(ist, ik, il), offdiag(:, :, il), src_factor(:), &
+                mem(:, :, :, il), dt, intf%np, st_sincos(:, :, il), tmp_wf(:))
+              !call calc_source_wf_new(max_iter, m, il, offdiag(:, :, il), src_factor(:), &
+              !  mem(:, :, :, il), dt, intf%np, st_psi0(:,:,1,ist,ik,il), tmp_wf(:))
             else
               ! TODO
             end if

@@ -327,6 +327,11 @@ contains
           ! Get anchor for recursion.
           call approx_coeff0(intface, delta, il, diag(:, :, il), offdiag(:, :, il), coeff(:, :, 0, il), &
                              sp_coeff(:, 0, il), mem_s(:,:,:,il), order, mem_type, sp2full_map)
+!call write_matrix(coeff(:, :, 0, il), 0, intface%np)
+!          call umerski_coeff0(delta, diag(:, :, il), offdiag(:, :, il), intface%np, il, coeff(:, :, 0, il))
+!call write_matrix(coeff(:, :, 0, il), 0, intface%np)
+!          call umerski_coeff0(delta, diag(:, :, il), offdiag(:, :, il), intface%np, il, coeff(:, :, 0, il),'L')
+!call write_matrix(coeff(:, :, 0, il), 0, intface%np)
           call loct_progress_bar(1, max_iter+1)
         end if
         ! Calculate the subsequent coefficients by the recursive relation.
@@ -394,6 +399,106 @@ contains
     deallocate(tmp)
     call pop_sub()
   end subroutine make_symmetric_average
+
+  ! ---------------------------------------------------------
+  ! compute the 0th coefficient analyticly (just testing, not working yet)
+  subroutine umerski_coeff0(delta, diag, offdiag, np, il, coeff0, side)
+    FLOAT,               intent(in)  :: delta
+    CMPLX,               intent(in)  :: diag(:, :)
+    CMPLX,               intent(in)  :: offdiag(:, :)
+    integer,             intent(in)  :: np ! number of interface points
+    integer,             intent(in)  :: il
+    CMPLX,               intent(out) :: coeff0(:, :)
+  character(1), optional, intent(in) :: side ! which eigenvectors ('L' or 'R')
+
+    integer             :: i
+    CMPLX, allocatable  :: x(:,:), s(:,:), sub_o(:,:), sub_d(:,:), d(:), tmp(:,:)
+    FLOAT               :: det
+    character(1)        :: side_
+
+    call push_sub('td_trans_mem.umerski_coeff0')
+
+    ALLOCATE(x(2*np,2*np),4*np**2)
+    ALLOCATE(s(2*np,2*np),4*np**2)
+    ALLOCATE(sub_o(np,np),np**2)
+    ALLOCATE(sub_d(np,np),np**2)
+    ALLOCATE(tmp(np,np),np**2)
+    ALLOCATE(d(2*np),2*np)
+
+    if (present(side)) then
+      side_ = side
+    else
+      side_ = 'R'
+    end if
+
+    ! Algorithm taken from A. Umerski, Closed-form solutions to surface Green`s functions
+    ! 0. substitute offdiag->-i*delta*offdiag and diag->-i*delta*diag (except for the last step)
+    ! 1. create matrix x ( x = {{0,offdiag^(-1)},{-offdiag^T,(1-diag)*offdiag}} )
+    ! 2. compute diagonalization matrix s, s^(-1)*x*s = d
+    ! 3. extract submatrices ( s = {{o1,o2},{o3,o4}}; d = {{d1,0},{0,d2}} )
+    ! 4. calculate g = o2*(offdiag*o2*d2)^(-1) for left lead or
+    !              g = o1*d1*(o1*offdiag^(T))^(-1) for right lead
+    ! 5. calculate offdiag^(T)*g*offdiag
+
+    ! 1. create matrix x ( x = {{0,offdiag^(-1)},{-offdiag^T,(energy-diag)*offdiag^(-1)}} )
+    x(1:np,1:np) = M_z0
+    ! use sub_o as tmp variable
+    sub_o = -M_zI*delta*offdiag
+    if (il.eq.LEFT) then
+      call lalg_invert_upper_triangular(np,  sub_o)
+    else
+      call lalg_invert_lower_triangular(np,  sub_o)
+    end if
+    x(1:np,np+1:2*np) = sub_o
+    do i=1, np
+      x(np+i,1:np) = M_zI*delta*offdiag(:,i)
+    end do
+    ! use sub_d as tmp variable
+    sub_d = M_zI*delta*diag
+    do i=1, np
+      sub_d(i,i) = sub_d(i,i) + M_ONE
+    end do
+    if (il.eq.LEFT) then
+      call lalg_trmm(np,np,'U','N','R',M_z1,sub_o,sub_d)
+    else
+      call lalg_trmm(np,np,'L','N','R',M_z1,sub_o,sub_d)
+    end if
+    x(np+1:2*np,np+1:2*np) = sub_d
+
+    ! 2. compute diagonalization matrix s, s^(-1)*x*s = d
+    s = x
+    call lalg_geneigensolve_nonh(2*np, s, d, side = side_)
+
+    ! 3. extract submatrices ( S = {{o1,o2},{o3,o4}}; D = {{d1,0},{0,d2}} )
+    sub_d = M_z0
+    if (il.eq.LEFT) then ! left side --> o2, d2
+      sub_o = s(1:np,np+1:2*np)
+      do i=1, np
+        sub_d(i,i) = d(np+i)
+      end do
+    else ! right side --> o1, d1
+      sub_o = s(1:np,1:np)
+      do i=1, np
+        sub_d(i,i) = d(i)
+      end do
+    end if
+
+    ! 4. calculate offdiag^(T)*g*offdiag
+    if (il.eq.LEFT) then ! offdiag^(T)*g*offdiag = offdiag^(T)*o2*(o2*d2)^(-1)
+      call zsymm('R','U',np,np,M_z1,sub_d,np,sub_o,np,M_z0,tmp,np)
+      det = lalg_inverter(np, tmp, invert = .true.)
+      call zgemm('N','N',np,np,np,M_z1,sub_o,np,tmp,np,M_z0,coeff0,np)
+      call lalg_trmm(np,np,'U','T','L',M_zI/delta,offdiag,coeff0)
+    else ! offdiag^(T)*g*offdiag = offdiag^(T)*o1*d1*o1^(-1)
+      call zsymm('R','U',np,np,M_z1,sub_d,np,sub_o,np,M_z0,tmp,np)
+      det = lalg_inverter(np, sub_o, invert = .true.)
+      call zgemm('N','N',np,np,np,M_z1,tmp,np,sub_o,np,M_z0,coeff0,np)
+      call lalg_trmm(np,np,'L','T','L',M_zI/delta,offdiag,coeff0)
+    end if
+
+    deallocate(x, s, sub_o, sub_d, d, tmp)
+    call pop_sub()
+  end subroutine umerski_coeff0
 
   ! ---------------------------------------------------------
   ! Solve for zeroth memory coefficient by truncating the continued
