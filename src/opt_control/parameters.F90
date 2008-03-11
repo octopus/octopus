@@ -199,6 +199,12 @@ contains
     ! Move to the sine-Fourier space if required.
     call parameters_set_rep(par)
     if(par%representation .eq. ctr_parameter_frequency_space) then
+      if(par%nfreqs <= 1) then
+        write(message(1), '(a)')    'Error: The dimension of the basis set used to represent the control'
+        write(message(2), '(a)')    '       functions must be larger than one. The input options that you'
+        write(message(3), '(a)')    '       supply do not meet this criterion.'
+        call write_fatal(3)
+      end if
       write(message(1), '(a)')      'Info: The expansion of the control parameters in a sine Fourier series'
       write(message(2), '(a,i6,a)') '      expansion implies the use of ', par%nfreqs, ' basis set functions.'
       call write_info(2)
@@ -832,12 +838,29 @@ contains
   subroutine parameters_par_to_x(par, x)
     type(oct_control_parameters_t), intent(in)    :: par
     FLOAT,                          intent(inout) :: x(:)
-    integer :: j
-    ASSERT(par%nfreqs .eq. size(x))
+    integer :: j, k, n
+    FLOAT :: sumx2, y
+    FLOAT, allocatable :: e(:)
+
+    n = par%nfreqs
+    ALLOCATE(e(n), n)
+
+    ASSERT(n-1 .eq. size(x))
     ASSERT(par%current_representation .eq. ctr_parameter_frequency_space)
-    do j =  1, par%nfreqs
-      x(j) = tdf(par%f(1), j)
+
+    do j =  1, n
+      e(j) = tdf(par%f(1), j)
     end do
+    x(n-1) = atan2(e(n), e(n-1))
+    do k = n-2, 1, -1
+      sumx2 = M_ZERO
+      do j = n, k+1, -1
+        sumx2 = sumx2 + e(j)**2
+      end do
+      x(k) = atan2(sqrt(sumx2), e(k))
+    end do
+
+    deallocate(e)
   end subroutine parameters_par_to_x
   ! ---------------------------------------------------------
 
@@ -846,9 +869,50 @@ contains
   subroutine parameters_x_to_par(par, x)
     type(oct_control_parameters_t), intent(inout) :: par
     FLOAT,                          intent(in)    :: x(:)
-    ASSERT(par%nfreqs .eq. size(x))
+    integer :: j, k, n
+    FLOAT, allocatable :: e(:)
+    call push_sub('parameters.parameters_x_to_par')
+
+    n = par%nfreqs
+    ASSERT(n-1 .eq. size(x))
     ASSERT(par%current_representation .eq. ctr_parameter_frequency_space)
-    call tdf_set_numerical(par%f(1), x)
+
+    ALLOCATE(e(n), n)
+    e = M_ZERO
+
+    if(n.eq.2) then
+      e(1) = cos(x(1))
+      e(2) = sin(x(1))
+      call pop_sub()
+      return
+    elseif(n.eq.3) then
+      e(1) = cos(x(1))
+      e(2) = sin(x(1))*cos(x(2))
+      e(3) = sin(x(1))*sin(x(2))
+      call pop_sub()
+      return
+    end if
+
+    e(1) = cos(x(1))
+    e(2) = sin(x(1))*cos(x(2))
+    e(3) = sin(x(1))*sin(x(2))*cos(x(3))
+    do j = 4, n
+      e(j) = M_ONE
+      do k = 1, j-1
+        e(j) = e(j) * sin(x(k))
+      end do
+      if(j < n) then
+        e(j) = e(j) * cos(x(j))
+      else
+        e(j) = e(j) * sin(x(j-1))
+      end if
+    end do
+
+    e = sqrt(par%targetfluence) * e
+    call tdf_set_numerical(par%f(1), e)
+
+    deallocate(e)
+    call pop_sub()
   end subroutine parameters_x_to_par
   ! ---------------------------------------------------------
 

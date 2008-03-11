@@ -368,7 +368,7 @@ contains
 
       call parameters_set_rep(par)
 
-      ALLOCATE(x(par%nfreqs), par%nfreqs)
+      ALLOCATE(x(par%nfreqs-1), par%nfreqs-1)
 
       ! Set the module pointers, so that the calc_point and write_iter_info routines
       ! can use them.
@@ -397,8 +397,8 @@ contains
       call iteration_manager_direct(g, par, iterator)
 
       call parameters_par_to_x(par, x)
-      step = oct%direct_step * sqrt(par%targetfluence / par%nfreqs)
-      ierr = loct_minimize_direct(MINMETHOD_NMSIMPLEX, par%nfreqs, x(1), step,&
+      step = oct%direct_step * M_PI
+      ierr = loct_minimize_direct(MINMETHOD_NMSIMPLEX, par%nfreqs-1, x(1), step,&
                iterator%eps, iterator%ctr_iter_max, &
                direct_opt_calc, direct_opt_write_info, minvalue)
 
