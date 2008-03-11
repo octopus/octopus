@@ -188,8 +188,7 @@ contains
     !%Section Hamiltonian
     !%Description
     !% A static constant electrical field may be added to the usual Hamiltonian,
-    !% by setting the block StaticElectricField. Atomic units will be assumed
-    !% always for its magnitude, regardless of the unit system specified.
+    !% by setting the block StaticElectricField.
     !% The three possible components of the block (which should only have one
     !% line) are the three components of the electrical field vector.
     !%End
@@ -200,6 +199,8 @@ contains
         call loct_parse_block_float(blk, 0, i-1, ep%E_field(i))
       end do
       call loct_parse_block_end(blk)
+
+      ep%E_field(:) = ep%E_field(:) * units_inp%energy%factor/units_inp%length%factor
       
       ! Compute the scalar potential
       ALLOCATE(ep%v_static(NP), NP)
