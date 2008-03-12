@@ -86,8 +86,11 @@ subroutine X(nl_operator_tune)(op)
     end if
 
     itime = loct_clock()
+#ifdef HAVE_MPI
+    call MPI_Barrier(MPI_COMM_WORLD, ierr)
+#endif
     do ii = 1, reps
-      call X(nl_operator_operate)(op, in, out, ghost_update = .true., profile = .true.)
+      call X(nl_operator_operate)(op, in, out, ghost_update = .false., profile = .false.)
     end do
 #ifdef HAVE_MPI
     call MPI_Barrier(MPI_COMM_WORLD, ierr)
@@ -99,16 +102,16 @@ subroutine X(nl_operator_tune)(op)
     
   end do
 
+#ifdef HAVE_MPI
+      call MPI_Allreduce(flops, global_flops, OP_MAX-OP_MIN+1, MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
+      flops = global_flops
+#endif
+
   !choose the best method
   op%X(function) = OP_MIN
   do method = OP_MIN + 1, OP_MAX
     if(flops(method) > flops(op%X(function))) op%X(function) = method
   end do
-
-#ifdef HAVE_MPI
-      call MPI_Allreduce(flops, global_flops, OP_MAX-OP_MIN+1, MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
-      flops = global_flops
-#endif
 
 #ifdef HAVE_MPI      
   call MPI_Comm_rank(MPI_COMM_WORLD, rank, ierr)
