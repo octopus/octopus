@@ -130,9 +130,15 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine write_warning(no_lines)
+  subroutine write_warning(no_lines, all_nodes)
     integer, intent(in) :: no_lines
+    logical, optional   :: all_nodes
+
+    logical :: all_nodes_
     integer :: i
+
+    all_nodes_ = .false.
+    if(present(all_nodes)) all_nodes_ = all_nodes
 
     if(flush_messages.and.mpi_grp_is_root(mpi_world)) then
       open(unit=iunit_err, file='messages.stderr', &
@@ -145,8 +151,10 @@ contains
     write(msg, '(a)') '** Warning:'
     call flush_msg(stderr, msg)
 #ifdef HAVE_MPI
-    write(msg , '(a,i4)') '** From node = ', mpi_world%rank
-    call flush_msg(stderr, msg)
+    if(all_nodes_) then
+      write(msg , '(a,i4)') '** From node = ', mpi_world%rank
+      call flush_msg(stderr, msg)
+    end if
 #endif
     do i = 1, no_lines
       write(msg , '(a,3x,a)') '**', trim(message(i))
