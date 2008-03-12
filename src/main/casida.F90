@@ -38,6 +38,7 @@ module casida_m
   use h_sys_output_m
   use poisson_m
   use restart_m
+  use simul_box_m
   use states_m
   use system_m
   use units_m
@@ -86,6 +87,11 @@ contains
     character(len=80) :: trandens
 
     call push_sub('casida.casida_run')
+
+    if (simul_box_is_periodic(sys%gr%sb)) then
+      message(1) = "Casida formulation does not apply to periodic systems"
+      call write_fatal(1)
+    end if
 
     message(1) = 'Info: Starting linear response calculation.'
     call write_info(1)
