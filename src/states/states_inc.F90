@@ -21,7 +21,7 @@
 ! ---------------------------------------------------------
 ! Orthonormalizes nst orbitals in mesh m (honours state
 ! parallelization).
-subroutine X(states_gram_schmidt1)(st, nst, m, dim, psi, start)
+subroutine X(states_gram_schmidt_full)(st, nst, m, dim, psi, start)
   type(states_t),    intent(in)    :: st
   integer,           intent(in)    :: nst, dim
   type(mesh_t),      intent(in)    :: m
@@ -102,7 +102,7 @@ subroutine X(states_gram_schmidt1)(st, nst, m, dim, psi, start)
   
   call pop_sub()
   call profiling_out(C_PROFILING_GRAM_SCHMIDT1)
-end subroutine X(states_gram_schmidt1)
+end subroutine X(states_gram_schmidt_full)
 
 
 ! ---------------------------------------------------------
@@ -111,7 +111,7 @@ end subroutine X(states_gram_schmidt1)
 ! And one can pass an extra optional argument, mask, which:
 !  - on input, if mask(p) = .true., the p-orbital is not used.
 !  - on output, mask(p) = .true. if p was already orthogonal (to within 1e-12).
-subroutine X(states_gram_schmidt2)(st, nst, m, dim, psi, phi, normalize, mask)
+subroutine X(states_gram_schmidt)(st, nst, m, dim, psi, phi, normalize, mask)
   type(states_t),    intent(in)    :: st
   integer,           intent(in)    :: nst, dim
   type(mesh_t),      intent(in)    :: m
@@ -155,7 +155,7 @@ subroutine X(states_gram_schmidt2)(st, nst, m, dim, psi, phi, normalize, mask)
 
   call pop_sub()
   call profiling_out(C_PROFILING_GRAM_SCHMIDT2)
-end subroutine X(states_gram_schmidt2)
+end subroutine X(states_gram_schmidt)
 
 
 ! ---------------------------------------------------------

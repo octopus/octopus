@@ -97,7 +97,7 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, reo
       end if
 
       ! Orthogonalize starting eigenfunctions to those already calculated...
-      call X(states_gram_schmidt)(st, p, gr%m, st%d%dim, st%X(psi)(:, 1:st%d%dim, 1:p, ik), start=p)
+      call X(states_gram_schmidt_full)(st, p, gr%m, st%d%dim, st%X(psi)(:, 1:st%d%dim, 1:p, ik), start=p)
 
       ! Calculate starting gradient: |hpsi> = H|psi>
       call X(Hpsi)(h, gr, st%X(psi)(:,:, p, ik) , h_psi, p, ik)
@@ -294,7 +294,7 @@ subroutine X(eigen_solver_cg2_new) (gr, st, h, tol, niter, converged, diff, reor
     states: do ist = conv + 1, nst
 
       ! Orthogonalize starting eigenfunctions to those already calculated...
-      call X(states_gram_schmidt)(st, ist, gr%m, dim, st%X(psi)(:, 1:dim, 1:ist, ik), start=ist)
+      call X(states_gram_schmidt_full)(st, ist, gr%m, dim, st%X(psi)(:, 1:dim, 1:ist, ik), start=ist)
       psi(1:NP, 1:dim) = st%X(psi)(1:NP, 1:dim, ist, ik)
 
       ! Calculate starting gradient: |hpsi> = H|psi>

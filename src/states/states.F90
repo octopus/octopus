@@ -89,6 +89,8 @@ module states_m
   public ::                         &
     dstates_gram_schmidt,           &
     zstates_gram_schmidt,           &
+    dstates_gram_schmidt_full,      &
+    zstates_gram_schmidt_full,      &
     dstates_dotp,                   &
     zstates_dotp,                   &
     dstates_nrm2,                   &
@@ -175,14 +177,6 @@ module states_m
 
   interface assignment (=)
     module procedure states_copy
-  end interface
-
-  interface dstates_gram_schmidt
-    module procedure dstates_gram_schmidt1, dstates_gram_schmidt2
-  end interface
-
-  interface zstates_gram_schmidt
-    module procedure zstates_gram_schmidt1, zstates_gram_schmidt2
   end interface
 
 contains
@@ -1331,9 +1325,9 @@ contains
     
     do ik = ik_start, ik_end
       if (st%wfs_type == M_REAL) then
-        call dstates_gram_schmidt(st, st%nst, m, st%d%dim, st%dpsi(:,:,:,ik), start)
+        call dstates_gram_schmidt_full(st, st%nst, m, st%d%dim, st%dpsi(:,:,:,ik), start)
       else
-        call zstates_gram_schmidt(st, st%nst, m, st%d%dim, st%zpsi(:,:,:,ik), start)
+        call zstates_gram_schmidt_full(st, st%nst, m, st%d%dim, st%zpsi(:,:,:,ik), start)
       end if
     end do
 
