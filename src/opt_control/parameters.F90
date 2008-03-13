@@ -896,17 +896,18 @@ contains
     e(1) = cos(x(1))
     e(2) = sin(x(1))*cos(x(2))
     e(3) = sin(x(1))*sin(x(2))*cos(x(3))
-    do j = 4, n
+    do j = 4, n - 1
       e(j) = M_ONE
-      do k = 1, j-1
+      do k = 1, j - 1
         e(j) = e(j) * sin(x(k))
       end do
-      if(j < n) then
-        e(j) = e(j) * cos(x(j))
-      else
-        e(j) = e(j) * sin(x(j-1))
-      end if
+      e(j) = e(j) * cos(x(j))
     end do
+    e(n) = M_ONE
+    do k = 1, n - 2
+      e(n) = e(n) * sin(x(k))
+    end do
+    e(n) = e(n) * sin(x(n-1))
 
     e = sqrt(par%targetfluence) * e
     call tdf_set_numerical(par%f(1), e)

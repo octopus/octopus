@@ -84,8 +84,6 @@ contains
     real(8), intent(in)  :: x(n)
     real(8), intent(out) :: f
 
-    integer :: j
-    FLOAT :: j1, fluence
     type(states_t) :: psi
 
     call parameters_x_to_par(par_, x)
@@ -94,10 +92,7 @@ contains
     call states_copy(psi, psi_)
     call propagate_forward(sys_, h_, td_, target_, psi)
     call parameters_set_rep(par_)
-
-    j1 = j1_functional(sys_%gr, psi, target_)
-    fluence = parameters_fluence(par_)
-    f = - j1 !+ par_%alpha(1) * (fluence - par_%targetfluence)**2
+    f = - j1_functional(sys_%gr, psi, target_)
 
     call states_end(psi)
   end subroutine direct_opt_calc
@@ -115,7 +110,7 @@ contains
     call parameters_x_to_par(par_, x)
 
     iterator_%ctr_iter = geom_iter
-    call iteration_manager_direct(energy, par_, iterator_, maxdx)
+    call iteration_manager_direct(-energy, par_, iterator_, maxdx)
     if(oct_%dump_intermediate) call iterator_write(iterator_, psi_, par_, sys_%gr, sys_%outp)
 
   end subroutine direct_opt_write_info
