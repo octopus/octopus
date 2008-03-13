@@ -329,7 +329,7 @@ subroutine X(mf_interpolate_points) (mesh_in, u, npoints, x, f)
   type(qshep_t) :: interp
   real(8), pointer :: rx(:, :)
 #ifndef R_TCOMPLEX
-  type(loct_spline_t) :: interp1d
+  type(spline_t) :: interp1d
 #endif
 
   call push_sub('mf_inc.Xmf_interpolate')
@@ -367,12 +367,12 @@ subroutine X(mf_interpolate_points) (mesh_in, u, npoints, x, f)
     message(1) = 'Believe it or not, cannot do 1D complex interpolation, only 2D or 3D.'
     call write_fatal(1)
 #else
-    call loct_spline_init(interp1d)
-    call loct_spline_fit(mesh_in%np_global, R_REAL(rx(:, 1)), ru, interp1d)
+    call spline_init(interp1d)
+    call spline_fit(mesh_in%np_global, R_REAL(rx(:, 1)), ru, interp1d)
     do i = 1, npoints
-      f(i) = loct_splint(interp1d, x(i, 1))
+      f(i) = spline_eval(interp1d, x(i, 1))
     end do
-    call loct_spline_end(interp1d)
+    call spline_end(interp1d)
 #endif
   end select
 #ifdef SINGLE_PRECISION
@@ -593,7 +593,7 @@ end function X(mf_line_integral_vector)
 ! puts a spline that represents a radial function into a mesh
 subroutine X(mf_put_radial_spline)(m, spl, center, f, add)
   type(mesh_t),        intent(in)    :: m
-  type(loct_spline_t), intent(in)    :: spl
+  type(spline_t), intent(in)    :: spl
   FLOAT,               intent(in)    :: center(1:MAX_DIM)
   R_TYPE,              intent(inout) :: f(:)
   logical, optional,   intent(in)    :: add
@@ -612,7 +612,7 @@ subroutine X(mf_put_radial_spline)(m, spl, center, f, add)
     !$omp parallel do private(r)
     do ip = 1, m%np
       r = sqrt(sum((m%x(ip, 1:MAX_DIM) - center(1:MAX_DIM))**2))
-      f(ip) = f(ip) + loct_splint(spl, r)
+      f(ip) = f(ip) + spline_eval(spl, r)
     end do
     !$omp end parallel do
 
@@ -621,7 +621,7 @@ subroutine X(mf_put_radial_spline)(m, spl, center, f, add)
     !$omp parallel do private(r)
      do ip = 1, m%np
       r = sqrt(sum((m%x(ip, 1:MAX_DIM) - center(1:MAX_DIM))**2))
-      f(ip) = loct_splint(spl, r)
+      f(ip) = spline_eval(spl, r)
     end do
     !$omp end parallel do
 

@@ -29,7 +29,7 @@ module external_pot_m
   use io_m
   use lalg_basic_m
   use loct_parser_m
-  use loct_gsl_spline_m
+  use splines_m
   use magnetic_m
   use mesh_function_m
   use mesh_m
@@ -797,8 +797,8 @@ contains
         s => geo%atom(iatom)%spec
         if (.not. specie_is_ps(s)) cycle
 
-        rc = loct_spline_cutoff_radius(s%ps%vion, s%ps%projectors_sphere_threshold)
-        rc = max(rc, loct_spline_cutoff_radius(s%ps%dvion, s%ps%projectors_sphere_threshold))
+        rc = spline_cutoff_radius(s%ps%vion, s%ps%projectors_sphere_threshold)
+        rc = max(rc, spline_cutoff_radius(s%ps%dvion, s%ps%projectors_sphere_threshold))
 
         call periodic_copy_init(pc, sb, geo%atom(iatom)%x, rc)
 
@@ -813,10 +813,10 @@ contains
             zj = -geo%atom(jatom)%spec%z_val
             r = sqrt( sum( (xi - geo%atom(jatom)%x)**2 ) )
             ! energy
-            ep%eii = ep%eii + M_HALF*zj*loct_splint(s%ps%vion, r)
+            ep%eii = ep%eii + M_HALF*zj*spline_eval(s%ps%vion, r)
             ! force
             ep%fii(1:MAX_DIM, jatom) = ep%fii(1:MAX_DIM, jatom) + &
-              M_HALF*zj*loct_splint(s%ps%dvion, r)/r*(geo%atom(jatom)%x(1:MAX_DIM) - xi(1:MAX_DIM))
+              M_HALF*zj*spline_eval(s%ps%dvion, r)/r*(geo%atom(jatom)%x(1:MAX_DIM) - xi(1:MAX_DIM))
           end do
           
         end do

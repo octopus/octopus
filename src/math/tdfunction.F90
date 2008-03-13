@@ -30,7 +30,7 @@ module tdf_m
   use io_m
   use messages_m
   use loct_parser_m
-  use loct_gsl_spline_m
+  use splines_m
   use units_m
   use fft_m
 
@@ -85,7 +85,7 @@ module tdf_m
     FLOAT   :: tau1   ! for the ramped shape, the length of the "ramping" intervals
     FLOAT   :: a0
     FLOAT   :: omega0
-    type(loct_spline_t) :: amplitude
+    type(spline_t) :: amplitude
     character(len=200) :: expression
     FLOAT   :: dt     ! the time-discretization value.
     FLOAT   :: init_time, final_time
@@ -273,8 +273,8 @@ module tdf_m
     f%init_time  = t(1)
     f%final_time = t(lines)
 
-    call loct_spline_init(f%amplitude)
-    call loct_spline_fit(lines, t, am, f%amplitude)
+    call spline_init(f%amplitude)
+    call spline_fit(lines, t, am, f%amplitude)
 
     nullify(f%val)
     nullify(f%coeffs)
@@ -483,7 +483,7 @@ module tdf_m
     f%dt = dt
     f%niter = niter
     f%mode = TDF_NUMERICAL
-    if (f%mode .eq. TDF_FROM_FILE) call loct_spline_end(f%amplitude)
+    if (f%mode .eq. TDF_FROM_FILE) call spline_end(f%amplitude)
 
   end subroutine tdf_to_numerical
 
@@ -615,7 +615,7 @@ module tdf_m
     case(TDF_FROM_FILE)
 
       if( t >= f%init_time .and. t <= f%final_time) then
-        y = loct_splint(f%amplitude, t)
+        y = spline_eval(f%amplitude, t)
       else
         y = M_ZERO
       end if
@@ -645,7 +645,7 @@ module tdf_m
 
     select case(f%mode)
     case(TDF_FROM_FILE)
-      call loct_spline_end(f%amplitude)
+      call spline_end(f%amplitude)
     case(TDF_NUMERICAL)
       deallocate(f%val); nullify(f%val)
     case(TDF_SINE_SERIES)
@@ -708,7 +708,7 @@ module tdf_m
     case(TDF_SINE_SERIES)
       f%coeffs = alpha*f%coeffs
     case(TDF_FROM_FILE)
-      call loct_spline_times(alpha, f%amplitude)
+      call spline_times(alpha, f%amplitude)
     end select
 
   end subroutine tdf_scalar_multiply

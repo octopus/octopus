@@ -22,7 +22,7 @@
 module mesh_function_m
   use global_m
   use lalg_basic_m
-  use loct_gsl_spline_m
+  use splines_m
   use math_m
   use mesh_m
   use messages_m

@@ -24,7 +24,7 @@ module ps_m
   use atomic_m
   use global_m
   use io_m
-  use loct_gsl_spline_m
+  use splines_m
   use loct_math_m
   use loct_parser_m
   use logrid_m
@@ -66,14 +66,14 @@ module ps_m
     FLOAT    :: z, z_val
     type(valconf_t)   :: conf
     type(logrid_t) :: g
-    type(loct_spline_t), pointer :: Ur(:, :)     ! atomic wavefunctions
+    type(spline_t), pointer :: Ur(:, :)     ! atomic wavefunctions
 
     ! Kleynman and Bylander projectors stuff
     integer  :: l_max    ! maximum value of l to take
     integer  :: l_loc    ! which component to take as local
 
-    type(loct_spline_t) :: vl         ! local part
-    type(loct_spline_t) :: vlocal_f   ! local potential in Fourier space (for periodic)
+    type(spline_t) :: vl         ! local part
+    type(spline_t) :: vlocal_f   ! local potential in Fourier space (for periodic)
 
     FLOAT :: projectors_sphere_threshold ! The projectors are localized in real
                                          ! space, and so they are contained in a 
@@ -86,28 +86,28 @@ module ps_m
 
     integer  :: kbc      ! Number of KB components (1 or 2 for TM ps, 3 for HGH)
     FLOAT, pointer :: h(:,:,:), k(:, :, :)
-    type(loct_spline_t), pointer :: kb(:, :)     ! Kleynman-Bylander projectors
-    type(loct_spline_t), pointer :: dkb(:, :)    ! derivatives of KB projectors
+    type(spline_t), pointer :: kb(:, :)     ! Kleynman-Bylander projectors
+    type(spline_t), pointer :: dkb(:, :)    ! derivatives of KB projectors
 
     ! NLCC
     character(len=4) :: icore
-    type(loct_spline_t) :: core ! core charge
+    type(spline_t) :: core ! core charge
 
 
     !LONG RANGE PART OF THE LOCAL POTENTIAL
     
     logical :: has_long_range
 
-    type(loct_spline_t) :: vlr         ! the long range part of the local potential
-    type(loct_spline_t) :: vlr_sq      ! the long range part of the
+    type(spline_t) :: vlr         ! the long range part of the local potential
+    type(spline_t) :: vlr_sq      ! the long range part of the
                                        ! local potential in terms of r^2, to avoid the sqrt
-    type(loct_spline_t) :: nlr         ! the charge density associated to the long range part
+    type(spline_t) :: nlr         ! the charge density associated to the long range part
     
     FLOAT :: sigma_erf                 ! the a constant in erf(r/(sqrt(2)*sigma))/r
     FLOAT :: a_erf                     ! the a constant in erf(ar)/r
 
-    type(loct_spline_t) :: vion        ! the potential that other ions see
-    type(loct_spline_t) :: dvion       ! the potential that other ions see
+    type(spline_t) :: vion        ! the potential that other ions see
+    type(spline_t) :: dvion       ! the potential that other ions see
   end type ps_t
 
   FLOAT, parameter :: eps = CNST(1.0e-8)
@@ -231,11 +231,11 @@ contains
     ALLOCATE(ps%ur   (ps%conf%p, ps%ispin),            ps%conf%p*ps%ispin)
     ALLOCATE(ps%h    (0:ps%l_max, 1:ps%kbc, 1:ps%kbc), (ps%l_max+1)*ps%kbc*ps%kbc)
     ALLOCATE(ps%k    (0:ps%l_max, 1:ps%kbc, 1:ps%kbc), (ps%l_max+1)*ps%kbc*ps%kbc)
-    call loct_spline_init(ps%kb)
-    call loct_spline_init(ps%dkb)
-    call loct_spline_init(ps%vl)
-    call loct_spline_init(ps%core)
-    call loct_spline_init(ps%vlocal_f)
+    call spline_init(ps%kb)
+    call spline_init(ps%dkb)
+    call spline_init(ps%vl)
+    call spline_init(ps%core)
+    call spline_init(ps%vlocal_f)
 
     ! Now we load the necessary information.
     select case(flavour)
@@ -310,36 +310,36 @@ contains
         vlr(ii)  = -ps%z_val*loct_erf(r/(ps%sigma_erf*sqrt(M_TWO)))/r
         vion(ii) = -ps%z_val/r - vlr(ii)
       end if
-      vsr(ii) = loct_splint(ps%vl, r) - vlr(ii)
+      vsr(ii) = spline_eval(ps%vl, r) - vlr(ii)
       nlr(ii) = -ps%z_val*M_ONE/(ps%sigma_erf*sqrt(M_TWO*M_PI))**3*exp(-M_HALF*r**2/ps%sigma_erf**2)
     end do
     
-    call loct_spline_init(ps%vlr)
-    call loct_spline_fit(ps%g%nrval, ps%g%rofi, vlr, ps%vlr)
+    call spline_init(ps%vlr)
+    call spline_fit(ps%g%nrval, ps%g%rofi, vlr, ps%vlr)
 
-    call loct_spline_init(ps%vlr_sq)
-    call loct_spline_fit(ps%g%nrval, r2ofi, vlr, ps%vlr_sq)
+    call spline_init(ps%vlr_sq)
+    call spline_fit(ps%g%nrval, r2ofi, vlr, ps%vlr_sq)
     
-    call loct_spline_init(ps%nlr)
-    call loct_spline_fit(ps%g%nrval, ps%g%rofi, nlr, ps%nlr)
+    call spline_init(ps%nlr)
+    call spline_fit(ps%g%nrval, ps%g%rofi, nlr, ps%nlr)
     
     !overwrite vl
-    call loct_spline_end(ps%vl)
-    call loct_spline_init(ps%vl)
-    call loct_spline_fit(ps%g%nrval, ps%g%rofi, vsr, ps%vl)
+    call spline_end(ps%vl)
+    call spline_init(ps%vl)
+    call spline_fit(ps%g%nrval, ps%g%rofi, vsr, ps%vl)
     
     ! And take the Fourier transform
-    call loct_spline_3dft(ps%vl, ps%vlocal_f, CNST(50.0))
-    call loct_spline_times(CNST(1.0)/(M_FOUR*M_PI), ps%vlocal_f)
+    call spline_3dft(ps%vl, ps%vlocal_f, CNST(50.0))
+    call spline_times(CNST(1.0)/(M_FOUR*M_PI), ps%vlocal_f)
 
     ! The ion-ion interaction
     vion(1) = vion(2)
     
-    call loct_spline_init(ps%vion)
-    call loct_spline_fit(ps%g%nrval, ps%g%rofi, vion, ps%vion)
+    call spline_init(ps%vion)
+    call spline_fit(ps%g%nrval, ps%g%rofi, vion, ps%vion)
 
-    call loct_spline_init(ps%dvion)
-    call loct_spline_der(ps%vion, ps%dvion)
+    call spline_init(ps%dvion)
+    call spline_der(ps%vion, ps%dvion)
 
     deallocate(vsr, vlr, nlr, vion, r2ofi)
     
@@ -356,7 +356,7 @@ contains
 
     do l = 0, ps%l_max
       do j = 1, ps%kbc
-        ps%rc_max = max(ps%rc_max, loct_spline_cutoff_radius(ps%kb(l, j), ps%projectors_sphere_threshold))
+        ps%rc_max = max(ps%rc_max, spline_cutoff_radius(ps%kb(l, j), ps%projectors_sphere_threshold))
       end do
     end do
     
@@ -373,7 +373,7 @@ contains
 
     do l = 0, ps%l_max
       do j = 1, ps%kbc
-        call loct_spline_der(ps%kb(l, j), ps%dkb(l, j))
+        call spline_der(ps%kb(l, j), ps%dkb(l, j))
       end do
     end do
 
@@ -391,16 +391,16 @@ contains
 
     call push_sub('ps.ps_filter')
 
-    call loct_spline_filter(ps%vl, fs = (/ alpha*gmax, CNST(100.0) /) )
+    call spline_filter(ps%vl, fs = (/ alpha*gmax, CNST(100.0) /) )
 
     do l = 0, ps%l_max
       do k = 1, ps%kbc
-        call loct_spline_filter(ps%kb(l, k), l, fs = (/ alpha*gmax, beta /), &
+        call spline_filter(ps%kb(l, k), l, fs = (/ alpha*gmax, beta /), &
           rs = (/ rcut, beta2 /))
       end do
     end do
 
-    if(trim(ps%icore).ne.'nc') call loct_spline_filter(ps%core, fs = (/ alpha*gmax, CNST(100.0) /) )
+    if(trim(ps%icore).ne.'nc') call spline_filter(ps%core, fs = (/ alpha*gmax, CNST(100.0) /) )
 
     call pop_sub()
   end subroutine ps_filter
@@ -412,7 +412,7 @@ contains
     character(len=*), intent(in) :: dir
 
     ! We will plot also some Fourier transforms.
-    type(loct_spline_t), allocatable :: fw(:, :)
+    type(spline_t), allocatable :: fw(:, :)
     FLOAT, parameter :: gmax = CNST(40.0)
 
     character(len=30) :: dirname
@@ -465,30 +465,30 @@ contains
     end do
 
     ! Local part.
-    call loct_spline_print(ps%vl, local_unit)
+    call spline_print(ps%vl, local_unit)
     ALLOCATE(fw(1, 1), 1*1)
-    call loct_spline_init(fw(1, 1))
-    call loct_spline_3dft(ps%vl, fw(1, 1), gmax = gmax)
-    call loct_spline_print(fw(1, 1), localw_unit)
-    call loct_spline_end(fw(1, 1))
+    call spline_init(fw(1, 1))
+    call spline_3dft(ps%vl, fw(1, 1), gmax = gmax)
+    call spline_print(fw(1, 1), localw_unit)
+    call spline_end(fw(1, 1))
     deallocate(fw)
 
     ! Kleinman-Bylander projectors
-    call loct_spline_print(ps%kb, nl_unit)
-    call loct_spline_print(ps%dkb, dnl_unit)
+    call spline_print(ps%kb, nl_unit)
+    call spline_print(ps%dkb, dnl_unit)
     ALLOCATE(fw(0:ps%l_max, 1:ps%kbc), (ps%l_max+1)*ps%kbc)
-    call loct_spline_init(fw)
+    call spline_init(fw)
     do k = 0, ps%l_max
       do j = 1, ps%kbc
-        call loct_spline_3dft(ps%kb(k, j), fw(k, j), gmax = gmax)
+        call spline_3dft(ps%kb(k, j), fw(k, j), gmax = gmax)
       end do
     end do
-    call loct_spline_print(fw, nlw_unit)
-    call loct_spline_end(fw)
+    call spline_print(fw, nlw_unit)
+    call spline_end(fw)
     deallocate(fw)
 
     ! Pseudo-wavefunctions
-    call loct_spline_print(ps%ur, wave_unit)
+    call spline_print(ps%ur, wave_unit)
 
     ! Closes files and exits
     call io_close(local_unit); call io_close(dlocal_unit); call io_close(localw_unit)
@@ -509,19 +509,19 @@ contains
     if(.not. associated(ps%kb)) return
 
 
-    call loct_spline_end(ps%kb)
-    call loct_spline_end(ps%dkb)
-    call loct_spline_end(ps%ur)
+    call spline_end(ps%kb)
+    call spline_end(ps%dkb)
+    call spline_end(ps%ur)
 
-    call loct_spline_end(ps%vlr)
-    call loct_spline_end(ps%vlr_sq)
-    call loct_spline_end(ps%nlr)
+    call spline_end(ps%vlr)
+    call spline_end(ps%vlr_sq)
+    call spline_end(ps%nlr)
 
-    call loct_spline_end(ps%vl)
-    call loct_spline_end(ps%core)
-    call loct_spline_end(ps%vlocal_f)
-    call loct_spline_end(ps%vion)
-    call loct_spline_end(ps%dvion)
+    call spline_end(ps%vl)
+    call spline_end(ps%core)
+    call spline_end(ps%vlocal_f)
+    call spline_end(ps%vion)
+    call spline_end(ps%dvion)
 
     call logrid_end(ps%g)
 
@@ -583,13 +583,13 @@ contains
           hato = M_ZERO
           nrc = nint(log(psp%kbr(l)/psp%g%b + M_ONE)/psp%g%a) + 1
           hato(1:nrc) = psp%kb(1:nrc, l, j)
-          call loct_spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%kb(l, j))
+          call spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%kb(l, j))
         end do
       end do
 
       ! Now the part corresponding to the local pseudopotential
       ! where the asymptotic part is substracted
-      call loct_spline_fit(psp%g%nrval, psp%g%rofi, psp%vlocal, ps%vl)
+      call spline_fit(psp%g%nrval, psp%g%rofi, psp%vlocal, ps%vl)
 
       ! Define the table for the pseudo-wavefunction components (using splines)
       ! with a correct normalization function
@@ -597,7 +597,7 @@ contains
         do l = 1, ps%conf%p
           hato(2:psp%g%nrval) = psp%rphi(2:psp%g%nrval, l)/psp%g%rofi(2:psp%g%nrval)
           hato(1) = hato(2)
-          call loct_spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%Ur(l, is))
+          call spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%Ur(l, is))
         end do
       end do
       
@@ -651,7 +651,7 @@ contains
           hato(1)  = linear_extrapolate(g%rofi(1), g%rofi(2), g%rofi(3), &
             hato(2), hato(3))
 
-          call loct_spline_fit(g%nrval, g%rofi, hato, ps%ur(l, is))
+          call spline_fit(g%nrval, g%rofi, hato, ps%ur(l, is))
 
         end do
       end do
@@ -662,13 +662,13 @@ contains
         hato(1:nrc)         = ps_grid%KB(1:nrc, l)
         hato(nrc+1:g%nrval) = M_ZERO
 
-        call loct_spline_fit(g%nrval, g%rofi, hato, ps%kb(l-1, 1))
+        call spline_fit(g%nrval, g%rofi, hato, ps%kb(l-1, 1))
       end do
 
       ! Now the part corresponding to the local pseudopotential
       ! where the asymptotic part is substracted
       hato(:) = ps_grid%vlocal(:)/M_TWO
-      call loct_spline_fit(g%nrval, g%rofi, hato, ps%vl)
+      call spline_fit(g%nrval, g%rofi, hato, ps%vl)
       
       if(ps_grid%core_corrections) then
         ! find cutoff radius
@@ -685,7 +685,7 @@ contains
         hato(1) = linear_extrapolate(g%rofi(1), g%rofi(2), g%rofi(3), &
           hato(2), hato(3))
 
-        call loct_spline_fit(g%nrval, g%rofi, hato, ps%core)
+        call spline_fit(g%nrval, g%rofi, hato, ps%core)
       end if
 
       deallocate(hato)
@@ -738,13 +738,13 @@ contains
 
       hato(nrc:ps%g%nrval) = M_ZERO
 
-      call loct_spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%core)
+      call spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%core)
     end if
 
     ! Now the part corresponding to the local pseudopotential
     ! where the asymptotic part is substracted
     hato(:) = ps_upf%v_local/M_TWO
-    call loct_spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%vl)
+    call spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%vl)
 
     ! Increasing radius a little, just in case.
     ! I have hard-coded a larger increase of the cutoff for the filtering.
@@ -755,7 +755,7 @@ contains
     if (ps_upf%l_local >= 0) then
       hato = M_ZERO
       do j = 1, ps%kbc
-        call loct_spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%kb(ps_upf%l_local, j))
+        call spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%kb(ps_upf%l_local, j))
       end do
     end if
 
@@ -772,10 +772,10 @@ contains
       hato(1:nrc)         = ps_upf%proj(1:nrc, i)
       hato(nrc+1:ps%g%nrval) = M_ZERO
 
-      call loct_spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%kb(ps_upf%proj_l(i), ij))
+      call spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%kb(ps_upf%proj_l(i), ij))
       if (ps_upf%proj_l(i) == 0 .and. ps_upf%kb_nc == 2) then
         hato = M_ZERO
-        call loct_spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%kb(ps_upf%proj_l(i), 2))
+        call spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%kb(ps_upf%proj_l(i), 2))
       end if
     end do
 
@@ -787,7 +787,7 @@ contains
     do is = 1, ps%ispin
       do l = 1, ps%conf%p
         hato = ps_upf%wfs(:, l)/ps%g%rofi
-        call loct_spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%Ur(l, is))
+        call spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%Ur(l, is))
       end do
     end do
 

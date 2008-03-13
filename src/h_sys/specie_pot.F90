@@ -28,7 +28,7 @@ module specie_pot_m
   use global_m
   use grid_m
   use io_m
-  use loct_gsl_spline_m
+  use splines_m
   use loct_parser_m
   use math_m
   use mesh_function_m
@@ -173,7 +173,7 @@ contains
       ! the outer loop sums densities over atoms in neighbour cells
 
       call periodic_copy_init(pp, sb, atom%x, &
-        range = loct_spline_cutoff_radius(s%ps%Ur(1, 1), s%ps%projectors_sphere_threshold))
+        range = spline_cutoff_radius(s%ps%Ur(1, 1), s%ps%projectors_sphere_threshold))
 
       do icell = 1, periodic_copy_num(pp)
         pos = periodic_copy_position(pp, sb, icell)
@@ -183,11 +183,11 @@ contains
           do n = 1, s%ps%conf%p
             select case(spin_channels)
             case(1)
-              psi1 = loct_splint(s%ps%Ur(n, 1), r)
+              psi1 = spline_eval(s%ps%Ur(n, 1), r)
               rho(i, 1) = rho(i, 1) + s%ps%conf%occ(n, 1)*psi1*psi1 /(M_FOUR*M_PI)
             case(2)
-              psi1 = loct_splint(s%ps%Ur(n, 1), r)
-              psi2 = loct_splint(s%ps%Ur(n, 2), r)
+              psi1 = spline_eval(s%ps%Ur(n, 1), r)
+              psi2 = spline_eval(s%ps%Ur(n, 2), r)
               rho(i, 1) = rho(i, 1) + s%ps%conf%occ(n, 1)*psi1*psi1 /(M_FOUR*M_PI)
               rho(i, 2) = rho(i, 2) + s%ps%conf%occ(n, 2)*psi2*psi2 /(M_FOUR*M_PI)
             end select
@@ -460,7 +460,7 @@ contains
 
     case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
       rho = M_ZERO
-      call periodic_copy_init(pp, gr%sb, pos, range = loct_spline_cutoff_radius(s%ps%nlr, s%ps%projectors_sphere_threshold))
+      call periodic_copy_init(pp, gr%sb, pos, range = spline_cutoff_radius(s%ps%nlr, s%ps%projectors_sphere_threshold))
       do icell = 1, periodic_copy_num(pp)
         call dmf_put_radial_spline(gr%m, s%ps%nlr, periodic_copy_position(pp, gr%sb, icell), rho, add = .true.)
       end do
@@ -648,7 +648,7 @@ contains
         do ip = 1, gr%m%np
           vl(ip) = sum((gr%m%x(ip, 1:MAX_DIM) - x_atom(1:MAX_DIM))**2)
         end do
-        call loct_splint_vec(s%ps%vlr_sq, NP, vl)
+        call spline_eval_vec(s%ps%vlr_sq, NP, vl)
         
       case(SPEC_ALL_E)
         vl(1:gr%m%np) = M_ZERO

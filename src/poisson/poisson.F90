@@ -43,7 +43,6 @@ module poisson_m
   use poisson_multigrid_m
   use mesh_function_m
   use par_vec_m
-  use loct_gsl_spline_m
 
   implicit none
 

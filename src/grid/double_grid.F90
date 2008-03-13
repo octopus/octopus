@@ -31,7 +31,7 @@ module double_grid_m
   use functions_m
   use mesh_function_m
   use loct_m
-  use loct_gsl_spline_m
+  use splines_m
   use loct_parser_m
   use profiling_m
   use simul_box_m
@@ -166,7 +166,7 @@ contains
     type(specie_t),          intent(in) :: s
     type(mesh_t),            intent(in) :: m
     
-    rmax = loct_spline_cutoff_radius(s%ps%vl, s%ps%projectors_sphere_threshold)
+    rmax = spline_cutoff_radius(s%ps%vl, s%ps%projectors_sphere_threshold)
     if(this%use_double_grid) then 
       rmax = rmax + this%interpolation_max * maxval(m%h(1:3))
     end if
@@ -184,7 +184,7 @@ contains
 #define profiler double_grid_local_prof
 #define profiler_label "DOUBLE_GRID_LOCAL"
 #define double_grid_apply double_grid_apply_local
-#define calc_pot(vv) vv = loct_splint(s%ps%vl, r)
+#define calc_pot(vv) vv = spline_eval(s%ps%vl, r)
 
 #include "double_grid_apply.F90"
 

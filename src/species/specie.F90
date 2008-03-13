@@ -23,7 +23,7 @@ module specie_m
   use datasets_m
   use global_m
   use io_m
-  use loct_gsl_spline_m
+  use splines_m
   use loct_m
   use loct_math_m
   use loct_parser_m
@@ -590,8 +590,8 @@ contains
 
     r = sqrt(sum(x(1:MAX_DIM)**2))
 
-    uVr0  = loct_splint(s%ps%kb(l, i), r)
-    duVr0 = loct_splint(s%ps%dkb(l, i), r)
+    uVr0  = spline_eval(s%ps%kb(l, i), r)
+    duVr0 = spline_eval(s%ps%dkb(l, i), r)
 
     call grylmr(x(1), x(2), x(3), l, lm, ylm, gylm)
     uv = uvr0*ylm
@@ -628,7 +628,7 @@ contains
 
     r = sqrt(sum(x(1:MAX_DIM)**2))
 
-    uVr0 = loct_splint(s%ps%kb(l, i), r)
+    uVr0 = spline_eval(s%ps%kb(l, i), r)
 
     call ylmr(x(1), x(2), x(3), l, lm, ylm)
     uv = uvr0*ylm
@@ -642,7 +642,7 @@ contains
 
     ! only for 3D pseudopotentials, please
     if(s%type==SPEC_PS_PSF.or.s%type==SPEC_PS_HGH.or.s%type==SPEC_PS_CPI.or.s%type==SPEC_PS_FHI.or.s%type==SPEC_PS_UPF) then
-      l = loct_splint(s%ps%core, sqrt(sum(x**2)))
+      l = spline_eval(s%ps%core, sqrt(sum(x**2)))
     else
       l = M_ZERO
     end if
@@ -666,7 +666,7 @@ contains
     r2 = sum(x*x)
 
     if(specie_is_ps(s)) then
-      phi =  loct_splint(s%ps%ur(i, is), sqrt(r2)) * loct_ylm(x(1), x(2), x(3), l, m)
+      phi =  spline_eval(s%ps%ur(i, is), sqrt(r2)) * loct_ylm(x(1), x(2), x(3), l, m)
     else
       phi=M_ZERO
       select case(dim)

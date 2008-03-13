@@ -23,7 +23,6 @@ module lasers_m
   use datasets_m
   use global_m
   use io_m
-  use loct_gsl_spline_m
   use loct_parser_m
   use mesh_m
   use messages_m

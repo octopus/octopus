@@ -39,7 +39,7 @@ module poisson_fft_m
   use mesh_function_m
   use par_vec_m
   use poisson_cutoffs_m
-  use loct_gsl_spline_m
+  use splines_m
 
   implicit none
 
@@ -66,8 +66,9 @@ contains
   !-----------------------------------------------------------------
   subroutine poisson_fft_build_3d(gr, poisson_solver)
     type(grid_t), intent(inout) :: gr
-    integer, intent(in) :: poisson_solver
-    type(loct_spline_t) :: cylinder_cutoff_f
+    integer,      intent(in)    :: poisson_solver
+
+    type(spline_t)     :: cylinder_cutoff_f
     FLOAT, allocatable :: x(:), y(:)
     integer :: ix, iy, iz, ixx(MAX_DIM), db(MAX_DIM), k, ngp, idim
     FLOAT :: temp(MAX_DIM), modg2, xmax
@@ -126,13 +127,13 @@ contains
       gx = temp(1)*ixx(1)
 
       if( (poisson_solver .eq. FFT_CYL)  .and. (gr%sb%periodic_dim == 0) ) then
-        call loct_spline_init(cylinder_cutoff_f)
+        call spline_init(cylinder_cutoff_f)
         xmax = sqrt((temp(2)*db(2)/2)**2 + (temp(3)*db(3)/2)**2)
         do k = 1, ngp
           x(k) = (k-1)*(xmax/(ngp-1))
           y(k) = poisson_cutoff_fin_cylinder(gx, x(k), M_TWO*gr%m%sb%xsize, M_TWO*gr%m%sb%rsize)
         end do
-        call loct_spline_fit(ngp, x, y, cylinder_cutoff_f)
+        call spline_fit(ngp, x, y, cylinder_cutoff_f)
       end if
 
       do iy = 1, db(2)
@@ -163,7 +164,7 @@ contains
                 gy = gg(2)
                 gz = gg(3)
                 if ((gz >= M_ZERO) .and. (gy >= M_ZERO)) then
-                  fft_Coulb_FS(ix, iy, iz) = loct_splint(cylinder_cutoff_f, gperp)
+                  fft_Coulb_FS(ix, iy, iz) = spline_eval(cylinder_cutoff_f, gperp)
                 end if
                 if ((gz >= M_ZERO) .and. (gy < M_ZERO)) then
                   fft_Coulb_FS(ix, iy, iz) = fft_Coulb_FS(ix, -ixx(2) + 1, iz)
@@ -210,7 +211,7 @@ contains
       end do
 
       if( (poisson_solver .eq. FFT_CYL) .and. (gr%sb%periodic_dim == 0) ) then
-        call loct_spline_end(cylinder_cutoff_f)
+        call spline_end(cylinder_cutoff_f)
       end if
     end do
 
@@ -230,7 +231,7 @@ contains
     type(grid_t), intent(in) :: gr
     integer, intent(in) :: poisson_solver
 
-    type(loct_spline_t) :: besselintf
+    type(spline_t) :: besselintf
     integer :: i, ix, iy, ixx(MAX_DIM), db(MAX_DIM), npoints
     FLOAT :: temp(MAX_DIM), vec, r_c, maxf, dk
     FLOAT :: DELTA_R = CNST(1.0e-12)
@@ -269,7 +270,7 @@ contains
       call write_warning(2)
     end if
 
-    call loct_spline_init(besselintf)
+    call spline_init(besselintf)
 
     ! store the fourier transform of the Coulomb interaction
     ALLOCATE(fft_Coulb_FS(fft_cf%nx, fft_cf%n(2), fft_cf%n(3)), fft_cf%nx*fft_cf%n(2)*fft_cf%n(3))
@@ -287,19 +288,19 @@ contains
        x(i) = (i-1) * maxf / (npoints-1)
        y(i) = besselint(x(i))
     end do
-    call loct_spline_fit(npoints, x, y, besselintf)
+    call spline_fit(npoints, x, y, besselintf)
 
     do iy = 1, db(2)
       ixx(2) = pad_feq(iy, db(2), .true.)
       do ix = 1, fft_cf%nx
         ixx(1) = pad_feq(ix, db(1), .true.)
         vec = sqrt( (temp(1)*ixx(1))**2 + (temp(2)*ixx(2))**2)
-        fft_coulb_fs(ix, iy, 1) = M_TWO * M_PI * r_c * loct_splint(besselintf, vec*r_c)
+        fft_coulb_fs(ix, iy, 1) = M_TWO * M_PI * r_c * spline_eval(besselintf, vec*r_c)
       end do
     end do
 
     deallocate(x, y)
-    call loct_spline_end(besselintf)
+    call spline_end(besselintf)
 
     call pop_sub()
   end subroutine poisson_fft_build_2d
