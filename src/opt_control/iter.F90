@@ -204,18 +204,17 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine iteration_manager_direct(g, par, iterator, dx)
-    FLOAT, intent(in) :: g
+  subroutine iteration_manager_direct(j1, par, iterator, dx)
+    FLOAT, intent(in) :: j1
     type(oct_control_parameters_t), intent(in)  :: par
     type(oct_iterator_t), intent(inout) :: iterator
     FLOAT, optional, intent(in) :: dx
 
 
-    FLOAT :: j, j1, j2, fluence
+    FLOAT :: j, j2, fluence
     call push_sub('opt_control.iteration_manager_direct')
 
     fluence = parameters_fluence(par)
-    j1 = -g + par%alpha(1) * (fluence - par%targetfluence)**2
     j2 = - par%alpha(1) * (fluence - par%targetfluence)
     j  = j1 + j2
 
@@ -234,8 +233,8 @@ contains
     write(message(1), '(a,i5)') 'Optimal control iteration #', iterator%ctr_iter
     call messages_print_stress(stdout, trim(message(1)))
 
-    write(message(1), '(6x,a,f12.5)')    " => G        = ", g
-    write(message(2), '(6x,a,f12.5)')    " => J1       = ", j1
+    write(message(1), '(6x,a,f12.5)')    " => J1       = ", j1
+    write(message(2), '(6x,a,f12.5)')    " => J        = ", j
     write(message(3), '(6x,a,f12.5)')    " => J2       = ", j2
     write(message(4), '(6x,a,f12.5)')    " => Fluence  = ", fluence
     call write_info(4)

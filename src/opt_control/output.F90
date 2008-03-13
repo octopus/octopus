@@ -72,16 +72,18 @@ contains
     ! dump convergence: J,P,fluence,penalty
     iunit = io_open('opt-control/convergence', action='write')
     ! header
-    write(iunit, '(4(a))') '# iteration', '  J[Psi,chi,epsilon]', &
+    write(iunit, '(5(a))') '# iteration', '  J[Psi,chi,epsilon]', &
                                           '            J_1[Psi]', &
-                                          '        J_2[epsilon]'
+                                          '        J_2[epsilon]', &
+                                          '               Delta'
+
     write(iunit, '(a)') &
-     '#######################################################################'
+     '###########################################################################################'
 
     ! data
-    do loop = 0, iterator%ctr_iter_max
-       write(iunit, '(i11,3f20.8)') loop, iterator%convergence(1,loop), &
-         iterator%convergence(2,loop), iterator%convergence(3,loop)
+    do loop = 0, iterator%ctr_iter-1
+       write(iunit, '(i11,4f20.8)') loop, iterator%convergence(1,loop), &
+         iterator%convergence(2,loop), iterator%convergence(3,loop), iterator%convergence(5, loop)
     end do
     call io_close(iunit)
 

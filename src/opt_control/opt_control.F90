@@ -97,7 +97,7 @@ contains
 
     j1 = j1_functional(sys_%gr, psi, target_)
     fluence = parameters_fluence(par_)
-    f = - j1 + par_%alpha(1) * (fluence - par_%targetfluence)**2
+    f = - j1 !+ par_%alpha(1) * (fluence - par_%targetfluence)**2
 
     call states_end(psi)
   end subroutine direct_opt_calc
@@ -361,8 +361,8 @@ contains
 
     ! ---------------------------------------------------------
     subroutine scheme_direct
-      integer :: ierr, j
-      FLOAT :: minvalue, fluence, j2, jfunctional, step, g
+      integer :: ierr
+      FLOAT :: minvalue, step
       FLOAT, allocatable :: x(:)
       call push_sub('opt_control.scheme_direct')
 
@@ -392,9 +392,7 @@ contains
       if(oct%dump_intermediate) call iterator_write(iterator, psi, par, sys%gr, sys%outp)
 
       j1 = j1_functional(sys%gr, psi, target)
-      fluence = parameters_fluence(par)
-      g = - j1 + par%alpha(1) * (fluence - par%targetfluence)**2
-      call iteration_manager_direct(g, par, iterator)
+      call iteration_manager_direct(j1, par, iterator)
 
       call parameters_par_to_x(par, x)
       step = oct%direct_step * M_PI
