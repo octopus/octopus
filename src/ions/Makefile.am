@@ -46,5 +46,5 @@ solids.o: solids.F90 simul_box.o
 simul_box.o : simul_box.F90 geometry.o
 vibrations.o : vibrations.F90 simul_box.o geometry.o
 crystal.o : crystal.F90 
-dynamics.o : dynamics.F90 simul_box.o geometry.o
+dynamics.o : dynamics.F90 simul_box.o geometry.o xyz_file.o
 interaction.o : interaction.F90 solids.o simul_box.o geometry.o

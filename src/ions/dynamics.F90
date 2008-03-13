@@ -20,6 +20,7 @@
 #include "global.h"
 
 module ion_dynamics_m
+  use c_pointer_m
   use global_m
   use io_m
   use datasets_m
@@ -27,12 +28,14 @@ module ion_dynamics_m
   use loct_parser_m
   use units_m
   use messages_m
+  use mpi_m
   use geometry_m
   use loct_m
   use simul_box_m
   use profiling_m
   use varinfo_m
   use math_m
+  use xyz_file_m
 
   implicit none
 
@@ -47,7 +50,8 @@ module ion_dynamics_m
     ion_dynamics_propagate_velocities,     &
     ion_dynamics_save_state,               &
     ion_dynamics_restore_state,            &
-    ion_dynamics_ions_move
+    ion_dynamics_ions_move,                &
+    ion_dynamics_kinetic_energy
 
   integer, parameter ::   &
     STATIC_IONS     = 0,  &
@@ -70,7 +74,12 @@ contains
 
   subroutine ion_dynamics_init(this, geo)
     type(ion_dynamics_t), intent(out)   :: this
-    type(geometry_t),     intent(in)    :: geo
+    type(geometry_t),     intent(inout) :: geo
+
+    integer :: i, j
+    FLOAT   :: x(MAX_DIM), temperature, sigma, kin1, kin2
+    type(c_pointer_t) :: random_gen_pointer
+    type(xyz_file_info) :: xyz
 
     !%Variable MoveIons
     !%Type integer
@@ -96,6 +105,122 @@ contains
       ALLOCATE(this%oldforce(1:MAX_DIM, 1:geo%natoms), MAX_DIM*geo%natoms)
 
     end if
+
+    !now initialize velocities
+
+    !%Variable RandomVelocityTemp
+    !%Type float
+    !%Section System::Velocities
+    !%Description
+    !% If this variable is present, octopus will assign random
+    !% velocities to the atoms following a Bolzmann distribution with
+    !% temperature given by RandomVelocityTemp (in degrees Kelvin).
+    !%End
+
+    ! we now load the velocities, either from the temperature, from the input, or from a file
+    if(loct_parse_isdef(check_inp('RandomVelocityTemp')).ne.0) then
+
+      if( mpi_grp_is_root(mpi_world)) then
+        call loct_ran_init(random_gen_pointer)
+        call loct_parse_float(check_inp('RandomVelocityTemp'), M_ZERO, temperature)
+      end if
+
+      do i = 1, geo%natoms
+        !generate the velocities in the root node
+        if( mpi_grp_is_root(mpi_world)) then
+          sigma = sqrt( P_Kb*temperature / geo%atom(i)%spec%weight )
+          do j = 1, 3
+             geo%atom(i)%v(j) = loct_ran_gaussian(random_gen_pointer, sigma)
+          end do
+        end if
+#ifdef HAVE_MPI
+        !and send them to the others
+        call MPI_Bcast(geo%atom(i)%v, MAX_DIM, MPI_FLOAT, 0, mpi_world%comm, mpi_err)
+#endif
+      end do
+
+      if( mpi_grp_is_root(mpi_world)) then
+        call loct_ran_end(random_gen_pointer)
+      end if
+
+      kin1 = ion_dynamics_kinetic_energy(this, geo)
+
+      call cm_vel(geo, x)
+      do i = 1, geo%natoms
+        geo%atom(i)%v = geo%atom(i)%v - x
+      end do
+
+      kin2 = ion_dynamics_kinetic_energy(this, geo)
+
+      do i = 1, geo%natoms
+        geo%atom(i)%v(:) =  sqrt(kin1/kin2)*geo%atom(i)%v(:)
+      end do
+
+      write(message(1),'(a,f10.4,1x,a)') 'Info: Initial velocities ramdomly distributed with T =', &
+        temperature, 'K'
+      write(message(2),'(2x,a,f8.4,1x,a)') '<K>       =', &
+        (ion_dynamics_kinetic_energy(this, geo)/geo%natoms)/units_out%energy%factor, &
+        units_out%energy%abbrev
+      write(message(3),'(2x,a,f8.4,1x,a)') '3/2 k_B T =', &
+        (M_THREE/M_TWO)*P_Kb*temperature/units_out%energy%factor, &
+        units_out%energy%abbrev
+      call write_info(3)
+
+    else
+      !%Variable XYZVelocities
+      !%Type string
+      !%Section System::Velocities
+      !%Description
+      !% octopus will try to read the starting velocities of the atoms from the XYZ file 
+      !% specified by the variable XYZVelocities.
+      !% Note that you do not need to specify initial velocities if you are not going
+      !% to perform ion dynamics; if you are going to allow the ions to move but the velocities
+      !% are not specified, they are considered to be null.
+      !%End
+
+      !%Variable Velocities
+      !%Type block
+      !%Section System::Velocities
+      !%Description
+      !% If XYZVelocities is not present, octopus will try to fetch the initial 
+      !% atomic velocities from this block. If this block is not present, octopus
+      !% will reset the initial velocities to zero. The format of this block can be
+      !% illustrated by this example:
+      !%
+      !% <tt>%Velocities
+      !% <br>&nbsp;&nbsp;'C'  |      -1.7 | 0.0 | 0.0
+      !% <br>&nbsp;&nbsp;'O'  | &nbsp;1.7 | 0.0 | 0.0
+      !% <br>%</tt>
+      !%
+      !% It describes one Carbon and one Oxygen moving at the relative
+      !% velocity of 3.4, velocity units.
+      !%
+      !% Note: It is important for the velocities to maintain the ordering 
+      !% in which the species were defined in the coordinates specifications.
+      !%End
+
+      call xyz_file_init(xyz)
+      call xyz_file_read('Velocities', xyz)
+      if(xyz%file_type.ne.XYZ_FILE_ERR) then
+        if(geo%natoms.ne.xyz%n) then
+          write(message(1), '(a,i4,a,i4)') 'I need exactly ', geo%natoms, ' velocities, but I found ', xyz%n
+          call write_fatal(1)
+        end if
+
+        ! copy information and adjust units
+        do i = 1, geo%natoms
+          geo%atom(i)%v = xyz%atom(i)%x * (units_inp%velocity%factor / units_inp%length%factor)
+        end do
+        call xyz_file_end(xyz)
+
+      else
+        do i = 1, geo%natoms
+          geo%atom(i)%v = M_ZERO
+        end do
+      end if
+    end if
+
+    geo%kinetic_energy = ion_dynamics_kinetic_energy(this, geo)
 
   end subroutine ion_dynamics_init
 
@@ -194,6 +319,20 @@ contains
     
   end function ion_dynamics_ions_move
   
+  ! ---------------------------------------------------------
+  FLOAT pure function ion_dynamics_kinetic_energy(this, geo) result(kinetic_energy)
+    type(ion_dynamics_t),  intent(in) :: this
+    type(geometry_t),      intent(in) :: geo
+
+    integer :: iatom
+
+    kinetic_energy = M_ZERO
+    do iatom = 1, geo%natoms
+      kinetic_energy = kinetic_energy + M_HALF*geo%atom(iatom)%spec%weight*sum(geo%atom(iatom)%v(1:MAX_DIM)**2)
+    end do
+
+  end function ion_dynamics_kinetic_energy
+
 end module ion_dynamics_m
 
 !! Local Variables:
