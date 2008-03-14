@@ -20,10 +20,7 @@
 
   ! ---------------------------------------------------------
   ! read the parameters for the optimal control run     
-  subroutine oct_read_inp(oct)
-    type(oct_t), intent(inout) :: oct
-
-
+  subroutine oct_read_inp
     call push_sub('opt_control_read.oct_read_inp')  
 
     !%Variable OCTScheme
@@ -160,8 +157,7 @@
   ! ---------------------------------------------------------
   ! Tries to avoid ill defined combinations of run modes.
   ! ---------------------------------------------------------
-  subroutine check_faulty_runmodes(oct, sys, h, target, tr)
-    type(oct_t),                    intent(inout) :: oct
+  subroutine check_faulty_runmodes(sys, h, target, tr)
     type(system_t), target,         intent(in)    :: sys
     type(hamiltonian_t),            intent(in)    :: h
     type(target_t),                 intent(in)    :: target

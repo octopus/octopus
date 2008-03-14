@@ -68,6 +68,7 @@ module opt_control_m
 
   ! Module variables
   type(filter_t)                 :: filter
+  type(oct_t)                    :: oct
 
   ! For the algorithm_direct scheme:
   type(oct_control_parameters_t) :: par_
@@ -77,7 +78,6 @@ module opt_control_m
   type(target_t), pointer :: target_
   type(states_t), pointer :: psi_
   type(oct_iterator_t), pointer :: iterator_
-  type(oct_t), pointer :: oct_
 
 contains
 
@@ -114,7 +114,7 @@ contains
 
     iterator_%ctr_iter = geom_iter
     call iteration_manager_direct(-energy, par_, iterator_, maxdx)
-    if(oct_%dump_intermediate) call iterator_write(iterator_, psi_, par_, sys_%gr, sys_%outp)
+    if(oct%dump_intermediate) call iterator_write(iterator_, psi_, par_, sys_%gr, sys_%outp)
 
   end subroutine direct_opt_write_info
   ! ---------------------------------------------------------
@@ -125,7 +125,6 @@ contains
     type(system_t), target,      intent(inout) :: sys
     type(hamiltonian_t), target, intent(inout) :: h
 
-    type(oct_t), target            :: oct
     type(oct_iterator_t), target   :: iterator
     type(td_t), target             :: td
     type(states_t)                 :: psi
@@ -147,7 +146,7 @@ contains
 
     call states_allocate_wfns(sys%st, sys%gr%m, M_CMPLX)
 
-    call oct_read_inp(oct)
+    call oct_read_inp()
 
     call parameters_set_initial(par, h%ep, sys%gr%m, td%dt, td%max_iter, &
                                 oct%mode_fixed_fluence, oct%mode_basis_set)
@@ -162,7 +161,7 @@ contains
     call initial_state_init(sys%gr, sys%geo, sys%st, initial_st)
     call target_init(sys%gr, sys%geo, sys%st, td, target)
 
-    call check_faulty_runmodes(oct, sys, h, target, td%tr)
+    call check_faulty_runmodes(sys, h, target, td%tr)
 
     call h_sys_output_states(initial_st, sys%gr, 'opt-control/initial', sys%outp)
     call target_output(target, sys%gr, 'opt-control/target', sys%outp)
@@ -208,7 +207,7 @@ contains
     call oct_output(iterator, sys%gr, sys%outp, psi)
 
     ! do final test run: propagate initial state with optimal field
-    call oct_finalcheck(oct, initial_st, target, iterator%best_par, sys, h, td)
+    call oct_finalcheck(initial_st, target, iterator%best_par, sys, h, td)
 
     ! clean up
     call parameters_end(par)
@@ -233,7 +232,7 @@ contains
       call parameters_copy(par_new, par)
       ctr_loop: do
         call parameters_copy(par_prev, par)
-        call f_striter(oct, sys, h, td, psi, initial_st, target, par, j1)
+        call f_striter(sys, h, td, psi, initial_st, target, par, j1)
         if(oct%dump_intermediate) call iterator_write(iterator, psi, par_prev, sys%gr, sys%outp)
         stop_loop = iteration_manager(j1, par_prev, par, iterator)
         if(clean_stop() .or. stop_loop) exit ctr_loop
@@ -261,7 +260,7 @@ contains
       call parameters_copy(par_new, par)
       ctr_loop: do
         call parameters_copy(par_prev, par)
-        call f_iter(oct, iterator, sys, h, td, psi, initial_st, target, par, prop_psi, prop_chi, j1)
+        call f_iter(iterator, sys, h, td, psi, initial_st, target, par, prop_psi, prop_chi, j1)
         if(oct%dump_intermediate) call iterator_write(iterator, psi, par, sys%gr, sys%outp)
         stop_loop = iteration_manager(j1, par, par_prev, iterator)
         if(clean_stop() .or. stop_loop) exit ctr_loop
@@ -296,7 +295,7 @@ contains
       call parameters_copy(par_new, par)      
       ctr_loop: do
         call parameters_copy(par_prev, par)
-        call f_wg05(oct, iterator, sys, h, td, psi, initial_st, target, par, prop_psi, prop_chi, j1)
+        call f_wg05(iterator, sys, h, td, psi, initial_st, target, par, prop_psi, prop_chi, j1)
         if(oct%dump_intermediate) call iterator_write(iterator, psi, par, sys%gr, sys%outp)
         stop_loop = iteration_manager(j1, par, par_prev, iterator)
         if(clean_stop() .or. stop_loop) exit ctr_loop
@@ -331,7 +330,7 @@ contains
       call parameters_copy(par_new, par)
       ctr_loop: do
         call parameters_copy(par_prev, par)
-        call f_zbr98(oct, sys, h, td, psi, initial_st, target, prop_psi, prop_chi, par)
+        call f_zbr98(sys, h, td, psi, initial_st, target, prop_psi, prop_chi, par)
         j1 = j1_functional(sys%gr, psi, target)
         if(oct%dump_intermediate) call iterator_write(iterator, psi, par, sys%gr, sys%outp)
         stop_loop = iteration_manager(j1, par, par_prev, iterator)
@@ -371,7 +370,6 @@ contains
       target_   => target
       psi_      => initial_st
       iterator_ => iterator
-      oct_      => oct
 
       ! Do a zero iteration, with the input field.
       ! (This could be removed in a final version, since the minimization algorithm itself
@@ -412,8 +410,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine f_zbr98(oct, sys, h, td, psi, initial_st, target, prop_psi, prop_chi, par)
-    type(oct_t), intent(in)                       :: oct
+  subroutine f_zbr98(sys, h, td, psi, initial_st, target, prop_psi, prop_chi, par)
     type(system_t), intent(inout)                 :: sys
     type(hamiltonian_t), intent(inout)            :: h
     type(td_t), intent(inout)                     :: td
@@ -451,8 +448,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine f_wg05(oct, iterator, sys, h, td, psi, initial_st, target, par, prop_psi, prop_chi, j1)
-    type(oct_t), intent(in)                       :: oct
+  subroutine f_wg05(iterator, sys, h, td, psi, initial_st, target, par, prop_psi, prop_chi, j1)
     type(oct_iterator_t), intent(in)              :: iterator
     type(system_t), intent(inout)                 :: sys
     type(hamiltonian_t), intent(inout)            :: h
@@ -520,8 +516,7 @@ contains
 
 
    ! ---------------------------------------------------------
-  subroutine f_striter(oct, sys, h, td, psi, initial_st, target, par, j1)
-    type(oct_t), intent(in)                       :: oct
+  subroutine f_striter(sys, h, td, psi, initial_st, target, par, j1)
     type(system_t), intent(inout)                 :: sys
     type(hamiltonian_t), intent(inout)            :: h
     type(td_t), intent(inout)                     :: td
@@ -582,8 +577,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine f_iter(oct, iterator, sys, h, td, psi, initial_st, target, par, prop_psi, prop_chi, j1)
-    type(oct_t), intent(in)                       :: oct
+  subroutine f_iter(iterator, sys, h, td, psi, initial_st, target, par, prop_psi, prop_chi, j1)
     type(oct_iterator_t), intent(in)              :: iterator
     type(system_t), intent(inout)                 :: sys
     type(hamiltonian_t), intent(inout)            :: h

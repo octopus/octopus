@@ -19,8 +19,7 @@
 
 
   ! ---------------------------------------------------------
-  subroutine oct_finalcheck(oct, initial_st, target, par, sys, h, td)
-    type(oct_t), intent(in)            :: oct
+  subroutine oct_finalcheck(initial_st, target, par, sys, h, td)
     type(states_t), intent(in)         :: initial_st
     type(target_t), intent(inout)      :: target
     type(system_t), intent(inout)      :: sys
