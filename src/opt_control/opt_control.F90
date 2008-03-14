@@ -66,6 +66,9 @@ module opt_control_m
   private
   public :: opt_control_run
 
+  ! Module variables
+  type(filter_t)                 :: filter
+
   ! For the algorithm_direct scheme:
   type(oct_control_parameters_t) :: par_
   type(system_t), pointer :: sys_
@@ -128,7 +131,6 @@ contains
     type(states_t)                 :: psi
     type(states_t), target         :: initial_st
     type(target_t), target         :: target
-    type(filter_t)                 :: filter
     type(oct_control_parameters_t) :: par, par_new, par_prev
     logical                        :: stop_loop
     FLOAT                          :: j1
@@ -227,14 +229,11 @@ contains
     subroutine scheme_straight_iteration
       call push_sub('opt_control.scheme_mt03')
 
-      call oct_prop_init(prop_chi, "chi", td%max_iter, oct%number_checkpoints)
-      call oct_prop_init(prop_psi, "psi", td%max_iter, oct%number_checkpoints)
-
       call parameters_set_rep(par)
       call parameters_copy(par_new, par)
       ctr_loop: do
         call parameters_copy(par_prev, par)
-        call f_striter(oct, sys, h, td, filter, psi, initial_st, target, par, prop_psi, prop_chi, j1)
+        call f_striter(oct, sys, h, td, psi, initial_st, target, par, j1)
         if(oct%dump_intermediate) call iterator_write(iterator, psi, par_prev, sys%gr, sys%outp)
         stop_loop = iteration_manager(j1, par_prev, par, iterator)
         if(clean_stop() .or. stop_loop) exit ctr_loop
@@ -245,8 +244,6 @@ contains
         end if
       end do ctr_loop
 
-      call oct_prop_end(prop_chi)
-      call oct_prop_end(prop_psi)
       call parameters_end(par_new)
       call parameters_end(par_prev)
       call pop_sub()
@@ -299,7 +296,7 @@ contains
       call parameters_copy(par_new, par)      
       ctr_loop: do
         call parameters_copy(par_prev, par)
-        call f_wg05(oct, iterator, sys, h, td, filter, psi, initial_st, target, par, prop_psi, prop_chi, j1)
+        call f_wg05(oct, iterator, sys, h, td, psi, initial_st, target, par, prop_psi, prop_chi, j1)
         if(oct%dump_intermediate) call iterator_write(iterator, psi, par, sys%gr, sys%outp)
         stop_loop = iteration_manager(j1, par, par_prev, iterator)
         if(clean_stop() .or. stop_loop) exit ctr_loop
@@ -454,13 +451,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine f_wg05(oct, iterator, sys, h, td, filter, psi, initial_st, target, par, prop_psi, prop_chi, j1)
+  subroutine f_wg05(oct, iterator, sys, h, td, psi, initial_st, target, par, prop_psi, prop_chi, j1)
     type(oct_t), intent(in)                       :: oct
     type(oct_iterator_t), intent(in)              :: iterator
     type(system_t), intent(inout)                 :: sys
     type(hamiltonian_t), intent(inout)            :: h
     type(td_t), intent(inout)                     :: td
-    type(filter_t), intent(inout)                 :: filter
     type(states_t), intent(inout)                 :: psi
     type(states_t), intent(in)                    :: initial_st
     type(target_t), intent(inout)                 :: target
@@ -524,22 +520,24 @@ contains
 
 
    ! ---------------------------------------------------------
-  subroutine f_striter(oct, sys, h, td, filter, psi, initial_st, target, par, prop_psi, prop_chi, j1)
+  subroutine f_striter(oct, sys, h, td, psi, initial_st, target, par, j1)
     type(oct_t), intent(in)                       :: oct
     type(system_t), intent(inout)                 :: sys
     type(hamiltonian_t), intent(inout)            :: h
     type(td_t), intent(inout)                     :: td
-    type(filter_t), intent(inout)                 :: filter
     type(states_t), intent(inout)                 :: psi
     type(states_t), intent(in)                    :: initial_st
     type(target_t), intent(inout)                 :: target
     type(oct_control_parameters_t), intent(inout) :: par
-    type(oct_prop_t), intent(inout)               :: prop_psi, prop_chi
     FLOAT, intent(out)                            :: j1
 
     integer :: j
     type(states_t) :: chi
     type(oct_control_parameters_t) :: par_chi
+    type(oct_prop_t)               :: prop_chi, prop_psi;
+
+    call oct_prop_init(prop_chi, "chi", td%max_iter, oct%number_checkpoints)
+    call oct_prop_init(prop_psi, "psi", td%max_iter, oct%number_checkpoints)
 
     call parameters_to_realtime(par)
 
@@ -574,6 +572,10 @@ contains
     ! Copy par_chi to par
     call parameters_end(par)
     call parameters_copy(par, par_chi)
+
+    call parameters_end(par_chi)
+    call oct_prop_end(prop_chi)
+    call oct_prop_end(prop_psi)
     call pop_sub()
   end subroutine f_striter
   ! ---------------------------------------------------------
