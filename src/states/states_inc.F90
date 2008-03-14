@@ -37,7 +37,7 @@ subroutine X(states_gram_schmidt_full)(st, nst, m, dim, psi, start)
   R_TYPE, pointer             :: psi_q(:, :), psi_p(:, :)
 
   call profiling_in(C_PROFILING_GRAM_SCHMIDT1)
-  call push_sub('states_inc.Xstates_gram_schmidt1')
+  call push_sub('states_inc.Xstates_gram_schmidt_full')
 
   if(present(start)) then
     stst = start
@@ -121,27 +121,104 @@ subroutine X(states_gram_schmidt)(st, nst, m, dim, psi, phi, normalize, mask)
   logical, optional, intent(inout) :: mask(:)      ! nst
 
   logical :: normalize_
-  integer :: q, idim
+  integer :: ist, idim
   FLOAT   :: nrm2
-  R_TYPE  :: ss
+  R_TYPE, allocatable  :: ss(:)
+  integer :: block_size, size, sp
+  type(profile_t), save :: prof
+#ifdef HAVE_MPI
+  R_TYPE, allocatable  :: ss_tmp(:)
+  type(profile_t), save :: reduce_prof
+#endif
 
   ASSERT(.not.st%parallel_in_states)
 
-  call profiling_in(C_PROFILING_GRAM_SCHMIDT2)
-  call push_sub('states_inc.Xstates_gram_schmidt2')
+  call profiling_in(prof, "GRAM_SCHMIDT")
+  call push_sub('states_inc.Xstates_gram_schmidt')
 
-  do q = 1, nst
-    if(present(mask)) then
-      if(mask(q)) cycle
-    end if
-    ss = X(states_dotp)(m, dim, psi(:,:, q), phi)
-    if(abs(ss) > M_EPSILON) then
-      do idim = 1, dim
-        call lalg_axpy(m%np, -ss, psi(:, idim, q), phi(:, idim))
+  ! set the block_size so each block takes one third of the l1 cache
+  block_size = hardware%l1%size / (3*R_SIZEOF)
+  ! the block_size should be a multiple of the cache line
+  block_size = block_size - mod(block_size, hardware%l1%line_size)
+
+  ASSERT(block_size > 0)
+
+  ALLOCATE(ss(1:nst), nst)
+
+  ss = M_ZERO
+
+  if(.not. m%use_curvlinear) then
+    
+    do idim = 1, dim
+      do sp = 1, m%np, block_size
+        size = min(block_size, m%np - sp + 1)
+        do ist = 1, nst
+
+          if(present(mask)) then
+            if(mask(ist)) cycle
+          end if
+          
+#ifdef R_TCOMPLEX
+          ss(ist) = ss(ist) + zdotc(size, psi(sp, idim, ist), 1, phi(sp, idim), 1)
+#else
+          ss(ist) = ss(ist) + ddot(size, psi(sp, idim, ist), 1, phi(sp, idim), 1)
+#endif
+        end do
       end do
-    else
-      if(present(mask)) mask(q) = .true.
-    end if
+    end do
+    
+    ss = ss*m%vol_pp(1)
+
+  else
+
+    do idim = 1, dim
+      do sp = 1, m%np, block_size
+        size = min(block_size, m%np - sp + 1)
+        do ist = 1, nst
+
+          if(present(mask)) then
+            if(mask(ist)) cycle
+          end if
+
+          ss(ist) = ss(ist) + sum(m%vol_pp(sp:sp + size)*R_CONJ(psi(sp:sp + size, idim, ist))*phi(sp:sp+size, idim))
+        end do
+      end do
+    end do
+    
+  end if
+
+#ifdef HAVE_MPI
+  if(m%parallel_in_domains) then
+    ALLOCATE(ss_tmp(1:nst), nst)
+    call profiling_in(reduce_prof, "GRAM_SCHMIDT_REDUCE")
+    call MPI_Allreduce(ss, ss_tmp, nst, R_MPITYPE, MPI_SUM, m%vp%comm, mpi_err)
+    call profiling_out(reduce_prof)
+    ss = ss_tmp
+  end if
+#endif
+
+  if(present(mask)) then
+    do ist = 1, nst
+      mask(ist) = (abs(ss(ist)) <= M_EPSILON)
+    end do
+  end if
+
+  do idim = 1, dim
+    do sp = 1, m%np, block_size
+      size = min(block_size, m%np - sp + 1)
+      do ist = 1, nst
+
+        if(present(mask)) then
+          if(mask(ist)) cycle
+        end if
+        
+#ifdef R_TCOMPLEX
+        call zaxpy(size, -ss(ist), psi(sp, idim, ist), 1, phi(sp, idim), 1)
+#else
+        call daxpy(size, -ss(ist), psi(sp, idim, ist), 1, phi(sp, idim), 1)
+#endif
+      end do
+    end do
   end do
 
   normalize_ = .false.
@@ -153,10 +230,11 @@ subroutine X(states_gram_schmidt)(st, nst, m, dim, psi, phi, normalize, mask)
     end do
   end if
 
+  deallocate(ss)
+  
   call pop_sub()
-  call profiling_out(C_PROFILING_GRAM_SCHMIDT2)
+  call profiling_out(prof)
 end subroutine X(states_gram_schmidt)
-
 
 ! ---------------------------------------------------------
 R_TYPE function X(states_dotp)(m, dim, f1, f2, reduce) result(dotp)

@@ -26,7 +26,8 @@ libbasic_a_SOURCES = \
 	loct_parser.F90 datasets.F90 messages.F90 io.F90   \
 	io_binary.c mpi_lib.F90 types.F90 \
 	units.F90 mpi_debug.F90 profiling.F90 utils.F90      \
-	multicomm.F90 periodic_table.F90 getopt_f.c command_line.F90
+	multicomm.F90 periodic_table.F90 getopt_f.c command_line.F90 \
+	hardware.F90
 
 noinst_HEADERS = \
 	mpi_debug_inc.F90 mpi_lib_inc.F90
@@ -63,7 +64,7 @@ loct.o : loct.F90 types.o
 string.o : string.F90 types.o
 varinfo.o : varinfo.F90 string.o types.o
 mpi.o : mpi.F90 
-global.o : global.F90 mpi.o loct.o 
+global.o : global.F90 mpi.o loct.o hardware.o
 loct_parser.o : loct_parser.F90 mpi.o loct.o global.o types.o
 datasets.o : datasets.F90 loct_parser.o types.o
 messages.o : messages.F90 varinfo.o string.o mpi.o loct_parser.o loct.o global.o datasets.o 
@@ -79,3 +80,4 @@ periodic_table.o : periodic_table.F90
 getopt_f.o : getopt_f.c 
 command_line.o : command_line.F90 
 types.o : types.F90
+hardware.o : hardware.F90

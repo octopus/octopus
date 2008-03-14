@@ -30,6 +30,8 @@
 #define R_REAL(x)   real(x, REAL_PRECISION)
 #define R_AIMAG(x)  aimag(x)
 
+#define R_SIZEOF    16
+
 #define X(x)        z ## x
 
 #if defined(DISABLE_DEBUG)

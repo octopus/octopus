@@ -130,7 +130,6 @@ module profiling_m
        C_PROFILING_XC_OEP_FULL,    &
        C_PROFILING_TIME_STEP,      &
        C_PROFILING_GRAM_SCHMIDT1,  &
-       C_PROFILING_GRAM_SCHMIDT2,  &
        C_PROFILING_EIGEN_SOLVER,   &
        C_PROFILING_DISK_ACCESS,    &
        C_PROFILING_LCAO,           &
@@ -204,8 +203,7 @@ contains
       call profile_init(C_PROFILING_XC_KLI,           'XC_KLI')
       call profile_init(C_PROFILING_XC_OEP_FULL,      'XC_OEP_FULL')
       call profile_init(C_PROFILING_TIME_STEP	,     'TIME_STEP')
-      call profile_init(C_PROFILING_GRAM_SCHMIDT1,    'GRAM_SCHMIDT1')
-      call profile_init(C_PROFILING_GRAM_SCHMIDT2,    'GRAM_SCHMIDT2')
+      call profile_init(C_PROFILING_GRAM_SCHMIDT1,    'GRAM_SCHMIDT_FULL')
       call profile_init(C_PROFILING_EIGEN_SOLVER,     'EIGEN_SOLVER')
       call profile_init(C_PROFILING_DISK_ACCESS,      'DISK_ACCESS')
       call profile_init(C_PROFILING_LCAO,             'LCAO')

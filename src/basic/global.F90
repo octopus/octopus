@@ -22,6 +22,7 @@
 module global_m
   use loct_m
   use mpi_m
+  use hardware_m
 
   implicit none
 
@@ -147,6 +148,8 @@ contains
     ! Get epoch time at node startup, just after the barrier to synchronize nodes first.
     call loct_gettimeofday(s_epoch_sec, s_epoch_usec)
 
+    call hardware_init()
+
     ! Get the environment variable OCTOPUS_SHARE that overrides SHARE_OCTOPUS/share/octopus.
     call loct_getenv("OCTOPUS_SHARE", share)
 
@@ -174,6 +177,7 @@ contains
   ! ---------------------------------------------------------
   subroutine global_end()
 
+    call hardware_end()
     call mpi_mod_end()
     call varinfo_end()
 

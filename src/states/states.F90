@@ -21,11 +21,13 @@
 
 module states_m
   use crystal_m
+  use blas_m
   use datasets_m
   use functions_m
   use geometry_m
   use global_m
   use grid_m
+  use hardware_m
   use io_function_m
   use io_m
   use lalg_basic_m
@@ -38,7 +40,6 @@ module states_m
   use mpi_m
   use mpi_lib_m
   use multicomm_m
-  !use output_m
   use profiling_m
   use simul_box_m
   use string_m
