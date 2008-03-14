@@ -20,7 +20,7 @@ Input: 04-box.01-ground_state.inp
 Match ; Total energy ; sed -n '/^Energy/{n\;p\;}' ground_state_static/info ; \s*Total\s*=\s*-4.9569
 Match ; 2th state    ; grep '2   --' excited_states_static/eigenvalues ; \s*-4.8279
 
-# Then, run the optimization for 15 iterations with ZBR98 scheme and compare the convergence.
+# Then, run the optimization for 5 iterations with ZBR98 scheme and compare the convergence.
 
 Input: 04-box.02-oct_long.inp
 Match ; J1 1st iteration   ; grep ' 1  ' opt-control/convergence ; \s*0.641\d*
@@ -28,19 +28,25 @@ Match ; J1 2nd iteration   ; grep ' 2  ' opt-control/convergence ; \s*0.760\d*
 Match ; J1 5th iteration   ; grep ' 5  ' opt-control/convergence ; \s*0.869\d*
 
 
-# Then, run the optimization for 15 iterations with a ZR98 scheme and compare the convergence.
+# Then, run the optimization for 5 iterations with a ZR98 scheme and compare the convergence.
 Input: 04-box.03-oct_long.inp
 Match ; J1 1st iteration  ; grep ' 1  ' opt-control/convergence ; \s*0.620\d*
 Match ; J1 2nd iteration  ; grep ' 2  ' opt-control/convergence ; \s*0.739\d*
 Match ; J1 5th iteration  ; grep ' 5  ' opt-control/convergence ; \s*0.872\d*
 
 
-# Then, run the optimization for 15 iterations with a WG05 scheme and compare the convergence.
+# Then, run the optimization for 5 iterations with a WG05 scheme and compare the convergence.
 Input: 04-box.04-oct_long.inp
 Match ; J1 1st  iteration  ; grep ' 1  ' opt-control/convergence ; \s*0.711\d*
 Match ; J1 2nd  iteration  ; grep ' 2  ' opt-control/convergence ; \s*0.855\d*
 Match ; J1 5th  iteration  ; grep ' 5  ' opt-control/convergence ; \s*0.985\d*
 
-
-
+# Then, run the optimization for 5 iterations with the STRAINGT ITERATION scheme
+# This test makes use of Broyden mixing.
+# Note that, despite the poor behaviour of the first iterations, the run actually converges
+# if it is allowed to run for more iterations.
+Input: 04-box.05-oct_long.inp
+Match ; J1 1st  iteration  ; grep ' 1  ' opt-control/convergence ; \s*0.576\d*
+Match ; J1 2nd  iteration  ; grep ' 2  ' opt-control/convergence ; \s*0.741\d*
+Match ; J1 5th  iteration  ; grep ' 5  ' opt-control/convergence ; \s*0.786\d*
 

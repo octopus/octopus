@@ -1,0 +1,85 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: 04-box.03-oct_long.inp 3604 2007-11-25 22:23:24Z acastro $
+
+CalculationMode = opt_control
+
+# ------------------
+# TD RUN Parameters
+# ------------------
+
+stime  = 100.0
+dt = 0.01
+TDEvolutionMethod = aetrs
+TDExponentialMethod = taylor
+TDExponentialOrder = 4
+TDLanczosTol = 5.0e-5
+TDMaximumIter = stime/dt
+TDTimeStep = dt
+
+
+# --------------
+# OCT parameters
+# --------------
+
+OCTPenalty =1.0
+OCTEps   = 0.000001
+OCTMaxIter = 5
+
+OCTFilterMode = 0
+OCTInitialState = oct_is_groundstate
+OCTTargetOperator = oct_tg_gstransformation
+%OCTTargetTransformStates
+0 | 1
+%
+OCTScheme = oct_algorithm_straight_iteration
+OCTDoubleCheck = no
+
+OCTMixing = yes
+Mixing = 0.01
+TypeOfMixing = broyden
+
+
+#----------------------------
+# Laser field = Initial guess
+#-----------------------------
+
+ampl = 0.06
+freq = 0.157
+envelope = 0
+w = 5.0
+cycles = 4
+tau = (pi/freq)*cycles
+t0 = tau
+%TDExternalFields
+  electric_field | 1 | 0 | 0 | envelope_constant | ampl | freq
+%
+
+Dimensions = 1
+fromScratch = yes
+
+BoxShape = sphere
+Spacing = 0.4
+Radius =  15.0
+
+TheoryLevel = independent_particles
+
+%Species
+"Box1D" | 1 | user_defined | 1 | "-5*step(x+5)*step(5-x)"
+%
+
+%Coordinates
+"Box1D" | 0 | 0 | 0
+%
+
+EigenSolverInitTolerance = 1.0e-6
+EigenSolverFinalTolerance = 1.0e-6
+EigenSolverMaxIter = 1000
+#Mixing = 1.0
+#TypeOfMixing = linear
+
+NumberUnoccStates = 4
+
+Output = potential + density + wfs
+OutputHow = axis_x
+
+TDOutput = laser + td_occup 
