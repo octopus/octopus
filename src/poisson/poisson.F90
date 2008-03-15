@@ -283,9 +283,10 @@ contains
     FLOAT, allocatable :: rho_corrected(:), vh_correction(:)
     FLOAT, allocatable :: rhop(:), potp(:)
 
-    logical         :: all_nodes_value
-
-    call profiling_in(C_PROFILING_POISSON_SOLVE)
+    logical               :: all_nodes_value
+    type(profile_t), save :: prof
+    
+    call profiling_in(prof, 'POISSON_SOLVE')
     call push_sub('poisson.dpoisson_solve')
 
     ! Check optional argument and set to default if necessary.
@@ -364,7 +365,7 @@ contains
     end select
 
     call pop_sub()
-    call profiling_out(C_PROFILING_POISSON_SOLVE)
+    call profiling_out(prof)
   end subroutine dpoisson_solve
 
 

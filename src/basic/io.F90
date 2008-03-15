@@ -245,22 +245,6 @@ contains
       call io_mkdir('debug')
     end if
 
-    !%Variable ProfilingMode
-    !%Default no
-    !%Type logical
-    !%Section Generalities::Debug
-    !%Description
-    !% Use this variable to run octopus in profiling mode. In this mode
-    !% octopus records time spent in certain areas of the code and
-    !% the number of times this code is executed. These numbers
-    !% are written in './profiling.NNN/profiling.nnn' with nnn being the
-    !% node number (000 in serial) and NNN the number of processors.
-    !% This is mainly for development purposes. Note, however, that
-    !% octopus should be compiled with --disable-debug to do proper
-    !% profiling.
-    !%End
-    call loct_parse_logical('ProfilingMode', .false., in_profiling_mode)
-
   end subroutine io_init
 
 

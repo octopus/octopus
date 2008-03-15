@@ -113,7 +113,7 @@ module nl_operator_m
     end function op_is_available
   end interface
 
-  type(profile_t), save :: nl_operate_profile, nl_tuning_profile
+  type(profile_t), save :: nl_operate_profile
 
 contains
   

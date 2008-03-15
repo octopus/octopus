@@ -370,8 +370,9 @@ contains
     logical :: self_consistent
     CMPLX, allocatable :: zpsi1(:, :, :, :)
     FLOAT, allocatable :: dtmp(:), vaux(:, :)
+    type(profile_t), save :: prof
 
-    call profiling_in(C_PROFILING_ELEC_PROPAGATOR)
+    call profiling_in(prof, "TD_PROPAGATOR")
     call push_sub('td_rti.td_rti_dt')
 
     self_consistent = .false.
@@ -454,7 +455,7 @@ contains
     end if
 
     call pop_sub()
-    call profiling_out(C_PROFILING_ELEC_PROPAGATOR)
+    call profiling_out(prof)
 
   contains
 

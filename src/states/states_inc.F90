@@ -35,8 +35,9 @@ subroutine X(states_gram_schmidt_full)(st, nst, m, dim, psi, start)
   R_TYPE, target, allocatable :: buf(:, :)
 #endif
   R_TYPE, pointer             :: psi_q(:, :), psi_p(:, :)
+  type(profile_t), save :: prof
 
-  call profiling_in(C_PROFILING_GRAM_SCHMIDT1)
+  call profiling_in(prof, "GRAM_SCHMIDT_FULL")
   call push_sub('states_inc.Xstates_gram_schmidt_full')
 
   if(present(start)) then
@@ -101,7 +102,7 @@ subroutine X(states_gram_schmidt_full)(st, nst, m, dim, psi, start)
 #endif
   
   call pop_sub()
-  call profiling_out(C_PROFILING_GRAM_SCHMIDT1)
+  call profiling_out(prof)
 end subroutine X(states_gram_schmidt_full)
 
 
@@ -136,10 +137,16 @@ subroutine X(states_gram_schmidt)(st, nst, m, dim, psi, phi, normalize, mask)
   call profiling_in(prof, "GRAM_SCHMIDT")
   call push_sub('states_inc.Xstates_gram_schmidt')
 
-  ! set the block_size so each block takes one third of the l1 cache
-  block_size = hardware%l1%size / (3*R_SIZEOF)
-  ! the block_size should be a multiple of the cache line
-  block_size = block_size - mod(block_size, hardware%l1%line_size)
+  ! This routine uses blocking to optimize cache usage. One block of
+  ! |phi> is loaded in cache L1 and then then we calculate the dot
+  ! product of it with the corresponding blocks of |psi_k>, next we
+  ! load another block and do the same continue. This way we only have
+  ! to load |psi> from the L2 or memory.
+
+  ! set the block_size so each block fits in the l1 cache
+  block_size = hardware%l1%size / (6*R_SIZEOF)
+  ! the block_size should be a multiple of the cache line (minus 2 lines to avoid powers of 2)
+  block_size = block_size - mod(block_size, hardware%l1%line_size) - 2*hardware%l1%line_size
 
   ASSERT(block_size > 0)
 

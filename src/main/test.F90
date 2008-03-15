@@ -43,6 +43,7 @@ program oct_test
 
   call global_init()
   call parser_init()
+  call profiling_init()
 
   conf%devel_version = .true.
 
@@ -85,6 +86,7 @@ program oct_test
   call fft_all_end()
   call io_end()
   call datasets_end()
+  call profiling_end()
   call parser_end()
   call global_end()
 

@@ -33,10 +33,11 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, reltype, ik)
   CMPLX, pointer :: phase(:)
   integer :: ipj, nreduce, ii
   R_TYPE, allocatable :: reduce_buffer(:)
-#if defined(HAVE_MPI)
-  R_TYPE, allocatable :: reduce_buffer_dest(:)
-#endif
   integer, allocatable :: ireduce(:)
+#if defined(HAVE_MPI)
+  R_TYPE, allocatable   :: reduce_buffer_dest(:)
+  type(profile_t), save :: reduce_prof
+#endif
 
   call push_sub('projector_inc.project_psi')
 
@@ -77,8 +78,10 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, reltype, ik)
   ! reduce <p|psi>
 #if defined(HAVE_MPI)
   if(mesh%parallel_in_domains) then
+    call profiling_in(reduce_prof, "VNLPSI_REDUCE")
     call MPI_Allreduce(reduce_buffer, reduce_buffer_dest, nreduce, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
     reduce_buffer = reduce_buffer_dest
+    call profiling_out(reduce_prof)
   end if
 #endif
 

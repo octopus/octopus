@@ -23,6 +23,7 @@ module profiling_m
   use global_m
   use io_m
   use loct_m
+  use loct_parser_m
   use messages_m
   use mpi_m
 
@@ -99,7 +100,7 @@ module profiling_m
   type(profile_pointer_t)  :: profile_list(MAX_PROFILES) !the list of all profilers
   integer                  :: last_profile
   
-  !For the moment we will have the profiler object here, but they
+  !For the moment we will have the profiler objects here, but they
   !should be moved to their respective modules.
   !i.e. DO NOT PUT NEW PROFILES HERE
 
@@ -118,7 +119,6 @@ module profiling_m
        C_PROFILING_KINETIC,        &
        C_PROFILING_VLPSI,          &
        C_PROFILING_VNLPSI,         &
-       C_PROFILING_POISSON_SOLVE,  &
        C_PROFILING_XC,             &
        C_PROFILING_XC_LOCAL,       &
        C_PROFILING_XC_OEP,         &
@@ -129,14 +129,11 @@ module profiling_m
   type(profile_t), save, public :: &
        C_PROFILING_XC_OEP_FULL,    &
        C_PROFILING_TIME_STEP,      &
-       C_PROFILING_GRAM_SCHMIDT1,  &
        C_PROFILING_EIGEN_SOLVER,   &
-       C_PROFILING_DISK_ACCESS,    &
        C_PROFILING_LCAO,           &
        C_PROFILING_LCAO_INIT
 
   type(profile_t), save, public ::    &
-       C_PROFILING_ELEC_PROPAGATOR,   &
        C_PROFILING_BLOCKT,            &
        C_PROFILING_BLOCKT_AR,         &
        C_PROFILING_BLOCKT_MM,         &
@@ -155,9 +152,26 @@ contains
   ! ---------------------------------------------------------
   ! Create profiling subdirectory.
   subroutine profiling_init
+
 #if defined(HAVE_MPI)
     character(len=3) :: dirnum
 #endif
+
+    !%Variable ProfilingMode
+    !%Default no
+    !%Type logical
+    !%Section Generalities::Debug
+    !%Description
+    !% Use this variable to run octopus in profiling mode. In this mode
+    !% octopus records time spent in certain areas of the code and
+    !% the number of times this code is executed. These numbers
+    !% are written in './profiling.NNN/profiling.nnn' with nnn being the
+    !% node number (000 in serial) and NNN the number of processors.
+    !% This is mainly for development purposes. Note, however, that
+    !% octopus should be compiled with --disable-debug to do proper
+    !% profiling.
+    !%End
+    call loct_parse_logical('ProfilingMode', .false., in_profiling_mode)
 
     if(.not.in_profiling_mode) return
 
@@ -194,7 +208,6 @@ contains
       call profile_init(C_PROFILING_KINETIC,          'KINETIC')
       call profile_init(C_PROFILING_VLPSI,            'VLPSI')
       call profile_init(C_PROFILING_VNLPSI,           'VNLPSI')
-      call profile_init(C_PROFILING_POISSON_SOLVE,    'POISSON_SOLVE')
       call profile_init(C_PROFILING_XC,               'XC')
       call profile_init(C_PROFILING_XC_LOCAL,         'XC_LOCAL')
       call profile_init(C_PROFILING_XC_OEP,           'XC_OEP')
@@ -203,12 +216,9 @@ contains
       call profile_init(C_PROFILING_XC_KLI,           'XC_KLI')
       call profile_init(C_PROFILING_XC_OEP_FULL,      'XC_OEP_FULL')
       call profile_init(C_PROFILING_TIME_STEP	,     'TIME_STEP')
-      call profile_init(C_PROFILING_GRAM_SCHMIDT1,    'GRAM_SCHMIDT_FULL')
       call profile_init(C_PROFILING_EIGEN_SOLVER,     'EIGEN_SOLVER')
-      call profile_init(C_PROFILING_DISK_ACCESS,      'DISK_ACCESS')
       call profile_init(C_PROFILING_LCAO,             'LCAO')
       call profile_init(C_PROFILING_LCAO_INIT,        'LCAO_INIT')
-      call profile_init(C_PROFILING_ELEC_PROPAGATOR,  'ELEC_PROPAGATOR')
       call profile_init(C_PROFILING_BLOCKT,           'BLOCKT')
       call profile_init(C_PROFILING_BLOCKT_AR,        'BLOCKT_AR')
       call profile_init(C_PROFILING_BLOCKT_MM,        'BLOCKT_MM')
