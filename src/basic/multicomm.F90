@@ -48,6 +48,7 @@
     use datasets_m
     use global_m
     use io_m
+    use loct_m
     use loct_parser_m
     use messages_m
     use mpi_m
@@ -107,6 +108,7 @@
     integer          :: dom_st_comm    ! States-domain plane communicator.
 
     integer          :: nthreads
+    integer, pointer :: distance(:, :)
   end type multicomm_t
 
   ! An all-pairs communication schedule for a given group.
@@ -148,6 +150,8 @@ contains
     if(mc%par_strategy.ne.P_STRATEGY_SERIAL) then
       ALLOCATE(mc%group_sizes(mc%n_index), mc%n_index)
       mc%group_sizes(:) = 1
+
+      call get_network_metric()
 
       !%Variable ParallelizationGroupRanks
       !%Type block
@@ -282,6 +286,52 @@ contains
       end do
     end subroutine read_block
 
+    ! ---------------------------------------------------------
+    
+    ! this routine tries to guess the distribution of the processors
+    ! we got, currently only checks processes that are running in the
+    ! same node
+    
+    subroutine get_network_metric
+#ifdef HAVE_MPI
+      character(len=25) :: my_name, its_name
+      integer :: ir, jr
+      integer, allocatable :: distance(:, :)
+
+      !get the system name
+      call loct_sysname(my_name)
+
+      ALLOCATE(mc%distance(1:mpi_world%size, 1:mpi_world%size), mpi_world%size**2)
+
+      do ir = 1, mpi_world%size
+
+        if(ir - 1 == mpi_world%rank) then
+
+          call MPI_Bcast(my_name, 256, MPI_CHARACTER, ir - 1, mpi_world%comm, mpi_err)
+
+          mc%distance(ir, mpi_world%rank + 1) = 0
+
+        else
+
+          call MPI_Bcast(its_name, 256, MPI_CHARACTER, ir - 1, mpi_world%comm, mpi_err)
+
+          if(my_name == its_name) then
+            mc%distance(ir, mpi_world%rank + 1) = 1
+          else
+            mc%distance(ir, mpi_world%rank + 1) = 2
+          end if
+
+        end if
+
+      end do
+
+      do ir = 1, mpi_world%size
+        call MPI_Bcast(mc%distance(1, ir), mpi_world%size, MPI_INTEGER, ir - 1, mpi_world%comm, mpi_err)
+      end do
+
+#endif
+    end subroutine get_network_metric
+
 
     ! ---------------------------------------------------------
     subroutine assign_nodes()
@@ -414,8 +464,8 @@ contains
       ! world afterwards.
       ! FIXME: make sure this works! World root may be someone else
       ! afterwards!
-      call MPI_Cart_create(mpi_world%comm, mc%n_index, mc%group_sizes, periodic_mask, &
-        .true., new_comm, mpi_err)
+      call MPI_Cart_create(mpi_world%comm, mc%n_index, mc%group_sizes, periodic_mask, .true., new_comm, mpi_err)
+
       ! Re-initialize the world.
       call mpi_grp_init(mpi_world, new_comm)
 #endif
@@ -478,6 +528,7 @@ contains
 
     if(mc%par_strategy.ne.P_STRATEGY_SERIAL) then
 #if defined(HAVE_MPI)
+      deallocate(mc%distance)
       ! Delete communicators.
       do i = 1, mc%n_index
         if(.not.multicomm_strategy_is_parallel(mc, i)) cycle
