@@ -73,7 +73,8 @@
     multicomm_t,                     &
     multicomm_all_pairs_t,           &
     multicomm_init, multicomm_end,   &
-    multicomm_strategy_is_parallel
+    multicomm_strategy_is_parallel,  &
+    topology_t
 
   ! possible parallelization strategies
   integer, public, parameter ::      &
