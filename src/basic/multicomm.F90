@@ -95,6 +95,14 @@
 
   integer, public, parameter :: MAX_OMP_THREADS = 16
 
+  type topology_t
+    integer          :: ng
+    integer          :: maxgsize
+    integer, pointer :: distance(:, :)
+    integer, pointer :: groups(:,:)
+    integer, pointer :: gsize(:)
+  end type topology_t
+
   ! Stores all communicators and groups
   type multicomm_t
     integer          :: n_node         ! Total number of nodes.
@@ -108,7 +116,8 @@
     integer          :: dom_st_comm    ! States-domain plane communicator.
 
     integer          :: nthreads
-    integer, pointer :: distance(:, :)
+    logical          :: use_topology
+    type(topology_t) :: topo
   end type multicomm_t
 
   ! An all-pairs communication schedule for a given group.
@@ -151,7 +160,34 @@ contains
       ALLOCATE(mc%group_sizes(mc%n_index), mc%n_index)
       mc%group_sizes(:) = 1
 
-      call get_network_metric()
+      call topology_init(mc%topo)
+
+      !%Variable ParallelizationUseTopology
+      !%Type block
+      !%Section Generalities::Parallel
+      !%Description
+      !%
+      !% When set to yes, Octopus will try to determine the topology
+      !% of the network and based on this, assign the nodes to the
+      !% different possible parallelization strategies and distribute
+      !% the processes to reduce the communication overhead. Currently
+      !% Octopus is only capable of detecting if processes are on the
+      !% same machine or connected by a network. By default it is not
+      !% enabled.
+      !%
+      !% This feauture is experimental, so use it with care.
+      !%
+      !% Warning: currently is not possible to use this variable for
+      !% states parallelization for ground state calculation or
+      !% Car-Parrinello.
+      !%
+      !%End
+  
+      call loct_parse_logical(check_inp('ParallelizationUseTopology'), .false., mc%use_topology)
+
+      mc%use_topology = mc%use_topology .and. topology_groups_are_equal(mc%topo)
+      mc%use_topology = mc%use_topology .and. multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)
+      mc%use_topology = mc%use_topology .and. multicomm_strategy_is_parallel(mc, P_STRATEGY_DOMAINS)
 
       !%Variable ParallelizationGroupRanks
       !%Type block
@@ -287,59 +323,20 @@ contains
     end subroutine read_block
 
     ! ---------------------------------------------------------
-    
-    ! this routine tries to guess the distribution of the processors
-    ! we got, currently only checks processes that are running in the
-    ! same node
-    
-    subroutine get_network_metric
-#ifdef HAVE_MPI
-      character(len=25) :: my_name, its_name
-      integer :: ir, jr
-      integer, allocatable :: distance(:, :)
-
-      !get the system name
-      call loct_sysname(my_name)
-
-      ALLOCATE(mc%distance(1:mpi_world%size, 1:mpi_world%size), mpi_world%size**2)
-
-      do ir = 1, mpi_world%size
-
-        if(ir - 1 == mpi_world%rank) then
-
-          call MPI_Bcast(my_name, 256, MPI_CHARACTER, ir - 1, mpi_world%comm, mpi_err)
-
-          mc%distance(ir, mpi_world%rank + 1) = 0
-
-        else
-
-          call MPI_Bcast(its_name, 256, MPI_CHARACTER, ir - 1, mpi_world%comm, mpi_err)
-
-          if(my_name == its_name) then
-            mc%distance(ir, mpi_world%rank + 1) = 1
-          else
-            mc%distance(ir, mpi_world%rank + 1) = 2
-          end if
-
-        end if
-
-      end do
-
-      do ir = 1, mpi_world%size
-        call MPI_Bcast(mc%distance(1, ir), mpi_world%size, MPI_INTEGER, ir - 1, mpi_world%comm, mpi_err)
-      end do
-
-#endif
-    end subroutine get_network_metric
-
-
-    ! ---------------------------------------------------------
     subroutine assign_nodes()
       integer :: i, n, k, n_divisors, divisors(50)
       integer, allocatable :: n_group_max(:)
       FLOAT   :: f
 
-      ALLOCATE(n_group_max(mc%n_index), mc%n_index)
+      if(mc%use_topology) then
+        mc%group_sizes = 1
+        mc%group_sizes(P_STRATEGY_DOMAINS) = mc%topo%maxgsize
+        mc%group_sizes(P_STRATEGY_STATES)  = mc%topo%ng
+        return
+      end if
+
+      ALLOCATE(n_group_max(1:mc%n_index), mc%n_index)
+
       n = mc%n_node
 
       ! this is the maximum number of processors in each group
@@ -452,22 +449,24 @@ contains
       call push_sub('multicomm.cart_topology_create')
 
 #if defined(HAVE_MPI)
-      ! The domain and states dimensions have to be periodic (2D torus)
-      ! in order to circulate matrix blocks.
-      if(multicomm_strategy_is_parallel(mc, P_STRATEGY_DOMAINS)) then
-        periodic_mask(P_STRATEGY_DOMAINS) = .true.
-      end if
-      if(multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)) then
-        periodic_mask(P_STRATEGY_STATES) = .true.
-      end if
-      ! We allow reordering of ranks, as we intent to replace the
-      ! world afterwards.
-      ! FIXME: make sure this works! World root may be someone else
-      ! afterwards!
-      call MPI_Cart_create(mpi_world%comm, mc%n_index, mc%group_sizes, periodic_mask, .true., new_comm, mpi_err)
+      if(.not. mc%use_topology) then
+        ! The domain and states dimensions have to be periodic (2D torus)
+        ! in order to circulate matrix blocks.
+        if(multicomm_strategy_is_parallel(mc, P_STRATEGY_DOMAINS)) then
+          periodic_mask(P_STRATEGY_DOMAINS) = .true.
+        end if
+        if(multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)) then
+          periodic_mask(P_STRATEGY_STATES) = .true.
+        end if
+        ! We allow reordering of ranks, as we intent to replace the
+        ! world afterwards.
+        ! FIXME: make sure this works! World root may be someone else
+        ! afterwards!
+        call MPI_Cart_create(mpi_world%comm, mc%n_index, mc%group_sizes, periodic_mask, .true., new_comm, mpi_err)
 
-      ! Re-initialize the world.
-      call mpi_grp_init(mpi_world, new_comm)
+        ! Re-initialize the world.
+        call mpi_grp_init(mpi_world, new_comm)
+      end if
 #endif
 
       call pop_sub()
@@ -478,6 +477,8 @@ contains
     subroutine group_comm_create()
 #if defined(HAVE_MPI)
       logical :: dim_mask(n_index)
+      integer :: world_group, sub_group, dummy_comm
+      integer :: ii
 #endif
       integer :: i_strategy
 
@@ -486,31 +487,67 @@ contains
       ALLOCATE(mc%group_comm(mc%n_index), mc%n_index)
       ALLOCATE(mc%who_am_i(mc%n_index), mc%n_index)
 
-      ! The "lines" of the cartesian grid.
-      do i_strategy = 1, mc%n_index
 #if defined(HAVE_MPI)
-        if(multicomm_strategy_is_parallel(mc, i_strategy)) then
-          dim_mask             = .false.
-          dim_mask(i_strategy) = .true.
-          call MPI_Cart_sub(mpi_world%comm, dim_mask, mc%group_comm(i_strategy), mpi_err)
-          call MPI_Comm_rank(mc%group_comm(i_strategy), mc%who_am_i(i_strategy), mpi_err)
+        if(.not. mc%use_topology) then
+
+          ! The "lines" of the cartesian grid.
+          do i_strategy = 1, mc%n_index
+            if(multicomm_strategy_is_parallel(mc, i_strategy)) then
+              dim_mask             = .false.
+              dim_mask(i_strategy) = .true.
+              call MPI_Cart_sub(mpi_world%comm, dim_mask, mc%group_comm(i_strategy), mpi_err)
+              call MPI_Comm_rank(mc%group_comm(i_strategy), mc%who_am_i(i_strategy), mpi_err)
+            else
+              mc%group_comm(i_strategy) = MPI_COMM_NULL
+              mc%who_am_i(i_strategy)   = 0
+            end if
+          end do
+
+          ! The domain-state "planes" of the grid (the ones with periodic dimensions).
+          dim_mask                     = .false.
+          dim_mask(P_STRATEGY_DOMAINS) = .true.
+          dim_mask(P_STRATEGY_STATES)  = .true.
+          call MPI_Cart_sub(mpi_world%comm, dim_mask, mc%dom_st_comm, mpi_err)
+          
         else
-          mc%group_comm(i_strategy) = MPI_COMM_NULL
-          mc%who_am_i(i_strategy)   = 0
+
+          call MPI_Comm_group(mpi_world%comm, world_group, mpi_err)
+
+          ! domains
+          do ii = 1, mc%topo%ng
+            call MPI_Group_incl(world_group, mc%topo%gsize(1), mc%topo%groups(1:mc%topo%gsize(1), ii), sub_group, mpi_err)
+            call MPI_Comm_create(mpi_world%comm, sub_group, dummy_comm, mpi_err)
+
+            if(dummy_comm /= MPI_COMM_NULL) then
+              mc%group_comm(P_STRATEGY_DOMAINS) = dummy_comm
+              call MPI_Comm_rank(mc%group_comm(P_STRATEGY_DOMAINS), mc%who_am_i(P_STRATEGY_DOMAINS), mpi_err)
+            end if
+          end do
+
+          ! states
+          do ii = 1, mc%topo%gsize(1)
+            call MPI_Group_incl(world_group, mc%topo%ng, mc%topo%groups(ii, 1:mc%topo%ng), sub_group, mpi_err)
+            call MPI_Comm_create(mpi_world%comm, sub_group, dummy_comm, mpi_err)
+
+            if(dummy_comm /= MPI_COMM_NULL) then
+              mc%group_comm(P_STRATEGY_STATES) = dummy_comm
+              call MPI_Comm_rank(mc%group_comm(P_STRATEGY_STATES), mc%who_am_i(P_STRATEGY_STATES), mpi_err)
+            end if
+          end do
+
+          mc%group_comm(P_STRATEGY_KPOINTS) = MPI_COMM_NULL
+          mc%who_am_i(P_STRATEGY_KPOINTS)   = 0
+          mc%group_comm(P_STRATEGY_OTHER)   = MPI_COMM_NULL
+          mc%who_am_i(P_STRATEGY_OTHER)     = 0
+
+          call MPI_Comm_dup(mpi_world%comm, mc%dom_st_comm, mpi_err)
+
         end if
 #else
         mc%group_comm = -1
         mc%who_am_i   = 0
 #endif
-      end do
 
-#if defined(HAVE_MPI)
-      ! The domain-state "planes" of the grid (the ones with periodic dimensions).
-      dim_mask                     = .false.
-      dim_mask(P_STRATEGY_DOMAINS) = .true.
-      dim_mask(P_STRATEGY_STATES)  = .true.
-      call MPI_Cart_sub(mpi_world%comm, dim_mask, mc%dom_st_comm, mpi_err)
-#endif
       call pop_sub()
     end subroutine group_comm_create
   end subroutine multicomm_init
@@ -528,7 +565,6 @@ contains
 
     if(mc%par_strategy.ne.P_STRATEGY_SERIAL) then
 #if defined(HAVE_MPI)
-      deallocate(mc%distance)
       ! Delete communicators.
       do i = 1, mc%n_index
         if(.not.multicomm_strategy_is_parallel(mc, i)) cycle
@@ -639,6 +675,112 @@ contains
   end subroutine multicomm_create_all_pairs
 #endif
 
+    ! ---------------------------------------------------------
+    
+    ! this routine tries to guess the distribution of the processors
+    ! we got, currently only checks processes that are running in the
+    ! same node
+    
+    subroutine topology_init(this)
+      type(topology_t), intent(out) :: this
+
+#ifdef HAVE_MPI
+      character(len=25) :: my_name, its_name
+      integer :: ir,  size, ig
+
+      size = mpi_world%size
+
+      !get the system name
+      call loct_sysname(my_name)
+
+      ALLOCATE(this%distance(1:size, 1:size), size**2)
+
+      do ir = 1, size
+
+        if(ir - 1 == mpi_world%rank) then
+
+          call MPI_Bcast(my_name, 256, MPI_CHARACTER, ir - 1, mpi_world%comm, mpi_err)
+
+          this%distance(ir, mpi_world%rank + 1) = 0
+
+        else
+
+          call MPI_Bcast(its_name, 256, MPI_CHARACTER, ir - 1, mpi_world%comm, mpi_err)
+
+          if(my_name == its_name) then
+            this%distance(ir, mpi_world%rank + 1) = 1
+          else
+            this%distance(ir, mpi_world%rank + 1) = 2
+          end if
+
+        end if
+
+      end do
+
+      do ir = 1, size
+        call MPI_Bcast(this%distance(1, ir), size, MPI_INTEGER, ir - 1, mpi_world%comm, mpi_err)
+      end do
+      
+      !classify processors in groups
+
+      ALLOCATE(this%groups(1:size, 1:size), size**2)
+      ALLOCATE(this%gsize(1:size), size)
+
+      ! put the first node in the first group
+      this%ng = 1
+      this%gsize = 0
+      this%groups = 0
+      this%groups(1, 1) = 1
+      this%gsize(1) = 1
+
+      ! check the other processors
+      do ir = 2, size
+        do ig = 1, size
+          ! if the group has elements
+          if(this%gsize(ig) > 0) then
+            ! check the distance
+            if(this%distance(ir, this%groups(1, ig)) == 1) then
+              ! if it is close enough
+              ! add it to the group
+              this%gsize(ig) = this%gsize(ig) + 1
+              this%groups(this%gsize(ig), ig) = ir
+              exit
+            end if
+          else
+            ! if the group is empty 
+            ! set this processor as the head of a group
+            this%gsize(ig) = this%gsize(ig) + 1
+            this%groups(1, ig) = ir
+            this%ng = this%ng + 1
+            exit
+          end if
+        end do
+      end do
+
+      ASSERT(sum(this%gsize(1:this%ng)) == mpi_world%size)
+
+      this%maxgsize = maxval(this%gsize(1:this%ng))
+
+      !convert to mpi ranks
+      this%groups = this%groups - 1
+
+#endif
+    end subroutine topology_init
+
+    logical function topology_groups_are_equal(this) result(are_equal)
+      type(topology_t), intent(in) :: this
+      
+      are_equal = all(this%gsize(2:this%ng) == this%maxgsize)
+    end function topology_groups_are_equal
+
+    subroutine topology_end(this)
+      type(topology_t), intent(inout) :: this
+
+      deallocate(this%groups)
+      deallocate(this%distance)
+      deallocate(this%gsize)
+      
+    end subroutine topology_end
 
   !---------------------------------------------------
   ! Function to divide the range of numbers from 1 to nn
