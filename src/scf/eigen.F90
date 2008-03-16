@@ -22,6 +22,7 @@
 module eigen_solver_m
   use datasets_m
   use eigen_cg_m
+  use eigen_lobpcg_m
   use global_m
   use grid_m
   use hamiltonian_m

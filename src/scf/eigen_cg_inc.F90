@@ -31,12 +31,11 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, reo
   logical,   optional, intent(in)    :: reorder
   logical,   optional, intent(in)    :: verbose
 
-  R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:), &
-    cg(:,:), ppsi(:,:)
+  R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:),  cg(:,:), ppsi(:,:)
 
   R_DOUBLE :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma
   real(8) :: cg0, e0, res
-  integer  :: ik, p, iter, maxter, conv, conv_, idim, ns
+  integer  :: ik, p, iter, maxter, conv, conv_, idim, ns, ip
   logical  :: reord = .true., verbose_
 
   call push_sub('eigen_cg.eigen_solver_cg2')
@@ -116,14 +115,12 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, reo
         es(2) = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), ppsi)
         es(1) = es(1)/es(2)
 
-        !this does: g(1:NP, 1:st%d%dim) = g(1:NP, 1:st%d%dim) - es(1)*ppsi(1:NP, 1:st%d%dim)
         do idim = 1, st%d%dim
           call lalg_axpy(NP, R_TOPREC(-es(1)), ppsi(:, idim), g(:, idim))
         end do
 
         ! Orthogonalize to lowest eigenvalues (already calculated)
-        if(p > 1) call X(states_gram_schmidt)(st, p - 1, gr%m, st%d%dim, st%X(psi)(:, :, :, ik), g, &
-                                              normalize = .false.)
+        if(p > 1) call X(states_gram_schmidt)(st, p - 1, gr%m, st%d%dim, st%X(psi)(:, :, :, ik), g, normalize = .false.)
 
         if(iter .ne. 1) gg1 = X(states_dotp) (gr%m, st%d%dim, g, g0)
 
@@ -142,7 +139,6 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, reo
         if(iter .eq. 1) then
           gg0 = gg
 
-          !this does: cg(1:NP, 1:st%d%dim) = g(1:NP, 1:st%d%dim)
           do idim = 1, st%d%dim
             call lalg_copy(NP, g(:,idim), cg(:, idim))
           end do
@@ -151,16 +147,14 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, reo
           gamma = (gg - gg1)/gg0   ! (Polack-Ribiere)
           gg0 = gg
 
-          !$omp parallel workshare
-          cg(1:NP, 1:st%d%dim) = gamma*cg(1:NP, 1:st%d%dim) + g(1:NP, 1:st%d%dim)
-          !$omp end parallel workshare
-
           norma = gamma*cg0*sin(theta)
 
-          !this does: cg(1:NP, 1:st%d%dim) = cg(1:NP, 1:st%d%dim) - norma * st%X(psi)(1:NP, 1:st%d%dim, p, ik)
-          do idim = 1, st%d%dim 
-            call lalg_axpy(NP, R_TOPREC(-norma), st%X(psi)(:, idim, p, ik), cg(:, idim))
+          do idim = 1, st%d%dim
+            do ip = 1, NP
+              cg(ip, idim) = gamma*cg(ip, idim) + g(ip, idim) - norma*st%X(psi)(ip, idim, p, ik)
+            end do
           end do
+
         end if
 
         ! cg contains now the conjugate gradient
@@ -169,8 +163,9 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, reo
 
         ! Line minimization.
         a0 = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), ppsi)
-        a0 = M_TWO * a0 / cg0
         b0 = X(states_dotp) (gr%m, st%d%dim, cg(:,:), ppsi)
+
+        a0 = M_TWO * a0 / cg0
         b0 = b0/cg0**2
         e0 = st%eigenval(p, ik)
         theta = atan(R_REAL(a0/(e0 - b0)))/M_TWO
@@ -187,12 +182,16 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, reo
         a0 = cos(theta)
         b0 = sin(theta)/cg0
 
-        !$omp parallel workshare
-        st%X(psi)(1:NP, 1:st%d%dim, p, ik) = a0*st%X(psi)(1:NP, 1:st%d%dim, p, ik) + b0*cg(1:NP, 1:st%d%dim)
-        h_psi(1:NP, 1:st%d%dim) = a0*h_psi(1:NP, 1:st%d%dim) + b0*ppsi(1:NP, 1:st%d%dim)
-        !$omp end parallel workshare
+       
+        do idim = 1, st%d%dim
+          do ip = 1, NP
+            st%X(psi)(ip, idim, p, ik) = a0*st%X(psi)(ip, idim, p, ik) + b0*cg(ip, idim)
+            h_psi(ip, idim) = a0*h_psi(ip, idim) + b0*ppsi(ip, idim)
+          end do
+        end do
 
         res = X(states_residue)(gr%m, st%d%dim, h_psi, st%eigenval(p, ik), st%X(psi)(:, :, p, ik))
+
         ! Test convergence.
         if(res < tol) then
           conv = conv + 1

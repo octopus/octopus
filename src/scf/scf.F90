@@ -338,7 +338,7 @@ contains
       end do
     endif
 
-    if ( verbosity_ == VERB_COMPACT ) then
+    if ( verbosity_ /= VERB_NO ) then
       write(message(1),'(a)') 'Info: Starting SCF iteration'
       call write_info(1)
     end if

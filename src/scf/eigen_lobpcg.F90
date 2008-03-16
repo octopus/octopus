@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-module eigen_cg_m
+module eigen_lobpcg_m
   use global_m
   use grid_m
   use hamiltonian_m
@@ -43,22 +43,20 @@ module eigen_cg_m
 
   private
   public ::                  &
-    deigen_solver_cg2,       &
-    zeigen_solver_cg2,       &
-    deigen_solver_cg2_new,   &
-    zeigen_solver_cg2_new
+    deigen_solver_lobpcg,    &
+    zeigen_solver_lobpcg
   
   contains
 
 #include "real.F90"
-#include "eigen_cg_inc.F90"
+#include "eigen_lobpcg_inc.F90"
 #include "undef.F90"
 
 #include "complex.F90"
-#include "eigen_cg_inc.F90"
+#include "eigen_lobpcg_inc.F90"
 #include "undef.F90"
 
-end module eigen_cg_m
+end module eigen_lobpcg_m
 
 
 !! Local Variables:
