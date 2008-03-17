@@ -401,11 +401,11 @@ contains
 !    Find exchange and correlation energy densities and their
 !    derivatives with respect to density and density gradient
      IF (GGA) THEN
-       call xc_f90_gga(x_conf, D(1), sigma(1), EPSX, DEXDD(1), vxsigma(1))
-       call xc_f90_gga(c_conf, D(1), sigma(1), EPSC, DECDD(1), vcsigma(1))
+       call XC_F90(gga_vxc)(x_conf, D(1), sigma(1), EPSX, DEXDD(1), vxsigma(1))
+       call XC_F90(gga_vxc)(c_conf, D(1), sigma(1), EPSC, DECDD(1), vcsigma(1))
      ELSE
-       call xc_f90_lda_vxc(x_conf, D(1), EPSX, DEXDD(1))
-       call xc_f90_lda_vxc(c_conf, D(1), EPSC, DECDD(1))
+       call XC_F90(lda_vxc)(x_conf, D(1), EPSX, DEXDD(1))
+       call XC_F90(lda_vxc)(c_conf, D(1), EPSC, DECDD(1))
      ENDIF
 
      ! The derivatives of the exchange and correlation energies per particle with
