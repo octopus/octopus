@@ -202,7 +202,7 @@ contains
       call loct_parse_block_end(blk)
 
       ep%E_field(:) = ep%E_field(:) * units_inp%energy%factor/units_inp%length%factor
-      
+
       ! Compute the scalar potential
       ALLOCATE(ep%v_static(NP), NP)
       do i = 1, NP

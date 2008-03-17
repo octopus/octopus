@@ -93,7 +93,7 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
             r, l_dedd(1))
           e = M_ZERO; l_vsigma = M_ZERO
         else
-          call XC_F90(gga)(functl(ixc)%conf, l_dens(1), l_sigma(1), &
+          call XC_F90(gga_vxc)(functl(ixc)%conf, l_dens(1), l_sigma(1), &
             e, l_dedd(1), l_vsigma(1))
         end if
 
