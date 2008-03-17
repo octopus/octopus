@@ -116,7 +116,7 @@ subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi, normalize, mask, overla
   type(mesh_t),      intent(in)    :: m
   integer,           intent(in)    :: nst
   integer,           intent(in)    :: dim
-  R_TYPE,            intent(inout) :: psi(:,:,:)   ! psi(m%np_part, dim, nst)
+  R_TYPE,            intent(in)    :: psi(:,:,:)   ! psi(m%np_part, dim, nst)
   R_TYPE,            intent(inout) :: phi(:,:)     ! phi(m%np_part, dim)
   R_TYPE,  optional, intent(out)   :: overlap(:) 
   R_TYPE,  optional, intent(out)   :: norm

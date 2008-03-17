@@ -21,32 +21,18 @@
 ! ---------------------------------------------------------
 ! Orthogonalizes v against all the occupied states
 ! ---------------------------------------------------------
-subroutine X(lr_orth_vector) (m, st, v, ik, tol)
+subroutine X(lr_orth_vector) (m, st, v, ik)
   type(mesh_t),        intent(in)    :: m
   type(states_t),      intent(in)    :: st
   R_TYPE,              intent(inout) :: v(:,:)
   integer,             intent(in)    :: ik
-  FLOAT,   optional,   intent(in)    :: tol
 
   R_TYPE  :: scalp
   integer :: ist, idim
 
   call push_sub('linear_response_inc.Xlr_orth_vector')
 
-  do ist = 1, st%nst
-    if(st%occ(ist, ik) > lr_min_occ) then
-      scalp = X(states_dotp)(m, st%d%dim, st%X(psi)(:,:, ist, ik), v)
-      if(present(tol)) then 
-        if( ABS(scalp) < tol ) cycle
-      end if
-
-      !v = v - scalp*st%X(psi)
-      do idim=1, st%d%dim
-        call lalg_axpy(m%np, -scalp, st%X(psi)(:, idim, ist, ik), v(:, idim))
-      end do
-
-    end if
-  end do
+  call X(states_gram_schmidt)(m, st%nst, st%d%dim, st%X(psi)(:, :, :, ik), v(:, :))
 
   call pop_sub()
 end subroutine X(lr_orth_vector)
@@ -120,9 +106,7 @@ subroutine X(lr_orth_response)(m, st, lr)
   
   do ik = 1, st%d%nspin
     do ist = 1, st%nst
-      if(st%occ(ist, ik) > lr_min_occ) then
-        call X(lr_orth_vector) (m, st, lr%X(dl_psi)(:,:, ist, ik), ik)
-      end if
+      if(st%occ(ist, ik) > lr_min_occ) call X(lr_orth_vector) (m, st, lr%X(dl_psi)(:,:, ist, ik), ik)
     end do
   end do
   
