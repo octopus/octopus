@@ -58,7 +58,8 @@ module opt_control_constants_m
     oct_algorithm_mt03               = 4,       &
     oct_algorithm_krotov             = 5,       &
     oct_algorithm_str_iter           = 6,       &
-    oct_algorithm_direct             = 7
+    oct_algorithm_direct             = 7,       &
+    oct_algorithm_direct2            = 8
  
   integer, parameter ::  &
     oct_targetmode_static = 0,     &

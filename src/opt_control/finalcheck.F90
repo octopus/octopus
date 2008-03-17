@@ -19,9 +19,7 @@
 
 
   ! ---------------------------------------------------------
-  subroutine oct_finalcheck(initial_st, target, par, sys, h, td)
-    type(states_t), intent(in)         :: initial_st
-    type(target_t), intent(inout)      :: target
+  subroutine oct_finalcheck(par, sys, h, td)
     type(system_t), intent(inout)      :: sys
     type(oct_control_parameters_t), intent(inout) :: par
     type(hamiltonian_t), intent(inout) :: h
@@ -36,16 +34,11 @@
       call pop_sub(); return
     end if
 
-    psi = initial_st
+    call states_copy(psi, initial_st)
 
-    call parameters_to_realtime(par)
-    
-    call parameters_to_h(par, h%ep)
-    call propagate_forward(sys, h, td, target, psi, write_iter = .true.)
+    call propagate_forward(sys, h, td, par, target, psi, write_iter = .true.)
 
-    call parameters_set_rep(par)
-
-    j1 = j1_functional(sys%gr, psi, target)
+    j1 = j1_functional(sys%gr, psi)
     fluence = parameters_fluence(par)
     j2 = parameters_j2(par)
     jfunctional = j1 + j2

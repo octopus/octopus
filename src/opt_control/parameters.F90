@@ -502,14 +502,35 @@ contains
 
   ! ---------------------------------------------------------
   subroutine parameters_to_h(cp, ep)
-    type(oct_control_parameters_t), intent(in) :: cp
+    type(oct_control_parameters_t), target, intent(in) :: cp
     type(epot_t), intent(inout) :: ep
+
     integer :: j
+    logical :: change_rep
+    type(oct_control_parameters_t), pointer :: par
     call push_sub('parameters.parameters_to_h')
+
+    ! First, check that we are in the real space representation.
+    if(cp%current_representation .eq. ctr_parameter_frequency_space) then
+      ALLOCATE(par, 1)
+      call parameters_copy(par, cp)
+      call parameters_to_realtime(par)
+      change_rep = .true.
+    else
+      par => cp
+      change_rep = .false.
+    end if
+
     do j = 1, cp%no_parameters
       call tdf_end(ep%lasers(j)%f)
-      ep%lasers(j)%f = cp%f(j)
+      ep%lasers(j)%f = par%f(j)
     end do
+
+    if(change_rep) then 
+      call parameters_end(par)
+    else
+      nullify(par)
+    end if
     call pop_sub()
   end subroutine parameters_to_h
   ! ---------------------------------------------------------

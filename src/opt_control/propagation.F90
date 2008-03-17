@@ -74,18 +74,18 @@ module opt_control_propagation_m
 
   ! ---------------------------------------------------------
   ! Performs a full propagation of state psi, with the laser
-  ! field specified in hamiltonian h. If write_iter is present
-  ! and is set to .true., writes down through the td_write
-  ! module.
+  ! field specified in par. If write_iter is present and is
+  ! set to .true., writes down through the td_write module.
   ! ---------------------------------------------------------
-  subroutine propagate_forward(sys, h, td, target, psi, prop, write_iter)
-    type(system_t),             intent(inout) :: sys
-    type(hamiltonian_t),        intent(inout) :: h
-    type(td_t),                 intent(inout) :: td
-    type(target_t),             intent(inout) :: target
-    type(states_t),             intent(inout) :: psi
-    type(oct_prop_t), optional, intent(in)    :: prop
-    logical, optional,          intent(in)    :: write_iter
+  subroutine propagate_forward(sys, h, td, par, target, psi, prop, write_iter)
+    type(system_t),             intent(inout)  :: sys
+    type(hamiltonian_t),        intent(inout)  :: h
+    type(td_t),                 intent(inout)  :: td
+    type(oct_control_parameters_t), intent(in) :: par
+    type(target_t),             intent(inout)  :: target
+    type(states_t),             intent(inout)  :: psi
+    type(oct_prop_t), optional, intent(in)     :: prop
+    logical, optional,          intent(in)     :: write_iter
 
     integer :: ii, i
     logical :: write_iter_ = .false.
@@ -97,13 +97,16 @@ module opt_control_propagation_m
     message(1) = "Info: Forward propagation."
     call write_info(1)
 
+    call parameters_to_h(par, h%ep)
+
     write_iter_ = .false.
     if(present(write_iter)) write_iter_ = write_iter
 
     gr => sys%gr
 
     if(write_iter_) then
-      call td_write_init(write_handler, gr, sys%st, sys%geo, ion_dynamics_ions_move(td%ions), h%ep%with_gauge_field, td%iter, td%dt)
+      call td_write_init(write_handler, gr, sys%st, sys%geo, &
+        ion_dynamics_ions_move(td%ions), h%ep%with_gauge_field, td%iter, td%dt)
       call td_write_data(write_handler, gr, psi, h, sys%outp, sys%geo, 0)
     end if
 

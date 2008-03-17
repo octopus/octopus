@@ -71,7 +71,9 @@
     !% resulting wave functions. Note that this scheme typically does not converge, unless
     !% some mixing ("OCTMixing = yes") is used.
     !%Option oct_algorithm_direct 7
-    !% Direct optimization
+    !% Direct optimization (version 1)
+    !%Option oct_algorithm_direct2 8
+    !% Direct optimization (version 2)
     !%End
     call loct_parse_int(check_inp('OCTScheme'), oct_algorithm_zr98, oct%algorithm)
     if(.not.varinfo_valid_option('OCTScheme', oct%algorithm)) call input_error('OCTScheme')
@@ -157,10 +159,9 @@
   ! ---------------------------------------------------------
   ! Tries to avoid ill defined combinations of run modes.
   ! ---------------------------------------------------------
-  subroutine check_faulty_runmodes(sys, h, target, tr)
+  subroutine check_faulty_runmodes(sys, h, tr)
     type(system_t), target,         intent(in)    :: sys
     type(hamiltonian_t),            intent(in)    :: h
-    type(target_t),                 intent(in)    :: target
     type(td_rti_t),                 intent(in)    :: tr
 
     integer :: no_electrons, n_filled, n_partially_filled, n_half_filled
@@ -219,7 +220,8 @@
     if((oct%mode_fixed_fluence)) then
       if( (oct%algorithm.ne.oct_algorithm_wg05)     .and. &
           (oct%algorithm.ne.oct_algorithm_str_iter) .and. &
-          (oct%algorithm.ne.oct_algorithm_direct) ) then
+          (oct%algorithm.ne.oct_algorithm_direct)   .and. &
+          (oct%algorithm.ne.oct_algorithm_direct2)  ) then
         write(message(1),'(a)') "Cannot optimize to a given fluence with the chosen algorithm."
         write(message(2),'(a)') "Switching to scheme WG05."         
         call write_info(2)
@@ -308,13 +310,15 @@
 
     if(oct%mode_basis_set) then
       if( (oct%algorithm .ne. oct_algorithm_str_iter)  .and.  &
-          (oct%algorithm .ne. oct_algorithm_direct) ) then
+          (oct%algorithm .ne. oct_algorithm_direct)    .and.  &
+          (oct%algorithm .ne. oct_algorithm_direct2) ) then
         write(message(1), '(a)') 'If the control parameters are to be represented with a basis set'
         write(message(2), '(a)') '(i.e. "OCTParameterRepresentation = control_parameters_fourier_space"),'
         write(message(3), '(a)') 'the only acceptable algorithms are:'
         write(message(4), '(a)') ' (1) "OCTScheme = oct_algorithm_straight_iteration".'
         write(message(5), '(a)') ' (2) "OCTScheme = oct_algorithm_direct".'
-        call write_fatal(5)
+        write(message(6), '(a)') ' (2) "OCTScheme = oct_algorithm_direct2".'
+        call write_fatal(6)
       endif
     end if
 

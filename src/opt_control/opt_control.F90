@@ -67,19 +67,21 @@ module opt_control_m
   public :: opt_control_run
 
   ! Module variables
-  type(filter_t)                 :: filter
-  type(oct_t)                    :: oct
+  type(filter_t)       :: filter
+  type(oct_t)          :: oct
+  type(oct_iterator_t) :: iterator
+  type(target_t)       :: target
+  type(states_t)       :: initial_st
+  
 
   ! For the algorithm_direct scheme:
   type(oct_control_parameters_t) :: par_
   type(system_t), pointer :: sys_
   type(hamiltonian_t), pointer :: h_
   type(td_t), pointer :: td_
-  type(target_t), pointer :: target_
-  type(states_t), pointer :: psi_
-  type(oct_iterator_t), pointer :: iterator_
 
 contains
+
 
   ! ---------------------------------------------------------
   subroutine direct_opt_calc(n, x, f)
@@ -90,15 +92,32 @@ contains
     type(states_t) :: psi
 
     call parameters_x_to_par(par_, x)
-    call parameters_to_realtime(par_)
-    call parameters_to_h(par_, h_%ep)
-    call states_copy(psi, psi_)
-    call propagate_forward(sys_, h_, td_, target_, psi)
-    call parameters_set_rep(par_)
-    f = - j1_functional(sys_%gr, psi, target_)
+    call states_copy(psi, initial_st)
+    call propagate_forward(sys_, h_, td_, par_, target, psi)
+    f = - j1_functional(sys_%gr, psi)
 
     call states_end(psi)
   end subroutine direct_opt_calc
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine direct2_opt_calc(n, x, f)
+    integer, intent(in)  :: n
+    real(8), intent(in)  :: x(n)
+    real(8), intent(out) :: f
+
+    type(oct_control_parameters_t) :: par_new
+    FLOAT :: j1
+
+    call parameters_x_to_par(par_, x)
+    call parameters_copy(par_new, par_)
+    call f_striter(sys_, h_, td_, par_new, j1)
+
+    f = parameters_diff(par_, par_new)
+
+    call parameters_end(par_new)
+  end subroutine direct2_opt_calc
   ! ---------------------------------------------------------
 
 
@@ -108,15 +127,27 @@ contains
     real(8), intent(in) :: energy, maxdx
     real(8), intent(in) :: x(n)
 
-    FLOAT :: fluence, j, j1, j2
-
     call parameters_x_to_par(par_, x)
-
-    iterator_%ctr_iter = geom_iter
-    call iteration_manager_direct(-energy, par_, iterator_, maxdx)
-    if(oct%dump_intermediate) call iterator_write(iterator_, psi_, par_, sys_%gr, sys_%outp)
+    iterator%ctr_iter = geom_iter
+    call iteration_manager_direct(-energy, par_, iterator, maxdx)
+    if(oct%dump_intermediate) call iterator_write(iterator, par_)
 
   end subroutine direct_opt_write_info
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine direct2_opt_write_info(geom_iter, n, energy, maxdx, x)
+    integer, intent(in) :: geom_iter, n
+    real(8), intent(in) :: energy, maxdx
+    real(8), intent(in) :: x(n)
+
+    call parameters_x_to_par(par_, x)
+    iterator%ctr_iter = geom_iter
+    call iteration_manager_direct(-energy, par_, iterator, maxdx)
+    if(oct%dump_intermediate) call iterator_write(iterator, par_)
+
+  end subroutine direct2_opt_write_info
   ! ---------------------------------------------------------
 
 
@@ -125,11 +156,8 @@ contains
     type(system_t), target,      intent(inout) :: sys
     type(hamiltonian_t), target, intent(inout) :: h
 
-    type(oct_iterator_t), target   :: iterator
     type(td_t), target             :: td
     type(states_t)                 :: psi
-    type(states_t), target         :: initial_st
-    type(target_t), target         :: target
     type(oct_control_parameters_t) :: par, par_new, par_prev
     logical                        :: stop_loop
     FLOAT                          :: j1
@@ -161,7 +189,7 @@ contains
     call initial_state_init(sys%gr, sys%geo, sys%st, initial_st)
     call target_init(sys%gr, sys%geo, sys%st, td, target)
 
-    call check_faulty_runmodes(sys, h, target, td%tr)
+    call check_faulty_runmodes(sys, h, td%tr)
 
     call h_sys_output_states(initial_st, sys%gr, 'opt-control/initial', sys%outp)
     call target_output(target, sys%gr, 'opt-control/target', sys%outp)
@@ -199,6 +227,10 @@ contains
         message(1) = "Info: Starting OCT iterations using scheme: DIRECT OPTIMIZATION"
         call write_info(1)
         call scheme_direct
+      case(oct_algorithm_direct2)
+        message(1) = "Info: Starting OCT iterations using scheme: DIRECT OPTIMIZATION (2)"
+        call write_info(1)
+        call scheme_direct2
     case default
       call input_error('OCTScheme')
     end select
@@ -207,7 +239,7 @@ contains
     call oct_output(iterator, sys%gr, sys%outp, psi)
 
     ! do final test run: propagate initial state with optimal field
-    call oct_finalcheck(initial_st, target, iterator%best_par, sys, h, td)
+    call oct_finalcheck(iterator%best_par, sys, h, td)
 
     ! clean up
     call parameters_end(par)
@@ -232,8 +264,8 @@ contains
       call parameters_copy(par_new, par)
       ctr_loop: do
         call parameters_copy(par_prev, par)
-        call f_striter(sys, h, td, psi, initial_st, target, par, j1)
-        if(oct%dump_intermediate) call iterator_write(iterator, psi, par_prev, sys%gr, sys%outp)
+        call f_striter(sys, h, td, par, j1)
+        if(oct%dump_intermediate) call iterator_write(iterator, par_prev)
         stop_loop = iteration_manager(j1, par_prev, par, iterator)
         if(clean_stop() .or. stop_loop) exit ctr_loop
         if(oct%use_mixing) then
@@ -260,8 +292,8 @@ contains
       call parameters_copy(par_new, par)
       ctr_loop: do
         call parameters_copy(par_prev, par)
-        call f_iter(iterator, sys, h, td, psi, initial_st, target, par, prop_psi, prop_chi, j1)
-        if(oct%dump_intermediate) call iterator_write(iterator, psi, par, sys%gr, sys%outp)
+        call f_iter(sys, h, td, psi, par, prop_psi, prop_chi, j1)
+        if(oct%dump_intermediate) call iterator_write(iterator, par)
         stop_loop = iteration_manager(j1, par, par_prev, iterator)
         if(clean_stop() .or. stop_loop) exit ctr_loop
         if( oct%use_mixing .and. (iterator%ctr_iter > 1) ) then
@@ -295,8 +327,8 @@ contains
       call parameters_copy(par_new, par)      
       ctr_loop: do
         call parameters_copy(par_prev, par)
-        call f_wg05(iterator, sys, h, td, psi, initial_st, target, par, prop_psi, prop_chi, j1)
-        if(oct%dump_intermediate) call iterator_write(iterator, psi, par, sys%gr, sys%outp)
+        call f_wg05(sys, h, td, psi, par, prop_psi, prop_chi, j1)
+        if(oct%dump_intermediate) call iterator_write(iterator, par)
         stop_loop = iteration_manager(j1, par, par_prev, iterator)
         if(clean_stop() .or. stop_loop) exit ctr_loop
         if(oct%use_mixing) then
@@ -321,18 +353,18 @@ contains
       call oct_prop_init(prop_psi, "psi", td%max_iter, oct%number_checkpoints)
 
       call parameters_copy(par_prev, par)
-      call propagate_forward(sys, h, td, target, psi, prop_psi)
-      j1 = j1_functional(sys%gr, psi, target)
-      if(oct%dump_intermediate) call iterator_write(iterator, psi, par, sys%gr, sys%outp)
+      call propagate_forward(sys, h, td, par, target, psi, prop_psi)
+      j1 = j1_functional(sys%gr, psi)
+      if(oct%dump_intermediate) call iterator_write(iterator, par)
       stop_loop = iteration_manager(j1, par, par_prev, iterator)
       call parameters_end(par_prev)
 
       call parameters_copy(par_new, par)
       ctr_loop: do
         call parameters_copy(par_prev, par)
-        call f_zbr98(sys, h, td, psi, initial_st, target, prop_psi, prop_chi, par)
-        j1 = j1_functional(sys%gr, psi, target)
-        if(oct%dump_intermediate) call iterator_write(iterator, psi, par, sys%gr, sys%outp)
+        call f_zbr98(sys, h, td, psi, prop_psi, prop_chi, par)
+        j1 = j1_functional(sys%gr, psi)
+        if(oct%dump_intermediate) call iterator_write(iterator, par)
         stop_loop = iteration_manager(j1, par, par_prev, iterator)
         if(clean_stop() .or. stop_loop) exit ctr_loop
         if(oct%use_mixing) then
@@ -367,21 +399,15 @@ contains
       sys_      => sys
       h_        => h
       td_       => td
-      target_   => target
-      psi_      => initial_st
-      iterator_ => iterator
 
       ! Do a zero iteration, with the input field.
       ! (This could be removed in a final version, since the minimization algorithm itself
       ! has to repeat this run. Now it stays for clarity).
-      call parameters_to_realtime(par)
       call states_copy(psi, initial_st)
-      call parameters_to_h(par, h%ep)
-      call propagate_forward(sys, h, td, target, psi)
-      call parameters_set_rep(par)
-      if(oct%dump_intermediate) call iterator_write(iterator, psi, par, sys%gr, sys%outp)
+      call propagate_forward(sys, h, td, par, target, psi)
+      if(oct%dump_intermediate) call iterator_write(iterator, par)
 
-      j1 = j1_functional(sys%gr, psi, target)
+      j1 = j1_functional(sys%gr, psi)
       call iteration_manager_direct(j1, par, iterator)
 
       call parameters_par_to_x(par, x)
@@ -406,17 +432,58 @@ contains
     end subroutine scheme_direct
     ! ---------------------------------------------------------
 
+    ! ---------------------------------------------------------
+    subroutine scheme_direct2
+      integer :: ierr
+      FLOAT :: minvalue, step
+      FLOAT, allocatable :: x(:)
+      call push_sub('opt_control.scheme_direct2')
+
+      call parameters_set_rep(par)
+
+      ALLOCATE(x(par%nfreqs-1), par%nfreqs-1)
+
+      ! Set the module pointers, so that the calc_point and write_iter_info routines
+      ! can use them.
+      call parameters_copy(par_, par)
+      sys_      => sys
+      h_        => h
+      td_       => td
+
+      call states_copy(psi, initial_st)
+
+      call parameters_par_to_x(par, x)
+      step = oct%direct_step * M_PI
+      ierr = loct_minimize_direct(MINMETHOD_NMSIMPLEX, par%nfreqs-1, x(1), step,&
+               iterator%eps, iterator%ctr_iter_max, &
+               direct2_opt_calc, direct2_opt_write_info, minvalue)
+
+      if(ierr.ne.0) then
+        if(ierr <= 1024) then
+          message(1) = "Error occurred during the GSL minimization procedure:"
+          call loct_strerror(ierr, message(2))
+          call write_fatal(2)
+        else
+          message(1) = "The OCT direct optimization did not meet the convergence criterion."
+          call write_info(1)
+        end if
+      end if
+
+      deallocate(x)
+      call pop_sub()
+    end subroutine scheme_direct2
+
+
   end subroutine opt_control_run
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  subroutine f_zbr98(sys, h, td, psi, initial_st, target, prop_psi, prop_chi, par)
+  subroutine f_zbr98(sys, h, td, psi, prop_psi, prop_chi, par)
     type(system_t), intent(inout)                 :: sys
     type(hamiltonian_t), intent(inout)            :: h
     type(td_t), intent(inout)                     :: td
     type(states_t), intent(inout)                 :: psi
-    type(states_t), intent(in)                    :: initial_st
-    type(target_t), intent(inout)                 :: target
     type(oct_prop_t), intent(inout)               :: prop_psi, prop_chi
     type(oct_control_parameters_t), intent(inout) :: par
 
@@ -430,8 +497,7 @@ contains
     if(oct%use_mixing) then
       call states_end(psi)
       call states_copy(psi, initial_st)
-      call parameters_to_h(par, h%ep)
-      call propagate_forward(sys, h, td, target, psi, prop_psi)
+      call propagate_forward(sys, h, td, par, target, psi, prop_psi)
     end if
 
     call states_copy(chi, target%st)
@@ -448,14 +514,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine f_wg05(iterator, sys, h, td, psi, initial_st, target, par, prop_psi, prop_chi, j1)
-    type(oct_iterator_t), intent(in)              :: iterator
+  subroutine f_wg05(sys, h, td, psi, par, prop_psi, prop_chi, j1)
     type(system_t), intent(inout)                 :: sys
     type(hamiltonian_t), intent(inout)            :: h
     type(td_t), intent(inout)                     :: td
     type(states_t), intent(inout)                 :: psi
-    type(states_t), intent(in)                    :: initial_st
-    type(target_t), intent(inout)                 :: target
     type(oct_control_parameters_t), intent(inout) :: par
     type(oct_prop_t), intent(inout)               :: prop_psi, prop_chi
     FLOAT, intent(out)                            :: j1
@@ -470,9 +533,8 @@ contains
     if( iterator%ctr_iter .eq. 0) then
       call states_end(psi)
       call states_copy(psi, initial_st)
-      call parameters_to_h(par, h%ep)
-      call propagate_forward(sys, h, td, target, psi, prop_psi)
-      j1 = j1_functional(sys%gr, psi, target)
+      call propagate_forward(sys, h, td, par, target, psi, prop_psi)
+      j1 = j1_functional(sys%gr, psi)
       call pop_sub()
       return
     end if
@@ -480,7 +542,7 @@ contains
     call parameters_copy(parp, par)
 
     call states_copy(chi, psi)
-    call calc_chi(oct, sys%gr, target, psi, chi)
+    call calc_chi(sys%gr, psi, chi)
     call bwd_step(oct, sys, td, h, target, par, parp, chi, prop_chi, prop_psi)
 
     do j = 1, parp%no_parameters
@@ -503,10 +565,9 @@ contains
 
     call states_end(psi)
     call states_copy(psi, initial_st)
-    call parameters_to_h(par, h%ep)
-    call propagate_forward(sys, h, td, target, psi, prop_psi)
+    call propagate_forward(sys, h, td, par, target, psi, prop_psi)
 
-    j1 = j1_functional(sys%gr, psi, target)
+    j1 = j1_functional(sys%gr, psi)
 
     call states_end(chi)
     call parameters_end(parp)
@@ -516,18 +577,16 @@ contains
 
 
    ! ---------------------------------------------------------
-  subroutine f_striter(sys, h, td, psi, initial_st, target, par, j1)
+  subroutine f_striter(sys, h, td, par, j1)
     type(system_t), intent(inout)                 :: sys
     type(hamiltonian_t), intent(inout)            :: h
     type(td_t), intent(inout)                     :: td
-    type(states_t), intent(inout)                 :: psi
-    type(states_t), intent(in)                    :: initial_st
-    type(target_t), intent(inout)                 :: target
     type(oct_control_parameters_t), intent(inout) :: par
     FLOAT, intent(out)                            :: j1
 
     integer :: j
     type(states_t) :: chi
+    type(states_t) :: psi
     type(oct_control_parameters_t) :: par_chi
     type(oct_prop_t)               :: prop_chi, prop_psi;
 
@@ -539,17 +598,15 @@ contains
     call parameters_copy(par_chi, par)
 
     ! First, a forward propagation with the input field.
-    call states_end(psi)
     call states_copy(psi, initial_st)
-    call parameters_to_h(par, h%ep)
-    call propagate_forward(sys, h, td, target, psi, prop_psi)
+    call propagate_forward(sys, h, td, par, target, psi, prop_psi)
 
     ! Check the performance.
-    j1 = j1_functional(sys%gr, psi, target)
+    j1 = j1_functional(sys%gr, psi)
 
     ! Set the boundary condition for the backward propagation.
     call states_copy(chi, psi)
-    call calc_chi(oct, sys%gr, target, psi, chi)
+    call calc_chi(sys%gr, psi, chi)
 
     ! Backward propagation, while at the same time finding the output field, 
     ! which is placed at par_chi
@@ -577,14 +634,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine f_iter(iterator, sys, h, td, psi, initial_st, target, par, prop_psi, prop_chi, j1)
-    type(oct_iterator_t), intent(in)              :: iterator
+  subroutine f_iter(sys, h, td, psi, par, prop_psi, prop_chi, j1)
     type(system_t), intent(inout)                 :: sys
     type(hamiltonian_t), intent(inout)            :: h
     type(td_t), intent(inout)                     :: td
     type(states_t), intent(inout)                 :: psi
-    type(states_t), intent(in)                    :: initial_st
-    type(target_t), intent(inout)                 :: target
     type(oct_control_parameters_t), intent(inout) :: par
     type(oct_prop_t), intent(inout)               :: prop_psi, prop_chi
     FLOAT, intent(out)                            :: j1
@@ -597,9 +651,8 @@ contains
     if( iterator%ctr_iter .eq. 0) then
       call states_end(psi)
       call states_copy(psi, initial_st)
-      call parameters_to_h(par, h%ep)
-      call propagate_forward(sys, h, td, target, psi, prop_psi)
-      j1 = j1_functional(sys%gr, psi, target)
+      call propagate_forward(sys, h, td, par, target, psi, prop_psi)
+      j1 = j1_functional(sys%gr, psi)
       call pop_sub()
       return
     end if
@@ -610,19 +663,18 @@ contains
       ! No need to do this auxiliary propagation if no mixing has been done previously.
       call states_end(psi)
       call states_copy(psi, initial_st)
-      call parameters_to_h(par, h%ep)
-      call propagate_forward(sys, h, td, target, psi, prop_psi)
+      call propagate_forward(sys, h, td, par, target, psi, prop_psi)
     end if
     
     call states_copy(chi, psi)
-    call calc_chi(oct, sys%gr, target, psi, chi)
+    call calc_chi(sys%gr, psi, chi)
     call bwd_step(oct, sys, td, h, target, par, par_chi, chi, prop_chi, prop_psi)
 
     call states_end(psi)
     call states_copy(psi, initial_st)
     call fwd_step(oct, sys, td, h, target, par, par_chi, psi, prop_chi, prop_psi)
 
-    j1 = j1_functional(sys%gr, psi, target)
+    j1 = j1_functional(sys%gr, psi)
 
     call states_end(chi)
     call parameters_end(par_chi)
