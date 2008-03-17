@@ -120,7 +120,7 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, reo
         end do
 
         ! Orthogonalize to lowest eigenvalues (already calculated)
-        if(p > 1) call X(states_gram_schmidt)(st, p - 1, gr%m, st%d%dim, st%X(psi)(:, :, :, ik), g, normalize = .false.)
+        if(p > 1) call X(states_gram_schmidt)(gr%m, p - 1, st%d%dim, st%X(psi)(:, :, :, ik), g, normalize = .false.)
 
         if(iter .ne. 1) gg1 = X(states_dotp) (gr%m, st%d%dim, g, g0)
 
@@ -330,8 +330,8 @@ subroutine X(eigen_solver_cg2_new) (gr, st, h, tol, niter, converged, diff, reor
 
          ! Get steepest descent vector
          sd(1:NP, 1:dim) = lambda*psi(1:NP, 1:dim) - phi(1:NP, 1:dim)
-         if(ist > 1) call X(states_gram_schmidt)(st, ist - 1, gr%m, dim, st%X(psi)(:, :, :, ik), sd, &
-                                                 normalize = .false., mask = orthogonal)
+         if(ist > 1) &
+           call X(states_gram_schmidt)(gr%m, ist - 1, dim, st%X(psi)(:, :, :, ik), sd, normalize = .false., mask = orthogonal)
 
          ! Get conjugate-gradient vector
          gamma = X(states_dotp)(gr%m, dim, sd, sd)/mu

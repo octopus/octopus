@@ -112,12 +112,14 @@ end subroutine X(states_gram_schmidt_full)
 ! And one can pass an extra optional argument, mask, which:
 !  - on input, if mask(p) = .true., the p-orbital is not used.
 !  - on output, mask(p) = .true. if p was already orthogonal (to within 1e-12).
-subroutine X(states_gram_schmidt)(st, nst, m, dim, psi, phi, normalize, mask)
-  type(states_t),    intent(in)    :: st
-  integer,           intent(in)    :: nst, dim
+subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi, normalize, mask, overlap, norm)
   type(mesh_t),      intent(in)    :: m
+  integer,           intent(in)    :: nst
+  integer,           intent(in)    :: dim
   R_TYPE,            intent(inout) :: psi(:,:,:)   ! psi(m%np_part, dim, nst)
   R_TYPE,            intent(inout) :: phi(:,:)     ! phi(m%np_part, dim)
+  R_TYPE,  optional, intent(out)   :: overlap(:) 
+  R_TYPE,  optional, intent(out)   :: norm
   logical, optional, intent(in)    :: normalize
   logical, optional, intent(inout) :: mask(:)      ! nst
 
@@ -132,19 +134,17 @@ subroutine X(states_gram_schmidt)(st, nst, m, dim, psi, phi, normalize, mask)
   type(profile_t), save :: reduce_prof
 #endif
 
-  ASSERT(.not.st%parallel_in_states)
-
   call profiling_in(prof, "GRAM_SCHMIDT")
   call push_sub('states_inc.Xstates_gram_schmidt')
 
   ! This routine uses blocking to optimize cache usage. One block of
   ! |phi> is loaded in cache L1 and then then we calculate the dot
   ! product of it with the corresponding blocks of |psi_k>, next we
-  ! load another block and do the same continue. This way we only have
-  ! to load |psi> from the L2 or memory.
+  ! load another block and do the same. This way we only have to load
+  ! |psi> from the L2 or memory.
 
   ! set the block_size so each block fits in the l1 cache
-  block_size = hardware%l1%size / (6*R_SIZEOF)
+  block_size = hardware%l1%size / (4*R_SIZEOF)
   ! the block_size should be a multiple of the cache line (minus 2 lines to avoid powers of 2)
   block_size = block_size - mod(block_size, hardware%l1%line_size) - 2*hardware%l1%line_size
 
@@ -236,6 +236,9 @@ subroutine X(states_gram_schmidt)(st, nst, m, dim, psi, phi, normalize, mask)
       call lalg_scal(m%np, M_ONE/nrm2, phi(:, idim))
     end do
   end if
+
+  if(present(overlap)) overlap(1:nst) = ss(1:nst)
+  if(present(norm) .and. normalize) norm = nrm2
 
   deallocate(ss)
   

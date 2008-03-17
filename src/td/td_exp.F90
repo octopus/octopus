@@ -416,18 +416,9 @@ contains
           l = 1
         end if
 
-        do k = l, n
-          hm(k, n) = zstates_dotp(gr%m, h%d%dim, v(:, :, k), v(:, :, n + 1))
-          do idim = 1, h%d%dim
-            call lalg_axpy(NP, -hm(k, n), v(:, idim, k), v(:, idim, n + 1))
-          end do
-        end do
-
-        hm(n + 1, n) = zstates_nrm2(gr%m, h%d%dim, v(:, :, n + 1))
-
-        do idim = 1, h%d%dim
-          call lalg_scal(NP, M_ONE/real(hm(n + 1, n)), v(:, idim, n + 1)) 
-        end do
+        !orthogonalize against previous vectors
+        call zstates_gram_schmidt(gr%m, n - l + 1, h%d%dim, v(:, :, l:n), v(:, :, n + 1), &
+          normalize = .true., overlap = hm(l:n, n), norm = hm(n + 1, n))
 
         !calculate the exponential of the dense matrix using expokit
         if(hamiltonian_hermitean(h)) then
