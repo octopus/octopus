@@ -161,8 +161,6 @@ contains
       ALLOCATE(mc%group_sizes(mc%n_index), mc%n_index)
       mc%group_sizes(:) = 1
 
-      call topology_init(mc%topo)
-
       !%Variable ParallelizationUseTopology
       !%Type block
       !%Section Generalities::Parallel
@@ -186,9 +184,13 @@ contains
   
       call loct_parse_logical(check_inp('ParallelizationUseTopology'), .false., mc%use_topology)
 
-      mc%use_topology = mc%use_topology .and. topology_groups_are_equal(mc%topo)
       mc%use_topology = mc%use_topology .and. multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)
       mc%use_topology = mc%use_topology .and. multicomm_strategy_is_parallel(mc, P_STRATEGY_DOMAINS)
+      
+      if(mc%use_topology) then
+        call topology_init(mc%topo)
+        mc%use_topology = mc%use_topology .and. topology_groups_are_equal(mc%topo)
+      end if
 
       !%Variable ParallelizationGroupRanks
       !%Type block
