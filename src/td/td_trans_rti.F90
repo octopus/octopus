@@ -730,7 +730,7 @@ write(*,*) 'state 2', st%zpsi(:,1,st%st_start+1,ik)
 
   ! ---------------------------------------------------------
   ! compute the extended eigenstate(s) 
-  subroutine ext_eigenstate_lippmann_schwinger(h, gr, np, diag, offdiag, order, energy, lead_pot, dx, st, phase, ik)
+  subroutine ext_eigenstate_lip_sch(h, gr, np, diag, offdiag, order, energy, lead_pot, dx, st, phase, ik)
     type(hamiltonian_t), intent(inout) :: h
     type(grid_t),   intent(inout)      :: gr
     integer,        intent(in)      :: np                      ! number of interface points
@@ -752,7 +752,7 @@ write(*,*) 'state 2', st%zpsi(:,1,st%st_start+1,ik)
     FLOAT              :: dres
     CMPLX              :: cres
 
-    call push_sub('td_trans_rti.ext_eigenstate_lippmann_schwinger')
+    call push_sub('td_trans_rti.ext_eigenstate_lip_sch')
 
     ALLOCATE(green_l(np, np, NLEADS),np**2*NLEADS)
     ALLOCATE(tmp(NP_PART, 1), NP_PART)
@@ -822,7 +822,7 @@ write(*,*) 'ey = ',M_HALF*(n(2)*q(2))**2
 !    write(*,*) iter, cres
     deallocate(green_l, tmp)
     call pop_sub()
-  end subroutine ext_eigenstate_lippmann_schwinger
+  end subroutine ext_eigenstate_lip_sch
 
   ! ---------------------------------------------------------
   ! compute the extended eigenstate(s)
@@ -850,7 +850,7 @@ write(*,*) 'ey = ',M_HALF*(n(2)*q(2))**2
     case(1) ! reference implementation, only feasible in 1D (maybe 2D)
       call ext_eigenst_imag_green(h, gr, np, diag, offdiag, order, energy, lead_pot, dx, st, phase, ik)
     case(2) ! method by Florian Lorenzen and Heiko Appel
-      call ext_eigenstate_lippmann_schwinger(h, gr, np, diag, offdiag, order, energy, lead_pot, dx, st, phase, ik)
+      call ext_eigenstate_lip_sch(h, gr, np, diag, offdiag, order, energy, lead_pot, dx, st, phase, ik)
     case(3) ! method by Gianluca Stefannuci
      !call ext_eigenstate_stefanucci(h, gr, np, diag, offdiag, order, energy, lead_pot, dx, st, phase, ik)
     end select

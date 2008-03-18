@@ -36,7 +36,7 @@ module vibrations_m
        vibrations_init, &
        vibrations_end,  &
        vibrations_normalize_dyn_matrix, &
-       vibrations_diagonalize_dyn_matrix, &
+       vibrations_diag_dyn_matrix, &
        vibrations_get_index, &
        vibrations_get_atom,  &
        vibrations_get_dir,   &
@@ -118,17 +118,17 @@ contains
 
   end subroutine vibrations_normalize_dyn_matrix
 
-  subroutine vibrations_diagonalize_dyn_matrix(this)
+  subroutine vibrations_diag_dyn_matrix(this)
     type(vibrations_t),      intent(inout) :: this
     
     this%normal_mode = M_ZERO
     
-    ! diagonalize DYN_MATRIX
+    ! diag DYN_MATRIX
     call lalg_eigensolve(this%num_modes, this%dyn_matrix, this%normal_mode, this%freq)
 
     this%freq(1:this%num_modes) = this%freq(1:this%num_modes) / this%total_mass
 
-  end subroutine vibrations_diagonalize_dyn_matrix
+  end subroutine vibrations_diag_dyn_matrix
 
   integer pure function vibrations_get_index(this, iatom, idim)
     type(vibrations_t), intent(in) :: this

@@ -19,7 +19,7 @@
 
 ! ---------------------------------------------------------
 ! This routine diagonalises the Hamiltonian in the subspace defined by the states.
-subroutine X(eigen_diagon_subspace)(gr, st, h, diff)
+subroutine X(eigen_diag_subspace)(gr, st, h, diff)
   type(grid_t),        intent(inout) :: gr
   type(states_t),      intent(inout) :: st
   type(hamiltonian_t), intent(inout) :: h
@@ -101,7 +101,7 @@ subroutine X(eigen_diagon_subspace)(gr, st, h, diff)
 
   call profiling_out(diagon_prof)
   call pop_sub()
-end subroutine X(eigen_diagon_subspace)
+end subroutine X(eigen_diag_subspace)
 
 
 ! --------------------------------------------------------- 
@@ -110,7 +110,7 @@ end subroutine X(eigen_diagon_subspace)
 ! consumes more memory.
 !
 
-subroutine X(eigen_diagon_subspace_par_states)(gr, st, h, diff)
+subroutine X(eigen_diag_subspace_par_states)(gr, st, h, diff)
   type(grid_t),        intent(inout) :: gr
   type(states_t),      intent(inout) :: st
   type(hamiltonian_t), intent(inout) :: h
@@ -178,7 +178,7 @@ subroutine X(eigen_diagon_subspace_par_states)(gr, st, h, diff)
   call profiling_out(diagon_prof)
   call pop_sub()
 
-end subroutine X(eigen_diagon_subspace_par_states) 
+end subroutine X(eigen_diag_subspace_par_states) 
 
 !! Local Variables:
 !! mode: f90

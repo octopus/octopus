@@ -47,7 +47,7 @@ module ion_dynamics_m
     ion_dynamics_init,                     &
     ion_dynamics_end,                      &
     ion_dynamics_propagate,                &
-    ion_dynamics_propagate_velocities,     &
+    ion_dynamics_propagate_vel,     &
     ion_dynamics_save_state,               &
     ion_dynamics_restore_state,            &
     ion_dynamics_ions_move,                &
@@ -257,7 +257,7 @@ contains
     
   end subroutine ion_dynamics_propagate
 
-  subroutine ion_dynamics_propagate_velocities(this, geo)
+  subroutine ion_dynamics_propagate_vel(this, geo)
     type(ion_dynamics_t), intent(in)    :: this
     type(geometry_t),     intent(inout) :: geo
 
@@ -273,7 +273,7 @@ contains
 
     end do
 
-  end subroutine ion_dynamics_propagate_velocities
+  end subroutine ion_dynamics_propagate_vel
 
   subroutine ion_dynamics_save_state(this, geo, state)
     type(ion_dynamics_t), intent(in)    :: this

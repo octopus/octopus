@@ -262,7 +262,7 @@ contains
       if(ion_dynamics_ions_move(td%ions)) then
         call epot_forces(gr, sys%geo, h%ep, st, i*td%dt)
 
-        call ion_dynamics_propagate_velocities(td%ions, sys%geo)
+        call ion_dynamics_propagate_vel(td%ions, sys%geo)
 
         geo%kinetic_energy = ion_dynamics_kinetic_energy(td%ions, geo)
       end if

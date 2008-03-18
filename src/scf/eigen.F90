@@ -293,9 +293,9 @@ contains
       end select
 
       if(st%parallel_in_states) then 
-        call deigen_diagon_subspace_par_states(gr, st, h)
+        call deigen_diag_subspace_par_states(gr, st, h)
       else
-        call deigen_diagon_subspace(gr, st, h)
+        call deigen_diag_subspace(gr, st, h)
       end if
 
     else
@@ -326,9 +326,9 @@ contains
       end select
 
       if(st%parallel_in_states) then 
-        call zeigen_diagon_subspace_par_states(gr, st, h)
+        call zeigen_diag_subspace_par_states(gr, st, h)
       else
-        call zeigen_diagon_subspace(gr, st, h)
+        call zeigen_diag_subspace(gr, st, h)
       end if
 
     end if

@@ -183,7 +183,7 @@ contains
     call scf_end(scf)
 
     call vibrations_normalize_dyn_matrix(vib, geo)
-    call vibrations_diagonalize_dyn_matrix(vib)
+    call vibrations_diag_dyn_matrix(vib)
 
   end subroutine get_dyn_matrix
 

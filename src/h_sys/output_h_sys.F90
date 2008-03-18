@@ -316,7 +316,7 @@ contains
     
     call h_sys_output_states(st, gr, dir, outp)
     call h_sys_output_hamiltonian(h, gr%m, gr%sb, dir, outp)
-    call h_sys_output_localization_functions(st, h, gr, dir, outp)
+    call h_sys_output_localization_funct(st, h, gr, dir, outp)
     call h_sys_output_current_flow(gr, st, dir, outp)
 
     if(iand(outp%what, output_geometry).ne.0) then
@@ -327,7 +327,7 @@ contains
     
   end subroutine h_sys_output_all
 
-  subroutine h_sys_output_localization_functions(st, h, gr, dir, outp)
+  subroutine h_sys_output_localization_funct(st, h, gr, dir, outp)
     type(states_t),         intent(inout) :: st
     type(hamiltonian_t),    intent(in)    :: h
     type(grid_t),           intent(inout) :: gr
@@ -426,7 +426,7 @@ contains
 
     end subroutine out_basins
 
-  end subroutine h_sys_output_localization_functions
+  end subroutine h_sys_output_localization_funct
 
   
   subroutine h_sys_calc_electronic_pressure(st, h, gr, pressure)
