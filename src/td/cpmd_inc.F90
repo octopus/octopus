@@ -33,7 +33,9 @@ subroutine X(cpmd_propagate)(this, gr, h, st, iter, dt)
 
   R_TYPE, allocatable :: hpsi(:, :), psi(:, :), xx(:, :)
   R_TYPE, pointer     :: oldpsi(:, :, :)
-  R_TYPE, parameter   :: one = M_ONE
+  R_TYPE :: one 
+
+  one = R_TOTYPE(M_ONE)
 
   call profiling_in(cpmd_prop, "CP_PROPAGATION")
 
@@ -181,7 +183,9 @@ subroutine X(cpmd_propagate_vel)(this, gr, h, st, iter, dt)
   integer :: ik, ist1, ddim, np
 
   R_TYPE, allocatable :: hpsi(:, :), yy(:, :)
-  R_TYPE, parameter   :: one = R_TOTYPE(M_ONE)
+  R_TYPE :: one
+
+  one = R_TOTYPE(M_ONE)
 
   if ( this%method == VERLET ) return
 
