@@ -312,164 +312,162 @@ contains
 ! Initialize output                                                           !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  EX = 0
-  EC = 0
-  DX = 0
-  DC = 0
-  DO 20 IS = 1,NSPIN
-     DO 10 IR = 1,NR
-        V_XC(IR,IS) = 0
-     10   CONTINUE
-  20 CONTINUE
+  EX = M_ZERO
+  EC = M_ZERO
+  DX = M_ZERO
+  DC = M_ZERO
+  do IS = 1,NSPIN
+    do IR = 1,NR
+      V_XC(IR,IS) = M_ZERO
+    end do
+  end do
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Loop on mesh points                                                         !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  DO 140 IR = 1,NR
+  do IR = 1,NR
+    
+    ! Find interval of neighbour points to calculate derivatives
+    IN1 = MAX(  1, IR-NN ) - IR
+    IN2 = MIN( NR, IR+NN ) - IR
 
-!       Find interval of neighbour points to calculate derivatives
-     IN1 = MAX(  1, IR-NN ) - IR
-     IN2 = MIN( NR, IR+NN ) - IR
+    ! Find weights of numerical derivation from Lagrange
+    ! interpolation formula
+    do IN = IN1,IN2
+      if (IN .eq. 0) then
+        DGDM(IN) = 0
+        do JN = IN1,IN2
+          if (JN.ne.0) DGDM(IN) = DGDM(IN) + M_ONE / (0 - JN)
+        end do
+      else
+        F1 = 1
+        F2 = 1
+        do JN = IN1,IN2
+          if (JN.ne.IN .and. JN.ne.0) F1 = F1 * (0  - JN)
+          if (JN.ne.IN)               F2 = F2 * (IN - JN)
+        end do
+        DGDM(IN) = F1 / F2
+      end if
+    end do
 
-!    Find weights of numerical derivation from Lagrange
-!    interpolation formula
-     DO 50 IN = IN1,IN2
-        IF (IN .EQ. 0) THEN
-           DGDM(IN) = 0
-           DO 30 JN = IN1,IN2
-              IF (JN.NE.0) DGDM(IN) = DGDM(IN) + M_ONE / (0 - JN)
-           30 CONTINUE
-        ELSE
-           F1 = 1
-           F2 = 1
-           DO 40 JN = IN1,IN2
-              IF (JN.NE.IN .AND. JN.NE.0) F1 = F1 * (0  - JN)
-              IF (JN.NE.IN)               F2 = F2 * (IN - JN)
-           40 CONTINUE
-           DGDM(IN) = F1 / F2
-        ENDIF
-     50 CONTINUE
+    ! Find dr/dmesh
+    DRDM = 0
+    do IN = IN1,IN2
+      DRDM = DRDM + RMESH(IR+IN) * DGDM(IN)
+    end do
 
-!       Find dr/dmesh
-     DRDM = 0
-     DO 60 IN = IN1,IN2
-        DRDM = DRDM + RMESH(IR+IN) * DGDM(IN)
-     60 CONTINUE
+    ! Find differential of volume. Use trapezoidal integration rule
+    DVOL = 4 * M_PI * RMESH(IR)**2 * DRDM
 
-!       Find differential of volume. Use trapezoidal integration rule
-     DVOL = 4 * M_PI * RMESH(IR)**2 * DRDM
-!    DVMIN is a small number added to avoid a division by zero
-     DVOL = DVOL + DVMIN
-     IF (IR.EQ.1 .OR. IR.EQ.NR) DVOL = DVOL / 2
-     IF (GGA) AUX(IR) = DVOL
+    ! DVMIN is a small number added to avoid a division by zero
+    DVOL = DVOL + DVMIN
+    if (IR.eq.1 .or. IR.eq.NR) DVOL = DVOL / 2
+    if (GGA) AUX(IR) = DVOL
 
-!       Find the weights for the derivative d(gradF(i))/d(F(j)), of
-!       the gradient at point i with respect to the value at point j
-     IF (GGA) THEN
-        DO 80 IN = IN1,IN2
-           DGIDFJ(IN) = DGDM(IN) / DRDM
-        80 CONTINUE
-     ENDIF
+    ! Find the weights for the derivative d(gradF(i))/d(F(j)), of
+    ! the gradient at point i with respect to the value at point j
+    if (GGA) then
+      do IN = IN1,IN2
+        DGIDFJ(IN) = DGDM(IN) / DRDM
+      end do
+    end if
 
+    ! Find density and gradient of density at this point
+    do IS = 1,NSPIN
+      D(IS) = DENS(IR,IS)
+    end do
+    if (GGA) then
+      do IS = 1,NSPIN
+        GD(:,IS) = M_ZERO
+        do IN = IN1,IN2
+          GD(3,IS) = GD(3,IS) + DGIDFJ(IN) * DENS(IR+IN,IS)
+        end do
+      end do
+    else
+      GD = M_ZERO
+    end if
 
-!    Find density and gradient of density at this point
-     DO 90 IS = 1,NSPIN
-        D(IS) = DENS(IR,IS)
-     90 CONTINUE
-     IF (GGA) THEN
-        DO 110 IS = 1,NSPIN
-           GD(1,IS) = 0
-           GD(2,IS) = 0
-           GD(3,IS) = 0
-           DO 100 IN = IN1,IN2
-              GD(3,IS) = GD(3,IS) + DGIDFJ(IN) * DENS(IR+IN,IS)
-           100 CONTINUE
-        110 CONTINUE
-     ELSE
-        GD = M_ZERO
-     ENDIF
+    ! The xc_f90_gga routines need as input these combinations of 
+    ! the gradient of the densities.
+    sigma(1) = gd(3, 1)*gd(3, 1)
+    if(NSPIN > 1) then
+      sigma(2) = gd(3, 1) * gd(3, 2)
+      sigma(3) = gd(3, 2) * gd(3, 2)
+    end if
 
-     ! The xc_f90_gga routines need as input these combinations of 
-     ! the gradient of the densities.
-     sigma(1) = gd(3, 1)*gd(3, 1)
-     if(NSPIN > 1) then
-       sigma(2) = gd(3, 1) * gd(3, 2)
-       sigma(3) = gd(3, 2) * gd(3, 2)
-     end if
+    ! Find exchange and correlation energy densities and their
+    ! derivatives with respect to density and density gradient
+    if (GGA) then
+      call xc_f90_gga_vxc(x_conf, D(1), sigma(1), EPSX, DEXDD(1), vxsigma(1))
+      call xc_f90_gga_vxc(c_conf, D(1), sigma(1), EPSC, DECDD(1), vcsigma(1))
+    else
+      call xc_f90_lda_vxc(x_conf, D(1), EPSX, DEXDD(1))
+      call xc_f90_lda_vxc(c_conf, D(1), EPSC, DECDD(1))
+    end if
 
-!    Find exchange and correlation energy densities and their
-!    derivatives with respect to density and density gradient
-     IF (GGA) THEN
-       call XC_F90(gga_vxc)(x_conf, D(1), sigma(1), EPSX, DEXDD(1), vxsigma(1))
-       call XC_F90(gga_vxc)(c_conf, D(1), sigma(1), EPSC, DECDD(1), vcsigma(1))
-     ELSE
-       call XC_F90(lda_vxc)(x_conf, D(1), EPSX, DEXDD(1))
-       call XC_F90(lda_vxc)(c_conf, D(1), EPSC, DECDD(1))
-     ENDIF
+    ! The derivatives of the exchange and correlation energies per particle with
+    ! respect to the density gradient have to be recovered from the derivatives
+    ! with respect to the sigma values defined above.
+    if(gga) then
+      dexdgd(:, 1) = M_TWO * vxsigma(1)*gd(:, 1)
+      decdgd(:, 1) = M_TWO * vcsigma(1)*gd(:, 1)
+      if(NSPIN .eq. 2) then
+        dexdgd(:, 1) = dexdgd(:, 1) + vxsigma(2)*gd(:, 2)
+        dexdgd(:, 2) = M_TWO * vxsigma(3)*gd(:, 2) + vxsigma(2)*gd(:, 1)
+        decdgd(:, 1) = decdgd(:, 1) + vcsigma(2)*gd(:, 2)
+        decdgd(:, 2) = M_TWO * vcsigma(3)*gd(:, 2) + vcsigma(2)*gd(:, 1)
+      end if
+    end if
 
-     ! The derivatives of the exchange and correlation energies per particle with
-     ! respect to the density gradient have to be recovered from the derivatives
-     ! with respect to the sigma values defined above.
-     if(gga) then
-       dexdgd(:, 1) = M_TWO * vxsigma(1)*gd(:, 1)
-       decdgd(:, 1) = M_TWO * vcsigma(1)*gd(:, 1)
-       if(NSPIN .eq. 2) then
-         dexdgd(:, 1) = dexdgd(:, 1) + vxsigma(2)*gd(:, 2)
-         dexdgd(:, 2) = M_TWO * vxsigma(3)*gd(:, 2) + vxsigma(2)*gd(:, 1)
-         decdgd(:, 1) = decdgd(:, 1) + vcsigma(2)*gd(:, 2)
-         decdgd(:, 2) = M_TWO * vcsigma(3)*gd(:, 2) + vcsigma(2)*gd(:, 1)
-       end if
-     end if
+    ! Add contributions to exchange-correlation energy and its
+    ! derivatives with respect to density at all points
+    do is = 1, NSPIN
+      EX = EX + DVOL * D(IS) * EPSX
+      EC = EC + DVOL * D(IS) * EPSC
+      DX = DX + DVOL * D(IS) * (EPSX - DEXDD(IS))
+      DC = DC + DVOL * D(IS) * (EPSC - DECDD(IS))
+      if (GGA) then
+        V_XC(IR,IS) = V_XC(IR,IS) + DVOL * ( DEXDD(IS) + DECDD(IS) )
+        do IN = IN1,IN2
+          DX = DX - DVOL * DENS(IR+IN,IS) * DEXDGD(3,IS) * DGIDFJ(IN)
+          DC = DC - DVOL * DENS(IR+IN,IS) * DECDGD(3,IS) * DGIDFJ(IN)
+          V_XC(IR+IN,IS) = V_XC(IR+IN,IS) + DVOL *                         &
+            (DEXDGD(3,IS) + DECDGD(3,IS)) * DGIDFJ(IN)
+        end do
+      else
+        V_XC(IR,IS) = DEXDD(IS) + DECDD(IS)
+      end if
+    end do
 
-!       Add contributions to exchange-correlation energy and its
-!       derivatives with respect to density at all points
-     DO 130 IS = 1,NSPIN
-        EX = EX + DVOL * D(IS) * EPSX
-        EC = EC + DVOL * D(IS) * EPSC
-        DX = DX + DVOL * D(IS) * (EPSX - DEXDD(IS))
-        DC = DC + DVOL * D(IS) * (EPSC - DECDD(IS))
-        IF (GGA) THEN
-            V_XC(IR,IS) = V_XC(IR,IS) + DVOL * ( DEXDD(IS) + DECDD(IS) )
-            DO 120 IN = IN1,IN2
-               DX= DX - DVOL * DENS(IR+IN,IS) * DEXDGD(3,IS) * DGIDFJ(IN)
-               DC= DC - DVOL * DENS(IR+IN,IS) * DECDGD(3,IS) * DGIDFJ(IN)
-               V_XC(IR+IN,IS) = V_XC(IR+IN,IS) + DVOL *                         &
-                  (DEXDGD(3,IS) + DECDGD(3,IS)) * DGIDFJ(IN)
-            120 CONTINUE
-        ELSE
-            V_XC(IR,IS) = DEXDD(IS) + DECDD(IS)
-        ENDIF
-     130 CONTINUE
+  end do
 
-  140 CONTINUE
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! Divide by volume element to obtain the potential (per electron)             !
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! Divide by volume element to obtain the potential (per electron)             !
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  if(GGA) then
+    do IS = 1,NSPIN
+      do IR = 1,NR
+        DVOL = AUX(IR)
+        V_XC(IR,IS) = V_XC(IR,IS) / DVOL
+      end do
+    end do
+  end if
 
-  IF (GGA) THEN
-     DO 160 IS = 1,NSPIN
-        DO 150 IR = 1,NR
-           DVOL = AUX(IR)
-           V_XC(IR,IS) = V_XC(IR,IS) / DVOL
-        150 CONTINUE
-     160 CONTINUE
-  ENDIF
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! Divide by energy unit                                                       !
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! Divide by energy unit                                                       !
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   EX = EX / EUNIT
   EC = EC / EUNIT
   DX = DX / EUNIT
   DC = DC / EUNIT
-  DO IS = 1,NSPIN
-    DO IR = 1,NR
+  do IS = 1,NSPIN
+    do IR = 1,NR
       V_XC(IR,IS) = V_XC(IR,IS) / EUNIT
-    end DO
-  end DO
+    end do
+  end do
 
   if(GGA) then
     call xc_f90_gga_end(x_conf)
@@ -630,7 +628,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !                                                                             !
 !  two fundamental techniques are used to locate the solution:                !
 !      1) node counting and bisection                                         !
-!       2) variational estimate based on a slope discontinuity in psi         !
+!      2) variational estimate based on a slope discontinuity in psi         !
 !  the arguments are defined as follows:                                      !
 !       h,s: g = (h-e*s)*g                                                    !
 !       nr: maximum allowed number of radial points                           !
