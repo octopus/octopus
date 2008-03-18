@@ -81,7 +81,7 @@ if test -z "${FCFLAGS}"; then
           FCFLAGS="-align dcommons -fast -tune host -arch host -noautomatic"
           ;;
         mips*)
-          FCFLAGS="-O3 -INLINE -n32 -LANG:recursive=on"
+          FCFLAGS="-Ofast -O3"
           ;;
         sparc*)
           FCFLAGS="-fast"
