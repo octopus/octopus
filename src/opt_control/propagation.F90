@@ -192,7 +192,7 @@ module opt_control_propagation_m
   ! ---------------------------------------------------------
 
 
-  ! /*---------------------------------------------------------
+  ! ---------------------------------------------------------
   ! Performs a forward propagation on the state psi and on the
   ! lagrange-multiplier state chi. It also updates the control
   ! parameter par,  according to the following scheme:
@@ -201,10 +201,10 @@ module opt_control_propagation_m
   ! par = par[|psi>, |chi>]
   ! |psi> --> U[par](T, 0)|psi>
   !
-  ! Note that the control parameters "par" are updated "on the
-  ! fly", so that the propagation of psi is performed with the
+  ! Note that the control parameters "par" are updated on the
+  ! fly, so that the propagation of psi is performed with the
   ! "new" parameters.
-  ! */--------------------------------------------------------
+  ! --------------------------------------------------------
   subroutine fwd_step(oct, sys, td, h, target, par, par_chi, psi, prop_chi, prop_psi)
     type(oct_t), intent(in)                       :: oct
     type(system_t), intent(inout)                 :: sys
