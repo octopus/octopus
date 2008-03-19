@@ -1121,7 +1121,7 @@ contains
     FLOAT,          intent(inout) :: rho(:,:)
     integer,        intent(in)    :: ist
 
-    integer :: i, ik, sp
+    integer :: ip, ik, sp
     CMPLX   :: c
     type(profile_t), save :: prof
 
@@ -1132,33 +1132,41 @@ contains
     if(st%d%ispin == SPIN_POLARIZED) sp = 2
 
     do ik = 1, st%d%nik, sp
-      !$omp parallel do private(c)
-      do i = 1, np
 
+      if (st%wfs_type == M_REAL) then
+        do ip = 1, np
+          rho(ip, 1) = rho(ip, 1) + st%d%kweights(ik)*st%occ(ist, ik)*st%dpsi(ip, 1, ist, ik)**2
+        end do
+      else
+        do ip = 1, np
+          rho(ip, 1) = rho(ip, 1) + st%d%kweights(ik)*st%occ(ist, ik)*&
+               (real(st%zpsi(ip, 1, ist, ik), REAL_PRECISION)**2 + aimag(st%zpsi(ip, 1, ist, ik))**2)
+        end do
+      end if
+
+      select case(st%d%ispin)
+      case(SPIN_POLARIZED)
         if (st%wfs_type == M_REAL) then
-          rho(i, 1) = rho(i, 1) + st%d%kweights(ik)  *st%occ(ist, ik)*abs(st%dpsi(i, 1, ist, ik))**2
+          do ip = 1, np
+            rho(ip, 2) = rho(ip, 2) + st%d%kweights(ik + 1)*st%occ(ist, ik + 1)*(st%dpsi(ip, 1, ist, ik + 1))**2
+          end do
         else
-          rho(i, 1) = rho(i, 1) + st%d%kweights(ik)  *st%occ(ist, ik)*abs(st%zpsi(i, 1, ist, ik))**2
+          do ip = 1, np
+            rho(ip, 2) = rho(ip, 2) + st%d%kweights(ik + 1)*st%occ(ist, ik + 1)*&
+                 (real(st%zpsi(ip, 1, ist, ik + 1), REAL_PRECISION)**2 + aimag(st%zpsi(ip, 1, ist, ik + 1))**2)
+          end do
         end if
-
-        select case(st%d%ispin)
-
-        case(SPIN_POLARIZED)
-          if (st%wfs_type == M_REAL) then
-            rho(i, 2) = rho(i, 2) + st%d%kweights(ik+1)*st%occ(ist, ik+1)*abs(st%dpsi(i, 1, ist, ik+1))**2
-          else
-            rho(i, 2) = rho(i, 2) + st%d%kweights(ik+1)*st%occ(ist, ik+1)*abs(st%zpsi(i, 1, ist, ik+1))**2
-          end if
-        case(SPINORS) ! in this case wave-functions are always complex
-          rho(i, 2) = rho(i, 2) + st%d%kweights(ik)  *st%occ(ist, ik)*abs(st%zpsi(i, 2, ist, ik))**2
-
-          c = st%d%kweights(ik)*st%occ(ist, ik) * st%zpsi(i, 1, ist, ik) * conjg(st%zpsi(i, 2, ist, ik))
-          rho(i, 3) = rho(i, 3) + real(c, REAL_PRECISION)
-          rho(i, 4) = rho(i, 4) + aimag(c)
-        end select
-
-      end do
-      !$omp end parallel do
+      case(SPINORS) ! in this case wave-functions are always complex
+        do ip = 1, np
+          rho(ip, 2) = rho(ip, 2) + st%d%kweights(ik)*st%occ(ist, ik)*&
+               (real(st%zpsi(ip, 2, ist, ik), REAL_PRECISION)**2 + aimag(st%zpsi(ip, 2, ist, ik))**2)
+          
+          c = st%d%kweights(ik)*st%occ(ist, ik)*st%zpsi(ip, 1, ist, ik)*conjg(st%zpsi(ip, 2, ist, ik))
+          rho(ip, 3) = rho(ip, 3) + real(c, REAL_PRECISION)
+          rho(ip, 4) = rho(ip, 4) + aimag(c)
+        end do
+      end select
+      
     end do
 
     call profiling_out(prof)
