@@ -80,6 +80,8 @@ module io_function_m
   character(len=3), parameter ::  &
     index2label(3) = (/ 're ', 'im ', 'abs' /)
 
+  type(profile_t), save :: read_prof, write_prof
+
 contains
 
   ! ---------------------------------------------------------

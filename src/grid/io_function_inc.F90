@@ -120,7 +120,6 @@ subroutine X(input_function_global)(filename, m, f, ierr, is_tmp)
   integer,           intent(out) :: ierr
   logical,           intent(in)  :: is_tmp
 
-  type(profile_t), save :: prof
 #if defined(HAVE_NETCDF)
   integer :: function_kind
   type(X(cf_t)) :: c
@@ -129,7 +128,7 @@ subroutine X(input_function_global)(filename, m, f, ierr, is_tmp)
 #endif
 #endif
 
-  call profiling_in(prof, "DISK_READ")
+  call profiling_in(read_prof, "DISK_READ")
   call push_sub('out_inc.Xinput_function_global')
 
   ierr = 0
@@ -165,7 +164,7 @@ subroutine X(input_function_global)(filename, m, f, ierr, is_tmp)
   end select
 
   call pop_sub()
-  call profiling_out(prof)
+  call profiling_out(read_prof)
 
 #if defined(HAVE_NETCDF)
 
@@ -363,9 +362,8 @@ subroutine X(output_function_global) (how, dir, fname, m, sb, f, u, ierr, is_tmp
   integer            :: iunit, i, j, np_max
   FLOAT              :: x0
   logical            :: gnuplot_mode = .false.
-  type(profile_t), save :: prof
 
-  call profiling_in(prof, "DISK_WRITE")
+  call profiling_in(write_prof, "DISK_WRITE")
   call push_sub('out_inc.Xoutput_function_global')
 
   call io_mkdir(dir)
@@ -426,7 +424,7 @@ subroutine X(output_function_global) (how, dir, fname, m, sb, f, u, ierr, is_tmp
 #endif
 
   call pop_sub()
-  call profiling_out(prof)
+  call profiling_out(write_prof)
 
 contains
 

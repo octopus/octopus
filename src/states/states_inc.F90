@@ -330,8 +330,11 @@ FLOAT function X(states_residue)(m, dim, hf, e, f) result(r)
   FLOAT,             intent(in)  :: e
 
   R_TYPE, allocatable :: res(:,:)
+  type(profile_t), save :: prof
 
   call push_sub('states_inc.Xstates_residue')
+
+  call profiling_in(prof, "RESIDUE")
 
   ALLOCATE(res(m%np_part, dim), m%np_part*dim)
 
@@ -339,8 +342,12 @@ FLOAT function X(states_residue)(m, dim, hf, e, f) result(r)
   res(1:m%np, 1:dim) = hf(1:m%np, 1:dim) - e*f(1:m%np, 1:dim)
   !$omp end parallel workshare
 
+  call profiling_count_operations(prof, dim*m%np*(R_ADD + R_MUL))
+
   r = X(states_nrm2)(m, dim, res)
   deallocate(res)
+
+  call profiling_out(prof)
 
   call pop_sub()
 

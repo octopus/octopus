@@ -1123,12 +1123,10 @@ contains
 
     integer :: i, ik, sp
     CMPLX   :: c
-
-#ifdef HAVE_MPI
-    FLOAT,  allocatable :: reduce_rho(:)
-#endif
+    type(profile_t), save :: prof
 
     call push_sub('states.states_dens_accumulate')
+    call profiling_in(prof, "CALC_DENSITY")
 
     sp = 1
     if(st%d%ispin == SPIN_POLARIZED) sp = 2
@@ -1163,6 +1161,8 @@ contains
       !$omp end parallel do
     end do
 
+    call profiling_out(prof)
+
     call pop_sub()
   end subroutine states_dens_accumulate
 
@@ -1174,6 +1174,7 @@ contains
 #ifdef HAVE_MPI
     integer :: ispin
     FLOAT,  allocatable :: reduce_rho(:)
+    type(profile_t), save :: reduce_prof
 #endif
 
     call push_sub('states.states_dens_reduce')
@@ -1181,13 +1182,14 @@ contains
 #ifdef HAVE_MPI
     ! reduce density
     if(st%parallel_in_states) then
+      call profiling_in(reduce_prof, "DENSITY_REDUCE")
       ALLOCATE(reduce_rho(1:np), np)
       do ispin = 1, st%d%nspin
-        call MPI_Allreduce(rho(1, ispin), reduce_rho(1), np, &
-          MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+        call MPI_Allreduce(rho(1, ispin), reduce_rho(1), np, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
         call lalg_copy(np, reduce_rho, rho(:, ispin))
       end do
       deallocate(reduce_rho)
+      call profiling_out(reduce_prof)
     end if
 #endif
 
