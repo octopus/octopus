@@ -176,7 +176,7 @@ subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi, normalize, mask, overla
     
     ss = ss*m%vol_pp(1)
 
-    call profiling_count_operations(prof, (R_ADD + R_MUL)*m%np*dim*nst)
+    call profiling_count_operations((R_ADD + R_MUL)*m%np*dim*nst)
 
   else
 
@@ -194,7 +194,7 @@ subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi, normalize, mask, overla
       end do
     end do
     
-    call profiling_count_operations(prof, (R_ADD + 2*R_MUL)*m%np*dim*nst)
+    call profiling_count_operations((R_ADD + 2*R_MUL)*m%np*dim*nst)
 
   end if
 
@@ -232,7 +232,7 @@ subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi, normalize, mask, overla
     end do
   end do
 
-  call profiling_count_operations(prof, (R_ADD + R_MUL)*m%np*dim*nst)
+  call profiling_count_operations((R_ADD + R_MUL)*m%np*dim*nst)
 
   normalize_ = .false.
   if(present(normalize)) normalize_ = normalize
@@ -342,7 +342,7 @@ FLOAT function X(states_residue)(m, dim, hf, e, f) result(r)
   res(1:m%np, 1:dim) = hf(1:m%np, 1:dim) - e*f(1:m%np, 1:dim)
   !$omp end parallel workshare
 
-  call profiling_count_operations(prof, dim*m%np*(R_ADD + R_MUL))
+  call profiling_count_operations(dim*m%np*(R_ADD + R_MUL))
 
   r = X(states_nrm2)(m, dim, res)
   deallocate(res)

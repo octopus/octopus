@@ -189,9 +189,9 @@ subroutine FNAME(axpy_1)(n1, da, dx, dy)
 #endif
   
 #if TYPE == 1 || TYPE == 2
-  call profiling_count_operations(axpy_profile, n1*2)
+  call profiling_count_operations(n1*2)
 #else
-  call profiling_count_operations(axpy_profile, n1*8)
+  call profiling_count_operations(n1*8)
 #endif
 
   call profiling_out(axpy_profile)
@@ -211,9 +211,9 @@ subroutine FNAME(axpy_2)(n1, n2, da, dx, dy)
   call blas_axpy(n1*n2, da, dx(1,1), 1, dy(1,1), 1)
 
 #if TYPE == 1 || TYPE == 2
-  call profiling_count_operations(axpy_profile, n1*n2*2)
+  call profiling_count_operations(n1*n2*2)
 #else
-  call profiling_count_operations(axpy_profile, n1*n2*8)
+  call profiling_count_operations(n1*n2*8)
 #endif
 
   call profiling_out(axpy_profile)
@@ -232,9 +232,9 @@ subroutine FNAME(axpy_3)(n1, n2, n3, da, dx, dy)
   call blas_axpy(n1*n2*n3, da, dx(1,1,1), 1, dy(1,1,1), 1)
 
 #if TYPE == 1 || TYPE == 2
-  call profiling_count_operations(axpy_profile, n1*n2*n3*2)
+  call profiling_count_operations(n1*n2*n3*2)
 #else
-  call profiling_count_operations(axpy_profile, n1*n2*n3*8)
+  call profiling_count_operations(n1*n2*n3*8)
 #endif
 
   call profiling_out(axpy_profile)
@@ -253,9 +253,9 @@ subroutine FNAME(axpy_4)(n1, n2, n3, n4, da, dx, dy)
   call blas_axpy(n1*n2*n3*n4, da, dx(1,1,1,1), 1, dy(1,1,1,1), 1)
 
 #if TYPE == 1 || TYPE == 2
-  call profiling_count_operations(axpy_profile, n1*n2*n3*n4*2)
+  call profiling_count_operations(n1*n2*n3*n4*2)
 #else
-  call profiling_count_operations(axpy_profile, n1*n2*n3*n4*8)
+  call profiling_count_operations(n1*n2*n3*n4*8)
 #endif
 
   call profiling_out(axpy_profile)
@@ -286,7 +286,7 @@ subroutine FNAME(axpy_5)(n1, da, dx, dy)
   call blas_axpy(n1, da, dx(1), dy(1))
 #endif
 
-  call profiling_count_operations(axpy_profile, n1*4)
+  call profiling_count_operations(n1*4)
 
   call profiling_out(axpy_profile)
 

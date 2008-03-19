@@ -155,7 +155,7 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, reo
             end do
           end do
 
-          call profiling_count_operations(C_PROFILING_EIGEN_SOLVER, st%d%dim*NP*(2*R_ADD + 2*R_MUL))
+          call profiling_count_operations(st%d%dim*NP*(2*R_ADD + 2*R_MUL))
 
         end if
 
@@ -192,7 +192,7 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, reo
           end do
         end do
 
-        call profiling_count_operations(C_PROFILING_EIGEN_SOLVER, st%d%dim*NP*(2*R_ADD + 4*R_MUL))
+        call profiling_count_operations(st%d%dim*NP*(2*R_ADD + 4*R_MUL))
 
         res = X(states_residue)(gr%m, st%d%dim, h_psi, st%eigenval(p, ik), st%X(psi)(:, :, p, ik))
 

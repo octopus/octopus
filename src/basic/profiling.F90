@@ -351,13 +351,12 @@ contains
 
   end subroutine profiling_out
 
-  subroutine profiling_count_operations(this, ops)
-    type(profile_t), intent(inout) :: this
+  subroutine profiling_count_operations(ops)
     integer,         intent(in)    :: ops
 
     if(.not.in_profiling_mode) return
 
-    this%op_count = this%op_count + dble(ops)
+    current%p%op_count = current%p%op_count + dble(ops)
   end subroutine profiling_count_operations
 
   real(8) function profile_total_time(this)
@@ -439,7 +438,7 @@ contains
       '|                SELF TIME'
     write(iunit, '(2a)')                                                                    &
       '                                            ------------------------------------|', &
-      '--------------------------------------------'
+      '---------------------------------------------------'
     write(iunit, '(2a)')                                                                    &
       'TAG                   NUMBER_OF_CALLS       TOTAL_TIME    TIME_PER_CALL   %TIME |', &
       '        TOTAL_TIME    TIME_PER_CALL  MFLOPS   %TIME'
