@@ -330,13 +330,15 @@ subroutine X(nl_operator_operate)(op, fi, fo, ghost_update, profile, points)
 
   end if
 
-  if(op%cmplx_op) then
-    call profiling_count_operations((imax(nri) - imin(1))*op%n*(R_ADD + R_MUL))
-  else 
-    call profiling_count_operations((imax(nri) - imin(1))*op%n*2*R_ADD)
+  if(profile_) then
+    if(op%cmplx_op) then
+      call profiling_count_operations((imax(nri) - imin(1))*op%n*(R_ADD + R_MUL))
+    else 
+      call profiling_count_operations((imax(nri) - imin(1))*op%n*2*R_ADD)
+    end if
+    call profiling_out(nl_operate_profile)
   end if
 
-  if(profile_) call profiling_out(nl_operate_profile)
   call pop_sub()
 end subroutine X(nl_operator_operate)
 

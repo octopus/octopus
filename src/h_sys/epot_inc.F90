@@ -56,9 +56,11 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
         !accumulate to calculate the gradient of the density
         do idir = 1, NDIM
           grho(1:NP, idir) = grho(1:NP, idir) + st%d%kweights(ik)*st%occ(ist, ik) * M_TWO * &
-               R_REAL(st%X(psi)(1:NP, idim, ist, ik) * R_CONJ(gpsi(1:NP, idir, idim)))
+               R_REAL(st%X(psi)(1:NP, idim, ist, ik)*R_CONJ(gpsi(1:NP, idir, idim)))
         end do
       end do
+
+      call profiling_count_operations(NP*st%d%dim*NDIM*(2 + R_MUL))
 
       ! iterate over the projectors
       do ivnl = 1, ep%nvnl

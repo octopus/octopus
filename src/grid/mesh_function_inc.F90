@@ -84,9 +84,15 @@ R_TYPE function X(mf_dotp)(mesh, f1, f2, reduce) result(dotp)
     ALLOCATE(l(mesh%np), mesh%np)
     l(1:mesh%np) = f1(1:mesh%np) * mesh%vol_pp(1:mesh%np)
     dotp_tmp  = lalg_dot(mesh%np, l(:),  f2(:))
+
+    call profiling_count_operations(mesh%np*(2*R_ADD + R_MUL))
+
     deallocate(l)
   else
     dotp_tmp = lalg_dot(mesh%np, f1(:),  f2(:))*mesh%vol_pp(1)
+    
+    call profiling_count_operations(mesh%np*(R_ADD + R_MUL))
+
   end if
 
   if(mesh%parallel_in_domains.and.reduce_) then

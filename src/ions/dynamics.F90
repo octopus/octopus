@@ -156,7 +156,7 @@ contains
         geo%atom(i)%v(:) =  sqrt(kin1/kin2)*geo%atom(i)%v(:)
       end do
 
-      write(message(1),'(a,f10.4,1x,a)') 'Info: Initial velocities ramdomly distributed with T =', &
+      write(message(1),'(a,f10.4,1x,a)') 'Info: Initial velocities randomly distributed with T =', &
         temperature, 'K'
       write(message(2),'(2x,a,f8.4,1x,a)') '<K>       =', &
         (ion_dynamics_kinetic_energy(this, geo)/geo%natoms)/units_out%energy%factor, &

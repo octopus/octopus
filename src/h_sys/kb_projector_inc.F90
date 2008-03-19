@@ -88,12 +88,15 @@ subroutine X(kb_project_bra)(mesh, sm, kb_p, dim, psi, uvpsi, phase)
     end do
   end if
 
+  call profiling_count_operations(ns*kb_p%n_c)
+
   if(associated(phase)) then
     do ic = 1, kb_p%n_c
       kp(1:ns, ic) = kp(1:ns, ic)*phase(1:ns)
     end do
+    call profiling_count_operations(ns*kb_p%n_c*R_MUL)
   end if
-            
+ 
   uvpsi = M_ZERO
 
   do idim = 1, dim
@@ -103,6 +106,8 @@ subroutine X(kb_project_bra)(mesh, sm, kb_p, dim, psi, uvpsi, phase)
       uvpsi(2) = uvpsi(2) + psi(ip, idim)*kp(is, 2)
     end do
   end do
+
+  call profiling_count_operations(ns*dim*kb_p%n_c*(R_ADD + R_MUL))
 
   deallocate(kp)
 
@@ -134,7 +139,9 @@ subroutine X(kb_project_ket)(mesh, sm, kb_p, dim, uvpsi, psi, phase)
         end do
       end do
     end do
-  
+
+    call profiling_count_operations(ns*dim*kb_p%n_c*(2*R_ADD + R_MUL))
+
   else
 
     do idim = 1, dim
@@ -145,6 +152,8 @@ subroutine X(kb_project_ket)(mesh, sm, kb_p, dim, uvpsi, psi, phase)
         end do
       end do
     end do
+
+    call profiling_count_operations(ns*dim*kb_p%n_c*2*R_ADD)
 
   end if
 

@@ -438,7 +438,7 @@ contains
       '|                SELF TIME'
     write(iunit, '(2a)')                                                                    &
       '                                            ------------------------------------|', &
-      '---------------------------------------------------'
+      '----------------------------------------------------'
     write(iunit, '(2a)')                                                                    &
       'TAG                   NUMBER_OF_CALLS       TOTAL_TIME    TIME_PER_CALL   %TIME |', &
       '        TOTAL_TIME    TIME_PER_CALL  MFLOPS   %TIME'
