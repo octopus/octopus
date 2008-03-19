@@ -37,6 +37,8 @@ module hardware_m
   type hardware_t 
     type(cache_t) :: l1
     type(cache_t) :: l2
+    integer :: dblock_size
+    integer :: zblock_size
   end type hardware_t
   
   type(hardware_t) :: hardware
@@ -54,6 +56,15 @@ contains
     hardware%l2%size = 4096*1024
 
     hardware%l2%line_size = 64
+
+    ! set the block_size so each block fits in the l1 cache
+    ! the block_size should be a multiple of the cache line (minus 2 lines to avoid powers of 2)
+
+    hardware%dblock_size = hardware%l1%size / (4*8)
+    hardware%dblock_size = hardware%dblock_size - mod(hardware%dblock_size, hardware%l1%line_size) - 2*hardware%l1%line_size
+
+    hardware%zblock_size = hardware%l1%size / (4*16)
+    hardware%zblock_size = hardware%zblock_size - mod(hardware%zblock_size, hardware%l1%line_size) - 2*hardware%l1%line_size
 
   end subroutine hardware_init
 

@@ -143,12 +143,7 @@ subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi, normalize, mask, overla
   ! load another block and do the same. This way we only have to load
   ! |psi> from the L2 or memory.
 
-  ! set the block_size so each block fits in the l1 cache
-  block_size = hardware%l1%size / (4*R_SIZEOF)
-  ! the block_size should be a multiple of the cache line (minus 2 lines to avoid powers of 2)
-  block_size = block_size - mod(block_size, hardware%l1%line_size) - 2*hardware%l1%line_size
-
-  ASSERT(block_size > 0)
+  block_size = hardware%X(block_size)
 
   ALLOCATE(ss(1:nst), nst)
 
