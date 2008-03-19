@@ -176,6 +176,8 @@ subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi, normalize, mask, overla
     
     ss = ss*m%vol_pp(1)
 
+    call profiling_count_operations(prof, (R_ADD + R_MUL)*m%np*dim*nst)
+
   else
 
     do idim = 1, dim
@@ -192,6 +194,8 @@ subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi, normalize, mask, overla
       end do
     end do
     
+    call profiling_count_operations(prof, (R_ADD + 2*R_MUL)*m%np*dim*nst)
+
   end if
 
 #ifdef HAVE_MPI
@@ -227,6 +231,8 @@ subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi, normalize, mask, overla
       end do
     end do
   end do
+
+  call profiling_count_operations(prof, (R_ADD + R_MUL)*m%np*dim*nst)
 
   normalize_ = .false.
   if(present(normalize)) normalize_ = normalize

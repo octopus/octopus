@@ -603,6 +603,9 @@ subroutine X(vlpsi) (h, m, psi, hpsi, ik)
       hpsi(ip, 1) = hpsi(ip, 1) + (h%vhxc(ip, 1) + h%ep%vpsl(ip))*psi(ip, 1)
     end do
     !$omp end parallel do
+
+    call profiling_count_operations(C_PROFILING_VLPSI, (2*R_ADD + R_MUL)*m%np)
+
   case(SPIN_POLARIZED)
     if(modulo(ik+1, 2) == 0) then ! we have a spin down
       do ip = 1, m%np
@@ -613,17 +616,26 @@ subroutine X(vlpsi) (h, m, psi, hpsi, ik)
         hpsi(ip, 1) = hpsi(ip, 1) + (h%vhxc(ip, 2) + h%ep%vpsl(ip))*psi(ip, 1)
       end do
     end if
+
+    call profiling_count_operations(C_PROFILING_VLPSI, (2*R_ADD + R_MUL)*m%np)
+
   case(SPINORS)
     do ip = 1, m%np
       hpsi(ip, 1) = hpsi(ip, 1) + (h%vhxc(ip, 1) + h%ep%vpsl(ip))*psi(ip, 1) + (h%vhxc(ip, 3) + M_zI*h%vhxc(ip, 4))*psi(ip, 2)
       hpsi(ip, 2) = hpsi(ip, 2) + (h%vhxc(ip, 2) + h%ep%vpsl(ip))*psi(ip, 2) + (h%vhxc(ip, 3) - M_zI*h%vhxc(ip, 4))*psi(ip, 1)
     end do
+
+    call profiling_count_operations(C_PROFILING_VLPSI, (8*R_ADD + 2*R_MUL)*m%np)
+
   end select
 
   if (associated(h%ep%E_field)) then
     do idim = 1, h%d%dim
       hpsi(1:m%np, idim) = hpsi(1:m%np, idim) + h%ep%v_static*psi(1:m%np, idim)
     end do
+
+    call profiling_count_operations(C_PROFILING_VLPSI, (R_ADD + R_MUL)*m%np)
+
   end if
 
   call pop_sub()

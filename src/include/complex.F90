@@ -31,6 +31,8 @@
 #define R_AIMAG(x)  aimag(x)
 
 #define R_SIZEOF    16
+#define R_ADD       2
+#define R_MUL       6
 
 #define X(x)        z ## x
 

@@ -33,6 +33,8 @@
 #define X(x)        d ## x
 
 #define R_SIZEOF    8
+#define R_ADD       1
+#define R_MUL       1
 
 #if defined(DISABLE_DEBUG)
 #define TS(x)       x

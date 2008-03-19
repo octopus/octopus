@@ -37,6 +37,8 @@
 #undef R_TOTYPE
 #undef R_TOPREC
 #undef R_SIZEOF
+#undef R_ADD
+#undef R_MUL
 #undef R_ABS
 #undef R_CONJ
 #undef R_REAL

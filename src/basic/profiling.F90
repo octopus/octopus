@@ -38,6 +38,7 @@ module profiling_m
     profiling_end,                      &
     profiling_in,                       &
     profiling_out,                      &
+    profiling_count_operations,         &
     profiling_output
 
 
@@ -85,8 +86,9 @@ module profiling_m
     real(8)                  :: entry_time
     real(8)                  :: total_time
     real(8)                  :: self_time
-    integer                  :: count
+    real(8)                  :: op_count
     type(profile_t), pointer :: parent
+    integer                  :: count
     logical                  :: initialized = .false.
     logical                  :: active
   end type profile_t
@@ -253,6 +255,7 @@ contains
     this%self_time  = M_ZERO
     this%entry_time = HUGE(this%entry_time)
     this%count  = 0
+    this%op_count = 0
     this%active = .false.
     nullify(this%parent)
 
@@ -319,7 +322,8 @@ contains
   ! Increment out counter and sum up difference between entry
   ! and exit time.
   subroutine profiling_out(this)
-    type(profile_t), intent(inout)   :: this
+    type(profile_t),   intent(inout) :: this
+
     real(8) :: now, time_spent
     
     if(.not.in_profiling_mode) return
@@ -347,6 +351,15 @@ contains
 
   end subroutine profiling_out
 
+  subroutine profiling_count_operations(this, ops)
+    type(profile_t), intent(inout) :: this
+    integer,         intent(in)    :: ops
+
+    if(.not.in_profiling_mode) return
+
+    this%op_count = this%op_count + dble(ops)
+  end subroutine profiling_count_operations
+
   real(8) function profile_total_time(this)
     type(profile_t), intent(in) :: this
     profile_total_time = this%total_time
@@ -366,6 +379,11 @@ contains
     type(profile_t), intent(in) :: this
     profile_self_time_per_call = this%self_time / dble(this%count)
   end function profile_self_time_per_call
+
+  real(8) function profile_throughput(this)
+    type(profile_t), intent(in) :: this
+    profile_throughput = this%op_count / this%self_time / CNST(1.0e6)
+  end function profile_throughput
 
   integer function profile_num_calls(this)
     type(profile_t), intent(in) :: this
@@ -397,12 +415,14 @@ contains
 
     call push_sub('profiling.profiling_output')
 
-#if defined(HAVE_MPI)
-    write(filenum, '(i3.3)') mpi_world%rank
-    write(dirnum, '(i3.3)') mpi_world%size
-#else
+
     filenum = '000'
     dirnum  = 'ser'
+#if defined(HAVE_MPI)
+    if(mpi_world%size > 1) then
+      write(filenum, '(i3.3)') mpi_world%rank
+      write(dirnum, '(i3.3)') mpi_world%size
+    end if
 #endif
 
     total_time = profile_total_time(C_PROFILING_COMPLETE_DATASET)
@@ -415,23 +435,23 @@ contains
       return
     end if
     write(iunit, '(2a)')                                                                   &
-      '                                                      ACCUMULATIVE TIME          ', &
+      '                                                      ACCUMULATIVE TIME         ', &
       '|                SELF TIME'
     write(iunit, '(2a)')                                                                    &
-      '                                            -------------------------------------|', &
-      '---------------------------------------------'
+      '                                            ------------------------------------|', &
+      '--------------------------------------------'
     write(iunit, '(2a)')                                                                    &
-      'TAG                   NUMBER_OF_CALLS       TOTAL_TIME    TIME_PER_CALL    %TIME |', &
-      '        TOTAL_TIME    TIME_PER_CALL    %TIME'
+      'TAG                   NUMBER_OF_CALLS       TOTAL_TIME    TIME_PER_CALL   %TIME |', &
+      '        TOTAL_TIME    TIME_PER_CALL  MFLOPS   %TIME'
     write(iunit, '(2a)')                                                                    &
-      '=================================================================================|', &
-      '============================================='
+      '================================================================================|', &
+      '===================================================='
     do ii = 1, last_profile
       prof => profile_list(ii)%p
 
       if(profile_num_calls(prof) == 0) cycle
 
-      write(iunit, '(a,i20,2f17.7,f9.1,a,2f17.7,f9.1)')     &
+      write(iunit, '(a,i20,2f17.7,f8.1,a,2f17.7,f8.1,f8.1)')     &
            profile_label(prof),                             & 
            profile_num_calls(prof),                         &
            profile_total_time(prof),                        &
@@ -440,6 +460,7 @@ contains
            ' | ',                                           &
            profile_self_time(prof),                         &
            profile_self_time_per_call(prof),                &
+           profile_throughput(prof),                        &
            profile_self_time(prof)/total_time*CNST(100.0)
     end do
 
