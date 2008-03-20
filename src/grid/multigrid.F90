@@ -131,13 +131,22 @@ contains
       ALLOCATE(mgrid%level(i)%m, 1)
       ALLOCATE(mgrid%level(i)%f_der, 1)
       call multigrid_mesh_half(geo, cv, mgrid%level(i-1)%m, mgrid%level(i)%m)
+
+      call f_der_init(mgrid%level(i)%f_der, m%sb, cv%method.ne.CURV_METHOD_UNIFORM)
+
+      if(m%parallel_in_domains) then
+        call mesh_init_stage_3(mgrid%level(i)%m, geo, cv, &
+          mgrid%level(i)%f_der%der_discr%lapl%stencil, mgrid%level(i)%f_der%der_discr%lapl%n, m%mpi_grp)
+      else
+        call mesh_init_stage_3(mgrid%level(i)%m, geo, cv)
+      end if
+
       call get_transfer_tables(mgrid%level(i), mgrid%level(i-1)%m, mgrid%level(i)%m)
+
+      call f_der_build(m%sb, mgrid%level(i)%m, mgrid%level(i)%f_der)
 
       call mesh_write_info(mgrid%level(i)%m, stdout)
 
-      ! setup derivatives
-      call f_der_init(mgrid%level(i)%f_der, m%sb, cv%method.ne.CURV_METHOD_UNIFORM)
-      call f_der_build(m%sb, mgrid%level(i)%m, mgrid%level(i)%f_der)
     end do
 
     call pop_sub()
@@ -285,7 +294,6 @@ contains
     mesh_out%enlarge = mesh_in%enlarge
     
     call mesh_init_stage_2(mesh_out%sb, mesh_out, geo, cv)
-    call mesh_init_stage_3(mesh_out, geo, cv)
 
     call pop_sub()
   end subroutine multigrid_mesh_half
