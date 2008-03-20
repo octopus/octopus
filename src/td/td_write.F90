@@ -62,19 +62,23 @@ module td_write_m
     logical :: write = .false.
   end type td_write_prop_t
 
+  integer, parameter ::   &
+    OUT_MULTIPOLES  =  1, &
+    OUT_ANGULAR     =  2, &
+    OUT_SPIN        =  3, &
+    OUT_POPULATIONS =  4, &
+    OUT_COORDS      =  5, &
+    OUT_ACC         =  6, & 
+    OUT_LASER       =  7, &
+    OUT_ENERGY      =  8, &
+    OUT_PROJ        =  9, &
+    OUT_MAGNETS     = 10, &
+    OUT_GAUGE_FIELD = 11, &
+    OUT_MAX         = 11
+  
   type td_write_t
     private
-    type(td_write_prop_t) :: out_multip
-    type(td_write_prop_t) :: out_coords
-    type(td_write_prop_t) :: out_populations
-    type(td_write_prop_t) :: out_acc
-    type(td_write_prop_t) :: out_laser
-    type(td_write_prop_t) :: out_energy
-    type(td_write_prop_t) :: out_proj
-    type(td_write_prop_t) :: out_angular
-    type(td_write_prop_t) :: out_spin
-    type(td_write_prop_t) :: out_magnets
-    type(td_write_prop_t) :: out_gauge_field
+    type(td_write_prop_t) :: out(OUT_MAX)
 
     integer        :: lmax     ! maximum multipole moment to output
     FLOAT          :: lmm_r    ! radius of the sphere used to compute the local magnetic moments
@@ -99,7 +103,7 @@ contains
 
 
     FLOAT :: rmin
-    integer :: ierr, first, i, flags
+    integer :: ierr, first, i, flags, iout, default
     type(block_t) :: blk
     character(len=100) :: filename
 
@@ -108,7 +112,7 @@ contains
 
     !%Variable TDOutput
     !%Type flag
-    !%Default multipoles + geometry
+    !%Default multipoles + geometry + energy
     !%Section Time Dependent::TD Output
     !%Description
     !% Defines what should be output during the time-dependent simulation.
@@ -150,22 +154,21 @@ contains
     !% If set, outputs the vector gauge field corresponding to a uniform (but time dependent) external electrical potential.
     !% This is only useful in a time-dependent periodic run
     !%End
-    call loct_parse_int(check_inp('TDOutput'), 1+16+128, flags)
-    if(.not.varinfo_valid_option('TDOutput', flags, is_flag=.true.)) then
-      call input_error('TDOutput')
-    end if
 
-    if(iand(flags,    1).ne.0) w%out_multip%write = .true.
-    if(iand(flags,    2).ne.0) w%out_angular%write = .true.
-    if(iand(flags,    4).ne.0) w%out_spin%write = .true.
-    if(iand(flags,    8).ne.0) w%out_populations%write = .true.
-    if(iand(flags,   16).ne.0.and.ions_move) w%out_coords%write = .true.
-    if(iand(flags,   32).ne.0) w%out_acc%write = .true.
-    if(iand(flags,   64).ne.0) w%out_laser%write = .true.
-    if(iand(flags,  128).ne.0) w%out_energy%write = .true.
-    if(iand(flags,  256).ne.0) w%out_proj%write = .true.
-    if(iand(flags,  512).ne.0) w%out_magnets%write = .true.
-    if(iand(flags, 1024).ne.0 .and. with_gauge_field) w%out_gauge_field%write = .true.
+    ! by default print multipoles, coordinates and energy
+    default = 2**(OUT_MULTIPOLES - 1) + 2**(OUT_COORDS - 1) + 2**(OUT_ENERGY - 1)
+
+    call loct_parse_int(check_inp('TDOutput'), default, flags)
+
+    if(.not.varinfo_valid_option('TDOutput', flags, is_flag = .true.)) call input_error('TDOutput')
+
+    do iout = 1, OUT_MAX
+      w%out(iout)%write = (iand(flags, 2**(iout - 1)) .ne. 0)
+    end do
+
+    !special cases
+    w%out(OUT_COORDS)%write = w%out(OUT_COORDS)%write .and. ions_move
+    w%out(OUT_GAUGE_FIELD)%write = w%out(OUT_GAUGE_FIELD)%write .and. with_gauge_field
 
     !%Variable TDDipoleLmax
     !%Type integer
@@ -183,7 +186,7 @@ contains
     end if
 
     ! Compatibility test
-    if( (w%out_acc%write) .and. ions_move ) then
+    if( (w%out(OUT_ACC)%write) .and. ions_move ) then
       message(1) = 'Error. If harmonic spectrum is to be calculated'
       message(2) = 'Atoms should not be allowed to move'
       call write_fatal(2)
@@ -193,13 +196,13 @@ contains
     call loct_parse_float(check_inp('LocalMagneticMomentsSphereRadius'), rmin*M_HALF/units_inp%length%factor, w%lmm_r)
     w%lmm_r = w%lmm_r * units_inp%length%factor
 
-    if( (w%out_proj%write)  .or.  (w%out_populations%write) ) then
+    if( (w%out(OUT_PROJ)%write)  .or.  (w%out(OUT_POPULATIONS)%write) ) then
       call states_copy(w%gs_st, st)
       ! WARNING: should be first deallocate, then nullify?
       nullify(w%gs_st%zpsi, w%gs_st%node, w%gs_st%occ, w%gs_st%eigenval)
       call states_look (trim(tmpdir)//'gs', gr%m, i, i, w%gs_st%nst, ierr)
 
-      if(w%out_populations%write) then ! do only this when not calculating populations
+      if(w%out(OUT_POPULATIONS)%write) then ! do only this when not calculating populations
         ! We will store the ground-state Kohn-Sham system by all processors.
         !%Variable TDProjStateStart
         !%Type integer
@@ -236,7 +239,7 @@ contains
     end if
 
     ! Build the excited states...
-    if( w%out_populations%write) then
+    if(w%out(OUT_POPULATIONS)%write) then
       !%Variable TDExcitedStatesToProject
       !%Type block
       !%Section Time Dependent::TD Output
@@ -273,28 +276,42 @@ contains
     end if
 
     if(mpi_grp_is_root(mpi_world)) then
-      if(w%out_multip%write)  call write_iter_init(w%out_multip%handle,  first, dt/units_out%time%factor, &
-        trim(io_workpath("td.general/multipoles")))
-      if(w%out_angular%write) call write_iter_init(w%out_angular%handle, first, dt/units_out%time%factor, &
-        trim(io_workpath("td.general/angular")))
-      if(w%out_spin%write)    call write_iter_init(w%out_spin%handle,    first, dt/units_out%time%factor, &
-        trim(io_workpath("td.general/spin")))
-      if(w%out_magnets%write) call write_iter_init(w%out_magnets%handle, first, dt/units_out%time%factor, &
-        trim(io_workpath("td.general/magnetic_moments")))
-      if(w%out_coords%write)  call write_iter_init(w%out_coords%handle,  first, dt/units_out%time%factor, &
-        trim(io_workpath("td.general/coordinates")))
-      if(w%out_populations%write) call write_iter_init(w%out_populations%handle,     first, dt/units_out%time%factor, &
-        trim(io_workpath("td.general/populations")))
-      if(w%out_acc%write)     call write_iter_init(w%out_acc%handle,     first, dt/units_out%time%factor, &
-        trim(io_workpath("td.general/acceleration")))
-      if(w%out_laser%write)   call write_iter_init(w%out_laser%handle,   first, dt/units_out%time%factor, &
-        trim(io_workpath("td.general/laser")))
-      if(w%out_energy%write)  call write_iter_init(w%out_energy%handle,  first, dt/units_out%time%factor, &
-        trim(io_workpath("td.general/energy")))
-      if(w%out_proj%write)    call write_iter_init(w%out_proj%handle,    first, dt/units_out%time%factor, &
-        trim(io_workpath("td.general/projections")))
-      if(w%out_gauge_field%write)    call write_iter_init(w%out_gauge_field%handle,    first, dt/units_out%time%factor, &
-        trim(io_workpath("td.general/A_gauge")))
+      if(w%out(OUT_MULTIPOLES)%write) &
+        call write_iter_init(w%out(OUT_MULTIPOLES)%handle, &
+        first, dt/units_out%time%factor, trim(io_workpath("td.general/multipoles")))
+
+      if(w%out(OUT_ANGULAR)%write) &
+        call write_iter_init(w%out(OUT_ANGULAR)%handle, first, dt/units_out%time%factor, trim(io_workpath("td.general/angular")))
+
+      if(w%out(OUT_SPIN)%write) &
+        call write_iter_init(w%out(OUT_SPIN)%handle, first, dt/units_out%time%factor, trim(io_workpath("td.general/spin")))
+
+      if(w%out(OUT_MAGNETS)%write) &
+        call write_iter_init(w%out(OUT_MAGNETS)%handle, &
+        first, dt/units_out%time%factor, trim(io_workpath("td.general/magnetic_moments")))
+
+      if(w%out(OUT_COORDS)%write) &
+        call write_iter_init(w%out(OUT_COORDS)%handle, first, dt/units_out%time%factor, trim(io_workpath("td.general/coordinates")))
+
+      if(w%out(OUT_POPULATIONS)%write) &
+        call write_iter_init(w%out(OUT_POPULATIONS)%handle, &
+        first, dt/units_out%time%factor, trim(io_workpath("td.general/populations")))
+
+      if(w%out(OUT_ACC)%write) &
+        call write_iter_init(w%out(OUT_ACC)%handle, first, dt/units_out%time%factor, trim(io_workpath("td.general/acceleration")))
+
+      if(w%out(OUT_LASER)%write) &
+        call write_iter_init(w%out(OUT_LASER)%handle, first, dt/units_out%time%factor, trim(io_workpath("td.general/laser")))
+
+      if(w%out(OUT_ENERGY)%write) &
+        call write_iter_init(w%out(OUT_ENERGY)%handle, first, dt/units_out%time%factor, trim(io_workpath("td.general/energy")))
+
+      if(w%out(OUT_PROJ)%write) &
+        call write_iter_init(w%out(OUT_PROJ)%handle, first, dt/units_out%time%factor, trim(io_workpath("td.general/projections")))
+
+      if(w%out(OUT_GAUGE_FIELD)%write) &
+        call write_iter_init(w%out(OUT_GAUGE_FIELD)%handle, &
+        first, dt/units_out%time%factor, trim(io_workpath("td.general/gauge_field")))
     end if
 
     call io_mkdir('td.general')
@@ -306,30 +323,22 @@ contains
   ! ---------------------------------------------------------
   subroutine td_write_end(w)
     type(td_write_t), intent(inout) :: w
-    integer :: i
+    integer :: i, iout
     call push_sub('td_write.td_write_end')
 
     if(mpi_grp_is_root(mpi_world)) then
-      if(w%out_multip%write)  call write_iter_end(w%out_multip%handle)
-      if(w%out_angular%write) call write_iter_end(w%out_angular%handle)
-      if(w%out_spin%write)    call write_iter_end(w%out_spin%handle)
-      if(w%out_magnets%write) call write_iter_end(w%out_magnets%handle)
-      if(w%out_coords%write)  call write_iter_end(w%out_coords%handle)
-      if(w%out_populations%write)     call write_iter_end(w%out_populations%handle)
-      if(w%out_acc%write)     call write_iter_end(w%out_acc%handle)
-      if(w%out_laser%write)   call write_iter_end(w%out_laser%handle)
-      if(w%out_energy%write)  call write_iter_end(w%out_energy%handle)
-      if(w%out_proj%write)    call write_iter_end(w%out_proj%handle)
-      if(w%out_gauge_field%write)    call write_iter_end(w%out_gauge_field%handle)
+      do iout = 1, OUT_MAX
+        if(w%out(iout)%write)  call write_iter_end(w%out(iout)%handle)
+      end do
     end if
-    if( w%out_populations%write ) then
+
+    if( w%out(OUT_POPULATIONS)%write ) then
       do i = 1, w%n_excited_states
         call excited_states_kill(w%excited_st(i))
       end do
     end if
-    if( (w%out_populations%write) .or. (w%out_proj%write) ) then
-      call states_end(w%gs_st)
-    end if
+
+    if(w%out(OUT_POPULATIONS)%write .or. w%out(OUT_PROJ)%write) call states_end(w%gs_st)
 
     call pop_sub()
   end subroutine td_write_end
@@ -348,18 +357,38 @@ contains
 
     call push_sub('td_write.td_write_iter')
 
-    if(w%out_multip%write)   call td_write_multipole(w%out_multip%handle, gr, geo, st, w%lmax, kick, i)
-    if(w%out_angular%write)  call td_write_angular(w%out_angular%handle, gr, geo, h, st, kick, i)
-    if(w%out_spin%write)     call td_write_spin(w%out_spin%handle, gr, st, i)
-    if(w%out_magnets%write)  call td_write_local_magnetic_moments(w%out_magnets%handle, gr, st, geo, w%lmm_r, i)
-    if(w%out_proj%write)     call td_write_proj(w%out_proj%handle, gr, geo, st, w%gs_st, kick, i)
-    if(w%out_coords%write)   call td_write_coordinates(w%out_coords%handle, gr, geo, i)
-    if(w%out_populations%write) &
-      call td_write_populations(w%out_populations%handle, gr%m, st, w%gs_st, w%n_excited_states, w%excited_st, dt, i)
-    if(w%out_acc%write)      call td_write_acc(w%out_acc%handle, gr, geo, st, h, dt, i)
-    if(w%out_laser%write)    call td_write_laser(w%out_laser%handle, gr, h, dt, i)
-    if(w%out_energy%write)   call td_write_energy(w%out_energy%handle, h, i, geo%kinetic_energy)
-    if(w%out_gauge_field%write)   call td_write_gauge_field(w%out_gauge_field%handle, h, gr, i)
+    if(w%out(OUT_MULTIPOLES)%write) &
+      call td_write_multipole(w%out(OUT_MULTIPOLES)%handle, gr, geo, st, w%lmax, kick, i)
+    
+    if(w%out(OUT_ANGULAR)%write) &
+      call td_write_angular(w%out(OUT_ANGULAR)%handle, gr, geo, h, st, kick, i)
+
+    if(w%out(OUT_SPIN)%write) &
+      call td_write_spin(w%out(OUT_SPIN)%handle, gr, st, i)
+
+    if(w%out(OUT_MAGNETS)%write) &
+      call td_write_local_magnetic_moments(w%out(OUT_MAGNETS)%handle, gr, st, geo, w%lmm_r, i)
+
+    if(w%out(OUT_PROJ)%write) &
+      call td_write_proj(w%out(OUT_PROJ)%handle, gr, geo, st, w%gs_st, kick, i)
+
+    if(w%out(OUT_COORDS)%write) &
+      call td_write_coordinates(w%out(OUT_COORDS)%handle, gr, geo, i)
+
+    if(w%out(OUT_POPULATIONS)%write) &
+      call td_write_populations(w%out(OUT_POPULATIONS)%handle, gr%m, st, w%gs_st, w%n_excited_states, w%excited_st, dt, i)
+
+    if(w%out(OUT_ACC)%write) &
+      call td_write_acc(w%out(OUT_ACC)%handle, gr, geo, st, h, dt, i)
+
+    if(w%out(OUT_LASER)%write) &
+      call td_write_laser(w%out(OUT_LASER)%handle, gr, h, dt, i)
+
+    if(w%out(OUT_ENERGY)%write) &
+      call td_write_energy(w%out(OUT_ENERGY)%handle, h, i, geo%kinetic_energy)
+
+    if(w%out(OUT_GAUGE_FIELD)%write) &
+      call td_write_gauge_field(w%out(OUT_GAUGE_FIELD)%handle, h, gr, i)
 
     call pop_sub()
   end subroutine td_write_iter
@@ -376,20 +405,14 @@ contains
     integer,              intent(in)    :: iter
 
     character(len=256) :: filename
+    integer :: iout
 
     call push_sub('td.td_write_data')
 
     if(mpi_grp_is_root(mpi_world)) then
-      if(w%out_multip%write)  call write_iter_flush(w%out_multip%handle)
-      if(w%out_angular%write) call write_iter_flush(w%out_angular%handle)
-      if(w%out_spin%write)    call write_iter_flush(w%out_spin%handle)
-      if(w%out_magnets%write) call write_iter_flush(w%out_magnets%handle)
-      if(w%out_coords%write)  call write_iter_flush(w%out_coords%handle)
-      if(w%out_populations%write) call write_iter_flush(w%out_populations%handle)
-      if(w%out_acc%write)     call write_iter_flush(w%out_acc%handle)
-      if(w%out_laser%write)   call write_iter_flush(w%out_laser%handle)
-      if(w%out_energy%write)  call write_iter_flush(w%out_energy%handle)
-      if(w%out_proj%write)    call write_iter_flush(w%out_proj%handle)
+      do iout = 1, OUT_MAX
+        if(w%out(iout)%write)  call write_iter_flush(w%out(iout)%handle)
+      end do
     end if
 
     ! now write down the rest
