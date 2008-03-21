@@ -98,7 +98,7 @@ subroutine X(hgh_project)(mesh, sm, hgh_p, dim, psi, ppsi, reltype)
   
 end subroutine X(hgh_project)
 
-subroutine X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi, phase)
+subroutine X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi)
   type(mesh_t),          intent(in)  :: mesh
   type(submesh_t),       intent(in)  :: sm
   type(hgh_projector_t), intent(in)  :: hgh_p
@@ -106,7 +106,6 @@ subroutine X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi, phase)
   integer,               intent(in)  :: reltype
   R_TYPE,                intent(in)  :: psi(:, :)
   R_TYPE,                intent(out) :: uvpsi(1:2, 1:4, 1:3)
-  CMPLX,                 pointer     :: phase(:)
 
   integer :: n_s, jj, idim, kk
   R_TYPE, allocatable :: bra(:, :, :)
@@ -136,18 +135,10 @@ subroutine X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi, phase)
     bra(1:n_s, 4, 1:3) = hgh_p%p(1:n_s, 1:3)*mesh%vol_pp(1)
   end if
 
-  if(associated(phase)) then
-    do kk = 1, 4
-      do jj = 1, 3
-        bra(1:n_s, kk, jj) = bra(1:n_s, kk, jj)*phase(1:n_s)
-      end do
-    end do
-  end if
-
   do idim = 1, dim
     do kk = 1, 4
       do jj = 1, 3
-        uvpsi(idim, kk, jj) = sum(psi(sm%jxyz(1:n_s), idim)*bra(1:n_s, kk, jj))
+        uvpsi(idim, kk, jj) = sum(psi(1:n_s, idim)*bra(1:n_s, kk, jj))
       end do
     end do
   end do
@@ -156,7 +147,7 @@ subroutine X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi, phase)
 
 end subroutine X(hgh_project_bra)
 
-subroutine X(hgh_project_ket)(mesh, sm, hgh_p, dim, reltype, uvpsi, ppsi, phase)
+subroutine X(hgh_project_ket)(mesh, sm, hgh_p, dim, reltype, uvpsi, ppsi)
   type(mesh_t),          intent(in)    :: mesh
   type(submesh_t),       intent(in)    :: sm
   type(hgh_projector_t), intent(in)    :: hgh_p
@@ -164,7 +155,6 @@ subroutine X(hgh_project_ket)(mesh, sm, hgh_p, dim, reltype, uvpsi, ppsi, phase)
   integer,               intent(in)    :: reltype
   R_TYPE,                intent(in)    :: uvpsi(1:2, 1:4, 1:3)
   R_TYPE,                intent(inout) :: ppsi(:, :)
-  CMPLX,                 pointer       :: phase(:)
 
   integer :: n_s, ii, jj, idim
   integer :: kk
@@ -175,18 +165,11 @@ subroutine X(hgh_project_ket)(mesh, sm, hgh_p, dim, reltype, uvpsi, ppsi, phase)
   do idim = 1, dim
     do jj = 1, 3
       do ii = 1, 3
-        if(.not. associated(phase)) then
-          ppsi(sm%jxyz(1:n_s), idim) = ppsi(sm%jxyz(1:n_s), idim) + hgh_p%h(ii, jj)*uvpsi(idim, 4, jj)*hgh_p%p(1:n_s, ii)
-        else
-          ppsi(sm%jxyz(1:n_s), idim) = ppsi(sm%jxyz(1:n_s), idim) &
-            + hgh_p%h(ii, jj)*uvpsi(idim, 4, jj)*hgh_p%p(1:n_s, ii)*conjg(phase(1:n_s))
-        end if
-        end do
+        ppsi(1:n_s, idim) = ppsi(1:n_s, idim) + hgh_p%h(ii, jj)*uvpsi(idim, 4, jj)*hgh_p%p(1:n_s, ii)
       end do
     end do
-
-
-
+  end do
+  
   if (reltype == 1) then
 
     ALLOCATE(lp_psi(n_s, 3, dim), n_s*3*dim)
@@ -196,25 +179,14 @@ subroutine X(hgh_project_ket)(mesh, sm, hgh_p, dim, reltype, uvpsi, ppsi, phase)
       do kk = 1, 3
         do jj = 1, 3
           do ii = 1, 3
-            lp_psi(1:n_s, kk, idim) = lp_psi(1:n_s, kk, idim) + hgh_p%k(ii, jj) * uvpsi(idim, kk, jj) * hgh_p%p(1:n_s, ii)
+            lp_psi(1:n_s, kk, idim) = lp_psi(1:n_s, kk, idim) + hgh_p%k(ii, jj)*uvpsi(idim, kk, jj)*hgh_p%p(1:n_s, ii)
           end do
         end do
       end do
     end do
-    
-    if(associated(phase)) then
-      do idim = 1, dim
-        do kk = 1, 3
-          lp_psi(1:n_s, kk, idim) = lp_psi(1:n_s, kk, idim)*conjg(phase(1:n_s))
-        end do
-      end do
-    end if
 
-    ppsi(sm%jxyz(1:n_s), 1) = ppsi(sm%jxyz(1:n_s), 1) &
-      + M_zI*M_HALF*( lp_psi(1:n_s, 3, 1) + lp_psi(1:n_s, 1, 2) - M_zI*lp_psi(1:n_s, 2, 2))
-    
-    ppsi(sm%jxyz(1:n_s), 2) = ppsi(sm%jxyz(1:n_s), 2) &
-      + M_zI*M_HALF*(-lp_psi(1:n_s, 3, 2) + lp_psi(1:n_s, 1, 1) + M_zI*lp_psi(1:n_s, 2, 1))
+    ppsi(1:n_s, 1) = ppsi(1:n_s, 1) + M_zI*M_HALF*( lp_psi(1:n_s, 3, 1) + lp_psi(1:n_s, 1, 2) - M_zI*lp_psi(1:n_s, 2, 2))
+    ppsi(1:n_s, 2) = ppsi(1:n_s, 2) + M_zI*M_HALF*(-lp_psi(1:n_s, 3, 2) + lp_psi(1:n_s, 1, 1) + M_zI*lp_psi(1:n_s, 2, 1))
     
     deallocate(lp_psi)
    

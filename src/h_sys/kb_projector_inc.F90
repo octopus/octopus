@@ -58,17 +58,16 @@ subroutine X(kb_project)(mesh, sm, kb_p, dim, psi, ppsi)
   call pop_sub()
 end subroutine X(kb_project)
 
-subroutine X(kb_project_bra)(mesh, sm, kb_p, dim, psi, uvpsi, phase)
+subroutine X(kb_project_bra)(mesh, sm, kb_p, dim, psi, uvpsi)
   type(mesh_t),         intent(in)  :: mesh
   type(submesh_t),      intent(in)  :: sm
   type(kb_projector_t), intent(in)  :: kb_p
   integer,              intent(in)  :: dim
-  R_TYPE,               intent(in)  :: psi(:, :)  ! psi(1:NP, 1:dim)
+  R_TYPE,               intent(in)  :: psi(:, :)  ! psi(1:ns, 1:dim)
   R_TYPE,               intent(out) :: uvpsi(1:2)
-  CMPLX,                pointer     :: phase(:)
 
-  integer :: ic, idim, ns, ip, is
-  R_TYPE, allocatable :: kp(:, :)
+  integer :: ic, idim, ns, is
+  FLOAT, allocatable :: kp(:, :)
 
   call push_sub('kb_projector_inc.kb_project')
 
@@ -90,20 +89,12 @@ subroutine X(kb_project_bra)(mesh, sm, kb_p, dim, psi, uvpsi, phase)
 
   call profiling_count_operations(ns*kb_p%n_c)
 
-  if(associated(phase)) then
-    do ic = 1, kb_p%n_c
-      kp(1:ns, ic) = kp(1:ns, ic)*phase(1:ns)
-    end do
-    call profiling_count_operations(ns*kb_p%n_c*R_MUL)
-  end if
- 
   uvpsi = M_ZERO
 
   do idim = 1, dim
     do is = 1, ns
-      ip = sm%jxyz(is)
-      uvpsi(1) = uvpsi(1) + psi(ip, idim)*kp(is, 1)
-      uvpsi(2) = uvpsi(2) + psi(ip, idim)*kp(is, 2)
+      uvpsi(1) = uvpsi(1) + psi(is, idim)*kp(is, 1)
+      uvpsi(2) = uvpsi(2) + psi(is, idim)*kp(is, 2)
     end do
   end do
 
@@ -114,48 +105,29 @@ subroutine X(kb_project_bra)(mesh, sm, kb_p, dim, psi, uvpsi, phase)
   call pop_sub()
 end subroutine X(kb_project_bra)
 
-subroutine X(kb_project_ket)(mesh, sm, kb_p, dim, uvpsi, psi, phase)
+subroutine X(kb_project_ket)(mesh, sm, kb_p, dim, uvpsi, psi)
   type(mesh_t),         intent(in)    :: mesh
   type(submesh_t),      intent(in)    :: sm
   type(kb_projector_t), intent(in)    :: kb_p
   integer,              intent(in)    :: dim
   R_TYPE,               intent(in)    :: uvpsi(1:2)
-  R_TYPE,               intent(inout) :: psi(:, :) ! psi(1:NP, 1:dim)
-  CMPLX,                pointer       :: phase(:)
+  R_TYPE,               intent(inout) :: psi(:, :) ! psi(1:ns, 1:dim)
 
-  integer :: ic, idim, ns, ip, is
+  integer :: ic, idim, ns, is
 
   call push_sub('kb_projector_inc.kb_project')
 
   ns = kb_p%n_s
 
-  if(associated(phase)) then
-
-    do idim = 1, dim
-      do is = 1, ns
-        ip = sm%jxyz(is)
-        do ic = 1, kb_p%n_c
-          psi(ip, idim) = psi(ip, idim) + uvpsi(ic)*kb_p%p(is, ic)*conjg(phase(is))
-        end do
+  do idim = 1, dim
+    do is = 1, ns
+      do ic = 1, kb_p%n_c
+        psi(is, idim) = psi(is, idim) + uvpsi(ic)*kb_p%p(is, ic)
       end do
     end do
+  end do
 
-    call profiling_count_operations(ns*dim*kb_p%n_c*(2*R_ADD + R_MUL))
-
-  else
-
-    do idim = 1, dim
-      do is = 1, ns
-        ip = sm%jxyz(is)
-        do ic = 1, kb_p%n_c
-          psi(ip, idim) = psi(ip, idim) + uvpsi(ic)*kb_p%p(is, ic)
-        end do
-      end do
-    end do
-
-    call profiling_count_operations(ns*dim*kb_p%n_c*2*R_ADD)
-
-  end if
+  call profiling_count_operations(ns*dim*kb_p%n_c*2*R_ADD)
 
   call pop_sub()
 end subroutine X(kb_project_ket)

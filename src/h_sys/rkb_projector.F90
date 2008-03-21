@@ -192,15 +192,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine rkb_project_bra(mesh, sm, rkb_p, psi, uvpsi, phase)
+  subroutine rkb_project_bra(mesh, sm, rkb_p, psi, uvpsi)
     type(mesh_t),          intent(in)  :: mesh
     type(submesh_t),       intent(in)  :: sm
     type(rkb_projector_t), intent(in)  :: rkb_p
     CMPLX,                 intent(in)  :: psi(:, :)
     CMPLX,                 intent(out) :: uvpsi(1:2, 1:2)    
-    CMPLX,                 pointer     :: phase(:)
 
-    integer :: idim, n_s, ip, is
+    integer :: idim, n_s, is
 
     CMPLX, allocatable :: bra(:, :)
 
@@ -219,16 +218,10 @@ contains
       bra(1:n_s, 1:2) = rkb_p%bra(1:n_s, 1:2)*mesh%vol_pp(1)
     end if
 
-    if(associated(phase)) then
-      bra(1:n_s, 1) = bra(1:n_s, 1)*phase(1:n_s)
-      bra(1:n_s, 2) = bra(1:n_s, 2)*phase(1:n_s)
-    end if
-
     do idim = 1, 2
       do is = 1, n_s
-        ip = sm%jxyz(is)
-        uvpsi(idim, 1) = uvpsi(idim, 1) + psi(ip, idim)*bra(is, 1)
-        uvpsi(idim, 2) = uvpsi(idim, 2) + psi(ip, idim)*bra(is, 2)
+        uvpsi(idim, 1) = uvpsi(idim, 1) + psi(is, idim)*bra(is, 1)
+        uvpsi(idim, 2) = uvpsi(idim, 2) + psi(is, idim)*bra(is, 2)
       end do
     end do
 
@@ -236,51 +229,31 @@ contains
   end subroutine rkb_project_bra
 
   ! ---------------------------------------------------------
-  subroutine rkb_project_ket(mesh, sm, rkb_p, uvpsi, psi, phase)
+  subroutine rkb_project_ket(mesh, sm, rkb_p, uvpsi, psi)
     type(mesh_t),          intent(in)    :: mesh
     type(submesh_t),       intent(in)    :: sm
     type(rkb_projector_t), intent(in)    :: rkb_p
     CMPLX,                 intent(in)    :: uvpsi(1:2, 1:2)
     CMPLX,                 intent(inout) :: psi(:, :)
-    CMPLX,                 pointer       :: phase(:)
 
-    integer :: idim, jdim, n_s, ip, is
+    integer :: idim, jdim, n_s, is
     CMPLX :: aa
 
     call push_sub('rkb_projector.rkb_project_bra')
 
     n_s = rkb_p%n_s
 
-    if(.not. associated(phase)) then
-      
-      do jdim = 1, 2
-        do is = 1, n_s
-          ip = sm%jxyz(is)
-          aa = M_z0
-          do idim = 1, 2
-            aa = aa + rkb_p%f(1, jdim, idim)*uvpsi(idim, 1)*rkb_p%ket(is, 1, jdim, idim)
-            aa = aa + rkb_p%f(2, jdim, idim)*uvpsi(idim, 2)*rkb_p%ket(is, 2, jdim, idim)
-          end do
-          psi(ip, jdim) = psi(ip, jdim) + aa
+    do jdim = 1, 2
+      do is = 1, n_s
+        aa = M_z0
+        do idim = 1, 2
+          aa = aa + rkb_p%f(1, jdim, idim)*uvpsi(idim, 1)*rkb_p%ket(is, 1, jdim, idim)
+          aa = aa + rkb_p%f(2, jdim, idim)*uvpsi(idim, 2)*rkb_p%ket(is, 2, jdim, idim)
         end do
+        psi(is, jdim) = psi(is, jdim) + aa
       end do
-      
-    else
-      
-      do jdim = 1, 2
-        do is = 1, n_s
-          ip = sm%jxyz(is)
-          aa = M_z0
-          do idim = 1, 2
-            aa = aa + rkb_p%f(1, jdim, idim)*uvpsi(idim, 1)*rkb_p%ket(is, 1, jdim, idim)
-            aa = aa + rkb_p%f(2, jdim, idim)*uvpsi(idim, 2)*rkb_p%ket(is, 2, jdim, idim)
-          end do
-          psi(ip, jdim) = psi(ip, jdim) + aa*conjg(phase(is))
-        end do
-      end do
+    end do
 
-    end if
-    
     call pop_sub()
   end subroutine rkb_project_ket
   
