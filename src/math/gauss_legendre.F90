@@ -130,8 +130,8 @@ contains
     case(8);  points_ref  => GL_points_8;  weights_ref => GL_weights_8
     case(9);  points_ref  => GL_points_9;  weights_ref => GL_weights_9
     case(10); points_ref  => GL_points_10; weights_ref => GL_weights_10
-    case(12); points_ref  => GL_points_11; weights_ref => GL_weights_11
-    case(13); points_ref  => GL_points_12; weights_ref => GL_weights_12
+    case(11); points_ref  => GL_points_11; weights_ref => GL_weights_11
+    case(12); points_ref  => GL_points_12; weights_ref => GL_weights_12
     end select
     
     do i = 1, n/2
