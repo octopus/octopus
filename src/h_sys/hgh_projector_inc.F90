@@ -36,65 +36,21 @@ subroutine X(hgh_project)(mesh, sm, hgh_p, dim, psi, ppsi, reltype)
   R_TYPE,                intent(out) :: ppsi(:, :) ! ppsi(hgh%n_s, dim)
   integer,               intent(in)  :: reltype
 
-  integer :: n_s, i, j, idim
-#ifdef R_TCOMPLEX
-  integer :: k
-#endif
-  R_TYPE :: uvpsi
-#ifdef R_TCOMPLEX
-  CMPLX, allocatable :: lp_psi(:, :, :)
+  R_TYPE :: uvpsi(1:2, 1:4, 1:3)
+#ifdef HAVE_MPI
+  R_TYPE :: uvpsi_tmp(1:2, 1:4, 1:3)
 #endif
 
-  n_s = hgh_p%n_s
-  ppsi = R_TOTYPE(M_ZERO)
+  call X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi)
 
-  do idim = 1, dim
-    do j = 1, 3
-      if (all(hgh_p%h(:, j) == M_ZERO)) cycle
-      uvpsi = X(dsm_integrate_prod)(mesh, sm, psi(1:n_s, idim), hgh_p%p(1:n_s, j))
-
-      do i = 1, 3
-        if (hgh_p%h(i, j) == M_ZERO) cycle
-#ifdef R_TCOMPLEX
-        ppsi(1:n_s, idim) = ppsi(1:n_s, idim) + hgh_p%h(i, j)*uvpsi*hgh_p%p(1:n_s, i)
-#else
-        call lalg_axpy(n_s, hgh_p%h(i, j)*uvpsi, hgh_p%p(:, i), ppsi(:, idim))
-#endif
-      end do
-
-    end do
-  end do
-  
-  if (reltype == 1) then
-#ifdef R_TCOMPLEX
-    ! Add spin-orbit term
-    ASSERT(dim == 2)
-
-    ALLOCATE(lp_psi(n_s, 3, dim), n_s*3*dim)
-    lp_psi = M_Z0
-
-    do idim = 1, dim
-      do k = 1, 3
-        do j = 1, 3
-          if (all(hgh_p%k(:, j) == M_ZERO)) cycle
-          uvpsi = zdsm_integrate_prod(mesh, sm, psi(1:n_s, idim), hgh_p%lp(1:n_s, k, j))
-          
-          do i = 1, 3
-            if (hgh_p%k(i, j) == M_ZERO) cycle
-            lp_psi(1:n_s, k, idim) = lp_psi(1:n_s, k, idim) + &
-                 hgh_p%k(i, j) * uvpsi * hgh_p%p(1:n_s, i)
-          end do
-        end do
-      end do
-    end do
-    
-    ppsi(1:n_s, 1) = ppsi(1:n_s, 1) + M_zI*M_HALF*( lp_psi(1:n_s, 3, 1) + lp_psi(1:n_s, 1, 2) - M_zI*lp_psi(1:n_s, 2, 2))
-    ppsi(1:n_s, 2) = ppsi(1:n_s, 2) + M_zI*M_HALF*(-lp_psi(1:n_s, 3, 2) + lp_psi(1:n_s, 1, 1) + M_zI*lp_psi(1:n_s, 2, 1))
-    
-    deallocate(lp_psi)
-    
-#endif
+#if defined(HAVE_MPI)
+  if(mesh%parallel_in_domains) then
+    call MPI_Allreduce(uvpsi, uvpsi_tmp, 24, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
+    uvpsi = uvpsi_tmp
   end if
+#endif
+
+  call X(hgh_project_ket)(mesh, sm, hgh_p, dim, reltype, uvpsi, ppsi)
   
 end subroutine X(hgh_project)
 
@@ -154,13 +110,14 @@ subroutine X(hgh_project_ket)(mesh, sm, hgh_p, dim, reltype, uvpsi, ppsi)
   integer,               intent(in)    :: dim
   integer,               intent(in)    :: reltype
   R_TYPE,                intent(in)    :: uvpsi(1:2, 1:4, 1:3)
-  R_TYPE,                intent(inout) :: ppsi(:, :)
+  R_TYPE,                intent(out)   :: ppsi(:, :)
 
   integer :: n_s, ii, jj, idim
   integer :: kk
   CMPLX, allocatable :: lp_psi(:, :, :)
 
   n_s = hgh_p%n_s
+  ppsi = M_ZERO
 
   do idim = 1, dim
     do jj = 1, 3

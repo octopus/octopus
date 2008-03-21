@@ -32,28 +32,24 @@ subroutine X(kb_project)(mesh, sm, kb_p, dim, psi, ppsi)
   R_TYPE,               intent(in)  :: psi(:, :)  ! psi(kb%n_s, dim)
   R_TYPE,               intent(out) :: ppsi(:, :) ! ppsi(kb%n_s, dim)
 
-  integer :: i, idim, n_s
-  R_TYPE :: uvpsi
+  R_TYPE :: uvpsi(1:2)
+#if defined(HAVE_MPI)
+  R_TYPE :: uvpsi_tmp(1:2)
+#endif
 
   call push_sub('kb_projector_inc.kb_project')
 
-  n_s = kb_p%n_s
-  ppsi = R_TOTYPE(M_ZERO)
+  call X(kb_project_bra)(mesh, sm, kb_p, dim, psi, uvpsi)
 
-  do idim = 1, dim
-    do i = 1, kb_p%n_c
-      if (kb_p%e(i) == M_ZERO) cycle
-
-      uvpsi = X(dsm_integrate_prod)(mesh, sm, psi(1:n_s, idim), kb_p%p(1:n_s, i))
-
-#ifdef R_TCOMPLEX
-      ppsi(1:n_s, idim) = ppsi(1:n_s, idim) + kb_p%e(i)*uvpsi*kb_p%p(1:n_s, i)
-#else
-      call lalg_axpy(n_s, kb_p%e(i)*uvpsi, kb_p%p(:, i), ppsi(:, idim))
+#if defined(HAVE_MPI)
+  if(mesh%parallel_in_domains) then
+    call MPI_Allreduce(uvpsi, uvpsi_tmp, 2, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
+    uvpsi = uvpsi_tmp
+  end if
 #endif
-      
-    end do
-  end do
+
+  uvpsi(1:2) = kb_p%e(1:2)*uvpsi(1:2)
+  call X(kb_project_ket)(mesh, sm, kb_p, dim, uvpsi, ppsi)
 
   call pop_sub()
 end subroutine X(kb_project)
@@ -111,11 +107,13 @@ subroutine X(kb_project_ket)(mesh, sm, kb_p, dim, uvpsi, psi)
   type(kb_projector_t), intent(in)    :: kb_p
   integer,              intent(in)    :: dim
   R_TYPE,               intent(in)    :: uvpsi(1:2)
-  R_TYPE,               intent(inout) :: psi(:, :) ! psi(1:ns, 1:dim)
+  R_TYPE,               intent(out)   :: psi(:, :) ! psi(1:ns, 1:dim)
 
   integer :: ic, idim, ns, is
 
   call push_sub('kb_projector_inc.kb_project')
+
+  psi = M_ZERO
 
   ns = kb_p%n_s
 

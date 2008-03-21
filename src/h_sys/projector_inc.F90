@@ -101,8 +101,6 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, reltype, ik)
     ns = pj(ipj)%sphere%ns
     ALLOCATE(lpsi(ns, dim),  ns*dim)
 
-    lpsi = M_ZERO
-
     ii = ireduce(ipj)
 
     select case(pj(ipj)%type)
@@ -168,8 +166,6 @@ R_TYPE function X(psia_project_psib)(mesh, pj, dim, psia, psib, reltype, ik) res
     end if
   end do
 
-  plpsi = M_ZERO
-
   call X(project_sphere)(mesh, pj, dim, lpsi, plpsi, reltype)
 
   apb = M_ZERO
@@ -184,7 +180,6 @@ R_TYPE function X(psia_project_psib)(mesh, pj, dim, psia, psib, reltype, ik) res
 
   deallocate(lpsi, plpsi)
 
-
   call pop_sub()
 end function X(psia_project_psib)
 
@@ -193,7 +188,7 @@ subroutine X(project_sphere)(mesh, pj, dim, psi, ppsi, reltype)
   type(projector_t), intent(in)    :: pj
   integer,           intent(in)    :: dim
   R_TYPE,            intent(in)    :: psi(:, :)   ! psi(1:ns, dim)
-  R_TYPE,            intent(inout) :: ppsi(:, :)  ! ppsi(1:ns, dim)
+  R_TYPE,            intent(out)   :: ppsi(:, :)  ! ppsi(1:ns, dim)
   integer,           intent(in)    :: reltype
 
   call push_sub('projector_inc.project_sphere')

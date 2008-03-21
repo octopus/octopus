@@ -164,32 +164,23 @@ contains
     CMPLX,                 intent(in)  :: psi(:, :)  ! psi(kb%n_s, 2)
     CMPLX,                 intent(out) :: ppsi(:, :) ! ppsi(kb%n_s, 2)
 
-    integer :: j, idim, jdim, n_s
-    CMPLX :: uvpsi
+    CMPLX :: uvpsi(1:2, 1:2)
+#ifdef HAVE_MPI
+    CMPLX :: uvpsi_tmp(1:2, 1:2)
+#endif
 
-    call push_sub('rkb_projector.rkb_project')
+    call rkb_project_bra(mesh, sm, rkb_p, psi, uvpsi)
 
-    n_s = rkb_p%n_s
-    ppsi = M_z0
+#if defined(HAVE_MPI)
+    if(mesh%parallel_in_domains) then
+      call MPI_Allreduce(uvpsi, uvpsi_tmp, 4, MPI_CMPLX, MPI_SUM, mesh%vp%comm, mpi_err)
+      uvpsi = uvpsi_tmp
+    end if
+#endif
 
-    do idim = 1, 2   
-      do j = 1, 2
+    call rkb_project_ket(mesh, sm, rkb_p, uvpsi, ppsi)
 
-        if (all(rkb_p%f(j, :, idim) == M_ZERO)) cycle
-
-        uvpsi = zzsm_integrate_prod(mesh, sm, psi(1:n_s, idim), rkb_p%bra(1:n_s, j))
-
-        do jdim = 1, 2
-          if (rkb_p%f(j, jdim, idim) == M_ZERO) cycle
-          call lalg_axpy(n_s, rkb_p%f(j, jdim, idim)*uvpsi, rkb_p%ket(:, j, jdim, idim), ppsi(:, jdim))
-        end do
-
-      end do
-    end do
-    
-    call pop_sub()
   end subroutine rkb_project
-
 
   ! ---------------------------------------------------------
   subroutine rkb_project_bra(mesh, sm, rkb_p, psi, uvpsi)
@@ -234,12 +225,14 @@ contains
     type(submesh_t),       intent(in)    :: sm
     type(rkb_projector_t), intent(in)    :: rkb_p
     CMPLX,                 intent(in)    :: uvpsi(1:2, 1:2)
-    CMPLX,                 intent(inout) :: psi(:, :)
+    CMPLX,                 intent(out)   :: psi(:, :)
 
     integer :: idim, jdim, n_s, is
     CMPLX :: aa
 
     call push_sub('rkb_projector.rkb_project_bra')
+
+    psi = M_ZERO
 
     n_s = rkb_p%n_s
 
