@@ -77,10 +77,10 @@ module external_pot_m
 
     ! Ions
     FLOAT,       pointer :: vpsl(:)       ! the local part of the pseudopotentials
-    integer :: nvnl                       ! number of nonlocal operators
     type(projector_t), pointer :: p(:)    ! non-local projectors
-    integer, pointer :: atomproj(:,:)     ! the range of projectors
-                                          ! corresponding to an atom
+    logical :: non_local
+    integer :: natoms
+
     ! External e-m fields
     integer :: no_lasers                   ! number of laser pulses used
     type(laser_t), pointer :: lasers(:)    ! lasers stuff
@@ -336,24 +336,13 @@ contains
     end if
     call messages_print_var_option(stdout, "RelativisticCorrection", ep%reltype)
     
-    ! The projectors
-    ep%nvnl = geometry_nvnl(geo)
-    
-    nullify(ep%p)
-    
-    if(ep%nvnl > 0) then
-      ALLOCATE(ep%p(ep%nvnl), ep%nvnl)
+    ALLOCATE(ep%p(geo%natoms), geo%natoms)
 
-      do i = 1, ep%nvnl
-        call projector_null(ep%p(i))
-      end do
-
-    end if
-    
-    ALLOCATE(ep%atomproj(1:2, geo%natoms), 2*geo%natoms)
-    
-    ep%atomproj(1, :) = 0
-    ep%atomproj(2, :) = -1
+    do i = 1, geo%natoms
+      call projector_null(ep%p(i))
+    end do
+    ep%natoms = geo%natoms
+    ep%non_local = .false.
 
     ALLOCATE(ep%fii(1:MAX_DIM, 1:geo%natoms), MAX_DIM*geo%natoms)
 
@@ -402,16 +391,13 @@ contains
     if(associated(ep%A_gauge_dot)) deallocate(ep%A_gauge_dot)
     if(associated(ep%A_gauge_ddot)) deallocate(ep%A_gauge_ddot)
 
-    if(ep%nvnl>0) then
-      do iproj = 1, ep%nvnl
-        call projector_end(ep%p(iproj))
-      end do
-
-      ASSERT(associated(ep%p))
-      deallocate(ep%p)
-    end if
-
-    deallocate(ep%atomproj)
+    do iproj = 1, geo%natoms
+      if(.not. specie_is_ps(geo%atom(iproj)%spec)) cycle
+      call projector_end(ep%p(iproj))
+    end do
+    
+    ASSERT(associated(ep%p))
+    deallocate(ep%p)
 
     call pop_sub()
 
@@ -461,12 +447,11 @@ contains
     FLOAT,   optional, intent(in)    :: time
 
     FLOAT   :: time_
-    integer :: ia, l, lm, iproj
-    type(atom_t),   pointer :: atm
+    integer :: ia
+    type(atom_t),     pointer :: atm
 
     type(mesh_t),      pointer :: m
     type(simul_box_t), pointer :: sb
-    type(submesh_t)  :: nl_sphere
     type(profile_t), save :: epot_generate_prof
 
 #ifdef HAVE_MPI
@@ -503,44 +488,14 @@ contains
     ! we assume that we need to recalculate the ion ion energy
     call ion_interaction_calculate(geo, sb, ep%eii, ep%fii)
 
-    if(ep%nvnl > 0) then
-      ! Local.
-      ! the pseudo potential part.
-      iproj = 1
-      do ia = 1, geo%natoms
-        atm => geo%atom(ia)
-
-        if(.not. specie_is_ps(atm%spec)) cycle
-
-        ep%atomproj(1, ia) = iproj
-
-        call submesh_init_sphere(nl_sphere, sb, m, atm%x, atm%spec%ps%rc_max + m%h(1))
-
-        do l = 0, atm%spec%ps%l_max
-          if(atm%spec%ps%l_loc == l) cycle
-          do lm = -l, l
-
-            call projector_end(ep%p(iproj))
-            call submesh_copy(nl_sphere, ep%p(iproj)%sphere)
-            call projector_init(ep%p(iproj), atm, ep%reltype, l, lm)
-
-            if(simul_box_is_periodic(sb)) &
-              call projector_init_phases(ep%p(iproj), gr%m, st%d%nik, st%d%kpoints)
-
-            ep%p(iproj)%iatom = ia
-            iproj = iproj + 1
-          end do
-        end do
-
-        call submesh_end(nl_sphere)
-
-        ep%atomproj(2, ia) = iproj - 1
-
-      end do
-    end if
-
-    do iproj = 1, ep%nvnl
-      call projector_build(ep%p(iproj), gr, geo%atom(ep%p(iproj)%iatom))
+    ! the pseudo potential part.
+    do ia = 1, geo%natoms
+      atm => geo%atom(ia)
+      if(.not. specie_is_ps(atm%spec)) cycle
+      ep%non_local = .true.
+      call projector_init(ep%p(ia), gr%m, sb, atm, ep%reltype)
+      if(simul_box_is_periodic(sb)) call projector_init_phases(ep%p(ia), gr%m, st%d%nik, st%d%kpoints)
+      call projector_build(ep%p(ia), gr, atm)
     end do
 
     if (ep%classic_pot > 0) then

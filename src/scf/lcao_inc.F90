@@ -224,7 +224,7 @@ subroutine X(lcao_wf) (lcao_data, st, gr, h, start)
     do n1 = 1, lcao_data%st%nst
       hpsi = M_ZERO
       call X(vlpsi) (h, gr%m, lcao_data%st%X(psi)(:,:, n1, ik), hpsi(:,:), ik)
-      if (h%ep%nvnl > 0) call X(vnlpsi) (h, gr, lcao_data%st%X(psi)(:,:, n1, ik), hpsi(:,:), ik)
+      if (h%ep%non_local) call X(vnlpsi) (h, gr, lcao_data%st%X(psi)(:,:, n1, ik), hpsi(:,:), ik)
       do n2 = n1, lcao_data%st%nst
         lcao_data%X(v) (n1, n2, ik) = X(states_dotp)(gr%m, dim, hpsi, lcao_data%st%X(psi)(:, : ,n2, ik))
         lcao_data%X(hamilt) (n1, n2, ik) = lcao_data%X(k) (n1, n2, ik) + lcao_data%X(v) (n1 , n2, ik)

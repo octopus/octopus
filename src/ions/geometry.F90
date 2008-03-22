@@ -46,7 +46,6 @@ module geometry_m
     geometry_init_xyz,     &
     geometry_init_species, &
     geometry_partition,    &
-    geometry_nvnl,         &
     geometry_end,          &
     geometry_dipole,       &
     geometry_min_distance, &
@@ -450,32 +449,6 @@ contains
 
     call pop_sub()
   end subroutine geometry_end
-
-
-  ! ---------------------------------------------------------
-  ! Returns the number of non-local operator that should be defined.
-  function geometry_nvnl(geo) result(res)
-    type(geometry_t), intent(in) :: geo
-    integer                      :: res
-
-    type(specie_t), pointer :: s
-    integer :: ia, l
-
-    call push_sub('geometry.geometry_nvnl')
-
-    res = 0
-    do ia = 1, geo%natoms
-      s => geo%atom(ia)%spec
-      if(specie_is_ps(s)) then
-        do l = 0, s%ps%l_max
-          if(l == s%ps%l_loc) cycle
-          res = res + 2*l + 1
-        end do
-      end if
-    end do
-
-    call pop_sub()
-  end function geometry_nvnl
 
   ! ---------------------------------------------------------
   ! This function returns .true. if two atoms are too close.

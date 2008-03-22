@@ -107,7 +107,7 @@ subroutine X(hpsi) (h, gr, psi, hpsi, ist, ik, t)
   call X(kinetic_start)(h, gr, epsi, lapl)
   call X(vlpsi)(h, gr%m, epsi, hpsi, ik)
   call X(kinetic_keep_going)(h, gr, epsi, lapl)
-  if(h%ep%nvnl > 0) then
+  if(h%ep%non_local) then
     call X(vnlpsi)(h, gr, epsi, hpsi, ik)
     call X(kinetic_keep_going)(h, gr, epsi, lapl)
   end if
@@ -310,7 +310,7 @@ subroutine X(magnus) (h, gr, psi, hpsi, ik, vmagnus)
     call lalg_copy(NP, hpsi(:, idim), auxpsi(:, idim))
   end do
 
-  if (h%ep%nvnl > 0) call X(vnlpsi)  (h, gr, psi, auxpsi, ik)
+  if (h%ep%non_local) call X(vnlpsi)  (h, gr, psi, auxpsi, ik)
 
   select case(h%d%ispin)
   case(UNPOLARIZED)
@@ -336,7 +336,7 @@ subroutine X(magnus) (h, gr, psi, hpsi, ik, vmagnus)
 
   call X(kinetic) (h, gr, auxpsi, aux2psi)
 
-  if (h%ep%nvnl > 0) call X(vnlpsi)  (h, gr, auxpsi, aux2psi, ik)
+  if (h%ep%non_local) call X(vnlpsi)  (h, gr, auxpsi, aux2psi, ik)
 
   hpsi(1:NP, 1) = hpsi(1:NP, 1) + M_zI*aux2psi(1:NP, 1)
 
@@ -355,7 +355,7 @@ subroutine X(magnus) (h, gr, psi, hpsi, ik, vmagnus)
     end if
   end select
 
-  if (h%ep%nvnl > 0) call X(vnlpsi)  (h, gr, psi, Hpsi, ik)
+  if (h%ep%non_local) call X(vnlpsi)  (h, gr, psi, Hpsi, ik)
 
   call X(vborders) (gr, h, psi, hpsi)
 
@@ -577,7 +577,7 @@ subroutine X(vnlpsi) (h, gr, psi, hpsi, ik)
   call profiling_in(C_PROFILING_VNLPSI)
   call push_sub('h_inc.Xvnlpsi')
 
-  call X(project_psi)(gr%m, h%ep%p, h%ep%nvnl, h%d%dim, psi, hpsi, h%ep%reltype, ik)
+  call X(project_psi)(gr%m, h%ep%p, h%ep%natoms, h%d%dim, psi, hpsi, h%ep%reltype, ik)
     
   call pop_sub()
   call profiling_out(C_PROFILING_VNLPSI)
@@ -670,7 +670,7 @@ subroutine X(vexternal) (h, gr, psi, hpsi, ik)
     end do
   end if
 
-  if(h%ep%nvnl > 0) call X(vnlpsi)  (h, gr, psi, hpsi, ik)
+  if(h%ep%non_local) call X(vnlpsi)  (h, gr, psi, hpsi, ik)
 
   call pop_sub()
   call profiling_out(C_PROFILING_VLPSI)

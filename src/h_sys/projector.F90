@@ -35,6 +35,7 @@ module projector_m
   use specie_pot_m
   use geometry_m
   use states_m
+  use simul_box_m
   use submesh_m
   use mpi_m
   use mpi_debug_m
@@ -62,11 +63,13 @@ module projector_m
        zpsia_project_psib
 
   integer, public, parameter ::  &
-       M_HGH = 1, &
-       M_KB  = 2, &
-       M_RKB = 3
+       M_NONE = 0,  &
+       M_HGH  = 1,  &
+       M_KB   = 2,  &
+       M_RKB  = 3
 
   integer, parameter :: MAX_REDUCE_SIZE = 24
+  integer, parameter :: MAX_L = 5
 
   ! The projector data type is intended to hold the local and
   ! non-local parts of the pseudopotentials. The definition of the
@@ -80,11 +83,10 @@ module projector_m
   ! Kleinman-Bylander projector (includes spin-orbit)
 
   type projector_t
-    integer :: type
+    integer :: type = M_NONE
     integer :: reduce_size
-    integer :: iatom
-    integer :: l
-    integer :: lm
+    integer :: lmax
+    integer :: lloc
 
     type(submesh_t)  :: sphere
 
@@ -92,10 +94,10 @@ module projector_m
 
     ! Only one of the following structures should be used at once
     ! The one to be used depends on the value of type variable
-    type(hgh_projector_t)  :: hgh_p
-    type(kb_projector_t)   :: kb_p
-    type(rkb_projector_t)  :: rkb_p
-    CMPLX, pointer         :: phase(:, :)
+    type(hgh_projector_t), pointer :: hgh_p(:, :)
+    type(kb_projector_t),  pointer :: kb_p(:, :)
+    type(rkb_projector_t), pointer :: rkb_p(:, :)
+    CMPLX,                 pointer :: phase(:, :)
   end type projector_t
 
 contains
@@ -103,34 +105,44 @@ contains
   subroutine projector_null(p)
     type(projector_t), intent(out) :: p
 
-    p%type = 0
+    p%type = M_NONE
     nullify(p%phase)
     call submesh_null(p%sphere)
 
   end subroutine projector_null
 
   !---------------------------------------------------------
-  subroutine projector_init(p, a, reltype, l, lm)
+  subroutine projector_init(p, m, sb, atm, reltype)
     type(projector_t), intent(inout) :: p
-    type(atom_t),      intent(in)    :: a
+    type(simul_box_t), intent(in)    :: sb
+    type(mesh_t),      intent(in)    :: m
+    type(atom_t),      intent(in)    :: atm
     integer,           intent(in)    :: reltype
-    integer,           intent(in)    :: l, lm
 
     call push_sub('projector.projector_init')
 
     nullify(p%phase)
-    p%l = l
-    p%lm = lm
+    p%lmax = atm%spec%ps%l_max
 
-    select case (a%spec%ps%kbc)
+    if(p%lmax == 0) then
+      p%type = M_NONE
+      call pop_sub()
+      return
+    end if
+
+    p%lloc = atm%spec%ps%l_loc
+
+    call submesh_init_sphere(p%sphere, sb, m, atm%x, atm%spec%ps%rc_max + m%h(1))
+
+    select case (atm%spec%ps%kbc)
     case (1)
       p%type = M_KB
       if (reltype == 1) then
-        write(message(1),'(a,a,a)') "Spin-orbit coupling for specie ", trim(a%spec%label), " is not available."
+        write(message(1),'(a,a,a)') "Spin-orbit coupling for specie ", trim(atm%spec%label), " is not available."
         call write_warning(1)
       end if
     case (2)
-      if (l == 0 .or. reltype == 0) then
+      if (reltype == 0) then
         p%type = M_KB
       else
         p%type = M_RKB
@@ -180,26 +192,47 @@ contains
     type(grid_t),      intent(in)    :: gr
     type(atom_t),      intent(in)    :: a
 
-    integer :: l, lm
+    integer :: ll, mm
 
     call push_sub('projector.projector_build')
-
-    l = p%l
-    lm = p%lm
 
     select case (p%type)
 
     case (M_HGH)
-      call hgh_projector_null(p%hgh_p)
-      call hgh_projector_init(p%hgh_p, p%sphere, gr, a, l, lm)
+      ALLOCATE(p%hgh_p(0:p%lmax, -p%lmax:p%lmax), (p%lmax + 1)*(2*p%lmax + 1))
+      do ll = 0, p%lmax
+        if(ll == p%lloc) cycle
+        do mm = -ll, ll
+          call hgh_projector_null(p%hgh_p(ll, mm))
+          call hgh_projector_init(p%hgh_p(ll, mm), p%sphere, gr, a, ll, mm)
+        end do
+      end do
 
     case (M_KB)
-      call kb_projector_null(p%kb_p)
-      call kb_projector_init(p%kb_p, p%sphere, gr, a, l, lm)
+      ALLOCATE(p%kb_p(0:p%lmax, -p%lmax:p%lmax), (p%lmax + 1)*(2*p%lmax + 1))
+      do ll = 0, p%lmax
+        if(ll == p%lloc) cycle
+        do mm = -ll, ll
+          call kb_projector_null(p%kb_p(ll, mm))
+          call kb_projector_init(p%kb_p(ll, mm), p%sphere, gr, a, ll, mm)
+        end do
+      end do
 
     case (M_RKB)
-      call rkb_projector_null(p%rkb_p)
-      call rkb_projector_init(p%rkb_p, p%sphere, gr, a, l, lm)
+      ALLOCATE(p%rkb_p(1:p%lmax, -p%lmax:p%lmax), p%lmax*(2*p%lmax + 1))
+      do ll = 1, p%lmax
+        if(ll == p%lloc) cycle
+        do mm = -ll, ll
+          call rkb_projector_null(p%rkb_p(ll, mm))
+          call rkb_projector_init(p%rkb_p(ll, mm), p%sphere, gr, a, ll, mm)
+        end do
+      end do
+      ! for rkb, l = 0 is a normal kb
+      if(p%lloc /= 0) then
+        ALLOCATE(p%kb_p(1, 1), 1)
+        call kb_projector_null(p%kb_p(1, 1))
+        call kb_projector_init(p%kb_p(1, 1), p%sphere, gr, a, 0, 0)
+      end if
 
     end select
 
@@ -210,20 +243,46 @@ contains
   subroutine projector_end(p)
     type(projector_t), intent(inout) :: p
 
+    integer :: ll, mm
+
     call push_sub('projector.projector_end')
 
     call submesh_end(p%sphere)
 
     select case(p%type)
     case(M_HGH)
-      call hgh_projector_end(p%hgh_p)
+      do ll = 0, p%lmax
+        if(ll == p%lloc) cycle
+        do mm = -ll, ll
+          call hgh_projector_end(p%hgh_p(ll, mm))
+        end do
+      end do
+      deallocate(p%hgh_p)
+
     case(M_KB)
-      call kb_projector_end(p%kb_p)
+      do ll = 0, p%lmax
+        if(ll == p%lloc) cycle
+        do mm = -ll, ll
+          call kb_projector_end(p%kb_p(ll, mm))
+        end do
+      end do
+      deallocate(p%kb_p)
+
     case(M_RKB)
-      call rkb_projector_end(p%rkb_p)
+      do ll = 1, p%lmax
+        if(ll == p%lloc) cycle
+        do mm = -ll, ll
+          call rkb_projector_end(p%rkb_p(ll, mm))
+        end do
+      end do
+      if(p%lloc /= 0) then
+        call kb_projector_end(p%kb_p(1, 1))
+        deallocate(p%rkb_p, p%kb_p)
+      end if
+
     end select
     
-    p%type = 0
+    p%type = M_NONE
 
     if(associated(p%phase)) deallocate(p%phase)
 

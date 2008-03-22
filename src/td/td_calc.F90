@@ -63,7 +63,7 @@ subroutine td_calc_tacc(gr, geo, st, h, acc, t)
     acc(1:NDIM) = acc(1:NDIM) - st%qtot*field(1:NDIM)
   end do
 
-  if(h%ep%nvnl <= 0) then
+  if(.not. h%ep%non_local) then
     call pop_sub()
     return
   end if

@@ -30,9 +30,9 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, reltype, ik)
   integer,           intent(in)    :: reltype
   integer,           intent(in)    :: ik
 
-  integer :: ipj, nreduce, ii, ns, idim
+  integer :: ipj, nreduce, ii, ns, idim, ll, mm
   R_TYPE, allocatable :: reduce_buffer(:), lpsi(:, :)
-  integer, allocatable :: ireduce(:)
+  integer, allocatable :: ireduce(:, :, :)
 #if defined(HAVE_MPI)
   R_TYPE, allocatable   :: reduce_buffer_dest(:)
   type(profile_t), save :: reduce_prof
@@ -40,13 +40,19 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, reltype, ik)
 
   call push_sub('projector_inc.project_psi')
 
-  ALLOCATE(ireduce(1:npj), npj)
+  ALLOCATE(ireduce(1:npj, 0:MAX_L, -MAX_L:MAX_L), npj*(MAX_L + 1)*(2*MAX_L + 1))
 
   ! generate the reduce buffer and related structures
   nreduce = 0
   do ipj = 1, npj
-    ireduce(ipj) = 1 + nreduce
-    nreduce = nreduce + pj(ipj)%reduce_size
+    if(pj(ipj)%type == M_NONE) cycle
+    do ll = 0, pj(ipj)%lmax
+      if (ll == pj(ipj)%lloc) cycle
+      do mm = -ll, ll
+        ireduce(ipj, ll, mm) = 1 + nreduce
+        nreduce = nreduce + pj(ipj)%reduce_size
+      end do
+    end do
   end do
 
   ALLOCATE(reduce_buffer(1:nreduce), nreduce)
@@ -56,10 +62,10 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, reltype, ik)
 
   ! calculate <p|psi>
   do ipj = 1, npj
-
-    ii = ireduce(ipj)
+    if(pj(ipj)%type == M_NONE) cycle
 
     ns = pj(ipj)%sphere%ns
+
     ALLOCATE(lpsi(ns, dim),  ns*dim)
 
     do idim = 1, dim
@@ -70,16 +76,29 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, reltype, ik)
       end if
     end do
 
-    select case(pj(ipj)%type)
-    case(M_KB)
-      call X(kb_project_bra)(mesh, pj(ipj)%sphere, pj(ipj)%kb_p, dim, lpsi, reduce_buffer(ii:))
-    case(M_RKB)
+    do ll = 0, pj(ipj)%lmax
+      if (ll == pj(ipj)%lloc) cycle
+      do mm = -ll, ll
+
+        ii = ireduce(ipj, ll, mm)
+
+        select case(pj(ipj)%type)
+        case(M_KB)
+          call X(kb_project_bra)(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(ll, mm), dim, lpsi, reduce_buffer(ii:))
+        case(M_RKB)
 #ifdef R_TCOMPLEX
-      call rkb_project_bra(mesh, pj(ipj)%sphere, pj(ipj)%rkb_p, lpsi, reduce_buffer(ii:))
+          if(ll /= 0) then
+            call rkb_project_bra(mesh, pj(ipj)%sphere, pj(ipj)%rkb_p(ll, mm), lpsi, reduce_buffer(ii:))
+          else
+            call zkb_project_bra(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(1, 1), dim, lpsi, reduce_buffer(ii:))
+          end if
 #endif
-    case(M_HGH)
-      call X(hgh_project_bra)(mesh, pj(ipj)%sphere, pj(ipj)%hgh_p, dim, reltype, lpsi, reduce_buffer(ii:))
-    end select
+        case(M_HGH)
+          call X(hgh_project_bra)(mesh, pj(ipj)%sphere, pj(ipj)%hgh_p(ll, mm), dim, reltype, lpsi, reduce_buffer(ii:))
+        end select
+
+      end do ! mm
+    end do ! ll
 
     deallocate(lpsi)
 
@@ -97,32 +116,44 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, reltype, ik)
 
   ! calculate |ppsi> += |p><p|psi>
   do ipj = 1, npj
-
+    if(pj(ipj)%type == M_NONE) cycle
+    
     ns = pj(ipj)%sphere%ns
     ALLOCATE(lpsi(ns, dim),  ns*dim)
 
-    ii = ireduce(ipj)
+    do ll = 0, pj(ipj)%lmax
+      if (ll == pj(ipj)%lloc) cycle
+      do mm = -ll, ll
 
-    select case(pj(ipj)%type)
-    case(M_KB)
-      reduce_buffer(ii:ii + 1) = reduce_buffer(ii:ii + 1)*pj(ipj)%kb_p%e(1:2)
-      call X(kb_project_ket)(mesh, pj(ipj)%sphere, pj(ipj)%kb_p, dim, reduce_buffer(ii:), lpsi)
-    case(M_RKB)
+        ii = ireduce(ipj, ll, mm)
+
+        select case(pj(ipj)%type)
+        case(M_KB)
+          reduce_buffer(ii:ii + 1) = reduce_buffer(ii:ii + 1)*pj(ipj)%kb_p(ll, mm)%e(1:2)
+          call X(kb_project_ket)(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(ll, mm), dim, reduce_buffer(ii:), lpsi)
+        case(M_RKB)
 #ifdef R_TCOMPLEX
-      call rkb_project_ket(mesh, pj(ipj)%sphere, pj(ipj)%rkb_p, reduce_buffer(ii:), lpsi)
+          if(ll /= 0) then
+            call rkb_project_ket(mesh, pj(ipj)%sphere, pj(ipj)%rkb_p(ll, mm), reduce_buffer(ii:), lpsi)
+          else
+            call zkb_project_ket(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(1, 1), dim, reduce_buffer(ii:), lpsi)
+          end if
 #endif
-    case(M_HGH)
-      call X(hgh_project_ket)(mesh, pj(ipj)%sphere, pj(ipj)%hgh_p, dim, reltype, reduce_buffer(ii:), lpsi)
-    end select
+        case(M_HGH)
+          call X(hgh_project_ket)(mesh, pj(ipj)%sphere, pj(ipj)%hgh_p(ll, mm), dim, reltype, reduce_buffer(ii:), lpsi)
+        end select
 
-    do idim = 1, dim
-      if(simul_box_is_periodic(mesh%sb)) then
-        ppsi(pj(ipj)%sphere%jxyz(1:ns), idim) = &
-          ppsi(pj(ipj)%sphere%jxyz(1:ns), idim) + lpsi(1:ns, idim)*conjg(pj(ipj)%phase(1:ns, ik))
-      else
-        ppsi(pj(ipj)%sphere%jxyz(1:ns), idim) = ppsi(pj(ipj)%sphere%jxyz(1:ns), idim) + lpsi(1:ns, idim)
-      end if
-    end do
+        do idim = 1, dim
+          if(simul_box_is_periodic(mesh%sb)) then
+            ppsi(pj(ipj)%sphere%jxyz(1:ns), idim) = &
+              ppsi(pj(ipj)%sphere%jxyz(1:ns), idim) + lpsi(1:ns, idim)*conjg(pj(ipj)%phase(1:ns, ik))
+          else
+            ppsi(pj(ipj)%sphere%jxyz(1:ns), idim) = ppsi(pj(ipj)%sphere%jxyz(1:ns), idim) + lpsi(1:ns, idim)
+          end if
+        end do
+
+      end do ! mm
+    end do ! ll
 
     deallocate(lpsi)
 
@@ -165,7 +196,7 @@ R_TYPE function X(psia_project_psib)(mesh, pj, dim, psia, psib, reltype, ik) res
       lpsi(1:ns, idim) = psib(pj%sphere%jxyz(1:ns), idim)
     end if
   end do
-
+      
   call X(project_sphere)(mesh, pj, dim, lpsi, plpsi, reltype)
 
   apb = M_ZERO
@@ -191,20 +222,42 @@ subroutine X(project_sphere)(mesh, pj, dim, psi, ppsi, reltype)
   R_TYPE,            intent(out)   :: ppsi(:, :)  ! ppsi(1:ns, dim)
   integer,           intent(in)    :: reltype
 
+  R_TYPE, allocatable :: lpsi(:, :)
+  integer :: ns, ll, mm
+
   call push_sub('projector_inc.project_sphere')
 
-  select case (pj%type)
-  case (M_HGH)
-    call X(hgh_project)(mesh, pj%sphere, pj%hgh_p, dim, psi, ppsi, reltype)
-  case (M_KB)
-    call X(kb_project)(mesh, pj%sphere, pj%kb_p, dim, psi, ppsi)
-  case (M_RKB)
+  ns = pj%sphere%ns
+  ALLOCATE(lpsi(ns, dim), ns*dim)
+
+  ppsi = M_ZERO
+
+  do ll = 0, pj%lmax
+    if (ll == pj%lloc) cycle
+    do mm = -ll, ll
+      
+      select case (pj%type)
+      case (M_HGH)
+        call X(hgh_project)(mesh, pj%sphere, pj%hgh_p(ll, mm), dim, psi, lpsi, reltype)
+      case (M_KB)
+        call X(kb_project)(mesh, pj%sphere, pj%kb_p(ll, mm), dim, psi, lpsi)
+      case (M_RKB)
 #ifdef R_TCOMPLEX
-    !This can only be aplied to complex spinor wave-functions
-    call rkb_project(mesh, pj%sphere, pj%rkb_p, psi, ppsi)
+        if(ll /= 0) then
+          call rkb_project(mesh, pj%sphere, pj%rkb_p(ll, mm), psi, lpsi)
+        else
+          call zkb_project(mesh, pj%sphere, pj%kb_p(1, 1), dim, psi, lpsi)
+        end if
 #endif
-  end select
+      end select
   
+      ppsi(1:ns, 1:dim) = ppsi(1:ns, 1:dim) + lpsi(1:ns, 1:dim)
+
+    end do
+  end do
+
+  deallocate(lpsi)
+
   call pop_sub()
 end subroutine X(project_sphere)
 

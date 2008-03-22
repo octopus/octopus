@@ -24,7 +24,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
   type(states_t),   intent(inout)  :: st
   FLOAT,            intent(in)     :: time
 
-  integer :: iatom, ist, ik, ivnl, idim, idir
+  integer :: iatom, ist, ik, idim, idir
 
   R_TYPE :: psi_proj_gpsi
   R_TYPE, allocatable :: gpsi(:, :, :)
@@ -63,20 +63,17 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
       call profiling_count_operations(NP*st%d%dim*NDIM*(2 + R_MUL))
 
       ! iterate over the projectors
-      do ivnl = 1, ep%nvnl
-
-        iatom = ep%p(ivnl)%iatom
-
+      do iatom = 1, geo%natoms
+        if(ep%p(iatom)%type == 0) cycle
         do idir = 1, NDIM
-
-          psi_proj_gpsi = X(psia_project_psib)(gr%m, ep%p(ivnl), st%d%dim, &
-               st%X(psi)(:, :, ist, ik), gpsi(:, idir, :), ep%reltype, ik)
-
+          
+          psi_proj_gpsi = &
+            X(psia_project_psib)(gr%m, ep%p(iatom), st%d%dim, st%X(psi)(:, :, ist, ik), gpsi(:, idir, :), ep%reltype, ik)
+          
           force(idir, iatom) = force(idir, iatom) - M_TWO * st%occ(ist, ik) * R_REAL(psi_proj_gpsi)
 
         end do
-        
-      end do !invl
+      end do
 
     end do
   end do
@@ -132,7 +129,7 @@ subroutine X(conmut_vnl_r)(gr, geo, ep, dim, idir, iatom, psi, cpsi, ik)
   R_TYPE,                intent(out)    :: cpsi(:,:)
   integer,               intent(in)     :: ik
 
-  integer ::  n_s, idim, ipj
+  integer ::  n_s, idim
   R_TYPE, allocatable :: lpsi(:, :), pxlpsi(:,:), xplpsi(:,:)
   integer, pointer :: jxyz(:)
   FLOAT,   pointer :: smx(:, :)
@@ -142,42 +139,39 @@ subroutine X(conmut_vnl_r)(gr, geo, ep, dim, idir, iatom, psi, cpsi, ik)
 
   cpsi(1:gr%m%np, 1:dim) = M_ZERO
 
-  do ipj = ep%atomproj(1, iatom), ep%atomproj(2, iatom)
-    
-    n_s = ep%p(ipj)%sphere%ns
-    jxyz => ep%p(ipj)%sphere%jxyz
-    smx => ep%p(ipj)%sphere%x
-    
-    ALLOCATE(lpsi(n_s, dim),  n_s*dim)
-    ALLOCATE(xplpsi(n_s, dim), n_s*dim)
-    ALLOCATE(pxlpsi(n_s, dim), n_s*dim)
-    
-    do idim = 1, dim
-      lpsi(1:n_s, idim) = psi(jxyz(1:n_s))
-    end do
+  n_s = ep%p(iatom)%sphere%ns
+  jxyz => ep%p(iatom)%sphere%jxyz
+  smx => ep%p(iatom)%sphere%x
 
-    ! x V_nl |psi>
-    call X(project_sphere)(gr%m, ep%p(ipj), dim, lpsi, xplpsi, ep%reltype)
-    do idim = 1, dim
-      xplpsi(1:n_s, idim) = smx(1:n_s, idir) * xplpsi(1:n_s, idim)
-    end do
-    
-    ! V_nl x |psi>
-    do idim = 1, dim
-      lpsi(1:n_s, idim) = smx(1:n_s, idir) * lpsi(1:n_s, idim)
-    end do
-    call X(project_sphere)(gr%m, ep%p(ipj), dim, lpsi, pxlpsi, ep%reltype)
+  ALLOCATE(lpsi(n_s, dim),  n_s*dim)
+  ALLOCATE(xplpsi(n_s, dim), n_s*dim)
+  ALLOCATE(pxlpsi(n_s, dim), n_s*dim)
 
-    ! |cpsi> = x V_nl |psi> - V_nl x |psi> 
-    do idim = 1, dim
-      cpsi(jxyz(1:n_s), idim) = cpsi(jxyz(1:n_s), idim) + xplpsi(1:n_s, idim) - pxlpsi(1:n_s, idim)
-    end do
-
-    deallocate(lpsi, xplpsi, pxlpsi)
+  do idim = 1, dim
+    lpsi(1:n_s, idim) = psi(jxyz(1:n_s))
   end do
-  
+
+  ! x V_nl |psi>
+  call X(project_sphere)(gr%m, ep%p(iatom), dim, lpsi, xplpsi, ep%reltype)
+  do idim = 1, dim
+    xplpsi(1:n_s, idim) = smx(1:n_s, idir) * xplpsi(1:n_s, idim)
+  end do
+
+  ! V_nl x |psi>
+  do idim = 1, dim
+    lpsi(1:n_s, idim) = smx(1:n_s, idir) * lpsi(1:n_s, idim)
+  end do
+  call X(project_sphere)(gr%m, ep%p(iatom), dim, lpsi, pxlpsi, ep%reltype)
+
+  ! |cpsi> = x V_nl |psi> - V_nl x |psi> 
+  do idim = 1, dim
+    cpsi(jxyz(1:n_s), idim) = cpsi(jxyz(1:n_s), idim) + xplpsi(1:n_s, idim) - pxlpsi(1:n_s, idim)
+  end do
+
+  deallocate(lpsi, xplpsi, pxlpsi)
+
   call pop_sub()
-  
+
 end subroutine X(conmut_vnl_r)
 
 !! Local Variables:
