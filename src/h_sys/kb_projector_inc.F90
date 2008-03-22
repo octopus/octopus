@@ -94,7 +94,7 @@ subroutine X(kb_project_bra)(mesh, sm, kb_p, dim, psi, uvpsi)
 
     call profiling_count_operations(ns*dim*kb_p%n_c*(2*R_ADD))
 
-    uvpsi(1:2) = uvpsi(1:2)*mesh%vol_pp(sm%jxyz(1:ns))
+    uvpsi(1:2) = uvpsi(1:2)*mesh%vol_pp(1)
   end if
 
 call pop_sub()
