@@ -158,11 +158,11 @@ contains
 
   ! ---------------------------------------------------------
   subroutine rkb_project(mesh, sm, rkb_p, psi, ppsi)
-    type(mesh_t),          intent(in)  :: mesh
-    type(submesh_t),       intent(in)  :: sm
-    type(rkb_projector_t), intent(in)  :: rkb_p
-    CMPLX,                 intent(in)  :: psi(:, :)  ! psi(kb%n_s, 2)
-    CMPLX,                 intent(out) :: ppsi(:, :) ! ppsi(kb%n_s, 2)
+    type(mesh_t),          intent(in)    :: mesh
+    type(submesh_t),       intent(in)    :: sm
+    type(rkb_projector_t), intent(in)    :: rkb_p
+    CMPLX,                 intent(in)    :: psi(:, :)  ! psi(kb%n_s, 2)
+    CMPLX,                 intent(inout) :: ppsi(:, :) ! ppsi(kb%n_s, 2)
 
     CMPLX :: uvpsi(1:2, 1:2)
 #ifdef HAVE_MPI
@@ -225,14 +225,12 @@ contains
     type(submesh_t),       intent(in)    :: sm
     type(rkb_projector_t), intent(in)    :: rkb_p
     CMPLX,                 intent(in)    :: uvpsi(1:2, 1:2)
-    CMPLX,                 intent(out)   :: psi(:, :)
+    CMPLX,                 intent(inout) :: psi(:, :)
 
     integer :: idim, jdim, n_s, is
     CMPLX :: aa
 
     call push_sub('rkb_projector.rkb_project_bra')
-
-    psi = M_ZERO
 
     n_s = rkb_p%n_s
 

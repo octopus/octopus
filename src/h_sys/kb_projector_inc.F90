@@ -25,12 +25,12 @@
 ! The result is summed up to ppsi.
 !------------------------------------------------------------------------------
 subroutine X(kb_project)(mesh, sm, kb_p, dim, psi, ppsi)
-  type(mesh_t),         intent(in)  :: mesh
-  type(submesh_t),      intent(in)  :: sm
-  type(kb_projector_t), intent(in)  :: kb_p
-  integer,              intent(in)  :: dim
-  R_TYPE,               intent(in)  :: psi(:, :)  ! psi(kb%n_s, dim)
-  R_TYPE,               intent(out) :: ppsi(:, :) ! ppsi(kb%n_s, dim)
+  type(mesh_t),         intent(in)    :: mesh
+  type(submesh_t),      intent(in)    :: sm
+  type(kb_projector_t), intent(in)    :: kb_p
+  integer,              intent(in)    :: dim
+  R_TYPE,               intent(in)    :: psi(:, :)  ! psi(kb%n_s, dim)
+  R_TYPE,               intent(inout) :: ppsi(:, :) ! ppsi(kb%n_s, dim)
 
   R_TYPE :: uvpsi(1:2)
 #if defined(HAVE_MPI)
@@ -63,42 +63,41 @@ subroutine X(kb_project_bra)(mesh, sm, kb_p, dim, psi, uvpsi)
   R_TYPE,               intent(out) :: uvpsi(1:2)
 
   integer :: ic, idim, ns, is
-  FLOAT, allocatable :: kp(:, :)
 
   call push_sub('kb_projector_inc.kb_project')
 
   ns = kb_p%n_s
 
-  ALLOCATE(kp(1:ns, 1:2), ns*2)
-
-  kp = M_ZERO
-
-  if(mesh%use_curvlinear) then
-    do ic = 1, kb_p%n_c
-      kp(1:ns, ic) = kb_p%p(1:ns, ic)*mesh%vol_pp(sm%jxyz(1:ns))
-    end do
-  else
-    do ic = 1, kb_p%n_c
-      kp(1:ns, ic) = kb_p%p(1:ns, ic)*mesh%vol_pp(1)
-    end do
-  end if
-
-  call profiling_count_operations(ns*kb_p%n_c)
-
   uvpsi = M_ZERO
 
-  do idim = 1, dim
-    do is = 1, ns
-      uvpsi(1) = uvpsi(1) + psi(is, idim)*kp(is, 1)
-      uvpsi(2) = uvpsi(2) + psi(is, idim)*kp(is, 2)
+  if(mesh%use_curvlinear) then
+
+    do idim = 1, dim
+      do ic = 1, kb_p%n_c
+        do is = 1, ns
+          uvpsi(ic) = uvpsi(ic) + (kb_p%p(is, ic)*psi(is, idim))*mesh%vol_pp(sm%jxyz(is))
+        end do
+      end do
     end do
-  end do
 
-  call profiling_count_operations(ns*dim*kb_p%n_c*(R_ADD + R_MUL))
+    call profiling_count_operations(ns*dim*kb_p%n_c*(3*R_ADD))
 
-  deallocate(kp)
+  else
 
-  call pop_sub()
+    do idim = 1, dim
+      do ic = 1, kb_p%n_c
+        do is = 1, ns
+          uvpsi(ic) = uvpsi(ic) + psi(is, idim)*kb_p%p(is, ic)
+        end do
+      end do
+    end do
+
+    call profiling_count_operations(ns*dim*kb_p%n_c*(2*R_ADD))
+
+    uvpsi(1:2) = uvpsi(1:2)*mesh%vol_pp(sm%jxyz(1:ns))
+  end if
+
+call pop_sub()
 end subroutine X(kb_project_bra)
 
 subroutine X(kb_project_ket)(mesh, sm, kb_p, dim, uvpsi, psi)
@@ -107,19 +106,17 @@ subroutine X(kb_project_ket)(mesh, sm, kb_p, dim, uvpsi, psi)
   type(kb_projector_t), intent(in)    :: kb_p
   integer,              intent(in)    :: dim
   R_TYPE,               intent(in)    :: uvpsi(1:2)
-  R_TYPE,               intent(out)   :: psi(:, :) ! psi(1:ns, 1:dim)
+  R_TYPE,               intent(inout) :: psi(:, :) ! psi(1:ns, 1:dim)
 
   integer :: ic, idim, ns, is
 
   call push_sub('kb_projector_inc.kb_project')
 
-  psi = M_ZERO
-
   ns = kb_p%n_s
 
   do idim = 1, dim
-    do is = 1, ns
-      do ic = 1, kb_p%n_c
+    do ic = 1, kb_p%n_c
+      do is = 1, ns
         psi(is, idim) = psi(is, idim) + uvpsi(ic)*kb_p%p(is, ic)
       end do
     end do

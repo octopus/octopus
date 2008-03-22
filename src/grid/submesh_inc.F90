@@ -41,35 +41,6 @@ R_TYPE function X(sm_integrate)(m, sm, f) result(res)
 
 end function X(sm_integrate)
 
-R_TYPE function X(dsm_integrate_prod)(m, sm, f, g) result(res)
-  type(mesh_t),    intent(in) :: m
-  type(submesh_t), intent(in) :: sm
-  R_TYPE,          intent(in) :: f(:)
-  FLOAT,           intent(in) :: g(:)
-  
-#if defined(HAVE_MPI)
-  R_TYPE :: tmp
-#endif
-
-  if (m%use_curvlinear) then
-    res = sum( f(1:sm%ns)*g(1:sm%ns)*m%vol_pp(sm%jxyz(1:sm%ns)))
-  else
-#ifdef R_TCOMPLEX
-    res = sum(f(1:sm%ns)*g(1:sm%ns))*m%vol_pp(1)
-#else
-    res = lalg_dot(sm%ns, f, g)*m%vol_pp(1)
-#endif
-  end if
-
-#if defined(HAVE_MPI)
-  if(m%parallel_in_domains) then
-    call MPI_Allreduce(res, tmp, 1, R_MPITYPE, MPI_SUM, m%vp%comm, mpi_err)
-    res = tmp
-  end if
-#endif
-
-end function X(dsm_integrate_prod)
-
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

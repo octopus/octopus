@@ -28,13 +28,13 @@
 ! \sum_{ij}^3\sum{k}^3 p%k(i,j) |hgh_p%p(:, i)><hgh_p%lp(:, k, j)|\hat{S(k)}|psi>
 !------------------------------------------------------------------------------
 subroutine X(hgh_project)(mesh, sm, hgh_p, dim, psi, ppsi, reltype)
-  type(mesh_t),          intent(in)  :: mesh
-  type(submesh_t),       intent(in)  :: sm
-  type(hgh_projector_t), intent(in)  :: hgh_p
-  integer,               intent(in)  :: dim
-  R_TYPE,                intent(in)  :: psi(:, :)  ! psi(hgh%n_s, dim)
-  R_TYPE,                intent(out) :: ppsi(:, :) ! ppsi(hgh%n_s, dim)
-  integer,               intent(in)  :: reltype
+  type(mesh_t),          intent(in)    :: mesh
+  type(submesh_t),       intent(in)    :: sm
+  type(hgh_projector_t), intent(in)    :: hgh_p
+  integer,               intent(in)    :: dim
+  R_TYPE,                intent(in)    :: psi(:, :)  ! psi(hgh%n_s, dim)
+  R_TYPE,                intent(inout) :: ppsi(:, :) ! ppsi(hgh%n_s, dim)
+  integer,               intent(in)    :: reltype
 
   R_TYPE :: uvpsi(1:2, 1:4, 1:3)
 #ifdef HAVE_MPI
@@ -110,14 +110,13 @@ subroutine X(hgh_project_ket)(mesh, sm, hgh_p, dim, reltype, uvpsi, ppsi)
   integer,               intent(in)    :: dim
   integer,               intent(in)    :: reltype
   R_TYPE,                intent(in)    :: uvpsi(1:2, 1:4, 1:3)
-  R_TYPE,                intent(out)   :: ppsi(:, :)
+  R_TYPE,                intent(inout) :: ppsi(:, :)
 
   integer :: n_s, ii, jj, idim
   integer :: kk
   CMPLX, allocatable :: lp_psi(:, :, :)
 
   n_s = hgh_p%n_s
-  ppsi = M_ZERO
 
   do idim = 1, dim
     do jj = 1, 3
