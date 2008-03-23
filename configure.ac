@@ -76,6 +76,8 @@ strerror strncasecmp strndup uname tcgetpgrp scandir alphasort \
 sigaction malloc realloc opendir readdir closedir strchr strtod assert \
 posix_memalign _mm_malloc _mm_free perror strcasestr])
 
+AC_CHECK_LIB([numa], [numa_available])
+
 ACX_MALLOC_ALIGNMENT
 
 dnl ============================================================================
