@@ -21,6 +21,7 @@
 
 SUBDIRS = \
 	finite_systems_1d finite_systems_2d finite_systems_3d \
+	optimal_control \
 	periodic_systems \
 	open_systems
 

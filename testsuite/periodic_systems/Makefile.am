@@ -19,7 +19,7 @@
 ##
 ## $Id$
 
-sharedir = $(pkgdatadir)/testsuite/periodic_systems_1d
+sharedir = $(pkgdatadir)/testsuite/periodic_systems
 
 dist_share_DATA = \
 	01-free_electrons.01-ground_state.inp \
