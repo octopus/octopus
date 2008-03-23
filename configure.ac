@@ -325,9 +325,8 @@ AC_CONFIG_FILES([Makefile
   testsuite/finite_systems_1d/Makefile 
   testsuite/finite_systems_2d/Makefile
   testsuite/finite_systems_3d/Makefile 
-  testsuite/open_systems_1d/Makefile
-  testsuite/open_systems_2d/Makefile
-  testsuite/periodic_systems_1d/Makefile
+  testsuite/open_systems/Makefile
+  testsuite/periodic_systems/Makefile
 ])
 AC_CONFIG_FILES([testsuite/oct-run_testsuite], [chmod +x testsuite/oct-run_testsuite])
 
