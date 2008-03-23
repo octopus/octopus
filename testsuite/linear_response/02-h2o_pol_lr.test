@@ -10,12 +10,12 @@ Programs   : octopus
 TestGroups : short-run
 Enabled    : Yes
 
-Input: 14-h2o_pol_lr.01_h2o_gs.inp
+Input: 02-h2o_pol_lr.01_h2o_gs.inp
 
 Match ; Total energy               ; sed -n '/^Energy/{n\;p\;}' static/info ; \s*Total\s*=\s*-16.06
 Match ; Ground state eigenvalues   ; sed -n '/Eigenvalues \[/{n\;n\;p\;}' static/info | tail -1 ; \s*-1.16\d*\s*2.0000\d* 
 
-Input: 14-h2o_pol_lr.02_h2o_dyn_pol.inp
+Input: 02-h2o_pol_lr.02_h2o_dyn_pol.inp
 Match ; Polarizability XX w=0.0    ; head -2 linear/freq_0.0000/alpha | tail -1 ; \s*15.
 Match ; Polarizability YY w=0.0    ; head -3 linear/freq_0.0000/alpha | tail -1 ; \s*12.
 Match ; Polarizability ZZ w=0.0    ; head -4 linear/freq_0.0000/alpha | tail -1 ; \s*23.
@@ -24,7 +24,7 @@ Match ; Polarizability XX w=0.1    ; head -2 linear/freq_0.1000/alpha | tail -1 
 Match ; Polarizability YY w=0.1    ; head -3 linear/freq_0.1000/alpha | tail -1 ; \s*12.
 Match ; Polarizability ZZ w=0.1    ; head -4 linear/freq_0.1000/alpha | tail -1 ; \s*29.
 
-Input: 14-h2o_pol_lr.03_h2o_dyn_pol_cmplx.inp
+Input: 02-h2o_pol_lr.03_h2o_dyn_pol_cmplx.inp
 Match ; Restart                    ; grep -c "Could not load response wave-functions" out ; \s*12
 Match ; Polarizability XX w=0.0    ; head -2 linear/freq_0.0000/alpha | tail -1 ; \s*15.
 Match ; Polarizability YY w=0.0    ; head -3 linear/freq_0.0000/alpha | tail -1 ; \s*12.
@@ -39,7 +39,7 @@ Match ; Cross section     w=0.1    ; grep -v \# linear/freq_0.1000/cross_section
 Match ; Hyperpolarizability w=0.0  ; grep //\ y  linear/freq_0.0000/beta ; \s*0.233
 Match ; Hyperpolarizability w=0.1  ; grep //\ y linear/freq_0.1000/beta ; \s*0.867
 
-Input: 14-h2o_pol_lr.04_h2o_susc.inp
+Input: 02-h2o_pol_lr.04_h2o_susc.inp
 Match; Paramagnetic susceptibility ; head -5  linear/freq_0.0000/susceptibility | tail -1 ; \s*30.00
 Match; Diamagnetic susceptibility  ; head -11 linear/freq_0.0000/susceptibility | tail -1 ; \s*-215.36
 Match; Total susceptibility        ; head -17 linear/freq_0.0000/susceptibility | tail -1 ; \s*-185.3

@@ -44,13 +44,8 @@ dist_share_DATA = \
 	07-spin_orbit_coupling.01-hgh.inp \
 	07-spin_orbit_coupling.02-rkb.inp \
 	07-spin_orbit_coupling.test \
-	08-sodium_dimer.01-ground_state.inp \
-	08-sodium_dimer.02-phonons.inp \
-	08-sodium_dimer.test \
 	09-spinors.01-ground_state.inp \
 	09-spinors.test \
-	10-casida.01-N2.inp \
-	10-casida.test \
 	11-sic.01-gs.inp \
 	11-sic.test \
 	12-forces.01-N2_gs.inp \
@@ -60,18 +55,10 @@ dist_share_DATA = \
 	13-full_potential_hydrogen.01-gs.inp \
 	13-full_potential_hydrogen.02-gs-cg.inp \
 	13-full_potential_hydrogen.test \
-	14-h2o_pol_lr.01_h2o_gs.inp \
-	14-h2o_pol_lr.02_h2o_dyn_pol.inp \
-	14-h2o_pol_lr.03_h2o_dyn_pol_cmplx.inp \
-	14-h2o_pol_lr.04_h2o_susc.inp \
-	14-h2o_pol_lr.test \
 	15-hartree.01-rectangular.inp \
 	15-hartree.test \
 	16-isf_solver.01-ground_state.inp \
 	16-isf_solver.test \
-	17-vdw_sternheimer.01-ground_state.inp \
-	17-vdw_sternheimer.02-vdw.inp \
-	17-vdw_sternheimer.test \
 	18-current.01-current.inp \
 	18-current.test \
 	19-laser.test \

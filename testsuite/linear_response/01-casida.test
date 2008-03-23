@@ -39,7 +39,7 @@ Enabled    : Yes
 # the basis-set truncation error, and because of this are difficult
 # to compare.
 
-Input: 10-casida.01-N2.inp
+Input: 01-casida.01-N2.inp
 
 Match ; TotalEnergy    ; sed -n '/^Energy/{n\;p\;}' ground_state_static/info ; \s*Total\s*=\s*-19.9296\d*
 Match ; HOMO           ; sed -n '/Eigenvalues \[/,$p' ground_state_static/info | head -7 | tail -1 ; \s*-0.3845\d*\s*2.0000\d*

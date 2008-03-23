@@ -21,8 +21,8 @@ Enabled    : Yes
 # the grid spacing to 0.20 a.u., and the box radius to 9.0 a.u., we
 # get 1.8626 Hartree * bohr^6.
 
-Input: 17-vdw_sternheimer.01-ground_state.inp
-Input: 17-vdw_sternheimer.02-vdw.inp
+Input: 03-vdw_sternheimer.01-ground_state.inp
+Input: 03-vdw_sternheimer.02-vdw.inp
 
 Match ; C6 ; grep '^C_6  \[a.u.' linear/vdw_c6 ; \s*1.828\d*
 
