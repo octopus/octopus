@@ -8,6 +8,10 @@ CalculationMode = gs
   "H" | 0 | 0 | 0 | no
 %
 
+%Species
+"H" | 1.0079400 | spec_ps_psf | 1 | 1 | 0
+%
+
 ExtraStates = 1
 
 %Occupations
@@ -20,11 +24,10 @@ Spacing = 0.46
 CurvMethod = curv_gygi
 CurvGygiA = 0.80
 
-DerivativesSpace = real_space
 DerivativesStencil = stencil_starplus
 DerivativesOrder = 3
 
-ConvAbsDens = 1e-5
+ConvAbsDens = 1e-2
 
 TheoryLevel = independent_particles
 
