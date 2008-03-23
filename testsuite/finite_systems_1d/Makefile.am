@@ -27,24 +27,8 @@ dist_share_DATA = \
 	02-neon_mpi.01-ground_state-kli_par_domains.inp \
 	02-neon_mpi.02-td_calc-kli_par_states.inp \
 	02-neon_mpi.test \
-	04-box.01-ground_state.inp \
-	04-box.02-oct_long.inp \
-	04-box.03-oct_long.inp \
-	04-box.04-oct_long.inp \
-	04-box_oct_long.test \
-	05-adw.01-ground_state.inp \
-	05-adw.02-filter_fixed.inp \
-	05-adw.03-filter_indirect.inp \
-	05-adw_oct_features.test \
 	06-eigen_evolution.01-ground_state.inp \
 	06-eigen_evolution.test \
-	07-sym_doublewell.test \
-	07-sym_doublewell.01-ground_state.inp \
-	07-sym_doublewell.02-unocc.inp \
-	07-sym_doublewell.03-oct.inp \
-	08-localtarget.test \
-	08-localtarget.01-gs.inp \
-	08-localtarget.02-oct.inp \
 	09-morse.test \
 	09-morse.01-gs.inp \
 	09-morse.02-unocc.inp \
