@@ -60,7 +60,7 @@ subroutine X(kb_project_bra)(mesh, sm, kb_p, dim, psi, uvpsi)
   type(kb_projector_t), intent(in)  :: kb_p
   integer,              intent(in)  :: dim
   R_TYPE,               intent(in)  :: psi(:, :)  ! psi(1:ns, 1:dim)
-  R_TYPE,               intent(out) :: uvpsi(1:2)
+  R_TYPE,               intent(out) :: uvpsi(:)
 
   integer :: ic, idim, ns, is
 
@@ -68,7 +68,7 @@ subroutine X(kb_project_bra)(mesh, sm, kb_p, dim, psi, uvpsi)
 
   ns = kb_p%n_s
 
-  uvpsi = M_ZERO
+  uvpsi(1:kb_p%n_c) = M_ZERO
 
   if(mesh%use_curvlinear) then
 
@@ -94,7 +94,7 @@ subroutine X(kb_project_bra)(mesh, sm, kb_p, dim, psi, uvpsi)
 
     call profiling_count_operations(ns*dim*kb_p%n_c*(2*R_ADD))
 
-    uvpsi(1:2) = uvpsi(1:2)*mesh%vol_pp(1)
+    uvpsi(1:kb_p%n_c) = uvpsi(1:kb_p%n_c)*mesh%vol_pp(1)
   end if
 
 call pop_sub()
@@ -105,7 +105,7 @@ subroutine X(kb_project_ket)(mesh, sm, kb_p, dim, uvpsi, psi)
   type(submesh_t),      intent(in)    :: sm
   type(kb_projector_t), intent(in)    :: kb_p
   integer,              intent(in)    :: dim
-  R_TYPE,               intent(in)    :: uvpsi(1:2)
+  R_TYPE,               intent(in)    :: uvpsi(:)
   R_TYPE,               intent(inout) :: psi(:, :) ! psi(1:ns, 1:dim)
 
   integer :: ic, idim, ns, is

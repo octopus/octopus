@@ -153,7 +153,11 @@ contains
     
     select case(p%type)
     case(M_KB)
-      p%reduce_size = 2
+      if(atm%spec%ps%kbc == 1) then
+        p%reduce_size = 1
+      else
+        p%reduce_size = 2
+      end if
     case(M_RKB)
       p%reduce_size = 4
     case(M_HGH)

@@ -132,7 +132,8 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, reltype, ik)
 
         select case(pj(ipj)%type)
         case(M_KB)
-          reduce_buffer(ii:ii + 1) = reduce_buffer(ii:ii + 1)*pj(ipj)%kb_p(ll, mm)%e(1:2)
+          reduce_buffer(ii:ii + pj(ipj)%kb_p(ll, mm)%n_c - 1) = &
+            reduce_buffer(ii:ii + pj(ipj)%kb_p(ll, mm)%n_c - 1)*pj(ipj)%kb_p(ll, mm)%e(1:2)
           call X(kb_project_ket)(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(ll, mm), dim, reduce_buffer(ii:), lpsi)
         case(M_RKB)
 #ifdef R_TCOMPLEX
@@ -184,7 +185,7 @@ R_TYPE function X(psia_project_psib)(mesh, pj, dim, psia, psib, reltype, ik) res
   integer,           intent(in)    :: reltype
   integer,           intent(in)    :: ik
 
-  integer ::  ns, idim, ll, mm
+  integer ::  ns, idim, ll, mm, nc, size
   R_TYPE, allocatable :: lpsi(:, :), plpsi(:,:)
   R_TYPE, allocatable :: uvpsi(:, :, :, :)
 #if defined(HAVE_MPI)
@@ -216,20 +217,21 @@ R_TYPE function X(psia_project_psib)(mesh, pj, dim, psia, psib, reltype, ik) res
       end if
     end do
 
-    ALLOCATE(uvpsi(1:2, 1:2, 0:pj%lmax, -pj%lmax:pj%lmax), 4*(pj%lmax + 1)*(2*pj%lmax + 1))
+    size = pj%reduce_size*2*(pj%lmax + 1)*(2*pj%lmax + 1)
+    ALLOCATE(uvpsi(1:pj%reduce_size, 1:2, 0:pj%lmax, -pj%lmax:pj%lmax), size)
 
     do ll = 0, pj%lmax
       if (ll == pj%lloc) cycle
       do mm = -ll, ll
-        call X(kb_project_bra)(mesh, pj%sphere, pj%kb_p(ll, mm), dim, lpsi, uvpsi(1:2, 1, ll, mm))
-        call X(kb_project_bra)(mesh, pj%sphere, pj%kb_p(ll, mm), dim, plpsi, uvpsi(1:2, 2, ll, mm))
+        call X(kb_project_bra)(mesh, pj%sphere, pj%kb_p(ll, mm), dim, lpsi, uvpsi(:, 1, ll, mm))
+        call X(kb_project_bra)(mesh, pj%sphere, pj%kb_p(ll, mm), dim, plpsi, uvpsi(:, 2, ll, mm))
       end do
     end do
     
 #if defined(HAVE_MPI)
     if(mesh%parallel_in_domains) then
-      ALLOCATE(uvpsi_tmp(1:2, 1:2, 0:pj%lmax, -pj%lmax:pj%lmax), 4*(pj%lmax + 1)*(2*pj%lmax + 1))
-      call MPI_Allreduce(uvpsi, uvpsi_tmp, 4*(pj%lmax + 1)*(2*pj%lmax + 1), R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
+      ALLOCATE(uvpsi_tmp(1:pj%reduce_size, 1:2, 0:pj%lmax, -pj%lmax:pj%lmax), size)
+      call MPI_Allreduce(uvpsi, uvpsi_tmp, size, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
       uvpsi = uvpsi_tmp
       deallocate(uvpsi_tmp)
     end if
@@ -240,7 +242,8 @@ R_TYPE function X(psia_project_psib)(mesh, pj, dim, psia, psib, reltype, ik) res
     do ll = 0, pj%lmax
       if (ll == pj%lloc) cycle
       do mm = -ll, ll
-        apb = apb + sum(R_CONJ(uvpsi(1:2, 2, ll, mm))*pj%kb_p(ll, mm)%e(1:2)*uvpsi(1:2, 1, ll, mm))
+        nc = pj%kb_p(ll, mm)%n_c
+        apb = apb + sum(R_CONJ(uvpsi(1:nc, 2, ll, mm))*pj%kb_p(ll, mm)%e(1:nc)*uvpsi(1:nc, 1, ll, mm))
       end do
     end do
 
