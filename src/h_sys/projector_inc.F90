@@ -186,9 +186,9 @@ R_TYPE function X(psia_project_psib)(mesh, pj, dim, psia, psib, reltype, ik) res
 
   integer ::  ns, idim, ll, mm
   R_TYPE, allocatable :: lpsi(:, :), plpsi(:,:)
-  R_TYPE :: uvpsi(1:2, 1:2, 0:MAX_L, -MAX_L:MAX_L)
+  R_TYPE, allocatable :: uvpsi(:, :, :, :)
 #if defined(HAVE_MPI)
-  R_TYPE :: uvpsi_tmp(1:2, 1:2, 0:MAX_L, -MAX_L:MAX_L)
+  R_TYPE, allocatable :: uvpsi_tmp(:, :, :, :)
 #endif
 
   call push_sub('projector_inc.psia_project_psib')
@@ -216,6 +216,8 @@ R_TYPE function X(psia_project_psib)(mesh, pj, dim, psia, psib, reltype, ik) res
       end if
     end do
 
+    ALLOCATE(uvpsi(1:2, 1:2, 0:pj%lmax, -pj%lmax:pj%lmax), 4*(pj%lmax + 1)*(2*pj%lmax + 1))
+
     do ll = 0, pj%lmax
       if (ll == pj%lloc) cycle
       do mm = -ll, ll
@@ -226,8 +228,10 @@ R_TYPE function X(psia_project_psib)(mesh, pj, dim, psia, psib, reltype, ik) res
     
 #if defined(HAVE_MPI)
     if(mesh%parallel_in_domains) then
-      call MPI_Allreduce(uvpsi, uvpsi_tmp, 4*(MAX_L + 1)*(2*MAX_L + 1), R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
+      ALLOCATE(uvpsi_tmp(1:2, 1:2, 0:pj%lmax, -pj%lmax:pj%lmax), 4*(pj%lmax + 1)*(2*pj%lmax + 1))
+      call MPI_Allreduce(uvpsi, uvpsi_tmp, 4*(pj%lmax + 1)*(2*pj%lmax + 1), R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
       uvpsi = uvpsi_tmp
+      deallocate(uvpsi_tmp)
     end if
 #endif
 
