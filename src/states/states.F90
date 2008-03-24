@@ -2093,7 +2093,7 @@ contains
     type(multicomm_t), intent(in)    :: mc
 
 #ifdef HAVE_MPI
-    integer :: sn, sn1, r, j, k, i, ii, st_start, st_end
+    integer :: sn, sn1, r, j, k
 #endif
 
     call push_sub('states.states_distribute_nodes')

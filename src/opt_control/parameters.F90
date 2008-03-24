@@ -771,7 +771,7 @@ contains
     type(oct_control_parameters_t), target, intent(in) :: par
     type(oct_control_parameters_t), pointer :: par_
     integer :: i, j, k
-    FLOAT :: t, integral
+    FLOAT   :: t, integral
     logical :: change_rep
 
     ASSERT(par%current_representation .eq. par%representation)
@@ -860,7 +860,7 @@ contains
     type(oct_control_parameters_t), intent(in)    :: par
     FLOAT,                          intent(inout) :: x(:)
     integer :: j, k, n
-    FLOAT :: sumx2, y
+    FLOAT :: sumx2
     FLOAT, allocatable :: e(:)
 
     n = par%nfreqs

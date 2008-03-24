@@ -596,7 +596,7 @@ contains
     FLOAT, optional, intent(in) :: time
 
     FLOAT :: a1, a2, Rb2 ! for jellium
-    FLOAT :: xx(MAX_DIM), r, pot_re, pot_im, time_, r2
+    FLOAT :: xx(MAX_DIM), r, pot_re, pot_im, time_
     integer :: ip
 
     type(profile_t), save :: prof

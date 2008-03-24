@@ -160,7 +160,7 @@
   ! Tries to avoid ill defined combinations of run modes.
   ! ---------------------------------------------------------
   subroutine check_faulty_runmodes(sys, h, tr)
-    type(system_t), target,         intent(in)    :: sys
+    type(system_t),                 intent(in)    :: sys
     type(hamiltonian_t),            intent(in)    :: h
     type(td_rti_t),                 intent(in)    :: tr
 

@@ -276,11 +276,9 @@ subroutine X(project_sphere)(mesh, pj, dim, psi, ppsi, reltype)
   R_TYPE,            intent(out)   :: ppsi(:, :)  ! ppsi(1:ns, dim)
   integer,           intent(in)    :: reltype
 
-  integer :: ns, ll, mm
+  integer :: ll, mm
 
   call push_sub('projector_inc.project_sphere')
-
-  ns = pj%sphere%ns
 
   ppsi = M_ZERO
 

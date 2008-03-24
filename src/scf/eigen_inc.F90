@@ -29,10 +29,6 @@ subroutine X(eigen_diag_subspace)(gr, st, h, diff)
   R_TYPE :: aa
   integer             :: ist, ik, ip, idim, jst
   FLOAT               :: nrm2
-#if defined(HAVE_MPI)
-  integer             :: tmp
-  FLOAT               :: ldiff(st%lnst)
-#endif
 
   call push_sub('eigen_inc.Xeigen_diagon_subspace')
   call profiling_in(diagon_prof, "SUBSPACE_DIAG")

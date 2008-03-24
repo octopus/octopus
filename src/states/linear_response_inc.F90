@@ -27,9 +27,6 @@ subroutine X(lr_orth_vector) (m, st, v, ik)
   R_TYPE,              intent(inout) :: v(:,:)
   integer,             intent(in)    :: ik
 
-  R_TYPE  :: scalp
-  integer :: ist, idim
-
   call push_sub('linear_response_inc.Xlr_orth_vector')
 
   call X(states_gram_schmidt)(m, st%nst, st%d%dim, st%X(psi)(:, :, :, ik), v(:, :))
