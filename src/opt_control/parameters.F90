@@ -90,7 +90,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine parameters_set_initial(par, ep, m, dt, max_iter, &
-                                    mode_fixed_fluence, mode_basis_set)
+                                    mode_fixed_fluence, mode_basis_set, maximize)
     type(oct_control_parameters_t), intent(inout) :: par
     type(epot_t), intent(inout)                   :: ep
     type(mesh_t), intent(inout)                   :: m
@@ -98,6 +98,7 @@ contains
     integer, intent(in)                           :: max_iter
     logical, intent(out)                          :: mode_fixed_fluence
     logical, intent(out)                          :: mode_basis_set
+    logical, intent(out)                          :: maximize
 
     integer :: i
     FLOAT :: targetfluence, omegamax
@@ -189,6 +190,10 @@ contains
 
     call parameters_init(par, ep%no_lasers, dt, max_iter, targetfluence, omegamax)
     call parameters_set(par, ep)
+
+    ! Depending on the sign of the penalty factor, which has been found out in parameters_init,
+    ! we will have maximization or minimization
+    maximize = (par%alpha(1) > M_ZERO)
 
     ! This prints the initial control parameters, exactly as described in the inp file,
     ! that is, without applying any envelope or filter.
@@ -676,14 +681,44 @@ contains
     !%Default 1.0
     !%Description
     !% The variable specificies the value of the penalty factor for the 
-    !% integrated field strength (fluence). Large value - small fluence. The value is 
-    !% always positive. A transient shape can be specified using the block OCTLaserEnvelope.
+    !% integrated field strength (fluence). Large value - small fluence.
+    !% A transient shape can be specified using the block OCTLaserEnvelope.
     !% In this case OCTPenalty is multiplied with time-dependent function. 
     !% The value depends on the coupling between the states. A good start might be a 
     !% value from 0.1 (strong fields) to 10 (weak fields). 
+    !%
+    !% It should be a positive value if you want to maximize the objective, and
+    !% a negative value if you want to minimize.
+    !%
+    !% Note that if there are several control functions, one can specify this
+    !% variable as a one-line code, each column being the penalty factor for each
+    !% of the control functions. Make sure that the number of columns is equal to the
+    !% number of control functions. If it is not a block, all control functions will
+    !% have the same penalty factor. 
+    !%
+    !% All penalty factors must be non-null. If there are more than one, they must
+    !% all have the same sign.
     !%End
-    call loct_parse_float(check_inp('OCTPenalty'), M_ONE, octpenalty)
-    par%alpha(1:par%no_parameters) = octpenalty
+    if(loct_parse_block('OCTPenalty', blk) == 0) then
+      ! We have a block
+      i = loct_parse_block_cols(blk, 0)
+      if(i.ne.par%no_parameters) then
+        call input_error('OCTPenalty')
+      else
+        do j = 1, i
+          call loct_parse_block_float(blk, 0, j-1, par%alpha(j))
+        end do
+        ! Make sure that all the penalties have the same sign (it determines if we want
+        ! maximization or minimization)
+        do j = 2, i
+          if( par%alpha(j)*par%alpha(1) <= M_ZERO) call input_error('OCTPenalty')
+        end do
+      end if
+    else
+      ! We have the same penalty for all the control functions.
+      call loct_parse_float(check_inp('OCTPenalty'), M_ONE, octpenalty)
+      par%alpha(1:par%no_parameters) = octpenalty
+    end if
 
     ALLOCATE(par%td_penalty(par%no_parameters), par%no_parameters)
     do i = 1, par%no_parameters
