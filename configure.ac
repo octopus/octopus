@@ -325,6 +325,7 @@ AC_CONFIG_FILES([Makefile
   testsuite/finite_systems_1d/Makefile 
   testsuite/finite_systems_2d/Makefile
   testsuite/finite_systems_3d/Makefile
+  testsuite/real_time/Makefile
   testsuite/linear_response/Makefile
   testsuite/optimal_control/Makefile
   testsuite/open_systems/Makefile
