@@ -35,7 +35,6 @@ module external_pot_m
   use mesh_function_m
   use mesh_m
   use messages_m
-  use multicomm_m
   use simul_box_m
   use units_m
   use logrid_m
@@ -438,11 +437,10 @@ contains
   end subroutine epot_generate_gauge_field
   
   ! ---------------------------------------------------------
-  subroutine epot_generate(ep, gr, geo, mc, st, time)
+  subroutine epot_generate(ep, gr, geo, st, time)
     type(epot_t),      intent(inout) :: ep
     type(grid_t), target,  intent(inout) :: gr
     type(geometry_t),  intent(inout) :: geo
-    type(multicomm_t), intent(in)    :: mc
     type(states_t),    intent(inout) :: st
     FLOAT,   optional, intent(in)    :: time
 

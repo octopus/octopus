@@ -144,7 +144,7 @@ contains
     if(ion_dynamics_ions_move(td%ions)) then
       if(td%iter > 0) then
         call td_read_coordinates()
-        call epot_generate(h%ep, gr, geo, sys%mc, st)
+        call epot_generate(h%ep, gr, geo, st)
       end if
 
       call epot_forces(gr, geo, h%ep, st, td%iter*td%dt)
@@ -198,7 +198,7 @@ contains
 
 	if( h%ep%with_gauge_field ) call apply_verlet_gauge_field_1(M_HALF*td%dt)
 
-        call epot_generate(h%ep, gr, sys%geo, sys%mc, st, time = i*td%dt)
+        call epot_generate(h%ep, gr, sys%geo, st, time = i*td%dt)
 
         ! Calculate the gauge vector potential at half step
       end if
@@ -241,7 +241,7 @@ contains
 	  call apply_verlet_gauge_field_1(td%dt)
 	  call epot_generate_gauge_field(h%ep, gr, st)
 	end if
-        call epot_generate(h%ep, gr, sys%geo, sys%mc, st, time = i*td%dt)
+        call epot_generate(h%ep, gr, sys%geo, st, time = i*td%dt)
       end if
 
       ! update hamiltonian and eigenvalues (fermi is *not* called)

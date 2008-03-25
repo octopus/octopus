@@ -348,7 +348,7 @@ contains
 
     call atom_write_xyz(".", "work-geom", g_opt%geo, append=.true.)
 
-    call epot_generate(g_opt%hamilt%ep, g_opt%syst%gr, g_opt%syst%geo, g_opt%syst%mc, g_opt%syst%st)
+    call epot_generate(g_opt%hamilt%ep, g_opt%syst%gr, g_opt%syst%geo, g_opt%syst%st)
     call states_calc_dens(g_opt%st, g_opt%m%np, g_opt%st%rho)
     call v_ks_calc(g_opt%syst%gr, g_opt%syst%ks, g_opt%hamilt, g_opt%st, calc_eigenval=.true.)
     call hamiltonian_energy(g_opt%hamilt, g_opt%syst%gr, g_opt%geo, g_opt%st, -1)
