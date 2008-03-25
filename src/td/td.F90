@@ -110,7 +110,7 @@ contains
     FLOAT, allocatable        :: A_gauge_tmp(:)
     FLOAT, allocatable        :: A_gauge_dot_tmp(:)
     FLOAT, allocatable        :: A_gauge_ddot_tmp(:)
-    type(ion_state_t)         :: ions_state
+    logical                   :: generate
 
     call push_sub('td.td_run')
 
@@ -188,25 +188,19 @@ contains
       if(clean_stop()) stopping = .true.
       call profiling_in(C_PROFILING_TIME_STEP)
       
-      if( (ion_dynamics_ions_move(td%ions) .and. td%dynamics == EHRENFEST ) .or. h%ep%with_gauge_field) then
-
-        call ion_dynamics_save_state(td%ions, sys%geo, ions_state)
-
-        ! Move the ions: only half step, to obtain the external potential 
-        ! in the middle of the time slice.
-        call ion_dynamics_propagate(td%ions, sys%gr%sb, sys%geo, M_HALF*td%dt)
-
-	if( h%ep%with_gauge_field ) call apply_verlet_gauge_field_1(M_HALF*td%dt)
-
-        call epot_generate(h%ep, gr, sys%geo, st, time = i*td%dt)
-
+      if(h%ep%with_gauge_field) then
         ! Calculate the gauge vector potential at half step
+	if( h%ep%with_gauge_field ) call apply_verlet_gauge_field_1(M_HALF*td%dt)
       end if
       
       ! time iterate wavefunctions
       select case(td%dynamics)
       case(EHRENFEST)
-        call td_rti_dt(sys%ks, h, gr, st, td%tr, i*td%dt, td%dt / td%mu, td%max_iter, i)
+        if(ion_dynamics_ions_move(td%ions)) then
+          call td_rti_dt(sys%ks, h, gr, st, td%tr, i*td%dt, td%dt / td%mu, td%max_iter, i, ions = td%ions, geo = sys%geo)
+        else
+          call td_rti_dt(sys%ks, h, gr, st, td%tr, i*td%dt, td%dt / td%mu, td%max_iter, i)
+        end if
       case(BO)
         call scf_run(td%scf, sys%gr, geo, st, sys%ks, h, sys%outp, gs_run = .false., verbosity = VERB_NO)
       case(CP)
@@ -223,26 +217,25 @@ contains
       ! update density
       call states_calc_dens(st, NP, st%rho)
 
-      if(ion_dynamics_ions_move(td%ions) .or. h%ep%with_gauge_field) then
+      generate = .false.
 
-        ! Now really move the full time step, from the original positions.
-        if( ion_dynamics_ions_move(td%ions) ) then
-
-          if(td%dynamics == EHRENFEST) call ion_dynamics_restore_state(td%ions, sys%geo, ions_state)
-
-          call ion_dynamics_propagate(td%ions, sys%gr%sb, sys%geo, td%dt)
-
-	end if
-
-	if( h%ep%with_gauge_field ) then
-	  h%ep%A_gauge(1:NDIM) = A_gauge_tmp(1:NDIM)
-	  h%ep%A_gauge_dot(1:NDIM) = A_gauge_dot_tmp(1:NDIM)
-	  h%ep%A_gauge_ddot(1:NDIM) = A_gauge_ddot_tmp(1:NDIM)
-	  call apply_verlet_gauge_field_1(td%dt)
-	  call epot_generate_gauge_field(h%ep, gr, st)
-	end if
-        call epot_generate(h%ep, gr, sys%geo, st, time = i*td%dt)
+      if( h%ep%with_gauge_field ) then
+        h%ep%A_gauge(1:NDIM) = A_gauge_tmp(1:NDIM)
+        h%ep%A_gauge_dot(1:NDIM) = A_gauge_dot_tmp(1:NDIM)
+        h%ep%A_gauge_ddot(1:NDIM) = A_gauge_ddot_tmp(1:NDIM)
+        call apply_verlet_gauge_field_1(td%dt)
+        call epot_generate_gauge_field(h%ep, gr, st)
+        generate = .true.
       end if
+      
+      if(ion_dynamics_ions_move(td%ions)) then 
+        if(td%dynamics /= EHRENFEST .or. .not. td_rti_ions_are_propagated(td%tr)) then
+          call ion_dynamics_propagate(td%ions, sys%gr%sb, sys%geo, td%dt)
+          generate = .true.
+        end if
+      end if
+      
+      if(generate) call epot_generate(h%ep, gr, sys%geo, st, time = i*td%dt)
 
       ! update hamiltonian and eigenvalues (fermi is *not* called)
       call v_ks_calc(gr, sys%ks, h, st, calc_eigenval=.true.)
@@ -257,7 +250,7 @@ contains
           call zcpmd_propagate_vel(td%cp_propagator, sys%gr, h, st, i, td%dt)
         end if
       end if
-
+      
       ! Recalculate forces, update velocities...
       if(ion_dynamics_ions_move(td%ions)) then
         call epot_forces(gr, sys%geo, h%ep, st, i*td%dt)

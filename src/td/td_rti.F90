@@ -21,20 +21,22 @@
 
 module td_rti_m
   use datasets_m
-  use varinfo_m
-  use messages_m
-  use profiling_m
+  use geometry_m
+  use ion_dynamics_m
   use lalg_basic_m
+  use lasers_m
   use loct_parser_m
   use math_m
+  use messages_m
+  use mesh_function_m
+  use profiling_m
   use sparskit_m
   use states_m
   use td_exp_m
   use td_exp_split_m
   use td_trans_rti_m
   use v_ks_m
-  use mesh_function_m
-  use lasers_m
+  use varinfo_m
 
   implicit none
 
@@ -48,7 +50,8 @@ module td_rti_m
     td_rti_dt,                &
     td_zop,                   &
     td_zopt,                  &
-    td_rti_set_scf_prop
+    td_rti_set_scf_prop,      &
+    td_rti_ions_are_propagated
 
   integer, public, parameter ::       &
     PROP_SPLIT_OPERATOR          = 0, &
@@ -121,12 +124,15 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_rti_init(gr, st, tr, dt, max_iter)
+  subroutine td_rti_init(gr, st, tr, dt, max_iter, move_ions)
     type(grid_t),   intent(in)    :: gr
     type(states_t), intent(in)    :: st
     type(td_rti_t), intent(inout) :: tr
     FLOAT,          intent(in)    :: dt
     integer,        intent(in)    :: max_iter
+    logical,        intent(in)    :: move_ions
+
+
 
     call push_sub('td_rti.td_rti_init')
 
@@ -292,6 +298,15 @@ contains
     end select
     call messages_print_var_option(stdout, 'TDEvolutionMethod', tr%method)
 
+    if(move_ions) then
+      if(tr%method /= PROP_REVERSAL .and.    &
+         tr%method /= PROP_APP_REVERSAL .and. &
+         tr%method /= PROP_EXPONENTIAL_MIDPOINT) then
+        message(1) = "If you want to move the ions you have to use the etrs, aetrs or exp_mid propagators." 
+        call write_fatal(1)
+      end if
+    end if
+
     ! Allocate memory to store the old KS potentials
     ALLOCATE(tr%v_old(NP, st%d%nspin, 0:3), NP*st%d%nspin*(3+1))
     tr%v_old(:, :, :) = M_ZERO
@@ -355,15 +370,17 @@ contains
   ! Propagates st from t-dt to t.
   ! If dt<0, it propagates *backwards* from t+|dt| to t
   ! ---------------------------------------------------------
-  subroutine td_rti_dt(ks, h, gr, st, tr, t, dt, max_iter, nt)
-    type(v_ks_t),                intent(inout) :: ks
-    type(hamiltonian_t), target, intent(inout) :: h
-    type(grid_t),        target, intent(inout) :: gr
-    type(states_t),      target, intent(inout) :: st
-    type(td_rti_t),      target, intent(inout) :: tr
-    FLOAT,                       intent(in)    :: t, dt
-    integer,                     intent(in)    :: max_iter
-    integer,                     intent(in)    :: nt
+  subroutine td_rti_dt(ks, h, gr, st, tr, t, dt, max_iter, nt, ions, geo)
+    type(v_ks_t),                    intent(inout) :: ks
+    type(hamiltonian_t), target,     intent(inout) :: h
+    type(grid_t),        target,     intent(inout) :: gr
+    type(states_t),      target,     intent(inout) :: st
+    type(td_rti_t),      target,     intent(inout) :: tr
+    FLOAT,                           intent(in)    :: t, dt
+    integer,                         intent(in)    :: max_iter
+    integer,                         intent(in)    :: nt
+    type(ion_dynamics_t), optional,  intent(inout) :: ions
+    type(geometry_t),     optional,  intent(inout) :: geo
 
     integer :: is, iter
     FLOAT   :: d, d_max
@@ -374,6 +391,10 @@ contains
 
     call profiling_in(prof, "TD_PROPAGATOR")
     call push_sub('td_rti.td_rti_dt')
+
+    if(present(ions)) then
+      ASSERT(present(geo))
+    end if
 
     self_consistent = .false.
     if(h%theory_level .ne. INDEPENDENT_PARTICLES) then
@@ -591,6 +612,12 @@ contains
       end do
 
       ! propagate dt/2 with H(t)
+      
+      if(present(ions)) then
+        call ion_dynamics_propagate(ions, gr%sb, geo, dt)
+        call epot_generate(h%ep, gr, geo, st, time = t)
+      end if
+
       if(h%theory_level.ne.INDEPENDENT_PARTICLES)  h%vhxc = vhxc_t2
       do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
@@ -618,6 +645,12 @@ contains
       end do
 
       h%vhxc = tr%v_old(:, :, 0)
+
+      if(present(ions)) then      
+        call ion_dynamics_propagate(ions, gr%sb, geo, dt)
+        call epot_generate(h%ep, gr, geo, st, time = t)
+      end if
+
       do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
           call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, ik), ist, ik, dt/M_TWO, t)
@@ -632,11 +665,18 @@ contains
     ! Exponential midpoint
     subroutine td_exponential_midpoint
       integer :: ist, ik
-
+      type(ion_state_t) :: ions_state
+    
       call push_sub('td_rti.td_exponential_midpoint')
 
       if(h%theory_level.ne.INDEPENDENT_PARTICLES) then
         call interpolate( (/t-3*dt, t-2*dt, t-dt/), tr%v_old(:, :, 0:2), t-dt/M_TWO, h%vhxc(:, :))
+      end if
+
+      if(present(ions)) then
+        call ion_dynamics_save_state(ions, geo, ions_state)
+        call ion_dynamics_propagate(ions, gr%sb, geo, M_HALF*dt)
+        call epot_generate(h%ep, gr, geo, st, time = t - dt/M_TWO)
       end if
 
       do ik = 1, st%d%nik
@@ -644,6 +684,8 @@ contains
           call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, ik), ist, ik, dt, t - dt/M_TWO)
         end do
       end do
+
+      if(present(ions)) call ion_dynamics_restore_state(ions, geo, ions_state)
 
       call pop_sub()
     end subroutine td_exponential_midpoint
@@ -856,6 +898,14 @@ contains
 #endif        
     call pop_sub()
   end subroutine td_zopt
+
+  logical pure function td_rti_ions_are_propagated(tr) result(propagated)
+    type(td_rti_t), intent(in) :: tr
+
+    propagated = .false.
+    if(tr%method == PROP_REVERSAL .or. tr%method == PROP_APP_REVERSAL) propagated = .true.
+
+  end function td_rti_ions_are_propagated
 
 end module td_rti_m
 
