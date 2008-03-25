@@ -559,8 +559,8 @@ contains
 
         ALLOCATE(vhxc_t1(NP, st%d%nspin), NP*st%d%nspin)
         ALLOCATE(vhxc_t2(NP, st%d%nspin), NP*st%d%nspin)
-        vhxc_t1 = h%vhxc
-     
+        call lalg_copy(NP, st%d%nspin, h%vhxc, vhxc_t1)
+
         ALLOCATE(zpsi1(NP_PART, st%d%dim, st%d%nik), NP_PART*st%d%dim*st%d%nik)
 
         !$omp parallel workshare
@@ -600,8 +600,8 @@ contains
 
         call v_ks_calc(gr, ks, h, st)
 
-        vhxc_t2 = h%vhxc
-        h%vhxc = vhxc_t1
+        call lalg_copy(NP, st%d%nspin, h%vhxc, vhxc_t2)
+        call lalg_copy(NP, st%d%nspin, vhxc_t1, h%vhxc)
       end if
 
       ! propagate dt/2 with H(t-dt)
@@ -618,7 +618,8 @@ contains
         call epot_generate(h%ep, gr, geo, st, time = t)
       end if
 
-      if(h%theory_level.ne.INDEPENDENT_PARTICLES)  h%vhxc = vhxc_t2
+      if(h%theory_level.ne.INDEPENDENT_PARTICLES)  call lalg_copy(NP, st%d%nspin, vhxc_t2, h%vhxc)
+
       do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
           call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, ik), ist, ik, dt/M_TWO, t)
@@ -644,7 +645,7 @@ contains
         end do
       end do
 
-      h%vhxc = tr%v_old(:, :, 0)
+      call lalg_copy(NP, st%d%nspin, tr%v_old(:, :, 0), h%vhxc)
 
       if(present(ions)) then      
         call ion_dynamics_propagate(ions, gr%sb, geo, dt)
