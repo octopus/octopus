@@ -248,7 +248,7 @@ module splines_m
 
   ! the basic spline datatype
   type spline_t
-    type(c_pointer_t) :: spl, acc
+    type(c_ptr) :: spl, acc
   end type spline_t
 
   interface assignment (=)
@@ -306,70 +306,70 @@ module splines_m
   interface
     subroutine oct_spline_end(spl, acc)
       use c_pointer_m
-      type(c_pointer_t), intent(inout) :: spl, acc
+      type(c_ptr), intent(inout) :: spl, acc
     end subroutine oct_spline_end
 
     subroutine oct_spline_fit(nrc, x, y, spl, acc)
       use c_pointer_m
       integer, intent(in) :: nrc
       real(8), intent(in) :: x, y
-      type(c_pointer_t), intent(inout) :: spl, acc
+      type(c_ptr), intent(inout) :: spl, acc
     end subroutine oct_spline_fit
 
     real(8) function oct_spline_eval(x, spl, acc)
       use c_pointer_m
       real(8), intent(in) :: x
-      type(c_pointer_t), intent(in) :: spl, acc
+      type(c_ptr), intent(in) :: spl, acc
     end function oct_spline_eval
 
     subroutine oct_splice_eval_array(nn, xf, spl, acc)
       use c_pointer_m
       integer, intent(in)    :: nn
       real(8), intent(inout) :: xf
-      type(c_pointer_t), intent(in) :: spl
-      type(c_pointer_t), intent(in) :: acc  
+      type(c_ptr), intent(in) :: spl
+      type(c_ptr), intent(in) :: acc  
     end subroutine oct_splice_eval_array
 
     subroutine oct_splice_eval_array4(nn, xf, spl, acc)
       use c_pointer_m
       integer, intent(in)    :: nn
       real(4), intent(inout) :: xf
-      type(c_pointer_t), intent(in) :: spl
-      type(c_pointer_t), intent(in) :: acc  
+      type(c_ptr), intent(in) :: spl
+      type(c_ptr), intent(in) :: acc  
     end subroutine oct_splice_eval_array4
 
     real(8) function oct_spline_eval_der(x, spl, acc)
       use c_pointer_m
       real(8), intent(in) :: x
-      type(c_pointer_t), intent(in) :: spl, acc
+      type(c_ptr), intent(in) :: spl, acc
     end function oct_spline_eval_der
 
     real(8) function oct_spline_eval_der2(x, spl, acc)
       use c_pointer_m
       real(8), intent(in) :: x
-      type(c_pointer_t), intent(in) :: spl, acc
+      type(c_ptr), intent(in) :: spl, acc
     end function oct_spline_eval_der2
 
     integer function oct_spline_npoints(spl)
       use c_pointer_m
-      type(c_pointer_t), intent(in) :: spl
+      type(c_ptr), intent(in) :: spl
     end function oct_spline_npoints
 
     subroutine oct_spline_x(spl, x)
       use c_pointer_m
-      type(c_pointer_t), intent(in) :: spl
+      type(c_ptr), intent(in) :: spl
       real(8), intent(out) :: x
     end subroutine oct_spline_x
 
     subroutine oct_spline_y(spl, y)
       use c_pointer_m
-      type(c_pointer_t), intent(in) :: spl
+      type(c_ptr), intent(in) :: spl
       real(8), intent(out) :: y
     end subroutine oct_spline_y
 
     real(8) function oct_spline_eval_integ(spl, a, b, acc)
       use c_pointer_m
-      type(c_pointer_t), intent(in) :: spl, acc
+      type(c_ptr), intent(in) :: spl, acc
       real(8),           intent(in) :: a, b
     end function oct_spline_eval_integ
   end interface
@@ -404,7 +404,7 @@ contains
 
   subroutine spline_end_0(spl)
     type(spline_t), intent(inout) :: spl
-    if(.not.is_null(spl%spl) .and. .not. is_null(spl%acc)) then
+    if(c_associated(spl%spl) .and. c_associated(spl%acc)) then
       call oct_spline_end(spl%spl, spl%acc)
     end if
     call set_null(spl%spl)
@@ -607,7 +607,7 @@ contains
     call oct_spline_y(spl%spl, y(1))
 
     ! Check wether splw comes with a defined grid, or else build it.
-    if(.not. is_null(splw%spl)) then
+    if(c_associated(splw%spl)) then
       np = oct_spline_npoints(splw%spl)
       ALLOCATE(xw(np), np)
       ALLOCATE(yw(np), np)
@@ -669,7 +669,7 @@ contains
     call oct_spline_y(spl%spl, y(1))
 
     ! Check wether splw comes with a defined grid, or else build it.
-    if(.not. is_null(splw%spl)) then
+    if(c_associated(splw%spl)) then
       np = oct_spline_npoints(splw%spl)
       ALLOCATE(xw(np), np)
       ALLOCATE(yw(np), np)
@@ -776,7 +776,7 @@ contains
     real(8), allocatable :: x(:), y(:)
 
     ! Use the grid of dspl if it is present, otherwise use the same one of spl.
-    if(is_null(dspl%spl)) then ! use the grid of spl
+    if(.not. c_associated(dspl%spl)) then ! use the grid of spl
       npoints = oct_spline_npoints(spl%spl)
       ALLOCATE(x(npoints), npoints)
       ALLOCATE(y(npoints), npoints)
@@ -803,7 +803,7 @@ contains
     real(8), allocatable :: x(:), y(:)
 
     ! Use the grid of dspl if it is present, otherwise use the same one of spl.
-    if(is_null(dspl%spl)) then ! use the grid of spl
+    if(.not. c_associated(dspl%spl)) then ! use the grid of spl
       npoints = oct_spline_npoints(spl%spl)
       ALLOCATE(x(npoints), npoints)
       ALLOCATE(y(npoints), npoints)

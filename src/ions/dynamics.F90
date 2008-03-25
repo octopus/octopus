@@ -78,7 +78,7 @@ contains
 
     integer :: i, j
     FLOAT   :: x(MAX_DIM), temperature, sigma, kin1, kin2
-    type(c_pointer_t) :: random_gen_pointer
+    type(c_ptr) :: random_gen_pointer
     type(xyz_file_info) :: xyz
 
     !%Variable MoveIons

@@ -214,7 +214,7 @@ contains
   subroutine kick_write(k, iunit, out)
     type(kick_t),         intent(in) :: k
     integer,   optional,  intent(in) :: iunit
-    type(c_pointer_t), optional,  intent(in) :: out
+    type(c_ptr), optional,  intent(in) :: out
 
     integer :: i
     character(len=120) :: aux

@@ -176,6 +176,9 @@ ACX_F90_ACCEPTS_LINE_NUMBERS
 dnl check whether the Fortran compiler supports command line arguments
 ACX_FC_COMMAND_LINE_ARGUMENTS
 
+dnl check whether the Fortran compiler supports Fortran 2003's c_ptr type
+ACX_FC_F2003_C_PTR
+
 dnl Check if the Fortran 90 uses malloc(3).
 ACX_FC_USES_MALLOC
 

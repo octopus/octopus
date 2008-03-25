@@ -142,19 +142,19 @@ contains
   ! prints the C string given by the pointer str
   subroutine print_C_string(iunit, str, pre, advance)
     integer,                    intent(in) :: iunit
-    type(c_pointer_t),                  intent(in) :: str
+    type(c_ptr),                intent(in) :: str
     character(len=*), optional, intent(in) :: pre
     character(len=*), optional, intent(in) :: advance
 
-    type(c_pointer_t)  :: s
+    type(c_ptr)        :: s
     character(len=256) :: line
     character(len=5)   :: advance_
 
     interface
       subroutine break_C_string(str, s, line)
         use types_m
-        type(c_pointer_t), intent(in)    :: str
-        type(c_pointer_t), intent(inout) :: s
+        type(c_ptr),       intent(in)    :: str
+        type(c_ptr),       intent(inout) :: s
         character(len=*),  intent(out)   :: line
       end subroutine break_C_string
     end interface
@@ -165,7 +165,7 @@ contains
     call set_null(s)
     do
       call break_C_string(str, s, line)
-      if (is_null(s)) exit
+      if (.not. c_associated(s)) exit
       if(present(pre)) then
         write(iunit, '(a,a)', advance=advance_) pre, trim(line)
       else

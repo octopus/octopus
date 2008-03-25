@@ -70,8 +70,8 @@ module fft_m
 
     integer   :: n(MAX_DIM) ! size of the fft
     integer   :: is_real    ! is the fft real or complex
-    type(c_pointer_t) :: planf      ! the plan for forward transforms
-    type(c_pointer_t) :: planb      ! the plan for backward transforms
+    type(c_ptr) :: planf      ! the plan for forward transforms
+    type(c_ptr) :: planb      ! the plan for backward transforms
   end type fft_t
 
   integer     :: fft_refs(FFT_MAX)

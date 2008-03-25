@@ -153,7 +153,7 @@ module par_vec_m
   type pv_handle_t
     private
 #if defined(HAVE_LIBNBC)
-    type(c_pointer_t) :: nbc_h
+    type(c_ptr) :: nbc_h
 #else
     integer          :: nnb
     integer, pointer :: requests(:, :)

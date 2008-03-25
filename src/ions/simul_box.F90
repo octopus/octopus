@@ -72,7 +72,7 @@ module simul_box_m
     FLOAT :: xsize          ! the length of the cylinder in the x direction
     FLOAT :: lsize(3)       ! half of the length of the parallelepiped in each direction.
 
-    type(c_pointer_t)   :: image    ! for the box defined through an image
+    type(c_ptr)   :: image    ! for the box defined through an image
     character(len=1024) :: user_def ! for the user defined box
 
     FLOAT :: rlattice(3,3)      ! lattice primitive vectors
@@ -317,7 +317,7 @@ contains
 #if defined(HAVE_GDLIB)        
         call loct_parse_string(check_inp("BoxShapeImage"), "", filename)
         sb%image = loct_gdimage_create_from(filename)
-        if(is_null(sb%image)) then
+        if(.not.c_associated(sb%image)) then
           message(1) = "Could not open file '" // filename // "'"
           call write_fatal(1)
         end if

@@ -52,12 +52,12 @@ contains
     character(len=*), intent(in) :: var
     integer,optional, intent(out):: ierr
 
-    type(c_pointer_t) :: handle, opt, name, type, section, desc
+    type(c_ptr) :: handle, opt, name, type, section, desc
     integer :: value
     logical :: first
 
     call varinfo_getvar(var, handle)
-    if(is_null(handle)) then
+    if(.not. c_associated(handle)) then
       if(present(ierr)) then
         ierr = -1
       else
@@ -79,7 +79,7 @@ contains
     first = .true.
     do
       call varinfo_getopt(handle, opt)
-      if(is_null(opt)) then
+      if(.not. c_associated(opt)) then
         exit
       else
         if(first) then
@@ -101,7 +101,7 @@ contains
     integer,           intent(in) :: option
     logical, optional, intent(in) :: is_flag
 
-    type(c_pointer_t) :: handle, opt, name, desc
+    type(c_ptr) :: handle, opt, name, desc
     integer :: value, option_
     logical :: is_flag_
 
@@ -112,12 +112,12 @@ contains
     l = .false.
 
     call varinfo_getvar(var, handle)
-    if(is_null(handle)) return
+    if(.not. c_associated(handle)) return
 
     call set_null(opt)
     do
       call varinfo_getopt(handle, opt)
-      if(is_null(opt)) exit
+      if(.not. c_associated(opt)) exit
       call varinfo_opt_getinfo(opt, name, value, desc)
 
       if(is_flag_) then
@@ -143,16 +143,16 @@ contains
     integer,          intent(in) :: option
     character(len=*), intent(in), optional :: pre
 
-    type(c_pointer_t) :: handle, opt, name, desc
+    type(c_ptr) :: handle, opt, name, desc
     integer :: value
 
     call varinfo_getvar(var, handle)
-    if(is_null(handle)) return
+    if(.not. c_associated(handle)) return
 
     call set_null(opt)
     do
       call varinfo_getopt(handle, opt)
-      if(is_null(opt)) exit
+      if(.not. c_associated(opt)) exit
 
       call varinfo_opt_getinfo(opt, name, value, desc)
 
@@ -180,14 +180,14 @@ contains
     character(len=*), intent(in) :: var
     integer,optional, intent(out):: ierr
     
-    type(c_pointer_t) :: handle, name, type, section, desc
+    type(c_ptr) :: handle, name, type, section, desc
     
     call set_null(handle)
     if(present(ierr)) ierr = -1
     do 
       call varinfo_search_var(var, handle)
 
-      if(.not. is_null(handle)) then 
+      if(c_associated(handle)) then 
         if(present(ierr)) ierr = 0
       else
         exit

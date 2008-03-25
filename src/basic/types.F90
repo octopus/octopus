@@ -20,15 +20,21 @@
 #include "global.h"
 
 module types_m
-
+#ifdef F2003_C_PTR
+  use iso_c_binding
+#endif
   implicit none
   
   private
 
-  type, public :: c_pointer_t
+#ifdef F2003_C_PTR
+  public :: c_ptr
+#else
+  type, public :: c_ptr
     private
     integer, pointer :: p
-  end type c_pointer_t
+  end type c_ptr
+#endif
 
   type, public :: block_t
     private
@@ -39,7 +45,9 @@ end module types_m
 
 
 module c_pointer_m
-
+#ifdef F2003_C_PTR
+  use iso_c_binding
+#endif
   use types_m
 
   implicit none 
@@ -47,33 +55,40 @@ module c_pointer_m
   private
 
   public :: &
-       c_pointer_t,      &
-       set_null,         &
-       is_null
+       c_ptr,      &
+       set_null,   &
+       c_associated
 
+#ifndef F2003_C_PTR
   interface
     subroutine set_null(ptr)
       use types_m
-      type(c_pointer_t), intent(out) :: ptr
+      type(c_ptr), intent(out) :: ptr
     end subroutine set_null
   end interface
 
   interface
     function is_null_int(ptr)
       use types_m
-      type(c_pointer_t), intent(in) :: ptr
+      type(c_ptr), intent(in) :: ptr
       integer :: is_null_int
     end function is_null_int
   end interface
+#endif
   
 contains
 
-  logical function is_null(ptr)
-    type(c_pointer_t), intent(in) :: ptr
-    
-    is_null = (is_null_int(ptr) /= 0)
-  end function is_null
-  
+#ifndef F2003_C_PTR
+  logical function c_associated(ptr)
+    type(c_ptr), intent(in) :: ptr
+    c_associated = (is_null_int(ptr) == 0)
+  end function c_associated
+#else
+  subroutine set_null(ptr)
+      type(c_ptr), intent(out) :: ptr
+      ptr = c_null_ptr
+  end subroutine set_null
+#endif
 end module c_pointer_m
 
 !! Local Variables:

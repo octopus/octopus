@@ -188,14 +188,14 @@ module loct_math_m
   interface loct_ran_init
     subroutine oct_ran_init(r)
       use c_pointer_m
-      type(c_pointer_t), intent(out) :: r
+      type(c_ptr), intent(out) :: r
     end subroutine oct_ran_init
   end interface
 
   interface loct_ran_end
     subroutine oct_ran_end(r)
       use c_pointer_m
-      type(c_pointer_t), intent(out) :: r
+      type(c_ptr), intent(out) :: r
     end subroutine oct_ran_end
   end interface
 
@@ -203,7 +203,7 @@ module loct_math_m
     function oct_ran_gaussian(r, sigma)
       use c_pointer_m
       real(8) :: oct_ran_gaussian
-      type(c_pointer_t), intent(in) :: r
+      type(c_ptr), intent(in) :: r
       real(8),   intent(in) :: sigma
     end function oct_ran_gaussian
     module procedure oct_ran_gaussian4
@@ -388,7 +388,7 @@ contains
 
   real(4) function oct_ran_gaussian4(r, sigma)
     use c_pointer_m
-    type(c_pointer_t), intent(in) :: r
+    type(c_ptr), intent(in) :: r
     real(4),   intent(in) :: sigma
 
     oct_ran_gaussian4 = real(oct_ran_gaussian(r, real(sigma, kind=8)), kind=4)

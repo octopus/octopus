@@ -38,6 +38,7 @@
 
 #include "string_f.h" /* fortran <-> c string compatibility issues */
 
+#ifndef F2003_C_PTR
 /* Pointer handling functions */
 
 void FC_FUNC_(set_null, SET_NULL)
@@ -51,6 +52,7 @@ int FC_FUNC_(is_null_int, is_null_int)
 {
   return (*ptr == NULL);
 }
+#endif
 
 /* *********************** interface functions ********************** */
 
