@@ -370,7 +370,7 @@ contains
   ! Propagates st from t-dt to t.
   ! If dt<0, it propagates *backwards* from t+|dt| to t
   ! ---------------------------------------------------------
-  subroutine td_rti_dt(ks, h, gr, st, tr, t, dt, max_iter, nt, ions, geo)
+  subroutine td_rti_dt(ks, h, gr, st, tr, t, dt, max_iter, nt, ions, geo, ionic_dt)
     type(v_ks_t),                    intent(inout) :: ks
     type(hamiltonian_t), target,     intent(inout) :: h
     type(grid_t),        target,     intent(inout) :: gr
@@ -381,6 +381,7 @@ contains
     integer,                         intent(in)    :: nt
     type(ion_dynamics_t), optional,  intent(inout) :: ions
     type(geometry_t),     optional,  intent(inout) :: geo
+    FLOAT,                optional,  intent(in)    :: ionic_dt
 
     integer :: is, iter
     FLOAT   :: d, d_max
@@ -394,6 +395,7 @@ contains
 
     if(present(ions)) then
       ASSERT(present(geo))
+      ASSERT(present(ionic_dt))
     end if
 
     self_consistent = .false.
@@ -612,9 +614,10 @@ contains
       end do
 
       ! propagate dt/2 with H(t)
-      
+
+      ! first move the ions to time t
       if(present(ions)) then
-        call ion_dynamics_propagate(ions, gr%sb, geo, dt)
+        call ion_dynamics_propagate(ions, gr%sb, geo, ionic_dt)
         call epot_generate(h%ep, gr, geo, st, time = t)
       end if
 
@@ -639,19 +642,23 @@ contains
 
       call push_sub('td_rti.td_app_reversal')
 
+      ! propagate half of the time step with H(t-dt)
       do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
           call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, ik), ist, ik, dt/M_TWO, t-dt)
         end do
       end do
 
+      ! interpolate the hamiltonian to time t
       call lalg_copy(NP, st%d%nspin, tr%v_old(:, :, 0), h%vhxc)
 
+      ! move the ions to time t
       if(present(ions)) then      
-        call ion_dynamics_propagate(ions, gr%sb, geo, dt)
+        call ion_dynamics_propagate(ions, gr%sb, geo, ionic_dt)
         call epot_generate(h%ep, gr, geo, st, time = t)
       end if
 
+      ! propagate the other half with H(t)
       do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
           call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, ik), ist, ik, dt/M_TWO, t)
@@ -674,10 +681,11 @@ contains
         call interpolate( (/t-3*dt, t-2*dt, t-dt/), tr%v_old(:, :, 0:2), t-dt/M_TWO, h%vhxc(:, :))
       end if
 
+      !move the ions to time t - dt/2
       if(present(ions)) then
         call ion_dynamics_save_state(ions, geo, ions_state)
-        call ion_dynamics_propagate(ions, gr%sb, geo, M_HALF*dt)
-        call epot_generate(h%ep, gr, geo, st, time = t - dt/M_TWO)
+        call ion_dynamics_propagate(ions, gr%sb, geo, M_HALF*ionic_dt)
+        call epot_generate(h%ep, gr, geo, st, time = t - ionic_dt/M_TWO)
       end if
 
       do ik = 1, st%d%nik

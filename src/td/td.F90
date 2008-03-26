@@ -197,7 +197,8 @@ contains
       select case(td%dynamics)
       case(EHRENFEST)
         if(ion_dynamics_ions_move(td%ions)) then
-          call td_rti_dt(sys%ks, h, gr, st, td%tr, i*td%dt, td%dt / td%mu, td%max_iter, i, ions = td%ions, geo = sys%geo)
+          call td_rti_dt(sys%ks, h, gr, st, td%tr, i*td%dt, td%dt / td%mu, td%max_iter, i, &
+            ions = td%ions, geo = sys%geo, ionic_dt = td%dt)
         else
           call td_rti_dt(sys%ks, h, gr, st, td%tr, i*td%dt, td%dt / td%mu, td%max_iter, i)
         end if
