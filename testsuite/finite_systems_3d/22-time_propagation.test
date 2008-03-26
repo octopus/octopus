@@ -41,12 +41,12 @@ Processors : 4
 Input      : 22-time_propagation.05-td_fast_md.inp
 Match ; Energy [step 1]  ; tail -21 td.general/energy | head -1 ; \s*-3.7911
 Match ; Energy [step 5]  ; tail -16 td.general/energy | head -1 ; \s*-3.7911
-Match ; Energy [step 10] ; tail -11 td.general/energy | head -1 ; \s*-3.7911
-Match ; Energy [step 15] ; tail -6 td.general/energy  | head -1 ; \s*-3.7911
-Match ; Energy [step 20] ; tail -1 td.general/energy  | head -1 ; \s*-3.7911
+Match ; Energy [step 10] ; tail -11 td.general/energy | head -1 ; \s*-3.7910
+Match ; Energy [step 15] ; tail -6 td.general/energy  | head -1 ; \s*-3.7910
+Match ; Energy [step 20] ; tail -1 td.general/energy  | head -1 ; \s*-3.7910
 
 Match ; Forces [step 1]  ; tail -21 td.general/coordinates | head -1 | cut -b 1610-1630; \s*-1.460
-Match ; Forces [step 5]  ; tail -16 td.general/coordinates | head -1 | cut -b 1610-1630; \s*-1.394
-Match ; Forces [step 10] ; tail -11 td.general/coordinates | head -1 | cut -b 1610-1630; \s*-1.412
-Match ; Forces [step 15] ; tail -6  td.general/coordinates | head -1 | cut -b 1610-1630; \s*-1.423
-Match ; Forces [step 20] ; tail -1  td.general/coordinates | head -1 | cut -b 1610-1630; \s*-1.412
+Match ; Forces [step 5]  ; tail -16 td.general/coordinates | head -1 | cut -b 1610-1630; \s*-7.99
+Match ; Forces [step 10] ; tail -11 td.general/coordinates | head -1 | cut -b 1610-1630; \s*-9.74
+Match ; Forces [step 15] ; tail -6  td.general/coordinates | head -1 | cut -b 1610-1630; \s*-1.080
+Match ; Forces [step 20] ; tail -1  td.general/coordinates | head -1 | cut -b 1610-1630; \s*-9.80
