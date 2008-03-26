@@ -96,6 +96,9 @@ contains
     call propagate_forward(sys_, h_, td_, par_, target, psi)
     f = - j1_functional(sys_%gr, psi)
 
+    call iteration_manager_direct(-f, par_, iterator)
+    if(oct%dump_intermediate) call iterator_write(iterator, par_)
+
     call states_end(psi)
   end subroutine direct_opt_calc
   ! ---------------------------------------------------------
@@ -122,29 +125,44 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine direct_opt_write_info(geom_iter, n, energy, maxdx, x)
+  subroutine direct_opt_write_info(geom_iter, n, val, maxdx, x)
     integer, intent(in) :: geom_iter, n
-    real(8), intent(in) :: energy, maxdx
+    real(8), intent(in) :: val, maxdx
     real(8), intent(in) :: x(n)
 
+    FLOAT :: fluence, j1, j2, j
+
     call parameters_x_to_par(par_, x)
-    iterator%ctr_iter = geom_iter
-    call iteration_manager_direct(-energy, par_, iterator, maxdx)
-    if(oct%dump_intermediate) call iterator_write(iterator, par_)
+
+    j1 = - val
+    fluence = parameters_fluence(par_)
+    j2 = - par_%alpha(1) * (fluence - par_%targetfluence)
+    j  = j1 + j2
+
+    write(message(1), '(a,i5)') 'Direct optimization iteration #', geom_iter
+    call messages_print_stress(stdout, trim(message(1)))
+
+    write(message(1), '(6x,a,f12.5)')    " => J1       = ", j1
+    write(message(2), '(6x,a,f12.5)')    " => J        = ", j
+    write(message(3), '(6x,a,f12.5)')    " => J2       = ", j2
+    write(message(4), '(6x,a,f12.5)')    " => Fluence  = ", fluence
+    write(message(5), '(6x,a,f12.5)')    " => Delta    = ", maxdx
+    call write_info(5)
+    call messages_print_stress(stdout)
 
   end subroutine direct_opt_write_info
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  subroutine direct2_opt_write_info(geom_iter, n, energy, maxdx, x)
+  subroutine direct2_opt_write_info(geom_iter, n, val, maxdx, x)
     integer, intent(in) :: geom_iter, n
-    real(8), intent(in) :: energy, maxdx
+    real(8), intent(in) :: val, maxdx
     real(8), intent(in) :: x(n)
 
     call parameters_x_to_par(par_, x)
     iterator%ctr_iter = geom_iter
-    call iteration_manager_direct(-energy, par_, iterator, maxdx)
+    call iteration_manager_direct(-val, par_, iterator, maxdx)
     if(oct%dump_intermediate) call iterator_write(iterator, par_)
 
   end subroutine direct2_opt_write_info
@@ -384,7 +402,7 @@ contains
 
     ! ---------------------------------------------------------
     subroutine scheme_direct
-      integer :: ierr
+      integer :: ierr, maxiter
       FLOAT :: minvalue, step
       FLOAT, allocatable :: x(:)
       call push_sub('opt_control.scheme_direct')
@@ -400,20 +418,11 @@ contains
       h_        => h
       td_       => td
 
-      ! Do a zero iteration, with the input field.
-      ! (This could be removed in a final version, since the minimization algorithm itself
-      ! has to repeat this run. Now it stays for clarity).
-      call states_copy(psi, initial_st)
-      call propagate_forward(sys, h, td, par, target, psi)
-      if(oct%dump_intermediate) call iterator_write(iterator, par)
-
-      j1 = j1_functional(sys%gr, psi)
-      call iteration_manager_direct(j1, par, iterator)
-
       call parameters_par_to_x(par, x)
       step = oct%direct_step * M_PI
+      maxiter = floor(real(iterator%ctr_iter_max) / real(par%nfreqs))
       ierr = loct_minimize_direct(MINMETHOD_NMSIMPLEX, par%nfreqs-1, x(1), step,&
-               iterator%eps, iterator%ctr_iter_max, &
+               iterator%eps, maxiter, &
                direct_opt_calc, direct_opt_write_info, minvalue)
 
       if(ierr.ne.0) then

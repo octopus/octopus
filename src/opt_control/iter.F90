@@ -246,7 +246,7 @@ contains
       iterator%convergence(5, iterator%ctr_iter) = M_ZERO
     end if
 
-    write(message(1), '(a,i5)') 'Optimal control iteration #', iterator%ctr_iter
+    write(message(1), '(a,i5)') 'Function evaluation #', iterator%ctr_iter
     call messages_print_stress(stdout, trim(message(1)))
 
     write(message(1), '(6x,a,f12.5)')    " => J1       = ", j1
@@ -269,6 +269,8 @@ contains
       call parameters_end(iterator%best_par)
       call parameters_copy(iterator%best_par, par)
     end if
+
+    iterator%ctr_iter = iterator%ctr_iter + 1
 
     call pop_sub()
   end subroutine iteration_manager_direct
