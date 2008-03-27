@@ -52,7 +52,6 @@ OCTPenalty =1.0
 OCTEps   = 0.000001
 OCTMaxIter = 1
 
-OCTFilterMode = no
 OCTInitialState = oct_is_groundstate
 OCTTargetOperator = oct_tg_gstransformation
 %OCTTargetTransformStates

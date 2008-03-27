@@ -51,7 +51,6 @@ TDTimeStep = dt
 OCTPenalty = 0.2
 OCTMaxIter = 2
 
-OCTFilterMode = no
 OCTInitialState = oct_is_groundstate
 OCTTargetOperator = oct_tg_density
 OCTTargetDensity = "exp(-(x-1)^2)"

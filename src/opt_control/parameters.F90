@@ -81,6 +81,9 @@ module opt_control_parameters_m
     integer :: representation
     integer :: current_representation
     FLOAT   :: omegamax
+
+    logical :: envelope
+    FLOAT   :: w0
   end type oct_control_parameters_t
 
   type(mix_t) :: parameters_mix
@@ -109,7 +112,9 @@ contains
     !%Section Optimal Control
     !%Default control_parameter_real_space
     !%Description
-    !%
+    !% The control functions can be represented in real space (default), or expanded
+    !% in a finite basis set (now, the only basis set defined in the code for this is
+    !% a sine Fourier series). 
     !%Option control_parameters_real_space 1
     !%
     !%Option control_parameters_fourier_space 2
@@ -173,6 +178,29 @@ contains
     !% guess, no matter the fluence, by setting "OCTFixInitialFluence = no".
     !%End
     call loct_parse_logical(check_inp('OCTFixInitialFluence'), .true., fix_initial_fluence)
+
+
+    !Variable OCTControlFunctionIsEnvelope
+    !%Type logical
+    !%Section Optimal Control
+    !%Default yes
+    !%Description
+    !% 
+    !%End
+    call loct_parse_logical(check_inp('OCTControlFunctionIsEnvelope'), .false., par%envelope)
+    if(par%envelope) then
+      !%Variable OCTCarrierFrequency
+      !%Type float
+      !%Section Optimal Control
+      !%Default 0.0
+      !%Description
+      !%
+      !%End
+      call loct_parse_float(check_inp('OCTCarrierFrequency'), M_ZERO, par%w0)
+    else
+      par%w0 = M_ZERO
+    end if
+
 
     ! Check that the laser polarizations are not imaginary.
     do i = 1, ep%no_lasers
@@ -476,6 +504,9 @@ contains
     do j = 1, cp%no_parameters
       call tdf_end(cp%f(j))
       call tdf_copy(cp%f(j), ep%lasers(j)%f)
+      if(cp%envelope) then
+        call tdf_cosine_divide(cp%w0, cp%f(j))
+      end if
       cp%pol(1:MAX_DIM, j) = ep%lasers(j)%pol(1:MAX_DIM)
     end do
 
@@ -528,7 +559,10 @@ contains
 
     do j = 1, cp%no_parameters
       call tdf_end(ep%lasers(j)%f)
-      ep%lasers(j)%f = par%f(j)
+      call tdf_copy(ep%lasers(j)%f, par%f(j))
+      if(par%envelope) then
+        call tdf_cosine_multiply(par%w0, ep%lasers(j)%f)
+      end if
     end do
 
     if(change_rep) then 
@@ -546,10 +580,21 @@ contains
     type(oct_control_parameters_t), intent(in) :: cp
     type(epot_t), intent(inout) :: ep
     integer, intent(in) :: val
+
     integer :: j
-    do j = 1, cp%no_parameters
+    FLOAT   :: t
+
+    if(cp%envelope) then
+      t = (val - 1)*cp%dt
+      do j = 1, cp%no_parameters
+        call tdf_set_numerical(ep%lasers(j)%f, val, tdf(cp%f(j), val) * cos(cp%w0*t) )
+      end do
+    else
+      do j = 1, cp%no_parameters
         call tdf_set_numerical(ep%lasers(j)%f, val, tdf(cp%f(j), val))
-    end do
+      end do
+    end if
+
   end subroutine parameters_to_h_val
   ! ---------------------------------------------------------
 
@@ -786,11 +831,18 @@ contains
   FLOAT function parameters_fluence(par)
     type(oct_control_parameters_t), intent(in) :: par
     integer :: j
+    type(tdf_t) :: f
     call push_sub('parameters.parameters_fluence')
 
     parameters_fluence = M_ZERO
     do j = 1, par%no_parameters
-      parameters_fluence = parameters_fluence + tdf_dot_product(par%f(j), par%f(j))
+      if(par%envelope) then
+        call tdf_copy(f, par%f(j))
+        call tdf_cosine_multiply(par%w0, f)
+        parameters_fluence = parameters_fluence + tdf_dot_product(f, f)
+      else
+        parameters_fluence = parameters_fluence + tdf_dot_product(par%f(j), par%f(j))
+      end if
     end do
 
     call pop_sub()
@@ -826,7 +878,13 @@ contains
       do i = 1, par_%ntiter + 1
         t = (i-1) * par_%dt
         do k = 1, MAX_DIM
-          integral = integral + tdf(par_%td_penalty(j), i) * real( par_%pol(k, j) * tdf(par_%f(j), i) )**2 
+          if(par%envelope) then
+            integral = integral + tdf(par_%td_penalty(j), i) * &
+              real( par_%pol(k, j) * tdf(par_%f(j), i) * cos(par%w0*t) )**2 
+          else
+            integral = integral + tdf(par_%td_penalty(j), i) * &
+              real( par_%pol(k, j) * tdf(par_%f(j), i) )**2 
+          end if
         end do
       end do
     end do
@@ -873,6 +931,8 @@ contains
     cp_out%representation = cp_in%representation
     cp_out%current_representation = cp_in%current_representation
     cp_out%omegamax = cp_in%omegamax
+    cp_out%envelope = cp_in%envelope
+    cp_out%w0 = cp_in%w0
     ALLOCATE(cp_out%f(cp_out%no_parameters), cp_out%no_parameters)
     ALLOCATE(cp_out%alpha(cp_out%no_parameters), cp_out%no_parameters)
     ALLOCATE(cp_out%td_penalty(cp_out%no_parameters), cp_out%no_parameters)

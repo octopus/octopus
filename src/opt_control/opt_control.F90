@@ -555,10 +555,6 @@ contains
 
     call parameters_set_rep(par_chi)
 
-    do j = 1, par_chi%no_parameters
-      call filter_apply(par_chi%f(j), filter)
-    end do
-
     ! Fix the fluence, in case it is needed.
     if(oct%mode_fixed_fluence) call parameters_set_fluence(par_chi)
 

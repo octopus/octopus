@@ -52,6 +52,8 @@ module tdf_m
             tdf,                         &
             tdf_dot_product,             &
             tdf_scalar_multiply,         &
+            tdf_cosine_multiply,         &
+            tdf_cosine_divide,           &
             tdf_fft_forward,             &
             tdf_fft_backward,            &
             tdf_sineseries_to_numerical, &
@@ -712,6 +714,46 @@ module tdf_m
     end select
 
   end subroutine tdf_scalar_multiply
+
+
+  !------------------------------------------------------------
+  subroutine tdf_cosine_multiply(omega, f) 
+    FLOAT, intent(in) :: omega
+    type(tdf_t), intent(inout) :: f
+
+    integer :: j
+    FLOAT :: t
+
+    ! For the moment, we will just assume that f and g are of the same type.
+    ASSERT(f%mode .eq. TDF_NUMERICAL)
+
+    do j = 1, f%niter + 1
+      t = f%init_time + (j-1)*f%dt
+      f%val(j) = f%val(j) * cos(omega*t)
+    end do
+
+  end subroutine tdf_cosine_multiply
+
+
+  !------------------------------------------------------------
+  subroutine tdf_cosine_divide(omega, f) 
+    FLOAT, intent(in) :: omega
+    type(tdf_t), intent(inout) :: f
+
+    integer :: j
+    FLOAT :: t
+
+    ! For the moment, we will just assume that f and g are of the same type.
+    ASSERT(f%mode .eq. TDF_NUMERICAL)
+
+
+    ! WARNING: no check is done for the case cos(omega*t) = 0
+    do j = 1, f%niter + 1
+      t = f%init_time + (j-1)*f%dt
+      f%val(j) = f%val(j) / cos(omega*t)
+    end do
+
+  end subroutine tdf_cosine_divide
 
 
   !------------------------------------------------------------

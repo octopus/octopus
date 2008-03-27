@@ -37,6 +37,7 @@ module filter_m
   
   public ::             &
        filter_t,        &
+       filter_number,   &
        filter_init,     &
        filter_apply,    &
        filter_write,    &
@@ -44,10 +45,10 @@ module filter_m
 
   type filter_t
     private
-    integer :: no_filters
-    type(tdf_t), pointer :: f(:)
-    character(len=1024), pointer :: expression(:)
-    integer, pointer :: domain(:)
+    integer :: no_filters = 0
+    type(tdf_t), pointer :: f(:) => NULL()
+    character(len=1024), pointer :: expression(:) => NULL()
+    integer, pointer :: domain(:) =>  NULL()
   end type filter_t
 
   integer, parameter, public  :: &
@@ -146,6 +147,7 @@ contains
 
     call pop_sub()
   end subroutine filter_init
+  ! ---------------------------------------------------------
 
   
   ! ---------------------------------------------------------
@@ -188,6 +190,7 @@ contains
 
     call pop_sub()
   end subroutine filter_apply
+  ! ---------------------------------------------------------
 
 
   !------------------------------------------------
@@ -243,6 +246,7 @@ contains
     
     call pop_sub()
   end subroutine build_filter
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
@@ -287,6 +291,7 @@ contains
 
     call pop_sub()
   end subroutine filter_write
+  ! ---------------------------------------------------------
 
 
   ! ----------------------------------------------------------------
@@ -310,6 +315,15 @@ contains
 
     call pop_sub()
   end subroutine filter_end
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  integer function filter_number(filter)
+    type(filter_t), intent(in) :: filter
+    filter_number = filter%no_filters
+  end function filter_number
+  ! ---------------------------------------------------------
 
 
 end module filter_m

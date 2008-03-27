@@ -43,7 +43,6 @@ OCTPenalty =5.0
 OCTEps   = -1.0
 OCTMaxIter = 2
 
-OCTFilterMode = no
 OCTFixFluenceTo = 0.08
 OCTFixInitialFluence = no
 OCTInitialState = oct_is_groundstate

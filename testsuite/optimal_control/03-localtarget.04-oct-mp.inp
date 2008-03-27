@@ -67,7 +67,6 @@ OCTPenalty = 0.2
 OCTEps = 1.0e-8
 OCTMaxIter = 2
 
-OCTFilterMode = no
 OCTInitialState = oct_is_groundstate
 
 OCTTargetOperator = oct_tg_density

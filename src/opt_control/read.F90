@@ -245,7 +245,13 @@
       end if
     end if
       
-    ! WARNING filters can only be used with WG05, and this is not checked any more.
+    ! Filters only with the WG05 scheme.
+    if(filter_number(filter).ne.0) then
+      if(oct%algorithm .ne. oct_algorithm_wg05) then
+        write(message(1), '(a)') 'Filters can only be used with the WG05 QOCT algorithm.'
+        call write_fatal(1)
+      end if
+    end if
       
     ! local targets only in ZR98 and WG05
     if(target%type .eq. oct_tg_local .or. &
