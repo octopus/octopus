@@ -946,10 +946,10 @@ write(*,*) 'state 2', st%zpsi(:,1,st%st_start+1,ik)
       do ist = st%st_start, st%st_end
         ! 1. Apply effective Hamiltonian.
         if (mem_type.eq.1) then
-       !   call apply_h_eff(h, gr, mem(:, :, 0, :), intf, -M_ONE, dt, t, ist, ik, st%zpsi(:, :, ist, ik))
+          call apply_h_eff(h, gr, mem(:, :, 0, :), intf, -M_ONE, dt, t, ist, ik, st%zpsi(:, :, ist, ik))
         else
-        !  call apply_h_eff_sp(h, gr, sp_mem(:, 0, :), intf, -M_ONE, dt, t, ist, ik, &
-         !                     st%zpsi(:, :, ist, ik), mem_s(:, :, :, :), mapping)
+          call apply_h_eff_sp(h, gr, sp_mem(:, 0, :), intf, -M_ONE, dt, t, ist, ik, &
+                              st%zpsi(:, :, ist, ik), mem_s(:, :, :, :), mapping)
         end if
 
         do il = 1, NLEADS
