@@ -71,9 +71,7 @@
     !% resulting wave functions. Note that this scheme typically does not converge, unless
     !% some mixing ("OCTMixing = yes") is used.
     !%Option oct_algorithm_direct 7
-    !% Direct optimization (version 1)
-    !%Option oct_algorithm_direct2 8
-    !% Direct optimization (version 2)
+    !% Direct optimization (experimental)
     !%End
     call loct_parse_int(check_inp('OCTScheme'), oct_algorithm_zr98, oct%algorithm)
     if(.not.varinfo_valid_option('OCTScheme', oct%algorithm)) call input_error('OCTScheme')
@@ -86,6 +84,9 @@
       oct%delta = M_ONE; oct%eta = M_ZERO
     case(oct_algorithm_str_iter)
       oct%delta = M_ZERO; oct%eta = M_ONE
+    case(oct_algorithm_direct)
+      call loct_parse_float(check_inp('OCTEta'), M_ONE, oct%eta)
+      call loct_parse_float(check_inp('OCTDelta'), M_ZERO, oct%delta)
     case default
       oct%delta = M_ONE; oct%eta = M_ONE
     end select
@@ -220,8 +221,7 @@
     if((oct%mode_fixed_fluence)) then
       if( (oct%algorithm.ne.oct_algorithm_wg05)     .and. &
           (oct%algorithm.ne.oct_algorithm_str_iter) .and. &
-          (oct%algorithm.ne.oct_algorithm_direct)   .and. &
-          (oct%algorithm.ne.oct_algorithm_direct2)  ) then
+          (oct%algorithm.ne.oct_algorithm_direct)  ) then
         write(message(1),'(a)') "Cannot optimize to a given fluence with the chosen algorithm."
         write(message(2),'(a)') "Switching to scheme WG05."         
         call write_info(2)
@@ -310,15 +310,13 @@
 
     if(oct%mode_basis_set) then
       if( (oct%algorithm .ne. oct_algorithm_str_iter)  .and.  &
-          (oct%algorithm .ne. oct_algorithm_direct)    .and.  &
-          (oct%algorithm .ne. oct_algorithm_direct2) ) then
+          (oct%algorithm .ne. oct_algorithm_direct) ) then
         write(message(1), '(a)') 'If the control parameters are to be represented with a basis set'
         write(message(2), '(a)') '(i.e. "OCTParameterRepresentation = control_parameters_fourier_space"),'
         write(message(3), '(a)') 'the only acceptable algorithms are:'
         write(message(4), '(a)') ' (1) "OCTScheme = oct_algorithm_straight_iteration".'
         write(message(5), '(a)') ' (2) "OCTScheme = oct_algorithm_direct".'
-        write(message(6), '(a)') ' (2) "OCTScheme = oct_algorithm_direct2".'
-        call write_fatal(6)
+        call write_fatal(5)
       endif
     end if
 

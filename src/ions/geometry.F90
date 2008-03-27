@@ -152,7 +152,7 @@ contains
     !% from the file specified by its value. The PDB (Protein Data Bank
     !% (http://www.rcsb.org/pdb/)) format is quite complicated, and it goes 
     !% well beyond the scope of this manual. You can find a comprehensive
-    !% description in <a href='http://www.rcsb.org/pdb/docs/format/pdbguide2.2/guide2.2_frame.html'>here</a>.
+    !% description in <a href='http://www.wwpdb.org/docs.html'>here</a>.
     !% From the plethora of instructions defined in the PDB standard, octopus
     !% only reads two, "ATOM" and "HETATOM". From these fields, it reads:
     !% <ul>

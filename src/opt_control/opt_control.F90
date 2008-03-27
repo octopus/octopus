@@ -89,38 +89,31 @@ contains
     real(8), intent(in)  :: x(n)
     real(8), intent(out) :: f
 
+    FLOAT :: j1, delta
     type(states_t) :: psi
+    type(oct_control_parameters_t) :: par_new
 
     call parameters_x_to_par(par_, x)
-    call states_copy(psi, initial_st)
-    call propagate_forward(sys_, h_, td_, par_, target, psi)
-    f = - j1_functional(sys_%gr, psi)
 
-    call iteration_manager_direct(-f, par_, iterator)
+    if(oct%delta == M_ZERO) then
+      ! We only need the value of the target functional.
+      call states_copy(psi, initial_st)
+      call propagate_forward(sys_, h_, td_, par_, target, psi)
+      f = - j1_functional(sys_%gr, psi)
+      call iteration_manager_direct(-f, par_, iterator)
+      call states_end(psi)
+    else
+      call parameters_copy(par_new, par_)
+      call f_striter(sys_, h_, td_, par_new, j1)
+      delta = parameters_diff(par_, par_new)
+      f = - oct%eta * j1 + oct%delta * delta
+      call iteration_manager_direct(-f, par_, iterator, delta)
+      call parameters_end(par_new)
+    end if
+
     if(oct%dump_intermediate) call iterator_write(iterator, par_)
 
-    call states_end(psi)
   end subroutine direct_opt_calc
-  ! ---------------------------------------------------------
-
-
-  ! ---------------------------------------------------------
-  subroutine direct2_opt_calc(n, x, f)
-    integer, intent(in)  :: n
-    real(8), intent(in)  :: x(n)
-    real(8), intent(out) :: f
-
-    type(oct_control_parameters_t) :: par_new
-    FLOAT :: j1
-
-    call parameters_x_to_par(par_, x)
-    call parameters_copy(par_new, par_)
-    call f_striter(sys_, h_, td_, par_new, j1)
-
-    f = parameters_diff(par_, par_new)
-
-    call parameters_end(par_new)
-  end subroutine direct2_opt_calc
   ! ---------------------------------------------------------
 
 
@@ -151,21 +144,6 @@ contains
     call messages_print_stress(stdout)
 
   end subroutine direct_opt_write_info
-  ! ---------------------------------------------------------
-
-
-  ! ---------------------------------------------------------
-  subroutine direct2_opt_write_info(geom_iter, n, val, maxdx, x)
-    integer, intent(in) :: geom_iter, n
-    real(8), intent(in) :: val, maxdx
-    real(8), intent(in) :: x(n)
-
-    call parameters_x_to_par(par_, x)
-    iterator%ctr_iter = geom_iter
-    call iteration_manager_direct(-val, par_, iterator, maxdx)
-    if(oct%dump_intermediate) call iterator_write(iterator, par_)
-
-  end subroutine direct2_opt_write_info
   ! ---------------------------------------------------------
 
 
@@ -245,10 +223,6 @@ contains
         message(1) = "Info: Starting OCT iterations using scheme: DIRECT OPTIMIZATION"
         call write_info(1)
         call scheme_direct
-      case(oct_algorithm_direct2)
-        message(1) = "Info: Starting OCT iterations using scheme: DIRECT OPTIMIZATION (2)"
-        call write_info(1)
-        call scheme_direct2
     case default
       call input_error('OCTScheme')
     end select
@@ -440,48 +414,6 @@ contains
       call pop_sub()
     end subroutine scheme_direct
     ! ---------------------------------------------------------
-
-    ! ---------------------------------------------------------
-    subroutine scheme_direct2
-      integer :: ierr
-      FLOAT :: minvalue, step
-      FLOAT, allocatable :: x(:)
-      call push_sub('opt_control.scheme_direct2')
-
-      call parameters_set_rep(par)
-
-      ALLOCATE(x(par%nfreqs-1), par%nfreqs-1)
-
-      ! Set the module pointers, so that the calc_point and write_iter_info routines
-      ! can use them.
-      call parameters_copy(par_, par)
-      sys_      => sys
-      h_        => h
-      td_       => td
-
-      call states_copy(psi, initial_st)
-
-      call parameters_par_to_x(par, x)
-      step = oct%direct_step * M_PI
-      ierr = loct_minimize_direct(MINMETHOD_NMSIMPLEX, par%nfreqs-1, x(1), step,&
-               iterator%eps, iterator%ctr_iter_max, &
-               direct2_opt_calc, direct2_opt_write_info, minvalue)
-
-      if(ierr.ne.0) then
-        if(ierr <= 1024) then
-          message(1) = "Error occurred during the GSL minimization procedure:"
-          call loct_strerror(ierr, message(2))
-          call write_fatal(2)
-        else
-          message(1) = "The OCT direct optimization did not meet the convergence criterion."
-          call write_info(1)
-        end if
-      end if
-
-      deallocate(x)
-      call pop_sub()
-    end subroutine scheme_direct2
-
 
   end subroutine opt_control_run
   ! ---------------------------------------------------------

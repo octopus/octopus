@@ -58,7 +58,9 @@
 #  define ALLOCATE(x, size) \
      allocate(x, stat=global_alloc_err)                 \newline \
      if(global_alloc_err.ne.0) then                     \newline \
-       call alloc_error((size), __FILE__, __LINE__)     \newline \
+       call alloc_error((size),  &                      \newline \
+  __FILE__, &                                           \newline \
+  __LINE__)                                             \newline \
      end if                                             \
      CARDINAL
 #endif
