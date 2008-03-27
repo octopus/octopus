@@ -141,7 +141,7 @@ contains
     !% Sets the convergence tolerance for the residue in the BiCG linear solver
     !% in the Crank-Nicholson procedure.
     !%End
-    call loct_parse_float(check_inp('TDTransBiCGMaxIter'), CNST(1e-12), cg_tol)
+    call loct_parse_float(check_inp('TDTransBiCGTol'), CNST(1e-12), cg_tol)
     if(cg_tol.le.M_ZERO) then
       write(message(1), '(a,f14.6,a)') "Input : '", cg_tol, "' is not a valid TDTransBiCGTol."
       message(2) = '(0 < TDTransBiCGTol)'
@@ -410,7 +410,6 @@ energy = 0.2
   
   ! ---------------------------------------------------------
   ! compute the semi-infinite surface green function (half) analyticly
-  ! returns V^T * g * V
   ! only the diagonalization process is numerical done
   subroutine green_lead(energy, diag, offdiag, np, il, green)
     FLOAT,               intent(in)  :: energy
@@ -434,12 +433,11 @@ energy = 0.2
     ALLOCATE(d(2*np),2*np)
 
     ! Algorithm taken from A. Umerski, Closed-form solutions to surface Green`s functions
-    ! 1. create matrix x ( x = {{0,offdiag^(-1)},{-offdiag^T,(energy-diag)*offdiag}} )
+    ! 1. create matrix x ( x = {{0,offdiag^(-1)},{-offdiag^T,(energy-diag)*offdiag^(-1)}} )
     ! 2. compute diagonalization matrix s, s^(-1)*x*s = d
     ! 3. extract submatrices ( s = {{o1,o2},{o3,o4}}; d = {{d1,0},{0,d2}} )
     ! 4. calculate g = o2*(offdiag*o2*d2)^(-1) for left lead or
     !              g = o1*d1*(o1*offdiag^(T))^(-1) for right lead
-    ! 5. calculate offdiag^(T)*g*offdiag
 
     ! 1. create matrix x ( x = {{0,offdiag^(-1)},{-offdiag^T,(energy-diag)*offdiag^(-1)}} )
     x(1:np,1:np) = M_z0
@@ -452,10 +450,10 @@ energy = 0.2
     end if
     x(1:np,np+1:2*np) = sub_o
     do i=1, np
-      x(np+i,1:np) = -offdiag(:,i)
+      x(np+i,1:np) = -offdiag(1:np,i)
     end do
     ! use sub_d as tmp variable
-    sub_d = -diag
+    sub_d(:, :) = -diag(:, :)
     do i=1, np
       sub_d(i,i) = sub_d(i,i) + energy + CNST(1e-10)*M_zI
     end do
@@ -467,8 +465,11 @@ energy = 0.2
     x(np+1:2*np,np+1:2*np) = sub_d
 
     ! 2. compute diagonalization matrix s, s^(-1)*x*s = d
-    s = x
-    call lalg_geneigensolve_nonh(2*np, s, d)
+    s(:, :) = x(:, :)
+    ! TODO: there is still a problem near the transversal eigenenergies,
+    ! there the zgeev,zgeevx routine does not work
+    ! a bigger imaginary eta does not solve this issue.
+    call lalg_eigensolve_nonh(2*np, s, d)
 
     ! 3. extract submatrices ( S = {{o1,o2},{o3,o4}}; D = {{d1,0},{0,d2}} )
     sub_d = M_z0
@@ -477,24 +478,26 @@ energy = 0.2
       do i=1, np
         sub_d(i,i) = d(np+i)
       end do
+!write(*,*) 'd', d(np+1:2*np)
     else ! right side --> o1, d1
       sub_o = s(1:np,1:np)
       do i=1, np
         sub_d(i,i) = d(i)
       end do
+!write(*,*) 'd', d(1:np)
     end if
 
-    ! 4. calculate offdiag^(T)*g*offdiag
-    if (il.eq.LEFT) then ! offdiag^(T)*g*offdiag = offdiag^(T)*o2*(o2*d2)^(-1)
+    ! 4. calculate g
+    if (il.eq.LEFT) then ! g = o2*(offdiag*o2*d2)^(-1)
       call zsymm('R','U',np,np,M_z1,sub_d,np,sub_o,np,M_z0,tmp,np)
+      call lalg_trmm(np,np,'U','N','L',M_z1,offdiag,tmp)
       det = lalg_inverter(np, tmp, invert = .true.)
       call zgemm('N','N',np,np,np,M_z1,sub_o,np,tmp,np,M_z0,green,np)
-      call lalg_trmm(np,np,'U','T','L',M_z1,offdiag,green)
-    else ! offdiag^(T)*g*offdiag = offdiag^(T)*o1*d1*o1^(-1)
+    else ! g = o1*d1*(offdiag^T*o1)^(-1)
       call zsymm('R','U',np,np,M_z1,sub_d,np,sub_o,np,M_z0,tmp,np)
+      call lalg_trmm(np,np,'L','T','L',M_z1,offdiag,sub_o)
       det = lalg_inverter(np, sub_o, invert = .true.)
       call zgemm('N','N',np,np,np,M_z1,tmp,np,sub_o,np,M_z0,green,np)
-      call lalg_trmm(np,np,'L','T','L',M_z1,offdiag,green)
     end if
     ! now check if we have the correct solution: Im(Tr(g))<0
     ! if this is not the case just take the conjugate
@@ -505,6 +508,7 @@ energy = 0.2
     if (det.gt.M_ZERO) then
       green = conjg(green)
     end if
+write(*,*) 'dos', -det
 
     deallocate(x, s, sub_o, sub_d, d, tmp)
     call pop_sub()
@@ -534,7 +538,7 @@ energy = 0.2
 
   ! ---------------------------------------------------------
   ! compute the extended eigenstate(s) with imaginary part of the green function
-  ! needs much memory: matrix do diagonalize has the size np**2 
+  ! needs much memory: matrix do diagonalize has the size NP**2 
   subroutine ext_eigenst_imag_green(h, gr, np, diag, offdiag, order, energy, lead_pot, dx, st, phase, ik)
     type(hamiltonian_t), intent(in) :: h
     type(grid_t),   intent(in)      :: gr
@@ -574,7 +578,9 @@ energy = 0.2
     ! 1. calculate the extended eigenstate (unbounded)
     ! 1.1 calculate the retarded green function
     call green_lead(energy, diag(:,:,LEFT), offdiag(:,:,LEFT), np, LEFT, green_l(:,:,LEFT))
+    ! TODO: apply_coupling
     call green_lead(energy, diag(:,:,RIGHT), offdiag(:,:,RIGHT), np, RIGHT, green_l(:,:,RIGHT))
+    ! TODO: apply_coupling
     ! 1.2 calculate the green function for the central region
     g_cc = M_z0
     call nl_operator_op_to_matrix_cmplx(gr%f_der%der_discr%lapl, g_cc)
@@ -666,8 +672,8 @@ write(*,*) 'state 2', st%zpsi(:,1,st%st_start+1,ik)
 
     call push_sub('td_trans_rti.h_eff_lip_sch')
 
-    ALLOCATE(tmpx(gr_p%m%np_part, 1),gr_p%m%np_part)
-    ALLOCATE(tmpy(gr_p%m%np_part, 1),gr_p%m%np_part)
+    ALLOCATE(tmpx(gr_p%m%np_part, 1), gr_p%m%np_part)
+    ALLOCATE(tmpy(gr_p%m%np_part, 1), gr_p%m%np_part)
     inp = intf_p%np
     np = gr_p%m%np
 
@@ -677,8 +683,8 @@ write(*,*) 'state 2', st%zpsi(:,1,st%st_start+1,ik)
 
     y(1:np) = energy_p*x(1:np) - tmpy(1:np,1)
     ! TODO: the static potential of the lead
-    call zsymv('U', inp, -M_z1, green_l_p(:,:,LEFT), inp, x(1:inp), 1, M_z1, y(1:inp), 1)
-    call zsymv('U', inp, -M_z1, green_l_p(:,:,RIGHT), inp, x(np-inp+1:np), &
+    call zsymv('U', inp, -M_z1, green_l_p(:, :, LEFT), inp, x(1:inp), 1, M_z1, y(1:inp), 1)
+    call zsymv('U', inp, -M_z1, green_l_p(:, :, RIGHT), inp, x(np-inp+1:np), &
                1, M_z1, y(np-inp+1:np), 1)
 
 
@@ -687,43 +693,25 @@ write(*,*) 'state 2', st%zpsi(:,1,st%st_start+1,ik)
   end subroutine h_eff_lip_sch
 
   ! ---------------------------------------------------------
-  ! the left side of the Lippmann-Schwinger equation (daggered)
-  ! e-H_cc+V(lead)-sum(a)[H_ca*g_a*H_ac]
-  ! Used by the iterative linear solver.
-  subroutine h_eff_lip_sch_t(x, y)
-    CMPLX, intent(in)  :: x(:)
-    CMPLX, intent(out) :: y(:)
-
-    CMPLX, allocatable :: tmpx(:, :)
-    CMPLX, allocatable :: tmpy(:, :)
-    integer            :: np, inp
-
-    call push_sub('td_trans_rti.h_eff_lip_sch_t')
-
-    ALLOCATE(tmpx(gr_p%m%np_part, 1),gr_p%m%np_part)
-    ALLOCATE(tmpy(gr_p%m%np_part, 1),gr_p%m%np_part)
-    np = gr_p%m%np
-    inp = intf_p%np
-    tmpx(1:np, 1) = conjg(x(1:np))
-    call zhpsi(h_p, gr_p, tmpx, tmpy, 1, 1)
-    tmpy(1:np,1) = energy_p*tmpx(1:np, 1) - tmpy(1:np,1)
-    ! TODO: the static potential of the lead
-    call zsymv('U', inp, -M_z1, green_l_p(:,:,LEFT), inp, tmpx(1:inp,1), 1, M_z1, tmpy(1:inp,1), 1)
-    call zsymv('U', inp, -M_z1, green_l_p(:,:,RIGHT), inp, tmpx(np-inp+1:np,1), &
-               1, M_z1, tmpy(np-inp+1:np,1), 1)
-    y(1:np) = conjg(tmpy(1:np,1))
-
-    deallocate(tmpx, tmpy)
-    call pop_sub()
-  end subroutine h_eff_lip_sch_t
-
-  ! ---------------------------------------------------------
   subroutine preconditioner(x, y)
     CMPLX, intent(in)  :: x(:)
     CMPLX, intent(out) :: y(:)
 
+    CMPLX, allocatable :: diag(:, :)
+    integer            :: np, i
+
     call push_sub('td_rti.preconditioner')
-    y(:) = x(:)
+    np = gr_p%m%np
+
+    ALLOCATE(diag(np, 1), np)
+
+    call zhpsi_diag(h_p, gr_p, diag, 1)
+
+    diag(:, 1) = energy_p - diag(:,1) 
+    y(1:np) = x(1:np)/diag(1:np, 1)
+!    y(:) = x(:) ! no preconditioner
+
+    deallocate(diag)
 
     call pop_sub()
   end subroutine preconditioner
@@ -750,7 +738,6 @@ write(*,*) 'state 2', st%zpsi(:,1,st%st_start+1,ik)
     integer, pointer   :: lxyz(:,:)
     FLOAT              :: en, lsize(3), q(3)
     FLOAT              :: dres
-    CMPLX              :: cres
 
     call push_sub('td_trans_rti.ext_eigenstate_lip_sch')
 
@@ -773,17 +760,16 @@ write(*,*) 'state 2', st%zpsi(:,1,st%st_start+1,ik)
     ! subtract the transversal energy from the total energy to get the longitudinal part
     ! which is the energy used for the transport
     do id=2, gr%sb%dim ! FIXME: when the last gridpoint is not the border, recalculate transversal energy
-      q(id) = M_PI/(M_TWO*(lsize(id)+gr%sb%h(1)))
+      q(id) = M_PI/(M_TWO*(lsize(id)+gr%sb%h(id)))
       n(id) = sqrt(M_TWO*en)/q(id) ! use for now the largest transversal energy
       en = en - M_HALF*(n(id)*q(id))**2
     end do
-write(*,*) 'n  = ',n(2)
-write(*,*) 'ex = ',en
-write(*,*) 'ey = ',M_HALF*(n(2)*q(2))**2
+!write(*,*) 'ny, ex, ey',n(2), en, M_HALF*(n(2)*q(2))**2
+!write(*,*) 'ny, ex',n(2), en
     ! FIXME: tight binding approximation
     q(1) = sqrt(M_TWO*en)
     ! the rest is the energy for the transport direction
-    if(en.le.M_ZERO) then
+    if(en < M_ZERO) then
       write(message(1), '(a,f14.6,a)') "The input energy : '", energy, &
                   "' is smaller than the groundstate energy for the given system."
       call write_fatal(1)
@@ -800,26 +786,29 @@ write(*,*) 'ey = ',M_HALF*(n(2)*q(2))**2
       end do
     end do
     ! calculate right hand side (e-T-V(lead)-sum(a)[H_ca*g_a*H_ac]
+    tmp(:,:) = M_z0
     call zkinetic(h, gr, st%zpsi(:, :, 1, ik), tmp(:,:))
     tmp(1:NP, :) = energy*st%zpsi(1:NP, :, 1, ik) - tmp(1:NP, :)
     ! TODO: the static potential of the lead
     call green_lead(energy, diag(:, :, LEFT), offdiag(:, :, LEFT), np, LEFT, green_l(:, :, LEFT))
+    call apply_coupling(green_l(:, :, LEFT), offdiag(:, :, LEFT), green_l(:, :, LEFT), np, LEFT)
     call zsymv('U', np, -M_z1, green_l(:, :, LEFT), np, st%zpsi(1:np, 1, 1, 1), 1, M_z1, tmp(1:np, 1), 1)
     call green_lead(energy, diag(:, :, RIGHT), offdiag(:, :, RIGHT), np, RIGHT, green_l(:, :, RIGHT))
+    call apply_coupling(green_l(:, :, RIGHT), offdiag(:, :, RIGHT), green_l(:, :, RIGHT), np, RIGHT)
 
     call zsymv('U', np, -M_z1, green_l(:, :, RIGHT), np, &
       st%zpsi(NP - np + 1:NP, 1, 1, 1), 1, M_z1, tmp(NP - np + 1:NP, 1), 1)
 
     ! now solve the equation
     green_l_p => green_l
-    ! set the unperturbed state as initial guess
-    iter = 10000
+    ! now solve the linear system to get the extended eigenstate
+    iter = 5000
+    ! zconjugate_gradients fails in some cases (wrong solution) and takes longer
+    ! therefore take the symmetric quasi-minimal residual solver (QMR)
     call zqmr_sym(NP, st%zpsi(:, 1, 1, ik), tmp(:, 1), h_eff_lip_sch, preconditioner, &
                     iter, residue=dres, threshold=cg_tol, showprogress = .true.)
     write(*,*) 'iter =',iter, 'residue =', dres
-!    call zconjugate_gradients(NP, st%zpsi(:, 1, 1, ik), tmp(:, 1), &
-!      h_eff_lip_sch, h_eff_lip_sch_t, zmf_dotp_aux, iter, residue=cres, threshold=cg_tol)
-!    write(*,*) iter, cres
+
     deallocate(green_l, tmp)
     call pop_sub()
   end subroutine ext_eigenstate_lip_sch
@@ -929,11 +918,17 @@ write(*,*) 'ey = ',M_HALF*(n(2)*q(2))**2
 
 !if (m.eq.0) then
 ! FIXME: this does NOT belong here
-  energy = (timestep/M_TEN+3.85)*(M_PI/(gr%sb%lsize(2)+gr%sb%h(2)))**2/M_EIGHT !M_TWO/M_TEN
-!  energy = (timestep/M_TEN+1.25)*(M_PI/(gr%sb%lsize(2)+gr%sb%h(2)))**2/M_EIGHT !M_TWO/M_TEN
-!write(*,*) energy
+  energy = (timestep/M_TEN+3.825)*(M_PI/(gr%sb%lsize(2)+gr%sb%h(2)))**2/M_EIGHT 
+!  energy = (timestep/M_TEN+3.4)*(M_PI/(gr%sb%lsize(2)+gr%sb%h(2)))**2/M_EIGHT 
+!  energy = (timestep/M_TEN+1.175)*(M_PI/(gr%sb%lsize(2)+gr%sb%h(2)))**2/M_EIGHT
+!  energy = (timestep/M_TEN+0.925)*(M_PI/(gr%sb%lsize(2)+gr%sb%h(2)))**2/M_EIGHT
+!  energy = (timestep/M_TEN/M_TWO)
+!  energy = (timestep/M_TEN**5+3.96750)*(M_PI/(gr%sb%lsize(2)+gr%sb%h(2)))**2/M_EIGHT 
+!  energy = ((timestep+1)**2-0.1)*(M_PI/(gr%sb%lsize(2)+gr%sb%h(2)))**2/M_EIGHT 
+!write(*,*) 'E/Ey', (timestep/M_TEN**5+3.96750)
+!  energy = 0.1
   do ik = 1, st%d%nik
-    !call calculate_ext_eigenstate(h, gr, intf%np, diag, offdiag, order, energy, u(0,:), gr%sb%h(1), st, st_phase, ik)
+   ! call calculate_ext_eigenstate(h, gr, intf%np, diag, offdiag, order, energy, u(0,:), gr%sb%h(1), st, st_phase, ik)
   end do
 !end if
 !write(*,*) 'left  center', st%zpsi(1, 1, 1, 1)
@@ -951,10 +946,10 @@ write(*,*) 'ey = ',M_HALF*(n(2)*q(2))**2
       do ist = st%st_start, st%st_end
         ! 1. Apply effective Hamiltonian.
         if (mem_type.eq.1) then
-          call apply_h_eff(h, gr, mem(:, :, 0, :), intf, -M_ONE, dt, t, ist, ik, st%zpsi(:, :, ist, ik))
+       !   call apply_h_eff(h, gr, mem(:, :, 0, :), intf, -M_ONE, dt, t, ist, ik, st%zpsi(:, :, ist, ik))
         else
-          call apply_h_eff_sp(h, gr, sp_mem(:, 0, :), intf, -M_ONE, dt, t, ist, ik, &
-                              st%zpsi(:, :, ist, ik), mem_s(:, :, :, :), mapping)
+        !  call apply_h_eff_sp(h, gr, sp_mem(:, 0, :), intf, -M_ONE, dt, t, ist, ik, &
+         !                     st%zpsi(:, :, ist, ik), mem_s(:, :, :, :), mapping)
         end if
 
         do il = 1, NLEADS

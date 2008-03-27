@@ -29,8 +29,8 @@ module lalg_adv_m
   public ::                       &
     lalg_cholesky,                &
     lalg_geneigensolve,           &
-    lalg_geneigensolve_nonh,      &
     lalg_eigensolve,              &
+    lalg_eigensolve_nonh,         &
     lalg_determinant,             &
     lalg_inverter,                &
     lalg_sym_inverter,            &
@@ -50,8 +50,8 @@ module lalg_adv_m
     module procedure dgeneigensolve, zgeneigensolve
   end interface
 
-  interface lalg_geneigensolve_nonh
-    module procedure zgeneigensolve_nonh
+  interface lalg_eigensolve_nonh
+    module procedure zeigensolve_nonh, deigensolve_nonh
   end interface
 
   interface lalg_eigensolve

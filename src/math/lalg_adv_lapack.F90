@@ -261,8 +261,8 @@ end subroutine zgeneigensolve
 
 ! ---------------------------------------------------------
 ! Computes all the eigenvalues and the right (left) eigenvectors of a complex
-! generalized (non hermitian) eigenproblem, of the form  A*x=(lambda)*x
-subroutine zgeneigensolve_nonh(n, a, e, err_code, side)
+! (non hermitian) eigenproblem, of the form  A*x=(lambda)*x
+subroutine zeigensolve_nonh(n, a, e, err_code, side)
   integer,           intent(in)      :: n
   CMPLX,             intent(inout)   :: a(n,n)
   CMPLX,             intent(out)     :: e(n)
@@ -309,12 +309,13 @@ subroutine zgeneigensolve_nonh(n, a, e, err_code, side)
       ALLOCATE(vl(n,n), n*n)
       ALLOCATE(vr(1, 1), 1)
       call ZLAPACK(geev) ('V', 'N', n, a(1, 1), n, e(1), vl(1, 1), n, vr(1,1), 1, work(1), lwork, rwork(1), info)
+      a(:, :) = vl(:, :)
   else
       ALLOCATE(vl(1, 1), 1)
       ALLOCATE(vr(n,n), n*n)
       call ZLAPACK(geev) ('N', 'V', n, a(1, 1), n, e(1), vl(1, 1), 1, vr(1,1), n, work(1), lwork, rwork(1), info)
+      a(:, :) = vr(:, :)
   end if
-  a(:, :) = vr(:, :)
   deallocate(work, rwork, vr, vl)
 
   if(info.ne.0) then
@@ -324,8 +325,76 @@ subroutine zgeneigensolve_nonh(n, a, e, err_code, side)
   if(present(err_code)) then
     err_code = info
   end if
-end subroutine zgeneigensolve_nonh
+end subroutine zeigensolve_nonh
 
+
+! ---------------------------------------------------------
+! Computes all the eigenvalues and the right (left) eigenvectors of a complex
+! generalized (non hermitian) eigenproblem, of the form  A*x=(lambda)*x
+subroutine deigensolve_nonh(n, a, e, err_code, side)
+  integer,           intent(in)      :: n
+  FLOAT,             intent(inout)   :: a(n,n)
+  FLOAT,             intent(out)     :: e(n)
+  integer, optional, intent(out)     :: err_code
+  character(1), optional, intent(in) :: side ! which eigenvectors ('L' or 'R')
+
+  interface
+    subroutine DLAPACK(geev) (jobvl, jobvr, n, a, lda, w, vl, ldvl, vr, ldvr, work, lwork, rwork, info)
+      character(1), intent(in)    :: jobvl, jobvr
+      integer,      intent(in)    :: n, lda, ldvl, ldvr, lwork
+      FLOAT,        intent(inout) :: a ! a(lda,n)
+      FLOAT,        intent(out)   :: w, vl, vr ! w(n), vl(ldvl,n), vl(ldvr,n)
+      FLOAT,        intent(out)   :: rwork ! rwork(max(1,2n))
+      FLOAT,        intent(out)   :: work  ! work(lwork)
+      integer,      intent(out)   :: info
+    end subroutine DLAPACK(geev)
+  end interface
+
+  integer            :: info, lwork
+  FLOAT, allocatable :: rwork(:)
+  FLOAT, allocatable :: work(:), vl(:, :) ,vr(:, :)
+  character(1)       :: side_
+
+  if (present(side)) then
+    side_ = side
+  else
+    side_ = 'R'
+  end if
+
+  lwork = -1
+  ALLOCATE(work(1), 1)
+  ALLOCATE(vl(1, 1), 1)
+  ALLOCATE(vr(1, 1), 1)
+  ALLOCATE(rwork(1), 1)
+  call DLAPACK(geev) ('N', 'V', n, a(1, 1), n, e(1), vl(1, 1), 1, vr(1, 1), n, work(1), lwork, rwork(1), info)
+    
+  lwork = int(real(work(1)))
+  deallocate(work, vl, vr, rwork)
+  
+
+  ALLOCATE(work(lwork), lwork)
+  ALLOCATE(rwork(max(1, 2*n)), max(1, 2*n))
+  if (side_.eq.'L'.or.side_.eq.'l') then
+      ALLOCATE(vl(n,n), n*n)
+      ALLOCATE(vr(1, 1), 1)
+      call DLAPACK(geev) ('V', 'N', n, a(1, 1), n, e(1), vl(1, 1), n, vr(1,1), 1, work(1), lwork, rwork(1), info)
+      a(:, :) = vl(:, :)
+  else
+      ALLOCATE(vl(1, 1), 1)
+      ALLOCATE(vr(n,n), n*n)
+      call DLAPACK(geev) ('N', 'V', n, a(1, 1), n, e(1), vl(1, 1), 1, vr(1,1), n, work(1), lwork, rwork(1), info)
+      a(:, :) = vr(:, :)
+  end if
+  deallocate(work, rwork, vr, vl)
+
+  if(info.ne.0) then
+    write(message(1),'(a,i5)') 'In zgeneigensolve_nonh, LAPACK Xgeev returned error message ', info
+    call write_fatal(1)
+  end if
+  if(present(err_code)) then
+    err_code = info
+  end if
+end subroutine deigensolve_nonh
 
 ! ---------------------------------------------------------
 ! Computes the k lowest eigenvalues and the eigenvectors of a real

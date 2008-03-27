@@ -82,33 +82,6 @@ contains
   end function mbytes_memory_term
 
   ! ---------------------------------------------------------
-  ! check if the matrix is bisymmetric
-  ! only the case if discretization order = 1
-  logical function is_bisymmetric(matrix, np)
-    CMPLX,          intent(in) :: matrix(np, np)
-    integer,        intent(in) :: np
-
-    integer :: i, j
-
-    call push_sub('td_transport.is_bisymmetric')
-    
-    is_bisymmetric = .true.
-    do j=1, np
-      do i=1, np
-        if ((abs(matrix(i,j)-matrix(j,i)).gt.mem_tolerance).or.&
-            (abs(matrix(i,j)-matrix(np-j+1,np-i+1)).gt.mem_tolerance)) then
-          is_bisymmetric = .false.
-         ! write(*,'(a,i3,a,i3,a,e10.10)') "m(",i,",",j,")=",abs(matrix(i,j)-matrix(j,i))
-         ! write(*,'(a,i3,a,i3,a,e10.10)') "m(",j,",",i,")=",abs(matrix(i,j)-matrix(np-j+1,np-i+1))
-          exit
-        end if
-      end do
-    end do
-
-    call pop_sub()
-  end function is_bisymmetric
-
-  ! ---------------------------------------------------------
   ! create sparse matrix out of the full matrix
   ! only 2D case yet
   ! sp = s^(-1).m.s
@@ -122,12 +95,11 @@ contains
     integer,        intent(in)  :: mapping(:)  ! the mapping
 
     CMPLX, allocatable :: tmp(:, :), tmp2(:, :)
-    integer :: id, i, count, n
+    integer :: id, i
     call push_sub('td_transport.make_sparse_matrix')
 
     ALLOCATE(tmp(np,np),np**2)
     ALLOCATE(tmp2(np,np),np**2)
-    count = 0
 
     ! now calculate [S^(-1)*sp*S] to get the sparse matrix
     ! FIXME: s, inv_s and sp are symmetric
@@ -195,7 +167,7 @@ contains
     integer,        intent(in)  :: mapping(:)  ! the mapping
 
     CMPLX, allocatable :: tmp(:, :)
-    integer :: id, i, count, n
+    integer :: id, i
     call push_sub('td_transport.make_full_matrix')
 
     ALLOCATE(tmp(np,np),np**2)
@@ -294,12 +266,11 @@ contains
     !% Sets the maximum iteration number to converge the memory coefficients.
     !%End
     call loct_parse_int(check_inp('TDTransMemMaxIter'), 500, mem_iter)
-    if(mem_iter.le.0) then
+    if(mem_iter.lt.0) then
       write(message(1), '(a,i6,a)') "Input : '", mem_iter, "' is not a valid TDTransMemMaxIter."
-      message(2) = '(0 < TDTransMemMaxIter)'
+      message(2) = '(0 <= TDTransMemMaxIter)'
       call write_fatal(2)
     end if
-
     do il = 1, NLEADS
       ! Get diagonal matrix.
       call calculate_diag(op, intface, il, diag(:, :, il))
@@ -368,7 +339,7 @@ contains
     CMPLX,          intent(inout) :: matrix(np, np)
     integer,        intent(in) :: np
 
-    integer   ::  i,j
+    integer   ::  j
     call push_sub('td_transport.make_symmetric')
 
     do j=1, np-1
@@ -384,7 +355,7 @@ contains
     CMPLX,          intent(inout) :: matrix(np, np)
     integer,        intent(in) :: np
 
-    integer   ::  i,j
+    integer   ::  j
     CMPLX,  allocatable :: tmp(:,:)
     call push_sub('td_transport.make_symmetric_average')
     ALLOCATE(tmp(np,np),np**2)
@@ -467,7 +438,7 @@ contains
 
     ! 2. compute diagonalization matrix s, s^(-1)*x*s = d
     s = x
-    call lalg_geneigensolve_nonh(2*np, s, d, side = side_)
+    call lalg_eigensolve_nonh(2*np, s, d, side = side_)
 
     ! 3. extract submatrices ( S = {{o1,o2},{o3,o4}}; D = {{d1,0},{0,d2}} )
     sub_d = M_z0
@@ -518,7 +489,6 @@ contains
     integer,             intent(in)  :: mapping(:)   ! the mapping
 
     integer            :: i, j, np
-    CMPLX              :: det
     CMPLX, allocatable :: q0(:, :)
     FLOAT              :: norm, old_norm
 
@@ -571,7 +541,7 @@ contains
     else
       ! diagonalization procedure
       mem_s(:, :, 1) = q0(:, :)
-      call lalg_geneigensolve_nonh(np, mem_s(:, :, 1), mem_s(:, 1, 2))
+      call lalg_eigensolve_nonh(np, mem_s(:, :, 1), mem_s(:, 1, 2))
       mem_s(:, :, 2) = mem_s(:, :, 1)
       norm = lalg_inverter(np, mem_s(:, :, 2), invert = .true.)
       call make_sparse_matrix(np, order, 2, q0, mem_s, sp_coeff0, mapping)
@@ -767,7 +737,7 @@ contains
   ! Calculate res <- offdiag^T matrix offdiag. with all matrices np x np.
   ! If matrix is symmetric, so is the result.
   subroutine apply_coupling(matrix, offdiag, res, np, il)
-    CMPLX,               intent(in)  :: matrix(np, np)
+    CMPLX,               intent(inout)  :: matrix(np, np)
     CMPLX,               intent(in)  :: offdiag(np, np)
     integer,             intent(in)  :: np, il
     CMPLX,               intent(out) :: res(np, np)
@@ -1219,7 +1189,7 @@ contains
     integer,   intent(in)    :: length       ! length of the packed array
     integer,   intent(in)    :: il           ! which lead
 
-    integer     :: ntime, i, j, iunit, s_dim, s_np, s_op_n, s_mem_type
+    integer     :: ntime, j, iunit, s_dim, s_np, s_op_n, s_mem_type
     FLOAT       :: s_spacing, s_delta, det
 
     call push_sub('td_trans_mem.read_coeffs')

@@ -132,12 +132,12 @@ contains
 
     CMPLX     :: qlr, factor
     integer   :: im, id, length
-    FLOAT     :: en, spacing, x, sqrt2, tmp
+    FLOAT     :: en, spacing, x, sqrt2
     integer, pointer :: lxyz(:,:)
     FLOAT :: lsize(3)
     FLOAT, allocatable :: coeffs(:,:)
     CMPLX, allocatable :: ext_psi0(:,:)
-    integer     :: ierr
+    !integer     :: ierr
 
     call push_sub('td_trans_src.source_init')
 
@@ -312,6 +312,40 @@ contains
     deallocate(temp)
     call pop_sub()
   end subroutine calc_source_wf_new
+
+  ! ---------------------------------------------------------
+  ! calculates the source-wavefunction for the source-term (for sparse mem-coefficients)
+  ! f(m)*offdiag*psi_lead + i dt/2 sum[k=0,m](f(m-k)(mem(k)+mem(k-1))psi_c(0))
+  subroutine calc_source_wf_sp(max_iter, m, il, offdiag, factor, sp_mem, dt, np, psi0,&
+                               mem_s, order, dim, mapping, src_wf)
+    integer, intent(in)   :: max_iter ! the maximum timestep
+    integer, intent(in)   :: m    ! the m-th timestep
+    integer, intent(in)   :: np   ! intf%np, the size of the wave functions
+    integer, intent(in)   :: il   ! which lead
+    CMPLX,   intent(in)   :: offdiag(:, :) ! the matrix V^T
+    CMPLX,   intent(in)   :: factor(0:np) ! factor(m) = (1 - i dt/2 en)^m / (1 + i dt/2 en)^(m+1)
+    CMPLX,   intent(in)   :: sp_mem(:)
+!    CMPLX,   intent(in)   :: mem(1:np, 1:np, 0:max_iter) ! the memory coefficients
+    FLOAT,   intent(in)   :: dt ! time step
+    CMPLX,   intent(in)   :: psi0(:, :)! np, (lead=1; center=2)
+    CMPLX,   intent(in)   :: mem_s(:, :, :)
+    integer, intent(in)   :: order
+    integer, intent(in)   :: dim
+    integer, intent(in)   :: mapping(:)   ! the mapping
+    CMPLX,   intent(out)  :: src_wf(:) ! the resulting wave function
+    
+    CMPLX,   allocatable   :: tmem(:, :)
+
+    call push_sub('td_trans_src.calc_source_wf_sp')
+
+    ALLOCATE(tmem(np, np), np**2)
+    !call make_full_matrix(np, order, dim, sp_mem, mem_s, tmem, mapping)
+    call calc_source_wf_new(max_iter, m, il, offdiag, factor, tmem, dt, np, psi0, src_wf)
+    deallocate(tmem)
+
+    deallocate(tmem)
+    call pop_sub()
+  end subroutine calc_source_wf_sp
 
 
   ! ---------------------------------------------------------

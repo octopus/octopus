@@ -785,6 +785,8 @@ subroutine zqmr_sym(np, x, b, op, prec, iter, residue, threshold, showprogress)
   FLOAT               :: rho, xsi, gamma, alpha, theta, threshold_, res, oldtheta, oldgamma, oldrho
   integer             :: max_iter, err
   logical             :: showprogress_
+  FLOAT               :: log_res, log_thr
+  integer             :: ilog_res, ilog_thr
 
   call push_sub('math_cg_inc.zqmr_sym_x')
 
@@ -807,7 +809,6 @@ subroutine zqmr_sym(np, x, b, op, prec, iter, residue, threshold, showprogress)
   ALLOCATE( p(np), np)
   ALLOCATE( deltax(np), np)
   ALLOCATE( deltar(np), np)
-
   x(:) = M_z0
   call lalg_copy(np, b, r)
   call lalg_copy(np, b, v)
@@ -837,6 +838,7 @@ subroutine zqmr_sym(np, x, b, op, prec, iter, residue, threshold, showprogress)
       err = 2
       exit
     end if
+!write(*,*) alpha, delta, rho, xsi
     if (iter == 1) then
       call lalg_copy(np, z, q)
     else
@@ -874,7 +876,7 @@ subroutine zqmr_sym(np, x, b, op, prec, iter, residue, threshold, showprogress)
       call lalg_scal(np, eta, deltar)
     else
       call lalg_scal(np, (oldtheta*gamma)**2, deltax)
-      call lalg_axpy(np, eta, q, deltax)
+      call lalg_axpy(np, eta*alpha, q, deltax)
       call lalg_scal(np, (oldtheta*gamma)**2, deltar)
       call lalg_axpy(np, eta, p, deltar)
     end if
@@ -883,7 +885,14 @@ subroutine zqmr_sym(np, x, b, op, prec, iter, residue, threshold, showprogress)
     res = lalg_nrm2(np,r)/lalg_nrm2(np,x)
     if (res < threshold_) exit
     iter = iter + 1
-    if (showprogress_)  call loct_progress_bar(iter, max_iter)
+    !write(*,*) res
+    log_res = -log(res)
+    if (log_res < 0) log_res = 0
+    log_thr = -log(threshold_)
+    ilog_res = M_TEN*log_res
+    ilog_thr = M_TEN*log_thr
+    if (showprogress_)  call loct_progress_bar(ilog_res, ilog_thr)
+!    if (showprogress_)  call loct_progress_bar(iter, max_iter)
   end do
 
   select case(err)
