@@ -30,12 +30,15 @@ OCTTargetOperator = oct_tg_gstransformation
 %OCTTargetTransformStates
 0 | 1
 %
-OCTScheme = oct_algorithm_straight_iteration
-OCTDoubleCheck = no
 
-OCTMixing = yes
-Mixing = 0.01
-TypeOfMixing = broyden
+OCTScheme = oct_algorithm_direct
+OCTParameterRepresentation = control_parameters_fourier_space
+OCTParameterOmegaMax = 0.10
+OCTFixFluenceTo = -1
+
+OCTDoubleCheck = no
+OCTMixing = no
+
 
 
 #----------------------------

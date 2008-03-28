@@ -41,7 +41,7 @@ Match ; J1 1st  iteration  ; grep ' 1  ' opt-control/convergence ; \s*0.711\d*
 Match ; J1 2nd  iteration  ; grep ' 2  ' opt-control/convergence ; \s*0.855\d*
 Match ; J1 5th  iteration  ; grep ' 5  ' opt-control/convergence ; \s*0.985\d*
 
-# Then, run the optimization for 5 iterations with the STRAINGT ITERATION scheme
+# Then, run the optimization for 5 iterations with the STRAIGHT ITERATION scheme
 # This test makes use of Broyden mixing.
 # Note that, despite the poor behaviour of the first iterations, the run actually converges
 # if it is allowed to run for more iterations.
@@ -50,3 +50,6 @@ Match ; J1 1st  iteration  ; grep ' 1  ' opt-control/convergence ; \s*0.576\d*
 Match ; J1 2nd  iteration  ; grep ' 2  ' opt-control/convergence ; \s*0.741\d*
 Match ; J1 5th  iteration  ; grep ' 5  ' opt-control/convergence ; \s*0.786\d*
 
+# Then, run the optimization for "a few" iterations with the DIRECT OPTIMIZATION scheme
+Input: 04-box.06-oct_long.inp
+Match ; J1 4th evaluation ; grep ' 4  ' opt-control/convergence ; \s*0.625\d*

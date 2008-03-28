@@ -73,7 +73,3 @@ TypeOfMixing = linear
 
 NumberUnoccStates = 4
 
-Output = potential + density + wfs
-OutputHow = axis_x
-
-TDOutput = laser + td_occup 
