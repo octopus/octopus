@@ -19,18 +19,32 @@
 
 #include "global.h"
 
+! This module is only supposed to be used within this file
+module block_t_m
+  implicit none
+  
+  private
+
+  type, public :: block_t
+    private
+    integer, pointer :: p
+  end type block_t
+
+end module block_t_m
+
+
 module loct_parser_m
   use global_m
   use loct_m
   use mpi_m
-  use types_m
+  use block_t_m
 
   implicit none
 
   ! Define the which routines can be seen from the outside
   private
   public ::                   &
-    block_t,                  &   
+    block_t,                  &   ! This is defined in block_t_m above
     parser_init,              &
     parser_end,               &
     loct_parse_init,          &
@@ -125,7 +139,7 @@ module loct_parser_m
 
   interface loct_parse_block
     integer function oct_parse_block(name, blk)
-      use types_m
+      use block_t_m
       character(len=*), intent(in) :: name
       type(block_t), intent(out) :: blk
     end function oct_parse_block
@@ -133,21 +147,21 @@ module loct_parser_m
 
   interface loct_parse_block_end
     subroutine oct_parse_block_end(blk)
-      use types_m
+      use block_t_m
       type(block_t), intent(in) :: blk
     end subroutine oct_parse_block_end
   end interface
 
   interface loct_parse_block_n
     integer function oct_parse_block_n(blk)
-      use types_m
+      use block_t_m
       type(block_t), intent(in) :: blk
     end function oct_parse_block_n
   end interface
 
   interface loct_parse_block_cols
     integer function oct_parse_block_cols(blk, line)
-      use types_m
+      use block_t_m
       type(block_t), intent(in) :: blk
       integer, intent(in) :: line
     end function oct_parse_block_cols
@@ -155,7 +169,7 @@ module loct_parser_m
 
   interface loct_parse_block_int
     subroutine oct_parse_block_int(blk, l, c, res)
-      use types_m
+      use block_t_m
       type(block_t), intent(in) :: blk
       integer, intent(in)          :: l, c
       integer, intent(out)         :: res
@@ -164,7 +178,7 @@ module loct_parser_m
 
   interface loct_parse_block_float
     subroutine oct_parse_block_double(blk, l, c, res)
-      use types_m
+      use block_t_m
       type(block_t), intent(in) :: blk
       integer, intent(in)          :: l, c
       real(8), intent(out)         :: res
@@ -174,7 +188,7 @@ module loct_parser_m
 
   interface loct_parse_block_cmplx
     subroutine oct_parse_block_complex(blk, l, c, res)
-      use types_m
+      use block_t_m
       type(block_t), intent(in) :: blk
       integer, intent(in)          :: l, c
       complex(8), intent(out)      :: res
@@ -184,7 +198,7 @@ module loct_parser_m
 
   interface loct_parse_block_string
     subroutine oct_parse_block_string(blk, l, c, res)
-      use types_m
+      use block_t_m
       type(block_t), intent(in) :: blk
       integer, intent(in)          :: l, c
       character(len=*), intent(out):: res

@@ -19,45 +19,27 @@
 
 #include "global.h"
 
-module types_m
-#ifdef F2003_C_PTR
-  use iso_c_binding
-#endif
-  implicit none
-  
-  private
-
-#ifdef F2003_C_PTR
-  public :: c_ptr
-#else
-  type, public :: c_ptr
-    private
-    integer, pointer :: p
-  end type c_ptr
-#endif
-
-  type, public :: block_t
-    private
-    integer, pointer :: p
-  end type block_t
-
-end module types_m
-
 
 module c_pointer_m
 #ifdef F2003_C_PTR
   use iso_c_binding
 #endif
-  use types_m
 
   implicit none 
 
   private
 
-  public :: &
-       c_ptr,      &
-       set_null,   &
-       c_associated
+  public ::     &
+    c_ptr,      &
+    set_null,   &
+    c_associated
+
+#ifndef F2003_C_PTR
+  type c_ptr
+    private
+    integer, pointer :: p
+  end type c_ptr
+#endif
 
 #ifndef F2003_C_PTR
   interface

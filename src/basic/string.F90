@@ -152,7 +152,7 @@ contains
 
     interface
       subroutine break_C_string(str, s, line)
-        use types_m
+        use c_pointer_m
         type(c_ptr),       intent(in)    :: str
         type(c_ptr),       intent(inout) :: s
         character(len=*),  intent(out)   :: line
