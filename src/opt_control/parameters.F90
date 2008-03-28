@@ -671,6 +671,22 @@ contains
       call io_close(iunit)
     end do
 
+    if(cp%envelope) then
+      do j = 1, cp%no_parameters
+        if(cp%no_parameters > 1) then
+          write(digit,'(i2.2)') j
+          iunit = io_open(trim(filename)//'/cp_coswt-'//digit, action='write')
+        else
+          iunit = io_open(trim(filename)//'/cp_coswt', action='write')
+        end if
+        do i = 1, cp%ntiter + 1
+          t = (i-1)*cp%dt
+          write(iunit, '(3es20.8e3)') t, tdf(par%f(j), t) * cos(cp%w0*t)
+        end do
+        call io_close(iunit)
+      end do
+    end if
+
     if(present(fourier)) then
     if(fourier) then
       do j = 1, cp%no_parameters
@@ -837,9 +853,14 @@ contains
     parameters_fluence = M_ZERO
     do j = 1, par%no_parameters
       if(par%envelope) then
+        call tdf_init(f)
         call tdf_copy(f, par%f(j))
+        if(par%current_representation .eq. ctr_parameter_frequency_space) then
+          call tdf_sineseries_to_numerical(f)
+        end if
         call tdf_cosine_multiply(par%w0, f)
         parameters_fluence = parameters_fluence + tdf_dot_product(f, f)
+        call tdf_end(f)
       else
         parameters_fluence = parameters_fluence + tdf_dot_product(par%f(j), par%f(j))
       end if
