@@ -160,11 +160,7 @@ subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi, normalize, mask, overla
             if(mask(ist)) cycle
           end if
           
-#ifdef R_TCOMPLEX
-          ss(ist) = ss(ist) + zdotc(size, psi(sp, idim, ist), 1, phi(sp, idim), 1)
-#else
-          ss(ist) = ss(ist) + ddot(size, psi(sp, idim, ist), 1, phi(sp, idim), 1)
-#endif
+          ss(ist) = ss(ist) + blas_dot(size, psi(sp, idim, ist), 1, phi(sp, idim), 1)
         end do
       end do
     end do
