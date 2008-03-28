@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-#ifdef F2003_C_PTR 
+#ifndef F2003_C_PTR 
 module types_m 
 
   implicit none 
@@ -39,8 +39,8 @@ module c_pointer_m
   use types_m
 #endif
 
-  ! this module must be public, because the sun compiler cannot
-  ! declare c_ptr as public
+  ! This module must be public, because the sun compiler cannot
+  ! declare c_ptr as public.
 
   implicit none 
 
