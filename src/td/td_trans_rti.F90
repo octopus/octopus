@@ -419,18 +419,25 @@ energy = 0.2
     integer,             intent(in)  :: il
     CMPLX,               intent(out) :: green(:, :)
 
-    integer             :: i
-    CMPLX, allocatable  :: x(:,:), s(:,:), sub_o(:,:), sub_d(:,:), d(:), tmp(:,:)
-    FLOAT               :: det
+    integer              :: i
+    CMPLX, allocatable   :: x(:,:), s(:,:), unsorted_s(:,:), sub_o(:,:)
+    CMPLX, allocatable   :: sub_d(:,:), d(:), unsorted_d(:), tmp(:,:)
+    FLOAT, allocatable   :: abs_d(:)
+    integer, allocatable :: index(:)
+    FLOAT                :: det
 
     call push_sub('td_trans_rti.green_lead')
 
     ALLOCATE(x(2*np,2*np),4*np**2)
+    ALLOCATE(unsorted_s(2*np,2*np),4*np**2)
     ALLOCATE(s(2*np,2*np),4*np**2)
     ALLOCATE(sub_o(np,np),np**2)
     ALLOCATE(sub_d(np,np),np**2)
     ALLOCATE(tmp(np,np),np**2)
     ALLOCATE(d(2*np),2*np)
+    ALLOCATE(unsorted_d(2*np),2*np)
+    ALLOCATE(abs_d(2*np),2*np)
+    ALLOCATE(index(2*np),2*np)
 
     ! Algorithm taken from A. Umerski, Closed-form solutions to surface Green`s functions
     ! 1. create matrix x ( x = {{0,offdiag^(-1)},{-offdiag^T,(energy-diag)*offdiag^(-1)}} )
@@ -444,7 +451,9 @@ energy = 0.2
     ! use sub_o as tmp variable
     sub_o = offdiag
     if (il.eq.LEFT) then
+!call write_matrix(sub_o,np)
       call lalg_invert_upper_triangular(np,  sub_o)
+!call write_matrix(sub_o,np)
     else
       call lalg_invert_lower_triangular(np,  sub_o)
     end if
@@ -455,7 +464,8 @@ energy = 0.2
     ! use sub_d as tmp variable
     sub_d(:, :) = -diag(:, :)
     do i=1, np
-      sub_d(i,i) = sub_d(i,i) + energy + CNST(1e-10)*M_zI
+      !sub_d(i,i) = sub_d(i,i) + energy
+      sub_d(i,i) = sub_d(i,i) + energy + CNST(1e-6)*M_zI
     end do
     if (il.eq.LEFT) then
       call lalg_trmm(np,np,'U','N','R',M_z1,sub_o,sub_d)
@@ -465,12 +475,21 @@ energy = 0.2
     x(np+1:2*np,np+1:2*np) = sub_d
 
     ! 2. compute diagonalization matrix s, s^(-1)*x*s = d
-    s(:, :) = x(:, :)
-    ! TODO: there is still a problem near the transversal eigenenergies,
-    ! there the zgeev,zgeevx routine does not work
-    ! a bigger imaginary eta does not solve this issue.
-    call lalg_eigensolve_nonh(2*np, s, d)
-
+    unsorted_s(:, :) = x(:, :)
+    call lalg_eigensolve_nonh(2*np, unsorted_s, unsorted_d)
+    ! the eigenvalues and the corresponding eigenvectors have to be sorted in the following way:
+    ! let d = diag(d(1),d(2),d(3),...,d(2n))
+    ! with |d(1)| < |d(2)| < ... < |d(2n)|
+    ! sort the eigenvalues and eigenvectors
+    abs_d(:) = abs(unsorted_d(:))
+    call sort(abs_d, index)
+    do i=1, 2*np
+      d(index(i))   = unsorted_d(i)
+      s(index(i),:) = unsorted_s(i,:)
+    end do
+!d(:)   = unsorted_d(:)
+!s(:,:) = unsorted_s(:,:)
+!write(*,*) abs(d)
     ! 3. extract submatrices ( S = {{o1,o2},{o3,o4}}; D = {{d1,0},{0,d2}} )
     sub_d = M_z0
     if (il.eq.LEFT) then ! left side --> o2, d2
@@ -478,13 +497,11 @@ energy = 0.2
       do i=1, np
         sub_d(i,i) = d(np+i)
       end do
-!write(*,*) 'd', d(np+1:2*np)
     else ! right side --> o1, d1
       sub_o = s(1:np,1:np)
       do i=1, np
         sub_d(i,i) = d(i)
       end do
-!write(*,*) 'd', d(1:np)
     end if
 
     ! 4. calculate g
@@ -507,12 +524,98 @@ energy = 0.2
     end do
     if (det.gt.M_ZERO) then
       green = conjg(green)
+      det = -det
     end if
 write(*,*) 'dos', -det
 
-    deallocate(x, s, sub_o, sub_d, d, tmp)
+    deallocate(x, s, sub_o, sub_d, d, tmp, unsorted_s, abs_d, unsorted_d, index)
     call pop_sub()
   end subroutine green_lead
+
+  ! ---------------------------------------------------------
+  ! compute the semi-infinite surface green function (half) analyticly
+  ! only the diagonalization process is numerical done
+  subroutine green_lead_recursive(energy, diag, offdiag, np, il, green)
+    FLOAT,               intent(in)  :: energy
+    CMPLX,               intent(in)  :: diag(:, :)
+    CMPLX,               intent(in)  :: offdiag(:, :)
+    integer,             intent(in)  :: np ! number of interface points
+    integer,             intent(in)  :: il
+    CMPLX,               intent(out) :: green(:, :)
+
+    CMPLX, allocatable   :: e(:, :), es(:, :), a(:, :), b(:, :), old_e(:, :)
+    CMPLX, allocatable   :: old_a(:, :), old_b(:, :), inv(:, :), tmp(:, :)
+    integer              :: i, j
+    FLOAT                :: det, old_norm, norm
+
+    call push_sub('td_trans_rti.green_lead_recursive')
+
+    ALLOCATE(e(np,np),np**2)
+    ALLOCATE(es(np,np),np**2)
+    ALLOCATE(a(np,np),np**2)
+    ALLOCATE(b(np,np),np**2)
+    ALLOCATE(old_e(np,np),np**2)
+    ALLOCATE(old_a(np,np),np**2)
+    ALLOCATE(old_b(np,np),np**2)
+    ALLOCATE(inv(np,np),np**2)
+    ALLOCATE(tmp(np,np),np**2)
+
+    ! fill with start values
+    old_e(:, :) = diag(:, :)
+    old_a(:, :) = offdiag(:, :)
+    do i=1, np
+      old_b(i,1:np) = offdiag(1:np,i)
+    end do
+    es(:, :) = diag(:, :)
+    old_norm = M_ZERO
+
+    ! start the iteration
+    do i=1, 1000
+      inv(:, :) = -old_e(:, :)
+      do j=1, np
+        inv(j, j) = inv(j, j) + energy + CNST(1e-10)*M_zI
+      end do
+      det = lalg_inverter(np, inv, invert = .true.)
+      call zgemm('N','N',np,np,np,M_z1,old_a,np,inv,np,M_z0,tmp,np)
+      call zgemm('N','N',np,np,np,M_z1,tmp,np,old_a,np,M_z0,a,np)
+      call zgemm('N','N',np,np,np,M_z1,old_b,np,inv,np,M_z0,tmp,np)
+      call zgemm('N','N',np,np,np,M_z1,tmp,np,old_b,np,M_z0,b,np)
+      e(:, :) = old_e(:, :)
+      call zgemm('N','N',np,np,np,M_z1,old_a,np,inv,np,M_z0,tmp,np)
+      call zgemm('N','N',np,np,np,M_z1,tmp,np,old_b,np,M_z1,e,np)
+      call zgemm('N','N',np,np,np,M_z1,old_b,np,inv,np,M_z0,tmp,np)
+      call zgemm('N','N',np,np,np,M_z1,tmp,np,old_a,np,M_z1,e,np)
+      call zgemm('N','N',np,np,np,M_z1,old_a,np,inv,np,M_z0,tmp,np)
+      call zgemm('N','N',np,np,np,M_z1,tmp,np,old_b,np,M_z1,es,np)
+      old_e(:, :) = e(:, :)
+      old_a(:, :) = a(:, :)
+      old_b(:, :) = b(:, :)
+      norm = infinity_norm(es)
+      if(abs(norm-old_norm).lt.CNST(1e-10)) then
+        !write(*,*) 'green-iter:', i
+        exit
+      end if
+      old_norm = norm
+    end do
+    green(:, :) = -es(:, :)
+    do j=1, np
+      green(j, j) = green(j, j) + energy + CNST(1e-10)*M_zI
+    end do
+    det = lalg_inverter(np, green, invert = .true.)
+    call make_symmetric_average(green, np)
+    det = aimag(green(1,1))
+    do i=2,np
+      det = det + aimag(green(i,i))
+    end do
+    if (det.gt.M_ZERO) then
+      green = conjg(green)
+      det = -det
+    end if
+!write(*,*) 'dos', -det
+
+    deallocate(e, es, a, b, old_e, old_a, old_b, inv, tmp)
+    call pop_sub()
+  end subroutine green_lead_recursive
 
   ! ---------------------------------------------------------
   ! check if the matrix is not just real valued
@@ -709,7 +812,7 @@ write(*,*) 'state 2', st%zpsi(:,1,st%st_start+1,ik)
 
     diag(:, 1) = energy_p - diag(:,1) 
     y(1:np) = x(1:np)/diag(1:np, 1)
-!    y(:) = x(:) ! no preconditioner
+  !  y(:) = x(:) ! no preconditioner
 
     deallocate(diag)
 
@@ -790,10 +893,12 @@ write(*,*) 'state 2', st%zpsi(:,1,st%st_start+1,ik)
     call zkinetic(h, gr, st%zpsi(:, :, 1, ik), tmp(:,:))
     tmp(1:NP, :) = energy*st%zpsi(1:NP, :, 1, ik) - tmp(1:NP, :)
     ! TODO: the static potential of the lead
-    call green_lead(energy, diag(:, :, LEFT), offdiag(:, :, LEFT), np, LEFT, green_l(:, :, LEFT))
+    !call green_lead(energy, diag(:, :, LEFT), offdiag(:, :, LEFT), np, LEFT, green_l(:, :, LEFT))
+    call green_lead_recursive(energy, diag(:, :, LEFT), offdiag(:, :, LEFT), np, LEFT, green_l(:, :, LEFT))
     call apply_coupling(green_l(:, :, LEFT), offdiag(:, :, LEFT), green_l(:, :, LEFT), np, LEFT)
     call zsymv('U', np, -M_z1, green_l(:, :, LEFT), np, st%zpsi(1:np, 1, 1, 1), 1, M_z1, tmp(1:np, 1), 1)
-    call green_lead(energy, diag(:, :, RIGHT), offdiag(:, :, RIGHT), np, RIGHT, green_l(:, :, RIGHT))
+    !call green_lead(energy, diag(:, :, RIGHT), offdiag(:, :, RIGHT), np, RIGHT, green_l(:, :, RIGHT))
+    call green_lead_recursive(energy, diag(:, :, RIGHT), offdiag(:, :, RIGHT), np, RIGHT, green_l(:, :, RIGHT))
     call apply_coupling(green_l(:, :, RIGHT), offdiag(:, :, RIGHT), green_l(:, :, RIGHT), np, RIGHT)
 
     call zsymv('U', np, -M_z1, green_l(:, :, RIGHT), np, &
@@ -802,7 +907,7 @@ write(*,*) 'state 2', st%zpsi(:,1,st%st_start+1,ik)
     ! now solve the equation
     green_l_p => green_l
     ! now solve the linear system to get the extended eigenstate
-    iter = 5000
+    iter = 10000
     ! zconjugate_gradients fails in some cases (wrong solution) and takes longer
     ! therefore take the symmetric quasi-minimal residual solver (QMR)
     call zqmr_sym(NP, st%zpsi(:, 1, 1, ik), tmp(:, 1), h_eff_lip_sch, preconditioner, &
@@ -926,9 +1031,10 @@ write(*,*) 'state 2', st%zpsi(:,1,st%st_start+1,ik)
 !  energy = (timestep/M_TEN**5+3.96750)*(M_PI/(gr%sb%lsize(2)+gr%sb%h(2)))**2/M_EIGHT 
 !  energy = ((timestep+1)**2-0.1)*(M_PI/(gr%sb%lsize(2)+gr%sb%h(2)))**2/M_EIGHT 
 !write(*,*) 'E/Ey', (timestep/M_TEN**5+3.96750)
+!write(*,*) 'energy', energy
 !  energy = 0.1
   do ik = 1, st%d%nik
-   ! call calculate_ext_eigenstate(h, gr, intf%np, diag, offdiag, order, energy, u(0,:), gr%sb%h(1), st, st_phase, ik)
+    !call calculate_ext_eigenstate(h, gr, intf%np, diag, offdiag, order, energy, u(0,:), gr%sb%h(1), st, st_phase, ik)
   end do
 !end if
 !write(*,*) 'left  center', st%zpsi(1, 1, 1, 1)
@@ -1035,9 +1141,9 @@ write(*,*) 'state 2', st%zpsi(:,1,st%st_start+1,ik)
     integer            :: i, j
 
     character(len=10) :: c_np
-    write(c_np,'(i10)') np*2
+    write(c_np,'(i10)') np
     do j = 1, np
-      write(*,'(a,i3,a,'//trim(c_np)//'e20.9)') "m(",j,",i)=",matr(j,1:np)
+      write(*,'(a,i3,a,'//trim(c_np)//'e20.9)') "m(",j,",i)=",real(matr(j,1:np))
     end do
 !    do j = 1, np
 !      do i = 1, np

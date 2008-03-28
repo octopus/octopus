@@ -820,7 +820,9 @@ subroutine zqmr_sym(np, x, b, op, prec, iter, residue, threshold, showprogress)
   alpha = M_ONE
   
   ! initialize progress bar
-  if (showprogress_) call loct_progress_bar(-1, iter)
+  log_thr = -log(threshold_)
+  ilog_thr = M_TEN**2*log_thr
+  if (showprogress_) call loct_progress_bar(-1, ilog_thr)
 
   max_iter = iter
   iter     = 1
@@ -838,7 +840,6 @@ subroutine zqmr_sym(np, x, b, op, prec, iter, residue, threshold, showprogress)
       err = 2
       exit
     end if
-!write(*,*) alpha, delta, rho, xsi
     if (iter == 1) then
       call lalg_copy(np, z, q)
     else
@@ -883,15 +884,13 @@ subroutine zqmr_sym(np, x, b, op, prec, iter, residue, threshold, showprogress)
     call lalg_axpy(np, M_z1, deltax, x)
     call lalg_axpy(np, -M_z1, deltar, r)
     res = lalg_nrm2(np,r)/lalg_nrm2(np,x)
+    log_res = -log(res)
+    if (log_res < 0) log_res = 0
+    ilog_res = (M_TEN**2-1)*log_res
+    if (showprogress_)  call loct_progress_bar(ilog_res, ilog_thr)
     if (res < threshold_) exit
     iter = iter + 1
     !write(*,*) res
-    log_res = -log(res)
-    if (log_res < 0) log_res = 0
-    log_thr = -log(threshold_)
-    ilog_res = M_TEN*log_res
-    ilog_thr = M_TEN*log_thr
-    if (showprogress_)  call loct_progress_bar(ilog_res, ilog_thr)
 !    if (showprogress_)  call loct_progress_bar(iter, max_iter)
   end do
 
