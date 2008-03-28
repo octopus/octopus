@@ -40,10 +40,19 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, reltype, ik)
 
   call push_sub('projector_inc.project_psi')
 
-  ALLOCATE(ireduce(1:npj, 0:MAX_L, -MAX_L:MAX_L), npj*(MAX_L + 1)*(2*MAX_L + 1))
+  ! To optimize the application of the non-local operator in parallel,
+  ! the projectors are applied in steps. First the <p|psi> is
+  ! calculated for all projectors and the result is stored on an array
+  ! (reduce_buffer). Then the array is reduced (as it is contiguous
+  ! only one reduction is required). Finally |ppsi> += |p><p|psi> is
+  ! calculated.
 
   ! generate the reduce buffer and related structures
+
+  ALLOCATE(ireduce(1:npj, 0:MAX_L, -MAX_L:MAX_L), npj*(MAX_L + 1)*(2*MAX_L + 1))
   nreduce = 0
+
+  ! count the number of elements in the reduce buffer
   do ipj = 1, npj
     if(pj(ipj)%type == M_NONE) cycle
     do ll = 0, pj(ipj)%lmax
@@ -68,6 +77,8 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, reltype, ik)
 
     ALLOCATE(lpsi(ns, dim),  ns*dim)
 
+    !copy psi to the small spherical grid
+
     do idim = 1, dim
       if(simul_box_is_periodic(mesh%sb)) then
         lpsi(1:ns, idim) = psi(pj(ipj)%sphere%jxyz(1:ns), idim)*pj(ipj)%phase(1:ns, ik)
@@ -76,6 +87,8 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, reltype, ik)
         lpsi(1:ns, idim) = psi(pj(ipj)%sphere%jxyz(1:ns), idim)
       end if
     end do
+
+    !apply the projectors for each angular momentum component
 
     do ll = 0, pj(ipj)%lmax
       if (ll == pj(ipj)%lloc) cycle
@@ -132,14 +145,17 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, reltype, ik)
 
         select case(pj(ipj)%type)
         case(M_KB)
+          ! in this case we have to multiply by the energies here
           reduce_buffer(ii:ii + pj(ipj)%kb_p(ll, mm)%n_c - 1) = &
-            reduce_buffer(ii:ii + pj(ipj)%kb_p(ll, mm)%n_c - 1)*pj(ipj)%kb_p(ll, mm)%e(1:2)
+            reduce_buffer(ii:ii + pj(ipj)%kb_p(ll, mm)%n_c - 1)*pj(ipj)%kb_p(ll, mm)%e(1:pj(ipj)%kb_p(ll, mm)%n_c)
           call X(kb_project_ket)(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(ll, mm), dim, reduce_buffer(ii:), lpsi)
         case(M_RKB)
 #ifdef R_TCOMPLEX
           if(ll /= 0) then
             call rkb_project_ket(mesh, pj(ipj)%sphere, pj(ipj)%rkb_p(ll, mm), reduce_buffer(ii:), lpsi)
           else
+            !this case is l = 0, so we only have one projector
+            reduce_buffer(ii) = reduce_buffer(ii)*pj(ipj)%kb_p(1, 1)%e(1) 
             call zkb_project_ket(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(1, 1), dim, reduce_buffer(ii:), lpsi)
           end if
 #endif
@@ -149,6 +165,8 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, reltype, ik)
 
       end do ! mm
     end do ! ll
+
+    !put the result back in the complete grid
 
     do idim = 1, dim
       if(simul_box_is_periodic(mesh%sb)) then
