@@ -205,8 +205,19 @@ contains
     !% should contain three columns: first column is time, second and third column are the
     !% real part and the imaginary part of the temporal function f(t):
     !%
-    !% <math> F(t) = Re[ \hat{p} f(t) ]
+    !% <math> F(t) = Re[ \hat{p} f(t) ] </math>.
     !%
+    !%    (A.6) envelope_fromexpr
+    !%
+    !% <tt>%TDExternalFields
+    !% <br>&nbsp;&nbsp; type | nx | ny | nz | envelope_fromexpr | "expression"
+    !% <br>%</tt>
+    !%
+    !% The temporal shape of the field is given as an expression (e.g., "cos(2.0*t)". The 
+    !% letter "t" means time, obviously. The expression is used to construct the function f
+    !% that defines the field:
+    !%
+    !% <math> F(t) = Re[ \hat{p} f(t) ] </math>.
     !%
     !% (B) type = scalar_potential
     !%
