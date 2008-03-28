@@ -45,10 +45,10 @@ module filter_m
 
   type filter_t
     private
-    integer :: no_filters = 0
-    type(tdf_t), pointer :: f(:) => NULL()
-    character(len=1024), pointer :: expression(:) => NULL()
-    integer, pointer :: domain(:) =>  NULL()
+    integer :: no_filters
+    type(tdf_t), pointer :: f(:)
+    character(len=1024), pointer :: expression(:)
+    integer, pointer :: domain(:)
   end type filter_t
 
   integer, parameter, public  :: &
