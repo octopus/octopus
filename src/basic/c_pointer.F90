@@ -19,27 +19,30 @@
 
 #include "global.h"
 
+#ifdef F2003_C_PTR 
+module types_m 
+
+  implicit none 
+  
+  type, public :: c_ptr 
+    private 
+    integer, pointer :: p 
+  end type c_ptr
+  
+end module types_m
+#endif
 
 module c_pointer_m
 #ifdef F2003_C_PTR
-  use iso_c_binding
+  use iso_c_binding, only : c_ptr, c_associated, c_null_ptr
+#else
+  use types_m
 #endif
+
+  ! this module must be public, because the sun compiler cannot
+  ! declare c_ptr as public
 
   implicit none 
-
-  private
-
-  public ::     &
-    c_ptr,      &
-    set_null,   &
-    c_associated
-
-#ifndef F2003_C_PTR
-  type c_ptr
-    private
-    integer, pointer :: p
-  end type c_ptr
-#endif
 
 #ifndef F2003_C_PTR
   interface
