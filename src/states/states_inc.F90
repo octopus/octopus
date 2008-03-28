@@ -215,9 +215,9 @@ subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi, normalize, mask, overla
         end if
         
 #ifdef R_TCOMPLEX
-        call zaxpy(size, -ss(ist), psi(sp, idim, ist), 1, phi(sp, idim), 1)
+        call ZPREC(zaxpy)(size, -ss(ist), psi(sp, idim, ist), 1, phi(sp, idim), 1)
 #else
-        call daxpy(size, -ss(ist), psi(sp, idim, ist), 1, phi(sp, idim), 1)
+        call PREC(axpy)(size, -ss(ist), psi(sp, idim, ist), 1, phi(sp, idim), 1)
 #endif
       end do
     end do

@@ -75,6 +75,7 @@
 #  define CMPLX     	 complex(4)
 #  define MPI_CMPLX 	 MPI_COMPLEX
 #  define PREC(x)   	 s ## x
+#  define ZPREC(x)   	 c ## x
 #  define CNST(x)   	 x ## _4
 #  define XC_F90(x)      xc_s_f90_ ## x
 #else
@@ -84,6 +85,7 @@
 #  define CMPLX     	 complex(8)
 #  define MPI_CMPLX 	 MPI_DOUBLE_COMPLEX
 #  define PREC(x)   	 d ## x
+#  define ZPREC(x)   	 z ## x
 #  define CNST(x)   	 x ## _8
 #  define XC_F90(x)      xc_f90_ ## x
 #endif
