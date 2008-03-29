@@ -393,8 +393,8 @@ contains
 
   subroutine write_iter_info(geom_iter, n, energy, maxdx, maxdf, x)
     integer, intent(in) :: geom_iter, n
-    real(8), intent(in) :: energy, maxdx, maxdf
-    real(8), intent(in) :: x(n)
+    REAL_DOUBLE, intent(in) :: energy, maxdx, maxdf
+    REAL_DOUBLE, intent(in) :: x(n)
 
     integer :: i
     character(len=256) :: c_geom_iter, title
@@ -433,10 +433,10 @@ contains
   ! Same as write_iter_info, but without the gradients.
   subroutine write_iter_info_ng(geom_iter, n, energy, maxdx, x)
     integer, intent(in) :: geom_iter, n
-    real(8), intent(in) :: energy, maxdx
-    real(8), intent(in) :: x(n)
+    REAL_DOUBLE, intent(in) :: energy, maxdx
+    REAL_DOUBLE, intent(in) :: x(n)
 
-    call write_iter_info(geom_iter, n, energy, maxdx, -M_ONE, x)
+    call write_iter_info(geom_iter, n, energy, maxdx, real(-M_ONE, 8), x)
   end subroutine write_iter_info_ng
 
 end module geom_opt_m

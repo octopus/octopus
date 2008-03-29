@@ -974,7 +974,7 @@ contains
   ! ---------------------------------------------------------
   subroutine parameters_par_to_x(par, x)
     type(oct_control_parameters_t), intent(in)    :: par
-    FLOAT,                          intent(inout) :: x(:)
+    REAL_DOUBLE,                    intent(inout) :: x(:)
     integer :: j, k, n
     FLOAT :: sumx2
     FLOAT, allocatable :: e(:)
@@ -1005,7 +1005,8 @@ contains
   ! ---------------------------------------------------------
   subroutine parameters_x_to_par(par, x)
     type(oct_control_parameters_t), intent(inout) :: par
-    FLOAT,                          intent(in)    :: x(:)
+    REAL_DOUBLE,                          intent(in)    :: x(:)
+
     integer :: j, k, n
     FLOAT, allocatable :: e(:)
     call push_sub('parameters.parameters_x_to_par')

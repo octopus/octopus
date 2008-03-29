@@ -86,8 +86,8 @@ contains
   ! ---------------------------------------------------------
   subroutine direct_opt_calc(n, x, f)
     integer, intent(in)  :: n
-    real(8), intent(in)  :: x(n)
-    real(8), intent(out) :: f
+    REAL_DOUBLE, intent(in)  :: x(n)
+    REAL_DOUBLE, intent(out) :: f
 
     FLOAT :: j1, delta
     type(states_t) :: psi
@@ -120,8 +120,8 @@ contains
   ! ---------------------------------------------------------
   subroutine direct_opt_write_info(geom_iter, n, val, maxdx, x)
     integer, intent(in) :: geom_iter, n
-    real(8), intent(in) :: val, maxdx
-    real(8), intent(in) :: x(n)
+    REAL_DOUBLE, intent(in) :: val, maxdx
+    REAL_DOUBLE, intent(in) :: x(n)
 
     FLOAT :: fluence, j1, j2, j
 
@@ -377,8 +377,8 @@ contains
     ! ---------------------------------------------------------
     subroutine scheme_direct
       integer :: ierr, maxiter
-      FLOAT :: minvalue, step
-      FLOAT, allocatable :: x(:)
+      REAL_DOUBLE :: minvalue, step
+      REAL_DOUBLE, allocatable :: x(:)
       call push_sub('opt_control.scheme_direct')
 
       call parameters_set_rep(par)
@@ -396,7 +396,7 @@ contains
       step = oct%direct_step * M_PI
       maxiter = floor(real(iterator%ctr_iter_max) / real(par%nfreqs))
       ierr = loct_minimize_direct(MINMETHOD_NMSIMPLEX, par%nfreqs-1, x(1), step,&
-               iterator%eps, maxiter, &
+               real(iterator%eps, 8), maxiter, &
                direct_opt_calc, direct_opt_write_info, minvalue)
 
       if(ierr.ne.0) then
