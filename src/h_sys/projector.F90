@@ -112,13 +112,14 @@ contains
   end subroutine projector_null
 
   !---------------------------------------------------------
-  subroutine projector_init(p, m, sb, atm, reltype)
+  subroutine projector_init(p, m, sb, atm, dim, reltype)
     type(projector_t), intent(inout) :: p
-    type(simul_box_t), intent(in)    :: sb
     type(mesh_t),      intent(in)    :: m
+    type(simul_box_t), intent(in)    :: sb
     type(atom_t),      intent(in)    :: atm
+    integer,           intent(in)    :: dim
     integer,           intent(in)    :: reltype
-
+    
     call push_sub('projector.projector_init')
 
     nullify(p%phase)
@@ -153,11 +154,7 @@ contains
     
     select case(p%type)
     case(M_KB)
-      if(atm%spec%ps%kbc == 1) then
-        p%reduce_size = 1
-      else
-        p%reduce_size = 2
-      end if
+      p%reduce_size = dim*atm%spec%ps%kbc
     case(M_RKB)
       p%reduce_size = 4
     case(M_HGH)

@@ -145,17 +145,12 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, reltype, ik)
 
         select case(pj(ipj)%type)
         case(M_KB)
-          ! in this case we have to multiply by the energies here
-          reduce_buffer(ii:ii + pj(ipj)%kb_p(ll, mm)%n_c - 1) = &
-            reduce_buffer(ii:ii + pj(ipj)%kb_p(ll, mm)%n_c - 1)*pj(ipj)%kb_p(ll, mm)%e(1:pj(ipj)%kb_p(ll, mm)%n_c)
           call X(kb_project_ket)(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(ll, mm), dim, reduce_buffer(ii:), lpsi)
         case(M_RKB)
 #ifdef R_TCOMPLEX
           if(ll /= 0) then
             call rkb_project_ket(mesh, pj(ipj)%sphere, pj(ipj)%rkb_p(ll, mm), reduce_buffer(ii:), lpsi)
           else
-            !this case is l = 0, so we only have one projector
-            reduce_buffer(ii) = reduce_buffer(ii)*pj(ipj)%kb_p(1, 1)%e(1) 
             call zkb_project_ket(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(1, 1), dim, reduce_buffer(ii:), lpsi)
           end if
 #endif
@@ -261,7 +256,8 @@ R_TYPE function X(psia_project_psib)(mesh, pj, dim, psia, psib, reltype, ik) res
       if (ll == pj%lloc) cycle
       do mm = -ll, ll
         nc = pj%kb_p(ll, mm)%n_c
-        apb = apb + sum(R_CONJ(uvpsi(1:nc, 2, ll, mm))*pj%kb_p(ll, mm)%e(1:nc)*uvpsi(1:nc, 1, ll, mm))
+        call X(kb_mul_energies)(pj%kb_p(ll, mm), dim, uvpsi(1:nc, 1, ll, mm))
+        apb = apb + sum(R_CONJ(uvpsi(1:nc, 2, ll, mm))*uvpsi(1:nc, 1, ll, mm))
       end do
     end do
 

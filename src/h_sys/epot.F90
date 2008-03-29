@@ -492,7 +492,7 @@ contains
       if(.not. specie_is_ps(atm%spec)) cycle
       ep%non_local = .true.
       call projector_end(ep%p(ia))
-      call projector_init(ep%p(ia), gr%m, sb, atm, ep%reltype)
+      call projector_init(ep%p(ia), gr%m, sb, atm, st%d%dim, ep%reltype)
       if(simul_box_is_periodic(sb)) call projector_init_phases(ep%p(ia), gr%m, st%d%nik, st%d%kpoints)
       call projector_build(ep%p(ia), gr, atm)
     end do

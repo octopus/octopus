@@ -49,6 +49,8 @@ module kb_projector_m
        zkb_project_bra,            &
        dkb_project_ket,            &
        zkb_project_ket,            &
+       dkb_mul_energies,           &
+       zkb_mul_energies,           &
        kb_projector_end
 
   type kb_projector_t
