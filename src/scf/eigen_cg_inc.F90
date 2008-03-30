@@ -196,6 +196,11 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, reo
 
         res = X(states_residue)(gr%m, st%d%dim, h_psi, st%eigenval(p, ik), st%X(psi)(:, :, p, ik))
 
+        if(in_debug_mode) then
+          write(message(1), '(a,i4,a,f12.6)') 'Debug: CG Eigensolver - iteration = ', iter, ' error = ', res
+          call write_info(1)
+        end if
+
         ! Test convergence.
         if(res < tol) then
           conv = conv + 1
