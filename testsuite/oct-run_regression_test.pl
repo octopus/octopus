@@ -194,57 +194,63 @@ $failures = 0;
 # Loop over all the executables.
 foreach my $octopus_exe (@executables){
 
- $workdir = tempdir('/tmp/octopus.XXXXXX');
- chomp($workdir);
+    if($octopus_exe =~ m/single/){
+      $prec = "\\.000";
+    } else {
+      $prec = "\\.0000";
+    }
+    
+    $workdir = tempdir('/tmp/octopus.XXXXXX');
+    chomp($workdir);
 
- if (!$opt_m) {
-  system ("rm -rf $workdir");
-  mkdir $workdir;
- }   
+    if (!$opt_m) {
+    system ("rm -rf $workdir");
+    mkdir $workdir;
+    }   
 
 
- # create script for cleanups in the current workdir
- $mscript = "$workdir/clean.sh";
- open(SCRIPT, ">$mscript") or die "could not create script file\n";
- print SCRIPT "#\!/bin/bash\n\n";
- print SCRIPT "rm -rf tmp static exec *_tmp *_static out.oct out ds* td.* \n";
- close(SCRIPT);
- chmod 0755, $mscript;
+    # create script for cleanups in the current workdir
+    $mscript = "$workdir/clean.sh";
+    open(SCRIPT, ">$mscript") or die "could not create script file\n";
+    print SCRIPT "#\!/bin/bash\n\n";
+    print SCRIPT "rm -rf tmp static exec *_tmp *_static out.oct out ds* td.* \n";
+    close(SCRIPT);
+    chmod 0755, $mscript;
 
- # testsuite
- open(TESTSUITE, "<".$opt_f ) or die "cannot open testsuite file\n";
+    # testsuite
+    open(TESTSUITE, "<".$opt_f ) or die "cannot open testsuite file\n";
 
- while ($_ = <TESTSUITE>) {
+    while ($_ = <TESTSUITE>) {
 
-  # skip comments
-  next if /^#/;
+    # skip comments
+    next if /^#/;
 
-  if ( $_ =~ /^Test\s*:\s*(.*)\s*$/) {
-   $test{"name"} = $1;
-   if(!$opt_i) {
+    if ( $_ =~ /^Test\s*:\s*(.*)\s*$/) {
+    $test{"name"} = $1;
+    if(!$opt_i) {
     print "$color_start{blue} ***** $test{\"name\"} ***** $color_end{blue} \n\n";
     print "Using workdir    : $workdir \n";
     print "Using executable : $octopus_exe\n";
     print "Using test file  : $opt_f \n";
-   }
-  }
+    }
+    }
 
-  if ( $_ =~ /^Enabled\s*:\s*(.*)\s*$/) {
-   %test = ();
-   $enabled = $1;
-   $enabled =~ s/^\s*//;
-   $enabled =~ s/\s*$//;
-   $test{"enabled"} = $enabled;
-  }
+    if ( $_ =~ /^Enabled\s*:\s*(.*)\s*$/) {
+    %test = ();
+    $enabled = $1;
+    $enabled =~ s/^\s*//;
+    $enabled =~ s/\s*$//;
+    $test{"enabled"} = $enabled;
+    }
 
-  # Running this regression test if it is enabled
-  if ( $enabled eq "Yes" ) {
+    # Running this regression test if it is enabled
+    if ( $enabled eq "Yes" ) {
 
-   if ( $_ =~ /^Processors\s*:\s*(.*)\s*$/) {
+    if ( $_ =~ /^Processors\s*:\s*(.*)\s*$/) {
      $np = $1;
-   }
+    }
 
-   if ( $_ =~ /^Input\s*:\s*(.*)\s*$/) {
+    if ( $_ =~ /^Input\s*:\s*(.*)\s*$/) {
      $input_base = $1;
      $input_file = dirname($opt_f) . "/" . $input_base;
 
@@ -264,7 +270,7 @@ foreach my $octopus_exe (@executables){
        if ( !$opt_n ) {
 	 print "\nStarting test run ...\n";
 
-         $octopus_exe_suffix = $octopus_exe;
+	 $octopus_exe_suffix = $octopus_exe;
 
 	 # serial or MPI run?
 	 if ( $octopus_exe_suffix =~ /mpi$/) {
@@ -302,14 +308,16 @@ foreach my $octopus_exe (@executables){
      print SCRIPT "#\!/bin/bash\n\n";
      close(SCRIPT);
      chmod 0755, $mscript;
-   }
+    }
 
-   if ( $_ =~ /^Match/ && !$opt_n) {
+    if ( $_ =~ /^Match/ && !$opt_n) {
      $- = s/\\;/_COLUMN_/g;
      ($match, $name, $pre_command, $regexp) = split(/;/, $_);
      $name        =~ s/_COLUMN_/;/g;
      $pre_command =~ s/_COLUMN_/;/g;
      $regexp      =~ s/_COLUMN_/;/g;
+
+     $regexp =~ s/\$prec/$prec/g;
 
      if(!opt_m) {
        die "have to run before matching" if !$test{"run"};
@@ -329,8 +337,7 @@ foreach my $octopus_exe (@executables){
      print SCRIPT "echo ", "-"x60, "[ $name - regular expression ] \n";
      print SCRIPT "echo '$regexp'\n";
      print SCRIPT "export LINE=`$pre_command`\n";
-     print SCRIPT 'perl -e \'print "Match: ".($ENV{LINE} =~ m/'.$regexp
-                 .'/?"OK":"FAILED")."\n"\''."\n";
+     print SCRIPT 'perl -e \'print "Match: ".($ENV{LINE} =~ m/'.$regexp.'/?"OK":"FAILED")."\n"\''."\n";
      print SCRIPT "echo;echo\n";
      close(SCRIPT);
 
