@@ -12,23 +12,45 @@ Enabled    : Yes
 
 
 Input: 07-spin_orbit_coupling.01-hgh.inp
-Match ; Eigenvalue  1 ; grep '1   --   -28.09' static/info | awk '{print $3" "$7" "$4}' ; \s*-28.0924\d*\s*0.500\d*\s*1.00
-Match ; Eigenvalue  3 ; grep '3   --   -27.15'   static/info | awk '{print $3" "$7" "$4}' ; \s*-27.1511\d*\s*0.500\d*\s*1.00
-Match ; Eigenvalue  5 ; grep '5   --   -17.99' static/info | awk '{print $3" "$7" "$4}' ; \s*-17.9913\d*\s*0.476\d*\s*1.00
-Match ; Eigenvalue  7 ; grep '7   --   -16.40' static/info | awk '{print $3" "$7" "$4}' ; \s*-16.4021\d*\s*0.143\d*\s*1.00
-Match ; Eigenvalue  9 ; grep '9   --   -15.28' static/info | awk '{print $3" "$7" "$4}' ; \s*-15.2892\d*\s*-0.080\d*\s*1.00
-Match ; Eigenvalue 11 ; grep '11   --   -15.28' static/info | awk '{print $3" "$7" "$4}' ; \s*-15.2877\d*\s*0.135\d*\s*1.00
-Match ; Eigenvalue 13 ; grep '13   --   -14.45' static/info | awk '{print $3" "$7" "$4}' ; \s*-14.4566\d*\s*-0.110\d*\s*1.00
-Match ; Force         ; sed -n '/^Forces on/{n\;n\;p\;}' static/info ; \s*2.545\d*
+Match ; Eigenvalue  1 ; echo $(grep ' 1   --   ' static/info | head -1 | cut -b 12-25) + 28.09244 | bc -l; $prec
+Match ; Eigenvalue  3 ; echo $(grep ' 3   --   ' static/info | head -1 | cut -b 12-25) + 27.15118 | bc -l; $prec
+Match ; Eigenvalue  5 ; echo $(grep ' 5   --   ' static/info | head -1 | cut -b 12-25) + 17.99135 | bc -l; $prec
+Match ; Eigenvalue  7 ; echo $(grep ' 7   --   ' static/info | head -1 | cut -b 12-25) + 16.40218 | bc -l; $prec
+Match ; Eigenvalue  9 ; echo $(grep ' 9   --   ' static/info | head -1 | cut -b 12-25) + 15.28922 | bc -l; $prec
+Match ; Eigenvalue 11 ; echo $(grep '11   --   ' static/info | head -1 | cut -b 12-25) + 15.28775 | bc -l; $prec
+Match ; Eigenvalue 13 ; echo $(grep '13   --   ' static/info | head -1 | cut -b 12-25) + 14.45666 | bc -l; $prec
+Match ; Eigenvalue 15 ; echo $(grep '15   --   ' static/info | head -1 | cut -b 12-25) + 14.34825 | bc -l; $prec
 
+Match ; Sz  1         ; echo $(grep ' 1   --   ' static/info | head -1 | cut -b 52-)   -  0.5     | bc -l; 0
+Match ; Sz  3         ; echo $(grep ' 3   --   ' static/info | head -1 | cut -b 52-)   -  0.5     | bc -l; 0
+Match ; Sz  5         ; echo $(grep ' 5   --   ' static/info | head -1 | cut -b 52-)   -  0.476   | bc -l; 0
+Match ; Sz  7         ; echo $(grep ' 7   --   ' static/info | head -1 | cut -b 52-)   -  0.1436  | bc -l; 0
+Match ; Sz  9         ; echo $(grep ' 9   --   ' static/info | head -1 | cut -b 52-)   +  0.0804  | bc -l; 0
+Match ; Sz 11         ; echo $(grep '11   --   ' static/info | head -1 | cut -b 52-)   -  0.1350  | bc -l; 0
+Match ; Sz 13         ; echo $(grep '13   --   ' static/info | head -1 | cut -b 52-)   +  0.1109  | bc -l; 0
+Match ; Sz 15         ; echo $(grep '15   --   ' static/info | head -1 | cut -b 52-)   -  0.4364  | bc -l; 0
+
+Match ; Force         ; echo $(sed -n '/^Forces on/{n\;n\;p\;}' static/info | cut -b 20-29) -  2.54586| bc -l ; \.000
 
 
 Input: 07-spin_orbit_coupling.02-rkb.inp
-Match ; Eigenvalue  1 ; grep '1   --   -27.40' static/info | awk '{print $3" "$7" "$4}' ; \s*-27.4081\d*\s*0.500\d*\s*1.00
-Match ; Eigenvalue  3 ; grep '3   --   -26.45'   static/info | awk '{print $3" "$7" "$4}' ; \s*-26.4529\d*\s*0.500\d*\s*1.00
-Match ; Eigenvalue  5 ; grep '5   --   -17.30' static/info | awk '{print $3" "$7" "$4}' ; \s*-17.3086\d*\s*0.474\d*\s*1.00
-Match ; Eigenvalue  7 ; grep '7   --   -15.83' static/info | awk '{print $3" "$7" "$4}' ; \s*-15.8323\d*\s*0.136\d*\s*1.00
-Match ; Eigenvalue  9 ; grep '9   --   -14.76' static/info | awk '{print $3" "$7" "$4}' ; \s*-14.7673\d*\s*-0.087\d*\s*1.00
-Match ; Eigenvalue 11 ; grep '11   --   -14.73' static/info | awk '{print $3" "$7" "$4}' ; \s*-14.7323\d*\s*0.136\d*\s*1.00
-Match ; Eigenvalue 13 ; grep '13   --   -13.91' static/info | awk '{print $3" "$7" "$4}' ; \s*-13.9146\d*\s*-0.111\d*\s*1.00
-Match ; Force         ; sed -n '/^Forces on/{n\;n\;p\;}' static/info ; \s*2.528\d*
+Match ; Eigenvalue  1 ; echo $(grep ' 1   --   ' static/info | head -1 | cut -b 12-25) + 27.40811 | bc -l; $prec
+Match ; Eigenvalue  3 ; echo $(grep ' 3   --   ' static/info | head -1 | cut -b 12-25) + 26.45293 | bc -l; $prec
+Match ; Eigenvalue  5 ; echo $(grep ' 5   --   ' static/info | head -1 | cut -b 12-25) + 17.30865 | bc -l; $prec
+Match ; Eigenvalue  7 ; echo $(grep ' 7   --   ' static/info | head -1 | cut -b 12-25) + 15.83238 | bc -l; $prec
+Match ; Eigenvalue  9 ; echo $(grep ' 9   --   ' static/info | head -1 | cut -b 12-25) + 14.76732 | bc -l; $prec
+Match ; Eigenvalue 11 ; echo $(grep '11   --   ' static/info | head -1 | cut -b 12-25) + 14.73237 | bc -l; $prec
+Match ; Eigenvalue 13 ; echo $(grep '13   --   ' static/info | head -1 | cut -b 12-25) + 13.91461 | bc -l; $prec
+Match ; Eigenvalue 15 ; echo $(grep '15   --   ' static/info | head -1 | cut -b 12-25) + 13.64236 | bc -l; $prec
+
+Match ; Sz  1         ; echo $(grep ' 1   --   ' static/info | head -1 | cut -b 52-)   -  0.5     | bc -l; 0
+Match ; Sz  3         ; echo $(grep ' 3   --   ' static/info | head -1 | cut -b 52-)   -  0.5     | bc -l; 0
+Match ; Sz  5         ; echo $(grep ' 5   --   ' static/info | head -1 | cut -b 52-)   -  0.476   | bc -l; 0
+Match ; Sz  7         ; echo $(grep ' 7   --   ' static/info | head -1 | cut -b 52-)   -  0.1436  | bc -l; 0
+Match ; Sz  9         ; echo $(grep ' 9   --   ' static/info | head -1 | cut -b 52-)   +  0.0804  | bc -l; 0
+Match ; Sz 11         ; echo $(grep '11   --   ' static/info | head -1 | cut -b 52-)   -  0.1350  | bc -l; 0
+Match ; Sz 13         ; echo $(grep '13   --   ' static/info | head -1 | cut -b 52-)   +  0.1109  | bc -l; 0
+Match ; Sz 15         ; echo $(grep '15   --   ' static/info | head -1 | cut -b 52-)   -  0.4364  | bc -l; 0
+
+Match ; Force         ; echo $(sed -n '/^Forces on/{n\;n\;p\;}' static/info | cut -b 20-29) - 2.52840 | bc -l ; \.000
+

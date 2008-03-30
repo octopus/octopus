@@ -6,7 +6,7 @@ Author     : Alberto
 Date       : 13.11.05
 Arch       : Linux rhodas 2.4.26-1-386 #1 Thu Jul 22 12:46:23 JST 2004 i686 GNU/Linux
 Release    : 3.1.0pre1
-Programs   : octopus; octopus_single
+Programs   : octopus
 TestGroups : short-run
 Enabled    : Yes
 

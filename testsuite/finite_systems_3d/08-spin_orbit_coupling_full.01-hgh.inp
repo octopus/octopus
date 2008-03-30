@@ -1,0 +1,31 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: 07-spin_orbit_coupling.01-ground_state.inp 2655 2007-01-19 17:38:16Z xavier $
+
+Units = ev_angstrom
+
+CalculationMode = gs
+fromScratch = yes
+
+Radius  = 5.0
+Spacing = 0.35
+
+%Species
+  "Xe"  | 131.29 | spec_ps_hgh | 54 | 2 | 1
+%
+
+%Coordinates
+  "Xe" | -1.5 | 0 | 0 | no
+  "Xe" |  1.5 | 0 | 0 | no
+%
+ExcessCharge = 1
+
+SpinComponents = non_collinear
+RelativisticCorrection = spin_orbit
+
+GuessMagnetDensity = user_defined
+%AtomsMagnetDirection
+ 0.0 | 0.0 | 1.0 
+ 0.0 | 0.0 | 1.0
+%
+
+ParallelizationStrategy=par_domains

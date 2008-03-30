@@ -1,0 +1,36 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id$
+
+Test       : Spin-orbit coupling (fully converged SCF)
+Author     : Micael
+Date       : 13.09.07
+Arch       : Linux localhost.localdomain 2.6.11-1.27_FC3 #1 Tue May 17 20:27:37 EDT 2005 i686 i686 i386 GNU/Linux
+Release    : 3.1.0pre1
+Programs   : octopus; octopus_mpi
+TestGroups : long-run
+Enabled    : Yes
+
+
+Input: 08-spin_orbit_coupling_full.01-hgh.inp
+Match ; Eigenvalue  1 ; echo $(grep ' 1   --   ' static/info | head -1 | cut -b 12-25) + 27.32224 | bc -l; $prec
+Match ; Eigenvalue  3 ; echo $(grep ' 3   --   ' static/info | head -1 | cut -b 12-25) + 26.42260 | bc -l; $prec
+Match ; Eigenvalue  5 ; echo $(grep ' 5   --   ' static/info | head -1 | cut -b 12-25) + 17.23180 | bc -l; $prec
+Match ; Eigenvalue  7 ; echo $(grep ' 7   --   ' static/info | head -1 | cut -b 12-25) + 15.77943 | bc -l; $prec
+Match ; Eigenvalue  9 ; echo $(grep ' 9   --   ' static/info | head -1 | cut -b 12-25) + 14.70713 | bc -l; $prec
+Match ; Eigenvalue 11 ; echo $(grep '11   --   ' static/info | head -1 | cut -b 12-25) + 14.69884 | bc -l; $prec
+Match ; Eigenvalue 13 ; echo $(grep '13   --   ' static/info | head -1 | cut -b 12-25) + 13.89219 | bc -l; $prec
+Match ; Eigenvalue 15 ; echo $(grep '15   --   ' static/info | head -1 | cut -b 12-25) + 13.65231 | bc -l; $prec
+
+Match ; Sz  1         ; echo $(grep ' 1   --   ' static/info | head -1 | cut -b 52-)   -  0.5     | bc -l; 0
+Match ; Sz  3         ; echo $(grep ' 3   --   ' static/info | head -1 | cut -b 52-)   -  0.5     | bc -l; 0
+Match ; Sz  5         ; echo $(grep ' 5   --   ' static/info | head -1 | cut -b 52-)   -  0.476   | bc -l; 0
+Match ; Sz  7         ; echo $(grep ' 7   --   ' static/info | head -1 | cut -b 52-)   -  0.1436  | bc -l; 0
+Match ; Sz  9         ; echo $(grep ' 9   --   ' static/info | head -1 | cut -b 52-)   +  0.0804  | bc -l; 0
+Match ; Sz 11         ; echo $(grep '11   --   ' static/info | head -1 | cut -b 52-)   -  0.1350  | bc -l; 0
+Match ; Sz 13         ; echo $(grep '13   --   ' static/info | head -1 | cut -b 52-)   +  0.1109  | bc -l; 0
+Match ; Sz 15         ; echo $(grep '15   --   ' static/info | head -1 | cut -b 52-)   -  0.4364  | bc -l; 0
+
+Match ; Force         ; echo $(sed -n '/^Forces on/{n\;n\;p\;}' static/info | cut -b 20-29) + 0.97768 | bc -l ; $prec
+
+#Disabled because it doesn't converge.
+#Input: 08-spin_orbit_coupling_full.02-rkb.inp
