@@ -99,7 +99,7 @@ contains
       ! We only need the value of the target functional.
       call states_copy(psi, initial_st)
       call propagate_forward(sys_, h_, td_, par_, target, psi)
-      f = - j1_functional(sys_%gr, psi)
+      f = - j1_functional(target, sys_%gr, psi)
       call iteration_manager_direct(-f, par_, iterator)
       call states_end(psi)
     else
@@ -129,7 +129,7 @@ contains
 
     j1 = - val
     fluence = parameters_fluence(par_)
-    j2 = - par_%alpha(1) * (fluence - par_%targetfluence)
+    j2 = parameters_j2(par_)
     j  = j1 + j2
 
     write(message(1), '(a,i5)') 'Direct optimization iteration #', geom_iter
@@ -313,7 +313,7 @@ contains
       call oct_prop_init(prop_psi, "psi", td%max_iter, oct%number_checkpoints)
 
       if (oct%mode_fixed_fluence) then
-        par%alpha(1) = (M_ONE/sqrt(par%targetfluence)) * sqrt ( parameters_fluence(par) )
+        call parameters_set_alpha(par, sqrt( parameters_fluence(par) / parameters_targetfluence(par)))
       end if
 
       call parameters_copy(par_new, par)      
@@ -346,7 +346,7 @@ contains
 
       call parameters_copy(par_prev, par)
       call propagate_forward(sys, h, td, par, target, psi, prop_psi)
-      j1 = j1_functional(sys%gr, psi)
+      j1 = j1_functional(target, sys%gr, psi)
       if(oct%dump_intermediate) call iterator_write(iterator, par)
       stop_loop = iteration_manager(j1, par, par_prev, iterator)
       call parameters_end(par_prev)
@@ -355,7 +355,7 @@ contains
       ctr_loop: do
         call parameters_copy(par_prev, par)
         call f_zbr98(sys, h, td, psi, prop_psi, prop_chi, par)
-        j1 = j1_functional(sys%gr, psi)
+        j1 = j1_functional(target, sys%gr, psi)
         if(oct%dump_intermediate) call iterator_write(iterator, par)
         stop_loop = iteration_manager(j1, par, par_prev, iterator)
         if(clean_stop() .or. stop_loop) exit ctr_loop
@@ -379,11 +379,14 @@ contains
       integer :: ierr, maxiter
       REAL_DOUBLE :: minvalue, step
       REAL_DOUBLE, allocatable :: x(:)
+      integer :: nfreqs
+
       call push_sub('opt_control.scheme_direct')
 
       call parameters_set_rep(par)
 
-      ALLOCATE(x(par%nfreqs-1), par%nfreqs-1)
+      nfreqs = parameters_nfreqs(par)
+      ALLOCATE(x(nfreqs-1), nfreqs-1)
 
       ! Set the module pointers, so that the calc_point and write_iter_info routines
       ! can use them.
@@ -394,8 +397,8 @@ contains
 
       call parameters_par_to_x(par, x)
       step = oct%direct_step * M_PI
-      maxiter = floor(real(iterator%ctr_iter_max) / real(par%nfreqs))
-      ierr = loct_minimize_direct(MINMETHOD_NMSIMPLEX, par%nfreqs-1, x(1), step,&
+      maxiter = floor(real(iterator%ctr_iter_max) / real(nfreqs))
+      ierr = loct_minimize_direct(MINMETHOD_NMSIMPLEX, nfreqs-1, x(1), step,&
                real(iterator%eps, 8), maxiter, &
                direct_opt_calc, direct_opt_write_info, minvalue)
 
@@ -441,7 +444,7 @@ contains
       call propagate_forward(sys, h, td, par, target, psi, prop_psi)
     end if
 
-    call states_copy(chi, target%st)
+    call calc_chi(oct, target, sys%gr, psi, chi)
     call bwd_step(oct, sys, td, h, target, par, par_chi, chi, prop_chi, prop_psi)
 
     call states_end(psi)
@@ -464,8 +467,7 @@ contains
     type(oct_prop_t), intent(inout)               :: prop_psi, prop_chi
     FLOAT, intent(out)                            :: j1
 
-    integer :: j
-    FLOAT :: fluence, old_penalty, new_penalty
+    FLOAT :: new_penalty
     type(states_t) :: chi
     type(oct_control_parameters_t) :: parp
 
@@ -475,7 +477,7 @@ contains
       call states_end(psi)
       call states_copy(psi, initial_st)
       call propagate_forward(sys, h, td, par, target, psi, prop_psi)
-      j1 = j1_functional(sys%gr, psi)
+      j1 = j1_functional(target, sys%gr, psi)
       call pop_sub()
       return
     end if
@@ -483,20 +485,15 @@ contains
     call parameters_copy(parp, par)
 
     call states_copy(chi, psi)
-    call calc_chi(sys%gr, psi, chi)
+    call calc_chi(oct, target, sys%gr, psi, chi)
     call bwd_step(oct, sys, td, h, target, par, parp, chi, prop_chi, prop_psi)
 
-    do j = 1, parp%no_parameters
-      call filter_apply(parp%f(j), filter)
-    end do
+    call parameters_filter(parp, filter)
 
     ! recalc field
     if (oct%mode_fixed_fluence) then
-      fluence = parameters_fluence(parp) 
-      old_penalty = par%alpha(1)
-      new_penalty = sqrt( fluence * old_penalty**2 / par%targetfluence )
-      par%alpha(:) = new_penalty
-      parp%alpha(:) = new_penalty
+      new_penalty = parameters_alpha(par, 1) * sqrt( parameters_fluence(parp) / parameters_targetfluence(par) )
+      call parameters_set_alpha(parp, new_penalty)
       call parameters_set_fluence(parp)
     end if
 
@@ -508,7 +505,7 @@ contains
     call states_copy(psi, initial_st)
     call propagate_forward(sys, h, td, par, target, psi, prop_psi)
 
-    j1 = j1_functional(sys%gr, psi)
+    j1 = j1_functional(target, sys%gr, psi)
 
     call states_end(chi)
     call parameters_end(parp)
@@ -543,11 +540,11 @@ contains
     call propagate_forward(sys, h, td, par, target, psi, prop_psi)
 
     ! Check the performance.
-    j1 = j1_functional(sys%gr, psi)
+    j1 = j1_functional(target, sys%gr, psi)
 
     ! Set the boundary condition for the backward propagation.
     call states_copy(chi, psi)
-    call calc_chi(sys%gr, psi, chi)
+    call calc_chi(oct, target, sys%gr, psi, chi)
 
     ! Backward propagation, while at the same time finding the output field, 
     ! which is placed at par_chi
@@ -589,7 +586,7 @@ contains
       call states_end(psi)
       call states_copy(psi, initial_st)
       call propagate_forward(sys, h, td, par, target, psi, prop_psi)
-      j1 = j1_functional(sys%gr, psi)
+      j1 = j1_functional(target, sys%gr, psi)
       call pop_sub()
       return
     end if
@@ -604,14 +601,14 @@ contains
     end if
     
     call states_copy(chi, psi)
-    call calc_chi(sys%gr, psi, chi)
+    call calc_chi(oct, target, sys%gr, psi, chi)
     call bwd_step(oct, sys, td, h, target, par, par_chi, chi, prop_chi, prop_psi)
 
     call states_end(psi)
     call states_copy(psi, initial_st)
     call fwd_step(oct, sys, td, h, target, par, par_chi, psi, prop_chi, prop_psi)
 
-    j1 = j1_functional(sys%gr, psi)
+    j1 = j1_functional(target, sys%gr, psi)
 
     call states_end(chi)
     call parameters_end(par_chi)
@@ -621,7 +618,6 @@ contains
 
 
 #include "read.F90"
-#include "aux.F90"
 #include "defstates.F90"
 #include "finalcheck.F90"
 

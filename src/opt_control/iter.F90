@@ -162,7 +162,7 @@ contains
     iterator%convergence(3, iterator%ctr_iter) = j2
     ! WARNING: this does not consider the possibility of different 
     ! alphas for different control parameters.
-    iterator%convergence(4, iterator%ctr_iter) = par%alpha(1)
+    iterator%convergence(4, iterator%ctr_iter) = parameters_alpha(par, 1)
     iterator%convergence(5, iterator%ctr_iter) = parameters_diff(par, par_prev)
     
     if(iterator%ctr_iter .eq. iterator%ctr_iter_max) then
@@ -186,7 +186,7 @@ contains
     write(message(2), '(6x,a,f12.5)')  " => J        = ", jfunctional
     write(message(3), '(6x,a,f12.5)')  " => J2       = ", j2
     write(message(4), '(6x,a,f12.5)')  " => Fluence  = ", fluence
-    write(message(5), '(6x,a,f12.5)')  " => Penalty  = ", par%alpha(1)
+    write(message(5), '(6x,a,f12.5)')  " => Penalty  = ", parameters_alpha(par, 1)
     write(message(6), '(6x,a,es12.2)') " => D[e,e']  = ", iterator%convergence(5, iterator%ctr_iter)
     if(iterator%ctr_iter .ne. 0) then
       call write_info(6)
@@ -231,7 +231,7 @@ contains
     call push_sub('iter.iteration_manager_direct')
 
     fluence = parameters_fluence(par)
-    j2 = - par%alpha(1) * (fluence - par%targetfluence)
+    j2 = parameters_j2(par)
     j  = j1 + j2
 
     iterator%convergence(1, iterator%ctr_iter) = j
@@ -239,7 +239,7 @@ contains
     iterator%convergence(3, iterator%ctr_iter) = j2
     ! WARNING: this does not consider the possibility of different 
     ! alphas for different control parameters.
-    iterator%convergence(4, iterator%ctr_iter) = par%alpha(1)
+    iterator%convergence(4, iterator%ctr_iter) = parameters_alpha(par, 1)
     if(present(dx)) then
       iterator%convergence(5, iterator%ctr_iter) = dx
     else

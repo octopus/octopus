@@ -38,7 +38,7 @@
 
     call propagate_forward(sys, h, td, par, target, psi, write_iter = .true.)
 
-    j1 = j1_functional(sys%gr, psi)
+    j1 = j1_functional(target, sys%gr, psi)
     fluence = parameters_fluence(par)
     j2 = parameters_j2(par)
     jfunctional = j1 + j2

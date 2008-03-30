@@ -26,7 +26,7 @@ libopt_control_a_SOURCES = \
 	output.F90 target.F90 propagation.F90 opt_control.F90
 
 noinst_HEADERS = \
-	read.F90 aux.F90 defstates.F90 propagation.F90 finalcheck.F90 
+	read.F90 defstates.F90 propagation.F90 finalcheck.F90 
 
 include $(srcdir)/../common-rules.make
 
@@ -41,4 +41,4 @@ iter.o : iter.F90 parameters.o opt_control_constants.o
 output.o : output.F90 iter.o parameters.o opt_control_constants.o 
 target.o : target.F90 opt_control_constants.o 
 propagation.o : propagation.F90 output.o parameters.o target.o opt_control_constants.o 
-opt_control.o : opt_control.F90 finalcheck.F90 defstates.F90 aux.F90 read.F90 target.o output.o iter.o parameters.o propagation.o opt_control_constants.o filters.o 
+opt_control.o : opt_control.F90 finalcheck.F90 defstates.F90 read.F90 target.o output.o iter.o parameters.o propagation.o opt_control_constants.o filters.o 

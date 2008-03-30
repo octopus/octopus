@@ -126,7 +126,7 @@ module opt_control_propagation_m
       if(present(prop)) call oct_prop_output(prop, i, psi, gr)
 
       ! if td_target
-      if(target%mode==oct_targetmode_td) call calc_tdfitness(target, gr, psi, i)
+      call target_tdcalc(target, gr, psi, i)
       
       ! update
       call states_calc_dens(psi, NP_PART, psi%rho)
@@ -234,7 +234,7 @@ module opt_control_propagation_m
     gr => sys%gr
     call td_rti_copy(tr_chi, td%tr)
 
-    aux_fwd_propagation = (target%mode == oct_targetmode_td .or. (h%theory_level.ne.INDEPENDENT_PARTICLES))
+    aux_fwd_propagation = (target_mode(target) == oct_targetmode_td .or. (h%theory_level.ne.INDEPENDENT_PARTICLES))
     if(aux_fwd_propagation) then
       call states_copy(psi2, psi)
       call parameters_copy(par_prev, par)
@@ -266,7 +266,7 @@ module opt_control_propagation_m
       call td_rti_dt(sys%ks, h, gr, chi, tr_chi, i*td%dt, td%dt, td%max_iter, i)
       call update_hamiltonian_psi(i, gr, sys%ks, h, td, target, par, psi)
       call td_rti_dt(sys%ks, h, gr, psi, td%tr, i*td%dt, td%dt, td%max_iter, i)
-      if(target%mode == oct_targetmode_td) call calc_tdfitness(target, gr, psi, i) 
+      call target_tdcalc(target, gr, psi, i) 
       call oct_prop_output(prop_psi, i, psi, gr)
       call oct_prop_check(prop_chi, chi, gr, sys%geo, i)
     end do
@@ -274,7 +274,7 @@ module opt_control_propagation_m
     call states_calc_dens(psi, NP_PART, psi%rho)
     call v_ks_calc(gr, sys%ks, h, psi)
 
-    if(target%mode == oct_targetmode_td .or. (h%theory_level.ne.INDEPENDENT_PARTICLES) ) then
+    if(target_mode(target) == oct_targetmode_td .or. (h%theory_level.ne.INDEPENDENT_PARTICLES) ) then
       call states_end(psi2)
       call parameters_end(par_prev)
     end if
@@ -438,8 +438,8 @@ module opt_control_propagation_m
     integer :: j
     call push_sub('propagation.update_hamiltonian_chi')
 
-    if(target%mode == oct_targetmode_td) then
-      call calc_inh(st, gr, target, td%dt*iter, inh)
+    if(target_mode(target) == oct_targetmode_td) then
+      call target_inh(st, gr, target, td%dt*iter, inh)
       call hamiltonian_set_inh(h, inh)
     end if
 
@@ -480,7 +480,7 @@ module opt_control_propagation_m
     integer :: j
     call push_sub('propagation.update_hamiltonian_psi')
 
-    if(target%mode == oct_targetmode_td) then
+    if(target_mode(target) == oct_targetmode_td) then
       call hamiltonian_remove_inh(h)
     end if
 
@@ -535,15 +535,17 @@ module opt_control_propagation_m
     
     CMPLX :: d1
     CMPLX, allocatable  :: dl(:), dq(:)
-    integer :: ik, p, j
+    integer :: ik, p, j, no_parameters
     FLOAT :: value
 
     call push_sub('propagation.update_field')
-    
-    ALLOCATE(dl(cp%no_parameters), cp%no_parameters)
-    ALLOCATE(dq(cp%no_parameters), cp%no_parameters)
 
-    do j = 1, cp%no_parameters
+    no_parameters = parameters_number(cp)
+    
+    ALLOCATE(dl(no_parameters), no_parameters)
+    ALLOCATE(dq(no_parameters), no_parameters)
+
+    do j = 1, no_parameters
       oppsi = psi
       dl(j) = M_z0
       do ik = 1, psi%d%nik
@@ -580,27 +582,7 @@ module opt_control_propagation_m
     d1 = M_z1
     if(oct%algorithm .eq. oct_algorithm_zbr98) d1 = zstates_mpdotp(gr%m, psi, chi)
 
-    select case(dir)
-      case('f')
-        do j = 1, cp%no_parameters
-          value = (M_ONE / cp%alpha(j)) * aimag(d1*dl(j)) / &
-           ( tdf(cp%td_penalty(j), iter) - M_TWO*aimag(dq(j)) )
-          value = (M_ONE - oct%delta)*tdf(cpp%f(j), iter) + oct%delta * value
-          call tdf_set_numerical(cp%f(j), iter, value)
-          if(iter+1 <= td%max_iter + 1)  call tdf_set_numerical(cp%f(j), iter+1, value)
-          if(iter+2 <= td%max_iter + 1)  call tdf_set_numerical(cp%f(j), iter+2, value)
-        end do
-
-      case('b')
-        do j = 1, cp%no_parameters
-          value = (M_ONE / cp%alpha(j)) * aimag(d1*dl(j)) / &
-           ( tdf(cp%td_penalty(j), iter+1) - M_TWO*aimag(dq(j)) ) 
-          value = (M_ONE - oct%eta)*tdf(cpp%f(j), iter+1) + oct%eta * value
-          call tdf_set_numerical(cp%f(j), iter+1, value)
-          if(iter > 0) call tdf_set_numerical(cp%f(j), iter, value)
-          if(iter-1 > 0) call tdf_set_numerical(cp%f(j), iter-1, value)
-        end do
-    end select
+    call parameters_update(cp, cpp, dir, iter, oct%delta, oct%eta, d1, dl, dq)
 
     deallocate(dl, dq)
     call pop_sub()

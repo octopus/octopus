@@ -35,6 +35,7 @@ module opt_control_parameters_m
   use tdf_m
   use mesh_m
   use mix_m
+  use filter_m
 
   implicit none
 
@@ -53,13 +54,21 @@ module opt_control_parameters_m
             parameters_diff,              &
             parameters_apply_envelope,    &
             parameters_set_fluence,       &
+            parameters_set_alpha,         &
             parameters_set_rep,           &
             parameters_to_realtime,       &
             parameters_set_initial,       &
             parameters_fluence,           &
             parameters_j2,                &
             parameters_par_to_x,          &
-            parameters_x_to_par
+            parameters_x_to_par,          &
+            parameters_update,            &
+            parameters_number,            &
+            parameters_nfreqs,            &
+            parameters_alpha,             &
+            parameters_targetfluence,     &
+            parameters_filter
+
 
   integer, parameter ::                 &
     ctr_parameter_real_space       = 1, &
@@ -67,6 +76,7 @@ module opt_control_parameters_m
 
 
   type oct_control_parameters_t
+    private
     integer :: no_parameters
     FLOAT   :: dt
     integer :: ntiter
@@ -938,6 +948,15 @@ contains
 
 
   ! ---------------------------------------------------------
+  subroutine parameters_set_alpha(par, alpha)
+    type(oct_control_parameters_t), intent(inout) :: par
+    FLOAT, intent(in) :: alpha
+    par%alpha(:) = alpha
+  end subroutine parameters_set_alpha
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
   subroutine parameters_copy(cp_out, cp_in)
     type(oct_control_parameters_t), intent(inout) :: cp_out
     type(oct_control_parameters_t), intent(in)    :: cp_in
@@ -1055,6 +1074,94 @@ contains
   end subroutine parameters_x_to_par
   ! ---------------------------------------------------------
 
+
+  ! ---------------------------------------------------------
+  subroutine parameters_update(cp, cpp, dir, iter, delta, eta, d1, dl, dq)
+    type(oct_control_parameters_t), intent(inout) :: cp
+    type(oct_control_parameters_t), intent(in)    :: cpp
+    character(len=1),               intent(in)    :: dir
+    integer,                        intent(in)    :: iter
+    FLOAT,                          intent(in)    :: delta, eta
+    CMPLX,                          intent(in)    :: d1
+    CMPLX,                          intent(in)    :: dl(:), dq(:)
+
+    FLOAT :: value
+    integer :: j, ntiter
+
+    call push_sub('parameters.parameters_update')
+
+    select case(dir)
+      case('f')
+        do j = 1, cp%no_parameters
+          value = (M_ONE / parameters_alpha(cp, j)) * aimag(d1*dl(j)) / &
+           ( tdf(cp%td_penalty(j), iter) - M_TWO*aimag(dq(j)) )
+          value = (M_ONE - delta)*tdf(cpp%f(j), iter) + delta * value
+          call tdf_set_numerical(cp%f(j), iter, value)
+          if(iter+1 <= cp%ntiter + 1)  call tdf_set_numerical(cp%f(j), iter+1, value)
+          if(iter+2 <= cp%ntiter + 1)  call tdf_set_numerical(cp%f(j), iter+2, value)
+        end do
+
+      case('b')
+        do j = 1, cp%no_parameters
+          value = (M_ONE / parameters_alpha(cp, j)) * aimag(d1*dl(j)) / &
+           ( tdf(cp%td_penalty(j), iter+1) - M_TWO*aimag(dq(j)) ) 
+          value = (M_ONE - eta)*tdf(cpp%f(j), iter+1) + eta * value
+          call tdf_set_numerical(cp%f(j), iter+1, value)
+          if(iter > 0) call tdf_set_numerical(cp%f(j), iter, value)
+          if(iter-1 > 0) call tdf_set_numerical(cp%f(j), iter-1, value)
+        end do
+    end select
+
+    call pop_sub()
+  end subroutine parameters_update
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  FLOAT function parameters_alpha(par, j)
+    type(oct_control_parameters_t), intent(in) :: par
+    integer,                        intent(in) :: j
+    parameters_alpha = par%alpha(j)
+  end function parameters_alpha
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  FLOAT function parameters_targetfluence(par)
+    type(oct_control_parameters_t), intent(in) :: par
+    parameters_targetfluence = par%targetfluence
+  end function parameters_targetfluence
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  integer function parameters_number(par)
+    type(oct_control_parameters_t), intent(in) :: par
+    parameters_number = par%no_parameters
+  end function parameters_number
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  integer function parameters_nfreqs(par)
+    type(oct_control_parameters_t), intent(in) :: par
+    parameters_nfreqs = par%nfreqs
+  end function parameters_nfreqs
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine parameters_filter(par, filter)
+    type(oct_control_parameters_t), intent(inout) :: par
+    type(filter_t),                 intent(inout) :: filter
+    integer :: j
+
+    do j = 1, par%no_parameters
+      call filter_apply(par%f(j), filter)
+    end do
+
+  end subroutine parameters_filter
+  ! ---------------------------------------------------------
 
 end module opt_control_parameters_m
 

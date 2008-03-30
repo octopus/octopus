@@ -236,8 +236,8 @@
     end if
 
     if(oct%algorithm .eq. oct_algorithm_zbr98) then
-      if( (target%type .ne. oct_tg_groundstate) .and. &
-          (target%type .ne. oct_tg_gstransformation) ) then
+      if( (target_type(target) .ne. oct_tg_groundstate) .and. &
+          (target_type(target) .ne. oct_tg_gstransformation) ) then
         write(message(1), '(a)') 'The scheme "OCTScheme = oct_algorithm_zbr98 can only be used if'
         write(message(2), '(a)') 'the target state is "OCTTargetOperator = oct_tg_gstransformation"'
         write(message(3), '(a)') 'or "OCTTargetOperator = oct_tg_groundstate".'
@@ -254,9 +254,9 @@
     end if
       
     ! local targets only in ZR98 and WG05
-    if(target%type .eq. oct_tg_local .or. &
-       target%type .eq. oct_tg_density .or. &
-       target%type .eq. oct_tg_td_local) then
+    if(target_type(target) .eq. oct_tg_local .or. &
+       target_type(target) .eq. oct_tg_density .or. &
+       target_type(target) .eq. oct_tg_td_local) then
       if(oct%algorithm .eq. oct_algorithm_zbr98) then
         write(message(1), '(a)') 'Cannot use ZBR98 OCT scheme if the target is oct_tg_density,'
         write(message(2), '(a)') 'oct_tg_local or oct_tg_td_local.'
@@ -264,7 +264,7 @@
       end if
     end if
 
-    if(target%type .eq. oct_tg_td_local) then
+    if(target_type(target) .eq. oct_tg_td_local) then
       if(tr%method .ne. PROP_CRANK_NICHOLSON) then
         write(message(1), '(a)') 'If OCTTargetMode = oct_tg_td_local, then you must set'
         write(message(2), '(a)') 'TDEvolutionMethod = crank_nicholson'
@@ -272,7 +272,7 @@
       end if
     end if
 
-    if(target%type .eq. oct_tg_excited) then
+    if(target_type(target) .eq. oct_tg_excited) then
       if(sys%st%d%ispin .eq. UNPOLARIZED) then
         write(message(1), '(a)') 'If OCTTargetMode = oct_tg_excited, then you must run either with'
         write(message(1), '(a)') 'SpinComponents = spin_polarized or SpinComponents = spinors.'
@@ -300,7 +300,7 @@
       call write_fatal(2)
     end if
 
-    if(target%type .eq. oct_tg_exclude_state ) then
+    if(target_type(target) .eq. oct_tg_exclude_state ) then
       if(no_electrons > 1) then
         write(message(1), '(a)') 'If "OCTTargetOperator = oct_tg_exclude_state", you can only do'
         write(message(2), '(a)') 'one-electron runs.'
