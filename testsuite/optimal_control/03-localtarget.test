@@ -6,7 +6,7 @@ Author     : Alberto
 Date       : 07.09.07
 Arch       : Linux 
 Release    : 2.6.21
-Programs   : octopus; octopus_single
+Programs   : octopus
 TestGroups : long-run, oct
 Enabled    : Yes
 
