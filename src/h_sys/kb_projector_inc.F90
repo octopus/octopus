@@ -48,7 +48,6 @@ subroutine X(kb_project)(mesh, sm, kb_p, dim, psi, ppsi)
   end if
 #endif
 
-  uvpsi(1:2) = kb_p%e(1:2)*uvpsi(1:2)
   call X(kb_project_ket)(mesh, sm, kb_p, dim, uvpsi, ppsi)
 
   call pop_sub()
