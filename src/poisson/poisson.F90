@@ -157,7 +157,12 @@ contains
     subroutine init_3D()
       integer :: default_solver
 
+#ifndef SINGLE_PRECISION
       default_solver = ISF
+#else
+      default_solver = FFT_SPH
+#endif
+
       if (gr%m%use_curvlinear) default_solver = CG_CORRECTED
       if (gr%sb%periodic_dim > 0) default_solver = gr%sb%periodic_dim
       
