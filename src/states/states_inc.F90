@@ -150,7 +150,7 @@ subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi, normalize, mask, overla
   ss = M_ZERO
 
   if(.not. m%use_curvlinear) then
-    
+
     do idim = 1, dim
       do sp = 1, m%np, block_size
         size = min(block_size, m%np - sp + 1)
@@ -159,12 +159,12 @@ subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi, normalize, mask, overla
           if(present(mask)) then
             if(mask(ist)) cycle
           end if
-          
+
           ss(ist) = ss(ist) + blas_dot(size, psi(sp, idim, ist), 1, phi(sp, idim), 1)
         end do
       end do
     end do
-    
+
     ss = ss*m%vol_pp(1)
 
     call profiling_count_operations((R_ADD + R_MUL)*m%np*dim*nst)
@@ -184,7 +184,7 @@ subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi, normalize, mask, overla
         end do
       end do
     end do
-    
+
     call profiling_count_operations((R_ADD + 2*R_MUL)*m%np*dim*nst)
 
   end if
@@ -213,12 +213,9 @@ subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi, normalize, mask, overla
         if(present(mask)) then
           if(mask(ist)) cycle
         end if
-        
-#ifdef R_TCOMPLEX
-        call ZPREC(axpy)(size, -ss(ist), psi(sp, idim, ist), 1, phi(sp, idim), 1)
-#else
-        call PREC(axpy)(size, -ss(ist), psi(sp, idim, ist), 1, phi(sp, idim), 1)
-#endif
+
+        call blas_axpy(size, -ss(ist), psi(sp, idim, ist), 1, phi(sp, idim), 1)
+
       end do
     end do
   end do
@@ -238,7 +235,7 @@ subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi, normalize, mask, overla
   if(present(norm) .and. normalize) norm = nrm2
 
   deallocate(ss)
-  
+
   call pop_sub()
   call profiling_out(prof)
 end subroutine X(states_gram_schmidt)
