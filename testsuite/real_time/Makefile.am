@@ -32,6 +32,7 @@ dist_share_DATA =                    \
 	02-aetrs.test                \
 	03-exp_mid.01-gs.inp         \
 	03-exp_mid.02-td.inp         \
-	03-exp_mid.test
+	03-exp_mid.test              \
+	04-etrs_single.test
 
 CLEANFILES = *~ *.bak
