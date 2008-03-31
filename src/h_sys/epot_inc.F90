@@ -136,9 +136,9 @@ subroutine X(conmut_vnl_r)(gr, geo, ep, dim, idir, iatom, psi, cpsi, ik)
 
   call push_sub('epot_inc.Xconmut_vnl_r')
 
-  if(ep%p(iatom)%type.ne.M_NONE) then
-    cpsi(1:gr%m%np, 1:dim) = M_ZERO
+  cpsi(1:gr%m%np, 1:dim) = M_ZERO
 
+  if(ep%p(iatom)%type.ne.M_NONE) then
     n_s = ep%p(iatom)%sphere%ns
     jxyz => ep%p(iatom)%sphere%jxyz
     smx => ep%p(iatom)%sphere%x
