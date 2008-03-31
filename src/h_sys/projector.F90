@@ -188,10 +188,11 @@ contains
   end subroutine projector_init_phases
 
   !---------------------------------------------------------
-  subroutine projector_build(p, gr, a)
+  subroutine projector_build(p, gr, a, so_strength)
     type(projector_t), intent(inout) :: p
     type(grid_t),      intent(in)    :: gr
     type(atom_t),      intent(in)    :: a
+    FLOAT,             intent(in)    :: so_strength
 
     integer :: ll, mm
 
@@ -225,7 +226,7 @@ contains
         if(ll == p%lloc) cycle
         do mm = -ll, ll
           call rkb_projector_null(p%rkb_p(ll, mm))
-          call rkb_projector_init(p%rkb_p(ll, mm), p%sphere, gr, a, ll, mm)
+          call rkb_projector_init(p%rkb_p(ll, mm), p%sphere, gr, a, ll, mm, so_strength)
         end do
       end do
       ! for rkb, l = 0 is a normal kb

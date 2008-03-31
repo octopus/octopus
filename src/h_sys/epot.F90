@@ -97,6 +97,9 @@ module external_pot_m
     ! The gyromagnetic ratio (-2.0 for the electron, but different if we treat
     ! *effective* electrons in a quantum dot. It affects the spin Zeeman term.
     FLOAT :: gyromagnetic_ratio
+
+    ! SO prefactor (1.0 = normal SO, 0.0 = no SO)
+    FLOAT :: so_strength
     
     FLOAT :: eii
     FLOAT, pointer :: fii(:, :)
@@ -334,6 +337,16 @@ contains
       call write_fatal(1)
     end if
     call messages_print_var_option(stdout, "RelativisticCorrection", ep%reltype)
+
+    !%Variable SOStrength
+    !%Type float
+    !%Default M_ONE
+    !%Section Hamiltonian
+    !%Description
+    !% Tuning of the spin-orbit coupling strength: setting this value to zero turns off spin-orbit terms in
+    !% the hamiltonian, and setting it to one corresponds to full spin-orbit.
+    !%End
+    call loct_parse_float(check_inp('SOStrength'), M_ONE, ep%so_strength)
     
     ALLOCATE(ep%p(geo%natoms), geo%natoms)
 
@@ -494,7 +507,7 @@ contains
       call projector_end(ep%p(ia))
       call projector_init(ep%p(ia), gr%m, sb, atm, st%d%dim, ep%reltype)
       if(simul_box_is_periodic(sb)) call projector_init_phases(ep%p(ia), gr%m, st%d%nik, st%d%kpoints)
-      call projector_build(ep%p(ia), gr, atm)
+      call projector_build(ep%p(ia), gr, atm, ep%so_strength)
     end do
 
     if (ep%classic_pot > 0) then

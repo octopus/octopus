@@ -76,12 +76,13 @@ contains
   end subroutine rkb_projector_null
 
   ! ---------------------------------------------------------
-  subroutine rkb_projector_init(rkb_p, sm, gr, a, l, lm)
+  subroutine rkb_projector_init(rkb_p, sm, gr, a, l, lm, so_strength)
     type(rkb_projector_t), intent(inout) :: rkb_p
     type(submesh_t),       intent(in)    :: sm
     type(grid_t),          intent(in)    :: gr
     type(atom_t),          intent(in)    :: a
     integer,               intent(in)    :: l, lm
+    FLOAT,                 intent(in)    :: so_strength
  
     integer :: is, i
     FLOAT :: v, dv(3), x(MAX_DIM)
@@ -126,14 +127,14 @@ contains
     end do
     
     ! The l and m dependent prefactors are included in the KB energies
-    rkb_p%f(1, 1, 1) = real(l + lm + 1, REAL_PRECISION)
-    rkb_p%f(1, 2, 1) = sqrt(real((l + lm + 1)*(l - lm), REAL_PRECISION))
-    rkb_p%f(1, 1, 2) = sqrt(real((l - lm + 1)*(l + lm), REAL_PRECISION))
-    rkb_p%f(1, 2, 2) = real(l - lm + 1, REAL_PRECISION)
-    rkb_p%f(2, 1, 1) = real(l - lm, REAL_PRECISION)
-    rkb_p%f(2, 2, 1) = -sqrt(real((l + lm + 1)*(l - lm), REAL_PRECISION))
-    rkb_p%f(2, 1, 2) = -sqrt(real((l - lm + 1)*(l + lm), REAL_PRECISION))
-    rkb_p%f(2, 2, 2) = real(l + lm, REAL_PRECISION)
+    rkb_p%f(1, 1, 1) = real(l + so_strength*lm + 1, REAL_PRECISION)
+    rkb_p%f(1, 2, 1) = so_strength*sqrt(real((l + lm + 1)*(l - lm), REAL_PRECISION))
+    rkb_p%f(1, 1, 2) = so_strength*sqrt(real((l - lm + 1)*(l + lm), REAL_PRECISION))
+    rkb_p%f(1, 2, 2) = real(l - so_strength*lm + 1, REAL_PRECISION)
+    rkb_p%f(2, 1, 1) = real(l - so_strength*lm, REAL_PRECISION)
+    rkb_p%f(2, 2, 1) = -so_strength*sqrt(real((l + lm + 1)*(l - lm), REAL_PRECISION))
+    rkb_p%f(2, 1, 2) = -so_strength*sqrt(real((l - lm + 1)*(l + lm), REAL_PRECISION))
+    rkb_p%f(2, 2, 2) = real(l + so_strength*lm, REAL_PRECISION)
     rkb_p%f = rkb_p%f/real(2*l + 1, REAL_PRECISION)
 
     rkb_p%f(1, :, :) = rkb_p%f(1, :, :)*a%spec%ps%h(l, 1, 1)
