@@ -160,7 +160,7 @@ subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi, normalize, mask, overla
             if(mask(ist)) cycle
           end if
 
-          ss(ist) = ss(ist) + blas_dot(size, psi(sp, idim, ist), 1, phi(sp, idim), 1)
+          ss(ist) = ss(ist) + lalg_dot(size, psi(sp:, idim, ist), phi(sp:, idim))
         end do
       end do
     end do

@@ -136,39 +136,40 @@ subroutine X(conmut_vnl_r)(gr, geo, ep, dim, idir, iatom, psi, cpsi, ik)
 
   call push_sub('epot_inc.Xconmut_vnl_r')
 
+  if(ep%p(iatom)%type.ne.M_NONE) then
+    cpsi(1:gr%m%np, 1:dim) = M_ZERO
 
-  cpsi(1:gr%m%np, 1:dim) = M_ZERO
+    n_s = ep%p(iatom)%sphere%ns
+    jxyz => ep%p(iatom)%sphere%jxyz
+    smx => ep%p(iatom)%sphere%x
 
-  n_s = ep%p(iatom)%sphere%ns
-  jxyz => ep%p(iatom)%sphere%jxyz
-  smx => ep%p(iatom)%sphere%x
+    ALLOCATE(lpsi(n_s, dim),  n_s*dim)
+    ALLOCATE(xplpsi(n_s, dim), n_s*dim)
+    ALLOCATE(pxlpsi(n_s, dim), n_s*dim)
 
-  ALLOCATE(lpsi(n_s, dim),  n_s*dim)
-  ALLOCATE(xplpsi(n_s, dim), n_s*dim)
-  ALLOCATE(pxlpsi(n_s, dim), n_s*dim)
+    do idim = 1, dim
+      lpsi(1:n_s, idim) = psi(jxyz(1:n_s))
+    end do
 
-  do idim = 1, dim
-    lpsi(1:n_s, idim) = psi(jxyz(1:n_s))
-  end do
+    ! x V_nl |psi>
+    call X(project_sphere)(gr%m, ep%p(iatom), dim, lpsi, xplpsi, ep%reltype)
+    do idim = 1, dim
+      xplpsi(1:n_s, idim) = smx(1:n_s, idir) * xplpsi(1:n_s, idim)
+    end do
 
-  ! x V_nl |psi>
-  call X(project_sphere)(gr%m, ep%p(iatom), dim, lpsi, xplpsi, ep%reltype)
-  do idim = 1, dim
-    xplpsi(1:n_s, idim) = smx(1:n_s, idir) * xplpsi(1:n_s, idim)
-  end do
+    ! V_nl x |psi>
+    do idim = 1, dim
+      lpsi(1:n_s, idim) = smx(1:n_s, idir) * lpsi(1:n_s, idim)
+    end do
+    call X(project_sphere)(gr%m, ep%p(iatom), dim, lpsi, pxlpsi, ep%reltype)
+    
+    ! |cpsi> = x V_nl |psi> - V_nl x |psi> 
+    do idim = 1, dim
+      cpsi(jxyz(1:n_s), idim) = cpsi(jxyz(1:n_s), idim) + xplpsi(1:n_s, idim) - pxlpsi(1:n_s, idim)
+    end do
 
-  ! V_nl x |psi>
-  do idim = 1, dim
-    lpsi(1:n_s, idim) = smx(1:n_s, idir) * lpsi(1:n_s, idim)
-  end do
-  call X(project_sphere)(gr%m, ep%p(iatom), dim, lpsi, pxlpsi, ep%reltype)
-
-  ! |cpsi> = x V_nl |psi> - V_nl x |psi> 
-  do idim = 1, dim
-    cpsi(jxyz(1:n_s), idim) = cpsi(jxyz(1:n_s), idim) + xplpsi(1:n_s, idim) - pxlpsi(1:n_s, idim)
-  end do
-
-  deallocate(lpsi, xplpsi, pxlpsi)
+    deallocate(lpsi, xplpsi, pxlpsi)
+  end if
 
   call pop_sub()
 
