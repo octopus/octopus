@@ -27,16 +27,15 @@ Enabled    : Yes
 
 # First, we reproduce the LSDA results for Li, 8 electrons.
 Input: 03-functionals.01-jellium-lsda.inp
-Match ; TotalEnergy ; sed -n '/^Energy/{n\;p\;}' static/info ;\s*Total\s*=\s*-0.5049
-Match ; Eigenvalues ; sed -n '/Eigenvalues \[/{n\;n\;p\;}' static/info ; \s*-0.201102\d*\s*2.0000\d*
-Match ; Exchange    ; grep 'Exchange' static/info ; \s*Exchange\s*=\s*-0.95514
-
+Match ; TotalEnergy ; echo $(sed -n '/^Energy/{n\;p\;}' static/info | cut -b 20- ) + 0.5049 | bc -l; $prec
+Match ; Eigenvalues ; echo $(sed -n '/Eigenvalues \[/{n\;n\;p\;}' static/info | cut -b 10-22) + 0.2011 | bc -l; $prec
+Match ; Exchange    ; echo $(grep 'Exchange    =' static/info | cut -b 20- ) + 0.9551 | bc -l; $prec
 
 # Now, EXX/KLI for Li, 8 electrons (restarting from the previous run)
 Input: 03-functionals.02-jellium-exx_kli.inp
-Match ; TotalEnergy ; sed -n '/^Energy/{n\;p\;}' static/info ;\s*Total\s*=\s*-0.32895
-Match ; Eigenvalues ; sed -n '/Eigenvalues \[/{n\;n\;p\;}' static/info ; \s*-0.251694\d*\s*2.0000\d*
-Match ; Exchange    ; grep 'Exchange' static/info ; \s*Exchange\s*=\s*-1.03245
+Match ; TotalEnergy ; echo $(sed -n '/^Energy/{n\;p\;}' static/info | cut -b 20- ) + 0.3327 | bc -l ; $prec
+Match ; Eigenvalues ; echo $(sed -n '/Eigenvalues \[/{n\;n\;p\;}' static/info | cut -b 10-22) + 0.2520 | bc -l ; $prec
+Match ; Exchange    ; echo $(grep 'Exchange    =' static/info | cut -b 20- ) + 1.0329 | bc -l ; $prec
 
 
 # And finally, full EXX for Li, 8 electrons (restarting from the previous run)
