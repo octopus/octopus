@@ -566,9 +566,6 @@ contains
               if(first > ist) first = ist
             end if
 
-            write(message(1),'(a,3i5)') 'Randomizing wavefunction: #dim, #ist, #ik = ', idim, ist, ik
-            call write_warning(1)
-            
             call states_generate_random(st, gr%m, ist, ist)
             st%occ(ist, ik) = M_ZERO
           end do
