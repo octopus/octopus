@@ -418,12 +418,12 @@ contains
 
       ! are we finished?
       finish = &
-        (scf%conv_abs_dens  > M_ZERO .and. scf%abs_dens  <= scf%conv_abs_dens)  .or. &
-        (scf%conv_rel_dens  > M_ZERO .and. scf%rel_dens  <= scf%conv_rel_dens)  .or. &
-        (scf%conv_abs_force > M_ZERO .and. scf%abs_force <= scf%conv_abs_force) .or. &
-        (scf%conv_rel_force > M_ZERO .and. scf%rel_force <= scf%conv_rel_force) .or. &
-        (scf%conv_abs_ev    > M_ZERO .and. scf%abs_ev    <= scf%conv_abs_ev)    .or. &
-        (scf%conv_rel_ev    > M_ZERO .and. scf%rel_ev    <= scf%conv_rel_ev)
+        (scf%conv_abs_dens  <= M_ZERO .or. scf%abs_dens  <= scf%conv_abs_dens)  .and. &
+        (scf%conv_rel_dens  <= M_ZERO .or. scf%rel_dens  <= scf%conv_rel_dens)  .and. &
+        (scf%conv_abs_force <= M_ZERO .or. scf%abs_force <= scf%conv_abs_force) .and. &
+        (scf%conv_rel_force <= M_ZERO .or. scf%rel_force <= scf%conv_rel_force) .and. &
+        (scf%conv_abs_ev    <= M_ZERO .or. scf%abs_ev    <= scf%conv_abs_ev)    .and. &
+        (scf%conv_rel_ev    <= M_ZERO .or. scf%rel_ev    <= scf%conv_rel_ev)
 
       etime = loct_clock() - itime
       itime = etime + itime
