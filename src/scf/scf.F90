@@ -134,7 +134,6 @@ contains
     !% <i>N</i> is the total number of electrons in the problem.  A
     !% zero value means do not use this criterion. By default this
     !% value is set to 1e-3.
-
     !%End
     call loct_parse_float(check_inp('ConvRelDens'), CNST(1e-3), scf%conv_rel_dens)
 
