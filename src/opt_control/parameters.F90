@@ -190,10 +190,10 @@ contains
     call loct_parse_logical(check_inp('OCTFixInitialFluence'), .true., fix_initial_fluence)
 
 
-    !Variable OCTControlFunctionIsEnvelope
+    !%Variable OCTControlFunctionIsEnvelope
     !%Type logical
     !%Section Optimal Control
-    !%Default yes
+    !%Default no
     !%Description
     !% 
     !%End
@@ -514,9 +514,9 @@ contains
     do j = 1, cp%no_parameters
       call tdf_end(cp%f(j))
       call tdf_copy(cp%f(j), ep%lasers(j)%f)
-      if(cp%envelope) then
-        call tdf_cosine_divide(cp%w0, cp%f(j))
-      end if
+!!$      if(cp%envelope) then
+!!$        call tdf_cosine_divide(cp%w0, cp%f(j))
+!!$      end if
       cp%pol(1:MAX_DIM, j) = ep%lasers(j)%pol(1:MAX_DIM)
     end do
 

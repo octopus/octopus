@@ -64,8 +64,7 @@ module tdf_m
             tdf_nfreqs,                  &
             tdf_dt,                      &
             tdf_copy,                    &
-            tdf_end,                     &
-            assignment(=)
+            tdf_end
 
 
   integer, parameter ::      &
@@ -104,10 +103,6 @@ module tdf_m
 
   interface tdf
     module procedure tdfi, tdft
-  end interface
-
-  interface assignment (=)
-    module procedure tdf_copy
   end interface
 
   contains

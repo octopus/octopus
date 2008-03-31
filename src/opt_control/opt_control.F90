@@ -397,7 +397,13 @@ contains
 
       call parameters_par_to_x(par, x)
       step = oct%direct_step * M_PI
+      if(iterator%ctr_iter_max < nfreqs + 3) then
+        write(message(1), '(a)')     'The maximum number of OCT iterations (i.e., function evaluations)'
+        write(message(2), '(a, i4)') 'must be, for the current input data, larger than', nfreqs + 2
+        call write_fatal(2)
+      end if
       maxiter = floor(real(iterator%ctr_iter_max) / real(nfreqs))
+
       ierr = loct_minimize_direct(MINMETHOD_NMSIMPLEX, nfreqs-1, x(1), step,&
                real(iterator%eps, 8), maxiter, &
                direct_opt_calc, direct_opt_write_info, minvalue)
