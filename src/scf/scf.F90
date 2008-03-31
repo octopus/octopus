@@ -111,26 +111,32 @@ contains
 
     !%Variable ConvAbsDens
     !%Type float
-    !%Default 1e-5
-    !%Section SCF::Convergence
-    !%Description
-    !% Absolute convergence of the density: 
-    !% <math>\epsilon = \int {\rm d}^3r \vert \rho^{out}(\bf r) -\rho^{inp}(\bf r) \vert</math>.
-    !% A zero value means do not use this criterion.
-    !%End
-    call loct_parse_float(check_inp('ConvAbsDens'), CNST(1e-3), scf%conv_abs_dens)
-
-    !%Variable ConvRelDens
-    !%Type float
     !%Default 0.0
     !%Section SCF::Convergence
     !%Description
-    !% Relative convergence of the density:
-    !% <math>\epsilon = {1\over N} ConvAbsDens</math>.
-    !% <i>N</i> is the total number of electrons in the problem.
-    !% A zero value means do not use this criterion.
+    !% Absolute convergence of the density: 
+    !%
+    !% <math>\epsilon = \int {\rm d}^3r \vert \rho^{out}(\bf r) -\rho^{inp}(\bf r) \vert</math>.
+    !%
+    !% A zero value (the default) means do not use this criterion.
     !%End
-    call loct_parse_float(check_inp('ConvRelDens'), M_ZERO, scf%conv_rel_dens)
+    call loct_parse_float(check_inp('ConvAbsDens'), M_ZERO, scf%conv_abs_dens)
+
+    !%Variable ConvRelDens
+    !%Type float
+    !%Default 1e-3
+    !%Section SCF::Convergence
+    !%Description
+    !% Relative convergence of the density: 
+    !%
+    !% <math>\epsilon = {1\over N} ConvAbsDens</math>.
+    !% 
+    !% <i>N</i> is the total number of electrons in the problem.  A
+    !% zero value means do not use this criterion. By default this
+    !% value is set to 1e-3.
+
+    !%End
+    call loct_parse_float(check_inp('ConvRelDens'), CNST(1e-3), scf%conv_rel_dens)
 
     !%Variable ConvAbsEv
     !%Type float
@@ -138,8 +144,10 @@ contains
     !%Section SCF::Convergence
     !%Description
     !% Absolute convergence of the eigenvalues:
+    !%
     !% <math>\epsilon = \sum_{j=1}^{N_{occ}} \vert \epsilon_j^{out}-\epsilon_j^{inp}\vert</math>.
-    !% A zero value means do not use this criterion.
+    !%
+    !% A zero value (the default) means do not use this criterion.
     !%End
     call loct_parse_float(check_inp('ConvAbsEv'), M_ZERO, scf%conv_abs_ev)
     scf%conv_abs_ev = scf%conv_abs_ev * units_inp%energy%factor
@@ -150,8 +158,10 @@ contains
     !%Section SCF::Convergence
     !%Description
     !% Relative convergence of the eigenvalues:
+    !%
     !% <math>\epsilon = {1 \over E} \sum_{j=1}^{N_{occ}} \vert \epsilon_j^{out}-\epsilon_j^{inp}\vert</math>.
-    !% <i>E</i> is the sum of the eigenvalues. A zero value means do not use this criterion.
+    !%
+    !% <i>E</i> is the sum of the eigenvalues. A zero value(the default)  means do not use this criterion.
     !%End
     call loct_parse_float(check_inp('ConvRelEv'), M_ZERO, scf%conv_rel_ev)
 
@@ -162,7 +172,7 @@ contains
     !%Description
     !% Absolute convergence of the forces: 
     !% maximum variation of any component of the ionic forces in consecutive iterations.
-    !% A zero value means do not use this criterion.
+    !% A zero value (the default) means do not use this criterion.
     !%End
     call loct_parse_float(check_inp('ConvAbsForce'), M_ZERO, scf%conv_abs_force)
     scf%conv_abs_force = scf%conv_abs_force * units_inp%force%factor
@@ -174,7 +184,7 @@ contains
     !%Description
     !% Relative convergence of the forces:
     !% absolute convergence divided by the modulus of the force on the ion where the force changes the most.
-    !% A zero value means do not use this criterion.
+    !% A zero value (the default) means do not use this criterion.
     !%End
     call loct_parse_float(check_inp('ConvRelForce'), M_ZERO, scf%conv_rel_force)
 
