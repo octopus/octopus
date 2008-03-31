@@ -142,7 +142,7 @@ contains
     !% A zero value means do not use this criterion.
     !%End
     call loct_parse_float(check_inp('ConvAbsEv'), M_ZERO, scf%conv_abs_ev)
-    scf%conv_rel_dens = scf%conv_rel_dens * units_inp%energy%factor
+    scf%conv_abs_ev = scf%conv_abs_ev * units_inp%energy%factor
 
     !%Variable ConvRelEv
     !%Type float
