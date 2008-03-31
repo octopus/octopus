@@ -7,7 +7,7 @@ CalculationMode = opt_control
 # TD RUN Parameters
 # ------------------
 
-stime  = 100.0
+stime  = 300.0
 dt = 0.01
 TDEvolutionMethod = aetrs
 TDExponentialMethod = taylor
@@ -23,7 +23,7 @@ TDTimeStep = dt
 
 OCTPenalty =1.0
 OCTEps   = 0.000001
-OCTMaxIter = 7
+OCTMaxIter = 12
 
 OCTInitialState = oct_is_groundstate
 OCTTargetOperator = oct_tg_gstransformation
@@ -33,8 +33,14 @@ OCTTargetOperator = oct_tg_gstransformation
 
 OCTScheme = oct_algorithm_direct
 OCTParameterRepresentation = control_parameters_fourier_space
-OCTParameterOmegaMax = 0.10
+OCTParameterOmegaMax = 0.05
 OCTFixFluenceTo = -1
+
+#freq = 0.5
+freq = 0.129009
+
+OCTControlFunctionIsEnvelope = yes
+OCTCarrierFrequency = freq
 
 OCTDoubleCheck = no
 OCTMixing = no
@@ -46,14 +52,12 @@ OCTMixing = no
 #-----------------------------
 
 ampl = 0.06
-freq = 0.157
-envelope = 0
-w = 5.0
-cycles = 4
-tau = (pi/freq)*cycles
-t0 = tau
+#freq = 0.157
+freq = 0.00
+t0 = stime/2
+tau0 = stime/2
 %TDExternalFields
-  electric_field | 1 | 0 | 0 | envelope_constant | ampl | freq
+  electric_field | 1 | 0 | 0 | envelope_cosinusoidal | ampl | freq | tau0 | t0
 %
 
 Dimensions = 1

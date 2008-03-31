@@ -20,6 +20,7 @@
 #include "global.h"
 
 module opt_control_parameters_m
+  use lalg_adv_m
   use string_m
   use datasets_m
   use varinfo_m
@@ -94,6 +95,7 @@ module opt_control_parameters_m
 
     logical :: envelope
     FLOAT   :: w0
+    FLOAT, pointer :: utransf(:, :), utransfi(:, :)
   end type oct_control_parameters_t
 
   type(mix_t) :: parameters_mix
@@ -113,9 +115,11 @@ contains
     logical, intent(out)                          :: mode_basis_set
     logical, intent(out)                          :: maximize
 
-    integer :: i
-    FLOAT :: targetfluence, omegamax
+    integer :: i, mm, nn
+    FLOAT :: targetfluence, omegamax, t, det
     logical :: fix_initial_fluence
+    type(tdf_t) :: fn, fm
+    FLOAT, allocatable :: eigenvec(:, :), eigenval(:)
 
     !%Variable OCTParameterRepresentation
     !%Type integer
@@ -278,6 +282,81 @@ contains
 
     mode_basis_set = .false.
     if(par%representation .ne. ctr_parameter_real_space ) mode_basis_set = .true.
+
+    if(par%envelope) then
+      ! If par%envelope = .true., the object to optimize is the envelope of the
+      ! the laser pulse. Being e(t) the laser pulse, it is assumed that it
+      ! has the form:
+      !   e(t) = f(t) cos(w0*t),
+      ! where f(t) is the envelope. This is then expanded in a basis set:
+      !   f(t) = sum_{n=1}^N f_n g_n(t).
+      ! The fluence F[e] is then given by:
+      !   F[e] = sum_{m=1}^N sum_{n=1}^N f_m f_n S_{nm},
+      !   S_{nm} = \int_{0}^{T} dt g_n(t) g_m(t) cos^2(w0*t).
+      ! The following lines of code calculate a matrix U, placed in par%utransf,
+      ! that performs the transformation of variables that takes {f_n} to
+      ! {h_n}, (\vec{h} = U\vec{f}), such that
+      !   F[e] = sum-{m=1}^N h_n^2.
+      ! The inverse matrix U^{-1} is palced in par%utransfi.
+      ALLOCATE(eigenvec(par%nfreqs, par%nfreqs), par%nfreqs*par%nfreqs)
+      ALLOCATE(eigenval(par%nfreqs), par%nfreqs)
+      ALLOCATE(par%utransf (par%nfreqs, par%nfreqs), par%nfreqs*par%nfreqs)
+      ALLOCATE(par%utransfi(par%nfreqs, par%nfreqs), par%nfreqs*par%nfreqs)
+      par%utransf  = M_ZERO
+      par%utransfi = M_ZERO
+
+      call tdf_init_numerical(fn, par%ntiter, par%dt, initval = M_z0, omegamax = par%omegamax)
+      call tdf_init_numerical(fm, par%ntiter, par%dt, initval = M_z0, omegamax = par%omegamax)
+      call tdf_numerical_to_sineseries(fn, par%omegamax)
+      call tdf_numerical_to_sineseries(fm, par%omegamax)
+      do mm = 1, par%nfreqs
+        do nn = 1, par%nfreqs
+          call tdf_set_numerical(fm, reshape( (/ M_ZERO /), (/ par%nfreqs /) ) )
+          call tdf_set_numerical(fn, reshape( (/ M_ZERO /), (/ par%nfreqs /) ) )
+          call tdf_set_numerical(fm, mm, M_ONE)
+          call tdf_set_numerical(fn, nn, M_ONE)
+
+          call tdf_sineseries_to_numerical(fm)
+          call tdf_sineseries_to_numerical(fn)
+
+          do i = 1, par%ntiter + 1
+            t = (i-1)*par%dt
+            call tdf_set_numerical(fm, i, tdf(fm, i)*cos(par%w0*t))
+            call tdf_set_numerical(fn, i, tdf(fn, i)*cos(par%w0*t))
+          end do
+          par%utransf(mm, nn) = tdf_dot_product(fm, fn)
+          call tdf_numerical_to_sineseries(fn, par%omegamax)
+          call tdf_numerical_to_sineseries(fm, par%omegamax)
+        end do
+      end do
+
+      call lalg_eigensolve(par%nfreqs, par%utransf, eigenvec, eigenval)
+      do mm = 1, par%nfreqs
+        do nn = 1, par%nfreqs
+          eigenvec(mm, nn) = eigenvec(mm, nn) * sqrt(eigenval(nn))
+        end do
+      end do
+
+      par%utransf = transpose(eigenvec)
+      par%utransfi = par%utransf
+      det =  lalg_inverter(par%nfreqs, par%utransfi)
+
+    end if
+
+!!$    call parameters_set_rep(par)
+
+!!$    ALLOCATE(x(par%nfreqs), par%nfreqs)
+!!$    ALLOCATE(y(par%nfreqs), par%nfreqs)
+!!$    write(0, *) 'AAA', parameters_fluence(par)
+!!$
+!!$    do mm = 1, par%nfreqs
+!!$      x(mm) = tdf(par%f(1), mm)
+!!$    end do
+!!$    y = matmul(par%utransf, x)
+!!$    write(0, *) dot_product(y, y)
+!!$
+!!$    deallocate(x, y)
+
 
   end subroutine parameters_set_initial
   ! ---------------------------------------------------------
@@ -628,6 +707,12 @@ contains
     nullify(cp%alpha)
     deallocate(cp%pol)
     nullify(cp%pol)
+    if(cp%envelope) then
+      deallocate(cp%utransf)
+      nullify(cp%utransf)
+      deallocate(cp%utransfi)
+      nullify(cp%utransfi)
+    end if
 
     call pop_sub()
   end subroutine parameters_end
@@ -985,6 +1070,12 @@ contains
       call tdf_copy(cp_out%td_penalty(j), cp_in%td_penalty(j))
       cp_out%pol(1:MAX_DIM, j) = cp_in%pol(1:MAX_DIM, j)
     end do
+    if(cp_in%envelope) then
+      ALLOCATE(cp_out%utransf(cp_out%nfreqs, cp_out%nfreqs), cp_out%nfreqs**2)
+      cp_out%utransf = cp_in%utransf
+      ALLOCATE(cp_out%utransfi(cp_out%nfreqs, cp_out%nfreqs), cp_out%nfreqs**2)
+      cp_out%utransfi = cp_in%utransfi
+    end if
 
   end subroutine parameters_copy
   ! ---------------------------------------------------------
@@ -996,17 +1087,23 @@ contains
     REAL_DOUBLE,                    intent(inout) :: x(:)
     integer :: j, k, n
     FLOAT :: sumx2
-    FLOAT, allocatable :: e(:)
+    FLOAT, allocatable :: ep(:), e(:)
 
     n = par%nfreqs
     ALLOCATE(e(n), n)
+    ALLOCATE(ep(n), n)
 
     ASSERT(n-1 .eq. size(x))
     ASSERT(par%current_representation .eq. ctr_parameter_frequency_space)
 
     do j =  1, n
-      e(j) = tdf(par%f(1), j)
+      ep(j) = tdf(par%f(1), j)
     end do
+    if(par%envelope) then
+      e = matmul(par%utransf, ep)
+    else
+      e = ep
+    end if
     x(n-1) = atan2(e(n), e(n-1))
     do k = n-2, 1, -1
       sumx2 = M_ZERO
@@ -1016,7 +1113,7 @@ contains
       x(k) = atan2(sqrt(sumx2), e(k))
     end do
 
-    deallocate(e)
+    deallocate(e, ep)
   end subroutine parameters_par_to_x
   ! ---------------------------------------------------------
 
@@ -1027,7 +1124,8 @@ contains
     REAL_DOUBLE,                          intent(in)    :: x(:)
 
     integer :: j, k, n
-    FLOAT, allocatable :: e(:)
+    FLOAT, allocatable :: e(:), ep(:), inverse(:, :)
+    FLOAT :: det
     call push_sub('parameters.parameters_x_to_par')
 
     n = par%nfreqs
@@ -1035,7 +1133,8 @@ contains
     ASSERT(par%current_representation .eq. ctr_parameter_frequency_space)
 
     ALLOCATE(e(n), n)
-    e = M_ZERO
+    ALLOCATE(ep(n), n)
+    e = M_ZERO; ep = M_ZERO
 
     if(n.eq.2) then
       e(1) = cos(x(1))
@@ -1067,9 +1166,15 @@ contains
     e(n) = e(n) * sin(x(n-1))
 
     e = sqrt(par%targetfluence) * e
-    call tdf_set_numerical(par%f(1), e)
 
-    deallocate(e)
+    if(par%envelope) then
+      ep = matmul(par%utransfi, e)
+    else
+      ep = e
+    end if
+    call tdf_set_numerical(par%f(1), ep)
+
+    deallocate(e, ep)
     call pop_sub()
   end subroutine parameters_x_to_par
   ! ---------------------------------------------------------
