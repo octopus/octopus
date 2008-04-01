@@ -23,8 +23,8 @@ Match ; Energy [step 10] ; tail -11 td.general/energy | head -1 ; \s*-1.0981
 Match ; Energy [step 15] ; tail -6 td.general/energy  | head -1 ; \s*-1.0981
 Match ; Energy [step 20] ; tail -1 td.general/energy  | head -1 ; \s*-1.0981
 
-Match ; Forces [step 1]  ; tail -21 td.general/coordinates | head -1 | cut -b 270-288; \s*1.700
-Match ; Forces [step 5]  ; tail -16 td.general/coordinates | head -1 | cut -b 270-288; \s*1.675
-Match ; Forces [step 10] ; tail -11 td.general/coordinates | head -1 | cut -b 270-288; \s*1.673
-Match ; Forces [step 15] ; tail -6  td.general/coordinates | head -1 | cut -b 270-288; \s*1.677
-Match ; Forces [step 20] ; tail -1  td.general/coordinates | head -1 | cut -b 270-288; \s*1.682
+Match ; Forces [step 1]  ; echo $(tail -21 td.general/coordinates | head -1 | cut -b 270-288) -1.700e-1 | sed 's/e/\*10^/g' | bc -l ; $prec
+Match ; Forces [step 5]  ; echo $(tail -16 td.general/coordinates | head -1 | cut -b 270-288) -1.675e-1 | sed 's/e/\*10^/g' | bc -l ; $prec
+Match ; Forces [step 10] ; echo $(tail -11 td.general/coordinates | head -1 | cut -b 270-288) -1.673e-1 | sed 's/e/\*10^/g' | bc -l ; $prec
+Match ; Forces [step 15] ; echo $(tail -6  td.general/coordinates | head -1 | cut -b 270-288) -1.677e-1 | sed 's/e/\*10^/g' | bc -l ; $prec
+Match ; Forces [step 20] ; echo $(tail -1  td.general/coordinates | head -1 | cut -b 270-288) -1.682e-1 | sed 's/e/\*10^/g' | bc -l ; $prec
