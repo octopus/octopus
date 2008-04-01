@@ -16,5 +16,7 @@ Enabled    : Yes
 Input: 05-spin_precession.01-ground_state.inp
 Input: 05-spin_precession.02-time_propagation.inp
 
-Match ; <Sx> (t=T/4) ; tail -1 td.general/spin ; \s*86\s*4.30\d*e\+01\s*2.30\d*e\-05
+match ; <Sx> (t=T/4) ; FILE(td.general/spin, -1, 29) ; 2.305837574660e-05
+match ; <Sy> (t=T/4) ; FILE(td.general/spin, -1, 49) ; 4.999999994723e-01
+
 

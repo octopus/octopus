@@ -26,6 +26,5 @@ Enabled    : Yes
 # is 0.0002731 au, quite close to the value produced by the test.
 
 Input: 04-biot_savart.01-gs.inp
-
-Match ; Current flow                  ; grep '# Flow =' static/current-flow ; \s*-0.1787d*
-Match ; Magnetic Field at loop center ; grep '^  0.0000' static/Bind_z.x\=0\,z\=0 ; \s*2.782d*
+match ; Current flow                  ; GREP(static/current-flow, '# Flow =', 9) ; -0.178754410103E-01
+match ; Magnetic Field at loop center ; FILE(static/Bind_z.x=0\,z=0, 87, 24) ; 2.78226124094150E-004

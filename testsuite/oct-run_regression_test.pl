@@ -444,7 +444,7 @@ sub run_match_new(){
     $pre_command .= " | cut -b $par[2]- | perl -ne '/\\s*([0-9\\-+.eEdD]*)/; print \$1'";
 
   }elsif($func eq "GREP") { # function GREP
-    $pre_command = "n=\$(cat -n $par[0] | grep $par[1] | tail -n 1 | awk '{print \$1;}');";
+    $pre_command = "n=\$(cat -n $par[0] | grep $par[1] | head -n 1 | awk '{print \$1;}');";
 
     $pre_command .= " cat $par[0] | tail -n +\$n | head -n 1";
     $pre_command .= " | cut -b $par[2]- | perl -ne '/\\s*([0-9\\-+.eEdD]*)/; print \$1'";

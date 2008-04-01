@@ -24,10 +24,10 @@ Enabled    : Yes
 # In this case, the electron-electron interaction is not exactly a soft-Coulomb
 # interaction. The total energy reproduces the -77.3eV quoted in the paper.
 Input: 03-helium_atom.01-ground_state.inp
-Match ; Total energy #1 ; sed -n '/^Energy/{n\;p\;}' static/info ; \s*Total\s*=\s*-2.84045
+match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -2.84045149
 
 # This second example reproduces the ground-state calculation present in
 # [W.-C. Liu et al, Phys. Rev. Lett. 83, 520 (1999)]
 # The total energy reproduces the -2.238Ha quoted in the paper.
 Input: 03-helium_atom.02-ground_state.inp
-Match ; Total energy #2 ; sed -n '/^Energy/{n\;p\;}' static/info ; \s*Total\s*=\s*-2.238
+match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -2.23825108

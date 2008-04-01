@@ -38,8 +38,8 @@ Input: 06-tdmagnetic.01-gs.inp
 Input: 06-tdmagnetic.02-unocc.inp
 
 Input: 06-tdmagnetic.03-td.inp
-
-Match ; '<X>(T),<Y>(T)' ; tail -1 td.general/multipoles ; \s*400\s*2.00\d*e\+01\s*1.00\d*e\+00\s*1.448209\d*e\+00\s*-1.1055
+match ; '<x>(t)' ; FILE(td.general/multipoles, -1, 50) ; 1.448209790220e+00
+match ; '<y>(t)' ; FILE(td.general/multipoles, -1, 70) ; -1.105550230171e-02
 
 
 # In order to do the "exact" calculation with perfectly symmetric

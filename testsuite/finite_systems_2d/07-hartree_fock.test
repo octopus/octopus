@@ -23,7 +23,7 @@ Enabled    : Yes
 # units, 1.0419 e.a.u. corresponds to 4.168, as given in the table.
 
 Input: 07-hartree_fock.01-2electrons.inp
-Match ; Total energy ; sed -n '/^Energy:/{n\;p\;}' static/info ; \s*Total\s*=\s*1.0419
+match ; Total energy ; GREP(static/info, 'Total       =', 20) ; 1.04191861
 
 # Results for 8 electrons quantum dots, provided in the paper, can
 # also be approximately reproduced. I do not put a test because it

@@ -27,13 +27,13 @@ Enabled    : Yes
 
 Input : 02-fock-darwin.01-ground_state.inp
 
-Match ; Eigenvalue  1 ; sed -n '/#st  Spin   Eigenvalue/{n\;p\;}' static/info ; \s*0.2502\d*\s*2.0000\d*
-Match ; Eigenvalue  2 ; sed -n '/#st  Spin   Eigenvalue/{n\;n\;p\;}' static/info ; \s*0.4904\d*\s*2.0000\d*
-Match ; Eigenvalue  3 ; sed -n '/#st  Spin   Eigenvalue/{n\;n\;n\;p\;}' static/info ; \s*0.5104\d*\s*2.0000\d*
-Match ; Eigenvalue  4 ; sed -n '/#st  Spin   Eigenvalue/{n\;n\;n\;n\;p\;}' static/info ; \s*0.7305\d*\s*2.0000\d*
-Match ; Eigenvalue  5 ; sed -n '/#st  Spin   Eigenvalue/{n\;n\;n\;n\;n\;p\;}' static/info ; \s*0.7505\d*\s*2.0000\d*
-Match ; Eigenvalue  6 ; sed -n '/#st  Spin   Eigenvalue/{n\;n\;n\;n\;n\;n\;p\;}' static/info ; \s*0.7705\d*\s*2.0000\d*
-Match ; Eigenvalue  7 ; sed -n '/#st  Spin   Eigenvalue/{n\;n\;n\;n\;n\;n\;n\;p\;}' static/info ; \s*0.9707\d*\s*2.0000\d*
-Match ; Eigenvalue  8 ; sed -n '/#st  Spin   Eigenvalue/{n\;n\;n\;n\;n\;n\;n\;n\;p\;}' static/info | grep '^   8' ; \s*0.9907\d*\s*2.0000\d*
-Match ; Eigenvalue  9 ; sed -n '/#st  Spin   Eigenvalue/{n\;n\;n\;n\;n\;n\;n\;n\;n\;p\;}' static/info ; \s*1.0107\d*\s*2.0000\d*
-Match ; Eigenvalue 10 ; sed -n '/#st  Spin   Eigenvalue/{n\;n\;n\;n\;n\;n\;n\;n\;n\;n\;p\;}' static/info ; \s*1.0307\d*\s*2.0000\d*
+match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; 0.250200
+match ; Eigenvalue  2 ; GREP(static/info, ' 2   --', 13) ; 0.490400
+match ; Eigenvalue  3 ; GREP(static/info, ' 3   --', 13) ; 0.510400
+match ; Eigenvalue  4 ; GREP(static/info, ' 4   --', 13) ; 0.730599
+match ; Eigenvalue  5 ; GREP(static/info, ' 5   --', 13) ; 0.750599
+match ; Eigenvalue  6 ; GREP(static/info, ' 6   --', 13) ; 0.770599
+match ; Eigenvalue  7 ; GREP(static/info, ' 7   --', 13) ; 0.970798
+match ; Eigenvalue  8 ; GREP(static/info, ' 8   --', 13) ; 0.990797
+match ; Eigenvalue  9 ; GREP(static/info, ' 9   --', 13) ; 1.010796
+match ; Eigenvalue 10 ; GREP(static/info, '10   --', 13) ; 1.030798
