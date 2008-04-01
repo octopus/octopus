@@ -20,6 +20,9 @@
 */
 
 #include <config.h>
+
+#if HAVE_FFT == cuda
+
 #include <cufft.h>
 
 typedef struct {
@@ -97,3 +100,5 @@ void FC_FUNC_(zfft_backward, ZFFT_BACKWARD)
 int FC_FUNC_(pad_feq, PAD_FEQ)
 (const * i, const * n, const * mode){
 }
+
+#endif
