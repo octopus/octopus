@@ -1,5 +1,5 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id: 02-neon_mpi.test 3344 2007-10-13 13:38:03Z acastro $
+# $Id: 22-time_propagation.test 3344 2007-10-13 13:38:03Z acastro $
 
 Test       : Time propagation
 Author     : Xavier
@@ -45,8 +45,8 @@ Match ; Energy [step 10] ; tail -11 td.general/energy | head -1 ; \s*-3.7910
 Match ; Energy [step 15] ; tail -6 td.general/energy  | head -1 ; \s*-3.7910
 Match ; Energy [step 20] ; tail -1 td.general/energy  | head -1 ; \s*-3.7910
 
-Match ; Forces [step 1]  ; tail -21 td.general/coordinates | head -1 | cut -b 1610-1630; \s*-1.460
-Match ; Forces [step 5]  ; tail -16 td.general/coordinates | head -1 | cut -b 1610-1630; \s*-7.99
-Match ; Forces [step 10] ; tail -11 td.general/coordinates | head -1 | cut -b 1610-1630; \s*-9.74
-Match ; Forces [step 15] ; tail -6  td.general/coordinates | head -1 | cut -b 1610-1630; \s*-1.080
-Match ; Forces [step 20] ; tail -1  td.general/coordinates | head -1 | cut -b 1610-1630; \s*-9.80
+Match ; Forces [step 1]  ; tail -21 td.general/coordinates | head -1 | cut -b 1610-1630; -1.461189019962e-02 ; $prec;
+Match ; Forces [step 5]  ; tail -16 td.general/coordinates | head -1 | cut -b 1610-1630; -7.999917163345e-03 ; $prec;
+Match ; Forces [step 10] ; tail -11 td.general/coordinates | head -1 | cut -b 1610-1630; -9.747595883062e-03 ; $prec;
+Match ; Forces [step 15] ; tail -6  td.general/coordinates | head -1 | cut -b 1610-1630; -1.080888096097e-02 ; $prec;
+Match ; Forces [step 20] ; tail -1  td.general/coordinates | head -1 | cut -b 1610-1630; -9.800629054763e-03 ; $prec;
