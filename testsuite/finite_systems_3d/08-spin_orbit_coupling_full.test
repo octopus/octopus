@@ -12,25 +12,43 @@ Enabled    : Yes
 
 
 Input: 08-spin_orbit_coupling_full.01-hgh.inp
-Match ; Eigenvalue  1 ; echo $(grep ' 1   --   ' static/info | head -1 | cut -b 12-25) + 27.32224 | bc -l; $prec
-Match ; Eigenvalue  3 ; echo $(grep ' 3   --   ' static/info | head -1 | cut -b 12-25) + 26.42260 | bc -l; $prec
-Match ; Eigenvalue  5 ; echo $(grep ' 5   --   ' static/info | head -1 | cut -b 12-25) + 17.23180 | bc -l; $prec
-Match ; Eigenvalue  7 ; echo $(grep ' 7   --   ' static/info | head -1 | cut -b 12-25) + 15.77943 | bc -l; $prec
-Match ; Eigenvalue  9 ; echo $(grep ' 9   --   ' static/info | head -1 | cut -b 12-25) + 14.70713 | bc -l; $prec
-Match ; Eigenvalue 11 ; echo $(grep '11   --   ' static/info | head -1 | cut -b 12-25) + 14.69884 | bc -l; $prec
-Match ; Eigenvalue 13 ; echo $(grep '13   --   ' static/info | head -1 | cut -b 12-25) + 13.89219 | bc -l; $prec
-Match ; Eigenvalue 15 ; echo $(grep '15   --   ' static/info | head -1 | cut -b 12-25) + 13.65231 | bc -l; $prec
+Match ; Eigenvalue  1 ; echo $(grep ' 1   --   ' static/info | head -1 | cut -b 12-25) + 27.32224 | bc -l | xargs printf "%f\n"; $prec
+Match ; Eigenvalue  3 ; echo $(grep ' 3   --   ' static/info | head -1 | cut -b 12-25) + 26.42260 | bc -l | xargs printf "%f\n"; $prec
+Match ; Eigenvalue  5 ; echo $(grep ' 5   --   ' static/info | head -1 | cut -b 12-25) + 17.23180 | bc -l | xargs printf "%f\n"; $prec
+Match ; Eigenvalue  7 ; echo $(grep ' 7   --   ' static/info | head -1 | cut -b 12-25) + 15.77943 | bc -l | xargs printf "%f\n"; $prec
+Match ; Eigenvalue  9 ; echo $(grep ' 9   --   ' static/info | head -1 | cut -b 12-25) + 14.70713 | bc -l | xargs printf "%f\n"; $prec
+Match ; Eigenvalue 11 ; echo $(grep '11   --   ' static/info | head -1 | cut -b 12-25) + 14.69874 | bc -l | xargs printf "%f\n"; $prec
+Match ; Eigenvalue 13 ; echo $(grep '13   --   ' static/info | head -1 | cut -b 12-25) + 13.89219 | bc -l | xargs printf "%f\n"; $prec
+Match ; Eigenvalue 15 ; echo $(grep '15   --   ' static/info | head -1 | cut -b 12-25) + 13.65231 | bc -l | xargs printf "%f\n"; $prec
 
-Match ; Sz  1         ; echo $(grep ' 1   --   ' static/info | head -1 | cut -b 52-)   -  0.5     | bc -l; 0
-Match ; Sz  3         ; echo $(grep ' 3   --   ' static/info | head -1 | cut -b 52-)   -  0.5     | bc -l; 0
-Match ; Sz  5         ; echo $(grep ' 5   --   ' static/info | head -1 | cut -b 52-)   -  0.476   | bc -l; 0
-Match ; Sz  7         ; echo $(grep ' 7   --   ' static/info | head -1 | cut -b 52-)   -  0.1436  | bc -l; 0
-Match ; Sz  9         ; echo $(grep ' 9   --   ' static/info | head -1 | cut -b 52-)   +  0.0804  | bc -l; 0
-Match ; Sz 11         ; echo $(grep '11   --   ' static/info | head -1 | cut -b 52-)   -  0.1350  | bc -l; 0
-Match ; Sz 13         ; echo $(grep '13   --   ' static/info | head -1 | cut -b 52-)   +  0.1109  | bc -l; 0
-Match ; Sz 15         ; echo $(grep '15   --   ' static/info | head -1 | cut -b 52-)   -  0.4364  | bc -l; 0
+Match ; Sz  1         ; echo $(grep ' 1   --   ' static/info | head -1 | cut -b 52-)   -  0.5     | bc -l | xargs printf "%f\n"; $prec
+Match ; Sz  3         ; echo $(grep ' 3   --   ' static/info | head -1 | cut -b 52-)   -  0.5     | bc -l | xargs printf "%f\n"; $prec
+Match ; Sz  5         ; echo $(grep ' 5   --   ' static/info | head -1 | cut -b 52-)   -  0.4741  | bc -l | xargs printf "%f\n"; $prec
+Match ; Sz  7         ; echo $(grep ' 7   --   ' static/info | head -1 | cut -b 52-)   -  0.1342  | bc -l | xargs printf "%f\n"; $prec
+Match ; Sz  9         ; echo $(grep ' 9   --   ' static/info | head -1 | cut -b 52-)   +  0.0838  | bc -l | xargs printf "%f\n"; $prec
+Match ; Sz 11         ; echo $(grep '11   --   ' static/info | head -1 | cut -b 52-)   -  0.1277  | bc -l | xargs printf "%f\n"; $prec
+Match ; Sz 13         ; echo $(grep '13   --   ' static/info | head -1 | cut -b 52-)   +  0.1016  | bc -l | xargs printf "%f\n"; $prec
+Match ; Sz 15         ; echo $(grep '15   --   ' static/info | head -1 | cut -b 52-)   -  0.4492  | bc -l | xargs printf "%f\n"; $prec
 
-Match ; Force         ; echo $(sed -n '/^Forces on/{n\;n\;p\;}' static/info | cut -b 20-29) + 0.97768 | bc -l ; $prec
+Match ; Force         ; echo $(sed -n '/^Forces on/{n\;n\;p\;}' static/info | cut -b 20-29) + 0.977717 | bc -l | xargs printf "%f\n"; $prec
 
-#Disabled because it doesn't converge.
-#Input: 08-spin_orbit_coupling_full.02-rkb.inp
+Input: 08-spin_orbit_coupling_full.02-rkb.inp
+Match ; Eigenvalue  1 ; echo $(grep ' 1   --   ' static/info | head -1 | cut -b 12-25) + 27.33028 | bc -l | xargs printf "%f\n"; $prec
+Match ; Eigenvalue  3 ; echo $(grep ' 3   --   ' static/info | head -1 | cut -b 12-25) + 26.43960 | bc -l | xargs printf "%f\n"; $prec
+Match ; Eigenvalue  5 ; echo $(grep ' 5   --   ' static/info | head -1 | cut -b 12-25) + 17.12902 | bc -l | xargs printf "%f\n"; $prec
+Match ; Eigenvalue  7 ; echo $(grep ' 7   --   ' static/info | head -1 | cut -b 12-25) + 15.78056 | bc -l | xargs printf "%f\n"; $prec
+Match ; Eigenvalue  9 ; echo $(grep ' 9   --   ' static/info | head -1 | cut -b 12-25) + 14.71483 | bc -l | xargs printf "%f\n"; $prec
+Match ; Eigenvalue 11 ; echo $(grep '11   --   ' static/info | head -1 | cut -b 12-25) + 14.71205 | bc -l | xargs printf "%f\n"; $prec
+Match ; Eigenvalue 13 ; echo $(grep '13   --   ' static/info | head -1 | cut -b 12-25) + 13.90428 | bc -l | xargs printf "%f\n"; $prec
+Match ; Eigenvalue 15 ; echo $(grep '15   --   ' static/info | head -1 | cut -b 12-25) + 13.53921 | bc -l | xargs printf "%f\n"; $prec
+
+Match ; Sz  1         ; echo $(grep ' 1   --   ' static/info | head -1 | cut -b 52-)   -  0.5     | bc -l | xargs printf "%f\n"; $prec
+Match ; Sz  3         ; echo $(grep ' 3   --   ' static/info | head -1 | cut -b 52-)   -  0.5     | bc -l | xargs printf "%f\n"; $prec
+Match ; Sz  5         ; echo $(grep ' 5   --   ' static/info | head -1 | cut -b 52-)   -  0.4714  | bc -l | xargs printf "%f\n"; $prec
+Match ; Sz  7         ; echo $(grep ' 7   --   ' static/info | head -1 | cut -b 52-)   -  0.1288  | bc -l | xargs printf "%f\n"; $prec
+Match ; Sz  9         ; echo $(grep ' 9   --   ' static/info | head -1 | cut -b 52-)   +  0.0820  | bc -l | xargs printf "%f\n"; 0\.0
+Match ; Sz 11         ; echo $(grep '11   --   ' static/info | head -1 | cut -b 52-)   -  0.1272  | bc -l | xargs printf "%f\n"; 0\.0
+Match ; Sz 13         ; echo $(grep '13   --   ' static/info | head -1 | cut -b 52-)   +  0.1012  | bc -l | xargs printf "%f\n"; 0\.000
+Match ; Sz 15         ; echo $(grep '15   --   ' static/info | head -1 | cut -b 52-)   -  0.4557  | bc -l | xargs printf "%f\n"; $prec
+
+Match ; Force         ; echo $(sed -n '/^Forces on/{n\;n\;p\;}' static/info | cut -b 20-29) + 0.664614 | bc -l | xargs printf "%f\n"; 0\.000
