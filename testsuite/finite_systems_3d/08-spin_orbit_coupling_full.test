@@ -49,6 +49,6 @@ Match ; Sz  7         ; echo $(grep ' 7   --   ' static/info | head -1 | cut -b 
 Match ; Sz  9         ; echo $(grep ' 9   --   ' static/info | head -1 | cut -b 52-)   +  0.0820  | bc -l | xargs printf "%f\n"; 0\.0
 Match ; Sz 11         ; echo $(grep '11   --   ' static/info | head -1 | cut -b 52-)   -  0.1272  | bc -l | xargs printf "%f\n"; 0\.0
 Match ; Sz 13         ; echo $(grep '13   --   ' static/info | head -1 | cut -b 52-)   +  0.1012  | bc -l | xargs printf "%f\n"; 0\.000
-Match ; Sz 15         ; echo $(grep '15   --   ' static/info | head -1 | cut -b 52-)   -  0.4557  | bc -l | xargs printf "%f\n"; $prec
+Match ; Sz 15         ; echo $(grep '15   --   ' static/info | head -1 | cut -b 52-) ;  0.4557; 0.001;
 
 Match ; Force         ; echo $(sed -n '/^Forces on/{n\;n\;p\;}' static/info | cut -b 20-29) + 0.664614 | bc -l | xargs printf "%f\n"; 0\.000
