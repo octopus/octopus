@@ -48,7 +48,7 @@ if test -z "${FCFLAGS}"; then
             FCFLAGS="$FCFLAGS -tpp7 -xW"
           fi
           ;;	
-        efc*|ifort*)
+        ia64*)
           FCFLAGS="-O3 -ip -IPF_fp_relaxed -ftz -fpp -u -align all -pad"
          ;;
       esac
@@ -73,7 +73,7 @@ if test -z "${FCFLAGS}"; then
       FCFLAGS="-O3 -YEXT_NAMES=LCS -YEXT_SFX=_"
       ;;
     xlf*)
-      FCFLAGS="-bmaxdata:0x80000000 -qmaxmem=-1 -qsuffix=f=f90 -Q -O5 -qtune=auto -qarch=auto -qhot -qipa"
+      FCFLAGS="-O3 -qarch=auto -qtune=auto -qcache=auto"
       ;;
     f9*)
       case "${host}" in
