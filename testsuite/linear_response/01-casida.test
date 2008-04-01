@@ -41,10 +41,10 @@ Enabled    : Yes
 
 Input: 01-casida.01-N2.inp
 
-Match ; TotalEnergy    ; sed -n '/^Energy/{n\;p\;}' ground_state_static/info ; \s*Total\s*=\s*-19.9296\d*
-Match ; HOMO           ; sed -n '/Eigenvalues \[/,$p' ground_state_static/info | head -7 | tail -1 ; \s*-0.3845\d*\s*2.0000\d*
-Match ; LUMO           ; sed -n '/Eigenvalues \[/,$p' unocc_states_static/eigenvalues | head -8 | tail -1 ; \s*-0.0851\d*
-Match ; LUMO+8         ; sed -n '/Eigenvalues \[/,$p' unocc_states_static/eigenvalues | head -15 | tail -1 ; \s*0.1531\d*
-Match ; 1st excitation ; head -n 2 lrtddft_linear/casida | tail -1 ; \s*3.3739\d*
-Match ; 2nd excitation ; head -n 4 lrtddft_linear/casida | tail -1 ; \s*3.5537\d* 
-Match ; 3rd excitation ; head -n 5 lrtddft_linear/casida | tail -1 ; \s*3.7538\d* 
+Match ; TotalEnergy    ; echo $(sed -n '/^Energy/{n\;p\;}' ground_state_static/info | cut -b 20-) + 19.9297 | bc -l ; $prec
+Match ; HOMO           ; echo $(sed -n '/Eigenvalues \[/,$p' ground_state_static/info | head -7 | tail -1 | cut -b 12-24) + 0.3845 | bc -l ; $prec
+Match ; LUMO           ; echo $(sed -n '/Eigenvalues \[/,$p' unocc_states_static/eigenvalues | head -8 | tail -1 | cut -b 12-24) + 0.0851 | bc -l ; $prec
+Match ; LUMO+8         ; echo $(sed -n '/Eigenvalues \[/,$p' unocc_states_static/eigenvalues | head -15 | tail -1 | cut -b 12-24) - 0.1532 | bc -l ; $prec
+Match ; 1st excitation ; echo $(head -n 2 lrtddft_linear/casida | tail -1 | cut -b 1-10) - 3.3739 | bc -l ; $prec
+Match ; 2nd excitation ; echo $(head -n 4 lrtddft_linear/casida | tail -1 | cut -b 1-10) - 3.5537 | bc -l ; $prec
+Match ; 3rd excitation ; echo $(head -n 5 lrtddft_linear/casida | tail -1 | cut -b 1-10) - 3.7538 | bc -l ; $prec
