@@ -30,10 +30,8 @@
 # include "fftw2.F90"
 #elif HAVE_FFT == 3
 # include "fftw3.F90"
-#else
-! Some compilers do not like completely empty files.
-subroutine fft_dumb
-end subroutine fft_dumb
+#elif HAVE_FFT == cuda
+# include "fft_cuda_inc.F90"
 #endif
 
 !! Local Variables:

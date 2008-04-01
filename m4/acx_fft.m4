@@ -24,7 +24,8 @@ acx_fft_ok=no
 
 AC_ARG_WITH(fft, [  --with-fft=ARG    fft support
       ARG=fftw3       FFTW3 support through libfftw3 (default)
-      ARG=fftw2       FFTW2 support through libfftw],
+      ARG=fftw2       FFTW2 support through libfftw
+      ARG=cuda        NVIDIA CUFFT Library (single precision only, experimental)],
   [fft=$withval], [fft=fftw3])
 
 case $fft in
@@ -47,6 +48,15 @@ case $fft in
       fft_libs="fftw dfftw"
     fi
     ;;
+  cuda*)
+    fft=cuda
+    if test "x${SINGLE_PRECISION}" == x; then
+      AC_MSG_ERROR([CUFFT can only be used with single precision])
+    else
+      fft_func="cufftPlan3d"
+      fft_libs="cufft cufftemu"
+    fi
+    ;;
 esac
 
   dnl Check if the library was given in the command line
@@ -62,46 +72,81 @@ esac
   acx_fft_save_LIBS="$LIBS"
   LIBS="$LIBS_FFT $LIBS $FLIBS"
 
-  dnl First, check LIBS_FFT environment variable
-  if test $acx_fft_ok = no; then
-    if test "x$LIBS_FFT" != x; then
-      AC_MSG_CHECKING([for $fft_func in $LIBS_FFT])
-      AC_TRY_LINK_FUNC($fft_func, [acx_fft_ok=yes], [])
-      if test $acx_fft_ok = no; then
-        AC_MSG_RESULT([$acx_fft_ok])
-      else
-        AC_MSG_RESULT([$acx_fft_ok ($LIBS_FFT)])
+  if test $fft = cuda ; then
+    AC_LANG_PUSH(C)
+    AC_CHECK_HEADER(cufft.h,[],[AC_MSG_ERROR([Can not find CUFFT header])])
+
+    dnl First, check LIBS_FFT environment variable
+    if test $acx_fft_ok = no; then
+      if test "x$LIBS_FFT" != x; then
+        AC_MSG_CHECKING([for $fft_func in $LIBS_FFT])
+        AC_TRY_LINK_FUNC($fft_func, [acx_fft_ok=yes], [])
+        if test $acx_fft_ok = no; then
+          AC_MSG_RESULT([$acx_fft_ok])
+        else
+          AC_MSG_RESULT([$acx_fft_ok ($LIBS_FFT)])
+        fi
       fi
     fi
-  fi
 
-  dnl FFTW linked to by default?
-  if test $acx_fft_ok = no; then
-    AC_CHECK_FUNC($fft_func, [acx_fft_ok=yes])
-  fi
-
-  dnl search libraries
-  for fftl in $fft_libs; do
+    dnl linked to by default?
     if test $acx_fft_ok = no; then
-      AC_CHECK_LIB($fftl, $fft_func,
-        [acx_fft_ok=yes; LIBS_FFT="$LIBS_FFT -l$fftl"], [], [$FLIBS])
+      AC_CHECK_FUNC($fft_func, [acx_fft_ok=yes])
     fi
-  done
 
-  dnl if we have fftw2, search also for the real transforms
-  if test "${fft}" = "2"; then
-    if test $acx_fft_ok = yes; then
+    dnl search libraries
+    for fftl in $fft_libs; do
+      if test $acx_fft_ok = no; then
+        AC_CHECK_LIB($fftl, $fft_func,
+          [acx_fft_ok=yes; LIBS_FFT="$LIBS_FFT -l$fftl"], [], [$FLIBS])
+      fi
+    done
 
-      acx_fft_ok=no;
+    AC_LANG_POP(C)
 
-      AC_CHECK_FUNC(rfftw3d_f77_create_plan, [acx_fft_ok=yes])
+  else
 
-      for fftl in rfftw drfftw; do
+    dnl First, check LIBS_FFT environment variable
+    if test $acx_fft_ok = no; then
+      if test "x$LIBS_FFT" != x; then
+        AC_MSG_CHECKING([for $fft_func in $LIBS_FFT])
+        AC_TRY_LINK_FUNC($fft_func, [acx_fft_ok=yes], [])
         if test $acx_fft_ok = no; then
-          AC_CHECK_LIB($fftl, rfftw3d_f77_create_plan,
-            [acx_fft_ok=yes; LIBS_FFT="$LIBS_FFT -l$fftl"], [], [$LIBS_FFT $FLIBS])
+          AC_MSG_RESULT([$acx_fft_ok])
+        else
+          AC_MSG_RESULT([$acx_fft_ok ($LIBS_FFT)])
         fi
-      done
+      fi
+    fi
+
+    dnl FFTW linked to by default?
+    if test $acx_fft_ok = no; then
+      AC_CHECK_FUNC($fft_func, [acx_fft_ok=yes])
+    fi
+
+    dnl search libraries
+    for fftl in $fft_libs; do
+      if test $acx_fft_ok = no; then
+        AC_CHECK_LIB($fftl, $fft_func,
+          [acx_fft_ok=yes; LIBS_FFT="$LIBS_FFT -l$fftl"], [], [$FLIBS])
+      fi
+    done
+
+    dnl if we have fftw2, search also for the real transforms
+    if test "${fft}" = "2"; then
+      if test $acx_fft_ok = yes; then
+
+        acx_fft_ok=no;
+
+        AC_CHECK_FUNC(rfftw3d_f77_create_plan, [acx_fft_ok=yes])
+
+        for fftl in rfftw drfftw; do
+          if test $acx_fft_ok = no; then
+            AC_CHECK_LIB($fftl, rfftw3d_f77_create_plan,
+              [acx_fft_ok=yes; LIBS_FFT="$LIBS_FFT -l$fftl"], [], [$LIBS_FFT $FLIBS])
+          fi
+        done
+      fi
     fi
   fi
 
@@ -110,11 +155,11 @@ LIBS="$acx_fft_save_LIBS"
 
 # Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
 if test x"$acx_fft_ok" = xyes; then
-  AC_DEFINE_UNQUOTED(HAVE_FFT, [$fft], [FFT library (fftw2 | fftw3)])
+  AC_DEFINE_UNQUOTED(HAVE_FFT, [$fft], [FFT library (fftw2 | fftw3 | cuda)])
   $1
 else
   if test $acx_fft_ok != disable; then
-    AC_MSG_ERROR([Could not find required fftw library.])
+    AC_MSG_ERROR([Could not find required fft library.])
   fi
   $2
 fi
