@@ -196,8 +196,10 @@ foreach my $octopus_exe (@executables){
 
     if($octopus_exe =~ m/single/){
       $prec = "\\.000";
+      $precnum = 0.001
     } else {
       $prec = "\\.0000";
+      $precnum = 0.0001
     }
     
     $workdir = tempdir('/tmp/octopus.XXXXXX');
@@ -312,12 +314,14 @@ foreach my $octopus_exe (@executables){
 
     if ( $_ =~ /^Match/ && !$opt_n) {
      $- = s/\\;/_COLUMN_/g;
-     ($match, $name, $pre_command, $regexp) = split(/;/, $_);
+     ($match, $name, $pre_command, $regexp, $tol) = split(/;/, $_);
      $name        =~ s/_COLUMN_/;/g;
      $pre_command =~ s/_COLUMN_/;/g;
      $regexp      =~ s/_COLUMN_/;/g;
+     $tol         =~ s/_COLUMN_/;/g;
 
      $regexp =~ s/\$prec/$prec/g;
+     $tol    =~ s/\$prec/$precnum/g;
 
      if(!opt_m) {
        die "have to run before matching" if !$test{"run"};
@@ -325,6 +329,7 @@ foreach my $octopus_exe (@executables){
 
      if ($opt_v) { print "$pre_command \n"; }
      if ($opt_v) { print "$regexp \n"; }
+
      $regexp =~ s/^\s*//;
      $regexp =~ s/\s*$//;
      $lineout = `cd $workdir; $pre_command`;
@@ -337,19 +342,41 @@ foreach my $octopus_exe (@executables){
      print SCRIPT "echo ", "-"x60, "[ $name - regular expression ] \n";
      print SCRIPT "echo '$regexp'\n";
      print SCRIPT "export LINE=`$pre_command`\n";
-     print SCRIPT 'perl -e \'print "Match: ".($ENV{LINE} =~ m/'.$regexp.'/?"OK":"FAILED")."\n"\''."\n";
+
+     if($tol eq ""){
+
+       print SCRIPT 'perl -e \'print "Match: ".($ENV{LINE} =~ m/'.$regexp.'/?"OK":"FAILED")."\n"\''."\n";
+
+       if ( $lineout =~ /$regexp/ ) {
+	 $test_succeded = 1;
+       } else {
+	 $test_succeded = 0;
+	 $failures++;
+       }
+     } else {
+
+       if ($opt_v) { print "$tol \n"; }
+       print SCRIPT "echo '$tol'\n";
+       print SCRIPT 'perl -e \'print "Match: ".((abs($ENV{LINE} - '.$regexp.') < '.$tol.')?"OK":"FAILED")."\n"\''."\n";
+
+       if ( abs($lineout - $regexp) < $tol ) {
+	 $test_succeded = 1;
+       } else {
+	 $test_succeded = 0;
+	 $failures++;
+       } 
+     }
+     
      print SCRIPT "echo;echo\n";
      close(SCRIPT);
 
-     if ( $lineout =~ /$regexp/ ) {
-	 print "$name: \t [ $color_start{green}  OK  $color_end{green} ] \n";
-         $test_succeded = 1;
+     if($test_succeded){
+       print "$name: \t [ $color_start{green}  OK  $color_end{green} ] \n";
      } else {
-	 print "$name: \t [ $color_start{red} FAIL $color_end{red} ] \n";
-         $test_succeded = 0;
-	 $failures++;
+       print "$name: \t [ $color_start{red} FAIL $color_end{red} ] \n";
      }
-   }
+     
+    }
 
   } else {
    if ( $_ =~ /^RUN/) { print " skipping test\n"; }
