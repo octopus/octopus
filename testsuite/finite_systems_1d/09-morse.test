@@ -22,12 +22,14 @@ Enabled    : Yes
 Input: 09-morse.01-gs.inp
 Input: 09-morse.02-unocc.inp
 
-Match ; 'E[nu=0]' ; grep ' 1   -- ' static/eigenvalues ; \s*1\s*--\s*-0.190472
-Match ; 'E[nu=1]' ; grep ' 2   -- ' static/eigenvalues ; \s*2\s*--\s*-0.173229
-Match ; 'E[nu=2]' ; grep ' 3   -- ' static/eigenvalues ; \s*3\s*--\s*-0.156805
-Match ; 'E[nu=6]' ; grep ' 7   -- ' static/eigenvalues ; \s*7\s*--\s*-0.099285
+match ; 'E[nu=0]' ; GREP(static/eigenvalues, ' 1   -- ', 12) ; -0.190472
+match ; 'E[nu=1]' ; GREP(static/eigenvalues, ' 2   -- ', 12) ; -0.173229
+match ; 'E[nu=2]' ; GREP(static/eigenvalues, ' 3   -- ', 12) ; -0.156805
+match ; 'E[nu=6]' ; GREP(static/eigenvalues, ' 7   -- ', 12) ; -0.099285
 
 Input: 09-morse.03-td.inp
 
-Match ; '<Psi(T)|Psi(0)>' ; tail -n 1 td.general/projections ; \s*1654\s*4.135\d*e\+02\s*-9.76044
+match ; '<Psi(T)|Psi(0)> (niter)' ; FILE(td.general/projections, -1,  0) ; 1654
+match ; '<Psi(T)|Psi(0)>  (time)' ; FILE(td.general/projections, -1,  9) ; 4.135000000000e+02
+match ; '<Psi(T)|Psi(0)>  (proj)' ; FILE(td.general/projections, -1, 29) ; -9.760443846953e-01
 

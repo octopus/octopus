@@ -143,7 +143,7 @@ closedir(EXEC_DIRECTORY);
 
 # determine exec suffix
 $exec_suffix = "";
-if($opt_s)  { $exec_suffix = $opt_s; } 
+if($opt_s)  { $exec_suffix = $opt_s; }
 
 # MPI stuff
 $mpirun = $ENV{MPIRUN};
@@ -164,7 +164,7 @@ while ($_ = <TESTSUITE>) {
 
  if ( $_ =~ /^Programs\s*:\s*(.*)\s*$/) {
   $i = 0;
-  foreach my $program (split(/;/,$1)) {
+  foreach my $program (split(/;/, $1)) {
    $program =  "$program$exec_suffix";
    $program =~ s/^\s+//;
    foreach my $x (@octopus_execs) {
@@ -174,7 +174,7 @@ while ($_ = <TESTSUITE>) {
      $i = $i+1;
     };
    }
-  } 
+  }
  }
 }
 close(TESTSUITE);
@@ -194,203 +194,282 @@ $failures = 0;
 # Loop over all the executables.
 foreach my $octopus_exe (@executables){
 
-    if($octopus_exe =~ m/single/){
-      $prec = "\\.000";
-      $precnum = 0.001
-    } else {
-      $prec = "\\.0000";
-      $precnum = 0.0001
-    }
-    
-    $workdir = tempdir('/tmp/octopus.XXXXXX');
-    chomp($workdir);
+  if($octopus_exe =~ m/single/){
+    $prec = "\\.000";
+    $precnum = 0.001
+  } else {
+    $prec = "\\.0000";
+    $precnum = 0.0001
+  }
 
-    if (!$opt_m) {
+  $workdir = tempdir('/tmp/octopus.XXXXXX');
+  chomp($workdir);
+
+  if (!$opt_m) {
     system ("rm -rf $workdir");
     mkdir $workdir;
-    }   
+  }
 
+  # create script for cleanups in the current workdir
+  $mscript = "$workdir/clean.sh";
+  open(SCRIPT, ">$mscript") or die "could not create script file\n";
+  print SCRIPT "#\!/bin/bash\n\n";
+  print SCRIPT "rm -rf tmp static exec *_tmp *_static out.oct out ds* td.* \n";
+  close(SCRIPT);
+  chmod 0755, $mscript;
 
-    # create script for cleanups in the current workdir
-    $mscript = "$workdir/clean.sh";
-    open(SCRIPT, ">$mscript") or die "could not create script file\n";
-    print SCRIPT "#\!/bin/bash\n\n";
-    print SCRIPT "rm -rf tmp static exec *_tmp *_static out.oct out ds* td.* \n";
-    close(SCRIPT);
-    chmod 0755, $mscript;
+  # testsuite
+  open(TESTSUITE, "<".$opt_f ) or die "cannot open testsuite file\n";
 
-    # testsuite
-    open(TESTSUITE, "<".$opt_f ) or die "cannot open testsuite file\n";
-
-    while ($_ = <TESTSUITE>) {
+  while ($_ = <TESTSUITE>) {
 
     # skip comments
     next if /^#/;
 
     if ( $_ =~ /^Test\s*:\s*(.*)\s*$/) {
-    $test{"name"} = $1;
-    if(!$opt_i) {
-    print "$color_start{blue} ***** $test{\"name\"} ***** $color_end{blue} \n\n";
-    print "Using workdir    : $workdir \n";
-    print "Using executable : $octopus_exe\n";
-    print "Using test file  : $opt_f \n";
-    }
+      $test{"name"} = $1;
+      if(!$opt_i) {
+	print "$color_start{blue} ***** $test{\"name\"} ***** $color_end{blue} \n\n";
+	print "Using workdir    : $workdir \n";
+	print "Using executable : $octopus_exe\n";
+	print "Using test file  : $opt_f \n";
+      }
     }
 
     if ( $_ =~ /^Enabled\s*:\s*(.*)\s*$/) {
-    %test = ();
-    $enabled = $1;
-    $enabled =~ s/^\s*//;
-    $enabled =~ s/\s*$//;
-    $test{"enabled"} = $enabled;
+      %test = ();
+      $enabled = $1;
+      $enabled =~ s/^\s*//;
+      $enabled =~ s/\s*$//;
+      $test{"enabled"} = $enabled;
     }
 
     # Running this regression test if it is enabled
     if ( $enabled eq "Yes" ) {
 
-    if ( $_ =~ /^Processors\s*:\s*(.*)\s*$/) {
-     $np = $1;
+      if ( $_ =~ /^Processors\s*:\s*(.*)\s*$/) {
+	$np = $1;
+      }
+
+      if ( $_ =~ /^Input\s*:\s*(.*)\s*$/) {
+	$input_base = $1;
+	$input_file = dirname($opt_f) . "/" . $input_base;
+
+	if( -f $input_file ) {
+	  print "\n\nUsing input file : $input_file \n";
+	  system("cp $input_file $workdir/inp");
+	  # Ensure, that the input file is writable so that it can
+	  # be overwritten by the next test.
+	  $mode = (stat "$workdir/inp")[2];
+	  chmod $mode|S_IWUSR, "$workdir/inp";
+	} else {
+	  die "could not find input file: $input_file\n";
+	}
+
+
+	if ( !$opt_m ) {
+	  if ( !$opt_n ) {
+	    print "\nStarting test run ...\n";
+
+	    $octopus_exe_suffix = $octopus_exe;
+
+	    # serial or MPI run?
+	    if ( $octopus_exe_suffix =~ /mpi$/) {
+	      if( -x "$mpirun") {
+		print "Executing: cd $workdir; $mpirun -np $np $octopus_exe_suffix > out 2>&1 \n";
+		system("cd $workdir; $mpirun -np $np $octopus_exe_suffix > out 2>&1");
+	      } else {
+		print "No mpirun found: Skipping parallel test \n";
+		exit 255;
+	      }
+	    } else {
+	      print "Executing: cd $workdir; $octopus_exe_suffix > out 2>&1 \n";
+	      system("cd $workdir; $octopus_exe_suffix > out 2>&1");
+	    }
+	    system("sed -n '/Running octopus/{N;N;N;N;N;N;p;}' $workdir/out > $workdir/build-stamp");
+	    print "Finished test run.\n\n"; }
+	  else {
+	    if(!$opt_i) { print "cd $workdir; $octopus_exe_suffix < inp > out 2>&1 \n"; }
+	  }
+	  $test{"run"} = 1;
+	}
+
+	# copy all files of this run to archive directory with the name of the
+	# current input file
+	mkdir "$workdir/$input_base";
+	@wfiles = `ls -d $workdir/* | grep -v inp`;
+	$workfiles = join("",@wfiles);
+	$workfiles =~ s/\n/ /g;
+	system("cp -r $workfiles $workdir/inp $workdir/$input_base");
+
+	# file for shell script with matches
+	$mscript = "$workdir/$input_base/matches.sh";
+	open(SCRIPT, ">$mscript") or die "could not create script file\n";
+	# write skeleton for script
+	print SCRIPT "#\!/bin/bash\n\n";
+	close(SCRIPT);
+	chmod 0755, $mscript;
+      }
+
+      # Warning: this is deprecated
+      if ( $_ =~ /^Match/ && !$opt_n) {
+	if(run_match($_)){
+	  print "$name: \t [ $color_start{green}  OK  $color_end{green} ] \n";
+	  $test_succeded = 1;
+	} else {
+	  print "$name: \t [ $color_start{red} FAIL $color_end{red} ] \n";
+	  $test_succeded = 0;
+	  $failures++;
+	}
+      }
+
+      if ( $_ =~ /^Precision\s*:\s*(.*)\s*$/) {
+	$precnum = $1;
+      }
+
+      if ( $_ =~ /^match/ && !$opt_n) {
+	if(run_match_new($_)){
+	  print "$name: \t [ $color_start{green}  OK  $color_end{green} ] \n";
+	  $test_succeded = 1;
+	} else {
+	  print "$name: \t [ $color_start{red} FAIL $color_end{red} ] \n";
+	  $test_succeded = 0;
+	  $failures++;
+	}
+      }
+
+    } else {
+      if ( $_ =~ /^RUN/) { print " skipping test\n"; }
     }
-
-    if ( $_ =~ /^Input\s*:\s*(.*)\s*$/) {
-     $input_base = $1;
-     $input_file = dirname($opt_f) . "/" . $input_base;
-
-     if( -f $input_file ) {
-       print "\n\nUsing input file : $input_file \n";
-       system("cp $input_file $workdir/inp");
-       # Ensure, that the input file is writable so that it can
-       # be overwritten by the next test.
-       $mode = (stat "$workdir/inp")[2];
-       chmod $mode|S_IWUSR, "$workdir/inp";
-     } else {
-       die "could not find input file: $input_file\n";
-     }
-
-
-     if ( !$opt_m ) {
-       if ( !$opt_n ) {
-	 print "\nStarting test run ...\n";
-
-	 $octopus_exe_suffix = $octopus_exe;
-
-	 # serial or MPI run?
-	 if ( $octopus_exe_suffix =~ /mpi$/) {
-	   if( -x "$mpirun") {
-	     print "Executing: cd $workdir; $mpirun -np $np $octopus_exe_suffix > out 2>&1 \n";
-	     system("cd $workdir; $mpirun -np $np $octopus_exe_suffix > out 2>&1");
-	   } else {
-	     print "No mpirun found: Skipping parallel test \n";
-	     exit 255;
-	   }
-	 } else {
-	   print "Executing: cd $workdir; $octopus_exe_suffix > out 2>&1 \n";
-	   system("cd $workdir; $octopus_exe_suffix > out 2>&1");
-	 }
-	 system("sed -n '/Running octopus/{N;N;N;N;N;N;p;}' $workdir/out > $workdir/build-stamp");
-	 print "Finished test run.\n\n"; }
-       else {
-	 if(!$opt_i) { print "cd $workdir; $octopus_exe_suffix < inp > out 2>&1 \n"; }
-       }
-       $test{"run"} = 1;
-     }
-
-     # copy all files of this run to archive directory with the name of the
-     # current input file
-     mkdir "$workdir/$input_base";
-     @wfiles = `ls -d $workdir/* | grep -v inp`;
-     $workfiles = join("",@wfiles);
-     $workfiles =~ s/\n/ /g;
-     system("cp -r $workfiles $workdir/inp $workdir/$input_base");
-
-     # file for shell script with matches
-     $mscript = "$workdir/$input_base/matches.sh";
-     open(SCRIPT, ">$mscript") or die "could not create script file\n";
-     # write skeleton for script
-     print SCRIPT "#\!/bin/bash\n\n";
-     close(SCRIPT);
-     chmod 0755, $mscript;
-    }
-
-    if ( $_ =~ /^Match/ && !$opt_n) {
-     $- = s/\\;/_COLUMN_/g;
-     ($match, $name, $pre_command, $regexp, $tol) = split(/;/, $_);
-     $name        =~ s/_COLUMN_/;/g;
-     $pre_command =~ s/_COLUMN_/;/g;
-     $regexp      =~ s/_COLUMN_/;/g;
-     $tol         =~ s/_COLUMN_/;/g;
-
-     $regexp =~ s/\$prec/$prec/g;
-     $tol    =~ s/\$prec/$precnum/g;
-
-     if(!opt_m) {
-       die "have to run before matching" if !$test{"run"};
-     }
-
-     if ($opt_v) { print "$pre_command \n"; }
-     if ($opt_v) { print "$regexp \n"; }
-
-     $regexp =~ s/^\s*//;
-     $regexp =~ s/\s*$//;
-     $lineout = `cd $workdir; $pre_command`;
-
-     # append the command and the regexp also to the shell script matches.sh in the
-     # current archive directory
-     open(SCRIPT, ">>$mscript");
-     print SCRIPT "echo ", "="x60, "[ $name - pre command ] \n";
-     print SCRIPT "$pre_command\n";
-     print SCRIPT "echo ", "-"x60, "[ $name - regular expression ] \n";
-     print SCRIPT "echo '$regexp'\n";
-     print SCRIPT "export LINE=`$pre_command`\n";
-
-     if($tol eq ""){
-
-       print SCRIPT 'perl -e \'print "Match: ".($ENV{LINE} =~ m/'.$regexp.'/?"OK":"FAILED")."\n"\''."\n";
-
-       if ( $lineout =~ /$regexp/ ) {
-	 $test_succeded = 1;
-       } else {
-	 $test_succeded = 0;
-	 $failures++;
-       }
-     } else {
-
-       if ($opt_v) { print "$tol \n"; }
-       print SCRIPT "echo '$tol'\n";
-       print SCRIPT 'perl -e \'print "Match: ".((abs($ENV{LINE} - '.$regexp.') < '.$tol.')?"OK":"FAILED")."\n"\''."\n";
-
-       if ( abs($lineout - $regexp) < $tol ) {
-	 $test_succeded = 1;
-       } else {
-	 $test_succeded = 0;
-	 $failures++;
-       } 
-     }
-     
-     print SCRIPT "echo;echo\n";
-     close(SCRIPT);
-
-     if($test_succeded){
-       print "$name: \t [ $color_start{green}  OK  $color_end{green} ] \n";
-     } else {
-       print "$name: \t [ $color_start{red} FAIL $color_end{red} ] \n";
-     }
-     
-    }
-
-  } else {
-   if ( $_ =~ /^RUN/) { print " skipping test\n"; }
   }
- }
 
- if ($opt_l)  { system ("cat $workdir/out >> out.log"); }
- if (!$opt_p && !$opt_m && $test_succeded) { system ("rm -rf $workdir"); }
+  if ($opt_l)  { system ("cat $workdir/out >> out.log"); }
+  if (!$opt_p && !$opt_m && $test_succeded) { system ("rm -rf $workdir"); }
 
- close(TESTSUITE)
+  close(TESTSUITE)
+}
+
+exit $failures;
+
+# WARNING: This is deprecated. One should use the new interface
+sub run_match(){
+  my $line, $match, $name, $pre_command, $regexp, $lineout;
+
+  $line = @_[0];
+  $line =~ s/\\;/_COLUMN_/g;
+  ($match, $name, $pre_command, $regexp, $tol) = split(/;/, $line);
+  $name        =~ s/_COLUMN_/;/g;
+  $pre_command =~ s/_COLUMN_/;/g;
+  $regexp      =~ s/_COLUMN_/;/g;
+  $tol         =~ s/_COLUMN_/;/g;
+	
+  $regexp =~ s/\$prec/$prec/g;
+  $tol    =~ s/\$prec/$precnum/g;
+
+  die "have to run before matching" if !$test{"run"} && !opt_m;
+
+  if ($opt_v) { print "$pre_command \n"; }
+  if ($opt_v) { print "$regexp \n"; }
+  $regexp =~ s/^\s*//;
+  $regexp =~ s/\s*$//;
+  $lineout = `cd $workdir; $pre_command`;
+
+  # append the command and the regexp also to the shell script matches.sh in the
+  # current archive directory
+  open(SCRIPT, ">>$mscript");
+  print SCRIPT "echo ", "="x60, "[ $name - pre command ] \n";
+  print SCRIPT "$pre_command\n";
+  print SCRIPT "echo ", "-"x60, "[ $name - regular expression ] \n";
+  print SCRIPT "echo '$regexp'\n";
+  print SCRIPT "export LINE=`$pre_command`\n";
+  print SCRIPT 'perl -e \'print "Match: ".($ENV{LINE} =~ m/'.$regexp.'/?"OK":"FAILED")."\n"\''."\n";
+  print SCRIPT "echo;echo\n";
+
+  $test_succeded = 0;
+  if($tol eq ""){
+    print SCRIPT 'perl -e \'print "Match: ".($ENV{LINE} =~ m/'.$regexp.'/?"OK":"FAILED")."\n"\''."\n";
+
+    $test_succeded = 1 if ( $lineout =~ /$regexp/ );
+  } else {
+    if ($opt_v) { print "$tol \n"; }
+    print SCRIPT "echo '$tol'\n";
+    print SCRIPT 'perl -e \'print "Match: ".((abs($ENV{LINE} - '.$regexp.') < '.$tol.')?"OK":"FAILED")."\n"\''."\n";
+
+    $test_succeded = 1 if ( abs($lineout - $regexp) < $tol );
+  }
+
+  print SCRIPT "echo;echo\n";
+  close(SCRIPT);
 
 }
 
 
-if (!$opt_i) { print "\n\n\n"; }
+sub run_match_new(){
+  die "Have to run before matching" if !$test{"run"} && !opt_m;
 
-exit $failures;
+  # parse match line
+  my $line, $match, $name, $pre_command, $ref_value;
+  $line = @_[0];
+  $line =~ s/\\;/_COLUMN_/g;
+  ($match, $name, $pre_command, $ref_value) = split(/;/, $line);
+  $pre_command =~ s/_COLUMN_/;/g;
+  $ref_value =~ s/^\s*//;
+  $ref_value =~ s/\s*$//;
+
+  # parse command
+  $pre_command =~ /\s*(\w+)\s*\((.*)\)/;
+
+  my $func = $1;
+  my $params = $2;
+
+  # parse parameters
+  $params =~ s/\\,/_COMMA_/g;
+  my @par = split(/,/, $params);
+  for($params=0; $params <= $#par; $params++){
+    $par[$params] =~ s/_COMMA_/,/g;
+    $par[$params] =~ s/^\s*//;
+    $par[$params] =~ s/\s*$//;
+  }
+
+  if    ($func eq "SHELL"){ # function SHELL
+    $pre_command = $par[0];
+
+  }elsif($func eq "FILE") { # function FILE
+    $pre_command = "cat $par[0]";
+    if($par[1] > 0){
+      $pre_command .= " | tail -n +$par[1] | head -n 1";
+    } else {
+      $pre_command .= " | tail -n  $par[1] | head -n 1";
+    }
+    $pre_command .= " | cut -b $par[2]- | perl -ne '/\\s*([0-9\\-+.eEdD]*)/; print \$1'";
+
+  }elsif($func eq "GREP") { # function GREP
+    $pre_command = "n=\$(cat -n $par[0] | grep $par[1] | tail -n 1 | awk '{print \$1;}');";
+
+    $pre_command .= " cat $par[0] | tail -n +\$n | head -n 1";
+    $pre_command .= " | cut -b $par[2]- | perl -ne '/\\s*([0-9\\-+.eEdD]*)/; print \$1'";
+  }else{ # error
+    printf stderr "Unknown command '$func'\n";
+    return 0;
+  }
+
+  printf("%s\n", $pre_command) if ($opt_v);
+
+  my $value = `cd $workdir; $pre_command`;
+
+  # append the command and the regexp also to the shell script matches.sh in the
+  # current archive directory
+  open(SCRIPT, ">>$mscript");
+  print SCRIPT "echo ", "="x10, "[ $name - pre command ] \n";
+  print SCRIPT "$pre_command\n";
+  print SCRIPT "echo ", "-"x10, "[ $name - ref value   ] \n";
+  print SCRIPT "echo '$ref_value'\n";
+  print SCRIPT "export LINE=`$pre_command`\n";
+  print SCRIPT 'perl -e \'print "Match: ".(abs($ENV{LINE}-(', $ref_value, ')) <= ',
+    $precnum, ' ? "OK" : "FAILED")."\n"\'', "\n";
+  print SCRIPT "echo;echo\n";
+  close(SCRIPT);
+
+  return (abs(($value)-($ref_value)) <= $precnum);
+}
+
