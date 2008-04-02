@@ -52,8 +52,8 @@ Exit codes:
 Report bugs to <octopus-devel\@tddft.org>
 EndOfUsage
 
-# Option -d is ignored for the moment.
-#    -d        working directory for the tests
+  # Option -d is ignored for the moment.
+  #    -d        working directory for the tests
 
   exit 0;
 }
@@ -67,7 +67,6 @@ sub create_template {
   $author = `whoami`;
   chomp($author);
   $author =~ s/^(\w)(.*)/\u$1$2/;
-#  $cvs_id = qw($Id$);
   $cvs_id = "\$Id: oct-run_regression_test.pl 2423 2006-09-24 21:25:52Z acastro \$";
 
   open(TEMPLATE, ">".$opt_c );
@@ -90,7 +89,10 @@ Input: 01-template.01-ground_state.inp
 # add your own matches
 #
 # Example (of course you have to uncomment the lines :)
-# Match ; TotalEnergy ; sed -n '/^Energy:/{n\;p}' static/info ; \\s*Total\\s*=\\s*-0.33802679
+# match ; Total energy       ; GREP(static/info, 'Total       =', 20) ; -146.81378481
+# match ; Eigenvalue   [1up] ; GREP(static/info, '1   up', 13) ; -14.466667
+# match ; Forces [step  1] ; LINE(td.general/coordinates, -21, 270) ; 1.700891538586e-01
+
 EndOfTemplate
 
   close(TEMPLATE);
@@ -154,39 +156,8 @@ $np = 2;
 
 
 # Figure out which are the executables to test
-open(TESTSUITE, "<".$opt_f ) or die "cannot open testsuite file\n";
 my @executables;
-while ($_ = <TESTSUITE>) {
-
- if ( $_ =~ /^Test\s*:\s*(.*)\s*$/) {
-  $test{"name"} = $1;
- }
-
- if ( $_ =~ /^Programs\s*:\s*(.*)\s*$/) {
-  $i = 0;
-  foreach my $program (split(/;/, $1)) {
-   $program =  "$program$exec_suffix";
-   $program =~ s/^\s+//;
-   foreach my $x (@octopus_execs) {
-    $valid = $program cmp $x;
-    if(!$valid) {
-     $executables[$i] = "$exec_directory/$x";
-     $i = $i+1;
-    };
-   }
-  }
- }
-}
-close(TESTSUITE);
-
-# Die if not suitable executable was found.
-if( @executables == 0 ){
- print "$color_start{blue} ***** $test{\"name\"} ***** $color_end{blue} \n\n";
- print "$color_start{red}No valid executable$color_end{red} found for $opt_f\n";
- print "Skipping ... \n\n";
- exit 255;
-}
-
+find_executables();
 
 # This variable counts the number of failed testcases.
 $failures = 0;
@@ -195,10 +166,8 @@ $failures = 0;
 foreach my $octopus_exe (@executables){
 
   if($octopus_exe =~ m/single/){
-    $prec = "\\.000";
     $precnum = 0.001
   } else {
-    $prec = "\\.0000";
     $precnum = 0.0001
   }
 
@@ -311,18 +280,6 @@ foreach my $octopus_exe (@executables){
 	chmod 0755, $mscript;
       }
 
-      # Warning: this is deprecated
-      if ( $_ =~ /^Match/ && !$opt_n) {
-	if(run_match($_)){
-	  print "$name: \t [ $color_start{green}  OK  $color_end{green} ] \n";
-	  $test_succeded = 1;
-	} else {
-	  print "$name: \t [ $color_start{red} FAIL $color_end{red} ] \n";
-	  $test_succeded = 0;
-	  $failures++;
-	}
-      }
-
       if ( $_ =~ /^Precision\s*:\s*(.*)\s*$/) {
 	$precnum = $1;
       }
@@ -353,58 +310,43 @@ foreach my $octopus_exe (@executables){
 
 exit $failures;
 
-# WARNING: This is deprecated. One should use the new interface
-sub run_match(){
-  my $line, $match, $name, $pre_command, $regexp, $lineout;
 
-  $line = @_[0];
-  $line =~ s/\\;/_COLUMN_/g;
-  ($match, $name, $pre_command, $regexp, $tol) = split(/;/, $line);
-  $name        =~ s/_COLUMN_/;/g;
-  $pre_command =~ s/_COLUMN_/;/g;
-  $regexp      =~ s/_COLUMN_/;/g;
-  $tol         =~ s/_COLUMN_/;/g;
-	
-  $regexp =~ s/\$prec/$prec/g;
-  $tol    =~ s/\$prec/$precnum/g;
+sub find_executables(){
+  my $name;
 
-  die "have to run before matching" if !$test{"run"} && !opt_m;
+  open(TESTSUITE, "<".$opt_f ) or die "cannot open testsuite file\n";
+  while ($_ = <TESTSUITE>) {
 
-  if ($opt_v) { print "$pre_command \n"; }
-  if ($opt_v) { print "$regexp \n"; }
-  $regexp =~ s/^\s*//;
-  $regexp =~ s/\s*$//;
-  $lineout = `cd $workdir; $pre_command`;
+    if ( $_ =~ /^Test\s*:\s*(.*)\s*$/) {
+      $name = $1;
+    }
 
-  # append the command and the regexp also to the shell script matches.sh in the
-  # current archive directory
-  open(SCRIPT, ">>$mscript");
-  print SCRIPT "echo ", "="x60, "[ $name - pre command ] \n";
-  print SCRIPT "$pre_command\n";
-  print SCRIPT "echo ", "-"x60, "[ $name - regular expression ] \n";
-  print SCRIPT "echo '$regexp'\n";
-  print SCRIPT "export LINE=`$pre_command`\n";
-  print SCRIPT 'perl -e \'print "Match: ".($ENV{LINE} =~ m/'.$regexp.'/?"OK":"FAILED")."\n"\''."\n";
-  print SCRIPT "echo;echo\n";
+    if ( $_ =~ /^Programs\s*:\s*(.*)\s*$/) {
+      my $i = 0;
+      foreach my $program (split(/;/, $1)) {
+	$program =  "$program$exec_suffix";
+	$program =~ s/^\s+//;
+	foreach my $x (@octopus_execs) {
+	  $valid = $program cmp $x;
+	  if(!$valid) {
+	    $executables[$i] = "$exec_directory/$x";
+	    $i = $i+1;
+	  }
+	}
+      }
+    }
 
-  $test_succeded = 0;
-  if($tol eq ""){
-    print SCRIPT 'perl -e \'print "Match: ".($ENV{LINE} =~ m/'.$regexp.'/?"OK":"FAILED")."\n"\''."\n";
-
-    $test_succeded = 1 if ( $lineout =~ /$regexp/ );
-  } else {
-    if ($opt_v) { print "$tol \n"; }
-    print SCRIPT "echo '$tol'\n";
-    print SCRIPT 'perl -e \'print "Match: ".((abs($ENV{LINE} - '.$regexp.') < '.$tol.')?"OK":"FAILED")."\n"\''."\n";
-
-    $test_succeded = 1 if ( abs($lineout - $regexp) < $tol );
   }
+  close(TESTSUITE);
 
-  print SCRIPT "echo;echo\n";
-  close(SCRIPT);
-
+  # Die if not suitable executable was found.
+  if( @executables == 0 ){
+    print stderr "$color_start{blue} ***** $test{\"name\"} ***** $color_end{blue} \n\n";
+    print stderr "$color_start{red}No valid executable$color_end{red} found for $opt_f\n";
+    print stderr "Skipping ... \n\n";
+    exit 255;
+  }
 }
-
 
 sub run_match_new(){
   die "Have to run before matching" if !$test{"run"} && !opt_m;

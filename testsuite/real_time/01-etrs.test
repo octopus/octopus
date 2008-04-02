@@ -4,7 +4,7 @@
 Test       : Enforced time reversal symmetry propagator
 Author     : Xavier
 Release    : 3.1.0pre1
-Programs   : octopus_mpi; octopus; octopus_single
+Programs   : octopus_mpi; octopus
 TestGroups : short-run
 Enabled    : Yes
 
