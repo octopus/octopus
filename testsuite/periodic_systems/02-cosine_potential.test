@@ -11,19 +11,17 @@ TestGroups : short-run
 Enabled    : Yes
 
 Input: 02-cosine_potential.01-ground_state.inp
+match ; Bands n=1,k=1; GREP(unoccstatic/eigenvalues, '#k =   1', 12, 2) ; -0.133002
+match ; Bands n=1,k=2; GREP(unoccstatic/eigenvalues, '#k =   2', 12, 2) ; -0.133000
+match ; Bands n=1,k=3; GREP(unoccstatic/eigenvalues, '#k =   3', 12, 2) ; -0.132996
+match ; Bands n=1,k=4; GREP(unoccstatic/eigenvalues, '#k =   4', 12, 2) ; -0.132992
+match ; Bands n=1,k=5; GREP(unoccstatic/eigenvalues, '#k =   5', 12, 2) ; -0.132988
+match ; Bands n=1,k=6; GREP(unoccstatic/eigenvalues, '#k =   6', 12, 2) ; -0.132986
 
-# 1st Band
-Match ; Bands ; grep '^   1' unoccstatic/eigenvalues | tac | head -n 6 | tail -n 1 ; \s*-0.13300\d*\s*2.0000\d*
-Match ; Bands ; grep '^   1' unoccstatic/eigenvalues | tac | head -n 5 | tail -n 1 ; \s*-0.13300\d*\s*2.0000\d*
-Match ; Bands ; grep '^   1' unoccstatic/eigenvalues | tac | head -n 4 | tail -n 1 ; \s*-0.13299\d*\s*2.0000\d*
-Match ; Bands ; grep '^   1' unoccstatic/eigenvalues | tac | head -n 3 | tail -n 1 ; \s*-0.13299\d*\s*2.0000\d*
-Match ; Bands ; grep '^   1' unoccstatic/eigenvalues | tac | head -n 2 | tail -n 1 ; \s*-0.13298\d*\s*2.0000\d*
-Match ; Bands ; grep '^   1' unoccstatic/eigenvalues | tac | head -n 1 | tail -n 1 ; \s*-0.13298\d*\s*2.0000\d*
+match ; Bands n=2,k=1; GREP(unoccstatic/eigenvalues, '#k =   1', 12, 3) ; -0.006033
+match ; Bands n=2,k=2; GREP(unoccstatic/eigenvalues, '#k =   2', 12, 3) ; -0.006086
+match ; Bands n=2,k=3; GREP(unoccstatic/eigenvalues, '#k =   3', 12, 3) ; -0.006223
+match ; Bands n=2,k=4; GREP(unoccstatic/eigenvalues, '#k =   4', 12, 3) ; -0.006391
+match ; Bands n=2,k=5; GREP(unoccstatic/eigenvalues, '#k =   5', 12, 3) ; -0.006526
+match ; Bands n=2,k=6; GREP(unoccstatic/eigenvalues, '#k =   6', 12, 3) ; -0.006577
 
-# 2nd Band
-Match ; Bands ; grep '^   2' unoccstatic/eigenvalues | tac | head -n 6 | tail -n 1 ; \s*-0.00603\d*\s*0.0000\d*
-Match ; Bands ; grep '^   2' unoccstatic/eigenvalues | tac | head -n 5 | tail -n 1 ; \s*-0.00608\d*\s*0.0000\d*
-Match ; Bands ; grep '^   2' unoccstatic/eigenvalues | tac | head -n 4 | tail -n 1 ; \s*-0.00622\d*\s*0.0000\d*
-Match ; Bands ; grep '^   2' unoccstatic/eigenvalues | tac | head -n 3 | tail -n 1 ; \s*-0.00639\d*\s*0.0000\d*
-Match ; Bands ; grep '^   2' unoccstatic/eigenvalues | tac | head -n 2 | tail -n 1 ; \s*-0.00652\d*\s*0.0000\d*
-Match ; Bands ; grep '^   2' unoccstatic/eigenvalues | tac | head -n 1 | tail -n 1 ; \s*-0.00657\d*\s*0.0000\d*

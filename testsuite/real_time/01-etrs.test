@@ -4,7 +4,7 @@
 Test       : Enforced time reversal symmetry propagator
 Author     : Xavier
 Release    : 3.1.0pre1
-Programs   : octopus_mpi; octopus
+Programs   : octopus_mpi; octopus; octopus_single
 TestGroups : short-run
 Enabled    : Yes
 
@@ -13,33 +13,34 @@ Enabled    : Yes
 # ground state
 Processors : 1
 Input      : 01-etrs.01-gs.inp
-Match ; Initial Energy   ; echo $(sed -n '/^Energy/{n\;p\;}' static/info | cut -f 2 -d\=) + 11.0035 |  sed 's/e+/\*10^/g' | bc -l ; $prec
+match ; Initial energy ; GREP(static/info, 'Total       =', 20) ; -11.00353072
 
 Processors : 4
 Input      : 01-etrs.02-td.inp
-Match ; Energy [step 1]  ; echo $(tail -21 td.general/energy | head -1 | cut -b 30-48) +10.9816 | sed 's/e+/\*10^/g' | bc -l ; $prec
-Match ; Energy [step 5]  ; echo $(tail -16 td.general/energy | head -1 | cut -b 30-48) +10.9815 | sed 's/e+/\*10^/g' | bc -l ; $prec
-Match ; Energy [step 10] ; echo $(tail -11 td.general/energy | head -1 | cut -b 30-48) +10.9814 | sed 's/e+/\*10^/g' | bc -l ; $prec
-Match ; Energy [step 15] ; echo $(tail -6  td.general/energy | head -1 | cut -b 30-48) +10.9814 | sed 's/e+/\*10^/g' | bc -l ; $prec
-Match ; Energy [step 20] ; echo $(tail -1  td.general/energy | head -1 | cut -b 30-48) +10.9813 | sed 's/e+/\*10^/g' | bc -l ; $prec
+match ; Energy [step  1] ; LINE(td.general/energy, -21, 30) ; -1.098162577741e+01
+match ; Energy [step  5] ; LINE(td.general/energy, -16, 30) ; -1.098155135224e+01
+match ; Energy [step 10] ; LINE(td.general/energy, -11, 30) ; -1.098147635943e+01
+match ; Energy [step 15] ; LINE(td.general/energy,  -6, 30) ; -1.098140063765e+01
+match ; Energy [step 20] ; LINE(td.general/energy,  -1, 30) ; -1.098132419337e+01
 
-Match ; Forces [step 1]  ; echo $(tail -21 td.general/coordinates | head -1 | cut -b 270-288) -0.1700 | sed 's/e/\*10^/g' | bc -l ; $prec
-Match ; Forces [step 5]  ; echo $(tail -16 td.general/coordinates | head -1 | cut -b 270-288) -0.1675 | sed 's/e/\*10^/g' | bc -l ; $prec
-Match ; Forces [step 10] ; echo $(tail -11 td.general/coordinates | head -1 | cut -b 270-288) -0.1672 | sed 's/e/\*10^/g' | bc -l ; $prec
-Match ; Forces [step 15] ; echo $(tail -6  td.general/coordinates | head -1 | cut -b 270-288) -0.1673 | sed 's/e/\*10^/g' | bc -l ; $prec
-Match ; Forces [step 20] ; echo $(tail -1  td.general/coordinates | head -1 | cut -b 270-288) -0.1675 | sed 's/e/\*10^/g' | bc -l ; $prec
+match ; Forces [step  1] ; LINE(td.general/coordinates, -21, 270) ; 1.700891538586e-01
+match ; Forces [step  5] ; LINE(td.general/coordinates, -16, 270) ; 1.675208428715e-01
+match ; Forces [step 10] ; LINE(td.general/coordinates, -11, 270) ; 1.672066391044e-01
+match ; Forces [step 15] ; LINE(td.general/coordinates,  -6, 270) ; 1.673650199509e-01
+match ; Forces [step 20] ; LINE(td.general/coordinates,  -1, 270) ; 1.675376322523e-01
 
 Processors : 4
 Input      : 01-etrs.03-td_lanczos.inp
-Match ; Energy [step 1]  ; echo $(tail -21 td.general/energy | head -1 | cut -b 30-48) +10.9816 | sed 's/e+/\*10^/g' | bc -l ; $prec
-Match ; Energy [step 5]  ; echo $(tail -16 td.general/energy | head -1 | cut -b 30-48) +10.9815 | sed 's/e+/\*10^/g' | bc -l ; $prec
-Match ; Energy [step 10] ; echo $(tail -11 td.general/energy | head -1 | cut -b 30-48) +10.9814 | sed 's/e+/\*10^/g' | bc -l ; $prec
-Match ; Energy [step 15] ; echo $(tail -6  td.general/energy | head -1 | cut -b 30-48) +10.9814 | sed 's/e+/\*10^/g' | bc -l ; $prec
-Match ; Energy [step 20] ; echo $(tail -1  td.general/energy | head -1 | cut -b 30-48) +10.9813 | sed 's/e+/\*10^/g' | bc -l ; $prec
 
-Match ; Forces [step 1]  ; echo $(tail -21 td.general/coordinates | head -1 | cut -b 270-288) -0.1700 | sed 's/e/\*10^/g' | bc -l ; $prec
-Match ; Forces [step 5]  ; echo $(tail -16 td.general/coordinates | head -1 | cut -b 270-288) -0.1675 | sed 's/e/\*10^/g' | bc -l ; $prec
-Match ; Forces [step 10] ; echo $(tail -11 td.general/coordinates | head -1 | cut -b 270-288) -0.1672 | sed 's/e/\*10^/g' | bc -l ; $prec
-Match ; Forces [step 15] ; echo $(tail -6  td.general/coordinates | head -1 | cut -b 270-288) -0.1673 | sed 's/e/\*10^/g' | bc -l ; $prec
-Match ; Forces [step 20] ; echo $(tail -1  td.general/coordinates | head -1 | cut -b 270-288) -0.1675 | sed 's/e/\*10^/g' | bc -l ; $prec
+match ; Energy [step  1] ; LINE(td.general/energy, -21, 30) ; -1.098162577741e+01
+match ; Energy [step  5] ; LINE(td.general/energy, -16, 30) ; -1.098155135215e+01
+match ; Energy [step 10] ; LINE(td.general/energy, -11, 30) ; -1.098147635920e+01
+match ; Energy [step 15] ; LINE(td.general/energy,  -6, 30) ; -1.098140063721e+01
+match ; Energy [step 20] ; LINE(td.general/energy,  -1, 30) ; -1.098132419280e+01
+
+match ; Forces [step  1] ; LINE(td.general/coordinates, -21, 270) ; 1.700891538586e-01
+match ; Forces [step  5] ; LINE(td.general/coordinates, -16, 270) ; 1.675212427740e-01
+match ; Forces [step 10] ; LINE(td.general/coordinates, -11, 270) ; 1.672069091684e-01
+match ; Forces [step 15] ; LINE(td.general/coordinates,  -6, 270) ; 1.673652322802e-01
+match ; Forces [step 20] ; LINE(td.general/coordinates,  -1, 270) ; 1.675377490743e-01
 

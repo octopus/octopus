@@ -12,33 +12,33 @@ Enabled    : Yes
 
 
 Input: 03-sodium_chain.01-ground_state.inp
+match ; Bands n=1,k=1; GREP(unocc_static/eigenvalues, '#k =   1', 12, 2) ; -3.648593
+match ; Bands n=1,k=2; GREP(unocc_static/eigenvalues, '#k =   2', 12, 2) ; -3.552608
+match ; Bands n=1,k=3; GREP(unocc_static/eigenvalues, '#k =   3', 12, 2) ; -3.265539
+match ; Bands n=1,k=4; GREP(unocc_static/eigenvalues, '#k =   4', 12, 2) ; -2.790094
+match ; Bands n=1,k=5; GREP(unocc_static/eigenvalues, '#k =   5', 12, 2) ; -2.131387
+match ; Bands n=1,k=6; GREP(unocc_static/eigenvalues, '#k =   6', 12, 2) ; -1.368580
 
-Match ; Bands ; grep '^   1' unocc_static/eigenvalues | tac | head -n 6 | tail -n 1 ; \s*-3.648\d*\s*2.0000\d*
-Match ; Bands ; grep '^   1' unocc_static/eigenvalues | tac | head -n 5 | tail -n 1 ; \s*-3.552\d*\s*2.0000\d*
-Match ; Bands ; grep '^   1' unocc_static/eigenvalues | tac | head -n 4 | tail -n 1 ; \s*-3.265\d*\s*2.0000\d*
-Match ; Bands ; grep '^   1' unocc_static/eigenvalues | tac | head -n 3 | tail -n 1 ; \s*-2.790\d*\s*0.0000\d*
-Match ; Bands ; grep '^   1' unocc_static/eigenvalues | tac | head -n 2 | tail -n 1 ; \s*-2.131\d*\s*0.0000\d*
-Match ; Bands ; grep '^   1' unocc_static/eigenvalues | tac | head -n 1 | tail -n 1 ; \s*-1.368\d*\s*0.0000\d*
+match ; Bands n=2,k=1; GREP(unocc_static/eigenvalues, '#k =   1', 12, 3) ; -1.236907
+match ; Bands n=2,k=2; GREP(unocc_static/eigenvalues, '#k =   2', 12, 3) ; -1.145361
+match ; Bands n=2,k=3; GREP(unocc_static/eigenvalues, '#k =   3', 12, 3) ; -0.870845
+match ; Bands n=2,k=4; GREP(unocc_static/eigenvalues, '#k =   4', 12, 3) ; -0.413978
+match ; Bands n=2,k=5; GREP(unocc_static/eigenvalues, '#k =   5', 12, 3) ; -0.281613
+match ; Bands n=2,k=6; GREP(unocc_static/eigenvalues, '#k =   6', 12, 3) ; -1.210874
 
-Match ; Bands ; grep '^   2' unocc_static/eigenvalues | tac | head -n 6 | tail -n 1 ; \s*-1.236\d*\s*0.0000\d*
-Match ; Bands ; grep '^   2' unocc_static/eigenvalues | tac | head -n 5 | tail -n 1 ; \s*-1.145\d*\s*0.0000\d*
-Match ; Bands ; grep '^   2' unocc_static/eigenvalues | tac | head -n 4 | tail -n 1 ; \s*-0.870\d*\s*0.0000\d*
-Match ; Bands ; grep '^   2' unocc_static/eigenvalues | tac | head -n 3 | tail -n 1 ; \s*-0.413\d*\s*0.0000\d*
-Match ; Bands ; grep '^   2' unocc_static/eigenvalues | tac | head -n 2 | tail -n 1 ; \s*-0.281\d*\s*0.0000\d*
-Match ; Bands ; grep '^   2' unocc_static/eigenvalues | tac | head -n 1 | tail -n 1 ; \s*-1.210\d*\s*0.0000\d*
 
 Input: 03-sodium_chain.02-ground_state_disp.inp
+match ; Bands n=1,k=1; GREP(unocc_static/eigenvalues, '#k =   1', 12, 2) ; -3.648589
+match ; Bands n=1,k=2; GREP(unocc_static/eigenvalues, '#k =   2', 12, 2) ; -3.552604
+match ; Bands n=1,k=3; GREP(unocc_static/eigenvalues, '#k =   3', 12, 2) ; -3.265535
+match ; Bands n=1,k=4; GREP(unocc_static/eigenvalues, '#k =   4', 12, 2) ; -2.790090
+match ; Bands n=1,k=5; GREP(unocc_static/eigenvalues, '#k =   5', 12, 2) ; -2.131382
+match ; Bands n=1,k=6; GREP(unocc_static/eigenvalues, '#k =   6', 12, 2) ; -1.368568
 
-Match ; Bands ; grep '^   1' unocc_static/eigenvalues | tac | head -n 6 | tail -n 1 ; \s*-3.648\d*\s*2.0000\d*
-Match ; Bands ; grep '^   1' unocc_static/eigenvalues | tac | head -n 5 | tail -n 1 ; \s*-3.552\d*\s*2.0000\d*
-Match ; Bands ; grep '^   1' unocc_static/eigenvalues | tac | head -n 4 | tail -n 1 ; \s*-3.265\d*\s*2.0000\d*
-Match ; Bands ; grep '^   1' unocc_static/eigenvalues | tac | head -n 3 | tail -n 1 ; \s*-2.790\d*\s*0.0000\d*
-Match ; Bands ; grep '^   1' unocc_static/eigenvalues | tac | head -n 2 | tail -n 1 ; \s*-2.131\d*\s*0.0000\d*
-Match ; Bands ; grep '^   1' unocc_static/eigenvalues | tac | head -n 1 | tail -n 1 ; \s*-1.368\d*\s*0.0000\d*
+match ; Bands n=2,k=1; GREP(unocc_static/eigenvalues, '#k =   1', 12, 3) ; -1.236903
+match ; Bands n=2,k=2; GREP(unocc_static/eigenvalues, '#k =   2', 12, 3) ; -1.145357
+match ; Bands n=2,k=3; GREP(unocc_static/eigenvalues, '#k =   3', 12, 3) ; -0.870841
+match ; Bands n=2,k=4; GREP(unocc_static/eigenvalues, '#k =   4', 12, 3) ; -0.413974
+match ; Bands n=2,k=5; GREP(unocc_static/eigenvalues, '#k =   5', 12, 3) ; -0.281608
+match ; Bands n=2,k=6; GREP(unocc_static/eigenvalues, '#k =   6', 12, 3) ; -1.210870
 
-Match ; Bands ; grep '^   2' unocc_static/eigenvalues | tac | head -n 6 | tail -n 1 ; \s*-1.236\d*\s*0.0000\d*
-Match ; Bands ; grep '^   2' unocc_static/eigenvalues | tac | head -n 5 | tail -n 1 ; \s*-1.145\d*\s*0.0000\d*
-Match ; Bands ; grep '^   2' unocc_static/eigenvalues | tac | head -n 4 | tail -n 1 ; \s*-0.870\d*\s*0.0000\d*
-Match ; Bands ; grep '^   2' unocc_static/eigenvalues | tac | head -n 3 | tail -n 1 ; \s*-0.413\d*\s*0.0000\d*
-Match ; Bands ; grep '^   2' unocc_static/eigenvalues | tac | head -n 2 | tail -n 1 ; \s*-0.281\d*\s*0.0000\d*
-Match ; Bands ; grep '^   2' unocc_static/eigenvalues | tac | head -n 1 | tail -n 1 ; \s*-1.210\d*\s*0.0000\d*
