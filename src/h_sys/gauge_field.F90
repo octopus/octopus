@@ -225,7 +225,7 @@ contains
         
         do idir = 1, gr%sb%dim
           force(idir) = force(idir) + &
-               st%d%kweights(ik)*st%occ(ist, ik)/M_ZI*zstates_dotp(gr%m, st%d%dim, st%zpsi(:, :, ist, ik), gpsi(:, idir, :))
+               st%d%kweights(ik)*st%occ(ist, ik)*aimag(zstates_dotp(gr%m, st%d%dim, st%zpsi(:, :, ist, ik), gpsi(:, idir, :)))
         end do
         
       end do
