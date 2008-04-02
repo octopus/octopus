@@ -304,6 +304,8 @@ contains
           if(def_rsize>M_ZERO.and.sb%periodic_dim<i) call check_def(def_rsize, sb%lsize(i), 'Lsize')
         end do
       end if
+     
+
 
       ! read in image for box_image
       if(sb%box_shape == BOX_IMAGE) then
@@ -501,6 +503,8 @@ contains
       !% <br>&nbsp;&nbsp;0.0 | 0.0 | 1.0
       !% <br>%</tt>
       !%End
+
+      sb%rcell_volume = product(sb%lsize(1:sb%dim))
 
       sb%rlattice = M_ZERO
       do idim = 1, MAX_DIM

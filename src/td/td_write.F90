@@ -157,7 +157,7 @@ contains
     !%End
 
     ! by default print multipoles, coordinates and energy
-    default = 2**(OUT_MULTIPOLES - 1) + 2**(OUT_COORDS - 1) + 2**(OUT_ENERGY - 1)
+    default = 2**(OUT_MULTIPOLES - 1) + 2**(OUT_COORDS - 1) + 2**(OUT_ENERGY - 1) + 2**(OUT_GAUGE_FIELD - 1)
 
     call loct_parse_int(check_inp('TDOutput'), default, flags)
 
