@@ -160,7 +160,7 @@ contains
       end if
     end if
 
-    gauge_force = gauge_field_get_force(h%ep%gfield, gr, st)
+    gauge_force = gauge_field_get_force(h%ep%gfield, gr, geo, h%ep%p, st)
 
     if(td%iter == 0) call td_run_zero_iter()
 
@@ -252,7 +252,7 @@ contains
       end if
 
       if(gauge_field_is_applied(h%ep%gfield)) then
-        gauge_force = gauge_field_get_force(h%ep%gfield, gr, st)
+        gauge_force = gauge_field_get_force(h%ep%gfield, gr, geo, h%ep%p, st)
         call gauge_field_propagate_vel(h%ep%gfield, gauge_force, td%dt)
       end if
 

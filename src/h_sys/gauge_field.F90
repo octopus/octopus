@@ -100,6 +100,7 @@ contains
     !% external electric field in a time dependent run for a periodic system
     !% By default this field is kept null.
     !%End
+
     ! Read the initial gauge vector field
 
     if(simul_box_is_periodic(sb)) then
@@ -186,12 +187,14 @@ contains
     this%vecpot_vel = this%vecpot_vel + M_HALF*dt*(this%vecpot_acc + force)
   end subroutine gauge_field_propagate_vel
 
-  function gauge_field_get_force(this, gr, st) result(force)
+  function gauge_field_get_force(this, gr, geo, pj, st) result(force)
     type(gauge_field_t),  intent(in)    :: this
     type(grid_t),         intent(inout) :: gr
+    type(geometry_t),     intent(in)    :: geo
+    type(projector_t),    intent(in)    :: pj(:)
     type(states_t),       intent(inout) :: st
     
-    integer :: ik, ist, idir, idim
+    integer :: ik, ist, idir, idim, iatom
     CMPLX, allocatable :: gpsi(:, :, :)
     FLOAT :: force(1:MAX_DIM), n_el
 #ifdef HAVE_MPI
@@ -209,16 +212,22 @@ contains
     
     do ik = 1, st%d%nik
       do ist = st%st_start, st%st_end
+        
         do idim = 1, st%d%dim
-          
           call zf_gradient(gr%sb, gr%f_der, st%zpsi(:, idim, ist, ik), gpsi(:, :, idim))
-          
-          do idir = 1, gr%sb%dim
-            force(idir) = force(idir) + &
-                 st%d%kweights(ik)*st%occ(ist, ik)/M_ZI*zstates_dotp(gr%m, st%d%dim, st%zpsi(:, :, ist, ik), gpsi(:, idir, :))
-          end do
-          
         end do
+
+        do idir = 1, 3
+          do iatom = 1, geo%natoms
+            call zprojector_conmut_r(pj(iatom), gr, st%d%dim, idir, ik, st%zpsi(:, 1, ist, ik), gpsi(:, idir, :))
+          end do
+        end do
+        
+        do idir = 1, gr%sb%dim
+          force(idir) = force(idir) + &
+               st%d%kweights(ik)*st%occ(ist, ik)/M_ZI*zstates_dotp(gr%m, st%d%dim, st%zpsi(:, :, ist, ik), gpsi(:, idir, :))
+        end do
+        
       end do
     end do
     
@@ -232,7 +241,7 @@ contains
     deallocate(gpsi)
 
     force = force*M_FOUR*M_PI*P_c/gr%sb%rcell_volume
-    
+
   end function gauge_field_get_force
 
 end module gauge_field_m
