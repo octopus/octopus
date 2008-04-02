@@ -67,7 +67,7 @@ contains
 
       do iatom = 1, geo%natoms
         do idir = 1, gr%sb%dim
-          call X(conmut_vnl_r)(gr, geo, h%ep, h%d%dim, idir, iatom, f_in, vrnl(:, :, idir), ik)
+          call X(conmut_vnl_r)(gr, h%ep, h%d%dim, idir, iatom, f_in, vrnl(:, :, idir), ik)
         end do
 
         do ip = 1, NP
@@ -222,14 +222,14 @@ contains
         do idir = 1, gr%sb%dim
           do idir2 = 1, gr%sb%dim
             !calculate dnl |f_in2> = -[x,vnl] |f_in2>
-            call X(conmut_vnl_r)(gr, geo, h%ep, h%d%dim, idir2, iatom, f_in2(:, idir2), vrnl(:, :), ik)
+            call X(conmut_vnl_r)(gr, h%ep, h%d%dim, idir2, iatom, f_in2(:, idir2), vrnl(:, :), ik)
 
             ! -x vnl |f>
             dnl(1:NP, idir) = dnl(1:NP, idir) - gr%m%x(1:NP, idir) * vrnl(1:NP, 1)
 
             ! vnl x |f>
             xf(1:NP) = gr%m%x(1:NP, idir) * f_in2(1:NP, idir2)
-            call X(conmut_vnl_r)(gr, geo, h%ep, h%d%dim, idir2, iatom, xf, vrnl(:, :), ik)
+            call X(conmut_vnl_r)(gr, h%ep, h%d%dim, idir2, iatom, xf, vrnl(:, :), ik)
 
             dnl(1:NP, idir) = dnl(1:NP, idir) + vrnl(1:NP, 1)
           end do
