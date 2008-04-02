@@ -343,21 +343,6 @@ contains
 
     end if
 
-!!$    call parameters_set_rep(par)
-
-!!$    ALLOCATE(x(par%nfreqs), par%nfreqs)
-!!$    ALLOCATE(y(par%nfreqs), par%nfreqs)
-!!$    write(0, *) 'AAA', parameters_fluence(par)
-!!$
-!!$    do mm = 1, par%nfreqs
-!!$      x(mm) = tdf(par%f(1), mm)
-!!$    end do
-!!$    y = matmul(par%utransf, x)
-!!$    write(0, *) dot_product(y, y)
-!!$
-!!$    deallocate(x, y)
-
-
   end subroutine parameters_set_initial
   ! ---------------------------------------------------------
 

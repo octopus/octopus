@@ -19,20 +19,24 @@
 
 
   ! ---------------------------------------------------------
-  subroutine oct_finalcheck(par, sys, h, td)
+  subroutine oct_finalcheck(sys, h, td)
     type(system_t), intent(inout)      :: sys
-    type(oct_control_parameters_t), intent(inout) :: par
     type(hamiltonian_t), intent(inout) :: h
     type(td_t), intent(inout)          :: td
 
     type(states_t) :: psi
     FLOAT :: j1, jfunctional, fluence, j2
 
+    type(oct_control_parameters_t), pointer :: par
+
     call push_sub('finalcheck.oct_finalcheck')
+
 
     if(.not.oct%oct_double_check) then
       call pop_sub(); return
     end if
+
+    call oct_iterator_bestpar(par, iterator)
 
     call states_copy(psi, initial_st)
 
@@ -52,6 +56,9 @@
     call write_info(4)
     call messages_print_stress(stdout)
 
+    call h_sys_output_states(psi, sys%gr, 'opt-control/final', sys%outp)
+
+    nullify(par)
     call states_end(psi)
     call pop_sub()
   end subroutine oct_finalcheck

@@ -23,7 +23,7 @@ noinst_LIBRARIES = libopt_control.a
 
 libopt_control_a_SOURCES = \
 	opt_control_constants.F90 filters.F90 parameters.F90 iter.F90 \
-	output.F90 target.F90 propagation.F90 opt_control.F90
+	target.F90 propagation.F90 opt_control.F90
 
 noinst_HEADERS = \
 	read.F90 defstates.F90 propagation.F90 finalcheck.F90 
@@ -38,7 +38,7 @@ opt_control_constants.o : opt_control_constants.F90
 filters.o : filters.F90 
 parameters.o : parameters.F90 filters.o 
 iter.o : iter.F90 parameters.o opt_control_constants.o 
-output.o : output.F90 iter.o parameters.o opt_control_constants.o 
 target.o : target.F90 opt_control_constants.o 
-propagation.o : propagation.F90 output.o parameters.o target.o opt_control_constants.o 
-opt_control.o : opt_control.F90 finalcheck.F90 defstates.F90 read.F90 target.o output.o iter.o parameters.o propagation.o opt_control_constants.o filters.o 
+propagation.o : propagation.F90 parameters.o target.o opt_control_constants.o 
+opt_control.o : opt_control.F90 finalcheck.F90 defstates.F90 read.F90 target.o iter.o parameters.o \
+  propagation.o opt_control_constants.o filters.o 

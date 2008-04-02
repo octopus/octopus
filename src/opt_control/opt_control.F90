@@ -58,7 +58,6 @@ module opt_control_m
   use opt_control_propagation_m
   use opt_control_parameters_m
   use opt_control_iter_m
-  use opt_control_output_m
   use opt_control_target_m
 
   implicit none
@@ -227,11 +226,8 @@ contains
       call input_error('OCTScheme')
     end select
 
-    ! Some informative output.
-    call oct_output(iterator, sys%gr, sys%outp, psi)
-
     ! do final test run: propagate initial state with optimal field
-    call oct_finalcheck(iterator%best_par, sys, h, td)
+    call oct_finalcheck(sys, h, td)
 
     ! clean up
     call parameters_end(par)
@@ -261,7 +257,7 @@ contains
         stop_loop = iteration_manager(j1, par_prev, par, iterator)
         if(clean_stop() .or. stop_loop) exit ctr_loop
         if(oct%use_mixing) then
-          call parameters_mixing(iterator%ctr_iter, par_prev, par, par_new)
+          call parameters_mixing(oct_iterator_current(iterator), par_prev, par, par_new)
           call parameters_copy(par, par_new)
           if(oct%mode_fixed_fluence) call parameters_set_fluence(par)
         end if
@@ -288,10 +284,10 @@ contains
         if(oct%dump_intermediate) call iterator_write(iterator, par)
         stop_loop = iteration_manager(j1, par, par_prev, iterator)
         if(clean_stop() .or. stop_loop) exit ctr_loop
-        if( oct%use_mixing .and. (iterator%ctr_iter > 1) ) then
+        if( oct%use_mixing .and. (oct_iterator_current(iterator) > 1) ) then
           ! We do not mix if it is the first iteration, since in that case f_iter only propagates
           ! with the input field, and does not generate any output field.
-          call parameters_mixing(iterator%ctr_iter-1, par_prev, par, par_new)
+          call parameters_mixing(oct_iterator_current(iterator) - 1, par_prev, par, par_new)
           call parameters_copy(par, par_new)
         end if
       end do ctr_loop
@@ -324,7 +320,7 @@ contains
         stop_loop = iteration_manager(j1, par, par_prev, iterator)
         if(clean_stop() .or. stop_loop) exit ctr_loop
         if(oct%use_mixing) then
-          call parameters_mixing(iterator%ctr_iter, par_prev, par, par_new)
+          call parameters_mixing(oct_iterator_current(iterator), par_prev, par, par_new)
           call parameters_copy(par, par_new)
         end if
       end do ctr_loop
@@ -360,7 +356,7 @@ contains
         stop_loop = iteration_manager(j1, par, par_prev, iterator)
         if(clean_stop() .or. stop_loop) exit ctr_loop
         if(oct%use_mixing) then
-          call parameters_mixing(iterator%ctr_iter-1, par_prev, par, par_new)
+          call parameters_mixing(oct_iterator_current(iterator) - 1, par_prev, par, par_new)
           call parameters_copy(par, par_new)
         end if
       end do ctr_loop
@@ -397,15 +393,10 @@ contains
 
       call parameters_par_to_x(par, x)
       step = oct%direct_step * M_PI
-      if(iterator%ctr_iter_max < nfreqs + 3) then
-        write(message(1), '(a)')     'The maximum number of OCT iterations (i.e., function evaluations)'
-        write(message(2), '(a, i4)') 'must be, for the current input data, larger than', nfreqs + 2
-        call write_fatal(2)
-      end if
-      maxiter = floor(real(iterator%ctr_iter_max) / real(nfreqs))
+      maxiter = oct_iterator_maxiter(iterator)
 
       ierr = loct_minimize_direct(MINMETHOD_NMSIMPLEX, nfreqs-1, x(1), step,&
-               real(iterator%eps, 8), maxiter, &
+               real(oct_iterator_tolerance(iterator), 8), maxiter, &
                direct_opt_calc, direct_opt_write_info, minvalue)
 
       if(ierr.ne.0) then
@@ -479,7 +470,7 @@ contains
 
     call push_sub('opt_control.f_wg05')
 
-    if( iterator%ctr_iter .eq. 0) then
+    if( oct_iterator_current(iterator) .eq. 0) then
       call states_end(psi)
       call states_copy(psi, initial_st)
       call propagate_forward(sys, h, td, par, target, psi, prop_psi)
@@ -588,7 +579,7 @@ contains
 
     call push_sub('opt_control.f_zbr98')
 
-    if( iterator%ctr_iter .eq. 0) then
+    if( oct_iterator_current(iterator) .eq. 0) then
       call states_end(psi)
       call states_copy(psi, initial_st)
       call propagate_forward(sys, h, td, par, target, psi, prop_psi)
@@ -599,7 +590,7 @@ contains
 
     call parameters_copy(par_chi, par)
 
-    if(oct%use_mixing .and. (iterator%ctr_iter > 1) ) then
+    if(oct%use_mixing .and. (oct_iterator_current(iterator) > 1) ) then
       ! No need to do this auxiliary propagation if no mixing has been done previously.
       call states_end(psi)
       call states_copy(psi, initial_st)

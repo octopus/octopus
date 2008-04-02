@@ -43,7 +43,6 @@ module opt_control_propagation_m
   use opt_control_constants_m
   use opt_control_target_m
   use opt_control_parameters_m
-  use opt_control_output_m
   use lasers_m
   use v_ks_m
   use tdf_m
