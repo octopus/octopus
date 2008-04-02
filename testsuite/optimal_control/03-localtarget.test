@@ -19,7 +19,7 @@ Enabled    : Yes
 # A similar potential is used in Rev Mod (Haenggi, Griffoni)
 
 Input: 03-localtarget.01-gs.inp
-Match ; TotalEnergy ; sed -n '/^Energy/{n\;p\;}' static/info ; \s*Total\s*=\s*-0.6206
+match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -0.62061580
 
 # Then, run the optimization for two iterations and check the convergence.
 # Note that this run only converges to an almost perfect overlap with
@@ -27,15 +27,15 @@ Match ; TotalEnergy ; sed -n '/^Energy/{n\;p\;}' static/info ; \s*Total\s*=\s*-0
 # 100 iterations we reach J1 = -0.01156, with J1=0 implying perfect
 # overlap and J1 = -2 to overlap at all.
 Input: 03-localtarget.02-oct.inp
-Match ; J1 2nd iteration  ; grep ' 2  ' opt-control/convergence ; \s*-0.398\d*
+match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 2  ', 40) ; -0.39835990
 
 # Now we check that the many-particle version of the QOCT optimization of
 # local targets also works.
 
 Input: 03-localtarget.03-gs-mp.inp
-Match ; TotalEnergy ; sed -n '/^Energy/{n\;p\;}' static/info ; \s*Total\s*=\s*-2.1689
+match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -2.16891047
 
 # Now once again we run for a couple of iterations and check the convergence.
 # In this case, after 25 iterations we reach J1 approx -1.81
 Input: 03-localtarget.04-oct-mp.inp
-Match ; J1 2nd iteration  ; grep ' 2  ' opt-control/convergence ; \s*-4.098\d*
+match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 2  ', 40) ; -4.09830798 

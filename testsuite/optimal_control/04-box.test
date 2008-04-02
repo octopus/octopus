@@ -17,44 +17,44 @@ Enabled    : Yes
 # V(x) = -5*step(x+5)*step(5-x),
 # are calculated. 
 Input: 04-box.01-ground_state.inp
-Match ; Total energy ; sed -n '/^Energy/{n\;p\;}' ground_state_static/info ; \s*Total\s*=\s*-4.9569
-Match ; 2th state    ; grep '2   --' excited_states_static/eigenvalues ; \s*-4.8279
+match ; Total energy ; GREP(ground_state_static/info, 'Total       =', 20) ; -4.95697718
+match ; 2th state    ; GREP(excited_states_static/eigenvalues, '2   --', 12) ; -4.827968
 
 # Then, run the optimization for 5 iterations with ZBR98 scheme and compare the convergence.
 
 Input: 04-box.02-oct_long.inp
-Match ; J1 1st iteration   ; grep ' 1  ' opt-control/convergence ; \s*0.641\d*
-Match ; J1 2nd iteration   ; grep ' 2  ' opt-control/convergence ; \s*0.760\d*
-Match ; J1 5th iteration   ; grep ' 5  ' opt-control/convergence ; \s*0.869\d*
+match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; 0.64196906
+match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 2  ', 40) ; 0.76028965
+match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 5  ', 40) ; 0.86906020
 
 
 # Then, run the optimization for 5 iterations with a ZR98 scheme and compare the convergence.
 Input: 04-box.03-oct_long.inp
-Match ; J1 1st iteration  ; grep ' 1  ' opt-control/convergence ; \s*0.620\d*
-Match ; J1 2nd iteration  ; grep ' 2  ' opt-control/convergence ; \s*0.739\d*
-Match ; J1 5th iteration  ; grep ' 5  ' opt-control/convergence ; \s*0.872\d*
+match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; 0.62099965
+match ; J1 2nd iteration  ; GREP(opt-control/convergence, ' 2  ', 40) ; 0.73937945 
+match ; J1 5th iteration  ; GREP(opt-control/convergence, ' 5  ', 40) ; 0.87210427
 
 
 # Then, run the optimization for 5 iterations with a WG05 scheme and compare the convergence.
 Input: 04-box.04-oct_long.inp
-Match ; J1 1st  iteration  ; grep ' 1  ' opt-control/convergence ; \s*0.711\d*
-Match ; J1 2nd  iteration  ; grep ' 2  ' opt-control/convergence ; \s*0.855\d*
-Match ; J1 5th  iteration  ; grep ' 5  ' opt-control/convergence ; \s*0.985\d*
+match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; 0.71182205
+match ; J1 2nd iteration  ; GREP(opt-control/convergence, ' 2  ', 40) ; 0.85558731
+match ; J1 5th iteration  ; GREP(opt-control/convergence, ' 5  ', 40) ; 0.98597392
 
 # Then, run the optimization for 5 iterations with the STRAIGHT ITERATION scheme
 # This test makes use of Broyden mixing.
 # Note that, despite the poor behaviour of the first iterations, the run actually converges
 # if it is allowed to run for more iterations.
 Input: 04-box.05-oct_long.inp
-Match ; J1 1st  iteration  ; grep ' 1  ' opt-control/convergence ; \s*0.576\d*
-Match ; J1 2nd  iteration  ; grep ' 2  ' opt-control/convergence ; \s*0.741\d*
-Match ; J1 5th  iteration  ; grep ' 5  ' opt-control/convergence ; \s*0.786\d*
+match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; 0.57638588
+match ; J1 2nd iteration  ; GREP(opt-control/convergence, ' 2  ', 40) ; 0.74120977
+match ; J1 5th iteration  ; GREP(opt-control/convergence, ' 5  ', 40) ; 0.78685628
 
 # Then, run the optimization for "a few" iterations with the DIRECT OPTIMIZATION scheme
 Input: 04-box.06-oct_long.inp
-Match ; J1 4th evaluation ; grep ' 4  ' opt-control/convergence ; \s*0.625\d*
+match ; J1 4th evaluation  ; GREP(opt-control/convergence, ' 4  ', 40) ; 0.62549487
 
 # Then, run the optimization also with DIRECT OPTIMIZATION scheme, but optimizing
 # the envelope of the laser field only.
 Input: 04-box.07-oct_long.inp
-Match ; J1 6th evaluation ; grep ' 6  ' opt-control/convergence ; \s*0.598\d*
+match ; J1 6th evaluation  ; GREP(opt-control/convergence, ' 6  ', 40) ; 0.59890231
