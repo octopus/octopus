@@ -57,11 +57,11 @@ module gauge_field_m
     gauge_field_t,                        &
     gauge_field_init,                     &
     gauge_field_is_applied,               &
-    gauge_field_set_vector_potential,     &
-    gauge_field_set_vector_potential_vel, &
-    gauge_field_get_vector_potential,     &
-    gauge_field_get_vector_potential_vel, &
-    gauge_field_get_vector_potential_acc, &
+    gauge_field_set_vec_pot,     &
+    gauge_field_set_vec_pot_vel, &
+    gauge_field_get_vec_pot,     &
+    gauge_field_get_vec_pot_vel, &
+    gauge_field_get_vec_pot_acc, &
     gauge_field_propagate,                &
     gauge_field_propagate_vel,            &
     gauge_field_get_force,                &
@@ -133,40 +133,40 @@ contains
     is_applied = this%with_gauge_field
   end function gauge_field_is_applied
 
-  subroutine gauge_field_set_vector_potential(this, vector_potential)
+  subroutine gauge_field_set_vec_pot(this, vec_pot)
     type(gauge_field_t),  intent(inout) :: this
-    FLOAT,                intent(in)    :: vector_potential(1:MAX_DIM)
+    FLOAT,                intent(in)    :: vec_pot(1:MAX_DIM)
 
-    this%vecpot = vector_potential 
-  end subroutine gauge_field_set_vector_potential
+    this%vecpot = vec_pot 
+  end subroutine gauge_field_set_vec_pot
 
-  subroutine gauge_field_set_vector_potential_vel(this, vector_potential_vel)
+  subroutine gauge_field_set_vec_pot_vel(this, vec_pot_vel)
     type(gauge_field_t),  intent(inout) :: this
-    FLOAT,                intent(in)    :: vector_potential_vel(1:MAX_DIM)
+    FLOAT,                intent(in)    :: vec_pot_vel(1:MAX_DIM)
 
-    this%vecpot_vel = vector_potential_vel
-  end subroutine gauge_field_set_vector_potential_vel
+    this%vecpot_vel = vec_pot_vel
+  end subroutine gauge_field_set_vec_pot_vel
 
-  function gauge_field_get_vector_potential(this) result(vector_potential)
+  function gauge_field_get_vec_pot(this) result(vec_pot)
     type(gauge_field_t),  intent(in) :: this
-    FLOAT :: vector_potential(1:MAX_DIM)
+    FLOAT :: vec_pot(1:MAX_DIM)
 
-    vector_potential = this%vecpot
-  end function gauge_field_get_vector_potential
+    vec_pot = this%vecpot
+  end function gauge_field_get_vec_pot
 
-  function gauge_field_get_vector_potential_vel(this) result(vector_potential_vel)
+  function gauge_field_get_vec_pot_vel(this) result(vec_pot_vel)
     type(gauge_field_t),  intent(in) :: this
-    FLOAT :: vector_potential_vel(1:MAX_DIM)
+    FLOAT :: vec_pot_vel(1:MAX_DIM)
 
-    vector_potential_vel = this%vecpot_vel
-  end function gauge_field_get_vector_potential_vel
+    vec_pot_vel = this%vecpot_vel
+  end function gauge_field_get_vec_pot_vel
 
-  function gauge_field_get_vector_potential_acc(this) result(vector_potential_acc)
+  function gauge_field_get_vec_pot_acc(this) result(vec_pot_acc)
     type(gauge_field_t),  intent(in) :: this
-    FLOAT :: vector_potential_acc(1:MAX_DIM)
+    FLOAT :: vec_pot_acc(1:MAX_DIM)
 
-    vector_potential_acc = this%vecpot_acc
-  end function gauge_field_get_vector_potential_acc
+    vec_pot_acc = this%vecpot_acc
+  end function gauge_field_get_vec_pot_acc
 
   subroutine gauge_field_propagate(this, force, dt)
     type(gauge_field_t),  intent(inout) :: this

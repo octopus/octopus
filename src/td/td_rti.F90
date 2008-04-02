@@ -703,8 +703,8 @@ contains
       end if
       
       if(gauge_field_is_applied(h%ep%gfield)) then
-        vecpot = gauge_field_get_vector_potential(h%ep%gfield)
-        vecpot_vel = gauge_field_get_vector_potential_vel(h%ep%gfield)
+        vecpot = gauge_field_get_vec_pot(h%ep%gfield)
+        vecpot_vel = gauge_field_get_vec_pot_vel(h%ep%gfield)
         call gauge_field_propagate(h%ep%gfield, gauge_force, M_HALF*dt)
       end if
 
@@ -717,8 +717,8 @@ contains
       if(present(ions)) call ion_dynamics_restore_state(ions, geo, ions_state)
 
       if(gauge_field_is_applied(h%ep%gfield)) then
-        call gauge_field_set_vector_potential(h%ep%gfield, vecpot)
-        call gauge_field_set_vector_potential_vel(h%ep%gfield, vecpot_vel)
+        call gauge_field_set_vec_pot(h%ep%gfield, vecpot)
+        call gauge_field_set_vec_pot_vel(h%ep%gfield, vecpot_vel)
       end if
 
       call pop_sub()

@@ -1102,9 +1102,9 @@ contains
     call write_iter_start(out_gauge)
 
     ! TODO: put the appropriate units here 
-    call write_iter_double(out_gauge, gauge_field_get_vector_potential(h%ep%gfield), NDIM)
-    call write_iter_double(out_gauge, gauge_field_get_vector_potential_vel(h%ep%gfield), NDIM)
-    call write_iter_double(out_gauge, gauge_field_get_vector_potential_acc(h%ep%gfield), NDIM)
+    call write_iter_double(out_gauge, gauge_field_get_vec_pot(h%ep%gfield), NDIM)
+    call write_iter_double(out_gauge, gauge_field_get_vec_pot_vel(h%ep%gfield), NDIM)
+    call write_iter_double(out_gauge, gauge_field_get_vec_pot_acc(h%ep%gfield), NDIM)
     call write_iter_nl(out_gauge)
     call pop_sub()
     

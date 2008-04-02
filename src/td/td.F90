@@ -651,8 +651,8 @@ contains
       read(iunit, '(3es20.12)', advance='no') vecpot(1:MAX_DIM)
       read(iunit, '(3es20.12)', advance='no') vecpot_vel(1:MAX_DIM)
 
-      call gauge_field_set_vector_potential(h%ep%gfield, vecpot)
-      call gauge_field_set_vector_potential_vel(h%ep%gfield, vecpot_vel)
+      call gauge_field_set_vec_pot(h%ep%gfield, vecpot)
+      call gauge_field_set_vec_pot_vel(h%ep%gfield, vecpot_vel)
  
       call io_close(iunit)
       call pop_sub()

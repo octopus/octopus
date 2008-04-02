@@ -1067,7 +1067,7 @@ subroutine X(vgauge) (gr, h, psi, hpsi)
 
   if (gauge_field_is_applied(h%ep%gfield)) then
 
-    vecpot  = gauge_field_get_vector_potential(h%ep%gfield)
+    vecpot  = gauge_field_get_vec_pot(h%ep%gfield)
 
     ALLOCATE(grad(NP_PART, NDIM, h%d%dim), NP_PART*h%d%dim*NDIM)
 
