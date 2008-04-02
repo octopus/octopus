@@ -23,6 +23,6 @@ Enabled    : Yes
 
 Input: 03-vdw_sternheimer.01-ground_state.inp
 Input: 03-vdw_sternheimer.02-vdw.inp
+match ; C6 ; GREP(linear/vdw_c6, '^C_6  \[a.u.', 17) ; 1.828181671233E+00
 
-Match ; C6 ; grep '^C_6  \[a.u.' linear/vdw_c6 ; \s*1.828\d*
 
