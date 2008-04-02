@@ -227,7 +227,8 @@ contains
 
         do idim = 1, st%d%dim
           do idir = 1, 3
-            gpsi(1:NP, idir, idim) = gpsi(1:NP, idir, idim) + M_zI*st%d%kpoints(idir, ik)*st%zpsi(1:NP, idim, ist, ik)
+            gpsi(1:NP, idir, idim) = gpsi(1:NP, idir, idim) + &
+                 M_zI*st%d%kpoints(idir, ik)*st%zpsi(1:NP, idim, ist, ik)
           end do
         end do
 
