@@ -123,7 +123,7 @@ subroutine X(hpsi) (h, gr, psi, hpsi, ist, ik, t)
   end if
   
   call X(magnetic_terms) (gr, h, epsi, hpsi, ik)
-  if (h%ep%with_gauge_field) call X(vgauge) (gr, h, epsi, hpsi)
+  if (gauge_field_is_applied(h%ep%gfield)) call X(vgauge)(gr, h, epsi, hpsi)
   if(present(t)) call X(vborders) (gr, h, epsi, hpsi)
   
   if(simul_box_is_periodic(gr%sb) .and. .not. kpoint_is_gamma(h%d, ik)) then
@@ -524,7 +524,7 @@ subroutine X(magnetic_terms) (gr, h, psi, hpsi, ik)
       ! Not yet implemented
     end select
 
-  endif
+  endif !CDT
 
   ! If we have an external magnetic field
   if (associated(h%ep%A_static)) then
@@ -1061,22 +1061,28 @@ subroutine X(vgauge) (gr, h, psi, hpsi)
 
   integer :: k, idim
   R_TYPE, allocatable :: grad(:,:,:)
+  FLOAT :: vecpot(1:MAX_DIM)
 
   call push_sub('h_inc.Xvgauge')
 
-  if (associated(h%ep%A_gauge)) then
+  if (gauge_field_is_applied(h%ep%gfield)) then
+
+    vecpot  = gauge_field_get_vector_potential(h%ep%gfield)
+
     ALLOCATE(grad(NP_PART, NDIM, h%d%dim), NP_PART*h%d%dim*NDIM)
+
     do idim = 1, h%d%dim
       call X(f_gradient)(gr%sb, gr%f_der, psi(:, idim), grad(:, :, idim))
     end do
+
     do k = 1, NP
-      hpsi(k, :) = hpsi(k, :) + M_HALF*sum(h%ep%A_gauge(:)**2)*psi(k, :)
+      hpsi(k, :) = hpsi(k, :) + M_HALF*sum(vecpot(:)**2)*psi(k, :)
       select case(h%d%ispin)
       case(UNPOLARIZED, SPIN_POLARIZED)
-        hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(h%ep%A_gauge(1:NDIM), grad(k, 1:NDIM, 1))
+        hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(vecpot(1:NDIM), grad(k, 1:NDIM, 1))
       case (SPINORS)
         do idim = 1, h%d%dim
-          hpsi(k, idim) = hpsi(k, idim) - M_zI*dot_product(h%ep%A_gauge(1:NDIM), grad(k, 1:NDIM, idim))
+          hpsi(k, idim) = hpsi(k, idim) - M_zI*dot_product(vecpot(1:NDIM), grad(k, 1:NDIM, idim))
         end do
       end select
     end do

@@ -28,7 +28,8 @@ libh_sys_a_SOURCES = \
 	scf_tol.F90 xc_OEP.F90 v_ks.F90 \
 	output_h_sys.F90 \
 	system.F90 xc_OEP_kernel.F90 \
-	pert.F90
+	pert.F90                     \
+	gauge_field.F90
 
 noinst_HEADERS = \
 	xc_KLI_inc.F90 xc_OEP_x_inc.F90 xc_OEP_SIC_inc.F90 xc_OEP_kernel_inc.F90 \
@@ -47,8 +48,8 @@ rkb_projector.o : rkb_projector.F90 specie_pot.o
 kb_projector.o : kb_projector.F90 kb_projector_inc.F90 specie_pot.o 
 hgh_projector.o : hgh_projector.F90 hgh_projector_inc.F90 specie_pot.o 
 projector.o : projector.F90 projector_inc.F90 rkb_projector.o kb_projector.o hgh_projector.o specie_pot.o 
-epot.o : epot.F90 epot_inc.F90 projector.o lasers.o specie_pot.o 
-h.o : h.F90 h_inc.F90 lasers.o projector.o epot.o 
+epot.o : epot.F90 epot_inc.F90 projector.o lasers.o specie_pot.o gauge_field.o
+h.o : h.F90 h_inc.F90 lasers.o projector.o epot.o gauge_field.o
 preconditioners.o : preconditioners.F90 preconditioners_inc.F90 h.o 
 linear_solver.o : linear_solver.F90 linear_solver_inc.F90 preconditioners.o h.o 
 scf_tol.o : scf_tol.F90 
@@ -58,3 +59,4 @@ system.o : system.F90 v_ks.o h.o
 xc_OEP_kernel.o : xc_OEP_kernel.F90 xc_OEP_kernel_inc.F90 xc_OEP.o system.o h.o 
 pert.o : pert.F90 pert_inc.F90 specie_pot.o projector.o h.o epot.o 
 output_h_sys.o : output_h_sys.F90 output_states.F90 output_h.F90 output_linear_response.F90 h.o
+gauge_field.o : gauge_field.F90

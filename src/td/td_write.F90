@@ -24,6 +24,7 @@ module td_write_m
   use datasets_m
   use excited_states_m
   use functions_m
+  use gauge_field_m
   use geometry_m
   use global_m
   use grid_m
@@ -1101,9 +1102,9 @@ contains
     call write_iter_start(out_gauge)
 
     ! TODO: put the appropriate units here 
-    call write_iter_double(out_gauge, h%ep%A_gauge(1:NDIM),   NDIM)
-    call write_iter_double(out_gauge, h%ep%A_gauge_dot(1:NDIM), NDIM)
-    call write_iter_double(out_gauge, h%ep%A_gauge_ddot(1:NDIM),    NDIM)
+    call write_iter_double(out_gauge, gauge_field_get_vector_potential(h%ep%gfield), NDIM)
+    call write_iter_double(out_gauge, gauge_field_get_vector_potential_vel(h%ep%gfield), NDIM)
+    call write_iter_double(out_gauge, gauge_field_get_vector_potential_acc(h%ep%gfield), NDIM)
     call write_iter_nl(out_gauge)
     call pop_sub()
     

@@ -23,6 +23,7 @@ module hamiltonian_m
   use datasets_m
   use derivatives_m
   use functions_m
+  use gauge_field_m
   use geometry_m
   use global_m
   use grid_m
@@ -235,7 +236,7 @@ contains
 
 
     !Static magnetic field requires complex wave-functions
-    if (associated(h%ep%B_field) .or. h%ep%with_gauge_field) wfs_type = M_CMPLX
+    if (associated(h%ep%B_field) .or. gauge_field_is_applied(h%ep%gfield)) wfs_type = M_CMPLX
 
     call loct_parse_logical(check_inp('CalculateSelfInducedMagneticField'), .false., h%self_induced_magnetic)
     !%Variable CalculateSelfInducedMagneticField

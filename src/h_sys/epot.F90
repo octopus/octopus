@@ -24,6 +24,7 @@ module external_pot_m
   use derivatives_m
   use double_grid_m
   use functions_m
+  use gauge_field_m
   use global_m
   use grid_m
   use io_m
@@ -62,7 +63,6 @@ module external_pot_m
     epot_init,                 &
     epot_end,                  &
     epot_generate,             &
-    epot_generate_gauge_field, &
     epot_forces,               &
     dconmut_vnl_r,             &
     zconmut_vnl_r,             &
@@ -87,11 +87,7 @@ module external_pot_m
     FLOAT, pointer :: v_static(:)          ! static scalar potential
     FLOAT, pointer :: B_field(:)           ! static magnetic field
     FLOAT, pointer :: A_static(:,:)        ! static vector potential
-    FLOAT, pointer :: A_gauge(:)           ! gauge vector potential
-    FLOAT, pointer :: A_gauge_dot(:)       ! dA_gauge/dt
-    FLOAT, pointer :: A_gauge_ddot(:)      ! d^2A_gauge/dt^2
-    logical :: with_gauge_field            ! true if A_gauge(:) is used
-
+    type(gauge_field_t) :: gfield
     integer :: reltype            ! type of relativistic correction to use
 
     ! The gyromagnetic ratio (-2.0 for the electron, but different if we treat
@@ -262,33 +258,6 @@ contains
 
     end if
     
-    !%Variable GaugeVectorField
-    !%Type block
-    !%Section Hamiltonian
-    !%Description
-    !% The gauge vector field is used to include a uniform (but time dependent)
-    !% external electric field in a time dependent run for a periodic system
-    !% By default this field is kept null.
-    !%End
-    ! Read the initial gauge vector field
-    ep%with_gauge_field = .false.
-    nullify(ep%A_gauge, ep%A_gauge_dot, ep%A_gauge_ddot)
-    if(simul_box_is_periodic(gr%sb)) then
-      if(loct_parse_block(check_inp('GaugeVectorField'), blk) == 0) then
-        ep%with_gauge_field = .true.
-        ALLOCATE(ep%A_gauge(NDIM), NDIM)
-        ALLOCATE(ep%A_gauge_dot(NDIM), NDIM)
-        ALLOCATE(ep%A_gauge_ddot(NDIM), NDIM)
-        ep%A_gauge = M_ZERO
-	ep%A_gauge_dot = M_ZERO
-	ep%A_gauge_ddot = M_ZERO
-	do i = 1, NDIM
-          call loct_parse_block_float(blk, 0, i-1, ep%A_gauge(i))
-	end do
-	call loct_parse_block_end(blk)
-      end if
-    end if
-    
     !%Variable GyromagneticRatio
     !%Type float
     !%Default 2.0023193043768
@@ -358,6 +327,8 @@ contains
 
     ALLOCATE(ep%fii(1:MAX_DIM, 1:geo%natoms), MAX_DIM*geo%natoms)
 
+    call gauge_field_init(ep%gfield, gr%sb)
+
     call pop_sub()
   end subroutine epot_init
 
@@ -399,9 +370,6 @@ contains
     if(associated(ep%v_static)) deallocate(ep%v_static)
     if(associated(ep%B_field))  deallocate(ep%B_field)
     if(associated(ep%A_static)) deallocate(ep%A_static)
-    if(associated(ep%A_gauge)) deallocate(ep%A_gauge)
-    if(associated(ep%A_gauge_dot)) deallocate(ep%A_gauge_dot)
-    if(associated(ep%A_gauge_ddot)) deallocate(ep%A_gauge_ddot)
 
     do iproj = 1, geo%natoms
       if(.not. specie_is_ps(geo%atom(iproj)%spec)) cycle
@@ -416,40 +384,7 @@ contains
   end subroutine epot_end
 
   ! ---------------------------------------------------------
-  subroutine epot_generate_gauge_field(ep, gr, st)
-    type(epot_t),      intent(inout) :: ep
-    type(grid_t),      intent(inout) :: gr
-    type(states_t),    intent(inout) :: st
-    
-    integer :: ispin
-    FLOAT :: n_el, omega2
 
-    call push_sub('epot.epot_generate_gauge_field')
-    
-    ASSERT(st%wfs_type == M_CMPLX)
-    
-    ! Integrate the charge density
-    n_el = M_ZERO
-    do ispin = 1, st%d%spin_channels
-      n_el = n_el + dmf_integrate(gr%m, st%rho(1:NP,ispin))
-    end do
-    
-    omega2 = M_FOUR*M_PI*P_c*n_el/gr%sb%rcell_volume
-    !call calc_paramagnetic_current(gr, st, jp)
-    
-    ! DEBUG
-    ! Harmonic oscillator
-    ep%A_gauge_ddot(1:NDIM) = -omega2*ep%A_gauge(1:NDIM)
-    !write(*,'(a,3f12.6)')'OUT: A = ',ep%A_gauge(1:NDIM)
-    !write(*,'(a,3f12.6)')'OUT: dA/dt = ',ep%A_gauge_dot(1:NDIM)
-    !write(*,'(a,3f12.6)')'OUT: d^2A/dt^2 = ',ep%A_gauge_ddot(1:NDIM)
-    ! END DEBUG
-       
-    call pop_sub()
-  
-  end subroutine epot_generate_gauge_field
-  
-  ! ---------------------------------------------------------
   subroutine epot_generate(ep, gr, geo, st, time)
     type(epot_t),      intent(inout) :: ep
     type(grid_t), target,  intent(inout) :: gr

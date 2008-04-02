@@ -31,6 +31,7 @@ module timedep_m
   use messages_m
   use mesh_m
   use external_pot_m
+  use gauge_field_m
   use geometry_m
   use ground_state_m
   use h_sys_output_m
@@ -107,10 +108,8 @@ contains
     logical                   :: stopping
     integer                   :: i, ii, ik, ierr
     real(8)                   :: etime
-    FLOAT, allocatable        :: A_gauge_tmp(:)
-    FLOAT, allocatable        :: A_gauge_dot_tmp(:)
-    FLOAT, allocatable        :: A_gauge_ddot_tmp(:)
     logical                   :: generate
+    FLOAT                     :: gauge_force(1:MAX_DIM)
 
     call push_sub('td.td_run')
 
@@ -138,7 +137,8 @@ contains
 
     call init_wfs()
 
-    call td_write_init(write_handler, gr, st, geo, ion_dynamics_ions_move(td%ions), h%ep%with_gauge_field, td%iter, td%dt)
+    call td_write_init(write_handler, gr, st, geo, &
+         ion_dynamics_ions_move(td%ions), gauge_field_is_applied(h%ep%gfield), td%iter, td%dt)
 
     ! Calculate initial forces and kinetic energy
     if(ion_dynamics_ions_move(td%ions)) then
@@ -154,13 +154,13 @@ contains
     end if
           
     ! Calculate initial value of the gauge vector field
-    if (h%ep%with_gauge_field) then
+    if (gauge_field_is_applied(h%ep%gfield)) then
       if(td%iter > 0) then
         call td_read_gauge_field()
       end if
-      call epot_generate_gauge_field(h%ep, gr, st)
-      call init_verlet_gauge_field()
     end if
+
+    gauge_force = gauge_field_get_force(h%ep%gfield, gr, st)
 
     if(td%iter == 0) call td_run_zero_iter()
 
@@ -188,19 +188,14 @@ contains
       if(clean_stop()) stopping = .true.
       call profiling_in(C_PROFILING_TIME_STEP)
       
-      if(h%ep%with_gauge_field) then
-        ! Calculate the gauge vector potential at half step
-	if( h%ep%with_gauge_field ) call apply_verlet_gauge_field_1(M_HALF*td%dt)
-      end if
-      
       ! time iterate wavefunctions
       select case(td%dynamics)
       case(EHRENFEST)
         if(ion_dynamics_ions_move(td%ions)) then
-          call td_rti_dt(sys%ks, h, gr, st, td%tr, i*td%dt, td%dt / td%mu, td%max_iter, i, &
+          call td_rti_dt(sys%ks, h, gr, st, td%tr, i*td%dt, td%dt / td%mu, td%max_iter, i, gauge_force, &
             ions = td%ions, geo = sys%geo, ionic_dt = td%dt)
         else
-          call td_rti_dt(sys%ks, h, gr, st, td%tr, i*td%dt, td%dt / td%mu, td%max_iter, i)
+          call td_rti_dt(sys%ks, h, gr, st, td%tr, i*td%dt, td%dt / td%mu, td%max_iter, i, gauge_force)
         end if
       case(BO)
         call scf_run(td%scf, sys%gr, geo, st, sys%ks, h, sys%outp, gs_run = .false., verbosity = VERB_NO)
@@ -220,20 +215,15 @@ contains
 
       generate = .false.
 
-      if( h%ep%with_gauge_field ) then
-        h%ep%A_gauge(1:NDIM) = A_gauge_tmp(1:NDIM)
-        h%ep%A_gauge_dot(1:NDIM) = A_gauge_dot_tmp(1:NDIM)
-        h%ep%A_gauge_ddot(1:NDIM) = A_gauge_ddot_tmp(1:NDIM)
-        call apply_verlet_gauge_field_1(td%dt)
-        call epot_generate_gauge_field(h%ep, gr, st)
-        generate = .true.
-      end if
-      
       if(ion_dynamics_ions_move(td%ions)) then 
         if(td%dynamics /= EHRENFEST .or. .not. td_rti_ions_are_propagated(td%tr)) then
           call ion_dynamics_propagate(td%ions, sys%gr%sb, sys%geo, td%dt)
           generate = .true.
         end if
+      end if
+
+      if(gauge_field_is_applied(h%ep%gfield) .and. .not. td_rti_ions_are_propagated(td%tr)) then
+        call gauge_field_propagate(h%ep%gfield, gauge_force, td%dt)
       end if
       
       if(generate) call epot_generate(h%ep, gr, sys%geo, st, time = i*td%dt)
@@ -261,11 +251,11 @@ contains
         geo%kinetic_energy = ion_dynamics_kinetic_energy(td%ions, geo)
       end if
 
-      if (h%ep%with_gauge_field) then
-        call epot_generate_gauge_field(h%ep, gr, st)
-	call apply_verlet_gauge_field_2
+      if(gauge_field_is_applied(h%ep%gfield)) then
+        gauge_force = gauge_field_get_force(h%ep%gfield, gr, st)
+        call gauge_field_propagate_vel(h%ep%gfield, gauge_force, td%dt)
       end if
-      
+
       call td_write_iter(write_handler, gr, st, h, geo, td%kick, td%dt, i)
 
 #if !defined(DISABLE_PES)
@@ -328,44 +318,12 @@ contains
       end if
     end subroutine check_point
 
-    ! ---------------------------------------------------------
-    subroutine init_verlet_gauge_field
-      ALLOCATE(A_gauge_tmp(NDIM), NDIM)
-      ALLOCATE(A_gauge_dot_tmp(NDIM), NDIM)
-      ALLOCATE(A_gauge_ddot_tmp(NDIM), NDIM)
-      A_gauge_tmp(1:NDIM) = h%ep%A_gauge(1:NDIM)
-      A_gauge_dot_tmp(1:NDIM) = h%ep%A_gauge_dot(1:NDIM)
-      A_gauge_ddot_tmp(1:NDIM) = h%ep%A_gauge_ddot(1:NDIM)
-    end subroutine init_verlet_gauge_field
-
-    ! ---------------------------------------------------------
-    subroutine end_verlet_gauge_field
-      deallocate(A_gauge_tmp)
-      deallocate(A_gauge_dot_tmp)
-      deallocate(A_gauge_ddot_tmp)
-    end subroutine end_verlet_gauge_field
-
-   ! ---------------------------------------------------------
-    subroutine apply_verlet_gauge_field_1(tau)
-      FLOAT, intent(in) :: tau
-      A_gauge_tmp(1:NDIM) = h%ep%A_gauge(1:NDIM)
-      A_gauge_dot_tmp(1:NDIM) = h%ep%A_gauge_dot(1:NDIM)
-      A_gauge_ddot_tmp(1:NDIM) = h%ep%A_gauge_ddot(1:NDIM)
-      h%ep%A_gauge(:) = h%ep%A_gauge(:) +  tau*h%ep%A_gauge_dot(:) + M_HALF*tau**2*h%ep%A_gauge_ddot(:)
-    end subroutine apply_verlet_gauge_field_1
-   
-   ! ---------------------------------------------------------
-    subroutine apply_verlet_gauge_field_2
-      h%ep%A_gauge_dot(:) = h%ep%A_gauge_dot(:)  +  td%dt/M_TWO * (A_gauge_ddot_tmp(:) + h%ep%A_gauge_ddot(:))
-    end subroutine apply_verlet_gauge_field_2
-   
    ! ---------------------------------------------------------
     subroutine end_()
       ! free memory
       if(td%dynamics == CP) call cpmd_end(td%cp_propagator)
       call states_deallocate_wfns(st)
       call ion_dynamics_end(td%ions)
-      if (h%ep%with_gauge_field) call end_verlet_gauge_field
       call td_end(td)
       call pop_sub()
     end subroutine end_
@@ -668,7 +626,8 @@ contains
     subroutine td_read_gauge_field()
       
       integer :: i, iunit, record_length
-      
+      FLOAT :: vecpot(1:MAX_DIM), vecpot_vel(1:MAX_DIM)
+
       call push_sub('td.td_read_gauge_field')
 
       record_length = 28 + 3*3*20
@@ -689,10 +648,11 @@ contains
       read(iunit, '(28x)', advance='no') ! skip the time index.
 
       ! TODO: units are missing
-      read(iunit, '(3es20.12)', advance='no') h%ep%A_gauge(1:NDIM)
-      read(iunit, '(3es20.12)', advance='no') h%ep%A_gauge_dot(1:NDIM)
-      read(iunit, '(3es20.12)', advance='no') h%ep%A_gauge_ddot(1:NDIM)
-      !           !* units_out%length%factor
+      read(iunit, '(3es20.12)', advance='no') vecpot(1:MAX_DIM)
+      read(iunit, '(3es20.12)', advance='no') vecpot_vel(1:MAX_DIM)
+
+      call gauge_field_set_vector_potential(h%ep%gfield, vecpot)
+      call gauge_field_set_vector_potential_vel(h%ep%gfield, vecpot_vel)
  
       call io_close(iunit)
       call pop_sub()

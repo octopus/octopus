@@ -21,6 +21,7 @@
 
 module td_rti_m
   use datasets_m
+  use gauge_field_m
   use geometry_m
   use ion_dynamics_m
   use lalg_basic_m
@@ -124,13 +125,16 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_rti_init(gr, st, tr, dt, max_iter, move_ions)
+  subroutine td_rti_init(gr, st, tr, dt, max_iter, have_fields)
     type(grid_t),   intent(in)    :: gr
     type(states_t), intent(in)    :: st
     type(td_rti_t), intent(inout) :: tr
     FLOAT,          intent(in)    :: dt
     integer,        intent(in)    :: max_iter
-    logical,        intent(in)    :: move_ions
+    logical,        intent(in)    :: have_fields ! whether there is an associated "field"
+                                                 ! that must be propagated (currently ions
+                                                 ! or a gauge field).
+
 
 
 
@@ -298,11 +302,11 @@ contains
     end select
     call messages_print_var_option(stdout, 'TDEvolutionMethod', tr%method)
 
-    if(move_ions) then
+    if(have_fields) then
       if(tr%method /= PROP_REVERSAL .and.    &
          tr%method /= PROP_APP_REVERSAL .and. &
          tr%method /= PROP_EXPONENTIAL_MIDPOINT) then
-        message(1) = "If you want to move the ions you have to use the etrs, aetrs or exp_mid propagators." 
+        message(1) = "To move the ions or put a gauge field use the etrs, aetrs or exp_mid propagators." 
         call write_fatal(1)
       end if
     end if
@@ -370,7 +374,7 @@ contains
   ! Propagates st from t-dt to t.
   ! If dt<0, it propagates *backwards* from t+|dt| to t
   ! ---------------------------------------------------------
-  subroutine td_rti_dt(ks, h, gr, st, tr, t, dt, max_iter, nt, ions, geo, ionic_dt)
+  subroutine td_rti_dt(ks, h, gr, st, tr, t, dt, max_iter, nt, gauge_force, ions, geo, ionic_dt)
     type(v_ks_t),                    intent(inout) :: ks
     type(hamiltonian_t), target,     intent(inout) :: h
     type(grid_t),        target,     intent(inout) :: gr
@@ -379,6 +383,7 @@ contains
     FLOAT,                           intent(in)    :: t, dt
     integer,                         intent(in)    :: max_iter
     integer,                         intent(in)    :: nt
+    FLOAT,                optional,  intent(inout) :: gauge_force(1:MAX_DIM)
     type(ion_dynamics_t), optional,  intent(inout) :: ions
     type(geometry_t),     optional,  intent(inout) :: geo
     FLOAT,                optional,  intent(in)    :: ionic_dt
@@ -396,6 +401,10 @@ contains
     if(present(ions)) then
       ASSERT(present(geo))
       ASSERT(present(ionic_dt))
+    end if
+
+    if(gauge_field_is_applied(h%ep%gfield)) then
+      ASSERT(present(gauge_force))
     end if
 
     self_consistent = .false.
@@ -621,6 +630,8 @@ contains
         call epot_generate(h%ep, gr, geo, st, time = t)
       end if
 
+      if(gauge_field_is_applied(h%ep%gfield)) call gauge_field_propagate(h%ep%gfield, gauge_force, dt)
+
       if(h%theory_level.ne.INDEPENDENT_PARTICLES)  call lalg_copy(NP, st%d%nspin, vhxc_t2, h%vhxc)
 
       do ik = 1, st%d%nik
@@ -658,6 +669,8 @@ contains
         call epot_generate(h%ep, gr, geo, st, time = t)
       end if
 
+      if(gauge_field_is_applied(h%ep%gfield)) call gauge_field_propagate(h%ep%gfield, gauge_force, dt)
+
       ! propagate the other half with H(t)
       do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
@@ -674,7 +687,8 @@ contains
     subroutine td_exponential_midpoint
       integer :: ist, ik
       type(ion_state_t) :: ions_state
-    
+      FLOAT :: vecpot(1:MAX_DIM), vecpot_vel(1:MAX_DIM)
+
       call push_sub('td_rti.td_exponential_midpoint')
 
       if(h%theory_level.ne.INDEPENDENT_PARTICLES) then
@@ -687,6 +701,12 @@ contains
         call ion_dynamics_propagate(ions, gr%sb, geo, M_HALF*ionic_dt)
         call epot_generate(h%ep, gr, geo, st, time = t - ionic_dt/M_TWO)
       end if
+      
+      if(gauge_field_is_applied(h%ep%gfield)) then
+        vecpot = gauge_field_get_vector_potential(h%ep%gfield)
+        vecpot_vel = gauge_field_get_vector_potential_vel(h%ep%gfield)
+        call gauge_field_propagate(h%ep%gfield, gauge_force, M_HALF*dt)
+      end if
 
       do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
@@ -695,6 +715,11 @@ contains
       end do
 
       if(present(ions)) call ion_dynamics_restore_state(ions, geo, ions_state)
+
+      if(gauge_field_is_applied(h%ep%gfield)) then
+        call gauge_field_set_vector_potential(h%ep%gfield, vecpot)
+        call gauge_field_set_vector_potential_vel(h%ep%gfield, vecpot_vel)
+      end if
 
       call pop_sub()
     end subroutine td_exponential_midpoint
