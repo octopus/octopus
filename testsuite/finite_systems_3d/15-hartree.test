@@ -11,5 +11,6 @@ TestGroups : short-run
 Enabled    : Yes
 
 Input: 15-hartree.01-rectangular.inp
-Match ; Dumb test ; grep '^Hartree test' hartree_results ; \s*0.00
+match ; Dumb test ; GREP(hatree_results, 'Hartree test =', 20) ; 0.00
+
 

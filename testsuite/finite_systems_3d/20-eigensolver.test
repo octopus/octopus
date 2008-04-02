@@ -21,22 +21,19 @@ Enabled    : Yes
 #Match ; Eigenvalue [4th] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;n\;n\;p\;}' static/info ; \s*-8.419\d*\s*2.0000\d*
 
 Input: 20-eigensolver.02-cg.inp
-
-Match ; Eigenvalue [1st] ; sed -n '/^Eigenvalues \[/{n\;n\;p\;}'          static/info ; \s*-13.449*\d*\s*2.0000\d*
-Match ; Eigenvalue [2nd] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;p\;}'       static/info ; \s*-8.455\d*\s*2.0000\d*
-Match ; Eigenvalue [3rd] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;n\;p\;}'    static/info ; \s*-8.455\d*\s*2.0000\d*
-Match ; Eigenvalue [4th] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;n\;n\;p\;}' static/info ; \s*-8.419\d*\s*2.0000\d*
+match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; -13.449077
+match ; Eigenvalue  2 ; GREP(static/info, ' 2   --', 13) ;  -8.455429
+match ; Eigenvalue  3 ; GREP(static/info, ' 3   --', 13) ;  -8.455429
+match ; Eigenvalue  4 ; GREP(static/info, ' 4   --', 13) ;  -8.419394
 
 Input: 20-eigensolver.03-cg_new.inp
-
-Match ; Eigenvalue [1st] ; sed -n '/^Eigenvalues \[/{n\;n\;p\;}'          static/info ; \s*-13.449*\d*\s*2.0000\d*
-Match ; Eigenvalue [2nd] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;p\;}'       static/info ; \s*-8.455\d*\s*2.0000\d*
-Match ; Eigenvalue [3rd] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;n\;p\;}'    static/info ; \s*-8.455\d*\s*2.0000\d*
-Match ; Eigenvalue [4th] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;n\;n\;p\;}' static/info ; \s*-8.419\d*\s*2.0000\d*
+match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; -13.449130
+match ; Eigenvalue  2 ; GREP(static/info, ' 2   --', 13) ;  -8.455474
+match ; Eigenvalue  3 ; GREP(static/info, ' 3   --', 13) ;  -8.455474
+match ; Eigenvalue  4 ; GREP(static/info, ' 4   --', 13) ;  -8.419439
 
 Input: 20-eigensolver.04-plan.inp
-
-Match ; Eigenvalue [1st] ; sed -n '/^Eigenvalues \[/{n\;n\;p\;}'          static/info ; \s*-13.449*\d*\s*2.0000\d*
-Match ; Eigenvalue [2nd] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;p\;}'       static/info ; \s*-8.455\d*\s*2.0000\d*
-Match ; Eigenvalue [3rd] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;n\;p\;}'    static/info ; \s*-8.455\d*\s*2.0000\d*
-Match ; Eigenvalue [4th] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;n\;n\;p\;}' static/info ; \s*-8.419\d*\s*2.0000\d*
+match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; -13.449172
+match ; Eigenvalue  2 ; GREP(static/info, ' 2   --', 13) ;  -8.455560
+match ; Eigenvalue  3 ; GREP(static/info, ' 3   --', 13) ;  -8.455481
+match ; Eigenvalue  4 ; GREP(static/info, ' 4   --', 13) ;  -8.419482

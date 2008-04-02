@@ -15,38 +15,39 @@ Enabled    : Yes
 # ground state
 Processors : 4
 Input      : 22-time_propagation.01-gs.inp
-Match ; Initial Energy   ; sed -n '/^Energy/{n\;p\;}' static/info ; \s*Total\s*=\s*-37.925
+match ; Initial energy ; GREP(static/info, 'Total       =', 20) ; -37.92510069
 
 # time propagation, parallel in domains
 Processors : 4
 Input      : 22-time_propagation.02-td_domains.inp
-Match ; Energy [step 5]  ; tail -6 td.general/energy | head -1 ; \s*-3.7925
-Match ; Energy [step 10] ; tail -1 td.general/energy ; \s*-3.7925
+match ; Energy [step  5] ; LINE(td.general/energy, -6, 30) ; -3.792522754945e+01
+match ; Energy [step 10] ; LINE(td.general/energy, -1, 30) ; -3.792522754814e+01
 
 # combined parallelization
 Processors : 4
 Input      : 22-time_propagation.03-td_domains_states.inp
-Match ; Energy [step 5]  ; tail -6 td.general/energy | head -1 ; \s*-3.7925
-Match ; Energy [step 10] ; tail -1 td.general/energy ; \s*-3.7925
+match ; Energy [step  5] ; LINE(td.general/energy, -6, 30) ; -3.792522754945e+01
+match ; Energy [step 10] ; LINE(td.general/energy, -1, 30) ; -3.792522754814e+01
 
 #moving the ions
 Processors : 4
 Input      : 22-time_propagation.04-td_md.inp
-Match ; Energy [step 1]  ; tail -11 td.general/energy | head -1 ; \s*-3.7911
-Match ; Energy [step 5]  ; tail -6  td.general/energy | head -1 ; \s*-3.7911
-Match ; Energy [step 10] ; tail -1  td.general/energy ; \s*-3.7911
+match ; Energy [step  1] ; LINE(td.general/energy, -11, 30) ; -3.791137115072e+01
+match ; Energy [step  5] ; LINE(td.general/energy,  -6, 30) ; -3.791133478924e+01
+match ; Energy [step 10] ; LINE(td.general/energy,  -1, 30) ; -3.791129939150e+01
 
 #fast ehrenfest molecular dynamics
 Processors : 4
 Input      : 22-time_propagation.05-td_fast_md.inp
-Match ; Energy [step 1]  ; tail -21 td.general/energy | head -1 ; \s*-3.7911
-Match ; Energy [step 5]  ; tail -16 td.general/energy | head -1 ; \s*-3.7911
-Match ; Energy [step 10] ; tail -11 td.general/energy | head -1 ; \s*-3.7910
-Match ; Energy [step 15] ; tail -6 td.general/energy  | head -1 ; \s*-3.7910
-Match ; Energy [step 20] ; tail -1 td.general/energy  | head -1 ; \s*-3.7910
+match ; Energy [step  1] ; LINE(td.general/energy, -21, 30) ; -3.791137115072e+01
+match ; Energy [step  5] ; LINE(td.general/energy, -16, 30) ; -3.791104428135e+01
+match ; Energy [step 10] ; LINE(td.general/energy, -11, 30) ; -3.791081551608e+01
+match ; Energy [step 15] ; LINE(td.general/energy,  -6, 30) ; -3.791066994648e+01
+match ; Energy [step 20] ; LINE(td.general/energy,  -1, 30) ; -3.791060164685e+01
 
-Match ; Forces [step 1]  ; tail -21 td.general/coordinates | head -1 | cut -b 1610-1630; -1.461189019962e-02 ; $prec;
-Match ; Forces [step 5]  ; tail -16 td.general/coordinates | head -1 | cut -b 1610-1630; -7.999917163345e-03 ; $prec;
-Match ; Forces [step 10] ; tail -11 td.general/coordinates | head -1 | cut -b 1610-1630; -9.747595883062e-03 ; $prec;
-Match ; Forces [step 15] ; tail -6  td.general/coordinates | head -1 | cut -b 1610-1630; -1.080888096097e-02 ; $prec;
-Match ; Forces [step 20] ; tail -1  td.general/coordinates | head -1 | cut -b 1610-1630; -9.800629054763e-03 ; $prec;
+match ; Forces [step  1] ; LINE(td.general/coordinates, -21, 1610) ; -1.461189019962e-02
+match ; Forces [step  5] ; LINE(td.general/coordinates, -16, 1610) ; -7.999917163345e-03
+match ; Forces [step 10] ; LINE(td.general/coordinates, -11, 1610) ; -9.747595883062e-03
+match ; Forces [step 15] ; LINE(td.general/coordinates,  -6, 1610) ; -1.080888096097e-02
+match ; Forces [step 20] ; LINE(td.general/coordinates,  -1, 1610) ; -9.800629054763e-03
+

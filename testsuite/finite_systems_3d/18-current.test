@@ -33,6 +33,6 @@ Enabled    : Yes
 
 
 Input: 18-current.01-current.inp
+match ; Current flow                  ; GREP(static/current-flow, '# Flow =', 9) ; 0.200964249215E-01
+match ; Magnetic Field at loop center ; LINE(static/Bind_z.x=0\,z=0, 34, 24) ; 3.06863991178469E-004
 
-Match ; Current Flow ; grep 'Flow =' static/current-flow ; \s*0.20\d*
-Match ; Magnetic Field at loop center ; grep '^  0.0000' static/Bind_z.x\=0\,z\=0 ; \s*3.06\d*

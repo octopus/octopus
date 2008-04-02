@@ -13,32 +13,34 @@ Enabled    : Yes
 # ground state
 Processors : 1
 Input      : 24-cpmd.01-gs.inp
-Match ; Initial Energy   ; sed -n '/^Energy/{n\;p\;}' static/info ; \s*Total\s*=\s*-11.032
+match ; Initial energy ; GREP(static/info, 'Total       =', 20) ; -11.03280171
 
 Processors : 4
 Input      : 24-cpmd.02-verlet.inp
-Match ; Energy [step 1]  ; tail -21 td.general/energy | head -1 ; \s*-1.101
-Match ; Energy [step 5]  ; tail -16 td.general/energy | head -1 ; \s*-1.101
-Match ; Energy [step 10] ; tail -11 td.general/energy | head -1 ; \s*-1.101
-Match ; Energy [step 15] ; tail -6 td.general/energy  | head -1 ; \s*-1.101
-Match ; Energy [step 20] ; tail -1 td.general/energy  | head -1 ; \s*-1.101
+match ; Energy [step  1] ; LINE(td.general/energy, -21, 30) ; -1.101090673721e+01
+match ; Energy [step  5] ; LINE(td.general/energy, -16, 30) ; -1.101106932280e+01
+match ; Energy [step 10] ; LINE(td.general/energy, -11, 30) ; -1.101123285876e+01
+match ; Energy [step 15] ; LINE(td.general/energy,  -6, 30) ; -1.101139866145e+01
+match ; Energy [step 20] ; LINE(td.general/energy,  -1, 30) ; -1.101156958094e+01
 
-Match ; Forces [step 1]  ; echo $(tail -21 td.general/coordinates | head -1 | cut -b 270-288) -5.481e-2 | sed 's/e/\*10^/g' | bc -l ; $prec
-Match ; Forces [step 5]  ; echo $(tail -16 td.general/coordinates | head -1 | cut -b 270-288) -5.188e-2 | sed 's/e/\*10^/g' | bc -l ; $prec
-Match ; Forces [step 10] ; echo $(tail -11 td.general/coordinates | head -1 | cut -b 270-288) -5.363e-2 | sed 's/e/\*10^/g' | bc -l ; $prec
-Match ; Forces [step 15] ; echo $(tail -6  td.general/coordinates | head -1 | cut -b 270-288) -5.219e-2 | sed 's/e/\*10^/g' | bc -l ; $prec
-Match ; Forces [step 20] ; echo $(tail -1  td.general/coordinates | head -1 | cut -b 270-288) -5.055e-2 | sed 's/e/\*10^/g' | bc -l ; $prec
+match ; Forces [step  1] ; LINE(td.general/coordinates, -21, 270) ; 5.481047150950e-02
+match ; Forces [step  5] ; LINE(td.general/coordinates, -16, 270) ; 5.189070427566e-02
+match ; Forces [step 10] ; LINE(td.general/coordinates, -11, 270) ; 5.363497453378e-02
+match ; Forces [step 15] ; LINE(td.general/coordinates,  -6, 270) ; 5.219762437556e-02
+match ; Forces [step 20] ; LINE(td.general/coordinates,  -1, 270) ; 5.055230061902e-02
+
 
 Processors : 4
 Input      : 24-cpmd.03-vel_verlet.inp
-Match ; Energy [step 1]  ; tail -21 td.general/energy | head -1 ; \s*-1.101
-Match ; Energy [step 5]  ; tail -16 td.general/energy | head -1 ; \s*-1.101
-Match ; Energy [step 10] ; tail -11 td.general/energy | head -1 ; \s*-1.101
-Match ; Energy [step 15] ; tail -6 td.general/energy  | head -1 ; \s*-1.101
-Match ; Energy [step 20] ; tail -1 td.general/energy  | head -1 ; \s*-1.101
+match ; Energy [step  1] ; LINE(td.general/energy, -21, 30) ; -1.101090673721e+01
+match ; Energy [step  5] ; LINE(td.general/energy, -16, 30) ; -1.101106932280e+01
+match ; Energy [step 10] ; LINE(td.general/energy, -11, 30) ; -1.101123285876e+01
+match ; Energy [step 15] ; LINE(td.general/energy,  -6, 30) ; -1.101139866145e+01
+match ; Energy [step 20] ; LINE(td.general/energy,  -1, 30) ; -1.101156958094e+01
 
-Match ; Forces [step 1]  ; echo $(tail -21 td.general/coordinates | head -1 | cut -b 270-288) -5.481e-2 | sed 's/e/\*10^/g' | bc -l ; $prec
-Match ; Forces [step 5]  ; echo $(tail -16 td.general/coordinates | head -1 | cut -b 270-288) -5.188e-2 | sed 's/e/\*10^/g' | bc -l ; $prec
-Match ; Forces [step 10] ; echo $(tail -11 td.general/coordinates | head -1 | cut -b 270-288) -5.363e-2 | sed 's/e/\*10^/g' | bc -l ; $prec
-Match ; Forces [step 15] ; echo $(tail -6  td.general/coordinates | head -1 | cut -b 270-288) -5.219e-2 | sed 's/e/\*10^/g' | bc -l ; $prec
-Match ; Forces [step 20] ; echo $(tail -1  td.general/coordinates | head -1 | cut -b 270-288) -5.055e-2 | sed 's/e/\*10^/g' | bc -l ; $prec
+match ; Forces [step  1] ; LINE(td.general/coordinates, -21, 270) ; 5.481047150950e-02
+match ; Forces [step  5] ; LINE(td.general/coordinates, -16, 270) ; 5.189070427566e-02
+match ; Forces [step 10] ; LINE(td.general/coordinates, -11, 270) ; 5.363497453378e-02
+match ; Forces [step 15] ; LINE(td.general/coordinates,  -6, 270) ; 5.219762437556e-02
+match ; Forces [step 20] ; LINE(td.general/coordinates,  -1, 270) ; 5.055230061902e-02
+

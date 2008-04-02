@@ -22,8 +22,8 @@ Enabled    : Yes
 # It is the value of the energy of the HOMO (a.k.a. ionization potential): 0.549Ha.
 #
 # The number is missed by 0.006Ha = 0.16eV. The reason is probably that we
-# use a LDA pseudopotential, whereas the results in the paper is all-electron.
+# use a LDA pseudopotential, whereas the results in the paper are all-electron.
 
 Input: 11-sic.01-gs.inp
+match ; Ionization Potential ; GREP(static/info, '4   --', 13) ; -0.542717
 
-Match ; Ionization Potential ; sed -n '/Eigenvalues \[/{n\;n\;n\;n\;n\;p\;}' static/info ; \s*-0.5427\d*\s*2.0000\d*

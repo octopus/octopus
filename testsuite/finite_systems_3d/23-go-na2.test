@@ -11,8 +11,8 @@ TestGroups : short-run
 Enabled    : Yes
 
 Input      : 23-go-na2.01-steep.inp
-Match ; Total energy ; sed -n '/^Energy/{n\;p\;}' static/info ; \s*Total\s*=\s*-0.4178
-Match ; Force    [1] ; tail -2 static/info | head -1; .*Na.*0.000.*0.000.*0.000
-Match ; Force    [2] ; tail -1 static/info          ; .*Na.*0.000.*0.000.*0.000
-Match ; Geometry [1] ; tail -2 min.xyz | head -1    ; .*Na.*0.000.*0.000.*-2.738
-Match ; Geometry [2] ; tail -1 min.xyz              ; .*Na.*0.000.*0.000.*2.738
+match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -0.41784564
+match ; Force    [1] ; GREP(static/info, 'Forces on the ions', 50, 2) ; -0.000732
+match ; Force    [2] ; GREP(static/info, 'Forces on the ions', 50, 3) ;  0.000732
+match ; Geometry [1] ; LINE(min.xyz, 3, 50) ; -2.738370
+match ; Geometry [1] ; LINE(min.xyz, 4, 50) ;  2.738370

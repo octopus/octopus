@@ -23,10 +23,12 @@ Enabled    : Yes
 # since we are not using a gauge-independent energy expression.
 
 Input: 19-laser.01-ground_state.inp
-Input: 19-laser.02-length_gauge.inp
 
-Match ; <Z>(t=0.2) ; tail -n 1 td.general/multipoles | awk '{print $2, $6}'; \s*2.0\d*e-01\s*-1.33\d*e-04
+Input: 19-laser.02-length_gauge.inp
+match ;   n(t=0.2) ; LINE(td.general/multipoles, -1, 10) ;  2.000000000000e-01
+match ; <Z>(t=0.2) ; LINE(td.general/multipoles, -1, 90) ; -1.334845206979e-04
 
 Input: 19-laser.03-velocity_gauge.inp
+match ;   n(t=0.2) ; LINE(td.general/multipoles, -1, 10) ;  2.000000000000e-01
+match ; <Z>(t=0.2) ; LINE(td.general/multipoles, -1, 90) ; -1.332345613504e-04
 
-Match ; <Z>(t=0.2) ; tail -n 1 td.general/multipoles | awk '{print $2, $6}'; \s*2.0\d*e-01\s*-1.33\d*e-04
