@@ -1,0 +1,23 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id$
+#
+
+DebugLevel = 0
+CalculationMode = gs
+
+ParallelizationStrategy = par_domains
+
+Dimensions = 1
+Spacing = 0.2
+Radius = 50.0
+ExtraStates = 1
+
+TheoryLevel = independent_particles
+
+%Species
+  "Neon1D" | 1 | user_defined | 10 | "-10/sqrt(0.25 + x^2)"
+%
+
+%Coordinates
+  "Neon1D" | 0 | 0 | 0
+%

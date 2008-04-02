@@ -28,5 +28,5 @@ match ; Total energy ; GREP(static/info, 'Total       =', 20) ; 1.04191861
 # Results for 8 electrons quantum dots, provided in the paper, can
 # also be approximately reproduced. I do not put a test because it
 # would be too slow. In fact, the results provided by octopus are
-# lower in energy and closer to the Quantum Montecarlo numbers, which
+# lower in energy and closer to the Quantum Monte Carlo numbers, which
 # could be do to the use of an underconverged basis set in the paper.

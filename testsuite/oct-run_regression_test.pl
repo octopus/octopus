@@ -341,11 +341,13 @@ foreach my $octopus_exe (@executables){
     } else {
       if ( $_ =~ /^RUN/) { print " skipping test\n"; }
     }
+
   }
 
   if ($opt_l)  { system ("cat $workdir/out >> out.log"); }
   if (!$opt_p && !$opt_m && $test_succeded) { system ("rm -rf $workdir"); }
 
+  print "\n";
   close(TESTSUITE)
 }
 
@@ -431,10 +433,10 @@ sub run_match_new(){
     $par[$params] =~ s/\s*$//;
   }
 
-  if    ($func eq "SHELL"){ # function SHELL
+  if    ($func eq "SHELL"){ # function SHELL(shell code)
     $pre_command = $par[0];
 
-  }elsif($func eq "FILE") { # function FILE
+  }elsif($func eq "LINE") { # function LINE(filename, line, column)
     $pre_command = "cat $par[0]";
     if($par[1] > 0){
       $pre_command .= " | tail -n +$par[1] | head -n 1";
@@ -443,11 +445,12 @@ sub run_match_new(){
     }
     $pre_command .= " | cut -b $par[2]- | perl -ne '/\\s*([0-9\\-+.eEdD]*)/; print \$1'";
 
-  }elsif($func eq "GREP") { # function GREP
+  }elsif($func eq "GREP") { # function GREP(filename, 're', column <, offset>)
+    my $off = 1*$par[3];
     $pre_command = "n=\$(cat -n $par[0] | grep $par[1] | head -n 1 | awk '{print \$1;}');";
-
-    $pre_command .= " cat $par[0] | tail -n +\$n | head -n 1";
+    $pre_command .= " cat $par[0] | tail -n +\$((n+$off)) | head -n 1";
     $pre_command .= " | cut -b $par[2]- | perl -ne '/\\s*([0-9\\-+.eEdD]*)/; print \$1'";
+
   }else{ # error
     printf stderr "Unknown command '$func'\n";
     return 0;
@@ -460,14 +463,16 @@ sub run_match_new(){
   # append the command and the regexp also to the shell script matches.sh in the
   # current archive directory
   open(SCRIPT, ">>$mscript");
-  print SCRIPT "echo ", "="x10, "[ $name - pre command ] \n";
-  print SCRIPT "$pre_command\n";
-  print SCRIPT "echo ", "-"x10, "[ $name - ref value   ] \n";
-  print SCRIPT "echo '$ref_value'\n";
-  print SCRIPT "export LINE=`$pre_command`\n";
-  print SCRIPT 'perl -e \'print "Match: ".(abs($ENV{LINE}-(', $ref_value, ')) <= ',
-    $precnum, ' ? "OK" : "FAILED")."\n"\'', "\n";
-  print SCRIPT "echo;echo\n";
+  print SCRIPT "
+echo ", "="x4, " [ $name - pre command ]
+$pre_command
+echo
+echo ", "-"x4, " [ $name - ref value   ]
+echo $ref_value
+export LINE=`$pre_command`
+perl -e 'print \"Match: \".(abs(\$ENV{LINE}-($ref_value)) <= $precnum ? \"OK\" : \"FAILED\");'
+echo
+echo";
   close(SCRIPT);
 
   return (abs(($value)-($ref_value)) <= $precnum);
