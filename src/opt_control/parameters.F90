@@ -121,6 +121,8 @@ contains
     type(tdf_t) :: fn, fm
     FLOAT, allocatable :: eigenvec(:, :), eigenval(:)
 
+    call push_sub('parameters.parameters_set_initial')
+
     !%Variable OCTParameterRepresentation
     !%Type integer
     !%Section Optimal Control
@@ -305,14 +307,12 @@ contains
       par%utransf  = M_ZERO
       par%utransfi = M_ZERO
 
-      call tdf_init_numerical(fn, par%ntiter, par%dt, initval = M_z0, omegamax = par%omegamax)
-      call tdf_init_numerical(fm, par%ntiter, par%dt, initval = M_z0, omegamax = par%omegamax)
-      call tdf_numerical_to_sineseries(fn, par%omegamax)
-      call tdf_numerical_to_sineseries(fm, par%omegamax)
       do mm = 1, par%nfreqs
         do nn = 1, par%nfreqs
-          call tdf_set_numerical(fm, reshape( (/ M_ZERO /), (/ par%nfreqs /) ) )
-          call tdf_set_numerical(fn, reshape( (/ M_ZERO /), (/ par%nfreqs /) ) )
+          call tdf_init_numerical(fn, par%ntiter, par%dt, initval = M_z0, omegamax = par%omegamax)
+          call tdf_init_numerical(fm, par%ntiter, par%dt, initval = M_z0, omegamax = par%omegamax)
+          call tdf_numerical_to_sineseries(fn, par%omegamax)
+          call tdf_numerical_to_sineseries(fm, par%omegamax)
           call tdf_set_numerical(fm, mm, M_ONE)
           call tdf_set_numerical(fn, nn, M_ONE)
 
@@ -327,6 +327,9 @@ contains
           par%utransf(mm, nn) = tdf_dot_product(fm, fn)
           call tdf_numerical_to_sineseries(fn, par%omegamax)
           call tdf_numerical_to_sineseries(fm, par%omegamax)
+
+          call tdf_end(fm)
+          call tdf_end(fn)
         end do
       end do
 
@@ -343,6 +346,7 @@ contains
 
     end if
 
+    call pop_sub()
   end subroutine parameters_set_initial
   ! ---------------------------------------------------------
 
