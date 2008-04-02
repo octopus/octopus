@@ -152,7 +152,7 @@ contains
       geo%kinetic_energy = ion_dynamics_kinetic_energy(td%ions, geo)
 
     end if
-          
+
     ! Calculate initial value of the gauge vector field
     if (gauge_field_is_applied(h%ep%gfield)) then
       if(td%iter > 0) then
@@ -160,9 +160,11 @@ contains
       end if
     end if
 
-    gauge_force = gauge_field_get_force(h%ep%gfield, gr, geo, h%ep%p, st)
+    if(gauge_field_is_applied(h%ep%gfield)) &
+      gauge_force = gauge_field_get_force(h%ep%gfield, gr, geo, h%ep%p, st)
 
     if(td%iter == 0) call td_run_zero_iter()
+
 
     !call td_check_trotter(td, sys, h)
     td%iter = td%iter + 1
