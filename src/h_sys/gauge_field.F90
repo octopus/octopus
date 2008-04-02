@@ -91,28 +91,36 @@ contains
     this%vecpot = M_ZERO
     this%vecpot_vel = M_ZERO
     this%vecpot_acc = M_ZERO
-    
+
     !%Variable GaugeVectorField
     !%Type block
     !%Section Hamiltonian
     !%Description
-    !% The gauge vector field is used to include a uniform (but time dependent)
-    !% external electric field in a time dependent run for a periodic system
-    !% By default this field is kept null.
+    !% The gauge vector field is used to include a uniform (but time
+    !% dependent) external electric field in a time dependent run for
+    !% a periodic system. An optional second row specifies the initial
+    !% value for the time derivative of the gauge_field (that is set
+    !% to zero by default).  By default this field is not included.
     !%End
-
+    
     ! Read the initial gauge vector field
-
+    
     if(simul_box_is_periodic(sb)) then
       if(loct_parse_block(check_inp('GaugeVectorField'), blk) == 0) then
-
+        
         this%with_gauge_field = .true.
-
+        
     	do ii = 1, sb%dim
           call loct_parse_block_float(blk, 0, ii - 1, this%vecpot(ii))
-	end do
+        end do
 
-	call loct_parse_block_end(blk)
+        if (loct_parse_block_n(blk) > 1) then !we have the gauge field velocity
+          do ii = 1, sb%dim
+            call loct_parse_block_float(blk, 1, ii - 1, this%vecpot_vel(ii))
+          end do
+        end if
+
+ 	call loct_parse_block_end(blk)
 
       end if
     end if
@@ -215,6 +223,12 @@ contains
         
         do idim = 1, st%d%dim
           call zf_gradient(gr%sb, gr%f_der, st%zpsi(:, idim, ist, ik), gpsi(:, :, idim))
+        end do
+
+        do idim = 1, st%d%dim
+          do idir = 1, 3
+            gpsi(1:NP, idir, idim) = gpsi(1:NP, idir, idim) + M_zI*st%d%kpoints(idir, ik)*st%zpsi(1:NP, idim, ist, ik)
+          end do
         end do
 
         do idir = 1, 3
