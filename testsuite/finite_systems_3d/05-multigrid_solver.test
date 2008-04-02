@@ -11,7 +11,6 @@ TestGroups : short-run
 Enabled    : Yes
 
 Input: 05-multigrid_solver.01-ground_state.inp
-
-Match ; Grid levels  ; grep 'Multigrid levels:' out ; \s*Multigrid\s*levels:\s*3
-Match ; Total energy ; sed -n '/^Energy/{n\;p\;}' static/info ; \s*Total\s*=\s*-0.3379
-Match ; Eigenvalues  ; sed -n '/Eigenvalues \[/{n\;n\;p\;}' static/info ; \s*-0.1373\d*\s*2.0000\d* 
+match ; Grid levels  ; GREP(out, 'Multigrid levels:', 18) ; 3
+match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -0.33797603
+match ; Eigenvalue   ; GREP(static/info, '1   --', 13) ; -0.137333

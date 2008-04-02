@@ -11,6 +11,12 @@ TestGroups  : short-run
 Enabled  : Yes
 
 Input: 09-spinors.01-ground_state.inp
-Match ; Total Energy           ; sed -n '/^Energy/{n\;p\;}' static/info ; \s*Total\s*=\s*-0.176695\d*
-Match ; Eigenvalues            ; sed -n '/Eigenvalues \[/{n\;n\;p\;}' static/info ; \s*-0.08532\d*\s*1.00\s*0.1928\s*0.1928\s*0.4191
-Match ; Local Magnetic Moments ; sed -n '/Local Magnetic Moments/{n\;n\;p\;}' static/info ; \s*0.3855\d*\s*0.3855\d*\s*0.8382\d* 
+match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -0.17669588
+match ; Eigenvalue   ; GREP(static/info, '1   --', 13) ; -0.085321
+match ; <Sx>         ; GREP(static/info, '1   --', 36) ;  0.1928
+match ; <Sy>         ; GREP(static/info, '1   --', 44) ;  0.1928
+match ; <Sz>         ; GREP(static/info, '1   --', 52) ;  0.4191
+match ; mx           ; GREP(static/info, 'Local Magnetic Moments', 20, 2) ; 0.385559
+match ; my           ; GREP(static/info, 'Local Magnetic Moments', 33, 2) ; 0.385559
+match ; mz           ; GREP(static/info, 'Local Magnetic Moments', 46, 2) ; 0.838265
+

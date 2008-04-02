@@ -25,19 +25,25 @@ Enabled    : Yes
 # It would be nice to investigate the reason for the small
 # discrepancy...
 Input: 01-carbon_atom.01-ground_state.inp
-Match ; Total Energy       ; sed -n '/^Energy/{n\;p\;}' static/info ; \s*Total\s*=\s*-146.741
-Match ; Eigenvalue   [1up] ; sed -n '/^Eigenvalues \[/{n\;n\;p\;}' static/info ; \s*-14.461\d*\s*1.0000\d*
-Match ; Eigenvalue [4down] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;n\;n\;n\;n\;n\;n\;p\;}' static/info ; \s*-3.682\d*\s*0.000000\d*
+match ; Total energy       ; GREP(static/info, 'Total       =', 20) ; -146.74149007
+match ; Eigenvalue   [1up] ; GREP(static/info, '1   up', 13) ; -14.461702
+match ; Occupation   [1up] ; GREP(static/info, '1   up', 28) ;   1.000000
+match ; Eigenvalue [4down] ; GREP(static/info, '4   dn', 13) ;  -3.682119
+match ; Occupation [4down] ; GREP(static/info, '4   dn', 28) ;   0.000000
 
 # Now we repeat the calculation but making use of the l=1 component
 # of the pseudopotencial to build the local component.
 Input: 01-carbon_atom.02-ground_state.inp
-Match ; Total Energy       ; sed -n '/^Energy/{n\;p\;}' static/info ; \s*Total\s*=\s*-146.813
-Match ; Eigenvalue   [1up] ; sed -n '/^Eigenvalues \[/{n\;n\;p\;}' static/info ; \s*-14.466\d*\s*1.0000\d*
-Match ; Eigenvalue [4down] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;n\;n\;n\;n\;n\;n\;p\;}' static/info ; \s*-3.683\d*\s*0.000000\d*
+match ; Total energy       ; GREP(static/info, 'Total       =', 20) ; -146.81378481
+match ; Eigenvalue   [1up] ; GREP(static/info, '1   up', 13) ; -14.466667
+match ; Occupation   [1up] ; GREP(static/info, '1   up', 28) ;   1.000000
+match ; Eigenvalue [4down] ; GREP(static/info, '4   dn', 13) ;  -3.683497
+match ; Occupation [4down] ; GREP(static/info, '4   dn', 28) ;   0.000000
 
 #The same using double grid
 Input: 01-carbon_atom.03-ground_state_double_grid.inp
-Match ; Total Energy       ; sed -n '/^Energy/{n\;p\;}' static/info ; \s*Total\s*=\s*-146.662
-Match ; Eigenvalue   [1up] ; sed -n '/^Eigenvalues \[/{n\;n\;p\;}' static/info ; \s*-14.418\d*\s*1.0000\d*
-Match ; Eigenvalue [4down] ; sed -n '/^Eigenvalues \[/{n\;n\;n\;n\;n\;n\;n\;n\;n\;p\;}' static/info ; \s*-3.694\d*\s*0.000000\d*
+match ; Total energy       ; GREP(static/info, 'Total       =', 20) ; -146.66216092
+match ; Eigenvalue   [1up] ; GREP(static/info, '1   up', 13) ; -14.418842
+match ; Occupation   [1up] ; GREP(static/info, '1   up', 28) ;   1.000000
+match ; Eigenvalue [4down] ; GREP(static/info, '4   dn', 13) ;  -3.694731
+match ; Occupation [4down] ; GREP(static/info, '4   dn', 28) ;   0.000000

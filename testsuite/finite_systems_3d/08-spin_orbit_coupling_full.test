@@ -12,43 +12,45 @@ Enabled    : Yes
 
 
 Input: 08-spin_orbit_coupling_full.01-hgh.inp
-Match ; Eigenvalue  1 ; echo $(grep ' 1   --   ' static/info | head -1 | cut -b 12-25) + 27.32224 | bc -l | xargs printf "%f\n"; $prec
-Match ; Eigenvalue  3 ; echo $(grep ' 3   --   ' static/info | head -1 | cut -b 12-25) + 26.42260 | bc -l | xargs printf "%f\n"; $prec
-Match ; Eigenvalue  5 ; echo $(grep ' 5   --   ' static/info | head -1 | cut -b 12-25) + 17.23180 | bc -l | xargs printf "%f\n"; $prec
-Match ; Eigenvalue  7 ; echo $(grep ' 7   --   ' static/info | head -1 | cut -b 12-25) + 15.77943 | bc -l | xargs printf "%f\n"; $prec
-Match ; Eigenvalue  9 ; echo $(grep ' 9   --   ' static/info | head -1 | cut -b 12-25) + 14.70713 | bc -l | xargs printf "%f\n"; $prec
-Match ; Eigenvalue 11 ; echo $(grep '11   --   ' static/info | head -1 | cut -b 12-25) + 14.69874 | bc -l | xargs printf "%f\n"; $prec
-Match ; Eigenvalue 13 ; echo $(grep '13   --   ' static/info | head -1 | cut -b 12-25) + 13.89219 | bc -l | xargs printf "%f\n"; $prec
-Match ; Eigenvalue 15 ; echo $(grep '15   --   ' static/info | head -1 | cut -b 12-25) + 13.65231 | bc -l | xargs printf "%f\n"; $prec
+match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; -27.322244
+match ; Eigenvalue  3 ; GREP(static/info, ' 3   --', 13) ; -26.422600
+match ; Eigenvalue  5 ; GREP(static/info, ' 5   --', 13) ; -17.231805
+match ; Eigenvalue  7 ; GREP(static/info, ' 7   --', 13) ; -15.779429
+match ; Eigenvalue  9 ; GREP(static/info, ' 9   --', 13) ; -14.707133
+match ; Eigenvalue 11 ; GREP(static/info, '11   --', 13) ; -14.698837
+match ; Eigenvalue 13 ; GREP(static/info, '13   --', 13) ; -13.892193
+match ; Eigenvalue 15 ; GREP(static/info, '15   --', 13) ; -13.652306
 
-Match ; Sz  1         ; echo $(grep ' 1   --   ' static/info | head -1 | cut -b 52-)   -  0.5     | bc -l | xargs printf "%f\n"; $prec
-Match ; Sz  3         ; echo $(grep ' 3   --   ' static/info | head -1 | cut -b 52-)   -  0.5     | bc -l | xargs printf "%f\n"; $prec
-Match ; Sz  5         ; echo $(grep ' 5   --   ' static/info | head -1 | cut -b 52-)   -  0.4741  | bc -l | xargs printf "%f\n"; $prec
-Match ; Sz  7         ; echo $(grep ' 7   --   ' static/info | head -1 | cut -b 52-) ; 0.1342  ; 0.001;
-Match ; Sz  9         ; echo $(grep ' 9   --   ' static/info | head -1 | cut -b 52-)   +  0.0838  | bc -l | xargs printf "%f\n"; $prec
-Match ; Sz 11         ; echo $(grep '11   --   ' static/info | head -1 | cut -b 52-)   -  0.1277  | bc -l | xargs printf "%f\n"; $prec
-Match ; Sz 13         ; echo $(grep '13   --   ' static/info | head -1 | cut -b 52-)   +  0.1016  | bc -l | xargs printf "%f\n"; $prec
-Match ; Sz 15         ; echo $(grep '15   --   ' static/info | head -1 | cut -b 52-)   -  0.4492  | bc -l | xargs printf "%f\n"; $prec
+match ; <Sz>        1 ; GREP(static/info, ' 1   --', 52) ;  0.5000
+match ; <Sz>        3 ; GREP(static/info, ' 3   --', 52) ;  0.5000
+match ; <Sz>        5 ; GREP(static/info, ' 5   --', 52) ;  0.4741
+match ; <Sz>        7 ; GREP(static/info, ' 7   --', 52) ;  0.1343
+match ; <Sz>        9 ; GREP(static/info, ' 9   --', 52) ; -0.0838
+match ; <Sz>       11 ; GREP(static/info, '11   --', 52) ;  0.1277
+match ; <Sz>       13 ; GREP(static/info, '13   --', 52) ; -0.1016
+match ; <Sz>       15 ; GREP(static/info, '15   --', 52) ;  0.4492
 
-Match ; Force         ; echo $(sed -n '/^Forces on/{n\;n\;p\;}' static/info | cut -b 20-29) + 0.977717 | bc -l | xargs printf "%f\n"; $prec
+match ; Force         ; GREP(static/info, 'Forces on the ions', 20, 2) ; -0.977686
+
 
 Input: 08-spin_orbit_coupling_full.02-rkb.inp
-Match ; Eigenvalue  1 ; echo $(grep ' 1   --   ' static/info | head -1 | cut -b 12-25) + 27.33028 | bc -l | xargs printf "%f\n"; $prec
-Match ; Eigenvalue  3 ; echo $(grep ' 3   --   ' static/info | head -1 | cut -b 12-25) + 26.43960 | bc -l | xargs printf "%f\n"; $prec
-Match ; Eigenvalue  5 ; echo $(grep ' 5   --   ' static/info | head -1 | cut -b 12-25) + 17.12902 | bc -l | xargs printf "%f\n"; $prec
-Match ; Eigenvalue  7 ; echo $(grep ' 7   --   ' static/info | head -1 | cut -b 12-25) + 15.78056 | bc -l | xargs printf "%f\n"; $prec
-Match ; Eigenvalue  9 ; echo $(grep ' 9   --   ' static/info | head -1 | cut -b 12-25) + 14.71483 | bc -l | xargs printf "%f\n"; $prec
-Match ; Eigenvalue 11 ; echo $(grep '11   --   ' static/info | head -1 | cut -b 12-25) + 14.71205 | bc -l | xargs printf "%f\n"; $prec
-Match ; Eigenvalue 13 ; echo $(grep '13   --   ' static/info | head -1 | cut -b 12-25) + 13.90428 | bc -l | xargs printf "%f\n"; $prec
-Match ; Eigenvalue 15 ; echo $(grep '15   --   ' static/info | head -1 | cut -b 12-25) + 13.53921 | bc -l | xargs printf "%f\n"; $prec
+match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; -27.330226
+match ; Eigenvalue  3 ; GREP(static/info, ' 3   --', 13) ; -26.439545
+match ; Eigenvalue  5 ; GREP(static/info, ' 5   --', 13) ; -17.128970
+match ; Eigenvalue  7 ; GREP(static/info, ' 7   --', 13) ; -15.780517
+match ; Eigenvalue  9 ; GREP(static/info, ' 9   --', 13) ; -14.714795
+match ; Eigenvalue 11 ; GREP(static/info, '11   --', 13) ; -14.712017
+match ; Eigenvalue 13 ; GREP(static/info, '13   --', 13) ; -13.904243
+match ; Eigenvalue 15 ; GREP(static/info, '15   --', 13) ; -13.539179
 
-Match ; Sz  1         ; echo $(grep ' 1   --   ' static/info | head -1 | cut -b 52-)   -  0.5     | bc -l | xargs printf "%f\n"; $prec
-Match ; Sz  3         ; echo $(grep ' 3   --   ' static/info | head -1 | cut -b 52-)   -  0.5     | bc -l | xargs printf "%f\n"; $prec
-Match ; Sz  5         ; echo $(grep ' 5   --   ' static/info | head -1 | cut -b 52-)   -  0.4714  | bc -l | xargs printf "%f\n"; $prec
-Match ; Sz  7         ; echo $(grep ' 7   --   ' static/info | head -1 | cut -b 52-)   -  0.1288  | bc -l | xargs printf "%f\n"; $prec
-Match ; Sz  9         ; echo $(grep ' 9   --   ' static/info | head -1 | cut -b 52-)   +  0.0820  | bc -l | xargs printf "%f\n"; 0\.0
-Match ; Sz 11         ; echo $(grep '11   --   ' static/info | head -1 | cut -b 52-)   -  0.1272  | bc -l | xargs printf "%f\n"; 0\.0
-Match ; Sz 13         ; echo $(grep '13   --   ' static/info | head -1 | cut -b 52-)   +  0.1012  | bc -l | xargs printf "%f\n"; 0\.000
-Match ; Sz 15         ; echo $(grep '15   --   ' static/info | head -1 | cut -b 52-) ;  0.4557; 0.001;
+match ; <Sz>        1 ; GREP(static/info, ' 1   --', 52) ;  0.5000
+match ; <Sz>        3 ; GREP(static/info, ' 3   --', 52) ;  0.5000
+match ; <Sz>        5 ; GREP(static/info, ' 5   --', 52) ;  0.4714
+match ; <Sz>        7 ; GREP(static/info, ' 7   --', 52) ;  0.1288
+match ; <Sz>        9 ; GREP(static/info, ' 9   --', 52) ; -0.0844
+match ; <Sz>       11 ; GREP(static/info, '11   --', 52) ;  0.1296
+match ; <Sz>       13 ; GREP(static/info, '13   --', 52) ; -0.1012
+match ; <Sz>       15 ; GREP(static/info, '15   --', 52) ;  0.4557
 
-Match ; Force         ; echo $(sed -n '/^Forces on/{n\;n\;p\;}' static/info | cut -b 20-29) + 0.664614 | bc -l | xargs printf "%f\n"; 0\.000
+match ; Force         ; GREP(static/info, 'Forces on the ions', 20, 2) ; -0.664385
+

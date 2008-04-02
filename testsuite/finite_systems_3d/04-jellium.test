@@ -13,11 +13,12 @@ Enabled    : Yes
 # This test calculates the ground-state of a Na8 cluster, described by
 # the spherical-jellium model. The calculation reproduces one of the 
 # first calculation of this kind; namely the plot of the density and of
-# the total self-consisten potential reproduces Fig. 1 of
+# the total self-consistent potential reproduces Fig. 1 of
 # [W. Ekardt, Phys. Rev. B 29, 1558 (1984)].
 # 
 
 Input: 04-jellium.01-ground_state.inp
-Match ; Total energy   ; echo $(sed -n '/^Energy/{n\;p\;}' static/info | cut -b 20-) + 0.5765 | bc -l ; $prec
-Match ; Eigenvalue [s] ; echo $(sed -n '/Eigenvalues \[/{n\;n\;p\;}' static/info | cut -b 10-22) + 0.1677 | bc -l ; $prec
-Match ; Eigenvalue [p] ; echo $(sed -n '/Eigenvalues \[/{n\;n\;n\;p\;}' static/info | cut -b 10-22) + 0.1226 | bc -l ; $prec
+match ; Total energy   ; GREP(static/info, 'Total       =', 20) ; -0.57652032
+match ; Eigenvalue [s] ; GREP(static/info, '1   --', 13) ; -0.167698
+match ; Eigenvalue [p] ; GREP(static/info, '2   --', 13) ; -0.122636
+
