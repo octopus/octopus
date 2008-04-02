@@ -20,14 +20,13 @@
 !------ -----------------------------------------------------------------------
 ! X(project_psi) calculates the action of a projector on the psi wavefunction.
 ! The result is summed up to ppsi
-subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, reltype, ik)
+subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, ik)
   type(mesh_t),      intent(in)    :: mesh
   type(projector_t), intent(in)    :: pj(:)
   integer,           intent(in)    :: npj
   integer,           intent(in)    :: dim
   R_TYPE,            intent(in)    :: psi(:, :)   ! psi(1:mesh%np, dim)
   R_TYPE,            intent(inout) :: ppsi(:, :)  ! ppsi(1:mesh%np, dim)
-  integer,           intent(in)    :: reltype
   integer,           intent(in)    :: ik
 
   integer :: ipj, nreduce, ii, ns, idim, ll, mm
@@ -108,7 +107,7 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, reltype, ik)
           end if
 #endif
         case(M_HGH)
-          call X(hgh_project_bra)(mesh, pj(ipj)%sphere, pj(ipj)%hgh_p(ll, mm), dim, reltype, lpsi, reduce_buffer(ii:))
+          call X(hgh_project_bra)(mesh, pj(ipj)%sphere, pj(ipj)%hgh_p(ll, mm), dim, pj(ipj)%reltype, lpsi, reduce_buffer(ii:))
         end select
 
       end do ! mm
@@ -155,7 +154,7 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, reltype, ik)
           end if
 #endif
         case(M_HGH)
-          call X(hgh_project_ket)(mesh, pj(ipj)%sphere, pj(ipj)%hgh_p(ll, mm), dim, reltype, reduce_buffer(ii:), lpsi)
+          call X(hgh_project_ket)(mesh, pj(ipj)%sphere, pj(ipj)%hgh_p(ll, mm), dim, pj(ipj)%reltype, reduce_buffer(ii:), lpsi)
         end select
 
       end do ! mm
@@ -189,13 +188,12 @@ end subroutine X(project_psi)
 
 !------------------------------------------------------------------------------
 ! X(psia_project_psib) calculates <psia|projector|psib>
-R_TYPE function X(psia_project_psib)(mesh, pj, dim, psia, psib, reltype, ik) result(apb)
+R_TYPE function X(psia_project_psib)(mesh, pj, dim, psia, psib, ik) result(apb)
   type(mesh_t),      intent(in)    :: mesh
   type(projector_t), intent(in)    :: pj
   integer,           intent(in)    :: dim
   R_TYPE,            intent(in)    :: psia(:, :)  ! psia(1:mesh%np, dim)
   R_TYPE,            intent(inout) :: psib(:, :)  ! psib(1:mesh%np, dim)
-  integer,           intent(in)    :: reltype
   integer,           intent(in)    :: ik
 
   integer ::  ns, idim, ll, mm, nc, size
@@ -263,7 +261,7 @@ R_TYPE function X(psia_project_psib)(mesh, pj, dim, psia, psib, reltype, ik) res
 
   else
 
-    call X(project_sphere)(mesh, pj, dim, lpsi, plpsi, reltype)
+    call X(project_sphere)(mesh, pj, dim, lpsi, plpsi)
 
     apb = M_ZERO
     do idim = 1, dim
@@ -282,13 +280,12 @@ R_TYPE function X(psia_project_psib)(mesh, pj, dim, psia, psib, reltype, ik) res
   call pop_sub()
 end function X(psia_project_psib)
 
-subroutine X(project_sphere)(mesh, pj, dim, psi, ppsi, reltype)
+subroutine X(project_sphere)(mesh, pj, dim, psi, ppsi)
   type(mesh_t),      intent(in)    :: mesh
   type(projector_t), intent(in)    :: pj
   integer,           intent(in)    :: dim
   R_TYPE,            intent(in)    :: psi(:, :)   ! psi(1:ns, dim)
   R_TYPE,            intent(out)   :: ppsi(:, :)  ! ppsi(1:ns, dim)
-  integer,           intent(in)    :: reltype
 
   integer :: ll, mm
 
@@ -302,7 +299,7 @@ subroutine X(project_sphere)(mesh, pj, dim, psi, ppsi, reltype)
       
       select case (pj%type)
       case (M_HGH)
-        call X(hgh_project)(mesh, pj%sphere, pj%hgh_p(ll, mm), dim, psi, ppsi, reltype)
+        call X(hgh_project)(mesh, pj%sphere, pj%hgh_p(ll, mm), dim, psi, ppsi, pj%reltype)
       case (M_KB)
         call X(kb_project)(mesh, pj%sphere, pj%kb_p(ll, mm), dim, psi, ppsi)
       case (M_RKB)
@@ -320,6 +317,77 @@ subroutine X(project_sphere)(mesh, pj, dim, psi, ppsi, reltype)
 
   call pop_sub()
 end subroutine X(project_sphere)
+
+!This function calculates |cpsi> = [x,V_nl] |psi>
+
+subroutine X(projector_conmut_r)(pj, gr, dim, idir, ik, psi, cpsi)
+  type(projector_t),     intent(in)     :: pj
+  type(grid_t),          intent(in)     :: gr
+  integer,               intent(in)     :: dim
+  integer,               intent(in)     :: idir
+  integer,               intent(in)     :: ik
+  R_TYPE,                intent(in)     :: psi(:)
+  R_TYPE,                intent(out)    :: cpsi(:,:)
+
+  integer ::  ns, idim
+  R_TYPE, allocatable :: lpsi(:, :), pxlpsi(:,:), xplpsi(:,:)
+  integer, pointer :: jxyz(:)
+  FLOAT,   pointer :: smx(:, :)
+
+  call push_sub('epot_inc.Xconmut_vnl_r')
+
+  cpsi(1:gr%m%np, 1:dim) = M_ZERO
+
+  if(pj%type .ne. M_NONE) then
+
+    ns = pj%sphere%ns
+    jxyz => pj%sphere%jxyz
+    smx => pj%sphere%x
+
+    ALLOCATE(lpsi(ns, dim),  ns*dim)
+    ALLOCATE(xplpsi(ns, dim), ns*dim)
+    ALLOCATE(pxlpsi(ns, dim), ns*dim)
+
+    if(simul_box_is_periodic(gr%m%sb)) then
+      do idim = 1, dim      
+        lpsi(1:ns, idim) = psi(jxyz(1:ns))*pj%phase(1:ns, ik)
+      end do
+    else
+      do idim = 1, dim      
+        lpsi(1:ns, idim) = psi(jxyz(1:ns))
+      end do
+    end if
+
+    ! x V_nl |psi>
+    call X(project_sphere)(gr%m, pj, dim, lpsi, xplpsi)
+    do idim = 1, dim
+      xplpsi(1:ns, idim) = smx(1:ns, idir) * xplpsi(1:ns, idim)
+    end do
+
+    ! V_nl x |psi>
+    do idim = 1, dim
+      lpsi(1:ns, idim) = smx(1:ns, idir) * lpsi(1:ns, idim)
+    end do
+    call X(project_sphere)(gr%m, pj, dim, lpsi, pxlpsi)
+    
+    ! |cpsi> += x V_nl |psi> - V_nl x |psi> 
+    if(simul_box_is_periodic(gr%m%sb)) then
+      do idim = 1, dim
+        cpsi(jxyz(1:ns), idim) = cpsi(jxyz(1:ns), idim) + &
+             (xplpsi(1:ns, idim) - pxlpsi(1:ns, idim))*R_CONJ(pj%phase(1:ns, ik))
+      end do
+    else
+      do idim = 1, dim
+        cpsi(jxyz(1:ns), idim) = cpsi(jxyz(1:ns), idim) + xplpsi(1:ns, idim) - pxlpsi(1:ns, idim)
+      end do
+    end if
+
+    deallocate(lpsi, xplpsi, pxlpsi)
+  end if
+
+  call pop_sub()
+
+end subroutine X(projector_conmut_r)
 
 !! Local Variables:
 !! mode: f90

@@ -64,8 +64,6 @@ module external_pot_m
     epot_end,                  &
     epot_generate,             &
     epot_forces,               &
-    dconmut_vnl_r,             &
-    zconmut_vnl_r,             &
     epot_local_potential
 
 

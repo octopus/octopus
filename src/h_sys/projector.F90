@@ -60,7 +60,9 @@ module projector_m
        dproject_sphere,           &
        zproject_sphere,           &
        dpsia_project_psib,        &
-       zpsia_project_psib
+       zpsia_project_psib,        &
+       dprojector_conmut_r,       &
+       zprojector_conmut_r
 
   integer, public, parameter ::  &
        M_NONE = 0,  &
@@ -87,10 +89,11 @@ module projector_m
     integer :: reduce_size
     integer :: lmax
     integer :: lloc
+    integer :: nik
+    integer :: reltype
 
     type(submesh_t)  :: sphere
-
-    integer          :: nik
+    
 
     ! Only one of the following structures should be used at once
     ! The one to be used depends on the value of type variable
@@ -123,6 +126,7 @@ contains
     call push_sub('projector.projector_init')
 
     nullify(p%phase)
+    p%reltype = reltype
     p%lmax = atm%spec%ps%l_max
 
     if(p%lmax == 0) then

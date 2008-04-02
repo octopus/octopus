@@ -25,9 +25,11 @@ subroutine X(one_body) (gr, geo, st, h)
   type(states_t),      intent(inout) :: st
   type(hamiltonian_t), intent(in) :: h
 
-  integer i, j, iunit, idir, iatom
+  integer i, j, iunit, idir, iatom, np
   R_TYPE :: me, exp_r, exp_g, corr
   R_TYPE, allocatable :: gpsi(:,:), cpsi(:,:)
+
+  np = NP
 
   call io_assign(iunit)
   iunit = io_open('matrix_elements/1-body', action='write')
@@ -36,8 +38,8 @@ subroutine X(one_body) (gr, geo, st, h)
     do j = 1, st%nst
       if(j > i) cycle
       
-      me = st%eigenval(i,1) - X(mf_integrate) (gr%m, R_CONJ(st%X(psi) (1:NP, 1, i, 1)) * &
-           h%Vhxc(1:NP, 1) * st%X(psi) (1:NP, 1, j, 1))
+      me = st%eigenval(i,1) - X(mf_integrate) (gr%m, R_CONJ(st%X(psi) (1:np, 1, i, 1)) * &
+           h%Vhxc(1:np, 1) * st%X(psi) (1:np, 1, j, 1))
 
       write(iunit, *) i, j, me
     end do
@@ -58,17 +60,17 @@ subroutine X(one_body) (gr, geo, st, h)
       call X(f_gradient)(gr%sb, gr%f_der, st%X(psi)(:, 1, j, 1), gpsi(:, :))
        
       do idir = 1, 3
-         exp_r = X(mf_integrate) (gr%m, R_CONJ(st%X(psi) (1:NP, 1, i, 1)) * &
-              gr%m%x(1:NP, idir) * st%X(psi) (1:NP, 1, j, 1))
+         exp_r = X(mf_integrate) (gr%m, R_CONJ(st%X(psi) (1:np, 1, i, 1)) * &
+              gr%m%x(1:np, idir) * st%X(psi) (1:np, 1, j, 1))
          
-         exp_g = X(mf_integrate) (gr%m, R_CONJ(st%X(psi) (1:NP, 1, i, 1)) * &
-              gpsi(1:NP, idir))
+         exp_g = X(mf_integrate) (gr%m, R_CONJ(st%X(psi) (1:np, 1, i, 1)) * &
+              gpsi(1:np, idir))
          
          corr = M_ZERO
          do iatom = 1, geo%natoms
-           call X(conmut_vnl_r)(gr, h%ep, 1, idir, iatom, st%X(psi)(1:NP, 1, j, 1), cpsi, ik=1)
-           corr = corr + X(mf_integrate) (gr%m, R_CONJ(st%X(psi) (1:NP, 1, i, 1)) * &
-                cpsi(1:NP, 1))
+           call X(projector_conmut_r)(h%ep%p(iatom), gr, 1, idir, 1, st%X(psi)(1:np, 1, j, 1), cpsi)
+           corr = corr + &
+                X(mf_integrate)(gr%m, R_CONJ(st%X(psi)(1:np, 1, i, 1))*cpsi(1:np, 1))
          end do
 
          me = (st%eigenval(j,1) - st%eigenval(i,1))*exp_r

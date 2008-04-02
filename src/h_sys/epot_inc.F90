@@ -68,7 +68,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
         do idir = 1, NDIM
           
           psi_proj_gpsi = &
-            X(psia_project_psib)(gr%m, ep%p(iatom), st%d%dim, st%X(psi)(:, :, ist, ik), gpsi(:, idir, :), ep%reltype, ik)
+            X(psia_project_psib)(gr%m, ep%p(iatom), st%d%dim, st%X(psi)(:, :, ist, ik), gpsi(:, idir, :), ik)
           
           force(idir, iatom) = force(idir, iatom) - M_TWO * st%occ(ist, ik) * R_REAL(psi_proj_gpsi)
 
@@ -115,78 +115,6 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
   deallocate(force)
   
 end subroutine X(calc_forces_from_potential)
-
-!This function calculates |cpsi> = [x,V_nl] |psi>
-
-subroutine X(conmut_vnl_r)(gr, ep, dim, idir, iatom, psi, cpsi, ik)
-  type(grid_t),          intent(in)     :: gr
-  type(epot_t), target,  intent(in)     :: ep
-  integer,               intent(in)     :: dim
-  integer,               intent(in)     :: idir
-  integer,               intent(in)     :: iatom
-  R_TYPE,                intent(in)     :: psi(:)
-  R_TYPE,                intent(out)    :: cpsi(:,:)
-  integer,               intent(in)     :: ik
-
-  integer ::  ns, idim
-  R_TYPE, allocatable :: lpsi(:, :), pxlpsi(:,:), xplpsi(:,:)
-  integer, pointer :: jxyz(:)
-  FLOAT,   pointer :: smx(:, :)
-
-  call push_sub('epot_inc.Xconmut_vnl_r')
-
-  cpsi(1:gr%m%np, 1:dim) = M_ZERO
-
-  if(ep%p(iatom)%type .ne. M_NONE) then
-
-    ns = ep%p(iatom)%sphere%ns
-    jxyz => ep%p(iatom)%sphere%jxyz
-    smx => ep%p(iatom)%sphere%x
-
-    ALLOCATE(lpsi(ns, dim),  ns*dim)
-    ALLOCATE(xplpsi(ns, dim), ns*dim)
-    ALLOCATE(pxlpsi(ns, dim), ns*dim)
-
-    if(simul_box_is_periodic(gr%m%sb)) then
-      do idim = 1, dim      
-        lpsi(1:ns, idim) = psi(jxyz(1:ns))*ep%p(iatom)%phase(1:ns, ik)
-      end do
-    else
-      do idim = 1, dim      
-        lpsi(1:ns, idim) = psi(jxyz(1:ns))
-      end do
-    end if
-
-    ! x V_nl |psi>
-    call X(project_sphere)(gr%m, ep%p(iatom), dim, lpsi, xplpsi, ep%reltype)
-    do idim = 1, dim
-      xplpsi(1:ns, idim) = smx(1:ns, idir) * xplpsi(1:ns, idim)
-    end do
-
-    ! V_nl x |psi>
-    do idim = 1, dim
-      lpsi(1:ns, idim) = smx(1:ns, idir) * lpsi(1:ns, idim)
-    end do
-    call X(project_sphere)(gr%m, ep%p(iatom), dim, lpsi, pxlpsi, ep%reltype)
-    
-    ! |cpsi> += x V_nl |psi> - V_nl x |psi> 
-    if(simul_box_is_periodic(gr%m%sb)) then
-      do idim = 1, dim
-        cpsi(jxyz(1:ns), idim) = cpsi(jxyz(1:ns), idim) + &
-             (xplpsi(1:ns, idim) - pxlpsi(1:ns, idim))*R_CONJ(ep%p(iatom)%phase(1:ns, ik))
-      end do
-    else
-      do idim = 1, dim
-        cpsi(jxyz(1:ns), idim) = cpsi(jxyz(1:ns), idim) + xplpsi(1:ns, idim) - pxlpsi(1:ns, idim)
-      end do
-    end if
-
-    deallocate(lpsi, xplpsi, pxlpsi)
-  end if
-
-  call pop_sub()
-
-end subroutine X(conmut_vnl_r)
 
 !! Local Variables:
 !! mode: f90
