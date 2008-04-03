@@ -1,0 +1,158 @@
+!! Copyright (C) 2008 X. Andrade
+!!
+!! This program is free software; you can redistribute it and/or modify
+!! it under the terms of the GNU General Public License as published by
+!! the Free Software Foundation; either version 2, or (at your option)
+!! any later version.
+!!
+!! This program is distributed in the hope that it will be useful,
+!! but WITHOUT ANY WARRANTY; without even the implied warranty of
+!! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!! GNU General Public License for more details.
+!!
+!! You should have received a copy of the GNU General Public License
+!! along with this program; if not, write to the Free Software
+!! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+!! 02111-1307, USA.
+!!
+!! $Id: dielectric_function.F90 3613 2007-11-29 16:47:41Z xavier $
+
+#include "global.h"
+
+program dielectric_function
+  use global_m
+  use messages_m
+  use datasets_m
+  use loct_m
+  use loct_parser_m
+  use io_m
+  use units_m
+  use spectrum_m
+
+  implicit none
+
+  integer :: in_file, out_file, ii, jj, kk
+  integer :: time_steps, energy_steps, istart, iend, ntiter
+  FLOAT :: vecpot0(1:MAX_DIM), dt, tt, ww
+  FLOAT, allocatable :: vecpot(:, :), dumpa(:)
+  CMPLX, allocatable :: dielectric(:,:)
+  FLOAT, parameter :: eta = CNST(0.1)/CNST(27.211383)
+  type(spec_t) :: s
+  type(unit_system_t) :: file_units
+  type(block_t) :: blk
+
+  ! Initialize stuff
+  call global_init()
+  call parser_init()
+  call loct_parse_int('DebugLevel', 0, conf%debug_level)
+  if(conf%debug_level>0) then
+    in_debug_mode = .true.
+  else
+    in_debug_mode = .false.
+  end if
+  call datasets_init(1)
+  call io_init()
+  if(in_debug_mode) then
+     call io_mkdir('debug')
+  end if
+  call units_init()
+
+  call spectrum_init(s)
+    
+  if(loct_parse_block(check_inp('GaugeVectorField'), blk) == 0) then
+    
+    do ii = 1, MAX_DIM
+      call loct_parse_block_float(blk, 0, ii - 1, vecpot0(ii))
+    end do
+    
+    call loct_parse_block_end(blk)
+
+  else
+    
+    if(in_file < 0) then 
+      message(1) = "Can not find the GaugeVectorField in the input file"
+      call write_fatal(1)
+    end if
+
+  end if
+
+  in_file = io_open('td.general/gauge_field', action='read', status='old', die=.false.)
+  call io_skip_header(in_file)
+  call count_time_steps(in_file, time_steps, dt)
+  if(in_file < 0) then 
+    message(1) = "Can not open file 'td.general/gauge_field'"
+    call write_fatal(1)
+  end if
+
+  ALLOCATE(vecpot(1:MAX_DIM*3, time_steps), MAX_DIM*3*time_steps)
+
+  call io_skip_header(in_file)
+  
+  do ii = 1, time_steps
+    read(in_file, *) jj, tt, vecpot(1:MAX_DIM*3, ii)
+  end do
+
+  call io_close(in_file)
+
+  write(message(1), '(a, i7, a)') "Info: Read ", time_steps, " steps from file td.general/gauge_field"
+  call write_info(1)
+
+
+  ! Find out the iteration numbers corresponding to the time limits.
+  call spectrum_fix_time_limits(time_steps, dt, s%start_time, s%end_time, istart, iend, ntiter)
+
+  ALLOCATE(dumpa(istart:iend), ntiter)
+
+  do ii = istart, iend
+    jj = ii - istart
+    select case(s%damp)
+    case(SPECTRUM_DAMP_NONE)
+      dumpa(ii) = M_ONE
+    case(SPECTRUM_DAMP_LORENTZIAN)
+      dumpa(ii)= exp(-jj*dt*s%damp_factor)
+    case(SPECTRUM_DAMP_POLYNOMIAL)
+      dumpa(ii) = M_ONE - M_THREE*(real(jj)/ntiter)**2+ M_TWO*(real(jj)/ntiter)**3
+    case(SPECTRUM_DAMP_GAUSSIAN)
+      dumpa(ii)= exp(-(jj*dt)**2*s%damp_factor**2)
+    end select
+  end do
+
+  energy_steps = s%max_energy / s%energy_step
+  ALLOCATE(dielectric(1:MAX_DIM, 0:energy_steps), MAX_DIM*(energy_steps + 1))
+  
+  do kk = 0, energy_steps
+    ww = kk*s%energy_step
+
+    do ii = istart, iend
+      tt = ii*dt
+      dielectric(1:MAX_DIM, kk) = dielectric(1:MAX_DIM, kk) + &
+           vecpot(MAX_DIM + 1:2*MAX_DIM, ii)*exp((M_zI*ww - eta)*tt)*dumpa(ii)
+    end do
+
+    dielectric(1:MAX_DIM, kk) = vecpot0(1:MAX_DIM)/(dielectric(1:MAX_DIM, kk) + vecpot0(1:MAX_DIM))
+    
+  end do
+
+  out_file = io_open('td.general/dielectric_function', action='write')
+  do kk = 0, energy_steps
+    ww = kk*s%energy_step
+    write(out_file, '(i10, 7e15.6)') kk, ww,                                &
+         real(dielectric(1, kk), REAL_PRECISION), aimag(dielectric(1, kk)), &
+         real(dielectric(2, kk), REAL_PRECISION), aimag(dielectric(2, kk)), &
+         real(dielectric(3, kk), REAL_PRECISION), aimag(dielectric(3, kk))
+  end do
+  call io_close(out_file)
+
+  deallocate(dielectric, vecpot, dumpa)
+
+  call io_end()
+  call datasets_end()
+  call parser_end()
+  call global_end()
+
+end program dielectric_function
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

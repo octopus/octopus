@@ -23,7 +23,8 @@ include $(srcdir)/../common-rules.make
 
 EXTRA_PROGRAMS = oct-cross-section oct-rsf oct-harmonic-spectrum \
                  oct-broad oct-vibrational oct-xyz-anim oct-center-geom oct-help \
-                 oct-oscillator-strength
+                 oct-oscillator-strength \
+		 oct-dielectric-function
 
 bin_PROGRAMS = @UTILITY_PROGRAMS@
 
@@ -32,6 +33,9 @@ oct_cross_section_LDADD   = @LIBS_LAPACK@ @LIBS_BLAS@ $(core_LIBS) $(external_LI
 
 oct_oscillator_strength_SOURCES = oscillator_strength.F90
 oct_oscillator_strength_LDADD   = @LIBS_LAPACK@ @LIBS_BLAS@ $(core_LIBS) $(external_LIBS)
+
+oct_dielectric_function_SOURCES = dielectric_function.F90
+oct_dielectric_function_LDADD   = @LIBS_LAPACK@ @LIBS_BLAS@ $(core_LIBS) $(external_LIBS)
 
 oct_rsf_SOURCES = rotational_strength.F90
 oct_rsf_LDADD   = @LIBS_LAPACK@ @LIBS_BLAS@ $(core_LIBS) $(external_LIBS)
@@ -55,7 +59,7 @@ oct_help_SOURCES = help.F90
 oct_help_LDADD =  $(core_LIBS)
 
 depend:
-	@makedepf90 $(core_SRCS) $(oct_cross_section_SOURCES) $(oct_rsf_SOURCES) $(oct_harmonic_spectrum_SOURCES) $(oct_xyz_anim_SOURCES) $(oct_broad_SOURCES) $(oct_vibrational_SOURCES) $(oct_center_geom_SOURCES) $(oct_atoms_magnet_SOURCES) $(oct_help_SOURCES)
+	@makedepf90 $(core_SRCS) $(oct_dielectric_function_SOURCES) $(oct_cross_section_SOURCES) $(oct_rsf_SOURCES) $(oct_harmonic_spectrum_SOURCES) $(oct_xyz_anim_SOURCES) $(oct_broad_SOURCES) $(oct_vibrational_SOURCES) $(oct_center_geom_SOURCES) $(oct_atoms_magnet_SOURCES) $(oct_help_SOURCES)
 
 cross_section.o : cross_section.F90 
 rotational_strength.o : rotational_strength.F90 
@@ -65,3 +69,4 @@ broad.o : broad.F90
 phonon_spectrum.o : phonon_spectrum.F90 
 centergeom.o : centergeom.F90 
 help.o : help.F90 
+dielectric_function.o : dielectric_function.F90

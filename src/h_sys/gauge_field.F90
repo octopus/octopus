@@ -57,14 +57,15 @@ module gauge_field_m
     gauge_field_t,                        &
     gauge_field_init,                     &
     gauge_field_is_applied,               &
-    gauge_field_set_vec_pot,     &
-    gauge_field_set_vec_pot_vel, &
-    gauge_field_get_vec_pot,     &
-    gauge_field_get_vec_pot_vel, &
-    gauge_field_get_vec_pot_acc, &
+    gauge_field_set_vec_pot,              &
+    gauge_field_set_vec_pot_vel,          &
+    gauge_field_get_vec_pot,              &
+    gauge_field_get_vec_pot_vel,          &
+    gauge_field_get_vec_pot_acc,          &
     gauge_field_propagate,                &
     gauge_field_propagate_vel,            &
     gauge_field_get_force,                &
+    gauge_field_get_energy,               &
     gauge_field_end
 
   type gauge_field_t
@@ -216,7 +217,7 @@ contains
       n_el = n_el + dmf_integrate(gr%m, st%rho(1:NP, ik))
     end do
 
-    force(1:MAX_DIM) = -this%vecpot(1:MAX_DIM)*n_el
+    force(1:MAX_DIM) = M_ZERO
     
     do ik = 1, st%d%nik
       do ist = st%st_start, st%st_end
@@ -239,8 +240,8 @@ contains
         end do
         
         do idir = 1, gr%sb%dim
-          force(idir) = force(idir) + &
-               st%d%kweights(ik)*st%occ(ist, ik)*aimag(zstates_dotp(gr%m, st%d%dim, st%zpsi(:, :, ist, ik), gpsi(:, idir, :)))
+          force(idir) = force(idir) + st%d%kweights(ik)*st%occ(ist, ik)*&
+               aimag(zstates_dotp(gr%m, st%d%dim, st%zpsi(:, :, ist, ik), gpsi(:, idir, :)))
         end do
         
       end do
@@ -253,11 +254,21 @@ contains
     end if
 #endif
 
+    force(1:MAX_DIM) = force(1:MAX_DIM) - n_el*this%vecpot(1:MAX_DIM)/P_c
+
     deallocate(gpsi)
 
     force = force*M_FOUR*M_PI*P_c/gr%sb%rcell_volume
 
   end function gauge_field_get_force
+
+  FLOAT function gauge_field_get_energy(this, sb) result(energy)
+    type(gauge_field_t),  intent(in)    :: this
+    type(simul_box_t),    intent(in)    :: sb
+
+    energy = sb%rcell_volume/(M_EIGHT*M_PI)*sum(this%vecpot_vel(1:MAX_DIM)**2)/P_c**2
+
+  end function gauge_field_get_energy
 
 end module gauge_field_m
 

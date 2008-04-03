@@ -45,6 +45,8 @@ module spectrum_m
     spectrum_hs_from_mult,         &
     spectrum_hs_from_acc,          &
     spectrum_mult_info,            &
+    spectrum_fix_time_limits,      &
+    count_time_steps,              &
     kick_init,                     &
     kick_write,                    &
     kick_read
@@ -1143,8 +1145,7 @@ contains
     type(unit_system_t), intent(out) :: file_units
     integer, optional, intent(out) :: lmax
 
-    integer :: i, j
-    FLOAT :: t1, t2, dummy
+    integer :: i
     character(len=100) :: line
 
     call push_sub('spectrum.spectrum_mult_info')
@@ -1167,26 +1168,38 @@ contains
       call units_get(file_units, UNITS_ATOMIC)
     end if
 
+    call count_time_steps(iunit, time_steps, dt)
+    dt = dt * file_units%time%factor ! units_out is OK
+
+    call pop_sub()
+  end subroutine spectrum_mult_info
+  
+  subroutine count_time_steps(iunit, time_steps, dt)
+    integer, intent(in)  :: iunit
+    integer, intent(out) :: time_steps
+    FLOAT,   intent(out) :: dt
+
+    FLOAT :: t1, t2, dummy
+    integer :: jj
+
     ! count number of time_steps
     time_steps = 0
     do
-      read(iunit, *, end=100) j, dummy
+      read(iunit, *, end=100) jj, dummy
       time_steps = time_steps + 1
       if(time_steps == 1) t1 = dummy
       if(time_steps == 2) t2 = dummy
     end do
 100 continue
-    dt = (t2 - t1) * file_units%time%factor ! units_out is OK
+    dt = (t2 - t1)
     time_steps = time_steps - 1
-
+    
     if(time_steps < 3) then
-      message(1) = "Empty multipole file?"
+      message(1) = "Empty file?"
       call write_fatal(1)
     end if
 
-    call pop_sub()
-  end subroutine spectrum_mult_info
-
+  end subroutine count_time_steps
 
   ! ---------------------------------------------------------
   subroutine spectrum_cross_section_info(iunit, nspin, kick, energy_steps, dw)

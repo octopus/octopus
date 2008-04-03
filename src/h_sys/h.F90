@@ -534,6 +534,10 @@ contains
         h%etot   = h%ep%eii + h%eeigen - h%ehartree + h%ex + h%ec - h%epot
       end select
     end if
+    
+    if(gauge_field_is_applied(h%ep%gfield)) then
+      h%etot = h%etot + gauge_field_get_energy(h%ep%gfield, gr%sb)
+    end if
 
     if (iunit > 0) then
       write(message(1), '(6x,a, f15.8)')'Total       = ', h%etot     / units_out%energy%factor
