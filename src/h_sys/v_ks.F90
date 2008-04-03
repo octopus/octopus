@@ -221,11 +221,12 @@ contains
     logical,      optional, intent(in) :: calc_eigenval
 
     FLOAT :: amaldi_factor
+    ! The next line is a hack to be able to perform an IP/RPA calculation
+    !logical, save :: RPA_first = .true.
 
     call push_sub('v_ks.v_ks_calc')
 
     h%epot     = M_ZERO
-    h%ehartree = M_ZERO
 
     ! check if we should introduce the amaldi SIC correction
     amaldi_factor = M_ONE
@@ -237,16 +238,22 @@ contains
       h%vhxc     = M_ZERO
       !$omp end parallel workshare
       h%epot     = M_ZERO
+      h%ehartree = M_ZERO
       h%ex       = M_ZERO
       h%ec       = M_ZERO
     else
-      call v_hartree()
+      ! The next 2 lines are a hack to be able to perform an IP/RPA calculation
+      !if(RPA_first) then
+      !  RPA_first = .false.
+        h%ehartree = M_ZERO
+        call v_hartree()
 
-      !$omp parallel workshare
-      h%vxc      = M_ZERO
-      !$omp end parallel workshare
-      if(h%d%cdft) h%axc = M_ZERO
-      if(ks%theory_level.ne.HARTREE) call v_a_xc()
+        !$omp parallel workshare
+        h%vxc      = M_ZERO
+        !$omp end parallel workshare
+        if(h%d%cdft) h%axc = M_ZERO
+        if(ks%theory_level.ne.HARTREE) call v_a_xc()
+      !end if
 
       ! Build Hartree + xc potential
 
@@ -265,6 +272,7 @@ contains
         h%vhxc(1:NP, 3:4) = h%vxc(1:NP, 3:4)
         !$omp end parallel workshare        
       end if
+
     end if
     
     if(ks%theory_level==HARTREE.or.ks%theory_level==HARTREE_FOCK) then
@@ -329,6 +337,7 @@ contains
     subroutine v_a_xc()
       FLOAT, allocatable :: rho(:, :)
       integer :: is
+
       call profiling_in(C_PROFILING_XC)
 
       h%ex = M_ZERO

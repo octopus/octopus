@@ -232,115 +232,125 @@ contains
       !%Section Hamiltonian::XC
       !%Description
       !% Defines the exchange and correlation functionals
-      !%Option lda_x 1
+      !%Option lda_x                      1
       !% LDA: Slater exchange
-      !%Option lda_c_wigner 2000
+      !%Option lda_c_wigner               2000
       !% LDA: Wigner parametrization
-      !%Option lda_c_rpa 3000
+      !%Option lda_c_rpa                  3000
       !% LDA: Random Phase Approximation
-      !%Option lda_c_hl 4000
+      !%Option lda_c_hl                   4000
       !% LDA: Hedin & Lundqvist
-      !%Option lda_c_gl 5000
+      !%Option lda_c_gl                   5000
       !% LDA: Gunnarson & Lundqvist
-      !%Option lda_c_xalpha 6000
+      !%Option lda_c_xalpha               6000
       !% LDA: Slater s Xalpha
-      !%Option lda_c_vwn 7000
+      !%Option lda_c_vwn                  7000
       !% LDA: Vosko, Wilk, & Nussair
-      !%Option lda_c_vwn_rpa 8000
+      !%Option lda_c_vwn_rpa              8000
       !% LDA: Vosko, Wilk, & Nussair (fit to the RPA correlation energy)
-      !%Option lda_c_pz 9000
+      !%Option lda_c_pz                   9000
       !% LDA: Perdew & Zunger
-      !%Option lda_c_pz_mod 10000
+      !%Option lda_c_pz_mod              10000
       !% LDA: Perdew & Zunger (Modified to improve the matching between
       !% the high and the low rs region)
-      !%Option lda_c_ob_pz 11000
+      !%Option lda_c_ob_pz               11000
       !% LDA: Ortiz & Ballone (PZ-type parametrization)
-      !%Option lda_c_pw 12000
+      !%Option lda_c_pw                  12000
       !% LDA: Perdew & Wang
-      !%Option lda_c_pw_mod 13000
+      !%Option lda_c_pw_mod              13000
       !% LDA: Perdew & Wang (Modified to match the original PBE routine)
-      !%Option lda_c_ob_pw 14000
+      !%Option lda_c_ob_pw               14000
       !% LDA: Ortiz & Ballone (PW-type parametrization)
-      !%Option lda_c_amgb 15000
+      !%Option lda_c_amgb                15000
       !% LDA: Attacalite et al functional for the 2D electron gas
-      !%Option lda_xc_teter93
+      !%Option lda_xc_teter93            20
       !% LDA: Teter 93 pade parametrization
-      !%Option gga_x_pbe 101
+      !%Option gga_x_pbe                101
       !% GGA: Perdew, Burke & Ernzerhof
-      !%Option gga_x_pbe_r 102
+      !%Option gga_x_pbe_r              102
       !% GGA: Perdew, Burke & Ernzerhof (revised)
-      !%Option gga_x_pbe_sol 116
-      !% GGA: Perdew, Burke & Ernzerhof (solids)
-      !%Option gga_x_rpbe 117
-      !% GGA: Hammer, Hansen & Norskov (PBE-like)
-      !%Option gga_x_wc 118
-      !% GGA:  Wu & Cohen
-      !%Option gga_x_b86 103
+      !%Option gga_x_b86                103
       !% GGA: Becke 86 Xalpha,beta,gamma
-      !%Option gga_x_b86_r 104
+      !%Option gga_x_b86_r              104
       !% GGA: Becke 86 Xalpha,beta,gamma reoptimized
-      !%Option gga_x_b86_mgc 105
+      !%Option gga_x_b86_mgc            105
       !% GGA: Becke 86 Xalpha,beta,gamma (with mod. grad. correction)
-      !%Option gga_x_b88 106
+      !%Option gga_x_b88                106
       !% GGA: Becke 88
-      !%Option gga_x_g96 107
+      !%Option gga_x_g96                107
       !% GGA: Gill 96
-      !%Option gga_x_pw86 108
+      !%Option gga_x_pw86               108
       !% GGA: Perdew & Wang 86
-      !%Option gga_x_pw91 109
+      !%Option gga_x_pw91               109
       !% GGA: Perdew & Wang 91
-      !%Option gga_x_optx 110
+      !%Option gga_x_optx               110
       !% GGA: Handy & Cohen OPTX 01
-      !%Option gga_c_pbe 130000
-      !% GGA: Perdew, Burke & Ernzerhof correlation
-      !%Option gga_c_pbe_sol 133000
-      !% GGA: Perdew, Burke & Ernzerhof correlation (solids)
-      !%Option lda_c_lyp 131000
-      !% GGA: Lee, Yang, & Parr LDA
-      !%Option lda_c_p86 132000
-      !% GGA: Perdew 86
-      !%Option gga_c_pw91 134000
-      !% GGA: Perdew & Wang 91
-      !%Option gga_xc_dk87_r1 111
+      !%Option gga_x_dk87_r1            111
       !% GGA: dePristo & Kress 87 (version R1)
-      !%Option gga_xc_dk87_r2 112
+      !%Option gga_x_dk87_r2            112
       !% GGA: dePristo & Kress 87 (version R2)
-      !%Option gga_xc_ft97_a 114
+      !%Option gga_x_lg93               113
+      !% GGA: Lacks & Gordon 93
+      !%Option gga_x_ft97_a             114
       !% GGA: Filatov & Thiel 97 (version A)
-      !%Option gga_xc_ft97_b 115
+      !%Option gga_x_ft97_b             115
       !% GGA: Filatov & Thiel 97 (version B)
-      !%Option gga_xc_lb 160
+      !%Option gga_x_pbe_sol            116
+      !% GGA: Perdew, Burke & Ernzerhof (solids)
+      !%Option gga_x_rpbe               117
+      !% GGA: Hammer, Hansen & Norskov (PBE-like)
+      !%Option gga_x_wc                 118
+      !% GGA:  Wu & Cohen
+      !%Option gga_x_mpw91              119
+      !% GGA: Modified form of PW91 by Adamo & Barone
+      !%Option gga_x_am05               120
+      !% GGA: Armiento & Mattsson 05 exchange
+      !%Option gga_x_pbea               121
+      !% GGA: Madsen 07 (PBE-like)
+      !%Option gga_c_pbe                130000
+      !% GGA: Perdew, Burke & Ernzerhof correlation
+      !%Option gga_c_lyp                131000
+      !% GGA: Lee, Yang, & Parr
+      !%Option gga_c_p86                132000
+      !% GGA: Perdew 86
+      !%Option gga_c_pbe_sol            133000
+      !% GGA: Perdew, Burke & Ernzerhof correlation (solids)
+      !%Option gga_c_pw91               134000
+      !% GGA: Perdew & Wang 91
+      !%Option gga_c_am05               135000
+      !% GGA: Armiento & Mattsson 05 correlation
+      !%Option gga_xc_lb                160
       !% GGA: van Leeuwen & Baerends (xc)
-      !%Option gga_xc_hcth_93 161
+      !%Option gga_xc_hcth_93           161
       !% GGA: HCTH fit to 93 molecules (xc)
-      !%Option gga_xc_hcth_120 162
+      !%Option gga_xc_hcth_120          162
       !% GGA: HCTH fit to 120 molecules (xc)
-      !%Option gga_xc_hcth_147 163
+      !%Option gga_xc_hcth_147          163
       !% GGA: HCTH fit to 147 molecules (xc)
-      !%Option gga_xc_hcth_407 164
+      !%Option gga_xc_hcth_407          164
       !% GGA: HCTH fit to 407 molecules (xc)
-      !%Option gga_xc_edf1 165
-      !% GGA: Empirical functional from Adamson, Gill, and Pople
-      !%Option gga_xc_xlyp 166
-      !% GGA: Empirical functional from Xu and Goddard
-      !%Option hyb_gga_xc_b3pw91 401000
+      !%Option gga_xc_edf1              165
+      !% GGA: Empirical functional from Adamson, Gill, & Pople
+      !%Option gga_xc_xlyp              166
+      !% GGA: Empirical functional from Xu & Goddard
+      !%Option hyb_gga_xc_b3pw91        401000
       !% Hybrid (GGA): the first hybrid by Becke
-      !%Option hyb_gga_xc_b3lyp 402000
+      !%Option hyb_gga_xc_b3lyp         402000
       !% Hybrid (GGA): The (in)famous B3LYP
-      !%Option hyb_gga_xc_b3p86 403000
+      !%Option hyb_gga_xc_b3p86         403000
       !% Hybrid (GGA): Perdew 86 hybrid similar to B3PW91
-      !%Option hyb_gga_xc_o3lyp 404000
+      !%Option hyb_gga_xc_o3lyp         404000
       !% Hybrid (GGA): Hybrid using the optx functional
-      !%Option hyb_gga_xc_pbeh 406000
+      !%Option hyb_gga_xc_pbeh          406000
       !% Hybrid (GGA): aka PBE0 or PBE1PBE
-      !%Option hyb_gga_xc_x3lyp 411000
+      !%Option hyb_gga_xc_x3lyp         411000
       !% Hybrid (GGA): maybe the best hybrid around
-      !%Option mgga_x_tpss 201
+      !%Option mgga_x_tpss              201
       !% MGGA (not working)
-      !%Option oep_x 901
+      !%Option mgga_c_tpss              202000
+      !% MGGA (not working)
+      !%Option oep_x                    901
       !% OEP: Exact exchange
-      !%Option mgga_c_tpss 202000
-      !% MGGA (not working)
       !%End
 
       call loct_parse_int(check_inp('XCFunctional'), default, val)

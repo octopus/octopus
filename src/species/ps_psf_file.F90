@@ -66,7 +66,7 @@ contains
     integer  :: ndown, nup, i, l
     character(len=70) :: aux_s
 
-    call push_sub('psf_psf.ps_psf_file_read')
+    call push_sub('psf_psf_file.ps_psf_file_read')
 
     ! formats used in this routine
 8000 format(1x,i2)
