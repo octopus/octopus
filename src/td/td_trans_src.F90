@@ -74,9 +74,11 @@ contains
     psi0(1:np, 2, 1, 1, 1, LEFT)  = tmp(np+1:2*np,1,1,1) ! np, (lead=1;center=2), ndim, nst, nik
     psi0(1:np, 1, 1, 1, 1, RIGHT) = tmp(NP+np+1:NP+2*np,1,1,1) ! np, (lead=1;center=2), ndim, nst, nik
     psi0(1:np, 2, 1, 1, 1, RIGHT) = tmp(NP+1:NP+np,1,1,1) ! np, (lead=1;center=2), ndim, nst, nik 
-    
-    ! TODO: calculate the energy from H(lead)*psi(lead)+H(lead,C)*psi(C) == energy*psi(lead)
-    energy = 0.2
+
+    ! FIXME
+    energy = 3.5*(M_PI/(gr%sb%lsize(2)+gr%sb%h(2)))**2/M_EIGHT
+
+    deallocate(tmp)
     call pop_sub()
   end subroutine read_psi0_ext
 
@@ -102,7 +104,7 @@ contains
     ! read the extended blocks of the wave funtion
     ! TODO: for all states
     st_psi0 = M_z0
-    call read_psi0_ext('/home/nitsche/octopus_n/oct_extended_initial_state.obf', st, st_psi0, energy, inp, gr)
+    call read_psi0_ext('ext_eigenstate.obf', st, st_psi0, energy, inp, gr)
     ! and do some precalculations
     src_factor(:) = M_z0
     factor = (M_z1 - M_zI*M_HALF*dt*energy) / (M_z1 + M_zI*M_HALF*dt*energy)

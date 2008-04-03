@@ -285,7 +285,11 @@ contains
   end subroutine td_trans_rti_write_info
 
   ! ---------------------------------------------------------
-  ! compute the semi-infinite surface green function (2*Lopez Sancho, Rubio)
+  ! compute the semi-infinite surface green function
+  ! algorithm taken from the paper
+  ! Highly convergent schemes for the calculation of bulk and surface Green function
+  ! M P Lopez Sanco, J M Sancho and J Rubio (1984)
+  ! J. Phys. F: Met. Phys 15 (1985) 851-858
   subroutine green_lead(energy, diag, offdiag, np, il, green)
     FLOAT,               intent(in)  :: energy
     CMPLX,               intent(in)  :: diag(:, :)
@@ -580,17 +584,20 @@ contains
     integer,                     intent(in)    :: additional_terms
     integer, target,             intent(in)    :: mapping(:)   ! the mapping
 
-    integer            :: il, it, m, cg_iter, j, order
+    integer            :: il, it, m, cg_iter, j, order, ierr
     integer, target    :: ist, ik
     FLOAT              :: energy
     CMPLX              :: factor
     CMPLX, allocatable :: tmp(:, :), tmp_wf(:), tmp_mem(:, :)
+    CMPLX, allocatable :: ext_wf(:,:,:,:) ! NP+2*np, ndim, nst, nik
 
     call push_sub('td_trans_rti.cn_src_mem_dt')
 
     order = gr%f_der%der_discr%order
     ALLOCATE(tmp(NP, st%d%ispin), NP*st%d%ispin)
     ALLOCATE(tmp_wf(intf%np), intf%np)
+    ALLOCATE(ext_wf(NP+2*intf%np, st%d%dim, st%st_start:st%st_end,  st%d%nik), &
+              (NP+2*intf%np)*st%d%dim*st%lnst*st%d%nik*NLEADS )
     if (mem_type.eq.1) then
       ALLOCATE(tmp_mem(intf%np, intf%np), intf%np**2)
     else
@@ -617,10 +624,10 @@ contains
     m = timestep-1
     cg_iter = cg_max_iter
 
-!if (m.eq.0) then
+if (m.eq.0) then
 ! FIXME: this does NOT belong here
-  energy = (timestep/M_TEN+3.825)*(M_PI/(gr%sb%lsize(2)+gr%sb%h(2)))**2/M_EIGHT 
-!  energy = (timestep/M_TEN+3.4)*(M_PI/(gr%sb%lsize(2)+gr%sb%h(2)))**2/M_EIGHT 
+!  energy = (timestep/M_TEN+3.825)*(M_PI/(gr%sb%lsize(2)+gr%sb%h(2)))**2/M_EIGHT 
+  energy = (timestep/M_TEN+3.4)*(M_PI/(gr%sb%lsize(2)+gr%sb%h(2)))**2/M_EIGHT 
 !  energy = (timestep/M_TEN+1.175)*(M_PI/(gr%sb%lsize(2)+gr%sb%h(2)))**2/M_EIGHT
 !  energy = (timestep/M_TEN+0.925)*(M_PI/(gr%sb%lsize(2)+gr%sb%h(2)))**2/M_EIGHT
 !  energy = (timestep/M_TEN/M_TWO)
@@ -630,11 +637,16 @@ contains
 !write(*,*) 'energy', energy
 !  energy = 0.1
   do ik = 1, st%d%nik
+    ! DON'T FORGET TO MAKE THE SIMULATION BOX BIGGER IN THE INP FILE
     !call calculate_ext_eigenstate(h, gr, intf%np, diag, offdiag, order, energy, u(0,:), gr%sb%h(1), st, ik)
+    !call write_binary(NP, st%zpsi(:, 1, 1, ik), 3, ierr, 'ext_eigenstate.obf')
+
+
+    !call read_binary(NP+2*intf%np, ext_wf, 3, ierr, 'ext_eigenstate.obf')
+    !st%zpsi(1:NP, 1, 1, ik) = ext_wf(intf%np+1:NP+intf%np,1,1,ik)
+
   end do
-!end if
-!write(*,*) 'left  center', st%zpsi(1, 1, 1, 1)
-!write(*,*) 'right center', st%zpsi(NP, 1, 1, 1)
+end if
 
     ! Save interface part of wavefunctions for subsequent iterations
     ! before we overwrite them with the values for the new timestep.
@@ -710,7 +722,7 @@ contains
     ! Save interface part of wavefunction for subsequent iterations.
     call save_intf_wf(intf, timestep, st, max_iter, st_intf)
 
-    deallocate(tmp, tmp_wf, tmp_mem)
+    deallocate(tmp, tmp_wf, tmp_mem, ext_wf)
     call pop_sub()
 
   contains
