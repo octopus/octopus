@@ -596,8 +596,8 @@ contains
     order = gr%f_der%der_discr%order
     ALLOCATE(tmp(NP, st%d%ispin), NP*st%d%ispin)
     ALLOCATE(tmp_wf(intf%np), intf%np)
-    ALLOCATE(ext_wf(NP+2*intf%np, st%d%dim, st%st_start:st%st_end,  st%d%nik), &
-              (NP+2*intf%np)*st%d%dim*st%lnst*st%d%nik*NLEADS )
+    j = (NP+2*intf%np)*st%d%dim*st%lnst*st%d%nik*NLEADS 
+    ALLOCATE(ext_wf(NP+2*intf%np, st%d%dim, st%st_start:st%st_end,  st%d%nik), j)
     if (mem_type.eq.1) then
       ALLOCATE(tmp_mem(intf%np, intf%np), intf%np**2)
     else
