@@ -222,6 +222,10 @@ contains
         message(1) = "Info: Starting OCT iterations using scheme: DIRECT OPTIMIZATION"
         call write_info(1)
         call scheme_direct
+      case(oct_algorithm_newuoa)
+        message(1) = "Info: Starting OCT iterations using scheme: DIRECT OPTIMIZATION (NEWUOA)"
+        call write_info(1)
+        call scheme_newuoa
     case default
       call input_error('OCTScheme')
     end select
@@ -413,6 +417,49 @@ contains
       deallocate(x)
       call pop_sub()
     end subroutine scheme_direct
+    ! ---------------------------------------------------------
+
+
+    ! ---------------------------------------------------------
+    subroutine scheme_newuoa
+#if defined(HAVE_NEWUOA)
+      integer :: ierr, iprint, npt, maxfun, nvariables, sizeofw
+      REAL_DOUBLE :: minvalue, rhobeg, rhoend
+      REAL_DOUBLE, allocatable :: x(:), w(:)
+      integer :: nfreqs
+
+      call push_sub('opt_control.scheme_direct')
+
+      call parameters_set_rep(par)
+
+      nfreqs = parameters_nfreqs(par)
+      ALLOCATE(x(nfreqs-1), nfreqs-1)
+
+      ! Set the module pointers, so that the calc_point and write_iter_info routines
+      ! can use them.
+      call parameters_copy(par_, par)
+      sys_      => sys
+      h_        => h
+      td_       => td
+
+      call parameters_par_to_x(par, x)
+
+      nvariables = parameters_nfreqs(par) - 1 
+      iprint = 2
+      npt = 2*nvariables + 1
+      rhoend = oct_iterator_tolerance(iterator)
+      rhobeg = oct%direct_step * M_PI
+      maxfun = oct_iterator_maxiter(iterator)
+      sizeofw = (npt + 13)*(npt + nvariables) + 3 * nvariables*(nvariables + 3)/2 
+      ALLOCATE(w(sizeofw), sizeofw)
+      w = M_ZERO
+      
+      call newuoa(nvariables, npt, x(1:nvariables), rhobeg, rhoend, iprint, maxfun, w, direct_opt_calc)
+
+      deallocate(x, w)
+      call pop_sub()
+#endif
+    end subroutine scheme_newuoa
     ! ---------------------------------------------------------
 
   end subroutine opt_control_run

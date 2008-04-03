@@ -117,6 +117,11 @@ if test x"$enable_mpi" != x"no"; then
 fi
 AM_CONDITIONAL(COMPILE_LIBNBC, test x${HAVE_LIBNBC} = x1)
 
+dnl check for newuoa
+ACX_NEWUOA
+AM_CONDITIONAL(COMPILE_NEWUOA, test x${HAVE_NEWUOA} = x1)
+
+
 dnl if libnbc is enabled, check for C MPI
 if test x"$acx_libnbc_ok" == x"yes"; then
   AC_CHECK_HEADER(mpi.h,,AC_MSG_ERROR([cannot find mpi.h (required for libnbc)]))
@@ -285,6 +290,7 @@ AC_CONFIG_FILES([Makefile
   external_libs/qshep/Makefile
   external_libs/poisson_isf/Makefile
   external_libs/libnbc/Makefile
+  external_libs/newuoa/Makefile
   liboct_parser/Makefile
   liboct/Makefile
   src/Makefile

@@ -17,6 +17,16 @@
 ## Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 ## 02111-1307, USA.
 ##
-## $Id$
+## $Id: Makefile.am 2593 2006-11-20 10:58:15Z marques $
 
-SUBDIRS = expokit metis-4.0 qshep poisson_isf libnbc newuoa
+if COMPILE_NEWUOA
+  noinst_LIBRARIES = libnewuoa.a
+endif
+
+libnewuoa_a_SOURCES = bigden.f90 biglag.f90 newuob.f90 trsapp.f90 update.f90 newuoa.f90
+
+# how to compile a f90 file :)
+.f90.o:
+	@FC@ @FCFLAGS@ -c @FCFLAGS_f90@ -o $@ $<
+
+CLEANFILES = *~ *.bak

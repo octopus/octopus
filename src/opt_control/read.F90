@@ -72,6 +72,8 @@
     !% some mixing ("OCTMixing = yes") is used.
     !%Option oct_algorithm_direct 7
     !% Direct optimization (experimental)
+    !%Option oct_algorithm_newuoa 8
+    !% Direct optimization with the newuoa algorithm (experimental)
     !%End
     call loct_parse_int(check_inp('OCTScheme'), oct_algorithm_zr98, oct%algorithm)
     if(.not.varinfo_valid_option('OCTScheme', oct%algorithm)) call input_error('OCTScheme')
@@ -87,6 +89,16 @@
     case(oct_algorithm_direct)
       call loct_parse_float(check_inp('OCTEta'), M_ONE, oct%eta)
       call loct_parse_float(check_inp('OCTDelta'), M_ZERO, oct%delta)
+    case(oct_algorithm_newuoa)
+#if defined(HAVE_NEWUOA)
+      call loct_parse_float(check_inp('OCTEta'), M_ONE, oct%eta)
+      call loct_parse_float(check_inp('OCTDelta'), M_ZERO, oct%delta)
+#else
+      write(message(1), '(a)') '"OCTScheme = oct_algorithm_newuoa" is only possible if the newuoa'
+      write(message(2), '(a)') 'code has been compiled. You must configure octopus passing the'
+      write(message(3), '(a)') 'the "--enable-newuoa" switch.'
+      call write_fatal(3)
+#endif
     case default
       oct%delta = M_ONE; oct%eta = M_ONE
     end select
@@ -221,7 +233,8 @@
     if((oct%mode_fixed_fluence)) then
       if( (oct%algorithm.ne.oct_algorithm_wg05)     .and. &
           (oct%algorithm.ne.oct_algorithm_str_iter) .and. &
-          (oct%algorithm.ne.oct_algorithm_direct)  ) then
+          (oct%algorithm.ne.oct_algorithm_direct)   .and. &
+          (oct%algorithm.ne.oct_algorithm_newuoa) ) then
         write(message(1),'(a)') "Cannot optimize to a given fluence with the chosen algorithm."
         write(message(2),'(a)') "Switching to scheme WG05."         
         call write_info(2)
@@ -316,13 +329,15 @@
 
     if(oct%mode_basis_set) then
       if( (oct%algorithm .ne. oct_algorithm_str_iter)  .and.  &
-          (oct%algorithm .ne. oct_algorithm_direct) ) then
+          (oct%algorithm .ne. oct_algorithm_direct)    .and.  &
+          (oct%algorithm .ne. oct_algorithm_newuoa) ) then
         write(message(1), '(a)') 'If the control parameters are to be represented with a basis set'
         write(message(2), '(a)') '(i.e. "OCTParameterRepresentation = control_parameters_fourier_space"),'
         write(message(3), '(a)') 'the only acceptable algorithms are:'
         write(message(4), '(a)') ' (1) "OCTScheme = oct_algorithm_straight_iteration".'
         write(message(5), '(a)') ' (2) "OCTScheme = oct_algorithm_direct".'
-        call write_fatal(5)
+        write(message(6), '(a)') ' (3) "OCTScheme = oct_algorithm_newuoa".'
+        call write_fatal(6)
       endif
     end if
 

@@ -89,6 +89,10 @@ if COMPILE_LIBNBC
   external_LIBS += $(top_builddir)/external_libs/libnbc/libnbc.a
 endif
 
+if COMPILE_NEWUOA
+  external_LIBS += $(top_builddir)/external_libs/newuoa/libnewuoa.a
+endif
+
 all_LIBS = $(core_LIBS) @LIBS_FFT@ @LIBS_SPARSKIT@ \
   @LIBS_NETCDF@ $(external_LIBS) @LIBS_MPI@ @LIBS_LAPACK@ @LIBS_BLAS@
 
