@@ -298,11 +298,6 @@ contains
           ! Get anchor for recursion.
           call approx_coeff0(intface, delta, il, diag(:, :, il), offdiag(:, :, il), coeff(:, :, 0, il), &
                              sp_coeff(:, 0, il), mem_s(:,:,:,il), order, mem_type, sp2full_map)
-!call write_matrix(coeff(:, :, 0, il), 0, intface%np)
-!          call umerski_coeff0(delta, diag(:, :, il), offdiag(:, :, il), intface%np, il, coeff(:, :, 0, il))
-!call write_matrix(coeff(:, :, 0, il), 0, intface%np)
-!          call umerski_coeff0(delta, diag(:, :, il), offdiag(:, :, il), intface%np, il, coeff(:, :, 0, il),'L')
-!call write_matrix(coeff(:, :, 0, il), 0, intface%np)
           call loct_progress_bar(1, max_iter+1)
         end if
         ! Calculate the subsequent coefficients by the recursive relation.
@@ -1097,10 +1092,6 @@ contains
           ', '//trim(lead_name(il))//' lead, not converged.'
         call write_warning(1)
       end if
-
-      !if (.not.is_bisymmetric(coeffs(:,:,i),np)) then
-      !  write(*,*) 'memory coefficient',i,'is not bisymmetric'
-      !end if
 
       call loct_progress_bar(i+1, iter+1)
     end do

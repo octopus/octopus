@@ -886,12 +886,11 @@ subroutine zqmr_sym(np, x, b, op, prec, iter, residue, threshold, showprogress)
     res = lalg_nrm2(np,r)/lalg_nrm2(np,x)
     log_res = -log(res)
     if (log_res < 0) log_res = 0
-    ilog_res = (M_TEN**2-1)*log_res
+    ilog_res = M_TEN**2*log_res
     if (showprogress_)  call loct_progress_bar(ilog_res, ilog_thr)
     if (res < threshold_) exit
     iter = iter + 1
     !write(*,*) res
-!    if (showprogress_)  call loct_progress_bar(iter, max_iter)
   end do
 
   select case(err)
