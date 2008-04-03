@@ -21,6 +21,7 @@ match ; Eigenvalue 11 ; GREP(static/info, '11   --', 13) ; -15.287752
 match ; Eigenvalue 13 ; GREP(static/info, '13   --', 13) ; -14.456657
 match ; Eigenvalue 15 ; GREP(static/info, '15   --', 13) ; -14.348252
 
+Precision : 0.001
 match ; <Sz>        1 ; GREP(static/info, ' 1   --', 52) ;  0.5000
 match ; <Sz>        3 ; GREP(static/info, ' 3   --', 52) ;  0.5000
 match ; <Sz>        5 ; GREP(static/info, ' 5   --', 52) ;  0.4760
@@ -31,7 +32,7 @@ match ; <Sz>       13 ; GREP(static/info, '13   --', 52) ; -0.1109
 match ; <Sz>       15 ; GREP(static/info, '15   --', 52) ;  0.4363
 
 match ; Force         ; GREP(static/info, 'Forces on the ions', 20, 2) ; 2.545507
-
+Precision : default
 
 Input: 07-spin_orbit_coupling.02-rkb.inp
 match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; -27.408114
@@ -43,6 +44,7 @@ match ; Eigenvalue 11 ; GREP(static/info, '11   --', 13) ; -14.732367
 match ; Eigenvalue 13 ; GREP(static/info, '13   --', 13) ; -13.914607
 match ; Eigenvalue 15 ; GREP(static/info, '15   --', 13) ; -13.642364
 
+Precision : 0.001
 match ; <Sz>        1 ; GREP(static/info, ' 1   --', 52) ;  0.5000
 match ; <Sz>        3 ; GREP(static/info, ' 3   --', 52) ;  0.5000
 match ; <Sz>        5 ; GREP(static/info, ' 5   --', 52) ;  0.4749
@@ -53,3 +55,4 @@ match ; <Sz>       13 ; GREP(static/info, '13   --', 52) ; -0.1110
 match ; <Sz>       15 ; GREP(static/info, '15   --', 52) ;  0.4503
 
 match ; Force         ; GREP(static/info, 'Forces on the ions', 20, 2) ; 2.528536
+Precision : default

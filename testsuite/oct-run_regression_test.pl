@@ -100,6 +100,18 @@ EndOfTemplate
   exit 0;
 }
 
+
+sub set_precision{
+  my $p = $_[0];
+  if($p ne "default"){
+    $precnum = 1.0*$p;
+  }elsif($octopus_exe =~ m/single/){
+    $precnum = 0.001
+  } else {
+    $precnum = 0.0001
+  }
+}
+
 # Check, if STDOUT is a terminal. If not, not ANSI sequences are
 # emitted.
 if(-t STDOUT) {
@@ -165,11 +177,7 @@ $failures = 0;
 # Loop over all the executables.
 foreach my $octopus_exe (@executables){
 
-  if($octopus_exe =~ m/single/){
-    $precnum = 0.001
-  } else {
-    $precnum = 0.0001
-  }
+  set_precision("default");
 
   $workdir = tempdir('/tmp/octopus.XXXXXX');
   chomp($workdir);
@@ -281,7 +289,7 @@ foreach my $octopus_exe (@executables){
       }
 
       if ( $_ =~ /^Precision\s*:\s*(.*)\s*$/) {
-	$precnum = $1;
+	set_precision($1) ;
       }
 
       if ( $_ =~ /^match/ && !$opt_n) {
@@ -406,10 +414,10 @@ sub run_match_new(){
   # current archive directory
   open(SCRIPT, ">>$mscript");
   print SCRIPT "
-echo ", "="x4, " [ $name - pre command ]
+echo '", "="x4, " [ $name - pre command ]'
 $pre_command
 echo
-echo ", "-"x4, " [ $name - ref value   ]
+echo '", "-"x4, " [ $name - ref value   ]'
 echo $ref_value
 export LINE=`$pre_command`
 perl -e 'print \"Match: \".(abs(\$ENV{LINE}-($ref_value)) <= $precnum ? \"OK\" : \"FAILED\");'
