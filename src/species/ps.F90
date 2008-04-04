@@ -100,11 +100,11 @@ module ps_m
 
     type(spline_t) :: vlr         ! the long range part of the local potential
     type(spline_t) :: vlr_sq      ! the long range part of the
-                                       ! local potential in terms of r^2, to avoid the sqrt
+                                  ! local potential in terms of r^2, to avoid the sqrt
     type(spline_t) :: nlr         ! the charge density associated to the long range part
     
-    FLOAT :: sigma_erf                 ! the a constant in erf(r/(sqrt(2)*sigma))/r
-    FLOAT :: a_erf                     ! the a constant in erf(ar)/r
+    FLOAT :: sigma_erf            ! the a constant in erf(r/(sqrt(2)*sigma))/r
+    FLOAT :: a_erf                ! the a constant in erf(ar)/r
 
     type(spline_t) :: vion        ! the potential that other ions see
     type(spline_t) :: dvion       ! the potential that other ions see

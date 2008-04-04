@@ -116,8 +116,13 @@ contains
     end do
 
     if(psf%core_corrections) then
-      psf%chcore(1) = M_ZERO
-      psf%chcore(:) = psf%chcore(:)/(M_FOUR*M_PI)
+      ! At this point, we use the normalization of the siesta format, where
+      ! psf%chcore(:) = 4*pi*\tilde{rho} r**2. As in the Fritz-Haber file we
+      ! have written 4*pi*\tilde{rho}, we divide by r**2
+      psf%chcore(:) = psf%chcore(:) * psf%rofi(:)**2
+
+      psf%chcore(1) = linear_extrapolate(psf%rofi(1), psf%rofi(2), psf%rofi(3), &
+        psf%chcore(2), psf%chcore(3))
 
       psf%d1chcore(1) = linear_extrapolate(psf%rofi(1), psf%rofi(2), psf%rofi(3), &
         psf%d1chcore(2), psf%d1chcore(3))
