@@ -56,6 +56,7 @@ module gauge_field_m
   public ::                               &
     gauge_field_t,                        &
     gauge_field_init,                     &
+    gauge_field_init_vec_pot,             &
     gauge_field_is_applied,               &
     gauge_field_set_vec_pot,              &
     gauge_field_set_vec_pot_vel,          &
@@ -73,6 +74,7 @@ module gauge_field_m
     FLOAT   :: vecpot(1:MAX_DIM)   
     FLOAT   :: vecpot_vel(1:MAX_DIM)
     FLOAT   :: vecpot_acc(1:MAX_DIM)      
+    FLOAT   :: wp2
     logical :: with_gauge_field    
   end type gauge_field_t
 
@@ -136,12 +138,16 @@ contains
 
     this%with_gauge_field = .false.
   end subroutine gauge_field_end
+
+  ! ---------------------------------------------------------
   
   logical pure function gauge_field_is_applied(this) result(is_applied)
     type(gauge_field_t),  intent(in) :: this
 
     is_applied = this%with_gauge_field
   end function gauge_field_is_applied
+
+  ! ---------------------------------------------------------
 
   subroutine gauge_field_set_vec_pot(this, vec_pot)
     type(gauge_field_t),  intent(inout) :: this
@@ -150,12 +156,16 @@ contains
     this%vecpot = vec_pot 
   end subroutine gauge_field_set_vec_pot
 
+  ! ---------------------------------------------------------
+
   subroutine gauge_field_set_vec_pot_vel(this, vec_pot_vel)
     type(gauge_field_t),  intent(inout) :: this
     FLOAT,                intent(in)    :: vec_pot_vel(1:MAX_DIM)
 
     this%vecpot_vel = vec_pot_vel
   end subroutine gauge_field_set_vec_pot_vel
+
+  ! ---------------------------------------------------------
 
   function gauge_field_get_vec_pot(this) result(vec_pot)
     type(gauge_field_t),  intent(in) :: this
@@ -164,6 +174,8 @@ contains
     vec_pot = this%vecpot
   end function gauge_field_get_vec_pot
 
+  ! ---------------------------------------------------------
+
   function gauge_field_get_vec_pot_vel(this) result(vec_pot_vel)
     type(gauge_field_t),  intent(in) :: this
     FLOAT :: vec_pot_vel(1:MAX_DIM)
@@ -171,12 +183,16 @@ contains
     vec_pot_vel = this%vecpot_vel
   end function gauge_field_get_vec_pot_vel
 
+  ! ---------------------------------------------------------
+
   function gauge_field_get_vec_pot_acc(this) result(vec_pot_acc)
     type(gauge_field_t),  intent(in) :: this
     FLOAT :: vec_pot_acc(1:MAX_DIM)
 
     vec_pot_acc = this%vecpot_acc
   end function gauge_field_get_vec_pot_acc
+
+  ! ---------------------------------------------------------
 
   subroutine gauge_field_propagate(this, force, dt)
     type(gauge_field_t),  intent(inout) :: this
@@ -187,6 +203,33 @@ contains
 
     this%vecpot = this%vecpot + dt*this%vecpot_vel + M_HALF*dt**2*force
   end subroutine gauge_field_propagate
+
+  ! ---------------------------------------------------------
+
+  subroutine gauge_field_init_vec_pot(this, m, sb, st, dt)
+    type(gauge_field_t),  intent(inout) :: this
+    type(mesh_t),         intent(in)    :: m
+    type(simul_box_t),    intent(in)    :: sb
+    type(states_t),       intent(in)    :: st
+    FLOAT,                intent(in)    :: dt
+    
+    integer :: ik
+    FLOAT :: n_el
+
+    n_el = M_ZERO
+    do ik = 1, st%d%spin_channels
+      n_el = n_el + dmf_integrate(m, st%rho(1:m%np, ik))
+    end do
+    
+    this%wp2 = M_FOUR*M_PI*n_el/sb%rcell_volume
+
+    write (message(1), '(a,f12.6)') "Info: Electron gas plasmon frequency", sqrt(this%wp2)
+
+    this%vecpot_vel = this%wp2*this%vecpot*dt
+
+  end subroutine gauge_field_init_vec_pot
+
+  ! ---------------------------------------------------------
 
   subroutine gauge_field_propagate_vel(this, force, dt)
     type(gauge_field_t),  intent(inout) :: this
@@ -205,17 +248,12 @@ contains
     
     integer :: ik, ist, idir, idim, iatom
     CMPLX, allocatable :: gpsi(:, :, :)
-    FLOAT :: force(1:MAX_DIM), n_el
+    FLOAT :: force(1:MAX_DIM)
 #ifdef HAVE_MPI
     FLOAT :: force_tmp(1:MAX_DIM)
 #endif
 
     ALLOCATE(gpsi(gr%m%np, 1:NDIM, st%d%dim), gr%m%np*NDIM*st%d%dim)
-
-    n_el = M_ZERO
-    do ik = 1, st%d%spin_channels
-      n_el = n_el + dmf_integrate(gr%m, st%rho(1:NP, ik))
-    end do
 
     force(1:MAX_DIM) = M_ZERO
     
@@ -227,20 +265,20 @@ contains
         end do
 
         do idim = 1, st%d%dim
-          do idir = 1, 3
+          do idir = 1, gr%sb%dim
             gpsi(1:NP, idir, idim) = gpsi(1:NP, idir, idim) + &
                  M_zI*st%d%kpoints(idir, ik)*st%zpsi(1:NP, idim, ist, ik)
           end do
         end do
 
-        do idir = 1, 3
+        do idir = 1, gr%sb%dim
           do iatom = 1, geo%natoms
             call zprojector_conmut_r(pj(iatom), gr, st%d%dim, idir, ik, st%zpsi(:, 1, ist, ik), gpsi(:, idir, :))
           end do
         end do
         
         do idir = 1, gr%sb%dim
-          force(idir) = force(idir) + st%d%kweights(ik)*st%occ(ist, ik)*&
+          force(idir) = force(idir) + M_FOUR*M_PI*P_c/gr%sb%rcell_volume*st%d%kweights(ik)*st%occ(ist, ik)*&
                aimag(zstates_dotp(gr%m, st%d%dim, st%zpsi(:, :, ist, ik), gpsi(:, idir, :)))
         end do
         
@@ -254,11 +292,9 @@ contains
     end if
 #endif
 
-    force(1:MAX_DIM) = force(1:MAX_DIM) - n_el*this%vecpot(1:MAX_DIM)/P_c
+    force(1:MAX_DIM) = force(1:MAX_DIM) - this%wp2*this%vecpot(1:MAX_DIM)
 
     deallocate(gpsi)
-
-    force = force*M_FOUR*M_PI*P_c/gr%sb%rcell_volume
 
   end function gauge_field_get_force
 
@@ -266,7 +302,7 @@ contains
     type(gauge_field_t),  intent(in)    :: this
     type(simul_box_t),    intent(in)    :: sb
 
-    energy = sb%rcell_volume/(M_EIGHT*M_PI)*sum(this%vecpot_vel(1:MAX_DIM)**2)/P_c**2
+    energy = sb%rcell_volume/(M_EIGHT*M_PI*P_c**2)*sum(this%vecpot_vel(1:MAX_DIM)**2)
 
   end function gauge_field_get_energy
 

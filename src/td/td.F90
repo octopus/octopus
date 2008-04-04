@@ -155,13 +155,16 @@ contains
 
     ! Calculate initial value of the gauge vector field
     if (gauge_field_is_applied(h%ep%gfield)) then
+
       if(td%iter > 0) then
         call td_read_gauge_field()
+      else
+        call gauge_field_init_vec_pot(h%ep%gfield, gr%m, gr%sb, st, td%dt)
       end if
-    end if
 
-    if(gauge_field_is_applied(h%ep%gfield)) &
       gauge_force = gauge_field_get_force(h%ep%gfield, gr, geo, h%ep%p, st)
+
+    end if
 
     if(td%iter == 0) call td_run_zero_iter()
 

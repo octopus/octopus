@@ -31,9 +31,9 @@ program dielectric_function
 
   implicit none
 
-  integer :: in_file, out_file, ii, jj, kk
+  integer :: in_file, out_file, ii, jj, kk, idir
   integer :: time_steps, energy_steps, istart, iend, ntiter
-  FLOAT :: vecpot0(1:MAX_DIM), dt, tt, ww
+  FLOAT :: vecpot0(1:MAX_DIM), dt, tt, ww, av
   FLOAT, allocatable :: vecpot(:, :), dumpa(:)
   CMPLX, allocatable :: dielectric(:,:)
   FLOAT, parameter :: eta = CNST(0.1)/CNST(27.211383)
@@ -117,6 +117,12 @@ program dielectric_function
     end select
   end do
 
+  !remove the dc component
+  do idir = 1, MAX_DIM
+    av = sum(vecpot(idir, istart:iend))
+    vecpot(idir, istart:iend) = vecpot(idir, istart:iend) - av/dble(ntiter)
+  end do
+
   energy_steps = s%max_energy / s%energy_step
   ALLOCATE(dielectric(1:MAX_DIM, 0:energy_steps), MAX_DIM*(energy_steps + 1))
   
@@ -126,17 +132,17 @@ program dielectric_function
     do ii = istart, iend
       tt = ii*dt
       dielectric(1:MAX_DIM, kk) = dielectric(1:MAX_DIM, kk) + &
-           vecpot(MAX_DIM + 1:2*MAX_DIM, ii)*exp((M_zI*ww - eta)*tt)*dumpa(ii)
+           vecpot(MAX_DIM + 1:2*MAX_DIM, ii)*exp((M_zI*ww)*tt)*dumpa(ii)*dt
     end do
 
-    dielectric(1:MAX_DIM, kk) = vecpot0(1:MAX_DIM)/(dielectric(1:MAX_DIM, kk) + vecpot0(1:MAX_DIM))
+    dielectric(1:MAX_DIM, kk) = dielectric(1:MAX_DIM, kk)/vecpot0(1:MAX_DIM) + 1
     
   end do
 
   out_file = io_open('td.general/dielectric_function', action='write')
   do kk = 0, energy_steps
     ww = kk*s%energy_step
-    write(out_file, '(i10, 7e15.6)') kk, ww,                                &
+    write(out_file, '(7e15.6)') ww,                                         &
          real(dielectric(1, kk), REAL_PRECISION), aimag(dielectric(1, kk)), &
          real(dielectric(2, kk), REAL_PRECISION), aimag(dielectric(2, kk)), &
          real(dielectric(3, kk), REAL_PRECISION), aimag(dielectric(3, kk))
