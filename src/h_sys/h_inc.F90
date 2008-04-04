@@ -1069,7 +1069,7 @@ subroutine X(vgauge) (gr, h, psi, hpsi)
 
     vecpot = gauge_field_get_vec_pot(h%ep%gfield)/P_c
 
-    ALLOCATE(grad(NP_PART, NDIM, h%d%dim), NP_PART*h%d%dim*NDIM)
+    ALLOCATE(grad(NP, NDIM, h%d%dim), NP*h%d%dim*NDIM)
 
     do idim = 1, h%d%dim
       call X(f_gradient)(gr%sb, gr%f_der, psi(:, idim), grad(:, :, idim))
@@ -1079,10 +1079,10 @@ subroutine X(vgauge) (gr, h, psi, hpsi)
       hpsi(k, :) = hpsi(k, :) + M_HALF*sum(vecpot(:)**2)*psi(k, :)
       select case(h%d%ispin)
       case(UNPOLARIZED, SPIN_POLARIZED)
-        hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(vecpot(1:NDIM), grad(k, 1:NDIM, 1))
+        hpsi(k, 1) = hpsi(k, 1) + M_zI*dot_product(vecpot(1:NDIM), grad(k, 1:NDIM, 1))
       case (SPINORS)
         do idim = 1, h%d%dim
-          hpsi(k, idim) = hpsi(k, idim) - M_zI*dot_product(vecpot(1:NDIM), grad(k, 1:NDIM, idim))
+          hpsi(k, idim) = hpsi(k, idim) + M_zI*dot_product(vecpot(1:NDIM), grad(k, 1:NDIM, idim))
         end do
       end select
     end do

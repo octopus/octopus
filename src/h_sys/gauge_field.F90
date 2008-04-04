@@ -227,6 +227,7 @@ contains
     call write_info(1)
 
     this%vecpot_vel = this%wp2*this%vecpot*dt
+    this%vecpot_acc = -this%wp2*this%vecpot
 
   end subroutine gauge_field_init_vec_pot
 
@@ -292,7 +293,7 @@ contains
     
 #ifdef HAVE_MPI
     if(st%parallel_in_states) then
-      call MPI_Allreduce(force, force_tmp, 3, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+      call MPI_Allreduce(force, force_tmp, MAX_DIM, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
       force_tmp = force
     end if
 #endif
