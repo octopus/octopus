@@ -126,6 +126,7 @@ module states_m
 
     integer :: wfs_type             ! real (M_REAL) or complex (M_CMPLX) wavefunctions
     ! pointers to the wavefunctions 
+    logical :: only_userdef_istates ! only use user defined states initial states in propagation
     FLOAT, pointer :: dpsi(:,:,:,:) ! dpsi(sys%NP_PART, st%d%dim, st%nst, st%d%nik)
     CMPLX, pointer :: zpsi(:,:,:,:) ! zpsi(sys%NP_PART, st%d%dim, st%nst, st%d%nik)
 
@@ -328,6 +329,17 @@ contains
     if(calc_mode.eq.M_TD_TRANSPORT) then
       st%wfs_type = M_CMPLX
     end if
+
+    !%Variable OnlyUserDefinedInitialStates
+    !%Type logical
+    !%Default no
+    !%Section States
+    !%Description
+    !% If true, then only user defined states from the block UserDefinedStates
+    !% will be used as initial states for a time propagation. No attempt is made
+    !% to load ground state orbitals from a previous ground state run.
+    !%End
+    call loct_parse_logical(check_inp('OnlyUserDefinedInitialStates'), .false., st%only_userdef_istates)
 
     ! we now allocate some arrays
     ALLOCATE(st%occ     (st%nst, st%d%nik),      st%nst*st%d%nik)

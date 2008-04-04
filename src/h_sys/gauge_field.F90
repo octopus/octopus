@@ -271,11 +271,13 @@ contains
           end do
         end do
 
-        do idir = 1, gr%sb%dim
-          do iatom = 1, geo%natoms
-            call zprojector_conmut_r(pj(iatom), gr, st%d%dim, idir, ik, st%zpsi(:, 1, ist, ik), gpsi(:, idir, :))
+        if(.not. st%only_userdef_istates) then
+          do idir = 1, gr%sb%dim
+            do iatom = 1, geo%natoms
+              call zprojector_conmut_r(pj(iatom), gr, st%d%dim, idir, ik, st%zpsi(:, 1, ist, ik), gpsi(:, idir, :))
+            end do
           end do
-        end do
+        end if
         
         do idir = 1, gr%sb%dim
           force(idir) = force(idir) + M_FOUR*M_PI*P_c/gr%sb%rcell_volume*st%d%kweights(ik)*st%occ(ist, ik)*&

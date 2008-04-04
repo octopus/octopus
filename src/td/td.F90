@@ -338,7 +338,6 @@ contains
       integer :: i, is, ierr, ist, jst
       character(len=50) :: filename
       FLOAT :: x
-      logical :: only_userdef_istates
       type(block_t) :: blk
       type(states_t) :: stin
       CMPLX, allocatable :: rotation_matrix(:, :)
@@ -385,18 +384,7 @@ contains
 
       if(fromScratch) then
 
-        !%Variable OnlyUserDefinedInitialStates
-        !%Type logical
-        !%Default no
-        !%Section States
-        !%Description
-        !% If true, then only user defined states from the block UserDefinedStates
-        !% will be used as initial states for a time propagation. No attempt is made
-        !% to load ground state orbitals from a previous ground state run.
-        !%End
-        call loct_parse_logical(check_inp('OnlyUserDefinedInitialStates'), .false., only_userdef_istates)
-
-        if(.not. only_userdef_istates) then
+        if(.not. st%only_userdef_istates) then
           call restart_read(trim(tmpdir)//'gs', st, gr, geo, ierr)
           if(ierr.ne.0) then
             message(1) = "Could not read KS orbitals from '"//trim(tmpdir)//"gs'"
