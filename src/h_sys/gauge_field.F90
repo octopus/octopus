@@ -224,6 +224,7 @@ contains
     this%wp2 = M_FOUR*M_PI*n_el/sb%rcell_volume
 
     write (message(1), '(a,f12.6)') "Info: Electron gas plasmon frequency", sqrt(this%wp2)
+    call write_info(1)
 
     this%vecpot_vel = this%wp2*this%vecpot*dt
 
@@ -247,19 +248,20 @@ contains
     type(states_t),       intent(inout) :: st
     
     integer :: ik, ist, idir, idim, iatom
-    CMPLX, allocatable :: gpsi(:, :, :)
+    CMPLX, allocatable :: gpsi(:, :, :), cpsi(:, :)
     FLOAT :: force(1:MAX_DIM)
 #ifdef HAVE_MPI
     FLOAT :: force_tmp(1:MAX_DIM)
 #endif
 
     ALLOCATE(gpsi(gr%m%np, 1:NDIM, st%d%dim), gr%m%np*NDIM*st%d%dim)
+    ALLOCATE(cpsi(gr%m%np, st%d%dim), gr%m%np*st%d%dim)
 
     force(1:MAX_DIM) = M_ZERO
     
     do ik = 1, st%d%nik
       do ist = st%st_start, st%st_end
-        
+
         do idim = 1, st%d%dim
           call zf_gradient(gr%sb, gr%f_der, st%zpsi(:, idim, ist, ik), gpsi(:, :, idim))
         end do
@@ -271,13 +273,14 @@ contains
           end do
         end do
 
-        if(.not. st%only_userdef_istates) then
-          do idir = 1, gr%sb%dim
-            do iatom = 1, geo%natoms
-              call zprojector_conmut_r(pj(iatom), gr, st%d%dim, idir, ik, st%zpsi(:, 1, ist, ik), gpsi(:, idir, :))
-            end do
+        do idir = 1, gr%sb%dim
+          do iatom = 1, geo%natoms
+            if(specie_is_ps(geo%atom(iatom)%spec)) then
+              call zprojector_conmut_r(pj(iatom), gr, st%d%dim, idir, ik, st%zpsi(:, 1, ist, ik), cpsi(:, :))
+              gpsi(1:NP, idir, 1:st%d%dim) = gpsi(1:NP, idir, 1:st%d%dim) + cpsi(1:NP, 1:st%d%dim)
+            end if
           end do
-        end if
+        end do
         
         do idir = 1, gr%sb%dim
           force(idir) = force(idir) + M_FOUR*M_PI*P_c/gr%sb%rcell_volume*st%d%kweights(ik)*st%occ(ist, ik)*&
@@ -296,7 +299,7 @@ contains
 
     force(1:MAX_DIM) = force(1:MAX_DIM) - this%wp2*this%vecpot(1:MAX_DIM)
 
-    deallocate(gpsi)
+    deallocate(gpsi, cpsi)
 
   end function gauge_field_get_force
 
