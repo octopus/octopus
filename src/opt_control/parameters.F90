@@ -66,6 +66,7 @@ module opt_control_parameters_m
             parameters_update,            &
             parameters_number,            &
             parameters_nfreqs,            &
+            parameters_w0,                &
             parameters_alpha,             &
             parameters_targetfluence,     &
             parameters_filter
@@ -1241,6 +1242,14 @@ contains
     type(oct_control_parameters_t), intent(in) :: par
     parameters_nfreqs = par%nfreqs
   end function parameters_nfreqs
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  FLOAT function parameters_w0(par)
+    type(oct_control_parameters_t), intent(in) :: par
+    parameters_w0 = par%w0
+  end function parameters_w0
   ! ---------------------------------------------------------
 
 

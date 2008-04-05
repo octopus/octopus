@@ -182,7 +182,7 @@ contains
     call filter_write(filter)
 
     call initial_state_init(sys%gr, sys%geo, sys%st, initial_st)
-    call target_init(sys%gr, sys%geo, sys%st, td, target)
+    call target_init(sys%gr, sys%geo, sys%st, td, parameters_w0(par), target)
 
     call check_faulty_runmodes(sys, h, td%tr)
 

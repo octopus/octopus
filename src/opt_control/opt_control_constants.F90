@@ -50,7 +50,8 @@ module opt_control_constants_m
     oct_tg_density          = 5,      &        
     oct_tg_local            = 6,      &
     oct_tg_td_local         = 7,      &
-    oct_tg_exclude_state    = 8
+    oct_tg_exclude_state    = 8,      &
+    oct_tg_hhg              = 9
 
   integer, parameter ::  &
     oct_algorithm_zbr98              = 1,       &

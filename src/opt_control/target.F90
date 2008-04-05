@@ -36,6 +36,7 @@ module opt_control_target_m
   use h_sys_output_m
   use io_function_m
   use geometry_m
+  use functions_m
   use mesh_m
   use mesh_function_m
   use restart_m
@@ -66,18 +67,22 @@ module opt_control_target_m
     FLOAT, pointer :: td_fitness(:)
     character(len=200) :: td_local_target
     integer :: excluded_states
+    integer :: hhg_k
+    FLOAT   :: hhg_w0
+    FLOAT   :: dt
   end type target_t
 
   contains
 
 
   ! ----------------------------------------------------------------------
-  subroutine target_init(gr, geo, stin, td, target)
-    type(grid_t), intent(in)      :: gr
-    type(geometry_t), intent(in)  :: geo
-    type(states_t), intent(in)    :: stin
-    type(td_t), intent(in)        :: td
-    type(target_t), intent(inout) :: target
+  subroutine target_init(gr, geo, stin, td, w0, target)
+    type(grid_t),     intent(in)    :: gr
+    type(geometry_t), intent(in)    :: geo
+    type(states_t),   intent(in)    :: stin
+    type(td_t),       intent(in)    :: td
+    FLOAT,            intent(in)    :: w0
+    type(target_t),   intent(inout) :: target
 
     integer           :: ierr, ip, ist, jst
     type(block_t)         :: blk
@@ -117,11 +122,14 @@ module opt_control_target_m
     !% Target operator is the projection onto the complement of a given state, given by the
     !% block OCTTargetTransformStates. This means that the target operator is the unity
     !% operator minus the projector onto that state.
+    !%Option oct_tg_hhg 9
+    !% The target is the optimization of the HHG yield.
     !%End
     call loct_parse_int(check_inp('OCTTargetOperator'), oct_tg_gstransformation, target%type)
     if(.not.varinfo_valid_option('OCTTargetOperator', target%type)) call input_error('OCTTargetOperator')
 
     call states_copy(target%st, stin)
+    nullify(target%td_fitness)
 
     select case(target%type)
     case(oct_tg_groundstate)
@@ -133,7 +141,6 @@ module opt_control_target_m
         write(message(1),'(a)') 'Could not read ground-state wavefunctions from '//trim(tmpdir)//'gs.'
         call write_fatal(1)
       end if
-
       
     case(oct_tg_excited) 
 
@@ -345,13 +352,36 @@ module opt_control_target_m
 
     case(oct_tg_td_local)
       target%mode = oct_targetmode_td
-      call tdtarget_init(target, gr, td)
+      if(loct_parse_block(check_inp('OCTTdTarget'),blk)==0) then
+        call loct_parse_block_string(blk, 0, 0, target%td_local_target)
+        call conv_to_C_string(target%td_local_target)
+        ALLOCATE(target%rho(NP), NP)
+      else
+        message(1) = 'If OCTTargetMode = oct_targetmode_td, you must suppy a OCTTDTarget block'
+        call write_fatal(1)
+      end if
+      ALLOCATE(target%td_fitness(0:td%max_iter), td%max_iter+1)
+
+
+    case(oct_tg_hhg)
+      !%Variable OCTOptimizeKthHarmonic
+      !%Type integer
+      !%Default 3
+      !%Section Optimal Control
+      !%Description
+      !% WARNING: Experimental
+      !%End
+      target%mode = oct_targetmode_td 
+      call loct_parse_int(check_inp('OCTOptimizeKthHarmonic'), 3, target%hhg_k)
+      target%hhg_w0 = w0
+      target%dt     = td%dt
+      ALLOCATE(target%td_fitness(0:td%max_iter), td%max_iter+1)
+      target%td_fitness = M_ZERO
 
     case default
       write(message(1),'(a)') "Target Operator not properly defined."
       call write_fatal(1)
     end select
-
 
     call pop_sub()
   end subroutine target_init
@@ -424,7 +454,8 @@ module opt_control_target_m
     type(states_t),    intent(in) :: psi
     integer,           intent(in) :: i
     CMPLX, allocatable :: opsi(:, :)
-    integer :: p, j
+    FLOAT, allocatable :: multipole(:, :)
+    integer :: p, j, is
 
     if(target%mode .ne. oct_targetmode_td) return
 
@@ -451,6 +482,14 @@ module opt_control_target_m
       case(SPINORS);        stop 'Error'
       end select
 
+    case(oct_tg_hhg)
+
+      ALLOCATE(multipole(4, psi%d%nspin), 4*psi%d%nspin)
+      do is = 1, psi%d%nspin
+        call df_multipoles(gr%m, psi%rho(:, is), 1, multipole(:, is))
+      end do
+      target%td_fitness(i) = sum(multipole(2, 1:psi%d%spin_channels))
+      deallocate(multipole)
 
     case default
       stop 'Error at calc_tdfitness'
@@ -495,54 +534,6 @@ module opt_control_target_m
 
 
   !----------------------------------------------------------
-  ! 
-  !----------------------------------------------------------
-  subroutine tdtarget_init(target, gr, td)
-    type(target_t), intent(inout) :: target
-    type(grid_t),      intent(in) :: gr
-    type(td_t),        intent(in) :: td
-
-    type(block_t) :: blk
-
-    call push_sub('target.tdtarget_init')
-
-    !%Variable OCTTdTarget
-    !%Type block
-    !%Section Optimal Control
-    !%Description
-    !% octopus features also time-dependent targets, i.e., one wants to optimize a laser 
-    !% field that achieves a predefined time-dependent target. An example, could be the 
-    !% evolution of occupation numbers in time. A time-dependent target consists of two 
-    !% parts, i.e., the operator itself (a projection or a local operator) and its 
-    !% time-dependence. 
-    !%End
-    if(loct_parse_block(check_inp('OCTTdTarget'),blk)==0) then
-      select case(target%type)
-      case(oct_tg_td_local)
-        call loct_parse_block_string(blk, 0, 0, target%td_local_target)
-        call conv_to_C_string(target%td_local_target)
-        ALLOCATE(target%rho(NP), NP)
-      case default
-        stop 'ERROR in tdtarget_init'
-      end select
-      call loct_parse_block_end(blk)
-    else
-      message(1) = 'If OCTTargetMode = oct_targetmode_td, you must suppy a OCTTDTarget block'
-      call write_fatal(1)
-    end if
-
-    if(target%mode .ne. oct_targetmode_td ) then
-      nullify(target%td_fitness)
-    else
-      ALLOCATE(target%td_fitness(0:td%max_iter), td%max_iter+1)
-    end if
-
-    call pop_sub()
-  end subroutine tdtarget_init
-  !----------------------------------------------------------
-
-
-  !----------------------------------------------------------
   subroutine tdtarget_build_tdlocal(target, gr, t)
     type(target_t), intent(inout) :: target
     type(grid_t),      intent(in) :: gr
@@ -573,11 +564,13 @@ module opt_control_target_m
     type(grid_t),   intent(inout)   :: gr
     type(states_t), intent(inout)   :: psi
 
-    integer :: i, p, j
+    integer :: i, p, j, maxiter
+    FLOAT :: t, omega
+    CMPLX :: dw
     FLOAT, allocatable :: local_function(:)
     CMPLX, allocatable :: opsi(:, :)
 
-    call push_sub('aux.j1_functional')
+    call push_sub('target.j1_functional')
 
     select case(target%type)
     case(oct_tg_density)
@@ -629,6 +622,17 @@ module opt_control_target_m
 !!$        end do
 !!$      end if
 
+    case(oct_tg_hhg)
+      maxiter = size(target%td_fitness) - 1
+      dw = M_z0
+      omega = target%hhg_w0*target%hhg_k
+      ! Maybe we should get the second derivative?
+      do i = 0, maxiter
+        t = (i-1)*target%dt
+        dw = dw + target%td_fitness(i) * exp(-M_zI*omega*t)
+      end do
+      j1 = conjg(dw)*dw
+
     case default
       j1 = abs(zstates_mpdotp(gr%m, psi, target%st))**2
 
@@ -653,7 +657,7 @@ module opt_control_target_m
     CMPLX, allocatable :: cI(:), dI(:), mat(:, :, :), mm(:, :, :, :), mk(:, :), lambda(:, :)
     integer :: ik, p, dim, k, j, no_electrons, ia, ib, n_pairs, nst, kpoints, jj
 
-    call push_sub('opt_control.calc_chi')
+    call push_sub('target.calc_chi')
 
     no_electrons = -nint(psi_in%val_charge)
 
