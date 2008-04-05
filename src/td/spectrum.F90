@@ -1010,17 +1010,17 @@ contains
       read(iunit, *) j, dump, dump, d
       select case(sh%pol)
       case('x')
-        dipole(i) = -sum(d(3, :))
-      case('y')
         dipole(i) = -sum(d(1, :))
+      case('y')
+        dipole(i) = -sum(d(2, :))
       case('z')
-        dipole(i) =  sum(d(2, :))
+        dipole(i) =  sum(d(3, :))
       case('+')
-        dipole(i) = -sum(d(3, :) + M_zI*d(1, :)) / sqrt(M_TWO)
+        dipole(i) = -sum(d(1, :) + M_zI*d(2, :)) / sqrt(M_TWO)
       case('-')
-        dipole(i) = -sum(d(3, :) - M_zI*d(1, :)) / sqrt(M_TWO)
+        dipole(i) = -sum(d(1, :) - M_zI*d(2, :)) / sqrt(M_TWO)
       end select
-      dipole(i) = dipole(i) * units_out%length%factor * sqrt(M_FOUR*M_PI/M_THREE)
+      dipole(i) = dipole(i) * units_out%length%factor 
     end do
     deallocate(d)
 
