@@ -99,6 +99,7 @@ contains
       call states_copy(psi, initial_st)
       call propagate_forward(sys_, h_, td_, par_, target, psi)
       f = - j1_functional(target, sys_%gr, psi)
+      if(oct%dump_intermediate) call iterator_write(iterator, par_)
       call iteration_manager_direct(-f, par_, iterator)
       call states_end(psi)
     else
@@ -106,11 +107,11 @@ contains
       call f_striter(sys_, h_, td_, par_new, j1)
       delta = parameters_diff(par_, par_new)
       f = - oct%eta * j1 + oct%delta * delta
+      if(oct%dump_intermediate) call iterator_write(iterator, par_)
       call iteration_manager_direct(-f, par_, iterator, delta)
       call parameters_end(par_new)
     end if
 
-    if(oct%dump_intermediate) call iterator_write(iterator, par_)
 
   end subroutine direct_opt_calc
   ! ---------------------------------------------------------

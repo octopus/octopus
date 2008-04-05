@@ -300,7 +300,9 @@ contains
       ! that performs the transformation of variables that takes {f_n} to
       ! {h_n}, (\vec{h} = U\vec{f}), such that
       !   F[e] = sum-{m=1}^N h_n^2.
-      ! The inverse matrix U^{-1} is palced in par%utransfi.
+      ! The inverse matrix U^{-1} is placed in par%utransfi.
+      !
+      ! This scan probably be optimized in some way?
       ALLOCATE(eigenvec(par%nfreqs, par%nfreqs), par%nfreqs*par%nfreqs)
       ALLOCATE(eigenval(par%nfreqs), par%nfreqs)
       ALLOCATE(par%utransf (par%nfreqs, par%nfreqs), par%nfreqs*par%nfreqs)
@@ -309,7 +311,7 @@ contains
       par%utransfi = M_ZERO
 
       do mm = 1, par%nfreqs
-        do nn = 1, par%nfreqs
+        do nn = mm, par%nfreqs
           call tdf_init_numerical(fn, par%ntiter, par%dt, initval = M_z0, omegamax = par%omegamax)
           call tdf_init_numerical(fm, par%ntiter, par%dt, initval = M_z0, omegamax = par%omegamax)
           call tdf_numerical_to_sineseries(fn, par%omegamax)
@@ -331,6 +333,11 @@ contains
 
           call tdf_end(fm)
           call tdf_end(fn)
+        end do
+      end do
+      do mm = 1, par%nfreqs
+        do nn = 1, mm - 1
+          par%utransf(mm, nn) = par%utransf(nn, mm)
         end do
       end do
 
