@@ -1018,11 +1018,11 @@ contains
       case('z')
         dipole(i) =  sum(d(3, :))
       case('+')
-        dipole(i) = -sum(d(1, :) + M_zI*d(3, :)) / sqrt(M_TWO)
+        dipole(i) = -sum(d(1, :) + M_zI*d(2, :)) / sqrt(M_TWO)
       case('-')
         dipole(i) = -sum(d(1, :) - M_zI*d(2, :)) / sqrt(M_TWO)
       end select
-      dipole(i) = dipole(i) * units_out%length%factor !* sqrt(M_FOUR*M_PI/M_THREE)
+      dipole(i) = dipole(i) * units_out%length%factor 
     end do
     deallocate(d)
 
