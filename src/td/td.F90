@@ -39,6 +39,7 @@ module timedep_m
   use ion_dynamics_m
   use loct_m
   use profiling_m
+  use projector_m
   use scf_m
   use states_m
   use restart_m
@@ -106,7 +107,7 @@ contains
     type(states_t),   pointer :: st
     type(geometry_t), pointer :: geo
     logical                   :: stopping
-    integer                   :: i, ii, ik, ierr
+    integer                   :: i, ii, ik, ierr, iatom
     real(8)                   :: etime
     logical                   :: generate
     FLOAT                     :: gauge_force(1:MAX_DIM)
@@ -163,6 +164,10 @@ contains
       end if
 
       gauge_force = gauge_field_get_force(h%ep%gfield, gr, geo, h%ep%p, st)
+
+      do iatom = 1, geo%natoms
+         call projector_init_phases(h%ep%p(iatom), gr%m, st%d%nik, st%d%kpoints, gauge_field_get_vec_pot(h%ep%gfield))
+      end do
 
     end if
 
@@ -257,8 +262,15 @@ contains
       end if
 
       if(gauge_field_is_applied(h%ep%gfield)) then
+
         gauge_force = gauge_field_get_force(h%ep%gfield, gr, geo, h%ep%p, st)
+
         call gauge_field_propagate_vel(h%ep%gfield, gauge_force, td%dt)
+
+        do iatom = 1, geo%natoms
+          call projector_init_phases(h%ep%p(iatom), gr%m, st%d%nik, st%d%kpoints, gauge_field_get_vec_pot(h%ep%gfield)/P_c)
+        end do
+
       end if
 
       call td_write_iter(write_handler, gr, st, h, geo, td%kick, td%dt, i)
