@@ -226,8 +226,7 @@ contains
     write (message(1), '(a,f12.6)') "Info: Electron gas plasmon frequency", sqrt(this%wp2)
     call write_info(1)
 
-    this%vecpot_vel = this%wp2*this%vecpot*dt
-    this%vecpot_acc = -this%wp2*this%vecpot
+    this%vecpot_vel = -this%wp2*this%vecpot*dt
 
   end subroutine gauge_field_init_vec_pot
 

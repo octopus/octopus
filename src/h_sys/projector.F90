@@ -188,7 +188,7 @@ contains
 
       do is = 1, ns
         kr = sum(kpoints(1:MAX_DIM, ik)*(this%sphere%x(is, 1:MAX_DIM) - m%x(this%sphere%jxyz(is), 1:MAX_DIM)))
-        if(present(vec_pot)) kr = kr + sum(-vec_pot(1:MAX_DIM)*this%sphere%x(is, 1:MAX_DIM))
+        if(present(vec_pot)) kr = kr + sum(vec_pot(1:MAX_DIM)*this%sphere%x(is, 1:MAX_DIM))
         this%phase(is, ik) = exp(-M_zI*kr)
       end do
 
