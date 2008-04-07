@@ -1059,34 +1059,33 @@ subroutine X(vgauge) (gr, h, psi, hpsi)
   R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
   R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, h%d%dim)
 
-  integer :: k, idim
+  integer :: ip, idim, a2
   R_TYPE, allocatable :: grad(:,:,:)
   FLOAT :: vecpot(1:MAX_DIM)
 
   call push_sub('h_inc.Xvgauge')
 
-  if (gauge_field_is_applied(h%ep%gfield)) then
-
-    vecpot = gauge_field_get_vec_pot(h%ep%gfield)/P_c
-
-    ALLOCATE(grad(NP, NDIM, h%d%dim), NP*h%d%dim*NDIM)
-
-    do idim = 1, h%d%dim
-      call X(f_gradient)(gr%sb, gr%f_der, psi(:, idim), grad(:, :, idim))
-    end do
-
-    do k = 1, NP
-      hpsi(k, :) = hpsi(k, :) + M_HALF*sum(vecpot(:)**2)*psi(k, :)
-      select case(h%d%ispin)
-      case(UNPOLARIZED, SPIN_POLARIZED)
-        hpsi(k, 1) = hpsi(k, 1) + M_zI*dot_product(vecpot(1:NDIM), grad(k, 1:NDIM, 1))
-      case (SPINORS)
-        do idim = 1, h%d%dim
-          hpsi(k, idim) = hpsi(k, idim) + M_zI*dot_product(vecpot(1:NDIM), grad(k, 1:NDIM, idim))
-        end do
-      end select
-    end do
+  if (.not. gauge_field_is_applied(h%ep%gfield)) then 
+    call pop_sub()
+    return
   end if
+
+  vecpot = gauge_field_get_vec_pot(h%ep%gfield)/P_c
+  a2 = sum(vecpot(1:MAX_DIM)**2)
+  
+  ALLOCATE(grad(NP, MAX_DIM, h%d%dim), NP*h%d%dim*MAX_DIM)
+  
+  do idim = 1, h%d%dim 
+    ! boundary points were already set
+    call X(derivatives_grad)(gr%f_der%der_discr, psi(:, idim), grad(:, :, idim), ghost_update = .false., set_bc = .false.)
+  end do
+  
+  do idim = 1, h%d%dim
+    do ip = 1, NP
+      hpsi(ip, idim) = hpsi(ip, idim) + &
+           M_HALF*a2*psi(ip, idim) + M_zI*dot_product(vecpot(1:MAX_DIM), grad(ip, 1:MAX_DIM, idim))
+    end do
+  end do
 
   call pop_sub()
 end subroutine X(vgauge)

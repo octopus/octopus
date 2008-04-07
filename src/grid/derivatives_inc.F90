@@ -141,13 +141,15 @@ subroutine X(derivatives_lapl)(der, f, lapl, ghost_update, set_bc)
 end subroutine X(derivatives_lapl)
 
 ! ---------------------------------------------------------
-subroutine X(derivatives_grad)(der, f, grad, ghost_update)
+subroutine X(derivatives_grad)(der, f, grad, ghost_update, set_bc)
   type(der_discr_t), intent(in)    :: der
   R_TYPE,            intent(inout) :: f(:)       ! f(m%np_part)
   R_TYPE,            intent(out)   :: grad(:,:)  ! grad(m%np, m%sb%dim)
   logical, optional, intent(in)    :: ghost_update
+  logical, optional, intent(in)    :: set_bc
 
   integer :: idir
+  logical :: set_bc_
 #ifdef HAVE_MPI
   type(pv_handle_t) :: pv_h
   logical :: ghost_update_
@@ -159,7 +161,9 @@ subroutine X(derivatives_grad)(der, f, grad, ghost_update)
   ASSERT(ubound(grad, DIM=1) >= der%m%np)
   ASSERT(ubound(grad, DIM=2) >= der%m%sb%dim)
 
-  call X(set_bc)(der, f)
+  set_bc_ = .true.
+  if(present(set_bc)) set_bc_ = set_bc
+  if(set_bc_) call X(set_bc)(der, f)
 
 #ifdef HAVE_MPI
   ghost_update_ = .true.
