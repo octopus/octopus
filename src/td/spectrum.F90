@@ -1052,18 +1052,19 @@ contains
       do j = is, ie
         c = c + exp(M_zI * i * s%energy_step * j * dt)*dipole(j)
       end do
-      sh%sp(i) = abs(c)**2
+      sh%sp(i) = abs(c)**2*dt**2
     end do
     deallocate(dipole)
 
     ! output
     if(trim(out_file) .ne. '-') then
       iunit = io_open(trim(out_file) // "." // trim(sh%pol), action='write')
-
-      ! should output units, etc...
+      write(iunit, '(a1,a20,a20)') '#', str_center("w", 20), str_center("H(w)", 20)
+      write(iunit, '(a1,a20,a20)') '#', str_center('['//trim(units_out%energy%abbrev) // ']', 20), &
+         str_center('[('//trim(units_out%length%abbrev)//'/'//trim(units_out%time%abbrev)//')^2]' , 20)
       do i = 0, sh%no_e
-        write(iunit, '(5e15.6)') i*s%energy_step / units_out%energy%factor, &
-          sh%sp(i) * units_out%energy%factor
+        write(iunit, '(1x,2e20.8)') i*s%energy_step / units_out%energy%factor, &
+          sh%sp(i) / (units_out%length%factor / units_out%time%factor)**2
       end do
       call io_close(iunit)
     end if
@@ -1116,18 +1117,19 @@ contains
       do j = is, ie
         c = c + exp(M_zI * i * s%energy_step * j * dt)*acc(j)
       end do
-      sh%sp(i) = abs(c)**2
+      sh%sp(i) = abs(c)**2*dt**2
     end do
     deallocate(acc)
 
     ! output
     if(trim(out_file) .ne. '-') then
       iunit = io_open(trim(out_file) // "." // trim(sh%pol), action='write')
-
-      ! should output units, etc...
+      write(iunit, '(a1,a20,a20)') '#', str_center("w", 20), str_center("H(w)", 20)
+      write(iunit, '(a1,a20,a20)') '#', str_center('['//trim(units_out%energy%abbrev) // ']', 20), &
+         str_center('[('//trim(units_out%length%abbrev)//'/'//trim(units_out%time%abbrev)//')^2]' , 20)
       do i = 0, sh%no_e
-        write(iunit, '(5e15.6)') i*s%energy_step / units_out%energy%factor, &
-          sh%sp(i) * units_out%energy%factor
+        write(iunit, '(2e15.6)') i*s%energy_step / units_out%energy%factor, &
+          sh%sp(i) / (units_out%length%factor / units_out%time%factor)**2
       end do
       call io_close(iunit)
     end if
