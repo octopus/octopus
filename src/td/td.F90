@@ -619,16 +619,16 @@ contains
     subroutine td_read_gauge_field()
       
       integer :: i, iunit, record_length
-      FLOAT :: vecpot(1:MAX_DIM), vecpot_vel(1:MAX_DIM)
+      FLOAT :: vecpot(1:MAX_DIM), vecpot_vel(1:MAX_DIM), dummy(1:MAX_DIM)
 
       call push_sub('td.td_read_gauge_field')
 
       record_length = 28 + 3*3*20
       call io_assign(iunit)
-      open(unit = iunit, file = 'td.general/A_gauge', &
+      open(unit = iunit, file = 'td.general/gauge_field', &
         action='read', status='old', recl = record_length)
       if(iunit < 0) then
-        message(1) = "Could not open file 'td.general/A_gauge'"
+        message(1) = "Could not open file 'td.general/gauge_field'"
         message(2) = "Starting simulation from initial value"
         call write_warning(2)
         return
@@ -643,6 +643,7 @@ contains
       ! TODO: units are missing
       read(iunit, '(3es20.12)', advance='no') vecpot(1:MAX_DIM)
       read(iunit, '(3es20.12)', advance='no') vecpot_vel(1:MAX_DIM)
+      read(iunit, '(3es20.12)', advance='no') dummy(1:MAX_DIM) ! skip the accel field.
 
       call gauge_field_set_vec_pot(h%ep%gfield, vecpot)
       call gauge_field_set_vec_pot_vel(h%ep%gfield, vecpot_vel)
