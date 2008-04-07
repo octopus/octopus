@@ -567,7 +567,7 @@ module opt_control_target_m
     integer :: i, p, j, maxiter
     FLOAT :: t, omega
     CMPLX :: dw
-    FLOAT, allocatable :: local_function(:)
+    FLOAT, allocatable :: local_function(:), dipole(:), ddipole(:)
     CMPLX, allocatable :: opsi(:, :)
 
     call push_sub('target.j1_functional')
@@ -624,14 +624,34 @@ module opt_control_target_m
 
     case(oct_tg_hhg)
       maxiter = size(target%td_fitness) - 1
+      ALLOCATE( dipole(0:maxiter), maxiter+1)
+      ALLOCATE(ddipole(0:maxiter), maxiter+1)
+      dipole = M_ZERO; ddipole = M_ZERO
+      dipole(0:maxiter) = target%td_fitness(0:maxiter)
+
+      ! we now calculate the first time derivative
+      ddipole(0) = (dipole(1) - dipole(0))/target%dt
+      do i = 1, maxiter - 1
+        ddipole(i) = (dipole(i + 1) - dipole(i - 1))/(M_TWO*target%dt)
+      end do
+      ddipole(maxiter) = (dipole(maxiter) - dipole(maxiter - 1))/target%dt
+      ! and the second time derivative
+      dipole(0) = (ddipole(1) - ddipole(0))/target%dt
+      do i = 1, maxiter - 1
+        dipole(i) = (ddipole(i + 1) - ddipole(i - 1))/(M_TWO*target%dt)
+      end do
+      dipole(maxiter) = (ddipole(maxiter) - ddipole(maxiter - 1))/target%dt
+ 
       dw = M_z0
       omega = target%hhg_w0*target%hhg_k
       ! Maybe we should get the second derivative?
       do i = 0, maxiter
         t = (i-1)*target%dt
-        dw = dw + target%td_fitness(i) * exp(-M_zI*omega*t)
+        dw = dw + dipole(i) * exp(-M_zI*omega*t)
       end do
-      j1 = conjg(dw)*dw
+      j1 = conjg(dw)*dw * (target%dt)**2
+
+      deallocate(dipole, ddipole)
 
     case default
       j1 = abs(zstates_mpdotp(gr%m, psi, target%st))**2
