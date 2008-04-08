@@ -73,7 +73,10 @@ module td_trans_rti_m
     CMPLX, pointer   :: mem_sp_coeff(:, :, :) ! sp_length, t, il (if mem_type=1)
     integer, pointer :: sp2full_map(:)        ! the mapping indices from sparse to full matrices
     CMPLX, pointer   :: src_mem_u(:, :)       ! t, il     u(m)
-    CMPLX, pointer   :: src_factor(:)         ! iter
+    FLOAT            :: energy                !
+    CMPLX            :: src_factor            ! (1 - i delta e)/(1+i delta e)
+    CMPLX            :: src_f0                ! 1/(1+i delta e)
+    CMPLX, pointer   :: src_prev(:, :, :, :, :)! intf%np, ndim, nst, nik, NLEADS
     CMPLX, pointer   :: diag(:, :, :)         ! h
     CMPLX, pointer   :: offdiag(:, :, :)      ! hopping operator V^T (np,np,nleads)
     CMPLX, pointer   :: mem_s(:, :, :, :)     ! the matrices to diagonalize coeff0
@@ -106,7 +109,6 @@ contains
     integer,           intent(in)  :: max_iter
 
     integer :: allocsize, id
-    FLOAT   :: energy
     type(nl_operator_t)  :: op
 
     call push_sub('td_trans_rti.cn_src_mem_init')
@@ -181,6 +183,15 @@ contains
     !%End
     call loct_parse_int(check_inp('TDTransAdditionalTerms'), mem_term_flag+src_term_flag, trans%additional_terms)
 
+    !%Variable TDTransEnergy
+    !%Type float
+    !%Default 0.1
+    !%Section Transport
+    !%Description
+    !% The energy for the wave function.
+    !%End
+    call loct_parse_float(check_inp('TDTransEnergy'), CNST(0.1), trans%energy)
+
     call lead_init(trans%lead, max_iter, dt)
 
     call td_trans_rti_write_info(trans, st, max_iter, gr%f_der%der_discr%order, trans%mem_type)
@@ -189,7 +200,8 @@ contains
                       trans%mem_coeff, trans%mem_sp_coeff, trans%mem_s, trans%diag, trans%offdiag, gr%sb%dim, &
                       gr%sb%h(1), trans%mem_type, gr%f_der%der_discr%order, trans%sp2full_map)
 
-    call source_init(st, trans%src_factor, trans%st_psi0, dt, energy, max_iter, trans%intface%np, gr)
+    call source_init(st, trans%src_factor, trans%src_f0, trans%src_prev, &
+                     trans%st_psi0, dt, trans%energy, trans%intface%np, gr)
 
     ! Allocate memory for the interface wave functions.
     allocsize = trans%intface%np*st%lnst*st%d%nik*(max_iter+1)*NLEADS
@@ -227,7 +239,7 @@ contains
 
     call intface_end(trans%intface)
     call lead_end(trans%lead)
-    call source_end(trans%src_factor, trans%st_psi0)
+    call source_end(trans%src_prev, trans%st_psi0)
     call memory_end(trans%mem_coeff, trans%mem_sp_coeff, trans%diag, trans%offdiag, trans%mem_s, trans%sp2full_map)
 
     call pop_sub()
@@ -558,8 +570,8 @@ contains
   ! Crank-Nicholson timestep with source and memory.
   ! Only non-interacting electrons for the moment, so no
   ! predictor-corrector scheme.
-  subroutine cn_src_mem_dt(intf, mem_type, mem, sp_mem, st_intf, ks, h, st, gr, dt,  &
-    t, max_iter, sm_u, u, timestep, src_factor, diag, offdiag, st_psi0, mem_s, &
+  subroutine cn_src_mem_dt(intf, mem_type, mem, sp_mem, st_intf, ks, h, st, gr, energy, dt,  &
+    t, max_iter, sm_u, td_pot, timestep, src_factor, src_prev, diag, offdiag, st_psi0, mem_s, &
     additional_terms, mapping)
     type(intface_t), target,     intent(in)    :: intf
     type(states_t),              intent(inout) :: st
@@ -568,15 +580,17 @@ contains
     type(v_ks_t),                intent(in)    :: ks
     type(hamiltonian_t), target, intent(inout) :: h
     type(grid_t), target,        intent(inout) :: gr
+    FLOAT, target,               intent(in)    :: energy
     FLOAT, target,               intent(in)    :: dt
     FLOAT, target,               intent(in)    :: t
     integer, target,             intent(in)    :: mem_type
     CMPLX, target,               intent(in)    :: mem(intf%np, intf%np, 0:max_iter, NLEADS)
     CMPLX, target,               intent(in)    :: sp_mem(intf%np*gr%f_der%der_discr%order, 0:max_iter, NLEADS)
     CMPLX, target,               intent(in)    :: sm_u(0:max_iter, NLEADS)
-    FLOAT, target,               intent(in)    :: u(0:max_iter, NLEADS)
+    FLOAT, target,               intent(in)    :: td_pot(0:max_iter, NLEADS)
     integer,                     intent(in)    :: timestep
     CMPLX, target,               intent(in)    :: src_factor(0:max_iter) ! max_iter
+    CMPLX, target,               intent(inout) :: src_prev(intf%np, 1, st%st_start:st%st_end, st%d%nik, NLEADS)
     CMPLX, target,               intent(in)    :: diag(intf%np, intf%np, NLEADS)
     CMPLX, target,               intent(in)    :: offdiag(intf%np, intf%np, NLEADS)   ! hopping operator V^T
     CMPLX, target,               intent(in)    :: st_psi0(:, :, :, :, :, :)
@@ -584,10 +598,9 @@ contains
     integer,                     intent(in)    :: additional_terms
     integer, target,             intent(in)    :: mapping(:)   ! the mapping
 
-    integer            :: il, it, m, cg_iter, j, order, ierr
+    integer            :: il, it, m, cg_iter, j, order, ierr, inp, groundstate
     integer, target    :: ist, ik
-    FLOAT              :: energy
-    CMPLX              :: factor
+    CMPLX              :: factor, alpha, fac, f0
     CMPLX, allocatable :: tmp(:, :), tmp_wf(:), tmp_mem(:, :)
     CMPLX, allocatable :: ext_wf(:,:,:,:) ! NP+2*np, ndim, nst, nik
 
@@ -596,8 +609,6 @@ contains
     order = gr%f_der%der_discr%order
     ALLOCATE(tmp(NP, st%d%ispin), NP*st%d%ispin)
     ALLOCATE(tmp_wf(intf%np), intf%np)
-    j = (NP+2*intf%np)*st%d%dim*st%lnst*st%d%nik*NLEADS 
-    ALLOCATE(ext_wf(NP+2*intf%np, st%d%dim, st%st_start:st%st_end,  st%d%nik), j)
     if (mem_type.eq.1) then
       ALLOCATE(tmp_mem(intf%np, intf%np), intf%np**2)
     else
@@ -623,30 +634,43 @@ contains
 
     m = timestep-1
     cg_iter = cg_max_iter
+    inp = intf%np
 
-if (m.eq.0) then
-! FIXME: this does NOT belong here
-!  energy = (timestep/M_TEN+3.825)*(M_PI/(gr%sb%lsize(2)+gr%sb%h(2)))**2/M_EIGHT 
-  energy = (timestep/M_TEN+3.4)*(M_PI/(gr%sb%lsize(2)+gr%sb%h(2)))**2/M_EIGHT 
-!  energy = (timestep/M_TEN+1.175)*(M_PI/(gr%sb%lsize(2)+gr%sb%h(2)))**2/M_EIGHT
-!  energy = (timestep/M_TEN+0.925)*(M_PI/(gr%sb%lsize(2)+gr%sb%h(2)))**2/M_EIGHT
-!  energy = (timestep/M_TEN/M_TWO)
-!  energy = (timestep/M_TEN**5+3.96750)*(M_PI/(gr%sb%lsize(2)+gr%sb%h(2)))**2/M_EIGHT 
-!  energy = ((timestep+1)**2-0.1)*(M_PI/(gr%sb%lsize(2)+gr%sb%h(2)))**2/M_EIGHT 
-!write(*,*) 'E/Ey', (timestep/M_TEN**5+3.96750)
-!write(*,*) 'energy', energy
-!  energy = 0.1
-  do ik = 1, st%d%nik
-    ! DON'T FORGET TO MAKE THE SIMULATION BOX BIGGER IN THE INP FILE
-    !call calculate_ext_eigenstate(h, gr, intf%np, diag, offdiag, order, energy, u(0,:), gr%sb%h(1), st, ik)
-    !call write_binary(NP, st%zpsi(:, 1, 1, ik), 3, ierr, 'ext_eigenstate.obf')
+    f0 = M_z1/(M_z1+M_zI*M_HALF*dt*energy)
+    fac= (M_z1-M_zI*M_HALF*dt*energy)*f0
 
+    ! hack to do the calculation of the groundstate
+    if (m.eq.0) then
+      !%Variable TDTransGroundState
+      !%Type integer
+      !%Default -1
+      !%Section Transport
+      !%Description
+      !% Decides whether we have the groundstate calculation or the td run.
+      !%End
+      call loct_parse_int(check_inp('TDTransGroundState'), -1, groundstate)
 
-    !call read_binary(NP+2*intf%np, ext_wf, 3, ierr, 'ext_eigenstate.obf')
-    !st%zpsi(1:NP, 1, 1, ik) = ext_wf(intf%np+1:NP+intf%np,1,1,ik)
+      
+      do ik = 1, st%d%nik
+        do ist = st%st_start, st%st_end
+        
+          select case(groundstate)
+          case(-1) ! do nothing
+          case(0) ! td run with reading extended eigenstate
+            j = (NP+2*inp)*st%d%dim*st%lnst*st%d%nik*NLEADS 
+            ALLOCATE(ext_wf(NP+2*inp, st%d%dim, st%st_start:st%st_end,  st%d%nik), j)
+            call read_binary(NP+2*inp, ext_wf, 3, ierr, 'ext_eigenstate.obf')
+            st%zpsi(1:NP, 1, ist, ik) = ext_wf(inp+1:NP+inp,1,ist,ik)
+            deallocate(ext_wf)
+          case(1) ! calculate the extended eigenstate
+            ! DON'T FORGET TO MAKE THE SIMULATION BOX BIGGER IN THE INP FILE
+            call calculate_ext_eigenstate(h, gr, inp, diag, offdiag, order, energy, td_pot(0,:), gr%sb%h(1), st, ik)
+            call write_binary(NP, st%zpsi(:, 1, ist, ik), 3, ierr, 'ext_eigenstate.obf')
+          end select
 
-  end do
-end if
+        end do
+      end do
+    end if
 
     ! Save interface part of wavefunctions for subsequent iterations
     ! before we overwrite them with the values for the new timestep.
@@ -670,17 +694,20 @@ end if
           ! 2. Add source term
           if(iand(additional_terms, src_term_flag).ne.0) then
             if (mem_type.eq.1) then
-              call calc_source_wf(max_iter, m, il, offdiag(:, :, il), src_factor(:), &
-                mem(:, :, :, il), dt, intf%np, st_psi0(:,:,1,ist,ik,il), tmp_wf(:))
+              tmp_mem(:, :) = mem(:, :, m, il)
+              if (m.gt.0) tmp_mem(:, :) = tmp_mem(:, :) + mem(:, :, m-1, il)
+              call calc_source_wf(max_iter, m, inp, il, offdiag(:,:,il), tmp_mem, dt, &
+                                    st_psi0(:,:,1,ist,ik,il), sm_u, f0, fac, &
+                                    lambda(m, 0, il, max_iter, sm_u), src_prev(:, 1, ist, ik, il))
             else
-              call calc_source_wf_sp(max_iter, m, il, offdiag(:, :, il), src_factor, &
-                sp_mem(:, :, il), dt, intf%np, order, gr%sb%dim, st_psi0(:,:,1,ist,ik,il),&
-                mem_s(:,:,:,il), mapping, tmp_wf(:))
+              tmp_mem(:, 1) = sp_mem(:, m, il)
+              if (m.gt.0) tmp_mem(:, 1) = tmp_mem(:, 1) + sp_mem(:, m-1, il)
+              call calc_source_wf_sp(max_iter, m, inp, il, offdiag(:, :, il), tmp_mem(:, 1), dt, order, &
+                       gr%sb%dim, st_psi0(:,:,1,ist,ik,il), mem_s(:,:,:,il), mapping, sm_u, f0, fac, &
+                       lambda(m, 0, il, max_iter, sm_u), src_prev(:, 1, ist, ik, il))
             end if
-            factor = -M_zI*dt*lambda(m, 0, il, max_iter, sm_u) / sm_u(m, il)
-            call apply_src(intf, il, factor, tmp_wf, st%zpsi(:, :, ist, ik))
+            call apply_src(intf, il, src_prev(:, 1, ist, ik, il), st%zpsi(:, :, ist, ik))
           end if
-
           ! 3. Add memory term.
           if(iand(additional_terms, mem_term_flag).ne.0) then
             do it = 0, m-1
@@ -688,10 +715,12 @@ end if
                 (sm_u(m, il)*sm_u(it, il))
               tmp_wf(:) = st_intf(:, ist, ik, il, it+1) + st_intf(:, ist, ik, il, it)
               if (mem_type.eq.1) then
-                tmp_mem = mem(:, :, m-it, il) + mem(:, :, m-it-1, il)
+                tmp_mem(:, :) = mem(:, :, m-it, il)
+                if ((m-it).gt.0) tmp_mem(:, :) = tmp_mem(:, :) + mem(:, :, m-it-1, il)
                 call apply_mem(tmp_mem, il, intf, tmp_wf, st%zpsi(:, :, ist, ik), factor)
               else
-                tmp_mem(:,1) = sp_mem(:, m-it, il) + sp_mem(:, m-it-1, il)
+                tmp_mem(:, 1) = sp_mem(:, m-it, il)
+                if ((m-it).gt.0) tmp_mem(:, 1) = tmp_mem(:, 1) + sp_mem(:, m-it-1, il)
                 call apply_sp_mem(tmp_mem(:,1), il, intf, tmp_wf, st%zpsi(:, :, ist, ik),&
                   factor, mem_s(:,:,:,il),order,gr%sb%dim, mapping)
               end if
@@ -722,7 +751,7 @@ end if
     ! Save interface part of wavefunction for subsequent iterations.
     call save_intf_wf(intf, timestep, st, max_iter, st_intf)
 
-    deallocate(tmp, tmp_wf, tmp_mem, ext_wf)
+    deallocate(tmp, tmp_wf, tmp_mem)
     call pop_sub()
 
   contains
@@ -957,11 +986,10 @@ end if
 
 
   ! ---------------------------------------------------------
-  ! Apply source coefficient: zpsi <- zpsi + factor src_wf
-  subroutine apply_src(intf, il, factor, src_wf, zpsi)
+  ! Apply source coefficient: zpsi <- zpsi + src_wf
+  subroutine apply_src(intf, il, src_wf, zpsi)
     type(intface_t), intent(in)    :: intf
     integer,         intent(in)    :: il
-    CMPLX,           intent(in)    :: factor
     CMPLX,           intent(in)    :: src_wf(:)
     CMPLX,           intent(inout) :: zpsi(:, :)
 
@@ -969,7 +997,7 @@ end if
 
     ! Do not use use BLAS here.
     zpsi(intf%index_range(1, il):intf%index_range(2, il), 1) = &
-      zpsi(intf%index_range(1, il):intf%index_range(2, il), 1) + factor*src_wf(:)
+      zpsi(intf%index_range(1, il):intf%index_range(2, il), 1) + src_wf(:)
 
     call pop_sub()
   end subroutine apply_src

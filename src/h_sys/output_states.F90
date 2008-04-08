@@ -259,6 +259,7 @@
       select case(NDIM)
       case(3); flow = mf_surface_integral (gr%m, j, outp%plane)
       case(2); flow = mf_line_integral (gr%m, j, outp%line)
+      case(1); flow = sum(j(outp%plane%origin(1), :))
       end select
 
       deallocate(j)
