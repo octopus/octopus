@@ -213,7 +213,7 @@ contains
     type(states_t),       intent(in)    :: st
     FLOAT,                intent(in)    :: dt
     
-    integer :: ik
+    integer :: ik, idir
     FLOAT :: n_el
 
     n_el = M_ZERO
@@ -222,11 +222,13 @@ contains
     end do
     
     this%wp2 = M_FOUR*M_PI*n_el/sb%rcell_volume
-
+    
     write (message(1), '(a,f12.6)') "Info: Electron gas plasmon frequency", sqrt(this%wp2)
     call write_info(1)
 
-    this%vecpot_vel = -this%wp2*this%vecpot*dt
+    do idir = 1, sb%dim
+      this%vecpot_vel(idir) = (M_FOUR*M_PI*P_c*sum(st%d%kpoints(idir, :))/sb%rcell_volume -this%wp2*this%vecpot(idir))*dt
+    end do
 
   end subroutine gauge_field_init_vec_pot
 
