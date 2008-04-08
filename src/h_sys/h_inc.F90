@@ -63,6 +63,7 @@ subroutine X(hpsi) (h, gr, psi, hpsi, ist, ik, t)
   integer :: idim
 
   R_TYPE, pointer :: epsi(:,:), lapl(:, :)
+  R_TYPE, allocatable :: grad(:, :, :)
   type(profile_t), save :: phase_prof
 
   call profiling_in(C_PROFILING_HPSI)
@@ -111,8 +112,27 @@ subroutine X(hpsi) (h, gr, psi, hpsi, ist, ik, t)
     call X(vnlpsi)(h, gr, epsi, hpsi, ik)
     call X(kinetic_keep_going)(h, gr, epsi, lapl)
   end if
-  if(present(t)) call X(vlasers)(gr, h, epsi, hpsi, ik, t)
+
   call X(kinetic_finish)(h, gr, epsi, lapl, hpsi)
+
+  ! all functions that require the gradient or other derivatives of
+  ! epsi sould go after this point and must not update the
+  ! boundary points
+
+  if (gauge_field_is_applied(h%ep%gfield)) then
+
+    ALLOCATE(grad(1:NP, 1:MAX_DIM, 1:h%d%dim), NP*MAX_DIM*h%d%dim)
+    
+    do idim = 1, h%d%dim 
+      ! boundary points were already set by the laplacian
+      call X(derivatives_grad)(gr%f_der%der_discr, epsi(:, idim), grad(:, :, idim), ghost_update = .false., set_bc = .false.)
+    end do
+
+  end if
+
+  if(present(t)) call X(vlasers)(gr, h, epsi, hpsi, ik, t)
+
+  if (gauge_field_is_applied(h%ep%gfield)) call X(vgauge)(gr, h, epsi, hpsi, grad)
   
   if(h%theory_level==HARTREE.or.h%theory_level==HARTREE_FOCK) then
     call X(exchange_operator)(h, gr, epsi, hpsi, ist, ik)
@@ -123,7 +143,9 @@ subroutine X(hpsi) (h, gr, psi, hpsi, ist, ik, t)
   end if
   
   call X(magnetic_terms) (gr, h, epsi, hpsi, ik)
-  if (gauge_field_is_applied(h%ep%gfield)) call X(vgauge)(gr, h, epsi, hpsi)
+
+  if(allocated(grad)) deallocate(grad)
+
   if(present(t)) call X(vborders) (gr, h, epsi, hpsi)
   
   if(simul_box_is_periodic(gr%sb) .and. .not. kpoint_is_gamma(h%d, ik)) then
@@ -1053,14 +1075,14 @@ end subroutine X(vlasers)
 
 
 ! ---------------------------------------------------------
-subroutine X(vgauge) (gr, h, psi, hpsi)
+subroutine X(vgauge) (gr, h, psi, hpsi, grad)
   type(grid_t),        intent(inout) :: gr
   type(hamiltonian_t), intent(in)    :: h
-  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
+  R_TYPE,              intent(in)    :: psi(:,:)  ! psi(NP_PART, h%d%dim)
   R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, h%d%dim)
+  R_TYPE,              intent(in)    :: grad(:, :, :)
 
   integer :: ip, idim, a2
-  R_TYPE, allocatable :: grad(:,:,:)
   FLOAT :: vecpot(1:MAX_DIM)
 
   call push_sub('h_inc.Xvgauge')
@@ -1072,13 +1094,6 @@ subroutine X(vgauge) (gr, h, psi, hpsi)
 
   vecpot = gauge_field_get_vec_pot(h%ep%gfield)/P_c
   a2 = sum(vecpot(1:MAX_DIM)**2)
-  
-  ALLOCATE(grad(NP, MAX_DIM, h%d%dim), NP*h%d%dim*MAX_DIM)
-  
-  do idim = 1, h%d%dim 
-    ! boundary points were already set
-    call X(derivatives_grad)(gr%f_der%der_discr, psi(:, idim), grad(:, :, idim), ghost_update = .false., set_bc = .false.)
-  end do
   
   do idim = 1, h%d%dim
     do ip = 1, NP
