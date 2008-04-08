@@ -119,7 +119,7 @@ subroutine X(hpsi) (h, gr, psi, hpsi, ist, ik, t)
   ! epsi sould go after this point and must not update the
   ! boundary points
 
-  if (gauge_field_is_applied(h%ep%gfield)) then
+  if (present(t) .and. gauge_field_is_applied(h%ep%gfield)) then
 
     ALLOCATE(grad(1:NP, 1:MAX_DIM, 1:h%d%dim), NP*MAX_DIM*h%d%dim)
     
@@ -132,7 +132,7 @@ subroutine X(hpsi) (h, gr, psi, hpsi, ist, ik, t)
 
   if(present(t)) call X(vlasers)(gr, h, epsi, hpsi, ik, t)
 
-  if (gauge_field_is_applied(h%ep%gfield)) call X(vgauge)(gr, h, epsi, hpsi, grad)
+  if (present(t) .and. gauge_field_is_applied(h%ep%gfield)) call X(vgauge)(gr, h, epsi, hpsi, grad)
   
   if(h%theory_level==HARTREE.or.h%theory_level==HARTREE_FOCK) then
     call X(exchange_operator)(h, gr, epsi, hpsi, ist, ik)
