@@ -215,8 +215,8 @@
     character(len=*),     intent(in)    :: dir
     type(h_sys_output_t), intent(in)    :: outp
 
-    integer :: iunit, i, k
-    FLOAT   :: flow
+    integer :: iunit, i, k, rankmin
+    FLOAT   :: flow, dmin
     FLOAT, allocatable :: j(:, :)
 
     call push_sub('h_sys_output.h_sys_output_current_flows')
@@ -259,7 +259,7 @@
       select case(NDIM)
       case(3); flow = mf_surface_integral (gr%m, j, outp%plane)
       case(2); flow = mf_line_integral (gr%m, j, outp%line)
-      case(1); flow = sum(j(outp%plane%origin(1), :))
+      case(1); flow = sum(j(mesh_nearest_point(gr%m, outp%plane%origin(1), dmin, rankmin), :))
       end select
 
       deallocate(j)
