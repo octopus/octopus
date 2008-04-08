@@ -653,9 +653,9 @@ contains
       read(iunit, '(28x)', advance='no') ! skip the time index.
 
       ! TODO: units are missing
-      read(iunit, '(3es20.12)', advance='no') vecpot(1:MAX_DIM)
-      read(iunit, '(3es20.12)', advance='no') vecpot_vel(1:MAX_DIM)
-      read(iunit, '(3es20.12)', advance='no') dummy(1:MAX_DIM) ! skip the accel field.
+      read(iunit, '(3es20.12)', advance='no') vecpot(1:NDIM)
+      read(iunit, '(3es20.12)', advance='no') vecpot_vel(1:NDIM)
+      read(iunit, '(3es20.12)', advance='no') dummy(1:NDIM) ! skip the accel field.
 
       call gauge_field_set_vec_pot(h%ep%gfield, vecpot)
       call gauge_field_set_vec_pot_vel(h%ep%gfield, vecpot_vel)
