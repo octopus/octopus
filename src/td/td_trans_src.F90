@@ -81,10 +81,8 @@ contains
 
   ! ---------------------------------------------------------
   ! Allocate memory for extended groundstate and calculate eigenstates of the lead
-  subroutine source_init(st, src_factor, src_f0, src_prev, st_psi0, dt, energy, inp, gr)
+  subroutine source_init(st, src_prev, st_psi0, dt, energy, inp, gr)
     type(states_t),  intent(in)  :: st
-    CMPLX, intent(out)  :: src_factor
-    CMPLX, intent(out)  :: src_f0
     CMPLX, pointer      :: src_prev(:, :, :, :, :)! intf%np, ndim, nst, nik, NLEADS
     CMPLX, pointer      :: st_psi0(:, :, :, :, : ,:)  ! np, (lead=1;center=2), ndim, nst, nik, nleads, nleads 
     FLOAT, intent(in)   :: dt      ! timestep
@@ -102,8 +100,6 @@ contains
     st_psi0 = M_z0
     call read_psi0_ext('ext_eigenstate.obf', st, st_psi0, inp, gr)
     ! and do some precalculations
-    src_f0 = M_z1 / (M_z1 + M_zI*M_HALF*dt*energy)
-    src_factor = (M_z1 - M_zI*M_HALF*dt*energy) * src_f0
 
     call pop_sub()
   end subroutine source_init

@@ -74,8 +74,6 @@ module td_trans_rti_m
     integer, pointer :: sp2full_map(:)        ! the mapping indices from sparse to full matrices
     CMPLX, pointer   :: src_mem_u(:, :)       ! t, il     u(m)
     FLOAT            :: energy                !
-    CMPLX            :: src_factor            ! (1 - i delta e)/(1+i delta e)
-    CMPLX            :: src_f0                ! 1/(1+i delta e)
     CMPLX, pointer   :: src_prev(:, :, :, :, :)! intf%np, ndim, nst, nik, NLEADS
     CMPLX, pointer   :: diag(:, :, :)         ! h
     CMPLX, pointer   :: offdiag(:, :, :)      ! hopping operator V^T (np,np,nleads)
@@ -200,8 +198,7 @@ contains
                       trans%mem_coeff, trans%mem_sp_coeff, trans%mem_s, trans%diag, trans%offdiag, gr%sb%dim, &
                       gr%sb%h(1), trans%mem_type, gr%f_der%der_discr%order, trans%sp2full_map)
 
-    call source_init(st, trans%src_factor, trans%src_f0, trans%src_prev, &
-                     trans%st_psi0, dt, trans%energy, trans%intface%np, gr)
+    call source_init(st, trans%src_prev, trans%st_psi0, dt, trans%energy, trans%intface%np, gr)
 
     ! Allocate memory for the interface wave functions.
     allocsize = trans%intface%np*st%lnst*st%d%nik*(max_iter+1)*NLEADS
@@ -571,7 +568,7 @@ contains
   ! Only non-interacting electrons for the moment, so no
   ! predictor-corrector scheme.
   subroutine cn_src_mem_dt(intf, mem_type, mem, sp_mem, st_intf, ks, h, st, gr, energy, dt,  &
-    t, max_iter, sm_u, td_pot, timestep, src_factor, src_prev, diag, offdiag, st_psi0, mem_s, &
+    t, max_iter, sm_u, td_pot, timestep, src_prev, diag, offdiag, st_psi0, mem_s, &
     additional_terms, mapping)
     type(intface_t), target,     intent(in)    :: intf
     type(states_t),              intent(inout) :: st
@@ -589,7 +586,6 @@ contains
     CMPLX, target,               intent(in)    :: sm_u(0:max_iter, NLEADS)
     FLOAT, target,               intent(in)    :: td_pot(0:max_iter, NLEADS)
     integer,                     intent(in)    :: timestep
-    CMPLX, target,               intent(in)    :: src_factor(0:max_iter) ! max_iter
     CMPLX, target,               intent(inout) :: src_prev(intf%np, 1, st%st_start:st%st_end, st%d%nik, NLEADS)
     CMPLX, target,               intent(in)    :: diag(intf%np, intf%np, NLEADS)
     CMPLX, target,               intent(in)    :: offdiag(intf%np, intf%np, NLEADS)   ! hopping operator V^T
