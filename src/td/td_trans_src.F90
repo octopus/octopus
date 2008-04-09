@@ -62,19 +62,23 @@ contains
     type(grid_t),  intent(in):: gr
 
     CMPLX, allocatable :: tmp(:,:,:,:) ! NP+2*np, ndim, nst, nik
-    integer :: ierr
+    integer :: ierr, s
 
     call push_sub('td_trans_src.read_psi0_ext')
-    ALLOCATE(tmp(NP+2*np, st%d%dim, st%st_start:st%st_end,  st%d%nik), (NP+2*np)*st%d%dim*st%lnst*st%d%nik*NLEADS )
+    s = (NP+2*np)*st%d%dim*st%lnst*st%d%nik
+    ALLOCATE(tmp(NP+2*np, st%d%dim, st%st_start:st%st_end,  st%d%nik), s )
 
     ! try to read from file
     psi0 = M_z0
-    call read_binary(NP+2*np, tmp, 3, ierr, trim(dir))
-    psi0(1:np, 1, 1, 1, 1, LEFT)  = tmp(1:np,1,1,1) ! np, (lead=1;center=2), ndim, nst, nik
-    psi0(1:np, 2, 1, 1, 1, LEFT)  = tmp(np+1:2*np,1,1,1) ! np, (lead=1;center=2), ndim, nst, nik
-    psi0(1:np, 1, 1, 1, 1, RIGHT) = tmp(NP+np+1:NP+2*np,1,1,1) ! np, (lead=1;center=2), ndim, nst, nik
-    psi0(1:np, 2, 1, 1, 1, RIGHT) = tmp(NP+1:NP+np,1,1,1) ! np, (lead=1;center=2), ndim, nst, nik 
-
+    call read_binary(s, tmp(1:NP+2*np, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik), 3, ierr, trim(dir))
+    psi0(1:np, 1, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik, LEFT)  = &
+        tmp(1:np,1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik)
+    psi0(1:np, 2, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik, LEFT)  = &
+        tmp(np+1:2*np, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik)
+    psi0(1:np, 1, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik, RIGHT) = &
+        tmp(NP+np+1:NP+2*np, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik)
+    psi0(1:np, 2, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik, RIGHT) = &
+        tmp(NP+1:NP+np, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik)
     deallocate(tmp)
     call pop_sub()
   end subroutine read_psi0_ext

@@ -436,7 +436,7 @@ contains
 
   ! ---------------------------------------------------------
   ! compute the extended eigenstate(s) 
-  subroutine ext_eigenstate_lip_sch(h, gr, np, diag, offdiag, order, energy, lead_pot, dx, st, ik)
+  subroutine ext_eigenstate_lip_sch(h, gr, np, diag, offdiag, order, energy, lead_pot, dx, st)
     type(hamiltonian_t), intent(inout) :: h
     type(grid_t),   intent(inout)      :: gr
     integer,        intent(in)      :: np                      ! number of interface points
@@ -447,11 +447,10 @@ contains
     FLOAT,          intent(in)      :: lead_pot(NLEADS)        ! lead potential at t=0
     FLOAT,          intent(in)      :: dx                      ! spacing
     type(states_t), intent(inout)   :: st                      ! states
-    integer,        intent(in)      :: ik                      ! the index of the k-point
 
     CMPLX, target, allocatable :: green_l(:,:,:)
     CMPLX, allocatable :: tmp(:, :)
-    integer            :: i, id, iter, n(3)
+    integer            :: i, id, iter, n(3), ist, ik
     integer, pointer   :: lxyz(:,:)
     FLOAT              :: en, lsize(3), q(3)
     FLOAT              :: dres
@@ -493,46 +492,51 @@ contains
     end if
     n(1) = 1
     do i=1,NP
-      st%zpsi(i, 1, 1, ik) = exp(M_zI*n(1)*q(1)*lxyz(i,1)*gr%sb%h(1))
+!      st%zpsi(i, 1, 1, ik) = exp(M_zI*n(1)*q(1)*lxyz(i,1)*gr%sb%h(1))
       do id=2, gr%sb%dim
         if (mod(n(id),2).eq.0) then
-          st%zpsi(i, 1, 1, ik) = st%zpsi(i, 1, 1, ik)*sin(n(id)*q(id)*lxyz(i,id)*gr%sb%h(id))
+!          st%zpsi(i, 1, 1, ik) = st%zpsi(i, 1, 1, ik)*sin(n(id)*q(id)*lxyz(i,id)*gr%sb%h(id))
         else
-          st%zpsi(i, 1, 1, ik) = st%zpsi(i, 1, 1, ik)*cos(n(id)*q(id)*lxyz(i,id)*gr%sb%h(id))
+!          st%zpsi(i, 1, 1, ik) = st%zpsi(i, 1, 1, ik)*cos(n(id)*q(id)*lxyz(i,id)*gr%sb%h(id))
         end if
       end do
     end do
     ! calculate right hand side (e-T-V(lead)-sum(a)[H_ca*g_a*H_ac]
-    tmp(:,:) = M_z0
-    call zkinetic(h, gr, st%zpsi(:, :, 1, ik), tmp(:,:))
-    tmp(1:NP, :) = energy*st%zpsi(1:NP, :, 1, ik) - tmp(1:NP, :)
-    ! TODO: the static potential of the lead
     call green_lead(energy, diag(:, :, LEFT), offdiag(:, :, LEFT), np, LEFT, green_l(:, :, LEFT))
     call apply_coupling(green_l(:, :, LEFT), offdiag(:, :, LEFT), green_l(:, :, LEFT), np, LEFT)
-    call zsymv('U', np, -M_z1, green_l(:, :, LEFT), np, st%zpsi(1:np, 1, 1, 1), 1, M_z1, tmp(1:np, 1), 1)
     call green_lead(energy, diag(:, :, RIGHT), offdiag(:, :, RIGHT), np, RIGHT, green_l(:, :, RIGHT))
     call apply_coupling(green_l(:, :, RIGHT), offdiag(:, :, RIGHT), green_l(:, :, RIGHT), np, RIGHT)
+    do ik = 1, st%d%nik
+      do ist = st%st_start, st%st_end
 
-    call zsymv('U', np, -M_z1, green_l(:, :, RIGHT), np, &
-      st%zpsi(NP - np + 1:NP, 1, 1, 1), 1, M_z1, tmp(NP - np + 1:NP, 1), 1)
+        tmp(:,:) = M_z0
+        call zkinetic(h, gr, st%zpsi(:, :, ist, ik), tmp(:,:))
+        tmp(1:NP, :) = energy*st%zpsi(1:NP, :, ist, ik) - tmp(1:NP, :)
+        ! TODO: the static potential of the lead
+        call zsymv('U', np, -M_z1, green_l(:, :, LEFT), np, st%zpsi(1:np, 1, ist, ik), 1, M_z1, tmp(1:np, 1), 1)
 
-    ! now solve the equation
-    green_l_p => green_l
-    ! now solve the linear system to get the extended eigenstate
-    iter = 10000
-    ! zconjugate_gradients fails in some cases (wrong solution) and takes longer
-    ! therefore take the symmetric quasi-minimal residual solver (QMR)
-    call zqmr_sym(NP, st%zpsi(:, 1, 1, ik), tmp(:, 1), h_eff_lip_sch, preconditioner, &
-                    iter, residue=dres, threshold=cg_tol, showprogress = .true.)
-    !write(*,*) 'iter =',iter, 'residue =', dres
+        call zsymv('U', np, -M_z1, green_l(:, :, RIGHT), np, &
+          st%zpsi(NP - np + 1:NP, 1, ist, ik), 1, M_z1, tmp(NP - np + 1:NP, 1), 1)
 
+        ! now solve the equation
+        green_l_p => green_l
+        ! now solve the linear system to get the extended eigenstate
+        iter = 10000
+        ! zconjugate_gradients fails in some cases (wrong solution) and takes longer
+        ! therefore take the symmetric quasi-minimal residual solver (QMR)
+        call zqmr_sym(NP, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_lip_sch, preconditioner, &
+                        iter, residue=dres, threshold=cg_tol, showprogress = .true.)
+!if (ist.eq.2) write(*,*) st%zpsi(:, 1, ist, ik)
+        !write(*,*) 'iter =',iter, 'residue =', dres
+      end do
+    end do
     deallocate(green_l, tmp)
     call pop_sub()
   end subroutine ext_eigenstate_lip_sch
 
   ! ---------------------------------------------------------
   ! compute the extended eigenstate(s)
-  subroutine calculate_ext_eigenstate(h, gr, np, diag, offdiag, order, energy, lead_pot, dx, st, ik)
+  subroutine calculate_ext_eigenstate(h, gr, np, diag, offdiag, order, energy, lead_pot, dx, st)
     type(hamiltonian_t), intent(inout) :: h
     type(grid_t),   intent(inout)      :: gr
     integer,        intent(in)      :: np                      ! number of interface points
@@ -543,7 +547,6 @@ contains
     FLOAT,          intent(in)      :: lead_pot(NLEADS)        ! lead potential at t=0
     FLOAT,          intent(in)      :: dx                      ! spacing
     type(states_t), intent(inout)   :: st                      ! states
-    integer,        intent(in)      :: ik                      ! the index of the k-point
 
     integer  :: eigenstate_type
 
@@ -555,7 +558,7 @@ contains
     case(1) ! reference implementation, only feasible in 1D (maybe 2D)
       !call ext_eigenst_imag_green(h, gr, np, diag, offdiag, order, energy, lead_pot, dx, st, phase, ik)
     case(2) ! method by Florian Lorenzen and Heiko Appel
-      call ext_eigenstate_lip_sch(h, gr, np, diag, offdiag, order, energy, lead_pot, dx, st, ik)
+      call ext_eigenstate_lip_sch(h, gr, np, diag, offdiag, order, energy, lead_pot, dx, st)
     case(3) ! method by Gianluca Stefannuci
      !call ext_eigenstate_stefanucci(h, gr, np, diag, offdiag, order, energy, lead_pot, dx, st, phase, ik)
     end select
@@ -646,26 +649,21 @@ contains
       !%End
       call loct_parse_int(check_inp('TDTransGroundState'), -1, groundstate)
 
-      
-      do ik = 1, st%d%nik
-        do ist = st%st_start, st%st_end
-        
-          select case(groundstate)
-          case(-1) ! do nothing
-          case(0) ! td run with reading extended eigenstate
-            j = (NP+2*inp)*st%d%dim*st%lnst*st%d%nik*NLEADS 
-            ALLOCATE(ext_wf(NP+2*inp, st%d%dim, st%st_start:st%st_end,  st%d%nik), j)
-            call read_binary(NP+2*inp, ext_wf, 3, ierr, 'ext_eigenstate.obf')
-            st%zpsi(1:NP, 1, ist, ik) = ext_wf(inp+1:NP+inp,1,ist,ik)
-            deallocate(ext_wf)
-          case(1) ! calculate the extended eigenstate
-            ! DON'T FORGET TO MAKE THE SIMULATION BOX BIGGER IN THE INP FILE
-            call calculate_ext_eigenstate(h, gr, inp, diag, offdiag, order, energy, td_pot(0,:), gr%sb%h(1), st, ik)
-            call write_binary(NP, st%zpsi(:, 1, ist, ik), 3, ierr, 'ext_eigenstate.obf')
-          end select
-
-        end do
-      end do
+      select case(groundstate)
+      case(-1) ! do nothing
+      case(0) ! td run with reading extended eigenstate
+        j = (NP+2*inp)*st%d%dim*st%lnst*st%d%nik
+        ALLOCATE(ext_wf(NP+2*inp, st%d%dim, st%st_start:st%st_end, st%d%nik), j)
+        call read_binary(j, ext_wf(1:NP+2*inp, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik), 3, ierr, 'ext_eigenstate.obf')
+        st%zpsi(1:NP, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik) = &
+                      ext_wf(inp+1:NP+inp, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik)
+        deallocate(ext_wf)
+      case(1) ! calculate the extended eigenstate
+        ! DON'T FORGET TO MAKE THE SIMULATION BOX BIGGER IN THE INP FILE
+        j = NP*st%d%dim*st%lnst*st%d%nik
+        call calculate_ext_eigenstate(h, gr, inp, diag, offdiag, order, energy, td_pot(0,:), gr%sb%h(1), st)
+        call write_binary(j, st%zpsi(1:NP, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik), 3, ierr, 'ext_eigenstate.obf')
+      end select
     end if
 
     ! Save interface part of wavefunctions for subsequent iterations

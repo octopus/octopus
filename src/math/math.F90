@@ -825,9 +825,10 @@ subroutine zqmr_sym(np, x, b, op, prec, iter, residue, threshold, showprogress)
   if (showprogress_) call loct_progress_bar(-1, ilog_thr)
 
   max_iter = iter
-  iter     = 1
-  err = 0
+  iter     = 0
+  err      = 0
   do while(iter < max_iter)
+    iter = iter + 1
     if((abs(rho) < M_EPSILON) .or. (abs(xsi) < M_EPSILON)) then
       err = 1
       exit
@@ -889,9 +890,9 @@ subroutine zqmr_sym(np, x, b, op, prec, iter, residue, threshold, showprogress)
     ilog_res = M_TEN**2*log_res
     if (showprogress_)  call loct_progress_bar(ilog_res, ilog_thr)
     if (res < threshold_) exit
-    iter = iter + 1
     !write(*,*) res
   end do
+  if (iter.eq.max_iter) err = 5
 
   select case(err)
   case(0)
@@ -906,9 +907,13 @@ subroutine zqmr_sym(np, x, b, op, prec, iter, residue, threshold, showprogress)
     write(message(1), '(a)') "QMR failure, can't continue: q^T*p is zero!"
     call write_fatal(1)
   case(4)
-    write(message(1), '(a)') "QMR failure, can't continue: gamma is zero"
+    write(message(1), '(a)') "QMR failure, can't continue: gamma is zero!"
     call write_fatal(1)
+  case(5)
+    write(message(1), '(a)') "QMR Solver not converged!"
+    call write_warning(1)
   end select
+  write(*,*) ''
 
   if(present(residue)) residue = res
 

@@ -244,6 +244,10 @@
       write(iunit,'(a, f9.5)') '# spacing = ', outp%line%spacing
       write(iunit,'(a,2i4)')   '# nu, mu = ', outp%line%nu, outp%line%mu
 
+    case(1)
+      write(iunit,'(a)')       '# Point:'
+      write(iunit,'(a, f9.5)') '# spacing = ', outp%line%spacing
+
     end select
 
     if(st%wfs_type == M_CMPLX) then
@@ -259,7 +263,7 @@
       select case(NDIM)
       case(3); flow = mf_surface_integral (gr%m, j, outp%plane)
       case(2); flow = mf_line_integral (gr%m, j, outp%line)
-      case(1); flow = sum(j(mesh_nearest_point(gr%m, outp%plane%origin(1), dmin, rankmin), :))
+      case(1); flow = sum(j(mesh_nearest_point(gr%m, outp%line%origin(1), dmin, rankmin), :))
       end select
 
       deallocate(j)
