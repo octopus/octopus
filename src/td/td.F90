@@ -163,7 +163,7 @@ contains
         call gauge_field_init_vec_pot(h%ep%gfield, gr%m, gr%sb, st, td%dt)
       end if
 
-      gauge_force = gauge_field_get_force(h%ep%gfield, gr, geo, h%ep%p, st)
+      gauge_force = gauge_field_get_force(h%ep%gfield, gr, geo, h%ep%p, h%phase, st)
 
       do iatom = 1, geo%natoms
          call projector_init_phases(h%ep%p(iatom), gr%m, st%d%nik, st%d%kpoints, gauge_field_get_vec_pot(h%ep%gfield)/P_c)
@@ -263,7 +263,7 @@ contains
 
       if(gauge_field_is_applied(h%ep%gfield)) then
 
-        gauge_force = gauge_field_get_force(h%ep%gfield, gr, geo, h%ep%p, st)
+        gauge_force = gauge_field_get_force(h%ep%gfield, gr, geo, h%ep%p, h%phase, st)
 
         call gauge_field_propagate_vel(h%ep%gfield, gauge_force, td%dt)
 

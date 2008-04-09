@@ -117,12 +117,6 @@ contains
           call loct_parse_block_float(blk, 0, ii - 1, this%vecpot(ii))
         end do
 
-        if (loct_parse_block_n(blk) > 1) then !we have the gauge field velocity
-          do ii = 1, sb%dim
-            call loct_parse_block_float(blk, 1, ii - 1, this%vecpot_vel(ii))
-          end do
-        end if
-
  	call loct_parse_block_end(blk)
 
       end if
@@ -206,6 +200,16 @@ contains
 
   ! ---------------------------------------------------------
 
+  subroutine gauge_field_propagate_vel(this, force, dt)
+    type(gauge_field_t),  intent(inout) :: this
+    FLOAT,                intent(in)    :: force(1:MAX_DIM)
+    FLOAT,                intent(in)    :: dt
+
+    this%vecpot_vel = this%vecpot_vel + M_HALF*dt*(this%vecpot_acc + force)
+  end subroutine gauge_field_propagate_vel
+
+  ! ---------------------------------------------------------
+
   subroutine gauge_field_init_vec_pot(this, m, sb, st, dt)
     type(gauge_field_t),  intent(inout) :: this
     type(mesh_t),         intent(in)    :: m
@@ -226,36 +230,26 @@ contains
     write (message(1), '(a,f12.6)') "Info: Electron gas plasmon frequency", sqrt(this%wp2)
     call write_info(1)
 
-    do idir = 1, sb%dim
-      this%vecpot_vel(idir) = (M_FOUR*M_PI*P_c*sum(st%d%kpoints(idir, :))/sb%rcell_volume -this%wp2*this%vecpot(idir))*dt
-    end do
-
   end subroutine gauge_field_init_vec_pot
 
   ! ---------------------------------------------------------
 
-  subroutine gauge_field_propagate_vel(this, force, dt)
+  function gauge_field_get_force(this, gr, geo, pj, phases, st) result(force)
     type(gauge_field_t),  intent(inout) :: this
-    FLOAT,                intent(in)    :: force(1:MAX_DIM)
-    FLOAT,                intent(in)    :: dt
-
-    this%vecpot_vel = this%vecpot_vel + M_HALF*dt*(this%vecpot_acc + force)
-  end subroutine gauge_field_propagate_vel
-
-  function gauge_field_get_force(this, gr, geo, pj, st) result(force)
-    type(gauge_field_t),  intent(in)    :: this
     type(grid_t),         intent(inout) :: gr
     type(geometry_t),     intent(in)    :: geo
     type(projector_t),    intent(in)    :: pj(:)
+    CMPLX,                intent(in)    :: phases(:, :)
     type(states_t),       intent(inout) :: st
-    
+
     integer :: ik, ist, idir, idim, iatom
-    CMPLX, allocatable :: gpsi(:, :, :), cpsi(:, :)
+    CMPLX, allocatable :: gpsi(:, :, :), cpsi(:, :), epsi(:, :)
     FLOAT :: force(1:MAX_DIM)
 #ifdef HAVE_MPI
     FLOAT :: force_tmp(1:MAX_DIM)
 #endif
 
+    ALLOCATE(epsi(gr%m%np_part, st%d%dim), gr%m%np_part*st%d%dim)
     ALLOCATE(gpsi(gr%m%np, 1:NDIM, st%d%dim), gr%m%np*NDIM*st%d%dim)
     ALLOCATE(cpsi(gr%m%np, st%d%dim), gr%m%np*st%d%dim)
 
@@ -264,21 +258,22 @@ contains
     do ik = 1, st%d%nik
       do ist = st%st_start, st%st_end
 
-        do idim = 1, st%d%dim
-          call zf_gradient(gr%sb, gr%f_der, st%zpsi(:, idim, ist, ik), gpsi(:, :, idim))
-        end do
+
 
         do idim = 1, st%d%dim
-          do idir = 1, gr%sb%dim
-            gpsi(1:NP, idir, idim) = gpsi(1:NP, idir, idim) + &
-                 M_zI*st%d%kpoints(idir, ik)*st%zpsi(1:NP, idim, ist, ik)
-          end do
+
+          call zset_bc(gr%f_der%der_discr, st%zpsi(:, idim, ist, ik))
+
+          epsi(1:NP_PART, idim) = phases(1:NP_PART, ik)*st%zpsi(1:NP_PART, idim, ist, ik)
+          
+          call zderivatives_grad(gr%f_der%der_discr, epsi(:, idim), gpsi(:, :, idim), set_bc = .false.)
+
         end do
 
         do idir = 1, gr%sb%dim
           do iatom = 1, geo%natoms
             if(specie_is_ps(geo%atom(iatom)%spec)) then
-              call zprojector_conmut_r(pj(iatom), gr, st%d%dim, idir, ik, st%zpsi(:, 1, ist, ik), cpsi(:, :))
+              call zprojector_conmut_r(pj(iatom), gr, st%d%dim, idir, ik, epsi(:, 1), cpsi(:, :))
               gpsi(1:NP, idir, 1:st%d%dim) = gpsi(1:NP, idir, 1:st%d%dim) + cpsi(1:NP, 1:st%d%dim)
             end if
           end do
@@ -286,7 +281,7 @@ contains
         
         do idir = 1, gr%sb%dim
           force(idir) = force(idir) + M_FOUR*M_PI*P_c/gr%sb%rcell_volume*st%d%kweights(ik)*st%occ(ist, ik)*&
-               aimag(zstates_dotp(gr%m, st%d%dim, st%zpsi(:, :, ist, ik), gpsi(:, idir, :)))
+               aimag(zstates_dotp(gr%m, st%d%dim, epsi, gpsi(:, idir, :)))
         end do
         
       end do
@@ -304,6 +299,8 @@ contains
     deallocate(gpsi, cpsi)
 
   end function gauge_field_get_force
+
+  ! ---------------------------------------------------------
 
   FLOAT function gauge_field_get_energy(this, sb) result(energy)
     type(gauge_field_t),  intent(in)    :: this
