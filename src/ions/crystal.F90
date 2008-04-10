@@ -154,7 +154,7 @@ contains
       ALLOCATE(xk(3, nx*ny*nz), 3*nx*ny*nz)
       ALLOCATE(kmap(nx*ny*nz), nx*ny*nz)
 
-      call crystal_monkpack(nx,ny,nz,sx,sy,sz,nrk,rk,w,.false.)
+      call crystal_monkpack(nx,ny,nz,sx,sy,sz,nrk,rk,w,.true.)
 
       message(1) =' ikp       weight             kpoint (relative)                kpoint (absolute)'
       call write_info(1)
@@ -233,134 +233,110 @@ contains
       end subroutine invers
 
 
-      subroutine crystal_monkpack(nx,ny,nz,sx,sy,sz,nrk,rk,w,need_gw)
-
-      implicit none
-
-!      Implements the Monkhorst-Pack scheme.
-
-!      Sets up uniform array of k points. Use the normal MP scheme
-!      (PRB13, 5188, (1976)) when sx=sy=sz=0.5. If sx=sy=0,
-!      the special hexagonal scheme is used (PRB16, 1748, (1977))
-
-!     .. Scalar Arguments ..
-       FLOAT :: sx, sy, sz
-       integer nrk, nx, ny, nz
-
-!     .. Array Arguments ..
-      FLOAT :: rk(3,*), w(*)
-
-!     .. Local Scalars ..
-      FLOAT :: dw, dx, dy, dz !, xdum
-      integer i, j, k, l, n
-!      integer km, kp, kdel, jm, jp, ip, irk, im
-!      character tmny_kpnts*80 , wkarr_ovfw*80
-      logical need_gw
-
-!     .. Local Arrays ..
-
-      FLOAT :: rktran(3), rktran_inv(3)
-
-!     .. Intrinsic Functions ..
-      intrinsic abs
-
-      call push_sub('crystal.crystal_monkpack')
-
-!      nx, ny, and nz are the number of points in the three
-!      directions dermined by the lattice wave vectors. sx, sy, and
-!      sz shift the grid of integration points from the origin.
-!
-!      kmap is used to mark reducible k points and also to
-!      map reducible to irreducible k points
-
-      dx = M_ONE/real(nx, REAL_PRECISION)
-      dy = M_ONE/real(ny, REAL_PRECISION)
-      dz = M_ONE/real(nz, REAL_PRECISION)
-      n = 0
-      do i = 1, nx
-        do j = 1, ny
-          do k = 1, nz
-               n = n + 1
-            xk(1,n) = (real(i-1, REAL_PRECISION) + sx)*dx
-            xk(2,n) = (real(j-1, REAL_PRECISION) + sy)*dy
-            xk(3,n) = (real(k-1, REAL_PRECISION) + sz)*dz
-               kmap(n) = n
-         end do
+  subroutine crystal_monkpack(nx, ny, nz, sx, sy, sz, nrk, rk, w, time_reversal)
+    FLOAT,   intent(in)  :: sx, sy, sz
+    integer, intent(in)  :: nx, ny, nz
+    integer, intent(out) :: nrk
+    FLOAT,   intent(out) :: rk(:, :), w(:)
+    logical, intent(in)  :: time_reversal
+    
+    ! Implements the Monkhorst-Pack scheme.
+    
+    ! Sets up uniform array of k points. Use the normal MP scheme
+    ! (PRB13, 5188, (1976)) when sx=sy=sz=0.5. If sx=sy=0,
+    ! the special hexagonal scheme is used (PRB16, 1748, (1977))
+  
+    FLOAT :: dw, dx, dy, dz !, xdum
+    integer i, j, k, l, n
+    FLOAT :: rktran(3), rktran_inv(3)
+    
+    call push_sub('crystal.crystal_monkpack')
+    
+    ! nx, ny, and nz are the number of points in the three
+    ! directions dermined by the lattice wave vectors. sx, sy, and
+    ! sz shift the grid of integration points from the origin.
+    !
+    ! kmap is used to mark reducible k points and also to
+    ! map reducible to irreducible k points
+    
+    dx = M_ONE/real(nx, REAL_PRECISION)
+    dy = M_ONE/real(ny, REAL_PRECISION)
+    dz = M_ONE/real(nz, REAL_PRECISION)
+    n = 0
+    do i = 1, nx
+      do j = 1, ny
+        do k = 1, nz
+          n = n + 1
+          xk(1,n) = (real(i - 1, REAL_PRECISION) + sx)*dx
+          xk(2,n) = (real(j - 1, REAL_PRECISION) + sy)*dy
+          xk(3,n) = (real(k - 1, REAL_PRECISION) + sz)*dz
+          kmap(n) = n
         end do
-       end do
+      end do
+    end do
 
-!      reduce to irreducible zone
+    ! reduce to irreducible zone
+    
+    dw = M_ONE/real(n, REAL_PRECISION)
+    nrk = 0
+    do i = 1, n
+      if (kmap(i) /= i) cycle
+      
+      ! new irreducible point
+      ! mark with negative kmap
+      
+      nrk = nrk + 1
+      rk(1:3, nrk) = xk(1:3, i)
+      
+      kmap(i) = -nrk
+      
+      w(nrk) = dw
 
-      dw = M_ONE/real(n, REAL_PRECISION)
-      nrk = 0
-      do 120 i = 1, n
-         if (kmap(i) /= i) go to 120
+      if (i == n) cycle
+      
+      ! operate on irreducible rk with the symmetry operations
+      
+      do j = 1, ntrans
 
-!      new irreducible point
-!      mark with negative kmap
+        do k = 1, 3
 
-         nrk = nrk + 1
-         do j = 1, 3
-            rk(j,nrk) = xk(j,i)
-         end do
-         kmap(i) = -nrk
-         w(nrk) = dw
-         if (i == n) go to 120
-!ang         goto 120
+          rktran(k) = sum(gmtrx(j, k, 1:3)*rk(1:3, nrk))
+          
+          ! translate to interval 0-1 and compute its inverse for
+          ! later use. (built as reduce_01(-rk)). This
+          ! fixes a bug when rktran(l)=0 (first reported by
+          ! Mike Surh, March 1992)
+          
+          rktran(k) = reduce_01(rktran(k))
+          rktran_inv(k) = reduce_01(-rktran(k))
 
-!      operate on irreducible rk with the symmetry operations
-!
-         do 110 j = 1, ntrans
-           do k = 1, 3
-             rktran(k) = M_ZERO
-             do l = 1, 3
-                  rktran(k) = gmtrx(j,k,l)*rk(l,nrk) + rktran(k)
-             end do
+        end do
+           
+        ! remove (mark) k points related to irreducible rk by symmetry
+        
+        do k = i + 1, n
+          if (kmap(k) /= k) cycle
+          
+          ! both the transformed rk ...
+          if (all( abs(rktran(1:3) - xk(1:3, k)) <= CNST(1.0e-5))) then
+            w(nrk) = w(nrk) + dw
+            kmap(k) = nrk
+            cycle
+          end if
 
-!      translate to interval 0-1 and compute its inverse for
-!      later use. (built as reduce_01(-rk)). This
-!          fixes a bug when rktran(l)=0 (first reported by
-!          Mike Surh, March 1992)
-!
-               rktran(k) = reduce_01(rktran(k))
-               rktran_inv(k) = reduce_01(-rktran(k))
-           end do
-
-!      remove (mark) k points related to irreducible rk by symmetry
-
-            do 100 k = i + 1, n
-             if (kmap(k) /= k) go to 100
-
-!      both the transformed rk ...
-
-             do l = 1, 3
-                if (abs(rktran(l)-xk(l,k)) > CNST(1.0e-5)) go to 80
-             end do
-               w(nrk) = w(nrk) + dw
-               kmap(k) = nrk
-
-               go to 100
-
-!      ... and its inverse (see construction above)
-!ar        do not use in GW calculations!!
-
-   80          continue
-         if (need_gw) go to 100
-           do l = 1, 3
-              if (abs(rktran_inv(l)-xk(l,k) )> CNST(1.0e-5)) go to 100
-           end do
-               w(nrk) = w(nrk) + dw
-               kmap(k) = nrk
-  100       continue
-  110    continue
-  120 continue
-
-
-      return
-
-      call pop_sub()
-      end subroutine crystal_monkpack
-
+          ! and its inverse
+          if (time_reversal .and. all(abs(rktran_inv(1:3) - xk(1:3, k)) <= CNST(1.0e-5)) ) then
+            w(nrk) = w(nrk) + dw
+            kmap(k) =nrk
+         end if
+          
+        end do
+      end do
+    end do
+    
+    call pop_sub()
+  end subroutine crystal_monkpack
+     
       FLOAT function reduce_01(x)
 !     Reduces x to its appropriate equivalent in [0,1)
 !     It works for -500 < x < infinity...
