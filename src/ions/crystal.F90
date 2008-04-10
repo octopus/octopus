@@ -14,9 +14,6 @@ module crystal_m
   implicit none
 
   private
-
-  FLOAT,   allocatable :: xk(:,:)
-  integer, allocatable :: kmap(:)
   
   integer :: ntrans, gmtrx(48,3,3)
   integer :: rmtrx(48,3,3)
@@ -27,7 +24,6 @@ module crystal_m
   FLOAT :: b(3,3)    ! reciprocal lattice vectors
   FLOAT :: bmet(3,3) ! b_i dot b_k for reciprocal lattice vectors
   
-  integer ::  i, j, k, l
   
   FLOAT :: tnpi(3), xmt(3,3)
   character(len=1) :: i1(3)
@@ -37,220 +33,204 @@ module crystal_m
   
 contains
 
-      subroutine crystal_init(al,ntype,natom,maxnatom,coorat,    &
-                              nk_axis,k_shift,nrk,nrkmax,rk,w)
+  subroutine crystal_init(al,ntype,natom,maxnatom,coorat, nk_axis,k_shift,nrk,nrkmax,rk,w)
+    
+    integer, intent(in)  :: nrkmax,ntype,maxnatom
+    integer, intent(in)  :: nk_axis(3),natom(ntype)
+    integer, intent(out) :: nrk
+    FLOAT, intent(in)    :: al(3,3), coorat(ntype,maxnatom,3)
+    FLOAT, intent(in)    :: k_shift(3)
+    FLOAT, intent(out)   :: rk(3,nrkmax), w(nrkmax)
+    
+    ! Local
+    
+    integer  :: ipr, invers_no, jabs, jcar, neg, nx, ny, nz, i, j, k, l
+    FLOAT :: volume_check, celvol, ek, ek1, ek2
+    FLOAT :: a1(3),a2(3),a3(3),    &
+         b1(3), b2(3), b3(3),  &
+         rkcar(3),rkmod(3,4), sx, sy, sz
+    
+    FLOAT,   allocatable :: xk(:,:)
+    
+    call push_sub('crystal.crystal_init')
+    
+    !  now only for cubic crystals. will be made general later on
+    
+    a = al
+    nx = nk_axis(1)
+    ny = nk_axis(2)
+    nz = nk_axis(3)
+    sx = k_shift(1)
+    sy = k_shift(2)
+    sz = k_shift(3)
+    
+    
+    !      compute reciprocal lattice and reset scales.
+    !               T                       T        -1          T -1
+    !              B A  = 2pi (1), so b =  B  = 2pi(A  )  = 2pi(a )
+    !     and we can compute the determinant (celvol) and the inverse.
+    !     But note that the 2pi factor is NOT needed here yet. (It
+    !     will be put in below)
+    
+    b = transpose(a)
+    
+    call invers(b,volume_check)
+    if (volume_check < M_ZERO) then
+      message(1) = 'Note: The lattice vectors as given do not form a direct triad'
+      call write_warning(1)
+      volume_check = - volume_check
+    end if
 
-      integer, intent(in)  :: nrkmax,ntype,maxnatom
-      integer, intent(in)  ::   nk_axis(3),natom(ntype)
-      integer, intent(out) :: nrk
-      FLOAT, intent(in)    :: al(3,3), coorat(ntype,maxnatom,3)
-      FLOAT, intent(in)    :: k_shift(3)
-      FLOAT, intent(out)   :: rk(3,nrkmax), w(nrkmax)
+    celvol = volume_check
+    
+    write(message(1), '(a15,f10.4,a)')'CRYSTAL: cell volume = ', &
+         celvol/units_out%length%factor**3,'['//trim(units_out%length%abbrev)//'^3]'
+    call write_info(1)
+    
+    ! compute the inner products ba, put in the 2pi factor and clean up.
+    
+    do i = 1, 3
+      a1(i) = a(i,1)
+      a2(i) = a(i,2)
+      a3(i) = a(i,3)
+      b(i,:) = M_TWO*M_PI*b(i,:)
+    end do
+    
+    b1(:) = b(:,1)
+    b2(:) = b(:,2)
+    b3(:) = b(:,3)
 
-! Local
-
-      integer  :: ipr, invers_no, jabs, jcar, neg, nx, ny, nz
-      FLOAT :: volume_check, celvol, ek, ek1, ek2
-      FLOAT :: a1(3),a2(3),a3(3),    &
-               b1(3), b2(3), b3(3),  &
-               rkcar(3),rkmod(3,4), sx, sy, sz
-!      FLOAT :: scale
-!      character(len=1) :: np
-!      logical :: vol_input
-
-      call push_sub('crystal.crystal_init')
-
-!  now only for cubic crystls..will be made general later on
-
-      a = al
-      nx = nk_axis(1)
-      ny = nk_axis(2)
-      nz = nk_axis(3)
-      sx = k_shift(1)
-      sy = k_shift(2)
-      sz = k_shift(3)
-
-
-!      compute reciprocal lattice and reset scales.
-!               T                       T        -1          T -1
-!              B A  = 2pi (1), so b =  B  = 2pi(A  )  = 2pi(a )
-!     and we can compute the determinant (celvol) and the inverse.
-!     But note that the 2pi factor is NOT needed here yet. (It
-!     will be put in below)
-
-      b = transpose(a)
-
-      call invers(b,volume_check)
-      if (volume_check < M_ZERO) then
-        message(1) = 'Note: The lattice vectors as given do not form a direct triad'
-        call write_warning(1)
-        volume_check = - volume_check
-      end if
-
-      celvol = volume_check
-
-      write(message(1), '(a15,f10.4,a)')'CRYSTAL: cell volume = ', &
-            celvol/units_out%length%factor**3,'['//trim(units_out%length%abbrev)//'^3]'
-      call write_info(1)
-
-!     compute the inner products ba, put in the 2pi factor and clean up.
-
-      do i = 1, 3
-        a1(i) = a(i,1)
-        a2(i) = a(i,2)
-        a3(i) = a(i,3)
-        b(i,:) = M_TWO*M_PI*b(i,:)
+    ! compute metrics bmet(i,j) and amet(i,j)
+    
+    do i = 1, 3
+      do j = i, 3
+        bmet(i,j) = 0
+        amet(i,j) = 0
+        do k = 1, 3
+          bmet(i,j) = bmet(i,j) + b(k,i)*b(k,j)
+          amet(i,j) = amet(i,j) + a(k,i)*a(k,j)
+        end do
+        if (i /= j) then
+          bmet(j,i) = bmet(i,j)
+          amet(j,i) = amet(i,j)
+        end if
       end do
-
-      b1(:) = b(:,1)
-      b2(:) = b(:,2)
-      b3(:) = b(:,3)
-
-!     compute metrics bmet(i,j) and amet(i,j)
-
-      do i = 1, 3
-        do j = i, 3
-          bmet(i,j) = 0
-          amet(i,j) = 0
-          do k = 1, 3
-            bmet(i,j) = bmet(i,j) + b(k,i)*b(k,j)
-            amet(i,j) = amet(i,j) + a(k,i)*a(k,j)
-          end do
-          if (i /= j) then
-            bmet(j,i) = bmet(i,j)
-            amet(j,i) = amet(i,j)
-          end if
-         end do
+    end do
+    
+    ! printout
+    
+    message(1) = 'CRYSTAL: lattice vectors ['//trim(units_out%length%abbrev)//']'
+    write(message(2), '(a,3(f10.5,1x))') 'a1 = ',a1/units_out%length%factor
+    write(message(3), '(a,3(f10.5,1x))') 'a2 = ',a2/units_out%length%factor
+    write(message(4), '(a,3(f10.5,1x))') 'a3 = ',a3/units_out%length%factor
+    call write_info(4)
+    message(1) = 'CRYSTAL: reciprocal basis ['//trim(units_out%length%abbrev)//']'
+    write(message(2), '(a,3(f10.5,1x))') 'b1 = ',b1*units_out%length%factor
+    write(message(3), '(a,3(f10.5,1x))') 'b2 = ',b2*units_out%length%factor
+    write(message(4), '(a,3(f10.5,1x))') 'b3 = ',b3*units_out%length%factor
+    call write_info(4)
+    
+    
+    write(6,9150) ((amet(i,j),j=1,3),i=1,3)
+9150 format(/' direct space matrix (some units)',/3(/1x,3f10.5))
+    write(6,9160) ((bmet(i,j),j=1,3),i=1,3)
+9160 format(/' reciprocal space metrix (some units)',/3(/1x,3f10.5))
+    
+    ! generate symmetries operation
+    
+    ipr = 1
+    call crystal_symgen(ipr,a,coorat,natom,maxnatom,ntype,invers_no)
+    
+    !  k-points are generated by the MP scheme
+    
+    ALLOCATE(xk(3, nx*ny*nz), 3*nx*ny*nz)
+    
+    call crystal_monkpack_generate(nx, ny, nz, sx, sy, sz, xk)
+    call crystal_monkpack_reduce(xk, nx*ny*nz, nrk, rk, w, .true.)
+    
+    message(1) =' ikp       weight             kpoint (relative)                kpoint (absolute)'
+    call write_info(1)
+    
+    do i = 1, nrk
+      
+      do j = 1, 4
+        rkmod(:,j) = rk(:,i)
       end do
-
-!      printout
-
-      message(1) = 'CRYSTAL: lattice vectors ['//trim(units_out%length%abbrev)//']'
-      write(message(2), '(a,3(f10.5,1x))') 'a1 = ',a1/units_out%length%factor
-      write(message(3), '(a,3(f10.5,1x))') 'a2 = ',a2/units_out%length%factor
-      write(message(4), '(a,3(f10.5,1x))') 'a3 = ',a3/units_out%length%factor
-      call write_info(4)
-      message(1) = 'CRYSTAL: reciprocal basis ['//trim(units_out%length%abbrev)//']'
-      write(message(2), '(a,3(f10.5,1x))') 'b1 = ',b1*units_out%length%factor
-      write(message(3), '(a,3(f10.5,1x))') 'b2 = ',b2*units_out%length%factor
-      write(message(4), '(a,3(f10.5,1x))') 'b3 = ',b3*units_out%length%factor
-      call write_info(4)
-
-
-!      write(6,9140) b1, b2, b3
-! 9140 format(/' reciprocal basis (Ang)',/3(/1x,3f10.5))
-      write(6,9150) ((amet(i,j),j=1,3),i=1,3)
- 9150 format(/' direct space matrix (some units)',/3(/1x,3f10.5))
-      write(6,9160) ((bmet(i,j),j=1,3),i=1,3)
- 9160 format(/' reciprocal space metrix (some units)',/3(/1x,3f10.5))
-
-! generate symmetries operation
-
-      ipr = 1
-      call crystal_symgen(ipr,a,coorat,natom,maxnatom,ntype,invers_no)
-
-!  k-points are generated by the MP scheme
-
-      ALLOCATE(xk(3, nx*ny*nz), 3*nx*ny*nz)
-      ALLOCATE(kmap(nx*ny*nz), nx*ny*nz)
-
-      call crystal_monkpack(nx,ny,nz,sx,sy,sz,nrk,rk,w,.true.)
-
-      message(1) =' ikp       weight             kpoint (relative)                kpoint (absolute)'
-      call write_info(1)
-
-      do 120 i = 1, nrk
-
-         do j = 1, 4
-           rkmod(:,j) = rk(:,i)
-            end do
-         rkmod(1,2) = rkmod(1,2) - M_ONE
-         rkmod(2,3) = rkmod(2,3) - M_ONE
-         rkmod(3,4) = rkmod(3,4) - M_ONE
-         ek = CNST(2000.0)
-         do j = 1, 4
-            ek1 = M_ZERO
-            ek2 = M_ZERO
-            do k = 1, 3
-               do l = 1, 3
-                  ek1 = ek1 + rkmod(k,j)*bmet(k,l)*rkmod(l,j)
-                  ek2 = ek2 + (rkmod(k,j)-M_ONE)*bmet(k,l)* (rkmod(l,j)-M_ONE)
-               end do
-            end do
-            if (ek1 < ek) then
-               ek = ek1
-               jcar = j
-            end if
-            if (ek2 < ek) then
-               ek = ek2
-               jcar = -j
-            end if
+      rkmod(1,2) = rkmod(1,2) - M_ONE
+      rkmod(2,3) = rkmod(2,3) - M_ONE
+      rkmod(3,4) = rkmod(3,4) - M_ONE
+      ek = CNST(2000.0)
+      do j = 1, 4
+        ek1 = M_ZERO
+        ek2 = M_ZERO
+        do k = 1, 3
+          do l = 1, 3
+            ek1 = ek1 + rkmod(k,j)*bmet(k,l)*rkmod(l,j)
+            ek2 = ek2 + (rkmod(k,j)-M_ONE)*bmet(k,l)* (rkmod(l,j)-M_ONE)
           end do
-
-!      rk in cartesian coordinates
-
-         neg = 0
-         do k = 1, 3
-            jabs = abs(jcar)
-            rkcar(k) = b1(k)*rkmod(1,jabs) + b2(k)*rkmod(2,jabs) + b3(k)*rkmod(3,jabs)
-            if (jcar < 0) rkcar(k) = rkcar(k) - b1(k) - b2(k) - b3(k)
-            if (rkcar(k) < M_ZERO) neg = neg + 1
-         end do
-         if (neg <= 1) neg = 1
-         if (neg > 1) neg = -1
-
-!      printout
-
-!        write(message(1),'(i4,3x,f10.6,3x,3f10.6,3x,3f10.6)') &
-!              i,w(i),(rk(j,i),j=1,3), (real(neg, REAL_PRECISION)*rkcar(j),j=1,3)
-!        call write_info(1)
-       write(6,9060)i,w(i),(rk(j,i),j=1,3), (real(neg, REAL_PRECISION)*rkcar(j),j=1,3)
+        end do
+        if (ek1 < ek) then
+          ek = ek1
+          jcar = j
+        end if
+        if (ek2 < ek) then
+          ek = ek2
+          jcar = -j
+        end if
+      end do
+      
+      ! rk in cartesian coordinates
+      
+      neg = 0
+      do k = 1, 3
+        jabs = abs(jcar)
+        rkcar(k) = b1(k)*rkmod(1,jabs) + b2(k)*rkmod(2,jabs) + b3(k)*rkmod(3,jabs)
+        if (jcar < 0) rkcar(k) = rkcar(k) - b1(k) - b2(k) - b3(k)
+        if (rkcar(k) < M_ZERO) neg = neg + 1
+      end do
+      if (neg <= 1) neg = 1
+      if (neg > 1) neg = -1
+      
+      ! printout
+      write(6,9060)i,w(i),(rk(j,i),j=1,3), (real(neg, REAL_PRECISION)*rkcar(j),j=1,3)
 9060  format(i4,3x,f10.6,3x,3f10.6,3x,3f10.6)
+      
+    end do
+    
+    write(6,9070) nrk, nx, ny, nz, sx, sy, sz
+9070 format(//1x,i3,' k points generated by program from',               &
+          ' parameters :',/1x,51('-'),//4x,'n =',3i5,6x,'s =',3f6.2,//)
+     
+    deallocate(xk)
+    
+    call pop_sub()
+  end subroutine crystal_init
+   
+  subroutine invers(mat,determinant)
+    FLOAT, intent(inout) :: mat(3,3)
+    FLOAT, intent(out)   :: determinant
 
-  120 continue
+    ! Compute the inverse of a 3x3 matrix (in situ) and its determinant
+    
+    determinant = lalg_inverter(3, mat, invert = .true.)
+    
+  end subroutine invers
 
-!        write(message(1),'(//1x,i3,a,/1x,51('-'),//4x,a3,3i5,6x,a3,3f6.2,//)') &
-!             nrk,' k points generated by program from parameters :', &
-!             'n =',nx, ny, nz,'s =',sx, sy, sz
-!        call write_info(1)
-
-      write(6,9070) nrk, nx, ny, nz, sx, sy, sz
- 9070 format(//1x,i3,' k points generated by program from',               &
-            ' parameters :',/1x,51('-'),//4x,'n =',3i5,6x,'s =',3f6.2,//)
-
-      deallocate(xk,kmap)
-
-        call pop_sub()
-      end subroutine crystal_init
-
-      subroutine invers(mat,determinant)
-        ! Compute the inverse of a 3x3 matrix (in situ) and its determinant
-        FLOAT :: mat(3,3), determinant
-
-        determinant = lalg_inverter(3, mat, invert = .true.)
-
-      return
-      end subroutine invers
-
-
-  subroutine crystal_monkpack(nx, ny, nz, sx, sy, sz, nrk, rk, w, time_reversal)
+  subroutine crystal_monkpack_generate(nx, ny, nz, sx, sy, sz, kpoints)
     FLOAT,   intent(in)  :: sx, sy, sz
     integer, intent(in)  :: nx, ny, nz
-    integer, intent(out) :: nrk
-    FLOAT,   intent(out) :: rk(:, :), w(:)
-    logical, intent(in)  :: time_reversal
-    
+    FLOAT,   intent(out) :: kpoints(:, :)
+
     ! Implements the Monkhorst-Pack scheme.
     
     ! Sets up uniform array of k points. Use the normal MP scheme
     ! (PRB13, 5188, (1976)) when sx=sy=sz=0.5. If sx=sy=0,
     ! the special hexagonal scheme is used (PRB16, 1748, (1977))
   
-    FLOAT :: dw, dx, dy, dz !, xdum
-    integer i, j, k, l, n
-    FLOAT :: rktran(3), rktran_inv(3)
-    
-    call push_sub('crystal.crystal_monkpack')
+    FLOAT :: dx, dy, dz
+    integer ii, jj, kk, nn
+
+    call push_sub('crystal.crystal_monkpack_generate')
     
     ! nx, ny, and nz are the number of points in the three
     ! directions dermined by the lattice wave vectors. sx, sy, and
@@ -262,93 +242,119 @@ contains
     dx = M_ONE/real(nx, REAL_PRECISION)
     dy = M_ONE/real(ny, REAL_PRECISION)
     dz = M_ONE/real(nz, REAL_PRECISION)
-    n = 0
-    do i = 1, nx
-      do j = 1, ny
-        do k = 1, nz
-          n = n + 1
-          xk(1,n) = (real(i - 1, REAL_PRECISION) + sx)*dx
-          xk(2,n) = (real(j - 1, REAL_PRECISION) + sy)*dy
-          xk(3,n) = (real(k - 1, REAL_PRECISION) + sz)*dz
-          kmap(n) = n
+    nn = 0
+    do ii = 1, nx
+      do jj = 1, ny
+        do kk = 1, nz
+          nn = nn + 1
+          kpoints(1, nn) = (real(ii - 1, REAL_PRECISION) + sx)*dx
+          kpoints(2, nn) = (real(jj - 1, REAL_PRECISION) + sy)*dy
+          kpoints(3, nn) = (real(kk - 1, REAL_PRECISION) + sz)*dz
         end do
       end do
     end do
 
-    ! reduce to irreducible zone
+    call pop_sub()
     
-    dw = M_ONE/real(n, REAL_PRECISION)
+  end subroutine crystal_monkpack_generate
+
+  subroutine crystal_monkpack_reduce(kpoints, nkpoints, nrk, rk, w, time_reversal)
+    FLOAT,   intent(in)  :: kpoints(:, :)
+    integer, intent(in)  :: nkpoints
+    integer, intent(out) :: nrk
+    FLOAT,   intent(out) :: rk(:, :), w(:)
+    logical, intent(in)  :: time_reversal
+    
+    FLOAT :: dw
+    integer ik, iop, ik2, idir
+    FLOAT :: rktran(3), rktran_inv(3)
+    integer, allocatable :: kmap(:)
+
+    call push_sub('crystal.crystal_monkpack_reduce')
+
+    ! reduce to irreducible zone
+
+    ALLOCATE(kmap(nkpoints), nkpoints)
+
+    do ik = 1, nkpoints
+      kmap(ik) = ik
+    end do
+    
+    dw = M_ONE/real(nkpoints, REAL_PRECISION)
+
     nrk = 0
-    do i = 1, n
-      if (kmap(i) /= i) cycle
+
+    do ik = 1, nkpoints
+      if (kmap(ik) /= ik) cycle
       
       ! new irreducible point
       ! mark with negative kmap
       
       nrk = nrk + 1
-      rk(1:3, nrk) = xk(1:3, i)
+      rk(1:3, nrk) = kpoints(1:3, ik)
       
-      kmap(i) = -nrk
+      kmap(ik) = -nrk
       
       w(nrk) = dw
 
-      if (i == n) cycle
+      if (ik == nkpoints) cycle
       
       ! operate on irreducible rk with the symmetry operations
       
-      do j = 1, ntrans
+      do iop = 1, ntrans
 
-        do k = 1, 3
+        do idir = 1, 3
 
-          rktran(k) = sum(gmtrx(j, k, 1:3)*rk(1:3, nrk))
+          rktran(idir) = sum(gmtrx(iop, idir, 1:3)*rk(1:3, nrk))
           
           ! translate to interval 0-1 and compute its inverse for
           ! later use. (built as reduce_01(-rk)). This
           ! fixes a bug when rktran(l)=0 (first reported by
           ! Mike Surh, March 1992)
           
-          rktran(k) = reduce_01(rktran(k))
-          rktran_inv(k) = reduce_01(-rktran(k))
-
+          rktran(idir) = reduce_01(rktran(idir))
+          rktran_inv(idir) = reduce_01(-rktran(idir))
+          
         end do
            
         ! remove (mark) k points related to irreducible rk by symmetry
         
-        do k = i + 1, n
-          if (kmap(k) /= k) cycle
+        do ik2 = ik + 1, nkpoints
+          if (kmap(ik2) /= ik2) cycle
           
           ! both the transformed rk ...
-          if (all( abs(rktran(1:3) - xk(1:3, k)) <= CNST(1.0e-5))) then
+          if (all( abs(rktran(1:3) - kpoints(1:3, ik2)) <= CNST(1.0e-5))) then
             w(nrk) = w(nrk) + dw
-            kmap(k) = nrk
+            kmap(ik2) = nrk
             cycle
           end if
 
           ! and its inverse
-          if (time_reversal .and. all(abs(rktran_inv(1:3) - xk(1:3, k)) <= CNST(1.0e-5)) ) then
+          if (time_reversal .and. all(abs(rktran_inv(1:3) - kpoints(1:3, ik2)) <= CNST(1.0e-5)) ) then
             w(nrk) = w(nrk) + dw
-            kmap(k) =nrk
-         end if
+            kmap(ik2) =nrk
+          end if
           
         end do
       end do
     end do
-    
+
     call pop_sub()
-  end subroutine crystal_monkpack
+  end subroutine crystal_monkpack_reduce
      
-      FLOAT function reduce_01(x)
-!     Reduces x to its appropriate equivalent in [0,1)
-!     It works for -500 < x < infinity...
-!     A function that works for all x is: mod(mod(x,1)+1,1), but it
-!     involves two mods...
+  FLOAT function reduce_01(x)
+    FLOAT :: x
 
-      FLOAT :: x
-
-      reduce_01 = mod(x+CNST(500.0), M_ONE)
-
-      end function reduce_01
-
+    !  Reduces x to its appropriate equivalent in [0,1)
+    !  It works for -500 < x < infinity...
+    !  A function that works for all x is: mod(mod(x,1)+1,1), but it
+    ! involves two mods...
+    
+    
+    reduce_01 = mod(x+CNST(500.0), M_ONE)
+    
+  end function reduce_01
+  
 
       subroutine crystal_symgen(ipr, a,coorat,natom,maxnatom,ntype,invers_no)
 
