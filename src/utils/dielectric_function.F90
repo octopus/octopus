@@ -36,7 +36,7 @@ program dielectric_function
   FLOAT :: vecpot0(1:MAX_DIM), dt, tt, ww, av
   FLOAT, allocatable :: vecpot(:, :), dumpa(:)
   CMPLX, allocatable :: dielectric(:,:)
-  FLOAT, parameter :: eta = CNST(0.1)/CNST(27.211383)
+  FLOAT, parameter :: eta = CNST(0.2)/CNST(27.211383)
   type(spec_t) :: s
   type(unit_system_t) :: file_units
   type(block_t) :: blk
@@ -132,7 +132,7 @@ program dielectric_function
     do ii = istart, iend
       tt = ii*dt
       dielectric(1:MAX_DIM, kk) = dielectric(1:MAX_DIM, kk) + &
-           vecpot(MAX_DIM + 1:2*MAX_DIM, ii)*exp((M_zI*ww)*tt)*dumpa(ii)*dt
+           vecpot(MAX_DIM + 1:2*MAX_DIM, ii)*exp((M_zI*ww - eta)*tt)*dumpa(ii)*dt
     end do
 
     dielectric(1:MAX_DIM, kk) = dielectric(1:MAX_DIM, kk)/vecpot0(1:MAX_DIM) + 1
