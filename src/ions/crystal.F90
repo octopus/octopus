@@ -33,15 +33,17 @@ module crystal_m
   
 contains
 
-  subroutine crystal_init(al,ntype,natom,maxnatom,coorat, nk_axis,k_shift,nrk,nrkmax,rk,w)
-    
+  subroutine crystal_init(al, ntype, natom, maxnatom, coorat, nk_axis, k_shift, nrk, nrkmax, rk, w, &
+       use_symmetries, use_time_reversal)
     integer, intent(in)  :: nrkmax,ntype,maxnatom
     integer, intent(in)  :: nk_axis(3),natom(ntype)
     integer, intent(out) :: nrk
     FLOAT, intent(in)    :: al(3,3), coorat(ntype,maxnatom,3)
     FLOAT, intent(in)    :: k_shift(3)
     FLOAT, intent(out)   :: rk(3,nrkmax), w(nrkmax)
-    
+    logical, intent(in)  :: use_symmetries
+    logical, intent(in)  :: use_time_reversal
+
     ! Local
     
     integer  :: ipr, invers_no, jabs, jcar, neg, nx, ny, nz, i, j, k, l
@@ -146,7 +148,15 @@ contains
     ALLOCATE(xk(3, nx*ny*nz), 3*nx*ny*nz)
     
     call crystal_monkpack_generate(nx, ny, nz, sx, sy, sz, xk)
-    call crystal_monkpack_reduce(xk, nx*ny*nz, nrk, rk, w, .true.)
+
+    if(use_symmetries) then
+      call crystal_monkpack_reduce(xk, nx*ny*nz, nrk, rk, w, use_time_reversal)
+    else
+      !just copy the full grid
+      nrk = nx*ny*nz
+      rk(1:MAX_DIM, 1:nrk) = xk(1:MAX_DIM, 1:nrk)
+      w(1:nrk) = M_ONE/real(nrk, REAL_PRECISION)
+    end if
     
     message(1) =' ikp       weight             kpoint (relative)                kpoint (absolute)'
     call write_info(1)

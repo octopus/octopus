@@ -28,7 +28,7 @@ subroutine states_choose_kpoints(d, sb, geo)
   FLOAT     :: total_weight, kmax
 
   ! local variables for the crystal_init call
-  logical :: use_symmetries
+  logical :: use_symmetries, use_time_reversal
   integer :: is, nk
   integer, allocatable :: natom(:)      ! natom(i) is the number of atoms of specie i
   FLOAT :: kshifts(MAX_DIM)
@@ -170,6 +170,10 @@ subroutine states_choose_kpoints(d, sb, geo)
   !% yes.
   !%End
   call loct_parse_logical(check_inp('KPointsUseSymmetries'), .true., use_symmetries)
+  call loct_parse_logical(check_inp('KPointsUseTimeReversal'), .true., use_time_reversal)
+  
+  
+
 
   !%Variable KPointsCenterOfInversion
   !%Type integer
@@ -228,32 +232,13 @@ subroutine states_choose_kpoints(d, sb, geo)
     coorat(:,:,i) = coorat(:,:,i) / sb%rlattice(i, i) + M_HALF
   end do
 
-  if (.not. use_symmetries) then
-    ! find out how many points we have inside the Wigner-Seitz cell
-    nkmax = points_inside_ws_cell(sb%periodic_dim, d%nik_axis, sb%klattice) 
-
-    write(message(1), '(a,i5)' ) 'Info: Total number of k-points:', nkmax
-    call write_info(1)
-    
-    ALLOCATE(kp(3, nkmax), 3*nkmax)
-    ALLOCATE(kw(nkmax), nkmax)
-
-    ! get kpoints
-    call get_points_in_ws_cell(sb%periodic_dim, d%nik_axis, sb%klattice, kp) 
-
-    ! equal weights for all points
-    nk = nkmax
-    kw = M_ONE/nk
-  else
-    ALLOCATE(kp(3, nkmax), 3*nkmax)
-    ALLOCATE(kw(nkmax), nkmax)
-
-    ! choose k-points according to Monkhorst-Pack scheme
-    ! all points are equal, but some are more equal than others :)
-    call crystal_init(sb%rlattice, geo%nspecies, natom, geo%natoms, coorat, d%nik_axis, &
-      kshifts, nk, nkmax, kp, kw)
-  end if
+  ALLOCATE(kp(3, nkmax), 3*nkmax)
+  ALLOCATE(kw(nkmax), nkmax)
   
+  ! choose k-points according to Monkhorst-Pack scheme
+  call crystal_init(sb%rlattice, geo%nspecies, natom, geo%natoms, coorat, d%nik_axis, &
+       kshifts, nk, nkmax, kp, kw, use_symmetries, use_time_reversal)
+
   ! double d%nik and copy points for spin polarized calc
   select case(d%ispin)
   case(UNPOLARIZED, SPINORS)
@@ -278,7 +263,7 @@ subroutine states_choose_kpoints(d, sb, geo)
 
   deallocate(natom, coorat)
   deallocate(kp, kw)
-
+  
   call print_kpoints_debug
   call pop_sub()
 
@@ -326,95 +311,6 @@ subroutine kpoints_write_info(d, iunit)
 
   call pop_sub()
 end subroutine kpoints_write_info
-
-
-! ---------------------------------------------------------
-subroutine get_points_in_ws_cell(dim, nik_axis, klattice, kp) 
-  integer, intent(in)    :: dim
-  integer, intent(in)    :: nik_axis(:)
-  FLOAT,   intent(in)    :: klattice(:,:)
-  FLOAT,   intent(out)   :: kp(:,:)
-
-  integer :: ix, iy, iz, inik, iunit, ik(3), id
-  FLOAT   :: k_point(3)
-
-  call push_sub('states_kpoints.get_points_in_ws_cell')
-
-  iunit = io_open('static/wigner_seitz_cell.dat', action = 'write')
-  write(message(1), '(a)') '# index  k_x, k_y, k_z (unscaled)  k_x, k_y, k_z (scaled)'
-  call write_info(1, iunit)
-
-  inik = 1
-
-  do ix = 0, nik_axis(1) - 1
-    do iy = 0, nik_axis(2) - 1
-      do iz = 0, nik_axis(3) - 1
-
-        k_point = M_ZERO
-        ik = (/ ix, iy, iz /)
-
-        do id = 1, dim
-          k_point(id) = -klattice(id, id) + ik(id) * ( M_TWO*klattice(id, id) / (nik_axis(id) - 1) ) 
-        end do
-
-        if (in_wigner_seitz_cell(k_point, klattice)) then
-          ! return a scaled point (to be compatible with crystal_init)
-          kp(:, inik) = M_ZERO
-          do id = 1, dim
-            kp(id, inik) = k_point(id)/klattice(id, id)
-          end do
-          write(message(1),'(i4, 6f18.12)') inik, k_point(:), kp(:, inik)
-          call write_info(1, iunit)
-          inik = inik + 1          
-        end if
-        
-      end do
-    end do
-  end do
-
-  call io_close(iunit)
-
-  call pop_sub()
-end subroutine get_points_in_ws_cell
-
-
-! ---------------------------------------------------------
-integer function points_inside_ws_cell(dim, nik_axis, klattice) result(no_of_points)
-  integer, intent(in) :: dim
-  integer, intent(in) :: nik_axis(:)
-  FLOAT,   intent(in) :: klattice(:,:)
-
-  integer :: ix, iy, iz, inik, ik(3), id
-  FLOAT   :: k_point(3)
-
-  call push_sub('states_kpoints.points_inside_ws_cell')
-
-  ! find out how many k-points are contained in the Wigner-Seitz cell
-
-  inik = 0
-
-  do ix = 0, nik_axis(1) - 1 
-    do iy = 0, nik_axis(2) - 1
-      do iz = 0, nik_axis(3) - 1
-
-        k_point = M_ZERO
-        ik = (/ ix, iy, iz /)
-
-        do id = 1, dim
-          k_point(id) = -klattice(id, id) + ik(id) * ( M_TWO*klattice(id, id) / (nik_axis(id) - 1) ) 
-        end do
-
-        if (in_wigner_seitz_cell(k_point, klattice)) inik = inik + 1
-
-      end do
-    end do
-  end do
-
-  no_of_points = inik
-
-  call pop_sub()
-end function points_inside_ws_cell
-
 
 ! ---------------------------------------------------------
 logical function in_wigner_seitz_cell(k_point, klattice) result(in_cell)
