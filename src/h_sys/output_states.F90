@@ -246,7 +246,7 @@
 
     case(1)
       write(iunit,'(a)')       '# Point:'
-      write(iunit,'(a, f9.5)') '# spacing = ', outp%line%spacing
+      write(iunit,'(a, f9.5)') '# origin = ', outp%line%origin(1)
 
     end select
 
@@ -263,7 +263,7 @@
       select case(NDIM)
       case(3); flow = mf_surface_integral (gr%m, j, outp%plane)
       case(2); flow = mf_line_integral (gr%m, j, outp%line)
-      case(1); flow = sum(j(mesh_nearest_point(gr%m, outp%line%origin(1), dmin, rankmin), :))
+      case(1); flow = j(mesh_nearest_point(gr%m, outp%line%origin(1), dmin, rankmin), 1)
       end select
 
       deallocate(j)

@@ -738,9 +738,10 @@ contains
           message(2) = 'when propagating with H_eff.'
           call write_warning(2)
         end if
-
       end do
     end do
+
+!write(*,*) calc_current(gr, st)
 
     ! Save interface part of wavefunction for subsequent iterations.
     call save_intf_wf(intf, timestep, st, max_iter, st_intf)
