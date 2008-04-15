@@ -297,16 +297,17 @@ contains
         if (saved_iter.eq.0) then 
           ! Get anchor for recursion.
           call approx_coeff0(intface, delta, il, diag(:, :, il), offdiag(:, :, il), coeff(:, :, 0, il), &
-                             sp_coeff(:, 0, il), mem_s(:,:,:,il), order, mem_type, sp2full_map)
+                             sp_coeff(:, 0, il), mem_s(:,:,:,il), order, mem_type, sp2full_map, spacing)
           call loct_progress_bar(1, max_iter+1)
         end if
         ! Calculate the subsequent coefficients by the recursive relation.
         if (mem_type.eq.1) then
           call calculate_coeffs(il, saved_iter+1, max_iter, delta, intface, diag(:, :, il), &
-                     offdiag(:, :, il), coeff(:, :, :, il))
+                     offdiag(:, :, il), coeff(:, :, :, il), spacing)
         else ! FIXME: yet only 2D
           call calculate_sp_coeffs(il, saved_iter+1, max_iter, delta, intface, diag(:, :, il), &
-                     offdiag(:, :, il), sp_coeff(:, :, il), mem_s(:,:,:,il),np*order,order,dim,sp2full_map)
+                     offdiag(:, :, il), sp_coeff(:, :, il), mem_s(:,:,:,il),np*order, &
+                      order, dim, sp2full_map, spacing)
         end if
 
         if (saved_iter.lt.max_iter) then
@@ -370,7 +371,8 @@ contains
   ! Solve for zeroth memory coefficient by truncating the continued
   ! matrix fraction. Since the coefficient must be symmetric,
   ! a symmetric inversion is used.
-  subroutine approx_coeff0(intface, delta, il, diag, offdiag, coeff0, sp_coeff0, mem_s, order, mem_type, mapping)
+  subroutine approx_coeff0(intface, delta, il, diag, offdiag, coeff0, sp_coeff0, &
+                            mem_s, order, mem_type, mapping, spacing)
     type(intface_t),     intent(in)  :: intface
     FLOAT,               intent(in)  :: delta
     integer,             intent(in)  :: il
@@ -382,15 +384,17 @@ contains
     integer,             intent(in)  :: order
     integer,             intent(in)  :: mem_type
     integer,             intent(in)  :: mapping(:)   ! the mapping
+    FLOAT,               intent(in)  :: spacing
 
     integer            :: i, j, np
     CMPLX, allocatable :: q0(:, :)
-    FLOAT              :: norm, old_norm
+    FLOAT              :: norm, old_norm, sp2
 
 
     call push_sub('td_trans_mem.approx_coeff0')
 
     np = intface%np
+    sp2 = spacing**2
     ALLOCATE(q0(np, np), np**2)
 
     ! Truncating the continued fraction is the same as iterating the
@@ -417,7 +421,7 @@ contains
       call apply_coupling(q0, offdiag, q0, np, il)
       call make_symmetric_average(q0, np)
       norm = infinity_norm(q0)
-      if(abs(norm-old_norm).lt.mem_tolerance) then
+      if((abs(norm-old_norm)*sp2).lt.mem_tolerance) then
         exit
       end if
       old_norm = norm
@@ -491,7 +495,6 @@ contains
         k_stencil = op%m%lxyz_inv(op%m%lxyz(n,1)+op%stencil(1,k), &
                                   op%m%lxyz(n,2)+op%stencil(2,k), &
                                   op%m%lxyz(n,3)+op%stencil(3,k))
-!write(*,*) i,op%w_re(k, 1)
         ! If the coupling point is in the interface...
         if(k_stencil.le.op%np.and. &
           member_of_intface(k_stencil, intf, il)) then
@@ -520,7 +523,6 @@ contains
         end if
       end do
     end do
-!call write_matrix(diag, 0, intf%np)
     call pop_sub()
   end subroutine calculate_diag
 
@@ -623,7 +625,6 @@ contains
       end do
     end do
 
-!call write_matrix(offdiag, 0, intface%np)
     call pop_sub()
   end subroutine calculate_offdiag
 
@@ -656,7 +657,7 @@ contains
   ! the recursive relation. Since the 0th coefficiant is symmetric
   ! all subsequent are also, therefore symmetric matrix multiplications
   ! can be used. use recursive relation without p (uses only half the memory)
-  subroutine calculate_coeffs(il, start_iter, iter, delta, intf, diag, offdiag, coeffs)
+  subroutine calculate_coeffs(il, start_iter, iter, delta, intf, diag, offdiag, coeffs, spacing)
     integer,             intent(in)    :: il
     integer,             intent(in)    :: start_iter
     integer,             intent(in)    :: iter
@@ -665,8 +666,9 @@ contains
     CMPLX,               intent(in)    :: diag(intf%np, intf%np)
     CMPLX,               intent(in)    :: offdiag(intf%np, intf%np)
     CMPLX,               intent(inout) :: coeffs(intf%np, intf%np, 0:iter)
+    FLOAT,               intent(in)    :: spacing
 
-    FLOAT              :: old_norm, norm
+    FLOAT              :: old_norm, norm, sp2
     integer            :: i,j, k, np
     CMPLX, allocatable :: tmp(:, :), tmp2(:, :), inv_offdiag(:, :)
     CMPLX, allocatable :: prefactor_plus(:, :), prefactor_minus(:, :)
@@ -674,6 +676,7 @@ contains
     call push_sub('td_trans_mem.calculate_coeffs')
 
     np = intf%np
+    sp2 = spacing**2
 
     ALLOCATE(tmp(np, np), np**2)
     ALLOCATE(tmp2(np, np), np**2)
@@ -734,7 +737,7 @@ contains
         call make_symmetric_average(coeffs(:, :, i), np)
 
         norm = infinity_norm(coeffs(:, :, i))
-        if(abs(norm-old_norm).lt.mem_tolerance) then
+        if((abs(norm-old_norm)*sp2).lt.mem_tolerance) then
           exit
         end if
         old_norm = norm
@@ -893,7 +896,7 @@ contains
   ! the recursive relation. We can only use the (sparse) mem_q, so use the
   ! mem_q only recursive relation.
   subroutine calculate_sp_coeffs(il, start_iter, iter, delta, intf, diag, offdiag, &
-                                 sp_coeffs, mem_s, length, order, dim, mapping)
+                                 sp_coeffs, mem_s, length, order, dim, mapping, spacing)
     integer,             intent(in)    :: il
     integer,             intent(in)    :: start_iter
     integer,             intent(in)    :: iter
@@ -907,15 +910,17 @@ contains
     integer,             intent(in)    :: order
     integer,             intent(in)    :: dim
     integer,             intent(in)    :: mapping(:)   ! the mapping
+    FLOAT,               intent(in)    :: spacing
 
     integer            :: i,j, k, np
     CMPLX, allocatable :: tmp1(:, :), tmp2(:, :), tmp3(:, :), inv_offdiag(:, :)
     CMPLX, allocatable :: prefactor_plus(:, :), prefactor_minus(:, :)
     CMPLX, allocatable :: sp_tmp(:)
-    FLOAT              :: old_norm, norm
+    FLOAT              :: old_norm, norm, sp2
 
     call push_sub('td_trans_mem.calculate_sp_coeffs')
     np = intf%np
+    sp2 = spacing**2
 
     ALLOCATE(tmp1(np, np), np**2)
     ALLOCATE(tmp2(np, np), np**2)
@@ -981,7 +986,7 @@ contains
         call make_symmetric_average(tmp1, np)
         call make_sparse_matrix(np, order, dim, tmp1, mem_s, sp_coeffs(:, i), mapping)
         norm = infinity_norm(tmp1)
-        if(abs(norm-old_norm).lt.mem_tolerance) then
+        if((abs(norm-old_norm)*sp2).lt.mem_tolerance) then
           exit
         end if
         old_norm = norm

@@ -526,7 +526,6 @@ contains
         ! therefore take the symmetric quasi-minimal residual solver (QMR)
         call zqmr_sym(NP, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_lip_sch, preconditioner, &
                         iter, residue=dres, threshold=cg_tol, showprogress = .true.)
-!if (ist.eq.2) write(*,*) st%zpsi(:, 1, ist, ik)
         !write(*,*) 'iter =',iter, 'residue =', dres
       end do
     end do
@@ -632,7 +631,6 @@ contains
     call mesh_init_mesh_aux(gr%m)
 
     m = timestep-1
-    cg_iter = cg_max_iter
     inp = intf%np
 
     f0 = M_z1/(M_z1+M_zI*M_HALF*dt*energy)
@@ -724,6 +722,7 @@ contains
 
         ! TODO: for many states parallel
         ! 4. Solve linear system (1 + i \delta H_{eff}) st%zpsi = tmp.
+        cg_iter = cg_max_iter
         tmp(1:NP, 1) = st%zpsi(1:NP, 1, ist, ik)
         if (mem_type.eq.1) then
           call zconjugate_gradients(NP, st%zpsi(:, 1, ist, ik), tmp(:, 1), &
