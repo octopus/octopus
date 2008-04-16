@@ -68,8 +68,8 @@ contains
 
     call push_sub('td_trans_lead.lead_init')
 
-    ALLOCATE(leads%td_pot(0:n_steps, NLEADS), (n_steps+1)*NLEADS)
-    ALLOCATE(pot_im(0:n_steps), n_steps+1)
+    ALLOCATE(leads%td_pot(0:n_steps+1, NLEADS), (n_steps+2)*NLEADS)
+    ALLOCATE(pot_im(0:n_steps+1), n_steps+2)
 
     !%Variable TDTransLeads
     !%Type block
@@ -147,7 +147,8 @@ contains
       tmp_c_string = leads%td_pot_formula(il)
       call conv_to_c_string(tmp_c_string)
 
-      do it = 0, n_steps
+      leads%td_pot(0, il) = M_ZERO
+      do it = 1, n_steps+1
         t = it*tstep
         call loct_parse_expression(leads%td_pot(it, il), pot_im(it), &
           M_ZERO, M_ZERO, M_ZERO, M_ZERO, t, tmp_c_string)

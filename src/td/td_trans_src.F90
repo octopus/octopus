@@ -57,7 +57,6 @@ contains
     character(len=*), intent(in) :: dir ! directory with the extended states
     type(states_t),   intent(in) :: st  ! states
     CMPLX,     intent(out)   :: psi0(:, :, :, :, :, :) ! np, (lead=1;center=2), ndim, nst, nik, NLEADS
-    !FLOAT,     intent(out)   :: energy ! H(lead)*psi(lead)+H(lead,C)*psi(C) == energy*psi(lead)
     integer,   intent(in)    :: np      ! length of the extended block
     type(grid_t),  intent(in):: gr
 
@@ -85,12 +84,11 @@ contains
 
   ! ---------------------------------------------------------
   ! Allocate memory for extended groundstate and calculate eigenstates of the lead
-  subroutine source_init(st, src_prev, st_psi0, dt, energy, inp, gr)
+  subroutine source_init(st, src_prev, st_psi0, dt, inp, gr)
     type(states_t),  intent(in)  :: st
     CMPLX, pointer      :: src_prev(:, :, :, :, :)! intf%np, ndim, nst, nik, NLEADS
     CMPLX, pointer      :: st_psi0(:, :, :, :, : ,:)  ! np, (lead=1;center=2), ndim, nst, nik, nleads, nleads 
     FLOAT, intent(in)   :: dt      ! timestep
-    FLOAT, intent(in)   :: energy
     integer, intent(in) :: inp
     type(grid_t),  intent(in)  :: gr
 

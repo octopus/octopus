@@ -40,6 +40,7 @@ module td_trans_rti_m
   use td_trans_intf_m
   use v_ks_m
   use nl_operator_m
+  use loct_m
 
   implicit none
 
@@ -108,6 +109,9 @@ contains
 
     integer :: allocsize, id
     type(nl_operator_t)  :: op
+    FLOAT, allocatable   :: um(:)
+
+    ALLOCATE(um(NLEADS), NLEADS)
 
     call push_sub('td_trans_rti.cn_src_mem_init')
 
@@ -198,7 +202,7 @@ contains
                       trans%mem_coeff, trans%mem_sp_coeff, trans%mem_s, trans%diag, trans%offdiag, gr%sb%dim, &
                       gr%sb%h(1), trans%mem_type, gr%f_der%der_discr%order, trans%sp2full_map)
 
-    call source_init(st, trans%src_prev, trans%st_psi0, dt, trans%energy, trans%intface%np, gr)
+    call source_init(st, trans%src_prev, trans%st_psi0, dt, trans%intface%np, gr)
 
     ! Allocate memory for the interface wave functions.
     allocsize = trans%intface%np*st%lnst*st%d%nik*(max_iter+1)*NLEADS
@@ -210,9 +214,12 @@ contains
     !            /      dt        \   / /       dt        \
     ! u(m, il) = |1 - i -- U(m,il)|  /  | 1 + i -- U(m,il) |
     !            \      4         / /   \       4         /
-    trans%src_mem_u(:, :) = (M_z1 - M_zI*dt/M_FOUR*trans%lead%td_pot(:, :)) / &
-      (M_z1 + M_zI*dt/M_FOUR*trans%lead%td_pot(:, :))
-
+    do id=0, max_iter
+      um(:) = M_HALF*(trans%lead%td_pot(id+1, :) + trans%lead%td_pot(id, :))
+      !um(:) = trans%lead%td_pot(id, :)
+      trans%src_mem_u(id, :) = (M_z1 - M_zI*dt/M_FOUR*um(:)) / (M_z1 + M_zI*dt/M_FOUR*um(:))
+    end do
+    deallocate(um)
     call pop_sub()
   end subroutine cn_src_mem_init
 
@@ -299,18 +306,19 @@ contains
   ! Highly convergent schemes for the calculation of bulk and surface Green function
   ! M P Lopez Sanco, J M Sancho and J Rubio (1984)
   ! J. Phys. F: Met. Phys 15 (1985) 851-858
-  subroutine green_lead(energy, diag, offdiag, np, il, green)
+  subroutine green_lead(energy, diag, offdiag, np, il, green, dx)
     FLOAT,               intent(in)  :: energy
     CMPLX,               intent(in)  :: diag(:, :)
     CMPLX,               intent(in)  :: offdiag(:, :)
     integer,             intent(in)  :: np ! number of interface points
     integer,             intent(in)  :: il
     CMPLX,               intent(out) :: green(:, :)
+    FLOAT,               intent(out) :: dx
 
     CMPLX, allocatable   :: e(:, :), es(:, :), a(:, :), b(:, :), inv(:, :)
     CMPLX, allocatable   :: tmp1(:, :), tmp2(:, :), tmp3(:, :)
-    integer              :: i, j
-    FLOAT                :: det, old_norm, norm
+    integer              :: i, j, ilog_thr, ilog_res
+    FLOAT                :: det, old_norm, norm, dx2, threshold, log_thr, log_res, res
 
     call push_sub('td_trans_rti.green_lead2')
 
@@ -322,6 +330,17 @@ contains
     ALLOCATE(tmp1(np,np),np**2)
     ALLOCATE(tmp2(np,np),np**2)
     ALLOCATE(tmp3(np,np),np**2)
+    dx2 = dx**2
+    threshold = CNST(1e-12)
+
+    write(message(1), '(a,es10.3)') '  Calculating surface Green function for '//trim(lead_name(il))// &
+    ' lead: Energy = ', energy
+    call write_info(1, stdout)
+
+    ! initialize progress bar
+    log_thr = -log(threshold)
+    ilog_thr = M_TEN**2*log_thr
+    call loct_progress_bar(-1, ilog_thr)
 
     ! fill with start values
     e(:, :) = diag(:, :)
@@ -342,8 +361,13 @@ contains
       call zgemm('N','N',np,np,np,M_z1,a,np,inv,np,M_z0,tmp2,np)
       call zgemm('N','N',np,np,np,M_z1,tmp2,np,b,np,M_z0,tmp1,np)
       es(:, :) = es(:, :) + tmp1(:, :)
-      norm = infinity_norm(es)
-      if(abs(norm-old_norm).lt.CNST(1e-10)) then
+      norm = infinity_norm(es)*dx2
+      res = abs(norm-old_norm)
+      log_res = -log(res)
+      if (log_res > log_thr) log_res = log_thr
+      ilog_res = M_TEN**2*log_res
+      call loct_progress_bar(ilog_res, ilog_thr)
+      if(res.lt.threshold) then
         !write(*,*) 'green-iter:', i
         exit
       end if
@@ -358,7 +382,7 @@ contains
     end do
     green(:, :) = -es(:, :)
     do j=1, np
-      green(j, j) = green(j, j) + energy + CNST(1e-10)*M_zI
+      green(j, j) = green(j, j) + energy + threshold*M_zI
     end do
     det = lalg_inverter(np, green, invert = .true.)
     call make_symmetric_average(green, np)
@@ -436,7 +460,7 @@ contains
 
   ! ---------------------------------------------------------
   ! compute the extended eigenstate(s) 
-  subroutine ext_eigenstate_lip_sch(h, gr, np, diag, offdiag, order, energy, lead_pot, dx, st)
+  subroutine ext_eigenstate_lip_sch(h, gr, np, diag, offdiag, order, energy, st)
     type(hamiltonian_t), intent(inout) :: h
     type(grid_t),   intent(inout)      :: gr
     integer,        intent(in)      :: np                      ! number of interface points
@@ -444,17 +468,14 @@ contains
     CMPLX,          intent(in)      :: offdiag(np, np, NLEADS) ! hopping operator V^T
     integer,        intent(in)      :: order                   ! discretization order
     FLOAT, target,  intent(in)      :: energy                  ! total energy
-    FLOAT,          intent(in)      :: lead_pot(NLEADS)        ! lead potential at t=0
-    FLOAT,          intent(in)      :: dx                      ! spacing
     type(states_t), intent(inout)   :: st                      ! states
 
     CMPLX, target, allocatable :: green_l(:,:,:)
     CMPLX, allocatable :: tmp(:, :)
-    integer            :: i, id, iter, n(3), ist
+    integer            :: i, id, iter, n(3), ist, nst2
     integer, pointer   :: lxyz(:,:)
     FLOAT, target      :: en
-    FLOAT              :: lsize(3), q(3)
-    FLOAT              :: dres, emin, emax
+    FLOAT              :: lsize(3), q(3), dres, emax, qmin, qmax, dx(3)
 
     call push_sub('td_trans_rti.ext_eigenstate_lip_sch')
 
@@ -472,64 +493,70 @@ contains
     energy_p => en
     lxyz => gr%m%lxyz
     lsize = gr%sb%lsize
-    emin = M_ZERO
-    do id=2, gr%sb%dim ! FIXME: when the last gridpoint is not the border, recalculate transversal energy
-      q(id) = M_PI/(M_TWO*(lsize(id)+gr%sb%h(id)))
-      emin = emin + M_HALF*q(id)**2
-    end do
+    dx(:) = gr%sb%h(:)
     emax = energy
-    if(emax < emin) then
+    do id=2, gr%sb%dim ! FIXME: when the last gridpoint is not the border, recalculate transversal energy
+      q(id) = M_PI/(M_TWO*(lsize(id)+dx(id)))
+      if (order.eq.1) then ! tight binding
+        emax = emax - (M_ONE-cos(dx(id)*q(id)))/dx(id)**2
+      else ! continuous relation
+        emax = emax - M_HALF*q(id)**2
+      end if
+    end do
+    if(emax < M_ZERO) then
       write(message(1), '(a,f14.6,a)') "The input energy : '", energy, &
                   "' is smaller than the groundstate energy for the given system."
       call write_fatal(1)
     end if
+    qmin = CNST(1e-5)
+    if (order.eq.1) then ! tight binding
+      qmax = acos(M_ONE-emax*dx(1)**2)/dx(1)
+    else ! continuous relation
+      qmax = sqrt(M_TWO*emax)
+    end if
 
-    ! sample the k integral (k=q)
+    nst2 = (st%lnst-1)/2
+    if (nst2.eq.0) nst2 = 1
+    ! sample the k integral (k=q), start with highest k
     do ist=st%st_start, st%st_end
       ! always two states (ist=(1,2); (3,4), ...) have the same energy
       ! start with en > emin
-      i = (ist-1)/2 + 1
-      en = emin + 2*i*(emax-emin)/st%lnst
+      i = (ist-1)/2
+      q(1) = qmax - i*(qmax-qmin)/nst2
       ! now calculate the q's for each state
       ! TODO: run over all states, now only the lowest transversal mode is used
-      ! subtract the transversal energy from the total energy to get the longitudinal part
-      ! which is the energy used for the transport
-      do id=2, gr%sb%dim ! FIXME: when the last gridpoint is not the border, recalculate transversal energy
-        q(id) = M_PI/(M_TWO*(lsize(id)+gr%sb%h(id)))
-        en = en - M_HALF*q(id)**2
-      end do
       if (order.eq.1) then ! tight binding
-        q(1) = acos(M_ONE-en*gr%sb%h(1)**2)/gr%sb%h(1)
+        en = (M_ONE-cos(dx(1)*q(1)))/dx(1)**2
       else ! continuous relation
-        q(1) = sqrt(M_TWO*en)
+        en = q(1)**2/M_TWO
       end if
       ! now set the unscattered states (flat leads with box geometry)
       do i=1, NP
         if (mod(ist-1,2).eq.0) then
-          st%zpsi(i, 1, ist, 1) = exp(M_zI*q(1)*lxyz(i,1)*gr%sb%h(1))
+          st%zpsi(i, 1, ist, 1) = exp(M_zI*q(1)*lxyz(i,1)*dx(1))
         else
-          st%zpsi(i, 1, ist, 1) = exp(-M_zI*q(1)*lxyz(i,1)*gr%sb%h(1))
+          st%zpsi(i, 1, ist, 1) = exp(-M_zI*q(1)*lxyz(i,1)*dx(1))
         end if
         do id=2, gr%sb%dim
           if (mod(n(id),2).eq.0) then
-            st%zpsi(i, 1, ist, 1) = st%zpsi(i, 1, ist, 1)*sin(q(id)*lxyz(i,id)*gr%sb%h(id))
+            st%zpsi(i, 1, ist, 1) = st%zpsi(i, 1, ist, 1)*sin(q(id)*lxyz(i,id)*dx(id))
           else
-            st%zpsi(i, 1, ist, 1) = st%zpsi(i, 1, ist, 1)*cos(q(id)*lxyz(i,id)*gr%sb%h(id))
+            st%zpsi(i, 1, ist, 1) = st%zpsi(i, 1, ist, 1)*cos(q(id)*lxyz(i,id)*dx(id))
           end if
         end do
       end do
       ! calculate right hand side (e-T-V(lead)-sum(a)[H_ca*g_a*H_ac]
       ! only calculate once for a given energy
       if (mod(ist-1,2).eq.0) then
-        call green_lead(energy, diag(:, :, LEFT), offdiag(:, :, LEFT), np, LEFT, green_l(:, :, LEFT))
+        call green_lead(en, diag(:, :, LEFT), offdiag(:, :, LEFT), np, LEFT, green_l(:, :, LEFT), dx(1))
         call apply_coupling(green_l(:, :, LEFT), offdiag(:, :, LEFT), green_l(:, :, LEFT), np, LEFT)
-        call green_lead(energy, diag(:, :, RIGHT), offdiag(:, :, RIGHT), np, RIGHT, green_l(:, :, RIGHT))
+        call green_lead(en, diag(:, :, RIGHT), offdiag(:, :, RIGHT), np, RIGHT, green_l(:, :, RIGHT), dx(1))
         call apply_coupling(green_l(:, :, RIGHT), offdiag(:, :, RIGHT), green_l(:, :, RIGHT), np, RIGHT)
       end if
 
       tmp(:,:) = M_z0
       call zkinetic(h, gr, st%zpsi(:, :, ist, 1), tmp(:,:))
-      tmp(1:NP, :) = energy*st%zpsi(1:NP, :, ist, 1) - tmp(1:NP, :)
+      tmp(1:NP, :) = en*st%zpsi(1:NP, :, ist, 1) - tmp(1:NP, :)
       ! TODO: the static potential of the lead
       call zsymv('U', np, -M_z1, green_l(:, :, LEFT), np, st%zpsi(1:np, 1, ist, 1), 1, M_z1, tmp(1:np, 1), 1)
       call zsymv('U', np, -M_z1, green_l(:, :, RIGHT), np, &
@@ -538,6 +565,8 @@ contains
       ! now solve the equation
       green_l_p => green_l
       ! now solve the linear system to get the extended eigenstate
+      write(message(1), '(a,es10.3)') '  Solving Lippmann Schwinger equation for energy ', energy
+      call write_info(1, stdout)
       iter = 10000
       ! zconjugate_gradients fails in some cases (wrong solution) and takes longer
       ! therefore take the symmetric quasi-minimal residual solver (QMR)
@@ -546,16 +575,13 @@ contains
       !write(*,*) 'iter =',iter, 'residue =', dres
     end do !ist
 
-
-
-
     deallocate(green_l, tmp)
     call pop_sub()
   end subroutine ext_eigenstate_lip_sch
 
   ! ---------------------------------------------------------
   ! compute the extended eigenstate(s)
-  subroutine calculate_ext_eigenstate(h, gr, np, diag, offdiag, order, energy, lead_pot, dx, st)
+  subroutine calculate_ext_eigenstate(h, gr, np, diag, offdiag, order, energy, lead_pot, st)
     type(hamiltonian_t), intent(inout) :: h
     type(grid_t),   intent(inout)      :: gr
     integer,        intent(in)      :: np                      ! number of interface points
@@ -564,7 +590,6 @@ contains
     integer,        intent(in)      :: order                   ! discretization order
     FLOAT,          intent(in)      :: energy                  ! total energy
     FLOAT,          intent(in)      :: lead_pot(NLEADS)        ! lead potential at t=0
-    FLOAT,          intent(in)      :: dx                      ! spacing
     type(states_t), intent(inout)   :: st                      ! states
 
     integer  :: eigenstate_type
@@ -577,7 +602,7 @@ contains
     case(1) ! reference implementation, only feasible in 1D (maybe 2D)
       !call ext_eigenst_imag_green(h, gr, np, diag, offdiag, order, energy, lead_pot, dx, st, phase, ik)
     case(2) ! method by Florian Lorenzen and Heiko Appel
-      call ext_eigenstate_lip_sch(h, gr, np, diag, offdiag, order, energy, lead_pot, dx, st)
+      call ext_eigenstate_lip_sch(h, gr, np, diag, offdiag, order, energy, st)
     case(3) ! method by Gianluca Stefannuci
      !call ext_eigenstate_stefanucci(h, gr, np, diag, offdiag, order, energy, lead_pot, dx, st, phase, ik)
     end select
@@ -679,7 +704,7 @@ contains
       case(1) ! calculate the extended eigenstate
         ! DON'T FORGET TO MAKE THE SIMULATION BOX BIGGER IN THE INP FILE
         j = NP*st%d%dim*st%lnst*st%d%nik
-        call calculate_ext_eigenstate(h, gr, inp, diag, offdiag, order, energy, td_pot(0,:), gr%sb%h(1), st)
+        call calculate_ext_eigenstate(h, gr, inp, diag, offdiag, order, energy, td_pot(0,:), st)
         call write_binary(j, st%zpsi(1:NP, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik), 3, ierr, 'ext_eigenstate.obf')
       end select
     end if
