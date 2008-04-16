@@ -450,10 +450,11 @@ contains
 
     CMPLX, target, allocatable :: green_l(:,:,:)
     CMPLX, allocatable :: tmp(:, :)
-    integer            :: i, id, iter, n(3), ist, ik
+    integer            :: i, id, iter, n(3), ist
     integer, pointer   :: lxyz(:,:)
-    FLOAT              :: en, lsize(3), q(3)
-    FLOAT              :: dres
+    FLOAT, target      :: en
+    FLOAT              :: lsize(3), q(3)
+    FLOAT              :: dres, emin, emax
 
     call push_sub('td_trans_rti.ext_eigenstate_lip_sch')
 
@@ -468,67 +469,86 @@ contains
 
     ! 1. compute the unpertubed eigenstates (groundstate calculation)
     ! for now set manually psi(x)*phi(y,z)
-    energy_p => energy
+    energy_p => en
     lxyz => gr%m%lxyz
     lsize = gr%sb%lsize
-    en = energy
-    ! TODO: run over all states
-    ! subtract the transversal energy from the total energy to get the longitudinal part
-    ! which is the energy used for the transport
+    emin = M_ZERO
     do id=2, gr%sb%dim ! FIXME: when the last gridpoint is not the border, recalculate transversal energy
       q(id) = M_PI/(M_TWO*(lsize(id)+gr%sb%h(id)))
-      n(id) = sqrt(M_TWO*en)/q(id) ! use for now the largest transversal energy
-      en = en - M_HALF*(n(id)*q(id))**2
+      emin = emin + M_HALF*q(id)**2
     end do
-!write(*,*) 'ny, ex, ey',n(2), en, M_HALF*(n(2)*q(2))**2
-!write(*,*) 'ny, ex',n(2), en
-    ! FIXME: tight binding approximation
-    q(1) = sqrt(M_TWO*en)
-    ! the rest is the energy for the transport direction
-    if(en < M_ZERO) then
+    emax = energy
+    if(emax < emin) then
       write(message(1), '(a,f14.6,a)') "The input energy : '", energy, &
                   "' is smaller than the groundstate energy for the given system."
       call write_fatal(1)
     end if
-    n(1) = 1
-    do i=1,NP
-!      st%zpsi(i, 1, 1, ik) = exp(M_zI*n(1)*q(1)*lxyz(i,1)*gr%sb%h(1))
-      do id=2, gr%sb%dim
-        if (mod(n(id),2).eq.0) then
-!          st%zpsi(i, 1, 1, ik) = st%zpsi(i, 1, 1, ik)*sin(n(id)*q(id)*lxyz(i,id)*gr%sb%h(id))
+
+    ! sample the k integral (k=q)
+    do ist=st%st_start, st%st_end
+      ! always two states (ist=(1,2); (3,4), ...) have the same energy
+      ! start with en > emin
+      i = (ist-1)/2 + 1
+      en = emin + 2*i*(emax-emin)/st%lnst
+      ! now calculate the q's for each state
+      ! TODO: run over all states, now only the lowest transversal mode is used
+      ! subtract the transversal energy from the total energy to get the longitudinal part
+      ! which is the energy used for the transport
+      do id=2, gr%sb%dim ! FIXME: when the last gridpoint is not the border, recalculate transversal energy
+        q(id) = M_PI/(M_TWO*(lsize(id)+gr%sb%h(id)))
+        en = en - M_HALF*q(id)**2
+      end do
+      if (order.eq.1) then ! tight binding
+        q(1) = acos(M_ONE-en*gr%sb%h(1)**2)/gr%sb%h(1)
+      else ! continuous relation
+        q(1) = sqrt(M_TWO*en)
+      end if
+      ! now set the unscattered states (flat leads with box geometry)
+      do i=1, NP
+        if (mod(ist-1,2).eq.0) then
+          st%zpsi(i, 1, ist, 1) = exp(M_zI*q(1)*lxyz(i,1)*gr%sb%h(1))
         else
-!          st%zpsi(i, 1, 1, ik) = st%zpsi(i, 1, 1, ik)*cos(n(id)*q(id)*lxyz(i,id)*gr%sb%h(id))
+          st%zpsi(i, 1, ist, 1) = exp(-M_zI*q(1)*lxyz(i,1)*gr%sb%h(1))
         end if
+        do id=2, gr%sb%dim
+          if (mod(n(id),2).eq.0) then
+            st%zpsi(i, 1, ist, 1) = st%zpsi(i, 1, ist, 1)*sin(q(id)*lxyz(i,id)*gr%sb%h(id))
+          else
+            st%zpsi(i, 1, ist, 1) = st%zpsi(i, 1, ist, 1)*cos(q(id)*lxyz(i,id)*gr%sb%h(id))
+          end if
+        end do
       end do
-    end do
-    ! calculate right hand side (e-T-V(lead)-sum(a)[H_ca*g_a*H_ac]
-    call green_lead(energy, diag(:, :, LEFT), offdiag(:, :, LEFT), np, LEFT, green_l(:, :, LEFT))
-    call apply_coupling(green_l(:, :, LEFT), offdiag(:, :, LEFT), green_l(:, :, LEFT), np, LEFT)
-    call green_lead(energy, diag(:, :, RIGHT), offdiag(:, :, RIGHT), np, RIGHT, green_l(:, :, RIGHT))
-    call apply_coupling(green_l(:, :, RIGHT), offdiag(:, :, RIGHT), green_l(:, :, RIGHT), np, RIGHT)
-    do ik = 1, st%d%nik
-      do ist = st%st_start, st%st_end
+      ! calculate right hand side (e-T-V(lead)-sum(a)[H_ca*g_a*H_ac]
+      ! only calculate once for a given energy
+      if (mod(ist-1,2).eq.0) then
+        call green_lead(energy, diag(:, :, LEFT), offdiag(:, :, LEFT), np, LEFT, green_l(:, :, LEFT))
+        call apply_coupling(green_l(:, :, LEFT), offdiag(:, :, LEFT), green_l(:, :, LEFT), np, LEFT)
+        call green_lead(energy, diag(:, :, RIGHT), offdiag(:, :, RIGHT), np, RIGHT, green_l(:, :, RIGHT))
+        call apply_coupling(green_l(:, :, RIGHT), offdiag(:, :, RIGHT), green_l(:, :, RIGHT), np, RIGHT)
+      end if
 
-        tmp(:,:) = M_z0
-        call zkinetic(h, gr, st%zpsi(:, :, ist, ik), tmp(:,:))
-        tmp(1:NP, :) = energy*st%zpsi(1:NP, :, ist, ik) - tmp(1:NP, :)
-        ! TODO: the static potential of the lead
-        call zsymv('U', np, -M_z1, green_l(:, :, LEFT), np, st%zpsi(1:np, 1, ist, ik), 1, M_z1, tmp(1:np, 1), 1)
+      tmp(:,:) = M_z0
+      call zkinetic(h, gr, st%zpsi(:, :, ist, 1), tmp(:,:))
+      tmp(1:NP, :) = energy*st%zpsi(1:NP, :, ist, 1) - tmp(1:NP, :)
+      ! TODO: the static potential of the lead
+      call zsymv('U', np, -M_z1, green_l(:, :, LEFT), np, st%zpsi(1:np, 1, ist, 1), 1, M_z1, tmp(1:np, 1), 1)
+      call zsymv('U', np, -M_z1, green_l(:, :, RIGHT), np, &
+        st%zpsi(NP - np + 1:NP, 1, ist, 1), 1, M_z1, tmp(NP - np + 1:NP, 1), 1)
 
-        call zsymv('U', np, -M_z1, green_l(:, :, RIGHT), np, &
-          st%zpsi(NP - np + 1:NP, 1, ist, ik), 1, M_z1, tmp(NP - np + 1:NP, 1), 1)
+      ! now solve the equation
+      green_l_p => green_l
+      ! now solve the linear system to get the extended eigenstate
+      iter = 10000
+      ! zconjugate_gradients fails in some cases (wrong solution) and takes longer
+      ! therefore take the symmetric quasi-minimal residual solver (QMR)
+      call zqmr_sym(NP, st%zpsi(:, 1, ist, 1), tmp(:, 1), h_eff_lip_sch, preconditioner, &
+                      iter, residue=dres, threshold=cg_tol, showprogress = .true.)
+      !write(*,*) 'iter =',iter, 'residue =', dres
+    end do !ist
 
-        ! now solve the equation
-        green_l_p => green_l
-        ! now solve the linear system to get the extended eigenstate
-        iter = 10000
-        ! zconjugate_gradients fails in some cases (wrong solution) and takes longer
-        ! therefore take the symmetric quasi-minimal residual solver (QMR)
-        call zqmr_sym(NP, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_lip_sch, preconditioner, &
-                        iter, residue=dres, threshold=cg_tol, showprogress = .true.)
-        !write(*,*) 'iter =',iter, 'residue =', dres
-      end do
-    end do
+
+
+
     deallocate(green_l, tmp)
     call pop_sub()
   end subroutine ext_eigenstate_lip_sch
