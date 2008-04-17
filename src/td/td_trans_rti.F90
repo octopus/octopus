@@ -313,7 +313,7 @@ contains
     integer,             intent(in)  :: np ! number of interface points
     integer,             intent(in)  :: il
     CMPLX,               intent(out) :: green(:, :)
-    FLOAT,               intent(out) :: dx
+    FLOAT,               intent(in)  :: dx
 
     CMPLX, allocatable   :: e(:, :), es(:, :), a(:, :), b(:, :), inv(:, :)
     CMPLX, allocatable   :: tmp1(:, :), tmp2(:, :), tmp3(:, :)
@@ -734,21 +734,21 @@ contains
               tmp_mem(:, :) = mem(:, :, m, il)
               if (m.gt.0) tmp_mem(:, :) = tmp_mem(:, :) + mem(:, :, m-1, il)
               call calc_source_wf(max_iter, m, inp, il, offdiag(:,:,il), tmp_mem, dt, &
-                                    st_psi0(:,:,1,ist,ik,il), sm_u, f0, fac, &
-                                    lambda(m, 0, il, max_iter, sm_u), src_prev(:, 1, ist, ik, il))
+                                    st_psi0(:,:,1,ist,ik,il), sm_u(:, il), f0, fac, &
+                                    lambda(m, 0, max_iter, sm_u(:, il)), src_prev(:, 1, ist, ik, il))
             else
               tmp_mem(:, 1) = sp_mem(:, m, il)
               if (m.gt.0) tmp_mem(:, 1) = tmp_mem(:, 1) + sp_mem(:, m-1, il)
               call calc_source_wf_sp(max_iter, m, inp, il, offdiag(:, :, il), tmp_mem(:, 1), dt, order, &
-                       gr%sb%dim, st_psi0(:,:,1,ist,ik,il), mem_s(:,:,:,il), mapping, sm_u, f0, fac, &
-                       lambda(m, 0, il, max_iter, sm_u), src_prev(:, 1, ist, ik, il))
+                       gr%sb%dim, st_psi0(:,:,1,ist,ik,il), mem_s(:,:,:,il), mapping, sm_u(:, il), f0, fac, &
+                       lambda(m, 0, max_iter, sm_u(:, il)), src_prev(:, 1, ist, ik, il))
             end if
             call apply_src(intf, il, src_prev(:, 1, ist, ik, il), st%zpsi(:, :, ist, ik))
           end if
           ! 3. Add memory term.
           if(iand(additional_terms, mem_term_flag).ne.0) then
             do it = 0, m-1
-              factor = -dt**2/M_FOUR*lambda(m, it, il, max_iter, sm_u) / &
+              factor = -dt**2/M_FOUR*lambda(m, it, max_iter, sm_u(:, il)) / &
                 (sm_u(m, il)*sm_u(it, il))
               tmp_wf(:) = st_intf(:, ist, ik, il, it+1) + st_intf(:, ist, ik, il, it)
               if (mem_type.eq.1) then
@@ -794,15 +794,15 @@ contains
     call pop_sub()
 
   contains
-    CMPLX function lambda(m, k, il, max_iter, sm_u) result(res)
-      integer, intent(in) :: m, k, il, max_iter
-      CMPLX,   intent(in) :: sm_u(0:max_iter, NLEADS)
+    CMPLX function lambda(m, k, max_iter, sm_u) result(res)
+      integer, intent(in) :: m, k, max_iter
+      CMPLX,   intent(in) :: sm_u(0:max_iter)
 
-      integer :: ij
+      integer :: j
       res = M_z1
 
-      do ij = k, m
-        res = res*sm_u(ij,il)**2
+      do j = k, m
+        res = res*sm_u(j)**2
       end do
     end function lambda
 
