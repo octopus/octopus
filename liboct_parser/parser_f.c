@@ -34,6 +34,10 @@
 #include "liboct_parser.h"
 #include "string_f.h"
 
+#ifndef FC_FUNC
+#error "Unknown Fortran name mangling. Check configuration."
+#endif
+
 /* --------------------- Interface to the parsing routines ---------------------- */
 
 /* --------------------------------------------------------- */

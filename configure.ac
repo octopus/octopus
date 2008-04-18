@@ -291,6 +291,7 @@ AC_CONFIG_FILES([Makefile
   external_libs/poisson_isf/Makefile
   external_libs/libnbc/Makefile
   external_libs/newuoa/Makefile
+  external_libs/spglib/Makefile
   liboct_parser/Makefile
   liboct/Makefile
   src/Makefile

@@ -19,4 +19,4 @@
 ##
 ## $Id$
 
-SUBDIRS = expokit metis-4.0 qshep poisson_isf libnbc newuoa
+SUBDIRS = expokit metis-4.0 qshep poisson_isf libnbc newuoa spglib
