@@ -147,12 +147,12 @@ contains
     
     ALLOCATE(xk(3, nx*ny*nz), 3*nx*ny*nz)
     
-    call crystal_monkpack_generate(nx, ny, nz, sx, sy, sz, xk)
+    call crystal_monkpack_generate(nx, ny, nz, sx, sy, sz, xk, .not. use_symmetries)
 
     if(use_symmetries) then
       call crystal_monkpack_reduce(xk, nx*ny*nz, nrk, rk, w, use_time_reversal)
     else
-      !just copy the full grid
+      !just return the full grid
       nrk = nx*ny*nz
       rk(1:MAX_DIM, 1:nrk) = xk(1:MAX_DIM, 1:nrk)
       w(1:nrk) = M_ONE/real(nrk, REAL_PRECISION)
@@ -226,47 +226,73 @@ contains
     
   end subroutine invers
 
-  subroutine crystal_monkpack_generate(nx, ny, nz, sx, sy, sz, kpoints)
+  subroutine crystal_monkpack_generate(nx, ny, nz, sx, sy, sz, kpoints, full)
     FLOAT,   intent(in)  :: sx, sy, sz
     integer, intent(in)  :: nx, ny, nz
     FLOAT,   intent(out) :: kpoints(:, :)
-
+    logical, intent(in)  :: full
     ! Implements the Monkhorst-Pack scheme.
-    
+
     ! Sets up uniform array of k points. Use the normal MP scheme
     ! (PRB13, 5188, (1976)) when sx=sy=sz=0.5. If sx=sy=0,
     ! the special hexagonal scheme is used (PRB16, 1748, (1977))
-  
+
     FLOAT :: dx, dy, dz
     integer ii, jj, kk, nn
 
     call push_sub('crystal.crystal_monkpack_generate')
-    
+
     ! nx, ny, and nz are the number of points in the three
     ! directions dermined by the lattice wave vectors. sx, sy, and
     ! sz shift the grid of integration points from the origin.
     !
-    ! kmap is used to mark reducible k points and also to
-    ! map reducible to irreducible k points
-    
-    dx = M_ONE/real(nx, REAL_PRECISION)
-    dy = M_ONE/real(ny, REAL_PRECISION)
-    dz = M_ONE/real(nz, REAL_PRECISION)
-    nn = 0
-    do ii = 1, nx
-      do jj = 1, ny
-        do kk = 1, nz
-          nn = nn + 1
-          kpoints(1, nn) = (real(ii - 1, REAL_PRECISION) + sx)*dx
-          kpoints(2, nn) = (real(jj - 1, REAL_PRECISION) + sy)*dy
-          kpoints(3, nn) = (real(kk - 1, REAL_PRECISION) + sz)*dz
+
+    !this is a hack to restore previous behaviour and get things
+    !"working", we should rewrite all this code.
+
+    if(.not. full) then
+
+      !only generate positive k-points
+
+      dx = M_ONE/real(nx, REAL_PRECISION)
+      dy = M_ONE/real(ny, REAL_PRECISION)
+      dz = M_ONE/real(nz, REAL_PRECISION)
+      nn = 0
+      do ii = 1, nx
+        do jj = 1, ny
+          do kk = 1, nz
+            nn = nn + 1
+            kpoints(1, nn) = (real(ii - 1, REAL_PRECISION) + sx)*dx
+            kpoints(2, nn) = (real(jj - 1, REAL_PRECISION) + sy)*dy
+            kpoints(3, nn) = (real(kk - 1, REAL_PRECISION) + sz)*dz
+          end do
         end do
       end do
-    end do
+
+    else
+      
+      !generate k-points using the MP scheme
+
+      dx = M_ONE/real(2*nx, REAL_PRECISION)
+      dy = M_ONE/real(2*ny, REAL_PRECISION)
+      dz = M_ONE/real(2*nz, REAL_PRECISION)
+      nn = 0
+      do ii = 1, nx
+        do jj = 1, ny
+          do kk = 1, nz
+            nn = nn + 1
+            kpoints(1, nn) = (real(2*ii - nx - 1, REAL_PRECISION) + sx)*dx
+            kpoints(2, nn) = (real(2*jj - ny - 1, REAL_PRECISION) + sy)*dy
+            kpoints(3, nn) = (real(2*kk - nz - 1, REAL_PRECISION) + sz)*dz
+          end do
+        end do
+      end do
+
+    end if
 
     call pop_sub()
-    
-  end subroutine crystal_monkpack_generate
+
+    end subroutine crystal_monkpack_generate
 
   subroutine crystal_monkpack_reduce(kpoints, nkpoints, nrk, rk, w, time_reversal)
     FLOAT,   intent(in)  :: kpoints(:, :)
@@ -283,6 +309,9 @@ contains
     call push_sub('crystal.crystal_monkpack_reduce')
 
     ! reduce to irreducible zone
+
+    ! kmap is used to mark reducible k points and also to
+    ! map reducible to irreducible k points
 
     ALLOCATE(kmap(nkpoints), nkpoints)
 
