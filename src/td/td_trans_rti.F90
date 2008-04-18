@@ -548,6 +548,9 @@ contains
     nst2 = (st%lnst-1)/2
     if (nst2.eq.0) nst2 = 1
     ! sample the k integral (k=q), start with highest k
+    do id=2, gr%sb%dim ! FIXME: when the last gridpoint is not the border, recalculate transversal energy
+      q(id) = M_PI/(M_TWO*(gr%sb%lsize(id)+gr%sb%h(id)))
+    end do
     do ist=st%st_start, st%st_end
       en = energy(ist) + energy(0)
       ! always two states (ist=(1,2); (3,4), ...) have the same energy
@@ -590,7 +593,7 @@ contains
 
       ! now solve the equation
       ! now solve the linear system to get the extended eigenstate
-      write(message(1), '(a,es10.3)') '  Solving Lippmann Schwinger equation for energy ', energy(ist)
+      write(message(1), '(a,es10.3)') '  Solving Lippmann Schwinger equation for energy ', en
       call write_info(1, stdout)
       iter = 10000
       ! zconjugate_gradients fails in some cases (wrong solution) and takes longer
