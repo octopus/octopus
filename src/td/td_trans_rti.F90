@@ -74,7 +74,7 @@ module td_trans_rti_m
     CMPLX, pointer   :: mem_sp_coeff(:, :, :) ! sp_length, t, il (if mem_type=1)
     integer, pointer :: sp2full_map(:)        ! the mapping indices from sparse to full matrices
     CMPLX, pointer   :: src_mem_u(:, :)       ! t, il     u(m)
-    FLOAT            :: energy                !
+    FLOAT, pointer   :: energy(:)             ! nst, 0 = transversal energy
     CMPLX, pointer   :: src_prev(:, :, :, :, :)! intf%np, ndim, nst, nik, NLEADS
     CMPLX, pointer   :: diag(:, :, :)         ! h
     CMPLX, pointer   :: offdiag(:, :, :)      ! hopping operator V^T (np,np,nleads)
@@ -107,11 +107,13 @@ contains
     FLOAT,             intent(in)  :: dt
     integer,           intent(in)  :: max_iter
 
-    integer :: allocsize, id
+    integer :: allocsize, id, ist, nst2, i
     type(nl_operator_t)  :: op
     FLOAT, allocatable   :: um(:)
+    FLOAT                :: emax, qmin, qmax, q, energy
 
     ALLOCATE(um(NLEADS), NLEADS)
+    ALLOCATE(trans%energy(0:st%lnst), st%lnst+1 )
 
     call push_sub('td_trans_rti.cn_src_mem_init')
 
@@ -192,7 +194,43 @@ contains
     !%Description
     !% The energy for the wave function.
     !%End
-    call loct_parse_float(check_inp('TDTransEnergy'), CNST(0.1), trans%energy)
+    call loct_parse_float(check_inp('TDTransEnergy'), CNST(0.1), energy)
+
+    trans%energy(0) = M_ZERO
+    do id=2, gr%sb%dim ! FIXME: when the last gridpoint is not the border, recalculate transversal energy
+      q = M_PI/(M_TWO*(gr%sb%lsize(id)+gr%sb%h(id)))
+      if (gr%f_der%der_discr%order.eq.1) then ! tight binding
+        trans%energy(0) = trans%energy(0) + (M_ONE-cos(gr%sb%h(id)*q))/gr%sb%h(id)**2
+      else ! continuous relation
+        trans%energy(0) = trans%energy(0) + M_HALF*q**2
+      end if
+    end do
+    emax = energy - trans%energy(0)
+    if(emax < M_ZERO) then
+      write(message(1), '(a,f14.6,a)') "The Fermie energy : '", energy, &
+                  "' is smaller than the groundstate energy for the given system."
+      call write_fatal(1)
+    end if
+    qmin = CNST(1e-5)
+    if (gr%f_der%der_discr%order.eq.1) then ! tight binding
+      qmax = acos(M_ONE-emax*gr%sb%h(1)**2)/gr%sb%h(1)
+    else ! continuous relation
+      qmax = sqrt(M_TWO*emax)
+    end if
+
+    nst2 = (st%lnst-1)/2
+    if (nst2.eq.0) nst2 = 1
+    ! sample the k integral (k=q), start with highest k
+    do ist=st%st_start, st%st_end
+      ! always two states (ist=(1,2); (3,4), ...) have the same energy
+      i = (ist-1)/2
+      q = qmax - i*(qmax-qmin)/nst2
+      if (gr%f_der%der_discr%order.eq.1) then ! tight binding
+        trans%energy(ist) = (M_ONE-cos(gr%sb%h(1)*q))/gr%sb%h(1)**2
+      else ! continuous relation
+        trans%energy(ist) = q**2/M_TWO
+      end if
+    end do !ist
 
     call lead_init(trans%lead, max_iter, dt)
 
@@ -239,6 +277,11 @@ contains
     if(associated(trans%src_mem_u)) then
       deallocate(trans%src_mem_u)
       nullify(trans%src_mem_u)
+    end if
+
+    if(associated(trans%energy)) then
+      deallocate(trans%energy)
+      nullify(trans%energy)
     end if
 
     call intface_end(trans%intface)
@@ -467,15 +510,15 @@ contains
     CMPLX,          intent(in)      :: diag(np, np, NLEADS)    ! lead hamiltonian (diagonal part)
     CMPLX,          intent(in)      :: offdiag(np, np, NLEADS) ! hopping operator V^T
     integer,        intent(in)      :: order                   ! discretization order
-    FLOAT, target,  intent(in)      :: energy                  ! total energy
     type(states_t), intent(inout)   :: st                      ! states
+    FLOAT, target,  intent(in)      :: energy(0:st%lnst)       ! energy
 
     CMPLX, target, allocatable :: green_l(:,:,:)
     CMPLX, allocatable :: tmp(:, :)
     integer            :: i, id, iter, n(3), ist, nst2
     integer, pointer   :: lxyz(:,:)
+    FLOAT              :: lsize(3), q(3), dres, qmin, qmax, dx(3)
     FLOAT, target      :: en
-    FLOAT              :: lsize(3), q(3), dres, emax, qmin, qmax, dx(3)
 
     call push_sub('td_trans_rti.ext_eigenstate_lip_sch')
 
@@ -491,45 +534,28 @@ contains
     ! 1. compute the unpertubed eigenstates (groundstate calculation)
     ! for now set manually psi(x)*phi(y,z)
     energy_p => en
+    green_l_p => green_l
     lxyz => gr%m%lxyz
     lsize = gr%sb%lsize
     dx(:) = gr%sb%h(:)
-    emax = energy
-    do id=2, gr%sb%dim ! FIXME: when the last gridpoint is not the border, recalculate transversal energy
-      q(id) = M_PI/(M_TWO*(lsize(id)+dx(id)))
-      if (order.eq.1) then ! tight binding
-        emax = emax - (M_ONE-cos(dx(id)*q(id)))/dx(id)**2
-      else ! continuous relation
-        emax = emax - M_HALF*q(id)**2
-      end if
-    end do
-    if(emax < M_ZERO) then
-      write(message(1), '(a,f14.6,a)') "The input energy : '", energy, &
-                  "' is smaller than the groundstate energy for the given system."
-      call write_fatal(1)
-    end if
     qmin = CNST(1e-5)
     if (order.eq.1) then ! tight binding
-      qmax = acos(M_ONE-emax*dx(1)**2)/dx(1)
+      qmax = acos(M_ONE-energy(1)*dx(1)**2)/dx(1)
     else ! continuous relation
-      qmax = sqrt(M_TWO*emax)
+      qmax = sqrt(M_TWO*energy(1))
     end if
 
     nst2 = (st%lnst-1)/2
     if (nst2.eq.0) nst2 = 1
     ! sample the k integral (k=q), start with highest k
     do ist=st%st_start, st%st_end
+      en = energy(ist) + energy(0)
       ! always two states (ist=(1,2); (3,4), ...) have the same energy
       ! start with en > emin
       i = (ist-1)/2
       q(1) = qmax - i*(qmax-qmin)/nst2
       ! now calculate the q's for each state
       ! TODO: run over all states, now only the lowest transversal mode is used
-      if (order.eq.1) then ! tight binding
-        en = (M_ONE-cos(dx(1)*q(1)))/dx(1)**2
-      else ! continuous relation
-        en = q(1)**2/M_TWO
-      end if
       ! now set the unscattered states (flat leads with box geometry)
       do i=1, NP
         if (mod(ist-1,2).eq.0) then
@@ -563,9 +589,8 @@ contains
         st%zpsi(NP - np + 1:NP, 1, ist, 1), 1, M_z1, tmp(NP - np + 1:NP, 1), 1)
 
       ! now solve the equation
-      green_l_p => green_l
       ! now solve the linear system to get the extended eigenstate
-      write(message(1), '(a,es10.3)') '  Solving Lippmann Schwinger equation for energy ', energy
+      write(message(1), '(a,es10.3)') '  Solving Lippmann Schwinger equation for energy ', energy(ist)
       call write_info(1, stdout)
       iter = 10000
       ! zconjugate_gradients fails in some cases (wrong solution) and takes longer
@@ -588,9 +613,9 @@ contains
     CMPLX,          intent(in)      :: diag(np, np, NLEADS)    ! lead hamiltonian (diagonal part)
     CMPLX,          intent(in)      :: offdiag(np, np, NLEADS) ! hopping operator V^T
     integer,        intent(in)      :: order                   ! discretization order
-    FLOAT,          intent(in)      :: energy                  ! total energy
     FLOAT,          intent(in)      :: lead_pot(NLEADS)        ! lead potential at t=0
     type(states_t), intent(inout)   :: st                      ! states
+    FLOAT,          intent(in)      :: energy(0:st%lnst)       ! energy
 
     integer  :: eigenstate_type
 
@@ -624,7 +649,7 @@ contains
     type(v_ks_t),                intent(in)    :: ks
     type(hamiltonian_t), target, intent(inout) :: h
     type(grid_t), target,        intent(inout) :: gr
-    FLOAT, target,               intent(in)    :: energy
+    FLOAT, target,               intent(in)    :: energy(0:st%lnst) ! energy of the states
     FLOAT, target,               intent(in)    :: dt
     FLOAT, target,               intent(in)    :: t
     integer, target,             intent(in)    :: mem_type
@@ -678,9 +703,6 @@ contains
     m = timestep-1
     inp = intf%np
 
-    f0 = M_z1/(M_z1+M_zI*M_HALF*dt*energy)
-    fac= (M_z1-M_zI*M_HALF*dt*energy)*f0
-
     ! hack to do the calculation of the groundstate
     if (m.eq.0) then
       !%Variable TDTransGroundState
@@ -730,6 +752,8 @@ contains
         do il = 1, NLEADS
           ! 2. Add source term
           if(iand(additional_terms, src_term_flag).ne.0) then
+            f0  = M_z1/(M_z1+M_zI*M_HALF*dt*(energy(0)+energy(ist)))
+            fac = (M_z1-M_zI*M_HALF*dt*(energy(0)+energy(ist)))*f0
             if (mem_type.eq.1) then
               tmp_mem(:, :) = mem(:, :, m, il)
               if (m.gt.0) tmp_mem(:, :) = tmp_mem(:, :) + mem(:, :, m-1, il)
