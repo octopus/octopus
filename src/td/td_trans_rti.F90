@@ -515,7 +515,7 @@ contains
 
     CMPLX, target, allocatable :: green_l(:,:,:)
     CMPLX, allocatable :: tmp(:, :)
-    integer            :: i, id, iter, n(3), ist, nst2
+    integer            :: i, id, iter, ist, nst2
     integer, pointer   :: lxyz(:,:)
     FLOAT              :: lsize(3), q(3), dres, qmin, qmax, dx(3)
     FLOAT, target      :: en
@@ -567,11 +567,11 @@ contains
           st%zpsi(i, 1, ist, 1) = exp(-M_zI*q(1)*lxyz(i,1)*dx(1))
         end if
         do id=2, gr%sb%dim
-          if (mod(n(id),2).eq.0) then
-            st%zpsi(i, 1, ist, 1) = st%zpsi(i, 1, ist, 1)*sin(q(id)*lxyz(i,id)*dx(id))
-          else
+!          if (mod(n(id),2).eq.0) then
+!            st%zpsi(i, 1, ist, 1) = st%zpsi(i, 1, ist, 1)*sin(q(id)*lxyz(i,id)*dx(id))
+!          else
             st%zpsi(i, 1, ist, 1) = st%zpsi(i, 1, ist, 1)*cos(q(id)*lxyz(i,id)*dx(id))
-          end if
+!          end if
         end do
       end do
       ! calculate right hand side (e-T-V(lead)-sum(a)[H_ca*g_a*H_ac]
