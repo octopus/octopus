@@ -20,7 +20,9 @@
 #include "global.h"
 
 module td_rti_m
+  use cube_function_m
   use datasets_m
+  use fourier_space_m
   use gauge_field_m
   use geometry_m
   use ion_dynamics_m

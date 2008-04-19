@@ -35,20 +35,8 @@ module cube_function_m
     dcf_alloc_rs, zcf_alloc_rs, &
     dcf_free_rs, zcf_free_rs,   &
     dcf_free, zcf_free,         &
-    cf_surface_average
-
-  public ::                     &     
-    cf_phase_factor,            &
-    dcf_alloc_fs,               & 
-    zcf_alloc_fs,               &
-    dcf_free_fs,                &
-    zcf_free_fs,                &
-    dcf_fft_init,               &
-    zcf_fft_init,               &
-    dcf_RS2FS,                  &
-    zcf_RS2FS,                  &
-    dcf_FS2RS,                  &
-    zcf_FS2RS
+    cf_surface_average,         &
+    cf_phase_factor
 
   type dcf_t
     integer :: n(MAX_DIM)   ! the linear dimensions of the cube

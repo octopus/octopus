@@ -20,7 +20,10 @@
 #include "global.h"
 
 module poisson_fft_m
+  use cube_function_m
   use datasets_m
+  use fft_m
+  use fourier_space_m
   use geometry_m
   use global_m
   use lalg_basic_m
@@ -32,8 +35,6 @@ module poisson_fft_m
   use mpi_m
   use profiling_m
   use units_m
-  use fft_m
-  use cube_function_m
   use functions_m
   use grid_m
   use mesh_function_m

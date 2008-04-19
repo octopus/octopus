@@ -22,6 +22,7 @@
 module td_exp_m
   use cube_function_m
   use datasets_m
+  use fourier_space_m
   use lalg_basic_m
   use loct_math_m
   use loct_parser_m

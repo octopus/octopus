@@ -25,6 +25,7 @@ module td_exp_split_m
   use cube_function_m
   use external_pot_m
   use fft_m
+  use fourier_space_m
   use functions_m
   use global_m
   use grid_m
