@@ -48,11 +48,7 @@ module cube_function_m
     dcf_RS2FS,                  &
     zcf_RS2FS,                  &
     dcf_FS2RS,                  &
-    zcf_FS2RS,                  &
-    dcf_FS_lapl,                &
-    zcf_FS_lapl,                &
-    dcf_FS_grad,                &
-    zcf_FS_grad
+    zcf_FS2RS
 
   type dcf_t
     integer :: n(MAX_DIM)   ! the linear dimensions of the cube

@@ -178,7 +178,6 @@ subroutine X(cf_RS2FS)(cf)
 
 end subroutine X(cf_RS2FS)
 
-
 ! ---------------------------------------------------------
 subroutine X(cf_FS2RS)(cf)
   type(X(cf_t)), intent(inout)  :: cf
@@ -189,77 +188,6 @@ subroutine X(cf_FS2RS)(cf)
   call X(fft_backward)(cf%fft, cf%FS, cf%RS)
 
 end subroutine X(cf_FS2RS)
-
-
-! ---------------------------------------------------------
-! This function calculates the laplacian of a function in Fourier space.
-! optionally, one can apply a cutoff
-! i.e. \nabla^2 f = min(cutoff, G^2) * f
-subroutine X(cf_FS_lapl)(sb, m, cf, cutoff_)
-  type(simul_box_t), intent(in)    :: sb
-  type(mesh_t),      intent(in)    :: m
-  type(X(cf_t)),     intent(inout) :: cf
-  FLOAT, optional,   intent(in)    :: cutoff_
-
-  FLOAT :: cutoff, temp(MAX_DIM), g2
-  integer :: k(MAX_DIM), ix, iy, iz
-
-  ASSERT(associated(cf%FS))
-
-  cutoff = CNST(1e10)
-  if(present(cutoff_)) then
-    if(cutoff_>M_ZERO) cutoff = cutoff_
-  end if
-
-  temp = M_ZERO
-  temp(1:sb%dim) = (M_TWO*M_PI)/(cf%n(1:sb%dim)*m%h(1:sb%dim))
-
-  do iz = 1, cf%n(3)
-    k(3) = pad_feq(iz, cf%n(3), .true.)
-    do iy = 1, cf%n(2)
-      k(2) = pad_feq(iy, cf%n(2), .true.)
-      do ix = 1, cf%nx
-        k(1) = pad_feq(ix, cf%n(1), .true.)
-        g2 = min(cutoff, sum((temp(1:sb%dim)*k(1:sb%dim))**2))
-        cf%FS(ix, iy, iz) = -g2*cf%FS(ix, iy, iz)
-      end do
-    end do
-  end do
-
-end subroutine X(cf_FS_lapl)
-
-
-! ---------------------------------------------------------
-subroutine X(cf_FS_grad)(sb, m, cf, j)
-  type(simul_box_t), intent(in)    :: sb
-  type(mesh_t),      intent(in)    :: m
-  type(X(cf_t)),     intent(inout) :: cf
-  integer,           intent(in)    :: j
-
-  FLOAT :: temp(MAX_DIM), g
-  integer  :: k(MAX_DIM), ix, iy, iz
-
-  call push_sub('cf_inc.Xcf_FS_grad')
-
-  temp = M_ZERO
-  temp(1:sb%dim) = (M_TWO*M_PI)/(cf%n(1:sb%dim)*m%h(1:sb%dim))
-
-  k = 0
-  do iz = 1, cf%n(3)
-    if(j == 3) k(3) = pad_feq(iz, cf%n(3), .true.)
-    do iy = 1, cf%n(2)
-      if(j == 2) k(2) = pad_feq(iy, cf%n(2), .true.)
-      do ix = 1, cf%nx
-        if(j == 1) k(1) = pad_feq(ix, cf%n(1), .true.)
-
-        g = sum(temp(1:sb%dim)*k(1:sb%dim))
-        cf%FS(ix, iy, iz) = g * M_zI * cf%FS(ix, iy, iz)
-      end do
-    end do
-  end do
-
-  call pop_sub()
-end subroutine X(cf_FS_grad)
 
 !! Local Variables:
 !! mode: f90
