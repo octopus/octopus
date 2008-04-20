@@ -60,7 +60,7 @@ module poisson_fft_m
        FFT_CORRECTED =  4
 
   type(dcf_t), public :: fft_cf
-  FLOAT, pointer :: fft_coulb_FS(:,:,:)
+  type(fourier_space_op_t) :: coulb
 
 contains
 
@@ -75,6 +75,7 @@ contains
     FLOAT :: temp(MAX_DIM), modg2, xmax
     FLOAT :: gpar, gperp, gx, gy, gz, r_c, gg(MAX_DIM)
     FLOAT :: DELTA_R = CNST(1.0e-12)
+    FLOAT, allocatable :: fft_coulb_FS(:,:,:)
 
     call push_sub('solver_fft.poisson_fft_build_3d')
     
@@ -220,10 +221,14 @@ contains
       fft_Coulb_FS(1:fft_cf%nx, 1:fft_cf%n(2), k) = M_FOUR*M_PI*fft_Coulb_FS(1:fft_cf%nx, 1:fft_cf%n(2), k)
     end do
 
+    call dfourier_space_op_init(coulb, fft_cf, fft_Coulb_FS)
+
+    deallocate(fft_Coulb_FS)
+
     if( (poisson_solver .eq. FFT_CYL) .and. (gr%sb%periodic_dim == 0) ) then
       deallocate(x, y)
     end if
-
+    
     call pop_sub()
   end subroutine poisson_fft_build_3d
     
@@ -237,6 +242,7 @@ contains
     FLOAT :: temp(MAX_DIM), vec, r_c, maxf, dk
     FLOAT :: DELTA_R = CNST(1.0e-12)
     FLOAT, allocatable :: x(:), y(:)
+    FLOAT, allocatable :: fft_coulb_FS(:,:,:)
 
     call push_sub('solver_fft.poisson_fft_build_2d')
 
@@ -300,6 +306,10 @@ contains
       end do
     end do
 
+    call dfourier_space_op_init(coulb, fft_cf, fft_Coulb_FS)
+
+    deallocate(fft_Coulb_FS)
+
     deallocate(x, y)
     call spline_end(besselintf)
 
@@ -309,7 +319,9 @@ contains
   !-----------------------------------------------------------------
   subroutine poisson_fft_end()
       call dcf_free(fft_cf)
-      deallocate(fft_coulb_FS); nullify(fft_coulb_FS)
+
+      call dfourier_space_op_end(coulb)
+
   end subroutine poisson_fft_end
 
   !-----------------------------------------------------------------
@@ -321,7 +333,6 @@ contains
 
     FLOAT, allocatable :: rho_global(:), pot_global(:)
 
-    integer :: k, j, i
     FLOAT :: average
 
     call push_sub('poisson.poisson_fft')
@@ -334,29 +345,21 @@ contains
     end if
 
     call dcf_alloc_RS(fft_cf)          ! allocate the cube in real space
-    call dcf_alloc_FS(fft_cf)          ! allocate the cube in Fourier space
 
+    ! put the density in the cube
     if(m%parallel_in_domains) then
 #if defined HAVE_MPI
       call dvec_gather(m%vp, rho_global, rho)
-      call dmf2cf(m, rho_global, fft_cf)        ! put the density in a cube
+      call dmf2cf(m, rho_global, fft_cf) 
 #endif
     else
-      call dmf2cf(m, rho, fft_cf)        ! put the density in a cube
+      call dmf2cf(m, rho, fft_cf)
     end if
-    call dcf_RS2FS(fft_cf)             ! Fourier transform
 
+    ! apply the couloumb term in fourier space
+    call dfourier_space_op_apply(coulb, fft_cf)
 
-    ! multiply by the FS of the Coulomb interaction
-    do k = 1, fft_cf%n(3)
-      do j = 1, fft_cf%n(2)
-        do i = 1, fft_cf%nx
-          fft_cf%FS(i, j, k) = fft_cf%FS(i, j, k)*fft_Coulb_FS(i, j, k)
-        end do
-      end do
-    end do
-
-    call dcf_FS2RS(fft_cf)             ! Fourier transform back
+    !now the cube has the potential
     if(present(average_to_zero)) then
       if(average_to_zero) average = cf_surface_average(fft_cf)
 #if defined HAVE_MPI
@@ -365,29 +368,28 @@ contains
 #endif
     end if
 
+    ! move the potential back to the grid
     if(m%parallel_in_domains) then
 #if defined(HAVE_MPI)
-      call dcf2mf(m, fft_cf, pot_global)        ! put the density in a mesh
+      call dcf2mf(m, fft_cf, pot_global)
       call dvec_scatter(m%vp, pot_global, pot)
 #endif
     else
-      call dcf2mf(m, fft_cf, pot)        ! put the density in a mesh
+      call dcf2mf(m, fft_cf, pot)
     end if
 
     if(present(average_to_zero)) then
-      if(average_to_zero) pot = pot - average
+      if(average_to_zero) pot(1:m%np) = pot(1:m%np) - average
     end if
 
     call dcf_free_RS(fft_cf)           ! memory is no longer needed
-    call dcf_free_FS(fft_cf)
 
     if(m%parallel_in_domains) then
       deallocate(rho_global, pot_global)
     end if
+
     call pop_sub()
   end subroutine poisson_fft
-
-
 
 end module poisson_fft_m
 

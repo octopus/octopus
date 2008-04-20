@@ -91,6 +91,54 @@ subroutine X(cf_FS2RS)(cf)
 
 end subroutine X(cf_FS2RS)
 
+subroutine X(fourier_space_op_init)(this, cube, op)
+  type(fourier_space_op_t), intent(out) :: this
+  type(X(cf_t)),            intent(in)  :: cube
+  R_TYPE,                   intent(in)  :: op(:, :, :)
+
+  integer :: ii, jj, kk
+
+  ALLOCATE(this%X(op)(cube%nx, cube%n(2), cube%n(3)), cube%nx*cube%n(2)*cube%n(3))
+
+  do kk = 1, cube%n(3)
+    do jj = 1, cube%n(2)
+      do ii = 1, cube%nx
+        this%X(op)(ii, jj, kk) = op(ii, jj, kk)
+      end do
+    end do
+  end do
+
+end subroutine X(fourier_space_op_init)
+
+subroutine X(fourier_space_op_end)(this)
+  type(fourier_space_op_t), intent(inout) :: this
+
+  deallocate(this%X(op))
+
+end subroutine X(fourier_space_op_end)
+
+subroutine X(fourier_space_op_apply)(this, cube)
+  type(fourier_space_op_t), intent(in)     :: this
+  type(X(cf_t)),            intent(inout)  :: cube
+  
+  integer :: ii, jj, kk
+  
+  call X(cf_alloc_FS)(cube)
+  call X(cf_RS2FS)(cube)
+
+  do kk = 1, cube%n(3)
+    do jj = 1, cube%n(2)
+      do ii = 1, cube%nx
+        cube%FS(ii, jj, kk) = cube%FS(ii, jj, kk)*this%X(op)(ii, jj, kk)
+      end do
+    end do
+  end do
+
+  call X(cf_FS2RS)(cube)
+  call X(cf_free_FS)(cube)
+
+end subroutine X(fourier_space_op_apply)
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

@@ -41,8 +41,22 @@ module fourier_space_m
     dcf_RS2FS,                  &
     zcf_RS2FS,                  &
     dcf_FS2RS,                  &
-    zcf_FS2RS
+    zcf_FS2RS,                  &
+    fourier_space_op_t,         &
+    dfourier_space_op_init,     &
+    dfourier_space_op_end,      &
+    dfourier_space_op_apply,    &
+    zfourier_space_op_init,     &
+    zfourier_space_op_end,      &
+    zfourier_space_op_apply
+    
 
+  type fourier_space_op_t
+    private
+    FLOAT, pointer :: dop(:, :, :)
+    CMPLX, pointer :: zop(:, :, :)
+  end type fourier_space_op_t
+  
 contains
 
 #include "undef.F90"
