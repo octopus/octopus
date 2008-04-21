@@ -105,7 +105,7 @@ sub set_precision{
   my $p = $_[0];
   if($p ne "default"){
     $precnum = 1.0*$p;
-  }elsif($octopus_exe =~ m/single/){
+  }elsif($_[1] =~ m/_single/){
     $precnum = 0.001
   } else {
     $precnum = 0.0001
@@ -177,7 +177,7 @@ $failures = 0;
 # Loop over all the executables.
 foreach my $octopus_exe (@executables){
 
-  set_precision("default");
+  set_precision("default", $octopus_exe);
 
   $workdir = tempdir('/tmp/octopus.XXXXXX');
   chomp($workdir);
@@ -289,7 +289,7 @@ foreach my $octopus_exe (@executables){
       }
 
       if ( $_ =~ /^Precision\s*:\s*(.*)\s*$/) {
-	set_precision($1) ;
+	set_precision($1, $octopus_exe) ;
       }
 
       if ( $_ =~ /^match/ && !$opt_n) {
