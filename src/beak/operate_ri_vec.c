@@ -190,7 +190,7 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opn,
   const int n = opn[0];
   const int nri = opnri[0];
 
-  int l, i, j;
+  int l, i, j, aligned;
   const int * restrict index;
   const __m128d * ffi[MAX_OP_N];
 
@@ -198,39 +198,85 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opn,
 
   for(j = 0; j < n ; j++) vw[j] =_mm_set1_pd(w[j]);
 
-  for (l = 0; l < nri ; l++) {
+  /* check whether we got aligned vectors or not */
+  aligned = 1;
+  aligned = aligned && (((long long) fi)%16 == 0);
+  aligned = aligned && (((long long) fo)%16 == 0);
 
-    index = opri + n * l;
+  if(aligned){
 
-    for(j = 0; j < n ; j++) ffi[j] = fi + index[j];
+    for (l = 0; l < nri ; l++) {
 
-    for (  i = rimap_inv[l]; i < (rimap_inv_max[l] - 4 + 1) ; i+=4){
-      register __m128d a0, a1, a2, a3;
+      index = opri + n * l;
 
-      a0 = a1 = a2 = a3 = _mm_setzero_pd();
+      for(j = 0; j < n ; j++) ffi[j] = fi + index[j];
+
+      for (  i = rimap_inv[l]; i < (rimap_inv_max[l] - 4 + 1) ; i+=4){
+	register __m128d a0, a1, a2, a3;
+
+	a0 = a1 = a2 = a3 = _mm_setzero_pd();
       
-      for(j = 0; j < n; j++) {
-	a0 = _mm_add_pd(a0, _mm_mul_pd(vw[j], ffi[j][i+0]));
-	a1 = _mm_add_pd(a1, _mm_mul_pd(vw[j], ffi[j][i+1]));
-	a2 = _mm_add_pd(a2, _mm_mul_pd(vw[j], ffi[j][i+2]));
-	a3 = _mm_add_pd(a3, _mm_mul_pd(vw[j], ffi[j][i+3]));
+	for(j = 0; j < n; j++) {
+	  a0 = _mm_add_pd(a0, _mm_mul_pd(vw[j], ffi[j][i+0]));
+	  a1 = _mm_add_pd(a1, _mm_mul_pd(vw[j], ffi[j][i+1]));
+	  a2 = _mm_add_pd(a2, _mm_mul_pd(vw[j], ffi[j][i+2]));
+	  a3 = _mm_add_pd(a3, _mm_mul_pd(vw[j], ffi[j][i+3]));
+	}
+	fo[i  ] = a0;
+	fo[i+1] = a1;
+	fo[i+2] = a2;
+	fo[i+3] = a3;
       }
-      fo[i  ] = a0;
-      fo[i+1] = a1;
-      fo[i+2] = a2;
-      fo[i+3] = a3;
+
+      for (; i < rimap_inv_max[l]; i++){
+	register __m128d a0;
+      
+	a0 = _mm_setzero_pd();
+	for(j = 0; j < n; j++) {
+	  a0 = _mm_add_pd(a0, _mm_mul_pd(vw[j],ffi[j][i]));
+	}
+	fo[i] = a0;
+      }
+
     }
 
-    for (; i < rimap_inv_max[l]; i++){
-      register __m128d a0;
-      
-      a0 = _mm_setzero_pd();
-      for(j = 0; j < n; j++) {
-	a0 = _mm_add_pd(a0, _mm_mul_pd(vw[j],ffi[j][i]));
-      }
-      fo[i] = a0;
-    }
+  } else { 
+    /* not aligned */
+    
+    for (l = 0; l < nri ; l++) {
 
+      index = opri + n * l;
+
+      for(j = 0; j < n ; j++) ffi[j] = fi + index[j];
+
+      for (  i = rimap_inv[l]; i < (rimap_inv_max[l] - 4 + 1) ; i+=4){
+	register __m128d a0, a1, a2, a3;
+
+	a0 = a1 = a2 = a3 = _mm_setzero_pd();
+      
+	for(j = 0; j < n; j++) {
+	  a0 = _mm_add_pd(a0, _mm_mul_pd(vw[j], _mm_loadu_pd(ffi[j] + i + 0)));
+	  a1 = _mm_add_pd(a1, _mm_mul_pd(vw[j], _mm_loadu_pd(ffi[j] + i + 1)));
+	  a2 = _mm_add_pd(a2, _mm_mul_pd(vw[j], _mm_loadu_pd(ffi[j] + i + 2)));
+	  a3 = _mm_add_pd(a3, _mm_mul_pd(vw[j], _mm_loadu_pd(ffi[j] + i + 3)));
+	}
+	_mm_storeu_pd(fo + i    , a0);
+	_mm_storeu_pd(fo + i + 1, a1);
+	_mm_storeu_pd(fo + i + 2, a2);
+	_mm_storeu_pd(fo + i + 3, a3);
+      }
+
+      for (; i < rimap_inv_max[l]; i++){
+	register __m128d a0;
+      
+	a0 = _mm_setzero_pd();
+	for(j = 0; j < n; j++) {
+	  a0 = _mm_add_pd(a0, _mm_mul_pd(vw[j], _mm_loadu_pd(ffi[j] + i)));
+	}
+	_mm_storeu_pd(fo + i, a0);
+      }
+
+    }
   }
 
 }
