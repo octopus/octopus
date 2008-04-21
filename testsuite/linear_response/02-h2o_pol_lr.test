@@ -7,7 +7,7 @@ Date       : 18.10.05
 Arch       : Linux bizet 2.6.8-2-686 #1 Thu May 19 17:53:30 JST 2005 i686 GNU/Linux
 Release    : 3.1.0pre1
 Programs   : octopus
-TestGroups : long-run
+TestGroups : short-run
 Enabled    : Yes
 
 Input: 05-h2o_pol_lr_full.01_h2o_gs.inp
