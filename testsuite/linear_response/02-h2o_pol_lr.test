@@ -10,11 +10,11 @@ Programs   : octopus
 TestGroups : short-run
 Enabled    : Yes
 
-Input: 05-h2o_pol_lr_full.01_h2o_gs.inp
+Input: 02-h2o_pol_lr.01_h2o_gs.inp
 match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -16.06685186
 match ; Eigenvalues  ; GREP(static/info, '1   --', 12) ;  -1.167612
 
-Input: 05-h2o_pol_lr_full.02_h2o_dyn_pol.inp
+Input: 02-h2o_pol_lr.02_h2o_dyn_pol.inp
 match ; Polarizability XX w=0.0    ; LINE(linear/freq_0.0000/alpha, 2,  5) ; 15.247802
 match ; Polarizability YY w=0.0    ; LINE(linear/freq_0.0000/alpha, 3, 25) ; 12.333039
 match ; Polarizability ZZ w=0.0    ; LINE(linear/freq_0.0000/alpha, 4, 45) ; 23.148746
@@ -23,7 +23,7 @@ match ; Polarizability XX w=0.1    ; LINE(linear/freq_0.1000/alpha, 2,  5) ; 15.
 match ; Polarizability YY w=0.1    ; LINE(linear/freq_0.1000/alpha, 3, 25) ; 12.856594
 match ; Polarizability ZZ w=0.1    ; LINE(linear/freq_0.1000/alpha, 4, 45) ; 29.766045
 
-Input: 05-h2o_pol_lr_full.03_h2o_dyn_pol_cmplx.inp
+Input: 02-h2o_pol_lr.03_h2o_dyn_pol_cmplx.inp
 Precision : 0.001
 match ; Polarizability XX w=0.0    ; LINE(linear/freq_0.0000/alpha, 2,  5) ; 15.241286
 match ; Polarizability YY w=0.0    ; LINE(linear/freq_0.0000/alpha, 3, 25) ; 12.328137
@@ -41,7 +41,7 @@ match ; Hyperpolarizability w=0.0  ; GREP(linear/freq_0.0000/beta, 'beta // y', 
 match ; Hyperpolarizability w=0.1  ; GREP(linear/freq_0.1000/beta, 'beta // y', 10) ; 0.86713699E+02
 Precision : default
 
-Input: 05-h2o_pol_lr_full.04_h2o_susc.inp
+Input: 02-h2o_pol_lr.04_h2o_susc.inp
 match; Paramagnetic susceptibility ; LINE(linear/freq_0.0000/susceptibility,  5, 25) ;   30.003072
 match; Diamagnetic susceptibility  ; LINE(linear/freq_0.0000/susceptibility, 11, 25) ; -215.363250
 match; Total susceptibility        ; LINE(linear/freq_0.0000/susceptibility, 17, 25) ; -185.360178
