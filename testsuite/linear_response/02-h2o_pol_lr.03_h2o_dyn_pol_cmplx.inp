@@ -20,5 +20,3 @@ Spacing = 0.65
 %
 
 EMEta = 0.01
-LRConvAbsDens = 1e-4
-LinearSolverTol = 1e-4

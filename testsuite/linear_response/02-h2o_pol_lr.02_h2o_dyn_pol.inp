@@ -16,7 +16,3 @@ Spacing = 0.65
 %EMFreqs 
 2 | 0.0 | 0.1
 %
-
-LRConvAbsDens = 1e-4
-LinearSolverTol = 1e-4
-

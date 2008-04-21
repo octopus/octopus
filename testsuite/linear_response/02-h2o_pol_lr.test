@@ -7,42 +7,42 @@ Date       : 18.10.05
 Arch       : Linux bizet 2.6.8-2-686 #1 Thu May 19 17:53:30 JST 2005 i686 GNU/Linux
 Release    : 3.1.0pre1
 Programs   : octopus
-TestGroups : short-run
+TestGroups : long-run
 Enabled    : Yes
 
-Input: 02-h2o_pol_lr.01_h2o_gs.inp
+Input: 05-h2o_pol_lr_full.01_h2o_gs.inp
 match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -16.06685186
 match ; Eigenvalues  ; GREP(static/info, '1   --', 12) ;  -1.167612
 
-Input: 02-h2o_pol_lr.02_h2o_dyn_pol.inp
-match ; Polarizability XX w=0.0    ; LINE(linear/freq_0.0000/alpha, 2,  5) ; 15.247841
-match ; Polarizability YY w=0.0    ; LINE(linear/freq_0.0000/alpha, 3, 25) ; 12.332924
-match ; Polarizability ZZ w=0.0    ; LINE(linear/freq_0.0000/alpha, 4, 45) ; 23.148146
+Input: 05-h2o_pol_lr_full.02_h2o_dyn_pol.inp
+match ; Polarizability XX w=0.0    ; LINE(linear/freq_0.0000/alpha, 2,  5) ; 15.247802
+match ; Polarizability YY w=0.0    ; LINE(linear/freq_0.0000/alpha, 3, 25) ; 12.333039
+match ; Polarizability ZZ w=0.0    ; LINE(linear/freq_0.0000/alpha, 4, 45) ; 23.148746
 
-match ; Polarizability XX w=0.1    ; LINE(linear/freq_0.1000/alpha, 2,  5) ; 15.942856
-match ; Polarizability YY w=0.1    ; LINE(linear/freq_0.1000/alpha, 3, 25) ; 12.856437
-match ; Polarizability ZZ w=0.1    ; LINE(linear/freq_0.1000/alpha, 4, 45) ; 29.765501
+match ; Polarizability XX w=0.1    ; LINE(linear/freq_0.1000/alpha, 2,  5) ; 15.943065
+match ; Polarizability YY w=0.1    ; LINE(linear/freq_0.1000/alpha, 3, 25) ; 12.856594
+match ; Polarizability ZZ w=0.1    ; LINE(linear/freq_0.1000/alpha, 4, 45) ; 29.766045
 
-Input: 02-h2o_pol_lr.03_h2o_dyn_pol_cmplx.inp
+Input: 05-h2o_pol_lr_full.03_h2o_dyn_pol_cmplx.inp
 Precision : 0.001
-match ; Polarizability XX w=0.0    ; LINE(linear/freq_0.0000/alpha, 2,  5) ; 15.241377
-match ; Polarizability YY w=0.0    ; LINE(linear/freq_0.0000/alpha, 3, 25) ; 12.328152
-match ; Polarizability ZZ w=0.0    ; LINE(linear/freq_0.0000/alpha, 4, 45) ; 23.106016
+match ; Polarizability XX w=0.0    ; LINE(linear/freq_0.0000/alpha, 2,  5) ; 15.241286
+match ; Polarizability YY w=0.0    ; LINE(linear/freq_0.0000/alpha, 3, 25) ; 12.328137
+match ; Polarizability ZZ w=0.0    ; LINE(linear/freq_0.0000/alpha, 4, 45) ; 23.105410
 
-match ; Polarizability XX w=0.1    ; LINE(linear/freq_0.1000/alpha, 2,  5) ; 15.933556
-match ; Polarizability YY w=0.1    ; LINE(linear/freq_0.1000/alpha, 3, 25) ; 12.849307
-match ; Polarizability ZZ w=0.1    ; LINE(linear/freq_0.1000/alpha, 4, 45) ; 29.439892
+match ; Polarizability XX w=0.1    ; LINE(linear/freq_0.1000/alpha, 2,  5) ; 15.933687
+match ; Polarizability YY w=0.1    ; LINE(linear/freq_0.1000/alpha, 3, 25) ; 12.849589
+match ; Polarizability ZZ w=0.1    ; LINE(linear/freq_0.1000/alpha, 4, 45) ; 29.440144
 
-match ; Cross sect. (avg) w=0.1    ; LINE(linear/freq_0.1000/cross_section, -1, 25) ; 0.68953861E-02
-match ; Cross sect. (ani) w=0.1    ; LINE(linear/freq_0.1000/cross_section, -1, 45) ; 0.13979999E-01
+match ; Cross sect. (avg) w=0.1    ; LINE(linear/freq_0.1000/cross_section, -1, 25) ; 0.68973035E-02
+match ; Cross sect. (ani) w=0.1    ; LINE(linear/freq_0.1000/cross_section, -1, 45) ; 0.13985151E-01
 
 Precision : 0.02
-match ; Hyperpolarizability w=0.0  ; GREP(linear/freq_0.0000/beta, 'beta // y', 10) ; -0.23367220E+02
-match ; Hyperpolarizability w=0.1  ; GREP(linear/freq_0.1000/beta, 'beta // y', 10) ;  0.86709113E+02
+match ; Hyperpolarizability w=0.0  ; GREP(linear/freq_0.0000/beta, 'beta // y', 10) ; -0.23366122E+02
+match ; Hyperpolarizability w=0.1  ; GREP(linear/freq_0.1000/beta, 'beta // y', 10) ; 0.86713699E+02
 Precision : default
 
-Input: 02-h2o_pol_lr.04_h2o_susc.inp
-match; Paramagnetic susceptibility ; LINE(linear/freq_0.0000/susceptibility,  5, 25) ;   30.003045
-match; Diamagnetic susceptibility  ; LINE(linear/freq_0.0000/susceptibility, 11, 25) ; -215.362984
-match; Total susceptibility        ; LINE(linear/freq_0.0000/susceptibility, 17, 25) ; -185.359939
+Input: 05-h2o_pol_lr_full.04_h2o_susc.inp
+match; Paramagnetic susceptibility ; LINE(linear/freq_0.0000/susceptibility,  5, 25) ;   30.003072
+match; Diamagnetic susceptibility  ; LINE(linear/freq_0.0000/susceptibility, 11, 25) ; -215.363250
+match; Total susceptibility        ; LINE(linear/freq_0.0000/susceptibility, 17, 25) ; -185.360178
 
