@@ -108,20 +108,18 @@ contains
     
     ! Read the initial gauge vector field
     
-    if(simul_box_is_periodic(sb)) then
-      if(loct_parse_block(check_inp('GaugeVectorField'), blk) == 0) then
-        
-        this%with_gauge_field = .true.
-        
-    	do ii = 1, sb%dim
-          call loct_parse_block_float(blk, 0, ii - 1, this%vecpot(ii))
-        end do
-
- 	call loct_parse_block_end(blk)
-
-      end if
+    if(loct_parse_block(check_inp('GaugeVectorField'), blk) == 0) then
+      
+      this%with_gauge_field = .true.
+      
+      do ii = 1, sb%dim
+        call loct_parse_block_float(blk, 0, ii - 1, this%vecpot(ii))
+      end do
+      
+      call loct_parse_block_end(blk)
+      
     end if
-
+    
     call pop_sub()
   end subroutine gauge_field_init
 
@@ -226,7 +224,7 @@ contains
     end do
     
     this%wp2 = M_FOUR*M_PI*n_el/sb%rcell_volume
-    
+
     write (message(1), '(a,f12.6)') "Info: Electron gas plasmon frequency", sqrt(this%wp2)
     call write_info(1)
 
@@ -258,14 +256,14 @@ contains
     do ik = 1, st%d%nik
       do ist = st%st_start, st%st_end
 
-
-
         do idim = 1, st%d%dim
 
           call zset_bc(gr%f_der%der_discr, st%zpsi(:, idim, ist, ik))
 
-          epsi(1:NP_PART, idim) = phases(1:NP_PART, ik)*st%zpsi(1:NP_PART, idim, ist, ik)
-          
+          if(simul_box_is_periodic(gr%sb)) then
+            epsi(1:NP_PART, idim) = phases(1:NP_PART, ik)*st%zpsi(1:NP_PART, idim, ist, ik)
+          end if
+
           call zderivatives_grad(gr%f_der%der_discr, epsi(:, idim), gpsi(:, :, idim), set_bc = .false.)
 
         end do

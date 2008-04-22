@@ -118,7 +118,7 @@ program dielectric_function
   end do
 
   !remove the dc component
-  do idir = 1, MAX_DIM
+  do idir = 4, 6
     av = sum(vecpot(idir, istart:iend))
     vecpot(idir, istart:iend) = vecpot(idir, istart:iend) - av/dble(ntiter)
   end do

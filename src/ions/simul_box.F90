@@ -503,9 +503,9 @@ contains
       !% <br>&nbsp;&nbsp;0.0 | 0.0 | 1.0
       !% <br>%</tt>
       !%End
-
+      
       ! this has to be updated for non orthogonal grids
-      sb%rcell_volume = product(M_TWO*sb%lsize(1:sb%dim))
+      sb%rcell_volume = product(M_TWO*sb%lsize(1:sb%periodic_dim))
 
       sb%rlattice = M_ZERO
       do idim = 1, MAX_DIM
