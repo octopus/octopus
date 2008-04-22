@@ -27,7 +27,7 @@ int get_primitive_multiplicity(double pure_trans[][3],
 Cell get_primitive_cell(Cell * cell, Symmetry * symmetry, double symprec);
 void get_primitive_least_axes(double vectors[][3], int size, Cell * cell,
                               double symprec);
-int trim_cell(Cell * primitive, Cell * cell, double symprec);
+void trim_cell(Cell * primitive, Cell * cell, double symprec);
 int check_overlap(double a[3], double b[3], double symprec);
 
 #endif

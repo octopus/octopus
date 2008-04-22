@@ -82,11 +82,8 @@ void spg_get_bravais_lattice(double bravais_lattice[3][3], double lattice[3][3],
                              double position[][3], int types[], int num_atom,
                              double symprec)
 {
-    int holohedry;
     Bravais bravais;
     Cell cell;
-    Symmetry symmetry;
-    LatticeSymmetry lattice_sym;
 
     cell = new_cell(num_atom);
     set_cell(&cell, lattice, position, types);

@@ -18,10 +18,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "cell.h"
+#include "mathfunc.h"
 
 Cell new_cell(int size)
 {
-    int i;
     Cell cell;
     cell.size = size;
     if ((cell.types = (int *) malloc(sizeof(int) * size)) == NULL) {
@@ -41,8 +41,7 @@ Cell copy_cell(Cell * cell_orig)
     Cell cell;
 
     cell = new_cell(cell_orig->size);
-    set_cell(&cell, cell_orig->lattice, cell_orig->position,
-             cell_orig->types);
+    set_cell(&cell, cell_orig->lattice, cell_orig->position, cell_orig->types);
 
     return cell;
 }

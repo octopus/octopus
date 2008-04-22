@@ -25,7 +25,7 @@ LatticeSymmetry get_symmetry_candidate(Bravais * bravais,
                                        double lattice[3][3],
                                        double symprec)
 {
-    int i, j, k;
+    int i, j;
     double coordinate[3][3], tmp_matrix_d3[3][3], check_val;
     LatticeSymmetry lattice_sym;
 
@@ -174,7 +174,9 @@ LatticeSymmetry get_bravais_symmetry(int holohedry)
 void generate_point_symmetry(int point_symmetry[][3][3],
                              int generator[3][3], int n_sym, int n_gen)
 {
-    int i, j, count;
+    static int i, j, count;  /* this is declared static to avoid
+				inlining, which triggers a bug in
+				gcc-4.3 */
     int tmp_matrix[3][3];
 
     /* n_sym is number of symmetry operations, which was already counted. */
@@ -559,9 +561,9 @@ void set_bravais_lattice(Bravais *bravais, double symprec)
     }
 
     /* monoclinic */
-    if (!found && (angle_90[0] && angle_90[1] ||
-                   angle_90[1] && angle_90[2] ||
-                   angle_90[2] && angle_90[0])) {
+    if (!found && ( (angle_90[0] && angle_90[1]) ||
+                    (angle_90[1] && angle_90[2]) ||
+		    (angle_90[2] && angle_90[0]) )) {
         if (angle_90[0] && angle_90[1])
             for (i = 0; i < 3; i++) {
                 bravais->lattice[i][0] = lattice[i][0];
@@ -759,8 +761,7 @@ int bravais_ortho5(int axis, int c0, int c1, double min_lattice[3][3],
     ratio_b = inner_product_d3(tmp_matrix_d3[axis], vector_b) / inner_product_d3(vector_b, vector_b);	/* bc/bb = |c|cos/|b| */
 
     if (Dabs(Dabs(ratio_a) - 0.5) < symprec &&	/* |a|=2*|c||cos| */
-        Dabs(ratio_b) < symprec ||	/* b and c are orthogoanl. */
-        Dabs(ratio_a) < symprec &&	/* a and c are orthogoanl. */
+        (Dabs(ratio_b) < symprec ||  Dabs(ratio_a) < symprec ) &&  /* b and c are orthogonal or  a and c are orthogonal */
         Dabs(Dabs(ratio_b) - 0.5) < symprec) {	/* |b|=2*|c||cos| */
         for (j = 0; j < 3; j++) {
             lattice[j][axis] = (min_lattice[j][axis] - ratio_a * vector_a[j]
@@ -777,8 +778,8 @@ int bravais_ortho6(int axis, int c0, int c1, double min_lattice[3][3],
                    double lattice[3][3], double symprec)
 {
     int j;
-    double vector_a[3], vector_b[3], ratio_a, ratio_b, tmp_matrix_d3[3][3],
-        metric[3][3];
+    double vector_a[3], vector_b[3], metric[3][3];
+
     get_metric(metric, min_lattice);
 
     for (j = 0; j < 3; j++) {
@@ -978,10 +979,8 @@ int bravais_rhombo4(int axis, int c0, int c1, double min_lattice[3][3],
         ratio_b = metric[axis][c1] / metric[c1][c1];
 
         if (Dabs(Dabs(ratio_a) - 0.5) < symprec
-            && Dabs(Dabs(ratio_b) - 0.5) < symprec
-            || Dabs(ratio_a) < symprec
-            && Dabs(Dabs(ratio_b) - 0.5) < symprec
-            || Dabs(Dabs(ratio_a) - 0.5) < symprec
+            && ( Dabs(Dabs(ratio_b) - 0.5) < symprec || Dabs(ratio_a) < symprec )
+            && ( Dabs(Dabs(ratio_b) - 0.5) < symprec || Dabs(Dabs(ratio_a) - 0.5) < symprec)
             && Dabs(ratio_b) < symprec) {
 
             for (j = 0; j < 3; j++) {
@@ -996,7 +995,7 @@ int bravais_rhombo4(int axis, int c0, int c1, double min_lattice[3][3],
                     lattice[j][c1] =
                         min_lattice[j][axis] - 2 * ratio_b * vector_b[j];
 
-                if (Dabs(ratio_a) < symprec)
+                if (Dabs(ratio_a) < symprec) {
 
                     /* angle between a and b is 60 deg. */
                     if (inner_product_d3(vector_a, vector_b) > 0)
@@ -1007,8 +1006,9 @@ int bravais_rhombo4(int axis, int c0, int c1, double min_lattice[3][3],
                         lattice[j][c0] =
                             min_lattice[j][axis] - 2 * ratio_b * vector_b[j] +
                             vector_a[j];
+		}
 
-                if (Dabs(ratio_b) < symprec)
+                if (Dabs(ratio_b) < symprec){
 
                     /* angle between a and b is 60 deg. */
                     if (inner_product_d3(vector_a, vector_b) > 0)
@@ -1019,6 +1019,7 @@ int bravais_rhombo4(int axis, int c0, int c1, double min_lattice[3][3],
                         lattice[j][c1] =
                             min_lattice[j][axis] - 2 * ratio_a * vector_a[j] +
                             vector_b[j];
+		}
             }
             return 1;
         }
@@ -1178,9 +1179,8 @@ int bravais_monocli3_ext(double lattice[3][3], double vector_a[3],
 int check_holohedry(double lattice[3][3], int holohedry, double symprec)
 {
     double metric[3][3];
-    int angle_90[3] = { 0, 0, 0 }, edge_equal[3] = {
-    0, 0, 0};
-    int i, orthogonal = 0, all_edge_equal = 0;
+    int angle_90[3] = { 0, 0, 0 }, edge_equal[3] = {0, 0, 0};
+    int orthogonal = 0, all_edge_equal = 0;
 
     get_metric(metric, lattice);
     check_angle90_equaledge(angle_90, edge_equal, metric, symprec);

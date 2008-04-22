@@ -112,11 +112,12 @@ int get_spacegroup_data_special_case(Symmetry * symmetry,
                 }
 
             for (i = 0; i < size; i++)
-                if (rot_class[i] == A_B_C_PLANE)
+	        if (rot_class[i] == A_B_C_PLANE){
                     if (Dabs(symmetry->trans[i][direction]) > symprec)
                         return 1;
                     else
                         return 2;
+		}
         }
 
         /* 55 (Pbam) or 57 (Pbcm) */
@@ -133,11 +134,12 @@ int get_spacegroup_data_special_case(Symmetry * symmetry,
                 }
 
             for (i = 0; i < size; i++)
-                if (rot_class[i] == A_B_C_PLANE)
+                if (rot_class[i] == A_B_C_PLANE){
                     if (Dabs(symmetry->trans[i][direction]) > symprec)
                         return 1;
                     else
                         return 2;
+		}
         }
 
         /* 56 (Pccn) or 60 (Pbcn) */
@@ -154,11 +156,12 @@ int get_spacegroup_data_special_case(Symmetry * symmetry,
                 }
 
             for (i = 0; i < size; i++)
-                if (rot_class[i] == A_B_C_PLANE)
+                if (rot_class[i] == A_B_C_PLANE){
                     if (Dabs(symmetry->trans[i][direction]) > symprec)
                         return 1;
                     else
                         return 2;
+		}
         }
     }
 
@@ -215,13 +218,13 @@ int get_spacegroup_data_special_case(Symmetry * symmetry,
     if (check_class_table(class_table, tables[5]) ||	/* 143 (0) or 146 (1) */
         check_class_table(class_table, tables[6]) ||	/* 147 (0) or 148 (1) */
         check_class_table(class_table, tables[7]) ||	/* 156 (0) or 160 (1) */
-        check_class_table(class_table, tables[8]))
+        check_class_table(class_table, tables[8])) {
         /* 158 (0) or 161 (1) */
         if (centering == TRIGO)
             return 2;
         else
             return 1;
-
+    }
     /* default */
     return 0;
 }

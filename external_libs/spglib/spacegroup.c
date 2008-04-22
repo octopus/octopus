@@ -26,6 +26,7 @@
 #include "primitive.h"
 #include "spacegroup_data.h"
 #include "spacegroup_database.h"
+#include "pointgroup.h"
 
 Spacegroup get_spacegroup(Cell * cell, double symprec)
 {
@@ -166,10 +167,8 @@ void get_correct_bravais(Bravais *bravais, Cell *cell, int holohedry,
 int get_spacegroup_number(Bravais * bravais, Cell * primitive,
                           Symmetry * primitive_sym, double symprec)
 {
-    int i, j, order, spacegroup_number;
+    int i, order;
     Symmetry symmetry;
-    Spacegroup spacegroup;
-    Pointgroup pointgroup;
 
     symmetry = get_conventional_symmetry(bravais, primitive,
                                          primitive_sym, symprec);
@@ -249,11 +248,7 @@ int get_improper_rotation_class_2axis(Bravais * bravais, int rot[3][3],
 {
     int i, sum=0, holohedry, centering;
     double trans[3], trans2[3];
-    int identity[3][3] = {
-        {1, 0, 0},
-        {0, 1, 0},
-        {0, 0, 1}
-    };
+
     int mirror_x[3][3] = {
         {-1, 0, 0},
         {0, 1, 0},
@@ -294,7 +289,7 @@ int get_improper_rotation_class_2axis(Bravais * bravais, int rot[3][3],
     centering = bravais->centering;
 
     /* determine axis_type */
-    if (sum == 1)
+    if (sum == 1){
 
         if (check_identity_matrix_i3(rot, mirror_z))
             axis_type = PRIMARY_AXIS;
@@ -307,6 +302,7 @@ int get_improper_rotation_class_2axis(Bravais * bravais, int rot[3][3],
             if (holohedry == TETRA || holohedry == HEXA)
                 axis_type = SECONDARY_AXIS;
         }
+    }
 
     if (sum == 2)
         axis_type = SECONDARY_AXIS;
@@ -501,8 +497,7 @@ double get_abs_diff_two_vectors(double a[3], double b[3])
 int get_proper_rotation_class(Bravais * bravais, int order, int rot[3][3],
                               double raw_trans[3], double symprec)
 {
-    int i, j, rot_class, centering, holohedry, trans_order,
-        nonsymmorphic[3];
+    int i, rot_class, centering, holohedry, trans_order, nonsymmorphic[3];
     double trans[3];
 
     centering = bravais->centering;
@@ -675,7 +670,7 @@ int get_proper_rotation_class_3axis(int holohedry, int rot[3][3],
 int get_proper_rotation_class_2axis(Bravais * bravais, int rot[3][3],
                                     int trans_order)
 {
-    int i, holohedry, centering, sum;
+    int holohedry, centering, sum;
     enum axis_type {
         PRIMARY_AXIS = 1,
         SECONDARY_AXIS = 2,

@@ -20,7 +20,6 @@
 
 void get_metric(double metric[3][3], double lattice[3][3])
 {
-    int i;
     double lattice_t[3][3];
     transpose_matrix_d3(lattice_t, lattice);
     multiply_matrix_d3(metric, lattice_t, lattice);

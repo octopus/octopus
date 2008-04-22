@@ -39,7 +39,7 @@ int check_primitive_cell(Symmetry * symmetry)
 
 Cell get_primitive_cell(Cell * cell, Symmetry * symmetry, double symprec)
 {
-    int i, j, k, l, m, count, multi;
+    int i, j, multi;
     double pure_trans[symmetry->size][3], new_lattice[3][3];
     Cell primitive;
 
@@ -50,7 +50,6 @@ Cell get_primitive_cell(Cell * cell, Symmetry * symmetry, double symprec)
 
     if (multi > 1) {
         double vectors[multi + 2][3];
-        double vectors2[multi + 2][3];
 
         for (i = 0; i < multi - 1; i++)
             copy_vector_d3(vectors[i], pure_trans[i + 1]);
@@ -106,7 +105,7 @@ Cell get_primitive_cell(Cell * cell, Symmetry * symmetry, double symprec)
     return primitive;
 }
 
-int trim_cell(Cell * primitive, Cell * cell, double symprec)
+void trim_cell(Cell * primitive, Cell * cell, double symprec)
 {
     int i, j, k, count, ratio;
     int table[cell->size][cell->size], check_table[cell->size];
@@ -239,7 +238,7 @@ int check_overlap(double a[3], double b[3], double symprec)
 void get_primitive_least_axes(double vectors[][3], int size, Cell * cell,
                               double symprec)
 {
-    int i, j, k, l;
+    int i, j, k;
     double min_volume, initial_volume, volume, min_vectors[3][3],
         tmp_lattice[3][3];
 

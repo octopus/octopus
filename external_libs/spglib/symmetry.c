@@ -117,7 +117,6 @@ Symmetry get_symmetry_operation(Cell * cell, LatticeSymmetry * lattice_sym,
 Symmetry new_symmetry(int size)
 {
     Symmetry symmetry;
-    int i;
     symmetry.size = size;
     if ((symmetry.rot =
          (int (*)[3][3]) malloc(sizeof(int[3][3]) * size)) == NULL) {

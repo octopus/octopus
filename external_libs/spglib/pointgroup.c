@@ -27,7 +27,7 @@
 
 int check_pointgroup(int holohedry, Symmetry * symmetry)
 {
-    int i, j, found, table[10];
+    int i, found, table[10];
     char pointgroup[6];         /* This is not used out of this function. */
     PointgroupData pointgroup_data;
 

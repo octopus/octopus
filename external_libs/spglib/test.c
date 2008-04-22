@@ -71,8 +71,6 @@ void test_spg_show_symmetry_operations()
     int types[] = {1,1,2,2,2,2,1,1,2,2,2,2};
     int num_atom = 12;
 
-    int size;
-
     spg_show_symmetry_operations(lattice, position, types, num_atom, 1e-5);
     
 }
@@ -125,8 +123,6 @@ void test_spg_show_symmetry()
         };
     int types[] = {1,1,2,2,2,2,1,1,2,2,2,2};
     int num_atom = 12;
-
-    int size;
 
     spg_show_symmetry(lattice, position, types, num_atom, 1e-5);
 }

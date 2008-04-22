@@ -42,6 +42,7 @@ int check_identity_matrix_i3(int a[3][3], int b[3][3]);
 void multiply_matrix_d3(double m[3][3], double a[3][3], double b[3][3]);
 void multiply_matrix_i3(int m[3][3], int a[3][3], int b[3][3]);
 void multiply_matrix_vector_d3(double v[3], double a[3][3], double b[3]);
+void multiply_matrix_vector_id3(double v[3], int a[3][3], double b[3]);
 void cast_matrix_3i_to_3d(double m[3][3], int a[3][3]);
 void cast_matrix_3d_to_3i(int m[3][3], double a[3][3]);
 int inverse_matrix_d3(double m[3][3], double a[3][3], double precision);
