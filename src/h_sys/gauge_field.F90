@@ -215,7 +215,7 @@ contains
     type(states_t),       intent(in)    :: st
     FLOAT,                intent(in)    :: dt
     
-    integer :: ik, idir
+    integer :: ik
     FLOAT :: n_el
 
     n_el = M_ZERO

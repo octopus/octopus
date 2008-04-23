@@ -56,7 +56,6 @@ subroutine poisson1D_solve(m, pot, rho)
         y = m%x(j, 1)
         pot(i) = pot(i) + rho(j)/sqrt(M_ONE + (x-y)**2) * m%vol_pp(j)
       end do
-      pot(i) = pot(i)
     end do
   end if
 

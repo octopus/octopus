@@ -50,7 +50,7 @@ contains
 
     type(specie_t), pointer :: s
     FLOAT :: r, rc, xi(1:MAX_DIM), dd, zi, zj
-    integer :: iatom, jatom, icopy, idir
+    integer :: iatom, jatom, icopy
     type(periodic_copy_t) :: pc
 
     type(profile_t), save :: ion_ion_prof
