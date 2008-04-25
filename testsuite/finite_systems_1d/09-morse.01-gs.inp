@@ -60,7 +60,7 @@ TheoryLevel = independent_particles
 MaximumIter = 200
 ConvAbsDens = 1e-6
 
-LCAOStart = yes
+LCAOStart = no
 
 EigenSolver = cg_new
 EigenSolverInitTolerance = 1e-6

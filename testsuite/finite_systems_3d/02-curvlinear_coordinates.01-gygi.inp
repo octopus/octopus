@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id$
 
-DebugLevel = 0
+FromScratch = yes
 
 CalculationMode = gs
 
@@ -21,6 +21,8 @@ CurvGygiA = 0.80
 
 DerivativesStencil = stencil_starplus
 DerivativesOrder = 3
+
+LCAOStart = no
 
 ConvAbsDens = 1e-5
 

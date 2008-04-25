@@ -2,7 +2,8 @@
 # $Id$
 #
 
-DebugLevel = 0
+FromScratch=yes
+
 CalculationMode = gs
 
 ParallelizationStrategy = par_domains

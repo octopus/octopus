@@ -253,20 +253,20 @@ foreach my $octopus_exe (@executables){
 	    # serial or MPI run?
 	    if ( $octopus_exe_suffix =~ /mpi$/) {
 	      if( -x "$mpirun") {
-		print "Executing: cd $workdir; $mpirun -np $np $octopus_exe_suffix > out 2>&1 \n";
-		system("cd $workdir; $mpirun -np $np $octopus_exe_suffix > out 2>&1");
+		print "Executing: cd $workdir; $mpirun -np $np $octopus_exe_suffix > out \n";
+		system("cd $workdir; $mpirun -np $np $octopus_exe_suffix > out ");
 	      } else {
 		print "No mpirun found: Skipping parallel test \n";
 		exit 255;
 	      }
 	    } else {
-	      print "Executing: cd $workdir; $octopus_exe_suffix > out 2>&1 \n";
-	      system("cd $workdir; $octopus_exe_suffix > out 2>&1");
+	      print "Executing: cd $workdir; $octopus_exe_suffix > out \n";
+	      system("cd $workdir; $octopus_exe_suffix > out ");
 	    }
 	    system("sed -n '/Running octopus/{N;N;N;N;N;N;p;}' $workdir/out > $workdir/build-stamp");
 	    print "Finished test run.\n\n"; }
 	  else {
-	    if(!$opt_i) { print "cd $workdir; $octopus_exe_suffix < inp > out 2>&1 \n"; }
+	    if(!$opt_i) { print "cd $workdir; $octopus_exe_suffix > out \n"; }
 	  }
 	  $test{"run"} = 1;
 	}
