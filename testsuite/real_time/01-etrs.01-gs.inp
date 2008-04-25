@@ -1,5 +1,7 @@
 CalculationMode = gs
 
+FromScratch = yes
+
 bond_length = 2.8
 
 %Coordinates

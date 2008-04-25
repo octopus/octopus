@@ -99,7 +99,7 @@ contains
     case(M_VDW)
       call vdW_run(sys, h, fromScratch)
     case(M_GEOM_OPT)
-      call geom_opt_run(sys, h)
+      call geom_opt_run(sys, h, fromScratch)
     case(M_PHONONS_LR)
       select case(get_resp_method())
       case(FD)

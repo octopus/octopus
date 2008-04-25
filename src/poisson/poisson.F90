@@ -409,7 +409,9 @@ contains
     alpha = CNST(4.0) * gr%m%h(1)
     beta = M_ONE / ( alpha**calc_dim * sqrt(M_PI)**calc_dim )
 
-    write(0, *) 'Building the Gaussian distribution of charge...'
+    write(message(1), '(a)') 'Building the Gaussian distribution of charge...'
+    call write_info(1)
+
     rho = M_ZERO
     do n = 1, n_gaussians
       norm = M_ZERO

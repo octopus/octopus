@@ -1,9 +1,9 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id$
 
-DebugLevel = 0
-
 CalculationMode = gs
+
+FromScratch = yes
 
 %Species
   "Ar" | 39.9480000 | spec_ps_hgh | 18 | -1 | -1

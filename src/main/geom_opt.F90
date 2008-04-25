@@ -71,9 +71,10 @@ module geom_opt_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine geom_opt_run(sys, h)
+  subroutine geom_opt_run(sys, h, fromscratch)
     type(system_t), target,      intent(inout) :: sys
     type(hamiltonian_t), target, intent(inout) :: h
+    logical,                     intent(inout) :: fromscratch
 
     integer :: i, ierr, lcao_start, lcao_start_default
     real(8), allocatable :: x(:)
@@ -84,10 +85,16 @@ contains
     
     ! load wave-functions
 
-    call restart_read(trim(tmpdir)//'gs', sys%st, sys%gr, sys%geo, ierr)
-    if(ierr.ne.0) then
-      message(1) = "Could not load wave-functions: Starting from scratch"
-      call write_warning(1)
+    if(.not. fromscratch) then
+      call restart_read(trim(tmpdir)//'gs', sys%st, sys%gr, sys%geo, ierr)
+      if(ierr .ne. 0) then
+        message(1) = "Could not load wave-functions: Starting from scratch"
+        call write_warning(1)
+        fromscratch = .true.
+      end if
+    end if
+
+    if(fromscratch) then
 
       ! Randomly generate the initial wave-functions
       call states_generate_random(sys%st, sys%gr%m)
