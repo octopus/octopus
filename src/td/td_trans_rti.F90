@@ -557,7 +557,7 @@ contains
       ! start with en > emin
       i = (ist-1)/2
       q(1) = qmax - i*(qmax-qmin)/nst2
-      ! now calculate the q's for each state
+      ! now calculate the q`s for each state
       ! TODO: run over all states, now only the lowest transversal mode is used
       ! now set the unscattered states (flat leads with box geometry)
       do i=1, NP
@@ -727,7 +727,7 @@ contains
                       ext_wf(inp+1:NP+inp, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik)
         deallocate(ext_wf)
       case(1) ! calculate the extended eigenstate
-        ! DON'T FORGET TO MAKE THE SIMULATION BOX BIGGER IN THE INP FILE
+        ! DON NOT FORGET TO MAKE THE SIMULATION BOX BIGGER IN THE INP FILE
         j = NP*st%d%dim*st%lnst*st%d%nik
         call calculate_ext_eigenstate(h, gr, inp, diag, offdiag, order, energy, td_pot(0,:), st)
         call write_binary(j, st%zpsi(1:NP, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik), 3, ierr, 'ext_eigenstate.obf')
