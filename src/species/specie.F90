@@ -531,11 +531,6 @@ contains
       write(message(4),'(a)')  '   for a delta density distribution.'
       call write_info(4)
 
-      write(message(1),'(a)')    'Gradients are not calculated, forces are not correct.'
-      call write_warning(1)
-      
-      write(message(1),'(a)')    'If octopus stops with error, turnoff LCAO (LCAOStart = no).'
-      call write_warning(1)
     end select
 
     ALLOCATE(s%iwf_l(s%niwfs, ispin), s%niwfs*ispin)
