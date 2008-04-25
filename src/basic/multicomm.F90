@@ -208,7 +208,7 @@ contains
         call assign_nodes()
       end if
 
-      ! reset par_strategy
+      ! clear parallel strategies that were available but will not be used
       do i = 1, mc%n_index
         if(mc%group_sizes(i) == 1) mc%par_strategy = ibclr(mc%par_strategy, i-1)
       end do
@@ -343,7 +343,7 @@ contains
       n = mc%n_node
 
       ! this is the maximum number of processors in each group
-      n_group_max(1:mc%n_index) = max(index_range(1:mc%n_index)/min_range(1:mc%n_index), 1)
+      n_group_max(1:mc%n_index) = max(index_range(1:mc%n_index), 1)
       do k = 1, mc%n_index
         if(.not.multicomm_strategy_is_parallel(mc, k)) n_group_max(k) = 1
       end do
