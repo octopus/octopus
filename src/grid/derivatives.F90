@@ -111,6 +111,7 @@ module derivatives_m
     private
 #ifdef HAVE_MPI
     type(pv_handle_t) :: pv_h
+    logical :: parallel_in_domains
 #endif
     FLOAT, pointer :: df(:)
     CMPLX, pointer :: zf(:)
@@ -609,8 +610,9 @@ contains
 
     nullify(this%df, this%zf)
     nullify(this%dlapl, this%zlapl)
-#ifdef HAVE_MPI    
-    call pv_handle_init(this%pv_h, mesh%vp)
+#ifdef HAVE_MPI
+    this%parallel_in_domains = mesh%parallel_in_domains
+    if(this%parallel_in_domains) call pv_handle_init(this%pv_h, mesh%vp)
 #endif
   end subroutine der_handle_init
 
@@ -619,8 +621,8 @@ contains
 
     nullify(this%df, this%zf)
     nullify(this%dlapl, this%zlapl)
-#ifdef HAVE_MPI    
-    call pv_handle_end(this%pv_h)
+#ifdef HAVE_MPI
+    if(this%parallel_in_domains) call pv_handle_end(this%pv_h)
 #endif
   end subroutine der_handle_end
 
