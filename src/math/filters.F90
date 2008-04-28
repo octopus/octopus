@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-module filter_m
+module spline_filter_m
   use global_m
   use splines_m
   use loct_math_m
@@ -138,7 +138,7 @@ contains
 
 #include "filters_data.F90"
 
-end module filter_m
+end module spline_filter_m
 
 !! Local Variables:
 !! mode: f90
