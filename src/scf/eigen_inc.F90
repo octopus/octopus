@@ -25,9 +25,8 @@ subroutine X(eigen_diag_subspace)(gr, st, h, diff)
   type(hamiltonian_t), intent(inout) :: h
   FLOAT, optional,     intent(out)   :: diff(1:st%nst,1:st%d%nik)
 
-  R_TYPE, allocatable :: h_subspace(:, :), vec(:, :), f(:, :), psiold(:)
-  R_TYPE :: aa
-  integer             :: ist, ik, ip, idim, jst
+  R_TYPE, allocatable :: h_subspace(:, :), vec(:, :), f(:, :)
+  integer             :: ist, jst, ik
   FLOAT               :: nrm2
 
   call push_sub('eigen_inc.Xeigen_diagon_subspace')
@@ -40,7 +39,6 @@ subroutine X(eigen_diag_subspace)(gr, st, h, diff)
   ALLOCATE(h_subspace(st%nst, st%nst), st%nst*st%nst)
   ALLOCATE(vec(st%nst, st%nst), st%nst*st%nst)
   ALLOCATE(f(NP, st%d%dim), NP*st%d%dim)
-  ALLOCATE(psiold(st%st_start:st%st_end), st%lnst)
 
   ik_loop: do ik = 1, st%d%nik
 
@@ -58,23 +56,9 @@ subroutine X(eigen_diag_subspace)(gr, st, h, diff)
     call lalg_eigensolve(st%nst, h_subspace, vec, st%eigenval(:, ik))
 
     ! Calculate the new eigenfunctions as a linear combination of the
-    ! old ones. This code could be optimized using blocks.
-    do ip = 1, NP
-      do idim = 1, st%d%dim
-
-        psiold(st%st_start:st%st_end) = st%X(psi)(ip, idim, st%st_start:st%st_end, ik)
-
-        do ist = st%st_start, st%st_end
-          aa = M_ZERO
-          do jst = st%st_start, st%st_end
-            aa = aa + vec(jst, ist)*psiold(jst)
-          end do
-          st%X(psi)(ip, idim, ist, ik) = aa
-        end do
-
-      end do
-    end do
-
+    ! old ones.
+    call X(states_linear_combination)(st, gr%m, ik, vec)
+    
     ! Renormalize.
     do ist = st%st_start, st%st_end
       nrm2 = X(states_nrm2)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik))
@@ -93,12 +77,12 @@ subroutine X(eigen_diag_subspace)(gr, st, h, diff)
 
   end do ik_loop
 
-  deallocate(f, h_subspace, vec, psiold)
+  deallocate(f, h_subspace, vec)
 
   call profiling_out(diagon_prof)
   call pop_sub()
-end subroutine X(eigen_diag_subspace)
 
+end subroutine X(eigen_diag_subspace)
 
 ! --------------------------------------------------------- 
 ! This routine diagonalises the Hamiltonian in the subspace defined by

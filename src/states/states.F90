@@ -106,6 +106,8 @@ module states_m
     zstates_angular_momentum,       &
     dstates_matrix,                 &
     zstates_matrix,                 &
+    dstates_linear_combination,     &
+    zstates_linear_combination,     &
     states_distribute_nodes
 
   type states_dim_t

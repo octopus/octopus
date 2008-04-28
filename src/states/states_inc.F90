@@ -552,6 +552,48 @@ subroutine X(states_matrix)(m, st1, st2, a)
   call pop_sub()
 end subroutine X(states_matrix)
 
+! ------------------------------------------------------------------
+! This routine forms a new sets of states as linear combination of the
+! previous one, the coefficients are given by the matrix tranfs. This
+! combination is done in place, so it does not require a second set of
+! wavefunctions to be allocated.
+!
+! The performance of this function could be improved using blocks and
+! blas, but for the moment this is not necessary.
+!
+subroutine X(states_linear_combination)(st, mesh, ik, transf)
+  type(states_t),      intent(inout) :: st
+  type(mesh_t),        intent(in)    :: mesh
+  integer,             intent(in)    :: ik
+  R_TYPE,              intent(in)    :: transf(:, :)
+  
+  R_TYPE, allocatable :: psiold(:)
+  
+  R_TYPE :: aa
+  integer :: ist, jst, ip, idim
+
+  ALLOCATE(psiold(st%st_start:st%st_end), st%lnst)
+  
+  do ip = 1, mesh%np
+    do idim = 1, st%d%dim
+      
+      psiold(st%st_start:st%st_end) = st%X(psi)(ip, idim, st%st_start:st%st_end, ik)
+      
+      do ist = st%st_start, st%st_end
+        aa = M_ZERO
+        do jst = st%st_start, st%st_end
+          aa = aa +transf(jst, ist)*psiold(jst)
+        end do
+        st%X(psi)(ip, idim, ist, ik) = aa
+      end do
+      
+    end do
+  end do
+  
+  deallocate(psiold)
+  
+end subroutine X(states_linear_combination)
+
 
 !! Local Variables:
 !! mode: f90
