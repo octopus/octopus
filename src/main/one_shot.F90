@@ -53,7 +53,7 @@ contains
     type(hamiltonian_t), target, intent(inout) :: h
 
     integer :: ierr
-    real(8) :: E_tot, E_t, E_ext, E_Hartree, E_x, E_c
+    FLOAT :: E_tot, E_t, E_ext, E_Hartree, E_x, E_c
 
     ! load wave-functions
     call states_allocate_wfns(sys%st, sys%gr%m)
