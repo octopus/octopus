@@ -187,23 +187,6 @@
 !       real(8), intent(in) :: cutoff, beta
 !     end subroutine spline_cut
 !
-! [12] FILTERING A FUNCTION, BOTH IN REAL AND FOURIER SPACE:
-!     The function spline_filter permits to filter out high-values
-!     of a given spline function, either in real or in Fourier space.
-!     If the optional argument fs is supplied, a filter in Fourier space
-!     will be done by moving to the Fourier representation and then calling
-!     spline_cut with cutoff = fs(1) and beta = fs(2). If the optional
-!     argument rs is supplied, a filter in real space will be done by calling
-!     spline_cut with cutoff = rs(1) and beta = rs(2). If both arguments
-!     are supplied, the Fourier filter will be applied *before*.
-!
-!     Interface:
-!     subroutine spline_filter(spl, fs, rs)
-!       type(spline_t), intent(inout) :: spl
-!       real(8), intent(in), optional :: fs(2)
-!       real(8), intent(in), optional :: rs(2)
-!     end subroutine spline_filter
-!
 ! [13] PRINTING A FUNCTION:
 !     It prints to a file the (x,y) values that were used to define a function.
 !     The file is pointed by its Fortran unit given by argument iunit.
@@ -218,6 +201,7 @@
 !
 !----------------------------------------------------------------------------*/!
 module splines_m
+  use global_m
   use loct_math_m
   use messages_m
   use c_pointer_m
@@ -239,10 +223,11 @@ module splines_m
     spline_3dft,     & ! [9]
     spline_besselft, & ! [10]
     spline_cut,      & ! [11]
-    spline_filter,   & ! [12]
     spline_print,    & ! [13]
     spline_der,      &
     spline_der2,     &
+    spline_div,      & 
+    spline_mult,     & 
     spline_cutoff_radius, &
     assignment(=)
 
@@ -294,11 +279,6 @@ module splines_m
     module procedure spline_print_0
     module procedure spline_print_1
     module procedure spline_print_2
-  end interface
-
-  interface spline_filter
-    module procedure spline_filter_ft
-    module procedure spline_filter_bessel
   end interface
 
   ! These are interfaces to functions defined in oct_gsl_f.c, which  in turn
@@ -373,8 +353,6 @@ module splines_m
       real(8),           intent(in) :: a, b
     end function oct_spline_eval_integ
   end interface
-
-  real(8), parameter :: M_PI = CNST(3.141592653589793)
 
 contains
 
@@ -677,6 +655,7 @@ contains
       ! But now we need to kill the input:
       call spline_end(splw)
     else
+      ASSERT(present(gmax))
       np = 1000 ! hard coded value
       dg = gmax/(np-1)
       ALLOCATE(xw(np), np)
@@ -705,7 +684,7 @@ contains
 
   subroutine spline_cut(spl, cutoff, beta)
     type(spline_t), intent(inout) :: spl
-    FLOAT,                  intent(in) :: cutoff, beta
+    FLOAT,          intent(in) :: cutoff, beta
 
     integer :: npoints, i
     real(8), allocatable :: x(:), y(:)
@@ -725,47 +704,62 @@ contains
     deallocate(x, y)
   end subroutine spline_cut
 
-  subroutine spline_filter_ft(spl, fs, rs)
-    type(spline_t), intent(inout) :: spl
-    FLOAT, optional,     intent(in)    :: fs(2)
-    FLOAT, optional,     intent(in)    :: rs(2)
+  subroutine spline_div(spla, splb)
+    type(spline_t), intent(inout) :: spla
+    type(spline_t), intent(in)    :: splb
 
-    type(spline_t) :: splw
+    integer :: npoints, i
+    real(8), allocatable :: x(:), y(:)
+    real(8) :: aa
 
-    if(present(fs)) then
-      call spline_init(splw)
-      call spline_3dft(spl, splw, CNST(2.0)*fs(1))
-      call spline_cut(splw, fs(1), fs(2))
-      call spline_3dft(splw, spl)
-      call spline_times(TOFLOAT(CNST(1.0)/(CNST(2.0)*M_PI)**3), spl)
-      call spline_end(splw)
-    end if
-    if(present(rs)) then
-      call spline_cut(spl, rs(1), rs(2))
-    end if
+    npoints = oct_spline_npoints(spla%spl)
 
-  end subroutine spline_filter_ft
+    ALLOCATE(x(npoints), npoints)
+    ALLOCATE(y(npoints), npoints)
+    call oct_spline_x(spla%spl, x(1))
+    call oct_spline_y(spla%spl, y(1))
+    call oct_spline_end(spla%spl, spla%acc)
+  
+    do i = npoints, 1, -1
+      aa = spline_eval(splb, x(i))
+      if(abs(aa) < M_EPSILON) cycle
+      y(i) = y(i)/aa
+    end do
+    
+    call oct_spline_fit(npoints, x(1), y(1), spla%spl, spla%acc)
 
-  subroutine spline_filter_bessel(spl, l, fs, rs)
-    type(spline_t), intent(inout) :: spl
-    integer, intent(in) :: l
-    FLOAT, intent(in), optional :: fs(2)
-    FLOAT, intent(in), optional :: rs(2)
+    deallocate(x, y)
+  end subroutine spline_div
 
-    type(spline_t) :: splw
 
-    if(present(fs)) then
-      call spline_init(splw)
-      call spline_besselft(spl, splw, l, CNST(2.0)*fs(1))
-      call spline_cut(splw, fs(1), fs(2))
-      call spline_besselft(splw, spl, l)
-      call spline_end(splw)
-    end if
-    if(present(rs)) then
-      call spline_cut(spl, rs(1), rs(2))
-    end if
+   subroutine spline_mult(spla, splb)
+    type(spline_t), intent(inout) :: spla
+    type(spline_t), intent(in)    :: splb
 
-  end subroutine spline_filter_bessel
+    integer :: npoints, i
+    real(8), allocatable :: x(:), y(:)
+    real(8) :: aa
+
+    npoints = oct_spline_npoints(spla%spl)
+
+    ALLOCATE(x(npoints), npoints)
+    ALLOCATE(y(npoints), npoints)
+    call oct_spline_x(spla%spl, x(1))
+    call oct_spline_y(spla%spl, y(1))
+    call oct_spline_end(spla%spl, spla%acc)
+  
+    do i = npoints, 1, -1
+      aa = spline_eval(splb, x(i))
+      if(abs(aa) < M_EPSILON) cycle
+      y(i) = y(i)*aa
+    end do
+    
+    call oct_spline_fit(npoints, x(1), y(1), spla%spl, spla%acc)
+
+    deallocate(x, y)
+  end subroutine spline_mult
+
+
 
   subroutine spline_der(spl, dspl)
     type(spline_t), intent(in)    :: spl

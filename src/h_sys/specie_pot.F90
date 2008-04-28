@@ -82,11 +82,12 @@ contains
     if(specie_is_ps(this)) then
       call ps_separate(this%ps)
 
+      call ps_getradius(this%ps)
+
       if(filter) then 
-        call ps_filter(this%ps, mesh_gcutoff(gr%m), this%alpha, this%beta, this%rcut, this%beta2)
+        call ps_filter(this%ps, mesh_gcutoff(gr%m), CNST(1.1), CNST(2.0))
       end if
 
-      call ps_getradius(this%ps)
       call ps_derivatives(this%ps)
       
       if(in_debug_mode) then

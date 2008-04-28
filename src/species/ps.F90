@@ -35,7 +35,7 @@ module ps_m
   use ps_in_grid_m
   use ps_psf_m
   use ps_upf_m
-
+  use filter_m
   implicit none
 
   private
@@ -383,24 +383,24 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine ps_filter(ps, gmax, alpha, beta, rcut, beta2)
+  subroutine ps_filter(ps, gmax, alpha, gamma)
     type(ps_t), intent(inout) :: ps
     FLOAT, intent(in) :: gmax
-    FLOAT, intent(in) :: alpha, beta, rcut, beta2
+    FLOAT, intent(in) :: alpha, gamma
     integer :: l, k
 
     call push_sub('ps.ps_filter')
 
-    call spline_filter(ps%vl, fs = (/ alpha*gmax, CNST(100.0) /) )
+    call filter_mask(ps%vl, ps%l_loc, spline_cutoff_radius(ps%vl, ps%projectors_sphere_threshold), gmax, alpha, gamma )
 
     do l = 0, ps%l_max
+      if(l == ps%l_loc) cycle
       do k = 1, ps%kbc
-        call spline_filter(ps%kb(l, k), l, fs = (/ alpha*gmax, beta /), &
-          rs = (/ rcut, beta2 /))
+        call filter_mask(ps%kb(l, k), l, ps%rc_max, gmax, alpha, gamma)
       end do
     end do
 
-    if(trim(ps%icore).ne.'nc') call spline_filter(ps%core, fs = (/ alpha*gmax, CNST(100.0) /) )
+    if(trim(ps%icore).ne.'nc') call spline_filter_ft(ps%core, fs = (/ alpha*gmax, CNST(100.0) /) )
 
     call pop_sub()
   end subroutine ps_filter
