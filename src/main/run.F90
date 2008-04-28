@@ -32,6 +32,7 @@ module run_prog_m
   use messages_m
   use mpi_debug_m
   use multicomm_m
+  use one_shot_m
   use opt_control_m
   use phonons_fd_m
   use phonons_lr_m
@@ -85,6 +86,8 @@ contains
     select case(calc_mode)
     case(M_GS)
       call ground_state_run(sys, h, fromScratch)
+    case(M_ONE_SHOT)
+      call one_shot_run(sys, h)
     case(M_UNOCC)
       call unocc_run(sys, h, fromScratch)
     case(M_TD)
@@ -123,6 +126,7 @@ contains
     
   end subroutine run
   
+
   integer function get_resp_method()
     
     !%Variable ResponseMethod

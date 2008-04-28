@@ -177,10 +177,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine xc_functl_init_correlation(functl, id, ndim, spin_channels)
+  subroutine xc_functl_init_correlation(functl, id, ndim, nel, spin_channels)
     type(xc_functl_t), intent(out) :: functl
     integer,           intent(in)  :: id
     integer,           intent(in)  :: ndim
+    FLOAT,             intent(in)  :: nel
     integer,           intent(in)  :: spin_channels
 
     FLOAT :: alpha
@@ -233,6 +234,10 @@ contains
       functl%type = XC_F90(info_kind)(functl%info)
     else
       functl%type = -1
+    end if
+
+    if(functl%id == XC_LDA_C_PRM08) then
+      call XC_F90(lda_c_prm08_set_params)(functl%conf, nel)
     end if
 
     call pop_sub()

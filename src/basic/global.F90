@@ -111,6 +111,7 @@ module global_m
     M_VDW                =  11,  &
     M_PHONONS_LR         =  12,  &
     M_RAMAN              =  13,  &
+    M_ONE_SHOT           =  14,  &
     M_PULPO_A_FEIRA      =  99
 
   ! the standard input and output

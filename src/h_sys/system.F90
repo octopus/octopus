@@ -80,7 +80,7 @@ contains
     call h_sys_output_init(sys%gr%sb, sys%outp)
     call elf_init
     call poisson_init(sys%gr, sys%geo)
-    call v_ks_init(sys%gr, sys%ks, sys%st%d)
+    call v_ks_init(sys%gr, sys%ks, sys%st%d, sys%st%qtot)
 
     !print the mesh information if it is required
     call print_r()

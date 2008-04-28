@@ -107,9 +107,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine xc_init(xcs, ndim, spin_channels, cdft, hartree_fock)
+  subroutine xc_init(xcs, ndim, nel, spin_channels, cdft, hartree_fock)
     type(xc_t), intent(out) :: xcs
     integer,    intent(in)  :: ndim
+    FLOAT,      intent(in)  :: nel
     integer,    intent(in)  :: spin_channels
     logical,    intent(in)  :: cdft
     logical,    intent(in)  :: hartree_fock
@@ -135,10 +136,10 @@ contains
       do i = 1, 2
 
         call xc_functl_init_exchange   (xcs%functl(1,i), x_id, ndim, i)
-        call xc_functl_init_correlation(xcs%functl(2,i), c_id, ndim, i)
+        call xc_functl_init_correlation(xcs%functl(2,i), c_id, ndim, nel, i)
         
         call xc_functl_init_exchange   (xcs%kernel(1,i), xk_id, ndim, i)
-        call xc_functl_init_correlation(xcs%kernel(2,i), ck_id, ndim, i)
+        call xc_functl_init_correlation(xcs%kernel(2,i), ck_id, ndim, nel, i)
 
       end do
 

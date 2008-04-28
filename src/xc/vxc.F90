@@ -18,13 +18,14 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
+subroutine xc_get_vxc(gr, xcs, rho, ispin, ex, ec, ip, qtot, vxc)
   type(grid_t),       intent(inout) :: gr
   type(xc_t), target, intent(in)    :: xcs
   FLOAT,              intent(in)    :: rho(:, :)
   integer,            intent(in)    :: ispin
-  FLOAT,              intent(inout) :: vxc(:,:), ex, ec
+  FLOAT,              intent(inout) :: ex, ec
   FLOAT,              intent(in)    :: ip, qtot
+  FLOAT, optional,    intent(inout) :: vxc(:,:)
 
   FLOAT :: l_dens(MAX_SPIN), l_dedd(MAX_SPIN), l_sigma(3), l_vsigma(3)!, l_tau(MAX_SPIN) , l_dedtau(MAX_SPIN)
   FLOAT, allocatable :: dens(:,:), dedd(:,:), ex_per_vol(:), ec_per_vol(:)
@@ -82,34 +83,50 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
     ! Calculate the potential/gradient density in local reference frame.
     functl_loop: do ixc = 1, 2
 
-      select case(functl(ixc)%family)
-      case(XC_FAMILY_LDA)
-        call XC_F90(lda_vxc)(functl(ixc)%conf, l_dens(1), e, l_dedd(1))
+      if(.not.present(vxc)) then ! get only the xc energy
+        select case(functl(ixc)%family)
+        case(XC_FAMILY_LDA)
+          call XC_F90(lda_exc)(functl(ixc)%conf, l_dens(1), e)
+        case(XC_FAMILY_GGA)
+          call XC_F90(gga_exc)(functl(ixc)%conf, l_dens(1), l_sigma(1), e)
+        case(XC_FAMILY_HYB_GGA)
+          message(1) = 'Hyb-GGAs are currently disabled.'
+          call write_fatal(1)
+          !call XC_F90(hyb_gga_exc)(functl(ixc)%conf, l_dens(1), l_sigma(1), e)
+        case(XC_FAMILY_MGGA)
+          message(1) = 'Meta-GGAs are currently disabled.'
+          call write_fatal(1)
+        case default
+          cycle
+        end select
 
-      case(XC_FAMILY_GGA)
-        if(functl(ixc)%id == XC_GGA_XC_LB) then
-          call mesh_r(gr%m, jj, r)
-          call XC_F90(gga_lb_modified)(functl(ixc)%conf, l_dens(1), l_sigma(1), &
-            r, l_dedd(1))
-          e = M_ZERO; l_vsigma = M_ZERO
-        else
-          call XC_F90(gga_vxc)(functl(ixc)%conf, l_dens(1), l_sigma(1), &
+      else ! we also get the xc potential
+        select case(functl(ixc)%family)
+        case(XC_FAMILY_LDA)
+          call XC_F90(lda_vxc)(functl(ixc)%conf, l_dens(1), e, l_dedd(1))
+          
+        case(XC_FAMILY_GGA)
+          if(functl(ixc)%id == XC_GGA_XC_LB) then
+            call mesh_r(gr%m, jj, r)
+            call XC_F90(gga_lb_modified)(functl(ixc)%conf, l_dens(1), l_sigma(1), &
+              r, l_dedd(1))
+            e = M_ZERO; l_vsigma = M_ZERO
+          else
+            call XC_F90(gga_vxc)(functl(ixc)%conf, l_dens(1), l_sigma(1), &
+              e, l_dedd(1), l_vsigma(1))
+          end if
+          
+        case(XC_FAMILY_HYB_GGA)
+          call XC_F90(hyb_gga)(functl(ixc)%conf, l_dens(1), l_sigma(1), &
             e, l_dedd(1), l_vsigma(1))
-        end if
 
-      case(XC_FAMILY_HYB_GGA)
-        call XC_F90(hyb_gga)(functl(ixc)%conf, l_dens(1), l_sigma(1), &
-          e, l_dedd(1), l_vsigma(1))
-
-      case(XC_FAMILY_MGGA)
-        message(1) = 'Meta-GGAs are currently disabled.'
-        call write_fatal(1)
-        ! call XC_F90(mgga)(functl(ixc)%conf, l_dens(1), l_gdens(1,1), l_tau(1), &
-        !   e, l_dedd(1), l_dedgd(1,1), l_dedtau(1))
-
-      case default
-        cycle
-      end select
+        case(XC_FAMILY_MGGA)
+          message(1) = 'Meta-GGAs are currently disabled.'
+          call write_fatal(1)
+          ! call XC_F90(mgga)(functl(ixc)%conf, l_dens(1), l_gdens(1,1), l_tau(1), &
+          !   e, l_dedd(1), l_dedgd(1,1), l_dedtau(1))
+        end select
+      end if
 
       if(functl(ixc)%type == XC_EXCHANGE) then
         ex_per_vol(jj) = ex_per_vol(jj) + sum(l_dens(1:spin_channels)) * e
@@ -118,27 +135,31 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
       end if
 
       ! store results
-      dedd(jj,1:spin_channels) = dedd(jj,1:spin_channels) + l_dedd(1:spin_channels)
+      if(present(vxc)) then
+        dedd(jj,1:spin_channels) = dedd(jj,1:spin_channels) + l_dedd(1:spin_channels)
 
-      if(gga.or.mgga) then
-        dedgd(jj,:,1) = dedgd(jj,:,1) + M_TWO*l_vsigma(1)*gdens(jj,:,1)
-        if(ispin /= UNPOLARIZED) then
-          dedgd(jj,:,1) = dedgd(jj,:,1) + l_vsigma(2)*gdens(jj,:,2)
-          dedgd(jj,:,2) = dedgd(jj,:,2) + M_TWO*l_vsigma(3)*gdens(jj,:,2) + l_vsigma(2)*gdens(jj,:,1)
+        if(gga.or.mgga) then
+          dedgd(jj,:,1) = dedgd(jj,:,1) + M_TWO*l_vsigma(1)*gdens(jj,:,1)
+          if(ispin /= UNPOLARIZED) then
+            dedgd(jj,:,1) = dedgd(jj,:,1) + l_vsigma(2)*gdens(jj,:,2)
+            dedgd(jj,:,2) = dedgd(jj,:,2) + M_TWO*l_vsigma(3)*gdens(jj,:,2) + l_vsigma(2)*gdens(jj,:,1)
+          end if
         end if
-      end if
 
-      if(functl(ixc)%family == XC_FAMILY_MGGA) then
-        ! dedtau(jj,:)   = dedtau(jj,:)   + l_dedtau(:)
+        if(functl(ixc)%family == XC_FAMILY_MGGA) then
+          ! dedtau(jj,:)   = dedtau(jj,:)   + l_dedtau(:)
+        end if
       end if
 
     end do functl_loop
   end do space_loop
 
   ! this has to be done in inverse order
-  if(       mgga) call mgga_process()
-  if(gga.or.mgga) call  gga_process()
-  call  lda_process()
+  if(present(vxc)) then
+    if(       mgga) call mgga_process()
+    if(gga.or.mgga) call  gga_process()
+    call  lda_process()
+  end if
 
   ! integrate eneries per unit volume
   ex = dmf_integrate(gr%m, ex_per_vol)
@@ -164,14 +185,17 @@ contains
 
     ! allocate some general arrays
     ALLOCATE(dens(NP_PART, spin_channels), NP_PART*spin_channels)
-    ALLOCATE(dedd(NP_PART, spin_channels), NP_PART*spin_channels)
     ALLOCATE(ex_per_vol(NP), NP)
     ALLOCATE(ec_per_vol(NP), NP)
 
     dens       = M_ZERO
-    dedd       = M_ZERO
     ex_per_vol = M_ZERO
     ec_per_vol = M_ZERO
+
+    if(present(vxc)) then
+      ALLOCATE(dedd(NP_PART, spin_channels), NP_PART*spin_channels)
+      dedd       = M_ZERO
+    end if
 
     !$omp parallel do private(d, dtot, dpol)
     do ii = 1, NP
@@ -199,7 +223,8 @@ contains
   ! ---------------------------------------------------------
   ! deallocates variables allocated in lda_init
   subroutine lda_end()
-    deallocate(dens, dedd, ex_per_vol, ec_per_vol)
+    deallocate(dens, ex_per_vol, ec_per_vol)
+    if(present(vxc)) deallocate(dedd)
   end subroutine lda_end
 
 
@@ -250,9 +275,12 @@ contains
     integer :: ii
     ! allocate variables
     ALLOCATE(gdens(NP,      3, spin_channels), NP     *3*spin_channels)
-    ALLOCATE(dedgd(NP_PART, 3, spin_channels), NP_PART*3*spin_channels)
     gdens = M_ZERO
-    dedgd = M_ZERO
+
+    if(present(vxc)) then
+      ALLOCATE(dedgd(NP_PART, 3, spin_channels), NP_PART*3*spin_channels)
+      dedgd = M_ZERO
+    end if
 
     ! get gradient of the density
     do ii = 1, spin_channels
@@ -272,7 +300,8 @@ contains
   ! ---------------------------------------------------------
   ! cleans up memory allocated in gga_init
   subroutine gga_end()
-    deallocate(gdens, dedgd)
+    deallocate(gdens)
+    if(present(vxc)) deallocate(dedgd)
   end subroutine gga_end
 
 

@@ -55,6 +55,10 @@ module hamiltonian_m
     hamiltonian_span,      &
     dhamiltonian_eigenval, &
     zhamiltonian_eigenval, &
+    delectronic_kinetic_energy,  &
+    zelectronic_kinetic_energy,  &
+    delectronic_external_energy, &
+    zelectronic_external_energy, &
     dhpsi,                 &
     dhpsi_diag,            &
     dvlpsi,                &

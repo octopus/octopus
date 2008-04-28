@@ -44,7 +44,8 @@ module v_ks_m
     v_ks_init,          &
     v_ks_end,           &
     v_ks_write_info,    &
-    v_ks_calc
+    v_ks_calc,          &
+    v_ks_hartree
 
   integer, parameter :: &
     sic_none   = 1,     &  ! no self interaction correction
@@ -64,10 +65,11 @@ module v_ks_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine v_ks_init(gr, ks, d)
+  subroutine v_ks_init(gr, ks, d, nel)
     type(v_ks_t),        intent(out)   :: ks
     type(grid_t),        intent(inout) :: gr
     type(states_dim_t),  intent(in)    :: d
+    FLOAT,               intent(in)    :: nel ! the total number of electrons
 
     call push_sub('v_ks.v_ks_init');
 
@@ -116,13 +118,13 @@ contains
       end if
     case(HARTREE_FOCK)
       ! initilize xc modules
-      call xc_init(ks%xc, NDIM, d%spin_channels, d%cdft, hartree_fock=.true.)
+      call xc_init(ks%xc, NDIM, nel, d%spin_channels, d%cdft, hartree_fock=.true.)
       ks%xc_family = ks%xc%family
       ks%sic_type = sic_none
 
     case(KOHN_SHAM_DFT)
       ! initilize xc modules
-      call xc_init(ks%xc, NDIM, d%spin_channels, d%cdft, hartree_fock=.false.)
+      call xc_init(ks%xc, NDIM, nel, d%spin_channels, d%cdft, hartree_fock=.false.)
       ks%xc_family = ks%xc%family
 
       ! check for SIC
@@ -246,7 +248,7 @@ contains
       !if(RPA_first) then
       !  RPA_first = .false.
         h%ehartree = M_ZERO
-        call v_hartree()
+        call v_ks_hartree(gr, st, h, amaldi_factor)
 
         !$omp parallel workshare
         h%vxc      = M_ZERO
@@ -304,36 +306,6 @@ contains
   contains
 
     ! ---------------------------------------------------------
-    ! Hartree contribution to the xc potential
-    subroutine v_hartree()
-      FLOAT, allocatable :: rho(:)
-      integer :: is
-
-      ALLOCATE(rho(NP), NP)
-
-      ! calculate the total density
-      !$omp parallel workshare
-      rho(1:NP) = st%rho(1:NP, 1)
-      !$omp end parallel workshare
-      do is = 2, h%d%spin_channels
-        !$omp parallel workshare
-        rho(1:NP) = rho(1:NP) + st%rho(1:NP, is)
-        !$omp end parallel workshare
-      end do
-
-      ! Amaldi correction
-      if(ks%sic_type == sic_amaldi) rho = amaldi_factor*rho
-
-      ! solve the poisson equation
-      call dpoisson_solve(gr, h%vhartree, rho)
-
-      ! Get the Hartree energy
-      h%ehartree = M_HALF*dmf_dotp(gr%m, rho, h%vhartree)
-
-      deallocate(rho)
-    end subroutine v_hartree
-
-    ! ---------------------------------------------------------
     subroutine v_a_xc()
       FLOAT, allocatable :: rho(:, :)
       integer :: is
@@ -362,8 +334,8 @@ contains
         call xc_get_vxc_and_axc(gr, ks%xc, rho, st%j, st%d%ispin, h%vxc, h%axc, &
              h%ex, h%ec, h%exc_j, -minval(st%eigenval(st%nst, :)), st%qtot)
       else
-        call xc_get_vxc(gr, ks%xc, rho, st%d%ispin, h%vxc, h%ex, h%ec, &
-             -minval(st%eigenval(st%nst, :)), st%qtot)
+        call xc_get_vxc(gr, ks%xc, rho, st%d%ispin, h%ex, h%ec, &
+             -minval(st%eigenval(st%nst, :)), st%qtot, vxc=h%vxc)
       end if
       deallocate(rho)
 
@@ -396,6 +368,42 @@ contains
       call profiling_out(C_PROFILING_XC)
     end subroutine v_a_xc
   end subroutine v_ks_calc
+
+
+  ! ---------------------------------------------------------
+  ! Hartree contribution to the xc potential
+  subroutine v_ks_hartree(gr, st, h, amaldi_factor)
+    type(grid_t),        intent(inout) :: gr
+    type(hamiltonian_t), intent(inout) :: h
+    type(states_t),      intent(in)    :: st
+    FLOAT, optional,     intent(in)    :: amaldi_factor
+
+    FLOAT, allocatable :: rho(:)
+    integer :: is
+
+    ALLOCATE(rho(NP), NP)
+
+    ! calculate the total density
+    !$omp parallel workshare
+    rho(1:NP) = st%rho(1:NP, 1)
+    !$omp end parallel workshare
+    do is = 2, h%d%spin_channels
+      !$omp parallel workshare
+      rho(1:NP) = rho(1:NP) + st%rho(1:NP, is)
+      !$omp end parallel workshare
+    end do
+
+    ! Amaldi correction
+    if(present(amaldi_factor)) rho = amaldi_factor*rho
+
+    ! solve the poisson equation
+    call dpoisson_solve(gr, h%vhartree, rho)
+
+    ! Get the Hartree energy
+    h%ehartree = M_HALF*dmf_dotp(gr%m, rho, h%vhartree)
+
+    deallocate(rho)
+  end subroutine v_ks_hartree
 
 end module v_ks_m
 

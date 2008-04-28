@@ -88,6 +88,11 @@ program octopus
   !% Decides what kind of calculation is to be performed.
   !%Option gs 1
   !% Calculation of the ground state
+  !%Option one_shot 14
+  !% Use the self-consistent wave-functions in the restart directory to
+  !% evaluate the total energy using a different xc functional.
+  !% This is effectively a first order perturbative calculation of the total energy, 
+  !% the perturbation being the difference between the two xc used.
   !%Option unocc 02
   !% Calculation of unoccupied/virtual KS states
   !%Option td 03
