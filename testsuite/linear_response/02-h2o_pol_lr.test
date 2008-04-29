@@ -15,30 +15,30 @@ match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -16.06685186
 match ; Eigenvalues  ; GREP(static/info, '1   --', 12) ;  -1.167612
 
 Input: 02-h2o_pol_lr.02_h2o_dyn_pol.inp
-match ; Polarizability XX w=0.0    ; LINE(linear/freq_0.0000/alpha, 2,  5) ; 15.247802
-match ; Polarizability YY w=0.0    ; LINE(linear/freq_0.0000/alpha, 3, 25) ; 12.333039
-match ; Polarizability ZZ w=0.0    ; LINE(linear/freq_0.0000/alpha, 4, 45) ; 23.148746
+match ; Polarizability XX w=0.0    ; LINE(linear/freq_0.0000/alpha, 2,  5) ; 15.248016
+match ; Polarizability YY w=0.0    ; LINE(linear/freq_0.0000/alpha, 3, 25) ; 12.333204
+match ; Polarizability ZZ w=0.0    ; LINE(linear/freq_0.0000/alpha, 4, 45) ; 23.149118
 
-match ; Polarizability XX w=0.1    ; LINE(linear/freq_0.1000/alpha, 2,  5) ; 15.943065
-match ; Polarizability YY w=0.1    ; LINE(linear/freq_0.1000/alpha, 3, 25) ; 12.856594
-match ; Polarizability ZZ w=0.1    ; LINE(linear/freq_0.1000/alpha, 4, 45) ; 29.766045
+match ; Polarizability XX w=0.1    ; LINE(linear/freq_0.1000/alpha, 2,  5) ; 15.943337
+match ; Polarizability YY w=0.1    ; LINE(linear/freq_0.1000/alpha, 3, 25) ; 12.856796
+match ; Polarizability ZZ w=0.1    ; LINE(linear/freq_0.1000/alpha, 4, 45) ; 29.767051
 
 Input: 02-h2o_pol_lr.03_h2o_dyn_pol_cmplx.inp
 Precision : 0.001
-match ; Polarizability XX w=0.0    ; LINE(linear/freq_0.0000/alpha, 2,  5) ; 15.241286
-match ; Polarizability YY w=0.0    ; LINE(linear/freq_0.0000/alpha, 3, 25) ; 12.328137
-match ; Polarizability ZZ w=0.0    ; LINE(linear/freq_0.0000/alpha, 4, 45) ; 23.105410
+match ; Polarizability XX w=0.0    ; LINE(linear/freq_0.0000/alpha, 2,  5) ; 15.241503
+match ; Polarizability YY w=0.0    ; LINE(linear/freq_0.0000/alpha, 3, 25) ; 12.328301
+match ; Polarizability ZZ w=0.0    ; LINE(linear/freq_0.0000/alpha, 4, 45) ; 23.105777
 
-match ; Polarizability XX w=0.1    ; LINE(linear/freq_0.1000/alpha, 2,  5) ; 15.933687
-match ; Polarizability YY w=0.1    ; LINE(linear/freq_0.1000/alpha, 3, 25) ; 12.849589
-match ; Polarizability ZZ w=0.1    ; LINE(linear/freq_0.1000/alpha, 4, 45) ; 29.440144
+match ; Polarizability XX w=0.1    ; LINE(linear/freq_0.1000/alpha, 2,  5) ; 15.933959
+match ; Polarizability YY w=0.1    ; LINE(linear/freq_0.1000/alpha, 3, 25) ; 12.849791
+match ; Polarizability ZZ w=0.1    ; LINE(linear/freq_0.1000/alpha, 4, 45) ; 29.441094
 
-match ; Cross sect. (avg) w=0.1    ; LINE(linear/freq_0.1000/cross_section, -1, 25) ; 0.68973035E-02
-match ; Cross sect. (ani) w=0.1    ; LINE(linear/freq_0.1000/cross_section, -1, 45) ; 0.13985151E-01
+match ; Cross sect. (avg) w=0.1    ; LINE(linear/freq_0.1000/cross_section, -1, 25) ; 0.68981105E-02
+match ; Cross sect. (ani) w=0.1    ; LINE(linear/freq_0.1000/cross_section, -1, 45) ; 0.13986890E-01
 
 Precision : 0.02
-match ; Hyperpolarizability w=0.0  ; GREP(linear/freq_0.0000/beta, 'beta // y', 10) ; -0.23366122E+02
-match ; Hyperpolarizability w=0.1  ; GREP(linear/freq_0.1000/beta, 'beta // y', 10) ; 0.86713699E+02
+match ; Hyperpolarizability w=0.0  ; GREP(linear/freq_0.0000/beta, 'beta // y', 10) ; -0.23384617E+02
+match ; Hyperpolarizability w=0.1  ; GREP(linear/freq_0.1000/beta, 'beta // y', 10) ;  0.86738740E+02
 Precision : default
 
 Input: 02-h2o_pol_lr.04_h2o_susc.inp

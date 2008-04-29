@@ -232,7 +232,12 @@ contains
       !%Default lda_x+lda_c_pz_mod
       !%Section Hamiltonian::XC
       !%Description
-      !% Defines the exchange and correlation functionals
+      !% Defines the exchange and correlation functional to be used,
+      !% they should be specified as a sum of a correlation and an
+      !% exchange term.
+      !%
+      !% The value by default is xc_lda_x + xc_lda_pz_mod.
+      !%
       !%Option lda_x                      1
       !% LDA: Slater exchange
       !%Option lda_c_wigner               2000
