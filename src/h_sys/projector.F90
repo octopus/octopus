@@ -286,9 +286,10 @@ contains
           call rkb_projector_end(p%rkb_p(ll, mm))
         end do
       end do
+      deallocate(p%rkb_p)
       if(p%lloc /= 0) then
         call kb_projector_end(p%kb_p(1, 1))
-        deallocate(p%rkb_p, p%kb_p)
+        deallocate(p%kb_p)
       end if
 
     end select
