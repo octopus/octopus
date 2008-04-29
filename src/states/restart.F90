@@ -323,6 +323,9 @@ contains
 
     call push_sub('restart.restart_read')
 
+    write(message(1), '(a,i5)') 'Info: Loading restart information'
+    call write_info(1)
+
     ! sanity check
     boolean = (associated(st%dpsi) .and. st%wfs_type == M_REAL) .or. &
               (associated(st%zpsi) .and. st%wfs_type == M_CMPLX)
