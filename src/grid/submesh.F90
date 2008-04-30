@@ -26,9 +26,10 @@ module submesh_m
   use messages_m
   use mesh_m
   use mpi_m
-  use solids_m
+  use par_vec_m
   use profiling_m
   use simul_box_m
+  use solids_m
 
   implicit none
   private 
@@ -113,7 +114,7 @@ contains
             ip = m%Lxyz_inv(ix, iy, iz)
 #if defined(HAVE_MPI)
             if(ip == 0) cycle
-            if(m%parallel_in_domains) ip = m%vp%global(ip, m%vp%partno)
+            if(m%parallel_in_domains) ip = vec_global2local(m%vp, ip, m%vp%partno)
 #endif
             if(ip == 0) cycle
             r2 = sum((m%x(ip, 1:MAX_DIM) - center(1:MAX_DIM))**2)
@@ -144,7 +145,7 @@ contains
             ip = m%Lxyz_inv(ix, iy, iz)
 #if defined(HAVE_MPI)
             if(ip == 0) cycle
-            if(m%parallel_in_domains) ip = m%vp%global(ip, m%vp%partno)
+            if(m%parallel_in_domains) ip = vec_global2local(m%vp, ip, m%vp%partno)
 #endif
             is = this%jxyz_inv(ip)
             if( is == 0 ) cycle

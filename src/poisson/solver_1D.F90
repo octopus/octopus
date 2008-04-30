@@ -42,7 +42,7 @@ subroutine poisson1D_solve(m, pot, rho)
       end do
       tmp = dmf_integrate(m, pvec)
       if (m%vp%part(i).eq.m%vp%partno) then
-        pot(m%vp%global(i, m%vp%partno)) = tmp
+        pot(vec_global2local(m%vp, i, m%vp%partno)) = tmp
       end if
     end do
 

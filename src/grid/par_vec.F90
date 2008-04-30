@@ -87,6 +87,7 @@ module par_vec_m
 
   use c_pointer_m
   use global_m
+  use iihash_m
   use io_m
   use mesh_lib_m
   use messages_m
@@ -115,35 +116,32 @@ module par_vec_m
     integer, pointer :: rcounts(:)
 
     ! The following members are set independent of the nodes.
-    integer          :: p                    ! Number of partitions.
-    integer          :: root                 ! The master node.
-    integer          :: comm                 ! MPI communicator to use.
-    integer          :: np                   ! Number of points in mesh.
-    integer          :: np_enl               ! Number of points in enlargement.
-    integer, pointer :: part(:)              ! Point -> partition.
-    integer, pointer :: np_local(:)          ! How many points has partition r?
-    integer, pointer :: xlocal(:)            ! Points of partition r start at
-                                             ! xlocal(r) in local.
-    integer, pointer :: local(:)             ! Partition r has points
-                                             ! local(xlocal(r):
-                                             ! xlocal(r)+np_local(r)-1).
-    integer, pointer :: np_bndry(:)          ! Number of boundary points.
-    integer, pointer :: xbndry(:)            ! Index of bndry(:).
-    integer, pointer :: bndry(:)             ! Global numbers of boundary
-                                             ! points.
-    integer, pointer :: global(:, :)         ! global(i, r) is local number
-                                             ! of point i in partition r
-                                             ! (if this is 0, i is neither
-                                             ! a ghost point nor local to r).
-    integer          :: total                ! Total number of ghost points.
-    integer, pointer :: np_ghost(:)          ! How many ghost points has
-                                             ! partition r?
-    integer, pointer :: np_ghost_neigh(:, :) ! Number of ghost points per
-                                             ! neighbour per partition.
-    integer, pointer :: xghost(:)            ! Like xlocal.
-    integer, pointer :: xghost_neigh(:, :)   ! Like xghost for neighbours.
-    integer, pointer :: ghost(:)             ! Global indices of all local
-
+    integer                 :: p                    ! Number of partitions.
+    integer                 :: root                 ! The master node.
+    integer                 :: comm                 ! MPI communicator to use.
+    integer                 :: np                   ! Number of points in mesh.
+    integer                 :: np_enl               ! Number of points in enlargement.
+    integer, pointer        :: part(:)              ! Point -> partition.
+    integer, pointer        :: np_local(:)          ! How many points has partition r?
+    integer, pointer        :: xlocal(:)            ! Points of partition r start at
+                                                    ! xlocal(r) in local.
+    integer, pointer        :: local(:)             ! Partition r has points
+                                                    ! local(xlocal(r):
+                                                    ! xlocal(r)+np_local(r)-1).
+    integer, pointer        :: np_bndry(:)          ! Number of boundary points.
+    integer, pointer        :: xbndry(:)            ! Index of bndry(:).
+    integer, pointer        :: bndry(:)             ! Global numbers of boundary
+                                                    ! points.
+    type(iihash_t), pointer :: global(:)            ! global(r) contains the global ->
+                                                    ! local mapping for partition r.
+    integer                 :: total                ! Total number of ghost points.
+    integer, pointer        :: np_ghost(:)          ! How many ghost points has
+                                                    ! partition r?
+    integer, pointer        :: np_ghost_neigh(:, :) ! Number of ghost points per
+                                                    ! neighbour per partition.
+    integer, pointer        :: xghost(:)            ! Like xlocal.
+    integer, pointer        :: xghost_neigh(:, :)   ! Like xghost for neighbours.
+    integer, pointer        :: ghost(:)             ! Global indices of all local
   end type pv_t
 
 #if defined(HAVE_MPI)
@@ -171,6 +169,7 @@ module par_vec_m
   public ::              &
     vec_init,            &
     vec_end,             &
+    vec_global2local,    &
     dvec_scatter,        &
     zvec_scatter,        &
     ivec_scatter,        &
@@ -248,15 +247,17 @@ contains
     ! Careful: MPI counts node ranks from 0 to numproc-1.
     ! Partition numbers from METIS range from 1 to numproc.
     ! For this reason, all ranks are incremented by one.
-    integer              :: p                ! Number of partitions.
-    integer              :: np_enl           ! Number of points in enlargement.
-    integer              :: i, j, k, r       ! Counters.
-    integer, allocatable :: ir(:), irr(:, :) ! Counters.
-    integer              :: rank             ! Rank of current node.
-    integer              :: p1(MAX_DIM)      ! Points.
-    integer, allocatable :: ghost_flag(:, :) ! To remember ghost pnts.
-    integer              :: iunit            ! For debug output to files.
-    character(len=3)     :: filenum
+    integer                     :: p                ! Number of partitions.
+    integer                     :: np_enl           ! Number of points in enlargement.
+    integer                     :: i, j, k, r       ! Counters.
+    integer, allocatable        :: ir(:), irr(:, :) ! Counters.
+    integer                     :: rank             ! Rank of current node.
+    integer                     :: p1(MAX_DIM)      ! Points.
+    type(iihash_t), allocatable :: ghost_flag(:)    ! To remember ghost pnts.
+    integer                     :: iunit            ! For debug output to files.
+    character(len=3)            :: filenum
+    integer                     :: tmp
+    logical                     :: found
 
     call push_sub('par_vec.vec_init')
 
@@ -270,7 +271,7 @@ contains
     vp%rank   = rank
     vp%partno = rank + 1
 
-    ALLOCATE(ghost_flag(np+np_enl, p), (np+np_enl)*p)
+    ALLOCATE(ghost_flag(p),            p)
     ALLOCATE(ir(p),                    p)
     ALLOCATE(irr(p, p),                p*p)
     ALLOCATE(vp%part(np+np_enl),       np+np_enl)
@@ -280,7 +281,7 @@ contains
     ALLOCATE(vp%np_bndry(p),           p)
     ALLOCATE(vp%xbndry(p),             p)
     ALLOCATE(vp%bndry(np_enl),         np_enl)
-    ALLOCATE(vp%global(np+np_enl, p),  (np+np_enl)*p)
+    ALLOCATE(vp%global(p),             p)
     ALLOCATE(vp%np_ghost(p),           p)
     ALLOCATE(vp%np_ghost_neigh(p, p),  p*p)
     ALLOCATE(vp%xghost(p),             p)
@@ -339,8 +340,10 @@ contains
 
     ! Mark and count ghost points and neighbours
     ! (set vp%np_ghost_neigh, vp%np_ghost, ghost_flag).
+    do r = 1, p
+      call iihash_init(ghost_flag(r), vp%np_local(r))
+    end do
     vp%total          = 0
-    ghost_flag        = 0
     vp%np_ghost_neigh = 0
     vp%np_ghost       = 0
     ! Check all nodes.
@@ -363,9 +366,10 @@ contains
             ! Only mark and count this ghost point, if it is not
             ! done yet. Otherwise, points would possibly be registered
             ! more than once.
-            if(ghost_flag(k, r).eq.0) then
+            tmp = iihash_lookup(ghost_flag(r), k, found)
+            if(.not.found) then
               ! Mark point i as ghost point for r from part(k).
-              ghost_flag(k, r)                = part(k)
+              call iihash_insert(ghost_flag(r), k, part(k))
               ! Increase number of ghost points of r from part(k).
               vp%np_ghost_neigh(r, part(k)) = vp%np_ghost_neigh(r, part(k))+1
               ! Increase total number of ghostpoints of r.
@@ -398,10 +402,10 @@ contains
     irr = 0
     do i = 1, np+np_enl
       do r = 1, p
-        j = ghost_flag(i, r)
+        j = iihash_lookup(ghost_flag(r), i, found)
         ! If point i is a ghost point for r from j, save this
         ! information.
-        if(j.ne.0) then
+        if(found) then
           vp%ghost(vp%xghost_neigh(r, j)+irr(r, j)) = i
           irr(r, j)                                 = irr(r, j)+1
         end if
@@ -432,51 +436,23 @@ contains
       end if
     end if
 
-    ! Create reverse (global to local) lookup.
-    ! Given a global point number i and a vector v_local of
-    ! length vp%np_local(r)+vp%np_ghost(r)+vp%np_bndry(r) global(i, r) gives
-    ! the index of point i in v_local as long as this point is
-    ! local to r or a ghost point for r (if vp%np_bndry(r) >
-    ! global(i, r) > vp%np_local(r) it is a ghost point).
-    ! If global(i, r) is 0 then i is neither local
-    ! to r nor a ghost point of r. This indicates a serious error.
-    ! Note: The global array may consume too much memory for many
-    ! nodes and points, e. g. about 64MB for 16 nodes and half a
-    ! million points on a 64 bit architecture.
-    ! The solution is then to introduce a function global which
-    ! does the mapping. This function does a binary search in the
-    ! sorted array of global point numbers the node has,
-    ! which will hopefully be fast enough (O(log n)). This avoids
-    ! storing all those 0.
-    ! global is mainly used in initialization, so speed is not too
-    ! important.
-
-    !$omp parallel
-
-    !$omp do
+    ! Set up the global to local point number mapping.
     do r = 1, p
-      vp%global(1:np+np_enl, r) = 0
-    end do
-    !$omp end do nowait
-    
-    !$omp do private(i)
-    do r = 1, p
-      ! Local points.
+      ! Create hash table.
+      call iihash_init(vp%global(r), vp%np_local(r)+vp%np_ghost(r)+vp%np_bndry(r))
+      ! Insert local points.
       do i = 1, vp%np_local(r)
-        vp%global(vp%local(vp%xlocal(r) + i - 1), r) = i
+        call iihash_insert(vp%global(r), vp%local(vp%xlocal(r)+i-1), i)
       end do
-      ! Ghost points.
+      ! Insert ghost points.
       do i = 1, vp%np_ghost(r)
-        vp%global(vp%ghost(vp%xghost(r) + i - 1), r) = vp%np_local(r) + i
+        call iihash_insert(vp%global(r), vp%ghost(vp%xghost(r)+i-1), i+vp%np_local(r))
       end do
-      ! Boundary points.
+      ! Insert boundary points.
       do i = 1, vp%np_bndry(r)
-        vp%global(vp%bndry(vp%xbndry(r) + i - 1), r) =  vp%np_local(r) + vp%np_ghost(r)+i
+        call iihash_insert(vp%global(r), vp%bndry(vp%xbndry(r)+i-1), i+vp%np_local(r)+vp%np_ghost(r))
       end do
     end do
-    !$omp end do
-
-    !$omp end parallel
     
     ! Complete entries in vp.
     vp%comm   = comm
@@ -487,6 +463,10 @@ contains
     vp%part   = part
 
     call init_mpi_datatypes
+
+    do r = 1, p
+      call iihash_end(ghost_flag(r))
+    end do
 
     call pop_sub()
 
@@ -519,7 +499,7 @@ contains
           ! Get global number kk of i-th ghost point.
           kk = vp%ghost(vp%xghost_neigh(ipart, vp%partno) + ii)
           ! Lookup up local number of point kk
-          displacements(ii + 1) = vp%global(kk, vp%partno) - 1
+          displacements(ii + 1) = vec_global2local(vp, kk, vp%partno) - 1
         end do
         
         call MPI_Type_indexed(total, blocklengths, displacements, MPI_INTEGER, vp%isend_type(ipart), ierr)
@@ -567,7 +547,7 @@ contains
   subroutine vec_end(vp)
     type(pv_t), intent(inout) :: vp
 
-    integer :: ipart
+    integer :: ipart, r
 
     call push_sub('par_vec.vec_end')
 
@@ -643,6 +623,13 @@ contains
       deallocate(vp%ghost)
       nullify(vp%ghost)
     end if
+    if(associated(vp%global)) then
+      do r = 1, vp%p
+        call iihash_end(vp%global(r))
+      end do
+      deallocate(vp%global)
+      nullify(vp%global)
+    end if
 
     call pop_sub()
 
@@ -689,6 +676,27 @@ contains
 #endif
     call profiling_out(prof)
   end subroutine pv_handle_wait
+
+
+  ! ---------------------------------------------------------
+  ! Returns local local number of global point i on partition r.
+  ! If the result is zero, the point is neither a local nor a ghost
+  ! point on r.
+  integer function vec_global2local(vp, i, r)
+    type(pv_t), intent(in) :: vp
+    integer,    intent(in) :: i
+    integer,    intent(in) :: r
+
+    integer :: n
+    logical :: found
+
+    n = iihash_lookup(vp%global(r), i, found)
+    if(found) then
+      vec_global2local = n
+    else
+      vec_global2local = 0
+    end if
+  end function vec_global2local
 
 #include "undef.F90"
 #include "complex.F90"

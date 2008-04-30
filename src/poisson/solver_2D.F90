@@ -53,7 +53,7 @@ subroutine poisson2D_solve(m, pot, rho)
     do i = 1, m%np_global
       x(:) = m%x_global(i,1:2)
       do j = 1, m%np
-        if(m%vp%global(i, m%vp%partno) == j) then
+        if(vec_global2local(m%vp, i, m%vp%partno) == j) then
           pvec(j) = M_TWO*sqrt(M_PI)*rho(j)/m%h(1)
         else
           y(:) = m%x(j,1:2)
@@ -62,7 +62,7 @@ subroutine poisson2D_solve(m, pot, rho)
       end do
       tmp = dmf_integrate(m, pvec)
       if (m%vp%part(i).eq.m%vp%partno) then
-        pot(m%vp%global(i, m%vp%partno)) = tmp
+        pot(vec_global2local(m%vp, i, m%vp%partno)) = tmp
       end if
     end do
 

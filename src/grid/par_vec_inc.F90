@@ -352,7 +352,7 @@ subroutine X(vec_ghost_update_prepare) (vp, v_local, ghost_send)
       k = vp%ghost(vp%xghost_neigh(r, vp%partno)+i)
       ! Lookup up local number of point k and put
       ! value from v_local to send buffer.
-      ghost_send(j) = v_local(vp%global(k, vp%partno))
+      ghost_send(j) = v_local(vec_global2local(vp, k, vp%partno))
       j             = j + 1
     end do
   end do

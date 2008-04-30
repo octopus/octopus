@@ -123,7 +123,7 @@ subroutine double_grid_apply (this, s, m, sm, x_atom, vl, l, lm, ic)
                     ip = m%Lxyz_inv(pp, qq, rr)
 #ifdef HAVE_MPI      
                     !map the global point to a local point
-                    if (m%parallel_in_domains) ip = m%vp%global(ip, m%vp%partno)
+                    if (m%parallel_in_domains) ip = vec_global2local(m%vp, ip, m%vp%partno)
 #endif
                     is2 = sm%jxyz_inv(ip)
                     vs(is2) = vs(is2)  + this%co(ll)*this%co(mm)*this%co(nn)*vv

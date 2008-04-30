@@ -31,11 +31,12 @@ module double_grid_m
   use functions_m
   use mesh_function_m
   use loct_m
-  use splines_m
   use loct_parser_m
+  use par_vec_m
   use profiling_m
   use simul_box_m
   use specie_m
+  use splines_m
   use submesh_m
 
 #ifdef USE_OMP

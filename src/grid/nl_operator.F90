@@ -286,7 +286,7 @@ contains
           if(m%parallel_in_domains) then
             ! When running parallel, translate this global
             ! number back to a local number.
-            st1(jj) = m%vp%global(st1(jj), m%vp%partno)
+            st1(jj) = vec_global2local(m%vp, st1(jj), m%vp%partno)
           end if
 
         end do
