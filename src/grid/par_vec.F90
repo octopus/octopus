@@ -599,10 +599,6 @@ contains
       deallocate(vp%bndry)
       nullify(vp%bndry)
     end if
-    if(associated(vp%global)) then
-      deallocate(vp%global)
-      nullify(vp%global)
-    end if
     if(associated(vp%np_ghost)) then
       deallocate(vp%np_ghost)
       nullify(vp%np_ghost)
