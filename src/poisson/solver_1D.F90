@@ -29,7 +29,7 @@ subroutine poisson1D_solve(m, pot, rho)
   ASSERT(poisson_solver == -1)
 
   call push_sub('poisson1D.poisson1D_solve')
-
+#ifdef HAVE_MPI
   if(m%parallel_in_domains) then
     ALLOCATE(pvec(m%np), m%np)
 
@@ -49,6 +49,7 @@ subroutine poisson1D_solve(m, pot, rho)
     deallocate(pvec)
 
   else  ! running in serial
+#endif
     pot = M_ZERO
     do i = 1, m%np
       x = m%x(i, 1)
@@ -57,7 +58,9 @@ subroutine poisson1D_solve(m, pot, rho)
         pot(i) = pot(i) + rho(j)/sqrt(M_ONE + (x-y)**2) * m%vol_pp(j)
       end do
     end do
+#ifdef HAVE_MPI
   end if
+#endif
 
   call pop_sub()
 end subroutine poisson1D_solve

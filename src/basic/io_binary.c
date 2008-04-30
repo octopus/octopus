@@ -79,7 +79,7 @@ typedef char byte;
 static const int size_of[4]={4, 8, 8, 16};
 static const int base_size_of[4]={4, 8, 4, 8};
 
-inline void inf_error(const char * msg, int * ierr){
+static inline void inf_error(const char * msg, int * ierr){
 #ifdef HAVE_PERROR
   perror(msg);
 #else
@@ -97,7 +97,7 @@ typedef union {
    but it is not necessary, as restart files are converted at most
    once per run */
 
-void endian_convert (const int size, char * a){
+static inline void endian_convert (const int size, char * a){
   char tmp[8];
   int ii;
 
@@ -136,7 +136,7 @@ typedef struct {
 
 } header_t;
 
-inline void init_header(header_t * h){
+static inline void init_header(header_t * h){
   int i;
   strcpy(h -> text, "pulpo");
   h -> text[6] = 0;

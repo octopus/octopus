@@ -45,7 +45,7 @@ subroutine poisson2D_solve(m, pot, rho)
   ASSERT(poisson_solver == -2)
 
   call push_sub('poisson2D.poisson2D_solve')
-
+#ifdef HAVE_MPI
   if(m%parallel_in_domains) then
     ALLOCATE(pvec(m%np), m%np)
 
@@ -69,7 +69,7 @@ subroutine poisson2D_solve(m, pot, rho)
     deallocate(pvec)
 
   else ! serial mode
-
+#endif
     pot = M_ZERO
     do i = 1, m%np
       x(:) = m%x(i,1:2)
@@ -82,8 +82,9 @@ subroutine poisson2D_solve(m, pot, rho)
         end if
       end do
     end do
-
+#ifdef HAVE_MPI
   end if
+#endif
 
   call pop_sub()
 end subroutine poisson2D_solve
