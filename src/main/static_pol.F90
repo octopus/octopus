@@ -30,6 +30,7 @@ module static_pol_m
   use io_m
   use loct_m
   use loct_parser_m
+  use mpi_m
   use mesh_function_m
   use mesh_m
   use messages_m
@@ -105,10 +106,13 @@ contains
     end if
 
     if(fromScratch) then
-      iunit = io_open(trim(tmpdir)//'restart.pol', action='write')
-      call io_close(iunit)
+      if(mpi_grp_is_root(mpi_world)) then
+        iunit = io_open(trim(tmpdir)//'restart.pol', action='write')
+        call io_close(iunit)
+      end if
       i_start = 1
     end if
+    if(i_start > NDIM) out_pol = .true.
 
     ! Save local pseudopotential
     ALLOCATE(Vpsl_save(NP), NP)
@@ -146,9 +150,11 @@ contains
       end do
 
       ! Writes down the dipole to the file
-      iunit = io_open(trim(tmpdir)//'restart.pol', action='write', status='old', position='append')
-      write(iunit, fmt='(6e20.12)') ((dipole(i, j, k), j = 1, NDIM), k = 1, 2)
-      call io_close(iunit)
+      if(mpi_grp_is_root(mpi_world)) then 
+        iunit = io_open(trim(tmpdir)//'restart.pol', action='write', status='old', position='append')
+        write(iunit, fmt='(6e20.12)') ((dipole(i, j, k), j = 1, NDIM), k = 1, 2)
+        call io_close(iunit)
+      end if
 
       out_pol = (i == NDIM)
 
@@ -156,8 +162,8 @@ contains
 
     call scf_end(scfv)
 
-    if(out_pol) then ! output pol file
-      call io_mkdir('linear')
+    call io_mkdir('linear')
+    if(out_pol  .and.  mpi_grp_is_root(mpi_world)) then ! output pol file
       iunit = io_open('linear/polarizability_fd', action='write')
       write(iunit, '(2a)', advance='no') '# Static polarizability tensor [', &
         trim(units_out%length%abbrev)
