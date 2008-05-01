@@ -46,6 +46,12 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, ik)
   ! only one reduction is required). Finally |ppsi> += |p><p|psi> is
   ! calculated.
 
+  ! Check whether we have or not "real" projectors. If we do not, return.
+  if(.not. any(pj(1:npj)%type.ne.M_NONE) ) then
+    call pop_sub()
+    return
+  end if
+
   ! generate the reduce buffer and related structures
 
   ALLOCATE(ireduce(1:npj, 0:MAX_L, -MAX_L:MAX_L), npj*(MAX_L + 1)*(2*MAX_L + 1))
