@@ -111,7 +111,7 @@ contains
     rcut = gamma*rnlmax
 
     ! we define the mask function as f(r/rcut)
-    mask_x = mask_x/rcut
+    mask_x = mask_x*rcut
     call spline_fit(mask_n, mask_x, mask_y, mask)
 
     ! apply the mask function
