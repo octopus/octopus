@@ -145,8 +145,6 @@ subroutine X(f_laplacian) (sb, f_der, f, lapl, cutoff_, ghost_update, set_bc)
   logical, optional, intent(in)    :: ghost_update
   logical, optional, intent(in)    :: set_bc
 
-  FLOAT :: cutoff
-
   call push_sub('f_inc.Xf_laplacian')
 
   call X(derivatives_lapl) (f_der%der_discr, f, lapl, ghost_update, set_bc)
@@ -163,8 +161,6 @@ subroutine X(f_gradient) (sb, f_der, f, grad, ghost_update)
   R_TYPE,            intent(out)   :: grad(:,:)    ! grad(m%np, m%sb%dim)
   logical, optional, intent(in)    :: ghost_update
 
-  integer :: i
-
   call push_sub('f_inc.Xf_gradient')
 
   call X(derivatives_grad) (f_der%der_discr, f, grad, ghost_update)
@@ -180,9 +176,6 @@ subroutine X(f_divergence) (sb, f_der, f, divf, ghost_update)
   R_TYPE,            intent(inout) :: f(:,:)    ! f(m%np_part, sb%dim)
   R_TYPE,            intent(out)   :: divf(:)   ! divf(m%np)
   logical, optional, intent(in)    :: ghost_update
-
-  integer :: i
-  R_TYPE, allocatable :: aux(:)
 
   call push_sub('f_inc.Xf_divergence')
 

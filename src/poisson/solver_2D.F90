@@ -39,8 +39,11 @@ subroutine poisson2D_solve(m, pot, rho)
   FLOAT, intent(in)        :: rho(m%np)
 
   integer  :: i, j
-  FLOAT    :: x(2), y(2), tmp
+  FLOAT    :: x(2), y(2)
+#ifdef HAVE_MPI
+  FLOAT    :: tmp
   FLOAT, allocatable :: pvec(:)
+#endif
 
   ASSERT(poisson_solver == -2)
 

@@ -131,14 +131,16 @@ contains
 
   ! ---------------------------------------------------------
   subroutine write_warning(no_lines, all_nodes)
-    integer, intent(in) :: no_lines
-    logical, optional   :: all_nodes
+    integer,           intent(in) :: no_lines
+    logical, optional, intent(in) :: all_nodes
 
-    logical :: all_nodes_
     integer :: i
+#ifdef HAVE_MPI
+    logical :: all_nodes_
 
     all_nodes_ = .false.
     if(present(all_nodes)) all_nodes_ = all_nodes
+#endif
 
     if(flush_messages.and.mpi_grp_is_root(mpi_world)) then
       open(unit=iunit_err, file='messages.stderr', &

@@ -23,12 +23,16 @@ subroutine poisson1D_solve(m, pot, rho)
   FLOAT, intent(in)  :: rho(m%np)
 
   integer  :: i, j
-  FLOAT    :: x, y, tmp
+  FLOAT    :: x, y
+#ifdef HAVE_MPI
+  FLOAT    :: tmp
   FLOAT, allocatable :: pvec(:)
+#endif
 
   ASSERT(poisson_solver == -1)
 
   call push_sub('poisson1D.poisson1D_solve')
+
 #ifdef HAVE_MPI
   if(m%parallel_in_domains) then
     ALLOCATE(pvec(m%np), m%np)

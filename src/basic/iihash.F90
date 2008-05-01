@@ -138,7 +138,7 @@ contains
   integer function get_next_prime(k)
     integer, intent(in) :: k
 
-    integer          :: size, newsize, i, j
+    integer          :: size, i, j
     logical, pointer :: primes(:), primes1(:)
     logical          :: found, searching
 

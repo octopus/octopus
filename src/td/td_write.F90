@@ -1229,9 +1229,6 @@ contains
     ! ---------------------------------------------------------
     subroutine calc_projections()
       integer :: uist, ist, ik
-#if defined(HAVE_MPI)
-      integer :: k
-#endif
 
       do ik = 1, st%d%nik
         do ist = max(gs_st%st_start, st%st_start), st%st_end
@@ -1254,9 +1251,6 @@ contains
       integer :: uist, ist, ik, idim
       FLOAT   :: n_dip(MAX_DIM)
       CMPLX, allocatable :: xpsi(:,:)
-#if defined(HAVE_MPI)
-      integer :: k
-#endif
 
       call geometry_dipole(geo, n_dip)
 

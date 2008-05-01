@@ -78,7 +78,7 @@ contains
   ! ---------------------------------------------------------
   ! Delete the pair with the given key from the list.
   subroutine ialist_delete(key, l)
-    integer                       :: key
+    integer,        intent(in)    :: key
     type(ialist_t), intent(inout) :: l
 
     integer                 :: i
