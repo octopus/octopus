@@ -132,7 +132,7 @@ contains
       ! Look for key in list.
       ptr => l%head
       do i = 1, l%length
-        ! If found, replace key's value.
+        ! If found, replace key`s value.
         if(ptr%key.eq.key) then
           ptr%val = val
           exit
@@ -155,7 +155,7 @@ contains
   ! ---------------------------------------------------------
   ! Get the value of key. If found is present and .false. the return
   ! value of ialist_looup is meaningless (i. e. undefined). for this reason,
-  ! always pass found if you don't know, for different reasons, that key
+  ! always pass found if you do not know, for different reasons, that key
   ! is member of the list.
   integer function ialist_lookup(key, l, found)
     integer,           intent(in) :: key
