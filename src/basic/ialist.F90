@@ -165,6 +165,10 @@ contains
     integer                 :: i
     type(iacons_t), pointer :: ptr
 
+    ! we define a default return value to avoid problems with checks
+    ! for uninitialized values
+    ialist_lookup = -1
+
     ptr => l%head
     do i = 1, l%length
       if(ptr%key.eq.key) then
