@@ -25,6 +25,6 @@ match ; Energy [step 20] ; LINE(td.general/energy,  -1, 30) ; -1.098132242054e+0
 
 match ; Forces [step  1] ; LINE(td.general/coordinates, -21, 270) ; 1.700891538586e-01
 match ; Forces [step  5] ; LINE(td.general/coordinates, -16, 270) ; 1.675406093022e-01
-match ; Forces [step 10] ; LINE(td.general/coordinates, -11, 270) ; 1.673735752449e-01
-match ; Forces [step 15] ; LINE(td.general/coordinates,  -6, 270) ; 1.677847189156e-01
-match ; Forces [step 20] ; LINE(td.general/coordinates,  -1, 270) ; 1.681999054504e-01
+match ; Forces [step 10] ; LINE(td.general/coordinates, -11, 270) ; 1.672068650500e-01
+match ; Forces [step 15] ; LINE(td.general/coordinates,  -6, 270) ; 1.673613896028e-01
+match ; Forces [step 20] ; LINE(td.general/coordinates,  -1, 270) ; 1.675347090883e-01
