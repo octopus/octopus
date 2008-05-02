@@ -163,6 +163,11 @@ if($opt_s)  { $exec_suffix = $opt_s; }
 $mpirun = $ENV{MPIRUN};
 if ("$mpirun" eq "") { $mpirun = `which mpirun`; }
 chomp($mpirun);
+
+# mpirun without arguments (to check if it is available)
+$mpirun_raw = $mpirun;
+$mpirun_raw =~ s/\ (.*)//;
+
 # default number of processors for MPI runs is 2
 $np = 2;
 
@@ -252,7 +257,7 @@ foreach my $octopus_exe (@executables){
 
 	    # serial or MPI run?
 	    if ( $octopus_exe_suffix =~ /mpi$/) {
-	      if( -x "$mpirun") {
+	      if( -x "$mpirun_raw") {
 		print "Executing: cd $workdir; $mpirun -np $np $octopus_exe_suffix > out \n";
 		system("cd $workdir; $mpirun -np $np $octopus_exe_suffix > out ");
 	      } else {
