@@ -233,7 +233,9 @@ module splines_m
 
   ! the basic spline datatype
   type spline_t
-    type(c_ptr) :: spl, acc
+    type(c_ptr) :: spl
+    type(c_ptr) :: acc
+    logical     :: initialized = .false.
   end type spline_t
 
   interface assignment (=)
@@ -360,6 +362,7 @@ contains
     type(spline_t), intent(out) :: spl
     call set_null(spl%spl)
     call set_null(spl%acc)
+    spl%initialized = .true.
   end subroutine spline_init_0
 
   subroutine spline_init_1(spl)
@@ -382,6 +385,7 @@ contains
 
   subroutine spline_end_0(spl)
     type(spline_t), intent(inout) :: spl
+    if(.not. spl%initialized) return
     if(c_associated(spl%spl) .and. c_associated(spl%acc)) then
       call oct_spline_end(spl%spl, spl%acc)
     end if
