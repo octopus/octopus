@@ -71,7 +71,7 @@ subroutine X(sternheimer_solve)(&
   ALLOCATE(hvar(m%np, st%d%nspin, nsigma), m%np*st%d%nspin*nsigma)
   ALLOCATE(dl_rhoin(m%np, st%d%nspin, 1), 1*m%np*st%d%nspin)
   ALLOCATE(dl_rhonew(m%np, st%d%nspin, 1), 1*m%np*st%d%nspin)
-  ALLOCATE(dl_rhotmp(m%np, st%d%nspin, 1),1*m%np*st%d%nspin)
+  ALLOCATE(dl_rhotmp(m%np, st%d%nspin, 1), 1*m%np*st%d%nspin)
 
   conv = .false.
   conv_last = .false.
@@ -122,20 +122,20 @@ subroutine X(sternheimer_solve)(&
             call X(lr_orth_vector)(m, st, Y(:,:, sigma), ik)
           end if
         
-          if(sigma==1) then 
+          if(sigma == 1) then 
             omega_sigma = omega
           else 
             omega_sigma = -R_CONJ(omega)
           end if
 
           !solve the Sternheimer equation
-          call X(solve_HXeY) (this%solver, h, sys%gr, sys%st, ist, ik, lr(sigma)%X(dl_psi)(:,:, ist, ik),&
+          call X(solve_HXeY) (this%solver, h, sys%gr, sys%st, ist, ik, lr(sigma)%X(dl_psi)(:, :, ist, ik),&
                Y(:,:, sigma), -sys%st%eigenval(ist, ik) + omega_sigma)
           
           !altough the dl_psi we get should be orthogonal to psi
           !a re-orthogonalization is sometimes necessary 
           if(this%orth_response) then 
-            call X(lr_orth_vector)(m, st, lr(sigma)%X(dl_psi)(:,:, ist, ik), ik)
+            call X(lr_orth_vector)(m, st, lr(sigma)%X(dl_psi)(:, :, ist, ik), ik)
           end if
 
           ! print the norm of the variations, and the number of
@@ -172,7 +172,6 @@ subroutine X(sternheimer_solve)(&
       call write_warning(1);
     end if
 
-
     dl_rhotmp(1:m%np, 1:st%d%nspin, 1) = lr(1)%X(dl_rho)(1:m%np, 1:st%d%nspin)
 
     call X(mixing)(this%mixer, iter, dl_rhoin, dl_rhotmp, dl_rhonew, X(mf_dotp_aux))
@@ -181,7 +180,7 @@ subroutine X(sternheimer_solve)(&
 
     do ik = 1, st%d%nspin
       tmp(1:m%np) = dl_rhoin(1:m%np, ik, 1) - dl_rhotmp(1:m%np, ik, 1)
-      abs_dens = hypot(abs_dens, real(X(mf_nrm2)(m, tmp),8))
+      abs_dens = hypot(abs_dens, real(X(mf_nrm2)(m, tmp), 8))
     end do
 
     write(message(1), '(a, e20.6)') "SCF Residual ", abs_dens
@@ -256,7 +255,7 @@ subroutine X(sternheimer_calc_hvar)(this, sys, h, lr, nsigma, hvar)
       tmp(i) = sum(lr(1)%X(dl_rho)(i, 1:sys%st%d%nspin))
     end do
     hartree(1:np) = R_TOTYPE(M_ZERO)
-    call X(poisson_solve)(sys%gr, hartree, tmp, all_nodes=.false.)
+    call X(poisson_solve)(sys%gr, hartree, tmp, all_nodes = .false.)
 
     deallocate(tmp)
 
@@ -277,7 +276,7 @@ subroutine X(sternheimer_calc_hvar)(this, sys, h, lr, nsigma, hvar)
           hvar(1:np, ik, 1) = hvar(1:np, ik, 1) + this%fxc(1:np, ik, ik2)*lr(1)%X(dl_rho)(1:np, ik2)
         end do
       else
-        call X(xc_oep_kernel_calc)(sys, h,lr, nsigma, hartree(:))
+        call X(xc_oep_kernel_calc)(sys, h, lr, nsigma, hartree(:))
         hvar(1:np, ik, 1) = hvar(1:np, ik, 1) + hartree(1:np)
       end if
     end if

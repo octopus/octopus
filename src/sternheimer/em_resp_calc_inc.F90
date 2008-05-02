@@ -85,7 +85,6 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
     dl_rho  = M_ZERO
     gdl_rho = M_ZERO
 
-    
     !first we calculate the densities and its gradients, this could
     !be done directly, but it is less precise numerically
     do ik = is, st%d%nik, st%d%nspin
@@ -98,12 +97,12 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
           call X(f_gradient)(gr%sb, gr%f_der, lr%X(dl_psi)(:, idim, ist, is), gdl_psi)
 
           ! sum over states to obtain the spin-density
-          rho(1:NP)    = rho(1:NP)    + ik_weight * abs(st%X(psi)(1:NP, idim, ist, is))**2
+          rho(1:NP) = rho(1:NP) + ik_weight*abs(st%X(psi)(1:NP, idim, ist, is))**2
 
           !the gradient of the density
           do i = 1, NDIM
-            grho(1:NP,i)    = grho(1:NP, i)   + ik_weight *  &
-                 M_TWO * R_REAL(R_CONJ(st%X(psi)(1:NP, idim, ist, is)) * gpsi(1:NP,i))
+            grho(1:NP, i) = grho(1:NP, i) + &
+                 ik_weight*M_TWO*R_REAL(R_CONJ(st%X(psi)(1:NP, idim, ist, is))*gpsi(1:NP, i))
           end do
 
           !the variation of the density and its gradient
@@ -116,7 +115,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
                  R_CONJ(st%X(psi)(1:NP, idim, ist, is)) * lr%X(dl_psi)(1:NP, idim, ist, is)+ & 
                  st%X(psi)(1:NP, idim, ist, is) * R_CONJ(lr_m%X(dl_psi)(1:NP, idim, ist, is)) )
 
-            do i=1,NDIM
+            do i=1, NDIM
 
               gdl_rho(1:NP,i) = gdl_rho(1:NP,i) + ik_weight * ( &
                    R_CONJ(st%X(psi)(1:NP, idim, ist, is)) * gdl_psi(1:NP,i) +      &
@@ -128,13 +127,13 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
 
           else
             
-            dl_rho(1:NP) = dl_rho(1:NP) + ik_weight * M_TWO *  &
-                 R_REAL(R_CONJ(st%X(psi)(1:NP, idim, ist, is)) * lr%X(dl_psi)(1:NP, idim, ist, is))
+            dl_rho(1:NP) = dl_rho(1:NP) + ik_weight*M_TWO* &
+                 R_REAL(R_CONJ(st%X(psi)(1:NP, idim, ist, is))*lr%X(dl_psi)(1:NP, idim, ist, is))
 
             do i=1,NDIM
               gdl_rho(1:NP,i) = gdl_rho(1:NP,i) + ik_weight * M_TWO * ( &
-                   R_CONJ(st%X(psi)(1:NP, idim, ist, is)) * gdl_psi(1:NP,i) +      &
-                   gpsi(1:NP,i) * R_CONJ(lr%X(dl_psi)(1:NP, idim, ist, is))  )
+                   R_CONJ(st%X(psi)(1:NP, idim, ist, is)) * gdl_psi(1:NP, i) + &
+                   gpsi(1:NP, i)*R_CONJ(lr%X(dl_psi)(1:NP, idim, ist, is))  )
             end do
 
           end if
@@ -158,20 +157,20 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
           if(present(lr_m)) then 
 
             call X(f_gradient)(gr%sb, gr%f_der, lr_m%X(dl_psi)(:, idim, ist, is), gdl_psi_m)
+
             do i = 1, NP
-              lr%X(dl_de)(i, is) = lr%X(dl_de)(i, is) +                             &
-                   dl_rho(i) * ik_weight * sum(R_ABS(gpsi(i, 1:NDIM))**2) + &
-                   rho(i)    * ik_weight * sum( & 
-                   R_CONJ(gpsi(i,1:NDIM))*gdl_psi(i,1:NDIM) &
-                   + gpsi(i,1:NDIM)*R_CONJ(gdl_psi_m(i,1:NDIM)) )
+              lr%X(dl_de)(i, is) = lr%X(dl_de)(i, is) + &
+                   dl_rho(i)*ik_weight*sum(R_ABS(gpsi(i, 1:NDIM))**2) + &
+                   rho(i)*ik_weight*&
+                   sum(R_CONJ(gpsi(i,1:NDIM))*gdl_psi(i, 1:NDIM) + gpsi(i,1:NDIM)*R_CONJ(gdl_psi_m(i, 1:NDIM)))
             end do
 
           else 
 
             do i = 1, NP
-              lr%X(dl_de)(i, is) = lr%X(dl_de)(i, is) +                             &
-                   dl_rho(i) * ik_weight * sum(R_ABS(gpsi(i, 1:NDIM))**2) + &
-                   rho(i)    * ik_weight * M_TWO*(sum(R_CONJ(gpsi(i,1:NDIM))*gdl_psi(i,1:NDIM)))
+              lr%X(dl_de)(i, is) = lr%X(dl_de)(i, is) + &
+                   dl_rho(i)*ik_weight*sum(R_ABS(gpsi(i, 1:NDIM))**2) + &
+                   rho(i)*ik_weight*M_TWO*(sum(R_CONJ(gpsi(i, 1:NDIM))*gdl_psi(i, 1:NDIM)))
             end do
 
           end if
@@ -181,19 +180,17 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
     end do
 
     !the density term
-    do i= 1, NP
+    do i = 1, NP
       if(abs(st%rho(i, is)) >= dmin) then
-        lr%X(dl_de)(i, is) = lr%X(dl_de)(i, is)                       &
-             - M_HALF * sum(grho(i, 1:NDIM)*gdl_rho(i, 1:NDIM))
+        lr%X(dl_de)(i, is) = lr%X(dl_de)(i, is) - M_HALF*sum(grho(i, 1:NDIM)*gdl_rho(i, 1:NDIM))
       end if
     end do
 
     !the current term
     if(st%wfs_type == M_CMPLX) then       
-      do i= 1, NP
+      do i = 1, NP
         if(abs(st%rho(i, is)) >= dmin) then
-          lr%X(dl_de)(i, is) = lr%X(dl_de)(i, is)                       &
-               +M_TWO*sum(st%j(i, 1:NDIM, is)*lr%dl_j(i, 1:NDIM, is))
+          lr%X(dl_de)(i, is) = lr%X(dl_de)(i, is) + M_TWO*sum(st%j(i, 1:NDIM, is)*lr%dl_j(i, 1:NDIM, is))
         end if
       end do
     end if
@@ -203,17 +200,14 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
     do i = 1, NP
 
       if(abs(st%rho(i, is)) >= dmin) then
+        d0    = f*rho(i)**(M_EIGHT/M_THREE)
+        dl_d0 = M_EIGHT/M_THREE*f*dl_rho(i)*rho(i)**(M_FIVE/M_THREE)
 
-        d0    = f * rho(i)**(M_EIGHT/M_THREE)
-        dl_d0 = M_EIGHT/M_THREE * f * dl_rho(i) * rho(i)**(M_FIVE/M_THREE)
-
-        lr%X(dl_elf)(i,is) = M_TWO*d0*dl_d0/(d0**2+de(i,is)**2)*(1-elf(i,is))& 
-             -M_TWO*de(i,is)*lr%X(dl_de)(i,is)/(d0**2+de(i,is)**2)*elf(i,is)
-
+        lr%X(dl_elf)(i, is) = &
+             M_TWO*d0*dl_d0/(d0**2 + de(i, is)**2)*(M_ONE - elf(i,is)) &
+             - M_TWO*de(i, is)*lr%X(dl_de)(i, is)/(d0**2 + de(i, is)**2)*elf(i, is)
       else
-
         lr%X(dl_elf)(i, is) = M_ZERO
-
       end if
 
     end do
@@ -256,15 +250,14 @@ subroutine X(lr_calc_polarizability)(sys, h, lr, nsigma, perturbation, zpol, ndi
   do dir1 = 1, ndir_
     do dir2 = 1, sys%gr%sb%dim
       call pert_setup_dir(perturbation, dir1, dir2)
-      zpol(dir1, dir2) = &
-          -X(pert_expectation_value)(perturbation,sys%gr,sys%geo,h,sys%st, sys%st%X(psi), lr(dir2, 1)%X(dl_psi))
+      zpol(dir1, dir2) = -X(pert_expectation_value)(perturbation, sys%gr, sys%geo, h, sys%st, sys%st%X(psi), lr(dir2, 1)%X(dl_psi))
 
       if(nsigma == 1) then
         ! either purely real or purely imaginary frequency
         zpol(dir1, dir2) = zpol(dir1, dir2) + R_CONJ(zpol(dir1, dir2))
       else
         zpol(dir1, dir2) = zpol(dir1, dir2) &
-            -X(pert_expectation_value)(perturbation,sys%gr,sys%geo,h,sys%st, lr(dir2, 2)%X(dl_psi), sys%st%X(psi))
+            -X(pert_expectation_value)(perturbation, sys%gr, sys%geo, h, sys%st, lr(dir2, 2)%X(dl_psi), sys%st%X(psi))
       end if
     end do
   end do
@@ -297,20 +290,20 @@ subroutine X(lr_calc_susceptibility)(sys, h, lr, nsigma, perturbation, chi_para,
 
       call pert_setup_dir(perturbation, dir1, dir2)
 
-      trace = X(pert_expectation_value)(perturbation, sys%gr,sys%geo,h,sys%st, sys%st%X(psi), lr(dir2, 1)%X(dl_psi))
+      trace = X(pert_expectation_value)(perturbation, sys%gr, sys%geo,h,sys%st, sys%st%X(psi), lr(dir2, 1)%X(dl_psi))
       
       if (nsigma == 1) then 
         trace = trace + R_CONJ(trace)
       else
         trace = trace + &
-             X(pert_expectation_value)(perturbation, sys%gr,sys%geo,h,sys%st, lr(dir2, 2)%X(dl_psi), sys%st%X(psi))
+             X(pert_expectation_value)(perturbation, sys%gr, sys%geo,h,sys%st, lr(dir2, 2)%X(dl_psi), sys%st%X(psi))
       end if
      
       ! first the paramagnetic term 
       chi_para(dir1, dir2) = chi_para(dir1, dir2) + trace
 
       chi_dia(dir1, dir2) = chi_dia(dir1, dir2) + &
-           X(pert_expectation_value)(perturbation, sys%gr,sys%geo,h,sys%st, sys%st%X(psi), sys%st%X(psi), pert_order=2)
+           X(pert_expectation_value)(perturbation, sys%gr, sys%geo,h,sys%st, sys%st%X(psi), sys%st%X(psi), pert_order=2)
 
     end do
   end do
@@ -349,7 +342,7 @@ subroutine X(lr_calc_beta) (sh, sys, h, lr, perturbation, beta)
 
   R_TYPE, allocatable :: hvar(:, :, :, :, :, :)
   R_TYPE, allocatable :: tmp(:), tmp2(:)
-  FLOAT,  allocatable :: kxc(:,:,:,:)
+  FLOAT,  allocatable :: kxc(:, :, :, :)
   R_TYPE, allocatable :: hpol_density(:)
 
   np  = sys%gr%m%np
@@ -362,7 +355,7 @@ subroutine X(lr_calc_beta) (sh, sys, h, lr, perturbation, beta)
 
   !calculate kxc, the derivative of fxc
   ALLOCATE(kxc(1:np, 1:sys%st%d%nspin, 1:sys%st%d%nspin, 1:sys%st%d%nspin), np*sys%st%d%nspin**3)
-  kxc(:,:,:,:) = M_ZERO
+  kxc = M_ZERO
   call xc_get_kxc(sys%ks%xc, sys%gr%m, sys%st%rho, sys%st%d%ispin, kxc)
 
   ALLOCATE(tmp(1:np), np)
@@ -380,7 +373,6 @@ subroutine X(lr_calc_beta) (sh, sys, h, lr, perturbation, beta)
 
   beta(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM) = M_ZERO
 
-
   do ii = 1, ndim
     do jj = 1, ndim
       do kk = 1, ndim
@@ -390,7 +382,7 @@ subroutine X(lr_calc_beta) (sh, sys, h, lr, perturbation, beta)
         do isigma = 1, 2
 
           op_sigma = 2 
-          if(isigma==2) op_sigma = 1
+          if(isigma == 2) op_sigma = 1
 
           do iperm = 1, 6
 
@@ -401,7 +393,6 @@ subroutine X(lr_calc_beta) (sh, sys, h, lr, perturbation, beta)
 
             hpol_density(1:np)=M_ZERO
 
-
             do ispin = 1, sys%st%d%nspin
               do ist = 1, sys%st%nst
                 do idim = 1, sys%st%d%dim
@@ -411,6 +402,7 @@ subroutine X(lr_calc_beta) (sh, sys, h, lr, perturbation, beta)
                     call pert_setup_dir(perturbation, u(2))
                     call X(pert_apply) (perturbation, sys%gr, sys%geo, h, ik, &
                          lr(u(3), isigma, w(3))%X(dl_psi)(1:np, idim, ist, ispin), tmp2)
+
                     tmp2(1:np) = tmp2(1:np) + R_REAL(hvar(1:np, ispin, isigma, idim, u(2), w(2) )) &
                        * lr(u(3), isigma, w(3))%X(dl_psi)(1:np, idim, ist, ispin)
 
@@ -426,11 +418,11 @@ subroutine X(lr_calc_beta) (sh, sys, h, lr, perturbation, beta)
 
                             call pert_setup_dir(perturbation, u(2))
                             call X(pert_apply)(perturbation, sys%gr, sys%geo, h, ik, sys%st%X(psi)(1:np, idim, ist, ispin), tmp2)
-                            tmp2(1:np) = tmp2(1:np) + R_REAL(hvar(1:np, ispin2, isigma, idim2, u(2), w(2))) * &
-                               sys%st%X(psi)(1:np, idim, ist, ispin)
 
-                            tmp(1:np) = &
-                               R_CONJ(sys%st%X(psi)(1:np, idim2, ist2, ispin2)) * tmp2(1:np)
+                            tmp2(1:np) = tmp2(1:np) + &
+                                 R_REAL(hvar(1:np, ispin2, isigma, idim2, u(2), w(2)))*sys%st%X(psi)(1:np, idim, ist, ispin)
+
+                            tmp(1:np) = R_CONJ(sys%st%X(psi)(1:np, idim2, ist2, ispin2)) * tmp2(1:np)
 
                             prod = X(mf_integrate)(sys%gr%m, tmp(1:np))
 
@@ -461,7 +453,7 @@ subroutine X(lr_calc_beta) (sh, sys, h, lr, perturbation, beta)
               end do
             end if
 
-            beta(ii, jj, kk)= beta(ii, jj, kk) - M_HALF * X(mf_integrate)(sys%gr%m, hpol_density(1:np))
+            beta(ii, jj, kk)= beta(ii, jj, kk) - M_HALF*X(mf_integrate)(sys%gr%m, hpol_density(1:np))
 
 
           end do ! iperm

@@ -79,15 +79,15 @@ subroutine X(ls_solver_cg) (ls, h, gr, st, ist, ik, x, y, omega)
 
   ! Initial residue
   call X(Hpsi)(h, gr, x, Hp, ist, ik)
-  r(1:NP,1:st%d%dim) = y(1:NP,1:st%d%dim) - ( Hp(1:NP,1:st%d%dim) + omega*x(1:NP,1:st%d%dim) )
+  r(1:NP, 1:st%d%dim) = y(1:NP, 1:st%d%dim) - (Hp(1:NP, 1:st%d%dim) + omega*x(1:NP, 1:st%d%dim))
   
   ! Initial search direction
-  p(1:NP,1:st%d%dim) = r(1:NP,1:st%d%dim)
-  p((NP+1):NP_PART,1:st%d%dim)=M_ZERO
+  p(1:NP, 1:st%d%dim) = r(1:NP, 1:st%d%dim)
+  p((NP+1):NP_PART,1:st%d%dim) = M_ZERO
   
   conv_last = .false.
   do iter = 1, ls%max_iter
-    gamma = X(states_dotp) (gr%m, st%d%dim, r, r)
+    gamma = X(states_dotp)(gr%m, st%d%dim, r, r)
 
     conv = ( abs(gamma) < ls%tol**2)
     if(conv.and.conv_last) exit
@@ -99,7 +99,7 @@ subroutine X(ls_solver_cg) (ls, h, gr, st, ist, ik, x, y, omega)
       call lalg_axpy(NP, omega, p(:, idim), Hp(:, idim))
     end do
 
-    alpha = gamma/ X(states_dotp) (gr%m, st%d%dim, p, Hp)
+    alpha = gamma/X(states_dotp) (gr%m, st%d%dim, p, Hp)
 
     do idim = 1, st%d%dim
       !r = r - alpha*Hp
@@ -109,7 +109,7 @@ subroutine X(ls_solver_cg) (ls, h, gr, st, ist, ik, x, y, omega)
     end do
 
 
-    beta = X(states_dotp) (gr%m, st%d%dim, r, r)/gamma
+    beta = X(states_dotp)(gr%m, st%d%dim, r, r)/gamma
 
     p(1:NP, 1:st%d%dim) = r(1:NP, 1:st%d%dim) + beta*p(1:NP, 1:st%d%dim)
 
@@ -152,6 +152,7 @@ subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ist, ik, x, y, omega)
   ALLOCATE( s(NP_PART, st%d%dim), NP_PART*st%d%dim)
   ALLOCATE(Hp(NP, st%d%dim),      NP     *st%d%dim)
   ALLOCATE(Hs(NP, st%d%dim),      NP     *st%d%dim)
+
   !$omp parallel workshare
   r = R_TOTYPE(M_ZERO)
   p = R_TOTYPE(M_ZERO)
@@ -162,8 +163,9 @@ subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ist, ik, x, y, omega)
   !$omp end parallel workshare
 
   ! this will store the preconditioned functions
-  ALLOCATE( phat(NP_PART, st%d%dim), NP_PART*st%d%dim)
-  ALLOCATE( shat(NP_PART, st%d%dim), NP_PART*st%d%dim)
+  ALLOCATE(phat(NP_PART, st%d%dim), NP_PART*st%d%dim)
+  ALLOCATE(shat(NP_PART, st%d%dim), NP_PART*st%d%dim)
+
   !$omp parallel workshare
   phat = R_TOTYPE(M_ZERO)
   shat = R_TOTYPE(M_ZERO)
@@ -171,6 +173,7 @@ subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ist, ik, x, y, omega)
 
   ! Initial residue
   call X(Hpsi)(h, gr, x, Hp, ist, ik)
+
   !$omp parallel workshare
   r(1:NP,1:st%d%dim) = y(1:NP,1:st%d%dim) - ( Hp(1:NP,1:st%d%dim) + omega*x(1:NP,1:st%d%dim) )
   rs(1:NP,1:st%d%dim) = r(1:NP,1:st%d%dim)
@@ -193,7 +196,7 @@ subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ist, ik, x, y, omega)
     else
       beta = rho_1/rho_2*alpha/w
       !$omp parallel workshare
-      p(1:NP,1:st%d%dim) = r(1:NP,1:st%d%dim) + beta * (p(1:NP,1:st%d%dim) - w*Hp(1:NP,1:st%d%dim))
+      p(1:NP, 1:st%d%dim) = r(1:NP, 1:st%d%dim) + beta*(p(1:NP, 1:st%d%dim) - w*Hp(1:NP, 1:st%d%dim))
       !$omp end parallel workshare
     end if
 
@@ -206,10 +209,10 @@ subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ist, ik, x, y, omega)
       call lalg_axpy(NP, omega, phat(:, idim), Hp(:, idim))
     end do
     
-    alpha = rho_1/X(states_dotp) (gr%m, st%d%dim, rs, Hp)
+    alpha = rho_1/X(states_dotp)(gr%m, st%d%dim, rs, Hp)
 
     !$omp parallel workshare    
-    s(1:NP,1:st%d%dim) = r(1:NP,1:st%d%dim) - alpha * Hp(1:NP,1:st%d%dim)
+    s(1:NP, 1:st%d%dim) = r(1:NP, 1:st%d%dim) - alpha*Hp(1:NP,1:st%d%dim)
     !$omp end parallel workshare
 
     gamma = X(states_nrm2) (gr%m, st%d%dim, s)
@@ -229,17 +232,17 @@ subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ist, ik, x, y, omega)
       call lalg_axpy(NP, omega, shat(:, idim), Hs(:, idim))
     end do
 
-    w = X(states_dotp) (gr%m, st%d%dim, Hs, s) / X(states_dotp) (gr%m, st%d%dim, Hs, Hs)
+    w = X(states_dotp)(gr%m, st%d%dim, Hs, s)/X(states_dotp) (gr%m, st%d%dim, Hs, Hs)
 
     !$omp parallel workshare
-    x(1:NP,1:st%d%dim) = x(1:NP,1:st%d%dim) + alpha*phat(1:NP,1:st%d%dim) + w*shat(1:NP,1:st%d%dim)
+    x(1:NP, 1:st%d%dim) = x(1:NP, 1:st%d%dim) + alpha*phat(1:NP, 1:st%d%dim) + w*shat(1:NP, 1:st%d%dim)
 
-    r(1:NP,1:st%d%dim) = s(1:NP,1:st%d%dim) - w * Hs(1:NP,1:st%d%dim)
+    r(1:NP, 1:st%d%dim) = s(1:NP, 1:st%d%dim) - w*Hs(1:NP, 1:st%d%dim)
     !$omp end parallel workshare
 
-    rho_2=rho_1
+    rho_2 = rho_1
 
-    gamma = X(states_nrm2) (gr%m, st%d%dim, r)
+    gamma = X(states_nrm2)(gr%m, st%d%dim, r)
     conv = (gamma < ls%tol)
 
     if( conv .and. conv_last ) then 

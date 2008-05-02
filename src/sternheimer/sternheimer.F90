@@ -203,7 +203,6 @@ contains
 
   end subroutine sternheimer_build_fxc
 
-
   logical function sternheimer_add_fxc(this) result(r)
     type(sternheimer_t), intent(in) :: this
     r = this%add_fxc

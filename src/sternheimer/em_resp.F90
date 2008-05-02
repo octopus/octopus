@@ -50,11 +50,10 @@ module pol_lr_m
   implicit none
 
   private
-  public :: &
-       pol_lr_run       
 
   public :: &
-    read_wfs
+       pol_lr_run,       &
+       read_wfs
 
   type em_resp_t
     type(pert_t) :: perturbation
@@ -117,6 +116,7 @@ contains
     ALLOCATE(em_vars%lr(1:NDIM, 1:em_vars%nsigma, 1:em_vars%nfactor), NDIM*em_vars%nsigma*em_vars%nfactor)
 
     call read_wfs(sys%st, sys%gr, sys%geo, complex_response)
+
     em_vars%lr(1:NDIM, 1:em_vars%nsigma, 1:em_vars%nfactor)%nst = sys%st%nst
 
     ! setup Hamiltonian
@@ -177,15 +177,13 @@ contains
           
           ! if this frequency is zero and this is not the first
           ! iteration we do not have to do anything
-          if( iomega > 1 .and. em_vars%freq_factor(ifactor) == M_ZERO) then 
-            have_to_calculate = .false. 
-          end if
+          if( iomega > 1 .and. em_vars%freq_factor(ifactor) == M_ZERO) have_to_calculate = .false. 
             
           if(ifactor > 1) then 
 
             ! if this frequency is the same as the previous one, just copy it
             if( have_to_calculate .and. &
-              em_vars%freq_factor(ifactor)*em_vars%omega(iomega)==&
+              em_vars%freq_factor(ifactor)*em_vars%omega(iomega) == &
               em_vars%freq_factor(ifactor-1)*em_vars%omega(iomega) ) then 
               
               call lr_copy(sys%st, sys%gr%m, em_vars%lr(dir, 1, ifactor-1), em_vars%lr(dir, 1, ifactor))
@@ -210,7 +208,7 @@ contains
 
           if(have_to_calculate) then 
 
-            if( .not. fromscratch) then 
+            if(.not. fromscratch) then 
 
               !try to load restart density
               if (wfs_are_complex(sys%st)) then 
@@ -224,7 +222,7 @@ contains
               end if
 
               !search for the density of the closest frequency
-              if( ierr /= 0) then 
+              if(ierr /= 0) then 
                 
                 closest_omega = em_vars%freq_factor(ifactor)*em_vars%omega(iomega)
                 call oct_search_file_lr(closest_omega, dir, ierr, trim(tmpdir)//RESTART_DIR)
@@ -252,7 +250,6 @@ contains
 
             end if ! .not. fromscratch
             
-
             call pert_setup_dir(em_vars%perturbation, dir)
             if (wfs_are_complex(sys%st)) then 
               call zsternheimer_solve(sh, sys, h, em_vars%lr(dir, :, ifactor), em_vars%nsigma , &
@@ -279,20 +276,20 @@ contains
         ! calculate polarizability
         do ifactor = 1, em_vars%nfactor
           if(wfs_are_complex(sys%st)) then 
-            call zlr_calc_polarizability(sys, h, em_vars%lr(:,:, ifactor), em_vars%nsigma, &
-                em_vars%perturbation, em_vars%alpha(:,:, ifactor))
+            call zlr_calc_polarizability(sys, h, em_vars%lr(:, :, ifactor), em_vars%nsigma, &
+                 em_vars%perturbation, em_vars%alpha(:, :, ifactor))
           else
-            call dlr_calc_polarizability(sys, h, em_vars%lr(:,:, ifactor), em_vars%nsigma, &
-                em_vars%perturbation, em_vars%alpha(:,:, ifactor))
+            call dlr_calc_polarizability(sys, h, em_vars%lr(:, :, ifactor), em_vars%nsigma, &
+                em_vars%perturbation, em_vars%alpha(:, :, ifactor))
           end if
         end do
         
         ! calculate hyperpolarizability
         if(em_vars%calc_hyperpol) then
           if(wfs_are_complex(sys%st)) then
-            call zlr_calc_beta(sh, sys, h, em_vars%lr(:,:,:), em_vars%perturbation, em_vars%beta)
+            call zlr_calc_beta(sh, sys, h, em_vars%lr, em_vars%perturbation, em_vars%beta)
           else
-            call dlr_calc_beta(sh, sys, h, em_vars%lr(:,:,:), em_vars%perturbation, em_vars%beta)
+            call dlr_calc_beta(sh, sys, h, em_vars%lr, em_vars%perturbation, em_vars%beta)
           end if
         end if
       
@@ -388,11 +385,11 @@ contains
             call loct_parse_block_float(blk, i, 2, omega_fin)
             domega = (omega_fin - omega_ini)/(number - M_ONE)
             do k = 0, number-1
-              em_vars%omega(j + k) = (omega_ini + domega*k) * units_inp%energy%factor
+              em_vars%omega(j + k) = (omega_ini + domega*k)*units_inp%energy%factor
             end do
             j = j + number
           else
-            em_vars%omega(j) = omega_ini * units_inp%energy%factor
+            em_vars%omega(j) = omega_ini*units_inp%energy%factor
             j = j + 1
           end if
         end do
@@ -417,7 +414,7 @@ contains
       !%End
 
       call loct_parse_float(check_inp('EMEta'), M_ZERO, em_vars%eta)
-      em_vars%eta = em_vars%eta * units_inp%energy%factor
+      em_vars%eta = em_vars%eta*units_inp%energy%factor
 
       ! reset the values of these variables
       em_vars%calc_hyperpol = .false.
@@ -628,15 +625,14 @@ contains
         iunit = io_open(trim(dirname)//'/cross_section', action='write')
         if (.not.em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
 
-        average = M_THIRD* ( cross(1, 1) + cross(2, 2) + cross(3, 3) )
-        crossp(:, :) = matmul(cross(:, :),cross(:, :))
-        anisotropy =  M_THIRD * ( M_THREE * (crossp(1, 1) + crossp(2, 2) + crossp(3, 3)) - &
-          (cross(1, 1) + cross(2, 2) + cross(3, 3))**2 )
+        average = M_THIRD*(cross(1, 1) + cross(2, 2) + cross(3, 3))
+        crossp(:, :) = matmul(cross(:, :), cross(:, :))
+        anisotropy = &
+             M_THIRD*(M_THREE*(crossp(1, 1) + crossp(2, 2) + crossp(3, 3)) - (cross(1, 1) + cross(2, 2) + cross(3, 3))**2)
           
         call cross_section_header(iunit)
         write(iunit,'(3e20.8)', advance = 'no') &
-          em_vars%freq_factor(ifactor)*em_vars%omega(iomega) / units_out%energy%factor, &
-          average , sqrt(max(anisotropy, M_ZERO)) 
+          em_vars%freq_factor(ifactor)*em_vars%omega(iomega) / units_out%energy%factor, average , sqrt(max(anisotropy, M_ZERO))
         write(iunit,'(9e20.8)', advance = 'no') cross(1:3, 1:3)
         write(iunit,'(a)', advance = 'yes')
 
@@ -653,29 +649,29 @@ contains
       if (.not.em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
 
       write(iunit, '(2a)') '# Paramagnetic contribution to the susceptibility tensor [ppm a.u.]'
-      call out_tensor(iunit, em_vars%chi_para(:,:, ifactor), CNST(1e-6))
+      call out_tensor(iunit, em_vars%chi_para(:, :, ifactor), CNST(1e-6))
       write(iunit, '(1x)')
 
       write(iunit, '(2a)') '# Diamagnetic contribution to the susceptibility tensor [ppm a.u.]'
-      call out_tensor(iunit, em_vars%chi_dia(:,:, ifactor), CNST(1e-6))
+      call out_tensor(iunit, em_vars%chi_dia(:, :, ifactor), CNST(1e-6))
       write(iunit, '(1x)')
 
       write(iunit, '(2a)') '# Total susceptibility tensor [ppm a.u.]'
-      call out_tensor(iunit, em_vars%chi_para(:,:, ifactor) + em_vars%chi_dia(:,:, ifactor), CNST(1e-6))
+      call out_tensor(iunit, em_vars%chi_para(:, :, ifactor) + em_vars%chi_dia(:,:, ifactor), CNST(1e-6))
       write(iunit, '(1x)')
 
       write(iunit, '(a)') hyphens
 
       write(iunit, '(2a)') '# Paramagnetic contribution to the susceptibility tensor [ppm cgs / mol]'
-      call out_tensor(iunit, em_vars%chi_para(:,:, ifactor), M_ONE/CNST(8.9238878e-2)*CNST(1e-6))
+      call out_tensor(iunit, em_vars%chi_para(:, :, ifactor), M_ONE/CNST(8.9238878e-2)*CNST(1e-6))
       write(iunit, '(1x)')
 
       write(iunit, '(2a)') '# Diamagnetic contribution to the susceptibility tensor [ppm cgs / mol]'
-      call out_tensor(iunit, em_vars%chi_dia(:,:, ifactor), M_ONE/CNST(8.9238878e-2)*CNST(1e-6))
+      call out_tensor(iunit, em_vars%chi_dia(:, :, ifactor), M_ONE/CNST(8.9238878e-2)*CNST(1e-6))
       write(iunit, '(1x)')
 
       write(iunit, '(2a)') '# Total susceptibility tensor [ppm cgs / mol]'
-      call out_tensor(iunit, em_vars%chi_para(:,:, ifactor) + em_vars%chi_dia(:,:, ifactor), M_ONE/CNST(8.9238878e-2)*CNST(1e-6))
+      call out_tensor(iunit, em_vars%chi_para(:, :, ifactor) + em_vars%chi_dia(:,:, ifactor), M_ONE/CNST(8.9238878e-2)*CNST(1e-6))
       write(iunit, '(1x)')
 
       call io_close(iunit)      
@@ -693,12 +689,12 @@ contains
 
       trace = M_z0
       do j = 1, NDIM
-        write(iunit, '(3f20.6)') real(tensor(j, 1:NDIM)) / factor
+        write(iunit, '(3f20.6)') real(tensor(j, 1:NDIM))/factor
         trace = trace + real(tensor(j, j))
       end do
-      trace = trace / M_THREE
+      trace = trace/M_THREE
 
-      write(iunit, '(a, f20.6)')  'Isotropic average', trace / factor
+      write(iunit, '(a, f20.6)')  'Isotropic average', trace/factor
       
     end subroutine out_tensor
 
@@ -715,8 +711,7 @@ contains
 
       if (.not.em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
 
-      write(iunit, '(2a)', advance='no') 'First hyperpolarizability tensor: beta [', &
-        trim(units_out%length%abbrev)
+      write(iunit, '(2a)', advance='no') 'First hyperpolarizability tensor: beta [', trim(units_out%length%abbrev)
       write(iunit, '(a,i1)', advance='no') '^', 5
       write(iunit, '(a)') ']'
 
@@ -742,18 +737,15 @@ contains
 
         do i = 1, NDIM
           do j = 1, NDIM
-            bpar(i) = bpar(i) + em_vars%beta(i, j, j) + &
-              em_vars%beta(j, i, j) + em_vars%beta(j, j, i)
-
-            bper(i) = bper(i) + M_TWO*em_vars%beta(i, j, j) - &
-              M_THREE*em_vars%beta(j, i, j) + M_TWO*em_vars%beta(j, j, i)
+            bpar(i) = bpar(i) + em_vars%beta(i, j, j) + em_vars%beta(j, i, j) + em_vars%beta(j, j, i)
+            bper(i) = bper(i) + M_TWO*em_vars%beta(i, j, j) - M_THREE*em_vars%beta(j, i, j) + M_TWO*em_vars%beta(j, j, i)
           end do
         end do
 
         write(iunit, '()')
 
-        bpar = bpar / (M_FIVE * units_out%length%factor**(5))
-        bper = bper / (M_FIVE * units_out%length%factor**(5))
+        bpar = bpar/(M_FIVE * units_out%length%factor**(5))
+        bper = bper/(M_FIVE * units_out%length%factor**(5))
         bk(1:NDIM) = M_THREE*M_HALF*(bpar(1:NDIM) - bper(1:NDIM))
             
         do i = 1, NDIM
@@ -812,13 +804,11 @@ contains
               do sigma = 1, em_vars%nsigma
 
                 if(wfs_are_complex(st)) then
-                  proj = zstates_dotp(gr%m, st%d%dim, &
-                    st%zpsi(:,:, ist, ik),                &
-                    em_vars%lr(dir, sigma, ifactor)%zdl_psi(:,:, ivar, ik))
+                  proj = &
+                       zstates_dotp(gr%m, st%d%dim, st%zpsi(:, :, ist, ik), em_vars%lr(dir, sigma, ifactor)%zdl_psi(:, :, ivar, ik))
                 else
-                  proj = dstates_dotp(gr%m, st%d%dim, &
-                    st%dpsi(:,:, ist, ik),                &
-                    em_vars%lr(dir, sigma, ifactor)%ddl_psi(:,:, ivar, ik))
+                  proj = &
+                       dstates_dotp(gr%m, st%d%dim, st%dpsi(:, :, ist, ik), em_vars%lr(dir, sigma, ifactor)%ddl_psi(:, :, ivar, ik))
                 end if
                   
                 if( sigma == em_vars%nsigma .and. ivar == em_vars%lr(dir, 1, 1)%nst) then 
@@ -844,7 +834,7 @@ contains
       integer :: dir, isigma
 
       do dir = 1, NDIM
-        if( wfs_are_complex(st) ) then 
+        if(wfs_are_complex(st)) then 
 
           if(NDIM==3) then
             if(iand(outp%what, output_elf).ne.0) &
@@ -856,9 +846,10 @@ contains
         else
 
           if(NDIM==3) then
-            if(iand(outp%what, output_elf).ne.0) &
+            if(iand(outp%what, output_elf) .ne. 0) &
               call dlr_calc_elf(st, gr, em_vars%lr(dir, 1, ifactor), em_vars%lr(dir, 2, ifactor))
           end if
+
           do isigma = 1, em_vars%nsigma
             call dh_sys_output_lr(st, gr, em_vars%lr(dir, isigma, ifactor), dirname, dir, isigma, outp)
           end do
@@ -891,7 +882,7 @@ contains
         
         call pert_end(angular_momentum)
         
-        dic = dic * M_zI / P_c
+        dic = dic*M_zI/P_c
 
         iunit = io_open(trim(dirname)//'/rotatory_strength', action='write')
 
@@ -902,17 +893,9 @@ contains
              str_center('['//trim(units_out%length%abbrev) //'^4]', 20)
 
         ff = M_ZERO
-        if(em_vars%omega(iomega).ne.0) then
-          ff = real(dic) * P_C/(M_THREE*em_vars%omega(iomega))
-        end if
+        if(em_vars%omega(iomega) .ne. 0) ff = real(dic) * P_C/(M_THREE*em_vars%omega(iomega))
 
-        ff = M_ZERO
-        if(em_vars%omega(iomega).ne.0) then
-          ff = real(dic) * P_C/(M_THREE*em_vars%omega(iomega))
-        end if
-
-        write(iunit, '(3e20.8)') em_vars%omega(iomega), &
-          aimag(dic) / (M_PI*units_out%length%factor**3), ff/units_out%length%factor**4
+        write(iunit, '(3e20.8)') em_vars%omega(iomega), aimag(dic)/(M_PI*units_out%length%factor**3), ff/units_out%length%factor**4
 
         call io_close(iunit)
 
@@ -921,15 +904,6 @@ contains
     end subroutine out_circular_dichroism
     
   end subroutine em_resp_output
-
-  
-#include "undef.F90"
-#include "complex.F90"
-#include "em_resp_inc.F90"
-
-#include "undef.F90"
-#include "real.F90"
-#include "em_resp_inc.F90"
 
 end module pol_lr_m
 
