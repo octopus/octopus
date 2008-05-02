@@ -170,7 +170,6 @@ contains
     s%user_def  = ""
     read_data   = 0
 
-#if 0
     !%Variable Species
     !%Type block
     !%Section System::Species
@@ -257,7 +256,6 @@ contains
     !% 
     !% WARNING: Currently you can not use LCAO with this specie.
     !%End
-#endif 
 
     !%Variable SpecieAllElectronSigma
     !%Type float
@@ -325,7 +323,7 @@ contains
     end if
 
     if(read_data == 0) then
-      message(1) = 'Species '//trim(label)//' not found.'
+      message(1) = 'Specie '//trim(label)//' not found.'
       call write_fatal(1)
     end if
 
@@ -419,6 +417,8 @@ contains
       n = loct_parse_block_cols(blk, row)
 
       call loct_parse_block_float (blk, row, 3, s%Z)
+
+      if(s%type == SPEC_PS_UPF) read_data = 4
 
       if(n>4) then
         call loct_parse_block_int (blk, row, 4, s%lmax)
