@@ -295,6 +295,8 @@ contains
     ps%sigma_erf = CNST(0.625) ! This is hard-coded to a reasonable value.
     ps%a_erf = M_ONE/(ps%sigma_erf*sqrt(M_TWO))
     
+    ASSERT(ps%g%nrval > 0)
+
     ALLOCATE(vsr(ps%g%nrval), ps%g%nrval)
     ALLOCATE(vlr(ps%g%nrval), ps%g%nrval)
     ALLOCATE(nlr(ps%g%nrval), ps%g%nrval)
