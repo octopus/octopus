@@ -345,6 +345,8 @@ subroutine X(lr_calc_beta) (sh, sys, h, lr, perturbation, beta)
   FLOAT,  allocatable :: kxc(:, :, :, :)
   R_TYPE, allocatable :: hpol_density(:)
 
+  call profiling_in(beta_prof, "CALC_BETA")
+
   np  = sys%gr%m%np
   ndim = sys%gr%sb%dim
 
@@ -470,6 +472,8 @@ subroutine X(lr_calc_beta) (sh, sys, h, lr, perturbation, beta)
   deallocate(hvar)
 
   call pop_sub()
+
+  call profiling_out(beta_prof)
 
 contains
 

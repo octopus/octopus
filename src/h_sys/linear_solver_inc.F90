@@ -34,6 +34,8 @@ subroutine X(solve_HXeY) (this, h, gr, st, ist, ik, x, y, omega)
   R_TYPE,              intent(in)    :: y(:,:)   ! y(NP, d%dim)
   R_TYPE,              intent(in)    :: omega
 
+  call profiling_in(prof, "LINEAR_SOLVER")
+
   select case(this%solver)
 
   case(LS_CG)
@@ -50,6 +52,8 @@ subroutine X(solve_HXeY) (this, h, gr, st, ist, ik, x, y, omega)
     call write_fatal(1)
 
   end select
+
+  call profiling_out(prof)
 
 end subroutine X(solve_HXeY)
 
@@ -141,7 +145,7 @@ subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ist, ik, x, y, omega)
   R_TYPE, pointer :: phat(:,:), shat(:,:)
   R_TYPE  :: alpha, beta, w, rho_1, rho_2
   logical :: conv_last, conv
-  integer :: iter, idim
+  integer :: iter, idim, ip
   FLOAT :: gamma
 
   call push_sub('linear_response_solver.Xls_solver_bicgstab')
@@ -190,14 +194,18 @@ subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ist, ik, x, y, omega)
     if( abs(rho_1) < M_EPSILON ) exit
 
     if( iter == 1 ) then
-      !$omp parallel workshare
-      p(1:NP,1:st%d%dim) = r(1:NP,1:st%d%dim)
-      !$omp end parallel workshare
+      do idim = 1, st%d%dim
+        call lalg_copy(NP, r(:, idim), p(:, idim))
+      end do
     else
       beta = rho_1/rho_2*alpha/w
-      !$omp parallel workshare
-      p(1:NP, 1:st%d%dim) = r(1:NP, 1:st%d%dim) + beta*(p(1:NP, 1:st%d%dim) - w*Hp(1:NP, 1:st%d%dim))
-      !$omp end parallel workshare
+      do idim = 1, st%d%dim
+        !$omp parallel do
+        do ip = 1, NP
+          p(ip, idim) = r(ip, idim) + beta*(p(ip, idim) - w*Hp(ip, idim))
+        end do
+        !$omp end parallel do
+      end do
     end if
 
     ! preconditioning 
@@ -211,16 +219,20 @@ subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ist, ik, x, y, omega)
     
     alpha = rho_1/X(states_dotp)(gr%m, st%d%dim, rs, Hp)
 
-    !$omp parallel workshare    
-    s(1:NP, 1:st%d%dim) = r(1:NP, 1:st%d%dim) - alpha*Hp(1:NP,1:st%d%dim)
-    !$omp end parallel workshare
+    do idim = 1, st%d%dim
+      !$omp parallel do
+      do ip = 1, NP
+        s(ip, idim) = r(ip, idim) - alpha*Hp(ip, idim)
+      end do
+      !$omp end parallel do
+    end do
 
     gamma = X(states_nrm2) (gr%m, st%d%dim, s)
 
     if( gamma < ls%tol ) then
-      !$omp parallel workshare
-      x(1:NP,1:st%d%dim) = x(1:NP,1:st%d%dim) + alpha*phat(1:NP,1:st%d%dim)
-      !$omp end parallel workshare
+      do idim = 1, st%d%dim 
+        call lalg_axpy(NP, alpha, phat(:, idim), x(:, idim))
+      end do
       exit
     end if
 
@@ -234,11 +246,14 @@ subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ist, ik, x, y, omega)
 
     w = X(states_dotp)(gr%m, st%d%dim, Hs, s)/X(states_dotp) (gr%m, st%d%dim, Hs, Hs)
 
-    !$omp parallel workshare
-    x(1:NP, 1:st%d%dim) = x(1:NP, 1:st%d%dim) + alpha*phat(1:NP, 1:st%d%dim) + w*shat(1:NP, 1:st%d%dim)
-
-    r(1:NP, 1:st%d%dim) = s(1:NP, 1:st%d%dim) - w*Hs(1:NP, 1:st%d%dim)
-    !$omp end parallel workshare
+    do idim = 1, st%d%dim
+      !$omp parallel do
+      do ip = 1, NP
+        x(ip, idim) = x(ip, idim) + alpha*phat(ip, idim) + w*shat(ip, idim)
+        r(ip, idim) = s(ip, idim) - w*Hs(ip, idim)
+      end do
+      !$omp end parallel do
+    end do
 
     rho_2 = rho_1
 

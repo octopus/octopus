@@ -35,6 +35,7 @@ module pert_m
   use mesh_function_m
   use messages_m
   use nl_operator_m
+  use profiling_m
   use projector_m
   use specie_pot_m
   use states_m
@@ -97,6 +98,8 @@ module pert_m
     module procedure pert_init1
     module procedure pert_init2
   end interface
+
+  type(profile_t), save :: prof
 
 contains
 

@@ -31,6 +31,7 @@ module linear_solver_m
   use loct_parser_m
   use mesh_m
   use messages_m
+  use profiling_m
   use preconditioners_m
   use states_m
 
@@ -62,6 +63,8 @@ module linear_solver_m
      integer :: iter
      integer :: max_iter
   end type linear_solver_t
+
+  type(profile_t), save :: prof
 
 contains
 

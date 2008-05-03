@@ -33,6 +33,7 @@ module em_resp_calc_m
   use messages_m
   use poisson_m
   use pert_m
+  use profiling_m
   use states_m
   use sternheimer_m
   use system_m
@@ -54,6 +55,8 @@ module em_resp_calc_m
      freq2str,                     &
      em_wfs_tag,                   &
      em_rho_tag
+
+  type(profile_t), save :: beta_prof
 
 contains
 

@@ -27,6 +27,8 @@ subroutine X(pert_apply) (this, gr, geo, h, ik, f_in, f_out)
   R_TYPE,               intent(in)    :: f_in(:)
   R_TYPE,               intent(out)   :: f_out(:)
 
+  call profiling_in(prof, "PERT_APPLY")
+
   ASSERT(this%dir.ne.-1)
 
   select case(this%pert_type)
@@ -41,6 +43,8 @@ subroutine X(pert_apply) (this, gr, geo, h, ik, f_in, f_out)
     call ionic()
 
   end select
+
+  call profiling_out(prof)
 
 contains 
 
