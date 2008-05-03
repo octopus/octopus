@@ -179,15 +179,6 @@ contains
 
     call push_sub('profiling.profiling_init')
 
-#if defined(HAVE_MPI)
-    if(mpi_grp_is_root(mpi_world)) then
-      write(dirnum, '(i3.3)') mpi_world%size
-      call io_mkdir(trim('profiling.'//dirnum))
-    end if
-#else
-    call io_mkdir('profiling.ser')
-#endif
-    
     last_profile = 0
 
     nullify(current%p)
@@ -414,7 +405,6 @@ contains
 
     call push_sub('profiling.profiling_output')
 
-
     filenum = '000'
     dirnum  = 'ser'
 #if defined(HAVE_MPI)
@@ -424,7 +414,10 @@ contains
     end if
 #endif
 
-    total_time = profile_total_time(C_PROFILING_COMPLETE_DATASET)
+    if(mpi_grp_is_root(mpi_world)) call io_mkdir('profiling.'//dirnum)
+#ifdef HAVE_MPI
+    call MPI_Barrier(mpi_world%comm, mpi_err)
+#endif
 
     iunit = io_open('profiling.'//dirnum//'/profiling.'//filenum, action='write')
     if(iunit.lt.0) then
@@ -433,6 +426,7 @@ contains
       call pop_sub()
       return
     end if
+
     write(iunit, '(2a)')                                                                   &
       '                                                      ACCUMULATIVE TIME         ', &
       '|                SELF TIME'
@@ -445,6 +439,9 @@ contains
     write(iunit, '(2a)')                                                                    &
       '================================================================================|', &
       '===================================================='
+
+    total_time = profile_total_time(C_PROFILING_COMPLETE_DATASET)
+
     do ii = 1, last_profile
       prof => profile_list(ii)%p
 
