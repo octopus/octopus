@@ -29,6 +29,7 @@ module em_resp_calc_m
   use loct_parser_m
   use linear_response_m
   use magnetic_m
+  use mesh_m
   use mesh_function_m
   use messages_m
   use poisson_m
