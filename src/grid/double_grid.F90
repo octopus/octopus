@@ -119,26 +119,17 @@ contains
     contains
 
       subroutine calc_coefficients
-        integer, allocatable :: points(:)
-        integer :: ii, jj
+        FLOAT, allocatable :: points(:)
+        integer :: ii
 
         ALLOCATE(points(this%interpolation_min:this%interpolation_max), this%npoints)
         
         do ii = this%interpolation_min,  this%interpolation_max
-          points(ii) = 3 * ii - 1
+          points(ii) = M_THREE*ii - M_ONE
         end do
 
-        do ii = this%interpolation_min,  this%interpolation_max
-          
-          this%co(ii) = M_ONE
-          do jj = this%interpolation_min,  this%interpolation_max
-            if(ii /= jj) then
-              this%co(ii) = this%co(ii) * (dble(points(jj))/dble(points(jj) - points(ii)))
-            end if
-          end do
+        call interpolation_coefficients(this%npoints, points, M_ZERO, this%co)
 
-        end do
-        
         deallocate(points)
         
       end subroutine calc_coefficients

@@ -18,28 +18,30 @@
 !! $Id$
 
 subroutine X(interpolate_2)(xa, ya, x, y)
-  FLOAT, intent(in)   :: xa(:)
+  FLOAT,  intent(in)  :: xa(:)
   R_TYPE, intent(in)  :: ya(:, :, :)
-  FLOAT, intent(in)   :: x
+  FLOAT,  intent(in)  :: x
   R_TYPE, intent(out) :: y(:, :)
+
   integer :: n, n1, n2, i, k
-  R_TYPE, allocatable :: c(:)
+  FLOAT, allocatable :: c(:)
 
   n = size(xa)
   n1 = size(ya, 1)
   n2 = size(ya, 2)
+
   ALLOCATE(c(n), n)
 
-  do i = 1, n
-    c(i) = CNST(1.0)
-    do k = 1, n
-      if(k.eq.i) cycle
-      c(i) = c(i) * (x-xa(k)) / (xa(i)-xa(k))
+  call interpolation_coefficients(n, xa, x, c)
+
+  do k = 1, n2
+
+    y(:, k) = M_ZERO
+
+    do i = 1, n
+      call lalg_axpy(n1, c(i), ya(:, k, i), y(:, k)) 
     end do
-  end do
-  y(:, :) = M_ZERO
-  do i = 1, n
-    call lalg_axpy(n1, n2, c(i), ya(:, :, i), y(:, :)) 
+
   end do
 
   deallocate(c)
@@ -47,24 +49,20 @@ end subroutine X(interpolate_2)
 
 
 subroutine X(interpolate_1)(xa, ya, x, y)
-  FLOAT, intent(in)  :: xa(:)
-  R_TYPE, intent(in) :: ya(:, :)
-  FLOAT, intent(in)  :: x
+  FLOAT,  intent(in)  :: xa(:)
+  R_TYPE, intent(in)  :: ya(:, :)
+  FLOAT,  intent(in)  :: x
   R_TYPE, intent(out) :: y(:)
-  integer :: n, n1, i, k
-  R_TYPE, allocatable :: c(:)
+
+  integer :: n, n1, i
+  FLOAT, allocatable :: c(:)
 
   n = size(xa)
   n1 = size(ya, 1)
   ALLOCATE(c(n), n)
 
-  do i = 1, n
-    c(i) = CNST(1.0)
-    do k = 1, n
-      if(k.eq.i) cycle
-      c(i) = c(i) * (x-xa(k)) / (xa(i)-xa(k))
-    end do
-  end do
+  call interpolation_coefficients(n, xa, x, c)
+
   y(:) = M_ZERO
   do i = 1, n
     call lalg_axpy(n1, c(i), ya(:, i), y(:)) 
@@ -75,23 +73,19 @@ end subroutine X(interpolate_1)
 
 
 subroutine X(interpolate_0)(xa, ya, x, y)
-  FLOAT, intent(in)  :: xa(:)
-  R_TYPE, intent(in) :: ya(:)
-  FLOAT, intent(in)  :: x
+  FLOAT,  intent(in)  :: xa(:)
+  R_TYPE, intent(in)  :: ya(:)
+  FLOAT,  intent(in)  :: x
   R_TYPE, intent(out) :: y
-  integer :: n, i, k
-  R_TYPE, allocatable :: c(:)
+
+  integer :: n, i
+  FLOAT, allocatable :: c(:)
 
   n = size(xa)
   ALLOCATE(c(n), n)
 
-  do i = 1, n
-    c(i) = CNST(1.0)
-    do k = 1, n
-      if(k.eq.i) cycle
-      c(i) = c(i) * (x-xa(k)) / (xa(i)-xa(k))
-    end do
-  end do
+  call interpolation_coefficients(n, xa, x, c)
+
   y = M_ZERO
   do i = 1, n
     y = y + c(i)*ya(i)
@@ -99,8 +93,6 @@ subroutine X(interpolate_0)(xa, ya, x, y)
 
   deallocate(c)
 end subroutine X(interpolate_0)
-
-
 
 ! ---------------------------------------------------------
 subroutine X(shellsort1)(a, x)

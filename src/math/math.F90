@@ -64,6 +64,7 @@ module math_m
     member,                     &
     make_idx_set,               &
     infinity_norm,              &
+    interpolation_coefficients, &
     interpolate
 
 
@@ -922,9 +923,23 @@ subroutine zqmr_sym(np, x, b, op, prec, iter, residue, threshold, showprogress)
   call pop_sub()
 end subroutine zqmr_sym
 
+subroutine interpolation_coefficients(nn, xa, xx, cc)
+  integer, intent(in)  :: nn    ! the number of points and coefficients
+  FLOAT,   intent(in)  :: xa(:) ! the nn points where we know the function
+  FLOAT,   intent(in)  :: xx    ! the point where we want the function
+  FLOAT,   intent(out) :: cc(:)  ! the coefficients
 
+  integer :: ii, kk
 
-
+  do ii = 1, nn
+    cc(ii) = M_ONE
+    do kk = 1, nn
+      if(kk .eq. ii) cycle
+      cc(ii) = cc(ii)*(xx - xa(kk))/(xa(ii) - xa(kk))
+    end do
+  end do
+  
+end subroutine interpolation_coefficients
 
 #include "undef.F90"
 #include "complex.F90"
