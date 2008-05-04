@@ -108,6 +108,8 @@ module ps_m
 
     type(spline_t) :: vion        ! the potential that other ions see
     type(spline_t) :: dvion       ! the potential that other ions see
+    
+    logical :: is_separated
   end type ps_t
 
   FLOAT, parameter :: eps = CNST(1.0e-8)
@@ -279,6 +281,8 @@ contains
 
     ps%has_long_range = .true.
 
+    ps%is_separated = .false.
+
     call pop_sub()
 
   end subroutine ps_init
@@ -345,6 +349,8 @@ contains
 
     deallocate(vsr, vlr, nlr, vion, r2ofi)
     
+    ps%is_separated = .true.
+
   end subroutine ps_separate
   
   ! ---------------------------------------------------------
@@ -510,20 +516,21 @@ contains
 
     if(.not. associated(ps%kb)) return
 
+    if(ps%is_separated) then
+      call spline_end(ps%vlr)
+      call spline_end(ps%vlr_sq)
+      call spline_end(ps%nlr)
+      call spline_end(ps%vion)
+      call spline_end(ps%dvion)
+    end if
 
     call spline_end(ps%kb)
     call spline_end(ps%dkb)
     call spline_end(ps%ur)
 
-    call spline_end(ps%vlr)
-    call spline_end(ps%vlr_sq)
-    call spline_end(ps%nlr)
-
     call spline_end(ps%vl)
     call spline_end(ps%core)
     call spline_end(ps%vlocal_f)
-    call spline_end(ps%vion)
-    call spline_end(ps%dvion)
 
     call logrid_end(ps%g)
 
