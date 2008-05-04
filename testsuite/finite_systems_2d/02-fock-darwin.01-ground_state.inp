@@ -38,7 +38,6 @@ DerivativesOrder = 4
 TheoryLevel = independent_particles
 
 MaximumIter = 200
-ConvAbsDens = 1e-5
 LCAOStart = lcao_full
 
 EigenSolver = cg
