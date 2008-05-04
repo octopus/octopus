@@ -32,7 +32,7 @@ TheoryLevel = hartree_fock
 
 SpinComponents = spin_polarized
 
-MaximumIter = 200
+
 ConvRelDens = 1e-4
 LCAOStart = lcao_none
 

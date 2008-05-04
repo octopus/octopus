@@ -36,7 +36,7 @@ DerivativesOrder = 1
 
 XCFunctional = lda_x + lda_c_amgb
 
-MaximumIter = 200
+
 ConvAbsDens = 1e-8
 LCAOStart = lcao_full
 

@@ -41,7 +41,7 @@ Spacing = 0.35
 XCFunctional = oep_x
 OEP_Level = oep_full
 
-MaximumIter = 200
+
 ConvRelDens = 1e-5
 
 LCAOStart = lcao_none

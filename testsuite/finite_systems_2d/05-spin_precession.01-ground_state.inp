@@ -22,7 +22,7 @@ TheoryLevel = independent_particles
 
 SpinComponents = spinors
 
-MaximumIter = 200
+
 ConvAbsDens = 1e-5
 
 # We cannot use the LCAO because otherwise the InitialSpins don't work.

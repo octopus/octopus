@@ -57,7 +57,7 @@ Spacing = 0.01
 
 TheoryLevel = independent_particles
 
-MaximumIter = 200
+
 ConvAbsDens = 1e-6
 
 LCAOStart = no
