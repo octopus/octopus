@@ -51,7 +51,7 @@ end subroutine X(hamiltonian_eigenval)
 
 
 ! ---------------------------------------------------------
-subroutine X(hpsi) (h, gr, psi, hpsi, ist, ik, t)
+subroutine X(hpsi) (h, gr, psi, hpsi, ist, ik, t, kinetic_only)
   type(hamiltonian_t), intent(inout) :: h
   type(grid_t),        intent(inout) :: gr
   integer,             intent(in)    :: ist       ! the index of the state
@@ -59,16 +59,20 @@ subroutine X(hpsi) (h, gr, psi, hpsi, ist, ik, t)
   R_TYPE, target,      intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
   R_TYPE,              intent(out)   :: hpsi(:,:) ! hpsi(NP, h%d%dim)
   FLOAT, optional,     intent(in)    :: t
+  logical, optional,   intent(in)    :: kinetic_only
 
   integer :: idim
 
   R_TYPE, pointer :: epsi(:,:), lapl(:, :)
   R_TYPE, allocatable :: grad(:, :, :)
   type(profile_t), save :: phase_prof
-  logical :: copy_input, apply_kpoint
+  logical :: copy_input, apply_kpoint, kinetic_only_
 
   call profiling_in(C_PROFILING_HPSI)
   call push_sub('h_inc.Xhpsi')
+
+  kinetic_only_ = .false.
+  if(present(kinetic_only)) kinetic_only_ = kinetic_only
 
   if(present(t).and.h%d%cdft) then
     message(1) = "TDCDFT not yet implemented"
@@ -113,47 +117,58 @@ subroutine X(hpsi) (h, gr, psi, hpsi, ist, ik, t)
 
   nullify(lapl)
   call X(kinetic_start)(h, gr, epsi, lapl)
-  call X(vlpsi)(h, gr%m, epsi, hpsi, ik)
-  call X(kinetic_keep_going)(h, gr, epsi, lapl)
-  if(h%ep%non_local) then
-    call X(vnlpsi)(h, gr, epsi, hpsi, ik)
+
+  if (.not. kinetic_only_) then
+
+    call X(vlpsi)(h, gr%m, epsi, hpsi, ik)
+    
     call X(kinetic_keep_going)(h, gr, epsi, lapl)
+    
+    if(h%ep%non_local) then
+      call X(vnlpsi)(h, gr, epsi, hpsi, ik)
+      call X(kinetic_keep_going)(h, gr, epsi, lapl)
+    end if
+    
   end if
 
   call X(kinetic_finish)(h, gr, epsi, lapl, hpsi)
 
-  ! all functions that require the gradient or other derivatives of
-  ! epsi sould go after this point and must not update the
-  ! boundary points
-
-  if (present(t) .and. gauge_field_is_applied(h%ep%gfield)) then
-
-    ALLOCATE(grad(1:NP, 1:MAX_DIM, 1:h%d%dim), NP*MAX_DIM*h%d%dim)
+  if (.not. kinetic_only_) then
     
-    do idim = 1, h%d%dim 
-      ! boundary points were already set by the laplacian
-      call X(derivatives_grad)(gr%f_der%der_discr, epsi(:, idim), grad(:, :, idim), ghost_update = .false., set_bc = .false.)
-    end do
+    ! all functions that require the gradient or other derivatives of
+    ! epsi sould go after this point and must not update the
+    ! boundary points
+    
+    if (present(t) .and. gauge_field_is_applied(h%ep%gfield)) then
+      
+      ALLOCATE(grad(1:NP, 1:MAX_DIM, 1:h%d%dim), NP*MAX_DIM*h%d%dim)
+      
+      do idim = 1, h%d%dim 
+        ! boundary points were already set by the laplacian
+        call X(derivatives_grad)(gr%f_der%der_discr, epsi(:, idim), grad(:, :, idim), ghost_update = .false., set_bc = .false.)
+      end do
+      
+    end if
 
-  end if
-
-  if(present(t)) call X(vlasers)(gr, h, epsi, hpsi, ik, t)
-
-  if (present(t) .and. gauge_field_is_applied(h%ep%gfield)) call X(vgauge)(gr, h, epsi, hpsi, grad)
+    if(present(t)) call X(vlasers)(gr, h, epsi, hpsi, ik, t)
+    
+    if (present(t) .and. gauge_field_is_applied(h%ep%gfield)) call X(vgauge)(gr, h, epsi, hpsi, grad)
   
-  if(h%theory_level==HARTREE.or.h%theory_level==HARTREE_FOCK) then
-    call X(exchange_operator)(h, gr, epsi, hpsi, ist, ik)
+    if(h%theory_level==HARTREE.or.h%theory_level==HARTREE_FOCK) then
+      call X(exchange_operator)(h, gr, epsi, hpsi, ist, ik)
+    end if
+    
+    if(hamiltonian_oct_exchange(h)) then
+      call X(oct_exchange_operator)(h, gr, epsi, hpsi, ik)
+    end if
+    
+    call X(magnetic_terms) (gr, h, epsi, hpsi, ik)
+    
+    if(allocated(grad)) deallocate(grad)
+
+    if(present(t)) call X(vborders) (gr, h, epsi, hpsi)
+
   end if
-
-  if(hamiltonian_oct_exchange(h)) then
-    call X(oct_exchange_operator)(h, gr, epsi, hpsi, ik)
-  end if
-  
-  call X(magnetic_terms) (gr, h, epsi, hpsi, ik)
-
-  if(allocated(grad)) deallocate(grad)
-
-  if(present(t)) call X(vborders) (gr, h, epsi, hpsi)
 
   if(copy_input) deallocate(epsi)
 
@@ -444,19 +459,9 @@ subroutine X(kinetic) (h, gr, psi, hpsi)
   R_TYPE,              intent(inout) :: psi(:,:)
   R_TYPE,              intent(inout) :: hpsi(:,:) 
 
-  R_TYPE, pointer :: lapl(:, :)
-  integer :: idim
-
   call push_sub('h_inc.Xkinetic')
 
-  nullify(lapl)
-
-  do idim = 1, h%d%dim
-    call X(set_bc)(gr%f_der%der_discr, psi(:, idim))
-  end do
-
-  call X(kinetic_start)(h, gr, psi, lapl)
-  call X(kinetic_finish) (h, gr, psi, lapl, hpsi)
+  call X(hpsi) (h, gr, psi, hpsi, ist = 1, ik = 1, kinetic_only = .true.)
 
   call pop_sub()
 end subroutine X(kinetic)

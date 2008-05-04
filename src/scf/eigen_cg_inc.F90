@@ -56,10 +56,10 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, reo
   niter = 0
 
   ALLOCATE(h_psi(NP_PART, st%d%dim), NP_PART*st%d%dim)
-  ALLOCATE( ppsi(NP_PART, st%d%dim), NP_PART*st%d%dim)
-  ALLOCATE(    g(NP_PART, st%d%dim), NP_PART*st%d%dim)
-  ALLOCATE(   g0(NP_PART, st%d%dim), NP_PART*st%d%dim)
   ALLOCATE(   cg(NP_PART, st%d%dim), NP_PART*st%d%dim)
+  ALLOCATE(    g(NP_PART, st%d%dim), NP_PART*st%d%dim)
+  ALLOCATE(   g0(NP, st%d%dim), NP*st%d%dim)
+  ALLOCATE( ppsi(NP, st%d%dim), NP*st%d%dim)
 
   do idim = 1, st%d%dim
     !$omp parallel workshare
