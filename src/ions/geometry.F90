@@ -350,8 +350,8 @@ contains
       message(1) = 'Info: Parallelization in atoms:'
         call write_info(1)
       do kk = 1, size
-        write(message(1),'(a,i4,a,i4,a,i4)') 'Info: Node in states-group ', kk - 1, &
-          ' will manage atoms', geo%atoms_range(1, kk - 1), " - ", geo%atoms_range(2, kk - 1)
+        write(message(1),'(a,i4,a,i6,a,i6)') 'Info: Node in states-group ', kk - 1, &
+             ' will manage atoms', geo%atoms_range(1, kk - 1), " - ", geo%atoms_range(2, kk - 1)
         call write_info(1)
         if(rank .eq. kk - 1) then
           geo%atoms_start = geo%atoms_range(1, kk - 1)
