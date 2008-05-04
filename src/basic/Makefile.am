@@ -82,4 +82,4 @@ command_line.o : command_line.F90
 c_pointer.o : c_pointer.F90
 hardware.o : hardware.F90
 ialist.o : ialist.F90
-iihash.o : iihash.F90 ialist.o
+iihash.o : iihash.F90 ialist.o global.o

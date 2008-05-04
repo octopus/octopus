@@ -46,6 +46,6 @@ td_transport.o : td_transport.F90 td.o td_rti.o td_trans_rti.o
 td_trans_rti.o : td_trans_rti.F90 td_trans_intf.o td_trans_mem.o td_trans_src.o td_exp.o td_trans_lead.o
 td_trans_intf.o : td_trans_intf.F90 
 td_trans_mem.o : td_trans_mem.F90 td_trans_intf.o
-td_trans_src.o : td_trans_src.F90 td_trans_intf.o 
+td_trans_src.o : td_trans_src.F90 td_trans_intf.o td_trans_mem.o
 td_trans_lead.o : td_trans_intf.o
 cpmd.o : cpmd.F90 cpmd_inc.F90
