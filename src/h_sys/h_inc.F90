@@ -65,37 +65,44 @@ subroutine X(hpsi) (h, gr, psi, hpsi, ist, ik, t)
   R_TYPE, pointer :: epsi(:,:), lapl(:, :)
   R_TYPE, allocatable :: grad(:, :, :)
   type(profile_t), save :: phase_prof
+  logical :: copy_input, apply_kpoint
 
   call profiling_in(C_PROFILING_HPSI)
   call push_sub('h_inc.Xhpsi')
-
-  ASSERT(ubound(psi, DIM=1) == NP_PART)
 
   if(present(t).and.h%d%cdft) then
     message(1) = "TDCDFT not yet implemented"
     call write_fatal(1)
   end if
 
+  apply_kpoint = simul_box_is_periodic(gr%sb) .and. .not. kpoint_is_gamma(h%d, ik)
+  copy_input = (ubound(psi, DIM = 1) == NP) .or. apply_kpoint
+
+  if(copy_input) then
+    ALLOCATE(epsi(1:NP_PART, 1:h%d%dim), NP_PART*h%d%dim)
+    do idim = 1, h%d%dim
+      call lalg_copy(NP, psi(:, idim), epsi(:, idim))
+    end do
+  else
+    ASSERT(ubound(psi, DIM=1) == NP_PART)
+    epsi => psi
+  end if
+
   ! first of all, set boundary conditions
   do idim = 1, h%d%dim
-    call X(set_bc)(gr%f_der%der_discr, psi(:, idim))
+    call X(set_bc)(gr%f_der%der_discr, epsi(:, idim))
   end do
 
-  if(simul_box_is_periodic(gr%sb) .and. .not. kpoint_is_gamma(h%d, ik)) then ! we multiply psi by exp(i k.r)
+  if(apply_kpoint) then ! we multiply psi by exp(i k.r)
     call profiling_in(phase_prof, "PBC_PHASE_APPLY")
-
-    ALLOCATE(epsi(1:NP_PART, 1:h%d%dim), NP_PART*h%d%dim)
 
     do idim = 1, h%d%dim
       !$omp parallel workshare
-      epsi(1:NP_PART, idim) = h%phase(1:NP_PART, ik) * psi(1:NP_PART, idim)
+      epsi(1:NP_PART, idim) = h%phase(1:NP_PART, ik)*epsi(1:NP_PART, idim)
       !$omp end parallel workshare
     end do
     
     call profiling_out(phase_prof)
-  else
-    ! for finite systems we do nothing
-    epsi => psi
   end if
 
   do idim = 1, h%d%dim
@@ -147,8 +154,10 @@ subroutine X(hpsi) (h, gr, psi, hpsi, ist, ik, t)
   if(allocated(grad)) deallocate(grad)
 
   if(present(t)) call X(vborders) (gr, h, epsi, hpsi)
-  
-  if(simul_box_is_periodic(gr%sb) .and. .not. kpoint_is_gamma(h%d, ik)) then
+
+  if(copy_input) deallocate(epsi)
+
+  if(apply_kpoint) then
     ! now we need to remove the exp(-i k.r) factor
     call profiling_in(phase_prof)
 
@@ -158,7 +167,6 @@ subroutine X(hpsi) (h, gr, psi, hpsi, ist, ik, t)
       !$omp end parallel workshare
     end do
     
-    deallocate(epsi)
     call profiling_out(phase_prof)
   end if
   

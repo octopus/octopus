@@ -23,6 +23,7 @@ module derivatives_m
   use datasets_m
   use global_m
   use lalg_adv_m
+  use lalg_basic_m
   use loct_parser_m
   use mesh_m
   use messages_m
@@ -118,6 +119,7 @@ module derivatives_m
     FLOAT, pointer :: dlapl(:)
     CMPLX, pointer :: zlapl(:)
     logical :: ghost_update
+    logical :: dealloc_f
   end type der_handle_t
 
 contains

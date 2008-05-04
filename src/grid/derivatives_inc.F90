@@ -42,11 +42,28 @@ subroutine X(derivatives_laplt)(der, f, lapl)
   call pop_sub()
 end subroutine X(derivatives_laplt)
 
+subroutine X(init_f)(der, handle, f)
+  type(der_discr_t),         intent(in)    :: der
+  type(der_handle_t),        intent(inout) :: handle
+  R_TYPE,  target,           intent(in)    :: f(:)
+
+  if(ubound(f, DIM = 1) == der%m%np_part) then
+    handle%X(f) => f
+    handle%dealloc_f = .false.
+  else
+    ASSERT(ubound(f, DIM = 1) == der%m%np)
+    ALLOCATE(handle%X(f)(1:der%m%np_part), der%m%np_part)
+    call lalg_copy(der%m%np, f, handle%X(f))
+    handle%dealloc_f = .true.
+  end if
+
+end subroutine X(init_f)
+
 ! ---------------------------------------------------------
 subroutine X(derivatives_lapl_start)(der, handle, f, lapl, ghost_update, set_bc)
   type(der_discr_t),         intent(in)    :: der
   type(der_handle_t),        intent(inout) :: handle
-  R_TYPE,  target,           intent(inout) :: f(:)     ! f(m%np_part)
+  R_TYPE,                    intent(inout) :: f(:)     ! f(m%np_part)
   R_TYPE,  target,           intent(inout) :: lapl(:)  ! lapl(m%np)
   logical, optional,         intent(in)    :: ghost_update
   logical, optional,         intent(in)    :: set_bc
@@ -55,11 +72,10 @@ subroutine X(derivatives_lapl_start)(der, handle, f, lapl, ghost_update, set_bc)
 
   call push_sub('derivatives_inc.Xderivatives_lapl_start')
 
-  ASSERT(ubound(f,    DIM=1) == der%m%np_part)
   ASSERT(ubound(lapl, DIM=1) >= der%m%np)
-
-  handle%X(f) => f 
   handle%X(lapl) => lapl
+
+  call X(init_f)(der, handle, f)
 
   handle%ghost_update = .true.
   if(present(ghost_update)) handle%ghost_update = ghost_update
@@ -117,6 +133,9 @@ subroutine X(derivatives_lapl_finish)(der, handle)
 #endif
 
   call X(nl_operator_operate) (der%lapl, handle%X(f), handle%X(lapl), ghost_update = handle%ghost_update)
+  
+  if(handle%dealloc_f) deallocate(handle%X(f))
+
   call pop_sub()
 end subroutine X(derivatives_lapl_finish)
 
@@ -148,22 +167,25 @@ subroutine X(derivatives_grad)(der, f, grad, ghost_update, set_bc)
   logical, optional, intent(in)    :: ghost_update
   logical, optional, intent(in)    :: set_bc
 
+  type(der_handle_t) :: handle
   integer :: idir
   logical :: set_bc_
+  
 #ifdef HAVE_MPI
-  type(pv_handle_t) :: pv_h
   logical :: ghost_update_
 #endif
 
   call push_sub('derivatives_inc.Xderivatives_grad')
-  
-  ASSERT(ubound(f,    DIM=1) == der%m%np_part)
+
+  call der_handle_init(handle, der%m)
+  call X(init_f)(der, handle, f)
+
   ASSERT(ubound(grad, DIM=1) >= der%m%np)
   ASSERT(ubound(grad, DIM=2) >= der%m%sb%dim)
 
   set_bc_ = .true.
   if(present(set_bc)) set_bc_ = set_bc
-  if(set_bc_) call X(set_bc)(der, f)
+  if(set_bc_) call X(set_bc)(der, handle%X(f))
 
 #ifdef HAVE_MPI
   ghost_update_ = .true.
@@ -171,18 +193,18 @@ subroutine X(derivatives_grad)(der, f, grad, ghost_update, set_bc)
 
   if(der%overlap .and. der%m%parallel_in_domains .and. ghost_update_) then
 
-    call pv_handle_init(pv_h, der%m%vp)
-    call X(vec_ighost_update)(der%m%vp, f, pv_h)
+    call pv_handle_init(handle%pv_h, der%m%vp)
+    call X(vec_ighost_update)(der%m%vp, handle%X(f), handle%pv_h)
 
     do idir = 1, der%m%sb%dim
-      call X(nl_operator_operate)(der%grad(idir), f, grad(:, idir), ghost_update = .false., points = OP_INNER)
+      call X(nl_operator_operate)(der%grad(idir), handle%X(f), grad(:, idir), ghost_update = .false., points = OP_INNER)
     end do
 
-    call pv_handle_wait(pv_h)
-    call pv_handle_end(pv_h)
+    call pv_handle_wait(handle%pv_h)
+    call pv_handle_end(handle%pv_h)
 
     do idir = 1, der%m%sb%dim
-      call X(nl_operator_operate)(der%grad(idir), f, grad(:, idir), ghost_update = .false., points = OP_OUTER)
+      call X(nl_operator_operate)(der%grad(idir), handle%X(f), grad(:, idir), ghost_update = .false., points = OP_OUTER)
     end do
 
     call pop_sub()
@@ -191,8 +213,11 @@ subroutine X(derivatives_grad)(der, f, grad, ghost_update, set_bc)
 #endif
 
   do idir = 1, der%m%sb%dim
-    call X(nl_operator_operate) (der%grad(idir), f, grad(:, idir), ghost_update = ghost_update)
+    call X(nl_operator_operate) (der%grad(idir), handle%X(f), grad(:, idir), ghost_update = ghost_update)
   end do
+
+  if(handle%dealloc_f) deallocate(handle%X(f))
+  call der_handle_end(handle)
 
   call pop_sub()
 end subroutine X(derivatives_grad)
@@ -205,17 +230,19 @@ subroutine X(derivatives_oper)(op, der, f, opf, ghost_update)
   R_TYPE,              intent(out)   :: opf(:)     ! opf(m%np)
   logical, optional,   intent(in)    :: ghost_update
 
+  type(der_handle_t) :: handle
 #ifdef HAVE_MPI
-  type(pv_handle_t) :: pv_h
   logical :: ghost_update_
 #endif
 
-  call push_sub('derivatives_inc.Xderivatives_grad')
+  call push_sub('derivatives_inc.Xderivatives_oper')
   
-  ASSERT(ubound(f,   DIM=1) == der%m%np_part)
   ASSERT(ubound(opf, DIM=1) >= der%m%np)
 
-  call X(set_bc)(der, f)
+  call der_handle_init(handle, der%m)
+  call X(init_f)(der, handle, f)
+
+  call X(set_bc)(der, handle%X(f))
 
 #ifdef HAVE_MPI
   ghost_update_ = .true.
@@ -223,22 +250,25 @@ subroutine X(derivatives_oper)(op, der, f, opf, ghost_update)
 
   if(der%overlap .and. der%m%parallel_in_domains .and. ghost_update_) then
 
-    call pv_handle_init(pv_h, der%m%vp)
-    call X(vec_ighost_update)(der%m%vp, f, pv_h)
+    call pv_handle_init(handle%pv_h, der%m%vp)
+    call X(vec_ighost_update)(der%m%vp, handle%X(f), handle%pv_h)
 
-    call X(nl_operator_operate)(op, f, opf, ghost_update = .false., points = OP_INNER)
+    call X(nl_operator_operate)(op, handle%X(f), opf, ghost_update = .false., points = OP_INNER)
 
-    call pv_handle_wait(pv_h)
-    call pv_handle_end(pv_h)
+    call pv_handle_wait(handle%pv_h)
+    call pv_handle_end(handle%pv_h)
 
-    call X(nl_operator_operate)(op, f, opf, ghost_update = .false., points = OP_OUTER)
+    call X(nl_operator_operate)(op, handle%X(f), opf, ghost_update = .false., points = OP_OUTER)
 
     call pop_sub()
     return
   end if
 #endif
 
-  call X(nl_operator_operate) (op, f, opf, ghost_update=ghost_update)
+  call X(nl_operator_operate) (op, handle%X(f), opf, ghost_update = ghost_update)
+
+  if(handle%dealloc_f) deallocate(handle%X(f))
+  call der_handle_end(handle)
 
   call pop_sub()
 end subroutine X(derivatives_oper)
@@ -354,6 +384,8 @@ subroutine X(set_bc)(der, f)
   call push_sub('derivatives_inc.Xset_bc')
   call profiling_in(set_bc_prof, 'SET_BC')
   
+  ASSERT(ubound(f, DIM=1) == der%m%np_part)
+
   if(der%zero_bc) then
     
     p = der%m%vp%partno
