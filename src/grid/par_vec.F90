@@ -157,6 +157,9 @@ module par_vec_m
     integer, pointer :: requests(:, :)
     integer, pointer :: status(:, :, :)
 #endif
+    integer, pointer :: ighost_send(:)
+    FLOAT,   pointer :: dghost_send(:)
+    CMPLX,   pointer :: zghost_send(:)
   end type pv_handle_t
 
   public ::              &
@@ -641,6 +644,7 @@ contains
     ALLOCATE(this%requests(1:this%nnb, 1:2), this%nnb*2)
     ALLOCATE(this%status(MPI_STATUS_SIZE, 1:this%nnb, 1:2), this%nnb*2)
 #endif
+    nullify(this%ighost_send, this%dghost_send, this%zghost_send)
   end subroutine pv_handle_init
 
   subroutine pv_handle_end(this)
@@ -664,12 +668,24 @@ contains
 
     type(profile_t), save :: prof
     
-    call profiling_in(prof, "MPI_WAIT")
+    call profiling_in(prof, "GHOST_UPDATE_WAIT")
 #if defined(HAVE_LIBNBC)
     call NBCF_Wait(this%nbc_h, mpi_err)
 #else
     call MPI_Waitall(this%nnb*2, this%requests(1,1), this%status(1, 1, 1), mpi_err)
 #endif
+    if(associated(this%ighost_send)) then
+      deallocate(this%ighost_send)
+      nullify(this%ighost_send)
+    end if
+    if(associated(this%dghost_send)) then
+      deallocate(this%dghost_send)
+      nullify(this%dghost_send)
+    end if
+    if(associated(this%zghost_send)) then
+      deallocate(this%zghost_send)
+      nullify(this%zghost_send)
+    end if
     call profiling_out(prof)
   end subroutine pv_handle_wait
 

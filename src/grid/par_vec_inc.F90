@@ -282,11 +282,9 @@ end subroutine X(vec_ghost_update)
 subroutine X(vec_ighost_update)(vp, v_local, handle)
   type(pv_t), intent(in)    :: vp
   R_TYPE,     intent(inout) :: v_local(:)
-  type(pv_handle_t),  intent(in)  :: handle
+  type(pv_handle_t),  intent(inout)  :: handle
 
-#ifdef HAVE_LIBNBC
-  R_TYPE,  pointer :: ghost_send(:)          ! Send buffer.
-#else
+#ifndef HAVE_LIBNBC
   integer :: ipart, pos, inb
 #endif
 
@@ -297,14 +295,13 @@ subroutine X(vec_ighost_update)(vp, v_local, handle)
 #if defined(HAVE_LIBNBC)
   ! use a collective non-blocking call
 
-  call X(vec_ghost_update_prepare)(vp, v_local, ghost_send)
+  nullify(handle%ighost_send, handle%dghost_send, handle%zghost_send)
+  call X(vec_ghost_update_prepare)(vp, v_local, handle%X(ghost_send))
 
-  call NBCF_Ialltoallv(ghost_send, vp%np_ghost_neigh(1, vp%partno), vp%sdispls(1),          &
+  call NBCF_Ialltoallv(handle%X(ghost_send), vp%np_ghost_neigh(1, vp%partno), vp%sdispls(1),          &
        R_MPITYPE, v_local(vp%np_local(vp%partno)+1), vp%rcounts(1), vp%rdispls(1), R_MPITYPE, &
        vp%comm, handle%nbc_h, mpi_err)
 
-  call X(vec_ghost_update_finish)(ghost_send)
- 
 #else
   ! use a series of p2p non-blocking calls
 
@@ -369,7 +366,7 @@ subroutine X(vec_ghost_update_prepare) (vp, v_local, ghost_send)
 end subroutine X(vec_ghost_update_prepare)
 
 subroutine X(vec_ghost_update_finish)(ghost_send)
-  R_TYPE,  pointer :: ghost_send(:)          ! Send buffer.
+  R_TYPE,  pointer :: ghost_send(:)
 
   deallocate(ghost_send)
 
