@@ -17,7 +17,7 @@ if test $acx_mpi_ok = no; then
 fi
 
 if test $acx_mpi_ok = no; then
-  AC_CHECK_LIB(mpi, MPI_init, [acx_mpi_ok=yes; LIBS_MPI="$LIBS_MPI -lmpi"])
+  AC_CHECK_LIB(mpi, MPI_Init, [acx_mpi_ok=yes; LIBS_MPI="$LIBS_MPI -lmpi"])
 fi
 
 AC_SUBST(LIBS_MPI)
