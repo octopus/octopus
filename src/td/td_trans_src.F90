@@ -53,23 +53,30 @@ contains
 
   ! ---------------------------------------------------------
   ! Read extended states for time t=0
-  subroutine read_psi0_ext(dir, st, psi0, np, gr)
-    character(len=*), intent(in) :: dir ! directory with the extended states
+  subroutine read_psi0_ext(st, psi0, np, gr)
     type(states_t),   intent(in) :: st  ! states
     CMPLX,     intent(out)   :: psi0(:, :, :, :, :, :) ! np, (lead=1;center=2), ndim, nst, nik, NLEADS
     integer,   intent(in)    :: np      ! length of the extended block
     type(grid_t),  intent(in):: gr
 
     CMPLX, allocatable :: tmp(:,:,:,:) ! NP+2*np, ndim, nst, nik
-    integer :: ierr, s
+    integer :: ierr, s, ist, ik
+    character(len=100) :: filename
 
     call push_sub('td_trans_src.read_psi0_ext')
-    s = (NP+2*np)*st%d%dim*st%lnst*st%d%nik
+    s = (NP+2*np)*st%d%dim
     ALLOCATE(tmp(NP+2*np, st%d%dim, st%st_start:st%st_end,  st%d%nik), s )
 
     ! try to read from file
     psi0 = M_z0
-    call read_binary(s, tmp(1:NP+2*np, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik), 3, ierr, trim(dir))
+    do ik = 1, st%d%nik
+      do ist = st%st_start, st%st_end
+        write(filename, '(a,i6.6,a,i6.6,a)') 'ext_eigenstate-', ist, '-', ik, '.obf'
+        call read_binary(s, tmp(1:NP+2*np, 1:st%d%dim, ist, ik), 3, ierr, filename)
+      end do
+    end do
+    
+!    call read_binary(s, tmp(1:NP+2*np, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik), 3, ierr, trim(dir))
     psi0(1:np, 1, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik, LEFT)  = &
         tmp(1:np,1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik)
     psi0(1:np, 2, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik, LEFT)  = &
@@ -100,7 +107,8 @@ contains
     ! read the extended blocks of the wave funtion
     ! TODO: for all states
     st_psi0 = M_z0
-    call read_psi0_ext('ext_eigenstate.obf', st, st_psi0, inp, gr)
+    src_prev = M_z0
+    call read_psi0_ext(st, st_psi0, inp, gr)
     ! and do some precalculations
 
     call pop_sub()

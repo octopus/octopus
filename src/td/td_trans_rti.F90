@@ -113,7 +113,7 @@ contains
     FLOAT                :: emax, qmin, qmax, q, energy
 
     ALLOCATE(um(NLEADS), NLEADS)
-    ALLOCATE(trans%energy(0:st%lnst), st%lnst+1 )
+    ALLOCATE(trans%energy(0:st%nst), st%nst+1 )
 
     call push_sub('td_trans_rti.cn_src_mem_init')
 
@@ -218,10 +218,10 @@ contains
       qmax = sqrt(M_TWO*emax)
     end if
 
-    nst2 = (st%lnst-1)/2
+    nst2 = (st%nst-1)/2
     if (nst2.eq.0) nst2 = 1
     ! sample the k integral (k=q), start with highest k
-    do ist=st%st_start, st%st_end
+    do ist = 1, st%nst
       ! always two states (ist=(1,2); (3,4), ...) have the same energy
       i = (ist-1)/2
       q = qmax - i*(qmax-qmin)/nst2
@@ -238,7 +238,7 @@ contains
 
     call memory_init(trans%intface, dt/M_TWO, max_iter, gr%f_der%der_discr%lapl,&
                       trans%mem_coeff, trans%mem_sp_coeff, trans%mem_s, trans%diag, trans%offdiag, gr%sb%dim, &
-                      gr%sb%h(1), trans%mem_type, gr%f_der%der_discr%order, trans%sp2full_map)
+                      gr%sb%h(1), trans%mem_type, gr%f_der%der_discr%order, trans%sp2full_map, st%mpi_grp)
 
     call source_init(st, trans%src_prev, trans%st_psi0, dt, trans%intface%np, gr)
 
@@ -511,7 +511,7 @@ contains
     CMPLX,          intent(in)      :: offdiag(np, np, NLEADS) ! hopping operator V^T
     integer,        intent(in)      :: order                   ! discretization order
     type(states_t), intent(inout)   :: st                      ! states
-    FLOAT, target,  intent(in)      :: energy(0:st%lnst)       ! energy
+    FLOAT, target,  intent(in)      :: energy(0:st%nst)       ! energy
 
     CMPLX, target, allocatable :: green_l(:,:,:)
     CMPLX, allocatable :: tmp(:, :)
@@ -545,13 +545,13 @@ contains
       qmax = sqrt(M_TWO*energy(1))
     end if
 
-    nst2 = (st%lnst-1)/2
+    nst2 = (st%nst-1)/2
     if (nst2.eq.0) nst2 = 1
     ! sample the k integral (k=q), start with highest k
     do id=2, gr%sb%dim ! FIXME: when the last gridpoint is not the border, recalculate transversal energy
       q(id) = M_PI/(M_TWO*(gr%sb%lsize(id)+gr%sb%h(id)))
     end do
-    do ist=st%st_start, st%st_end
+    do ist = st%st_start, st%st_end
       en = energy(ist) + energy(0)
       ! always two states (ist=(1,2); (3,4), ...) have the same energy
       ! start with en > emin
@@ -618,7 +618,7 @@ contains
     integer,        intent(in)      :: order                   ! discretization order
     FLOAT,          intent(in)      :: lead_pot(NLEADS)        ! lead potential at t=0
     type(states_t), intent(inout)   :: st                      ! states
-    FLOAT,          intent(in)      :: energy(0:st%lnst)       ! energy
+    FLOAT,          intent(in)      :: energy(0:st%nst)       ! energy
 
     integer  :: eigenstate_type
 
@@ -652,7 +652,7 @@ contains
     type(v_ks_t),                intent(in)    :: ks
     type(hamiltonian_t), target, intent(inout) :: h
     type(grid_t), target,        intent(inout) :: gr
-    FLOAT, target,               intent(in)    :: energy(0:st%lnst) ! energy of the states
+    FLOAT, target,               intent(in)    :: energy(0:st%nst) ! energy of the states
     FLOAT, target,               intent(in)    :: dt
     FLOAT, target,               intent(in)    :: t
     integer, target,             intent(in)    :: mem_type
@@ -674,6 +674,7 @@ contains
     CMPLX              :: factor, alpha, fac, f0
     CMPLX, allocatable :: tmp(:, :), tmp_wf(:), tmp_mem(:, :)
     CMPLX, allocatable :: ext_wf(:,:,:,:) ! NP+2*np, ndim, nst, nik
+    character(len=100) :: filename
 
     call push_sub('td_trans_rti.cn_src_mem_dt')
 
@@ -720,17 +721,29 @@ contains
       select case(groundstate)
       case(-1) ! do nothing
       case(0) ! td run with reading extended eigenstate
-        j = (NP+2*inp)*st%d%dim*st%lnst*st%d%nik
+        j = (NP+2*inp)*st%d%dim
         ALLOCATE(ext_wf(NP+2*inp, st%d%dim, st%st_start:st%st_end, st%d%nik), j)
-        call read_binary(j, ext_wf(1:NP+2*inp, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik), 3, ierr, 'ext_eigenstate.obf')
+        do ik = 1, st%d%nik
+          do ist = st%st_start, st%st_end
+            write(filename, '(a,i6.6,a,i6.6,a)') 'ext_eigenstate-', ist, '-', ik, '.obf'
+            call read_binary(j, ext_wf(1:NP+2*inp, 1:st%d%dim, ist, ik), 3, ierr, filename)
+          end do
+        end do
         st%zpsi(1:NP, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik) = &
-                      ext_wf(inp+1:NP+inp, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik)
+          ext_wf(inp+1:NP+inp, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik)
         deallocate(ext_wf)
       case(1) ! calculate the extended eigenstate
         ! DON NOT FORGET TO MAKE THE SIMULATION BOX BIGGER IN THE INP FILE
-        j = NP*st%d%dim*st%lnst*st%d%nik
-        call calculate_ext_eigenstate(h, gr, inp, diag, offdiag, order, energy, td_pot(0,:), st)
-        call write_binary(j, st%zpsi(1:NP, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik), 3, ierr, 'ext_eigenstate.obf')
+        j = NP*st%d%dim
+!        j = NP*st%d%dim*st%lnst*st%d%nik
+!        call write_binary(j, st%zpsi(1:NP, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik), 3, ierr, 'ext_eigenstate.obf')
+         call calculate_ext_eigenstate(h, gr, inp, diag, offdiag, order, energy, td_pot(0,:), st)
+        do ik = 1, st%d%nik
+          do ist = st%st_start, st%st_end
+            write(filename, '(a,i6.6,a,i6.6,a)') 'ext_eigenstate-', ist, '-', ik, '.obf'
+            call write_binary(j, st%zpsi(1:NP, 1:st%d%dim, ist, ik), 3, ierr, trim(filename))
+          end do
+        end do
       end select
     end if
 

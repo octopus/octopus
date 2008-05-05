@@ -30,6 +30,7 @@ module td_trans_mem_m
   use loct_m
   use math_m
   use messages_m
+  use mpi_m
   use nl_operator_m
   use states_m
   use system_m
@@ -199,7 +200,7 @@ contains
   ! Allocate (machine) memory for the memory coefficents and
   ! calculate them.
   subroutine memory_init(intface, delta, max_iter, op, coeff, sp_coeff, mem_s, &
-                          diag, offdiag, dim, spacing, mem_type, order, sp2full_map)
+    diag, offdiag, dim, spacing, mem_type, order, sp2full_map, mpi_grp)
     type(intface_t),     intent(in) :: intface
     FLOAT,               intent(in) :: delta
     integer,             intent(in) :: max_iter
@@ -214,6 +215,7 @@ contains
     integer,             intent(in) :: mem_type
     integer,             intent(in) :: order
     integer,             pointer    :: sp2full_map(:)
+    type(mpi_grp_t),     intent(in) :: mpi_grp
 
     integer            :: il, np, saved_iter, ii
 
@@ -315,8 +317,10 @@ contains
           message(2) = 'Info: Writing memory coefficients of '// &
             trim(lead_name(il))//' lead.'
           call write_info(2)
-          call write_coeffs(io_workpath("transport/"), coeff(:, :, :, il), sp_coeff(:, :, il), mem_s(:,:,:,il), dim, &
-                            max_iter, intface%np, spacing, delta, op%n, mem_type, np*order, il)
+          if(mpi_grp_is_root(mpi_grp)) then
+            call write_coeffs(io_workpath("transport/"), coeff(:, :, :, il), sp_coeff(:, :, il), mem_s(:,:,:,il), dim, &
+              max_iter, intface%np, spacing, delta, op%n, mem_type, np*order, il)
+          end if
         end if
       else
         message(1) = 'Info: Successfully loaded memory coefficients from '// &
