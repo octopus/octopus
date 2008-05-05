@@ -313,6 +313,13 @@ subroutine X(vec_ighost_update)(vp, v_local, handle)
     call MPI_Isend(v_local(1), 1, vp%X(send_type)(ipart), ipart - 1, 0, &
          vp%comm, handle%requests(inb, SEND), mpi_err)
 
+    inb = inb + 1
+  end do
+
+  inb = 1
+  do ipart = 1, vp%p
+    if(vp%np_ghost_neigh(ipart, vp%partno) == 0) cycle
+
     pos = vp%np_local(vp%partno) + 1 + vp%rdispls(ipart)
     call MPI_Irecv(v_local(pos), vp%rcounts(ipart), R_MPITYPE, ipart - 1, 0, &
          vp%comm, handle%requests(inb, RECV), mpi_err)
