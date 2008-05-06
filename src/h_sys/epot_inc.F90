@@ -33,6 +33,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
 #ifdef HAVE_MPI
   integer, allocatable :: recv_count(:), recv_displ(:)
   FLOAT, allocatable  :: force_local(:, :), grho_local(:, :)
+  type(profile_t), save :: prof
 #endif
 
   ALLOCATE(gpsi(gr%m%np, 1:NDIM, st%d%dim), gr%m%np*NDIM*st%d%dim)
@@ -84,6 +85,8 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
 #if defined(HAVE_MPI)
   if(st%parallel_in_states) then
 
+    call profiling_in(prof, "FORCES_MPI")
+
     !reduce the force
     ALLOCATE(force_local(1:MAX_DIM, 1:geo%natoms), MAX_DIM*geo%natoms)
     force_local = force
@@ -95,6 +98,8 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
     call lalg_copy(NP, MAX_DIM, grho, grho_local)
     call MPI_Allreduce(grho_local, grho, NP*MAX_DIM, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
     deallocate(grho_local)
+
+    call profiling_out(prof)
 
   end if
 #endif
@@ -124,6 +129,8 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
 #ifdef HAVE_MPI
   if(geo%parallel_in_atoms) then
 
+    call profiling_in(prof, "FORCES_MPI")
+
     ! each node has a piece of the force array, they have to be
     ! collected by all nodes, MPI_Allgatherv does precisely this (if
     ! we get the arguments right).
@@ -143,6 +150,8 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
          geo%mpi_grp%comm, mpi_err)
 
     deallocate(recv_count, recv_displ, force_local)
+
+    call profiling_out(prof)
 
   end if
 #endif
