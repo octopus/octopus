@@ -1025,6 +1025,7 @@ contains
       dipole(i) = dipole(i) * units_out%length%factor 
     end do
     deallocate(d)
+    dipole(0) = dipole(1)
 
     ! we now calculate the first time derivative
     ALLOCATE(ddipole(0:time_steps), time_steps+1)
