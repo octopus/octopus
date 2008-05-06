@@ -31,7 +31,8 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
   FLOAT,  allocatable :: grho(:, :), vloc(:)
   FLOAT,  allocatable :: force(:, :)
 #ifdef HAVE_MPI
-  FLOAT, allocatable  :: force_local(:, :)
+  integer, allocatable :: recv_count(:), recv_displ(:)
+  FLOAT, allocatable  :: force_local(:, :), grho_local(:, :)
 #endif
 
   ALLOCATE(gpsi(gr%m%np, 1:NDIM, st%d%dim), gr%m%np*NDIM*st%d%dim)
@@ -45,7 +46,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
   grho(1:NP, 1:NDIM) = M_ZERO
   !$omp end parallel workshare    
 
-  !the non-local part
+  !THE NON-LOCAL PART (parallel in states)
   do ik = 1, st%d%nik
     do ist = st%st_start, st%st_end
 
@@ -80,34 +81,72 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
 
   deallocate(gpsi)
 
-  !now add the local part
-  ALLOCATE(vloc(1:NP), NP)
-  
-  do iatom = 1, geo%natoms
-    
-    !$omp parallel workshare
-    vloc(1:NP) = M_ZERO
-    !$omp end parallel workshare
-    
-    call epot_local_potential(ep, gr, geo, geo%atom(iatom), vloc, time)
-    
-    do idir = 1, NDIM
-      force(idir, iatom) = force(idir, iatom) - dmf_dotp(gr%m, grho(1:NP, idir), vloc(1:NP))
-    end do
-
-  end do
-  
-  deallocate(vloc)
-
 #if defined(HAVE_MPI)
   if(st%parallel_in_states) then
+
+    !reduce the force
     ALLOCATE(force_local(1:MAX_DIM, 1:geo%natoms), MAX_DIM*geo%natoms)
     force_local = force
     call MPI_Allreduce(force_local, force, MAX_DIM*geo%natoms, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
     deallocate(force_local)
+
+    !reduce the gradient of the density
+    ALLOCATE(grho_local(NP, MAX_DIM), NP*MAX_DIM)
+    call lalg_copy(NP, MAX_DIM, grho, grho_local)
+    call MPI_Allreduce(grho_local, grho, NP*MAX_DIM, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+    deallocate(grho_local)
+
   end if
 #endif
   
+  do iatom = 1, geo%natoms
+    geo%atom(iatom)%f(1:MAX_DIM) = geo%atom(iatom)%f(1:MAX_DIM) + force(1:MAX_DIM, iatom)
+  end do
+
+  ! THE LOCAL PART (parallel in atoms)
+
+  ALLOCATE(vloc(1:NP), NP)
+  
+  do iatom = geo%atoms_start, geo%atoms_end
+    
+    vloc(1:NP) = M_ZERO
+    
+    call epot_local_potential(ep, gr, geo, geo%atom(iatom), vloc, time)
+    
+    do idir = 1, NDIM
+      force(idir, iatom) = -dmf_dotp(gr%m, grho(1:NP, idir), vloc(1:NP))
+    end do
+
+  end do
+
+  deallocate(vloc)
+
+#ifdef HAVE_MPI
+  if(geo%parallel_in_atoms) then
+
+    ! each node has a piece of the force array, they have to be
+    ! collected by all nodes, MPI_Allgatherv does precisely this (if
+    ! we get the arguments right).
+
+    ALLOCATE(recv_count(geo%mpi_grp%size), geo%mpi_grp%size)
+    ALLOCATE(recv_displ(geo%mpi_grp%size), geo%mpi_grp%size)
+    ALLOCATE(force_local(1:MAX_DIM, 1:geo%nlatoms), MAX_DIM*geo%nlatoms)
+
+    recv_count(1:geo%mpi_grp%size) = MAX_DIM*geo%atoms_num(0:geo%mpi_grp%size - 1)
+    recv_displ(1:geo%mpi_grp%size) = MAX_DIM*(geo%atoms_range(1, 0:geo%mpi_grp%size - 1) - 1)
+
+    force_local(1:MAX_DIM, 1:geo%nlatoms) = force(1:MAX_DIM, geo%atoms_start:geo%atoms_end)
+
+    call MPI_Allgatherv(&
+         force_local(1, 1), MAX_DIM*geo%nlatoms, MPI_FLOAT, &
+         force(1, 1), recv_count(1), recv_displ(1), MPI_FLOAT, &
+         geo%mpi_grp%comm, mpi_err)
+
+    deallocate(recv_count, recv_displ, force_local)
+
+  end if
+#endif
+
   do iatom = 1, geo%natoms
     geo%atom(iatom)%f(1:MAX_DIM) = geo%atom(iatom)%f(1:MAX_DIM) + force(1:MAX_DIM, iatom)
   end do
