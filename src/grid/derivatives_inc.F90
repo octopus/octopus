@@ -193,7 +193,6 @@ subroutine X(derivatives_grad)(der, f, grad, ghost_update, set_bc)
 
   if(der%overlap .and. der%m%parallel_in_domains .and. ghost_update_) then
 
-    call pv_handle_init(handle%pv_h, der%m%vp)
     call X(vec_ighost_update)(der%m%vp, handle%X(f), handle%pv_h)
 
     do idir = 1, der%m%sb%dim
@@ -201,7 +200,6 @@ subroutine X(derivatives_grad)(der, f, grad, ghost_update, set_bc)
     end do
 
     call pv_handle_wait(handle%pv_h)
-    call pv_handle_end(handle%pv_h)
 
     do idir = 1, der%m%sb%dim
       call X(nl_operator_operate)(der%grad(idir), handle%X(f), grad(:, idir), ghost_update = .false., points = OP_OUTER)
@@ -250,13 +248,11 @@ subroutine X(derivatives_oper)(op, der, f, opf, ghost_update)
 
   if(der%overlap .and. der%m%parallel_in_domains .and. ghost_update_) then
 
-    call pv_handle_init(handle%pv_h, der%m%vp)
     call X(vec_ighost_update)(der%m%vp, handle%X(f), handle%pv_h)
 
     call X(nl_operator_operate)(op, handle%X(f), opf, ghost_update = .false., points = OP_INNER)
 
     call pv_handle_wait(handle%pv_h)
-    call pv_handle_end(handle%pv_h)
 
     call X(nl_operator_operate)(op, handle%X(f), opf, ghost_update = .false., points = OP_OUTER)
 
