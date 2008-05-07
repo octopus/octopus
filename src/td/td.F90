@@ -483,9 +483,6 @@ contains
       ! I apply the delta electric field *after* td_write_iter, otherwise the
       ! dipole matrix elements in write_proj are wrong
       call apply_delta_field(td%kick)
-
-      call td_save_restart(0)
-      call td_write_data(write_handler, gr, st, h, sys%outp, geo, 0)
       call td_rti_run_zero_iter(h, td%tr)
 
       call pop_sub()
