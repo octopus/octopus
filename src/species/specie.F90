@@ -420,6 +420,8 @@ contains
 
       call loct_parse_block_float (blk, row, 3, s%Z)
 
+      if(s%type == SPEC_PS_UPF) read_data = 4
+
       if(n>4) then
         call loct_parse_block_int (blk, row, 4, s%lmax)
         read_data = 5
