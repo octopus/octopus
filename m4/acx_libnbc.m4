@@ -1,10 +1,7 @@
 AC_DEFUN([ACX_LIBNBC], [
 
 dnl LibNBC is included in the distribution
-acx_libnbc_ok=yes
-
-dnl LibNBC is enabled by default
-AC_ARG_ENABLE(libnbc, AS_HELP_STRING([--disable-libnbc], [Disable support for non-blocking collectives via LibNBC]), [acx_libnbc_ok=no])
+acx_libnbc_ok=no
 
 AC_MSG_CHECKING([whether libnbc is enabled])
 
