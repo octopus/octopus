@@ -133,7 +133,7 @@ contains
       fxc(:,1,1) = fxc(:,1,1) + dedd(:,1)
     case(SPIN_POLARIZED)
       fxc(:,1,1) = fxc(:,1,1) + dedd(:,1)
-      fxc(:,2,2) = fxc(:,1,1) + dedd(:,3)
+      fxc(:,2,2) = fxc(:,2,2) + dedd(:,3)
       fxc(:,1,2) = fxc(:,1,2) + dedd(:,2)
       fxc(:,2,1) = fxc(:,2,1) + dedd(:,2)
     case(SPINORS)
