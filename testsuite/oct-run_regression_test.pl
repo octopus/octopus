@@ -80,7 +80,7 @@ Test       : $opt_c
 Author     : $author
 Date       : $date
 Arch       : $arch
-Release    : 3.0.0pre1
+Release    : 3.0.1
 Programs   : octopus
 TestGroups : short-run
 Enabled    : Yes

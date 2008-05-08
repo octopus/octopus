@@ -5,7 +5,7 @@ Test       : Current
 Author     : Alberto
 Date       : 13.03.07
 Arch       : Linux appartment 2.6.18-4-686 #1 SMP Wed Feb 21 16:06:54 UTC 2007 i686 GNU/Linux
-Release    : 3.0.0
+Release    : 3.0.1
 Programs   : octopus
 TestGroups : long-run
 Enabled    : Yes

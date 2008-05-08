@@ -5,7 +5,7 @@ Test       : Geometry optimization
 Author     : Xavier
 Date       : 11.23.07
 Arch       : Linux lascar 2.6.21-2-amd64 #1 SMP Wed Jul 11 05:38:29 UTC 2007 x86_64 GNU/Linux
-Release    : 3.0.0
+Release    : 3.0.1
 Programs   : octopus_mpi; octopus
 TestGroups : short-run
 Enabled    : Yes
