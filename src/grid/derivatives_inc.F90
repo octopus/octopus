@@ -205,14 +205,16 @@ subroutine X(derivatives_grad)(der, f, grad, ghost_update, set_bc)
       call X(nl_operator_operate)(der%grad(idir), handle%X(f), grad(:, idir), ghost_update = .false., points = OP_OUTER)
     end do
 
-    call pop_sub()
-    return
+  else
+#endif
+    
+    do idir = 1, der%m%sb%dim
+      call X(nl_operator_operate) (der%grad(idir), handle%X(f), grad(:, idir), ghost_update = ghost_update)
+    end do
+    
+#ifdef HAVE_MPI
   end if
 #endif
-
-  do idir = 1, der%m%sb%dim
-    call X(nl_operator_operate) (der%grad(idir), handle%X(f), grad(:, idir), ghost_update = ghost_update)
-  end do
 
   if(handle%dealloc_f) deallocate(handle%X(f))
   call der_handle_end(handle)
@@ -256,12 +258,14 @@ subroutine X(derivatives_oper)(op, der, f, opf, ghost_update)
 
     call X(nl_operator_operate)(op, handle%X(f), opf, ghost_update = .false., points = OP_OUTER)
 
-    call pop_sub()
-    return
-  end if
+  else
 #endif
 
-  call X(nl_operator_operate) (op, handle%X(f), opf, ghost_update = ghost_update)
+    call X(nl_operator_operate) (op, handle%X(f), opf, ghost_update = ghost_update)
+
+#ifdef HAVE_MPI
+  end if
+#endif
 
   if(handle%dealloc_f) deallocate(handle%X(f))
   call der_handle_end(handle)
