@@ -36,7 +36,10 @@ subroutine X(vec_scatter)(vp, v, v_local)
   integer, allocatable :: displs(:) ! Displacements for scatter.
   R_TYPE,  allocatable :: v_tmp(:)  ! Send buffer.
 
-  if(vp%p.lt.2) return
+  if(vp%p.lt.2) then
+    v_local = v
+    return
+  end if
 
   call push_sub('par_vec.Xvec_scatter')
 
@@ -86,8 +89,6 @@ subroutine X(vec_scatter_bndry)(vp, v, v_local)
   integer              :: i         ! Counter.
   integer, allocatable :: displs(:) ! Displacements for scatter.
   R_TYPE,  allocatable :: v_tmp(:)  ! Send buffer.
-
-  if(vp%p.lt.2) return
 
   call push_sub('par_vec.Xvec_scatter_bndry')
 
@@ -153,7 +154,10 @@ subroutine X(vec_gather)(vp, v, v_local)
   integer, allocatable :: displs(:) ! Displacements for scatter.
   R_TYPE,  allocatable :: v_tmp(:)  ! Receive buffer.
 
-  if(vp%p.lt.2) return
+  if(vp%p.lt.2) then
+    v = v_local
+    return
+  end if
 
   call push_sub('par_vec.Xvec_gather')
 
@@ -199,8 +203,6 @@ subroutine X(vec_allgather)(vp, v, v_local)
   integer              :: i         ! Counter.
   integer, allocatable :: displs(:) ! Displacements for scatter.
   R_TYPE,  allocatable :: v_tmp(:)  ! Receive buffer.
-
-  if(vp%p.lt.2) return
 
   call push_sub('par_vec.Xvec_allgather')
 
