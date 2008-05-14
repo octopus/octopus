@@ -39,6 +39,7 @@ module one_shot_m
   use varinfo_m
   use specie_pot_m
   use xc_m
+  use h_sys_output_m
 
   implicit none
 
@@ -95,6 +96,8 @@ contains
     write(message(7), '(6x,a, f15.8)')'Correlation = ', E_c       / units_out%energy%factor
     call write_info(7, stdout)
     call messages_print_stress(stdout)
+
+    call h_sys_output_all(sys%outp, sys%gr, sys%geo, sys%st, h, "static")
 
     call states_deallocate_wfns(sys%st)
 
