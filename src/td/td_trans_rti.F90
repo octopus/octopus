@@ -575,13 +575,10 @@ contains
         end do
       end do
       ! calculate right hand side (e-T-V(lead)-sum(a)[H_ca*g_a*H_ac]
-      ! only calculate once for a given energy
-      if (mod(ist-1,2).eq.0) then
-        call green_lead(en, diag(:, :, LEFT), offdiag(:, :, LEFT), np, LEFT, green_l(:, :, LEFT), dx(1))
-        call apply_coupling(green_l(:, :, LEFT), offdiag(:, :, LEFT), green_l(:, :, LEFT), np, LEFT)
-        call green_lead(en, diag(:, :, RIGHT), offdiag(:, :, RIGHT), np, RIGHT, green_l(:, :, RIGHT), dx(1))
-        call apply_coupling(green_l(:, :, RIGHT), offdiag(:, :, RIGHT), green_l(:, :, RIGHT), np, RIGHT)
-      end if
+      call green_lead(en, diag(:, :, LEFT), offdiag(:, :, LEFT), np, LEFT, green_l(:, :, LEFT), dx(1))
+      call apply_coupling(green_l(:, :, LEFT), offdiag(:, :, LEFT), green_l(:, :, LEFT), np, LEFT)
+      call green_lead(en, diag(:, :, RIGHT), offdiag(:, :, RIGHT), np, RIGHT, green_l(:, :, RIGHT), dx(1))
+      call apply_coupling(green_l(:, :, RIGHT), offdiag(:, :, RIGHT), green_l(:, :, RIGHT), np, RIGHT)
 
       tmp(:,:) = M_z0
       call zkinetic(h, gr, st%zpsi(:, :, ist, 1), tmp(:,:))
