@@ -56,6 +56,10 @@ module ps_m
     PS_TYPE_FHI = 103,          &
     PS_TYPE_UPF = 104
 
+  integer, parameter, public :: &
+    PS_FILTER_NONE = 1,         &
+    PS_FILTER_TS   = 2
+
   character(len=3), parameter  :: ps_name(PS_TYPE_PSF:PS_TYPE_UPF) = (/"tm2", "hgh", "cpi", "fhi", "upf"/)
 
   type ps_t
@@ -391,24 +395,32 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine ps_filter(ps, gmax, alpha, gamma)
+  subroutine ps_filter(ps, filter, gmax, alpha, gamma)
     type(ps_t), intent(inout) :: ps
-    FLOAT, intent(in) :: gmax
-    FLOAT, intent(in) :: alpha, gamma
+    integer,    intent(in)    :: filter
+    FLOAT,      intent(in)    :: gmax
+    FLOAT,      intent(in)    :: alpha, gamma
     integer :: l, k
 
     call push_sub('ps.ps_filter')
 
-    call filter_mask(ps%vl, ps%l_loc, spline_cutoff_radius(ps%vl, ps%projectors_sphere_threshold), gmax, alpha, gamma )
+    select case(filter)
+    case(PS_FILTER_NONE)
 
-    do l = 0, ps%l_max
-      if(l == ps%l_loc) cycle
-      do k = 1, ps%kbc
-        call filter_mask(ps%kb(l, k), l, ps%rc_max, gmax, alpha, gamma)
+    case(PS_FILTER_TS)
+      call spline_filter_mask(ps%vl, ps%l_loc,  &
+        spline_cutoff_radius(ps%vl, ps%projectors_sphere_threshold), gmax, alpha, gamma )
+      do l = 0, ps%l_max
+        if(l == ps%l_loc) cycle
+        do k = 1, ps%kbc
+          call spline_filter_mask(ps%kb(l, k), l, ps%rc_max, gmax, alpha, gamma)
+        end do
       end do
-    end do
+      
+      if(trim(ps%icore).ne.'nc') call spline_filter_mask(ps%core, 0, &
+        spline_cutoff_radius(ps%core, ps%projectors_sphere_threshold), gmax, alpha, gamma)
 
-    if(trim(ps%icore).ne.'nc') call spline_filter_ft(ps%core, fs = (/ alpha*gmax, CNST(100.0) /) )
+    end select
 
     call pop_sub()
   end subroutine ps_filter

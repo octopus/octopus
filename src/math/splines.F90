@@ -233,6 +233,7 @@ module splines_m
 
   ! the basic spline datatype
   type spline_t
+    real(8)     :: x_limit(2)
     type(c_ptr) :: spl, acc
   end type spline_t
 
@@ -422,7 +423,7 @@ contains
     call oct_spline_x(splin%spl, x(1))
     call oct_spline_y(splout%spl, y(1))
 
-    call oct_spline_fit(npoints, x(1), y(1), splout%spl, splout%acc)
+    call spline_fit(npoints, x, y, splout)
 
     deallocate(x, y)
   end subroutine spline_copy
@@ -431,6 +432,9 @@ contains
     integer, intent(in) :: nrc
     real(8), intent(in) :: ffit(nrc), rofi(nrc)
     type(spline_t), intent(out) :: spl
+
+    spl%x_limit(1) = rofi(1)
+    spl%x_limit(2) = rofi(nrc)
     call oct_spline_fit(nrc, rofi(1), ffit(1), spl%spl, spl%acc)
   end subroutine spline_fit8
 
@@ -445,7 +449,7 @@ contains
     ALLOCATE(ffit8(nrc), nrc)
     rofi8 = real(rofi, kind=8)
     ffit8 = real(ffit, kind=8)
-    call oct_spline_fit(nrc, rofi8(1), ffit8(1), spl%spl, spl%acc)
+    call spline_fit8(nrc, rofi8, ffit8, spl)
     deallocate(rofi8, ffit8)
   end subroutine spline_fit4
 
@@ -542,6 +546,7 @@ contains
   real(8) function spline_integral_limits(spl, a, b) result(res)
     type(spline_t), intent(in) :: spl
     real(8), intent(in) :: a, b
+
     res = oct_spline_eval_integ(spl%spl, a, b, spl%acc)
   end function spline_integral_limits
 
@@ -611,6 +616,7 @@ contains
     call oct_spline_fit(npoints, x(1), y2(1), aux%spl, aux%acc)
     yw(1) = oct_spline_eval_integ(aux%spl, x(1), x(npoints), aux%acc)
     call spline_end(aux)
+
     do i = 2, np
       do j = 1, npoints
         y2(j) = (CNST(4.0)*M_PI/xw(i))*y(j)*x(j)*sin(xw(i)*x(j))
@@ -661,14 +667,14 @@ contains
       ALLOCATE(xw(np), np)
       ALLOCATE(yw(np), np)
       do i = 1, np
-        g = (i-1)*dg
+        g = real(i-1, 8)*dg
         xw(i) = g
       end do
     end if
 
     do i = 1, np
       do j = 1, npoints
-        y2(j) = y(j)*x(j)**2*loct_sph_bessel(l, x(j)*xw(i))
+        y2(j) = y(j) * x(j)**2 * loct_sph_bessel(l, x(j)*xw(i))
       end do
       call spline_init(aux)
       call oct_spline_fit(npoints, x(1), y2(1), aux%spl, aux%acc)
@@ -705,8 +711,8 @@ contains
   end subroutine spline_cut
 
   subroutine spline_div(spla, splb)
-    type(spline_t), intent(inout) :: spla
-    type(spline_t), intent(in)    :: splb
+    type(spline_t),   intent(inout) :: spla
+    type(spline_t),   intent(in)    :: splb
 
     integer :: npoints, i
     real(8), allocatable :: x(:), y(:)
@@ -721,8 +727,8 @@ contains
     call oct_spline_end(spla%spl, spla%acc)
   
     do i = npoints, 1, -1
+      if(x(i) > splb%x_limit(2)) cycle
       aa = spline_eval(splb, x(i))
-      if(abs(aa) < M_EPSILON) cycle
       y(i) = y(i)/aa
     end do
     
@@ -733,8 +739,8 @@ contains
 
 
    subroutine spline_mult(spla, splb)
-    type(spline_t), intent(inout) :: spla
-    type(spline_t), intent(in)    :: splb
+    type(spline_t),  intent(inout) :: spla
+    type(spline_t),  intent(in)    :: splb
 
     integer :: npoints, i
     real(8), allocatable :: x(:), y(:)
@@ -749,8 +755,11 @@ contains
     call oct_spline_end(spla%spl, spla%acc)
   
     do i = npoints, 1, -1
-      aa = spline_eval(splb, x(i))
-      if(abs(aa) < M_EPSILON) cycle
+      if(x(i) > splb%x_limit(2)) then
+        aa = M_ZERO
+      else
+        aa = spline_eval(splb, x(i))
+      end if
       y(i) = y(i)*aa
     end do
     
@@ -758,7 +767,6 @@ contains
 
     deallocate(x, y)
   end subroutine spline_mult
-
 
 
   subroutine spline_der(spl, dspl)

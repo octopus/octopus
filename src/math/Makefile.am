@@ -29,7 +29,7 @@ libmath_a_SOURCES = \
 noinst_HEADERS = \
 	lalg_basic_blas.F90 lalg_adv_lapack.F90 math_cg_inc.F90 math_inc.F90 \
 	ode_solver_inc.F90 root_solver_inc.F90 sparskit_inc.F90 \
-	fftw2.F90 fftw3.F90 fft_cuda_inc.F90 filters_data.F90
+	fftw2.F90 fftw3.F90 fft_cuda_inc.F90
 
 include $(srcdir)/../common-rules.make
 
@@ -51,4 +51,4 @@ fft.o : fft.F90 fftw3.F90 fftw2.F90 fft_cuda_inc.F90 lalg_basic.o loct_math.o
 oct_gsl_f.o : oct_gsl_f.c
 ylm.o : ylm.c
 fft_cuda.o : fft_cuda.c
-filters.o: filters.F90 filters_data.F90 splines.o
+filters.o: filters.F90 splines.o

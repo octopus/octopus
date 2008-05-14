@@ -73,7 +73,7 @@ contains
   subroutine specie_pot_init(this, gr, filter)
     type(specie_t),      intent(inout) :: this
     type(grid_t),        intent(in)    :: gr
-    logical,             intent(in)    :: filter
+    integer,             intent(in)    :: filter
 
     character(len=256) :: dirname
 
@@ -84,8 +84,9 @@ contains
 
       call ps_getradius(this%ps)
 
-      if(filter) then 
-        call ps_filter(this%ps, mesh_gcutoff(gr%m), CNST(1.1), CNST(2.0))
+      if(filter .ne. PS_FILTER_NONE) then 
+        call ps_filter(this%ps, filter, mesh_gcutoff(gr%m), CNST(1.1), CNST(2.0))
+        call ps_getradius(this%ps) ! radius may have changed
       end if
 
       call ps_derivatives(this%ps)

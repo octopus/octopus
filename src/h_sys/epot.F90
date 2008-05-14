@@ -43,6 +43,7 @@ module external_pot_m
   use ps_m
   use specie_m
   use specie_pot_m
+  use spline_filter_m
   use solids_m
   use geometry_m
   use states_m
@@ -118,27 +119,29 @@ contains
     integer :: i
     type(block_t) :: blk
     FLOAT, allocatable :: x(:)
-    logical :: filter
+    integer :: filter
 
     call push_sub('epot.epot_init')
 
     !%Variable FilterPotentials
-    !%Type logical
-    !%Default no
+    !%Type integer
+    !%Default 1
     !%Section Hamiltonian
     !%Description
-    !% If set to yes, octopus filters the pseudopotentials so that they no
+    !% Octopus filters the pseudopotentials so that they no
     !% longer contain Fourier components larger than the mesh itself. This is
     !% very useful to decrease the egg-box effect, and so should be used in
     !% all instances where atoms move.
+    !%Option filter_none 1
+    !% Do not filter
+    !%Option filter_TS 2
+    !% The filter of M. Tafipolsky and R. Schmid, J. Chem. Phys. 124, 174102 (2006)
     !%End
-    call loct_parse_logical(check_inp('FilterPotentials'), .false., filter)
+    call loct_parse_int(check_inp('FilterPotentials'), PS_FILTER_NONE, filter)
+    if(.not.varinfo_valid_option('FilterPotentials', filter)) call input_error('FilterPotentials')
+    call messages_print_var_option(stdout, "FilterPotentials", filter)
 
-    if(filter) then
-      message(1) = 'Info: filtering the potentials.'
-      call write_info(1)
-    end if
-    
+    if(filter == PS_FILTER_TS) call spline_filter_mask_init()
     do i = 1, geo%nspecies
       call specie_pot_init(geo%specie(i), gr, filter)
     end do

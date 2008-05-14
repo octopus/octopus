@@ -21,6 +21,7 @@
 
 module spline_filter_m
   use global_m
+  use io_m
   use splines_m
   use loct_math_m
   use messages_m
@@ -33,7 +34,8 @@ module spline_filter_m
   public ::               &
     spline_filter_ft,     &
     spline_filter_bessel, &  
-    filter_mask       
+    spline_filter_mask,   &
+    spline_filter_mask_init
 
   integer, parameter :: mask_n = 201
   FLOAT :: mask_x(mask_n), mask_y(mask_n)
@@ -50,7 +52,7 @@ contains
   !     cutoff = rs(1) and beta = rs(2). If both arguments are
   !     supplied, the Fourier filter will be applied *before*.
   !
-
+  !----------------------------------------------------------------------------
   subroutine spline_filter_ft(spl, fs, rs)
     type(spline_t),      intent(inout) :: spl
     FLOAT, optional,     intent(in)    :: fs(2)
@@ -72,6 +74,8 @@ contains
 
   end subroutine spline_filter_ft
 
+  
+  !----------------------------------------------------------------------------
   subroutine spline_filter_bessel(spl, l, fs, rs)
     type(spline_t), intent(inout) :: spl
     integer, intent(in) :: l
@@ -93,7 +97,21 @@ contains
 
   end subroutine spline_filter_bessel
 
-  subroutine filter_mask(spl, l,rnlmax, qmax, alpha, gamma)
+
+  !----------------------------------------------------------------------------
+  subroutine spline_filter_mask_init()
+    integer :: iunit, i
+
+    iunit = io_open(trim(conf%share)//"/filter_mask.data", action='read', status='old', die=.true.)
+    do i = 1, mask_n
+      read(iunit, *), mask_x(i), mask_y(i)
+    end do
+
+  end subroutine spline_filter_mask_init
+
+
+  !----------------------------------------------------------------------------
+  subroutine spline_filter_mask(spl, l, rnlmax, qmax, alpha, gamma)
     type(spline_t), intent(inout) :: spl
     integer,        intent(in)    :: l
     FLOAT,          intent(in)    :: rnlmax
@@ -102,28 +120,27 @@ contains
     FLOAT,          intent(in)    :: gamma
 
     type(spline_t) :: mask, splw
-    FLOAT :: rcut, beta
+    FLOAT :: local_mask_x(mask_n), rcut, beta
+    integer :: i
 
-    call push_sub('filters.filter_mask')
-
-    call mask_function_init()
+    call push_sub('filters.spline_filter_mask')
 
     rcut = gamma*rnlmax
 
     ! we define the mask function as f(r/rcut)
-    mask_x = mask_x*rcut
-    call spline_fit(mask_n, mask_x, mask_y, mask)
+    local_mask_x = mask_x*rcut
+    call spline_fit(mask_n, local_mask_x, mask_y, mask)
 
     ! apply the mask function
     call spline_div(spl, mask)
 
     ! transform to bessel space
     call spline_init(splw)
-    call spline_besselft(spl, splw, l, M_TWO*qmax)
+    call spline_besselft(spl, splw, l, M_FOUR*qmax)
 
     ! apply a cutoff
-    beta = log(M_ONE/CNST(1e-5))/(M_ONE/alpha - 1)**2
-    call spline_cut(spl, qmax/alpha, beta)
+    beta = log(CNST(1e5))/(alpha - 1)**2
+    call spline_cut(splw, qmax/alpha, beta)
 
     ! transform back to real space
     call spline_besselft(splw, spl, l)
@@ -134,9 +151,7 @@ contains
 
     call pop_sub()
 
-  end subroutine filter_mask
-
-#include "filters_data.F90"
+  end subroutine spline_filter_mask
 
 end module spline_filter_m
 
