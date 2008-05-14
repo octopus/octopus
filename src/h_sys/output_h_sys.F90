@@ -91,7 +91,8 @@ module h_sys_output_m
     output_pol_density    =  4096,    &
     output_r              =  8192,    &
     output_ked            = 16384,    &
-    output_j_flow         = 32768
+    output_j_flow         = 32768,    &
+    output_dos            = 65536
 
 contains
 
@@ -178,6 +179,8 @@ contains
     !% files will be called "tau-1" and "tau-2", if the spin-resolved kinetic
     !% energy density is produced (runs in spin-polarized and spinors mode), or
     !% only "tau" if the run is in spin unpolarized mode.
+    !%Option dos 65536
+    !% Prints out the density of states.
     !%End
     call loct_parse_int(check_inp('Output'), 0, outp%what)
 

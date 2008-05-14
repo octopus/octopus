@@ -528,7 +528,6 @@ contains
 
     if(simul_box_is_periodic(gr%sb).and.st%d%nik > st%d%nspin) then
       call states_write_bands('static', st%nst, st, gr%sb)
-      call states_write_dos  ('static', st)
       call states_write_fermi_energy('static', st, gr%m, gr%sb)
       call states_degeneracy_matrix(st)
     end if
