@@ -428,7 +428,7 @@ contains
       end if
 
     case(PS_FILTER_BSB)
-      alpha   = M_FOUR/M_SEVEN
+      alpha   = CNST(0.7) ! The original was M_FOUR/M_SEVEN
       beta_fs = CNST(18.0)
       rcut    = CNST(2.5)
       beta_rs = CNST(0.4)

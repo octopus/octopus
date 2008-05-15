@@ -269,11 +269,12 @@ contains
     !% <math>q</math> should sum up to <math>z</math>). <math>\delta</math> is 
     !% the grid spacing (the grid spacing in the first dimension, to be precise). 
     !% <math>\vec{r0}</math> is calculated in such a way that the the first moment of 
-    !% <math>q(r)/z</math> is equal to the atomic position.
+    !% <math>q(r)/z</math> is equal to the atomic position. This number should be small,
+    !% but you may run into numerical difficulties if it is too small.
     !%
     !% For a precise description, see [N. A. Modine, Phys. Rev. B 55, 10289 (1997)]
     !%End
-    call loct_parse_float(check_inp('SpecieAllElectronSigma'), CNST(0.2), s%sigma)
+    call loct_parse_float(check_inp('SpecieAllElectronSigma'), CNST(0.25), s%sigma)
     if(s%sigma <= M_ZERO) call input_error('SpecieAllElectronSigma')
 
     ! First, find out if there is a Species block.
