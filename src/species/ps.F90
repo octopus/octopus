@@ -58,7 +58,8 @@ module ps_m
 
   integer, parameter, public :: &
     PS_FILTER_NONE = 1,         &
-    PS_FILTER_TS   = 2
+    PS_FILTER_TS   = 2,         &
+    PS_FILTER_BSB  = 3
 
   character(len=3), parameter  :: ps_name(PS_TYPE_PSF:PS_TYPE_UPF) = (/"tm2", "hgh", "cpi", "fhi", "upf"/)
 
@@ -395,12 +396,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine ps_filter(ps, filter, gmax, alpha, gamma)
+  subroutine ps_filter(ps, filter, gmax)
     type(ps_t), intent(inout) :: ps
     integer,    intent(in)    :: filter
     FLOAT,      intent(in)    :: gmax
-    FLOAT,      intent(in)    :: alpha, gamma
     integer :: l, k
+
+    FLOAT :: alpha, beta_fs, rmax, rcut, gamma, beta_rs
 
     call push_sub('ps.ps_filter')
 
@@ -408,8 +410,11 @@ contains
     case(PS_FILTER_NONE)
 
     case(PS_FILTER_TS)
-      call spline_filter_mask(ps%vl, ps%l_loc,  &
-        spline_cutoff_radius(ps%vl, ps%projectors_sphere_threshold), gmax, alpha, gamma )
+      alpha = CNST(1.1)
+      gamma = CNST(2.0)
+
+      rmax = spline_cutoff_radius(ps%vl, ps%projectors_sphere_threshold)
+      call spline_filter_mask(ps%vl, ps%l_loc, rmax, gmax, alpha, gamma)
       do l = 0, ps%l_max
         if(l == ps%l_loc) cycle
         do k = 1, ps%kbc
@@ -417,8 +422,28 @@ contains
         end do
       end do
       
-      if(trim(ps%icore).ne.'nc') call spline_filter_mask(ps%core, 0, &
-        spline_cutoff_radius(ps%core, ps%projectors_sphere_threshold), gmax, alpha, gamma)
+      if(trim(ps%icore).ne.'nc') then
+        rmax = spline_cutoff_radius(ps%core, ps%projectors_sphere_threshold)
+        call spline_filter_mask(ps%core, 0, rmax, gmax, alpha, gamma)
+      end if
+
+    case(PS_FILTER_BSB)
+      alpha   = M_FOUR/M_SEVEN
+      beta_fs = CNST(18.0)
+      rcut    = CNST(2.5)
+      beta_rs = CNST(0.4)
+
+      call spline_filter_bessel(ps%vl, ps%l_loc, gmax, alpha, beta_fs, rcut, beta_rs)
+      do l = 0, ps%l_max
+        if(l == ps%l_loc) cycle
+        do k = 1, ps%kbc
+          call spline_filter_bessel(ps%kb(l, k), l, gmax, alpha, beta_fs, rcut, beta_rs)
+        end do
+      end do
+      
+      if(trim(ps%icore).ne.'nc') then
+        call spline_filter_bessel(ps%core, 0, gmax, alpha, beta_fs, rcut, beta_rs)
+      end if
 
     end select
 

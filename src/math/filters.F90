@@ -76,24 +76,19 @@ contains
 
   
   !----------------------------------------------------------------------------
-  subroutine spline_filter_bessel(spl, l, fs, rs)
+  subroutine spline_filter_bessel(spl, l, qmax, alpha, beta_fs, rcut, beta_rs)
     type(spline_t), intent(inout) :: spl
     integer, intent(in) :: l
-    FLOAT, intent(in), optional :: fs(2)
-    FLOAT, intent(in), optional :: rs(2)
+    FLOAT, intent(in)   :: qmax, alpha, beta_fs, rcut, beta_rs
 
     type(spline_t) :: splw
 
-    if(present(fs)) then
-      call spline_init(splw)
-      call spline_besselft(spl, splw, l, CNST(2.0)*fs(1))
-      call spline_cut(splw, fs(1), fs(2))
-      call spline_besselft(splw, spl, l)
-      call spline_end(splw)
-    end if
-    if(present(rs)) then
-      call spline_cut(spl, rs(1), rs(2))
-    end if
+    call spline_init(splw)
+    call spline_besselft(spl, splw, l, M_FOUR*qmax)
+    call spline_cut(splw, alpha*qmax, beta_fs)
+    call spline_besselft(splw, spl, l)
+    call spline_end(splw)
+    call spline_cut(spl, rcut, beta_rs)
 
   end subroutine spline_filter_bessel
 
@@ -111,10 +106,10 @@ contains
 
 
   !----------------------------------------------------------------------------
-  subroutine spline_filter_mask(spl, l, rnlmax, qmax, alpha, gamma)
+  subroutine spline_filter_mask(spl, l, rmax, qmax, alpha, gamma)
     type(spline_t), intent(inout) :: spl
     integer,        intent(in)    :: l
-    FLOAT,          intent(in)    :: rnlmax
+    FLOAT,          intent(in)    :: rmax
     FLOAT,          intent(in)    :: qmax
     FLOAT,          intent(in)    :: alpha
     FLOAT,          intent(in)    :: gamma
@@ -125,7 +120,7 @@ contains
 
     call push_sub('filters.spline_filter_mask')
 
-    rcut = gamma*rnlmax
+    rcut = gamma*rmax
 
     ! we define the mask function as f(r/rcut)
     local_mask_x = mask_x*rcut

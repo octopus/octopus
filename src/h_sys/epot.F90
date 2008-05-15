@@ -136,6 +136,8 @@ contains
     !% Do not filter
     !%Option filter_TS 2
     !% The filter of M. Tafipolsky and R. Schmid, J. Chem. Phys. 124, 174102 (2006)
+    !%Option filter_BSB 3
+    !% The filter of E. L. Briggs, D. J. Sullivan, and J. Bernholc, Phys. Rev. B 54, 14362 (1996)
     !%End
     call loct_parse_int(check_inp('FilterPotentials'), PS_FILTER_NONE, filter)
     if(.not.varinfo_valid_option('FilterPotentials', filter)) call input_error('FilterPotentials')

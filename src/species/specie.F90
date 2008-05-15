@@ -96,10 +96,6 @@ module specie_m
 
     ! For the TM pseudos, the lmax and lloc.
     integer :: lmax, lloc
-
-    ! The filtering parameters.
-    FLOAT :: alpha, beta, rcut, beta2
-
   end type specie_t
 
 
@@ -338,7 +334,7 @@ contains
     type(specie_t), intent(inout) :: s
 
     character(len=10) :: label
-    FLOAT :: weight, z, def_h, def_rsize, alpha, beta, rcut, beta2
+    FLOAT :: weight, z, def_h, def_rsize
     integer :: lloc, lmax
     integer :: type
 
@@ -346,7 +342,7 @@ contains
 
     backspace(iunit)
 
-    read(iunit,*) label, weight, type, z, lmax, lloc, def_h, def_rsize, alpha, beta, rcut, beta2
+    read(iunit,*) label, weight, type, z, lmax, lloc, def_h, def_rsize
     def_h     = def_h     * P_ANG  ! These units are always in Angstrom
     def_rsize = def_rsize * P_ANG
     ASSERT(trim(label) == trim(s%label))
@@ -360,12 +356,7 @@ contains
     if(read_data < 6) s%lloc      = lloc
     if(read_data < 7) s%def_h     = def_h
     if(read_data < 8) s%def_rsize = def_rsize
-    if(read_data < 9) then
-      s%alpha     = alpha
-      s%beta      = beta
-      s%rcut      = rcut
-      s%beta2     = beta2
-    end if
+
     read_data = 8
 
     call pop_sub()
@@ -440,18 +431,6 @@ contains
         call loct_parse_block_float (blk, row, 7, s%def_rsize)
         s%def_rsize = s%def_rsize * units_inp%length%factor
         read_data = 8
-      end if
-
-      if(n>8) then
-        ! For the moment being, let us assume that this is always in atomic units.
-        call loct_parse_block_float (blk, row, 8, s%alpha)
-        call loct_parse_block_float (blk, row, 9, s%beta)
-        call loct_parse_block_float (blk, row, 10, s%rcut)
-        call loct_parse_block_float (blk, row, 11, s%beta2)
-        read_data = 10
-      else
-        ! Reasonable defaults
-        s%alpha = CNST(0.7); s%beta = CNST(18.0); s%rcut = CNST(2.5); s%beta2 = CNST(0.4)
       end if
 
     case default

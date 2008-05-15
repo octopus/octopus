@@ -85,7 +85,7 @@ contains
       call ps_getradius(this%ps)
 
       if(filter .ne. PS_FILTER_NONE) then 
-        call ps_filter(this%ps, filter, mesh_gcutoff(gr%m), CNST(1.1), CNST(2.0))
+        call ps_filter(this%ps, filter, mesh_gcutoff(gr%m))
         call ps_getradius(this%ps) ! radius may have changed
       end if
 
