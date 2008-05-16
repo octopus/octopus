@@ -36,12 +36,13 @@ subroutine X(vec_scatter)(vp, v, v_local)
   integer, allocatable :: displs(:) ! Displacements for scatter.
   R_TYPE,  allocatable :: v_tmp(:)  ! Send buffer.
 
+  call push_sub('par_vec.Xvec_scatter')
+
+  ! Skip the MPI call if domain parallelization is not used.
   if(vp%p.lt.2) then
-    v_local = v
+    v_local(1:vp%np) = v(1:vp%np)
     return
   end if
-
-  call push_sub('par_vec.Xvec_scatter')
 
   ! Unfortunately, vp%xlocal ist not quite the required
   ! displacement vector.
@@ -154,12 +155,13 @@ subroutine X(vec_gather)(vp, v, v_local)
   integer, allocatable :: displs(:) ! Displacements for scatter.
   R_TYPE,  allocatable :: v_tmp(:)  ! Receive buffer.
 
+  call push_sub('par_vec.Xvec_gather')
+
+  ! Skip the MPI call if domain parallelization is not used.
   if(vp%p.lt.2) then
-    v = v_local
+    v(1:vp%np) = v_local(1:vp%np)
     return
   end if
-
-  call push_sub('par_vec.Xvec_gather')
 
   ! Unfortunately, vp%xlocal ist not quite the required
   ! displacement vector.

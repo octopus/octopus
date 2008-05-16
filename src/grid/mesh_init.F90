@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -190,6 +190,11 @@ subroutine mesh_init_stage_3(mesh, geo, cv, stencil, np_stencil, mpi_grp)
     ! When running serially those two are the same.
     mesh%np      = mesh%np_global
     mesh%np_part = mesh%np_part_global
+
+    ! These must be initialized for vec_gather, vec_scatter to work
+    ! as copy operations when running without domain parallelization.
+    mesh%vp%np = mesh%np_global
+    mesh%vp%p  = 1
   end if
 
   call mesh_get_vol_pp(mesh%sb)
