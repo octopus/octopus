@@ -319,6 +319,8 @@ subroutine FNAME(copy_1)(n1, dx, dy)
   call blas_copy(n1, dx(1), 1, dy(1), 1)
 #endif
 
+  call profiling_count_transfers(n1, dx(1))
+
   call profiling_out(copy_profile)
 
 end subroutine FNAME(copy_1)

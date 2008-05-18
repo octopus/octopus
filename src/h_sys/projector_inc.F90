@@ -128,6 +128,7 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, ik)
   if(mesh%parallel_in_domains) then
     call profiling_in(reduce_prof, "VNLPSI_REDUCE")
     call MPI_Allreduce(reduce_buffer, reduce_buffer_dest, nreduce, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
+    call profiling_count_transfers(nreduce, reduce_buffer(1))
     reduce_buffer = reduce_buffer_dest
     call profiling_out(reduce_prof)
   end if

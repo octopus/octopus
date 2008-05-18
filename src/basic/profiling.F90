@@ -39,6 +39,7 @@ module profiling_m
     profiling_in,                       &
     profiling_out,                      &
     profiling_count_operations,         &
+    profiling_count_transfers,          &
     profiling_output
 
 
@@ -87,6 +88,7 @@ module profiling_m
     real(8)                  :: total_time
     real(8)                  :: self_time
     real(8)                  :: op_count
+    real(8)                  :: tr_count
     type(profile_t), pointer :: parent
     integer                  :: count
     logical                  :: initialized = .false.
@@ -98,6 +100,15 @@ module profiling_m
     type(profile_t), pointer :: p
   end type profile_pointer_t
   
+  interface profiling_count_transfers
+    module procedure &
+         profiling_count_transfers_int,         &
+         profiling_count_transfers_real_4,      &
+         profiling_count_transfers_real_8,      &
+         profiling_count_transfers_complex_4,   &
+         profiling_count_transfers_complex_8
+  end interface
+
   type(profile_pointer_t)  :: current !the currently active profile
   type(profile_pointer_t)  :: profile_list(MAX_PROFILES) !the list of all profilers
   integer                  :: last_profile
@@ -246,7 +257,8 @@ contains
     this%self_time  = M_ZERO
     this%entry_time = HUGE(this%entry_time)
     this%count  = 0
-    this%op_count = 0
+    this%op_count = M_ZERO
+    this%tr_count = M_ZERO
     this%active = .false.
     nullify(this%parent)
 
@@ -350,6 +362,51 @@ contains
     current%p%op_count = current%p%op_count + dble(ops)
   end subroutine profiling_count_operations
 
+  subroutine profiling_count_transfers_int(trf, type)
+    integer,         intent(in)    :: trf
+    integer,         intent(in)    :: type
+
+    if(.not.in_profiling_mode) return
+
+    current%p%tr_count = current%p%tr_count + dble(4*trf)
+  end subroutine profiling_count_transfers_int
+
+  subroutine profiling_count_transfers_real_4(trf, type)
+    integer,         intent(in)    :: trf
+    real(4),         intent(in)    :: type
+    
+    if(.not.in_profiling_mode) return
+    
+    current%p%tr_count = current%p%tr_count + dble(4*trf)
+  end subroutine profiling_count_transfers_real_4
+
+  subroutine profiling_count_transfers_real_8(trf, type)
+    integer,         intent(in)    :: trf
+    real(8),         intent(in)    :: type
+    
+    if(.not.in_profiling_mode) return
+    
+    current%p%tr_count = current%p%tr_count + dble(8*trf)
+  end subroutine profiling_count_transfers_real_8
+
+  subroutine profiling_count_transfers_complex_4(trf, type)
+    integer,         intent(in)    :: trf
+    complex(4),      intent(in)    :: type
+
+    if(.not.in_profiling_mode) return
+
+    current%p%tr_count = current%p%tr_count + dble(8*trf)
+  end subroutine profiling_count_transfers_complex_4
+
+  subroutine profiling_count_transfers_complex_8(trf, type)
+    integer,         intent(in)    :: trf
+    complex(8),      intent(in)    :: type
+
+    if(.not.in_profiling_mode) return
+
+    current%p%tr_count = current%p%tr_count + dble(16*trf)
+  end subroutine profiling_count_transfers_complex_8
+
   real(8) function profile_total_time(this)
     type(profile_t), intent(in) :: this
     profile_total_time = this%total_time
@@ -374,6 +431,11 @@ contains
     type(profile_t), intent(in) :: this
     profile_throughput = this%op_count / this%self_time / CNST(1.0e6)
   end function profile_throughput
+
+  real(8) function profile_bandwidth(this)
+    type(profile_t), intent(in) :: this
+    profile_bandwidth = this%tr_count / (this%self_time*CNST(1024.0)**2)
+  end function profile_bandwidth
 
   integer function profile_num_calls(this)
     type(profile_t), intent(in) :: this
@@ -432,13 +494,13 @@ contains
       '|                SELF TIME'
     write(iunit, '(2a)')                                                                    &
       '                                            ------------------------------------|', &
-      '----------------------------------------------------'
+      '------------------------------------------------------------'
     write(iunit, '(2a)')                                                                    &
       'TAG                   NUMBER_OF_CALLS       TOTAL_TIME    TIME_PER_CALL   %TIME |', &
-      '        TOTAL_TIME    TIME_PER_CALL  MFLOPS   %TIME'
+      '        TOTAL_TIME    TIME_PER_CALL  MFLOPS MBYTES/S   %TIME'
     write(iunit, '(2a)')                                                                    &
       '================================================================================|', &
-      '===================================================='
+      '============================================================'
 
     total_time = profile_total_time(C_PROFILING_COMPLETE_DATASET)
 
@@ -447,7 +509,7 @@ contains
 
       if(profile_num_calls(prof) == 0) cycle
 
-      write(iunit, '(a,i20,2f17.7,f8.1,a,2f17.7,f8.1,f8.1)')     &
+      write(iunit, '(a,i20,2f17.7,f8.1,a,2f17.7,f8.1,f9.1,f8.1)')     &
            profile_label(prof),                             & 
            profile_num_calls(prof),                         &
            profile_total_time(prof),                        &
@@ -457,6 +519,7 @@ contains
            profile_self_time(prof),                         &
            profile_self_time_per_call(prof),                &
            profile_throughput(prof),                        &
+           profile_bandwidth(prof),                         &
            profile_self_time(prof)/total_time*CNST(100.0)
     end do
 
