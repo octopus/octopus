@@ -102,11 +102,11 @@ module profiling_m
   
   interface profiling_count_transfers
     module procedure &
-         profiling_count_transfers_int,         &
-         profiling_count_transfers_real_4,      &
-         profiling_count_transfers_real_8,      &
-         profiling_count_transfers_complex_4,   &
-         profiling_count_transfers_complex_8
+         profiling_count_tran_int,         &
+         profiling_count_tran_real_4,      &
+         profiling_count_tran_real_8,      &
+         profiling_count_tran_complex_4,   &
+         profiling_count_tran_complex_8
   end interface
 
   type(profile_pointer_t)  :: current !the currently active profile
@@ -362,50 +362,50 @@ contains
     current%p%op_count = current%p%op_count + dble(ops)
   end subroutine profiling_count_operations
 
-  subroutine profiling_count_transfers_int(trf, type)
+  subroutine profiling_count_tran_int(trf, type)
     integer,         intent(in)    :: trf
     integer,         intent(in)    :: type
 
     if(.not.in_profiling_mode) return
 
     current%p%tr_count = current%p%tr_count + dble(4*trf)
-  end subroutine profiling_count_transfers_int
+  end subroutine profiling_count_tran_int
 
-  subroutine profiling_count_transfers_real_4(trf, type)
+  subroutine profiling_count_tran_real_4(trf, type)
     integer,         intent(in)    :: trf
     real(4),         intent(in)    :: type
     
     if(.not.in_profiling_mode) return
     
     current%p%tr_count = current%p%tr_count + dble(4*trf)
-  end subroutine profiling_count_transfers_real_4
+  end subroutine profiling_count_tran_real_4
 
-  subroutine profiling_count_transfers_real_8(trf, type)
+  subroutine profiling_count_tran_real_8(trf, type)
     integer,         intent(in)    :: trf
     real(8),         intent(in)    :: type
     
     if(.not.in_profiling_mode) return
     
     current%p%tr_count = current%p%tr_count + dble(8*trf)
-  end subroutine profiling_count_transfers_real_8
+  end subroutine profiling_count_tran_real_8
 
-  subroutine profiling_count_transfers_complex_4(trf, type)
+  subroutine profiling_count_tran_complex_4(trf, type)
     integer,         intent(in)    :: trf
     complex(4),      intent(in)    :: type
 
     if(.not.in_profiling_mode) return
 
     current%p%tr_count = current%p%tr_count + dble(8*trf)
-  end subroutine profiling_count_transfers_complex_4
+  end subroutine profiling_count_tran_complex_4
 
-  subroutine profiling_count_transfers_complex_8(trf, type)
+  subroutine profiling_count_tran_complex_8(trf, type)
     integer,         intent(in)    :: trf
     complex(8),      intent(in)    :: type
 
     if(.not.in_profiling_mode) return
 
     current%p%tr_count = current%p%tr_count + dble(16*trf)
-  end subroutine profiling_count_transfers_complex_8
+  end subroutine profiling_count_tran_complex_8
 
   real(8) function profile_total_time(this)
     type(profile_t), intent(in) :: this
