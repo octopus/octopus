@@ -118,7 +118,7 @@ contains
     if(psf%core_corrections) then
       ! At this point, we use the normalization of the siesta format, where
       ! psf%chcore(:) = 4*pi*\tilde{rho} r**2. As in the Fritz-Haber file we
-      ! have written 4*pi*\tilde{rho}, we divide by r**2
+      ! have written 4*pi*\tilde{rho}, we multiply by r**2
       psf%chcore(:) = psf%chcore(:) * psf%rofi(:)**2
 
       psf%chcore(1) = linear_extrapolate(psf%rofi(1), psf%rofi(2), psf%rofi(3), &

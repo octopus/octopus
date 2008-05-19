@@ -78,7 +78,6 @@ module ps_m
     integer  :: l_loc    ! which component to take as local
 
     type(spline_t) :: vl         ! local part
-    type(spline_t) :: vlocal_f   ! local potential in Fourier space (for periodic)
 
     FLOAT :: projectors_sphere_threshold ! The projectors are localized in real
                                          ! space, and so they are contained in a 
@@ -94,9 +93,9 @@ module ps_m
     type(spline_t), pointer :: kb(:, :)     ! Kleynman-Bylander projectors
     type(spline_t), pointer :: dkb(:, :)    ! derivatives of KB projectors
 
-    ! NLCC
+    ! nonlinear core corrections
     character(len=4) :: icore
-    type(spline_t) :: core ! core charge
+    type(spline_t) :: core ! normalization \int dr 4 pi r^2 rho(r) = N
 
 
     !LONG RANGE PART OF THE LOCAL POTENTIAL
@@ -242,7 +241,6 @@ contains
     call spline_init(ps%dkb)
     call spline_init(ps%vl)
     call spline_init(ps%core)
-    call spline_init(ps%vlocal_f)
 
     ! Now we load the necessary information.
     select case(flavour)
@@ -339,10 +337,6 @@ contains
     call spline_init(ps%vl)
     call spline_fit(ps%g%nrval, ps%g%rofi, vsr, ps%vl)
     
-    ! And take the Fourier transform
-    call spline_3dft(ps%vl, ps%vlocal_f, CNST(50.0))
-    call spline_times(CNST(1.0)/(M_FOUR*M_PI), ps%vlocal_f)
-
     ! The ion-ion interaction
     vion(1) = vion(2)
     
@@ -460,67 +454,60 @@ contains
     type(spline_t), allocatable :: fw(:, :)
     FLOAT, parameter :: gmax = CNST(40.0)
 
-    character(len=30) :: dirname
-    integer  :: info_unit                            ! A text file with some basic data.
-    integer  :: local_unit, dlocal_unit, localw_unit ! The local part, derivative, and FT.
-    integer  :: nl_unit, dnl_unit, nlw_unit          ! Nonlocal part
-    integer  :: wave_unit                            ! pseudowavefunctions
-    integer  :: so_unit, dso_unit, sow_unit          ! The spin-orbit non-local terms.
+    integer  :: iunit
     integer  :: j, k, l
 
     call push_sub('ps.ps_debug')
 
-    ! Opens the files.
-    dirname = trim(dir)//'/ps.'//trim(ps%label)
-    call io_mkdir(dirname)
-    info_unit   = io_open(trim(dirname)//'/info', action='write')
-    local_unit  = io_open(trim(dirname)//'/local', action='write')
-    dlocal_unit = io_open(trim(dirname)//'/local_derivative', action='write')
-    localw_unit = io_open(trim(dirname)//'/local_ft', action='write')
-    nl_unit     = io_open(trim(dirname)//'/nonlocal', action='write')
-    dnl_unit    = io_open(trim(dirname)//'/nonlocal_derivative', action='write')
-    nlw_unit    = io_open(trim(dirname)//'/nonlocal_ft', action='write')
-    so_unit     = io_open(trim(dirname)//'/so', action='write')
-    dso_unit    = io_open(trim(dirname)//'/so_derivative', action='write')
-    sow_unit    = io_open(trim(dirname)//'/so_ft', action='write')
-    wave_unit   = io_open(trim(dirname)//'/wavefunctions', action='write')
-
-    ! Writes down the info.
-    write(info_unit,'(a,/)')      ps%label
-    write(info_unit,'(a,a,/)')    'Flavour : ', ps_name(ps%flavour)
-    write(info_unit,'(a,f6.3)')   'z       : ', ps%z
-    write(info_unit,'(a,f6.3,/)') 'zval    : ', ps%z_val
-    write(info_unit,'(a,i4)')     'lmax    : ', ps%l_max
-    write(info_unit,'(a,i4)')     'lloc    : ', ps%l_loc
-    write(info_unit,'(a,i4,/)')   'kbc     : ', ps%kbc
-    write(info_unit,'(a,f9.5,/)') 'rcmax   : ', ps%rc_max
-    write(info_unit,'(/,a,/)')    'h matrix:'
+    ! A text file with some basic data.
+    iunit = io_open(trim(dir)//'/pseudo-info', action='write')
+    write(iunit,'(a,/)')      ps%label
+    write(iunit,'(a,a,/)')    'Flavour : ', ps_name(ps%flavour)
+    write(iunit,'(a,f6.3)')   'z       : ', ps%z
+    write(iunit,'(a,f6.3,/)') 'zval    : ', ps%z_val
+    write(iunit,'(a,i4)')     'lmax    : ', ps%l_max
+    write(iunit,'(a,i4)')     'lloc    : ', ps%l_loc
+    write(iunit,'(a,i4,/)')   'kbc     : ', ps%kbc
+    write(iunit,'(a,f9.5,/)') 'rcmax   : ', ps%rc_max
+    write(iunit,'(a,/)')    'h matrix:'
     do l = 0, ps%l_max
       do k = 1, ps%kbc
-        write(info_unit,'(3f9.5)') (ps%h(l, k, j), j = 1, ps%kbc)
+        write(iunit,'(10f9.5)') (ps%h(l, k, j), j = 1, ps%kbc)
       end do
-      write(info_unit, '(a)')
     end do
-    write(info_unit,'(/,a,/)')    'k matrix:'
+    write(iunit,'(/,a,/)')    'k matrix:'
     do l = 0, ps%l_max
       do k = 1, ps%kbc
-        write(info_unit,'(3f9.5)') (ps%k(l, k, j), j = 1, ps%kbc)
+        write(iunit,'(10f9.5)') (ps%k(l, k, j), j = 1, ps%kbc)
       end do
-      write(info_unit, '(a)')
     end do
+    call io_close(iunit);
 
-    ! Local part.
-    call spline_print(ps%vl, local_unit)
+    ! Local part of the pseudopotential
+    iunit  = io_open(trim(dir)//'/local', action='write')
+    call spline_print(ps%vl, iunit)
+    call io_close(iunit)
+
+    ! Fourier transform of the local part
+    iunit = io_open(trim(dir)//'/local_ft', action='write')
     ALLOCATE(fw(1, 1), 1*1)
     call spline_init(fw(1, 1))
     call spline_3dft(ps%vl, fw(1, 1), gmax = gmax)
-    call spline_print(fw(1, 1), localw_unit)
+    call spline_print(fw(1, 1), iunit)
     call spline_end(fw(1, 1))
     deallocate(fw)
+    call io_close(iunit)
 
     ! Kleinman-Bylander projectors
-    call spline_print(ps%kb, nl_unit)
-    call spline_print(ps%dkb, dnl_unit)
+    iunit = io_open(trim(dir)//'/nonlocal', action='write')
+    call spline_print(ps%kb, iunit)
+    call io_close(iunit)
+
+    iunit = io_open(trim(dir)//'/nonlocal_derivative', action='write')
+    call spline_print(ps%dkb, iunit)
+    call io_close(iunit)
+
+    iunit = io_open(trim(dir)//'/nonlocal_ft', action='write')
     ALLOCATE(fw(0:ps%l_max, 1:ps%kbc), (ps%l_max+1)*ps%kbc)
     call spline_init(fw)
     do k = 0, ps%l_max
@@ -528,18 +515,21 @@ contains
         call spline_3dft(ps%kb(k, j), fw(k, j), gmax = gmax)
       end do
     end do
-    call spline_print(fw, nlw_unit)
+    call spline_print(fw, iunit)
     call spline_end(fw)
     deallocate(fw)
+    call io_close(iunit)
 
     ! Pseudo-wavefunctions
-    call spline_print(ps%ur, wave_unit)
+    iunit = io_open(trim(dir)//'/wavefunctions', action='write')
+    call spline_print(ps%ur, iunit)
+    call io_close(iunit)
 
-    ! Closes files and exits
-    call io_close(local_unit); call io_close(dlocal_unit); call io_close(localw_unit)
-    call io_close(nl_unit)   ; call io_close(dnl_unit)   ; call io_close(nlw_unit)
-    call io_close(so_unit)   ; call io_close(dso_unit)   ; call io_close(sow_unit)
-    call io_close(info_unit) ; call io_close(wave_unit)
+    if(trim(ps%icore).ne.'nc') then
+      iunit = io_open(trim(dir)//'/nlcc', action='write')
+      call spline_print(ps%core, iunit)
+      call io_close(iunit)
+    end if
 
     call pop_sub()
   end subroutine ps_debug
@@ -567,7 +557,6 @@ contains
 
     call spline_end(ps%vl)
     call spline_end(ps%core)
-    call spline_end(ps%vlocal_f)
 
     call logrid_end(ps%g)
 
@@ -664,7 +653,6 @@ contains
 
     ps%icore = 'nc'
     if(ps_grid%core_corrections) ps%icore=''
-
 
     ps%h(0:ps%l_max, 1, 1) = ps_grid%dkbcos(1:ps%l_max+1)
 
@@ -773,7 +761,7 @@ contains
     !Non-linear core-corrections
     if(ps_upf%nlcc) then
       ! find cutoff radius
-      hato = ps_upf%core_density/(M_FOUR*M_PI*ps%g%rofi**2)
+      hato = ps_upf%core_density
 
       do ir = ps%g%nrval-1, 1, -1
         if(hato(ir) > eps) then

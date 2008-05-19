@@ -576,10 +576,10 @@ contains
   ! ---------------------------------------------------------
   subroutine epot_forces(gr, geo, ep, st, t)
     type(grid_t),     intent(inout) :: gr
-    type(geometry_t), intent(inout)  :: geo
-    type(epot_t),     intent(in)     :: ep
-    type(states_t),   intent(inout)     :: st
-    FLOAT,     optional, intent(in)    :: t
+    type(geometry_t), intent(inout) :: geo
+    type(epot_t),     intent(in)    :: ep
+    type(states_t),   intent(inout) :: st
+    FLOAT,     optional, intent(in) :: t
 
     integer :: i, j
     FLOAT :: x(MAX_DIM), time
@@ -612,6 +612,7 @@ contains
           do i = 1, geo%natoms
             geo%atom(i)%f(1:NDIM) = geo%atom(i)%f(1:NDIM) + geo%atom(i)%spec%z_val*x(1:NDIM)
           end do
+
         case(E_FIELD_MAGNETIC, E_FIELD_VECTOR_POTENTIAL, E_FIELD_SCALAR_POTENTIAL)
           write(message(1),'(a)') 'The forces are currently not properly calculated if time-dependent'
           write(message(2),'(a)') 'magnetic fields are present.'

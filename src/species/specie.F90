@@ -255,7 +255,7 @@ contains
 
     !%Variable SpecieAllElectronSigma
     !%Type float
-    !%Default 0.2
+    !%Default 0.25
     !%Section System::Species
     !%Description
     !% An all-electron atom is defined by a Gaussian accumulation of positive charge 
@@ -614,10 +614,12 @@ contains
   FLOAT function specie_get_nlcc(s, x) result(l)
     type(specie_t), intent(in) :: s
     FLOAT, intent(in) :: x(MAX_DIM)
+    FLOAT :: r
 
     ! only for 3D pseudopotentials, please
     if(s%type==SPEC_PS_PSF.or.s%type==SPEC_PS_HGH.or.s%type==SPEC_PS_CPI.or.s%type==SPEC_PS_FHI.or.s%type==SPEC_PS_UPF) then
-      l = spline_eval(s%ps%core, sqrt(sum(x**2)))
+      r = sqrt(sum(x(:)**2))
+      l = spline_eval(s%ps%core, r)
     else
       l = M_ZERO
     end if
