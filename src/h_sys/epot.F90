@@ -385,16 +385,15 @@ contains
   ! ---------------------------------------------------------
 
   subroutine epot_generate(ep, gr, geo, st, time)
-    type(epot_t),      intent(inout) :: ep
+    type(epot_t),          intent(inout) :: ep
     type(grid_t), target,  intent(inout) :: gr
-    type(geometry_t),  intent(inout) :: geo
-    type(states_t),    intent(inout) :: st
-    FLOAT,   optional, intent(in)    :: time
+    type(geometry_t),      intent(inout) :: geo
+    type(states_t),        intent(inout) :: st
+    FLOAT,       optional, intent(in)    :: time
 
     FLOAT   :: time_
     integer :: ia
-    type(atom_t),     pointer :: atm
-
+    type(atom_t),      pointer :: atm
     type(mesh_t),      pointer :: m
     type(simul_box_t), pointer :: sb
     type(profile_t), save :: epot_generate_prof
@@ -425,6 +424,8 @@ contains
       ALLOCATE(vpsltmp(1:NP), NP)
       call MPI_Allreduce(ep%vpsl, vpsltmp, NP, MPI_FLOAT, MPI_SUM, geo%mpi_grp%comm, mpi_err)
       call lalg_copy(NP, vpsltmp, ep%vpsl)
+      call MPI_Allreduce(st%rho_core, vpsltmp, NP, MPI_FLOAT, MPI_SUM, geo%mpi_grp%comm, mpi_err)
+      call lalg_copy(NP, vpsltmp, st%rho_core)
       deallocate(vpsltmp)
     end if
     call profiling_out(epot_reduce)

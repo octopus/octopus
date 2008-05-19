@@ -560,17 +560,17 @@ contains
     end if
 
     if (iunit > 0) then
-      write(message(1), '(6x,a, f15.8)')'Total       = ', h%etot     / units_out%energy%factor
-      write(message(2), '(6x,a, f15.8)')'Ion-ion     = ', h%ep%eii   / units_out%energy%factor
-      write(message(3), '(6x,a, f15.8)')'Eigenvalues = ', h%eeigen   / units_out%energy%factor
-      write(message(4), '(6x,a, f15.8)')'Hartree     = ', h%ehartree / units_out%energy%factor
-      write(message(5), '(6x,a, f15.8)')'Int[n*v_xc] = ', h%epot     / units_out%energy%factor
-      write(message(6), '(6x,a, f15.8)')'Exchange    = ', h%ex       / units_out%energy%factor
-      write(message(7), '(6x,a, f15.8)')'Correlation = ', h%ec       / units_out%energy%factor
+      write(message(1), '(6x,a, f18.8)')'Total       = ', h%etot     / units_out%energy%factor
+      write(message(2), '(6x,a, f18.8)')'Ion-ion     = ', h%ep%eii   / units_out%energy%factor
+      write(message(3), '(6x,a, f18.8)')'Eigenvalues = ', h%eeigen   / units_out%energy%factor
+      write(message(4), '(6x,a, f18.8)')'Hartree     = ', h%ehartree / units_out%energy%factor
+      write(message(5), '(6x,a, f18.8)')'Int[n*v_xc] = ', h%epot     / units_out%energy%factor
+      write(message(6), '(6x,a, f18.8)')'Exchange    = ', h%ex       / units_out%energy%factor
+      write(message(7), '(6x,a, f18.8)')'Correlation = ', h%ec       / units_out%energy%factor
       call write_info(7, iunit)
       if(full_) then
-        write(message(1), '(6x,a, f15.8)')'Kinetic     = ', h%t0 / units_out%energy%factor
-        write(message(2), '(6x,a, f15.8)')'External    = ', h%eext / units_out%energy%factor
+        write(message(1), '(6x,a, f18.8)')'Kinetic     = ', h%t0 / units_out%energy%factor
+        write(message(2), '(6x,a, f18.8)')'External    = ', h%eext / units_out%energy%factor
         call write_info(2, iunit)
       end if
     end if
