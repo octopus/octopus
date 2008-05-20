@@ -332,7 +332,7 @@ contains
     ALLOCATE(fxc(m%np, st%d%nspin, st%d%nspin), m%np*st%d%nspin*st%d%nspin)
     rho = M_ZERO; fxc = M_ZERO
 
-    if(associated(st%rho_core)) then
+    if(st%nlcc) then
       do is = 1, st%d%spin_channels
         rho(1:m%np, is) = st%rho(1:m%np, is) + st%rho_core(1:m%np)/st%d%spin_channels
       end do

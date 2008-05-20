@@ -181,7 +181,7 @@ contains
     if( iand(ks%xc%kernel_family, XC_FAMILY_OEP) == 0 ) then 
       
       ALLOCATE(rho(m%np, st%d%nspin), m%np*st%d%nspin)
-      if(associated(st%rho_core)) then
+      if(st%nlcc) then
         do is = 1, st%d%spin_channels
           rho(1:m%np, is) = st%rho(1:m%np, is) + st%rho_core(1:m%np)/st%d%spin_channels
         end do

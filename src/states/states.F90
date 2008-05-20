@@ -139,6 +139,7 @@ module states_m
     FLOAT, pointer :: rho(:,:)      ! rho(gr%m%np_part, st%d%nspin)
     FLOAT, pointer :: j(:,:,:)      !   j(gr%m%np_part, gr%sb%dim, st%d%nspin)
 
+    logical        :: nlcc          ! do we have non-linear core corrections
     FLOAT, pointer :: rho_core(:)   ! core charge for nl core corrections
 
     FLOAT, pointer :: eigenval(:,:) ! obviously the eigenvalues
@@ -892,9 +893,10 @@ contains
     ! allocate arrays for charge and current densities
     ALLOCATE(st%rho(NP_PART, st%d%nspin), NP_PART*st%d%nspin)
     ALLOCATE(st%j(NP_PART, NDIM, st%d%nspin), NP_PART*NDIM*st%d%nspin)
-    st%rho = M_ZERO
-    st%j   = M_ZERO
-    if(geo%nlcc) then
+    st%rho  = M_ZERO
+    st%j    = M_ZERO
+    st%nlcc = geo%nlcc
+    if(st%nlcc) then
       ALLOCATE(st%rho_core(gr%m%np), gr%m%np)
       st%rho_core(:) = M_ZERO
     end if
@@ -962,15 +964,15 @@ contains
 
     stout%wfs_type = stin%wfs_type
     call states_dim_copy(stout%d, stin%d)
-    stout%nst           = stin%nst
-    stout%qtot = stin%qtot
+    stout%nst        = stin%nst
+    stout%qtot       = stin%qtot
     stout%val_charge = stin%val_charge
-    stout%el_temp = stin%el_temp
-    stout%ef = stin%ef
+    stout%el_temp    = stin%el_temp
+    stout%ef         = stin%ef
     stout%parallel_in_states = stin%parallel_in_states
-    stout%lnst = stin%lnst
-    stout%st_start = stin%st_start
-    stout%st_end = stin%st_end
+    stout%lnst       = stin%lnst
+    stout%st_start   = stin%st_start
+    stout%st_end     = stin%st_end
     if(associated(stin%dpsi)) then
       i = size(stin%dpsi, 1)*stin%d%dim*(stin%st_end-stin%st_start+1)*stin%d%nik
       ALLOCATE(stout%dpsi(size(stin%dpsi, 1), stin%d%dim, stin%st_start:stin%st_end, stin%d%nik), i)
@@ -1011,6 +1013,7 @@ contains
         end do
       end do
     end if
+    stout%nlcc = stin%nlcc
     if(associated(stin%rho_core)) then
       i = size(stin%rho_core, 1)
       ALLOCATE(stout%rho_core(size(stin%rho_core, 1)), i)

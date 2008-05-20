@@ -87,13 +87,13 @@ contains
     E_tot = E_t + E_ext + E_Hartree + E_x + E_c + h%ep%eii
 
     call messages_print_stress(stdout, "Energy")
-    write(message(1), '(6x,a, f15.8)')'Total       = ', E_tot     / units_out%energy%factor
-    write(message(2), '(6x,a, f15.8)')'Ion-ion     = ', h%ep%eii  / units_out%energy%factor
-    write(message(3), '(6x,a, f15.8)')'Kinetic     = ', E_t       / units_out%energy%factor
-    write(message(4), '(6x,a, f15.8)')'External    = ', E_ext     / units_out%energy%factor
-    write(message(5), '(6x,a, f15.8)')'Hartree     = ', E_Hartree / units_out%energy%factor
-    write(message(6), '(6x,a, f15.8)')'Exchange    = ', E_x       / units_out%energy%factor
-    write(message(7), '(6x,a, f15.8)')'Correlation = ', E_c       / units_out%energy%factor
+    write(message(1), '(6x,a, f18.8)')'Total       = ', E_tot     / units_out%energy%factor
+    write(message(2), '(6x,a, f18.8)')'Ion-ion     = ', h%ep%eii  / units_out%energy%factor
+    write(message(3), '(6x,a, f18.8)')'Kinetic     = ', E_t       / units_out%energy%factor
+    write(message(4), '(6x,a, f18.8)')'External    = ', E_ext     / units_out%energy%factor
+    write(message(5), '(6x,a, f18.8)')'Hartree     = ', E_Hartree / units_out%energy%factor
+    write(message(6), '(6x,a, f18.8)')'Exchange    = ', E_x       / units_out%energy%factor
+    write(message(7), '(6x,a, f18.8)')'Correlation = ', E_c       / units_out%energy%factor
     call write_info(7, stdout)
     call messages_print_stress(stdout)
 
