@@ -172,50 +172,6 @@ subroutine states_choose_kpoints(d, sb, geo)
   call loct_parse_logical(check_inp('KPointsUseSymmetries'), .true., use_symmetries)
   call loct_parse_logical(check_inp('KPointsUseTimeReversal'), .true., use_time_reversal)
   
-  
-
-
-  !%Variable KPointsCenterOfInversion
-  !%Type integer
-  !%Default no
-  !%Section Mesh::KPoints
-  !%Description
-  !% If the system is periodic in one dimension, when this variable is
-  !% set to yes, it specifies that the system has a center of
-  !% inversion and that this property must be used to reduce the
-  !% number of K points sampled. The defaults is no.
-  !%End
-  if(use_symmetries) then
-
-    if(sb%periodic_dim == 1) then
-      call loct_parse_int(check_inp('KPointsCenterOfInversion'), 0, coi)
-      d%nik = d%nik_axis(1)/(1 + coi) + 1
-      ALLOCATE(d%kpoints(3, d%nik), 3*d%nik)
-      ALLOCATE(d%kweights  (d%nik),   d%nik)
-      d%kpoints     = M_ZERO
-      d%kweights    = M_ONE
-      kmax          = (M_ONE - coi*M_HALF)*sb%klattice(1,1)
-      total_weight  = M_ZERO
-
-      do i = 1, d%nik
-        d%kpoints(1, i) = (i-1)*kmax/real(d%nik-1)
-        if (i /= 1 .and. i /= d%nik) then
-          d%kweights(i) = d%kweights(i) + coi
-        end if
-        total_weight = total_weight + d%kweights(i)
-      end do
-      d%kweights = d%kweights/total_weight
-      if (d%ispin == 2) then
-        message(1) = 'Not implemented yet.'
-        call write_fatal(1)
-      end if
-
-      call print_kpoints_debug
-      call pop_sub()
-      return
-    end if
-
-  end if
 
   ALLOCATE(natom(geo%nspecies), geo%nspecies)
   ALLOCATE(coorat(geo%nspecies, geo%natoms, 3), geo%nspecies*geo%natoms*3)
