@@ -54,7 +54,7 @@ typedef struct {
 #define M_REAL     1
 #define M_CMPLX    2
 
-#define MAX_OP_N   100
+#define MAX_OP_N   400
 
 /* HERE WE DETECT THE PROCESSOR TYPE AND VECTORIAL CAPABILITIES */
 

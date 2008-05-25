@@ -240,7 +240,7 @@ subroutine X(nl_operator_operate)(op, fi, fo, ghost_update, profile, points)
   logical, optional,   intent(in)    :: profile
   integer, optional,   intent(in)    :: points
   
-  real(8) :: ws(100)
+  real(8) :: ws(400)
   logical :: profile_
   integer :: points_, nri, nri_loc, ini, nns(1:2)
   integer, pointer :: imin(:), imax(:), ri(:, :)
