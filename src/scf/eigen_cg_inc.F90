@@ -19,7 +19,7 @@
 
 ! ---------------------------------------------------------
 ! conjugate-gradients method.
-subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, reorder, verbose)
+subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, verbose)
   type(grid_t),        intent(inout) :: gr
   type(states_t),      intent(inout) :: st
   type(hamiltonian_t), intent(inout) :: h
@@ -28,7 +28,6 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, reo
   integer,             intent(inout) :: niter
   integer,             intent(inout) :: converged
   FLOAT,     optional, intent(out)   :: diff(1:st%nst,1:st%d%nik)
-  logical,   optional, intent(in)    :: reorder
   logical,   optional, intent(in)    :: verbose
 
   R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:),  cg(:,:), ppsi(:,:)
@@ -36,7 +35,7 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, reo
   R_DOUBLE :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma
   real(8) :: cg0, e0, res
   integer  :: ik, p, iter, maxter, conv, conv_, idim, ns, ip
-  logical  :: reord = .true., verbose_
+  logical  :: verbose_
 
   call push_sub('eigen_cg.eigen_solver_cg2')
 
@@ -50,7 +49,6 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, reo
     call write_info(4)
   end if
 
-  if(present(reorder)) reord = reorder
   conv_ = 0
   maxter = niter
   niter = 0
@@ -224,8 +222,6 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, reo
         diff(p, ik) = res
       end if
 
-      if(p>1 .and. reord) call sort(st%eigenval(1:p, ik), st%X(psi)(1:NP, :, 1:p, ik))
-
     end do eigenfunction_loop
 
     conv_ = conv_ + conv
@@ -243,7 +239,7 @@ end subroutine X(eigen_solver_cg2)
 
 ! ---------------------------------------------------------
 ! The algorithm is essentially taken from Jiang et al. Phys. Rev. B 68, 165337 (2003).
-subroutine X(eigen_solver_cg2_new) (gr, st, h, tol, niter, converged, diff, reorder, verbose)
+subroutine X(eigen_solver_cg2_new) (gr, st, h, tol, niter, converged, diff, verbose)
   type(grid_t),        intent(inout) :: gr
   type(states_t),      intent(inout) :: st
   type(hamiltonian_t), intent(inout) :: h
@@ -251,11 +247,10 @@ subroutine X(eigen_solver_cg2_new) (gr, st, h, tol, niter, converged, diff, reor
   integer,             intent(inout) :: niter
   integer,             intent(inout) :: converged
   FLOAT,     optional, intent(out)   :: diff(1:st%nst,1:st%d%nik)
-  logical,   optional, intent(in)    :: reorder
   logical,   optional, intent(in)    :: verbose
 
   integer :: nik, nst, dim, ik, ist, maxter, i, conv, conv_
-  logical :: verbose_, reorder_
+  logical :: verbose_
   R_TYPE, allocatable :: psi(:,:), phi(:, :), hpsi(:, :), hcgp(:, :), cg(:, :), sd(:, :), cgp(:, :)
   FLOAT :: ctheta, stheta, ctheta2, stheta2, mu, lambda, dump, &
            gamma, sol(2), alpha, beta, theta, theta2, res ! Could be complex?
@@ -264,7 +259,7 @@ subroutine X(eigen_solver_cg2_new) (gr, st, h, tol, niter, converged, diff, reor
   call push_sub('eigen_cg.eigen_solver_cg2_new')
 
   verbose_ = .false.; if(present(verbose)) verbose_ = verbose
-  reorder_ = .true. ; if(present(reorder)) reorder_ = reorder
+
   if(verbose_) then
     call messages_print_stress(stdout, "CG Info")
     message(1) = "Diagonalization with the conjugate gradients algorithm [new]."
@@ -391,9 +386,6 @@ subroutine X(eigen_solver_cg2_new) (gr, st, h, tol, niter, converged, diff, reor
       end if
 
     end do states
-
-    ! Reordering.
-    if(reorder_) call sort(st%eigenval(1:nst, ik), st%X(psi)(:, :, 1:nst, ik))
 
     conv_ = conv_ + conv
 
