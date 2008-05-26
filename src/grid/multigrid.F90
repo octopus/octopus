@@ -32,18 +32,19 @@ module multigrid_m
   implicit none
 
   private
-  public ::                     &
-    multigrid_level_t,          &
-    multigrid_t,                &
-    multigrid_init,             &
-    multigrid_end,              &
-    multigrid_mesh_half,        &
-    multigrid_mesh_double,      &
-    multigrid_fine2coarse,      &
-    multigrid_coarse2fine,      &
-    multigrid_get_transfer_tables, &
-    mg_float_pointer,           &
-    gridhier_init,              &
+  public ::                         &
+    multigrid_level_t,              &
+    multigrid_t,                    &
+    multigrid_init,                 &
+    multigrid_end,                  &
+    multigrid_mesh_half,            &
+    multigrid_mesh_double,          &
+    multigrid_fine2coarse,          &
+    dmultigrid_coarse2fine,         &
+    zmultigrid_coarse2fine,         &
+    multigrid_get_transfer_tables,  &
+    mg_float_pointer,               &
+    gridhier_init,                  &
     gridhier_end
 
 
@@ -459,58 +460,6 @@ contains
     call pop_sub()
   end subroutine multigrid_restriction
 
-
-  ! ---------------------------------------------------------
-  subroutine multigrid_coarse2fine(mgrid, ilevel, f_coarse, f_fine)
-    type(multigrid_t), intent(in)  :: mgrid
-    integer,           intent(in)  :: ilevel
-    FLOAT,             intent(in)  :: f_coarse(:)
-    FLOAT,             intent(out) :: f_fine(:)
-
-    type(multigrid_level_t), pointer :: level
-    FLOAT, pointer :: vol_pp(:)
-
-    integer :: i, i1, i2, i4, i8
-    integer :: jj, j(8)
-    FLOAT   :: vol_total
-
-    call push_sub('multigrid.multigrid_coarse2fine')
-
-    ASSERT(ilevel>0.and.ilevel<=mgrid%n_levels)
-
-    level  => mgrid%level(ilevel)
-    vol_pp => level%m%vol_pp
-
-    i1 = 0;  i2 = 0;  i4 = 0;  i8 = 0;
-    do i = 1, level%n_fine
-      select case(level%fine_i(i))
-      case(1)
-        i1 = i1 + 1
-        j(1:1) = level%to_fine1(1:1, i1)
-      case(2)
-        i2 = i2 + 1
-        j(1:2) = level%to_fine2(1:2, i2)
-      case(4)
-        i4 = i4 + 1
-        j(1:4) = level%to_fine4(1:4, i4)
-      case(8)
-        i8 = i8 + 1
-        j(1:8) = level%to_fine8(1:8, i8)
-      end select
-
-      f_fine(i) = M_ZERO
-      vol_total = M_ZERO
-      do jj = 1, level%fine_i(i)
-        f_fine(i) = f_fine(i) + vol_pp(j(jj))*f_coarse(j(jj))
-        vol_total = vol_total + vol_pp(j(jj))
-      end do
-      f_fine(i) = f_fine(i)/vol_total
-
-    end do
-
-    call pop_sub()
-  end subroutine multigrid_coarse2fine
-
   ! ---------------------------------------------------------
   subroutine gridhier_init(a, mgrid, add_points_for_boundaries)
     type(mg_float_pointer), pointer :: a(:)
@@ -555,6 +504,14 @@ contains
 
     call pop_sub()
   end subroutine gridhier_end
+
+#include "undef.F90"
+#include "real.F90"
+#include "multigrid_inc.F90"
+
+#include "undef.F90"
+#include "complex.F90"
+#include "multigrid_inc.F90"
 
 end module multigrid_m
 

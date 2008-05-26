@@ -241,7 +241,7 @@ contains
 
       if(res < this%threshold) then
         if(curr_l > 0 ) then
-          call multigrid_coarse2fine(gr%mgrid, curr_l, phi(curr_l)%p, phi(curr_l-1)%p)
+          call dmultigrid_coarse2fine(gr%mgrid%level(curr_l), phi(curr_l)%p, phi(curr_l-1)%p)
           curr_l = curr_l-1
         else
           exit
@@ -341,7 +341,7 @@ contains
           phi(l)%p(1:np) = phi(l)%p(1:np) - phi_ini(l)%p(1:np)
 
           ! transfer correction to finer level
-          call multigrid_coarse2fine(gr%mgrid, l, phi(l)%p, err(l-1)%p)
+          call dmultigrid_coarse2fine(gr%mgrid%level(l), phi(l)%p, err(l-1)%p)
           np = gr%mgrid%level(l-1)%m%np
           phi(l-1)%p(1:np) = phi(l-1)%p(1:np) + err(l-1)%p(1:np)
         end if

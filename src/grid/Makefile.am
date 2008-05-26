@@ -31,7 +31,7 @@ libgrid_a_SOURCES = \
 noinst_HEADERS = \
 	mesh_init.F90 par_vec_inc.F90 derivatives_inc.F90 cube_function_inc.F90 fourier_space_inc.F90 \
 	mesh_function_inc.F90 functions_inc.F90 double_grid_apply.F90 \
-	submesh_inc.F90 io_function_inc.F90 nl_operator_inc.F90
+	submesh_inc.F90 io_function_inc.F90 nl_operator_inc.F90 multigrid_inc.F90
 
 include $(srcdir)/../common-rules.make
 
@@ -59,6 +59,6 @@ mesh_function.o : mesh_function.F90 mesh_function_inc.F90 par_vec.o mesh.o
 functions.o : functions.F90 functions_inc.F90  mesh_function.o mesh.o derivatives.o cube_function.o 
 basins.o : basins.F90 par_vec.o mesh_lib.o mesh.o 
 io_function.o : io_function.F90 io_function_inc.F90 par_vec.o  mesh.o functions.o cube_function.o 
-multigrid.o : multigrid.F90 mesh.o functions.o curvlinear.o 
+multigrid.o : multigrid.F90 multigrid_inc.F90 mesh.o functions.o curvlinear.o 
 double_grid.o : double_grid.F90 double_grid_apply.F90 submesh.o  mesh_function.o functions.o mesh.o curvlinear.o 
 grid.o : grid.F90  multigrid.o mesh.o functions.o double_grid.o curvlinear.o 
