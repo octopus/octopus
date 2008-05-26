@@ -36,6 +36,7 @@ module external_pot_m
   use mesh_function_m
   use mesh_m
   use messages_m
+  use multigrid_m
   use simul_box_m
   use units_m
   use logrid_m
@@ -416,9 +417,9 @@ contains
     ep%vpsl = M_ZERO
     do ia = geo%atoms_start, geo%atoms_end
       if(st%nlcc) then
-        call epot_local_potential(ep, gr, geo, geo%atom(ia), ep%vpsl, time_, st%rho_core)
+        call epot_local_potential(ep, gr, gr%m, geo, geo%atom(ia), ep%vpsl, time_, st%rho_core)
       else
-        call epot_local_potential(ep, gr, geo, geo%atom(ia), ep%vpsl, time_)
+        call epot_local_potential(ep, gr, gr%m, geo, geo%atom(ia), ep%vpsl, time_)
       end if
     end do
 
@@ -460,9 +461,10 @@ contains
 
   end subroutine epot_generate
 
-  subroutine epot_local_potential(ep, gr, geo, a, vpsl, time, rho_core)
+  subroutine epot_local_potential(ep, gr, mesh, geo, a, vpsl, time, rho_core)
     type(epot_t),             intent(in)    :: ep
     type(grid_t),             intent(inout) :: gr
+    type(mesh_t),             intent(inout) :: mesh
     type(geometry_t),         intent(in)    :: geo
     type(atom_t),             intent(inout) :: a
     FLOAT,                    intent(inout) :: vpsl(:)
@@ -506,7 +508,7 @@ contains
     else
 
       !Local potential
-      call specie_get_local(a%spec, gr, a%x(1:NDIM), vl, time)
+      call specie_get_local(a%spec, mesh, a%x(1:NDIM), vl, time)
 
     end if
 
@@ -517,10 +519,10 @@ contains
     !the localized part
     if(specie_is_ps(a%spec)) then
 
-      radius = double_grid_get_rmax(gr%dgrid, a%spec, gr%m) + gr%m%h(1)
+      radius = double_grid_get_rmax(gr%dgrid, a%spec, mesh) + mesh%h(1)
 
-      call submesh_init_sphere(sphere, gr%sb, gr%m, a%x, radius)
-      call double_grid_apply_local(gr%dgrid, a%spec, gr%m, sphere, a%x, vl(1:sphere%ns))
+      call submesh_init_sphere(sphere, gr%sb, mesh, a%x, radius)
+      call double_grid_apply_local(gr%dgrid, a%spec, mesh, sphere, a%x, vl(1:sphere%ns))
 
       vpsl(sphere%jxyz(1:sphere%ns)) = vpsl(sphere%jxyz(1:sphere%ns)) + vl(1:sphere%ns)
       call submesh_end(sphere)
@@ -532,7 +534,7 @@ contains
     !Non-local core corrections
     if(present(rho_core) .and. a%spec%nlcc .and. specie_is_ps(a%spec)) then
       do i = 1, NP
-        x(1:NDIM) = gr%m%x(i, 1:NDIM) - a%x(1:NDIM)
+        x(1:NDIM) = mesh%x(i, 1:NDIM) - a%x(1:NDIM)
         rho_core(i) = rho_core(i) + specie_get_nlcc(a%spec, x)
       end do
     end if

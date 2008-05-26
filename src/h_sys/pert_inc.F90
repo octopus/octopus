@@ -140,7 +140,7 @@ subroutine X(ionic_perturbation)(this, gr, geo, h, ik, f_in, f_out, iatom, idir)
 
   ALLOCATE(vloc(1:NP), NP)
   vloc(1:NP) = M_ZERO
-  call epot_local_potential(h%ep, gr, geo, atm, vloc, CNST(0.0))
+  call epot_local_potential(h%ep, gr, gr%m, geo, atm, vloc, CNST(0.0))
 
   ALLOCATE(fin(1:NP_PART, 1), NP_PART)
   call lalg_copy(NP, f_in, fin(:, 1))    
@@ -314,7 +314,7 @@ subroutine X(ionic_perturbation_order_2) (this, gr, geo, h, ik, f_in, f_out, iat
   ALLOCATE(vloc(1:NP), NP)
 
   vloc(1:NP) = M_ZERO
-  call epot_local_potential(h%ep, gr, geo, atm, vloc, CNST(0.0))
+  call epot_local_potential(h%ep, gr, gr%m, geo, atm, vloc, CNST(0.0))
 
   call lalg_copy(NP, f_in, fin(:, 1))    
 

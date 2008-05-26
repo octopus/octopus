@@ -590,9 +590,9 @@ contains
   end subroutine getrho 
 
   ! ---------------------------------------------------------
-  subroutine specie_get_local(s, gr, x_atom, vl, time)
+  subroutine specie_get_local(s, mesh, x_atom, vl, time)
     type(specie_t),  intent(in) :: s
-    type(grid_t),    intent(in) :: gr
+    type(mesh_t),    intent(in) :: mesh
     FLOAT,           intent(in) :: x_atom(MAX_DIM)
     FLOAT,           intent(out):: vl(:)
     FLOAT, optional, intent(in) :: time
@@ -612,9 +612,9 @@ contains
       select case(s%type)
       case(SPEC_USDEF)
 
-        do ip = 1, gr%m%np
+        do ip = 1, mesh%np
           
-          xx(:) = gr%m%x(ip,:)-x_atom(:)
+          xx(:) = mesh%x(ip,:)-x_atom(:)
           r = sqrt(sum(xx(:)**2))
           
           ! Note that as the s%user_def is in input units, we have to convert
@@ -633,9 +633,9 @@ contains
         a2 = s%Z/s%jradius
         Rb2= s%jradius**2
         
-        do ip = 1, gr%m%np
+        do ip = 1, mesh%np
           
-          xx(:) = gr%m%x(ip,:)-x_atom(:)
+          xx(:) = mesh%x(ip,:)-x_atom(:)
           r = sqrt(sum(xx(:)**2))
           
           if(r <= s%jradius) then
@@ -647,13 +647,13 @@ contains
         end do
         
       case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
-        do ip = 1, gr%m%np
-          vl(ip) = sum((gr%m%x(ip, 1:MAX_DIM) - x_atom(1:MAX_DIM))**2)
+        do ip = 1, mesh%np
+          vl(ip) = sum((mesh%x(ip, 1:MAX_DIM) - x_atom(1:MAX_DIM))**2)
         end do
-        call spline_eval_vec(s%ps%vlr_sq, NP, vl)
+        call spline_eval_vec(s%ps%vlr_sq, mesh%np, vl)
         
       case(SPEC_ALL_E)
-        vl(1:gr%m%np) = M_ZERO
+        vl(1:mesh%np) = M_ZERO
         
       end select
 

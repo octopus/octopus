@@ -24,10 +24,11 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
   type(states_t),   intent(inout)  :: st
   FLOAT,            intent(in)     :: time
 
-  integer :: iatom, ist, ik, idim, idir
+  integer :: iatom, ist, ik, idim, idir, np
 
   R_TYPE :: psi_proj_gpsi
   R_TYPE, allocatable :: gpsi(:, :, :)
+  R_TYPE, pointer     :: psi(:)
   FLOAT,  allocatable :: grho(:, :), vloc(:)
   FLOAT,  allocatable :: force(:, :)
 #ifdef HAVE_MPI
@@ -36,15 +37,19 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
   type(profile_t), save :: prof
 #endif
 
-  ALLOCATE(gpsi(gr%m%np, 1:NDIM, st%d%dim), gr%m%np*NDIM*st%d%dim)
-  ALLOCATE(grho(NP, MAX_DIM), NP*MAX_DIM)
+  np = gr%fine%m%np
+
+  ALLOCATE(gpsi(np, 1:NDIM, st%d%dim), np*NDIM*st%d%dim)
+  ALLOCATE(grho(np, MAX_DIM), np*MAX_DIM)
 
   ALLOCATE(force(1:MAX_DIM, 1:geo%natoms), MAX_DIM*geo%natoms)
+
+  if(gr%have_fine_mesh) ALLOCATE(psi(gr%fine%m%np_part), gr%fine%m%np_part)
 
   force = M_ZERO
 
   !$omp parallel workshare
-  grho(1:NP, 1:NDIM) = M_ZERO
+  grho(1:np, 1:NDIM) = M_ZERO
   !$omp end parallel workshare    
 
   !THE NON-LOCAL PART (parallel in states)
@@ -53,16 +58,23 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
 
       ! calculate the gradient of the wave-function
       do idim = 1, st%d%dim
-        call X(f_gradient)(gr%sb, gr%f_der, st%X(psi)(:, idim, ist, ik), gpsi(:, :, idim))
+
+        if(gr%have_fine_mesh) then
+          call X(multigrid_coarse2fine)(gr%fine, st%X(psi)(:, idim, ist, ik), psi)
+        else
+          psi => st%X(psi)(:, idim, ist, ik)
+        end if
+
+        call X(derivatives_grad)(gr%fine%f_der%der_discr, psi, gpsi(:, :, idim))
 
         !accumulate to calculate the gradient of the density
         do idir = 1, NDIM
-          grho(1:NP, idir) = grho(1:NP, idir) + st%d%kweights(ik)*st%occ(ist, ik) * M_TWO * &
-               R_REAL(st%X(psi)(1:NP, idim, ist, ik)*R_CONJ(gpsi(1:NP, idir, idim)))
+          grho(1:np, idir) = grho(1:np, idir) + &
+               st%d%kweights(ik)*st%occ(ist, ik)*M_TWO*R_REAL(psi(1:np)*R_CONJ(gpsi(1:np, idir, idim)))
         end do
       end do
 
-      call profiling_count_operations(NP*st%d%dim*NDIM*(2 + R_MUL))
+      call profiling_count_operations(np*st%d%dim*NDIM*(2 + R_MUL))
 
       ! iterate over the projectors
       do iatom = 1, geo%natoms
@@ -70,9 +82,9 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
         do idir = 1, NDIM
           
           psi_proj_gpsi = &
-            X(psia_project_psib)(gr%m, ep%p(iatom), st%d%dim, st%X(psi)(:, :, ist, ik), gpsi(:, idir, :), ik)
+               X(psia_project_psib)(gr%fine%m, ep%p(iatom), st%d%dim, st%X(psi)(:, :, ist, ik), gpsi(:, idir, :), ik)
           
-          force(idir, iatom) = force(idir, iatom) - M_TWO * st%occ(ist, ik) * R_REAL(psi_proj_gpsi)
+          force(idir, iatom) = force(idir, iatom) - M_TWO*st%occ(ist, ik)*R_REAL(psi_proj_gpsi)
 
         end do
       end do
@@ -80,6 +92,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
     end do
   end do
 
+  if(gr%have_fine_mesh) deallocate(psi)
   deallocate(gpsi)
 
 #if defined(HAVE_MPI)
@@ -94,9 +107,9 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
     deallocate(force_local)
 
     !reduce the gradient of the density
-    ALLOCATE(grho_local(NP, MAX_DIM), NP*MAX_DIM)
-    call lalg_copy(NP, MAX_DIM, grho, grho_local)
-    call MPI_Allreduce(grho_local, grho, NP*MAX_DIM, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+    ALLOCATE(grho_local(np, MAX_DIM), np*MAX_DIM)
+    call lalg_copy(np, MAX_DIM, grho, grho_local)
+    call MPI_Allreduce(grho_local, grho, np*MAX_DIM, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
     deallocate(grho_local)
 
     call profiling_out(prof)
@@ -110,16 +123,16 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
 
   ! THE LOCAL PART (parallel in atoms)
 
-  ALLOCATE(vloc(1:NP), NP)
+  ALLOCATE(vloc(1:np), np)
   
   do iatom = geo%atoms_start, geo%atoms_end
     
-    vloc(1:NP) = M_ZERO
+    vloc(1:np) = M_ZERO
     
-    call epot_local_potential(ep, gr, geo, geo%atom(iatom), vloc, time)
+    call epot_local_potential(ep, gr, gr%fine%m, geo, geo%atom(iatom), vloc, time)
     
     do idir = 1, NDIM
-      force(idir, iatom) = -dmf_dotp(gr%m, grho(1:NP, idir), vloc(1:NP))
+      force(idir, iatom) = -dmf_dotp(gr%m, grho(1:np, idir), vloc(1:np))
     end do
 
   end do
