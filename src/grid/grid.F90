@@ -21,6 +21,7 @@
 
 module grid_m
   use curvlinear_m
+  use datasets_m
   use double_grid_m
   use functions_m
   use geometry_m
@@ -30,6 +31,7 @@ module grid_m
   use mpi_m
   use multicomm_m
   use multigrid_m
+  use loct_parser_m
   use simul_box_m
 
   implicit none
@@ -47,10 +49,12 @@ module grid_m
   type grid_t
     type(simul_box_t)           :: sb
     type(mesh_t)                :: m
+    type(multigrid_level_t)     :: fine
     type(f_der_t)               :: f_der
     type(curvlinear_t)          :: cv
     type(multigrid_t), pointer  :: mgrid
     type(double_grid_t)         :: dgrid
+    logical                     :: have_fine_mesh
   end type grid_t
 
 
@@ -63,11 +67,26 @@ contains
 
     call push_sub('grid.grid_init_stage_1')
 
+    !%Variable UseFineMesh
+    !%Type logical
+    !%Default no
+    !%Section Mesh
+    !%Description
+    !% If enabled, octopus will use a finer mesh for the calculation
+    !% of the forces or other sensitive quantities. The default is
+    !% disable.
+    !%End
+    if (gr%sb%dim == 3) then 
+      call loct_parse_logical(check_inp('UseFineMesh'), .false., gr%have_fine_mesh)
+    else
+      gr%have_fine_mesh = .false.
+    end if
+
     ! initialize curvlinear coordinates
     call curvlinear_init(gr%sb, geo, gr%cv)
 
     ! initilize derivatives
-    call f_der_init(gr%f_der, gr%sb, gr%cv%method.ne.CURV_METHOD_UNIFORM)
+    call f_der_init(gr%f_der, gr%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
 
     call double_grid_init(gr%dgrid, gr%sb)
 
@@ -82,9 +101,9 @@ contains
 
   !-------------------------------------------------------------------
   subroutine grid_init_stage_2(gr, mc, geo)
-    type(grid_t),      intent(inout) :: gr
-    type(multicomm_t), intent(in)    :: mc
-    type(geometry_t),  intent(in)    :: geo
+    type(grid_t), target, intent(inout) :: gr
+    type(multicomm_t),    intent(in)    :: mc
+    type(geometry_t),     intent(in)    :: geo
 
     type(mpi_grp_t) :: grp
 
@@ -101,6 +120,36 @@ contains
 
     call f_der_build(gr%sb, gr%m, gr%f_der)
 
+    ! initialize a finer mesh to hold the density, for this we use the
+    ! multigrid routines
+    
+    if(gr%have_fine_mesh) then
+      
+      ALLOCATE(gr%fine%m, 1)
+      ALLOCATE(gr%fine%f_der, 1)
+      
+      call multigrid_mesh_double(geo, gr%cv, gr%m, gr%fine%m)
+      
+      call f_der_init(gr%fine%f_der, gr%m%sb, gr%cv%method .ne. CURV_METHOD_UNIFORM)
+      
+      if(gr%m%parallel_in_domains) then
+        call mesh_init_stage_3(gr%fine%m, geo, gr%cv, &
+             gr%fine%f_der%der_discr%lapl%stencil, gr%fine%f_der%der_discr%lapl%n, gr%m%mpi_grp)
+      else
+        call mesh_init_stage_3(gr%fine%m, geo, gr%cv)
+      end if
+      
+      call multigrid_get_transfer_tables(gr%fine, gr%fine%m, gr%m)
+      
+      call f_der_build(gr%m%sb, gr%fine%m, gr%fine%f_der)
+      
+      call mesh_write_info(gr%fine%m, stdout)
+
+    else
+      gr%fine%m => gr%m
+      gr%fine%f_der => gr%f_der
+    end if
+
     ! multigrids are not initialized by default
     nullify(gr%mgrid)
 
@@ -116,6 +165,13 @@ contains
     type(grid_t), intent(inout) :: gr
 
     call push_sub('grid.grid_end')
+
+    if(gr%have_fine_mesh) then
+      call f_der_end(gr%fine%f_der)
+      call mesh_end(gr%fine%m)
+      deallocate(gr%fine%m, gr%fine%f_der)
+      deallocate(gr%fine%to_coarse, gr%fine%to_fine1, gr%fine%to_fine2, gr%fine%to_fine4, gr%fine%to_fine8, gr%fine%fine_i)
+    end if
 
     call double_grid_end(gr%dgrid)
 
