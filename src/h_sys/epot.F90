@@ -480,10 +480,10 @@ contains
     call push_sub('epot.epot_local_potential')
     call profiling_in(prof, "EPOT_LOCAL")
 
-    ALLOCATE(vl(1:NP_PART), NP_PART)
+    ALLOCATE(vl(1:mesh%np_part), mesh%np_part)
 #ifdef USE_OMP
     !$omp parallel workshare
-    vl(1:NP) = M_ZERO
+    vl(1:mesh%np) = M_ZERO
     !$omp end parallel workshare
 #endif
 
@@ -493,13 +493,13 @@ contains
 
     if(a%spec%has_density .or. (specie_is_ps(a%spec) .and. simul_box_is_periodic(gr%sb))) then
 
-      ALLOCATE(rho(1:NP), NP)
+      ALLOCATE(rho(1:mesh%np), mesh%np)
 
       !this has to be optimized so the poisson solution is made once
       !for all species, perhaps even include it in the hartree term
       call specie_get_density(a%spec, a%x, gr, geo, rho)
 
-      vl(1:NP) = M_ZERO   ! vl has to be initialized before entering routine
+      vl(1:mesh%np) = M_ZERO   ! vl has to be initialized before entering routine
       ! and our best guess for the potential is zero
       call dpoisson_solve(gr, vl, rho)
 
@@ -513,7 +513,7 @@ contains
     end if
 
     !$omp parallel workshare
-    vpsl(1:NP) = vpsl(1:NP) + vl(1:NP)
+    vpsl(1:mesh%np) = vpsl(1:mesh%np) + vl(1:mesh%np)
     !$omp end parallel workshare
 
     !the localized part
@@ -533,7 +533,7 @@ contains
 
     !Non-local core corrections
     if(present(rho_core) .and. a%spec%nlcc .and. specie_is_ps(a%spec)) then
-      do i = 1, NP
+      do i = 1, mesh%np
         x(1:NDIM) = mesh%x(i, 1:NDIM) - a%x(1:NDIM)
         rho_core(i) = rho_core(i) + specie_get_nlcc(a%spec, x)
       end do
