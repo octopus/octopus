@@ -44,12 +44,13 @@ module submesh_m
        submesh_end
  
   type submesh_t
-     integer          :: ns = -1        ! number of points inside the submesh
-     integer          :: ns_part        ! number of points inside the submesh including ghost points
-     integer          :: np_part
-     integer, pointer :: jxyz(:)        ! index in the mesh of the points inside the sphere
-     integer, pointer :: jxyz_inv(:)    ! and the inverse
-     FLOAT,   pointer :: x(:,:)
+     integer               :: ns = -1        ! number of points inside the submesh
+     integer               :: ns_part        ! number of points inside the submesh including ghost points
+     integer               :: np_part
+     integer,      pointer :: jxyz(:)        ! index in the mesh of the points inside the sphere
+     integer,      pointer :: jxyz_inv(:)    ! and the inverse
+     FLOAT,        pointer :: x(:,:)
+     type(mesh_t), pointer :: mesh
   end type submesh_t
   
 contains
@@ -65,11 +66,11 @@ contains
   end subroutine submesh_null
 
   subroutine submesh_init_sphere(this, sb, m, center, rc)
-    type(submesh_t),   intent(out)  :: this
-    type(simul_box_t), intent(in)   :: sb
-    type(mesh_t),      intent(in)   :: m
-    FLOAT,             intent(in)   :: center(1:MAX_DIM)
-    FLOAT,             intent(in)   :: rc
+    type(submesh_t),      intent(out)  :: this
+    type(simul_box_t),    intent(in)   :: sb
+    type(mesh_t), target, intent(in)   :: m
+    FLOAT,                intent(in)   :: center(1:MAX_DIM)
+    FLOAT,                intent(in)   :: rc
     
     FLOAT :: r2, x(1:MAX_DIM)
     FLOAT, allocatable :: center_copies(:, :)
@@ -83,6 +84,7 @@ contains
     call profiling_in(submesh_init_prof, "SUBMESH_INIT")
 
     this%np_part = m%np_part
+    this%mesh => m
 
     ALLOCATE(this%jxyz_inv(0:this%np_part), this%np_part+1)
 
@@ -225,6 +227,7 @@ contains
     call push_sub('submesh.submesh_end')
 
     if( this%ns /= -1 ) then
+      nullify(this%mesh)
       this%ns = -1
       deallocate(this%jxyz)
       deallocate(this%jxyz_inv)
@@ -236,12 +239,14 @@ contains
   end subroutine submesh_end
 
   subroutine submesh_copy(sm_in, sm_out)
-    type(submesh_t),   intent(in)   :: sm_in
-    type(submesh_t),   intent(out)  :: sm_out
+    type(submesh_t), target,  intent(in)   :: sm_in
+    type(submesh_t),          intent(out)  :: sm_out
 
     call push_sub('submesh.submesh_copy')
     
     ASSERT(sm_out%ns == -1)
+
+    sm_out%mesh => sm_in%mesh
 
     sm_out%ns = sm_in%ns
     sm_out%ns_part = sm_in%ns_part

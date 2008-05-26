@@ -195,8 +195,7 @@ end subroutine X(project_psi)
 
 !------------------------------------------------------------------------------
 ! X(psia_project_psib) calculates <psia|projector|psib>
-R_TYPE function X(psia_project_psib)(mesh, pj, dim, psia, psib, ik) result(apb)
-  type(mesh_t),      intent(in)    :: mesh
+R_TYPE function X(psia_project_psib)(pj, dim, psia, psib, ik) result(apb)
   type(projector_t), intent(in)    :: pj
   integer,           intent(in)    :: dim
   R_TYPE,            intent(in)    :: psia(:, :)  ! psia(1:mesh%np, dim)
@@ -209,10 +208,14 @@ R_TYPE function X(psia_project_psib)(mesh, pj, dim, psia, psib, ik) result(apb)
 #if defined(HAVE_MPI)
   R_TYPE, allocatable :: uvpsi_tmp(:, :, :, :)
 #endif
+  type(mesh_t), pointer :: mesh
 
   call push_sub('projector_inc.psia_project_psib')
 
   ns = pj%sphere%ns
+
+  ASSERT(associated(pj%sphere%mesh))
+  mesh => pj%sphere%mesh
 
   ALLOCATE(lpsi(ns, dim),  ns*dim)
   ALLOCATE(plpsi(ns, dim), ns*dim)

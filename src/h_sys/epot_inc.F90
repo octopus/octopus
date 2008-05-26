@@ -82,7 +82,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
         do idir = 1, NDIM
           
           psi_proj_gpsi = &
-               X(psia_project_psib)(gr%fine%m, ep%p(iatom), st%d%dim, st%X(psi)(:, :, ist, ik), gpsi(:, idir, :), ik)
+               X(psia_project_psib)(ep%p(iatom), st%d%dim, st%X(psi)(:, :, ist, ik), gpsi(:, idir, :), ik)
           
           force(idir, iatom) = force(idir, iatom) - M_TWO*st%occ(ist, ik)*R_REAL(psi_proj_gpsi)
 
