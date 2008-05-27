@@ -75,8 +75,9 @@ module external_pot_m
     FLOAT, pointer :: vclassic(:) ! We use it to store the potential of the classic charges
 
     ! Ions
-    FLOAT,       pointer :: vpsl(:)       ! the local part of the pseudopotentials
-    type(projector_t), pointer :: p(:)    ! non-local projectors
+    FLOAT,       pointer :: vpsl(:)          ! the local part of the pseudopotentials
+    type(projector_t), pointer :: p(:)       ! non-local projectors
+    type(projector_t), pointer :: p_fine(:)  ! non-local projectors in the fine grid
     logical :: non_local
     integer :: natoms
 
@@ -318,10 +319,19 @@ contains
     call loct_parse_float(check_inp('SOStrength'), M_ONE, ep%so_strength)
     
     ALLOCATE(ep%p(geo%natoms), geo%natoms)
-
     do i = 1, geo%natoms
       call projector_null(ep%p(i))
     end do
+
+    if(gr%have_fine_mesh) then
+      ALLOCATE(ep%p_fine(geo%natoms), geo%natoms)
+      do i = 1, geo%natoms
+        call projector_null(ep%p_fine(i))
+      end do
+    else
+      ep%p_fine => ep%p
+    end if
+
     ep%natoms = geo%natoms
     ep%non_local = .false.
 
@@ -375,9 +385,17 @@ contains
       if(.not. specie_is_ps(geo%atom(iproj)%spec)) cycle
       call projector_end(ep%p(iproj))
     end do
-    
+
     ASSERT(associated(ep%p))
     deallocate(ep%p)
+
+    if(gr%have_fine_mesh) then
+      do iproj = 1, geo%natoms
+        if(.not. specie_is_ps(geo%atom(iproj)%spec)) cycle
+        call projector_end(ep%p_fine(iproj))
+      end do
+      deallocate(ep%p_fine)
+    end if
 
     call pop_sub()
 
@@ -448,13 +466,23 @@ contains
       ep%non_local = .true.
       call projector_end(ep%p(ia))
       call projector_init(ep%p(ia), gr%m, sb, atm, st%d%dim, ep%reltype)
-      if(simul_box_is_periodic(sb)) call projector_init_phases(ep%p(ia), gr%m, st%d%nik, st%d%kpoints)
+      if(simul_box_is_periodic(sb)) call projector_init_phases(ep%p(ia), st%d%nik, st%d%kpoints)
       call projector_build(ep%p(ia), gr, atm, ep%so_strength)
     end do
 
-    if (ep%classic_pot > 0) then
-      ep%vpsl(1:m%np) = ep%vpsl(1:m%np) + ep%vclassic(1:m%np)
+    if(gr%have_fine_mesh) then
+      do ia = 1, geo%natoms
+        atm => geo%atom(ia)
+        if(.not. specie_is_ps(atm%spec)) cycle
+        ep%non_local = .true.
+        call projector_end(ep%p_fine(ia))
+        call projector_init(ep%p_fine(ia), gr%fine%m, sb, atm, st%d%dim, ep%reltype)
+        if(simul_box_is_periodic(sb)) call projector_init_phases(ep%p_fine(ia), st%d%nik, st%d%kpoints)
+        call projector_build(ep%p(ia), gr, atm, ep%so_strength)
+      end do
     end if
+
+    if (ep%classic_pot > 0) ep%vpsl(1:m%np) = ep%vpsl(1:m%np) + ep%vclassic(1:m%np)
 
     call pop_sub()
     call profiling_out(epot_generate_prof)

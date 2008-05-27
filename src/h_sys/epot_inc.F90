@@ -28,7 +28,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
 
   R_TYPE :: psi_proj_gpsi
   R_TYPE, allocatable :: gpsi(:, :, :)
-  R_TYPE, pointer     :: psi(:)
+  R_TYPE, pointer     :: psi(:, :)
   FLOAT,  allocatable :: grho(:, :), vloc(:)
   FLOAT,  allocatable :: force(:, :)
 #ifdef HAVE_MPI
@@ -44,7 +44,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
 
   ALLOCATE(force(1:MAX_DIM, 1:geo%natoms), MAX_DIM*geo%natoms)
 
-  if(gr%have_fine_mesh) ALLOCATE(psi(gr%fine%m%np_part), gr%fine%m%np_part)
+  if(gr%have_fine_mesh) ALLOCATE(psi(gr%fine%m%np_part, st%d%dim), gr%fine%m%np_part*st%d%dim)
 
   force = M_ZERO
 
@@ -55,22 +55,24 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
   !THE NON-LOCAL PART (parallel in states)
   do ik = 1, st%d%nik
     do ist = st%st_start, st%st_end
+      
+      if(gr%have_fine_mesh) then
+        do idim = 1, st%d%dim
+          call X(multigrid_coarse2fine)(gr%fine, st%X(psi)(:, idim, ist, ik), psi(:, idim))
+        end do
+      else
+        psi => st%X(psi)(:, :, ist, ik)
+      end if
 
       ! calculate the gradient of the wave-function
       do idim = 1, st%d%dim
 
-        if(gr%have_fine_mesh) then
-          call X(multigrid_coarse2fine)(gr%fine, st%X(psi)(:, idim, ist, ik), psi)
-        else
-          psi => st%X(psi)(:, idim, ist, ik)
-        end if
-
-        call X(derivatives_grad)(gr%fine%f_der%der_discr, psi, gpsi(:, :, idim))
+        call X(derivatives_grad)(gr%fine%f_der%der_discr, psi(:, idim), gpsi(:, :, idim))
 
         !accumulate to calculate the gradient of the density
         do idir = 1, NDIM
           grho(1:np, idir) = grho(1:np, idir) + &
-               st%d%kweights(ik)*st%occ(ist, ik)*M_TWO*R_REAL(psi(1:np)*R_CONJ(gpsi(1:np, idir, idim)))
+               st%d%kweights(ik)*st%occ(ist, ik)*M_TWO*R_REAL(psi(1:np, idim)*R_CONJ(gpsi(1:np, idir, idim)))
         end do
       end do
 
@@ -81,8 +83,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
         if(ep%p(iatom)%type == 0) cycle
         do idir = 1, NDIM
           
-          psi_proj_gpsi = &
-               X(psia_project_psib)(ep%p(iatom), st%d%dim, st%X(psi)(:, :, ist, ik), gpsi(:, idir, :), ik)
+          psi_proj_gpsi = X(psia_project_psib)(ep%p_fine(iatom), st%d%dim, psi, gpsi(:, idir, :), ik)
           
           force(idir, iatom) = force(idir, iatom) - M_TWO*st%occ(ist, ik)*R_REAL(psi_proj_gpsi)
 

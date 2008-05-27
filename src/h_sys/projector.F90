@@ -168,9 +168,8 @@ contains
     call pop_sub()
   end subroutine projector_init
 
-  subroutine projector_init_phases(this, m, nkpoints, kpoints, vec_pot)
+  subroutine projector_init_phases(this, nkpoints, kpoints, vec_pot)
     type(projector_t), intent(inout) :: this
-    type(mesh_t),      intent(in)    :: m
     integer,           intent(in)    :: nkpoints
     FLOAT,             intent(in)    :: kpoints(:, :)
     FLOAT, optional,   intent(in)    :: vec_pot(1:MAX_DIM)
@@ -187,7 +186,7 @@ contains
     do ik = 1, nkpoints
 
       do is = 1, ns
-        kr = sum(kpoints(1:MAX_DIM, ik)*(this%sphere%x(is, 1:MAX_DIM) - m%x(this%sphere%jxyz(is), 1:MAX_DIM)))
+        kr = sum(kpoints(1:MAX_DIM, ik)*(this%sphere%x(is, 1:MAX_DIM) - this%sphere%mesh%x(this%sphere%jxyz(is), 1:MAX_DIM)))
         if(present(vec_pot)) kr = kr + sum(vec_pot(1:MAX_DIM)*this%sphere%x(is, 1:MAX_DIM))
         this%phase(is, ik) = exp(-M_zI*kr)
       end do

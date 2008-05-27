@@ -99,7 +99,7 @@ contains
     kb_p%e = M_ZERO
     
     do ic = 1, n_c
-      call double_grid_apply_non_local(gr%dgrid, a%spec, gr%m, sm, a%x, kb_p%p(:, ic), l, lm, ic)
+      call double_grid_apply_non_local(gr%dgrid, a%spec, sm%mesh, sm, a%x, kb_p%p(:, ic), l, lm, ic)
       kb_p%e(ic) = a%spec%ps%h(l, ic, ic)
     end do
 
