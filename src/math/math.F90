@@ -760,6 +760,10 @@ contains
 
 ! ---------------------------------------------------------
 ! QMR (quasi-minimal residual) algorithm for complex symmetric matrices
+! algorithm taken from:
+! Parallel implementation of efficient preconditioned linear solver for
+! grid-based applications in chemical physics. II: QMR linear solver
+! Appendix A. Simplified QMR algorithm
 subroutine zqmr_sym(np, x, b, op, prec, iter, residue, threshold, showprogress)
   integer, intent(in)             :: np
   CMPLX,  intent(inout)           :: x(:)

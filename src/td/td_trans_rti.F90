@@ -75,6 +75,7 @@ module td_trans_rti_m
     integer, pointer :: sp2full_map(:)        ! the mapping indices from sparse to full matrices
     CMPLX, pointer   :: src_mem_u(:, :)       ! t, il     u(m)
     FLOAT, pointer   :: energy(:)             ! nst, 0 = transversal energy
+    FLOAT, pointer   :: q(:, :)               ! nst (0 = transversal q), dim
     CMPLX, pointer   :: src_prev(:, :, :, :, :)! intf%np, ndim, nst, nik, NLEADS
     CMPLX, pointer   :: diag(:, :, :)         ! h
     CMPLX, pointer   :: offdiag(:, :, :)      ! hopping operator V^T (np,np,nleads)
@@ -107,18 +108,20 @@ contains
     FLOAT,             intent(in)  :: dt
     integer,           intent(in)  :: max_iter
 
-    integer :: allocsize, id, ist, nst2, i
+    integer :: allocsize, id, ist, nst2, i, order, band
     type(nl_operator_t)  :: op
     FLOAT, allocatable   :: um(:)
-    FLOAT                :: emax, qmin, qmax, q, energy
+    FLOAT                :: emax, qmin, qmax, q, energy, deltaq
 
     ALLOCATE(um(NLEADS), NLEADS)
     ALLOCATE(trans%energy(0:st%nst), st%nst+1 )
+    ALLOCATE(trans%q(0:st%nst, gr%sb%dim), (st%nst+1)*gr%sb%dim )
 
     call push_sub('td_trans_rti.cn_src_mem_init')
 
     taylor_1st%exp_method = TAYLOR
     taylor_1st%exp_order = 1
+    order = gr%f_der%der_discr%order
 
     call intface_init(gr, trans%intface)
 
@@ -196,15 +199,38 @@ contains
     !%End
     call loct_parse_float(check_inp('TDTransEnergy'), CNST(0.1), energy)
 
+    ! calculate the energies and the corresponding q-vectors for each state
+    ! this includes also all degenerated states
+    ! we start from the fermie-energy and go to the lowest possible energie
+    ! this is needed for the k-spacing of the current integral
+    ! will throw out a warning if the number of states is not right
+
+    !%Variable TDTransSubBand
+    !%Type integer
+    !%Default 1
+    !%Section Transport
+    !%Description
+    !% Chooses the subband in dimensions greater equal 2 (needed for current calculation)
+    !%End
+    call loct_parse_int(check_inp('TDTransSubBand'), 1, band)
+    if(band.lt.1) then
+      write(message(1), '(a,i6,a)') "Input : '", band, "' is not a valid TDTransSubBand."
+      message(2) = '(1 <= TDTransSubBand)'
+      call write_fatal(2)
+    end if
+
+    ! first calculate the lowest possible energy
     trans%energy(0) = M_ZERO
     do id=2, gr%sb%dim ! FIXME: when the last gridpoint is not the border, recalculate transversal energy
-      q = M_PI/(M_TWO*(gr%sb%lsize(id)+gr%sb%h(id)))
-      if (gr%f_der%der_discr%order.eq.1) then ! tight binding
-        trans%energy(0) = trans%energy(0) + (M_ONE-cos(gr%sb%h(id)*q))/gr%sb%h(id)**2
+      trans%q(0, id) = band*M_PI/(M_TWO*(gr%sb%lsize(id)+gr%sb%h(id)))
+      if (order.eq.1) then ! tight binding
+        trans%energy(0) = trans%energy(0) + (M_ONE-cos(gr%sb%h(id)*trans%q(0, id)))/gr%sb%h(id)**2
       else ! continuous relation
-        trans%energy(0) = trans%energy(0) + M_HALF*q**2
+        trans%energy(0) = trans%energy(0) + M_HALF*trans%q(0, id)**2
       end if
     end do
+
+    ! now calculate the highest energy used for transport direction
     emax = energy - trans%energy(0)
     if(emax < M_ZERO) then
       write(message(1), '(a,f14.6,a)') "The Fermie energy : '", energy, &
@@ -212,33 +238,50 @@ contains
       call write_fatal(1)
     end if
     qmin = CNST(1e-5)
-    if (gr%f_der%der_discr%order.eq.1) then ! tight binding
+    trans%q(0, 1) = qmin
+    if (order.eq.1) then ! tight binding
       qmax = acos(M_ONE-emax*gr%sb%h(1)**2)/gr%sb%h(1)
     else ! continuous relation
       qmax = sqrt(M_TWO*emax)
     end if
 
+    ! sample equidistant from qmax to qmin
+    ! the degeneracy is -qx and +qx
+    ! therefore we need a even number of states (need to check)
+    if(mod(st%nst,2).eq.1) then
+      write(message(1), '(a)') "The number of states has to be even!"
+      call write_fatal(1)
+    end if
     nst2 = (st%nst-1)/2
     if (nst2.eq.0) nst2 = 1
+    deltaq = (qmax-qmin)/nst2
     ! sample the k integral (k=q), start with highest k
-    do ist = 1, st%nst
+    do ist = 1, st%nst, 2
       ! always two states (ist=(1,2); (3,4), ...) have the same energy
       i = (ist-1)/2
-      q = qmax - i*(qmax-qmin)/nst2
-      if (gr%f_der%der_discr%order.eq.1) then ! tight binding
+      q = qmax - i*deltaq
+      trans%q(ist  , 1) = q
+      trans%q(ist+1, 1) = -q
+      if (order.eq.1) then ! tight binding
         trans%energy(ist) = (M_ONE-cos(gr%sb%h(1)*q))/gr%sb%h(1)**2
       else ! continuous relation
         trans%energy(ist) = q**2/M_TWO
       end if
+      trans%energy(ist+1) = trans%energy(ist)
+      ! for now we have only one sub-band at once, to be set from outside
+      do id=2, gr%sb%dim
+        trans%q(ist  , id) = trans%q(0, id)
+        trans%q(ist+1, id) = trans%q(0, id)
+      end do
     end do !ist
 
     call lead_init(trans%lead, max_iter, dt)
 
-    call td_trans_rti_write_info(trans, st, max_iter, gr%f_der%der_discr%order, trans%mem_type)
+    call td_trans_rti_write_info(trans, st, max_iter, order, trans%mem_type)
 
     call memory_init(trans%intface, dt/M_TWO, max_iter, gr%f_der%der_discr%lapl,&
                       trans%mem_coeff, trans%mem_sp_coeff, trans%mem_s, trans%diag, trans%offdiag, gr%sb%dim, &
-                      gr%sb%h(1), trans%mem_type, gr%f_der%der_discr%order, trans%sp2full_map, st%mpi_grp)
+                      gr%sb%h(1), trans%mem_type, order, trans%sp2full_map, st%mpi_grp)
 
     call source_init(st, trans%src_prev, trans%st_psi0, dt, trans%intface%np, gr)
 
@@ -282,6 +325,11 @@ contains
     if(associated(trans%energy)) then
       deallocate(trans%energy)
       nullify(trans%energy)
+    end if
+
+    if(associated(trans%q)) then
+      deallocate(trans%q)
+      nullify(trans%q)
     end if
 
     call intface_end(trans%intface)
@@ -501,9 +549,29 @@ contains
     call pop_sub()
   end subroutine preconditioner
 
+  ! continuous or discrete plane wave (depending on discretization order)
+  CMPLX function plane_wave(j, q, dx, order)
+    integer,        intent(in) :: j     ! x = j*dx
+    FLOAT,          intent(in) :: q     ! q(en)
+    FLOAT,          intent(in) :: dx    ! spacing
+    integer,        intent(in) :: order ! discretization order
+
+    FLOAT :: en
+    call push_sub('td_transport.plane_wave')
+
+    if (order.eq.1) then ! discrete
+      en = (M_ONE-cos(q*dx))/dx**2
+      plane_wave = (M_ONE-en*dx**2 + sign(M_ONE, q)*M_zI*dx*sqrt(M_TWO*en-(en*dx)**2))**j
+    else ! continuous
+      plane_wave = exp(M_zI*q*j*dx)
+    end if
+
+    call pop_sub()
+  end function plane_wave
+
   ! ---------------------------------------------------------
   ! compute the extended eigenstate(s) 
-  subroutine ext_eigenstate_lip_sch(h, gr, np, diag, offdiag, order, energy, st)
+  subroutine ext_eigenstate_lip_sch(h, gr, np, diag, offdiag, order, energy, q, st)
     type(hamiltonian_t), intent(inout) :: h
     type(grid_t),   intent(inout)      :: gr
     integer,        intent(in)      :: np                      ! number of interface points
@@ -511,13 +579,14 @@ contains
     CMPLX,          intent(in)      :: offdiag(np, np, NLEADS) ! hopping operator V^T
     integer,        intent(in)      :: order                   ! discretization order
     type(states_t), intent(inout)   :: st                      ! states
-    FLOAT, target,  intent(in)      :: energy(0:st%nst)       ! energy
+    FLOAT, target,  intent(in)      :: energy(0:st%nst)        ! energy
+    FLOAT,          intent(in)      :: q(0:st%nst, 1:gr%sb%dim)! q(energy) of the states
 
     CMPLX, target, allocatable :: green_l(:,:,:)
     CMPLX, allocatable :: tmp(:, :)
-    integer            :: i, id, iter, ist, nst2
+    integer            :: i, id, iter, ist, subband
     integer, pointer   :: lxyz(:,:)
-    FLOAT              :: lsize(3), q(3), dres, qmin, qmax, dx(3)
+    FLOAT              :: lsize(3), dres, dx(3)
     FLOAT, target      :: en
 
     call push_sub('td_trans_rti.ext_eigenstate_lip_sch')
@@ -529,7 +598,6 @@ contains
     ! yet only for a box psi=psi(x)*psi(y)*psi(z)
     ! e_tot = e_x + e_y + e_z, we need e_x for q (for box-sized leads)
     ! FIXME: (probably) run trough all possible linear combinations
-    ! yet only the highest state of the separated function is multiplied
 
     ! 1. compute the unpertubed eigenstates (groundstate calculation)
     ! for now set manually psi(x)*phi(y,z)
@@ -538,42 +606,25 @@ contains
     lxyz => gr%m%lxyz
     lsize = gr%sb%lsize
     dx(:) = gr%sb%h(:)
-    qmin = CNST(1e-5)
-    if (order.eq.1) then ! tight binding
-      qmax = acos(M_ONE-energy(1)*dx(1)**2)/dx(1)
-    else ! continuous relation
-      qmax = sqrt(M_TWO*energy(1))
-    end if
 
-    nst2 = (st%nst-1)/2
-    if (nst2.eq.0) nst2 = 1
     ! sample the k integral (k=q), start with highest k
-    do id=2, gr%sb%dim ! FIXME: when the last gridpoint is not the border, recalculate transversal energy
-      q(id) = M_PI/(M_TWO*(gr%sb%lsize(id)+gr%sb%h(id)))
-    end do
     do ist = st%st_start, st%st_end
       en = energy(ist) + energy(0)
-      ! always two states (ist=(1,2); (3,4), ...) have the same energy
-      ! start with en > emin
-      i = (ist-1)/2
-      q(1) = qmax - i*(qmax-qmin)/nst2
-      ! now calculate the q`s for each state
-      ! TODO: run over all states, now only the lowest transversal mode is used
+      ! TODO: run over all states, for now only one transversal mode is used
       ! now set the unscattered states (flat leads with box geometry)
+      ! first in transport direction
       do i=1, NP
-        if (mod(ist-1,2).eq.0) then
-          st%zpsi(i, 1, ist, 1) = exp(M_zI*q(1)*lxyz(i,1)*dx(1))
-        else
-          st%zpsi(i, 1, ist, 1) = exp(-M_zI*q(1)*lxyz(i,1)*dx(1))
-        end if
-        do id=2, gr%sb%dim
-!          if (mod(n(id),2).eq.0) then
-!            st%zpsi(i, 1, ist, 1) = st%zpsi(i, 1, ist, 1)*sin(q(id)*lxyz(i,id)*dx(id))
-!          else
-            st%zpsi(i, 1, ist, 1) = st%zpsi(i, 1, ist, 1)*cos(q(id)*lxyz(i,id)*dx(id))
-!          end if
-        end do
+        st%zpsi(i, 1, ist, 1) = plane_wave(lxyz(i,1), q(ist, 1), dx(1), order)
       end do
+      ! then transversal direction
+      do id=2, gr%sb%dim
+        subband = (q(ist,id)+0.1) / (M_PI/(M_TWO*(gr%sb%lsize(id)+gr%sb%h(id))))
+        do i=1, NP
+          st%zpsi(i, 1, ist, 1) = st%zpsi(i, 1, ist, 1)*M_HALF* &
+             (plane_wave(lxyz(i, id), q(ist, id), dx(id), order) + &
+              (-M_ONE)**(subband+1)*plane_wave(lxyz(i,id), -q(ist, id), dx(id), order))
+        end do ! i
+      end do ! id
       ! calculate right hand side (e-T-V(lead)-sum(a)[H_ca*g_a*H_ac]
       call green_lead(en, diag(:, :, LEFT), offdiag(:, :, LEFT), np, LEFT, green_l(:, :, LEFT), dx(1))
       call apply_coupling(green_l(:, :, LEFT), offdiag(:, :, LEFT), green_l(:, :, LEFT), np, LEFT)
@@ -606,7 +657,7 @@ contains
 
   ! ---------------------------------------------------------
   ! compute the extended eigenstate(s)
-  subroutine calculate_ext_eigenstate(h, gr, np, diag, offdiag, order, energy, lead_pot, st)
+  subroutine calculate_ext_eigenstate(h, gr, np, diag, offdiag, order, energy, q, lead_pot, st)
     type(hamiltonian_t), intent(inout) :: h
     type(grid_t),   intent(inout)      :: gr
     integer,        intent(in)      :: np                      ! number of interface points
@@ -615,7 +666,8 @@ contains
     integer,        intent(in)      :: order                   ! discretization order
     FLOAT,          intent(in)      :: lead_pot(NLEADS)        ! lead potential at t=0
     type(states_t), intent(inout)   :: st                      ! states
-    FLOAT,          intent(in)      :: energy(0:st%nst)       ! energy
+    FLOAT,          intent(in)      :: energy(0:st%nst)        ! energy
+    FLOAT,          intent(in)      :: q(0:st%nst, 1:gr%sb%dim)! q(energy) of the states
 
     integer  :: eigenstate_type
 
@@ -625,11 +677,11 @@ contains
 
     select case(eigenstate_type)
     case(1) ! reference implementation, only feasible in 1D (maybe 2D)
-      !call ext_eigenst_imag_green(h, gr, np, diag, offdiag, order, energy, lead_pot, dx, st, phase, ik)
+      !call ext_eigenst_imag_green(h, gr, np, diag, offdiag, order, energy, q, lead_pot, dx, st, phase, ik)
     case(2) ! method by Florian Lorenzen and Heiko Appel
-      call ext_eigenstate_lip_sch(h, gr, np, diag, offdiag, order, energy, st)
+      call ext_eigenstate_lip_sch(h, gr, np, diag, offdiag, order, energy, q, st)
     case(3) ! method by Gianluca Stefannuci
-     !call ext_eigenstate_stefanucci(h, gr, np, diag, offdiag, order, energy, lead_pot, dx, st, phase, ik)
+     !call ext_eigenstate_stefanucci(h, gr, np, diag, offdiag, order, energy, q, lead_pot, dx, st, phase, ik)
     end select
 
     call pop_sub()
@@ -639,7 +691,7 @@ contains
   ! Crank-Nicholson timestep with source and memory.
   ! Only non-interacting electrons for the moment, so no
   ! predictor-corrector scheme.
-  subroutine cn_src_mem_dt(intf, mem_type, mem, sp_mem, st_intf, ks, h, st, gr, energy, dt,  &
+  subroutine cn_src_mem_dt(intf, mem_type, mem, sp_mem, st_intf, ks, h, st, gr, energy, q, dt,  &
     t, max_iter, sm_u, td_pot, timestep, src_prev, diag, offdiag, st_psi0, mem_s, &
     additional_terms, mapping)
     type(intface_t), target,     intent(in)    :: intf
@@ -650,6 +702,7 @@ contains
     type(hamiltonian_t), target, intent(inout) :: h
     type(grid_t), target,        intent(inout) :: gr
     FLOAT, target,               intent(in)    :: energy(0:st%nst) ! energy of the states
+    FLOAT, target,               intent(in)    :: q(0:st%nst, 1:gr%sb%dim) ! q(energy) of the states
     FLOAT, target,               intent(in)    :: dt
     FLOAT, target,               intent(in)    :: t
     integer, target,             intent(in)    :: mem_type
@@ -730,11 +783,11 @@ contains
           ext_wf(inp+1:NP+inp, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik)
         deallocate(ext_wf)
       case(1) ! calculate the extended eigenstate
-        ! DON NOT FORGET TO MAKE THE SIMULATION BOX BIGGER IN THE INP FILE
+        ! DO NOT FORGET TO MAKE THE SIMULATION BOX BIGGER IN THE INP FILE
         j = NP*st%d%dim
 !        j = NP*st%d%dim*st%lnst*st%d%nik
 !        call write_binary(j, st%zpsi(1:NP, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik), 3, ierr, 'ext_eigenstate.obf')
-         call calculate_ext_eigenstate(h, gr, inp, diag, offdiag, order, energy, td_pot(0,:), st)
+         call calculate_ext_eigenstate(h, gr, inp, diag, offdiag, order, energy, q, td_pot(0,:), st)
         do ik = 1, st%d%nik
           do ist = st%st_start, st%st_end
             write(filename, '(a,i6.6,a,i6.6,a)') 'ext_eigenstate-', ist, '-', ik, '.obf'
@@ -802,7 +855,6 @@ contains
           end if
         end do
 
-        ! TODO: for many states parallel
         ! 4. Solve linear system (1 + i \delta H_{eff}) st%zpsi = tmp.
         cg_iter = cg_max_iter
         tmp(1:NP, 1) = st%zpsi(1:NP, 1, ist, ik)

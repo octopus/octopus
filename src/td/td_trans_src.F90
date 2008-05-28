@@ -105,11 +105,9 @@ contains
     ALLOCATE(st_psi0(inp, 2, 1, st%st_start:st%st_end, st%d%nik, NLEADS), inp*2*1*st%lnst*st%d%nik*NLEADS )
     
     ! read the extended blocks of the wave funtion
-    ! TODO: for all states
     st_psi0 = M_z0
     src_prev = M_z0
     call read_psi0_ext(st, st_psi0, inp, gr)
-    ! and do some precalculations
 
     call pop_sub()
   end subroutine source_init

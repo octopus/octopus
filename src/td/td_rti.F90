@@ -884,7 +884,8 @@ contains
       call push_sub('td_rti.td_crank_nicholson_src_mem')
       
       call cn_src_mem_dt(tr%trans%intface, tr%trans%mem_type, tr%trans%mem_coeff, tr%trans%mem_sp_coeff, &
-        tr%trans%st_intface,ks, h, st, gr, tr%trans%energy, dt, t, max_iter, tr%trans%src_mem_u, tr%trans%lead%td_pot, nt, &
+        tr%trans%st_intface,ks, h, st, gr, tr%trans%energy, tr%trans%q, &
+        dt, t, max_iter, tr%trans%src_mem_u, tr%trans%lead%td_pot, nt, &
         tr%trans%src_prev, tr%trans%diag, tr%trans%offdiag, tr%trans%st_psi0, &
         tr%trans%mem_s, tr%trans%additional_terms, tr%trans%sp2full_map)
 

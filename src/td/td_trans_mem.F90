@@ -436,9 +436,6 @@ contains
       call write_warning(1)
     end if
     
-    !if (.not.is_bisymmetric(tmp(:,:),np)) then
-    !  write(*,*) 'memory coefficient 0 is not bisymmetric'
-    !end if
     if (mem_type.eq.1) then
       coeff0 = q0
     else
@@ -754,15 +751,8 @@ contains
         call write_warning(1)
       end if
 
-      !if (.not.is_bisymmetric(coeffs(:,:,i),np)) then
-      !  write(*,*) 'memory coefficient',i,'is not bisymmetric'
-      !end if
-
       call loct_progress_bar(i+1, iter+1)
     end do
-
-!    message(1) = ''
-!    call write_info(1)
 
     deallocate(tmp, tmp2, inv_offdiag)
     deallocate(prefactor_plus, prefactor_minus)
@@ -867,7 +857,6 @@ contains
           exit
         end if
         old_norm = norm
-!write(*,*) i,j,norm
       end do
 
       ! Write a warning if a coefficient is not converged.
@@ -878,9 +867,6 @@ contains
       end if
 
       call apply_coupling(coeff_p(:, :, i), offdiag, coeffs(:, :, i), np, il)
-!      if (.not.is_bisymmetric(coeffs(:,:,i),np)) then
-!        write(*,*) 'memory coefficient',i,'is not bisymmetric'
-!      end if
 
       call loct_progress_bar(i+1, iter+1)
     end do
