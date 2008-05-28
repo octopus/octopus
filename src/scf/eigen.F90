@@ -120,7 +120,8 @@ contains
     !% An alternative conjugated gradients eigensolver, faster for
     !% larger systems but less mature.
     !%Option evolution 7
-    !% Propagation in imaginary time. WARNING: Temporarily disabled.
+    !% Propagation in imaginary time. WARNING: Sometimes it misbehaves. Use with 
+    !% caution.
     !%Option lobpcg 8
     !% Locally optimal block preconditioned conjugate gradient algorithm
     !% (only available if DevelVersion = yes),
@@ -146,14 +147,14 @@ contains
     case(EVOLUTION)
       !%Variable EigenSolverImaginaryTime
       !%Type float
-      !%Default 1.0
+      !%Default 10.0
       !%Section SCF::EigenSolver
       !%Description
       !% The imaginary-time step that is used in the imaginary-time evolution
       !% method to obtain the lowest eigenvalues/eigenvectors.
       !% It must satisfy EigenSolverImaginaryTime > 0.
       !%End
-      call loct_parse_float(check_inp('EigenSolverImaginaryTime'), M_ONE, eigens%imag_time)
+      call loct_parse_float(check_inp('EigenSolverImaginaryTime'), CNST(10.0), eigens%imag_time)
       if(eigens%imag_time <= M_ZERO) call input_error('EigenSolverImaginaryTime')
     case(RS_LOBPCG)
     case default

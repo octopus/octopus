@@ -28,8 +28,6 @@ dist_share_DATA = \
 	02-neon_mpi.02-ground_state-kli_par_domains.inp \
 	02-neon_mpi.03-td_calc-kli_par_states.inp \
 	02-neon_mpi.test \
-	06-eigen_evolution.01-ground_state.inp \
-	06-eigen_evolution.test \
 	09-morse.test \
 	09-morse.01-gs.inp \
 	09-morse.02-unocc.inp \

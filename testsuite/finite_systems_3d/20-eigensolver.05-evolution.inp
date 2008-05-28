@@ -1,0 +1,30 @@
+# -*- coding: utf-8 -*-
+# $Id$
+
+Units = ev_angstrom
+
+CalculationMode = gs
+FromScratch = yes
+
+BoxShape = sphere
+Radius = 4
+Spacing = 0.25
+
+LCAOStart = yes
+
+%Coordinates
+ "Si" |  0.000 |  0.000 |  0.000 | no
+ "H"  | -1.213 | -0.852 |  0.000 | no
+ "H"  |  0.000 |  0.852 | -1.213 | no
+ "H"  |  0.000 |  0.852 |  1.213 | no
+ "H"  |  1.213 | -0.852 |  0.000 | no
+%
+
+EigenSolver = evolution
+EigenSolverMaxiter = 25
+EigenSolverInitTolerance = 1e-2
+EigenSolverFinalTolerance = 1e-5
+
+ConvRelDens = 0.1
+
+ParallelizationStrategy = par_domains
