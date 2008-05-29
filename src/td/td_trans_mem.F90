@@ -393,61 +393,69 @@ contains
     integer            :: i, j, np
     CMPLX, allocatable :: q0(:, :)
     FLOAT              :: norm, old_norm, sp2
+    CMPLX              :: h
 
 
     call push_sub('td_trans_mem.approx_coeff0')
 
     np = intface%np
-    sp2 = spacing**2
-    ALLOCATE(q0(np, np), np**2)
 
-    ! Truncating the continued fraction is the same as iterating the
-    ! equation
-    !
-    !     q0 = V^T * (1/(1 + i*delta*h + delta^2*q0)) * V
-    !
-    ! with start value 0:
-    q0(:, :) = M_z0
-    old_norm = M_ZERO
+    ! If we are in 1d mode and have only a number we can solve the equation explicitely.
+    ! So check this first for faster calculation.
+    if (np.eq.1) then
+      h = M_z1 + M_zI*delta*diag(1,1)
+      coeff0(1,1) = ( -h + sqrt(h**2 + (M_TWO*delta*offdiag(1,1))**2) ) / (M_TWO*delta**2)
+    else ! we have the general case of a matrix, so solve the equation by iteration
+      ! Truncating the continued fraction is the same as iterating the equation
+      !
+      !     q0 = V^T * (1/(1 + i*delta*h + delta^2*q0)) * V
+      !
+      ! with start value 0:
+      sp2 = spacing**2
+      ALLOCATE(q0(np, np), np**2)
 
-    do i = 1, mem_iter
-      ! Calculate 1 + i*delta*h + delta^2*coeff0_old
-      q0 = M_zI*delta*diag + delta**2*q0
-      do j = 1, np
-        q0(j, j) = 1 + q0(j, j)
+      q0(:, :) = M_z0
+      old_norm = M_ZERO
+      do i = 1, mem_iter
+        ! Calculate 1 + i*delta*h + delta^2*coeff0_old
+        q0 = M_zI*delta*diag + delta**2*q0
+        do j = 1, np
+          q0(j, j) = 1 + q0(j, j)
+        end do
+
+        ! Invert.
+        call lalg_sym_inverter('U', np, q0)
+        call make_symmetric(q0, np)
+
+        ! Apply coupling matrices.
+        call apply_coupling(q0, offdiag, q0, np, il)
+        call make_symmetric_average(q0, np)
+        norm = infinity_norm(q0)
+        if((abs(norm-old_norm)*sp2).lt.mem_tolerance) then
+          exit
+        end if
+        old_norm = norm
       end do
-
-      ! Invert.
-      call lalg_sym_inverter('U', np, q0)
-      call make_symmetric(q0, np)
-
-      ! Apply coupling matrices.
-      call apply_coupling(q0, offdiag, q0, np, il)
-      call make_symmetric_average(q0, np)
-      norm = infinity_norm(q0)
-      if((abs(norm-old_norm)*sp2).lt.mem_tolerance) then
-        exit
+      if(i.gt.mem_iter) then
+        write(message(1), '(a,i6,a)') 'Memory coefficent for time step 0, ' &
+          //trim(lead_name(il))//' lead, not converged'
+        call write_warning(1)
       end if
-      old_norm = norm
-    end do
-    if(i.gt.mem_iter) then
-      write(message(1), '(a,i6,a)') 'Memory coefficent for time step 0, ' &
-        //trim(lead_name(il))//' lead, not converged'
-      call write_warning(1)
-    end if
-    
-    if (mem_type.eq.1) then
-      coeff0 = q0
-    else
-      ! diagonalization procedure
-      mem_s(:, :, 1) = q0(:, :)
-      call lalg_eigensolve_nonh(np, mem_s(:, :, 1), mem_s(:, 1, 2))
-      mem_s(:, :, 2) = mem_s(:, :, 1)
-      norm = lalg_inverter(np, mem_s(:, :, 2), invert = .true.)
-      call make_sparse_matrix(np, order, 2, q0, mem_s, sp_coeff0, mapping)
+
+      if (mem_type.eq.1) then
+        coeff0 = q0
+
+      else
+        ! diagonalization procedure
+        mem_s(:, :, 1) = q0(:, :)
+        call lalg_eigensolve_nonh(np, mem_s(:, :, 1), mem_s(:, 1, 2))
+        mem_s(:, :, 2) = mem_s(:, :, 1)
+        norm = lalg_inverter(np, mem_s(:, :, 2), invert = .true.)
+        call make_sparse_matrix(np, order, 2, q0, mem_s, sp_coeff0, mapping)
+      end if
+      deallocate(q0)
     end if
 
-    deallocate(q0)
     call pop_sub()
   end subroutine approx_coeff0
 
@@ -669,15 +677,17 @@ contains
     CMPLX,               intent(inout) :: coeffs(intf%np, intf%np, 0:iter)
     FLOAT,               intent(in)    :: spacing
 
-    FLOAT              :: old_norm, norm, sp2
+    FLOAT              :: old_norm, norm, sp2, d2
     integer            :: i,j, k, np
     CMPLX, allocatable :: tmp(:, :), tmp2(:, :), inv_offdiag(:, :)
     CMPLX, allocatable :: prefactor_plus(:, :), prefactor_minus(:, :)
+    CMPLX              :: tp
 
     call push_sub('td_trans_mem.calculate_coeffs')
 
     np = intf%np
     sp2 = spacing**2
+    d2 = delta**2
 
     ALLOCATE(tmp(np, np), np**2)
     ALLOCATE(tmp2(np, np), np**2)
@@ -692,67 +702,86 @@ contains
       prefactor_plus(i, i)  = M_one + prefactor_plus(i, i)
       prefactor_minus(i, i) = M_one + prefactor_minus(i, i)
     end do
-    inv_offdiag(:, :) = offdiag(:, :)
 
-    if (il.eq.LEFT) then
-      call lalg_invert_upper_triangular(np, inv_offdiag)
-    else
-      call lalg_invert_lower_triangular(np, inv_offdiag)
-    end if
-
-    call lalg_sym_inverter('U', np, prefactor_plus)
-    call make_symmetric(prefactor_plus, np)
-    if (il.eq.LEFT) then
-      call lalg_trmm(np,np,'U','N','L',M_z1,offdiag,prefactor_plus)
-      call lalg_trmm(np,np,'U','N','R',M_z1,inv_offdiag,prefactor_minus)
-    else
-      call lalg_trmm(np,np,'L','N','L',M_z1,offdiag,prefactor_plus)
-      call lalg_trmm(np,np,'L','N','R',M_z1,inv_offdiag,prefactor_minus)
-    end if
-    do i = start_iter, iter       ! i=start_iter to m.
-      coeffs(:, :, i) = M_z0
-      old_norm = M_ZERO
-      do j = 1, mem_iter ! maxiter to converge matrix equation for q(i)
-
-        tmp2(:,:) = M_z0
-
-        ! k = 0 to k = m.
-        do k = 0, i
-          tmp(:, :) = coeffs(:, :, k)
-          if(k.gt.0) then
-            tmp(:, :) = tmp(:, :) + M_TWO*coeffs(:, :, k-1)
-          end if
-          if(k.gt.1) then
-            tmp(:, :) = tmp(:, :) + coeffs(:, :, k-2)
-          end if
-          if (il.eq.LEFT) then
-            call lalg_trmm(np,np,'U','N','R',M_z1,inv_offdiag,tmp)
-          else
-            call lalg_trmm(np,np,'L','N','R',M_z1,inv_offdiag,tmp)
-          end if
-          call zsymm('R','U',np,np,M_z1,coeffs(:, :, i-k),np,tmp,np,M_z1,tmp2,np)
-        end do
-        call zsymm('R','U',np,np,M_z1,coeffs(:, :, i-1),np,prefactor_minus,np,TOCMPLX(-delta**2, M_ZERO),tmp2,np)
-        call zgemm('N','N',np,np,np,M_z1,prefactor_plus,np,tmp2,np,M_z0,coeffs(:, :, i),np)
-        ! use for numerical stability
-        call make_symmetric_average(coeffs(:, :, i), np)
-
-        norm = infinity_norm(coeffs(:, :, i))
-        if((abs(norm-old_norm)*sp2).lt.mem_tolerance) then
-          exit
+    ! If we are in 1d mode and have only a number we can calculate the coefficients explicitely.
+    ! So check this first for faster calculation.
+    if (np.eq.1) then
+      tp = M_ONE/(prefactor_plus(1, 1) + M_two*d2*coeffs(1, 1, 0))
+      do i = start_iter, iter       ! i=start_iter to m.
+        if (i.eq.1) then
+          coeffs(1, 1, 1) = coeffs(1,1,0)*(prefactor_minus(1, 1) - M_two*d2*coeffs(1, 1, 0))*tp
+        else ! i>=2
+          !j = 1
+          coeffs(1, 1, i) = (coeffs(1,1,1)+M_two*coeffs(1,1,0))*coeffs(1,1,i-1) + coeffs(1,1,0)*coeffs(1,1,i-2)
+          do j = 2, i-1
+            coeffs(1,1,i) = coeffs(1,1,i) + (coeffs(1,1,j)+M_two*coeffs(1,1,j-1)+coeffs(1,1,j-2))*coeffs(1,1,i-j)
+          end do
+          coeffs(1,1,i) = coeffs(1,1,1)*coeffs(1,1,i-1)/coeffs(1,1,0) - d2*tp*coeffs(1,1,i)
         end if
-        old_norm = norm
+        call loct_progress_bar(i+1, iter+1)
       end do
-
-      ! Write a warning if a coefficient is not converged.
-      if(j.gt.mem_iter) then
-        write(message(1), '(a,i6,a)') 'Memory coefficent for time step ', i, &
-          ', '//trim(lead_name(il))//' lead, not converged.'
-        call write_warning(1)
+    else ! we have the general case of a matrix, so solve the equation by iteration
+      inv_offdiag(:, :) = offdiag(:, :)
+      if (il.eq.LEFT) then
+        call lalg_invert_upper_triangular(np, inv_offdiag)
+      else
+        call lalg_invert_lower_triangular(np, inv_offdiag)
       end if
 
-      call loct_progress_bar(i+1, iter+1)
-    end do
+      call lalg_sym_inverter('U', np, prefactor_plus)
+      call make_symmetric(prefactor_plus, np)
+      if (il.eq.LEFT) then
+        call lalg_trmm(np,np,'U','N','L',M_z1,offdiag,prefactor_plus)
+        call lalg_trmm(np,np,'U','N','R',M_z1,inv_offdiag,prefactor_minus)
+      else
+        call lalg_trmm(np,np,'L','N','L',M_z1,offdiag,prefactor_plus)
+        call lalg_trmm(np,np,'L','N','R',M_z1,inv_offdiag,prefactor_minus)
+      end if
+      do i = start_iter, iter       ! i=start_iter to m.
+        coeffs(:, :, i) = M_z0
+        old_norm = M_ZERO
+        do j = 1, mem_iter ! maxiter to converge matrix equation for q(i)
+
+          tmp2(:,:) = M_z0
+
+          ! k = 0 to k = m.
+          do k = 0, i
+            tmp(:, :) = coeffs(:, :, k)
+            if(k.gt.0) then
+              tmp(:, :) = tmp(:, :) + M_TWO*coeffs(:, :, k-1)
+            end if
+            if(k.gt.1) then
+              tmp(:, :) = tmp(:, :) + coeffs(:, :, k-2)
+            end if
+            if (il.eq.LEFT) then
+              call lalg_trmm(np,np,'U','N','R',M_z1,inv_offdiag,tmp)
+            else
+              call lalg_trmm(np,np,'L','N','R',M_z1,inv_offdiag,tmp)
+            end if
+            call zsymm('R','U',np,np,M_z1,coeffs(:, :, i-k),np,tmp,np,M_z1,tmp2,np)
+          end do
+          call zsymm('R','U',np,np,M_z1,coeffs(:, :, i-1),np,prefactor_minus,np,TOCMPLX(-delta**2, M_ZERO),tmp2,np)
+          call zgemm('N','N',np,np,np,M_z1,prefactor_plus,np,tmp2,np,M_z0,coeffs(:, :, i),np)
+          ! use for numerical stability
+          call make_symmetric_average(coeffs(:, :, i), np)
+
+          norm = infinity_norm(coeffs(:, :, i))
+          if((abs(norm-old_norm)*sp2).lt.mem_tolerance) then
+            exit
+          end if
+          old_norm = norm
+        end do
+
+        ! Write a warning if a coefficient is not converged.
+        if(j.gt.mem_iter) then
+          write(message(1), '(a,i6,a)') 'Memory coefficent for time step ', i, &
+            ', '//trim(lead_name(il))//' lead, not converged.'
+          call write_warning(1)
+        end if
+
+        call loct_progress_bar(i+1, iter+1)
+      end do
+    end if
 
     deallocate(tmp, tmp2, inv_offdiag)
     deallocate(prefactor_plus, prefactor_minus)
