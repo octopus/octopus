@@ -161,7 +161,7 @@ contains
     type(multigrid_level_t), intent(inout) :: tt
     type(mesh_t),            intent(in)    :: fine, coarse
 
-    integer :: i, i1, i2, i4, i8
+    integer :: i, i1, i2, i4, i8, pt
     integer :: x(MAX_DIM), mod2(MAX_DIM)
 
     call push_sub('multigrid.multigrid_get_transfer_tables')
@@ -183,28 +183,26 @@ contains
     tt%n_fine8 = 0
     do i = 1, tt%n_fine
       mod2 = mod(fine%Lxyz(i,:), 2)
-      if(all(mod2.eq.0)) then
+      
+      pt = sum(abs(mod2(1:3)))
+      
+      select case(pt)
+      case(0)
         tt%n_fine1 = tt%n_fine1 + 1
         tt%fine_i(i) = 1
-      else if( &
-           ((mod2(1).eq.0).and.(mod2(2).eq.0).and.(mod2(3).ne.0)).or. &
-           ((mod2(3).eq.0).and.(mod2(1).eq.0).and.(mod2(2).ne.0)).or. &
-           ((mod2(2).eq.0).and.(mod2(3).eq.0).and.(mod2(1).ne.0))) then
+      case(1)
         tt%n_fine2 = tt%n_fine2 + 1
         tt%fine_i(i) = 2
-      else if( &
-           ((mod2(1).eq.0).and.(mod2(2).ne.0).and.(mod2(3).ne.0)).or. &
-           ((mod2(3).eq.0).and.(mod2(1).ne.0).and.(mod2(2).ne.0)).or. &
-           ((mod2(2).eq.0).and.(mod2(3).ne.0).and.(mod2(1).ne.0))) then
+      case(2)
         tt%n_fine4 = tt%n_fine4 + 1
         tt%fine_i(i) = 4
-      else if(all(mod2.ne.0)) then
+      case(3)
         tt%n_fine8 = tt%n_fine8 + 1
         tt%fine_i(i) = 8
-      end if
+      end select
     end do
-
-    ASSERT(tt%n_fine1+tt%n_fine2+tt%n_fine4+tt%n_fine8 == tt%n_fine)
+    
+    ASSERT(tt%n_fine1 + tt%n_fine2 + tt%n_fine4 + tt%n_fine8 == tt%n_fine)
 
     ALLOCATE(tt%to_fine1(1, tt%n_fine1), 1*tt%n_fine1)
     ALLOCATE(tt%to_fine2(2, tt%n_fine2), 2*tt%n_fine2)
@@ -217,57 +215,41 @@ contains
       x(1:3)    = fine%Lxyz(i, 1:3)/2
       mod2(1:3) = mod(fine%Lxyz(i, 1:3), 2)
 
-      if((mod2(1).eq.0).and.(mod2(2).eq.0).and.(mod2(3).eq.0)) then
+      pt = sum(abs(mod2(1:3)))
+
+      select case(pt)
+      case(0)
         i1 = i1 + 1
         tt%to_fine1(1, i1) = coarse%Lxyz_inv(x(1), x(2), x(3))
-
-      else if((mod2(1).eq.0).and.(mod2(2).eq.0).and.(mod2(3).ne.0)) then
+        
+      case(1)
         i2 = i2 + 1
-        tt%to_fine2(1, i2) = coarse%Lxyz_inv(x(1), x(2), x(3))
-        tt%to_fine2(2, i2) = coarse%Lxyz_inv(x(1), x(2), x(3) + mod2(3))
-      else if((mod2(3).eq.0).and.(mod2(1).eq.0).and.(mod2(2).ne.0)) then
-        i2 = i2 + 1
-        tt%to_fine2(1, i2) = coarse%Lxyz_inv(x(1), x(2), x(3))
-        tt%to_fine2(2, i2) = coarse%Lxyz_inv(x(1), x(2) + mod2(2), x(3))
-      else if((mod2(2).eq.0).and.(mod2(3).eq.0).and.(mod2(1).ne.0)) then
-        i2 = i2 + 1
-        tt%to_fine2(1, i2) = coarse%Lxyz_inv(x(1), x(2), x(3))
-        tt%to_fine2(2, i2) = coarse%Lxyz_inv(x(1) + mod2(1), x(2), x(3))
-
-      else if((mod2(1).eq.0).and.(mod2(2).ne.0).and.(mod2(3).ne.0)) then
+        tt%to_fine2(1, i2) = coarse%Lxyz_inv(x(1)          , x(2)          , x(3)          )
+        tt%to_fine2(2, i2) = coarse%Lxyz_inv(x(1) + mod2(1), x(2) + mod2(2), x(3) + mod2(3))
+        
+      case(2)
         i4 = i4 + 1
-        tt%to_fine4(1, i4) = coarse%Lxyz_inv(x(1), x(2), x(3))
-        tt%to_fine4(3, i4) = coarse%Lxyz_inv(x(1), x(2) + mod2(2), x(3))
-        tt%to_fine4(2, i4) = coarse%Lxyz_inv(x(1), x(2), x(3) + mod2(3))
-        tt%to_fine4(4, i4) = coarse%Lxyz_inv(x(1), x(2) + mod2(2), x(3) + mod2(3))
-      else if((mod2(3).eq.0).and.(mod2(1).ne.0).and.(mod2(2).ne.0)) then
-        i4 = i4 + 1
-        tt%to_fine4(1, i4) = coarse%Lxyz_inv(x(1), x(2), x(3))
-        tt%to_fine4(2, i4) = coarse%Lxyz_inv(x(1) + mod2(1), x(2), x(3))
-        tt%to_fine4(3, i4) = coarse%Lxyz_inv(x(1), x(2) + mod2(2), x(3))
-        tt%to_fine4(4, i4) = coarse%Lxyz_inv(x(1) + mod2(1), x(2) + mod2(2), x(3))
-      else if((mod2(2).eq.0).and.(mod2(3).ne.0).and.(mod2(1).ne.0)) then
-        i4 = i4 + 1
-        tt%to_fine4(1, i4) = coarse%Lxyz_inv(x(1), x(2), x(3))
-        tt%to_fine4(2, i4) = coarse%Lxyz_inv(x(1), x(2), x(3) + mod2(3))
-        tt%to_fine4(3, i4) = coarse%Lxyz_inv(x(1) + mod2(1), x(2), x(3))
-        tt%to_fine4(4, i4) = coarse%Lxyz_inv(x(1) + mod2(1), x(2), x(3) + mod2(3))
-
-      else if((mod2(1).ne.0).and.(mod2(2).ne.0).and.(mod2(3).ne.0)) then
+        tt%to_fine4(1, i4) = coarse%Lxyz_inv(x(1)          , x(2) + mod2(2), x(3) + mod2(3))
+        tt%to_fine4(2, i4) = coarse%Lxyz_inv(x(1) + mod2(1), x(2)          , x(3) + mod2(3))
+        tt%to_fine4(3, i4) = coarse%Lxyz_inv(x(1) + mod2(1), x(2) + mod2(2), x(3)          )
+        tt%to_fine4(4, i4) = coarse%Lxyz_inv(x(1) + mod2(1), x(2) + mod2(2), x(3) + mod2(3))
+        
+      case(3)
         i8 = i8 + 1
-        tt%to_fine8(1, i8) = coarse%Lxyz_inv(x(1), x(2), x(3))
-        tt%to_fine8(2, i8) = coarse%Lxyz_inv(x(1) + mod2(1), x(2), x(3))
-        tt%to_fine8(3, i8) = coarse%Lxyz_inv(x(1), x(2) + mod2(2), x(3))
-        tt%to_fine8(4, i8) = coarse%Lxyz_inv(x(1), x(2), x(3) + mod2(3))
-        tt%to_fine8(5, i8) = coarse%Lxyz_inv(x(1), x(2) + mod2(2), x(3) + mod2(3))
-        tt%to_fine8(6, i8) = coarse%Lxyz_inv(x(1) + mod2(1), x(2) + mod2(2), x(3))
-        tt%to_fine8(7, i8) = coarse%Lxyz_inv(x(1) + mod2(1), x(2), x(3) + mod2(3))
+        tt%to_fine8(1, i8) = coarse%Lxyz_inv(x(1)          , x(2)          , x(3)          )
+        tt%to_fine8(2, i8) = coarse%Lxyz_inv(x(1) + mod2(1), x(2)          , x(3)          )
+        tt%to_fine8(3, i8) = coarse%Lxyz_inv(x(1)          , x(2) + mod2(2), x(3)          )
+        tt%to_fine8(4, i8) = coarse%Lxyz_inv(x(1)          , x(2)          , x(3) + mod2(3))
+        tt%to_fine8(5, i8) = coarse%Lxyz_inv(x(1)          , x(2) + mod2(2), x(3) + mod2(3))
+        tt%to_fine8(6, i8) = coarse%Lxyz_inv(x(1) + mod2(1), x(2)          , x(3) + mod2(3))
+        tt%to_fine8(7, i8) = coarse%Lxyz_inv(x(1) + mod2(1), x(2) + mod2(2), x(3)          )
         tt%to_fine8(8, i8) = coarse%Lxyz_inv(x(1) + mod2(1), x(2) + mod2(2), x(3) + mod2(3))
-      end if
-
+        
+      end select
+      
     end do
 
-    ASSERT(i1==tt%n_fine1.and.i2==tt%n_fine2.and.i4==tt%n_fine4.and.i8==tt%n_fine8)
+    ASSERT(i1 == tt%n_fine1 .and. i2 == tt%n_fine2 .and. i4 == tt%n_fine4 .and. i8 == tt%n_fine8)
 
     call pop_sub()
   end subroutine multigrid_get_transfer_tables
