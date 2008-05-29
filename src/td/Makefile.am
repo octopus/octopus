@@ -22,8 +22,7 @@
 noinst_LIBRARIES = libtd.a
 
 libtd_a_SOURCES = \
-	cpmd.F90 pes.F90 spectrum.F90 \
-	td_exp_split.F90 td_exp.F90 td_rti.F90 td_write.F90 td.F90 \
+	cpmd.F90 pes.F90 spectrum.F90 td_rti.F90 td_write.F90 td.F90 \
 	td_transport.F90 td_trans_rti.F90 td_trans_intf.F90 td_trans_mem.F90 \
 	td_trans_src.F90 td_trans_lead.F90
 
@@ -37,13 +36,11 @@ depend:
 
 pes.o : pes.F90 pes_mask.F90 pes_rc.F90 
 spectrum.o : spectrum.F90 
-td_exp_split.o : td_exp_split.F90 
-td_exp.o : td_exp.F90 td_exp_split.o 
-td_rti.o : td_rti.F90 td_trans_rti.o td_exp_split.o td_exp.o 
+td_rti.o : td_rti.F90 td_trans_rti.o 
 td_write.o : td_write.F90 td_calc.F90 spectrum.o 
 td.o : td.F90 td_init.F90 spectrum.o pes.o td_write.o td_rti.o cpmd.o
 td_transport.o : td_transport.F90 td.o td_rti.o td_trans_rti.o 
-td_trans_rti.o : td_trans_rti.F90 td_trans_intf.o td_trans_mem.o td_trans_src.o td_exp.o td_trans_lead.o
+td_trans_rti.o : td_trans_rti.F90 td_trans_intf.o td_trans_mem.o td_trans_src.o td_trans_lead.o
 td_trans_intf.o : td_trans_intf.F90 
 td_trans_mem.o : td_trans_mem.F90 td_trans_intf.o
 td_trans_src.o : td_trans_src.F90 td_trans_intf.o td_trans_mem.o

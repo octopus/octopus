@@ -222,18 +222,20 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_exp_dt(te, gr, h, zpsi, ist, ik, timestep, t, order, vmagnus)
+  subroutine td_exp_dt(te, gr, h, zpsi, ist, ik, deltat, t, order, vmagnus, imag_time)
     type(td_exp_t),      intent(inout) :: te
     type(grid_t),        intent(inout) :: gr
     type(hamiltonian_t), intent(inout) :: h
     integer,             intent(in)    :: ist
     integer,             intent(in)    :: ik
     CMPLX,               intent(inout) :: zpsi(:, :)
-    FLOAT,               intent(in)    :: timestep, t
+    FLOAT,               intent(in)    :: deltat, t
     integer, optional,   intent(out)   :: order ! For the methods that rely on Hamiltonian-vector
     ! multiplication, the number of these.
     FLOAT,     optional, intent(in)    :: vmagnus(NP, h%d%nspin, 2)
+    logical, optional,   intent(in)    :: imag_time
 
+    CMPLX   :: timestep
     logical :: apply_magnus
     type(profile_t), save :: exp_prof
 
@@ -242,6 +244,23 @@ contains
 
     apply_magnus = .false.
     if(present(vmagnus)) apply_magnus = .true.
+
+    ! If we want to use imaginary time, timestep = i*deltat
+    ! Otherwise, timestep is simply equal to deltat.
+    timestep = cmplx(deltat, M_ZERO)
+    if(present(imag_time)) then
+      if(imag_time) then
+        select case(te%exp_method)
+          case(TAYLOR, LANCZOS_EXPANSION)
+            timestep = M_zI * deltat
+          case default
+            write(message(1), '(a)') 'Imaginary time evolution can only be performed with the Lanczos'
+            write(message(2), '(a)') 'exponentiation scheme ("TDExponentialMethod = lanczos") or with the'
+            write(message(3), '(a)') 'Taylor expansion ("TDExponentialMethod = taylor") method.'
+            call write_fatal(3)
+        end select
+      end if
+    end if
 
     select case(te%exp_method)
     case(TAYLOR);            call taylor_series
@@ -268,6 +287,7 @@ contains
       end if
 
     end subroutine operate
+    ! ---------------------------------------------------------
 
 
     ! ---------------------------------------------------------
@@ -317,6 +337,7 @@ contains
       if(present(order)) order = te%exp_order
       call pop_sub()
     end subroutine taylor_series
+    ! ---------------------------------------------------------
 
 
     ! ---------------------------------------------------------
@@ -349,7 +370,7 @@ contains
         end do
 
         call operate(zpsi1(:, :, 1), zpsi1(:, :, 0))
-        zfact = 2*(-M_zI)**j*loct_bessel(j, h%spectral_half_span*timestep)
+        zfact = 2*(-M_zI)**j*loct_bessel(j, h%spectral_half_span*deltat)
 
         do idim = 1, h%d%dim
           call lalg_axpy(NP, -h%spectral_middle_point, zpsi1(:, idim, 1), zpsi1(:, idim, 0))
@@ -361,13 +382,14 @@ contains
 
       zpsi(:, :) = M_HALF*(zpsi1(:, :, 0) - zpsi1(:, :, 2))
       do idim = 1, h%d%dim
-        call lalg_scal(NP, exp(-M_zI*h%spectral_middle_point*timestep), zpsi(:, idim))
+        call lalg_scal(NP, exp(-M_zI*h%spectral_middle_point*deltat), zpsi(:, idim))
       end do
       deallocate(zpsi1)
 
       if(present(order)) order = te%exp_order
       call pop_sub()
     end subroutine cheby
+    ! ---------------------------------------------------------
 
 
     ! ---------------------------------------------------------
@@ -422,10 +444,18 @@ contains
           normalize = .true., overlap = hm(l:n, n), norm = hm(n + 1, n))
 
         !calculate the exponential of the dense matrix using expokit
-        if(hamiltonian_hermitean(h)) then
-          call zhpadm(6, n, timestep, -M_zI*hm(1:n, 1:n), n, wsp, lwsp, ipiv(1:n), iexph, ns, iflag)
+        if(present(imag_time)) then
+          if(hamiltonian_hermitean(h)) then
+            call zhpadm(6, n, deltat, hm(1:n, 1:n), n, wsp, lwsp, ipiv(1:n), iexph, ns, iflag)
+          else
+            call zgpadm(6, n, deltat, hm(1:n, 1:n), n, wsp, lwsp, ipiv(1:n), iexph, ns, iflag)
+          end if
         else
-          call zgpadm(6, n, timestep, -M_zI*hm(1:n, 1:n), n, wsp, lwsp, ipiv(1:n), iexph, ns, iflag)
+          if(hamiltonian_hermitean(h)) then
+            call zhpadm(6, n, deltat, -M_zI*hm(1:n, 1:n), n, wsp, lwsp, ipiv(1:n), iexph, ns, iflag)
+          else
+            call zgpadm(6, n, deltat, -M_zI*hm(1:n, 1:n), n, wsp, lwsp, ipiv(1:n), iexph, ns, iflag)
+          end if
         end if
 
         k = 0
@@ -437,6 +467,7 @@ contains
         end do
 
         res = abs(hm(n+1, n)*abs(expo(n, 1)))
+
         if(abs(hm(n+1, n)) < CNST(1.0e4)*M_EPSILON) exit ! (very unlikely) happy breakdown!!! Yuppi!!!
         if(n > 2 .and. res < tol) exit
       end do
@@ -446,8 +477,13 @@ contains
         call write_warning(1)
       end if
 
-      call zgpadm(6, korder + 1, timestep, -M_zI*hm(1:korder + 1, 1:korder + 1), korder + 1, wsp, &
-        lwsp, ipiv(1:korder + 1), iexph, ns, iflag)
+      if(present(imag_time)) then
+        call zgpadm(6, korder + 1, deltat, hm(1:korder + 1, 1:korder + 1), korder + 1, wsp, &
+          lwsp, ipiv(1:korder + 1), iexph, ns, iflag)
+      else
+        call zgpadm(6, korder + 1, deltat, -M_zI*hm(1:korder + 1, 1:korder + 1), korder + 1, wsp, &
+          lwsp, ipiv(1:korder + 1), iexph, ns, iflag)
+      end if
 
       k = 0
       do i = 1, korder+1
@@ -470,6 +506,7 @@ contains
 
       call pop_sub()
     end subroutine lanczos
+    ! ---------------------------------------------------------
 
 
     ! ---------------------------------------------------------
@@ -481,15 +518,16 @@ contains
         call write_fatal(1)
       end if
 
-      call zexp_vlpsi (gr, h, zpsi, ik, t, -M_zI*timestep/M_TWO)
-      if(h%ep%non_local) call zexp_vnlpsi (gr%m, h, zpsi, -M_zI*timestep/M_TWO, .true.)
-      call zexp_kinetic(gr, h, zpsi, te%cf, -M_zI*timestep)
-      if(h%ep%non_local) call zexp_vnlpsi (gr%m, h, zpsi, -M_zI*timestep/M_TWO, .false.)
-      call zexp_vlpsi (gr, h, zpsi, ik, t, -M_zI*timestep/M_TWO)
+      call zexp_vlpsi (gr, h, zpsi, ik, t, -M_zI*deltat/M_TWO)
+      if(h%ep%non_local) call zexp_vnlpsi (gr%m, h, zpsi, -M_zI*deltat/M_TWO, .true.)
+      call zexp_kinetic(gr, h, zpsi, te%cf, -M_zI*deltat)
+      if(h%ep%non_local) call zexp_vnlpsi (gr%m, h, zpsi, -M_zI*deltat/M_TWO, .false.)
+      call zexp_vlpsi (gr, h, zpsi, ik, t, -M_zI*deltat/M_TWO)
 
       if(present(order)) order = 0
       call pop_sub()
     end subroutine split
+    ! ---------------------------------------------------------
 
 
     ! ---------------------------------------------------------
@@ -506,7 +544,7 @@ contains
 
       p = M_ONE/(M_FOUR - M_FOUR**(M_THIRD))
       pp = (/ p, p, M_ONE-M_FOUR*p, p, p /)
-      dt(1:5) = pp(1:5)*timestep
+      dt(1:5) = pp(1:5)*deltat
 
       do k = 1, 5
         call zexp_vlpsi (gr, h, zpsi, ik, t, -M_zI*dt(k)/M_TWO)
@@ -519,6 +557,7 @@ contains
       if(present(order)) order = 0
       call pop_sub()
     end subroutine suzuki
+    ! ---------------------------------------------------------
 
   end subroutine td_exp_dt
 

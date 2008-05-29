@@ -31,12 +31,15 @@ subroutine X(eigen_solver_evolution) (gr, st, h, tol, niter, converged, diff, ta
   integer :: ik, ist, iter, maxiter, conv, conv_, matvec, i, j
   R_TYPE, allocatable :: hpsi(:, :), m(:, :), c(:, :), phi(:, :, :)
   FLOAT, allocatable :: eig(:)
+  type(td_exp_t) :: te
 
   call push_sub('eigen_evolution.eigen_solver_evolution')
 
   maxiter = niter
   conv_ = 0
   matvec = 0
+
+  call td_exp_init(gr, te)
 
   ALLOCATE(hpsi(NP_PART, st%d%dim), NP_PART*st%d%dim)
   ALLOCATE(m(st%nst, st%nst), st%nst*st%nst)
@@ -97,77 +100,32 @@ subroutine X(eigen_solver_evolution) (gr, st, h, tol, niter, converged, diff, ta
 
   converged = conv_
   niter = matvec
+  call td_exp_end(te)
   deallocate(hpsi, m, c, eig, phi)
   call pop_sub()
 contains
 
   ! ---------------------------------------------------------
   subroutine exponentiate(psi, j)
-    R_TYPE, intent(inout) :: psi(:, :)
+    R_TYPE, intent(inout), target :: psi(:, :)
     integer, intent(out) :: j
-
-    integer :: n, m, itrace, iflag, lwsp, liwsp
-    integer, allocatable :: iwsp(:)
-    FLOAT :: t, tolerance, anorm
-    R_TYPE, allocatable :: w(:, :), wsp(:)
-
-
-    n = st%d%dim * NP_PART
-    m = 20 ! maximum size for the Krylov basis.
-    t = -tau
-    tolerance = CNST(1.0e-8)
-    anorm = M_ONE
-    itrace = 0
-    lwsp = n*(m+1)+n+(m+2)**2+4*(m+2)**2+6+1
-    liwsp = m + 2
-    iflag = 0
-
-    ALLOCATE(wsp(lwsp), lwsp)
-    ALLOCATE(iwsp(lwsp), lwsp)
-    ALLOCATE(w(NP_PART, st%d%dim), NP_PART*st%d%dim)
-    
-    wsp=R_TOTYPE(M_ZERO)
-    iwsp=R_TOTYPE(M_ZERO)
-    
-    h_   => h
-    gr_  => gr
-    ik_  =  ik
-    ist_ =  ist
-    call X(gexpv)(n, m, t, psi(:, 1), w(:, 1), tolerance, anorm, &
-      wsp, lwsp, iwsp, liwsp, X(mv), itrace, iflag)
-    nullify(h_)
-    nullify(gr_)
-    psi(1:NP_PART, 1:st%d%dim) = w(1:NP_PART, 1:st%d%dim)
-    deallocate(w)
-
-    j = iwsp(1)
+    CMPLX, pointer :: zpsi(:, :)
+#if defined(R_TREAL)
+    ALLOCATE(zpsi(NP_PART, st%d%dim), NP_PART*st%d%dim)
+    zpsi = psi
+#else
+    zpsi => psi
+#endif
+    call td_exp_dt(te, gr, h, zpsi, ist, ik, -tau, M_ZERO, order = j, imag_time = .true.)
+#if defined(R_TREAL)
+    psi = zpsi
+    deallocate(zpsi)
+#else
+    nullify(zpsi)
+#endif
   end subroutine exponentiate
 
 end subroutine X(eigen_solver_evolution)
-
-
-! ---------------------------------------------------------
-subroutine X(mv) (x, y)
-  R_TYPE, intent(in) :: x(*)
-  R_TYPE, intent(out) :: y(*)
-  integer :: idim, np, np_part
-  R_TYPE, allocatable :: psi(:, :), hpsi(:, :)
-
-  np = gr_%m%np; np_part = gr_%m%np_part
-  ALLOCATE(psi(np_part, h_%d%dim), np_part*h_%d%dim)
-  ALLOCATE(hpsi(np_part, h_%d%dim), np_part*h_%d%dim)
-
-  do idim = 1, h_%d%dim
-    psi(1:np, idim) = x((idim-1)*np_part+1:(idim-1)*np_part+np)
-  end do
-  call X(hpsi)(h_, gr_, psi, hpsi, ist_, ik_)
-  do idim = 1, h_%d%dim
-    y((idim-1)*np_part+1:(idim-1)*np_part+np) = hpsi(1:np, idim)
-  end do
-
-  deallocate(psi, hpsi)
-
-end subroutine X(mv)
 
 
 !! Local Variables:

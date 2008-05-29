@@ -42,6 +42,7 @@ module eigen_solver_m
   use states_m
   use states_block_m
   use units_m
+  use td_exp_m
 
   implicit none
 
@@ -51,10 +52,6 @@ module eigen_solver_m
     eigen_solver_init,  &
     eigen_solver_end,   &
     eigen_solver_run
-
-  private :: &
-    dmv,     &
-    zmv
 
   type eigen_solver_t
     integer :: es_type    ! which eigen solver to use
@@ -83,12 +80,6 @@ module eigen_solver_m
   integer, parameter :: RS_CG_NEW  = 6
   integer, parameter :: EVOLUTION  = 7
   integer, parameter :: RS_LOBPCG  = 8
-
-
-  type(hamiltonian_t), pointer :: h_
-  type(grid_t),        pointer :: gr_
-  integer                      :: ik_
-  integer                      :: ist_
 
   type(profile_t),     save    :: diagon_prof
 
