@@ -173,8 +173,8 @@ module hamiltonian_m
     MASK_ABSORBING      = 2
 
   integer, public, parameter ::        &
-    INDEPENDENT_PARTICLES = 1, &
-    HARTREE               = 2, &
+    INDEPENDENT_PARTICLES = 2, &
+    HARTREE               = 1, &
     HARTREE_FOCK          = 3, &
     KOHN_SHAM_DFT         = 4
 

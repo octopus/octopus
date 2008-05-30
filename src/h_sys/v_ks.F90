@@ -79,11 +79,11 @@ contains
     !%Section Hamiltonian
     !%Description
     !% The calculations can be run with three different "theory levels"
-    !%Option independent_particles 1
+    !%Option independent_particles 2
     !% Particles will be considered as independent, i.e. as non-interacting.
     !% This mode is mainly used for testing purposes, as the code is usually 
     !% much faster with independent_particles.
-    !%Option hartree 2
+    !%Option hartree 1
     !% Calculation within the Hartree method. Note that, contrary to what many people
     !% may think, the Hartree potential is self-interaction free. Therefore, this run 
     !% mode will not yield the same result as dft without exchange-correlation.
