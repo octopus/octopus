@@ -657,13 +657,20 @@ contains
 #endif
   
   subroutine obsolete_variable(name, rep)
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: rep
+    character(len=*),           intent(in) :: name
+    character(len=*), optional, intent(in) :: rep
     
     if ( loct_parse_isdef(trim(name)) /= 0 ) then 
+
       write(message(1), '(a)') 'Input variable '//trim(name)//' is obsolete.'
-      write(message(2), '(a)') 'Please use variable '//trim(rep)//' instead.'
-      call write_fatal(2)
+
+      if(present(rep)) then
+        write(message(2), '(a)') 'Please use variable '//trim(rep)//' instead.'
+        call write_fatal(2)
+      else
+        call write_fatal(1)
+      end if
+
     end if
     
   end subroutine obsolete_variable

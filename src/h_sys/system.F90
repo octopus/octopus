@@ -66,6 +66,8 @@ contains
 
     ALLOCATE(sys%gr, 1)
     ALLOCATE(sys%st, 1)
+    
+    call obsolete_variable('SystemName')
 
     call geometry_init(sys%geo)
     call simul_box_init(sys%gr%sb, sys%geo)
