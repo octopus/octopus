@@ -2475,25 +2475,20 @@ contains
 
       do ik = 1, st%d%nik
         do ist = staux%st_start, staux%st_end
-          if(.not.state_is_local(st, ist-n) then
-            call MPI_Send(staux%zpsi(:, :, ist, ik), m%np_part*st%d%dim, R_MPITYPE, staux%node(ist), &
-              0, st%mpi_grp%comm, mpi_err)
+          if(ist <= n) cycle
+          if(.not.state_is_local(st, ist-n)) then
+            call mpi_send(staux%zpsi(1, 1, ist, ik), gr%m%np_part*st%d%dim, MPI_CMPLX, staux%node(ist), &
+              ist, st%mpi_grp%comm, mpi_err)
+
+            call mpi_recv(st%zpsi(1, 1, ist-n, ik), gr%m%np_part*st%d%dim, MPI_CMPLX, st%node(ist-n), &
+              ist, st%mpi_grp%comm, mpi_err)
+          else
+            st%zpsi(:, :, ist-n, ik) = staux%zpsi(1, 1, ist, ik)
           end if
    
         end do
       end do
-
-      do ik = 1, st%d%nik
-        do ist = st%st_start, st%st_end
-
-          if(state_is_local(staux, n+ist)) then
-            st%zpsi(:, :, ist, ik) = staux%zpsi(:, :, n + ist, ik)
-          else
-            call MPI_Recv(st%zpsi(1, 1, ist, ik), m%np_part*st%d%dim, R_MPITYPE, st%node(n+ist), 0, st%mpi_grp%comm, mpi_err)
-          end if
-
-        end do
-      end do
+     write(0, *) 'Completed communication.'
 
    else
      do ik = 1, st%d%nik
