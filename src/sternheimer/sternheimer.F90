@@ -109,16 +109,18 @@ contains
     !%Default hartree+fxc
     !%Section Linear Response::Sternheimer
     !%Description
-    !% The terms are considered in the variation of the
-    !% hamiltonian. V_ext is always considered. The default is to include
-    !% also the exchange, correlation and hartree terms. If you want
+    !% The terms to be considered in the variation of the
+    !% Hamiltonian. V_ext is always considered. The default is to include
+    !% also the exchange, correlation and Hartree terms. If you want
     !% to choose the exchange and correlation kernel use the variable
     !% XCKernel.
-    !%Option hartree 2
-    !% The variation of the hartree potential.
-    !%Option fxc 3
+    !%Option V_ext_only 0
+    !% Neither Hartree nor xc potentials included.
+    !%Option hartree 1
+    !% The variation of the Hartree potential only.
+    !%Option fxc 2
     !% The exchange and correlation kernel, the variation of the
-    !% exchange and correlation potential.
+    !% exchange and correlation potential only.
     !%End
 
     if(h%theory_level.ne.INDEPENDENT_PARTICLES) then
