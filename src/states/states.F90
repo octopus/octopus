@@ -84,6 +84,7 @@ module states_m
     wfs_are_real,                     &
     states_dump,                      &
     rotate_states,                    &
+    states_freeze_orbitals,           &
     assignment(=)
 
 
@@ -2422,6 +2423,100 @@ contains
 
     call pop_sub()
   end function state_is_local
+
+
+  ! ---------------------------------------------------------
+  subroutine states_freeze_orbitals(st, gr, mc, n)
+    type(states_t), intent(inout) :: st
+    type(grid_t),   intent(in)    :: gr
+    type(multicomm_t), intent(in) :: mc
+    integer,        intent(in)    :: n
+
+    integer :: ispin, ist, ik
+    FLOAT, allocatable :: rho(:, :)
+    type(states_t) :: staux
+
+    call push_sub('states.states_freeze_orbitals')
+
+    if(n >= st%nst) then
+      write(message(1),'(a)') 'Attempting to freeze a number of orbitals which is larger or equal to'
+      write(message(2),'(a)') 'the total number. The program has to stop.'
+      call write_fatal(2)
+    end if
+
+    ! We will put the frozen density into st%rho_core. We will put the total density, summing up
+    ! the possible spin-up an spin-down contributions. This could be refined later...
+    if(.not.associated(st%rho_core)) then
+      ALLOCATE(st%rho_core(gr%m%np), gr%m%np)
+      st%rho_core(:) = M_ZERO
+    end if
+
+    ALLOCATE(rho(gr%m%np, st%d%nspin), gr%m%np*st%d%nspin)
+    do ist = st%st_start, st%st_end
+      if(ist > n) cycle
+      call states_dens_accumulate(st, gr%m%np, rho, ist)
+    end do
+    call states_dens_reduce(st, gr%m%np, rho)
+
+    do ispin = 1, st%d%nspin
+      st%rho_core(:) = st%rho_core(:) + rho(:, ispin)
+    end do
+
+    call states_copy(staux, st)
+
+    st%nst = st%nst - n
+
+    call states_deallocate_wfns(st)
+    call states_distribute_nodes(st, mc)
+    call states_allocate_wfns(st, gr%m, M_CMPLX)
+
+#if defined(HAVE_MPI) 
+    if(staux%parallel_in_states) then
+
+      do ik = 1, st%d%nik
+        do ist = staux%st_start, staux%st_end
+          if(.not.state_is_local(st, ist-n) then
+            call MPI_Send(staux%zpsi(:, :, ist, ik), m%np_part*st%d%dim, R_MPITYPE, staux%node(ist), &
+              0, st%mpi_grp%comm, mpi_err)
+          end if
+   
+        end do
+      end do
+
+      do ik = 1, st%d%nik
+        do ist = st%st_start, st%st_end
+
+          if(state_is_local(staux, n+ist)) then
+            st%zpsi(:, :, ist, ik) = staux%zpsi(:, :, n + ist, ik)
+          else
+            call MPI_Recv(st%zpsi(1, 1, ist, ik), m%np_part*st%d%dim, R_MPITYPE, st%node(n+ist), 0, st%mpi_grp%comm, mpi_err)
+          end if
+
+        end do
+      end do
+
+   else
+     do ik = 1, st%d%nik
+       do ist = st%st_start, st%st_end
+         st%zpsi(:, :, ist, ik) = staux%zpsi(:, :, n + ist, ik)
+       end do
+     end do
+   end if
+
+#else
+
+   do ik = 1, st%d%nik
+     do ist = st%st_start, st%st_end
+       st%zpsi(:, :, ist, ik) = staux%zpsi(:, :, n + ist, ik)
+     end do
+   end do
+
+#endif
+
+    call states_end(staux)
+    deallocate(rho)
+    call pop_sub()
+  end subroutine states_freeze_orbitals
 
 
 #include "states_kpoints.F90"

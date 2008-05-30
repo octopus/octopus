@@ -347,7 +347,7 @@ contains
 
     ! ---------------------------------------------------------
     subroutine init_wfs()
-      integer :: i, is, ierr, ist, jst
+      integer :: i, is, ierr, ist, jst, freeze_orbitals
       character(len=50) :: filename
       FLOAT :: x
       type(block_t) :: blk
@@ -459,6 +459,26 @@ contains
       end if
 
       if(fromScratch) call modify_occs()
+
+      !%Variable TDFreezeOrbitals
+      !%Type integer
+      !%Default 0
+      !%Section Time Dependent
+      !%Description
+      !% You have the possibility of "freezing" a number of orbitals during a time-propagation.
+      !% The Hartree and exchange-and-correlation potential originated by these orbitals (which
+      !% will be the lowest-energy ones) will be added during the propagation, but the orbitals
+      !% will not be propagated.
+      !% 
+      !% WARNING: NOT WORKING YET.
+      !%End
+      call loct_parse_int(check_inp('TDFreezeOrbitals'), 0, freeze_orbitals)
+      if(freeze_orbitals > 0) then
+        call states_freeze_orbitals(st, gr, sys%mc, freeze_orbitals)
+        write(message(1),'(a,i4,a,i4,a)') 'Info: The lowest', freeze_orbitals, &
+          ' orbitals have been frozen.', st%nst, ' will be propagated.'
+        call write_info(1)
+      end if
 
       call states_calc_dens(st, NP, st%rho)
       call v_ks_calc(gr, sys%ks, h, st, calc_eigenval=.true.)
