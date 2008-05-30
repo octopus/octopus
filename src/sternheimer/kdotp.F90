@@ -120,7 +120,7 @@ contains
 !
     complex_response = wfs_are_complex(sys%st)
 !
-!    ALLOCATE(em_vars%lr(1:NDIM, 1:em_vars%nsigma, 1:em_vars%nfactor), NDIM*em_vars%nsigma*em_vars%nfactor)
+!/*    ALLOCATE(em_vars%lr(1:NDIM, 1:em_vars%nsigma, 1:em_vars%nfactor), NDIM*em_vars%nsigma*em_vars%nfactor) */
 !
     call read_wfs(sys%st, sys%gr, sys%geo, complex_response)
 !
@@ -384,7 +384,7 @@ contains
 !          em_vars%nomega = em_vars%nomega + number
 !        end do
 !
-!        ALLOCATE(em_vars%omega(1:em_vars%nomega), em_vars%nomega)
+!/*        ALLOCATE(em_vars%omega(1:em_vars%nomega), em_vars%nomega) */
 !
 !        !read frequencies
 !        j = 1
@@ -411,7 +411,7 @@ contains
 !      else
 !        !there is no frequency block, we calculate response for w = 0.0
 !        em_vars%nomega = 1
-!        ALLOCATE(em_vars%omega(1:em_vars%nomega), em_vars%nomega)
+!/*        ALLOCATE(em_vars%omega(1:em_vars%nomega), em_vars%nomega) */
 !        em_vars%omega(1) = M_ZERO
 !      end if
 !
