@@ -57,5 +57,5 @@ xc_OEP_kernel.o : xc_OEP_kernel.F90 xc_OEP_kernel_inc.F90 xc_OEP.o system.o h.o
 pert.o : pert.F90 pert_inc.F90 specie_pot.o projector.o h.o epot.o 
 output_h_sys.o : output_h_sys.F90 output_states.F90 output_h.F90 output_linear_response.F90 h.o
 gauge_field.o : gauge_field.F90 projector.o
-td_exp_split.o : td_exp_split.F90
-td_exp.o : td_exp.F90 td_exp_split.o
+td_exp_split.o : td_exp_split.F90 epot.o h.o
+td_exp.o : td_exp.F90 td_exp_split.o epot.o h.o
