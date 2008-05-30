@@ -245,12 +245,13 @@ contains
       qmax = sqrt(M_TWO*emax)
     end if
 
+    ! for a full transport scheme we have degeneracies (flat leads)
+    ! therefore we need an even number of states
     ! sample equidistant from qmax to qmin
     ! the degeneracy is -qx and +qx
-    ! therefore we need a even number of states (need to check)
-    if(mod(st%nst,2).eq.1) then
-      write(message(1), '(a)') "The number of states has to be even!"
-      call write_fatal(1)
+    if ((mod(st%nst,2).eq.1).and.(iand(trans%additional_terms, src_term_flag).ne.0)) then
+      write(message(1), '(a)') "The number of states should be even!"
+      call write_warning(1)
     end if
     nst2 = (st%nst-1)/2
     if (nst2.eq.0) nst2 = 1
