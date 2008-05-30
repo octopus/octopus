@@ -86,13 +86,8 @@ program octopus
   !%Section Generalities
   !%Description
   !% Decides what kind of calculation is to be performed.
-  !%Option gs 1
+  !%Option gs 01
   !% Calculation of the ground state
-  !%Option one_shot 14
-  !% Use the self-consistent wave-functions in the restart directory to
-  !% evaluate the total energy using a different xc functional.
-  !% This is effectively a first order perturbative calculation of the total energy, 
-  !% the perturbation being the difference between the two xc used.
   !%Option unocc 02
   !% Calculation of unoccupied/virtual KS states
   !%Option td 03
@@ -115,6 +110,13 @@ program octopus
   !% Calculation of the vibrational modes.
   !%Option raman 13
   !% Calculation of Raman response properties
+  !%Option one_shot 14
+  !% Use the self-consistent wave-functions in the restart directory to
+  !% evaluate the total energy using a different xc functional.
+  !% This is effectively a first-order perturbative calculation of the total energy, 
+  !% the perturbation being the difference between the two xc used.
+  !%Option kdotp 15
+  !% Calculation of effective masses by k.p perturbation theory
   !%Option recipe 99
   !% Prints out a tasty recipe
   !%End

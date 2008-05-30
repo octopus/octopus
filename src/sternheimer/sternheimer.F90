@@ -95,7 +95,7 @@ contains
     !%Default true
     !%Section Linear Response::Sternheimer
     !%Description
-    !% Wheter variations of the wavefunctios should be orthogonalized
+    !% Whether variations of the wavefunctions should be orthogonalized
     !% or not against the occupied states.
     !%End
     if (loct_parse_isdef(check_inp(trim(prefix)//'OrthResponse')) /= 0) then

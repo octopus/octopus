@@ -85,9 +85,9 @@ contains
     !%Section Linear Response::Solver
     !%Description
     !% To calculate response using density functional perturbation
-    !% theory is necessary to solve the sterheimer equation, this is a
-    !% self consistent linear equation where the operator is the
-    !% Kohn-Sham hamiltonian with a complex shift. This variable
+    !% theory is necessary to solve the Sternheimer equation, a
+    !% self-consistent linear equation where the operator is the
+    !% Kohn-Sham Hamiltonian with a complex shift. This variable
     !% selects which method to use in order to solve this linear
     !% equation.
     !%Option cg 5

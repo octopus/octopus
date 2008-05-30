@@ -67,7 +67,8 @@ module pert_m
   integer, public, parameter :: &
      PERTURBATION_ELECTRIC = 1, &
      PERTURBATION_MAGNETIC = 2, &
-     PERTURBATION_IONIC    = 3
+     PERTURBATION_IONIC    = 3, &
+     PERTURBATION_KDOTP    = 4
 
   integer, public, parameter :: &
        GAUGE_GIPAW  = 1, &
@@ -124,6 +125,9 @@ contains
     !%Option ionic 3
     !% Displacements of the ions, used to calculate phonon frequencies and
     !% electron-phonon couplings
+    !%Option kpoint 4
+    !% Small change of k-point, as in k.p perturbation theory, for calculating
+    !% derivatives with respect to k, for hyperpolarizabilities in periodic system
     !%End 
     call loct_parse_int(check_inp('RespPerturbationType'), PERTURBATION_ELECTRIC, ii)
 

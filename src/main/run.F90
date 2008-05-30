@@ -37,6 +37,7 @@ module run_prog_m
   use phonons_fd_m
   use phonons_lr_m
   use pol_lr_m
+  use kdotp_lr_m
   use pulpo_m
   use raman_m
   use restart_m
@@ -86,8 +87,6 @@ contains
     select case(calc_mode)
     case(M_GS)
       call ground_state_run(sys, h, fromScratch)
-    case(M_ONE_SHOT)
-      call one_shot_run(sys, h)
     case(M_UNOCC)
       call unocc_run(sys, h, fromScratch)
     case(M_TD)
@@ -118,6 +117,11 @@ contains
       call td_transport_run(sys, h, fromScratch)
     case(M_RAMAN)
       call raman_run(sys, h, fromscratch)
+    case(M_ONE_SHOT)
+      call one_shot_run(sys, h)
+    case(M_KDOTP)
+      write(*,*) 'call kdotp'
+      call kdotp_lr_run(sys, h, fromScratch)
     case(M_PULPO_A_FEIRA)
       call pulpo_print()
     end select

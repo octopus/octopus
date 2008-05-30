@@ -42,6 +42,9 @@ subroutine X(pert_apply) (this, gr, geo, h, ik, f_in, f_out)
   case(PERTURBATION_IONIC)
     call ionic()
 
+  case(PERTURBATION_KDOTP)
+!    call kdotp()
+
   end select
 
   call profiling_out(prof)

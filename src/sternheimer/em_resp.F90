@@ -227,7 +227,7 @@ contains
                 closest_omega = em_vars%freq_factor(ifactor)*em_vars%omega(iomega)
                 call oct_search_file_lr(closest_omega, dir, ierr, trim(tmpdir)//RESTART_DIR)
                 
-                !atempt to read 
+                !attempt to read 
                 if(ierr == 0 ) then 
                   if (wfs_are_complex(sys%st)) then 
                     call zrestart_read_lr_rho(em_vars%lr(dir, 1, ifactor), sys%gr, sys%st%d%nspin, &
