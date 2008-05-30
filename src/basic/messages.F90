@@ -451,7 +451,7 @@ contains
         str(i:i) = '*'
       end do
 
-      call flush_msg(iunit, str)  ! out nice line with the heade
+      call flush_msg(iunit, str)  ! out nice line with the header
       call flush_msg(iunit, '')   ! empty line
     end if
 

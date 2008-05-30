@@ -70,7 +70,7 @@ module kdotp_lr_m
 !!    FLOAT :: eta                     ! small imaginary part to add to the frequency
 !!    FLOAT :: freq_factor(MAX_DIM)    !
 !!    FLOAT,      pointer :: omega(:)  ! the frequencies to consider
-!!    type(lr_t), pointer :: lr(:,:,:) ! linear response for (NDIM, nsigma, nomega)
+    type(lr_t), pointer :: lr(:,:) ! linear response for (NDIM, nkpts)
 !
 !!    logical :: calc_hyperpol
 !!    CMPLX   :: alpha(MAX_DIM, MAX_DIM, 3)        ! the linear polarizability
@@ -79,7 +79,7 @@ module kdotp_lr_m
 !!    CMPLX   :: chi_para(MAX_DIM, MAX_DIM, 3)     ! The paramagnetic part of the susceptibility
 !!    CMPLX   :: chi_dia (MAX_DIM, MAX_DIM, 3)     ! The diamagnetic  part of the susceptibility
 !
-    logical :: ok(1:3)
+    logical :: ok
   end type kdotp_t
 
 contains
@@ -94,7 +94,7 @@ contains
     type(kdotp_t)           :: kdotp_vars
     type(sternheimer_t)     :: sh
 !
-    integer :: ik
+    integer :: ik, ist, idir, ierr
 !    integer :: sigma, ndim, i, dir, ierr, iomega, ifactor
 !    character(len=100) :: dirname, str_tmp
     logical :: complex_response, have_to_calculate
@@ -109,9 +109,10 @@ contains
 
     ALLOCATE(kdotp_vars%eff_mass_inv(NDIM, NDIM, sys%st%nst), NDIM * NDIM * sys%st%nst)
     kdotp_vars%eff_mass_inv(:,:,:)=0
-!
-!    call parse_input()
-!
+
+    !    call parse_input()
+    call pert_init(kdotp_vars%perturbation, PERTURBATION_KDOTP, sys%gr, sys%geo)
+
 !!    em_vars%nfactor = 1
 !!    if(em_vars%calc_hyperpol) em_vars%nfactor=3
 !
@@ -119,20 +120,20 @@ contains
 !!    if(em_vars%calc_hyperpol .or. (em_vars%nomega > 1) .or. (abs(em_vars%omega(1)) >= M_EPSILON) ) em_vars%nsigma = 2
 !
     complex_response = wfs_are_complex(sys%st)
-!
-!/*    ALLOCATE(em_vars%lr(1:NDIM, 1:em_vars%nsigma, 1:em_vars%nfactor), NDIM*em_vars%nsigma*em_vars%nfactor) */
-!
+
+    ALLOCATE(kdotp_vars%lr(1:NDIM, 1:sys%st%d%nik), NDIM * sys%st%d%nik)
+
     call read_wfs(sys%st, sys%gr, sys%geo, complex_response)
-!
-!    em_vars%lr(1:NDIM, 1:em_vars%nsigma, 1:em_vars%nfactor)%nst = sys%st%nst
-!
+
+    kdotp_vars%lr(1:NDIM, 1:sys%st%d%nik)%nst = sys%st%nst
+
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian for linear response'
     call write_info(1)
     call system_h_setup(sys, h)
     
     call sternheimer_init(sh, sys, h, "KdotP", hermitian = wfs_are_real(sys%st))
-!
+
 !    do dir = 1, ndim
 !      do sigma = 1, em_vars%nsigma
 !        do ifactor = 1, em_vars%nfactor 
@@ -157,7 +158,7 @@ contains
 !        end do
 !      end do
 !    end do
-!
+
     call io_mkdir(trim(tmpdir)//RESTART_DIR)
     call info()
 
@@ -167,6 +168,32 @@ contains
     call io_mkdir('kdotp/')
 
     do ik = 1, sys%st%d%nik
+      do ist = 1, sys%st%nst
+        do idir = 1, NDIM
+          write(message(1), '(a,i,a,i,a,i)') 'Info: Calculating response for k-point ', ik, &
+            ', state ', ist, ', and direction ', idir
+          call write_info(1)
+          call pert_setup_dir(kdotp_vars%perturbation, idir)
+          if (wfs_are_complex(sys%st)) then
+!            call zsternheimer_solve(sh, sys, h, kdotp_vars%lr(idir, :, ifactor), em_vars%nsigma , &
+!              em_vars%freq_factor(ifactor)*em_vars%omega(iomega) + M_zI * em_vars%eta, &
+!              em_vars%perturbation, RESTART_DIR,& &
+!              em_rho_tag(em_vars%freq_factor(ifactor)*em_vars%omega(iomega), dir),& &
+!              em_wfs_tag(dir, ifactor), have_restart_rho=(ierr==0))
+            else
+!              call dsternheimer_solve(sh, sys, h, kdotp_vars%lr(dir, :, ifactor), em_vars%nsigma , &
+!                em_vars%freq_factor(ifactor)*em_vars%omega(iomega), &
+!                em_vars%perturbation, RESTART_DIR,& &
+!                em_rho_tag(em_vars%freq_factor(ifactor)*em_vars%omega(iomega), dir),& &
+!                em_wfs_tag(dir, ifactor), have_restart_rho=(ierr==0))
+            end if
+
+            kdotp_vars%ok = kdotp_vars%ok .and. sternheimer_has_converged(sh)
+          
+        end do ! idir
+      end do ! ist
+      call kdotp_output(sys%st, sys%gr, h, sys%geo, sys%outp, kdotp_vars, ik)
+    end do ! ik
 
 !    do iomega = 1, em_vars%nomega
 !
@@ -221,11 +248,11 @@ contains
 !
 !              !try to load restart density
 !              if (wfs_are_complex(sys%st)) then 
-!                call zrestart_read_lr_rho(em_vars%lr(dir, 1, ifactor), sys%gr, sys%st%d%nspin, &
+!                call zrestart_read_lr_rho(kdotp_vars%lr(idir, ik), sys%gr, sys%st%d%nspin, &
 !                     RESTART_DIR, &
 !                     em_rho_tag(em_vars%freq_factor(ifactor)*em_vars%omega(iomega), dir), ierr)
 !              else 
-!                call drestart_read_lr_rho(em_vars%lr(dir, 1, ifactor), sys%gr, sys%st%d%nspin, &
+!                call drestart_read_lr_rho(kdotp_vars%lr(idir, ik), sys%gr, sys%st%d%nspin, &
 !                     RESTART_DIR, &
 !                     em_rho_tag(em_vars%freq_factor(ifactor)*em_vars%omega(iomega), dir), ierr)
 !              end if
@@ -314,21 +341,17 @@ contains
 !        end do
 !      end if
 !
-    call kdotp_output(sys%st, sys%gr, h, sys%geo, sys%outp, kdotp_vars, ik)
 !    call kdotp_output(sys%st, sys%gr, h, sys%geo, sys%outp, em_vars, iomega)
 !
+
+    do idir = 1, NDIM
+      do ik = 1, sys%st%d%nik
+        call lr_dealloc(kdotp_vars%lr(idir, ik))
+      end do
     end do
-!
-!    do dir = 1, ndim
-!      do sigma = 1, em_vars%nsigma
-!        do ifactor = 1, em_vars%nfactor
-!          call lr_dealloc(em_vars%lr(dir, sigma, ifactor))
-!        end do
-!      end do
-!    end do
-!
+
     call sternheimer_end(sh)
-!    call pert_end(em_vars%perturbation)
+    call pert_end(kdotp_vars%perturbation)
 !
 !    deallocate(em_vars%omega, em_vars%lr)
     call states_deallocate_wfns(sys%st)
@@ -460,7 +483,7 @@ contains
     ! ---------------------------------------------------------
     subroutine info()
 
-!      call pert_info(em_vars%perturbation, stdout)
+      call pert_info(kdotp_vars%perturbation, stdout)
 !      if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
 !        if(em_vars%calc_hyperpol) then 
 !          write(message(1),'(a)') 'Linear Reponse First Order Hyperpolarizabilities'
@@ -484,7 +507,7 @@ contains
 !      write(message(1),'(a,i3,a)') 'Calculating response for ', em_vars%nomega, ' frequencies.'
 !      call write_info(1)
 !
-!      call messages_print_stress(stdout)
+      call messages_print_stress(stdout)
 
     end subroutine info
 
@@ -557,8 +580,8 @@ contains
 
     write(*,*) 'kdotp_output'
 
-    write(*,*) 'Number of states = ', st%nst
-    write(*,*) 'Number of k-points = ', st%d%nik
+!    write(*,*) 'Number of states = ', st%nst
+!    write(*,*) 'Number of k-points = ', st%d%nik
 
     call out_eff_mass(ik, st%nst)
 
@@ -721,7 +744,7 @@ contains
 !
 !      call io_close(iunit)      
 !    end subroutine out_susceptibility
-!
+
 
     ! ---------------------------------------------------------
     subroutine out_tensor(iunit, tensor, factor)
