@@ -51,7 +51,8 @@ contains
   ! --------------------------------------------------------------------------
   subroutine magnetic()
     R_TYPE, allocatable :: f_in_copy(:), lf(:,:), vrnl(:,:,:)
-    R_TYPE :: cross(1:MAX_DIM)
+    R_TYPE :: cross(1:MAX_DIM), vv(1:MAX_DIM)
+    FLOAT :: xx(1:MAX_DIM)
     integer :: iatom, idir, ip
 
     ALLOCATE(f_in_copy(1:NP_PART), NP_PART)
@@ -66,26 +67,33 @@ contains
 
     deallocate(lf, f_in_copy)
 
-    if(this%gauge==GAUGE_GIPAW .or. this%gauge==GAUGE_ICL) then
-      ALLOCATE(vrnl(gr%m%np_part, h%d%dim, gr%sb%dim), gr%m%np_part*h%d%dim*gr%sb%dim)
+    if(this%gauge == GAUGE_GIPAW .or. this%gauge == GAUGE_ICL) then
+      ALLOCATE(vrnl(NP, h%d%dim, gr%sb%dim), NP*h%d%dim*gr%sb%dim)
+      vrnl(1:NP, 1:h%d%dim, this%dir) = M_ZERO
 
       do iatom = 1, geo%natoms
+
         do idir = 1, gr%sb%dim
+          if(this%dir == idir) cycle ! this direction is not used in the cross product
           call X(projector_conmut_r)(h%ep%p(iatom), gr, h%d%dim, idir, ik, f_in, vrnl(:, :, idir))
         end do
 
+        xx(1:MAX_DIM) = geo%atom(iatom)%x(1:MAX_DIM)
+
         do ip = 1, NP
-          select case(this%gauge)
-          case(GAUGE_GIPAW)
-            cross = X(cross_product)(R_TOTYPE(geo%atom(iatom)%x), vrnl(ip, 1, :))
-          case(GAUGE_ICL)
-            cross = X(cross_product)(R_TOTYPE(gr%m%x(ip, :)), vrnl(ip, 1, :))
-          end select
+
+          if(this%gauge == GAUGE_ICL) xx(1:MAX_DIM) = gr%m%x(ip, 1:MAX_DIM)
+         
+          vv(1:MAX_DIM) = vrnl(ip, 1, 1:MAX_DIM)
+
+          cross(1) = xx(2)*vv(3) - xx(3)*vv(2)
+          cross(2) = xx(3)*vv(1) - xx(1)*vv(3)
+          cross(3) = xx(1)*vv(2) - xx(2)*vv(1)
 
 #if !defined(R_TCOMPLEX)
-          f_out(ip) = f_out(ip) +        M_HALF * cross(this%dir)
+          f_out(ip) = f_out(ip) + M_HALF*cross(this%dir)
 #else
-          f_out(ip) = f_out(ip) - M_zI * M_HALF * cross(this%dir)
+          f_out(ip) = f_out(ip) - M_zI*M_HALF*cross(this%dir)
 #endif
         end do
       end do

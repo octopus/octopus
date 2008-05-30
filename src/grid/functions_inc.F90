@@ -268,8 +268,9 @@ subroutine X(f_angular_momentum)(sb, f_der, f, lf, ghost_update)
   logical, optional, intent(in)    :: ghost_update
 
   R_TYPE, allocatable :: gf(:, :)
-  FLOAT :: x(sb%dim)
-  integer :: i
+  FLOAT :: x1, x2, x3
+  R_TYPE :: factor
+  integer :: ip
 
   call push_sub('f_inc.Xf_angular_momentum')
 
@@ -278,27 +279,31 @@ subroutine X(f_angular_momentum)(sb, f_der, f, lf, ghost_update)
   ALLOCATE(gf(f_der%m%np, sb%dim), f_der%m%np*sb%dim)
   call X(f_gradient)(sb, f_der, f, gf, ghost_update)
 
-  do i = 1, f_der%m%np
-    x(1:sb%dim) = f_der%m%x(i,1:sb%dim)
-    select case(sb%dim)
-    case(3)
-      lf(i, 1) = (x(2)*gf(i, 3) - x(3)*gf(i, 2))
-      lf(i, 2) = (x(3)*gf(i, 1) - x(1)*gf(i, 3))
-      lf(i, 3) = (x(1)*gf(i, 2) - x(2)*gf(i, 1))
-    case(2)
-      lf(i, 1) = (x(1)*gf(i, 2) - x(2)*gf(i, 1))
-    end select
-  end do
 #if defined(R_TCOMPLEX)
+  factor = -M_ZI
+#else
+  factor = M_ONE
+#endif
+
   select case(sb%dim)
   case(3)
-    do i = 1, 3
-      call lalg_scal(f_der%m%np, -M_zI, lf(:, i))
+    do ip = 1, f_der%m%np
+      x1 = f_der%m%x(ip, 1)
+      x2 = f_der%m%x(ip, 2)
+      x3 = f_der%m%x(ip, 3)
+      lf(ip, 1) = factor*(x2*gf(ip, 3) - x3*gf(ip, 2))
+      lf(ip, 2) = factor*(x3*gf(ip, 1) - x1*gf(ip, 3))
+      lf(ip, 3) = factor*(x1*gf(ip, 2) - x2*gf(ip, 1))
     end do
+
   case(2)
-    call lalg_scal(f_der%m%np, -M_zI, lf(:, 1))
+    do ip = 1, f_der%m%np
+      x1 = f_der%m%x(ip, 1)
+      x2 = f_der%m%x(ip, 2)
+      lf(ip, 1) = factor*(x1*gf(ip, 2) - x2*gf(ip, 1))
+    end do
+
   end select
-#endif
 
   deallocate(gf)
   call pop_sub()
