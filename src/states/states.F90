@@ -143,6 +143,10 @@ module states_m
     logical        :: nlcc          ! do we have non-linear core corrections
     FLOAT, pointer :: rho_core(:)   ! core charge for nl core corrections
 
+    ! It may be required to "freeze" the deepest orbitals during the evolution; the density
+    ! of these orbitals is kept in frozen_rho. It is different from rho_core.
+    FLOAT, pointer :: frozen_rho(:, :)
+
     FLOAT, pointer :: eigenval(:,:) ! obviously the eigenvalues
     logical        :: fixed_occ     ! should the occupation numbers be fixed?
     FLOAT, pointer :: occ(:,:)      ! the occupation numbers
@@ -192,7 +196,7 @@ contains
     type(states_t), intent(inout) :: st
     call push_sub('states.states_null')
 
-    nullify(st%dpsi, st%zpsi, st%rho, st%j, st%rho_core, st%eigenval)
+    nullify(st%dpsi, st%zpsi, st%rho, st%j, st%rho_core, st%frozen_rho, st%eigenval)
     nullify(st%occ, st%spin, st%momentum, st%node, st%user_def_states)
     nullify(st%d%kpoints, st%d%kweights)
     nullify(st%st_range, st%st_num)
@@ -1020,6 +1024,11 @@ contains
       ALLOCATE(stout%rho_core(size(stin%rho_core, 1)), i)
       stout%rho_core = stin%rho_core
     end if
+    if(associated(stin%frozen_rho)) then
+      i = size(stin%frozen_rho, 1)*size(stin%frozen_rho, 2)
+      ALLOCATE(stout%frozen_rho(size(stin%frozen_rho, 1), size(stin%frozen_rho, 2)), i)
+      stout%frozen_rho = stin%frozen_rho
+    end if
     if(associated(stin%eigenval)) then
       i = (stin%st_end-stin%st_start)*stin%d%nik
       ALLOCATE(stout%eigenval(stin%st_start:stin%st_end, stin%d%nik), i)
@@ -1099,6 +1108,11 @@ contains
     if(associated(st%rho_core)) then
       deallocate(st%rho_core)
       nullify(st%rho_core)
+    end if
+
+    if(associated(st%frozen_rho)) then
+      deallocate(st%frozen_rho)
+      nullify(st%frozen_rho)
     end if
 
     if(st%d%ispin==SPINORS .and. associated(st%spin)) then
@@ -2435,7 +2449,6 @@ contains
     integer,        intent(in)    :: n
 
     integer :: ispin, ist, ik
-    FLOAT, allocatable :: rho(:, :)
     type(states_t) :: staux
 
     call push_sub('states.states_freeze_orbitals')
@@ -2446,24 +2459,17 @@ contains
       call write_fatal(2)
     end if
 
-    ! We will put the frozen density into st%rho_core. We will put the total density, summing up
-    ! the possible spin-up an spin-down contributions. This could be refined later...
-    if(.not.associated(st%rho_core)) then
-      ALLOCATE(st%rho_core(gr%m%np), gr%m%np)
-      st%rho_core(:) = M_ZERO
+    if(.not.associated(st%frozen_rho)) then
+      ALLOCATE(st%frozen_rho(gr%m%np, st%d%dim), gr%m%np * st%d%dim)
+      st%frozen_rho = M_ZERO
     end if
 
-    ALLOCATE(rho(gr%m%np, st%d%nspin), gr%m%np*st%d%nspin)
-    rho = M_ZERO
+    st%frozen_rho = M_ZERO
     do ist = st%st_start, st%st_end
       if(ist > n) cycle
-      call states_dens_accumulate(st, gr%m%np, rho, ist)
+      call states_dens_accumulate(st, gr%m%np, st%frozen_rho, ist)
     end do
-    call states_dens_reduce(st, gr%m%np, rho)
-
-    do ispin = 1, st%d%nspin
-      st%rho_core(:) = st%rho_core(:) + rho(:, ispin)
-    end do
+    call states_dens_reduce(st, gr%m%np, st%frozen_rho)
 
     call states_copy(staux, st)
 
@@ -2524,7 +2530,6 @@ contains
     end do
 
     call states_end(staux)
-    deallocate(rho)
     call pop_sub()
   end subroutine states_freeze_orbitals
 

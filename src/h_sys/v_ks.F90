@@ -326,6 +326,15 @@ contains
         rho(1:NP, :) = st%rho(1:NP, :)
       end if
 
+      ! Add, if it exists, the frozen density from the inner orbitals.
+      if(associated(st%frozen_rho)) then
+        do is = 1, st%d%spin_channels
+          !$omp parallel workshare
+          rho(1:NP, is) = rho(1:NP, is) + st%frozen_rho(1:NP, is)
+          !$omp end parallel workshare
+        end do
+      end if
+
       ! Amaldi correction
       if(ks%sic_type == sic_amaldi) rho(1:NP,:) = amaldi_factor*rho(1:NP,:)
 
@@ -392,6 +401,15 @@ contains
       rho(1:NP) = rho(1:NP) + st%rho(1:NP, is)
       !$omp end parallel workshare
     end do
+
+    ! Add, if it exists, the frozen density from the inner orbitals.
+    if(associated(st%frozen_rho)) then
+      do is = 1, h%d%spin_channels
+        !$omp parallel workshare
+        rho(1:NP) = rho(1:NP) + st%frozen_rho(1:NP, is)
+        !$omp end parallel workshare
+      end do
+    end if
 
     ! Amaldi correction
     if(present(amaldi_factor)) rho = amaldi_factor*rho
