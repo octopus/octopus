@@ -261,18 +261,18 @@ contains
       ! always two states (ist=(1,2); (3,4), ...) have the same energy
       i = (ist-1)/2
       q = qmax - i*deltaq
-      trans%q(ist  , 1) = q
-      trans%q(ist+1, 1) = -q
+      trans%q(ist, 1) = q
+      if (ist.lt.st%nst) trans%q(ist+1, 1) = -q
       if (order.eq.1) then ! tight binding
         trans%energy(ist) = (M_ONE-cos(gr%sb%h(1)*q))/gr%sb%h(1)**2
       else ! continuous relation
         trans%energy(ist) = q**2/M_TWO
       end if
-      trans%energy(ist+1) = trans%energy(ist)
+      if (ist.lt.st%nst) trans%energy(ist+1) = trans%energy(ist)
       ! for now we have only one sub-band at once, to be set from outside
       do id=2, gr%sb%dim
-        trans%q(ist  , id) = trans%q(0, id)
-        trans%q(ist+1, id) = trans%q(0, id)
+        trans%q(ist, id) = trans%q(0, id)
+        if (ist.lt.st%nst) trans%q(ist+1, id) = trans%q(0, id)
       end do
     end do !ist
 
