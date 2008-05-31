@@ -45,7 +45,9 @@ module v_ks_m
     v_ks_end,           &
     v_ks_write_info,    &
     v_ks_calc,          &
-    v_ks_hartree
+    v_ks_hartree,       &
+    v_ks_freeze_hxc
+
 
   integer, parameter :: &
     sic_none   = 1,     &  ! no self interaction correction
@@ -54,6 +56,8 @@ module v_ks_m
 
   type v_ks_t
     integer :: theory_level
+
+    logical :: frozen_hxc ! For RPA and SAE calculations.
 
     integer           :: xc_family  ! the xc stuff
     integer           :: sic_type   ! what kind of Self Interaction Correction to apply
@@ -64,6 +68,7 @@ module v_ks_m
 
 contains
 
+  
   ! ---------------------------------------------------------
   subroutine v_ks_init(gr, ks, d, nel)
     type(v_ks_t),        intent(out)   :: ks
@@ -157,10 +162,13 @@ contains
       call xc_oep_init(ks%oep, ks%xc_family, gr, d)
     end select
 
+    ks%frozen_hxc = .false.
+
     call v_ks_write_info(ks, stdout)
 
     call pop_sub()
   end subroutine v_ks_init
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
@@ -177,6 +185,7 @@ contains
 
     call pop_sub();
   end subroutine v_ks_end
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
@@ -212,6 +221,7 @@ contains
 
     call pop_sub()
   end subroutine v_ks_write_info
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
@@ -227,6 +237,21 @@ contains
     !logical, save :: RPA_first = .true.
 
     call push_sub('v_ks.v_ks_calc')
+
+    ! If the Hxc term is frozen, there is nothing to do, except we 
+    ! maybe have to calculat the eigenvalues (and WARNING: MISSING
+    ! h%epot)
+    if(ks%frozen_hxc) then
+      if(present(calc_eigenval)) then
+        if (st%wfs_type == M_REAL) then
+          call dhamiltonian_eigenval(h, gr, st)
+        else
+          call zhamiltonian_eigenval(h, gr, st)
+        end if
+      end if
+      call pop_sub()
+      return
+    end if
 
     h%epot     = M_ZERO
 
@@ -377,6 +402,7 @@ contains
       call profiling_out(C_PROFILING_XC)
     end subroutine v_a_xc
   end subroutine v_ks_calc
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
@@ -422,6 +448,17 @@ contains
 
     deallocate(rho)
   end subroutine v_ks_hartree
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine v_ks_freeze_hxc(ks)
+    type(v_ks_t), intent(inout) :: ks
+    ks%frozen_hxc = .true.
+  end subroutine v_ks_freeze_hxc
+  ! ---------------------------------------------------------
+
+
 
 end module v_ks_m
 

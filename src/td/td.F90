@@ -470,18 +470,43 @@ contains
       !% will be the lowest-energy ones) will be added during the propagation, but the orbitals
       !% will not be propagated.
       !% 
-      !% WARNING: NOT WORKING YET.
+      !% WARNING: NOT TESTED YET.
+      !%Option sae -1
+      !% Single-active-electron approximation. This option is only valid for time-dependent 
+      !% calculations ("CalculationMode = td"). Also, the nuclei should not move. 
+      !% The idea is that all orbitals except the last one are frozen. The orbitals are to 
+      !% be read from a previous ground-state calculation. The active orbital is then treated
+      !% as independent (no matter if it contains one electron or two) -- although it will
+      !% feel the Hartree and exchange-correlation created by the ground-state electronic
+      !% configureation.
+      !% 
+      !% It is almost equivalent to setting "TDFreezeOrbitals = N-1", where N is the number
+      !% of orbitals, but not completely.
       !%End
       call loct_parse_int(check_inp('TDFreezeOrbitals'), 0, freeze_orbitals)
       if(freeze_orbitals > 0) then
+        ! In this case, we first freeze the orbitals, then calculate the Hxc potential.
         call states_freeze_orbitals(st, gr, sys%mc, freeze_orbitals)
         write(message(1),'(a,i4,a,i4,a)') 'Info: The lowest', freeze_orbitals, &
           ' orbitals have been frozen.', st%nst, ' will be propagated.'
         call write_info(1)
+        call states_calc_dens(st, NP, st%rho)
+        call v_ks_calc(gr, sys%ks, h, st, calc_eigenval=.true.)
+      elseif(freeze_orbitals < 0) then
+        ! This means SAE approximation. We calculate the Hxc first, then freezer all
+        ! orbitals minus one.
+        write(message(1),'(a)') 'Info: The single-active-electron approximation will be used.'
+        call write_info(1)
+        call states_calc_dens(st, NP, st%rho)
+        call v_ks_calc(gr, sys%ks, h, st, calc_eigenval=.true.)
+        call states_freeze_orbitals(st, gr, sys%mc, n = st%nst-1)
+        call v_ks_freeze_hxc(sys%ks)
+      else
+        ! Normal run.
+        call states_calc_dens(st, NP, st%rho)
+        call v_ks_calc(gr, sys%ks, h, st, calc_eigenval=.true.)
       end if
 
-      call states_calc_dens(st, NP, st%rho)
-      call v_ks_calc(gr, sys%ks, h, st, calc_eigenval=.true.)
       x = minval(st%eigenval(st%st_start, :))
 #ifdef HAVE_MPI
       if(st%parallel_in_states) then
