@@ -1050,14 +1050,16 @@ contains
     call mpi_grp_copy(stout%mpi_grp, stin%mpi_grp)
     if(associated(stin%st_range)) then
       i = size(stin%st_range, 1)*size(stin%st_range, 2)
-      ALLOCATE(stout%st_range(2,0:stin%mpi_grp%size), i)
+      ALLOCATE(stout%st_range(2,0:stin%mpi_grp%size-1), i)
       stout%st_range = stin%st_range
     end if
     if(associated(stin%st_num)) then
       i = size(stin%st_num, 1)
-      ALLOCATE(stout%st_num(0:stin%mpi_grp%size), i)
+      ALLOCATE(stout%st_num(0:stin%mpi_grp%size-1), i)
       stout%st_num = stin%st_num
     end if
+
+    if(stin%parallel_in_states) call multicomm_all_pairs_copy(stout%ap, stin%ap)
 
     call pop_sub()
   end subroutine states_copy
@@ -2452,6 +2454,7 @@ contains
     end if
 
     ALLOCATE(rho(gr%m%np, st%d%nspin), gr%m%np*st%d%nspin)
+    rho = M_ZERO
     do ist = st%st_start, st%st_end
       if(ist > n) cycle
       call states_dens_accumulate(st, gr%m%np, rho, ist)
@@ -2471,8 +2474,8 @@ contains
     call states_allocate_wfns(st, gr%m, M_CMPLX)
 
 #if defined(HAVE_MPI) 
-    if(staux%parallel_in_states) then
 
+    if(staux%parallel_in_states) then
       do ik = 1, st%d%nik
         do ist = staux%st_start, staux%st_end
           if(ist <= n) cycle
@@ -2483,30 +2486,42 @@ contains
             call mpi_recv(st%zpsi(1, 1, ist-n, ik), gr%m%np_part*st%d%dim, MPI_CMPLX, st%node(ist-n), &
               ist, st%mpi_grp%comm, mpi_err)
           else
-            st%zpsi(:, :, ist-n, ik) = staux%zpsi(1, 1, ist, ik)
+            st%zpsi(:, :, ist-n, ik) = staux%zpsi(:, :, ist, ik)
           end if
    
         end do
       end do
-     write(0, *) 'Completed communication.'
-
    else
      do ik = 1, st%d%nik
-       do ist = st%st_start, st%st_end
-         st%zpsi(:, :, ist, ik) = staux%zpsi(:, :, n + ist, ik)
+       do ist = staux%st_start, staux%st_end
+         if(ist <= n) cycle
+         st%zpsi(:, :, ist-n, ik) = staux%zpsi(:, :, ist, ik)
        end do
      end do
    end if
 
 #else
 
-   do ik = 1, st%d%nik
-     do ist = st%st_start, st%st_end
-       st%zpsi(:, :, ist, ik) = staux%zpsi(:, :, n + ist, ik)
-     end do
-   end do
+    do ik = 1, st%d%nik
+      do ist = st%st_start, st%st_end
+        st%zpsi(:, :, ist, ik) = staux%zpsi(:, :, n + ist, ik)
+      end do
+    end do
 
 #endif
+
+    deallocate(st%occ, st%eigenval, st%momentum)
+    ALLOCATE(st%occ     (st%nst, st%d%nik),      st%nst*st%d%nik)
+    ALLOCATE(st%eigenval(st%nst, st%d%nik),      st%nst*st%d%nik)
+    ALLOCATE(st%momentum(3, st%nst, st%d%nik), 3*st%nst*st%d%nik)
+
+    do ik = 1, st%d%nik
+      do ist = st%st_start, st%st_end
+        st%occ(ist, ik) = staux%occ(n+ist, ik)
+        st%eigenval(ist, ik) = staux%eigenval(n+ist, ik)
+        st%momentum(1:3, ist, ik) = staux%momentum(1:3, n+ist, ik)
+      end do
+    end do
 
     call states_end(staux)
     deallocate(rho)

@@ -73,6 +73,7 @@
     multicomm_t,                     &
     multicomm_all_pairs_t,           &
     multicomm_init, multicomm_end,   &
+    multicomm_all_pairs_copy,        &
     multicomm_strategy_is_parallel,  &
     topology_t
 
@@ -129,6 +130,22 @@
   end type multicomm_all_pairs_t
 
 contains
+
+  ! ---------------------------------------------------------
+  subroutine multicomm_all_pairs_copy(apout, apin)
+    type(multicomm_all_pairs_t), intent(inout) :: apout
+    type(multicomm_all_pairs_t), intent(in)    :: apin
+    integer :: i
+
+    call mpi_grp_copy(apout%grp, apin%grp)
+    apout%rounds = apin%rounds
+    if(associated(apin%schedule)) then
+      i = size(apin%schedule, 1)*size(apin%schedule, 2)
+      ALLOCATE(apout%schedule(size(apin%schedule, 1), size(apin%schedule, 2)), i)
+      apout%schedule = apin%schedule
+    end if    
+
+  end subroutine multicomm_all_pairs_copy
 
   ! ---------------------------------------------------------
   ! create index and domain communicators
@@ -606,25 +623,25 @@ contains
     type(mpi_grp_t),             intent(in)  :: mpi_grp
     type(multicomm_all_pairs_t), intent(out) :: ap
 
-    integer :: size, rounds, ir, in
+    integer :: grp_size, rounds, ir, in
 
     call push_sub('multicomm.create_all_pairs')
 
     ap%grp = mpi_grp
-    size   = mpi_grp%size
+    grp_size   = mpi_grp%size
 
     ! Number of rounds.
-    if(mod(size, 2).eq.0) then
-      rounds = size-1
+    if(mod(grp_size, 2).eq.0) then
+      rounds = grp_size-1
     else
-      rounds = size
+      rounds = grp_size
     end if
     ap%rounds = rounds
 
     ! Calculate schedule.
-    ALLOCATE(ap%schedule(0:size-1, rounds), size*rounds)
+    ALLOCATE(ap%schedule(0:grp_size-1, rounds), grp_size*rounds)
     do ir = 1, rounds
-      do in = 0, size-1
+      do in = 0, grp_size-1
         ap%schedule(in, ir) = get_partner(in+1, ir)-1
       end do
     end do
@@ -637,19 +654,19 @@ contains
     integer function get_partner(in, ir)
       integer, intent(in) :: in, ir
 
-      if(mod(size, 2).eq.0) then
-        get_partner = get_partner_even(size, in-1, ir-1) + 1
+      if(mod(grp_size, 2).eq.0) then
+        get_partner = get_partner_even(grp_size, in-1, ir-1) + 1
       else
-        get_partner = get_partner_odd(size, in-1, ir-1) + 1
+        get_partner = get_partner_odd(grp_size, in-1, ir-1) + 1
       end if
     end function get_partner
 
-    integer function get_partner_even(size, i, r) result(p)
-      integer, intent(in) :: size, i, r
+    integer function get_partner_even(grp_size, i, r) result(p)
+      integer, intent(in) :: grp_size, i, r
 
       integer :: m
 
-      m = size/2
+      m = grp_size/2
 
       if(i.eq.0) then
         p = r+1
@@ -662,14 +679,14 @@ contains
       end if
     end function get_partner_even
 
-    integer function get_partner_odd(size, i, r) result(p)
-      integer, intent(in) :: size, i, r
+    integer function get_partner_odd(grp_size, i, r) result(p)
+      integer, intent(in) :: grp_size, i, r
 
       integer :: m
 
-      m = (size+1)/2
+      m = (grp_size+1)/2
 
-      p = get_partner_even(size+1, i, r)
+      p = get_partner_even(grp_size+1, i, r)
 
       if(p.eq.2*m-1) then
         p = i
@@ -689,16 +706,16 @@ contains
 
 #ifdef HAVE_MPI
       character(len=25) :: my_name, its_name
-      integer :: ir,  size, ig
+      integer :: ir,  wsize, ig
 
-      size = mpi_world%size
+      wsize = mpi_world%size
 
       !get the system name
       call loct_sysname(my_name)
 
-      ALLOCATE(this%distance(1:size, 1:size), size**2)
+      ALLOCATE(this%distance(1:wsize, 1:wsize), wsize**2)
 
-      do ir = 1, size
+      do ir = 1, wsize
 
         if(ir - 1 == mpi_world%rank) then
 
@@ -720,14 +737,14 @@ contains
 
       end do
 
-      do ir = 1, size
-        call MPI_Bcast(this%distance(1, ir), size, MPI_INTEGER, ir - 1, mpi_world%comm, mpi_err)
+      do ir = 1, wsize
+        call MPI_Bcast(this%distance(1, ir), wsize, MPI_INTEGER, ir - 1, mpi_world%comm, mpi_err)
       end do
       
       !classify processors in groups
 
-      ALLOCATE(this%groups(1:size, 1:size), size**2)
-      ALLOCATE(this%gsize(1:size), size)
+      ALLOCATE(this%groups(1:wsize, 1:wsize), wsize**2)
+      ALLOCATE(this%gsize(1:wsize), wsize)
 
       ! put the first node in the first group
       this%ng = 1
@@ -737,8 +754,8 @@ contains
       this%gsize(1) = 1
 
       ! check the other processors
-      do ir = 2, size
-        do ig = 1, size
+      do ir = 2, wsize
+        do ig = 1, wsize
           ! if the group has elements
           if(this%gsize(ig) > 0) then
             ! check the distance
@@ -788,26 +805,26 @@ contains
   !---------------------------------------------------
   ! Function to divide the range of numbers from 1 to nn
   ! between size processors.
-  subroutine multicomm_divide_range(nn, size, start, final, lsize)
+  subroutine multicomm_divide_range(nn, tsize, start, final, lsize)
     integer, intent(in)    :: nn
-    integer, intent(in)    :: size
+    integer, intent(in)    :: tsize
     integer, intent(out)   :: start(:)
     integer, intent(out)   :: final(:)
     integer, intent(out)   :: lsize(:)
 
     integer :: ii, jj, rank
     
-    if(size <= nn ) then
+    if(tsize <= nn ) then
       
-      do rank = 0, size - 1
-        jj = nn / size
-        ii = nn - jj*size
+      do rank = 0, tsize - 1
+        jj = nn / tsize
+        ii = nn - jj*tsize
         if(ii > 0 .and. rank < ii) then
           jj = jj + 1
           start(rank + 1) = rank*jj + 1
           final(rank + 1) = start(rank + 1) + jj - 1
         else
-          final(rank + 1) = nn - (size - rank - 1)*jj
+          final(rank + 1) = nn - (tsize - rank - 1)*jj
           start(rank + 1) = final(rank + 1) - jj + 1
         end if
       end do
@@ -819,9 +836,9 @@ contains
       final(1) = nn
     end if
 
-    lsize(1:size) = final(1:size) - start(1:size) + 1
+    lsize(1:tsize) = final(1:tsize) - start(1:tsize) + 1
     
-    ASSERT(sum(lsize(1:size)) == nn)
+    ASSERT(sum(lsize(1:tsize)) == nn)
 
   end subroutine multicomm_divide_range
 
