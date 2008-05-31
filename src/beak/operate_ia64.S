@@ -96,27 +96,44 @@ LDI MAXII = [ARG_MX],ISIZE         // MAXII = ARG_MX[LL++]
 //calculate WS[1:NN] = FI + II + ARG_RI[1:NN, LL]
 mov RILL = ARG_RI
 mov WS = ARG_WS
-mov ar.ec = 4 + 1
+mov ar.ec = 5 + 1
 mov pr.rot = 1 << 16;;
+mov WW = ARG_WW	
 mov ar.lc = NNM1;;
+
+mov f33 = f0
+mov f34 = f0
+;; 
+
+//load the addresses of the arrays in memory and perform the first iteration
 
 .dloop_NN1:
 (p16) LDI r38 = [RILL], 4
-(p17) sxt4 r39 = r39
-(p18) shladd r40 = r40, FSHIFT, ARG_FI
-(p19) shladd r41 = II, FSHIFT, r41
-(p20) st8 [WS] = r42, 8
+(p16) ldfd f45 = [WW], FSIZE
+(p17) shladd r39 = r39, FSHIFT, ARG_FI
+(p18) ldfd f56 = [r40], FSIZE
+;;
+(p16) sxt4 r38 = r38
+(p17) shladd r39 = II, FSHIFT, r39
+(p19) st8 [WS] = r41, 8
+(p21) fma.d f37 = f50,f59, f39
 br.ctop.sptk.few .dloop_NN1
 ;;
-clrrrb;;
 
+adds II = 1, II
+fadd.d f8 = f38, f39
+clrrrb;;
+stfd.nta [ARG_FO] = f8, FSIZE
+		
 // FIRST, THE UNROLLED LOOP IN II
 #define UNROLL 8
 adds MAXUNRII = -UNROLL + 1, MAXII;;
 
 //check whether we have to do at least one iteration
-cmp.ge p6,p0 = II, MAXUNRII;;   // if (II > MAXUNRII) 
-(p6) br.cond.dpnt.few .dloop_II  // goto rolled loop
+cmp.ge p7,p0 = II, MAXII        // p7 = II >= MAXII
+cmp.ge p6,p0 = II, MAXUNRII;;   // p6 = II >= MAXUNRII
+(p7) br.cond.dptk.few .dend_II   // if p7 goto next iteration
+(p6) br.cond.dpnt.few .dloop_II  // if p6 goto rolled loop
 
 .dloop_II_unrolled:
 mov WS = ARG_WS;;
@@ -241,6 +258,7 @@ br.ctop.sptk.few .dloop_NN3
 fadd.d f40 = f40, f41
 fadd.d f42 = f42, f43;;
 fadd.d f8 = f40, f42;;
+
 //store
 stfd.nta [ARG_FO] = f8, FSIZE
 
@@ -563,7 +581,7 @@ br.ret.sptk.many b0
 .endp FC_FUNC_(zoperate_as, ZOPERATE_AS)#
 
 // Local Variables:
-// mode: asm
+// mode: C++
 // End:
 
 #endif
