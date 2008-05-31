@@ -76,12 +76,20 @@ void FC_FUNC_(doperate_ri_vec,DOPERATE_RI_VEC)(const int * opn,
   assert(((long long) vw)%16 == 0);
 
   for (l = 0; l < nri ; l++) {
+    register ffloat a;
 
     index  = opri + n * l;
+    
+    i = rimap_inv[l];
 
-    for(j = 0; j < n ; j++) ffi[j] = fi + index[j];
+    a = 0.0;
+    for(j = 0; j < n ; j++){
+      ffi[j] = fi + index[j];
+      a += w[j]*ffi[j][i];
+    }
+    fo[i++] = a;
 
-    for (i = rimap_inv[l]; i < rimap_inv_max[l] - 4*VECSIZE + 1; i+=4*VECSIZE){
+    for (; i < rimap_inv_max[l] - 4*VECSIZE + 1; i+=4*VECSIZE){
 
 #ifdef SINGLE_PRECISION
       register __m128 a0, a1, a2, a3;
@@ -106,7 +114,7 @@ void FC_FUNC_(doperate_ri_vec,DOPERATE_RI_VEC)(const int * opn,
     }
 
     for (; i < rimap_inv_max[l]; i++){
-      register ffloat a = 0.0;
+      a = 0.0;
       for(j = 0; j < n; j++) a += w[j] * ffi[j][i];
       fo[i] = a;
     }
@@ -209,10 +217,17 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opn,
 
       index = opri + n * l;
 
-      for(j = 0; j < n ; j++) ffi[j] = fi + index[j];
+      register __m128d a0, a1, a2, a3;
+      i = rimap_inv[l];
 
-      for (  i = rimap_inv[l]; i < (rimap_inv_max[l] - 4 + 1) ; i+=4){
-	register __m128d a0, a1, a2, a3;
+      a0 = _mm_setzero_pd();
+      for(j = 0; j < n; j++){
+	ffi[j] = fi + index[j];
+	a0 = _mm_add_pd(a0, _mm_mul_pd(vw[j], ffi[j][i]));
+      }
+      fo[i++] = a0;
+
+      for (; i < (rimap_inv_max[l] - 4 + 1) ; i+=4){
 
 	a0 = a1 = a2 = a3 = _mm_setzero_pd();
       
@@ -229,8 +244,6 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opn,
       }
 
       for (; i < rimap_inv_max[l]; i++){
-	register __m128d a0;
-      
 	a0 = _mm_setzero_pd();
 	for(j = 0; j < n; j++) {
 	  a0 = _mm_add_pd(a0, _mm_mul_pd(vw[j],ffi[j][i]));
@@ -246,11 +259,18 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opn,
     for (l = 0; l < nri ; l++) {
 
       index = opri + n * l;
+      register __m128d a0, a1, a2, a3;;
+      i = rimap_inv[l];
 
-      for(j = 0; j < n ; j++) ffi[j] = fi + index[j];
+      a0 = _mm_setzero_pd();      
+      for(j = 0; j < n; j++) {
+	ffi[j] = fi + index[j];
+	a0 = _mm_add_pd(a0, _mm_mul_pd(vw[j], _mm_loadu_pd(ffi[j] + i)));
+      }
+      _mm_storeu_pd(fo + i, a0);
+      i++;
 
-      for (  i = rimap_inv[l]; i < (rimap_inv_max[l] - 4 + 1) ; i+=4){
-	register __m128d a0, a1, a2, a3;
+      for (; i < (rimap_inv_max[l] - 4 + 1) ; i+=4){
 
 	a0 = a1 = a2 = a3 = _mm_setzero_pd();
       
@@ -267,7 +287,6 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opn,
       }
 
       for (; i < rimap_inv_max[l]; i++){
-	register __m128d a0;
       
 	a0 = _mm_setzero_pd();
 	for(j = 0; j < n; j++) {

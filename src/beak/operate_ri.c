@@ -58,15 +58,20 @@ void FC_FUNC_(doperate_ri,DOPERATE_RI)(const int * opn,
     index  = opri + n * l;
     index1 = opri + n * (l+1);
 
+    i = rimap_inv[l];
+
+    a0 = 0.0;
     for(j = 0; j < n ; j++) {
       ffi[j] = fi + index[j];
+      a0 += w[j]*ffi[j][i];
       /* prefecth */
 #if defined(OCT_ITANIUM)
       __builtin_prefetch(fi + rimap_inv[l+1] + index1[j], 0, 3);
 #endif
     }
+    fo[i++] = a0;
 
-    for (i = rimap_inv[l]; i < rimap_inv_max[l] - 8 + 1; i+=8){
+    for (; i < rimap_inv_max[l] - 8 + 1; i+=8){
       a0 = a1 = a2 = a3 = 0.0;
       a4 = a5 = a6 = a7 = 0.0;
       for(j = 0; j < n; j++){
@@ -127,15 +132,24 @@ void FC_FUNC_(zoperate_ri,ZOPERATE_RI)(const int * opn,
     index = opri + n * l;
     index1= opri + n * (l+1);
 
+    i = rimap_inv[l];
+
+    a0 = 0.0;
+    a1 = 0.0;
     for(j = 0; j < n ; j++) {
       ffi[j] = fi + index[j];
+      a0 += w[j]*ffi[j][i].re;
+      a1 += w[j]*ffi[j][i].im;
       /* prefetch */
 #if defined(OCT_ITANIUM)
       __builtin_prefetch(fi + rimap_inv[l+1] + index1[j], 0, 3);
 #endif
     }
+    fo[i].re = a0;
+    fo[i].im = a1;
+    i++;
 
-    for (i = rimap_inv[l]; i < (rimap_inv_max[l] - 4 + 1) ; i+=4){
+    for (; i < (rimap_inv_max[l] - 4 + 1) ; i+=4){
       a0 = a1 = a2 = a3 = 0.0;
       a4 = a5 = a6 = a7 = 0.0;
       
