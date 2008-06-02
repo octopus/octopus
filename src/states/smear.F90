@@ -70,6 +70,9 @@ contains
     !%Section States
     !%Description
     !% This is the function used to smear the electronic occupations
+    !%Option semiconducting 1
+    !% Semiconducting occupations, i.e., the lowest lying states are occupied
+    !% until no more electrons are left 
     !%Option fermi_dirac 2
     !% Simple Fermi-Dirac distribution. In this case, the <tt>Smearing</tt> has
     !% the meaning of an electronic temperature
