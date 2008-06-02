@@ -21,6 +21,7 @@
 
 module smear_m
   use datasets_m
+  use loct_math_m
   use loct_parser_m
   use global_m
   use math_m
@@ -45,11 +46,16 @@ module smear_m
     
     logical :: fixed_occ   ! Are occupations fixed, or are we allowed to change them
     FLOAT   :: ef_occ      ! Occupancy of the level at the Fermi energy
+
+    integer :: MP_n        ! order of Methfessel-Paxton smearing
   end type smear_t
 
   integer, parameter ::               &
-    SMEAR_SEMICONDUCTOR = 1,          &
-    SMEAR_FERMI_DIRAC   = 2
+    SMEAR_SEMICONDUCTOR     = 1,      &
+    SMEAR_FERMI_DIRAC       = 2,      &
+    SMEAR_COLD              = 3,      &
+    SMEAR_METHFESSEL_PAXTON = 4,      &
+    SMEAR_SPLINE            = 5
   
 contains
 
@@ -64,9 +70,16 @@ contains
     !%Section States
     !%Description
     !% This is the function used to smear the electronic occupations
-    !%Option fermi_dirac 1
+    !%Option fermi_dirac 2
     !% Simple Fermi-Dirac distribution. In this case, the <tt>Smearing</tt> has
     !% the meaning of an electronic temperature
+    !%Option cold_smearing 3
+    !% N Marzari, D Vanderbilt, A De Vita, and MC Payne, Phys. Rev. Lett. 82, 3296 (1999).
+    !%Option methfessel_paxton 4
+    !% M Methfessel and AT Paxton, Phys. Rev. B 40, 3616 (1989).
+    !% In this case, the variable <tt>SmearingMPOrder</tt> sets the order of the smearing.
+    !%Option spline_smearing 5
+    !% Nearly identical to Gaussian smearing
     !%End
     call loct_parse_int(check_inp('SmearingFunction'), SMEAR_SEMICONDUCTOR, this%method)
     if(.not.varinfo_valid_option('SmearingFunction', this%method)) call input_error('SmearingFunction')
@@ -88,6 +101,19 @@ contains
     end if
 
     this%fixed_occ = fixed_occ
+
+    this%MP_n = 0
+    if(this%method == SMEAR_METHFESSEL_PAXTON) then
+      !%Variable SmearingMPOrder
+      !%Type integer
+      !%Default 1
+      !%Section States
+      !%Description
+      !% Sets the order of the Methfessel-Paxton smearing function
+      !%End
+      call loct_parse_int(check_inp('SmearingMPOrder'), 1, this%MP_n)
+    end if
+
   end subroutine smear_init
 
 
@@ -101,6 +127,7 @@ contains
     to%e_fermi   = from%e_fermi
     to%fixed_occ = from%fixed_occ
     to%ef_occ    = from%ef_occ
+    to%MP_n      = from%MP_n
   end subroutine smear_copy
 
 
@@ -202,7 +229,7 @@ contains
 
         do ik = 1, nik
           do ist = 1, nst
-            xx   = (eigenvalues(ist, ik) - this%e_fermi)/dsmear
+            xx   = (this%e_fermi - eigenvalues(ist, ik))/dsmear
             sumq = sumq + kweights(ik)*(M_TWO/spin_channels) * &
               smear_step_function(this, xx)
           end do
@@ -258,7 +285,7 @@ contains
       dsmear = max(CNST(1e-14), this%dsmear)
       do ik = 1, nik
         do ist = 1, nst
-          xx = (eigenvalues(ist, ik) - this%e_fermi)/dsmear
+          xx = (this%e_fermi - eigenvalues(ist, ik))/dsmear
           occupations(ist, ik) = (M_TWO/spin_channels) * smear_step_function(this, xx)
         end do
       end do
@@ -268,28 +295,71 @@ contains
 
 
   ! ---------------------------------------------------------
+  ! Some pieces glued from PW/wgauss.f90 from PWSCF
+  ! x is defined as x = (eps - mu)/smear
+  ! In PWSCF it is has a different sign
   FLOAT function smear_step_function(this, xx) result(stepf)
     type(smear_t), intent(in) :: this
     FLOAT,         intent(in) ::  xx
 
-    stepf = M_ZERO
+    FLOAT, parameter :: maxarg = CNST(200.0)
+    FLOAT :: xp, arg, hd, hp, A
+    integer :: ii, ni
 
+    stepf = M_ZERO
     select case(this%method)
     case(SMEAR_SEMICONDUCTOR)
-      if(xx < M_ZERO) then
+      if(xx > M_ZERO) then
         stepf = M_ONE
       else if(xx == M_ZERO) then
         stepf = this%ef_occ
       end if
 
     case(SMEAR_FERMI_DIRAC)
-      if (xx < CNST(-100.0)) then
+      if (xx > maxarg) then
         stepf = M_ONE
-      else if(xx < CNST(100.0)) then
-        stepf = M_ONE / ( M_ONE + exp(xx) )
+      else if(xx > -maxarg) then
+        stepf = M_ONE/(M_ONE + exp(-xx))
       end if
+
+    case(SMEAR_COLD)
+      xp  = xx - M_ONE/sqrt(M_TWO)
+      arg = min(maxarg, xp**2)
+
+      stepf = M_HALF*loct_erf(xp) + &
+        M_ONE/sqrt(M_TWO*M_PI)*exp(-arg) + M_HALF
+      
+    case(SMEAR_METHFESSEL_PAXTON)
+      stepf = M_HALF*(M_ONE - loct_erf(-xx))
+
+      if(this%MP_n > 0) then ! recursion
+        hd = M_ZERO
+        arg = min(maxarg, xx**2)
+        hp = exp(-arg)
+        ni = 0
+        A = M_ONE/sqrt(M_PI)
+        do ii = 1, this%MP_n
+          hd = M_TWO*xx*hp - M_TWO*ni*hd
+          ni = ni + 1
+          A = -A/(M_FOUR*ii)
+          stepf = stepf - A*hd
+          hp = M_TWO*xx*hd - M_TWO*ni*hp
+          ni = ni + 1
+        end do
+      end if
+
+    case(SMEAR_SPLINE)
+      if(xx <= M_ZERO) then
+        xp = xx - M_ONE/sqrt(M_TWO)
+        stepf = M_HALF*sqrt(M_E)*exp(-xx*xx)
+      else
+        xp = xx + M_ONE/sqrt(M_TWO)
+        stepf = M_ONE - M_HALF*sqrt(M_E)*exp(-xx*xx)
+      end if
+
     end select
 
+    
   end function smear_step_function
 
 
