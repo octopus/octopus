@@ -94,7 +94,7 @@ contains
     !% smearing used in the <tt>SmearingFunction</tt> used to distribute the electrons
     !% among the existing states.
     !%End
-    this%dsmear = M_ZERO
+    this%dsmear = CNST(1e-14)
     if(this%method.ne.SMEAR_SEMICONDUCTOR) then
       call loct_parse_float(check_inp('Smearing'), CNST(0.1)/(M_TWO*P_Ry), this%dsmear)
       this%dsmear = this%dsmear * units_inp%energy%factor
@@ -359,8 +359,67 @@ contains
 
     end select
 
-    
   end function smear_step_function
 
+
+  ! ---------------------------------------------------------
+  ! Some pieces glued from PW/wgauss.f90 from PWSCF
+  ! x is defined as x = (eps - mu)/smear
+  ! In PWSCF it is has a different sign
+  FLOAT function smear_delta_function(this, xx) result(deltaf)
+    type(smear_t), intent(in) :: this
+    FLOAT,         intent(in) ::  xx
+
+    FLOAT, parameter :: maxarg = CNST(200.0)
+    FLOAT :: xp, arg, hd, hp, A
+    integer :: ii, ni
+
+    deltaf = M_ZERO
+    select case(this%method)
+    case(SMEAR_SEMICONDUCTOR)
+      if(xx == M_ZERO) &
+        deltaf = M_ONE
+
+    case(SMEAR_FERMI_DIRAC)
+      if (abs(xx) <= CNST(36.0)) &
+        deltaf = M_ONE/(M_TWO + exp(-xx) + exp(xx))
+
+    case(SMEAR_COLD)
+      xp  = xx - M_ONE/sqrt(M_TWO)
+      arg = min(maxarg, xp**2)
+
+      deltaf = exp(-arg)/sqrt(M_PI)*(M_TWO - sqrt(M_TWO)*xx)
+      
+    case(SMEAR_METHFESSEL_PAXTON)
+      arg    = min(maxarg, xx**2)
+      deltaf = exp(-arg)/sqrt(M_PI)
+
+      if(this%MP_n > 0) then ! recursion
+        hd = M_ZERO
+        hp = exp(-arg)
+        ni = 0
+        A = M_ONE/sqrt(M_PI)
+        do ii = 1, this%MP_n
+          hd = M_TWO*xx*hp - M_TWO*ni*hd
+          ni = ni + 1
+          A = -A/(M_FOUR*ii)
+          hp = M_TWO*xx*hd - M_TWO*ni*hp
+          ni = ni + 1
+          deltaf = deltaf + A*hp
+        end do
+      end if
+
+    case(SMEAR_SPLINE)
+      if(xx <= M_ZERO) then
+        xp = xx - M_ONE/sqrt(M_TWO)
+        deltaf = -sqrt(M_E)*xx*exp(-xx*xx)
+      else
+        xp = xx + M_ONE/sqrt(M_TWO)
+        deltaf =  sqrt(M_E)*xx*exp(-xx*xx)
+      end if
+
+    end select
+    
+  end function smear_delta_function
 
 end module smear_m
