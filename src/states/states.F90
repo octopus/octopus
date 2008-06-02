@@ -42,6 +42,7 @@ module states_m
   use multicomm_m
   use profiling_m
   use simul_box_m
+  use smear_m
   use string_m
   use units_m
   use varinfo_m
@@ -155,11 +156,10 @@ module states_m
     FLOAT, pointer :: spin(:, :, :)
     FLOAT, pointer :: momentum(:, :, :)
 
-    FLOAT :: qtot                   ! (-) The total charge in the system (used in Fermi)
-    FLOAT :: val_charge             ! valence charge
+    FLOAT          :: qtot          ! (-) The total charge in the system (used in Fermi)
+    FLOAT          :: val_charge    ! valence charge
 
-    FLOAT :: el_temp                ! electronic temperature for the Fermi function
-    FLOAT :: ef                     ! the fermi energy
+    type(smear_t)  :: smear         ! smearing of the electronic occupations
 
     ! This is stuff needed for the parallelization in states.
     logical                     :: parallel_in_states ! Am I parallel in states?
@@ -274,7 +274,7 @@ contains
     !% However, one may command <tt>octopus</tt> to put more states, which is necessary if one wants to
     !% use fractional occupational numbers, either fixed from the origin through
     !% the <tt>Occupations</tt> block or by prescribing
-    !% an electronic temperature with <tt>ElectronicTemperature</tt>.
+    !% an electronic temperature with <tt>Smearing</tt>.
     !%
     !% Note that this number is unrelated to <tt>CalculationMode == unocc</tt>.
     !%End
@@ -388,7 +388,7 @@ contains
   ! ---------------------------------------------------------
   ! Reads from the input file the initial occupations, if the
   ! block "Occupations" is present. Otherwise, it makes an initial
-  ! guess for the occupations, maybe using the "ElectronicTemperature"
+  ! guess for the occupations, maybe using the "Smearing"
   ! variable.
   ! The resulting occupations are placed on the st%occ variable. The
   ! boolean st%fixed_occ is also set to .true., if the occupations are
@@ -444,8 +444,6 @@ contains
     !% of the spin options.
     !%End
 
-
-
     occ_fix: if(loct_parse_block(check_inp('Occupations'), blk)==0) then
       ! read in occupations
       st%fixed_occ = .true.
@@ -492,19 +490,9 @@ contains
 
         end do
       end do
-
-      !%Variable ElectronicTemperature
-      !%Type float
-      !%Default 0.0
-      !%Section States
-      !%Description
-      !% If <tt>Occupations</tt> is not set, <tt>ElectronicTemperature</tt> is the
-      !% temperature in the Fermi-Dirac function used to distribute the electrons
-      !% among the existing states.
-      !%End
-      call loct_parse_float(check_inp('ElectronicTemperature'), M_ZERO, st%el_temp)
-      st%el_temp = st%el_temp * units_inp%energy%factor
     end if occ_fix
+
+    call smear_init(st%smear, st%fixed_occ)
 
     call pop_sub()
   end subroutine states_read_initial_occs
@@ -967,13 +955,12 @@ contains
 
     call states_null(stout)
 
-    stout%wfs_type = stin%wfs_type
+    stout%wfs_type   = stin%wfs_type
     call states_dim_copy(stout%d, stin%d)
     stout%nst        = stin%nst
     stout%qtot       = stin%qtot
     stout%val_charge = stin%val_charge
-    stout%el_temp    = stin%el_temp
-    stout%ef         = stin%ef
+    call smear_copy(stout%smear, stin%smear)
     stout%parallel_in_states = stin%parallel_in_states
     stout%lnst       = stin%lnst
     stout%st_start   = stin%st_start
@@ -1385,11 +1372,8 @@ contains
     type(mesh_t),   intent(in)    :: m
 
     ! Local variables.
-    integer            :: ie, ik, iter
-    integer, parameter :: nitmax = 200
-    FLOAT              :: drange, t, emin, emax, sumq
-    FLOAT, parameter   :: tol = CNST(1.0e-10)
-    logical            :: conv
+    integer            :: ist, ik, iter
+    FLOAT              :: charge
 #if defined(HAVE_MPI)
     integer            :: j
     integer            :: tmp
@@ -1398,120 +1382,32 @@ contains
 
     call push_sub('states.fermi')
 
-    if(st%fixed_occ) then ! nothing to do
-      ! Calculate magnetizations...
-      if(st%d%ispin == SPINORS) then
-        do ik = 1, st%d%nik
-          do ie = st%st_start, st%st_end
-            if (st%wfs_type == M_REAL) then
-              write(message(1),'(a)') 'Internal error in states_fermi'
-              call write_fatal(1)
-            else
-              st%spin(1:3, ie, ik) = state_spin(m, st%zpsi(:, :, ie, ik))
-            end if
-          end do
-#if defined(HAVE_MPI)
-          if(st%parallel_in_states) then
-            ALLOCATE(lspin(3, st%lnst), 3*st%lnst)
-            lspin = st%spin(1:3, st%st_start:st%st_end, ik)
-            do j = 1, 3
-              call lmpi_gen_alltoallv(st%lnst, lspin(j, :), tmp, st%spin(j, :, ik), st%mpi_grp)
-            end do
-            deallocate(lspin)
-          end if
-#endif
-        end do
-      end if
-      call pop_sub()
-      return
-    end if
+    call smear_find_fermi_energy(st%smear, st%eigenval, st%occ, st%qtot, &
+      st%d%nik, st%nst, st%d%spin_channels, st%d%ispin == SPINORS, st%d%kweights)
 
-    ! Initializations
-    emin = minval(st%eigenval)
-    emax = maxval(st%eigenval)
+    call smear_fill_occupations(st%smear, st%eigenval, st%occ, &
+      st%d%nik, st%nst, st%d%spin_channels)
+
+    ! check if everything is OK
+    charge = M_ZERO
+    do ist = 1, st%nst
+      charge = charge + sum(st%occ(ist, :)*st%d%kweights(:))
+    end do
+    if(abs(charge-st%qtot) > CNST(1e-6)) then
+      message(1) = 'Occupations do not integrate to total charge!'
+      write(message(2), '(6x,f12.8,a,f12.8)') charge, '.ne.', st%qtot
+      call write_warning(2)
+    end if
 
     if(st%d%ispin == SPINORS) then
-      sumq = real(st%nst, REAL_PRECISION)
-    else
-      sumq = M_TWO*st%nst
-    end if
-
-    t = max(st%el_temp, CNST(1.0e-6))
-    st%ef = emax
-
-    conv = .true.
-    if (abs(sumq - st%qtot) > tol) conv = .false.
-    if (conv) then ! all orbitals are full; nothing to be done
-      st%occ = M_TWO/st%d%spin_channels!st%d%nspin
-      ! Calculate magnetizations...
-      if(st%d%ispin == SPINORS) then
-        do ik = 1, st%d%nik
-          do ie = st%st_start, st%st_end
-            st%spin(1:3, ie, ik) = state_spin(m, st%zpsi(:, :, ie, ik))
-          end do
-#if defined(HAVE_MPI)
-          if(st%parallel_in_states) then
-            ALLOCATE(lspin(3, st%lnst), 3*st%lnst)
-            lspin = st%spin(1:3, st%st_start:st%st_end, ik)
-            do j = 1, 3
-              call lmpi_gen_alltoallv(st%lnst, lspin(j, :), tmp, st%spin(j, :, ik), st%mpi_grp)
-            end do
-            deallocate(lspin)
+      do ik = 1, st%d%nik
+        do ist = st%st_start, st%st_end
+          if (st%wfs_type == M_REAL) then
+            write(message(1),'(a)') 'Internal error in states_fermi'
+            call write_fatal(1)
+          else
+            st%spin(1:3, ist, ik) = state_spin(m, st%zpsi(:, :, ist, ik))
           end if
-#endif
-        end do
-      end if
-      call pop_sub()
-      return
-    end if
-
-    if (sumq < st%qtot) then ! not enough states
-      message(1) = 'Fermi: Not enough states'
-      write(message(2),'(6x,a,f12.6,a,f12.6)')'(total charge = ', st%qtot, &
-        ' max charge = ', sumq
-      call write_fatal(2)
-    end if
-
-    drange = t*sqrt(-log(tol*CNST(.01)))
-
-    emin = emin - drange
-    emax = emax + drange
-
-    do iter = 1, nitmax
-      st%ef = M_HALF*(emin + emax)
-      sumq  = M_ZERO
-
-      do ik = 1, st%d%nik
-        do ie = 1, st%nst
-          sumq = sumq + st%d%kweights(ik)/st%d%spin_channels * & !st%d%nspin * &
-            stepf((st%eigenval(ie, ik) - st%ef)/t)
-        end do
-      end do
-
-      conv = .true.
-      if(abs(sumq - st%qtot) > tol) conv = .false.
-      if(conv) exit
-
-      if(sumq <= st%qtot ) emin = st%ef
-      if(sumq >= st%qtot ) emax = st%ef
-    end do
-
-    if(iter == nitmax) then
-      message(1) = 'Fermi: did not converge'
-      call write_fatal(1)
-    end if
-
-    do ik = 1, st%d%nik
-      do ie = 1, st%nst
-        st%occ(ie, ik) = stepf((st%eigenval(ie, ik) - st%ef)/t)/st%d%spin_channels!st%d%nspin
-      end do
-    end do
-
-    ! Calculate magnetizations...
-    if(st%d%ispin == SPINORS) then
-      do ik = 1, st%d%nik
-        do ie = st%st_start, st%st_end
-          st%spin(1:3, ie, ik) = state_spin(m, st%zpsi(:, :, ie, ik))
         end do
 #if defined(HAVE_MPI)
         if(st%parallel_in_states) then
@@ -1635,7 +1531,7 @@ contains
           if(simul_box_is_periodic(sb)) then
             if(st%d%ispin == SPINORS) then
               write(tmp_str(2), '(1x,f12.6,3x,4f5.2)') &
-                (st%eigenval(j, ik)-st%ef)/units_out%energy%factor, o, st%spin(1:3, j, ik)
+                (st%eigenval(j, ik) - st%smear%e_fermi)/units_out%energy%factor, o, st%spin(1:3, j, ik)
               if(present(error)) write(tmp_str(3), '(a7,es7.1,a1)')'      (', error(j, ik+is), ')'
             else
               write(tmp_str(2), '(1x,f12.6,3x,f12.6)') &
@@ -1964,12 +1860,12 @@ contains
       minval(st%d%kpoints(1,:)/factor(1)), &
       minval(st%d%kpoints(2,:)/factor(2)), &
       minval(st%d%kpoints(3,:)/factor(3)), &
-      st%ef/scale
+      st%smear%e_fermi/scale
 
     ! Gamma point
     write(message(3), '(7f12.6)')          &
       (M_ZERO, i = 1, 6),                  &
-      st%ef/scale
+      st%smear%e_fermi/scale
 
     write(message(4), '(7f12.6)')          &
       maxval(st%d%kpoints(1,:)),           &
@@ -1978,7 +1874,7 @@ contains
       maxval(st%d%kpoints(1,:)/factor(1)), &
       maxval(st%d%kpoints(2,:)/factor(2)), &
       maxval(st%d%kpoints(3,:)/factor(3)), &
-      st%ef/scale
+      st%smear%e_fermi/scale
 
     call write_info(4, iunit)
     call io_close(iunit)
@@ -1992,8 +1888,8 @@ contains
     ! this is the maximum that tdos can reach
     maxdos = sum(st%d%kweights) * st%nst
 
-    write(message(2), '(4f12.6)') st%ef/scale, M_ZERO
-    write(message(3), '(4f12.6)') st%ef/scale, maxdos
+    write(message(2), '(4f12.6)') st%smear%e_fermi/scale, M_ZERO
+    write(message(3), '(4f12.6)') st%smear%e_fermi/scale, maxdos
 
     call write_info(3, iunit)
     call io_close(iunit)

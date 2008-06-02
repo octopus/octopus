@@ -170,7 +170,7 @@ contains
 
     do idir = 1, NDIM
       kdotp_vars%ok = .true.
-      write(message(1), '(a,i)') 'Info: Calculating response for direction ', idir
+      write(message(1), '(a,i3)') 'Info: Calculating response for direction ', idir
       call write_info(1)
       call pert_setup_dir(kdotp_vars%perturbation, idir)
       write(*,*) 'done with pert_setup_dir'
@@ -618,12 +618,12 @@ contains
         write(filename, '(a, a)') 'kdotp/kpoint_', ik2str(ik)
         iunit = io_open(trim(filename), action='write')
         write(iunit,'(a)') '# Inverse effective mass tensors for valence bands'
-        write(iunit,'(a, i)') '# k-point index = ', ik
-        write(iunit,'(a, 3f)') '# k-point coordinates = ', st%d%kpoints(1:MAX_DIM, ik)      
+        write(iunit,'(a, i4)') '# k-point index = ', ik
+        write(iunit,'(a, 3f12.8)') '# k-point coordinates = ', st%d%kpoints(1:MAX_DIM, ik)      
 
         do ist = 1, nst
           write(iunit,'(a)')
-          write(iunit,'(a, i)') 'State #', ist
+          write(iunit,'(a, i6)') 'State #', ist
           call out_tensor(iunit, kdotp_vars%eff_mass_inv(:,:,ist), M_ONE)
         enddo
 

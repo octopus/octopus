@@ -22,7 +22,7 @@
 noinst_LIBRARIES = libstates.a
 
 libstates_a_SOURCES = \
-	states.F90 magnetic.F90 elf.F90 states_block.F90 \
+	smear.F90 states.F90 magnetic.F90 elf.F90 states_block.F90 \
 	excited_states.F90 mix.F90 linear_response.F90 restart.F90
 
 noinst_HEADERS = \

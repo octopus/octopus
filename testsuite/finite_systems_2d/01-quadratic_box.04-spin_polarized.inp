@@ -40,11 +40,8 @@ ExtraStates = 1
 1 | 0 | 0
 %
 
-
 XCFunctional = lda_x + lda_c_amgb
 
-
-ConvAbsDens = 1e-8
 LCAOStart = lcao_full
 
 EigenSolverMaxIter = 50

@@ -1014,7 +1014,12 @@ subroutine dlinsyssolve(n, nhrs, a, b, x)
 
   if(info /= 0) then
     write(message(1), '(a, i3)') 'In dlinsyssolve, LAPACK (d|s)gesvx returned info = ', info
-    call write_fatal(1)
+    if(info == n+1) then
+      message(2) = '(reciprocal of the condition number is less than machine precision)'
+      call write_warning(2)
+    else
+      call write_fatal(1)
+    end if
   end if
 
   deallocate(ipiv, iwork, ferr, berr, work, r, c, af)

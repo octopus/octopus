@@ -33,11 +33,8 @@ delta | delta | delta
 
 DerivativesOrder = 1
 
-
 XCFunctional = lda_x + lda_c_amgb
 
-
-ConvAbsDens = 1e-8
 LCAOStart = lcao_full
 
 EigenSolver = cg

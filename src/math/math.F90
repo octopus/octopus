@@ -46,7 +46,6 @@ module math_m
     ddot_product,               &
     zdot_product,               &
     quickrnd,                   &
-    stepf,                      &
     ylmr,                       &
     grylmr,                     &
     weights,                    &
@@ -202,22 +201,6 @@ contains
 
   end subroutine quickrnd
 
-
-  ! ---------------------------------------------------------
-  ! Step function, needed for definition of fermi function.
-  function stepf(x)
-    FLOAT, intent(in) ::  x
-    FLOAT :: stepf
-
-    if (x.gt.CNST(100.0)) then
-      stepf = M_ZERO
-    elseif (x.lt.CNST(-100.0)) then
-      stepf = M_TWO
-    else
-      stepf = M_TWO / ( M_ONE + exp(x) )
-    end if
-
-  end function stepf
 
   ! ---------------------------------------------------------
   ! Computes spherical harmonics ylm in the direction of vector r

@@ -32,11 +32,8 @@ delta | delta | delta
 
 DerivativesOrder = 1
 
-
 XCFunctional = no
 
-
-ConvAbsDens = 1e-8
 LCAOStart = lcao_full
 
 EigenSolverMaxIter = 50
