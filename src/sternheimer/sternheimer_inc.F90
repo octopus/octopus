@@ -95,7 +95,7 @@ subroutine X(sternheimer_solve)(&
 
   total_iter = 0
     
-  !self consistency iteration for response
+  !self-consistency iteration for response
   iter_loop: do iter=1, this%scftol%max_iter
 
     write(message(1), '(a, i3)') "LR SCF Iteration: ", iter
@@ -132,7 +132,7 @@ subroutine X(sternheimer_solve)(&
           call X(solve_HXeY) (this%solver, h, sys%gr, sys%st, ist, ik, lr(sigma)%X(dl_psi)(:, :, ist, ik),&
                Y(:,:, sigma), -sys%st%eigenval(ist, ik) + omega_sigma)
           
-          !altough the dl_psi we get should be orthogonal to psi
+          !although the dl_psi we get should be orthogonal to psi
           !a re-orthogonalization is sometimes necessary 
           if(this%orth_response) then 
             call X(lr_orth_vector)(m, st, lr(sigma)%X(dl_psi)(:, :, ist, ik), ik)

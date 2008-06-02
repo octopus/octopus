@@ -15,7 +15,7 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! $Id: response.F90 2548 2006-11-06 21:42:27Z xavier $
+!! $Id: pert_inc.F90 2548 2006-11-06 21:42:27Z xavier $
 
 ! --------------------------------------------------------------------------
 subroutine X(pert_apply) (this, gr, geo, h, ik, f_in, f_out)
@@ -43,13 +43,32 @@ subroutine X(pert_apply) (this, gr, geo, h, ik, f_in, f_out)
     call ionic()
 
   case(PERTURBATION_KDOTP)
-!    call kdotp()
+    call kdotp()
 
   end select
 
   call profiling_out(prof)
 
 contains 
+
+  ! --------------------------------------------------------------------------
+  subroutine kdotp()
+    R_TYPE, allocatable :: f_in_copy(:), grad(:,:)
+
+    ALLOCATE(f_in_copy(1:NP_PART), NP_PART)
+    call lalg_copy(NP_PART, f_in, f_in_copy)
+    
+    ALLOCATE(grad(gr%m%np, gr%sb%dim), gr%m%np*gr%sb%dim)
+
+    call X(derivatives_grad) (gr%f_der%der_discr, f_in_copy, grad) 
+
+    f_out(1:NP) = - M_zI * (grad(1:NP, this%dir)) &
+                  + h%d%kpoints(this%dir, ik) * f_in(1:NP)
+!    delta_H = (-i*grad + k) . delta_k
+
+    deallocate(f_in_copy, grad)
+    
+  end subroutine kdotp
 
   ! --------------------------------------------------------------------------
   subroutine magnetic()

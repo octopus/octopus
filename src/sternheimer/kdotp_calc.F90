@@ -1,0 +1,184 @@
+!!! Copyright (C) 2004 Xavier Andrade, Eugene S. Kadantsev (ekadants@mjs1.phy.queensu.ca)
+!!
+!! This program is free software; you can redistribute it and/or modify
+!! it under the terms of the GNU General Public License as published by
+!! the Free Software Foundation; either version 2, or (at your option)
+!! any later version.
+!!
+!! This program is distributed in the hope that it will be useful,
+!! but WITHOUT ANY WARRANTY; without even the implied warranty of
+!! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!! GNU General Public License for more details.
+!!
+!! You should have received a copy of the GNU General Public License
+!! along with this program; if not, write to the Free Software
+!! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+!! 02111-1307, USA.
+!!
+!! $Id: kdotp_calc.F90 2548 2006-11-06 21:42:27Z xavier $
+
+#include "global.h"
+
+module kdotp_calc_m
+  use datasets_m
+  use elf_m
+  use functions_m
+  use grid_m
+  use global_m
+  use hamiltonian_m
+  use loct_parser_m
+  use linear_response_m
+!  use magnetic_m
+  use mesh_m
+  use mesh_function_m
+  use messages_m
+!  use poisson_m
+  use pert_m
+  use profiling_m
+  use states_m
+  use sternheimer_m
+  use system_m
+  use xc_m
+
+  implicit none
+
+  private
+  public ::                        &
+!     lr_calc_current,              &
+!     dlr_calc_elf,                 &
+!     zlr_calc_elf,                 &
+!     dlr_calc_polarizability,      &
+!     zlr_calc_polarizability,      &
+!     dlr_calc_susceptibility,      &
+!     zlr_calc_susceptibility,      &
+!     dlr_calc_beta,                &
+!     zlr_calc_beta,                &
+!     freq2str,                     &
+     kdotp_wfs_tag,                &
+     kdotp_rho_tag
+!
+!  type(profile_t), save :: beta_prof
+
+contains
+
+!  ! ---------------------------------------------------------
+!  subroutine lr_calc_current(st, gr, lr, lr_m)
+!    type(states_t),   intent(inout) :: st
+!    type(grid_t),     intent(inout) :: gr
+!    type(lr_t),       intent(inout) :: lr
+!    type(lr_t), optional, intent(inout) :: lr_m
+!
+!    integer :: k, ist, ispin, idim, ndim, np
+!
+!    CMPLX, allocatable :: gpsi(:,:), gdl_psi(:,:), gdl_psi_m(:,:)
+!
+!    call push_sub('em_resp.lr_calc_current')
+!
+!    if(.not. associated(lr%dl_j)) ALLOCATE(lr%dl_j(gr%m%np, MAX_DIM, st%d%nspin), gr%m%np*MAX_DIM*st%d%nspin)
+!
+!    np = NP
+!    ndim = NDIM
+!
+!    ALLOCATE(   gpsi(1:np, 1:ndim), np*ndim)
+!    ALLOCATE(gdl_psi(1:np, 1:ndim), np*ndim)
+!    if(present(lr_m)) ALLOCATE(gdl_psi_m(1:np, 1:ndim), np*ndim)
+!
+!    lr%dl_j = M_ZERO
+!
+!    do ispin = 1, st%d%nspin
+!      do ist = 1, st%nst
+!        do idim = 1, st%d%dim
+!
+!          call zf_gradient(gr%sb, gr%f_der, lr%zdl_psi(:, idim, ist, ispin), gdl_psi)
+!          call zf_gradient(gr%sb, gr%f_der, st%zpsi(:, idim, ist, ispin), gpsi)
+!
+!          if(present(lr_m)) then               
+!
+!            call zf_gradient(gr%sb, gr%f_der, lr_m%zdl_psi(:, idim, ist, ispin), gdl_psi_m)
+!
+!            do k = 1, NDIM 
+!
+!              lr%dl_j(1:np,k,ispin) = lr%dl_j(1:np, k, ispin) + (           &
+!                + conjg(st%zpsi(1:np, idim, ist, ispin)) *      gdl_psi(1:np,k)   &
+!                -       st%zpsi(1:np, idim, ist, ispin) * conjg(gdl_psi_m(1:np,k))  &
+!                + conjg(lr_m%zdl_psi(1:np, idim, ist, ispin)) *     gpsi(1:np,k)   & 
+!                -       lr%zdl_psi(1:np, idim, ist, ispin)  * conjg(gpsi(1:np,k))  &
+!                )/(M_TWO*M_zI)
+!            end do
+!
+!          else 
+!
+!            do k = 1, NDIM 
+!
+!              lr%dl_j(1:np,k,ispin) = lr%dl_j(1:np, k, ispin) + (           &
+!                + conjg(st%zpsi(1:np, idim, ist, ispin)) *       gdl_psi(1:np,k)   &
+!                -       st%zpsi(1:np, idim, ist, ispin)  * conjg(gdl_psi(1:np,k))  &
+!                + conjg(lr%zdl_psi(1:np, idim, ist, ispin)) *       gpsi(1:np,k)   & 
+!                -       lr%zdl_psi(1:np, idim, ist, ispin)  * conjg(gpsi(1:np,k))  &
+!                )/(M_TWO*M_zI)
+!
+!            end do
+!
+!          end if
+!
+!        end do
+!      end do
+!    end do
+!
+!    deallocate(gpsi)
+!    deallocate(gdl_psi)
+!    if(present(lr_m)) deallocate(gdl_psi_m)
+!
+!    call pop_sub()
+!
+!  end subroutine lr_calc_current
+!
+!  character(len=12) function freq2str(w) result(str)
+!    FLOAT, intent(in) :: w
+!
+!    write(str, '(f11.4)') w
+!    str = trim(adjustl(str))
+!
+!  end function freq2str
+
+  character(len=100) function kdotp_rho_tag(dir) result(str)
+!    FLOAT, intent(in) :: w
+    integer, intent(in) :: dir
+!    character(len=12) :: str_tmp
+
+    !this function has to be consistent with oct_search_file_lr in liboct/oct_f.c
+
+    call push_sub('kdotp_calc.kdotp_rho_tag')
+
+!    str_tmp = freq2str(w)
+    write(str, '(a,i1)') 'rho_', dir
+
+    call pop_sub()
+
+  end function kdotp_rho_tag
+  
+  character(len=100) function kdotp_wfs_tag(dir) result(str)
+    integer, intent(in) :: dir 
+
+    call push_sub('kdotp_calc.kdotp_rho_tag')
+
+    write(str, '(a,i1)') "wfs_", dir
+
+    call pop_sub()
+
+  end function kdotp_wfs_tag
+  
+!#include "undef.F90"
+!#include "real.F90"
+!#include "em_resp_calc_inc.F90"
+
+!#include "undef.F90"
+!#include "complex.F90"
+!#include "em_resp_calc_inc.F90"
+
+end module kdotp_calc_m
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:
