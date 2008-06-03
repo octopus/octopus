@@ -112,16 +112,22 @@ end subroutine X(states_gram_schmidt_full)
 ! And one can pass an extra optional argument, mask, which:
 !  - on input, if mask(p) = .true., the p-orbital is not used.
 !  - on output, mask(p) = .true. if p was already orthogonal (to within 1e-12).
-subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi, normalize, mask, overlap, norm)
+! If Theta_Fi and beta_ij are present, it performs the generalized orthogonalization
+!   (Theta_Fi - sum_j beta_ij |j><j|Phi>
+! This is used in response for metals
+subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi,  &
+  normalize, mask, overlap, norm, Theta_fi, beta_ij)
   type(mesh_t),      intent(in)    :: m
   integer,           intent(in)    :: nst
   integer,           intent(in)    :: dim
   R_TYPE,            intent(in)    :: psi(:,:,:)   ! psi(m%np_part, dim, nst)
   R_TYPE,            intent(inout) :: phi(:,:)     ! phi(m%np_part, dim)
+  logical, optional, intent(in)    :: normalize
+  logical, optional, intent(inout) :: mask(:)      ! mask(nst)
   R_TYPE,  optional, intent(out)   :: overlap(:) 
   R_TYPE,  optional, intent(out)   :: norm
-  logical, optional, intent(in)    :: normalize
-  logical, optional, intent(inout) :: mask(:)      ! nst
+  FLOAT,   optional, intent(in)    :: Theta_Fi
+  FLOAT,   optional, intent(in)    :: beta_ij(:)   ! beta_ij(nst)
 
   logical :: normalize_
   integer :: ist, idim
@@ -205,9 +211,16 @@ subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi, normalize, mask, overla
     end do
   end if
 
+  if(present(beta_ij))  &
+    ss(:) = ss(:)*beta_ij(:)
+
   do idim = 1, dim
     do sp = 1, m%np, block_size
       size = min(block_size, m%np - sp + 1)
+
+      if(present(Theta_Fi))  &
+        call blas_scal(size, R_TOTYPE(Theta_Fi), phi(sp,idim), 1)
+
       do ist = 1, nst
 
         if(present(mask)) then
@@ -239,6 +252,7 @@ subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi, normalize, mask, overla
   call pop_sub()
   call profiling_out(prof)
 end subroutine X(states_gram_schmidt)
+
 
 ! ---------------------------------------------------------
 R_TYPE function X(states_dotp)(m, dim, f1, f2, reduce) result(dotp)

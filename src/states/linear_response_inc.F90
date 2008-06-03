@@ -20,18 +20,61 @@
 
 ! ---------------------------------------------------------
 ! Orthogonalizes v against all the occupied states
+! For details on the metallic part, take a look at
+! de Gironcoli, PRB 51, 6773 (1995)
 ! ---------------------------------------------------------
-subroutine X(lr_orth_vector) (m, st, v, ik)
+subroutine X(lr_orth_vector) (m, st, v, ist, ik)
   type(mesh_t),        intent(in)    :: m
   type(states_t),      intent(in)    :: st
   R_TYPE,              intent(inout) :: v(:,:)
-  integer,             intent(in)    :: ik
+  integer,             intent(in)    :: ist, ik
+
+  integer :: jst
+  FLOAT :: xx, theta_ij, theta_ji, alpha_j, delta_e, dsmear
+  FLOAT, allocatable :: theta_Fi(:), beta_ij(:)
 
   call push_sub('linear_response_inc.Xlr_orth_vector')
 
-  call X(states_gram_schmidt)(m, st%nst, st%d%dim, st%X(psi)(:, :, :, ik), v(:, :))
+  dsmear = max(CNST(1e-14), st%smear%dsmear)
+
+  ALLOCATE(theta_Fi(st%nst), st%nst)
+  do jst = 1, st%nst
+    ! we move away xx from Ef by a small quantity to get properly
+    ! systems with semiconducting occupations
+    xx = (st%smear%e_fermi - st%eigenval(jst, ik) + CNST(1e-10))/dsmear
+    theta_Fi(jst) = smear_step_function(st%smear, xx)
+    !print *, st%smear%e_fermi, st%eigenval(jst, ik), xx!, theta_Fi(jst)
+  end do
+
+  ALLOCATE(beta_ij(st%nst), st%nst)
+  beta_ij = M_ZERO
+  do jst = 1, st%nst
+    xx = (st%eigenval(ist, ik) - st%eigenval(jst, ik))/dsmear
+    theta_ij = smear_step_function(st%smear,  xx)
+    theta_ji = smear_step_function(st%smear, -xx)
+
+    beta_ij(jst) = theta_Fi(ist)*Theta_ij + theta_Fi(jst)*Theta_ji
+
+    alpha_j = max(st%smear%e_fermi + M_THREE*dsmear - st%eigenval(jst, ik), M_ZERO)
+    delta_e = st%eigenval(ist, ik) - st%eigenval(jst, ik)
+
+    if(delta_e >= CNST(1e-5)) then
+      beta_ij(jst) = beta_ij(jst) + alpha_j*Theta_ji*(Theta_Fi(ist) - Theta_Fi(jst))/delta_e
+    else
+      xx = (st%smear%e_fermi - st%eigenval(ist, ik) + CNST(1e-10))/dsmear
+      beta_ij(jst) = beta_ij(jst) + alpha_j*Theta_ji*  &
+        (-smear_delta_function(st%smear,  xx)/dsmear)
+    end if
+  end do
+
+  call X(states_gram_schmidt)(m, st%nst, st%d%dim, st%X(psi)(:, :, :, ik), v(:, :), &
+    Theta_Fi=Theta_Fi(ist), beta_ij=beta_ij)
+
+  deallocate(beta_ij)
+  deallocate(Theta_Fi)
 
   call pop_sub()
+
 end subroutine X(lr_orth_vector)
 
 
@@ -103,7 +146,8 @@ subroutine X(lr_orth_response)(m, st, lr)
   
   do ik = 1, st%d%nspin
     do ist = 1, st%nst
-      if(st%occ(ist, ik) > lr_min_occ) call X(lr_orth_vector) (m, st, lr%X(dl_psi)(:,:, ist, ik), ik)
+      if(st%occ(ist, ik) > lr_min_occ) &
+        call X(lr_orth_vector) (m, st, lr%X(dl_psi)(:,:, ist, ik), ist, ik)
     end do
   end do
   

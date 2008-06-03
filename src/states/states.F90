@@ -1383,7 +1383,7 @@ contains
     call push_sub('states.fermi')
 
     call smear_find_fermi_energy(st%smear, st%eigenval, st%occ, st%qtot, &
-      st%d%nik, st%nst, st%d%spin_channels, st%d%ispin == SPINORS, st%d%kweights)
+      st%d%nik, st%nst, st%d%spin_channels, st%d%kweights)
 
     call smear_fill_occupations(st%smear, st%eigenval, st%occ, &
       st%d%nik, st%nst, st%d%spin_channels)

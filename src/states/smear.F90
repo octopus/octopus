@@ -40,7 +40,10 @@ module smear_m
     smear_copy,                       &
     smear_find_fermi_energy,          &
     smear_fill_occupations,           &
-    smear_calc_entropy
+    smear_calc_entropy,               &
+    smear_delta_function,             &
+    smear_step_function,              &
+    smear_entropy_function
 
   type smear_t
     integer :: method      ! which smearing function to take
@@ -139,12 +142,11 @@ contains
 
   !--------------------------------------------------
   subroutine smear_find_fermi_energy(this, eigenvalues, occupations, &
-    qtot, nik, nst, spin_channels, is_spinors, kweights)
+    qtot, nik, nst, spin_channels, kweights)
     type(smear_t), intent(inout) :: this
     FLOAT,         intent(in)    :: eigenvalues(:,:), occupations(:,:)
     FLOAT,         intent(in)    :: qtot, kweights(:)
     integer,       intent(in)    :: nik, nst, spin_channels
-    logical,       intent(in)    :: is_spinors
 
     integer, parameter :: nitmax = 200
     FLOAT, parameter   :: tol = CNST(1.0e-10)
@@ -163,10 +165,9 @@ contains
     emin = minval(eigenvalues)
     emax = maxval(eigenvalues)
 
-    el_per_state = M_TWO
-    if(is_spinors) el_per_state = M_ONE
-
+    el_per_state = M_TWO/spin_channels
     sumq = el_per_state*nst
+
     if (sumq < qtot) then ! not enough states
       message(1) = 'Not enough states'
       write(message(2),'(6x,a,f12.6,a,f12.6)')'(total charge = ', qtot, &
@@ -180,7 +181,7 @@ contains
         do ik = 1, nik
           if(occupations(ist, ik) > CNST(1e-5)) then
             this%e_fermi  = eigenvalues(ist, ik)
-            this%ef_occ   = occupations(ist, ik)
+            this%ef_occ   = occupations(ist, ik)/el_per_state
             exit ist_cycle
           end if
 
@@ -209,13 +210,13 @@ contains
       do iter = 1, nst*nik
         xx = kweights(k_list(reorder(iter)))
 
-        if(sumq <= xx*el_per_state/spin_channels) then
+        if(sumq <= xx*el_per_state) then
           this%e_fermi = eigenval_list(iter)
-          this%ef_occ  = sumq / xx
+          this%ef_occ  = sumq / (el_per_state*xx)
           exit
         end if
 
-        sumq = sumq - xx*el_per_state/spin_channels
+        sumq = sumq - xx*el_per_state
       end do
 
       deallocate(eigenval_list)
@@ -236,7 +237,7 @@ contains
         do ik = 1, nik
           do ist = 1, nst
             xx   = (this%e_fermi - eigenvalues(ist, ik))/dsmear
-            sumq = sumq + kweights(ik)*(M_TWO/spin_channels) * &
+            sumq = sumq + kweights(ik)*el_per_state * &
               smear_step_function(this, xx)
           end do
         end do
@@ -247,7 +248,7 @@ contains
         if(sumq <= qtot ) emin = this%e_fermi
         if(sumq >= qtot ) emax = this%e_fermi
 
-        this%ef_occ = (M_TWO/spin_channels) * smear_step_function(this, M_ZERO)
+        this%ef_occ = smear_step_function(this, M_ZERO)
       end do
 
       if(.not.conv) then
@@ -280,7 +281,7 @@ contains
           if(xx < M_ZERO) then
             occupations(ist, ik) = (M_TWO/spin_channels)
           else if(xx == M_ZERO) then
-            occupations(ist, ik) = this%ef_occ
+            occupations(ist, ik) = this%ef_occ * (M_TWO/spin_channels)
           else
             occupations(ist, ik) = M_ZERO
           end if
@@ -392,7 +393,7 @@ contains
       if(xx > M_ZERO) then
         stepf = M_ONE
       else if(xx == M_ZERO) then
-        stepf = this%ef_occ
+        stepf = M_HALF
       end if
 
     case(SMEAR_FERMI_DIRAC)

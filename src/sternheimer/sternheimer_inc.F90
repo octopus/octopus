@@ -119,7 +119,7 @@ subroutine X(sternheimer_solve)(&
 
           !and project it into the unoccupied states
           if(this%orth_response) then 
-            call X(lr_orth_vector)(m, st, Y(:,:, sigma), ik)
+            call X(lr_orth_vector)(m, st, Y(:,:, sigma), ist, ik)
           end if
         
           if(sigma == 1) then 
@@ -135,7 +135,7 @@ subroutine X(sternheimer_solve)(&
           !although the dl_psi we get should be orthogonal to psi
           !a re-orthogonalization is sometimes necessary 
           if(this%orth_response) then 
-            call X(lr_orth_vector)(m, st, lr(sigma)%X(dl_psi)(:, :, ist, ik), ik)
+            call X(lr_orth_vector)(m, st, lr(sigma)%X(dl_psi)(:, :, ist, ik), ist, ik)
           end if
 
           ! print the norm of the variations, and the number of

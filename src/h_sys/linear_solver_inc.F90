@@ -343,7 +343,7 @@ contains
 
     end do
 
-    call X(lr_orth_vector)(gr%m, st, x, ik)
+    call X(lr_orth_vector)(gr%m, st, x, ist, ik)
 
   end subroutine smoothing
 
