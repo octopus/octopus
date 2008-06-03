@@ -17,6 +17,8 @@
 !!
 !! $Id: states.F90 4223 2008-05-31 13:28:56Z acastro $
 
+! Some pieces glued from PW/w(0,1)gauss.f90 from PWSCF
+
 #include "global.h"
 
 module smear_m
@@ -37,7 +39,8 @@ module smear_m
     smear_init,                       &
     smear_copy,                       &
     smear_find_fermi_energy,          &
-    smear_fill_occupations
+    smear_fill_occupations,           &
+    smear_calc_entropy
 
   type smear_t
     integer :: method      ! which smearing function to take
@@ -297,10 +300,84 @@ contains
   end subroutine smear_fill_occupations
 
 
+  !--------------------------------------------------
+  FLOAT function smear_calc_entropy(this, eigenvalues, &
+    nik, nst, spin_channels, kweights) result(entropy)
+    type(smear_t), intent(inout) :: this
+    FLOAT,         intent(in)    :: eigenvalues(:,:)
+    FLOAT,         intent(in)    :: kweights(:)
+    integer,       intent(in)    :: nik, nst, spin_channels
+
+    integer :: ist, ik
+    FLOAT :: dsmear, xx
+
+    dsmear = max(CNST(1e-14), this%dsmear)
+    entropy = M_ZERO
+    do ik = 1, nik
+      do ist = 1, nst
+        xx = (this%e_fermi - eigenvalues(ist, ik))/dsmear
+        entropy = entropy + (M_TWO/spin_channels)*kweights(ik)*  &
+          dsmear*smear_entropy_function(this, xx)
+      end do
+    end do
+
+  end function smear_calc_entropy
+
+
   ! ---------------------------------------------------------
-  ! Some pieces glued from PW/wgauss.f90 from PWSCF
-  ! x is defined as x = (eps - mu)/smear
-  ! In PWSCF it is has a different sign
+  FLOAT function smear_delta_function(this, xx) result(deltaf)
+    type(smear_t), intent(in) :: this
+    FLOAT,         intent(in) ::  xx
+
+    FLOAT, parameter :: maxarg = CNST(200.0)
+    FLOAT :: xp, arg, hd, hp, A
+    integer :: ii, ni
+
+    deltaf = M_ZERO
+    select case(this%method)
+    case(SMEAR_SEMICONDUCTOR)
+      if(xx == M_ZERO) &
+        deltaf = M_ONE
+
+    case(SMEAR_FERMI_DIRAC)
+      if (abs(xx) <= CNST(36.0)) &
+        deltaf = M_ONE/(M_TWO + exp(-xx) + exp(xx))
+
+    case(SMEAR_COLD)
+      xp  = xx - M_ONE/sqrt(M_TWO)
+      arg = min(maxarg, xp**2)
+
+      deltaf = exp(-arg)/sqrt(M_PI)*(M_TWO - sqrt(M_TWO)*xx)
+      
+    case(SMEAR_METHFESSEL_PAXTON)
+      arg    = min(maxarg, xx**2)
+      deltaf = exp(-arg)/sqrt(M_PI)
+
+      if(this%MP_n > 0) then ! recursion
+        hd = M_ZERO
+        hp = exp(-arg)
+        ni = 0
+        A = M_ONE/sqrt(M_PI)
+        do ii = 1, this%MP_n
+          hd = M_TWO*xx*hp - M_TWO*ni*hd
+          ni = ni + 1
+          A = -A/(M_FOUR*ii)
+          hp = M_TWO*xx*hd - M_TWO*ni*hp
+          ni = ni + 1
+          deltaf = deltaf + A*hp
+        end do
+      end if
+
+    case(SMEAR_SPLINE)
+      xp     = abs(xx) + M_ONE/sqrt(M_TWO)
+      deltaf = sqrt(M_E)*xp*exp(-xp*xp)
+
+    end select
+    
+  end function smear_delta_function
+
+
+  ! ---------------------------------------------------------
   FLOAT function smear_step_function(this, xx) result(stepf)
     type(smear_t), intent(in) :: this
     FLOAT,         intent(in) ::  xx
@@ -354,10 +431,10 @@ contains
     case(SMEAR_SPLINE)
       if(xx <= M_ZERO) then
         xp = xx - M_ONE/sqrt(M_TWO)
-        stepf = M_HALF*sqrt(M_E)*exp(-xx*xx)
+        stepf = M_HALF*sqrt(M_E)*exp(-xp*xp)
       else
         xp = xx + M_ONE/sqrt(M_TWO)
-        stepf = M_ONE - M_HALF*sqrt(M_E)*exp(-xx*xx)
+        stepf = M_ONE - M_HALF*sqrt(M_E)*exp(-xp*xp)
       end if
 
     end select
@@ -366,36 +443,34 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Some pieces glued from PW/wgauss.f90 from PWSCF
-  ! x is defined as x = (eps - mu)/smear
-  ! In PWSCF it is has a different sign
-  FLOAT function smear_delta_function(this, xx) result(deltaf)
+  ! This function is defined as \int_{-infty}^x y delta(y) dy
+  FLOAT function smear_entropy_function(this, xx) result(entropyf)
     type(smear_t), intent(in) :: this
     FLOAT,         intent(in) ::  xx
 
     FLOAT, parameter :: maxarg = CNST(200.0)
-    FLOAT :: xp, arg, hd, hp, A
+    FLOAT :: xp, arg, hd, hp, hpm1, A
     integer :: ii, ni
 
-    deltaf = M_ZERO
+    entropyf = M_ZERO
     select case(this%method)
     case(SMEAR_SEMICONDUCTOR)
-      if(xx == M_ZERO) &
-        deltaf = M_ONE
 
     case(SMEAR_FERMI_DIRAC)
-      if (abs(xx) <= CNST(36.0)) &
-        deltaf = M_ONE/(M_TWO + exp(-xx) + exp(xx))
+      if(abs(xx) <= 36.0) then
+        xp = M_ONE/(M_ONE + exp(-xx))
+        entropyf = xp*log(xp) + (M_ONE - xp)*log(M_ONE - xp)
+      end if
 
     case(SMEAR_COLD)
       xp  = xx - M_ONE/sqrt(M_TWO)
       arg = min(maxarg, xp**2)
 
-      deltaf = exp(-arg)/sqrt(M_PI)*(M_TWO - sqrt(M_TWO)*xx)
+      entropyf =  M_ONE/sqrt(M_TWO*M_PI)*xp*exp(-arg)
       
     case(SMEAR_METHFESSEL_PAXTON)
-      arg    = min(maxarg, xx**2)
-      deltaf = exp(-arg)/sqrt(M_PI)
+      arg = min(maxarg, xx**2)
+      entropyf = -M_HALF*exp(-arg)/sqrt(M_PI)
 
       if(this%MP_n > 0) then ! recursion
         hd = M_ZERO
@@ -405,24 +480,20 @@ contains
         do ii = 1, this%MP_n
           hd = M_TWO*xx*hp - M_TWO*ni*hd
           ni = ni + 1
-          A = -A/(M_FOUR*ii)
+          hpm1 = hp
           hp = M_TWO*xx*hd - M_TWO*ni*hp
           ni = ni + 1
-          deltaf = deltaf + A*hp
+          A = -A/(M_FOUR*ii)
+          entropyf = entropyf - A*(M_HALF*hp + hpm1*ni)
         end do
       end if
 
     case(SMEAR_SPLINE)
-      if(xx <= M_ZERO) then
-        xp = xx - M_ONE/sqrt(M_TWO)
-        deltaf = -sqrt(M_E)*xx*exp(-xx*xx)
-      else
-        xp = xx + M_ONE/sqrt(M_TWO)
-        deltaf =  sqrt(M_E)*xx*exp(-xx*xx)
-      end if
+      xp = abs(xx) + M_ONE/sqrt(M_TWO)
+      entropyf = -sqrt(M_E)*(abs(xx)*exp(-xp*xp) + sqrt(M_PI)/M_FOUR*loct_erfc(xp))
 
     end select
-    
-  end function smear_delta_function
+
+  end function smear_entropy_function
 
 end module smear_m
