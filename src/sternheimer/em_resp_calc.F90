@@ -160,7 +160,7 @@ contains
   character(len=100) function em_wfs_tag(dir, ifactor) result(str)
     integer, intent(in) :: dir, ifactor 
 
-    call push_sub('em_resp_calc.em_rho_tag')
+    call push_sub('em_resp_calc.em_wfs_tag')
 
     write(str, '(a,i1,a,i1)') "wfs_", dir, "_", ifactor
 

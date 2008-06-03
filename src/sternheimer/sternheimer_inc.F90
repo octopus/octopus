@@ -164,7 +164,7 @@ subroutine X(sternheimer_solve)(&
       call restart_write(trim(tmpdir)//dirname, st, sys%gr, err, iter=iter, lr=lr(sigma))
     end do
     
-    !all the rest is the mixing and checking for convergency
+    !all the rest is the mixing and checking for convergence
 
     if( this%scftol%max_iter == iter  ) then 
       message(1) = "Self-consistent iteration for response did not converge"

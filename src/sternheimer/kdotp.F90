@@ -95,9 +95,9 @@ contains
     type(kdotp_t)           :: kdotp_vars
     type(sternheimer_t)     :: sh
 
-    integer :: ik, ist, idir, ierr
+    integer :: idir, ierr
 !    integer :: sigma, ndim, i, dir, ierr, iomega, ifactor
-!    character(len=100) :: dirname, str_tmp
+    character(len=100) :: dirname, str_tmp
     logical :: complex_response, have_to_calculate
 
 !    FLOAT :: closest_omega
@@ -105,7 +105,7 @@ contains
 
     call push_sub('kdotp.static_kdotp_lr_run')
 
-!    gr => sys%gr
+    gr => sys%gr
 !    ndim = sys%gr%sb%dim
 
     ALLOCATE(kdotp_vars%eff_mass_inv(NDIM, NDIM, sys%st%nst), NDIM * NDIM * sys%st%nst)
@@ -144,14 +144,15 @@ contains
 !
 !          ! load wave-functions
 !          if(.not.fromScratch) then
-!            str_tmp =  em_wfs_tag(dir, ifactor)
-!            write(dirname,'(3a, i1)') RESTART_DIR, trim(str_tmp), '_', sigma
+            str_tmp =  kdotp_wfs_tag(idir)
+            write(dirname,'(3a, i1)') RESTART_DIR, trim(str_tmp), '_1'
+            ! 1 is the sigma index which is used in em_resp
 !            call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, &
 !              ierr, lr=em_vars%lr(dir, sigma, ifactor))
 !
 !            if(ierr.ne.0) then
-!              message(1) = "Could not load response wave-functions from '"//trim(tmpdir)//dirname
-!              call write_warning(1)
+              message(1) = "Could not load response wave-functions from '"//trim(tmpdir)//dirname
+              call write_warning(1)
 !            end if
 !
 !          end if
@@ -161,6 +162,7 @@ contains
     end do
 
     call io_mkdir(trim(tmpdir)//RESTART_DIR)
+
     call info()
 
     message(1) = "Info: Calculating effective masses."
@@ -181,7 +183,7 @@ contains
         kdotp_rho_tag(idir), kdotp_wfs_tag(idir), have_restart_rho=(ierr==0))
         write(*,*) 'called zsternheimer_solve'
       else
-        write(*,*) 'calling zsternheimer_solve'
+        write(*,*) 'calling dsternheimer_solve'
         call dsternheimer_solve(sh, sys, h, kdotp_vars%lr(idir,:), 1, M_ZERO, &
         kdotp_vars%perturbation, RESTART_DIR, &
         kdotp_rho_tag(idir), kdotp_wfs_tag(idir), have_restart_rho=(ierr==0))
@@ -192,7 +194,16 @@ contains
           
     end do ! idir
 
-    call kdotp_output(sys%st, sys%gr, h, sys%geo, sys%outp, kdotp_vars, ik)
+    if(wfs_are_complex(sys%st)) then 
+!      call zlr_calc_eff_mass(sys, h, kdotp_vars%lr(idir, :), &
+!      kdotp_vars%perturbation, em_vars%alpha(:, :, ifactor))
+    else
+!      call dlr_calc_polarizability(sys, h, em_vars%lr(:, :, ifactor), &
+!      kdotp_vars%perturbation, em_vars%alpha(:, :, ifactor))
+    end if
+
+!    call effective_masses(kdotp_vars)
+    call kdotp_output(sys%st, sys%gr, h, sys%geo, sys%outp, kdotp_vars)
 
 !    do iomega = 1, em_vars%nomega
 !
@@ -344,9 +355,7 @@ contains
 !
 
     do idir = 1, NDIM
-      do ik = 1, sys%st%d%nik
-        call lr_dealloc(kdotp_vars%lr(idir, 1))
-      end do
+      call lr_dealloc(kdotp_vars%lr(idir, 1))
     end do
 
     call sternheimer_end(sh)
@@ -354,6 +363,7 @@ contains
 
     deallocate(kdotp_vars%lr)
     call states_deallocate_wfns(sys%st)
+    deallocate(kdotp_vars%eff_mass_inv)
 
     call pop_sub()
 
@@ -566,23 +576,23 @@ contains
   end subroutine read_wfs
 
   ! ---------------------------------------------------------
-  subroutine kdotp_output(st, gr, h, geo, outp, kdotp_vars, ik)
+  subroutine kdotp_output(st, gr, h, geo, outp, kdotp_vars)
     type(states_t),  intent(inout) :: st
     type(grid_t),    intent(inout) :: gr
     type(hamiltonian_t),    intent(inout) :: h
     type(geometry_t),    intent(inout) :: geo
     type(h_sys_output_t),  intent(in)    :: outp
     type(kdotp_t), intent(inout) :: kdotp_vars
-    integer,         intent(in)    :: ik
 
-    integer :: iunit, ifactor
+    integer :: iunit
+    !, ifactor
 
-    write(*,*) 'kdotp_output'
+    write(*,'(a)') 'kdotp_output'
 
-!    write(*,*) 'Number of states = ', st%nst
-!    write(*,*) 'Number of k-points = ', st%d%nik
+    write(*,*) 'Number of states = ', st%nst
+    write(*,*) 'Number of k-points = ', st%d%nik
 
-    call out_eff_mass(ik, st%nst)
+!    call out_eff_mass(ik, st%nst)
 
 !    do ifactor = 1, em_vars%nfactor
 !      str_tmp = freq2str(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)/units_out%energy%factor)

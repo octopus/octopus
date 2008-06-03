@@ -104,11 +104,11 @@ contains
 
     call push_sub('linear_response.lr_init')
 
-    size = m%np_part*st%d%dim*st%nst*st%d%nspin
+    size = m%np_part * st%d%dim * st%nst * (st%d%nspin * st%d%nik)
 
     if (wfs_are_complex(st)) then 
 
-      ALLOCATE(lr%zdl_psi(m%np_part, st%d%dim, st%nst, st%d%nspin), size)
+      ALLOCATE(lr%zdl_psi(m%np_part, st%d%dim, st%nst, st%d%nspin * st%d%nik), size)
       ALLOCATE(lr%zdl_rho(m%np, st%d%nspin), m%np*st%d%nspin)
       
       lr%zdl_psi = M_ZERO
@@ -116,7 +116,7 @@ contains
       
     else
 
-      ALLOCATE(lr%ddl_psi(m%np_part, st%d%dim, st%nst, st%d%nspin), size)
+      ALLOCATE(lr%ddl_psi(m%np_part, st%d%dim, st%nst, st%d%nspin * st%d%nik), size)
       ALLOCATE(lr%ddl_rho(m%np, st%d%nspin), m%np*st%d%nspin)
 
       lr%ddl_psi = M_ZERO

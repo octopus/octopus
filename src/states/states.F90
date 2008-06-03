@@ -118,7 +118,7 @@ module states_m
     integer :: nik_axis(MAX_DIM)    ! Number of kpoints per axis
     integer :: ispin                ! spin mode (unpolarized, spin polarized, spinors)
     integer :: nspin                ! dimension of rho (1, 2 or 4)
-    integer :: spin_channels        ! 1 or 2, wether spin is or not considered.
+    integer :: spin_channels        ! 1 or 2, whether spin is or not considered.
     logical :: cdft                 ! Are we using Current-DFT or not?
     FLOAT, pointer :: kpoints(:,:)  ! obviously the kpoints
     FLOAT, pointer :: kweights(:)   ! weights for the kpoint integrations
@@ -130,11 +130,11 @@ module states_m
 
     integer :: wfs_type             ! real (M_REAL) or complex (M_CMPLX) wavefunctions
     ! pointers to the wavefunctions 
-    logical :: only_userdef_istates ! only use user defined states initial states in propagation
+    logical :: only_userdef_istates ! only use user-defined states initial states in propagation
     FLOAT, pointer :: dpsi(:,:,:,:) ! dpsi(sys%NP_PART, st%d%dim, st%nst, st%d%nik)
     CMPLX, pointer :: zpsi(:,:,:,:) ! zpsi(sys%NP_PART, st%d%dim, st%nst, st%d%nik)
 
-    ! used for the user defined wavefunctions (they are stored as formula strings)
+    ! used for the user-defined wavefunctions (they are stored as formula strings)
     character(len=1024), pointer :: user_def_states(:,:,:) ! (st%d%dim, st%nst, st%d%nik)
 
     ! the densities and currents (after all we are doing DFT :)

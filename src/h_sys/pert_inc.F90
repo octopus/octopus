@@ -43,7 +43,8 @@ subroutine X(pert_apply) (this, gr, geo, h, ik, f_in, f_out)
     call ionic()
 
   case(PERTURBATION_KDOTP)
-    call kdotp()
+    f_out(1:NP) = 0
+!    call kdotp()
 
   end select
 
@@ -65,6 +66,9 @@ contains
     f_out(1:NP) = - M_zI * (grad(1:NP, this%dir)) &
                   + h%d%kpoints(this%dir, ik) * f_in(1:NP)
 !    delta_H = (-i*grad + k) . delta_k
+
+!    write(*,*) 'pert_apply: ik = ', ik
+!    write(*,*) 'pert_apply: kpoint = ', h%d%kpoints(:,ik)
 
     deallocate(f_in_copy, grad)
     

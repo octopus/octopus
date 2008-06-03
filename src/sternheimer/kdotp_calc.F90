@@ -63,7 +63,7 @@ contains
   character(len=100) function kdotp_wfs_tag(dir) result(str)
     integer, intent(in) :: dir 
 
-    call push_sub('kdotp_calc.kdotp_rho_tag')
+    call push_sub('kdotp_calc.kdotp_wfs_tag')
 
     write(str, '(a,i1)') "wfs_", dir
 
