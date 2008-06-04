@@ -31,6 +31,8 @@ module lcao_m
   use mesh_m
   use messages_m
   use profiling_m
+  use simul_box_m
+  use solids_m
   use specie_m
   use states_m
   use h_sys_output_m
@@ -147,9 +149,9 @@ contains
     call states_allocate_wfns(lcao_data%st, gr%m, st%wfs_type)
 
     if (lcao_data%st%wfs_type == M_REAL) then
-      call dlcao_init(lcao_data, gr, geo, h, norbs)
+      call dlcao_init(lcao_data, gr, geo, h, st, norbs)
     else
-      call zlcao_init(lcao_data, gr, geo, h, norbs)
+      call zlcao_init(lcao_data, gr, geo, h, st, norbs)
     end if
 
     lcao_data%state = 1

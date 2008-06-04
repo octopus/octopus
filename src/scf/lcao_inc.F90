@@ -49,19 +49,23 @@
 ! n = 3 => first spin-up orbital of atom 2, assigned to the spin-up component of the spinor.
 ! ....
 ! ---------------------------------------------------------
-Subroutine X(lcao_initial_wf) (n, m, geo, psi, ispin, ik, err)
+Subroutine X(lcao_initial_wf) (n, m, geo, sb, psi, ispin, ik, kpoints, err)
   integer,                  intent(in)  :: n
   type(mesh_t),             intent(in)  :: m
+  type(simul_box_t),        intent(in)  :: sb
   type(geometry_t), target, intent(in)  :: geo
   R_TYPE,                   intent(out) :: psi(:, :)
   integer,                  intent(in)  :: ispin
   integer,                  intent(in)  :: ik
+  FLOAT,                    intent(in)  :: kpoints(:)
   integer,                  intent(out) :: err
 
-  integer :: norbs, ia, i, j, idim, k, wf_dim
   type(specie_t), pointer :: s
-  FLOAT :: x(MAX_DIM)
-
+  type(periodic_copy_t)   :: pc
+  integer :: norbs, ia, i, icell, j, idim, k, wf_dim
+  FLOAT :: x(MAX_DIM), pos(MAX_DIM)
+  
+  
   call push_sub('lcao_inc.Xlcao_initial_wf')
 
   err = 0
@@ -99,11 +103,16 @@ Subroutine X(lcao_initial_wf) (n, m, geo, psi, ispin, ik, err)
           s => geo%atom(ia)%spec
           if(j > s%niwfs) cycle
           if(n == i) then
-            do k = 1, m%np
-              x(1:calc_dim) = m%x(k, 1:calc_dim) - geo%atom(ia)%x(1:calc_dim)
-              psi(k, 1) =  &
-                   R_TOTYPE(specie_get_iwf(s, j, calc_dim, states_spin_channel(ispin, ik, 1), x(1:calc_dim)))
+            call periodic_copy_init(pc, sb, geo%atom(ia)%x, range = maxval(sb%lsize(1:sb%periodic_dim)))
+            do icell = 1, periodic_copy_num(pc)
+            pos = periodic_copy_position(pc, sb, icell)
+              do k = 1, m%np
+                x(1:calc_dim) = m%x(k, 1:calc_dim) - pos(1:calc_dim)
+                psi(k, 1) =  psi(k, 1) + exp(M_zI*sum(kpoints(:)*x(:)))* &
+                  R_TOTYPE(specie_get_iwf(s, j, calc_dim, states_spin_channel(ispin, ik, 1), x(1:calc_dim)))
+              end do
             end do
+            call periodic_copy_end(pc)
             call X(states_normalize_orbital)(m, wf_dim, psi)
             call pop_sub()
             return
@@ -122,11 +131,16 @@ Subroutine X(lcao_initial_wf) (n, m, geo, psi, ispin, ik, err)
           if(j > s%niwfs) cycle
           do idim = 1, 2
             if(n == i) then
-              do k = 1, m%np
-                x(1:calc_dim) = m%x(k, 1:calc_dim) - geo%atom(ia)%x(1:calc_dim)
-                psi(k, idim) =  &
-                     R_TOTYPE(specie_get_iwf(s, j, calc_dim, idim, x(1:calc_dim)))
+              call periodic_copy_init(pc, sb, geo%atom(ia)%x, range = maxval(sb%lsize(1:sb%periodic_dim)))
+              do icell = 1, periodic_copy_num(pc)
+                pos = periodic_copy_position(pc, sb, icell)
+                do k = 1, m%np
+                  x(1:calc_dim) = m%x(k, 1:calc_dim) - geo%atom(ia)%x(1:calc_dim)
+                  psi(k, idim) =  &
+                       R_TOTYPE(specie_get_iwf(s, j, calc_dim, idim, x(1:calc_dim)))
+                end do
               end do
+              call periodic_copy_end(pc)
               call X(states_normalize_orbital)(m, wf_dim, psi)
               call pop_sub()
               return
@@ -143,11 +157,12 @@ end subroutine X(lcao_initial_wf)
 
 
 ! ---------------------------------------------------------
-subroutine X(lcao_init) (lcao_data, gr, geo, h, norbs)
+subroutine X(lcao_init) (lcao_data, gr, geo, h, states, norbs)
   type(lcao_t), target, intent(inout) :: lcao_data
   type(grid_t),         intent(inout) :: gr
   type(geometry_t),     intent(in)    :: geo
   type(hamiltonian_t),  intent(inout) :: h
+  type(states_t),     intent(in)    :: states
   integer,              intent(in)    :: norbs
 
   type(states_t), pointer :: st
@@ -160,7 +175,7 @@ subroutine X(lcao_init) (lcao_data, gr, geo, h, norbs)
 
   do ik = 1, st%d%nik
     do n = 1, st%nst
-      call X(lcao_initial_wf) (n, gr%m, geo, st%X(psi)(:, :, n, ik), st%d%ispin, ik, ierr)
+      call X(lcao_initial_wf) (n, gr%m, geo, gr%sb, st%X(psi)(:, :, n, ik), st%d%ispin, ik, states%d%kpoints(:,ik), ierr)
       if(ierr.ne.0) then
         write(message(1),'(a)') 'Internal error in lcao_wf'
         call write_fatal(1)
