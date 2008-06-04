@@ -134,7 +134,7 @@ contains
     call system_h_setup(sys, h)
     
     call sternheimer_init(sh, sys, h, "KdotP", hermitian = wfs_are_real(sys%st), ham_var_set = 0)
-    ! ham_var_set = 0 --> HamiltonianVariation = V_ext_only
+    ! ham_var_set = 0 results in HamiltonianVariation = V_ext_only
 
     do idir = 1, NDIM
 !      do sigma = 1, em_vars%nsigma
