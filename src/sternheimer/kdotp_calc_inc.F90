@@ -241,7 +241,6 @@ subroutine X(lr_calc_eff_mass_inv)(sys, h, lr, perturbation, eff_mass_inv)
 !  integer,                intent(in)    :: nsigma
   type(pert_t),           intent(inout) :: perturbation
   FLOAT,                  intent(out)   :: eff_mass_inv(:, :, :, :)
-!  CMPLX,                  intent(out)   :: zpol(1:MAX_DIM, 1:MAX_DIM)
 !  integer, optional,      intent(in)    :: ndir
 !
 !  integer :: dir1, dir2, ndir_
