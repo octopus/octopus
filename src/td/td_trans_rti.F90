@@ -550,6 +550,15 @@ contains
     call pop_sub()
   end subroutine preconditioner
 
+  ! ---------------------------------------------------------
+  subroutine precond_prop(x, y)
+    CMPLX, intent(in)  :: x(:)
+    CMPLX, intent(out) :: y(:)
+
+    y(:) = x(:) ! no preconditioner
+
+  end subroutine precond_prop
+
   ! continuous or discrete plane wave (depending on discretization order)
   CMPLX function plane_wave(j, q, dx, order)
     integer,        intent(in) :: j     ! x = j*dx
@@ -647,6 +656,8 @@ contains
       iter = 10000
       ! zconjugate_gradients fails in some cases (wrong solution) and takes longer
       ! therefore take the symmetric quasi-minimal residual solver (QMR)
+      st%zpsi(:, 1, ist, 1) = M_z0
+      !st%zpsi(:, 1, ist, 1) = tmp(:, 1)
       call zqmr_sym(NP, st%zpsi(:, 1, ist, 1), tmp(:, 1), h_eff_lip_sch, preconditioner, &
                       iter, residue=dres, threshold=cg_tol, showprogress = .true.)
       !write(*,*) 'iter =',iter, 'residue =', dres
@@ -726,6 +737,7 @@ contains
     CMPLX, allocatable :: tmp(:, :), tmp_wf(:), tmp_mem(:, :)
     CMPLX, allocatable :: ext_wf(:,:,:,:) ! NP+2*np, ndim, nst, nik
     character(len=100) :: filename
+    FLOAT              :: dres
 
     call push_sub('td_trans_rti.cn_src_mem_dt')
 
@@ -859,23 +871,28 @@ contains
         ! 4. Solve linear system (1 + i \delta H_{eff}) st%zpsi = tmp.
         cg_iter = cg_max_iter
         tmp(1:NP, 1) = st%zpsi(1:NP, 1, ist, ik)
+        ! use QMR-solver since it is faster and more stable than BiCG
         if (mem_type.eq.1) then
-          call zconjugate_gradients(NP, st%zpsi(:, 1, ist, ik), tmp(:, 1), &
-            h_eff_backward, h_eff_backwardt, zmf_dotp_aux, cg_iter, threshold=cg_tol)
+          call zqmr_sym(NP, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_backward, precond_prop, &
+                          cg_iter, residue=dres, threshold=cg_tol, showprogress = .false.)
+          !write(*,*) 'iter =',iter, 'residue =', dres
+
+          !call zconjugate_gradients(NP, st%zpsi(:, 1, ist, ik), tmp(:, 1), &
+          !  h_eff_backward, h_eff_backwardt, zmf_dotp_aux, cg_iter, threshold=cg_tol)
         else
-          call zconjugate_gradients(NP, st%zpsi(:, 1, ist, ik), tmp(1:NP, 1), &
-            h_eff_backward_sp, h_eff_backwardt_sp, zmf_dotp_aux, cg_iter, threshold=cg_tol)
+          call zqmr_sym(NP, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_backward_sp, precond_prop, &
+                          cg_iter, residue=dres, threshold=cg_tol, showprogress = .false.)
+          !call zconjugate_gradients(NP, st%zpsi(:, 1, ist, ik), tmp(1:NP, 1), &
+          !  h_eff_backward_sp, h_eff_backwardt_sp, zmf_dotp_aux, cg_iter, threshold=cg_tol)
         end if
         ! Write warning if BiCG did not converge.
-        if(cg_iter.gt.cg_max_iter) then
-          write(message(1), '(a,i5,a)') 'BiCG did not converge in ', cg_max_iter, ' iterations'
-          message(2) = 'when propagating with H_eff.'
-          call write_warning(2)
-        end if
+        !if(cg_iter.gt.cg_max_iter) then
+        !  write(message(1), '(a,i5,a)') 'BiCG did not converge in ', cg_max_iter, ' iterations'
+        !  message(2) = 'when propagating with H_eff.'
+        !  call write_warning(2)
+        !end if
       end do
     end do
-
-!write(*,*) calc_current(gr, st)
 
     ! Save interface part of wavefunction for subsequent iterations.
     call save_intf_wf(intf, timestep, st, max_iter, st_intf)

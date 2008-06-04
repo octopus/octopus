@@ -797,11 +797,14 @@ subroutine zqmr_sym(np, x, b, op, prec, iter, residue, threshold, showprogress)
   ALLOCATE( p(np), np)
   ALLOCATE( deltax(np), np)
   ALLOCATE( deltar(np), np)
-  x(:) = M_z0
+
+  ! use v as temp var
   call lalg_copy(np, b, r)
-  call lalg_copy(np, b, v)
-  rho = lalg_nrm2(np, b)
-  call prec(b, z)
+  call op(x, v)
+  call lalg_axpy(np, -M_z1, v, r)
+  call lalg_copy(np, r, v)
+  rho = lalg_nrm2(np, v)
+  call prec(v, z)
   xsi = lalg_nrm2(np, z)
   gamma = M_ONE
   eta = -M_z1
@@ -901,7 +904,7 @@ subroutine zqmr_sym(np, x, b, op, prec, iter, residue, threshold, showprogress)
     write(message(1), '(a)') "QMR Solver not converged!"
     call write_warning(1)
   end select
-  write(*,*) ''
+  if (showprogress_) write(*,*) ''
 
   if(present(residue)) residue = res
 
