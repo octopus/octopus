@@ -133,7 +133,8 @@ contains
     call write_info(1)
     call system_h_setup(sys, h)
     
-    call sternheimer_init(sh, sys, h, "KdotP", hermitian = wfs_are_real(sys%st))
+    call sternheimer_init(sh, sys, h, "KdotP", hermitian = wfs_are_real(sys%st), ham_var_set = 0)
+    ! HamiltonianVariation = V_ext_only
 
     do idir = 1, NDIM
 !      do sigma = 1, em_vars%nsigma

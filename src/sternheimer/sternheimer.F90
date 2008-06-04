@@ -81,12 +81,13 @@ module sternheimer_m
   
 contains
   
-  subroutine sternheimer_init(this, sys, h, prefix, hermitian)
+  subroutine sternheimer_init(this, sys, h, prefix, hermitian, ham_var_set)
     type(sternheimer_t), intent(out)   :: this
     type(system_t),      intent(inout) :: sys
     type(hamiltonian_t), intent(inout) :: h
     character(len=*),    intent(in)    :: prefix
     logical, optional,   intent(in)    :: hermitian
+    integer, optional,   intent(in)    :: ham_var_set
 
     integer :: ham_var
 
@@ -123,7 +124,10 @@ contains
     !% exchange and correlation potential only.
     !%End
 
-    if(h%theory_level.ne.INDEPENDENT_PARTICLES) then
+    if(present(ham_var_set)) then
+      ham_var = ham_var_set
+
+    else if(h%theory_level.ne.INDEPENDENT_PARTICLES) then
       if (loct_parse_isdef(check_inp(trim(prefix)//'HamiltonianVariation')) /= 0) then
         call loct_parse_int(check_inp(trim(prefix)//'HamiltonianVariation'), 3, ham_var)
       else

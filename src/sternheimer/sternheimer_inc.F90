@@ -19,9 +19,9 @@
 
 
 ! -------------------------------------------------------------
-! this is the central routine of the electromagnetic response
-! it calculates the first order variations of the wavefunctions 
-! for an electric field
+! This is the central routine of the electromagnetic response.
+! It calculates the first-order variations of the wavefunctions 
+! for an applied perturbation.
 !--------------------------------------------------------------
 
 subroutine X(sternheimer_solve)(&

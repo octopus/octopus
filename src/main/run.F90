@@ -120,7 +120,6 @@ contains
     case(M_ONE_SHOT)
       call one_shot_run(sys, h)
     case(M_KDOTP)
-      write(*,*) 'call kdotp'
       call kdotp_lr_run(sys, h, fromScratch)
     case(M_PULPO_A_FEIRA)
       call pulpo_print()
