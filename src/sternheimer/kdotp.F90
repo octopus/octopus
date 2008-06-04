@@ -98,7 +98,8 @@ contains
     integer :: idir, ierr
 !    integer :: sigma, ndim, i, dir, ierr, iomega, ifactor
     character(len=100) :: dirname, str_tmp
-    logical :: complex_response, have_to_calculate
+    logical :: complex_response
+    !, have_to_calculate
 
 !    FLOAT :: closest_omega
 
@@ -143,20 +144,20 @@ contains
           call lr_init(kdotp_vars%lr(idir, 1))
           call lr_allocate(kdotp_vars%lr(idir, 1), sys%st, sys%gr%m)
 
-!          ! load wave-functions
-!          if(.not.fromScratch) then
+          ! load wave-functions
+          if(.not.fromScratch) then
             str_tmp =  kdotp_wfs_tag(idir)
             write(dirname,'(3a, i1)') RESTART_DIR, trim(str_tmp), '_1'
             ! 1 is the sigma index which is used in em_resp
-!            call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, &
-!              ierr, lr=kdotp_vars%lr(idir, 1))
-!
-!            if(ierr.ne.0) then
+            call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, &
+              ierr, lr=kdotp_vars%lr(idir, 1))
+
+            if(ierr.ne.0) then
               message(1) = "Could not load response wave-functions from '"//trim(tmpdir)//dirname
               call write_warning(1)
-!            end if
-!
-!          end if
+            end if
+
+          end if
 !
 !        end do
 !      end do

@@ -39,7 +39,7 @@
 !
 !  call push_sub('em_resp_inc.Xcalc_lr_elf')
 !
-!  ALLOCATE(   gpsi(NP, NDIM), NP*NDIM)
+!/*  ALLOCATE(   gpsi(NP, NDIM), NP*NDIM)
 !  ALLOCATE(gdl_psi(NP, NDIM), NP*NDIM)
 !
 !  if(present(lr_m)) ALLOCATE(gdl_psi_m(NP, NDIM), NP*NDIM)
@@ -229,7 +229,7 @@
 !
 !  call pop_sub()
 !
-!end subroutine X(lr_calc_elf)
+!end subroutine X(lr_calc_elf) */
 
 
 ! ---------------------------------------------------------
@@ -283,7 +283,8 @@ subroutine X(lr_calc_eff_mass_inv)(sys, h, lr, perturbation, eff_mass_inv)
 
 end subroutine X(lr_calc_eff_mass_inv)
 
-!! ---------------------------------------------------------
+
+!!/* ---------------------------------------------------------
 !!subroutine X(lr_calc_polarizability)(sys, h, lr, nsigma, perturbation, zpol, ndir)
 !  type(system_t),         intent(inout) :: sys
 !  type(hamiltonian_t),    intent(inout) :: h
@@ -548,9 +549,9 @@ end subroutine X(lr_calc_eff_mass_inv)
 !
 !  end subroutine get_permutation
 !
-!end subroutine X(lr_calc_beta)
-!
-!!! Local Variables:
-!!! mode: f90
-!!! coding: utf-8
-!!! End:
+!end subroutine X(lr_calc_beta) */
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:
