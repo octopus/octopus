@@ -195,8 +195,8 @@ contains
     end do ! idir
 
     if(wfs_are_complex(sys%st)) then 
-!      call zlr_calc_eff_mass(sys, h, kdotp_vars%lr(idir, :), &
-!      kdotp_vars%perturbation, em_vars%alpha(:, :, ifactor))
+!      call zlr_calc_eff_mass_inv(sys, h, kdotp_vars%lr(idir, :), &
+!      kdotp_vars%perturbation, kdotp_vars%eff_mass_inv(:, :, :))
     else
 !      call dlr_calc_polarizability(sys, h, em_vars%lr(:, :, ifactor), &
 !      kdotp_vars%perturbation, em_vars%alpha(:, :, ifactor))
@@ -853,7 +853,7 @@ contains
 !      integer :: ist, ivar, ik, dir, sigma
 !      character(len=80) :: fname
 !
-!      do ik = 1, st%d%nspin
+!      do ik = 1, st%d%nik
 !        do dir = 1, NDIM
 !
 !          write(fname, '(2a,i1,a,i1)') trim(dirname), '/projection-', ik, '-', dir

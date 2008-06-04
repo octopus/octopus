@@ -104,11 +104,11 @@ contains
 
     call push_sub('linear_response.lr_init')
 
-    size = m%np_part * st%d%dim * st%nst * (st%d%nspin * st%d%nik)
+    size = m%np_part * st%d%dim * st%nst * st%d%nik
 
     if (wfs_are_complex(st)) then 
 
-      ALLOCATE(lr%zdl_psi(m%np_part, st%d%dim, st%nst, st%d%nspin * st%d%nik), size)
+      ALLOCATE(lr%zdl_psi(m%np_part, st%d%dim, st%nst, st%d%nik), size)
       ALLOCATE(lr%zdl_rho(m%np, st%d%nspin), m%np*st%d%nspin)
       
       lr%zdl_psi = M_ZERO
@@ -116,7 +116,7 @@ contains
       
     else
 
-      ALLOCATE(lr%ddl_psi(m%np_part, st%d%dim, st%nst, st%d%nspin * st%d%nik), size)
+      ALLOCATE(lr%ddl_psi(m%np_part, st%d%dim, st%nst, st%d%nik), size)
       ALLOCATE(lr%ddl_rho(m%np, st%d%nspin), m%np*st%d%nspin)
 
       lr%ddl_psi = M_ZERO
@@ -171,13 +171,14 @@ contains
     integer :: ik, idim, ist
 
     do ik = 1, st%d%nspin
-      
       if( wfs_are_complex(st)) then
         call lalg_copy(m%np, src%zdl_rho(:, ik), dest%zdl_rho(:, ik))
       else
         call lalg_copy(m%np, src%ddl_rho(:, ik), dest%ddl_rho(:, ik))
       end if
-    
+    enddo
+
+    do ik = 1, st%d%nik
       do ist = 1, st%nst
         do idim = 1, st%d%dim
           if( wfs_are_complex(st)) then
@@ -187,7 +188,6 @@ contains
           end if
         end do
       end do
-
    end do
 
   end subroutine lr_copy

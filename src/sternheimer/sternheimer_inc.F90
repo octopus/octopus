@@ -106,7 +106,7 @@ subroutine X(sternheimer_solve)(&
     dl_rhoin(1:m%np, 1:st%d%nspin, 1) = lr(1)%X(dl_rho)(1:m%np, 1:st%d%nspin)
     call X(sternheimer_calc_hvar)(this, sys, h, lr, nsigma, hvar)
 
-    do ik = 1, st%d%nspin
+    do ik = 1, st%d%nik
       !now calculate response for each state
       do ist = 1, st%nst
         do sigma = 1, nsigma

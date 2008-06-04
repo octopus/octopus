@@ -21,9 +21,9 @@
 ! This file handles the evaluation of the OEP potential, in the KLI or full OEP
 ! as described in S. Kuemmel and J. Perdew, PRL 90, 043004 (2003)
 
-! This file has to be outside the module xc, for it requires the Hpsi
+! This file has to be outside the module xc, for it requires the Hpsi.
 ! This is why it needs the xc_functl module. I prefer to put it here since
-! the rest of the hamiltonian module does not know about the gory details
+! the rest of the Hamiltonian module does not know about the gory details
 ! of how xc is defined and calculated.
 
 ! ---------------------------------------------------------

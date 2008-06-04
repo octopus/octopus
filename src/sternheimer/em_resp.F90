@@ -776,7 +776,7 @@ contains
       integer :: ist, ivar, ik, dir, sigma
       character(len=80) :: fname
 
-      do ik = 1, st%d%nspin
+      do ik = 1, st%d%nik
         do dir = 1, NDIM
 
           write(fname, '(2a,i1,a,i1)') trim(dirname), '/projection-', ik, '-', dir

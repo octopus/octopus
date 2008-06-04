@@ -144,7 +144,7 @@ subroutine X(lr_orth_response)(m, st, lr)
   integer :: ist, ik
   call push_sub('linear_response_inc.Xlr_orth_response')
   
-  do ik = 1, st%d%nspin
+  do ik = 1, st%d%nik
     do ist = 1, st%nst
       if(st%occ(ist, ik) > lr_min_occ) &
         call X(lr_orth_vector) (m, st, lr%X(dl_psi)(:,:, ist, ik), ist, ik)

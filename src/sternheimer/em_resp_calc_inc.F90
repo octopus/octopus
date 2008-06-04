@@ -85,7 +85,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
     dl_rho  = M_ZERO
     gdl_rho = M_ZERO
 
-    !first we calculate the densities and its gradients, this could
+    !first we calculate the densities and their gradients; this could
     !be done directly, but it is less precise numerically
     do ik = is, st%d%nik, st%d%nspin
       do ist = 1, st%nst
