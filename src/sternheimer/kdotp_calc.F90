@@ -26,7 +26,6 @@ module kdotp_calc_m
   use grid_m
   use global_m
   use hamiltonian_m
-!  use kdotp_lr_m
   use loct_parser_m
   use linear_response_m
   use mesh_m

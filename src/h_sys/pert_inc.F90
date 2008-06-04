@@ -43,8 +43,8 @@ subroutine X(pert_apply) (this, gr, geo, h, ik, f_in, f_out)
     call ionic()
 
   case(PERTURBATION_KDOTP)
-    f_out(1:NP) = 0
-!    call kdotp()
+!    f_out(1:NP) = 0
+    call kdotp()
 
   end select
 
@@ -382,7 +382,7 @@ subroutine X(ionic_perturbation_order_2) (this, gr, geo, h, ik, f_in, f_out, iat
 end subroutine X(ionic_perturbation_order_2)
 
 subroutine X(pert_expectation_density) (this, gr, geo, h, st, psia, psib, density, pert_order)
-  type(pert_t),    intent(in)    :: this
+  type(pert_t),         intent(in)    :: this
   type(grid_t),         intent(inout) :: gr
   type(geometry_t),     intent(in)    :: geo
   type(hamiltonian_t),  intent(in)    :: h
@@ -392,11 +392,11 @@ subroutine X(pert_expectation_density) (this, gr, geo, h, st, psia, psib, densit
   R_TYPE,               intent(out)   :: density(:)
   integer, optional,    intent(in)    :: pert_order
 
-  R_TYPE, allocatable :: tmp(:)
+  R_TYPE, allocatable :: pertpsib(:)
 
   integer :: ik, ist, idim, order
 
-  ALLOCATE(tmp(1:NP), NP)
+  ALLOCATE(pertpsib(1:NP), NP)
 
   order = 1
   if(present(pert_order)) order = pert_order
@@ -409,23 +409,25 @@ subroutine X(pert_expectation_density) (this, gr, geo, h, st, psia, psib, densit
       do idim = 1, st%d%dim
 
         if(order == 1) then 
-          call X(pert_apply) (this, gr, geo, h, ik, psib(:, idim, ist, ik), tmp)
+          call X(pert_apply) (this, gr, geo, h, ik, psib(:, idim, ist, ik), pertpsib)
         else
-          call X(pert_apply_order_2) (this, gr, geo, h, ik, psib(:, idim, ist, ik), tmp)
+          call X(pert_apply_order_2) (this, gr, geo, h, ik, psib(:, idim, ist, ik), pertpsib)
         end if
 
         density(1:NP) = density(1:NP) + st%d%kweights(ik)*st%occ(ist, ik)*&
-             R_CONJ(psia(1:NP, idim, ist, ik))*tmp(1:NP)
+             R_CONJ(psia(1:NP, idim, ist, ik))*pertpsib(1:NP)
 
       end do
     end do
   end do
 
+  deallocate(pertpsib)
+
 end subroutine X(pert_expectation_density)
 
 
 R_TYPE function X(pert_expectation_value) (this, gr, geo, h, st, psia, psib, pert_order) result(expval)
-  type(pert_t),    intent(in)    :: this
+  type(pert_t),         intent(in)    :: this
   type(grid_t),         intent(inout) :: gr
   type(geometry_t),     intent(in)    :: geo
   type(hamiltonian_t),  intent(in)    :: h
@@ -434,7 +436,7 @@ R_TYPE function X(pert_expectation_value) (this, gr, geo, h, st, psia, psib, per
   R_TYPE,               pointer       :: psib(:, :, :, :)
   integer, optional,    intent(in)    :: pert_order
 
-  R_TYPE, allocatable :: tmp(:)
+  R_TYPE, allocatable :: density(:)
 #ifdef HAVE_MPI
   R_TYPE :: expval_tmp
 #endif
@@ -445,11 +447,11 @@ R_TYPE function X(pert_expectation_value) (this, gr, geo, h, st, psia, psib, per
 
   ASSERT(order == 1 .or. order == 2)
 
-  ALLOCATE(tmp(1:NP), NP)
+  ALLOCATE(density(1:NP), NP)
 
-  call X(pert_expectation_density)(this, gr, geo, h, st, psia, psib, tmp, pert_order = order)
+  call X(pert_expectation_density)(this, gr, geo, h, st, psia, psib, density, pert_order = order)
 
-  expval = X(mf_integrate)(gr%m, tmp)
+  expval = X(mf_integrate)(gr%m, density)
 
 #ifdef HAVE_MPI
     ! reduce density
@@ -459,7 +461,7 @@ R_TYPE function X(pert_expectation_value) (this, gr, geo, h, st, psia, psib, per
     end if
 #endif
 
-  deallocate(tmp)
+  deallocate(density)
 end function X(pert_expectation_value)
 
 !! Local Variables:

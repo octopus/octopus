@@ -234,12 +234,12 @@
 
 ! ---------------------------------------------------------
 subroutine X(lr_calc_eff_mass_inv)(sys, h, lr, perturbation, eff_mass_inv)
-  type(system_t),         intent(in)    :: sys
+  type(system_t),         intent(inout) :: sys
   type(hamiltonian_t),    intent(in)    :: h
 !  type(kdotp_t),          intent(inout) :: kdotp_vars
   type(lr_t),             intent(in)    :: lr(:,:)
 !  integer,                intent(in)    :: nsigma
-  type(pert_t),           intent(in)    :: perturbation
+  type(pert_t),           intent(inout) :: perturbation
   FLOAT,                  intent(out)   :: eff_mass_inv(:, :, :, :)
 !  CMPLX,                  intent(out)   :: zpol(1:MAX_DIM, 1:MAX_DIM)
 !  integer, optional,      intent(in)    :: ndir
@@ -254,9 +254,12 @@ subroutine X(lr_calc_eff_mass_inv)(sys, h, lr, perturbation, eff_mass_inv)
   do ik = 1, sys%st%d%nik
     do ist = 1, sys%st%nst
       do idir1 = 1, sys%gr%sb%dim
-!        do idir2 = 1, sys%gr%sb%dim
-          eff_mass_inv(ik, ist, idir1, idir1) = 1
-!        enddo
+        eff_mass_inv(ik, ist, idir1, idir1) = 1
+        do idir2 = 1, sys%gr%sb%dim
+          call pert_setup_dir(perturbation, idir1)
+          eff_mass_inv(ik, ist, idir1, idir2) = eff_mass_inv(ik, ist, idir1, idir2) &
+            + 2 * X(pert_expectation_value)(perturbation, sys%gr, sys%geo, h, sys%st, sys%st%X(psi), lr(idir2, 1)%X(dl_psi))
+        enddo
       enddo
     enddo
   enddo
