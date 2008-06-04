@@ -26,6 +26,7 @@ module kdotp_calc_m
   use grid_m
   use global_m
   use hamiltonian_m
+!  use kdotp_lr_m
   use loct_parser_m
   use linear_response_m
   use mesh_m
@@ -41,9 +42,11 @@ module kdotp_calc_m
   implicit none
 
   private
-  public ::                        &
-     kdotp_wfs_tag,                &
-     kdotp_rho_tag
+  public ::                       &
+    dlr_calc_eff_mass_inv,        &
+    zlr_calc_eff_mass_inv,        &  
+    kdotp_wfs_tag,                &
+    kdotp_rho_tag
 
 contains
 
@@ -71,6 +74,14 @@ contains
 
   end function kdotp_wfs_tag
   
+#include "undef.F90"
+#include "real.F90"
+#include "kdotp_calc_inc.F90"
+
+#include "undef.F90"
+#include "complex.F90"
+#include "kdotp_calc_inc.F90"
+
 end module kdotp_calc_m
 
 !! Local Variables:

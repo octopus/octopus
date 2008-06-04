@@ -22,13 +22,13 @@
 
 module kdotp_lr_m
   use datasets_m
-  use kdotp_calc_m
   use functions_m
   use geometry_m
   use global_m
   use grid_m
   use hamiltonian_m
   use io_m
+  use kdotp_calc_m
   use lalg_basic_m
   use loct_parser_m
   use linear_response_m
@@ -58,8 +58,8 @@ module kdotp_lr_m
   type kdotp_t
     type(pert_t) :: perturbation
 
-    FLOAT, pointer :: eff_mass_inv(:, :, :)  ! inverse effective mass tensor
-                                             ! (dir1, dir2, band)
+    FLOAT, pointer :: eff_mass_inv(:, :, :, :)  ! inverse effective mass tensor
+                                                ! (ik, ist, idir1, idir2)
 
 !!    integer :: nsigma ! 1: consider only positive values of the frequency
 !!                      ! 2: consider both positive and negative
@@ -108,8 +108,8 @@ contains
     gr => sys%gr
 !    ndim = sys%gr%sb%dim
 
-    ALLOCATE(kdotp_vars%eff_mass_inv(NDIM, NDIM, sys%st%nst), NDIM * NDIM * sys%st%nst)
-    kdotp_vars%eff_mass_inv(:,:,:)=0
+    ALLOCATE(kdotp_vars%eff_mass_inv(sys%st%d%nik, sys%st%nst, NDIM, NDIM), sys%st%d%nik * sys%st%nst * NDIM * NDIM)
+    kdotp_vars%eff_mass_inv(:,:,:,:)=0
 
     !    call parse_input()
     call pert_init(kdotp_vars%perturbation, PERTURBATION_KDOTP, sys%gr, sys%geo)
@@ -134,7 +134,7 @@ contains
     call system_h_setup(sys, h)
     
     call sternheimer_init(sh, sys, h, "KdotP", hermitian = wfs_are_real(sys%st), ham_var_set = 0)
-    ! HamiltonianVariation = V_ext_only
+    ! ham_var_set = 0 --> HamiltonianVariation = V_ext_only
 
     do idir = 1, NDIM
 !      do sigma = 1, em_vars%nsigma
@@ -142,14 +142,14 @@ contains
 
           call lr_init(kdotp_vars%lr(idir, 1))
           call lr_allocate(kdotp_vars%lr(idir, 1), sys%st, sys%gr%m)
-!
+
 !          ! load wave-functions
 !          if(.not.fromScratch) then
             str_tmp =  kdotp_wfs_tag(idir)
             write(dirname,'(3a, i1)') RESTART_DIR, trim(str_tmp), '_1'
             ! 1 is the sigma index which is used in em_resp
 !            call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, &
-!              ierr, lr=em_vars%lr(dir, sigma, ifactor))
+!              ierr, lr=kdotp_vars%lr(idir, 1))
 !
 !            if(ierr.ne.0) then
               message(1) = "Could not load response wave-functions from '"//trim(tmpdir)//dirname
@@ -180,14 +180,14 @@ contains
       if (wfs_are_complex(sys%st)) then
         write(*,*) 'calling zsternheimer_solve'
         call zsternheimer_solve(sh, sys, h, kdotp_vars%lr(idir,:), 1, M_Z0, &
-        kdotp_vars%perturbation, RESTART_DIR, &
-        kdotp_rho_tag(idir), kdotp_wfs_tag(idir), have_restart_rho=(ierr==0))
+          kdotp_vars%perturbation, RESTART_DIR, &
+          kdotp_rho_tag(idir), kdotp_wfs_tag(idir), have_restart_rho=(ierr==0))
         write(*,*) 'called zsternheimer_solve'
       else
         write(*,*) 'calling dsternheimer_solve'
         call dsternheimer_solve(sh, sys, h, kdotp_vars%lr(idir,:), 1, M_ZERO, &
-        kdotp_vars%perturbation, RESTART_DIR, &
-        kdotp_rho_tag(idir), kdotp_wfs_tag(idir), have_restart_rho=(ierr==0))
+          kdotp_vars%perturbation, RESTART_DIR, &
+          kdotp_rho_tag(idir), kdotp_wfs_tag(idir), have_restart_rho=(ierr==0))
         write(*,*) 'called dsternheimer_solve'
       end if
         
@@ -196,11 +196,13 @@ contains
     end do ! idir
 
     if(wfs_are_complex(sys%st)) then 
-!      call zlr_calc_eff_mass_inv(sys, h, kdotp_vars%lr(idir, :), &
-!      kdotp_vars%perturbation, kdotp_vars%eff_mass_inv(:, :, :))
+!      call zlr_calc_eff_mass_inv(sys, h, kdotp_vars)
+      call zlr_calc_eff_mass_inv(sys, h, kdotp_vars%lr, &
+        kdotp_vars%perturbation, kdotp_vars%eff_mass_inv)
     else
-!      call dlr_calc_polarizability(sys, h, em_vars%lr(:, :, ifactor), &
-!      kdotp_vars%perturbation, em_vars%alpha(:, :, ifactor))
+!      call dlr_calc_eff_mass_inv(sys, h, kdotp_vars)
+      call dlr_calc_eff_mass_inv(sys, h, kdotp_vars%lr, &
+        kdotp_vars%perturbation, kdotp_vars%eff_mass_inv)
     end if
 
 !    call effective_masses(kdotp_vars)
@@ -585,7 +587,7 @@ contains
     type(h_sys_output_t),  intent(in)    :: outp
     type(kdotp_t), intent(inout) :: kdotp_vars
 
-    integer :: iunit
+    integer :: iunit, ik
     !, ifactor
 
     write(*,'(a)') 'kdotp_output'
@@ -593,7 +595,9 @@ contains
     write(*,*) 'Number of states = ', st%nst
     write(*,*) 'Number of k-points = ', st%d%nik
 
-!    call out_eff_mass(ik, st%nst)
+    do ik = 1, st%d%nik
+      call out_eff_mass(ik, st%nst)
+    enddo
 
 !    do ifactor = 1, em_vars%nfactor
 !      str_tmp = freq2str(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)/units_out%energy%factor)
@@ -635,7 +639,7 @@ contains
         do ist = 1, nst
           write(iunit,'(a)')
           write(iunit,'(a, i6)') 'State #', ist
-          call out_tensor(iunit, kdotp_vars%eff_mass_inv(:,:,ist), M_ONE)
+          call out_tensor(iunit, kdotp_vars%eff_mass_inv(ik, ist, :, :), M_ONE)
         enddo
 
       end subroutine out_eff_mass
