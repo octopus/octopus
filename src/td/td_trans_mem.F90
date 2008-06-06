@@ -677,23 +677,24 @@ contains
     CMPLX,               intent(inout) :: coeffs(intf%np, intf%np, 0:iter)
     FLOAT,               intent(in)    :: spacing
 
-    FLOAT              :: old_norm, norm, sp2, d2
+    FLOAT              :: old_norm, norm, sp2
     integer            :: i,j, k, np
     CMPLX, allocatable :: tmp(:, :), tmp2(:, :), inv_offdiag(:, :)
-    CMPLX, allocatable :: prefactor_plus(:, :), prefactor_minus(:, :)
-    CMPLX              :: tp
+    CMPLX, allocatable :: prefactor_plus(:, :), prefactor_minus(:, :), fr(:, :)
+    CMPLX              :: tp, d2
 
     call push_sub('td_trans_mem.calculate_coeffs')
 
     np = intf%np
     sp2 = spacing**2
-    d2 = delta**2
+    d2 = TOCMPLX(delta**2, M_ZERO)
 
     ALLOCATE(tmp(np, np), np**2)
     ALLOCATE(tmp2(np, np), np**2)
     ALLOCATE(inv_offdiag(np, np), np**2)
     ALLOCATE(prefactor_plus(np, np), np**2)
     ALLOCATE(prefactor_minus(np, np), np**2)
+    ALLOCATE(fr(np, np), np**2)
 
     prefactor_plus(:, :)  = M_zI*delta*diag(:, :)
     prefactor_minus(:, :) = -M_zI*delta*diag(:, :)
@@ -728,43 +729,49 @@ contains
         call lalg_invert_lower_triangular(np, inv_offdiag)
       end if
 
+      prefactor_plus(:, :) = prefactor_plus(:, :) + d2*coeffs(:, :, 0)
       call lalg_sym_inverter('U', np, prefactor_plus)
       call make_symmetric(prefactor_plus, np)
+      fr(:, :) = coeffs(:, :, 0)
       if (il.eq.LEFT) then
         call lalg_trmm(np,np,'U','N','L',M_z1,offdiag,prefactor_plus)
         call lalg_trmm(np,np,'U','N','R',M_z1,inv_offdiag,prefactor_minus)
+        call lalg_trmm(np,np,'U','N','L',d2,inv_offdiag,fr)
       else
         call lalg_trmm(np,np,'L','N','L',M_z1,offdiag,prefactor_plus)
         call lalg_trmm(np,np,'L','N','R',M_z1,inv_offdiag,prefactor_minus)
+        call lalg_trmm(np,np,'L','N','L',d2,inv_offdiag,fr)
       end if
       do i = start_iter, iter       ! i=start_iter to m.
+        tmp2(:, :) = M_z0
+        ! first calculate the part without q(m) and store it in tmp2
+        ! k = 1 to k = m, but without q(m)
+        do k = 1, i
+          tmp(:, :) = M_TWO*coeffs(:, :, k-1)
+          if(k.ne.i) tmp(:, :) = tmp(:, :) + coeffs(:, :, k)
+          if(k.gt.1) tmp(:, :) = tmp(:, :) + coeffs(:, :, k-2)
+          if (il.eq.LEFT) then
+            call lalg_trmm(np,np,'U','N','R',M_z1,inv_offdiag,tmp)
+          else
+            call lalg_trmm(np,np,'L','N','R',M_z1,inv_offdiag,tmp)
+          end if
+          call zsymm('R','U',np,np,M_z1,coeffs(:, :, i-k),np,tmp,np,M_z1,tmp2,np)
+        end do
+        call zsymm('R','U',np,np,M_z1,coeffs(:, :, i-1),np,prefactor_minus,np,-d2,tmp2,np)
+
+        ! now solve the equation via iteration (for now)
+        ! save some time, so set the first iteration explicitly
         coeffs(:, :, i) = M_z0
-        old_norm = M_ZERO
-        do j = 1, mem_iter ! maxiter to converge matrix equation for q(i)
+        call zgemm('N','N',np,np,np,M_z1,prefactor_plus,np,tmp2,np,M_z0,coeffs(:, :, i),np)
+        call make_symmetric_average(coeffs(:, :, i), np)
+        old_norm = infinity_norm(coeffs(:, :, i))
 
-          tmp2(:,:) = M_z0
-
-          ! k = 0 to k = m.
-          do k = 0, i
-            tmp(:, :) = coeffs(:, :, k)
-            if(k.gt.0) then
-              tmp(:, :) = tmp(:, :) + M_TWO*coeffs(:, :, k-1)
-            end if
-            if(k.gt.1) then
-              tmp(:, :) = tmp(:, :) + coeffs(:, :, k-2)
-            end if
-            if (il.eq.LEFT) then
-              call lalg_trmm(np,np,'U','N','R',M_z1,inv_offdiag,tmp)
-            else
-              call lalg_trmm(np,np,'L','N','R',M_z1,inv_offdiag,tmp)
-            end if
-            call zsymm('R','U',np,np,M_z1,coeffs(:, :, i-k),np,tmp,np,M_z1,tmp2,np)
-          end do
-          call zsymm('R','U',np,np,M_z1,coeffs(:, :, i-1),np,prefactor_minus,np,TOCMPLX(-delta**2, M_ZERO),tmp2,np)
-          call zgemm('N','N',np,np,np,M_z1,prefactor_plus,np,tmp2,np,M_z0,coeffs(:, :, i),np)
+        do j = 2, mem_iter ! maxiter to converge matrix equation for q(i)
+          tmp(:, :) = tmp2(:, :)
+          call zsymm('L','U',np,np,-M_z1,coeffs(:, :, i),np,fr,np,M_z1,tmp,np)
+          call zgemm('N','N',np,np,np,M_z1,prefactor_plus,np,tmp,np,M_z0,coeffs(:, :, i),np)
           ! use for numerical stability
           call make_symmetric_average(coeffs(:, :, i), np)
-
           norm = infinity_norm(coeffs(:, :, i))
           if((abs(norm-old_norm)*sp2).lt.mem_tolerance) then
             exit
@@ -784,130 +791,10 @@ contains
     end if
 
     deallocate(tmp, tmp2, inv_offdiag)
-    deallocate(prefactor_plus, prefactor_minus)
+    deallocate(prefactor_plus, prefactor_minus, fr)
 
     call pop_sub()
   end subroutine calculate_coeffs
-
-  ! ---------------------------------------------------------
-  ! a bit faster, but uses twice the memory
-  ! coeffs(:, :, :, 0) given, calculate the subsequent ones by
-  ! the recursive relation. Since the 0th coefficiant is symmetric
-  ! all subsequent are also, therefore symmetric matrix multiplications
-  ! can be used.
-  subroutine calculate_coeffs_old(il, start_iter, iter, delta, intf, diag, offdiag, coeffs)
-    integer,             intent(in)    :: il
-    integer,             intent(in)    :: start_iter
-    integer,             intent(in)    :: iter
-    FLOAT,               intent(in)    :: delta
-    type(intface_t),     intent(in)    :: intf
-    CMPLX,               intent(in)    :: diag(:, :)
-    CMPLX,               intent(in)    :: offdiag(:, :)
-    CMPLX,               intent(inout) :: coeffs(intf%np, intf%np, 0:iter)
-
-    integer            :: i,j, k, np
-    CMPLX, allocatable :: coeff_p(:, :, :), p_prev(:, :), tmp(:, :)
-    CMPLX, allocatable :: prefactor_plus(:, :), prefactor_minus(:, :)
-    FLOAT              :: norm, old_norm
-
-    call push_sub('td_trans_mem.calculate_coeffs')
-
-    np = intf%np
-
-    ALLOCATE(coeff_p(np, np, 0:iter), np**2*(iter+1))
-    ALLOCATE(p_prev(np, np), np**2)
-    ALLOCATE(tmp(np, np), np**2)
-    ALLOCATE(prefactor_plus(np, np), np**2)
-    ALLOCATE(prefactor_minus(np, np), np**2)
-
-    coeff_p = M_z0
-    prefactor_plus  = M_zI*delta*diag(:, :)
-    prefactor_minus = -M_zI*delta*diag(:, :)
-
-    do i = 1, np
-      prefactor_plus(i, i)  = M_one + prefactor_plus(i, i)
-      prefactor_minus(i, i) = M_one + prefactor_minus(i, i)
-    end do
-
-    ! Calculate p_\alpha = 1/(1 + i*delta*h_\alpha + delta^2*q_\alpha)
-    coeff_p(:, :, 0) = prefactor_plus + delta**2 * coeffs(:, :, 0)
-
-    call lalg_sym_inverter('U', np, coeff_p(:, :, 0))
-    call make_symmetric(coeff_p(:, :, 0), np)
-    call lalg_sym_inverter('U', np, prefactor_plus)
-    call make_symmetric(prefactor_plus, np)
-
-    tmp = offdiag
-    if (il.eq.LEFT) then
-      call lalg_invert_upper_triangular(np, tmp)
-    else
-      call lalg_invert_lower_triangular(np, tmp)
-    end if
-
-    do i = 1, start_iter-1
-      call apply_coupling(coeffs(:, :, i), tmp, coeff_p(:, :, i), np, il)
-    end do
-
-    do i = start_iter, iter       ! i=1 to m.
-      old_norm = M_ZERO
-      do j = 1, mem_iter ! maxiter to converge matrix equation for p(i) and q(i)
-
-        p_prev = coeff_p(:, :, i)
-
-        ! k = m.
-        call apply_coupling(p_prev, offdiag, coeff_p(:, :, i), np, il)
-        coeff_p(:, :, i) = coeff_p(:, :, i) + M_TWO*coeffs(:, :, i-1)
-
-        if(i.gt.1) then
-          coeff_p(:, :, i) = coeff_p(:, :, i) + coeffs(:, :, i-2)
-        end if
-
-        call zsymm('L','U',np,np,M_z1,coeff_p(:, :, i),np,coeff_p(:, :, 0),np,M_z0,tmp,np)
-        coeff_p(:, :, i) = tmp
-
-        ! k = 0.
-        call zsymm('L','U',np,np,M_z1,coeffs(:, :, 0),np,p_prev,np,M_z1,coeff_p(:, :, i),np)
-
-        ! k = 1 to k = m-1.
-        do k = 1, i-1
-          tmp = coeffs(:, :, k) + M_TWO*coeffs(:, :, k-1)
-          if(k.gt.1) then
-            tmp = tmp + coeffs(:, :, k-2)
-          end if
-          call zsymm('L','U',np,np,M_z1,tmp,np,coeff_p(:, :, i-k),np,M_z1,coeff_p(:, :, i),np)
-        end do
-
-        coeff_p(:, :, i) = -delta**2 * coeff_p(:, :, i)
-        call zsymm('L','U',np,np,M_z1,prefactor_minus,np,coeff_p(:, :, i-1),np,M_z1,coeff_p(:, :, i),np)
-        call zsymm('L','U',np,np,M_z1,prefactor_plus,np,coeff_p(:, :, i),np,M_z0,tmp,np)
-        coeff_p(:, :, i) = tmp
-        norm = infinity_norm(coeff_p(:, :, i))
-        if(abs(norm-old_norm).lt.mem_tolerance) then
-          exit
-        end if
-        old_norm = norm
-      end do
-
-      ! Write a warning if a coefficient is not converged.
-      if(j.gt.mem_iter) then
-        write(message(1), '(a,i6,a)') 'Memory coefficent for time step ', i, &
-          ', '//trim(lead_name(il))//' lead, not converged.'
-        call write_warning(1)
-      end if
-
-      call apply_coupling(coeff_p(:, :, i), offdiag, coeffs(:, :, i), np, il)
-
-      call loct_progress_bar(i+1, iter+1)
-    end do
-
-    message(1) = ''
-    call write_info(1)
-
-    deallocate(coeff_p, p_prev, tmp)
-    deallocate(prefactor_plus, prefactor_minus)
-
-    call pop_sub()
-  end subroutine calculate_coeffs_old
 
   ! ---------------------------------------------------------
   ! same as calculate_coeffs but with the sparse matrix
