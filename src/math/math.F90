@@ -809,6 +809,7 @@ subroutine zqmr_sym(np, x, b, op, prec, iter, residue, threshold, showprogress)
   gamma = M_ONE
   eta = -M_z1
   alpha = M_ONE
+  theta = M_ZERO
   
   ! initialize progress bar
   log_thr = -log(threshold_)
