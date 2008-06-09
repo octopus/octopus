@@ -218,8 +218,10 @@ subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi,  &
     do sp = 1, m%np, block_size
       size = min(block_size, m%np - sp + 1)
 
-      if(present(Theta_Fi))  &
-        call blas_scal(size, R_TOTYPE(Theta_Fi), phi(sp,idim), 1)
+      if(present(Theta_Fi)) then
+        if(Theta_Fi.ne.M_ONE) &
+          call blas_scal(size, R_TOTYPE(Theta_Fi), phi(sp, idim), 1)
+      end if
 
       do ist = 1, nst
 

@@ -39,33 +39,43 @@ subroutine X(lr_orth_vector) (m, st, v, ist, ik)
 
   ALLOCATE(theta_Fi(st%nst), st%nst)
   do jst = 1, st%nst
-    ! we move away xx from Ef by a small quantity to get properly
-    ! systems with semiconducting occupations
-    xx = (st%smear%e_fermi - st%eigenval(jst, ik) + CNST(1e-10))/dsmear
+    ! epsilon has to be added or we have problem with semiconducting smearing
+    xx = (st%smear%e_fermi - st%eigenval(jst, ik) + CNST(1e-14))/dsmear
     theta_Fi(jst) = smear_step_function(st%smear, xx)
-    !print *, st%smear%e_fermi, st%eigenval(jst, ik), xx!, theta_Fi(jst)
   end do
 
   ALLOCATE(beta_ij(st%nst), st%nst)
-  beta_ij = M_ZERO
-  do jst = 1, st%nst
-    xx = (st%eigenval(ist, ik) - st%eigenval(jst, ik))/dsmear
-    theta_ij = smear_step_function(st%smear,  xx)
-    theta_ji = smear_step_function(st%smear, -xx)
 
-    beta_ij(jst) = theta_Fi(ist)*Theta_ij + theta_Fi(jst)*Theta_ji
+  if(st%smear%method == SMEAR_SEMICONDUCTOR) then
+    beta_ij = Theta_Fi
+  else
+    beta_ij = M_ZERO
+    do jst = 1, st%nst
+      xx = (st%eigenval(ist, ik) - st%eigenval(jst, ik))/dsmear
+      theta_ij = smear_step_function(st%smear,  xx)
+      theta_ji = smear_step_function(st%smear, -xx)
+      
+      !print *, 'theta_ij'
+      !print *, ist, jst, theta_ij, theta_ji
 
-    alpha_j = max(st%smear%e_fermi + M_THREE*dsmear - st%eigenval(jst, ik), M_ZERO)
-    delta_e = st%eigenval(ist, ik) - st%eigenval(jst, ik)
+      beta_ij(jst) = theta_Fi(ist)*Theta_ij + theta_Fi(jst)*Theta_ji
+        
+      alpha_j = max(st%smear%e_fermi + M_THREE*dsmear - st%eigenval(jst, ik), M_ZERO)
+      delta_e = st%eigenval(ist, ik) - st%eigenval(jst, ik)
+      
+      if(delta_e >= CNST(1e-5)) then
+        beta_ij(jst) = beta_ij(jst) + alpha_j*Theta_ji*(Theta_Fi(ist) - Theta_Fi(jst))/delta_e
+      else
+        xx = (st%smear%e_fermi - st%eigenval(ist, ik) + CNST(1e-14))/dsmear
+        beta_ij(jst) = beta_ij(jst) + alpha_j*Theta_ji*  &
+          (-smear_delta_function(st%smear,  xx)/dsmear)
+      end if
+    end do
+  end if
 
-    if(delta_e >= CNST(1e-5)) then
-      beta_ij(jst) = beta_ij(jst) + alpha_j*Theta_ji*(Theta_Fi(ist) - Theta_Fi(jst))/delta_e
-    else
-      xx = (st%smear%e_fermi - st%eigenval(ist, ik) + CNST(1e-10))/dsmear
-      beta_ij(jst) = beta_ij(jst) + alpha_j*Theta_ji*  &
-        (-smear_delta_function(st%smear,  xx)/dsmear)
-    end if
-  end do
+  !do jst = 1, st%nst
+  !  print *, ist, jst, theta_Fi(jst), beta_ij(jst)
+  !end do
 
   call X(states_gram_schmidt)(m, st%nst, st%d%dim, st%X(psi)(:, :, :, ik), v(:, :), &
     Theta_Fi=Theta_Fi(ist), beta_ij=beta_ij)
@@ -105,13 +115,13 @@ subroutine X(lr_build_dl_rho) (m, st, lr, nsigma)
       do i = 1, m%np
 
         do ik2 = ik, ik+sp-1 ! this loop takes care of the SPIN_POLARIZED case
-          d = st%d%kweights(ik2)*st%occ(ist, ik2)
+          d = st%d%kweights(ik2) * st%smear%el_per_state
 
           if(nsigma == 1) then  ! either omega purely real or purely imaginary
             d = d * st%X(psi)(i, 1, ist, ik2)*R_CONJ(lr(1)%X(dl_psi)(i, 1, ist, ik2))
             lr(1)%X(dl_rho)(i, 1) = lr(1)%X(dl_rho)(i, 1) + d + R_CONJ(d)
           else
-            c = d*(                                                         &
+            c = d * (                                                             &
               R_CONJ(st%X(psi)(i, 1, ist, ik2))*lr(1)%X(dl_psi)(i, 1, ist, ik2) + &
               st%X(psi)(i, 1, ist, ik2)*R_CONJ(lr(2)%X(dl_psi)(i, 1, ist, ik2)))
             lr(1)%X(dl_rho)(i, 1) = lr(1)%X(dl_rho)(i, 1) + c

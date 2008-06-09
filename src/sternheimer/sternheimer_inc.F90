@@ -76,7 +76,7 @@ subroutine X(sternheimer_solve)(&
   conv = .false.
   conv_last = .false.
 
-  do sigma=1,nsigma
+  do sigma = 1, nsigma
     if(this%orth_response) then 
       call X(lr_orth_response)(m, st, lr(sigma))
     end if

@@ -557,8 +557,7 @@ contains
 
     end select
     
-    h%entropy = smear_calc_entropy(st%smear, st%eigenval, st%d%nik, st%nst, &
-      st%d%spin_channels, st%d%kweights)
+    h%entropy = smear_calc_entropy(st%smear, st%eigenval, st%d%nik, st%nst, st%d%kweights)
 
     if(gauge_field_is_applied(h%ep%gfield)) then
       h%etot = h%etot + gauge_field_get_energy(h%ep%gfield, gr%sb)

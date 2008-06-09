@@ -16,5 +16,5 @@ match ; Total energy   ; GREP(static/info, 'Total       =', 20) ; -0.41787721
 match ; Eigenvalues    ; GREP(static/info, '1   --', 12) ;  -0.119004
 
 Input: 04-vib_modes.02-vib_modes.inp
-match ; Vibrational Frequency ; LINE(vibrations/normal_frequencies_lr, 1, 15) ; 167.32523922484754
+match ; Vibrational Frequency ; LINE(vibrations/normal_frequencies_lr, 1, 15) ; 167.32402582818366
 

@@ -135,7 +135,7 @@ contains
     !%Variable ResponseMethod
     !%Type integer
     !%Default gs
-    !%Section Generalities
+    !%Section Linear Response
     !%Description
     !% Some response properties can be calculated either via
     !% Sternheimer linear response or by using finite

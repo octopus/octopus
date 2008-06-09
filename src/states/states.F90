@@ -492,7 +492,7 @@ contains
       end do
     end if occ_fix
 
-    call smear_init(st%smear, st%fixed_occ)
+    call smear_init(st%smear, st%d%ispin, st%fixed_occ)
 
     call pop_sub()
   end subroutine states_read_initial_occs
@@ -1383,10 +1383,10 @@ contains
     call push_sub('states.fermi')
 
     call smear_find_fermi_energy(st%smear, st%eigenval, st%occ, st%qtot, &
-      st%d%nik, st%nst, st%d%spin_channels, st%d%kweights)
+      st%d%nik, st%nst, st%d%kweights)
 
     call smear_fill_occupations(st%smear, st%eigenval, st%occ, &
-      st%d%nik, st%nst, st%d%spin_channels)
+      st%d%nik, st%nst)
 
     ! check if everything is OK
     charge = M_ZERO

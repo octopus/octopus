@@ -46,17 +46,18 @@ module smear_m
     smear_entropy_function
 
   type smear_t
-    integer :: method      ! which smearing function to take
-    FLOAT   :: dsmear      ! the parameter defining this function
-    FLOAT   :: e_fermi     ! the Fermi energy
+    integer :: method       ! which smearing function to take
+    FLOAT   :: dsmear       ! the parameter defining this function
+    FLOAT   :: e_fermi      ! the Fermi energy
     
-    logical :: fixed_occ   ! Are occupations fixed, or are we allowed to change them
-    FLOAT   :: ef_occ      ! Occupancy of the level at the Fermi energy
+    FLOAT   :: el_per_state ! How many electrons can we put in each state
+    logical :: fixed_occ    ! Are occupations fixed, or are we allowed to change them
+    FLOAT   :: ef_occ       ! Occupancy of the level at the Fermi energy
 
-    integer :: MP_n        ! order of Methfessel-Paxton smearing
+    integer :: MP_n         ! order of Methfessel-Paxton smearing
   end type smear_t
 
-  integer, parameter ::               &
+  integer, parameter, public ::       &
     SMEAR_SEMICONDUCTOR     = 1,      &
     SMEAR_FERMI_DIRAC       = 2,      &
     SMEAR_COLD              = 3,      &
@@ -66,8 +67,9 @@ module smear_m
 contains
 
   !--------------------------------------------------
-  subroutine smear_init(this, fixed_occ)
+  subroutine smear_init(this, ispin, fixed_occ)
     type(smear_t), intent(out) :: this
+    integer,       intent(in)  :: ispin
     logical,       intent(in)  :: fixed_occ
 
     !%Variable SmearingFunction
@@ -96,7 +98,7 @@ contains
 
     !%Variable Smearing
     !%Type float
-    !%Default 0.0
+    !%Default 0.1 eV
     !%Section States
     !%Description
     !% If <tt>Occupations</tt> is not set, <tt>Smearing</tt> is the
@@ -110,6 +112,9 @@ contains
     end if
 
     this%fixed_occ = fixed_occ
+    this%el_per_state = M_ONE
+    if(ispin == 1) & ! unpolarized
+      this%el_per_state = M_TWO
 
     this%MP_n = 0
     if(this%method == SMEAR_METHFESSEL_PAXTON) then
@@ -131,29 +136,30 @@ contains
     type(smear_t), intent(out) :: to
     type(smear_t), intent(in)  :: from
 
-    to%method    = from%method
-    to%dsmear    = from%dsmear
-    to%e_fermi   = from%e_fermi
-    to%fixed_occ = from%fixed_occ
-    to%ef_occ    = from%ef_occ
-    to%MP_n      = from%MP_n
+    to%method       = from%method
+    to%dsmear       = from%dsmear
+    to%e_fermi      = from%e_fermi
+    to%el_per_state = from%el_per_state
+    to%fixed_occ    = from%fixed_occ
+    to%ef_occ       = from%ef_occ
+    to%MP_n         = from%MP_n
   end subroutine smear_copy
 
 
   !--------------------------------------------------
   subroutine smear_find_fermi_energy(this, eigenvalues, occupations, &
-    qtot, nik, nst, spin_channels, kweights)
+    qtot, nik, nst, kweights)
     type(smear_t), intent(inout) :: this
     FLOAT,         intent(in)    :: eigenvalues(:,:), occupations(:,:)
     FLOAT,         intent(in)    :: qtot, kweights(:)
-    integer,       intent(in)    :: nik, nst, spin_channels
+    integer,       intent(in)    :: nik, nst
 
     integer, parameter :: nitmax = 200
     FLOAT, parameter   :: tol = CNST(1.0e-10)
 
     ! Local variables.
     integer            :: ist, ik, iter
-    FLOAT              :: drange, xx, emin, emax, sumq, dsmear, el_per_state
+    FLOAT              :: drange, xx, emin, emax, sumq, dsmear
     logical            :: conv
 
     FLOAT,   allocatable :: eigenval_list(:)
@@ -165,8 +171,7 @@ contains
     emin = minval(eigenvalues)
     emax = maxval(eigenvalues)
 
-    el_per_state = M_TWO/spin_channels
-    sumq = el_per_state*nst
+    sumq = this%el_per_state*nst
 
     if (sumq < qtot) then ! not enough states
       message(1) = 'Not enough states'
@@ -181,7 +186,7 @@ contains
         do ik = 1, nik
           if(occupations(ist, ik) > CNST(1e-5)) then
             this%e_fermi  = eigenvalues(ist, ik)
-            this%ef_occ   = occupations(ist, ik)/el_per_state
+            this%ef_occ   = occupations(ist, ik) / this%el_per_state
             exit ist_cycle
           end if
 
@@ -190,7 +195,6 @@ contains
 
     else if(this%method == SMEAR_SEMICONDUCTOR) then
       sumq = qtot
-
       ! first we sort the eigenvalues
       ALLOCATE(eigenval_list(nst*nik), nst*nik)
       ALLOCATE(k_list(nst*nik), nst*nik)
@@ -210,13 +214,13 @@ contains
       do iter = 1, nst*nik
         xx = kweights(k_list(reorder(iter)))
 
-        if(sumq <= xx*el_per_state) then
+        if(sumq <= xx*this%el_per_state) then
           this%e_fermi = eigenval_list(iter)
-          this%ef_occ  = sumq / (el_per_state*xx)
+          this%ef_occ  = sumq / (xx * this%el_per_state)
           exit
         end if
 
-        sumq = sumq - xx*el_per_state
+        sumq = sumq - xx*this%el_per_state
       end do
 
       deallocate(eigenval_list)
@@ -237,7 +241,7 @@ contains
         do ik = 1, nik
           do ist = 1, nst
             xx   = (this%e_fermi - eigenvalues(ist, ik))/dsmear
-            sumq = sumq + kweights(ik)*el_per_state * &
+            sumq = sumq + kweights(ik) * this%el_per_state * &
               smear_step_function(this, xx)
           end do
         end do
@@ -263,11 +267,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine smear_fill_occupations(this, eigenvalues, occupations, nik, nst, spin_channels)
+  subroutine smear_fill_occupations(this, eigenvalues, occupations, nik, nst)
     type(smear_t), intent(in)  :: this
     FLOAT,         intent(in)  :: eigenvalues(:,:)
     FLOAT,         intent(out) :: occupations(:,:)
-    integer,       intent(in)  :: nik, nst, spin_channels
+    integer,       intent(in)  :: nik, nst
 
     integer :: ik, ist
     FLOAT   :: dsmear, xx
@@ -279,9 +283,9 @@ contains
         do ist = 1, nst
           xx = eigenvalues(ist, ik) - this%e_fermi
           if(xx < M_ZERO) then
-            occupations(ist, ik) = (M_TWO/spin_channels)
+            occupations(ist, ik) = this%el_per_state
           else if(xx == M_ZERO) then
-            occupations(ist, ik) = this%ef_occ * (M_TWO/spin_channels)
+            occupations(ist, ik) = this%ef_occ * this%el_per_state
           else
             occupations(ist, ik) = M_ZERO
           end if
@@ -293,7 +297,7 @@ contains
       do ik = 1, nik
         do ist = 1, nst
           xx = (this%e_fermi - eigenvalues(ist, ik))/dsmear
-          occupations(ist, ik) = (M_TWO/spin_channels) * smear_step_function(this, xx)
+          occupations(ist, ik) = smear_step_function(this, xx) * this%el_per_state
         end do
       end do
     end if
@@ -303,11 +307,11 @@ contains
 
   !--------------------------------------------------
   FLOAT function smear_calc_entropy(this, eigenvalues, &
-    nik, nst, spin_channels, kweights) result(entropy)
+    nik, nst, kweights) result(entropy)
     type(smear_t), intent(inout) :: this
     FLOAT,         intent(in)    :: eigenvalues(:,:)
     FLOAT,         intent(in)    :: kweights(:)
-    integer,       intent(in)    :: nik, nst, spin_channels
+    integer,       intent(in)    :: nik, nst
 
     integer :: ist, ik
     FLOAT :: dsmear, xx
@@ -317,7 +321,7 @@ contains
     do ik = 1, nik
       do ist = 1, nst
         xx = (this%e_fermi - eigenvalues(ist, ik))/dsmear
-        entropy = entropy + (M_TWO/spin_channels)*kweights(ik)*  &
+        entropy = entropy + kweights(ik) * this%el_per_state *  &
           dsmear*smear_entropy_function(this, xx)
       end do
     end do
@@ -338,7 +342,7 @@ contains
     select case(this%method)
     case(SMEAR_SEMICONDUCTOR)
       if(xx == M_ZERO) &
-        deltaf = M_ONE
+        deltaf = this%ef_occ
 
     case(SMEAR_FERMI_DIRAC)
       if (abs(xx) <= CNST(36.0)) &
@@ -393,7 +397,7 @@ contains
       if(xx > M_ZERO) then
         stepf = M_ONE
       else if(xx == M_ZERO) then
-        stepf = M_HALF
+        stepf = this%ef_occ
       end if
 
     case(SMEAR_FERMI_DIRAC)

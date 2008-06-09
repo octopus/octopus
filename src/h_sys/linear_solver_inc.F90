@@ -82,8 +82,8 @@ subroutine X(ls_solver_cg) (ls, h, gr, st, ist, ik, x, y, omega)
   ALLOCATE(Hp(NP, st%d%dim),      NP     *st%d%dim)
 
   ! Initial residue
-  call X(Hpsi)(h, gr, x, Hp, ist, ik)
-  r(1:NP, 1:st%d%dim) = y(1:NP, 1:st%d%dim) - (Hp(1:NP, 1:st%d%dim) + omega*x(1:NP, 1:st%d%dim))
+  call X(ls_solver_operator)(h, gr, st, ist, ik, omega, x, Hp)
+  r(1:NP, 1:st%d%dim) = y(1:NP, 1:st%d%dim) - Hp(1:NP, 1:st%d%dim)
   
   ! Initial search direction
   p(1:NP, 1:st%d%dim) = r(1:NP, 1:st%d%dim)
@@ -97,11 +97,7 @@ subroutine X(ls_solver_cg) (ls, h, gr, st, ist, ik, x, y, omega)
     if(conv.and.conv_last) exit
     conv_last = conv
     
-    call X(Hpsi)(h, gr, p, Hp, ist, ik)
-    !Hp = Hp + omega*p
-    do idim = 1, st%d%dim
-      call lalg_axpy(NP, omega, p(:, idim), Hp(:, idim))
-    end do
+    call X(ls_solver_operator)(h, gr, st, ist, ik, omega, p, Hp)
 
     alpha = gamma/X(states_dotp) (gr%m, st%d%dim, p, Hp)
 
@@ -176,10 +172,10 @@ subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ist, ik, x, y, omega)
   !$omp end parallel workshare
 
   ! Initial residue
-  call X(Hpsi)(h, gr, x, Hp, ist, ik)
+  call X(ls_solver_operator) (h, gr, st, ist, ik, omega, x, Hp)
 
   !$omp parallel workshare
-  r(1:NP,1:st%d%dim) = y(1:NP,1:st%d%dim) - ( Hp(1:NP,1:st%d%dim) + omega*x(1:NP,1:st%d%dim) )
+  r(1:NP,1:st%d%dim) = y(1:NP,1:st%d%dim) - Hp(1:NP,1:st%d%dim)
   rs(1:NP,1:st%d%dim) = r(1:NP,1:st%d%dim)
   !$omp end parallel workshare
 
@@ -210,12 +206,7 @@ subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ist, ik, x, y, omega)
 
     ! preconditioning 
     call X(preconditioner_apply)(ls%pre, gr, h, p, phat, omega)
-    call X(Hpsi)(h, gr, phat, Hp, ist, ik)
-
-    !Hp = Hp + omega*phat
-    do idim = 1, st%d%dim 
-      call lalg_axpy(NP, omega, phat(:, idim), Hp(:, idim))
-    end do
+    call X(ls_solver_operator)(h, gr, st, ist, ik, omega, phat, Hp)
     
     alpha = rho_1/X(states_dotp)(gr%m, st%d%dim, rs, Hp)
 
@@ -237,12 +228,7 @@ subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ist, ik, x, y, omega)
     end if
 
     call X(preconditioner_apply)(ls%pre, gr, h, s, shat, omega)
-    call X(Hpsi)(h, gr, shat, Hs, ist, ik)
-
-    !Hs = Hs + omega*shat
-    do idim = 1, st%d%dim 
-      call lalg_axpy(NP, omega, shat(:, idim), Hs(:, idim))
-    end do
+    call X(ls_solver_operator)(h, gr, st, ist, ik, omega, shat, Hs)
 
     w = X(states_dotp)(gr%m, st%d%dim, Hs, s)/X(states_dotp) (gr%m, st%d%dim, Hs, Hs)
 
@@ -279,15 +265,15 @@ subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ist, ik, x, y, omega)
 end subroutine X(ls_solver_bicgstab)
 
 subroutine X(ls_solver_multigrid) (ls, h, gr, st, ist, ik, x, y, omega)
-  type(linear_solver_t),          intent(inout) :: ls
-  type(hamiltonian_t), intent(inout) :: h
-  type(grid_t),        intent(inout) :: gr
-  type(states_t),      intent(in)    :: st
-  integer,             intent(in)    :: ist
-  integer,             intent(in)    :: ik
-  R_TYPE,              intent(inout) :: x(:,:)   ! x(NP, st%d%dim)
-  R_TYPE,              intent(in)    :: y(:,:)   ! y(NP, st%d%dim)
-  R_TYPE,              intent(in)    :: omega
+  type(linear_solver_t), intent(inout) :: ls
+  type(hamiltonian_t),   intent(inout) :: h
+  type(grid_t),          intent(inout) :: gr
+  type(states_t),        intent(in)    :: st
+  integer,               intent(in)    :: ist
+  integer,               intent(in)    :: ik
+  R_TYPE,                intent(inout) :: x(:,:)   ! x(NP, st%d%dim)
+  R_TYPE,                intent(in)    :: y(:,:)   ! y(NP, st%d%dim)
+  R_TYPE,                intent(in)    :: omega
 
   R_TYPE, allocatable :: diag(:,:), hx(:,:), res(:,:)
   integer :: iter
@@ -297,7 +283,6 @@ subroutine X(ls_solver_multigrid) (ls, h, gr, st, ist, ik, x, y, omega)
   ALLOCATE(res(NP, st%d%dim), NP*st%d%dim)
 
   call X(Hpsi_diag)(h, gr, diag, ik)
-
   diag(1:NP, 1:st%d%dim) = diag(1:NP, 1:st%d%dim) + omega
 
   do iter = 1, ls%max_iter
@@ -307,11 +292,11 @@ subroutine X(ls_solver_multigrid) (ls, h, gr, st, ist, ik, x, y, omega)
     call smoothing(3)
 
     !calculate the residue
-    call X(Hpsi)(h, gr, x, hx, ist, ik)
-    res(1:NP, 1:st%d%dim) = hx(1:NP, 1:st%d%dim) + omega*x(1:NP, 1:st%d%dim) - y(1:NP, 1:st%d%dim)
+    call X(ls_solver_operator)(h, gr, st, ist, ik, omega, x, hx)
+    res(1:NP, 1:st%d%dim) = hx(1:NP, 1:st%d%dim) - y(1:NP, 1:st%d%dim)
     ls%abs_psi = X(states_nrm2)(gr%m, st%d%dim, res)
 
-    if( ls%abs_psi < ls%tol) exit
+    if(ls%abs_psi < ls%tol) exit
 
     if(in_debug_mode) then 
       write(message(1), *)  "Multigrid: iter ", iter,  ls%abs_psi, abs(X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), x))
@@ -332,11 +317,11 @@ contains
 
     do ii = 1, steps
 
-      call X(Hpsi)(h, gr, x, hx, ist, ik)
+      call X(ls_solver_operator)(h, gr, st, ist, ik, omega, x, hx)
 
       do idim = 1, st%d%dim
         do ip = 1, gr%m%np
-          rr = hx(ip, idim) + omega*x(ip, idim) - y(ip, idim)
+          rr = hx(ip, idim) - y(ip, idim)
           x(ip, idim) = x(ip, idim) - CNST(0.666666) * rr / diag(ip, idim)
         end do
       end do
@@ -348,6 +333,46 @@ contains
   end subroutine smoothing
 
 end subroutine X(ls_solver_multigrid)
+
+
+! This routine applies the operator hx = (H + omega) x
+subroutine X(ls_solver_operator) (h, gr, st, ist, ik, omega, x, hx)
+  type(hamiltonian_t),   intent(inout) :: h
+  type(grid_t),          intent(inout) :: gr
+  type(states_t),        intent(in)    :: st
+  integer,               intent(in)    :: ist
+  integer,               intent(in)    :: ik
+  R_TYPE,                intent(inout) :: x(:,:)   !  x(NP, st%d%dim)
+  R_TYPE,                intent(out)   :: Hx(:,:)  ! Hx(NP, st%d%dim)
+  R_TYPE,                intent(in)    :: omega
+
+  integer :: idim, jst
+  FLOAT   :: alpha_j, proj, dsmear
+
+  call X(Hpsi)(h, gr, x, Hx, ist, ik)
+
+  !Hx = Hx + omega*x
+  do idim = 1, st%d%dim
+    call lalg_axpy(NP, omega, x(:, idim), Hx(:, idim))
+  end do
+  return
+
+  ! FIX ME
+  ASSERT(.not.st%parallel_in_states)
+
+  dsmear = max(CNST(1e-14), st%smear%dsmear)
+  do jst = 1, st%nst
+    alpha_j = max(st%smear%e_fermi + M_THREE*dsmear - st%eigenval(jst, ik), M_ZERO)
+    if(alpha_j == M_ZERO) cycle
+
+    proj = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), x)
+    do idim = 1, st%d%dim
+      call lalg_axpy(NP, R_TOTYPE(alpha_j*proj), st%X(psi)(:, idim, ist, ik), Hx(:, idim))
+    end do
+
+  end do
+
+end subroutine X(ls_solver_operator)
 
 !! Local Variables:
 !! mode: f90
