@@ -355,7 +355,6 @@ subroutine X(ls_solver_operator) (h, gr, st, ist, ik, omega, x, hx)
   do idim = 1, st%d%dim
     call lalg_axpy(NP, omega, x(:, idim), Hx(:, idim))
   end do
-  return
 
   ! FIX ME
   ASSERT(.not.st%parallel_in_states)
@@ -365,9 +364,9 @@ subroutine X(ls_solver_operator) (h, gr, st, ist, ik, omega, x, hx)
     alpha_j = max(st%smear%e_fermi + M_THREE*dsmear - st%eigenval(jst, ik), M_ZERO)
     if(alpha_j == M_ZERO) cycle
 
-    proj = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), x)
+    proj = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:, :, jst, ik), x)
     do idim = 1, st%d%dim
-      call lalg_axpy(NP, R_TOTYPE(alpha_j*proj), st%X(psi)(:, idim, ist, ik), Hx(:, idim))
+      call lalg_axpy(NP, R_TOTYPE(alpha_j*proj), st%X(psi)(:, idim, jst, ik), Hx(:, idim))
     end do
 
   end do

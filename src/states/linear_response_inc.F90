@@ -55,15 +55,12 @@ subroutine X(lr_orth_vector) (m, st, v, ist, ik)
       theta_ij = smear_step_function(st%smear,  xx)
       theta_ji = smear_step_function(st%smear, -xx)
       
-      !print *, 'theta_ij'
-      !print *, ist, jst, theta_ij, theta_ji
-
-      beta_ij(jst) = theta_Fi(ist)*Theta_ij + theta_Fi(jst)*Theta_ji
+      beta_ij(jst) = theta_Fi(ist)*Theta_ij + Theta_Fi(jst)*Theta_ji
         
       alpha_j = max(st%smear%e_fermi + M_THREE*dsmear - st%eigenval(jst, ik), M_ZERO)
       delta_e = st%eigenval(ist, ik) - st%eigenval(jst, ik)
       
-      if(delta_e >= CNST(1e-5)) then
+      if(abs(delta_e) >= CNST(1e-5)) then
         beta_ij(jst) = beta_ij(jst) + alpha_j*Theta_ji*(Theta_Fi(ist) - Theta_Fi(jst))/delta_e
       else
         xx = (st%smear%e_fermi - st%eigenval(ist, ik) + CNST(1e-14))/dsmear
@@ -72,10 +69,6 @@ subroutine X(lr_orth_vector) (m, st, v, ist, ik)
       end if
     end do
   end if
-
-  !do jst = 1, st%nst
-  !  print *, ist, jst, theta_Fi(jst), beta_ij(jst)
-  !end do
 
   call X(states_gram_schmidt)(m, st%nst, st%d%dim, st%X(psi)(:, :, :, ik), v(:, :), &
     Theta_Fi=Theta_Fi(ist), beta_ij=beta_ij)
