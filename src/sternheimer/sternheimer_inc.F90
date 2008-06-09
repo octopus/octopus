@@ -33,7 +33,7 @@ subroutine X(sternheimer_solve)(&
   type(lr_t),             intent(inout) :: lr(:) 
   integer,                intent(in)    :: nsigma 
   R_TYPE,                 intent(in)    :: omega
-  type(pert_t),      intent(in)    :: perturbation
+  type(pert_t),           intent(in)    :: perturbation
   character(len=*),       intent(in)    :: restart_dir
   character(len=*),       intent(in)    :: rho_tag
   character(len=*),       intent(in)    :: wfs_tag

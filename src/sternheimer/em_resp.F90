@@ -124,7 +124,13 @@ contains
     call write_info(1)
     call system_h_setup(sys, h)
     
-    call sternheimer_init(sh, sys, h, "EM", hermitian = wfs_are_real(sys%st))
+    if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
+       call sternheimer_init(sh, sys, h, "EM", hermitian = wfs_are_real(sys%st), ham_var_set = 0)
+       ! set HamiltonVariation to V_ext_only, in magnetic case
+    else
+       call sternheimer_init(sh, sys, h, "EM", hermitian = wfs_are_real(sys%st))
+       ! otherwise, use default, which is hartree + fxc
+    endif
 
     do dir = 1, ndim
       do sigma = 1, em_vars%nsigma
