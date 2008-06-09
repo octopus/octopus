@@ -29,6 +29,7 @@ module linear_solver_m
   use linear_response_m
   use loct_m
   use loct_parser_m
+  use math_m
   use mesh_m
   use messages_m
   use profiling_m
@@ -42,7 +43,8 @@ module linear_solver_m
   integer, public, parameter ::&
        LS_CG = 5,        &
        LS_BICGSTAB = 3,  &
-       LS_MULTIGRID = 7
+       LS_MULTIGRID = 7, &
+       LS_QMR       = 8
 
   public :: &
        linear_solver_t, &
@@ -65,6 +67,19 @@ module linear_solver_m
   end type linear_solver_t
 
   type(profile_t), save :: prof
+
+  type linear_solver_args_t
+    type(linear_solver_t), pointer :: ls
+    type(hamiltonian_t),   pointer :: h
+    type(grid_t),          pointer :: gr
+    type(states_t),        pointer :: st
+    integer                        :: ist
+    integer                        :: ik
+    FLOAT                          :: domega
+    CMPLX                          :: zomega
+  end type linear_solver_args_t
+
+  type(linear_solver_args_t) :: args
 
 contains
 
@@ -99,6 +114,8 @@ contains
     !% complex polarizabilities are calculated.
     !%Option multigrid 7
     !% Multigrid solver (experimental, currently is only Gauss-Jacobi).
+    !%Option qmr 8
+    !% Quasi-minimal residual solver.
     !%End
 
     defsolver_ = LS_BICGSTAB
@@ -207,6 +224,8 @@ contains
     case(LS_BICGSTAB)
       n = 2
     case (LS_MULTIGRID)
+      n = 1
+    case (LS_QMR)
       n = 1
     end select
   

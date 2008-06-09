@@ -24,15 +24,15 @@
 ! ---------------------------------------------------------
 
 subroutine X(solve_HXeY) (this, h, gr, st, ist, ik, x, y, omega)
-  type(linear_solver_t), intent(inout) :: this
-  type(hamiltonian_t), intent(inout) :: h
-  type(grid_t),        intent(inout) :: gr
-  type(states_t),      intent(in)    :: st
-  integer,             intent(in)    :: ist
-  integer,             intent(in)    :: ik
-  R_TYPE,              intent(inout) :: x(:,:)   ! x(NP, d%dim)
-  R_TYPE,              intent(in)    :: y(:,:)   ! y(NP, d%dim)
-  R_TYPE,              intent(in)    :: omega
+  type(linear_solver_t), target, intent(inout) :: this
+  type(hamiltonian_t),   target, intent(inout) :: h
+  type(grid_t),          target, intent(inout) :: gr
+  type(states_t),        target, intent(in)    :: st
+  integer,                       intent(in)    :: ist
+  integer,                       intent(in)    :: ik
+  R_TYPE,                        intent(inout) :: x(:,:)   ! x(NP, d%dim)
+  R_TYPE,                        intent(in)    :: y(:,:)   ! y(NP, d%dim)
+  R_TYPE,                        intent(in)    :: omega
 
   call profiling_in(prof, "LINEAR_SOLVER")
 
@@ -46,6 +46,22 @@ subroutine X(solve_HXeY) (this, h, gr, st, ist, ik, x, y, omega)
 
   case(LS_MULTIGRID)
     call X(ls_solver_multigrid)(this, h, gr, st, ist, ik, x, y, omega)
+
+#ifdef R_TCOMPLEX
+  case(LS_QMR)
+    args%ls       => this
+    args%h        => h
+    args%gr       => gr 
+    args%st       => st
+    args%ist      = ist
+    args%ik       = ik
+    args%X(omega) = omega
+
+    this%iter = this%max_iter
+    
+    call zqmr_sym(NP, x(:, 1), y(:, 1), X(ls_solver_operator_na), X(ls_preconditioner), &
+         this%iter, residue = this%abs_psi, threshold = this%tol, showprogress = .false.)
+#endif
 
   case default 
     write(message(1), '(a,i2)') "Unknown linear response solver", this%solver
@@ -372,6 +388,40 @@ subroutine X(ls_solver_operator) (h, gr, st, ist, ik, omega, x, hx)
   end do
 
 end subroutine X(ls_solver_operator)
+
+subroutine X(ls_solver_operator_na) (x, hx)
+  R_TYPE,                intent(in)    :: x(:)   !  x(NP, st%d%dim)
+  R_TYPE,                intent(out)   :: Hx(:)  ! Hx(NP, st%d%dim)
+
+  R_TYPE, allocatable :: tmpx(:, :)
+  R_TYPE, allocatable :: tmpy(:, :)
+
+  ALLOCATE(tmpx(args%gr%m%np_part, 1), args%gr%m%np_part)
+  ALLOCATE(tmpy(args%gr%m%np_part, 1), args%gr%m%np_part)
+  call lalg_copy(args%gr%m%np, x, tmpx(:, 1))
+  call X(ls_solver_operator)(args%h, args%gr, args%st, args%ist, args%ik, args%X(omega), tmpx, tmpy)
+  call lalg_copy(args%gr%m%np, tmpy(:, 1), hx)
+  deallocate(tmpx, tmpy)
+
+end subroutine X(ls_solver_operator_na)
+
+subroutine X(ls_preconditioner) (x, hx)
+  R_TYPE,                intent(in)    :: x(:)   !  x(NP, st%d%dim)
+  R_TYPE,                intent(out)   :: hx(:)  ! Hx(NP, st%d%dim)
+
+  R_TYPE, allocatable :: tmpx(:, :)
+  R_TYPE, allocatable :: tmpy(:, :)
+
+  ALLOCATE(tmpx(args%gr%m%np_part, 1), args%gr%m%np_part)
+  ALLOCATE(tmpy(args%gr%m%np_part, 1), args%gr%m%np_part)
+
+  call lalg_copy(args%gr%m%np, x, tmpx(:, 1))
+  call X(preconditioner_apply)(args%ls%pre, args%gr, args%h, tmpx, tmpy, args%X(omega))
+  call lalg_copy(args%gr%m%np, tmpy(:, 1), hx)
+
+  deallocate(tmpx, tmpy)
+
+end subroutine X(ls_preconditioner)
 
 !! Local Variables:
 !! mode: f90
