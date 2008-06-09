@@ -468,19 +468,16 @@ contains
       call projector_init(ep%p(ia), gr%m, sb, atm, st%d%dim, ep%reltype)
       if(simul_box_is_periodic(sb)) call projector_init_phases(ep%p(ia), st%d%nik, st%d%kpoints)
       call projector_build(ep%p(ia), gr, atm, ep%so_strength)
-    end do
 
-    if(gr%have_fine_mesh) then
-      do ia = 1, geo%natoms
-        atm => geo%atom(ia)
-        if(.not. specie_is_ps(atm%spec)) cycle
-        ep%non_local = .true.
+      ! the projectors in the fine grid
+      if(gr%have_fine_mesh) then
         call projector_end(ep%p_fine(ia))
         call projector_init(ep%p_fine(ia), gr%fine%m, sb, atm, st%d%dim, ep%reltype)
         if(simul_box_is_periodic(sb)) call projector_init_phases(ep%p_fine(ia), st%d%nik, st%d%kpoints)
         call projector_build(ep%p(ia), gr, atm, ep%so_strength)
-      end do
-    end if
+      end if
+
+    end do
 
     if (ep%classic_pot > 0) ep%vpsl(1:m%np) = ep%vpsl(1:m%np) + ep%vclassic(1:m%np)
 
