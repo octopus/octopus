@@ -77,8 +77,9 @@ module eigen_solver_m
 
   integer, parameter :: RS_PLAN    = 11
   integer, parameter :: RS_CG      = 5
+  integer, parameter :: RS_MG      = 7
   integer, parameter :: RS_CG_NEW  = 6
-  integer, parameter :: EVOLUTION  = 7
+  integer, parameter :: EVOLUTION  = 9
   integer, parameter :: RS_LOBPCG  = 8
 
   type(profile_t),     save    :: diagon_prof
@@ -110,7 +111,7 @@ contains
     !%Option cg_new 6
     !% An alternative conjugated gradients eigensolver, faster for
     !% larger systems but less mature.
-    !%Option evolution 7
+    !%Option evolution 9
     !% Propagation in imaginary time. WARNING: Sometimes it misbehaves. Use with 
     !% caution.
     !%Option lobpcg 8
@@ -119,6 +120,8 @@ contains
     !% see: A. Knyazev. Toward the Optimal Preconditioned Eigensolver: Locally
     !% Optimal Block Preconditioned Conjugate Gradient Method. SIAM
     !% Journal on Scientific Computing, 23(2):517­541, 2001.
+    !%Option multigrid 7
+    !% Multigrid eigensolver (experimental).
     !%End
     call loct_parse_int(check_inp('EigenSolver'), RS_CG, eigens%es_type)
 
@@ -133,6 +136,7 @@ contains
     
     select case(eigens%es_type)
     case(RS_CG_NEW)
+    case(RS_MG)
     case(RS_CG)
     case(RS_PLAN)
     case(EVOLUTION)
@@ -282,6 +286,8 @@ contains
           message(5) = 'in your input file if you really want to use it. Be warned.'
           call write_fatal(5)
         end if
+      case(RS_MG)
+        call deigen_solver_mg(gr, st, h, eigens%pre, tol, maxiter, eigens%converged, eigens%diff, verbose = verbose_)
       end select
 
       if(st%parallel_in_states) then 
@@ -315,6 +321,8 @@ contains
           message(5) = 'in your input file if you really want to use it. Be warned.'
           call write_fatal(5)
         end if
+      case(RS_MG)
+        call zeigen_solver_mg(gr, st, h, eigens%pre, tol, maxiter, eigens%converged, eigens%diff, verbose = verbose_)
       end select
 
       if(st%parallel_in_states) then 
@@ -336,6 +344,7 @@ contains
 #include "undef.F90"
 #include "real.F90"
 #include "eigen_inc.F90"
+#include "eigen_mg_inc.F90"
 #include "eigen_plan_inc.F90"
 #include "eigen_evolution_inc.F90"
 
@@ -343,6 +352,7 @@ contains
 #include "undef.F90"
 #include "complex.F90"
 #include "eigen_inc.F90"
+#include "eigen_mg_inc.F90"
 #include "eigen_plan_inc.F90"
 #include "eigen_evolution_inc.F90"
 end module eigen_solver_m
