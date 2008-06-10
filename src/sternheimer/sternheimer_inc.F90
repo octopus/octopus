@@ -96,7 +96,7 @@ subroutine X(sternheimer_solve)(&
   total_iter = 0
     
   !self-consistency iteration for response
-  iter_loop: do iter=1, this%scftol%max_iter
+  iter_loop: do iter = 1, this%scftol%max_iter
 
     write(message(1), '(a, i3)') "LR SCF Iteration: ", iter
     write(message(2), '(a, f20.6, a, f20.6, a, i1)') &
@@ -159,7 +159,7 @@ subroutine X(sternheimer_solve)(&
     !write restart info
     call X(restart_write_lr_rho)(lr(1), sys%gr, st%d%nspin, restart_dir, rho_tag)
 
-    do sigma=1,nsigma 
+    do sigma = 1, nsigma 
       write(dirname,'(a,a,i1)') trim(restart_dir)//trim(wfs_tag),'_', sigma
       call restart_write(trim(tmpdir)//dirname, st, sys%gr, err, iter=iter, lr=lr(sigma))
     end do

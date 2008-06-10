@@ -22,7 +22,6 @@
 ! This subroutine calculates the solution of using conjugated gradients
 !    (H + omega) x = y
 ! ---------------------------------------------------------
-
 subroutine X(solve_HXeY) (this, h, gr, st, ist, ik, x, y, omega)
   type(linear_solver_t), target, intent(inout) :: this
   type(hamiltonian_t),   target, intent(inout) :: h
@@ -74,6 +73,7 @@ subroutine X(solve_HXeY) (this, h, gr, st, ist, ik, x, y, omega)
 end subroutine X(solve_HXeY)
 
 
+! ---------------------------------------------------------
 !Conjugated gradients
 subroutine X(ls_solver_cg) (ls, h, gr, st, ist, ik, x, y, omega)
   type(linear_solver_t),          intent(inout) :: ls
@@ -139,9 +139,9 @@ subroutine X(ls_solver_cg) (ls, h, gr, st, ist, ik, x, y, omega)
   call pop_sub()
 end subroutine X(ls_solver_cg)
 
+! ---------------------------------------------------------
 !BICONJUGATED GRADIENTS STABILIZED
 !see http://math.nist.gov/iml++/bicgstab.h.txt
-
 subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ist, ik, x, y, omega)
   type(linear_solver_t),          intent(inout) :: ls
   type(hamiltonian_t), intent(inout) :: h
@@ -280,6 +280,8 @@ subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ist, ik, x, y, omega)
   call pop_sub()
 end subroutine X(ls_solver_bicgstab)
 
+
+! ---------------------------------------------------------
 subroutine X(ls_solver_multigrid) (ls, h, gr, st, ist, ik, x, y, omega)
   type(linear_solver_t), intent(inout) :: ls
   type(hamiltonian_t),   intent(inout) :: h
@@ -351,7 +353,8 @@ contains
 end subroutine X(ls_solver_multigrid)
 
 
-! This routine applies the operator hx = (H + omega) x
+! ---------------------------------------------------------
+! This routine applies the operator hx = [H (+ Q) + omega] x
 subroutine X(ls_solver_operator) (h, gr, st, ist, ik, omega, x, hx)
   type(hamiltonian_t),   intent(inout) :: h
   type(grid_t),          intent(inout) :: gr
@@ -372,23 +375,27 @@ subroutine X(ls_solver_operator) (h, gr, st, ist, ik, omega, x, hx)
     call lalg_axpy(NP, omega, x(:, idim), Hx(:, idim))
   end do
 
-  ! FIX ME
-  ASSERT(.not.st%parallel_in_states)
+  if(.not.st%smear%fixed_occ .and. st%smear%method.ne.SMEAR_SEMICONDUCTOR) then
+    ! This is the Q term in Eq. (11) of PRB 51, 6773 (1995)
+    ASSERT(.not.st%parallel_in_states)
 
-  dsmear = max(CNST(1e-14), st%smear%dsmear)
-  do jst = 1, st%nst
-    alpha_j = max(st%smear%e_fermi + M_THREE*dsmear - st%eigenval(jst, ik), M_ZERO)
-    if(alpha_j == M_ZERO) cycle
+    dsmear = max(CNST(1e-14), st%smear%dsmear)
+    do jst = 1, st%nst
+      alpha_j = max(st%smear%e_fermi + M_THREE*dsmear - st%eigenval(jst, ik), M_ZERO)
+      if(alpha_j == M_ZERO) cycle
+      
+      proj = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:, :, jst, ik), x)
+      do idim = 1, st%d%dim
+        call lalg_axpy(NP, R_TOTYPE(alpha_j*proj), st%X(psi)(:, idim, jst, ik), Hx(:, idim))
+      end do
 
-    proj = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:, :, jst, ik), x)
-    do idim = 1, st%d%dim
-      call lalg_axpy(NP, R_TOTYPE(alpha_j*proj), st%X(psi)(:, idim, jst, ik), Hx(:, idim))
     end do
-
-  end do
+  end if
 
 end subroutine X(ls_solver_operator)
 
+
+! ---------------------------------------------------------
 subroutine X(ls_solver_operator_na) (x, hx)
   R_TYPE,                intent(in)    :: x(:)   !  x(NP, st%d%dim)
   R_TYPE,                intent(out)   :: Hx(:)  ! Hx(NP, st%d%dim)
@@ -398,13 +405,17 @@ subroutine X(ls_solver_operator_na) (x, hx)
 
   ALLOCATE(tmpx(args%gr%m%np_part, 1), args%gr%m%np_part)
   ALLOCATE(tmpy(args%gr%m%np_part, 1), args%gr%m%np_part)
+
   call lalg_copy(args%gr%m%np, x, tmpx(:, 1))
   call X(ls_solver_operator)(args%h, args%gr, args%st, args%ist, args%ik, args%X(omega), tmpx, tmpy)
   call lalg_copy(args%gr%m%np, tmpy(:, 1), hx)
+
   deallocate(tmpx, tmpy)
 
 end subroutine X(ls_solver_operator_na)
 
+
+! ---------------------------------------------------------
 subroutine X(ls_preconditioner) (x, hx)
   R_TYPE,                intent(in)    :: x(:)   !  x(NP, st%d%dim)
   R_TYPE,                intent(out)   :: hx(:)  ! Hx(NP, st%d%dim)

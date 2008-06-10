@@ -34,6 +34,7 @@ module linear_solver_m
   use messages_m
   use profiling_m
   use preconditioners_m
+  use smear_m
   use states_m
 
   implicit none

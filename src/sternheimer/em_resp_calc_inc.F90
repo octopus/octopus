@@ -19,6 +19,8 @@
 
 
 ! ---------------------------------------------------------
+! WARNING: This subroutine is clearly broken after the changes
+! to include temperature in linear response
 subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
   type(states_t),   intent(inout) :: st
   type(grid_t),     intent(inout) :: gr
@@ -38,6 +40,8 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
   FLOAT :: ik_weight
 
   call push_sub('em_resp_inc.Xcalc_lr_elf')
+
+  ASSERT(.false.)
 
   ALLOCATE(   gpsi(NP, NDIM), NP*NDIM)
   ALLOCATE(gdl_psi(NP, NDIM), NP*NDIM)
@@ -413,7 +417,7 @@ subroutine X(lr_calc_beta) (sh, sys, h, lr, dipole, beta)
                     end do
 
                     beta(ii, jj, kk) = beta(ii, jj, kk) &
-                         - M_HALF*st%d%kweights(ik)*st%occ(ist, ik) &
+                         - M_HALF*st%d%kweights(ik)*st%smear%el_per_state &
                          *X(mf_dotp)(mesh, lr(u(1), op_sigma, w(1))%X(dl_psi)(:, idim, ist, ispin), tmp)
 
                     do ispin2 = 1, st%d%nspin
@@ -432,7 +436,7 @@ subroutine X(lr_calc_beta) (sh, sys, h, lr, dipole, beta)
                             prod = X(mf_dotp)(mesh, st%X(psi)(:, idim2, ist2, ispin2), tmp)
 
                             beta(ii, jj, kk) = beta(ii, jj, kk) + & 
-                                 M_HALF*st%d%kweights(ik)*st%occ(ist, ik)*prod*X(mf_dotp)(mesh, &
+                                 M_HALF*st%d%kweights(ik)*st%smear%el_per_state*prod*X(mf_dotp)(mesh, &
                                  lr(u(1), op_sigma, w(1))%X(dl_psi)(:, idim, ist, ispin), &
                                  lr(u(3), isigma,   w(3))%X(dl_psi)(:, idim2, ist2, ispin2))
 

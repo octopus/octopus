@@ -46,7 +46,7 @@ subroutine X(lr_orth_vector) (m, st, v, ist, ik)
 
   ALLOCATE(beta_ij(st%nst), st%nst)
 
-  if(st%smear%method == SMEAR_SEMICONDUCTOR) then
+  if(st%smear%fixed_occ .or. st%smear%method == SMEAR_SEMICONDUCTOR) then
     beta_ij = Theta_Fi
   else
     beta_ij = M_ZERO

@@ -381,6 +381,7 @@ subroutine X(ionic_perturbation_order_2) (this, gr, geo, h, ik, f_in, f_out, iat
 
 end subroutine X(ionic_perturbation_order_2)
 
+
 subroutine X(pert_expectation_density) (this, gr, geo, h, st, psia, psib, density, pert_order)
   type(pert_t),         intent(in)    :: this
   type(grid_t),         intent(inout) :: gr
@@ -393,8 +394,8 @@ subroutine X(pert_expectation_density) (this, gr, geo, h, st, psia, psib, densit
   integer, optional,    intent(in)    :: pert_order
 
   R_TYPE, allocatable :: pertpsib(:)
-
   integer :: ik, ist, idim, order
+  FLOAT   :: ikweight
 
   ALLOCATE(pertpsib(1:NP), NP)
 
@@ -410,11 +411,13 @@ subroutine X(pert_expectation_density) (this, gr, geo, h, st, psia, psib, densit
 
         if(order == 1) then 
           call X(pert_apply) (this, gr, geo, h, ik, psib(:, idim, ist, ik), pertpsib)
+          ikweight = st%d%kweights(ik)*st%smear%el_per_state
         else
           call X(pert_apply_order_2) (this, gr, geo, h, ik, psib(:, idim, ist, ik), pertpsib)
+          ikweight = st%d%kweights(ik)*st%occ(ist, ik)
         end if
 
-        density(1:NP) = density(1:NP) + st%d%kweights(ik)*st%occ(ist, ik)*&
+        density(1:NP) = density(1:NP) + ikweight * &
              R_CONJ(psia(1:NP, idim, ist, ik))*pertpsib(1:NP)
 
       end do

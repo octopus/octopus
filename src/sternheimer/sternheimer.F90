@@ -126,13 +126,15 @@ contains
 
     if(present(ham_var_set)) then
       ham_var = ham_var_set
-
     else if(h%theory_level.ne.INDEPENDENT_PARTICLES) then
       if (loct_parse_isdef(check_inp(trim(prefix)//'HamiltonianVariation')) /= 0) then
         call loct_parse_int(check_inp(trim(prefix)//'HamiltonianVariation'), 3, ham_var)
       else
         call loct_parse_int(check_inp('HamiltonianVariation'), 3, ham_var)
       end if
+    end if
+
+    if(h%theory_level.ne.INDEPENDENT_PARTICLES) then
       this%add_fxc = ((ham_var/2) == 1)
       this%add_hartree = (mod(ham_var, 2) == 1)
     else
