@@ -19,96 +19,122 @@
 
 ! ---------------------------------------------------------
 subroutine X(eigen_solver_mg) (gr, st, h, pre, tol, niter, converged, diff, verbose)
-  type(grid_t),        intent(inout) :: gr
-  type(states_t),      intent(inout) :: st
-  type(hamiltonian_t), intent(inout) :: h
+  type(grid_t),           intent(inout) :: gr
+  type(states_t),         intent(inout) :: st
+  type(hamiltonian_t),    intent(inout) :: h
   type(preconditioner_t), intent(in) :: pre
-  FLOAT,               intent(in)    :: tol
-  integer,             intent(inout) :: niter
-  integer,             intent(inout) :: converged
-  FLOAT,     optional, intent(out)   :: diff(1:st%nst,1:st%d%nik)
-  logical,   optional, intent(in)    :: verbose
+  FLOAT,                  intent(in)    :: tol
+  integer,                intent(inout) :: niter
+  integer,                intent(inout) :: converged
+  FLOAT,                  intent(out)   :: diff(1:st%nst,1:st%d%nik)
+  logical,   optional,    intent(in)    :: verbose
 
-  integer  :: ik, p, iter, maxter, conv, conv_, idim, ns, ip, is, inb
-  R_TYPE   :: aa, rta, rtb, rtc, alpha, beta, dh, sigma, vv
-  FLOAT    :: bb, res
-  R_TYPE, allocatable :: hpsi(:, :), hdiag(:, :)
+  integer  :: ik, ist, ist2, iter, maxter, conv, conv_, idim, ns, ip, is, inb
+  R_TYPE   :: rta, rtb, rtc, alpha, dh, vv, s1, s2, s3
+  FLOAT    :: ww, bb
+  R_TYPE, allocatable :: hpsi(:, :), hdiag(:, :), cc(:, :), sigma(:), beta(:), aa(:)
 
   call push_sub('eigen_cg.eigen_solver_mg')
 
   ALLOCATE(hpsi(1:NP, 1:st%d%dim), NP*st%d%dim)
   ALLOCATE(hdiag(1:NP, 1:st%d%dim), NP*st%d%dim)
+  ALLOCATE(cc(1:st%nst, 1:st%nst), st%nst**2)
+  ALLOCATE(aa(1:st%nst), st%nst)
+  ALLOCATE(sigma(1:st%nst), st%nst)
+  ALLOCATE(beta(1:st%nst), st%nst)
+
+  cc = M_Z0
+
+  ww = 5.0
 
   do ik = 1, st%d%nik
     
     call X(hpsi_diag) (h, gr, hdiag, ik)
+    
+    do iter = 1, niter*100
 
-    do p = conv + 1, st%nst
+      do ist = 1, st%nst
 
-      do iter = 1, niter*100
+        call X(hpsi)(h, gr, st%X(psi)(:,:, ist, ik), hpsi, ist, ik)
         
-        call X(hpsi)(h, gr, st%X(psi)(:,:, p, ik), hpsi, p, ik)
+        bb = X(states_nrm2)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik))
+        call lalg_scal(NP, M_ONE/bb, st%X(psi)(:, 1, ist, ik))
         
-        bb = X(states_nrm2)(gr%m, st%d%dim, st%X(psi)(:, :, p, ik))
-        call lalg_scal(NP, M_ONE/bb, st%X(psi)(:, 1, p, ik))
-        
-        aa = X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, p, ik), hpsi)
+        cc(ist, 1:ist - 1) = cc(ist, 1:ist - 1)/bb
 
-        st%eigenval(p, ik) = aa
+        aa(ist) = X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), hpsi)
 
-        res = X(states_residue)(gr%m, st%d%dim, hpsi, st%eigenval(p, ik), st%X(psi)(:, :, p, ik))
+        st%eigenval(ist, ik) = aa(ist)
+
+        diff(ist, ik) = X(states_residue)(gr%m, st%d%dim, hpsi, st%eigenval(ist, ik), st%X(psi)(:, :, ist, ik))
  
-        if(res < tol) exit
+        if(mod(iter, 100) ==  1) print*, iter, ist, st%eigenval(ist, ik), diff(ist, ik)
 
-!        print*, st%eigenval(p, ik), res
-       
-        bb = M_ONE
-        
-        do ip = 1, NP
+      end do
+      
+      do ist = 1, st%nst
+
+        cc(ist, ist) = M_ONE
+        do ist2 = 1, ist - 1
+          cc(ist, ist2) = X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), st%X(psi)(:, :, ist2, ik))
+        end do
+
+      end do
+      
+      do ip = 1, NP
+
+        vv = sqrt(gr%m%vol_pp(ip))
+        dh = hdiag(ip, 1)
           
-          vv = sqrt(gr%m%vol_pp(ip))
+        do ist = 1, st%nst
 
+          beta(ist) = st%X(psi)(ip, 1, ist, ik)*vv
+          
           ! apply the hamiltonian in the point
 
           alpha = M_ZERO
           do is = 1, gr%LAP%n
             inb = ip + gr%LAP%ri(is, gr%LAP%rimap(ip))
-            alpha = alpha + gr%LAP%w_re(is, 1)*st%X(psi)(inb, 1, p, ik)
+            alpha = alpha + gr%LAP%w_re(is, 1)*st%X(psi)(inb, 1, ist, ik)
           end do
 
-          alpha = -M_HALF*alpha + (h%vhxc(ip, 1) + h%ep%vpsl(ip))*st%X(psi)(ip, 1, p, ik)
+          alpha = -M_HALF*alpha + (h%vhxc(ip, 1) + h%ep%vpsl(ip))*st%X(psi)(ip, 1, ist, ik)
 
           alpha = alpha*vv
 
-          beta = st%X(psi)(ip, 1, p, ik)*vv
-          dh = hdiag(ip, 1)
+          s1 = M_ZERO
+          s2 = M_ZERO
+          s3 = M_ZERO
+          do ist2 = 1, ist - 1 
+            s1 = s1 + ww*beta(ist2)**2/cc(ist2, ist2)
+            s2 = s2 + ww*beta(ist2)*cc(ist, ist2)/cc(ist2, ist2)
+            s3 = s3 + ww*cc(ist, ist2)**2/cc(ist2, ist2)
+          end do
+
+          rta = alpha - dh*beta(ist) + s2 - beta(ist)*s1
+          rtb = cc(ist, ist)*dh - aa(ist) + cc(ist, ist)*s1 - s3
+          rtc = aa(ist)*beta(ist) - cc(ist, ist)*alpha + beta(ist)*s3 - s2
           
-          rta = alpha - dh*beta
-          rtb = bb*dh - aa
-          rtc = aa*beta - bb*alpha
+          sigma(ist) = -M_TWO*rtc/(rtb + sqrt(rtb**2 - M_FOUR*rta*rtc))
           
-          sigma = -M_TWO*rtc/(rtb + sqrt(rtb**2 - M_FOUR*rta*rtc))
+          st%X(psi)(ip, 1, ist, ik) = st%X(psi)(ip, 1, ist, ik) - sigma(ist)/vv
           
-          st%X(psi)(ip, 1, p, ik) = st%X(psi)(ip, 1, p, ik) - sigma/vv
+          aa(ist) = aa(ist) - M_TWO*sigma(ist)*alpha + sigma(ist)**2*dh
+          cc(ist, ist) = cc(ist, ist) - M_TWO*sigma(ist)*beta(ist)  + sigma(ist)**2
+
+          do ist2 = 1, ist - 1
+            cc(ist, ist2) = cc(ist, ist2) - sigma(ist)*beta(ist2) - sigma(ist2)*beta(ist) + sigma(ist)*sigma(ist2)
+          end do
           
-          aa = aa - M_TWO*sigma*alpha + sigma**2*dh
-          bb = bb - M_TWO*sigma*beta  + sigma**2
         end do
-        
-        st%eigenval(p, ik) = aa/bb
         
       end do
       
-      niter = iter
-
-      if(present(diff)) then
-        diff(p, ik) = res
-      end if
-
     end do
-  end do
 
-  deallocate(hpsi)
+    niter = iter
+
+  end do
 
   call pop_sub()
 end subroutine X(eigen_solver_mg)
