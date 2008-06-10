@@ -415,7 +415,7 @@ contains
         M_ONE/sqrt(M_TWO*M_PI)*exp(-arg) + M_HALF
       
     case(SMEAR_METHFESSEL_PAXTON)
-      stepf = M_HALF*(M_ONE - loct_erf(-xx))
+      stepf = M_HALF*loct_erfc(-xx)
 
       if(this%MP_n > 0) then ! recursion
         hd = M_ZERO
@@ -495,7 +495,7 @@ contains
 
     case(SMEAR_SPLINE)
       xp = abs(xx) + M_ONE/sqrt(M_TWO)
-      entropyf = -sqrt(M_E)*(abs(xx)*exp(-xp*xp) + sqrt(M_PI)/M_FOUR*loct_erfc(xp))
+      entropyf = -sqrt(M_E)*(abs(xx)*exp(-xp*xp)/M_TWO + sqrt(M_PI)/M_FOUR*loct_erfc(xp))
 
     end select
 
