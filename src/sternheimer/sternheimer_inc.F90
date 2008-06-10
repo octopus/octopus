@@ -24,8 +24,8 @@
 ! for an applied perturbation.
 !--------------------------------------------------------------
 
-subroutine X(sternheimer_solve)(&
-     this, sys, h, lr, nsigma, omega, perturbation, & 
+subroutine X(sternheimer_solve)(                           &
+     this, sys, h, lr, nsigma, omega, perturbation,        &
      restart_dir, rho_tag, wfs_tag, have_restart_rho)
   type(sternheimer_t),    intent(inout) :: this
   type(system_t), target, intent(inout) :: sys
@@ -76,12 +76,6 @@ subroutine X(sternheimer_solve)(&
   conv = .false.
   conv_last = .false.
 
-  do sigma = 1, nsigma
-    if(this%orth_response) then 
-      call X(lr_orth_response)(m, st, lr(sigma))
-    end if
-  end do
-
   if (present(have_restart_rho)) then 
     if (.not. have_restart_rho) call X(lr_build_dl_rho)(m, st, lr, nsigma)
   else
@@ -118,9 +112,7 @@ subroutine X(sternheimer_solve)(&
           Y(1:m%np, 1, sigma) = -Y(1:m%np, 1, sigma) - hvar(1:m%np, ik, sigma)*st%X(psi)(1:m%np, 1, ist, ik)
 
           !and project it into the unoccupied states
-          if(this%orth_response) then 
-            call X(lr_orth_vector)(m, st, Y(:,:, sigma), ist, ik)
-          end if
+          call X(lr_orth_vector)(m, st, Y(:,:, sigma), ist, ik)
         
           if(sigma == 1) then 
             omega_sigma = omega
@@ -132,12 +124,6 @@ subroutine X(sternheimer_solve)(&
           call X(solve_HXeY) (this%solver, h, sys%gr, sys%st, ist, ik, lr(sigma)%X(dl_psi)(:, :, ist, ik),&
                Y(:,:, sigma), -sys%st%eigenval(ist, ik) + omega_sigma)
           
-          !although the dl_psi we get should be orthogonal to psi
-          !a re-orthogonalization is sometimes necessary 
-          if(this%orth_response) then 
-            call X(lr_orth_vector)(m, st, lr(sigma)%X(dl_psi)(:, :, ist, ik), ist, ik)
-          end if
-
           ! print the norm of the variations, and the number of
           ! iterations and residual of the linear solver
           dpsimod = X(mf_nrm2)(m, lr(sigma)%X(dl_psi)(1:m%np, 1, ist, ik))
@@ -146,7 +132,7 @@ subroutine X(sternheimer_solve)(&
                (3 - 2*sigma)*ist, dpsimod, this%solver%iter, this%solver%abs_psi 
           call write_info(1)
 
-          total_iter=total_iter + this%solver%iter
+          total_iter = total_iter + this%solver%iter
           
         end do !sigma
       end do !ist
@@ -164,7 +150,7 @@ subroutine X(sternheimer_solve)(&
       call restart_write(trim(tmpdir)//dirname, st, sys%gr, err, iter=iter, lr=lr(sigma))
     end do
     
-    !all the rest is the mixing and checking for convergence
+    ! all the rest is the mixing and checking for convergence
 
     if( this%scftol%max_iter == iter  ) then 
       message(1) = "Self-consistent iteration for response did not converge"
@@ -231,6 +217,7 @@ subroutine X(sternheimer_solve)(&
   call pop_sub()
 
 end subroutine X(sternheimer_solve)
+
 
 subroutine X(sternheimer_calc_hvar)(this, sys, h, lr, nsigma, hvar)
   type(sternheimer_t),    intent(inout) :: this

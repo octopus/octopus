@@ -300,14 +300,14 @@ subroutine X(lr_calc_susceptibility)(sys, h, lr, nsigma, perturbation, chi_para,
         trace = trace + R_CONJ(trace)
       else
         trace = trace + &
-             X(pert_expectation_value)(perturbation, sys%gr, sys%geo,h,sys%st, lr(dir2, 2)%X(dl_psi), sys%st%X(psi))
+          X(pert_expectation_value)(perturbation, sys%gr, sys%geo,h,sys%st, lr(dir2, 2)%X(dl_psi), sys%st%X(psi))
       end if
      
       ! first the paramagnetic term 
       chi_para(dir1, dir2) = chi_para(dir1, dir2) + trace
 
       chi_dia(dir1, dir2) = chi_dia(dir1, dir2) + &
-           X(pert_expectation_value)(perturbation, sys%gr, sys%geo,h,sys%st, sys%st%X(psi), sys%st%X(psi), pert_order=2)
+        X(pert_expectation_value)(perturbation, sys%gr, sys%geo,h,sys%st, sys%st%X(psi), sys%st%X(psi), pert_order=2)
 
     end do
   end do
@@ -408,7 +408,7 @@ subroutine X(lr_calc_beta) (sh, sys, h, lr, dipole, beta)
                   if( st%occ(ist, ik) > lr_min_occ ) then 
 
                     call pert_setup_dir(dipole, u(2))
-                    call X(pert_apply)&
+                    call X(pert_apply)  &
                          (dipole, sys%gr, sys%geo, h, ik, lr(u(3), isigma, w(3))%X(dl_psi)(:, idim, ist, ispin), tmp)
 
                     do ip = 1, np

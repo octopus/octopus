@@ -73,7 +73,6 @@ module sternheimer_m
      logical :: add_hartree
      logical :: ok
      logical :: hermitian 
-     logical :: orth_response
      logical :: oep_kernel
      FLOAT, pointer :: fxc(:,:,:)    ! linear change of the xc potential (fxc)
      
@@ -81,6 +80,7 @@ module sternheimer_m
   
 contains
   
+  !-----------------------------------------------------------
   subroutine sternheimer_init(this, sys, h, prefix, hermitian, ham_var_set)
     type(sternheimer_t), intent(out)   :: this
     type(system_t),      intent(inout) :: sys
@@ -90,20 +90,6 @@ contains
     integer, optional,   intent(in)    :: ham_var_set
 
     integer :: ham_var
-
-    !%Variable OrthResponse
-    !%Type logical
-    !%Default true
-    !%Section Linear Response::Sternheimer
-    !%Description
-    !% Whether variations of the wavefunctions should be orthogonalized
-    !% or not against the occupied states.
-    !%End
-    if (loct_parse_isdef(check_inp(trim(prefix)//'OrthResponse')) /= 0) then
-      call loct_parse_logical(check_inp(trim(prefix)//'OrthResponse'), .true., this%orth_response)
-    else
-      call loct_parse_logical(check_inp('OrthResponse'), .true., this%orth_response)
-    end if
 
     !%Variable HamiltonianVariation
     !%Type integer
@@ -163,6 +149,8 @@ contains
 
   end subroutine sternheimer_init
 
+
+  !-----------------------------------------------------------
   subroutine sternheimer_end(this)
     type(sternheimer_t), intent(inout) :: this
 
@@ -173,6 +161,8 @@ contains
 
   end subroutine sternheimer_end
 
+
+  !-----------------------------------------------------------
   subroutine sternheimer_build_fxc(this, m, st, ks)
     type(sternheimer_t), intent(inout) :: this
     type(mesh_t),        intent(in)    :: m
@@ -211,16 +201,22 @@ contains
 
   end subroutine sternheimer_build_fxc
 
+
+  !-----------------------------------------------------------
   logical function sternheimer_add_fxc(this) result(r)
     type(sternheimer_t), intent(in) :: this
     r = this%add_fxc
   end function sternheimer_add_fxc
 
+
+  !-----------------------------------------------------------
   logical function sternheimer_add_hartree(this) result(r)
     type(sternheimer_t), intent(in) :: this
     r = this%add_hartree
   end function sternheimer_add_hartree
 
+
+  !-----------------------------------------------------------
   logical function sternheimer_has_converged(this) result(r)
     type(sternheimer_t), intent(in) :: this
     r = this%ok
