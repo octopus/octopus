@@ -23,7 +23,7 @@ subroutine X(eigen_diag_subspace)(gr, st, h, diff)
   type(grid_t),        intent(inout) :: gr
   type(states_t),      intent(inout) :: st
   type(hamiltonian_t), intent(inout) :: h
-  FLOAT, optional,     intent(out)   :: diff(1:st%nst,1:st%d%nik)
+  FLOAT, optional,     intent(out)   :: diff(:, :)
 
   R_TYPE, allocatable :: h_subspace(:, :), vec(:, :), f(:, :)
   integer             :: ist, jst, ik
@@ -45,13 +45,13 @@ subroutine X(eigen_diag_subspace)(gr, st, h, diff)
     ! Calculate the matrix representation of the Hamiltonian in the subspace <psi|H|psi>.
     do ist = st%st_start, st%st_end
       call X(hpsi)(h, gr, st%X(psi)(:, :, ist, ik), f, ist, ik)
-      h_subspace(ist, ist) = st%eigenval(ist, ik)
-      do jst = ist + 1, st%st_end
+      do jst = ist, st%st_end
         h_subspace(ist, jst) = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, jst, ik), f)
         h_subspace(jst, ist) = R_CONJ(h_subspace(ist, jst))
       end do
     end do
-    
+
+
     ! Diagonalize the hamiltonian in the subspace.
     call lalg_eigensolve(st%nst, h_subspace, vec, st%eigenval(:, ik))
 
