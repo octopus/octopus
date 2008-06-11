@@ -459,14 +459,14 @@ contains
       call pert_info(em_vars%perturbation, stdout)
       if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
         if(em_vars%calc_hyperpol) then 
-          write(message(1),'(a)') 'Linear Reponse First Order Hyperpolarizabilities'
+          write(message(1),'(a)') 'Linear-Reponse First-Order Hyperpolarizabilities'
           call messages_print_stress(stdout, trim(message(1)))
         else 
-          write(message(1),'(a)') 'Linear Reponse Polarizabilities'
+          write(message(1),'(a)') 'Linear-Reponse Polarizabilities'
           call messages_print_stress(stdout, trim(message(1)))
         end if
       else
-        write(message(1),'(a)') 'Magnetic susceptibilities'
+        write(message(1),'(a)') 'Magnetic Susceptibilities'
         call messages_print_stress(stdout, trim(message(1)))
       end if
 

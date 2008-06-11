@@ -116,14 +116,14 @@ contains
     !% (see M. Hochbruck and C. Lubich, SIAM J. Numer. Anal. <b>34</b>, 1911 (1997) for details). 
     !% Two more variables control the performance of the method: the maximum dimension
     !% of this subspace (controlled by variable <tt>TDExpOrder</tt>), and
-    !% the stopping criterium (controlled by variable <tt>TDLanczosTol</tt>).
-    !% The smaller the stopping criterium, the more precisely the exponential
+    !% the stopping criterion (controlled by variable <tt>TDLanczosTol</tt>).
+    !% The smaller the stopping criterion, the more precisely the exponential
     !% is calculated, but also the larger the dimension of the Arnoldi
     !% subspace. If the maximum dimension allowed by <tt>TDExpOrder</tt> is not
-    !% enough to meet the criterium, the above-mentioned warning is emitted.
+    !% enough to meet the criterion, the above-mentioned warning is emitted.
     !%Option taylor 3
     !% This method amounts to a straightforward application of the definition of
-    !% the exponential of an operator, in terms of it Taylor expansion.
+    !% the exponential of an operator, in terms of its Taylor expansion.
     !%
     !% <MATH>\exp_{\rm STD} (-i\delta t H) = \sum_{i=0}^{k} {(-i\delta t)^i\over{i!}} H^i.</MATH>
     !%

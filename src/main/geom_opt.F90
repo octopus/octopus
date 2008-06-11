@@ -252,9 +252,9 @@ contains
       !%Default 0.001 a.u.
       !%Section Geometry Optimization
       !%Description
-      !% Convergence criterium to stop the minimization. In units of force; minimization
+      !% Convergence criterion to stop the minimization. In units of force; minimization
       !% is stopped when all forces on ions are smaller.
-      !% Used in conjunction with GOMinimumMove. If GOTolerance = 0, this criterium is ignored.
+      !% Used in conjunction with GOMinimumMove. If GOTolerance = 0, this criterion is ignored.
       !%End
       call loct_parse_float(check_inp('GOTolerance'), CNST(0.001)/units_inp%force%factor, g_opt%tolgrad)
       g_opt%tolgrad = g_opt%tolgrad*units_inp%force%factor
@@ -264,9 +264,9 @@ contains
       !%Default 0.0 a.u.
       !%Section Geometry Optimization
       !%Description
-      !% Convergence criterium to stop the minimization. In units of length; minimization
+      !% Convergence criterion to stop the minimization. In units of length; minimization
       !% is stopped when all species coordinates change less than GOMinimumMove.
-      !% Used in conjunction with GOTolerance. If GOMinimumMove = 0, this criterium is ignored.
+      !% Used in conjunction with GOTolerance. If GOMinimumMove = 0, this criterion is ignored.
       !%
       !% Note that if you use GOMethod = simplex, then you must supply a non-zero GOMinimumMove.
       !%End
@@ -288,7 +288,7 @@ contains
       !%Default 200
       !%Section Geometry Optimization
       !%Description
-      !% Even if previous convergence criterium is not satisfied, minimization will stop
+      !% Even if previous convergence criterion is not satisfied, minimization will stop
       !% after this number of iterations.
       !%End
       call loct_parse_int(check_inp('GOMaxIter'), 200, g_opt%max_iter)

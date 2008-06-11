@@ -165,7 +165,7 @@ contains
       else
         write(iunit,'(a)') 'Some of the unoccupied states are not fully converged!'
       end if
-      write(iunit,'(a, e17.6)') 'Criterium = ', eigens%final_tol
+      write(iunit,'(a, e17.6)') 'Criterion = ', eigens%final_tol
       write(iunit,'(1x)')
       call states_write_eigenvalues(iunit, sys%st%nst, sys%st, sys%gr%sb, eigens%diff)
       call io_close(iunit)

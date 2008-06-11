@@ -250,7 +250,7 @@ contains
     oep%eigen_n = 1
     do i = 1, st%nst
       if(occ(i) .gt. small) then
-        ! criterium for degeneracy
+        ! criterion for degeneracy
         if(abs(eigenval(i)-max_eigen).le.CNST(1e-3)) then
           oep%eigen_type(i) = 2
         else

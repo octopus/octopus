@@ -227,15 +227,15 @@ contains
     !%Section States
     !%Description
     !% The calculations may be done in three different ways: spin-restricted (TD)DFT (i.e., doubly
-    !% occupied "closed shells"), spin-unsrestricted or "spin-polarized" (TD)DFT (i.e. we have two
+    !% occupied "closed shells"), spin-unrestricted or "spin-polarized" (TD)DFT (i.e. we have two
     !% electronic systes, one with spin up and one with spin down), or making use of two-component
     !% spinors.
     !%Option unpolarized 1
     !% Spin-restricted calculations.
     !%Option polarized 2
     !%Option spin_polarized 2
-    !% Spin unrestricted, also know as spin-DFT, SDFT. This mode will double the number of wave
-    !% functions necessary for a spin-unpolarised calculation.
+    !% Spin unrestricted, also known as spin-DFT, SDFT. This mode will double the number of wave
+    !% functions necessary for a spin-unpolarized calculation.
     !%Option non_collinear 3
     !%Option spinors 3
     !% The spin-orbitals are two-component spinors. This effectively allows the spin-density to
@@ -343,9 +343,9 @@ contains
     !%Default no
     !%Section States
     !%Description
-    !% If true, then only user defined states from the block UserDefinedStates
+    !% If true, then only user-defined states from the block UserDefinedStates
     !% will be used as initial states for a time propagation. No attempt is made
-    !% to load ground state orbitals from a previous ground state run.
+    !% to load ground-state orbitals from a previous ground-state run.
     !%End
     call loct_parse_logical(check_inp('OnlyUserDefinedInitialStates'), .false., st%only_userdef_istates)
 
@@ -600,11 +600,11 @@ contains
     !%Section States
     !%Description
     !% Normally Octopus determines automatically the type necessary
-    !% for the wave functions. When set to yes this variable will
+    !% for the wavefunctions. When set to yes this variable will
     !% force the use of complex wavefunctions. 
     !%
     !% Warning: This variable is designed for testing and
-    !% benchmarching and normal users need not use it.
+    !% benchmarking and normal users need not use it.
     !%
     !%End
     call loct_parse_logical(check_inp('ForceComplex'), .false., force)
@@ -697,7 +697,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! the routine reads formulas for user defined wavefunctions 
+  ! the routine reads formulas for user-defined wavefunctions 
   ! from the input file and fills the respective orbitals
   subroutine states_read_user_def_orbitals(mesh, st)
     type(mesh_t),      intent(in) :: mesh
@@ -723,8 +723,8 @@ contains
     !%Description
     !% Instead of using the ground state as initial state for
     !% time propagations it might be interesting in some cases 
-    !% to specify alternative states. Similar to user defined
-    !% potentials this block allows to specify formulas for
+    !% to specify alternative states. Similarly to user-defined
+    !% potentials, this block allows you to specify formulas for
     !% the orbitals at t=0.
     !%
     !% Example:

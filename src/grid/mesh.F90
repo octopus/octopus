@@ -229,7 +229,7 @@ contains
   !---------------------------------------------------------------------
   ! Finds out if a given point of a mesh belongs to the "border" of the
   ! mesh. A point belongs to the border of the mesh if it is too close
-  ! to any of the walls of the mesh. The criterium is set by input
+  ! to any of the walls of the mesh. The criterion is set by input
   ! parameter "width".
   !
   ! m     : the mesh.
