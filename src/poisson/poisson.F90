@@ -118,9 +118,9 @@ contains
     !%Option fft_corrected 4
     !% FFTs + corrections
     !%Option cg 5
-    !% Conjugated gradients
+    !% Conjugate gradients
     !%Option cg_corrected 6
-    !% Corrected conjugated gradients
+    !% Corrected conjugate gradients
     !%Option multigrid 7
     !% Multigrid method
     !%Option isf 8

@@ -19,8 +19,8 @@
 
 
 ! ---------------------------------------------------------
-! This subroutine calculates the solution of using conjugated gradients
-!    (H + omega) x = y
+! This subroutine calculates the solution using conjugate gradients
+!    of (H + omega) x = y
 ! ---------------------------------------------------------
 subroutine X(solve_HXeY) (this, h, gr, st, ist, ik, x, y, omega)
   type(linear_solver_t), target, intent(inout) :: this
@@ -74,7 +74,7 @@ end subroutine X(solve_HXeY)
 
 
 ! ---------------------------------------------------------
-!Conjugated gradients
+!Conjugate gradients
 subroutine X(ls_solver_cg) (ls, h, gr, st, ist, ik, x, y, omega)
   type(linear_solver_t),          intent(inout) :: ls
   type(hamiltonian_t), intent(inout) :: h
@@ -140,7 +140,7 @@ subroutine X(ls_solver_cg) (ls, h, gr, st, ist, ik, x, y, omega)
 end subroutine X(ls_solver_cg)
 
 ! ---------------------------------------------------------
-!BICONJUGATED GRADIENTS STABILIZED
+!BICONJUGATE GRADIENTS STABILIZED
 !see http://math.nist.gov/iml++/bicgstab.h.txt
 subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ist, ik, x, y, omega)
   type(linear_solver_t),          intent(inout) :: ls

@@ -103,20 +103,20 @@ contains
     !%Description
     !% Decides the eigensolver that obtains the lowest eigenvalues and
     !% eigenfunctions of the Kohn-Sham Hamiltonian. The default is
-    !% conjugated gradients (cg), when parallelization in states is
+    !% conjugate gradients (cg), when parallelization in states is
     !% enabled the default is lobpcg.
     !%Option cg 5
     !% Conjugate-gradients algorithm.
     !%Option plan 11
     !% Preconditioned Lanczos scheme.
     !%Option cg_new 6
-    !% An alternative conjugated gradients eigensolver, faster for
+    !% An alternative conjugate-gradients eigensolver, faster for
     !% larger systems but less mature.
     !%Option evolution 9
     !% Propagation in imaginary time. WARNING: Sometimes it misbehaves. Use with 
     !% caution.
     !%Option lobpcg 8
-    !% Locally optimal block preconditioned conjugate gradient algorithm
+    !% Locally optimal block-preconditioned conjugate-gradient algorithm
     !% (only available if DevelVersion = yes),
     !% see: A. Knyazev. Toward the Optimal Preconditioned Eigensolver: Locally
     !% Optimal Block Preconditioned Conjugate Gradient Method. SIAM

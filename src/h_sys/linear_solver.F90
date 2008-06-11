@@ -107,10 +107,10 @@ contains
     !% selects which method to use in order to solve this linear
     !% equation.
     !%Option cg 5
-    !% Conjugated gradients. This is the fastest solver but does not
+    !% Conjugate gradients. This is the fastest solver but does not
     !% work when an imaginary shift is added. This is the default.
     !%Option bicgstab 3
-    !% Biconjugated gradients stabilized. This is an improved version
+    !% Biconjugate gradients stabilized. This is an improved version
     !% of bcg that is faster and more stable. This is the default when
     !% complex polarizabilities are calculated.
     !%Option multigrid 7
@@ -188,13 +188,13 @@ contains
     ! solver 
     select case(this%solver)
       case(LS_CG)
-        message(1)='Linear Solver: Conjugated Gradients'
+        message(1)='Linear Solver: Conjugate Gradients'
 
       case(LS_BICGSTAB)
-        message(1)='Linear Solver: Biconjugated Gradients Stabilized'
+        message(1)='Linear Solver: Biconjugate Gradients Stabilized'
 
       case(LS_MULTIGRID)
-        message(1)='Multigrid (currently only gauss-jacobi - EXPERIMENTAL)'
+        message(1)='Multigrid (currently only Gauss-Jacobi - EXPERIMENTAL)'
 
     end select
 
