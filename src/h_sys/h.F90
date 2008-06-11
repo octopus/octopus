@@ -27,6 +27,7 @@ module hamiltonian_m
   use geometry_m
   use global_m
   use grid_m
+  use gridhier_m
   use lalg_basic_m
   use loct_parser_m
   use mesh_m
@@ -88,8 +89,6 @@ module hamiltonian_m
     hamiltonian_adjoint,             &
     hamiltonian_not_adjoint,         &
     hamiltonian_hermitean
-
-
 
   type hamiltonian_t
     ! The Hamiltonian must know what are the "dimensions" of the spaces,
@@ -161,7 +160,8 @@ module hamiltonian_m
 
     CMPLX, pointer :: phase(:, :)
 
-    type(mg_float_pointer), pointer :: coarse_v(:)
+    logical :: multigrid_initialized
+    type(dgridhier_t) :: coarse_v
 
   end type hamiltonian_t
 
@@ -389,6 +389,8 @@ contains
     nullify(h%phase)
     if (simul_box_is_periodic(gr%sb)) call init_phase
 
+    h%multigrid_initialized = .false.
+
     call pop_sub()
 
   contains
@@ -417,13 +419,15 @@ contains
     integer :: level
 
     call push_sub('epot.epot_mg_init')
+    
+    h%multigrid_initialized = .true.
 
     call gridhier_init(h%coarse_v, gr%mgrid, add_points_for_boundaries=.false.)
 
-    h%coarse_v(0)%p(1:NP) = h%ep%vpsl(1:NP) + h%vhxc(1:NP, 1)
+    h%coarse_v%level(0)%p(1:NP) = h%ep%vpsl(1:NP) + h%vhxc(1:NP, 1)
 
     do level = 1, gr%mgrid%n_levels
-      call multigrid_fine2coarse(gr%mgrid, level, h%coarse_v(level - 1)%p, h%coarse_v(level)%p, INJECTION)
+      call multigrid_fine2coarse(gr%mgrid, level, h%coarse_v%level(level - 1)%p, h%coarse_v%level(level)%p, INJECTION)
     end do
 
   end subroutine hamiltonian_mg_init
@@ -438,7 +442,7 @@ contains
 
     call push_sub('h.hamiltonian_end')
 
-    if(associated(h%coarse_v)) then
+    if(h%multigrid_initialized) then
       call gridhier_end(h%coarse_v, gr%mgrid)
     end if
 

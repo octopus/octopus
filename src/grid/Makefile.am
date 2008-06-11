@@ -26,7 +26,7 @@ libgrid_a_SOURCES = \
 	mesh_lib.F90 par_vec.F90 mesh.F90 scalar_mesh.F90 nl_operator.F90 \
 	submesh.F90 stencil_star.F90 stencil_variational.F90 stencil_cube.F90 \
 	stencil_starplus.F90 derivatives.F90 cube_function.F90 fourier_space.F90 mesh_function.F90 \
-	functions.F90 basins.F90 io_function.F90 multigrid.F90 double_grid.F90 grid.F90
+	functions.F90 basins.F90 io_function.F90 multigrid.F90 gridhier.F90 double_grid.F90 grid.F90
 
 noinst_HEADERS = \
 	mesh_init.F90 par_vec_inc.F90 derivatives_inc.F90 cube_function_inc.F90 fourier_space_inc.F90 \
@@ -62,3 +62,4 @@ io_function.o : io_function.F90 io_function_inc.F90 par_vec.o  mesh.o functions.
 multigrid.o : multigrid.F90 multigrid_inc.F90 mesh.o functions.o curvlinear.o 
 double_grid.o : double_grid.F90 double_grid_apply.F90 submesh.o  mesh_function.o functions.o mesh.o curvlinear.o 
 grid.o : grid.F90  multigrid.o mesh.o functions.o double_grid.o curvlinear.o 
+gridhier.o : gridhier.F90 gridhier_inc.F90 multigrid.o
