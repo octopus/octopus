@@ -248,7 +248,7 @@ contains
       if(0 == t .and. res > fmg_threshold) then
         curr_l = max(cl-1, 0)
         do l= 0, curr_l-1
-          call multigrid_fine2coarse(gr%mgrid, l+1, tau%level(l)%p, tau%level(l+1)%p, this%restriction_method)
+          call dmultigrid_fine2coarse(gr%mgrid, l+1, tau%level(l)%p, tau%level(l+1)%p, this%restriction_method)
         end do
       end  if
 
@@ -308,14 +308,14 @@ contains
 
         if (l /= cl ) then
           ! transfer of the current solution
-          call multigrid_fine2coarse(gr%mgrid, l+1, phi%level(l)%p, phi%level(l+1)%p, this%restriction_method)
+          call dmultigrid_fine2coarse(gr%mgrid, l+1, phi%level(l)%p, phi%level(l+1)%p, this%restriction_method)
 
           ! error calculation
           call df_laplacian(gr%sb, gr%mgrid%level(l)%f_der, phi%level(l)%p, err%level(l)%p)
           err%level(l)%p = err%level(l)%p - tau%level(l)%p
 
           ! transfer error to coarser grid
-          call multigrid_fine2coarse(gr%mgrid, l+1, err%level(l)%p, tau%level(l+1)%p, this%restriction_method)
+          call dmultigrid_fine2coarse(gr%mgrid, l+1, err%level(l)%p, tau%level(l+1)%p, this%restriction_method)
 
           ! the other part of the error
           call df_laplacian(gr%sb, gr%mgrid%level(l+1)%f_der, phi%level(l+1)%p, err%level(l+1)%p)

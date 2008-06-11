@@ -65,6 +65,115 @@
     call pop_sub()
   end subroutine X(multigrid_coarse2fine)
 
+  ! ---------------------------------------------------------
+  subroutine X(multigrid_fine2coarse)(mgrid, ilevel, f_fine, f_coarse, method_p)
+    type(multigrid_t), intent(in)  :: mgrid
+    integer,           intent(in)  :: ilevel
+    R_TYPE,            intent(in)  :: f_fine(:)
+    R_TYPE,            intent(out) :: f_coarse(:)
+    integer, optional, intent(in)  :: method_p
+
+    integer :: method
+
+    call push_sub('multigrid.multigrid_fine2coarse')
+
+    if(present(method_p)) then
+      method=method_p
+    else
+      method=FULLWEIGHT
+    end if
+
+    select case(method)
+    case(FULLWEIGHT)
+      call X(multigrid_restriction)(mgrid, ilevel, f_fine, f_coarse)
+    case(INJECTION)
+      call X(multigrid_injection)(mgrid, ilevel, f_fine, f_coarse)
+    case default
+      write(message(1), '(a,i2,a)') 'Multigrid: Restriction method  = ', method, ' is not valid.'
+      call write_fatal(1)
+    end select
+
+    call pop_sub()
+  end subroutine X(multigrid_fine2coarse)
+
+
+  ! ---------------------------------------------------------
+  subroutine X(multigrid_injection)(mgrid, ilevel, f_fine, f_coarse)
+    type(multigrid_t), intent(in)  :: mgrid
+    integer,           intent(in)  :: ilevel
+    R_TYPE,            intent(in)  :: f_fine(:)
+    R_TYPE,            intent(out) :: f_coarse(:)
+
+    integer :: i
+    type(multigrid_level_t), pointer :: level
+
+    call push_sub('multigrid.multigrid_injection')
+
+    ASSERT(ilevel>0.and.ilevel<=mgrid%n_levels)
+
+    level => mgrid%level(ilevel)
+    do i = 1, level%n_coarse
+      f_coarse(i) = f_fine(level%to_coarse(i))
+    end do
+
+    call pop_sub()
+  end subroutine X(multigrid_injection)
+
+  ! ---------------------------------------------------------
+  subroutine X(multigrid_restriction)(mgrid, ilevel, f_fine, f_coarse)
+    type(multigrid_t), intent(in)  :: mgrid
+    integer,           intent(in)  :: ilevel
+    R_TYPE,            intent(in)  :: f_fine(:)
+    R_TYPE,            intent(out) :: f_coarse(:)
+
+    FLOAT :: weight(-1:1,-1:1,-1:1)
+
+    integer :: n, fn, di, dj, dk, d, fi(MAX_DIM)
+    type(multigrid_level_t), pointer :: level
+    type(mesh_t), pointer :: fine_mesh, coarse_mesh
+
+    call push_sub('multigrid.multigrid_restriction')
+
+    ASSERT(ilevel>0.and.ilevel<=mgrid%n_levels)
+
+    do di = -1, 1
+      do dj = -1, 1
+        do dk = -1, 1
+          d = abs(di) + abs(dj) + abs(dk)
+          weight(di, dj, dk) = CNST(0.5)**d
+        end do
+      end do
+    end do
+
+    level => mgrid%level(ilevel)
+
+    fine_mesh => mgrid%level(ilevel-1)%m
+    coarse_mesh => mgrid%level(ilevel)%m
+
+    do n = 1, level%n_coarse
+      fn   = level%to_coarse(n)
+      fi(:)= fine_mesh%Lxyz(fn,:)
+
+      f_coarse(n) = M_ZERO
+
+      do di = -1, 1
+        do dj = -1, 1
+          do dk = -1, 1
+            fn = fine_mesh%Lxyz_inv(fi(1)+di,fi(2)+dj,fi(3)+dk)
+            if(fn <= fine_mesh%np ) then
+              f_coarse(n) = f_coarse(n)+weight(di,dj,dk)*f_fine(fn)*fine_mesh%vol_pp(fn)
+            end if
+          end do
+        end do
+      end do
+
+      f_coarse(n) = f_coarse(n)/coarse_mesh%vol_pp(n)
+    end do
+
+    call pop_sub()
+  end subroutine X(multigrid_restriction)
+
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

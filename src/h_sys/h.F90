@@ -427,7 +427,7 @@ contains
     h%coarse_v%level(0)%p(1:NP) = h%ep%vpsl(1:NP) + h%vhxc(1:NP, 1)
 
     do level = 1, gr%mgrid%n_levels
-      call multigrid_fine2coarse(gr%mgrid, level, h%coarse_v%level(level - 1)%p, h%coarse_v%level(level)%p, INJECTION)
+      call dmultigrid_fine2coarse(gr%mgrid, level, h%coarse_v%level(level - 1)%p, h%coarse_v%level(level)%p, INJECTION)
     end do
 
   end subroutine hamiltonian_mg_init
