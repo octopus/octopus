@@ -54,7 +54,7 @@ Subroutine X(lcao_initial_wf) (n, m, geo, sb, psi, ispin, ik, kpoints, err)
   type(mesh_t),             intent(in)  :: m
   type(simul_box_t),        intent(in)  :: sb
   type(geometry_t), target, intent(in)  :: geo
-  R_TYPE,                   intent(out) :: psi(:, :)
+  R_TYPE,                   intent(inout) :: psi(:, :)
   integer,                  intent(in)  :: ispin
   integer,                  intent(in)  :: ik
   FLOAT,                    intent(in)  :: kpoints(:)
@@ -88,7 +88,7 @@ Subroutine X(lcao_initial_wf) (n, m, geo, sb, psi, ispin, ik, kpoints, err)
   end if
 
   psi(1:m%np, 1:wf_dim) = R_TOTYPE(M_ZERO)
-
+  
   select case(ispin)
 
     case(UNPOLARIZED, SPIN_POLARIZED)
@@ -105,10 +105,10 @@ Subroutine X(lcao_initial_wf) (n, m, geo, sb, psi, ispin, ik, kpoints, err)
           if(n == i) then
             call periodic_copy_init(pc, sb, geo%atom(ia)%x, range = maxval(sb%lsize(1:sb%periodic_dim)))
             do icell = 1, periodic_copy_num(pc)
-            pos = periodic_copy_position(pc, sb, icell)
+              pos = periodic_copy_position(pc, sb, icell)
               do k = 1, m%np
                 x(1:calc_dim) = m%x(k, 1:calc_dim) - pos(1:calc_dim)
-                psi(k, 1) =  psi(k, 1) + exp(M_zI*sum(kpoints(:)*x(:)))* &
+                psi(k, 1) =  psi(k, 1) + exp(M_zI*sum(kpoints(1:calc_dim)*x(1:calc_dim)))* &
                   R_TOTYPE(specie_get_iwf(s, j, calc_dim, states_spin_channel(ispin, ik, 1), x(1:calc_dim)))
               end do
             end do
