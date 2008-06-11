@@ -171,7 +171,7 @@ contains
     emin = minval(eigenvalues)
     emax = maxval(eigenvalues)
 
-    sumq = this%el_per_state*nst
+    sumq = this%el_per_state*nst*nik
 
     if (sumq < qtot) then ! not enough states
       message(1) = 'Not enough states'
