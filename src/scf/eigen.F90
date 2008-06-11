@@ -287,7 +287,7 @@ contains
           call write_fatal(5)
         end if
       case(RS_MG)
-        call deigen_solver_mg(gr, st, h, eigens%pre, tol, maxiter, eigens%converged, eigens%diff, verbose = verbose_)
+        call deigen_solver_mg(gr, st, h, tol, maxiter, eigens%converged, eigens%diff, verbose = verbose_)
       end select
 
       if(st%parallel_in_states) then 
@@ -322,7 +322,7 @@ contains
           call write_fatal(5)
         end if
       case(RS_MG)
-        call zeigen_solver_mg(gr, st, h, eigens%pre, tol, maxiter, eigens%converged, eigens%diff, verbose = verbose_)
+        call zeigen_solver_mg(gr, st, h, tol, maxiter, eigens%converged, eigens%diff, verbose = verbose_)
       end select
 
       if(st%parallel_in_states) then 

@@ -18,11 +18,10 @@
 !! $Id: eigen_mg_inc.F90 4195 2008-05-25 18:15:35Z xavier $
 
 ! ---------------------------------------------------------
-subroutine X(eigen_solver_mg) (gr, st, h, pre, tol, niter, converged, diff, verbose)
+subroutine X(eigen_solver_mg) (gr, st, h, tol, niter, converged, diff, verbose)
   type(grid_t),           intent(inout) :: gr
   type(states_t),         intent(inout) :: st
   type(hamiltonian_t),    intent(inout) :: h
-  type(preconditioner_t), intent(in) :: pre
   FLOAT,                  intent(in)    :: tol
   integer,                intent(inout) :: niter
   integer,                intent(inout) :: converged
@@ -49,31 +48,19 @@ subroutine X(eigen_solver_mg) (gr, st, h, pre, tol, niter, converged, diff, verb
 
   do ik = 1, st%d%nik
     
-    call X(hpsi_diag) (h, gr, hdiag, ik)
-    
-    do iter = 1, niter*100
+    do iter = 1, niter
+
+      call X(eigen_diag_subspace)(gr, st, h, diff)
 
       do ist = 1, st%nst
-
-        call X(hpsi)(h, gr, st%X(psi)(:,:, ist, ik), hpsi, ist, ik)
-        
-        bb = X(states_nrm2)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik))
-        call lalg_scal(NP, M_ONE/bb, st%X(psi)(:, 1, ist, ik))
-        
-        cc(ist, 1:ist - 1) = cc(ist, 1:ist - 1)/bb
-
-        aa(ist) = X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), hpsi)
-
-        st%eigenval(ist, ik) = aa(ist)
-
-        diff(ist, ik) = X(states_residue)(gr%m, st%d%dim, hpsi, st%eigenval(ist, ik), st%X(psi)(:, :, ist, ik))
- 
-        if(mod(iter, 100) ==  1) print*, iter, ist, st%eigenval(ist, ik), diff(ist, ik)
-
+        print*, iter, ist, st%eigenval(ist, ik), diff(ist, ik)
       end do
-      
+      print*, " "
+
       do ist = 1, st%nst
 
+        aa(ist) = st%eigenval(ist, ik)
+      
         cc(ist, ist) = M_ONE
         do ist2 = 1, ist - 1
           cc(ist, ist2) = X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), st%X(psi)(:, :, ist2, ik))
@@ -81,63 +68,103 @@ subroutine X(eigen_solver_mg) (gr, st, h, pre, tol, niter, converged, diff, verb
 
       end do
       
-      do ip = 1, NP
+      call X(coordinate_relaxation)(gr, gr%m, h, st%nst, 10, ik, st%X(psi)(:, :, :, ik), aa, cc)
 
-        vv = sqrt(gr%m%vol_pp(ip))
-        dh = hdiag(ip, 1)
-          
-        do ist = 1, st%nst
-
-          beta(ist) = st%X(psi)(ip, 1, ist, ik)*vv
-          
-          ! apply the hamiltonian in the point
-
-          alpha = M_ZERO
-          do is = 1, gr%LAP%n
-            inb = ip + gr%LAP%ri(is, gr%LAP%rimap(ip))
-            alpha = alpha + gr%LAP%w_re(is, 1)*st%X(psi)(inb, 1, ist, ik)
-          end do
-
-          alpha = -M_HALF*alpha + (h%vhxc(ip, 1) + h%ep%vpsl(ip))*st%X(psi)(ip, 1, ist, ik)
-
-          alpha = alpha*vv
-
-          s1 = M_ZERO
-          s2 = M_ZERO
-          s3 = M_ZERO
-          do ist2 = 1, ist - 1 
-            s1 = s1 + ww*beta(ist2)**2/cc(ist2, ist2)
-            s2 = s2 + ww*beta(ist2)*cc(ist, ist2)/cc(ist2, ist2)
-            s3 = s3 + ww*cc(ist, ist2)**2/cc(ist2, ist2)
-          end do
-
-          rta = alpha - dh*beta(ist) + s2 - beta(ist)*s1
-          rtb = cc(ist, ist)*dh - aa(ist) + cc(ist, ist)*s1 - s3
-          rtc = aa(ist)*beta(ist) - cc(ist, ist)*alpha + beta(ist)*s3 - s2
-          
-          sigma(ist) = -M_TWO*rtc/(rtb + sqrt(rtb**2 - M_FOUR*rta*rtc))
-          
-          st%X(psi)(ip, 1, ist, ik) = st%X(psi)(ip, 1, ist, ik) - sigma(ist)/vv
-          
-          aa(ist) = aa(ist) - M_TWO*sigma(ist)*alpha + sigma(ist)**2*dh
-          cc(ist, ist) = cc(ist, ist) - M_TWO*sigma(ist)*beta(ist)  + sigma(ist)**2
-
-          do ist2 = 1, ist - 1
-            cc(ist, ist2) = cc(ist, ist2) - sigma(ist)*beta(ist2) - sigma(ist2)*beta(ist) + sigma(ist)*sigma(ist2)
-          end do
-          
-        end do
-        
+      ! normalize
+      do ist = 1, st%nst      
+        call lalg_scal(NP, CNST(1.0)/sqrt(cc(ist, ist)), st%X(psi)(:, 1, ist, ik))
       end do
-      
+
     end do
 
-    niter = iter
+    call X(eigen_diag_subspace)(gr, st, h, diff)
+
+    niter = iter*10
 
   end do
 
   call pop_sub()
 end subroutine X(eigen_solver_mg)
+
+subroutine X(coordinate_relaxation)(gr, mesh, h, nst, steps, ik, psi, aa, cc)
+  type(grid_t),           intent(inout) :: gr
+  type(mesh_t),           intent(inout) :: mesh
+  type(hamiltonian_t),    intent(inout) :: h
+  integer,                intent(in)    :: nst
+  integer,                intent(in)    :: steps
+  integer,                intent(in)    :: ik
+  R_TYPE,                 intent(inout) :: psi(:, :, :)
+  R_TYPE,                 intent(inout) :: aa(:)
+  R_TYPE,                 intent(inout) :: cc(:, :)
+
+  integer :: ip, ist, ist2, iter, is, inb
+  FLOAT, parameter :: ww = 5.0
+  FLOAT :: pot, dh, vv
+  R_TYPE  :: rta, rtb, rtc, alpha, s1, s2, s3
+  
+  R_TYPE, allocatable :: sigma(:), beta(:), hdiag(:, :)
+
+  ALLOCATE(sigma(1:nst), nst)
+  ALLOCATE(beta(1:nst), nst)
+  ALLOCATE(hdiag(1:mesh%np, 1:h%d%dim), NP*h%d%dim)
+
+  call X(hpsi_diag) (h, gr, hdiag, ik)
+
+  do iter = 1, steps
+    
+    do ip = 1, mesh%np
+      
+      vv = sqrt(mesh%vol_pp(ip))
+      dh = hdiag(ip, 1)
+      pot = h%vhxc(ip, 1) + h%ep%vpsl(ip)
+      
+      do ist = 1, nst
+        
+        beta(ist) = psi(ip, 1, ist)*vv
+        
+        ! apply the hamiltonian in the point
+            
+        alpha = M_ZERO
+        do is = 1, gr%LAP%n
+          inb = ip + gr%LAP%ri(is, gr%LAP%rimap(ip))
+          alpha = alpha + gr%LAP%w_re(is, 1)*psi(inb, 1, ist)
+        end do
+        
+        alpha = -M_HALF*alpha + pot*psi(ip, 1, ist)
+        
+        alpha = alpha*vv
+        
+        s1 = M_ZERO
+        s2 = M_ZERO
+        s3 = M_ZERO
+        do ist2 = 1, ist - 1 
+          s1 = s1 + ww/cc(ist2, ist2)*beta(ist2)**2
+          s2 = s2 + ww/cc(ist2, ist2)*beta(ist2)*cc(ist, ist2)
+          s3 = s3 + ww/cc(ist2, ist2)*cc(ist, ist2)**2
+        end do
+        
+        rta = alpha - dh*beta(ist) + s2 - beta(ist)*s1
+        rtb = cc(ist, ist)*dh - aa(ist) + cc(ist, ist)*s1 - s3
+        rtc = aa(ist)*beta(ist) - cc(ist, ist)*alpha + beta(ist)*s3 - s2
+        
+        sigma(ist) = -M_TWO*rtc/(rtb + sqrt(rtb**2 - M_FOUR*rta*rtc))
+        
+        psi(ip, 1, ist) = psi(ip, 1, ist) - sigma(ist)/vv
+        
+        aa(ist) = aa(ist) - M_TWO*sigma(ist)*alpha + sigma(ist)**2*dh
+        cc(ist, ist) = cc(ist, ist) - M_TWO*sigma(ist)*beta(ist)  + sigma(ist)**2
+        
+        do ist2 = 1, ist - 1
+          cc(ist, ist2) = cc(ist, ist2) - sigma(ist)*beta(ist2) - sigma(ist2)*beta(ist) + sigma(ist)*sigma(ist2)
+        end do
+        
+      end do
+      
+    end do
+    
+  end do
+  
+end subroutine X(coordinate_relaxation)
 
 !! Local Variables:
 !! mode: f90
