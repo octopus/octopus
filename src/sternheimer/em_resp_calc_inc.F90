@@ -405,47 +405,42 @@ subroutine X(lr_calc_beta) (sh, sys, h, lr, dipole, beta)
               do ist = 1, st%nst
                 do idim = 1, st%d%dim
 
-                  if( st%occ(ist, ik) > lr_min_occ ) then 
+                  call pert_setup_dir(dipole, u(2))
+                  call X(pert_apply)  &
+                    (dipole, sys%gr, sys%geo, h, ik, lr(u(3), isigma, w(3))%X(dl_psi)(:, idim, ist, ispin), tmp)
+                  
+                  do ip = 1, np
+                    tmp(ip) = tmp(ip) + &
+                      R_REAL(hvar(ip, ispin, isigma, idim, u(2), w(2)))*lr(u(3), isigma, w(3))%X(dl_psi)(ip, idim, ist, ispin)
+                  end do
 
-                    call pert_setup_dir(dipole, u(2))
-                    call X(pert_apply)  &
-                         (dipole, sys%gr, sys%geo, h, ik, lr(u(3), isigma, w(3))%X(dl_psi)(:, idim, ist, ispin), tmp)
+                  beta(ii, jj, kk) = beta(ii, jj, kk) &
+                    - M_HALF*st%d%kweights(ik)*st%smear%el_per_state &
+                    *X(mf_dotp)(mesh, lr(u(1), op_sigma, w(1))%X(dl_psi)(:, idim, ist, ispin), tmp)
+                  
+                  do ispin2 = 1, st%d%nspin
+                    do ist2 = 1, st%nst
+                      do idim2 = 1, st%d%dim
 
-                    do ip = 1, np
-                      tmp(ip) = tmp(ip) + &
-                           R_REAL(hvar(ip, ispin, isigma, idim, u(2), w(2)))*lr(u(3), isigma, w(3))%X(dl_psi)(ip, idim, ist, ispin)
-                    end do
+                        call pert_setup_dir(dipole, u(2))
+                        call X(pert_apply)(dipole, sys%gr, sys%geo, h, ik, st%X(psi)(1:np, idim, ist, ispin), tmp)
 
-                    beta(ii, jj, kk) = beta(ii, jj, kk) &
-                         - M_HALF*st%d%kweights(ik)*st%smear%el_per_state &
-                         *X(mf_dotp)(mesh, lr(u(1), op_sigma, w(1))%X(dl_psi)(:, idim, ist, ispin), tmp)
+                        do ip = 1, np
+                          tmp(ip) = tmp(ip) + &
+                            R_REAL(hvar(ip, ispin2, isigma, idim2, u(2), w(2)))*st%X(psi)(ip, idim, ist, ispin)
+                        end do
 
-                    do ispin2 = 1, st%d%nspin
-                      do ist2 = 1, st%nst
-                        do idim2 = 1, st%d%dim
-                          if( st%occ(ist2, ik) > lr_min_occ ) then 
+                        prod = X(mf_dotp)(mesh, st%X(psi)(:, idim2, ist2, ispin2), tmp)
 
-                            call pert_setup_dir(dipole, u(2))
-                            call X(pert_apply)(dipole, sys%gr, sys%geo, h, ik, st%X(psi)(1:np, idim, ist, ispin), tmp)
+                        beta(ii, jj, kk) = beta(ii, jj, kk) + & 
+                          M_HALF*st%d%kweights(ik)*st%smear%el_per_state*prod*X(mf_dotp)(mesh, &
+                          lr(u(1), op_sigma, w(1))%X(dl_psi)(:, idim, ist, ispin), &
+                          lr(u(3), isigma,   w(3))%X(dl_psi)(:, idim2, ist2, ispin2))
 
-                            do ip = 1, np
-                              tmp(ip) = tmp(ip) + &
-                                   R_REAL(hvar(ip, ispin2, isigma, idim2, u(2), w(2)))*st%X(psi)(ip, idim, ist, ispin)
-                            end do
+                      end do !idim2
+                    end do ! ist2
+                  end do ! ispin2
 
-                            prod = X(mf_dotp)(mesh, st%X(psi)(:, idim2, ist2, ispin2), tmp)
-
-                            beta(ii, jj, kk) = beta(ii, jj, kk) + & 
-                                 M_HALF*st%d%kweights(ik)*st%smear%el_per_state*prod*X(mf_dotp)(mesh, &
-                                 lr(u(1), op_sigma, w(1))%X(dl_psi)(:, idim, ist, ispin), &
-                                 lr(u(3), isigma,   w(3))%X(dl_psi)(:, idim2, ist2, ispin2))
-
-                          end if
-                        end do !idim2
-                      end do ! ist2
-                    end do ! ispin2
-
-                  end if
 
                 end do !idim
               end do !ist

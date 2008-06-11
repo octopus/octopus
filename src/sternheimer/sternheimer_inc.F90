@@ -104,8 +104,6 @@ subroutine X(sternheimer_solve)(                           &
       !now calculate response for each state
       do ist = 1, st%nst
         do sigma = 1, nsigma
-          if(st%occ(ist, ik) <= lr_min_occ) cycle
-          
           !calculate the RHS of the Sternheimer eq
           Y(:, 1, sigma) = R_TOTYPE(M_ZERO)
           call X(pert_apply) (perturbation, sys%gr, sys%geo, h, ik, st%X(psi)(:, 1, ist, ik), Y(:, 1, sigma))

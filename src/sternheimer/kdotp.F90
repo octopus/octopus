@@ -28,6 +28,7 @@ module kdotp_lr_m
   use grid_m
   use hamiltonian_m
   use io_m
+  use io_function_m
   use kdotp_calc_m
   use lalg_basic_m
   use loct_parser_m
@@ -640,7 +641,7 @@ contains
         do ist = 1, nst
           write(iunit,'(a)')
           write(iunit,'(a, i6)') 'State #', ist
-          call out_tensor(iunit, kdotp_vars%eff_mass_inv(ik, ist, :, :), M_ONE)
+          call io_output_tensor(iunit, kdotp_vars%eff_mass_inv(ik, ist, :, :), NDIM, M_ONE)
         enddo
 
       end subroutine out_eff_mass
@@ -696,7 +697,7 @@ contains
 !      if(NDIM.ne.1) write(iunit, '(a,i1)', advance='no') '^', NDIM
 !      write(iunit, '(a)') ']'
 !
-!      call out_tensor(iunit, em_vars%alpha(:,:, ifactor), units_out%length%factor**NDIM)
+!      call io_output_tensor(iunit, em_vars%alpha(:,:, ifactor), units_out%length%factor**NDIM)
 !
 !      call io_close(iunit)
 !
@@ -732,54 +733,33 @@ contains
 !      if (.not.em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
 !
 !      write(iunit, '(2a)') '# Paramagnetic contribution to the susceptibility tensor [ppm a.u.]'
-!      call out_tensor(iunit, em_vars%chi_para(:, :, ifactor), CNST(1e-6))
+!      call io_output_tensor(iunit, em_vars%chi_para(:, :, ifactor), CNST(1e-6))
 !      write(iunit, '(1x)')
 !
 !      write(iunit, '(2a)') '# Diamagnetic contribution to the susceptibility tensor [ppm a.u.]'
-!      call out_tensor(iunit, em_vars%chi_dia(:, :, ifactor), CNST(1e-6))
+!      call io_output_tensor(iunit, em_vars%chi_dia(:, :, ifactor), CNST(1e-6))
 !      write(iunit, '(1x)')
 !
 !      write(iunit, '(2a)') '# Total susceptibility tensor [ppm a.u.]'
-!      call out_tensor(iunit, em_vars%chi_para(:, :, ifactor) + em_vars%chi_dia(:,:, ifactor), CNST(1e-6))
+!      call io_output_tensor(iunit, em_vars%chi_para(:, :, ifactor) + em_vars%chi_dia(:,:, ifactor), CNST(1e-6))
 !      write(iunit, '(1x)')
 !
 !      write(iunit, '(a)') hyphens
 !
 !      write(iunit, '(2a)') '# Paramagnetic contribution to the susceptibility tensor [ppm cgs / mol]'
-!      call out_tensor(iunit, em_vars%chi_para(:, :, ifactor), M_ONE/CNST(8.9238878e-2)*CNST(1e-6))
+!      call io_output_tensor(iunit, em_vars%chi_para(:, :, ifactor), M_ONE/CNST(8.9238878e-2)*CNST(1e-6))
 !      write(iunit, '(1x)')
 !
 !      write(iunit, '(2a)') '# Diamagnetic contribution to the susceptibility tensor [ppm cgs / mol]'
-!      call out_tensor(iunit, em_vars%chi_dia(:, :, ifactor), M_ONE/CNST(8.9238878e-2)*CNST(1e-6))
+!      call io_output_tensor(iunit, em_vars%chi_dia(:, :, ifactor), M_ONE/CNST(8.9238878e-2)*CNST(1e-6))
 !      write(iunit, '(1x)')
 !
 !      write(iunit, '(2a)') '# Total susceptibility tensor [ppm cgs / mol]'
-!      call out_tensor(iunit, em_vars%chi_para(:, :, ifactor) + em_vars%chi_dia(:,:, ifactor), M_ONE/CNST(8.9238878e-2)*CNST(1e-6))
+!      call io_output_tensor(iunit, em_vars%chi_para(:, :, ifactor) + em_vars%chi_dia(:,:, ifactor), M_ONE/CNST(8.9238878e-2)*CNST(1e-6))
 !      write(iunit, '(1x)')
 !
 !      call io_close(iunit)      
 !    end subroutine out_susceptibility
-
-
-    ! ---------------------------------------------------------
-    subroutine out_tensor(iunit, tensor, factor)
-      integer, intent(in) :: iunit
-      FLOAT,   intent(in) :: tensor(:,:)
-      FLOAT,   intent(in) :: factor
-
-      FLOAT :: trace
-      integer :: j
-
-      trace = M_z0
-      do j = 1, NDIM
-        write(iunit, '(3f20.6)') real(tensor(j, 1:NDIM))/factor
-        trace = trace + real(tensor(j, j))
-      end do
-      trace = trace/M_THREE
-
-      write(iunit, '(a, f20.6)')  'Isotropic average', trace/factor
-      
-    end subroutine out_tensor
 
 
 !    ! ---------------------------------------------------------

@@ -171,9 +171,9 @@ contains
     emin = minval(eigenvalues)
     emax = maxval(eigenvalues)
 
-    sumq = this%el_per_state*nst*nik
+    sumq = this%el_per_state*nst*sum(kweights(:))
 
-    if (sumq < qtot) then ! not enough states
+    if (sumq - qtot <= -CNST(1e-10)) then ! not enough states
       message(1) = 'Not enough states'
       write(message(2),'(6x,a,f12.6,a,f12.6)')'(total charge = ', qtot, &
         ' max charge = ', sumq
@@ -181,7 +181,7 @@ contains
     end if
 
     conv = .true.
-    if(this%fixed_occ) then ! Fermi energy last of occupied states
+    if(this%fixed_occ) then ! Fermi energy: last of occupied states
       ist_cycle: do ist = nst, 1, -1
         do ik = 1, nik
           if(occupations(ist, ik) > CNST(1e-5)) then

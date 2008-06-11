@@ -1,0 +1,12 @@
+CalculationMode = em_resp
+Units = eV_Angstrom
+fromScratch = yes
+
+SmearingFunction = methfessel_paxton
+Smearing = 0.5
+ExtraStates = 3
+
+%Coordinates
+  "Na" | -1.54 | 0 | 0
+  "Na" |  1.54 | 0 | 0
+%

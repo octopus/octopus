@@ -48,7 +48,8 @@ module io_function_m
     dinput_function,              &
     zinput_function,              &
     doutput_function,             &
-    zoutput_function
+    zoutput_function,             &
+    io_output_tensor
 
   integer, parameter, public ::   &
     output_axis_x     =     1,    &
@@ -227,6 +228,28 @@ contains
       end do
     end do
   end subroutine transpose3
+
+
+  ! ---------------------------------------------------------
+  subroutine io_output_tensor(iunit, tensor, ndim, factor)
+    integer, intent(in) :: iunit
+    FLOAT,   intent(in) :: tensor(:,:)
+    integer, intent(in) :: ndim
+    FLOAT,   intent(in) :: factor
+    
+    FLOAT :: trace
+    integer :: j
+
+    trace = M_z0
+    do j = 1, ndim
+      write(iunit, '(3f20.6)') tensor(j, 1:ndim)/factor
+      trace = trace + tensor(j, j)
+    end do
+    trace = trace/TOFLOAT(ndim)
+
+    write(iunit, '(a, f20.6)')  'Isotropic average', trace/factor
+      
+  end subroutine io_output_tensor
 
 
 #include "undef.F90"

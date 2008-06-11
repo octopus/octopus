@@ -37,9 +37,6 @@ module linear_response_m
 
   private
 
-  !the minimum value for a state to be considered occupied
-  FLOAT, public, parameter :: lr_min_occ=CNST(1e-5)
-  
   public ::               &
        lr_t,              &
        lr_init,           &

@@ -145,7 +145,7 @@ contains
           dipole(i, j, k) = dmf_moment(gr%m, trrho, j, 1)
         end do
 
-        call output_()
+        call output_cycle_()
 
       end do
 
@@ -161,24 +161,9 @@ contains
     end do
 
     call scf_end(scfv)
-
-    call io_mkdir('linear')
-    if(out_pol  .and.  mpi_grp_is_root(mpi_world)) then ! output pol file
-      iunit = io_open('linear/polarizability_fd', action='write')
-      write(iunit, '(2a)', advance='no') '# Static polarizability tensor [', &
-        trim(units_out%length%abbrev)
-      if(NDIM.ne.1) write(iunit, '(a,i1)', advance='no') '^', NDIM
-      write(iunit, '(a)') ']'
-
-      do j = 1, NDIM
-        write(iunit, '(3f12.6)') (dipole(j, 1:NDIM, 1) - dipole(j, 1:NDIM, 2))/(M_TWO*e_field) &
-          / units_out%length%factor**NDIM
-      end do
-      call io_close(iunit)
-    end if
+    call output_end_()
 
     deallocate(Vpsl_save, trrho, dipole)
-    call output_end_()
     call end_()
 
   contains
@@ -219,10 +204,11 @@ contains
       call pop_sub()
     end subroutine end_
   
+
+    !-------------------------------------------------------------
     subroutine output_init_()
 
       !allocate memory for what we want to output
-      
       if(iand(sys%outp%what, output_density).ne.0) then 
         ALLOCATE(lr_rho(1:NP, 1:st%d%nspin), NP*st%d%nspin)
       end if
@@ -236,7 +222,9 @@ contains
       
     end subroutine output_init_
 
-    subroutine output_()
+
+    !-------------------------------------------------------------
+    subroutine output_cycle_()
       
       !DENSITY      
       if(iand(sys%outp%what, output_density).ne.0) then 
@@ -277,14 +265,30 @@ contains
             call doutput_function(sys%outp%how, "linear", trim(fname),&
                 gr%m, gr%sb, lr_elfd(:, is), M_ONE, ierr)
           end do
-
         end if
 
       end if
 
-    end subroutine output_
+    end subroutine output_cycle_
 
+
+    !-------------------------------------------------------------
     subroutine output_end_()
+      FLOAT :: alpha(MAX_DIM, MAX_DIM)
+      integer :: iunit
+
+      call io_mkdir('linear')
+      if(out_pol  .and.  mpi_grp_is_root(mpi_world)) then ! output pol file
+        iunit = io_open('linear/polarizability_fd', action='write')
+        write(iunit, '(2a)', advance='no') '# Polarizability tensor [', &
+          trim(units_out%length%abbrev)
+        if(NDIM.ne.1) write(iunit, '(a,i1)', advance='no') '^', NDIM
+        write(iunit, '(a)') ']'
+
+        alpha(1:NDIM,1:NDIM) = (dipole(1:NDIM, 1:NDIM, 1) - dipole(1:NDIM, 1:NDIM, 2))/(M_TWO*e_field)
+        call io_output_tensor(iunit, alpha, NDIM, units_out%length%factor**NDIM)
+        call io_close(iunit)
+      end if
 
       if(iand(sys%outp%what, output_density).ne.0) then 
         deallocate(lr_rho)
@@ -296,7 +300,6 @@ contains
         deallocate(lr_elfd)
         deallocate(elfd)
       end if
-
     end subroutine output_end_
 
   end subroutine static_pol_run

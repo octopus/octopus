@@ -150,8 +150,7 @@ subroutine X(lr_orth_response)(m, st, lr)
   
   do ik = 1, st%d%nik
     do ist = 1, st%nst
-      if(st%occ(ist, ik) > lr_min_occ) &
-        call X(lr_orth_vector) (m, st, lr%X(dl_psi)(:,:, ist, ik), ist, ik)
+      call X(lr_orth_vector) (m, st, lr%X(dl_psi)(:,:, ist, ik), ist, ik)
     end do
   end do
   
