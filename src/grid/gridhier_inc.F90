@@ -18,9 +18,9 @@
 !! $Id: gridhier_inc.F90 4205 2008-05-29 07:54:35Z xavier $
 
 subroutine X(gridhier_init)(this, mgrid, add_points_for_boundaries)
-  type(X(gridhier_t)),  intent(in) :: this
-  type(multigrid_t),      pointer :: mgrid
-  logical,             intent(in) :: add_points_for_boundaries
+  type(X(gridhier_t)),  intent(out) :: this
+  type(multigrid_t),    intent(in)  :: mgrid
+  logical,              intent(in)  :: add_points_for_boundaries
   
   integer :: cl, l
   call push_sub('poisson_multigrid.gridhier_init')
@@ -44,8 +44,8 @@ end subroutine X(gridhier_init)
 
 ! ---------------------------------------------------------
 subroutine X(gridhier_end)(this, mgrid)
-  type(X(gridhier_t)),  intent(in) :: this
-  type(multigrid_t),       pointer :: mgrid
+  type(X(gridhier_t)),  intent(inout) :: this
+  type(multigrid_t),    intent(in)    :: mgrid
 
   integer :: cl, l
   call push_sub('poisson_multigrid.gridhier_end')
