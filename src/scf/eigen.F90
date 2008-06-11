@@ -75,12 +75,13 @@ module eigen_solver_m
   end type eigen_solver_t
 
 
-  integer, parameter :: RS_PLAN    = 11
-  integer, parameter :: RS_CG      = 5
-  integer, parameter :: RS_MG      = 7
-  integer, parameter :: RS_CG_NEW  = 6
-  integer, parameter :: EVOLUTION  = 9
-  integer, parameter :: RS_LOBPCG  = 8
+  integer, public, parameter :: &
+       RS_PLAN    = 11,         &
+       RS_CG      =  5,         &
+       RS_MG      =  7,         &
+       RS_CG_NEW  =  6,         &
+       RS_EVO     =  9,         &
+       RS_LOBPCG  =  8
 
   type(profile_t),     save    :: diagon_prof
 
@@ -139,7 +140,7 @@ contains
     case(RS_MG)
     case(RS_CG)
     case(RS_PLAN)
-    case(EVOLUTION)
+    case(RS_EVO)
       !%Variable EigenSolverImaginaryTime
       !%Type float
       !%Default 10.0
@@ -271,7 +272,7 @@ contains
              eigens%converged, eigens%diff, verbose = verbose_)
       case(RS_PLAN)
         call deigen_solver_plan(gr, st, h, eigens%pre, tol, maxiter, eigens%converged, eigens%diff)
-      case(EVOLUTION)
+      case(RS_EVO)
         call deigen_solver_evolution(gr, st, h, tol, maxiter, eigens%converged, eigens%diff, &
              tau = eigens%imag_time)
       case(RS_LOBPCG)
@@ -306,7 +307,7 @@ contains
              eigens%converged, eigens%diff, verbose = verbose_)
       case(RS_PLAN)
         call zeigen_solver_plan(gr, st, h, eigens%pre, tol, maxiter, eigens%converged, eigens%diff)
-      case(EVOLUTION)
+      case(RS_EVO)
         call zeigen_solver_evolution(gr, st, h, tol, maxiter, eigens%converged, eigens%diff, &
              tau = eigens%imag_time)
       case(RS_LOBPCG)
