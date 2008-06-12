@@ -22,10 +22,12 @@ ExtraStates = 1
 %
 SpinComponents = polarized
 EigenSolver = cg_new
-EigenSolverInitTolerance = 1.0e-4
-EigenSolverFinalTolerance = 1.0e-4
+EigenSolverInitTolerance = 1.0e-5
+EigenSolverFinalTolerance = 1.0e-5
 EigenSolverMaxIter = 1000
 Mixing = 1.0
+
+ConvRelDens = 1.0e-2
 
 # P_c is the speed of light in atomic units.
 P_c = 137.036
