@@ -447,27 +447,27 @@ subroutine X(ls_solver_sos) (this, h, gr, st, ist, ik, x, y, omega)
   R_TYPE,                         intent(in)    :: y(:,:)   ! y(NP, st%d%dim)
   R_TYPE,                         intent(in)    :: omega
 
-  integer :: ist2, idim
+  integer :: jst, idim
   R_TYPE  :: aa
+  FLOAT   :: alpha_j, dsmear
   R_TYPE, allocatable  :: rr(:, :)
 
   x(1:NP, 1:st%d%dim) = M_ZERO
   
-  do ist2 = 1, st%nst
+  dsmear = max(CNST(1e-14), st%smear%dsmear)
+  do jst = 1, st%nst
+    alpha_j = max(st%smear%e_fermi + M_THREE*dsmear - st%eigenval(jst, ik), M_ZERO)
 
-    aa = X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist2, ik), y)
-    aa = aa/(st%eigenval(ist2, ik) - st%eigenval(ist, ik) + omega)
+    aa = X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, jst, ik), y)
+    aa = aa/(st%eigenval(jst, ik) - st%eigenval(ist, ik) + alpha_j + omega)
 
     do idim = 1, st%d%dim
-      call lalg_axpy(NP, aa, st%X(psi)(:, idim, ist2, ik), x(:, idim))
+      call lalg_axpy(NP, aa, st%X(psi)(:, idim, jst, ik), x(:, idim))
     end do
-
   end do
 
   ! calculate the residual
-
   ALLOCATE(rr(1:NP, 1:st%d%dim), NP*st%d%dim)
-
   call X(ls_solver_operator)(h, gr, st, ist, ik, omega, x, rr)
 
   do idim = 1, st%d%dim
