@@ -124,7 +124,7 @@ subroutine X(sternheimer_solve)(                           &
           
           ! print the norm of the variations, and the number of
           ! iterations and residual of the linear solver
-          dpsimod = X(mf_nrm2)(m, lr(sigma)%X(dl_psi)(1:m%np, 1, ist, ik))
+          dpsimod = X(states_nrm2)(m, st%d%dim, lr(sigma)%X(dl_psi)(:,:, ist, ik))
 
           write(message(1), '(i4, f20.6, i5, e20.6)') &
                (3 - 2*sigma)*ist, dpsimod, this%solver%iter, this%solver%abs_psi 

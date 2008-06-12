@@ -378,22 +378,20 @@ subroutine X(ls_solver_operator) (h, gr, st, ist, ik, omega, x, hx)
     call lalg_axpy(NP, omega, x(:, idim), Hx(:, idim))
   end do
 
-  if(.not.st%smear%fixed_occ .and. st%smear%method.ne.SMEAR_SEMICONDUCTOR) then
-    ! This is the Q term in Eq. (11) of PRB 51, 6773 (1995)
-    ASSERT(.not.st%parallel_in_states)
+  ! This is the Q term in Eq. (11) of PRB 51, 6773 (1995)
+  ASSERT(.not.st%parallel_in_states)
 
-    dsmear = max(CNST(1e-14), st%smear%dsmear)
-    do jst = 1, st%nst
-      alpha_j = max(st%smear%e_fermi + M_THREE*dsmear - st%eigenval(jst, ik), M_ZERO)
-      if(alpha_j == M_ZERO) cycle
+  dsmear = max(CNST(1e-14), st%smear%dsmear)
+  do jst = 1, st%nst
+    alpha_j = max(st%smear%e_fermi + M_THREE*dsmear - st%eigenval(jst, ik), M_ZERO)
+    if(alpha_j == M_ZERO) cycle
       
-      proj = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:, :, jst, ik), x)
-      do idim = 1, st%d%dim
-        call lalg_axpy(NP, R_TOTYPE(alpha_j*proj), st%X(psi)(:, idim, jst, ik), Hx(:, idim))
-      end do
-
+    proj = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:, :, jst, ik), x)
+    do idim = 1, st%d%dim
+      call lalg_axpy(NP, R_TOTYPE(alpha_j*proj), st%X(psi)(:, idim, jst, ik), Hx(:, idim))
     end do
-  end if
+
+  end do
 
 end subroutine X(ls_solver_operator)
 
