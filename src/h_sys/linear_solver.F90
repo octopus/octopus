@@ -42,10 +42,11 @@ module linear_solver_m
   private
 
   integer, public, parameter ::&
-       LS_CG = 5,        &
-       LS_BICGSTAB = 3,  &
+       LS_CG        = 5, &
+       LS_BICGSTAB  = 3, &
        LS_MULTIGRID = 7, &
-       LS_QMR       = 8
+       LS_QMR       = 8, &
+       LS_SOS       = 9
 
   public :: &
        linear_solver_t, &
@@ -117,6 +118,10 @@ contains
     !% Multigrid solver (experimental, currently is only Gauss-Jacobi).
     !%Option qmr 8
     !% Quasi-minimal residual solver.
+    !%Option sos 9
+    !% Sum over states, the Sternheimer equation is solved by using
+    !% the explicit solution in terms of the ground state
+    !% wavefunctions. You need unoccupied states to use this method.
     !%End
 
     defsolver_ = LS_BICGSTAB
@@ -227,6 +232,8 @@ contains
     case (LS_MULTIGRID)
       n = 1
     case (LS_QMR)
+      n = 1
+    case(LS_SOS)
       n = 1
     end select
   

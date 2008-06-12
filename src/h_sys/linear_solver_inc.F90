@@ -62,6 +62,9 @@ subroutine X(solve_HXeY) (this, h, gr, st, ist, ik, x, y, omega)
          this%iter, residue = this%abs_psi, threshold = this%tol, showprogress = .false.)
 #endif
 
+  case(LS_SOS)
+    call X(ls_solver_sos)(this, h, gr, st, ist, ik, x, y, omega)
+
   case default 
     write(message(1), '(a,i2)') "Unknown linear response solver", this%solver
     call write_fatal(1)
@@ -433,6 +436,52 @@ subroutine X(ls_preconditioner) (x, hx)
   deallocate(tmpx, tmpy)
 
 end subroutine X(ls_preconditioner)
+
+! ---------------------------------------------------------
+subroutine X(ls_solver_sos) (this, h, gr, st, ist, ik, x, y, omega)
+  type(linear_solver_t),          intent(inout) :: this
+  type(hamiltonian_t),            intent(inout) :: h
+  type(grid_t),                   intent(inout) :: gr
+  type(states_t),                 intent(in)    :: st
+  integer,                        intent(in)    :: ist
+  integer,                        intent(in)    :: ik
+  R_TYPE,                         intent(inout) :: x(:,:)   ! x(NP, st%d%dim)
+  R_TYPE,                         intent(in)    :: y(:,:)   ! y(NP, st%d%dim)
+  R_TYPE,                         intent(in)    :: omega
+
+  integer :: ist2, idim
+  R_TYPE  :: aa
+  R_TYPE, allocatable  :: rr(:, :)
+
+  x(1:NP, 1:st%d%dim) = M_ZERO
+  
+  do ist2 = 1, st%nst
+
+    aa = X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist2, ik), y)
+    aa = aa/(st%eigenval(ist2, ik) - st%eigenval(ist, ik) + omega)
+
+    do idim = 1, st%d%dim
+      call lalg_axpy(NP, aa, st%X(psi)(:, idim, ist2, ik), x(:, idim))
+    end do
+
+  end do
+
+  ! calculate the residual
+
+  ALLOCATE(rr(1:NP, 1:st%d%dim), NP*st%d%dim)
+
+  call X(ls_solver_operator)(h, gr, st, ist, ik, omega, x, rr)
+
+  do idim = 1, st%d%dim
+    call lalg_axpy(NP, -M_ONE, y(:, idim), rr(:, idim))
+  end do
+  
+  this%abs_psi = X(states_nrm2)(gr%m, st%d%dim, rr)
+  this%iter = 1
+
+  deallocate(rr)
+
+end subroutine X(ls_solver_sos)
 
 !! Local Variables:
 !! mode: f90
