@@ -40,7 +40,7 @@ subroutine X(sternheimer_solve)(                           &
   logical,      optional, intent(in)    :: have_restart_rho
 
   FLOAT :: dpsimod
-  integer :: iter, sigma, ik, ist, err
+  integer :: iter, sigma, ik, ist, is, err
   R_TYPE, allocatable :: dl_rhoin(:, :, :), dl_rhonew(:, :, :), dl_rhotmp(:, :, :)
   R_TYPE, allocatable :: Y(:, :, :), hvar(:, :, :)
   R_TYPE, allocatable :: tmp(:)
@@ -102,12 +102,14 @@ subroutine X(sternheimer_solve)(                           &
 
     do ik = 1, st%d%nik
       !now calculate response for each state
+      is = mod(ik - 1, 2) + 1
+
       do ist = 1, st%nst
         do sigma = 1, nsigma
           !calculate the RHS of the Sternheimer eq
           Y(:, 1, sigma) = R_TOTYPE(M_ZERO)
           call X(pert_apply) (perturbation, sys%gr, sys%geo, h, ik, st%X(psi)(:, 1, ist, ik), Y(:, 1, sigma))
-          Y(1:m%np, 1, sigma) = -Y(1:m%np, 1, sigma) - hvar(1:m%np, ik, sigma)*st%X(psi)(1:m%np, 1, ist, ik)
+          Y(1:m%np, 1, sigma) = -Y(1:m%np, 1, sigma) - hvar(1:m%np, is, sigma)*st%X(psi)(1:m%np, 1, ist, ik)
 
           !and project it into the unoccupied states
           call X(lr_orth_vector)(m, st, Y(:,:, sigma), ist, ik)

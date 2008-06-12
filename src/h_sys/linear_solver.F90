@@ -224,16 +224,9 @@ contains
     type(linear_solver_t), intent(inout) :: this
     
     select case(this%solver)
-      
-    case(LS_CG)
-      n = 1
     case(LS_BICGSTAB)
       n = 2
-    case (LS_MULTIGRID)
-      n = 1
-    case (LS_QMR)
-      n = 1
-    case(LS_SOS)
+    case default ! LS_CG, LS_MULTIGRID, LS_QMR, LS_SOS
       n = 1
     end select
   

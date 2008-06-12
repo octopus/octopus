@@ -109,6 +109,7 @@ subroutine X(ls_solver_cg) (ls, h, gr, st, ist, ik, x, y, omega)
   p((NP+1):NP_PART,1:st%d%dim) = M_ZERO
   
   conv_last = .false.
+  gamma     = M_ONE
   do iter = 1, ls%max_iter
     gamma = X(states_dotp)(gr%m, st%d%dim, r, r)
 
@@ -201,7 +202,6 @@ subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ist, ik, x, y, omega)
   gamma = X(states_nrm2)(gr%m, st%d%dim, r)
 
   conv_last = .false.
-
   do iter = 1, ls%max_iter
 
     rho_1 = X(states_dotp) (gr%m, st%d%dim, rs, r)
