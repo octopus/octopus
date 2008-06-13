@@ -144,7 +144,7 @@ contains
     !%Section Linear Response::Solver
     !%Description
     !% Maximum number of iterations the linear solver does, even if
-    !% convergency is not achieved.
+    !% convergence is not achieved.
     !%End
     if (loct_parse_isdef(check_inp(trim(prefix)//"LinearSolverMaxIter")) /= 0) then 
       call loct_parse_int  (check_inp(trim(prefix)//"LinearSolverMaxIter"), 1000, this%max_iter)

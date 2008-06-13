@@ -180,17 +180,17 @@ contains
       call pert_setup_dir(kdotp_vars%perturbation, idir)
       write(*,*) 'done with pert_setup_dir'
       if (wfs_are_complex(sys%st)) then
-        write(*,*) 'calling zsternheimer_solve'
+!        write(*,*) 'calling zsternheimer_solve'
         call zsternheimer_solve(sh, sys, h, kdotp_vars%lr(idir,:), 1, M_Z0, &
           kdotp_vars%perturbation, RESTART_DIR, &
           kdotp_rho_tag(idir), kdotp_wfs_tag(idir), have_restart_rho=(ierr==0))
-        write(*,*) 'called zsternheimer_solve'
+!        write(*,*) 'called zsternheimer_solve'
       else
-        write(*,*) 'calling dsternheimer_solve'
+!        write(*,*) 'calling dsternheimer_solve'
         call dsternheimer_solve(sh, sys, h, kdotp_vars%lr(idir,:), 1, M_ZERO, &
           kdotp_vars%perturbation, RESTART_DIR, &
           kdotp_rho_tag(idir), kdotp_wfs_tag(idir), have_restart_rho=(ierr==0))
-        write(*,*) 'called dsternheimer_solve'
+!        write(*,*) 'called dsternheimer_solve'
       end if
         
       kdotp_vars%ok = kdotp_vars%ok .and. sternheimer_has_converged(sh)
@@ -592,10 +592,10 @@ contains
     integer :: iunit, ik
     !, ifactor
 
-    write(*,'(a)') 'kdotp_output'
+!    write(*,'(a)') 'kdotp_output'
 
-    write(*,*) 'Number of states = ', st%nst
-    write(*,*) 'Number of k-points = ', st%d%nik
+!    write(*,*) 'Number of states = ', st%nst
+!    write(*,*) 'Number of k-points = ', st%d%nik
 
     do ik = 1, st%d%nik
       call out_eff_mass(ik, st%nst)

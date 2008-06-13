@@ -103,10 +103,10 @@ contains
     !% the SCF iteration.
     !%Option fixed 0
     !% The solver tolerance is fixed during all the iteration, this
-    !% improves convergency but increases the computational cost
+    !% improves convergence but increases the computational cost
     !%Option adaptive 1 
     !% The tolerance is increased according to the level of
-    !% convergency of the SCF.
+    !% convergence of the SCF.
     !%End
     if (loct_parse_isdef(check_inp(trim(prefix)//'LRTolScheme')) /= 0 ) then
       call loct_parse_int(check_inp(trim(prefix)//'LRTolScheme'), SCF_ADAPTIVE, this%scheme)

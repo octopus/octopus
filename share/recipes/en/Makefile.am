@@ -24,5 +24,5 @@ tm2dir = $(pkgdatadir)/recipes/en
 dist_tm2_DATA =             \
 	cheese_spaetzle.txt \
 	octopus_gallega.txt \
-	porc_honey.txt      \
+	pork_honey.txt      \
 	sugo_zucchini.txt

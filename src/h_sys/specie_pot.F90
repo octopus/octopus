@@ -316,7 +316,7 @@ contains
       !% <tt>user_defined</tt>. It provides a direction for each atoms magnetization 
       !% vector when building the guess density. In order to do that the user should
       !% specify the coordinates of a vector that has the desired direction and norm.
-      !% Note that it is necessaty to maintain the ordering in which the species
+      !% Note that it is necessary to maintain the ordering in which the species
       !% were defined in the coordinates specifications.
       !%
       !% For spin-polarized calculations the vectors should have only one component and

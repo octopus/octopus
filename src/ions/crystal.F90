@@ -136,7 +136,7 @@ contains
     write(6,9150) ((amet(i,j),j=1,3),i=1,3)
 9150 format(/' direct space matrix (some units)',/3(/1x,3f10.5))
     write(6,9160) ((bmet(i,j),j=1,3),i=1,3)
-9160 format(/' reciprocal space metrix (some units)',/3(/1x,3f10.5))
+9160 format(/' reciprocal space matrix (some units)',/3(/1x,3f10.5))
     
     ! generate symmetries operation
     
