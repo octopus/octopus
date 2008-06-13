@@ -69,6 +69,7 @@ module multigrid_m
     integer          :: tp
     integer, pointer :: sp(:)
     integer, pointer :: ep(:)
+    integer, pointer :: ep_part(:)
   end type multigrid_t
 
 contains
@@ -150,12 +151,14 @@ contains
     
     ALLOCATE(mgrid%sp(0:mgrid%n_levels), mgrid%n_levels)
     ALLOCATE(mgrid%ep(0:mgrid%n_levels), mgrid%n_levels)
+    ALLOCATE(mgrid%ep_part(0:mgrid%n_levels), mgrid%n_levels)
 
     mgrid%tp = 0
     do i = 0, mgrid%n_levels    
       mgrid%sp(i) = 1 + mgrid%tp
-      mgrid%tp = mgrid%tp + mgrid%level(0)%m%np_part
-      mgrid%ep(i) = mgrid%tp      
+      mgrid%ep(i) = mgrid%tp + mgrid%level(i)%m%np
+      mgrid%tp = mgrid%tp + mgrid%level(i)%m%np_part
+      mgrid%ep_part(i) = mgrid%tp      
     end do
 
     call pop_sub()    
@@ -319,6 +322,7 @@ contains
 
     deallocate(mgrid%sp)
     deallocate(mgrid%ep)
+    deallocate(mgrid%ep_part)
 
     deallocate(mgrid%level(0)%fine_i)
 
