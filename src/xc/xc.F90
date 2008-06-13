@@ -269,6 +269,8 @@ contains
       !% LDA: Ortiz & Ballone (PW-type parametrization)
       !%Option lda_c_amgb                15000
       !% LDA: Attacalite et al functional for the 2D electron gas
+      !%Option lda_c_prm08               16000
+      !% LDA: Pittalis, Rasanen & Marques correlation in 2D
       !%Option lda_xc_teter93            20
       !% LDA: Teter 93 pade parametrization
       !%Option gga_x_pbe                101

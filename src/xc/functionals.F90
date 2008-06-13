@@ -236,9 +236,9 @@ contains
       functl%type = -1
     end if
 
-    !if(functl%id == XC_LDA_C_PRM08) then
-    !  call XC_F90(lda_c_prm08_set_params)(functl%conf, nel)
-    !end if
+    if(functl%id == XC_LDA_C_PRM08) then
+      call XC_F90(lda_c_prm08_set_params)(functl%conf, nel)
+    end if
 
     call pop_sub()
   end subroutine xc_functl_init_correlation
