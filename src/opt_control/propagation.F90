@@ -45,7 +45,6 @@ module opt_control_propagation_m
   use opt_control_parameters_m
   use lasers_m
   use v_ks_m
-  use tdf_m
 
   implicit none
 
@@ -560,7 +559,7 @@ module opt_control_propagation_m
       call states_end(oppsi)
 
       ! The quadratic part should only be computed if necessary.
-      if(h%ep%lasers(j)%field.eq.E_FIELD_MAGNETIC ) then
+      if(laser_kind(h%ep%lasers(j)).eq.E_FIELD_MAGNETIC ) then
         oppsi = psi
         dq(j) = M_z0
         do ik = 1, psi%d%nik

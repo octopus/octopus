@@ -221,7 +221,8 @@ contains
 
     ! Check that the laser polarizations are not imaginary.
     do i = 1, ep%no_lasers
-      if(any(aimag(ep%lasers(i)%pol(:)) .ne. M_ZERO)) then
+      ! WARNING: Check if this is working....
+      if(any(aimag(laser_polarization(ep%lasers(i))) .ne. M_ZERO)) then
         write(message(1),'(a)') 'For optimal control runs, you cannot specify an initial field guess'
         write(message(2),'(a)') 'with complex polarization direction'
         call write_fatal(2)
@@ -589,11 +590,12 @@ contains
 
     do j = 1, cp%no_parameters
       call tdf_end(cp%f(j))
-      call tdf_copy(cp%f(j), ep%lasers(j)%f)
+      call laser_get_f(ep%lasers(j), cp%f(j))
 !!$      if(cp%envelope) then
 !!$        call tdf_cosine_divide(cp%w0, cp%f(j))
 !!$      end if
-      cp%pol(1:MAX_DIM, j) = ep%lasers(j)%pol(1:MAX_DIM)
+      ! WARNING: Check if this is really working...
+      cp%pol(1:MAX_DIM, j) = laser_polarization(ep%lasers(j))
     end do
 
     call pop_sub()
@@ -644,10 +646,10 @@ contains
     end if
 
     do j = 1, cp%no_parameters
-      call tdf_end(ep%lasers(j)%f)
-      call tdf_copy(ep%lasers(j)%f, par%f(j))
       if(par%envelope) then
-        call tdf_cosine_multiply(par%w0, ep%lasers(j)%f)
+        call laser_set_f(ep%lasers(j), par%f(j), par%w0)
+      else
+        call laser_set_f(ep%lasers(j), par%f(j))
       end if
     end do
 
@@ -673,11 +675,11 @@ contains
     if(cp%envelope) then
       t = (val - 1)*cp%dt
       do j = 1, cp%no_parameters
-        call tdf_set_numerical(ep%lasers(j)%f, val, tdf(cp%f(j), val) * cos(cp%w0*t) )
+        call laser_set_f_value(ep%lasers(j), val, real(tdf(cp%f(j), val) * cos(cp%w0*t)) )
       end do
     else
       do j = 1, cp%no_parameters
-        call tdf_set_numerical(ep%lasers(j)%f, val, tdf(cp%f(j), val))
+        call laser_set_f_value(ep%lasers(j), val, real(tdf(cp%f(j), val)) )
       end do
     end if
 

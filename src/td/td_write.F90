@@ -935,7 +935,7 @@ contains
 
       call write_iter_header_start(out_laser)
       do i = 1, h%ep%no_lasers
-        select case(h%ep%lasers(i)%field)
+        select case(laser_kind(h%ep%lasers(i)))
         case(E_FIELD_ELECTRIC)
           do j = 1, NDIM
             write(aux, '(a,i1,a)') 'E(', j, ')'
@@ -962,7 +962,7 @@ contains
       ! (force, force, and energy, respectively). The reason is that the units of E, B or A 
       ! are ugly.
       do i = 1, h%ep%no_lasers
-        select case(h%ep%lasers(i)%field)
+        select case(laser_kind(h%ep%lasers(i)))
         case(E_FIELD_ELECTRIC, E_FIELD_MAGNETIC)
           aux = '[' // trim(units_out%energy%abbrev) // ' / ' // trim(units_inp%length%abbrev) // ']'
           do j = 1, NDIM
@@ -985,7 +985,7 @@ contains
     do i = 1, h%ep%no_lasers
       field = M_ZERO
       call laser_field(gr%sb, h%ep%lasers(i), field, iter*dt)
-      select case(h%ep%lasers(i)%field)
+      select case(laser_kind(h%ep%lasers(i)))
       case(E_FIELD_ELECTRIC, E_FIELD_MAGNETIC)
         field = field * units_inp%length%factor / units_inp%energy%factor
       case(E_FIELD_VECTOR_POTENTIAL)

@@ -41,7 +41,12 @@ module lasers_m
     laser_field,                  &
     laser_potential,              &
     laser_vector_potential,       &
-    laser_to_numerical
+    laser_to_numerical,           &
+    laser_kind,                   &
+    laser_polarization,           &
+    laser_get_f,                  &
+    laser_set_f,                  &
+    laser_set_f_value
 
   integer, parameter ::           &
     ENVELOPE_CONSTANT      =  0,  &
@@ -58,6 +63,7 @@ module lasers_m
     E_FIELD_SCALAR_POTENTIAL =  4
 
   type laser_t
+    private
     integer :: field
     CMPLX :: pol(MAX_DIM) = M_z0 ! the polarization of the laser
     type(tdf_t) :: f
@@ -67,6 +73,56 @@ module lasers_m
   end type laser_t
 
 contains
+
+
+  ! ---------------------------------------------------------
+  integer function laser_kind(l)
+    type(laser_t), intent(in) :: l
+    laser_kind = l%field
+  end function laser_kind
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  function laser_polarization(l) result(pol)
+    type(laser_t), intent(in) :: l
+    CMPLX :: pol(MAX_DIM)
+    pol(1:MAX_DIM) = l%pol(1:MAX_DIM)
+  end function laser_polarization
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine laser_get_f(l, f)
+    type(laser_t), intent(in)    :: l
+    type(tdf_t),   intent(inout) :: f
+    call tdf_copy(f, l%f)
+  end subroutine laser_get_f
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine laser_set_f(l, f, w0)
+    type(laser_t), intent(inout) :: l
+    type(tdf_t),   intent(inout) :: f
+    FLOAT, intent(in), optional  :: w0
+    call tdf_end(l%f)
+    call tdf_copy(l%f, f)
+    if(present(w0)) then
+      call tdf_cosine_multiply(w0, l%f)
+    end if
+  end subroutine laser_set_f
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine laser_set_f_value(l, i, x)
+    type(laser_t), intent(inout) :: l
+    integer,       intent(in)    :: i
+    FLOAT,         intent(in)    :: x
+    call tdf_set_numerical(l%f, i, x)
+  end subroutine laser_set_f_value
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------

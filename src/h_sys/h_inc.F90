@@ -706,7 +706,7 @@ subroutine X(vlaser_operator_quadratic) (gr, h, psi, hpsi, ik, laser_number)
   magnetic_field = .false.
   i = laser_number
 
-  select case(h%ep%lasers(i)%field)
+  select case(laser_kind(h%ep%lasers(i)))
   case(E_FIELD_ELECTRIC) ! do nothing
   case(E_FIELD_MAGNETIC)
     if(.not. allocated(a)) then 
@@ -768,7 +768,7 @@ subroutine X(vlaser_operator_linear) (gr, h, psi, hpsi, ik, laser_number)
   magnetic_field = .false.
   i = laser_number
 
-  select case(h%ep%lasers(i)%field)
+  select case(laser_kind(h%ep%lasers(i)))
   case(E_FIELD_SCALAR_POTENTIAL)
     if(.not. allocated(v)) then 
       ALLOCATE(v(NP), NP)
@@ -922,7 +922,7 @@ subroutine X(vlasers) (gr, h, psi, hpsi, ik, t)
 
   do i = 1, h%ep%no_lasers
 
-    select case(h%ep%lasers(i)%field)
+    select case(laser_kind(h%ep%lasers(i)))
     case(E_FIELD_SCALAR_POTENTIAL, E_FIELD_ELECTRIC)
       if(.not. allocated(v)) then 
         ALLOCATE(v(NP), NP)

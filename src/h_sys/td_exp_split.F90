@@ -132,7 +132,7 @@ contains
     end select
 
     do i = 1, h%ep%no_lasers
-      select case(h%ep%lasers(i)%field)
+      select case(laser_kind(h%ep%lasers(i)))
       case(E_FIELD_ELECTRIC)
         ALLOCATE(pot(NP), NP)
         call laser_potential(gr%sb, h%ep%lasers(i), gr%m, pot, t)

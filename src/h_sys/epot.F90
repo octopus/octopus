@@ -640,7 +640,7 @@ contains
     !TODO: forces due to the magnetic fields (static and time-dependent)
     if(present(t)) then
       do j = 1, ep%no_lasers
-        select case(ep%lasers(j)%field)
+        select case(laser_kind(ep%lasers(j)))
         case(E_FIELD_ELECTRIC)
           call laser_field(gr%sb, ep%lasers(j), x, t)
           do i = 1, geo%natoms

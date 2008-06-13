@@ -53,7 +53,6 @@ module opt_control_m
   use v_ks_m
   use external_pot_m
   use restart_m
-  use tdf_m
   use opt_control_constants_m
   use opt_control_propagation_m
   use opt_control_parameters_m

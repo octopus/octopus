@@ -847,7 +847,7 @@ contains
       do j = 1, 2
         ! WARNING: This should be carefully tested, and extended to allow for velocity-gauge laser fields.
         do i = 1, h%ep%no_lasers
-          select case(h%ep%lasers(i)%field)
+          select case(laser_kind(h%ep%lasers(i)))
           case(E_FIELD_ELECTRIC)
             ALLOCATE(pot(NP), NP)
             call laser_potential(gr%sb, h%ep%lasers(i), gr%m, pot, t-dt+time(j))
