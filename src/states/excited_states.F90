@@ -81,12 +81,12 @@ module excited_states_m
 contains
 
   ! ---------------------------------------------------------
-  ! Returns information about which single particle orbitals are
+  ! Returns information about which single-particle orbitals are
   ! occupied or not in a _many-particle_ state st:
   !   n_filled are the number of orbitals that are totally filled
   !            (the occupation number is two, if ispin = UNPOLARIZED,
   !            or it is one in the other cases).
-  !   n_half_filled is only meaningfull if ispin = UNPOLARIZED. It 
+  !   n_half_filled is only meaningful if ispin = UNPOLARIZED. It 
   !            is the number of orbitals where there is only one 
   !            electron in the orbital.
   !   n_partially_filled is the number of orbitals that are not filled

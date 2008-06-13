@@ -253,7 +253,9 @@ subroutine X(lr_calc_polarizability)(sys, h, lr, nsigma, perturbation, zpol, ndi
 
   do dir1 = 1, ndir_
     do dir2 = 1, sys%gr%sb%dim
-      call pert_setup_dir(perturbation, dir1, dir2)
+      call pert_setup_dir(perturbation, dir1)
+!      call pert_setup_dir(perturbation, dir1, dir2)
+!      "dir2" here appears to have no effect or meaning
       zpol(dir1, dir2) = -X(pert_expectation_value)(perturbation, sys%gr, sys%geo, h, sys%st, sys%st%X(psi), lr(dir2, 1)%X(dl_psi))
 
       if(nsigma == 1) then

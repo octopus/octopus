@@ -151,7 +151,7 @@ contains
     ! write restart information.
     call restart_write (trim(tmpdir)//'gs', sys%st, sys%gr, ierr)
     if(ierr.ne.0) then
-      message(1) = 'Unsuccesfull write of "'//trim(tmpdir)//'gs"'
+      message(1) = 'Unsuccesful write of "'//trim(tmpdir)//'gs"'
       call write_fatal(1)
     end if
 

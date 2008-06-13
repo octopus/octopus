@@ -22,7 +22,6 @@ subroutine X(lr_calc_eff_mass_inv)(sys, h, lr, perturbation, eff_mass_inv)
   type(hamiltonian_t),    intent(in)    :: h
 !  type(kdotp_t),          intent(inout) :: kdotp_vars
   type(lr_t),             intent(in)    :: lr(:,:)
-!  integer,                intent(in)    :: nsigma
   type(pert_t),           intent(inout) :: perturbation
   FLOAT,                  intent(out)   :: eff_mass_inv(:, :, :, :)
 !  integer, optional,      intent(in)    :: ndir
@@ -30,18 +29,30 @@ subroutine X(lr_calc_eff_mass_inv)(sys, h, lr, perturbation, eff_mass_inv)
 !  integer :: dir1, dir2, ndir_
 !
 
+! m^-1[ij] = delta[ij] + 2*Re<psi0|H'i|psi'j>
+! for each state, spin, and k-point
+! This routine is not set up for spinors.
+
   integer ik, ist, idir1, idir2
+  R_TYPE, allocatable :: pertpsi(:)
+
+  ALLOCATE(pertpsi(1:sys%gr%m%np), sys%gr%m%np)
 
   eff_mass_inv(:, :, :, :) = 0
 
   do ik = 1, sys%st%d%nik
     do ist = 1, sys%st%nst
       do idir1 = 1, sys%gr%sb%dim
+
         eff_mass_inv(ik, ist, idir1, idir1) = 1
+        call pert_setup_dir(perturbation, idir1)
+        call X(pert_apply) (perturbation, sys%gr, sys%geo, h, ik, &
+          sys%st%X(psi)(:, 1, ist, ik), pertpsi)
+
         do idir2 = 1, sys%gr%sb%dim
-          call pert_setup_dir(perturbation, idir1)
-          eff_mass_inv(ik, ist, idir1, idir2) = eff_mass_inv(ik, ist, idir1, idir2) &
-            + 2 * X(pert_expectation_value)(perturbation, sys%gr, sys%geo, h, sys%st, sys%st%X(psi), lr(idir2, 1)%X(dl_psi))
+          eff_mass_inv(ik, ist, idir1, idir2) = eff_mass_inv(ik, ist, idir1, idir2) + &
+             2 * R_REAL(X(mf_integrate)(sys%gr%m, &
+             lr(idir2, 1)%X(dl_psi)(1:sys%gr%m%np, 1, ist, ik)*pertpsi(1:sys%gr%m%np)))
         enddo
       enddo
     enddo

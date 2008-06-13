@@ -178,7 +178,7 @@ contains
       write(message(1), '(a,i3)') 'Info: Calculating response for direction ', idir
       call write_info(1)
       call pert_setup_dir(kdotp_vars%perturbation, idir)
-      write(*,*) 'done with pert_setup_dir'
+!      write(*,*) 'done with pert_setup_dir'
       if (wfs_are_complex(sys%st)) then
 !        write(*,*) 'calling zsternheimer_solve'
         call zsternheimer_solve(sh, sys, h, kdotp_vars%lr(idir,:), 1, M_Z0, &

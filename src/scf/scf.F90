@@ -461,7 +461,7 @@ contains
         if(finish.or.(modulo(iter, 3) == 0).or.iter==scf%max_iter.or.forced_finish) then
           call restart_write(trim(tmpdir)//'gs', st, gr, err, iter=iter)
           if(err.ne.0) then
-            message(1) = 'Unsuccesfull write of "'//trim(tmpdir)//'gs"'
+            message(1) = 'Unsuccessful write of "'//trim(tmpdir)//'gs"'
             call write_fatal(1)
           end if
         end if

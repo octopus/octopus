@@ -383,10 +383,10 @@ contains
           do is = 1, st%d%nspin
             write(filename,'(a,i2.2,i3.3)') trim(tmpdir)//'td/vprev_', i, is
             call dinput_function(trim(filename)//'.obf', gr%m, td%tr%v_old(1:NP, is, i), ierr)
-            ! If we do not succed, try netcdf
+            ! If we do not succeed, try netcdf
             if(ierr > 0) call dinput_function(trim(filename)//'.ncdf', gr%m, td%tr%v_old(1:NP, is, i), ierr)
             if(ierr > 0) then
-              write(message(1), '(3a)') 'Unsuccesfull read of "', trim(filename), '"'
+              write(message(1), '(3a)') 'Unsuccessful read of "', trim(filename), '"'
               call write_fatal(1)
             end if
           end do
@@ -405,7 +405,7 @@ contains
           end if
         end if
 
-        ! check if we should deploy user defined wavefunctions. 
+        ! check if we should deploy user-defined wavefunctions. 
         ! according to the settings in the input file the routine 
         ! overwrites orbitals that were read from restart/gs 
         if(loct_parse_isdef(check_inp('UserDefinedStates')).ne.0) then
@@ -718,7 +718,7 @@ contains
       ! first write resume file
       call restart_write(trim(tmpdir)//'td', st, gr, ierr, iter)
       if(ierr.ne.0) then
-        message(1) = 'Unsuccesfull write of "'//trim(tmpdir)//'td"'
+        message(1) = 'Unsuccessful write of "'//trim(tmpdir)//'td"'
         call write_fatal(1)
       end if
 
@@ -730,7 +730,7 @@ contains
             call doutput_function(restart_format, trim(tmpdir)//"td", &
               filename, gr%m, gr%sb, td%tr%v_old(1:NP, is, i), M_ONE, ierr, is_tmp = .true.)
             if(ierr.ne.0) then
-              write(message(1), '(3a)') 'Unsuccesfull write of "', trim(filename), '"'
+              write(message(1), '(3a)') 'Unsuccessful write of "', trim(filename), '"'
               call write_fatal(1)
             end if
           end do
