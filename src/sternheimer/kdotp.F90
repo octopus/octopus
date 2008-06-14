@@ -630,7 +630,7 @@ contains
         integer, intent(in) :: ik, nst
 
         character(len=80) :: filename
-        integer :: ist, id1, id2
+        integer :: ist
 
         write(filename, '(a, a)') 'kdotp/kpoint_', ik2str(ik)
         iunit = io_open(trim(filename), action='write')

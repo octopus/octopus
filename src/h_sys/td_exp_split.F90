@@ -160,20 +160,20 @@ contains
     CMPLX,               intent(in) :: factor_
     logical,             intent(in) :: order_
 
-    logical :: order
-    CMPLX   :: factor
-    CMPLX, allocatable :: initzpsi(:, :)
+!    logical :: order
+!    CMPLX   :: factor
+!    CMPLX, allocatable :: initzpsi(:, :)
 
     call push_sub('td_exp_split.vnlpsi')
 
     message(1) = 'Error: zexp_vnlpsi is currently broken.'
     call write_fatal(1)
 
-    ALLOCATE(initzpsi(m%np, 1:h%d%dim), m%np*h%d%dim)
+!    ALLOCATE(initzpsi(m%np, 1:h%d%dim), m%np*h%d%dim)
 !   just to avoid compiler warnings due to unused variables
-    factor   = factor_
-    order    = order_
-    initzpsi = psi
+!    factor   = factor_
+!    order    = order_
+!    initzpsi = psi
 
 !!$
 !!$    dimension_loop: do idim = 1, h%d%dim
@@ -213,7 +213,7 @@ contains
 !!$
 !!$    end do dimension_loop
 !!$
-    deallocate(initzpsi)
+!    deallocate(initzpsi)
 
     call pop_sub()
   end subroutine zexp_vnlpsi

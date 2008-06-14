@@ -1372,7 +1372,7 @@ contains
     type(mesh_t),   intent(in)    :: m
 
     ! Local variables.
-    integer            :: ist, ik, iter
+    integer            :: ist, ik
     FLOAT              :: charge
 #if defined(HAVE_MPI)
     integer            :: j
@@ -2344,7 +2344,7 @@ contains
     type(multicomm_t), intent(in) :: mc
     integer,        intent(in)    :: n
 
-    integer :: ispin, ist, ik
+    integer :: ist, ik
     type(states_t) :: staux
 
     call push_sub('states.states_freeze_orbitals')

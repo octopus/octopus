@@ -50,8 +50,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine one_shot_run(sys, h)
-    type(system_t), target,      intent(inout) :: sys
-    type(hamiltonian_t), target, intent(inout) :: h
+    type(system_t),              intent(inout) :: sys
+    type(hamiltonian_t),         intent(inout) :: h
 
     integer :: ierr
     FLOAT :: E_tot, E_t, E_ext, E_Hartree, E_x, E_c

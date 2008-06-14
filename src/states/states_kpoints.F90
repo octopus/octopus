@@ -23,9 +23,8 @@ subroutine states_choose_kpoints(d, sb, geo)
   type(simul_box_t),  intent(in)    :: sb
   type(geometry_t),   intent(in)    :: geo
 
-  integer   :: coi, i, nkmax, ik, idim
+  integer   :: i, nkmax, ik, idim
   type(block_t) :: blk
-  FLOAT     :: total_weight, kmax
 
   ! local variables for the crystal_init call
   logical :: use_symmetries, use_time_reversal

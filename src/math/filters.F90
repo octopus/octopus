@@ -116,7 +116,6 @@ contains
 
     type(spline_t) :: mask, splw
     FLOAT :: local_mask_x(mask_n), rcut, beta
-    integer :: i
 
     call push_sub('filters.spline_filter_mask')
 

@@ -28,23 +28,15 @@ subroutine X(eigen_solver_mg) (gr, st, h, tol, niter, converged, diff, verbose)
   FLOAT,                  intent(out)   :: diff(1:st%nst,1:st%d%nik)
   logical,   optional,    intent(in)    :: verbose
 
-  integer  :: ik, ist, ist2, iter, maxter, conv, conv_, idim, ns, ip, is, inb
-  R_TYPE   :: rta, rtb, rtc, alpha, dh, vv, s1, s2, s3
-  FLOAT    :: ww, bb
-  R_TYPE, allocatable :: hpsi(:, :), hdiag(:, :), cc(:, :), sigma(:), beta(:), aa(:)
+  integer  :: ik, ist, ist2, iter
+  R_TYPE, allocatable :: cc(:, :), aa(:)
 
   call push_sub('eigen_cg.eigen_solver_mg')
 
-  ALLOCATE(hpsi(1:NP, 1:st%d%dim), NP*st%d%dim)
-  ALLOCATE(hdiag(1:NP, 1:st%d%dim), NP*st%d%dim)
   ALLOCATE(cc(1:st%nst, 1:st%nst), st%nst**2)
   ALLOCATE(aa(1:st%nst), st%nst)
-  ALLOCATE(sigma(1:st%nst), st%nst)
-  ALLOCATE(beta(1:st%nst), st%nst)
 
   cc = M_Z0
-
-  ww = 5.0
 
   do ik = 1, st%d%nik
     

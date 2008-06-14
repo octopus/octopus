@@ -107,9 +107,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine exponentiate(psi, j)
-    R_TYPE, intent(inout), target :: psi(:, :)
-    integer, intent(out) :: j
-    CMPLX, pointer :: zpsi(:, :)
+    R_TYPE, target, intent(inout) :: psi(:, :)
+    integer,        intent(out)   :: j
+    CMPLX,          pointer       :: zpsi(:, :)
+
 #if defined(R_TREAL)
     ALLOCATE(zpsi(NP_PART, st%d%dim), NP_PART*st%d%dim)
     zpsi = psi

@@ -38,7 +38,6 @@ program dielectric_function
   CMPLX, allocatable :: dielectric(:,:)
   FLOAT, parameter :: eta = CNST(0.2)/CNST(27.211383)
   type(spec_t) :: s
-  type(unit_system_t) :: file_units
   type(block_t) :: blk
 
   ! Initialize stuff
