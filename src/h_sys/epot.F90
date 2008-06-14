@@ -71,25 +71,25 @@ module external_pot_m
 
   type epot_t
     ! Classic charges:
-    integer :: classic_pot        ! How to include the classic charges
+    integer        :: classic_pot        ! How to include the classic charges
     FLOAT, pointer :: vclassic(:) ! We use it to store the potential of the classic charges
 
     ! Ions
-    FLOAT,       pointer :: vpsl(:)          ! the local part of the pseudopotentials
-    type(projector_t), pointer :: p(:)       ! non-local projectors
-    type(projector_t), pointer :: p_fine(:)  ! non-local projectors in the fine grid
-    logical :: non_local
-    integer :: natoms
+    FLOAT,             pointer :: vpsl(:)          ! the local part of the pseudopotentials
+    type(projector_t), pointer :: proj(:)       ! non-local projectors
+    type(projector_t), pointer :: proj_fine(:)  ! non-local projectors in the fine grid
+    logical                    :: non_local
+    integer                    :: natoms
 
     ! External e-m fields
-    integer :: no_lasers                   ! number of laser pulses used
-    type(laser_t), pointer :: lasers(:)    ! lasers stuff
-    FLOAT, pointer :: E_field(:)           ! static electric field
-    FLOAT, pointer :: v_static(:)          ! static scalar potential
-    FLOAT, pointer :: B_field(:)           ! static magnetic field
-    FLOAT, pointer :: A_static(:,:)        ! static vector potential
-    type(gauge_field_t) :: gfield
-    integer :: reltype            ! type of relativistic correction to use
+    integer                :: no_lasers            ! number of laser pulses used
+    type(laser_t), pointer :: lasers(:)            ! lasers stuff
+    FLOAT,         pointer :: E_field(:)           ! static electric field
+    FLOAT, pointer         :: v_static(:)          ! static scalar potential
+    FLOAT, pointer         :: B_field(:)           ! static magnetic field
+    FLOAT, pointer         :: A_static(:,:)        ! static vector potential
+    type(gauge_field_t)    :: gfield               ! the type dependent gauge field
+    integer                :: reltype              ! type of relativistic correction to use
 
     ! The gyromagnetic ratio (-2.0 for the electron, but different if we treat
     ! *effective* electrons in a quantum dot. It affects the spin Zeeman term.
@@ -98,7 +98,8 @@ module external_pot_m
     ! SO prefactor (1.0 = normal SO, 0.0 = no SO)
     FLOAT :: so_strength
     
-    FLOAT :: eii
+    ! the ion-ion energy and force
+    FLOAT          :: eii
     FLOAT, pointer :: fii(:, :)
 
   end type epot_t
@@ -318,18 +319,18 @@ contains
     !%End
     call loct_parse_float(check_inp('SOStrength'), M_ONE, ep%so_strength)
     
-    ALLOCATE(ep%p(geo%natoms), geo%natoms)
+    ALLOCATE(ep%proj(geo%natoms), geo%natoms)
     do i = 1, geo%natoms
-      call projector_null(ep%p(i))
+      call projector_null(ep%proj(i))
     end do
 
     if(gr%have_fine_mesh) then
-      ALLOCATE(ep%p_fine(geo%natoms), geo%natoms)
+      ALLOCATE(ep%proj_fine(geo%natoms), geo%natoms)
       do i = 1, geo%natoms
-        call projector_null(ep%p_fine(i))
+        call projector_null(ep%proj_fine(i))
       end do
     else
-      ep%p_fine => ep%p
+      ep%proj_fine => ep%proj
     end if
 
     ep%natoms = geo%natoms
@@ -383,18 +384,18 @@ contains
 
     do iproj = 1, geo%natoms
       if(.not. species_is_ps(geo%atom(iproj)%spec)) cycle
-      call projector_end(ep%p(iproj))
+      call projector_end(ep%proj(iproj))
     end do
 
-    ASSERT(associated(ep%p))
-    deallocate(ep%p)
+    ASSERT(associated(ep%proj))
+    deallocate(ep%proj)
 
     if(gr%have_fine_mesh) then
       do iproj = 1, geo%natoms
         if(.not. species_is_ps(geo%atom(iproj)%spec)) cycle
-        call projector_end(ep%p_fine(iproj))
+        call projector_end(ep%proj_fine(iproj))
       end do
-      deallocate(ep%p_fine)
+      deallocate(ep%proj_fine)
     end if
 
     call pop_sub()
@@ -464,17 +465,17 @@ contains
       atm => geo%atom(ia)
       if(.not. species_is_ps(atm%spec)) cycle
       ep%non_local = .true.
-      call projector_end(ep%p(ia))
-      call projector_init(ep%p(ia), gr%m, sb, atm, st%d%dim, ep%reltype)
-      if(simul_box_is_periodic(sb)) call projector_init_phases(ep%p(ia), st%d%nik, st%d%kpoints)
-      call projector_build(ep%p(ia), gr, atm, ep%so_strength)
+      call projector_end(ep%proj(ia))
+      call projector_init(ep%proj(ia), gr%m, sb, atm, st%d%dim, ep%reltype)
+      if(simul_box_is_periodic(sb)) call projector_init_phases(ep%proj(ia), st%d%nik, st%d%kpoints)
+      call projector_build(ep%proj(ia), gr, atm, ep%so_strength)
 
       ! the projectors in the fine grid
       if(gr%have_fine_mesh) then
-        call projector_end(ep%p_fine(ia))
-        call projector_init(ep%p_fine(ia), gr%fine%m, sb, atm, st%d%dim, ep%reltype)
-        if(simul_box_is_periodic(sb)) call projector_init_phases(ep%p_fine(ia), st%d%nik, st%d%kpoints)
-        call projector_build(ep%p(ia), gr, atm, ep%so_strength)
+        call projector_end(ep%proj_fine(ia))
+        call projector_init(ep%proj_fine(ia), gr%fine%m, sb, atm, st%d%dim, ep%reltype)
+        if(simul_box_is_periodic(sb)) call projector_init_phases(ep%proj_fine(ia), st%d%nik, st%d%kpoints)
+        call projector_build(ep%proj(ia), gr, atm, ep%so_strength)
       end if
 
     end do

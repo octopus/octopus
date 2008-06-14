@@ -241,6 +241,8 @@ R_TYPE function X(psia_project_psib)(pj, dim, psia, psib, ik) result(apb)
     size = pj%reduce_size*2*(pj%lmax + 1)*(2*pj%lmax + 1)
     ALLOCATE(uvpsi(1:pj%reduce_size, 1:2, 0:pj%lmax, -pj%lmax:pj%lmax), size)
 
+    ASSERT(associated(pj%kb_p))
+
     do ll = 0, pj%lmax
       if (ll == pj%lloc) cycle
       do mm = -ll, ll

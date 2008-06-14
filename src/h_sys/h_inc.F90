@@ -584,7 +584,7 @@ subroutine X(vnlpsi) (h, gr, psi, hpsi, ik)
   call profiling_in(C_PROFILING_VNLPSI)
   call push_sub('h_inc.Xvnlpsi')
 
-  call X(project_psi)(gr%m, h%ep%p, h%ep%natoms, h%d%dim, psi, hpsi, ik)
+  call X(project_psi)(gr%m, h%ep%proj, h%ep%natoms, h%d%dim, psi, hpsi, ik)
     
   call pop_sub()
   call profiling_out(C_PROFILING_VNLPSI)

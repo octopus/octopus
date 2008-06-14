@@ -95,10 +95,10 @@ module projector_m
 
     ! Only one of the following structures should be used at once
     ! The one to be used depends on the value of type variable
-    type(hgh_projector_t), pointer :: hgh_p(:, :)
-    type(kb_projector_t),  pointer :: kb_p(:, :)
-    type(rkb_projector_t), pointer :: rkb_p(:, :)
-    CMPLX,                 pointer :: phase(:, :)
+    type(hgh_projector_t), pointer :: hgh_p(:, :) => null()
+    type(kb_projector_t),  pointer :: kb_p(:, :)  => null()
+    type(rkb_projector_t), pointer :: rkb_p(:, :) => null()
+    CMPLX,                 pointer :: phase(:, :) => null()
   end type projector_t
 
 contains

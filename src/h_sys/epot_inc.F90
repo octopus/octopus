@@ -80,10 +80,10 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
 
       ! iterate over the projectors
       do iatom = 1, geo%natoms
-        if(ep%p(iatom)%type == 0) cycle
+        if(ep%proj(iatom)%type == 0) cycle
         do idir = 1, NDIM
           
-          psi_proj_gpsi = X(psia_project_psib)(ep%p_fine(iatom), st%d%dim, psi, gpsi(:, idir, :), ik)
+          psi_proj_gpsi = X(psia_project_psib)(ep%proj_fine(iatom), st%d%dim, psi, gpsi(:, idir, :), ik)
           
           force(idir, iatom) = force(idir, iatom) - M_TWO*st%occ(ist, ik)*R_REAL(psi_proj_gpsi)
 

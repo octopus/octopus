@@ -101,7 +101,7 @@ contains
 
         do idir = 1, gr%sb%dim
           if(this%dir == idir) cycle ! this direction is not used in the cross product
-          call X(projector_conmut_r)(h%ep%p(iatom), gr, h%d%dim, idir, ik, f_in, vrnl(:, :, idir))
+          call X(projector_conmut_r)(h%ep%proj(iatom), gr, h%d%dim, idir, ik, f_in, vrnl(:, :, idir))
         end do
 
         xx(1:MAX_DIM) = geo%atom(iatom)%x(1:MAX_DIM)
@@ -182,14 +182,14 @@ subroutine X(ionic_perturbation)(this, gr, geo, h, ik, f_in, f_out, iatom, idir)
   !d^T v |f>
   ALLOCATE(fout(1:NP_PART, 1), NP_PART)
   fout(1:NP, 1) = vloc(1:NP) * fin(1:NP, 1)
-  call X(project_psi)(gr%m, h%ep%p(iatom:iatom), 1, 1, fin, fout, ik)
+  call X(project_psi)(gr%m, h%ep%proj(iatom:iatom), 1, 1, fin, fout, ik)
   call X(derivatives_oper)(gr%f_der%der_discr%grad(idir), gr%f_der%der_discr, fout(:,1), f_out)
 
   !v d |f>
   ALLOCATE(grad(1:NP, 1), NP)
   call X(derivatives_oper)(gr%f_der%der_discr%grad(idir), gr%f_der%der_discr, fin(:,1), grad(:,1))
   fout(1:NP, 1) = vloc(1:NP) * grad(1:NP, 1)
-  call X(project_psi)(gr%m, h%ep%p(iatom:iatom), 1, 1, grad, fout, ik)
+  call X(project_psi)(gr%m, h%ep%proj(iatom:iatom), 1, 1, grad, fout, ik)
   f_out(1:NP) = -f_out(1:NP) + fout(1:NP, 1)
 
 end subroutine X(ionic_perturbation)
@@ -260,14 +260,14 @@ contains
         do idir = 1, gr%sb%dim
           do idir2 = 1, gr%sb%dim
             !calculate dnl |f_in2> = -[x,vnl] |f_in2>
-            call X(projector_conmut_r)(h%ep%p(iatom), gr, h%d%dim, idir2, ik, f_in2(:, idir2), vrnl(:, :))
+            call X(projector_conmut_r)(h%ep%proj(iatom), gr, h%d%dim, idir2, ik, f_in2(:, idir2), vrnl(:, :))
 
             ! -x vnl |f>
             dnl(1:NP, idir) = dnl(1:NP, idir) - gr%m%x(1:NP, idir) * vrnl(1:NP, 1)
 
             ! vnl x |f>
             xf(1:NP) = gr%m%x(1:NP, idir) * f_in2(1:NP, idir2)
-            call X(projector_conmut_r)(h%ep%p(iatom), gr, h%d%dim, idir2, ik, xf, vrnl(:, :))
+            call X(projector_conmut_r)(h%ep%proj(iatom), gr, h%d%dim, idir2, ik, xf, vrnl(:, :))
 
             dnl(1:NP, idir) = dnl(1:NP, idir) + vrnl(1:NP, 1)
           end do
@@ -354,21 +354,21 @@ subroutine X(ionic_perturbation_order_2) (this, gr, geo, h, ik, f_in, f_out, iat
 
   !di^T dj^T v |f>
   tmp1(1:NP, 1) = vloc(1:NP) * fin(1:NP, 1)
-  call X(project_psi)(gr%m, h%ep%p(iatom:iatom), 1, 1, fin, tmp1, ik)
+  call X(project_psi)(gr%m, h%ep%proj(iatom:iatom), 1, 1, fin, tmp1, ik)
   call X(derivatives_oper)(gr%f_der%der_discr%grad(idir), gr%f_der%der_discr, tmp1(:,1), tmp2(:,1))
   call X(derivatives_oper)(gr%f_der%der_discr%grad(jdir), gr%f_der%der_discr, tmp2(:,1), f_out)
 
   !di^T v dj |f>
   call X(derivatives_oper)(gr%f_der%der_discr%grad(jdir), gr%f_der%der_discr, fin(:,1), tmp1(:,1))
   tmp2(1:NP, 1) = vloc(1:NP) * tmp1(1:NP, 1)
-  call X(project_psi)(gr%m, h%ep%p(iatom:iatom), 1, 1, tmp1, tmp2, ik)
+  call X(project_psi)(gr%m, h%ep%proj(iatom:iatom), 1, 1, tmp1, tmp2, ik)
   call X(derivatives_oper)(gr%f_der%der_discr%grad(idir), gr%f_der%der_discr, tmp2(:,1), tmp1(:,1))
   f_out(1:NP) = f_out(1:NP) - tmp1(1:NP, 1)
 
   !dj^T v di |f>
   call X(derivatives_oper)(gr%f_der%der_discr%grad(idir), gr%f_der%der_discr, fin(:,1), tmp1(:,1))
   tmp2(1:NP, 1) = vloc(1:NP) * tmp1(1:NP, 1)
-  call X(project_psi)(gr%m, h%ep%p(iatom:iatom), 1, 1, tmp1, tmp2, ik)
+  call X(project_psi)(gr%m, h%ep%proj(iatom:iatom), 1, 1, tmp1, tmp2, ik)
   call X(derivatives_oper)(gr%f_der%der_discr%grad(jdir), gr%f_der%der_discr, tmp2(:,1), tmp1(:,1))
   f_out(1:NP) = f_out(1:NP) - tmp1(1:NP, 1)
 
@@ -376,7 +376,7 @@ subroutine X(ionic_perturbation_order_2) (this, gr, geo, h, ik, f_in, f_out, iat
   call X(derivatives_oper)(gr%f_der%der_discr%grad(idir), gr%f_der%der_discr, fin(:,1), tmp1(:,1))
   call X(derivatives_oper)(gr%f_der%der_discr%grad(jdir), gr%f_der%der_discr, tmp1(:,1), tmp2(:,1))
   tmp1(1:NP, 1) = vloc(1:NP) * tmp2(1:NP, 1)
-  call X(project_psi)(gr%m, h%ep%p(iatom:iatom), 1, 1, tmp2, tmp1, ik)
+  call X(project_psi)(gr%m, h%ep%proj(iatom:iatom), 1, 1, tmp2, tmp1, ik)
   f_out(1:NP) = f_out(1:NP) + tmp1(1:NP, 1)
 
 end subroutine X(ionic_perturbation_order_2)
