@@ -60,7 +60,7 @@ Subroutine X(lcao_initial_wf) (n, m, geo, sb, psi, ispin, ik, kpoints, err)
   FLOAT,                    intent(in)  :: kpoints(:)
   integer,                  intent(out) :: err
 
-  type(specie_t), pointer :: s
+  type(species_t), pointer :: s
   type(periodic_copy_t)   :: pc
   integer :: norbs, ia, i, icell, j, idim, k, wf_dim
   FLOAT :: x(MAX_DIM), pos(MAX_DIM)
@@ -109,7 +109,7 @@ Subroutine X(lcao_initial_wf) (n, m, geo, sb, psi, ispin, ik, kpoints, err)
               do k = 1, m%np
                 x(1:calc_dim) = m%x(k, 1:calc_dim) - pos(1:calc_dim)
                 psi(k, 1) =  psi(k, 1) + exp(M_zI*sum(kpoints(1:calc_dim)*x(1:calc_dim)))* &
-                  R_TOTYPE(specie_get_iwf(s, j, calc_dim, states_spin_channel(ispin, ik, 1), x(1:calc_dim)))
+                  R_TOTYPE(species_get_iwf(s, j, calc_dim, states_spin_channel(ispin, ik, 1), x(1:calc_dim)))
               end do
             end do
             call periodic_copy_end(pc)
@@ -137,7 +137,7 @@ Subroutine X(lcao_initial_wf) (n, m, geo, sb, psi, ispin, ik, kpoints, err)
                 do k = 1, m%np
                   x(1:calc_dim) = m%x(k, 1:calc_dim) - geo%atom(ia)%x(1:calc_dim)
                   psi(k, idim) =  &
-                       R_TOTYPE(specie_get_iwf(s, j, calc_dim, idim, x(1:calc_dim)))
+                       R_TOTYPE(species_get_iwf(s, j, calc_dim, idim, x(1:calc_dim)))
                 end do
               end do
               call periodic_copy_end(pc)

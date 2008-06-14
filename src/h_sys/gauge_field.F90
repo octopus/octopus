@@ -36,8 +36,7 @@ module gauge_field_m
   use units_m
   use logrid_m
   use ps_m
-  use specie_m
-  use specie_pot_m
+  use species_m
   use solids_m
   use geometry_m
   use states_m
@@ -270,7 +269,7 @@ contains
 
         do idir = 1, gr%sb%dim
           do iatom = 1, geo%natoms
-            if(specie_is_ps(geo%atom(iatom)%spec)) then
+            if(species_is_ps(geo%atom(iatom)%spec)) then
               call zprojector_conmut_r(pj(iatom), gr, st%d%dim, idir, ik, epsi(:, 1), cpsi(:, :))
               gpsi(1:NP, idir, 1:st%d%dim) = gpsi(1:NP, idir, 1:st%d%dim) + cpsi(1:NP, 1:st%d%dim)
             end if

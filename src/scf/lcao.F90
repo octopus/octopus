@@ -33,7 +33,7 @@ module lcao_m
   use profiling_m
   use simul_box_m
   use solids_m
-  use specie_m
+  use species_m
   use states_m
   use h_sys_output_m
 

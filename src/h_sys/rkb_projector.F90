@@ -28,8 +28,7 @@ module rkb_projector_m
   use simul_box_m
   use submesh_m
   use ps_m
-  use specie_m
-  use specie_pot_m
+  use species_m
   use geometry_m
   use mpi_m
   use mpi_debug_m
@@ -103,25 +102,25 @@ contains
 
       ! i runs over j=l+1/2 and j=l-1/2
       do i = 1, 2
-        call specie_nl_projector(a%spec, x, l, lm, i, zv)
+        call species_nl_projector(a%spec, x, l, lm, i, zv)
         rkb_p%bra(is, i) = conjg(zv)
         
         rkb_p%ket(is, i, 1, 1) = zv
         rkb_p%ket(is, i, 2, 2) = zv
         if (lm /= l) then
-          call specie_nl_projector(a%spec, x, l, lm+1, i, zv)
+          call species_nl_projector(a%spec, x, l, lm+1, i, zv)
           rkb_p%ket(is, i, 2, 1) = zv
         else
           rkb_p%ket(is, i, 2, 1) = M_z0
         end if
         if (lm /= -l) then
-          call specie_nl_projector(a%spec, x, l, lm-1, i, zv)
+          call species_nl_projector(a%spec, x, l, lm-1, i, zv)
           rkb_p%ket(is, i, 1, 2) = zv
         else
           rkb_p%ket(is, i, 1, 2) = M_z0
         end if
         
-        call specie_real_nl_projector(a%spec, x, l, lm, i, v, dv)
+        call species_real_nl_projector(a%spec, x, l, lm, i, v, dv)
         rkb_p%p(is, i) = v
       end do
     end do

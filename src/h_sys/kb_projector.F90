@@ -29,8 +29,6 @@ module kb_projector_m
   use simul_box_m
   use profiling_m
   use ps_m
-  use specie_m
-  use specie_pot_m
   use submesh_m
   use geometry_m
   use mpi_m

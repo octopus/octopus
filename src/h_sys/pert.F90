@@ -37,7 +37,6 @@ module pert_m
   use nl_operator_m
   use profiling_m
   use projector_m
-  use specie_pot_m
   use states_m
   use varinfo_m
   use mpi_m

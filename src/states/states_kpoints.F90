@@ -29,7 +29,7 @@ subroutine states_choose_kpoints(d, sb, geo)
   ! local variables for the crystal_init call
   logical :: use_symmetries, use_time_reversal
   integer :: is, nk
-  integer, allocatable :: natom(:)      ! natom(i) is the number of atoms of specie i
+  integer, allocatable :: natom(:)      ! natom(i) is the number of atoms of species i
   FLOAT :: kshifts(MAX_DIM)
   FLOAT, allocatable :: coorat(:,:,:)   ! coorat(i,j,k) is the k-th component (lattice coordinates)
   ! of the position of the j-th atom of type i.

@@ -259,7 +259,7 @@ contains
     call push_sub('ps_psf.solve_schroedinger')
 
     ! Let us be a bit informative.
-    message(1) = '      Calculating atomic pseudo-eigenfunctions for specie ' // psf_file%namatm // '....'
+    message(1) = '      Calculating atomic pseudo-eigenfunctions for species ' // psf_file%namatm // '....'
     call write_info(1)
 
     ! Allocation.

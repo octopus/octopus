@@ -512,7 +512,7 @@ contains
     a2b4 = M_FOURTH*psp%g%a**2
 
     ! Let us be a bit informative.
-    message(1) = '      Calculating atomic pseudo-eigenfunctions for specie ' // psp%atom_name // '....'
+    message(1) = '      Calculating atomic pseudo-eigenfunctions for species ' // psp%atom_name // '....'
     call write_info(1)
 
     ! "Double" self consistent loop: nonlocal and xc parts have to be calculated

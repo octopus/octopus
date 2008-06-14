@@ -27,8 +27,7 @@ module hgh_projector_m
   use messages_m
   use simul_box_m
   use ps_m
-  use specie_m
-  use specie_pot_m
+  use species_m
   use submesh_m
   use geometry_m
   use mpi_m
@@ -98,7 +97,7 @@ contains
       x(1:MAX_DIM) = sm%x(is, 1:MAX_DIM)
 
       do i = 1, 3
-        call specie_real_nl_projector(a%spec, x, l, lm, i, v, dv(1:3))
+        call species_real_nl_projector(a%spec, x, l, lm, i, v, dv(1:3))
         hgh_p%p(is, i) = v
         hgh_p%lp(is, 1, i) = x(2)*dv(3) - x(3)*dv(2)
         hgh_p%lp(is, 2, i) = x(3)*dv(1) - x(1)*dv(3)

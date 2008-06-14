@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-module specie_pot_m
+module species_pot_m
   use curvlinear_m
   use datasets_m
   use double_grid_m
@@ -28,7 +28,6 @@ module specie_pot_m
   use global_m
   use grid_m
   use io_m
-  use splines_m
   use loct_parser_m
   use math_m
   use mesh_function_m
@@ -37,8 +36,9 @@ module specie_pot_m
   use mpi_m
   use root_solver_m
   use simul_box_m
-  use specie_m
+  use species_m
   use solids_m
+  use splines_m
   use submesh_m
   use poisson_m
   use profiling_m
@@ -51,10 +51,10 @@ module specie_pot_m
   private
   public ::                   &
     guess_density,            &
-    specie_pot_init,          &
-    specie_pot_end,           &
-    specie_get_density,       & 
-    specie_get_local
+    species_pot_init,          &
+    species_pot_end,           &
+    species_get_density,       & 
+    species_get_local
 
   integer, parameter :: INITRHO_PARAMAGNETIC  = 1, &
                         INITRHO_FERROMAGNETIC = 2, &
@@ -70,16 +70,16 @@ module specie_pot_m
 contains
 
  ! ---------------------------------------------------------
-  subroutine specie_pot_init(this, gr, filter)
-    type(specie_t),      intent(inout) :: this
+  subroutine species_pot_init(this, gr, filter)
+    type(species_t),      intent(inout) :: this
     type(grid_t),        intent(in)    :: gr
     integer,             intent(in)    :: filter
 
     character(len=256) :: dirname
 
-    call push_sub('specie_pot.specie_pot_init')
+    call push_sub('species_pot.species_pot_init')
     
-    if(specie_is_ps(this)) then
+    if(species_is_ps(this)) then
       call ps_separate(this%ps)
 
       call ps_getradius(this%ps)
@@ -94,23 +94,23 @@ contains
       if(in_debug_mode) then
         write(dirname, '(a)') 'debug/geometry'
         call io_mkdir(dirname)
-        call specie_debug(trim(dirname), this)
+        call species_debug(trim(dirname), this)
       end if
 
     end if
 
     call pop_sub()
 
-  end subroutine specie_pot_init
+  end subroutine species_pot_init
 
   ! ---------------------------------------------------------
   ! WARNING: this subroutine should be terminating something?
-  subroutine specie_pot_end(this, gr)
-    type(specie_t),      intent(inout) :: this
+  subroutine species_pot_end(this, gr)
+    type(species_t),      intent(inout) :: this
     type(grid_t),        intent(in)    :: gr
 
 
-  end subroutine specie_pot_end
+  end subroutine species_pot_end
 
   ! ---------------------------------------------------------
   subroutine atom_density(m, sb, atom, spin_channels, rho)
@@ -123,13 +123,13 @@ contains
     integer :: i, in_points, n, icell
     FLOAT :: r, x, pos(1:MAX_DIM)
     FLOAT :: psi1, psi2
-    type(specie_t), pointer :: s
+    type(species_t), pointer :: s
 #if defined(HAVE_MPI)
     integer :: in_points_red
 #endif
     type(periodic_copy_t) :: pp
 
-    call push_sub('specie_pot.atom_density')
+    call push_sub('species_pot.atom_density')
 
     ASSERT(spin_channels == 1 .or. spin_channels == 2)
 
@@ -220,7 +220,7 @@ contains
     FLOAT :: r, rnd, phi, theta, mag(MAX_DIM), lmag, n1, n2
     FLOAT, allocatable :: atom_rho(:,:)
 
-    call push_sub('specie_pot.guess_density')
+    call push_sub('species_pot.guess_density')
 
     if (spin_channels == 1) then
       gmd_opt = INITRHO_PARAMAGNETIC
@@ -441,8 +441,8 @@ contains
   end subroutine guess_density
 
 
-  subroutine specie_get_density(s, pos, gr, geo, rho)
-    type(specie_t),             intent(in)  :: s
+  subroutine species_get_density(s, pos, gr, geo, rho)
+    type(species_t),             intent(in)  :: s
     FLOAT,                      intent(in)  :: pos(MAX_DIM)
     type(grid_t),       target, intent(in)  :: gr
     type(geometry_t),           intent(in)  :: geo
@@ -456,7 +456,7 @@ contains
     integer :: icell
     type(periodic_copy_t) :: pp
 
-    call push_sub('specie_grid.specie_get_density')
+    call push_sub('species_grid.species_get_density')
 
     select case(s%type)
 
@@ -506,7 +506,7 @@ contains
       call droot_solver_run(rs, func, x, conv, startval=startval)
 
       if(.not.conv) then
-        write(message(1),'(a)') 'Internal error in get_specie_density.'
+        write(message(1),'(a)') 'Internal error in get_species_density.'
         call write_fatal(1)
       end if
 
@@ -518,7 +518,7 @@ contains
     end select
 
     call pop_sub()
-  end subroutine specie_get_density
+  end subroutine species_get_density
 
   subroutine func(xin, f, jacobian)
     FLOAT, intent(in)  :: xin(:)
@@ -590,8 +590,8 @@ contains
   end subroutine getrho 
 
   ! ---------------------------------------------------------
-  subroutine specie_get_local(s, mesh, x_atom, vl, time)
-    type(specie_t),  intent(in) :: s
+  subroutine species_get_local(s, mesh, x_atom, vl, time)
+    type(species_t),  intent(in) :: s
     type(mesh_t),    intent(in) :: mesh
     FLOAT,           intent(in) :: x_atom(MAX_DIM)
     FLOAT,           intent(out):: vl(:)
@@ -603,7 +603,7 @@ contains
 
     type(profile_t), save :: prof
 
-    call profiling_in(prof, "SPECIE_GET_LOCAL")
+    call profiling_in(prof, "SPECIES_GET_LOCAL")
 
     time_ = M_ZERO
 
@@ -659,9 +659,9 @@ contains
 
       call profiling_out(prof)
       
-  end subroutine specie_get_local
+  end subroutine species_get_local
 
-end module specie_pot_m
+end module species_pot_m
 
 !! Local Variables:
 !! mode: f90

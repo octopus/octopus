@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-module specie_m
+module species_m
   use datasets_m
   use global_m
   use io_m
@@ -38,17 +38,17 @@ module specie_m
 
   private
   public ::                   &
-    specie_init,              &
-    specie_end,               &
-    specie_t,                 &
-    specie_debug,             &
-    specie_read,              &
-    specie_get_nlcc,          &
-    specie_get_iwf,           &
-    specie_is_ps,             &
-    specie_is_local,          &
-    specie_real_nl_projector, &
-    specie_nl_projector
+    species_init,              &
+    species_end,               &
+    species_t,                 &
+    species_debug,             &
+    species_read,              &
+    species_get_nlcc,          &
+    species_get_iwf,           &
+    species_is_ps,             &
+    species_is_local,          &
+    species_real_nl_projector, &
+    species_nl_projector
 
   integer, public, parameter :: &
     SPEC_USDEF  = 123,          & ! user defined function
@@ -61,7 +61,7 @@ module specie_m
     SPEC_PS_FHI = PS_TYPE_FHI,  & ! FHI pseudopotential (ABINIT format)
     SPEC_PS_UPF = PS_TYPE_UPF     ! UPF pseudopotential
 
-  type specie_t
+  type species_t
     integer :: index              ! just a counter
 
     character(len=15) :: label    ! Identifier for the species
@@ -71,7 +71,7 @@ module specie_m
                                   ! minus the core charge in the case of the pseudopotentials
     FLOAT   :: weight             ! mass, in atomic mass units (!= atomic units of mass)
 
-    logical :: has_density        ! true if the specie has a electric density 
+    logical :: has_density        ! true if the species has a electric density 
     
     ! for the user defined potential
     character(len=1024) :: user_def
@@ -96,15 +96,15 @@ module specie_m
 
     ! For the TM pseudos, the lmax and lloc.
     integer :: lmax, lloc
-  end type specie_t
+  end type species_t
 
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine specie_debug(dir, s)
+  subroutine species_debug(dir, s)
     character(len=*), intent(in)  :: dir
-    type(specie_t),    intent(in) :: s
+    type(species_t),    intent(in) :: s
 
     character(len=256) :: dirname
     integer :: iunit
@@ -114,7 +114,7 @@ contains
       return
     end if
 
-    call push_sub('specie.specie_debug')
+    call push_sub('species.species_debug')
 
     dirname = trim(dir)//'/'//trim(s%label)
 
@@ -128,7 +128,7 @@ contains
     if (s%type /= SPEC_USDEF ) write(iunit, '(a,f15.2)') 'z      = ', s%z
     write(iunit, '(a,f15.2)') 'z_val  = ', s%z_val
     write(iunit, '(a,f15.2)') 'weight = ', s%weight
-    write(iunit, *)           'local  = ', specie_is_local(s)
+    write(iunit, *)           'local  = ', species_is_local(s)
     write(iunit, '(2a)')      'usdef  = ', trim(s%user_def)
     if (s%type == SPEC_JELLI .or. s%type == SPEC_POINT) then
       write(iunit, '(a,f15.2)') 'jradius= ', s%jradius
@@ -139,17 +139,17 @@ contains
     if (s%type /= SPEC_USDEF ) write(iunit, '(a,i3)')    'lmax  = ', s%lmax
     if (s%type /= SPEC_USDEF ) write(iunit, '(a,i3)')    'lloc  = ', s%lloc
 
-    if(specie_is_ps(s)) then
+    if(species_is_ps(s)) then
        if(in_debug_mode) call ps_debug(s%ps, trim(dirname))
     end if
 
     call io_close(iunit)
     call pop_sub()
-  end subroutine specie_debug
+  end subroutine species_debug
 
   ! ---------------------------------------------------------
-  subroutine specie_read(s, label)
-    type(specie_t), intent(inout) :: s
+  subroutine species_read(s, label)
+    type(species_t), intent(inout) :: s
     character(len=*),  intent(in) :: label
 
     character(len=256) :: fname
@@ -157,7 +157,7 @@ contains
     integer :: i, row, n_spec_block, n_spec_def, iunit, read_data
     type(block_t) :: blk
 
-    call push_sub('specie.specie_read')
+    call push_sub('species.species_read')
 
     s%has_density = .false. !there is no density associated
     s%nlcc      = .false. ! without non-local core corrections
@@ -170,7 +170,7 @@ contains
     !%Type block
     !%Section System::Species
     !%Description
-    !% A specie is by definition either an "ion" (nucleus + core electrons) described
+    !% A species is by definition either an "ion" (nucleus + core electrons) described
     !% through a pseudo-potential, or an user-defined, model potential.
     !%
     !% Note that some common pseudopotentials are distributed with the code in the
@@ -183,7 +183,7 @@ contains
     !%
     !% The format of this block is the following: The first field is
     !% the name of the specie, followed by the atomic mass (in atomic mass
-    !% units). The third field defines the type of specie (the valid options
+    !% units). The third field defines the type of species (the valid options
     !% are detailed below), each type needs some extra parameters given in
     !% the following fields of the row.
     !%
@@ -200,7 +200,7 @@ contains
     !%
     !%
     !%Option user_defined  123
-    !% Specie with user defined potential. In this case, the fourth
+    !% Species with user defined potential. In this case, the fourth
     !% field is the valence charge and the fifth
     !% field is a string with a mathematical expression that defines the
     !% potential (you can use any of the <i>x</i>, <i>y</i>, <i>z</i>
@@ -250,10 +250,12 @@ contains
     !% atomic number. See the documentation of the variable 
     !% SpecieAllElectronSigma.
     !% 
-    !% WARNING: Currently you can not use LCAO with this specie.
+    !% WARNING: Currently you can not use LCAO with this species.
     !%End
 
-    !%Variable SpecieAllElectronSigma
+    call obsolete_variable('SpecieAllElectronSigma', 'SpeciesAllElectronSigma')
+
+    !%Variable SpeciesAllElectronSigma
     !%Type float
     !%Default 0.25
     !%Section System::Species
@@ -274,8 +276,8 @@ contains
     !%
     !% For a precise description, see [N. A. Modine, Phys. Rev. B 55, 10289 (1997)]
     !%End
-    call loct_parse_float(check_inp('SpecieAllElectronSigma'), CNST(0.25), s%sigma)
-    if(s%sigma <= M_ZERO) call input_error('SpecieAllElectronSigma')
+    call loct_parse_float(check_inp('SpeciesAllElectronSigma'), CNST(0.25), s%sigma)
+    if(s%sigma <= M_ZERO) call input_error('SpeciesAllElectronSigma')
 
     ! First, find out if there is a Species block.
     n_spec_block = 0
@@ -320,26 +322,26 @@ contains
     end if
 
     if(read_data == 0) then
-      message(1) = 'Specie '//trim(label)//' not found.'
+      message(1) = 'Species '//trim(label)//' not found.'
       call write_fatal(1)
     end if
 
     call pop_sub()
-  end subroutine specie_read
+  end subroutine species_read
 
 
   ! ---------------------------------------------------------
   subroutine read_from_default_file(iunit, read_data, s)
     integer,        intent(in)    :: iunit
     integer,        intent(inout) :: read_data
-    type(specie_t), intent(inout) :: s
+    type(species_t), intent(inout) :: s
 
     character(len=10) :: label
     FLOAT :: weight, z, def_h, def_rsize
     integer :: lloc, lmax
     integer :: type
 
-    call push_sub('specie.read_from_default_file')
+    call push_sub('species.read_from_default_file')
 
     backspace(iunit)
 
@@ -368,12 +370,12 @@ contains
   subroutine read_from_block(blk, row, s, read_data)
     type(block_t),      intent(in) :: blk
     integer,        intent(in) :: row
-    type(specie_t), intent(inout) :: s
+    type(species_t), intent(inout) :: s
     integer,        intent(out) :: read_data
 
     integer :: n
 
-    call push_sub('specie.read_from_block')
+    call push_sub('species.read_from_block')
 
     read_data = 0
 
@@ -444,14 +446,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine specie_init(s, ispin)
-    type(specie_t), intent(inout) :: s
+  subroutine species_init(s, ispin)
+    type(species_t), intent(inout) :: s
     integer,        intent(in)    :: ispin
 
     integer :: i, l
     FLOAT   :: pot_re, pot_im
 
-    call push_sub('specie.specie_init')
+    call push_sub('species.species_init')
 
     ! masses are always in a.u.m, so convert them to a.u.
     s%weight =  units_inp%mass%factor * s%weight
@@ -479,7 +481,7 @@ contains
       end do
 
     case(SPEC_USDEF)
-      write(message(1),'(a,a,a)')    'Specie "',trim(s%label),'" is an user-defined potential.'
+      write(message(1),'(a,a,a)')    'Species "',trim(s%label),'" is an user-defined potential.'
       write(message(2),'(a,a)')      '   Potential = ', trim(s%user_def(1:237)) ! 256-16, 16 for "Potential =", 3 for ...
       if(len(trim(s%user_def)).gt.237) then
         message(2) = trim(message(2))//'...'
@@ -493,7 +495,7 @@ contains
       if(s%omega <= M_ZERO) s%omega = CNST(0.1) 
 
     case(SPEC_JELLI, SPEC_POINT)
-      write(message(1),'(a,a,a)')    'Specie "',trim(s%label),'" is a jellium sphere / approximated point particle.'
+      write(message(1),'(a,a,a)')    'Species "',trim(s%label),'" is a jellium sphere / approximated point particle.'
       write(message(2),'(a,f11.6)')  '   Valence charge = ', s%z_val
       write(message(3),'(a,f11.6)')  '   Radius [a.u]   = ', s%jradius
       write(message(4),'(a,f11.6)')  '   Rs [a.u]       = ', s%jradius * s%z_val ** (-M_ONE/M_THREE)
@@ -504,7 +506,7 @@ contains
     case(SPEC_ALL_E)
       s%niwfs = 2*s%z_val
       s%has_density = .true.
-      write(message(1),'(a,a,a)')    'Specie "',trim(s%label),'" is an all electron atom.'
+      write(message(1),'(a,a,a)')    'Species "',trim(s%label),'" is an all electron atom.'
       write(message(2),'(a,f11.6)')  '   Z = ', s%z_val
       write(message(3),'(a)')  '   Potential will be calulated solving poisson equation'
       write(message(3),'(a)')  '   Potential will be calulated solving poisson equation'
@@ -516,24 +518,24 @@ contains
     ALLOCATE(s%iwf_l(s%niwfs, ispin), s%niwfs*ispin)
     ALLOCATE(s%iwf_m(s%niwfs, ispin), s%niwfs*ispin)
     ALLOCATE(s%iwf_i(s%niwfs, ispin), s%niwfs*ispin)
-    call specie_iwf_fix_qn(s, ispin)
+    call species_iwf_fix_qn(s, ispin)
 
     call pop_sub()
-  end subroutine specie_init
+  end subroutine species_init
 
 
   ! ---------------------------------------------------------
-  subroutine specie_end(ns, s)
+  subroutine species_end(ns, s)
     integer,        intent(in) :: ns
-    type(specie_t), pointer    :: s(:)
+    type(species_t), pointer    :: s(:)
 
 
     integer :: i
 
-    call push_sub('specie.specie_end')
+    call push_sub('species.species_end')
 
     do i = 1, ns
-      if (specie_is_ps(s(i))) then 
+      if (species_is_ps(s(i))) then 
         if(associated(s(i)%ps)) then 
           call ps_end(s(i)%ps)
         deallocate(s(i)%ps)
@@ -549,13 +551,13 @@ contains
     end if
 
     call pop_sub()
-  end subroutine specie_end
+  end subroutine species_end
 
   ! ---------------------------------------------------------
   ! This routine returns the non-local projector and its 
   ! derivative build using real spherical harmonics
-  subroutine specie_real_nl_projector(s, x, l, lm, i, uV, duV)
-    type(specie_t),    intent(in)  :: s
+  subroutine species_real_nl_projector(s, x, l, lm, i, uV, duV)
+    type(species_t),    intent(in)  :: s
     FLOAT,             intent(in)  :: x(1:MAX_DIM)
     integer,           intent(in)  :: l, lm, i
     FLOAT,             intent(out) :: uV, duV(1:MAX_DIM)
@@ -587,13 +589,13 @@ contains
       end if
     end if
 
-  end subroutine specie_real_nl_projector
+  end subroutine species_real_nl_projector
 
   ! ---------------------------------------------------------
   ! This routine returns the non-local projector build using 
   ! spherical harmonics
-  subroutine specie_nl_projector(s, x, l, lm, i, uV)
-    type(specie_t),    intent(in)  :: s
+  subroutine species_nl_projector(s, x, l, lm, i, uV)
+    type(species_t),    intent(in)  :: s
     FLOAT,             intent(in)  :: x(1:MAX_DIM)
     integer,           intent(in)  :: l, lm, i
     CMPLX,             intent(out) :: uV
@@ -608,11 +610,11 @@ contains
     call ylmr(x(1), x(2), x(3), l, lm, ylm)
     uv = uvr0*ylm
 
-  end subroutine specie_nl_projector
+  end subroutine species_nl_projector
 
   ! ---------------------------------------------------------
-  FLOAT function specie_get_nlcc(s, x) result(l)
-    type(specie_t), intent(in) :: s
+  FLOAT function species_get_nlcc(s, x) result(l)
+    type(species_t), intent(in) :: s
     FLOAT, intent(in) :: x(MAX_DIM)
     FLOAT :: r
 
@@ -624,11 +626,11 @@ contains
       l = M_ZERO
     end if
 
-  end function specie_get_nlcc
+  end function species_get_nlcc
 
   ! ---------------------------------------------------------
-  FLOAT function specie_get_iwf(s, j, dim, is, x) result(phi)
-    type(specie_t), intent(in) :: s
+  FLOAT function species_get_iwf(s, j, dim, is, x) result(phi)
+    type(species_t), intent(in) :: s
     integer,           intent(in) :: j
     integer,           intent(in) :: dim
     integer,           intent(in) :: is
@@ -642,7 +644,7 @@ contains
     m = s%iwf_m(j, is)
     r2 = sum(x*x)
 
-    if(specie_is_ps(s)) then
+    if(species_is_ps(s)) then
       phi =  spline_eval(s%ps%ur(i, is), sqrt(r2)) * loct_ylm(x(1), x(2), x(3), l, m)
     else
       phi=M_ZERO
@@ -659,19 +661,19 @@ contains
       end select
     end if
 
-  end function specie_get_iwf
+  end function species_get_iwf
 
 
   ! ---------------------------------------------------------
-  subroutine specie_iwf_fix_qn(s, ispin)
-    type(specie_t), intent(inout) :: s
+  subroutine species_iwf_fix_qn(s, ispin)
+    type(species_t), intent(inout) :: s
     integer, intent(in) :: ispin
 
     integer :: is, n, i, l, m, n1, n2, n3
 
-    call push_sub('specie.specie_iwf_fix_qn')
+    call push_sub('species.species_iwf_fix_qn')
 
-    if(specie_is_ps(s)) then
+    if(species_is_ps(s)) then
       do is = 1, ispin
         n = 1
         do i = 1, s%ps%conf%p
@@ -769,32 +771,32 @@ contains
     end if
 
     call pop_sub()
-  end subroutine specie_iwf_fix_qn
+  end subroutine species_iwf_fix_qn
 
-  logical function specie_is_ps(s)
-    type(specie_t), intent(in) :: s
+  logical function species_is_ps(s)
+    type(species_t), intent(in) :: s
     
-    specie_is_ps = &
+    species_is_ps = &
          ( s%type == SPEC_PS_PSF) .or. &
          ( s%type == SPEC_PS_HGH) .or. &
          ( s%type == SPEC_PS_CPI) .or. &
          ( s%type == SPEC_PS_FHI) .or. &
          ( s%type == SPEC_PS_UPF)
     
-  end function specie_is_ps
+  end function species_is_ps
 
-  logical function specie_is_local(s)
-    type(specie_t), intent(in) :: s
+  logical function species_is_local(s)
+    type(species_t), intent(in) :: s
 
-    specie_is_local = .true.
+    species_is_local = .true.
       
-    if( specie_is_ps(s) ) then 
-      if ( s%ps%l_max /= 0 ) specie_is_local = .false. 
+    if( species_is_ps(s) ) then 
+      if ( s%ps%l_max /= 0 ) species_is_local = .false. 
     end if
 
-  end function specie_is_local
+  end function species_is_local
 
-end module specie_m
+end module species_m
 
 !! Local Variables:
 !! mode: f90

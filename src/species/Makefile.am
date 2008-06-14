@@ -24,7 +24,7 @@ noinst_LIBRARIES = libspecies.a
 libspecies_a_SOURCES = \
 	logrid.F90 atomic.F90 ps_in_grid.F90 ps_psf_file.F90 ps_psf.F90  \
 	ps_cpi_file.F90 ps_cpi.F90 ps_fhi_file.F90 ps_fhi.F90 \
-	ps_upf.F90 ps_hgh.F90 ps.F90 specie.F90
+	ps_upf.F90 ps_hgh.F90 ps.F90 species.F90
 
 noinst_HEADERS =
 
@@ -45,4 +45,4 @@ ps_fhi.o : ps_fhi.F90 ps_in_grid.o ps_fhi_file.o ps_cpi.o ps_cpi_file.o atomic.o
 ps_upf.o : ps_upf.F90 atomic.o 
 ps_hgh.o : ps_hgh.F90 logrid.o atomic.o 
 ps.o : ps.F90 ps_upf.o ps_psf.o ps_in_grid.o ps_hgh.o ps_fhi.o ps_cpi.o logrid.o atomic.o 
-specie.o : specie.F90 ps.o 
+species.o : species.F90 ps.o 

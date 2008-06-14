@@ -15,7 +15,7 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! $Id: specie.F90 2711 2007-02-13 17:36:18Z xavier $
+!! $Id: double_grid.F90 2711 2007-02-13 17:36:18Z xavier $
 
 #include "global.h"
 
@@ -35,7 +35,7 @@ module double_grid_m
   use par_vec_m
   use profiling_m
   use simul_box_m
-  use specie_m
+  use species_m
   use splines_m
   use submesh_m
 
@@ -155,7 +155,7 @@ contains
 
   FLOAT function double_grid_get_rmax(this, s, m) result(rmax)
     type(double_grid_t),     intent(in) :: this
-    type(specie_t),          intent(in) :: s
+    type(species_t),          intent(in) :: s
     type(mesh_t),            intent(in) :: m
     
     rmax = spline_cutoff_radius(s%ps%vl, s%ps%projectors_sphere_threshold)
@@ -188,7 +188,7 @@ contains
 #define profiler double_grid_nonlocal_prof
 #define profiler_label "DOUBLE_GRID_NL"
 #define double_grid_apply double_grid_apply_non_local
-#define calc_pot(vv) call specie_real_nl_projector(s, x, l, lm, ic, vv, tmp)
+#define calc_pot(vv) call species_real_nl_projector(s, x, l, lm, ic, vv, tmp)
 
 #include "double_grid_apply.F90"
 

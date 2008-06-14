@@ -37,7 +37,7 @@ module geom_opt_m
   use units_m
   use v_ks_m
   use varinfo_m
-  use specie_pot_m
+  use species_pot_m
   use lcao_m
 
   implicit none

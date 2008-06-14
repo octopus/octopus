@@ -24,7 +24,7 @@ module ion_interaction_m
   use global_m
   use simul_box_m
   use ps_m
-  use specie_m
+  use species_m
   use solids_m
   use geometry_m
   use splines_m
@@ -48,7 +48,7 @@ contains
     FLOAT,                     intent(out)   :: energy
     FLOAT,                     intent(out)   :: force(:, :)
 
-    type(specie_t), pointer :: s
+    type(species_t), pointer :: s
     FLOAT :: r, rc, xi(1:MAX_DIM), dd, zi, zj
     integer :: iatom, jatom, icopy
     type(periodic_copy_t) :: pc
@@ -99,7 +99,7 @@ contains
       ! the short range part is calculated directly
       do iatom = 1, geo%natoms
         s => geo%atom(iatom)%spec
-        if (.not. specie_is_ps(s)) cycle
+        if (.not. species_is_ps(s)) cycle
 
         rc = spline_cutoff_radius(s%ps%vion, s%ps%projectors_sphere_threshold)
         rc = max(rc, spline_cutoff_radius(s%ps%dvion, s%ps%projectors_sphere_threshold))

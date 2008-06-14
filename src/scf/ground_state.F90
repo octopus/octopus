@@ -33,8 +33,8 @@ module ground_state_m
   use restart_m
   use scf_m
   use simul_box_m
-  use specie_m
-  use specie_pot_m
+  use species_m
+  use species_pot_m
   use states_m
   use system_m
   use v_ks_m
@@ -104,7 +104,7 @@ contains
       ! The initial LCAO calculation is done by default if we have pseudopotentials.
       ! Otherwise, it is not the default value and has to be enforced in the input file.
       lcao_start_default = LCAO_START_FULL
-      if(sys%geo%only_user_def .or. any(sys%geo%specie(1:sys%geo%nspecies)%type == SPEC_ALL_E)) then
+      if(sys%geo%only_user_def .or. any(sys%geo%species(1:sys%geo%nspecies)%type == SPEC_ALL_E)) then
         lcao_start_default = LCAO_START_NONE
       end if
       

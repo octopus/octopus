@@ -40,7 +40,6 @@ module raman_m
   use phonons_lr_m
   use pert_m
   use restart_m
-  use specie_m
   use states_m
   use sternheimer_m
   use string_m

@@ -15,11 +15,11 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! $Id: specie.F90 2711 2007-02-13 17:36:18Z xavier $
+!! $Id: double_grid_apply.F90 2711 2007-02-13 17:36:18Z xavier $
 
 subroutine double_grid_apply (this, s, m, sm, x_atom, vl, l, lm, ic)
   type(double_grid_t),    intent(in)    :: this
-  type(specie_t),         intent(in)    :: s
+  type(species_t),         intent(in)    :: s
   type(mesh_t),           intent(in)    :: m
   type(submesh_t),        intent(in)    :: sm
   FLOAT,                  intent(in)    :: x_atom(1:MAX_DIM)

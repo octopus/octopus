@@ -42,8 +42,8 @@ module external_pot_m
   use logrid_m
   use poisson_cutoffs_m
   use ps_m
-  use specie_m
-  use specie_pot_m
+  use species_m
+  use species_pot_m
   use spline_filter_m
   use solids_m
   use geometry_m
@@ -147,7 +147,7 @@ contains
 
     if(filter == PS_FILTER_TS) call spline_filter_mask_init()
     do i = 1, geo%nspecies
-      call specie_pot_init(geo%specie(i), gr, filter)
+      call species_pot_init(geo%species(i), gr, filter)
     end do
 
     ! Local part of the pseudopotentials
@@ -356,7 +356,7 @@ contains
     deallocate(ep%fii)
 
     do i = 1, geo%nspecies
-      call specie_pot_end(geo%specie(i), gr)
+      call species_pot_end(geo%species(i), gr)
     end do
 
     if(associated(ep%vpsl)) then
@@ -382,7 +382,7 @@ contains
     if(associated(ep%A_static)) deallocate(ep%A_static)
 
     do iproj = 1, geo%natoms
-      if(.not. specie_is_ps(geo%atom(iproj)%spec)) cycle
+      if(.not. species_is_ps(geo%atom(iproj)%spec)) cycle
       call projector_end(ep%p(iproj))
     end do
 
@@ -391,7 +391,7 @@ contains
 
     if(gr%have_fine_mesh) then
       do iproj = 1, geo%natoms
-        if(.not. specie_is_ps(geo%atom(iproj)%spec)) cycle
+        if(.not. species_is_ps(geo%atom(iproj)%spec)) cycle
         call projector_end(ep%p_fine(iproj))
       end do
       deallocate(ep%p_fine)
@@ -462,7 +462,7 @@ contains
     ! the pseudo potential part.
     do ia = 1, geo%natoms
       atm => geo%atom(ia)
-      if(.not. specie_is_ps(atm%spec)) cycle
+      if(.not. species_is_ps(atm%spec)) cycle
       ep%non_local = .true.
       call projector_end(ep%p(ia))
       call projector_init(ep%p(ia), gr%m, sb, atm, st%d%dim, ep%reltype)
@@ -516,13 +516,13 @@ contains
     !(for all electron species or pseudopotentials in periodic
     !systems) or by applying it directly to the grid
 
-    if(a%spec%has_density .or. (specie_is_ps(a%spec) .and. simul_box_is_periodic(gr%sb))) then
+    if(a%spec%has_density .or. (species_is_ps(a%spec) .and. simul_box_is_periodic(gr%sb))) then
 
       ALLOCATE(rho(1:mesh%np), mesh%np)
 
       !this has to be optimized so the poisson solution is made once
       !for all species, perhaps even include it in the hartree term
-      call specie_get_density(a%spec, a%x, gr, geo, rho)
+      call species_get_density(a%spec, a%x, gr, geo, rho)
 
       vl(1:mesh%np) = M_ZERO   ! vl has to be initialized before entering routine
       ! and our best guess for the potential is zero
@@ -533,7 +533,7 @@ contains
     else
 
       !Local potential
-      call specie_get_local(a%spec, mesh, a%x(1:NDIM), vl, time)
+      call species_get_local(a%spec, mesh, a%x(1:NDIM), vl, time)
 
     end if
 
@@ -542,7 +542,7 @@ contains
     !$omp end parallel workshare
 
     !the localized part
-    if(specie_is_ps(a%spec)) then
+    if(species_is_ps(a%spec)) then
 
       radius = double_grid_get_rmax(gr%dgrid, a%spec, mesh) + mesh%h(1)
 
@@ -557,10 +557,10 @@ contains
     deallocate(vl)
 
     !Non-local core corrections
-    if(present(rho_core) .and. a%spec%nlcc .and. specie_is_ps(a%spec)) then
+    if(present(rho_core) .and. a%spec%nlcc .and. species_is_ps(a%spec)) then
       do i = 1, mesh%np
         x(1:NDIM) = mesh%x(i, 1:NDIM) - a%x(1:NDIM)
-        rho_core(i) = rho_core(i) + specie_get_nlcc(a%spec, x)
+        rho_core(i) = rho_core(i) + species_get_nlcc(a%spec, x)
       end do
     end if
 

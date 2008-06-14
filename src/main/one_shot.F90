@@ -37,7 +37,6 @@ module one_shot_m
   use units_m
   use v_ks_m
   use varinfo_m
-  use specie_pot_m
   use xc_m
   use h_sys_output_m
 

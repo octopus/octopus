@@ -31,8 +31,6 @@ module projector_m
   use simul_box_m
   use profiling_m
   use ps_m
-  use specie_m
-  use specie_pot_m
   use geometry_m
   use states_m
   use simul_box_m
@@ -143,7 +141,7 @@ contains
     case (1)
       p%type = M_KB
       if (reltype == 1) then
-        write(message(1),'(a,a,a)') "Spin-orbit coupling for specie ", trim(atm%spec%label), " is not available."
+        write(message(1),'(a,a,a)') "Spin-orbit coupling for species ", trim(atm%spec%label), " is not available."
         call write_warning(1)
       end if
     case (2)

@@ -29,7 +29,7 @@ module geometry_m
   use messages_m
   use multicomm_m
   use mpi_m
-  use specie_m
+  use species_m
   use string_m
   use units_m
   use varinfo_m
@@ -59,7 +59,7 @@ module geometry_m
 
   type atom_t
     character(len=15) :: label
-    type(specie_t), pointer :: spec              ! pointer to specie
+    type(species_t), pointer :: spec              ! pointer to species
     FLOAT :: x(MAX_DIM), v(MAX_DIM), f(MAX_DIM)  ! position/velocity/force of atom in real space
     logical :: move                              ! should I move this atom in the optimization mode
   end type atom_t
@@ -79,7 +79,7 @@ module geometry_m
     type(atom_classical_t), pointer :: catom(:)
 
     integer :: nspecies
-    type(specie_t), pointer :: specie(:)
+    type(species_t), pointer :: species(:)
 
     logical :: only_user_def        ! Do we want to treat only user defined species?
 
@@ -156,7 +156,7 @@ contains
     !% From the plethora of instructions defined in the PDB standard, octopus
     !% only reads two, "ATOM" and "HETATOM". From these fields, it reads:
     !% <ul>
-    !% <li> columns 13-16: The specie; in fact "octopus" only cares about the
+    !% <li> columns 13-16: The species; in fact "octopus" only cares about the
     !% first letter - "CA" and "CB" will both refer to Carbon - so elements whose
     !% chemical symbol has more than one letter can not be represented in this way.
     !% So, if you want to run mercury ("Hg") please use one of the other two methods_m
@@ -272,7 +272,7 @@ contains
     end do atoms1
 
     ! Allocate the species structure.
-    ALLOCATE(geo%specie(geo%nspecies), geo%nspecies)
+    ALLOCATE(geo%species(geo%nspecies), geo%nspecies)
 
     ! Now, read the data.
     k = 0
@@ -282,10 +282,10 @@ contains
         if(trim(geo%atom(j)%label) == trim(geo%atom(i)%label)) cycle atoms2
       end do
       k = k + 1
-      geo%specie(k)%label = geo%atom(j)%label
-      geo%specie(k)%index = k
-      call specie_read(geo%specie(k), trim(geo%specie(k)%label))
-      geo%only_user_def = (geo%only_user_def .and. (geo%specie(k)%type==SPEC_USDEF))
+      geo%species(k)%label = geo%atom(j)%label
+      geo%species(k)%index = k
+      call species_read(geo%species(k), trim(geo%species(k)%label))
+      geo%only_user_def = (geo%only_user_def .and. (geo%species(k)%type==SPEC_USDEF))
     end do atoms2
 
     ! Reads the spin components. This is read here, as well as in states_init,
@@ -296,15 +296,15 @@ contains
 
     call messages_print_stress(stdout, "Species")
     do i = 1, geo%nspecies
-      call specie_init(geo%specie(i), ispin)
+      call species_init(geo%species(i), ispin)
     end do
     call messages_print_stress(stdout)
 
     !  assign species
     do i = 1, geo%natoms
       do j = 1, geo%nspecies
-        if(trim(geo%atom(i)%label) == trim(geo%specie(j)%label)) then
-          geo%atom(i)%spec => geo%specie(j)
+        if(trim(geo%atom(i)%label) == trim(geo%species(j)%label)) then
+          geo%atom(i)%spec => geo%species(j)
           exit
         end if
       end do
@@ -314,8 +314,8 @@ contains
     geo%nlcc = .false.
     geo%nlpp = .false.
     do i = 1, geo%nspecies
-      geo%nlcc = (geo%nlcc.or.geo%specie(i)%nlcc)
-      geo%nlpp = (geo%nlpp .or. specie_is_ps(geo%specie(i)))
+      geo%nlcc = (geo%nlcc.or.geo%species(i)%nlcc)
+      geo%nlpp = (geo%nlpp .or. species_is_ps(geo%species(i)))
     end do
 
     call pop_sub()
@@ -445,7 +445,7 @@ contains
       deallocate(geo%catom); nullify(geo%catom)
     end if
 
-    call specie_end(geo%nspecies, geo%specie)
+    call species_end(geo%nspecies, geo%species)
 
     call pop_sub()
   end subroutine geometry_end
@@ -606,8 +606,8 @@ contains
     def_h     =  huge(REAL_PRECISION)
     def_rsize = -huge(REAL_PRECISION)
     do i = 1, geo%nspecies
-      def_h     = min(def_h,     geo%specie(i)%def_h)
-      def_rsize = max(def_rsize, geo%specie(i)%def_rsize)
+      def_h     = min(def_h,     geo%species(i)%def_h)
+      def_rsize = max(def_rsize, geo%species(i)%def_rsize)
     end do
 
     call pop_sub()

@@ -262,7 +262,10 @@ contains
     end select
 
     ! Fix the threshold to calculate the radius of the projector function localization spheres:
-    !%Variable SpecieProjectorSphereThreshold
+
+    call obsolete_variable('SSpecieProjectorSphereThreshold', 'SpeciesProjectorSphereThreshold')
+
+    !%Variable SpeciesProjectorSphereThreshold
     !%Type float
     !%Default 0.001
     !%Section System::Species
@@ -278,9 +281,9 @@ contains
     !% absolute value of the projector functions, at points outside the localization sphere, is 
     !% below a certain threshold. This threshold is set the SpecieProjectorSphereThreshold.
     !%End
-    call loct_parse_float(check_inp('SpecieProjectorSphereThreshold'), &
+    call loct_parse_float(check_inp('SpeciesProjectorSphereThreshold'), &
       CNST(0.001), ps%projectors_sphere_threshold)
-    if(ps%projectors_sphere_threshold <= M_ZERO) call input_error('SpecieProjectorSphereThreshold')
+    if(ps%projectors_sphere_threshold <= M_ZERO) call input_error('SpeciesProjectorSphereThreshold')
 
     ps%has_long_range = .true.
 
