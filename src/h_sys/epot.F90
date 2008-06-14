@@ -475,7 +475,7 @@ contains
         call projector_end(ep%proj_fine(ia))
         call projector_init(ep%proj_fine(ia), gr%fine%m, sb, atm, st%d%dim, ep%reltype)
         if(simul_box_is_periodic(sb)) call projector_init_phases(ep%proj_fine(ia), st%d%nik, st%d%kpoints)
-        call projector_build(ep%proj(ia), gr, atm, ep%so_strength)
+        call projector_build(ep%proj_fine(ia), gr, atm, ep%so_strength)
       end if
 
     end do
