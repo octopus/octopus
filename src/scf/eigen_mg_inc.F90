@@ -24,7 +24,7 @@ subroutine X(eigen_solver_mg) (gr, st, h, tol, niter, converged, diff, verbose)
   type(hamiltonian_t),    intent(inout) :: h
   FLOAT,                  intent(in)    :: tol
   integer,                intent(inout) :: niter
-  integer,                intent(inout) :: converged
+  integer,                intent(inout) :: converged(:)
   FLOAT,                  intent(out)   :: diff(1:st%nst,1:st%d%nik)
   logical,   optional,    intent(in)    :: verbose
 

@@ -26,7 +26,7 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, ver
   type(preconditioner_t), intent(in) :: pre
   FLOAT,               intent(in)    :: tol
   integer,             intent(inout) :: niter
-  integer,             intent(inout) :: converged
+  integer,             intent(inout) :: converged(:)
   FLOAT,     optional, intent(out)   :: diff(1:st%nst,1:st%d%nik)
   logical,   optional, intent(in)    :: verbose
 
@@ -34,7 +34,7 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, ver
 
   R_DOUBLE :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma
   real(8) :: cg0, e0, res
-  integer  :: ik, p, iter, maxter, conv, conv_, idim, ns, ip
+  integer  :: ik, p, iter, maxter, conv, idim, ns, ip
   logical  :: verbose_
 
   call push_sub('eigen_cg.eigen_solver_cg2')
@@ -49,7 +49,6 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, ver
     call write_info(4)
   end if
 
-  conv_ = 0
   maxter = niter
   niter = 0
 
@@ -75,7 +74,7 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, ver
   ns = 1
   if(st%d%nspin == 2) ns = 2
   ik_loop: do ik = 1, st%d%nik
-    conv = converged
+    conv = converged(ik)
 
     if(verbose_) then
       if(st%d%nik > ns) then
@@ -87,6 +86,8 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, ver
       end if
     end if
     
+    ASSERT(conv >= 0 .and. conv < st%nst)
+
     eigenfunction_loop : do p = conv + 1, st%nst
 
       if(verbose_) then
@@ -224,11 +225,10 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, ver
 
     end do eigenfunction_loop
 
-    conv_ = conv_ + conv
+    converged(ik) = conv
 
   end do ik_loop
 
-  converged = conv_
   ! Deallocation of variables
   deallocate(h_psi, g, g0, cg, ppsi)
 
@@ -245,11 +245,11 @@ subroutine X(eigen_solver_cg2_new) (gr, st, h, tol, niter, converged, diff, verb
   type(hamiltonian_t), intent(inout) :: h
   FLOAT,               intent(in)    :: tol
   integer,             intent(inout) :: niter
-  integer,             intent(inout) :: converged
+  integer,             intent(inout) :: converged(:)
   FLOAT,     optional, intent(out)   :: diff(1:st%nst,1:st%d%nik)
   logical,   optional, intent(in)    :: verbose
 
-  integer :: nik, nst, dim, ik, ist, maxter, i, conv, conv_
+  integer :: nik, nst, dim, ik, ist, maxter, i, conv
   logical :: verbose_
   R_TYPE, allocatable :: psi(:,:), phi(:, :), hpsi(:, :), hcgp(:, :), cg(:, :), sd(:, :), cgp(:, :)
   FLOAT :: ctheta, stheta, ctheta2, stheta2, mu, lambda, dump, &
@@ -271,7 +271,6 @@ subroutine X(eigen_solver_cg2_new) (gr, st, h, tol, niter, converged, diff, verb
 
   dim = st%d%dim; nik = st%d%nik; nst = st%nst
 
-  conv_ = 0
   maxter = niter
   niter = 0
 
@@ -293,7 +292,7 @@ subroutine X(eigen_solver_cg2_new) (gr, st, h, tol, niter, converged, diff, verb
   end if
 
   kpoints: do ik = 1, nik
-    conv = converged
+    conv = converged(ik)
     states: do ist = conv + 1, nst
 
       ! Orthogonalize starting eigenfunctions to those already calculated...
@@ -387,11 +386,9 @@ subroutine X(eigen_solver_cg2_new) (gr, st, h, tol, niter, converged, diff, verb
 
     end do states
 
-    conv_ = conv_ + conv
+    converged(ik) = conv
 
   end do kpoints
-
-  converged = conv_
 
   deallocate(phi, psi, hpsi, cg, hcgp, sd, cgp, orthogonal)
   if(verbose_) call messages_print_stress(stdout)

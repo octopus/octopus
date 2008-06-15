@@ -128,7 +128,7 @@ contains
       ALLOCATE(zh_psi(sys%gr%m%np, h%d%dim), sys%gr%m%np*h%d%dim)
     end if
     do ik = 1, sys%st%d%nik
-      do p = 1, eigens%converged
+      do p = 1, eigens%converged(ik)
         if (sys%st%wfs_type == M_REAL) then
           call dHpsi(h, sys%gr, sys%st%dpsi(:,:, p, ik) ,dh_psi, p, ik)
           eigens%diff(p, ik) = dstates_residue(sys%gr%m, sys%st%d%dim, dh_psi, sys%st%eigenval(p, ik), &
@@ -246,12 +246,12 @@ contains
       st%occ      = M_ZERO
 
       ! now the eigen solver stuff
-      call eigen_solver_init(sys%gr, eigens, st, 50)
+      call eigen_solver_init(sys%gr, eigens, st)
 
       ! Having initial and final tolerance does not make sense in this case:
       eigens%init_tol       = eigens%final_tol
       eigens%final_tol_iter = 2
-      eigens%converged      = st%nst - nus
+      eigens%converged(1:st%d%nik) = st%nst - nus
 
     end subroutine init_
 

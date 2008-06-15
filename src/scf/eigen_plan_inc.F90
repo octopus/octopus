@@ -34,7 +34,7 @@ subroutine X(eigen_solver_plan) (gr, st, hamilt, pre, tol, niter, converged, dif
   type(preconditioner_t),      intent(in)    :: pre
   FLOAT,                       intent(in)    :: tol
   integer,                     intent(inout) :: niter
-  integer,                     intent(out)   :: converged
+  integer,                     intent(out)   :: converged(:)
   FLOAT,             optional, intent(out)   :: diff(1:st%nst,1:st%d%nik)
 
 
@@ -58,7 +58,7 @@ subroutine X(eigen_solver_plan) (gr, st, hamilt, pre, tol, niter, converged, dif
   R_TYPE, allocatable :: hevec(:,:)
   R_TYPE, allocatable :: aux(:,:)
 
-  integer  :: blk, i, ii, idim, dim, j, d1, d2, matvec, nconv, ik, knec
+  integer  :: blk, i, ii, idim, dim, j, d1, d2, matvec, nconv, ik
   FLOAT :: x
 
   ! Some hard coded parameters.
@@ -98,7 +98,6 @@ subroutine X(eigen_solver_plan) (gr, st, hamilt, pre, tol, niter, converged, dif
   hevec    = R_TOTYPE(M_ZERO)
   aux      = R_TOTYPE(M_ZERO)
 
-  knec  = 0 ! Initialize the total (including all irreps.) converged eigenvector counter.
   niter = 0 ! Initialize the total matrix-vector multiplication counter.
 
   ! Main loop: runs over the irreducible subspaces.
@@ -295,12 +294,11 @@ subroutine X(eigen_solver_plan) (gr, st, hamilt, pre, tol, niter, converged, dif
       diff(i, ik) = res(i)
     end do
 
-    knec = knec + nec
+    converged(ik) = nec
     niter = niter + matvec
 
   end do k_points
 
-  converged = knec
   deallocate(eigenval, eigenvec, res,  v, av, tmp, h, hevec, aux)
   call pop_sub()
 

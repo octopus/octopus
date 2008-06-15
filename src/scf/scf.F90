@@ -227,7 +227,7 @@ contains
     call mesh_init_mesh_aux(gr%m)
 
     ! now the eigen solver stuff
-    call eigen_solver_init(gr, scf%eigens, st, 25)
+    call eigen_solver_init(gr, scf%eigens, st)
 
     if(scf%eigens%es_type == RS_MG) then
       if(.not. associated(gr%mgrid)) then
@@ -572,7 +572,7 @@ contains
 
         if(.not.scf%lcao_restricted) then
           write(message(1),'(a,i6)') 'Matrix vector products: ', scf%eigens%matvec
-          write(message(2),'(a,i6)') 'Converged eigenvectors: ', scf%eigens%converged
+          write(message(2),'(a,i6)') 'Converged eigenvectors: ', sum(scf%eigens%converged(1:st%d%nik))
           call write_info(2)
           call states_write_eigenvalues(stdout, st%nst, st, gr%sb, scf%eigens%diff)
         else

@@ -47,7 +47,7 @@ subroutine X(eigen_solver_lobpcg)(gr, st, h, pre, tol, niter, converged, diff, v
   type(preconditioner_t), intent(in)    :: pre
   FLOAT,                  intent(in)    :: tol
   integer,                intent(inout) :: niter
-  integer,                intent(inout) :: converged
+  integer,                intent(inout) :: converged(:)
   FLOAT, optional,        intent(out)   :: diff(1:st%nst, 1:st%d%nik)
   logical, optional,      intent(in)    :: verbose
 
@@ -429,7 +429,7 @@ subroutine X(eigen_solver_lobpcg)(gr, st, h, pre, tol, niter, converged, diff, v
 #endif
       diff = diffs
     end if
-    converged = converged + conv
+    converged(ik) = conv
     call X(lobpcg_info)(st, verbose_, ik, k, nuc, uc, diffs(:, ik))
   end do k_loop
 

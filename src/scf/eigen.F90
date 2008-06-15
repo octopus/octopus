@@ -68,7 +68,7 @@ module eigen_solver_m
     ! Stores information about how well it performed.
     FLOAT, pointer :: diff(:, :)
     integer        :: matvec
-    integer        :: converged
+    integer, pointer :: converged(:)
 
     ! Stores information about the preconditioning.
     type(preconditioner_t) :: pre
@@ -88,11 +88,10 @@ module eigen_solver_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine eigen_solver_init(gr, eigens, st, max_iter_default)
+  subroutine eigen_solver_init(gr, eigens, st)
     type(grid_t),         intent(inout) :: gr
     type(eigen_solver_t), intent(out)   :: eigens
     type(states_t),       intent(in)    :: st
-    integer,              intent(in)    :: max_iter_default
 
     call push_sub('eigen.eigen_solver_init')
 
@@ -195,11 +194,11 @@ contains
     !%Default 25
     !%Section SCF::EigenSolver
     !%Description
-    !% Determines the maximum number of iterations 
-    !% for the eigensolver (per state) -- that is, if this number is reached, the diagonalization
-    !% is stopped even if the desired tolerance was not achieved. Must be larger or equal than 1.
+    !% Determines the maximum number of iterations that the
+    !% eigensolver will perform if the desired tolerance is not
+    !% achieved. The default is 25 iterations.
     !%End
-    call loct_parse_int(check_inp('EigenSolverMaxIter'), max_iter_default, eigens%es_maxiter)
+    call loct_parse_int(check_inp('EigenSolverMaxIter'), 25, eigens%es_maxiter)
     if(eigens%es_maxiter < 1) call input_error('EigenSolverMaxIter')
 
     select case(eigens%es_type)
@@ -210,7 +209,8 @@ contains
     nullify(eigens%diff)
     ALLOCATE(eigens%diff(st%nst, st%d%nik), st%nst*st%d%nik)
 
-    eigens%converged = 0
+    ALLOCATE(eigens%converged(st%d%nik), st%d%nik)
+    eigens%converged(1:st%d%nik) = 0
     eigens%matvec    = 0
 
     call pop_sub()
@@ -227,6 +227,7 @@ contains
       call preconditioner_end(eigens%pre)
     end select
 
+    deallocate(eigens%converged)
     deallocate(eigens%diff)
     nullify(eigens%diff)
   end subroutine eigen_solver_end
@@ -335,7 +336,7 @@ contains
     end if
 
     eigens%matvec = maxiter
-    if(present(conv).and. eigens%converged == st%nst*st%d%nik) conv = .true.
+    if(present(conv).and. sum(eigens%converged(1:st%d%nik)) == st%nst*st%d%nik) conv = .true.
 
     call pop_sub()
     call profiling_out(C_PROFILING_EIGEN_SOLVER)

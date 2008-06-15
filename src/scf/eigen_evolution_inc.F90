@@ -24,11 +24,11 @@ subroutine X(eigen_solver_evolution) (gr, st, h, tol, niter, converged, diff, ta
   type(hamiltonian_t), target, intent(inout)    :: h
   FLOAT,               intent(in)    :: tol
   integer,             intent(inout) :: niter
-  integer,             intent(inout) :: converged
+  integer,             intent(inout) :: converged(:)
   FLOAT,               intent(out)   :: diff(1:st%nst,1:st%d%nik)
   FLOAT,               intent(in)    :: tau
 
-  integer :: ik, ist, iter, maxiter, conv, conv_, matvec, i, j
+  integer :: ik, ist, iter, maxiter, conv, matvec, i, j
   R_TYPE, allocatable :: hpsi(:, :), m(:, :), c(:, :), phi(:, :, :)
   FLOAT, allocatable :: eig(:)
   type(td_exp_t) :: te
@@ -36,7 +36,6 @@ subroutine X(eigen_solver_evolution) (gr, st, h, tol, niter, converged, diff, ta
   call push_sub('eigen_evolution.eigen_solver_evolution')
 
   maxiter = niter
-  conv_ = 0
   matvec = 0
 
   call td_exp_init(gr, te)
@@ -51,7 +50,7 @@ subroutine X(eigen_solver_evolution) (gr, st, h, tol, niter, converged, diff, ta
   ! Warning: it seems that the algorithm is improved if some extra states are added -- states
   ! whose convergence should not be checked.
   kpoints: do ik = 1, st%d%nik
-    conv = converged
+    conv = converged(ik)
 
     do iter = 1, maxiter
 
@@ -95,10 +94,9 @@ subroutine X(eigen_solver_evolution) (gr, st, h, tol, niter, converged, diff, ta
       if(conv == st%nst) exit
     end do
 
-    conv_ = conv_ + conv
+    converged(ik) = conv
   end do kpoints
 
-  converged = conv_
   niter = matvec
   call td_exp_end(te)
   deallocate(hpsi, m, c, eig, phi)
