@@ -86,7 +86,7 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, ver
       end if
     end if
     
-    ASSERT(conv >= 0 .and. conv < st%nst)
+    ASSERT(conv >= 0)
 
     eigenfunction_loop : do p = conv + 1, st%nst
 

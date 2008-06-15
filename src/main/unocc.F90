@@ -56,23 +56,32 @@ module unocc_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine unocc_run(sys, h, fromScratch)
+  subroutine unocc_run(sys, h, fromscratch)
     type(system_t),      intent(inout) :: sys
     type(hamiltonian_t), intent(inout) :: h
-    logical,             intent(inout) :: fromScratch
+    logical,             intent(inout) :: fromscratch
 
     type(eigen_solver_t) :: eigens
-    integer :: iunit, ierr, ik, p, occupied_states
+    integer :: iunit, ierr, ik, p, occupied_states, total_states, iter
     FLOAT, allocatable :: dh_psi(:,:)
     CMPLX, allocatable :: zh_psi(:,:)
     logical :: converged, l
-    integer :: lcao_start, lcao_start_default
+    integer :: lcao_start, lcao_start_default, max_iter
     type(lcao_t) :: lcao_data
+
+    ! read the maximum number of eigensolver iterations
+    call loct_parse_int(check_inp('MaximumIter'), 20, max_iter)
 
     occupied_states = sys%st%nst
     call init_(sys%gr%m, sys%st)
+    total_states = sys%st%nst
+
+    if(fromscratch) sys%st%nst = occupied_states !only read occupied states
 
     call restart_read (trim(tmpdir)//'gs', sys%st, sys%gr, sys%geo, ierr)
+
+    if(fromscratch) sys%st%nst = total_states
+
     if( (ierr .ne. 0)  .and.  (ierr < occupied_states) ) then
       message(1) = "Not all the occupied KS orbitals could be read from '"//trim(tmpdir)//"gs'"
       message(2) = "Please run a ground-state calculation first!"
@@ -104,6 +113,7 @@ contains
     call loct_parse_int(check_inp('LCAOStart'), lcao_start_default, lcao_start)
     if(.not.varinfo_valid_option('LCAOStart', lcao_start)) call input_error('LCAOStart')
     call messages_print_var_option(stdout, 'LCAOStart', lcao_start)
+
     if (lcao_start > LCAO_START_NONE) then
       if( (ierr.ne.0) .and. (ierr >= occupied_states)) then
         message(1) = "Info:  I will perform a LCAO calculation to get reasonable starting points."
@@ -146,7 +156,13 @@ contains
       deallocate(zh_psi)
     end if
 
-    call eigen_solver_run(eigens, sys%gr, sys%st, h, 1, converged, verbose = .true.)
+    do iter = 1, max_iter
+      write(message(1), '(a,i3)') "Info: Unoccupied states iteration ", iter
+      call write_info(1)
+      call eigen_solver_run(eigens, sys%gr, sys%st, h, 1, converged, verbose = .true.)
+
+      if(converged) exit
+    end do
 
     ! write restart information.
     call restart_write (trim(tmpdir)//'gs', sys%st, sys%gr, ierr)
