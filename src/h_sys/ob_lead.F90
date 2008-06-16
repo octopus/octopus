@@ -1,0 +1,335 @@
+!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!!
+!! This program is free software; you can redistribute it and/or modify
+!! it under the terms of the GNU General Public License as published by
+!! the Free Software Foundation; either version 2, or (at your option)
+!! any later version.
+!!
+!! This program is distributed in the hope that it will be useful,
+!! but WITHOUT ANY WARRANTY; without even the implied warranty of
+!! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!! GNU General Public License for more details.
+!!
+!! You should have received a copy of the GNU General Public License
+!! along with this program; if not, write to the Free Software
+!! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+!! 02111-1307, USA.
+!!
+!! $Id: h.F90 4037 2008-04-03 13:30:00Z xavier $
+
+! Lead related routines for open boundaries.
+
+#include "global.h"
+
+module ob_lead_m
+  use global_m
+  use grid_m
+  use lalg_adv_m
+  use lalg_basic_m
+  use math_m
+  use messages_m
+  use nl_operator_m
+  use ob_interface_m
+  use simul_box_m
+
+  implicit none
+  private
+
+  public ::         &
+    apply_coupling, &
+    lead_diag,      &
+    lead_offdiag,   &
+    lead_green
+
+contains
+
+  ! ---------------------------------------------------------
+  ! Calculate the diagonal block matrix, i. e. the Hamiltonian for
+  ! entries contained in the interface region.
+  subroutine lead_diag(lapl, vks, intf, diag)
+    type(nl_operator_t), intent(in)  :: lapl
+    FLOAT,               intent(in)  :: vks(:)
+    type(interface_t),   intent(in)  :: intf
+    CMPLX,               intent(out) :: diag(:, :)
+
+    integer :: i, k, n, k_stencil
+    FLOAT   :: w_re, w_im
+
+    call push_sub('ob_lead.lead_diag')
+
+    diag = M_z0
+
+    ! For all interface points...
+    do i = 1, intf%np
+      n = intf%index(i)
+      ! ... find the points they are coupled to.
+      do k = 1, lapl%n
+        k_stencil = lapl%m%lxyz_inv(          &
+          lapl%m%lxyz(n,1)+lapl%stencil(1,k), &
+          lapl%m%lxyz(n,2)+lapl%stencil(2,k), &
+          lapl%m%lxyz(n,3)+lapl%stencil(3,k))
+        ! If the coupling point is in the interface...
+        if(k_stencil.le.lapl%np.and. &
+          member_of_interface(k_stencil, intf)) then
+          ! ... get the operator coefficients.
+          if(lapl%cmplx_op) then
+            if(lapl%const_w) then
+              w_re = lapl%w_re(k, 1)
+              w_im = lapl%w_im(k, 1)
+            else
+              w_re = lapl%w_re(k, n)
+              w_im = lapl%w_im(k, n)
+            end if
+          else
+            if(lapl%const_w) then
+              w_re = lapl%w_re(k, 1)
+            else
+              w_re = lapl%w_re(k, n)
+            end if
+            w_im = M_ZERO
+          end if
+          ! Calculation if the kinetic term: -1/2 prefactor.
+          w_im = -w_im/M_TWO
+          w_re = -w_re/M_TWO
+          ! ... write them into the right entry of the diagonal block.
+          diag(i, k_stencil-intf%index_range(1)+1) = TOCMPLX(w_re, w_im)
+        end if
+      end do
+    end do
+
+    ! Add potential.
+    do i = 1, intf%np
+      diag(i, i) = diag(i, i) + vks(i)
+    end do
+    call pop_sub()
+  end subroutine lead_diag
+
+
+  ! ---------------------------------------------------------
+  ! Calculate the offdiagonal block matrix, i. e. the Hamiltonian for
+  ! entries not contained in the interface region, which is the matrix
+  ! V^T_\alpha or H_{C\alpha}.
+  subroutine lead_offdiag(lapl, intf, il, offdiag)
+    type(nl_operator_t), intent(in)  :: lapl
+    type(interface_t),   intent(in)  :: intf
+    integer,             intent(in)  :: il
+    CMPLX,               intent(out) :: offdiag(:, :)
+
+    integer :: p_n(MAX_DIM), p_k(MAX_DIM), p_matr(MAX_DIM)
+    integer :: j, k, k_stencil
+    integer :: n, n_matr
+    integer :: dir
+    integer :: x_shift
+    FLOAT   :: w_re, w_im
+
+    call push_sub('ob_lead.lead_offdiag')
+
+    ! Coupling direction.
+    select case(il)
+    case(LEFT)
+      dir = 1
+    case(RIGHT)
+      dir = -1
+    end select
+
+    offdiag(:, :) = M_z0
+
+    ! j iterates over rows of the block matrix.
+    do j = 1, intf%np
+      n = intf%index(j)
+      ! k iterates over all stencil points.
+      do k = 1, lapl%n
+        ! Get point number of coupling point.
+        k_stencil = lapl%m%lxyz_inv(            &
+          lapl%m%lxyz(n, 1)+lapl%stencil(1, k), &
+          lapl%m%lxyz(n, 2)+lapl%stencil(2, k), &
+          lapl%m%lxyz(n, 3)+lapl%stencil(3, k))
+
+        ! Get coordinates of current interface point n and current stencil point k_stencil.
+        p_n = lapl%m%lxyz(n, :)
+        p_k = lapl%m%lxyz(k_stencil, :)
+
+        ! Now, we shift the stencil by the size of one unit cell (intf%extent)
+        ! and check if the coupling point with point number n_matr is in the interface.
+        ! The sketch if for a 4x2 unit cell and a 5 point stencil in 2D:
+        !
+        !    |       ||                     |       ||
+        ! ...+---+---++---+---+...       ...+---+---++---+---+...
+        !    | o |   ||   |   |             |   |   || o |   |
+        ! ...+-|-+---++---+---+...       ...+---+---++-|-+---+...
+        !  x---o---o ||   |   |             |   | #----o---o |
+        ! ...+-|-+---++---+---+...  ==>  ...+---+---++-|-+---+...
+        !    | o |   ||   |   |             |   |   || o |   |
+        ! ...+---+---++---+---+...       ...+---+---++---+---+...
+        !    |   |   ||   |   |             |   |   ||   |   |
+        ! ...+---+---++---+---+...       ...+---+---++---+---+...
+        !    |   L   ||   C                 |   L   ||   C
+        !      unit
+        !      cell
+        !
+        ! The point p_k is markes with an x, the point p_matr with a #.
+        x_shift           = abs(p_k(TRANS_DIR)-p_n(TRANS_DIR))
+        p_matr            = p_n
+        p_matr(TRANS_DIR) = p_matr(TRANS_DIR) + dir*(intf%extent-x_shift)
+        n_matr            = lapl%m%lxyz_inv(p_matr(1), p_matr(2), p_matr(3))
+
+        if(member_of_interface(n_matr, intf)) then
+          n_matr = interface_index(n_matr, intf)
+
+          ! Multiply by the coefficient of the operator and sum up.
+          if(lapl%cmplx_op) then
+            if(lapl%const_w) then
+              w_re = lapl%w_re(k, 1)
+              w_im = lapl%w_im(k, 1)
+            else
+              w_re = lapl%w_re(k, n)
+              w_im = lapl%w_im(k, n)
+            end if
+          else
+            if(lapl%const_w) then
+              w_re = lapl%w_re(k, 1)
+            else
+              w_re = lapl%w_re(k, n)
+            end if
+            w_im = M_ZERO
+          end if
+
+          ! Calculation of the kinetic term: -1/2 prefactor.
+          w_im = -w_im/M_TWO
+          w_re = -w_re/M_TWO
+          offdiag(j, n_matr) = TOCMPLX(w_re, w_im)
+        end if
+      end do
+    end do
+
+    call pop_sub()
+  end subroutine lead_offdiag
+
+
+  ! ---------------------------------------------------------
+  ! Calculate head of the semi-infinite surface green function with the
+  ! algorithm from the paper
+  ! Highly convergent schemes for the calculation of bulk and surface Green functions
+  ! M. P. Lopez Sanco, J. M. Sancho, and J. Rubio (1984)
+  ! J. Phys. F: Met. Phys. 15 (1985) 851-858
+  subroutine lead_green(energy, diag, offdiag, np, green, dx)
+    FLOAT,   intent(in)  :: energy        ! Energy to calculate Green function for.
+    CMPLX,   intent(in)  :: diag(:, :)    ! Diagonal block of lead Hamiltonian.
+    CMPLX,   intent(in)  :: offdiag(:, :) ! Off-diagonal block of lead Hamiltonian.
+    integer, intent(in)  :: np            ! Number of interface points.
+    CMPLX,   intent(out) :: green(:, :)   ! The calculated Green function.
+    FLOAT,   intent(in)  :: dx            ! Spacing in transport direction.
+
+    CMPLX, allocatable :: e(:, :), es(:, :), a(:, :), b(:, :), inv(:, :)
+    CMPLX, allocatable :: tmp1(:, :), tmp2(:, :), tmp3(:, :)
+    integer            :: i, j
+    FLOAT              :: det, old_norm, norm, threshold, res
+
+    call push_sub('ob_lead.lead_green')
+
+    ALLOCATE(e(np, np), np**2)
+    ALLOCATE(es(np, np), np**2)
+    ALLOCATE(a(np, np), np**2)
+    ALLOCATE(b(np, np), np**2)
+    ALLOCATE(inv(np, np), np**2)
+    ALLOCATE(tmp1(np, np), np**2)
+    ALLOCATE(tmp2(np, np), np**2)
+    ALLOCATE(tmp3(np, np), np**2)
+
+    threshold = CNST(1e-12) ! FIXME: read from input.
+
+    ! Fill with start values.
+    call lalg_copy(np**2, diag(:, 1), e(:, 1))
+    call lalg_copy(np**2, offdiag(:, 1), a(:, 1))
+    do i = 1, np
+      b(i, :) = offdiag(:, i)
+    end do
+    call lalg_copy(np**2, diag(:, 1), es(:, 1))
+    old_norm = M_ZERO
+
+    do i = 1, 1000 ! FIXME: read from input. 2^1000 efective layers
+      ! inv <- -e
+      inv = M_z0
+      call lalg_axpy(np**2, -M_z1, e(:, 1), inv(:, 1))
+
+      do j = 1, np
+        inv(j, j) = inv(j, j) + energy + threshold*M_zI
+      end do
+      det = lalg_inverter(np, inv, invert=.true.)
+
+      call lalg_gemm(np, np, np, M_z1, a, inv, M_z0, tmp2)
+      call lalg_gemm(np, np, np, M_z1, tmp2, b, M_z0, tmp1)
+
+      call lalg_axpy(np**2, M_z1, tmp1(:, 1), es(:, 1)) ! es <- es + tmp1
+
+      norm = infinity_norm(es)*dx**2
+      res  = abs(norm-old_norm)
+
+      if(res.lt.threshold) then
+        exit
+      end if
+
+      old_norm = norm
+
+      call lalg_axpy(np**2, M_z1, tmp1(:, 1), e(:, 1)) ! e <- e + tmp1
+
+      call lalg_gemm(np, np, np, M_z1, b, inv, M_Z0, tmp1)
+      call lalg_gemm(np, np, np, M_z1, tmp1, a, M_z1, e)
+      call lalg_copy(np**2, a(:, 1), tmp3(:, 1))
+      call lalg_gemm(np, np, np, M_z1, tmp2, tmp3, M_z0, a)
+      call lalg_copy(np**2, b(:, 1), tmp3(:, 1))
+      call lalg_gemm(np, np, np, M_z1, tmp1, tmp3, m_z0, b)
+    end do
+
+    ! green <- -es
+    green = M_z0
+    call lalg_axpy(np**2, -M_z1, es(:, 1), green(:, 1))
+
+    do j = 1, np
+      green(j, j) = green(j, j) + energy + threshold*M_zI
+    end do
+    det = lalg_inverter(np, green, invert = .true.)
+    call symmetric_average(green, np)
+    det = aimag(green(1, 1))
+    do i = 2, np
+      det = det + aimag(green(i, i))
+    end do
+    if(det.gt.M_ZERO) then
+      green = conjg(green)
+      det   = -det
+    end if
+
+    deallocate(e, es, a, b, inv, tmp1, tmp2, tmp3)
+    call pop_sub()
+  end subroutine lead_green
+
+
+  ! ---------------------------------------------------------
+  ! Calculate res <- offdiag^T matrix offdiag with all matrices np x np.
+  ! If matrix is symmetric, so is the result.
+  subroutine apply_coupling(matrix, offdiag, res, np, il)
+    CMPLX,   intent(inout) :: matrix(np, np)
+    CMPLX,   intent(in)    :: offdiag(np, np)
+    integer, intent(in)    :: np, il
+    CMPLX,   intent(out)   :: res(np, np)
+
+    call push_sub('ob_lead.apply_coupling')
+
+    call lalg_copy(np**2, matrix(:, 1), res(:, 1))
+    if(il.eq.LEFT) then
+      call lalg_trmm(np, np, 'U', 'N', 'L', M_z1, offdiag, res)
+      call lalg_trmm(np, np, 'U', 'T', 'R', M_z1, offdiag, res)
+    else
+      call lalg_trmm(np, np, 'L', 'N', 'L', M_z1, offdiag, res)
+      call lalg_trmm(np, np, 'L', 'T', 'R', M_z1, offdiag, res)
+    end if
+
+    call pop_sub()
+  end subroutine apply_coupling
+end module ob_lead_m
+
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:
