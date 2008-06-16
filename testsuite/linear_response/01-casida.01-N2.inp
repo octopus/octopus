@@ -44,8 +44,6 @@ EigenSolverFinalToleranceIteration = 6
 
 EigenSolverMaxIter = 20
 
-unocc_states_EigenSolverMaxIter = 1000
-
 NumberUnoccStates = 9
 
 PoissonSolver = fft_corrected
