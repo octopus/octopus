@@ -49,7 +49,7 @@ subroutine X(lr_orth_vector) (m, st, v, ist, ik)
   if(st%smear%fixed_occ .or. st%smear%method == SMEAR_SEMICONDUCTOR) then
     do jst = 1, st%nst
       if(Theta_Fi(ist).ne.M_ZERO .and. Theta_Fi(jst).ne.M_ZERO) then
-        beta_ij(jst) = M_ONE
+        beta_ij(jst) = Theta_Fi(jst)
       else
         beta_ij(jst) = M_ZERO
       end if

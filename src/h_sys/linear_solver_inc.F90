@@ -378,10 +378,8 @@ subroutine X(ls_solver_operator) (h, gr, st, ist, ik, omega, x, hx)
     call lalg_axpy(NP, omega, x(:, idim), Hx(:, idim))
   end do
 
-
-  ! this is currently disabled as it is producing wrong results for
-  ! "normal" closed shell systems.
-  return
+  if(st%smear%fixed_occ .or. st%smear%method == SMEAR_SEMICONDUCTOR) &
+    return
 
   ! This is the Q term in Eq. (11) of PRB 51, 6773 (1995)
   ASSERT(.not.st%parallel_in_states)
