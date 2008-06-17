@@ -121,7 +121,7 @@ contains
       !% Do not perform a LCAO calculation before the SCF cycle.
       !%Option lcao_states 1
       !% Do a LCAO calculation before the SCF cycle and use the resulting wave-functions as 
-      !% initail wave-functions without changing the guess density.
+      !% initial wave-functions without changing the guess density.
       !% This will speed-up the convergence of the eigensolver during the first SCF iterations.
       !%Option lcao_full 2
       !% Do a LCAO calculation before the SCF cycle and use the LCAO wave-functions to build a new

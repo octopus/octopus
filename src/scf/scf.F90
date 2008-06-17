@@ -242,7 +242,7 @@ contains
     !%Default no
     !%Section SCF
     !%Description
-    !% Performs all the SCF cycle restricting the calculation to the LCAO subspace.
+    !% Performs the SCF cycle with the calculation restricted to the LCAO subspace.
     !% This may be useful for systems with convergence problems (first do a 
     !% calculation within the LCAO subspace, then restart from that point for
     !% an unrestricted calculation).

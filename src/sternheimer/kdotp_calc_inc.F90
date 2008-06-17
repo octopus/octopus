@@ -26,9 +26,6 @@ subroutine X(lr_calc_eff_mass_inv)(sys, h, lr, perturbation, eff_mass_inv)
   FLOAT,                  intent(out)   :: eff_mass_inv(:, :, :, :)
 !  integer, optional,      intent(in)    :: ndir
 !
-!  integer :: dir1, dir2, ndir_
-!
-
 ! m^-1[ij] = delta[ij] + 2*Re<psi0|H'i|psi'j>
 ! for each state, spin, and k-point
 ! This routine is not set up for spinors.
@@ -51,7 +48,7 @@ subroutine X(lr_calc_eff_mass_inv)(sys, h, lr, perturbation, eff_mass_inv)
 
         do idir2 = 1, sys%gr%sb%dim
           eff_mass_inv(ik, ist, idir1, idir2) = eff_mass_inv(ik, ist, idir1, idir2) + &
-             M_TWO*R_REAL(X(mf_integrate)(sys%gr%m, lr(idir2, 1)%X(dl_psi)(1:sys%gr%m%np, 1, ist, ik)*pertpsi(1:sys%gr%m%np)))
+             M_TWO*R_REAL(X(mf_integrate)(sys%gr%m, lr(idir2, 1)%X(dl_psi)(1:sys%gr%m%np, 1, ist, ik)*R_CONJ(pertpsi(1:sys%gr%m%np))))
         enddo
       enddo
     enddo

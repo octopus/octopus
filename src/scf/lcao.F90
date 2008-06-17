@@ -121,7 +121,7 @@ contains
     !% For this purpose, the code calculates a number of atomic orbitals -- this
     !% number depends on the given species. The default dimension for the LCAO basis
     !% set will be the sum of all these numbers, unless this dimension is larger than
-    !% twice the number of required orbitlas for the full calculation. 
+    !% twice the number of required orbitals for the full calculation. 
     !%
     !% This dimension however can be reduced (never increased) by making use of the 
     !% variable LCAODimension. Note that LCAODimension cannot be smaller than the 

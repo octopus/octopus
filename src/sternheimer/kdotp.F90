@@ -62,25 +62,10 @@ module kdotp_lr_m
     FLOAT, pointer :: eff_mass_inv(:, :, :, :)  ! inverse effective mass tensor
                                                 ! (ik, ist, idir1, idir2)
 
-!!    integer :: nsigma ! 1: consider only positive values of the frequency
-!!                      ! 2: consider both positive and negative
-!!    integer :: nfactor! 1: only one frequency needed
-!!                      ! 3: three frequencies (for the hyperpolarizabilities)
-!!    integer :: nomega ! number of frequencies to consider
-!
-!!    FLOAT :: eta                     ! small imaginary part to add to the frequency
-!!    FLOAT :: freq_factor(MAX_DIM)    !
-!!    FLOAT,      pointer :: omega(:)  ! the frequencies to consider
     type(lr_t), pointer :: lr(:,:) ! linear response for (NDIM,1)
                                    ! second index is dummy; should only be 1
-!
-!!    logical :: calc_hyperpol
-!!    CMPLX   :: alpha(MAX_DIM, MAX_DIM, 3)        ! the linear polarizability
-!!    CMPLX   :: beta (MAX_DIM, MAX_DIM, MAX_DIM)  ! first hyperpolarizability
-!
-!!    CMPLX   :: chi_para(MAX_DIM, MAX_DIM, 3)     ! The paramagnetic part of the susceptibility
-!!    CMPLX   :: chi_dia (MAX_DIM, MAX_DIM, 3)     ! The diamagnetic  part of the susceptibility
-!
+                                   ! for compatibility with em_resp routines
+
     logical :: ok
   end type kdotp_t
 
@@ -99,11 +84,8 @@ contains
     integer :: idir, ierr
 !    integer :: sigma, ndim, i, dir, ierr, iomega, ifactor
     character(len=100) :: dirname, str_tmp
-    logical :: complex_response
+!    logical :: complex_response
     !, have_to_calculate
-
-!    FLOAT :: closest_omega
-
 
     call push_sub('kdotp.static_kdotp_lr_run')
 
@@ -116,17 +98,10 @@ contains
     !    call parse_input()
     call pert_init(kdotp_vars%perturbation, PERTURBATION_KDOTP, sys%gr, sys%geo)
 
-!    em_vars%nfactor = 1
-!    if(em_vars%calc_hyperpol) em_vars%nfactor=3
-!
-!    em_vars%nsigma = 1  ! positive and negative values of the frequency must be considered
-!    if(em_vars%calc_hyperpol .or. (em_vars%nomega > 1) .or. (abs(em_vars%omega(1)) >= M_EPSILON) ) em_vars%nsigma = 2
-!
-    complex_response = wfs_are_complex(sys%st)
-
     ALLOCATE(kdotp_vars%lr(1:NDIM, 1), NDIM)
 
-    call read_wfs(sys%st, sys%gr, sys%geo, complex_response)
+    call read_wfs(sys%st, sys%gr, sys%geo, .true.)
+    ! even if wfs are real, the response must be allowed to be complex
 
     kdotp_vars%lr(1:NDIM,:)%nst = sys%st%nst
 
@@ -179,33 +154,33 @@ contains
       call write_info(1)
       call pert_setup_dir(kdotp_vars%perturbation, idir)
 !      write(*,*) 'done with pert_setup_dir'
-      if (wfs_are_complex(sys%st)) then
+!      if (wfs_are_complex(sys%st)) then
 !        write(*,*) 'calling zsternheimer_solve'
-        call zsternheimer_solve(sh, sys, h, kdotp_vars%lr(idir,:), 1, M_Z0, &
-          kdotp_vars%perturbation, RESTART_DIR, &
-          kdotp_rho_tag(idir), kdotp_wfs_tag(idir), have_restart_rho=(ierr==0))
+      call zsternheimer_solve(sh, sys, h, kdotp_vars%lr(idir,:), 1, M_Z0, &
+        kdotp_vars%perturbation, RESTART_DIR, &
+        kdotp_rho_tag(idir), kdotp_wfs_tag(idir), have_restart_rho=(ierr==0))
 !        write(*,*) 'called zsternheimer_solve'
-      else
+!      else
 !        write(*,*) 'calling dsternheimer_solve'
-        call dsternheimer_solve(sh, sys, h, kdotp_vars%lr(idir,:), 1, M_ZERO, &
-          kdotp_vars%perturbation, RESTART_DIR, &
-          kdotp_rho_tag(idir), kdotp_wfs_tag(idir), have_restart_rho=(ierr==0))
+!        call dsternheimer_solve(sh, sys, h, kdotp_vars%lr(idir,:), 1, M_ZERO, &
+!          kdotp_vars%perturbation, RESTART_DIR, &
+!          kdotp_rho_tag(idir), kdotp_wfs_tag(idir), have_restart_rho=(ierr==0))
 !        write(*,*) 'called dsternheimer_solve'
-      end if
+!      end if
         
       kdotp_vars%ok = kdotp_vars%ok .and. sternheimer_has_converged(sh)
           
     end do ! idir
 
-    if(wfs_are_complex(sys%st)) then 
+!    if(wfs_are_complex(sys%st)) then 
 !      call zlr_calc_eff_mass_inv(sys, h, kdotp_vars)
-      call zlr_calc_eff_mass_inv(sys, h, kdotp_vars%lr, &
+    call zlr_calc_eff_mass_inv(sys, h, kdotp_vars%lr, &
         kdotp_vars%perturbation, kdotp_vars%eff_mass_inv)
-    else
+!    else
 !      call dlr_calc_eff_mass_inv(sys, h, kdotp_vars)
-      call dlr_calc_eff_mass_inv(sys, h, kdotp_vars%lr, &
-        kdotp_vars%perturbation, kdotp_vars%eff_mass_inv)
-    end if
+!      call dlr_calc_eff_mass_inv(sys, h, kdotp_vars%lr, &
+!        kdotp_vars%perturbation, kdotp_vars%eff_mass_inv)
+!    end if
 
 !    call effective_masses(kdotp_vars)
     call kdotp_output(sys%st, sys%gr, h, sys%geo, sys%outp, kdotp_vars)
@@ -507,15 +482,15 @@ contains
 !          call messages_print_stress(stdout, trim(message(1)))
 !        end if
 !      else
-!        write(message(1),'(a)') 'Magnetic susceptibilities'
-!        call messages_print_stress(stdout, trim(message(1)))
+        write(message(1),'(a)') 'Effective masses'
+        call messages_print_stress(stdout, trim(message(1)))
 !      end if
 
-      if (wfs_are_real(sys%st)) then 
-        message(1) = 'Wavefunctions type: Real'
-      else
-        message(1) = 'Wavefunctions type: Complex'
-      end if
+!      if (wfs_are_real(sys%st)) then 
+!        message(1) = 'Wavefunctions type: Real'
+!      else
+     message(1) = 'Wavefunctions type: Complex'
+!      end if
       call write_info(1)
 
 !      write(message(1),'(a,i3,a)') 'Calculating response for ', em_vars%nomega, ' frequencies.'
@@ -632,57 +607,29 @@ contains
         character(len=80) :: filename
         integer :: ist
 
-        write(filename, '(a, a)') 'kdotp/kpoint_', ik2str(ik)
+        write(filename, '(a, a)') 'kdotp/kpoint_', int2str(ik)
         iunit = io_open(trim(filename), action='write')
-        write(iunit,'(a)') '# Inverse effective mass tensors for valence bands'
-        write(iunit,'(a, i4)') '# k-point index = ', ik
+        write(iunit,'(a)') '# Inverse effective mass tensors'
+        write(iunit,'(a, a)') '# k-point index = ', int2str(ik)
         write(iunit,'(a, 3f12.8)') '# k-point coordinates = ', st%d%kpoints(1:MAX_DIM, ik)      
 
         do ist = 1, nst
           write(iunit,'(a)')
-          write(iunit,'(a, i6)') 'State #', ist
+          write(iunit,'(a, a, a, f12.8, a, a)') 'State #', int2str(ist), ', Energy = ', &
+            st%eigenval(ist, ik)*units_out%energy%factor, ' ', units_out%energy%abbrev
           call io_output_tensor(iunit, kdotp_vars%eff_mass_inv(ik, ist, :, :), NDIM, M_ONE)
         enddo
 
       end subroutine out_eff_mass
 
-      character(len=12) function ik2str(ik) result(str)
-        integer, intent(in) :: ik
+      character(len=12) function int2str(i) result(str)
+        integer, intent(in) :: i
       
-        write(str, '(i11)') ik
+        write(str, '(i11)') i
         str = trim(adjustl(str))
 
-      end function ik2str
+      end function int2str
             
-!    ! ---------------------------------------------------------
-!    ! Note: this should be in spectrum.F90
-!    subroutine cross_section_header(out_file)
-!      integer, intent(in) :: out_file
-!
-!      character(len=80) :: header_string
-!      integer :: i, k
-!
-!      !this header is the same from spectrum.F90
-!      write(out_file, '(a1, a20)', advance = 'no') '#', str_center("Energy", 20)
-!      write(out_file, '(a20)', advance = 'no') str_center("(1/3)*Tr[sigma]", 20)
-!      write(out_file, '(a20)', advance = 'no') str_center("Anisotropy[sigma]", 20)
-!
-!      do i = 1, 3
-!        do k = 1, 3
-!          write(header_string,'(a6,i1,a1,i1,a1)') 'sigma(',i,',',k,')'
-!          write(out_file, '(a20)', advance = 'no') str_center(trim(header_string), 20)
-!        end do
-!      end do
-!
-!      write(out_file, *)
-!      write(out_file, '(a1,a20)', advance = 'no') '#', str_center('['//trim(units_out%energy%abbrev) // ']', 20)
-!      do i = 1, 11
-!        write(out_file, '(a20)', advance = 'no')  str_center('['//trim(units_out%length%abbrev) //'^2]', 20)
-!      end do
-!      write(out_file,*)
-!    end subroutine cross_section_header
-!
-!
 !    ! ---------------------------------------------------------
 !    subroutine out_polarizability()
 !      FLOAT :: cross(MAX_DIM, MAX_DIM), crossp(MAX_DIM, MAX_DIM)

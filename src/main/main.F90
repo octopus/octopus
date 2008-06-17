@@ -46,7 +46,7 @@ program octopus
   !%Default no
   !%Section Generalities::Debug
   !%Description
-  !% If true, allows the use of certains parts of the code that are
+  !% If true, allows the use of certain parts of the code that are
   !% still under development. This should not be used for production runs.
   !%End
   call loct_parse_logical('DevelVersion', .false., conf%devel_version)
@@ -56,10 +56,10 @@ program octopus
   !%Default 0
   !%Section Generalities::Debug
   !%Description
-  !% This variable decides wether or not to enter debug-mode.
+  !% This variable decides whether or not to enter debug mode.
   !% If its value is 0 (the default) Octopus does not enter debug mode.
   !% If it is greater than 0 different amounts of additional information
-  !% is written to standard output and additional assertion checks are performed.
+  !% are written to standard output and additional assertion checks are performed.
   !% Level 1: moderate amount of debug output but assertion checks enabled.
   !% Level 2: the code prints a stack trace as it enters end exits subroutines.
   !% This is useful for developers and you should include this output when
