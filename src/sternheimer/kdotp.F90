@@ -31,6 +31,7 @@ module kdotp_lr_m
   use io_function_m
   use kdotp_calc_m
   use lalg_basic_m
+  use lalg_adv_m
   use loct_parser_m
   use linear_response_m
   use math_m
@@ -114,29 +115,24 @@ contains
     ! ham_var_set = 0 results in HamiltonianVariation = V_ext_only
 
     do idir = 1, NDIM
-!      do sigma = 1, em_vars%nsigma
-!        do ifactor = 1, em_vars%nfactor 
+      call lr_init(kdotp_vars%lr(idir, 1))
+      call lr_allocate(kdotp_vars%lr(idir, 1), sys%st, sys%gr%m)
 
-          call lr_init(kdotp_vars%lr(idir, 1))
-          call lr_allocate(kdotp_vars%lr(idir, 1), sys%st, sys%gr%m)
-
-          ! load wave-functions
-          if(.not.fromScratch) then
-            str_tmp =  kdotp_wfs_tag(idir)
-            write(dirname,'(3a, i1)') RESTART_DIR, trim(str_tmp), '_1'
-            ! 1 is the sigma index which is used in em_resp
-            call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, &
-              ierr, lr=kdotp_vars%lr(idir, 1))
-
-            if(ierr.ne.0) then
-              message(1) = "Could not load response wave-functions from '"//trim(tmpdir)//dirname
-              call write_warning(1)
-            end if
-
+      ! load wave-functions
+      if(.not.fromScratch) then
+         str_tmp =  kdotp_wfs_tag(idir)
+         write(dirname,'(3a, i1)') RESTART_DIR, trim(str_tmp), '_1'
+         ! 1 is the sigma index which is used in em_resp
+         call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, &
+               ierr, lr=kdotp_vars%lr(idir, 1))
+          
+          if(ierr.ne.0) then
+             message(1) = "Could not load response wave-functions from '"//trim(tmpdir)//dirname
+             call write_warning(1)
           end if
-!
-!        end do
-!      end do
+          
+       end if
+
     end do
 
     call io_mkdir(trim(tmpdir)//RESTART_DIR)
@@ -183,7 +179,7 @@ contains
 !    end if
 
 !    call effective_masses(kdotp_vars)
-    call kdotp_output(sys%st, sys%gr, h, sys%geo, sys%outp, kdotp_vars)
+    call kdotp_output(sys%st, sys%gr, kdotp_vars)
 
 !    do iomega = 1, em_vars%nomega
 !
@@ -297,42 +293,6 @@ contains
 !
 !        end do ! dir
 !      end do ! ifactor
-!      
-!      if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
-!        ! calculate polarizability
-!        do ifactor = 1, em_vars%nfactor
-!          if(wfs_are_complex(sys%st)) then 
-!            call zlr_calc_polarizability(sys, h, em_vars%lr(:, :, ifactor), em_vars%nsigma, &
-!                 em_vars%perturbation, em_vars%alpha(:, :, ifactor))
-!          else
-!            call dlr_calc_polarizability(sys, h, em_vars%lr(:, :, ifactor), em_vars%nsigma, &
-!                em_vars%perturbation, em_vars%alpha(:, :, ifactor))
-!          end if
-!        end do
-!        
-!        ! calculate hyperpolarizability
-!        if(em_vars%calc_hyperpol) then
-!          if(wfs_are_complex(sys%st)) then
-!            call zlr_calc_beta(sh, sys, h, em_vars%lr, em_vars%perturbation, em_vars%beta)
-!          else
-!            call dlr_calc_beta(sh, sys, h, em_vars%lr, em_vars%perturbation, em_vars%beta)
-!          end if
-!        end if
-!      
-!      else if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
-!        do ifactor = 1, em_vars%nfactor
-!          if(wfs_are_complex(sys%st)) then 
-!            call zlr_calc_susceptibility(sys, h, em_vars%lr(:,:, ifactor), em_vars%nsigma, em_vars%perturbation, &
-!               em_vars%chi_para(:,:, ifactor), em_vars%chi_dia(:,:, ifactor))
-!          else
-!            call dlr_calc_susceptibility(sys, h, em_vars%lr(:,:, ifactor), em_vars%nsigma, em_vars%perturbation, &
-!               em_vars%chi_para(:,:, ifactor), em_vars%chi_dia(:,:, ifactor))
-!          end if
-!        end do
-!      end if
-!
-!    call kdotp_output(sys%st, sys%gr, h, sys%geo, sys%outp, em_vars, iomega)
-!
 
     do idir = 1, NDIM
       call lr_dealloc(kdotp_vars%lr(idir, 1))
@@ -473,18 +433,9 @@ contains
     subroutine info()
 
       call pert_info(kdotp_vars%perturbation, stdout)
-!      if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
-!        if(em_vars%calc_hyperpol) then 
-!          write(message(1),'(a)') 'Linear Reponse First Order Hyperpolarizabilities'
-!          call messages_print_stress(stdout, trim(message(1)))
-!        else 
-!          write(message(1),'(a)') 'Linear Reponse Polarizabilities'
-!          call messages_print_stress(stdout, trim(message(1)))
-!        end if
-!      else
+
         write(message(1),'(a)') 'Effective masses'
         call messages_print_stress(stdout, trim(message(1)))
-!      end if
 
 !      if (wfs_are_real(sys%st)) then 
 !        message(1) = 'Wavefunctions type: Real'
@@ -556,16 +507,13 @@ contains
   end subroutine read_wfs
 
   ! ---------------------------------------------------------
-  subroutine kdotp_output(st, gr, h, geo, outp, kdotp_vars)
-    type(states_t),  intent(inout) :: st
-    type(grid_t),    intent(inout) :: gr
-    type(hamiltonian_t),    intent(inout) :: h
-    type(geometry_t),    intent(inout) :: geo
-    type(h_sys_output_t),  intent(in)    :: outp
-    type(kdotp_t), intent(inout) :: kdotp_vars
+  subroutine kdotp_output(st, gr, kdotp_vars)
+    type(states_t),       intent(inout) :: st
+    type(grid_t),         intent(inout) :: gr
+    type(kdotp_t),        intent(inout) :: kdotp_vars
 
     integer :: iunit, ik
-    !, ifactor
+    FLOAT :: determinant
 
 !    write(*,'(a)') 'kdotp_output'
 
@@ -576,28 +524,6 @@ contains
       call out_eff_mass(ik, st%nst)
     enddo
 
-!    do ifactor = 1, em_vars%nfactor
-!      str_tmp = freq2str(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)/units_out%energy%factor)
-!      write(dirname, '(a, a)') 'linear/freq_', trim(str_tmp)
-!      call io_mkdir(trim(dirname))
-!
-!      if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
-!        call out_polarizability()
-!        if(em_vars%calc_hyperpol) call out_hyperpolarizability()
-!      else if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
-!        call out_susceptibility()
-!      end if
-!
-!      call out_projections()
-!
-!      str_tmp = freq2str(em_vars%omega(iomega)/units_out%energy%factor)
-!      write(dirname, '(a, a)') 'linear/freq_', trim(str_tmp)
-!      call io_mkdir(dirname)
-!      call out_wavefunctions()
-!
-!      call out_circular_dichroism
-!    end do
-!
     contains
 
       subroutine out_eff_mass(ik, nst)
@@ -609,14 +535,26 @@ contains
 
         write(filename, '(a, a)') 'kdotp/kpoint_', int2str(ik)
         iunit = io_open(trim(filename), action='write')
-        write(iunit,'(a)') '# Inverse effective mass tensors'
         write(iunit,'(a, a)') '# k-point index = ', int2str(ik)
-        write(iunit,'(a, 3f12.8)') '# k-point coordinates = ', st%d%kpoints(1:MAX_DIM, ik)      
+        write(iunit,'(a, 3f12.8)') '# k-point coordinates = ', st%d%kpoints(1:MAX_DIM, ik)
+        if (.not.kdotp_vars%ok) write(iunit, '(a)') "# WARNING: not converged"      
 
+        write(iunit,'(a)')
+        write(iunit,'(a)') '# Inverse effective mass tensors'
         do ist = 1, nst
           write(iunit,'(a)')
           write(iunit,'(a, a, a, f12.8, a, a)') 'State #', int2str(ist), ', Energy = ', &
             st%eigenval(ist, ik)*units_out%energy%factor, ' ', units_out%energy%abbrev
+          call io_output_tensor(iunit, kdotp_vars%eff_mass_inv(ik, ist, :, :), NDIM, M_ONE)
+        enddo
+
+        write(iunit,'(a)')
+        write(iunit,'(a)') '# Effective mass tensors'
+        do ist = 1, nst
+          write(iunit,'(a)')
+          write(iunit,'(a, a, a, f12.8, a, a)') 'State #', int2str(ist), ', Energy = ', &
+            st%eigenval(ist, ik)*units_out%energy%factor, ' ', units_out%energy%abbrev
+          determinant = lalg_inverter(gr%sb%dim, kdotp_vars%eff_mass_inv(ik, ist, :, :), .true.)
           call io_output_tensor(iunit, kdotp_vars%eff_mass_inv(ik, ist, :, :), NDIM, M_ONE)
         enddo
 
@@ -671,248 +609,7 @@ contains
 !      end if
 !
 !    end subroutine out_polarizability
-!
-!
-!    ! ---------------------------------------------------------
-!    subroutine out_susceptibility()
-!      iunit = io_open(trim(dirname)//'/susceptibility', action='write')
-!
-!      if (.not.em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
-!
-!      write(iunit, '(2a)') '# Paramagnetic contribution to the susceptibility tensor [ppm a.u.]'
-!      call io_output_tensor(iunit, em_vars%chi_para(:, :, ifactor), CNST(1e-6))
-!      write(iunit, '(1x)')
-!
-!      write(iunit, '(2a)') '# Diamagnetic contribution to the susceptibility tensor [ppm a.u.]'
-!      call io_output_tensor(iunit, em_vars%chi_dia(:, :, ifactor), CNST(1e-6))
-!      write(iunit, '(1x)')
-!
-!      write(iunit, '(2a)') '# Total susceptibility tensor [ppm a.u.]'
-!      call io_output_tensor(iunit, em_vars%chi_para(:, :, ifactor) + em_vars%chi_dia(:,:, ifactor), CNST(1e-6))
-!      write(iunit, '(1x)')
-!
-!      write(iunit, '(a)') hyphens
-!
-!      write(iunit, '(2a)') '# Paramagnetic contribution to the susceptibility tensor [ppm cgs / mol]'
-!      call io_output_tensor(iunit, em_vars%chi_para(:, :, ifactor), M_ONE/CNST(8.9238878e-2)*CNST(1e-6))
-!      write(iunit, '(1x)')
-!
-!      write(iunit, '(2a)') '# Diamagnetic contribution to the susceptibility tensor [ppm cgs / mol]'
-!      call io_output_tensor(iunit, em_vars%chi_dia(:, :, ifactor), M_ONE/CNST(8.9238878e-2)*CNST(1e-6))
-!      write(iunit, '(1x)')
-!
-!      write(iunit, '(2a)') '# Total susceptibility tensor [ppm cgs / mol]'
-!      call io_output_tensor(iunit, em_vars%chi_para(:, :, ifactor) + em_vars%chi_dia(:,:, ifactor), M_ONE/CNST(8.9238878e-2)*CNST(1e-6))
-!      write(iunit, '(1x)')
-!
-!      call io_close(iunit)      
-!    end subroutine out_susceptibility
 
-
-!    ! ---------------------------------------------------------
-!    subroutine out_hyperpolarizability()
-!      character, parameter :: axis(1:3) = (/ 'x', 'y', 'z' /)
-!
-!      CMPLX :: bpar(1:MAX_DIM), bper(1:MAX_DIM), bk(1:MAX_DIM)
-!      integer :: i, j, k
-!
-!      ! Output first hyperpolarizabilty (beta)
-!      iunit = io_open(trim(dirname)//'/beta', action='write')
-!
-!      if (.not.em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
-!
-!      write(iunit, '(2a)', advance='no') 'First hyperpolarizability tensor: beta [', trim(units_out%length%abbrev)
-!      write(iunit, '(a,i1)', advance='no') '^', 5
-!      write(iunit, '(a)') ']'
-!
-!      if (st%d%nspin /= UNPOLARIZED ) then 
-!        write(iunit, '(a)') 'WARNING: Hyperpolarizability has not been tested for spin polarized systems'
-!      end if
-!
-!      write(iunit, '()')
-!
-!      do i = 1, NDIM
-!        do j = 1, NDIM
-!          do k = 1, NDIM
-!            write(iunit,'(a,e20.8,e20.8)') 'beta '//axis(i)//axis(j)//axis(k)//' ', &
-!              real( em_vars%beta(i, j, k))/units_out%length%factor**(5), &
-!              aimag(em_vars%beta(i, j, k))/units_out%length%factor**(5)
-!          end do
-!        end do
-!      end do
-!
-!      if (NDIM == 3) then 
-!        bpar = M_ZERO
-!        bper = M_ZERO
-!
-!        do i = 1, NDIM
-!          do j = 1, NDIM
-!            bpar(i) = bpar(i) + em_vars%beta(i, j, j) + em_vars%beta(j, i, j) + em_vars%beta(j, j, i)
-!            bper(i) = bper(i) + M_TWO*em_vars%beta(i, j, j) - M_THREE*em_vars%beta(j, i, j) + M_TWO*em_vars%beta(j, j, i)
-!          end do
-!        end do
-!
-!        write(iunit, '()')
-!
-!        bpar = bpar/(M_FIVE * units_out%length%factor**(5))
-!        bper = bper/(M_FIVE * units_out%length%factor**(5))
-!        bk(1:NDIM) = M_THREE*M_HALF*(bpar(1:NDIM) - bper(1:NDIM))
-!            
-!        do i = 1, NDIM
-!          write(iunit, '(a, 2e20.8)') 'beta // '//axis(i), real(bpar(i)), aimag(bpar(i))
-!        end do
-!        
-!        write(iunit, '()')
-!            
-!        do i = 1, NDIM
-!          write(iunit, '(a, 2e20.8)') 'beta _L '//axis(i), real(bper(i)), aimag(bper(i))
-!        end do
-!
-!        write(iunit, '()')
-!
-!        do i = 1, NDIM
-!          write(iunit, '(a, 2e20.8)') 'beta  k '//axis(i), real(bk(i)), aimag(bk(i))
-!        end do
-!      endif
-!
-!      call io_close(iunit)
-!
-!    end subroutine out_hyperpolarizability
-!
-!
-!    ! ---------------------------------------------------------
-!    subroutine out_projections()
-!      CMPLX   :: proj
-!      integer :: ist, ivar, ik, dir, sigma
-!      character(len=80) :: fname
-!
-!      do ik = 1, st%d%nik
-!        do dir = 1, NDIM
-!
-!          write(fname, '(2a,i1,a,i1)') trim(dirname), '/projection-', ik, '-', dir
-!          iunit = io_open(trim(fname), action='write')
-!
-!          if (.not.em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
-!
-!          write(iunit, '(a)', advance='no') '# state '
-!          do ivar = 1, em_vars%lr(dir, 1, 1)%nst
-!            do sigma = 1, em_vars%nsigma
-!
-!              if( sigma == em_vars%nsigma .and. ivar == em_vars%lr(dir, 1, 1)%nst) then 
-!                write(iunit, '(i3)', advance='yes') (3 - 2*sigma)*ivar
-!              else 
-!                write(iunit, '(i3)', advance='no') (3 - 2*sigma)*ivar
-!              end if
-!
-!            end do
-!          end do
-!
-!          do ist = 1, st%nst
-!            write(iunit, '(i3)', advance='no') ist
-!
-!            do ivar = 1, em_vars%lr(dir, 1, 1)%nst
-!              do sigma = 1, em_vars%nsigma
-!
-!                if(wfs_are_complex(st)) then
-!                  proj = &
-!                       zstates_dotp(gr%m, st%d%dim, st%zpsi(:, :, ist, ik), em_vars%lr(dir, sigma, ifactor)%zdl_psi(:, :, ivar, ik))
-!                else
-!                  proj = &
-!                       dstates_dotp(gr%m, st%d%dim, st%dpsi(:, :, ist, ik), em_vars%lr(dir, sigma, ifactor)%ddl_psi(:, :, ivar, ik))
-!                end if
-!                  
-!                if( sigma == em_vars%nsigma .and. ivar == em_vars%lr(dir, 1, 1)%nst) then 
-!                  write(iunit, '(f12.6)', advance='yes') abs(proj)
-!                else 
-!                  write(iunit, '(f12.6,a)', advance='no') abs(proj), ' '
-!                end if
-!
-!              end do
-!            end do
-!
-!          end do
-!          call io_close(iunit)
-!
-!        end do ! dir
-!      end do !ik
-!
-!    end subroutine out_projections
-!
-!
-!    ! ---------------------------------------------------------
-!    subroutine out_wavefunctions()
-!      integer :: dir, isigma
-!
-!      do dir = 1, NDIM
-!        if(wfs_are_complex(st)) then 
-!
-!          if(NDIM==3) then
-!            if(iand(outp%what, output_elf).ne.0) &
-!              call zlr_calc_elf(st, gr, em_vars%lr(dir, 1, ifactor), em_vars%lr(dir, 2, ifactor))
-!          end if
-!          do isigma = 1, em_vars%nsigma
-!            call zh_sys_output_lr(st, gr, em_vars%lr(dir, isigma, ifactor), dirname, dir, isigma, outp)
-!          end do
-!        else
-!
-!          if(NDIM==3) then
-!            if(iand(outp%what, output_elf) .ne. 0) &
-!              call dlr_calc_elf(st, gr, em_vars%lr(dir, 1, ifactor), em_vars%lr(dir, 2, ifactor))
-!          end if
-!
-!          do isigma = 1, em_vars%nsigma
-!            call dh_sys_output_lr(st, gr, em_vars%lr(dir, isigma, ifactor), dirname, dir, isigma, outp)
-!          end do
-!
-!        end if
-!      end do
-!
-!    end subroutine out_wavefunctions
-!    
-!    subroutine out_circular_dichroism
-!      type(pert_t) :: angular_momentum
-!      integer :: idir
-!      FLOAT :: ff
-!      CMPLX :: dic
-!
-!      if(wfs_are_complex(st) .and. em_vars%nsigma == 2) then       
-!
-!        message(1) = "Info: Calculating circular dichroism"
-!        call write_info(1)
-!
-!        call pert_init(angular_momentum, PERTURBATION_MAGNETIC, gr, geo)
-!        
-!        dic = M_ZERO
-!        do idir = 1, 3
-!          call pert_setup_dir(angular_momentum, idir)
-!          dic = dic &
-!               + zpert_expectation_value(angular_momentum, gr, geo, h, st, em_vars%lr(idir, 1, ifactor)%zdl_psi, st%zpsi) &
-!               - zpert_expectation_value(angular_momentum, gr, geo, h, st, em_vars%lr(idir, 2, ifactor)%zdl_psi, st%zpsi)
-!        end do
-!        
-!        call pert_end(angular_momentum)
-!        
-!        dic = dic*M_zI/P_c
-!
-!        iunit = io_open(trim(dirname)//'/rotatory_strength', action='write')
-!
-!        ! print header
-!        write(iunit, '(a1,a20,a20,a20)') '#', str_center("Energy", 20), str_center("R", 20), str_center("Re[beta]", 20)
-!        write(iunit, '(a1,a20,a20,a20)') '#', str_center('['//trim(units_out%energy%abbrev) // ']', 20), &
-!             str_center('['//trim(units_out%length%abbrev) //'^3]', 20), &
-!             str_center('['//trim(units_out%length%abbrev) //'^4]', 20)
-!
-!        ff = M_ZERO
-!        if(em_vars%omega(iomega) .ne. 0) ff = real(dic) * P_C/(M_THREE*em_vars%omega(iomega))
-!
-!        write(iunit, '(3e20.8)') em_vars%omega(iomega), aimag(dic)/(M_PI*units_out%length%factor**3), ff/units_out%length%factor**4
-!
-!        call io_close(iunit)
-!
-!      end if
-!
-!    end subroutine out_circular_dichroism
-!    
   end subroutine kdotp_output
 
 end module kdotp_lr_m

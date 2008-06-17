@@ -133,31 +133,6 @@ contains
        ! otherwise, use default, which is hartree + fxc
     endif
 
-    do dir = 1, ndim
-      do sigma = 1, em_vars%nsigma
-        do ifactor = 1, em_vars%nfactor 
-
-          call lr_init(em_vars%lr(dir, sigma, ifactor))
-          call lr_allocate(em_vars%lr(dir, sigma, ifactor), sys%st, sys%gr%m)
-
-          ! load wave-functions
-          if(.not.fromScratch) then
-            str_tmp =  em_wfs_tag(dir, ifactor)
-            write(dirname,'(3a, i1)') RESTART_DIR, trim(str_tmp), '_', sigma
-            call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, &
-              ierr, lr=em_vars%lr(dir, sigma, ifactor))
-
-            if(ierr.ne.0) then
-              message(1) = "Could not load response wave-functions from '"//trim(tmpdir)//dirname
-              call write_warning(1)
-            end if
-
-          end if
-
-        end do
-      end do
-    end do
-
     call io_mkdir(trim(tmpdir)//RESTART_DIR)
     call info()
 
@@ -172,6 +147,11 @@ contains
 
       do ifactor = 1, em_vars%nfactor
         do dir = 1, sys%gr%sb%dim
+
+          do sigma = 1, em_vars%nsigma
+            call lr_init(em_vars%lr(dir, sigma, ifactor))
+            call lr_allocate(em_vars%lr(dir, sigma, ifactor), sys%st, sys%gr%m)
+          end do
 
           ierr = 0
 
@@ -190,8 +170,7 @@ contains
 
             ! if this frequency is the same as the previous one, just copy it
             if( have_to_calculate .and. &
-              em_vars%freq_factor(ifactor)*em_vars%omega(iomega) == &
-              em_vars%freq_factor(ifactor-1)*em_vars%omega(iomega) ) then 
+              em_vars%freq_factor(ifactor) == em_vars%freq_factor(ifactor-1)) then 
               
               call lr_copy(sys%st, sys%gr%m, em_vars%lr(dir, 1, ifactor-1), em_vars%lr(dir, 1, ifactor))
               call lr_copy(sys%st, sys%gr%m, em_vars%lr(dir, 2, ifactor-1), em_vars%lr(dir, 2, ifactor))
@@ -216,6 +195,21 @@ contains
           if(have_to_calculate) then 
 
             if(.not. fromscratch) then 
+
+               ! try to load wavefunctions, if first frequency; otherwise will already be initialized
+               if(iomega == 1) then
+                  do sigma = 1, em_vars%nsigma
+                     str_tmp =  em_wfs_tag(dir, ifactor)
+                     write(dirname,'(3a, i1)') RESTART_DIR, trim(str_tmp), '_', sigma
+                     call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, &
+                          ierr, lr=em_vars%lr(dir, sigma, ifactor))
+
+                     if(ierr.ne.0) then
+                        message(1) = "Could not load response wave-functions from '"//trim(tmpdir)//dirname
+                        call write_warning(1)
+                     end if
+                  end do
+               end if
 
               !try to load restart density
               if (wfs_are_complex(sys%st)) then 
@@ -542,13 +536,13 @@ contains
 
   ! ---------------------------------------------------------
   subroutine em_resp_output(st, gr, h, geo, outp, em_vars, iomega)
-    type(states_t),  intent(inout) :: st
-    type(grid_t),    intent(inout) :: gr
-    type(hamiltonian_t),    intent(inout) :: h
-    type(geometry_t),    intent(inout) :: geo
-    type(h_sys_output_t),  intent(in)    :: outp
-    type(em_resp_t), intent(inout) :: em_vars
-    integer,         intent(in)    :: iomega
+    type(states_t),       intent(inout) :: st
+    type(grid_t),         intent(inout) :: gr
+    type(hamiltonian_t),  intent(inout) :: h
+    type(geometry_t),     intent(inout) :: geo
+    type(h_sys_output_t), intent(in)    :: outp
+    type(em_resp_t),      intent(inout) :: em_vars
+    integer,              intent(in)    :: iomega
     
     integer :: iunit, ifactor
     character(len=80) :: dirname, str_tmp
