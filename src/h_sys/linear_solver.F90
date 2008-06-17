@@ -201,6 +201,11 @@ contains
       case(LS_MULTIGRID)
         message(1)='Multigrid (currently only Gauss-Jacobi - EXPERIMENTAL)'
 
+      case(LS_QMR)
+        message(1)='Linear Solver: Quasi-Minimal Residual'
+
+      case(LS_SOS)
+        message(1)='Linear Solver: Sum-over-States'
     end select
 
     call write_info(1)
