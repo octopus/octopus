@@ -29,6 +29,7 @@ module poisson_multigrid_m
   use loct_parser_m
   use math_m
   use mesh_m
+  use mesh_function_m
   use messages_m
   use multigrid_m
   use poisson_corrections_m
@@ -194,7 +195,7 @@ contains
 
     integer :: l, cl, t, np, curr_l
     FLOAT :: res, fmg_threshold = CNST(0.1)
-    FLOAT, allocatable :: rho_corrected(:), vh_correction(:)
+    FLOAT, allocatable :: vh_correction(:)
 
     type(dgridhier_t) :: phi
     type(dgridhier_t) :: phi_ini
@@ -204,26 +205,22 @@ contains
     call push_sub('poisson_multigrid.poisson_multigrid_solver');
 
     ! correction for treating boundaries
-    ALLOCATE(rho_corrected(gr%m%np), gr%m%np)
     ALLOCATE(vh_correction(gr%m%np), gr%m%np)
-
-    call correct_rho(this%corrector, gr%m, rho, rho_corrected, vh_correction)
-    rho_corrected(1:NP) = - M_FOUR*M_PI*rho_corrected(1:NP)
-    pot(1:NP) = pot(1:NP) - vh_correction(1:NP)
-
     call gridhier_init(phi, gr%mgrid, add_points_for_boundaries=.true.)
-    call gridhier_init(phi_ini, gr%mgrid, add_points_for_boundaries=.true.)
+    call gridhier_init(phi_ini, gr%mgrid, add_points_for_boundaries=.false.)
     call gridhier_init(tau, gr%mgrid, add_points_for_boundaries=.false.)
     call gridhier_init(err, gr%mgrid, add_points_for_boundaries=.false.)
 
-    phi%level(0)%p(1:gr%m%np) = pot(1:gr%m%np)
-    tau%level(0)%p(1:gr%m%np) = rho_corrected(1:gr%m%np)
+    call correct_rho(this%corrector, gr%m, rho, tau%level(0)%p, vh_correction)
+    call lalg_scal(NP, -M_FOUR*M_PI, tau%level(0)%p)
+
+    phi%level(0)%p(1:NP) = pot(1:NP) - vh_correction(1:NP)
 
     cl = gr%mgrid%n_levels
 
     curr_l = 0
 
-    do t= 0, this%maxcycles
+    do t = 0, this%maxcycles
 
       if(t > 0) then ! during the first cycle only the residue is calculated
         call vcycle_fas(curr_l)
@@ -232,7 +229,7 @@ contains
       res = residue(curr_l, phi%level(curr_l)%p, tau%level(curr_l)%p, err%level(curr_l)%p)
       
       if(in_debug_mode) then
-        write(message(1), *)"Multigrid: base level ", curr_l, " iter ", t, " res ", res
+        write(message(1), *) "Multigrid: base level ", curr_l, " iter ", t, " res ", res
         call write_info(1)
       end if
 
@@ -247,7 +244,7 @@ contains
 
       if(0 == t .and. res > fmg_threshold) then
         curr_l = max(cl-1, 0)
-        do l= 0, curr_l-1
+        do l= 0, curr_l - 1
           call dmultigrid_fine2coarse(gr%mgrid, l+1, tau%level(l)%p, tau%level(l+1)%p, this%restriction_method)
         end do
       end  if
@@ -261,20 +258,19 @@ contains
     end if
 
     pot(1:gr%m%np) = phi%level(0)%p(1:gr%m%np) + vh_correction(1:gr%m%np)
-    deallocate(rho_corrected, vh_correction)
+    deallocate(vh_correction)
 
-    call gridhier_end(phi,gr%mgrid)
-    call gridhier_end(tau,gr%mgrid)
-    call gridhier_end(err,gr%mgrid)
-    call gridhier_end(phi_ini,gr%mgrid)
+    call gridhier_end(phi, gr%mgrid)
+    call gridhier_end(tau, gr%mgrid)
+    call gridhier_end(err, gr%mgrid)
+    call gridhier_end(phi_ini, gr%mgrid)
 
     call pop_sub()
 
   contains
 
-
     ! ---------------------------------------------------------
-    FLOAT function residue(l, phi, rho, tmp) result(r)
+    FLOAT function residue(l, phi, rho, tmp) result(res)
       integer, intent(in) :: l
       FLOAT, pointer  :: phi(:)
       FLOAT, pointer  :: rho(:)
@@ -284,12 +280,11 @@ contains
 
       m => gr%mgrid%level(l)%m
       call df_laplacian(gr%sb, gr%mgrid%level(l)%f_der, phi, tmp)
-      tmp = tmp-rho
-      r   = sqrt(sum((tmp(1:m%np)*m%vol_pp(1:m%np))**2))
+      tmp(1:m%np) = tmp(1:m%np) - rho(1:m%np)
+      res = dmf_nrm2(m, tmp)
 
       call pop_sub()
     end function residue
-
 
     ! ---------------------------------------------------------
     subroutine vcycle_fas(fl)
@@ -299,7 +294,7 @@ contains
 
       do l = fl, cl
         ! store the initial approximation
-        np = gr%mgrid%level(l)%m%np_part
+        np = gr%mgrid%level(l)%m%np
         phi_ini%level(l)%p(1:np) = phi%level(l)%p(1:np)
 
         ! presmoothing
@@ -312,18 +307,20 @@ contains
 
           ! error calculation
           call df_laplacian(gr%sb, gr%mgrid%level(l)%f_der, phi%level(l)%p, err%level(l)%p)
-          err%level(l)%p = err%level(l)%p - tau%level(l)%p
+          err%level(l)%p(1:np) = err%level(l)%p(1:np) - tau%level(l)%p(1:np)
 
           ! transfer error to coarser grid
           call dmultigrid_fine2coarse(gr%mgrid, l+1, err%level(l)%p, tau%level(l+1)%p, this%restriction_method)
 
           ! the other part of the error
           call df_laplacian(gr%sb, gr%mgrid%level(l+1)%f_der, phi%level(l+1)%p, err%level(l+1)%p)
-          tau%level(l+1)%p = err%level(l+1)%p - tau%level(l+1)%p
+          np = gr%mgrid%level(l + 1)%m%np
+          tau%level(l + 1)%p(1:np) = err%level(l + 1)%p(1:np) - tau%level(l + 1)%p(1:np)
         end if
       end do
 
       do l = cl, fl, -1
+       
         ! postsmoothing
         call multigrid_relax(this, gr, gr%mgrid%level(l)%m, gr%mgrid%level(l)%f_der, &
           phi%level(l)%p, tau%level(l)%p , this%poststeps)
@@ -331,13 +328,13 @@ contains
         if(l /= fl) then
           ! calculate correction as the diference with the
           ! original grid in this level
-          np = gr%mgrid%level(l)%m%np_part
+          np = gr%mgrid%level(l)%m%np
           phi%level(l)%p(1:np) = phi%level(l)%p(1:np) - phi_ini%level(l)%p(1:np)
 
           ! transfer correction to finer level
           call dmultigrid_coarse2fine(gr%mgrid%level(l), phi%level(l)%p, err%level(l-1)%p)
           np = gr%mgrid%level(l-1)%m%np
-          phi%level(l-1)%p(1:np) = phi%level(l-1)%p(1:np) + err%level(l-1)%p(1:np)
+          phi%level(l - 1)%p(1:np) = phi%level(l - 1)%p(1:np) + err%level(l - 1)%p(1:np)
         end if
       end do
 
@@ -367,7 +364,7 @@ contains
     select case(this%relaxation_method)
 
     case(GAUSS_SEIDEL)
-      factor = CNST(-1.0)/LAP%w_re(LAP%stencil_center,1)*this%relax_factor;
+      factor = CNST(-1.0)/LAP%w_re(LAP%stencil_center, 1)*this%relax_factor
 
       n=LAP%n
 
