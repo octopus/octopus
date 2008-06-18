@@ -22,6 +22,7 @@
 module static_pol_m
   use datasets_m
   use elf_m
+  use pol_lr_m
   use geometry_m
   use global_m
   use grid_m
@@ -64,6 +65,7 @@ contains
     FLOAT, allocatable :: Vpsl_save(:), trrho(:), dipole(:, :, :)
     FLOAT, allocatable :: elf(:,:), lr_elf(:,:), elfd(:,:), lr_elfd(:,:)
     FLOAT, allocatable :: lr_rho(:,:)
+    FLOAT :: center_dipole(1:MAX_DIM)
     logical :: out_pol
     character(len=80) :: fname
 
@@ -73,6 +75,7 @@ contains
 
     ! load wave-functions
     call restart_read(trim(tmpdir)//'gs', sys%st, gr, sys%geo, ierr)
+
     if(ierr.ne.0) then
       message(1) = "Could not read KS orbitals from '"//trim(tmpdir)//"gs'"
       message(2) = "Please run a ground-state calculation first!"
@@ -137,7 +140,7 @@ contains
 
         trrho = M_ZERO
         do is = 1, st%d%spin_channels
-          trrho(:) = trrho(:) + st%rho(:, is)
+          trrho(1:NP) = trrho(1:NP) + st%rho(1:NP, is)
         end do
 
         ! calculate dipole
@@ -158,6 +161,22 @@ contains
 
       out_pol = (i == NDIM)
 
+    end do
+    
+    ! now calculate the dipole without field
+
+    h%ep%vpsl(1:NP) = vpsl_save(1:NP)
+    
+    call scf_run(scfv, sys%gr, sys%geo, st, sys%ks, h, sys%outp, gs_run=.false., verbosity = VERB_COMPACT)
+    
+    trrho = M_ZERO
+    do is = 1, st%d%spin_channels
+      trrho(1:NP) = trrho(1:NP) + st%rho(1:NP, is)
+    end do
+
+        ! calculate dipole
+    do j = 1, NDIM
+       center_dipole(j) = dmf_moment(gr%m, trrho, j, 1)
     end do
 
     call scf_end(scfv)
@@ -275,7 +294,8 @@ contains
     !-------------------------------------------------------------
     subroutine output_end_()
       FLOAT :: alpha(MAX_DIM, MAX_DIM)
-      integer :: iunit
+      CMPLX :: beta(MAX_DIM, MAX_DIM, MAX_DIM)
+      integer :: iunit, idir, jdir
 
       call io_mkdir('linear')
       if(out_pol  .and.  mpi_grp_is_root(mpi_world)) then ! output pol file
@@ -286,8 +306,20 @@ contains
         write(iunit, '(a)') ']'
 
         alpha(1:NDIM,1:NDIM) = (dipole(1:NDIM, 1:NDIM, 1) - dipole(1:NDIM, 1:NDIM, 2))/(M_TWO*e_field)
+
+        beta = M_ZERO
+
+        do idir = 1, NDIM
+          beta(1:NDIM, idir, idir) = -(dipole(idir, 1:NDIM, 1) + dipole(idir, 1:NDIM, 2) - M_TWO*center_dipole(1:NDIM))/e_field**2
+          beta(idir, 1:NDIM, idir) = beta(1:NDIM, idir, idir) 
+          beta(idir, idir, 1:NDIM) = beta(1:NDIM, idir, idir)
+        end do
+
         call io_output_tensor(iunit, alpha, NDIM, units_out%length%factor**NDIM)
         call io_close(iunit)
+        
+        call out_hyperpolarizability(gr%sb, beta, converged = .true., dirname = "linear/")
+
       end if
 
       if(iand(sys%outp%what, output_density).ne.0) then 

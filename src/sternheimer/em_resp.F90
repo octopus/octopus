@@ -41,6 +41,7 @@ module pol_lr_m
   use h_sys_output_m
   use pert_m
   use restart_m
+  use simul_box_m
   use states_m
   use sternheimer_m
   use string_m
@@ -54,7 +55,8 @@ module pol_lr_m
 
   public :: &
        pol_lr_run,       &
-       read_wfs
+       read_wfs,         &
+       out_hyperpolarizability
 
   type em_resp_t
     type(pert_t) :: perturbation
@@ -554,7 +556,7 @@ contains
 
       if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
         call out_polarizability()
-        if(em_vars%calc_hyperpol) call out_hyperpolarizability()
+        if(em_vars%calc_hyperpol) call out_hyperpolarizability(gr%sb, em_vars%beta, em_vars%ok(ifactor), dirname)
       else if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
         call out_susceptibility()
       end if
@@ -681,78 +683,6 @@ contains
 
       call io_close(iunit)      
     end subroutine out_susceptibility
-
-
-    ! ---------------------------------------------------------
-    subroutine out_hyperpolarizability()
-      character, parameter :: axis(1:3) = (/ 'x', 'y', 'z' /)
-
-      CMPLX :: bpar(1:MAX_DIM), bper(1:MAX_DIM), bk(1:MAX_DIM)
-      integer :: i, j, k
-
-      ! Output first hyperpolarizabilty (beta)
-      iunit = io_open(trim(dirname)//'/beta', action='write')
-
-      if (.not.em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
-
-      write(iunit, '(2a)', advance='no') 'First hyperpolarizability tensor: beta [', trim(units_out%length%abbrev)
-      write(iunit, '(a,i1)', advance='no') '^', 5
-      write(iunit, '(a)') ']'
-
-      if (st%d%nspin /= UNPOLARIZED ) then 
-        write(iunit, '(a)') 'WARNING: Hyperpolarizability has not been tested for spin polarized systems'
-      end if
-
-      write(iunit, '()')
-
-      do i = 1, NDIM
-        do j = 1, NDIM
-          do k = 1, NDIM
-            write(iunit,'(a,e20.8,e20.8)') 'beta '//axis(i)//axis(j)//axis(k)//' ', &
-              real( em_vars%beta(i, j, k))/units_out%length%factor**(5), &
-              aimag(em_vars%beta(i, j, k))/units_out%length%factor**(5)
-          end do
-        end do
-      end do
-
-      if (NDIM == 3) then 
-        bpar = M_ZERO
-        bper = M_ZERO
-
-        do i = 1, NDIM
-          do j = 1, NDIM
-            bpar(i) = bpar(i) + em_vars%beta(i, j, j) + em_vars%beta(j, i, j) + em_vars%beta(j, j, i)
-            bper(i) = bper(i) + M_TWO*em_vars%beta(i, j, j) - M_THREE*em_vars%beta(j, i, j) + M_TWO*em_vars%beta(j, j, i)
-          end do
-        end do
-
-        write(iunit, '()')
-
-        bpar = bpar/(M_FIVE * units_out%length%factor**(5))
-        bper = bper/(M_FIVE * units_out%length%factor**(5))
-        bk(1:NDIM) = M_THREE*M_HALF*(bpar(1:NDIM) - bper(1:NDIM))
-            
-        do i = 1, NDIM
-          write(iunit, '(a, 2e20.8)') 'beta // '//axis(i), real(bpar(i)), aimag(bpar(i))
-        end do
-        
-        write(iunit, '()')
-            
-        do i = 1, NDIM
-          write(iunit, '(a, 2e20.8)') 'beta _L '//axis(i), real(bper(i)), aimag(bper(i))
-        end do
-
-        write(iunit, '()')
-
-        do i = 1, NDIM
-          write(iunit, '(a, 2e20.8)') 'beta  k '//axis(i), real(bk(i)), aimag(bk(i))
-        end do
-      endif
-
-      call io_close(iunit)
-
-    end subroutine out_hyperpolarizability
-
 
     ! ---------------------------------------------------------
     subroutine out_projections()
@@ -888,6 +818,79 @@ contains
     end subroutine out_circular_dichroism
     
   end subroutine em_resp_output
+
+
+  ! ---------------------------------------------------------
+  subroutine out_hyperpolarizability(sb, beta, converged, dirname)
+    type(simul_box_t),  intent(in) :: sb
+    CMPLX,              intent(in) :: beta(:, :, :)
+    logical,            intent(in) :: converged
+    character(len=*),   intent(in) :: dirname
+
+
+    character, parameter :: axis(1:3) = (/ 'x', 'y', 'z' /)
+
+    CMPLX :: bpar(1:MAX_DIM), bper(1:MAX_DIM), bk(1:MAX_DIM)
+    integer :: i, j, k, iunit
+
+    ! Output first hyperpolarizabilty (beta)
+    iunit = io_open(trim(dirname)//'/beta', action='write')
+
+    if (.not. converged) write(iunit, '(a)') "# WARNING: not converged"
+
+    write(iunit, '(2a)', advance='no') 'First hyperpolarizability tensor: beta [', trim(units_out%length%abbrev)
+    write(iunit, '(a,i1)', advance='no') '^', 5
+    write(iunit, '(a)') ']'
+
+    write(iunit, '()')
+
+    do i = 1, sb%dim
+      do j = 1, sb%dim
+        do k = 1, sb%dim
+          write(iunit,'(a,e20.8,e20.8)') 'beta '//axis(i)//axis(j)//axis(k)//' ', &
+               real( beta(i, j, k))/units_out%length%factor**(5), &
+               aimag(beta(i, j, k))/units_out%length%factor**(5)
+        end do
+      end do
+    end do
+
+    if (sb%dim == 3) then 
+      bpar = M_ZERO
+      bper = M_ZERO
+
+      do i = 1, sb%dim
+        do j = 1, sb%dim
+          bpar(i) = bpar(i) + beta(i, j, j) + beta(j, i, j) + beta(j, j, i)
+          bper(i) = bper(i) + M_TWO*beta(i, j, j) - M_THREE*beta(j, i, j) + M_TWO*beta(j, j, i)
+        end do
+      end do
+
+      write(iunit, '()')
+
+      bpar = bpar/(M_FIVE * units_out%length%factor**(5))
+      bper = bper/(M_FIVE * units_out%length%factor**(5))
+      bk(1:sb%dim) = M_THREE*M_HALF*(bpar(1:sb%dim) - bper(1:sb%dim))
+
+      do i = 1, sb%dim
+        write(iunit, '(a, 2e20.8)') 'beta // '//axis(i), real(bpar(i)), aimag(bpar(i))
+      end do
+
+      write(iunit, '()')
+
+      do i = 1, sb%dim
+        write(iunit, '(a, 2e20.8)') 'beta _L '//axis(i), real(bper(i)), aimag(bper(i))
+      end do
+
+      write(iunit, '()')
+
+      do i = 1, sb%dim
+        write(iunit, '(a, 2e20.8)') 'beta  k '//axis(i), real(bk(i)), aimag(bk(i))
+      end do
+    endif
+
+    call io_close(iunit)
+
+  end subroutine out_hyperpolarizability
 
 end module pol_lr_m
 
