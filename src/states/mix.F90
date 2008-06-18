@@ -113,7 +113,7 @@ contains
     !%Default 0.3
     !%Section SCF::Mixing
     !%Description
-    !% Both the linear and the Broyden scheme depend on a "mixing parameter", set by this variable.
+    !% Both the linear and the Broyden scheme depend on a "mixing parameter", set by this variable.  Must be 0 < Mixing <= 1.
     !%End
     if (smix%type_of_mixing == MIX_LINEAR .or. smix%type_of_mixing == MIX_BROYDEN) then
       call loct_parse_float(check_inp('Mixing'), CNST(0.3), smix%alpha)
@@ -126,8 +126,8 @@ contains
     !%Section SCF::Mixing
     !%Description
     !% In the Broyden and in the GR-Pulay scheme, the new input density or potential is constructed
-    !% from the values of densities/potentials of previous a given number of previous iterations.
-    !% This number is set by this variable.
+    !% from the values of densities/potentials of a given number of previous iterations.
+    !% This number is set by this variable. Must be at least 1.
     !%End
     if (smix%type_of_mixing == MIX_GRPULAY .or. smix%type_of_mixing == MIX_BROYDEN) then
       call loct_parse_int(check_inp('MixNumberSteps'), 3, smix%ns)

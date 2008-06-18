@@ -32,7 +32,7 @@ noinst_HEADERS = \
 	mesh_init.F90 par_vec_inc.F90 derivatives_inc.F90 cube_function_inc.F90 fourier_space_inc.F90 \
 	mesh_function_inc.F90 functions_inc.F90 double_grid_apply.F90 \
 	submesh_inc.F90 io_function_inc.F90 nl_operator_inc.F90 \
-	multigrid_inc.F90 gridhier.F90
+	multigrid_inc.F90 gridhier_inc.F90
 
 include $(srcdir)/../common-rules.make
 
