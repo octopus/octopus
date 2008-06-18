@@ -59,6 +59,12 @@ Spacing = 0.01
 
 TheoryLevel = independent_particles
 
+
+
+
+# The following calculation corresponds with Fig. 1 (C), of G. K. Paramonov, Chem. Phys. 177, 169 (1993).
+# The figure should be perfectly reproduced if the calculation is done until 1 picosecond.
+
 TDOutput = energy + laser + multipoles + td_occup
 
 picosecond = 41341.373
@@ -66,6 +72,7 @@ picosecond = 41341.373
 # The whole run should go up to 1 picosecond, but in order to have a short
 # test we only do a small fraction of that.
 T = picosecond/100
+#T = picosecond
 dt = 0.25
 TDMaximumIter = T/dt
 TDEvolutionMethod = aetrs
@@ -80,24 +87,15 @@ AbsorbingBoundaries = no
 ABWidth = 3.0
 ABHeight = -4.0
 
-#mu0 = 3.088
 
 # The parameters, according to the bibliography, are:
 # mu0 = 7.85 debye / angstrom = 1.634 atomiccharge
 # xp = 0.6 Angstrom
-
-# This should correspond to [Jakubetz et al, Chem. Phys. Lett. 165, 100 (1990)],
-# Fig 1a, except for a factor of 0.529177 in the amplitude of the laser field that
-# I don't understand.
-# (Maybe it is a mistake in their paper?)
-
+# Note that in the paper of Paramonov, m0 is given as 7.58 D/A, which is probably wrong;
+# 7.85 D/A = 1.634 a.u., which is the number given in [Jakubetz et al, J. Chem. Phys. 90, 3686 (1989)],
+# and [Breueur et al, J. Phys. B: At. Mol. Opt. Phys. 24, 1343 (1991)]
 mu0 = 1.634
-#mu0 = 3.088
-#mu0 = 0.64290417
 xp = 0.6 / 0.529177
-
-# omega0 = E(6)-E(0)
-#omega0 = (-0.0992853178 - (-0.190472))/6
 
 # omega0 = 3332.44 cm^(-1)
 omega0 = 0.015183714
@@ -105,10 +103,6 @@ omega0 = 0.015183714
 #amp = 442.42 megavolt / cm
 amp = 0.086037
 
-
-#%TDExternalFields
-#scalar_potential | "amp*mu0*(x+r0)*exp(-(x+r0)/xp)" | envelope_fromexpr | "sin(pi*t/T)^2*cos(omega0*t)"
-#%
 
 %TDExternalFields
 scalar_potential | "amp*mu0*(x+r0)*exp(-(x+r0)/xp)" | envelope_fromexpr | "sin(pi*t/picosecond)^2*cos(omega0*t)"
