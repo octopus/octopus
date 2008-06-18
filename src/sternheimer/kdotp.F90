@@ -454,59 +454,6 @@ contains
 
   end subroutine kdotp_lr_run
 
-
-  ! ---------------------------------------------------------
-!  subroutine read_wfs(st, gr, geo, complex_wfs)
-!    type(states_t),   intent(inout) :: st
-!    type(grid_t),     intent(in)    :: gr
-!    type(geometry_t), intent(in)    :: geo
-!    logical,          intent(in)    :: complex_wfs
-!
-!    integer :: kpoints, nst, ierr, dim
-!      
-!    !check how many wfs we have
-!
-!    call push_sub('kdotp.read_wfs')
-!
-!    call states_look(trim(tmpdir)//'gs', gr%m, kpoints, dim, nst, ierr)
-!
-!    if(ierr.ne.0) then
-!      message(1) = 'Could not properly read wave-functions from "'//trim(tmpdir)//'gs".'
-!      call write_fatal(1)
-!    end if
-!
-!    st%nst    = nst
-!    st%st_end = nst
-!    deallocate(st%eigenval, st%occ)
-!
-!    if ( complex_wfs ) then 
-!      call states_allocate_wfns(st, gr%m, M_CMPLX)
-!    else 
-!      call states_allocate_wfns(st, gr%m, M_REAL)
-!    end if
-!
-!    ALLOCATE(st%eigenval(st%nst, st%d%nik), st%nst*st%d%nik)
-!    ALLOCATE(st%occ(st%nst, st%d%nik), st%nst*st%d%nik)
-!
-!    if(st%d%ispin == SPINORS) then
-!      ALLOCATE(st%spin(3, st%nst, st%d%nik), st%nst*st%d%nik)
-!      st%spin = M_ZERO
-!    end if
-!    st%eigenval = huge(REAL_PRECISION)
-!    st%occ      = M_ZERO
-!
-!    ! load wave-functions
-!    call restart_read(trim(tmpdir)//'gs', st, gr, geo, ierr)  
-!    if(ierr.ne.0) then
-!      message(1) = "Could not read KS orbitals from '"//trim(tmpdir)//"gs'"
-!      message(2) = "Please run a calculation of the ground state first!"
-!      call write_fatal(2)
-!    end if
-!
-!    call pop_sub()
-!
-!  end subroutine read_wfs
-
   ! ---------------------------------------------------------
   subroutine kdotp_output(st, gr, kdotp_vars)
     type(states_t),       intent(inout) :: st
