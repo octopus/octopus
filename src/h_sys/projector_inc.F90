@@ -331,8 +331,7 @@ subroutine X(project_sphere)(mesh, pj, dim, psi, ppsi)
 end subroutine X(project_sphere)
 
 !This function calculates |cpsi> = [x,V_nl] |psi>
-
-subroutine X(projector_conmut_r)(pj, gr, dim, idir, ik, psi, cpsi)
+subroutine X(projector_commute_r)(pj, gr, dim, idir, ik, psi, cpsi)
   type(projector_t),     intent(in)     :: pj
   type(grid_t),          intent(in)     :: gr
   integer,               intent(in)     :: dim
@@ -346,7 +345,7 @@ subroutine X(projector_conmut_r)(pj, gr, dim, idir, ik, psi, cpsi)
   integer, pointer :: jxyz(:)
   FLOAT,   pointer :: smx(:, :)
 
-  call push_sub('epot_inc.Xconmut_vnl_r')
+  call push_sub('epot_inc.Xcommute_vnl_r')
 
   cpsi(1:gr%m%np, 1:dim) = M_ZERO
 
@@ -356,7 +355,7 @@ subroutine X(projector_conmut_r)(pj, gr, dim, idir, ik, psi, cpsi)
     jxyz => pj%sphere%jxyz
     smx => pj%sphere%x
 
-    ALLOCATE(lpsi(ns, dim),  ns*dim)
+    ALLOCATE(lpsi(ns, dim), ns*dim)
     ALLOCATE(xplpsi(ns, dim), ns*dim)
     ALLOCATE(pxlpsi(ns, dim), ns*dim)
 
@@ -399,7 +398,7 @@ subroutine X(projector_conmut_r)(pj, gr, dim, idir, ik, psi, cpsi)
 
   call pop_sub()
 
-end subroutine X(projector_conmut_r)
+end subroutine X(projector_commute_r)
 
 !! Local Variables:
 !! mode: f90

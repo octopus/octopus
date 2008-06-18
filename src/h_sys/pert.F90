@@ -37,6 +37,7 @@ module pert_m
   use nl_operator_m
   use profiling_m
   use projector_m
+  use species_m
   use states_m
   use varinfo_m
   use mpi_m
@@ -198,9 +199,9 @@ contains
   ! --------------------------------------------------------------------
   subroutine pert_info(this, unit)
     type(pert_t), intent(in) :: this
-    integer,           intent(in) :: unit
+    integer,      intent(in) :: unit
 
-    call messages_print_var_option(stdout, 'RespPerturbationType', this%pert_type)
+    call messages_print_var_option(unit, 'RespPerturbationType', this%pert_type)
    
   end subroutine pert_info
 

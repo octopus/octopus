@@ -92,7 +92,7 @@ contains
     !%Default broyden
     !%Section SCF::Mixing
     !%Description
-    !% The scheme scheme used to produce, at each iteration in the self consistent cycle
+    !% The scheme scheme used to produce, at each iteration in the self-consistent cycle
     !% that attempts to solve the Kohn-Sham equations, the input density from the value
     !% of the input and output densities of previous iterations.
     !%Option linear 0

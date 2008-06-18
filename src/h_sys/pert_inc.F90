@@ -44,7 +44,6 @@ subroutine X(pert_apply) (this, gr, geo, h, ik, f_in, f_out)
 
   case(PERTURBATION_KDOTP)
     call kdotp()
-!    f_out(1:NP) = 0
 
   end select
 
@@ -54,15 +53,35 @@ contains
 
   ! --------------------------------------------------------------------------
   subroutine kdotp()
-    R_TYPE, allocatable :: f_in_copy(:), grad(:,:)
+    R_TYPE, allocatable :: f_in_copy(:), grad(:,:), psi(:), cpsi(:,:)
+    ! f_in_copy is "u", the periodic part of the Bloch function
+    ! psi is the full wavefunction
+
+    integer iatom
 
     ALLOCATE(f_in_copy(1:NP_PART), NP_PART)
+!    ALLOCATE(psi(1:NP_PART), NP_PART)
+!    ALLOCATE(cpsi(1:NP_PART, h%d%dim), NP_PART*h%d%dim)
     call lalg_copy(NP_PART, f_in, f_in_copy)
+!    call X(set_bc(gr%f_der%der_discr, f_in_copy(:)))
+!    psi(1:NP_PART) = h%phase(1:NP_PART, ik)*f_in_copy(1:NP_PART)
     
     ALLOCATE(grad(gr%m%np, gr%sb%dim), gr%m%np*gr%sb%dim)
+!    call X(derivatives_grad) (gr%f_der%der_discr, psi, grad, set_bc = .false.)
+    ! set_bc done already separately, since phase has been applied
+!    f_out(1:NP) = - M_zI * (grad(1:NP, this%dir))
+
+!    do iatom = 1, geo%natoms
+!       if(species_is_ps(geo%atom(iatom)%spec)) then
+!          call X(projector_commute_r(h%ep%proj(iatom), gr, h%d%dim, this%dir, ik, psi, cpsi(:, :)))
+!          f_out(1:NP) = f_out(1:NP) + cpsi(1:NP, 1)
+          ! using only the first spinor component
+!       end if
+!    end do
+
+!    f_out(1:NP) = R_CONJ(h%phase(1:NP, ik)) * f_out(1:NP)
 
     call X(derivatives_grad) (gr%f_der%der_discr, f_in_copy, grad) 
-
     f_out(1:NP) = - M_zI * (grad(1:NP, this%dir)) &
                   + h%d%kpoints(this%dir, ik) * f_in(1:NP)
 !    delta_H = (-i*grad + k) . delta_k
@@ -102,7 +121,7 @@ contains
 
         do idir = 1, gr%sb%dim
           if(this%dir == idir) cycle ! this direction is not used in the cross product
-          call X(projector_conmut_r)(h%ep%proj(iatom), gr, h%d%dim, idir, ik, f_in, vrnl(:, :, idir))
+          call X(projector_commute_r)(h%ep%proj(iatom), gr, h%d%dim, idir, ik, f_in, vrnl(:, :, idir))
         end do
 
         xx(1:MAX_DIM) = geo%atom(iatom)%x(1:MAX_DIM)
@@ -261,14 +280,14 @@ contains
         do idir = 1, gr%sb%dim
           do idir2 = 1, gr%sb%dim
             !calculate dnl |f_in2> = -[x,vnl] |f_in2>
-            call X(projector_conmut_r)(h%ep%proj(iatom), gr, h%d%dim, idir2, ik, f_in2(:, idir2), vrnl(:, :))
+            call X(projector_commute_r)(h%ep%proj(iatom), gr, h%d%dim, idir2, ik, f_in2(:, idir2), vrnl(:, :))
 
             ! -x vnl |f>
             dnl(1:NP, idir) = dnl(1:NP, idir) - gr%m%x(1:NP, idir) * vrnl(1:NP, 1)
 
             ! vnl x |f>
             xf(1:NP) = gr%m%x(1:NP, idir) * f_in2(1:NP, idir2)
-            call X(projector_conmut_r)(h%ep%proj(iatom), gr, h%d%dim, idir2, ik, xf, vrnl(:, :))
+            call X(projector_commute_r)(h%ep%proj(iatom), gr, h%d%dim, idir2, ik, xf, vrnl(:, :))
 
             dnl(1:NP, idir) = dnl(1:NP, idir) + vrnl(1:NP, 1)
           end do

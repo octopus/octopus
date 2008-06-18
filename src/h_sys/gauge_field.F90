@@ -270,7 +270,7 @@ contains
         do idir = 1, gr%sb%dim
           do iatom = 1, geo%natoms
             if(species_is_ps(geo%atom(iatom)%spec)) then
-              call zprojector_conmut_r(pj(iatom), gr, st%d%dim, idir, ik, epsi(:, 1), cpsi(:, :))
+              call zprojector_commute_r(pj(iatom), gr, st%d%dim, idir, ik, epsi(:, 1), cpsi(:, :))
               gpsi(1:NP, idir, 1:st%d%dim) = gpsi(1:NP, idir, 1:st%d%dim) + cpsi(1:NP, 1:st%d%dim)
             end if
           end do
