@@ -114,6 +114,7 @@ module global_m
     M_RAMAN              =  13,  &
     M_ONE_SHOT           =  14,  &
     M_KDOTP              =  15,  &
+    M_GCM                =  16,  &
     M_PULPO_A_FEIRA      =  99
 
   ! the standard input and output

@@ -117,6 +117,8 @@ program octopus
   !% the perturbation being the difference between the two xc used.
   !%Option kdotp 15
   !% Calculation of effective masses by k.p perturbation theory
+  !%Option gcm 16
+  !% Generator-Coordinates calculation (experimental).
   !%Option recipe 99
   !% Prints out a tasty recipe
   !%End

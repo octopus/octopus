@@ -90,6 +90,11 @@ module hamiltonian_m
     hamiltonian_not_adjoint,         &
     hamiltonian_hermitean
 
+!!!!NEW
+  public ::                &
+    dvexternal
+!!!!ENDOFNEW
+
   type hamiltonian_t
     ! The Hamiltonian must know what are the "dimensions" of the spaces,
     ! in order to be able to operate on the states.

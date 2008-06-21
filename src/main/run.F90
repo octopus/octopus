@@ -38,6 +38,7 @@ module run_prog_m
   use phonons_lr_m
   use pol_lr_m
   use kdotp_lr_m
+  use gcm_m
   use pulpo_m
   use raman_m
   use restart_m
@@ -121,6 +122,10 @@ contains
       call one_shot_run(sys, h)
     case(M_KDOTP)
       call kdotp_lr_run(sys, h, fromScratch)
+!!!!NEW
+    case(M_GCM)
+      call gcm_run(sys, h)
+!!!!ENDOFNEW
     case(M_PULPO_A_FEIRA)
       call pulpo_print()
     end select
