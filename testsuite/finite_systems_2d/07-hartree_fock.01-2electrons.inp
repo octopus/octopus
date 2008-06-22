@@ -33,12 +33,12 @@ TheoryLevel = hartree_fock
 SpinComponents = spin_polarized
 
 
-ConvRelDens = 1e-4
+ConvRelDens = 5e-3
 LCAOStart = lcao_none
 
 EigenSolver = cg
-EigenSolverInitTolerance = 1e-5
-EigenSolverFinalTolerance = 1e-5
+EigenSolverInitTolerance = 1e-2
+EigenSolverFinalTolerance = 1e-6
 EigenSolverMaxIter = 25
 TypeOfMixing = linear
 Mixing = 1.0
