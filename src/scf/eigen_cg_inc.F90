@@ -32,8 +32,8 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, ver
 
   R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:),  cg(:,:), ppsi(:,:)
 
-  R_DOUBLE :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma
-  real(8) :: cg0, e0, res
+  R_TYPE   :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma
+  real(8)  :: cg0, e0, res
   integer  :: ik, p, iter, maxter, conv, idim, ns, ip
   logical  :: verbose_
 
@@ -159,31 +159,28 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, ver
         end if
 
         ! cg contains now the conjugate gradient
-        cg0 = X(states_nrm2) (gr%m, st%d%dim, cg(:,:))
         call X(Hpsi) (h, gr, cg, ppsi, p, ik)
 
         ! Line minimization.
         a0 = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), ppsi)
         b0 = X(states_dotp) (gr%m, st%d%dim, cg(:,:), ppsi)
+        cg0 = X(states_nrm2) (gr%m, st%d%dim, cg(:,:))
 
         a0 = M_TWO * a0 / cg0
         b0 = b0/cg0**2
         e0 = st%eigenval(p, ik)
         theta = atan(R_REAL(a0/(e0 - b0)))/M_TWO
-        es(1) = ((e0-b0)*cos(M_TWO*theta) + a0*sin(M_TWO*theta) + e0 + b0) / M_TWO
-        es(2) =(-(e0-b0)*cos(M_TWO*theta) - a0*sin(M_TWO*theta) + e0 + b0) / M_TWO
+        es(1) = M_HALF*((e0-b0)*cos(M_TWO*theta) + a0*sin(M_TWO*theta) + e0 + b0)
+        es(2) = -M_HALF*((e0-b0)*cos(M_TWO*theta) + a0*sin(M_TWO*theta) - (e0 + b0))
 
         ! Choose the minimum solutions.
-        if (R_REAL(es(2)) < R_REAL(es(1))) then
-          theta = theta + M_PI/M_TWO
-        end if
+        if (R_REAL(es(2)) < R_REAL(es(1))) theta = theta + M_PI/M_TWO
         st%eigenval(p, ik) = min(R_REAL(es(1)), R_REAL(es(2)))
 
         ! Upgrade psi...
         a0 = cos(theta)
         b0 = sin(theta)/cg0
 
-       
         do idim = 1, st%d%dim
           do ip = 1, NP
             st%X(psi)(ip, idim, p, ik) = a0*st%X(psi)(ip, idim, p, ik) + b0*cg(ip, idim)

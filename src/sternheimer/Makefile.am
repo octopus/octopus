@@ -37,7 +37,7 @@ sternheimer.o : sternheimer.F90 sternheimer_inc.F90
 em_resp_calc.o : em_resp_calc.F90 em_resp_calc_inc.F90 sternheimer.o
 em_resp.o : em_resp.F90 sternheimer.o em_resp_calc.o
 kdotp_calc.o : kdotp_calc.F90 kdotp_calc_inc.F90 sternheimer.o
-kdotp.o : kdotp.F90 kdotp_calc.o sternheimer.o
+kdotp.o : kdotp.F90 kdotp_calc.o sternheimer.o em_resp.o
 vdW.o : vdW.F90 em_resp.o sternheimer.o em_resp_calc.o
 phonons_lr.o : phonons_lr.F90 sternheimer.o
 raman.o : raman.F90 phonons_lr.o sternheimer.o
