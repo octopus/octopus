@@ -172,7 +172,8 @@ contains
 
             ! if this frequency is the same as the previous one, just copy it
             if( have_to_calculate .and. &
-              em_vars%freq_factor(ifactor) == em_vars%freq_factor(ifactor-1)) then 
+                 em_vars%freq_factor(ifactor)*em_vars%omega(iomega) == & 
+                 em_vars%freq_factor(ifactor-1)*em_vars%omega(iomega) ) then
               
               call lr_copy(sys%st, sys%gr%m, em_vars%lr(dir, 1, ifactor-1), em_vars%lr(dir, 1, ifactor))
               call lr_copy(sys%st, sys%gr%m, em_vars%lr(dir, 2, ifactor-1), em_vars%lr(dir, 2, ifactor))
