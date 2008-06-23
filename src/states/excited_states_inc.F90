@@ -181,8 +181,10 @@ R_TYPE function X(states_mpmatrixelement_g)(m, st1, st2, opst2) result(st1opst2)
       end do
 
       ! Get the matrix of cofactors.
-      z = lalg_determinant(i1+k1, c, invert = .true.)
-      c = z * transpose(c)
+      if(i1+k1 > 1) then
+        z = lalg_determinant(i1+k1, c, invert = .true.)
+        c = z * transpose(c)
+      end if
 
       ! And now, apply Lowdin`s formula.
       z = M_ZERO
@@ -191,6 +193,9 @@ R_TYPE function X(states_mpmatrixelement_g)(m, st1, st2, opst2) result(st1opst2)
            z = z + b(i, j) * c(i, j) * (-1)**(i+j)
         end do
       end do
+
+      !!!! WARNING: not absolutely sure about this (maybe only valid for the one orbital case?)
+      z = M_TWO * z
 
       st1opst2 = st1opst2 * z ** st1%d%kweights(ik)
 

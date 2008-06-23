@@ -25,9 +25,11 @@ module gcm_m
   use messages_m
   use loct_parser_m
   use units_m
+  use grid_m
   use system_m
   use hamiltonian_m
   use states_m
+  use excited_states_m
   use restart_m
   use poisson_m
   use mesh_function_m
@@ -54,13 +56,15 @@ module gcm_m
 
     type(states_t), allocatable :: phi(:)
     type(block_t) :: blk
+    type(grid_t), pointer :: gr
+    type(states_t) :: opst
     FLOAT, allocatable :: etot(:)
     FLOAT, allocatable :: hpsi(:, :)
     FLOAT, allocatable :: rho(:), vh(:)
-    FLOAT, allocatable :: hmatrix(:, :), smatrix(:, :)
+    FLOAT, allocatable :: hmatrix(:, :), smatrix(:, :), overlap_matrix(:, :, :)
     character(len=100), allocatable :: slatdetnames(:)
-    FLOAT :: uh, overlap, kij, gamma, emin
-    integer :: ierr, i, ndeterminants, j, k
+    FLOAT :: uh, overlap, kij, gamma, emin, ex
+    integer :: ierr, i, ndeterminants, j, k, n
 
     call push_sub('gcm.gcm_run')
 
@@ -75,10 +79,10 @@ module gcm_m
       write(message(2),'(a)') 'supply also a "GCMSlaterDeterminants" block.'
       call write_fatal(2)
     else
-     ndeterminants = loct_parse_block_cols(blk, 0)
+     ndeterminants = loct_parse_block_n(blk)
      ALLOCATE(slatdetnames(ndeterminants), ndeterminants)
      do i = 0, ndeterminants - 1
-       call loct_parse_block_string(blk, 0, i, slatdetnames(i+1))
+       call loct_parse_block_string(blk, i, 0, slatdetnames(i+1))
      end do
      call loct_parse_block_end(blk)
     end if
@@ -87,11 +91,12 @@ module gcm_m
     ALLOCATE(etot(ndeterminants), ndeterminants)
     ALLOCATE(smatrix(ndeterminants, ndeterminants), ndeterminants**2)
     ALLOCATE(hmatrix(ndeterminants, ndeterminants), ndeterminants**2)
+    gr => sys%gr
 
     ! Copy the basic structure in sys%st to all of the members of phi.
     do i = 1, ndeterminants
       call states_copy(phi(i), sys%st)
-      call states_allocate_wfns(phi(i), sys%gr%m)
+      call states_allocate_wfns(phi(i), gr%m)
       ALLOCATE(phi(i)%eigenval(phi(i)%nst, phi(i)%d%nik), phi(i)%nst*phi(i)%d%nik)
       ALLOCATE(phi(i)%momentum(3, phi(i)%nst, phi(i)%d%nik), phi(i)%nst*phi(i)%d%nik)
       ALLOCATE(phi(i)%occ(phi(i)%nst, phi(i)%d%nik), phi(i)%nst*phi(i)%d%nik)
@@ -106,30 +111,50 @@ module gcm_m
     call messages_print_stress(stdout, 'Reading Slater determinants. ')
     ! Read each of the Slater determinants.
     do i = 1, ndeterminants
-      call restart_read (trim(slatdetnames(i)), phi(i), sys%gr, sys%geo, ierr)
+      call restart_read (trim(slatdetnames(i)), phi(i), gr, sys%geo, ierr)
     end do
     call messages_print_stress(stdout)
 
 
-    ALLOCATE(rho(sys%gr%m%np), sys%gr%m%np)
-    ALLOCATE(vh(sys%gr%m%np), sys%gr%m%np)
+    ALLOCATE(rho(NP), NP)
+    ALLOCATE(vh(NP), NP)
     rho = M_ZERO
     vh  = M_ZERO
 
     ! Calculate the total energies for each of the Slater determinants
     do i = 1, ndeterminants
-      call states_calc_dens(phi(i), sys%gr%m%np, phi(i)%rho)
-      do j = 1, sys%gr%m%np
+      ! The total density may be needed.
+      call states_calc_dens(phi(i), NP, phi(i)%rho)
+
+      ! First, the one-body part of the total energy:
+      etot(i) = delectronic_kinetic_energy(h, gr, phi(i)) + &
+                delectronic_external_energy(h, gr, phi(i))
+
+      ! Coulomb contribution.
+      do j = 1, NP
         rho(j) = phi(i)%rho(j, 1)
       end do
-      call dpoisson_solve(sys%gr, vh, rho)
-      uh = M_HALF*dmf_integrate(sys%gr%m, vh * rho)
-      etot(i) = delectronic_kinetic_energy(h, sys%gr, phi(i)) + &
-                delectronic_external_energy(h, sys%gr, phi(i))
-      !write(0, '(a,i1,a,f18.10)') 'One body: (', i, ')', etot(i) / units_out%energy%factor
-      etot(i) = etot(i) + M_HALF*uh + h%ep%eii
+      call dpoisson_solve(gr, vh, rho)
+      uh = M_HALF*dmf_integrate(gr%m, vh * rho)
+
+      !Exchange contribution
+      if(phi(i)%nst > 1) then
+        ex = M_ZERO
+        do j = 1, phi(i)%nst
+          do k = 1, phi(i)%nst
+            do n = 1, NP
+              rho(n) = phi(i)%dpsi(n, 1, j, 1)*phi(i)%dpsi(n, 1, k, 1)
+            end do
+            call dpoisson_solve(gr, vh, rho)
+            ex = ex - dmf_integrate(gr%m, vh*rho)
+          end do
+        end do
+      else
+        ex = - M_HALF * uh
+      end if
+
+      etot(i) = etot(i) + uh + ex + h%ep%eii
       hmatrix(i, i) = etot(i)
-      !write(0, '(a,i1,a,f18.10)') 'etot(',i,') = ', etot(i) / units_out%energy%factor
     end do
 
     call messages_print_stress(stdout, 'Total energies of the Slater determinants')
@@ -141,36 +166,39 @@ module gcm_m
     call messages_print_stress(stdout)
 
 
-    ALLOCATE(hpsi(sys%gr%m%np_part, phi(1)%d%dim), sys%gr%m%np_part*phi(1)%d%dim)
+    ALLOCATE(hpsi(NP_PART, phi(1)%d%dim), NP_PART*phi(1)%d%dim)
 
 
     ! Calculate the cross terms
     do i = 1, ndeterminants
       do j = i + 1, ndeterminants
 
-        overlap = dstates_dotp(sys%gr%m, 1, phi(i)%dpsi(:, :, 1, 1), phi(j)%dpsi(:, :, 1, 1))
-        smatrix(i, j) = overlap**2
+        ALLOCATE(overlap_matrix(phi(i)%nst, phi(i)%nst, 1), phi(i)%nst*phi(i)%nst)
 
-        hpsi = M_ZERO
+        call states_copy(opst, phi(j))
+        do k = 1, phi(j)%nst
+          opst%dpsi(:, :, k, 1) = M_ZERO
+          call dkinetic (h, gr, phi(j)%dpsi(:, :, k, 1), opst%dpsi(:, :, k, 1))
+          call dvexternal (h, gr, phi(j)%dpsi(:, :, k, 1), opst%dpsi(:, :, k, 1), 1)
+        end do
+        kij = dstates_mpmatrixelement(gr%m, phi(i), phi(j), opst)
+        call states_end(opst)
 
-        call dkinetic (h, sys%gr, phi(j)%dpsi(:, :, 1, 1), hpsi)
-        call dvexternal (h, sys%gr, phi(j)%dpsi(:, :, 1, 1), hpsi, 1)
-        kij = dstates_dotp(sys%gr%m, 1, phi(i)%dpsi(:, :, 1, 1), hpsi(:, :))
-        !write(0, *) 'kij, overlap = ', kij, overlap
+        call dstates_matrix(gr%m, phi(i), phi(j), overlap_matrix)
+        smatrix(i, j) = dstates_mpdotp(gr%m, phi(i), phi(j), overlap_matrix)
 
         rho = M_ZERO
         vh = M_ZERO
-        do k = 1, sys%gr%m%np
+        do k = 1, NP
           rho(k) = phi(i)%dpsi(k, 1, 1, 1) * phi(j)%dpsi(k, 1, 1, 1)
         end do
-        call dpoisson_solve(sys%gr, vh, rho)
-        uh =  dmf_integrate(sys%gr%m, vh(:) * rho(:))
-        !write(0, *) 'One body: ', M_TWO * overlap * kij
-        !write(0, *) 'Two body: ', uh
+        call dpoisson_solve(gr, vh, rho)
+        uh =  dmf_integrate(gr%m, vh(:) * rho(:))
 
-        gamma = M_TWO * overlap * kij + uh + h%ep%eii
+        gamma = kij + uh + h%ep%eii
         hmatrix(i, j) = gamma
 
+        deallocate(overlap_matrix)
       end do 
     end do
 

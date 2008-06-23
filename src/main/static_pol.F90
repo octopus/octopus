@@ -310,7 +310,8 @@ contains
         beta = M_ZERO
 
         do idir = 1, NDIM
-          beta(1:NDIM, idir, idir) = -(dipole(idir, 1:NDIM, 1) + dipole(idir, 1:NDIM, 2) - M_TWO*center_dipole(1:NDIM))/e_field**2
+          beta(1:NDIM, idir, idir) = -(dipole(idir, 1:NDIM, 1) + dipole(idir, 1:NDIM, 2) - &
+            M_TWO*center_dipole(1:NDIM))/e_field**2
           beta(idir, 1:NDIM, idir) = beta(1:NDIM, idir, idir) 
           beta(idir, idir, 1:NDIM) = beta(1:NDIM, idir, idir)
         end do
