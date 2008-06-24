@@ -32,6 +32,7 @@
 #include <assert.h>
 
 #include "liboct_parser.h"
+#include "symbols.h"
 #include "string_f.h"
 
 #ifndef FC_FUNC

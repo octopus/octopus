@@ -23,16 +23,7 @@
 #define _SYMBOLS_H
 
 #include <gsl/gsl_complex.h>
-
-typedef struct sym_block_line{
-  int n;
-  char **fields;
-} sym_block_line;
-
-typedef struct sym_block{
-  int n;
-  sym_block_line *lines;
-} sym_block;
+#include "liboct_parser.h"
 
 typedef enum{
   S_CMPLX, S_STR, S_BLOCK, S_FNCT

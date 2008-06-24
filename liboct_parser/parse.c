@@ -30,6 +30,7 @@ extern char ** environ;
 #include <assert.h>
 
 #include "liboct_parser.h"
+#include "symbols.h"
 
 static FILE *fout;
 static int  disable_write;

@@ -23,18 +23,27 @@
 #define _LIB_OCT_H
 
 #include <gsl/gsl_complex.h>
-#include "symbols.h"
 
-int parse_init(char *file_out, int *mpiv_node);
-int parse_input(char *file_in);
-void parse_end();
+int         parse_init   (char *file_out, int *mpiv_node);
+int         parse_input  (char *file_in);
+void        parse_end    ();
 
-int parse_isdef(char *name);
-
-int parse_int(char *name, int def);
-double parse_double(char *name, double def);
+int         parse_isdef  (char *name);
+int         parse_int    (char *name, int def);
+double      parse_double (char *name, double def);
 gsl_complex parse_complex(char *name, gsl_complex def);
-char *parse_string(char *name, char *def);
+char       *parse_string (char *name, char *def);
+
+/* Now comes stuff for the blocks */
+typedef struct sym_block_line{
+  int n;
+  char **fields;
+} sym_block_line;
+
+typedef struct sym_block{
+  int n;
+  sym_block_line *lines;
+} sym_block;
 
 int parse_block        (char *name, sym_block **blk);
 int parse_block_end    (sym_block **blk);
