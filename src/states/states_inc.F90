@@ -306,10 +306,11 @@ end subroutine X(states_normalize_orbital)
 
 
 ! ---------------------------------------------------------
-FLOAT function X(states_nrm2)(m, dim, f) result(nrm2)
-  type(mesh_t),    intent(in) :: m
-  integer,         intent(in) :: dim
-  R_TYPE,          intent(in) :: f(:,:)
+FLOAT function X(states_nrm2)(m, dim, f, reduce) result(nrm2)
+  type(mesh_t),      intent(in) :: m
+  integer,           intent(in) :: dim
+  R_TYPE,            intent(in) :: f(:,:)
+  logical, optional, intent(in) :: reduce
 
   integer :: idim
 
@@ -317,7 +318,7 @@ FLOAT function X(states_nrm2)(m, dim, f) result(nrm2)
 
   nrm2 = M_ZERO
   do idim = 1, dim
-    nrm2 = nrm2 + X(mf_nrm2)(m, f(:, idim))**2
+    nrm2 = nrm2 + X(mf_nrm2)(m, f(:, idim), reduce)**2
   end do
   nrm2 = sqrt(nrm2)
 

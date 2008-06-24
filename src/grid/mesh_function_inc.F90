@@ -115,12 +115,14 @@ end function X(mf_dotp)
 
 ! ---------------------------------------------------------
 ! this function returns the the norm of a vector
-FLOAT function X(mf_nrm2)(mesh, f) result(nrm2)
+FLOAT function X(mf_nrm2)(mesh, f, reduce) result(nrm2)
   type(mesh_t), intent(in) :: mesh
   R_TYPE,       intent(in) :: f(:)
+  logical, optional, intent(in) :: reduce
 
   R_TYPE, allocatable :: l(:)
   FLOAT               :: nrm2_tmp
+  logical             :: reduce_
 
   call profiling_in(C_PROFILING_MF_NRM2)
   call push_sub('mf_inc.Xmf_nrm2')
@@ -136,7 +138,12 @@ FLOAT function X(mf_nrm2)(mesh, f) result(nrm2)
     nrm2_tmp = lalg_nrm2(mesh%np, f) * sqrt(mesh%vol_pp(1))
   end if
 
-  if(mesh%parallel_in_domains) then
+  reduce_ = .true.
+#if defined(HAVE_MPI)
+  if(present(reduce)) reduce_ = reduce
+#endif
+
+  if(mesh%parallel_in_domains .and. reduce_) then
 #if defined(HAVE_MPI)
     nrm2_tmp = nrm2_tmp**2
     call profiling_in(C_PROFILING_MF_DOTP_ALLREDUCE)

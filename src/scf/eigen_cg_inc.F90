@@ -36,6 +36,9 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, ver
   real(8)  :: cg0, e0, res
   integer  :: ik, p, iter, maxter, conv, idim, ns, ip
   logical  :: verbose_
+#ifdef HAVE_MPI
+  R_TYPE   :: sb(3), rb(3)
+#endif
 
   call push_sub('eigen_cg.eigen_solver_cg2')
 
@@ -110,8 +113,17 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, ver
         call  X(preconditioner_apply)(pre, gr, h, h_psi(:,:), g(:,:))
         call  X(preconditioner_apply)(pre, gr, h, st%X(psi)(:,:, p, ik), ppsi(:,:))
 
-        es(1) = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), g)
-        es(2) = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), ppsi)
+        es(1) = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), g, reduce = .false.)
+        es(2) = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), ppsi, reduce = .false.)
+
+#ifdef HAVE_MPI
+        if(gr%m%parallel_in_domains) then
+          sb(1) = es(1)
+          sb(2) = es(2)
+          call MPI_Allreduce(sb, es, 2, R_MPITYPE, MPI_SUM, gr%m%vp%comm, mpi_err)
+        end if
+#endif       
+
         es(1) = es(1)/es(2)
 
         do idim = 1, st%d%dim
@@ -121,12 +133,23 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, ver
         ! Orthogonalize to lowest eigenvalues (already calculated)
         if(p > 1) call X(states_gram_schmidt)(gr%m, p - 1, st%d%dim, st%X(psi)(:, :, :, ik), g, normalize = .false.)
 
-        if(iter .ne. 1) gg1 = X(states_dotp) (gr%m, st%d%dim, g, g0)
+        if(iter .ne. 1) gg1 = X(states_dotp) (gr%m, st%d%dim, g, g0, reduce = .false.)
 
         ! Approximate inverse preconditioner...
         call  X(preconditioner_apply)(pre, gr, h, g(:,:), g0(:,:))
 
-        gg = X(states_dotp) (gr%m, st%d%dim, g, g0)
+        gg = X(states_dotp) (gr%m, st%d%dim, g, g0, reduce = .false.)
+
+#ifdef HAVE_MPI
+        if(gr%m%parallel_in_domains) then
+          sb(1) = gg1
+          sb(2) = gg
+          call MPI_Allreduce(sb, rb, 2, R_MPITYPE, MPI_SUM, gr%m%vp%comm, mpi_err)
+          gg1 = rb(1)
+          gg  = rb(2)
+        end if
+#endif
+
         if( abs(gg) < M_EPSILON ) then
           conv = conv + 1
           st%eigenval(p, ik) = es(1)
@@ -162,9 +185,21 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, ver
         call X(Hpsi) (h, gr, cg, ppsi, p, ik)
 
         ! Line minimization.
-        a0 = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), ppsi)
-        b0 = X(states_dotp) (gr%m, st%d%dim, cg(:,:), ppsi)
-        cg0 = X(states_nrm2) (gr%m, st%d%dim, cg(:,:))
+        a0 = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), ppsi, reduce = .false.)
+        b0 = X(states_dotp) (gr%m, st%d%dim, cg(:,:), ppsi, reduce = .false.)
+        cg0 = X(states_nrm2) (gr%m, st%d%dim, cg(:,:), reduce = .false.)
+
+#ifdef HAVE_MPI
+        if(gr%m%parallel_in_domains) then
+          sb(1) = a0
+          sb(2) = b0
+          sb(3) = cg0**2
+          call MPI_Allreduce(sb, rb, 3, R_MPITYPE, MPI_SUM, gr%m%vp%comm, mpi_err)
+          a0 = rb(1)
+          b0 = rb(2)
+          cg0 = sqrt(rb(3))
+        end if
+#endif
 
         a0 = M_TWO * a0 / cg0
         b0 = b0/cg0**2
