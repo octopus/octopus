@@ -114,7 +114,7 @@ R_TYPE function X(states_mpmatrixelement_g)(m, st1, st2, opst2) result(st1opst2)
                           half_filled1(:), half_filled2(:)
   R_TYPE, allocatable :: overlap_mat(:, :, :), op_mat(:, :, :)
   R_TYPE, allocatable :: b(:, :), c(:, :)
-  R_TYPE :: z
+  R_TYPE :: z, det
 
   call push_sub('excited_states_inc.Xstates_mpmatrixelement_g')
 
@@ -180,22 +180,21 @@ R_TYPE function X(states_mpmatrixelement_g)(m, st1, st2, opst2) result(st1opst2)
         end do
       end do
 
-      ! Get the matrix of cofactors.
-      if(i1+k1 > 1) then
-        z = lalg_determinant(i1+k1, c, invert = .true.)
-        c = z * transpose(c)
-      end if
+      det = lalg_determinant(i1+k1, c, invert = .true.)
+      c = det * transpose(c)
 
       ! And now, apply Lowdin`s formula.
+      ! <U|O|V> = 2 D'_{UV} \sum_{jk} <phi^U_j|o|phi^V_k> D'_{UV}(j|k)
+      ! where D'_{UV} is the determinana of the overlap matrix between the
+      ! spatial orbitals of U and V (dimension = N/2), and D'_{UV}(j|k) is
+      ! the (j,k) minor of this matrix.
       z = M_ZERO
       do i = 1, i1 + k1
         do j = 1, i1 + k1
            z = z + b(i, j) * c(i, j) * (-1)**(i+j)
         end do
       end do
-
-      !!!! WARNING: not absolutely sure about this (maybe only valid for the one orbital case?)
-      z = M_TWO * z
+      z = M_TWO * det * z
 
       st1opst2 = st1opst2 * z ** st1%d%kweights(ik)
 

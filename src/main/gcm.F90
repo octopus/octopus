@@ -187,13 +187,7 @@ module gcm_m
         call dstates_matrix(gr%m, phi(i), phi(j), overlap_matrix)
         smatrix(i, j) = dstates_mpdotp(gr%m, phi(i), phi(j), overlap_matrix)
 
-        rho = M_ZERO
-        vh = M_ZERO
-        do k = 1, NP
-          rho(k) = phi(i)%dpsi(k, 1, 1, 1) * phi(j)%dpsi(k, 1, 1, 1)
-        end do
-        call dpoisson_solve(gr, vh, rho)
-        uh =  dmf_integrate(gr%m, vh(:) * rho(:))
+        uh =  mpdotp_twobody(phi(i), phi(j), gr)
 
         gamma = kij + uh + h%ep%eii
         hmatrix(i, j) = gamma
@@ -242,6 +236,74 @@ module gcm_m
     deallocate(phi, etot, hpsi, rho, vh, smatrix, hmatrix, slatdetnames)
     call pop_sub()
   end subroutine gcm_run
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  FLOAT function mpdotp_twobody(st1, st2, gr) result (st1opst2)
+    type(states_t), intent(in)    :: st1
+    type(states_t), intent(in)    :: st2
+    type(grid_t),   intent(inout) :: gr
+
+    integer :: nst, k, k1, k2, l1, l2, i
+    FLOAT, allocatable :: rho(:), vh(:)
+    FLOAT, allocatable :: mat(:, :, :, :)
+
+    call push_sub('gcm.mpdotp_twobody')
+
+    nst = st1%nst
+
+    select case(nst)
+
+    case(1)
+
+      ALLOCATE(rho(NP), NP)
+      ALLOCATE(vh(NP), NP)
+
+      rho = M_ZERO
+      vh = M_ZERO
+      do k = 1, NP
+        rho(k) = st1%dpsi(k, 1, 1, 1) * st2%dpsi(k, 1, 1, 1)
+      end do
+      call dpoisson_solve(gr, vh, rho)
+      st1opst2 =  dmf_integrate(gr%m, vh(:) * rho(:))
+
+      deallocate(rho, vh)
+
+    case default
+      write(message(1),'(a)') 'GCM mode does not handle yet systems with more than one orbital.'
+      call write_fatal(1)
+
+      ALLOCATE(mat(nst, nst, nst, nst), nst**4)
+      ALLOCATE(rho(NP), NP)
+      ALLOCATE(vh(NP), NP)
+
+      ! Build the matrix <k1 k2 | 1/|r1-r2| | l1 l2>
+      do k1 = 1, nst
+        do l1 = 1, nst
+          do i = 1, NP
+            rho(i) = st1%dpsi(i, 1, k1, 1)*st2%dpsi(i, 1, l1, 1)
+          end do
+          call dpoisson_solve(gr, vh, rho)
+          do k2 = 1, nst
+            do l2 = 1, nst
+              do i = 1, NP
+                rho(i) = st1%dpsi(i, 1, k2, 1)*st2%dpsi(i, 1, l2, 1)
+              end do
+              mat(k1, l1, k2, l2) = dmf_integrate(gr%m, vh(:)*rho(:))
+            end do
+          end do
+
+        end do
+      end do
+
+      deallocate(mat, rho, vh)
+    end select
+
+    call pop_sub()
+  end function mpdotp_twobody
+  ! ---------------------------------------------------------
+
 
 
 end module gcm_m
