@@ -94,11 +94,13 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, ver
     eigenfunction_loop : do p = conv + 1, st%nst
 
       if(verbose_) then
-        write(message(2),'(a,i4,a)') ' Eigenstate # ',p,':'
+        write(message(2),'(a,i4,a)') ' Eigenstate # ', p, ':'
       end if
 
       ! Orthogonalize starting eigenfunctions to those already calculated...
-      call X(states_gram_schmidt_full)(st, p, gr%m, st%d%dim, st%X(psi)(:, 1:st%d%dim, 1:p, ik), start=p)
+      if(p > 1) then
+        call X(states_gram_schmidt)(gr%m, p - 1, st%d%dim, st%X(psi)(:, :, :, ik), st%X(psi)(:, :, p, ik), normalize = .true.)
+      end if
 
       ! Calculate starting gradient: |hpsi> = H|psi>
       call X(Hpsi)(h, gr, st%X(psi)(:,:, p, ik) , h_psi, p, ik)
@@ -122,7 +124,7 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, ver
           sb(2) = es(2)
           call MPI_Allreduce(sb, es, 2, R_MPITYPE, MPI_SUM, gr%m%vp%comm, mpi_err)
         end if
-#endif       
+#endif  
 
         es(1) = es(1)/es(2)
 
