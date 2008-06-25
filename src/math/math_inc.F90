@@ -406,14 +406,39 @@ FLOAT function X(infinity_norm)(matrix)
   m_max = ubound(matrix, 1)
   do i = m_min, m_max
     norm_old = norm
-    norm = sum(abs(matrix(i, :)))
-    norm = max(norm, norm_old)
+    norm     = sum(abs(matrix(i, :)))
+    norm     = max(norm, norm_old)
   end do
   
   X(infinity_norm) = norm
 
   call pop_sub()
 end function X(infinity_norm)
+
+
+! ---------------------------------------------------------
+! Takes the average of the matrix and its transposed.
+subroutine X(symmetric_average)(matrix, np)
+  R_TYPE,  intent(inout) :: matrix(np, np)
+  integer, intent(in)    :: np
+
+  integer             :: j
+  R_TYPE, allocatable :: tmp(:, :)
+
+  call push_sub('math_inc.symmetric_average')
+
+  ALLOCATE(tmp(np, np), np**2)
+
+  if(np.gt.1) then
+    do j = 1, np
+      tmp(:, j) = M_HALF*(matrix(j, :) + matrix(:, j))
+    end do
+    matrix = tmp
+  end if
+
+  deallocate(tmp)
+  call pop_sub()
+end subroutine X(symmetric_average)
 
 
 !! Local Variables:

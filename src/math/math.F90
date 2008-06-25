@@ -45,6 +45,8 @@ module math_m
     zmatrix_inv_residual,       &
     ddot_product,               &
     zdot_product,               &
+    is_integer_multiple,        &
+    divides,                    &
     quickrnd,                   &
     ylmr,                       &
     grylmr,                     &
@@ -63,13 +65,28 @@ module math_m
     member,                     &
     make_idx_set,               &
     infinity_norm,              &
+    symmetric_average,          &
     interpolation_coefficients, &
-    interpolate
+    interpolate,                &
+    even,                       &
+    odd
+
+
+  ! ---------------------------------------------------------
+  ! QMR (quasi-minimal residual) algorithm for complex symmetric matrices
+  ! algorithm taken from:
+  ! Parallel implementation of efficient preconditioned linear solver for
+  ! grid-based applications in chemical physics. II: QMR linear solver
+  ! Appendix A. Simplified QMR algorithm
+  interface zqmr_sym
+    module procedure zqmr_sym_spec_dotp, zqmr_sym_gen_dotp
+  end interface
+  integer, pointer :: np_p
 
 
   !------------------------------------------------------------------------------
   ! This is the common interface to a simple-minded polynomical interpolation
-  ! procudure (simple use of the classical formula of Lagrange.
+  ! procudure (simple use of the classical formula of Lagrange).
   interface interpolate
     module procedure dinterpolate_0, dinterpolate_1, dinterpolate_2
     module procedure zinterpolate_0, zinterpolate_1, zinterpolate_2
@@ -156,7 +173,36 @@ module math_m
     module procedure dinfinity_norm, zinfinity_norm
   end interface
 
+  interface symmetric_average
+    module procedure dsymmetric_average, zsymmetric_average
+  end interface
+
 contains
+
+  ! ---------------------------------------------------------
+  ! Checks if a divides b.
+  logical function divides(a, b)
+    integer, intent(in) :: a, b
+
+    call push_sub('math.divides')
+
+    divides = mod(b, a).eq.0
+
+    call pop_sub()
+  end function divides
+
+
+  ! ---------------------------------------------------------
+  logical function is_integer_multiple(a, b)
+    FLOAT, intent(in) :: a, b
+
+    FLOAT :: ratio
+
+    ratio = a/b
+
+    is_integer_multiple = ratio.app.TOFLOAT(nint(ratio))
+  end function is_integer_multiple
+
 
   ! ---------------------------------------------------------
   recursive function hermite(n, x) result (h)
@@ -666,11 +712,11 @@ contains
     FLOAT, intent(in) :: thr
     APP_THRESHOLD = thr
   end subroutine set_app_threshold
-  
+
   FLOAT pure function ddelta(i, j)
     integer, intent(in) :: i
     integer, intent(in) :: j
-    
+
     if ( i == j) then 
       ddelta = M_ONE
     else 
@@ -682,10 +728,10 @@ contains
   logical function math_xor(a, b)
     logical, intent(in) :: a
     logical, intent(in) :: b
-    
+
     math_xor = ( a .or. b )
     if ( a .and. b ) math_xor = .false.
-    
+
   end function math_xor
 
 
@@ -741,196 +787,318 @@ contains
     call pop_sub()
   end function member
 
-! ---------------------------------------------------------
-! QMR (quasi-minimal residual) algorithm for complex symmetric matrices
-! algorithm taken from:
-! Parallel implementation of efficient preconditioned linear solver for
-! grid-based applications in chemical physics. II: QMR linear solver
-! Appendix A. Simplified QMR algorithm
-subroutine zqmr_sym(np, x, b, op, prec, iter, residue, threshold, showprogress)
-  integer, intent(in)             :: np
-  CMPLX,  intent(inout)           :: x(:)
-  CMPLX,  intent(in)              :: b(:)
-  interface
-    subroutine op(x, y)
-      CMPLX, intent(in)           :: x(:)
-      CMPLX, intent(out)          :: y(:)
-    end subroutine op
-  end interface
-  interface
-    subroutine prec(x, y)
-      CMPLX, intent(in)           :: x(:)
-      CMPLX, intent(out)          :: y(:)
-    end subroutine prec
-  end interface
-  integer,          intent(inout) :: iter
-  FLOAT, optional, intent(out)    :: residue
-  FLOAT, optional,  intent(in)    :: threshold
-  logical, optional, intent(in)   :: showprogress
 
-  CMPLX, allocatable  :: r(:), v(:), z(:), q(:), p(:), deltax(:), deltar(:)
-  CMPLX               :: eta, delta, epsilon, beta
-  FLOAT               :: rho, xsi, gamma, alpha, theta, threshold_, res, oldtheta, oldgamma, oldrho
-  integer             :: max_iter, err
-  logical             :: showprogress_
-  FLOAT               :: log_res, log_thr
-  integer             :: ilog_res, ilog_thr
+  ! ---------------------------------------------------------
+  subroutine zqmr_sym_spec_dotp(np, x, b, op, prec, iter, residue, threshold, showprogress, converged)
+    integer, target,   intent(in)    :: np
+    CMPLX,             intent(inout) :: x(:)
+    CMPLX,             intent(in)    :: b(:)
+    interface
+      subroutine op(x, y)
+        CMPLX, intent(in)  :: x(:)
+        CMPLX, intent(out) :: y(:)
+      end subroutine op
+    end interface
+    interface
+      subroutine prec(x, y)
+        CMPLX, intent(in)  :: x(:)
+        CMPLX, intent(out) :: y(:)
+      end subroutine prec
+    end interface
+    integer,           intent(inout) :: iter
+    FLOAT, optional,   intent(out)   :: residue
+    FLOAT, optional,   intent(in)    :: threshold
+    logical, optional, intent(in)    :: showprogress
+    logical, optional, intent(out)   :: converged
 
-  call push_sub('math_cg_inc.zqmr_sym_x')
+    call push_sub('math.zqmr_sym_spec_dotp')
 
-  if(present(threshold)) then
-    threshold_ = threshold
-  else
-    threshold_ = CNST(1.0e-6)
-  end if
+    np_p => np
+    call zqmr_sym_gen_dotp(np, x, b, op, dotu_qmr, nrm2_qmr, prec, iter, residue, threshold, showprogress)
 
-  if(present(showprogress)) then
-    showprogress_ = showprogress
-  else
-    showprogress_ = .false.
-  end if
+    call pop_sub()
+  end subroutine zqmr_sym_spec_dotp
 
-  ALLOCATE( r(np), np)
-  ALLOCATE( v(np), np)
-  ALLOCATE( z(np), np)
-  ALLOCATE( q(np), np)
-  ALLOCATE( p(np), np)
-  ALLOCATE( deltax(np), np)
-  ALLOCATE( deltar(np), np)
 
-  ! use v as temp var
-  call lalg_copy(np, b, r)
-  call op(x, v)
-  call lalg_axpy(np, -M_z1, v, r)
-  call lalg_copy(np, r, v)
-  rho = lalg_nrm2(np, v)
-  call prec(v, z)
-  xsi = lalg_nrm2(np, z)
-  gamma = M_ONE
-  eta = -M_z1
-  alpha = M_ONE
-  theta = M_ZERO
-  
-  ! initialize progress bar
-  log_thr = -log(threshold_)
-  ilog_thr = M_TEN**2*log_thr
-  if (showprogress_) call loct_progress_bar(-1, ilog_thr)
+  ! ---------------------------------------------------------
+  CMPLX function dotu_qmr(x, y)
+    CMPLX, intent(in) :: x(:)
+    CMPLX, intent(in) :: y(:)
 
-  max_iter = iter
-  iter     = 0
-  err      = 0
-  do while(iter < max_iter)
-    iter = iter + 1
-    if((abs(rho) < M_EPSILON) .or. (abs(xsi) < M_EPSILON)) then
-      err = 1
-      exit
+    call push_sub('math.dotu_qmr')
+
+    dotu_qmr = blas_dotu(np_p, x(1), 1, y(1), 1)
+
+    call pop_sub()
+  end function dotu_qmr
+
+
+  ! ---------------------------------------------------------
+  FLOAT function nrm2_qmr(x)
+    CMPLX, intent(in) :: x(:)
+
+    call push_sub('math.nrm2_qmr')
+
+    nrm2_qmr = lalg_nrm2(np_p, x(:))
+
+    call pop_sub()
+  end function nrm2_qmr
+
+
+  ! ---------------------------------------------------------
+  subroutine zqmr_sym_gen_dotp(np, x, b, op, dotu, nrm2, prec, iter, &
+    residue, threshold, showprogress, converged)
+    integer,           intent(in)    :: np
+    CMPLX,             intent(inout) :: x(:)
+    CMPLX,             intent(in)    :: b(:)
+    interface
+      subroutine op(x, y)
+        CMPLX, intent(in)  :: x(:)
+        CMPLX, intent(out) :: y(:)
+      end subroutine op
+    end interface
+    interface 
+      CMPLX function dotu(x, y)
+        CMPLX, intent(in) :: x(:)
+        CMPLX, intent(in) :: y(:)
+      end function dotu
+    end interface
+    interface 
+      FLOAT function nrm2(x)
+        CMPLX, intent(in) :: x(:)
+      end function nrm2
+    end interface
+    interface
+      subroutine prec(x, y)
+        CMPLX, intent(in)  :: x(:)
+        CMPLX, intent(out) :: y(:)
+      end subroutine prec
+    end interface
+    integer,           intent(inout) :: iter
+    FLOAT, optional,   intent(out)   :: residue
+    FLOAT, optional,   intent(in)    :: threshold
+    logical, optional, intent(in)    :: showprogress
+    logical, optional, intent(out)   :: converged
+
+    CMPLX, allocatable  :: r(:), v(:), z(:), q(:), p(:), deltax(:), deltar(:)
+    CMPLX               :: eta, delta, epsilon, beta
+    FLOAT               :: rho, xsi, gamma, alpha, theta, threshold_, res, oldtheta, oldgamma, oldrho
+    integer             :: max_iter, err
+    logical             :: showprogress_
+    FLOAT               :: log_res, log_thr
+    integer             :: ilog_res, ilog_thr
+
+    call push_sub('math_cg_inc.zqmr_sym_gen_dotp')
+
+    if(present(converged)) then
+      converged = .false.
     end if
-    alpha = alpha*xsi/rho
-    call lalg_scal(np, M_z1/rho, v)
-    call lalg_scal(np, M_z1/xsi, z)
-    delta = blas_dotu(np, v(1), 1, z(1), 1)
-    if (abs(delta) < M_EPSILON) then
-      err = 2
-      exit
-    end if
-    if (iter == 1) then
-      call lalg_copy(np, z, q)
+    if(present(threshold)) then
+      threshold_ = threshold
     else
-      call lalg_scal(np, -rho*delta/epsilon, q)
-      call lalg_axpy(np, M_z1, z, q)
+      threshold_ = CNST(1.0e-6)
     end if
-    call op(q, p)
-    call lalg_scal(np, alpha, p)
-    epsilon = blas_dotu(np, q(1), 1, p(1), 1)
-    if (abs(epsilon) < M_EPSILON) then
-      err = 3
-      exit
-    end if
-    beta = epsilon/delta
-    call lalg_scal(np, -beta, v)
-    call lalg_axpy(np, M_z1, p, v)
-    oldrho = rho
-    rho = lalg_nrm2(np, v)
-    call prec(v, z)
-    call lalg_scal(np, M_z1/alpha, z)
-    xsi = lalg_nrm2(np, z)
-    oldtheta = theta
-    theta = rho/(gamma*abs(beta))
-    oldgamma = gamma
-    gamma = M_ONE/sqrt(M_ONE+theta**2)
-    if (abs(gamma) < M_EPSILON) then
-      err = 4
-      exit
-    end if
-    eta = -eta*oldrho*gamma**2/(beta*oldgamma**2)
-    if (iter == 1) then
-      call lalg_copy(np, q, deltax)
-      call lalg_scal(np, eta*alpha, deltax)
-      call lalg_copy(np, p, deltar)
-      call lalg_scal(np, eta, deltar)
+    if(present(showprogress)) then
+      showprogress_ = showprogress
     else
-      call lalg_scal(np, (oldtheta*gamma)**2, deltax)
-      call lalg_axpy(np, eta*alpha, q, deltax)
-      call lalg_scal(np, (oldtheta*gamma)**2, deltar)
-      call lalg_axpy(np, eta, p, deltar)
+      showprogress_ = .false.
     end if
-    call lalg_axpy(np, M_z1, deltax, x)
-    call lalg_axpy(np, -M_z1, deltar, r)
-    res = lalg_nrm2(np,r)/lalg_nrm2(np,x)
-    log_res = -log(res)
-    if (log_res < 0) log_res = 0
-    ilog_res = M_TEN**2*log_res
-    if (showprogress_)  call loct_progress_bar(ilog_res, ilog_thr)
-    if (res < threshold_) exit
-    !write(*,*) res
-  end do
-  if (iter.eq.max_iter) err = 5
 
-  select case(err)
-  case(0)
-    ! converged
-  case(1)
-    write(message(1), '(a)') "QMR failure, can't continue: b or P*b is the zero vector!"
-    call write_fatal(1)
-  case(2)
-    write(message(1), '(a)') "QMR failure, can't continue: v^T*z is zero!"
-    call write_fatal(1)
-  case(3)
-    write(message(1), '(a)') "QMR failure, can't continue: q^T*p is zero!"
-    call write_fatal(1)
-  case(4)
-    write(message(1), '(a)') "QMR failure, can't continue: gamma is zero!"
-    call write_fatal(1)
-  case(5)
-    write(message(1), '(a)') "QMR Solver not converged!"
-    call write_warning(1)
-  end select
-  if (showprogress_) write(*,*) ''
+    ALLOCATE(r(np), np)
+    ALLOCATE(v(np), np)
+    ALLOCATE(z(np), np)
+    ALLOCATE(q(np), np)
+    ALLOCATE(p(np), np)
+    ALLOCATE(deltax(np), np)
+    ALLOCATE(deltar(np), np)
 
-  if(present(residue)) residue = res
+    ! use v as temp var
+    call lalg_copy(np, b, r)
+    call op(x, v)
+    call lalg_axpy(np, -M_z1, v, r)
+    call lalg_copy(np, r, v)
 
-  deallocate(r, v, z, q, p, deltax, deltar)
+    rho = nrm2(v)
 
-  call pop_sub()
-end subroutine zqmr_sym
+    max_iter = iter
+    iter     = 0
+    err      = 0
+    res      = rho
 
-subroutine interpolation_coefficients(nn, xa, xx, cc)
-  integer, intent(in)  :: nn    ! the number of points and coefficients
-  FLOAT,   intent(in)  :: xa(:) ! the nn points where we know the function
-  FLOAT,   intent(in)  :: xx    ! the point where we want the function
-  FLOAT,   intent(out) :: cc(:)  ! the coefficients
+    ! If rho is basically zero we are already done.
+    if(abs(rho).gt.M_EPSILON) then
+      call prec(v, z)
 
-  integer :: ii, kk
+      xsi = nrm2(z)
 
-  do ii = 1, nn
-    cc(ii) = M_ONE
-    do kk = 1, nn
-      if(kk .eq. ii) cycle
-      cc(ii) = cc(ii)*(xx - xa(kk))/(xa(ii) - xa(kk))
+      gamma = M_ONE
+      eta   = -M_z1
+      alpha = M_ONE
+      theta = M_ZERO
+
+      ! initialize progress bar
+      log_thr = -log(threshold_)
+      ilog_thr = M_TEN**2*log_thr
+      if(showprogress_) call loct_progress_bar(-1, ilog_thr)
+
+      do while(iter < max_iter)
+        iter = iter + 1
+        if((abs(rho) < M_EPSILON) .or. (abs(xsi) < M_EPSILON)) then
+          err = 1
+          exit
+        end if
+        alpha = alpha*xsi/rho
+        call lalg_scal(np, M_z1/rho, v)
+        call lalg_scal(np, M_z1/xsi, z)
+
+        delta = dotu(v, z)
+
+        if(abs(delta) < M_EPSILON) then
+          err = 2
+          exit
+        end if
+        if(iter == 1) then
+          call lalg_copy(np, z, q)
+        else
+          call lalg_scal(np, -rho*delta/epsilon, q)
+          call lalg_axpy(np, M_z1, z, q)
+        end if
+        call op(q, p)
+        call lalg_scal(np, alpha, p)
+
+        epsilon = dotu(q, p)
+
+        if(abs(epsilon) < M_EPSILON) then
+          err = 3
+          exit
+        end if
+        beta = epsilon/delta
+        call lalg_scal(np, -beta, v)
+        call lalg_axpy(np, M_z1, p, v)
+        oldrho = rho
+
+        rho = nrm2(v)
+
+        call prec(v, z)
+        call lalg_scal(np, M_z1/alpha, z)
+
+        xsi = nrm2(z)
+
+        oldtheta = theta
+        theta    = rho/(gamma*abs(beta))
+        oldgamma = gamma
+        gamma    = M_ONE/sqrt(M_ONE+theta**2)
+        if(abs(gamma) < M_EPSILON) then
+          err = 4
+          exit
+        end if
+        eta = -eta*oldrho*gamma**2/(beta*oldgamma**2)
+        if(iter == 1) then
+          call lalg_copy(np, q, deltax)
+          call lalg_scal(np, eta*alpha, deltax)
+          call lalg_copy(np, p, deltar)
+          call lalg_scal(np, eta, deltar)
+        else
+          call lalg_scal(np, (oldtheta*gamma)**2, deltax)
+          call lalg_axpy(np, eta*alpha, q, deltax)
+          call lalg_scal(np, (oldtheta*gamma)**2, deltar)
+          call lalg_axpy(np, eta, p, deltar)
+        end if
+        call lalg_axpy(np, M_z1, deltax, x)
+        call lalg_axpy(np, -M_z1, deltar, r)
+
+        res = nrm2(r)/nrm2(x)
+
+        log_res = -log(res)
+        if(log_res < 0) log_res = 0
+        ilog_res = M_TEN**2*log_res
+        if(showprogress_)  call loct_progress_bar(ilog_res, ilog_thr)
+        if(res < threshold_) exit
+      end do
+    end if
+
+    if(iter.eq.max_iter) err = 5
+
+    select case(err)
+    case(0)
+      ! converged
+      if(present(converged)) then
+        converged = .true.
+      end if
+    case(1)
+      write(message(1), '(a)') "QMR failure, can't continue: b or P*b is the zero vector!"
+      call write_fatal(1)
+    case(2)
+      write(message(1), '(a)') "QMR failure, can't continue: v^T*z is zero!"
+      call write_fatal(1)
+    case(3)
+      write(message(1), '(a)') "QMR failure, can't continue: q^T*p is zero!"
+      call write_fatal(1)
+    case(4)
+      write(message(1), '(a)') "QMR failure, can't continue: gamma is zero!"
+      call write_fatal(1)
+    case(5)
+      write(message(1), '(a)') "QMR Solver not converged!"
+      call write_warning(1)
+      if(present(converged)) then
+        converged = .false.
+      end if
+    end select
+    if(showprogress_) write(*,*) ''
+
+    if(present(residue)) residue = res
+
+    deallocate(r, v, z, q, p, deltax, deltar)
+
+    call pop_sub()
+  end subroutine zqmr_sym_gen_dotp
+
+
+  ! ---------------------------------------------------------
+  subroutine interpolation_coefficients(nn, xa, xx, cc)
+    integer, intent(in)  :: nn    ! the number of points and coefficients
+    FLOAT,   intent(in)  :: xa(:) ! the nn points where we know the function
+    FLOAT,   intent(in)  :: xx    ! the point where we want the function
+    FLOAT,   intent(out) :: cc(:)  ! the coefficients
+
+    integer :: ii, kk
+
+    do ii = 1, nn
+      cc(ii) = M_ONE
+      do kk = 1, nn
+        if(kk .eq. ii) cycle
+        cc(ii) = cc(ii)*(xx - xa(kk))/(xa(ii) - xa(kk))
+      end do
     end do
-  end do
-  
-end subroutine interpolation_coefficients
+
+  end subroutine interpolation_coefficients
+
+
+  ! ---------------------------------------------------------
+  ! Returns if n is even.
+  logical function even(n)
+    integer, intent(in) :: n
+
+    call push_sub('math.even')
+
+    even = mod(n, 2).eq.0
+
+    call pop_sub()
+  end function even
+
+
+  ! ---------------------------------------------------------
+  ! Returns if n is odd.
+  logical function odd(n)
+    integer, intent(in) :: n
+
+    call push_sub('math.odd')
+
+    odd = .not.even(n)
+
+    call pop_sub()
+  end function odd
+
 
 #include "undef.F90"
 #include "complex.F90"
