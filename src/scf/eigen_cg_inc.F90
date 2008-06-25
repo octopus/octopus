@@ -283,11 +283,12 @@ subroutine X(eigen_solver_cg2_new) (gr, st, h, tol, niter, converged, diff, verb
   FLOAT,     optional, intent(out)   :: diff(1:st%nst,1:st%d%nik)
   logical,   optional, intent(in)    :: verbose
 
-  integer :: nik, nst, dim, ik, ist, maxter, i, conv
+  integer :: nik, nst, dim, ik, ist, maxter, i, conv, ip, idim
   logical :: verbose_
   R_TYPE, allocatable :: psi(:,:), phi(:, :), hpsi(:, :), hcgp(:, :), cg(:, :), sd(:, :), cgp(:, :)
   FLOAT :: ctheta, stheta, ctheta2, stheta2, mu, lambda, dump, &
-           gamma, sol(2), alpha, beta, theta, theta2, res ! Could be complex?
+       gamma, sol(2), alpha, beta, theta, theta2, res ! Could be complex?
+  R_TYPE :: dot
   logical, allocatable :: orthogonal(:)
 
   call push_sub('eigen_cg.eigen_solver_cg2_new')
@@ -308,22 +309,20 @@ subroutine X(eigen_solver_cg2_new) (gr, st, h, tol, niter, converged, diff, verb
   maxter = niter
   niter = 0
 
-  ALLOCATE( phi(NP_PART, dim), NP_PART*dim)
+  ALLOCATE( phi(NP     , dim), NP_PART*dim)
   ALLOCATE( psi(NP_PART, dim), NP_PART*dim)
-  ALLOCATE(hpsi(NP_PART, dim), NP_PART*dim)
-  ALLOCATE(  cg(NP_PART, dim), NP_PART*dim)
-  ALLOCATE(hcgp(NP_PART, dim), NP_PART*dim)
-  ALLOCATE(  sd(NP_PART, dim), NP_PART*dim)
+  ALLOCATE(hpsi(NP     , dim), NP_PART*dim)
+  ALLOCATE(  cg(NP     , dim), NP_PART*dim)
+  ALLOCATE(hcgp(NP     , dim), NP_PART*dim)
+  ALLOCATE(  sd(NP     , dim), NP_PART*dim)
   ALLOCATE( cgp(NP_PART, dim), NP_PART*dim)
   ALLOCATE(orthogonal(nst), nst)
 
-  psi(1:NP_PART, 1:dim) = M_ZERO
-  cgp(1:NP_PART, 1:dim) = M_ZERO
+  psi(1:NP, 1:dim) = M_ZERO
+  cgp(1:NP, 1:dim) = M_ZERO
 
   ! Set the diff to zero, since it is intent(out)
-  if(present(diff)) then 
-    diff(1:st%nst,1:st%d%nik) = M_ZERO
-  end if
+  if(present(diff)) diff(1:st%nst,1:st%d%nik) = M_ZERO
 
   kpoints: do ik = 1, nik
     conv = converged(ik)
@@ -331,10 +330,14 @@ subroutine X(eigen_solver_cg2_new) (gr, st, h, tol, niter, converged, diff, verb
 
       ! Orthogonalize starting eigenfunctions to those already calculated...
       call X(states_gram_schmidt_full)(st, ist, gr%m, dim, st%X(psi)(:, 1:dim, 1:ist, ik), start=ist)
-      psi(1:NP, 1:dim) = st%X(psi)(1:NP, 1:dim, ist, ik)
+
+      do idim = 1, st%d%dim
+        call lalg_copy(NP, st%X(psi)(:, idim, ist, ik), psi(:, idim))
+      end do
 
       ! Calculate starting gradient: |hpsi> = H|psi>
-      call X(Hpsi)(h, gr, psi, phi, ist, ik); niter = niter + 1
+      call X(hpsi)(h, gr, psi, phi, ist, ik)
+      niter = niter + 1
 
       ! Initial settings for scalar variables.
       ctheta = M_ONE
@@ -349,64 +352,96 @@ subroutine X(eigen_solver_cg2_new) (gr, st, h, tol, niter, converged, diff, verb
 
       band: do i = 1, maxter - 1 ! One operation has already been made.
 
-         if(mod(i, 5).eq.0) orthogonal = .false.
+        if(mod(i, 5).eq.0) orthogonal = .false.
 
-         ! Get H|psi> (through the linear formula)
-         phi(1:NP, 1:dim) = ctheta*phi(1:NP, 1:dim) + stheta*hcgp(1:NP, 1:dim)
+        ! Get H|psi> (through the linear formula)
+        do idim = 1, st%d%dim
+          do ip = 1, NP
+            phi(ip, idim) = ctheta*phi(ip, idim) + stheta*hcgp(ip, idim)
+          end do
+        end do
 
-         ! lambda = <psi|H|psi> = <psi|phi>
-         lambda = X(states_dotp)(gr%m, dim, psi, phi)
+        ! lambda = <psi|H|psi> = <psi|phi>
+        lambda = X(states_dotp)(gr%m, dim, psi, phi)
 
-         ! Check convergence
-         res = X(states_residue)(gr%m, dim, phi, lambda, psi)
-         if(present(diff)) diff(ist, ik) = res
-         if(res < tol) then
-           conv = conv + 1
-           exit band
-         end if
+        ! Check convergence
+        res = X(states_residue)(gr%m, dim, phi, lambda, psi)
+        if(present(diff)) diff(ist, ik) = res
+        if(res < tol) then
+          conv = conv + 1
+          exit band
+        end if
 
-         ! Get steepest descent vector
-         sd(1:NP, 1:dim) = lambda*psi(1:NP, 1:dim) - phi(1:NP, 1:dim)
-         if(ist > 1) &
-           call X(states_gram_schmidt)(gr%m, ist - 1, dim, st%X(psi)(:, :, :, ik), sd, normalize = .false., mask = orthogonal)
+        ! Get steepest descent vector
+        do idim = 1, st%d%dim
+          do ip = 1, NP
+            sd(ip, idim) = lambda*psi(ip, idim) - phi(ip, idim)
+          end do
+        end do
+        
+        if(ist > 1) &
+             call X(states_gram_schmidt)(gr%m, ist - 1, dim, st%X(psi)(:, :, :, ik), sd, normalize = .false., mask = orthogonal)
 
-         ! Get conjugate-gradient vector
-         gamma = X(states_dotp)(gr%m, dim, sd, sd)/mu
-         mu    = X(states_dotp)(gr%m, dim, sd, sd)
-         cg(1:NP, 1:dim) = sd(1:NP, 1:dim) + gamma*cg(1:NP, 1:dim)
+        ! Get conjugate-gradient vector
+        dot = X(states_nrm2)(gr%m, dim, sd)**2
+        gamma = dot/mu
+        mu    = dot
 
-         !
-         dump = X(states_dotp)(gr%m, dim, psi, cg)
-         cgp(1:NP, 1:dim) = cg(1:NP, 1:dim) - dump*psi(1:NP, 1:dim)
-         dump = sqrt(X(states_dotp)(gr%m, dim, cgp, cgp))
-         cgp(1:NP, 1:dim) = cgp(1:NP, 1:dim)/dump
+        do idim = 1, st%d%dim
+          do ip = 1, NP
+            cg(ip, idim) = sd(ip, idim) + gamma*cg(ip, idim)
+          end do
+        end do
 
-         call X(Hpsi)(h, gr, cgp, hcgp, ist, ik); niter = niter + 1
+        dump = X(states_dotp)(gr%m, dim, psi, cg)
 
-         alpha = - lambda + X(states_dotp)(gr%m, dim, cgp, hcgp)
-         beta  = M_TWO*X(states_dotp)(gr%m, dim, cgp, phi)
-         theta = M_HALF*atan(-beta/alpha)
-         ctheta = cos(theta)
-         stheta = sin(theta)
+        do idim = 1, st%d%dim
+          do ip = 1, NP
+            cgp(ip, idim) = cg(ip, idim) - dump*psi(ip, idim)
+          end do
+        end do
 
-         ! This checks wether we are picking the maximum, or the minimum.
-         theta2 = theta + M_PI/M_TWO
-         ctheta2 = cos(theta2)
-         stheta2 = sin(theta2)
-         sol(1) = lambda + stheta**2*alpha + beta*stheta*ctheta
-         sol(2) = lambda + stheta2**2*alpha + beta*stheta2*ctheta2
+        dump = X(states_nrm2)(gr%m, dim, cgp)
 
-         if(sol(2) < sol(1)) then
-            theta = theta2
-            stheta = stheta2
-            ctheta = ctheta2
-         end if
+        do idim = 1, st%d%dim
+          call lalg_scal(NP, M_ONE/dump, cgp(:, idim))
+        end do
 
-         psi(1:NP, 1:dim) = ctheta*psi(1:NP, 1:dim) + stheta*cgp(1:NP, 1:dim)
+        call X(hpsi)(h, gr, cgp, hcgp, ist, ik)
 
+        niter = niter + 1
+
+        alpha = -lambda + X(states_dotp)(gr%m, dim, cgp, hcgp)
+        beta  = M_TWO*X(states_dotp)(gr%m, dim, cgp, phi)
+        theta = M_HALF*atan(-beta/alpha)
+        ctheta = cos(theta)
+        stheta = sin(theta)
+
+        ! This checks wether we are picking the maximum, or the minimum.
+        theta2 = theta + M_PI/M_TWO
+        ctheta2 = cos(theta2)
+        stheta2 = sin(theta2)
+        sol(1) = lambda + stheta**2*alpha + beta*stheta*ctheta
+        sol(2) = lambda + stheta2**2*alpha + beta*stheta2*ctheta2
+
+        if(sol(2) < sol(1)) then
+          theta = theta2
+          stheta = stheta2
+          ctheta = ctheta2
+        end if
+
+        do idim = 1, st%d%dim
+          do ip = 1, NP
+            psi(ip, idim) = ctheta*psi(ip, idim) + stheta*cgp(ip, idim)
+          end do
+        end do
+        
       end do band
 
-      st%X(psi)(1:NP, 1:dim, ist, ik) = psi(1:NP, 1:dim)
+      do idim = 1, st%d%dim
+        call lalg_copy(NP, psi(:, idim), st%X(psi)(:, idim, ist, ik))
+      end do
+
       st%eigenval(ist, ik) = lambda
 
       if(verbose_) then
