@@ -152,7 +152,7 @@ program phonon_spectrum
         ww = dw * ifreq
         irtotal = sqrt(sum( abs(ftdipole(ifreq, 1:3))**2 ))
         write(unit = iunit, iostat = ierr, fmt = '(5e20.10)') &
-             ww*hartree_to_cm_inv, irtotal, abs(ftdipole(ifreq, 1:3))
+             ww*hartree_to_cm_inv, ww*irtotal, ww*abs(ftdipole(ifreq, 1:3))
       end do
       call io_close(iunit)
 
