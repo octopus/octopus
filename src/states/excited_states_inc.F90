@@ -184,9 +184,9 @@ R_TYPE function X(states_mpmatrixelement_g)(m, st1, st2, opst2) result(st1opst2)
       c = det * transpose(c)
 
       ! And now, apply Lowdin`s formula.
-      ! <U|O|V> = 2 D'_{UV} \sum_{jk} <phi^U_j|o|phi^V_k> D'_{UV}(j|k)
-      ! where D'_{UV} is the determinana of the overlap matrix between the
-      ! spatial orbitals of U and V (dimension = N/2), and D'_{UV}(j|k) is
+      ! <U|O|V> = 2 D`_{UV} \sum_{jk} <phi^U_j|o|phi^V_k> D`_{UV}(j|k)
+      ! where D`_{UV} is the determinana of the overlap matrix between the
+      ! spatial orbitals of U and V (dimension = N/2), and D`_{UV}(j|k) is
       ! the (j,k) minor of this matrix.
       z = M_ZERO
       do i = 1, i1 + k1
