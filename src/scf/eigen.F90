@@ -23,6 +23,7 @@ module eigen_solver_m
   use datasets_m
   use eigen_cg_m
   use eigen_lobpcg_m
+  use eigen_rmmdiis_m
   use global_m
   use grid_m
   use hamiltonian_m
@@ -82,7 +83,8 @@ module eigen_solver_m
        RS_MG      =  7,         &
        RS_CG_NEW  =  6,         &
        RS_EVO     =  9,         &
-       RS_LOBPCG  =  8
+       RS_LOBPCG  =  8,         &
+       RS_RMMDIIS = 10
 
 contains
 
@@ -119,6 +121,8 @@ contains
     !% see: A. Knyazev. Toward the Optimal Preconditioned Eigensolver: Locally
     !% Optimal Block Preconditioned Conjugate Gradient Method. SIAM
     !% Journal on Scientific Computing, 23(2):517­541, 2001.
+    !%Option rmmdiis 10
+    !% Residual minimization scheme, direct inversion in the iterative subspace.
     !%Option multigrid 7
     !% Multigrid eigensolver (experimental).
     !%End
@@ -151,6 +155,7 @@ contains
       call loct_parse_float(check_inp('EigenSolverImaginaryTime'), CNST(10.0), eigens%imag_time)
       if(eigens%imag_time <= M_ZERO) call input_error('EigenSolverImaginaryTime')
     case(RS_LOBPCG)
+    case(RS_RMMDIIS)
     case default
       call input_error('EigenSolver')
     end select
@@ -289,6 +294,8 @@ contains
         end if
       case(RS_MG)
         call deigen_solver_mg(gr, st, h, tol, maxiter, eigens%converged, eigens%diff, verbose = verbose_)
+      case(RS_RMMDIIS)
+        call deigen_solver_rmmdiis(gr, st, h, eigens%pre, tol, maxiter, eigens%converged, eigens%diff, verbose = verbose_)
       end select
 
       call dsubspace_diag(gr, st, h)
@@ -320,6 +327,8 @@ contains
         end if
       case(RS_MG)
         call zeigen_solver_mg(gr, st, h, tol, maxiter, eigens%converged, eigens%diff, verbose = verbose_)
+      case(RS_RMMDIIS)
+        call zeigen_solver_rmmdiis(gr, st, h, eigens%pre, tol, maxiter, eigens%converged, eigens%diff, verbose = verbose_)
       end select
 
       call zsubspace_diag(gr, st, h)
