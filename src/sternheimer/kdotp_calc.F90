@@ -20,15 +20,13 @@
 #include "global.h"
 
 module kdotp_calc_m
-  use datasets_m
-  use elf_m
-  use functions_m
-  use grid_m
+!  use datasets_m
+!  use functions_m
+!  use grid_m
   use global_m
   use hamiltonian_m
-  use loct_parser_m
   use linear_response_m
-  use mesh_m
+!  use mesh_m
   use mesh_function_m
   use messages_m
   use pert_m
@@ -36,13 +34,12 @@ module kdotp_calc_m
   use states_m
   use sternheimer_m
   use system_m
-  use xc_m
+!  use xc_m
 
   implicit none
 
   private
   public ::                       &
-    dlr_calc_eff_mass_inv,        &
     zlr_calc_eff_mass_inv,        &  
     kdotp_wfs_tag,                &
     kdotp_rho_tag
@@ -72,15 +69,46 @@ contains
     call pop_sub()
 
   end function kdotp_wfs_tag
-  
-#include "undef.F90"
-#include "real.F90"
-#include "kdotp_calc_inc.F90"
 
-#include "undef.F90"
 #include "complex.F90"
-#include "kdotp_calc_inc.F90"
 
+subroutine zlr_calc_eff_mass_inv(sys, h, lr, perturbation, eff_mass_inv)
+  type(system_t),         intent(inout) :: sys
+  type(hamiltonian_t),    intent(in)    :: h
+  type(lr_t),             intent(in)    :: lr(:,:)
+  type(pert_t),           intent(inout) :: perturbation
+  FLOAT,                  intent(out)   :: eff_mass_inv(:, :, :, :)
+
+! m^-1[ij] = delta[ij] + 2*Re<psi0|H'i|psi'j>
+! for each state, spin, and k-point
+! This routine is not set up for spinors.
+
+  integer ik, ist, idir1, idir2
+  R_TYPE, allocatable :: pertpsi(:)
+
+  ALLOCATE(pertpsi(1:sys%gr%m%np), sys%gr%m%np)
+
+  eff_mass_inv(:, :, :, :) = 0
+
+  do ik = 1, sys%st%d%nik
+    do ist = 1, sys%st%nst
+      do idir1 = 1, sys%gr%sb%dim
+
+        eff_mass_inv(ik, ist, idir1, idir1) = 1
+        call pert_setup_dir(perturbation, idir1)
+        call X(pert_apply) (perturbation, sys%gr, sys%geo, h, ik, &
+          sys%st%X(psi)(:, 1, ist, ik), pertpsi)
+
+        do idir2 = 1, sys%gr%sb%dim
+          eff_mass_inv(ik, ist, idir1, idir2) = eff_mass_inv(ik, ist, idir1, idir2) + &
+             M_TWO*R_REAL(X(mf_integrate)(sys%gr%m, lr(idir2, 1)%X(dl_psi)(1:sys%gr%m%np, 1, ist, ik)*R_CONJ(pertpsi(1:sys%gr%m%np))))
+        enddo
+      enddo
+    enddo
+  enddo
+
+end subroutine zlr_calc_eff_mass_inv
+  
 end module kdotp_calc_m
 
 !! Local Variables:
