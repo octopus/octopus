@@ -55,6 +55,10 @@ subroutine X(preconditioner_apply)(pre, gr, h, a, b, omega)
       call lalg_scal(NP, R_TOTYPE(M_ONE/(M_TWO*M_PI)), b(:,idim))
     end do
 
+  case default
+   write(message(1), '(a,i4,a)') "Error: unknown preconditioner ", pre%which, "."
+   call write_fatal(1)
+
   end select
 
   call profiling_out(preconditioner_prof)

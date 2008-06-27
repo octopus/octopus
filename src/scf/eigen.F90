@@ -206,7 +206,7 @@ contains
     if(eigens%es_maxiter < 1) call input_error('EigenSolverMaxIter')
 
     select case(eigens%es_type)
-    case(RS_PLAN, RS_CG, RS_LOBPCG)
+    case(RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS)
       call preconditioner_init(eigens%pre, gr)
     end select
 

@@ -42,7 +42,7 @@ subroutine X(eigen_solver_rmmdiis) (gr, st, h, pre, tol, niter, converged, diff,
 
   call push_sub('eigen_rmmdiis_inc.eigen_solver_rmmdiss')
 
-  ALLOCATE(residuals(1:NP, 1:st%d%dim), NP*st%d%dim)
+  ALLOCATE(residuals(1:NP_PART, 1:st%d%dim), NP*st%d%dim)
   ALLOCATE(preres(1:NP_PART, 1:st%d%dim), NP_PART*st%d%dim*st%lnst)
   ALLOCATE(resres(1:NP, 1:st%d%dim), NP*st%d%dim*st%lnst)
 
