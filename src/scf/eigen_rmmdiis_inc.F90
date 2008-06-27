@@ -35,77 +35,78 @@ subroutine X(eigen_solver_rmmdiis) (gr, st, h, pre, tol, niter, converged, diff,
   logical,   optional, intent(in)    :: verbose
 
   integer :: ik, ist, idim, ip
-  R_TYPE, allocatable :: residuals(:, :, :), preres(:, :), resres(:, :)
+  integer :: times, ntimes
+  R_TYPE, allocatable :: residuals(:, :), preres(:, :), resres(:, :)
   R_TYPE :: lambda
   FLOAT :: error
 
   call push_sub('eigen_rmmdiis_inc.eigen_solver_rmmdiss')
 
-  ALLOCATE(residuals(1:NP, 1:st%d%dim, st%st_start:st%st_end), NP*st%d%dim*st%lnst)
+  ALLOCATE(residuals(1:NP, 1:st%d%dim), NP*st%d%dim)
   ALLOCATE(preres(1:NP_PART, 1:st%d%dim), NP_PART*st%d%dim*st%lnst)
   ALLOCATE(resres(1:NP, 1:st%d%dim), NP*st%d%dim*st%lnst)
 
   call X(subspace_diag)(gr, st, h, diff)
 
+  ntimes = niter
+  niter = 0
+
   do ik = 1, st%d%nik
 
     do ist = st%st_start, st%st_end
       
-      call X(Hpsi)(h, gr, st%X(psi)(:,:, ist, ik) , residuals(:, :, ist), ist, ik)
-      
-      st%eigenval(ist, ik) = X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:,:, ist, ik) , residuals(:, :, ist))
+      do times = 1, ntimes
 
-      do idim = 1, st%d%dim
-        call lalg_axpy(NP, -st%eigenval(ist, ik), st%X(psi)(:, idim, ist, ik), residuals(:, idim, ist))
-      end do
-      
-    end do
+        call X(Hpsi)(h, gr, st%X(psi)(:,:, ist, ik) , residuals, ist, ik)
 
-    do ist = st%st_start, st%st_end
+        st%eigenval(ist, ik) = X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:,:, ist, ik) , residuals(:, :))
 
-      ! dummy preconditioning
-      do idim = 1, st%d%dim
-        call lalg_copy(NP, residuals(:, idim, ist), preres(:, idim))
-      end do
-      
-      ! calculate the residual of the residual
-      call X(Hpsi)(h, gr, preres, resres, ist, ik)
-      
-      do idim = 1, st%d%dim
-        call lalg_axpy(NP, -st%eigenval(ist, ik), preres(:, idim), resres(:, idim))
-      end do
+        do idim = 1, st%d%dim
+          call lalg_axpy(NP, -st%eigenval(ist, ik), st%X(psi)(:, idim, ist, ik), residuals(:, idim))
+        end do
 
-      ! the size of the correction
-      
-      lambda = -X(states_dotp)(gr%m, st%d%dim, residuals(:, :, ist), resres)/X(states_dotp)(gr%m, st%d%dim, resres, resres)
+        error = X(states_nrm2)(gr%m, st%d%dim, residuals)
 
-      do idim = 1, st%d%dim
-        call lalg_axpy(NP, M_HALF*lambda, resres(:, idim), residuals(:, idim, ist))
-      end do
-      
-      ! dummy preconditioning
-      do idim = 1, st%d%dim
-        call lalg_copy(NP, residuals(:, idim, ist), preres(:, idim))
-      end do
+        if(error < tol .or. times == ntimes) then
+          exit
+        end if
 
-      !now correct psi
-      do idim = 1, st%d%dim
-        call lalg_axpy(NP, M_TWO*lambda, preres(:, idim), st%X(psi)(:, idim, ist, ik))
+        ! dummy preconditioning
+        do idim = 1, st%d%dim
+          call lalg_copy(NP, residuals(:, idim), preres(:, idim))
+        end do
+
+        ! calculate the residual of the residual
+        call X(Hpsi)(h, gr, preres, resres, ist, ik)
+
+        do idim = 1, st%d%dim
+          call lalg_axpy(NP, -st%eigenval(ist, ik), preres(:, idim), resres(:, idim))
+        end do
+
+        ! the size of the correction
+        lambda = -X(states_dotp)(gr%m, st%d%dim, residuals, resres)/X(states_dotp)(gr%m, st%d%dim, resres, resres)
+
+        do idim = 1, st%d%dim
+          call lalg_axpy(NP, M_HALF*lambda, resres(:, idim), residuals(:, idim))
+        end do
+
+        ! dummy preconditioning
+        do idim = 1, st%d%dim
+          call lalg_copy(NP, residuals(:, idim), preres(:, idim))
+        end do
+
+        !now correct psi
+        do idim = 1, st%d%dim
+          call lalg_axpy(NP, M_TWO*lambda, preres(:, idim), st%X(psi)(:, idim, ist, ik))
+        end do
+
+        niter = niter + 2
+
       end do
 
     end do
 
     call X(states_gram_schmidt_full)(st, st%nst, gr%m, st%d%dim, st%X(psi)(:, :, :, ik))
-
-    do ist = st%st_start, st%st_end
-      
-      call X(Hpsi)(h, gr, st%X(psi)(:,:, ist, ik) , residuals(:, :, ist), ist, ik)
-
-      st%eigenval(ist, ik) = X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:,:, ist, ik) , residuals(:, :, ist))
-      
-      diff(ist, ik) = X(states_residue)(gr%m, st%d%dim, residuals(:, :, ist), st%eigenval(ist, ik), st%X(psi)(:, :, ist, ik))
-      
-    end do
 
   end do
 
