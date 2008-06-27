@@ -1261,10 +1261,10 @@ contains
 
     call push_sub('states.states_generate_random')
 
-    ist_start = 1
-    if(present(ist_start_)) ist_start = ist_start_
-    ist_end = st%nst
-    if(present(ist_end_)) ist_end = ist_end_
+    ist_start = st%st_start
+    if(present(ist_start_)) ist_start = max(ist_start, ist_start_)
+    ist_end = st%st_end
+    if(present(ist_end_)) ist_end = min(ist_end, ist_end_)
 
     if(st%parallel_in_states) then
       seed = st%mpi_grp%rank
