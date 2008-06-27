@@ -42,7 +42,7 @@ subroutine X(eigen_solver_mg) (gr, st, h, tol, niter, converged, diff, verbose)
     
     do iter = 1, niter
 
-      call X(eigen_diag_subspace)(gr, st, h, diff)
+      call X(subspace_diag)(gr, st, h, diff)
 
       do ist = 1, st%nst
         print*, iter, ist, st%eigenval(ist, ik), diff(ist, ik)
@@ -69,7 +69,7 @@ subroutine X(eigen_solver_mg) (gr, st, h, tol, niter, converged, diff, verbose)
 
     end do
 
-    call X(eigen_diag_subspace)(gr, st, h, diff)
+    call X(subspace_diag)(gr, st, h, diff)
 
     niter = iter*10
 

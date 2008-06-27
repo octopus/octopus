@@ -41,6 +41,7 @@ module eigen_solver_m
   use profiling_m
   use states_m
   use states_block_m
+  use subspace_m
   use units_m
   use td_exp_m
 
@@ -82,8 +83,6 @@ module eigen_solver_m
        RS_CG_NEW  =  6,         &
        RS_EVO     =  9,         &
        RS_LOBPCG  =  8
-
-  type(profile_t),     save    :: diagon_prof
 
 contains
 
@@ -292,11 +291,7 @@ contains
         call deigen_solver_mg(gr, st, h, tol, maxiter, eigens%converged, eigens%diff, verbose = verbose_)
       end select
 
-      if(st%parallel_in_states) then 
-        call deigen_diag_subspace_par_states(gr, st, h)
-      else
-        call deigen_diag_subspace(gr, st, h)
-      end if
+      call dsubspace_diag(gr, st, h)
 
     else
       select case(eigens%es_type)
@@ -327,11 +322,7 @@ contains
         call zeigen_solver_mg(gr, st, h, tol, maxiter, eigens%converged, eigens%diff, verbose = verbose_)
       end select
 
-      if(st%parallel_in_states) then 
-        call zeigen_diag_subspace_par_states(gr, st, h)
-      else
-        call zeigen_diag_subspace(gr, st, h)
-      end if
+      call zsubspace_diag(gr, st, h)
 
     end if
 
@@ -345,18 +336,16 @@ contains
 
 #include "undef.F90"
 #include "real.F90"
-#include "eigen_inc.F90"
 #include "eigen_mg_inc.F90"
 #include "eigen_plan_inc.F90"
 #include "eigen_evolution_inc.F90"
-
 
 #include "undef.F90"
 #include "complex.F90"
-#include "eigen_inc.F90"
 #include "eigen_mg_inc.F90"
 #include "eigen_plan_inc.F90"
 #include "eigen_evolution_inc.F90"
+
 end module eigen_solver_m
 
 

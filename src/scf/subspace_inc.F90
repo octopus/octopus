@@ -19,7 +19,7 @@
 
 ! ---------------------------------------------------------
 ! This routine diagonalises the Hamiltonian in the subspace defined by the states.
-subroutine X(eigen_diag_subspace)(gr, st, h, diff)
+subroutine X(subspace_diag)(gr, st, h, diff)
   type(grid_t),        intent(inout) :: gr
   type(states_t),      intent(inout) :: st
   type(hamiltonian_t), intent(inout) :: h
@@ -28,12 +28,15 @@ subroutine X(eigen_diag_subspace)(gr, st, h, diff)
   R_TYPE, allocatable :: h_subspace(:, :), vec(:, :), f(:, :)
   integer             :: ist, jst, ik
   FLOAT               :: nrm2
+  type(profile_t),     save    :: diagon_prof
 
   call push_sub('eigen_inc.Xeigen_diagon_subspace')
   call profiling_in(diagon_prof, "SUBSPACE_DIAG")
 
 #ifdef HAVE_MPI
-  ASSERT(.not. st%parallel_in_states)
+  if(st%parallel_in_states) then
+    call X(subspace_diag_par_states)(gr, st, h, diff)
+  end if
 #endif
 
   ALLOCATE(h_subspace(st%nst, st%nst), st%nst*st%nst)
@@ -82,15 +85,15 @@ subroutine X(eigen_diag_subspace)(gr, st, h, diff)
   call profiling_out(diagon_prof)
   call pop_sub()
 
-end subroutine X(eigen_diag_subspace)
+end subroutine X(subspace_diag)
 
+#ifdef HAVE_MPI
 ! --------------------------------------------------------- 
 ! This routine diagonalises the Hamiltonian in the subspace defined by
 ! the states, this version is aware of parallelization in states but
 ! consumes more memory.
 !
-
-subroutine X(eigen_diag_subspace_par_states)(gr, st, h, diff)
+subroutine X(subspace_diag_par_states)(gr, st, h, diff)
   type(grid_t),        intent(inout) :: gr
   type(states_t),      intent(inout) :: st
   type(hamiltonian_t), intent(inout) :: h
@@ -105,7 +108,6 @@ subroutine X(eigen_diag_subspace_par_states)(gr, st, h, diff)
 #endif
 
   call push_sub('eigen_inc.Xeigen_diagon_subspace')
-  call profiling_in(diagon_prof, "SUBSPACE_DIAG")
 
   ALLOCATE(h_subspace(st%nst, st%nst), st%nst*st%nst)
   ALLOCATE(vec(st%nst, st%nst), st%nst*st%nst)
@@ -155,10 +157,10 @@ subroutine X(eigen_diag_subspace_par_states)(gr, st, h, diff)
 
   deallocate(f, h_subspace, vec)
 
-  call profiling_out(diagon_prof)
   call pop_sub()
 
-end subroutine X(eigen_diag_subspace_par_states) 
+end subroutine X(subspace_diag_par_states) 
+#endif
 
 !! Local Variables:
 !! mode: f90
