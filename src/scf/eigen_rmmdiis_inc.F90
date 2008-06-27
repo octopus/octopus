@@ -34,7 +34,7 @@ subroutine X(eigen_solver_rmmdiis) (gr, st, h, pre, tol, niter, converged, diff,
   FLOAT,     optional, intent(out)   :: diff(1:st%nst,1:st%d%nik)
   logical,   optional, intent(in)    :: verbose
 
-  integer :: ik, ist, idim, ip
+  integer :: ik, ist, idim
   integer :: times, ntimes
   R_TYPE, allocatable :: residuals(:, :), preres(:, :), resres(:, :)
   R_TYPE :: lambda
@@ -53,11 +53,15 @@ subroutine X(eigen_solver_rmmdiis) (gr, st, h, pre, tol, niter, converged, diff,
 
   do ik = 1, st%d%nik
 
+    converged(ik) = 0
+
     do ist = st%st_start, st%st_end
       
       do times = 1, ntimes
 
         call X(Hpsi)(h, gr, st%X(psi)(:,:, ist, ik) , residuals, ist, ik)
+
+        niter = niter + 1
 
         st%eigenval(ist, ik) = X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:,:, ist, ik) , residuals(:, :))
 
@@ -67,14 +71,14 @@ subroutine X(eigen_solver_rmmdiis) (gr, st, h, pre, tol, niter, converged, diff,
 
         error = X(states_nrm2)(gr%m, st%d%dim, residuals)
 
-        if(error < tol .or. times == ntimes) then
+        if(error < tol) then
+          converged(ik) = converged(ik) + 1
+          if(present(diff)) diff(ist, ik) = error
           exit
         end if
 
         ! dummy preconditioning
-        do idim = 1, st%d%dim
-          call lalg_copy(NP, residuals(:, idim), preres(:, idim))
-        end do
+        call  X(preconditioner_apply)(pre, gr, h, residuals, preres)
 
         ! calculate the residual of the residual
         call X(Hpsi)(h, gr, preres, resres, ist, ik)
@@ -90,17 +94,14 @@ subroutine X(eigen_solver_rmmdiis) (gr, st, h, pre, tol, niter, converged, diff,
           call lalg_axpy(NP, M_HALF*lambda, resres(:, idim), residuals(:, idim))
         end do
 
-        ! dummy preconditioning
-        do idim = 1, st%d%dim
-          call lalg_copy(NP, residuals(:, idim), preres(:, idim))
-        end do
+        call X(preconditioner_apply)(pre, gr, h, residuals, preres)
 
         !now correct psi
         do idim = 1, st%d%dim
           call lalg_axpy(NP, M_TWO*lambda, preres(:, idim), st%X(psi)(:, idim, ist, ik))
         end do
 
-        niter = niter + 2
+        niter = niter + 1
 
       end do
 
