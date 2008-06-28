@@ -380,6 +380,10 @@ subroutine X(set_bc)(der, f)
   integer :: p
   integer :: iper
   type(profile_t), save :: set_bc_prof
+#ifdef HAVE_MPI
+  integer :: ib, ipart
+  integer, pointer :: sendreq(:), recvreq(:)
+#endif
 
   call push_sub('derivatives_inc.Xset_bc')
   call profiling_in(set_bc_prof, 'SET_BC')
@@ -407,11 +411,43 @@ subroutine X(set_bc)(der, f)
   end if
 
   if(der%periodic_bc) then
+
+#ifdef HAVE_MPI
+    if(der%m%parallel_in_domains) then
+      ! get the points from other nodes
+      ALLOCATE(sendreq(1:der%m%nnbsend), der%m%nnbsend)
+      ALLOCATE(recvreq(1:der%m%nnbrecv), der%m%nnbrecv)
+
+      ib = 1
+      do ipart = 1, der%m%vp%p
+        if(ipart == p .or. der%m%nsend(ipart) == 0) cycle
+        call MPI_Isend(f, 1, der%m%X(send_type)(ipart), ipart - 1, 3, der%m%vp%comm, sendreq(ib), mpi_err)
+        ib = ib + 1
+      end do
+
+      ib = 1
+      do ipart = 1, der%m%vp%p
+        if(ipart == p .or. der%m%nsend(ipart) == 0) cycle
+        call MPI_Irecv(f(der%m%np + 1:) , 1, der%m%X(recv_type)(ipart), ipart - 1, 3, der%m%vp%comm, recvreq(ib), mpi_err)
+        ib = ib + 1
+      end do
+
+    end if
+#endif
+
     !$omp parallel do
     do iper = 1, der%m%nper
       f(der%m%per_points(iper)) = f(der%m%per_map(iper))
     end do
     !$omp end parallel do
+
+#ifdef HAVE_MPI
+    if(der%m%parallel_in_domains) then
+      call MPI_Waitall(der%m%nnbrecv, sendreq, MPI_STATUS_IGNORE, mpi_err)
+      call MPI_Waitall(der%m%nnbsend, recvreq, MPI_STATUS_IGNORE, mpi_err)
+    end if
+#endif
+
   end if
 
   call profiling_out(set_bc_prof)

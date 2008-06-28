@@ -390,38 +390,185 @@ contains
   
   subroutine mesh_pbc_init()
     integer :: ip, ip_inner, iper
-        
+#ifdef HAVE_MPI
+    integer :: ip_orig, ipart
+    integer, allocatable :: recv_rem_points(:, :)
+    integer :: nper_recv
+    integer :: maxmax
+    integer, allocatable :: recv_points(:, :), blocklengths(:) 
+    integer, allocatable :: send_points(:, :)
+#endif
+
     nullify(mesh%per_points)
     nullify(mesh%per_map)
-      
+
     if (simul_box_is_periodic(mesh%sb)) then
 
       if(mesh%parallel_in_domains) then
         message(1) = "Parallelization in domains is not yet implemented for periodic boundary conditions."
-        call write_fatal(1)
+        call write_warning(1)
       end if
 
       !count the number of points that are periodic
       mesh%nper = 0
+#ifdef HAVE_MPI
+      nper_recv = 0
+#endif
       do ip = mesh%np + 1, mesh%np_part
         ip_inner = mesh_periodic_point(mesh, ip)
-        if(ip /= ip_inner) mesh%nper = mesh%nper + 1
+#ifdef HAVE_MPI
+        if(mesh%parallel_in_domains) then
+          ip_inner = vec_global2local(mesh%vp, ip_inner, mesh%vp%partno)
+        end if
+#endif
+        if(ip /= ip_inner .and. ip_inner /= 0) then 
+          mesh%nper = mesh%nper + 1
+#ifdef HAVE_MPI          
+        else if (ip /= 0) then
+          nper_recv = nper_recv + 1
+#endif
+        end if
       end do
-      
+
       ALLOCATE(mesh%per_points(1:mesh%nper), mesh%nper)
       ALLOCATE(mesh%per_map(1:mesh%nper), mesh%nper)
+
+#ifdef HAVE_MPI
+      if(mesh%parallel_in_domains) then
+        ALLOCATE(recv_points(1:nper_recv, 1:mesh%vp%p), nper_recv*mesh%vp%p)
+        ALLOCATE(recv_rem_points(1:nper_recv, 1:mesh%vp%p), nper_recv*mesh%vp%p)
+        ALLOCATE(mesh%nrecv(1:mesh%vp%p), mesh%vp%p)
+        mesh%nrecv = 0
+      end if
+#endif
 
       iper = 0
       do ip = mesh%np + 1, mesh%np_part
         ip_inner = mesh_periodic_point(mesh, ip)
-        if(ip == ip_inner) cycle
-        iper = iper + 1
-        mesh%per_points(iper) = ip
-        mesh%per_map(iper) = ip_inner
+#ifdef HAVE_MPI
+        if(mesh%parallel_in_domains) then
+          ip_orig = ip_inner
+          ip_inner = vec_global2local(mesh%vp, ip_inner, mesh%vp%partno)
+        end if
+#endif
+        if(ip /= ip_inner .and. ip_inner /= 0) then
+          iper = iper + 1
+          mesh%per_points(iper) = ip
+          mesh%per_map(iper) = ip_inner
+#ifdef HAVE_MPI
+        else if(ip_inner == 0) then ! the point is in another node
+          ! find in which paritition it is
+          do ipart = 1, mesh%vp%p
+            if(ipart == mesh%vp%partno) cycle
+
+            ip_inner = vec_global2local(mesh%vp, ip_orig, ipart)
+            
+            if(ip_inner /= 0) then
+              ! count the points to receive from each node
+              mesh%nrecv(ipart) = mesh%nrecv(ipart) + 1
+              ! and store the number of the point
+              recv_points(mesh%nrecv(ipart), ipart) = ip
+              ! and where it is in the other partition
+              recv_rem_points(mesh%nrecv(ipart), ipart) = ip_inner
+              exit
+            end if
+            
+          end do
+#endif
+        end if
       end do
-      
+
+#ifdef HAVE_MPI
+      if(mesh%parallel_in_domains) then
+        ! Now we communicate to each node the points they will have to
+        ! send us. Probably this could be done without communication,
+        ! but this way it seems simpler to implement.
+        
+        ! We send the number of points we expect to receive.
+        do ipart = 1, mesh%vp%p
+          if(ipart /= mesh%vp%partno) cycle
+          ! (this could cause a deadlock, we should use a Bsend or a Isend)
+          call MPI_Send(mesh%nrecv(ipart), 1, MPI_INTEGER, ipart - 1, 0, mesh%vp%comm, mpi_err)
+        end do
+
+        ! And we receive it
+        ALLOCATE(mesh%nsend(1:mesh%vp%p), mesh%vp%p)
+        mesh%nsend = 0
+        do ipart = 1, mesh%vp%p
+          if(ipart /= mesh%vp%partno) cycle
+          call MPI_Recv(mesh%nsend(ipart), 1, MPI_INTEGER, ipart - 1, 0, mesh%vp%comm, MPI_STATUS_IGNORE, mpi_err)
+        end do
+
+        ! Now we send the index of the points
+        do ipart = 1, mesh%vp%p
+          if(ipart /= mesh%vp%partno .or. mesh%nrecv(ipart) == 0) cycle
+          ! (this could cause a deadlock, we should use a Bsend or a Isend)
+          call MPI_Send(recv_rem_points(:, ipart), mesh%nrecv(ipart), MPI_INTEGER, ipart - 1, 1, mesh%vp%comm, mpi_err)
+        end do
+
+        ALLOCATE(send_points(1:maxval(mesh%nsend), 1:mesh%vp%p), maxval(mesh%nsend)*mesh%vp%p)
+
+        ! And we receive them
+        do ipart = 1, mesh%vp%p
+          if(ipart /= mesh%vp%partno .or. mesh%nsend(ipart) == 0) cycle
+          call MPI_Recv(send_points(:, ipart), mesh%nsend(ipart), MPI_INTEGER, &
+               ipart - 1, 1, mesh%vp%comm, MPI_STATUS_IGNORE, mpi_err)
+        end do
+
+        ! we no longer need this
+        deallocate(recv_rem_points)
+
+        ! Now we have all the indexes required locally, so we can
+        ! build the mpi datatypes
+
+        ALLOCATE(mesh%dsend_type(1:mesh%vp%p), mesh%vp%p)
+        ALLOCATE(mesh%zsend_type(1:mesh%vp%p), mesh%vp%p)
+        ALLOCATE(mesh%drecv_type(1:mesh%vp%p), mesh%vp%p)
+        ALLOCATE(mesh%zrecv_type(1:mesh%vp%p), mesh%vp%p)
+
+        maxmax = max(maxval(mesh%nsend), maxval(mesh%nrecv))
+        ALLOCATE(blocklengths(1:maxmax), maxmax)
+        blocklengths(1:maxmax) = 1
+        
+        mesh%nnbsend = 0
+        mesh%nnbrecv = 0
+
+        do ipart = 1, mesh%vp%p
+          if(ipart /= mesh%vp%partno) cycle
+
+          if(mesh%nsend(ipart) > 0) then
+
+            ASSERT(all(send_points(1:mesh%nsend(ipart), ipart) <= mesh%np))
+
+            call MPI_Type_indexed(mesh%nsend(ipart), blocklengths, send_points(:, ipart), MPI_FLOAT, mesh%dsend_type(ipart), mpi_err)
+            call MPI_Type_indexed(mesh%nsend(ipart), blocklengths, send_points(:, ipart), MPI_CMPLX, mesh%zsend_type(ipart), mpi_err)
+            call MPI_Type_commit(mesh%dsend_type(ipart), mpi_err)
+            call MPI_Type_commit(mesh%zsend_type(ipart), mpi_err)
+
+            mesh%nnbsend = mesh%nnbsend + 1
+          end if
+          
+          if(mesh%nrecv(ipart) > 0) then
+            ASSERT(all(recv_points(1:mesh%nrecv(ipart), ipart) <= mesh%np_part))
+            ASSERT(all(recv_points(1:mesh%nrecv(ipart), ipart) > mesh%np))
+
+            ! the recv types should start from np + 1
+            recv_points(1:mesh%nrecv(ipart), ipart) = recv_points(1:mesh%nrecv(ipart), ipart) - mesh%np
+
+            call MPI_Type_indexed(mesh%nrecv(ipart), blocklengths, recv_points(:, ipart), MPI_FLOAT, mesh%drecv_type(ipart), mpi_err)
+            call MPI_Type_indexed(mesh%nrecv(ipart), blocklengths, recv_points(:, ipart), MPI_CMPLX, mesh%zrecv_type(ipart), mpi_err)
+            call MPI_Type_commit(mesh%drecv_type(ipart), mpi_err)
+            call MPI_Type_commit(mesh%zrecv_type(ipart), mpi_err)
+
+            mesh%nnbrecv = mesh%nnbrecv + 1
+          end if
+
+        end do
+
+      end if
+#endif
       ASSERT(iper == mesh%nper)
-      
+
     end if
 
 
