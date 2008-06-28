@@ -227,7 +227,7 @@ contains
     type(eigen_solver_t), intent(inout) :: eigens
 
     select case(eigens%es_type)
-    case(RS_PLAN, RS_CG, RS_LOBPCG)
+    case(RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS)
       call preconditioner_end(eigens%pre)
     end select
 

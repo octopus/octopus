@@ -20,7 +20,11 @@
 ! ---------------------------------------------------------
 !
 ! This is an implementation of the RMM-DIIS method, it was taken from
-! the GPAW code (revision: 2086 file: gpaw/eigensolvers/rmm_diis2.py).
+! the GPAW code (revision: 2086 file:
+! gpaw/eigensolvers/rmm_diis2.py). I believe this is actually a two
+! step DIIS. In our case we restart it several times to achieve
+! convergency, perhaps it would be interesting to implement the full
+! process.
 !
 ! ---------------------------------------------------------
 subroutine X(eigen_solver_rmmdiis) (gr, st, h, pre, tol, niter, converged, diff, verbose)
@@ -37,7 +41,10 @@ subroutine X(eigen_solver_rmmdiis) (gr, st, h, pre, tol, niter, converged, diff,
   integer :: ik, ist, idim
   integer :: times, ntimes
   R_TYPE, allocatable :: residuals(:, :), preres(:, :), resres(:, :)
-  R_TYPE :: lambda
+  R_TYPE :: lambda(1:2)
+#ifdef HAVE_MPI
+  R_TYPE :: lambda_tmp(1:2)
+#endif  
   FLOAT :: error
 
   call push_sub('eigen_rmmdiis_inc.eigen_solver_rmmdiss')
@@ -48,7 +55,7 @@ subroutine X(eigen_solver_rmmdiis) (gr, st, h, pre, tol, niter, converged, diff,
 
   call X(subspace_diag)(gr, st, h, diff)
 
-  ntimes = niter
+  ntimes = niter/2
   niter = 0
 
   do ik = 1, st%d%nik
@@ -77,7 +84,6 @@ subroutine X(eigen_solver_rmmdiis) (gr, st, h, pre, tol, niter, converged, diff,
           exit
         end if
 
-        ! dummy preconditioning
         call  X(preconditioner_apply)(pre, gr, h, residuals, preres)
 
         ! calculate the residual of the residual
@@ -88,17 +94,27 @@ subroutine X(eigen_solver_rmmdiis) (gr, st, h, pre, tol, niter, converged, diff,
         end do
 
         ! the size of the correction
-        lambda = -X(states_dotp)(gr%m, st%d%dim, residuals, resres)/X(states_dotp)(gr%m, st%d%dim, resres, resres)
+        lambda(1) = X(states_dotp)(gr%m, st%d%dim, residuals, resres, reduce = .false.)
+        lambda(2) = X(states_dotp)(gr%m, st%d%dim, resres, resres, reduce = .false.)
+
+#ifdef HAVE_MPI
+        if(gr%m%parallel_in_domains) then
+          !reduce the two values together
+          call MPI_Allreduce(lambda, lambda_tmp, 2, R_MPITYPE, MPI_SUM, gr%m%vp%comm, mpi_err)
+          lambda(1:2) = lambda_tmp(1:2)
+        end if
+#endif
+        lambda(1) = -lambda(1)/lambda(2)
 
         do idim = 1, st%d%dim
-          call lalg_axpy(NP, M_HALF*lambda, resres(:, idim), residuals(:, idim))
+          call lalg_axpy(NP, M_HALF*lambda(1), resres(:, idim), residuals(:, idim))
         end do
 
         call X(preconditioner_apply)(pre, gr, h, residuals, preres)
 
         !now correct psi
         do idim = 1, st%d%dim
-          call lalg_axpy(NP, M_TWO*lambda, preres(:, idim), st%X(psi)(:, idim, ist, ik))
+          call lalg_axpy(NP, M_TWO*lambda(1), preres(:, idim), st%X(psi)(:, idim, ist, ik))
         end do
 
         niter = niter + 1

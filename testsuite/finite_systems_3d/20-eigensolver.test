@@ -41,3 +41,9 @@ match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; -13.312575
 match ; Eigenvalue  2 ; GREP(static/info, ' 2   --', 13) ;  -8.348728
 match ; Eigenvalue  3 ; GREP(static/info, ' 3   --', 13) ;  -8.348728
 match ; Eigenvalue  4 ; GREP(static/info, ' 4   --', 13) ;  -8.313335
+
+Input: 20-eigensolver.06-rmmdiis.inp
+match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; -13.449113
+match ; Eigenvalue  2 ; GREP(static/info, ' 2   --', 13) ;  -8.455461
+match ; Eigenvalue  3 ; GREP(static/info, ' 3   --', 13) ;  -8.455461
+match ; Eigenvalue  4 ; GREP(static/info, ' 4   --', 13) ;  -8.419422
