@@ -540,8 +540,10 @@ contains
 
             ASSERT(all(send_points(1:mesh%nsend(ipart), ipart) <= mesh%np))
 
-            call MPI_Type_indexed(mesh%nsend(ipart), blocklengths, send_points(:, ipart), MPI_FLOAT, mesh%dsend_type(ipart), mpi_err)
-            call MPI_Type_indexed(mesh%nsend(ipart), blocklengths, send_points(:, ipart), MPI_CMPLX, mesh%zsend_type(ipart), mpi_err)
+            call MPI_Type_indexed(mesh%nsend(ipart), blocklengths, &
+                 send_points(:, ipart), MPI_FLOAT, mesh%dsend_type(ipart), mpi_err)
+            call MPI_Type_indexed(mesh%nsend(ipart), blocklengths, &
+                 send_points(:, ipart), MPI_CMPLX, mesh%zsend_type(ipart), mpi_err)
             call MPI_Type_commit(mesh%dsend_type(ipart), mpi_err)
             call MPI_Type_commit(mesh%zsend_type(ipart), mpi_err)
 
@@ -555,8 +557,10 @@ contains
             ! the recv types should start from np + 1
             recv_points(1:mesh%nrecv(ipart), ipart) = recv_points(1:mesh%nrecv(ipart), ipart) - mesh%np
 
-            call MPI_Type_indexed(mesh%nrecv(ipart), blocklengths, recv_points(:, ipart), MPI_FLOAT, mesh%drecv_type(ipart), mpi_err)
-            call MPI_Type_indexed(mesh%nrecv(ipart), blocklengths, recv_points(:, ipart), MPI_CMPLX, mesh%zrecv_type(ipart), mpi_err)
+            call MPI_Type_indexed(mesh%nrecv(ipart), blocklengths, &
+                 recv_points(:, ipart), MPI_FLOAT, mesh%drecv_type(ipart), mpi_err)
+            call MPI_Type_indexed(mesh%nrecv(ipart), blocklengths, &
+                 recv_points(:, ipart), MPI_CMPLX, mesh%zrecv_type(ipart), mpi_err)
             call MPI_Type_commit(mesh%drecv_type(ipart), mpi_err)
             call MPI_Type_commit(mesh%zrecv_type(ipart), mpi_err)
 
