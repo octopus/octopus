@@ -134,7 +134,7 @@ contains
 
     ! --------------------------------------------------------------------
     subroutine input()
-      integer :: equiv_axis
+      integer :: equiv_axes
 
       !%Variable vdW_npoints
       !%Type integer
@@ -146,9 +146,9 @@ contains
       call  loct_parse_int(check_inp('vdW_npoints'), 6, gaus_leg_n)
 
       ! TODO: symmetry stuff should be general
-      call loct_parse_int(check_inp('TDPolarizationEquivAxis'), 0, equiv_axis)
+      call loct_parse_int(check_inp('TDPolarizationEquivAxes'), 0, equiv_axes)
 
-      select case(equiv_axis)
+      select case(equiv_axes)
       case(3);      ndir = 1
       case(2);      ndir = min(2, sys%NDIM)
       case default; ndir = min(3, sys%NDIM)

@@ -83,7 +83,7 @@ module spectrum_m
     ! In case we use a normal dipole kick:
     FLOAT             :: pol(3, 3)
     integer           :: pol_dir
-    integer           :: pol_equiv_axis
+    integer           :: pol_equiv_axes
     FLOAT             :: wprime(3)
     ! In case we have a general multipolar kick
     ! The form of this "kick" will be (atomic units):
@@ -236,7 +236,7 @@ contains
         write(iunit, '(a15,3f18.12)') '# pol(2)       ', k%pol(1:3, 2)
         write(iunit, '(a15,3f18.12)') '# pol(3)       ', k%pol(1:3, 3)
         write(iunit, '(a15,i1)')      '# direction    ', k%pol_dir
-        write(iunit, '(a15,i1)')      '# Equiv. axis  ', k%pol_equiv_axis
+        write(iunit, '(a15,i1)')      '# Equiv. axes  ', k%pol_equiv_axes
         write(iunit, '(a15,3f18.12)') '# wprime       ', k%wprime(1:3)
       end if
 
@@ -269,7 +269,7 @@ contains
         write(aux, '(a15,i2)')      '# direction    ', k%pol_dir
         call write_iter_string(out, aux)
         call write_iter_nl(out)
-        write(aux, '(a15,i2)')      '# Equiv. axis  ', k%pol_equiv_axis
+        write(aux, '(a15,i2)')      '# Equiv. axes  ', k%pol_equiv_axes
         call write_iter_string(out, aux)
         call write_iter_nl(out)
         write(aux, '(a15,3f18.12)') '# wprime       ', k%wprime(1:3)
@@ -313,7 +313,7 @@ contains
       read(iunit, '(15x,3f18.12)') k%pol(1:3, 2)
       read(iunit, '(15x,3f18.12)') k%pol(1:3, 3)
       read(iunit, '(15x,i2)')      k%pol_dir
-      read(iunit, '(15x,i2)')      k%pol_equiv_axis
+      read(iunit, '(15x,i2)')      k%pol_equiv_axes
       read(iunit, '(15x,3f18.12)') k%wprime(1:3)
     end if
 
@@ -346,7 +346,7 @@ contains
 
     if(abs(k%delta_strength) == M_ZERO) then
       k%delta_strength_mode = 0
-      k%pol_equiv_axis = 0
+      k%pol_equiv_axes = 0
       k%pol(1:3, 1) = (/ M_ONE, M_ZERO, M_ZERO /)
       k%pol(1:3, 2) = (/ M_ZERO, M_ONE, M_ZERO /)
       k%pol(1:3, 3) = (/ M_ZERO, M_ZERO, M_ONE /)
@@ -423,17 +423,17 @@ contains
     end if
     
 
-    ! Find out how many equivalent axis we have...
-    !%Variable TDPolarizationEquivAxis
+    ! Find out how many equivalent axes we have...
+    !%Variable TDPolarizationEquivAxes
     !%Type integer
     !%Default 0
     !%Section Time Dependent::Linear Response
     !%Description
-    !% Defines how many of the %TDPolarization axis are equivalent. This information can then
+    !% Defines how many of the %TDPolarization axes are equivalent. This information can then
     !% be used by oct-cross-section to rebuild the full polarizability tensor just from the
-    !% first 3-TDPolarizationEquivAxis directions.
+    !% first 3-TDPolarizationEquivAxes directions.
     !%End
-    call loct_parse_int(check_inp('TDPolarizationEquivAxis'), 0, k%pol_equiv_axis)
+    call loct_parse_int(check_inp('TDPolarizationEquivAxes'), 0, k%pol_equiv_axes)
 
     
     !%Variable TDPolarizationDirection
@@ -523,7 +523,7 @@ contains
     integer,      intent(in)    :: in_file(:)
 
     character(len=20) :: header_string
-    integer :: nspin, energy_steps, i, is, j, equiv_axis, n_files, k
+    integer :: nspin, energy_steps, i, is, j, equiv_axes, n_files, k
     FLOAT, allocatable :: sigma(:, :, :, :), sigmap(:, :, :, :), sigmau(:, :, :),  &
       sigmav(:, :, :), sigmaw(:, :, :), p(:, :), ip(:, :)
     FLOAT :: dw, dump, average, anisotropy
@@ -532,7 +532,7 @@ contains
     call push_sub('spectrum.spectrum_cross_section_tensor')
 
     n_files = size(in_file)
-    equiv_axis = 3 - n_files + 1
+    equiv_axes = 3 - n_files + 1
 
     call spectrum_cross_section_info(in_file(1), nspin, kick, energy_steps, dw)
     call io_skip_header(in_file(1))
@@ -545,7 +545,7 @@ contains
     ALLOCATE(     p(3, 3),                          3*3)
     ALLOCATE(    ip(3, 3),                          3*3)
 
-    select case(equiv_axis)
+    select case(equiv_axes)
 
     case(3)
 

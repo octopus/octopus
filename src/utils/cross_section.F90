@@ -31,7 +31,7 @@ program cross_section
 
   implicit none
 
-  integer :: in_file(3), out_file(3), eq_axis, nspin, lmax, time_steps
+  integer :: in_file(3), out_file(3), eq_axes, nspin, lmax, time_steps
   logical :: calculate_tensor
   type(spec_t) :: s
   type(unit_system_t) :: file_units
@@ -64,28 +64,28 @@ program cross_section
   contains
 
     !/*----------------------------------------------------------------------------
-    ! Here we start the search for the file(s) that we must process. In future
-    ! version of octopus, I would like this to be controlled by a command line
-    ! option. The routine sets the eq_axis and calculate_tensor variables, as well
+    ! Here we start the search for the file(s) that we must process. In a future
+    ! version of octopus, I would like this to be controlled by a command-line
+    ! option. The routine sets the eq_axes and calculate_tensor variables, as well
     ! as the in_file unit numbers.
     !
     ! The options are:
     ! (i)  A file called "multipoles" is found. In this case, no other file is
     !      considered.
-    !      (i.1) If this file signals three equivalent axis, the full tensor is
+    !      (i.1) If this file signals three equivalent axes, the full tensor is
     !            calculated, and placed in "cross_section_tensor".
-    !      (i.2) If this file signals less than three equivalent axis, the full
+    !      (i.2) If this file signals less than three equivalent axes, the full
     !            tensor cannot be calculated, and instead a "cross_section_vector"
     !            will be generated.
     ! (ii) A file called "multipoles.1" is found. In this case, the program will
     !      always try to generate the full tensor (calculate_tensor = .true.).
     !      The file "cross_section_tensor" should be generated at the end.
-    !      Other files are searched for, depending on the equivalent axis that
+    !      Other files are searched for, depending on the equivalent axes that
     !      are written in the "multipoles.1" file.
-    !      (ii.1) Three equivalent axis. No other file is searched for.
-    !      (ii.2) Two equivalent axis. File "multipoles.2" is searched for; the
+    !      (ii.1) Three equivalent axes. No other file is searched for.
+    !      (ii.2) Two equivalent axes. File "multipoles.2" is searched for; the
     !             program ends if it is not found.
-    !      (ii.3) No equivalent axis. Files "multipoles.2" and "multipoles.3" are
+    !      (ii.3) No equivalent axes. Files "multipoles.2" and "multipoles.3" are
     !             searched for; the program ends if they are not found.
     !---------------------------------------------------------------------------*/!
     subroutine read_files(fname)
@@ -105,14 +105,14 @@ program cross_section
         
         ! OK, so we only have one file. Now we have to see what it has inside.
         call spectrum_mult_info(in_file(1), nspin, kick, time_steps, dt, file_units, lmax=lmax)
-        eq_axis = kick%pol_equiv_axis
-        if(eq_axis == 3) then
+        eq_axes = kick%pol_equiv_axes
+        if(eq_axes == 3) then
           calculate_tensor = .true.
-          write(message(1),'(3a)') 'The file "', trim(fname), '" tells me that the system has three equivalent axis.'
+          write(message(1),'(3a)') 'The file "', trim(fname), '" tells me that the system has three equivalent axes.'
           write(message(2),'(a)')  'I will calculate the full tensor, written in file "XXXX_tensor".'
           call write_info(2)
-        else if(eq_axis == 2) then
-          write(message(1),'(3a)') 'The file "', trim(fname), '" tells me that the system has two equivalent axis.'
+        else if(eq_axes == 2) then
+          write(message(1),'(3a)') 'The file "', trim(fname), '" tells me that the system has two equivalent axes.'
           write(message(2),'(a)')  'However, I am only using this file; cannot calculate the full tensor.'
           write(message(3),'(a)')  'A file "XXXX_vector" will be generated instead.'
           call write_warning(3)
@@ -139,37 +139,37 @@ program cross_section
         end if
         
         call spectrum_mult_info(in_file(1), nspin, kick, time_steps, dt, file_units, lmax=lmax)
-        eq_axis = kick%pol_equiv_axis
+        eq_axes = kick%pol_equiv_axes
         
-        if(eq_axis == 3) then
-          write(message(1),'(3a)') 'The file "', trim(fname), '.1" tells me that the system has three equivalent axis.'
+        if(eq_axes == 3) then
+          write(message(1),'(3a)') 'The file "', trim(fname), '.1" tells me that the system has three equivalent axes.'
           write(message(2),'(a)') 'I will calculate the full tensor, written in file "cross_section_tensor".'
           call write_info(2)
           
-        else if(eq_axis == 2) then
+        else if(eq_axes == 2) then
           in_file(2) = io_open(trim(fname)//'.2', action='read', status='old', die=.false.)
           if(in_file(2) < 0) in_file(2) = io_open('td.general/'//trim(fname)//'.2', action='read', status='old', die=.false.)
           if(in_file(2) < 0) then
-            write(message(1),'(3a)') 'The file "', trim(fname), '.1" tells me that the system has two equivalent axis,'
+            write(message(1),'(3a)') 'The file "', trim(fname), '.1" tells me that the system has two equivalent axes,'
             write(message(2),'(3a)') 'but I cannot find a "', trim(fname), '.2".'
             call write_fatal(2)
           end if
           write(message(1),'(5a)') 'Found two files, "', trim(fname), '.1" and "', trim(fname), '.2".'
-          write(message(2),'(a)')  'Two polarization axis are equivalent. I will generate the full tensor.'
+          write(message(2),'(a)')  'Two polarization axes are equivalent. I will generate the full tensor.'
           call write_info(2)
           
-        else ! No equivalent axis
+        else ! No equivalent axes
           in_file(2) = io_open(trim(fname)//'.2', action='read', status='old', die=.false.)
           if(in_file(2) < 0) in_file(2) = io_open('td.general/'//trim(fname)//'.2', action='read', status='old', die=.false.)
           if(in_file(2) < 0) then
-            write(message(1),'(3a)') 'The file "', trim(fname), '.1" tells me that the system has three equivalent axis,'
+            write(message(1),'(3a)') 'The file "', trim(fname), '.1" tells me that the system has three equivalent axes,'
             write(message(2),'(3a)') 'but I cannot find a "', trim(fname), '.2".'
             call write_fatal(2)
           end if
           in_file(3) = io_open(trim(fname)//'.3', action='read', status='old', die=.false.)
           if(in_file(3) < 0) in_file(3) = io_open('td.general/'//trim(fname)//'.3', action='read', status='old', die=.false.)
           if(in_file(3) < 0) then
-            write(message(1),'(3a)') 'The file "', trim(fname), '.1" tells me that the system has two equivalent axis,'
+            write(message(1),'(3a)') 'The file "', trim(fname), '.1" tells me that the system has two equivalent axes,'
             write(message(2),'(3a)') 'but I cannot find a "', trim(fname), '.3".'
             call write_fatal(2)
           end if
@@ -196,7 +196,7 @@ program cross_section
         call io_close(in_file(1)); call io_close(out_file(1))
         
       else
-        select case(eq_axis)
+        select case(eq_axes)
         case(0, 1); j = 3
         case(2);    j = 2
         case(3);    j = 1
