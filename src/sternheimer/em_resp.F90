@@ -113,6 +113,7 @@ contains
 
     em_vars%nsigma = 1  ! positive and negative values of the frequency must be considered
     if(em_vars%calc_hyperpol .or. (em_vars%nomega > 1) .or. (abs(em_vars%omega(1)) >= M_EPSILON) ) em_vars%nsigma = 2
+    ! in effect, nsigma = 1 only if hyperpol not being calculated, and the only frequency is zero
 
     complex_response = (em_vars%eta /= M_ZERO ) .or. wfs_are_complex(sys%st)
 
@@ -128,7 +129,7 @@ contains
     call system_h_setup(sys, h)
     
     if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
-       call sternheimer_init(sh, sys, h, "EM", hermitian = wfs_are_real(sys%st), ham_var_set = 0)
+       call sternheimer_init(sh, sys, h, "EM", hermitian = wfs_are_real(sys%st), set_ham_var = 0)
        ! set HamiltonVariation to V_ext_only, in magnetic case
     else
        call sternheimer_init(sh, sys, h, "EM", hermitian = wfs_are_real(sys%st))

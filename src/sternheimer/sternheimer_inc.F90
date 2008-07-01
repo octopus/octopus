@@ -26,7 +26,7 @@
 
 subroutine X(sternheimer_solve)(                           &
      this, sys, h, lr, nsigma, omega, perturbation,        &
-     restart_dir, rho_tag, wfs_tag, have_restart_rho)
+     restart_dir, rho_tag, wfs_tag, have_restart_rho, occ_response)
   type(sternheimer_t),    intent(inout) :: this
   type(system_t), target, intent(inout) :: sys
   type(hamiltonian_t),    intent(inout) :: h
@@ -38,6 +38,7 @@ subroutine X(sternheimer_solve)(                           &
   character(len=*),       intent(in)    :: rho_tag
   character(len=*),       intent(in)    :: wfs_tag
   logical,      optional, intent(in)    :: have_restart_rho
+  logical,      optional, intent(in)    :: occ_response
 
   FLOAT :: dpsimod
   integer :: iter, sigma, ik, ist, is, err
@@ -111,8 +112,16 @@ subroutine X(sternheimer_solve)(                           &
           call X(pert_apply) (perturbation, sys%gr, sys%geo, h, ik, st%X(psi)(:, 1, ist, ik), Y(:, 1, sigma))
           Y(1:m%np, 1, sigma) = -Y(1:m%np, 1, sigma) - hvar(1:m%np, is, sigma)*st%X(psi)(1:m%np, 1, ist, ik)
 
-          !and project it into the unoccupied states
-          call X(lr_orth_vector)(m, st, Y(:,:, sigma), ist, ik)
+          if (present(occ_response) .and. occ_response == .true.) then
+          ! project out only the component of the unperturbed wavefunction
+          ! |Y> := (1 - |ist><ist|)|Y>
+          ! no, this doesn't take into account nonzero temperature...
+             Y(:, 1, sigma) = Y(:, 1, sigma) - st%X(psi)(:, 1, ist, ik) * &
+               X(mf_integrate)(sys%gr%m, st%X(psi)(:, 1, ist, ik) * Y(:, 1, sigma))
+          else
+          ! project RHS onto the unoccupied states
+             call X(lr_orth_vector)(m, st, Y(:,:, sigma), ist, ik)
+          endif
         
           if(sigma == 1) then 
             omega_sigma = omega

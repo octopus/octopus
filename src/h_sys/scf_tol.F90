@@ -52,10 +52,11 @@ module scf_tol_m
 
 contains
 
-  subroutine scf_tol_init(this, prefix, def_maximumiter)
+  subroutine scf_tol_init(this, prefix, def_maximumiter, set_scheme)
     type(scf_tol_t),    intent(out) :: this
     character(len=*),   intent(in)  :: prefix
     integer, optional,  intent(in)  :: def_maximumiter
+    integer, optional,  intent(in)  :: set_scheme
 
     integer :: def_maximumiter_
 
@@ -96,23 +97,29 @@ contains
 
     !%Variable LRTolScheme
     !%Type integer
-    !%Default true
+    !%Default adaptive
     !%Section Linear Response::SCF in LR calculations
     !%Description
-    !% The scheme used to adjust the tolerance of the Solver during
-    !% the SCF iteration.
+    !% The scheme used to adjust the tolerance of the solver during
+    !% the SCF iteration. For kdotp and magnetic em_resp modes, or
+    !% whenever HamiltonianVariation = V_ext_only, the
+    !% scheme is set to fixed, and this variable is ignored.
     !%Option fixed 0
-    !% The solver tolerance is fixed during all the iteration, this
+    !% The solver tolerance is fixed for all the iterations; this
     !% improves convergence but increases the computational cost
     !%Option adaptive 1 
     !% The tolerance is increased according to the level of
     !% convergence of the SCF.
     !%End
-    if (loct_parse_isdef(check_inp(trim(prefix)//'LRTolScheme')) /= 0 ) then
-      call loct_parse_int(check_inp(trim(prefix)//'LRTolScheme'), SCF_ADAPTIVE, this%scheme)
+    if (present(set_scheme)) then
+       this%scheme = set_scheme
     else
-      call loct_parse_int(check_inp('LRTolScheme'), SCF_ADAPTIVE, this%scheme)
-    end if
+       if (loct_parse_isdef(check_inp(trim(prefix)//'LRTolScheme')) /= 0 ) then
+          call loct_parse_int(check_inp(trim(prefix)//'LRTolScheme'), SCF_ADAPTIVE, this%scheme)
+       else
+          call loct_parse_int(check_inp('LRTolScheme'), SCF_ADAPTIVE, this%scheme)
+       end if
+    endif
 
     if( this%scheme /= SCF_ADAPTIVE .and. this%scheme /= SCF_FIXED ) then 
       call input_error('LRTolScheme')

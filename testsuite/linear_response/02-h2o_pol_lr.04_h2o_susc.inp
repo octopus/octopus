@@ -21,6 +21,8 @@ Spacing = 0.65
 RespPerturbationType = magnetic
 
 LinearSolverMaxIter = 100
-LinearSolverInitTol = 1e-6
 LinearSolverTol     = 1e-6
-HamiltonianVariation = no
+
+#LinearSolverInitTol = 1e-6
+#HamiltonianVariation = no
+#This is now the default for a magnetic perturbation, via LRTolScheme

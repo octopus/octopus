@@ -102,7 +102,7 @@ contains
     !%Section Linear Response::Solver
     !%Description
     !% To calculate response using density functional perturbation
-    !% theory is necessary to solve the Sternheimer equation, a
+    !% theory it is necessary to solve the Sternheimer equation, a
     !% self-consistent linear equation where the operator is the
     !% Kohn-Sham Hamiltonian with a complex shift. This variable
     !% selects which method to use in order to solve this linear
@@ -119,8 +119,8 @@ contains
     !%Option qmr 8
     !% Quasi-minimal residual solver.
     !%Option sos 9
-    !% Sum over states, the Sternheimer equation is solved by using
-    !% the explicit solution in terms of the ground state
+    !% Sum over states: the Sternheimer equation is solved by using
+    !% the explicit solution in terms of the ground-state
     !% wavefunctions. You need unoccupied states to use this method.
     !%End
 
@@ -157,7 +157,8 @@ contains
     !%Default 1e-2
     !%Section Linear Response::Solver
     !%Description
-    !% This is the tolerance to determine that the linear solver has converged.
+    !% This is the tolerance to determine that the linear solver has converged,
+    !% for the first SCF iteration.
     !%End
     if (loct_parse_isdef(check_inp(trim(prefix)//"LinearSolverInitTol")) /= 0) then 
       call loct_parse_float(check_inp(trim(prefix)//"LinearSolverInitTol"), &

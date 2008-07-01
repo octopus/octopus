@@ -81,13 +81,13 @@ module sternheimer_m
 contains
   
   !-----------------------------------------------------------
-  subroutine sternheimer_init(this, sys, h, prefix, hermitian, ham_var_set)
+  subroutine sternheimer_init(this, sys, h, prefix, hermitian, set_ham_var)
     type(sternheimer_t), intent(out)   :: this
     type(system_t),      intent(inout) :: sys
     type(hamiltonian_t), intent(inout) :: h
     character(len=*),    intent(in)    :: prefix
     logical, optional,   intent(in)    :: hermitian
-    integer, optional,   intent(in)    :: ham_var_set
+    integer, optional,   intent(in)    :: set_ham_var
 
     integer :: ham_var
 
@@ -100,7 +100,8 @@ contains
     !% Hamiltonian. V_ext is always considered. The default is to include
     !% also the exchange, correlation and Hartree terms. If you want
     !% to choose the exchange and correlation kernel use the variable
-    !% XCKernel.
+    !% XCKernel. For kdotp and magnetic em_resp modes, the value V_ext_only
+    !% is used and this variable is ignored.
     !%Option V_ext_only 0
     !% Neither Hartree nor xc potentials included.
     !%Option hartree 1
@@ -110,8 +111,8 @@ contains
     !% exchange and correlation potential only.
     !%End
 
-    if(present(ham_var_set)) then
-      ham_var = ham_var_set
+    if(present(set_ham_var)) then
+      ham_var = set_ham_var
     else if(h%theory_level.ne.INDEPENDENT_PARTICLES) then
       if (loct_parse_isdef(check_inp(trim(prefix)//'HamiltonianVariation')) /= 0) then
         call loct_parse_int(check_inp(trim(prefix)//'HamiltonianVariation'), 3, ham_var)
@@ -143,7 +144,12 @@ contains
       call hamiltonian_mg_init(h, sys%gr)
     end if
 
-    call scf_tol_init(this%scftol, prefix)
+    ! will not converge for non-self-consistent calculation unless LRTolScheme = fixed
+    if (ham_var == 0) then
+       call scf_tol_init(this%scftol, prefix, set_scheme = 0) ! fixed
+    else
+       call scf_tol_init(this%scftol, prefix) ! read from input
+    endif
 
     if(this%add_fxc) call sternheimer_build_fxc(this, sys%gr%m, sys%st, sys%ks) 
 

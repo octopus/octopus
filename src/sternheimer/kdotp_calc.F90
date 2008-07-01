@@ -79,7 +79,7 @@ subroutine zlr_calc_eff_mass_inv(sys, h, lr, perturbation, eff_mass_inv)
   type(pert_t),           intent(inout) :: perturbation
   FLOAT,                  intent(out)   :: eff_mass_inv(:, :, :, :)
 
-! m^-1[ij] = delta[ij] + 2*Re<psi0|H'i|psi'j>
+! m^-1[ij] = delta[ij] + 4*Re<psi0|H'i|psi'j>
 ! for each state, spin, and k-point
 ! This routine is not set up for spinors.
 
@@ -105,22 +105,29 @@ subroutine zlr_calc_eff_mass_inv(sys, h, lr, perturbation, eff_mass_inv)
 
         do idir2 = 1, sys%gr%sb%dim
           ! contribution from linear-response projection onto unoccupied states, as solved by Sternheimer equation
-          term = zmf_integrate(sys%gr%m, lr(idir2, 1)%zdl_psi(1:sys%gr%m%np, 1, ist, ik) * conjg(pertpsi(idir1, 1:sys%gr%m%np)))
-          eff_mass_inv(ik, ist, idir1, idir2) = eff_mass_inv(ik, ist, idir1, idir2) + M_TWO * real(term)
+          if (idir2 < idir1) then
+            eff_mass_inv(ik, ist, idir1, idir2) = eff_mass_inv(ik, ist, idir2, idir1)
+            ! utilizing symmetry of inverse effective mass tensor
+            cycle
+          end if
+
+          term = zmf_integrate(sys%gr%m, lr(idir2, 1)%zdl_psi(1:sys%gr%m%np, 1, ist, ik) &
+            * conjg(pertpsi(idir1, 1:sys%gr%m%np)))
+          eff_mass_inv(ik, ist, idir1, idir2) = eff_mass_inv(ik, ist, idir1, idir2) + M_FOUR * real(term)
 !          write(*,*) "unocc: ", eff_mass_inv(ik, ist, idir1, idir2)
 
           ! contribution from linear-response projection onto occupied states, by sum over states and perturbation theory
           ! this could be sped up yet more by storing each (ist,ist2) term, which will be used again as the complex
           !   conjugate as the (ist2,ist) term.  same will apply to hyperpolarizability
-          do ist2 = 1, sys%st%nst
-            if (ist2 == ist) cycle
-            term = zmf_integrate(sys%gr%m, conjg(pertpsi(idir1, 1:sys%gr%m%np)) * sys%st%zpsi(1:sys%gr%m%np, 1, ist2, ik)) * &
-              zmf_integrate(sys%gr%m, conjg(sys%st%zpsi(1:sys%gr%m%np, 1, ist2, ik)) * pertpsi(idir2, 1:sys%gr%m%np)) / &
-              (sys%st%eigenval(ist, ik) - sys%st%eigenval(ist2, ik))
-            eff_mass_inv(ik, ist, idir1, idir2) = eff_mass_inv(ik, ist, idir1, idir2) + M_TWO * real(term)
+!          do ist2 = 1, sys%st%nst
+!            if (ist2 == ist) cycle
+!            term = zmf_integrate(sys%gr%m, conjg(pertpsi(idir1, 1:sys%gr%m%np)) * sys%st%zpsi(1:sys%gr%m%np, 1, ist2, ik)) * &
+!              zmf_integrate(sys%gr%m, conjg(sys%st%zpsi(1:sys%gr%m%np, 1, ist2, ik)) * pertpsi(idir2, 1:sys%gr%m%np)) / &
+!              (sys%st%eigenval(ist, ik) - sys%st%eigenval(ist2, ik))
+!            eff_mass_inv(ik, ist, idir1, idir2) = eff_mass_inv(ik, ist, idir1, idir2) + M_FOUR * real(term)
 !            write(*,'(a,i2,a,f20.6)') "occ(", ist2, "): ", eff_mass_inv(ik, ist, idir1, idir2)
-          enddo
-!          write(*,*) "   occ: ", eff_mass_inv(ik, ist, idir1, idir2)
+!          enddo
+!          write(*,'(a,i1,a,i1,a,f20.6)') "eff_mass_inv(", idir1, ", ", idir2, ") = ", eff_mass_inv(ik, ist, idir1, idir2)
         enddo
       enddo
     enddo

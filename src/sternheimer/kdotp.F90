@@ -84,10 +84,7 @@ contains
     type(sternheimer_t)     :: sh
 
     integer :: idir, ierr
-!    integer :: sigma, ndim, i, dir, ierr, iomega, ifactor
     character(len=100) :: dirname, str_tmp
-!    logical :: complex_response
-    !, have_to_calculate
 
     call push_sub('kdotp.static_kdotp_lr_run')
 
@@ -111,7 +108,7 @@ contains
     call write_info(1)
     call system_h_setup(sys, h)
     
-    call sternheimer_init(sh, sys, h, "KdotP", hermitian = wfs_are_real(sys%st), ham_var_set = 0)
+    call sternheimer_init(sh, sys, h, "KdotP", hermitian = wfs_are_real(sys%st), set_ham_var = 0)
     ! ham_var_set = 0 results in HamiltonianVariation = V_ext_only
 
     do idir = 1, NDIM
@@ -152,7 +149,7 @@ contains
       call pert_setup_dir(kdotp_vars%perturbation, idir)
       call zsternheimer_solve(sh, sys, h, kdotp_vars%lr(idir,:), 1, M_Z0, &
         kdotp_vars%perturbation, RESTART_DIR, &
-        kdotp_rho_tag(idir), kdotp_wfs_tag(idir), have_restart_rho=(ierr==0))
+        kdotp_rho_tag(idir), kdotp_wfs_tag(idir), have_restart_rho=(ierr==0), occ_response=.true.)
       kdotp_vars%ok = kdotp_vars%ok .and. sternheimer_has_converged(sh)         
     end do ! idir
 
