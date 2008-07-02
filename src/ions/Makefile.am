@@ -21,15 +21,15 @@
 
 noinst_LIBRARIES = libions.a
 
-libions_a_SOURCES =     \
-	xyz_file.F90    \
-	geometry.F90    \
-	xyz_adjust.F90  \
-	simul_box.F90   \
-	solids.F90      \
-	vibrations.F90  \
-	crystal.F90     \
-	dynamics.F90    \
+libions_a_SOURCES =         \
+	xyz_file.F90        \
+	geometry.F90        \
+	xyz_adjust.F90      \
+	simul_box.F90       \
+	solids.F90          \
+	vibrations.F90      \
+	crystal.F90         \
+	dynamics.F90        \
 	interaction.F90
 
 noinst_HEADERS =

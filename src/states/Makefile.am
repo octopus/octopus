@@ -37,7 +37,7 @@ depend:
 states.o : states.F90 states_inc.F90 states_kpoints.F90
 magnetic.o : magnetic.F90 states.o 
 elf.o : elf.F90 states.o 
-states_block.o : states_block.F90 states_block_inc.F90 states.o 
+states_block.o : states_block.F90 states_block_inc.F90 states.o
 excited_states.o : excited_states.F90 excited_states_inc.F90 states.o
 mix.o : mix.F90 mix_inc.F90 
 linear_response.o : linear_response.F90 linear_response_inc.F90 states.o 

@@ -152,7 +152,7 @@ contains
     end if
 
     call geometry_end(s%geo)
-
+    call simul_box_end(s%gr%sb)
     call grid_end(s%gr)
     deallocate(s%gr);  nullify(s%gr)
 
