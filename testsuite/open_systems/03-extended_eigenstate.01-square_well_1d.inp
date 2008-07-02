@@ -1,0 +1,65 @@
+# -*- coding: utf-8 -*-
+#
+# $Id$
+#
+# Calculate extended eigenstate of an attractive square
+# potential barrier in 1D.
+
+
+%CalculationMode
+ gs      | gs
+ "lead_" | "well_"
+ 1       | 2
+%
+
+FromScratch = yes
+TheoryLevel = independent_particles
+
+BoxShape = parallelepiped
+DerivativesOrder = 1
+Dimensions = 2
+Spacing = 0.1
+Lx = 20
+
+V = 1.5
+W = 10
+%Species
+ "flat" | 0 | user_defined | 1.0 | "0"
+ "well" | 0 | user_defined | 1.0 | "V*(-step(x+W/2)+step(x-W/2))"
+%
+
+add_ucells = 10
+%well_OpenBoundaries
+ lead_dataset     | "lead_"
+ lead_restart_dir | "lead_restart"
+ lead_static_dir  | "lead_static"
+ add_unit_cells   | add_ucells
+%
+well_ExcessCharge = 2*add_ucells + 3
+
+lead_PeriodicDimensions = 1
+%lead_Coordinates
+ "flat" | 0 | 0 | 0
+%
+
+%lead_Lsize
+ Spacing | 0 | 0
+%
+
+%lead_KPoints
+ 1 | 0.4 | 0 | 0
+%
+
+%well_Coordinates
+ "well" | 0 | 0 | 0
+%
+
+%well_Lsize
+ 20 | 0 | 0
+%
+
+PoissonSolver = fft
+well_EigenSolverMaxiter = 5000
+
+Output = wfs + wfs_sqmod + potential
+OutputHow = axis_x + gnuplot + binary
