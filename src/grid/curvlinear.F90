@@ -66,6 +66,7 @@ module curvlinear_m
     module procedure curv_is_equal
   end interface
 
+  character(len=23), parameter :: dump_tag = '*** curvlinear_dump ***'
 
 contains
 
@@ -247,6 +248,7 @@ contains
     type(curvlinear_t), intent(in) :: cv
     integer,            intent(in) :: iunit
 
+    write(iunit, '(a)')             dump_tag
     write(iunit, '(a20,i4)')        'method=              ', cv%method
     select case(cv%method)
     case(CURV_METHOD_GYGI)
@@ -272,7 +274,13 @@ contains
     type(curvlinear_t), intent(out) :: cv
     integer,            intent(in)  :: iunit
 
-    character(len=20) :: str
+    character(len=100) :: line
+    character(len=20)  :: str
+
+    do
+      read(iunit, '(a)') line
+      if(trim(line).eq.dump_tag) exit
+    end do
 
     read(iunit, *) str, cv%method
     select case(cv%method)

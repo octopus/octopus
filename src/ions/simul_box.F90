@@ -40,12 +40,13 @@ module simul_box_m
   public ::                     &
     simul_box_t,                &
     simul_box_init,             &
+    simul_box_end,              &
     simul_box_write_info,       &
     simul_box_is_periodic,      &
     simul_box_in_box,           &
     simul_box_dump,             &
     simul_box_init_from_file,   &
-    simul_box_atoms_in_box,      &
+    simul_box_atoms_in_box,     &
     operator(.eq.),             &
     assignment(=)
 
@@ -58,8 +59,13 @@ module simul_box_m
     BOX_USDEF      = 123
 
   integer, parameter, public :: &
-    UC_SPACING = 1,             &
-    UC_LSIZE   = 2
+    LEFT      = 1,              & ! Lead indices,
+    RIGHT     = 2,              & ! L=1, R=2.
+    NLEADS    = 2,              & ! Number of leads.
+    TRANS_DIR = 1                 ! Transport is in x-direction.
+
+  character(len=5), dimension(NLEADS), parameter, public :: LEAD_NAME = &
+    (/'left ', 'right'/)
 
   type simul_box_t
     integer  :: box_shape   ! 1->sphere, 2->cylinder, 3->sphere around each atom,
@@ -84,15 +90,26 @@ module simul_box_m
 
     integer :: dim
     integer :: periodic_dim
+
+    ! For open boundaries, we need reference to the lead's unit cell.
+    ! This unit cell is itself a simulation box.
+    logical                    :: open_boundaries          ! Use open boundaries?
+    integer                    :: add_unit_cells(NLEADS)   ! Number of additonal unit cells.
+    character(len=32)          :: lead_dataset(NLEADS)     ! Dataset name of the periodic lead calculation.
+    character(len=32)          :: lead_restart_dir(NLEADS) ! Directory where to find the lead restart files.
+    character(len=32)          :: lead_static_dir(NLEADS)  ! Static directory of the lead ground state.
+    type(simul_box_t), pointer :: lead_unit_cell(:)        ! Simulation box of the unit cells.
   end type simul_box_t
 
   interface operator(.eq.)
     module procedure simul_box_is_eq
   end interface
 
-  interface assignment (=)
+  interface assignment(=)
     module procedure simul_box_copy
   end interface
+
+  character(len=22), parameter :: dump_tag = '*** simul_box_dump ***'
 
 contains
 
@@ -109,16 +126,216 @@ contains
 
     call geometry_grid_defaults(geo, def_h, def_rsize)
 
-    call read_misc()          ! miscellany stuff
-    call read_box()           ! parameters defining the simulation box
-    call read_spacing ()      ! parameters defining the (canonical) spacing
-    call read_box_offset()    ! parameters defining the offset of the origin
-    call build_lattice()      ! build lattice vectors
-    call simul_box_atoms_in_box(sb, geo)    ! put all the atoms inside the box
+    call read_misc()                       ! Miscellany stuff.
+    call read_box()                        ! Parameters defining the simulation box.
+    call read_spacing ()                   ! Parameters defining the (canonical) spacing.
+    call read_box_offset()                 ! Parameters defining the offset of the origin
+    call read_open_boundaries()            ! Parameters defining open boundaries.
+    call build_lattice()                   ! Build lattice vectors.
+    call simul_box_add_lead_atoms(sb, geo) ! Add the atoms of the lead unit cells that are
+                                           ! included in the simulation box to geo.
+    call simul_box_atoms_in_box(sb, geo)   ! Put all the atoms inside the box.
 
     call pop_sub()
 
   contains
+
+    !--------------------------------------------------------------
+    subroutine read_open_boundaries()
+      integer            :: nr, tag, nrows, ncols
+      type(block_t)      :: blk
+
+      integer, parameter ::   &
+        LEAD_DATASET     = 1, &
+        LEAD_RESTART_DIR = 2, &
+        LEAD_STATIC_DIR  = 3, &
+        ADD_UNIT_CELLS   = 4
+
+      integer :: iunit, il
+
+      call push_sub('simul_box.read_open_boundaries')
+
+      !%Variable OpenBoundaries
+      !%Type block
+      !%Section Mesh::Simulation Box
+      !%Description
+      !% Enables open boundaries in x-direction and defines the character
+      !% of the leads attached left and right ot the finite central system.
+      !%
+      !% The format is as follows:
+      !%
+      !% <pre>
+      !% %OpenBoundaries
+      !%  lead_dataset     | "dataset"   | "dataset"
+      !%  lead_restart_dir | "directory" | "directory"
+      !%  lead_static_dir  | "directory" | "directory"
+      !%  add_unit_cells   | nl          | nr
+      !%  td_pot_formula   | "formula"   | "formula"
+      !%  td_pot_file      | "file"      | "file"
+      !% %
+      !% </pre>
+      !%
+      !% The left column specifies characteristics of the left lead and
+      !% and the right column characteristics of the right lead analogously.
+      !% If only one column is given, the value specified is used for both leads.
+      !%
+      !% All entries excpet <tt>lead_dataset</tt> are optional.
+      !%
+      !%Option lead_dataset 1
+      !% Gives the name of the dataset used for the periodic calculation of the
+      !% leads groundstate. It is used, e. g., to read in the coordinates of the
+      !% atoms of the lead. Both entries for left and right have to be equal.
+      !%Option lead_restart_dir 2
+      !% <tt>lead_restart_dir</tt> gives the name of restart directory of the periodic
+      !% ground state calculation for the lead unit cell. Though
+      !% one may give different datasets for the left and right lead, they have to
+      !% be identical due to the algorithm used to obtain extended eigenstates.
+      !% The default is <tt>&lt;lead_dataset&gt;restart</tt>.
+      !%Option lead_static_dir 3
+      !% The same as <tt>lead_restart_dir</tt> for the <tt>static</tt> directory.
+      !% Octopus needs the Kohn-Sham potential of the leads. Therefore, the periodic
+      !% run must include <tt>Output = potential</tt> in the input file. The default
+      !% of this entry is <tt>&lt;lead_dataset&gt;static</tt>.
+      !%Option add_unit_cells 4
+      !% <tt>add_unit_cells</tt> specifies how many lead unit cells should
+      !% be included in the computational domain. Suitable values highly depend
+      !% on the system under study but the numbers <tt>nl</tt> and <tt>nr</tt> should
+      !% be taken large enough for the potential to equilibrate because we assume
+      !% instananoeus metallic screening in the leads. Furthermore, note that in
+      !% a ground state calculation, one additional unit cell is added automatically
+      !% for each lead to the computational domain because the propagation
+      !% algorithm needs the knowledge of the initial state for the first unit cell
+      !% outside the simulation box. If omitted, no unit cells are included in the
+      !% simlulation region (apart from the one which is automatically added in
+      !% ground state calculations).
+      !%Option td_pot_formula 5
+      !% Defines a spatially local time-dependent potential in the leads as an
+      !% analytic expression.
+      !%Option td_pot_file 6
+      !% Defines a spatially local time-dependent potential in the leads as a
+      !% datafile.
+      !% <tt>td_pot_formula</tt> and <tt>td_pot_file</tt> may only be used exclusively.
+      !%End
+      if(loct_parse_block(check_inp('OpenBoundaries'), blk).eq.0) then
+        ! Open boundaries are only possible for rectangular simulation boxes.
+        if(sb%box_shape.ne.PARALLELEPIPED) then
+          message(1) = 'Open boundaries are only possible with a parallelepiped'
+          message(2) = 'simulation box.'
+          call write_fatal(2)
+        end if
+        ! Simulation box must not be periodic in transport direction.
+        if(sb%periodic_dim.eq.1) then
+          message(1) = 'When using open boundaries you cannot use periodic boundary'
+          message(2) = 'conditions in x-direction.'
+          call write_fatal(2)
+        end if
+
+        sb%lead_dataset     = ''
+        sb%lead_restart_dir = ''
+        sb%lead_static_dir  = ''
+        nrows = loct_parse_block_n(blk)
+        do nr = 0, nrows-1
+          call loct_parse_block_int(blk, nr, 0, tag)
+          ncols = loct_parse_block_cols(blk, nr)
+          if(ncols.gt.3.or.ncols.lt.2) then
+            call input_error('OpenBoundaries')
+          end if
+
+          select case(tag)
+          case(LEAD_DATASET)
+            call loct_parse_block_string(blk, nr, 1, sb%lead_dataset(LEFT))
+            if(ncols.eq.3) then
+              call loct_parse_block_string(blk, nr, 2, sb%lead_dataset(RIGHT))
+              if(trim(sb%lead_dataset(LEFT)).ne.trim(sb%lead_dataset(RIGHT))) then
+                message(1) = 'Datasets for left and right lead unit cells must'
+                message(2) = 'be equal, i. e. only symmetric leads are possible.'
+                call write_fatal(2)
+              end if
+            else
+              sb%lead_dataset(RIGHT) = sb%lead_dataset(LEFT)
+            end if
+          case(LEAD_RESTART_DIR)
+            call loct_parse_block_string(blk, nr, 1, sb%lead_restart_dir(LEFT))
+            if(ncols.eq.3) then
+              call loct_parse_block_string(blk, nr, 2, sb%lead_restart_dir(RIGHT))
+              if(trim(sb%lead_restart_dir(LEFT)).ne.trim(sb%lead_restart_dir(RIGHT))) then
+                message(1) = 'Restart directories for left and right lead'
+                message(2) = 'unit cells must be equal, i. e. only symmetric'
+                message(3) = 'leads are possible.'
+                call write_fatal(3)
+              end if
+            else
+              sb%lead_restart_dir(RIGHT) = sb%lead_restart_dir(LEFT)
+            end if
+          case(LEAD_STATIC_DIR)
+            call loct_parse_block_string(blk, nr, 1, sb%lead_static_dir(LEFT))
+            if(ncols.eq.3) then
+              call loct_parse_block_string(blk, nr, 2, sb%lead_static_dir(RIGHT))
+              if(trim(sb%lead_static_dir(LEFT)).ne.trim(sb%lead_static_dir(RIGHT))) then
+                message(1) = 'Static directories for left and right lead'
+                message(2) = 'unit cells must be equal, i. e. only symmetric'
+                message(3) = 'leads are possible.'
+                call write_fatal(3)
+              end if
+            else
+              sb%lead_static_dir(RIGHT) = sb%lead_static_dir(LEFT)
+            end if
+          case(ADD_UNIT_CELLS)
+            call loct_parse_block_int(blk, nr, 1, sb%add_unit_cells(LEFT))
+            if(ncols.eq.3) then
+              call loct_parse_block_int(blk, nr, 2, sb%add_unit_cells(RIGHT))
+            else
+              sb%add_unit_cells(RIGHT) = sb%add_unit_cells(LEFT)
+            end if
+            if(any(sb%add_unit_cells.lt.0)) then
+              message(1) = 'add_unit_cells in the OpenBoundaries block must not be negative.'
+              call write_fatal(1)
+            end if
+            ! If we are doing a ground state calculation add one more unit
+            ! cell at both ends to calculate the extended eigenstates.
+            if(calc_mode.eq.M_GS) then
+              sb%add_unit_cells = sb%add_unit_cells + 1
+            end if
+          case default
+          end select
+        end do
+        ! Check if necessary lead_dataset line has been provided.
+        if(all(sb%lead_dataset.eq.'')) then
+          call input_error('OpenBoundaries')
+        end if
+        ! Set default restart directory.
+        if(all(sb%lead_restart_dir.eq.'')) then
+          do il = 1, NLEADS
+            sb%lead_restart_dir(il) = trim(sb%lead_dataset(il))//'restart'
+          end do
+        end if
+        ! Set default static directory.
+        if(all(sb%lead_static_dir.eq.'')) then
+          do il = 1, NLEADS
+            sb%lead_static_dir(il) = trim(sb%lead_dataset(il))//'static'
+          end do
+        end if
+        
+        sb%open_boundaries = .true.
+        ! Read and check the simulation boxes of the lead unit cells.
+        ALLOCATE(sb%lead_unit_cell(NLEADS), NLEADS)
+        do il = 1, NLEADS
+          call read_lead_unit_cell(sb, il)
+        end do
+        ! Adjust the size of the simulation box by adding the proper number
+        ! of unit cells to the simulation region.
+        do il = 1, NLEADS
+          sb%lsize(TRANS_DIR) = sb%lsize(TRANS_DIR) + sb%add_unit_cells(il)*sb%lead_unit_cell(il)%lsize(TRANS_DIR)
+        end do
+      else
+        sb%open_boundaries  = .false.
+        sb%add_unit_cells   = 0
+        sb%lead_restart_dir = ''
+        nullify(sb%lead_unit_cell)
+      end if
+      call pop_sub()
+    end subroutine read_open_boundaries
+
 
     !--------------------------------------------------------------
     subroutine read_misc()
@@ -305,8 +522,6 @@ contains
         end do
       end if
      
-
-
       ! read in image for box_image
       if(sb%box_shape == BOX_IMAGE) then
 
@@ -536,10 +751,105 @@ contains
 
       call pop_sub()
     end subroutine build_lattice
-
   end subroutine simul_box_init
+
   
-    !--------------------------------------------------------------
+  !--------------------------------------------------------------
+  ! Read the coordinates of the leads' atoms and add the to the
+  ! simulation box (for open boundaries only, of course).
+  subroutine simul_box_add_lead_atoms(sb, geo)
+    type(simul_box_t), intent(in)    :: sb
+    type(geometry_t),  intent(inout) :: geo
+
+    type(geometry_t)  :: lead_geo(NLEADS), central_geo
+    character(len=32) :: label_bak
+    integer           :: il, j, n, iatom, icatom, dir
+
+    call push_sub('simul_box.simul_box_add_lead_atoms')
+
+    if(sb%open_boundaries) then
+      do il = 1, NLEADS
+        ! We temporarily change the current label to read the
+        ! coordinates of another dataset, namely the lead dataset.
+        label_bak     = current_label
+        current_label = sb%lead_dataset(il)
+        call geometry_init(lead_geo(il), print_info=.false.)
+        current_label = label_bak
+        call simul_box_atoms_in_box(sb%lead_unit_cell(il), lead_geo(il))
+      end do
+
+      ! Merge the geometries of the lead and of the central region.
+      central_geo = geo
+
+      ! Set the number of atoms and classical atoms to the number
+      ! of atoms coming from left and right lead and central part.
+      if(geo%natoms.gt.0) then
+        deallocate(geo%atom)
+      end if
+      geo%natoms = central_geo%natoms +                 &
+        sb%add_unit_cells(LEFT)*lead_geo(LEFT)%natoms + &
+        sb%add_unit_cells(RIGHT)*lead_geo(RIGHT)%natoms
+      ALLOCATE(geo%atom(geo%natoms), geo%natoms)
+      if(geo%ncatoms.gt.0) then
+        deallocate(geo%catom)
+      end if
+      geo%ncatoms = central_geo%ncatoms +                &
+        sb%add_unit_cells(LEFT)*lead_geo(LEFT)%ncatoms + &
+        sb%add_unit_cells(RIGHT)*lead_geo(RIGHT)%ncatoms
+      ALLOCATE(geo%catom(geo%ncatoms), geo%ncatoms)
+
+      geo%only_user_def = central_geo%only_user_def.and.all(lead_geo(:)%only_user_def)
+      geo%nlpp          = central_geo%nlpp.or.any(lead_geo(:)%nlpp)
+      geo%nlcc          = central_geo%nlcc.or.any(lead_geo(:)%nlcc)
+      geo%atoms_start   = 1
+      geo%atoms_end     = geo%natoms
+      geo%nlatoms       = geo%natoms
+      
+      ! 1. Put the atoms of the central region into geo.
+      geo%atom(1:central_geo%natoms)   = central_geo%atom
+      geo%catom(1:central_geo%ncatoms) = central_geo%catom
+
+      ! 2. Put the atoms of the leads into geo and adjust their x coordinates.
+      iatom  = central_geo%natoms+1
+      icatom = central_geo%ncatoms+1
+      do il = 1, NLEADS
+        if(il.eq.LEFT) then
+          dir = -1
+        else
+          dir = 1
+        end if
+        ! We start from the "outer" unit cells of the lead.
+        do j = 1, sb%add_unit_cells(il)
+          do n = 1, lead_geo(il)%natoms
+            geo%atom(iatom) = lead_geo(il)%atom(n)
+            geo%atom(iatom)%x(TRANS_DIR) = geo%atom(iatom)%x(TRANS_DIR) + &
+              dir*(sb%lsize(TRANS_DIR) - (2*(j-1)+1)*sb%lead_unit_cell(il)%lsize(TRANS_DIR))
+            iatom = iatom + 1
+          end do
+          do n = 1, lead_geo(il)%ncatoms
+            geo%catom(icatom) = lead_geo(il)%catom(n)
+            geo%catom(icatom)%x(TRANS_DIR) = geo%catom(icatom)%x(TRANS_DIR) + &
+              dir*(sb%lsize(TRANS_DIR) - (2*(j-1)+1)*sb%lead_unit_cell(il)%lsize(TRANS_DIR))
+          end do
+        end do
+      end do
+      ! Initialize the species of the "extended" central system.
+      if(geo%nspecies.gt.0) then
+        deallocate(geo%species)
+      end if
+      call geometry_init_species(geo, print_info=.false.)
+
+      do il = 1, NLEADS
+        call geometry_end(lead_geo(il))
+      end do
+      call geometry_end(central_geo)
+
+    end if
+    call pop_sub()
+  end subroutine simul_box_add_lead_atoms
+
+
+  !--------------------------------------------------------------
   subroutine simul_box_atoms_in_box(sb, geo)
     type(simul_box_t), intent(in)    :: sb
     type(geometry_t),  intent(inout) :: geo
@@ -578,21 +888,21 @@ contains
         else
           call write_warning(1)
         end if
-
       end if
 
     end do
-
   end subroutine simul_box_atoms_in_box
 
+
+  !--------------------------------------------------------------
   subroutine reciprocal_lattice(rv, kv, volume)
     FLOAT, intent(in)    :: rv(MAX_DIM, MAX_DIM)
     FLOAT, intent(out)   :: kv(MAX_DIM, MAX_DIM)
     FLOAT, intent(out)   :: volume
-    
+
     FLOAT :: tmp(1:MAX_DIM)
 
- 
+
     tmp = dcross_product(rv(:, 2), rv(:, 3)) 
     volume = dot_product(rv(:, 1), tmp)
 
@@ -603,22 +913,32 @@ contains
 
     kv(:, 1) = dcross_product(rv(:, 2), rv(:, 3))/volume
     kv(:, 2) = dcross_product(rv(:, 3), rv(:, 1))/volume
-    kv(:, 3) = dcross_product(rv(:, 1), rv(:, 2))/volume
-    
+    kv(:, 3) = dcross_product(rv(:, 1), rv(:, 2))/volume    
   end subroutine reciprocal_lattice
 
+
   !--------------------------------------------------------------
-  subroutine simul_box_end(sb)
+  recursive subroutine simul_box_end(sb)
     type(simul_box_t), intent(inout) :: sb    
 
+    integer :: il
+
     call push_sub('simul_box.simul_box_end')
+
+    if(sb%open_boundaries) then
+      do il = 1, NLEADS
+        call simul_box_end(sb%lead_unit_cell(il))
+      end do
+      deallocate(sb%lead_unit_cell)
+      nullify(sb%lead_unit_cell)
+    end if
 
     call pop_sub()
   end subroutine simul_box_end
 
 
   !--------------------------------------------------------------
-  subroutine simul_box_write_info(sb, iunit)
+  recursive subroutine simul_box_write_info(sb, iunit)
     type(simul_box_t), intent(in) :: sb
     integer,           intent(in) :: iunit
 
@@ -678,6 +998,19 @@ contains
       call write_info(10, iunit)
     end if
 
+    if(sb%open_boundaries) then
+      write(message(1), '(a)')       'Open boundaries in x-direction:'
+      write(message(2), '(a,2i4)') '  Additional unit cells left:    ', &
+        sb%add_unit_cells(LEFT)
+      write(message(3), '(a,2i4)') '  Additional unit cells right:   ', &
+        sb%add_unit_cells(RIGHT)
+      write(message(4), '(a)')     '  Left lead read from directory:  '// &
+        trim(sb%lead_restart_dir(LEFT))
+      write(message(5), '(a)')     '  Right lead read from directory: '// &
+        trim(sb%lead_restart_dir(RIGHT))
+      call write_info(5, iunit)
+    end if
+
     call pop_sub()
   end subroutine simul_box_write_info
 
@@ -716,6 +1049,9 @@ contains
       llimit = -sb%lsize - DELTA
       ulimit =  sb%lsize + DELTA
       ulimit(1:sb%periodic_dim) = sb%lsize(1:sb%periodic_dim) - DELTA
+      if(sb%open_boundaries) then
+        ulimit(TRANS_DIR) = sb%lsize(TRANS_DIR) - DELTA
+      end if
 
       in_box = &
         xx(1) >= llimit(1) .and. xx(1) <= ulimit(1) .and. &
@@ -766,7 +1102,6 @@ contains
       end do
 
     end function in_minimum
-
   end function simul_box_in_box
 
 
@@ -782,9 +1117,11 @@ contains
   subroutine simul_box_dump(sb, iunit)
     type(simul_box_t), intent(in) :: sb
     integer,           intent(in) :: iunit
-    write(iunit, '(a20,i4)')        'box_shape=          ',sb%box_shape
-    write(iunit, '(a20,i4)')        'dim=                ',sb%dim
-    write(iunit, '(a20,i4)')        'periodic_dim=       ',sb%periodic_dim
+
+    write(iunit, '(a)')             dump_tag
+    write(iunit, '(a20,i4)')        'box_shape=          ', sb%box_shape
+    write(iunit, '(a20,i4)')        'dim=                ', sb%dim
+    write(iunit, '(a20,i4)')        'periodic_dim=       ', sb%periodic_dim
     select case(sb%box_shape)
     case(SPHERE, MINIMUM)
       write(iunit, '(a20,e22.14)')  'rsize=              ', sb%rsize
@@ -805,17 +1142,86 @@ contains
     write(iunit, '(a20,3e22.14)')   'rlattice(1)=        ', sb%rlattice(1:3, 1)
     write(iunit, '(a20,3e22.14)')   'rlattice(2)=        ', sb%rlattice(1:3, 2)
     write(iunit, '(a20,3e22.14)')   'rlattice(3)=        ', sb%rlattice(1:3, 3)
-
+    write(iunit, '(a20,l7)')        'open_boundaries=    ', sb%open_boundaries
+    if(sb%open_boundaries) then
+      write(iunit, '(a20,2i4)')     'add_unit_cells=     ', sb%add_unit_cells
+      write(iunit, '(a20,a32)')     'lead_restart_dir(L)=', sb%lead_restart_dir(LEFT)
+      write(iunit, '(a20,a32)')     'lead_restart_dir(R)=', sb%lead_restart_dir(RIGHT)
+    end if
   end subroutine simul_box_dump
+
+
+  !--------------------------------------------------------------
+  ! Read the simulation box for lead il from sb%lead_restart_dir(il) into
+  ! sb%lead_unit_cell(il).
+  subroutine read_lead_unit_cell(sb, il)
+    type(simul_box_t), intent(inout) :: sb
+    integer,           intent(in)    :: il
+
+    integer :: iunit
+
+    call push_sub('simul_box.read_lead_unit_cell')
+
+    iunit = io_open(trim(sb%lead_restart_dir(il))//'/gs/mesh', action='read', is_tmp=.true.)
+    call simul_box_init_from_file(sb%lead_unit_cell(il), iunit)
+    call io_close(iunit)
+    ! Check, if
+    ! * simulation box is a parallelepiped,
+    ! * lead simulation box has the same spacing than central region,
+    ! * the extensions in y-, z-directions fit the central box,
+    ! * the central simulation box x-length is an integer multiple of
+    !   the unit cell x-length,
+    ! * periodic in one dimension, and
+    ! * of the same dimensionality as the central system.
+    if(sb%lead_unit_cell(il)%box_shape.ne.PARALLELEPIPED) then
+      message(1) = 'Simulation box of '//LEAD_NAME(il)//' lead is not a parallelepiped.'
+      call write_fatal(1)
+    end if
+    if(any(sb%h.ne.sb%lead_unit_cell(il)%h)) then
+      message(1) = 'Simulation box of '//LEAD_NAME(il)//' has a different spacing than'
+      message(2) = 'the central system.'
+      call write_fatal(2)
+    end if
+    if(any(sb%lsize(2:3).ne.sb%lead_unit_cell(il)%lsize(2:3))) then
+      message(1) = 'The size in y-, z-directions of the '//LEAD_NAME(LEFT)//' lead'
+      message(2) = 'does not fit the size of the y-, z-directions of the central system.'
+      call write_fatal(2)
+    end if
+    if(.not.is_integer_multiple(sb%lsize(1), sb%lead_unit_cell(il)%lsize(1))) then
+      message(1) = 'The length in x-direction of the central simulation'
+      message(2) = 'box is not an integer multiple of the x-length of'
+      message(3) = 'the '//trim(LEAD_NAME(il))//' lead.'
+      call write_fatal(3)
+    end if
+    if(sb%lead_unit_cell(il)%periodic_dim.ne.1) then
+      message(1) = 'Simulation box of '//LEAD_NAME(il)//' lead is not periodic in x-direction.'
+      call write_fatal(1)
+    end if
+    if(sb%lead_unit_cell(il)%dim.ne.calc_dim) then
+      message(1) = 'Simulation box of '//LEAD_NAME(il)//' has a different dimension than'
+      message(2) = 'the central system.'
+      call write_fatal(2)
+    end if
+
+    call pop_sub()
+  end subroutine read_lead_unit_cell
 
 
   !--------------------------------------------------------------
   subroutine simul_box_init_from_file(sb, iunit)
     type(simul_box_t), intent(inout) :: sb
     integer,           intent(in)    :: iunit
-    character(len=20) :: str
-    integer :: idim, jdim
-    FLOAT :: norm
+
+    character(len=20)  :: str
+    character(len=100) :: line
+    integer            :: idim, jdim, il
+    FLOAT              :: norm
+
+    ! Find (and throw away) the dump tag.
+    do
+      read(iunit, '(a)') line
+      if(trim(line).eq.dump_tag) exit
+    end do
 
     read(iunit, *) str, sb%box_shape
     read(iunit, *) str, sb%dim
@@ -854,12 +1260,25 @@ contains
     do idim = 1, sb%periodic_dim
       sb%klattice(:, idim) = sb%klattice_unitary(:, idim)*M_TWO*M_PI/(M_TWO*sb%lsize(idim))
     end do
+
+    read(iunit, *) str, sb%open_boundaries
+    if(sb%open_boundaries) then
+      read(iunit, *) str, sb%add_unit_cells(LEFT), sb%add_unit_cells(RIGHT)
+      read(iunit, *) str, sb%lead_restart_dir(LEFT)
+      read(iunit, *) str, sb%lead_restart_dir(RIGHT)
+      ALLOCATE(sb%lead_unit_cell(NLEADS), NLEADS)
+      do il = 1, NLEADS
+        call read_lead_unit_cell(sb, il)
+      end do
+    end if
   end subroutine simul_box_init_from_file
 
 
   !--------------------------------------------------------------
-  logical function simul_box_is_eq(sb1, sb2) result(res)
+  recursive logical function simul_box_is_eq(sb1, sb2) result(res)
     type(simul_box_t), intent(in) :: sb1, sb2
+
+    integer :: il
 
     res = .false.
     if(sb1%box_shape .ne. sb2%box_shape)             return
@@ -882,15 +1301,24 @@ contains
     if(.not.(sb1%fft_alpha .app. sb2%fft_alpha))     return
     if(.not.(sb1%h .app. sb2%h))                     return
     if(.not.(sb1%box_offset .app. sb2%box_offset))   return
+    if(sb1%open_boundaries.neqv.sb2%open_boundaries)   return
+    if(any(sb1%add_unit_cells.ne.sb2%add_unit_cells))     return
+    if(any(sb1%lead_restart_dir.ne.sb2%lead_restart_dir)) return
+    if(associated(sb1%lead_unit_cell).and.associated(sb2%lead_unit_cell)) then
+      do il = 1, NLEADS
+        if(.not.simul_box_is_eq(sb1%lead_unit_cell(il), sb2%lead_unit_cell(il))) return
+      end do
+    end if
     res = .true.
-
   end function simul_box_is_eq
 
 
   !--------------------------------------------------------------
-  subroutine simul_box_copy(sbout, sbin)
+  recursive subroutine simul_box_copy(sbout, sbin)
     type(simul_box_t), intent(out) :: sbout
     type(simul_box_t), intent(in)  :: sbin
+
+    integer :: il
 
     sbout%box_shape               = sbin%box_shape
     sbout%h                       = sbin%h
@@ -907,8 +1335,16 @@ contains
     sbout%fft_alpha               = sbin%fft_alpha
     sbout%dim                     = sbin%dim
     sbout%periodic_dim            = sbin%periodic_dim
+    sbout%open_boundaries         = sbin%open_boundaries
+    sbout%add_unit_cells          = sbin%add_unit_cells
+    sbout%lead_restart_dir        = sbin%lead_restart_dir
+    if(associated(sbin%lead_unit_cell)) then
+      ALLOCATE(sbout%lead_unit_cell(NLEADS), NLEADS)
+      do il = 1, NLEADS
+        call simul_box_copy(sbout%lead_unit_cell(il), sbin%lead_unit_cell(il))
+      end do
+    end if
   end subroutine simul_box_copy
-
 end module simul_box_m
 
 !! Local Variables:
