@@ -4,9 +4,12 @@
 DebugLevel = 0
 
 %CalculationMode
-   gs  |  unocc
-  "gs" | "unocc"
+   gs   |  unocc
+  "gs_" | "unocc_"
 %
+
+unocc_RestartDir = "gs_restart"
+
 fromScratch = yes
 
 Dimensions = 1

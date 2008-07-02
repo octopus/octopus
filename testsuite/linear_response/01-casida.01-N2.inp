@@ -4,10 +4,13 @@
 DebugLevel = 0
 
 %CalculationMode
-gs | unocc | casida
-"ground_state_" |  "unocc_states_" | "lrtddft_"
-1 | 2 | 3
+ gs              | unocc            | casida
+ "ground_state_" |  "unocc_states_" | "lrtddft_"
+ 1               | 2                | 3
 %
+
+unocc_states_RestartDir = "ground_state_restart"
+lrtddft_RestartDir = "unocc_states_restart"
 
 FromScratch = yes
 
