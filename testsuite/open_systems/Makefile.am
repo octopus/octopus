@@ -19,7 +19,7 @@
 ##
 ## $Id: Makefile.am 3539 2007-11-18 18:22:14Z xavier $
 
-sharedir = $(pkgdatadir)/testsuite/infinite_systems
+sharedir = $(pkgdatadir)/testsuite/open_systems
 
 dist_share_DATA = \
 	01-wavepacket.01-deriv_order_1.inp \
