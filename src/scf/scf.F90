@@ -41,6 +41,7 @@ module scf_m
   use mpi_lib_m
   use multigrid_m
   use h_sys_output_m
+  use ob_lippmann_schwinger_m
   use profiling_m
   use restart_m
   use simul_box_m
@@ -369,8 +370,15 @@ contains
       if(scf%lcao_restricted) then
         call lcao_wf(lcao_data, st, gr, h)
       else
-        scf%eigens%converged = 0
-        call eigen_solver_run(scf%eigens, gr, st, h, iter)
+        ! FIXME: Currently, only the eigensolver or the
+        ! Lippmann-Schwinger approach can be used (exclusively),
+        ! i. e. no bound states for open boundaries.
+        if(gr%sb%open_boundaries) then
+          call lippmann_schwinger(scf%eigens, h, gr, st)
+        else
+          scf%eigens%converged = 0
+          call eigen_solver_run(scf%eigens, gr, st, h, iter)
+        end if
       end if
 
       ! occupations

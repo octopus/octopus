@@ -65,11 +65,17 @@ contains
     call states_distribute_nodes(sys%st, sys%mc)
     call states_allocate_wfns(sys%st, sys%gr%m)
 
+    ! Read free states for ground state open boundary calculation.
+    if(sys%gr%sb%open_boundaries) then
+      call states_allocate_free_states(sys%st, sys%gr)
+      call read_free_states(sys%st, sys%gr)
+    end if
+
     if(.not.fromScratch) then
       ! load wave-functions
-      call restart_read(trim(tmpdir)//'gs', sys%st, sys%gr, sys%geo, ierr)
+      call restart_read(trim(restart_dir)//'gs', sys%st, sys%gr, sys%geo, ierr)
       if(ierr.ne.0) then
-        message(1) = "Could not load wave-functions from '"//trim(tmpdir)//"gs'"
+        message(1) = "Could not load wave-functions from '"//trim(restart_dir)//"gs'"
         message(2) = "Starting from scratch!"
         call write_warning(2)
         fromScratch = .true.
@@ -83,15 +89,24 @@ contains
 #endif
 
     if(fromScratch) then
-      ! Randomly generate the initial wave-functions
-      call states_generate_random(sys%st, sys%gr%m)
-      call states_orthogonalize(sys%st, sys%gr%m)
+      ! FIXME: the following initialization is wrong when not all
+      ! wavefunctions are calculated by the Lippmann-Schwinger
+      ! equation.
+      ! Use free states as initial wavefunctions.
+      if(sys%gr%sb%open_boundaries) then
+        ASSERT(sys%st%ob_ncs.eq.sys%st%nst)
+        sys%st%zpsi(1:sys%NP, :, :, :) = sys%st%zphi
+      else
+        ! Randomly generate the initial wave-functions.
+        call states_generate_random(sys%st, sys%gr%m)
+        call states_orthogonalize(sys%st, sys%gr%m)
+      end if
 
       ! We do not compute the density from the random wave-functions. 
       ! Instead, we try to get a better guess for the density.
 
       call guess_density(sys%gr%m, sys%gr%sb, sys%geo, sys%st%qtot, sys%st%d%nspin, &
-           sys%st%d%spin_channels, sys%st%rho)
+        sys%st%d%spin_channels, sys%st%rho)
 
       ! setup Hamiltonian (we do not call system_h_setup here because we do not want to
       ! overwrite the guess density)
@@ -178,6 +193,7 @@ contains
 
     ! clean up
     call states_deallocate_wfns(sys%st)
+    call states_deallocate_free_states(sys%st, sys%gr)
 
     call pop_sub()
   end subroutine ground_state_run
