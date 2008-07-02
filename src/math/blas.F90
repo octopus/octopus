@@ -223,6 +223,45 @@ module blas_m
   ! BLAS level II
   ! ------------------------------------------------------------------
 
+  ! ----------------- symv ------------------
+  interface blas_symv
+    subroutine ssymv(uplo, n, alpha, a, lda, x, incx, beta, y, incy)
+      character(1), intent(in)    :: uplo
+      integer,      intent(in)    :: n, lda, incx, incy
+      real(4),      intent(in)    :: alpha, beta
+      real(4),      intent(in)    :: a ! a(lda,n)
+      real(4),      intent(in)    :: x ! x(:)
+      real(4),      intent(inout) :: y ! y(:)
+    end subroutine ssymv
+
+    subroutine dsymv(uplo, n, alpha, a, lda, x, incx, beta, y, incy)
+      character(1), intent(in)    :: uplo
+      integer,      intent(in)    :: n, lda, incx, incy
+      real(8),      intent(in)    :: alpha, beta
+      real(8),      intent(in)    :: a ! a(lda,n)
+      real(8),      intent(in)    :: x ! x(:)
+      real(8),      intent(inout) :: y ! y(:)
+    end subroutine dsymv
+
+    subroutine csymv(uplo, n, alpha, a, lda, x, incx, beta, y, incy)
+      character(1), intent(in)    :: uplo
+      integer,      intent(in)    :: n, lda, incx, incy
+      complex(4),   intent(in)    :: alpha, beta
+      complex(4),   intent(in)    :: a ! a(lda,n)
+      complex(4),   intent(in)    :: x ! x(:)
+      complex(4),   intent(inout) :: y ! y(:)
+    end subroutine csymv
+
+    subroutine zsymv(uplo, n, alpha, a, lda, x, incx, beta, y, incy)
+      character(1), intent(in)    :: uplo
+      integer,      intent(in)    :: n, lda, incx, incy
+      complex(8),   intent(in)    :: alpha, beta
+      complex(8),   intent(in)    :: a ! a(lda,n)
+      complex(8),   intent(in)    :: x ! x(:)
+      complex(8),   intent(inout) :: y ! y(:)
+    end subroutine zsymv
+  end interface
+  
   ! ----------------- gemv ------------------
   interface blas_gemv
     subroutine sgemv(trans, m, n, alpha, a, lda, x, incx, beta, y, incy)

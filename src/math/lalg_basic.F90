@@ -34,6 +34,7 @@ module lalg_basic_m
     lalg_copy,   &
     lalg_dot,    &
     lalg_nrm2,   &
+    lalg_symv,   &
     lalg_gemv,   &
     lalg_gemm,   &
     lalg_gemmt,  &
@@ -194,6 +195,17 @@ module lalg_basic_m
     module procedure herk_1_3
     module procedure herk_1_4
   end interface
+
+  interface lalg_symv
+    module procedure symv_1_1
+    module procedure symv_1_2
+    module procedure symv_1_3
+    module procedure symv_1_4
+    module procedure symv_2_1
+    module procedure symv_2_2
+    module procedure symv_2_3
+    module procedure symv_2_4
+  end interface
   
   interface lalg_gemv
     module procedure gemv_1_1
@@ -217,7 +229,7 @@ module lalg_basic_m
   end interface
 #endif
 
-  type(profile_t), save :: axpy_profile, copy_profile, gemv_profile
+  type(profile_t), save :: axpy_profile, copy_profile, gemv_profile, symv_profile
 
 contains
 

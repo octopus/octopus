@@ -443,6 +443,32 @@ end function FNAME(nrm2)
 ! Matrix-vector multiplication plus vector.
 ! ------------------------------------------------------------------
 
+subroutine FNAME(symv_1)(n, alpha, a, x, beta, y)
+  integer, intent(in)    :: n
+  TYPE1,   intent(in)    :: alpha, beta
+  TYPE1,   intent(in)    :: a(:, :)
+  TYPE1,   intent(in)    :: x(:)
+  TYPE1,   intent(inout) :: y(:)
+
+  call profiling_in(symv_profile, 'BLAS_SYMV')
+  call blas_symv('U', n, alpha, a(1, 1), n, x(1), 1, beta, y(1), 1)
+  call profiling_out(symv_profile)
+
+end subroutine FNAME(symv_1)
+
+subroutine FNAME(symv_2)(n1, n2, alpha, a, x, beta, y)
+  integer, intent(in)    :: n1, n2
+  TYPE1,   intent(in)    :: alpha, beta
+  TYPE1,   intent(in)    :: a(:, :, :)
+  TYPE1,   intent(in)    :: x(:)
+  TYPE1,   intent(inout) :: y(:, :)
+
+  call profiling_in(symv_profile, 'BLAS_SYMV')
+  call blas_symv('U', n1*n2, alpha, a(1, 1, 1), n1*2, x(1), 1, beta, y(1, 1), 1)
+  call profiling_out(symv_profile)
+
+end subroutine FNAME(symv_2)
+
 subroutine FNAME(gemv_1)(m, n, alpha, a, x, beta, y)
   integer, intent(in)    :: m, n
   TYPE1,   intent(in)    :: alpha, beta
