@@ -22,6 +22,7 @@
 module hamiltonian_m
   use datasets_m
   use derivatives_m
+  use external_pot_m
   use functions_m
   use gauge_field_m
   use geometry_m
@@ -30,11 +31,13 @@ module hamiltonian_m
   use gridhier_m
   use lalg_basic_m
   use loct_parser_m
+  use io_m
+  use io_function_m
   use mesh_m
-  use external_pot_m
   use messages_m
   use mpi_m
   use multigrid_m
+  use ob_lead_m
   use profiling_m
   use projector_m
   use simul_box_m
@@ -138,6 +141,12 @@ module hamiltonian_m
     FLOAT :: ab_height            ! height of the absorbing boundary
     FLOAT, pointer :: ab_pot(:)   ! where we store the ab potential
 
+    ! Open boundaries.
+    CMPLX, pointer :: lead_h_diag(:, :, :, :)     ! Diagonal block of the lead Hamiltonian.
+    CMPLX, pointer :: lead_h_offdiag(:, :, :)     ! Offdiagonal block of the lead Hamiltonian.
+    FLOAT, pointer :: lead_vks(:, :, :)           ! (np, nspin, nleads) Kohn-Sham potential of the leads.
+    CMPLX, pointer :: lead_green(:, :, :, :, :, :) ! (np, np, nspin, ncs, nik, nleads) Green function of the leads.
+    
     ! Spectral range
     FLOAT :: spectral_middle_point
     FLOAT :: spectral_half_span
@@ -188,18 +197,22 @@ module hamiltonian_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_init(h, gr, geo, states_dim, wfs_type, theory_level)
-    type(hamiltonian_t), intent(out)   :: h
-    type(grid_t),        intent(inout) :: gr
-    type(geometry_t),    intent(inout) :: geo
-    type(states_dim_t),  intent(in)    :: states_dim
-    integer,             intent(inout) :: wfs_type
-    integer,             intent(in)    :: theory_level
+  subroutine hamiltonian_init(h, gr, geo, st, theory_level)
+    type(hamiltonian_t),    intent(out)   :: h
+    type(grid_t),           intent(inout) :: gr
+    type(geometry_t),       intent(inout) :: geo
+    type(states_t), target, intent(inout) :: st
+    integer,                intent(in)    :: theory_level
 
-    integer :: i, j, n, ispin
-    FLOAT :: d(MAX_DIM)
+    integer                     :: i, j, n, ispin
+    integer, pointer            :: wfs_type
+    FLOAT                       :: d(MAX_DIM)
+    type(states_dim_t), pointer :: states_dim
 
     call push_sub('h.hamiltonian_init')
+
+    states_dim => st%d
+    wfs_type   => st%wfs_type
 
     ! make a couple of local copies
     h%theory_level = theory_level
@@ -394,12 +407,17 @@ contains
     nullify(h%phase)
     if (simul_box_is_periodic(gr%sb)) call init_phase
 
+    if(gr%sb%open_boundaries) then
+      call init_lead_h
+    end if
+
     h%multigrid_initialized = .false.
 
     call pop_sub()
 
   contains
-    
+
+    ! ---------------------------------------------------------
     subroutine init_phase
       integer :: ip, ik
 
@@ -415,8 +433,197 @@ contains
       
     end subroutine init_phase
     
+
+    ! ---------------------------------------------------------
+    ! Calculate the blocks of the lead Hamiltonian and read the potential
+    ! of the lead unit cell.
+    subroutine init_lead_h
+      integer               :: np, il, ierr, alloc_size, ik, ist, pot, ix, iy, iz
+      integer               :: green_real, green_imag, irow, diag, offdiag
+      character             :: channel
+      character(len=1)      :: ln(NLEADS)
+      character(len=2)      :: spin
+      character(len=256)    :: fname, fmt, fname_real, fname_imag
+      FLOAT                 :: energy
+      type(mesh_t), pointer :: m
+
+      ln(LEFT)  = 'L'; ln(RIGHT) = 'R'
+
+      np = gr%intf(LEFT)%np
+
+      ! Read potential of the leads. We try vks-x (for DFT without
+      ! psuedo-potentials) and v0 (for non-interacting electrons) in
+      ! that order (Octopus binary and NetCDF format). If none of the
+      ! two can be found, a warning is emittedg and zero potential
+      ! assumed.
+      ALLOCATE(h%lead_vks(np, h%d%nspin, NLEADS), np*h%d%nspin*NLEADS)
+!h%lead_vks = M_ZERO
+
+      do il = 1, NLEADS
+        do ispin = 1, h%d%nspin
+          write(channel, '(i1)') ispin
+
+          ! Try vks-ispin first.
+          ! OBF.
+          fname = trim(gr%sb%lead_static_dir(il))//'/vks-'//trim(channel)//'.obf'
+          call dinput_function(trim(fname), gr%m%lead_unit_cell(il), h%lead_vks(:, ispin, il), ierr)
+          if(ierr.eq.0) then
+            message(1) = 'Info: Successfully read potential of the '//trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
+            call write_info(1)
+          else
+            ! NetCDF.
+            fname = trim(gr%sb%lead_static_dir(il))//'/vks-'//trim(channel)//'.ncdf'
+            call dinput_function(trim(fname), gr%m%lead_unit_cell(il), h%lead_vks(:, ispin, il), ierr)
+            if(ierr.eq.0) then
+              message(1) = 'Info: Successfully read potential of the '//trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
+              call write_info(1)
+            else
+              ! Now try v0.
+              ! OBF.
+              fname = trim(gr%sb%lead_static_dir(il))//'/v0.obf'
+              call dinput_function(trim(fname), gr%m%lead_unit_cell(il), h%lead_vks(:, ispin, il), ierr)
+              if(ierr.eq.0) then
+                message(1) = 'Info: Successfully read potential of the '//trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
+                call write_info(1)
+              else
+                ! NetCDF.
+                fname = trim(gr%sb%lead_static_dir(il))//'/v0.ncdf'
+                call dinput_function(trim(fname), gr%m%lead_unit_cell(il), h%lead_vks(:, ispin, il), ierr)
+                if(ierr.eq.0) then
+                  message(1) = 'Info: Successfully read potential of the '//trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
+                  call write_info(1)
+                else
+                  ! Reading potential failed.
+                  message(1) = 'Could neither read vks-x nor v0 from the directory'
+                  message(2) = trim(gr%sb%lead_static_dir(il))//' for the '//trim(LEAD_NAME(il))//' lead.'
+                  message(3) = 'Please include'
+                  message(4) = ''
+                  message(5) = '  Output = potential'
+                  message(6) = ''
+                  message(7) = 'in your periodic run. Octopus now assumes zero potential'
+                  message(8) = 'in the leads. This is most likely not what you want.'
+                  call write_warning(8)
+                  h%lead_vks(:, ispin, il) = M_ZERO
+                end if
+              end if
+            end if
+          end if
+
+          ! In debug mode, write potential to file in gnuplot format
+          ! (only z=0 plane).  We cannot use doutput_function because
+          ! the lead mesh is not completely initialized, in particular
+          ! the x array is missing.
+          if(in_debug_mode) then
+            call io_mkdir('debug/open_boundaries')
+            fname = 'debug/open_boundaries/v_lead-'//trim(LEAD_NAME(il))//'-'//trim(channel)
+            pot = io_open(trim(fname), action='write', is_tmp=.false., grp=gr%m%mpi_grp)
+            m => gr%m%lead_unit_cell(LEFT)
+            do ix = m%nr(1, 1)+m%enlarge(1), m%nr(2, 1)-m%enlarge(1)
+              do iy = m%nr(1, 2)+m%enlarge(2), m%nr(2, 2)-m%enlarge(2)
+                write(pot, '(2i8,f16.8)') ix, iy, h%lead_vks(m%lxyz_inv(ix, iy, 0), ispin, il)
+              end do
+            end do
+            call io_close(pot)
+          end if
+        end do
+      end do
+
+      ! Calculate the diagonal and offdiagonal blocks of the lead Hamiltonian.
+      ALLOCATE(h%lead_h_diag(np, np, st%d%dim, NLEADS), np**2*st%d%dim*NLEADS)
+      ALLOCATE(h%lead_h_offdiag(np, np, NLEADS), np**2*NLEADS)
+      do il = 1, NLEADS
+        do ispin = 1, h%d%nspin
+          call lead_diag(gr%f_der%der_discr%lapl, h%lead_vks(:, ispin, il), &
+            gr%intf(il), h%lead_h_diag(:, :, ispin, il))
+          ! In debug mode write the diagonal block to a file.
+          if(in_debug_mode) then
+            call io_mkdir('debug/open_boundaries')
+            write(fname, '(3a,i1.1)') 'debug/open_boundaries/diag-', &
+              trim(LEAD_NAME(il)), '-', ispin
+            diag = io_open(fname, action='write', grp=gr%m%mpi_grp, is_tmp=.false.)
+            write(fmt, '(a,i6,a)') '(', gr%intf(il)%np, 'e14.4)'
+            do irow = 1, gr%intf(il)%np
+              write(diag, fmt) h%lead_h_diag(:, :, ispin, il)
+            end do
+            call io_close(diag)
+          end if
+        end do
+        call lead_offdiag(gr%f_der%der_discr%lapl, gr%intf(il), il, &
+          h%lead_h_offdiag(:, :, il))
+        if(in_debug_mode) then
+          write(fname, '(2a)') 'debug/open_boundaries/offdiag-', &
+            trim(LEAD_NAME(il))
+          offdiag = io_open(fname, action='write', grp=gr%m%mpi_grp, is_tmp=.false.)
+          write(fmt, '(a,i6,a)') '(', gr%intf(il)%np, 'e14.4)'
+          do irow = 1, gr%intf(il)%np
+            write(offdiag, fmt) h%lead_h_offdiag(:, :, il)
+          end do
+          call io_close(offdiag)
+        end if
+      end do
+
+      ! Calculate Green function of the leads.
+      ! FIXME: For spinors, this calculation is almost certainly wrong.
+      alloc_size = np**2*h%d%nspin*st%ob_ncs*st%d%nik*NLEADS
+      ALLOCATE(h%lead_green(np, np, h%d%nspin, st%ob_ncs, st%d%nik, NLEADS), alloc_size)
+
+      call messages_print_stress(stdout, 'Lead Green functions')
+      message(1) = ' st#  Spin  Lead     Energy'
+      call write_info(1)
+      do ik = 1, st%d%nik
+        do ist = 1, st%ob_ncs
+          energy = st%ob_eigenval(ist, ik)
+          do il = 1, NLEADS
+            do ispin = 1, h%d%nspin
+              select case(h%d%ispin)
+              case(UNPOLARIZED)
+                spin = '--'
+              case(SPIN_POLARIZED)
+                if(is_spin_up(ik)) then
+                  spin = 'up'
+                else
+                  spin = 'dn'
+                end if
+              ! This is nonsene, but at least all indices are present.
+              case(SPINORS)
+                if(ispin.eq.1) then
+                  spin = 'up'
+                else
+                  spin = 'dn'
+                end if
+              end select
+              write(message(1), '(i4,3x,a2,5x,a1,1x,f12.6)') ist, spin, ln(il), energy
+              call write_info(1)
+              call lead_green(energy, h%lead_h_diag(:, :, ispin, il), h%lead_h_offdiag(:, :, il), &
+                np, h%lead_green(:, :, ispin, ist, ik, il), gr%sb%h(TRANS_DIR))
+
+              ! Write the entire Green function to a file.
+              if(in_debug_mode) then
+                call io_mkdir('debug/open_boundaries')
+                write(fname_real, '(3a,i4.4,a,i3.3,a,i1.1,a)') 'debug/open_boundaries/green-', &
+                  trim(LEAD_NAME(il)), '-', ist, '-', ik, '-', ispin, '.real'
+                write(fname_imag, '(3a,i4.4,a,i3.3,a,i1.1,a)') 'debug/open_boundaries/green-', &
+                  trim(LEAD_NAME(il)), '-', ist, '-', ik, '-', ispin, '.imag'
+                green_real = io_open(fname_real, action='write', grp=gr%m%mpi_grp, is_tmp=.false.)
+                green_imag = io_open(fname_imag, action='write', grp=gr%m%mpi_grp, is_tmp=.false.)
+
+                write(fmt, '(a,i6,a)') '(', gr%intf(il)%np, 'e14.4)'
+                do irow = 1, gr%intf(il)%np
+                  write(green_real, fmt) real(h%lead_green(irow, :, ispin, ist, ik, il))
+                  write(green_imag, fmt) aimag(h%lead_green(irow, :, ispin, ist, ik, il))
+                end do
+                call io_close(green_real); call io_close(green_imag)
+              end if
+            end do
+          end do
+        end do
+      end do
+      call messages_print_stress(stdout)
+    end subroutine init_lead_h
   end subroutine hamiltonian_init
 
+
+  ! ---------------------------------------------------------
   subroutine hamiltonian_mg_init(h, gr)
     type(hamiltonian_t), intent(inout) :: h
     type(grid_t),        intent(inout) :: gr
@@ -436,6 +643,7 @@ contains
     end do
 
   end subroutine hamiltonian_mg_init
+
 
   ! ---------------------------------------------------------
   subroutine hamiltonian_end(h, gr, geo)
@@ -490,6 +698,11 @@ contains
     if(associated(h%ab_pot)) then
       deallocate(h%ab_pot); nullify(h%ab_pot)
     end if
+
+    DEALLOC(h%lead_h_diag)
+    DEALLOC(h%lead_h_offdiag)
+    DEALLOC(h%lead_vks)
+    DEALLOC(h%lead_green)
 
     call states_dim_end(h%d)
 

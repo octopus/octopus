@@ -33,17 +33,22 @@ subroutine X(hamiltonian_eigenval)(h, gr, st, t)
   call push_sub('h_inc.Xhamiltonian_eigenval')
   ALLOCATE(Hpsi(NP, st%d%dim), NP*st%d%dim)
 
-  do ik = 1, st%d%nik
-    do ist = st%st_start, st%st_end
-      if(present(t)) then
-        call X(hpsi) (h, gr, st%X(psi)(:, :, ist, ik), hpsi, ist, ik, t)
-      else
-        call X(hpsi) (h, gr, st%X(psi)(:, :, ist, ik), hpsi, ist, ik)
-      end if
-      e = X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), Hpsi)
-      st%eigenval(ist, ik) = R_REAL(e)
+  if(gr%sb%open_boundaries) then
+    ! For open boundaries we know the eigenvalues.
+    st%eigenval = st%ob_eigenval
+  else
+    do ik = 1, st%d%nik
+      do ist = st%st_start, st%st_end
+        if(present(t)) then
+          call X(hpsi) (h, gr, st%X(psi)(:, :, ist, ik), hpsi, ist, ik, t)
+        else
+          call X(hpsi) (h, gr, st%X(psi)(:, :, ist, ik), hpsi, ist, ik)
+        end if
+        e = X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), Hpsi)
+        st%eigenval(ist, ik) = R_REAL(e)
+      end do
     end do
-  end do
+  end if
 
   deallocate(Hpsi)
   call pop_sub()
@@ -740,6 +745,7 @@ subroutine X(vlaser_operator_quadratic) (gr, h, psi, hpsi, ik, laser_number)
 
   call pop_sub()
 end subroutine X(vlaser_operator_quadratic)
+
 
 
 ! ---------------------------------------------------------
