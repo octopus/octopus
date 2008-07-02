@@ -19,8 +19,7 @@
 
 
 ! ---------------------------------------------------------
-! This subroutine calculates the solution using conjugate gradients
-!    of (H + omega) x = y
+! This subroutine calculates the solution of (H + omega) x = y
 ! ---------------------------------------------------------
 subroutine X(solve_HXeY) (this, h, gr, st, ist, ik, x, y, omega)
   type(linear_solver_t), target, intent(inout) :: this

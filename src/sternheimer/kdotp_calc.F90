@@ -20,13 +20,10 @@
 #include "global.h"
 
 module kdotp_calc_m
-!  use datasets_m
-!  use functions_m
-!  use grid_m
   use global_m
   use hamiltonian_m
+!  use kdotp_lr_m
   use linear_response_m
-!  use mesh_m
   use mesh_function_m
   use messages_m
   use pert_m
@@ -34,7 +31,7 @@ module kdotp_calc_m
   use states_m
   use sternheimer_m
   use system_m
-!  use xc_m
+  use units_m
 
   implicit none
 
@@ -48,8 +45,6 @@ contains
 
   character(len=100) function kdotp_rho_tag(dir) result(str)
     integer, intent(in) :: dir
-
-    !this function has to be consistent with oct_search_file_lr in liboct/oct_f.c
 
     call push_sub('kdotp_calc.kdotp_rho_tag')
 
@@ -72,12 +67,14 @@ contains
 
 #include "complex.F90"
 
-subroutine zlr_calc_eff_mass_inv(sys, h, lr, perturbation, eff_mass_inv)
+subroutine zlr_calc_eff_mass_inv(sys, h, lr, perturbation, eff_mass_inv, occ_solution_method, degen_thres)
   type(system_t),         intent(inout) :: sys
   type(hamiltonian_t),    intent(in)    :: h
   type(lr_t),             intent(in)    :: lr(:,:)
   type(pert_t),           intent(inout) :: perturbation
   FLOAT,                  intent(out)   :: eff_mass_inv(:, :, :, :)
+  integer,                intent(in)    :: occ_solution_method
+  FLOAT,                  intent(in)    :: degen_thres
 
 ! m^-1[ij] = delta[ij] + 4*Re<psi0|H'i|psi'j>
 ! for each state, spin, and k-point
@@ -92,6 +89,27 @@ subroutine zlr_calc_eff_mass_inv(sys, h, lr, perturbation, eff_mass_inv)
   eff_mass_inv(:, :, :, :) = 0
 
   do ik = 1, sys%st%d%nik
+
+    ist = 1
+    do while (ist < sys%st%nst)
+
+      ! test for degeneracies
+      call messages_print_stress(stdout, 'Degenerate subspace')
+      write(*,'(a, i3, a, f12.8, a, a)') 'State #', ist, ', Energy = ', &
+           sys%st%eigenval(ist, ik)/units_out%energy%factor, ' ', units_out%energy%abbrev              
+      ist2 = ist + 1
+      do while (ist2 <= sys%st%nst .and. sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik) < degen_thres)
+         ! eigenvalues are supposed to be in ascending order; if they are not, it is a sign
+         ! of being in a degenerate subspace; hence no absolute value here
+!         write(*,*) ist2, ist, sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik)
+         write(*,'(a, i3, a, f12.8, a, a)') 'State #', ist2, ', Energy = ', &
+            sys%st%eigenval(ist2, ik)/units_out%energy%factor, ' ', units_out%energy%abbrev              
+         ist2 = ist2 + 1
+      enddo
+
+      ist = ist2
+    enddo
+
     do ist = 1, sys%st%nst
 
       do idir1 = 1, sys%gr%sb%dim
@@ -104,7 +122,7 @@ subroutine zlr_calc_eff_mass_inv(sys, h, lr, perturbation, eff_mass_inv)
         eff_mass_inv(ik, ist, idir1, idir1) = 1
 
         do idir2 = 1, sys%gr%sb%dim
-          ! contribution from linear-response projection onto unoccupied states, as solved by Sternheimer equation
+          ! contribution from Sternheimer equation
           if (idir2 < idir1) then
             eff_mass_inv(ik, ist, idir1, idir2) = eff_mass_inv(ik, ist, idir2, idir1)
             ! utilizing symmetry of inverse effective mass tensor
@@ -116,22 +134,25 @@ subroutine zlr_calc_eff_mass_inv(sys, h, lr, perturbation, eff_mass_inv)
           eff_mass_inv(ik, ist, idir1, idir2) = eff_mass_inv(ik, ist, idir1, idir2) + M_FOUR * real(term)
 !          write(*,*) "unocc: ", eff_mass_inv(ik, ist, idir1, idir2)
 
+          if (occ_solution_method == 1) then
           ! contribution from linear-response projection onto occupied states, by sum over states and perturbation theory
           ! this could be sped up yet more by storing each (ist,ist2) term, which will be used again as the complex
           !   conjugate as the (ist2,ist) term.  same will apply to hyperpolarizability
-!          do ist2 = 1, sys%st%nst
-!            if (ist2 == ist) cycle
-!            term = zmf_integrate(sys%gr%m, conjg(pertpsi(idir1, 1:sys%gr%m%np)) * sys%st%zpsi(1:sys%gr%m%np, 1, ist2, ik)) * &
-!              zmf_integrate(sys%gr%m, conjg(sys%st%zpsi(1:sys%gr%m%np, 1, ist2, ik)) * pertpsi(idir2, 1:sys%gr%m%np)) / &
-!              (sys%st%eigenval(ist, ik) - sys%st%eigenval(ist2, ik))
-!            eff_mass_inv(ik, ist, idir1, idir2) = eff_mass_inv(ik, ist, idir1, idir2) + M_FOUR * real(term)
-!            write(*,'(a,i2,a,f20.6)') "occ(", ist2, "): ", eff_mass_inv(ik, ist, idir1, idir2)
-!          enddo
+             do ist2 = 1, sys%st%nst
+                if (ist2 == ist) cycle
+                term = zmf_integrate(sys%gr%m, conjg(pertpsi(idir1, 1:sys%gr%m%np)) * sys%st%zpsi(1:sys%gr%m%np, 1, ist2, ik)) * &
+                     zmf_integrate(sys%gr%m, conjg(sys%st%zpsi(1:sys%gr%m%np, 1, ist2, ik)) * pertpsi(idir2, 1:sys%gr%m%np)) / &
+                     (sys%st%eigenval(ist, ik) - sys%st%eigenval(ist2, ik))
+                eff_mass_inv(ik, ist, idir1, idir2) = eff_mass_inv(ik, ist, idir1, idir2) + M_FOUR * real(term)
+!                write(*,'(a,i2,a,f20.6)') "occ(", ist2, "): ", eff_mass_inv(ik, ist, idir1, idir2)
+             enddo
+          endif
 !          write(*,'(a,i1,a,i1,a,f20.6)') "eff_mass_inv(", idir1, ", ", idir2, ") = ", eff_mass_inv(ik, ist, idir1, idir2)
-        enddo
-      enddo
-    enddo
-  enddo
+
+        enddo !idir2
+      enddo !idir1
+    enddo !ist
+  enddo !ik
 
 end subroutine zlr_calc_eff_mass_inv
   

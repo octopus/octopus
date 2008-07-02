@@ -26,7 +26,7 @@
 
 subroutine X(sternheimer_solve)(                           &
      this, sys, h, lr, nsigma, omega, perturbation,        &
-     restart_dir, rho_tag, wfs_tag, have_restart_rho, occ_response)
+     restart_dir, rho_tag, wfs_tag, have_restart_rho)
   type(sternheimer_t),    intent(inout) :: this
   type(system_t), target, intent(inout) :: sys
   type(hamiltonian_t),    intent(inout) :: h
@@ -38,7 +38,6 @@ subroutine X(sternheimer_solve)(                           &
   character(len=*),       intent(in)    :: rho_tag
   character(len=*),       intent(in)    :: wfs_tag
   logical,      optional, intent(in)    :: have_restart_rho
-  logical,      optional, intent(in)    :: occ_response
 
   FLOAT :: dpsimod
   integer :: iter, sigma, ik, ist, is, err
@@ -48,7 +47,7 @@ subroutine X(sternheimer_solve)(                           &
   real(8):: abs_dens
   R_TYPE :: omega_sigma
 
-  logical :: conv_last, conv
+  logical :: conv_last, conv, states_conv
 
   type(mesh_t), pointer :: m
   type(states_t), pointer :: st
@@ -105,6 +104,8 @@ subroutine X(sternheimer_solve)(                           &
       !now calculate response for each state
       is = mod(ik - 1, 2) + 1
 
+      states_conv = .true.
+
       do ist = 1, st%nst
         do sigma = 1, nsigma
           !calculate the RHS of the Sternheimer eq
@@ -112,10 +113,9 @@ subroutine X(sternheimer_solve)(                           &
           call X(pert_apply) (perturbation, sys%gr, sys%geo, h, ik, st%X(psi)(:, 1, ist, ik), Y(:, 1, sigma))
           Y(1:m%np, 1, sigma) = -Y(1:m%np, 1, sigma) - hvar(1:m%np, is, sigma)*st%X(psi)(1:m%np, 1, ist, ik)
 
-          if (present(occ_response) .and. occ_response == .true.) then
+          if (this%occ_response) then
           ! project out only the component of the unperturbed wavefunction
           ! |Y> := (1 - |ist><ist|)|Y>
-          ! no, this doesn't take into account nonzero temperature...
              Y(:, 1, sigma) = Y(:, 1, sigma) - st%X(psi)(:, 1, ist, ik) * &
                X(mf_integrate)(sys%gr%m, st%X(psi)(:, 1, ist, ik) * Y(:, 1, sigma))
           else
@@ -141,11 +141,29 @@ subroutine X(sternheimer_solve)(                           &
                (3 - 2*sigma)*ist, dpsimod, this%solver%iter, this%solver%abs_psi 
           call write_info(1)
 
+          states_conv = states_conv .and. (this%solver%abs_psi < this%solver%tol)
           total_iter = total_iter + this%solver%iter
           
         end do !sigma
       end do !ist
     end do !ik
+
+    if (this%add_fxc == .false. .and. this%add_hartree == .false.) then
+    ! no need to deal with density, mixing, SCF iterations, etc.
+    ! convergence criterion is now about individual states, rather than SCF residual
+      this%ok = states_conv
+
+      if (.not. this%ok) then
+         message(1) = "Linear solver failed to converge all states"
+         call write_warning(1)
+      endif
+
+      message(1)="--------------------------------------------"
+      write(message(2), '(a, i8)') &
+           'Info: Total Hamiltonian applications:', total_iter*linear_solver_ops_per_iter(this%solver)
+      call write_info(2)
+      exit
+    endif
 
     call X(lr_build_dl_rho)(m, st, lr, nsigma)
 
@@ -161,10 +179,10 @@ subroutine X(sternheimer_solve)(                           &
     
     ! all the rest is the mixing and checking for convergence
 
-    if( this%scftol%max_iter == iter  ) then 
+    if(this%scftol%max_iter == iter) then 
       message(1) = "Self-consistent iteration for response did not converge"
       this%ok = .false.
-      call write_warning(1);
+      call write_warning(1)
     end if
 
     dl_rhotmp(1:m%np, 1:st%d%nspin, 1) = lr(1)%X(dl_rho)(1:m%np, 1:st%d%nspin)

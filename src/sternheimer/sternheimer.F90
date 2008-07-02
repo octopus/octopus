@@ -73,6 +73,7 @@ module sternheimer_m
      logical :: add_hartree
      logical :: ok
      logical :: hermitian 
+     logical :: occ_response
      logical :: oep_kernel
      FLOAT, pointer :: fxc(:,:,:)    ! linear change of the xc potential (fxc)
      
@@ -81,13 +82,14 @@ module sternheimer_m
 contains
   
   !-----------------------------------------------------------
-  subroutine sternheimer_init(this, sys, h, prefix, hermitian, set_ham_var)
+  subroutine sternheimer_init(this, sys, h, prefix, hermitian, set_ham_var, set_occ_response)
     type(sternheimer_t), intent(out)   :: this
     type(system_t),      intent(inout) :: sys
     type(hamiltonian_t), intent(inout) :: h
     character(len=*),    intent(in)    :: prefix
     logical, optional,   intent(in)    :: hermitian
     integer, optional,   intent(in)    :: set_ham_var
+    logical, optional,   intent(in)    :: set_occ_response
 
     integer :: ham_var
 
@@ -129,10 +131,23 @@ contains
       this%add_hartree = .false.
     end if
     
-    message(1) = "Variation of the hamiltonian in Sternheimer equation: V_ext"
+    if(present(set_occ_response)) then
+       this%occ_response = set_occ_response
+    else
+       this%occ_response = .false.
+    endif
+
+    message(1) = "Variation of the Hamiltonian in Sternheimer equation: V_ext"
     if(this%add_hartree) write(message(1), '(2a)') trim(message(1)), ' + hartree'
     if(this%add_fxc)     write(message(1), '(2a)') trim(message(1)), ' + fxc'
-    call write_info(1)
+
+    message(2) = "Solving Sternheimer equation for"
+    if (this%occ_response) then
+       write(message(2), '(2a)') trim(message(2)), ' full linear response'
+    else
+       write(message(2), '(2a)') trim(message(2)), ' linear response in unoccupied subspace only'
+    endif
+    call write_info(2) 
 
     call linear_solver_init(this%solver, sys%gr, prefix)
 

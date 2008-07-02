@@ -438,7 +438,7 @@ contains
     !% <br>&nbsp;&nbsp; 0   |   0 |   0
     !% <br>%</tt>
     !%
-    !% Note that in this case the first state is absent; the code will calculate four states
+    !% Note that in this case the first state is absent, the code will calculate four states
     !% (two because there are four electrons, plus two because ExtraStates = 2), and since
     !% it finds only three columns, it will occupy the first state with one electron for each
     !% of the spin options.
@@ -1931,7 +1931,7 @@ contains
     ! sort eigenvalues
     call sort(eigenval_sorted, sindex)
 
-    !%Variable DegeneracyMatrixThreshold
+    !%Variable DegeneracyThreshold
     !%Type float
     !%Default 1e-5
     !%Section States
@@ -1939,7 +1939,7 @@ contains
     !% A state j with energy E_j will be considered degenerate with a state
     !% with energy E_i, if  E_i - threshold < E_j < E_i + threshold.
     !%End
-    call loct_parse_float(check_inp('DegeneracyMatrixThreshold'), CNST(1e-5), degen_thres)    
+    call loct_parse_float(check_inp('DegeneracyThreshold'), CNST(1e-5), degen_thres)    
 
     ! setup degeneracy matrix. the matrix summarizes the degeneracy relations 
     ! among the states

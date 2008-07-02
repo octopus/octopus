@@ -56,7 +56,7 @@ module kdotp_lr_m
 
   public :: &
        kdotp_lr_run,       &
-       read_wfs
+       int2str      
 
   type kdotp_t
     type(pert_t) :: perturbation
@@ -68,7 +68,10 @@ module kdotp_lr_m
                                    ! second index is dummy; should only be 1
                                    ! for compatibility with em_resp routines
 
-    logical :: ok
+    logical :: ok                   ! is converged?
+    integer :: occ_solution_method  ! how to get occupied components of response
+    FLOAT   :: degen_thres          ! maximum energy difference to be considered
+                                    ! degenerate
   end type kdotp_t
 
 contains
@@ -92,11 +95,13 @@ contains
 !    ndim = sys%gr%sb%dim
 
     ALLOCATE(kdotp_vars%eff_mass_inv(sys%st%d%nik, sys%st%nst, NDIM, NDIM), sys%st%d%nik * sys%st%nst * NDIM * NDIM)
-    kdotp_vars%eff_mass_inv(:,:,:,:)=0
+    kdotp_vars%eff_mass_inv(:,:,:,:)=0  
 
     call pert_init(kdotp_vars%perturbation, PERTURBATION_KDOTP, sys%gr, sys%geo)
 
     ALLOCATE(kdotp_vars%lr(1:NDIM, 1), NDIM)
+
+    call parse_input()
 
     call read_wfs(sys%st, sys%gr, sys%geo, .true.)
     ! even if wfs are real, the response must be allowed to be complex
@@ -108,7 +113,8 @@ contains
     call write_info(1)
     call system_h_setup(sys, h)
     
-    call sternheimer_init(sh, sys, h, "KdotP", hermitian = wfs_are_real(sys%st), set_ham_var = 0)
+    call sternheimer_init(sh, sys, h, "KdotP", hermitian = wfs_are_real(sys%st), &
+         set_ham_var = 0, set_occ_response = (kdotp_vars%occ_solution_method == 0))
     ! ham_var_set = 0 results in HamiltonianVariation = V_ext_only
 
     do idir = 1, NDIM
@@ -149,12 +155,12 @@ contains
       call pert_setup_dir(kdotp_vars%perturbation, idir)
       call zsternheimer_solve(sh, sys, h, kdotp_vars%lr(idir,:), 1, M_Z0, &
         kdotp_vars%perturbation, RESTART_DIR, &
-        kdotp_rho_tag(idir), kdotp_wfs_tag(idir), have_restart_rho=(ierr==0), occ_response=.true.)
+        kdotp_rho_tag(idir), kdotp_wfs_tag(idir), have_restart_rho=(ierr==0))
       kdotp_vars%ok = kdotp_vars%ok .and. sternheimer_has_converged(sh)         
     end do ! idir
 
-    call zlr_calc_eff_mass_inv(sys, h, kdotp_vars%lr, &
-        kdotp_vars%perturbation, kdotp_vars%eff_mass_inv)
+    call zlr_calc_eff_mass_inv(sys, h, kdotp_vars%lr, kdotp_vars%perturbation, &
+         kdotp_vars%eff_mass_inv, kdotp_vars%occ_solution_method, kdotp_vars%degen_thres)
 
     call kdotp_output(sys%st, sys%gr, kdotp_vars)
 
@@ -174,6 +180,35 @@ contains
   contains
 
     ! ---------------------------------------------------------
+
+    subroutine parse_input()
+
+      !%Variable KdotP_OccupiedSolutionMethod
+      !%Type integer
+      !%Default sternheimer
+      !%Section Linear Response::KdotP
+      !%Description
+      !% Method of calculating the contribution of the projection of the
+      !%  linear-response wavefunctions in the occupied subspace.
+      !%Option sternheimer_eqn 0
+      !% The Sternheimer equation is solved including the occupied subspace,
+      !% to get the full linear-response wavefunctions.
+      !%Option sum_over_states 1
+      !% The Sternheimer equation is solved only in the unoccupied subspace,
+      !% and a sum-over-states perturbation-theory expression is used to
+      !% evaluate the contributions in the occupied subspace.
+      !%End      
+
+      call loct_parse_int(check_inp('KdotP_OccupiedSolutionMethod'), &
+           0, kdotp_vars%occ_solution_method)
+
+      call loct_parse_float(check_inp('DegeneracyThreshold'), &
+           CNST(1e-5), kdotp_vars%degen_thres)
+      ! Note: this variable is defined in src/states.F90, in states_degeneracy_matrix
+
+    end subroutine parse_input
+
+    ! ---------------------------------------------------------
     subroutine info()
 
       call pert_info(kdotp_vars%perturbation, stdout)
@@ -181,7 +216,12 @@ contains
       write(message(1),'(a)') 'Effective masses'
       call messages_print_stress(stdout, trim(message(1)))
 
-      message(1) = 'Wavefunctions type: Complex'
+      if (kdotp_vars%occ_solution_method == 0) then
+          message(1) = 'Occupied solution method: Sternheimer equation'
+      else
+          message(1) = 'Occupied solution method: sum over states'
+      endif
+
       call write_info(1)
 
       call messages_print_stress(stdout)
@@ -212,7 +252,7 @@ contains
         do ist = 1, st%nst
           write(iunit,'(a)')
           write(iunit,'(a, a, a, f12.8, a, a)') 'State #', int2str(ist), ', Energy = ', &
-            st%eigenval(ist, ik)*units_out%energy%factor, ' ', units_out%energy%abbrev
+            st%eigenval(ist, ik)/units_out%energy%factor, ' ', units_out%energy%abbrev
           call io_output_tensor(iunit, kdotp_vars%eff_mass_inv(ik, ist, :, :), NDIM, M_ONE)
         enddo
 
@@ -221,25 +261,23 @@ contains
         do ist = 1, st%nst
           write(iunit,'(a)')
           write(iunit,'(a, a, a, f12.8, a, a)') 'State #', int2str(ist), ', Energy = ', &
-            st%eigenval(ist, ik)*units_out%energy%factor, ' ', units_out%energy%abbrev
+            st%eigenval(ist, ik)/units_out%energy%factor, ' ', units_out%energy%abbrev
           determinant = lalg_inverter(gr%sb%dim, kdotp_vars%eff_mass_inv(ik, ist, :, :), .true.)
           call io_output_tensor(iunit, kdotp_vars%eff_mass_inv(ik, ist, :, :), NDIM, M_ONE)
         enddo
 
      end do
 
-     contains
-
-      character(len=12) function int2str(i) result(str)
-        integer, intent(in) :: i
-      
-        write(str, '(i11)') i
-        str = trim(adjustl(str))
-
-      end function int2str
-            
   end subroutine kdotp_output
 
+  character(len=12) function int2str(i) result(str)
+    integer, intent(in) :: i
+    
+    write(str, '(i11)') i
+    str = trim(adjustl(str))
+    
+  end function int2str
+            
 end module kdotp_lr_m
 
 !! Local Variables:
