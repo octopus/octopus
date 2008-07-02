@@ -26,6 +26,7 @@ module grid_m
   use functions_m
   use geometry_m
   use global_m
+  use ob_interface_m
   use mesh_m
   use messages_m
   use mpi_m
@@ -49,6 +50,7 @@ module grid_m
   type grid_t
     type(simul_box_t)           :: sb
     type(mesh_t)                :: m
+    type(interface_t), pointer  :: intf(:)
     type(multigrid_level_t)     :: fine
     type(f_der_t)               :: f_der
     type(curvlinear_t)          :: cv
@@ -105,6 +107,7 @@ contains
     type(multicomm_t),    intent(in)    :: mc
     type(geometry_t),     intent(in)    :: geo
 
+    integer :: il
     type(mpi_grp_t) :: grp
 
     call push_sub('grid.grid_init_stage_2')
@@ -116,6 +119,15 @@ contains
         gr%f_der%der_discr%lapl%n, grp)
     else
       call mesh_init_stage_3(gr%m, geo, gr%cv)
+    end if
+
+    if(gr%sb%open_boundaries) then
+      ALLOCATE(gr%intf(NLEADS), NLEADS)
+      do il = 1, NLEADS
+        call interface_init(gr%m, gr%sb, gr%f_der%der_discr, gr%intf(il), il)
+      end do
+    else
+      nullify(gr%intf)
     end if
 
     call f_der_build(gr%sb, gr%m, gr%f_der)
@@ -183,6 +195,11 @@ contains
       deallocate(gr%mgrid); nullify(gr%mgrid)
     end if
 
+    if(gr%sb%open_boundaries) then
+      deallocate(gr%intf)
+      nullify(gr%intf)
+    end if
+
     call pop_sub()
   end subroutine grid_end
 
@@ -192,6 +209,8 @@ contains
     type(grid_t), intent(in) :: gr
     integer,      intent(in) :: iunit
 
+    integer :: il
+
     if(.not.mpi_grp_is_root(mpi_world)) then
       if(in_debug_mode) call write_debug_newlines(6)
       return
@@ -200,11 +219,15 @@ contains
     call messages_print_stress(iunit, "Grid")
     call simul_box_write_info(gr%sb, iunit)
     call mesh_write_info(gr%m, iunit)
+    if(gr%sb%open_boundaries) then
+      do il = 1, NLEADS
+        call interface_write_info(gr%intf(il), il, iunit)
+      end do
+    end if
     if (gr%m%use_curvlinear) then
       call curvlinear_write_info(gr%cv, iunit)
     end if
     call messages_print_stress(iunit)
-
   end subroutine grid_write_info
 
 

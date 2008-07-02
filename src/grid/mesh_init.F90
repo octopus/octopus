@@ -68,9 +68,59 @@ subroutine mesh_init_stage_1(sb, mesh, geo, cv, enlarge)
     mesh%nr(2, i) = mesh%nr(2, i) - 1
   end do
 
+  if(sb%open_boundaries) then
+    ! The upper boundary must be discarded to preserve periodicity in the leads.
+     ! Example in 1D, 2 point unit cell, central region of 8 unit cells, 2
+    ! additional unit cells at each end in simulation box:
+    !
+    ! simulation region:        /-------------------------------\
+    ! free state:        . .|. .|. .|. .|. .|. .|. .|. .|. .|. .|. .|. .
+    ! scattered state:   . .|. .|. .|. .|. . . . . . . .|. .|. .|. .|. .
+    !                       L   |               C               |^  R
+    !
+    ! The indicated point (^) must be omitted to preserve correct periodicity.
+    mesh%nr(2, TRANS_DIR) = mesh%nr(2, TRANS_DIR) - 1
+
+    call mesh_read_lead()
+  else
+    nullify(mesh%lead_unit_cell)
+  end if
+
   mesh%l(:) = mesh%nr(2, :) - mesh%nr(1, :) + 1
+
   call profiling_out(mesh_init_prof)
   call pop_sub()
+
+contains
+
+  ! ---------------------------------------------------------
+  subroutine mesh_read_lead()
+    integer :: il, iunit
+
+    integer               :: alloc_size
+    type(mesh_t), pointer :: m
+
+    call push_sub('mesh_init.mesh_read_lead')
+
+    ALLOCATE(mesh%lead_unit_cell(NLEADS), NLEADS)
+
+    do il = 1, NLEADS
+      m => mesh%lead_unit_cell(il)
+      iunit = io_open(trim(sb%lead_restart_dir(il))//'/gs/mesh', action='read', is_tmp=.true.)
+      call mesh_init_from_file(m, iunit)
+      call io_close(iunit)
+
+      ! Read the lxyz maps.
+      ALLOCATE(m%lxyz(m%np_part, 3), m%np_global*3)
+      alloc_size = (m%nr(2, 1)-m%nr(1, 1)+1) * (m%nr(2, 2)-m%nr(1, 2)+1) * (m%nr(2, 3)-m%nr(1, 3)+1)
+      ALLOCATE(m%lxyz_inv(m%nr(1, 1):m%nr(2, 1), m%nr(1, 2):m%nr(2, 2), m%nr(1, 3):m%nr(2, 3)), alloc_size)
+      iunit = io_open(trim(sb%lead_restart_dir(il))//'/gs/Lxyz', action='read', is_tmp=.true.)
+      call mesh_lxyz_init_from_file(m, iunit)
+      call io_close(iunit)
+    end do
+
+    call pop_sub()
+  end subroutine mesh_read_lead
 end subroutine mesh_init_stage_1
 
 

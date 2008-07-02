@@ -446,14 +446,21 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine species_init(s, ispin)
-    type(species_t), intent(inout) :: s
-    integer,        intent(in)    :: ispin
+  subroutine species_init(s, ispin, print_info)
+    type(species_t),   intent(inout) :: s
+    integer,           intent(in)    :: ispin
+    logical, optional, intent(in)    :: print_info
 
+    logical :: print_info_
     integer :: i, l
     FLOAT   :: pot_re, pot_im
 
     call push_sub('species.species_init')
+
+    print_info_ = .true.
+    if(present(print_info)) then
+      print_info_ = print_info
+    end if
 
     ! masses are always in a.u.m, so convert them to a.u.
     s%weight =  units_inp%mass%factor * s%weight
@@ -481,12 +488,14 @@ contains
       end do
 
     case(SPEC_USDEF)
-      write(message(1),'(a,a,a)')    'Species "',trim(s%label),'" is an user-defined potential.'
-      write(message(2),'(a,a)')      '   Potential = ', trim(s%user_def(1:237)) ! 256-16, 16 for "Potential =", 3 for ...
-      if(len(trim(s%user_def)).gt.237) then
-        message(2) = trim(message(2))//'...'
+      if(print_info_) then
+        write(message(1),'(a,a,a)')    'Species "',trim(s%label),'" is an user-defined potential.'
+        write(message(2),'(a,a)')      '   Potential = ', trim(s%user_def(1:237)) ! 256-16, 16 for "Potential =", 3 for ...
+        if(len(trim(s%user_def)).gt.237) then
+          message(2) = trim(message(2))//'...'
+        end if
+        call write_info(2)
       end if
-      call write_info(2)
       s%niwfs = 2*s%z_val
       call loct_parse_expression(pot_re, pot_im, CNST(0.01), M_ZERO,   &
         M_ZERO, CNST(0.01), M_ZERO, s%user_def)
@@ -495,24 +504,27 @@ contains
       if(s%omega <= M_ZERO) s%omega = CNST(0.1) 
 
     case(SPEC_JELLI, SPEC_POINT)
-      write(message(1),'(a,a,a)')    'Species "',trim(s%label),'" is a jellium sphere / approximated point particle.'
-      write(message(2),'(a,f11.6)')  '   Valence charge = ', s%z_val
-      write(message(3),'(a,f11.6)')  '   Radius [a.u]   = ', s%jradius
-      write(message(4),'(a,f11.6)')  '   Rs [a.u]       = ', s%jradius * s%z_val ** (-M_ONE/M_THREE)
-      call write_info(4)
+      if(print_info_) then
+        write(message(1),'(a,a,a)')    'Species "',trim(s%label),'" is a jellium sphere / approximated point particle.'
+        write(message(2),'(a,f11.6)')  '   Valence charge = ', s%z_val
+        write(message(3),'(a,f11.6)')  '   Radius [a.u]   = ', s%jradius
+        write(message(4),'(a,f11.6)')  '   Rs [a.u]       = ', s%jradius * s%z_val ** (-M_ONE/M_THREE)
+        call write_info(4)
+      end if
       s%niwfs = 2*s%z_val
       s%omega = CNST(0.1)
 
     case(SPEC_ALL_E)
       s%niwfs = 2*s%z_val
       s%has_density = .true.
-      write(message(1),'(a,a,a)')    'Species "',trim(s%label),'" is an all electron atom.'
-      write(message(2),'(a,f11.6)')  '   Z = ', s%z_val
-      write(message(3),'(a)')  '   Potential will be calulated solving poisson equation'
-      write(message(3),'(a)')  '   Potential will be calulated solving poisson equation'
-      write(message(4),'(a)')  '   for a delta density distribution.'
-      call write_info(4)
-
+      if(print_info_) then
+        write(message(1),'(a,a,a)')    'Species "',trim(s%label),'" is an all electron atom.'
+        write(message(2),'(a,f11.6)')  '   Z = ', s%z_val
+        write(message(3),'(a)')  '   Potential will be calulated solving poisson equation'
+        write(message(3),'(a)')  '   Potential will be calulated solving poisson equation'
+        write(message(4),'(a)')  '   for a delta density distribution.'
+        call write_info(4)
+      end if
     end select
 
     ALLOCATE(s%iwf_l(s%niwfs, ispin), s%niwfs*ispin)

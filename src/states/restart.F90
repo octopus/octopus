@@ -43,30 +43,31 @@ module restart_m
   implicit none
 
   private
-  public ::             &
-    restart_init,       &
-    clean_stop,         &
-    restart_write,      &
-    restart_read,       &
-    restart_format,     &
+  public ::                  &
+    restart_init,            &
+    clean_stop,              &
+    read_free_states,        &
+    restart_write,           &
+    restart_read,            &
+    restart_format,          &
+    restart_dir,             &
     restart_look_and_read,   &
     drestart_write_function, &
     zrestart_write_function, &
-    drestart_read_function, &
-    zrestart_read_function, & 
-    drestart_write_lr_rho, &
-    zrestart_write_lr_rho, &
-    drestart_read_lr_rho, &
+    drestart_read_function,  &
+    zrestart_read_function,  & 
+    drestart_write_lr_rho,   &
+    zrestart_write_lr_rho,   &
+    drestart_read_lr_rho,    &
     zrestart_read_lr_rho
-
   
 
   integer, parameter :: &
     RESTART_NETCDF = 2, &
     RESTART_BINARY = 3
 
-  integer :: restart_format
-
+  integer           :: restart_format
+  character(len=32) :: restart_dir
 
 contains
 
@@ -131,7 +132,24 @@ contains
     case(RESTART_BINARY)
       restart_format = io_function_fill_how("Binary")
     end select
-    
+
+    !%Variable RestartDir
+    !%Type string
+    !%Default ''
+    !%Section Generalities
+    !%Description
+    !% When Octopus reads restart files, e. g. when running a time propagation
+    !% after a ground state calculcation, these files will be read from
+    !% <tt>&lt;RestartDir&gt/</tt>. Usually, <tt>RestartDir</tt> is
+    !% <tt>TmpDir</tt> but in a transport calculation, e. g., the output of
+    !% a peridioc dataset is required to calculate the extended ground state.
+    !%End
+    call loct_parse_string(check_inp('RestartDir'), tmpdir, restart_dir)
+    ! Append "/" if necessary.
+    if(scan(restart_dir, '/', .true.).lt.1) then
+      restart_dir = trim(restart_dir)//'/'
+    end if
+
     call pop_sub()
   end subroutine restart_init
 
@@ -148,7 +166,7 @@ contains
 
     call push_sub('restart.restart_look_and_read')
 
-    call states_look(trim(tmpdir)//'gs', gr%m, kpoints, dim, nst, j)
+    call states_look(trim(restart_dir)//'gs', gr%m, kpoints, dim, nst, j)
     if(j.ne.0) then
       ierr = j
       call pop_sub(); return
@@ -170,7 +188,7 @@ contains
     st%eigenval = huge(REAL_PRECISION)
     st%occ      = M_ZERO
 
-    call restart_read(trim(tmpdir)//'gs', st, gr, geo, ierr)
+    call restart_read(trim(restart_dir)//'gs', st, gr, geo, ierr)
 
     call pop_sub()
   end subroutine restart_look_and_read
@@ -361,7 +379,7 @@ contains
 
     ! Reads out the previous mesh info.
     call read_previous_mesh()
-
+ 
     ! now we really start
     ALLOCATE(filled(st%d%dim, st%st_start:st%st_end, st%d%nik), st%d%dim*st%lnst*st%d%nik)
     filled = .false.
@@ -594,6 +612,144 @@ contains
 
   end subroutine restart_read
 
+
+  ! ---------------------------------------------------------
+  ! When doing an open boundary calculation Octopus needs the
+  ! unscattered states in order to solve the Lippmann-Schwinger
+  ! equation to obtain extended eigenstates.
+  subroutine read_free_states(st, gr)
+    type(states_t),       intent(inout) :: st
+    type(grid_t), target, intent(in)    :: gr
+    
+    integer                    :: k, ik, ist, idim, jst, err, wfns, occs, x_width, x_offset
+    integer                    :: k_ik, k_ist, k_idim, k_index
+    integer                    :: ix, iy, iz, ip, iunit, lead_nr(2, MAX_DIM)
+    character(len=256)         :: line, fname, filename, restart_dir, chars
+    character                  :: char
+    FLOAT                      :: occ, eval, k_x, k_y, k_z, w_k
+    type(simul_box_t), pointer :: sb
+    type(mesh_t), pointer      :: m_lead, m_center
+    CMPLX                      :: phase
+    CMPLX, allocatable         :: tmp(:)
+
+    FLOAT :: trans_e, long_e, e, kx, ky, x, y
+
+!     e = 1.0905190993397482
+
+!     ky = M_PI/(M_TWO*(gr%sb%lsize(2)+gr%sb%h(2)))
+!     kx = sqrt(2 * (e - ky**2*M_HALF))
+
+!     do ip = 1, gr%m%np
+!       x = gr%m%lxyz(ip, 1)*gr%m%h(1)
+!       y = gr%m%lxyz(ip, 2)*gr%m%h(2)
+!       st%zphi(ip, 1, 1, 1) = exp(M_zI*kx*x)*cos(ky*y)
+!     end do
+!     k_index = 1
+!     jst = 1
+!     idim = 1
+    
+    
+
+
+    call push_sub('states.states_read_free_states')
+
+    
+
+    sb       => gr%sb
+    m_lead   => gr%m%lead_unit_cell(LEFT)
+    m_center => gr%m
+    lead_nr(1, :) = m_lead%nr(1, :)+m_lead%enlarge
+    lead_nr(1, :) = m_lead%nr(2, :)-m_lead%enlarge
+
+    ALLOCATE(tmp(m_lead%np_part), m_lead%np_part)
+    restart_dir = trim(sb%lead_restart_dir(LEFT))//'/gs'
+
+    wfns = io_open(trim(restart_dir)//'/wfns', action='read', is_tmp=.true., grp=gr%m%mpi_grp)
+    if(wfns.lt.0) then
+      message(1) = 'Could not read '//trim(restart_dir)//'/wfns.'
+      call write_fatal(1)
+    end if
+    occs = io_open(trim(restart_dir)//'/occs', action='read', is_tmp=.true., grp=gr%m%mpi_grp)
+    if(occs.lt.0) then
+      message(1) = 'Could not read '//trim(restart_dir)//'/occs.'
+      call write_fatal(1)
+    end if
+
+    ! Skip two lines.
+    call iopar_read(gr%m%mpi_grp, wfns, line, err); call iopar_read(gr%m%mpi_grp, wfns, line, err)
+    call iopar_read(gr%m%mpi_grp, occs, line, err); call iopar_read(gr%m%mpi_grp, occs, line, err)
+
+    jst = 1
+    do
+      ! Check for end of file. Check only one of the two files assuming
+      ! they are written correctly, i. e. of same length.
+      call iopar_read(gr%m%mpi_grp, wfns, line, err)
+      read(line, '(a)') char
+      if(char.eq.'%') then
+        exit
+      end if
+      call iopar_backspace(gr%m%mpi_grp, wfns)
+
+      call iopar_read(gr%m%mpi_grp, wfns, line, err)
+      read(line, *) ik, char, ist, char, idim, char, fname
+
+      call iopar_read(gr%m%mpi_grp, occs, line, err)
+      read(line, *) occ, char, eval, char, k_x, char, k_y, char, k_z, char, w_k, char, &
+        chars, char, k_ik, char, k_ist, char, k_idim
+
+      st%ob_d%kpoints(:, k_ik) = (/k_x, k_y, k_z/)
+      st%ob_d%kweights(k_ik)   = w_k
+
+      call zrestart_read_function(trim(sb%lead_restart_dir(LEFT))//'/gs', fname, m_lead, tmp, err)
+
+      if(st%d%ispin.eq.SPIN_POLARIZED) then
+        if(is_spin_up(ik)) then
+          k_index = SPIN_UP
+        else
+          k_index = SPIN_DOWN
+        end if
+      else
+        k_index = 1
+      end if
+
+      ! This loop replicates the lead wavefunction into the central region.
+      ! It only works in this compact form because the transport-direction (x) is
+      ! the index running slowest.          
+      do k = 1, nint(sb%lsize(TRANS_DIR)/gr%sb%lead_unit_cell(LEFT)%lsize(TRANS_DIR))
+        st%zphi((k-1)*m_lead%np+1:k*m_lead%np, idim, jst, k_index) = tmp
+      end do
+
+      ! Apply phase.
+      do ip = 1, NP
+        phase = exp(-M_zI*sum(gr%m%x(ip, 1:MAX_DIM)*st%ob_d%kpoints(1:MAX_DIM, ik)))
+        st%zphi(ip, idim, jst, k_index) = phase*st%zphi(ip, idim, jst, k_index)
+      end do
+
+      ! For debugging: write phi in gnuplot format to files.
+      ! Only the z=0 plane is written, so mainly useful for 1D and 2D
+      ! debugging.
+      if(in_debug_mode) then
+        write(filename, '(a,i3.3,a,i4.4,a,i1.1)') 'phi-', k_index, '-', jst, '-', idim
+        call zoutput_function(output_gnuplot+output_plane_z, 'debug/open_boundaries', filename, &
+          m_center, sb, st%zphi(:, idim, jst, k_index), M_ONE, err, is_tmp=.false.)
+      end if
+
+      jst = jst + 1
+    end do ! Loop over all free states.
+    
+    call io_close(wfns); call io_close(occs)
+    deallocate(tmp)
+
+    
+
+    message(1) = "Info: Sucessfully initialized free states from '"// &
+      trim(sb%lead_restart_dir(LEFT))//"/gs'"
+    call write_info(1)
+
+    call pop_sub()
+  end subroutine read_free_states
+
+
 #include "undef.F90"
 #include "real.F90"
 #include "restart_inc.F90"
@@ -603,6 +759,7 @@ contains
 #include "restart_inc.F90"
 
 end module restart_m
+
 
 !! Local Variables:
 !! mode: f90

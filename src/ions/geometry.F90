@@ -101,21 +101,26 @@ module geometry_m
     integer, pointer :: atoms_node(:)
   end type geometry_t
 
-  interface assignment (=)
+  interface assignment(=)
+    module procedure geometry_copy
+  end interface
+
+  interface assignment(=)
     module procedure atom_copy
   end interface
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine geometry_init(geo)
-    type(geometry_t),            intent(inout) :: geo
+  subroutine geometry_init(geo, print_info)
+    type(geometry_t),  intent(inout) :: geo
+    logical, optional, intent(in)    :: print_info
 
     call push_sub('geometry.geometry_init')
 
     ! initialize geometry
     call geometry_init_xyz(geo)
-    call geometry_init_species(geo)
+    call geometry_init_species(geo, print_info=print_info)
 
     geo%parallel_in_atoms = .false.
 
@@ -255,13 +260,19 @@ contains
   end subroutine geometry_init_xyz
 
   ! ---------------------------------------------------------
-  subroutine geometry_init_species(geo)
-    type(geometry_t), intent(inout) :: geo
+  subroutine geometry_init_species(geo, print_info)
+    type(geometry_t),  intent(inout) :: geo
+    logical, optional, intent(in)    :: print_info
 
+    logical :: print_info_
     integer :: i, j, k, ispin
 
     call push_sub('geometry.geometry_init_species')
 
+    print_info_ = .true.
+    if(present(print_info)) then
+      print_info_ = print_info
+    end if
     ! First, count the species
     geo%nspecies = 0
     atoms1:  do i = 1, geo%natoms
@@ -294,11 +305,15 @@ contains
     if(.not.varinfo_valid_option('SpinComponents', ispin)) call input_error('SpinComponents')
     ispin = min(2, ispin)
 
-    call messages_print_stress(stdout, "Species")
+    if(print_info_) then
+      call messages_print_stress(stdout, "Species")
+    end if
     do i = 1, geo%nspecies
-      call species_init(geo%species(i), ispin)
+      call species_init(geo%species(i), ispin, print_info=print_info_)
     end do
-    call messages_print_stress(stdout)
+    if(print_info_) then
+      call messages_print_stress(stdout)
+    end if
 
     !  assign species
     do i = 1, geo%natoms
@@ -619,12 +634,47 @@ contains
     type(atom_t), intent(out) :: aout
     type(atom_t), intent(in)  :: ain
     aout%label = ain%label
-    aout%spec  = ain%spec
+    aout%spec  => ain%spec
     aout%x     = ain%x
     aout%v     = ain%v
     aout%f     = ain%f
     aout%move  = ain%move
   end subroutine atom_copy
+
+
+  !--------------------------------------------------------------
+  subroutine geometry_copy(geo_out, geo_in)
+    type(geometry_t), intent(out) :: geo_out
+    type(geometry_t), intent(in)  :: geo_in
+
+    call push_sub('geometry.geometry_copy')
+
+    geo_out%natoms = geo_in%natoms
+    ALLOCATE(geo_out%atom(geo_out%natoms), geo_out%natoms)
+    geo_out%atom = geo_in%atom
+
+    geo_out%ncatoms = geo_in%ncatoms
+    ALLOCATE(geo_out%catom(geo_out%ncatoms), geo_out%ncatoms)
+    geo_out%catom(1:geo_out%ncatoms) = geo_in%catom(1:geo_in%ncatoms)
+
+    geo_out%nspecies = geo_in%nspecies
+    ALLOCATE(geo_out%species(geo_out%nspecies), geo_out%nspecies)
+    geo_out%species = geo_in%species
+
+    geo_out%only_user_def     = geo_in%only_user_def
+    geo_out%kinetic_energy    = geo_in%kinetic_energy
+    geo_out%nlpp              = geo_in%nlpp
+    geo_out%nlcc              = geo_in%nlcc
+    geo_out%parallel_in_atoms = geo_in%parallel_in_atoms
+    geo_out%atoms_start       = geo_in%atoms_start
+    geo_out%atoms_end         = geo_in%atoms_end
+    geo_out%nlatoms           = geo_in%nlatoms
+    nullify(geo_out%atoms_range, geo_out%atoms_num, geo_out%atoms_node)
+
+    call pop_sub()
+  end subroutine geometry_copy
+
+
 
 end module geometry_m
 
