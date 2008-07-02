@@ -182,7 +182,7 @@ contains
       call units_init()
       call get_parallel_mask()
       call system_init(sys, parallel_mask)
-      call hamiltonian_init(h, sys%gr, sys%geo, sys%st%d, sys%st%wfs_type, sys%ks%theory_level)
+      call hamiltonian_init(h, sys%gr, sys%geo, sys%st, sys%ks%theory_level)
       call epot_generate(h%ep, sys%gr, sys%geo, sys%st)
       call restart_init()
     end if

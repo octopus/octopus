@@ -68,6 +68,8 @@ module states_m
     states_orthogonalize,             &
     states_fermi,                     &
     states_eigenvalues_sum,           &
+    states_allocate_free_states,      &
+    states_deallocate_free_states,    &
     states_write_eigenvalues,         &
     states_write_dos,                 &
     states_write_bands,               &
@@ -86,6 +88,8 @@ module states_m
     states_dump,                      &
     rotate_states,                    &
     states_freeze_orbitals,           &
+    is_spin_down,                     &
+    is_spin_up,                       &
     assignment(=)
 
 
@@ -134,7 +138,16 @@ module states_m
     FLOAT, pointer :: dpsi(:,:,:,:) ! dpsi(sys%NP_PART, st%d%dim, st%nst, st%d%nik)
     CMPLX, pointer :: zpsi(:,:,:,:) ! zpsi(sys%NP_PART, st%d%dim, st%nst, st%d%nik)
 
-    ! used for the user-defined wavefunctions (they are stored as formula strings)
+    logical            :: open_boundaries
+    CMPLX, pointer     :: zphi(:, :, :, :)  ! Free states for open boundary calculations.
+    FLOAT, pointer     :: ob_eigenval(:, :) ! Eigenvalues of free states.
+    type(states_dim_t) :: ob_d              ! Dims. of the unscattered systems.
+    integer            :: ob_nst            ! nst of the unscattered systems.
+    integer            :: ob_ncs            ! No. of continuum states of open system.
+                                            ! ob_ncs = ob_nst*st%ob_d%nik / st%d%nik
+    FLOAT, pointer     :: ob_occ(:, :)
+
+    ! used for the user defined wavefunctions (they are stored as formula strings)
     character(len=1024), pointer :: user_def_states(:,:,:) ! (st%d%dim, st%nst, st%d%nik)
 
     ! the densities and currents (after all we are doing DFT :)
@@ -177,14 +190,17 @@ module states_m
     type(multicomm_all_pairs_t) :: ap                 ! All-pairs schedule.
   end type states_t
 
-
-
   ! Parameters...
-  integer, public, parameter ::     &
-    UNPOLARIZED    = 1,             &
-    SPIN_POLARIZED = 2,             &
+  integer, public, parameter :: &
+    UNPOLARIZED    = 1,         &
+    SPIN_POLARIZED = 2,         &
     SPINORS        = 3
 
+  ! Spin polarized k indices for non-periodic systems.
+  integer, public, parameter :: &
+    SPIN_DOWN = 1,              &
+    SPIN_UP   = 2
+  
   interface assignment (=)
     module procedure states_copy
   end interface
@@ -215,7 +231,8 @@ contains
     type(geometry_t),  intent(in)    :: geo
 
     FLOAT :: excess_charge
-    integer :: nempty
+    integer :: nempty, ierr, il
+    integer :: ob_k(NLEADS), ob_st(NLEADS), ob_d(NLEADS)
 
     call push_sub('states.states_init')
 
@@ -285,33 +302,96 @@ contains
       call write_fatal(2)
     end if
 
+    ! For non-periodic systems this should just return the Gamma point
+    call states_choose_kpoints(st%d, gr%sb, geo)
+
     call geometry_val_charge(geo, st%val_charge)
     st%qtot = -(st%val_charge + excess_charge)
+
+    st%open_boundaries = .false.
+    ! When doing open boundary calculations the number of free states is
+    ! determined by the previous periodic calculation.
+    if(gr%sb%open_boundaries.and.calc_mode.eq.M_GS) then
+      st%open_boundaries = .true.
+      do il = 1, NLEADS
+        call states_look(trim(gr%sb%lead_restart_dir(il))//'/gs', gr%m, ob_k(il), ob_d(il), ob_st(il), ierr)
+        if(ierr.ne.0) then
+          message(1) = 'Could not read the number of states of the periodic calculation'
+          message(2) = 'from '//trim(gr%sb%lead_restart_dir(il))//'/gs.'
+          call write_fatal(2)
+        end if
+      end do
+      if(ob_k(LEFT).ne.ob_k(RIGHT).or. &
+        ob_st(LEFT).ne.ob_st(LEFT).or. &
+        ob_d(LEFT).ne.ob_d(RIGHT)) then
+        message(1) = 'The number of states for the left and right leads are not equal.'
+        call write_fatal(1)
+      end if
+      st%ob_d%dim = ob_d(LEFT)
+      st%ob_nst   = ob_st(LEFT)
+      st%ob_d%nik = ob_k(LEFT)
+      if((st%d%ispin.eq.UNPOLARIZED.and.st%ob_d%dim.ne.1) .or.   &
+        (st%d%ispin.eq.SPIN_POLARIZED.and.st%ob_d%dim.ne.1) .or. &
+        (st%d%ispin.eq.SPINORS.and.st%ob_d%dim.ne.2)) then
+        message(1) = 'The spin type of the leads calculation from '//gr%sb%lead_restart_dir(LEFT)
+        message(2) = 'and SpinComponents of the current run do not match.'
+        call write_fatal(2)
+      end if
+      ! If the system is spin-polarized one half of the free states
+      ! goes to the spin-up k-index, the other half to the spin-down
+      ! k-index, we therfore divide by st%d%nik.
+      st%ob_ncs = st%ob_d%nik*st%ob_nst / st%d%nik
+      ALLOCATE(st%ob_d%kpoints(MAX_DIM, st%ob_d%nik), MAX_DIM*st%ob_d%nik)
+      ALLOCATE(st%ob_d%kweights(st%ob_d%nik), st%ob_d%nik)
+      ALLOCATE(st%ob_eigenval(st%ob_ncs, st%d%nik), st%ob_ncs*st%d%nik)
+      ALLOCATE(st%ob_occ(st%ob_ncs, st%d%nik), st%ob_ncs*st%d%nik)
+      call read_ob_eigenval_and_occ()
+    else
+      st%ob_nst   = 0
+      st%ob_ncs   = 0
+      st%ob_d%nik = 0
+      st%ob_d%dim = 0
+    end if
 
     select case(st%d%ispin)
     case(UNPOLARIZED)
       st%d%dim = 1
       st%nst = int(st%qtot/2)
       if(st%nst*2 < st%qtot) st%nst = st%nst + 1
-      st%nst = st%nst + nempty
+      st%nst = st%nst + nempty + st%ob_ncs
       st%d%nspin = 1
       st%d%spin_channels = 1
     case(SPIN_POLARIZED)
       st%d%dim = 1
       st%nst = int(st%qtot/2)
       if(st%nst*2 < st%qtot) st%nst = st%nst + 1
-      st%nst = st%nst + nempty
-      st%d%nik = st%d%nik*2
+      st%nst = st%nst + nempty + st%ob_ncs
+      ! st%d%nik = st%d%nik*2
       st%d%nspin = 2
       st%d%spin_channels = 2
     case(SPINORS)
       st%d%dim = 2
       st%nst = int(st%qtot)
       if(st%nst < st%qtot) st%nst = st%nst + 1
-      st%nst = st%nst + nempty
+      st%nst = st%nst + nempty + st%ob_ncs
       st%d%nspin = 4
       st%d%spin_channels = 2
     end select
+
+    ! FIXME: For now, open boundary calculations are only possible for
+    ! continuum states, i. e. for those states treated by the Lippmann-
+    ! Schwinger approach during SCF.
+    if(gr%sb%open_boundaries.and.calc_mode.eq.M_GS) then
+      if(st%nst.ne.st%ob_ncs) then
+        message(1) = 'Open boundary calculations for possibly bound states'
+        message(2) = 'are not possible yet. You have to match your number'
+        message(3) = 'of states to the number of free states of your previous'
+        message(4) = 'periodic run.'
+        write(message(5), '(a,i5,a)') 'Your finite system contributes ', st%nst-st%ob_ncs, ' states,'
+        write(message(6), '(a,i5,a)') 'while your periodic calculation had ', st%ob_ncs, ' states.'
+        call write_fatal(6)
+      end if
+    end if
 
     ! current
     call loct_parse_logical(check_inp('CurrentDFT'), .false., st%d%cdft)
@@ -327,14 +407,11 @@ contains
       call write_info(1)
     end if
 
-    ! For non-periodic systems this should just return the Gamma point
-    call states_choose_kpoints(st%d, gr%sb, geo)
-
     ! Periodic systems require complex wave-functions
     if(simul_box_is_periodic(gr%sb)) st%wfs_type = M_CMPLX
 
-    ! Transport calculations require complex wave-functions.
-    if(calc_mode.eq.M_TD_TRANSPORT) then
+    ! Calculations with open boundaries require complex wavefunctions.
+    if(gr%sb%open_boundaries) then
       st%wfs_type = M_CMPLX
     end if
 
@@ -353,8 +430,8 @@ contains
     ALLOCATE(st%occ     (st%nst, st%d%nik),      st%nst*st%d%nik)
     ALLOCATE(st%eigenval(st%nst, st%d%nik),      st%nst*st%d%nik)
     ALLOCATE(st%momentum(3, st%nst, st%d%nik), 3*st%nst*st%d%nik)
-    st%occ = M_ZERO
     st%eigenval = M_ZERO
+    st%occ      = M_ZERO
     st%momentum = M_ZERO
     ! allocate space for formula strings that define user defined states
     ALLOCATE(st%user_def_states(st%d%dim, st%nst, st%d%nik), st%d%dim*st%nst*st%d%nik)
@@ -370,6 +447,8 @@ contains
     call states_read_initial_occs(st, excess_charge)
     call states_read_initial_spins(st)
 
+    nullify(st%zphi)
+
     st%st_start = 1
     st%st_end = st%nst
     st%lnst = st%nst
@@ -382,7 +461,97 @@ contains
     nullify(st%dpsi, st%zpsi)
 
     call pop_sub()
+
+  contains
+    subroutine read_ob_eigenval_and_occ()
+      integer            :: occs, jst, ist, ik, err
+      FLOAT              :: flt, eigenval, occ
+      character          :: char
+      character(len=256) :: restart_dir, line, chars
+
+      call push_sub('states.read_ob_eigenval')
+
+      restart_dir = trim(gr%sb%lead_restart_dir(LEFT))//'/gs'
+
+      occs = io_open(trim(restart_dir)//'/occs', action='read', is_tmp=.true., grp=gr%m%mpi_grp)
+      if(occs.lt.0) then
+        message(1) = 'Could not read '//trim(restart_dir)//'/occs.'
+        call write_fatal(1)
+      end if
+
+      ! Skip two lines.
+      call iopar_read(gr%m%mpi_grp, occs, line, err); call iopar_read(gr%m%mpi_grp, occs, line, err)
+
+      jst = 1
+      do
+        ! Check for end of file.
+        call iopar_read(gr%m%mpi_grp, occs, line, err)
+        read(line, '(a)') char
+        if(char.eq.'%') then
+          exit
+        end if
+        call iopar_backspace(gr%m%mpi_grp, occs)
+
+        ! Extract eigenvalue.
+        call iopar_read(gr%m%mpi_grp, occs, line, err)
+        read(line, *) occ, char, eigenval, char, flt, char, flt, char, flt, char, &
+          flt, chars, ik, char, ist
+        if(st%d%ispin.eq.SPIN_POLARIZED) then
+          if(is_spin_up(ik)) then
+            st%ob_eigenval(jst, SPIN_UP) = eigenval
+            st%ob_occ(jst, SPIN_UP)      = occ
+          else
+            st%ob_eigenval(jst, SPIN_DOWN) = eigenval
+            st%ob_occ(jst, SPIN_DOWN)      = occ
+          end if
+        else
+          st%ob_eigenval(jst, 1) = eigenval
+          st%ob_occ(jst, 1)      = occ
+        end if
+        jst = jst + 1
+      end do
+
+      call io_close(occs)
+
+      call pop_sub()
+    end subroutine read_ob_eigenval_and_occ
   end subroutine states_init
+
+
+  ! ---------------------------------------------------------
+  ! Allocate free states.
+  subroutine states_allocate_free_states(st, gr)
+    type(states_t), intent(inout) :: st
+    type(grid_t),   intent(in)    :: gr
+
+    call push_sub('states.states_allocate_free_states')
+
+    ! FIXME: spin-polarized free states ignored.
+    if(gr%sb%open_boundaries) then
+      ALLOCATE(st%zphi(NP, st%d%dim, st%ob_ncs, st%d%nik), NP*st%d%dim*st%ob_ncs*st%d%nik)
+      st%zphi = M_z0
+    else
+      nullify(st%zphi)
+    end if
+
+    call pop_sub()
+  end subroutine states_allocate_free_states
+
+
+  ! ---------------------------------------------------------
+  ! Deallocate free states.
+  subroutine states_deallocate_free_states(st, gr)
+    type(states_t), intent(inout) :: st
+    type(grid_t),   intent(in)    :: gr
+
+    call push_sub('states.states_deallocate_free_states')
+
+    if(gr%sb%open_boundaries) then
+      DEALLOC(st%zphi)
+    end if
+
+    call pop_sub()
+  end subroutine states_deallocate_free_states
 
 
   ! ---------------------------------------------------------
@@ -474,22 +643,27 @@ contains
     else
       st%fixed_occ = .false.
 
-      ! first guess for occupation...paramagnetic configuration
-      if(st%d%ispin == UNPOLARIZED) then
-        r = M_TWO
+      if(st%open_boundaries) then
+        st%occ  = st%ob_occ
+        st%qtot = sum(st%occ)
       else
-        r = M_ONE
-      end if
-      st%occ  = M_ZERO
-      st%qtot = M_ZERO
+        ! first guess for occupation...paramagnetic configuration
+        if(st%d%ispin == UNPOLARIZED) then
+          r = M_TWO
+        else
+          r = M_ONE
+        end if
+        st%occ  = M_ZERO
+        st%qtot = M_ZERO
 
-      do j = 1, st%nst
-        do i = 1, st%d%nik
-          st%occ(j, i) = min(r, -(st%val_charge + excess_charge) - st%qtot)
-          st%qtot = st%qtot + st%occ(j, i)
+        do j = 1, st%nst
+          do i = 1, st%d%nik
+            st%occ(j, i) = min(r, -(st%val_charge + excess_charge) - st%qtot)
+            st%qtot = st%qtot + st%occ(j, i)
 
+          end do
         end do
-      end do
+      end if
     end if occ_fix
 
     call smear_init(st%smear, st%d%ispin, st%fixed_occ)
@@ -580,9 +754,10 @@ contains
   ! Allocates the KS wavefunctions defined within an states_t
   ! structure.
   subroutine states_allocate_wfns(st, m, wfs_type)
-    type(states_t), intent(inout) :: st
-    type(mesh_t),    intent(in)    :: m
-    integer, optional, intent(in) :: wfs_type
+    type(states_t),    intent(inout) :: st
+    type(mesh_t),      intent(in)    :: m
+    integer, optional, intent(in)    :: wfs_type
+    !    logical,           intent(in)    :: open_boundaries
 
     integer :: n, ik, ist, idim
     logical :: force
@@ -608,7 +783,7 @@ contains
     !%
     !%End
     call loct_parse_logical(check_inp('ForceComplex'), .false., force)
-    
+
     if(force) st%wfs_type = M_CMPLX
 
     n = m%np_part * st%d%dim * st%lnst * st%d%nik
@@ -639,9 +814,7 @@ contains
           end do
         end do
       end do
-
     end if
-
     call pop_sub()
   end subroutine states_allocate_wfns
 
@@ -663,6 +836,7 @@ contains
     call pop_sub()
   end subroutine states_deallocate_wfns
 
+
   ! ---------------------------------------------------------
   ! This routine transforms the orbitals of state "st", according
   ! to the transformation matrix "u".
@@ -683,12 +857,12 @@ contains
     if(st%wfs_type == M_REAL) then
       do ik = 1, st%d%nik
         call lalg_gemm(mesh%np_part*st%d%dim, st%nst, stin%nst, M_ONE, stin%dpsi(:, :, 1:stin%nst, ik), &
-                       transpose(real(u(:, :), REAL_PRECISION)), M_ZERO, st%dpsi(:, :, :, ik))
+          transpose(real(u(:, :), REAL_PRECISION)), M_ZERO, st%dpsi(:, :, :, ik))
       end do
     else
       do ik = 1, st%d%nik
         call lalg_gemm(mesh%np_part*st%d%dim, st%nst, stin%nst, M_z1, stin%zpsi(:, :, 1:stin%nst, ik), &
-                       transpose(u(:, :)), M_z0, st%zpsi(:, :, :, ik))
+          transpose(u(:, :)), M_z0, st%zpsi(:, :, :, ik))
       end do
     end if
 
@@ -779,7 +953,7 @@ contains
           message(2) = 'five or six columns.'
           call write_fatal(2)
         end if
-        
+
         call loct_parse_block_int(blk, ib-1, 0, idim)
         call loct_parse_block_int(blk, ib-1, 1, inst)
         call loct_parse_block_int(blk, ib-1, 2, inik)
@@ -933,6 +1107,7 @@ contains
   ! ---------------------------------------------------------
   subroutine states_dim_end(d)
     type(states_dim_t), intent(inout) :: d
+
     if(associated(d%kpoints)) then
       deallocate(d%kpoints); nullify(d%kpoints)
     end if
@@ -1115,6 +1290,9 @@ contains
     end if
 
     call states_dim_end(st%d)
+    if(st%open_boundaries) then
+      call states_dim_end(st%ob_d)
+    end if
 
     if(associated(st%user_def_states)) then
       deallocate(st%user_def_states); nullify(st%user_def_states)
@@ -1127,6 +1305,11 @@ contains
       nullify(st%st_num)
       deallocate(st%ap%schedule)
       nullify(st%ap%schedule)
+    end if
+
+    if(associated(st%zphi)) then
+      deallocate(st%zphi)
+      nullify(st%zphi)
     end if
 
     call pop_sub()
@@ -1161,7 +1344,7 @@ contains
       else
         do ip = 1, np
           rho(ip, 1) = rho(ip, 1) + st%d%kweights(ik)*st%occ(ist, ik)*&
-               (real(st%zpsi(ip, 1, ist, ik), REAL_PRECISION)**2 + aimag(st%zpsi(ip, 1, ist, ik))**2)
+            (real(st%zpsi(ip, 1, ist, ik), REAL_PRECISION)**2 + aimag(st%zpsi(ip, 1, ist, ik))**2)
         end do
       end if
 
@@ -1174,20 +1357,20 @@ contains
         else
           do ip = 1, np
             rho(ip, 2) = rho(ip, 2) + st%d%kweights(ik + 1)*st%occ(ist, ik + 1)*&
-                 (real(st%zpsi(ip, 1, ist, ik + 1), REAL_PRECISION)**2 + aimag(st%zpsi(ip, 1, ist, ik + 1))**2)
+              (real(st%zpsi(ip, 1, ist, ik + 1), REAL_PRECISION)**2 + aimag(st%zpsi(ip, 1, ist, ik + 1))**2)
           end do
         end if
       case(SPINORS) ! in this case wave-functions are always complex
         do ip = 1, np
           rho(ip, 2) = rho(ip, 2) + st%d%kweights(ik)*st%occ(ist, ik)*&
-               (real(st%zpsi(ip, 2, ist, ik), REAL_PRECISION)**2 + aimag(st%zpsi(ip, 2, ist, ik))**2)
-          
+            (real(st%zpsi(ip, 2, ist, ik), REAL_PRECISION)**2 + aimag(st%zpsi(ip, 2, ist, ik))**2)
+
           c = st%d%kweights(ik)*st%occ(ist, ik)*st%zpsi(ip, 1, ist, ik)*conjg(st%zpsi(ip, 2, ist, ik))
           rho(ip, 3) = rho(ip, 3) + real(c, REAL_PRECISION)
           rho(ip, 4) = rho(ip, 4) + aimag(c)
         end do
       end select
-      
+
     end do
 
     call profiling_out(prof)
@@ -2428,6 +2611,32 @@ contains
     call states_end(staux)
     call pop_sub()
   end subroutine states_freeze_orbitals
+
+
+  ! ---------------------------------------------------------
+  ! Returns if k-point ik denotes spin-up, in spin-polarized case.
+  logical function is_spin_up(ik)
+    integer, intent(in) :: ik
+
+    call push_sub('states.is_spin_up')
+
+    is_spin_up = even(ik)
+
+    call pop_sub()
+  end function is_spin_up
+
+
+  ! ---------------------------------------------------------
+  ! Returns if k-point ik denotes spin-down, in spin-polarized case.
+  logical function is_spin_down(ik)
+    integer, intent(in) :: ik
+
+    call push_sub('states.is_spin_down')
+
+    is_spin_down = odd(ik)
+
+    call pop_sub()
+  end function is_spin_down
 
 
 #include "states_kpoints.F90"
