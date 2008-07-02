@@ -76,11 +76,11 @@ subroutine X(restart_write_lr_rho)(lr, gr, nspin, restart_dir, rho_tag)
 end subroutine X(restart_write_lr_rho)
 
 
-subroutine X(restart_read_lr_rho)(lr, gr, nspin, restart_dir, rho_tag, ierr)
+subroutine X(restart_read_lr_rho)(lr, gr, nspin, restart_subdir, rho_tag, ierr)
   type(lr_t),        intent(inout) :: lr
   type(grid_t),      intent(in)    :: gr
   integer,           intent(in)    :: nspin
-  character(len=*),  intent(in)    :: restart_dir
+  character(len=*),  intent(in)    :: restart_subdir
   character(len=*),  intent(in)    :: rho_tag
   integer,           intent(out)   :: ierr
 
@@ -90,7 +90,7 @@ subroutine X(restart_read_lr_rho)(lr, gr, nspin, restart_dir, rho_tag, ierr)
   ierr = 0;
   do is = 1, nspin
     write(fname, '(a, i1,a)') trim(rho_tag)//'_', is
-    call X(restart_read_function)(trim(tmpdir)//trim(restart_dir), fname, gr%m,&
+    call X(restart_read_function)(trim(restart_dir)//trim(restart_subdir), fname, gr%m,&
          lr%X(dl_rho)(:, is), s_ierr)
     if( s_ierr /=0 ) ierr = s_ierr;
   end do

@@ -78,18 +78,18 @@ contains
 
     if(fromscratch) sys%st%nst = occupied_states !only read occupied states
 
-    call restart_read (trim(tmpdir)//'gs', sys%st, sys%gr, sys%geo, ierr)
+    call restart_read (trim(restart_dir)//'gs', sys%st, sys%gr, sys%geo, ierr)
 
     if(fromscratch) sys%st%nst = total_states
 
     if( (ierr .ne. 0)  .and.  (ierr < occupied_states) ) then
-      message(1) = "Not all the occupied KS orbitals could be read from '"//trim(tmpdir)//"gs'"
+      message(1) = "Not all the occupied KS orbitals could be read from '"//trim(restart_dir)//"gs'"
       message(2) = "Please run a ground-state calculation first!"
       call write_fatal(2)
     end if
 
     if(ierr.ne.0) then
-      message(1) = "Info:  Could not load all wave-functions from '"//trim(tmpdir)//"gs'"
+      message(1) = "Info:  Could not load all wave-functions from '"//trim(restart_dir)//"gs'"
       call write_info(1)
     end if
 

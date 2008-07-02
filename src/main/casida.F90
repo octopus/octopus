@@ -96,9 +96,9 @@ contains
     message(1) = 'Info: Starting linear response calculation.'
     call write_info(1)
 
-    call restart_look_and_read(trim(tmpdir)//'gs', sys%st, sys%gr, sys%geo, ierr)
+    call restart_look_and_read(trim(restart_dir)//'gs', sys%st, sys%gr, sys%geo, ierr)
     if(ierr.ne.0) then
-      message(1) = 'Could not properly read wave-functions from "'//trim(tmpdir)//'gs".'
+      message(1) = 'Could not properly read wave-functions from "'//trim(restart_dir)//'gs".'
       call write_fatal(1)
     end if
 

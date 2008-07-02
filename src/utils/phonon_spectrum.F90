@@ -221,7 +221,8 @@ contains
     if(ini_iter == 0 ) ini_iter = 1
     end_iter = iter - 1
 
-    write (message(1), '(a)') "Read velocities from 'td.general/coordinates'"
+    write (message(1), '(a)') "Read velocities from '"// &
+      trim(io_workpath('td.general/coordinates'))//"'"
     call write_info(1)
     
     deallocate(vini)
@@ -266,7 +267,8 @@ contains
     if(ini_iter == 0 ) ini_iter = 1
     end_iter = iter - 1
 
-    write (message(1), '(a)') "Read dipole moment from 'td.general/multipoles'"
+    write (message(1), '(a)') "Read dipole moment from '"// &
+      trim(io_workpath('td.general/multipoles'))//"'."
     call write_info(1)
   end subroutine read_dipole
   

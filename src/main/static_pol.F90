@@ -74,12 +74,13 @@ contains
     call init_()
 
     ! load wave-functions
-    call restart_read(trim(tmpdir)//'gs', sys%st, gr, sys%geo, ierr)
+    call restart_read(trim(restart_dir)//'gs', sys%st, gr, sys%geo, ierr)
 
     if(ierr.ne.0) then
-      message(1) = "Could not read KS orbitals from '"//trim(tmpdir)//"gs'"
-      message(2) = "Please run a ground-state calculation first!"
-      call write_fatal(2)
+      message(1) = "Could not read KS orbitals from '"//trim(restart_dir)//"gs'"
+      message(2) = "Please run a ground-state calculation first and/or"
+      message(3) = "Give the correct RestartDataset in the input file."
+      call write_fatal(3)
     end if
 
     ! setup Hamiltonian

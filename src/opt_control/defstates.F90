@@ -58,7 +58,7 @@
     case(oct_is_groundstate) 
       message(1) =  'Info: Using Ground State for InitialState'
       call write_info(1)
-      call restart_read(trim(tmpdir)//'gs', initial_state, gr, geo, ierr)
+      call restart_read(trim(restart_dir)//'gs', initial_state, gr, geo, ierr)
 
     case(oct_is_excited)  
       message(1) = 'Error: using an excited state as the starting state for an '

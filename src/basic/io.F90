@@ -202,7 +202,7 @@ contains
     !% The name of the directory where octopus stores binary information
     !% like the wave-functions.
     !%End
-    call loct_parse_string('TmpDir', 'restart/', tmpdir)
+    call loct_parse_string('TmpDir', trim(current_label)//'restart/', tmpdir)
     call io_mkdir(tmpdir, is_tmp=.true.)
 
     ! create static directory

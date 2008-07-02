@@ -700,7 +700,7 @@ module opt_control_propagation_m
     do j = 1, prop%number_checkpoints + 2
       if(prop%iter(j) .eq. iter) then
         write(filename,'(a,i4.4)') trim(prop%dirname)//'/', j
-        call restart_write(trim(filename), psi, gr, ierr, iter)
+        call restart_write(io_workpath(filename), psi, gr, ierr, iter)
       end if
     end do
 

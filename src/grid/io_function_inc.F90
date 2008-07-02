@@ -441,7 +441,10 @@ contains
   end subroutine out_plain
 
   subroutine out_binary()
-    call write_binary(m%np_global, f, out_type, ierr, trim(dir)//'/'//trim(fname)//'.obf')
+    character(len=256) :: workdir
+
+    workdir = io_workpath(dir, is_tmp=is_tmp)
+    call write_binary(m%np_global, f, out_type, ierr, trim(workdir)//'/'//trim(fname)//'.obf')
 
   end subroutine out_binary
 

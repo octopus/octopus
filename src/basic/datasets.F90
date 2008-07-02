@@ -146,7 +146,7 @@ contains
     character(len = * ), intent(in)  :: variable
     character(len = 64)              :: composite_name
 
-    composite_name = trim(dataset_label(current_dataset))//trim(variable)
+    composite_name = trim(current_label)//trim(variable)
 
     if(loct_parse_isdef(composite_name).ne.0) then
       ! composite name has been defined in the input file

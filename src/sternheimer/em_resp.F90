@@ -499,10 +499,10 @@ contains
 
     call push_sub('em_resp.read_wfs')
 
-    call states_look(trim(tmpdir)//'gs', gr%m, kpoints, dim, nst, ierr)
+    call states_look(trim(restart_dir)//'gs', gr%m, kpoints, dim, nst, ierr)
 
     if(ierr.ne.0) then
-      message(1) = 'Could not properly read wave-functions from "'//trim(tmpdir)//'gs".'
+      message(1) = 'Could not properly read wave-functions from "'//trim(restart_dir)//'gs".'
       call write_fatal(1)
     end if
 
@@ -527,9 +527,9 @@ contains
     st%occ      = M_ZERO
 
     ! load wave-functions
-    call restart_read(trim(tmpdir)//'gs', st, gr, geo, ierr)  
+    call restart_read(trim(restart_dir)//'gs', st, gr, geo, ierr)  
     if(ierr.ne.0) then
-      message(1) = "Could not read KS orbitals from '"//trim(tmpdir)//"gs'"
+      message(1) = "Could not read KS orbitals from '"//trim(restart_dir)//"gs'"
       message(2) = "Please run a calculation of the ground state first!"
       call write_fatal(2)
     end if

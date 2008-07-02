@@ -48,7 +48,7 @@ program rotational_strength
   in_file = io_open('angular', action='read', status='old', die=.false.)
   if(in_file < 0) in_file = io_open('td.general/angular', action='read', status='old', die=.false.)
   if(in_file < 0) then
-    write(message(1),'(a)') 'No "angular" or "td.general/angular" file found. At least one of those'
+    write(message(1),'(a)') 'No "angular" or "'//trim(io_workpath('td.general/angular'))//'" file found. At least one of those'
     write(message(2),'(a)') 'should be visible.'
     call write_fatal(2)
   end if

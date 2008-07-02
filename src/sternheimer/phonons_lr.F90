@@ -119,7 +119,7 @@ contains
       if (.not. fromscratch) then
         message(1) = "Loading restart wave functions for linear response."
         call write_info(1)
-        call restart_read(trim(tmpdir)//'vib_modes/'//trim(phn_wfs_tag(iatom, idir))//'_1',&
+        call restart_read(trim(restart_dir)//'vib_modes/'//trim(phn_wfs_tag(iatom, idir))//'_1',&
           st, gr, geo, ierr, lr = lr(1))
       end if
       
@@ -282,7 +282,7 @@ contains
 
             imat = vibrations_get_index(vib, iatom, idir)
 
-            call restart_read(trim(tmpdir)//'vib_modes/'//trim(phn_wfs_tag(iatom, idir))//'_1',&
+            call restart_read(trim(restart_dir)//'vib_modes/'//trim(phn_wfs_tag(iatom, idir))//'_1',&
                  st, gr, geo, ierr, lr = lrtmp)
             
             do ik = 1, st%d%nik
@@ -299,8 +299,8 @@ contains
           end do
         end do
         
-        call restart_write(trim(tmpdir)//'vib_modes/'//trim(phn_nm_wfs_tag(inm))//'_1',&
-             st, gr, ierr, lr = lr(1))
+        call restart_write(io_workpath(trim(tmpdir)//'vib_modes/'//trim(phn_nm_wfs_tag(inm))//'_1'), &
+          st, gr, ierr, lr = lr(1))
         
       end do
 
@@ -324,9 +324,9 @@ contains
 
     call push_sub('em_resp.read_wfs')
 
-    call states_look(trim(tmpdir)//'gs', gr%m, kpoints, dim, nst, ierr)
+    call states_look(trim(restart_dir)//'gs', gr%m, kpoints, dim, nst, ierr)
     if(ierr.ne.0) then
-      message(1) = 'Could not properly read wave-functions from "'//trim(tmpdir)//'gs".'
+      message(1) = 'Could not properly read wave-functions from "'//trim(restart_dir)//'gs".'
       call write_fatal(1)
     end if
 
@@ -351,9 +351,9 @@ contains
     st%occ      = M_ZERO
 
     ! load wave-functions
-    call restart_read(trim(tmpdir)//'gs', st, gr, geo, ierr)
+    call restart_read(trim(restart_dir)//'gs', st, gr, geo, ierr)
     if(ierr.ne.0) then
-      message(1) = "Could not read KS orbitals from '"//trim(tmpdir)//"gs'"
+      message(1) = "Could not read KS orbitals from '"//trim(restart_dir)//"gs'"
       message(2) = "Please run a calculation of the ground state first!"
       call write_fatal(2)
     end if

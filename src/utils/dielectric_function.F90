@@ -79,7 +79,7 @@ program dielectric_function
   call io_skip_header(in_file)
   call count_time_steps(in_file, time_steps, dt)
   if(in_file < 0) then 
-    message(1) = "Can not open file 'td.general/gauge_field'"
+    message(1) = "Cannot open file '"//trim(io_workpath('td.general/gauge_field'))//"'"
     call write_fatal(1)
   end if
 
@@ -93,7 +93,8 @@ program dielectric_function
 
   call io_close(in_file)
 
-  write(message(1), '(a, i7, a)') "Info: Read ", time_steps, " steps from file td.general/gauge_field"
+  write(message(1), '(a, i7, a)') "Info: Read ", time_steps, " steps from file '"// &
+    trim(io_workpath('td.general/gauge_field'))//"'"
   call write_info(1)
 
 

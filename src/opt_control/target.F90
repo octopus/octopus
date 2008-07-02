@@ -139,9 +139,9 @@ module opt_control_target_m
       message(1) =  'Info: Using Ground State for TargetOperator'
       call write_info(1)
       target%mode = oct_targetmode_static
-      call restart_read(trim(tmpdir)//'gs', target%st, gr, geo, ierr)
+      call restart_read(trim(restart_dir)//'gs', target%st, gr, geo, ierr)
       if(ierr.ne.0) then
-        write(message(1),'(a)') 'Could not read ground-state wavefunctions from '//trim(tmpdir)//'gs.'
+        write(message(1),'(a)') 'Could not read ground-state wavefunctions from '//trim(restart_dir)//'gs.'
         call write_fatal(1)
       end if
       
@@ -151,7 +151,7 @@ module opt_control_target_m
       call write_info(1)
       target%mode = oct_targetmode_static
 
-      call states_look (trim(tmpdir)//'gs', gr%m, ip, ip, target%st%nst, ierr)
+      call states_look (trim(restart_dir)//'gs', gr%m, ip, ip, target%st%nst, ierr)
       target%st%st_start = 1
       target%st%st_end   = target%st%nst
       deallocate(target%st%occ, target%st%eigenval, target%st%momentum, target%st%node)
@@ -166,9 +166,9 @@ module opt_control_target_m
       call states_allocate_wfns(target%st, gr%m, M_CMPLX)
       target%st%node(:)  = 0
 
-      call restart_read(trim(tmpdir)//'gs', target%st, gr, geo, ierr)
+      call restart_read(trim(restart_dir)//'gs', target%st, gr, geo, ierr)
       if(ierr.ne.0) then
-        write(message(1),'(a)') 'Could not read ground-state wavefunctions from '//trim(tmpdir)//'gs.'
+        write(message(1),'(a)') 'Could not read ground-state wavefunctions from '//trim(restart_dir)//'gs.'
         call write_fatal(1)
       end if
       call excited_states_init(target%est, target%st, "oct-excited-state-target") 

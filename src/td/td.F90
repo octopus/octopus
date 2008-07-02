@@ -322,7 +322,7 @@ contains
           call messages_print_stress(stdout, 'Recalculating the ground state.')
           fromScratch = .false.
           call ground_state_run(sys, h, fromScratch)
-          call restart_read(trim(tmpdir)//'td', st, gr, geo, ierr, i)
+          call restart_read(trim(restart_dir)//'td', st, gr, geo, ierr, i)
           call messages_print_stress(stdout, "Time-Dependent simulation proceeds")
           if(td%dynamics /= CP) then 
             write(message(1), '(a7,1x,a14,a14,a17)') 'Iter ', 'Time ', 'Energy ', 'Elapsed Time '
@@ -369,7 +369,7 @@ contains
         call cpmd_restart_read(td%cp_propagator, gr, st, ierr)
 
         if(ierr.ne.0) then
-          message(1) = "Could not load "//trim(tmpdir)//"td/cpmd: Starting from scratch"
+          message(1) = "Could not load "//trim(restart_dir)//"td/cpmd: Starting from scratch"
           call write_warning(1)
           
           fromScratch = .true.
@@ -397,9 +397,9 @@ contains
       if(fromScratch) then
 
         if(.not. st%only_userdef_istates) then
-          call restart_read(trim(tmpdir)//'gs', st, gr, geo, ierr)
+          call restart_read(trim(restart_dir)//'gs', st, gr, geo, ierr)
           if(ierr.ne.0) then
-            message(1) = "Could not read KS orbitals from '"//trim(tmpdir)//"gs'"
+            message(1) = "Could not read KS orbitals from '"//trim(restart_dir)//"gs'"
             message(2) = "Please run a ground-state calculation first!"
             call write_fatal(2)
           end if
@@ -637,11 +637,11 @@ contains
 
       record_length = 28 + 3*geo%natoms*3*20
       call io_assign(iunit)
-      open(unit = iunit, file = 'td.general/coordinates', &
+      open(unit = iunit, file = io_workpath('td.general/coordinates'), &
         action='read', status='old', recl = record_length)
       if(iunit < 0) then
-        message(1) = "Could not open file 'td.general/coordinates'"
-        message(2) = "Starting simulation from initial geometry"
+        message(1) = "Could not open file '"//trim(io_workpath('td.general/coordinates'))//"'."
+        message(2) = "Starting simulation from initial geometry."
         call write_warning(2)
         return
       end if
@@ -679,11 +679,11 @@ contains
 
       record_length = 28 + 3*3*20
       call io_assign(iunit)
-      open(unit = iunit, file = 'td.general/gauge_field', &
+      open(unit = iunit, file = io_workpath('td.general/A_gauge'), &
         action='read', status='old', recl = record_length)
       if(iunit < 0) then
-        message(1) = "Could not open file 'td.general/gauge_field'"
-        message(2) = "Starting simulation from initial value"
+        message(1) = "Could not open file '"//trim(io_workpath('td.general/A_gauge'))//"'."
+        message(2) = "Starting simulation from initial values."
         call write_warning(2)
         return
       end if
