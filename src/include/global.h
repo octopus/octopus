@@ -65,6 +65,8 @@
      CARDINAL
 #endif
 
+#define DEALLOC(x) if(associated(x)) then; deallocate(x); nullify(x); end if
+
 #define REAL_DOUBLE real(8)
 #define REAL_SINGLE real(4)
 
