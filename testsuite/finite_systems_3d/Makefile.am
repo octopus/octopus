@@ -73,6 +73,7 @@ dist_share_DATA = \
 	20-eigensolver.03-cg_new.inp \
 	20-eigensolver.04-plan.inp \
 	20-eigensolver.05-evolution.inp \
+	20-eigensolver.06-rmmdiis.inp \
 	20-eigensolver.test \
 	21-lobpcg.01-spin_polarized.inp \
 	21-lobpcg.test \
