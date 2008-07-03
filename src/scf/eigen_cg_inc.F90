@@ -135,7 +135,11 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, ver
         ! Orthogonalize to lowest eigenvalues (already calculated)
         if(p > 1) call X(states_gram_schmidt)(gr%m, p - 1, st%d%dim, st%X(psi)(:, :, :, ik), g, normalize = .false.)
 
-        if(iter .ne. 1) gg1 = X(states_dotp) (gr%m, st%d%dim, g, g0, reduce = .false.)
+        if(iter .ne. 1) then
+          gg1 = X(states_dotp) (gr%m, st%d%dim, g, g0, reduce = .false.)
+        else
+          gg1 = M_ZERO
+        end if
 
         ! Approximate inverse preconditioner...
         call  X(preconditioner_apply)(pre, gr, h, g(:,:), g0(:,:))
