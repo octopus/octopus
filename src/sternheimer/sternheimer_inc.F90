@@ -148,7 +148,7 @@ subroutine X(sternheimer_solve)(                           &
       end do !ist
     end do !ik
 
-    if (this%add_fxc == .false. .and. this%add_hartree == .false.) then
+    if (.not.(this%add_fxc.or.this%add_hartree)) then
     ! no need to deal with density, mixing, SCF iterations, etc.
     ! convergence criterion is now about individual states, rather than SCF residual
       this%ok = states_conv
