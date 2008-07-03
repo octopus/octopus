@@ -1,0 +1,74 @@
+# -*- coding: utf-8 -*-
+#
+# $Id$
+#
+# Calculate eigenstates of 2D ring potential attached to upside-down Gaussian
+# shaped lead channels.
+
+%CalculationMode
+ gs      | gs
+ "lead_" | "ring_lead_"
+ 1       | 2
+%
+
+FromScratch = yes
+TheoryLevel = independent_particles
+
+BoxShape = parallelepiped
+DerivativesOrder = 1
+Dimensions = 2
+Spacing = 0.1
+Lx = 8
+Ly = 3
+
+D = 0.9 # Radius of the ring.
+W = 0.2 # Width of the channel.
+V = 10  # Depth of the potential.
+
+%Species
+ "channel" | 1.0 | user_defined | 1.0 | "V*step(x+lead_Lx+0.5*Spacing)*(1-step(x-0.5*Spacing))*(-exp(-y^2/W))"
+ "lchan"   | 1.0 | user_defined | 1.0 | "V*step(x+Lx-D+0.5*Spacing)*(1-step(x))*(-exp(-y^2/W))*(1-exp(-(sqrt((x-D)^2+y^2)-D)^2/W))"
+ "rchan"   | 1.0 | user_defined | 1.0 | "V*(1-step(x-Lx+D+0.5*Spacing))*step(x)*(-exp(-y^2/W))*(1-exp(-(sqrt((x+D)^2+y^2)-D)^2/W))"
+ "ring"    | 1.0 | user_defined | 1.0 | "-V*exp(-(sqrt(x^2+y^2)-D)^2/W)"
+%
+
+add_ucells = 10
+%ring_lead_OpenBoundaries
+ lead_dataset     | "lead_"
+ lead_restart_dir | "lead_restart"
+ add_unit_cells   | add_ucells
+%
+ring_lead_ExcessCharge = 5+2*add_ucells
+
+lead_PeriodicDimensions = 1
+%lead_coordinates
+ "channel" | 0 | 0 | 0
+%
+
+lead_Lx = Spacing
+%lead_Lsize
+ lead_Lx | Ly | 0
+%
+
+%lead_KPoints
+ 1 | 0.25 | 0 | 0
+ 1 | 0.5  | 0 | 0
+ 1 | 0.75 | 0 | 0
+ 1 | 1.0  | 0 | 0
+%
+
+%ring_lead_Lsize
+ Lx | Ly | 0
+%
+
+%ring_lead_Coordinates
+ "lchan" | -D | 0 | 0
+ "ring"  |  0 | 0 | 0
+ "rchan" |  D | 0 | 0
+%
+
+PoissonSolver = fft
+ring_lead_EigenSolverMaxIter = 5000
+
+Output = potential
+OutputHow = binary
