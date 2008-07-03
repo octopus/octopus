@@ -84,7 +84,7 @@ subroutine td_calc_tacc(gr, geo, st, h, acc, t)
       xzpsi = M_z0
       do k = 1, NP
         do j = 1, NDIM
-          xzpsi(k, 1:st%d%dim, j) = gr%m%x(j, k) * st%zpsi(k, 1:st%d%dim, ist, ik)
+          xzpsi(k, 1:st%d%dim, j) = gr%m%x(k, j)*st%zpsi(k, 1:st%d%dim, ist, ik)
         end do
       end do
 
@@ -93,7 +93,7 @@ subroutine td_calc_tacc(gr, geo, st, h, acc, t)
         call zvnlpsi(h, gr, xzpsi(:,:, j), vnl_xzpsi(:,:), ik)
 
         do idim = 1, st%d%dim
-          conj = conjg(hzpsi(:, idim))
+          conj = conjg(hzpsi(1:NP, idim))
           x(j) = x(j) - 2*st%occ(ist, ik)*zmf_dotp(gr%m, conj, vnl_xzpsi(:, idim) )
         end do
       end do
@@ -101,7 +101,7 @@ subroutine td_calc_tacc(gr, geo, st, h, acc, t)
       xzpsi = M_z0
       do k = 1, NP
         do j = 1, NDIM
-          xzpsi(k, 1:st%d%dim, j) = gr%m%x(j, k) * hzpsi(k, 1:st%d%dim)
+          xzpsi(k, 1:st%d%dim, j) = gr%m%x(k, j)*hzpsi(k, 1:st%d%dim)
         end do
       end do
 
@@ -109,7 +109,7 @@ subroutine td_calc_tacc(gr, geo, st, h, acc, t)
         vnl_xzpsi = M_z0
         call zvnlpsi(h, gr, xzpsi(:,:, j), vnl_xzpsi(:,:), ik)
         do idim = 1, st%d%dim
-          conj = conjg(st%zpsi(:, idim, ist, ik))
+          conj = conjg(st%zpsi(1:NP, idim, ist, ik))
           x(j) = x(j) + 2*st%occ(ist, ik)* &
             zmf_dotp(gr%m, conj, vnl_xzpsi(:, idim) )
         end do
