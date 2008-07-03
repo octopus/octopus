@@ -354,7 +354,7 @@ sub find_executables(){
 
   # Die if not suitable executable was found.
   if( @executables == 0 ){
-    print stderr "$color_start{blue} ***** $test{\"name\"} ***** $color_end{blue} \n\n";
+    print stderr "$color_start{blue} ***** $name ***** $color_end{blue} \n\n";
     print stderr "$color_start{red}No valid executable$color_end{red} found for $opt_f\n";
     print stderr "Skipping ... \n\n";
     exit 255;
