@@ -36,7 +36,7 @@ subroutine X(subspace_diag)(gr, st, h, diff)
 #ifdef HAVE_MPI
   if(st%parallel_in_states) then
     call X(subspace_diag_par_states)(gr, st, h, diff)
-  end if
+  else
 #endif
 
   ALLOCATE(h_subspace(st%nst, st%nst), st%nst*st%nst)
@@ -82,6 +82,10 @@ subroutine X(subspace_diag)(gr, st, h, diff)
 
   deallocate(f, h_subspace, vec)
 
+#ifdef HAVE_MPI
+  end if
+#endif
+
   call profiling_out(diagon_prof)
   call pop_sub()
 
@@ -107,7 +111,7 @@ subroutine X(subspace_diag_par_states)(gr, st, h, diff)
   FLOAT               :: ldiff(st%lnst)
 #endif
 
-  call push_sub('eigen_inc.Xeigen_diagon_subspace')
+  call push_sub('subspace_inc.Xsubspace_diag_par_states')
 
   ALLOCATE(h_subspace(st%nst, st%nst), st%nst*st%nst)
   ALLOCATE(vec(st%nst, st%nst), st%nst*st%nst)
