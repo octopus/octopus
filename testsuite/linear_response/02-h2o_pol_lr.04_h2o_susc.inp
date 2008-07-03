@@ -22,6 +22,7 @@ RespPerturbationType = magnetic
 
 LinearSolverMaxIter = 100
 LinearSolverTol     = 1e-6
+LinearSolver        = qmr
 
 #LinearSolverInitTol = 1e-6
 #HamiltonianVariation = no

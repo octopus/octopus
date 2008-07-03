@@ -124,7 +124,7 @@ contains
       ! load wave-functions
       if(.not.fromScratch) then
          str_tmp =  kdotp_wfs_tag(idir)
-         write(dirname,'(3a, i1)') RESTART_DIR, trim(str_tmp), '_1'
+         write(dirname,'(3a)') RESTART_DIR, trim(str_tmp), '_1'
          ! 1 is the sigma index which is used in em_resp
          call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, &
                ierr, lr=kdotp_vars%lr(idir, 1))
@@ -236,37 +236,87 @@ contains
     type(grid_t),         intent(inout) :: gr
     type(kdotp_t),        intent(inout) :: kdotp_vars
 
-    character(len=80) :: filename
-    integer :: iunit, ik, ist
+    character(len=80) :: filename, tmp
+    integer :: iunit, ik, ist, ist2, ik2, ispin
     FLOAT :: determinant
 
+    call messages_print_stress(stdout, 'Degenerate subspaces')
+
     do ik = 1, st%d%nik
-        write(filename, '(a, a)') 'kdotp/kpoint_', int2str(ik)
-        iunit = io_open(trim(filename), action='write')
-        write(iunit,'(a, a)') '# k-point index = ', int2str(ik)
-        write(iunit,'(a, 3f12.8)') '# k-point coordinates = ', st%d%kpoints(1:MAX_DIM, ik)
-        if (.not.kdotp_vars%ok) write(iunit, '(a)') "# WARNING: not converged"      
+      ! figure out the actual spin and k-point
+      ! this is not as elegant as using mod and int, but much easier to understand
+      if (st%d%nspin == 1) then
+        ispin = 1
+        ik2 = ik
+      else
+        if (mod(ik, 2) == 1) then
+           ispin = 1
+           ik2 = (ik + 1) / 2
+        else
+           ispin = 2
+           ik2 = ik / 2
+        endif
+      endif
 
+!      write(*,*) 'ik = ', ik, ', ispin = ', ispin, ', ik2 = ', ik2
+
+      tmp = int2str(ik2)
+      write(*, '(3a, i1)') 'k-point ', trim(tmp), ', spin ', ispin 
+
+      ist = 1
+      do while (ist <= st%nst)
+      ! test for degeneracies
+         write(*,'(a)') '===='
+         tmp = int2str(ist)
+         write(*,'(a, a, a, f12.8, a, a)') 'State #', trim(tmp), ', Energy = ', &
+           st%eigenval(ist, ik)/units_out%energy%factor, ' ', units_out%energy%abbrev
+         
+         ist2 = ist + 1
+         do while (ist2 <= st%nst .and. &
+           abs(st%eigenval(ist2, ik) - st%eigenval(ist, ik)) < kdotp_vars%degen_thres)
+           ! eigenvalues are supposed to be in ascending order; if they are not, it is a sign
+           ! of being in a degenerate subspace?
+           ! write(*,*) ist2, ist, sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik)
+            tmp = int2str(ist2)
+            write(*,'(a, a, a, f12.8, a, a)') 'State #', trim(tmp), ', Energy = ', &
+              st%eigenval(ist2, ik)/units_out%energy%factor, ' ', units_out%energy%abbrev
+            ist2 = ist2 + 1
+         enddo
+
+         ist = ist2
+      enddo
+      write(*,*)
+
+      tmp = int2str(ik2)
+      write(filename, '(3a, i1)') 'kdotp/kpoint_', trim(tmp), '_', ispin
+      iunit = io_open(trim(filename), action='write')
+      write(iunit,'(a, i10)') '# spin    index = ', ispin
+      write(iunit,'(a, i10)') '# k-point index = ', ik2
+      write(iunit,'(a, 3f12.8)') '# k-point coordinates = ', st%d%kpoints(1:MAX_DIM, ik)
+      if (.not. kdotp_vars%ok) write(iunit, '(a)') "# WARNING: not converged"      
+      
+      write(iunit,'(a)')
+      write(iunit,'(a)') '# Inverse effective mass tensors'
+      do ist = 1, st%nst
         write(iunit,'(a)')
-        write(iunit,'(a)') '# Inverse effective mass tensors'
-        do ist = 1, st%nst
-          write(iunit,'(a)')
-          write(iunit,'(a, a, a, f12.8, a, a)') 'State #', int2str(ist), ', Energy = ', &
-            st%eigenval(ist, ik)/units_out%energy%factor, ' ', units_out%energy%abbrev
-          call io_output_tensor(iunit, kdotp_vars%eff_mass_inv(ik, ist, :, :), NDIM, M_ONE)
-        enddo
-
+        tmp = int2str(ist)
+        write(iunit,'(a, a, a, f12.8, a, a)') 'State #', trim(tmp), ', Energy = ', &
+          st%eigenval(ist, ik)/units_out%energy%factor, ' ', units_out%energy%abbrev
+        call io_output_tensor(iunit, kdotp_vars%eff_mass_inv(ik, ist, :, :), NDIM, M_ONE)
+      enddo
+      
+      write(iunit,'(a)')
+      write(iunit,'(a)') '# Effective mass tensors'
+      do ist = 1, st%nst
         write(iunit,'(a)')
-        write(iunit,'(a)') '# Effective mass tensors'
-        do ist = 1, st%nst
-          write(iunit,'(a)')
-          write(iunit,'(a, a, a, f12.8, a, a)') 'State #', int2str(ist), ', Energy = ', &
-            st%eigenval(ist, ik)/units_out%energy%factor, ' ', units_out%energy%abbrev
-          determinant = lalg_inverter(gr%sb%dim, kdotp_vars%eff_mass_inv(ik, ist, :, :), .true.)
-          call io_output_tensor(iunit, kdotp_vars%eff_mass_inv(ik, ist, :, :), NDIM, M_ONE)
-        enddo
+        tmp = int2str(ist)
+        write(iunit,'(a, a, a, f12.8, a, a)') 'State #', trim(tmp), ', Energy = ', &
+          st%eigenval(ist, ik)/units_out%energy%factor, ' ', units_out%energy%abbrev
+        determinant = lalg_inverter(gr%sb%dim, kdotp_vars%eff_mass_inv(ik, ist, :, :), .true.)
+        call io_output_tensor(iunit, kdotp_vars%eff_mass_inv(ik, ist, :, :), NDIM, M_ONE)
+      enddo
 
-     end do
+    enddo
 
   end subroutine kdotp_output
 

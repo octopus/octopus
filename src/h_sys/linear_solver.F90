@@ -158,7 +158,7 @@ contains
     !%Section Linear Response::Solver
     !%Description
     !% This is the tolerance to determine that the linear solver has converged,
-    !% for the first SCF iteration.
+    !% for the first SCF iteration. Ignored if LRTolScheme = fixed.
     !%End
     if (loct_parse_isdef(check_inp(trim(prefix)//"LinearSolverInitTol")) /= 0) then 
       call loct_parse_float(check_inp(trim(prefix)//"LinearSolverInitTol"), &

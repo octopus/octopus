@@ -102,7 +102,7 @@ subroutine X(sternheimer_solve)(                           &
 
     do ik = 1, st%d%nik
       !now calculate response for each state
-      is = mod(ik - 1, 2) + 1
+      is = mod(ik - 1, st%d%nspin) + 1
 
       states_conv = .true.
 
@@ -110,8 +110,8 @@ subroutine X(sternheimer_solve)(                           &
         do sigma = 1, nsigma
           !calculate the RHS of the Sternheimer eq
           Y(:, 1, sigma) = R_TOTYPE(M_ZERO)
-          call X(pert_apply) (perturbation, sys%gr, sys%geo, h, ik, st%X(psi)(:, 1, ist, ik), Y(:, 1, sigma))
-          Y(1:m%np, 1, sigma) = -Y(1:m%np, 1, sigma) - hvar(1:m%np, is, sigma)*st%X(psi)(1:m%np, 1, ist, ik)
+          call X(pert_apply)(perturbation, sys%gr, sys%geo, h, ik, st%X(psi)(:, 1, ist, ik), Y(:, 1, sigma))
+          Y(1:m%np, 1, sigma) = -Y(1:m%np, 1, sigma) - hvar(1:m%np, is, sigma) * st%X(psi)(1:m%np, 1, ist, ik)
 
           if (this%occ_response) then
           ! project out only the component of the unperturbed wavefunction
@@ -135,10 +135,10 @@ subroutine X(sternheimer_solve)(                           &
           
           ! print the norm of the variations, and the number of
           ! iterations and residual of the linear solver
-          dpsimod = X(states_nrm2)(m, st%d%dim, lr(sigma)%X(dl_psi)(:,:, ist, ik))
+          dpsimod = X(states_nrm2)(m, st%d%dim, lr(sigma)%X(dl_psi)(:, :, ist, ik))
 
           write(message(1), '(i4, f20.6, i5, e20.6)') &
-               (3 - 2*sigma)*ist, dpsimod, this%solver%iter, this%solver%abs_psi 
+               (3 - 2 * sigma) * ist, dpsimod, this%solver%iter, this%solver%abs_psi 
           call write_info(1)
 
           states_conv = states_conv .and. (this%solver%abs_psi < this%solver%tol)
@@ -148,7 +148,7 @@ subroutine X(sternheimer_solve)(                           &
       end do !ist
     end do !ik
 
-    if (.not.(this%add_fxc.or.this%add_hartree)) then
+    if (.not.(this%add_fxc .or. this%add_hartree)) then
     ! no need to deal with density, mixing, SCF iterations, etc.
     ! convergence criterion is now about individual states, rather than SCF residual
       this%ok = states_conv
@@ -160,7 +160,7 @@ subroutine X(sternheimer_solve)(                           &
 
       message(1)="--------------------------------------------"
       write(message(2), '(a, i8)') &
-           'Info: Total Hamiltonian applications:', total_iter*linear_solver_ops_per_iter(this%solver)
+           'Info: Total Hamiltonian applications:', total_iter * linear_solver_ops_per_iter(this%solver)
       call write_info(2)
       exit
     endif
@@ -215,7 +215,7 @@ subroutine X(sternheimer_solve)(                           &
       write(message(1), '(a, i4, a)') &
            'Info: SCF for response converged in ', iter, ' iterations.'
       write(message(2), '(a, i8)') &
-           '      Total hamiltonian applications:', total_iter*linear_solver_ops_per_iter(this%solver)
+           '      Total hamiltonian applications:', total_iter * linear_solver_ops_per_iter(this%solver)
       call write_info(2)
       exit
 
@@ -244,7 +244,6 @@ subroutine X(sternheimer_solve)(                           &
   call pop_sub()
 
 end subroutine X(sternheimer_solve)
-
 
 subroutine X(sternheimer_calc_hvar)(this, sys, h, lr, nsigma, hvar)
   type(sternheimer_t),    intent(inout) :: this
