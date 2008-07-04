@@ -49,6 +49,7 @@ sections.js: RUN_SCRIPT
 vars_index.html: RUN_SCRIPT
 Generalities.html: RUN_SCRIPT
 Geometry_Optimization.html: RUN_SCRIPT
+Generator_Coordinates.html: RUN_SCRIPT
 Hamiltonian.html: RUN_SCRIPT
 Linear_Response.html: RUN_SCRIPT
 Math.html: RUN_SCRIPT
@@ -65,4 +66,3 @@ Utilities.html: RUN_SCRIPT
 
 RUN_SCRIPT:
 	$(top_srcdir)/build/var2html.pl -b $(top_builddir)
-
