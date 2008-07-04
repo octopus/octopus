@@ -126,10 +126,10 @@ contains
 
     call geometry_grid_defaults(geo, def_h, def_rsize)
 
-    call read_misc()                       ! Miscellany stuff.
+    call read_misc()                       ! Miscellaneous stuff.
     call read_box()                        ! Parameters defining the simulation box.
     call read_spacing ()                   ! Parameters defining the (canonical) spacing.
-    call read_box_offset()                 ! Parameters defining the offset of the origin
+    call read_box_offset()                 ! Parameters defining the offset of the origin.
     call read_open_boundaries()            ! Parameters defining open boundaries.
     call build_lattice()                   ! Build lattice vectors.
     call simul_box_add_lead_atoms(sb, geo) ! Add the atoms of the lead unit cells that are
@@ -1284,6 +1284,7 @@ contains
     if(sb1%box_shape .ne. sb2%box_shape)             return
     if(sb1%dim .ne. sb2%dim)                         return
     if(sb1%periodic_dim .ne. sb2%periodic_dim)       return
+
     select case(sb1%box_shape)
     case(SPHERE, MINIMUM)
       if(.not.(sb1%rsize .app. sb2%rsize))           return
@@ -1298,17 +1299,21 @@ contains
       if(.not.(sb1%lsize .app. sb2%lsize))           return
       if(trim(sb1%user_def) .ne. trim(sb2%user_def)) return
     end select
+
     if(.not.(sb1%fft_alpha .app. sb2%fft_alpha))     return
     if(.not.(sb1%h .app. sb2%h))                     return
     if(.not.(sb1%box_offset .app. sb2%box_offset))   return
     if(sb1%open_boundaries.neqv.sb2%open_boundaries)   return
-    if(any(sb1%add_unit_cells.ne.sb2%add_unit_cells))     return
-    if(any(sb1%lead_restart_dir.ne.sb2%lead_restart_dir)) return
-    if(associated(sb1%lead_unit_cell).and.associated(sb2%lead_unit_cell)) then
-      do il = 1, NLEADS
-        if(.not.simul_box_is_eq(sb1%lead_unit_cell(il), sb2%lead_unit_cell(il))) return
-      end do
-    end if
+    
+    if (sb1%open_boundaries) then
+      if(any(sb1%add_unit_cells.ne.sb2%add_unit_cells))     return
+      if(any(sb1%lead_restart_dir.ne.sb2%lead_restart_dir)) return
+      if(associated(sb1%lead_unit_cell).and.associated(sb2%lead_unit_cell)) then
+        do il = 1, NLEADS
+          if(.not.simul_box_is_eq(sb1%lead_unit_cell(il), sb2%lead_unit_cell(il))) return
+        end do
+      end if
+    endif
     res = .true.
   end function simul_box_is_eq
 
