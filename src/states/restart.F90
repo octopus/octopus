@@ -534,7 +534,7 @@ contains
 #if defined(HAVE_MPI)
       return ! For the moment, avoid the complications of parallel stuff.
 #endif
-      if(present(iter)) return ! No intepolation, in case we are in the td part.
+      if(present(iter)) return ! No interpolation, in case we are in the td part.
 
       iunit_mesh  = io_open(trim(dir)//'/mesh', action='read', status='old', die=.false., grp = gr%m%mpi_grp)
       if(iunit_mesh < 0) return
@@ -550,7 +550,7 @@ contains
       end if
       if( .not. (old_sb.eq.gr%sb) ) then
         mesh_change = .true.
-        ! First, check wether the spacings are the same.
+        ! First, check whether the spacings are the same.
         if(old_sb%h .app. gr%sb%h) full_interpolation = .false.
       end if
 

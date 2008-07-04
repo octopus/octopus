@@ -589,7 +589,7 @@ contains
     call oct_spline_x(spl%spl, x(1))
     call oct_spline_y(spl%spl, y(1))
 
-    ! Check wether splw comes with a defined grid, or else build it.
+    ! Check whether splw comes with a defined grid, or else build it.
     if(c_associated(splw%spl)) then
       np = oct_spline_npoints(splw%spl)
       ALLOCATE(xw(np), np)
@@ -652,7 +652,7 @@ contains
     call oct_spline_x(spl%spl, x(1))
     call oct_spline_y(spl%spl, y(1))
 
-    ! Check wether splw comes with a defined grid, or else build it.
+    ! Check whether splw comes with a defined grid, or else build it.
     if(c_associated(splw%spl)) then
       np = oct_spline_npoints(splw%spl)
       ALLOCATE(xw(np), np)

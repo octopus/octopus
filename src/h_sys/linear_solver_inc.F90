@@ -45,8 +45,8 @@ subroutine X(solve_HXeY) (this, h, gr, st, ist, ik, x, y, omega)
   case(LS_MULTIGRID)
     call X(ls_solver_multigrid)(this, h, gr, st, ist, ik, x, y, omega)
 
-#ifdef R_TCOMPLEX
   case(LS_QMR)
+#ifdef R_TCOMPLEX
     args%ls       => this
     args%h        => h
     args%gr       => gr 
@@ -59,13 +59,16 @@ subroutine X(solve_HXeY) (this, h, gr, st, ist, ik, x, y, omega)
     
     call zqmr_sym(NP, x(:, 1), y(:, 1), X(ls_solver_operator_na), X(ls_preconditioner), &
          this%iter, residue = this%abs_psi, threshold = this%tol, showprogress = .false.)
+#else
+    write(message(1), '(a,i2)') "Linear-response solver QMR not available for real wavefunctions."
+    call write_fatal(1)
 #endif
 
   case(LS_SOS)
     call X(ls_solver_sos)(this, h, gr, st, ist, ik, x, y, omega)
 
   case default 
-    write(message(1), '(a,i2)') "Unknown linear response solver", this%solver
+    write(message(1), '(a,i2)') "Unknown linear-response solver", this%solver
     call write_fatal(1)
 
   end select

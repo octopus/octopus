@@ -90,7 +90,7 @@ double ylm(double x, double y, double z, int l, int m)
 
 	r = gsl_sf_legendre_sphPlm(l, abs(m), rz);
 
-	/* I am not sure wether we are including the Condon-Shortley factor (-1)^m */
+	/* I am not sure whether we are including the Condon-Shortley factor (-1)^m */
 	return r*phase;
 }
 

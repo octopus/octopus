@@ -421,7 +421,7 @@ subroutine X(eigen_solver_cg2_new) (gr, st, h, tol, niter, converged, diff, verb
         ctheta = cos(theta)
         stheta = sin(theta)
 
-        ! This checks wether we are picking the maximum, or the minimum.
+        ! This checks whether we are picking the maximum or the minimum.
         theta2 = theta + M_PI/M_TWO
         ctheta2 = cos(theta2)
         stheta2 = sin(theta2)

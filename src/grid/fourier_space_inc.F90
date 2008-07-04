@@ -68,8 +68,8 @@ end subroutine X(cf_fft_init)
 
 ! ---------------------------------------------------------
 ! The next routines convert the function between real space and fourier space
-! Note that the dimensions of the function in FS are different wether f
-! is real or complex, because the FFT representation is different (FFTW scheme).
+! Note that the dimensions of the function in FS are different depending on whether
+! f is real or complex, because the FFT representation is different (FFTW scheme).
 subroutine X(cf_RS2FS)(cf)
   type(X(cf_t)), intent(inout)  :: cf
 
