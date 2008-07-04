@@ -27,6 +27,7 @@ dist_doc_DATA =     \
 	vars_index.html \
 	Generalities.html \
 	Geometry_Optimization.html \
+	Generator_Coordinates.html \
 	Hamiltonian.html \
 	Linear_Response.html \
 	Math.html \
