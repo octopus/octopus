@@ -622,7 +622,7 @@ contains
     type(grid_t), target, intent(in)    :: gr
     
     integer                    :: k, ik, ist, idim, jst, err, wfns, occs, x_width, x_offset
-    integer                    :: k_ik, k_ist, k_idim, k_index
+    integer                    :: k_ik, k_ist, k_idim, k_index, lb
     integer                    :: ix, iy, iz, ip, iunit, lead_nr(2, MAX_DIM)
     character(len=256)         :: line, fname, filename, restart_dir, chars
     character                  :: char
@@ -634,26 +634,7 @@ contains
 
     FLOAT :: trans_e, long_e, e, kx, ky, x, y
 
-!     e = 1.0905190993397482
-
-!     ky = M_PI/(M_TWO*(gr%sb%lsize(2)+gr%sb%h(2)))
-!     kx = sqrt(2 * (e - ky**2*M_HALF))
-
-!     do ip = 1, gr%m%np
-!       x = gr%m%lxyz(ip, 1)*gr%m%h(1)
-!       y = gr%m%lxyz(ip, 2)*gr%m%h(2)
-!       st%zphi(ip, 1, 1, 1) = exp(M_zI*kx*x)*cos(ky*y)
-!     end do
-!     k_index = 1
-!     jst = 1
-!     idim = 1
-    
-    
-
-
     call push_sub('states.states_read_free_states')
-
-    
 
     sb       => gr%sb
     m_lead   => gr%m%lead_unit_cell(LEFT)
@@ -716,7 +697,12 @@ contains
       ! It only works in this compact form because the transport-direction (x) is
       ! the index running slowest.          
       do k = 1, nint(sb%lsize(TRANS_DIR)/gr%sb%lead_unit_cell(LEFT)%lsize(TRANS_DIR))
-        st%zphi((k-1)*m_lead%np+1:k*m_lead%np, idim, jst, k_index) = tmp
+        ! Do not write this inner loop as vector assignment. GFortran
+        ! has a problem with that.
+        lb = (k-1)*m_lead%np+1
+        do ip = lb, k*m_lead%np
+          st%zphi(ip, idim, jst, k_index) = tmp(ip-lb+1)
+        end do
       end do
 
       ! Apply phase.
