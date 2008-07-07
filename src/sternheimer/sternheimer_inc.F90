@@ -148,8 +148,21 @@ subroutine X(sternheimer_solve)(                           &
       end do !ist
     end do !ik
 
+    call X(lr_build_dl_rho)(m, st, lr, nsigma)
+
+    dl_rhonew(1:m%np, 1:st%d%nspin, 1) = M_ZERO
+
+    !write restart info
+    call X(restart_write_lr_rho)(lr(1), sys%gr, st%d%nspin, restart_dir, rho_tag)
+
+    do sigma = 1, nsigma 
+      write(dirname,'(a,a,i1)') trim(restart_dir)//trim(wfs_tag),'_', sigma
+      call restart_write(trim(tmpdir)//dirname, st, sys%gr, err, iter=iter, lr=lr(sigma))
+    end do
+    
     if (.not.(this%add_fxc .or. this%add_hartree)) then
-    ! no need to deal with density, mixing, SCF iterations, etc.
+    ! no need to deal with mixing, SCF iterations, etc.
+    ! dealing with restart density above not necessary, but easier to just leave it
     ! convergence criterion is now about individual states, rather than SCF residual
       this%ok = states_conv
 
@@ -165,18 +178,6 @@ subroutine X(sternheimer_solve)(                           &
       exit
     endif
 
-    call X(lr_build_dl_rho)(m, st, lr, nsigma)
-
-    dl_rhonew(1:m%np, 1:st%d%nspin, 1) = M_ZERO
-
-    !write restart info
-    call X(restart_write_lr_rho)(lr(1), sys%gr, st%d%nspin, restart_dir, rho_tag)
-
-    do sigma = 1, nsigma 
-      write(dirname,'(a,a,i1)') trim(restart_dir)//trim(wfs_tag),'_', sigma
-      call restart_write(trim(tmpdir)//dirname, st, sys%gr, err, iter=iter, lr=lr(sigma))
-    end do
-    
     ! all the rest is the mixing and checking for convergence
 
     if(this%scftol%max_iter == iter) then 
