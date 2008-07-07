@@ -619,6 +619,9 @@ contains
 
             ASSERT(all(send_points(1:mesh%nsend(ipart), ipart) <= mesh%np))
 
+            ! MPI indexes start from zero
+            send_points(1:mesh%nsend(ipart), ipart) = send_points(1:mesh%nsend(ipart), ipart) - 1
+
             call MPI_Type_indexed(mesh%nsend(ipart), blocklengths, &
                  send_points(:, ipart), MPI_FLOAT, mesh%dsend_type(ipart), mpi_err)
             call MPI_Type_indexed(mesh%nsend(ipart), blocklengths, &
@@ -633,8 +636,8 @@ contains
             ASSERT(all(recv_points(1:mesh%nrecv(ipart), ipart) <= mesh%np_part))
             ASSERT(all(recv_points(1:mesh%nrecv(ipart), ipart) > mesh%np))
 
-            ! the recv types should start from np + 1
-            recv_points(1:mesh%nrecv(ipart), ipart) = recv_points(1:mesh%nrecv(ipart), ipart) - mesh%np
+            ! the recv types should start from np + 1 (minus one to start from zero)
+            recv_points(1:mesh%nrecv(ipart), ipart) = recv_points(1:mesh%nrecv(ipart), ipart) - mesh%np - 1
 
             call MPI_Type_indexed(mesh%nrecv(ipart), blocklengths, &
                  recv_points(:, ipart), MPI_FLOAT, mesh%drecv_type(ipart), mpi_err)
