@@ -565,7 +565,7 @@ contains
         
         ! We send the number of points we expect to receive.
         do ipart = 1, mesh%vp%p
-          if(ipart /= mesh%vp%partno) cycle
+          if(ipart == mesh%vp%partno) cycle
           ! (this could cause a deadlock, we should use a Bsend or a Isend)
           call MPI_Send(mesh%nrecv(ipart), 1, MPI_INTEGER, ipart - 1, 0, mesh%vp%comm, mpi_err)
         end do
@@ -574,13 +574,13 @@ contains
         ALLOCATE(mesh%nsend(1:mesh%vp%p), mesh%vp%p)
         mesh%nsend = 0
         do ipart = 1, mesh%vp%p
-          if(ipart /= mesh%vp%partno) cycle
+          if(ipart == mesh%vp%partno) cycle
           call MPI_Recv(mesh%nsend(ipart), 1, MPI_INTEGER, ipart - 1, 0, mesh%vp%comm, MPI_STATUS_IGNORE, mpi_err)
         end do
 
         ! Now we send the index of the points
         do ipart = 1, mesh%vp%p
-          if(ipart /= mesh%vp%partno .or. mesh%nrecv(ipart) == 0) cycle
+          if(ipart == mesh%vp%partno .or. mesh%nrecv(ipart) == 0) cycle
           ! (this could cause a deadlock, we should use a Bsend or a Isend)
           call MPI_Send(recv_rem_points(:, ipart), mesh%nrecv(ipart), MPI_INTEGER, ipart - 1, 1, mesh%vp%comm, mpi_err)
         end do
@@ -589,7 +589,7 @@ contains
 
         ! And we receive them
         do ipart = 1, mesh%vp%p
-          if(ipart /= mesh%vp%partno .or. mesh%nsend(ipart) == 0) cycle
+          if(ipart == mesh%vp%partno .or. mesh%nsend(ipart) == 0) cycle
           call MPI_Recv(send_points(:, ipart), mesh%nsend(ipart), MPI_INTEGER, &
                ipart - 1, 1, mesh%vp%comm, MPI_STATUS_IGNORE, mpi_err)
         end do
@@ -613,7 +613,7 @@ contains
         mesh%nnbrecv = 0
 
         do ipart = 1, mesh%vp%p
-          if(ipart /= mesh%vp%partno) cycle
+          if(ipart == mesh%vp%partno) cycle
 
           if(mesh%nsend(ipart) > 0) then
 
