@@ -439,9 +439,9 @@ contains
   end subroutine mesh_get_vol_pp
   
   subroutine mesh_pbc_init()
-    integer :: ip, ip_inner, iper
+    integer :: sp, ip, ip_inner, iper, ip_global
 #ifdef HAVE_MPI
-    integer :: ip_orig, ipart
+    integer :: ip_inner_global, ipart
     integer, allocatable :: recv_rem_points(:, :)
     integer :: nper_recv
     integer :: maxmax
@@ -459,18 +459,32 @@ contains
         call write_warning(1)
       end if
 
+      sp = mesh%np
+#ifdef HAVE_MPI
+        if(mesh%parallel_in_domains) sp = mesh%np + mesh%vp%np_ghost(mesh%vp%partno)
+#endif
+
       !count the number of points that are periodic
       mesh%nper = 0
 #ifdef HAVE_MPI
       nper_recv = 0
 #endif
-      do ip = mesh%np + 1, mesh%np_part
-        ip_inner = mesh_periodic_point(mesh, ip)
+      do ip = sp + 1, mesh%np_part
+
+        ip_global = ip
+
 #ifdef HAVE_MPI
-        if(mesh%parallel_in_domains) then
-          ip_inner = vec_global2local(mesh%vp, ip_inner, mesh%vp%partno)
-        end if
+        !translate to a global point
+        if(mesh%parallel_in_domains) ip_global = mesh%vp%bndry(ip - sp - 1 + mesh%vp%xbndry(mesh%vp%partno))
 #endif
+
+        ip_inner = mesh_periodic_point(mesh, ip_global)
+
+#ifdef HAVE_MPI
+        !translate back to a local point
+        if(mesh%parallel_in_domains) ip_inner = vec_global2local(mesh%vp, ip_inner, mesh%vp%partno)
+#endif
+
         if(ip /= ip_inner .and. ip_inner /= 0) then 
           mesh%nper = mesh%nper + 1
 #ifdef HAVE_MPI          
@@ -493,25 +507,37 @@ contains
 #endif
 
       iper = 0
-      do ip = mesh%np + 1, mesh%np_part
-        ip_inner = mesh_periodic_point(mesh, ip)
+      do ip = sp + 1, mesh%np_part
+
+        ip_global = ip
+
+        !translate to a global point
+#ifdef HAVE_MPI
+        if(mesh%parallel_in_domains) ip_global = mesh%vp%bndry(ip - sp - 1 + mesh%vp%xbndry(mesh%vp%partno))
+#endif
+
+        ip_inner = mesh_periodic_point(mesh, ip_global)
+        
+        !translate to local (and keep a copy of the global)
 #ifdef HAVE_MPI
         if(mesh%parallel_in_domains) then
-          ip_orig = ip_inner
+          ip_inner_global = ip_inner
           ip_inner = vec_global2local(mesh%vp, ip_inner, mesh%vp%partno)
         end if
 #endif
+
         if(ip /= ip_inner .and. ip_inner /= 0) then
           iper = iper + 1
           mesh%per_points(iper) = ip
           mesh%per_map(iper) = ip_inner
+
 #ifdef HAVE_MPI
         else if(ip_inner == 0) then ! the point is in another node
           ! find in which paritition it is
           do ipart = 1, mesh%vp%p
             if(ipart == mesh%vp%partno) cycle
 
-            ip_inner = vec_global2local(mesh%vp, ip_orig, ipart)
+            ip_inner = vec_global2local(mesh%vp, ip_inner_global, ipart)
             
             if(ip_inner /= 0) then
               ! count the points to receive from each node
@@ -520,6 +546,9 @@ contains
               recv_points(mesh%nrecv(ipart), ipart) = ip
               ! and where it is in the other partition
               recv_rem_points(mesh%nrecv(ipart), ipart) = ip_inner
+
+              ASSERT(mesh%mpi_grp%rank /= ipart - 1) ! if we are here, the point must be in another node
+
               exit
             end if
             
