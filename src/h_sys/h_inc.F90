@@ -88,7 +88,7 @@ subroutine X(hpsi) (h, gr, psi, hpsi, ist, ik, t, kinetic_only)
   copy_input = (ubound(psi, DIM = 1) == NP) .or. apply_kpoint
 
   if(copy_input) then
-    ALLOCATE(epsi(1:NP_PART, 1:h%d%dim), NP_PART*h%d%dim)
+    ALLOCATE(epsi(1:NP_PART, 1:h%d%dim), NP_PART * h%d%dim)
     do idim = 1, h%d%dim
       call lalg_copy(NP, psi(:, idim), epsi(:, idim))
     end do
@@ -107,7 +107,7 @@ subroutine X(hpsi) (h, gr, psi, hpsi, ist, ik, t, kinetic_only)
 
     do idim = 1, h%d%dim
       !$omp parallel workshare
-      epsi(1:NP_PART, idim) = h%phase(1:NP_PART, ik)*epsi(1:NP_PART, idim)
+      epsi(1:NP_PART, idim) = h%phase(1:NP_PART, ik) * epsi(1:NP_PART, idim)
       !$omp end parallel workshare
     end do
     
@@ -141,25 +141,25 @@ subroutine X(hpsi) (h, gr, psi, hpsi, ist, ik, t, kinetic_only)
   if (.not. kinetic_only_) then
     
     ! all functions that require the gradient or other derivatives of
-    ! epsi sould go after this point and must not update the
+    ! epsi should go after this point and must not update the
     ! boundary points
     
     if (present(t) .and. gauge_field_is_applied(h%ep%gfield)) then
       
-      ALLOCATE(grad(1:NP, 1:MAX_DIM, 1:h%d%dim), NP*MAX_DIM*h%d%dim)
+      ALLOCATE(grad(1:NP, 1:MAX_DIM, 1:h%d%dim), NP * MAX_DIM * h%d%dim)
       
       do idim = 1, h%d%dim 
-        ! boundary points were already set by the laplacian
+        ! boundary points were already set by the Laplacian
         call X(derivatives_grad)(gr%f_der%der_discr, epsi(:, idim), grad(:, :, idim), ghost_update = .false., set_bc = .false.)
       end do
       
     end if
 
-    if(present(t)) call X(vlasers)(gr, h, epsi, hpsi, ik, t)
+    if (present(t)) call X(vlasers)(gr, h, epsi, hpsi, ik, t)
     
     if (present(t) .and. gauge_field_is_applied(h%ep%gfield)) call X(vgauge)(gr, h, epsi, hpsi, grad)
   
-    if(h%theory_level==HARTREE.or.h%theory_level==HARTREE_FOCK) then
+    if(h%theory_level == HARTREE .or. h%theory_level == HARTREE_FOCK) then
       call X(exchange_operator)(h, gr, epsi, hpsi, ist, ik)
     end if
     

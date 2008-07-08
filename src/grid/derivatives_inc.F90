@@ -223,12 +223,13 @@ subroutine X(derivatives_grad)(der, f, grad, ghost_update, set_bc)
 end subroutine X(derivatives_grad)
 
 ! ---------------------------------------------------------
-subroutine X(derivatives_oper)(op, der, f, opf, ghost_update)
+subroutine X(derivatives_oper)(op, der, f, opf, ghost_update, set_bc)
   type(nl_operator_t), intent(in)    :: op
   type(der_discr_t),   intent(in)    :: der
   R_TYPE,              intent(inout) :: f(:)       ! f(m%np_part)
   R_TYPE,              intent(out)   :: opf(:)     ! opf(m%np)
   logical, optional,   intent(in)    :: ghost_update
+  logical, optional,   intent(in)    :: set_bc
 
   type(der_handle_t) :: handle
 #ifdef HAVE_MPI
@@ -242,7 +243,7 @@ subroutine X(derivatives_oper)(op, der, f, opf, ghost_update)
   call der_handle_init(handle, der%m)
   call X(init_f)(der, handle, f)
 
-  call X(set_bc)(der, handle%X(f))
+  if (.not. present(set_bc) .or. set_bc == .true.) call X(set_bc)(der, handle%X(f))
 
 #ifdef HAVE_MPI
   ghost_update_ = .true.

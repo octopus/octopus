@@ -79,7 +79,7 @@ module projector_m
   ! There are four different types: 
   ! local -> a local operator
   ! HGH projector -> "normal"
-  ! Kleinman-Bylander projector (no spin-orbit) -> "relativistc"
+  ! Kleinman-Bylander projector (no spin-orbit) -> "relativistic"
   ! Kleinman-Bylander projector (includes spin-orbit)
 
   type projector_t
@@ -156,7 +156,7 @@ contains
     
     select case(p%type)
     case(M_KB)
-      p%reduce_size = dim*atm%spec%ps%kbc
+      p%reduce_size = dim * atm%spec%ps%kbc
     case(M_RKB)
       p%reduce_size = 4
     case(M_HGH)
@@ -178,15 +178,16 @@ contains
     ns = this%sphere%ns
 
     if(.not. associated(this%phase)) then
-      ALLOCATE(this%phase(1:ns, 1:nkpoints), ns*nkpoints)
+      ALLOCATE(this%phase(1:ns, 1:nkpoints), ns * nkpoints)
     end if
 
     do ik = 1, nkpoints
 
       do is = 1, ns
-        kr = sum(kpoints(1:MAX_DIM, ik)*(this%sphere%x(is, 1:MAX_DIM) - this%sphere%mesh%x(this%sphere%jxyz(is), 1:MAX_DIM)))
-        if(present(vec_pot)) kr = kr + sum(vec_pot(1:MAX_DIM)*this%sphere%x(is, 1:MAX_DIM))
-        this%phase(is, ik) = exp(-M_zI*kr)
+        kr = sum(kpoints(1:MAX_DIM, ik) * &
+          (this%sphere%x(is, 1:MAX_DIM) - this%sphere%mesh%x(this%sphere%jxyz(is), 1:MAX_DIM)))
+        if(present(vec_pot)) kr = kr + sum(vec_pot(1:MAX_DIM) * this%sphere%x(is, 1:MAX_DIM))
+        this%phase(is, ik) = exp(-M_zI * kr)
       end do
 
     end do
@@ -207,7 +208,7 @@ contains
     select case (p%type)
 
     case (M_HGH)
-      ALLOCATE(p%hgh_p(0:p%lmax, -p%lmax:p%lmax), (p%lmax + 1)*(2*p%lmax + 1))
+      ALLOCATE(p%hgh_p(0:p%lmax, -p%lmax:p%lmax), (p%lmax + 1) * (2 * p%lmax + 1))
       do ll = 0, p%lmax
         if(ll == p%lloc) cycle
         do mm = -ll, ll

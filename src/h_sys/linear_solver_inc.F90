@@ -81,15 +81,15 @@ end subroutine X(solve_HXeY)
 ! ---------------------------------------------------------
 !Conjugate gradients
 subroutine X(ls_solver_cg) (ls, h, gr, st, ist, ik, x, y, omega)
-  type(linear_solver_t),          intent(inout) :: ls
-  type(hamiltonian_t), intent(inout) :: h
-  type(grid_t),        intent(inout) :: gr
-  type(states_t),      intent(in)    :: st
-  integer,             intent(in)    :: ist
-  integer,             intent(in)    :: ik
-  R_TYPE,              intent(inout) :: x(:,:)   ! x(NP, st%d%dim)
-  R_TYPE,              intent(in)    :: y(:,:)   ! y(NP, st%d%dim)
-  R_TYPE,              intent(in)    :: omega
+  type(linear_solver_t), intent(inout) :: ls
+  type(hamiltonian_t),   intent(inout) :: h
+  type(grid_t),          intent(inout) :: gr
+  type(states_t),        intent(in)    :: st
+  integer,               intent(in)    :: ist
+  integer,               intent(in)    :: ik
+  R_TYPE,                intent(inout) :: x(:,:)   ! x(NP, st%d%dim)
+  R_TYPE,                intent(in)    :: y(:,:)   ! y(NP, st%d%dim)
+  R_TYPE,                intent(in)    :: omega
 
   R_TYPE, allocatable :: r(:,:), p(:,:), Hp(:,:)
   R_TYPE  :: alpha, beta, gamma
@@ -98,9 +98,9 @@ subroutine X(ls_solver_cg) (ls, h, gr, st, ist, ik, x, y, omega)
 
   call push_sub('linear_response_solvers.Xls_solver_cg')
 
-  ALLOCATE( r(NP, st%d%dim),      NP     *st%d%dim)
-  ALLOCATE( p(NP_PART, st%d%dim), NP_PART*st%d%dim)
-  ALLOCATE(Hp(NP, st%d%dim),      NP     *st%d%dim)
+  ALLOCATE( r(NP, st%d%dim),      NP      * st%d%dim)
+  ALLOCATE( p(NP_PART, st%d%dim), NP_PART * st%d%dim)
+  ALLOCATE(Hp(NP, st%d%dim),      NP      * st%d%dim)
 
   ! Initial residue
   call X(ls_solver_operator)(h, gr, st, ist, ik, omega, x, Hp)
@@ -185,8 +185,8 @@ subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ist, ik, x, y, omega)
   !$omp end parallel workshare
 
   ! this will store the preconditioned functions
-  ALLOCATE(phat(NP_PART, st%d%dim), NP_PART*st%d%dim)
-  ALLOCATE(shat(NP_PART, st%d%dim), NP_PART*st%d%dim)
+  ALLOCATE(phat(NP_PART, st%d%dim), NP_PART * st%d%dim)
+  ALLOCATE(shat(NP_PART, st%d%dim), NP_PART * st%d%dim)
 
   !$omp parallel workshare
   phat = R_TOTYPE(M_ZERO)
@@ -197,8 +197,8 @@ subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ist, ik, x, y, omega)
   call X(ls_solver_operator) (h, gr, st, ist, ik, omega, x, Hp)
 
   !$omp parallel workshare
-  r(1:NP,1:st%d%dim) = y(1:NP,1:st%d%dim) - Hp(1:NP,1:st%d%dim)
-  rs(1:NP,1:st%d%dim) = r(1:NP,1:st%d%dim)
+  r(1:NP, 1:st%d%dim) = y(1:NP, 1:st%d%dim) - Hp(1:NP, 1:st%d%dim)
+  rs(1:NP, 1:st%d%dim) = r(1:NP, 1:st%d%dim)
   !$omp end parallel workshare
 
   gamma = X(states_nrm2)(gr%m, st%d%dim, r)
@@ -301,9 +301,9 @@ subroutine X(ls_solver_multigrid) (ls, h, gr, st, ist, ik, x, y, omega)
   R_TYPE, allocatable :: diag(:,:), hx(:,:), res(:,:)
   integer :: iter
 
-  ALLOCATE(diag(NP, st%d%dim), NP*st%d%dim)
-  ALLOCATE(hx(NP, st%d%dim), NP*st%d%dim)
-  ALLOCATE(res(NP, st%d%dim), NP*st%d%dim)
+  ALLOCATE(diag(NP, st%d%dim), NP * st%d%dim)
+  ALLOCATE(hx(NP, st%d%dim), NP * st%d%dim)
+  ALLOCATE(res(NP, st%d%dim), NP * st%d%dim)
 
   call X(Hpsi_diag)(h, gr, diag, ik)
   diag(1:NP, 1:st%d%dim) = diag(1:NP, 1:st%d%dim) + omega
@@ -388,12 +388,12 @@ subroutine X(ls_solver_operator) (h, gr, st, ist, ik, omega, x, hx)
 
   dsmear = max(CNST(1e-14), st%smear%dsmear)
   do jst = 1, st%nst
-    alpha_j = max(st%smear%e_fermi + M_THREE*dsmear - st%eigenval(jst, ik), M_ZERO)
+    alpha_j = max(st%smear%e_fermi + M_THREE * dsmear - st%eigenval(jst, ik), M_ZERO)
     if(alpha_j == M_ZERO) cycle
       
     proj = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:, :, jst, ik), x)
     do idim = 1, st%d%dim
-      call lalg_axpy(NP, R_TOTYPE(alpha_j*proj), st%X(psi)(:, idim, jst, ik), Hx(:, idim))
+      call lalg_axpy(NP, R_TOTYPE(alpha_j * proj), st%X(psi)(:, idim, jst, ik), Hx(:, idim))
     end do
 
   end do
@@ -441,8 +441,8 @@ subroutine X(ls_preconditioner) (x, hx)
 end subroutine X(ls_preconditioner)
 
 ! ---------------------------------------------------------
-subroutine X(ls_solver_sos) (this, h, gr, st, ist, ik, x, y, omega)
-  type(linear_solver_t),          intent(inout) :: this
+subroutine X(ls_solver_sos) (ls, h, gr, st, ist, ik, x, y, omega)
+  type(linear_solver_t),          intent(inout) :: ls
   type(hamiltonian_t),            intent(inout) :: h
   type(grid_t),                   intent(inout) :: gr
   type(states_t),                 intent(in)    :: st
@@ -479,8 +479,8 @@ subroutine X(ls_solver_sos) (this, h, gr, st, ist, ik, x, y, omega)
     call lalg_axpy(NP, -M_ONE, y(:, idim), rr(:, idim))
   end do
   
-  this%abs_psi = X(states_nrm2)(gr%m, st%d%dim, rr)
-  this%iter = 1
+  ls%abs_psi = X(states_nrm2)(gr%m, st%d%dim, rr)
+  ls%iter = 1
 
   deallocate(rr)
 

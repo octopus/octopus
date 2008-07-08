@@ -58,7 +58,7 @@ module mesh_m
   
   ! Describes mesh distribution to nodes.
   
-  ! Some general thing:
+  ! Some general things:
   ! All members of type(mesh_t) are equal on all
   ! nodes when running parallel except
   ! - np, np_part

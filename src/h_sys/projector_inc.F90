@@ -345,7 +345,7 @@ subroutine X(projector_commute_r)(pj, gr, dim, idir, ik, psi, cpsi)
   integer, pointer :: jxyz(:)
   FLOAT,   pointer :: smx(:, :)
 
-  call push_sub('epot_inc.Xcommute_vnl_r')
+  call push_sub('projector_inc.Xcommute_vnl_r')
 
   cpsi(1:gr%m%np, 1:dim) = M_ZERO
 
@@ -355,16 +355,16 @@ subroutine X(projector_commute_r)(pj, gr, dim, idir, ik, psi, cpsi)
     jxyz => pj%sphere%jxyz
     smx => pj%sphere%x
 
-    ALLOCATE(lpsi(ns, dim), ns*dim)
-    ALLOCATE(xplpsi(ns, dim), ns*dim)
-    ALLOCATE(pxlpsi(ns, dim), ns*dim)
+    ALLOCATE(lpsi(ns, dim), ns * dim)
+    ALLOCATE(xplpsi(ns, dim), ns * dim)
+    ALLOCATE(pxlpsi(ns, dim), ns * dim)
 
     if(simul_box_is_periodic(gr%m%sb)) then
-      do idim = 1, dim      
-        lpsi(1:ns, idim) = psi(jxyz(1:ns))*pj%phase(1:ns, ik)
+      do idim = 1, dim
+        lpsi(1:ns, idim) = psi(jxyz(1:ns)) * pj%phase(1:ns, ik)
       end do
     else
-      do idim = 1, dim      
+      do idim = 1, dim
         lpsi(1:ns, idim) = psi(jxyz(1:ns))
       end do
     end if
@@ -385,7 +385,7 @@ subroutine X(projector_commute_r)(pj, gr, dim, idir, ik, psi, cpsi)
     if(simul_box_is_periodic(gr%m%sb)) then
       do idim = 1, dim
         cpsi(jxyz(1:ns), idim) = cpsi(jxyz(1:ns), idim) + &
-             (xplpsi(1:ns, idim) - pxlpsi(1:ns, idim))*R_CONJ(pj%phase(1:ns, ik))
+          (xplpsi(1:ns, idim) - pxlpsi(1:ns, idim)) * R_CONJ(pj%phase(1:ns, ik))
       end do
     else
       do idim = 1, dim

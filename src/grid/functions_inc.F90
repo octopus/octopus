@@ -154,16 +154,17 @@ end subroutine X(f_laplacian)
 
 
 ! ---------------------------------------------------------
-subroutine X(f_gradient) (sb, f_der, f, grad, ghost_update)
+subroutine X(f_gradient) (sb, f_der, f, grad, ghost_update, set_bc)
   type(simul_box_t), intent(in)    :: sb
   type(f_der_t),     intent(inout) :: f_der
   R_TYPE,            intent(inout) :: f(:)         ! f(m%np_part)
   R_TYPE,            intent(out)   :: grad(:,:)    ! grad(m%np, m%sb%dim)
   logical, optional, intent(in)    :: ghost_update
+  logical, optional, intent(in)    :: set_bc
 
   call push_sub('f_inc.Xf_gradient')
 
-  call X(derivatives_grad) (f_der%der_discr, f, grad, ghost_update)
+  call X(derivatives_grad) (f_der%der_discr, f, grad, ghost_update, set_bc = set_bc)
 
   call pop_sub()
 end subroutine X(f_gradient)
@@ -260,12 +261,13 @@ end subroutine X(f_multipoles)
 ! In case of real functions, it does not include the -i prefactor
 ! (L = -i r ^ nabla).
 ! ---------------------------------------------------------
-subroutine X(f_angular_momentum)(sb, f_der, f, lf, ghost_update)
+subroutine X(f_angular_momentum)(sb, f_der, f, lf, ghost_update, set_bc)
   type(simul_box_t), intent(in)    :: sb
   type(f_der_t),     intent(inout) :: f_der
   R_TYPE,            intent(inout) :: f(:)     ! f(m%np_part)
   R_TYPE,            intent(out)   :: lf(:,:)  ! lf(m%np, 3) in 3D, lf(m%np, 1) in 2D
   logical, optional, intent(in)    :: ghost_update
+  logical, optional, intent(in)    :: set_bc
 
   R_TYPE, allocatable :: gf(:, :)
   FLOAT :: x1, x2, x3
@@ -277,7 +279,7 @@ subroutine X(f_angular_momentum)(sb, f_der, f, lf, ghost_update)
   ASSERT(sb%dim.ne.1)
 
   ALLOCATE(gf(f_der%m%np, sb%dim), f_der%m%np*sb%dim)
-  call X(f_gradient)(sb, f_der, f, gf, ghost_update)
+  call X(f_gradient)(sb, f_der, f, gf, ghost_update, set_bc = set_bc)
 
 #if defined(R_TCOMPLEX)
   factor = -M_ZI

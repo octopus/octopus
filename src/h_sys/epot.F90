@@ -70,12 +70,12 @@ module external_pot_m
 
 
   type epot_t
-    ! Classic charges:
-    integer        :: classic_pot        ! How to include the classic charges
-    FLOAT, pointer :: vclassic(:) ! We use it to store the potential of the classic charges
+    ! Classical charges:
+    integer        :: classic_pot        ! How to include the classical charges
+    FLOAT, pointer :: vclassic(:) ! We use it to store the potential of the classical charges
 
     ! Ions
-    FLOAT,             pointer :: vpsl(:)          ! the local part of the pseudopotentials
+    FLOAT,             pointer :: vpsl(:)       ! the local part of the pseudopotentials
     type(projector_t), pointer :: proj(:)       ! non-local projectors
     type(projector_t), pointer :: proj_fine(:)  ! non-local projectors in the fine grid
     logical                    :: non_local
@@ -88,7 +88,7 @@ module external_pot_m
     FLOAT, pointer         :: v_static(:)          ! static scalar potential
     FLOAT, pointer         :: B_field(:)           ! static magnetic field
     FLOAT, pointer         :: A_static(:,:)        ! static vector potential
-    type(gauge_field_t)    :: gfield               ! the type dependent gauge field
+    type(gauge_field_t)    :: gfield               ! the time-dependent gauge field
     integer                :: reltype              ! type of relativistic correction to use
 
     ! The gyromagnetic ratio (-2.0 for the electron, but different if we treat
@@ -457,10 +457,10 @@ contains
     call profiling_out(epot_reduce)
 #endif
 
-    ! we assume that we need to recalculate the ion ion energy
+    ! we assume that we need to recalculate the ion-ion energy
     call ion_interaction_calculate(geo, sb, ep%eii, ep%fii)
 
-    ! the pseudo potential part.
+    ! the pseudopotential part.
     do ia = 1, geo%natoms
       atm => geo%atom(ia)
       if(.not. species_is_ps(atm%spec)) cycle

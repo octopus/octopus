@@ -19,6 +19,8 @@
 
 ! --------------------------------------------------------------------------
 subroutine X(pert_apply) (this, gr, geo, h, ik, f_in, f_out)
+! Returns f_out = H' f_in, where H' is perturbation Hamiltonian
+! Note that e^ikr phase is applied to f_in, then is removed afterward
   type(pert_t),         intent(in)    :: this
   type(grid_t),         intent(inout) :: gr
   type(geometry_t),     intent(in)    :: geo
@@ -27,102 +29,123 @@ subroutine X(pert_apply) (this, gr, geo, h, ik, f_in, f_out)
   R_TYPE,               intent(in)    :: f_in(:)
   R_TYPE,               intent(out)   :: f_out(:)
 
+  R_TYPE, allocatable :: f_in_copy(:)
+  logical :: apply_kpoint
+
+  call push_sub('pert_inc.X(pert_apply)')
+
   call profiling_in(prof, "PERT_APPLY")
 
-  ASSERT(this%dir.ne.-1)
+  ASSERT(this%dir .ne. -1)
+
+  if (this%pert_type /= PERTURBATION_ELECTRIC) then
+     ALLOCATE(f_in_copy(1:NP_PART), NP_PART)
+     call lalg_copy(NP_PART, f_in, f_in_copy)
+     call X(set_bc(gr%f_der%der_discr, f_in_copy(:)))
+  endif
+  ! no derivatives in electric, so ghost points not needed
+
+  apply_kpoint = simul_box_is_periodic(gr%sb) .and. .not. kpoint_is_gamma(h%d, ik) &
+    .and. this%pert_type /= PERTURBATION_ELECTRIC
+  ! electric doesn't need it since (e^-ikr)r(e^ikr) = r
+
+  if (apply_kpoint) then
+    f_in_copy(1:NP_PART) = h%phase(1:NP_PART, ik) * f_in_copy(1:NP_PART)
+  endif
 
   select case(this%pert_type)
+    case(PERTURBATION_ELECTRIC)
+      call electric()
 
-  case(PERTURBATION_ELECTRIC)
-    f_out(1:NP) = f_in(1:NP) * gr%m%x(1:NP, this%dir)
+    case(PERTURBATION_MAGNETIC)
+      call magnetic()
 
-  case(PERTURBATION_MAGNETIC)
-    call magnetic()
+    case(PERTURBATION_IONIC)
+      call ionic()
 
-  case(PERTURBATION_IONIC)
-    call ionic()
-
-  case(PERTURBATION_KDOTP)
-    call kdotp()
+    case(PERTURBATION_KDOTP)
+      call kdotp()
 
   end select
+  
+  if (apply_kpoint) then
+    f_out(1:NP) = conjg(h%phase(1:NP, ik)) * f_out(1:NP)
+  endif
+
+  if (this%pert_type /= PERTURBATION_ELECTRIC) then
+     deallocate(f_in_copy)
+  endif
 
   call profiling_out(prof)
+  call pop_sub()
 
-contains 
+contains
+
+  ! --------------------------------------------------------------------------
+  subroutine electric()
+
+    call push_sub('pert_inc.X(pert_apply).electric')
+    f_out(1:NP) = f_in(1:NP) * gr%m%x(1:NP, this%dir)
+    call pop_sub()
+
+  end subroutine electric
 
   ! --------------------------------------------------------------------------
   subroutine kdotp()
-    R_TYPE, allocatable :: f_in_copy(:), grad(:,:), psi(:), cpsi(:,:)
-    ! f_in_copy is "u", the periodic part of the Bloch function
-    ! psi is the full wavefunction
-
+    R_TYPE, allocatable :: grad(:,:), cpsi(:,:)
     integer iatom
 
-    ALLOCATE(f_in_copy(1:NP_PART), NP_PART)
-    ALLOCATE(psi(1:NP_PART), NP_PART)
-    ALLOCATE(cpsi(1:NP_PART, h%d%dim), NP_PART*h%d%dim)
-    ALLOCATE(grad(gr%m%np, gr%sb%dim), gr%m%np*gr%sb%dim)
+    call push_sub('pert_inc.X(pert_apply).kdotp')
 
-    call lalg_copy(NP_PART, f_in, f_in_copy)
-    call X(set_bc(gr%f_der%der_discr, f_in_copy(:)))
-    psi(1:NP_PART) = h%phase(1:NP_PART, ik)*f_in_copy(1:NP_PART)
-    
-    call X(derivatives_grad) (gr%f_der%der_discr, psi, grad, set_bc = .false.)
-    ! set_bc done already separately, since phase has been applied
+    ALLOCATE(cpsi(1:NP_PART, h%d%dim), NP_PART * h%d%dim)
+    ALLOCATE(grad(gr%m%np, gr%sb%dim), gr%m%np * gr%sb%dim)
+
+    call X(derivatives_grad) (gr%f_der%der_discr, f_in_copy, grad, set_bc = .false.)
+    ! set_bc done already separately
     f_out(1:NP) = - M_zI * (grad(1:NP, this%dir))
+    ! delta_H_k = (-i*grad + k) . delta_k
+    ! representation on psi is just -i*grad . delta_k
+    ! note that second-order term is left out
 
     do iatom = 1, geo%natoms
-       if(species_is_ps(geo%atom(iatom)%spec)) then
-          call X(projector_commute_r(h%ep%proj(iatom), gr, h%d%dim, this%dir, ik, psi, cpsi(:, :)))
-          f_out(1:NP) = f_out(1:NP) + cpsi(1:NP, 1)
-         ! using only the first spinor component
-       end if
+      if(species_is_ps(geo%atom(iatom)%spec)) then
+        call X(projector_commute_r(h%ep%proj(iatom), gr, h%d%dim, this%dir, ik, f_in_copy, cpsi(:, :)))
+        f_out(1:NP) = f_out(1:NP) + cpsi(1:NP, 1)
+        ! using only the first spinor component
+      end if
     end do
 
-    f_out(1:NP) = R_CONJ(h%phase(1:NP, ik)) * f_out(1:NP)
-
-!    call X(derivatives_grad) (gr%f_der%der_discr, f_in_copy, grad) 
-!    f_out(1:NP) = - M_zI * (grad(1:NP, this%dir)) &
-!                  + h%d%kpoints(this%dir, ik) * f_in(1:NP)
-!    delta_H = (-i*grad + k) . delta_k
-
-!    write(*,*) 'pert_apply: ik = ', ik
-!    write(*,*) 'pert_apply: kpoint = ', h%d%kpoints(:,ik)
-!    write(*,*) 'pert_apply: direction = ', this%dir
-
-    deallocate(f_in_copy, grad)
+    deallocate(grad, cpsi)
+    call pop_sub()
     
   end subroutine kdotp
 
   ! --------------------------------------------------------------------------
   subroutine magnetic()
-    R_TYPE, allocatable :: f_in_copy(:), lf(:,:), vrnl(:,:,:)
+    R_TYPE, allocatable :: lf(:,:), vrnl(:,:,:)
     R_TYPE :: cross(1:MAX_DIM), vv(1:MAX_DIM)
     FLOAT :: xx(1:MAX_DIM)
     integer :: iatom, idir, ip
 
-    ALLOCATE(f_in_copy(1:NP_PART), NP_PART)
+    call push_sub('pert_inc.X(pert_apply).magnetic')
 
-    call lalg_copy(NP_PART, f_in, f_in_copy)
-    
-    ALLOCATE(lf(gr%m%np, gr%sb%dim), gr%m%np*gr%sb%dim)
+    ALLOCATE(lf(gr%m%np, gr%sb%dim), gr%m%np * gr%sb%dim)
 
     ! Note that we leave out the term 1/P_c
-    call X(f_angular_momentum) (gr%sb, gr%f_der, f_in_copy, lf)
+    call X(f_angular_momentum) (gr%sb, gr%f_der, f_in_copy, lf, set_bc = .false.)
     f_out(1:NP) = M_HALF * lf(1:NP, this%dir)
 
-    deallocate(lf, f_in_copy)
+    deallocate(lf)
 
     if(this%gauge == GAUGE_GIPAW .or. this%gauge == GAUGE_ICL) then
-      ALLOCATE(vrnl(NP, h%d%dim, gr%sb%dim), NP*h%d%dim*gr%sb%dim)
+      ALLOCATE(vrnl(NP, h%d%dim, gr%sb%dim), NP * h%d%dim * gr%sb%dim)
       vrnl(1:NP, 1:h%d%dim, this%dir) = M_ZERO
 
       do iatom = 1, geo%natoms
 
         do idir = 1, gr%sb%dim
           if(this%dir == idir) cycle ! this direction is not used in the cross product
-          call X(projector_commute_r)(h%ep%proj(iatom), gr, h%d%dim, idir, ik, f_in, vrnl(:, :, idir))
+          call X(projector_commute_r)(h%ep%proj(iatom), gr, h%d%dim, idir, ik, f_in_copy, vrnl(:, :, idir))
         end do
 
         xx(1:MAX_DIM) = geo%atom(iatom)%x(1:MAX_DIM)
@@ -133,14 +156,14 @@ contains
          
           vv(1:MAX_DIM) = vrnl(ip, 1, 1:MAX_DIM)
 
-          cross(1) = xx(2)*vv(3) - xx(3)*vv(2)
-          cross(2) = xx(3)*vv(1) - xx(1)*vv(3)
-          cross(3) = xx(1)*vv(2) - xx(2)*vv(1)
+          cross(1) = xx(2) * vv(3) - xx(3) * vv(2)
+          cross(2) = xx(3) * vv(1) - xx(1) * vv(3)
+          cross(3) = xx(1) * vv(2) - xx(2) * vv(1)
 
 #if !defined(R_TCOMPLEX)
-          f_out(ip) = f_out(ip) + M_HALF*cross(this%dir)
+          f_out(ip) = f_out(ip) + M_HALF * cross(this%dir)
 #else
-          f_out(ip) = f_out(ip) - M_zI*M_HALF*cross(this%dir)
+          f_out(ip) = f_out(ip) - M_zI * M_HALF * cross(this%dir)
 #endif
         end do
       end do
@@ -148,12 +171,16 @@ contains
       deallocate(vrnl)
     end if
 
+    call pop_sub()
+
   end subroutine magnetic
 
+  ! --------------------------------------------------------------------------
   subroutine ionic
     integer :: iatom, idir
     R_TYPE, allocatable  :: tmp(:)
 
+    call push_sub('pert_inc.X(pert_apply).ionic')
     ALLOCATE(tmp(1:NP), NP*1)
     
     f_out(1:NP) = M_ZERO
@@ -163,7 +190,7 @@ contains
 
         if (this%ionic%pure_dir .and. iatom /= this%atom1 .and. idir /= this%dir) cycle
 
-        call X(ionic_perturbation)(this, gr, geo, h, ik, f_in, tmp, iatom, idir)
+        call X(ionic_perturbation)(this, gr, geo, h, ik, f_in_copy, tmp, iatom, idir)
         
         call lalg_axpy(NP, this%ionic%mix1(iatom, idir), tmp, f_out)
 
@@ -171,6 +198,7 @@ contains
     end do
       
     deallocate(tmp)
+    call pop_sub()
 
   end subroutine ionic
 
@@ -187,9 +215,13 @@ subroutine X(ionic_perturbation)(this, gr, geo, h, ik, f_in, f_out, iatom, idir)
   R_TYPE,               intent(out)   :: f_out(:)
   integer,              intent(in)    :: iatom, idir    
 
+  ! FIX ME: may need to tell derivatives_oper not to apply boundary conditions 
+
   R_TYPE, allocatable :: grad(:,:), fin(:, :), fout(:, :)
   FLOAT,  allocatable :: vloc(:)
   type(atom_t), pointer :: atm
+
+  call push_sub('pert_inc.X(ionic_perturbation)')
 
   atm => geo%atom(iatom)
 
@@ -198,7 +230,7 @@ subroutine X(ionic_perturbation)(this, gr, geo, h, ik, f_in, f_out, iatom, idir)
   call epot_local_potential(h%ep, gr, gr%m, geo, atm, vloc, CNST(0.0))
 
   ALLOCATE(fin(1:NP_PART, 1), NP_PART)
-  call lalg_copy(NP, f_in, fin(:, 1))    
+  call lalg_copy(NP, f_in, fin(:, 1))
 
   !d^T v |f>
   ALLOCATE(fout(1:NP_PART, 1), NP_PART)
@@ -213,6 +245,9 @@ subroutine X(ionic_perturbation)(this, gr, geo, h, ik, f_in, f_out, iatom, idir)
   call X(project_psi)(gr%m, h%ep%proj(iatom:iatom), 1, 1, grad, fout, ik)
   f_out(1:NP) = -f_out(1:NP) + fout(1:NP, 1)
 
+  deallocate(grad, fin, fout, vloc)
+  call pop_sub()
+
 end subroutine X(ionic_perturbation)
 
 ! --------------------------------------------------------------------------
@@ -225,6 +260,10 @@ subroutine X(pert_apply_order_2) (this, gr, geo, h, ik, f_in, f_out)
   R_TYPE,               intent(in)    :: f_in(:)
   R_TYPE,               intent(out)   :: f_out(:)
 
+! FIX ME: need to apply phases here
+
+  call push_sub('pert_inc.X(pert_apply_order2)')
+
   select case(this%pert_type)
 
   case(PERTURBATION_ELECTRIC)
@@ -235,8 +274,11 @@ subroutine X(pert_apply_order_2) (this, gr, geo, h, ik, f_in, f_out)
     call magnetic()
   end select
 
+  call pop_sub()
+
 contains
 
+  ! --------------------------------------------------------------------------
   subroutine magnetic()
     R_TYPE, allocatable :: f_in2(:,:), dnl(:,:), vrnl(:,:), xf(:)
     R_TYPE :: cross1(1:MAX_DIM), bdir(1:MAX_DIM, 2)
@@ -245,20 +287,22 @@ contains
 
     integer :: iatom, idir, idir2, ip
 
+    call push_sub('pert_inc.X(pert_apply_order2).magnetic')
+
     do ip = 1, NP
       rdelta = sum(gr%m%x(ip, 1:MAX_DIM)**2) * ddelta(this%dir, this%dir2)
-      f_out(ip) = M_FOURTH*(rdelta - gr%m%x(ip, this%dir)*gr%m%x(ip, this%dir2)) * f_in(ip)
+      f_out(ip) = M_FOURTH * (rdelta - gr%m%x(ip, this%dir)*gr%m%x(ip, this%dir2)) * f_in(ip)
     end do
 
     ! gauge correction
-    apply_gauge: if(this%gauge==GAUGE_GIPAW .or. this%gauge==GAUGE_ICL) then
+    apply_gauge: if(this%gauge == GAUGE_GIPAW .or. this%gauge == GAUGE_ICL) then
       bdir(1:MAX_DIM, 1:2) = M_ZERO
       bdir(this%dir,  1)   = M_ONE
       bdir(this%dir2, 2)   = M_ONE
 
-      ALLOCATE(f_in2(NP_PART, NDIM), NP_PART*NDIM)
-      ALLOCATE(vrnl(NP_PART, h%d%dim), NP_PART*h%d%dim)
-      ALLOCATE(dnl(NP, NDIM), NP*NDIM)
+      ALLOCATE(f_in2(NP_PART, NDIM), NP_PART * NDIM)
+      ALLOCATE(vrnl(NP_PART, h%d%dim), NP_PART * h%d%dim)
+      ALLOCATE(dnl(NP, NDIM), NP * NDIM)
       ALLOCATE(xf(NP), NP)
 
       f_in2(NP:NP_PART,:) = R_TOTYPE(M_ZERO)
@@ -304,9 +348,9 @@ contains
 
           contr = M_ZERO
           do idir = 1, gr%sb%dim
-            contr = contr + cross1(idir)*dnl(ip, idir)
+            contr = contr + cross1(idir) * dnl(ip, idir)
           end do
-          f_out(ip) = f_out(ip) + M_FOURTH*contr
+          f_out(ip) = f_out(ip) + M_FOURTH * contr
         end do
 
       end do atoms
@@ -314,12 +358,17 @@ contains
       deallocate(f_in2, vrnl, dnl, xf)
     end if apply_gauge
 
+    call pop_sub()
+
   end subroutine magnetic
 
+  ! --------------------------------------------------------------------------
   subroutine ionic
     integer :: iatom, idir, jdir
     R_TYPE, allocatable  :: tmp(:)
     
+    call push_sub('pert_inc.X(pert_apply_order2).ionic')
+
     ALLOCATE(tmp(1:NP), NP*1)
     
     f_out(1:NP) = M_ZERO
@@ -341,11 +390,13 @@ contains
     end do
 
     deallocate(tmp)
+    call pop_sub()
 
   end subroutine ionic
 
 end subroutine X(pert_apply_order_2)
 
+! --------------------------------------------------------------------------
 subroutine X(ionic_perturbation_order_2) (this, gr, geo, h, ik, f_in, f_out, iatom, idir, jdir)
   type(pert_t),        intent(in)    :: this
   type(grid_t),        intent(inout) :: gr
@@ -356,10 +407,14 @@ subroutine X(ionic_perturbation_order_2) (this, gr, geo, h, ik, f_in, f_out, iat
   R_TYPE,              intent(out)   :: f_out(:)
   integer,             intent(in)    :: iatom, idir, jdir
 
+  ! FIX ME: may need to tell derivatives_oper not to apply boundary conditions
+
   R_TYPE, allocatable :: fin(:, :)
   R_TYPE, allocatable :: tmp1(:, :), tmp2(:,:)
   FLOAT,  allocatable :: vloc(:)
   type(atom_t), pointer :: atm
+
+  call push_sub('pert_inc.X(ionic_perturbation_order2)')
 
   atm => geo%atom(iatom)
 
@@ -400,9 +455,11 @@ subroutine X(ionic_perturbation_order_2) (this, gr, geo, h, ik, f_in, f_out, iat
   call X(project_psi)(gr%m, h%ep%proj(iatom:iatom), 1, 1, tmp2, tmp1, ik)
   f_out(1:NP) = f_out(1:NP) + tmp1(1:NP, 1)
 
+  call pop_sub()
+
 end subroutine X(ionic_perturbation_order_2)
 
-
+! --------------------------------------------------------------------------
 subroutine X(pert_expectation_density) (this, gr, geo, h, st, psia, psib, density, pert_order)
   type(pert_t),         intent(in)    :: this
   type(grid_t),         intent(inout) :: gr
@@ -417,6 +474,8 @@ subroutine X(pert_expectation_density) (this, gr, geo, h, st, psia, psib, densit
   R_TYPE, allocatable :: pertpsib(:)
   integer :: ik, ist, idim, order
   FLOAT   :: ikweight
+
+  call push_sub('pert_inc.X(pert_expectation_density)')
 
   ALLOCATE(pertpsib(1:NP), NP)
 
@@ -446,10 +505,11 @@ subroutine X(pert_expectation_density) (this, gr, geo, h, st, psia, psib, densit
   end do
 
   deallocate(pertpsib)
+  call pop_sub()
 
 end subroutine X(pert_expectation_density)
 
-
+! --------------------------------------------------------------------------
 R_TYPE function X(pert_expectation_value) (this, gr, geo, h, st, psia, psib, pert_order) result(expval)
   type(pert_t),         intent(in)    :: this
   type(grid_t),         intent(inout) :: gr
@@ -465,6 +525,8 @@ R_TYPE function X(pert_expectation_value) (this, gr, geo, h, st, psia, psib, per
   R_TYPE :: expval_tmp
 #endif
   integer :: order
+
+  call push_sub('pert_inc.X(pert_expectation_value)')
 
   order = 1
   if(present(pert_order)) order = pert_order
@@ -486,6 +548,8 @@ R_TYPE function X(pert_expectation_value) (this, gr, geo, h, st, psia, psib, per
 #endif
 
   deallocate(density)
+  call pop_sub()
+
 end function X(pert_expectation_value)
 
 !! Local Variables:

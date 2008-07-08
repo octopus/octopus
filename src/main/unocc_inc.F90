@@ -45,7 +45,7 @@ subroutine X(one_body) (gr, geo, st, h)
     end do
   end do
 
-  ALLOCATE(gpsi(1:NP_PART, 1:3), NP_PART*3)
+  ALLOCATE(gpsi(1:NP_PART, 1:MAX_DIM), NP_PART * MAX_DIM)
   ALLOCATE(cpsi(1:NP_PART, 1), NP_PART)
 
   
@@ -57,7 +57,7 @@ subroutine X(one_body) (gr, geo, st, h)
       if(st%occ(i, 1) < CNST(0.0001)) cycle
       if(st%occ(j, 1) > CNST(0.0001)) cycle
 
-      call X(f_gradient)(gr%sb, gr%f_der, st%X(psi)(:, 1, j, 1), gpsi(:, :))
+      call X(f_gradient)(gr%sb, gr%f_der, st%X(psi)(1:np, 1, j, 1), gpsi(1:NP_PART, 1:MAX_DIM))
        
       do idir = 1, 3
          exp_r = X(mf_integrate) (gr%m, R_CONJ(st%X(psi) (1:np, 1, i, 1)) * &
@@ -70,10 +70,10 @@ subroutine X(one_body) (gr, geo, st, h)
          do iatom = 1, geo%natoms
            call X(projector_commute_r)(h%ep%proj(iatom), gr, 1, idir, 1, st%X(psi)(1:np, 1, j, 1), cpsi)
            corr = corr + &
-                X(mf_integrate)(gr%m, R_CONJ(st%X(psi)(1:np, 1, i, 1))*cpsi(1:np, 1))
+                X(mf_integrate)(gr%m, R_CONJ(st%X(psi)(1:np, 1, i, 1)) * cpsi(1:np, 1))
          end do
 
-         me = (st%eigenval(j,1) - st%eigenval(i,1))*exp_r
+         me = (st%eigenval(j,1) - st%eigenval(i,1)) * exp_r
          
          write(iunit, *) i, j, idir, me, me - (exp_g + corr)
 

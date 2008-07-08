@@ -58,7 +58,7 @@ subroutine X(sternheimer_solve)(                           &
 
   call push_sub('sternheimer.sternheimer_solve')
 
-  ASSERT( nsigma==1 .or. nsigma ==2 )
+  ASSERT(nsigma == 1 .or. nsigma == 2)
 
   m => sys%gr%m
   st => sys%st
@@ -67,11 +67,11 @@ subroutine X(sternheimer_solve)(                           &
   call mesh_init_mesh_aux(sys%gr%m)
   
   ALLOCATE(tmp(m%np),m%np)
-  ALLOCATE(Y(m%np, 1, nsigma), m%np*1*nsigma)
-  ALLOCATE(hvar(m%np, st%d%nspin, nsigma), m%np*st%d%nspin*nsigma)
-  ALLOCATE(dl_rhoin(m%np, st%d%nspin, 1), 1*m%np*st%d%nspin)
-  ALLOCATE(dl_rhonew(m%np, st%d%nspin, 1), 1*m%np*st%d%nspin)
-  ALLOCATE(dl_rhotmp(m%np, st%d%nspin, 1), 1*m%np*st%d%nspin)
+  ALLOCATE(Y(m%np, 1, nsigma), m%np * 1 * nsigma)
+  ALLOCATE(hvar(m%np, st%d%nspin, nsigma), m%np * st%d%nspin * nsigma)
+  ALLOCATE(dl_rhoin(m%np, st%d%nspin, 1), 1 * m%np * st%d%nspin)
+  ALLOCATE(dl_rhonew(m%np, st%d%nspin, 1), 1 * m%np * st%d%nspin)
+  ALLOCATE(dl_rhotmp(m%np, st%d%nspin, 1), 1 * m%np * st%d%nspin)
 
   conv = .false.
   conv_last = .false.
@@ -110,17 +110,17 @@ subroutine X(sternheimer_solve)(                           &
         do sigma = 1, nsigma
           !calculate the RHS of the Sternheimer eq
           Y(:, 1, sigma) = R_TOTYPE(M_ZERO)
-          call X(pert_apply)(perturbation, sys%gr, sys%geo, h, ik, st%X(psi)(:, 1, ist, ik), Y(:, 1, sigma))
+          call X(pert_apply)(perturbation, sys%gr, sys%geo, h, ik, st%X(psi)(1:m%np, 1, ist, ik), Y(1:m%np, 1, sigma))
           Y(1:m%np, 1, sigma) = -Y(1:m%np, 1, sigma) - hvar(1:m%np, is, sigma) * st%X(psi)(1:m%np, 1, ist, ik)
 
           if (this%occ_response) then
           ! project out only the component of the unperturbed wavefunction
           ! |Y> := (1 - |ist><ist|)|Y>
-             Y(:, 1, sigma) = Y(:, 1, sigma) - st%X(psi)(:, 1, ist, ik) * &
-               X(mf_integrate)(sys%gr%m, st%X(psi)(:, 1, ist, ik) * Y(:, 1, sigma))
+             Y(1:m%np, 1, sigma) = Y(1:m%np, 1, sigma) - st%X(psi)(1:m%np, 1, ist, ik) * &
+               X(mf_integrate)(sys%gr%m, st%X(psi)(1:m%np, 1, ist, ik) * Y(1:m%np, 1, sigma))
           else
           ! project RHS onto the unoccupied states
-             call X(lr_orth_vector)(m, st, Y(:,:, sigma), ist, ik)
+             call X(lr_orth_vector)(m, st, Y(1:m%np, 1:1, sigma), ist, ik)
           endif
         
           if(sigma == 1) then 
@@ -130,15 +130,16 @@ subroutine X(sternheimer_solve)(                           &
           end if
 
           !solve the Sternheimer equation
-          call X(solve_HXeY) (this%solver, h, sys%gr, sys%st, ist, ik, lr(sigma)%X(dl_psi)(:, :, ist, ik),&
-               Y(:,:, sigma), -sys%st%eigenval(ist, ik) + omega_sigma)
+          call X(solve_HXeY) (this%solver, h, sys%gr, sys%st, ist, ik, &
+             lr(sigma)%X(dl_psi)(1:m%np_part, st%d%dim, ist, ik), &
+             Y(1:m%np, 1:1, sigma), -sys%st%eigenval(ist, ik) + omega_sigma)
           
           ! print the norm of the variations, and the number of
           ! iterations and residual of the linear solver
-          dpsimod = X(states_nrm2)(m, st%d%dim, lr(sigma)%X(dl_psi)(:, :, ist, ik))
+          dpsimod = X(states_nrm2)(m, st%d%dim, lr(sigma)%X(dl_psi)(1:m%np_part, st%d%dim, ist, ik))
 
           write(message(1), '(i4, f20.6, i5, e20.6)') &
-               (3 - 2 * sigma) * ist, dpsimod, this%solver%iter, this%solver%abs_psi 
+            (3 - 2 * sigma) * ist, dpsimod, this%solver%iter, this%solver%abs_psi 
           call write_info(1)
 
           states_conv = states_conv .and. (this%solver%abs_psi < this%solver%tol)

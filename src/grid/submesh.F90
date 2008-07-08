@@ -120,8 +120,8 @@ contains
 #endif
             if(ip == 0) cycle
             r2 = sum((m%x(ip, 1:MAX_DIM) - center(1:MAX_DIM))**2)
-            if(r2 <= rc**2 ) then
-              if( ip > m%np) then
+            if(r2 <= rc**2) then
+              if(ip > m%np) then
                 ! boundary points are marked as negative values
                 isb = isb + 1
                 this%jxyz_inv(ip) = -isb
@@ -137,7 +137,7 @@ contains
       this%ns_part = is + isb
       
       ALLOCATE(this%jxyz(this%ns_part), this%ns_part)
-      ALLOCATE(this%x(this%ns_part, 0:MAX_DIM), this%ns_part*(MAX_DIM+1))
+      ALLOCATE(this%x(this%ns_part, 0:MAX_DIM), this%ns_part * (MAX_DIM + 1))
       
       ! Generate the table and the positions
       !$omp parallel do private(ix, iy, iz, ip, is)
@@ -150,7 +150,7 @@ contains
             if(m%parallel_in_domains) ip = vec_global2local(m%vp, ip, m%vp%partno)
 #endif
             is = this%jxyz_inv(ip)
-            if( is == 0 ) cycle
+            if(is == 0) cycle
             if(is < 0) then
               ! it is a boundary point, move it to ns+1:ns_part range
               is = -is + this%ns
@@ -164,6 +164,7 @@ contains
       end do
       !$omp end parallel do
 
+    ! This is the case for a periodic system
     else
 
       ! Get the total number of points inside the sphere considering
@@ -193,7 +194,7 @@ contains
       this%ns_part = is
 
       ALLOCATE(this%jxyz(this%ns_part), this%ns_part)
-      ALLOCATE(this%x(this%ns_part, 0:MAX_DIM), this%ns_part*(MAX_DIM+1))
+      ALLOCATE(this%x(this%ns_part, 0:MAX_DIM), this%ns_part * (MAX_DIM + 1))
             
       !iterate again to fill the tables
       is = 0

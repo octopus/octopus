@@ -108,7 +108,7 @@ end subroutine X(states_gram_schmidt_full)
 
 ! ---------------------------------------------------------
 ! Orthonormalizes phi to the nst orbitals psi.
-! It also permits to do only the orthogonalization (no normalization).
+! It also permits doing only the orthogonalization (no normalization).
 ! And one can pass an extra optional argument, mask, which:
 !  - on input, if mask(p) = .true., the p-orbital is not used.
 !  - on output, mask(p) = .true. if p was already orthogonal (to within 1e-12).

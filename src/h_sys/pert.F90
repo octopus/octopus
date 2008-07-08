@@ -37,6 +37,7 @@ module pert_m
   use nl_operator_m
   use profiling_m
   use projector_m
+  use simul_box_m
   use species_m
   use states_m
   use varinfo_m
@@ -86,7 +87,7 @@ module pert_m
   end type pert_ionic_t
 
   type pert_t
-     private
+    private
     integer :: pert_type
     integer :: dir
     integer :: dir2
@@ -127,7 +128,7 @@ contains
     !% electron-phonon couplings
     !%Option kpoint 4
     !% Small change of k-point, as in k.p perturbation theory, for calculating
-    !% derivatives with respect to k, for hyperpolarizabilities in periodic system
+    !% derivatives with respect to k, and effective masses
     !%End 
     call loct_parse_int(check_inp('RespPerturbationType'), PERTURBATION_ELECTRIC, ii)
 
