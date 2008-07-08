@@ -484,8 +484,17 @@ contains
         !translate back to a local point
         if(mesh%parallel_in_domains) ip_inner = vec_global2local(mesh%vp, ip_inner, mesh%vp%partno)
 #endif
-
-        if(ip /= ip_inner .and. ip_inner /= 0) then 
+        
+        ! If the point is the periodic of another point, is not zero
+        ! (this might happen in the parallel case) and is inside the
+        ! grid then we have to copy it from the grid points.  
+        !
+        ! If the point index is larger than mesh%np then it is the
+        ! periodic copy of a point that is zero, so we don't count as
+        ! it will be initialized to zero anyway. For different mixed
+        ! boundary conditions the last check should be removed.
+        !
+        if(ip /= ip_inner .and. ip_inner /= 0 .and. ip_inner <= mesh%np) then 
           mesh%nper = mesh%nper + 1
 #ifdef HAVE_MPI          
         else if (ip /= 0) then
@@ -526,7 +535,7 @@ contains
         end if
 #endif
 
-        if(ip /= ip_inner .and. ip_inner /= 0) then
+        if(ip /= ip_inner .and. ip_inner /= 0 .and. ip_inner <= mesh%np) then
           iper = iper + 1
           mesh%per_points(iper) = ip
           mesh%per_map(iper) = ip_inner
