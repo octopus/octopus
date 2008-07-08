@@ -62,12 +62,14 @@ subroutine states_choose_kpoints(d, sb, geo)
   !%Type block
   !%Section Mesh::KPoints
   !%Description
-  !% This block defines an explicit set of kpoints and its weights for
-  !% a periodic system calculation. The first column are the weights
-  !% of each kpoint and the following are the components of the k
-  !% point vector, you only need to specify the components for the
-  !% periodic directions. Note that the K points should be given in
-  !% reciprocal space coordinates (not in reduced coordinates).
+  !% This block defines an explicit set of k-points and its weights for
+  !% a periodic-system calculation. The first column is the weights
+  !% of each kpoint and the following are the components of the k-point
+  !% vector. You only need to specify the components for the
+  !% periodic directions. Note that the k-points should be given in
+  !% reciprocal-space coordinates (not in reduced coordinates), i.e.
+  !% what Octopus writes in a line in the standard output as
+  !% <tt>#k =   1, k = (    0.154000,    0.154000,    0.154000)</tt>
   !%
   !% For example, if you want to include only the gamma point, you can
   !% use:
@@ -164,11 +166,23 @@ subroutine states_choose_kpoints(d, sb, geo)
   !%Section Mesh::KPoints
   !%Description
   !% This variable defines whether symmetries are taken into account
-  !% or not for the choice of k-points. If it is set no, the k-point
+  !% or not for the choice of k-points. If it is set to no, the k-point
   !% sampling will range over the full Brillouin zone. The default is
   !% yes.
   !%End
   call loct_parse_logical(check_inp('KPointsUseSymmetries'), .true., use_symmetries)
+
+  !%Variable KPointsUseTimeReversal
+  !%Type logical
+  !%Default yes
+  !%Section Mesh::KPoints
+  !%Description
+  !% This variable defines whether time-reversal symmetry is taken into account
+  !% or not for the choice of k-points. If it is set to no, the k-point
+  !% sampling will not be reduced according to time-reversal symmetry. The default is
+  !% yes. If KPointsUseSymmetries = no, this variable is ignored, and time-reversal
+  !% symmetry is not used.
+  !%End
   call loct_parse_logical(check_inp('KPointsUseTimeReversal'), .true., use_time_reversal)
   
 
@@ -194,7 +208,7 @@ subroutine states_choose_kpoints(d, sb, geo)
   call crystal_init(sb%rlattice, geo%nspecies, natom, geo%natoms, coorat, d%nik_axis, &
        kshifts, nk, nkmax, kp, kw, use_symmetries, use_time_reversal)
 
-  ! double d%nik and copy points for spin polarized calc
+  ! double d%nik and copy points for spin-polarized calc
   select case(d%ispin)
   case(UNPOLARIZED, SPINORS)
     d%nik = nk

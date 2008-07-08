@@ -61,10 +61,11 @@ module preconditioners_m
 contains
 
   ! --------------------------------------------------------- 
-  subroutine preconditioner_init(this, gr)
-    type(preconditioner_t), intent(out)   :: this 
-    type(grid_t),           intent(inout) :: gr
-    
+  subroutine preconditioner_init(this, gr, prefix)
+    type(preconditioner_t), intent(out)    :: this 
+    type(grid_t),           intent(inout)  :: gr
+    character(len=*), optional, intent(in) :: prefix
+
     FLOAT, parameter :: alpha = M_HALF
     
     !%Variable Preconditioner
@@ -73,7 +74,8 @@ contains
     !%Section SCF::EigenSolver
     !%Description
     !% Which preconditioner to use in order to solve the Kohn-Sham equations or
-    !% the linear-response equations.
+    !% the linear-response equations. May apply prefix of linear-response (e.g.
+    !% "EM", "KdotP_") to differentiate from choice for ground state.
     !%Option no 0
     !% Do not apply preconditioner.
     !%Option pre_filter 1
@@ -82,25 +84,32 @@ contains
     !% Jacobi preconditioner. only the local part of the pseudopotential is used.
     !% It does not help much, in my opinion
     !%Option pre_poisson 3
-    !% Uses the full laplacian as preconditioner. The inverse is calculated through
-    !% the solution of the poisson equation. This is, of course, very slow.
+    !% Uses the full Laplacian as preconditioner. The inverse is calculated through
+    !% the solution of the Poisson equation. This is, of course, very slow.
     !%Option pre_i_inverse 4
     !% Incomplete inverse
     !%End
-    call loct_parse_int(check_inp('Preconditioner'), PRE_SMOOTHING, this%which)
-    if(.not.varinfo_valid_option('Preconditioner', this%which)) call input_error('Preconditioner')
-    call messages_print_var_option(stdout, "Preconditioner", this%which)
-    
+    if (loct_parse_isdef(check_inp(trim(prefix)//'Preconditioner')) /= 0 ) then 
+      call loct_parse_int(check_inp(trim(prefix)//'Preconditioner'), PRE_SMOOTHING, this%which)
+      if(.not.varinfo_valid_option('Preconditioner', this%which)) &
+        call input_error('Preconditioner')
+      call messages_print_var_option(stdout, 'Preconditioner', this%which, prefix)
+    else
+      call loct_parse_int(check_inp('Preconditioner'), PRE_SMOOTHING, this%which)
+      if(.not.varinfo_valid_option('Preconditioner', this%which)) &
+        call input_error('Preconditioner')
+      call messages_print_var_option(stdout, 'Preconditioner', this%which)
+    endif  
 
     select case(this%which)
     case(PRE_SMOOTHING)
       ! the smoothing has a star stencil like the laplacian
-      call nl_operator_init(this%op, 2*NDIM + 1, "Preconditioner")
+      call nl_operator_init(this%op, 2 * NDIM + 1, "Preconditioner")
       call stencil_star_get_lapl(NDIM, 1, this%op%stencil)
       call nl_operator_build(gr%m, this%op, NP, const_w = .true.)
       
       this%op%w_re(1, 1) = alpha
-      this%op%w_re(2:,1) = M_HALF*(M_ONE-alpha)/NDIM
+      this%op%w_re(2:,1) = M_HALF * (M_ONE - alpha)/NDIM
 
     case(PRE_JACOBI)
       ALLOCATE(this%diag_lapl(NP), NP)

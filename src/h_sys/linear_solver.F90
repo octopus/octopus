@@ -136,7 +136,7 @@ contains
     !the last 2 digits select the linear solver
     this%solver = mod(fsolver, 100)
 
-    call preconditioner_init(this%pre, gr)
+    call preconditioner_init(this%pre, gr, prefix)
 
     !%Variable LinearSolverMaxIter
     !%Type integer
