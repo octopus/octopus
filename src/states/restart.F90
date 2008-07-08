@@ -622,7 +622,7 @@ contains
     type(grid_t), target, intent(in)    :: gr
     
     integer                    :: k, ik, ist, idim, jst, err, wfns, occs, x_width, x_offset
-    integer                    :: k_ik, k_ist, k_idim, k_index, lb
+    integer                    :: k_ik, k_ist, k_idim, k_index 
     integer                    :: ix, iy, iz, ip, iunit, lead_nr(2, MAX_DIM)
     character(len=256)         :: line, fname, filename, restart_dir, chars
     character                  :: char
@@ -642,7 +642,7 @@ contains
     lead_nr(1, :) = m_lead%nr(1, :)+m_lead%enlarge
     lead_nr(1, :) = m_lead%nr(2, :)-m_lead%enlarge
 
-    ALLOCATE(tmp(m_lead%np_part), m_lead%np_part)
+    ALLOCATE(tmp(m_lead%np), m_lead%np)
     restart_dir = trim(sb%lead_restart_dir(LEFT))//'/gs'
 
     wfns = io_open(trim(restart_dir)//'/wfns', action='read', is_tmp=.true., grp=gr%m%mpi_grp)
@@ -697,12 +697,7 @@ contains
       ! It only works in this compact form because the transport-direction (x) is
       ! the index running slowest.          
       do k = 1, nint(sb%lsize(TRANS_DIR)/gr%sb%lead_unit_cell(LEFT)%lsize(TRANS_DIR))
-        ! Do not write this inner loop as vector assignment. GFortran
-        ! has a problem with that.
-        lb = (k-1)*m_lead%np+1
-        do ip = lb, k*m_lead%np
-          st%zphi(ip, idim, jst, k_index) = tmp(ip-lb+1)
-        end do
+        st%zphi((k-1)*m_lead%np+1:k*m_lead%np, idim, jst, k_index) = tmp
       end do
 
       ! Apply phase.
@@ -725,8 +720,6 @@ contains
     
     call io_close(wfns); call io_close(occs)
     deallocate(tmp)
-
-    
 
     message(1) = "Info: Sucessfully initialized free states from '"// &
       trim(sb%lead_restart_dir(LEFT))//"/gs'"
