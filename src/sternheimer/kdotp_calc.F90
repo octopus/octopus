@@ -122,9 +122,6 @@ subroutine zlr_calc_eff_mass_inv(sys, h, lr, perturbation, eff_mass_inv, &
           if (occ_solution_method == 0) then
           ! project out components of other states in degenerate subspace
             do ist2 = 1, sys%st%nst
-!              if (ist2 == ist) cycle ! projection on unperturbed wfn already removed in Sternheimer eqn
-!              do it again just in case; can make a difference in degenerate subspace sometimes
-
 !              alternate direct method
 !              if (abs(sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik)) < degen_thres) then
 !                   proj_dl_psi(1:m%np) = proj_dl_psi(1:m%np) - sys%st%zpsi(1:m%np, 1, ist2, ik) * &
@@ -133,6 +130,9 @@ subroutine zlr_calc_eff_mass_inv(sys, h, lr, perturbation, eff_mass_inv, &
               orth_mask(ist2) = .not. (abs(sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik)) < degen_thres)
               ! mask == .false. means do projection; .true. means don't
             enddo
+
+!            orth_mask(ist) = .true. ! projection on unperturbed wfn already removed in Sternheimer eqn
+!            write(*,*) 'orth_mask(ist) = ', orth_mask(ist)
 
             call X(states_gram_schmidt)(m, sys%st%nst, sys%st%d%dim, sys%st%X(psi)(1:m%np, 1:1, 1:sys%st%nst, ik), &
               proj_dl_psi(1:m%np, 1:1), mask = orth_mask(1:sys%st%nst))
