@@ -243,7 +243,7 @@ subroutine X(derivatives_oper)(op, der, f, opf, ghost_update, set_bc)
   call der_handle_init(handle, der%m)
   call X(init_f)(der, handle, f)
 
-  if (.not. present(set_bc) .or. set_bc == .true.) call X(set_bc)(der, handle%X(f))
+  if (.not. present(set_bc) .or. set_bc) call X(set_bc)(der, handle%X(f))
 
 #ifdef HAVE_MPI
   ghost_update_ = .true.

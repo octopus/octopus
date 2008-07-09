@@ -22,8 +22,8 @@
 module kdotp_calc_m
   use global_m
   use hamiltonian_m
-!  use kdotp_lr_m
   use linear_response_m
+  use mesh_m
   use mesh_function_m
   use messages_m
   use pert_m
@@ -31,7 +31,6 @@ module kdotp_calc_m
   use states_m
   use sternheimer_m
   use system_m
-!  use units_m
 
   implicit none
 
@@ -67,7 +66,8 @@ contains
 
 #include "complex.F90"
 
-subroutine zlr_calc_eff_mass_inv(sys, h, lr, perturbation, eff_mass_inv, occ_solution_method, degen_thres)
+subroutine zlr_calc_eff_mass_inv(sys, h, lr, perturbation, eff_mass_inv, &
+  occ_solution_method, degen_thres)
   type(system_t),         intent(inout) :: sys
   type(hamiltonian_t),    intent(in)    :: h
   type(lr_t),             intent(in)    :: lr(:,:)
@@ -83,11 +83,16 @@ subroutine zlr_calc_eff_mass_inv(sys, h, lr, perturbation, eff_mass_inv, occ_sol
 
   integer ik, ist, ist2, idir1, idir2
   R_TYPE term
-  R_TYPE, allocatable :: pertpsi(:,:)       ! H'i|psi0>
-  R_TYPE, allocatable :: proj_dl_psi(:)   ! (1-Pn')|psi'j>
+  R_TYPE, allocatable   :: pertpsi(:, :)       ! H'i|psi0>
+  R_TYPE, allocatable   :: proj_dl_psi(:, :)   ! (1-Pn')|psi'j>
+  type(mesh_t), pointer :: m
+  logical, allocatable  :: orth_mask(:)
 
-  ALLOCATE(pertpsi(sys%gr%sb%dim, sys%gr%m%np), sys%gr%sb%dim * sys%gr%m%np)
-  ALLOCATE(proj_dl_psi(sys%gr%m%np), sys%gr%m%np)
+  m => sys%gr%m
+
+  ALLOCATE(pertpsi(sys%gr%sb%dim, m%np), sys%gr%sb%dim * m%np)
+  ALLOCATE(proj_dl_psi(m%np, 1), m%np * 1) ! second index should be sys%st%d%dim, i.e. spinors
+  ALLOCATE(orth_mask(sys%st%nst), sys%st%nst)
 
   eff_mass_inv(:, :, :, :) = 0
 
@@ -112,22 +117,29 @@ subroutine zlr_calc_eff_mass_inv(sys, h, lr, perturbation, eff_mass_inv, occ_sol
             cycle
           end if
 
-          proj_dl_psi(1:sys%gr%m%np) = lr(idir2, 1)%zdl_psi(1:sys%gr%m%np, 1, ist, ik)
+          proj_dl_psi(1:m%np, 1) = lr(idir2, 1)%zdl_psi(1:m%np, 1, ist, ik)
           
           if (occ_solution_method == 0) then
           ! project out components of other states in degenerate subspace
-             do ist2 = 1, sys%st%nst
-                if (ist2 == ist) cycle ! projection on unperturbed wfn already removed in Sternheimer eqn
-                if (abs(sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik)) < degen_thres) then
-                   proj_dl_psi(1:sys%gr%m%np) = proj_dl_psi(1:sys%gr%m%np) &
-                     - sys%st%zpsi(1:sys%gr%m%np, 1, ist2, ik) * &
-                     zmf_integrate(sys%gr%m, sys%st%zpsi(1:sys%gr%m%np, 1, ist2, ik) * proj_dl_psi(1:sys%gr%m%np))
-                endif
-             enddo
+            do ist2 = 1, sys%st%nst
+!              if (ist2 == ist) cycle ! projection on unperturbed wfn already removed in Sternheimer eqn
+!              do it again just in case; can make a difference in degenerate subspace sometimes
+
+!              alternate direct method
+!              if (abs(sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik)) < degen_thres) then
+!                   proj_dl_psi(1:m%np) = proj_dl_psi(1:m%np) - sys%st%zpsi(1:m%np, 1, ist2, ik) * &
+!                     zmf_integrate(m, sys%st%zpsi(1:m%np, 1, ist2, ik) * proj_dl_psi(1:m%np))
+
+              orth_mask(ist2) = .not. (abs(sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik)) < degen_thres)
+              ! mask == .false. means do projection; .true. means don't
+            enddo
+
+            call X(states_gram_schmidt)(m, sys%st%nst, sys%st%d%dim, sys%st%X(psi)(1:m%np, 1:1, 1:sys%st%nst, ik), &
+              proj_dl_psi(1:m%np, 1:1), mask = orth_mask(1:sys%st%nst))
           endif
 
           ! contribution from Sternheimer equation
-          term = zmf_integrate(sys%gr%m, proj_dl_psi(1:sys%gr%m%np) * conjg(pertpsi(idir1, 1:sys%gr%m%np)))
+          term = zmf_integrate(m, proj_dl_psi(1:m%np, 1) * conjg(pertpsi(idir1, 1:m%np)))
           eff_mass_inv(ik, ist, idir1, idir2) = eff_mass_inv(ik, ist, idir1, idir2) + M_TWO * term
 !          write(*,*) "unocc: ", eff_mass_inv(ik, ist, idir1, idir2)
 
@@ -137,8 +149,8 @@ subroutine zlr_calc_eff_mass_inv(sys, h, lr, perturbation, eff_mass_inv, occ_sol
           !   conjugate as the (ist2,ist) term.  same will apply to hyperpolarizability
              do ist2 = 1, sys%st%nst
                 if (ist2 == ist .or. abs(sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik)) < degen_thres) cycle
-                term = zmf_integrate(sys%gr%m, conjg(pertpsi(idir1, 1:sys%gr%m%np)) * sys%st%zpsi(1:sys%gr%m%np, 1, ist2, ik)) * &
-                     zmf_integrate(sys%gr%m, conjg(sys%st%zpsi(1:sys%gr%m%np, 1, ist2, ik)) * pertpsi(idir2, 1:sys%gr%m%np)) / &
+                term = zmf_integrate(m, conjg(pertpsi(idir1, 1:m%np)) * sys%st%zpsi(1:m%np, 1, ist2, ik)) * &
+                     zmf_integrate(m, conjg(sys%st%zpsi(1:m%np, 1, ist2, ik)) * pertpsi(idir2, 1:m%np)) / &
                      (sys%st%eigenval(ist, ik) - sys%st%eigenval(ist2, ik))
                 eff_mass_inv(ik, ist, idir1, idir2) = eff_mass_inv(ik, ist, idir1, idir2) + M_TWO * term
 !                write(*,'(a,i2,a,f20.6)') "occ(", ist2, "): ", eff_mass_inv(ik, ist, idir1, idir2)

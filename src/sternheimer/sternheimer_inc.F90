@@ -46,6 +46,7 @@ subroutine X(sternheimer_solve)(                           &
   R_TYPE, allocatable :: tmp(:)
   real(8):: abs_dens
   R_TYPE :: omega_sigma
+  logical, allocatable :: orth_mask(:)
 
   logical :: conv_last, conv, states_conv
 
@@ -72,6 +73,7 @@ subroutine X(sternheimer_solve)(                           &
   ALLOCATE(dl_rhoin(m%np, st%d%nspin, 1), 1 * m%np * st%d%nspin)
   ALLOCATE(dl_rhonew(m%np, st%d%nspin, 1), 1 * m%np * st%d%nspin)
   ALLOCATE(dl_rhotmp(m%np, st%d%nspin, 1), 1 * m%np * st%d%nspin)
+  ALLOCATE(orth_mask(st%nst), st%nst)
 
   conv = .false.
   conv_last = .false.
@@ -109,15 +111,21 @@ subroutine X(sternheimer_solve)(                           &
       do ist = 1, st%nst
         do sigma = 1, nsigma
           !calculate the RHS of the Sternheimer eq
-          Y(:, 1, sigma) = R_TOTYPE(M_ZERO)
+          Y(1:m%np, 1, sigma) = R_TOTYPE(M_ZERO)
           call X(pert_apply)(perturbation, sys%gr, sys%geo, h, ik, st%X(psi)(1:m%np, 1, ist, ik), Y(1:m%np, 1, sigma))
           Y(1:m%np, 1, sigma) = -Y(1:m%np, 1, sigma) - hvar(1:m%np, is, sigma) * st%X(psi)(1:m%np, 1, ist, ik)
 
           if (this%occ_response) then
           ! project out only the component of the unperturbed wavefunction
           ! |Y> := (1 - |ist><ist|)|Y>
-             Y(1:m%np, 1, sigma) = Y(1:m%np, 1, sigma) - st%X(psi)(1:m%np, 1, ist, ik) * &
-               X(mf_integrate)(sys%gr%m, st%X(psi)(1:m%np, 1, ist, ik) * Y(1:m%np, 1, sigma))
+!           alternative direct method below
+!             Y(1:m%np, 1, sigma) = Y(1:m%np, 1, sigma) - st%X(psi)(1:m%np, 1, ist, ik) * &
+!               X(mf_integrate)(sys%gr%m, st%X(psi)(1:m%np, 1, ist, ik) * Y(1:m%np, 1, sigma))
+
+             orth_mask(1:st%nst) = .true.
+             orth_mask(ist) = .false.
+             call X(states_gram_schmidt)(m, st%nst, st%d%dim, st%X(psi)(1:m%np, 1:1, 1:st%nst, ik), &
+               Y(1:m%np, 1:1, sigma), mask = orth_mask(1:st%nst))
           else
           ! project RHS onto the unoccupied states
              call X(lr_orth_vector)(m, st, Y(1:m%np, 1:1, sigma), ist, ik)

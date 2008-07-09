@@ -171,9 +171,9 @@ subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi,  &
       end do
     end do
 
-    ss = ss*m%vol_pp(1)
+    ss = ss * m%vol_pp(1)
 
-    call profiling_count_operations((R_ADD + R_MUL)*m%np*dim*nst)
+    call profiling_count_operations((R_ADD + R_MUL) * m%np * dim * nst)
 
   else
 
@@ -186,12 +186,13 @@ subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi,  &
             if(mask(ist)) cycle
           end if
 
-          ss(ist) = ss(ist) + sum(m%vol_pp(sp:sp + size)*R_CONJ(psi(sp:sp + size, idim, ist))*phi(sp:sp+size, idim))
+          ss(ist) = ss(ist) + sum(m%vol_pp(sp:sp + size) * &
+            R_CONJ(psi(sp:sp + size, idim, ist)) * phi(sp:sp + size, idim))
         end do
       end do
     end do
 
-    call profiling_count_operations((R_ADD + 2*R_MUL)*m%np*dim*nst)
+    call profiling_count_operations((R_ADD + 2 * R_MUL) * m%np * dim * nst)
 
   end if
 
@@ -202,6 +203,7 @@ subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi,  &
     call MPI_Allreduce(ss, ss_tmp, nst, R_MPITYPE, MPI_SUM, m%vp%comm, mpi_err)
     call profiling_out(reduce_prof)
     ss = ss_tmp
+    deallocate(ss_tmp)
   end if
 #endif
 
@@ -212,14 +214,14 @@ subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi,  &
   end if
 
   if(present(beta_ij))  &
-    ss(:) = ss(:)*beta_ij(:)
+    ss(:) = ss(:) * beta_ij(:)
 
   do idim = 1, dim
     do sp = 1, m%np, block_size
       size = min(block_size, m%np - sp + 1)
 
       if(present(Theta_Fi)) then
-        if(Theta_Fi.ne.M_ONE) &
+        if(Theta_Fi .ne. M_ONE) &
           call blas_scal(size, R_TOTYPE(Theta_Fi), phi(sp, idim), 1)
       end if
 
@@ -235,14 +237,14 @@ subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi,  &
     end do
   end do
 
-  call profiling_count_operations((R_ADD + R_MUL)*m%np*dim*nst)
+  call profiling_count_operations((R_ADD + R_MUL) * m%np * dim * nst)
 
   normalize_ = .false.
   if(present(normalize)) normalize_ = normalize
   if(normalize_) then
     nrm2 = X(states_nrm2)(m, dim, phi)
     do idim = 1, dim
-      call lalg_scal(m%np, M_ONE/nrm2, phi(:, idim))
+      call lalg_scal(m%np, M_ONE / nrm2, phi(:, idim))
     end do
   end if
 
