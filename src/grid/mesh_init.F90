@@ -447,6 +447,8 @@ contains
     integer :: maxmax
     integer, allocatable :: recv_points(:, :), blocklengths(:) 
     integer, allocatable :: send_points(:, :)
+    integer, allocatable :: send_buffer(:)
+    integer :: bsize
 #endif
 
     nullify(mesh%per_points)
@@ -490,14 +492,14 @@ contains
         ! grid then we have to copy it from the grid points.  
         !
         ! If the point index is larger than mesh%np then it is the
-        ! periodic copy of a point that is zero, so we don't count as
-        ! it will be initialized to zero anyway. For different mixed
-        ! boundary conditions the last check should be removed.
+        ! periodic copy of a point that is zero, so we don't count it
+        ! as it will be initialized to zero anyway. For different
+        ! mixed boundary conditions the last check should be removed.
         !
         if(ip /= ip_inner .and. ip_inner /= 0 .and. ip_inner <= mesh%np) then 
           mesh%nper = mesh%nper + 1
-#ifdef HAVE_MPI          
-        else if (ip /= 0) then
+#ifdef HAVE_MPI
+        else if(ip_inner == 0) then
           nper_recv = nper_recv + 1
 #endif
         end if
@@ -548,7 +550,7 @@ contains
 
             ip_inner = vec_global2local(mesh%vp, ip_inner_global, ipart)
             
-            if(ip_inner /= 0) then
+            if(ip_inner /= 0 .and. ip_inner <= mesh%vp%np_local(ipart)) then
               ! count the points to receive from each node
               mesh%nrecv(ipart) = mesh%nrecv(ipart) + 1
               ! and store the number of the point
@@ -568,6 +570,12 @@ contains
 
 #ifdef HAVE_MPI
       if(mesh%parallel_in_domains) then
+
+        ! first we allocate the buffer to be able to use MPI_Bsend
+        bsize = mesh%vp%p - 1 + nper_recv + MPI_BSEND_OVERHEAD*2*(mesh%vp%p - 1)
+        ALLOCATE(send_buffer(1:bsize), bsize)
+        call MPI_Buffer_attach(send_buffer, bsize*4, mpi_err)
+
         ! Now we communicate to each node the points they will have to
         ! send us. Probably this could be done without communication,
         ! but this way it seems simpler to implement.
@@ -575,8 +583,7 @@ contains
         ! We send the number of points we expect to receive.
         do ipart = 1, mesh%vp%p
           if(ipart == mesh%vp%partno) cycle
-          ! (this could cause a deadlock, we should use a Bsend or a Isend)
-          call MPI_Send(mesh%nrecv(ipart), 1, MPI_INTEGER, ipart - 1, 0, mesh%vp%comm, mpi_err)
+          call MPI_Bsend(mesh%nrecv(ipart), 1, MPI_INTEGER, ipart - 1, 0, mesh%vp%comm, mpi_err)
         end do
 
         ! And we receive it
@@ -587,11 +594,10 @@ contains
           call MPI_Recv(mesh%nsend(ipart), 1, MPI_INTEGER, ipart - 1, 0, mesh%vp%comm, MPI_STATUS_IGNORE, mpi_err)
         end do
 
-        ! Now we send the index of the points
+        ! Now we send the indexes of the points
         do ipart = 1, mesh%vp%p
           if(ipart == mesh%vp%partno .or. mesh%nrecv(ipart) == 0) cycle
-          ! (this could cause a deadlock, we should use a Bsend or a Isend)
-          call MPI_Send(recv_rem_points(:, ipart), mesh%nrecv(ipart), MPI_INTEGER, ipart - 1, 1, mesh%vp%comm, mpi_err)
+          call MPI_Bsend(recv_rem_points(:, ipart), mesh%nrecv(ipart), MPI_INTEGER, ipart - 1, 1, mesh%vp%comm, mpi_err)
         end do
 
         ALLOCATE(send_points(1:maxval(mesh%nsend), 1:mesh%vp%p), maxval(mesh%nsend)*mesh%vp%p)
@@ -659,6 +665,8 @@ contains
           end if
 
         end do
+
+        call MPI_Buffer_detach(send_buffer, bsize, mpi_err)
 
       end if
 #endif
