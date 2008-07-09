@@ -11,7 +11,7 @@ Enabled    : Yes
 
 # Calculate eigenstate of 1d attractive square potential barrier.
 Input: 03-extended_eigenstate.01-square_well_1d.inp
-match ; Total energy ; GREP(well_static/info, 'Total       =', 20) ; 326.1786
+match ; Total energy ; GREP(well_static/info, 'Total       =', 20) ; 5.7212
 
 # Calculate eigenstates of 2D ring potential attached to upside-down Gaussian
 # shaped lead channels.

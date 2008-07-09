@@ -16,8 +16,7 @@ FromScratch = yes
 TheoryLevel = independent_particles
 
 BoxShape = parallelepiped
-DerivativesOrder = 1
-Dimensions = 2
+Dimensions = 1
 Spacing = 0.1
 Lx = 20
 
@@ -43,10 +42,13 @@ lead_PeriodicDimensions = 1
 %
 
 %lead_Lsize
- Spacing | 0 | 0
+ 50*Spacing | 0 | 0
 %
 
 %lead_KPoints
+ 1 | 0.1 | 0 | 0
+ 1 | 0.2 | 0 | 0
+ 1 | 0.3 | 0 | 0
  1 | 0.4 | 0 | 0
 %
 
