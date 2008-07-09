@@ -147,7 +147,14 @@ subroutine X(f_laplacian) (sb, f_der, f, lapl, cutoff_, ghost_update, set_bc)
 
   call push_sub('f_inc.Xf_laplacian')
 
-  call X(derivatives_lapl) (f_der%der_discr, f, lapl, ghost_update, set_bc)
+  if (present(ghost_update) .and. present(set_bc)) &
+       call X(derivatives_lapl) (f_der%der_discr, f, lapl, ghost_update, set_bc)
+  if (present(ghost_update) .and. .not. present(set_bc)) &
+       call X(derivatives_lapl) (f_der%der_discr, f, lapl, ghost_update = ghost_update)
+  if (.not. present(ghost_update) .and. present(set_bc)) &
+       call X(derivatives_lapl) (f_der%der_discr, f, lapl, set_bc = set_bc)
+  if (.not. present(ghost_update) .and. .not. present(set_bc)) &
+       call X(derivatives_lapl) (f_der%der_discr, f, lapl)
 
   call pop_sub()
 end subroutine X(f_laplacian)
@@ -164,7 +171,14 @@ subroutine X(f_gradient) (sb, f_der, f, grad, ghost_update, set_bc)
 
   call push_sub('f_inc.Xf_gradient')
 
-  call X(derivatives_grad) (f_der%der_discr, f, grad, ghost_update, set_bc = set_bc)
+  if (present(ghost_update) .and. present(set_bc)) &
+    call X(derivatives_grad) (f_der%der_discr, f, grad, ghost_update, set_bc)
+  if (present(ghost_update) .and. .not. present(set_bc)) &
+    call X(derivatives_grad) (f_der%der_discr, f, grad, ghost_update = ghost_update)
+  if (.not. present(ghost_update) .and. present(set_bc)) &
+    call X(derivatives_grad) (f_der%der_discr, f, grad, set_bc = set_bc)
+  if (.not. present(ghost_update) .and. .not. present(set_bc)) &
+    call X(derivatives_grad) (f_der%der_discr, f, grad)
 
   call pop_sub()
 end subroutine X(f_gradient)
@@ -180,7 +194,11 @@ subroutine X(f_divergence) (sb, f_der, f, divf, ghost_update)
 
   call push_sub('f_inc.Xf_divergence')
 
-  call X(derivatives_div) (f_der%der_discr, f, divf, ghost_update)
+  if (present(ghost_update)) then
+     call X(derivatives_div) (f_der%der_discr, f, divf, ghost_update)
+  else
+     call X(derivatives_div) (f_der%der_discr, f, divf)
+  endif
 
   call pop_sub()
 end subroutine X(f_divergence)
@@ -195,7 +213,11 @@ subroutine X(f_curl) (f_der, f, curlf, ghost_update)
 
   call push_sub('f_inc.Xf_curl')
 
-  call X(derivatives_curl) (f_der%der_discr, f, curlf)
+  if (present(ghost_update)) then
+     call X(derivatives_curl) (f_der%der_discr, f, curlf, ghost_update)
+  else
+     call X(derivatives_curl) (f_der%der_discr, f, curlf)
+  endif
 
   call pop_sub()
 end subroutine X(f_curl)
@@ -279,7 +301,15 @@ subroutine X(f_angular_momentum)(sb, f_der, f, lf, ghost_update, set_bc)
   ASSERT(sb%dim.ne.1)
 
   ALLOCATE(gf(f_der%m%np, sb%dim), f_der%m%np*sb%dim)
-  call X(f_gradient)(sb, f_der, f, gf, ghost_update, set_bc = set_bc)
+
+  if (present(ghost_update) .and. present(set_bc)) &
+    call X(f_gradient)(sb, f_der, f, gf, ghost_update, set_bc)
+  if (present(ghost_update) .and. .not. present(set_bc)) &
+    call X(f_gradient)(sb, f_der, f, gf, ghost_update = ghost_update)
+  if (.not. present(ghost_update) .and. present(set_bc)) &
+    call X(f_gradient)(sb, f_der, f, gf, set_bc = set_bc)
+  if (.not. present(ghost_update) .and. .not. present(set_bc)) &
+    call X(f_gradient)(sb, f_der, f, gf)
 
 #if defined(R_TCOMPLEX)
   factor = -M_ZI
@@ -339,10 +369,19 @@ subroutine X(f_l2)(sb, f_der, f, l2f, ghost_update)
     ALLOCATE(gf(m%np_part, 3), m%np_part*3)
     ALLOCATE(ggf(m%np_part, 3, 3), m%np_part*3*3)
 
-    call X(f_angular_momentum)(sb, f_der, f, gf, ghost_update)
+    if (present(ghost_update)) then
+       call X(f_angular_momentum)(sb, f_der, f, gf, ghost_update)
+    else
+       call X(f_angular_momentum)(sb, f_der, f, gf)
+    endif
 
     do j = 1, 3
-      call X(f_angular_momentum)(sb, f_der, gf(:,j), ggf(:,:,j), ghost_update)
+      if (present(ghost_update)) then
+        call X(f_angular_momentum)(sb, f_der, gf(:,j), ggf(:,:,j), ghost_update)
+      else
+        call X(f_angular_momentum)(sb, f_der, gf(:,j), ggf(:,:,j))
+      endif
+
     end do
 
     do j = 1, sb%dim
@@ -353,8 +392,13 @@ subroutine X(f_l2)(sb, f_der, f, l2f, ghost_update)
     ALLOCATE(gf(m%np_part, 1), m%np_part)
     ALLOCATE(ggf(m%np_part, 1, 1), m%np_part)
 
-    call X(f_angular_momentum)(sb, f_der, f, gf, ghost_update)
-    call X(f_angular_momentum)(sb, f_der, gf(:, 1), ggf(:, :, 1), ghost_update)
+    if (present(ghost_update)) then
+       call X(f_angular_momentum)(sb, f_der, f, gf, ghost_update)
+       call X(f_angular_momentum)(sb, f_der, gf(:, 1), ggf(:, :, 1), ghost_update)
+    else
+       call X(f_angular_momentum)(sb, f_der, f, gf)
+       call X(f_angular_momentum)(sb, f_der, gf(:, 1), ggf(:, :, 1))
+    endif
 
     l2f(1:m%np) = ggf(1:m%np, 1, 1)
   end select
