@@ -86,9 +86,17 @@ dnl In particular, the code can be compile in single precision, mpi, using
 dnl complex wave-functions in the ground-state, and in debug mode.
 
 dnl these are the --enable/--disable possible in octopus
-AC_ARG_ENABLE(single, AS_HELP_STRING([--enable-single], [octopus in single precision]), [SINGLE_PRECISION=1])
+AC_ARG_ENABLE(single, AS_HELP_STRING([--enable-single], [octopus in single precision]))
 AC_ARG_ENABLE(debug, AS_HELP_STRING([--disable-debug], [debug mode]), [DEBUG=${enableval}])
-AC_ARG_ENABLE(openmp, AS_HELP_STRING([--enable-openmp], [Multi-threaded parallel version using OpenMP (experimental)]), [USE_OMP=1])
+AC_ARG_ENABLE(openmp, AS_HELP_STRING([--enable-openmp], [Multi-threaded parallel version using OpenMP (experimental)]))
+
+if test -n "${enable_single}" -a x"${enable_single}" != x"no"; then
+  SINGLE_PRECISION=1
+fi
+
+if test -n "${enable_openmp}" -a x"${enable_openmp}" != x"no"; then
+  USE_OMP=1
+fi
 
 dnl the MPI has a special treatment
 AC_ARG_ENABLE(mpi, AS_HELP_STRING([--enable-mpi(=PATH)], [Parallel version]))
