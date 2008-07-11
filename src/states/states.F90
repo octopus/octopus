@@ -1574,7 +1574,7 @@ contains
     ! check if everything is OK
     charge = M_ZERO
     do ist = 1, st%nst
-      charge = charge + sum(st%occ(ist, :)*st%d%kweights(:))
+      charge = charge + sum(st%occ(ist, 1:st%d%nik) * st%d%kweights(1:st%d%nik))
     end do
     if(abs(charge-st%qtot) > CNST(1e-6)) then
       message(1) = 'Occupations do not integrate to total charge!'

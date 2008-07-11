@@ -315,7 +315,7 @@ subroutine X(lr_calc_susceptibility)(sys, h, lr, nsigma, perturbation, chi_para,
   end do
 
 
-  ! We now add the minus sign from the definition of the suceptibility (chi = -d^2 E /d B^2)
+  ! We now add the minus sign from the definition of the susceptibility (chi = -d^2 E /d B^2)
   chi_para(:,:) = -chi_para(:,:)/P_C**2
   chi_dia (:,:) = -chi_dia (:,:)/P_C**2
 

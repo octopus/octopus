@@ -171,7 +171,7 @@ contains
     emin = minval(eigenvalues)
     emax = maxval(eigenvalues)
 
-    sumq = this%el_per_state*nst*sum(kweights(:))
+    sumq = this%el_per_state * nst* sum(kweights(:))
 
     if (sumq - qtot <= -CNST(1e-10)) then ! not enough states
       message(1) = 'Not enough states'
@@ -196,9 +196,9 @@ contains
     else if(this%method == SMEAR_SEMICONDUCTOR) then
       sumq = qtot
       ! first we sort the eigenvalues
-      ALLOCATE(eigenval_list(nst*nik), nst*nik)
-      ALLOCATE(k_list(nst*nik), nst*nik)
-      ALLOCATE(reorder(nst*nik), nst*nik)
+      ALLOCATE(eigenval_list(nst * nik), nst * nik)
+      ALLOCATE(k_list(nst * nik), nst * nik)
+      ALLOCATE(reorder(nst * nik), nst * nik)
 
       iter = 1
       do ist = 1, nst
@@ -214,7 +214,7 @@ contains
       do iter = 1, nst*nik
         xx = kweights(k_list(reorder(iter)))
 
-        if(sumq <= xx*this%el_per_state) then
+        if(sumq - xx*this%el_per_state <= CNST(1e-13)) then
           this%e_fermi = eigenval_list(iter)
           this%ef_occ  = sumq / (xx * this%el_per_state)
           exit
@@ -229,7 +229,7 @@ contains
 
     else ! bisection
       dsmear = max(CNST(1e-14), this%dsmear)
-      drange = dsmear*sqrt(-log(tol*CNST(.01)))
+      drange = dsmear * sqrt(-log(tol * CNST(.01)))
 
       emin = emin - drange
       emax = emax + drange
@@ -502,3 +502,8 @@ contains
   end function smear_entropy_function
 
 end module smear_m
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:
