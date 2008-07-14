@@ -53,8 +53,11 @@ subroutine X(eigen_solver_rmmdiis) (gr, st, h, pre, tol, niter, converged, diff,
   ALLOCATE(preres(1:NP_PART, 1:st%d%dim), NP_PART*st%d%dim*st%lnst)
   ALLOCATE(resres(1:NP, 1:st%d%dim), NP*st%d%dim*st%lnst)
 
-  call X(subspace_diag)(gr, st, h, diff)
-
+  if(present(diff)) then
+    call X(subspace_diag)(gr, st, h, diff)
+  else
+    call X(subspace_diag)(gr, st, h)
+  end if
   ntimes = niter/2
   niter = 0
 

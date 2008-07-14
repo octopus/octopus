@@ -149,8 +149,8 @@ subroutine X(subspace_diag_par_states)(gr, st, h, diff)
     ! Recalculate the residues if requested by the diff argument.
     if(present(diff)) then 
       do i = st%st_start, st%st_end
-        call X(Hpsi)(h, gr, st%X(psi)(:, :, i, ik) , f(:, :, 1), i, ik)
-        diff(i, ik) = X(states_residue)(gr%m, st%d%dim, f(:, :, 1), st%eigenval(i, ik), &
+        call X(Hpsi)(h, gr, st%X(psi)(:, :, i, ik) , f(:, :, st%st_start), i, ik)
+        diff(i, ik) = X(states_residue)(gr%m, st%d%dim, f(:, :, st%st_start), st%eigenval(i, ik), &
           st%X(psi)(:, :, i, ik))
       end do
 

@@ -159,8 +159,8 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
     force_local(1:MAX_DIM, 1:geo%nlatoms) = force(1:MAX_DIM, geo%atoms_start:geo%atoms_end)
 
     call MPI_Allgatherv(&
-         force_local(1, 1), MAX_DIM*geo%nlatoms, MPI_FLOAT, &
-         force(1, 1), recv_count(1), recv_displ(1), MPI_FLOAT, &
+         force_local, MAX_DIM*geo%nlatoms, MPI_FLOAT, &
+         force, recv_count(1), recv_displ, MPI_FLOAT, &
          geo%mpi_grp%comm, mpi_err)
 
     deallocate(recv_count, recv_displ, force_local)

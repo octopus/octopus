@@ -298,7 +298,7 @@ contains
         call deigen_solver_rmmdiis(gr, st, h, eigens%pre, tol, maxiter, eigens%converged, eigens%diff, verbose = verbose_)
       end select
 
-      call dsubspace_diag(gr, st, h)
+      call dsubspace_diag(gr, st, h, eigens%diff)
 
     else
       select case(eigens%es_type)
