@@ -55,4 +55,5 @@ lcao.o: lcao.F90 lcao_inc.F90
 scf.o: scf.F90 lcao.o eigen.o ob_lippmann_schwinger.o
 ground_state.o: ground_state.F90 scf.o lcao.o 
 eigen_rmmdiis.o: eigen_rmmdiis.F90 eigen_rmmdiis_inc.F90 subspace.o
-ob_lippmann_schwinger.o: ob_lippmann_schwinger.F90
+ob_lippmann_schwinger.o: ob_lippmann_schwinger.F90 eigen.o
+

@@ -345,8 +345,8 @@ contains
   ! ---------------------------------------------------------
   subroutine do_partition()
 #if defined(HAVE_METIS) && defined(HAVE_MPI)
-    integer :: i, j
-    integer, allocatable :: part(:)
+    integer :: i, j, ipart, jpart
+    integer, allocatable :: part(:), nnb(:)
 
     mesh%mpi_grp = mpi_grp
 
@@ -355,6 +355,32 @@ contains
     call vec_init(mesh%mpi_grp%comm, 0, part, mesh%np_global, mesh%np_part_global,  &
       mesh%nr, mesh%Lxyz_inv, mesh%Lxyz, stencil, np_stencil, mesh%sb%dim, mesh%vp)
     deallocate(part)
+
+    ALLOCATE(nnb(1:mesh%vp%p), mesh%vp%p)
+    nnb = 0
+    do jpart = 1, mesh%vp%p
+      do ipart = 1, mesh%vp%p
+        if (ipart == jpart) cycle
+        if (mesh%vp%np_ghost_neigh(jpart, ipart) /= 0) nnb(jpart) = nnb(jpart) + 1
+      end do
+      ASSERT(nnb(jpart) >= 0 .and. nnb(jpart) < mesh%vp%p)
+    end do
+
+    ! Write information about partitions.
+    message(1) = 'Info: Mesh partition:'
+    call write_info(1)
+    do ipart = 1, mesh%vp%p
+      write(message(1),'(a,i5)')  &
+           'Info: Nodes in domain-group ', ipart
+      write(message(2),'(a,i10,a,i10)') &
+           '      Neighbours   :', nnb(ipart), &
+           '      Local points    :', mesh%vp%np_local(ipart)
+      write(message(3),'(a,i10,a,i10)') &
+           '      Ghost points :', mesh%vp%np_ghost(ipart), &
+           '      Boundary points :', mesh%vp%np_bndry(ipart)
+      call write_info(3)
+    end do
+    deallocate(nnb)
 
     ! Set local point numbers.
     mesh%np      = mesh%vp%np_local(mesh%vp%partno)
@@ -715,7 +741,6 @@ subroutine mesh_partition(m, part)
   integer, allocatable :: xadj(:)        ! Indices of adjacency list in adjncy.
   integer, allocatable :: adjncy(:)      ! Adjacency lists.
   integer              :: options(5)     ! Options to METIS.
-  integer, allocatable :: ppp(:)         ! Points per partition.
   integer              :: iunit          ! For debug output to files.
   character(len=3)     :: filenum
 
@@ -833,20 +858,6 @@ subroutine mesh_partition(m, part)
     call oct_metis_part_graph_kway(nv, xadj, adjncy, &
       0, 0, 0, 1, p, options, edgecut, part)
   end if
-
-  ! Write information about partitions.
-  ! Count points in each partition.
-  ALLOCATE(ppp(p), p)
-  ppp = 0
-  do i = 1, nv
-    ppp(part(i)) = ppp(part(i))+1
-  end do
-
-  message(1) = 'Info: Number of grid points per node:'
-  write(message(2), '(a,i9,a,i9,a,i9)') 'Info: Average = ', int(sum(ppp)/dble(p)), &
-      '  Minimum = ', minval(ppp), '  Maximum = ', maxval(ppp)
-  call write_info(2)
-  deallocate(ppp)
 
   if(in_debug_mode.and.mpi_grp_is_root(mpi_world)) then
     ! Debug output. Write points of each partition in a different file.
