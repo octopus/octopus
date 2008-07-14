@@ -33,6 +33,7 @@ subroutine X(states_gram_schmidt_full)(st, nst, m, dim, psi, start)
   R_TYPE  :: ss
 #if defined(HAVE_MPI)
   R_TYPE, target, allocatable :: buf(:, :)
+  integer                     :: stat(MPI_STATUS_SIZE)
 #endif
   R_TYPE, pointer             :: psi_q(:, :), psi_p(:, :)
   type(profile_t), save :: prof
@@ -62,7 +63,7 @@ subroutine X(states_gram_schmidt_full)(st, nst, m, dim, psi, start)
           psi_q => psi(:, :, q-st%st_start+1)
           psi_p => psi(:, :, p-st%st_start+1)
         else if(state_is_local(st, p).and..not.state_is_local(st, q)) then
-          call MPI_Recv(buf, m%np_part*st%d%dim, R_MPITYPE, st%node(q), 0, st%mpi_grp%comm, mpi_err)
+          call MPI_Recv(buf, m%np_part*st%d%dim, R_MPITYPE, st%node(q), 0, st%mpi_grp%comm, stat, mpi_err)
           psi_q => buf
           psi_p => psi(:, :, p-st%st_start+1)
         else if(.not.state_is_local(st, p).and.state_is_local(st, q)) then

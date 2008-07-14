@@ -35,7 +35,11 @@ subroutine X(subspace_diag)(gr, st, h, diff)
 
 #ifdef HAVE_MPI
   if(st%parallel_in_states) then
-    call X(subspace_diag_par_states)(gr, st, h, diff)
+    if(present(diff)) then
+      call X(subspace_diag_par_states)(gr, st, h, diff)
+    else
+      call X(subspace_diag_par_states)(gr, st, h)
+    end if
   else
 #endif
 
