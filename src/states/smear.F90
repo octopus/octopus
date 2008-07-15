@@ -214,7 +214,7 @@ contains
       do iter = 1, nst*nik
         xx = kweights(k_list(reorder(iter)))
 
-        if(sumq - xx*this%el_per_state <= CNST(1e-13)) then
+        if(sumq - xx*this%el_per_state <= CNST(1e-12)) then
           this%e_fermi = eigenval_list(iter)
           this%ef_occ  = sumq / (xx * this%el_per_state)
           exit
