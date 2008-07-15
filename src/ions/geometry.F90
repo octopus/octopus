@@ -259,6 +259,7 @@ contains
     call pop_sub()
   end subroutine geometry_init_xyz
 
+
   ! ---------------------------------------------------------
   subroutine geometry_init_species(geo, print_info)
     type(geometry_t),  intent(inout) :: geo
@@ -655,7 +656,9 @@ contains
 
     geo_out%ncatoms = geo_in%ncatoms
     ALLOCATE(geo_out%catom(geo_out%ncatoms), geo_out%ncatoms)
-    geo_out%catom(1:geo_out%ncatoms) = geo_in%catom(1:geo_in%ncatoms)
+    if(geo_in%ncatoms.gt.0) then
+      geo_out%catom(1:geo_out%ncatoms) = geo_in%catom(1:geo_in%ncatoms)
+    end if
 
     geo_out%nspecies = geo_in%nspecies
     ALLOCATE(geo_out%species(geo_out%nspecies), geo_out%nspecies)

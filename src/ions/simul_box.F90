@@ -94,6 +94,7 @@ module simul_box_m
     ! For open boundaries, we need reference to the lead's unit cell.
     ! This unit cell is itself a simulation box.
     logical                    :: open_boundaries          ! Use open boundaries?
+    integer                    :: n_ucells                 ! Number of unit cells that fit in central region.
     integer                    :: add_unit_cells(NLEADS)   ! Number of additonal unit cells.
     character(len=32)          :: lead_dataset(NLEADS)     ! Dataset name of the periodic lead calculation.
     character(len=32)          :: lead_restart_dir(NLEADS) ! Directory where to find the lead restart files.
@@ -327,6 +328,7 @@ contains
         do il = 1, NLEADS
           sb%lsize(TRANS_DIR) = sb%lsize(TRANS_DIR) + sb%add_unit_cells(il)*sb%lead_unit_cell(il)%lsize(TRANS_DIR)
         end do
+        sb%n_ucells = nint(sb%lsize(TRANS_DIR)/sb%lead_unit_cell(LEFT)%lsize(TRANS_DIR))
       else
         sb%open_boundaries  = .false.
         sb%add_unit_cells   = 0
