@@ -58,7 +58,7 @@ program harmonic_spectrum
   !%Section Utilities::oct-harmonic-spectrum
   !%Description
   !% The oct-harmonic-spectrum utility program needs to know the direction along
-  !% which the emission raidiation is considered to be polarized. It may be
+  !% which the emission radiation is considered to be polarized. It may be
   !% linearly polarized or circularly polarized.
   !%Option "x"
   !% Linearly polarized field in the x direction.
@@ -67,9 +67,9 @@ program harmonic_spectrum
   !%Option "z"
   !% Linearly polarized field in the z direction.
   !%Option "+"
-  !% Circularly polarized field, counter clock-wise.
+  !% Circularly polarized field, counterclockwise.
   !%Option "-"
-  !% Circularly polarized field, clock-wise.
+  !% Circularly polarized field, clockwise.
   !%End
   call loct_parse_string(check_inp('HarmonicSpectrumPolarization'), 'z', txt)
   sh%pol = txt(1:1)
@@ -85,7 +85,7 @@ program harmonic_spectrum
   !%Description
   !% The oct-harmonic-spectrum may calculate the spectrum in two alternative ways,
   !% mathematically equivalent but numerically diferent: by reading the dipole
-  !% moment (from the multipoles file) and calculating the accelaratio numerically
+  !% moment (from the multipoles file) and calculating the acceleration numerically
   !% from it, or by reading directly the acceleration from the acceleration file,
   !% which may also be generated during a time-dependent run of octopus.
   !%Option hs_from_dipole 1

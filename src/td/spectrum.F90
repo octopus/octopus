@@ -73,7 +73,7 @@ module spectrum_m
     FLOAT   :: energy_step         ! step in energy mesh
     FLOAT   :: max_energy          ! maximum of energy mesh
     integer :: damp                ! Damp type (none, exp or pol)
-    integer :: transform           ! sinus, cosinus or exponential transform
+    integer :: transform           ! sine, cosine, or exponential transform
     FLOAT   :: damp_factor         ! factor used in damping
   end type spec_t
 
@@ -136,14 +136,14 @@ contains
 
     !%Variable SpecTransform
     !%Type integer
-    !%Default sinus
+    !%Default sine
     !%Section Utilities::oct-cross-section
     !%Description
     !% Decides which transform to perform
-    !%Option sinus 2
-    !% Sinus transform <math>\int dt \sin(wt) f(t)</math>
-    !%Option cosinus 3
-    !% Cosinus transform <math>\int dt \cos(wt) f(t)</math>
+    !%Option sine 2
+    !% Sine transform <math>\int dt \sin(wt) f(t)</math>
+    !%Option cosine 3
+    !% Cosine transform <math>\int dt \cos(wt) f(t)</math>
     !%Option exponential 1
     !% Exponential transform <math>\int dt \exp(-wt) f(t)</math>
     !%End
@@ -340,7 +340,7 @@ contains
     !% strength <tt>TDDeltaStrength</tt> can be applied. This is used to 
     !% calculate, e.g. the linear optical spectra.
     !%
-    !% Note that the "strength" here described is adimensional.
+    !% Note that the "strength" here described is non-dimensional.
     !%End
     call loct_parse_float(check_inp('TDDeltaStrength'), M_ZERO, k%delta_strength)
 

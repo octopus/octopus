@@ -47,14 +47,14 @@ module ps_in_grid_m
     integer        :: no_l_channels    ! number of l channels to consider
     FLOAT, pointer :: vps(:, :)        ! the pseudopotential (l=0 .. no_l_channels-1)
     FLOAT, pointer :: KB(:,:)          ! Kleinman-Bylander projectors
-    FLOAT, pointer :: dkbcos(:)        ! Kleinman-Bylander cosinus
+    FLOAT, pointer :: dkbcos(:)        ! Kleinman-Bylander cosine
     FLOAT, pointer :: dknorm(:)        ! Kleinman-Bylander norm
     FLOAT, pointer :: kb_radius(:)     ! radius of KB projectors
 
     integer        :: so_no_l_channels
     FLOAT, pointer :: so_vps(:,:)      ! spin-orbit components (l=1 .. so_no_l_channels)
     FLOAT, pointer :: so_KB(:,:)       ! Kleinman-Bylander projectors
-    FLOAT, pointer :: so_dkbcos(:)     ! Kleinman-Bylander cosinus
+    FLOAT, pointer :: so_dkbcos(:)     ! Kleinman-Bylander cosine
     FLOAT, pointer :: so_dknorm(:)     ! Kleinman-Bylander norm
     FLOAT, pointer :: so_kb_radius(:)  ! radius of KB projectors
     
