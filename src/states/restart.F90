@@ -630,7 +630,7 @@ contains
     type(simul_box_t), pointer :: sb
     type(mesh_t), pointer      :: m_lead, m_center
     CMPLX                      :: phase
-    CMPLX, allocatable         :: tmp(:)
+    CMPLX, allocatable         :: tmp(:, :)
 
     FLOAT :: trans_e, long_e, e, kx, ky, x, y
 
@@ -642,7 +642,7 @@ contains
     lead_nr(1, :) = m_lead%nr(1, :)+m_lead%enlarge
     lead_nr(1, :) = m_lead%nr(2, :)-m_lead%enlarge
 
-    ALLOCATE(tmp(m_lead%np), m_lead%np)
+    ALLOCATE(tmp(m_lead%np, st%d%dim), m_lead%np*st%d%dim)
     restart_dir = trim(sb%lead_restart_dir(LEFT))//'/gs'
 
     wfns = io_open(trim(restart_dir)//'/wfns', action='read', is_tmp=.true., grp=gr%m%mpi_grp)
@@ -661,6 +661,7 @@ contains
     call iopar_read(gr%m%mpi_grp, occs, line, err); call iopar_read(gr%m%mpi_grp, occs, line, err)
 
     jst = 1
+    st%ob_rho = M_ZERO
     do
       ! Check for end of file. Check only one of the two files assuming
       ! they are written correctly, i. e. of same length.
@@ -681,7 +682,7 @@ contains
       st%ob_d%kpoints(:, k_ik) = (/k_x, k_y, k_z/)
       st%ob_d%kweights(k_ik)   = w_k
 
-      call zrestart_read_function(trim(sb%lead_restart_dir(LEFT))//'/gs', fname, m_lead, tmp, err)
+      call zrestart_read_function(trim(sb%lead_restart_dir(LEFT))//'/gs', fname, m_lead, tmp(:, k_idim), err)
 
       if(st%d%ispin.eq.SPIN_POLARIZED) then
         if(is_spin_up(ik)) then
@@ -692,12 +693,14 @@ contains
       else
         k_index = 1
       end if
+      call lead_dens_accum()
+
 
       ! This loop replicates the lead wavefunction into the central region.
       ! It only works in this compact form because the transport-direction (x) is
       ! the index running slowest.          
-      do k = 1, nint(sb%lsize(TRANS_DIR)/gr%sb%lead_unit_cell(LEFT)%lsize(TRANS_DIR))
-        st%zphi((k-1)*m_lead%np+1:k*m_lead%np, idim, jst, k_index) = tmp
+      do k = 1, gr%sb%n_ucells
+        st%zphi((k-1)*m_lead%np+1:k*m_lead%np, idim, jst, k_index) = tmp(1:m_lead%np, k_idim)
       end do
 
       ! Apply phase.
@@ -711,8 +714,14 @@ contains
       ! debugging.
       if(in_debug_mode) then
         write(filename, '(a,i3.3,a,i4.4,a,i1.1)') 'phi-', k_index, '-', jst, '-', idim
-        call zoutput_function(output_gnuplot+output_plane_z, 'debug/open_boundaries', filename, &
-          m_center, sb, st%zphi(:, idim, jst, k_index), M_ONE, err, is_tmp=.false.)
+        select case(calc_dim)
+        case(1)
+          call zoutput_function(output_gnuplot+output_axis_x, 'debug/open_boundaries', filename, &
+            m_center, sb, st%zphi(:, idim, jst, k_index), M_ONE, err, is_tmp=.false.)
+        case(2, 3)
+          call zoutput_function(output_gnuplot+output_plane_z, 'debug/open_boundaries', filename, &
+            m_center, sb, st%zphi(:, idim, jst, k_index), M_ONE, err, is_tmp=.false.)
+        end select
       end if
 
       jst = jst + 1
@@ -726,6 +735,39 @@ contains
     call write_info(1)
 
     call pop_sub()
+
+  contains
+
+    subroutine lead_dens_accum()
+      integer :: il
+      CMPLX   :: c
+
+      call push_sub('restart.calc_lead_dens')
+
+      do il = 1, NLEADS
+        select case(st%d%ispin)
+        case(SPIN_POLARIZED, UNPOLARIZED)
+          do ip = 1, m_lead%np
+            st%ob_rho(ip, k_index, il) = st%ob_rho(ip, k_index, il) + w_k*occ* &
+              (real(tmp(ip, k_idim), REAL_PRECISION)**2 + aimag(tmp(ip, k_idim))**2)
+          end do
+        case(SPINORS)
+          do ip = 1, m_lead%np
+            st%ob_rho(ip, k_idim, il) = st%ob_rho(ip, k_idim, il) + w_k*occ* &
+              (real(tmp(ip, k_idim), REAL_PRECISION)**2 + aimag(tmp(ip, k_idim))**2)
+          end do
+          if(k_idim.eq.2) then
+            do ip = 1, m_lead%np
+              c = w_k*occ*tmp(ip, 1)*conjg(tmp(ip, 2))
+              st%ob_rho(ip, 3, il) = st%ob_rho(ip, 3, il) + real(c, REAL_PRECISION)
+              st%ob_rho(ip, 4, il) = st%ob_rho(ip, 4, il) + aimag(c)
+            end do
+          end if
+        end select
+      end do
+
+      call pop_sub()
+    end subroutine lead_dens_accum
   end subroutine read_free_states
 
 

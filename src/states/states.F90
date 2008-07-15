@@ -140,6 +140,7 @@ module states_m
 
     logical            :: open_boundaries
     CMPLX, pointer     :: zphi(:, :, :, :)  ! Free states for open boundary calculations.
+    FLOAT, pointer     :: ob_rho(:, :, :)   ! Density of the lead unit cells.
     FLOAT, pointer     :: ob_eigenval(:, :) ! Eigenvalues of free states.
     type(states_dim_t) :: ob_d              ! Dims. of the unscattered systems.
     integer            :: ob_nst            ! nst of the unscattered systems.
@@ -311,8 +312,10 @@ contains
     st%open_boundaries = .false.
     ! When doing open boundary calculations the number of free states is
     ! determined by the previous periodic calculation.
-    if(gr%sb%open_boundaries.and.calc_mode.eq.M_GS) then
+    if(gr%sb%open_boundaries) then
       st%open_boundaries = .true.
+    end if
+    if(gr%sb%open_boundaries.and.calc_mode.eq.M_GS) then
       do il = 1, NLEADS
         call states_look(trim(gr%sb%lead_restart_dir(il))//'/gs', gr%m, ob_k(il), ob_d(il), ob_st(il), ierr)
         if(ierr.ne.0) then
@@ -529,6 +532,7 @@ contains
     ! FIXME: spin-polarized free states ignored.
     if(gr%sb%open_boundaries) then
       ALLOCATE(st%zphi(NP, st%d%dim, st%ob_ncs, st%d%nik), NP*st%d%dim*st%ob_ncs*st%d%nik)
+      ALLOCATE(st%ob_rho(gr%m%lead_unit_cell(LEFT)%np, st%d%nspin, NLEADS), gr%m%lead_unit_cell(LEFT)%np*st%d%nspin*NLEADS)
       st%zphi = M_z0
     else
       nullify(st%zphi)
@@ -548,6 +552,7 @@ contains
 
     if(gr%sb%open_boundaries) then
       DEALLOC(st%zphi)
+      DEALLOC(st%ob_rho)
     end if
 
     call pop_sub()
@@ -613,58 +618,59 @@ contains
     !% of the spin options.
     !%End
 
-    occ_fix: if(loct_parse_block(check_inp('Occupations'), blk)==0) then
-      ! read in occupations
+    if(st%open_boundaries) then
       st%fixed_occ = .true.
-
-      ! Reads the number of columns in the first row. This assumes that all rows
-      ! have the same column number; otherwise the code will stop with an error.
-      ncols = loct_parse_block_cols(blk, 0)
-      if(ncols > st%nst) then
-        call input_error("Occupations")
-      end if
-      ! Now we fill al the "missing" states with the maximum occupation.
-      do i = 1, st%d%nik
-        do j = 1, st%nst - ncols
-          if(st%d%ispin == UNPOLARIZED) then
-            st%occ(j, i) = M_TWO
-          else
-            st%occ(j, i) = M_ONE
-          end if
-        end do
-      end do
-      do i = 1, st%d%nik
-        do j = st%nst - ncols + 1, st%nst 
-          call loct_parse_block_float(blk, i-1, j-1-(st%nst-ncols), st%occ(j, i))
-        end do
-      end do
-      call loct_parse_block_end(blk)
-
+      st%occ  = st%ob_occ
+      st%qtot = sum(st%occ)
     else
-      st%fixed_occ = .false.
+      occ_fix: if(loct_parse_block(check_inp('Occupations'), blk)==0) then
+        ! read in occupations
+        st%fixed_occ = .true.
 
-      if(st%open_boundaries) then
-        st%occ  = st%ob_occ
-        st%qtot = sum(st%occ)
-      else
-        ! first guess for occupation...paramagnetic configuration
-        if(st%d%ispin == UNPOLARIZED) then
-          r = M_TWO
-        else
-          r = M_ONE
+        ! Reads the number of columns in the first row. This assumes that all rows
+        ! have the same column number; otherwise the code will stop with an error.
+        ncols = loct_parse_block_cols(blk, 0)
+        if(ncols > st%nst) then
+          call input_error("Occupations")
         end if
-        st%occ  = M_ZERO
-        st%qtot = M_ZERO
-
-        do j = 1, st%nst
-          do i = 1, st%d%nik
-            st%occ(j, i) = min(r, -(st%val_charge + excess_charge) - st%qtot)
-            st%qtot = st%qtot + st%occ(j, i)
-
+        ! Now we fill al the "missing" states with the maximum occupation.
+        do i = 1, st%d%nik
+          do j = 1, st%nst - ncols
+            if(st%d%ispin == UNPOLARIZED) then
+              st%occ(j, i) = M_TWO
+            else
+              st%occ(j, i) = M_ONE
+            end if
           end do
         end do
-      end if
-    end if occ_fix
+        do i = 1, st%d%nik
+          do j = st%nst - ncols + 1, st%nst 
+            call loct_parse_block_float(blk, i-1, j-1-(st%nst-ncols), st%occ(j, i))
+          end do
+        end do
+        call loct_parse_block_end(blk)
+
+      else
+        st%fixed_occ = .false.
+
+          ! first guess for occupation...paramagnetic configuration
+          if(st%d%ispin == UNPOLARIZED) then
+            r = M_TWO
+          else
+            r = M_ONE
+          end if
+          st%occ  = M_ZERO
+          st%qtot = M_ZERO
+
+          do j = 1, st%nst
+            do i = 1, st%d%nik
+              st%occ(j, i) = min(r, -(st%val_charge + excess_charge) - st%qtot)
+              st%qtot = st%qtot + st%occ(j, i)
+
+            end do
+          end do
+      end if occ_fix
+    end if
 
     call smear_init(st%smear, st%d%ispin, st%fixed_occ)
 
@@ -2470,15 +2476,17 @@ contains
     call push_sub('states.states_look')
 
     ierr = 0
-    iunit  = io_open(trim(dir)//'/wfns', action='read', status='old', die=.false., is_tmp = .true., grp = m%mpi_grp)
+    iunit  = io_open(trim(dir)//'/wfns', action='read', status='old', die=.false., is_tmp=.true., grp=m%mpi_grp)
     if(iunit < 0) then
       ierr = -1
+      call pop_sub
       return
     end if
-    iunit2 = io_open(trim(dir)//'/occs', action='read', status='old', die=.false., is_tmp = .true., grp = m%mpi_grp)
+    iunit2 = io_open(trim(dir)//'/occs', action='read', status='old', die=.false., is_tmp=.true., grp=m%mpi_grp)
     if(iunit2 < 0) then
       call io_close(iunit, grp = m%mpi_grp)
       ierr = -1
+      call pop_sub()
       return
     end if
 
