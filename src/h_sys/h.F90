@@ -142,9 +142,10 @@ module hamiltonian_m
     FLOAT, pointer :: ab_pot(:)   ! where we store the ab potential
 
     ! Open boundaries.
-    CMPLX, pointer :: lead_h_diag(:, :, :, :)     ! Diagonal block of the lead Hamiltonian.
-    CMPLX, pointer :: lead_h_offdiag(:, :, :)     ! Offdiagonal block of the lead Hamiltonian.
-    FLOAT, pointer :: lead_vks(:, :, :)           ! (np, nspin, nleads) Kohn-Sham potential of the leads.
+    CMPLX, pointer :: lead_h_diag(:, :, :, :)      ! Diagonal block of the lead Hamiltonian.
+    CMPLX, pointer :: lead_h_offdiag(:, :, :)      ! Offdiagonal block of the lead Hamiltonian.
+    FLOAT, pointer :: lead_vks(:, :, :)            ! (np, nspin, nleads) Kohn-Sham potential of the leads.
+    FLOAT, pointer :: lead_vhartree(:, :)          ! (np, nleads) Hartree potential of the leads.
     CMPLX, pointer :: lead_green(:, :, :, :, :, :) ! (np, np, nspin, ncs, nik, nleads) Green function of the leads.
     
     ! Spectral range
@@ -457,7 +458,7 @@ contains
       ! two can be found, a warning is emittedg and zero potential
       ! assumed.
       ALLOCATE(h%lead_vks(np, h%d%nspin, NLEADS), np*h%d%nspin*NLEADS)
-!h%lead_vks = M_ZERO
+      ALLOCATE(h%lead_vhartree(np, NLEADS), np*NLEADS)
 
       do il = 1, NLEADS
         do ispin = 1, h%d%nspin
@@ -468,14 +469,14 @@ contains
           fname = trim(gr%sb%lead_static_dir(il))//'/vks-'//trim(channel)//'.obf'
           call dinput_function(trim(fname), gr%m%lead_unit_cell(il), h%lead_vks(:, ispin, il), ierr)
           if(ierr.eq.0) then
-            message(1) = 'Info: Successfully read potential of the '//trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
+            message(1) = 'Info: Successfully read KS potential of the '//trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
             call write_info(1)
           else
             ! NetCDF.
             fname = trim(gr%sb%lead_static_dir(il))//'/vks-'//trim(channel)//'.ncdf'
             call dinput_function(trim(fname), gr%m%lead_unit_cell(il), h%lead_vks(:, ispin, il), ierr)
             if(ierr.eq.0) then
-              message(1) = 'Info: Successfully read potential of the '//trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
+              message(1) = 'Info: Successfully read KS potential of the '//trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
               call write_info(1)
             else
               ! Now try v0.
@@ -483,14 +484,16 @@ contains
               fname = trim(gr%sb%lead_static_dir(il))//'/v0.obf'
               call dinput_function(trim(fname), gr%m%lead_unit_cell(il), h%lead_vks(:, ispin, il), ierr)
               if(ierr.eq.0) then
-                message(1) = 'Info: Successfully read potential of the '//trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
+                message(1) = 'Info: Successfully read external potential of the '// &
+                  trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
                 call write_info(1)
               else
                 ! NetCDF.
                 fname = trim(gr%sb%lead_static_dir(il))//'/v0.ncdf'
                 call dinput_function(trim(fname), gr%m%lead_unit_cell(il), h%lead_vks(:, ispin, il), ierr)
                 if(ierr.eq.0) then
-                  message(1) = 'Info: Successfully read potential of the '//trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
+                  message(1) = 'Info: Successfully read external potential of the '// &
+                    trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
                   call write_info(1)
                 else
                   ! Reading potential failed.
@@ -526,6 +529,36 @@ contains
             call io_close(pot)
           end if
         end do
+
+        ! Read Hartree potential.
+        ! OBF.
+        h%lead_vhartree(:, il) = M_ZERO
+        if(h%theory_level.ne.INDEPENDENT_PARTICLES) then
+          fname = trim(gr%sb%lead_static_dir(il))//'/vh.obf'
+          call dinput_function(trim(fname), gr%m%lead_unit_cell(il), h%lead_vhartree(:, il), ierr)
+          if(ierr.eq.0) then
+            message(1) = 'Info: Successfully read Hartree potential of the '//trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
+            call write_info(1)
+          else
+            ! NetCDF.
+            fname = trim(gr%sb%lead_static_dir(il))//'/vh.ncdf'
+            call dinput_function(trim(fname), gr%m%lead_unit_cell(il), h%lead_vhartree(:, il), ierr)
+            if(ierr.eq.0) then
+              message(1) = 'Info: Successfully read Hartree potential of the '//trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
+              call write_info(1)
+            else
+              message(1) = 'Could not read the Hartree potential of the leads.'
+              message(2) = 'The Hartree term will not be calculated correctly.'
+              message(3) = 'Include'
+              message(4) = ''
+              message(5) = '  Output = potential'
+              message(6) = ''
+              message(7) = 'in your periodic run and make sure the Hartree interaction'
+              message(8) = 'is switched on.'
+              call write_warning(8)
+            end if
+          end if
+        end if
       end do
 
       ! Calculate the diagonal and offdiagonal blocks of the lead Hamiltonian.
@@ -702,6 +735,7 @@ contains
     DEALLOC(h%lead_h_diag)
     DEALLOC(h%lead_h_offdiag)
     DEALLOC(h%lead_vks)
+    DEALLOC(h%lead_vhartree)
     DEALLOC(h%lead_green)
 
     call states_dim_end(h%d)
