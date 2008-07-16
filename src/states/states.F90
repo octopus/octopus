@@ -20,6 +20,7 @@
 #include "global.h"
 
 module states_m
+  use calc_mode_m
   use crystal_m
   use blas_m
   use datasets_m
@@ -315,7 +316,7 @@ contains
     if(gr%sb%open_boundaries) then
       st%open_boundaries = .true.
     end if
-    if(gr%sb%open_boundaries.and.calc_mode.eq.M_GS) then
+    if(gr%sb%open_boundaries .and. calc_mode_is(CM_GS)) then
       do il = 1, NLEADS
         call states_look(trim(gr%sb%lead_restart_dir(il))//'/gs', gr%m, ob_k(il), ob_d(il), ob_st(il), ierr)
         if(ierr.ne.0) then
@@ -384,7 +385,7 @@ contains
     ! FIXME: For now, open boundary calculations are only possible for
     ! continuum states, i. e. for those states treated by the Lippmann-
     ! Schwinger approach during SCF.
-    if(gr%sb%open_boundaries.and.calc_mode.eq.M_GS) then
+    if(gr%sb%open_boundaries .and. calc_mode_is(CM_GS)) then
       if(st%nst.ne.st%ob_ncs) then
         message(1) = 'Open boundary calculations for possibly bound states'
         message(2) = 'are not possible yet. You have to match your number'

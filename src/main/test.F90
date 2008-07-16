@@ -96,10 +96,7 @@ program oct_test
     integer :: parallel_mask
     type(system_t) :: sys
 
-    parallel_mask = 0
-    parallel_mask = ibset(parallel_mask, P_STRATEGY_DOMAINS - 1) ! all modes are parallel in domains
-
-    call system_init(sys, parallel_mask)
+    call system_init(sys)
     call poisson_test(sys%gr)
     call system_end(sys)
 

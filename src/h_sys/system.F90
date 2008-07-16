@@ -20,6 +20,7 @@
 #include "global.h"
 
 module system_m
+  use calc_mode_m
   use geometry_m
   use global_m
   use grid_m
@@ -58,9 +59,8 @@ module system_m
 contains
 
   !----------------------------------------------------------
-  subroutine system_init(sys, parallel_mask)
+  subroutine system_init(sys)
     type(system_t), intent(out) :: sys
-    integer, intent(in)         :: parallel_mask
 
     call push_sub('systm.system_init')
 
@@ -107,7 +107,7 @@ contains
       index_range(4) = 100000                 ! Some large number
 
       ! create index and domain communicators
-      call multicomm_init(sys%mc, parallel_mask, mpi_world%size, index_dim, &
+      call multicomm_init(sys%mc, calc_mode_parallel_mask(), mpi_world%size, index_dim, &
          index_range, (/ 5000, 1, 1, 1 /))
 
     end subroutine parallel_init

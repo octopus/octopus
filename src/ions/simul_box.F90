@@ -21,6 +21,7 @@
 
 module simul_box_m
   use c_pointer_m
+  use calc_mode_m
   use datasets_m
   use geometry_m
   use global_m
@@ -294,7 +295,7 @@ contains
             end if
             ! If we are doing a ground state calculation add one more unit
             ! cell at both ends to calculate the extended eigenstates.
-            if(calc_mode.eq.M_GS) then
+            if(calc_mode_is(CM_GS)) then
               sb%add_unit_cells = sb%add_unit_cells + 1
             end if
           case default

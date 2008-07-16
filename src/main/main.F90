@@ -20,6 +20,7 @@
 #include "global.h"
 
 program octopus
+  use calc_mode_m
   use datasets_m
   use global_m
   use io_m
@@ -34,7 +35,7 @@ program octopus
 
   implicit none
 
-  integer :: ns
+  integer :: ns, inp_calc_mode
   type(block_t) :: blk
   character(len=256) :: sys_name
 
@@ -123,12 +124,14 @@ program octopus
   !% Prints out a tasty recipe
   !%End
   if(loct_parse_block('CalculationMode', blk) == 0) then
-    call datasets_init(calc_mode, blk)
+    call datasets_init(inp_calc_mode, blk)
   else
-    call loct_parse_int('CalculationMode', M_GS, calc_mode)
-    if(.not.varinfo_valid_option('CalculationMode', calc_mode)) call input_error('CalculationMode')
-    call datasets_init(calc_mode)
+    call loct_parse_int('CalculationMode', CM_GS, inp_calc_mode)
+    if(.not.varinfo_valid_option('CalculationMode', inp_calc_mode)) call input_error('CalculationMode')
+    call datasets_init(inp_calc_mode)
   end if
+
+  call calc_mode_set(inp_calc_mode)
 
   !%Variable Dimensions
   !%Type integer
@@ -153,7 +156,7 @@ program octopus
     ! set system label
     current_dataset = dataset_run_order(ns)
     current_label = trim(dataset_label(current_dataset))
-    calc_mode = dataset_runmode(current_dataset)
+    call calc_mode_set(dataset_runmode(current_dataset))
 
     ! datasets have to be available before calling the _init() functions below
     call io_init()

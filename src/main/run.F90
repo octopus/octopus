@@ -20,6 +20,7 @@
 #include "global.h"
 
 module run_prog_m
+  use calc_mode_m
   use casida_m
   use datasets_m
   use external_pot_m
@@ -85,48 +86,48 @@ contains
 
     call loct_parse_logical(check_inp('fromScratch'), .false., fromScratch)
 
-    select case(calc_mode)
-    case(M_GS)
+    select case(calc_mode())
+    case(CM_GS)
       call ground_state_run(sys, h, fromScratch)
-    case(M_UNOCC)
+    case(CM_UNOCC)
       call unocc_run(sys, h, fromScratch)
-    case(M_TD)
+    case(CM_TD)
       call td_run(sys, h, fromScratch)
-    case(M_LR_POL)
+    case(CM_LR_POL)
       select case(get_resp_method())
       case(FD)
         call static_pol_run(sys, h, fromScratch)
       case(LR)
         call pol_lr_run(sys, h, fromScratch)
       end select
-    case(M_VDW)
+    case(CM_VDW)
       call vdW_run(sys, h, fromScratch)
-    case(M_GEOM_OPT)
+    case(CM_GEOM_OPT)
       call geom_opt_run(sys, h, fromScratch)
-    case(M_PHONONS_LR)
+    case(CM_PHONONS_LR)
       select case(get_resp_method())
       case(FD)
         call phonons_run(sys, h)
       case(LR)
         call phonons_lr_run(sys, h, fromscratch)
       end select
-    case(M_OPT_CONTROL)
+    case(CM_OPT_CONTROL)
       call opt_control_run(sys, h)
-    case(M_CASIDA)
+    case(CM_CASIDA)
       call casida_run(sys, h, fromScratch)
-    case(M_TD_TRANSPORT)
+    case(CM_TD_TRANSPORT)
       call td_transport_run(sys, h, fromScratch)
-    case(M_RAMAN)
+    case(CM_RAMAN)
       call raman_run(sys, h, fromscratch)
-    case(M_ONE_SHOT)
+    case(CM_ONE_SHOT)
       call one_shot_run(sys, h)
-    case(M_KDOTP)
+    case(CM_KDOTP)
       call kdotp_lr_run(sys, h, fromScratch)
 !!!!NEW
-    case(M_GCM)
+    case(CM_GCM)
       call gcm_run(sys, h)
 !!!!ENDOFNEW
-    case(M_PULPO_A_FEIRA)
+    case(CM_PULPO_A_FEIRA)
       call pulpo_print()
     end select
 
@@ -169,47 +170,27 @@ contains
   
   ! ---------------------------------------------------------
   subroutine run_init()
-    integer :: parallel_mask
 
     call messages_print_stress(stdout, "Calculation Mode")
-    call messages_print_var_option(stdout, "CalculationMode", calc_mode)
+    call messages_print_var_option(stdout, "CalculationMode", calc_mode())
     call messages_print_stress(stdout)
 
     ! initialize ffts
     call fft_all_init()
 
-    if(calc_mode .ne. M_PULPO_A_FEIRA) then
+    if(.not. calc_mode_is(CM_PULPO_A_FEIRA)) then
       call units_init()
-      call get_parallel_mask()
-      call system_init(sys, parallel_mask)
+      call system_init(sys)
       call hamiltonian_init(h, sys%gr, sys%geo, sys%st, sys%ks%theory_level)
       call epot_generate(h%ep, sys%gr, sys%geo, sys%st)
       call restart_init()
     end if
-
-  contains
-
-    subroutine get_parallel_mask()
-
-      parallel_mask = 0
-      parallel_mask = ibset(parallel_mask, P_STRATEGY_DOMAINS - 1) ! all modes are parallel in domains
-      select case(calc_mode)
-      case(M_TD_TRANSPORT)
-        parallel_mask = ibset(parallel_mask, P_STRATEGY_STATES - 1)
-      case(M_TD)
-        parallel_mask = ibset(parallel_mask, P_STRATEGY_STATES - 1)
-      case(M_CASIDA)
-        parallel_mask = ibset(parallel_mask, P_STRATEGY_OTHER - 1)
-      end select
-
-    end subroutine get_parallel_mask
-
   end subroutine run_init
 
 
   ! ---------------------------------------------------------
   subroutine run_end()
-    if(calc_mode .ne. M_PULPO_A_FEIRA) then
+    if(.not. calc_mode_is(CM_PULPO_A_FEIRA)) then
        call hamiltonian_end(h, sys%gr, sys%geo)
        call system_end(sys)
     end if
