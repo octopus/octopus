@@ -56,7 +56,7 @@ module eigen_solver_m
     eigen_solver_run
 
   type eigen_solver_t
-    integer :: es_type    ! which eigen solver to use
+    integer :: es_type    ! which eigensolver to use
     logical :: verbose    ! If true, the solver prints additional information.
 
     FLOAT   :: init_tol
@@ -96,10 +96,10 @@ contains
 
     call push_sub('eigen.eigen_solver_init')
 
-    !%Variable EigenSolver
+    !%Variable Eigensolver
     !%Type integer
     !%Default cg
-    !%Section SCF::EigenSolver
+    !%Section SCF::Eigensolver
     !%Description
     !% Decides the eigensolver that obtains the lowest eigenvalues and
     !% eigenfunctions of the Kohn-Sham Hamiltonian. The default is
@@ -127,6 +127,12 @@ contains
     !% Multigrid eigensolver (experimental).
     !%End
     call loct_parse_int(check_inp('EigenSolver'), RS_CG, eigens%es_type)
+
+    if(st%parallel_in_states .and. .not. eigen_solver_parallel_in_states(eigens)) then
+      message(1) = "The selected eigensolver is not parallel in states."
+      message(2) = "Please use the lobpcg or rmmdiis eigensolvers."
+      call write_fatal(2)
+    end if
 
     !%Variable EigenSolverVerbose
     !%Type logical
@@ -342,7 +348,18 @@ contains
     call profiling_out(C_PROFILING_EIGEN_SOLVER)
   end subroutine eigen_solver_run
 
+  logical function eigen_solver_parallel_in_states(this) result(par_stat)
+    type(eigen_solver_t), intent(in) :: this
+    
+    par_stat = .false.
 
+    select case(this%es_type)
+    case(RS_RMMDIIS, RS_LOBPCG)
+      par_stat = .true.
+    end select
+    
+  end function eigen_solver_parallel_in_states
+    
 #include "undef.F90"
 #include "real.F90"
 #include "eigen_mg_inc.F90"

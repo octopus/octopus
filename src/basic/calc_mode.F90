@@ -26,7 +26,8 @@ module calc_mode_m
        calc_mode,                      &
        calc_mode_is,                   &
        calc_mode_set,                  &
-       calc_mode_parallel_mask
+       calc_mode_parallel_mask,        &
+       calc_mode_default_parallel_mask
 
   integer :: calc_mode_id
 
@@ -72,7 +73,7 @@ module calc_mode_m
       par_mask = ibset(par_mask, P_STRATEGY_DOMAINS - 1) ! all modes are parallel in domains
 
       select case(calc_mode_id)
-      case(CM_TD_TRANSPORT, CM_TD)
+      case(CM_TD_TRANSPORT, CM_TD, CM_GS)
         par_mask = ibset(par_mask, P_STRATEGY_STATES - 1)
       case(CM_CASIDA)
         par_mask = ibset(par_mask, P_STRATEGY_OTHER - 1)
@@ -80,6 +81,22 @@ module calc_mode_m
 
     end function calc_mode_parallel_mask
 
+    ! This function returns the default modes used for a calculation,
+    ! that might be different from the modes available.
+    integer function calc_mode_default_parallel_mask() result(par_mask)
+
+      par_mask = 0
+
+      par_mask = ibset(par_mask, P_STRATEGY_DOMAINS - 1) ! all modes are parallel in domains
+
+      select case(calc_mode_id)
+      case(CM_TD_TRANSPORT, CM_TD)
+        par_mask = ibset(par_mask, P_STRATEGY_STATES - 1)
+      case(CM_CASIDA)
+        par_mask = ibset(par_mask, P_STRATEGY_OTHER - 1)
+      end select
+
+    end function calc_mode_default_parallel_mask
 
 end module calc_mode_m
 

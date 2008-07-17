@@ -149,9 +149,9 @@ contains
 
   ! ---------------------------------------------------------
   ! create index and domain communicators
-  subroutine multicomm_init(mc, parallel_mask, n_node, n_index, index_range, min_range)
+  subroutine multicomm_init(mc, parallel_mask, default_mask, n_node, n_index, index_range, min_range)
     type(multicomm_t), intent(out)  :: mc
-    integer,           intent(in)   :: parallel_mask, n_node, n_index
+    integer,           intent(in)   :: parallel_mask, default_mask, n_node, n_index
     integer,           intent(inout):: index_range(:)
     integer,           intent(in)   :: min_range(:)
 
@@ -244,7 +244,7 @@ contains
 
     ! ---------------------------------------------------------
     subroutine strategy()
-      integer :: i, j, par_all, par_mask
+      integer :: i, j,  par_mask
 
       !%Variable ParallelizationStrategy
       !%Type flag
@@ -267,10 +267,6 @@ contains
       !%End
 
       if(mpi_world%size > 1) then
-        par_all = 0
-        do i = 1, n_par_types
-          par_all = par_all + 2**(i-1)
-        end do
 
         par_mask = parallel_mask
 #if !defined(HAVE_METIS)
@@ -278,8 +274,7 @@ contains
         par_mask = ibclr(par_mask, P_STRATEGY_DOMAINS - 1)
 #endif
 
-        call loct_parse_int(check_inp('ParallelizationStrategy'),  &
-          par_all, mc%par_strategy)
+        call loct_parse_int(check_inp('ParallelizationStrategy'), default_mask, mc%par_strategy)
 
         if(.not.varinfo_valid_option('ParallelizationStrategy', mc%par_strategy, is_flag=.true.)) then
           call input_error('ParallelizationStrategy')
