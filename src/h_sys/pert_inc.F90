@@ -47,7 +47,7 @@ subroutine X(pert_apply) (this, gr, geo, h, ik, f_in, f_out)
 
   apply_kpoint = simul_box_is_periodic(gr%sb) .and. .not. kpoint_is_gamma(h%d, ik) &
     .and. this%pert_type /= PERTURBATION_ELECTRIC
-  ! electric doesn't need it since (e^-ikr)r(e^ikr) = r
+  ! electric does not need it since (e^-ikr)r(e^ikr) = r
 
   if (apply_kpoint) then
     f_in_copy(1:NP_PART) = h%phase(1:NP_PART, ik) * f_in_copy(1:NP_PART)

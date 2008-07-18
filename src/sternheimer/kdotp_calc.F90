@@ -83,7 +83,7 @@ subroutine zlr_calc_eff_mass_inv(sys, h, lr, perturbation, eff_mass_inv, &
 
   integer ik, ist, ist2, idir1, idir2
   R_TYPE term
-  R_TYPE, allocatable   :: pertpsi(:, :)       ! H'i|psi0>
+  R_TYPE, allocatable   :: pertpsi(:, :)       ! H`i|psi0>
   R_TYPE, allocatable   :: proj_dl_psi(:, :)   ! (1-Pn')|psi'j>
   type(mesh_t), pointer :: m
   logical, allocatable  :: orth_mask(:)
@@ -128,7 +128,7 @@ subroutine zlr_calc_eff_mass_inv(sys, h, lr, perturbation, eff_mass_inv, &
 !                     zmf_integrate(m, sys%st%zpsi(1:m%np, 1, ist2, ik) * proj_dl_psi(1:m%np))
 
               orth_mask(ist2) = .not. (abs(sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik)) < degen_thres)
-              ! mask == .false. means do projection; .true. means don't
+              ! mask == .false. means do projection; .true. means do not
             enddo
 
 !            orth_mask(ist) = .true. ! projection on unperturbed wfn already removed in Sternheimer eqn

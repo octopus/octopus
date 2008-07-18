@@ -518,7 +518,7 @@ contains
         ! grid then we have to copy it from the grid points.  
         !
         ! If the point index is larger than mesh%np then it is the
-        ! periodic copy of a point that is zero, so we don't count it
+        ! periodic copy of a point that is zero, so we don`t count it
         ! as it will be initialized to zero anyway. For different
         ! mixed boundary conditions the last check should be removed.
         !

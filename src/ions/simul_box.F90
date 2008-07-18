@@ -92,7 +92,7 @@ module simul_box_m
     integer :: dim
     integer :: periodic_dim
 
-    ! For open boundaries, we need reference to the lead's unit cell.
+    ! For open boundaries, we need reference to the lead`s unit cell.
     ! This unit cell is itself a simulation box.
     logical                    :: open_boundaries          ! Use open boundaries?
     integer                    :: n_ucells                 ! Number of unit cells that fit in central region.
@@ -758,7 +758,7 @@ contains
 
   
   !--------------------------------------------------------------
-  ! Read the coordinates of the leads' atoms and add the to the
+  ! Read the coordinates of the leads atoms and add the to the
   ! simulation box (for open boundaries only, of course).
   subroutine simul_box_add_lead_atoms(sb, geo)
     type(simul_box_t), intent(in)    :: sb
