@@ -210,7 +210,7 @@ module opt_control_target_m
       !%End
       if(loct_parse_isdef(check_inp('OCTTargetTransformStates')).ne.0) then
         if(loct_parse_block(check_inp('OCTTargetTransformStates'), blk) == 0) then
-          tmp_st = target%st
+          call states_copy(tmp_st, target%st)
           deallocate(tmp_st%zpsi)
           call restart_look_and_read("tmp", tmp_st, gr, geo, ierr)
           ALLOCATE(rotation_matrix(target%st%nst, tmp_st%nst), target%st%nst*tmp_st%nst)

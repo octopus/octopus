@@ -214,7 +214,7 @@ contains
     type(states_t), intent(inout) :: st
     call push_sub('states.states_null')
 
-    nullify(st%dpsi, st%zpsi, st%rho, st%j, st%rho_core, st%frozen_rho, st%eigenval)
+    nullify(st%dpsi, st%zpsi, st%zphi, st%rho, st%j, st%rho_core, st%frozen_rho, st%eigenval)
     nullify(st%occ, st%spin, st%momentum, st%node, st%user_def_states)
     nullify(st%d%kpoints, st%d%kweights)
     nullify(st%st_range, st%st_num)
@@ -1238,6 +1238,9 @@ contains
     end if
 
     if(stin%parallel_in_states) call multicomm_all_pairs_copy(stout%ap, stin%ap)
+
+    stout%open_boundaries = stin%open_boundaries
+    ! Some of the "open boundaries" variables are not copied.
 
     call pop_sub()
   end subroutine states_copy
