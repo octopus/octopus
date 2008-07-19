@@ -89,6 +89,7 @@ module par_vec_m
   use global_m
   use iihash_m
   use io_m
+  use math_m
   use mesh_lib_m
   use messages_m
   use mpi_debug_m
@@ -471,8 +472,8 @@ contains
   contains
     
     subroutine init_mpi_datatypes
-      integer, allocatable :: blocklengths(:), displacements(:)
-      integer :: ii, kk, ipart, total, ierr
+      integer, allocatable :: blocklengths(:), displacements(:), offsets(:)
+      integer :: ii, kk, ipart, total, ierr, nblocks
 
       ALLOCATE(vp%isend_type(1:vp%p), vp%p)
       ALLOCATE(vp%dsend_type(1:vp%p), vp%p)
@@ -486,10 +487,9 @@ contains
         if(total == 0) cycle
 
         ALLOCATE(blocklengths(total), total)
+        ALLOCATE(offsets(total), total)
         ALLOCATE(displacements(total), total)
         
-        blocklengths = 1
-      
         ! Collect all local points that have to be sent to neighbours.
         
         ! Iterate over all ghost points that ipart wants.
@@ -499,16 +499,18 @@ contains
           ! Lookup up local number of point kk
           displacements(ii + 1) = vec_global2local(vp, kk, vp%partno) - 1
         end do
-        
-        call MPI_Type_indexed(total, blocklengths, displacements, MPI_INTEGER, vp%isend_type(ipart), ierr)
-        call MPI_Type_indexed(total, blocklengths, displacements, MPI_FLOAT,   vp%dsend_type(ipart), ierr)
-        call MPI_Type_indexed(total, blocklengths, displacements, MPI_CMPLX,   vp%zsend_type(ipart), ierr)
+
+        call get_blocks(total, displacements, nblocks, blocklengths, offsets)
+
+        call MPI_Type_indexed(nblocks, blocklengths, offsets, MPI_INTEGER, vp%isend_type(ipart), ierr)
+        call MPI_Type_indexed(nblocks, blocklengths, offsets, MPI_FLOAT,   vp%dsend_type(ipart), ierr)
+        call MPI_Type_indexed(nblocks, blocklengths, offsets, MPI_CMPLX,   vp%zsend_type(ipart), ierr)
         
         call MPI_Type_commit(vp%isend_type(ipart), ierr)
         call MPI_Type_commit(vp%dsend_type(ipart), ierr)
         call MPI_Type_commit(vp%zsend_type(ipart), ierr)
 
-        deallocate(blocklengths, displacements)
+        deallocate(blocklengths, displacements, offsets)
         
         vp%nnb = vp%nnb + 1
       end do
