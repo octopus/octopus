@@ -34,8 +34,6 @@ DerivativesOrder = 1
 
 XCFunctional = no
 
-LCAOStart = lcao_full
-
 EigenSolverMaxIter = 50
 
 PoissonSolver = fft

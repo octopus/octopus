@@ -48,8 +48,8 @@ module lcao_m
 
   integer, public, parameter ::     &
     LCAO_START_NONE    = 0, &
-    LCAO_START_STATES  = 1, &
-    LCAO_START_FULL    = 2
+    LCAO_START_STATES  = 2, &
+    LCAO_START_FULL    = 3
 
   type lcao_t
     integer           :: state ! 0 => non-initialized;

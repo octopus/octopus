@@ -42,8 +42,6 @@ ExtraStates = 1
 
 XCFunctional = lda_x + lda_c_amgb
 
-LCAOStart = lcao_full
-
 EigenSolverMaxIter = 50
 
 PoissonSolver = fft

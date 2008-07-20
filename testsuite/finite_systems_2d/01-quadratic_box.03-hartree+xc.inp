@@ -35,8 +35,6 @@ DerivativesOrder = 1
 
 XCFunctional = lda_x + lda_c_amgb
 
-LCAOStart = lcao_full
-
 EigenSolver = cg
 EigenSolverInitTolerance = 1e-6
 EigenSolverFinalTolerance = 1e-6

@@ -37,9 +37,6 @@ DerivativesOrder = 4
 
 TheoryLevel = independent_particles
 
-
-LCAOStart = lcao_full
-
 EigenSolver = cg
 EigenSolverInitTolerance = 1e-6
 EigenSolverFinalTolerance = 1e-6

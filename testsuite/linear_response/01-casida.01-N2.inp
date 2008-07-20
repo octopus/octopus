@@ -36,9 +36,7 @@ XCFunctional = lda_x + lda_c_vwn
 
 ConvRelDens = 1e-5
 
-LCAOStart = lcao_full
 LCAODimension = 18
-
 
 EigenSolver = cg_new
 EigenSolverInitTolerance = 1e-2

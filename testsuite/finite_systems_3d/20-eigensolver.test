@@ -16,34 +16,34 @@ Enabled    : Yes
 #Input: 20-eigensolver.01-lobpcg.inp
 
 Input: 20-eigensolver.02-cg.inp
-match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; -13.449077
-match ; Eigenvalue  2 ; GREP(static/info, ' 2   --', 13) ;  -8.455429
-match ; Eigenvalue  3 ; GREP(static/info, ' 3   --', 13) ;  -8.455429
-match ; Eigenvalue  4 ; GREP(static/info, ' 4   --', 13) ;  -8.419394
+match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; -13.449028
+match ; Eigenvalue  2 ; GREP(static/info, ' 2   --', 13) ;  -8.455385
+match ; Eigenvalue  3 ; GREP(static/info, ' 3   --', 13) ;  -8.455385
+match ; Eigenvalue  4 ; GREP(static/info, ' 4   --', 13) ;  -8.419351
 
 Input: 20-eigensolver.03-cg_new.inp
-match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; -13.449130
-match ; Eigenvalue  2 ; GREP(static/info, ' 2   --', 13) ;  -8.455474
-match ; Eigenvalue  3 ; GREP(static/info, ' 3   --', 13) ;  -8.455474
-match ; Eigenvalue  4 ; GREP(static/info, ' 4   --', 13) ;  -8.419439
+match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; -13.449038
+match ; Eigenvalue  2 ; GREP(static/info, ' 2   --', 13) ;  -8.455388
+match ; Eigenvalue  3 ; GREP(static/info, ' 3   --', 13) ;  -8.455388
+match ; Eigenvalue  4 ; GREP(static/info, ' 4   --', 13) ;  -8.419354 
 
 Input: 20-eigensolver.04-plan.inp
-match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; -13.449172
-match ; Eigenvalue  2 ; GREP(static/info, ' 2   --', 13) ;  -8.455560
-match ; Eigenvalue  3 ; GREP(static/info, ' 3   --', 13) ;  -8.455481
-match ; Eigenvalue  4 ; GREP(static/info, ' 4   --', 13) ;  -8.419482
+match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; -13.449048
+match ; Eigenvalue  2 ; GREP(static/info, ' 2   --', 13) ;  -8.455424
+match ; Eigenvalue  3 ; GREP(static/info, ' 3   --', 13) ;  -8.455419 
+match ; Eigenvalue  4 ; GREP(static/info, ' 4   --', 13) ;  -8.419384
 
 # In this case, the numbers are slightly different because the input
 # file sets a high convergence criterion. If allowed to proceed further,
 # the algorithm does converge to the correct numbers.
 Input: 20-eigensolver.05-evolution.inp
-match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; -13.312575
-match ; Eigenvalue  2 ; GREP(static/info, ' 2   --', 13) ;  -8.348728
-match ; Eigenvalue  3 ; GREP(static/info, ' 3   --', 13) ;  -8.348728
-match ; Eigenvalue  4 ; GREP(static/info, ' 4   --', 13) ;  -8.313335
+match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; -13.662216
+match ; Eigenvalue  2 ; GREP(static/info, ' 2   --', 13) ;  -8.729765
+match ; Eigenvalue  3 ; GREP(static/info, ' 3   --', 13) ;  -8.729765
+match ; Eigenvalue  4 ; GREP(static/info, ' 4   --', 13) ;  -8.693304
 
 Input: 20-eigensolver.06-rmmdiis.inp
-match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; -13.449113
-match ; Eigenvalue  2 ; GREP(static/info, ' 2   --', 13) ;  -8.455461
-match ; Eigenvalue  3 ; GREP(static/info, ' 3   --', 13) ;  -8.455461
-match ; Eigenvalue  4 ; GREP(static/info, ' 4   --', 13) ;  -8.419422
+match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; -13.449066
+match ; Eigenvalue  2 ; GREP(static/info, ' 2   --', 13) ;  -8.455424
+match ; Eigenvalue  3 ; GREP(static/info, ' 3   --', 13) ;  -8.455424
+match ; Eigenvalue  4 ; GREP(static/info, ' 4   --', 13) ;  -8.419385

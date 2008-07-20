@@ -134,11 +134,11 @@ contains
       !% (Up to current version, only a minimal basis set used.)
       !%Option lcao_none 0
       !% Do not perform a LCAO calculation before the SCF cycle.
-      !%Option lcao_states 1
+      !%Option lcao_states 2
       !% Do a LCAO calculation before the SCF cycle and use the resulting wave-functions as 
       !% initial wave-functions without changing the guess density.
       !% This will speed-up the convergence of the eigensolver during the first SCF iterations.
-      !%Option lcao_full 2
+      !%Option lcao_full 3
       !% Do a LCAO calculation before the SCF cycle and use the LCAO wave-functions to build a new
       !% guess density and a new KS potential.
       !% Using the LCAO density as a new guess density may improve the convergence, but can
