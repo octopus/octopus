@@ -134,7 +134,7 @@ subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi,  &
   integer :: ist, idim
   FLOAT   :: nrm2
   R_TYPE, allocatable  :: ss(:)
-  integer :: block_size, size, sp
+  integer :: block_size, size, sp, ep
   type(profile_t), save :: prof
 #ifdef HAVE_MPI
   R_TYPE, allocatable  :: ss_tmp(:)
@@ -181,14 +181,15 @@ subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi,  &
     do idim = 1, dim
       do sp = 1, m%np, block_size
         size = min(block_size, m%np - sp + 1)
+        ep = sp - 1 + size
         do ist = 1, nst
 
           if(present(mask)) then
             if(mask(ist)) cycle
           end if
 
-          ss(ist) = ss(ist) + sum(m%vol_pp(sp:sp + size) * &
-            R_CONJ(psi(sp:sp + size, idim, ist)) * phi(sp:sp + size, idim))
+          ss(ist) = ss(ist) + sum(m%vol_pp(sp:ep)*R_CONJ(psi(sp:ep, idim, ist))*phi(sp:ep, idim))
+
         end do
       end do
     end do
