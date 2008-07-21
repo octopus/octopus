@@ -6,7 +6,7 @@ Author     : Xavier
 Date       : 18.11.07
 Arch       : Linux
 Release    : 2
-Programs   : octopus
+Programs   : octopus; octopus_mpi
 TestGroups : short-run
 Enabled    : Yes
 

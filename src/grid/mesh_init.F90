@@ -482,11 +482,6 @@ contains
 
     if (simul_box_is_periodic(mesh%sb)) then
 
-      if(mesh%parallel_in_domains) then
-        message(1) = "Parallelization in domains is not yet implemented for periodic boundary conditions."
-        call write_warning(1)
-      end if
-
       sp = mesh%np
 #ifdef HAVE_MPI
         if(mesh%parallel_in_domains) sp = mesh%np + mesh%vp%np_ghost(mesh%vp%partno)
@@ -525,7 +520,7 @@ contains
         if(ip /= ip_inner .and. ip_inner /= 0 .and. ip_inner <= mesh%np) then 
           mesh%nper = mesh%nper + 1
 #ifdef HAVE_MPI
-        else if(ip_inner == 0) then
+        else if(ip /= ip_inner) then
           nper_recv = nper_recv + 1
 #endif
         end if
@@ -569,7 +564,7 @@ contains
           mesh%per_map(iper) = ip_inner
 
 #ifdef HAVE_MPI
-        else if(ip_inner == 0) then ! the point is in another node
+        else if(ip /= ip_inner) then ! the point is in another node
           ! find in which paritition it is
           do ipart = 1, mesh%vp%p
             if(ipart == mesh%vp%partno) cycle
