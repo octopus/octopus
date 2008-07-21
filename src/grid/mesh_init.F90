@@ -467,11 +467,11 @@ contains
   subroutine mesh_pbc_init()
     integer :: sp, ip, ip_inner, iper, ip_global
 #ifdef HAVE_MPI
-    integer :: ip_inner_global, ipart
+    integer :: ip_inner_global, ipart, nblocks
     integer, allocatable :: recv_rem_points(:, :)
     integer :: nper_recv
     integer :: maxmax
-    integer, allocatable :: recv_points(:, :), blocklengths(:) 
+    integer, allocatable :: recv_points(:, :), blocklengths(:), offsets(:)
     integer, allocatable :: send_points(:, :)
     integer, allocatable :: send_buffer(:)
     integer :: bsize, status(MPI_STATUS_SIZE)
@@ -642,9 +642,10 @@ contains
         ALLOCATE(mesh%zrecv_type(1:mesh%vp%p), mesh%vp%p)
 
         maxmax = max(maxval(mesh%nsend), maxval(mesh%nrecv))
+
         ALLOCATE(blocklengths(1:maxmax), maxmax)
-        blocklengths(1:maxmax) = 1
-        
+        ALLOCATE(offsets(1:maxmax), maxmax)
+
         do ipart = 1, mesh%vp%p
           if(ipart == mesh%vp%partno) cycle
 
@@ -655,10 +656,10 @@ contains
             ! MPI indexes start from zero
             send_points(1:mesh%nsend(ipart), ipart) = send_points(1:mesh%nsend(ipart), ipart) - 1
 
-            call MPI_Type_indexed(mesh%nsend(ipart), blocklengths, &
-                 send_points(:, ipart), MPI_FLOAT, mesh%dsend_type(ipart), mpi_err)
-            call MPI_Type_indexed(mesh%nsend(ipart), blocklengths, &
-                 send_points(:, ipart), MPI_CMPLX, mesh%zsend_type(ipart), mpi_err)
+            call get_blocks(mesh%nsend(ipart), send_points(:, ipart), nblocks, blocklengths, offsets)
+
+            call MPI_Type_indexed(nblocks, blocklengths, offsets, MPI_FLOAT, mesh%dsend_type(ipart), mpi_err)
+            call MPI_Type_indexed(nblocks, blocklengths, offsets, MPI_CMPLX, mesh%zsend_type(ipart), mpi_err)
             call MPI_Type_commit(mesh%dsend_type(ipart), mpi_err)
             call MPI_Type_commit(mesh%zsend_type(ipart), mpi_err)
 
@@ -671,10 +672,10 @@ contains
             ! the recv types should start from np + 1 (minus one to start from zero)
             recv_points(1:mesh%nrecv(ipart), ipart) = recv_points(1:mesh%nrecv(ipart), ipart) - mesh%np - 1
 
-            call MPI_Type_indexed(mesh%nrecv(ipart), blocklengths, &
-                 recv_points(:, ipart), MPI_FLOAT, mesh%drecv_type(ipart), mpi_err)
-            call MPI_Type_indexed(mesh%nrecv(ipart), blocklengths, &
-                 recv_points(:, ipart), MPI_CMPLX, mesh%zrecv_type(ipart), mpi_err)
+            call get_blocks(mesh%nrecv(ipart), recv_points(:, ipart), nblocks, blocklengths, offsets)
+
+            call MPI_Type_indexed(nblocks, blocklengths, offsets, MPI_FLOAT, mesh%drecv_type(ipart), mpi_err)
+            call MPI_Type_indexed(nblocks, blocklengths, offsets, MPI_CMPLX, mesh%zrecv_type(ipart), mpi_err)
             call MPI_Type_commit(mesh%drecv_type(ipart), mpi_err)
             call MPI_Type_commit(mesh%zrecv_type(ipart), mpi_err)
 
