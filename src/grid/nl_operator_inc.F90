@@ -239,7 +239,7 @@ subroutine X(nl_operator_operate)(op, fi, fo, ghost_update, profile, points)
   logical, optional,   intent(in)    :: ghost_update
   logical, optional,   intent(in)    :: profile
   integer, optional,   intent(in)    :: points
-  
+
   real(8) :: ws(400)
   logical :: profile_
   integer :: points_, nri, nri_loc, ini, nns(1:2)
@@ -252,11 +252,11 @@ subroutine X(nl_operator_operate)(op, fi, fo, ghost_update, profile, points)
 
   profile_ = .true. 
   if(present(profile)) profile_ = profile
-  
+
   if(profile_) call profiling_in(nl_operate_profile, "NL_OPERATOR")
 
   ! update ghost points if required
-  
+
 #if defined(HAVE_MPI)
   update = .true.
   if(present(ghost_update)) update = ghost_update
@@ -290,54 +290,58 @@ subroutine X(nl_operator_operate)(op, fi, fo, ghost_update, profile, points)
 
   ! now apply the operator
 
-  if(op%cmplx_op) then
+  if(nri > 0) then
+    if(op%cmplx_op) then
 
-    if(op%const_w) then
-      call X(operate)(op%n, nri, op%w_re(:, 1), ri, imin, imax, fi, fo, op%w_im(:, 1))
-    else
-      call X(operate_nc)(op%n, nri, op%w_re, ri, imin, imax, fi, fo, op%w_im)
-    end if
+      if(op%const_w) then
+        call X(operate)(op%n, nri, op%w_re(:, 1), ri, imin, imax, fi, fo, op%w_im(:, 1))
+      else
+        call X(operate_nc)(op%n, nri, op%w_re, ri, imin, imax, fi, fo, op%w_im)
+      end if
 
-  else
-
-    if(.not. op%const_w) then
-      call X(operate_nc)(op%n, nri, op%w_re, ri, imin, imax, fi, fo)
     else
 
-      !$omp parallel private(ini, nri_loc, ws)
+      if(.not. op%const_w) then
+        call X(operate_nc)(op%n, nri, op%w_re, ri, imin, imax, fi, fo)
+      else
+
+        !$omp parallel private(ini, nri_loc, ws)
 #ifdef USE_OMP
-      call multicomm_divide_range_omp(nri, ini, nri_loc)
+        call multicomm_divide_range_omp(nri, ini, nri_loc)
 #else 
-      ini = 1
-      nri_loc = nri
+        ini = 1
+        nri_loc = nri
 #endif
 
-      select case(op%X(function))
-      case(OP_FORTRAN)
-        call X(operate)(op%n, nri, op%w_re(:, 1), ri, imin, imax, fi, fo)
-      case(OP_C)
-        call X(operate_ri)(op%n, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), imax(ini), fi(1), fo(1))
-      case(OP_VEC)
-        call X(operate_ri_vec)(op%n, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), imax(ini), fi(1), fo(1))
-      case(OP_AS)
-        nns(1) = op%n
-        nns(2) = nri_loc
-        call X(operate_as)(nns, op%w_re(1, 1), ri(1, ini), imin(ini), imax(ini), fi(1), fo(1), ws(1))
-      end select
-      !$omp end parallel
+        select case(op%X(function))
+        case(OP_FORTRAN)
+          call X(operate)(op%n, nri, op%w_re(:, 1), ri, imin, imax, fi, fo)
+        case(OP_C)
+          call X(operate_ri)(op%n, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), imax(ini), fi(1), fo(1))
+        case(OP_VEC)
+          call X(operate_ri_vec)(op%n, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), imax(ini), fi(1), fo(1))
+        case(OP_AS)
+          nns(1) = op%n
+          nns(2) = nri_loc
+          call X(operate_as)(nns, op%w_re(1, 1), ri(1, ini), imin(ini), imax(ini), fi(1), fo(1), ws(1))
+        end select
+        !$omp end parallel
 
+      end if
+
+    end if
+
+    if(profile_) then
+      if(op%cmplx_op) then
+        call profiling_count_operations((imax(nri) - imin(1))*op%n*(R_ADD + R_MUL))
+      else 
+        call profiling_count_operations((imax(nri) - imin(1))*op%n*2*R_ADD)
+      end if
     end if
 
   end if
 
-  if(profile_) then
-    if(op%cmplx_op) then
-      call profiling_count_operations((imax(nri) - imin(1))*op%n*(R_ADD + R_MUL))
-    else 
-      call profiling_count_operations((imax(nri) - imin(1))*op%n*2*R_ADD)
-    end if
-    call profiling_out(nl_operate_profile)
-  end if
+  if(profile_) call profiling_out(nl_operate_profile)
 
   call pop_sub()
 end subroutine X(nl_operator_operate)
