@@ -430,6 +430,16 @@ echo
 echo";
   close(SCRIPT);
 
-  return (abs(($value)-($ref_value)) <= $precnum);
+  $success = (abs(($value)-($ref_value)) <= $precnum);
+
+  if(!$success) {
+    print "\n  Match Failed\n";
+    print "   Calculated value : ".$value."\n";
+    print "   Reference value  : ".$ref_value."\n";
+    print "   Difference       : ".abs($ref_value - $value)."\n";
+    print "   Tolerance        : ".$precnum."\n\n";
+  }
+
+  return $success;
 }
 
