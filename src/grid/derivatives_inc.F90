@@ -382,8 +382,8 @@ subroutine X(set_bc)(der, f)
   integer :: iper
   type(profile_t), save :: set_bc_prof
 #ifdef HAVE_MPI
-  integer :: ib, ipart
-  integer, pointer :: sendreq(:), recvreq(:)
+  integer :: ipart, nreq, status(MPI_STATUS_SIZE)
+  integer, allocatable :: req(:), statuses(:, :)
 #endif
 
   call push_sub('derivatives_inc.Xset_bc')
@@ -416,21 +416,19 @@ subroutine X(set_bc)(der, f)
 #ifdef HAVE_MPI
     if(der%m%parallel_in_domains) then
       ! get the points from other nodes
-      ALLOCATE(sendreq(1:der%m%nnbsend), der%m%nnbsend)
-      ALLOCATE(recvreq(1:der%m%nnbrecv), der%m%nnbrecv)
+      ALLOCATE(req(2*der%m%vp%p), 2*der%m%vp%p)
 
-      ib = 1
+      nreq = 0
+
       do ipart = 1, der%m%vp%p
         if(ipart == p .or. der%m%nsend(ipart) == 0) cycle
-        call MPI_Isend(f, 1, der%m%X(send_type)(ipart), ipart - 1, 3, der%m%vp%comm, sendreq(ib), mpi_err)
-        ib = ib + 1
+        nreq = nreq + 1
+        call MPI_Isend(f, 1, der%m%X(send_type)(ipart), ipart - 1, 3, der%m%vp%comm, req(nreq), mpi_err)
       end do
 
-      ib = 1
       do ipart = 1, der%m%vp%p
-        if(ipart == p .or. der%m%nsend(ipart) == 0) cycle
-        call MPI_Irecv(f(der%m%np + 1:) , 1, der%m%X(recv_type)(ipart), ipart - 1, 3, der%m%vp%comm, recvreq(ib), mpi_err)
-        ib = ib + 1
+        if(ipart == p .or. der%m%nrecv(ipart) == 0) cycle
+        call MPI_Recv(f(der%m%np + 1:), 1, der%m%X(recv_type)(ipart), ipart - 1, 3, der%m%vp%comm, status, mpi_err)
       end do
 
     end if
@@ -444,8 +442,8 @@ subroutine X(set_bc)(der, f)
 
 #ifdef HAVE_MPI
     if(der%m%parallel_in_domains) then
-      call MPI_Waitall(der%m%nnbrecv, sendreq, MPI_STATUS_IGNORE, mpi_err)
-      call MPI_Waitall(der%m%nnbsend, recvreq, MPI_STATUS_IGNORE, mpi_err)
+      ALLOCATE(statuses(MPI_STATUS_SIZE, nreq), MPI_STATUS_SIZE*nreq)
+      call MPI_Waitall(nreq, req, statuses, mpi_err)
     end if
 #endif
 

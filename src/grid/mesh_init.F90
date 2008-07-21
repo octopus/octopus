@@ -474,7 +474,7 @@ contains
     integer, allocatable :: recv_points(:, :), blocklengths(:) 
     integer, allocatable :: send_points(:, :)
     integer, allocatable :: send_buffer(:)
-    integer :: bsize
+    integer :: bsize, status(MPI_STATUS_SIZE)
 #endif
 
     nullify(mesh%per_points)
@@ -617,7 +617,7 @@ contains
         mesh%nsend = 0
         do ipart = 1, mesh%vp%p
           if(ipart == mesh%vp%partno) cycle
-          call MPI_Recv(mesh%nsend(ipart), 1, MPI_INTEGER, ipart - 1, 0, mesh%vp%comm, MPI_STATUS_IGNORE, mpi_err)
+          call MPI_Recv(mesh%nsend(ipart), 1, MPI_INTEGER, ipart - 1, 0, mesh%vp%comm, status, mpi_err)
         end do
 
         ! Now we send the indexes of the points
@@ -632,7 +632,7 @@ contains
         do ipart = 1, mesh%vp%p
           if(ipart == mesh%vp%partno .or. mesh%nsend(ipart) == 0) cycle
           call MPI_Recv(send_points(:, ipart), mesh%nsend(ipart), MPI_INTEGER, &
-               ipart - 1, 1, mesh%vp%comm, MPI_STATUS_IGNORE, mpi_err)
+               ipart - 1, 1, mesh%vp%comm, status, mpi_err)
         end do
 
         ! we no longer need this
@@ -650,9 +650,6 @@ contains
         ALLOCATE(blocklengths(1:maxmax), maxmax)
         blocklengths(1:maxmax) = 1
         
-        mesh%nnbsend = 0
-        mesh%nnbrecv = 0
-
         do ipart = 1, mesh%vp%p
           if(ipart == mesh%vp%partno) cycle
 
@@ -670,7 +667,6 @@ contains
             call MPI_Type_commit(mesh%dsend_type(ipart), mpi_err)
             call MPI_Type_commit(mesh%zsend_type(ipart), mpi_err)
 
-            mesh%nnbsend = mesh%nnbsend + 1
           end if
           
           if(mesh%nrecv(ipart) > 0) then
@@ -687,7 +683,6 @@ contains
             call MPI_Type_commit(mesh%drecv_type(ipart), mpi_err)
             call MPI_Type_commit(mesh%zrecv_type(ipart), mpi_err)
 
-            mesh%nnbrecv = mesh%nnbrecv + 1
           end if
 
         end do

@@ -111,8 +111,6 @@ module mesh_m
     integer, pointer :: per_points(:)   ! (1:nper) the list of points that correspond to pbc 
     integer, pointer :: per_map(:)      ! (1:nper) the inner point that corresponds to each pbc point
 #ifdef HAVE_MPI
-    integer          :: nnbsend
-    integer          :: nnbrecv
     integer, pointer :: nsend(:)
     integer, pointer :: nrecv(:)
     integer, pointer :: dsend_type(:)
