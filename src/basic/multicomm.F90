@@ -96,6 +96,7 @@
     /)
 
   integer, public, parameter :: MAX_OMP_THREADS = 16
+  integer, parameter :: MAX_INDEX = 5
 
   type topology_t
     integer          :: ng
@@ -458,13 +459,17 @@ contains
     subroutine cart_topology_create()
 #if defined(HAVE_MPI)
       integer :: new_comm
-      logical :: periodic_mask(n_index)
+      logical :: reorder, periodic_mask(MAX_INDEX)
 #endif
 
       call push_sub('multicomm.cart_topology_create')
 
 #if defined(HAVE_MPI)
       if(.not. mc%use_topology) then
+
+        periodic_mask = .false.
+        reorder = .true.
+
         ! The domain and states dimensions have to be periodic (2D torus)
         ! in order to circulate matrix blocks.
         if(multicomm_strategy_is_parallel(mc, P_STRATEGY_DOMAINS)) then
@@ -477,7 +482,7 @@ contains
         ! world afterwards.
         ! FIXME: make sure this works! World root may be someone else
         ! afterwards!
-        call MPI_Cart_create(mpi_world%comm, mc%n_index, mc%group_sizes, periodic_mask, .true., new_comm, mpi_err)
+        call MPI_Cart_create(mpi_world%comm, mc%n_index, mc%group_sizes, periodic_mask, reorder, new_comm, mpi_err)
 
         ! Re-initialize the world.
         call mpi_grp_init(mpi_world, new_comm)
@@ -491,7 +496,7 @@ contains
     ! ---------------------------------------------------------
     subroutine group_comm_create()
 #if defined(HAVE_MPI)
-      logical :: dim_mask(n_index)
+      logical :: dim_mask(MAX_INDEX)
       integer :: world_group, sub_group, dummy_comm
       integer :: ii
 #endif
