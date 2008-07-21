@@ -33,6 +33,7 @@ module lalg_basic_m
     lalg_axpy,   &
     lalg_copy,   &
     lalg_dot,    &
+    lalg_dotu,   &
     lalg_nrm2,   &
     lalg_symv,   &
     lalg_gemv,   &
@@ -129,6 +130,11 @@ module lalg_basic_m
     module procedure dot_2
     module procedure dot_3
     module procedure dot_4
+  end interface
+
+  interface lalg_dotu
+    module procedure dotu_3
+    module procedure dotu_4
   end interface
 
   interface lalg_nrm2

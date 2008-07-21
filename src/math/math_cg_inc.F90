@@ -21,6 +21,10 @@
 ! The two following subroutines, sym_conjugate_gradients, and bi_conjugate_gradients,
 ! must be called under a common interface: conjugate_gradients. It provides an
 ! approximate solution to the linear system problem  Ax = b.
+! Solving a symmetric linear system, which is either real or complex symmetric or
+! hermitian the best choice is sym_conjugate_gradients (does not need A^\dagger)
+! Solving a real unsymmetric or a complex non hermitian system bi_conjugate_gradients
+! has to be chosen (where one does need A^\dagger).
 !
 ! Note: the complex valued versions (both CG and BiCG) work only with
 !       symmetric operators but they may be non-Hermitian. This is a
@@ -45,13 +49,17 @@
 !         FLOAT, intent(out) :: y(:)
 !      end subroutine opt
 !    end interface                   => If present, this should be a procedure that
-!                                       computes A^\dagger x = y. Only useful for non-Hermitian
-!                                       (but symmetric) operators.
+!                                       computes A^\dagger x = y.
+!                                       Only useful for non-Hermitian operators.
 !    interface
 !      R_TYPE function dotp(x, y)
 !      R_TYPE, intent(inout) :: x(:)
 !      R_TYPE, intent(in)    :: y(:)
 !    end function dotp               => Calculates the <x | y>.
+!                                       Depending on the matrix A one should choose:
+!                                       complex symmetric: <x | y> = x^T * y
+!                                       hermitian:         <x | y> = x^\dagger * y
+!                                       general:           <x | y> = x^\dagger * y
 !    integer, intent(inout) :: iter  => On input, the maximum number of iteratios that
 !                                       the procedure is allowed to take.
 !                                       On output, the iterations it actually did.

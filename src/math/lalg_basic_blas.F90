@@ -403,6 +403,39 @@ TYPE1 function FNAME(dot) (n, dx, dy) result(dot)
 end function FNAME(dot)
 
 ! ------------------------------------------------------------------
+! Forms the dot product of two vectors x^T.y (without conjugate)
+! ------------------------------------------------------------------
+#if TYPE == 3 || TYPE == 4
+TYPE1 function FNAME(dotu) (n, dx, dy) result(dot)
+  integer, intent(in) :: n
+  TYPE1,   intent(in) :: dx(:), dy(:)
+
+#ifdef USE_OMP
+  TYPE1   :: dot_loc
+  integer :: nn_loc, ini
+#endif
+
+  dot = CNST(0.0)
+  if (n < 1) return
+
+#ifdef USE_OMP  
+  !$omp parallel private(ini, nn_loc, dot_loc)
+  call multicomm_divide_range_omp(n, ini, nn_loc)
+  dot_loc = blas_dotu(nn_loc, dx(ini), 1, dy(ini), 1)
+
+  !$omp atomic
+  dot = dot + dot_loc
+
+  !$omp end parallel
+
+#else
+  dot = blas_dotu(n, dx(1), 1, dy(1), 1)
+#endif
+
+end function FNAME(dotu)
+#endif
+
+! ------------------------------------------------------------------
 ! Returns the euclidean norm of a vector
 ! ------------------------------------------------------------------
 

@@ -512,11 +512,9 @@ contains
     np = gr_p%m%np
 
     call lalg_copy(np, x, tmpx(:, 1))
-    ! calculate right hand side (e-T-V(lead)-sum(a)[H_ca*g_a*H_ac]
     call zhpsi(h_p, gr_p, tmpx, tmpy, 1, 1)
 
     y(1:np) = energy_p*x(1:np) - tmpy(1:np,1)
-    ! TODO: the static potential of the lead
     call zsymv('U', inp, -M_z1, green_l_p(:, :, LEFT), inp, x(1:inp), 1, M_z1, y(1:inp), 1)
     call zsymv('U', inp, -M_z1, green_l_p(:, :, RIGHT), inp, x(np-inp+1:np), &
                1, M_z1, y(np-inp+1:np), 1)
@@ -525,6 +523,40 @@ contains
     deallocate(tmpx, tmpy)
     call pop_sub()
   end subroutine h_eff_lip_sch
+
+  ! ---------------------------------------------------------
+  ! the left side of the Lippmann-Schwinger equation (transposed)
+  ! e-H_cc+V(lead)-sum(a)[H_ca*g_a*H_ac]
+  ! Used by the iterative linear solver.
+  ! For the Hermitian part of the matrix use the trick with the conjugated wave function.
+  ! For the complex symmetric part use the normal matrix vector product.
+  subroutine h_eff_lip_sch_t(x, y)
+    CMPLX, intent(in)  :: x(:)
+    CMPLX, intent(out) :: y(:)
+
+    CMPLX, allocatable :: tmpx(:, :)
+    CMPLX, allocatable :: tmpy(:, :)
+    integer            :: inp, np
+
+    call push_sub('td_trans_rti.h_eff_lip_sch_t')
+
+    ALLOCATE(tmpx(gr_p%m%np_part, 1), gr_p%m%np_part)
+    ALLOCATE(tmpy(gr_p%m%np_part, 1), gr_p%m%np_part)
+    inp = intf_p%np
+    np = gr_p%m%np
+
+    tmpx(1:np, 1) = conjg(x(1:np))
+    call zhpsi(h_p, gr_p, tmpx, tmpy, 1, 1)
+
+    y(1:np) = energy_p*x(1:np) - conjg(tmpy(1:np,1))
+    call zsymv('U', inp, -M_z1, green_l_p(:, :, LEFT), inp, x(1:inp), 1, M_z1, y(1:inp), 1)
+    call zsymv('U', inp, -M_z1, green_l_p(:, :, RIGHT), inp, x(np-inp+1:np), &
+               1, M_z1, y(np-inp+1:np), 1)
+
+
+    deallocate(tmpx, tmpy)
+    call pop_sub()
+  end subroutine h_eff_lip_sch_t
 
   ! ---------------------------------------------------------
   subroutine preconditioner(x, y)
@@ -543,7 +575,6 @@ contains
 
     diag(:, 1) = energy_p - diag(:,1) 
     y(1:np) = x(1:np)/diag(1:np, 1)
-  !  y(:) = x(:) ! no preconditioner
 
     deallocate(diag)
 
@@ -555,7 +586,23 @@ contains
     CMPLX, intent(in)  :: x(:)
     CMPLX, intent(out) :: y(:)
 
-    y(:) = x(:) ! no preconditioner
+    CMPLX, allocatable :: diag(:, :)
+    integer            :: np, i
+
+    call push_sub('td_rti.preconditioner')
+    np = gr_p%m%np
+
+!    y(:) = x(:) ! no preconditioner
+    ALLOCATE(diag(np, 1), np)
+
+    call zhpsi_diag(h_p, gr_p, diag, 1)
+
+    diag(:, 1) = M_z1 + M_HALF*dt_p*M_zI*diag(:,1) 
+    y(1:np) = x(1:np)/diag(1:np, 1)
+
+    deallocate(diag)
+
+    call pop_sub()
 
   end subroutine precond_prop
 
@@ -580,6 +627,13 @@ contains
   end function plane_wave
 
   ! ---------------------------------------------------------
+  CMPLX function zdot_productu(a, b) result(r)
+    CMPLX, intent(in) :: a(:), b(:)
+    r = lalg_dotu(gr_p%m%np, a, b)
+!    r = sum(a(:)*b(:))
+  end function zdot_productu
+
+  ! ---------------------------------------------------------
   ! compute the extended eigenstate(s) 
   subroutine ext_eigenstate_lip_sch(h, gr, np, diag, offdiag, order, energy, q, st)
     type(hamiltonian_t), intent(inout) :: h
@@ -598,6 +652,7 @@ contains
     integer, pointer   :: lxyz(:,:)
     FLOAT              :: lsize(3), dres, dx(3)
     FLOAT, target      :: en
+    CMPLX              :: cres
 
     call push_sub('td_trans_rti.ext_eigenstate_lip_sch')
 
@@ -654,13 +709,24 @@ contains
       write(message(1), '(a,es10.3)') '  Solving Lippmann Schwinger equation for energy ', en
       call write_info(1, stdout)
       iter = 10000
+!      iter = 3
       ! zconjugate_gradients fails in some cases (wrong solution) and takes longer
       ! therefore take the symmetric quasi-minimal residual solver (QMR)
       st%zpsi(:, 1, ist, 1) = M_z0
       !st%zpsi(:, 1, ist, 1) = tmp(:, 1)
+      ! case of no magnetic fields
       call zqmr_sym(NP, st%zpsi(:, 1, ist, 1), tmp(:, 1), h_eff_lip_sch, preconditioner, &
                       iter, residue=dres, threshold=cg_tol, showprogress = .true.)
-      !write(*,*) 'iter =',iter, 'residue =', dres
+!      write(*,*) 'iter =',iter, 'residue =', abs(dres)
+      ! works in principle, but sometimes converges to the wrong solution
+!      call zconjugate_gradients(NP, st%zpsi(:, 1, ist, 1), tmp(:, 1), h_eff_lip_sch, &
+!                zdot_productu, iter, residue = cres, threshold=cg_tol)
+!      write(*,*) 'iter =',iter, 'residue =', abs(cres)
+
+      ! with magnetic fields (no symmetric matrix)
+!      call zqmr(NP, st%zpsi(:, 1, ist, 1), tmp(:, 1), h_eff_lip_sch, h_eff_lip_sch_t, &
+!              preconditioner, preconditioner, iter, residue=dres, threshold=cg_tol, showprogress = .true.)
+!      write(*,*) 'iter =',iter, 'residue =', abs(dres)
     end do !ist
 
     deallocate(green_l, tmp)
@@ -871,17 +937,30 @@ contains
         ! 4. Solve linear system (1 + i \delta H_{eff}) st%zpsi = tmp.
         cg_iter = cg_max_iter
         tmp(1:NP, 1) = st%zpsi(1:NP, 1, ist, ik)
+!        tmp(1:NP, 1) = M_z0
         ! use QMR-solver since it is faster and more stable than BiCG
         if (mem_type.eq.1) then
+          ! use for non magnetic case
+          ! either the stable symmetric QMR solver
           call zqmr_sym(NP, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_backward, precond_prop, &
                           cg_iter, residue=dres, threshold=cg_tol, showprogress = .false.)
+          ! or the slightly faster but less stable CG solver
+!          call zconjugate_gradients(NP, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_backward, &
+!                zdot_productu, cg_iter, threshold=cg_tol)
+
+          ! use for magnetic fields a general solver like Bi-CG (working)
+!          call zconjugate_gradients(NP, st%zpsi(:, 1, ist, ik), tmp(:, 1), &
+!            h_eff_backward, h_eff_backward_dagger, zmf_dotp_aux, cg_iter, threshold=cg_tol)
+          ! or the general QMR solver (not working yet)
+!          call zqmr(NP, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_backward, h_eff_backward_t, &
+!               precond_prop, precond_prop, cg_iter, residue=dres, threshold=cg_tol, showprogress = .true.)
           !write(*,*) 'iter =',iter, 'residue =', dres
 
-          !call zconjugate_gradients(NP, st%zpsi(:, 1, ist, ik), tmp(:, 1), &
-          !  h_eff_backward, h_eff_backwardt, zmf_dotp_aux, cg_iter, threshold=cg_tol)
         else
           call zqmr_sym(NP, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_backward_sp, precond_prop, &
                           cg_iter, residue=dres, threshold=cg_tol, showprogress = .false.)
+!          call zqmr(NP, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_backward_sp, h_eff_backward_sp_t, &
+!                precond_prop, precond_prop, cg_iter, residue=dres, threshold=cg_tol, showprogress = .false.)
           !call zconjugate_gradients(NP, st%zpsi(:, 1, ist, ik), tmp(1:NP, 1), &
           !  h_eff_backward_sp, h_eff_backwardt_sp, zmf_dotp_aux, cg_iter, threshold=cg_tol)
         end if
@@ -957,6 +1036,46 @@ contains
   end subroutine h_eff_backward
 
   ! ---------------------------------------------------------
+  ! Progagate backwards with: 1 + i \delta H_{eff} (transposed)
+  ! Used by the iterative linear solver.
+  subroutine h_eff_backward_t(x, y)
+    CMPLX, intent(in)  :: x(:)
+    CMPLX, intent(out) :: y(:)
+
+    CMPLX, allocatable :: tmp(:, :)
+    call push_sub('td_trans_rti.h_eff_backward_t')
+    
+    ALLOCATE(tmp(gr_p%m%np_part, 1),gr_p%m%np_part)
+    ! Propagate backward.
+    call lalg_copy(gr_p%m%np, x, tmp(:, 1))
+    call apply_h_eff(h_p, gr_p, mem_p, intf_p, M_ONE, dt_p, t_p, ist_p, ik_p, tmp, .true.)
+    call lalg_copy(gr_p%m%np, tmp(:, 1), y)
+
+    deallocate(tmp)
+    call pop_sub()
+  end subroutine h_eff_backward_t
+
+  ! ---------------------------------------------------------
+  ! Progagate backwards with: 1 + i \delta H_{eff} (daggered)
+  ! Used by the iterative linear solver.
+  subroutine h_eff_backward_dagger(x, y)
+    CMPLX, intent(in)  :: x(:)
+    CMPLX, intent(out) :: y(:)
+
+    CMPLX, allocatable :: tmp(:, :)
+    call push_sub('td_trans_rti.h_eff_backward_t')
+    
+    ALLOCATE(tmp(gr_p%m%np_part, 1),gr_p%m%np_part)
+    ! Propagate backward.
+    call lalg_copy(gr_p%m%np, x, tmp(:, 1))
+    call apply_h_eff_dagger(h_p, gr_p, mem_p, intf_p, dt_p, t_p, ist_p, ik_p, tmp)
+    call lalg_copy(gr_p%m%np, tmp(:, 1), y)
+
+    deallocate(tmp)
+    call pop_sub()
+  end subroutine h_eff_backward_dagger
+
+  ! ---------------------------------------------------------
   ! Progagate backwards with: 1 + i \delta H_{eff}
   ! Used by the iterative linear solver.
   subroutine h_eff_backward_sp(x, y)
@@ -964,7 +1083,7 @@ contains
     CMPLX, intent(out) :: y(:)
 
     CMPLX, allocatable :: tmp(:, :)
-    call push_sub('td_trans_rti.h_eff_backward')
+    call push_sub('td_trans_rti.h_eff_backward_sp')
     
     ALLOCATE(tmp(gr_p%m%np_part, 1),gr_p%m%np_part)
     ! Propagate backward.
@@ -976,55 +1095,25 @@ contains
     call pop_sub()
   end subroutine h_eff_backward_sp
 
-
-  ! ---------------------------------------------------------
-  ! Progagate backwards with: (1 + i \delta H_{eff})^\dagger
+ ! ---------------------------------------------------------
+  ! Progagate backwards with: 1 + i \delta H_{eff} (transposed)
   ! Used by the iterative linear solver.
-  subroutine h_eff_backwardt(x, y)
+  subroutine h_eff_backward_sp_t(x, y)
     CMPLX, intent(in)  :: x(:)
     CMPLX, intent(out) :: y(:)
 
     CMPLX, allocatable :: tmp(:, :)
-    call push_sub('td_trans_rti.h_eff_backwardt')
+    call push_sub('td_trans_rti.h_eff_backward_sp_t')
     
     ALLOCATE(tmp(gr_p%m%np_part, 1),gr_p%m%np_part)
     ! Propagate backward.
-    ! To act with the Hermitian conjugate of H_{eff} on the wavefunction
-    ! we apply H_{eff} to the conjugate of psi and conjugate the
-    ! resulting H_{eff} psi (note that H_{eff} is not a purely real
-    ! operator for scattering wavefunctions anymore).
-    tmp(1:gr_p%m%np, 1) = conjg(x(1:gr_p%m%np))
-    call apply_h_eff(h_p, gr_p, mem_p, intf_p, M_ONE, dt_p, t_p, ist_p, ik_p, tmp)
-    y(1:gr_p%m%np) = conjg(tmp(1:gr_p%m%np, 1))
+    call lalg_copy(gr_p%m%np, x, tmp(:, 1))
+    call apply_h_eff_sp(h_p, gr_p, sp_mem_p, intf_p, M_ONE, dt_p, t_p, ist_p, ik_p, tmp, mem_s_p, mapping_p, .true.)
+    call lalg_copy(gr_p%m%np, tmp(:, 1), y)
 
     deallocate(tmp)
     call pop_sub()
-  end subroutine h_eff_backwardt
-
-  ! ---------------------------------------------------------
-  ! Progagate backwards with: (1 + i \delta H_{eff})^\dagger
-  ! Used by the iterative linear solver.
-  subroutine h_eff_backwardt_sp(x, y)
-    CMPLX, intent(in)  :: x(:)
-    CMPLX, intent(out) :: y(:)
-
-    CMPLX, allocatable :: tmp(:, :)
-    call push_sub('td_trans_rti.h_eff_backwardt')
-    
-    ALLOCATE(tmp(gr_p%m%np_part, 1), gr_p%m%np_part)
-    ! Propagate backward.
-    ! To act with the Hermitian conjugate of H_{eff} on the wavefunction
-    ! we apply H_{eff} to the conjugate of psi and conjugate the
-    ! resulting H_{eff} psi (note that H_{eff} is not a purely real
-    ! operator for scattering wavefunctions anymore).
-    tmp(1:gr_p%m%np, 1) = conjg(x(1:gr_p%m%np))
-    call apply_h_eff_sp(h_p, gr_p, sp_mem_p, intf_p, M_ONE, dt_p, t_p, ist_p, ik_p, tmp, mem_s_p, mapping_p)
-    y(1:gr_p%m%np) = conjg(tmp(1:gr_p%m%np, 1))
-
-    deallocate(tmp)
-    call pop_sub()
-  end subroutine h_eff_backwardt_sp
-
+  end subroutine h_eff_backward_sp_t
 
   ! ---------------------------------------------------------
   ! Save the interface part of all states st for timestep into
@@ -1054,7 +1143,7 @@ contains
 
   ! ---------------------------------------------------------
   ! Propagate forward/backward with effective Hamiltonian.
-  subroutine apply_h_eff(h, gr, mem, intf, sign, dt, t, ist, ik, zpsi)
+  subroutine apply_h_eff(h, gr, mem, intf, sign, dt, t, ist, ik, zpsi, transposed)
     type(hamiltonian_t), intent(inout) :: h
     type(grid_t),        intent(inout) :: gr
     CMPLX, target,       intent(in)    :: mem(:, :, :)
@@ -1063,6 +1152,7 @@ contains
     integer,             intent(in)    :: ist
     integer,             intent(in)    :: ik
     CMPLX,               intent(inout) :: zpsi(:, :)
+    logical, optional,   intent(in)    :: transposed
 
     CMPLX, allocatable :: intf_wf(:, :)
 
@@ -1075,10 +1165,15 @@ contains
     call get_intf_wf(intf, LEFT, zpsi, intf_wf(:, LEFT))
     call get_intf_wf(intf, RIGHT, zpsi, intf_wf(:, RIGHT))
 
+    ! To act with the transposed of H on the wavefunction
+    ! we apply H to the conjugate of psi and conjugate the
+    ! resulting H psi 
+    if(present(transposed).and.(transposed.eq..true.)) zpsi = conjg(zpsi)
     ! Apply (1 - i\delta H_{CC}^{(m)}) to zpsi.
     ! td_exp_dt with Taylor expansion calculates exp(-i dt H), i. e. the
     ! minus is already built in.
     call td_exp_dt(taylor_1st, gr, h, zpsi, ist, ik, -sign*dt/M_TWO, t-dt)
+    if(present(transposed).and.(transposed.eq..true.)) zpsi = conjg(zpsi)
 
     ! Apply modification: sign \delta^2 Q zpsi
     call apply_mem(mem(:,:,LEFT), LEFT, intf, intf_wf(:, LEFT), zpsi, TOCMPLX(sign*dt**2/M_FOUR, M_ZERO))
@@ -1091,7 +1186,42 @@ contains
 
   ! ---------------------------------------------------------
   ! Propagate forward/backward with effective Hamiltonian.
-  subroutine apply_h_eff_sp(h, gr, sp_mem, intf, sign, dt, t, ist, ik, zpsi, mem_s, mapping)
+  subroutine apply_h_eff_dagger(h, gr, mem, intf, dt, t, ist, ik, zpsi)
+    type(hamiltonian_t), intent(inout) :: h
+    type(grid_t),        intent(inout) :: gr
+    CMPLX, target,       intent(in)    :: mem(:, :, :)
+    type(intface_t),     intent(in)    :: intf
+    FLOAT,               intent(in)    :: dt, t
+    integer,             intent(in)    :: ist
+    integer,             intent(in)    :: ik
+    CMPLX,               intent(inout) :: zpsi(:, :)
+
+    CMPLX, allocatable :: intf_wf(:, :)
+
+    call push_sub('td_trans_rti.apply_h_eff_dagger')
+
+    ALLOCATE(intf_wf(intf%np, NLEADS), intf%np*NLEADS)
+
+    call get_intf_wf(intf, LEFT, zpsi, intf_wf(:, LEFT))
+    call get_intf_wf(intf, RIGHT, zpsi, intf_wf(:, RIGHT))
+
+    ! Apply (1 - i\delta H_{CC}^{(m)}) to zpsi.
+    ! td_exp_dt with Taylor expansion calculates exp(-i dt H), i. e. the
+    ! minus is already built in.
+    call td_exp_dt(taylor_1st, gr, h, zpsi, ist, ik, dt/M_TWO, t-dt)
+
+    ! Apply modification: sign \delta^2 Q zpsi
+    call apply_mem(conjg(mem(:,:,LEFT)), LEFT, intf, intf_wf(:, LEFT), zpsi, TOCMPLX(dt**2/M_FOUR, M_ZERO))
+    call apply_mem(conjg(mem(:,:,RIGHT)), RIGHT, intf, intf_wf(:, RIGHT), zpsi, TOCMPLX(dt**2/M_FOUR, M_ZERO))
+
+    deallocate(intf_wf)
+
+    call pop_sub()
+  end subroutine apply_h_eff_dagger
+
+  ! ---------------------------------------------------------
+  ! Propagate forward/backward with effective Hamiltonian.
+  subroutine apply_h_eff_sp(h, gr, sp_mem, intf, sign, dt, t, ist, ik, zpsi, mem_s, mapping, transposed)
     type(hamiltonian_t), intent(inout) :: h
     type(grid_t),        intent(inout) :: gr
     CMPLX, target,       intent(in)    :: sp_mem(:, :)
@@ -1102,6 +1232,7 @@ contains
     CMPLX,               intent(inout) :: zpsi(:, :)
     CMPLX,               intent(in)    :: mem_s(:, :, :, :)
     integer,             intent(in)    :: mapping(:)   ! the mapping
+    logical, optional,   intent(in)    :: transposed
 
     CMPLX, allocatable :: intf_wf(:, :)
 
@@ -1114,10 +1245,12 @@ contains
     call get_intf_wf(intf, LEFT, zpsi, intf_wf(:, LEFT))
     call get_intf_wf(intf, RIGHT, zpsi, intf_wf(:, RIGHT))
 
+    if(present(transposed).and.(transposed.eq..true.)) zpsi = conjg(zpsi)
     ! Apply (1 - i\delta H_{CC}^{(m)}) to zpsi.
     ! td_exp_dt with Taylor expansion calculates exp(-i dt H), i. e. the
     ! minus is already built in.
     call td_exp_dt(taylor_1st, gr, h, zpsi, ist, ik, -sign*dt/M_TWO, t-dt)
+    if(present(transposed).and.(transposed.eq..true.)) zpsi = conjg(zpsi)
 
     ! Apply modification: sign \delta^2 Q zpsi
     call apply_sp_mem(sp_mem(:,LEFT), LEFT, intf, intf_wf(:, LEFT), zpsi, &
