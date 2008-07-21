@@ -1168,12 +1168,17 @@ contains
     ! To act with the transposed of H on the wavefunction
     ! we apply H to the conjugate of psi and conjugate the
     ! resulting H psi 
-    if(present(transposed).and.(transposed.eq..true.)) zpsi = conjg(zpsi)
+    if(present(transposed)) then
+      if(transposed) zpsi = conjg(zpsi)
+    end if
+
     ! Apply (1 - i\delta H_{CC}^{(m)}) to zpsi.
     ! td_exp_dt with Taylor expansion calculates exp(-i dt H), i. e. the
     ! minus is already built in.
     call td_exp_dt(taylor_1st, gr, h, zpsi, ist, ik, -sign*dt/M_TWO, t-dt)
-    if(present(transposed).and.(transposed.eq..true.)) zpsi = conjg(zpsi)
+    if(present(transposed)) then
+      if(transposed) zpsi = conjg(zpsi)
+    end if
 
     ! Apply modification: sign \delta^2 Q zpsi
     call apply_mem(mem(:,:,LEFT), LEFT, intf, intf_wf(:, LEFT), zpsi, TOCMPLX(sign*dt**2/M_FOUR, M_ZERO))
@@ -1245,12 +1250,18 @@ contains
     call get_intf_wf(intf, LEFT, zpsi, intf_wf(:, LEFT))
     call get_intf_wf(intf, RIGHT, zpsi, intf_wf(:, RIGHT))
 
-    if(present(transposed).and.(transposed.eq..true.)) zpsi = conjg(zpsi)
+    if(present(transposed))  then 
+      if(transposed) zpsi = conjg(zpsi)
+    end if
+
     ! Apply (1 - i\delta H_{CC}^{(m)}) to zpsi.
     ! td_exp_dt with Taylor expansion calculates exp(-i dt H), i. e. the
     ! minus is already built in.
     call td_exp_dt(taylor_1st, gr, h, zpsi, ist, ik, -sign*dt/M_TWO, t-dt)
-    if(present(transposed).and.(transposed.eq..true.)) zpsi = conjg(zpsi)
+
+    if(present(transposed)) then
+      if(transposed) zpsi = conjg(zpsi)
+    end if
 
     ! Apply modification: sign \delta^2 Q zpsi
     call apply_sp_mem(sp_mem(:,LEFT), LEFT, intf, intf_wf(:, LEFT), zpsi, &
