@@ -104,12 +104,12 @@ contains
     !%
     !% Warning 2: Some values are treated in their most common units,
     !% for example atomic masses (a.m.u.), vibrational frequencies
-    !% (cm^-1) or temperatures (kelvin).
+    !% (cm^-1) or temperatures (Kelvin).
     !%
     !%Option atomic        1
     !% Atomic units
     !%Option ev_angstrom   2
-    !% Electron-volts for energy, Angstrom for length, the rest of the
+    !% Electronvolts for energy, Angstrom for length, the rest of the
     !% units are derived from these and <math>hbar=1</math>.
     !%End
 
@@ -122,7 +122,7 @@ contains
     !%Option atomic        1
     !% Atomic units
     !%Option ev_angstrom   2
-    !% Electron-volts for energy, Angstrom for length, the rest of the
+    !% Electronvolts for energy, Angstrom for length, the rest of the
     !% units are derived from these and <math>hbar=1</math>.
     !%End
 
@@ -135,7 +135,7 @@ contains
     !%Option atomic        1
     !% Atomic units
     !%Option ev_angstrom   2
-    !% Electron-volts for energy, Angstrom for length, the rest of the
+    !% Electronvolts for energy, Angstrom for length, the rest of the
     !% units are derived from these and <math>hbar=1</math>.
     !%End
 
@@ -185,7 +185,7 @@ contains
     type(unit_system_t), intent(out) :: u
 
     u%length%abbrev = "b"
-    u%length%name   = "bohr"
+    u%length%name   = "Bohr"
     u%length%factor = M_ONE
 
     u%energy%abbrev = "H"
@@ -197,7 +197,7 @@ contains
     u%time%factor = M_ONE/u%energy%factor
 
     u%velocity%abbrev = "bH(2pi/h)"
-    u%velocity%name   = "bohr times Hartree over h bar"
+    u%velocity%name   = "Bohr times Hartree over hbar"
     u%velocity%factor = M_ONE
 
     u%mass%abbrev   = "u"
@@ -205,11 +205,11 @@ contains
     u%mass%factor   = M_ONE/CNST(5.485799110e-4)
 
     u%force%abbrev  = "H/b"
-    u%force%name    = "Hartree/bohr"
+    u%force%name    = "Hartree/Bohr"
     u%force%factor  = M_ONE
 
     u%acceleration%abbrev = "bH(2pi/h)^2"
-    u%acceleration%name   = "bohr times (Hartree over h bar) squared"
+    u%acceleration%name   = "Bohr times (Hartree over h bar) squared"
     u%acceleration%factor = M_ONE
   end subroutine units_init_atomic
 
@@ -223,15 +223,15 @@ contains
     u%length%factor = P_Ang  ! 1 a.u. = 0.529 A
 
     u%energy%abbrev = "eV"
-    u%energy%name   = "electron volt"
+    u%energy%name   = "electronvolt"
     u%energy%factor = M_ONE/(M_TWO*P_Ry)   ! 1 a.u. = 27.2 eV
 
     u%time%abbrev = "hbar/eV"
-    u%time%name   = "hbar/electron volt"
+    u%time%name   = "hbar/electronvolt"
     u%time%factor = M_ONE/u%energy%factor
 
     u%velocity%abbrev = "AeV(2pi/h)"
-    u%velocity%name   = "Angstrom times electron volts over h bar"
+    u%velocity%name   = "Angstrom times electronvolts over hbar"
     u%velocity%factor = u%length%factor*u%energy%factor
 
     u%mass%abbrev   = "u"
@@ -239,11 +239,11 @@ contains
     u%mass%factor   = M_ONE/CNST(5.485799110e-4)
 
     u%force%abbrev  = "eV/A"
-    u%force%name    = "electron volt/amstrong"
+    u%force%name    = "electronvolt/Angstrom"
     u%force%factor  = u%energy%factor/u%length%factor
 
     u%acceleration%abbrev = "AeV(2pi/h)^2"
-    u%acceleration%name   = "Angstrom times (electron volt over h bar) squared"
+    u%acceleration%name   = "Angstrom times (electronvolt over hbar) squared"
     u%acceleration%factor = u%length%factor/u%time%factor**2
   end subroutine units_init_eV_Ang
 

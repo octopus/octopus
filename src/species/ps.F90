@@ -626,7 +626,7 @@ contains
       end do
 
       ! Now the part corresponding to the local pseudopotential
-      ! where the asymptotic part is substracted
+      ! where the asymptotic part is subtracted
       call spline_fit(psp%g%nrval, psp%g%rofi, psp%vlocal, ps%vl)
 
       ! Define the table for the pseudo-wavefunction components (using splines)
@@ -703,7 +703,7 @@ contains
       end do
 
       ! Now the part corresponding to the local pseudopotential
-      ! where the asymptotic part is substracted
+      ! where the asymptotic part is subtracted
       hato(:) = ps_grid%vlocal(:)/M_TWO
       call spline_fit(g%nrval, g%rofi, hato, ps%vl)
       
@@ -779,7 +779,7 @@ contains
     end if
 
     ! Now the part corresponding to the local pseudopotential
-    ! where the asymptotic part is substracted
+    ! where the asymptotic part is subtracted
     hato(:) = ps_upf%v_local/M_TWO
     call spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%vl)
 

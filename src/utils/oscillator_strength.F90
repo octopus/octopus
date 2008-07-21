@@ -244,7 +244,7 @@ subroutine read_resonances_file(order, ffile, search_interval, final_time, nfreq
   integer, intent(in)          :: nfrequencies
 
   FLOAT :: dummy, leftbound, rightbound, w, power, dw
-  integer :: iunit, nresonances, ios, i, j, k, npairs, nspin, order_in_file, nw_substracted, ierr
+  integer :: iunit, nresonances, ios, i, j, k, npairs, nspin, order_in_file, nw_subtracted, ierr
   logical :: file_exists
   FLOAT, allocatable :: wij(:), omega(:), c0i(:)
 
@@ -310,7 +310,7 @@ subroutine read_resonances_file(order, ffile, search_interval, final_time, nfreq
     search_interval = M_HALF
   end if
 
-  call read_ot(nspin, order_in_file, nw_substracted)
+  call read_ot(nspin, order_in_file, nw_subtracted)
 
   if(order_in_file.ne.order) then
     write(message(1), '(a)') 'Error: The ot file should contain the second order response'
@@ -335,11 +335,11 @@ subroutine read_resonances_file(order, ffile, search_interval, final_time, nfreq
 
   dw = (rightbound-leftbound) / (nfrequencies - 1)
 
-  ! First, substract zero resonance...
+  ! First, subtract zero resonance...
   w = M_ZERO
-  call resonance_second_order(w, power, nw_substracted, leftbound, rightbound, M_ZERO, M_ZERO)
+  call resonance_second_order(w, power, nw_subtracted, leftbound, rightbound, M_ZERO, M_ZERO)
   call modify_ot(time_steps, dt, order, ot, omega, power)
-  nw_substracted = nw_substracted + 1
+  nw_subtracted = nw_subtracted + 1
 
   ! Then, get all the others...
   k = 1
@@ -348,9 +348,9 @@ subroutine read_resonances_file(order, ffile, search_interval, final_time, nfreq
       leftbound = wij(k) - search_interval
       rightbound = wij(k) + search_interval
       call find_resonance(wij(k), leftbound, rightbound, nfrequencies)
-      call resonance_second_order(wij(k), power, nw_substracted, leftbound, rightbound, c0i(i), c0i(j))
+      call resonance_second_order(wij(k), power, nw_subtracted, leftbound, rightbound, c0i(i), c0i(j))
       call modify_ot(time_steps, dt, order, ot, wij(k), power)
-      nw_substracted = nw_substracted + 1
+      nw_subtracted = nw_subtracted + 1
       k = k + 1
     end do
   end do
@@ -386,7 +386,7 @@ subroutine analyze_signal(order, omega, search_interval, final_time, nresonances
 
   FLOAT :: leftbound, rightbound, dw, power
   FLOAT, allocatable :: w(:), c0I2(:)
-  integer :: nspin, i, ierr, order_in_file, nw_substracted
+  integer :: nspin, i, ierr, order_in_file, nw_subtracted
   logical :: file_exists
 
   ! First, let us check that the file "ot" exists.
@@ -418,7 +418,7 @@ subroutine analyze_signal(order, omega, search_interval, final_time, nresonances
   leftbound = omega - search_interval
   rightbound = omega + search_interval
 
-  call read_ot(nspin, order_in_file, nw_substracted)
+  call read_ot(nspin, order_in_file, nw_subtracted)
 
   if(order_in_file.ne.order) then
     write(message(1), '(a)') 'Internal error in analyze_signal'
@@ -455,9 +455,9 @@ subroutine analyze_signal(order, omega, search_interval, final_time, nresonances
 
   i = 1
   do
-    if(nw_substracted >= nresonances) exit
+    if(nw_subtracted >= nresonances) exit
 
-    if(mode == COSINE_TRANSFORM .and. nw_substracted == 0) then
+    if(mode == COSINE_TRANSFORM .and. nw_subtracted == 0) then
       omega = M_ZERO
     else
       call find_resonance(omega, leftbound, rightbound, nfrequencies)
@@ -465,9 +465,9 @@ subroutine analyze_signal(order, omega, search_interval, final_time, nresonances
 
     select case(order)
     case(1)
-      call resonance_first_order(omega, power, nw_substracted, dw, leftbound, rightbound)
+      call resonance_first_order(omega, power, nw_subtracted, dw, leftbound, rightbound)
     case(2)
-      call resonance_second_order(omega, power, nw_substracted, leftbound, rightbound, M_ZERO, M_ZERO)
+      call resonance_second_order(omega, power, nw_subtracted, leftbound, rightbound, M_ZERO, M_ZERO)
     end select
 
     w(i) = omega
@@ -475,7 +475,7 @@ subroutine analyze_signal(order, omega, search_interval, final_time, nresonances
 
     call modify_ot(time_steps, dt, order, ot, omega, power)
 
-    nw_substracted = nw_substracted + 1
+    nw_subtracted = nw_subtracted + 1
     i = i + 1
   end do
 
@@ -600,7 +600,7 @@ end subroutine find_resonance
 
 
 ! ---------------------------------------------------------
-subroutine resonance_first_order(omega, power, nw_substracted, dw, leftbound, rightbound)
+subroutine resonance_first_order(omega, power, nw_subtracted, dw, leftbound, rightbound)
   use global_m
   use messages_m
   use datasets_m
@@ -615,7 +615,7 @@ subroutine resonance_first_order(omega, power, nw_substracted, dw, leftbound, ri
 
   FLOAT, intent(in)               :: omega
   FLOAT, intent(out)              :: power
-  integer, intent(in)             :: nw_substracted
+  integer, intent(in)             :: nw_subtracted
   FLOAT, intent(in)               :: dw, leftbound, rightbound
 
   call ft(omega, power)
@@ -628,7 +628,7 @@ subroutine resonance_first_order(omega, power, nw_substracted, dw, leftbound, ri
   end select
 
   write(*, '(a)')                 '******************************************************************'
-  write(*, '(a,i3)')              'Resonance #', nw_substracted + 1
+  write(*, '(a,i3)')              'Resonance #', nw_subtracted + 1
   write(*, '(a,f12.8,a,f12.8,a)') 'omega    = ', omega / units%energy%factor, &
                                   ' '//trim(units%energy%abbrev)//' = ',      &
                                   omega, ' Ha'
@@ -653,7 +653,7 @@ end subroutine resonance_first_order
 
 
 ! ---------------------------------------------------------
-subroutine resonance_second_order(omega, power, nw_substracted, leftbound, rightbound, c01, c02)
+subroutine resonance_second_order(omega, power, nw_subtracted, leftbound, rightbound, c01, c02)
   use global_m
   use messages_m
   use datasets_m
@@ -668,7 +668,7 @@ subroutine resonance_second_order(omega, power, nw_substracted, leftbound, right
 
   FLOAT, intent(in)               :: omega
   FLOAT, intent(out)              :: power
-  integer, intent(in)             :: nw_substracted
+  integer, intent(in)             :: nw_subtracted
   FLOAT, intent(in)               :: leftbound, rightbound
   FLOAT, intent(in)               :: c01, c02
 
@@ -686,7 +686,7 @@ subroutine resonance_second_order(omega, power, nw_substracted, leftbound, right
   end select
 
   write(*, '(a)')                 '******************************************************************'
-  write(*, '(a,i3)')              'Resonance #', nw_substracted + 1
+  write(*, '(a,i3)')              'Resonance #', nw_subtracted + 1
   write(*, '(a,f12.8,a,f12.8,a)') 'omega    = ', omega / units%energy%factor, &
                                   ' '//trim(units%energy%abbrev)//' = ',      &
                                   omega, ' Ha'
@@ -1000,7 +1000,7 @@ subroutine write_ot(nspin, time_steps, dt, kick, units, order, ot, observable)
 
   write(iunit, '(a15,i2)')      '# nspin        ', nspin
   write(iunit, '(a15,i2)')      '# Order        ', order
-  write(iunit, '(a28,i2)')      '# Frequencies substracted = ', 0
+  write(iunit, '(a28,i2)')      '# Frequencies subtracted = ', 0
   select case(observable(1))
   case(-1)
     write(iunit,'(a)') '# Observable operator = kick operator'
@@ -1041,7 +1041,7 @@ end subroutine write_ot
 
 
 ! ---------------------------------------------------------
-subroutine read_ot(nspin, order, nw_substracted)
+subroutine read_ot(nspin, order, nw_subtracted)
   use global_m
   use io_m
   use messages_m
@@ -1055,7 +1055,7 @@ subroutine read_ot(nspin, order, nw_substracted)
 
   integer, intent(out) :: nspin
   integer, intent(out) :: order
-  integer, intent(out) :: nw_substracted
+  integer, intent(out) :: nw_subtracted
 
   integer :: iunit, i, ierr
   character(len=100) :: line
@@ -1070,7 +1070,7 @@ subroutine read_ot(nspin, order, nw_substracted)
 
   read(iunit, '(15x,i2)') nspin
   read(iunit, '(15x,i2)') order
-  read(iunit, '(28x,i2)') nw_substracted
+  read(iunit, '(28x,i2)') nw_subtracted
   read(iunit, '(a)')      line
 
   i = index(line, 'Observable')
@@ -1161,7 +1161,7 @@ subroutine print_omega_file(omega, search_interval, final_time, nfrequencies)
   FLOAT,   intent(inout) :: final_time
   integer, intent(inout) :: nfrequencies
 
-  integer :: iunit, i, ierr, nspin, order, nw_substracted
+  integer :: iunit, i, ierr, nspin, order, nw_subtracted
   logical :: file_exists
   character(len=20) :: header_string
   FLOAT, allocatable :: warray(:), tarray(:)
@@ -1199,7 +1199,7 @@ subroutine print_omega_file(omega, search_interval, final_time, nfrequencies)
   ALLOCATE(warray(nfrequencies), nfrequencies)
   ALLOCATE(tarray(nfrequencies), nfrequencies)
 
-  call read_ot(nspin, order, nw_substracted)
+  call read_ot(nspin, order, nw_subtracted)
 
   if(mod(order, 2).eq.1) then
     mode = SINE_TRANSFORM

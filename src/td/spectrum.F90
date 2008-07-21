@@ -366,17 +366,17 @@ contains
     !%Section Time Dependent::Linear Response
     !%Description
     !% When calculating the linear response of the density via the propagation
-    !% in real time, one needs to perfrom an initical kick on the KS system, at
-    !% time zero. Depending on what kind response property one wants to obtain,
+    !% in real time, one needs to perform an initial kick on the KS system, at
+    !% time zero. Depending on what kind of response property one wants to obtain,
     !% this kick may be done in several modes.
     !%Option kick_density 0
     !% The total density of the system is perturbed.
     !%Option kick_spin 1
     !% The individual spin densities are perturbed differently. Note that this mode
-    !% is only possible if the run is done in spin polarized mode, or with spinors.
+    !% is only possible if the run is done in spin-polarized mode, or with spinors.
     !%Option kick_spin_and_density 2
     !% A combination of the two above. Note that this mode
-    !% is only possible if the run is done in spin polarized mode, or with spinors.
+    !% is only possible if the run is done in spin-polarized mode, or with spinors.
     !%End
     call loct_parse_int(check_inp('TDDeltaStrengthMode'), KICK_DENSITY_MODE, k%delta_strength_mode)
     select case (k%delta_strength_mode)
@@ -442,7 +442,7 @@ contains
     !%Section Time Dependent::Linear Response
     !%Description
     !% Defines which one of the lines of <tt>TDPolarization</tt> to use for
-    !% the run. In a typical run (without using the symmetry), TDPolarization
+    !% the run. In a typical run (without using symmetry), TDPolarization
     !% would contain the three Cartesian unit vectors, and one would make 3 runs
     !% varying <tt>TDPolarization</tt> from 1 to 3.
     !%End
@@ -482,7 +482,7 @@ contains
       if(n_rows<2) k%pol(1:3, 2) = (/ M_ZERO, M_ONE, M_ZERO /)
       call loct_parse_block_end(blk)
     else
-      ! Here the symmetry of the system should be analized, and the polarization
+      ! Here the symmetry of the system should be analyzed, and the polarization
       ! basis, built accordingly.
       k%pol(1:3, 1) = (/ M_ONE, M_ZERO, M_ZERO /)
       k%pol(1:3, 2) = (/ M_ZERO, M_ONE, M_ZERO /)
@@ -702,7 +702,7 @@ contains
       ip = matmul(p, p)
       anisotropy = M_THIRD * ( M_THREE * ( ip(1, 1) + ip(2, 2) + ip(3, 3) ) - (M_THREE*average)**2 )
 
-      ! Note that the cross section elements do not have to be transformed to the proper units, since
+      ! Note that the cross-section elements do not have to be transformed to the proper units, since
       ! they have been read from the "cross_section_vector.x", that are already in the proper units.
       write(out_file,'(3e20.8)', advance = 'no') (i*s%energy_step) / units_out%energy%factor, &
         average , sqrt(max(anisotropy, M_ZERO)) 
@@ -761,7 +761,7 @@ contains
 
       dipole(1:3, i, :) = dipole(1:3, i, :) * file_units%length%factor
     end do
-    ! Now substract the initial dipole.
+    ! Now subtract the initial dipole.
     do i = time_steps, 0, -1
       dipole(:, i, :) = dipole(:, i, :) - dipole(:, 0, :)
     end do
@@ -831,11 +831,11 @@ contains
     write(out_file, '(a,f10.4)') '# SpecDampFactor       = ', s%damp_factor * units_out%time%factor
     write(out_file, '(a,f10.4)') '# SpecStartTime        = ', s%start_time   / units_out%time%factor
     write(out_file, '(a,f10.4)') '# SpecEndTime          = ', s%end_time     / units_out%time%factor
-    write(out_file, '(a,f10.4)') '# SpecMaxEnergy        = ', s%max_energy   / units_inp%energy%factor
-    write(out_file, '(a,f10.4)') '# SpecEnergyStep       = ', s%energy_step  / units_inp%energy%factor
+    write(out_file, '(a,f10.4)') '# SpecMaxEnergy        = ', s%max_energy   / units_out%energy%factor
+    write(out_file, '(a,f10.4)') '# SpecEnergyStep       = ', s%energy_step  / units_out%energy%factor
     write(out_file, '(a)') '#%'
     write(out_file, '(a,f16.6)') '# Electronic sum rule  = ', ewsum
-    write(out_file, '(a,f16.6)') '# Polariz. (sum rule)  = ', polsum  / units_inp%length%factor**3
+    write(out_file, '(a,f16.6)') '# Polariz. (sum rule)  = ', polsum  / units_out%length%factor**3
     write(out_file, '(a)') '#%'
     
     write(out_file, '(a1,a20)', advance = 'no') '#', str_center("Energy", 20)

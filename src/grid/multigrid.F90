@@ -91,13 +91,13 @@ contains
     !%Default 0 
     !%Section Mesh
     !%Description
-    !% Number of levels in the grid hierachy used for multigrid. Positive
-    !% numbers indicate an absolute numbers of levels, negative
-    !% numbers are substracted to maximum number of levels posible for
+    !% Number of levels in the grid hierarchy used for multigrid. Positive
+    !% numbers indicate an absolute number of levels, negative
+    !% numbers are subtracted to maximum number of levels possible for
     !% the grid been used. Default is the maximum number of levels for
     !% the grid.
     !%Option max_levels 0
-    !% Calculate the optimus number of levels for the grid.
+    !% Calculate the optimal number of levels for the grid.
     !%End
 
     call loct_parse_int(check_inp('MultigridLevels'), 0, n_levels)

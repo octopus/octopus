@@ -583,7 +583,7 @@ contains
       character(len=80) :: header_string
       integer :: i, k
 
-      !this header is the same from sprectrum.F90
+      !this header is the same as spectrum.F90
       write(out_file, '(a1, a20)', advance = 'no') '#', str_center("Energy", 20)
       write(out_file, '(a20)', advance = 'no') str_center("(1/3)*Tr[sigma]", 20)
       write(out_file, '(a20)', advance = 'no') str_center("Anisotropy[sigma]", 20)
