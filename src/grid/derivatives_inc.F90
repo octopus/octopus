@@ -391,9 +391,9 @@ subroutine X(set_bc)(der, f)
   
   ASSERT(ubound(f, DIM=1) == der%m%np_part)
 
+  p = der%m%vp%partno
+   
   if(der%zero_bc) then
-    
-    p = der%m%vp%partno
     
     ! The boundary points are at different locations depending on the presence
     ! of ghost points due to domain parallelization.
