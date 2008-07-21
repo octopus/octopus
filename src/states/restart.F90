@@ -632,8 +632,6 @@ contains
     CMPLX                      :: phase
     CMPLX, allocatable         :: tmp(:, :)
 
-    FLOAT :: trans_e, long_e, e, kx, ky, x, y
-
     call push_sub('states.states_read_free_states')
 
     sb       => gr%sb
