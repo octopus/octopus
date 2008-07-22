@@ -380,7 +380,7 @@ subroutine X(set_bc)(der, f)
   integer :: bndry_start, bndry_end
   integer :: p
   integer :: iper
-  type(profile_t), save :: set_bc_prof
+  type(profile_t), save :: set_bc_prof, comm_prof
 #ifdef HAVE_MPI
   integer :: ipart, nreq
   integer, allocatable :: req(:), statuses(:, :)
@@ -415,6 +415,7 @@ subroutine X(set_bc)(der, f)
 
 #ifdef HAVE_MPI
     if(der%m%parallel_in_domains) then
+      call profiling_in(comm_prof, 'SET_BC_COMMUNICATION')
       ! get the points from other nodes
       ALLOCATE(req(2*der%m%vp%p), 2*der%m%vp%p)
 
@@ -431,7 +432,7 @@ subroutine X(set_bc)(der, f)
         nreq = nreq + 1
         call MPI_Irecv(f, 1, der%m%X(recv_type)(ipart), ipart - 1, 3, der%m%vp%comm, req(nreq), mpi_err)
       end do
-
+      call profiling_out(comm_prof)
     end if
 #endif
 
@@ -443,9 +444,13 @@ subroutine X(set_bc)(der, f)
 
 #ifdef HAVE_MPI
     if(der%m%parallel_in_domains) then
+      call profiling_in(comm_prof)
+
       ALLOCATE(statuses(MPI_STATUS_SIZE, nreq), MPI_STATUS_SIZE*nreq)
       call MPI_Waitall(nreq, req, statuses, mpi_err)
       deallocate(statuses, req)
+
+      call profiling_out(comm_prof)
     end if
 #endif
 
