@@ -102,7 +102,7 @@ contains
     b2(:) = b(:,2)
     b3(:) = b(:,3)
 
-    ! compute metrics bmet(i,j) and amet(i,j)
+    ! compute matrices bmet(i,j) and amet(i,j)
     
     do i = 1, 3
       do j = i, 3
@@ -138,7 +138,7 @@ contains
     write(6,9160) ((bmet(i,j),j=1,3),i=1,3)
 9160 format(/' reciprocal space matrix (some units)',/3(/1x,3f10.5))
     
-    ! generate symmetries operation
+    ! generate symmetry operations
     
     ipr = 1
     call crystal_symgen(ipr,a,coorat,natom,maxnatom,ntype,invers_no)
@@ -371,7 +371,7 @@ contains
           ! and its inverse
           if (time_reversal .and. all(abs(rktran_inv(1:3) - kpoints(1:3, ik2)) <= CNST(1.0e-5)) ) then
             w(nrk) = w(nrk) + dw
-            kmap(ik2) =nrk
+            kmap(ik2) = nrk
           end if
           
         end do

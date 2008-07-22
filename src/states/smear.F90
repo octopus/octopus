@@ -211,16 +211,17 @@ contains
       
       call sort(eigenval_list, reorder)
 
-      do iter = 1, nst*nik
+      do iter = 1, nst * nik
         xx = kweights(k_list(reorder(iter)))
 
-        if(sumq - xx*this%el_per_state <= CNST(1e-12)) then
-          this%e_fermi = eigenval_list(iter)
-          this%ef_occ  = sumq / (xx * this%el_per_state)
+        this%e_fermi = eigenval_list(iter)
+        this%ef_occ  = sumq / (xx * this%el_per_state)
+
+        if(sumq - xx * this%el_per_state <= CNST(1e-10)) then
           exit
         end if
 
-        sumq = sumq - xx*this%el_per_state
+        sumq = sumq - xx * this%el_per_state
       end do
 
       deallocate(eigenval_list)
