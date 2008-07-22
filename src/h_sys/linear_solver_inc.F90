@@ -113,7 +113,7 @@ subroutine X(ls_solver_cg) (ls, h, gr, st, ist, ik, x, y, omega)
   conv_last = .false.
   gamma     = M_ONE
   do iter = 1, ls%max_iter
-    gamma = X(states_dotp)(gr%m, st%d%dim, r, r)
+    gamma = X(mf_dotp)(gr%m, st%d%dim, r, r)
 
     conv = ( abs(gamma) < ls%tol**2)
     if(conv.and.conv_last) exit
@@ -121,7 +121,7 @@ subroutine X(ls_solver_cg) (ls, h, gr, st, ist, ik, x, y, omega)
     
     call X(ls_solver_operator)(h, gr, st, ist, ik, omega, p, Hp)
 
-    alpha = gamma/X(states_dotp) (gr%m, st%d%dim, p, Hp)
+    alpha = gamma/X(mf_dotp) (gr%m, st%d%dim, p, Hp)
 
     do idim = 1, st%d%dim
       !r = r - alpha*Hp
@@ -131,7 +131,7 @@ subroutine X(ls_solver_cg) (ls, h, gr, st, ist, ik, x, y, omega)
     end do
 
 
-    beta = X(states_dotp)(gr%m, st%d%dim, r, r)/gamma
+    beta = X(mf_dotp)(gr%m, st%d%dim, r, r)/gamma
 
     p(1:NP, 1:st%d%dim) = r(1:NP, 1:st%d%dim) + beta*p(1:NP, 1:st%d%dim)
 
@@ -206,7 +206,7 @@ subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ist, ik, x, y, omega)
   conv_last = .false.
   do iter = 1, ls%max_iter
 
-    rho_1 = X(states_dotp) (gr%m, st%d%dim, rs, r)
+    rho_1 = X(mf_dotp) (gr%m, st%d%dim, rs, r)
 
     if( abs(rho_1) < M_EPSILON ) exit
 
@@ -229,7 +229,7 @@ subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ist, ik, x, y, omega)
     call X(preconditioner_apply)(ls%pre, gr, h, p, phat, omega)
     call X(ls_solver_operator)(h, gr, st, ist, ik, omega, phat, Hp)
     
-    alpha = rho_1/X(states_dotp)(gr%m, st%d%dim, rs, Hp)
+    alpha = rho_1/X(mf_dotp)(gr%m, st%d%dim, rs, Hp)
 
     do idim = 1, st%d%dim
       !$omp parallel do
@@ -251,7 +251,7 @@ subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ist, ik, x, y, omega)
     call X(preconditioner_apply)(ls%pre, gr, h, s, shat, omega)
     call X(ls_solver_operator)(h, gr, st, ist, ik, omega, shat, Hs)
 
-    w = X(states_dotp)(gr%m, st%d%dim, Hs, s)/X(states_dotp) (gr%m, st%d%dim, Hs, Hs)
+    w = X(mf_dotp)(gr%m, st%d%dim, Hs, s)/X(mf_dotp) (gr%m, st%d%dim, Hs, Hs)
 
     do idim = 1, st%d%dim
       !$omp parallel do
@@ -322,7 +322,7 @@ subroutine X(ls_solver_multigrid) (ls, h, gr, st, ist, ik, x, y, omega)
     if(ls%abs_psi < ls%tol) exit
 
     if(in_debug_mode) then 
-      write(message(1), *)  "Multigrid: iter ", iter,  ls%abs_psi, abs(X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), x))
+      write(message(1), *)  "Multigrid: iter ", iter,  ls%abs_psi, abs(X(mf_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), x))
       call write_info(1)
     end if
 
@@ -391,7 +391,7 @@ subroutine X(ls_solver_operator) (h, gr, st, ist, ik, omega, x, hx)
     alpha_j = max(st%smear%e_fermi + M_THREE * dsmear - st%eigenval(jst, ik), M_ZERO)
     if(alpha_j == M_ZERO) cycle
       
-    proj = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:, :, jst, ik), x)
+    proj = X(mf_dotp) (gr%m, st%d%dim, st%X(psi)(:, :, jst, ik), x)
     do idim = 1, st%d%dim
       call lalg_axpy(NP, R_TOTYPE(alpha_j * proj), st%X(psi)(:, idim, jst, ik), Hx(:, idim))
     end do
@@ -463,7 +463,7 @@ subroutine X(ls_solver_sos) (ls, h, gr, st, ist, ik, x, y, omega)
   do jst = 1, st%nst
     alpha_j = max(st%smear%e_fermi + M_THREE*dsmear - st%eigenval(jst, ik), M_ZERO)
 
-    aa = X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, jst, ik), y)
+    aa = X(mf_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, jst, ik), y)
     aa = aa/(st%eigenval(jst, ik) - st%eigenval(ist, ik) + alpha_j + omega)
 
     do idim = 1, st%d%dim

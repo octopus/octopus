@@ -69,6 +69,14 @@ module mesh_function_m
                      zmf_line_integral_scalar, zmf_line_integral_vector
   end interface
 
+  interface dmf_dotp
+    module procedure dmf_dotp_1, dmf_dotp_2
+  end interface
+
+  interface zmf_dotp
+    module procedure zmf_dotp_1, zmf_dotp_2
+  end interface
+
   type(mesh_t), pointer :: mesh_aux
 
 contains

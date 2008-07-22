@@ -151,13 +151,13 @@ subroutine X(eigen_solver_plan) (gr, st, hamilt, pre, tol, niter, converged, dif
         ortho: do
           if(i>d2) exit ortho
           do ii = 1, nec
-            av(ii, 1, d1 + 1) = X(states_dotp)(gr%m, dim, eigenvec(:,:,ii), v(:,:,i))
+            av(ii, 1, d1 + 1) = X(mf_dotp)(gr%m, dim, eigenvec(:,:,ii), v(:,:,i))
             do idim = 1, dim
               call lalg_axpy(NP, -av(ii, 1, d1 + 1), eigenvec(:, idim, ii), v(:, idim, i))
             end do
           end do
           do ii = 1, i - 1
-            av(ii, 1, d1 + 1) = X(states_dotp)(gr%m, dim, v(:, :, ii), v(:, :, i))
+            av(ii, 1, d1 + 1) = X(mf_dotp)(gr%m, dim, v(:, :, ii), v(:, :, i))
             do idim = 1, dim
               call lalg_axpy(NP, -av(ii, 1, d1 + 1), v(:, idim, ii), v(:, idim, i))
             end do
@@ -187,7 +187,7 @@ subroutine X(eigen_solver_plan) (gr, st, hamilt, pre, tol, niter, converged, dif
         ! part of  the matrix since it is symmetric (LAPACK routine only need the upper triangle)
         do i = d1 + 1, d2
           do ii = 1, i
-            h(ii, i) = X(states_dotp)(gr%m, dim, v(:, :, ii), av(:, :, i))
+            h(ii, i) = X(mf_dotp)(gr%m, dim, v(:, :, ii), av(:, :, i))
           end do
         end do
 
@@ -241,7 +241,7 @@ subroutine X(eigen_solver_plan) (gr, st, hamilt, pre, tol, niter, converged, dif
           ! Forms the first winsiz rows of H = V^T A V
           do i = 1, winsiz
             do ii = 1, i
-              h(ii, i) = X(states_dotp)(gr%m, dim, v(:, :, ii), av(:, :, i))
+              h(ii, i) = X(mf_dotp)(gr%m, dim, v(:, :, ii), av(:, :, i))
             end do
           end do
           d1 = winsiz

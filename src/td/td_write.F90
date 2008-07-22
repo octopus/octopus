@@ -1234,7 +1234,7 @@ contains
         do ist = max(gs_st%st_start, st%st_start), st%st_end
           do uist = gs_st%st_start, gs_st%st_end
             projections(ist, uist, ik) = &
-              zstates_dotp(gr%m, st%d%dim, st%zpsi(:, :, ist, ik), gs_st%zpsi(:, :, uist, ik))
+              zmf_dotp(gr%m, st%d%dim, st%zpsi(:, :, ist, ik), gs_st%zpsi(:, :, uist, ik))
           end do
         end do
       end do
@@ -1265,7 +1265,7 @@ contains
             end do
 
             projections(ist, uist, ik) = n_dip(dir) - &
-              zstates_dotp(gr%m, st%d%dim, st%zpsi(:, :, ist, ik), xpsi(:, :))
+              zmf_dotp(gr%m, st%d%dim, st%zpsi(:, :, ist, ik), xpsi(:, :))
 
           end do
         end do

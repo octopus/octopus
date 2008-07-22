@@ -531,7 +531,7 @@ module opt_control_target_m
           do j = 1, NP
             opsi(j, 1) = target%rho(j) * psi%zpsi(j, 1, p, 1)
           end do
-          target%td_fitness(i) = target%td_fitness(i) + zstates_dotp(gr%m, psi%d%dim, psi%zpsi(:, :, p, 1), opsi(:, :))
+          target%td_fitness(i) = target%td_fitness(i) + zmf_dotp(gr%m, psi%d%dim, psi%zpsi(:, :, p, 1), opsi(:, :))
         end do
         deallocate(opsi)
       case(SPIN_POLARIZED); stop 'Error'
@@ -650,7 +650,7 @@ module opt_control_target_m
           do j = 1, NP
             opsi(j, 1) = target%rho(j) * psi%zpsi(j, 1, p, 1)
           end do
-          j1 = j1 + zstates_dotp(gr%m, psi%d%dim, psi%zpsi(:, :, p, 1), opsi(:, :))
+          j1 = j1 + zmf_dotp(gr%m, psi%d%dim, psi%zpsi(:, :, p, 1), opsi(:, :))
         end do
         deallocate(opsi)
       case(SPIN_POLARIZED); stop 'Error'
@@ -669,12 +669,12 @@ module opt_control_target_m
 !!$      if(oct%maximize) then
         j1 = M_ONE
         do i = 1, target%excluded_states
-          j1 = j1 - abs(zstates_dotp(gr%m, psi%d%dim, target%st%zpsi(:, :, i, 1), psi%zpsi(:, :, 1, 1)))**2
+          j1 = j1 - abs(zmf_dotp(gr%m, psi%d%dim, target%st%zpsi(:, :, i, 1), psi%zpsi(:, :, 1, 1)))**2
         end do
 !!$      else
 !!$        j1 = M_ZERO
 !!$        do i = 1, target%excluded_states
-!!$          j1 = j1 + abs(zstates_dotp(gr%m, psi%d%dim, target%st%zpsi(:, :, i, 1), psi%zpsi(:, :, 1, 1)))**2
+!!$          j1 = j1 + abs(zmf_dotp(gr%m, psi%d%dim, target%st%zpsi(:, :, i, 1), psi%zpsi(:, :, 1, 1)))**2
 !!$        end do
 !!$      end if
 
@@ -901,13 +901,13 @@ module opt_control_target_m
       if(oct%maximize) then
         chi_out%zpsi(:, :, 1, 1) = psi_in%zpsi(:, :, 1, 1)
         do p = 1, target%excluded_states
-          olap = zstates_dotp(gr%m, psi_in%d%dim, target%st%zpsi(:, :, p, 1), psi_in%zpsi(:, :, 1, 1))
+          olap = zmf_dotp(gr%m, psi_in%d%dim, target%st%zpsi(:, :, p, 1), psi_in%zpsi(:, :, 1, 1))
           chi_out%zpsi(:, :, 1, 1) = chi_out%zpsi(:, :, 1, 1) - olap*target%st%zpsi(:, :, p, 1)
         end do
       else
         chi_out%zpsi(:, :, 1, 1) = M_z0
         do p = 1, target%excluded_states
-          olap = zstates_dotp(gr%m, psi_in%d%dim, target%st%zpsi(:, :, p, 1), psi_in%zpsi(:, :, 1, 1))
+          olap = zmf_dotp(gr%m, psi_in%d%dim, target%st%zpsi(:, :, p, 1), psi_in%zpsi(:, :, 1, 1))
           chi_out%zpsi(:, :, 1, 1) = chi_out%zpsi(:, :, 1, 1) + olap*target%st%zpsi(:, :, p, 1)
         end do
       end if

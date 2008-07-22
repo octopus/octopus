@@ -63,7 +63,7 @@ subroutine X(eigen_solver_evolution) (gr, st, h, tol, niter, converged, diff, ta
       ! [Comp. Mat. Science 34, 188 (2005)]
       do i = 1, st%nst
         do j = i, st%nst
-          m(i, j) = X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, i, ik), st%X(psi)(:, :, j, ik) )
+          m(i, j) = X(mf_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, i, ik), st%X(psi)(:, :, j, ik) )
         end do
       end do
       call lalg_eigensolve(st%nst, m, c, eig)
@@ -80,7 +80,7 @@ subroutine X(eigen_solver_evolution) (gr, st, h, tol, niter, converged, diff, ta
       ! Get the eigenvalues and the residues.
       do ist = conv + 1, st%nst
         call X(hpsi)(h, gr, st%X(psi)(:, :, ist, ik), hpsi, ist, ik)
-        st%eigenval(ist, ik) = X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), hpsi)
+        st%eigenval(ist, ik) = X(mf_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), hpsi)
         diff(ist, ik) = X(states_residue)(gr%m, st%d%dim, hpsi, st%eigenval(ist, ik), st%X(psi)(:, :, ist, ik))
       end do
 

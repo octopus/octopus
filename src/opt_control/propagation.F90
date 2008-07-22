@@ -552,7 +552,7 @@ module opt_control_propagation_m
           oppsi%zpsi(:, :, p, ik) = M_z0
           call zvlaser_operator_linear(gr, h, psi%zpsi(:, :, p, ik), &
                                        oppsi%zpsi(:, :, p, ik), ik, laser_number = j)
-          dl(j) = dl(j) + psi%occ(p, ik) * zstates_dotp(gr%m, psi%d%dim, chi%zpsi(:, :, p, ik), &
+          dl(j) = dl(j) + psi%occ(p, ik) * zmf_dotp(gr%m, psi%d%dim, chi%zpsi(:, :, p, ik), &
             oppsi%zpsi(:, :, p, ik))
         end do
       end do
@@ -568,7 +568,7 @@ module opt_control_propagation_m
             call zvlaser_operator_quadratic(gr, h, psi%zpsi(:, :, p, ik), &
                                          oppsi%zpsi(:, :, p, ik), ik, laser_number = j)
             dq(j) = dq(j) + psi%occ(p, ik) * &
-                    zstates_dotp(gr%m, psi%d%dim, chi%zpsi(:, :, p, ik), &
+                    zmf_dotp(gr%m, psi%d%dim, chi%zpsi(:, :, p, ik), &
               oppsi%zpsi(:, :, p, ik))
           end do
         end do

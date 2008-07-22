@@ -73,7 +73,7 @@ subroutine X(eigen_solver_rmmdiis) (gr, st, h, pre, tol, niter, converged, diff,
 
         niter = niter + 1
 
-        st%eigenval(ist, ik) = X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:,:, ist, ik) , residuals(:, :))
+        st%eigenval(ist, ik) = X(mf_dotp)(gr%m, st%d%dim, st%X(psi)(:,:, ist, ik) , residuals(:, :))
 
         do idim = 1, st%d%dim
           call lalg_axpy(NP, -st%eigenval(ist, ik), st%X(psi)(:, idim, ist, ik), residuals(:, idim))
@@ -97,8 +97,8 @@ subroutine X(eigen_solver_rmmdiis) (gr, st, h, pre, tol, niter, converged, diff,
         end do
 
         ! the size of the correction
-        lambda(1) = X(states_dotp)(gr%m, st%d%dim, residuals, resres, reduce = .false.)
-        lambda(2) = X(states_dotp)(gr%m, st%d%dim, resres, resres, reduce = .false.)
+        lambda(1) = X(mf_dotp)(gr%m, st%d%dim, residuals, resres, reduce = .false.)
+        lambda(2) = X(mf_dotp)(gr%m, st%d%dim, resres, resres, reduce = .false.)
 
 #ifdef HAVE_MPI
         if(gr%m%parallel_in_domains) then

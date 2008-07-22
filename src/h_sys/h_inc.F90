@@ -44,7 +44,7 @@ subroutine X(hamiltonian_eigenval)(h, gr, st, t)
         else
           call X(hpsi) (h, gr, st%X(psi)(:, :, ist, ik), hpsi, ist, ik)
         end if
-        e = X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), Hpsi)
+        e = X(mf_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), Hpsi)
         st%eigenval(ist, ik) = R_REAL(e)
       end do
     end do
@@ -1163,7 +1163,7 @@ FLOAT function X(electronic_kinetic_energy)(h, gr, st) result(t0)
     do ist = st%st_start, st%st_end
       tpsi = R_TOTYPE(M_ZERO)
       call X(kinetic) (h, gr, st%X(psi)(:, :, ist, ik), tpsi)
-      t(ist, ik) = X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), tpsi)
+      t(ist, ik) = X(mf_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), tpsi)
     end do
   end do
 
@@ -1194,7 +1194,7 @@ FLOAT function X(electronic_external_energy)(h, gr, st) result(v)
     do ist = st%st_start, st%st_end
       vpsi = R_TOTYPE(M_ZERO)
       call X(vexternal) (h, gr, st%X(psi)(:, :, ist, ik), vpsi, ik)
-      t(ist, ik) = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), vpsi)
+      t(ist, ik) = X(mf_dotp) (gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), vpsi)
     end do
   end do
 

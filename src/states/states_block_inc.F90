@@ -148,7 +148,7 @@ subroutine X(states_blockt_mul)(mesh, st, psi1, psi2, res, xpsi1, xpsi2, symm)
         do i = 1, xpsi1_count(rank)
           do j = 1, sendcnt
             res(i+res_row_offset, j+res_col_offset) = &
-              X(states_dotp)(mesh, st%d%dim, psi1(:, :, xpsi1_node(i, rank)), sendbuf(:, :, j), reduce=.false.)
+              X(mf_dotp)(mesh, st%d%dim, psi1(:, :, xpsi1_node(i, rank)), sendbuf(:, :, j), reduce=.false.)
           end do
         end do
       end if
@@ -191,21 +191,21 @@ subroutine X(states_blockt_mul)(mesh, st, psi1, psi2, res, xpsi1, xpsi2, symm)
     else ! Curvilinear coordinates.
       if(symm_) then
         do i = 1, psi1_col
-          res(i, i) = X(states_dotp)(mesh, st%d%dim, psi1(:, :, xpsi1_(i)), psi2(:, :, xpsi2_(i)), reduce=.false.)
+          res(i, i) = X(mf_dotp)(mesh, st%d%dim, psi1(:, :, xpsi1_(i)), psi2(:, :, xpsi2_(i)), reduce=.false.)
           do j = i+1, psi2_col
-            res(i, j) = X(states_dotp)(mesh, st%d%dim, psi1(:, :, xpsi1_(i)), psi2(:, :, xpsi2_(j)), reduce=.false.)
+            res(i, j) = X(mf_dotp)(mesh, st%d%dim, psi1(:, :, xpsi1_(i)), psi2(:, :, xpsi2_(j)), reduce=.false.)
             res(j, i) = R_CONJ(res(i, j))
           end do
         end do
       else
         do i = 1, psi1_col
           do j = 1, psi2_col
-            res(i, j) = X(states_dotp)(mesh, st%d%dim, psi1(:, :, xpsi1_(i)), psi2(:, :, xpsi2_(j)), reduce=.false.)
+            res(i, j) = X(mf_dotp)(mesh, st%d%dim, psi1(:, :, xpsi1_(i)), psi2(:, :, xpsi2_(j)), reduce=.false.)
           end do
         end do
       end if
     end if
-    ! This has to be done because no reduction is done in Xstates_dotp above.
+    ! This has to be done because no reduction is done in Xmf_dotp above.
     ! Rationale: this way, all the reduce operations are done at once (hopefully)
     ! saving latency overhead.
     if(mesh%parallel_in_domains) then

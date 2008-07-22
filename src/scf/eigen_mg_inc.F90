@@ -55,7 +55,7 @@ subroutine X(eigen_solver_mg) (gr, st, h, tol, niter, converged, diff, verbose)
       
         cc(ist, ist) = M_ONE
         do ist2 = 1, ist - 1
-          cc(ist, ist2) = X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), st%X(psi)(:, :, ist2, ik))
+          cc(ist, ist2) = X(mf_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), st%X(psi)(:, :, ist2, ik))
         end do
 
       end do

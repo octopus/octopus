@@ -80,7 +80,7 @@ subroutine X(states_gram_schmidt_full)(st, nst, m, dim, psi, start)
       end if
       
       if(state_is_local(st, p)) then
-        ss = X(states_dotp)(m, dim, psi_q(:,:), psi_p(:, :))
+        ss = X(mf_dotp)(m, dim, psi_q(:,:), psi_p(:, :))
         do idim = 1, dim
           call lalg_axpy(m%np, -ss, psi_q(:, idim), psi_p(:, idim))
         end do
@@ -259,32 +259,6 @@ subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi,  &
   call profiling_out(prof)
 end subroutine X(states_gram_schmidt)
 
-
-! ---------------------------------------------------------
-R_TYPE function X(states_dotp)(m, dim, f1, f2, reduce) result(dotp)
-  type(mesh_t),      intent(in) :: m
-  integer,           intent(in) :: dim
-  R_TYPE,            intent(in) :: f1(:,:), f2(:,:)
-  logical, optional, intent(in) :: reduce
-
-  integer :: idim
-
-  call push_sub('states_inc.Xstates_dotp')
-
-  dotp = R_TOTYPE(M_ZERO)
-  do idim = 1, dim
-    if(present(reduce)) then
-      dotp = dotp + X(mf_dotp)(m, f1(:, idim), f2(:, idim), reduce)
-    else
-      dotp = dotp + X(mf_dotp)(m, f1(:, idim), f2(:, idim))
-    end if
-  end do
-
-  call pop_sub()
-
-end function X(states_dotp)
-
-
 ! ---------------------------------------------------------
 subroutine X(states_normalize_orbital)(m, dim, psi)
   type(mesh_t),    intent(in)    :: m
@@ -400,7 +374,7 @@ subroutine X(states_calc_momentum)(gr, st)
         ! since the expectation value of the momentum operator is real
         ! for square integrable wfns this integral should be purely imaginary 
         ! for complex wfns but real for real wfns (see case distinction below)
-        expect_val_p = X(states_dotp)(gr%m, st%d%dim, &
+        expect_val_p = X(mf_dotp)(gr%m, st%d%dim, &
           st%X(psi)(1:NP, 1:st%d%dim, ist, ik), grad(1:NP, 1:st%d%dim, i))
 
         ! In the case of real wave functions we do not include the 
@@ -541,7 +515,7 @@ subroutine X(states_matrix)(m, st1, st2, a)
         phi2(:, :) = st2%X(psi)(:, :, j, ik)
       end if
       do i = st1%st_start, st1%st_end
-        a(i, j, ik) = X(states_dotp)(m, dim, st1%X(psi)(:, :, i, ik), phi2(:, :))
+        a(i, j, ik) = X(mf_dotp)(m, dim, st1%X(psi)(:, :, i, ik), phi2(:, :))
       end do
     end do
     deallocate(phi2)
@@ -563,7 +537,7 @@ subroutine X(states_matrix)(m, st1, st2, a)
   else
     do i = 1, n1
       do j = 1, n2
-        a(i, j, ik) = X(states_dotp)(m, dim, st1%X(psi)(:, :, i, ik), st2%X(psi)(:, :, j, ik))
+        a(i, j, ik) = X(mf_dotp)(m, dim, st1%X(psi)(:, :, i, ik), st2%X(psi)(:, :, j, ik))
       end do
     end do
   end if

@@ -106,7 +106,7 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, ver
       call X(Hpsi)(h, gr, st%X(psi)(:,:, p, ik) , h_psi, p, ik)
 
       ! Calculates starting eigenvalue: e(p) = <psi(p)|H|psi>
-      st%eigenval(p, ik) = R_REAL(X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), h_psi))
+      st%eigenval(p, ik) = R_REAL(X(mf_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), h_psi))
 
       ! Starts iteration for this band
       iter_loop: do iter = 1, maxter
@@ -115,8 +115,8 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, ver
         call  X(preconditioner_apply)(pre, gr, h, h_psi(:,:), g(:,:))
         call  X(preconditioner_apply)(pre, gr, h, st%X(psi)(:,:, p, ik), ppsi(:,:))
 
-        es(1) = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), g, reduce = .false.)
-        es(2) = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), ppsi, reduce = .false.)
+        es(1) = X(mf_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), g, reduce = .false.)
+        es(2) = X(mf_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), ppsi, reduce = .false.)
 
 #ifdef HAVE_MPI
         if(gr%m%parallel_in_domains) then
@@ -136,7 +136,7 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, ver
         if(p > 1) call X(states_gram_schmidt)(gr%m, p - 1, st%d%dim, st%X(psi)(:, :, :, ik), g, normalize = .false.)
 
         if(iter .ne. 1) then
-          gg1 = X(states_dotp) (gr%m, st%d%dim, g, g0, reduce = .false.)
+          gg1 = X(mf_dotp) (gr%m, st%d%dim, g, g0, reduce = .false.)
         else
           gg1 = M_ZERO
         end if
@@ -144,7 +144,7 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, ver
         ! Approximate inverse preconditioner...
         call  X(preconditioner_apply)(pre, gr, h, g(:,:), g0(:,:))
 
-        gg = X(states_dotp) (gr%m, st%d%dim, g, g0, reduce = .false.)
+        gg = X(mf_dotp) (gr%m, st%d%dim, g, g0, reduce = .false.)
 
 #ifdef HAVE_MPI
         if(gr%m%parallel_in_domains) then
@@ -191,8 +191,8 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, ver
         call X(Hpsi) (h, gr, cg, ppsi, p, ik)
 
         ! Line minimization.
-        a0 = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), ppsi, reduce = .false.)
-        b0 = X(states_dotp) (gr%m, st%d%dim, cg(:,:), ppsi, reduce = .false.)
+        a0 = X(mf_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), ppsi, reduce = .false.)
+        b0 = X(mf_dotp) (gr%m, st%d%dim, cg(:,:), ppsi, reduce = .false.)
         cg0 = X(states_nrm2) (gr%m, st%d%dim, cg(:,:), reduce = .false.)
 
 #ifdef HAVE_MPI
@@ -366,7 +366,7 @@ subroutine X(eigen_solver_cg2_new) (gr, st, h, tol, niter, converged, diff, verb
         end do
 
         ! lambda = <psi|H|psi> = <psi|phi>
-        lambda = X(states_dotp)(gr%m, dim, psi, phi)
+        lambda = X(mf_dotp)(gr%m, dim, psi, phi)
 
         ! Check convergence
         res = X(states_residue)(gr%m, dim, phi, lambda, psi)
@@ -397,7 +397,7 @@ subroutine X(eigen_solver_cg2_new) (gr, st, h, tol, niter, converged, diff, verb
           end do
         end do
 
-        dump = X(states_dotp)(gr%m, dim, psi, cg)
+        dump = X(mf_dotp)(gr%m, dim, psi, cg)
 
         do idim = 1, st%d%dim
           do ip = 1, NP
@@ -415,8 +415,8 @@ subroutine X(eigen_solver_cg2_new) (gr, st, h, tol, niter, converged, diff, verb
 
         niter = niter + 1
 
-        alpha = -lambda + X(states_dotp)(gr%m, dim, cgp, hcgp)
-        beta  = M_TWO*X(states_dotp)(gr%m, dim, cgp, phi)
+        alpha = -lambda + X(mf_dotp)(gr%m, dim, cgp, hcgp)
+        beta  = M_TWO*X(mf_dotp)(gr%m, dim, cgp, phi)
         theta = M_HALF*atan(-beta/alpha)
         ctheta = cos(theta)
         stheta = sin(theta)

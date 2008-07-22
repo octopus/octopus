@@ -58,10 +58,9 @@ R_TYPE function X(mf_dotp_aux)(f1, f2) result(dotp)
   dotp = X(mf_dotp)(mesh_aux, f1, f2)
 end function X(mf_dotp_aux)
 
-
 ! ---------------------------------------------------------
 ! this function returns the dot product between two vectors
-R_TYPE function X(mf_dotp)(mesh, f1, f2, reduce) result(dotp)
+R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce) result(dotp)
   type(mesh_t),      intent(in) :: mesh
   R_TYPE,            intent(in) :: f1(:), f2(:)
   logical, optional, intent(in) :: reduce
@@ -111,7 +110,44 @@ R_TYPE function X(mf_dotp)(mesh, f1, f2, reduce) result(dotp)
   call pop_sub()
   call profiling_out(C_PROFILING_MF_DOTP)
 
-end function X(mf_dotp)
+end function X(mf_dotp_1)
+
+
+! ---------------------------------------------------------
+R_TYPE function X(mf_dotp_2)(mesh, dim, f1, f2, reduce) result(dotp)
+  type(mesh_t),      intent(in) :: mesh
+  integer,           intent(in) :: dim
+  R_TYPE,            intent(in) :: f1(:,:), f2(:,:)
+  logical, optional, intent(in) :: reduce
+
+  integer :: idim
+#ifdef HAVE_MPI
+  logical :: reduce_
+  R_TYPE :: dotp_tmp
+#endif
+
+  call push_sub('states_inc.Xmf_dotp')
+
+  dotp = R_TOTYPE(M_ZERO)
+  do idim = 1, dim
+    dotp = dotp + X(mf_dotp_1)(mesh, f1(:, idim), f2(:, idim), reduce = .false.)
+  end do
+
+#ifdef HAVE_MPI
+  reduce_ = .true.
+  if(present(reduce)) reduce_ = reduce
+
+  if(mesh%parallel_in_domains.and.reduce_) then
+    call profiling_in(C_PROFILING_MF_DOTP_ALLREDUCE)
+    dotp_tmp = dotp
+    call MPI_Allreduce(dotp_tmp, dotp, 1, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
+    call profiling_out(C_PROFILING_MF_DOTP_ALLREDUCE)
+  end if
+#endif
+
+  call pop_sub()
+
+end function X(mf_dotp_2)
 
 ! ---------------------------------------------------------
 ! this function returns the the norm of a vector

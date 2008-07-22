@@ -53,7 +53,7 @@ subroutine X(subspace_diag)(gr, st, h, diff)
     do ist = st%st_start, st%st_end
       call X(hpsi)(h, gr, st%X(psi)(:, :, ist, ik), f, ist, ik)
       do jst = ist, st%st_end
-        h_subspace(ist, jst) = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, jst, ik), f)
+        h_subspace(ist, jst) = X(mf_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, jst, ik), f)
         h_subspace(jst, ist) = R_CONJ(h_subspace(ist, jst))
       end do
     end do

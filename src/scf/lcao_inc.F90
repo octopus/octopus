@@ -200,9 +200,9 @@ subroutine X(lcao_init) (lcao_data, gr, geo, h, states, norbs)
       call X(kinetic) (h, gr, st%X(psi)(:, :, n1, ik), hpsi(:, :))
 
       do n2 = n1, st%nst
-        lcao_data%X(k)(n1, n2, ik) = X(states_dotp)(gr%m, st%d%dim, hpsi, st%X(psi)(:, : ,n2, ik))
+        lcao_data%X(k)(n1, n2, ik) = X(mf_dotp)(gr%m, st%d%dim, hpsi, st%X(psi)(:, : ,n2, ik))
         lcao_data%X(k)(n2, n1, ik) = lcao_data%X(k)(n1, n2, ik)
-        lcao_data%X(s)(n1, n2, ik) = X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, n1, ik), &
+        lcao_data%X(s)(n1, n2, ik) = X(mf_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, n1, ik), &
              st%X(psi)(:, : ,n2, ik))
         lcao_data%X(s)(n2, n1, ik) = lcao_data%X(s)(n1, n2, ik)
       end do
@@ -241,7 +241,7 @@ subroutine X(lcao_wf) (lcao_data, st, gr, h, start)
       call X(vlpsi) (h, gr%m, lcao_data%st%X(psi)(:,:, n1, ik), hpsi(:,:), ik)
       if (h%ep%non_local) call X(vnlpsi) (h, gr, lcao_data%st%X(psi)(:,:, n1, ik), hpsi(:,:), ik)
       do n2 = n1, lcao_data%st%nst
-        lcao_data%X(v) (n1, n2, ik) = X(states_dotp)(gr%m, dim, hpsi, lcao_data%st%X(psi)(:, : ,n2, ik))
+        lcao_data%X(v) (n1, n2, ik) = X(mf_dotp)(gr%m, dim, hpsi, lcao_data%st%X(psi)(:, : ,n2, ik))
         lcao_data%X(hamilt) (n1, n2, ik) = lcao_data%X(k) (n1, n2, ik) + lcao_data%X(v) (n1 , n2, ik)
         lcao_data%X(hamilt) (n2, n1, ik) = R_CONJ(lcao_data%X(hamilt) (n1, n2, ik))
       end do

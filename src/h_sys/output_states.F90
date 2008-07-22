@@ -191,12 +191,12 @@
     do ii = 1, st%nst
       do jj = 1, st%nst
         if (st%wfs_type == M_REAL) then 
-          write(iunit,fmt = '(f20.10)', advance = 'no') dstates_dotp(gr%m, st%d%dim, &
+          write(iunit,fmt = '(f20.10)', advance = 'no') dmf_dotp(gr%m, st%d%dim, &
             st%dpsi(:, :, ii, 1), &
             st%dpsi(:, :, jj, 1) * multipole(:, :)) / units_out%length%factor**l
 
         else
-          multip_element = zstates_dotp(gr%m, st%d%dim, &
+          multip_element = zmf_dotp(gr%m, st%d%dim, &
             st%zpsi(:, :, ii, 1), &
             st%zpsi(:, :, jj, 1) * multipole(:, :)) / units_out%length%factor**l
 

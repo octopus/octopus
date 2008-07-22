@@ -99,8 +99,8 @@ module states_m
     zstates_gram_schmidt,           &
     dstates_gram_schmidt_full,      &
     zstates_gram_schmidt_full,      &
-    dstates_dotp,                   &
-    zstates_dotp,                   &
+    dmf_dotp,                   &
+    zmf_dotp,                   &
     dstates_nrm2,                   &
     zstates_nrm2,                   &
     dstates_normalize_orbital,      &
