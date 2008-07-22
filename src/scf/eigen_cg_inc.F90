@@ -193,7 +193,7 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, ver
         ! Line minimization.
         a0 = X(mf_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), ppsi, reduce = .false.)
         b0 = X(mf_dotp) (gr%m, st%d%dim, cg(:,:), ppsi, reduce = .false.)
-        cg0 = X(states_nrm2) (gr%m, st%d%dim, cg(:,:), reduce = .false.)
+        cg0 = X(mf_nrm2) (gr%m, st%d%dim, cg(:,:), reduce = .false.)
 
 #ifdef HAVE_MPI
         if(gr%m%parallel_in_domains) then
@@ -387,7 +387,7 @@ subroutine X(eigen_solver_cg2_new) (gr, st, h, tol, niter, converged, diff, verb
              call X(states_gram_schmidt)(gr%m, ist - 1, dim, st%X(psi)(:, :, :, ik), sd, normalize = .false., mask = orthogonal)
 
         ! Get conjugate-gradient vector
-        dot = X(states_nrm2)(gr%m, dim, sd)**2
+        dot = X(mf_nrm2)(gr%m, dim, sd)**2
         gamma = dot/mu
         mu    = dot
 
@@ -405,7 +405,7 @@ subroutine X(eigen_solver_cg2_new) (gr, st, h, tol, niter, converged, diff, verb
           end do
         end do
 
-        dump = X(states_nrm2)(gr%m, dim, cgp)
+        dump = X(mf_nrm2)(gr%m, dim, cgp)
 
         do idim = 1, st%d%dim
           call lalg_scal(NP, M_ONE/dump, cgp(:, idim))

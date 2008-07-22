@@ -31,6 +31,7 @@ module linear_solver_m
   use loct_parser_m
   use math_m
   use mesh_m
+  use mesh_function_m
   use messages_m
   use profiling_m
   use preconditioners_m

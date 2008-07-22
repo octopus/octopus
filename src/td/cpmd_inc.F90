@@ -70,7 +70,7 @@ subroutine X(cpmd_propagate)(this, gr, h, st, iter, dt)
 
         ! calculate the velocity and the fictitious electronic energy
         hpsi(1:np, 1:ddim) = abs(psi(1:np, 1:ddim) - this%X(psi2)(1:np, 1:ddim, ist1, ik))/(M_TWO*dt) !(4.7)
-        this%ecorr = this%ecorr + this%emass*X(states_nrm2)(gr%m, ddim, hpsi)**2 !(2.11)
+        this%ecorr = this%ecorr + this%emass*X(mf_nrm2)(gr%m, ddim, hpsi)**2 !(2.11)
 
         do idim = 1, ddim
           ! store the old wavefunctions
@@ -210,7 +210,7 @@ subroutine X(cpmd_propagate_vel)(this, gr, h, st, iter, dt)
       this%X(psi2)(1:np, 1:ddim, ist1, ik) = &
         this%X(psi2)(1:np, 1:ddim, ist1, ik) + dt*M_HALF/this%emass*(-st%occ(ist1, ik)*hpsi(1:np, 1:ddim)) !(4.9) 2nd part
 
-      this%ecorr = this%ecorr + this%emass*X(states_nrm2)(gr%m, ddim, this%X(psi2)(:, :, ist1, ik))**2 !(2.11)
+      this%ecorr = this%ecorr + this%emass*X(mf_nrm2)(gr%m, ddim, this%X(psi2)(:, :, ist1, ik))**2 !(2.11)
 
     end do
 

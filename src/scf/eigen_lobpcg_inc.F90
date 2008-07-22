@@ -546,7 +546,7 @@ subroutine X(lobpcg_unconv_ev)(ik, m, st, tol, res, diff, nuc, uc, lnuc, luc)
    new_nuc = 0
    do i = 1, lnuc
      ist = luc(i)
-     diff(ist, ik) = X(states_nrm2)(m, st%d%dim, res(:, :, ist))
+     diff(ist, ik) = X(mf_nrm2)(m, st%d%dim, res(:, :, ist))
      if(diff(ist, ik).ge.tol) then
        new_uc(j) = ist
        new_nuc   = new_nuc+1

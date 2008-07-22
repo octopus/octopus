@@ -151,7 +151,7 @@ end function X(mf_dotp_2)
 
 ! ---------------------------------------------------------
 ! this function returns the the norm of a vector
-FLOAT function X(mf_nrm2)(mesh, f, reduce) result(nrm2)
+FLOAT function X(mf_nrm2_1)(mesh, f, reduce) result(nrm2)
   type(mesh_t), intent(in) :: mesh
   R_TYPE,       intent(in) :: f(:)
   logical, optional, intent(in) :: reduce
@@ -196,7 +196,32 @@ FLOAT function X(mf_nrm2)(mesh, f, reduce) result(nrm2)
   call pop_sub()
   call profiling_out(C_PROFILING_MF_NRM2)
 
-end function X(mf_nrm2)
+end function X(mf_nrm2_1)
+
+! ---------------------------------------------------------
+FLOAT function X(mf_nrm2_2)(m, dim, f, reduce) result(nrm2)
+  type(mesh_t),      intent(in) :: m
+  integer,           intent(in) :: dim
+  R_TYPE,            intent(in) :: f(:,:)
+  logical, optional, intent(in) :: reduce
+
+  integer :: idim
+
+  call push_sub('states_inc.Xmf_nrm2')
+
+  nrm2 = M_ZERO
+
+  do idim = 1, dim
+    if(present(reduce)) then
+      nrm2 = hypot(nrm2, X(mf_nrm2)(m, f(:, idim), reduce))
+    else
+      nrm2 = hypot(nrm2, X(mf_nrm2)(m, f(:, idim)))
+    end if
+  end do
+
+  call pop_sub()
+
+end function X(mf_nrm2_2)
 
 ! ---------------------------------------------------------
 ! This function calculates the x_i moment of the function f

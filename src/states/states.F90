@@ -51,6 +51,7 @@ module states_m
   implicit none
 
   private
+
   public ::                           &
     states_t,                         &
     states_dim_t,                     &
@@ -82,27 +83,25 @@ module states_m
     states_calc_dens,                 &
     states_calc_tau_jp_gn,            &
     state_is_local,                   &
+    states_dump,                      &
+    states_distribute_nodes,          &
+    states_freeze_orbitals
+
+  public ::                           &
     kpoints_write_info,               &
     kpoint_is_gamma,                  &
     wfs_are_complex,                  &
     wfs_are_real,                     &
-    states_dump,                      &
     rotate_states,                    &
-    states_freeze_orbitals,           &
     is_spin_down,                     &
     is_spin_up,                       &
     assignment(=)
-
 
   public ::                         &
     dstates_gram_schmidt,           &
     zstates_gram_schmidt,           &
     dstates_gram_schmidt_full,      &
     zstates_gram_schmidt_full,      &
-    dmf_dotp,                   &
-    zmf_dotp,                   &
-    dstates_nrm2,                   &
-    zstates_nrm2,                   &
     dstates_normalize_orbital,      &
     zstates_normalize_orbital,      &
     dstates_residue,                &
@@ -114,8 +113,7 @@ module states_m
     dstates_matrix,                 &
     zstates_matrix,                 &
     dstates_linear_combination,     &
-    zstates_linear_combination,     &
-    states_distribute_nodes
+    zstates_linear_combination
 
   type states_dim_t
     integer :: dim                  ! Dimension of the state (one or two for spinors)

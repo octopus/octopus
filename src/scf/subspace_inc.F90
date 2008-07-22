@@ -68,7 +68,7 @@ subroutine X(subspace_diag)(gr, st, h, diff)
     
     ! Renormalize.
     do ist = st%st_start, st%st_end
-      nrm2 = X(states_nrm2)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik))
+      nrm2 = X(mf_nrm2)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik))
       !$omp parallel workshare
       st%X(psi)(1:NP, 1:st%d%dim, ist, ik) = st%X(psi)(1:NP, 1:st%d%dim, ist, ik)/nrm2
       !$omp end parallel workshare
@@ -140,7 +140,7 @@ subroutine X(subspace_diag_par_states)(gr, st, h, diff)
 
     ! Renormalize.
     do i = st%st_start, st%st_end
-      nrm2 = X(states_nrm2)(gr%m, st%d%dim, st%X(psi)(:, :, i, ik))
+      nrm2 = X(mf_nrm2)(gr%m, st%d%dim, st%X(psi)(:, :, i, ik))
       !$omp parallel workshare
       st%X(psi)(1:NP, 1:st%d%dim, i, ik) = st%X(psi)(1:NP, 1:st%d%dim, i, ik)/nrm2
       !$omp end parallel workshare

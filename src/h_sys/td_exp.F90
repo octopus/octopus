@@ -26,6 +26,7 @@ module td_exp_m
   use lalg_basic_m
   use loct_math_m
   use loct_parser_m
+  use mesh_function_m
   use profiling_m
   use td_exp_split_m
   use varinfo_m
@@ -417,7 +418,7 @@ contains
 
 
       ! Normalize input vector, and put it into v(:, :, 1)
-      beta = zstates_nrm2(gr%m, h%d%dim, zpsi)
+      beta = zmf_nrm2(gr%m, h%d%dim, zpsi)
       v(1:NP, 1:h%d%dim, 1) = zpsi(1:NP, 1:h%d%dim)/beta
 
       ! This is the Lanczos loop...

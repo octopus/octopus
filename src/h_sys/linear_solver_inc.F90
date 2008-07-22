@@ -201,7 +201,7 @@ subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ist, ik, x, y, omega)
   rs(1:NP, 1:st%d%dim) = r(1:NP, 1:st%d%dim)
   !$omp end parallel workshare
 
-  gamma = X(states_nrm2)(gr%m, st%d%dim, r)
+  gamma = X(mf_nrm2)(gr%m, st%d%dim, r)
 
   conv_last = .false.
   do iter = 1, ls%max_iter
@@ -239,7 +239,7 @@ subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ist, ik, x, y, omega)
       !$omp end parallel do
     end do
 
-    gamma = X(states_nrm2) (gr%m, st%d%dim, s)
+    gamma = X(mf_nrm2) (gr%m, st%d%dim, s)
 
     if( gamma < ls%tol ) then
       do idim = 1, st%d%dim 
@@ -264,7 +264,7 @@ subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ist, ik, x, y, omega)
 
     rho_2 = rho_1
 
-    gamma = X(states_nrm2)(gr%m, st%d%dim, r)
+    gamma = X(mf_nrm2)(gr%m, st%d%dim, r)
     conv = (gamma < ls%tol)
 
     if( conv .and. conv_last ) then 
@@ -317,7 +317,7 @@ subroutine X(ls_solver_multigrid) (ls, h, gr, st, ist, ik, x, y, omega)
     !calculate the residue
     call X(ls_solver_operator)(h, gr, st, ist, ik, omega, x, hx)
     res(1:NP, 1:st%d%dim) = hx(1:NP, 1:st%d%dim) - y(1:NP, 1:st%d%dim)
-    ls%abs_psi = X(states_nrm2)(gr%m, st%d%dim, res)
+    ls%abs_psi = X(mf_nrm2)(gr%m, st%d%dim, res)
 
     if(ls%abs_psi < ls%tol) exit
 
@@ -479,7 +479,7 @@ subroutine X(ls_solver_sos) (ls, h, gr, st, ist, ik, x, y, omega)
     call lalg_axpy(NP, -M_ONE, y(:, idim), rr(:, idim))
   end do
   
-  ls%abs_psi = X(states_nrm2)(gr%m, st%d%dim, rr)
+  ls%abs_psi = X(mf_nrm2)(gr%m, st%d%dim, rr)
   ls%iter = 1
 
   deallocate(rr)

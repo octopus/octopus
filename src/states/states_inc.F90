@@ -89,7 +89,7 @@ subroutine X(states_gram_schmidt_full)(st, nst, m, dim, psi, start)
 
     ! Normalize.
     if(state_is_local(st, p)) then
-      nrm2 = X(states_nrm2)(m, dim, psi(:, :, p-st%st_start+1))
+      nrm2 = X(mf_nrm2)(m, dim, psi(:, :, p-st%st_start+1))
       do idim = 1, dim
         call lalg_scal(m%np, M_ONE/nrm2, psi(:, idim, p-st%st_start+1))
       end do
@@ -244,7 +244,7 @@ subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi,  &
   normalize_ = .false.
   if(present(normalize)) normalize_ = normalize
   if(normalize_) then
-    nrm2 = X(states_nrm2)(m, dim, phi)
+    nrm2 = X(mf_nrm2)(m, dim, phi)
     do idim = 1, dim
       call lalg_scal(m%np, M_ONE / nrm2, phi(:, idim))
     end do
@@ -270,7 +270,7 @@ subroutine X(states_normalize_orbital)(m, dim, psi)
 
   call push_sub('states_inc.Xstates_normalize_orbital')
 
-  norm = X(states_nrm2) (m, dim, psi)
+  norm = X(mf_nrm2) (m, dim, psi)
   norm = sqrt(norm)
 
   do idim = 1, dim
@@ -281,29 +281,6 @@ subroutine X(states_normalize_orbital)(m, dim, psi)
 
   call pop_sub()
 end subroutine X(states_normalize_orbital)
-
-
-! ---------------------------------------------------------
-FLOAT function X(states_nrm2)(m, dim, f, reduce) result(nrm2)
-  type(mesh_t),      intent(in) :: m
-  integer,           intent(in) :: dim
-  R_TYPE,            intent(in) :: f(:,:)
-  logical, optional, intent(in) :: reduce
-
-  integer :: idim
-
-  call push_sub('states_inc.Xstates_nrm2')
-
-  nrm2 = M_ZERO
-  do idim = 1, dim
-    nrm2 = nrm2 + X(mf_nrm2)(m, f(:, idim), reduce)**2
-  end do
-  nrm2 = sqrt(nrm2)
-
-  call pop_sub()
-
-end function X(states_nrm2)
-
 
 ! ---------------------------------------------------------
 FLOAT function X(states_residue)(m, dim, hf, e, f) result(r)
@@ -327,7 +304,7 @@ FLOAT function X(states_residue)(m, dim, hf, e, f) result(r)
 
   call profiling_count_operations(dim*m%np*(R_ADD + R_MUL))
 
-  r = X(states_nrm2)(m, dim, res)
+  r = X(mf_nrm2)(m, dim, res)
   deallocate(res)
 
   call profiling_out(prof)

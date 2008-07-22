@@ -79,7 +79,7 @@ subroutine X(eigen_solver_rmmdiis) (gr, st, h, pre, tol, niter, converged, diff,
           call lalg_axpy(NP, -st%eigenval(ist, ik), st%X(psi)(:, idim, ist, ik), residuals(:, idim))
         end do
 
-        error = X(states_nrm2)(gr%m, st%d%dim, residuals)
+        error = X(mf_nrm2)(gr%m, st%d%dim, residuals)
 
         if(error < tol) then
           converged(ik) = converged(ik) + 1

@@ -162,7 +162,7 @@ subroutine X(eigen_solver_plan) (gr, st, hamilt, pre, tol, niter, converged, dif
               call lalg_axpy(NP, -av(ii, 1, d1 + 1), v(:, idim, ii), v(:, idim, i))
             end do
           end do
-          x = X(states_nrm2)(gr%m, dim, v(:, :, i))
+          x = X(mf_nrm2)(gr%m, dim, v(:, :, i))
           if(x .le. M_EPSILON) then
             call X(mf_random)(gr%m, v(:, 1, i))
           else
@@ -316,7 +316,7 @@ contains
     call push_sub('eigen_plan.residual')
 
     res = hv - e*v
-    r = X(states_nrm2)(gr%m, dim, res)
+    r = X(mf_nrm2)(gr%m, dim, res)
 
     call pop_sub()
   end subroutine residual

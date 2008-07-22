@@ -34,6 +34,7 @@ module hamiltonian_m
   use io_m
   use io_function_m
   use mesh_m
+  use mesh_function_m
   use messages_m
   use mpi_m
   use multigrid_m

@@ -29,8 +29,9 @@ module cpmd_m
   use loct_parser_m
   use units_m
   use math_m
-  use messages_m
   use mesh_m
+  use mesh_function_m
+  use messages_m
   use geometry_m
   use hamiltonian_m
   use loct_m
