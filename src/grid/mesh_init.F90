@@ -669,8 +669,7 @@ contains
             ASSERT(all(recv_points(1:mesh%nrecv(ipart), ipart) <= mesh%np_part))
             ASSERT(all(recv_points(1:mesh%nrecv(ipart), ipart) > mesh%np))
 
-            ! the recv types should start from np + 1 (minus one to start from zero)
-            recv_points(1:mesh%nrecv(ipart), ipart) = recv_points(1:mesh%nrecv(ipart), ipart) - mesh%np - 1
+            recv_points(1:mesh%nrecv(ipart), ipart) = recv_points(1:mesh%nrecv(ipart), ipart) - 1
 
             call get_blocks(mesh%nrecv(ipart), recv_points(:, ipart), nblocks, blocklengths, offsets)
 

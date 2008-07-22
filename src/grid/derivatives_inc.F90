@@ -382,7 +382,7 @@ subroutine X(set_bc)(der, f)
   integer :: iper
   type(profile_t), save :: set_bc_prof
 #ifdef HAVE_MPI
-  integer :: ipart, nreq, status(MPI_STATUS_SIZE)
+  integer :: ipart, nreq
   integer, allocatable :: req(:), statuses(:, :)
 #endif
 
@@ -428,7 +428,8 @@ subroutine X(set_bc)(der, f)
 
       do ipart = 1, der%m%vp%p
         if(ipart == p .or. der%m%nrecv(ipart) == 0) cycle
-        call MPI_Recv(f(der%m%np + 1:), 1, der%m%X(recv_type)(ipart), ipart - 1, 3, der%m%vp%comm, status, mpi_err)
+        nreq = nreq + 1
+        call MPI_Irecv(f, 1, der%m%X(recv_type)(ipart), ipart - 1, 3, der%m%vp%comm, req(nreq), mpi_err)
       end do
 
     end if
@@ -444,6 +445,7 @@ subroutine X(set_bc)(der, f)
     if(der%m%parallel_in_domains) then
       ALLOCATE(statuses(MPI_STATUS_SIZE, nreq), MPI_STATUS_SIZE*nreq)
       call MPI_Waitall(nreq, req, statuses, mpi_err)
+      deallocate(statuses, req)
     end if
 #endif
 
