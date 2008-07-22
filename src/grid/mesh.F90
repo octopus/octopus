@@ -555,7 +555,7 @@ contains
   recursive subroutine mesh_end(m)
     type(mesh_t), intent(inout) :: m
 
-    integer :: il
+    integer :: il, ipart
     call push_sub('mesh.mesh_end')
 
     DEALLOC(m%lxyz)
@@ -567,6 +567,23 @@ contains
       DEALLOC(m%x_global)
 #if defined(HAVE_MPI)
       call vec_end(m%vp)
+      if(simul_box_is_periodic(m%sb)) then
+
+        do ipart = 1, m%vp%p
+          if(m%nsend(ipart) /= 0) then 
+            call MPI_Type_free(m%dsend_type(ipart), mpi_err)
+            call MPI_Type_free(m%zsend_type(ipart), mpi_err)
+          end if
+          if(m%nrecv(ipart) /= 0) then 
+            call MPI_Type_free(m%drecv_type(ipart), mpi_err)
+            call MPI_Type_free(m%zrecv_type(ipart), mpi_err)
+          end if
+        end do
+
+        deallocate(m%dsend_type, m%zsend_type)
+        deallocate(m%drecv_type, m%zrecv_type)
+        deallocate(m%nsend, m%nrecv)
+      end if
 #endif
     end if
 
