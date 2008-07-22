@@ -87,8 +87,8 @@ module math_m
 
   ! ---------------------------------------------------------
   ! QMR (quasi-minimal residual) algorithm for complex matrices
-  ! algorithm taken from: 'An Implementation of the QMR Method based on
-  ! Coupled Two-Term Recurrences' by R. W. Freund and N. M. Nachtigal (page 25)
+  ! algorithm taken from: An Implementation of the QMR Method based on
+  ! Coupled Two-Term Recurrences by R. W. Freund and N. M. Nachtigal (page 25)
   interface zqmr
     module procedure zqmr_spec_dotp, zqmr_gen_dotp
   end interface

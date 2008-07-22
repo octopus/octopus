@@ -432,6 +432,9 @@ subroutine X(set_bc)(der, f)
         nreq = nreq + 1
         call MPI_Irecv(f, 1, der%m%X(recv_type)(ipart), ipart - 1, 3, der%m%vp%comm, req(nreq), mpi_err)
       end do
+
+      call profiling_count_transfers(sum(der%m%nrecv(1:der%m%vp%p) + der%m%nrecv(1:der%m%vp%p)), f(1))
+
       call profiling_out(comm_prof)
     end if
 #endif
