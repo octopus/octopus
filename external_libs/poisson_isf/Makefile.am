@@ -60,7 +60,7 @@ pconv.o: config_F90.h
 pfft3d.o: config_F90.h
 
 config_F90.h: ../../config.h
-	@grep -E '^#define' $^ > $@
+	@grep '^#define' $^ > $@
 
 CLEANFILES = config_F90.h *~ *.bak *.mod *.il *.d *.pc* ifc*
 
