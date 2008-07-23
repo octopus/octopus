@@ -103,7 +103,7 @@ subroutine td_init(sys, h, td)
   end if
   
   ! Initialize the kick (if optical spectrum calculations are to be performed)
-  call kick_init(td%kick, sys%st%d%nspin)
+  call kick_init(td%kick, sys%st%d%nspin, sys%gr%m%sb%dim)
 
   ! now the photoelectron stuff
 #if !defined(DISABLE_PES)

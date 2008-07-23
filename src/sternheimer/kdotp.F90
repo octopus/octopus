@@ -87,16 +87,16 @@ contains
     type(kdotp_t)           :: kdotp_vars
     type(sternheimer_t)     :: sh
 
-    integer :: idir, ierr
+    integer :: idir, ierr, size
     character(len=100) :: dirname, str_tmp
 
     call push_sub('kdotp.static_kdotp_lr_run')
 
     gr => sys%gr
 !    ndim = sys%gr%sb%dim
+    size = sys%st%d%nik*sys%st%nst*NDIM*NDIM
 
-    ALLOCATE(kdotp_vars%eff_mass_inv(sys%st%d%nik, sys%st%nst, NDIM, NDIM), &
-      sys%st%d%nik * sys%st%nst * NDIM * NDIM)
+    ALLOCATE(kdotp_vars%eff_mass_inv(sys%st%d%nik, sys%st%nst, NDIM, NDIM), size)
     kdotp_vars%eff_mass_inv(:,:,:,:)=0  
 
     call pert_init(kdotp_vars%perturbation, PERTURBATION_KDOTP, sys%gr, sys%geo)

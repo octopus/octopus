@@ -322,9 +322,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine kick_init(k, nspin)
+  subroutine kick_init(k, nspin, dim)
     type(kick_t), intent(out) :: k
     integer,      intent(in)  :: nspin
+    integer,      intent(in)  :: dim
 
     type(block_t) :: blk
     integer :: n_rows, i, j
@@ -441,12 +442,20 @@ contains
     !%Default 1
     !%Section Time Dependent::Linear Response
     !%Description
-    !% Defines which one of the lines of <tt>TDPolarization</tt> to use for
-    !% the run. In a typical run (without using symmetry), TDPolarization
-    !% would contain the three Cartesian unit vectors, and one would make 3 runs
-    !% varying <tt>TDPolarization</tt> from 1 to 3.
+    !%
+    !% When a delta potential is included in a time dependent run, this
+    !% variable defines in which direction the field will be applied
+    !% by selecting one of the lines of <tt>TDPolarization</tt>. In a
+    !% typical run (without using symmetry), the TDPolarization block
+    !% would contain the three Cartesian unit vectors (the default
+    !% value), and one would make 3 runs varying
+    !% <tt>TDPolarization</tt> from 1 to 3.
+    !%
     !%End
-    call loct_parse_int(check_inp('TDPolarizationDirection'), 1, k%pol_dir)
+
+    call loct_parse_int(check_inp('TDPolarizationDirection'), 0, k%pol_dir)
+
+    if(k%pol_dir < 1 .or. k%pol_dir > dim) call input_error('TDPolarizationDirection')
 
     !%Variable TDPolarization
     !%Type block
@@ -463,16 +472,28 @@ contains
     !% <br>&nbsp;&nbsp;pol3x | pol3y | pol3z
     !% <br>%</tt>
     !%
-    !% Octopus uses both this block and the variable <tt>TDPolarizationDirection</tt>
-    !% to determine the polarization vevtor for the run. For example, if <tt>TDPolarizationDirection=2</tt>
-    !% the polarization <tt>(pol2x, pol2y, pol2z)</tt> would be used.
+    !% Octopus uses both this block and the variable
+    !% <tt>TDPolarizationDirection</tt> to determine the polarization
+    !% vector for the run. For example, if
+    !% <tt>TDPolarizationDirection=2</tt> the polarization <tt>(pol2x,
+    !% pol2y, pol2z)</tt> would be used.
     !%
-    !% The default value for <tt>TDPolarization</tt> are the three Cartesian unit vectors
-    !% (1,0,0), (0,1,0), and (0,0,1).
+    !% The default value for <tt>TDPolarization</tt> are the three
+    !% Cartesian unit vectors (1,0,0), (0,1,0), and (0,0,1).
+    !%
+    !% WARNING: If you want to obtain the cross section tensor, the
+    !% TDPolarization block must be exactly the same for the run in
+    !% each direction. The direction must be selected by the
+    !% TDPolarizationDirection variable.
+    !%
     !%End
+
     k%pol(:, :) = M_ZERO
     if(loct_parse_block(check_inp('TDPolarization'), blk)==0) then
       n_rows = loct_parse_block_n(blk)
+
+      if(n_rows < dim) call input_error('TDPolarization')
+
       do j = 1, n_rows
         do i = 1, 3
           call loct_parse_block_float(blk, j-1, i-1, k%pol(i, j))
