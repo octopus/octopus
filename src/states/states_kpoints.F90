@@ -177,6 +177,7 @@ subroutine states_choose_kpoints(d, sb, geo)
   !%Default yes
   !%Section Mesh::KPoints
   !%Description
+  !% WARNING: This variable does not seem to work.
   !% This variable defines whether time-reversal symmetry is taken into account
   !% or not for the choice of k-points. If it is set to no, the k-point
   !% sampling will not be reduced according to time-reversal symmetry. The default is

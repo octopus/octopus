@@ -69,7 +69,8 @@ module pert_m
      PERTURBATION_ELECTRIC = 1, &
      PERTURBATION_MAGNETIC = 2, &
      PERTURBATION_IONIC    = 3, &
-     PERTURBATION_KDOTP    = 4
+     PERTURBATION_KDOTP    = 4, &
+     PERTURBATION_NONE     = 0
 
   integer, public, parameter :: &
        GAUGE_GIPAW  = 1, &
@@ -129,6 +130,8 @@ contains
     !%Option kpoint 4
     !% Small change of k-point, as in k.p perturbation theory, for calculating
     !% derivatives with respect to k, and effective masses
+    !%Option none 0
+    !% Zero perturbation, for use in testing.
     !%End 
     call loct_parse_int(check_inp('RespPerturbationType'), PERTURBATION_ELECTRIC, ii)
 

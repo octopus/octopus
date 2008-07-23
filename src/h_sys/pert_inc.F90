@@ -66,6 +66,9 @@ subroutine X(pert_apply) (this, gr, geo, h, ik, f_in, f_out)
     case(PERTURBATION_KDOTP)
       call kdotp()
 
+    case(PERTURBATION_NONE)
+      call none()
+
   end select
   
   if (apply_kpoint) then
@@ -80,6 +83,14 @@ subroutine X(pert_apply) (this, gr, geo, h, ik, f_in, f_out)
   call pop_sub()
 
 contains
+
+  ! --------------------------------------------------------------------------
+
+  subroutine none()
+
+    f_out(1:NP) = M_ZERO
+
+  end subroutine none
 
   ! --------------------------------------------------------------------------
   subroutine electric()

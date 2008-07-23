@@ -236,7 +236,7 @@ contains
       !% they should be specified as a sum of a correlation and an
       !% exchange term.
       !%
-      !% The value by default is xc_lda_x + xc_lda_pz_mod.
+      !% The value by default is lda_x + lda_c_pz_mod.
       !%
       !%Option lda_x                      1
       !% LDA: Slater exchange

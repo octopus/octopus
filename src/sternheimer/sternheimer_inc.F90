@@ -122,13 +122,13 @@ subroutine X(sternheimer_solve)(                           &
 !             Y(1:m%np, 1, sigma) = Y(1:m%np, 1, sigma) - st%X(psi)(1:m%np, 1, ist, ik) * &
 !               X(mf_integrate)(sys%gr%m, st%X(psi)(1:m%np, 1, ist, ik) * Y(1:m%np, 1, sigma))
 
-             orth_mask(1:st%nst) = .true.
-             orth_mask(ist) = .false.
-             call X(states_gram_schmidt)(m, st%nst, st%d%dim, st%X(psi)(1:m%np, 1:1, 1:st%nst, ik), &
-               Y(1:m%np, 1:1, sigma), mask = orth_mask(1:st%nst))
+            orth_mask(1:st%nst) = .true.
+            orth_mask(ist) = .false.
+            call X(states_gram_schmidt)(m, st%nst, st%d%dim, st%X(psi)(1:m%np, 1:1, 1:st%nst, ik), &
+              Y(1:m%np, 1:1, sigma), mask = orth_mask(1:st%nst))
           else
           ! project RHS onto the unoccupied states
-             call X(lr_orth_vector)(m, st, Y(1:m%np, 1:1, sigma), ist, ik)
+            call X(lr_orth_vector)(m, st, Y(1:m%np, 1:1, sigma), ist, ik)
           endif
         
           if(sigma == 1) then 

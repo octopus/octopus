@@ -186,7 +186,7 @@ module hamiltonian_m
     VELOCITY   = 2
 
   integer, public, parameter :: &
-    NO_ABSORBING        = 0,    &
+    NOT_ABSORBING       = 0,    &
     IMAGINARY_ABSORBING = 1,    &
     MASK_ABSORBING      = 2
 
@@ -318,26 +318,26 @@ contains
 
     !%Variable AbsorbingBoundaries
     !%Type integer
-    !%Default no_absorbing
+    !%Default not_absorbing
     !%Section Time Dependent::Absorbing Boundaries
     !%Description
     !% To improve the quality of the spectra by avoiding the formation of 
     !% standing density waves, one can make the boundaries of the simulation 
     !% box absorbing.
-    !%Option no_absorbing 0
+    !%Option not_absorbing 0
     !% No absorbing boundaries.
     !%Option sin2 1
     !% A <math>\sin^2</math> imaginary potential is added at the boundaries.
     !%Option mask 2
     !% A mask is applied to the wave-functions at the boundaries.
     !%End
-    call loct_parse_int(check_inp('AbsorbingBoundaries'), NO_ABSORBING, h%ab)
+    call loct_parse_int(check_inp('AbsorbingBoundaries'), NOT_ABSORBING, h%ab)
     if(.not.varinfo_valid_option('AbsorbingBoundaries', h%ab)) call input_error('AbsorbingBoundaries')
     call messages_print_var_option(stdout, "AbsorbingBoundaries", h%ab)
     
     nullify(h%ab_pot)
 
-    absorbing_boundaries: if(h%ab.ne.NO_ABSORBING) then
+    absorbing_boundaries: if(h%ab.ne.NOT_ABSORBING) then
       !%Variable ABWidth
       !%Type float
       !%Default 0.4 a.u.

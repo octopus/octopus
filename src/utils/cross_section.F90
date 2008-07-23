@@ -162,14 +162,14 @@ program cross_section
           in_file(2) = io_open(trim(fname)//'.2', action='read', status='old', die=.false.)
           if(in_file(2) < 0) in_file(2) = io_open('td.general/'//trim(fname)//'.2', action='read', status='old', die=.false.)
           if(in_file(2) < 0) then
-            write(message(1),'(3a)') 'The file "', trim(fname), '.1" tells me that the system has three equivalent axes,'
+            write(message(1),'(3a)') 'The file "', trim(fname), '.1" tells me that the system has three inequivalent axes,'
             write(message(2),'(3a)') 'but I cannot find a "', trim(fname), '.2".'
             call write_fatal(2)
           end if
           in_file(3) = io_open(trim(fname)//'.3', action='read', status='old', die=.false.)
           if(in_file(3) < 0) in_file(3) = io_open('td.general/'//trim(fname)//'.3', action='read', status='old', die=.false.)
           if(in_file(3) < 0) then
-            write(message(1),'(3a)') 'The file "', trim(fname), '.1" tells me that the system has two equivalent axes,'
+            write(message(1),'(3a)') 'The file "', trim(fname), '.1" tells me that the system has three inequivalent axes,'
             write(message(2),'(3a)') 'but I cannot find a "', trim(fname), '.3".'
             call write_fatal(2)
           end if

@@ -72,6 +72,7 @@ module kdotp_lr_m
     integer :: occ_solution_method  ! how to get occupied components of response
     FLOAT   :: degen_thres          ! maximum energy difference to be considered
                                     ! degenerate
+    FLOAT   :: eta                  ! imaginary freq. added to Sternheimer eqn.
   end type kdotp_t
 
 contains
@@ -94,10 +95,12 @@ contains
     gr => sys%gr
 !    ndim = sys%gr%sb%dim
 
-    ALLOCATE(kdotp_vars%eff_mass_inv(sys%st%d%nik, sys%st%nst, NDIM, NDIM), sys%st%d%nik * sys%st%nst * NDIM * NDIM)
+    ALLOCATE(kdotp_vars%eff_mass_inv(sys%st%d%nik, sys%st%nst, NDIM, NDIM), &
+      sys%st%d%nik * sys%st%nst * NDIM * NDIM)
     kdotp_vars%eff_mass_inv(:,:,:,:)=0  
 
     call pert_init(kdotp_vars%perturbation, PERTURBATION_KDOTP, sys%gr, sys%geo)
+!    call pert_init(kdotp_vars%perturbation, PERTURBATION_NONE, sys%gr, sys%geo)
 
     ALLOCATE(kdotp_vars%lr(1:NDIM, 1), NDIM)
 
@@ -106,7 +109,7 @@ contains
     call read_wfs(sys%st, sys%gr, sys%geo, .true.)
     ! even if wfs are real, the response must be allowed to be complex
 
-    kdotp_vars%lr(1:NDIM,:)%nst = sys%st%nst
+    kdotp_vars%lr(1:NDIM, 1:1)%nst = sys%st%nst
 
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian for linear response'
@@ -153,8 +156,8 @@ contains
       write(message(1), '(a,i3)') 'Info: Calculating response for direction ', idir
       call write_info(1)
       call pert_setup_dir(kdotp_vars%perturbation, idir)
-      call zsternheimer_solve(sh, sys, h, kdotp_vars%lr(idir,:), 1, M_Z0, &
-        kdotp_vars%perturbation, RESTART_DIR, &
+      call zsternheimer_solve(sh, sys, h, kdotp_vars%lr(idir,:), 1, &
+        M_zI * kdotp_vars%eta, kdotp_vars%perturbation, RESTART_DIR, &
         kdotp_rho_tag(idir), kdotp_wfs_tag(idir), have_restart_rho=(ierr==0))
       kdotp_vars%ok = kdotp_vars%ok .and. sternheimer_has_converged(sh)         
     end do ! idir
@@ -206,7 +209,18 @@ contains
            CNST(1e-5), kdotp_vars%degen_thres)
       ! Note: this variable is defined in src/states.F90, in states_degeneracy_matrix
 
-    end subroutine parse_input
+      !%Variable KdotP_Eta
+      !%Type float
+      !%Default 0.0
+      !%Section Linear Response::KdotP
+      !%Description
+      !% Imaginary frequency added to Sternheimer equation which may improve convergence.
+      !%End
+
+      call loct_parse_float(check_inp('KdotPEta'), M_ZERO, kdotp_vars%eta)
+      kdotp_vars%eta = kdotp_vars%eta*units_inp%energy%factor
+
+   end subroutine parse_input
 
     ! ---------------------------------------------------------
     subroutine info()
