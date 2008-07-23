@@ -33,6 +33,7 @@ module geom_opt_m
   use restart_m
   use scf_m
   use states_m
+  use states_lalg_m
   use system_m
   use units_m
   use v_ks_m

@@ -31,6 +31,7 @@ module linear_response_m
   use io_function_m
   use smear_m
   use states_m
+  use states_lalg_m
   use units_m
 
   implicit none

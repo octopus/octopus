@@ -36,6 +36,7 @@ module lcao_m
   use solids_m
   use species_m
   use states_m
+  use states_lalg_m
   use h_sys_output_m
 
   implicit none

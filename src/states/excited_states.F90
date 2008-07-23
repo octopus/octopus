@@ -29,6 +29,7 @@ module excited_states_m
   use mpi_m
   use grid_m
   use states_m
+  use states_lalg_m
 
   implicit none
 

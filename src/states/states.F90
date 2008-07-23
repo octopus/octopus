@@ -44,7 +44,6 @@ module states_m
   use profiling_m
   use simul_box_m
   use smear_m
-  use string_m
   use units_m
   use varinfo_m
 
@@ -57,7 +56,6 @@ module states_m
     states_dim_t,                     &
     states_init,                      &
     states_look,                      &
-    states_read_user_def_orbitals,    &
     states_densities_init,            &
     states_allocate_wfns,             &
     states_deallocate_wfns,           &
@@ -67,7 +65,6 @@ module states_m
     states_dim_copy,                  &
     states_dim_end,                   &
     states_generate_random,           &
-    states_orthogonalize,             &
     states_fermi,                     &
     states_eigenvalues_sum,           &
     states_allocate_free_states,      &
@@ -76,7 +73,6 @@ module states_m
     states_write_dos,                 &
     states_write_bands,               &
     states_write_fermi_energy,        &
-    states_degeneracy_matrix,         &
     states_spin_channel,              &
     states_dens_accumulate,           &
     states_dens_reduce,               &
@@ -92,28 +88,9 @@ module states_m
     kpoint_is_gamma,                  &
     wfs_are_complex,                  &
     wfs_are_real,                     &
-    rotate_states,                    &
     is_spin_down,                     &
     is_spin_up,                       &
     assignment(=)
-
-  public ::                         &
-    dstates_gram_schmidt,           &
-    zstates_gram_schmidt,           &
-    dstates_gram_schmidt_full,      &
-    zstates_gram_schmidt_full,      &
-    dstates_normalize_orbital,      &
-    zstates_normalize_orbital,      &
-    dstates_residue,                &
-    zstates_residue,                &
-    dstates_calc_momentum,          &
-    zstates_calc_momentum,          &
-    dstates_angular_momentum,       &
-    zstates_angular_momentum,       &
-    dstates_matrix,                 &
-    zstates_matrix,                 &
-    dstates_linear_combination,     &
-    zstates_linear_combination
 
   type states_dim_t
     integer :: dim                  ! Dimension of the state (one or two for spinors)
@@ -841,220 +818,6 @@ contains
     call pop_sub()
   end subroutine states_deallocate_wfns
 
-
-  ! ---------------------------------------------------------
-  ! This routine transforms the orbitals of state "st", according
-  ! to the transformation matrix "u".
-  !
-  ! Each row of u contains the coefficients of the new orbitals
-  ! in terms of the old ones.
-  ! ---------------------------------------------------------
-  subroutine rotate_states(mesh, st, stin, u)
-    type(mesh_t),      intent(in)    :: mesh
-    type(states_t),    intent(inout) :: st
-    type(states_t),    intent(in)    :: stin
-    CMPLX,             intent(in)    :: u(:, :)
-
-    integer :: ik
-
-    call push_sub('states.rotate_states')
-
-    if(st%wfs_type == M_REAL) then
-      do ik = 1, st%d%nik
-        call lalg_gemm(mesh%np_part*st%d%dim, st%nst, stin%nst, M_ONE, stin%dpsi(:, :, 1:stin%nst, ik), &
-          transpose(real(u(:, :), REAL_PRECISION)), M_ZERO, st%dpsi(:, :, :, ik))
-      end do
-    else
-      do ik = 1, st%d%nik
-        call lalg_gemm(mesh%np_part*st%d%dim, st%nst, stin%nst, M_z1, stin%zpsi(:, :, 1:stin%nst, ik), &
-          transpose(u(:, :)), M_z0, st%zpsi(:, :, :, ik))
-      end do
-    end if
-
-    call pop_sub()
-  end subroutine rotate_states
-
-
-  ! ---------------------------------------------------------
-  ! the routine reads formulas for user-defined wavefunctions 
-  ! from the input file and fills the respective orbitals
-  subroutine states_read_user_def_orbitals(mesh, st)
-    type(mesh_t),      intent(in) :: mesh
-    type(states_t), intent(inout) :: st    
-
-    type(block_t) :: blk
-    integer   :: ip, id, is, ik, nstates, state_from, ierr, ncols
-    integer   :: ib, idim, inst, inik, normalize
-    FLOAT     :: x(MAX_DIM), r, psi_re, psi_im
-    character(len=150) :: filename
-
-    integer, parameter ::      &
-      state_from_formula  = 1, &
-      state_from_file     = 0, &
-      normalize_yes       = 1, &
-      normalize_no        = 0
-
-    call push_sub('td.read_user_def_states')
-
-    !%Variable UserDefinedStates
-    !%Type block
-    !%Section States
-    !%Description
-    !% Instead of using the ground state as initial state for
-    !% time propagations it might be interesting in some cases 
-    !% to specify alternative states. Similarly to user-defined
-    !% potentials, this block allows you to specify formulas for
-    !% the orbitals at t=0.
-    !%
-    !% Example:
-    !%
-    !% <tt>%UserDefinedStates
-    !% <br>&nbsp;&nbsp; 1 | 1 | 1 | formula | "exp(-r^2)*exp(-i*0.2*x)" | normalize_yes
-    !% <br>%</tt>
-    !%
-    !% The first column specifies the component of the spinor, 
-    !% the second column the number of the state and the third 
-    !% contains kpoint and spin quantum numbers. Column four
-    !% indicates that column five should be interpreted as formula
-    !% for the correspondig orbital.
-    !% 
-    !% Alternatively, if column four states file the state will
-    !% be read from the file given in column five.
-    !%
-    !% <tt>%UserDefinedStates
-    !% <br>&nbsp;&nbsp; 1 | 1 | 1 | file | "/path/to/file" | normalize_no
-    !% <br>%</tt>
-    !% 
-    !% Octopus reads first the ground state orbitals from
-    !% the restart/gs directory. Only the states that are
-    !% specified in the above block will be overwritten with
-    !% the given analytical expression for the orbital.
-    !%
-    !% The sixth (optional) column indicates if Octopus should renormalize the orbital
-    !% or not. The default, i. e. no sixth column given, is to renormalize.
-    !%
-    !%Option file 0
-    !% Read initsial orbital from file
-    !%Option formula 1
-    !% Calculate initial orbital by given analytic expression
-    !%Option normalize_yes 1
-    !% Normalize orbitals (default)
-    !%Option normalize_no 0
-    !% Do not normalize orbitals
-    !%End
-    if(loct_parse_block(check_inp('UserDefinedStates'), blk) == 0) then
-
-      call messages_print_stress(stdout, trim('Substitution of orbitals'))
-
-      ! find out how many lines (i.e. states) the block has
-      nstates = loct_parse_block_n(blk)
-
-      ! read all lines
-      do ib = 1, nstates
-        ! Check that number of columns is five or six.
-        ncols = loct_parse_block_cols(blk, ib-1)
-        if(ncols.lt.5.or.ncols.gt.6) then
-          message(1) = 'Each line in the UserDefinedStates block must have'
-          message(2) = 'five or six columns.'
-          call write_fatal(2)
-        end if
-
-        call loct_parse_block_int(blk, ib-1, 0, idim)
-        call loct_parse_block_int(blk, ib-1, 1, inst)
-        call loct_parse_block_int(blk, ib-1, 2, inik)
-
-        ! Calculate from expression or read from file?
-        call loct_parse_block_int(blk, ib-1, 3, state_from)
-
-        ! loop over all states
-        do id = 1, st%d%dim
-          do is = 1, st%nst
-            do ik = 1, st%d%nik
-
-              ! does the block entry match and is this node responsible?
-              if(.not.(id.eq.idim .and. is.eq.inst .and. ik.eq.inik    &
-                .and. st%st_start.le.is .and. st%st_end.ge.is) ) cycle
-
-              select case(state_from)
-
-              case(state_from_formula)
-                ! parse formula string
-                call loct_parse_block_string(                            &
-                  blk, ib-1, 4, st%user_def_states(id, is, ik))
-
-                write(message(1), '(a,3i5)') 'Substituting state of orbital with k, ist, dim = ', ik, is, id
-                write(message(2), '(2a)') '  with the expression:'
-                write(message(3), '(2a)') '  ',trim(st%user_def_states(id, is, ik))
-                call write_info(3)
-
-                ! convert to C string
-                call conv_to_C_string(st%user_def_states(id, is, ik))
-
-                ! fill states with user defined formulas
-                do ip = 1, mesh%np
-                  x = mesh%x(ip, :)
-                  r = sqrt(sum(x(:)**2))
-
-                  ! parse user defined expressions
-                  call loct_parse_expression(psi_re, psi_im,             &
-                    x(1), x(2), x(3), r, M_ZERO, st%user_def_states(id, is, ik))
-                  ! fill state
-                  st%zpsi(ip, id, is, ik) = psi_re + M_zI*psi_im
-                end do
-
-              case(state_from_file)
-                ! The input format can be coded in column four now. As it is
-                ! not used now, we just say "file".
-                ! Read the filename.
-                call loct_parse_block_string(blk, ib-1, 4, filename)
-
-                write(message(1), '(a,3i5)') 'Substituting state of orbital with k, ist, dim = ', ik, is, id
-                write(message(2), '(2a)') '  with data from file:'
-                write(message(3), '(2a)') '  ',trim(filename)
-                call write_info(3)
-
-                ! finally read the state
-                call zinput_function(filename, mesh, st%zpsi(:, id, is, ik), ierr, .true.)
-
-              case default
-                message(1) = 'Wrong entry in UserDefinedStates, column 4.'
-                message(2) = 'You may state "formula" or "file" here.'
-                call write_fatal(2)
-              end select
-
-              ! normalize orbital
-              if(loct_parse_block_cols(blk, ib-1).eq.6) then
-                call loct_parse_block_int(blk, ib-1, 5, normalize)
-              else
-                normalize = 1
-              end if
-              select case(normalize)
-              case(normalize_no)
-              case(normalize_yes)
-                call zstates_normalize_orbital(mesh, st%d%dim, st%zpsi(:,:, is, ik))
-              case default
-                message(1) = 'The sixth column in UserDefinedStates may either be'
-                message(2) = '"normalize_yes" or "normalize_no"'
-                call write_fatal(2)
-              end select
-            end do
-          end do
-        end do
-
-      end do
-
-      call loct_parse_block_end(blk)
-      call messages_print_stress(stdout)
-
-    else
-      message(1) = '"UserDefinesStates" has to be specified as block.'
-      call write_fatal(1)
-    end if
-
-    call pop_sub()
-  end subroutine states_read_user_def_orbitals
-
-
   ! ---------------------------------------------------------
   subroutine states_densities_init(st, gr, geo)
     type(states_t),    intent(inout) :: st
@@ -1525,37 +1288,6 @@ contains
 
     call pop_sub()
   end subroutine states_generate_random
-
-
-  ! ---------------------------------------------------------
-  subroutine states_orthogonalize(st, m, ik_, start_)
-    type(states_t),    intent(inout) :: st
-    type(mesh_t),      intent(in)    :: m
-    integer, optional, intent(in)    :: ik_, start_
-
-    integer :: ik, ik_start, ik_end
-    integer :: start
-
-    start = 1
-    if(present(start_)) start = start_
-    if(present(ik_)) then
-      ik_start = ik_
-      ik_end   = ik_
-    else
-      ik_start = 1
-      ik_end   = st%d%nik
-    end if
-    
-    do ik = ik_start, ik_end
-      if (st%wfs_type == M_REAL) then
-        call dstates_gram_schmidt_full(st, st%nst, m, st%d%dim, st%dpsi(:,:,:,ik), start)
-      else
-        call zstates_gram_schmidt_full(st, st%nst, m, st%d%dim, st%zpsi(:,:,:,ik), start)
-      end if
-    end do
-
-  end subroutine states_orthogonalize
-
 
   ! ---------------------------------------------------------
   subroutine states_fermi(st, m)
@@ -2088,107 +1820,6 @@ contains
     call pop_sub()
   end subroutine states_write_fermi_energy
 
-
-  ! -------------------------------------------------------
-  subroutine states_degeneracy_matrix(st)
-    type(states_t), intent(in) :: st
-
-    integer :: is, js, inst, inik, dsize, iunit
-    integer, allocatable :: eindex(:,:), sindex(:)
-    integer, allocatable :: degeneracy_matrix(:, :)
-    FLOAT,   allocatable :: eigenval_sorted(:)
-    FLOAT :: degen_thres, evis, evjs
-
-    call push_sub('states.states_degeneracy_matrix')
-
-    ALLOCATE(eigenval_sorted(st%nst*st%d%nik),   st%nst*st%d%nik)
-    ALLOCATE(         sindex(st%nst*st%d%nik),   st%nst*st%d%nik)
-    ALLOCATE(      eindex(2, st%nst*st%d%nik), 2*st%nst*st%d%nik)
-    dsize = st%nst*st%d%nik * st%nst*st%d%nik
-    ALLOCATE(degeneracy_matrix(st%nst*st%d%nik, st%nst*st%d%nik), dsize)
-
-    ! convert double index "inst, inik" to single index "is"
-    ! and keep mapping array
-    is = 1
-    do inst = 1, st%nst
-      do inik = 1, st%d%nik
-        eigenval_sorted(is) = st%eigenval(inst, inik)        
-        eindex(1, is) = inst
-        eindex(2, is) = inik
-        is = is + 1
-      end do
-    end do
-
-    ! sort eigenvalues
-    call sort(eigenval_sorted, sindex)
-
-    !%Variable DegeneracyThreshold
-    !%Type float
-    !%Default 1e-5
-    !%Section States
-    !%Description
-    !% A state j with energy E_j will be considered degenerate with a state
-    !% with energy E_i, if  E_i - threshold < E_j < E_i + threshold.
-    !%End
-    call loct_parse_float(check_inp('DegeneracyThreshold'), CNST(1e-5), degen_thres)    
-
-    ! setup degeneracy matrix. the matrix summarizes the degeneracy relations 
-    ! among the states
-    degeneracy_matrix = 0
-
-    do is = 1, st%nst*st%d%nik
-      do js = 1, st%nst*st%d%nik
-
-        ! a state is always degenerate to itself
-        if ( is.eq.js ) cycle
-
-        evis = st%eigenval(eindex(1, sindex(is)), eindex(2, sindex(is)))
-        evjs = st%eigenval(eindex(1, sindex(js)), eindex(2, sindex(js)))
-
-        ! is evjs in the "evis plus minus threshold" bracket?
-        if( (evjs.gt.evis - degen_thres).and.(evjs.lt.evis + degen_thres) ) then
-          ! mark forward scattering states with +1 and backward scattering
-          ! states with -1
-          degeneracy_matrix(is, js) = &
-            sign(M_ONE, st%momentum(1, eindex(1, sindex(js)), eindex(2, sindex(js))))
-        end if
-
-      end do
-    end do
-
-    if(mpi_grp_is_root(mpi_world)) then
-
-      ! write matrix to "restart/gs" directory
-      iunit = io_open(trim(tmpdir)//'gs/degeneracy_matrix', action='write', is_tmp = .true.)
-
-      write(iunit, '(a)') '# index  kx ky kz  eigenvalue  degeneracy matrix'
-
-      do is = 1, st%nst*st%d%nik
-        write(iunit, '(i6,4e24.16,32767i3)') is, st%d%kpoints(:, eindex(2, sindex(is))), &
-          eigenval_sorted(is), (degeneracy_matrix(is, js), js = 1, st%nst*st%d%nik)
-      end do
-
-      call io_close(iunit)
-
-      ! write index vectors to "restart/gs" directory
-      iunit = io_open(trim(tmpdir)//'gs/index_vectors', action='write', is_tmp = .true.)    
-
-      write(iunit, '(a)') '# index  sindex  eindex1 eindex2'
-
-      do is = 1, st%nst*st%d%nik
-        write(iunit,'(4i6)') is, sindex(is), eindex(1, sindex(is)), eindex(2, sindex(is))
-      end do
-
-      call io_close(iunit)
-    end if
-
-    deallocate(eigenval_sorted, sindex, eindex)
-    deallocate(degeneracy_matrix)
-
-    call pop_sub()
-  end subroutine states_degeneracy_matrix
-
-
   ! -------------------------------------------------------
   integer function states_spin_channel(ispin, ik, dim)
     integer, intent(in) :: ispin, ik, dim
@@ -2650,15 +2281,6 @@ contains
 
 
 #include "states_kpoints.F90"
-
-#include "undef.F90"
-#include "real.F90"
-#include "states_inc.F90"
-
-#include "undef.F90"
-#include "complex.F90"
-#include "states_inc.F90"
-#include "undef.F90"
 
 end module states_m
 

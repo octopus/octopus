@@ -126,7 +126,7 @@ R_TYPE function X(mf_dotp_2)(mesh, dim, f1, f2, reduce) result(dotp)
   R_TYPE :: dotp_tmp
 #endif
 
-  call push_sub('states_inc.Xmf_dotp')
+  call push_sub('mesh_function_inc.Xmf_dotp')
 
   dotp = R_TOTYPE(M_ZERO)
   do idim = 1, dim
@@ -207,7 +207,7 @@ FLOAT function X(mf_nrm2_2)(m, dim, f, reduce) result(nrm2)
 
   integer :: idim
 
-  call push_sub('states_inc.Xmf_nrm2')
+  call push_sub('mesh_function_inc.Xmf_nrm2')
 
   nrm2 = M_ZERO
 

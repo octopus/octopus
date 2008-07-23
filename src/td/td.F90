@@ -42,6 +42,7 @@ module timedep_m
   use projector_m
   use scf_m
   use states_m
+  use states_lalg_m
   use restart_m
   use system_m
   use td_rti_m
@@ -409,7 +410,7 @@ contains
         ! according to the settings in the input file the routine 
         ! overwrites orbitals that were read from restart/gs 
         if(loct_parse_isdef(check_inp('UserDefinedStates')).ne.0) then
-          call states_read_user_def_orbitals(gr%m, st)
+          call restart_read_user_def_orbitals(gr%m, st)
         end if
 
         !%Variable TransformStates
