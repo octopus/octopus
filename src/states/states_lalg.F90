@@ -1,0 +1,255 @@
+!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!!
+!! This program is free software; you can redistribute it and/or modify
+!! it under the terms of the GNU General Public License as published by
+!! the Free Software Foundation; either version 2, or (at your option)
+!! any later version.
+!!
+!! This program is distributed in the hope that it will be useful,
+!! but WITHOUT ANY WARRANTY; without even the implied warranty of
+!! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!! GNU General Public License for more details.
+!!
+!! You should have received a copy of the GNU General Public License
+!! along with this program; if not, write to the Free Software
+!! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+!! 02111-1307, USA.
+!!
+!! $Id$
+
+#include "global.h"
+
+module states_lalg_m
+  use calc_mode_m
+  use crystal_m
+  use blas_m
+  use datasets_m
+  use functions_m
+  use geometry_m
+  use global_m
+  use grid_m
+  use hardware_m
+  use io_function_m
+  use io_m
+  use lalg_basic_m
+  use loct_m
+  use loct_parser_m
+  use math_m
+  use messages_m
+  use mesh_function_m
+  use mesh_m
+  use mpi_m
+  use mpi_lib_m
+  use multicomm_m
+  use profiling_m
+  use simul_box_m
+  use states_m
+  use smear_m
+  use units_m
+  use varinfo_m
+
+  implicit none
+
+  private
+
+  public ::                           &
+    states_orthogonalize,             &
+    states_degeneracy_matrix,         &
+    rotate_states
+
+  public ::                         &
+    dstates_gram_schmidt,           &
+    zstates_gram_schmidt,           &
+    dstates_gram_schmidt_full,      &
+    zstates_gram_schmidt_full,      &
+    dstates_normalize_orbital,      &
+    zstates_normalize_orbital,      &
+    dstates_residue,                &
+    zstates_residue,                &
+    dstates_calc_momentum,          &
+    zstates_calc_momentum,          &
+    dstates_angular_momentum,       &
+    zstates_angular_momentum,       &
+    dstates_matrix,                 &
+    zstates_matrix,                 &
+    dstates_linear_combination,     &
+    zstates_linear_combination
+
+contains
+
+  ! ---------------------------------------------------------
+  ! This routine transforms the orbitals of state "st", according
+  ! to the transformation matrix "u".
+  !
+  ! Each row of u contains the coefficients of the new orbitals
+  ! in terms of the old ones.
+  ! ---------------------------------------------------------
+  subroutine rotate_states(mesh, st, stin, u)
+    type(mesh_t),      intent(in)    :: mesh
+    type(states_t),    intent(inout) :: st
+    type(states_t),    intent(in)    :: stin
+    CMPLX,             intent(in)    :: u(:, :)
+
+    integer :: ik
+
+    call push_sub('states_lalg.rotate_states')
+
+    if(st%wfs_type == M_REAL) then
+      do ik = 1, st%d%nik
+        call lalg_gemm(mesh%np_part*st%d%dim, st%nst, stin%nst, M_ONE, stin%dpsi(:, :, 1:stin%nst, ik), &
+          transpose(real(u(:, :), REAL_PRECISION)), M_ZERO, st%dpsi(:, :, :, ik))
+      end do
+    else
+      do ik = 1, st%d%nik
+        call lalg_gemm(mesh%np_part*st%d%dim, st%nst, stin%nst, M_z1, stin%zpsi(:, :, 1:stin%nst, ik), &
+          transpose(u(:, :)), M_z0, st%zpsi(:, :, :, ik))
+      end do
+    end if
+
+    call pop_sub()
+  end subroutine rotate_states
+
+  ! ---------------------------------------------------------
+  subroutine states_orthogonalize(st, m, ik_, start_)
+    type(states_t),    intent(inout) :: st
+    type(mesh_t),      intent(in)    :: m
+    integer, optional, intent(in)    :: ik_, start_
+
+    integer :: ik, ik_start, ik_end
+    integer :: start
+
+    start = 1
+    if(present(start_)) start = start_
+    if(present(ik_)) then
+      ik_start = ik_
+      ik_end   = ik_
+    else
+      ik_start = 1
+      ik_end   = st%d%nik
+    end if
+    
+    do ik = ik_start, ik_end
+      if (st%wfs_type == M_REAL) then
+        call dstates_gram_schmidt_full(st, st%nst, m, st%d%dim, st%dpsi(:,:,:,ik), start)
+      else
+        call zstates_gram_schmidt_full(st, st%nst, m, st%d%dim, st%zpsi(:,:,:,ik), start)
+      end if
+    end do
+
+  end subroutine states_orthogonalize
+
+  ! -------------------------------------------------------
+  subroutine states_degeneracy_matrix(st)
+    type(states_t), intent(in) :: st
+
+    integer :: is, js, inst, inik, dsize, iunit
+    integer, allocatable :: eindex(:,:), sindex(:)
+    integer, allocatable :: degeneracy_matrix(:, :)
+    FLOAT,   allocatable :: eigenval_sorted(:)
+    FLOAT :: degen_thres, evis, evjs
+
+    call push_sub('states_lalg.states_degeneracy_matrix')
+
+    ALLOCATE(eigenval_sorted(st%nst*st%d%nik),   st%nst*st%d%nik)
+    ALLOCATE(         sindex(st%nst*st%d%nik),   st%nst*st%d%nik)
+    ALLOCATE(      eindex(2, st%nst*st%d%nik), 2*st%nst*st%d%nik)
+    dsize = st%nst*st%d%nik * st%nst*st%d%nik
+    ALLOCATE(degeneracy_matrix(st%nst*st%d%nik, st%nst*st%d%nik), dsize)
+
+    ! convert double index "inst, inik" to single index "is"
+    ! and keep mapping array
+    is = 1
+    do inst = 1, st%nst
+      do inik = 1, st%d%nik
+        eigenval_sorted(is) = st%eigenval(inst, inik)        
+        eindex(1, is) = inst
+        eindex(2, is) = inik
+        is = is + 1
+      end do
+    end do
+
+    ! sort eigenvalues
+    call sort(eigenval_sorted, sindex)
+
+    !%Variable DegeneracyThreshold
+    !%Type float
+    !%Default 1e-5
+    !%Section States
+    !%Description
+    !% A state j with energy E_j will be considered degenerate with a state
+    !% with energy E_i, if  E_i - threshold < E_j < E_i + threshold.
+    !%End
+    call loct_parse_float(check_inp('DegeneracyThreshold'), CNST(1e-5), degen_thres)    
+
+    ! setup degeneracy matrix. the matrix summarizes the degeneracy relations 
+    ! among the states
+    degeneracy_matrix = 0
+
+    do is = 1, st%nst*st%d%nik
+      do js = 1, st%nst*st%d%nik
+
+        ! a state is always degenerate to itself
+        if ( is.eq.js ) cycle
+
+        evis = st%eigenval(eindex(1, sindex(is)), eindex(2, sindex(is)))
+        evjs = st%eigenval(eindex(1, sindex(js)), eindex(2, sindex(js)))
+
+        ! is evjs in the "evis plus minus threshold" bracket?
+        if( (evjs.gt.evis - degen_thres).and.(evjs.lt.evis + degen_thres) ) then
+          ! mark forward scattering states with +1 and backward scattering
+          ! states with -1
+          degeneracy_matrix(is, js) = &
+            sign(M_ONE, st%momentum(1, eindex(1, sindex(js)), eindex(2, sindex(js))))
+        end if
+
+      end do
+    end do
+
+    if(mpi_grp_is_root(mpi_world)) then
+
+      ! write matrix to "restart/gs" directory
+      iunit = io_open(trim(tmpdir)//'gs/degeneracy_matrix', action='write', is_tmp = .true.)
+
+      write(iunit, '(a)') '# index  kx ky kz  eigenvalue  degeneracy matrix'
+
+      do is = 1, st%nst*st%d%nik
+        write(iunit, '(i6,4e24.16,32767i3)') is, st%d%kpoints(:, eindex(2, sindex(is))), &
+          eigenval_sorted(is), (degeneracy_matrix(is, js), js = 1, st%nst*st%d%nik)
+      end do
+
+      call io_close(iunit)
+
+      ! write index vectors to "restart/gs" directory
+      iunit = io_open(trim(tmpdir)//'gs/index_vectors', action='write', is_tmp = .true.)    
+
+      write(iunit, '(a)') '# index  sindex  eindex1 eindex2'
+
+      do is = 1, st%nst*st%d%nik
+        write(iunit,'(4i6)') is, sindex(is), eindex(1, sindex(is)), eindex(2, sindex(is))
+      end do
+
+      call io_close(iunit)
+    end if
+
+    deallocate(eigenval_sorted, sindex, eindex)
+    deallocate(degeneracy_matrix)
+
+    call pop_sub()
+  end subroutine states_degeneracy_matrix
+
+#include "undef.F90"
+#include "real.F90"
+#include "states_lalg_inc.F90"
+
+#include "undef.F90"
+#include "complex.F90"
+#include "states_lalg_inc.F90"
+#include "undef.F90"
+
+end module states_lalg_m
+
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:
