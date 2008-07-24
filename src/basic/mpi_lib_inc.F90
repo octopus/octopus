@@ -23,7 +23,7 @@
 ! array in) to send to everybody alse in the group. The total
 ! number of items in the out array is given by outcount. out has
 ! to be big enough to contain all possible incoming items.
-subroutine X(lmpi_gen_alltoallv)(incount, in, outcount, out, mpi_grp)
+subroutine X(lmpi_gen_allgatherv)(incount, in, outcount, out, mpi_grp)
   integer,         intent(in)  :: incount
   R_TYPE,          intent(in)  :: in(:)
   integer,         intent(out) :: outcount
@@ -33,7 +33,7 @@ subroutine X(lmpi_gen_alltoallv)(incount, in, outcount, out, mpi_grp)
   integer              :: mpi_err, i
   integer, allocatable :: rdispls(:), recvbuf(:), recvcnts(:)
 
-  call push_sub('mpi_lib_inc.Xlmpi_gen_alltoallv')
+  call push_sub('mpi_lib_inc.Xlmpi_gen_allgatherv')
 
   ALLOCATE(rdispls(mpi_grp%size), mpi_grp%size)
   ALLOCATE(recvbuf(mpi_grp%size), mpi_grp%size)
@@ -64,7 +64,7 @@ subroutine X(lmpi_gen_alltoallv)(incount, in, outcount, out, mpi_grp)
   deallocate(rdispls, recvbuf, recvcnts)
 
   call pop_sub()
-end subroutine X(lmpi_gen_alltoallv)
+end subroutine X(lmpi_gen_allgatherv)
 
 
 !! Local Variables:

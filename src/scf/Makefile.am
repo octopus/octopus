@@ -22,8 +22,8 @@
 noinst_LIBRARIES = libscf.a
 
 libscf_a_SOURCES = \
-	subspace.F90     \
-	eigen_cg.F90     \
+	subspace.F90 \
+	eigen_cg.F90 \
 	eigen_lobpcg.F90 \
 	eigen_rmmdiis.F90 \
         eigen.F90 \

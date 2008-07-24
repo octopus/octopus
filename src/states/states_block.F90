@@ -41,13 +41,34 @@ module states_block_m
   private
 
   public ::                    &
+!    states_block_t,            &
     states_blockt_mul,         &
     states_block_matr_mul_add, &
     states_block_matr_mul
 
+
 #if defined(HAVE_MPI)
   public :: states_gather
 #endif
+
+!   ! This type encapsulates an array of wavefunctions with numbers
+!   ! st_start to st_end. It is used to pass arrays of states around
+!   ! between subroutines because array in types do not get their
+!   ! index boundaries reset. In the bottom line, this avoids the need to
+!   ! pass array boundaries as additional arguments.
+!   ! The fields st_start, st_end, and nst are for convenience, the following
+!   ! equalities should hold:
+!   !   lbound(stb, 3)    = st_start
+!   !   ubound(stb, 3)    = st_end
+!   !   st_end-st_start+1 = nst
+!   ! with stb of type(states_block_t).
+!   type states_block_t
+!     integer        :: st_start
+!     integer        :: st_end
+!     integer        :: nst
+!     FLOAT, pointer :: dpsi(:, :, :) ! dpsi(NP_PART, DIM, st_start:st_end)
+!     CMPLX, pointer :: zpsi(:, :, :) ! zpsi(NP_PART, DIM, st_start:st_end)
+!   end type states_block_t
 
   interface states_blockt_mul
     module procedure dstates_blockt_mul, zstates_blockt_mul
@@ -60,6 +81,10 @@ module states_block_m
   interface states_block_matr_mul_add
     module procedure dstates_block_matr_mul_add, zstates_block_matr_mul_add
   end interface
+
+!   interface states_block_wrap
+!     module procedure dstates_block_wrap, zstates_block_wrap
+!   end interface
 
 #if defined(HAVE_MPI)
   interface states_gather

@@ -74,6 +74,10 @@ module eigen_solver_m
 
     ! Stores information about the preconditioning.
     type(preconditioner_t) :: pre
+
+    ! If a block solver is used this is the desired block size
+    ! (per node if running parallel in states).
+    integer :: block_size
   end type eigen_solver_t
 
 
@@ -142,6 +146,35 @@ contains
     !% If enabled the eigensolver prints additional information.
     !%End
     call loct_parse_logical(check_inp('EigenSolverVerbose'), .false., eigens%verbose)
+
+    !%Variable EigenSolverBlockSize
+    !%Type integer
+    !%Default 4
+    !%Section SCF::EigenSolver
+    !%Description
+    !% If a block eigenvalue solver is used (currently only the LOBPCG is available)
+    !% this variable gives the number of eigenvectors that are iterated simultaneously.
+    !% If the calculation is parallel in states, each node iterates EigenSolverBlockSize
+    !% vectors, i. e. in that case the effective block size is the product of this
+    !% variable and the number of nodes in the states parallelization group.
+    !%End
+    call loct_parse_int(check_inp('EigenSolverBlockSize'), -1, eigens%block_size)
+    if(eigens%block_size.ne.-1) then
+      select case(eigens%es_type)
+      case(RS_LOBPCG)
+      case default
+        message(1) = "You are not using a block eigensolver. The variable"
+        message(2) = "'EigenSolverBlockSize' will be ignored."
+        call write_warning(2)
+        eigens%block_size = 1
+      end select
+    else
+      eigens%block_size = 4
+    end if
+    if(eigens%block_size.lt.1) then
+      message(1) = "The variable 'EigenSolverBlockSize' must be greater than 0."
+      call write_fatal(1)
+    end if
     
     select case(eigens%es_type)
     case(RS_CG_NEW)
@@ -287,17 +320,8 @@ contains
         call deigen_solver_evolution(gr, st, h, tol, maxiter, eigens%converged, eigens%diff, &
              tau = eigens%imag_time)
       case(RS_LOBPCG)
-        if(conf%devel_version) then
-          call deigen_solver_lobpcg(gr, st, h, eigens%pre, tol, maxiter, eigens%converged, &
-            eigens%diff, verbose = verbose_)
-        else
-          message(1) = 'LOBPCG is still under development. Put'
-          message(2) = ''
-          message(3) = '  DevelVersion = yes'
-          message(4) = ''
-          message(5) = 'in your input file if you really want to use it. Be warned.'
-          call write_fatal(5)
-        end if
+        call deigen_solver_lobpcg(gr, st, h, eigens%pre, tol, maxiter, eigens%converged, &
+          eigens%diff, eigens%block_size, verbose = verbose_)
       case(RS_MG)
         call deigen_solver_mg(gr, st, h, tol, maxiter, eigens%converged, eigens%diff, verbose = verbose_)
       case(RS_RMMDIIS)
@@ -320,17 +344,8 @@ contains
         call zeigen_solver_evolution(gr, st, h, tol, maxiter, eigens%converged, eigens%diff, &
              tau = eigens%imag_time)
       case(RS_LOBPCG)
-        if(conf%devel_version) then
-          call zeigen_solver_lobpcg(gr, st, h, eigens%pre, tol, maxiter, eigens%converged, &
-            eigens%diff, verbose = verbose_)
-        else
-          message(1) = 'LOBPCG is still under development. Put'
-          message(2) = ''
-          message(3) = '  DevelVersion = yes'
-          message(4) = ''
-          message(5) = 'in your input file if you really want to use it. Be warned.'
-          call write_fatal(5)
-        end if
+       call zeigen_solver_lobpcg(gr, st, h, eigens%pre, tol, maxiter, eigens%converged, &
+         eigens%diff, eigens%block_size, verbose = verbose_)
       case(RS_MG)
         call zeigen_solver_mg(gr, st, h, tol, maxiter, eigens%converged, eigens%diff, verbose = verbose_)
       case(RS_RMMDIIS)

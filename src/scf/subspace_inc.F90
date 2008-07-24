@@ -126,7 +126,8 @@ subroutine X(subspace_diag_par_states)(gr, st, h, diff)
     do i = st%st_start, st%st_end
       call X(hpsi)(h, gr, st%X(psi)(:, :, i, ik), f(:, :, i), i, ik)
     end do
-    call states_blockt_mul(gr%m, st, st%X(psi)(:, :, :, ik), f, h_subspace, symm=.true.)
+    call states_blockt_mul(gr%m, st, st%st_start, st%st_end, st%st_start, st%st_end, &
+      st%X(psi)(:, :, :, ik), f, h_subspace, symm=.true.)
     
     ! Diagonalize the hamiltonian in the subspace.
     call lalg_eigensolve(st%nst, h_subspace, vec, st%eigenval(:, ik))
@@ -136,7 +137,8 @@ subroutine X(subspace_diag_par_states)(gr, st, h, diff)
     f(1:NP, 1:st%d%dim, st%st_start:st%st_end) = st%X(psi)(1:NP, 1:st%d%dim, st%st_start:st%st_end, ik)
     !$omp end parallel workshare
 
-    call states_block_matr_mul(gr%m, st, f, vec, st%X(psi)(:, :, :, ik))
+    call states_block_matr_mul(gr%m, st, st%st_start, st%st_end, st%st_start, st%st_end, &
+      f, vec, st%X(psi)(:, :, :, ik))
 
     ! Renormalize.
     do i = st%st_start, st%st_end
@@ -157,7 +159,7 @@ subroutine X(subspace_diag_par_states)(gr, st, h, diff)
 #if defined(HAVE_MPI)
       if(st%parallel_in_states) then
         ldiff = diff(st%st_start:st%st_end, ik)
-        call lmpi_gen_alltoallv(st%lnst, ldiff, tmp, diff(:, ik), st%mpi_grp)
+        call lmpi_gen_allgatherv(st%lnst, ldiff, tmp, diff(:, ik), st%mpi_grp)
       end if
 #endif
     end if

@@ -23,6 +23,7 @@ module eigen_lobpcg_m
   use global_m
   use grid_m
   use hamiltonian_m
+  use iihash_m
   use io_m
   use lalg_basic_m
   use lalg_adv_m

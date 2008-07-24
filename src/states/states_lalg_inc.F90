@@ -375,7 +375,7 @@ subroutine X(states_calc_momentum)(gr, st)
     if(st%parallel_in_states) then
       do i = 1, NDIM
         lmomentum(1:st%lnst) = st%momentum(i, st%st_start:st%st_end, ik)
-        call lmpi_gen_alltoallv(st%lnst, lmomentum, tmp, gmomentum, st%mpi_grp)
+        call lmpi_gen_allgatherv(st%lnst, lmomentum, tmp, gmomentum, st%mpi_grp)
         st%momentum(i, 1:st%nst, ik) = gmomentum(1:st%nst)
       end do
     end if

@@ -32,12 +32,12 @@ module mpi_lib_m
   private
 
 #if defined(HAVE_MPI)
-  public ::             &
-    lmpi_gen_alltoallv, &
+  public ::              &
+    lmpi_gen_allgatherv, &
     lmpi_translate_rank
 
-  interface lmpi_gen_alltoallv
-    module procedure dlmpi_gen_alltoallv, zlmpi_gen_alltoallv, ilmpi_gen_alltoallv
+  interface lmpi_gen_allgatherv
+    module procedure dlmpi_gen_allgatherv, zlmpi_gen_allgatherv, ilmpi_gen_allgatherv
   end interface
 #endif
 

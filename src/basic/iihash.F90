@@ -54,7 +54,7 @@ contains
   ! Initialize a hash table h with size entries. Since we use separate
   ! chaining, the number of entries in the hash table is, in
   ! principle, unlimited. We take the smallest prime number as table
-  ! size that is greater or equal then the requested size to reduce
+  ! size that is greater or equal than the requested size to reduce
   ! collisions.
   subroutine iihash_init(h, size)
     type(iihash_t), intent(out) :: h

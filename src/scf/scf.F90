@@ -780,10 +780,10 @@ contains
         if(st%parallel_in_states) then
           do j = 1, 3
             lang = ang(st%st_start:st%st_end, ik, j)
-            call lmpi_gen_alltoallv(st%lnst, lang, tmp, ang(:, ik, j), st%mpi_grp)
+            call lmpi_gen_allgatherv(st%lnst, lang, tmp, ang(:, ik, j), st%mpi_grp)
           end do
           lang = ang2(st%st_start:st%st_end, ik)
-          call lmpi_gen_alltoallv(st%lnst, lang, tmp, ang2(:, ik), st%mpi_grp)
+          call lmpi_gen_allgatherv(st%lnst, lang, tmp, ang2(:, ik), st%mpi_grp)
         end if
 #endif
         write(message(1), '(a4,1x,a5,4a12,4x,a12,1x)')       &

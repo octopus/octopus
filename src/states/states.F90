@@ -1337,7 +1337,7 @@ contains
           ALLOCATE(lspin(3, st%lnst), 3*st%lnst)
           lspin = st%spin(1:3, st%st_start:st%st_end, ik)
           do j = 1, 3
-            call lmpi_gen_alltoallv(st%lnst, lspin(j, :), tmp, st%spin(j, :, ik), st%mpi_grp)
+            call lmpi_gen_allgatherv(st%lnst, lspin(j, :), tmp, st%spin(j, :, ik), st%mpi_grp)
           end do
           deallocate(lspin)
         end if
