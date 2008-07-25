@@ -36,13 +36,16 @@ module kdotp_calc_m
   implicit none
 
   private
-  public ::                       &
-    zlr_calc_eff_mass_inv,        &  
-    kdotp_wfs_tag,                &
+  public ::                        &
+    zcalc_eff_mass_inv,            &  
+    zcalc_dipole_periodic,         &
+    zcalc_polarizability_periodic, &
+    kdotp_wfs_tag,                 &
     kdotp_rho_tag
 
 contains
 
+! ---------------------------------------------------------
   character(len=100) function kdotp_rho_tag(dir) result(str)
     integer, intent(in) :: dir
 
@@ -54,6 +57,8 @@ contains
 
   end function kdotp_rho_tag
   
+
+! ---------------------------------------------------------
   character(len=100) function kdotp_wfs_tag(dir) result(str)
     integer, intent(in) :: dir 
 
@@ -67,7 +72,100 @@ contains
 
 #include "complex.F90"
 
-subroutine zlr_calc_eff_mass_inv(sys, h, lr, perturbation, eff_mass_inv, &
+
+! ---------------------------------------------------------
+subroutine zcalc_dipole_periodic(sys, lr, dipole)
+  type(system_t),         intent(inout) :: sys
+  type(lr_t),             intent(in)    :: lr(:,:)
+  FLOAT,                  intent(out)   :: dipole(:)
+
+  integer idir, ist, ik
+  type(mesh_t), pointer :: m
+  CMPLX :: term, moment
+  m => sys%gr%m
+
+  ! mu_i = sum(m occ, k) <u_mk(0)|(-id/dk_i|u_mk(0)>)
+  !      = Im sum(m occ, k) <u_mk(0)|(d/dk_i|u_mk(0)>)
+  ! Smearing is not implemented here yet
+
+  call push_sub('kdotp_calc.zcalc_dipole_periodic')
+
+  do idir = 1, sys%gr%sb%dim
+    moment = M_ZERO
+
+    do ik = 1, sys%st%d%nik
+      term = M_ZERO
+
+      do ist = 1, sys%st%nst
+        term = term + zmf_dotp(m, sys%st%zpsi(1:m%np, 1, ist, ik), lr(idir, 1)%zdl_psi(1:m%np, 1, ist, ik))       
+      enddo
+
+      moment = moment + term * M_HALF * sys%st%d%kweights(ik) * sys%st%smear%el_per_state
+    enddo
+
+    dipole(idir) = aimag(moment)
+  enddo
+
+  call pop_sub()
+
+end subroutine
+
+
+! ---------------------------------------------------------
+subroutine zcalc_polarizability_periodic(sys, em_lr, kdotp_lr, nsigma, zpol, ndir)
+  type(system_t),         intent(inout) :: sys
+  type(lr_t),             intent(inout) :: em_lr(:,:)
+  type(lr_t),             intent(inout) :: kdotp_lr(:)
+  integer,                intent(in)    :: nsigma
+  CMPLX,                  intent(out)   :: zpol(1:MAX_DIM, 1:MAX_DIM)
+  integer, optional,      intent(in)    :: ndir
+
+  integer :: dir1, dir2, ndir_, ist, ik
+  CMPLX :: term
+  type(mesh_t), pointer :: m
+  m => sys%gr%m
+
+  call push_sub('kdotp_calc.zcalc_polarizability_periodic')
+
+  ndir_ = sys%NDIM
+  if(present(ndir)) ndir_ = ndir
+
+  ! alpha_ij(w) = sum(m occ, k) [(<u_mk(0)|id/dk_i)|u_mkj(1)(w)> + <u_mkj(1)(-w)|(-id/dk_i|u_mk(0)>)]
+  ! Smearing is not implemented here yet
+  ! Where does the minus sign in finite version come from????
+
+  do dir1 = 1, ndir_
+    do dir2 = 1, sys%gr%sb%dim
+
+      zpol(dir1, dir2) = M_ZERO
+
+      do ik = 1, sys%st%d%nik
+        term = M_ZERO
+        do ist = 1, sys%st%nst
+          term = term - M_zI * zmf_dotp(m, kdotp_lr(dir1)%zdl_psi(1:m%np, 1, ist, ik), &
+            em_lr(dir2, 1)%zdl_psi(1:m%np, 1, ist, ik))
+
+          if(nsigma == 1) then
+             term = term + conjg(zpol(dir1, dir2))
+          else
+             term = term + M_zI * zmf_dotp(m, em_lr(dir2, 2)%zdl_psi(1:m%np, 1, ist, ik), & 
+               kdotp_lr(dir1)%zdl_psi(1:m%np, 1, ist, ik))
+          end if
+        enddo
+
+        zpol(dir1, dir2) = zpol(dir1, dir2) + &
+          term * M_HALF * sys%st%d%kweights(ik) * sys%st%smear%el_per_state
+      enddo
+    enddo
+  enddo
+
+  call pop_sub()
+
+end subroutine zcalc_polarizability_periodic
+
+
+! ---------------------------------------------------------
+subroutine zcalc_eff_mass_inv(sys, h, lr, perturbation, eff_mass_inv, &
   occ_solution_method, degen_thres)
   type(system_t),         intent(inout) :: sys
   type(hamiltonian_t),    intent(in)    :: h
@@ -89,6 +187,8 @@ subroutine zlr_calc_eff_mass_inv(sys, h, lr, perturbation, eff_mass_inv, &
   type(mesh_t), pointer :: m
   logical, allocatable  :: orth_mask(:)
 
+  call push_sub('kdotp_calc.zcalc_eff_mass_inv')
+
   m => sys%gr%m
 
   ALLOCATE(pertpsi(sys%gr%sb%dim, m%np), sys%gr%sb%dim * m%np)
@@ -104,7 +204,7 @@ subroutine zlr_calc_eff_mass_inv(sys, h, lr, perturbation, eff_mass_inv, &
       do idir1 = 1, sys%gr%sb%dim
         call pert_setup_dir(perturbation, idir1)
         call zpert_apply (perturbation, sys%gr, sys%geo, h, ik, &
-          sys%st%zpsi(:, 1, ist, ik), pertpsi(idir1,:))
+          sys%st%zpsi(1:m%np, 1, ist, ik), pertpsi(idir1, 1:m%np))
       enddo
 
       do idir1 = 1, sys%gr%sb%dim
@@ -126,7 +226,7 @@ subroutine zlr_calc_eff_mass_inv(sys, h, lr, perturbation, eff_mass_inv, &
 !              alternate direct method
 !              if (abs(sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik)) < degen_thres) then
 !                   proj_dl_psi(1:m%np) = proj_dl_psi(1:m%np) - sys%st%zpsi(1:m%np, 1, ist2, ik) * &
-!                     zmf_integrate(m, sys%st%zpsi(1:m%np, 1, ist2, ik) * proj_dl_psi(1:m%np))
+!                     zmf_dotp(m, sys%st%zpsi(1:m%np, 1, ist2, ik), proj_dl_psi(1:m%np))
 
               orth_mask(ist2) = .not. (abs(sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik)) < degen_thres)
               ! mask == .false. means do projection; .true. means do not
@@ -140,7 +240,7 @@ subroutine zlr_calc_eff_mass_inv(sys, h, lr, perturbation, eff_mass_inv, &
           endif
 
           ! contribution from Sternheimer equation
-          term = zmf_integrate(m, proj_dl_psi(1:m%np, 1) * conjg(pertpsi(idir1, 1:m%np)))
+          term = zmf_dotp(m, proj_dl_psi(1:m%np, 1), conjg(pertpsi(idir1, 1:m%np)))
           eff_mass_inv(ik, ist, idir1, idir2) = eff_mass_inv(ik, ist, idir1, idir2) + M_TWO * term
 !          write(*,*) "unocc: ", eff_mass_inv(ik, ist, idir1, idir2)
 
@@ -150,8 +250,8 @@ subroutine zlr_calc_eff_mass_inv(sys, h, lr, perturbation, eff_mass_inv, &
           !   conjugate as the (ist2,ist) term.  same will apply to hyperpolarizability
              do ist2 = 1, sys%st%nst
                 if (ist2 == ist .or. abs(sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik)) < degen_thres) cycle
-                term = zmf_integrate(m, conjg(pertpsi(idir1, 1:m%np)) * sys%st%zpsi(1:m%np, 1, ist2, ik)) * &
-                     zmf_integrate(m, conjg(sys%st%zpsi(1:m%np, 1, ist2, ik)) * pertpsi(idir2, 1:m%np)) / &
+                term = zmf_dotp(m, conjg(pertpsi(idir1, 1:m%np)), sys%st%zpsi(1:m%np, 1, ist2, ik)) * &
+                     zmf_dotp(m, conjg(sys%st%zpsi(1:m%np, 1, ist2, ik)), pertpsi(idir2, 1:m%np)) / &
                      (sys%st%eigenval(ist, ik) - sys%st%eigenval(ist2, ik))
                 eff_mass_inv(ik, ist, idir1, idir2) = eff_mass_inv(ik, ist, idir1, idir2) + M_TWO * term
 !                write(*,'(a,i2,a,f20.6)') "occ(", ist2, "): ", eff_mass_inv(ik, ist, idir1, idir2)
@@ -164,7 +264,9 @@ subroutine zlr_calc_eff_mass_inv(sys, h, lr, perturbation, eff_mass_inv, &
     enddo !ist
   enddo !ik
 
-end subroutine zlr_calc_eff_mass_inv
+  call pop_sub()
+
+end subroutine zcalc_eff_mass_inv
   
 end module kdotp_calc_m
 

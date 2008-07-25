@@ -49,7 +49,8 @@ module io_function_m
     zinput_function,              &
     doutput_function,             &
     zoutput_function,             &
-    io_output_tensor
+    io_output_tensor,             &
+    io_output_dipole
 
   integer, parameter, public ::   &
     output_axis_x     =     1,    &
@@ -252,6 +253,25 @@ contains
   end subroutine io_output_tensor
 
 
+  ! ---------------------------------------------------------
+  subroutine io_output_dipole(iunit, dipole, ndim) 
+    integer, intent(in) :: iunit
+    FLOAT,   intent(in) :: dipole(:)
+    integer, intent(in) :: ndim
+    
+    integer :: idir
+    FLOAT, parameter :: ATOMIC_TO_DEBYE = CNST(2.5417462)
+
+    write(iunit, '(3a)') 'Dipole [', trim(units_out%length%abbrev), ']:                    [Debye]'
+    do idir = 1, ndim
+      write(iunit, '(6x,a,i1,a,es14.5,3x,2es14.5)') '<x', idir, '> = ', &
+        dipole(idir) / units_out%length%factor, dipole(idir) * ATOMIC_TO_DEBYE
+    end do
+
+  end subroutine io_output_dipole
+
+
+  ! ---------------------------------------------------------
 #include "undef.F90"
 #include "real.F90"
 #include "io_function_inc.F90"

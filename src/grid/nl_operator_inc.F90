@@ -79,7 +79,7 @@ subroutine X(nl_operator_tune)(op)
     reps = 10
 
     if(in_debug_mode) then
-      write(message(1), '(6a)') 'Info: Profiling non local operator: ', trim(op%label), ' - ', &
+      write(message(1), '(6a)') 'Info: Profiling non-local operator: ', trim(op%label), ' - ', &
         trim(type), ' - ', op_function_name(method)
       call write_info(1)
     end if
@@ -248,7 +248,7 @@ subroutine X(nl_operator_operate)(op, fi, fo, ghost_update, profile, points)
   logical :: update
 #endif
 
-  call push_sub('nl_operator.Xnl_operator_operate')
+  call push_sub('nl_operator_inc.Xnl_operator_operate')
 
   profile_ = .true. 
   if(present(profile)) profile_ = profile

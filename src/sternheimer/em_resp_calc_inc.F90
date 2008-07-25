@@ -237,7 +237,8 @@ end subroutine X(lr_calc_elf)
 
 
 ! ---------------------------------------------------------
-subroutine X(lr_calc_polarizability)(sys, h, lr, nsigma, perturbation, zpol, ndir)
+! Periodic version is in kdotp_calc.F90 since it requires d/dk wfns
+subroutine X(lr_calc_polarizability_finite)(sys, h, lr, nsigma, perturbation, zpol, ndir)
   type(system_t),         intent(inout) :: sys
   type(hamiltonian_t),    intent(inout) :: h
   type(lr_t),             intent(inout) :: lr(:,:)
@@ -248,27 +249,32 @@ subroutine X(lr_calc_polarizability)(sys, h, lr, nsigma, perturbation, zpol, ndi
 
   integer :: dir1, dir2, ndir_
 
+  call push_sub('em_resp_calc_inc.lr_calc_polarizability_finite')
+
   ndir_ = sys%NDIM
   if(present(ndir)) ndir_ = ndir
+
+  ! alpha_ij(w) = sum(m occ) [<psi_m(0)|r_i|psi_mj(1)(w)> + <psi_mj(1)(-w)|r_i|psi_m(0)>]
 
   do dir1 = 1, ndir_
     do dir2 = 1, sys%gr%sb%dim
       call pert_setup_dir(perturbation, dir1)
-!      call pert_setup_dir(perturbation, dir1, dir2)
-!      "dir2" here appears to have no effect or meaning
-      zpol(dir1, dir2) = -X(pert_expectation_value)(perturbation, sys%gr, sys%geo, h, sys%st, sys%st%X(psi), lr(dir2, 1)%X(dl_psi))
+      zpol(dir1, dir2) = -X(pert_expectation_value)(perturbation, sys%gr, sys%geo, h, &
+        sys%st, sys%st%X(psi), lr(dir2, 1)%X(dl_psi))
 
       if(nsigma == 1) then
-        ! either purely real or purely imaginary frequency
         zpol(dir1, dir2) = zpol(dir1, dir2) + R_CONJ(zpol(dir1, dir2))
       else
         zpol(dir1, dir2) = zpol(dir1, dir2) &
-            -X(pert_expectation_value)(perturbation, sys%gr, sys%geo, h, sys%st, lr(dir2, 2)%X(dl_psi), sys%st%X(psi))
+          - X(pert_expectation_value)(perturbation, sys%gr, sys%geo, h, &
+            sys%st, lr(dir2, 2)%X(dl_psi), sys%st%X(psi))
       end if
     end do
   end do
 
-end subroutine X(lr_calc_polarizability)
+  call pop_sub()
+
+end subroutine X(lr_calc_polarizability_finite)
 
 
 ! ---------------------------------------------------------
@@ -342,7 +348,7 @@ subroutine X(lr_calc_beta) (sh, sys, h, lr, dipole, beta)
   type(mesh_t),   pointer :: mesh
 
   integer :: ifreq, isigma, idim, ispin, ispin2, np, ndim, idir, ist
-  integer :: ii, jj, kk, iperm, op_sigma, idim2, ist2, ip
+  integer :: ii, jj, kk, iperm, op_sigma, idim2, ist2
   integer :: perm(1:3), u(1:3), w(1:3), ijk(1:3)
 
   integer, parameter :: ik = 1 !kpoints not supported
@@ -407,37 +413,35 @@ subroutine X(lr_calc_beta) (sh, sys, h, lr, dipole, beta)
               do ist = 1, st%nst
                 do idim = 1, st%d%dim
 
+! change here to accept tmp from arguments
                   call pert_setup_dir(dipole, u(2))
                   call X(pert_apply)  &
                     (dipole, sys%gr, sys%geo, h, ik, lr(u(3), isigma, w(3))%X(dl_psi)(:, idim, ist, ispin), tmp)
                   
-                  do ip = 1, np
-                    tmp(ip) = tmp(ip) + &
-                      R_REAL(hvar(ip, ispin, isigma, idim, u(2), w(2)))*lr(u(3), isigma, w(3))%X(dl_psi)(ip, idim, ist, ispin)
-                  end do
+                  tmp(1:np) = tmp(1:np) + R_REAL(hvar(1:np, ispin, isigma, idim, u(2), w(2))) &
+                    * lr(u(3), isigma, w(3))%X(dl_psi)(1:np, idim, ist, ispin)
 
                   beta(ii, jj, kk) = beta(ii, jj, kk) &
                     - M_HALF*st%d%kweights(ik)*st%smear%el_per_state &
-                    *X(mf_dotp)(mesh, lr(u(1), op_sigma, w(1))%X(dl_psi)(:, idim, ist, ispin), tmp)
+                    *X(mf_dotp)(mesh, lr(u(1), op_sigma, w(1))%X(dl_psi)(1:np, idim, ist, ispin), tmp(1:np))
                   
                   do ispin2 = 1, st%d%nspin
                     do ist2 = 1, st%nst
                       do idim2 = 1, st%d%dim
 
+! change here to accept tmp from arguments
                         call pert_setup_dir(dipole, u(2))
                         call X(pert_apply)(dipole, sys%gr, sys%geo, h, ik, st%X(psi)(1:np, idim, ist, ispin), tmp)
 
-                        do ip = 1, np
-                          tmp(ip) = tmp(ip) + &
-                            R_REAL(hvar(ip, ispin2, isigma, idim2, u(2), w(2)))*st%X(psi)(ip, idim, ist, ispin)
-                        end do
+                        tmp(1:np) = tmp(1:np) + &
+                            R_REAL(hvar(1:np, ispin2, isigma, idim2, u(2), w(2)))*st%X(psi)(1:np, idim, ist, ispin)
 
                         prod = X(mf_dotp)(mesh, st%X(psi)(:, idim2, ist2, ispin2), tmp)
 
                         beta(ii, jj, kk) = beta(ii, jj, kk) + & 
                           M_HALF*st%d%kweights(ik)*st%smear%el_per_state*prod*X(mf_dotp)(mesh, &
-                          lr(u(1), op_sigma, w(1))%X(dl_psi)(:, idim, ist, ispin), &
-                          lr(u(3), isigma,   w(3))%X(dl_psi)(:, idim2, ist2, ispin2))
+                          lr(u(1), op_sigma, w(1))%X(dl_psi)(1:np, idim, ist, ispin), &
+                          lr(u(3), isigma,   w(3))%X(dl_psi)(1:np, idim2, ist2, ispin2))
 
                       end do !idim2
                     end do ! ist2
@@ -449,16 +453,14 @@ subroutine X(lr_calc_beta) (sh, sys, h, lr, dipole, beta)
             end do !ispin
 
             if(sternheimer_add_fxc(sh)) then 
-              do ip = 1, np
-                hpol_density(ip) = kxc(ip, 1, 1, 1) &
-                     *sum(lr(u(1), isigma, w(1))%X(dl_rho)(ip, 1:st%d%nspin)) &
-                     *sum(lr(u(2), isigma, w(2))%X(dl_rho)(ip, 1:st%d%nspin)) &
-                     *sum(lr(u(3), isigma, w(3))%X(dl_rho)(ip, 1:st%d%nspin)) &
-                     /CNST(6.0)
-              end do
+              hpol_density(1:np) = kxc(1:np, 1, 1, 1) &
+                * sum(lr(u(1), isigma, w(1))%X(dl_rho)(1:np, 1:st%d%nspin)) &
+                * sum(lr(u(2), isigma, w(2))%X(dl_rho)(1:np, 1:st%d%nspin)) &
+                * sum(lr(u(3), isigma, w(3))%X(dl_rho)(1:np, 1:st%d%nspin)) &
+                / CNST(6.0)
             end if
 
-            beta(ii, jj, kk) = beta(ii, jj, kk) - M_HALF*X(mf_integrate)(mesh, hpol_density)
+            beta(ii, jj, kk) = beta(ii, jj, kk) - M_HALF * X(mf_integrate)(mesh, hpol_density)
 
 
           end do ! iperm

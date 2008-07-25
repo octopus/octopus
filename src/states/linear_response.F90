@@ -100,7 +100,7 @@ contains
 
     integer :: size
 
-    call push_sub('linear_response.lr_init')
+    call push_sub('linear_response.lr_allocate')
 
     size = m%np_part * st%d%dim * st%nst * st%d%nik
 
@@ -132,6 +132,8 @@ contains
   subroutine lr_dealloc(lr)
     type(lr_t), intent(inout) :: lr
 
+    call push_sub('linear_response.lr_dealloc')
+
     if(associated(lr%ddl_rho)) then
       deallocate(lr%ddl_rho)
       nullify   (lr%ddl_rho)
@@ -158,6 +160,8 @@ contains
     if(associated(lr%zdl_de)) deallocate(lr%zdl_de)
     if(associated(lr%zdl_elf)) deallocate(lr%zdl_elf)
 
+    call pop_sub()
+
   end subroutine lr_dealloc
 
   subroutine lr_copy(st, m, src, dest)
@@ -167,6 +171,8 @@ contains
     type(lr_t),     intent(inout) :: dest
 
     integer :: ik, idim, ist
+
+    call push_sub('linear_response.lr_copy')
 
     do ik = 1, st%d%nspin
       if( wfs_are_complex(st)) then
@@ -186,13 +192,17 @@ contains
           end if
         end do
       end do
-   end do
+    end do
+
+    call pop_sub()
 
   end subroutine lr_copy
 
   logical function lr_is_allocated(this) 
     type(lr_t),     intent(in) :: this
+    call push_sub('linear_response.lr_is_allocated')
     lr_is_allocated = this%is_allocated
+    call pop_sub()
   end function lr_is_allocated
 
 #include "undef.F90"

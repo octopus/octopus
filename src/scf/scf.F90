@@ -29,6 +29,7 @@ module scf_m
   use grid_m
   use hamiltonian_m
   use io_m
+  use io_function_m
   use lcao_m
   use loct_m
   use loct_parser_m
@@ -628,7 +629,6 @@ contains
       character(len=*), intent(in) :: dir, fname
 
       FLOAT :: e_dip(4, st%d%nspin), n_dip(MAX_DIM)
-      FLOAT, parameter :: ATOMIC_TO_DEBYE = CNST(2.5417462)
       integer :: iunit, i, j
 
       call push_sub('scf.scf_write_static')
@@ -683,15 +683,14 @@ contains
       n_dip(1:NDIM) = n_dip(1:NDIM) - e_dip(2:NDIM+1, 1)
 
       if(mpi_grp_is_root(mpi_world)) then
-        write(iunit, '(3a)') 'Dipole [', trim(units_out%length%abbrev), ']:                    [Debye]'
-        do j = 1, NDIM
-          write(iunit, '(6x,a,i1,a,es14.5,3x,2es14.5)') '<x', j, '> = ', n_dip(j) / units_out%length%factor, &
-            n_dip(j)*ATOMIC_TO_DEBYE
-        end do
-        write(iunit,'(a)')
+        if(simul_box_is_periodic(gr%sb)) then
+          write(iunit,'(a)') 'WARNING: Accurate calculation of dipole in periodic system requires kdotp run.'
+        endif
+
+        call io_output_dipole(iunit, n_dip, NDIM)
       end if
 
-      ! Output expecation values of the momentum operator
+      ! Output expectation values of the momentum operator
       call write_momentum(iunit)
 
       ! Next is the angular momentum. Only applies to 2D and 3D.

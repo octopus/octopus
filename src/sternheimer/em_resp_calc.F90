@@ -43,19 +43,20 @@ module em_resp_calc_m
   implicit none
 
   private
-  public ::                        &
-     lr_calc_current,              &
-     dlr_calc_elf,                 &
-     zlr_calc_elf,                 &
-     dlr_calc_polarizability,      &
-     zlr_calc_polarizability,      &
-     dlr_calc_susceptibility,      &
-     zlr_calc_susceptibility,      &
-     dlr_calc_beta,                &
-     zlr_calc_beta,                &
-     freq2str,                     &
-     em_wfs_tag,                   &
+  public ::                            &
+     lr_calc_current,                  &
+     dlr_calc_elf,                     &
+     zlr_calc_elf,                     &
+     dlr_calc_polarizability_finite,   &
+     zlr_calc_polarizability_finite,   &
+     dlr_calc_susceptibility,          &
+     zlr_calc_susceptibility,          &
+     dlr_calc_beta,                    &
+     zlr_calc_beta,                    &
+     freq2str,                         &
+     em_wfs_tag,                       &
      em_rho_tag
+  ! periodic version of polarizability in kdotp
 
   type(profile_t), save :: beta_prof
 
@@ -133,6 +134,8 @@ contains
 
   end subroutine lr_calc_current
 
+
+! ---------------------------------------------------------
   character(len=12) function freq2str(w) result(str)
     FLOAT, intent(in) :: w
 

@@ -86,8 +86,6 @@ contains
     !%Option pre_poisson 3
     !% Uses the full Laplacian as preconditioner. The inverse is calculated through
     !% the solution of the Poisson equation. This is, of course, very slow.
-    !%Option pre_i_inverse 4
-    !% Incomplete inverse
     !%End
     if (loct_parse_isdef(check_inp(trim(prefix)//'Preconditioner')) /= 0 ) then 
       call loct_parse_int(check_inp(trim(prefix)//'Preconditioner'), PRE_SMOOTHING, this%which)

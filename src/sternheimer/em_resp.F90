@@ -111,10 +111,15 @@ contains
     em_vars%nfactor = 1
     if(em_vars%calc_hyperpol) em_vars%nfactor=3
 
-    em_vars%nsigma = 1  ! positive and negative values of the frequency must be considered
-    if(em_vars%calc_hyperpol .or. (em_vars%nomega > 1) .or. (abs(em_vars%omega(1)) >= M_EPSILON) ) em_vars%nsigma = 2
     ! in effect, nsigma = 1 only if hyperpol not being calculated, and the only frequency is zero
-
+    if(em_vars%calc_hyperpol .or. (em_vars%nomega > 1) .or. (abs(em_vars%omega(1)) >= M_EPSILON) ) then
+       em_vars%nsigma = 2
+       ! positive and negative values of the frequency must be considered
+    else
+       em_vars%nsigma = 1
+       ! only considering positive values
+    endif
+    
     complex_response = (em_vars%eta /= M_ZERO ) .or. wfs_are_complex(sys%st)
 
     ALLOCATE(em_vars%lr(1:NDIM, 1:em_vars%nsigma, 1:em_vars%nfactor), NDIM*em_vars%nsigma*em_vars%nfactor)
@@ -281,10 +286,10 @@ contains
         ! calculate polarizability
         do ifactor = 1, em_vars%nfactor
           if(wfs_are_complex(sys%st)) then 
-            call zlr_calc_polarizability(sys, h, em_vars%lr(:, :, ifactor), em_vars%nsigma, &
+            call zlr_calc_polarizability_finite(sys, h, em_vars%lr(:, :, ifactor), em_vars%nsigma, &
                  em_vars%perturbation, em_vars%alpha(:, :, ifactor))
           else
-            call dlr_calc_polarizability(sys, h, em_vars%lr(:, :, ifactor), em_vars%nsigma, &
+            call dlr_calc_polarizability_finite(sys, h, em_vars%lr(:, :, ifactor), em_vars%nsigma, &
                 em_vars%perturbation, em_vars%alpha(:, :, ifactor))
           end if
         end do

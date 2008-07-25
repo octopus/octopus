@@ -70,6 +70,7 @@ module kdotp_lr_m
 
     logical :: ok                   ! is converged?
     integer :: occ_solution_method  ! how to get occupied components of response
+    integer :: initialization       ! method for initialization of wfns
     FLOAT   :: degen_thres          ! maximum energy difference to be considered
                                     ! degenerate
     FLOAT   :: eta                  ! imaginary freq. added to Sternheimer eqn.
@@ -87,14 +88,15 @@ contains
     type(kdotp_t)           :: kdotp_vars
     type(sternheimer_t)     :: sh
 
-    integer :: idir, ierr, size
+    integer :: idir, ierr, size, is, ist, ik
     character(len=100) :: dirname, str_tmp
+    FLOAT, allocatable :: dipole(:)
 
     call push_sub('kdotp.static_kdotp_lr_run')
 
     gr => sys%gr
 !    ndim = sys%gr%sb%dim
-    size = sys%st%d%nik*sys%st%nst*NDIM*NDIM
+    size = sys%st%d%nik * sys%st%nst * NDIM * NDIM
 
     ALLOCATE(kdotp_vars%eff_mass_inv(sys%st%d%nik, sys%st%nst, NDIM, NDIM), size)
     kdotp_vars%eff_mass_inv(:,:,:,:)=0  
@@ -103,6 +105,7 @@ contains
 !    call pert_init(kdotp_vars%perturbation, PERTURBATION_NONE, sys%gr, sys%geo)
 
     ALLOCATE(kdotp_vars%lr(1:NDIM, 1), NDIM)
+    ALLOCATE(dipole(1:NDIM), NDIM)
 
     call parse_input()
 
@@ -123,6 +126,19 @@ contains
     do idir = 1, NDIM
       call lr_init(kdotp_vars%lr(idir, 1))
       call lr_allocate(kdotp_vars%lr(idir, 1), sys%st, sys%gr%m)
+
+      if(fromScratch .and. kdotp_vars%initialization .eq. 1) then
+        do is = 1, sys%st%d%dim
+          do ist = 1, sys%st%nst
+            do ik = 1, sys%st%d%nik
+              kdotp_vars%lr(idir, 1)%zdl_psi(1:gr%m%np, is, ist, ik) &
+                = -M_zI * gr%m%x(1:gr%m%np, idir) * sys%st%zpsi(1:gr%m%np, is, ist, ik)
+            enddo
+          enddo
+        enddo
+      endif
+      ! this is the exact solution in the limit of no dispersion, i.e. non-interacting unit cells
+      ! |u_i(1)> = -i r_i |u(0)>
 
       ! load wave-functions
       if(.not.fromScratch) then
@@ -162,7 +178,11 @@ contains
       kdotp_vars%ok = kdotp_vars%ok .and. sternheimer_has_converged(sh)         
     end do ! idir
 
-    call zlr_calc_eff_mass_inv(sys, h, kdotp_vars%lr, kdotp_vars%perturbation, &
+    write(6, '(a)')
+    call zcalc_dipole_periodic(sys, kdotp_vars%lr, dipole(1:sys%gr%sb%dim))
+    call io_output_dipole(6, dipole, NDIM)
+
+    call zcalc_eff_mass_inv(sys, h, kdotp_vars%lr, kdotp_vars%perturbation, &
          kdotp_vars%eff_mass_inv, kdotp_vars%occ_solution_method, kdotp_vars%degen_thres)
 
     call kdotp_output(sys%st, sys%gr, kdotp_vars)
@@ -217,8 +237,24 @@ contains
       !% Imaginary frequency added to Sternheimer equation which may improve convergence.
       !%End
 
-      call loct_parse_float(check_inp('KdotPEta'), M_ZERO, kdotp_vars%eta)
+      call loct_parse_float(check_inp('KdotP_Eta'), M_ZERO, kdotp_vars%eta)
       kdotp_vars%eta = kdotp_vars%eta*units_inp%energy%factor
+
+      !%Variable KdotP_Initialization
+      !%Type integer
+      !%Default zero
+      !%Section Linear Response::KdotP
+      !%Description
+      !% Initial values assigned to linear-response wavefunctions. Only used if
+      !% FromScratch = yes, since otherwise initial values are read from restart directory.
+      !%Option zero 0
+      !% The initial values are zero.
+      !%Option nondispersive 1
+      !% The initial values are the exact solutions in the limit of no dispersion, i.e. 
+      !% non-interacting unit cells: |u_i(1)> = -i r_i |u(0)>
+      !%End
+
+      call loct_parse_int(check_inp('KdotP_Initialization'), 0, kdotp_vars%initialization)
 
    end subroutine parse_input
 
@@ -231,12 +267,20 @@ contains
       call messages_print_stress(stdout, trim(message(1)))
 
       if (kdotp_vars%occ_solution_method == 0) then
-          message(1) = 'Occupied solution method: Sternheimer equation'
+        message(1) = 'Occupied solution method: Sternheimer equation'
       else
-          message(1) = 'Occupied solution method: sum over states'
+        message(1) = 'Occupied solution method: sum over states'
       endif
 
-      call write_info(1)
+      if (.not. fromScratch) then
+        message(2) = 'KdotP initialization: restart wavefunctions'
+      else if (kdotp_vars%initialization == 0) then
+        message(2) = 'KdotP initialization: zero'
+      else
+        message(2) = 'KdotP initialization: non-dispersive solutions'
+      endif
+
+      call write_info(2)
 
       call messages_print_stress(stdout)
 

@@ -244,7 +244,7 @@ subroutine X(f_multipoles) (mesh, ff, lmax, multipole)
   FLOAT   :: x(MAX_DIM), r, ylm
   R_TYPE, allocatable :: ff2(:)
 
-  call push_sub('states.states_calculate_multipoles')
+  call push_sub('f_inc.Xf_multipoles')
 
   ALLOCATE(ff2(mesh%np), mesh%np)
 

@@ -232,9 +232,7 @@ subroutine X(derivatives_oper)(op, der, f, opf, ghost_update, set_bc)
   logical, optional,   intent(in)    :: set_bc
 
   type(der_handle_t) :: handle
-#ifdef HAVE_MPI
   logical :: ghost_update_
-#endif
 
   call push_sub('derivatives_inc.Xderivatives_oper')
   
@@ -245,10 +243,10 @@ subroutine X(derivatives_oper)(op, der, f, opf, ghost_update, set_bc)
 
   if (.not. present(set_bc) .or. set_bc) call X(set_bc)(der, handle%X(f))
 
-#ifdef HAVE_MPI
   ghost_update_ = .true.
   if(present(ghost_update)) ghost_update_ = ghost_update
 
+#ifdef HAVE_MPI
   if(der%overlap .and. der%m%parallel_in_domains .and. ghost_update_) then
 
     call X(vec_ighost_update)(der%m%vp, handle%X(f), handle%pv_h)
@@ -262,7 +260,7 @@ subroutine X(derivatives_oper)(op, der, f, opf, ghost_update, set_bc)
   else
 #endif
 
-    call X(nl_operator_operate) (op, handle%X(f), opf, ghost_update = ghost_update)
+    call X(nl_operator_operate) (op, handle%X(f), opf, ghost_update = ghost_update_)
 
 #ifdef HAVE_MPI
   end if

@@ -94,9 +94,16 @@ subroutine X(sternheimer_solve)(                           &
   !self-consistency iteration for response
   iter_loop: do iter = 1, this%scftol%max_iter
 
-    write(message(1), '(a, i3)') "LR SCF Iteration: ", iter
-    write(message(2), '(a, f20.6, a, f20.6, a, i1)') &
+    if (this%add_fxc .or. this%add_hartree) then
+       write(message(1), '(a, i3)') "LR SCF Iteration: ", iter
+       call write_info(1)
+    endif
+    ! otherwise it is not actually SCF, and there can only be one pass through
+
+    write(message(1), '(a, f20.6, a, f20.6, a, i1)') &
          "Frequency: ", R_REAL(omega), " Eta : ", R_AIMAG(omega)
+    write(message(2), '(a)') &
+         '   ik  ist                norm   iters            residual'
     call write_info(2)
 
     dl_rhoin(1:m%np, 1:st%d%nspin, 1) = lr(1)%X(dl_rho)(1:m%np, 1:st%d%nspin)
@@ -146,8 +153,8 @@ subroutine X(sternheimer_solve)(                           &
           ! iterations and residual of the linear solver
           dpsimod = X(mf_nrm2)(m, st%d%dim, lr(sigma)%X(dl_psi)(1:m%np, 1:st%d%dim, ist, ik))
 
-          write(message(1), '(i4, f20.6, i5, e20.6)') &
-            (3 - 2 * sigma) * ist, dpsimod, this%solver%iter, this%solver%abs_psi 
+          write(message(1), '(i5, i5, f20.6, i8, e20.6)') &
+            ik, (3 - 2 * sigma) * ist, dpsimod, this%solver%iter, this%solver%abs_psi 
           call write_info(1)
 
           states_conv = states_conv .and. (this%solver%abs_psi < this%solver%tol)

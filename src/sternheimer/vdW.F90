@@ -60,7 +60,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine vdw_run(sys, h, fromScratch)
-    type(system_t),          intent(inout) :: sys
+    type(system_t),         intent(inout) :: sys
     type(hamiltonian_t),    intent(inout) :: h
     logical,                intent(inout) :: fromScratch
 
@@ -250,7 +250,7 @@ contains
              RESTART_DIR, em_rho_tag(real(omega),dir), em_wfs_tag(dir,1))
       end do
 
-      call zlr_calc_polarizability(sys, h, lr(:,:), 1, perturbation, alpha(:,:), ndir)
+      call zlr_calc_polarizability_finite(sys, h, lr(:,:), 1, perturbation, alpha(:,:), ndir)
 
       get_pol = M_ZERO
       do dir = 1, ndir
