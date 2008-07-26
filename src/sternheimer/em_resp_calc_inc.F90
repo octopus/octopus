@@ -348,7 +348,7 @@ subroutine X(lr_calc_beta) (sh, sys, h, lr, dipole, beta)
   type(mesh_t),   pointer :: mesh
 
   integer :: ifreq, isigma, idim, ispin, ispin2, np, ndim, idir, ist
-  integer :: ii, jj, kk, iperm, op_sigma, idim2, ist2
+  integer :: ii, jj, kk, iperm, op_sigma, idim2, ist2, ip
   integer :: perm(1:3), u(1:3), w(1:3), ijk(1:3)
 
   integer, parameter :: ik = 1 !kpoints not supported
@@ -453,11 +453,13 @@ subroutine X(lr_calc_beta) (sh, sys, h, lr, dipole, beta)
             end do !ispin
 
             if(sternheimer_add_fxc(sh)) then 
-              hpol_density(1:np) = kxc(1:np, 1, 1, 1) &
-                * sum(lr(u(1), isigma, w(1))%X(dl_rho)(1:np, 1:st%d%nspin)) &
-                * sum(lr(u(2), isigma, w(2))%X(dl_rho)(1:np, 1:st%d%nspin)) &
-                * sum(lr(u(3), isigma, w(3))%X(dl_rho)(1:np, 1:st%d%nspin)) &
-                / CNST(6.0)
+              do ip = 1, np 
+                hpol_density(ip) = kxc(ip, 1, 1, 1) & 
+                  *sum(lr(u(1), isigma, w(1))%X(dl_rho)(ip, 1:st%d%nspin)) & 
+                  *sum(lr(u(2), isigma, w(2))%X(dl_rho)(ip, 1:st%d%nspin)) & 
+                  *sum(lr(u(3), isigma, w(3))%X(dl_rho)(ip, 1:st%d%nspin)) & 
+                  /CNST(6.0) 
+              end do
             end if
 
             beta(ii, jj, kk) = beta(ii, jj, kk) - M_HALF * X(mf_integrate)(mesh, hpol_density)
