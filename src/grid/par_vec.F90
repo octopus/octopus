@@ -106,9 +106,6 @@ module par_vec_m
     integer          :: rank                 ! Our rank in the communicator.
     integer          :: partno               ! Partition number of the
                                              ! current node
-    integer          :: nnb                  ! Number of processes we
-                                             ! have to send and recv
-
     integer, pointer :: isend_type(:)        ! The datatypes to send
     integer, pointer :: dsend_type(:)        ! ghost points
     integer, pointer :: zsend_type(:)
@@ -155,8 +152,8 @@ module par_vec_m
     type(c_ptr) :: nbc_h
 #else
     integer          :: nnb
-    integer, pointer :: requests(:, :)
-    integer, pointer :: status(:, :, :)
+    integer, pointer :: requests(:)
+    integer, pointer :: status(:, :)
 #endif
     integer, pointer :: ighost_send(:)
     FLOAT,   pointer :: dghost_send(:)
@@ -479,7 +476,6 @@ contains
       ALLOCATE(vp%dsend_type(1:vp%p), vp%p)
       ALLOCATE(vp%zsend_type(1:vp%p), vp%p)
 
-      vp%nnb = 0
       ! Iterate over all possible receivers.
       do ipart = 1, vp%p
         total = vp%np_ghost_neigh(ipart, vp%partno)
@@ -512,7 +508,6 @@ contains
 
         deallocate(blocklengths, displacements, offsets)
         
-        vp%nnb = vp%nnb + 1
       end do
 
       ! Send and receive displacements.
@@ -637,9 +632,8 @@ contains
 #if defined(HAVE_LIBNBC)
     call NBCF_Newhandle(this%nbc_h)
 #else
-    this%nnb = vp%nnb
-    ALLOCATE(this%requests(1:this%nnb, 1:2), this%nnb*2)
-    ALLOCATE(this%status(MPI_STATUS_SIZE, 1:this%nnb, 1:2), this%nnb*2)
+    ALLOCATE(this%requests(1:vp%p*2), vp%p*2)
+    ALLOCATE(this%status(MPI_STATUS_SIZE, 1:vp%p*2), vp%p*2)
 #endif
     nullify(this%ighost_send, this%dghost_send, this%zghost_send)
   end subroutine pv_handle_init
@@ -669,7 +663,7 @@ contains
 #if defined(HAVE_LIBNBC)
     call NBCF_Wait(this%nbc_h, mpi_err)
 #else
-    call MPI_Waitall(this%nnb*2, this%requests(1,1), this%status(1, 1, 1), mpi_err)
+    call MPI_Waitall(this%nnb, this%requests, this%status, mpi_err)
 #endif
     if(associated(this%ighost_send)) then
       deallocate(this%ighost_send)

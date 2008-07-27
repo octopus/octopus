@@ -289,7 +289,7 @@ subroutine X(vec_ighost_update)(vp, v_local, handle)
   type(pv_handle_t),  intent(inout)  :: handle
 
 #ifndef HAVE_LIBNBC
-  integer :: ipart, pos, inb
+  integer :: ipart, pos
 #endif
 
   call profiling_in(C_PROFILING_GHOST_UPDATE)
@@ -309,29 +309,24 @@ subroutine X(vec_ighost_update)(vp, v_local, handle)
 #else
   ! use a series of p2p non-blocking calls
 
-  inb = 1
+  handle%nnb = 0
   do ipart = 1, vp%p
-
     if(vp%np_ghost_neigh(ipart, vp%partno) == 0) cycle
 
+    handle%nnb = handle%nnb + 1
     call MPI_Isend(v_local(1), 1, vp%X(send_type)(ipart), ipart - 1, 0, &
-         vp%comm, handle%requests(inb, SEND), mpi_err)
-
-    inb = inb + 1
+         vp%comm, handle%requests(handle%nnb), mpi_err)
+    
   end do
 
-  inb = 1
   do ipart = 1, vp%p
-    if(vp%np_ghost_neigh(ipart, vp%partno) == 0) cycle
+    if(vp%np_ghost_neigh(vp%partno, ipart) == 0) cycle
 
+    handle%nnb = handle%nnb + 1
     pos = vp%np_local(vp%partno) + 1 + vp%rdispls(ipart)
     call MPI_Irecv(v_local(pos), vp%rcounts(ipart), R_MPITYPE, ipart - 1, 0, &
-         vp%comm, handle%requests(inb, RECV), mpi_err)
-
-    inb = inb + 1
+         vp%comm, handle%requests(handle%nnb), mpi_err)
   end do
-
-  ASSERT(inb == vp%nnb + 1)
 
 #endif
 
