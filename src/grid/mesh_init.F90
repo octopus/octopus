@@ -351,7 +351,7 @@ contains
     mesh%mpi_grp = mpi_grp
 
     ALLOCATE(part(mesh%np_part_global), mesh%np_part_global)
-    call mesh_partition(mesh, part)
+    call mesh_partition(mesh, stencil, np_stencil, part)
     call vec_init(mesh%mpi_grp%comm, 0, part, mesh%np_global, mesh%np_part_global,  &
       mesh%nr, mesh%Lxyz_inv, mesh%Lxyz, stencil, np_stencil, mesh%sb%dim, mesh%vp)
     deallocate(part)
@@ -710,9 +710,11 @@ end subroutine mesh_init_stage_3
 ! inner mesh and the enlargement. All other entries have to
 ! be zero. comm is used to get the number of partitions.
 ! ---------------------------------------------------------------
-subroutine mesh_partition(m, part)
+subroutine mesh_partition(m, stencil, np_stencil, part)
   type(mesh_t), intent(in)  :: m
-  integer,         intent(out) :: part(:)
+  integer,      intent(in)  :: stencil(:, :)
+  integer,      intent(in)  :: np_stencil
+  integer,      intent(out) :: part(:)
 
   integer              :: i, j           ! Counter.
   integer              :: ix, iy, iz     ! Counters to iterate over grid.
@@ -733,19 +735,21 @@ subroutine mesh_partition(m, part)
   integer              :: options(5)     ! Options to METIS.
   integer              :: iunit          ! For debug output to files.
   character(len=3)     :: filenum
+  integer, allocatable :: votes(:, :)
+  integer :: ip, rr
 
   call push_sub('mesh_init.mesh_partition')
 
   options = (/1, 2, 1, 1, 0/) ! Use heavy edge matching in METIS.
 
   ! Shortcut (number of vertices).
-  nv = m%np_part_global
+  nv = m%np_global
 
   ! Get space for partitioning.
   part = 1
 
-  ALLOCATE(xadj(m%np_part_global+1), m%np_part_global+1)
-  ALLOCATE(adjncy(2*m%sb%dim*m%np_part_global), 2*m%sb%dim*m%np_part_global)
+  ALLOCATE(xadj(nv + 1), nv + 1)
+  ALLOCATE(adjncy(2*m%sb%dim*nv), 2*m%sb%dim*nv)
 
   ! Get number of partitions.
   call MPI_Comm_Size(m%mpi_grp%comm, p, mpi_err)
@@ -778,28 +782,30 @@ subroutine mesh_partition(m, part)
     do j = 1, 2*m%sb%dim
       ! Store coordinates of possible neighbors, they
       ! are needed several times in the check below.
-      jx = ix+d(1, j)
-      jy = iy+d(2, j)
-      jz = iz+d(3, j)
+      jx = ix + d(1, j)
+      jy = iy + d(2, j)
+      jz = iz + d(3, j)
       ! Only if the neighbour is in the surrounding box,
       ! Lxyz_tmp has an entry for this point, otherweise
       ! it is out of bounds.
-      if(jx.ge.m%nr(1, 1).and.jx.le.m%nr(2, 1).and.  &
-        jy.ge.m%nr(1, 2).and.jy.le.m%nr(2, 2).and.  &
-        jz.ge.m%nr(1, 3).and.jz.le.m%nr(2, 3)) then
+      if(&
+           jx >= m%nr(1, 1) .and. jx <= m%nr(2, 1) .and.  &
+           jy >= m%nr(1, 2) .and. jy <= m%nr(2, 2) .and.  &
+           jz >= m%nr(1, 3) .and. jz <= m%nr(2, 3)        &
+        ) then
         ! Only points inside the mesh or its enlargement
         ! are included in the graph.
-        if(m%Lxyz_tmp(jx, jy, jz).ne.0) then
+        if(m%Lxyz_tmp(jx, jy, jz) /= 0 .and. m%Lxyz_inv(jx, jy, jz) <= nv) then
           ! Store a new edge and increment edge counter.
           adjncy(ne) = m%Lxyz_inv(jx, jy, jz)
-          ne         = ne+1
+          ne         = ne + 1
         end if
       end if
     end do
   end do
-  ne         = ne-1 ! We start with ne=1 for simplicity. This is off by one
+  ne         = ne - 1 ! We start with ne=1 for simplicity. This is off by one
   ! in the end --> -1.
-  xadj(nv+1) = ne+1 ! Set number of edges plus 1 as last index.
+  xadj(nv + 1) = ne + 1 ! Set number of edges plus 1 as last index.
   ! The reason is: neighbours of node i are stored
   ! in adjncy(xadj(i):xadj(i+1)-1). Setting the last
   ! index as mentioned makes special handling of
@@ -819,7 +825,7 @@ subroutine mesh_partition(m, part)
       iunit = io_open('debug/mesh_partition/mesh_graph.txt', action='write')
       write(iunit, *) nv, ne/2
       do i = 1, nv
-        write(iunit, *) adjncy(xadj(i):xadj(i+1)-1)
+        write(iunit, *) adjncy(xadj(i):xadj(i+1) - 1)
       end do
       call io_close(iunit)
     end if
@@ -837,7 +843,7 @@ subroutine mesh_partition(m, part)
   end if
   if(p == 1) then
     part(:) = 1
-  else if(p.lt.8) then
+  else if(p .lt. 8) then
     message(1) = 'Info: Using multilevel recursive bisection to partition mesh.'
     call write_info(1)
     call oct_metis_part_graph_recursive(nv, xadj, adjncy, &
@@ -869,6 +875,35 @@ subroutine mesh_partition(m, part)
     end do
     call io_close(iunit)
   end if
+
+  ALLOCATE(votes(1:p, m%np_global + 1:m%np_part_global), p*(m%np_part_global - m%np_global))
+
+  !now assign boundary points
+
+  !count the boundary points that each point needs
+  votes = 0
+  do i = 1, m%np_global
+    do j = 1, np_stencil
+      jx = m%Lxyz(i, 1) + stencil(1, j)
+      jy = m%Lxyz(i, 2) + stencil(2, j)
+      jz = m%Lxyz(i, 3) + stencil(3, j)
+      ip = m%Lxyz_inv(jx, jy, jz)
+      if(ip > m%np_global) votes(part(i), ip) = votes(part(i), ip) + 1
+    end do
+  end do
+
+  rr = 1
+  do i = m%np_global + 1, m%np_part_global
+    if(maxval(votes(1:p, i)) /= minval(votes(1:p, i))) then
+      ! we have a winner that takes the point
+      part(i:i) = maxloc(votes(1:p, i))
+    else
+      ! points without a winner are assigned in a round robin fashion
+      part(i) = rr
+      rr = rr + 1
+      if(rr > p) rr = 1
+    end if
+  end do
 
   call MPI_Barrier(m%mpi_grp%comm, mpi_err)
 
