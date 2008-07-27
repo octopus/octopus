@@ -95,7 +95,7 @@ contains
     ! now we generate create the mesh and the derivatives
     call mesh_init_stage_1(gr%sb, gr%m, geo, gr%cv, &
          enlarge = max(gr%f_der%n_ghost, double_grid_enlarge(gr%dgrid)))
-    call mesh_init_stage_2(gr%sb, gr%m, geo, gr%cv)
+    call mesh_init_stage_2(gr%sb, gr%m, geo, gr%cv, gr%f_der%der_discr%lapl%stencil, gr%f_der%der_discr%lapl%n)
 
     call pop_sub()
   end subroutine grid_init_stage_1
@@ -140,7 +140,7 @@ contains
       ALLOCATE(gr%fine%m, 1)
       ALLOCATE(gr%fine%f_der, 1)
       
-      call multigrid_mesh_double(geo, gr%cv, gr%m, gr%fine%m)
+      call multigrid_mesh_double(geo, gr%cv, gr%m, gr%fine%m, gr%f_der%der_discr%lapl%stencil, gr%f_der%der_discr%lapl%n)
       
       call f_der_init(gr%fine%f_der, gr%m%sb, gr%cv%method .ne. CURV_METHOD_UNIFORM)
       

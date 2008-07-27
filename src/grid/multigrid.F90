@@ -130,7 +130,8 @@ contains
     do i = 1, mgrid%n_levels
       ALLOCATE(mgrid%level(i)%m, 1)
       ALLOCATE(mgrid%level(i)%f_der, 1)
-      call multigrid_mesh_half(geo, cv, mgrid%level(i-1)%m, mgrid%level(i)%m)
+      
+      call multigrid_mesh_half(geo, cv, mgrid%level(i-1)%m, mgrid%level(i)%m, f_der%der_discr%lapl%stencil, f_der%der_discr%lapl%n)
 
       call f_der_init(mgrid%level(i)%f_der, m%sb, cv%method.ne.CURV_METHOD_UNIFORM)
 
@@ -267,13 +268,17 @@ contains
   ! Creates a mesh that has twice the spacing betwen the points than the in mesh.
   ! This is used in the multi-grid routines
   !---------------------------------------------------------------------------------*/
-  subroutine multigrid_mesh_half(geo, cv, mesh_in, mesh_out)
+  subroutine multigrid_mesh_half(geo, cv, mesh_in, mesh_out, stencil, np_stencil)
     type(geometry_t),   intent(in)  :: geo
     type(curvlinear_t), intent(in)  :: cv
     type(mesh_t),       intent(in)  :: mesh_in
     type(mesh_t),       intent(inout) :: mesh_out
+    integer,            intent(in)  :: stencil(:, :)
+    integer,            intent(in)  :: np_stencil
 
     call push_sub('multigrid.multigrid_mesh_half')
+
+    nullify(mesh_out%lead_unit_cell)
 
     mesh_out%sb             => mesh_in%sb
     mesh_out%use_curvlinear =  mesh_in%use_curvlinear
@@ -284,18 +289,22 @@ contains
 
     mesh_out%enlarge = mesh_in%enlarge
     
-    call mesh_init_stage_2(mesh_out%sb, mesh_out, geo, cv)
+    call mesh_init_stage_2(mesh_out%sb, mesh_out, geo, cv, stencil, np_stencil)
 
     call pop_sub()
   end subroutine multigrid_mesh_half
 
-  subroutine multigrid_mesh_double(geo, cv, mesh_in, mesh_out)
+  subroutine multigrid_mesh_double(geo, cv, mesh_in, mesh_out, stencil, np_stencil)
     type(geometry_t),   intent(in)  :: geo
     type(curvlinear_t), intent(in)  :: cv
     type(mesh_t),       intent(in)  :: mesh_in
     type(mesh_t),       intent(inout) :: mesh_out
+    integer,            intent(in)  :: stencil(:, :)
+    integer,            intent(in)  :: np_stencil
 
     call push_sub('multigrid.multigrid_mesh_double')
+
+    nullify(mesh_out%lead_unit_cell)
 
     mesh_out%sb             => mesh_in%sb
     mesh_out%use_curvlinear =  mesh_in%use_curvlinear
@@ -306,7 +315,7 @@ contains
     
     mesh_out%enlarge = mesh_in%enlarge
     
-    call mesh_init_stage_2(mesh_out%sb, mesh_out, geo, cv)
+    call mesh_init_stage_2(mesh_out%sb, mesh_out, geo, cv, stencil, np_stencil)
 
     call pop_sub()
   end subroutine multigrid_mesh_double

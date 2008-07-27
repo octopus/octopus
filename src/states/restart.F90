@@ -506,7 +506,7 @@ contains
     ! ---------------------------------------------------------
     subroutine interpolation_init
       call mesh_init_stage_1(old_sb, old_mesh, geo, old_cv, gr%f_der%n_ghost)
-      call mesh_init_stage_2(old_sb, old_mesh, geo, old_cv)
+      call mesh_init_stage_2(old_sb, old_mesh, geo, old_cv, gr%f_der%der_discr%lapl%stencil, gr%f_der%der_discr%lapl%n)
       call mesh_init_stage_3(old_mesh, geo, old_cv)
 
       if (st%wfs_type == M_REAL) then

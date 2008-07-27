@@ -125,13 +125,15 @@ end subroutine mesh_init_stage_1
 
 
 ! ---------------------------------------------------------
-subroutine mesh_init_stage_2(sb, mesh, geo, cv)
+subroutine mesh_init_stage_2(sb, mesh, geo, cv, stencil, np_stencil)
   type(simul_box_t),  intent(in)    :: sb
   type(mesh_t),       intent(inout) :: mesh
   type(geometry_t),   intent(in)    :: geo
   type(curvlinear_t), intent(in)    :: cv
+  integer,            intent(in)    :: stencil(:, :)
+  integer,            intent(in)    :: np_stencil
 
-  integer :: i, j, k, il, ik, ix, iy, iz
+  integer :: i, j, k, il, ik, ix, iy, iz, is
   FLOAT   :: chi(MAX_DIM)
 
   call push_sub('mesh_init.mesh_init_stage_2')
@@ -167,15 +169,14 @@ subroutine mesh_init_stage_2(sb, mesh, geo, cv)
         call curvlinear_chi2x(sb, geo, cv, chi(:), mesh%x_tmp(:, ix, iy, iz))
 
         if(simul_box_in_box(sb, geo, mesh%x_tmp(:, ix, iy, iz))) then
-          do i = -mesh%enlarge(1), mesh%enlarge(1)
-            do j = -mesh%enlarge(2), mesh%enlarge(2)
-              do k = -mesh%enlarge(3), mesh%enlarge(3)
-                if(  &
-                  ix+i>=mesh%nr(1,1).and.ix+i<=mesh%nr(2,1).and. &
-                  iy+j>=mesh%nr(1,2).and.iy+j<=mesh%nr(2,2).and. &
-                  iz+k>=mesh%nr(1,3).and.iz+k<=mesh%nr(2,3)) mesh%Lxyz_tmp(ix+i, iy+j, iz+k) = ENLARGEMENT_POINT
-              end do
-            end do
+          do is = 1, np_stencil
+            i = ix + stencil(1, is)
+            j = iy + stencil(2, is)
+            k = iz + stencil(3, is)
+            if(  &
+                 i >= mesh%nr(1,1) .and. i <= mesh%nr(2,1) .and. &
+                 j >= mesh%nr(1,2) .and. j <= mesh%nr(2,2) .and. &
+                 k >= mesh%nr(1,3) .and. k <= mesh%nr(2,3)) mesh%Lxyz_tmp(i, j, k) = ENLARGEMENT_POINT
           end do
         end if
 
