@@ -36,6 +36,7 @@ module xc_OEP_m
   use poisson_m
   use profiling_m
   use states_m
+  use states_dim_m
   use scf_tol_m
   use varinfo_m
   use xc_m

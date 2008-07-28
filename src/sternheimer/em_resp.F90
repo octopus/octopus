@@ -43,6 +43,7 @@ module pol_lr_m
   use restart_m
   use simul_box_m
   use states_m
+  use states_dim_m
   use sternheimer_m
   use string_m
   use system_m

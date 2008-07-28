@@ -32,6 +32,7 @@ module xc_m
   use messages_m
   use profiling_m
   use states_m
+  use states_dim_m
   use xc_functl_m
   use varinfo_m
 

@@ -41,6 +41,7 @@ module eigen_solver_m
   use preconditioners_m
   use profiling_m
   use states_m
+  use states_dim_m
   use states_lalg_m
   use subspace_m
   use units_m

@@ -34,6 +34,7 @@ module td_exp_split_m
   use messages_m
   use simul_box_m
   use states_m
+  use states_dim_m
   use lasers_m
 
   implicit none

@@ -40,6 +40,7 @@ module casida_m
   use restart_m
   use simul_box_m
   use states_m
+  use states_dim_m
   use system_m
   use units_m
   use xc_m

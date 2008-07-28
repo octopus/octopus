@@ -23,6 +23,7 @@ noinst_LIBRARIES = libstates.a
 
 libstates_a_SOURCES = \
 	smear.F90 states.F90 magnetic.F90 elf.F90 states_block.F90 \
+	states_dim.F90  \
 	states_lalg.F90 \
 	excited_states.F90 mix.F90 linear_response.F90 restart.F90
 
@@ -36,7 +37,8 @@ include $(srcdir)/../common-rules.make
 depend:
 	@makedepf90 $(libstates_a_SOURCES)
 
-states.o : states.F90 states_kpoints.F90
+states.o : states.F90 states_dim.o
+states_dim.o : states_dim.F90 states_kpoints.F90
 states_lalg.o : states_lalg.F90 states_lalg_inc.F90 states.o
 magnetic.o : magnetic.F90 states.o 
 elf.o : elf.F90 states.o 

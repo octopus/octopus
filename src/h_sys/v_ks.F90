@@ -32,6 +32,7 @@ module v_ks_m
   use poisson_m
   use profiling_m
   use states_m
+  use states_dim_m
   use varinfo_m
   use xc_OEP_m
   use xc_m

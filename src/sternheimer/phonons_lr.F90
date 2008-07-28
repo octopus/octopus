@@ -43,6 +43,7 @@ module phonons_lr_m
   use pert_m
   use restart_m
   use states_m
+  use states_dim_m
   use sternheimer_m
   use string_m
   use system_m

@@ -44,6 +44,7 @@ module states_m
   use profiling_m
   use simul_box_m
   use smear_m
+  use states_dim_m
   use units_m
   use varinfo_m
 
@@ -53,7 +54,6 @@ module states_m
 
   public ::                           &
     states_t,                         &
-    states_dim_t,                     &
     states_init,                      &
     states_look,                      &
     states_densities_init,            &
@@ -62,8 +62,6 @@ module states_m
     states_null,                      &
     states_end,                       &
     states_copy,                      &
-    states_dim_copy,                  &
-    states_dim_end,                   &
     states_generate_random,           &
     states_fermi,                     &
     states_eigenvalues_sum,           &
@@ -84,25 +82,9 @@ module states_m
     states_freeze_orbitals
 
   public ::                           &
-    kpoints_write_info,               &
-    kpoint_is_gamma,                  &
     wfs_are_complex,                  &
     wfs_are_real,                     &
-    is_spin_down,                     &
-    is_spin_up,                       &
     assignment(=)
-
-  type states_dim_t
-    integer :: dim                  ! Dimension of the state (one or two for spinors)
-    integer :: nik                  ! Number of irreducible subspaces
-    integer :: nik_axis(MAX_DIM)    ! Number of kpoints per axis
-    integer :: ispin                ! spin mode (unpolarized, spin polarized, spinors)
-    integer :: nspin                ! dimension of rho (1, 2 or 4)
-    integer :: spin_channels        ! 1 or 2, whether spin is or not considered.
-    logical :: cdft                 ! Are we using Current-DFT or not?
-    FLOAT, pointer :: kpoints(:,:)  ! obviously the kpoints
-    FLOAT, pointer :: kweights(:)   ! weights for the kpoint integrations
-  end type states_dim_t
 
   type states_t
     type(states_dim_t) :: d
@@ -167,17 +149,6 @@ module states_m
     type(multicomm_all_pairs_t) :: ap                 ! All-pairs schedule.
   end type states_t
 
-  ! Parameters...
-  integer, public, parameter :: &
-    UNPOLARIZED    = 1,         &
-    SPIN_POLARIZED = 2,         &
-    SPINORS        = 3
-
-  ! Spin polarized k indices for non-periodic systems.
-  integer, public, parameter :: &
-    SPIN_DOWN = 1,              &
-    SPIN_UP   = 2
-  
   interface assignment (=)
     module procedure states_copy
   end interface
@@ -838,54 +809,6 @@ contains
 
     call pop_sub()
   end subroutine states_densities_init
-
-
-  ! ---------------------------------------------------------
-  subroutine states_dim_copy(dout, din)
-    type(states_dim_t), intent(out) :: dout
-    type(states_dim_t), intent(in)  :: din
-    integer :: i
-
-    call push_sub('states.states_dim_copy')
-
-    dout%dim            = din%dim
-    dout%nik            = din%nik
-    dout%nik_axis       = din%nik_axis
-    dout%ispin          = din%ispin
-    dout%nspin          = din%nspin
-    dout%spin_channels  = din%spin_channels
-    dout%cdft           = din%cdft
-    if(associated(din%kpoints)) then
-      i = size(din%kpoints, 1)*size(din%kpoints, 2)
-      ALLOCATE(dout%kpoints(size(din%kpoints, 1), size(din%kpoints, 2)), i)
-      dout%kpoints = din%kpoints
-    end if
-    if(associated(din%kweights)) then
-      i = size(din%kweights, 1)
-      ALLOCATE(dout%kweights(size(din%kweights, 1)), i)
-      dout%kweights = din%kweights
-    end if
-
-    call pop_sub()
-  end subroutine states_dim_copy
-  ! ---------------------------------------------------------
-
-
-
-  ! ---------------------------------------------------------
-  subroutine states_dim_end(d)
-    type(states_dim_t), intent(inout) :: d
-
-    if(associated(d%kpoints)) then
-      deallocate(d%kpoints); nullify(d%kpoints)
-    end if
-
-    if(associated(d%kweights)) then
-      deallocate(d%kweights); nullify(d%kweights)
-    end if
-  end subroutine states_dim_end
-
-
 
   ! ---------------------------------------------------------
   subroutine states_copy(stout, stin)
@@ -2252,35 +2175,6 @@ contains
     call states_end(staux)
     call pop_sub()
   end subroutine states_freeze_orbitals
-
-
-  ! ---------------------------------------------------------
-  ! Returns if k-point ik denotes spin-up, in spin-polarized case.
-  logical function is_spin_up(ik)
-    integer, intent(in) :: ik
-
-    call push_sub('states.is_spin_up')
-
-    is_spin_up = even(ik)
-
-    call pop_sub()
-  end function is_spin_up
-
-
-  ! ---------------------------------------------------------
-  ! Returns if k-point ik denotes spin-down, in spin-polarized case.
-  logical function is_spin_down(ik)
-    integer, intent(in) :: ik
-
-    call push_sub('states.is_spin_down')
-
-    is_spin_down = odd(ik)
-
-    call pop_sub()
-  end function is_spin_down
-
-
-#include "states_kpoints.F90"
 
 end module states_m
 

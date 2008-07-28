@@ -48,6 +48,7 @@ module external_pot_m
   use solids_m
   use geometry_m
   use states_m
+  use states_dim_m
   use submesh_m
   use lasers_m
   use profiling_m

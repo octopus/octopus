@@ -32,6 +32,7 @@ module elf_m
   use messages_m
   use mpi_m
   use states_m
+  use states_dim_m
 
   implicit none
 

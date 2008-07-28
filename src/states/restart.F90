@@ -37,6 +37,7 @@ module restart_m
   use mpi_m
   use simul_box_m
   use states_m
+  use states_dim_m
   use states_lalg_m
   use string_m
   use units_m
