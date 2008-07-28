@@ -1013,62 +1013,46 @@ contains
   ! ---------------------------------------------------------
   ! Calculates the new density out the wavefunctions and
   ! occupations...
-  subroutine states_dens_accumulate(st, np, rho, ist)
+  subroutine states_dens_accumulate(st, np, rho, ist, ik)
     type(states_t), intent(in)    :: st
     integer,        intent(in)    :: np
     FLOAT,          intent(inout) :: rho(:,:)
     integer,        intent(in)    :: ist
-
-    integer :: ip, ik, sp
+    integer,        intent(in)    :: ik
+    
+    integer :: ip, ispin
     CMPLX   :: c
     type(profile_t), save :: prof
 
     call push_sub('states.states_dens_accumulate')
     call profiling_in(prof, "CALC_DENSITY")
 
-    sp = 1
-    if(st%d%ispin == SPIN_POLARIZED) sp = 2
-
-    do ik = 1, st%d%nik, sp
-
-      if (st%wfs_type == M_REAL) then
-        do ip = 1, np
-          rho(ip, 1) = rho(ip, 1) + st%d%kweights(ik)*st%occ(ist, ik)*st%dpsi(ip, 1, ist, ik)**2
-        end do
-      else
-        do ip = 1, np
-          rho(ip, 1) = rho(ip, 1) + st%d%kweights(ik)*st%occ(ist, ik)*&
-            (real(st%zpsi(ip, 1, ist, ik), REAL_PRECISION)**2 + aimag(st%zpsi(ip, 1, ist, ik))**2)
-        end do
-      end if
-
-      select case(st%d%ispin)
-      case(SPIN_POLARIZED)
-        if (st%wfs_type == M_REAL) then
-          do ip = 1, np
-            rho(ip, 2) = rho(ip, 2) + st%d%kweights(ik + 1)*st%occ(ist, ik + 1)*(st%dpsi(ip, 1, ist, ik + 1))**2
-          end do
-        else
-          do ip = 1, np
-            rho(ip, 2) = rho(ip, 2) + st%d%kweights(ik + 1)*st%occ(ist, ik + 1)*&
-              (real(st%zpsi(ip, 1, ist, ik + 1), REAL_PRECISION)**2 + aimag(st%zpsi(ip, 1, ist, ik + 1))**2)
-          end do
-        end if
-      case(SPINORS) ! in this case wave-functions are always complex
-        do ip = 1, np
-          rho(ip, 2) = rho(ip, 2) + st%d%kweights(ik)*st%occ(ist, ik)*&
-            (real(st%zpsi(ip, 2, ist, ik), REAL_PRECISION)**2 + aimag(st%zpsi(ip, 2, ist, ik))**2)
-
-          c = st%d%kweights(ik)*st%occ(ist, ik)*st%zpsi(ip, 1, ist, ik)*conjg(st%zpsi(ip, 2, ist, ik))
-          rho(ip, 3) = rho(ip, 3) + real(c, REAL_PRECISION)
-          rho(ip, 4) = rho(ip, 4) + aimag(c)
-        end do
-      end select
-
-    end do
-
+    ispin = states_dim_get_spin_index(st%d, ik)
+    
+    if (st%wfs_type == M_REAL) then
+      do ip = 1, np
+        rho(ip, ispin) = rho(ip, ispin) + st%d%kweights(ik)*st%occ(ist, ik)*st%dpsi(ip, 1, ist, ik)**2
+      end do
+    else
+      do ip = 1, np
+        rho(ip, ispin) = rho(ip, ispin) + st%d%kweights(ik)*st%occ(ist, ik)*&
+             (real(st%zpsi(ip, 1, ist, ik), REAL_PRECISION)**2 + aimag(st%zpsi(ip, 1, ist, ik))**2)
+      end do
+    end if
+    
+    if(st%d%ispin == SPINORS) then ! in this case wave-functions are always complex
+      do ip = 1, np
+        rho(ip, 2) = rho(ip, 2) + st%d%kweights(ik)*st%occ(ist, ik)*&
+             (real(st%zpsi(ip, 2, ist, ik), REAL_PRECISION)**2 + aimag(st%zpsi(ip, 2, ist, ik))**2)
+        
+        c = st%d%kweights(ik)*st%occ(ist, ik)*st%zpsi(ip, 1, ist, ik)*conjg(st%zpsi(ip, 2, ist, ik))
+        rho(ip, 3) = rho(ip, 3) + real(c, REAL_PRECISION)
+        rho(ip, 4) = rho(ip, 4) + aimag(c)
+      end do
+    end if
+    
     call profiling_out(prof)
-
+    
     call pop_sub()
   end subroutine states_dens_accumulate
 
@@ -1107,18 +1091,16 @@ contains
     integer,        intent(in)  :: np
     FLOAT,          intent(out) :: rho(:,:)
 
-    integer :: ispin, ist
+    integer :: ik, ist
 
     call push_sub('states.states_calc_dens')
 
-    do ispin = 1, st%d%nspin
-      !$omp parallel workshare
-      rho(1:np, ispin) = M_ZERO
-      !$omp end parallel workshare
-    end do
+    rho(1:np, 1:st%d%nspin) = M_ZERO
 
-    do ist = st%st_start, st%st_end
-      call states_dens_accumulate(st, np, rho, ist)
+    do ik = 1, st%d%nik
+      do ist = st%st_start, st%st_end
+        call states_dens_accumulate(st, np, rho, ist, ik)
+      end do
     end do
 
     call states_dens_reduce(st, np, rho)
@@ -2108,9 +2090,11 @@ contains
     end if
 
     st%frozen_rho = M_ZERO
-    do ist = st%st_start, st%st_end
-      if(ist > n) cycle
-      call states_dens_accumulate(st, gr%m%np, st%frozen_rho, ist)
+    do ik = 1, st%d%nik
+      do ist = st%st_start, st%st_end
+        if(ist > n) cycle
+        call states_dens_accumulate(st, gr%m%np, st%frozen_rho, ist, ik)
+      end do
     end do
     call states_dens_reduce(st, gr%m%np, st%frozen_rho)
 

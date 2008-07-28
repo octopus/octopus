@@ -563,7 +563,7 @@ contains
     ! Propagator with enforced time-reversal symmetry
     subroutine td_reversal
       FLOAT, allocatable :: vhxc_t1(:,:), vhxc_t2(:,:)
-      CMPLX, allocatable :: zpsi1(:,:,:)
+      CMPLX, allocatable :: zpsi1(:,:)
       integer :: ik, ist, idim
 
       call push_sub('td_rti.td_reversal')
@@ -574,33 +574,29 @@ contains
         ALLOCATE(vhxc_t2(NP, st%d%nspin), NP*st%d%nspin)
         call lalg_copy(NP, st%d%nspin, h%vhxc, vhxc_t1)
 
-        ALLOCATE(zpsi1(NP_PART, st%d%dim, st%d%nik), NP_PART*st%d%dim*st%d%nik)
+        ALLOCATE(zpsi1(NP_PART, st%d%dim), NP_PART*st%d%dim)
 
         !$omp parallel workshare
         st%rho(1:NP, 1:st%d%nspin) = M_ZERO
         !$omp end parallel workshare
 
-        do ist = st%st_start, st%st_end
-          
-          !save the state
-          do ik = 1, st%d%nik
+        do ik = 1, st%d%nik
+          do ist = st%st_start, st%st_end
+            
+            !save the state
             do idim = 1, st%d%dim
-              call lalg_copy(NP, st%zpsi(:, idim, ist, ik), zpsi1(:, idim, ik))
+              call lalg_copy(NP, st%zpsi(:, idim, ist, ik), zpsi1(:, idim))
             end do
-          end do
-          
-          !propagate the state dt with H(t-dt)
-          do ik = 1, st%d%nik
+            
+            !propagate the state dt with H(t-dt)
             call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, ik), ist, ik, dt, t-dt)
-          end do
-          
-          !calculate the contribution to the density
-          call states_dens_accumulate(st, NP, st%rho, ist)
-          
-          !restore the saved state
-          do ik = 1, st%d%nik
+            
+            !calculate the contribution to the density
+            call states_dens_accumulate(st, NP, st%rho, ist, ik)
+            
+            !restore the saved state
             do idim = 1, st%d%dim
-              call lalg_copy(NP, zpsi1(:, idim, ik), st%zpsi(:, idim, ist, ik))
+              call lalg_copy(NP, zpsi1(:, idim), st%zpsi(:, idim, ist, ik))
             end do
           end do
           
@@ -608,7 +604,7 @@ contains
 
         deallocate(zpsi1)
         
-        !terminate the calculation of the density
+        ! finish the calculation of the density
         call states_dens_reduce(st, NP, st%rho)
 
         call v_ks_calc(gr, ks, h, st)
