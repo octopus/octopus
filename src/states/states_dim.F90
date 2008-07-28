@@ -43,7 +43,6 @@ module states_dim_m
   use multicomm_m
   use profiling_m
   use simul_box_m
-  use smear_m
   use units_m
   use varinfo_m
 

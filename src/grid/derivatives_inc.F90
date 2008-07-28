@@ -232,7 +232,7 @@ subroutine X(derivatives_oper)(op, der, f, opf, ghost_update, set_bc)
   logical, optional,   intent(in)    :: set_bc
 
   type(der_handle_t) :: handle
-  logical :: ghost_update_
+  logical :: ghost_update_, set_bc_
 
   call push_sub('derivatives_inc.Xderivatives_oper')
   
@@ -241,7 +241,10 @@ subroutine X(derivatives_oper)(op, der, f, opf, ghost_update, set_bc)
   call der_handle_init(handle, der%m)
   call X(init_f)(der, handle, f)
 
-  if (.not. present(set_bc) .or. set_bc) call X(set_bc)(der, handle%X(f))
+  set_bc_ = .true.
+  if(present(set_bc)) set_bc_ = set_bc
+
+  if(set_bc_) call X(set_bc)(der, handle%X(f))
 
   ghost_update_ = .true.
   if(present(ghost_update)) ghost_update_ = ghost_update
