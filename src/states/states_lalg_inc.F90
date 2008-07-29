@@ -72,7 +72,7 @@ subroutine X(states_gram_schmidt_full)(st, nst, m, dim, psi, start)
 
   end do
   
-  if(st%parallel_in_states) then
+  if(.not. st%parallel_in_states) then
 
     call X(states_linear_combination)(st, m, qq, psi)
 
