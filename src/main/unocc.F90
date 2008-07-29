@@ -78,11 +78,7 @@ contains
     call init_(sys%gr%m, sys%st)
     total_states = sys%st%nst
 
-    if(fromscratch) sys%st%nst = occupied_states !only read occupied states
-
     call restart_read (trim(restart_dir)//'gs', sys%st, sys%gr, sys%geo, ierr)
-
-    if(fromscratch) sys%st%nst = total_states
 
     if( (ierr .ne. 0)  .and.  (ierr < occupied_states) ) then
       message(1) = "Not all the occupied KS orbitals could be read from '"//trim(restart_dir)//"gs'"

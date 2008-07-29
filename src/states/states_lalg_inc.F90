@@ -526,8 +526,8 @@ end subroutine X(states_matrix)
 subroutine X(states_linear_combination)(st, mesh, transf, psi)
   type(states_t),      intent(in)    :: st
   type(mesh_t),        intent(in)    :: mesh
-  R_TYPE,              intent(inout) :: psi(:, :, :)
   R_TYPE,              intent(in)    :: transf(:, :)
+  R_TYPE,              intent(inout) :: psi(:, :, :)
   
   R_TYPE, allocatable :: psiold(:)
   
