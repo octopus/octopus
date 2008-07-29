@@ -137,8 +137,7 @@ contains
                                                  ! that must be propagated (currently ions
                                                  ! or a gauge field).
 
-
-
+    integer :: default_propagator
 
     call push_sub('td_rti.td_rti_init')
 
@@ -265,8 +264,24 @@ contains
     !% Crank-Nicholson propagator with source and memory term for transport
     !% calculations.
     !%End
-    call loct_parse_int(check_inp('TDEvolutionMethod'), PROP_REVERSAL, tr%method)
+    if(gr%sb%open_boundaries) then
+      default_propagator = PROP_CRANK_NICHOLSON_SRC_MEM
+    else
+      default_propagator = PROP_REVERSAL
+    end if
+    call loct_parse_int(check_inp('TDEvolutionMethod'), default_propagator, tr%method)
     if(.not.varinfo_valid_option('TDEVolutionMethod', tr%method)) call input_error('TDEvolutionMethod')
+
+    if(gr%sb%open_boundaries.and.tr%method.ne.PROP_CRANK_NICHOLSON_SRC_MEM) then
+      message(1) = 'The time evolution method for time dependent cannot'
+      message(2) = 'be chosen freely. The Crank-Nicholson propagator'
+      message(3) = 'with source and memory term has to be used. Either set'
+      message(4) = ''
+      message(5) = '  TDEvolutionmethod = crank_nicholson_src_mem'
+      message(6) = ''
+      message(7) = 'in your input or remove the TDEvolutionMethod variable.'
+      call write_fatal(7)
+    end if
 
     if(tr%method .eq. SPLIT_OPERATOR .or. tr%method .eq. SUZUKI_TROTTER) then
       message(1) = "You cannnot use the split operator evolution method, or the"

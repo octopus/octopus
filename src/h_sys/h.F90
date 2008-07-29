@@ -412,6 +412,15 @@ contains
     if (simul_box_is_periodic(gr%sb)) call init_phase
 
     if(gr%sb%open_boundaries) then
+      if(h%theory_level.ne.INDEPENDENT_PARTICLES) then
+        message(1) = 'Open boundary calculations for interacting electrons are'
+        message(2) = 'not yet possible. Please include'
+        message(3) = ''
+        message(4) = '  NonInteractingElectrons = yes'
+        message(5) = ''
+        message(6) = 'in your input file.'
+        call write_fatal(6)
+      end if
       call init_lead_h
     end if
 
