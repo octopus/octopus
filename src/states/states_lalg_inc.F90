@@ -28,80 +28,70 @@ subroutine X(states_gram_schmidt_full)(st, nst, m, dim, psi, start)
   R_TYPE, target,    intent(inout) :: psi(:,:,:)   ! psi(m%np_part, dim, nst)
   integer, optional, intent(in)    :: start
 
-  integer :: p, q, stst, idim
-  FLOAT   :: nrm2
-  R_TYPE  :: ss
-#if defined(HAVE_MPI)
-  R_TYPE, target, allocatable :: buf(:, :)
-  integer                     :: stat(MPI_STATUS_SIZE)
-#endif
-  R_TYPE, pointer             :: psi_q(:, :), psi_p(:, :)
+  R_TYPE, allocatable :: ss(:, :), qq(:, :), psi_tmp(:, :, :)
   type(profile_t), save :: prof
+  integer :: idim, ist, jst, kst, start_
+  FLOAT   :: nrm2
 
   call profiling_in(prof, "GRAM_SCHMIDT_FULL")
   call push_sub('states_inc.Xstates_gram_schmidt_full')
 
-  if(present(start)) then
-    stst = start
-  else
-    stst = 1
-  end if
+  start_ = 1
+  if(present(start)) start_ = start
 
-#if defined(HAVE_MPI)
-  if(st%parallel_in_states) then
-    ALLOCATE(buf(m%np_part, st%d%dim), m%np_part*st%d%dim)
-  end if
-#endif
+  ALLOCATE(ss(st%nst, st%nst), st%nst*st%nst)
+  ALLOCATE(qq(st%nst, st%nst), st%nst*st%nst)
 
-  do p = stst, nst
-    ! Orthogonalize.
-    do q = 1, p - 1
-      ! Copy orbital p from other node if necessary.
-      if(st%parallel_in_states) then
-#if defined(HAVE_MPI)
-        if(state_is_local(st, p).and.state_is_local(st, q)) then
-          psi_q => psi(:, :, q-st%st_start+1)
-          psi_p => psi(:, :, p-st%st_start+1)
-        else if(state_is_local(st, p).and..not.state_is_local(st, q)) then
-          call MPI_Recv(buf, m%np_part*st%d%dim, R_MPITYPE, st%node(q), 0, st%mpi_grp%comm, stat, mpi_err)
-          psi_q => buf
-          psi_p => psi(:, :, p-st%st_start+1)
-        else if(.not.state_is_local(st, p).and.state_is_local(st, q)) then
-          call MPI_Send(psi(:, :, q-st%st_start+1), m%np_part*st%d%dim, R_MPITYPE, st%node(p), &
-            0, st%mpi_grp%comm, mpi_err)
-        end if
-#else
-        message(1) = 'Running parallel in states without MPI. This is a bug.'
-        call write_fatal(1)
-#endif
-      else
-        psi_q => psi(:, :, q)
-        psi_p => psi(:, :, p)
-      end if
-      
-      if(state_is_local(st, p)) then
-        ss = X(mf_dotp)(m, dim, psi_q(:,:), psi_p(:, :))
-        do idim = 1, dim
-          call lalg_axpy(m%np, -ss, psi_q(:, idim), psi_p(:, idim))
-        end do
-      end if
+  ! calculate the matrix of dot products
+  call states_blockt_mul(m, st, st%st_start, st%st_end, st%st_start, st%st_end, psi, psi, ss, symm = .true.)
+
+  qq = M_ZERO
+  do ist = 1, st%nst
+
+    if(ist < start_ .or. ist > nst) then
+      qq(ist, ist) = M_ONE
+      cycle
+    end if
+
+    ! calculate the norm of the resulting vector, and use it to scale
+    ! the coefficients so we get normalized vectors.
+    nrm2 = ss(ist, ist)
+    do jst = 1, ist - 1
+      nrm2 = nrm2 - M_TWO*abs(ss(ist, jst))**2/ss(jst, jst)
+      do kst = 1, ist - 1
+        nrm2 = nrm2 + ss(jst, kst)*ss(ist, jst)*ss(kst, ist)/(ss(jst, jst)*ss(kst, kst))
+      end do
+    end do
+    nrm2 = sqrt(nrm2)
+
+    ! now generate the matrix with the linear combination of orbitals
+    qq(ist, ist) = M_ONE/nrm2
+    do jst = 1, ist - 1
+      qq(jst, ist) = -ss(jst, ist)/ss(jst, jst)/nrm2
     end do
 
-    ! Normalize.
-    if(state_is_local(st, p)) then
-      nrm2 = X(mf_nrm2)(m, dim, psi(:, :, p-st%st_start+1))
-      do idim = 1, dim
-        call lalg_scal(m%np, M_ONE/nrm2, psi(:, idim, p-st%st_start+1))
-      end do
-    end if
   end do
-
-#if defined(HAVE_MPI)
-  if(st%parallel_in_states) then
-    deallocate(buf)
-  end if
-#endif
   
+  if(st%parallel_in_states) then
+
+    call X(states_linear_combination)(st, m, qq, psi)
+
+  else
+
+    ALLOCATE(psi_tmp(m%np_part, dim, st%st_start:st%st_end), m%np_part*dim*st%lnst)
+    
+    do ist = st%st_start, st%st_end
+      do idim = 1, dim
+        call lalg_copy(m%np, psi(:, idim, ist), psi_tmp(:, idim, ist))
+      end do
+    end do
+
+    call states_block_matr_mul(m, st, st%st_start, st%st_end, st%st_start, st%st_end, psi_tmp, qq, psi)
+
+    deallocate(psi_tmp)
+
+  end if
+
   call pop_sub()
   call profiling_out(prof)
 end subroutine X(states_gram_schmidt_full)
