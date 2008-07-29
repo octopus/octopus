@@ -533,10 +533,10 @@ end subroutine X(states_matrix)
 ! The performance of this function could be improved using blocks and
 ! blas, but for the moment this is not necessary.
 !
-subroutine X(states_linear_combination)(st, mesh, ik, transf)
-  type(states_t),      intent(inout) :: st
+subroutine X(states_linear_combination)(st, mesh, transf, psi)
+  type(states_t),      intent(in)    :: st
   type(mesh_t),        intent(in)    :: mesh
-  integer,             intent(in)    :: ik
+  R_TYPE,              intent(inout) :: psi(:, :, :)
   R_TYPE,              intent(in)    :: transf(:, :)
   
   R_TYPE, allocatable :: psiold(:)
@@ -544,19 +544,23 @@ subroutine X(states_linear_combination)(st, mesh, ik, transf)
   R_TYPE :: aa
   integer :: ist, jst, ip, idim
 
+#ifdef HAVE_MPI
+  ASSERT(.not. st%parallel_in_states)
+#endif
+
   ALLOCATE(psiold(st%st_start:st%st_end), st%lnst)
   
   do ip = 1, mesh%np
     do idim = 1, st%d%dim
       
-      psiold(st%st_start:st%st_end) = st%X(psi)(ip, idim, st%st_start:st%st_end, ik)
+      psiold(st%st_start:st%st_end) = psi(ip, idim, st%st_start:st%st_end)
       
       do ist = st%st_start, st%st_end
         aa = M_ZERO
         do jst = st%st_start, st%st_end
-          aa = aa +transf(jst, ist)*psiold(jst)
+          aa = aa + transf(jst, ist)*psiold(jst)
         end do
-        st%X(psi)(ip, idim, ist, ik) = aa
+        psi(ip, idim, ist) = aa
       end do
       
     end do
