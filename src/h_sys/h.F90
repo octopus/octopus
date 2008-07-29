@@ -20,6 +20,7 @@
 #include "global.h"
 
 module hamiltonian_m
+  use calc_mode_m
   use datasets_m
   use derivatives_m
   use external_pot_m
@@ -602,58 +603,60 @@ contains
       alloc_size = np**2*h%d%nspin*st%ob_ncs*st%d%nik*NLEADS
       ALLOCATE(h%lead_green(np, np, h%d%nspin, st%ob_ncs, st%d%nik, NLEADS), alloc_size)
 
-      call messages_print_stress(stdout, 'Lead Green functions')
-      message(1) = ' st#  Spin  Lead     Energy'
-      call write_info(1)
-      do ik = 1, st%d%nik
-        do ist = 1, st%ob_ncs
-          energy = st%ob_eigenval(ist, ik)
-          do il = 1, NLEADS
-            do ispin = 1, h%d%nspin
-              select case(h%d%ispin)
-              case(UNPOLARIZED)
-                spin = '--'
-              case(SPIN_POLARIZED)
-                if(is_spin_up(ik)) then
-                  spin = 'up'
-                else
-                  spin = 'dn'
-                end if
-              ! This is nonsene, but at least all indices are present.
-              case(SPINORS)
-                if(ispin.eq.1) then
-                  spin = 'up'
-                else
-                  spin = 'dn'
-                end if
-              end select
-              write(message(1), '(i4,3x,a2,5x,a1,1x,f12.6)') ist, spin, ln(il), energy
-              call write_info(1)
-              call lead_green(energy, h%lead_h_diag(:, :, ispin, il), h%lead_h_offdiag(:, :, il), &
-                np, h%lead_green(:, :, ispin, ist, ik, il), gr%sb%h(TRANS_DIR))
+      if(calc_mode_is(CM_GS)) then
+        call messages_print_stress(stdout, 'Lead Green functions')
+        message(1) = ' st#  Spin  Lead     Energy'
+        call write_info(1)
+        do ik = 1, st%d%nik
+          do ist = 1, st%ob_ncs
+            energy = st%ob_eigenval(ist, ik)
+            do il = 1, NLEADS
+              do ispin = 1, h%d%nspin
+                select case(h%d%ispin)
+                case(UNPOLARIZED)
+                  spin = '--'
+                case(SPIN_POLARIZED)
+                  if(is_spin_up(ik)) then
+                    spin = 'up'
+                  else
+                    spin = 'dn'
+                  end if
+                  ! This is nonsene, but at least all indices are present.
+                case(SPINORS)
+                  if(ispin.eq.1) then
+                    spin = 'up'
+                  else
+                    spin = 'dn'
+                  end if
+                end select
+                write(message(1), '(i4,3x,a2,5x,a1,1x,f12.6)') ist, spin, ln(il), energy
+                call write_info(1)
+                call lead_green(energy, h%lead_h_diag(:, :, ispin, il), h%lead_h_offdiag(:, :, il), &
+                  np, h%lead_green(:, :, ispin, ist, ik, il), gr%sb%h(TRANS_DIR))
 
-              ! Write the entire Green function to a file.
-              if(in_debug_mode) then
-                call io_mkdir('debug/open_boundaries')
-                write(fname_real, '(3a,i4.4,a,i3.3,a,i1.1,a)') 'debug/open_boundaries/green-', &
-                  trim(LEAD_NAME(il)), '-', ist, '-', ik, '-', ispin, '.real'
-                write(fname_imag, '(3a,i4.4,a,i3.3,a,i1.1,a)') 'debug/open_boundaries/green-', &
-                  trim(LEAD_NAME(il)), '-', ist, '-', ik, '-', ispin, '.imag'
-                green_real = io_open(fname_real, action='write', grp=gr%m%mpi_grp, is_tmp=.false.)
-                green_imag = io_open(fname_imag, action='write', grp=gr%m%mpi_grp, is_tmp=.false.)
+                ! Write the entire Green function to a file.
+                if(in_debug_mode) then
+                  call io_mkdir('debug/open_boundaries')
+                  write(fname_real, '(3a,i4.4,a,i3.3,a,i1.1,a)') 'debug/open_boundaries/green-', &
+                    trim(LEAD_NAME(il)), '-', ist, '-', ik, '-', ispin, '.real'
+                  write(fname_imag, '(3a,i4.4,a,i3.3,a,i1.1,a)') 'debug/open_boundaries/green-', &
+                    trim(LEAD_NAME(il)), '-', ist, '-', ik, '-', ispin, '.imag'
+                  green_real = io_open(fname_real, action='write', grp=gr%m%mpi_grp, is_tmp=.false.)
+                  green_imag = io_open(fname_imag, action='write', grp=gr%m%mpi_grp, is_tmp=.false.)
 
-                write(fmt, '(a,i6,a)') '(', gr%intf(il)%np, 'e14.4)'
-                do irow = 1, gr%intf(il)%np
-                  write(green_real, fmt) real(h%lead_green(irow, :, ispin, ist, ik, il))
-                  write(green_imag, fmt) aimag(h%lead_green(irow, :, ispin, ist, ik, il))
-                end do
-                call io_close(green_real); call io_close(green_imag)
-              end if
+                  write(fmt, '(a,i6,a)') '(', gr%intf(il)%np, 'e14.4)'
+                  do irow = 1, gr%intf(il)%np
+                    write(green_real, fmt) real(h%lead_green(irow, :, ispin, ist, ik, il))
+                    write(green_imag, fmt) aimag(h%lead_green(irow, :, ispin, ist, ik, il))
+                  end do
+                  call io_close(green_real); call io_close(green_imag)
+                end if
+              end do
             end do
           end do
         end do
-      end do
-      call messages_print_stress(stdout)
+        call messages_print_stress(stdout)
+      end if
     end subroutine init_lead_h
   end subroutine hamiltonian_init
 
