@@ -43,6 +43,7 @@ module mesh_m
     mesh_init_stage_1,         &
     mesh_init_stage_2,         &
     mesh_init_stage_3,         &
+    mesh_init_from_file,       &
     mesh_dump,                 &
     mesh_lxyz_dump,            &
     mesh_end,                  &
