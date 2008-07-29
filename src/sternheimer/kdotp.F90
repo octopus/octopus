@@ -92,7 +92,7 @@ contains
     character(len=100) :: dirname, str_tmp
     FLOAT, allocatable :: dipole(:)
 
-    call push_sub('kdotp.static_kdotp_lr_run')
+    call push_sub('kdotp.kdotp_lr_run')
 
     gr => sys%gr
 !    ndim = sys%gr%sb%dim

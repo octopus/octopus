@@ -71,7 +71,7 @@ module pol_lr_m
     FLOAT :: eta                     ! small imaginary part to add to the frequency
     FLOAT :: freq_factor(MAX_DIM)    !
     FLOAT,      pointer :: omega(:)  ! the frequencies to consider
-    type(lr_t), pointer :: lr(:,:,:) ! linear response for (NDIM, nsigma, nomega)
+    type(lr_t), pointer :: lr(:,:,:) ! linear response for (NDIM, nsigma, nfactor)
 
     logical :: calc_hyperpol
     CMPLX   :: alpha(MAX_DIM, MAX_DIM, 3)        ! the linear polarizability
@@ -102,7 +102,7 @@ contains
     FLOAT :: closest_omega
 
 
-    call push_sub('em_resp.static_pol_lr_run')
+    call push_sub('em_resp.pol_lr_run')
 
     gr => sys%gr
     ndim = sys%gr%sb%dim

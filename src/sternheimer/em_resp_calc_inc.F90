@@ -249,7 +249,7 @@ subroutine X(lr_calc_polarizability_finite)(sys, h, lr, nsigma, perturbation, zp
 
   integer :: dir1, dir2, ndir_
 
-  call push_sub('em_resp_calc_inc.lr_calc_polarizability_finite')
+  call push_sub('em_resp_calc_inc.Xlr_calc_polarizability_finite')
 
   ndir_ = sys%NDIM
   if(present(ndir)) ndir_ = ndir
@@ -289,7 +289,7 @@ subroutine X(lr_calc_susceptibility)(sys, h, lr, nsigma, perturbation, chi_para,
   integer :: dir1, dir2
   R_TYPE  :: trace
 
-  call push_sub('em_resp_calc_inc.lr_calc_susceptibility')
+  call push_sub('em_resp_calc_inc.Xlr_calc_susceptibility')
 
   message(1) = "Info: Calculating magnetic susceptibility"
   call write_info(1)
@@ -336,22 +336,21 @@ end subroutine X(lr_calc_susceptibility)
 
 
 ! ---------------------------------------------------------
-subroutine X(lr_calc_beta) (sh, sys, h, lr, dipole, beta)
+subroutine X(lr_calc_beta) (sh, sys, h, em_lr, dipole, beta)
+! Note: correctness for spinors is unclear
   type(sternheimer_t),     intent(inout) :: sh
   type(system_t), target,  intent(inout) :: sys
   type(hamiltonian_t),     intent(inout) :: h
-  type(lr_t),              intent(inout) :: lr(:,:,:)
+  type(lr_t),              intent(inout) :: em_lr(:,:,:)
   type(pert_t),            intent(inout) :: dipole
   CMPLX,                   intent(out)   :: beta(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM)
 
   type(states_t), pointer :: st
   type(mesh_t),   pointer :: mesh
 
-  integer :: ifreq, isigma, idim, ispin, ispin2, np, ndim, idir, ist
+  integer :: ifreq, isigma, idim, ispin, np, ndim, idir, ist, ik
   integer :: ii, jj, kk, iperm, op_sigma, idim2, ist2, ip
   integer :: perm(1:3), u(1:3), w(1:3), ijk(1:3)
-
-  integer, parameter :: ik = 1 !kpoints not supported
 
   R_TYPE :: prod
 
@@ -360,14 +359,14 @@ subroutine X(lr_calc_beta) (sh, sys, h, lr, dipole, beta)
   FLOAT,  allocatable :: kxc(:, :, :, :)
   R_TYPE, allocatable :: hpol_density(:)
 
+  call push_sub('em_resp_inc.Xlr_calc_beta')
+
   call profiling_in(beta_prof, "CALC_BETA")
 
   np   =  sys%gr%m%np
   ndim =  sys%gr%sb%dim
   st   => sys%st
   mesh => sys%gr%m
-
-  call push_sub('em_resp_inc.Xlr_calc_beta')
 
   write(message(1), '(a)') 'Info: Calculating hyperpolarizability tensor'
   call write_info(1)
@@ -384,7 +383,7 @@ subroutine X(lr_calc_beta) (sh, sys, h, lr, dipole, beta)
   do ifreq = 1, 3
     do idir = 1, ndim
       do idim = 1, st%d%dim
-        call X(sternheimer_calc_hvar)(sh, sys, h, lr(idir, :, ifreq), 2, hvar(:, :, :, idim, idir, ifreq))
+        call X(sternheimer_calc_hvar)(sh, sys, h, em_lr(idir, :, ifreq), 2, hvar(:, :, :, idim, idir, ifreq))
       end do !idim
     end do !idir
   end do !ifreq
@@ -409,56 +408,61 @@ subroutine X(lr_calc_beta) (sh, sys, h, lr, dipole, beta)
             u(1:3) = ijk(perm(1:3))
             w(1:3) = perm(1:3)
 
-            do ispin = 1, st%d%nspin
+            do ik = 1, st%d%nik
               do ist = 1, st%nst
                 do idim = 1, st%d%dim
 
+                  ispin = states_dim_get_spin_index(sys%st%d, ik)
+
 ! change here to accept tmp from arguments
                   call pert_setup_dir(dipole, u(2))
-                  call X(pert_apply)  &
-                    (dipole, sys%gr, sys%geo, h, ik, lr(u(3), isigma, w(3))%X(dl_psi)(:, idim, ist, ispin), tmp)
+                  call X(pert_apply) &
+                    (dipole, sys%gr, sys%geo, h, ik, em_lr(u(3), isigma, w(3))%X(dl_psi)(:, idim, ist, ik), tmp)
                   
-                  tmp(1:np) = tmp(1:np) + R_REAL(hvar(1:np, ispin, isigma, idim, u(2), w(2))) &
-                    * lr(u(3), isigma, w(3))%X(dl_psi)(1:np, idim, ist, ispin)
+                  do ip = 1, np
+                    tmp(ip) = tmp(ip) + R_REAL(hvar(ip, ispin, isigma, idim, u(2), w(2))) &
+                      * em_lr(u(3), isigma, w(3))%X(dl_psi)(ip, idim, ist, ik)
+                  enddo
 
                   beta(ii, jj, kk) = beta(ii, jj, kk) &
-                    - M_HALF*st%d%kweights(ik)*st%smear%el_per_state &
-                    *X(mf_dotp)(mesh, lr(u(1), op_sigma, w(1))%X(dl_psi)(1:np, idim, ist, ispin), tmp(1:np))
+                    - M_HALF * st%d%kweights(ik) * st%smear%el_per_state &
+                    * X(mf_dotp)(mesh, em_lr(u(1), op_sigma, w(1))%X(dl_psi)(1:np, idim, ist, ik), tmp(1:np))
                   
-                  do ispin2 = 1, st%d%nspin
-                    do ist2 = 1, st%nst
-                      do idim2 = 1, st%d%dim
+                  do ist2 = 1, st%nst
+                    do idim2 = 1, st%d%dim
+                      ! there is no coupling between states with different k or spin
+                      ! should there still be idim2 here?
 
 ! change here to accept tmp from arguments
-                        call pert_setup_dir(dipole, u(2))
-                        call X(pert_apply)(dipole, sys%gr, sys%geo, h, ik, st%X(psi)(1:np, idim, ist, ispin), tmp)
+                      call pert_setup_dir(dipole, u(2))
+                      call X(pert_apply)(dipole, sys%gr, sys%geo, h, ik, st%X(psi)(:, idim, ist, ik), tmp)
 
-                        tmp(1:np) = tmp(1:np) + &
-                            R_REAL(hvar(1:np, ispin2, isigma, idim2, u(2), w(2)))*st%X(psi)(1:np, idim, ist, ispin)
+                      do ip = 1, np
+                        tmp(ip) = tmp(ip) + &
+                          R_REAL(hvar(ip, ispin, isigma, idim2, u(2), w(2))) * st%X(psi)(ip, idim, ist, ik)
+                      enddo
 
-                        prod = X(mf_dotp)(mesh, st%X(psi)(:, idim2, ist2, ispin2), tmp)
+                      prod = X(mf_dotp)(mesh, st%X(psi)(:, idim2, ist2, ik), tmp)
 
-                        beta(ii, jj, kk) = beta(ii, jj, kk) + & 
-                          M_HALF*st%d%kweights(ik)*st%smear%el_per_state*prod*X(mf_dotp)(mesh, &
-                          lr(u(1), op_sigma, w(1))%X(dl_psi)(1:np, idim, ist, ispin), &
-                          lr(u(3), isigma,   w(3))%X(dl_psi)(1:np, idim2, ist2, ispin2))
+                      beta(ii, jj, kk) = beta(ii, jj, kk) + & 
+                        M_HALF * st%d%kweights(ik) * st%smear%el_per_state * prod * X(mf_dotp)(mesh, &
+                        em_lr(u(1), op_sigma, w(1))%X(dl_psi)(1:np, idim, ist, ik), &
+                        em_lr(u(3), isigma,   w(3))%X(dl_psi)(1:np, idim2, ist2, ik))
 
                       end do !idim2
                     end do ! ist2
-                  end do ! ispin2
-
 
                 end do !idim
               end do !ist
-            end do !ispin
+            end do !ik
 
             if(sternheimer_add_fxc(sh)) then 
               do ip = 1, np 
                 hpol_density(ip) = kxc(ip, 1, 1, 1) & 
-                  *sum(lr(u(1), isigma, w(1))%X(dl_rho)(ip, 1:st%d%nspin)) & 
-                  *sum(lr(u(2), isigma, w(2))%X(dl_rho)(ip, 1:st%d%nspin)) & 
-                  *sum(lr(u(3), isigma, w(3))%X(dl_rho)(ip, 1:st%d%nspin)) & 
-                  /CNST(6.0) 
+                  * sum(em_lr(u(1), isigma, w(1))%X(dl_rho)(ip, 1:st%d%nspin)) & 
+                  * sum(em_lr(u(2), isigma, w(2))%X(dl_rho)(ip, 1:st%d%nspin)) & 
+                  * sum(em_lr(u(3), isigma, w(3))%X(dl_rho)(ip, 1:st%d%nspin)) & 
+                  / CNST(6.0) 
               end do
             end if
 

@@ -111,7 +111,7 @@ subroutine X(sternheimer_solve)(                           &
 
     do ik = 1, st%d%nik
       !now calculate response for each state
-      is = mod(ik - 1, st%d%nspin) + 1
+      is = states_dim_get_spin_index(sys%st%d, ik)
 
       states_conv = .true.
 
@@ -206,7 +206,7 @@ subroutine X(sternheimer_solve)(                           &
 
     call X(mixing)(this%mixer, iter, dl_rhoin, dl_rhotmp, dl_rhonew, X(mf_dotp_aux))
 
-    abs_dens =  M_ZERO
+    abs_dens = M_ZERO
 
     do ik = 1, st%d%nspin
       tmp(1:m%np) = dl_rhoin(1:m%np, ik, 1) - dl_rhotmp(1:m%np, ik, 1)
