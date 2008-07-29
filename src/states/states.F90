@@ -98,6 +98,7 @@ module states_m
 
     logical            :: open_boundaries
     CMPLX, pointer     :: zphi(:, :, :, :)  ! Free states for open boundary calculations.
+    CMPLX, pointer     :: ob_intf_psi(:, :, :, :, :)
     FLOAT, pointer     :: ob_rho(:, :, :)   ! Density of the lead unit cells.
     FLOAT, pointer     :: ob_eigenval(:, :) ! Eigenvalues of free states.
     type(states_dim_t) :: ob_d              ! Dims. of the unscattered systems.
@@ -179,7 +180,7 @@ contains
     type(geometry_t),  intent(in)    :: geo
 
     FLOAT :: excess_charge
-    integer :: nempty, ierr, il
+    integer :: nempty, ierr, il, alloc_size
     integer :: ob_k(NLEADS), ob_st(NLEADS), ob_d(NLEADS)
 
     call push_sub('states.states_init')
@@ -259,10 +260,8 @@ contains
     st%open_boundaries = .false.
     ! When doing open boundary calculations the number of free states is
     ! determined by the previous periodic calculation.
+    st%open_boundaries = gr%sb%open_boundaries
     if(gr%sb%open_boundaries) then
-      st%open_boundaries = .true.
-    end if
-    if(gr%sb%open_boundaries .and. calc_mode_is(CM_GS)) then
       do il = 1, NLEADS
         call states_look(trim(gr%sb%lead_restart_dir(il))//'/gs', gr%m, ob_k(il), ob_d(il), ob_st(il), ierr)
         if(ierr.ne.0) then
@@ -328,10 +327,12 @@ contains
       st%d%spin_channels = 2
     end select
 
+    nullify(st%ob_intf_psi)
+
     ! FIXME: For now, open boundary calculations are only possible for
     ! continuum states, i. e. for those states treated by the Lippmann-
     ! Schwinger approach during SCF.
-    if(gr%sb%open_boundaries .and. calc_mode_is(CM_GS)) then
+    if(gr%sb%open_boundaries) then
       if(st%nst.ne.st%ob_ncs) then
         message(1) = 'Open boundary calculations for possibly bound states'
         message(2) = 'are not possible yet. You have to match your number'
@@ -710,9 +711,8 @@ contains
     type(states_t),    intent(inout) :: st
     type(mesh_t),      intent(in)    :: m
     integer, optional, intent(in)    :: wfs_type
-    !    logical,           intent(in)    :: open_boundaries
 
-    integer :: n, ik, ist, idim
+    integer :: n, ik, ist, idim, alloc_size
     logical :: force
 
     call push_sub('states.states_allocate_wfns')
@@ -768,6 +768,14 @@ contains
         end do
       end do
     end if
+
+    if(calc_mode_is(CM_TD).and.st%open_boundaries) then
+      alloc_size = m%lead_unit_cell(LEFT)%np*st%d%dim*st%nst*st%d%nik*NLEADS
+      ALLOCATE(st%ob_intf_psi(m%lead_unit_cell(LEFT)%np, st%d%dim, st%nst, st%d%nik, NLEADS), alloc_size)
+
+      st%ob_intf_psi = M_z0
+    end if
+
     call pop_sub()
   end subroutine states_allocate_wfns
 
@@ -784,6 +792,11 @@ contains
       deallocate(st%dpsi); nullify(st%dpsi)
     else
       deallocate(st%zpsi); nullify(st%zpsi)
+    end if
+
+    if(st%open_boundaries.and.calc_mode_is(CM_TD)) then
+      deallocate(st%ob_intf_psi)
+      nullify(st%ob_intf_psi)
     end if
 
     call pop_sub()
@@ -987,6 +1000,8 @@ contains
     if(st%open_boundaries) then
       call states_dim_end(st%ob_d)
     end if
+
+    DEALLOC(st%ob_intf_psi)
 
     if(associated(st%user_def_states)) then
       deallocate(st%user_def_states); nullify(st%user_def_states)

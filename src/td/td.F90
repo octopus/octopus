@@ -367,6 +367,10 @@ contains
         end if
       end if
 
+      if(.not.fromscratch .and. st%open_boundaries) then
+        call restart_read_ob_intf(trim(restart_dir)//'gs', st, gr, ierr)
+      end if
+
       if(.not. fromscratch .and. td%dynamics == CP) then 
         call cpmd_restart_read(td%cp_propagator, gr, st, ierr)
 
@@ -399,7 +403,19 @@ contains
       if(fromScratch) then
 
         if(.not. st%only_userdef_istates) then
-          call restart_read(trim(restart_dir)//'gs', st, gr, geo, ierr)
+          ! In the open bounary case the ground state wavefunctions are bit too "wide".
+          ! Therefore, we need a special routine to extract the middle.
+          if(gr%sb%open_boundaries) then
+            call restart_read_ob_intf(trim(restart_dir)//'gs', st, gr, ierr)
+            if(ierr.ne.0) then
+              message(1) = "Could not read interface wave functions from '"//trim(restart_dir)//"gs'"
+              message(2) = "Please run an open boundaries ground-state calculation first!"
+              call write_fatal(2)
+            end if
+            call restart_read_ob_central(trim(restart_dir)//'gs', st, gr, ierr)
+          else
+            call restart_read(trim(restart_dir)//'gs', st, gr, geo, ierr)
+          end if
           if(ierr.ne.0) then
             message(1) = "Could not read KS orbitals from '"//trim(restart_dir)//"gs'"
             message(2) = "Please run a ground-state calculation first!"

@@ -52,6 +52,9 @@ module restart_m
     read_free_states,        &
     restart_write,           &
     restart_read,            &
+    restart_read_ob,         &
+    restart_read_ob_intf,    &
+    restart_read_ob_central, &
     restart_format,          &
     restart_dir,             &
     restart_look_and_read,   &
@@ -315,6 +318,403 @@ contains
 
 
   ! ---------------------------------------------------------
+  ! Reads the interface regions of the ground state wavefunctions of
+  ! an open boundaries calculation.
+  ! Returns (in ierr)
+  ! <0 => Fatal error,
+  ! =0 => read all wave-functions,
+  ! >0 => could only read x wavefunctions.
+  subroutine restart_read_ob_intf(dir, st, gr, ierr)
+    character(len=*), intent(in)    :: dir
+    type(states_t),   intent(inout) :: st
+    type(grid_t),     intent(in)    :: gr
+    integer,          intent(out)   :: ierr
+
+    integer              :: io_wfns, io_occs, io_mesh, lead_np, i, err
+    integer              :: ik, ist, idim
+    character            :: char
+    character(len=256)   :: line, filename
+    CMPLX, allocatable   :: tmp(:)
+    type(mesh_t)         :: gs_mesh
+
+    call push_sub('restart.restart_read_ob_intf')
+
+    write(message(1), '(a,i5)') 'Info: Reading ground state interface wave functions'
+    call write_info(1)
+
+    ! Sanity check.
+    ASSERT(associated(st%ob_intf_psi))
+
+    ierr = 0
+
+    ! Read the mesh of the ground state calculation.
+    io_mesh = io_open(trim(dir)//'/mesh', action='read', status='old', die=.false., is_tmp=.true., grp=gr%m%mpi_grp)
+    if(io_mesh.lt.0) then
+      ierr = -1
+      call io_close(io_mesh, grp=gr%m%mpi_grp)
+      call pop_sub()
+      return
+    end if
+    call mesh_init_from_file(gs_mesh, io_mesh)
+
+    io_wfns  = io_open(trim(dir)//'/wfns', action='read', status='old', die=.false., is_tmp=.true., grp=gr%m%mpi_grp)
+    if(io_wfns.lt.0) then
+      ierr = -1
+    end if
+
+    io_occs = io_open(trim(dir)//'/occs', action='read', status='old', die=.false., is_tmp = .true., grp = gr%m%mpi_grp)
+    if(io_occs.lt.0) then
+      if(io_wfns.gt.0) call io_close(io_wfns, grp=gr%m%mpi_grp)
+      ierr = -1
+    end if
+
+    if(ierr.ne.0) then
+      write(message(1),'(a)') 'Could not load ground state interface wave functions.'
+      call write_info(1)
+      call messages_print_stress(stdout)
+      call pop_sub()
+      return
+    end if
+
+    ! Skip two lines.
+    call iopar_read(gr%m%mpi_grp, io_wfns, line, err); call iopar_read(gr%m%mpi_grp, io_wfns, line, err)
+    call iopar_read(gr%m%mpi_grp, io_occs, line, err); call iopar_read(gr%m%mpi_grp, io_occs, line, err)
+
+    lead_np = gr%m%lead_unit_cell(LEFT)%np
+    ALLOCATE(tmp(NP+2*lead_np), NP+2*lead_np)
+    
+    do
+      call iopar_read(gr%m%mpi_grp, io_wfns, line, i)
+      read(line, '(a)') char
+      if(i.ne.0.or.char.eq.'%') exit
+
+      call iopar_backspace(gr%m%mpi_grp, io_wfns)
+
+      call iopar_read(gr%m%mpi_grp, io_wfns, line, err)
+      read(line, *) ik, char, ist, char, idim, char, filename
+
+      call iopar_read(gr%m%mpi_grp, io_occs, line, err)
+      read(line, *) st%occ(ist, ik), char, st%eigenval(ist, ik)
+
+      if(ist.ge.st%st_start .and. ist.le.st%st_end) then
+        ! Open boundaries imply complex wavefunctions.
+        call zrestart_read_function(dir, filename, gs_mesh, tmp, err)
+        ! Here we use the fact that transport is in x-direction (x is the index
+        ! running slowest).
+        st%ob_intf_psi(1:lead_np, idim, ist, ik, LEFT)  = tmp(1:lead_np)
+        st%ob_intf_psi(1:lead_np, idim, ist, ik, RIGHT) = tmp(NP+lead_np+1:NP+2*lead_np)
+      end if
+      if(err.le.0) then
+        ierr = ierr + 1
+      end if
+    end do
+    
+#if defined(HAVE_MPI)
+    if(st%parallel_in_states) then
+      call MPI_Allreduce(ierr, err, 1, MPI_INTEGER, MPI_SUM, st%mpi_grp%comm, mpi_err)
+      ierr = err
+    end if
+#endif
+
+    if(ierr.eq.0) then
+      ierr = -1
+      call messages_print_stress(stdout, 'Loading restart information')
+      message(1) = 'No interface wave functions could be read.'
+      call write_info(1)
+      call messages_print_stress(stdout)
+    else
+      if(ierr.eq.st%nst*st%d%nik*st%d%dim) then
+        ierr = 0
+      else
+        call messages_print_stress(stdout, 'Loading restart information')
+        write(message(1),'(a,i4,a,i4,a)') 'Only ', ierr,' interface wave functions out of ', &
+          st%nst*st%d%nik*st%d%dim, ' could be read.'
+        call write_info(1)
+        call messages_print_stress(stdout)
+      end if
+    end if
+
+    call io_close(io_wfns, gr%m%mpi_grp)
+    call io_close(io_occs, gr%m%mpi_grp)
+
+    deallocate(tmp)
+
+    call pop_sub()
+  end subroutine restart_read_ob_intf
+
+
+  ! ---------------------------------------------------------
+  ! Reads the central regions of the ground state wavefunctions of
+  ! an open boundaries calculation.
+  ! Returns (in ierr)
+  ! <0 => Fatal error,
+  ! =0 => read all wave-functions,
+  ! >0 => could only read x wavefunctions.
+  subroutine restart_read_ob_central(dir, st, gr, ierr)
+    character(len=*), intent(in)    :: dir
+    type(states_t),   intent(inout) :: st
+    type(grid_t),     intent(in)    :: gr
+    integer,          intent(out)   :: ierr
+
+    logical              :: psi_allocated
+    logical, allocatable :: filled(:, :, :)
+    integer              :: io_wfns, io_occs, io_mesh, lead_np, i, err
+    integer              :: ik, ist, idim
+    character            :: char
+    character(len=256)   :: line, filename
+    CMPLX, allocatable   :: tmp(:)
+    type(mesh_t)         :: gs_mesh
+
+    call push_sub('restart.restart_read_ob_central')
+
+    write(message(1), '(a,i5)') 'Info: Loading restart information'
+    call write_info(1)
+
+    ! Sanity check.
+    psi_allocated = (associated(st%dpsi) .and. st%wfs_type.eq.M_REAL) .or. &
+      (associated(st%zpsi) .and. st%wfs_type.eq.M_CMPLX)
+    ASSERT(psi_allocated)
+
+    ierr = 0
+
+    ! Read the mesh of the ground state calculation.
+    io_mesh = io_open(trim(dir)//'/mesh', action='read', status='old', die=.false., is_tmp=.true., grp=gr%m%mpi_grp)
+    if(io_mesh.lt.0) then
+      ierr = -1
+      call io_close(io_mesh, grp=gr%m%mpi_grp)
+      call pop_sub()
+      return
+    end if
+    call mesh_init_from_file(gs_mesh, io_mesh)
+
+    io_wfns  = io_open(trim(dir)//'/wfns', action='read', status='old', die=.false., is_tmp=.true., grp=gr%m%mpi_grp)
+    if(io_wfns.lt.0) then
+      ierr = -1
+    end if
+
+    io_occs = io_open(trim(dir)//'/occs', action='read', status='old', die=.false., is_tmp = .true., grp = gr%m%mpi_grp)
+    if(io_occs.lt.0) then
+      if(io_wfns.gt.0) call io_close(io_wfns, grp=gr%m%mpi_grp)
+      ierr = -1
+    end if
+
+    if(ierr.ne.0) then
+      write(message(1),'(a)') 'Could not load any previous restart information.'
+      call write_info(1)
+      call messages_print_stress(stdout)
+      call pop_sub()
+      return
+    end if
+
+    ALLOCATE(filled(st%d%dim, st%st_start:st%st_end, st%d%nik), st%d%dim*st%lnst*st%d%nik)
+    filled = .false.
+
+    ! Skip two lines.
+    call iopar_read(gr%m%mpi_grp, io_wfns, line, err); call iopar_read(gr%m%mpi_grp, io_wfns, line, err)
+    call iopar_read(gr%m%mpi_grp, io_occs, line, err); call iopar_read(gr%m%mpi_grp, io_occs, line, err)
+
+    lead_np = gr%m%lead_unit_cell(LEFT)%np
+    ALLOCATE(tmp(NP+2*lead_np), NP+2*lead_np)
+    
+    do
+      call iopar_read(gr%m%mpi_grp, io_wfns, line, i)
+      read(line, '(a)') char
+      if(i.ne.0.or.char.eq.'%') exit
+
+      call iopar_backspace(gr%m%mpi_grp, io_wfns)
+
+      call iopar_read(gr%m%mpi_grp, io_wfns, line, err)
+      read(line, *) ik, char, ist, char, idim, char, filename
+
+      call iopar_read(gr%m%mpi_grp, io_occs, line, err)
+      read(line, *) st%occ(ist, ik), char, st%eigenval(ist, ik)
+
+      if(ist.ge.st%st_start .and. ist.le.st%st_end) then
+        ! Open boundaries imply complex wavefunctions.
+        call zrestart_read_function(dir, filename, gs_mesh, tmp, err)
+        ! Here we use the fact that transport is in x-direction (x is the index
+        ! running slowest).
+        st%zpsi(1:NP, idim, ist, ik)                    = tmp(lead_np+1:NP+lead_np)
+      end if
+      if(err.le.0) then
+        filled(idim, ist, ik) = .true.
+        ierr = ierr + 1
+      end if
+    end do
+    
+#if defined(HAVE_MPI)
+    if(st%parallel_in_states) then
+      call MPI_Allreduce(ierr, err, 1, MPI_INTEGER, MPI_SUM, st%mpi_grp%comm, mpi_err)
+      ierr = err
+    end if
+#endif
+    if(ierr.eq.0) then
+      ierr = -1
+      call messages_print_stress(stdout, 'Loading restart information')
+      message(1) = 'No files could be read. No restart information can be used.'
+      call write_info(1)
+      call messages_print_stress(stdout)
+    else
+      if(ierr.eq.st%nst*st%d%nik*st%d%dim) then
+        ierr = 0
+      else
+        call messages_print_stress(stdout, 'Loading restart information')
+        write(message(1),'(a,i4,a,i4,a)') 'Only ', ierr,' files out of ', &
+          st%nst*st%d%nik*st%d%dim, ' could be read.'
+        call write_info(1)
+        call messages_print_stress(stdout)
+      end if
+    end if
+
+    call io_close(io_wfns, gr%m%mpi_grp)
+    call io_close(io_occs, gr%m%mpi_grp)
+
+    deallocate(filled, tmp)
+
+    call pop_sub()
+  end subroutine restart_read_ob_central  
+
+
+  ! ---------------------------------------------------------
+  ! Reads the ground state wavefunctions of an open boundaries
+  ! calculation. It also reads the initial state of the lead
+  ! wavefunction one unit cell outside the simulation region.
+  ! Returns (in ierr)
+  ! <0 => Fatal error,
+  ! =0 => read all wave-functions,
+  ! >0 => could only read x wavefunctions.
+  subroutine restart_read_ob(dir, st, gr, geo, ierr)
+    character(len=*), intent(in)    :: dir
+    type(states_t),   intent(inout) :: st
+    type(grid_t),     intent(in)    :: gr
+    type(geometry_t), intent(in)    :: geo
+    integer,          intent(out)   :: ierr
+    
+    logical              :: psi_allocated
+    logical, allocatable :: filled(:, :, :)
+    integer              :: io_wfns, io_occs, io_mesh, lead_np, i, err
+    integer              :: ik, ist, idim
+    character            :: char
+    character(len=256)   :: line, filename
+    CMPLX, allocatable   :: tmp(:)
+    type(mesh_t)         :: gs_mesh
+
+    call push_sub('restart.restart_read_ob')
+
+
+    call restart_read_ob_intf(dir, st, gr, ierr)
+    call restart_read_ob_central(dir, st, gr, ierr)
+    write(message(1), '(a,i5)') 'Info: Loading restart information'
+    call write_info(1)
+
+    ! Sanity check.
+    psi_allocated = (associated(st%dpsi) .and. st%wfs_type.eq.M_REAL) .or. &
+      (associated(st%zpsi) .and. st%wfs_type.eq.M_CMPLX)
+    ASSERT(psi_allocated)
+
+    ierr = 0
+
+    ! Read the mesh of the ground state calculation.
+    io_mesh = io_open(trim(dir)//'/mesh', action='read', status='old', die=.false., is_tmp=.true., grp=gr%m%mpi_grp)
+    if(io_mesh.lt.0) then
+      ierr = -1
+      call io_close(io_mesh, grp=gr%m%mpi_grp)
+      call pop_sub()
+      return
+    end if
+    call mesh_init_from_file(gs_mesh, io_mesh)
+
+    io_wfns  = io_open(trim(dir)//'/wfns', action='read', status='old', die=.false., is_tmp=.true., grp=gr%m%mpi_grp)
+    if(io_wfns.lt.0) then
+      ierr = -1
+    end if
+
+    io_occs = io_open(trim(dir)//'/occs', action='read', status='old', die=.false., is_tmp = .true., grp = gr%m%mpi_grp)
+    if(io_occs.lt.0) then
+      if(io_wfns.gt.0) call io_close(io_wfns, grp=gr%m%mpi_grp)
+      ierr = -1
+    end if
+
+    if(ierr.ne.0) then
+      write(message(1),'(a)') 'Could not load any previous restart information.'
+      call write_info(1)
+      call messages_print_stress(stdout)
+      call pop_sub()
+      return
+    end if
+
+    ALLOCATE(filled(st%d%dim, st%st_start:st%st_end, st%d%nik), st%d%dim*st%lnst*st%d%nik)
+    filled = .false.
+
+    ! Skip two lines.
+    call iopar_read(gr%m%mpi_grp, io_wfns, line, err); call iopar_read(gr%m%mpi_grp, io_wfns, line, err)
+    call iopar_read(gr%m%mpi_grp, io_occs, line, err); call iopar_read(gr%m%mpi_grp, io_occs, line, err)
+
+    lead_np = gr%m%lead_unit_cell(LEFT)%np
+    ALLOCATE(tmp(NP+2*lead_np), NP+2*lead_np)
+    
+    do
+      call iopar_read(gr%m%mpi_grp, io_wfns, line, i)
+      read(line, '(a)') char
+      if(i.ne.0.or.char.eq.'%') exit
+
+      call iopar_backspace(gr%m%mpi_grp, io_wfns)
+
+      call iopar_read(gr%m%mpi_grp, io_wfns, line, err)
+      read(line, *) ik, char, ist, char, idim, char, filename
+
+      call iopar_read(gr%m%mpi_grp, io_occs, line, err)
+      read(line, *) st%occ(ist, ik), char, st%eigenval(ist, ik)
+
+      if(ist.ge.st%st_start .and. ist.le.st%st_end) then
+        ! Open boundaries imply complex wavefunctions.
+        call zrestart_read_function(dir, filename, gs_mesh, tmp, err)
+        ! Here we use the fact that transport is in x-direction (x is the index
+        ! running slowest).
+        st%zpsi(1:NP, idim, ist, ik)                    = tmp(lead_np+1:NP+lead_np)
+        st%ob_intf_psi(1:lead_np, idim, ist, ik, LEFT)  = tmp(1:lead_np)
+        st%ob_intf_psi(1:lead_np, idim, ist, ik, RIGHT) = tmp(NP+lead_np+1:NP+2*lead_np)
+      end if
+      if(err.le.0) then
+        filled(idim, ist, ik) = .true.
+        ierr = ierr + 1
+      end if
+    end do
+    
+#if defined(HAVE_MPI)
+    if(st%parallel_in_states) then
+      call MPI_Allreduce(ierr, err, 1, MPI_INTEGER, MPI_SUM, st%mpi_grp%comm, mpi_err)
+      ierr = err
+    end if
+#endif
+    if(ierr.eq.0) then
+      ierr = -1
+      call messages_print_stress(stdout, 'Loading restart information')
+      message(1) = 'No files could be read. No restart information can be used.'
+      call write_info(1)
+      call messages_print_stress(stdout)
+    else
+      if(ierr.eq.st%nst*st%d%nik*st%d%dim) then
+        ierr = 0
+      else
+        call messages_print_stress(stdout, 'Loading restart information')
+        write(message(1),'(a,i4,a,i4,a)') 'Only ', ierr,' files out of ', &
+          st%nst*st%d%nik*st%d%dim, ' could be read.'
+        call write_info(1)
+        call messages_print_stress(stdout)
+      end if
+    end if
+
+    call io_close(io_wfns, gr%m%mpi_grp)
+    call io_close(io_occs, gr%m%mpi_grp)
+
+    deallocate(filled, tmp)
+
+    call pop_sub()
+  end subroutine restart_read_ob
+
+
+  ! ---------------------------------------------------------
   ! returns
   ! <0 => Fatal error
   ! =0 => read all wave-functions
@@ -350,12 +750,12 @@ contains
 
     ! sanity check
     boolean = (associated(st%dpsi) .and. st%wfs_type == M_REAL) .or. &
-              (associated(st%zpsi) .and. st%wfs_type == M_CMPLX)
+      (associated(st%zpsi) .and. st%wfs_type == M_CMPLX)
     ASSERT(boolean)
-    
+
     if(present(lr)) then 
       boolean = (associated(lr%ddl_psi) .and. st%wfs_type == M_REAL) .or. &
-                (associated(lr%zdl_psi) .and. st%wfs_type == M_CMPLX)
+        (associated(lr%zdl_psi) .and. st%wfs_type == M_CMPLX)
       ASSERT(boolean)
     endif
 
@@ -383,7 +783,7 @@ contains
 
     ! Reads out the previous mesh info.
     call read_previous_mesh()
- 
+
     ! now we really start
     ALLOCATE(filled(st%d%dim, st%st_start:st%st_end, st%d%nik), st%d%dim*st%lnst*st%d%nik)
     filled = .false.
@@ -437,7 +837,7 @@ contains
               call dmf_interpolate(old_mesh, gr%m, full_interpolation, dphi, lr%ddl_psi(:, idim, ist, ik))
             end if
           else
-              call zrestart_read_function(dir, filename, old_mesh, zphi, err)
+            call zrestart_read_function(dir, filename, old_mesh, zphi, err)
             if( .not. present(lr) ) then 
               call zmf_interpolate(old_mesh, gr%m, full_interpolation, zphi, st%zpsi(:, idim, ist, ik))
             else
