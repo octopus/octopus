@@ -280,7 +280,7 @@ contains
   ! ---------------------------------------------------------
   ! Identity preconditioner. Since preconditioning with the inverse of
   ! the diagonal did not improve the convergence we put identity here
-  ! since we have something better.
+  ! until we have something better.
   subroutine precond(x, y)
     CMPLX, intent(in)  :: x(:)
     CMPLX, intent(out) :: y(:)
