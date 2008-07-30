@@ -861,7 +861,7 @@ contains
     ! system is periodic, the atoms are moved inside the box, if the
     ! system is finite a warning is emitted.
 
-    integer :: iatom, pd
+    integer :: iatom, pd, idir
     FLOAT :: xx(1:MAX_DIM)
 
     pd = sb%periodic_dim
@@ -873,10 +873,16 @@ contains
         !convert the position to the orthogonal space
         xx(1:pd) = matmul(geo%atom(iatom)%x(1:pd), sb%klattice_unitary(1:pd, 1:pd))
 
-        xx(1:pd) = xx(1:pd)/(M_TWO*sb%lsize(1:pd)) + 0.5
-
-        xx(1:pd) = xx(1:pd) - aint(xx(1:pd))
-
+        xx(1:pd) = xx(1:pd)/(M_TWO*sb%lsize(1:pd))
+        xx(1:pd) = xx(1:pd) + 0.5
+        do idir = 1, pd
+          if(xx(idir) > 0) then
+            xx(idir) = xx(idir) - aint(xx(idir))
+          else
+            xx(idir) = xx(idir) - aint(xx(idir)) + M_ONE
+          end if
+        end do
+        ASSERT(all(xx(1:pd) > 0))
         xx(1:pd) = (xx(1:pd) - 0.5)*M_TWO*sb%lsize(1:pd) 
 
         geo%atom(iatom)%x(1:pd) = matmul(sb%klattice_unitary(1:pd, 1:pd), xx(1:pd))
