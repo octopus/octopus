@@ -257,6 +257,7 @@ contains
     call geometry_val_charge(geo, st%val_charge)
     st%qtot = -(st%val_charge + excess_charge)
 
+    nullify(st%ob_intf_psi)
     st%open_boundaries = .false.
     ! When doing open boundary calculations the number of free states is
     ! determined by the previous periodic calculation.
@@ -326,8 +327,6 @@ contains
       st%d%nspin = 4
       st%d%spin_channels = 2
     end select
-
-    nullify(st%ob_intf_psi)
 
     ! FIXME: For now, open boundary calculations are only possible for
     ! continuum states, i. e. for those states treated by the Lippmann-
@@ -1000,8 +999,6 @@ contains
     if(st%open_boundaries) then
       call states_dim_end(st%ob_d)
     end if
-
-    DEALLOC(st%ob_intf_psi)
 
     if(associated(st%user_def_states)) then
       deallocate(st%user_def_states); nullify(st%user_def_states)
