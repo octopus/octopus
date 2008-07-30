@@ -20,4 +20,8 @@ Spacing = 0.25
 
 EigenSolver = rmmdiis
 
-ParallelizationStrategy = par_domains
+ParallelizationStrategy = par_domains + par_states
+
+%ParallelizationGroupRanks
+ 2 | 2
+%

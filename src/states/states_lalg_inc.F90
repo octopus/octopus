@@ -25,7 +25,7 @@ subroutine X(states_gram_schmidt_full)(st, nst, m, dim, psi, start)
   type(states_t),    intent(in)    :: st
   integer,           intent(in)    :: nst, dim
   type(mesh_t),      intent(in)    :: m
-  R_TYPE, target,    intent(inout) :: psi(:,:,:)   ! psi(m%np_part, dim, nst)
+  R_TYPE, target,    intent(inout) :: psi(:, :, st%st_start:)   ! psi(m%np_part, dim, nst)
   integer, optional, intent(in)    :: start
 
   R_TYPE, allocatable :: ss(:, :), qq(:, :), psi_tmp(:, :, :)
