@@ -876,13 +876,13 @@ contains
         xx(1:pd) = xx(1:pd)/(M_TWO*sb%lsize(1:pd))
         xx(1:pd) = xx(1:pd) + 0.5
         do idir = 1, pd
-          if(xx(idir) > 0) then
+          if(xx(idir) >= M_ZERO) then
             xx(idir) = xx(idir) - aint(xx(idir))
           else
             xx(idir) = xx(idir) - aint(xx(idir)) + M_ONE
           end if
         end do
-        ASSERT(all(xx(1:pd) > 0))
+        ASSERT(all(xx(1:pd) >= M_ZERO))
         xx(1:pd) = (xx(1:pd) - 0.5)*M_TWO*sb%lsize(1:pd) 
 
         geo%atom(iatom)%x(1:pd) = matmul(sb%klattice_unitary(1:pd, 1:pd), xx(1:pd))
