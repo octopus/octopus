@@ -119,7 +119,7 @@ subroutine X(sternheimer_solve)(                           &
         do sigma = 1, nsigma
           !calculate the RHS of the Sternheimer eq
           Y(1:m%np, 1, sigma) = R_TOTYPE(M_ZERO)
-          call X(pert_apply)(perturbation, sys%gr, sys%geo, h, ik, st%X(psi)(1:m%np, 1, ist, ik), Y(1:m%np, 1, sigma))
+          call X(pert_apply)(perturbation, sys%gr, sys%geo, h, ik, st%X(psi)(1:m%np_part, 1, ist, ik), Y(1:m%np, 1, sigma))
           Y(1:m%np, 1, sigma) = -Y(1:m%np, 1, sigma) - hvar(1:m%np, is, sigma) * st%X(psi)(1:m%np, 1, ist, ik)
 
           if (this%occ_response) then
@@ -146,7 +146,7 @@ subroutine X(sternheimer_solve)(                           &
 
           !solve the Sternheimer equation
           call X(solve_HXeY) (this%solver, h, sys%gr, sys%st, ist, ik, &
-             lr(sigma)%X(dl_psi)(1:m%np, 1:st%d%dim, ist, ik), &
+             lr(sigma)%X(dl_psi)(1:m%np_part, 1:st%d%dim, ist, ik), &
              Y(1:m%np, 1:1, sigma), -sys%st%eigenval(ist, ik) + omega_sigma)
           
           ! print the norm of the variations, and the number of

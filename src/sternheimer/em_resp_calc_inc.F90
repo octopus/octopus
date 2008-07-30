@@ -254,7 +254,8 @@ subroutine X(lr_calc_polarizability_finite)(sys, h, lr, nsigma, perturbation, zp
   ndir_ = sys%NDIM
   if(present(ndir)) ndir_ = ndir
 
-  ! alpha_ij(w) = sum(m occ) [<psi_m(0)|r_i|psi_mj(1)(w)> + <psi_mj(1)(-w)|r_i|psi_m(0)>]
+  ! alpha_ij(w) = - sum(m occ) [<psi_m(0)|r_i|psi_mj(1)(w)> + <psi_mj(1)(-w)|r_i|psi_m(0)>]
+  ! minus sign is from electronic charge -e
 
   do dir1 = 1, ndir_
     do dir2 = 1, sys%gr%sb%dim
@@ -267,7 +268,7 @@ subroutine X(lr_calc_polarizability_finite)(sys, h, lr, nsigma, perturbation, zp
       else
         zpol(dir1, dir2) = zpol(dir1, dir2) &
           - X(pert_expectation_value)(perturbation, sys%gr, sys%geo, h, &
-            sys%st, lr(dir2, 2)%X(dl_psi), sys%st%X(psi))
+          sys%st, lr(dir2, 2)%X(dl_psi), sys%st%X(psi))
       end if
     end do
   end do
@@ -336,14 +337,22 @@ end subroutine X(lr_calc_susceptibility)
 
 
 ! ---------------------------------------------------------
-subroutine X(lr_calc_beta) (sh, sys, h, em_lr, dipole, beta)
+subroutine X(lr_calc_beta) (sh, sys, h, em_lr, dipole, beta, kdotp_lr, kdotp_em_lr)
 ! Note: correctness for spinors is unclear
+! See (16) in X Andrade et al., J. Chem. Phys. 126, 184106 (2006) for finite systems
+! and (10) in A Dal Corso et al., Phys. Rev. B 15, 15638 (1996) for periodic systems
+! Supply only em_lr for finite systems, and both kdotp_lr and kdotp_em_lr for periodic
+! em_lr(dir, sigma, omega) = electric perturbation of ground-state wavefunctions
+! kdotp_lr(dir) = kdotp perturbation of ground-state wavefunctions
+! kdotp_em_lr(dir1, dir2, sigma, omega) = kdotp perturbation of electric-perturbed wfns
   type(sternheimer_t),     intent(inout) :: sh
   type(system_t), target,  intent(inout) :: sys
   type(hamiltonian_t),     intent(inout) :: h
   type(lr_t),              intent(inout) :: em_lr(:,:,:)
   type(pert_t),            intent(inout) :: dipole
   CMPLX,                   intent(out)   :: beta(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM)
+  type(lr_t),    optional, intent(in)    :: kdotp_lr(:)
+  type(lr_t),    optional, intent(in)    :: kdotp_em_lr(:,:,:,:)
 
   type(states_t), pointer :: st
   type(mesh_t),   pointer :: mesh
@@ -370,6 +379,9 @@ subroutine X(lr_calc_beta) (sh, sys, h, em_lr, dipole, beta)
 
   write(message(1), '(a)') 'Info: Calculating hyperpolarizability tensor'
   call write_info(1)
+
+  ASSERT(present(kdotp_lr) .eqv. present(kdotp_em_lr))
+  ! either both are absent for finite, or both present for periodic
 
   !calculate kxc, the derivative of fxc
   ALLOCATE(kxc(1:np, 1:st%d%nspin, 1:st%d%nspin, 1:st%d%nspin), np*st%d%nspin**3)
@@ -414,11 +426,14 @@ subroutine X(lr_calc_beta) (sh, sys, h, em_lr, dipole, beta)
 
                   ispin = states_dim_get_spin_index(sys%st%d, ik)
 
-! change here to accept tmp from arguments
-                  call pert_setup_dir(dipole, u(2))
-                  call X(pert_apply) &
-                    (dipole, sys%gr, sys%geo, h, ik, em_lr(u(3), isigma, w(3))%X(dl_psi)(:, idim, ist, ik), tmp)
-                  
+                  if (present(kdotp_em_lr)) then
+                    tmp(1:np) = - M_zI * kdotp_em_lr(u(2), u(3), isigma, w(3))%X(dl_psi)(1:np, idim, ist, ik)
+                  else
+                    call pert_setup_dir(dipole, u(2))
+                    call X(pert_apply) &
+                      (dipole, sys%gr, sys%geo, h, ik, em_lr(u(3), isigma, w(3))%X(dl_psi)(:, idim, ist, ik), tmp)
+                  endif
+
                   do ip = 1, np
                     tmp(ip) = tmp(ip) + R_REAL(hvar(ip, ispin, isigma, idim, u(2), w(2))) &
                       * em_lr(u(3), isigma, w(3))%X(dl_psi)(ip, idim, ist, ik)
@@ -431,11 +446,13 @@ subroutine X(lr_calc_beta) (sh, sys, h, em_lr, dipole, beta)
                   do ist2 = 1, st%nst
                     do idim2 = 1, st%d%dim
                       ! there is no coupling between states with different k or spin
-                      ! should there still be idim2 here?
 
-! change here to accept tmp from arguments
-                      call pert_setup_dir(dipole, u(2))
-                      call X(pert_apply)(dipole, sys%gr, sys%geo, h, ik, st%X(psi)(:, idim, ist, ik), tmp)
+                      if (present(kdotp_lr)) then
+                        tmp(1:np) = - M_zI * kdotp_lr(u(2))%X(dl_psi)(1:np, idim, ist, ik) 
+                      else
+                        call pert_setup_dir(dipole, u(2))
+                        call X(pert_apply)(dipole, sys%gr, sys%geo, h, ik, st%X(psi)(:, idim, ist, ik), tmp)
+                      endif
 
                       do ip = 1, np
                         tmp(ip) = tmp(ip) + &

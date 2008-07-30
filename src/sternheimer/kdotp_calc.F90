@@ -79,14 +79,13 @@ subroutine zcalc_dipole_periodic(sys, lr, dipole)
   type(lr_t),             intent(in)    :: lr(:,:)
   FLOAT,                  intent(out)   :: dipole(:)
 
-  integer idir, ist, ik
+  integer idir, ist, ik, idim
   type(mesh_t), pointer :: m
   CMPLX :: term, moment
   m => sys%gr%m
 
   ! mu_i = sum(m occ, k) <u_mk(0)|(-id/dk_i|u_mk(0)>)
   !      = Im sum(m occ, k) <u_mk(0)|(d/dk_i|u_mk(0)>)
-  ! Smearing is not implemented here yet
 
   call push_sub('kdotp_calc.zcalc_dipole_periodic')
 
@@ -97,10 +96,12 @@ subroutine zcalc_dipole_periodic(sys, lr, dipole)
       term = M_ZERO
 
       do ist = 1, sys%st%nst
-        term = term + zmf_dotp(m, sys%st%zpsi(1:m%np, 1, ist, ik), lr(idir, 1)%zdl_psi(1:m%np, 1, ist, ik))       
+        do idim = 1, sys%st%d%dim
+          term = term + zmf_dotp(m, sys%st%zpsi(1:m%np, idim, ist, ik), lr(idir, 1)%zdl_psi(1:m%np, idim, ist, ik))
+        enddo
       enddo
 
-      moment = moment + term * M_HALF * sys%st%d%kweights(ik) * sys%st%smear%el_per_state
+      moment = moment + term * sys%st%d%kweights(ik) * sys%st%smear%el_per_state
     enddo
 
     dipole(idir) = aimag(moment)
@@ -120,7 +121,7 @@ subroutine zcalc_polarizability_periodic(sys, em_lr, kdotp_lr, nsigma, zpol, ndi
   CMPLX,                  intent(out)   :: zpol(1:MAX_DIM, 1:MAX_DIM)
   integer, optional,      intent(in)    :: ndir
 
-  integer :: dir1, dir2, ndir_, ist, ik
+  integer :: dir1, dir2, ndir_, ist, ik, idim
   CMPLX :: term
   type(mesh_t), pointer :: m
   m => sys%gr%m
@@ -130,9 +131,8 @@ subroutine zcalc_polarizability_periodic(sys, em_lr, kdotp_lr, nsigma, zpol, ndi
   ndir_ = sys%NDIM
   if(present(ndir)) ndir_ = ndir
 
-  ! alpha_ij(w) = sum(m occ, k) [(<u_mk(0)|id/dk_i)|u_mkj(1)(w)> + <u_mkj(1)(-w)|(-id/dk_i|u_mk(0)>)]
-  ! Smearing is not implemented here yet
-  ! Where does the minus sign in finite version come from????
+  ! alpha_ij(w) = - sum(m occ, k) [(<u_mk(0)|id/dk_i)|u_mkj(1)(w)> + <u_mkj(1)(-w)|(-id/dk_i|u_mk(0)>)]
+  ! Smearing is not implemented here yet?
 
   do dir1 = 1, ndir_
     do dir2 = 1, sys%gr%sb%dim
@@ -142,19 +142,21 @@ subroutine zcalc_polarizability_periodic(sys, em_lr, kdotp_lr, nsigma, zpol, ndi
       do ik = 1, sys%st%d%nik
         term = M_ZERO
         do ist = 1, sys%st%nst
-          term = term - M_zI * zmf_dotp(m, kdotp_lr(dir1)%zdl_psi(1:m%np, 1, ist, ik), &
-            em_lr(dir2, 1)%zdl_psi(1:m%np, 1, ist, ik))
+          do idim = 1, sys%st%d%dim
+            term = term - M_zI * zmf_dotp(m, kdotp_lr(dir1)%zdl_psi(1:m%np, idim, ist, ik), &
+              em_lr(dir2, 1)%zdl_psi(1:m%np, idim, ist, ik))
 
-          if(nsigma == 1) then
-             term = term + conjg(zpol(dir1, dir2))
-          else
-             term = term + M_zI * zmf_dotp(m, em_lr(dir2, 2)%zdl_psi(1:m%np, 1, ist, ik), & 
-               kdotp_lr(dir1)%zdl_psi(1:m%np, 1, ist, ik))
-          end if
+            if(nsigma == 1) then
+              term = term + conjg(zpol(dir1, dir2))
+            else
+              term = term + M_zI * zmf_dotp(m, em_lr(dir2, 2)%zdl_psi(1:m%np, idim, ist, ik), & 
+                kdotp_lr(dir1)%zdl_psi(1:m%np, idim, ist, ik))
+            end if
+          enddo
         enddo
 
         zpol(dir1, dir2) = zpol(dir1, dir2) + &
-          term * M_HALF * sys%st%d%kweights(ik) * sys%st%smear%el_per_state
+          term * sys%st%d%kweights(ik) * sys%st%smear%el_per_state
       enddo
     enddo
   enddo

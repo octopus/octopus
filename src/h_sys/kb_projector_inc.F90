@@ -51,6 +51,7 @@ subroutine X(kb_project)(mesh, sm, kb_p, dim, psi, ppsi)
   call X(kb_project_ket)(mesh, sm, kb_p, dim, uvpsi, ppsi)
 
   call pop_sub()
+
 end subroutine X(kb_project)
 
 subroutine X(kb_project_bra)(mesh, sm, kb_p, dim, psi, uvpsi)
@@ -63,7 +64,7 @@ subroutine X(kb_project_bra)(mesh, sm, kb_p, dim, psi, uvpsi)
 
   integer :: ic, idim, ns, is
 
-  call push_sub('kb_projector_inc.kb_project')
+  call push_sub('kb_projector_inc.kb_project_bra')
 
   ns = kb_p%n_s
 
@@ -96,7 +97,8 @@ subroutine X(kb_project_bra)(mesh, sm, kb_p, dim, psi, uvpsi)
     uvpsi(1:kb_p%n_c, 1:dim) = uvpsi(1:kb_p%n_c, 1:dim)*mesh%vol_pp(1)
   end if
 
-call pop_sub()
+  call pop_sub()
+
 end subroutine X(kb_project_bra)
 
 subroutine X(kb_project_ket)(mesh, sm, kb_p, dim, uvpsi, psi)
@@ -109,7 +111,7 @@ subroutine X(kb_project_ket)(mesh, sm, kb_p, dim, uvpsi, psi)
 
   integer :: ic, idim, ns, is
 
-  call push_sub('kb_projector_inc.kb_project')
+  call push_sub('kb_projector_inc.kb_project_ket')
 
   ns = kb_p%n_s
 
@@ -124,8 +126,8 @@ subroutine X(kb_project_ket)(mesh, sm, kb_p, dim, uvpsi, psi)
   end do
 
   call profiling_count_operations(ns*dim*kb_p%n_c*2*R_ADD)
-
   call pop_sub()
+
 end subroutine X(kb_project_ket)
 
 subroutine X(kb_mul_energies)(kb_p, dim, uvpsi)
@@ -135,9 +137,13 @@ subroutine X(kb_mul_energies)(kb_p, dim, uvpsi)
   
   integer :: idim
 
+  call push_sub('kb_projector_inc.kb_mul_energies')
+
   do idim = 1, dim
     uvpsi(1:kb_p%n_c, idim) = uvpsi(1:kb_p%n_c, idim)*kb_p%e(1:kb_p%n_c)
   end do
+
+  call pop_sub()
 
 end subroutine X(kb_mul_energies)
 

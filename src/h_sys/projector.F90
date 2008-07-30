@@ -106,9 +106,13 @@ contains
   subroutine projector_null(p)
     type(projector_t), intent(out) :: p
 
+    call push_sub('projector.projector_null')
+
     p%type = M_NONE
     nullify(p%phase)
     call submesh_null(p%sphere)
+
+    call pop_sub()
 
   end subroutine projector_null
 
@@ -175,6 +179,8 @@ contains
     integer :: ns, ik, is
     FLOAT   :: kr
 
+    call push_sub('projector.projector_init_phases')
+
     ns = this%sphere%ns
 
     if(.not. associated(this%phase)) then
@@ -191,6 +197,8 @@ contains
       end do
 
     end do
+
+    call pop_sub()
 
   end subroutine projector_init_phases
 

@@ -32,7 +32,7 @@ subroutine X(pert_apply) (this, gr, geo, h, ik, f_in, f_out)
   R_TYPE, allocatable :: f_in_copy(:)
   logical :: apply_kpoint
 
-  call push_sub('pert_inc.X(pert_apply)')
+  call push_sub('pert_inc.Xpert_apply')
 
   call profiling_in(prof, "PERT_APPLY")
 
@@ -191,7 +191,7 @@ contains
     integer :: iatom, idir
     R_TYPE, allocatable  :: tmp(:)
 
-    call push_sub('pert_inc.X(pert_apply).ionic')
+    call push_sub('pert_inc.Xpert_apply.ionic')
     ALLOCATE(tmp(1:NP), NP*1)
     
     f_out(1:NP) = M_ZERO
@@ -227,12 +227,13 @@ subroutine X(ionic_perturbation)(this, gr, geo, h, ik, f_in, f_out, iatom, idir)
   integer,              intent(in)    :: iatom, idir    
 
   ! FIX ME: may need to tell derivatives_oper not to apply boundary conditions 
+  ! more things about ghost points may need to be done
 
   R_TYPE, allocatable :: grad(:,:), fin(:, :), fout(:, :)
   FLOAT,  allocatable :: vloc(:)
   type(atom_t), pointer :: atm
 
-  call push_sub('pert_inc.X(ionic_perturbation)')
+  call push_sub('pert_inc.Xionic_perturbation')
 
   atm => geo%atom(iatom)
 
@@ -241,7 +242,7 @@ subroutine X(ionic_perturbation)(this, gr, geo, h, ik, f_in, f_out, iatom, idir)
   call epot_local_potential(h%ep, gr, gr%m, geo, atm, vloc, CNST(0.0))
 
   ALLOCATE(fin(1:NP_PART, 1), NP_PART)
-  call lalg_copy(NP, f_in, fin(:, 1))
+  call lalg_copy(NP_PART, f_in, fin(:, 1))
 
   !d^T v |f>
   ALLOCATE(fout(1:NP_PART, 1), NP_PART)
@@ -273,7 +274,7 @@ subroutine X(pert_apply_order_2) (this, gr, geo, h, ik, f_in, f_out)
 
 ! FIX ME: need to apply phases here
 
-  call push_sub('pert_inc.X(pert_apply_order2)')
+  call push_sub('pert_inc.Xpert_apply_order2')
 
   select case(this%pert_type)
 
@@ -298,7 +299,7 @@ contains
 
     integer :: iatom, idir, idir2, ip
 
-    call push_sub('pert_inc.X(pert_apply_order2).magnetic')
+    call push_sub('pert_inc.Xpert_apply_order2.magnetic')
 
     do ip = 1, NP
       rdelta = sum(gr%m%x(ip, 1:MAX_DIM)**2) * ddelta(this%dir, this%dir2)
@@ -378,7 +379,7 @@ contains
     integer :: iatom, idir, jdir
     R_TYPE, allocatable  :: tmp(:)
     
-    call push_sub('pert_inc.X(pert_apply_order2).ionic')
+    call push_sub('pert_inc.Xpert_apply_order2.ionic')
 
     ALLOCATE(tmp(1:NP), NP*1)
     
@@ -425,7 +426,7 @@ subroutine X(ionic_perturbation_order_2) (this, gr, geo, h, ik, f_in, f_out, iat
   FLOAT,  allocatable :: vloc(:)
   type(atom_t), pointer :: atm
 
-  call push_sub('pert_inc.X(ionic_perturbation_order2)')
+  call push_sub('pert_inc.Xionic_perturbation_order2')
 
   atm => geo%atom(iatom)
 
@@ -437,7 +438,7 @@ subroutine X(ionic_perturbation_order_2) (this, gr, geo, h, ik, f_in, f_out, iat
   vloc(1:NP) = M_ZERO
   call epot_local_potential(h%ep, gr, gr%m, geo, atm, vloc, CNST(0.0))
 
-  call lalg_copy(NP, f_in, fin(:, 1))    
+  call lalg_copy(NP_PART, f_in, fin(:, 1))    
 
   !di^T dj^T v |f>
   tmp1(1:NP, 1) = vloc(1:NP) * fin(1:NP, 1)
@@ -486,7 +487,7 @@ subroutine X(pert_expectation_density) (this, gr, geo, h, st, psia, psib, densit
   integer :: ik, ist, idim, order
   FLOAT   :: ikweight
 
-  call push_sub('pert_inc.X(pert_expectation_density)')
+  call push_sub('pert_inc.Xpert_expectation_density')
 
   ALLOCATE(pertpsib(1:NP), NP)
 
@@ -537,7 +538,7 @@ R_TYPE function X(pert_expectation_value) (this, gr, geo, h, st, psia, psib, per
 #endif
   integer :: order
 
-  call push_sub('pert_inc.X(pert_expectation_value)')
+  call push_sub('pert_inc.Xpert_expectation_value')
 
   order = 1
   if(present(pert_order)) order = pert_order
