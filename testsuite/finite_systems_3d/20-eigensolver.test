@@ -10,10 +10,14 @@ Programs   : octopus; octopus_mpi
 TestGroups : short-run
 Enabled    : Yes
 
-# This test checks the eigensolver lobpcg, cg, cg_new, and plan with a simple
+# This test checks the eigensolver lobpcg, cg, cg_new, plan, evolution and rmmdiis with a simple
 # SiH4.
 
-#Input: 20-eigensolver.01-lobpcg.inp
+Input: 20-eigensolver.01-lobpcg.inp
+match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; -13.449024
+match ; Eigenvalue  2 ; GREP(static/info, ' 2   --', 13) ;  -8.455376
+match ; Eigenvalue  3 ; GREP(static/info, ' 3   --', 13) ;  -8.455376
+match ; Eigenvalue  4 ; GREP(static/info, ' 4   --', 13) ;  -8.419341
 
 Input: 20-eigensolver.02-cg.inp
 match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; -13.449028
