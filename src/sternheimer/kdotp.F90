@@ -88,9 +88,16 @@ contains
     type(kdotp_t)           :: kdotp_vars
     type(sternheimer_t)     :: sh
 
-    integer :: idir, ierr, size, is, ist, ik
+    type(lr_t), allocatable :: em_lr(:,:,:)
+    logical                 :: calc_pol
+    logical                 :: calc_hyperpol
+    integer                 :: em_nfactor
+    integer                 :: em_nsigma
+
+    integer            :: idir, ierr, size, is, ist, ik
     character(len=100) :: dirname, str_tmp
-    FLOAT, allocatable :: dipole(:)
+    FLOAT              :: elec_dipole(1:MAX_DIM) ! electronic contribution
+    FLOAT              :: ion_dipole(1:MAX_DIM)  ! ionic contribution
 
     call push_sub('kdotp.kdotp_lr_run')
 
@@ -102,10 +109,8 @@ contains
     kdotp_vars%eff_mass_inv(:,:,:,:)=0  
 
     call pert_init(kdotp_vars%perturbation, PERTURBATION_KDOTP, sys%gr, sys%geo)
-!    call pert_init(kdotp_vars%perturbation, PERTURBATION_NONE, sys%gr, sys%geo)
 
     ALLOCATE(kdotp_vars%lr(1:NDIM, 1), NDIM)
-    ALLOCATE(dipole(1:NDIM), NDIM)
 
     call parse_input()
 
@@ -161,7 +166,7 @@ contains
 
     call info()
 
-    message(1) = "Info: Calculating effective masses."
+    message(1) = "Info: Calculating kdotp linear response of ground-state wavefunctions."
     call write_info(1)
 
     call io_mkdir('kdotp/')
@@ -179,13 +184,25 @@ contains
     end do ! idir
 
     write(6, '(a)')
-    call zcalc_dipole_periodic(sys, kdotp_vars%lr, dipole(1:sys%gr%sb%dim))
-    call io_output_dipole(6, dipole, NDIM)
+    call zcalc_dipole_periodic(sys, kdotp_vars%lr, elec_dipole(1:NDIM))
+    call geometry_dipole(sys%geo, ion_dipole(1:NDIM))
+    call io_output_dipole(6, elec_dipole(1:NDIM) + ion_dipole(1:NDIM), NDIM)
+
+    message(1) = "Info: Calculating effective masses."
+    call write_info(1)
 
     call zcalc_eff_mass_inv(sys, h, kdotp_vars%lr, kdotp_vars%perturbation, &
          kdotp_vars%eff_mass_inv, kdotp_vars%occ_solution_method, kdotp_vars%degen_thres)
 
     call kdotp_output(sys%st, sys%gr, kdotp_vars)
+
+    ! Now do kdotp perturbation of electric responses, if requested
+    if (calc_pol) then
+       message(1) = "Info: Calculating kdotp linear response of electric LR wavefunctions."
+       call write_info(1)
+
+       ALLOCATE(em_lr(1:NDIM, 1:em_nsigma, 1:em_nfactor), NDIM*em_nsigma*em_nfactor)
+    endif
 
     do idir = 1, NDIM
       call lr_dealloc(kdotp_vars%lr(idir, 1))
@@ -206,6 +223,10 @@ contains
 
     subroutine parse_input()
 
+      type(block_t) blk
+
+      call push_sub('kdotp.kdotp_lr_run.parse_input')
+
       !%Variable KdotP_OccupiedSolutionMethod
       !%Type integer
       !%Default sternheimer
@@ -223,10 +244,10 @@ contains
       !%End      
 
       call loct_parse_int(check_inp('KdotP_OccupiedSolutionMethod'), &
-           0, kdotp_vars%occ_solution_method)
+        0, kdotp_vars%occ_solution_method)
 
       call loct_parse_float(check_inp('DegeneracyThreshold'), &
-           CNST(1e-5), kdotp_vars%degen_thres)
+        CNST(1e-5), kdotp_vars%degen_thres)
       ! Note: this variable is defined in src/states.F90, in states_degeneracy_matrix
 
       !%Variable KdotP_Eta
@@ -256,10 +277,38 @@ contains
 
       call loct_parse_int(check_inp('KdotP_Initialization'), 0, kdotp_vars%initialization)
 
+      !%Variable KdotP_CalculatePolarizabilities
+      !%Type logical
+      !%Default false
+      !%Section Linear Response::KdotP
+      !%Description
+      !% If true, reads wavefunctions from previous em_resp run,
+      !% calculates their kdotp perturbations, and uses them to
+      !% calculate polarizability and hyperpolarizability. If false,
+      !% only calculates effective masses and dipole moments.
+      !%End      
+
+      call loct_parse_logical(check_inp('KdotP_CalculatePolarizabilities'), &
+        .false., calc_pol)
+
+      if (loct_parse_block(check_inp('EMHyperpol'), blk) == 0) then
+         calc_hyperpol = .true.
+         em_nfactor = 3
+         em_nsigma = 2  ! not correct if omega = 0
+      else
+         calc_hyperpol = .false.
+         em_nfactor = 1
+         em_nsigma = 1
+      endif
+
+      call pop_sub()
+
    end subroutine parse_input
 
     ! ---------------------------------------------------------
     subroutine info()
+
+      call push_sub('kdotp.kdotp_lr_run.info')
 
       call pert_info(kdotp_vars%perturbation, stdout)
 
@@ -283,6 +332,8 @@ contains
       call write_info(2)
 
       call messages_print_stress(stdout)
+      
+      call pop_sub()
 
     end subroutine info
 
@@ -297,6 +348,8 @@ contains
     character(len=80) :: filename, tmp
     integer :: iunit, ik, ist, ist2, ik2, ispin
     FLOAT :: determinant
+
+    call push_sub('kdotp.kdotp_output')
 
     call messages_print_stress(stdout, 'Degenerate subspaces')
 
@@ -315,8 +368,6 @@ contains
            ik2 = ik / 2
         endif
       endif
-
-!      write(*,*) 'ik = ', ik, ', ispin = ', ispin, ', ik2 = ', ik2
 
       tmp = int2str(ik2)
       write(*, '(3a, i1)') 'k-point ', trim(tmp), ', spin ', ispin 
@@ -376,13 +427,19 @@ contains
 
     enddo
 
+    call pop_sub()
+
   end subroutine kdotp_output
 
   character(len=12) function int2str(i) result(str)
     integer, intent(in) :: i
     
+    call push_sub('kdotp.int2str')
+
     write(str, '(i11)') i
     str = trim(adjustl(str))
+
+    call pop_sub()
     
   end function int2str
             

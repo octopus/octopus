@@ -91,12 +91,13 @@ module pert_m
 
   type pert_t
     private
-    integer :: pert_type
-    integer :: dir
-    integer :: dir2
-    integer :: atom1, atom2
-    integer :: gauge
+    integer            :: pert_type
+    integer            :: dir
+    integer            :: dir2
+    integer            :: atom1, atom2
+    integer            :: gauge
     type(pert_ionic_t) :: ionic
+    logical            :: use_nonlocalpps
   end type pert_t
 
   interface pert_init
@@ -144,7 +145,7 @@ contains
 
   ! --------------------------------------------------------------------
   subroutine pert_init2(this, pert_type, gr, geo)
-    type(pert_t), intent(out)   :: this
+    type(pert_t),      intent(out)   :: this
     integer,           intent(in)    :: pert_type
     type(grid_t),      intent(inout) :: gr
     type(geometry_t),  intent(in)    :: geo
@@ -188,6 +189,20 @@ contains
       ALLOCATE(this%ionic%mix2(geo%natoms, NDIM), geo%natoms*NDIM)
     end if
 
+    if(this%pert_type == PERTURBATION_KDOTP) then
+      !%Variable KdotP_UseNonLocalPseudopotential
+      !%Type logical
+      !%Default true
+      !%Section Linear Response::KdotP
+      !%Description
+      !% For testing purposes, set to false to ignore the term -i[r,V] in
+      !% the kdotp perturbation, which is due to non-local pseudopotentials.
+      !%End
+
+      call loct_parse_logical(check_inp('KdotP_UseNonLocalPseudopotential'), &
+        .true., this%use_nonlocalpps)
+    endif
+
     call pop_sub()
 
   end subroutine pert_init2
@@ -208,6 +223,13 @@ contains
     integer,      intent(in) :: unit
 
     call messages_print_var_option(unit, 'RespPerturbationType', this%pert_type)
+    
+    if(this%pert_type == PERTURBATION_KDOTP) then
+      if (.not. this%use_nonlocalpps) then
+        write(message(1), '(a)') 'Ignoring non-local pseudopotential term.'
+        call write_info(1)
+      endif
+    endif
    
   end subroutine pert_info
 

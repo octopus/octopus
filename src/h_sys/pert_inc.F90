@@ -30,7 +30,7 @@ subroutine X(pert_apply) (this, gr, geo, h, ik, f_in, f_out)
   R_TYPE,               intent(out)   :: f_out(:)
 
   R_TYPE, allocatable :: f_in_copy(:)
-  logical :: apply_kpoint
+   logical :: apply_kpoint
 
   call push_sub('pert_inc.Xpert_apply')
 
@@ -118,14 +118,16 @@ contains
     ! representation on psi is just -i*grad . delta_k
     ! note that second-order term is left out
 
-    do iatom = 1, geo%natoms
-      if(species_is_ps(geo%atom(iatom)%spec)) then
-        call X(projector_commute_r(h%ep%proj(iatom), gr, h%d%dim, this%dir, ik, f_in_copy, cpsi(:, :)))
-        f_out(1:NP) = f_out(1:NP) + cpsi(1:NP, 1)
-        ! using only the first spinor component
-      end if
-    end do
-
+    if (this%use_nonlocalpps) then
+      do iatom = 1, geo%natoms
+        if(species_is_ps(geo%atom(iatom)%spec)) then
+          call X(projector_commute_r(h%ep%proj(iatom), gr, h%d%dim, this%dir, ik, f_in_copy, cpsi(:, :)))
+          f_out(1:NP) = f_out(1:NP) - M_zI * cpsi(1:NP, 1)
+          ! using only the first spinor component
+        end if
+      end do
+    endif
+ 
     deallocate(grad, cpsi)
     call pop_sub()
     

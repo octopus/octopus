@@ -345,7 +345,7 @@ subroutine X(projector_commute_r)(pj, gr, dim, idir, ik, psi, cpsi)
   integer, pointer :: jxyz(:)
   FLOAT,   pointer :: smx(:, :)
 
-  call push_sub('projector_inc.Xcommute_vnl_r')
+  call push_sub('projector_inc.Xprojector_commute_r')
 
   cpsi(1:gr%m%np, 1:dim) = M_ZERO
 
