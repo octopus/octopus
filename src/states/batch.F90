@@ -73,7 +73,7 @@ contains
   end function state_is_associated
 
   subroutine batch_end(this)
-    type(batch_t), intent(in)   :: this
+    type(batch_t), intent(inout) :: this
 
     deallocate(this%states)
   end subroutine batch_end

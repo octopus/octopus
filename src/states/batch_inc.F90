@@ -37,7 +37,7 @@ subroutine X(batch_init_contiguous)(this, st_start, st_end, ik, psi)
 end subroutine X(batch_init_contiguous)
 
 subroutine X(batch_add_state)(this, place, ist, ik, psi)
-  type(batch_t),  intent(out)   :: this
+  type(batch_t),  intent(inout) :: this
   integer,        intent(in)    :: place
   integer,        intent(in)    :: ist
   integer,        intent(in)    :: ik
