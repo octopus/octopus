@@ -455,12 +455,13 @@ contains
         !%End
         if(loct_parse_isdef(check_inp('TransformStates')).ne.0) then
           if(loct_parse_block(check_inp('TransformStates'), blk) == 0) then
-            stin = st
+            call states_copy(stin, st)
             deallocate(stin%zpsi)
-            call restart_look_and_read("tmp", stin, gr, sys%geo, ierr)
+            call restart_look_and_read(trim(restart_dir)//'gs', stin, gr, sys%geo, ierr)
             ALLOCATE(rotation_matrix(st%nst, stin%nst), st%nst*stin%nst)
+            rotation_matrix = M_z0
             do ist = 1, st%nst
-              do jst = 1, stin%nst
+              do jst = 1, loct_parse_block_cols(blk, ist-1)
                 call loct_parse_block_cmplx(blk, ist-1, jst-1, rotation_matrix(ist, jst))
               end do
             end do
