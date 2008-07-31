@@ -161,7 +161,7 @@ subroutine X(lobpcg)(gr, st, h, st_start, st_end, psi, constr_start, constr_end,
   integer, pointer     :: uc(:), lnuc, luc(:) ! Index set of local unconverged eigenpairs.
   integer, allocatable :: all_ev(:), all_constr(:), lall_constr(:)
 
-  integer           :: iunit
+  integer           :: iunit, hash_table_size
   logical           :: verbose_, no_bof, found
   logical           :: explicit_gram
   character(len=3)  :: rank_number
@@ -273,7 +273,8 @@ subroutine X(lobpcg)(gr, st, h, st_start, st_end, psi, constr_start, constr_end,
   ! all_ev_inv: {1, ..., st%nst} -> {1, ..., nst} (the reverese of all_ev).
   ALLOCATE(all_ev(nst), nst)
   all_ev = uc
-  call iihash_init(all_ev_inv, st%nst)
+  hash_table_size = max(3, st%nst) ! Minimum size of hash table is 3.
+  call iihash_init(all_ev_inv, hash_table_size)
   do ist = 1, nst
     call iihash_insert(all_ev_inv, all_ev(ist), ist)
   end do
