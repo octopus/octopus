@@ -175,7 +175,7 @@ subroutine X(lcao_init) (lcao_data, gr, geo, h, states, norbs)
 
   do ik = 1, st%d%nik
     do n = 1, st%nst
-      call X(lcao_initial_wf) (n, gr%m, geo, gr%sb, st%X(psi)(:, :, n, ik), st%d%ispin, ik, states%d%kpoints(:,ik), ierr)
+      call X(lcao_initial_wf) (n, gr%m, geo, gr%sb, st%X(psi)(:, :, n, ik), st%d%ispin, ik, states%d%kpoints(:, ik), ierr)
       if(ierr.ne.0) then
         write(message(1),'(a)') 'Internal error in lcao_wf'
         call write_fatal(1)
@@ -190,20 +190,17 @@ subroutine X(lcao_init) (lcao_data, gr, geo, h, states, norbs)
   ALLOCATE(lcao_data%X(v)      (norbs, norbs, st%d%nik), norbs*norbs*st%d%nik)
 
   ! Overlap and kinetic matrices.
-  ALLOCATE(hpsi(NP_PART, st%d%dim), NP_PART*st%d%dim)
-
+  ALLOCATE(hpsi(NP, st%d%dim), NP*st%d%dim)
 
   do ik = 1, st%d%nik
     do n1 = 1, st%nst
 
-      hpsi(1:NP_PART, 1:st%d%dim) = M_ZERO
       call X(kinetic) (h, gr, st%X(psi)(:, :, n1, ik), hpsi(:, :))
 
       do n2 = n1, st%nst
         lcao_data%X(k)(n1, n2, ik) = X(mf_dotp)(gr%m, st%d%dim, hpsi, st%X(psi)(:, : ,n2, ik))
         lcao_data%X(k)(n2, n1, ik) = lcao_data%X(k)(n1, n2, ik)
-        lcao_data%X(s)(n1, n2, ik) = X(mf_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, n1, ik), &
-             st%X(psi)(:, : ,n2, ik))
+        lcao_data%X(s)(n1, n2, ik) = X(mf_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, n1, ik), st%X(psi)(:, : ,n2, ik))
         lcao_data%X(s)(n2, n1, ik) = lcao_data%X(s)(n1, n2, ik)
       end do
 
