@@ -182,7 +182,8 @@ subroutine X(lobpcg)(gr, st, h, st_start, st_end, psi, constr_start, constr_end,
   R_TYPE, allocatable         :: gram_i(:, :)     ! Gram matrix for unit matrix.
   R_TYPE, allocatable         :: gram_block(:, :) ! Space to construct the Gram matrix blocks.
   R_TYPE, allocatable, target :: ritz_vec(:, :)   ! Ritz-vectors.
-
+  type(batch_t) :: psib, hpsib
+  
   call push_sub('eigen_lobpcg.Xlobpcg')
 
   verbose_ = .false.
@@ -294,9 +295,14 @@ subroutine X(lobpcg)(gr, st, h, st_start, st_end, psi, constr_start, constr_end,
   end if
 
   ! Get initial Ritz-values and -vectors.
-  do ist = st_start, st_end
-    call X(hpsi)(h, gr, st%X(psi)(:, :, ist, ik), h_psi(:, :, ist), ist, ik)
-  end do
+  call batch_init(psib, st_start, st_end, ik, st%X(psi)(:, :, :, ik))
+  call batch_init(hpsib, st_start, st_end, ik, h_psi)
+
+  call X(hpsi_batch)(h, gr, psib, hpsib)
+  
+  call batch_end(psib)
+  call batch_end(hpsib)
+
   niter = niter+lnst
   call X(blockt_mul)(psi(:, :, :), h_psi, gram_block, xpsi1=all_ev, xpsi2=all_ev, symm=.true.)
 
@@ -368,11 +374,22 @@ subroutine X(lobpcg)(gr, st, h, st_start, st_end, psi, constr_start, constr_end,
     end if
 
     ! Apply Hamiltonian to residuals.
+
+    call batch_init(psib, lnuc)
+    call batch_init(hpsib, lnuc)
+    
     do i = 1, lnuc
       ist = luc(i)
-      call X(hpsi)(h, gr, res(:, :, ist), h_res(:, :, ist), ist, ik)
+      call batch_add_state(psib, i, ist, ik, res(:, :, ist))
+      call batch_add_state(hpsib, i, ist, ik, h_res(:, :, ist))
     end do
-    niter = niter+lnuc
+
+    call X(hpsi_batch)(h, gr, psib, hpsib)
+
+    niter = niter + lnuc
+
+    call batch_end(psib)
+    call batch_end(hpsib)
       
     ! Orthonormalize conjugate directions in all but the first iteratation.
     ! Since h_dir also has to be modified (to avoid a full calculation of

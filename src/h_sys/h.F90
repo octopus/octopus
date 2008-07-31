@@ -20,6 +20,7 @@
 #include "global.h"
 
 module hamiltonian_m
+  use batch_m
   use calc_mode_m
   use datasets_m
   use derivatives_m
@@ -68,6 +69,7 @@ module hamiltonian_m
     delectronic_external_energy, &
     zelectronic_external_energy, &
     dhpsi,                 &
+    dhpsi_batch,           &
     dhpsi_diag,            &
     dvlpsi,                &
     dvnlpsi,               &
@@ -76,6 +78,7 @@ module hamiltonian_m
     dkinetic,              &
     dvmask,                &
     zhpsi,                 &
+    zhpsi_batch,           &
     zhpsi_diag,            &
     zvlpsi,                &
     zvnlpsi,               &

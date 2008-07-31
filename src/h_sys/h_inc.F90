@@ -56,6 +56,37 @@ end subroutine X(hamiltonian_eigenval)
 
 
 ! ---------------------------------------------------------
+subroutine X(hpsi_batch) (h, gr, psi, hpsi, t, kinetic_only)
+  type(hamiltonian_t), intent(inout) :: h
+  type(grid_t),        intent(inout) :: gr
+  type(batch_t),       intent(inout) :: psi
+  type(batch_t),       intent(inout) :: hpsi
+  FLOAT, optional,     intent(in)    :: t
+  logical, optional,   intent(in)    :: kinetic_only
+  
+  logical :: kinetic_only_
+  integer :: ist
+
+  kinetic_only_ = .false.
+  if(present(kinetic_only)) kinetic_only_ = kinetic_only
+
+  ASSERT(batch_is_ok(psi))
+  ASSERT(batch_is_ok(hpsi))
+  ASSERT(psi%nst == hpsi%nst)
+
+  do ist = 1, psi%nst
+    if(present(t)) then
+      call X(hpsi)(h, gr, psi%states(ist)%X(psi), hpsi%states(ist)%X(psi), &
+           psi%states(ist)%ist, psi%states(ist)%ik, t, kinetic_only_)
+    else
+      call X(hpsi)(h, gr, psi%states(ist)%X(psi), hpsi%states(ist)%X(psi), &
+           psi%states(ist)%ist, psi%states(ist)%ik, kinetic_only = kinetic_only_)
+    end if
+  end do
+  
+end subroutine X(hpsi_batch)
+
+! ---------------------------------------------------------
 subroutine X(hpsi) (h, gr, psi, hpsi, ist, ik, t, kinetic_only)
   type(hamiltonian_t), intent(inout) :: h
   type(grid_t),        intent(inout) :: gr
