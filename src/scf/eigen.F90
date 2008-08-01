@@ -101,10 +101,10 @@ contains
 
     call push_sub('eigen.eigen_solver_init')
 
-    !%Variable Eigensolver
+    !%Variable EigenSolver
     !%Type integer
     !%Default cg
-    !%Section SCF::Eigensolver
+    !%Section SCF::EigenSolver
     !%Description
     !% Decides the eigensolver that obtains the lowest eigenvalues and
     !% eigenfunctions of the Kohn-Sham Hamiltonian. The default is
