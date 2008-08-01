@@ -1,5 +1,5 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id: 24-cpmd.test 3344 2007-10-13 13:38:03Z acastro $
+# $Id: 05-cpmd.test 3344 2007-10-13 13:38:03Z acastro $
 
 Test       : Car-Parrinello Molecular Dynamics
 Author     : Xavier
@@ -12,11 +12,11 @@ Enabled    : Yes
 
 # ground state
 Processors : 1
-Input      : 24-cpmd.01-gs.inp
+Input      : 05-cpmd.01-gs.inp
 match ; Initial energy ; GREP(static/info, 'Total       =', 20) ; -11.03280171
 
 Processors : 4
-Input      : 24-cpmd.02-verlet.inp
+Input      : 05-cpmd.02-verlet.inp
 match ; Energy [step  1] ; LINE(td.general/energy, -21, 30) ; -1.101090673721e+01
 match ; Energy [step  5] ; LINE(td.general/energy, -16, 30) ; -1.101106932280e+01
 match ; Energy [step 10] ; LINE(td.general/energy, -11, 30) ; -1.101123285876e+01
@@ -31,7 +31,7 @@ match ; Forces [step 20] ; LINE(td.general/coordinates,  -1, 270) ; 5.0552300619
 
 
 Processors : 4
-Input      : 24-cpmd.03-vel_verlet.inp
+Input      : 05-cpmd.03-vel_verlet.inp
 match ; Energy [step  1] ; LINE(td.general/energy, -21, 30) ; -1.101090673721e+01
 match ; Energy [step  5] ; LINE(td.general/energy, -16, 30) ; -1.101106932280e+01
 match ; Energy [step 10] ; LINE(td.general/energy, -11, 30) ; -1.101123285876e+01
