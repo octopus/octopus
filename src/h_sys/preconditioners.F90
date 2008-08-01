@@ -67,6 +67,7 @@ contains
     character(len=*), optional, intent(in) :: prefix
 
     FLOAT, parameter :: alpha = M_HALF
+    character(len=256) :: prefix_
     
     !%Variable Preconditioner
     !%Type integer
@@ -87,11 +88,14 @@ contains
     !% Uses the full Laplacian as preconditioner. The inverse is calculated through
     !% the solution of the Poisson equation. This is, of course, very slow.
     !%End
-    if (loct_parse_isdef(check_inp(trim(prefix)//'Preconditioner')) /= 0 ) then 
-      call loct_parse_int(check_inp(trim(prefix)//'Preconditioner'), PRE_SMOOTHING, this%which)
+    prefix_ = ""
+    if(present(prefix)) prefix_ = prefix
+
+    if (loct_parse_isdef(check_inp(trim(prefix_)//'Preconditioner')) /= 0 ) then 
+      call loct_parse_int(check_inp(trim(prefix_)//'Preconditioner'), PRE_SMOOTHING, this%which)
       if(.not.varinfo_valid_option('Preconditioner', this%which)) &
         call input_error('Preconditioner')
-      call messages_print_var_option(stdout, 'Preconditioner', this%which, prefix)
+      call messages_print_var_option(stdout, 'Preconditioner', this%which, prefix_)
     else
       call loct_parse_int(check_inp('Preconditioner'), PRE_SMOOTHING, this%which)
       if(.not.varinfo_valid_option('Preconditioner', this%which)) &
