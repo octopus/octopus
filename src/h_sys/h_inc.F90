@@ -63,7 +63,7 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, t, kinetic_only)
   FLOAT, optional,     intent(in)    :: t
   logical, optional,   intent(in)    :: kinetic_only
   
-  integer :: idim
+  integer :: idim, nst
   R_TYPE, pointer :: epsi(:,:), lapl(:, :)
   R_TYPE, allocatable :: grad(:, :, :)
   type(profile_t), save :: phase_prof
@@ -86,12 +86,10 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, t, kinetic_only)
   ASSERT(batch_is_ok(hpsib))
   ASSERT(psib%nst == hpsib%nst)
 
-  do ii = 1, psib%nst
+  nst = psib%nst
 
-    psi => psib%states(ii)%X(psi)
-    hpsi => hpsib%states(ii)%X(psi)
-    ist = psib%states(ii)%ist
-    ik = psib%states(ii)%ik
+  do ii = 1, nst
+    call set_pointers
 
     apply_kpoint = simul_box_is_periodic(gr%sb) .and. .not. kpoint_is_gamma(h%d, ik)
     copy_input = (ubound(psi, DIM = 1) == NP) .or. apply_kpoint
@@ -203,6 +201,16 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, t, kinetic_only)
   
   call pop_sub()
   call profiling_out(C_PROFILING_HPSI)
+
+contains
+
+  subroutine set_pointers
+    psi => psib%states(ii)%X(psi)
+    hpsi => hpsib%states(ii)%X(psi)
+    ist = psib%states(ii)%ist
+    ik = psib%states(ii)%ik
+  end subroutine set_pointers
+
 end subroutine X(hpsi_batch)
 
 ! ---------------------------------------------------------
