@@ -54,36 +54,155 @@ subroutine X(hamiltonian_eigenval)(h, gr, st, t)
   call pop_sub()
 end subroutine X(hamiltonian_eigenval)
 
-
 ! ---------------------------------------------------------
-subroutine X(hpsi_batch) (h, gr, psi, hpsi, t, kinetic_only)
+subroutine X(hpsi_batch) (h, gr, psib, hpsib, t, kinetic_only)
   type(hamiltonian_t), intent(inout) :: h
   type(grid_t),        intent(inout) :: gr
-  type(batch_t),       intent(inout) :: psi
-  type(batch_t),       intent(inout) :: hpsi
+  type(batch_t),       intent(inout) :: psib
+  type(batch_t),       intent(inout) :: hpsib
   FLOAT, optional,     intent(in)    :: t
   logical, optional,   intent(in)    :: kinetic_only
   
-  logical :: kinetic_only_
-  integer :: ist
+  integer :: idim
+  R_TYPE, pointer :: epsi(:,:), lapl(:, :)
+  R_TYPE, allocatable :: grad(:, :, :)
+  type(profile_t), save :: phase_prof
+  logical :: copy_input, apply_kpoint, kinetic_only_
+  integer :: ii, ist, ik
+  R_TYPE, pointer :: psi(:, :), hpsi(:, :)
+
+  call profiling_in(C_PROFILING_HPSI)
+  call push_sub('h_inc.Xhpsi_batch')
 
   kinetic_only_ = .false.
   if(present(kinetic_only)) kinetic_only_ = kinetic_only
 
-  ASSERT(batch_is_ok(psi))
-  ASSERT(batch_is_ok(hpsi))
-  ASSERT(psi%nst == hpsi%nst)
+  if(present(t).and.h%d%cdft) then
+    message(1) = "TDCDFT not yet implemented"
+    call write_fatal(1)
+  end if
+  
+  ASSERT(batch_is_ok(psib))
+  ASSERT(batch_is_ok(hpsib))
+  ASSERT(psib%nst == hpsib%nst)
 
-  do ist = 1, psi%nst
-    if(present(t)) then
-      call X(hpsi)(h, gr, psi%states(ist)%X(psi), hpsi%states(ist)%X(psi), &
-           psi%states(ist)%ist, psi%states(ist)%ik, t, kinetic_only_)
+  do ii = 1, psib%nst
+
+    psi => psib%states(ii)%X(psi)
+    hpsi => hpsib%states(ii)%X(psi)
+    ist = psib%states(ii)%ist
+    ik = psib%states(ii)%ik
+
+    apply_kpoint = simul_box_is_periodic(gr%sb) .and. .not. kpoint_is_gamma(h%d, ik)
+    copy_input = (ubound(psi, DIM = 1) == NP) .or. apply_kpoint
+    
+    if(copy_input) then
+      ALLOCATE(epsi(1:NP_PART, 1:h%d%dim), NP_PART*h%d%dim)
+      do idim = 1, h%d%dim
+        call lalg_copy(NP, psi(:, idim), epsi(:, idim))
+      end do
     else
-      call X(hpsi)(h, gr, psi%states(ist)%X(psi), hpsi%states(ist)%X(psi), &
-           psi%states(ist)%ist, psi%states(ist)%ik, kinetic_only = kinetic_only_)
+      ASSERT(ubound(psi, DIM=1) == NP_PART)
+      epsi => psi
     end if
+    
+    ! first of all, set boundary conditions
+    do idim = 1, h%d%dim
+      call X(set_bc)(gr%f_der%der_discr, epsi(:, idim))
+    end do
+    
+    if(apply_kpoint) then ! we multiply psi by exp(i k.r)
+      call profiling_in(phase_prof, "PBC_PHASE_APPLY")
+      
+      do idim = 1, h%d%dim
+        !$omp parallel workshare
+        epsi(1:NP_PART, idim) = h%phase(1:NP_PART, ik)*epsi(1:NP_PART, idim)
+        !$omp end parallel workshare
+      end do
+      
+      call profiling_out(phase_prof)
+    end if
+    
+    do idim = 1, h%d%dim
+      !$omp parallel workshare
+      hpsi(:, idim) = M_ZERO
+      !$omp end parallel workshare
+    end do
+    
+    nullify(lapl)
+    call X(kinetic_start)(h, gr, epsi, lapl)
+    
+    if (.not. kinetic_only_) then
+      
+      call X(vlpsi)(h, gr%m, epsi, hpsi, ik)
+      
+      call X(kinetic_keep_going)(h, gr, epsi, lapl)
+      
+      if(h%ep%non_local) then
+        call X(vnlpsi)(h, gr, epsi, hpsi, ik)
+        call X(kinetic_keep_going)(h, gr, epsi, lapl)
+      end if
+      
+    end if
+    
+    call X(kinetic_finish)(h, gr, epsi, lapl, hpsi)
+    
+    if (.not. kinetic_only_) then
+      
+      ! all functions that require the gradient or other derivatives of
+      ! epsi should go after this point and must not update the
+      ! boundary points
+      
+      if (present(t) .and. gauge_field_is_applied(h%ep%gfield)) then
+        
+        ALLOCATE(grad(1:NP, 1:MAX_DIM, 1:h%d%dim), NP*MAX_DIM*h%d%dim)
+        
+        do idim = 1, h%d%dim 
+          ! boundary points were already set by the Laplacian
+          call X(derivatives_grad)(gr%f_der%der_discr, epsi(:, idim), grad(:, :, idim), ghost_update = .false., set_bc = .false.)
+        end do
+        
+      end if
+      
+      if (present(t)) call X(vlasers)(gr, h, epsi, hpsi, ik, t)
+      
+      if (present(t) .and. gauge_field_is_applied(h%ep%gfield)) call X(vgauge)(gr, h, epsi, hpsi, grad)
+      
+      if(h%theory_level == HARTREE .or. h%theory_level == HARTREE_FOCK) then
+        call X(exchange_operator)(h, gr, epsi, hpsi, ist, ik)
+      end if
+      
+      if(hamiltonian_oct_exchange(h)) then
+        call X(oct_exchange_operator)(h, gr, epsi, hpsi, ik)
+      end if
+      
+      call X(magnetic_terms) (gr, h, epsi, hpsi, ik)
+      
+      if(allocated(grad)) deallocate(grad)
+      
+      if(present(t)) call X(vborders) (gr, h, epsi, hpsi)
+      
+    end if
+    
+    if(copy_input) deallocate(epsi)
+    
+    if(apply_kpoint) then
+      ! now we need to remove the exp(-i k.r) factor
+      call profiling_in(phase_prof)
+
+      do idim = 1, h%d%dim
+        !$omp parallel workshare
+        hpsi(1:NP, idim) = conjg(h%phase(1:NP, ik))*hpsi(1:NP, idim)
+        !$omp end parallel workshare
+      end do
+      
+      call profiling_out(phase_prof)
+    end if
+
   end do
   
+  call pop_sub()
+  call profiling_out(C_PROFILING_HPSI)
 end subroutine X(hpsi_batch)
 
 ! ---------------------------------------------------------
@@ -97,132 +216,26 @@ subroutine X(hpsi) (h, gr, psi, hpsi, ist, ik, t, kinetic_only)
   FLOAT, optional,     intent(in)    :: t
   logical, optional,   intent(in)    :: kinetic_only
 
-  integer :: idim
-
-  R_TYPE, pointer :: epsi(:,:), lapl(:, :)
-  R_TYPE, allocatable :: grad(:, :, :)
-  type(profile_t), save :: phase_prof
-  logical :: copy_input, apply_kpoint, kinetic_only_
-
-  call profiling_in(C_PROFILING_HPSI)
-  call push_sub('h_inc.Xhpsi')
+  logical :: kinetic_only_
+  type(batch_t) :: psib, hpsib
 
   kinetic_only_ = .false.
   if(present(kinetic_only)) kinetic_only_ = kinetic_only
 
-  if(present(t).and.h%d%cdft) then
-    message(1) = "TDCDFT not yet implemented"
-    call write_fatal(1)
-  end if
+  call batch_init(psib, 1)
+  call batch_add_state(psib, 1, ist, ik, psi)
+  call batch_init(hpsib, 1)
+  call batch_add_state(hpsib, 1, ist, ik, hpsi)
 
-  apply_kpoint = simul_box_is_periodic(gr%sb) .and. .not. kpoint_is_gamma(h%d, ik)
-  copy_input = (ubound(psi, DIM = 1) == NP) .or. apply_kpoint
-
-  if(copy_input) then
-    ALLOCATE(epsi(1:NP_PART, 1:h%d%dim), NP_PART * h%d%dim)
-    do idim = 1, h%d%dim
-      call lalg_copy(NP, psi(:, idim), epsi(:, idim))
-    end do
+  if(present(t)) then
+    call X(hpsi_batch)(h, gr, psib, hpsib, t, kinetic_only = kinetic_only_)
   else
-    ASSERT(ubound(psi, DIM=1) == NP_PART)
-    epsi => psi
+    call X(hpsi_batch)(h, gr, psib, hpsib, kinetic_only = kinetic_only_)
   end if
 
-  ! first of all, set boundary conditions
-  do idim = 1, h%d%dim
-    call X(set_bc)(gr%f_der%der_discr, epsi(:, idim))
-  end do
+  call batch_end(psib)
+  call batch_end(hpsib)
 
-  if(apply_kpoint) then ! we multiply psi by exp(i k.r)
-    call profiling_in(phase_prof, "PBC_PHASE_APPLY")
-
-    do idim = 1, h%d%dim
-      !$omp parallel workshare
-      epsi(1:NP_PART, idim) = h%phase(1:NP_PART, ik) * epsi(1:NP_PART, idim)
-      !$omp end parallel workshare
-    end do
-    
-    call profiling_out(phase_prof)
-  end if
-
-  do idim = 1, h%d%dim
-    !$omp parallel workshare
-    hpsi(:, idim) = M_ZERO
-    !$omp end parallel workshare
-  end do
-
-  nullify(lapl)
-  call X(kinetic_start)(h, gr, epsi, lapl)
-
-  if (.not. kinetic_only_) then
-
-    call X(vlpsi)(h, gr%m, epsi, hpsi, ik)
-    
-    call X(kinetic_keep_going)(h, gr, epsi, lapl)
-    
-    if(h%ep%non_local) then
-      call X(vnlpsi)(h, gr, epsi, hpsi, ik)
-      call X(kinetic_keep_going)(h, gr, epsi, lapl)
-    end if
-    
-  end if
-
-  call X(kinetic_finish)(h, gr, epsi, lapl, hpsi)
-
-  if (.not. kinetic_only_) then
-    
-    ! all functions that require the gradient or other derivatives of
-    ! epsi should go after this point and must not update the
-    ! boundary points
-    
-    if (present(t) .and. gauge_field_is_applied(h%ep%gfield)) then
-      
-      ALLOCATE(grad(1:NP, 1:MAX_DIM, 1:h%d%dim), NP * MAX_DIM * h%d%dim)
-      
-      do idim = 1, h%d%dim 
-        ! boundary points were already set by the Laplacian
-        call X(derivatives_grad)(gr%f_der%der_discr, epsi(:, idim), grad(:, :, idim), ghost_update = .false., set_bc = .false.)
-      end do
-      
-    end if
-
-    if (present(t)) call X(vlasers)(gr, h, epsi, hpsi, ik, t)
-    
-    if (present(t) .and. gauge_field_is_applied(h%ep%gfield)) call X(vgauge)(gr, h, epsi, hpsi, grad)
-  
-    if(h%theory_level == HARTREE .or. h%theory_level == HARTREE_FOCK) then
-      call X(exchange_operator)(h, gr, epsi, hpsi, ist, ik)
-    end if
-    
-    if(hamiltonian_oct_exchange(h)) then
-      call X(oct_exchange_operator)(h, gr, epsi, hpsi, ik)
-    end if
-    
-    call X(magnetic_terms) (gr, h, epsi, hpsi, ik)
-    
-    if(allocated(grad)) deallocate(grad)
-
-    if(present(t)) call X(vborders) (gr, h, epsi, hpsi)
-
-  end if
-
-  if(copy_input) deallocate(epsi)
-
-  if(apply_kpoint) then
-    ! now we need to remove the exp(-i k.r) factor
-    call profiling_in(phase_prof)
-
-    do idim = 1, h%d%dim
-      !$omp parallel workshare
-      hpsi(1:NP, idim) = conjg(h%phase(1:NP, ik))*hpsi(1:NP, idim)
-      !$omp end parallel workshare
-    end do
-    
-    call profiling_out(phase_prof)
-  end if
-  
-  call pop_sub()
-  call profiling_out(C_PROFILING_HPSI)
 end subroutine X(hpsi)
 
 ! ---------------------------------------------------------
