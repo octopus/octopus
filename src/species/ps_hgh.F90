@@ -112,8 +112,9 @@ contains
 
     ! Finds out psp%l_max. The most special cases are H, He, Li_sc and Be_sc, where psp%l_max = -1.
     psp%l_max = 0
-    do while(psp%rc(psp%l_max)>CNST(0.01))
+    do while(psp%rc(psp%l_max) > CNST(0.01))
       psp%l_max = psp%l_max + 1
+      if(psp%l_max > 3) exit
     end do
     psp%l_max = psp%l_max - 1
 
