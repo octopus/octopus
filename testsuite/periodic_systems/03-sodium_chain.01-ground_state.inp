@@ -38,6 +38,5 @@ BoxShape = parallelepiped
 KPointsCenterOfInversion = yes
 
 LCAODimension = 9
-unocc_EigenSolverMaxIter = 200
 
 NumberUnoccStates = 1

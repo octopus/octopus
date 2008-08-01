@@ -1,8 +1,6 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id$
 
-DebugLevel = 0
-
 %CalculationMode
    gs   |  unocc
   "gs_" | "unocc_"
@@ -10,13 +8,12 @@ DebugLevel = 0
 
 unocc_RestartDir = "gs_restart"
 
-fromScratch = yes
+FromScratch = yes
 
 Dimensions = 1
 PeriodicDimensions = 1
 
 NumberUnoccStates = 4
-ConvAbsDens = 1e-6
 
 OnlyUserDef = yes
 TheoryLevel = independent_particles
@@ -28,7 +25,6 @@ TheoryLevel = independent_particles
 %Coordinates
  "Zero" | 0 | 0 | 0 | yes
 %
-
 
 BoxShape = parallelepiped
 
