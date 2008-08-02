@@ -61,10 +61,14 @@ contains
     type(distributed_t), intent(out) :: this
     integer,             intent(in)  :: total
 
+    call push_sub('distributed.distributed_nullify')
+
     this%start           = 1
     this%end             = total
     this%parallel        = .false.
     nullify(this%node, this%range, this%num)
+
+    call pop_sub()
   end subroutine distributed_nullify
   
   subroutine distributed_init(this, total, mc, strategy, tag)
@@ -131,6 +135,7 @@ contains
     end if
 #endif
     
+    call pop_sub()
   end subroutine distributed_init
 
   subroutine distributed_copy(in, out)
@@ -139,9 +144,12 @@ contains
 
     integer :: size
 
+    call push_sub('distributed.distributed_copy')
+
     out%start    = in%start
     out%end      = in%end
     out%nlocal   = in%nlocal
+    out%nglobal  = in%nglobal
     out%parallel = in%parallel
 
     size = in%mpi_grp%size
@@ -165,16 +173,21 @@ contains
       out%num(1:size) = in%num(1:size)
     end if
 
+    call pop_sub()
   end subroutine distributed_copy
 
   subroutine distributed_end(this)
     type(distributed_t), intent(inout) :: this
     
+    call push_sub('distributed.distributed_end')
+
     if(associated(this%node))  deallocate(this%node)
     if(associated(this%range)) deallocate(this%range)
     if(associated(this%num))   deallocate(this%num)
 
     nullify(this%node, this%range, this%num)
+
+    call pop_sub()
   end subroutine distributed_end
 
 end module distributed_m

@@ -22,6 +22,7 @@
 module states_m
   use calc_mode_m
   use crystal_m
+  use distributed_m
   use blas_m
   use datasets_m
   use functions_m
@@ -409,6 +410,8 @@ contains
     st%parallel_in_states = .false.
 
     nullify(st%dpsi, st%zpsi)
+
+    call distributed_nullify(st%d%kpt, st%d%nik)
 
     call pop_sub()
 
@@ -1082,12 +1085,24 @@ contains
     call push_sub('states.states_dens_reduce')
 
 #ifdef HAVE_MPI
-    ! reduce density
+    ! reduce over states
     if(st%parallel_in_states) then
       call profiling_in(reduce_prof, "DENSITY_REDUCE")
       ALLOCATE(reduce_rho(1:np), np)
       do ispin = 1, st%d%nspin
         call MPI_Allreduce(rho(1, ispin), reduce_rho(1), np, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+        call lalg_copy(np, reduce_rho, rho(:, ispin))
+      end do
+      deallocate(reduce_rho)
+      call profiling_out(reduce_prof)
+    end if
+
+    ! reduce over kpoints
+    if(st%d%kpt%parallel) then
+      call profiling_in(reduce_prof, "DENSITY_REDUCE")
+      ALLOCATE(reduce_rho(1:np), np)
+      do ispin = 1, st%d%nspin
+        call MPI_Allreduce(rho(1, ispin), reduce_rho(1), np, MPI_FLOAT, MPI_SUM, st%d%kpt%mpi_grp%comm, mpi_err)
         call lalg_copy(np, reduce_rho, rho(:, ispin))
       end do
       deallocate(reduce_rho)
@@ -1109,7 +1124,7 @@ contains
 
     rho(1:np, 1:st%d%nspin) = M_ZERO
 
-    do ik = 1, st%d%nik
+    do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
         call states_dens_accumulate(st, np, rho, ist, ik)
       end do
@@ -1146,7 +1161,7 @@ contains
     select case(st%d%ispin)
     case(UNPOLARIZED, SPIN_POLARIZED)
 
-      do ik = 1, st%d%nik
+      do ik = st%d%kpt%start, st%d%kpt%end
         do ist = ist_start, ist_end
           if (st%wfs_type == M_REAL) then
             call dmf_random(m, st%dpsi(:, 1, ist, ik), seed)
@@ -1162,7 +1177,8 @@ contains
       ASSERT(st%wfs_type == M_CMPLX)
 
       if(st%fixed_spins) then
-        do ik = 1, st%d%nik
+        
+        do ik = st%d%kpt%start, st%d%kpt%end
           do ist = ist_start, ist_end
             call zmf_random(m, st%zpsi(:, 1, ist, ik))
             ! In this case, the spinors are made of a spatial part times a vector [alpha beta]^T in 
@@ -1191,7 +1207,7 @@ contains
           end do
         end do
       else
-        do ik = 1, st%d%nik
+        do ik = st%d%kpt%start, st%d%kpt%end
           do ist = ist_start, ist_end
             do id = 1, st%d%dim
               call zmf_random(m, st%zpsi(:, id, ist, ik))
@@ -1240,7 +1256,7 @@ contains
     end if
 
     if(st%d%ispin == SPINORS) then
-      do ik = 1, st%d%nik
+      do ik = st%d%kpt%start, st%d%kpt%end
         do ist = st%st_start, st%st_end
           if (st%wfs_type == M_REAL) then
             write(message(1),'(a)') 'Internal error in states_fermi'
@@ -1281,7 +1297,7 @@ contains
     call push_sub('states.states_eigenvalues_sum')
 
     e = M_ZERO
-    do ik = 1, st%d%nik
+    do ik = st%d%kpt%start, st%d%kpt%end
       if(present(x)) then
         e = e + st%d%kweights(ik) * sum(st%occ(st%st_start:st%st_end, ik)* &
           x(st%st_start:st%st_end, ik))
@@ -1294,6 +1310,11 @@ contains
 #ifdef HAVE_MPI
     if(st%parallel_in_states) then
       call MPI_Allreduce(e, s, 1, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+      e = s
+    end if
+
+    if(st%d%kpt%parallel) then
+      call MPI_Allreduce(e, s, 1, MPI_FLOAT, MPI_SUM, st%d%kpt%mpi_grp%comm, mpi_err)
       e = s
     end if
 #endif

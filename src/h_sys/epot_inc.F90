@@ -52,8 +52,8 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
   grho(1:np, 1:NDIM) = M_ZERO
   !$omp end parallel workshare    
 
-  !THE NON-LOCAL PART (parallel in states)
-  do ik = 1, st%d%nik
+  !THE NON-LOCAL PART (parallel in states and k points)
+  do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
       
       if(gr%have_fine_mesh) then
@@ -116,6 +116,27 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
     call profiling_out(prof)
 
   end if
+
+  if(st%d%kpt%parallel) then
+    
+    call profiling_in(prof, "FORCES_MPI")
+    
+    !reduce the force
+    ALLOCATE(force_local(1:MAX_DIM, 1:geo%natoms), MAX_DIM*geo%natoms)
+    force_local = force
+    call MPI_Allreduce(force_local, force, MAX_DIM*geo%natoms, MPI_FLOAT, MPI_SUM, st%d%kpt%mpi_grp%comm, mpi_err)
+    deallocate(force_local)
+    
+    !reduce the gradient of the density
+    ALLOCATE(grho_local(np, MAX_DIM), np*MAX_DIM)
+    call lalg_copy(np, MAX_DIM, grho, grho_local)
+    call MPI_Allreduce(grho_local, grho, np*MAX_DIM, MPI_FLOAT, MPI_SUM, st%d%kpt%mpi_grp%comm, mpi_err)
+    deallocate(grho_local)
+
+    call profiling_out(prof)
+
+  end if
+
 #endif
   
   do iatom = 1, geo%natoms
