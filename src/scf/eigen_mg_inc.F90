@@ -18,17 +18,17 @@
 !! $Id: eigen_mg_inc.F90 4195 2008-05-25 18:15:35Z xavier $
 
 ! ---------------------------------------------------------
-subroutine X(eigen_solver_mg) (gr, st, h, tol, niter, converged, diff, verbose)
+subroutine X(eigen_solver_mg) (gr, st, h, tol, niter, converged, ik, diff)
   type(grid_t),           intent(inout) :: gr
   type(states_t),         intent(inout) :: st
   type(hamiltonian_t),    intent(inout) :: h
   FLOAT,                  intent(in)    :: tol
   integer,                intent(inout) :: niter
-  integer,                intent(inout) :: converged(:)
-  FLOAT,                  intent(out)   :: diff(1:st%nst,1:st%d%nik)
-  logical,   optional,    intent(in)    :: verbose
+  integer,                intent(inout) :: converged
+  integer,                intent(in)    :: ik
+  FLOAT,                  intent(out)   :: diff(1:st%nst)
 
-  integer  :: ik, ist, ist2, iter
+  integer  :: ist, ist2, iter
   R_TYPE, allocatable :: cc(:, :), aa(:)
 
   call push_sub('eigen_cg.eigen_solver_mg')
@@ -38,42 +38,38 @@ subroutine X(eigen_solver_mg) (gr, st, h, tol, niter, converged, diff, verbose)
 
   cc = M_Z0
 
-  do ik = 1, st%d%nik
-    
-    do iter = 1, niter
+  do iter = 1, niter
 
-      call X(subspace_diag)(gr, st, h, diff)
+    call X(subspace_diag)(gr, st, h, ik, diff)
 
-      do ist = 1, st%nst
-        print*, iter, ist, st%eigenval(ist, ik), diff(ist, ik)
-      end do
-      print*, " "
+    do ist = 1, st%nst
+      print*, iter, ist, st%eigenval(ist, ik), diff(ist)
+    end do
+    print*, " "
 
-      do ist = 1, st%nst
+    do ist = 1, st%nst
 
-        aa(ist) = st%eigenval(ist, ik)
-      
-        cc(ist, ist) = M_ONE
-        do ist2 = 1, ist - 1
-          cc(ist, ist2) = X(mf_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), st%X(psi)(:, :, ist2, ik))
-        end do
+      aa(ist) = st%eigenval(ist, ik)
 
-      end do
-      
-      call X(coordinate_relaxation)(gr, gr%m, h, st%nst, 10, ik, st%X(psi)(:, :, :, ik), aa, cc)
-
-      ! normalize
-      do ist = 1, st%nst      
-        call lalg_scal(NP, CNST(1.0)/sqrt(cc(ist, ist)), st%X(psi)(:, 1, ist, ik))
+      cc(ist, ist) = M_ONE
+      do ist2 = 1, ist - 1
+        cc(ist, ist2) = X(mf_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), st%X(psi)(:, :, ist2, ik))
       end do
 
     end do
 
-    call X(subspace_diag)(gr, st, h, diff)
+    call X(coordinate_relaxation)(gr, gr%m, h, st%nst, 10, ik, st%X(psi)(:, :, :, ik), aa, cc)
 
-    niter = iter*10
+    ! normalize
+    do ist = 1, st%nst      
+      call lalg_scal(NP, CNST(1.0)/sqrt(cc(ist, ist)), st%X(psi)(:, 1, ist, ik))
+    end do
 
   end do
+
+  call X(subspace_diag)(gr, st, h, ik, diff)
+
+  niter = iter*10
 
   call pop_sub()
 end subroutine X(eigen_solver_mg)

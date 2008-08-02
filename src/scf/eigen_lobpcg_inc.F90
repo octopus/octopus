@@ -29,52 +29,32 @@
 ! ---------------------------------------------------------
 ! Driver for the LOBPCG eigensolver that performs a per block,
 ! per k-point iteration.
-subroutine X(eigen_solver_lobpcg)(gr, st, h, pre, tol, niter, converged, diff, block_size, verbose)
-  type(grid_t),           intent(inout) :: gr
-  type(states_t),         intent(inout) :: st
-  type(hamiltonian_t),    intent(inout) :: h
-  type(preconditioner_t), intent(in)    :: pre
-  FLOAT,                  intent(in)    :: tol
-  integer,                intent(inout) :: niter
-  integer,                intent(inout) :: converged(:)
-  FLOAT,                  intent(out)   :: diff(1:st%nst, 1:st%d%nik)
-  integer,                intent(in)    :: block_size
-  logical, optional,      intent(in)    :: verbose
+  subroutine X(eigen_solver_lobpcg)(gr, st, h, pre, tol, niter, converged, ik, diff, block_size, verbose)
+    type(grid_t),           intent(inout) :: gr
+    type(states_t),         intent(inout) :: st
+    type(hamiltonian_t),    intent(inout) :: h
+    type(preconditioner_t), intent(in)    :: pre
+    FLOAT,                  intent(in)    :: tol
+    integer,                intent(inout) :: niter
+    integer,                intent(inout) :: converged
+    FLOAT,                  intent(out)   :: diff(1:st%nst)
+    integer,                intent(in)    :: block_size
+    logical, optional,      intent(in)    :: verbose
 
-  logical            :: verbose_
-  integer            :: ib, ik, psi_start, psi_end, constr_start, constr_end, bs
-  integer            :: n_matvec, conv, maxiter, outcount, iblock
-  FLOAT, allocatable :: ldiff(:)
+    logical            :: verbose_
+    integer            :: ib, ik, psi_start, psi_end, constr_start, constr_end, bs
+    integer            :: n_matvec, conv, maxiter, outcount, iblock
+    FLOAT, allocatable :: ldiff(:)
 
-  call push_sub('eigen_lobpcg.Xlobpcg')
+    call push_sub('eigen_lobpcg.Xlobpcg')
 
-  bs = block_size
+    bs = block_size
 
-  ! Some verbose output.
-  verbose_ = .false.
-  if(present(verbose)) verbose_ = verbose
-  if(verbose_) then
-    call messages_print_stress(stdout, "LOBPCG Info")
-    message(1) = 'Diagonalization with the locally optimal block preconditioned'
-    message(2) = 'conjugate gradient algorithm.'
-    write(message(3), '(a,e8.2)') '  Tolerance:                              ', tol
-    write(message(4), '(a,i8)')   '  Number of eigenstates per block:        ', bs
-    write(message(5), '(a,i8)')   '  Maximum number of iterations per block: ', niter
-    message(6) = ''
-    call write_info(6)
-  end if
+    maxiter = niter
+    niter   = 0
 
-  maxiter = niter
-  niter   = 0
+    diff(1:st%nst) = M_ZERO
 
-  diff(1:st%nst, 1:st%d%nik) = M_ZERO
-
-  ! Iterate over all k-points.
-  do ik = 1, st%d%nik
-    if(verbose_) then
-      write(message(1), '(a,i4)') '#k = ', ik
-      call write_info(1)
-    end if
     iblock = 0
 
     ! Iterate over all blocks.
@@ -92,28 +72,26 @@ subroutine X(eigen_solver_lobpcg)(gr, st, h, pre, tol, niter, converged, diff, b
       n_matvec = maxiter
 
       call X(lobpcg)(gr, st, h, psi_start, psi_end, st%X(psi)(:, :, psi_start:psi_end, ik), &
-        constr_start, constr_end, st%X(psi)(:, :, constr_start:constr_end, ik),             &
-        ik, pre, tol, n_matvec, conv, diff(:, ik), iblock, verbose)
+           constr_start, constr_end, st%X(psi)(:, :, constr_start:constr_end, ik),             &
+           ik, pre, tol, n_matvec, conv, diff, iblock, verbose)
 
       niter         = niter + n_matvec
-      converged(ik) = converged(ik) + conv
+      converged = converged + conv
     end do
 
 #if defined(HAVE_MPI)
     if(st%parallel_in_states) then
       ALLOCATE(ldiff(st%lnst), st%lnst)
-      ldiff(1:st%lnst) = diff(st%st_start:st%st_end, ik)
-      call lmpi_gen_allgatherv(st%lnst, ldiff, outcount, diff(:, ik), st%mpi_grp)
+      ldiff(1:st%lnst) = diff(st%st_start:st%st_end)
+      call lmpi_gen_allgatherv(st%lnst, ldiff, outcount, diff, st%mpi_grp)
       deallocate(ldiff)
     end if
 #endif
 
-  end do
+    if(verbose_) call messages_print_stress(stdout)
 
-  if(verbose_) call messages_print_stress(stdout)
-
-  call pop_sub()
-end subroutine X(eigen_solver_lobpcg)
+    call pop_sub()
+  end subroutine X(eigen_solver_lobpcg)
 
 
 ! ---------------------------------------------------------

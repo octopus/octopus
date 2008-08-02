@@ -27,18 +27,18 @@
 ! process.
 !
 ! ---------------------------------------------------------
-subroutine X(eigen_solver_rmmdiis) (gr, st, h, pre, tol, niter, converged, diff, verbose)
+subroutine X(eigen_solver_rmmdiis) (gr, st, h, pre, tol, niter, converged, ik, diff)
   type(grid_t),        intent(inout) :: gr
   type(states_t),      intent(inout) :: st
   type(hamiltonian_t), intent(inout) :: h
   type(preconditioner_t), intent(in) :: pre
   FLOAT,               intent(in)    :: tol
   integer,             intent(inout) :: niter
-  integer,             intent(inout) :: converged(:)
-  FLOAT,     optional, intent(out)   :: diff(1:st%nst,1:st%d%nik)
-  logical,   optional, intent(in)    :: verbose
+  integer,             intent(inout) :: converged
+  integer,             intent(in)    :: ik
+  FLOAT,     optional, intent(out)   :: diff(1:st%nst)
 
-  integer :: ik, ist, idim
+  integer :: ist, idim
   integer :: times, ntimes
   R_TYPE, allocatable :: residuals(:, :), preres(:, :), resres(:, :)
   R_TYPE :: lambda(1:2)
@@ -54,81 +54,77 @@ subroutine X(eigen_solver_rmmdiis) (gr, st, h, pre, tol, niter, converged, diff,
   ALLOCATE(resres(1:NP, 1:st%d%dim), NP*st%d%dim*st%lnst)
 
   if(present(diff)) then
-    call X(subspace_diag)(gr, st, h, diff)
+    call X(subspace_diag)(gr, st, h, ik, diff)
   else
-    call X(subspace_diag)(gr, st, h)
+    call X(subspace_diag)(gr, st, h, ik)
   end if
   ntimes = niter/2
   niter = 0
 
-  do ik = 1, st%d%nik
+  converged = 0
 
-    converged(ik) = 0
+  do ist = st%st_start, st%st_end
 
-    do ist = st%st_start, st%st_end
-      
-      do times = 1, ntimes
+    do times = 1, ntimes
 
-        call X(Hpsi)(h, gr, st%X(psi)(:,:, ist, ik) , residuals, ist, ik)
+      call X(Hpsi)(h, gr, st%X(psi)(:,:, ist, ik) , residuals, ist, ik)
 
-        niter = niter + 1
+      niter = niter + 1
 
-        st%eigenval(ist, ik) = X(mf_dotp)(gr%m, st%d%dim, st%X(psi)(:,:, ist, ik) , residuals(:, :))
+      st%eigenval(ist, ik) = X(mf_dotp)(gr%m, st%d%dim, st%X(psi)(:,:, ist, ik) , residuals(:, :))
 
-        do idim = 1, st%d%dim
-          call lalg_axpy(NP, -st%eigenval(ist, ik), st%X(psi)(:, idim, ist, ik), residuals(:, idim))
-        end do
+      do idim = 1, st%d%dim
+        call lalg_axpy(NP, -st%eigenval(ist, ik), st%X(psi)(:, idim, ist, ik), residuals(:, idim))
+      end do
 
-        error = X(mf_nrm2)(gr%m, st%d%dim, residuals)
+      error = X(mf_nrm2)(gr%m, st%d%dim, residuals)
 
-        if(error < tol) then
-          converged(ik) = converged(ik) + 1
-          if(present(diff)) diff(ist, ik) = error
-          exit
-        end if
+      if(error < tol) then
+        converged = converged + 1
+        if(present(diff)) diff(ist) = error
+        exit
+      end if
 
-        call  X(preconditioner_apply)(pre, gr, h, residuals, preres)
+      call  X(preconditioner_apply)(pre, gr, h, residuals, preres)
 
-        ! calculate the residual of the residual
-        call X(Hpsi)(h, gr, preres, resres, ist, ik)
+      ! calculate the residual of the residual
+      call X(Hpsi)(h, gr, preres, resres, ist, ik)
 
-        do idim = 1, st%d%dim
-          call lalg_axpy(NP, -st%eigenval(ist, ik), preres(:, idim), resres(:, idim))
-        end do
+      do idim = 1, st%d%dim
+        call lalg_axpy(NP, -st%eigenval(ist, ik), preres(:, idim), resres(:, idim))
+      end do
 
-        ! the size of the correction
-        lambda(1) = X(mf_dotp)(gr%m, st%d%dim, residuals, resres, reduce = .false.)
-        lambda(2) = X(mf_dotp)(gr%m, st%d%dim, resres, resres, reduce = .false.)
+      ! the size of the correction
+      lambda(1) = X(mf_dotp)(gr%m, st%d%dim, residuals, resres, reduce = .false.)
+      lambda(2) = X(mf_dotp)(gr%m, st%d%dim, resres, resres, reduce = .false.)
 
 #ifdef HAVE_MPI
-        if(gr%m%parallel_in_domains) then
-          !reduce the two values together
-          call MPI_Allreduce(lambda, lambda_tmp, 2, R_MPITYPE, MPI_SUM, gr%m%vp%comm, mpi_err)
-          lambda(1:2) = lambda_tmp(1:2)
-        end if
+      if(gr%m%parallel_in_domains) then
+        !reduce the two values together
+        call MPI_Allreduce(lambda, lambda_tmp, 2, R_MPITYPE, MPI_SUM, gr%m%vp%comm, mpi_err)
+        lambda(1:2) = lambda_tmp(1:2)
+      end if
 #endif
-        lambda(1) = -lambda(1)/lambda(2)
+      lambda(1) = -lambda(1)/lambda(2)
 
-        do idim = 1, st%d%dim
-          call lalg_axpy(NP, M_HALF*lambda(1), resres(:, idim), residuals(:, idim))
-        end do
-
-        call X(preconditioner_apply)(pre, gr, h, residuals, preres)
-
-        !now correct psi
-        do idim = 1, st%d%dim
-          call lalg_axpy(NP, M_TWO*lambda(1), preres(:, idim), st%X(psi)(:, idim, ist, ik))
-        end do
-
-        niter = niter + 1
-
+      do idim = 1, st%d%dim
+        call lalg_axpy(NP, M_HALF*lambda(1), resres(:, idim), residuals(:, idim))
       end do
+
+      call X(preconditioner_apply)(pre, gr, h, residuals, preres)
+
+      !now correct psi
+      do idim = 1, st%d%dim
+        call lalg_axpy(NP, M_TWO*lambda(1), preres(:, idim), st%X(psi)(:, idim, ist, ik))
+      end do
+
+      niter = niter + 1
 
     end do
 
-    call X(states_gram_schmidt_full)(st, st%nst, gr%m, st%d%dim, st%X(psi)(:, :, :, ik))
-
   end do
+
+  call X(states_gram_schmidt_full)(st, st%nst, gr%m, st%d%dim, st%X(psi)(:, :, :, ik))
 
   call pop_sub()
 

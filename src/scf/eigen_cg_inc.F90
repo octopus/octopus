@@ -19,22 +19,23 @@
 
 ! ---------------------------------------------------------
 ! conjugate-gradients method.
-subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, verbose)
+subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, ik, diff, verbose)
   type(grid_t),        intent(inout) :: gr
   type(states_t),      intent(inout) :: st
   type(hamiltonian_t), intent(inout) :: h
   type(preconditioner_t), intent(in) :: pre
   FLOAT,               intent(in)    :: tol
   integer,             intent(inout) :: niter
-  integer,             intent(inout) :: converged(:)
-  FLOAT,     optional, intent(out)   :: diff(1:st%nst,1:st%d%nik)
+  integer,             intent(inout) :: converged
+  integer,             intent(in)    :: ik
+  FLOAT,     optional, intent(out)   :: diff(1:st%nst)
   logical,   optional, intent(in)    :: verbose
 
   R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:),  cg(:,:), ppsi(:,:)
 
   R_TYPE   :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma
   real(8)  :: cg0, e0, res
-  integer  :: ik, p, iter, maxter, conv, idim, ns, ip
+  integer  :: p, iter, maxter, idim, ip
   logical  :: verbose_
 #ifdef HAVE_MPI
   R_TYPE   :: sb(3), rb(3)
@@ -70,202 +71,184 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, diff, ver
 
   ! Set the diff to zero, since it is intent(out)
   if(present(diff)) then 
-    diff(1:st%nst,1:st%d%nik) = M_ZERO
+    diff(1:st%nst) = M_ZERO
   end if
 
   ! Start of main loop, which runs over all the eigenvectors searched
-  ns = 1
-  if(st%d%nspin == 2) ns = 2
-  ik_loop: do ik = 1, st%d%nik
-    conv = converged(ik)
+
+  ASSERT(converged >= 0)
+
+  eigenfunction_loop : do p = converged + 1, st%nst
 
     if(verbose_) then
-      if(st%d%nik > ns) then
-	write(message(1), '(a,i4,3(a,f12.6),a)') '#k =',ik,', k = (',  &
-	  st%d%kpoints(1, ik)*units_out%length%factor, ',',            &
-	  st%d%kpoints(2, ik)*units_out%length%factor, ',',            &
-	  st%d%kpoints(3, ik)*units_out%length%factor, ')'
-	call write_info(1)
-      end if
+      write(message(2),'(a,i4,a)') ' Eigenstate # ', p, ':'
     end if
-    
-    ASSERT(conv >= 0)
 
-    eigenfunction_loop : do p = conv + 1, st%nst
+    ! Orthogonalize starting eigenfunctions to those already calculated...
+    if(p > 1) then
+      call X(states_gram_schmidt)(gr%m, p - 1, st%d%dim, st%X(psi)(:, :, :, ik), st%X(psi)(:, :, p, ik), normalize = .true.)
+    end if
 
-      if(verbose_) then
-        write(message(2),'(a,i4,a)') ' Eigenstate # ', p, ':'
-      end if
+    ! Calculate starting gradient: |hpsi> = H|psi>
+    call X(Hpsi)(h, gr, st%X(psi)(:,:, p, ik) , h_psi, p, ik)
 
-      ! Orthogonalize starting eigenfunctions to those already calculated...
-      if(p > 1) then
-        call X(states_gram_schmidt)(gr%m, p - 1, st%d%dim, st%X(psi)(:, :, :, ik), st%X(psi)(:, :, p, ik), normalize = .true.)
-      end if
+    ! Calculates starting eigenvalue: e(p) = <psi(p)|H|psi>
+    st%eigenval(p, ik) = R_REAL(X(mf_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), h_psi))
 
-      ! Calculate starting gradient: |hpsi> = H|psi>
-      call X(Hpsi)(h, gr, st%X(psi)(:,:, p, ik) , h_psi, p, ik)
+    ! Starts iteration for this band
+    iter_loop: do iter = 1, maxter
 
-      ! Calculates starting eigenvalue: e(p) = <psi(p)|H|psi>
-      st%eigenval(p, ik) = R_REAL(X(mf_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), h_psi))
+      ! inverse preconditioner....
+      call  X(preconditioner_apply)(pre, gr, h, h_psi(:,:), g(:,:))
+      call  X(preconditioner_apply)(pre, gr, h, st%X(psi)(:,:, p, ik), ppsi(:,:))
 
-      ! Starts iteration for this band
-      iter_loop: do iter = 1, maxter
-
-        ! inverse preconditioner....
-        call  X(preconditioner_apply)(pre, gr, h, h_psi(:,:), g(:,:))
-        call  X(preconditioner_apply)(pre, gr, h, st%X(psi)(:,:, p, ik), ppsi(:,:))
-
-        es(1) = X(mf_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), g, reduce = .false.)
-        es(2) = X(mf_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), ppsi, reduce = .false.)
+      es(1) = X(mf_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), g, reduce = .false.)
+      es(2) = X(mf_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), ppsi, reduce = .false.)
 
 #ifdef HAVE_MPI
-        if(gr%m%parallel_in_domains) then
-          sb(1) = es(1)
-          sb(2) = es(2)
-          call MPI_Allreduce(sb, es, 2, R_MPITYPE, MPI_SUM, gr%m%vp%comm, mpi_err)
-        end if
+      if(gr%m%parallel_in_domains) then
+        sb(1) = es(1)
+        sb(2) = es(2)
+        call MPI_Allreduce(sb, es, 2, R_MPITYPE, MPI_SUM, gr%m%vp%comm, mpi_err)
+      end if
 #endif  
 
-        es(1) = es(1)/es(2)
+      es(1) = es(1)/es(2)
+
+      do idim = 1, st%d%dim
+        call lalg_axpy(NP, R_TOPREC(-es(1)), ppsi(:, idim), g(:, idim))
+      end do
+
+      ! Orthogonalize to lowest eigenvalues (already calculated)
+      if(p > 1) call X(states_gram_schmidt)(gr%m, p - 1, st%d%dim, st%X(psi)(:, :, :, ik), g, normalize = .false.)
+
+      if(iter .ne. 1) then
+        gg1 = X(mf_dotp) (gr%m, st%d%dim, g, g0, reduce = .false.)
+      else
+        gg1 = M_ZERO
+      end if
+
+      ! Approximate inverse preconditioner...
+      call  X(preconditioner_apply)(pre, gr, h, g(:,:), g0(:,:))
+
+      gg = X(mf_dotp) (gr%m, st%d%dim, g, g0, reduce = .false.)
+
+#ifdef HAVE_MPI
+      if(gr%m%parallel_in_domains) then
+        sb(1) = gg1
+        sb(2) = gg
+        call MPI_Allreduce(sb, rb, 2, R_MPITYPE, MPI_SUM, gr%m%vp%comm, mpi_err)
+        gg1 = rb(1)
+        gg  = rb(2)
+      end if
+#endif
+
+      if( abs(gg) < M_EPSILON ) then
+        converged = converged + 1
+        st%eigenval(p, ik) = es(1)
+        res = sqrt(abs(gg))
+        exit
+      end if
+
+      ! Starting or following iterations...
+      if(iter .eq. 1) then
+        gg0 = gg
 
         do idim = 1, st%d%dim
-          call lalg_axpy(NP, R_TOPREC(-es(1)), ppsi(:, idim), g(:, idim))
+          call lalg_copy(NP, g(:,idim), cg(:, idim))
         end do
+      else
+        !gamma = gg/gg0        ! (Fletcher-Reeves)
+        gamma = (gg - gg1)/gg0   ! (Polack-Ribiere)
+        gg0 = gg
 
-        ! Orthogonalize to lowest eigenvalues (already calculated)
-        if(p > 1) call X(states_gram_schmidt)(gr%m, p - 1, st%d%dim, st%X(psi)(:, :, :, ik), g, normalize = .false.)
-
-        if(iter .ne. 1) then
-          gg1 = X(mf_dotp) (gr%m, st%d%dim, g, g0, reduce = .false.)
-        else
-          gg1 = M_ZERO
-        end if
-
-        ! Approximate inverse preconditioner...
-        call  X(preconditioner_apply)(pre, gr, h, g(:,:), g0(:,:))
-
-        gg = X(mf_dotp) (gr%m, st%d%dim, g, g0, reduce = .false.)
-
-#ifdef HAVE_MPI
-        if(gr%m%parallel_in_domains) then
-          sb(1) = gg1
-          sb(2) = gg
-          call MPI_Allreduce(sb, rb, 2, R_MPITYPE, MPI_SUM, gr%m%vp%comm, mpi_err)
-          gg1 = rb(1)
-          gg  = rb(2)
-        end if
-#endif
-
-        if( abs(gg) < M_EPSILON ) then
-          conv = conv + 1
-          st%eigenval(p, ik) = es(1)
-          res = sqrt(abs(gg))
-          exit
-        end if
-
-        ! Starting or following iterations...
-        if(iter .eq. 1) then
-          gg0 = gg
-
-          do idim = 1, st%d%dim
-            call lalg_copy(NP, g(:,idim), cg(:, idim))
-          end do
-        else
-          !gamma = gg/gg0        ! (Fletcher-Reeves)
-          gamma = (gg - gg1)/gg0   ! (Polack-Ribiere)
-          gg0 = gg
-
-          norma = gamma*cg0*sin(theta)
-
-          do idim = 1, st%d%dim
-            do ip = 1, NP
-              cg(ip, idim) = gamma*cg(ip, idim) + g(ip, idim) - norma*st%X(psi)(ip, idim, p, ik)
-            end do
-          end do
-
-          call profiling_count_operations(st%d%dim*NP*(2*R_ADD + 2*R_MUL))
-
-        end if
-
-        ! cg contains now the conjugate gradient
-        call X(Hpsi) (h, gr, cg, ppsi, p, ik)
-
-        ! Line minimization.
-        a0 = X(mf_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), ppsi, reduce = .false.)
-        b0 = X(mf_dotp) (gr%m, st%d%dim, cg(:,:), ppsi, reduce = .false.)
-        cg0 = X(mf_nrm2) (gr%m, st%d%dim, cg(:,:), reduce = .false.)
-
-#ifdef HAVE_MPI
-        if(gr%m%parallel_in_domains) then
-          sb(1) = a0
-          sb(2) = b0
-          sb(3) = cg0**2
-          call MPI_Allreduce(sb, rb, 3, R_MPITYPE, MPI_SUM, gr%m%vp%comm, mpi_err)
-          a0 = rb(1)
-          b0 = rb(2)
-          cg0 = sqrt(rb(3))
-        end if
-#endif
-
-        a0 = M_TWO * a0 / cg0
-        b0 = b0/cg0**2
-        e0 = st%eigenval(p, ik)
-        theta = atan(R_REAL(a0/(e0 - b0)))/M_TWO
-        es(1) = M_HALF*((e0-b0)*cos(M_TWO*theta) + a0*sin(M_TWO*theta) + e0 + b0)
-        es(2) = -M_HALF*((e0-b0)*cos(M_TWO*theta) + a0*sin(M_TWO*theta) - (e0 + b0))
-
-        ! Choose the minimum solutions.
-        if (R_REAL(es(2)) < R_REAL(es(1))) theta = theta + M_PI/M_TWO
-        st%eigenval(p, ik) = min(R_REAL(es(1)), R_REAL(es(2)))
-
-        ! Upgrade psi...
-        a0 = cos(theta)
-        b0 = sin(theta)/cg0
+        norma = gamma*cg0*sin(theta)
 
         do idim = 1, st%d%dim
           do ip = 1, NP
-            st%X(psi)(ip, idim, p, ik) = a0*st%X(psi)(ip, idim, p, ik) + b0*cg(ip, idim)
-            h_psi(ip, idim) = a0*h_psi(ip, idim) + b0*ppsi(ip, idim)
+            cg(ip, idim) = gamma*cg(ip, idim) + g(ip, idim) - norma*st%X(psi)(ip, idim, p, ik)
           end do
         end do
 
-        call profiling_count_operations(st%d%dim*NP*(2*R_ADD + 4*R_MUL))
+        call profiling_count_operations(st%d%dim*NP*(2*R_ADD + 2*R_MUL))
 
-        res = X(states_residue)(gr%m, st%d%dim, h_psi, st%eigenval(p, ik), st%X(psi)(:, :, p, ik))
+      end if
 
-        if(in_debug_mode) then
-          write(message(1), '(a,i4,a,f12.6)') 'Debug: CG Eigensolver - iteration = ', iter, ' error = ', res
-          call write_info(1)
-        end if
+      ! cg contains now the conjugate gradient
+      call X(Hpsi) (h, gr, cg, ppsi, p, ik)
 
-        ! Test convergence.
-        if(res < tol) then
-          conv = conv + 1
-          exit iter_loop
-        end if
+      ! Line minimization.
+      a0 = X(mf_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), ppsi, reduce = .false.)
+      b0 = X(mf_dotp) (gr%m, st%d%dim, cg(:,:), ppsi, reduce = .false.)
+      cg0 = X(mf_nrm2) (gr%m, st%d%dim, cg(:,:), reduce = .false.)
 
-      end do iter_loop
+#ifdef HAVE_MPI
+      if(gr%m%parallel_in_domains) then
+        sb(1) = a0
+        sb(2) = b0
+        sb(3) = cg0**2
+        call MPI_Allreduce(sb, rb, 3, R_MPITYPE, MPI_SUM, gr%m%vp%comm, mpi_err)
+        a0 = rb(1)
+        b0 = rb(2)
+        cg0 = sqrt(rb(3))
+      end if
+#endif
 
-      if(verbose_) then
-        if(res<tol) then
-          write(message(1),'(a,a,i5,a,e8.2,a)') trim(message(2)),"     converged. Iterations:", iter, '   [Res = ',res,']'
-        else
-          write(message(1),'(a,a,i5,a,e8.2,a)') trim(message(2))," not converged. Iterations:", iter, '   [Res = ',res,']'
-        end if
+      a0 = M_TWO * a0 / cg0
+      b0 = b0/cg0**2
+      e0 = st%eigenval(p, ik)
+      theta = atan(R_REAL(a0/(e0 - b0)))/M_TWO
+      es(1) = M_HALF*((e0-b0)*cos(M_TWO*theta) + a0*sin(M_TWO*theta) + e0 + b0)
+      es(2) = -M_HALF*((e0-b0)*cos(M_TWO*theta) + a0*sin(M_TWO*theta) - (e0 + b0))
+
+      ! Choose the minimum solutions.
+      if (R_REAL(es(2)) < R_REAL(es(1))) theta = theta + M_PI/M_TWO
+      st%eigenval(p, ik) = min(R_REAL(es(1)), R_REAL(es(2)))
+
+      ! Upgrade psi...
+      a0 = cos(theta)
+      b0 = sin(theta)/cg0
+
+      do idim = 1, st%d%dim
+        do ip = 1, NP
+          st%X(psi)(ip, idim, p, ik) = a0*st%X(psi)(ip, idim, p, ik) + b0*cg(ip, idim)
+          h_psi(ip, idim) = a0*h_psi(ip, idim) + b0*ppsi(ip, idim)
+        end do
+      end do
+
+      call profiling_count_operations(st%d%dim*NP*(2*R_ADD + 4*R_MUL))
+
+      res = X(states_residue)(gr%m, st%d%dim, h_psi, st%eigenval(p, ik), st%X(psi)(:, :, p, ik))
+
+      if(in_debug_mode) then
+        write(message(1), '(a,i4,a,i4,a,i4,a,f12.6)') 'Debug: CG Eigensolver - ik', ik, ' ist ', p, ' iter ', iter, ' res ', res
         call write_info(1)
       end if
 
-      niter = niter + iter + 1
-
-      if(present(diff)) then
-        diff(p, ik) = res
+      ! Test convergence.
+      if(res < tol) then
+        converged = converged + 1
+        exit iter_loop
       end if
 
-    end do eigenfunction_loop
+    end do iter_loop
 
-    converged(ik) = conv
+    if(verbose_) then
+      if(res<tol) then
+        write(message(1),'(a,a,i5,a,e8.2,a)') trim(message(2)),"     converged. Iterations:", iter, '   [Res = ',res,']'
+      else
+        write(message(1),'(a,a,i5,a,e8.2,a)') trim(message(2))," not converged. Iterations:", iter, '   [Res = ',res,']'
+      end if
+      call write_info(1)
+    end if
 
-  end do ik_loop
+    niter = niter + iter + 1
+
+    if(present(diff)) then
+      diff(p) = res
+    end if
+
+  end do eigenfunction_loop
 
   ! Deallocation of variables
   deallocate(h_psi, g, g0, cg, ppsi)
@@ -277,17 +260,18 @@ end subroutine X(eigen_solver_cg2)
 
 ! ---------------------------------------------------------
 ! The algorithm is essentially taken from Jiang et al. Phys. Rev. B 68, 165337 (2003).
-subroutine X(eigen_solver_cg2_new) (gr, st, h, tol, niter, converged, diff, verbose)
+subroutine X(eigen_solver_cg2_new) (gr, st, h, tol, niter, converged, ik, diff, verbose)
   type(grid_t),        intent(inout) :: gr
   type(states_t),      intent(inout) :: st
   type(hamiltonian_t), intent(inout) :: h
   FLOAT,               intent(in)    :: tol
   integer,             intent(inout) :: niter
-  integer,             intent(inout) :: converged(:)
-  FLOAT,     optional, intent(out)   :: diff(1:st%nst,1:st%d%nik)
+  integer,             intent(inout) :: converged
+  integer,             intent(in)    :: ik
+  FLOAT,     optional, intent(out)   :: diff(1:st%nst)
   logical,   optional, intent(in)    :: verbose
 
-  integer :: nik, nst, dim, ik, ist, maxter, i, conv, ip, idim
+  integer :: nst, dim, ist, maxter, i, conv, ip, idim
   logical :: verbose_
   R_TYPE, allocatable :: psi(:,:), phi(:, :), hpsi(:, :), hcgp(:, :), cg(:, :), sd(:, :), cgp(:, :)
   FLOAT :: ctheta, stheta, ctheta2, stheta2, mu, lambda, dump, &
@@ -308,7 +292,8 @@ subroutine X(eigen_solver_cg2_new) (gr, st, h, tol, niter, converged, diff, verb
     call write_info(4)
   end if
 
-  dim = st%d%dim; nik = st%d%nik; nst = st%nst
+  dim = st%d%dim
+  nst = st%nst
 
   maxter = niter
   niter = 0
@@ -326,142 +311,139 @@ subroutine X(eigen_solver_cg2_new) (gr, st, h, tol, niter, converged, diff, verb
   cgp(1:NP, 1:dim) = M_ZERO
 
   ! Set the diff to zero, since it is intent(out)
-  if(present(diff)) diff(1:st%nst,1:st%d%nik) = M_ZERO
+  if(present(diff)) diff(1:st%nst) = M_ZERO
 
-  kpoints: do ik = 1, nik
-    conv = converged(ik)
-    states: do ist = conv + 1, nst
+  conv = converged
+  states: do ist = conv + 1, nst
 
-      ! Orthogonalize starting eigenfunctions to those already calculated...
-      call X(states_gram_schmidt_full)(st, ist, gr%m, dim, st%X(psi)(:, :, :, ik), start=ist)
+    ! Orthogonalize starting eigenfunctions to those already calculated...
+    call X(states_gram_schmidt_full)(st, ist, gr%m, dim, st%X(psi)(:, :, :, ik), start=ist)
 
+    do idim = 1, st%d%dim
+      call lalg_copy(NP, st%X(psi)(:, idim, ist, ik), psi(:, idim))
+    end do
+
+    ! Calculate starting gradient: |hpsi> = H|psi>
+    call X(hpsi)(h, gr, psi, phi, ist, ik)
+    niter = niter + 1
+
+    ! Initial settings for scalar variables.
+    ctheta = M_ONE
+    stheta = M_ZERO
+    mu     = M_ONE
+
+    ! Initialize to zero the vector variables.
+    hcgp = R_TOTYPE(M_ZERO)
+    cg   = R_TOTYPE(M_ZERO)
+
+    orthogonal = .false.
+
+    band: do i = 1, maxter - 1 ! One operation has already been made.
+
+      if(mod(i, 5).eq.0) orthogonal = .false.
+
+      ! Get H|psi> (through the linear formula)
       do idim = 1, st%d%dim
-        call lalg_copy(NP, st%X(psi)(:, idim, ist, ik), psi(:, idim))
+        do ip = 1, NP
+          phi(ip, idim) = ctheta*phi(ip, idim) + stheta*hcgp(ip, idim)
+        end do
       end do
 
-      ! Calculate starting gradient: |hpsi> = H|psi>
-      call X(hpsi)(h, gr, psi, phi, ist, ik)
-      niter = niter + 1
+      ! lambda = <psi|H|psi> = <psi|phi>
+      lambda = X(mf_dotp)(gr%m, dim, psi, phi)
 
-      ! Initial settings for scalar variables.
-      ctheta = M_ONE
-      stheta = M_ZERO
-      mu     = M_ONE
-
-      ! Initialize to zero the vector variables.
-      hcgp = R_TOTYPE(M_ZERO)
-      cg   = R_TOTYPE(M_ZERO)
-
-      orthogonal = .false.
-
-      band: do i = 1, maxter - 1 ! One operation has already been made.
-
-        if(mod(i, 5).eq.0) orthogonal = .false.
-
-        ! Get H|psi> (through the linear formula)
-        do idim = 1, st%d%dim
-          do ip = 1, NP
-            phi(ip, idim) = ctheta*phi(ip, idim) + stheta*hcgp(ip, idim)
-          end do
-        end do
-
-        ! lambda = <psi|H|psi> = <psi|phi>
-        lambda = X(mf_dotp)(gr%m, dim, psi, phi)
-
-        ! Check convergence
-        res = X(states_residue)(gr%m, dim, phi, lambda, psi)
-        if(present(diff)) diff(ist, ik) = res
-        if(res < tol) then
-          conv = conv + 1
-          exit band
-        end if
-
-        ! Get steepest descent vector
-        do idim = 1, st%d%dim
-          do ip = 1, NP
-            sd(ip, idim) = lambda*psi(ip, idim) - phi(ip, idim)
-          end do
-        end do
-        
-        if(ist > 1) &
-             call X(states_gram_schmidt)(gr%m, ist - 1, dim, st%X(psi)(:, :, :, ik), sd, normalize = .false., mask = orthogonal)
-
-        ! Get conjugate-gradient vector
-        dot = X(mf_nrm2)(gr%m, dim, sd)**2
-        gamma = dot/mu
-        mu    = dot
-
-        do idim = 1, st%d%dim
-          do ip = 1, NP
-            cg(ip, idim) = sd(ip, idim) + gamma*cg(ip, idim)
-          end do
-        end do
-
-        dump = X(mf_dotp)(gr%m, dim, psi, cg)
-
-        do idim = 1, st%d%dim
-          do ip = 1, NP
-            cgp(ip, idim) = cg(ip, idim) - dump*psi(ip, idim)
-          end do
-        end do
-
-        dump = X(mf_nrm2)(gr%m, dim, cgp)
-
-        do idim = 1, st%d%dim
-          call lalg_scal(NP, M_ONE/dump, cgp(:, idim))
-        end do
-
-        call X(hpsi)(h, gr, cgp, hcgp, ist, ik)
-
-        niter = niter + 1
-
-        alpha = -lambda + X(mf_dotp)(gr%m, dim, cgp, hcgp)
-        beta  = M_TWO*X(mf_dotp)(gr%m, dim, cgp, phi)
-        theta = M_HALF*atan(-beta/alpha)
-        ctheta = cos(theta)
-        stheta = sin(theta)
-
-        ! This checks whether we are picking the maximum or the minimum.
-        theta2 = theta + M_PI/M_TWO
-        ctheta2 = cos(theta2)
-        stheta2 = sin(theta2)
-        sol(1) = lambda + stheta**2*alpha + beta*stheta*ctheta
-        sol(2) = lambda + stheta2**2*alpha + beta*stheta2*ctheta2
-
-        if(sol(2) < sol(1)) then
-          theta = theta2
-          stheta = stheta2
-          ctheta = ctheta2
-        end if
-
-        do idim = 1, st%d%dim
-          do ip = 1, NP
-            psi(ip, idim) = ctheta*psi(ip, idim) + stheta*cgp(ip, idim)
-          end do
-        end do
-        
-      end do band
-
-      do idim = 1, st%d%dim
-        call lalg_copy(NP, psi(:, idim), st%X(psi)(:, idim, ist, ik))
-      end do
-
-      st%eigenval(ist, ik) = lambda
-
-      if(verbose_) then
-        if(res<tol) then
-          write(message(1),'(a,a,i5,a,e8.2,a)') trim(message(2)),"     converged. Iterations:", i, '   [Res = ',res,']'
-        else
-          write(message(1),'(a,a,i5,a,e8.2,a)') trim(message(2))," not converged. Iterations:", i, '   [Res = ',res,']'
-        end if
-        call write_info(1)
+      ! Check convergence
+      res = X(states_residue)(gr%m, dim, phi, lambda, psi)
+      if(present(diff)) diff(ist) = res
+      if(res < tol) then
+        conv = conv + 1
+        exit band
       end if
 
-    end do states
+      ! Get steepest descent vector
+      do idim = 1, st%d%dim
+        do ip = 1, NP
+          sd(ip, idim) = lambda*psi(ip, idim) - phi(ip, idim)
+        end do
+      end do
 
-    converged(ik) = conv
+      if(ist > 1) &
+           call X(states_gram_schmidt)(gr%m, ist - 1, dim, st%X(psi)(:, :, :, ik), sd, normalize = .false., mask = orthogonal)
 
-  end do kpoints
+      ! Get conjugate-gradient vector
+      dot = X(mf_nrm2)(gr%m, dim, sd)**2
+      gamma = dot/mu
+      mu    = dot
+
+      do idim = 1, st%d%dim
+        do ip = 1, NP
+          cg(ip, idim) = sd(ip, idim) + gamma*cg(ip, idim)
+        end do
+      end do
+
+      dump = X(mf_dotp)(gr%m, dim, psi, cg)
+
+      do idim = 1, st%d%dim
+        do ip = 1, NP
+          cgp(ip, idim) = cg(ip, idim) - dump*psi(ip, idim)
+        end do
+      end do
+
+      dump = X(mf_nrm2)(gr%m, dim, cgp)
+
+      do idim = 1, st%d%dim
+        call lalg_scal(NP, M_ONE/dump, cgp(:, idim))
+      end do
+
+      call X(hpsi)(h, gr, cgp, hcgp, ist, ik)
+
+      niter = niter + 1
+
+      alpha = -lambda + X(mf_dotp)(gr%m, dim, cgp, hcgp)
+      beta  = M_TWO*X(mf_dotp)(gr%m, dim, cgp, phi)
+      theta = M_HALF*atan(-beta/alpha)
+      ctheta = cos(theta)
+      stheta = sin(theta)
+
+      ! This checks whether we are picking the maximum or the minimum.
+      theta2 = theta + M_PI/M_TWO
+      ctheta2 = cos(theta2)
+      stheta2 = sin(theta2)
+      sol(1) = lambda + stheta**2*alpha + beta*stheta*ctheta
+      sol(2) = lambda + stheta2**2*alpha + beta*stheta2*ctheta2
+
+      if(sol(2) < sol(1)) then
+        theta = theta2
+        stheta = stheta2
+        ctheta = ctheta2
+      end if
+
+      do idim = 1, st%d%dim
+        do ip = 1, NP
+          psi(ip, idim) = ctheta*psi(ip, idim) + stheta*cgp(ip, idim)
+        end do
+      end do
+
+    end do band
+
+    do idim = 1, st%d%dim
+      call lalg_copy(NP, psi(:, idim), st%X(psi)(:, idim, ist, ik))
+    end do
+
+    st%eigenval(ist, ik) = lambda
+
+    if(verbose_) then
+      if(res<tol) then
+        write(message(1),'(a,a,i5,a,e8.2,a)') trim(message(2)),"     converged. Iterations:", i, '   [Res = ',res,']'
+      else
+        write(message(1),'(a,a,i5,a,e8.2,a)') trim(message(2))," not converged. Iterations:", i, '   [Res = ',res,']'
+      end if
+      call write_info(1)
+    end if
+
+  end do states
+
+  converged = conv
 
   deallocate(phi, psi, hpsi, cg, hcgp, sd, cgp, orthogonal)
   if(verbose_) call messages_print_stress(stdout)

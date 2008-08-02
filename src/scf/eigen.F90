@@ -101,10 +101,10 @@ contains
 
     call push_sub('eigen.eigen_solver_init')
 
-    !%Variable EigenSolver
+    !%Variable Eigensolver
     !%Type integer
     !%Default cg
-    !%Section SCF::EigenSolver
+    !%Section SCF::Eigensolver
     !%Description
     !% Decides the eigensolver that obtains the lowest eigenvalues and
     !% eigenfunctions of the Kohn-Sham Hamiltonian. The default is
@@ -131,7 +131,7 @@ contains
     !%Option multigrid 7
     !% Multigrid eigensolver (experimental).
     !%End
-    call loct_parse_int(check_inp('EigenSolver'), RS_CG, eigens%es_type)
+    call loct_parse_int(check_inp('Eigensolver'), RS_CG, eigens%es_type)
 
     if(st%parallel_in_states .and. .not. eigen_solver_parallel_in_states(eigens)) then
       message(1) = "The selected eigensolver is not parallel in states."
@@ -139,33 +139,33 @@ contains
       call write_fatal(2)
     end if
 
-    !%Variable EigenSolverVerbose
+    !%Variable EigensolverVerbose
     !%Type logical
     !%Default no
-    !%Section SCF::EigenSolver
+    !%Section SCF::Eigensolver
     !%Description
     !% If enabled the eigensolver prints additional information.
     !%End
-    call loct_parse_logical(check_inp('EigenSolverVerbose'), .false., eigens%verbose)
+    call loct_parse_logical(check_inp('EigensolverVerbose'), .false., eigens%verbose)
 
-    !%Variable EigenSolverBlockSize
+    !%Variable EigensolverBlockSize
     !%Type integer
     !%Default 4
-    !%Section SCF::EigenSolver
+    !%Section SCF::Eigensolver
     !%Description
     !% If a block eigenvalue solver is used (currently only the LOBPCG is available)
     !% this variable gives the number of eigenvectors that are iterated simultaneously.
-    !% If the calculation is parallel in states, each node iterates EigenSolverBlockSize
+    !% If the calculation is parallel in states, each node iterates EigensolverBlockSize
     !% vectors, i. e. in that case the effective block size is the product of this
     !% variable and the number of nodes in the states parallelization group.
     !%End
-    call loct_parse_int(check_inp('EigenSolverBlockSize'), -1, eigens%block_size)
+    call loct_parse_int(check_inp('EigensolverBlockSize'), -1, eigens%block_size)
     if(eigens%block_size.ne.-1) then
       select case(eigens%es_type)
       case(RS_LOBPCG)
       case default
         message(1) = "You are not using a block eigensolver. The variable"
-        message(2) = "'EigenSolverBlockSize' will be ignored."
+        message(2) = "'EigensolverBlockSize' will be ignored."
         call write_warning(2)
         eigens%block_size = 1
       end select
@@ -173,7 +173,7 @@ contains
       eigens%block_size = 4
     end if
     if(eigens%block_size.lt.1) then
-      message(1) = "The variable 'EigenSolverBlockSize' must be greater than 0."
+      message(1) = "The variable 'EigensolverBlockSize' must be greater than 0."
       call write_fatal(1)
     end if
     
@@ -183,67 +183,67 @@ contains
     case(RS_CG)
     case(RS_PLAN)
     case(RS_EVO)
-      !%Variable EigenSolverImaginaryTime
+      !%Variable EigensolverImaginaryTime
       !%Type float
       !%Default 10.0
-      !%Section SCF::EigenSolver
+      !%Section SCF::Eigensolver
       !%Description
       !% The imaginary-time step that is used in the imaginary-time evolution
       !% method to obtain the lowest eigenvalues/eigenvectors.
-      !% It must satisfy EigenSolverImaginaryTime > 0.
+      !% It must satisfy EigensolverImaginaryTime > 0.
       !%End
-      call loct_parse_float(check_inp('EigenSolverImaginaryTime'), CNST(10.0), eigens%imag_time)
-      if(eigens%imag_time <= M_ZERO) call input_error('EigenSolverImaginaryTime')
+      call loct_parse_float(check_inp('EigensolverImaginaryTime'), CNST(10.0), eigens%imag_time)
+      if(eigens%imag_time <= M_ZERO) call input_error('EigensolverImaginaryTime')
     case(RS_LOBPCG)
     case(RS_RMMDIIS)
     case default
-      call input_error('EigenSolver')
+      call input_error('Eigensolver')
     end select
-    call messages_print_var_option(stdout, "EigenSolver", eigens%es_type)
+    call messages_print_var_option(stdout, "Eigensolver", eigens%es_type)
 
-    !%Variable EigenSolverInitTolerance
+    !%Variable EigensolverInitTolerance
     !%Type float
     !%Default 1.0e-6
-    !%Section SCF::EigenSolver
+    !%Section SCF::Eigensolver
     !%Description
     !% This is the initial tolerance for the eigenvectors.
     !%End
-    call loct_parse_float(check_inp('EigenSolverInitTolerance'), CNST(1.0e-6), eigens%init_tol)
-    if(eigens%init_tol < 0) call input_error('EigenSolverInitTolerance')
+    call loct_parse_float(check_inp('EigensolverInitTolerance'), CNST(1.0e-6), eigens%init_tol)
+    if(eigens%init_tol < 0) call input_error('EigensolverInitTolerance')
 
-    !%Variable EigenSolverFinalTolerance
+    !%Variable EigensolverFinalTolerance
     !%Type float
     !%Default 1.0e-6
-    !%Section SCF::EigenSolver
+    !%Section SCF::Eigensolver
     !%Description
-    !% This is the final tolerance for the eigenvectors. Must be smaller than <tt>EigenSolverInitTolerance</tt>.
+    !% This is the final tolerance for the eigenvectors. Must be smaller than <tt>EigensolverInitTolerance</tt>.
     !%End
-    call loct_parse_float(check_inp('EigenSolverFinalTolerance'), CNST(1.0e-6), eigens%final_tol)
-    if(eigens%final_tol < 0 .or. eigens%final_tol > eigens%init_tol) call input_error('EigenSolverFinalTolerance')
+    call loct_parse_float(check_inp('EigensolverFinalTolerance'), CNST(1.0e-6), eigens%final_tol)
+    if(eigens%final_tol < 0 .or. eigens%final_tol > eigens%init_tol) call input_error('EigensolverFinalTolerance')
 
-    !%Variable EigenSolverFinalToleranceIteration
+    !%Variable EigensolverFinalToleranceIteration
     !%Type integer
     !%Default 7
-    !%Section SCF::EigenSolver
+    !%Section SCF::Eigensolver
     !%Description
     !% Determines how many interactions are needed 
-    !% to go from <tt>EigenSolverInitTolerance</tt> to <tt>EigenSolverFinalTolerance</tt>.
+    !% to go from <tt>EigensolverInitTolerance</tt> to <tt>EigensolverFinalTolerance</tt>.
     !% Must be larger than 1.
     !%End
-    call loct_parse_int(check_inp('EigenSolverFinalToleranceIteration'), 7, eigens%final_tol_iter)
-    if(eigens%final_tol_iter <= 1) call input_error('EigenSolverFinalToleranceIteration')
+    call loct_parse_int(check_inp('EigensolverFinalToleranceIteration'), 7, eigens%final_tol_iter)
+    if(eigens%final_tol_iter <= 1) call input_error('EigensolverFinalToleranceIteration')
 
-    !%Variable EigenSolverMaxIter
+    !%Variable EigensolverMaxIter
     !%Type integer
     !%Default 25
-    !%Section SCF::EigenSolver
+    !%Section SCF::Eigensolver
     !%Description
     !% Determines the maximum number of iterations that the
     !% eigensolver will perform if the desired tolerance is not
     !% achieved. The default is 25 iterations.
     !%End
-    call loct_parse_int(check_inp('EigenSolverMaxIter'), 25, eigens%es_maxiter)
-    if(eigens%es_maxiter < 1) call input_error('EigenSolverMaxIter')
+    call loct_parse_int(check_inp('EigensolverMaxIter'), 25, eigens%es_maxiter)
+    if(eigens%es_maxiter < 1) call input_error('EigensolverMaxIter')
 
     select case(eigens%es_type)
     case(RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS)
@@ -288,8 +288,11 @@ contains
     logical,    optional, intent(in)    :: verbose
 
     logical :: verbose_
-    integer :: maxiter
+    integer :: maxiter, ik, ns
     FLOAT :: tol
+#ifdef HAVE_MPI
+    logical :: conv_reduced
+#endif
 
     call profiling_in(C_PROFILING_EIGEN_SOLVER)
     call push_sub('eigen.eigen_solver_run')
@@ -298,67 +301,94 @@ contains
 
     if(iter < eigens%final_tol_iter) then
       tol = log(eigens%final_tol/eigens%init_tol)/(eigens%final_tol_iter - 1)*(iter - 1) + &
-        log(eigens%init_tol)
+           log(eigens%init_tol)
       tol = exp(tol)
     else
       tol = eigens%final_tol
     end if
 
     if(present(conv)) conv = .false.
-    maxiter = eigens%es_maxiter
 
-    if (st%wfs_type == M_REAL) then 
-      select case(eigens%es_type)
-      case(RS_CG_NEW)
-        call deigen_solver_cg2_new(gr, st, h, tol, maxiter, &
-             eigens%converged, eigens%diff, verbose = verbose_)
-      case(RS_CG)
-        call deigen_solver_cg2(gr, st, h, eigens%pre, tol, maxiter, &
-             eigens%converged, eigens%diff, verbose = verbose_)
-      case(RS_PLAN)
-        call deigen_solver_plan(gr, st, h, eigens%pre, tol, maxiter, eigens%converged, eigens%diff)
-      case(RS_EVO)
-        call deigen_solver_evolution(gr, st, h, tol, maxiter, eigens%converged, eigens%diff, &
-             tau = eigens%imag_time)
-      case(RS_LOBPCG)
-        call deigen_solver_lobpcg(gr, st, h, eigens%pre, tol, maxiter, eigens%converged, &
-          eigens%diff, eigens%block_size, verbose = verbose_)
-      case(RS_MG)
-        call deigen_solver_mg(gr, st, h, tol, maxiter, eigens%converged, eigens%diff, verbose = verbose_)
-      case(RS_RMMDIIS)
-        call deigen_solver_rmmdiis(gr, st, h, eigens%pre, tol, maxiter, eigens%converged, eigens%diff, verbose = verbose_)
-      end select
+    eigens%matvec = 0
 
-      call dsubspace_diag(gr, st, h, eigens%diff)
+    ns = 1
 
-    else
-      select case(eigens%es_type)
-      case(RS_CG_NEW)
-        call zeigen_solver_cg2_new(gr, st, h, tol, maxiter, &
-             eigens%converged, eigens%diff, verbose = verbose_)
-      case(RS_CG)
-        call zeigen_solver_cg2(gr, st, h, eigens%pre, tol, maxiter, &
-             eigens%converged, eigens%diff, verbose = verbose_)
-      case(RS_PLAN)
-        call zeigen_solver_plan(gr, st, h, eigens%pre, tol, maxiter, eigens%converged, eigens%diff)
-      case(RS_EVO)
-        call zeigen_solver_evolution(gr, st, h, tol, maxiter, eigens%converged, eigens%diff, &
-             tau = eigens%imag_time)
-      case(RS_LOBPCG)
-       call zeigen_solver_lobpcg(gr, st, h, eigens%pre, tol, maxiter, eigens%converged, &
-         eigens%diff, eigens%block_size, verbose = verbose_)
-      case(RS_MG)
-        call zeigen_solver_mg(gr, st, h, tol, maxiter, eigens%converged, eigens%diff, verbose = verbose_)
-      case(RS_RMMDIIS)
-        call zeigen_solver_rmmdiis(gr, st, h, eigens%pre, tol, maxiter, eigens%converged, eigens%diff, verbose = verbose_)
-      end select
+    if(st%d%nspin == 2) ns = 2
 
-      call zsubspace_diag(gr, st, h)
+    ik_loop: do ik = st%d%kpt%start, st%d%kpt%end
+      maxiter = eigens%es_maxiter
+      if(verbose_) then
+        if(st%d%nik > ns) then
+          write(message(1), '(a,i4,3(a,f12.6),a)') '#k =',ik,', k = (',  &
+               st%d%kpoints(1, ik)*units_out%length%factor, ',',            &
+               st%d%kpoints(2, ik)*units_out%length%factor, ',',            &
+               st%d%kpoints(3, ik)*units_out%length%factor, ')'
+          call write_info(1)
+        end if
+      end if
 
+      if (st%wfs_type == M_REAL) then
+
+        select case(eigens%es_type)
+        case(RS_CG_NEW)
+          call deigen_solver_cg2_new(gr, st, h, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik), verbose = verbose_)
+        case(RS_CG)
+          call deigen_solver_cg2(gr, st, h, eigens%pre, tol, maxiter, &
+               eigens%converged(ik), ik, eigens%diff(:, ik), verbose = verbose_)
+        case(RS_PLAN)
+          call deigen_solver_plan(gr, st, h, eigens%pre, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
+        case(RS_EVO)
+          call deigen_solver_evolution(gr, st, h, tol, maxiter, &
+               eigens%converged(ik), ik, eigens%diff(:, ik), tau = eigens%imag_time)
+        case(RS_LOBPCG)
+          call deigen_solver_lobpcg(gr, st, h, eigens%pre, tol, maxiter, &
+               eigens%converged(ik), ik, eigens%diff(:, ik), eigens%block_size, verbose = verbose_)
+        case(RS_MG)
+          call deigen_solver_mg(gr, st, h, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
+        case(RS_RMMDIIS)
+          call deigen_solver_rmmdiis(gr, st, h, eigens%pre, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
+        end select
+
+        call dsubspace_diag(gr, st, h, ik, eigens%diff(:, ik))
+
+      else
+
+        select case(eigens%es_type)
+        case(RS_CG_NEW)
+          call zeigen_solver_cg2_new(gr, st, h, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik), verbose = verbose_)
+        case(RS_CG)
+          call zeigen_solver_cg2(gr, st, h, eigens%pre, tol, maxiter, &
+               eigens%converged(ik), ik, eigens%diff(:, ik), verbose = verbose_)
+        case(RS_PLAN)
+          call zeigen_solver_plan(gr, st, h, eigens%pre, tol, maxiter, &
+               eigens%converged(ik), ik, eigens%diff(:, ik))
+        case(RS_EVO)
+          call zeigen_solver_evolution(gr, st, h, tol, maxiter, &
+               eigens%converged(ik), ik, eigens%diff(:, ik), tau = eigens%imag_time)
+        case(RS_LOBPCG)
+          call zeigen_solver_lobpcg(gr, st, h, eigens%pre, tol, maxiter, &
+               eigens%converged(ik), ik, eigens%diff(:, ik), eigens%block_size, verbose = verbose_)
+        case(RS_MG)
+          call zeigen_solver_mg(gr, st, h, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
+        case(RS_RMMDIIS)
+          call zeigen_solver_rmmdiis(gr, st, h, eigens%pre, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
+        end select
+
+        call zsubspace_diag(gr, st, h, ik, eigens%diff(:, ik))
+
+      end if
+
+      eigens%matvec = eigens%matvec + maxiter
+    end do ik_loop
+
+    if(present(conv)) conv = all(eigens%converged(st%d%kpt%start:st%d%kpt%end) == st%nst)
+
+#ifdef HAVE_MPI
+    if(st%d%kpt%parallel .and. present(conv)) then
+      call MPI_Allreduce(conv, 1, MPI_LOGICAL, MPI_LAND, st%d%kpt%mpi_grp%comm, mpi_err)
+      conv = conv_reduced
     end if
-
-    eigens%matvec = maxiter
-    if(present(conv).and. sum(eigens%converged(1:st%d%nik)) == st%nst*st%d%nik) conv = .true.
+#endif
 
     call pop_sub()
     call profiling_out(C_PROFILING_EIGEN_SOLVER)
