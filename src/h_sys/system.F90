@@ -34,6 +34,7 @@ module system_m
   use poisson_m
   use simul_box_m
   use states_m
+  use states_dim_m
   use units_m
   use v_ks_m
   use elf_m
@@ -77,6 +78,7 @@ contains
     call parallel_init()
 
     call geometry_partition(sys%geo, sys%mc)
+    call kpoints_distribute(sys%st%d, sys%mc)
     call grid_init_stage_2(sys%gr, sys%mc, sys%geo)
     call states_densities_init(sys%st, sys%gr, sys%geo)
     call h_sys_output_init(sys%gr%sb, sys%outp)

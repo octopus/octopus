@@ -20,10 +20,11 @@
 #include "global.h"
 
 module states_dim_m
+  use blas_m
   use calc_mode_m
   use crystal_m
-  use blas_m
   use datasets_m
+  use distributed_m
   use functions_m
   use geometry_m
   use global_m
@@ -59,6 +60,7 @@ module states_dim_m
     states_choose_kpoints,            &
     states_dim_get_spin_index,        &
     kpoints_write_info,               &
+    kpoints_distribute,               &
     kpoint_is_gamma
 
   ! Parameters...
@@ -82,6 +84,7 @@ module states_dim_m
     logical :: cdft                 ! Are we using Current-DFT or not?
     FLOAT, pointer :: kpoints(:,:)  ! obviously the kpoints
     FLOAT, pointer :: kweights(:)   ! weights for the kpoint integrations
+    type(distributed_t) :: kpt
   end type states_dim_t
 
 contains
@@ -111,12 +114,16 @@ contains
       dout%kweights = din%kweights
     end if
 
+    call distributed_copy(din%kpt, dout%kpt)
+
     call pop_sub()
   end subroutine states_dim_copy
 
   ! ---------------------------------------------------------
   subroutine states_dim_end(d)
     type(states_dim_t), intent(inout) :: d
+
+    call distributed_end(d%kpt)
 
     if(associated(d%kpoints)) then
       deallocate(d%kpoints); nullify(d%kpoints)
@@ -164,6 +171,14 @@ contains
     end if
     
   end function states_dim_get_spin_index
+  
+  subroutine kpoints_distribute(this, mc)
+    type(states_dim_t), intent(inout) :: this
+    type(multicomm_t),  intent(in)    :: mc
+
+    call distributed_init(this%kpt, this%nik, mc, P_STRATEGY_KPOINTS, "K points")
+
+  end subroutine kpoints_distribute
   
 #include "states_kpoints.F90"
 
