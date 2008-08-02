@@ -804,9 +804,9 @@ contains
       geo%only_user_def = central_geo%only_user_def.and.all(lead_geo(:)%only_user_def)
       geo%nlpp          = central_geo%nlpp.or.any(lead_geo(:)%nlpp)
       geo%nlcc          = central_geo%nlcc.or.any(lead_geo(:)%nlcc)
-      geo%atoms_start   = 1
-      geo%atoms_end     = geo%natoms
-      geo%nlatoms       = geo%natoms
+      geo%atoms%start   = 1
+      geo%atoms%end     = geo%natoms
+      geo%atoms%nlocal  = geo%natoms
       
       ! 1. Put the atoms of the central region into geo.
       geo%atom(1:central_geo%natoms)   = central_geo%atom

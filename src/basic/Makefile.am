@@ -27,6 +27,7 @@ libbasic_a_SOURCES = \
 	io_binary.c mpi_lib.F90 c_pointer.F90 \
 	units.F90 mpi_debug.F90 profiling.F90 utils.F90      \
 	multicomm.F90 periodic_table.F90 getopt_f.c command_line.F90 \
+	distributed.F90 \
 	hardware.F90 ialist.F90 iihash.F90 calc_mode.F90
 
 noinst_HEADERS = \
@@ -84,3 +85,4 @@ hardware.o : hardware.F90
 ialist.o : ialist.F90
 iihash.o : iihash.F90 ialist.o global.o
 calc_mode.o : calc_mode.F90 multicomm.o
+distributed.o: distributed.F90 multicomm.o

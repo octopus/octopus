@@ -435,7 +435,7 @@ contains
 
     ! Local.
     ep%vpsl = M_ZERO
-    do ia = geo%atoms_start, geo%atoms_end
+    do ia = geo%atoms%start, geo%atoms%end
       if(st%nlcc) then
         call epot_local_potential(ep, gr, gr%m, geo, geo%atom(ia), ep%vpsl, time_, st%rho_core)
       else
@@ -445,12 +445,12 @@ contains
 
 #ifdef HAVE_MPI
     call profiling_in(epot_reduce, "EPOT_REDUCE")
-    if(geo%parallel_in_atoms) then
+    if(geo%atoms%parallel) then
       ALLOCATE(vpsltmp(1:NP), NP)
-      call MPI_Allreduce(ep%vpsl, vpsltmp, NP, MPI_FLOAT, MPI_SUM, geo%mpi_grp%comm, mpi_err)
+      call MPI_Allreduce(ep%vpsl, vpsltmp, NP, MPI_FLOAT, MPI_SUM, geo%atoms%mpi_grp%comm, mpi_err)
       call lalg_copy(NP, vpsltmp, ep%vpsl)
       if(associated(st%rho_core)) then
-        call MPI_Allreduce(st%rho_core, vpsltmp, NP, MPI_FLOAT, MPI_SUM, geo%mpi_grp%comm, mpi_err)
+        call MPI_Allreduce(st%rho_core, vpsltmp, NP, MPI_FLOAT, MPI_SUM, geo%atoms%mpi_grp%comm, mpi_err)
         call lalg_copy(NP, vpsltmp, st%rho_core)
       end if
       deallocate(vpsltmp)

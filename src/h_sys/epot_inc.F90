@@ -126,7 +126,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
 
   ALLOCATE(vloc(1:np), np)
   
-  do iatom = geo%atoms_start, geo%atoms_end
+  do iatom = geo%atoms%start, geo%atoms%end
     
     vloc(1:np) = M_ZERO
     
@@ -141,7 +141,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
   deallocate(vloc)
 
 #ifdef HAVE_MPI
-  if(geo%parallel_in_atoms) then
+  if(geo%atoms%parallel) then
 
     call profiling_in(prof, "FORCES_MPI")
 
@@ -149,19 +149,19 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
     ! collected by all nodes, MPI_Allgatherv does precisely this (if
     ! we get the arguments right).
 
-    ALLOCATE(recv_count(geo%mpi_grp%size), geo%mpi_grp%size)
-    ALLOCATE(recv_displ(geo%mpi_grp%size), geo%mpi_grp%size)
-    ALLOCATE(force_local(1:MAX_DIM, 1:geo%nlatoms), MAX_DIM*geo%nlatoms)
+    ALLOCATE(recv_count(geo%atoms%mpi_grp%size), geo%atoms%mpi_grp%size)
+    ALLOCATE(recv_displ(geo%atoms%mpi_grp%size), geo%atoms%mpi_grp%size)
+    ALLOCATE(force_local(1:MAX_DIM, 1:geo%atoms%nlocal), MAX_DIM*geo%atoms%nlocal)
 
-    recv_count(1:geo%mpi_grp%size) = MAX_DIM*geo%atoms_num(0:geo%mpi_grp%size - 1)
-    recv_displ(1:geo%mpi_grp%size) = MAX_DIM*(geo%atoms_range(1, 0:geo%mpi_grp%size - 1) - 1)
+    recv_count(1:geo%atoms%mpi_grp%size) = MAX_DIM*geo%atoms%num(0:geo%atoms%mpi_grp%size - 1)
+    recv_displ(1:geo%atoms%mpi_grp%size) = MAX_DIM*(geo%atoms%range(1, 0:geo%atoms%mpi_grp%size - 1) - 1)
 
-    force_local(1:MAX_DIM, 1:geo%nlatoms) = force(1:MAX_DIM, geo%atoms_start:geo%atoms_end)
+    force_local(1:MAX_DIM, 1:geo%atoms%nlocal) = force(1:MAX_DIM, geo%atoms%start:geo%atoms%end)
 
     call MPI_Allgatherv(&
-         force_local, MAX_DIM*geo%nlatoms, MPI_FLOAT, &
+         force_local, MAX_DIM*geo%atoms%nlocal, MPI_FLOAT, &
          force, recv_count(1), recv_displ, MPI_FLOAT, &
-         geo%mpi_grp%comm, mpi_err)
+         geo%atoms%mpi_grp%comm, mpi_err)
 
     deallocate(recv_count, recv_displ, force_local)
 

@@ -22,6 +22,7 @@
 module geometry_m
   use c_pointer_m
   use datasets_m
+  use distributed_m
   use global_m
   use io_m
   use loct_math_m
@@ -88,17 +89,7 @@ module geometry_m
     logical :: nlpp                 ! is any species having non-local pp
     logical :: nlcc                 ! is any species having non-local core corrections?
 
-    logical :: parallel_in_atoms
-
-    type(mpi_grp_t) :: mpi_grp
-
-    integer :: atoms_start
-    integer :: atoms_end
-    integer :: nlatoms
-    
-    integer, pointer :: atoms_range(:, :)
-    integer, pointer :: atoms_num(:)
-    integer, pointer :: atoms_node(:)
+    type(distributed_t) :: atoms
   end type geometry_t
 
   interface assignment(=)
@@ -121,16 +112,7 @@ contains
     ! initialize geometry
     call geometry_init_xyz(geo)
     call geometry_init_species(geo, print_info=print_info)
-
-    geo%parallel_in_atoms = .false.
-
-    geo%atoms_start = 1
-    geo%atoms_end   = geo%natoms
-    geo%nlatoms     = geo%natoms
-
-    nullify(geo%atoms_range, geo%atoms_num)
-
-    call mpi_grp_init(geo%mpi_grp, -1)
+    call distributed_nullify(geo%atoms, geo%natoms)
 
     call pop_sub()
   end subroutine geometry_init
@@ -341,48 +323,8 @@ contains
     type(geometry_t),            intent(inout) :: geo
     type(multicomm_t),           intent(in)    :: mc
 
-#ifdef HAVE_MPI
-    integer :: size, rank, kk
+    call distributed_init(geo%atoms, geo%natoms, mc, P_STRATEGY_STATES, "atoms")
 
-    call push_sub('geometry.geometry_partition')
-
-    ! for the atoms we use the parallelization in states
-
-    if(multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)) then
-
-      geo%parallel_in_atoms = .true.
-
-      call mpi_grp_init(geo%mpi_grp, mc%group_comm(P_STRATEGY_STATES))
-
-      size = mc%group_sizes(P_STRATEGY_STATES)
-      rank = mc%who_am_i(P_STRATEGY_STATES)
-
-      ALLOCATE(geo%atoms_range(2, 0:size - 1), 2*size)
-      ALLOCATE(geo%atoms_num(0:size - 1), size)
-      ALLOCATE(geo%atoms_node(1:geo%natoms), geo%natoms)
-
-      call multicomm_divide_range(geo%natoms, size, geo%atoms_range(1, :), geo%atoms_range(2, :), geo%atoms_num)
-
-      message(1) = 'Info: Parallelization in atoms:'
-        call write_info(1)
-      do kk = 1, size
-        write(message(1),'(a,i4,a,i6,a,i6)') 'Info: Node in states-group ', kk - 1, &
-             ' will manage atoms', geo%atoms_range(1, kk - 1), " - ", geo%atoms_range(2, kk - 1)
-        call write_info(1)
-        if(rank .eq. kk - 1) then
-          geo%atoms_start = geo%atoms_range(1, kk - 1)
-          geo%atoms_end   = geo%atoms_range(2, kk - 1)
-          geo%nlatoms     = geo%atoms_num(kk - 1)
-        endif
-        
-        geo%atoms_node(geo%atoms_range(1, kk - 1):geo%atoms_range(2, kk - 1)) = kk -1
-
-      end do
-      
-    end if
-
-    call pop_sub()
-#endif
   end subroutine geometry_partition
 
   ! ---------------------------------------------------------
@@ -448,10 +390,7 @@ contains
 
     call push_sub('geometry.geometry_end')
 
-    if(associated(geo%atoms_range)) then
-      deallocate(geo%atoms_range, geo%atoms_num, geo%atoms_node)
-      nullify(geo%atoms_range, geo%atoms_num, geo%atoms_node)
-    end if
+    call distributed_end(geo%atoms)
 
     if(associated(geo%atom)) then ! sanity check
       deallocate(geo%atom); nullify(geo%atom)
@@ -668,11 +607,8 @@ contains
     geo_out%kinetic_energy    = geo_in%kinetic_energy
     geo_out%nlpp              = geo_in%nlpp
     geo_out%nlcc              = geo_in%nlcc
-    geo_out%parallel_in_atoms = geo_in%parallel_in_atoms
-    geo_out%atoms_start       = geo_in%atoms_start
-    geo_out%atoms_end         = geo_in%atoms_end
-    geo_out%nlatoms           = geo_in%nlatoms
-    nullify(geo_out%atoms_range, geo_out%atoms_num, geo_out%atoms_node)
+
+    call distributed_copy(geo_in%atoms, geo_out%atoms)
 
     call pop_sub()
   end subroutine geometry_copy

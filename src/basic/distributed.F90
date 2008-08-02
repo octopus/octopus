@@ -1,0 +1,186 @@
+!! Copyright (C) 2008 X. Andrade
+!!
+!! This program is free software; you can redistribute it and/or modify
+!! it under the terms of the GNU General Public License as published by
+!! the Free Software Foundation; either version 2, or (at your option)
+!! any later version.
+!!
+!! This program is distributed in the hope that it will be useful,
+!! but WITHOUT ANY WARRANTY; without even the implied warranty of
+!! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!! GNU General Public License for more details.
+!!
+!! You should have received a copy of the GNU General Public License
+!! along with this program; if not, write to the Free Software
+!! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+!! 02111-1307, USA.
+!!
+!! $Id: multicomm.F90 4396 2008-07-21 16:14:17Z xavier $
+
+#include "global.h"
+
+module distributed_m
+  use datasets_m
+  use global_m
+  use io_m
+  use loct_m
+  use loct_parser_m
+  use messages_m
+  use multicomm_m
+  use mpi_m
+  use utils_m
+  use varinfo_m
+
+  implicit none
+
+  private
+
+  public                            &
+       distributed_t,               &
+       distributed_nullify,         &
+       distributed_init,            &
+       distributed_copy,            &
+       distributed_end
+  
+
+  type distributed_t
+    integer :: start
+    integer :: end
+    integer :: nlocal
+    integer :: nglobal
+    logical :: parallel
+    integer, pointer :: node(:)
+    integer, pointer :: range(:, :)
+    integer, pointer :: num(:)
+    type(mpi_grp_t)  :: mpi_grp
+  end type distributed_t
+  
+contains
+
+  subroutine distributed_nullify(this, total)
+    type(distributed_t), intent(out) :: this
+    integer,             intent(in)  :: total
+
+    this%start           = 1
+    this%end             = total
+    this%parallel        = .false.
+    nullify(this%node, this%range, this%num)
+  end subroutine distributed_nullify
+  
+  subroutine distributed_init(this, total, mc, strategy, tag)
+    type(distributed_t), intent(out) :: this
+    integer,             intent(in)  :: total
+    type(multicomm_t),   intent(in)  :: mc
+    integer,             intent(in)  :: strategy
+    character(len=*),    intent(in)  :: tag
+
+#ifdef HAVE_MPI
+    integer :: kk, size, rank
+#endif
+
+    call push_sub('distributed.distributed_init')
+    
+    this%nglobal = total
+
+#ifdef HAVE_MPI
+    if(.not. multicomm_strategy_is_parallel(mc, strategy)) then
+#endif      
+      
+      ALLOCATE(this%node(1:1), 1)
+      ! Defaults.
+      this%node(:)         = 0
+      this%start           = 1
+      this%end             = total
+      this%nlocal          = total
+      this%nglobal         = total
+      this%parallel        = .false.
+      call mpi_grp_init(this%mpi_grp, -1)
+      
+#ifdef HAVE_MPI
+    else
+
+      this%parallel = .true.
+
+      call mpi_grp_init(this%mpi_grp, mc%group_comm(strategy))
+
+      size = mc%group_sizes(strategy)
+      rank = mc%who_am_i(strategy)
+
+      ALLOCATE(this%range(2, 0:size - 1), 2*size)
+      ALLOCATE(this%num(0:size - 1), size)
+      ALLOCATE(this%node(1:this%nglobal), this%nglobal)
+
+      call multicomm_divide_range(this%nglobal, size, this%range(1, :), this%range(2, :), this%num)
+
+      message(1) = 'Info: Parallelization in atoms:'
+        call write_info(1)
+      do kk = 1, size
+        write(message(1),'(a,i4,a,i6,a,i6)') 'Info: Node in group ', kk - 1, &
+             ' will manage '//trim(tag), this%range(1, kk - 1), " - ", this%range(2, kk - 1)
+        call write_info(1)
+        if(rank .eq. kk - 1) then
+          this%start = this%range(1, kk - 1)
+          this%end   = this%range(2, kk - 1)
+          this%nlocal = this%num(kk - 1)
+        endif
+        
+        this%node(this%range(1, kk - 1):this%range(2, kk - 1)) = kk - 1
+        
+      end do
+      
+    end if
+#endif
+    
+  end subroutine distributed_init
+
+  subroutine distributed_copy(in, out)
+    type(distributed_t), intent(in)  :: in
+    type(distributed_t), intent(out) :: out
+
+    integer :: size
+
+    out%start    = in%start
+    out%end      = in%end
+    out%nlocal   = in%nlocal
+    out%parallel = in%parallel
+
+    size = in%mpi_grp%size
+
+    call mpi_grp_init(out%mpi_grp, in%mpi_grp%comm)
+    
+    nullify(out%node, out%range, out%num)
+
+    if(associated(in%node)) then
+      ALLOCATE(out%node(1:size), size)
+      out%node(1:size) = in%node(1:size)
+    end if
+
+    if(associated(in%range)) then
+      ALLOCATE(out%range(1:2, 1:size), 2*size)
+      out%range(1:2, 1:size) = in%range(1:2, 1:size)
+    end if
+
+    if(associated(in%num)) then
+      ALLOCATE(out%num(1:size), size)
+      out%num(1:size) = in%num(1:size)
+    end if
+
+  end subroutine distributed_copy
+
+  subroutine distributed_end(this)
+    type(distributed_t), intent(inout) :: this
+    
+    if(associated(this%node))  deallocate(this%node)
+    if(associated(this%range)) deallocate(this%range)
+    if(associated(this%num))   deallocate(this%num)
+
+    nullify(this%node, this%range, this%num)
+  end subroutine distributed_end
+
+end module distributed_m
+
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:
