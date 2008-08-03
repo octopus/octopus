@@ -44,6 +44,8 @@ subroutine X(eigen_solver_rmmdiis) (gr, st, h, pre, tol, niter, converged, ik, d
   R_TYPE :: lambda(1:2)
 #ifdef HAVE_MPI
   R_TYPE :: lambda_tmp(1:2)
+  FLOAT, allocatable :: ldiff(:)
+  integer :: outcount
 #endif  
   FLOAT :: error
 
@@ -123,6 +125,15 @@ subroutine X(eigen_solver_rmmdiis) (gr, st, h, pre, tol, niter, converged, ik, d
     end do
 
   end do
+
+#if defined(HAVE_MPI)
+  if(st%parallel_in_states .and. present(diff)) then
+    ALLOCATE(ldiff(st%lnst), st%lnst)
+    ldiff(1:st%lnst) = diff(st%st_start:st%st_end)
+    call lmpi_gen_allgatherv(st%lnst, ldiff, outcount, diff, st%mpi_grp)
+    deallocate(ldiff)
+  end if
+#endif
 
   call X(states_gram_schmidt_full)(st, st%nst, gr%m, st%d%dim, st%X(psi)(:, :, :, ik))
 
