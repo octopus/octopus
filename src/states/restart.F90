@@ -840,8 +840,8 @@ contains
     subroutine fill() ! Put random function in orbitals that could not be read.
       integer :: first
 
-      do ik = 1, st%d%nik
-        first = st%st_end+1 ! we have to orthogonalize all states after first
+      do ik = st%d%kpt%start, st%d%kpt%end
+        first = st%st_end + 1 ! we have to orthogonalize all states after first
 
         do ist = st%st_start, st%st_end
           do idim = 1, st%d%dim
@@ -855,10 +855,9 @@ contains
             st%occ(ist, ik) = M_ZERO
           end do
         end do
-
-        if(first.ne.st%st_end+1) &
-          call states_orthogonalize(st, gr%m, ik, first)
       end do
+
+      if(first.ne.st%st_end+1) call states_orthogonalize(st, gr%m, first)
 
     end subroutine fill
 

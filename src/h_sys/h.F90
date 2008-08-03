@@ -39,6 +39,7 @@ module hamiltonian_m
   use mesh_function_m
   use messages_m
   use mpi_m
+  use mpi_lib_m
   use multigrid_m
   use ob_lead_m
   use profiling_m

@@ -111,29 +111,21 @@ contains
   end subroutine rotate_states
 
   ! ---------------------------------------------------------
-  subroutine states_orthogonalize(st, m, ik_, start_)
+  subroutine states_orthogonalize(st, m, start)
     type(states_t),    intent(inout) :: st
     type(mesh_t),      intent(in)    :: m
-    integer, optional, intent(in)    :: ik_, start_
+    integer, optional, intent(in)    :: start
 
-    integer :: ik, ik_start, ik_end
-    integer :: start
+    integer :: ik, start_
 
-    start = 1
-    if(present(start_)) start = start_
-    if(present(ik_)) then
-      ik_start = ik_
-      ik_end   = ik_
-    else
-      ik_start = 1
-      ik_end   = st%d%nik
-    end if
+    start_ = 1
+    if(present(start)) start_ = start
     
-    do ik = ik_start, ik_end
-      if (st%wfs_type == M_REAL) then
-        call dstates_gram_schmidt_full(st, st%nst, m, st%d%dim, st%dpsi(:,:,:,ik), start)
+    do ik = st%d%kpt%start, st%d%kpt%end
+      if (wfs_are_real(st)) then
+        call dstates_gram_schmidt_full(st, st%nst, m, st%d%dim, st%dpsi(:, :, :, ik), start)
       else
-        call zstates_gram_schmidt_full(st, st%nst, m, st%d%dim, st%zpsi(:,:,:,ik), start)
+        call zstates_gram_schmidt_full(st, st%nst, m, st%d%dim, st%zpsi(:, :, :, ik), start)
       end if
     end do
 

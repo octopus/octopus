@@ -328,7 +328,7 @@ subroutine X(states_calc_momentum)(gr, st)
 
   ALLOCATE(grad(NP, st%d%dim, NDIM), NP*st%d%dim*NDIM)
 
-  do ik = 1, st%d%nik
+  do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
 
       do idim = 1, st%d%dim

@@ -29,6 +29,10 @@ subroutine X(hamiltonian_eigenval)(h, gr, st, t)
   R_TYPE, allocatable :: Hpsi(:,:)
   R_TYPE :: e
   integer :: ik, ist
+#ifdef HAVE_MPI
+  integer :: outcount
+  FLOAT, allocatable :: send(:), recv(:)
+#endif
 
   call push_sub('h_inc.Xhamiltonian_eigenval')
   ALLOCATE(Hpsi(NP, st%d%dim), NP*st%d%dim)
@@ -37,7 +41,7 @@ subroutine X(hamiltonian_eigenval)(h, gr, st, t)
     ! For open boundaries we know the eigenvalues.
     st%eigenval = st%ob_eigenval
   else
-    do ik = 1, st%d%nik
+    do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
         if(present(t)) then
           call X(hpsi) (h, gr, st%X(psi)(:, :, ist, ik), hpsi, ist, ik, t)
@@ -1211,7 +1215,7 @@ FLOAT function X(electronic_kinetic_energy)(h, gr, st) result(t0)
   ALLOCATE(t(st%st_start:st%st_end, st%d%nik), st%nst*st%d%nik)
   t = M_ZERO
 
-  do ik = 1, st%d%nik
+  do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
       tpsi = R_TOTYPE(M_ZERO)
       call X(kinetic) (h, gr, st%X(psi)(:, :, ist, ik), tpsi)
@@ -1242,7 +1246,7 @@ FLOAT function X(electronic_external_energy)(h, gr, st) result(v)
   ALLOCATE(t(st%st_start:st%st_end, st%d%nik), st%nst*st%d%nik)
   t = M_ZERO
 
-  do ik = 1, st%d%nik
+  do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
       vpsi = R_TOTYPE(M_ZERO)
       call X(vexternal) (h, gr, st%X(psi)(:, :, ist, ik), vpsi, ik)
