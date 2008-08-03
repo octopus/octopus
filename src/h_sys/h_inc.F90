@@ -1282,7 +1282,7 @@ subroutine X(hpsi_diag) (h, gr, diag, ik, t, E)
   psi = M_ONE
   diag = M_ZERO
 
-  call f_laplacian_diag(gr%sb, gr%f_der, ldiag)
+  call derivatives_lapl_diag(gr%f_der%der_discr, ldiag)
 
   do idim = 1, h%d%dim
     diag(1:NP, idim) = -M_HALF/h%mass * ldiag(1:NP)

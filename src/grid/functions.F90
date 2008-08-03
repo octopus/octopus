@@ -44,8 +44,6 @@ module functions_m
     f_der_end,                  &
     dmf2cf, zmf2cf,             &
     dcf2mf, zcf2mf,             &
-    df_laplacian, zf_laplacian, &
-    f_laplacian_diag,           &
     df_gradient, zf_gradient,   &
     df_divergence,              &
     zf_divergence,              &
@@ -59,20 +57,12 @@ module functions_m
   public  ::                    &
     dcf_FS2mf, zcf_FS2mf
 
-  integer, public, parameter :: &
-    REAL_SPACE = 0,             &
-    FOURIER_SPACE = 1
-
   type f_der_t
     type(mesh_t), pointer :: m            ! a pointer to mesh
 
     ! derivatives in real space
     integer               :: n_ghost(3)   ! ghost points to add in each dimension
     type(der_discr_t)     :: der_discr    ! discretization of the derivatives
-
-    ! derivatives in fourier space
-    type(dcf_t) :: dcf_der, dcf_aux            ! auxiliary variables
-    type(zcf_t) :: zcf_der, zcf_aux            ! derivatives in fourier space
   end type f_der_t
 
 contains
@@ -115,21 +105,6 @@ contains
 
     call pop_sub()
   end subroutine f_der_end
-
-
-  ! ---------------------------------------------------------
-  ! Returns the diagonal of the Laplacian needed for preconditioning
-  subroutine f_laplacian_diag (sb, f_der, lapl_diag)
-    type(simul_box_t), intent(in)    :: sb
-    type(f_der_t),     intent(inout) :: f_der
-    FLOAT,             intent(out)   :: lapl_diag(:)  ! lapl_diag(m%np)
-
-    call push_sub('f_inc.Xf_laplacian')
-    
-    call derivatives_lapl_diag (f_der%der_discr, lapl_diag)
-
-    call pop_sub()
-  end subroutine f_laplacian_diag
 
 #include "undef.F90"
 #include "real.F90"

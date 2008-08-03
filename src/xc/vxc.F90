@@ -361,7 +361,7 @@ contains
       f = CNST(3.0)/CNST(10.0) * (M_SIX*M_PI*M_PI)**M_TWOTHIRD
 
       do is = 1, spin_channels
-        call df_laplacian(gr%sb, gr%f_der, dens(:,is), n2dens(:))
+        call dderivatives_lapl(gr%f_der%der_discr, dens(:, is), n2dens(:))
 
         do i = 1, NP
           d          = max(dens(i, is), CNST(1e-14))
@@ -404,7 +404,7 @@ contains
       ALLOCATE(gf(NP), NP)
 
       do is = 1, spin_channels
-        call df_laplacian(gr%sb, gr%f_der, dedtau(:,is), gf(:))
+        call dderivatives_lapl(gr%f_der%der_discr, dedtau(:,is), gf(:))
 
         do i = 1, NP
           d = max(dens(i, is), CNST(1e-14))

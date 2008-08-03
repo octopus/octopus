@@ -41,7 +41,7 @@ depend:
 
 states.o : states.F90 states_dim.o
 states_dim.o : states_dim.F90 states_kpoints.F90
-states_lalg.o : states_lalg.F90 states_lalg_inc.F90 states.o
+states_lalg.o : states_lalg.F90 states_lalg_inc.F90 states.o states_block.o
 magnetic.o : magnetic.F90 states.o 
 elf.o : elf.F90 states.o 
 states_block.o : states_block.F90 states_block_inc.F90 states.o

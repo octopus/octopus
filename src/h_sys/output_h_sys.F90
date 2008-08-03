@@ -21,6 +21,7 @@
 
 module h_sys_output_m
   use datasets_m
+  use derivatives_m
   use basins_m
   use elf_m
   use functions_m
@@ -396,7 +397,7 @@ contains
     ! Now Bader analysis
     if(iand(outp%what, output_bader).ne.0) then
       do is = 1, st%d%nspin
-        call df_laplacian(gr%sb, gr%f_der, st%rho(:,is), f_loc(:,is))
+        call dderivatives_lapl(gr%f_der%der_discr, st%rho(:,is), f_loc(:,is))
         write(fname, '(a,a,i1)') 'bader', '-', is
         call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, &
           f_loc(:,is), M_ONE, ierr, is_tmp = .false.)
@@ -464,7 +465,7 @@ contains
     pressure = M_ZERO
     do is = 1, st%d%spin_channels
       lrho = M_ZERO
-      call df_laplacian(gr%sb, gr%f_der, rho(:,is), lrho(:))
+      call dderivatives_lapl(gr%f_der%der_discr, rho(:, is), lrho)
 
       pressure(:) = pressure(:) + &
         tau(:, is)/M_THREE - lrho(:)/M_FOUR

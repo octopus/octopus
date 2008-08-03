@@ -21,6 +21,7 @@
 
 module poisson_multigrid_m
   use datasets_m
+  use derivatives_m
   use functions_m
   use global_m
   use grid_m
@@ -279,7 +280,7 @@ contains
       call push_sub('poisson_multigrid.residue')
 
       m => gr%mgrid%level(l)%m
-      call df_laplacian(gr%sb, gr%mgrid%level(l)%f_der, phi, tmp)
+      call dderivatives_lapl(gr%mgrid%level(l)%f_der%der_discr, phi, tmp)
       tmp(1:m%np) = tmp(1:m%np) - rho(1:m%np)
       res = dmf_nrm2(m, tmp)
 
@@ -306,14 +307,14 @@ contains
           call dmultigrid_fine2coarse(gr%mgrid, l+1, phi%level(l)%p, phi%level(l+1)%p, this%restriction_method)
 
           ! error calculation
-          call df_laplacian(gr%sb, gr%mgrid%level(l)%f_der, phi%level(l)%p, err%level(l)%p)
+          call dderivatives_lapl(gr%mgrid%level(l)%f_der%der_discr, phi%level(l)%p, err%level(l)%p)
           err%level(l)%p(1:np) = err%level(l)%p(1:np) - tau%level(l)%p(1:np)
 
           ! transfer error to coarser grid
           call dmultigrid_fine2coarse(gr%mgrid, l+1, err%level(l)%p, tau%level(l+1)%p, this%restriction_method)
 
           ! the other part of the error
-          call df_laplacian(gr%sb, gr%mgrid%level(l+1)%f_der, phi%level(l+1)%p, err%level(l+1)%p)
+          call dderivatives_lapl(gr%mgrid%level(l + 1)%f_der%der_discr, phi%level(l + 1)%p, err%level(l + 1)%p)
           np = gr%mgrid%level(l + 1)%m%np
           tau%level(l + 1)%p(1:np) = err%level(l + 1)%p(1:np) - tau%level(l + 1)%p(1:np)
         end if
@@ -394,10 +395,10 @@ contains
       ALLOCATE(lpot(1:m%np_part), m%np_part)
       ALLOCATE(ldiag(1:m%np), m%np)
 
-      call f_laplacian_diag(gr%sb, f_der, ldiag)
+      call derivatives_lapl_diag(gr%f_der%der_discr, ldiag)
 
       do t=1,steps
-        call df_laplacian(gr%sb, f_der, pot, lpot)
+        call dderivatives_lapl(f_der%der_discr, pot, lpot)
         pot(1:m%np)=pot(1:m%np) - this%relax_factor/ldiag(1:m%np)*(lpot(1:m%np)-rho(1:m%np)) 
       end do
 

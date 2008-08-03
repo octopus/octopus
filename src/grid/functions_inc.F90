@@ -136,31 +136,6 @@ end subroutine X(cf_FS2mf)
 ! ---------------------------------------------------------
 ! Calculation of derivatives
 ! ---------------------------------------------------------
-subroutine X(f_laplacian) (sb, f_der, f, lapl, cutoff_, ghost_update, set_bc)
-  type(simul_box_t), intent(in)    :: sb
-  type(f_der_t),     intent(inout) :: f_der
-  R_TYPE,            intent(inout) :: f(:)     ! f(m%np_part)
-  R_TYPE,            intent(out)   :: lapl(:)  ! lapl(m%np_part)
-  FLOAT, optional,   intent(in)    :: cutoff_
-  logical, optional, intent(in)    :: ghost_update
-  logical, optional, intent(in)    :: set_bc
-
-  call push_sub('f_inc.Xf_laplacian')
-
-  if (present(ghost_update) .and. present(set_bc)) &
-       call X(derivatives_lapl) (f_der%der_discr, f, lapl, ghost_update, set_bc)
-  if (present(ghost_update) .and. .not. present(set_bc)) &
-       call X(derivatives_lapl) (f_der%der_discr, f, lapl, ghost_update = ghost_update)
-  if (.not. present(ghost_update) .and. present(set_bc)) &
-       call X(derivatives_lapl) (f_der%der_discr, f, lapl, set_bc = set_bc)
-  if (.not. present(ghost_update) .and. .not. present(set_bc)) &
-       call X(derivatives_lapl) (f_der%der_discr, f, lapl)
-
-  call pop_sub()
-end subroutine X(f_laplacian)
-
-
-! ---------------------------------------------------------
 subroutine X(f_gradient) (sb, f_der, f, grad, ghost_update, set_bc)
   type(simul_box_t), intent(in)    :: sb
   type(f_der_t),     intent(inout) :: f_der

@@ -115,7 +115,7 @@ contains
 
     case(PRE_JACOBI)
       ALLOCATE(this%diag_lapl(NP), NP)
-      call f_laplacian_diag (gr%sb, gr%f_der, this%diag_lapl)
+      call derivatives_lapl_diag(gr%f_der%der_discr, this%diag_lapl)
       call lalg_scal(NP, -M_HALF, this%diag_lapl(:))
     end select
 
