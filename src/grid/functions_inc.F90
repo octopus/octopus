@@ -133,71 +133,6 @@ subroutine X(cf_FS2mf) (m, cf, mf)
 
 end subroutine X(cf_FS2mf)
 
-! ---------------------------------------------------------
-! Calculation of derivatives
-! ---------------------------------------------------------
-subroutine X(f_gradient) (sb, f_der, f, grad, ghost_update, set_bc)
-  type(simul_box_t), intent(in)    :: sb
-  type(f_der_t),     intent(inout) :: f_der
-  R_TYPE,            intent(inout) :: f(:)         ! f(m%np_part)
-  R_TYPE,            intent(out)   :: grad(:,:)    ! grad(m%np, m%sb%dim)
-  logical, optional, intent(in)    :: ghost_update
-  logical, optional, intent(in)    :: set_bc
-
-  call push_sub('f_inc.Xf_gradient')
-
-  if (present(ghost_update) .and. present(set_bc)) &
-    call X(derivatives_grad) (f_der%der_discr, f, grad, ghost_update, set_bc)
-  if (present(ghost_update) .and. .not. present(set_bc)) &
-    call X(derivatives_grad) (f_der%der_discr, f, grad, ghost_update = ghost_update)
-  if (.not. present(ghost_update) .and. present(set_bc)) &
-    call X(derivatives_grad) (f_der%der_discr, f, grad, set_bc = set_bc)
-  if (.not. present(ghost_update) .and. .not. present(set_bc)) &
-    call X(derivatives_grad) (f_der%der_discr, f, grad)
-
-  call pop_sub()
-end subroutine X(f_gradient)
-
-
-! ---------------------------------------------------------
-subroutine X(f_divergence) (sb, f_der, f, divf, ghost_update)
-  type(simul_box_t), intent(in)    :: sb
-  type(f_der_t),     intent(inout) :: f_der
-  R_TYPE,            intent(inout) :: f(:,:)    ! f(m%np_part, sb%dim)
-  R_TYPE,            intent(out)   :: divf(:)   ! divf(m%np)
-  logical, optional, intent(in)    :: ghost_update
-
-  call push_sub('f_inc.Xf_divergence')
-
-  if (present(ghost_update)) then
-     call X(derivatives_div) (f_der%der_discr, f, divf, ghost_update)
-  else
-     call X(derivatives_div) (f_der%der_discr, f, divf)
-  endif
-
-  call pop_sub()
-end subroutine X(f_divergence)
-
-
-! ---------------------------------------------------------
-subroutine X(f_curl) (f_der, f, curlf, ghost_update)
-  type(f_der_t), intent(inout)  :: f_der
-  R_TYPE,        intent(inout)  :: f(:,:)     ! f(m%np_part, conf%dim)
-  R_TYPE,        intent(out)    :: curlf(:,:) ! curlf(m%np, conf%dim) if dim = 3, curlf(m%np, 1) if dim = 2 
-  logical, optional, intent(in) :: ghost_update
-
-  call push_sub('f_inc.Xf_curl')
-
-  if (present(ghost_update)) then
-     call X(derivatives_curl) (f_der%der_discr, f, curlf, ghost_update)
-  else
-     call X(derivatives_curl) (f_der%der_discr, f, curlf)
-  endif
-
-  call pop_sub()
-end subroutine X(f_curl)
-
-
 ! -----------------------------------------------------------------------------
 ! This routine calculates the multipoles of a function f
 ! distribution, defined in the following way:
@@ -278,13 +213,13 @@ subroutine X(f_angular_momentum)(sb, f_der, f, lf, ghost_update, set_bc)
   ALLOCATE(gf(f_der%m%np, sb%dim), f_der%m%np*sb%dim)
 
   if (present(ghost_update) .and. present(set_bc)) &
-    call X(f_gradient)(sb, f_der, f, gf, ghost_update, set_bc)
+    call X(derivatives_grad)(f_der%der_discr, f, gf, ghost_update, set_bc)
   if (present(ghost_update) .and. .not. present(set_bc)) &
-    call X(f_gradient)(sb, f_der, f, gf, ghost_update = ghost_update)
+    call X(derivatives_grad)(f_der%der_discr, f, gf, ghost_update = ghost_update)
   if (.not. present(ghost_update) .and. present(set_bc)) &
-    call X(f_gradient)(sb, f_der, f, gf, set_bc = set_bc)
+    call X(derivatives_grad)(f_der%der_discr, f, gf, set_bc = set_bc)
   if (.not. present(ghost_update) .and. .not. present(set_bc)) &
-    call X(f_gradient)(sb, f_der, f, gf)
+    call X(derivatives_grad)(f_der%der_discr, f, gf)
 
 #if defined(R_TCOMPLEX)
   factor = -M_ZI

@@ -57,7 +57,7 @@ subroutine X(one_body) (gr, geo, st, h)
       if(st%occ(i, 1) < CNST(0.0001)) cycle
       if(st%occ(j, 1) > CNST(0.0001)) cycle
 
-      call X(f_gradient)(gr%sb, gr%f_der, st%X(psi)(1:np, 1, j, 1), gpsi(1:NP_PART, 1:MAX_DIM))
+      call X(derivatives_grad)(gr%f_der%der_discr, st%X(psi)(1:np, 1, j, 1), gpsi(1:NP_PART, 1:MAX_DIM))
        
       do idir = 1, 3
          exp_r = X(mf_integrate) (gr%m, R_CONJ(st%X(psi) (1:np, 1, i, 1)) * &

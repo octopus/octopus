@@ -57,7 +57,7 @@ subroutine xc_get_vxc_and_axc(gr, xcs, rho, j, ispin, vxc, axc, ex, ec, exc_j, i
     do id = 1, NDIM
       f(1:NP, id, is) = j(1:NP, id, is)/rho(1:NP, is)
     end do
-    call df_curl(gr%f_der, f(:,:,is), v(:,:,is))
+    call dderivatives_curl(gr%f_der%der_discr, f(:,:,is), v(:,:,is))
   end do
 
   ALLOCATE(l_dens(spin_channels),       spin_channels)
@@ -90,7 +90,7 @@ subroutine xc_get_vxc_and_axc(gr, xcs, rho, j, ispin, vxc, axc, ex, ec, exc_j, i
   vxc = vxc + dedd
   ALLOCATE(tmp(NP, NDIM), NP*NDIM)
   do is = 1, spin_channels
-    call df_curl(gr%f_der, dedv(:,:,is), tmp)
+    call dderivatives_curl(gr%f_der%der_discr, dedv(:, :, is), tmp)
 
     do id = 1, NDIM
       axc(1:NP, id, is) = axc(1:NP, id, is) - tmp(1:NP, id)/rho(1:NP, is)

@@ -333,8 +333,7 @@ subroutine X(states_calc_momentum)(gr, st)
 
       do idim = 1, st%d%dim
         ! compute gradient of st%X(psi)
-        call X(f_gradient)(gr%sb, gr%f_der, &
-          st%X(psi)(1:NP_PART, idim, ist, ik), grad(1:NP, idim, 1:NDIM))
+        call X(derivatives_grad)(gr%f_der%der_discr, st%X(psi)(:, idim, ist, ik), grad(:, idim, 1:NDIM))
       end do
 
       do i = 1, NDIM

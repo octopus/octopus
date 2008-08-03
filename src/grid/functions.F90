@@ -44,12 +44,8 @@ module functions_m
     f_der_end,                  &
     dmf2cf, zmf2cf,             &
     dcf2mf, zcf2mf,             &
-    df_gradient, zf_gradient,   &
-    df_divergence,              &
-    zf_divergence,              &
     df_multipoles,              &
     zf_multipoles,              &
-    df_curl, zf_curl,           &
     df_angular_momentum,        &
     zf_angular_momentum,        &
     df_l2, zf_l2

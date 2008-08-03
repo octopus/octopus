@@ -546,7 +546,7 @@ subroutine X(magnetic_terms) (gr, h, psi, hpsi, ik)
   if(h%d%cdft .or. associated(h%ep%A_static)) then
     ALLOCATE(grad(NP_PART, NDIM, h%d%dim), NP_PART*h%d%dim*NDIM)
     do idim = 1, h%d%dim
-      call X(f_gradient)(gr%sb, gr%f_der, psi(:, idim), grad(:, :, idim))
+      call X(derivatives_grad)(gr%f_der%der_discr, psi(:, idim), grad(:, :, idim))
     end do
   else
     call pop_sub()
@@ -571,7 +571,7 @@ subroutine X(magnetic_terms) (gr, h, psi, hpsi, ik)
       write(message(1),'(a)') 'Current DFT not yet functional in spinors mode, sorry.'
       call write_fatal(2)
     end select
-    call df_divergence(gr%sb, gr%f_der, tmp, div)
+    call dderivatives_div(gr%f_der%der_discr, tmp, div)
     hpsi(1:NP, 1) = hpsi(1:NP, 1) - M_HALF*M_zI*div*psi(1:NP, 1)
     deallocate(div, tmp)
 
@@ -878,7 +878,7 @@ subroutine X(vlaser_operator_linear) (gr, h, psi, hpsi, ik, laser_number)
     ALLOCATE(grad(NP_PART, NDIM, h%d%dim), NP_PART*h%d%dim*NDIM)
 
     do idim = 1, h%d%dim
-      call X(f_gradient)(gr%sb, gr%f_der, psi(:, idim), grad(:, :, idim))
+      call X(derivatives_grad)(gr%f_der%der_discr, psi(:, idim), grad(:, :, idim))
     end do
 
     ! If there is a static magnetic field, its associated vector potential is coupled with
@@ -933,7 +933,7 @@ subroutine X(vlaser_operator_linear) (gr, h, psi, hpsi, ik, laser_number)
     ALLOCATE(grad(NP_PART, NDIM, h%d%dim), NP_PART*h%d%dim*NDIM)
 
     do idim = 1, h%d%dim
-      call X(f_gradient)(gr%sb, gr%f_der, psi(:, idim), grad(:, :, idim))
+      call X(derivatives_grad)(gr%f_der%der_discr, psi(:, idim), grad(:, :, idim))
     end do
 
     select case(h%d%ispin)
@@ -1035,7 +1035,7 @@ subroutine X(vlasers) (gr, h, psi, hpsi, ik, t)
     ALLOCATE(grad(NP_PART, NDIM, h%d%dim), NP_PART*h%d%dim*NDIM)
 
     do idim = 1, h%d%dim
-      call X(f_gradient)(gr%sb, gr%f_der, psi(:, idim), grad(:, :, idim))
+      call X(derivatives_grad)(gr%f_der%der_discr, psi(:, idim), grad(:, :, idim))
     end do
 
     do k = 1, NP
@@ -1094,7 +1094,7 @@ subroutine X(vlasers) (gr, h, psi, hpsi, ik, t)
     ALLOCATE(grad(NP_PART, NDIM, h%d%dim), NP_PART*h%d%dim*NDIM)
 
     do idim = 1, h%d%dim
-      call X(f_gradient)(gr%sb, gr%f_der, psi(:, idim), grad(:, :, idim))
+      call X(derivatives_grad)(gr%f_der%der_discr, psi(:, idim), grad(:, :, idim))
     end do
 
     do k = 1, NP

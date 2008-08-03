@@ -20,6 +20,7 @@
 #include "global.h"
 
 module states_lalg_m
+  use derivatives_m
   use calc_mode_m
   use crystal_m
   use blas_m

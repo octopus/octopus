@@ -20,6 +20,7 @@
 #include "global.h"
 
 module magnetic_m
+  use derivatives_m
   use functions_m
   use geometry_m
   use global_m
@@ -185,7 +186,7 @@ contains
     ! and therefore there is a minus sign missing (electrons are negative charges...)
     a_ind = - a_ind / P_C
 
-    call df_curl (gr%f_der, a_ind, b_ind)
+    call dderivatives_curl(gr%f_der%der_discr, a_ind, b_ind)
 
     deallocate(j)
     call pop_sub()

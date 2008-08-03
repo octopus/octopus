@@ -296,7 +296,7 @@ contains
     subroutine output_end_()
       FLOAT :: alpha(MAX_DIM, MAX_DIM)
       CMPLX :: beta(MAX_DIM, MAX_DIM, MAX_DIM)
-      integer :: iunit, idir, jdir
+      integer :: iunit, idir
 
       call io_mkdir('linear')
       if(out_pol  .and.  mpi_grp_is_root(mpi_world)) then ! output pol file

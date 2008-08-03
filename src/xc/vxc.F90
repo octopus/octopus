@@ -284,7 +284,7 @@ contains
 
     ! get gradient of the density
     do ii = 1, spin_channels
-      call df_gradient(gr%sb, gr%f_der, dens(:, ii), gdens(:,:, ii))
+      call dderivatives_grad(gr%f_der%der_discr, dens(:, ii), gdens(:, :, ii))
     end do
 
     do ii = 1, 2
@@ -315,7 +315,7 @@ contains
     ! the gradient of the density.
     ALLOCATE(gf(NP, 1), NP*1)
     do is = 1, spin_channels
-      call df_divergence(gr%sb, gr%f_der, dedgd(:,:,is), gf(:,1))
+      call dderivatives_div(gr%f_der%der_discr, dedgd(:, :, is), gf(:, 1))
       call lalg_axpy(NP, -M_ONE, gf(:,1), dedd(:, is))
     end do
     deallocate(gf)
@@ -326,7 +326,7 @@ contains
       ALLOCATE(gf(NP, 3), NP*3)
 
       do is = 1, spin_channels
-        call df_gradient(gr%sb, gr%f_der, dedd(:, is), gf(:,:))
+        call dderivatives_grad(gr%f_der%der_discr, dedd(:, is), gf(:,:))
         do i = 1, NP
           ex_per_vol(i) = ex_per_vol(i) - dens(i, is) * sum(gr%m%x(i,:)*gf(i,:))
         end do
