@@ -1919,7 +1919,7 @@ contains
 
           ! calculate gradient of the wave-function
           do st_dim = 1, st%d%dim
-            call zderivatives_grad(gr%f_der%der_discr, wf_psi(:,st_dim), gwf_psi(:,:,st_dim))
+            call zderivatives_grad(gr%der, wf_psi(:,st_dim), gwf_psi(:,:,st_dim))
           end do
 
           ww = st%d%kweights(ik)*st%occ(ist, ik)

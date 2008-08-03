@@ -92,12 +92,12 @@ contains
       do ist = 1, st%nst
         do idim = 1, st%d%dim
 
-          call zderivatives_grad(gr%f_der%der_discr, lr%zdl_psi(:, idim, ist, ispin), gdl_psi)
-          call zderivatives_grad(gr%f_der%der_discr, st%zpsi(:, idim, ist, ispin), gpsi)
+          call zderivatives_grad(gr%der, lr%zdl_psi(:, idim, ist, ispin), gdl_psi)
+          call zderivatives_grad(gr%der, st%zpsi(:, idim, ist, ispin), gpsi)
 
           if(present(lr_m)) then               
 
-            call zderivatives_grad(gr%f_der%der_discr, lr_m%zdl_psi(:, idim, ist, ispin), gdl_psi_m)
+            call zderivatives_grad(gr%der, lr_m%zdl_psi(:, idim, ist, ispin), gdl_psi_m)
 
             do k = 1, NDIM 
 

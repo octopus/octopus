@@ -113,9 +113,9 @@ subroutine X(coordinate_relaxation)(gr, mesh, h, nst, steps, ik, psi, aa, cc)
         ! apply the hamiltonian in the point
             
         alpha = M_ZERO
-        do is = 1, gr%LAP%n
-          inb = ip + gr%LAP%ri(is, gr%LAP%rimap(ip))
-          alpha = alpha + gr%LAP%w_re(is, 1)*psi(inb, 1, ist)
+        do is = 1, gr%der%lapl%n
+          inb = ip + gr%der%lapl%ri(is, gr%der%lapl%rimap(ip))
+          alpha = alpha + gr%der%lapl%w_re(is, 1)*psi(inb, 1, ist)
         end do
         
         alpha = -M_HALF*alpha + pot*psi(ip, 1, ist)

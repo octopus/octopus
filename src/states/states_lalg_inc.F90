@@ -333,7 +333,7 @@ subroutine X(states_calc_momentum)(gr, st)
 
       do idim = 1, st%d%dim
         ! compute gradient of st%X(psi)
-        call X(derivatives_grad)(gr%f_der%der_discr, st%X(psi)(:, idim, ist, ik), grad(:, idim, 1:NDIM))
+        call X(derivatives_grad)(gr%der, st%X(psi)(:, idim, ist, ik), grad(:, idim, 1:NDIM))
       end do
 
       do i = 1, NDIM
@@ -412,7 +412,7 @@ subroutine X(states_angular_momentum)(gr, phi, l, l2)
 #if defined(R_TREAL)
     l = M_ZERO
 #else
-    call X(f_angular_momentum)(gr%sb, gr%f_der, phi(:, idim), lpsi)
+    call X(f_angular_momentum)(gr%sb, gr%m, gr%der, phi(:, idim), lpsi)
     select case(gr%m%sb%dim)
     case(3)
       l(1) = l(1) + X(mf_dotp)(gr%m, phi(:, idim), lpsi(:, 1))
@@ -423,7 +423,7 @@ subroutine X(states_angular_momentum)(gr, phi, l, l2)
     end select
 #endif
     if(present(l2)) then
-      call X(f_l2)(gr%sb, gr%f_der, phi(:, idim), lpsi(:, 1))
+      call X(f_l2)(gr%sb, gr%m, gr%der, phi(:, idim), lpsi(:, 1))
       l2 = l2 + X(mf_dotp)(gr%m, phi(:, idim), lpsi(:, 1))
     end if
   end do

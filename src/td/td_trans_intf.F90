@@ -76,7 +76,7 @@ contains
 
     call push_sub('td_trans_intf.intface_init')
 
-    intface%extent = stencil_extent(gr%f_der%der_discr, TRANS_DIR)
+    intface%extent = stencil_extent(gr%der, TRANS_DIR)
 
     intface%np = intface%extent*gr%m%l(2)*gr%m%l(3)
 

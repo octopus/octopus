@@ -110,7 +110,7 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, t, kinetic_only)
     
     ! first of all, set boundary conditions
     do idim = 1, h%d%dim
-      call X(set_bc)(gr%f_der%der_discr, epsi(:, idim))
+      call X(set_bc)(gr%der, epsi(:, idim))
     end do
     
     if(apply_kpoint) then ! we multiply psi by exp(i k.r)
@@ -161,7 +161,7 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, t, kinetic_only)
         
         do idim = 1, h%d%dim 
           ! boundary points were already set by the Laplacian
-          call X(derivatives_grad)(gr%f_der%der_discr, epsi(:, idim), grad(:, :, idim), ghost_update = .false., set_bc = .false.)
+          call X(derivatives_grad)(gr%der, epsi(:, idim), grad(:, :, idim), ghost_update = .false., set_bc = .false.)
         end do
         
       end if
@@ -459,7 +459,7 @@ subroutine X(kinetic_start)(h, gr, psi, lapl)
   ALLOCATE(lapl(1:NP, 1:h%d%dim), NP*h%d%dim)
 
   do idim = 1, h%d%dim
-    call X(derivatives_lapl_start)(gr%f_der%der_discr, h%handles(idim), psi(:, idim), lapl(:, idim), set_bc = .false.)
+    call X(derivatives_lapl_start)(gr%der, h%handles(idim), psi(:, idim), lapl(:, idim), set_bc = .false.)
   end do
 
   call pop_sub()
@@ -478,7 +478,7 @@ subroutine X(kinetic_keep_going)(h, gr, psi, lapl)
   ASSERT(associated(lapl))
 
   do idim = 1, h%d%dim
-    call X(derivatives_lapl_keep_going)(gr%f_der%der_discr, h%handles(idim))
+    call X(derivatives_lapl_keep_going)(gr%der, h%handles(idim))
   end do
 
   call pop_sub()
@@ -516,7 +516,7 @@ subroutine X(kinetic_finish) (h, gr, psi, lapl, hpsi)
   ASSERT(associated(lapl))
 
   do idim = 1, h%d%dim
-    call X(derivatives_lapl_finish)(gr%f_der%der_discr, h%handles(idim))
+    call X(derivatives_lapl_finish)(gr%der, h%handles(idim))
     call lalg_axpy(NP, -M_HALF/h%mass, lapl(:, idim), hpsi(:, idim))
   end do
   
@@ -546,7 +546,7 @@ subroutine X(magnetic_terms) (gr, h, psi, hpsi, ik)
   if(h%d%cdft .or. associated(h%ep%A_static)) then
     ALLOCATE(grad(NP_PART, NDIM, h%d%dim), NP_PART*h%d%dim*NDIM)
     do idim = 1, h%d%dim
-      call X(derivatives_grad)(gr%f_der%der_discr, psi(:, idim), grad(:, :, idim))
+      call X(derivatives_grad)(gr%der, psi(:, idim), grad(:, :, idim))
     end do
   else
     call pop_sub()
@@ -571,7 +571,7 @@ subroutine X(magnetic_terms) (gr, h, psi, hpsi, ik)
       write(message(1),'(a)') 'Current DFT not yet functional in spinors mode, sorry.'
       call write_fatal(2)
     end select
-    call dderivatives_div(gr%f_der%der_discr, tmp, div)
+    call dderivatives_div(gr%der, tmp, div)
     hpsi(1:NP, 1) = hpsi(1:NP, 1) - M_HALF*M_zI*div*psi(1:NP, 1)
     deallocate(div, tmp)
 
@@ -878,7 +878,7 @@ subroutine X(vlaser_operator_linear) (gr, h, psi, hpsi, ik, laser_number)
     ALLOCATE(grad(NP_PART, NDIM, h%d%dim), NP_PART*h%d%dim*NDIM)
 
     do idim = 1, h%d%dim
-      call X(derivatives_grad)(gr%f_der%der_discr, psi(:, idim), grad(:, :, idim))
+      call X(derivatives_grad)(gr%der, psi(:, idim), grad(:, :, idim))
     end do
 
     ! If there is a static magnetic field, its associated vector potential is coupled with
@@ -933,7 +933,7 @@ subroutine X(vlaser_operator_linear) (gr, h, psi, hpsi, ik, laser_number)
     ALLOCATE(grad(NP_PART, NDIM, h%d%dim), NP_PART*h%d%dim*NDIM)
 
     do idim = 1, h%d%dim
-      call X(derivatives_grad)(gr%f_der%der_discr, psi(:, idim), grad(:, :, idim))
+      call X(derivatives_grad)(gr%der, psi(:, idim), grad(:, :, idim))
     end do
 
     select case(h%d%ispin)
@@ -1035,7 +1035,7 @@ subroutine X(vlasers) (gr, h, psi, hpsi, ik, t)
     ALLOCATE(grad(NP_PART, NDIM, h%d%dim), NP_PART*h%d%dim*NDIM)
 
     do idim = 1, h%d%dim
-      call X(derivatives_grad)(gr%f_der%der_discr, psi(:, idim), grad(:, :, idim))
+      call X(derivatives_grad)(gr%der, psi(:, idim), grad(:, :, idim))
     end do
 
     do k = 1, NP
@@ -1094,7 +1094,7 @@ subroutine X(vlasers) (gr, h, psi, hpsi, ik, t)
     ALLOCATE(grad(NP_PART, NDIM, h%d%dim), NP_PART*h%d%dim*NDIM)
 
     do idim = 1, h%d%dim
-      call X(derivatives_grad)(gr%f_der%der_discr, psi(:, idim), grad(:, :, idim))
+      call X(derivatives_grad)(gr%der, psi(:, idim), grad(:, :, idim))
     end do
 
     do k = 1, NP
@@ -1282,7 +1282,7 @@ subroutine X(hpsi_diag) (h, gr, diag, ik, t, E)
   psi = M_ONE
   diag = M_ZERO
 
-  call derivatives_lapl_diag(gr%f_der%der_discr, ldiag)
+  call derivatives_lapl_diag(gr%der, ldiag)
 
   do idim = 1, h%d%dim
     diag(1:NP, idim) = -M_HALF/h%mass * ldiag(1:NP)

@@ -236,7 +236,7 @@ contains
     if(scf%eigens%es_type == RS_MG) then
       if(.not. associated(gr%mgrid)) then
         ALLOCATE(gr%mgrid, 1)
-        call multigrid_init(geo, gr%cv,gr%m, gr%f_der, gr%mgrid)
+        call multigrid_init(geo, gr%cv,gr%m, gr%der, gr%mgrid)
       end if
       call hamiltonian_mg_init(h, gr)
     end if

@@ -21,6 +21,7 @@
 
 module multigrid_m
   use curvlinear_m
+  use derivatives_m
   use datasets_m
   use functions_m
   use geometry_m
@@ -51,7 +52,7 @@ module multigrid_m
 
   type multigrid_level_t
     type(mesh_t),  pointer  :: m
-    type(f_der_t), pointer  :: f_der
+    type(derivatives_t),   pointer  :: der
 
     integer          ::  n_coarse
     integer, pointer :: to_coarse(:)
@@ -75,11 +76,11 @@ module multigrid_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine multigrid_init(geo, cv, m, f_der, mgrid)
+  subroutine multigrid_init(geo, cv, m, der, mgrid)
     type(geometry_t),      intent(in)  :: geo
     type(curvlinear_t),    intent(in)  :: cv
     type(mesh_t),  target, intent(in)  :: m
-    type(f_der_t), target, intent(in)  :: f_der
+    type(derivatives_t),   target, intent(in)  :: der
     type(multigrid_t),     intent(out) :: mgrid
 
     integer :: i, n_levels, np
@@ -118,8 +119,8 @@ contains
 
     ALLOCATE(mgrid%level(0:n_levels), n_levels+1)
 
-    mgrid%level(0)%m     => m
-    mgrid%level(0)%f_der => f_der
+    mgrid%level(0)%m   => m
+    mgrid%level(0)%der => der
 
     mgrid%level(0)%n_fine = m%np
     ALLOCATE(mgrid%level(0)%fine_i(m%np), m%np)
@@ -129,22 +130,22 @@ contains
 
     do i = 1, mgrid%n_levels
       ALLOCATE(mgrid%level(i)%m, 1)
-      ALLOCATE(mgrid%level(i)%f_der, 1)
+      ALLOCATE(mgrid%level(i)%der, 1)
       
-      call multigrid_mesh_half(geo, cv, mgrid%level(i-1)%m, mgrid%level(i)%m, f_der%der_discr%lapl%stencil, f_der%der_discr%lapl%n)
+      call multigrid_mesh_half(geo, cv, mgrid%level(i-1)%m, mgrid%level(i)%m, der%lapl%stencil, der%lapl%n)
 
-      call f_der_init(mgrid%level(i)%f_der, m%sb, cv%method.ne.CURV_METHOD_UNIFORM)
+      call derivatives_init(m%sb, mgrid%level(i)%der, cv%method.ne.CURV_METHOD_UNIFORM)
 
       if(m%parallel_in_domains) then
         call mesh_init_stage_3(mgrid%level(i)%m, geo, cv, &
-          mgrid%level(i)%f_der%der_discr%lapl%stencil, mgrid%level(i)%f_der%der_discr%lapl%n, m%mpi_grp)
+          mgrid%level(i)%der%lapl%stencil, mgrid%level(i)%der%lapl%n, m%mpi_grp)
       else
         call mesh_init_stage_3(mgrid%level(i)%m, geo, cv)
       end if
 
       call multigrid_get_transfer_tables(mgrid%level(i), mgrid%level(i-1)%m, mgrid%level(i)%m)
 
-      call f_der_build(m%sb, mgrid%level(i)%m, mgrid%level(i)%f_der)
+      call derivatives_build(mgrid%level(i)%m, mgrid%level(i)%der)
 
       call mesh_write_info(mgrid%level(i)%m, stdout)
 
@@ -338,10 +339,10 @@ contains
     do i = 1, mgrid%n_levels
       level => mgrid%level(i)
 
-      call f_der_end(level%f_der)
+      call derivatives_end(level%der)
       call mesh_end(level%m)
-      deallocate(level%m, level%f_der)
-      nullify   (level%m, level%f_der)
+      deallocate(level%m, level%der)
+      nullify   (level%m, level%der)
 
       deallocate(level%to_coarse, level%to_fine1, level%to_fine2, &
         level%to_fine4, level%to_fine8, level%fine_i)

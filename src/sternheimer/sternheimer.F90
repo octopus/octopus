@@ -156,7 +156,7 @@ contains
     if(this%solver%solver == LS_MULTIGRID) then
       if(.not. associated(sys%gr%mgrid)) then
         ALLOCATE(sys%gr%mgrid, 1)
-        call multigrid_init(sys%geo, sys%gr%cv, sys%gr%m, sys%gr%f_der, sys%gr%mgrid)
+        call multigrid_init(sys%geo, sys%gr%cv, sys%gr%m, sys%gr%der, sys%gr%mgrid)
       end if
       call hamiltonian_mg_init(h, sys%gr)
     end if

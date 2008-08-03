@@ -41,7 +41,7 @@ subroutine X(pert_apply) (this, gr, geo, h, ik, f_in, f_out)
   if (this%pert_type /= PERTURBATION_ELECTRIC) then
      ALLOCATE(f_in_copy(1:NP_PART), NP_PART)
      call lalg_copy(NP_PART, f_in, f_in_copy)
-     call X(set_bc(gr%f_der%der_discr, f_in_copy(:)))
+     call X(set_bc(gr%der, f_in_copy(:)))
   endif
   ! no derivatives in electric, so ghost points not needed
 
@@ -111,7 +111,7 @@ contains
     ALLOCATE(cpsi(1:NP_PART, h%d%dim), NP_PART * h%d%dim)
     ALLOCATE(grad(gr%m%np, gr%sb%dim), gr%m%np * gr%sb%dim)
 
-    call X(derivatives_grad) (gr%f_der%der_discr, f_in_copy, grad, set_bc = .false.)
+    call X(derivatives_grad) (gr%der, f_in_copy, grad, set_bc = .false.)
     ! set_bc done already separately
     f_out(1:NP) = - M_zI * (grad(1:NP, this%dir))
     ! delta_H_k = (-i*grad + k) . delta_k
@@ -145,7 +145,7 @@ contains
     ALLOCATE(lf(gr%m%np, gr%sb%dim), gr%m%np * gr%sb%dim)
 
     ! Note that we leave out the term 1/P_c
-    call X(f_angular_momentum) (gr%sb, gr%f_der, f_in_copy, lf, set_bc = .false.)
+    call X(f_angular_momentum) (gr%sb, gr%m, gr%der, f_in_copy, lf, set_bc = .false.)
     f_out(1:NP) = M_HALF * lf(1:NP, this%dir)
 
     deallocate(lf)
@@ -250,11 +250,11 @@ subroutine X(ionic_perturbation)(this, gr, geo, h, ik, f_in, f_out, iatom, idir)
   ALLOCATE(fout(1:NP_PART, 1), NP_PART)
   fout(1:NP, 1) = vloc(1:NP) * fin(1:NP, 1)
   call X(project_psi)(gr%m, h%ep%proj(iatom:iatom), 1, 1, fin, fout, ik)
-  call X(derivatives_oper)(gr%f_der%der_discr%grad(idir), gr%f_der%der_discr, fout(:,1), f_out)
+  call X(derivatives_oper)(gr%der%grad(idir), gr%der, fout(:,1), f_out)
 
   !v d |f>
   ALLOCATE(grad(1:NP, 1), NP)
-  call X(derivatives_oper)(gr%f_der%der_discr%grad(idir), gr%f_der%der_discr, fin(:,1), grad(:,1))
+  call X(derivatives_oper)(gr%der%grad(idir), gr%der, fin(:,1), grad(:,1))
   fout(1:NP, 1) = vloc(1:NP) * grad(1:NP, 1)
   call X(project_psi)(gr%m, h%ep%proj(iatom:iatom), 1, 1, grad, fout, ik)
   f_out(1:NP) = -f_out(1:NP) + fout(1:NP, 1)
@@ -445,26 +445,26 @@ subroutine X(ionic_perturbation_order_2) (this, gr, geo, h, ik, f_in, f_out, iat
   !di^T dj^T v |f>
   tmp1(1:NP, 1) = vloc(1:NP) * fin(1:NP, 1)
   call X(project_psi)(gr%m, h%ep%proj(iatom:iatom), 1, 1, fin, tmp1, ik)
-  call X(derivatives_oper)(gr%f_der%der_discr%grad(idir), gr%f_der%der_discr, tmp1(:,1), tmp2(:,1))
-  call X(derivatives_oper)(gr%f_der%der_discr%grad(jdir), gr%f_der%der_discr, tmp2(:,1), f_out)
+  call X(derivatives_oper)(gr%der%grad(idir), gr%der, tmp1(:,1), tmp2(:,1))
+  call X(derivatives_oper)(gr%der%grad(jdir), gr%der, tmp2(:,1), f_out)
 
   !di^T v dj |f>
-  call X(derivatives_oper)(gr%f_der%der_discr%grad(jdir), gr%f_der%der_discr, fin(:,1), tmp1(:,1))
+  call X(derivatives_oper)(gr%der%grad(jdir), gr%der, fin(:,1), tmp1(:,1))
   tmp2(1:NP, 1) = vloc(1:NP) * tmp1(1:NP, 1)
   call X(project_psi)(gr%m, h%ep%proj(iatom:iatom), 1, 1, tmp1, tmp2, ik)
-  call X(derivatives_oper)(gr%f_der%der_discr%grad(idir), gr%f_der%der_discr, tmp2(:,1), tmp1(:,1))
+  call X(derivatives_oper)(gr%der%grad(idir), gr%der, tmp2(:,1), tmp1(:,1))
   f_out(1:NP) = f_out(1:NP) - tmp1(1:NP, 1)
 
   !dj^T v di |f>
-  call X(derivatives_oper)(gr%f_der%der_discr%grad(idir), gr%f_der%der_discr, fin(:,1), tmp1(:,1))
+  call X(derivatives_oper)(gr%der%grad(idir), gr%der, fin(:,1), tmp1(:,1))
   tmp2(1:NP, 1) = vloc(1:NP) * tmp1(1:NP, 1)
   call X(project_psi)(gr%m, h%ep%proj(iatom:iatom), 1, 1, tmp1, tmp2, ik)
-  call X(derivatives_oper)(gr%f_der%der_discr%grad(jdir), gr%f_der%der_discr, tmp2(:,1), tmp1(:,1))
+  call X(derivatives_oper)(gr%der%grad(jdir), gr%der, tmp2(:,1), tmp1(:,1))
   f_out(1:NP) = f_out(1:NP) - tmp1(1:NP, 1)
 
   !v di dj |f>
-  call X(derivatives_oper)(gr%f_der%der_discr%grad(idir), gr%f_der%der_discr, fin(:,1), tmp1(:,1))
-  call X(derivatives_oper)(gr%f_der%der_discr%grad(jdir), gr%f_der%der_discr, tmp1(:,1), tmp2(:,1))
+  call X(derivatives_oper)(gr%der%grad(idir), gr%der, fin(:,1), tmp1(:,1))
+  call X(derivatives_oper)(gr%der%grad(jdir), gr%der, tmp1(:,1), tmp2(:,1))
   tmp1(1:NP, 1) = vloc(1:NP) * tmp2(1:NP, 1)
   call X(project_psi)(gr%m, h%ep%proj(iatom:iatom), 1, 1, tmp2, tmp1, ik)
   f_out(1:NP) = f_out(1:NP) + tmp1(1:NP, 1)

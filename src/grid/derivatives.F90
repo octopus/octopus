@@ -42,7 +42,7 @@ module derivatives_m
 
   private
   public ::                 &
-    der_discr_t,            &
+    derivatives_t,          &
     derivatives_init,       &
     derivatives_end,        &
     derivatives_build,      &
@@ -83,7 +83,7 @@ module derivatives_m
     DER_CUBE         = 3,   &
     DER_STARPLUS     = 4
 
-  type der_discr_t
+  type derivatives_t
     type(mesh_t), pointer :: m             ! pointer to the underlying mesh
     integer               :: dim           ! dimensionality of the space (sb%dim)
     integer               :: order         ! order of the discretization (value depends on stencil)
@@ -103,10 +103,11 @@ module derivatives_m
     type(nl_operator_t), pointer :: grad(:)
 
     type(nl_operator_t) :: laplt ! The transpose of the Laplacian.
+    integer             :: n_ghost(3)   ! ghost points to add in each dimension
 #if defined(HAVE_MPI)
     logical :: overlap
 #endif
-  end type der_discr_t
+  end type derivatives_t
 
   type der_handle_t
     private
@@ -125,11 +126,10 @@ module derivatives_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine derivatives_init(sb, der, n_ghost, use_curvilinear)
-    type(simul_box_t), intent(in)  :: sb
-    type(der_discr_t), intent(out) :: der
-    integer,           intent(out) :: n_ghost(:)
-    logical,           intent(in)  :: use_curvilinear
+  subroutine derivatives_init(sb, der, use_curvilinear)
+    type(simul_box_t),   intent(in)  :: sb
+    type(derivatives_t), intent(out) :: der
+    logical,             intent(in)  :: use_curvilinear
 
     integer :: i
 
@@ -232,10 +232,10 @@ contains
     der%boundaries(1:sb%periodic_dim) = DER_BC_PERIOD
 
     ! find out how many ghost points we need in which dimension
-    n_ghost(:) = 0
+    der%n_ghost(:) = 0
     do i = 1, der%dim
       if(der%boundaries(i) == DER_BC_ZERO_F .or. der%boundaries(i) == DER_BC_PERIOD) then
-        n_ghost(i) = maxval(abs(der%lapl%stencil(i,:)))
+        der%n_ghost(i) = maxval(abs(der%lapl%stencil(i,:)))
       end if
     end do
 
@@ -245,7 +245,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine derivatives_end(der)
-    type(der_discr_t), intent(inout) :: der
+    type(derivatives_t), intent(inout) :: der
 
     integer :: i
 
@@ -268,7 +268,7 @@ contains
   ! Returns maximum extension of the stencil in spatial direction
   ! dir = 1, 2, 3 for a given derivative der.
   integer function stencil_extent(der, dir)
-    type(der_discr_t), intent(in) :: der
+    type(derivatives_t), intent(in) :: der
     integer,           intent(in) :: dir
 
     call push_sub('derivatives.stencil_extent')
@@ -290,7 +290,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine derivatives_get_stencil_lapl(der)
-    type(der_discr_t), intent(inout) :: der
+    type(derivatives_t), intent(inout) :: der
 
     integer :: n
 
@@ -329,7 +329,7 @@ contains
   ! ---------------------------------------------------------
   ! Returns the diagonal elements of the laplacian needed for preconditioning
   subroutine derivatives_lapl_diag(der, lapl)
-    type(der_discr_t), intent(in)  :: der
+    type(derivatives_t), intent(in)  :: der
     FLOAT,             intent(out) :: lapl(:)  ! lapl(m%np)
 
     call push_sub('derivatives_inc.derivatives_lapl_diag')
@@ -346,7 +346,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine derivatives_get_stencil_grad(der)
-    type(der_discr_t), intent(inout) :: der
+    type(derivatives_t), intent(inout) :: der
 
     integer :: i, n
     character :: dirchar
@@ -391,7 +391,7 @@ contains
   ! ---------------------------------------------------------
   subroutine derivatives_build(m, der)
     type(mesh_t), target, intent(in)    :: m
-    type(der_discr_t),    intent(inout) :: der
+    type(derivatives_t),    intent(inout) :: der
 
     integer, allocatable :: polynomials(:,:)
     FLOAT,   allocatable :: rhs(:,:)

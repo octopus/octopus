@@ -63,7 +63,7 @@ contains
   subroutine poisson_cg1(m, corrector, der, pot, rho)
     type(mesh_t),      target, intent(in)    :: m
     type(poisson_corr_t), intent(inout) :: corrector
-    type(der_discr_t), target, intent(in)    :: der
+    type(derivatives_t), target, intent(in)    :: der
     FLOAT,                     intent(inout) :: pot(:) ! pot(m%np)
     FLOAT,                     intent(in)    :: rho(:) ! rho(m%np)
 
@@ -111,7 +111,7 @@ contains
   subroutine poisson_cg2(m, der, pot, rho)
     implicit none
     type(mesh_t), target,      intent(in) :: m
-    type(der_discr_t), target, intent(in) :: der
+    type(derivatives_t), target, intent(in) :: der
     FLOAT,                  intent(inout) :: pot(:) ! pot(m%np)
     FLOAT,                     intent(in) :: rho(:) ! rho(m%np)
 

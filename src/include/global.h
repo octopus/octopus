@@ -25,7 +25,6 @@
 #define MAX_DIM 3
 #define MAX_SPIN 4
 #define NDIM    gr%sb%dim
-#define LAP     f_der%der_discr%lapl
 
 #if defined(F90_ACCEPTS_LINE_NUMBERS)
 #  define CARDINAL \newline\cardinal __LINE__ __FILE__

@@ -22,6 +22,7 @@
 module grid_m
   use curvlinear_m
   use datasets_m
+  use derivatives_m
   use double_grid_m
   use functions_m
   use geometry_m
@@ -52,7 +53,7 @@ module grid_m
     type(mesh_t)                :: m
     type(interface_t), pointer  :: intf(:)
     type(multigrid_level_t)     :: fine
-    type(f_der_t)               :: f_der
+    type(derivatives_t)         :: der
     type(curvlinear_t)          :: cv
     type(multigrid_t), pointer  :: mgrid
     type(double_grid_t)         :: dgrid
@@ -88,14 +89,14 @@ contains
     call curvlinear_init(gr%sb, geo, gr%cv)
 
     ! initilize derivatives
-    call f_der_init(gr%f_der, gr%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
+    call derivatives_init(gr%sb, gr%der, gr%cv%method /= CURV_METHOD_UNIFORM)
 
     call double_grid_init(gr%dgrid, gr%sb)
 
     ! now we generate create the mesh and the derivatives
     call mesh_init_stage_1(gr%sb, gr%m, geo, gr%cv, &
-         enlarge = max(gr%f_der%n_ghost, double_grid_enlarge(gr%dgrid)))
-    call mesh_init_stage_2(gr%sb, gr%m, geo, gr%cv, gr%f_der%der_discr%lapl%stencil, gr%f_der%der_discr%lapl%n)
+         enlarge = max(gr%der%n_ghost, double_grid_enlarge(gr%dgrid)))
+    call mesh_init_stage_2(gr%sb, gr%m, geo, gr%cv, gr%der%lapl%stencil, gr%der%lapl%n)
 
     call pop_sub()
   end subroutine grid_init_stage_1
@@ -115,8 +116,8 @@ contains
     if(multicomm_strategy_is_parallel(mc, P_STRATEGY_DOMAINS)) then
       call mpi_grp_init(grp, mc%group_comm(P_STRATEGY_DOMAINS))
       call mesh_init_stage_3(gr%m, geo, gr%cv,  &
-        gr%f_der%der_discr%lapl%stencil,        &
-        gr%f_der%der_discr%lapl%n, grp)
+        gr%der%lapl%stencil,        &
+        gr%der%lapl%n, grp)
     else
       call mesh_init_stage_3(gr%m, geo, gr%cv)
     end if
@@ -124,13 +125,13 @@ contains
     if(gr%sb%open_boundaries) then
       ALLOCATE(gr%intf(NLEADS), NLEADS)
       do il = 1, NLEADS
-        call interface_init(gr%m, gr%sb, gr%f_der%der_discr, gr%intf(il), il)
+        call interface_init(gr%m, gr%sb, gr%der, gr%intf(il), il)
       end do
     else
       nullify(gr%intf)
     end if
 
-    call f_der_build(gr%sb, gr%m, gr%f_der)
+    call derivatives_build(gr%m, gr%der)
 
     ! initialize a finer mesh to hold the density, for this we use the
     ! multigrid routines
@@ -138,28 +139,28 @@ contains
     if(gr%have_fine_mesh) then
       
       ALLOCATE(gr%fine%m, 1)
-      ALLOCATE(gr%fine%f_der, 1)
+      ALLOCATE(gr%fine%der, 1)
       
-      call multigrid_mesh_double(geo, gr%cv, gr%m, gr%fine%m, gr%f_der%der_discr%lapl%stencil, gr%f_der%der_discr%lapl%n)
+      call multigrid_mesh_double(geo, gr%cv, gr%m, gr%fine%m, gr%der%lapl%stencil, gr%der%lapl%n)
       
-      call f_der_init(gr%fine%f_der, gr%m%sb, gr%cv%method .ne. CURV_METHOD_UNIFORM)
+      call derivatives_init(gr%m%sb, gr%fine%der, gr%cv%method .ne. CURV_METHOD_UNIFORM)
       
       if(gr%m%parallel_in_domains) then
         call mesh_init_stage_3(gr%fine%m, geo, gr%cv, &
-             gr%fine%f_der%der_discr%lapl%stencil, gr%fine%f_der%der_discr%lapl%n, gr%m%mpi_grp)
+             gr%fine%der%lapl%stencil, gr%fine%der%lapl%n, gr%m%mpi_grp)
       else
         call mesh_init_stage_3(gr%fine%m, geo, gr%cv)
       end if
       
       call multigrid_get_transfer_tables(gr%fine, gr%fine%m, gr%m)
       
-      call f_der_build(gr%m%sb, gr%fine%m, gr%fine%f_der)
+      call derivatives_build(gr%fine%m, gr%fine%der)
       
       call mesh_write_info(gr%fine%m, stdout)
 
     else
       gr%fine%m => gr%m
-      gr%fine%f_der => gr%f_der
+      gr%fine%der => gr%der
     end if
 
     ! multigrids are not initialized by default
@@ -179,15 +180,15 @@ contains
     call push_sub('grid.grid_end')
 
     if(gr%have_fine_mesh) then
-      call f_der_end(gr%fine%f_der)
+      call derivatives_end(gr%fine%der)
       call mesh_end(gr%fine%m)
-      deallocate(gr%fine%m, gr%fine%f_der)
+      deallocate(gr%fine%m, gr%fine%der)
       deallocate(gr%fine%to_coarse, gr%fine%to_fine1, gr%fine%to_fine2, gr%fine%to_fine4, gr%fine%to_fine8, gr%fine%fine_i)
     end if
 
     call double_grid_end(gr%dgrid)
 
-    call f_der_end(gr%f_der)
+    call derivatives_end(gr%der)
     call mesh_end(gr%m)
 
     if(associated(gr%mgrid)) then
@@ -237,7 +238,7 @@ contains
     type(geometry_t), intent(in) :: geo
 
     ALLOCATE(gr%mgrid, 1)
-    call multigrid_init(geo, gr%cv, gr%m, gr%f_der, gr%mgrid)
+    call multigrid_init(geo, gr%cv, gr%m, gr%der, gr%mgrid)
 
   end subroutine grid_create_multigrid
 
@@ -281,13 +282,13 @@ contains
 
     if(grin%m%parallel_in_domains) then
       call mesh_init_stage_3(grout%m, geo, grout%cv,  &
-        grout%f_der%der_discr%lapl%stencil,        &
-        grout%f_der%der_discr%lapl%n, grin%m%mpi_grp)
+        grout%der%lapl%stencil,        &
+        grout%der%lapl%n, grin%m%mpi_grp)
     else
       call mesh_init_stage_3(grout%m, geo, grout%cv)
     end if
 
-    call f_der_build(grout%sb, grout%m, grout%f_der)
+    call derivatives_build(grout%m, grout%der)
 
     ! multigrids are not initialized by default
     nullify(grout%mgrid)

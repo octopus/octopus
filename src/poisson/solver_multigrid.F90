@@ -280,7 +280,7 @@ contains
       call push_sub('poisson_multigrid.residue')
 
       m => gr%mgrid%level(l)%m
-      call dderivatives_lapl(gr%mgrid%level(l)%f_der%der_discr, phi, tmp)
+      call dderivatives_lapl(gr%mgrid%level(l)%der, phi, tmp)
       tmp(1:m%np) = tmp(1:m%np) - rho(1:m%np)
       res = dmf_nrm2(m, tmp)
 
@@ -299,7 +299,7 @@ contains
         phi_ini%level(l)%p(1:np) = phi%level(l)%p(1:np)
 
         ! presmoothing
-        call multigrid_relax(this, gr,gr%mgrid%level(l)%m,gr%mgrid%level(l)%f_der, &
+        call multigrid_relax(this, gr,gr%mgrid%level(l)%m,gr%mgrid%level(l)%der, &
           phi%level(l)%p, tau%level(l)%p , this%presteps)
 
         if (l /= cl ) then
@@ -307,14 +307,14 @@ contains
           call dmultigrid_fine2coarse(gr%mgrid, l+1, phi%level(l)%p, phi%level(l+1)%p, this%restriction_method)
 
           ! error calculation
-          call dderivatives_lapl(gr%mgrid%level(l)%f_der%der_discr, phi%level(l)%p, err%level(l)%p)
+          call dderivatives_lapl(gr%mgrid%level(l)%der, phi%level(l)%p, err%level(l)%p)
           err%level(l)%p(1:np) = err%level(l)%p(1:np) - tau%level(l)%p(1:np)
 
           ! transfer error to coarser grid
           call dmultigrid_fine2coarse(gr%mgrid, l+1, err%level(l)%p, tau%level(l+1)%p, this%restriction_method)
 
           ! the other part of the error
-          call dderivatives_lapl(gr%mgrid%level(l + 1)%f_der%der_discr, phi%level(l + 1)%p, err%level(l + 1)%p)
+          call dderivatives_lapl(gr%mgrid%level(l + 1)%der, phi%level(l + 1)%p, err%level(l + 1)%p)
           np = gr%mgrid%level(l + 1)%m%np
           tau%level(l + 1)%p(1:np) = err%level(l + 1)%p(1:np) - tau%level(l + 1)%p(1:np)
         end if
@@ -323,7 +323,7 @@ contains
       do l = cl, fl, -1
        
         ! postsmoothing
-        call multigrid_relax(this, gr, gr%mgrid%level(l)%m, gr%mgrid%level(l)%f_der, &
+        call multigrid_relax(this, gr, gr%mgrid%level(l)%m, gr%mgrid%level(l)%der, &
           phi%level(l)%p, tau%level(l)%p , this%poststeps)
 
         if(l /= fl) then
@@ -345,12 +345,12 @@ contains
   end subroutine poisson_multigrid_solver
 
   ! ---------------------------------------------------------
-  subroutine multigrid_relax(this, gr, m, f_der, pot, rho, steps)
+  subroutine multigrid_relax(this, gr, m, der, pot, rho, steps)
     type(mg_solver_t), intent(in) :: this
 
     type(grid_t),          intent(in)    :: gr
     type(mesh_t),  target, intent(in)    :: m
-    type(f_der_t), target, intent(inout) :: f_der
+    type(derivatives_t), target, intent(inout) :: der
     FLOAT,            intent(inout) :: pot(:)  ! pot(m%np)
     FLOAT,            intent(in)    :: rho(:)  ! rho(m%np)
     integer,          intent(in)    :: steps
@@ -365,25 +365,25 @@ contains
     select case(this%relaxation_method)
 
     case(GAUSS_SEIDEL)
-      factor = CNST(-1.0)/LAP%w_re(LAP%stencil_center, 1)*this%relax_factor
+      factor = CNST(-1.0)/der%lapl%w_re(der%lapl%stencil_center, 1)*this%relax_factor
 
-      n=LAP%n
+      n=der%lapl%n
 
       ALLOCATE(w(1:n), n)
       
-      if(LAP%const_w) then
-        call lalg_copy(n, LAP%w_re(1:n, 1), w)
+      if(der%lapl%const_w) then
+        call lalg_copy(n, der%lapl%w_re(1:n, 1), w)
         do t = 0, steps
           do i = 1, m%np, 1
-            point_lap = sum( w(1:n)*pot(i + LAP%ri(1:n, LAP%rimap(i) )) )
+            point_lap = sum( w(1:n)*pot(i + der%lapl%ri(1:n, der%lapl%rimap(i) )) )
             pot(i) = pot(i)+factor*(point_lap-rho(i))
           end do
         end do
       else
         do t = 0, steps
           do i = 1, m%np
-            point_lap = sum(LAP%w_re(1:n,i)*pot(LAP%i(1:n,i)))
-            pot(i) = pot(i) - CNST(0.7)/LAP%w_re(LAP%stencil_center,i)*(point_lap-rho(i))
+            point_lap = sum(der%lapl%w_re(1:n,i)*pot(der%lapl%i(1:n,i)))
+            pot(i) = pot(i) - CNST(0.7)/der%lapl%w_re(der%lapl%stencil_center,i)*(point_lap-rho(i))
           end do
         end do
       end if
@@ -395,10 +395,10 @@ contains
       ALLOCATE(lpot(1:m%np_part), m%np_part)
       ALLOCATE(ldiag(1:m%np), m%np)
 
-      call derivatives_lapl_diag(gr%f_der%der_discr, ldiag)
+      call derivatives_lapl_diag(gr%der, ldiag)
 
       do t=1,steps
-        call dderivatives_lapl(f_der%der_discr, pot, lpot)
+        call dderivatives_lapl(der, pot, lpot)
         pot(1:m%np)=pot(1:m%np) - this%relax_factor/ldiag(1:m%np)*(lpot(1:m%np)-rho(1:m%np)) 
       end do
 
@@ -408,7 +408,7 @@ contains
 
     case(CONJUGATE_GRADIENTS)
       iter = steps
-      mesh_pointer => m ; der_pointer => f_der%der_discr
+      mesh_pointer => m ; der_pointer => der
       call dconjugate_gradients(m%np, pot(1:m%np), rho(1:m%np), &
         internal_laplacian_op, internal_dotp, iter, threshold=CNST(1.0e-12))
       nullify(mesh_pointer) ; nullify(der_pointer)

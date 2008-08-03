@@ -43,7 +43,7 @@ subroutine X(preconditioner_apply)(pre, gr, h, a, b, omega)
 
   case(PRE_SMOOTHING)
     do idim = 1, h%d%dim
-      call X(derivatives_oper)(pre%op, gr%f_der%der_discr, a(:, idim), b(:, idim))
+      call X(derivatives_oper)(pre%op, gr%der, a(:, idim), b(:, idim))
     end do
 
   case(PRE_JACOBI)

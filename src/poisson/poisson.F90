@@ -311,7 +311,7 @@ contains
       call poisson2d_solve(gr%m, pot, rho)
 
     case(CG)
-      call poisson_cg1(gr%m, corrector, gr%f_der%der_discr, pot, rho)
+      call poisson_cg1(gr%m, corrector, gr%der, pot, rho)
 
     case(CG_CORRECTED)
       if(hartree_integrator%increase_box) then
@@ -328,7 +328,7 @@ contains
         call dmf_interpolate(gr%m, hartree_integrator%grid%m, full_interpolation = .false., u = rho_corrected, f = rhop)
         call dmf_interpolate(gr%m, hartree_integrator%grid%m, full_interpolation = .false., u = pot, f = potp)
 
-        call poisson_cg2(hartree_integrator%grid%m, hartree_integrator%grid%f_der%der_discr, potp, rhop)
+        call poisson_cg2(hartree_integrator%grid%m, hartree_integrator%grid%der, potp, rhop)
 
         call dmf_interpolate(hartree_integrator%grid%m, gr%m, full_interpolation = .false., u = potp, f = pot)
         pot(1:NP) = pot(1:NP) + vh_correction(1:NP)
@@ -342,7 +342,7 @@ contains
         call correct_rho(corrector, gr%m, rho, rho_corrected, vh_correction)
 
         pot(1:NP) = pot(1:NP) - vh_correction(1:NP)
-        call poisson_cg2(gr%m, gr%f_der%der_discr, pot, rho_corrected)
+        call poisson_cg2(gr%m, gr%der, pot, rho_corrected)
         pot(1:NP) = pot(1:NP) + vh_correction(1:NP)
 
         deallocate(rho_corrected, vh_correction)

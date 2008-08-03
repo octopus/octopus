@@ -52,7 +52,7 @@ module poisson_corrections_m
      FLOAT, pointer :: aux(:, :)
   end type poisson_corr_t
 
-  type(der_discr_t), pointer :: der_pointer
+  type(derivatives_t), pointer :: der_pointer
   type(mesh_t),      pointer :: mesh_pointer
      
 contains

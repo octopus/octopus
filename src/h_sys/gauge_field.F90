@@ -257,13 +257,13 @@ contains
 
         do idim = 1, st%d%dim
 
-          call zset_bc(gr%f_der%der_discr, st%zpsi(:, idim, ist, ik))
+          call zset_bc(gr%der, st%zpsi(:, idim, ist, ik))
 
           if(simul_box_is_periodic(gr%sb)) then
             epsi(1:NP_PART, idim) = phases(1:NP_PART, ik)*st%zpsi(1:NP_PART, idim, ist, ik)
           end if
 
-          call zderivatives_grad(gr%f_der%der_discr, epsi(:, idim), gpsi(:, :, idim), set_bc = .false.)
+          call zderivatives_grad(gr%der, epsi(:, idim), gpsi(:, :, idim), set_bc = .false.)
 
         end do
 

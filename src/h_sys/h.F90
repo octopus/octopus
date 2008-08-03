@@ -582,7 +582,7 @@ contains
       ALLOCATE(h%lead_h_offdiag(np, np, NLEADS), np**2*NLEADS)
       do il = 1, NLEADS
         do ispin = 1, h%d%nspin
-          call lead_diag(gr%f_der%der_discr%lapl, h%lead_vks(:, ispin, il), &
+          call lead_diag(gr%der%lapl, h%lead_vks(:, ispin, il), &
             gr%intf(il), h%lead_h_diag(:, :, ispin, il))
           ! In debug mode write the diagonal block to a file.
           if(in_debug_mode) then
@@ -597,7 +597,7 @@ contains
             call io_close(diag)
           end if
         end do
-        call lead_offdiag(gr%f_der%der_discr%lapl, gr%intf(il), il, &
+        call lead_offdiag(gr%der%lapl, gr%intf(il), il, &
           h%lead_h_offdiag(:, :, il))
         if(in_debug_mode) then
           write(fname, '(2a)') 'debug/open_boundaries/offdiag-', &

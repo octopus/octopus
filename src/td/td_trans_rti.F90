@@ -121,7 +121,7 @@ contains
 
     taylor_1st%exp_method = TAYLOR
     taylor_1st%exp_order = 1
-    order = gr%f_der%der_discr%order
+    order = gr%der%order
 
     call intface_init(gr, trans%intface)
 
@@ -280,7 +280,7 @@ contains
 
     call td_trans_rti_write_info(trans, st, max_iter, order, trans%mem_type)
 
-    call memory_init(trans%intface, dt/M_TWO, max_iter, gr%f_der%der_discr%lapl,&
+    call memory_init(trans%intface, dt/M_TWO, max_iter, gr%der%lapl,&
                       trans%mem_coeff, trans%mem_sp_coeff, trans%mem_s, trans%diag, trans%offdiag, gr%sb%dim, &
                       gr%sb%h(1), trans%mem_type, order, trans%sp2full_map, st%mpi_grp)
 
@@ -785,7 +785,7 @@ contains
     FLOAT, target,               intent(in)    :: t
     integer, target,             intent(in)    :: mem_type
     CMPLX, target,               intent(in)    :: mem(intf%np, intf%np, 0:max_iter, NLEADS)
-    CMPLX, target,               intent(in)    :: sp_mem(intf%np*gr%f_der%der_discr%order, 0:max_iter, NLEADS)
+    CMPLX, target,               intent(in)    :: sp_mem(intf%np*gr%der%order, 0:max_iter, NLEADS)
     CMPLX, target,               intent(in)    :: sm_u(0:max_iter, NLEADS)
     FLOAT, target,               intent(in)    :: td_pot(0:max_iter, NLEADS)
     integer,                     intent(in)    :: timestep
@@ -807,7 +807,7 @@ contains
 
     call push_sub('td_trans_rti.cn_src_mem_dt')
 
-    order = gr%f_der%der_discr%order
+    order = gr%der%order
     ALLOCATE(tmp(NP, st%d%ispin), NP*st%d%ispin)
     ALLOCATE(tmp_wf(intf%np), intf%np)
     if (mem_type.eq.1) then
@@ -1265,9 +1265,9 @@ contains
 
     ! Apply modification: sign \delta^2 Q zpsi
     call apply_sp_mem(sp_mem(:,LEFT), LEFT, intf, intf_wf(:, LEFT), zpsi, &
-              TOCMPLX(sign*dt**2/M_FOUR, M_ZERO), mem_s(:,:,:,LEFT),gr%f_der%der_discr%order,gr%sb%dim, mapping)
+              TOCMPLX(sign*dt**2/M_FOUR, M_ZERO), mem_s(:,:,:,LEFT),gr%der%order,gr%sb%dim, mapping)
     call apply_sp_mem(sp_mem(:,RIGHT), RIGHT, intf, intf_wf(:, RIGHT), zpsi, &
-              TOCMPLX(sign*dt**2/M_FOUR, M_ZERO), mem_s(:,:,:,RIGHT),gr%f_der%der_discr%order,gr%sb%dim, mapping)
+              TOCMPLX(sign*dt**2/M_FOUR, M_ZERO), mem_s(:,:,:,RIGHT),gr%der%order,gr%sb%dim, mapping)
 
     deallocate(intf_wf)
 

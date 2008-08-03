@@ -26,7 +26,7 @@
 ! ---------------------------------------------------------
 ! The transpose of the Laplacian.
 subroutine X(derivatives_laplt)(der, f, lapl)
-  type(der_discr_t), intent(in)    :: der
+  type(derivatives_t), intent(in)    :: der
   R_TYPE,            intent(inout) :: f(:)     ! f(m%np_part)
   R_TYPE,            intent(out)   :: lapl(:)  ! lapl(m%np)
 
@@ -43,7 +43,7 @@ subroutine X(derivatives_laplt)(der, f, lapl)
 end subroutine X(derivatives_laplt)
 
 subroutine X(init_f)(der, handle, f)
-  type(der_discr_t),         intent(in)    :: der
+  type(derivatives_t),         intent(in)    :: der
   type(der_handle_t),        intent(inout) :: handle
   R_TYPE,  target,           intent(in)    :: f(:)
 
@@ -61,7 +61,7 @@ end subroutine X(init_f)
 
 ! ---------------------------------------------------------
 subroutine X(derivatives_lapl_start)(der, handle, f, lapl, ghost_update, set_bc)
-  type(der_discr_t),         intent(in)    :: der
+  type(derivatives_t),         intent(in)    :: der
   type(der_handle_t),        intent(inout) :: handle
   R_TYPE,                    intent(inout) :: f(:)     ! f(m%np_part)
   R_TYPE,  target,           intent(inout) :: lapl(:)  ! lapl(m%np)
@@ -100,7 +100,7 @@ end subroutine X(derivatives_lapl_start)
 ! in MPI implementations.
 ! ---------------------------------------------------------
 subroutine X(derivatives_lapl_keep_going)(der, handle)
-  type(der_discr_t),         intent(in)    :: der
+  type(derivatives_t),         intent(in)    :: der
   type(der_handle_t),        intent(inout) :: handle
 
   call push_sub('derivatives_inc.Xderivatives_lapl_keep_going')
@@ -116,7 +116,7 @@ end subroutine X(derivatives_lapl_keep_going)
 
 ! ---------------------------------------------------------
 subroutine X(derivatives_lapl_finish)(der, handle)
-  type(der_discr_t),         intent(in)    :: der
+  type(derivatives_t),         intent(in)    :: der
   type(der_handle_t),        intent(inout) :: handle
 
   call push_sub('derivatives_inc.Xderivatives_lapl_finish')
@@ -141,7 +141,7 @@ end subroutine X(derivatives_lapl_finish)
 
 ! ---------------------------------------------------------
 subroutine X(derivatives_lapl)(der, f, lapl, ghost_update, set_bc)
-  type(der_discr_t),         intent(in)    :: der
+  type(derivatives_t),         intent(in)    :: der
   R_TYPE,                    intent(inout) :: f(:)     ! f(m%np_part)
   R_TYPE,                    intent(out)   :: lapl(:)  ! lapl(m%np)
   logical, optional,         intent(in)    :: ghost_update
@@ -161,7 +161,7 @@ end subroutine X(derivatives_lapl)
 
 ! ---------------------------------------------------------
 subroutine X(derivatives_grad)(der, f, grad, ghost_update, set_bc)
-  type(der_discr_t), intent(in)    :: der
+  type(derivatives_t), intent(in)    :: der
   R_TYPE,            intent(inout) :: f(:)       ! f(m%np_part)
   R_TYPE,            intent(out)   :: grad(:,:)  ! grad(m%np, m%sb%dim)
   logical, optional, intent(in)    :: ghost_update
@@ -225,7 +225,7 @@ end subroutine X(derivatives_grad)
 ! ---------------------------------------------------------
 subroutine X(derivatives_oper)(op, der, f, opf, ghost_update, set_bc)
   type(nl_operator_t), intent(in)    :: op
-  type(der_discr_t),   intent(in)    :: der
+  type(derivatives_t),   intent(in)    :: der
   R_TYPE,              intent(inout) :: f(:)       ! f(m%np_part)
   R_TYPE,              intent(out)   :: opf(:)     ! opf(m%np)
   logical, optional,   intent(in)    :: ghost_update
@@ -278,7 +278,7 @@ end subroutine X(derivatives_oper)
 
 ! ---------------------------------------------------------
 subroutine X(derivatives_div)(der, f, div, ghost_update)
-  type(der_discr_t), intent(in)    :: der
+  type(derivatives_t), intent(in)    :: der
   R_TYPE,            intent(inout) :: f(:,:)   ! f(m%np_part, m%sb%dim)
   R_TYPE,            intent(out)   :: div(:)   ! div(m%np)
   logical, optional, intent(in)    :: ghost_update
@@ -311,7 +311,7 @@ end subroutine X(derivatives_div)
 
 ! ---------------------------------------------------------
 subroutine X(derivatives_curl)(der, f, curl, ghost_update)
-  type(der_discr_t), intent(in)    :: der
+  type(derivatives_t), intent(in)    :: der
   R_TYPE,            intent(inout) :: f(:,:)    ! f(m%np_part, der%m%sb%dim) 
   R_TYPE,            intent(out)   :: curl(:,:) ! curl(m%np, der%m%sb%dim) if dim = 2, curl(m%np, 1) if dim = 1.
   logical, optional, intent(in)    :: ghost_update
@@ -375,7 +375,7 @@ end subroutine X(derivatives_curl)
 ! Set all boundary points in f to zero to implement zero
 ! boundary conditions for the derivatives.
 subroutine X(set_bc)(der, f)
-  type(der_discr_t), intent(in)    :: der
+  type(derivatives_t), intent(in)    :: der
   R_TYPE,            intent(inout) :: f(:)
 
   integer :: bndry_start, bndry_end

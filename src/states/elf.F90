@@ -225,13 +225,13 @@ contains
             
             if (st%wfs_type == M_REAL) then
               call dmf2mf_RS2FS(gr%m, st%dpsi(:, idim, ist, ik), psi_fs(:), dcf_tmp)
-              call zderivatives_grad(gr%f_der%der_discr, psi_fs(:), gpsi)
+              call zderivatives_grad(gr%der, psi_fs(:), gpsi)
               do i = 1, NDIM
                 gpsi(:,i) = gpsi(:,i) * gr%m%h(i)**2 * real(dcf_tmp%n(i), REAL_PRECISION) / (M_TWO*M_PI)
               end do
             else
               call zmf2mf_RS2FS(gr%m, st%zpsi(:, idim, ist, ik), psi_fs(:), zcf_tmp)
-              call zderivatives_grad(gr%f_der%der_discr, psi_fs(:), gpsi)
+              call zderivatives_grad(gr%der, psi_fs(:), gpsi)
               do i = 1, NDIM
                 gpsi(:,i) = gpsi(:,i) * gr%m%h(i)**2 * real(zcf_tmp%n(i), REAL_PRECISION) / (M_TWO*M_PI)
               end do

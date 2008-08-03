@@ -186,7 +186,7 @@ contains
     ! and therefore there is a minus sign missing (electrons are negative charges...)
     a_ind = - a_ind / P_C
 
-    call dderivatives_curl(gr%f_der%der_discr, a_ind, b_ind)
+    call dderivatives_curl(gr%der, a_ind, b_ind)
 
     deallocate(j)
     call pop_sub()

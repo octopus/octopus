@@ -67,7 +67,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
       ! calculate the gradient of the wave-function
       do idim = 1, st%d%dim
 
-        call X(derivatives_grad)(gr%fine%f_der%der_discr, psi(:, idim), gpsi(:, :, idim))
+        call X(derivatives_grad)(gr%fine%der, psi(:, idim), gpsi(:, :, idim))
 
         !accumulate to calculate the gradient of the density
         do idir = 1, NDIM

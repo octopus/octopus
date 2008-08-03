@@ -64,7 +64,7 @@ contains
   subroutine interface_init(m, sb, der_discr, intf, il)
     type(mesh_t),      intent(in)  :: m
     type(simul_box_t), intent(in)  :: sb
-    type(der_discr_t), intent(in)  :: der_discr
+    type(derivatives_t), intent(in)  :: der_discr
     type(interface_t), intent(out) :: intf
     integer,           intent(in)  :: il
 

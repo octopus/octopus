@@ -97,8 +97,8 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
 
         do idim = 1, st%d%dim
 
-          call X(derivatives_grad)(gr%f_der%der_discr, st%X(psi)   (:, idim, ist, is), gpsi)
-          call X(derivatives_grad)(gr%f_der%der_discr, lr%X(dl_psi)(:, idim, ist, is), gdl_psi)
+          call X(derivatives_grad)(gr%der, st%X(psi)   (:, idim, ist, is), gpsi)
+          call X(derivatives_grad)(gr%der, lr%X(dl_psi)(:, idim, ist, is), gdl_psi)
 
           ! sum over states to obtain the spin-density
           rho(1:NP) = rho(1:NP) + ik_weight*abs(st%X(psi)(1:NP, idim, ist, is))**2
@@ -113,7 +113,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
 
           if(present(lr_m)) then 
 
-            call X(derivatives_grad)(gr%f_der%der_discr, lr_m%X(dl_psi)(:, idim, ist, is), gdl_psi_m)
+            call X(derivatives_grad)(gr%der, lr_m%X(dl_psi)(:, idim, ist, is), gdl_psi_m)
 
             dl_rho(1:NP) = dl_rho(1:NP) + ik_weight * ( &
                  R_CONJ(st%X(psi)(1:NP, idim, ist, is)) * lr%X(dl_psi)(1:NP, idim, ist, is)+ & 
@@ -155,12 +155,12 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
         ik_weight = st%d%kweights(ik)*st%occ(ist, ik)/s
         do idim = 1, st%d%dim
 
-          call X(derivatives_grad)(gr%f_der%der_discr, st%X(psi)   (:, idim, ist, is), gpsi)
-          call X(derivatives_grad)(gr%f_der%der_discr, lr%X(dl_psi)(:, idim, ist, is), gdl_psi)
+          call X(derivatives_grad)(gr%der, st%X(psi)   (:, idim, ist, is), gpsi)
+          call X(derivatives_grad)(gr%der, lr%X(dl_psi)(:, idim, ist, is), gdl_psi)
 
           if(present(lr_m)) then 
 
-            call X(derivatives_grad)(gr%f_der%der_discr, lr_m%X(dl_psi)(:, idim, ist, is), gdl_psi_m)
+            call X(derivatives_grad)(gr%der, lr_m%X(dl_psi)(:, idim, ist, is), gdl_psi_m)
 
             do i = 1, NP
               lr%X(dl_de)(i, is) = lr%X(dl_de)(i, is) + &

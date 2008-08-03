@@ -38,69 +38,16 @@ module functions_m
 
   private
   public  ::                    &
-    f_der_t,                    &
-    f_der_init,                 &
-    f_der_build,                &
-    f_der_end,                  &
     dmf2cf, zmf2cf,             &
     dcf2mf, zcf2mf,             &
     df_multipoles,              &
     zf_multipoles,              &
     df_angular_momentum,        &
     zf_angular_momentum,        &
-    df_l2, zf_l2
-
-  public  ::                    &
+    df_l2, zf_l2,               &
     dcf_FS2mf, zcf_FS2mf
 
-  type f_der_t
-    type(mesh_t), pointer :: m            ! a pointer to mesh
-
-    ! derivatives in real space
-    integer               :: n_ghost(3)   ! ghost points to add in each dimension
-    type(der_discr_t)     :: der_discr    ! discretization of the derivatives
-  end type f_der_t
-
 contains
-
-  ! ---------------------------------------------------------
-  subroutine f_der_init(f_der, sb, use_curvlinear)
-    type(f_der_t),     intent(out) :: f_der
-    type(simul_box_t), intent(in)  :: sb
-    logical,           intent(in)  :: use_curvlinear
-
-    call derivatives_init(sb, f_der%der_discr, f_der%n_ghost, use_curvlinear)
-
-  end subroutine f_der_init
-
-
-  ! ---------------------------------------------------------
-  subroutine f_der_build(sb, m, f_der)
-    type(simul_box_t),    intent(in)    :: sb
-    type(mesh_t), target, intent(in)    :: m
-    type(f_der_t),        intent(inout) :: f_der
-
-    call push_sub('f.f_der_build')
-
-    f_der%m => m ! keep a working pointer to the underlying mesh
-    call derivatives_build(m, f_der%der_discr)
-
-    call pop_sub()
-  end subroutine f_der_build
-
-
-  ! ---------------------------------------------------------
-  subroutine f_der_end(f_der)
-    type(f_der_t), intent(inout) :: f_der
-
-    call push_sub('f.f_der_end')
-
-    ASSERT(associated(f_der%m))
-
-     call derivatives_end(f_der%der_discr)
-
-    call pop_sub()
-  end subroutine f_der_end
 
 #include "undef.F90"
 #include "real.F90"
