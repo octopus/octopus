@@ -65,6 +65,8 @@ contains
 
     this%start           = 1
     this%end             = total
+    this%nlocal          = total
+    this%nglobal         = total
     this%parallel        = .false.
     nullify(this%node, this%range, this%num)
 
@@ -90,9 +92,9 @@ contains
     if(.not. multicomm_strategy_is_parallel(mc, strategy)) then
 #endif      
       
-      ALLOCATE(this%node(1:1), 1)
+      ALLOCATE(this%node(1:total), 1)
       ! Defaults.
-      this%node(:)         = 0
+      this%node(1:total)   = 0
       this%start           = 1
       this%end             = total
       this%nlocal          = total
@@ -123,8 +125,8 @@ contains
              ' will manage '//trim(tag), this%range(1, kk - 1), " - ", this%range(2, kk - 1)
         call write_info(1)
         if(rank .eq. kk - 1) then
-          this%start = this%range(1, kk - 1)
-          this%end   = this%range(2, kk - 1)
+          this%start  = this%range(1, kk - 1)
+          this%end    = this%range(2, kk - 1)
           this%nlocal = this%num(kk - 1)
         endif
         
@@ -159,18 +161,18 @@ contains
     nullify(out%node, out%range, out%num)
 
     if(associated(in%node)) then
-      ALLOCATE(out%node(1:size), size)
-      out%node(1:size) = in%node(1:size)
+      ALLOCATE(out%node(1:in%nglobal), in%nglobal)
+      out%node(1:in%nglobal) = in%node(1:in%nglobal)
     end if
 
     if(associated(in%range)) then
-      ALLOCATE(out%range(1:2, 1:size), 2*size)
-      out%range(1:2, 1:size) = in%range(1:2, 1:size)
+      ALLOCATE(out%range(1:2, 0:size - 1), 2*size)
+      out%range(1:2, 0:size - 1) = in%range(1:2, 0:size - 1)
     end if
 
     if(associated(in%num)) then
-      ALLOCATE(out%num(1:size), size)
-      out%num(1:size) = in%num(1:size)
+      ALLOCATE(out%num(0:size - 1), size)
+      out%num(0:size - 1) = in%num(0:size - 1)
     end if
 
     call pop_sub()
