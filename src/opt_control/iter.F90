@@ -56,7 +56,6 @@ module opt_control_iter_m
     FLOAT              :: bestJ1_fluence
     FLOAT              :: bestJ1_J
     integer            :: bestJ1_ctr_iter
-    logical            :: maximize
     type(oct_control_parameters_t), pointer :: best_par
     integer            :: convergence_iunit
   end type oct_iterator_t
@@ -65,10 +64,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine oct_iterator_init(iterator, par, maximize)
+  subroutine oct_iterator_init(iterator, par)
     type(oct_iterator_t), intent(inout)        :: iterator
     type(oct_control_parameters_t), intent(in) :: par
-    logical, intent(in)                        :: maximize
 
     call push_sub('iter.oct_iter_init')
 
@@ -112,14 +110,7 @@ contains
     if(iterator%ctr_iter_max < 0) iterator%ctr_iter_max = huge(iterator%ctr_iter_max)
 
     iterator%ctr_iter = 0
-
-    iterator%maximize = maximize
-
-    if(maximize) then
-      iterator%bestJ1        = -CNST(1.0e20)
-    else
-      iterator%bestj1        = CNST(1.0e20)
-    end if
+    iterator%bestJ1        = -CNST(1.0e20)
     iterator%bestJ1_fluence  = M_ZERO
     iterator%bestJ1_J        = M_ZERO
     iterator%bestJ1_ctr_iter = 0
@@ -207,12 +198,7 @@ contains
     end if
     call messages_print_stress(stdout)
 
-    if(iterator%maximize) then
-      bestj1 = (j1 > iterator%bestj1)
-    else
-      bestj1 = (j1 < iterator%bestj1)
-    end if
-
+    bestj1 = (j1 > iterator%bestj1)
     ! store field with best J1
     if(bestj1) then
       iterator%bestJ1          = j1

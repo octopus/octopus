@@ -26,7 +26,6 @@ module opt_control_constants_m
   type oct_t
     logical :: mode_fixed_fluence
     logical :: mode_basis_set
-    logical :: maximize
     integer :: algorithm
     FLOAT   :: eta, delta  ! The parameters defined by Maday and Turinici.
     FLOAT   :: direct_step

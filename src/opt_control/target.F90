@@ -667,18 +667,10 @@ module opt_control_target_m
 
     case(oct_tg_exclude_state)
 
-!!!! WARNING!
-!!$      if(oct%maximize) then
-        j1 = M_ONE
-        do i = 1, target%excluded_states
-          j1 = j1 - abs(zmf_dotp(gr%m, psi%d%dim, target%st%zpsi(:, :, i, 1), psi%zpsi(:, :, 1, 1)))**2
-        end do
-!!$      else
-!!$        j1 = M_ZERO
-!!$        do i = 1, target%excluded_states
-!!$          j1 = j1 + abs(zmf_dotp(gr%m, psi%d%dim, target%st%zpsi(:, :, i, 1), psi%zpsi(:, :, 1, 1)))**2
-!!$        end do
-!!$      end if
+      j1 = M_ONE
+      do i = 1, target%excluded_states
+        j1 = j1 - abs(zmf_dotp(gr%m, psi%d%dim, target%st%zpsi(:, :, i, 1), psi%zpsi(:, :, 1, 1)))**2
+      end do
 
     case(oct_tg_hhg)
       maxiter = size(target%td_fitness) - 1
@@ -900,19 +892,11 @@ module opt_control_target_m
 
     case(oct_tg_exclude_state)
 
-      if(oct%maximize) then
-        chi_out%zpsi(:, :, 1, 1) = psi_in%zpsi(:, :, 1, 1)
-        do p = 1, target%excluded_states
-          olap = zmf_dotp(gr%m, psi_in%d%dim, target%st%zpsi(:, :, p, 1), psi_in%zpsi(:, :, 1, 1))
-          chi_out%zpsi(:, :, 1, 1) = chi_out%zpsi(:, :, 1, 1) - olap*target%st%zpsi(:, :, p, 1)
-        end do
-      else
-        chi_out%zpsi(:, :, 1, 1) = M_z0
-        do p = 1, target%excluded_states
-          olap = zmf_dotp(gr%m, psi_in%d%dim, target%st%zpsi(:, :, p, 1), psi_in%zpsi(:, :, 1, 1))
-          chi_out%zpsi(:, :, 1, 1) = chi_out%zpsi(:, :, 1, 1) + olap*target%st%zpsi(:, :, p, 1)
-        end do
-      end if
+      chi_out%zpsi(:, :, 1, 1) = psi_in%zpsi(:, :, 1, 1)
+      do p = 1, target%excluded_states
+        olap = zmf_dotp(gr%m, psi_in%d%dim, target%st%zpsi(:, :, p, 1), psi_in%zpsi(:, :, 1, 1))
+        chi_out%zpsi(:, :, 1, 1) = chi_out%zpsi(:, :, 1, 1) - olap*target%st%zpsi(:, :, p, 1)
+      end do
 
     case default
 

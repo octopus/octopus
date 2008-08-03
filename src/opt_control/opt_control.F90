@@ -174,9 +174,9 @@ contains
     call oct_read_inp()
 
     call parameters_set_initial(par, h%ep, sys%gr%m, td%dt, td%max_iter, &
-                                oct%mode_fixed_fluence, oct%mode_basis_set, oct%maximize)
+                                oct%mode_fixed_fluence, oct%mode_basis_set)
 
-    call oct_iterator_init(iterator, par, oct%maximize)
+    call oct_iterator_init(iterator, par)
 
     if(oct%use_mixing) call parameters_mixing_init(par)
 
