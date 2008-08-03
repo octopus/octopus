@@ -24,7 +24,7 @@
 
 module ob_lippmann_schwinger_m
   use blas_m
-  use eigen_solver_m
+  use eigensolver_m
   use global_m
   use grid_m
   use hamiltonian_m
@@ -58,7 +58,7 @@ contains
   ! Solve the Lippmann-Schwinger equation for the open boundary
   ! system. Use convergence criteria in eigens.
   subroutine lippmann_schwinger(eigens, h, gr, st)
-    type(eigen_solver_t),        intent(out)   :: eigens
+    type(eigensolver_t),        intent(out)   :: eigens
     type(hamiltonian_t), target, intent(inout) :: h
     type(grid_t), target,        intent(inout) :: gr
     type(states_t), target,      intent(inout) :: st

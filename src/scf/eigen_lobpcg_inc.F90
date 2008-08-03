@@ -29,7 +29,7 @@
 ! ---------------------------------------------------------
 ! Driver for the LOBPCG eigensolver that performs a per block,
 ! per k-point iteration.
-  subroutine X(eigen_solver_lobpcg)(gr, st, h, pre, tol, niter, converged, ik, diff, block_size, verbose)
+  subroutine X(eigensolver_lobpcg)(gr, st, h, pre, tol, niter, converged, ik, diff, block_size, verbose)
     type(grid_t),           intent(inout) :: gr
     type(states_t),         intent(inout) :: st
     type(hamiltonian_t),    intent(inout) :: h
@@ -91,7 +91,7 @@
     if(verbose_) call messages_print_stress(stdout)
 
     call pop_sub()
-  end subroutine X(eigen_solver_lobpcg)
+  end subroutine X(eigensolver_lobpcg)
 
 
 ! ---------------------------------------------------------

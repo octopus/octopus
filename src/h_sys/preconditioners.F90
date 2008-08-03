@@ -72,7 +72,7 @@ contains
     !%Variable Preconditioner
     !%Type integer
     !%Default filter
-    !%Section SCF::EigenSolver
+    !%Section SCF::Eigensolver
     !%Description
     !% Which preconditioner to use in order to solve the Kohn-Sham equations or
     !% the linear-response equations. May apply prefix of linear-response (e.g.

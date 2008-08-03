@@ -44,8 +44,8 @@ module eigen_rmmdiis_m
 
   private
   public ::                     &
-    deigen_solver_rmmdiis,       &
-    zeigen_solver_rmmdiis
+    deigensolver_rmmdiis,       &
+    zeigensolver_rmmdiis
   
   contains
 

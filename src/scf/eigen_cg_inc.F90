@@ -19,7 +19,7 @@
 
 ! ---------------------------------------------------------
 ! conjugate-gradients method.
-subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, ik, diff, verbose)
+subroutine X(eigensolver_cg2) (gr, st, h, pre, tol, niter, converged, ik, diff, verbose)
   type(grid_t),        intent(inout) :: gr
   type(states_t),      intent(inout) :: st
   type(hamiltonian_t), intent(inout) :: h
@@ -41,7 +41,7 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, ik, diff,
   R_TYPE   :: sb(3), rb(3)
 #endif
 
-  call push_sub('eigen_cg.eigen_solver_cg2')
+  call push_sub('eigen_cg.eigensolver_cg2')
 
   verbose_ = .false.; if(present(verbose)) verbose_ = verbose
   if(verbose_) then
@@ -256,11 +256,11 @@ subroutine X(eigen_solver_cg2) (gr, st, h, pre, tol, niter, converged, ik, diff,
   if(verbose_) call messages_print_stress(stdout)
 
   call pop_sub()
-end subroutine X(eigen_solver_cg2)
+end subroutine X(eigensolver_cg2)
 
 ! ---------------------------------------------------------
 ! The algorithm is essentially taken from Jiang et al. Phys. Rev. B 68, 165337 (2003).
-subroutine X(eigen_solver_cg2_new) (gr, st, h, tol, niter, converged, ik, diff, verbose)
+subroutine X(eigensolver_cg2_new) (gr, st, h, tol, niter, converged, ik, diff, verbose)
   type(grid_t),        intent(inout) :: gr
   type(states_t),      intent(inout) :: st
   type(hamiltonian_t), intent(inout) :: h
@@ -279,7 +279,7 @@ subroutine X(eigen_solver_cg2_new) (gr, st, h, tol, niter, converged, ik, diff, 
   R_TYPE :: dot
   logical, allocatable :: orthogonal(:)
 
-  call push_sub('eigen_cg.eigen_solver_cg2_new')
+  call push_sub('eigen_cg.eigensolver_cg2_new')
 
   verbose_ = .false.; if(present(verbose)) verbose_ = verbose
 
@@ -449,7 +449,7 @@ subroutine X(eigen_solver_cg2_new) (gr, st, h, tol, niter, converged, ik, diff, 
   if(verbose_) call messages_print_stress(stdout)
 
   call pop_sub()
-end subroutine X(eigen_solver_cg2_new)
+end subroutine X(eigensolver_cg2_new)
 
 !! Local Variables:
 !! mode: f90

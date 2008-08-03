@@ -21,7 +21,7 @@
 
 module scf_m
   use datasets_m
-  use eigen_solver_m
+  use eigensolver_m
   use external_pot_m
   use functions_m
   use geometry_m
@@ -85,7 +85,7 @@ module scf_m
     logical :: lcao_restricted
 
     type(mix_t) :: smix
-    type(eigen_solver_t) :: eigens
+    type(eigensolver_t) :: eigens
   end type scf_t
 
 
@@ -230,8 +230,8 @@ contains
     call mix_init(scf%smix, gr%m%np, dim, st%d%nspin)
     call mesh_init_mesh_aux(gr%m)
 
-    ! now the eigen solver stuff
-    call eigen_solver_init(gr, scf%eigens, st)
+    ! now the eigensolver stuff
+    call eigensolver_init(gr, scf%eigens, st)
 
     if(scf%eigens%es_type == RS_MG) then
       if(.not. associated(gr%mgrid)) then
@@ -272,7 +272,7 @@ contains
 
     call push_sub('scf.scf_end')
 
-    call eigen_solver_end(scf%eigens)
+    call eigensolver_end(scf%eigens)
     call mix_end(scf%smix)
 
     call pop_sub()
@@ -380,7 +380,7 @@ contains
           call lippmann_schwinger(scf%eigens, h, gr, st)
         else
           scf%eigens%converged = 0
-          call eigen_solver_run(scf%eigens, gr, st, h, iter)
+          call eigensolver_run(scf%eigens, gr, st, h, iter)
         end if
       end if
 

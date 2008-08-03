@@ -18,7 +18,7 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-subroutine X(eigen_solver_evolution) (gr, st, h, tol, niter, converged, ik, diff, tau)
+subroutine X(eigensolver_evolution) (gr, st, h, tol, niter, converged, ik, diff, tau)
   type(grid_t), target,intent(inout) :: gr
   type(states_t),      intent(inout) :: st
   type(hamiltonian_t), target, intent(inout)    :: h
@@ -34,7 +34,7 @@ subroutine X(eigen_solver_evolution) (gr, st, h, tol, niter, converged, ik, diff
   FLOAT, allocatable :: eig(:)
   type(td_exp_t) :: te
 
-  call push_sub('eigen_evolution.eigen_solver_evolution')
+  call push_sub('eigen_evolution.eigensolver_evolution')
 
   maxiter = niter
   matvec = 0
@@ -123,7 +123,7 @@ contains
 #endif
   end subroutine exponentiate
 
-end subroutine X(eigen_solver_evolution)
+end subroutine X(eigensolver_evolution)
 
 
 !! Local Variables:

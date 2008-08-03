@@ -27,7 +27,7 @@
 !! We also implement the "smoothing" preconditioning described in that paper.
 
 
-subroutine X(eigen_solver_plan) (gr, st, hamilt, pre, tol, niter, converged, ik, diff)
+subroutine X(eigensolver_plan) (gr, st, hamilt, pre, tol, niter, converged, ik, diff)
   type(grid_t),                intent(inout) :: gr
   type(states_t),              intent(inout) :: st
   type(hamiltonian_t),         intent(inout) :: hamilt
@@ -66,7 +66,7 @@ subroutine X(eigen_solver_plan) (gr, st, hamilt, pre, tol, niter, converged, ik,
   integer, parameter  :: winsiz = 5  ! window size, number of eigenvalues computed simultaneously
   integer, parameter  :: krylov = 15 ! The Krylov subspace size.
 
-  call push_sub('eigen_plan.eigen_solver_plan')
+  call push_sub('eigen_plan.eigensolver_plan')
 
   !  n          = m%np*st%d%dim
   dim        = st%d%dim
@@ -317,7 +317,7 @@ contains
     call pop_sub()
   end subroutine residual
 
-end subroutine X(eigen_solver_plan)
+end subroutine X(eigensolver_plan)
 
 !! Local Variables:
 !! mode: f90

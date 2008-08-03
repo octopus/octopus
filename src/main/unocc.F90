@@ -21,7 +21,7 @@
 
 module unocc_m
   use datasets_m
-  use eigen_solver_m
+  use eigensolver_m
   use external_pot_m
   use functions_m
   use global_m
@@ -63,7 +63,7 @@ contains
     type(hamiltonian_t), intent(inout) :: h
     logical,             intent(inout) :: fromscratch
 
-    type(eigen_solver_t) :: eigens
+    type(eigensolver_t) :: eigens
     integer :: iunit, ierr, ik, p, occupied_states, total_states, iter
     FLOAT, allocatable :: dh_psi(:,:)
     CMPLX, allocatable :: zh_psi(:,:)
@@ -157,7 +157,7 @@ contains
     do iter = 1, max_iter
       write(message(1), '(a,i3)') "Info: Unoccupied states iteration ", iter
       call write_info(1)
-      call eigen_solver_run(eigens, sys%gr, sys%st, h, 1, converged, verbose = .true.)
+      call eigensolver_run(eigens, sys%gr, sys%st, h, 1, converged, verbose = .true.)
 
       if(converged) exit
     end do
@@ -259,8 +259,8 @@ contains
       st%eigenval = huge(REAL_PRECISION)
       st%occ      = M_ZERO
 
-      ! now the eigen solver stuff
-      call eigen_solver_init(sys%gr, eigens, st)
+      ! now the eigensolver stuff
+      call eigensolver_init(sys%gr, eigens, st)
 
       ! Having initial and final tolerance does not make sense in this case:
       eigens%init_tol       = eigens%final_tol
@@ -273,7 +273,7 @@ contains
     ! ---------------------------------------------------------
     subroutine end_()
       call states_deallocate_wfns(sys%st)
-      call eigen_solver_end(eigens)
+      call eigensolver_end(eigens)
 
       call pop_sub()
     end subroutine end_

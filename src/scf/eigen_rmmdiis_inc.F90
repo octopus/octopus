@@ -27,7 +27,7 @@
 ! process.
 !
 ! ---------------------------------------------------------
-subroutine X(eigen_solver_rmmdiis) (gr, st, h, pre, tol, niter, converged, ik, diff)
+subroutine X(eigensolver_rmmdiis) (gr, st, h, pre, tol, niter, converged, ik, diff)
   type(grid_t),        intent(inout) :: gr
   type(states_t),      intent(inout) :: st
   type(hamiltonian_t), intent(inout) :: h
@@ -49,7 +49,7 @@ subroutine X(eigen_solver_rmmdiis) (gr, st, h, pre, tol, niter, converged, ik, d
 #endif  
   FLOAT :: error
 
-  call push_sub('eigen_rmmdiis_inc.eigen_solver_rmmdiss')
+  call push_sub('eigen_rmmdiis_inc.eigensolver_rmmdiss')
 
   ALLOCATE(residuals(1:NP_PART, 1:st%d%dim), NP*st%d%dim)
   ALLOCATE(preres(1:NP_PART, 1:st%d%dim), NP_PART*st%d%dim*st%lnst)
@@ -139,7 +139,7 @@ subroutine X(eigen_solver_rmmdiis) (gr, st, h, pre, tol, niter, converged, ik, d
 
   call pop_sub()
 
-end subroutine X(eigen_solver_rmmdiis)
+end subroutine X(eigensolver_rmmdiis)
 
 !! Local Variables:
 !! mode: f90

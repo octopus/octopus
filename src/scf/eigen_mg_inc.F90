@@ -18,7 +18,7 @@
 !! $Id: eigen_mg_inc.F90 4195 2008-05-25 18:15:35Z xavier $
 
 ! ---------------------------------------------------------
-subroutine X(eigen_solver_mg) (gr, st, h, tol, niter, converged, ik, diff)
+subroutine X(eigensolver_mg) (gr, st, h, tol, niter, converged, ik, diff)
   type(grid_t),           intent(inout) :: gr
   type(states_t),         intent(inout) :: st
   type(hamiltonian_t),    intent(inout) :: h
@@ -31,7 +31,7 @@ subroutine X(eigen_solver_mg) (gr, st, h, tol, niter, converged, ik, diff)
   integer  :: ist, ist2, iter
   R_TYPE, allocatable :: cc(:, :), aa(:)
 
-  call push_sub('eigen_cg.eigen_solver_mg')
+  call push_sub('eigen_cg.eigensolver_mg')
 
   ALLOCATE(cc(1:st%nst, 1:st%nst), st%nst**2)
   ALLOCATE(aa(1:st%nst), st%nst)
@@ -72,7 +72,7 @@ subroutine X(eigen_solver_mg) (gr, st, h, tol, niter, converged, ik, diff)
   niter = iter*10
 
   call pop_sub()
-end subroutine X(eigen_solver_mg)
+end subroutine X(eigensolver_mg)
 
 subroutine X(coordinate_relaxation)(gr, mesh, h, nst, steps, ik, psi, aa, cc)
   type(grid_t),           intent(inout) :: gr

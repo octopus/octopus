@@ -43,10 +43,10 @@ module eigen_cg_m
 
   private
   public ::                  &
-    deigen_solver_cg2,       &
-    zeigen_solver_cg2,       &
-    deigen_solver_cg2_new,   &
-    zeigen_solver_cg2_new
+    deigensolver_cg2,       &
+    zeigensolver_cg2,       &
+    deigensolver_cg2_new,   &
+    zeigensolver_cg2_new
   
   contains
 

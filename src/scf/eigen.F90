@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-module eigen_solver_m
+module eigensolver_m
   use datasets_m
   use eigen_cg_m
   use eigen_lobpcg_m
@@ -51,12 +51,12 @@ module eigen_solver_m
 
   private
   public ::             &
-    eigen_solver_t,     &
-    eigen_solver_init,  &
-    eigen_solver_end,   &
-    eigen_solver_run
+    eigensolver_t,     &
+    eigensolver_init,  &
+    eigensolver_end,   &
+    eigensolver_run
 
-  type eigen_solver_t
+  type eigensolver_t
     integer :: es_type    ! which eigensolver to use
     logical :: verbose    ! If true, the solver prints additional information.
 
@@ -79,7 +79,7 @@ module eigen_solver_m
     ! If a block solver is used this is the desired block size
     ! (per node if running parallel in states).
     integer :: block_size
-  end type eigen_solver_t
+  end type eigensolver_t
 
 
   integer, public, parameter :: &
@@ -94,12 +94,12 @@ module eigen_solver_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine eigen_solver_init(gr, eigens, st)
+  subroutine eigensolver_init(gr, eigens, st)
     type(grid_t),         intent(inout) :: gr
-    type(eigen_solver_t), intent(out)   :: eigens
+    type(eigensolver_t), intent(out)   :: eigens
     type(states_t),       intent(in)    :: st
 
-    call push_sub('eigen.eigen_solver_init')
+    call push_sub('eigen.eigensolver_init')
 
     !%Variable Eigensolver
     !%Type integer
@@ -133,7 +133,7 @@ contains
     !%End
     call loct_parse_int(check_inp('Eigensolver'), RS_CG, eigens%es_type)
 
-    if(st%parallel_in_states .and. .not. eigen_solver_parallel_in_states(eigens)) then
+    if(st%parallel_in_states .and. .not. eigensolver_parallel_in_states(eigens)) then
       message(1) = "The selected eigensolver is not parallel in states."
       message(2) = "Please use the lobpcg or rmmdiis eigensolvers."
       call write_fatal(2)
@@ -259,12 +259,12 @@ contains
 
     call pop_sub()
 
-  end subroutine eigen_solver_init
+  end subroutine eigensolver_init
 
 
   ! ---------------------------------------------------------
-  subroutine eigen_solver_end(eigens)
-    type(eigen_solver_t), intent(inout) :: eigens
+  subroutine eigensolver_end(eigens)
+    type(eigensolver_t), intent(inout) :: eigens
 
     select case(eigens%es_type)
     case(RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS)
@@ -274,12 +274,12 @@ contains
     deallocate(eigens%converged)
     deallocate(eigens%diff)
     nullify(eigens%diff)
-  end subroutine eigen_solver_end
+  end subroutine eigensolver_end
 
 
   ! ---------------------------------------------------------
-  subroutine eigen_solver_run(eigens, gr, st, h, iter, conv, verbose)
-    type(eigen_solver_t), intent(inout) :: eigens
+  subroutine eigensolver_run(eigens, gr, st, h, iter, conv, verbose)
+    type(eigensolver_t), intent(inout) :: eigens
     type(grid_t),         intent(inout) :: gr
     type(states_t),       intent(inout) :: st
     type(hamiltonian_t),  intent(inout) :: h
@@ -295,7 +295,7 @@ contains
 #endif
 
     call profiling_in(C_PROFILING_EIGEN_SOLVER)
-    call push_sub('eigen.eigen_solver_run')
+    call push_sub('eigen.eigensolver_run')
 
     verbose_ = eigens%verbose; if(present(verbose)) verbose_ = verbose
 
@@ -331,22 +331,22 @@ contains
 
         select case(eigens%es_type)
         case(RS_CG_NEW)
-          call deigen_solver_cg2_new(gr, st, h, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik), verbose = verbose_)
+          call deigensolver_cg2_new(gr, st, h, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik), verbose = verbose_)
         case(RS_CG)
-          call deigen_solver_cg2(gr, st, h, eigens%pre, tol, maxiter, &
+          call deigensolver_cg2(gr, st, h, eigens%pre, tol, maxiter, &
                eigens%converged(ik), ik, eigens%diff(:, ik), verbose = verbose_)
         case(RS_PLAN)
-          call deigen_solver_plan(gr, st, h, eigens%pre, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
+          call deigensolver_plan(gr, st, h, eigens%pre, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_EVO)
-          call deigen_solver_evolution(gr, st, h, tol, maxiter, &
+          call deigensolver_evolution(gr, st, h, tol, maxiter, &
                eigens%converged(ik), ik, eigens%diff(:, ik), tau = eigens%imag_time)
         case(RS_LOBPCG)
-          call deigen_solver_lobpcg(gr, st, h, eigens%pre, tol, maxiter, &
+          call deigensolver_lobpcg(gr, st, h, eigens%pre, tol, maxiter, &
                eigens%converged(ik), ik, eigens%diff(:, ik), eigens%block_size, verbose = verbose_)
         case(RS_MG)
-          call deigen_solver_mg(gr, st, h, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
+          call deigensolver_mg(gr, st, h, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_RMMDIIS)
-          call deigen_solver_rmmdiis(gr, st, h, eigens%pre, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
+          call deigensolver_rmmdiis(gr, st, h, eigens%pre, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         end select
 
         call dsubspace_diag(gr, st, h, ik, eigens%diff(:, ik))
@@ -355,23 +355,23 @@ contains
 
         select case(eigens%es_type)
         case(RS_CG_NEW)
-          call zeigen_solver_cg2_new(gr, st, h, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik), verbose = verbose_)
+          call zeigensolver_cg2_new(gr, st, h, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik), verbose = verbose_)
         case(RS_CG)
-          call zeigen_solver_cg2(gr, st, h, eigens%pre, tol, maxiter, &
+          call zeigensolver_cg2(gr, st, h, eigens%pre, tol, maxiter, &
                eigens%converged(ik), ik, eigens%diff(:, ik), verbose = verbose_)
         case(RS_PLAN)
-          call zeigen_solver_plan(gr, st, h, eigens%pre, tol, maxiter, &
+          call zeigensolver_plan(gr, st, h, eigens%pre, tol, maxiter, &
                eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_EVO)
-          call zeigen_solver_evolution(gr, st, h, tol, maxiter, &
+          call zeigensolver_evolution(gr, st, h, tol, maxiter, &
                eigens%converged(ik), ik, eigens%diff(:, ik), tau = eigens%imag_time)
         case(RS_LOBPCG)
-          call zeigen_solver_lobpcg(gr, st, h, eigens%pre, tol, maxiter, &
+          call zeigensolver_lobpcg(gr, st, h, eigens%pre, tol, maxiter, &
                eigens%converged(ik), ik, eigens%diff(:, ik), eigens%block_size, verbose = verbose_)
         case(RS_MG)
-          call zeigen_solver_mg(gr, st, h, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
+          call zeigensolver_mg(gr, st, h, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_RMMDIIS)
-          call zeigen_solver_rmmdiis(gr, st, h, eigens%pre, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
+          call zeigensolver_rmmdiis(gr, st, h, eigens%pre, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         end select
 
         call zsubspace_diag(gr, st, h, ik, eigens%diff(:, ik))
@@ -392,10 +392,10 @@ contains
 
     call pop_sub()
     call profiling_out(C_PROFILING_EIGEN_SOLVER)
-  end subroutine eigen_solver_run
+  end subroutine eigensolver_run
 
-  logical function eigen_solver_parallel_in_states(this) result(par_stat)
-    type(eigen_solver_t), intent(in) :: this
+  logical function eigensolver_parallel_in_states(this) result(par_stat)
+    type(eigensolver_t), intent(in) :: this
     
     par_stat = .false.
 
@@ -404,7 +404,7 @@ contains
       par_stat = .true.
     end select
     
-  end function eigen_solver_parallel_in_states
+  end function eigensolver_parallel_in_states
     
 #include "undef.F90"
 #include "real.F90"
@@ -418,7 +418,7 @@ contains
 #include "eigen_plan_inc.F90"
 #include "eigen_evolution_inc.F90"
 
-end module eigen_solver_m
+end module eigensolver_m
 
 
 !! Local Variables:

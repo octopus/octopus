@@ -45,8 +45,8 @@ module eigen_lobpcg_m
 
   private
   public ::                  &
-    deigen_solver_lobpcg,    &
-    zeigen_solver_lobpcg
+    deigensolver_lobpcg,    &
+    zeigensolver_lobpcg
   
   contains
 
