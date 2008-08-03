@@ -21,6 +21,7 @@
 
 module lcao_m
   use datasets_m
+  use distributed_m
   use geometry_m
   use global_m
   use grid_m
@@ -149,6 +150,7 @@ contains
     lcao_data%st%d%dim = st%d%dim
     lcao_data%st%d%nik = st%d%nik
     lcao_data%st%d%ispin = st%d%ispin
+    call distributed_copy(st%d%kpt, lcao_data%st%d%kpt)
     call states_allocate_wfns(lcao_data%st, gr%m, st%wfs_type)
 
     if (lcao_data%st%wfs_type == M_REAL) then

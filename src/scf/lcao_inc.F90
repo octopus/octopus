@@ -173,7 +173,7 @@ subroutine X(lcao_init) (lcao_data, gr, geo, h, states, norbs)
 
   st => lcao_data%st
 
-  do ik = 1, st%d%nik
+  do ik = st%d%kpt%start, st%d%kpt%end
     do n = 1, st%nst
       call X(lcao_initial_wf) (n, gr%m, geo, gr%sb, st%X(psi)(:, :, n, ik), st%d%ispin, ik, states%d%kpoints(:, ik), ierr)
       if(ierr.ne.0) then
@@ -184,15 +184,15 @@ subroutine X(lcao_init) (lcao_data, gr, geo, h, states, norbs)
   end do
 
   ! Allocation of variables
-  ALLOCATE(lcao_data%X(hamilt) (norbs, norbs, st%d%nik), norbs*norbs*st%d%nik)
-  ALLOCATE(lcao_data%X(s)      (norbs, norbs, st%d%nik), norbs*norbs*st%d%nik)
-  ALLOCATE(lcao_data%X(k)      (norbs, norbs, st%d%nik), norbs*norbs*st%d%nik)
-  ALLOCATE(lcao_data%X(v)      (norbs, norbs, st%d%nik), norbs*norbs*st%d%nik)
+  ALLOCATE(lcao_data%X(hamilt) (norbs, norbs, st%d%kpt%start:st%d%kpt%end), norbs**2*st%d%kpt%nlocal)
+  ALLOCATE(lcao_data%X(s)      (norbs, norbs, st%d%kpt%start:st%d%kpt%end), norbs**2*st%d%kpt%nlocal)
+  ALLOCATE(lcao_data%X(k)      (norbs, norbs, st%d%kpt%start:st%d%kpt%end), norbs**2*st%d%kpt%nlocal)
+  ALLOCATE(lcao_data%X(v)      (norbs, norbs, st%d%kpt%start:st%d%kpt%end), norbs**2*st%d%kpt%nlocal)
 
   ! Overlap and kinetic matrices.
   ALLOCATE(hpsi(NP, st%d%dim), NP*st%d%dim)
 
-  do ik = 1, st%d%nik
+  do ik = st%d%kpt%start, st%d%kpt%end
     do n1 = 1, st%nst
 
       call X(kinetic) (h, gr, st%X(psi)(:, :, n1, ik), hpsi(:, :))
@@ -232,7 +232,7 @@ subroutine X(lcao_wf) (lcao_data, st, gr, h, start)
 
   ! Hamiltonian and overlap matrices.
   ALLOCATE(hpsi(NP_PART, dim), NP_PART*dim)
-  do ik = 1, st%d%nik
+  do ik = st%d%kpt%start, st%d%kpt%end
     do n1 = 1, lcao_data%st%nst
       hpsi = M_ZERO
       call X(vlpsi) (h, gr%m, lcao_data%st%X(psi)(:,:, n1, ik), hpsi(:,:), ik)
@@ -245,7 +245,7 @@ subroutine X(lcao_wf) (lcao_data, st, gr, h, start)
     end do
   end do
 
-  do ik = 1, st%d%nik
+  do ik =  st%d%kpt%start, st%d%kpt%end
     ALLOCATE(ev(norbs), norbs)
     call lalg_geneigensolve(norbs, lcao_data%X(hamilt) (1:norbs, 1:norbs, ik), &
          lcao_data%X(s) (1:norbs, 1:norbs, ik), ev)

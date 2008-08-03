@@ -181,7 +181,7 @@ contains
     type(geometry_t),  intent(in)    :: geo
 
     FLOAT :: excess_charge
-    integer :: nempty, ierr, il, alloc_size
+    integer :: nempty, ierr, il
     integer :: ob_k(NLEADS), ob_st(NLEADS), ob_d(NLEADS)
 
     call push_sub('states.states_init')
@@ -741,11 +741,12 @@ contains
 
     if(force) st%wfs_type = M_CMPLX
 
-    n = m%np_part * st%d%dim * st%lnst * st%d%nik
+    n = m%np_part*st%d%dim*st%lnst*st%d%kpt%nlocal
+    
     if (st%wfs_type == M_REAL) then
-      ALLOCATE(st%dpsi(m%np_part, st%d%dim, st%st_start:st%st_end, st%d%nik), n)
+      ALLOCATE(st%dpsi(m%np_part, st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end), n)
 
-      do ik = 1, st%d%nik
+      do ik = st%d%kpt%start, st%d%kpt%end
         do ist = st%st_start, st%st_end
           do idim = 1, st%d%dim
             !$omp parallel workshare
@@ -757,9 +758,9 @@ contains
       end do
 
     else
-      ALLOCATE(st%zpsi(m%np_part, st%d%dim, st%st_start:st%st_end, st%d%nik), n)
+      ALLOCATE(st%zpsi(m%np_part, st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end), n)
 
-      do ik = 1, st%d%nik
+      do ik = st%d%kpt%start, st%d%kpt%end
         do ist = st%st_start, st%st_end
           do idim = 1, st%d%dim
             !$omp parallel workshare
