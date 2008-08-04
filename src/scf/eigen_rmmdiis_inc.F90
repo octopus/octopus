@@ -27,7 +27,7 @@
 ! process.
 !
 ! ---------------------------------------------------------
-subroutine X(eigensolver_rmmdiis) (gr, st, h, pre, tol, niter, converged, ik, diff)
+subroutine X(eigensolver_rmmdiis) (gr, st, h, pre, tol, niter, converged, ik, diff, blocksize)
   type(grid_t),        intent(inout) :: gr
   type(states_t),      intent(inout) :: st
   type(hamiltonian_t), intent(inout) :: h
@@ -36,98 +36,170 @@ subroutine X(eigensolver_rmmdiis) (gr, st, h, pre, tol, niter, converged, ik, di
   integer,             intent(inout) :: niter
   integer,             intent(inout) :: converged
   integer,             intent(in)    :: ik
-  FLOAT,     optional, intent(out)   :: diff(1:st%nst)
+  FLOAT,               intent(out)   :: diff(1:st%nst)
+  integer,             intent(in)    :: blocksize
 
-  integer :: ist, idim
-  integer :: times, ntimes
-  R_TYPE, allocatable :: residuals(:, :), preres(:, :), resres(:, :)
-  R_TYPE :: lambda(1:2)
+  integer :: ist, idim, ib, ibatch
+  integer :: times, ntimes, iblock, psi_start, psi_end, num_in_block
+  R_TYPE, allocatable :: residuals(:, :, :), preres(:, :, :), resres(:, :, :)
+  R_TYPE, allocatable :: lambda(:, :)
+  logical, allocatable :: conv(:)
 #ifdef HAVE_MPI
-  R_TYPE :: lambda_tmp(1:2)
+  R_TYPE, allocatable :: lambda_tmp(:, :)
   FLOAT, allocatable :: ldiff(:)
   integer :: outcount
 #endif  
   FLOAT :: error
+  type(batch_t) :: psib, hpsib
 
   call push_sub('eigen_rmmdiis_inc.eigensolver_rmmdiss')
 
-  ALLOCATE(residuals(1:NP_PART, 1:st%d%dim), NP*st%d%dim)
-  ALLOCATE(preres(1:NP_PART, 1:st%d%dim), NP_PART*st%d%dim*st%lnst)
-  ALLOCATE(resres(1:NP, 1:st%d%dim), NP*st%d%dim*st%lnst)
+  ALLOCATE(residuals(1:NP_PART, 1:st%d%dim, blocksize), NP*st%d%dim*blocksize)
+  ALLOCATE(preres(1:NP_PART, 1:st%d%dim, blocksize), NP_PART*st%d%dim*blocksize)
+  ALLOCATE(resres(1:NP, 1:st%d%dim, blocksize), NP*st%d%dim*blocksize)
+  ALLOCATE(lambda(1:2, 1:blocksize), 2*blocksize) 
 
-  if(present(diff)) then
-    call X(subspace_diag)(gr, st, h, ik, diff)
-  else
-    call X(subspace_diag)(gr, st, h, ik)
-  end if
+  ALLOCATE(conv(st%st_start:st%st_end), st%lnst)
+  conv = .false.
+
+  call X(subspace_diag)(gr, st, h, ik, diff)
+
   ntimes = niter/2
   niter = 0
 
   converged = 0
 
-  do ist = st%st_start, st%st_end
+  iblock = 0
+  do psi_start = st%st_start, st%st_end, blocksize
+    iblock  = iblock + 1
+    psi_end = min(psi_start + blocksize - 1, st%st_end)
+
+    num_in_block = psi_end - psi_start + 1
 
     do times = 1, ntimes
+      
+      ! apply the hamiltonian over the initial vector
 
-      call X(Hpsi)(h, gr, st%X(psi)(:,:, ist, ik) , residuals, ist, ik)
+      call batch_init(psib, num_in_block)
+      call batch_init(hpsib, num_in_block)
 
-      niter = niter + 1
-
-      st%eigenval(ist, ik) = X(mf_dotp)(gr%m, st%d%dim, st%X(psi)(:,:, ist, ik) , residuals(:, :))
-
-      do idim = 1, st%d%dim
-        call lalg_axpy(NP, -st%eigenval(ist, ik), st%X(psi)(:, idim, ist, ik), residuals(:, idim))
+      ib = 0
+      ibatch = 0
+      do ist = psi_start, psi_end
+        ib = ib + 1
+        if(conv(ist)) cycle
+        ibatch = ibatch + 1
+        call batch_add_state(psib, ibatch, ist, ik, st%X(psi)(:, :, ist, ik))
+        call batch_add_state(hpsib, ibatch, ist, ik, residuals(:, :, ib))
       end do
 
-      error = X(mf_nrm2)(gr%m, st%d%dim, residuals)
+      call X(hpsi_batch)(h, gr, psib, hpsib)
 
-      if(error < tol) then
-        converged = converged + 1
-        if(present(diff)) diff(ist) = error
-        exit
-      end if
+      niter = niter + num_in_block
+      
+      call batch_end(psib)
+      call batch_end(hpsib)
 
-      call  X(preconditioner_apply)(pre, gr, h, residuals, preres)
+      ! calculate the residual
 
-      ! calculate the residual of the residual
-      call X(Hpsi)(h, gr, preres, resres, ist, ik)
+      ib = 0
+      do ist = psi_start, psi_end
+        ib = ib + 1
+        if(conv(ist)) cycle
 
-      do idim = 1, st%d%dim
-        call lalg_axpy(NP, -st%eigenval(ist, ik), preres(:, idim), resres(:, idim))
+        st%eigenval(ist, ik) = X(mf_dotp)(gr%m, st%d%dim, st%X(psi)(:,:, ist, ik) , residuals(:, :, ib))
+        
+        do idim = 1, st%d%dim
+          call lalg_axpy(NP, -st%eigenval(ist, ik), st%X(psi)(:, idim, ist, ik), residuals(:, idim, ib))
+        end do
+
+        error = X(mf_nrm2)(gr%m, st%d%dim, residuals(:, :, ib))
+
+        if(error < tol) then
+          num_in_block = num_in_block - 1
+          conv(ist) = .true.
+          converged = converged + 1
+          diff(ist) = error
+          cycle
+        end if
+
+        call  X(preconditioner_apply)(pre, gr, h, residuals(:, :, ib), preres(:, :, ib))
       end do
 
-      ! the size of the correction
-      lambda(1) = X(mf_dotp)(gr%m, st%d%dim, residuals, resres, reduce = .false.)
-      lambda(2) = X(mf_dotp)(gr%m, st%d%dim, resres, resres, reduce = .false.)
+      ! apply the hamiltonian to the residuals
+      call batch_init(psib, num_in_block)
+      call batch_init(hpsib, num_in_block)
+
+      ib = 0
+      ibatch = 0
+      do ist = psi_start, psi_end
+        ib = ib + 1
+        if(conv(ist)) cycle
+        ibatch = ibatch + 1
+        call batch_add_state(psib, ibatch, ist, ik, preres(:, :, ib))
+        call batch_add_state(hpsib, ibatch, ist, ik, resres(:, :, ib))
+      end do
+
+      call X(hpsi_batch)(h, gr, psib, hpsib)
+
+      niter = niter + num_in_block
+      
+      call batch_end(psib)
+      call batch_end(hpsib)
+
+      ! calculate the correction
+      ib = 0
+      do ist = psi_start, psi_end
+        ib = ib + 1
+        if(conv(ist)) cycle
+
+        do idim = 1, st%d%dim
+          call lalg_axpy(NP, -st%eigenval(ist, ik), preres(:, idim, ib), resres(:, idim, ib))
+        end do
+
+        ! the size of the correction
+        lambda(1, ib) = X(mf_dotp)(gr%m, st%d%dim, residuals(:, :, ib), resres(:, :, ib), reduce = .false.)
+        lambda(2, ib) = X(mf_dotp)(gr%m, st%d%dim, resres(:, :, ib), resres(:, :, ib), reduce = .false.)
+      end do
 
 #ifdef HAVE_MPI
       if(gr%m%parallel_in_domains) then
         !reduce the two values together
-        call MPI_Allreduce(lambda, lambda_tmp, 2, R_MPITYPE, MPI_SUM, gr%m%vp%comm, mpi_err)
-        lambda(1:2) = lambda_tmp(1:2)
+        ALLOCATE(lambda_tmp(1:2, 1:blocksize), 2*blocksize) 
+        call MPI_Allreduce(lambda, lambda_tmp, 2*blocksize, R_MPITYPE, MPI_SUM, gr%m%vp%comm, mpi_err)
+        lambda(1:2, 1:blocksize) = lambda_tmp(1:2, 1:blocksize)
+        deallocate(lambda_tmp)
       end if
-#endif
-      lambda(1) = -lambda(1)/lambda(2)
+#endif 
 
-      do idim = 1, st%d%dim
-        call lalg_axpy(NP, M_HALF*lambda(1), resres(:, idim), residuals(:, idim))
+      ib = 0
+      do ist = psi_start, psi_end
+        ib = ib + 1
+        if(conv(ist)) cycle
+        
+        lambda(1, ib) = -lambda(1, ib)/lambda(2, ib)
+
+        do idim = 1, st%d%dim
+          call lalg_axpy(NP, M_HALF*lambda(1, ib), resres(:, idim, ib), residuals(:, idim, ib))
+        end do
+
+        call X(preconditioner_apply)(pre, gr, h, residuals(:, :, ib), preres(:, :, ib))
+
+        !now correct psi
+        do idim = 1, st%d%dim
+          call lalg_axpy(NP, M_TWO*lambda(1, ib), preres(:, idim, ib), st%X(psi)(:, idim, ist, ik))
+        end do
+
+        niter = niter + 1
+
       end do
-
-      call X(preconditioner_apply)(pre, gr, h, residuals, preres)
-
-      !now correct psi
-      do idim = 1, st%d%dim
-        call lalg_axpy(NP, M_TWO*lambda(1), preres(:, idim), st%X(psi)(:, idim, ist, ik))
-      end do
-
-      niter = niter + 1
 
     end do
 
   end do
 
 #if defined(HAVE_MPI)
-  if(st%parallel_in_states .and. present(diff)) then
+  if(st%parallel_in_states) then
     ALLOCATE(ldiff(st%lnst), st%lnst)
     ldiff(1:st%lnst) = diff(st%st_start:st%st_end)
     call lmpi_gen_allgatherv(st%lnst, ldiff, outcount, diff, st%mpi_grp)

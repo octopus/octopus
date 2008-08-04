@@ -162,7 +162,7 @@ contains
     call loct_parse_int(check_inp('EigensolverBlockSize'), -1, eigens%block_size)
     if(eigens%block_size.ne.-1) then
       select case(eigens%es_type)
-      case(RS_LOBPCG)
+      case(RS_LOBPCG, RS_RMMDIIS)
       case default
         message(1) = "You are not using a block eigensolver. The variable"
         message(2) = "'EigensolverBlockSize' will be ignored."
@@ -346,7 +346,8 @@ contains
         case(RS_MG)
           call deigensolver_mg(gr, st, h, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_RMMDIIS)
-          call deigensolver_rmmdiis(gr, st, h, eigens%pre, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
+          call deigensolver_rmmdiis(gr, st, h, eigens%pre, tol, maxiter, &
+               eigens%converged(ik), ik, eigens%diff(:, ik), eigens%block_size)
         end select
 
         call dsubspace_diag(gr, st, h, ik, eigens%diff(:, ik))
@@ -371,7 +372,8 @@ contains
         case(RS_MG)
           call zeigensolver_mg(gr, st, h, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_RMMDIIS)
-          call zeigensolver_rmmdiis(gr, st, h, eigens%pre, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
+          call zeigensolver_rmmdiis(gr, st, h, eigens%pre, tol, maxiter, &
+               eigens%converged(ik), ik, eigens%diff(:, ik), eigens%block_size)
         end select
 
         call zsubspace_diag(gr, st, h, ik, eigens%diff(:, ik))
