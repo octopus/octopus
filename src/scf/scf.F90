@@ -23,7 +23,6 @@ module scf_m
   use datasets_m
   use eigensolver_m
   use external_pot_m
-  use functions_m
   use geometry_m
   use global_m
   use grid_m
@@ -675,7 +674,7 @@ contains
       ! Next lines of code calculate the dipole of the molecule, summing the electronic and
       ! ionic contributions.
       do j = 1, st%d%nspin
-        call df_multipoles(gr%m, st%rho(:,j), 1, e_dip(:, j))
+        call dmf_multipoles(gr%m, st%rho(:,j), 1, e_dip(:, j))
       end do
       do j = 1, 3
         e_dip(j+1, 1) = sum(e_dip(j+1, :))

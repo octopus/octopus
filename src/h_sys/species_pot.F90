@@ -23,7 +23,6 @@ module species_pot_m
   use curvlinear_m
   use datasets_m
   use double_grid_m
-  use functions_m
   use geometry_m
   use global_m
   use grid_m

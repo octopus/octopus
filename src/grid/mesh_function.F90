@@ -22,6 +22,7 @@
 module mesh_function_m
   use global_m
   use lalg_basic_m
+  use loct_math_m
   use splines_m
   use math_m
   use mesh_m
@@ -57,6 +58,8 @@ module mesh_function_m
     zmf_put_radial_spline, &
     dmf_dotp_aux,          &
     zmf_dotp_aux,          &
+    dmf_multipoles,        &
+    zmf_multipoles,        &
     mesh_init_mesh_aux
 
   interface mf_surface_integral

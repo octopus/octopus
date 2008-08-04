@@ -146,13 +146,13 @@ subroutine X(input_function_global)(filename, m, f, ierr, is_tmp)
      call X(cf_alloc_RS)(c); call dcf_alloc_RS(re); call dcf_alloc_RS(im)
      call read_netcdf()
      c%RS = re%RS + M_zI*im%RS
-     call X(cf2mf) (m, c, f)
+     call X(cube_to_mesh) (m, c, f)
      call X(cf_free)(c); call dcf_free(re); call dcf_free(im)
 #else
      call X(cf_new)(m%l, c)
      call X(cf_alloc_RS)(c)
      call read_netcdf()
-     call X(cf2mf) (m, c, f)
+     call X(cube_to_mesh) (m, c, f)
      call X(cf_free)(c)
 #endif
 #endif
@@ -603,7 +603,7 @@ contains
     ! put values in a nice cube
     call X(cf_new) (m%l, c)
     call X(cf_alloc_RS) (c)
-    call X(mf2cf) (m, f, c)
+    call X(mesh_to_cube) (m, f, c)
 
     ! the offset is different in periodic directions
     offset = -matmul(sb%rlattice, sb%lsize) / units_out%length%factor
@@ -665,7 +665,7 @@ contains
     ! put values in a nice cube
     call X(cf_new) (m%l, c)
     call X(cf_alloc_RS) (c)
-    call X(mf2cf) (m, f, c)
+    call X(mesh_to_cube) (m, f, c)
 
     filename = io_workpath(trim(dir)//'/'//trim(fname)//".ncdf", is_tmp=is_tmp);
 

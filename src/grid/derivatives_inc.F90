@@ -162,10 +162,10 @@ end subroutine X(derivatives_lapl)
 ! ---------------------------------------------------------
 subroutine X(derivatives_grad)(der, f, grad, ghost_update, set_bc)
   type(derivatives_t), intent(in)    :: der
-  R_TYPE,            intent(inout) :: f(:)       ! f(m%np_part)
-  R_TYPE,            intent(out)   :: grad(:,:)  ! grad(m%np, m%sb%dim)
-  logical, optional, intent(in)    :: ghost_update
-  logical, optional, intent(in)    :: set_bc
+  R_TYPE,              intent(inout) :: f(:)       ! f(m%np_part)
+  R_TYPE,              intent(out)   :: grad(:,:)  ! grad(m%np, m%sb%dim)
+  logical, optional,   intent(in)    :: ghost_update
+  logical, optional,   intent(in)    :: set_bc
 
   type(der_handle_t) :: handle
   integer :: idir
@@ -224,12 +224,12 @@ end subroutine X(derivatives_grad)
 
 ! ---------------------------------------------------------
 subroutine X(derivatives_oper)(op, der, f, opf, ghost_update, set_bc)
-  type(nl_operator_t), intent(in)    :: op
+  type(nl_operator_t),   intent(in)    :: op
   type(derivatives_t),   intent(in)    :: der
-  R_TYPE,              intent(inout) :: f(:)       ! f(m%np_part)
-  R_TYPE,              intent(out)   :: opf(:)     ! opf(m%np)
-  logical, optional,   intent(in)    :: ghost_update
-  logical, optional,   intent(in)    :: set_bc
+  R_TYPE,                intent(inout) :: f(:)       ! f(m%np_part)
+  R_TYPE,                intent(out)   :: opf(:)     ! opf(m%np)
+  logical, optional,     intent(in)    :: ghost_update
+  logical, optional,     intent(in)    :: set_bc
 
   type(der_handle_t) :: handle
   logical :: ghost_update_, set_bc_
@@ -279,9 +279,9 @@ end subroutine X(derivatives_oper)
 ! ---------------------------------------------------------
 subroutine X(derivatives_div)(der, f, div, ghost_update)
   type(derivatives_t), intent(in)    :: der
-  R_TYPE,            intent(inout) :: f(:,:)   ! f(m%np_part, m%sb%dim)
-  R_TYPE,            intent(out)   :: div(:)   ! div(m%np)
-  logical, optional, intent(in)    :: ghost_update
+  R_TYPE,              intent(inout) :: f(:,:)   ! f(m%np_part, m%sb%dim)
+  R_TYPE,              intent(out)   :: div(:)   ! div(m%np)
+  logical, optional,   intent(in)    :: ghost_update
 
   R_TYPE, allocatable :: tmp(:)
   integer             :: i
@@ -312,9 +312,9 @@ end subroutine X(derivatives_div)
 ! ---------------------------------------------------------
 subroutine X(derivatives_curl)(der, f, curl, ghost_update)
   type(derivatives_t), intent(in)    :: der
-  R_TYPE,            intent(inout) :: f(:,:)    ! f(m%np_part, der%m%sb%dim) 
-  R_TYPE,            intent(out)   :: curl(:,:) ! curl(m%np, der%m%sb%dim) if dim = 2, curl(m%np, 1) if dim = 1.
-  logical, optional, intent(in)    :: ghost_update
+  R_TYPE,              intent(inout) :: f(:,:)    ! f(m%np_part, der%m%sb%dim) 
+  R_TYPE,              intent(out)   :: curl(:,:) ! curl(m%np, der%m%sb%dim) if dim = 2, curl(m%np, 1) if dim = 1.
+  logical, optional,   intent(in)    :: ghost_update
 
   R_TYPE, allocatable :: tmp(:)
   integer             :: i, np
@@ -376,7 +376,7 @@ end subroutine X(derivatives_curl)
 ! boundary conditions for the derivatives.
 subroutine X(set_bc)(der, f)
   type(derivatives_t), intent(in)    :: der
-  R_TYPE,            intent(inout) :: f(:)
+  R_TYPE,              intent(inout) :: f(:)
 
   integer :: bndry_start, bndry_end
   integer :: p
@@ -464,6 +464,141 @@ subroutine X(set_bc)(der, f)
   call pop_sub()
 
 end subroutine X(set_bc)
+
+! ---------------------------------------------------------
+! The action of the angular momentum operator (three spatial components).
+! In case of real functions, it does not include the -i prefactor
+! (L = -i r ^ nabla).
+! ---------------------------------------------------------
+subroutine X(f_angular_momentum)(sb, mesh, der, f, lf, ghost_update, set_bc)
+  type(simul_box_t), intent(in)    :: sb
+  type(mesh_t),      intent(in)    :: mesh
+  type(derivatives_t), intent(inout) :: der
+  R_TYPE,            intent(inout) :: f(:)     ! f(m%np_part)
+  R_TYPE,            intent(out)   :: lf(:,:)  ! lf(m%np, 3) in 3D, lf(m%np, 1) in 2D
+  logical, optional, intent(in)    :: ghost_update
+  logical, optional, intent(in)    :: set_bc
+
+  R_TYPE, allocatable :: gf(:, :)
+  FLOAT :: x1, x2, x3
+  R_TYPE :: factor
+  integer :: ip
+
+  call push_sub('f_inc.Xf_angular_momentum')
+
+  ASSERT(sb%dim.ne.1)
+
+  ALLOCATE(gf(mesh%np, sb%dim), mesh%np*sb%dim)
+
+  if (present(ghost_update) .and. present(set_bc)) &
+    call X(derivatives_grad)(der, f, gf, ghost_update, set_bc)
+  if (present(ghost_update) .and. .not. present(set_bc)) &
+    call X(derivatives_grad)(der, f, gf, ghost_update = ghost_update)
+  if (.not. present(ghost_update) .and. present(set_bc)) &
+    call X(derivatives_grad)(der, f, gf, set_bc = set_bc)
+  if (.not. present(ghost_update) .and. .not. present(set_bc)) &
+    call X(derivatives_grad)(der, f, gf)
+
+#if defined(R_TCOMPLEX)
+  factor = -M_ZI
+#else
+  factor = M_ONE
+#endif
+
+  select case(sb%dim)
+  case(3)
+    do ip = 1, mesh%np
+      x1 = mesh%x(ip, 1)
+      x2 = mesh%x(ip, 2)
+      x3 = mesh%x(ip, 3)
+      lf(ip, 1) = factor*(x2*gf(ip, 3) - x3*gf(ip, 2))
+      lf(ip, 2) = factor*(x3*gf(ip, 1) - x1*gf(ip, 3))
+      lf(ip, 3) = factor*(x1*gf(ip, 2) - x2*gf(ip, 1))
+    end do
+
+  case(2)
+    do ip = 1, mesh%np
+      x1 = mesh%x(ip, 1)
+      x2 = mesh%x(ip, 2)
+      lf(ip, 1) = factor*(x1*gf(ip, 2) - x2*gf(ip, 1))
+    end do
+
+  end select
+
+  deallocate(gf)
+  call pop_sub()
+end subroutine X(f_angular_momentum)
+
+! ---------------------------------------------------------
+! Square of the angular momentum L. This has to be very much improved if
+! accuracy is needed.
+! ---------------------------------------------------------
+subroutine X(f_l2)(sb, m, der, f, l2f, ghost_update)
+  type(simul_box_t), intent(in)    :: sb
+  type(mesh_t),      intent(in)    :: m
+  type(derivatives_t), intent(inout) :: der
+  R_TYPE,            intent(inout) :: f(:)   ! f(1:m%np_part)
+  R_TYPE,            intent(out)   :: l2f(:)
+  logical, optional, intent(in)    :: ghost_update
+
+  R_TYPE, allocatable :: gf(:, :), ggf(:, :, :)
+  integer :: j
+
+  call push_sub('f_inc.Xf_l2')
+
+  ASSERT(sb%dim.ne.1)
+
+  l2f = R_TOTYPE(M_ZERO)
+
+  select case(sb%dim)
+  case(3)
+    ALLOCATE(gf(m%np_part, 3), m%np_part*3)
+    ALLOCATE(ggf(m%np_part, 3, 3), m%np_part*3*3)
+
+    if (present(ghost_update)) then
+       call X(f_angular_momentum)(sb, m, der, f, gf, ghost_update)
+    else
+       call X(f_angular_momentum)(sb, m, der, f, gf)
+    endif
+
+    do j = 1, 3
+      if (present(ghost_update)) then
+        call X(f_angular_momentum)(sb, m, der, gf(:,j), ggf(:,:,j), ghost_update)
+      else
+        call X(f_angular_momentum)(sb, m, der, gf(:,j), ggf(:,:,j))
+      endif
+
+    end do
+
+    do j = 1, sb%dim
+      l2f(1:m%np) = l2f(1:m%np) + ggf(1:m%np, j, j)
+    end do
+
+  case(2)
+    ALLOCATE(gf(m%np_part, 1), m%np_part)
+    ALLOCATE(ggf(m%np_part, 1, 1), m%np_part)
+
+    if (present(ghost_update)) then
+      call X(f_angular_momentum)(sb, m, der, f, gf, ghost_update)
+      call X(f_angular_momentum)(sb, m, der, gf(:, 1), ggf(:, :, 1), ghost_update)
+    else
+      call X(f_angular_momentum)(sb, m, der, f, gf)
+      call X(f_angular_momentum)(sb, m, der, gf(:, 1), ggf(:, :, 1))
+    endif
+
+    l2f(1:m%np) = ggf(1:m%np, 1, 1)
+  end select
+
+
+  ! In case of real functions, since the angular momentum calculations
+  ! lack a (-i) prefactor, we must add a (-1) factor
+#if defined(R_TREAL)
+  l2f = - l2f
+#endif
+
+  deallocate(gf, ggf)
+  call pop_sub()
+end subroutine X(f_l2)
 
 !! Local Variables:
 !! mode: f90

@@ -22,7 +22,6 @@
 module io_function_m
   use cube_function_m
   use datasets_m
-  use functions_m
   use global_m
   use io_m
   use loct_parser_m

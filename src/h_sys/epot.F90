@@ -23,7 +23,6 @@ module external_pot_m
   use datasets_m
   use derivatives_m
   use double_grid_m
-  use functions_m
   use gauge_field_m
   use global_m
   use grid_m

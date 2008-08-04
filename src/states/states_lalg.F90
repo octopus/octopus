@@ -25,7 +25,6 @@ module states_lalg_m
   use crystal_m
   use blas_m
   use datasets_m
-  use functions_m
   use geometry_m
   use global_m
   use grid_m

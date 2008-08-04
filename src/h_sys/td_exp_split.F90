@@ -26,7 +26,6 @@ module td_exp_split_m
   use external_pot_m
   use fft_m
   use fourier_space_m
-  use functions_m
   use global_m
   use grid_m
   use hamiltonian_m
@@ -74,7 +73,7 @@ contains
     call zcf_alloc_FS(cf)
 
     do idim = 1, h%d%dim
-      call zmf2cf(gr%m, psi(:, idim), cf)
+      call zmesh_to_cube(gr%m, psi(:, idim), cf)
       call zcf_RS2FS(cf)
 
       do iz = 1, cf%n(3)
@@ -91,7 +90,7 @@ contains
       end do
 
       call zcf_FS2RS(cf)
-      call zcf2mf(gr%m, cf, psi(:, idim))
+      call zcube_to_mesh(gr%m, cf, psi(:, idim))
     end do
 
     call zcf_free_RS(cf)

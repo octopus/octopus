@@ -36,7 +36,11 @@ module cube_function_m
     dcf_free_rs, zcf_free_rs,   &
     dcf_free, zcf_free,         &
     cf_surface_average,         &
-    cf_phase_factor
+    cf_phase_factor,            &
+    dmesh_to_cube,              &
+    zmesh_to_cube,              &
+    dcube_to_mesh,              &
+    zcube_to_mesh
 
   type dcf_t
     integer :: n(MAX_DIM)   ! the linear dimensions of the cube

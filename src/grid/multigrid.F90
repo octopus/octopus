@@ -23,7 +23,6 @@ module multigrid_m
   use curvlinear_m
   use derivatives_m
   use datasets_m
-  use functions_m
   use geometry_m
   use global_m
   use loct_parser_m
@@ -134,7 +133,7 @@ contains
       
       call multigrid_mesh_half(geo, cv, mgrid%level(i-1)%m, mgrid%level(i)%m, der%lapl%stencil, der%lapl%n)
 
-      call derivatives_init(m%sb, mgrid%level(i)%der, cv%method.ne.CURV_METHOD_UNIFORM)
+      call derivatives_init(mgrid%level(i)%der, m%sb, cv%method.ne.CURV_METHOD_UNIFORM)
 
       if(m%parallel_in_domains) then
         call mesh_init_stage_3(mgrid%level(i)%m, geo, cv, &
@@ -145,7 +144,7 @@ contains
 
       call multigrid_get_transfer_tables(mgrid%level(i), mgrid%level(i-1)%m, mgrid%level(i)%m)
 
-      call derivatives_build(mgrid%level(i)%m, mgrid%level(i)%der)
+      call derivatives_build(mgrid%level(i)%der, mgrid%level(i)%m)
 
       call mesh_write_info(mgrid%level(i)%m, stdout)
 

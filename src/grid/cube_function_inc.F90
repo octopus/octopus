@@ -110,6 +110,64 @@ subroutine X(cf_free)(cf)
   call pop_sub()
 end subroutine X(cf_free)
 
+! ---------------------------------------------------------
+! The next two subroutines convert a function between the normal
+! mesh and the cube.
+! Note that the function in the mesh should be defined
+! globally, not just in a partition (when running in
+! parallel in real-space domains).
+! ---------------------------------------------------------
+
+subroutine X(mesh_to_cube) (m, mf, cf)
+  type(mesh_t),  intent(in)    :: m
+  R_TYPE,        intent(in)    :: mf(:)  ! mf(m%np_global)
+  type(X(cf_t)), intent(inout) :: cf
+
+  integer :: i, ix, iy, iz, c(MAX_DIM)
+
+  ASSERT(associated(cf%RS))
+
+  c(:)  =  cf%n(:)/2 + 1
+
+  !$omp parallel workshare
+  cf%RS =  M_ZERO
+  !$omp end parallel workshare
+
+  !$omp parallel do private(ix, iy, iz)
+  do i = 1, m%np_global
+    ix = m%Lxyz(i, 1) + c(1)
+    iy = m%Lxyz(i, 2) + c(2)
+    iz = m%Lxyz(i, 3) + c(3)
+
+    cf%RS(ix, iy, iz) = mf(i)
+  end do
+  !$omp end parallel do
+
+end subroutine X(mesh_to_cube)
+
+! ---------------------------------------------------------
+subroutine X(cube_to_mesh) (m, cf, mf)
+  type(mesh_t),  intent(in)  :: m
+  type(X(cf_t)), intent(in)  :: cf
+  R_TYPE,        intent(out) :: mf(:)  ! mf(m%np_global)
+
+  integer :: i, ix, iy, iz, c(MAX_DIM)
+
+  ASSERT(associated(cf%RS))
+
+  c(:) =  cf%n(:)/2 + 1
+
+  !$omp parallel do private(ix, iy, iz)
+  do i = 1, m%np_global
+    ix = m%Lxyz(i, 1) + c(1)
+    iy = m%Lxyz(i, 2) + c(2)
+    iz = m%Lxyz(i, 3) + c(3)
+    mf(i) = cf%RS(ix, iy, iz)
+  end do
+  !$omp end parallel do
+
+end subroutine X(cube_to_mesh)
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

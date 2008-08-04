@@ -703,6 +703,61 @@ subroutine X(mf_put_radial_spline)(m, spl, center, f, add)
 
 end subroutine X(mf_put_radial_spline)
 
+
+! -----------------------------------------------------------------------------
+! This routine calculates the multipoles of a function f
+! distribution, defined in the following way:
+! multipole(1) is the trace of f (defined to be positive; integral
+!   of the f.
+! multipole(2:4) contains the dipole: integral of f times x, y or z.
+! multipole(5:9, is) contains the quadrupole, defined in the usual way using
+!   the spherical harmonics: multipole(5) = Integral [ f * Y_{2,-2} ],
+!   multipole(6, is) = Integral [ f * Y_{2, -1} ].
+! And so on.
+! -----------------------------------------------------------------------------
+subroutine X(mf_multipoles) (mesh, ff, lmax, multipole)
+  type(mesh_t),   intent(in)  :: mesh
+  R_TYPE,         intent(in)  :: ff(:)
+  integer,        intent(in)  :: lmax
+  R_TYPE,         intent(out) :: multipole(:) ! multipole((lmax + 1)**2)
+
+  integer :: i, l, lm, add_lm
+  FLOAT   :: x(MAX_DIM), r, ylm
+  R_TYPE, allocatable :: ff2(:)
+
+  call push_sub('f_inc.Xf_multipoles')
+
+  ALLOCATE(ff2(mesh%np), mesh%np)
+
+  ff2(1:mesh%np) = ff(1:mesh%np)
+  multipole(1) = X(mf_integrate)(mesh, ff2)
+
+  if(lmax > 0) then
+    do i = 1, 3
+      ff2(1:mesh%np) = ff(1:mesh%np) * mesh%x(1:mesh%np, i)
+      multipole(i+1) = X(mf_integrate)(mesh, ff2)
+    end do
+  end if
+
+  if(lmax>1) then
+    add_lm = 5
+    do l = 2, lmax
+      do lm = -l, l
+        do i = 1, mesh%np
+          call mesh_r(mesh, i, r, x=x)
+          ylm = loct_ylm(x(1), x(2), x(3), l, lm)
+          ff2(i) = ff(i) * ylm * r**l
+        end do
+        multipole(add_lm) = X(mf_integrate)(mesh, ff2)
+        add_lm = add_lm + 1
+      end do
+    end do
+  end if
+
+  deallocate(ff2)
+  call pop_sub()
+end subroutine X(mf_multipoles)
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

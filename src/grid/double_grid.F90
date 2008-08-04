@@ -28,7 +28,6 @@ module double_grid_m
   use math_m
   use mesh_m
   use messages_m
-  use functions_m
   use mesh_function_m
   use loct_m
   use loct_parser_m

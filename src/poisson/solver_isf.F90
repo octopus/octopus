@@ -24,7 +24,6 @@ module poisson_isf_m
   use global_m
   use messages_m
   use mesh_m
-  use functions_m
   use mpi_m
   use par_vec_m
 
@@ -170,10 +169,10 @@ contains
       ! uses another data distribution algorithm than for the mesh functions
       ! for which every node requires the full data.
       call dvec_allgather(m%vp, rho_global, rho)
-      call dmf2cf(m, rho_global, rho_cf)
+      call dmesh_to_cube(m, rho_global, rho_cf)
 #endif
     else
-      call dmf2cf(m, rho, rho_cf)
+      call dmesh_to_cube(m, rho, rho_cf)
     end if
 
     ! Choose configuration.
@@ -220,12 +219,12 @@ contains
 
     if(m%parallel_in_domains) then
 #if defined(HAVE_MPI)
-      call dcf2mf(m, rho_cf, pot_global)
+      call dcube_to_mesh(m, rho_cf, pot_global)
       call dvec_scatter(m%vp, pot_global, pot)
       deallocate(rho_global, pot_global)
 #endif
     else
-      call dcf2mf(m, rho_cf, pot)
+      call dcube_to_mesh(m, rho_cf, pot)
     end if
 
     call dcf_free_RS(rho_cf)

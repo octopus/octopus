@@ -21,7 +21,6 @@
 
 module linear_solver_m
   use datasets_m
-  use functions_m
   use global_m
   use grid_m
   use hamiltonian_m

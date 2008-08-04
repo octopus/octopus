@@ -23,7 +23,6 @@ module td_write_m
   use c_pointer_m
   use datasets_m
   use excited_states_m
-  use functions_m
   use gauge_field_m
   use geometry_m
   use global_m
@@ -691,7 +690,7 @@ contains
     ALLOCATE(nuclear_dipole(1:3), 3)
     ALLOCATE(multipole((lmax + 1)**2, st%d%nspin), (lmax + 1)**2*st%d%nspin)
     do is = 1, st%d%nspin
-      call df_multipoles(gr%m, st%rho(:,is), lmax, multipole(:,is))
+      call dmf_multipoles(gr%m, st%rho(:,is), lmax, multipole(:,is))
     end do
     call geometry_dipole(geo, nuclear_dipole)
     do is = 1, st%d%nspin

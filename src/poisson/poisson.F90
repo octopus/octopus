@@ -33,7 +33,6 @@ module poisson_m
   use profiling_m
   use simul_box_m
   use units_m
-  use functions_m
   use math_m
   use poisson_corrections_m
   use poisson_cg_m

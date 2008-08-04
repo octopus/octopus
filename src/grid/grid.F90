@@ -24,7 +24,6 @@ module grid_m
   use datasets_m
   use derivatives_m
   use double_grid_m
-  use functions_m
   use geometry_m
   use global_m
   use ob_interface_m
@@ -89,7 +88,7 @@ contains
     call curvlinear_init(gr%sb, geo, gr%cv)
 
     ! initilize derivatives
-    call derivatives_init(gr%sb, gr%der, gr%cv%method /= CURV_METHOD_UNIFORM)
+    call derivatives_init(gr%der, gr%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
 
     call double_grid_init(gr%dgrid, gr%sb)
 
@@ -131,7 +130,7 @@ contains
       nullify(gr%intf)
     end if
 
-    call derivatives_build(gr%m, gr%der)
+    call derivatives_build(gr%der, gr%m)
 
     ! initialize a finer mesh to hold the density, for this we use the
     ! multigrid routines
@@ -143,7 +142,7 @@ contains
       
       call multigrid_mesh_double(geo, gr%cv, gr%m, gr%fine%m, gr%der%lapl%stencil, gr%der%lapl%n)
       
-      call derivatives_init(gr%m%sb, gr%fine%der, gr%cv%method .ne. CURV_METHOD_UNIFORM)
+      call derivatives_init(gr%fine%der, gr%m%sb, gr%cv%method .ne. CURV_METHOD_UNIFORM)
       
       if(gr%m%parallel_in_domains) then
         call mesh_init_stage_3(gr%fine%m, geo, gr%cv, &
@@ -154,7 +153,7 @@ contains
       
       call multigrid_get_transfer_tables(gr%fine, gr%fine%m, gr%m)
       
-      call derivatives_build(gr%fine%m, gr%fine%der)
+      call derivatives_build(gr%fine%der, gr%fine%m)
       
       call mesh_write_info(gr%fine%m, stdout)
 
@@ -288,7 +287,7 @@ contains
       call mesh_init_stage_3(grout%m, geo, grout%cv)
     end if
 
-    call derivatives_build(grout%m, grout%der)
+    call derivatives_build(grout%der, grout%m)
 
     ! multigrids are not initialized by default
     nullify(grout%mgrid)

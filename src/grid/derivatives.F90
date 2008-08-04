@@ -70,7 +70,10 @@ module derivatives_m
     stencil_extent,         &
     der_handle_t,           &
     der_handle_init,        &
-    der_handle_end
+    der_handle_end,         &
+    df_angular_momentum,    &
+    zf_angular_momentum,    &
+    df_l2, zf_l2
 
   integer, parameter ::     &
     DER_BC_ZERO_F    = 0,   &  ! function is zero at the boundaries
@@ -126,9 +129,9 @@ module derivatives_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine derivatives_init(sb, der, use_curvilinear)
-    type(simul_box_t),   intent(in)  :: sb
+  subroutine derivatives_init(der, sb, use_curvilinear)
     type(derivatives_t), intent(out) :: der
+    type(simul_box_t),   intent(in)  :: sb
     logical,             intent(in)  :: use_curvilinear
 
     integer :: i
@@ -389,9 +392,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine derivatives_build(m, der)
-    type(mesh_t), target, intent(in)    :: m
+  subroutine derivatives_build(der, m)
     type(derivatives_t),    intent(inout) :: der
+    type(mesh_t),   target, intent(in)    :: m
 
     integer, allocatable :: polynomials(:,:)
     FLOAT,   allocatable :: rhs(:,:)

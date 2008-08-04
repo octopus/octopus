@@ -22,7 +22,6 @@
 module xc_m
   use datasets_m
   use derivatives_m
-  use functions_m
   use global_m
   use grid_m
   use lalg_basic_m

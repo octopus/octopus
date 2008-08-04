@@ -38,7 +38,6 @@ module opt_control_target_m
   use h_sys_output_m
   use io_function_m
   use geometry_m
-  use functions_m
   use mesh_m
   use mesh_function_m
   use restart_m
@@ -544,7 +543,7 @@ module opt_control_target_m
 
       ALLOCATE(multipole(4, psi%d%nspin), 4*psi%d%nspin)
       do is = 1, psi%d%nspin
-        call df_multipoles(gr%m, psi%rho(:, is), 1, multipole(:, is))
+        call dmf_multipoles(gr%m, psi%rho(:, is), 1, multipole(:, is))
       end do
       target%td_fitness(i) = sum(multipole(2, 1:psi%d%spin_channels))
       deallocate(multipole)

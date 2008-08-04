@@ -35,7 +35,6 @@ module poisson_fft_m
   use mpi_m
   use profiling_m
   use units_m
-  use functions_m
   use grid_m
   use mesh_function_m
   use par_vec_m
@@ -350,10 +349,10 @@ contains
     if(m%parallel_in_domains) then
 #if defined HAVE_MPI
       call dvec_gather(m%vp, rho_global, rho)
-      call dmf2cf(m, rho_global, fft_cf) 
+      call dmesh_to_cube(m, rho_global, fft_cf) 
 #endif
     else
-      call dmf2cf(m, rho, fft_cf)
+      call dmesh_to_cube(m, rho, fft_cf)
     end if
 
     ! apply the couloumb term in fourier space
@@ -371,11 +370,11 @@ contains
     ! move the potential back to the grid
     if(m%parallel_in_domains) then
 #if defined(HAVE_MPI)
-      call dcf2mf(m, fft_cf, pot_global)
+      call dcube_to_mesh(m, fft_cf, pot_global)
       call dvec_scatter(m%vp, pot_global, pot)
 #endif
     else
-      call dcf2mf(m, fft_cf, pot)
+      call dcube_to_mesh(m, fft_cf, pot)
     end if
 
     if(present(average_to_zero)) then

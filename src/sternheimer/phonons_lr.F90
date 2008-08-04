@@ -23,7 +23,6 @@
 module phonons_lr_m
   use datasets_m
   use external_pot_m
-  use functions_m
   use geometry_m
   use global_m
   use grid_m

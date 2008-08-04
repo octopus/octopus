@@ -40,7 +40,6 @@ module opt_control_m
   use simul_box_m
   use mesh_m
   use mesh_function_m
-  use functions_m
   use h_sys_output_m
   use geometry_m
   use states_m

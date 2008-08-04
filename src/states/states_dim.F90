@@ -25,11 +25,9 @@ module states_dim_m
   use crystal_m
   use datasets_m
   use distributed_m
-  use functions_m
   use geometry_m
   use global_m
   use grid_m
-  use hardware_m
   use io_function_m
   use io_m
   use lalg_basic_m

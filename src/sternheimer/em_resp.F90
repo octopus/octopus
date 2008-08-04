@@ -23,7 +23,6 @@
 module pol_lr_m
   use datasets_m
   use em_resp_calc_m
-  use functions_m
   use geometry_m
   use global_m
   use grid_m

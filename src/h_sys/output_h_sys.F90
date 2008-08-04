@@ -24,7 +24,6 @@ module h_sys_output_m
   use derivatives_m
   use basins_m
   use elf_m
-  use functions_m
   use geometry_m
   use global_m
   use grid_m

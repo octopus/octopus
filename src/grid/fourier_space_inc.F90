@@ -139,6 +139,63 @@ subroutine X(fourier_space_op_apply)(this, cube)
 
 end subroutine X(fourier_space_op_apply)
 
+! ---------------------------------------------------------
+! The next two subroutines convert a function in Fourier space
+! between the normal mesh and the cube
+! Note that the function in the mesh should be defined
+! globally, not just in a partition (when running in
+! parallel in real-space domains).
+! ---------------------------------------------------------
+subroutine X(mesh_to_fourier) (m, mf, cf)
+  type(mesh_t),  intent(in)    :: m
+  CMPLX,         intent(in)    :: mf(:)   ! mf(m%np_global)
+  type(X(cf_t)), intent(inout) :: cf
+
+  integer :: i, ix, iy, iz
+
+  ASSERT(associated(cf%FS))
+
+  cf%FS = M_z0
+
+  do i = 1, m%np_global
+    ix = pad_feq(m%Lxyz(i, 1), cf%n(1), .false.)
+    if(ix > cf%nx) cycle ! negative frequencies are redundant
+    iy = pad_feq(m%Lxyz(i, 2), cf%n(2), .false.)
+    iz = pad_feq(m%Lxyz(i, 3), cf%n(3), .false.)
+
+    cf%FS(ix, iy, iz) = mf(i)
+  end do
+end subroutine X(mesh_to_fourier)
+
+! ---------------------------------------------------------
+subroutine X(fourier_to_mesh) (m, cf, mf)
+  type(mesh_t),  intent(in)  :: m
+  type(X(cf_t)), intent(in)  :: cf
+  CMPLX,         intent(out) :: mf(:) ! mf(m%np_global)
+
+  integer :: i, ix, iy, iz
+
+  ASSERT(associated(cf%FS))
+
+  do i = 1, m%np_global
+    ix = pad_feq(m%Lxyz(i, 1), cf%n(1), .false.)
+    iy = pad_feq(m%Lxyz(i, 2), cf%n(2), .false.)
+    iz = pad_feq(m%Lxyz(i, 3), cf%n(3), .false.)
+
+#ifdef R_TREAL
+    if(ix > cf%nx) then
+      ix = pad_feq(-m%Lxyz(i, 1), cf%n(1), .false.)
+      mf(i) = conjg(cf%FS(ix, iy, iz))
+    else
+      mf(i) = cf%FS(ix, iy, iz)
+    end if
+#else
+    mf(i) = cf%FS(ix, iy, iz)
+#endif
+  end do
+
+end subroutine X(fourier_to_mesh)
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

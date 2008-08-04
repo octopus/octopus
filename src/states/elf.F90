@@ -26,7 +26,6 @@ module elf_m
   use io_m
   use loct_parser_m
   use cube_function_m
-  use functions_m
   use global_m
   use grid_m
   use mesh_m
@@ -295,9 +294,9 @@ contains
     
       call dcf_alloc_RS(c)
       call dcf_alloc_FS(c)
-      call dmf2cf(m, fin, c)
+      call dmesh_to_cube(m, fin, c)
       call dcf_RS2FS(c)
-      call dcf_FS2mf(m, c, fout)
+      call dfourier_to_mesh(m, c, fout)
       call dcf_free_RS(c)
       call dcf_free_FS(c)
     end subroutine dmf2mf_RS2FS
@@ -310,9 +309,9 @@ contains
     
       call zcf_alloc_RS(c)
       call zcf_alloc_FS(c)
-      call zmf2cf(m, fin, c)
+      call zmesh_to_cube(m, fin, c)
       call zcf_RS2FS(c)
-      call zcf_FS2mf(m, c, fout)
+      call zfourier_to_mesh(m, c, fout)
       call zcf_free_RS(c)
       call zcf_free_FS(c)
     end subroutine zmf2mf_RS2FS
