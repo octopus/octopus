@@ -174,6 +174,8 @@ contains
 
     call push_sub('lcao.lcao_end')
 
+    call distributed_end(lcao_data%st%d%kpt)
+
     wfs_type = lcao_data%st%wfs_type
 
     if(lcao_data%st%nst >= nst) then
