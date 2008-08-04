@@ -48,6 +48,9 @@
 
     call push_sub('eigen_lobpcg.Xlobpcg')
 
+    verbose_ = .false.
+    if(present(verbose)) verbose_ = verbose
+
     bs = block_size
 
     maxiter = niter
@@ -73,7 +76,7 @@
 
       call X(lobpcg)(gr, st, h, psi_start, psi_end, st%X(psi)(:, :, psi_start:psi_end, ik), &
            constr_start, constr_end, st%X(psi)(:, :, constr_start:constr_end, ik),             &
-           ik, pre, tol, n_matvec, conv, diff, iblock, verbose)
+           ik, pre, tol, n_matvec, conv, diff, iblock, verbose_)
 
       niter         = niter + n_matvec
       converged = converged + conv
