@@ -125,17 +125,12 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, t, kinetic_only)
       call profiling_out(phase_prof)
     end if
     
-    do idim = 1, h%d%dim
-      !$omp parallel workshare
-      hpsi(:, idim) = M_ZERO
-      !$omp end parallel workshare
-    end do
-    
     nullify(lapl)
     call X(kinetic_start)(h, gr, epsi, lapl)
     
     if (.not. kinetic_only_) then
-      
+      ! apply the potential
+
       call X(vlpsi)(h, gr%m, epsi, hpsi, ik)
       
       call X(kinetic_keep_going)(h, gr, epsi, lapl)
@@ -144,7 +139,10 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, t, kinetic_only)
         call X(vnlpsi)(h, gr, epsi, hpsi, ik)
         call X(kinetic_keep_going)(h, gr, epsi, lapl)
       end if
-      
+
+    else
+      ! the output array has to be set to zero
+      hpsi(1:gr%m%np, 1:h%d%dim) = M_ZERO
     end if
     
     call X(kinetic_finish)(h, gr, epsi, lapl, hpsi)
@@ -657,7 +655,7 @@ subroutine X(vlpsi) (h, m, psi, hpsi, ik)
   type(mesh_t),        intent(in)    :: m
   integer,             intent(in)    :: ik
   R_TYPE,              intent(in)    :: psi(:,:)  ! psi(NP_PART, h%d%dim)
-  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, h%d%dim)
+  R_TYPE,              intent(out)   :: hpsi(:,:) ! hpsi(NP_PART, h%d%dim)
 
   integer :: idim, ip
 
@@ -668,7 +666,7 @@ subroutine X(vlpsi) (h, m, psi, hpsi, ik)
   case(UNPOLARIZED)
     !$omp parallel do
     do ip = 1, m%np
-      hpsi(ip, 1) = hpsi(ip, 1) + (h%vhxc(ip, 1) + h%ep%vpsl(ip))*psi(ip, 1)
+      hpsi(ip, 1) = (h%vhxc(ip, 1) + h%ep%vpsl(ip))*psi(ip, 1)
     end do
     !$omp end parallel do
 
@@ -677,11 +675,11 @@ subroutine X(vlpsi) (h, m, psi, hpsi, ik)
   case(SPIN_POLARIZED)
     if(modulo(ik+1, 2) == 0) then ! we have a spin down
       do ip = 1, m%np
-        hpsi(ip, 1) = hpsi(ip, 1) + (h%vhxc(ip, 1) + h%ep%vpsl(ip))*psi(ip, 1)
+        hpsi(ip, 1) = (h%vhxc(ip, 1) + h%ep%vpsl(ip))*psi(ip, 1)
       end do
     else
       do ip = 1, m%np
-        hpsi(ip, 1) = hpsi(ip, 1) + (h%vhxc(ip, 2) + h%ep%vpsl(ip))*psi(ip, 1)
+        hpsi(ip, 1) = (h%vhxc(ip, 2) + h%ep%vpsl(ip))*psi(ip, 1)
       end do
     end if
 
@@ -689,8 +687,8 @@ subroutine X(vlpsi) (h, m, psi, hpsi, ik)
 
   case(SPINORS)
     do ip = 1, m%np
-      hpsi(ip, 1) = hpsi(ip, 1) + (h%vhxc(ip, 1) + h%ep%vpsl(ip))*psi(ip, 1) + (h%vhxc(ip, 3) + M_zI*h%vhxc(ip, 4))*psi(ip, 2)
-      hpsi(ip, 2) = hpsi(ip, 2) + (h%vhxc(ip, 2) + h%ep%vpsl(ip))*psi(ip, 2) + (h%vhxc(ip, 3) - M_zI*h%vhxc(ip, 4))*psi(ip, 1)
+      hpsi(ip, 1) = (h%vhxc(ip, 1) + h%ep%vpsl(ip))*psi(ip, 1) + (h%vhxc(ip, 3) + M_zI*h%vhxc(ip, 4))*psi(ip, 2)
+      hpsi(ip, 2) = (h%vhxc(ip, 2) + h%ep%vpsl(ip))*psi(ip, 2) + (h%vhxc(ip, 3) - M_zI*h%vhxc(ip, 4))*psi(ip, 1)
     end do
 
     call profiling_count_operations((8*R_ADD + 2*R_MUL)*m%np)
