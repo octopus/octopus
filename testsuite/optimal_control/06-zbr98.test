@@ -1,0 +1,39 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: 06-adw.test $
+
+Test       : ZBR98
+Author     : Alberto
+Date       : 05.08.08
+Arch       : Linux 
+Release    : 3.1.0pre1
+Programs   : octopus
+TestGroups : long-run, oct
+Enabled    : Yes
+
+# This test demonstrates how the code [svn revision #4473] permits to replicate
+# the QOCT results presented in [W. Zhu, J. Botina, and H. Rabitz, J. Chem. Phys.
+# 108, 1953 (1998)]. This demonstrates the use of the QOCT algorithm presented
+# in that paper ("ZBR98").
+#
+# In particular, it reproduces the first case study (Figs. 1-4). It corresponds
+# to the transition for the v=0 to the v=1 vibrational state for an OH bond,
+# as modeled by a Morse potential.
+#
+# First, we have to get the ground state and the first excited state.
+Input: 06-zbr98.01-ground_state.inp
+
+# Then, the OCT run. It goes only until the first iteration; in order to obtain
+# the convergence history presented in Fig. 1, one should go up to 20 iterations.
+# The laser pulse presented in Fig. 2 is obtained after around 60 iterations.
+#
+# Note that the precise convergence history is rather dependent on the numerical
+# details -- for example, it dependes on how much one converges the eigenstates
+# in the first, ground-state, calculation. The final result is a bit more robust,
+# but still it may happen that a rather different start might lead to a
+# different maximum.
+#
+# The reason for this sensibility is that the starting field is actually an
+# unstable solution of the equations, and therefore the behaviour of the first
+# iterations depends on numerical noise.
+Input: 06-zbr98.02-oct.inp
+match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; 0.98725047

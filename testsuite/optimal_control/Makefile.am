@@ -46,7 +46,10 @@ dist_share_DATA = \
 	05-adw.01-ground_state.inp             \
 	05-adw.02-filter_fixed.inp             \
 	05-adw.03-filter_indirect.inp          \
-	05-adw.test
+	05-adw.test                            \
+	06-zbr98.test                          \
+	06-zbr98.01-ground_state.inp           \
+	06-zbr98.02-oct.inp
 
 
 CLEANFILES = *~ *.bak
