@@ -176,9 +176,6 @@ module hamiltonian_m
     logical :: oct_exchange
     type(states_t), pointer :: oct_st
 
-    ! Handles for the calculation of the kinetic energy in parallel.
-    type(der_handle_t), pointer :: handles(:)
-
     CMPLX, pointer :: phase(:, :)
 
     logical :: multigrid_initialized
@@ -224,12 +221,6 @@ contains
     ! make a couple of local copies
     h%theory_level = theory_level
     call states_dim_copy(h%d, states_dim)
-
-    ! Allocate handles
-    ALLOCATE(h%handles(h%d%dim), h%d%dim)
-    do i = 1, h%d%dim
-      call der_handle_init(h%handles(i), gr%m)
-    end do
 
     ! initialize variables
     h%epot = M_ZERO
@@ -711,13 +702,6 @@ contains
 
     if(associated(h%phase)) deallocate(h%phase)
 
-    if(associated(h%handles)) then
-      do ii = 1, h%d%dim
-        call der_handle_end(h%handles(ii))
-      end do
-      deallocate(h%handles)
-      nullify(h%handles)
-    end if
     if(associated(h%vhartree)) then
       deallocate(h%vhartree)
       nullify(h%vhartree)

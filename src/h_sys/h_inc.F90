@@ -68,12 +68,16 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, t, kinetic_only)
   logical, optional,   intent(in)    :: kinetic_only
   
   integer :: idim, nst
-  R_TYPE, pointer :: epsi(:,:), lapl(:, :)
-  R_TYPE, allocatable :: grad(:, :, :)
+  R_TYPE, pointer :: epsi(:,:)
+  R_TYPE, allocatable :: lapl(:, :, :), grad(:, :, :)
   type(profile_t), save :: phase_prof
-  logical :: copy_input, apply_kpoint, kinetic_only_
+  logical, allocatable :: copy_input(:), apply_kpoint(:)
+  logical :: kinetic_only_
   integer :: ii, ist, ik
   R_TYPE, pointer :: psi(:, :), hpsi(:, :)
+  type(batch_t) :: epsib
+  type(der_handle_t), allocatable :: handles(:, :)
+
 
   call profiling_in(C_PROFILING_HPSI)
   call push_sub('h_inc.Xhpsi_batch')
@@ -92,13 +96,18 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, t, kinetic_only)
 
   nst = psib%nst
 
+  ALLOCATE(copy_input(1:nst), nst)
+  ALLOCATE(apply_kpoint(1:nst), nst)
+
+  call batch_init(epsib, nst)
+
   do ii = 1, nst
     call set_pointers
 
-    apply_kpoint = simul_box_is_periodic(gr%sb) .and. .not. kpoint_is_gamma(h%d, ik)
-    copy_input = (ubound(psi, DIM = 1) == NP) .or. apply_kpoint
+    apply_kpoint(ii) = simul_box_is_periodic(gr%sb) .and. .not. kpoint_is_gamma(h%d, ik)
+    copy_input(ii) = (ubound(psi, DIM = 1) == NP) .or. apply_kpoint(ii)
     
-    if(copy_input) then
+    if(copy_input(ii)) then
       ALLOCATE(epsi(1:NP_PART, 1:h%d%dim), NP_PART*h%d%dim)
       do idim = 1, h%d%dim
         call lalg_copy(NP, psi(:, idim), epsi(:, idim))
@@ -108,12 +117,25 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, t, kinetic_only)
       epsi => psi
     end if
     
+    call batch_add_state(epsib, ii, ist, ik, epsi)
+
+  end do
+
+  ASSERT(batch_is_ok(epsib))
+  ALLOCATE(lapl(1:NP, 1:h%d%dim, 1:nst), NP*h%d%dim*nst)
+
+  ! Allocate handles
+  ALLOCATE(handles(h%d%dim, nst), h%d%dim*nst)
+
+  do ii = 1, nst
+    call set_pointers
+
     ! first of all, set boundary conditions
     do idim = 1, h%d%dim
       call X(set_bc)(gr%der, epsi(:, idim))
     end do
     
-    if(apply_kpoint) then ! we multiply psi by exp(i k.r)
+    if(apply_kpoint(ii)) then ! we multiply psi by exp(i k.r)
       call profiling_in(phase_prof, "PBC_PHASE_APPLY")
       
       do idim = 1, h%d%dim
@@ -124,28 +146,37 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, t, kinetic_only)
       
       call profiling_out(phase_prof)
     end if
-    
-    nullify(lapl)
-    call X(kinetic_start)(h, gr, epsi, lapl)
-    
+
+    call X(kinetic_start)(h, handles(:, ii), gr, epsi, lapl(:, :, ii))
+
+  end do
+
+  do ii = 1, nst
+    call set_pointers
+
     if (.not. kinetic_only_) then
       ! apply the potential
 
       call X(vlpsi)(h, gr%m, epsi, hpsi, ik)
       
-      call X(kinetic_keep_going)(h, gr, epsi, lapl)
+      call X(kinetic_keep_going)(h, handles(:, ii), gr, epsi, lapl(:, :, ii))
       
       if(h%ep%non_local) then
         call X(vnlpsi)(h, gr, epsi, hpsi, ik)
-        call X(kinetic_keep_going)(h, gr, epsi, lapl)
+        call X(kinetic_keep_going)(h, handles(:, ii), gr, epsi, lapl(:, :, ii))
       end if
 
     else
       ! the output array has to be set to zero
       hpsi(1:gr%m%np, 1:h%d%dim) = M_ZERO
     end if
-    
-    call X(kinetic_finish)(h, gr, epsi, lapl, hpsi)
+
+  end do
+
+  do ii = 1, nst
+    call set_pointers
+ 
+    call X(kinetic_finish)(h, handles(:, ii), gr, epsi, lapl(:, :, ii), hpsi)
     
     if (.not. kinetic_only_) then
       
@@ -184,9 +215,9 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, t, kinetic_only)
       
     end if
     
-    if(copy_input) deallocate(epsi)
+    if(copy_input(ii)) deallocate(epsi)
     
-    if(apply_kpoint) then
+    if(apply_kpoint(ii)) then
       ! now we need to remove the exp(-i k.r) factor
       call profiling_in(phase_prof)
 
@@ -200,17 +231,20 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, t, kinetic_only)
     end if
 
   end do
-  
+
+  call batch_end(epsib)
+
   call pop_sub()
   call profiling_out(C_PROFILING_HPSI)
 
 contains
 
   subroutine set_pointers
-    psi => psib%states(ii)%X(psi)
+    psi  => psib%states(ii)%X(psi)
+    epsi => epsib%states(ii)%X(psi)
     hpsi => hpsib%states(ii)%X(psi)
-    ist = psib%states(ii)%ist
-    ik = psib%states(ii)%ik
+    ist  =  psib%states(ii)%ist
+    ik   =  psib%states(ii)%ik
   end subroutine set_pointers
 
 end subroutine X(hpsi_batch)
@@ -442,41 +476,38 @@ end subroutine X(magnus)
 
 ! ---------------------------------------------------------
 ! Exchange the ghost points and write the boundary points.
-subroutine X(kinetic_start)(h, gr, psi, lapl)
+subroutine X(kinetic_start)(h, handle, gr, psi, lapl)
   type(hamiltonian_t), intent(inout) :: h
+  type(der_handle_t),  intent(out)   :: handle(:)
   type(grid_t),        intent(inout) :: gr
   R_TYPE,              intent(inout) :: psi(:,:)
-  R_TYPE,              pointer       :: lapl(:,:)
+  R_TYPE,              intent(out)   :: lapl(:,:)
 
   integer :: idim
 
   call push_sub('h_inc.Xkinetic_start')
 
-  ASSERT(.not. associated(lapl))
-  
-  ALLOCATE(lapl(1:NP, 1:h%d%dim), NP*h%d%dim)
-
   do idim = 1, h%d%dim
-    call X(derivatives_lapl_start)(gr%der, h%handles(idim), psi(:, idim), lapl(:, idim), set_bc = .false.)
+    call der_handle_init(handle(idim), gr%m)
+    call X(derivatives_lapl_start)(gr%der, handle(idim), psi(:, idim), lapl(:, idim), set_bc = .false.)
   end do
 
   call pop_sub()
 end subroutine X(kinetic_start)
 
-subroutine X(kinetic_keep_going)(h, gr, psi, lapl)
+subroutine X(kinetic_keep_going)(h, handle, gr, psi, lapl)
   type(hamiltonian_t), intent(inout) :: h
+  type(der_handle_t),  intent(inout) :: handle(:)
   type(grid_t),        intent(inout) :: gr
   R_TYPE,              intent(inout) :: psi(:,:)
-  R_TYPE,              pointer       :: lapl(:,:)
+  R_TYPE,              intent(inout) :: lapl(:,:)
 
   integer :: idim
 
   call push_sub('h_inc.Xkinetic_keep_going')
 
-  ASSERT(associated(lapl))
-
   do idim = 1, h%d%dim
-    call X(derivatives_lapl_keep_going)(gr%der, h%handles(idim))
+    call X(derivatives_lapl_keep_going)(gr%der, handle(idim))
   end do
 
   call pop_sub()
@@ -499,11 +530,12 @@ end subroutine X(kinetic)
 
 
 ! ---------------------------------------------------------
-subroutine X(kinetic_finish) (h, gr, psi, lapl, hpsi)
+subroutine X(kinetic_finish) (h, handle, gr, psi, lapl, hpsi)
   type(hamiltonian_t), intent(inout) :: h
+  type(der_handle_t),  intent(inout) :: handle(:)
   type(grid_t),        intent(inout) :: gr
   R_TYPE,              intent(inout) :: psi(:,:)
-  R_TYPE,              pointer       :: lapl(:,:)
+  R_TYPE,              intent(inout) :: lapl(:,:)
   R_TYPE,              intent(inout) :: hpsi(:,:)
 
   integer             :: idim
@@ -511,16 +543,12 @@ subroutine X(kinetic_finish) (h, gr, psi, lapl, hpsi)
   call profiling_in(C_PROFILING_KINETIC)
   call push_sub('h_inc.Xkinetic_finish')
 
-  ASSERT(associated(lapl))
-
   do idim = 1, h%d%dim
-    call X(derivatives_lapl_finish)(gr%der, h%handles(idim))
+    call X(derivatives_lapl_finish)(gr%der, handle(idim))
     call lalg_axpy(NP, -M_HALF/h%mass, lapl(:, idim), hpsi(:, idim))
+    call der_handle_end(handle(idim))
   end do
   
-  deallocate(lapl)
-  nullify(lapl)
-
   call pop_sub()
   call profiling_out(C_PROFILING_KINETIC)
 end subroutine X(kinetic_finish)
