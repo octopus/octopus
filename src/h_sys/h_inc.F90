@@ -151,31 +151,26 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, t, kinetic_only)
 
   end do
 
-  do ii = 1, nst
-    call set_pointers
-
-    if (.not. kinetic_only_) then
-      ! apply the potential
-
+  if (.not. kinetic_only_) then
+    ! apply the potential
+    do ii = 1, nst
+      call set_pointers
+      
       call X(vlpsi)(h, gr%m, epsi, hpsi, ik)
-      
+
       call X(kinetic_keep_going)(h, handles(:, ii), gr, epsi, lapl(:, :, ii))
-      
-      if(h%ep%non_local) then
-        call X(vnlpsi)(h, gr, epsi, hpsi, ik)
-        call X(kinetic_keep_going)(h, handles(:, ii), gr, epsi, lapl(:, :, ii))
-      end if
 
-    else
-      ! the output array has to be set to zero
-      hpsi(1:gr%m%np, 1:h%d%dim) = M_ZERO
-    end if
+      if(h%ep%non_local) call X(vnlpsi)(h, gr%m, epsi, hpsi, ik)
 
-  end do
+    end do
+
+  end if
 
   do ii = 1, nst
     call set_pointers
- 
+
+    if (kinetic_only_) hpsi(1:gr%m%np, 1:h%d%dim) = M_ZERO
+
     call X(kinetic_finish)(h, handles(:, ii), gr, epsi, lapl(:, :, ii), hpsi)
     
     if (.not. kinetic_only_) then
@@ -281,6 +276,19 @@ subroutine X(hpsi) (h, gr, psi, hpsi, ist, ik, t, kinetic_only)
   call batch_end(hpsib)
 
 end subroutine X(hpsi)
+
+! ---------------------------------------------------------
+subroutine X(vpsi) (h, mesh, psi, vpsi, ik)
+  type(hamiltonian_t), intent(in)    :: h
+  type(mesh_t),        intent(inout) :: mesh
+  integer,             intent(in)    :: ik        ! the index of the k-point
+  R_TYPE, target,      intent(inout) :: psi(:,:)  
+  R_TYPE,              intent(out)   :: vpsi(:,:)
+
+  call X(vlpsi)(h, mesh, psi, vpsi, ik)
+  if(h%ep%non_local) call X(vnlpsi)(h, mesh, psi, vpsi, ik)
+
+end subroutine X(vpsi)
 
 ! ---------------------------------------------------------
 subroutine X(exchange_operator) (h, gr, psi, hpsi, ist, ik)
@@ -420,7 +428,7 @@ subroutine X(magnus) (h, gr, psi, hpsi, ik, vmagnus)
     call lalg_copy(NP, hpsi(:, idim), auxpsi(:, idim))
   end do
 
-  if (h%ep%non_local) call X(vnlpsi)  (h, gr, psi, auxpsi, ik)
+  if (h%ep%non_local) call X(vnlpsi)(h, gr%m, psi, auxpsi, ik)
 
   select case(h%d%ispin)
   case(UNPOLARIZED)
@@ -446,7 +454,7 @@ subroutine X(magnus) (h, gr, psi, hpsi, ik, vmagnus)
 
   call X(kinetic) (h, gr, auxpsi, aux2psi)
 
-  if (h%ep%non_local) call X(vnlpsi)  (h, gr, auxpsi, aux2psi, ik)
+  if (h%ep%non_local) call X(vnlpsi)(h, gr%m, auxpsi, aux2psi, ik)
 
   hpsi(1:NP, 1) = hpsi(1:NP, 1) + M_zI*aux2psi(1:NP, 1)
 
@@ -465,7 +473,7 @@ subroutine X(magnus) (h, gr, psi, hpsi, ik, vmagnus)
     end if
   end select
 
-  if (h%ep%non_local) call X(vnlpsi)  (h, gr, psi, Hpsi, ik)
+  if (h%ep%non_local) call X(vnlpsi)(h, gr%m, psi, Hpsi, ik)
 
   call X(vborders) (gr, h, psi, hpsi)
 
@@ -661,9 +669,9 @@ end subroutine X(magnetic_terms)
 
 
 ! ---------------------------------------------------------
-subroutine X(vnlpsi) (h, gr, psi, hpsi, ik)
+subroutine X(vnlpsi) (h, mesh, psi, hpsi, ik)
   type(hamiltonian_t), intent(in)    :: h
-  type(grid_t),        intent(inout) :: gr
+  type(mesh_t),        intent(inout) :: mesh
   R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
   R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, h%d%dim)
   integer,             intent(in)    :: ik
@@ -671,7 +679,7 @@ subroutine X(vnlpsi) (h, gr, psi, hpsi, ik)
   call profiling_in(C_PROFILING_VNLPSI)
   call push_sub('h_inc.Xvnlpsi')
 
-  call X(project_psi)(gr%m, h%ep%proj, h%ep%natoms, h%d%dim, psi, hpsi, ik)
+  call X(project_psi)(mesh, h%ep%proj, h%ep%natoms, h%d%dim, psi, hpsi, ik)
     
   call pop_sub()
   call profiling_out(C_PROFILING_VNLPSI)
@@ -764,7 +772,7 @@ subroutine X(vexternal) (h, gr, psi, hpsi, ik)
     end do
   end if
 
-  if(h%ep%non_local) call X(vnlpsi)  (h, gr, psi, hpsi, ik)
+  if(h%ep%non_local) call X(vnlpsi)(h, gr%m, psi, hpsi, ik)
 
   call pop_sub()
   call profiling_out(C_PROFILING_VLPSI)

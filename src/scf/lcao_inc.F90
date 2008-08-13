@@ -234,8 +234,7 @@ subroutine X(lcao_wf) (lcao_data, st, gr, h, start)
   ALLOCATE(hpsi(NP_PART, dim), NP_PART*dim)
   do ik = st%d%kpt%start, st%d%kpt%end
     do n1 = 1, lcao_data%st%nst
-      call X(vlpsi) (h, gr%m, lcao_data%st%X(psi)(:,:, n1, ik), hpsi(:,:), ik)
-      if (h%ep%non_local) call X(vnlpsi) (h, gr, lcao_data%st%X(psi)(:,:, n1, ik), hpsi(:,:), ik)
+      call X(vpsi)(h, gr%m, lcao_data%st%X(psi)(:,:, n1, ik), hpsi(:,:), ik)
       do n2 = n1, lcao_data%st%nst
         lcao_data%X(v) (n1, n2, ik) = X(mf_dotp)(gr%m, dim, hpsi, lcao_data%st%X(psi)(:, : ,n2, ik))
         lcao_data%X(hamilt) (n1, n2, ik) = lcao_data%X(k) (n1, n2, ik) + lcao_data%X(v) (n1 , n2, ik)

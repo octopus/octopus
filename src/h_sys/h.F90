@@ -71,7 +71,7 @@ module hamiltonian_m
     dhpsi,                 &
     dhpsi_batch,           &
     dhpsi_diag,            &
-    dvlpsi,                &
+    dvpsi,                 &
     dvnlpsi,               &
     dvnlpsi_diag,          &
     dmagnus,               &
@@ -80,7 +80,7 @@ module hamiltonian_m
     zhpsi,                 &
     zhpsi_batch,           &
     zhpsi_diag,            &
-    zvlpsi,                &
+    zvpsi,                 &
     zvnlpsi,               &
     zvnlpsi_diag,          &
     zmagnus,               &
