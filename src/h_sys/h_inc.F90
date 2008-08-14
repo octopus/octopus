@@ -184,7 +184,7 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
 
       nullify(grad)
       
-      if (present(t)) call X(vlasers)(gr, h, epsi, hpsi, ik, t)
+      if (present(t)) call X(vlasers)(gr, h, epsi, hpsi, grad, ik, t)
       
       if (present(t) .and. gauge_field_is_applied(h%ep%gfield)) call X(vgauge)(gr, h, epsi, hpsi, grad)
       
@@ -1014,7 +1014,7 @@ end subroutine X(vlaser_operator_linear)
 
 
 ! ---------------------------------------------------------
-subroutine X(vlasers) (gr, h, psi, hpsi, ik, t)
+subroutine X(vlasers) (gr, h, psi, hpsi, grad, ik, t)
   type(grid_t),        intent(inout) :: gr
   type(hamiltonian_t), intent(in)    :: h
   R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
