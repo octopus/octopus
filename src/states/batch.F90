@@ -48,6 +48,7 @@ module batch_m
   type batch_t
     type(state_t), pointer :: states(:)
     integer                :: nst
+    integer                :: current
   end type batch_t
 
   interface batch_init
@@ -82,6 +83,7 @@ contains
     integer,       intent(in)    :: nst
     
     this%nst = nst
+    this%current = 1
 
     ALLOCATE(this%states(1:nst), nst)
     call state_nullify(this%states(1:nst))

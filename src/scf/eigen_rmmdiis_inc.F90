@@ -39,7 +39,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, h, pre, tol, niter, converged, ik, di
   FLOAT,               intent(out)   :: diff(1:st%nst)
   integer,             intent(in)    :: blocksize
 
-  integer :: ist, idim, ib, ibatch
+  integer :: ist, idim, ib
   integer :: times, ntimes, iblock, psi_start, psi_end, num_in_block
   R_TYPE, allocatable :: residuals(:, :, :), preres(:, :, :), resres(:, :, :)
   R_TYPE, allocatable :: lambda(:, :)
@@ -84,13 +84,11 @@ subroutine X(eigensolver_rmmdiis) (gr, st, h, pre, tol, niter, converged, ik, di
       call batch_init(hpsib, num_in_block)
 
       ib = 0
-      ibatch = 0
       do ist = psi_start, psi_end
         ib = ib + 1
         if(conv(ist)) cycle
-        ibatch = ibatch + 1
-        call batch_add_state(psib, ibatch, ist, st%X(psi)(:, :, ist, ik))
-        call batch_add_state(hpsib, ibatch, ist, residuals(:, :, ib))
+        call batch_add_state(psib, ist, st%X(psi)(:, :, ist, ik))
+        call batch_add_state(hpsib, ist, residuals(:, :, ib))
       end do
 
       call X(hpsi_batch)(h, gr, psib, hpsib, ik)
@@ -131,13 +129,11 @@ subroutine X(eigensolver_rmmdiis) (gr, st, h, pre, tol, niter, converged, ik, di
       call batch_init(hpsib, num_in_block)
 
       ib = 0
-      ibatch = 0
       do ist = psi_start, psi_end
         ib = ib + 1
         if(conv(ist)) cycle
-        ibatch = ibatch + 1
-        call batch_add_state(psib, ibatch, ist, preres(:, :, ib))
-        call batch_add_state(hpsib, ibatch, ist, resres(:, :, ib))
+        call batch_add_state(psib, ist, preres(:, :, ib))
+        call batch_add_state(hpsib, ist, resres(:, :, ib))
       end do
 
       call X(hpsi_batch)(h, gr, psib, hpsib, ik)

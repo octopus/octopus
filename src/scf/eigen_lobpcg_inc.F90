@@ -361,8 +361,8 @@ subroutine X(lobpcg)(gr, st, h, st_start, st_end, psi, constr_start, constr_end,
     
     do i = 1, lnuc
       ist = luc(i)
-      call batch_add_state(psib, i, ist, res(:, :, ist))
-      call batch_add_state(hpsib, i, ist, h_res(:, :, ist))
+      call batch_add_state(psib, ist, res(:, :, ist))
+      call batch_add_state(hpsib, ist, h_res(:, :, ist))
     end do
 
     call X(hpsi_batch)(h, gr, psib, hpsib, ik)

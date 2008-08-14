@@ -23,28 +23,27 @@ subroutine X(batch_init_contiguous)(this, st_start, st_end, psi)
   integer,        intent(in)    :: st_end
   R_TYPE, target, intent(in)    :: psi(:, :, st_start:)
 
-  integer :: place, ist
+  integer :: ist
 
   call batch_init_empty(this, st_end - st_start + 1)
 
-  place = 1
   do ist = st_start, st_end
-    call X(batch_add_state)(this, place, ist, psi(:, :, ist))
-    place = place + 1
+    call X(batch_add_state)(this, ist, psi(:, :, ist))
   end do
 
 end subroutine X(batch_init_contiguous)
 
-subroutine X(batch_add_state)(this, place, ist, psi)
+subroutine X(batch_add_state)(this, ist, psi)
   type(batch_t),  intent(inout) :: this
-  integer,        intent(in)    :: place
   integer,        intent(in)    :: ist
   R_TYPE, target, intent(in)    :: psi(:, :)
 
-  ASSERT(place <= this%nst)
+  ASSERT(this%current <= this%nst)
 
-  this%states(place)%ist = ist
-  this%states(place)%X(psi) => psi
+  this%states(this%current)%ist = ist
+  this%states(this%current)%X(psi) => psi
+
+  this%current = this%current  + 1
 
 end subroutine X(batch_add_state)
 

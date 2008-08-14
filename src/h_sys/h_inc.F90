@@ -118,7 +118,7 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
       epsi => psi
     end if
     
-    call batch_add_state(epsib, ii, ist, epsi)
+    call batch_add_state(epsib, ist, epsi)
 
   end do
 
@@ -262,9 +262,9 @@ subroutine X(hpsi) (h, gr, psi, hpsi, ist, ik, t, kinetic_only)
   if(present(kinetic_only)) kinetic_only_ = kinetic_only
 
   call batch_init(psib, 1)
-  call batch_add_state(psib, 1, ist, psi)
+  call batch_add_state(psib, ist, psi)
   call batch_init(hpsib, 1)
-  call batch_add_state(hpsib, 1, ist, hpsi)
+  call batch_add_state(hpsib, ist, hpsi)
 
   if(present(t)) then
     call X(hpsi_batch)(h, gr, psib, hpsib, ik, t, kinetic_only = kinetic_only_)
