@@ -43,7 +43,6 @@ module batch_m
     FLOAT, pointer :: dpsi(:, :)
     CMPLX, pointer :: zpsi(:, :)
     integer        :: ist
-    integer        :: ik
   end type state_t
 
   type batch_t

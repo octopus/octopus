@@ -59,11 +59,12 @@ subroutine X(hamiltonian_eigenval)(h, gr, st, t)
 end subroutine X(hamiltonian_eigenval)
 
 ! ---------------------------------------------------------
-subroutine X(hpsi_batch) (h, gr, psib, hpsib, t, kinetic_only)
+subroutine X(hpsi_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
   type(hamiltonian_t), intent(inout) :: h
   type(grid_t),        intent(inout) :: gr
   type(batch_t),       intent(inout) :: psib
   type(batch_t),       intent(inout) :: hpsib
+  integer,             intent(in)    :: ik
   FLOAT, optional,     intent(in)    :: t
   logical, optional,   intent(in)    :: kinetic_only
   
@@ -73,7 +74,7 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, t, kinetic_only)
   type(profile_t), save :: phase_prof
   logical, allocatable :: copy_input(:), apply_kpoint(:)
   logical :: kinetic_only_
-  integer :: ii, ist, ik
+  integer :: ii, ist
   R_TYPE, pointer :: psi(:, :), hpsi(:, :)
   type(batch_t) :: epsib
   type(der_handle_t), allocatable :: handles(:, :)
@@ -117,7 +118,7 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, t, kinetic_only)
       epsi => psi
     end if
     
-    call batch_add_state(epsib, ii, ist, ik, epsi)
+    call batch_add_state(epsib, ii, ist, epsi)
 
   end do
 
@@ -239,7 +240,6 @@ contains
     epsi => epsib%states(ii)%X(psi)
     hpsi => hpsib%states(ii)%X(psi)
     ist  =  psib%states(ii)%ist
-    ik   =  psib%states(ii)%ik
   end subroutine set_pointers
 
 end subroutine X(hpsi_batch)
@@ -262,14 +262,14 @@ subroutine X(hpsi) (h, gr, psi, hpsi, ist, ik, t, kinetic_only)
   if(present(kinetic_only)) kinetic_only_ = kinetic_only
 
   call batch_init(psib, 1)
-  call batch_add_state(psib, 1, ist, ik, psi)
+  call batch_add_state(psib, 1, ist, psi)
   call batch_init(hpsib, 1)
-  call batch_add_state(hpsib, 1, ist, ik, hpsi)
+  call batch_add_state(hpsib, 1, ist, hpsi)
 
   if(present(t)) then
-    call X(hpsi_batch)(h, gr, psib, hpsib, t, kinetic_only = kinetic_only_)
+    call X(hpsi_batch)(h, gr, psib, hpsib, ik, t, kinetic_only = kinetic_only_)
   else
-    call X(hpsi_batch)(h, gr, psib, hpsib, kinetic_only = kinetic_only_)
+    call X(hpsi_batch)(h, gr, psib, hpsib, ik, kinetic_only = kinetic_only_)
   end if
 
   call batch_end(psib)

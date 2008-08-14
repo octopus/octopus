@@ -89,17 +89,17 @@ subroutine X(eigensolver_rmmdiis) (gr, st, h, pre, tol, niter, converged, ik, di
         ib = ib + 1
         if(conv(ist)) cycle
         ibatch = ibatch + 1
-        call batch_add_state(psib, ibatch, ist, ik, st%X(psi)(:, :, ist, ik))
-        call batch_add_state(hpsib, ibatch, ist, ik, residuals(:, :, ib))
+        call batch_add_state(psib, ibatch, ist, st%X(psi)(:, :, ist, ik))
+        call batch_add_state(hpsib, ibatch, ist, residuals(:, :, ib))
       end do
 
-      call X(hpsi_batch)(h, gr, psib, hpsib)
+      call X(hpsi_batch)(h, gr, psib, hpsib, ik)
 
       niter = niter + num_in_block
       
       call batch_end(psib)
       call batch_end(hpsib)
-
+      
       ! calculate the residual
 
       ib = 0
@@ -136,11 +136,11 @@ subroutine X(eigensolver_rmmdiis) (gr, st, h, pre, tol, niter, converged, ik, di
         ib = ib + 1
         if(conv(ist)) cycle
         ibatch = ibatch + 1
-        call batch_add_state(psib, ibatch, ist, ik, preres(:, :, ib))
-        call batch_add_state(hpsib, ibatch, ist, ik, resres(:, :, ib))
+        call batch_add_state(psib, ibatch, ist, preres(:, :, ib))
+        call batch_add_state(hpsib, ibatch, ist, resres(:, :, ib))
       end do
 
-      call X(hpsi_batch)(h, gr, psib, hpsib)
+      call X(hpsi_batch)(h, gr, psib, hpsib, ik)
 
       niter = niter + num_in_block
       

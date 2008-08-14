@@ -17,11 +17,10 @@
 !!
 !! $Id: batch_inc.F90 4298 2008-06-18 15:03:00Z dstrubbe $
 
-subroutine X(batch_init_contiguous)(this, st_start, st_end, ik, psi)
+subroutine X(batch_init_contiguous)(this, st_start, st_end, psi)
   type(batch_t),  intent(out)   :: this
   integer,        intent(in)    :: st_start
   integer,        intent(in)    :: st_end
-  integer,        intent(in)    :: ik
   R_TYPE, target, intent(in)    :: psi(:, :, st_start:)
 
   integer :: place, ist
@@ -30,23 +29,21 @@ subroutine X(batch_init_contiguous)(this, st_start, st_end, ik, psi)
 
   place = 1
   do ist = st_start, st_end
-    call X(batch_add_state)(this, place, ist, ik, psi(:, :, ist))
+    call X(batch_add_state)(this, place, ist, psi(:, :, ist))
     place = place + 1
   end do
 
 end subroutine X(batch_init_contiguous)
 
-subroutine X(batch_add_state)(this, place, ist, ik, psi)
+subroutine X(batch_add_state)(this, place, ist, psi)
   type(batch_t),  intent(inout) :: this
   integer,        intent(in)    :: place
   integer,        intent(in)    :: ist
-  integer,        intent(in)    :: ik
   R_TYPE, target, intent(in)    :: psi(:, :)
 
   ASSERT(place <= this%nst)
 
   this%states(place)%ist = ist
-  this%states(place)%ik  = ik
   this%states(place)%X(psi) => psi
 
 end subroutine X(batch_add_state)
