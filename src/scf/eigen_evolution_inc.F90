@@ -32,14 +32,14 @@ subroutine X(eigensolver_evolution) (gr, st, h, tol, niter, converged, ik, diff,
   integer :: ist, iter, maxiter, conv, matvec, i, j
   R_TYPE, allocatable :: hpsi(:, :), m(:, :), c(:, :), phi(:, :, :)
   FLOAT, allocatable :: eig(:)
-  type(td_exp_t) :: te
+  type(exponential_t) :: te
 
   call push_sub('eigen_evolution.eigensolver_evolution')
 
   maxiter = niter
   matvec = 0
 
-  call td_exp_init(gr, te)
+  call exponential_init(te, gr)
 
   ALLOCATE(hpsi(NP_PART, st%d%dim), NP_PART*st%d%dim)
   ALLOCATE(m(st%nst, st%nst), st%nst*st%nst)
@@ -97,7 +97,7 @@ subroutine X(eigensolver_evolution) (gr, st, h, tol, niter, converged, ik, diff,
   converged = conv
 
   niter = matvec
-  call td_exp_end(te)
+  call exponential_end(te)
   deallocate(hpsi, m, c, eig, phi)
   call pop_sub()
 contains
@@ -114,7 +114,7 @@ contains
 #else
     zpsi => psi
 #endif
-    call td_exp_dt(te, gr, h, zpsi, ist, ik, -tau, M_ZERO, order = j, imag_time = .true.)
+    call exponential_apply(te, gr, h, zpsi, ist, ik, -tau, M_ZERO, order = j, imag_time = .true.)
 #if defined(R_TREAL)
     psi = zpsi
     deallocate(zpsi)

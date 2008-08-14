@@ -30,7 +30,7 @@ libh_sys_a_SOURCES = \
 	system.F90 xc_OEP_kernel.F90 \
 	pert.F90 \
 	gauge_field.F90 ob_lead.F90 \
-	td_exp_split.F90 td_exp.F90
+	exponential_split.F90 exponential.F90
 
 noinst_HEADERS = \
 	xc_KLI_inc.F90 xc_OEP_x_inc.F90 xc_OEP_SIC_inc.F90 xc_OEP_kernel_inc.F90 \
@@ -62,5 +62,5 @@ pert.o : pert.F90 pert_inc.F90 species_pot.o projector.o h.o epot.o
 output_h_sys.o : output_h_sys.F90 output_states.F90 output_h.F90 output_linear_response.F90 h.o
 gauge_field.o : gauge_field.F90 projector.o
 ob_lead.o: ob_lead.F90
-td_exp_split.o : td_exp_split.F90 epot.o h.o
-td_exp.o : td_exp.F90 td_exp_split.o epot.o h.o
+exponential_split.o : exponential_split.F90 epot.o h.o
+exponential.o : exponential.F90 exponential_split.o epot.o h.o

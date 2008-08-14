@@ -33,7 +33,7 @@ module td_trans_rti_m
   use mesh_function_m
   use messages_m
   use states_m
-  use td_exp_m
+  use exponential_m
   use td_trans_mem_m
   use td_trans_lead_m
   use td_trans_src_m
@@ -91,7 +91,7 @@ module td_trans_rti_m
 
   ! We use 1st order Taylor expansion of exp(-i dt/2 H)|psi>
   ! to calculate (1 - i dt H)|psi>.
-  type(td_exp_t) :: taylor_1st
+  type(exponential_t) :: taylor_1st
 
   ! Parameters to the BiCG in Crank-Nicholson.
   integer          :: cg_max_iter
@@ -1173,9 +1173,9 @@ contains
     end if
 
     ! Apply (1 - i\delta H_{CC}^{(m)}) to zpsi.
-    ! td_exp_dt with Taylor expansion calculates exp(-i dt H), i. e. the
+    ! exponential_apply with Taylor expansion calculates exp(-i dt H), i. e. the
     ! minus is already built in.
-    call td_exp_dt(taylor_1st, gr, h, zpsi, ist, ik, -sign*dt/M_TWO, t-dt)
+    call exponential_apply(taylor_1st, gr, h, zpsi, ist, ik, -sign*dt/M_TWO, t-dt)
     if(present(transposed)) then
       if(transposed) zpsi = conjg(zpsi)
     end if
@@ -1211,9 +1211,9 @@ contains
     call get_intf_wf(intf, RIGHT, zpsi, intf_wf(:, RIGHT))
 
     ! Apply (1 - i\delta H_{CC}^{(m)}) to zpsi.
-    ! td_exp_dt with Taylor expansion calculates exp(-i dt H), i. e. the
+    ! exponential_apply with Taylor expansion calculates exp(-i dt H), i. e. the
     ! minus is already built in.
-    call td_exp_dt(taylor_1st, gr, h, zpsi, ist, ik, dt/M_TWO, t-dt)
+    call exponential_apply(taylor_1st, gr, h, zpsi, ist, ik, dt/M_TWO, t-dt)
 
     ! Apply modification: sign \delta^2 Q zpsi
     call apply_mem(conjg(mem(:,:,LEFT)), LEFT, intf, intf_wf(:, LEFT), zpsi, TOCMPLX(dt**2/M_FOUR, M_ZERO))
@@ -1255,9 +1255,9 @@ contains
     end if
 
     ! Apply (1 - i\delta H_{CC}^{(m)}) to zpsi.
-    ! td_exp_dt with Taylor expansion calculates exp(-i dt H), i. e. the
+    ! exponential_apply with Taylor expansion calculates exp(-i dt H), i. e. the
     ! minus is already built in.
-    call td_exp_dt(taylor_1st, gr, h, zpsi, ist, ik, -sign*dt/M_TWO, t-dt)
+    call exponential_apply(taylor_1st, gr, h, zpsi, ist, ik, -sign*dt/M_TWO, t-dt)
 
     if(present(transposed)) then
       if(transposed) zpsi = conjg(zpsi)

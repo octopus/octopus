@@ -45,7 +45,7 @@ module eigensolver_m
   use states_lalg_m
   use subspace_m
   use units_m
-  use td_exp_m
+  use exponential_m
 
   implicit none
 

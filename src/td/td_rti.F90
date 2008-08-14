@@ -35,8 +35,8 @@ module td_rti_m
   use profiling_m
   use sparskit_m
   use states_m
-  use td_exp_m
-  use td_exp_split_m
+  use exponential_m
+  use exponential_split_m
   use td_trans_rti_m
   use v_ks_m
   use varinfo_m
@@ -70,7 +70,7 @@ module td_rti_m
 
   type td_rti_t
     integer           :: method         ! Which evolution method to use.
-    type(td_exp_t)    :: te             ! How to apply the propagator (e^{-i H \Delta t}).
+    type(exponential_t)    :: te             ! How to apply the propagator (e^{-i H \Delta t}).
     FLOAT, pointer    :: v_old(:, :, :) ! Storage of the KS potential of previous iterations.
     FLOAT, pointer    :: vmagnus(:, :, :) ! Auxiliary function to store the Magnus potentials.
     type(zcf_t)       :: cf               ! Auxiliary cube for split operator methods.
@@ -119,7 +119,7 @@ contains
     nspin = size(tri%v_old, 2)
     ALLOCATE(tro%v_old(np, nspin, 0:3), np*nspin*(3+1))
     tro%v_old(:, :, :) = M_ZERO
-    call td_exp_copy(tro%te, tri%te)
+    call exponential_copy(tro%te, tri%te)
     tro%scf_propagation = tri%scf_propagation
 
     call pop_sub()
@@ -331,7 +331,7 @@ contains
     ! Allocate memory to store the old KS potentials
     ALLOCATE(tr%v_old(NP, st%d%nspin, 0:3), NP*st%d%nspin*(3+1))
     tr%v_old(:, :, :) = M_ZERO
-    call td_exp_init(gr, tr%te)             ! initialize propagator
+    call exponential_init(tr%te, gr) ! initialize propagator
 
     ! By default, the propagation is only self-consistent in the first iterations
     ! (unless we are doing a QOCT run)
@@ -372,7 +372,7 @@ contains
       call cn_src_mem_end(tr%trans)
     end select
     
-    call td_exp_end(tr%te)       ! clean propagator method
+    call exponential_end(tr%te)       ! clean propagator method
   end subroutine td_rti_end
 
 
@@ -443,7 +443,7 @@ contains
     case(PROP_SUZUKI_TROTTER);          call td_suzuki_trotter
     case(PROP_REVERSAL);                call td_reversal
     case(PROP_APP_REVERSAL);            call td_app_reversal
-    case(PROP_EXPONENTIAL_MIDPOINT);    call td_exponential_midpoint
+    case(PROP_EXPONENTIAL_MIDPOINT);    call exponentialonential_midpoint
     case(PROP_CRANK_NICHOLSON);         call td_crank_nicholson
     case(PROP_MAGNUS);                  call td_magnus
     case(PROP_CRANK_NICHOLSON_SRC_MEM); call td_crank_nicholson_src_mem
@@ -478,7 +478,7 @@ contains
           case(PROP_SUZUKI_TROTTER);          call td_suzuki_trotter
           case(PROP_REVERSAL);                call td_reversal
           case(PROP_APP_REVERSAL);            call td_app_reversal
-          case(PROP_EXPONENTIAL_MIDPOINT);    call td_exponential_midpoint
+          case(PROP_EXPONENTIAL_MIDPOINT);    call exponentialonential_midpoint
           case(PROP_CRANK_NICHOLSON);         call td_crank_nicholson
           case(PROP_MAGNUS);                  call td_magnus
           case(PROP_CRANK_NICHOLSON_SRC_MEM); call td_crank_nicholson_src_mem
@@ -604,7 +604,7 @@ contains
             end do
             
             !propagate the state dt with H(t-dt)
-            call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, ik), ist, ik, dt, t-dt)
+            call exponential_apply(tr%te, gr, h, st%zpsi(:,:, ist, ik), ist, ik, dt, t-dt)
             
             !calculate the contribution to the density
             call states_dens_accumulate(st, NP, st%rho, ist, ik)
@@ -631,7 +631,7 @@ contains
       ! propagate dt/2 with H(t-dt)
       do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
-          call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, ik), ist, ik, dt/M_TWO, t-dt)
+          call exponential_apply(tr%te, gr, h, st%zpsi(:,:, ist, ik), ist, ik, dt/M_TWO, t-dt)
         end do
       end do
 
@@ -649,7 +649,7 @@ contains
 
       do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
-          call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, ik), ist, ik, dt/M_TWO, t)
+          call exponential_apply(tr%te, gr, h, st%zpsi(:,:, ist, ik), ist, ik, dt/M_TWO, t)
         end do
       end do
 
@@ -669,7 +669,7 @@ contains
       ! propagate half of the time step with H(t-dt)
       do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
-          call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, ik), ist, ik, dt/M_TWO, t-dt)
+          call exponential_apply(tr%te, gr, h, st%zpsi(:,:, ist, ik), ist, ik, dt/M_TWO, t-dt)
         end do
       end do
 
@@ -687,7 +687,7 @@ contains
       ! propagate the other half with H(t)
       do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
-          call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, ik), ist, ik, dt/M_TWO, t)
+          call exponential_apply(tr%te, gr, h, st%zpsi(:,:, ist, ik), ist, ik, dt/M_TWO, t)
         end do
       end do
 
@@ -697,12 +697,12 @@ contains
 
     ! ---------------------------------------------------------
     ! Exponential midpoint
-    subroutine td_exponential_midpoint
+    subroutine exponentialonential_midpoint
       integer :: ist, ik
       type(ion_state_t) :: ions_state
       FLOAT :: vecpot(1:MAX_DIM), vecpot_vel(1:MAX_DIM)
 
-      call push_sub('td_rti.td_exponential_midpoint')
+      call push_sub('td_rti.exponentialonential_midpoint')
 
       if(h%theory_level.ne.INDEPENDENT_PARTICLES) then
         call interpolate( (/t, t-dt, t-2*dt/), tr%v_old(:, :, 0:2), t-dt/M_TWO, h%vhxc(:, :))
@@ -723,7 +723,7 @@ contains
 
       do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
-          call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, ik), ist, ik, dt, t - dt/M_TWO)
+          call exponential_apply(tr%te, gr, h, st%zpsi(:,:, ist, ik), ist, ik, dt, t - dt/M_TWO)
         end do
       end do
 
@@ -735,7 +735,7 @@ contains
       end if
 
       call pop_sub()
-    end subroutine td_exponential_midpoint
+    end subroutine exponentialonential_midpoint
 
 
     ! ---------------------------------------------------------
@@ -760,7 +760,7 @@ contains
       dt_op = dt
       t_op  = t
 
-      ! we (ab)use td_exp_dt to compute (1-i\delta t/2 H_n)\psi^n
+      ! we (ab)use exponential_apply to compute (1-i\delta t/2 H_n)\psi^n
       ! exponential order needs to be only 1
       tr%te%exp_method = 3 ! == taylor expansion
       tr%te%exp_order  = 1
@@ -776,7 +776,7 @@ contains
         ! get rhs of CN linear system (rhs1 = (1-i\delta t/2 H_n)\psi^n)
         do ik = 1, st%d%nik
           do ist = st%st_start, st%st_end
-            call td_exp_dt(tr%te, gr, h, zpsi_rhs_pred(:, :, ist, ik), ist, ik, dt/M_TWO, t-dt)
+            call exponential_apply(tr%te, gr, h, zpsi_rhs_pred(:, :, ist, ik), ist, ik, dt/M_TWO, t-dt)
             if(hamiltonian_inh_term(h)) then
               zpsi_rhs_pred(:, :, ist, ik) = zpsi_rhs_pred(:, :, ist, ik) + dt * h%inh_st%zpsi(:, :, ist, ik)
             end if
@@ -806,7 +806,7 @@ contains
       ! get rhs of CN linear system (rhs2 = (1-i\delta t H_{n+1/2})\psi^n)
       do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
-          call td_exp_dt(tr%te, gr, h, zpsi_rhs_corr(:, :, ist, ik), ist, ik, dt/M_TWO, t-dt)
+          call exponential_apply(tr%te, gr, h, zpsi_rhs_corr(:, :, ist, ik), ist, ik, dt/M_TWO, t-dt)
           if(hamiltonian_inh_term(h)) then
             zpsi_rhs_corr(:, :, ist, ik) = zpsi_rhs_corr(:, :, ist, ik) + dt * h%inh_st%zpsi(:, :, ist, ik)
           end if
@@ -879,7 +879,7 @@ contains
 
       do k = 1, st%d%nik
         do ist = st%st_start, st%st_end
-          call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, k), ist, k, dt, M_ZERO, &
+          call exponential_apply(tr%te, gr, h, st%zpsi(:,:, ist, k), ist, k, dt, M_ZERO, &
             vmagnus = tr%vmagnus)
         end do
       end do
@@ -916,7 +916,7 @@ contains
     zpsi_tmp(1:grid_p%m%np, idim_op, ist_op, ik_op) = xre(1:grid_p%m%np) + M_zI*xim(1:grid_p%m%np)
 
     ! propagate backwards
-    call td_exp_dt(tr_p%te, grid_p, h_p, zpsi_tmp(:, :, ist_op, ik_op), ist_op, ik_op, -dt_op/M_TWO, t_op)
+    call exponential_apply(tr_p%te, grid_p, h_p, zpsi_tmp(:, :, ist_op, ik_op), ist_op, ik_op, -dt_op/M_TWO, t_op)
 
     yre(1:grid_p%m%np) =  real(zpsi_tmp(1:grid_p%m%np, idim_op, ist_op, ik_op))
     yim(1:grid_p%m%np) = aimag(zpsi_tmp(1:grid_p%m%np, idim_op, ist_op, ik_op))
@@ -939,7 +939,7 @@ contains
     zpsi_tmp(1:grid_p%m%np, idim_op, ist_op, ik_op) = xre(1:grid_p%m%np) - M_zI*xim(1:grid_p%m%np)
     
     ! propagate backwards
-    call td_exp_dt(tr_p%te, grid_p, h_p, zpsi_tmp(:, :, ist_op, ik_op), ist_op, ik_op, -dt_op/M_TWO, t_op)
+    call exponential_apply(tr_p%te, grid_p, h_p, zpsi_tmp(:, :, ist_op, ik_op), ist_op, ik_op, -dt_op/M_TWO, t_op)
 
     yre(1:grid_p%m%np) =    real(zpsi_tmp(1:grid_p%m%np, idim_op, ist_op, ik_op))
     yim(1:grid_p%m%np) = - aimag(zpsi_tmp(1:grid_p%m%np, idim_op, ist_op, ik_op))

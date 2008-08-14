@@ -20,8 +20,8 @@
 #include "global.h"
 
 ! This module contains routines necessary to the split operator
-! methods defined in td_exp
-module td_exp_split_m
+! methods defined in exponential
+module exponential_split_m
   use cube_function_m
   use external_pot_m
   use fft_m
@@ -53,7 +53,7 @@ contains
     integer :: ix, iy, iz, k(MAX_DIM), idim
     FLOAT :: cutoff, temp(MAX_DIM), g2
 
-    call push_sub('td_exp_split.exp_kinetic')
+    call push_sub('exponential_split.exp_kinetic')
 
     if(simul_box_is_periodic(gr%sb)) then
       message(1) = 'Internal error in exp_kinetic'
@@ -114,7 +114,7 @@ contains
     integer :: i
     FLOAT, allocatable :: pot(:)
 
-    call push_sub('td_exp_split.vlpsi')
+    call push_sub('exponential_split.vlpsi')
 
     ! WARNING: spinors not yet supported.
     select case(h%d%ispin)
@@ -164,7 +164,7 @@ contains
 !    CMPLX   :: factor
 !    CMPLX, allocatable :: initzpsi(:, :)
 
-    call push_sub('td_exp_split.vnlpsi')
+    call push_sub('exponential_split.vnlpsi')
 
     message(1) = 'Error: zexp_vnlpsi is currently broken.'
     call write_fatal(1)
@@ -218,7 +218,7 @@ contains
     call pop_sub()
   end subroutine zexp_vnlpsi
 
-end module td_exp_split_m
+end module exponential_split_m
 
 !! Local Variables:
 !! mode: f90

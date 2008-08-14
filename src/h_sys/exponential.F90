@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-module td_exp_m
+module exponential_m
   use cube_function_m
   use datasets_m
   use fourier_space_m
@@ -29,18 +29,18 @@ module td_exp_m
   use mesh_function_m
   use profiling_m
   use states_lalg_m
-  use td_exp_split_m
+  use exponential_split_m
   use varinfo_m
 
   implicit none
 
   private
-  public ::                 &
-    td_exp_t,               &
-    td_exp_init,            &
-    td_exp_copy,            &
-    td_exp_end,             &
-    td_exp_dt
+  public ::                      &
+    exponential_t,               &
+    exponential_init,            &
+    exponential_copy,            &
+    exponential_end,             &
+    exponential_apply
 
   integer, public, parameter :: &
     SPLIT_OPERATOR     = 0,     &
@@ -49,21 +49,19 @@ module td_exp_m
     TAYLOR             = 3,     &
     CHEBYSHEV          = 4
 
-  type td_exp_t
-    integer   :: exp_method  ! which method is used to apply the exponential
-    FLOAT     :: lanczos_tol ! tolerance for the lanczos method
-    integer   :: exp_order   ! order to which the propagator is expanded
+  type exponential_t
+    integer     :: exp_method  ! which method is used to apply the exponential
+    FLOAT       :: lanczos_tol ! tolerance for the lanczos method
+    integer     :: exp_order   ! order to which the propagator is expanded
     type(zcf_t) :: cf          ! auxiliary cube for split operator methods
-  end type td_exp_t
-
+  end type exponential_t
 
 contains
 
-
   ! ---------------------------------------------------------
-  subroutine td_exp_init(gr, te)
-    type(grid_t),   intent(in)  :: gr
-    type(td_exp_t), intent(out) :: te
+  subroutine exponential_init(te, gr)
+    type(grid_t),        intent(in)  :: gr
+    type(exponential_t), intent(out) :: te
 
     !%Variable TDExponentialMethod
     !%Type integer
@@ -195,37 +193,31 @@ contains
       call zcf_fft_init(te%cf, gr%sb)
     end if
 
-  end subroutine td_exp_init
-
-
-  ! ---------------------------------------------------------
-  subroutine td_exp_end(te)
-    type(td_exp_t), intent(inout) :: te
-
-    if(te%exp_method==SPLIT_OPERATOR.or.te%exp_method==SUZUKI_TROTTER) then
-      call zcf_free(te%cf)
-    end if
-  end subroutine td_exp_end
-
+  end subroutine exponential_init
 
   ! ---------------------------------------------------------
-  subroutine td_exp_copy(teo, tei)
-    type(td_exp_t), intent(inout) :: teo
-    type(td_exp_t), intent(in)    :: tei
+  subroutine exponential_end(te)
+    type(exponential_t), intent(inout) :: te
+
+    if(te%exp_method==SPLIT_OPERATOR.or.te%exp_method==SUZUKI_TROTTER) call zcf_free(te%cf)
+
+  end subroutine exponential_end
+
+  ! ---------------------------------------------------------
+  subroutine exponential_copy(teo, tei)
+    type(exponential_t), intent(inout) :: teo
+    type(exponential_t), intent(in)    :: tei
 
     teo%exp_method  = tei%exp_method
     teo%lanczos_tol = tei%lanczos_tol
     teo%exp_order   = tei%exp_order
-    if( (teo%exp_method == SPLIT_OPERATOR) .or. (teo%exp_method == SUZUKI_TROTTER) ) then
-      call zcf_new_from(teo%cf, tei%cf)
-    end if
+    if(teo%exp_method == SPLIT_OPERATOR .or. teo%exp_method == SUZUKI_TROTTER) call zcf_new_from(teo%cf, tei%cf)
 
-  end subroutine td_exp_copy
-
+  end subroutine exponential_copy
 
   ! ---------------------------------------------------------
-  subroutine td_exp_dt(te, gr, h, zpsi, ist, ik, deltat, t, order, vmagnus, imag_time)
-    type(td_exp_t),      intent(inout) :: te
+  subroutine exponential_apply(te, gr, h, zpsi, ist, ik, deltat, t, order, vmagnus, imag_time)
+    type(exponential_t), intent(inout) :: te
     type(grid_t),        intent(inout) :: gr
     type(hamiltonian_t), intent(inout) :: h
     integer,             intent(in)    :: ist
@@ -233,15 +225,15 @@ contains
     CMPLX,               intent(inout) :: zpsi(:, :)
     FLOAT,               intent(in)    :: deltat, t
     integer, optional,   intent(out)   :: order ! For the methods that rely on Hamiltonian-vector
-    ! multiplication, the number of these.
-    FLOAT,     optional, intent(in)    :: vmagnus(NP, h%d%nspin, 2)
+                                                ! multiplication, the number of these.
+    FLOAT,   optional,   intent(in)    :: vmagnus(NP, h%d%nspin, 2)
     logical, optional,   intent(in)    :: imag_time
 
     CMPLX   :: timestep
     logical :: apply_magnus
     type(profile_t), save :: exp_prof
 
-    call push_sub('td_exp.td_exp_td')
+    call push_sub('exponential.exponential_td')
     call profiling_in(exp_prof, "EXPONENTIAL")
 
     apply_magnus = .false.
@@ -265,12 +257,16 @@ contains
     end if
 
     select case(te%exp_method)
-    case(TAYLOR);            call taylor_series
+    case(TAYLOR)
+      call taylor_series
     case(LANCZOS_EXPANSION)
       call lanczos
-    case(SPLIT_OPERATOR);    call split
-    case(SUZUKI_TROTTER);    call suzuki
-    case(CHEBYSHEV);         call cheby
+    case(SPLIT_OPERATOR)
+      call split
+    case(SUZUKI_TROTTER)
+      call suzuki
+    case(CHEBYSHEV)
+      call cheby
     end select
 
     call profiling_out(exp_prof)
@@ -291,7 +287,6 @@ contains
     end subroutine operate
     ! ---------------------------------------------------------
 
-
     ! ---------------------------------------------------------
     subroutine taylor_series()
       CMPLX :: zfact
@@ -299,7 +294,7 @@ contains
       integer :: i, idim
       logical :: zfact_is_real
 
-      call push_sub('td_exp.taylor_series')
+      call push_sub('exponential.taylor_series')
 
       ALLOCATE(zpsi1 (NP_PART, h%d%dim), NP_PART*h%d%dim)
       ALLOCATE(hzpsi1(NP,      h%d%dim), NP     *h%d%dim)
@@ -361,7 +356,7 @@ contains
       CMPLX :: zfact
       CMPLX, allocatable :: zpsi1(:,:,:)
 
-      call push_sub('td_exp.cheby')
+      call push_sub('exponential.cheby')
 
       ALLOCATE(zpsi1(NP_PART, h%d%dim, 0:2), NP_PART*h%d%dim*3)
       zpsi1 = M_z0
@@ -393,7 +388,6 @@ contains
     end subroutine cheby
     ! ---------------------------------------------------------
 
-
     ! ---------------------------------------------------------
     subroutine lanczos
       integer ::  korder, n, k, iflag, lwsp, ns, i, j, l, iexph, idim
@@ -401,7 +395,7 @@ contains
       CMPLX, allocatable :: hm(:,:), v(:,:,:), expo(:,:), wsp(:), tmp(:, :)
       FLOAT :: beta, res, tol !, nrm
 
-      call push_sub('td_exp.lanczos')
+      call push_sub('exponential.lanczos')
 
       tol    = te%lanczos_tol
 
@@ -510,10 +504,9 @@ contains
     end subroutine lanczos
     ! ---------------------------------------------------------
 
-
     ! ---------------------------------------------------------
     subroutine split
-      call push_sub('td_exp.split')
+      call push_sub('exponential.split')
 
       if(h%gauge == VELOCITY) then
         message(1) = 'Split operator does not work well if velocity gauge is used.'
@@ -531,13 +524,12 @@ contains
     end subroutine split
     ! ---------------------------------------------------------
 
-
     ! ---------------------------------------------------------
     subroutine suzuki
       FLOAT :: dt(5), p, pp(5)
       integer :: k
 
-      call push_sub('td_exp.suzuki')
+      call push_sub('exponential.suzuki')
 
       if(h%gauge == 2) then
         message(1) = 'Suzuki-Trotter operator does not work well if velocity gauge is used.'
@@ -561,9 +553,9 @@ contains
     end subroutine suzuki
     ! ---------------------------------------------------------
 
-  end subroutine td_exp_dt
+  end subroutine exponential_apply
 
-end module td_exp_m
+end module exponential_m
 
 !! Local Variables:
 !! mode: f90
