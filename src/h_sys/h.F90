@@ -73,7 +73,6 @@ module hamiltonian_m
     dhpsi_diag,            &
     dvpsi,                 &
     dvnlpsi,               &
-    dvnlpsi_diag,          &
     dmagnus,               &
     dkinetic,              &
     dvmask,                &
@@ -82,7 +81,6 @@ module hamiltonian_m
     zhpsi_diag,            &
     zvpsi,                 &
     zvnlpsi,               &
-    zvnlpsi_diag,          &
     zmagnus,               &
     zkinetic,              &
     zvmask,                &

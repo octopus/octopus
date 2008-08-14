@@ -155,11 +155,12 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
 
   if (.not. kinetic_only_) then
     ! apply the potential
+
+    call X(vlpsi)(h, gr%m, epsib, hpsib, ik)
+
     do ii = 1, nst
       call set_pointers
       
-      call X(vlpsi)(h, gr%m, epsi, hpsi, ik)
-
       call X(kinetic_keep_going)(h, handles(:, ii), gr, epsi, lapl(:, :, ii))
 
       if(h%ep%non_local) call X(vnlpsi)(h, gr%m, epsi, hpsi, ik)
@@ -294,7 +295,20 @@ subroutine X(vpsi) (h, mesh, psi, vpsi, ik)
   R_TYPE, target,      intent(inout) :: psi(:,:)  
   R_TYPE,              intent(out)   :: vpsi(:,:)
 
-  call X(vlpsi)(h, mesh, psi, vpsi, ik)
+
+  type(batch_t) :: psib, vpsib
+
+  call batch_init(psib, 1)
+  call batch_add_state(psib, 1, psi)
+
+  call batch_init(vpsib, 1)
+  call batch_add_state(vpsib, 1, vpsi)
+
+  call X(vlpsi)(h, mesh, psib, vpsib, ik)
+
+  call batch_end(psib)
+  call batch_end(vpsib)
+
   if(h%ep%non_local) call X(vnlpsi)(h, mesh, psi, vpsi, ik)
 
 end subroutine X(vpsi)
@@ -692,60 +706,64 @@ subroutine X(vnlpsi) (h, mesh, psi, hpsi, ik)
 end subroutine X(vnlpsi)
 
 ! ---------------------------------------------------------
-subroutine X(vlpsi) (h, m, psi, hpsi, ik)
+subroutine X(vlpsi) (h, m, psib, hpsib, ik)
   type(hamiltonian_t), intent(in)    :: h
   type(mesh_t),        intent(in)    :: m
   integer,             intent(in)    :: ik
-  R_TYPE,              intent(in)    :: psi(:,:)  ! psi(NP_PART, h%d%dim)
-  R_TYPE,              intent(out)   :: hpsi(:,:) ! hpsi(NP_PART, h%d%dim)
+  type(batch_t),       intent(in)    :: psib
+  type(batch_t),       intent(out)   :: hpsib
 
-  integer :: idim, ip
+  integer :: idim, ip, ii
+  R_TYPE, pointer :: psi(:, :), hpsi(:, :)
 
   call profiling_in(C_PROFILING_VLPSI)
   call push_sub('h_inc.Xvlpsi')
 
-  select case(h%d%ispin)
-  case(UNPOLARIZED)
-    !$omp parallel do
-    do ip = 1, m%np
-      hpsi(ip, 1) = (h%vhxc(ip, 1) + h%ep%vpsl(ip))*psi(ip, 1)
-    end do
-    !$omp end parallel do
+  do ii = 1, psib%nst
+    psi  => psib%states(ii)%X(psi)
+    hpsi => hpsib%states(ii)%X(psi)
 
-    call profiling_count_operations((2*R_ADD + R_MUL)*m%np)
-
-  case(SPIN_POLARIZED)
-    if(modulo(ik+1, 2) == 0) then ! we have a spin down
+    select case(h%d%ispin)
+    case(UNPOLARIZED)
       do ip = 1, m%np
         hpsi(ip, 1) = (h%vhxc(ip, 1) + h%ep%vpsl(ip))*psi(ip, 1)
       end do
-    else
+      
+      call profiling_count_operations((2*R_ADD + R_MUL)*m%np)
+      
+    case(SPIN_POLARIZED)
+      if(modulo(ik + 1, 2) == 0) then ! we have a spin down
+        do ip = 1, m%np
+          hpsi(ip, 1) = (h%vhxc(ip, 1) + h%ep%vpsl(ip))*psi(ip, 1)
+        end do
+      else
+        do ip = 1, m%np
+          hpsi(ip, 1) = (h%vhxc(ip, 2) + h%ep%vpsl(ip))*psi(ip, 1)
+        end do
+      end if
+      
+      call profiling_count_operations((2*R_ADD + R_MUL)*m%np)
+      
+    case(SPINORS)
       do ip = 1, m%np
-        hpsi(ip, 1) = (h%vhxc(ip, 2) + h%ep%vpsl(ip))*psi(ip, 1)
+        hpsi(ip, 1) = (h%vhxc(ip, 1) + h%ep%vpsl(ip))*psi(ip, 1) + (h%vhxc(ip, 3) + M_zI*h%vhxc(ip, 4))*psi(ip, 2)
+        hpsi(ip, 2) = (h%vhxc(ip, 2) + h%ep%vpsl(ip))*psi(ip, 2) + (h%vhxc(ip, 3) - M_zI*h%vhxc(ip, 4))*psi(ip, 1)
       end do
+      
+      call profiling_count_operations((8*R_ADD + 2*R_MUL)*m%np)
+      
+    end select
+    
+    if (associated(h%ep%E_field)) then
+      do idim = 1, h%d%dim
+        hpsi(1:m%np, idim) = hpsi(1:m%np, idim) + h%ep%v_static*psi(1:m%np, idim)
+      end do
+      
+      call profiling_count_operations((R_ADD + R_MUL)*m%np)
+      
     end if
-
-    call profiling_count_operations((2*R_ADD + R_MUL)*m%np)
-
-  case(SPINORS)
-    do ip = 1, m%np
-      hpsi(ip, 1) = (h%vhxc(ip, 1) + h%ep%vpsl(ip))*psi(ip, 1) + (h%vhxc(ip, 3) + M_zI*h%vhxc(ip, 4))*psi(ip, 2)
-      hpsi(ip, 2) = (h%vhxc(ip, 2) + h%ep%vpsl(ip))*psi(ip, 2) + (h%vhxc(ip, 3) - M_zI*h%vhxc(ip, 4))*psi(ip, 1)
-    end do
-
-    call profiling_count_operations((8*R_ADD + 2*R_MUL)*m%np)
-
-  end select
-
-  if (associated(h%ep%E_field)) then
-    do idim = 1, h%d%dim
-      hpsi(1:m%np, idim) = hpsi(1:m%np, idim) + h%ep%v_static*psi(1:m%np, idim)
-    end do
-
-    call profiling_count_operations((R_ADD + R_MUL)*m%np)
-
-  end if
-
+  end do
+  
   call pop_sub()
   call profiling_out(C_PROFILING_VLPSI)
 end subroutine X(vlpsi)
@@ -1302,41 +1320,37 @@ subroutine X(hpsi_diag) (h, gr, diag, ik, t, E)
   FLOAT, optional,     intent(in)    :: t
   FLOAT, optional,     intent(in)    :: E
 
-  integer :: idim
+  integer :: idim, ip
 
-  R_TYPE, allocatable :: psi(:,:)
   FLOAT, allocatable  :: ldiag(:)
 
   call push_sub('h_inc.Xhpsi_diag')
   
-  ALLOCATE(psi(NP, h%d%dim), NP*h%d%dim)
   ALLOCATE(ldiag(NP), NP)
 
-  psi = M_ONE
   diag = M_ZERO
 
   call derivatives_lapl_diag(gr%der, ldiag)
 
   do idim = 1, h%d%dim
-    diag(1:NP, idim) = -M_HALF/h%mass * ldiag(1:NP)
+    diag(1:NP, idim) = -M_HALF/h%mass*ldiag(1:NP)
   end do
 
-  call X(vlpsi)(h, gr%m, psi, diag, ik)
-  call X(vnlpsi_diag)(h, gr%m, diag)
+  select case(h%d%ispin)
 
+  case(UNPOLARIZED, SPIN_POLARIZED)
+    diag(1:NP, 1) = diag(1:NP, 1) + h%vhxc(1:NP, states_dim_get_spin_index(h%d, ik)) + h%ep%vpsl(1:NP)
+    
+  case(SPINORS)
+    do ip = 1, NP
+      diag(ip, 1) = diag(ip, 1) + h%vhxc(ip, 1) + h%ep%vpsl(ip)
+      diag(ip, 2) = diag(ip, 2) + h%vhxc(ip, 2) + h%ep%vpsl(ip)
+    end do
+    
+  end select
+    
   call pop_sub()
 end subroutine X(hpsi_diag)
-
-! ---------------------------------------------------------
-subroutine X(vnlpsi_diag) (h, m, hpsi)
-  type(hamiltonian_t), intent(in)    :: h
-  type(mesh_t),        intent(in)    :: m
-  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, h%d%dim)
-
-  call push_sub('h_inc.Xvnlpsi')
-
-  call pop_sub()
-end subroutine X(vnlpsi_diag)
 
 !! Local Variables:
 !! mode: f90

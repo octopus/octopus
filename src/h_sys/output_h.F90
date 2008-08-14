@@ -17,7 +17,6 @@
     if(iand(outp%what, output_potential).ne.0) then
       ALLOCATE(v0(1:m%np, 1:h%d%dim), m%np*h%d%dim)
       v0(1:m%np, 1) = h%ep%vpsl(1:m%np)
-      call dvnlpsi_diag(h, m, v0)
       call doutput_function(outp%how, dir, "v0", m, sb, v0(:, 1), u, err)
       deallocate(v0)
 
