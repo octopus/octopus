@@ -70,10 +70,11 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
   
   integer :: idim, nst
   R_TYPE, pointer :: epsi(:,:)
-  R_TYPE, allocatable :: lapl(:, :, :), grad(:, :, :)
+  R_TYPE, allocatable :: lapl(:, :, :)
+  R_TYPE, pointer :: grad(:, :, :)
   type(profile_t), save :: phase_prof
-  logical, allocatable :: copy_input(:), apply_kpoint(:)
-  logical :: kinetic_only_
+  logical, allocatable :: copy_input(:)
+  logical :: kinetic_only_, apply_kpoint
   integer :: ii, ist
   R_TYPE, pointer :: psi(:, :), hpsi(:, :)
   type(batch_t) :: epsib
@@ -97,16 +98,16 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
 
   nst = psib%nst
 
+  apply_kpoint = simul_box_is_periodic(gr%sb) .and. .not. kpoint_is_gamma(h%d, ik)
+
   ALLOCATE(copy_input(1:nst), nst)
-  ALLOCATE(apply_kpoint(1:nst), nst)
 
   call batch_init(epsib, nst)
 
   do ii = 1, nst
     call set_pointers
 
-    apply_kpoint(ii) = simul_box_is_periodic(gr%sb) .and. .not. kpoint_is_gamma(h%d, ik)
-    copy_input(ii) = (ubound(psi, DIM = 1) == NP) .or. apply_kpoint(ii)
+    copy_input(ii) = (ubound(psi, DIM = 1) == NP) .or. apply_kpoint
     
     if(copy_input(ii)) then
       ALLOCATE(epsi(1:NP_PART, 1:h%d%dim), NP_PART*h%d%dim)
@@ -136,7 +137,7 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
       call X(set_bc)(gr%der, epsi(:, idim))
     end do
     
-    if(apply_kpoint(ii)) then ! we multiply psi by exp(i k.r)
+    if(apply_kpoint) then ! we multiply psi by exp(i k.r)
       call profiling_in(phase_prof, "PBC_PHASE_APPLY")
       
       do idim = 1, h%d%dim
@@ -179,41 +180,29 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
       ! all functions that require the gradient or other derivatives of
       ! epsi should go after this point and must not update the
       ! boundary points
-      
-      if (present(t) .and. gauge_field_is_applied(h%ep%gfield)) then
-        
-        ALLOCATE(grad(1:NP, 1:MAX_DIM, 1:h%d%dim), NP*MAX_DIM*h%d%dim)
-        
-        do idim = 1, h%d%dim 
-          ! boundary points were already set by the Laplacian
-          call X(derivatives_grad)(gr%der, epsi(:, idim), grad(:, :, idim), ghost_update = .false., set_bc = .false.)
-        end do
-        
-      end if
+
+      nullify(grad)
       
       if (present(t)) call X(vlasers)(gr, h, epsi, hpsi, ik, t)
       
       if (present(t) .and. gauge_field_is_applied(h%ep%gfield)) call X(vgauge)(gr, h, epsi, hpsi, grad)
       
-      if(h%theory_level == HARTREE .or. h%theory_level == HARTREE_FOCK) then
-        call X(exchange_operator)(h, gr, epsi, hpsi, ist, ik)
-      end if
+      if(h%theory_level == HARTREE .or. h%theory_level == HARTREE_FOCK) &
+           call X(exchange_operator)(h, gr, epsi, hpsi, ist, ik)
       
-      if(hamiltonian_oct_exchange(h)) then
-        call X(oct_exchange_operator)(h, gr, epsi, hpsi, ik)
-      end if
+      if(hamiltonian_oct_exchange(h)) call X(oct_exchange_operator)(h, gr, epsi, hpsi, ik)
       
-      call X(magnetic_terms) (gr, h, epsi, hpsi, ik)
-      
-      if(allocated(grad)) deallocate(grad)
+      call X(magnetic_terms) (gr, h, epsi, hpsi, grad, ik)
       
       if(present(t)) call X(vborders) (gr, h, epsi, hpsi)
-      
+
+      if(associated(grad)) deallocate(grad)
+   
     end if
     
     if(copy_input(ii)) deallocate(epsi)
     
-    if(apply_kpoint(ii)) then
+    if(apply_kpoint) then
       ! now we need to remove the exp(-i k.r) factor
       call profiling_in(phase_prof)
 
@@ -243,6 +232,26 @@ contains
   end subroutine set_pointers
 
 end subroutine X(hpsi_batch)
+
+! ---------------------------------------------------------
+
+subroutine X(get_grad)(h, gr, psi, grad)
+  type(hamiltonian_t), intent(in)    :: h
+  type(grid_t),        intent(inout) :: gr
+  R_TYPE,              intent(inout) :: psi(:, :)
+  R_TYPE,              pointer       :: grad(:, :, :)
+
+  integer :: idim
+
+  if( .not. associated(grad)) then
+    ALLOCATE(grad(1:NP, 1:MAX_DIM, 1:h%d%dim), NP*MAX_DIM*h%d%dim)
+    do idim = 1, h%d%dim 
+      ! boundary points were already set by the Laplacian
+      call X(derivatives_grad)(gr%der, psi(:, idim), grad(:, :, idim), ghost_update = .false., set_bc = .false.)
+    end do
+  end if
+  
+end subroutine X(get_grad)       
 
 ! ---------------------------------------------------------
 subroutine X(hpsi) (h, gr, psi, hpsi, ist, ik, t, kinetic_only)
@@ -564,24 +573,22 @@ end subroutine X(kinetic_finish)
 ! ---------------------------------------------------------
 ! Here we the terms arising from the presence of a possible static external
 ! magnetic field, and the terms that come from CDFT.
-subroutine X(magnetic_terms) (gr, h, psi, hpsi, ik)
+subroutine X(magnetic_terms) (gr, h, psi, hpsi, grad, ik)
   type(grid_t),        intent(inout) :: gr
   type(hamiltonian_t), intent(inout) :: h
-  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
-  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP, h%d%dim)
+  R_TYPE,              intent(inout) :: psi(:, :)  ! psi(NP_PART, h%d%dim)
+  R_TYPE,              intent(inout) :: hpsi(:, :) ! hpsi(NP, h%d%dim)
+  R_TYPE,              pointer       :: grad(:, :, :)
   integer,             intent(in)    :: ik
 
   integer :: k, idim
   FLOAT,  allocatable :: div(:), tmp(:,:)
-  R_TYPE, allocatable :: grad(:, :, :), lhpsi(:, :)
+  R_TYPE, allocatable :: lhpsi(:, :)
 
   call push_sub('h_inc.Xmagnetic_terms')
 
   if(h%d%cdft .or. associated(h%ep%A_static)) then
-    ALLOCATE(grad(NP_PART, NDIM, h%d%dim), NP_PART*h%d%dim*NDIM)
-    do idim = 1, h%d%dim
-      call X(derivatives_grad)(gr%der, psi(:, idim), grad(:, :, idim))
-    end do
+    call X(get_grad)(h, gr, psi, grad)
   else
     call pop_sub()
     return
@@ -663,7 +670,6 @@ subroutine X(magnetic_terms) (gr, h, psi, hpsi, ik)
     deallocate(lhpsi)
   end if
 
-  deallocate(grad)
   call pop_sub()
 end subroutine X(magnetic_terms)
 
@@ -743,7 +749,6 @@ subroutine X(vlpsi) (h, m, psi, hpsi, ik)
   call pop_sub()
   call profiling_out(C_PROFILING_VLPSI)
 end subroutine X(vlpsi)
-
 
 ! ---------------------------------------------------------
 subroutine X(vexternal) (h, gr, psi, hpsi, ik)
@@ -909,8 +914,9 @@ subroutine X(vlaser_operator_linear) (gr, h, psi, hpsi, ik, laser_number)
   end if
 
   if(magnetic_field) then
-    ALLOCATE(grad(NP_PART, NDIM, h%d%dim), NP_PART*h%d%dim*NDIM)
 
+    ALLOCATE(grad(NP_PART, NDIM, h%d%dim), NP_PART*h%d%dim*NDIM)
+ 
     do idim = 1, h%d%dim
       call X(derivatives_grad)(gr%der, psi(:, idim), grad(:, :, idim))
     end do
@@ -995,12 +1001,13 @@ subroutine X(vlasers) (gr, h, psi, hpsi, ik, t)
   type(hamiltonian_t), intent(in)    :: h
   R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
   R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, h%d%dim)
+  R_TYPE,              pointer       :: grad(: , :, :)
   integer,             intent(in)    :: ik
   FLOAT,    optional,  intent(in)    :: t
 
   integer :: i, k, idim
   logical :: electric_field, vector_potential, magnetic_field
-  R_TYPE, allocatable :: grad(:, :, :), lhpsi(:, :)
+  R_TYPE, allocatable :: lhpsi(:, :)
   type(profile_t), save :: ext_fields_profile
 
   FLOAT :: a_field(1:MAX_DIM), a_field_prime(1:MAX_DIM), b(1:MAX_DIM), b_prime(1:MAX_DIM)
@@ -1066,11 +1073,7 @@ subroutine X(vlasers) (gr, h, psi, hpsi, ik, t)
   end if
 
   if(magnetic_field) then
-    ALLOCATE(grad(NP_PART, NDIM, h%d%dim), NP_PART*h%d%dim*NDIM)
-
-    do idim = 1, h%d%dim
-      call X(derivatives_grad)(gr%der, psi(:, idim), grad(:, :, idim))
-    end do
+    call X(get_grad)(h, gr, psi, grad)
 
     do k = 1, NP
       hpsi(k, :) = hpsi(k, :) + M_HALF*dot_product(a(k, 1:NDIM), a(k, 1:NDIM))*psi(k, :) / P_c**2
@@ -1120,16 +1123,11 @@ subroutine X(vlasers) (gr, h, psi, hpsi, ik, t)
       deallocate(lhpsi)
     end select
 
-    deallocate(grad)
     deallocate(a, a_prime)
   end if
 
   if(vector_potential) then
-    ALLOCATE(grad(NP_PART, NDIM, h%d%dim), NP_PART*h%d%dim*NDIM)
-
-    do idim = 1, h%d%dim
-      call X(derivatives_grad)(gr%der, psi(:, idim), grad(:, :, idim))
-    end do
+    call X(get_grad)(h, gr, psi, grad)
 
     do k = 1, NP
       hpsi(k, :) = hpsi(k, :) + M_HALF*dot_product(a_field(1:NDIM), a_field(1:NDIM))*psi(k, :) / P_c**2
@@ -1147,7 +1145,6 @@ subroutine X(vlasers) (gr, h, psi, hpsi, ik, t)
         end do
       end do
     end select
-    deallocate(grad)
   end if
 
   call profiling_out(ext_fields_profile)
@@ -1159,9 +1156,9 @@ end subroutine X(vlasers)
 subroutine X(vgauge) (gr, h, psi, hpsi, grad)
   type(grid_t),        intent(inout) :: gr
   type(hamiltonian_t), intent(in)    :: h
-  R_TYPE,              intent(in)    :: psi(:,:)  ! psi(NP_PART, h%d%dim)
+  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
   R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, h%d%dim)
-  R_TYPE,              intent(in)    :: grad(:, :, :)
+  R_TYPE,              pointer       :: grad(:, :, :)
 
   integer :: ip, idim, a2
   FLOAT :: vecpot(1:MAX_DIM)
@@ -1172,6 +1169,8 @@ subroutine X(vgauge) (gr, h, psi, hpsi, grad)
     call pop_sub()
     return
   end if
+
+  call X(get_grad)(h, gr, psi, grad)
 
   vecpot = gauge_field_get_vec_pot(h%ep%gfield)/P_c
   a2 = sum(vecpot(1:MAX_DIM)**2)
