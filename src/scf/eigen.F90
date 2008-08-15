@@ -50,7 +50,7 @@ module eigensolver_m
   implicit none
 
   private
-  public ::             &
+  public ::            &
     eigensolver_t,     &
     eigensolver_init,  &
     eigensolver_end,   &
@@ -75,10 +75,6 @@ module eigensolver_m
 
     ! Stores information about the preconditioning.
     type(preconditioner_t) :: pre
-
-    ! If a block solver is used this is the desired block size
-    ! (per node if running parallel in states).
-    integer :: block_size
   end type eigensolver_t
 
 
@@ -148,35 +144,6 @@ contains
     !%End
     call loct_parse_logical(check_inp('EigensolverVerbose'), .false., eigens%verbose)
 
-    !%Variable EigensolverBlockSize
-    !%Type integer
-    !%Default 4
-    !%Section SCF::Eigensolver
-    !%Description
-    !% If a block eigenvalue solver is used (currently only the LOBPCG is available)
-    !% this variable gives the number of eigenvectors that are iterated simultaneously.
-    !% If the calculation is parallel in states, each node iterates EigensolverBlockSize
-    !% vectors, i. e. in that case the effective block size is the product of this
-    !% variable and the number of nodes in the states parallelization group.
-    !%End
-    call loct_parse_int(check_inp('EigensolverBlockSize'), -1, eigens%block_size)
-    if(eigens%block_size.ne.-1) then
-      select case(eigens%es_type)
-      case(RS_LOBPCG, RS_RMMDIIS)
-      case default
-        message(1) = "You are not using a block eigensolver. The variable"
-        message(2) = "'EigensolverBlockSize' will be ignored."
-        call write_warning(2)
-        eigens%block_size = 1
-      end select
-    else
-      eigens%block_size = 4
-    end if
-    if(eigens%block_size.lt.1) then
-      message(1) = "The variable 'EigensolverBlockSize' must be greater than 0."
-      call write_fatal(1)
-    end if
-    
     select case(eigens%es_type)
     case(RS_CG_NEW)
     case(RS_MG)
@@ -342,12 +309,12 @@ contains
                eigens%converged(ik), ik, eigens%diff(:, ik), tau = eigens%imag_time)
         case(RS_LOBPCG)
           call deigensolver_lobpcg(gr, st, h, eigens%pre, tol, maxiter, &
-               eigens%converged(ik), ik, eigens%diff(:, ik), eigens%block_size, verbose = verbose_)
+               eigens%converged(ik), ik, eigens%diff(:, ik), h%d%block_size, verbose = verbose_)
         case(RS_MG)
           call deigensolver_mg(gr, st, h, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_RMMDIIS)
           call deigensolver_rmmdiis(gr, st, h, eigens%pre, tol, maxiter, &
-               eigens%converged(ik), ik, eigens%diff(:, ik), eigens%block_size)
+               eigens%converged(ik), ik, eigens%diff(:, ik), h%d%block_size)
         end select
 
         call dsubspace_diag(gr, st, h, ik, eigens%diff(:, ik))
@@ -368,12 +335,12 @@ contains
                eigens%converged(ik), ik, eigens%diff(:, ik), tau = eigens%imag_time)
         case(RS_LOBPCG)
           call zeigensolver_lobpcg(gr, st, h, eigens%pre, tol, maxiter, &
-               eigens%converged(ik), ik, eigens%diff(:, ik), eigens%block_size, verbose = verbose_)
+               eigens%converged(ik), ik, eigens%diff(:, ik), h%d%block_size, verbose = verbose_)
         case(RS_MG)
           call zeigensolver_mg(gr, st, h, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_RMMDIIS)
           call zeigensolver_rmmdiis(gr, st, h, eigens%pre, tol, maxiter, &
-               eigens%converged(ik), ik, eigens%diff(:, ik), eigens%block_size)
+               eigens%converged(ik), ik, eigens%diff(:, ik), h%d%block_size)
         end select
 
         call zsubspace_diag(gr, st, h, ik, eigens%diff(:, ik))

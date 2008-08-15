@@ -83,6 +83,7 @@ module states_dim_m
     FLOAT, pointer :: kpoints(:,:)  ! obviously the kpoints
     FLOAT, pointer :: kweights(:)   ! weights for the kpoint integrations
     type(distributed_t) :: kpt
+    integer :: block_size
   end type states_dim_t
 
 contains
@@ -101,6 +102,7 @@ contains
     dout%nspin          = din%nspin
     dout%spin_channels  = din%spin_channels
     dout%cdft           = din%cdft
+    dout%block_size     = din%block_size
     if(associated(din%kpoints)) then
       i = size(din%kpoints, 1)*size(din%kpoints, 2)
       ALLOCATE(dout%kpoints(size(din%kpoints, 1), size(din%kpoints, 2)), i)

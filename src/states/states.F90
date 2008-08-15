@@ -252,6 +252,22 @@ contains
       call write_fatal(2)
     end if
 
+    !%Variable StatesBlockSize
+    !%Type integer
+    !%Default 4
+    !%Section Execution::Optimization
+    !%Description
+    !% Some routines work over blocks of eigenfunctions, this
+    !% generally improves performance at the expense of increased
+    !% memory consumption. This variable selects the size of the
+    !% blocks to be used, the default size is 4.
+    !%End
+    call loct_parse_int(check_inp('StatesBlockSize'), 4, st%d%block_size)
+    if(st%d%block_size < 1) then
+      message(1) = "Error: The variable 'EigensolverBlockSize' must be greater than 0."
+      call write_fatal(1)
+    end if
+    
     ! For non-periodic systems this should just return the Gamma point
     call states_choose_kpoints(st%d, gr%sb, geo)
 
