@@ -36,4 +36,5 @@ Input: 06-zbr98.01-ground_state.inp
 # unstable solution of the equations, and therefore the behaviour of the first
 # iterations depends on numerical noise.
 Input: 06-zbr98.02-oct.inp
+Precision : 0.01
 match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; 0.98725047
