@@ -108,7 +108,7 @@ module derivatives_m
     type(nl_operator_t) :: laplt ! The transpose of the Laplacian.
     integer             :: n_ghost(3)   ! ghost points to add in each dimension
 #if defined(HAVE_MPI)
-    logical :: overlap
+    integer             :: comm_method 
 #endif
   end type derivatives_t
 
@@ -198,20 +198,39 @@ contains
     call loct_parse_int(check_inp('DerivativesOrder'), 4, der%order)
 
 #ifdef HAVE_MPI
-    !%Variable OverlapDerivatives
-    !%Type logical
-    !%Default yes
+    !%Variable ParallelizationOfDerivatives
+    !%Type integer
+    !%Default non_blocking
     !%Section Generalities::Parallel
     !%Description
-    !% When enabled, and if libnbc is available, the calculation of
-    !% derivatives is overlapped with the update of ghost points.
+    !% This option selects how the communication required for the
+    !% synchronization is performed. The default is non_blocking.
+    !%Option blocking 1
+    !% Blocking communication.
+    !%Option non_blocking 2
+    !% Communication is based on non blocking point to point communication.
+    !%Option non_blocking_collective 3
+    !% Non-blocking collective communication (requires libnbc).
     !%End
+    
     if ( der%dim > 1) then
-      call loct_parse_logical(check_inp('OverlapDerivatives'), .true., der%overlap)
+      call loct_parse_int(check_inp('ParallelizationOfDerivatives'), NON_BLOCKING, der%comm_method)
     else
-      ! for the moment we cannot do this for 1D
-      der%overlap = .false.
+      der%comm_method = BLOCKING
     end if
+    
+    if(.not. varinfo_valid_option('ParallelizationOfDerivatives', der%comm_method)) then
+      call input_error('ParallelizationOfDerivatives')
+    end if
+
+#ifndef HAVE_LIBNBC
+    if(der%comm_method == NON_BLOCKING_COLLECTIVE) then
+      message(1) = "Error: libnbc is not available. Check the ParallelizationOfDerivatives variable."
+      call write_fatal(1)
+    end if
+#endif
+
+    call obsolete_variable('OverlapDerivatives', 'ParallelizationOfDerivatives')
 #endif
 
     ! construct lapl and grad structures
@@ -609,15 +628,15 @@ contains
     call pop_sub()
   end subroutine make_discretization
 
-  subroutine der_handle_init(this, mesh)
-    type(der_handle_t), intent(out) :: this
-    type(mesh_t),       intent(in)  :: mesh
+  subroutine der_handle_init(this, der)
+    type(der_handle_t),  intent(out) :: this
+    type(derivatives_t), intent(in)  :: der
 
     nullify(this%df, this%zf)
     nullify(this%dlapl, this%zlapl)
 #ifdef HAVE_MPI
-    this%parallel_in_domains = mesh%parallel_in_domains
-    if(this%parallel_in_domains) call pv_handle_init(this%pv_h, mesh%vp)
+    this%parallel_in_domains = der%m%parallel_in_domains
+    if(this%parallel_in_domains) call pv_handle_init(this%pv_h, der%m%vp, der%comm_method)
 #endif
   end subroutine der_handle_init
 
@@ -631,6 +650,14 @@ contains
 #endif
   end subroutine der_handle_end
 
+#ifdef HAVE_MPI    
+  logical function derivatives_overlap(this) result(overlap)
+    type(derivatives_t),    intent(in) :: this
+
+    overlap = this%comm_method /= BLOCKING  
+  end function derivatives_overlap
+#endif
+  
 #include "undef.F90"
 #include "real.F90"
 #include "derivatives_inc.F90"

@@ -519,7 +519,7 @@ subroutine X(kinetic_start)(h, handle, gr, psi, lapl)
   call push_sub('h_inc.Xkinetic_start')
 
   do idim = 1, h%d%dim
-    call der_handle_init(handle(idim), gr%m)
+    call der_handle_init(handle(idim), gr%der)
     call X(derivatives_lapl_start)(gr%der, handle(idim), psi(:, idim), lapl(:, idim), set_bc = .false.)
   end do
 

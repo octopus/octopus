@@ -146,15 +146,15 @@ module par_vec_m
 
   integer :: SEND = 1, RECV = 2
 
+  integer, public, parameter :: BLOCKING = 1, NON_BLOCKING = 2, NON_BLOCKING_COLLECTIVE = 3
+
   type pv_handle_t
     private
-#if defined(HAVE_LIBNBC)
-    type(c_ptr) :: nbc_h
-#else
+    integer          :: comm_method
+    type(c_ptr)      :: nbc_h
     integer          :: nnb
     integer, pointer :: requests(:)
     integer, pointer :: status(:, :)
-#endif
     integer, pointer :: ighost_send(:)
     FLOAT,   pointer :: dghost_send(:)
     CMPLX,   pointer :: zghost_send(:)
@@ -626,32 +626,50 @@ contains
 
   end subroutine vec_end
 
-  subroutine pv_handle_init(this, vp)
+  subroutine pv_handle_init(this, vp, comm_method)
     type(pv_handle_t), intent(out) :: this
     type(pv_t),        intent(in)  :: vp
-#if defined(HAVE_LIBNBC)
-    call NBCF_Newhandle(this%nbc_h)
-#else
-    ALLOCATE(this%requests(1:vp%p*2), vp%p*2)
-    ALLOCATE(this%status(MPI_STATUS_SIZE, 1:vp%p*2), vp%p*2)
+    integer,           intent(in)  :: comm_method
+
+    this%comm_method = comm_method
+
+    select case(this%comm_method)
+#ifdef HAVE_LIBNBC
+    case(NON_BLOCKING_COLLECTIVE)
+      call NBCF_Newhandle(this%nbc_h)
 #endif
+    case(NON_BLOCKING)
+      ALLOCATE(this%requests(1:vp%p*2), vp%p*2)
+      ALLOCATE(this%status(MPI_STATUS_SIZE, 1:vp%p*2), vp%p*2)
+    end select
     nullify(this%ighost_send, this%dghost_send, this%zghost_send)
   end subroutine pv_handle_init
 
   subroutine pv_handle_end(this)
     type(pv_handle_t), intent(inout) :: this
-#if defined(HAVE_LIBNBC)
-    call NBCF_Freehandle(this%nbc_h)
-#else
-    deallocate(this%requests, this%status)
+
+    select case(this%comm_method)
+#ifdef HAVE_LIBNBC
+    case(NON_BLOCKING_COLLECTIVE)
+      call NBCF_Freehandle(this%nbc_h)
 #endif
+    case(NON_BLOCKING)
+      deallocate(this%requests, this%status)
+    end select
+
   end subroutine pv_handle_end
 
   subroutine pv_handle_test(this)
     type(pv_handle_t), intent(inout) :: this
-#if defined(HAVE_LIBNBC)
-    call NBCF_Test(this%nbc_h, mpi_err)
+    
+    select case(this%comm_method)
+#ifdef HAVE_LIBNBC
+    case(NON_BLOCKING_COLLECTIVE)
+      call NBCF_Test(this%nbc_h, mpi_err)
 #endif
+    case(NON_BLOCKING)
+    end select
+
   end subroutine pv_handle_test
 
   subroutine pv_handle_wait(this)
@@ -660,11 +678,16 @@ contains
     type(profile_t), save :: prof
     
     call profiling_in(prof, "GHOST_UPDATE_WAIT")
-#if defined(HAVE_LIBNBC)
-    call NBCF_Wait(this%nbc_h, mpi_err)
-#else
-    call MPI_Waitall(this%nnb, this%requests, this%status, mpi_err)
+
+    select case(this%comm_method)
+#ifdef HAVE_LIBNBC
+    case(NON_BLOCKING_COLLECTIVE)
+      call NBCF_Wait(this%nbc_h, mpi_err)
 #endif
+    case(NON_BLOCKING)
+      call MPI_Waitall(this%nnb, this%requests, this%status, mpi_err)
+    end select
+
     if(associated(this%ighost_send)) then
       deallocate(this%ighost_send)
       nullify(this%ighost_send)

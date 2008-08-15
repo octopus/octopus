@@ -284,51 +284,52 @@ end subroutine X(vec_ghost_update)
 ! The same as Xvec_ghost_update but in a non-blocking fashion.
 ! The handle is an NBC_Handle to be used in an NBC_Wait call.
 subroutine X(vec_ighost_update)(vp, v_local, handle)
-  type(pv_t), intent(in)    :: vp
-  R_TYPE,     intent(inout) :: v_local(:)
-  type(pv_handle_t),  intent(inout)  :: handle
+  type(pv_t),         intent(in)    :: vp
+  R_TYPE,             intent(inout) :: v_local(:)
+  type(pv_handle_t),  intent(inout) :: handle
 
-#ifndef HAVE_LIBNBC
   integer :: ipart, pos
-#endif
 
   call profiling_in(C_PROFILING_GHOST_UPDATE)
 
   call push_sub('par_vec.Xvec_ighost_update')
 
-#if defined(HAVE_LIBNBC)
-  ! use a collective non-blocking call
-
-  nullify(handle%ighost_send, handle%dghost_send, handle%zghost_send)
-  call X(vec_ghost_update_prepare)(vp, v_local, handle%X(ghost_send))
-
-  call NBCF_Ialltoallv(handle%X(ghost_send), vp%np_ghost_neigh(1, vp%partno), vp%sdispls(1),          &
-       R_MPITYPE, v_local(vp%np_local(vp%partno)+1), vp%rcounts(1), vp%rdispls(1), R_MPITYPE, &
-       vp%comm, handle%nbc_h, mpi_err)
-
-#else
-  ! use a series of p2p non-blocking calls
-
-  handle%nnb = 0
-  do ipart = 1, vp%p
-    if(vp%np_ghost_neigh(ipart, vp%partno) == 0) cycle
-
-    handle%nnb = handle%nnb + 1
-    call MPI_Isend(v_local(1), 1, vp%X(send_type)(ipart), ipart - 1, 0, &
-         vp%comm, handle%requests(handle%nnb), mpi_err)
+  select case(handle%comm_method)
+#ifdef HAVE_LIBNBC
+  case(NON_BLOCKING_COLLECTIVE)
+    ! use a collective non-blocking call
     
-  end do
-
-  do ipart = 1, vp%p
-    if(vp%np_ghost_neigh(vp%partno, ipart) == 0) cycle
-
-    handle%nnb = handle%nnb + 1
-    pos = vp%np_local(vp%partno) + 1 + vp%rdispls(ipart)
-    call MPI_Irecv(v_local(pos), vp%rcounts(ipart), R_MPITYPE, ipart - 1, 0, &
-         vp%comm, handle%requests(handle%nnb), mpi_err)
-  end do
-
+    nullify(handle%ighost_send, handle%dghost_send, handle%zghost_send)
+    call X(vec_ghost_update_prepare)(vp, v_local, handle%X(ghost_send))
+    
+    call NBCF_Ialltoallv(handle%X(ghost_send), vp%np_ghost_neigh(1, vp%partno), vp%sdispls(1),  &
+         R_MPITYPE, v_local(vp%np_local(vp%partno)+1), vp%rcounts(1), vp%rdispls(1), R_MPITYPE, &
+         vp%comm, handle%nbc_h, mpi_err)
+    
 #endif
+  case(NON_BLOCKING)
+    ! use a series of p2p non-blocking calls
+    
+    handle%nnb = 0
+    do ipart = 1, vp%p
+      if(vp%np_ghost_neigh(ipart, vp%partno) == 0) cycle
+      
+      handle%nnb = handle%nnb + 1
+      call MPI_Isend(v_local(1), 1, vp%X(send_type)(ipart), ipart - 1, 0, &
+           vp%comm, handle%requests(handle%nnb), mpi_err)
+      
+    end do
+    
+    do ipart = 1, vp%p
+      if(vp%np_ghost_neigh(vp%partno, ipart) == 0) cycle
+      
+      handle%nnb = handle%nnb + 1
+      pos = vp%np_local(vp%partno) + 1 + vp%rdispls(ipart)
+      call MPI_Irecv(v_local(pos), vp%rcounts(ipart), R_MPITYPE, ipart - 1, 0, &
+           vp%comm, handle%requests(handle%nnb), mpi_err)
+    end do
+    
+  end select
 
   call pop_sub()
 
