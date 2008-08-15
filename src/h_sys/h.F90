@@ -690,8 +690,6 @@ contains
     type(grid_t),        intent(in)    :: gr
     type(geometry_t),    intent(inout) :: geo
 
-    integer :: ii
-
     call push_sub('h.hamiltonian_end')
 
     if(h%multigrid_initialized) then

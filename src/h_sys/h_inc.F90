@@ -436,7 +436,7 @@ subroutine X(magnus) (h, gr, psi, hpsi, ik, vmagnus)
   FLOAT,               intent(in)    :: vmagnus(NP, h%d%nspin, 2)
 
   R_TYPE, allocatable :: auxpsi(:, :), aux2psi(:, :)
-  integer :: idim
+  integer :: idim, ispin
 
   ! We will assume, for the moment, no spinors.
 
@@ -444,6 +444,8 @@ subroutine X(magnus) (h, gr, psi, hpsi, ik, vmagnus)
 
   ALLOCATE( auxpsi(NP_PART, h%d%dim), NP_PART*h%d%dim)
   ALLOCATE(aux2psi(NP,      h%d%dim), NP*h%d%dim)
+
+  ispin = states_dim_get_spin_index(h%d, ik)
 
   call X(kinetic) (h, gr, psi, hpsi)
 
@@ -453,27 +455,8 @@ subroutine X(magnus) (h, gr, psi, hpsi, ik, vmagnus)
 
   if (h%ep%non_local) call X(vnlpsi)(h, gr%m, psi, auxpsi, ik)
 
-  select case(h%d%ispin)
-  case(UNPOLARIZED)
-    hpsi(1:NP, 1) = hpsi(1:NP, 1) -  M_zI*vmagnus(1:NP, 1, 1)*auxpsi(1:NP, 1)
-  case(SPIN_POLARIZED)
-    if(modulo(ik+1, 2) == 0) then
-      hpsi(1:NP, 1) = hpsi(1:NP, 1) - M_zI*vmagnus(1:NP, 1, 1)*auxpsi(1:NP, 1)
-    else
-      hpsi(1:NP, 1) = hpsi(1:NP, 1) - M_zI*vmagnus(1:NP, 2, 1)*auxpsi(1:NP, 1)
-    end if
-  end select
-
-  select case(h%d%ispin)
-  case(UNPOLARIZED)
-    auxpsi(1:NP, 1) = vmagnus(1:NP, 1, 1)*psi(1:NP, 1)
-  case(SPIN_POLARIZED)
-    if(modulo(ik+1, 2) == 0) then
-      auxpsi(1:NP, 1) = vmagnus(1:NP, 1, 1)*psi(1:NP, 1)
-    else
-      auxpsi(1:NP, 1) = vmagnus(1:NP, 2, 1)*psi(1:NP, 1)
-    end if
-  end select
+  hpsi(1:NP, 1) = hpsi(1:NP, 1) -  M_zI*vmagnus(1:NP, ispin, 1)*auxpsi(1:NP, 1)
+  auxpsi(1:NP, 1) = vmagnus(1:NP, ispin, 1)*psi(1:NP, 1)
 
   call X(kinetic) (h, gr, auxpsi, aux2psi)
 
@@ -485,16 +468,7 @@ subroutine X(magnus) (h, gr, psi, hpsi, ik, vmagnus)
     hpsi(1:NP, idim) = hpsi(1:NP, idim) + h%ep%Vpsl(1:NP)*psi(1:NP,idim)
   end do
 
-  select case(h%d%ispin)
-  case(UNPOLARIZED)
-    hpsi(1:NP, 1) = hpsi(1:NP, 1) + vmagnus(1:NP, 1, 2)*psi(1:NP, 1)
-  case(SPIN_POLARIZED)
-    if(modulo(ik+1, 2) == 0) then
-      hpsi(1:NP, 1) = hpsi(1:NP, 1) + vmagnus(1:NP, 1, 2)*psi(1:NP, 1)
-    else
-      hpsi(1:NP, 1) = hpsi(1:NP, 1) + vmagnus(1:NP, 2, 2)*psi(1:NP, 1)
-    end if
-  end select
+  hpsi(1:NP, 1) = hpsi(1:NP, 1) + vmagnus(1:NP, ispin, 2)*psi(1:NP, 1)
 
   if (h%ep%non_local) call X(vnlpsi)(h, gr%m, psi, Hpsi, ik)
 
@@ -713,7 +687,7 @@ subroutine X(vlpsi) (h, m, psib, hpsib, ik)
   type(batch_t),       intent(in)    :: psib
   type(batch_t),       intent(out)   :: hpsib
 
-  integer :: idim, ip, ii
+  integer :: idim, ip, ii, ispin
   R_TYPE, pointer :: psi(:, :), hpsi(:, :)
 
   call profiling_in(C_PROFILING_VLPSI)
@@ -724,25 +698,13 @@ subroutine X(vlpsi) (h, m, psib, hpsib, ik)
     hpsi => hpsib%states(ii)%X(psi)
 
     select case(h%d%ispin)
-    case(UNPOLARIZED)
+    case(UNPOLARIZED, SPIN_POLARIZED)
+      ispin = states_dim_get_spin_index(h%d, ik)
       do ip = 1, m%np
-        hpsi(ip, 1) = (h%vhxc(ip, 1) + h%ep%vpsl(ip))*psi(ip, 1)
+        hpsi(ip, 1) = (h%vhxc(ip, ispin) + h%ep%vpsl(ip))*psi(ip, 1)
       end do
       
-      call profiling_count_operations((2*R_ADD + R_MUL)*m%np)
-      
-    case(SPIN_POLARIZED)
-      if(modulo(ik + 1, 2) == 0) then ! we have a spin down
-        do ip = 1, m%np
-          hpsi(ip, 1) = (h%vhxc(ip, 1) + h%ep%vpsl(ip))*psi(ip, 1)
-        end do
-      else
-        do ip = 1, m%np
-          hpsi(ip, 1) = (h%vhxc(ip, 2) + h%ep%vpsl(ip))*psi(ip, 1)
-        end do
-      end if
-      
-      call profiling_count_operations((2*R_ADD + R_MUL)*m%np)
+      call profiling_count_operations((R_ADD + R_MUL)*m%np)
       
     case(SPINORS)
       do ip = 1, m%np
@@ -750,18 +712,10 @@ subroutine X(vlpsi) (h, m, psib, hpsib, ik)
         hpsi(ip, 2) = (h%vhxc(ip, 2) + h%ep%vpsl(ip))*psi(ip, 2) + (h%vhxc(ip, 3) - M_zI*h%vhxc(ip, 4))*psi(ip, 1)
       end do
       
-      call profiling_count_operations((8*R_ADD + 2*R_MUL)*m%np)
+      call profiling_count_operations((6*R_ADD + 2*R_MUL)*m%np)
       
     end select
     
-    if (associated(h%ep%E_field)) then
-      do idim = 1, h%d%dim
-        hpsi(1:m%np, idim) = hpsi(1:m%np, idim) + h%ep%v_static*psi(1:m%np, idim)
-      end do
-      
-      call profiling_count_operations((R_ADD + R_MUL)*m%np)
-      
-    end if
   end do
   
   call pop_sub()
@@ -781,19 +735,9 @@ subroutine X(vexternal) (h, gr, psi, hpsi, ik)
   call profiling_in(C_PROFILING_VLPSI)
   call push_sub('h_inc.Xvlpsi')
 
-  select case(h%d%ispin)
-  case(UNPOLARIZED, SPIN_POLARIZED)
-    hpsi(1:NP, 1) = hpsi(1:NP, 1) + (h%ep%vpsl(1:NP))*psi(1:NP, 1)
-  case(SPINORS)
-    hpsi(1:NP, 1) = hpsi(1:NP, 1) + (h%ep%vpsl(1:NP))*psi(1:NP, 1)
-    hpsi(1:NP, 2) = hpsi(1:NP, 2) + (h%ep%vpsl(1:NP))*psi(1:NP, 2)
-  end select
-
-  if (associated(h%ep%E_field)) then
-    do idim = 1, h%d%dim
-      hpsi(1:NP, idim) = hpsi(1:NP, idim) + h%ep%v_static*psi(1:NP, idim)
-    end do
-  end if
+  do idim = 1, h%d%dim
+    hpsi(1:NP, idim) = hpsi(1:NP, idim) + h%ep%vpsl(1:NP)*psi(1:NP, idim)
+  end do
 
   if(h%ep%non_local) call X(vnlpsi)(h, gr%m, psi, hpsi, ik)
 
@@ -1183,10 +1127,7 @@ subroutine X(vgauge) (gr, h, psi, hpsi, grad)
 
   call push_sub('h_inc.Xvgauge')
 
-  if (.not. gauge_field_is_applied(h%ep%gfield)) then 
-    call pop_sub()
-    return
-  end if
+  ASSERT(gauge_field_is_applied(h%ep%gfield))
 
   call X(get_grad)(h, gr, psi, grad)
 
@@ -1239,8 +1180,7 @@ subroutine X(vmask) (gr, h, st)
     do ik = 1, st%d%nik
       do ist = st%st_start, st%st_end
         do idim = 1, st%d%dim
-           st%X(psi)(1:NP, idim, ist, ik) = st%X(psi)(1:NP, idim, ist, ik) * &
-             (M_ONE - h%ab_pot(1:NP))
+           st%X(psi)(1:NP, idim, ist, ik) = st%X(psi)(1:NP, idim, ist, ik)*(M_ONE - h%ab_pot(1:NP))
         end do
       end do
     end do
@@ -1320,7 +1260,7 @@ subroutine X(hpsi_diag) (h, gr, diag, ik, t, E)
   FLOAT, optional,     intent(in)    :: t
   FLOAT, optional,     intent(in)    :: E
 
-  integer :: idim, ip
+  integer :: idim, ip, ispin
 
   FLOAT, allocatable  :: ldiag(:)
 
@@ -1339,7 +1279,8 @@ subroutine X(hpsi_diag) (h, gr, diag, ik, t, E)
   select case(h%d%ispin)
 
   case(UNPOLARIZED, SPIN_POLARIZED)
-    diag(1:NP, 1) = diag(1:NP, 1) + h%vhxc(1:NP, states_dim_get_spin_index(h%d, ik)) + h%ep%vpsl(1:NP)
+    ispin = states_dim_get_spin_index(h%d, ik)
+    diag(1:NP, 1) = diag(1:NP, 1) + h%vhxc(1:NP, ispin) + h%ep%vpsl(1:NP)
     
   case(SPINORS)
     do ip = 1, NP

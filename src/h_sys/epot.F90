@@ -480,7 +480,8 @@ contains
 
     end do
 
-    if (ep%classic_pot > 0) ep%vpsl(1:m%np) = ep%vpsl(1:m%np) + ep%vclassic(1:m%np)
+    if (ep%classic_pot > 0)     ep%vpsl(1:m%np) = ep%vpsl(1:m%np) + ep%vclassic(1:m%np)
+    if (associated(ep%e_field)) ep%vpsl(1:m%np) = ep%vpsl(1:m%np) + ep%v_static(1:m%np)
 
     call pop_sub()
     call profiling_out(epot_generate_prof)
