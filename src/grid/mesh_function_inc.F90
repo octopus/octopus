@@ -24,21 +24,32 @@ R_TYPE function X(mf_integrate) (mesh, f) result(d)
   type(mesh_t), intent(in) :: mesh
   R_TYPE,       intent(in) :: f(:)  ! f(mesh%np)
 
+  integer :: ip
+#ifdef HAVE_MPI
+  R_TYPE :: d_local
+#endif
+
   call profiling_in(C_PROFILING_MF_INTEGRATE)
   call push_sub('mf_inc.Xmf_integrate')
 
-  if(mesh%parallel_in_domains) then
-#if defined(HAVE_MPI)
-    d = X(vec_integrate)(mesh%vp, f(1:mesh%np)*mesh%vol_pp(1:mesh%np))
-#else
-    ASSERT(.false.)
-#endif
+  d = M_ZERO
+  if (mesh%use_curvlinear) then
+    do ip = 1, mesh%np
+      d = d + f(ip)*mesh%vol_pp(ip)
+    end do
   else
-    !$omp parallel workshare
-    d = sum(f(1:mesh%np)*mesh%vol_pp(1:mesh%np))
-    !$omp end parallel workshare
+    do ip = 1, mesh%np
+      d = d + f(ip)*mesh%vol_pp(1)
+    end do
   end if
 
+#ifdef HAVE_MPI
+  if(mesh%parallel_in_domains) then
+    d_local = d
+    call MPI_Allreduce(d_local, d, 1, R_MPITYPE, MPI_SUM, mesh%mpi_grp%comm, mpi_err)
+  end if
+#endif
+  
   call pop_sub()
   call profiling_out(C_PROFILING_MF_INTEGRATE)
 
@@ -77,8 +88,6 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce) result(dotp)
     reduce_ = reduce
   end if
 
-  ! This is not implemented via vec_integrate
-  ! because BLAS is much faster.
   if(mesh%use_curvlinear) then
     ALLOCATE(l(mesh%np), mesh%np)
     l(1:mesh%np) = f1(1:mesh%np) * mesh%vol_pp(1:mesh%np)
@@ -163,15 +172,13 @@ FLOAT function X(mf_nrm2_1)(mesh, f, reduce) result(nrm2)
   call profiling_in(C_PROFILING_MF_NRM2)
   call push_sub('mf_inc.Xmf_nrm2')
 
-  ! This is not implemented via vec_integrate
-  ! because BLAS is much faster.
   if(mesh%use_curvlinear) then
     ALLOCATE(l(mesh%np), mesh%np)
-    l(1:mesh%np) = f(1:mesh%np) * sqrt(mesh%vol_pp(1:mesh%np))
+    l(1:mesh%np) = f(1:mesh%np)*sqrt(mesh%vol_pp(1:mesh%np))
     nrm2_tmp = lalg_nrm2(mesh%np, l)
     deallocate(l)
   else
-    nrm2_tmp = lalg_nrm2(mesh%np, f) * sqrt(mesh%vol_pp(1))
+    nrm2_tmp = lalg_nrm2(mesh%np, f)*sqrt(mesh%vol_pp(1))
   end if
 
   reduce_ = .true.
@@ -231,18 +238,16 @@ function X(mf_moment) (m, f, i, n) result(r)
   integer,      intent(in) :: i, n
 
   R_TYPE                   :: r
+  R_TYPE, allocatable      :: fxn(:)
 
   call push_sub('mf_inc.Xmf_moment')
 
-  if(m%parallel_in_domains) then
-#if defined(HAVE_MPI)
-    r = X(vec_integrate)(m%vp, f(1:m%np)*m%x(1:m%np,i)**n * m%vol_pp(1:m%np))
-#else
-    ASSERT(.false.)
-#endif
-  else
-    r = sum(f(1:m%np) * m%x(1:m%np,i)**n * m%vol_pp(1:m%np))
-  end if
+  ALLOCATE(fxn(1:m%np), m%np)
+
+  fxn(1:m%np) = f(1:m%np)*m%x(1:m%np, i)**n
+  r = X(mf_integrate)(m, fxn)
+
+  deallocate(fxn)
 
   call pop_sub()
 

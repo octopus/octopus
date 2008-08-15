@@ -379,31 +379,6 @@ subroutine X(vec_ghost_update_finish)(ghost_send)
 
 end subroutine X(vec_ghost_update_finish)
 
-! Sums over all elements of a vector v which was
-! scattered to several v_local with vec_scatter.
-! It is of no relevance, if v_local contains
-! ghost points or not, because only the first
-! vp%np_local(vp%partno) elements are considered.
-R_TYPE function X(vec_integrate)(vp, v_local) result(s)
-  type(pv_t), intent(in) :: vp
-  R_TYPE,     intent(in) :: v_local(:)
-
-  R_TYPE  :: s_local ! Sum of v_local(i).
-
-  call profiling_in(C_PROFILING_VEC_INTEGRATE)
-  call push_sub('par_vec.Xvec_integrate')
-
-  s_local = sum(v_local(:vp%np_local(vp%partno)))
-
-  call mpi_debug_in(vp%comm, C_MPI_ALLREDUCE)
-  call MPI_Allreduce(s_local, s, 1, R_MPITYPE, MPI_SUM, vp%comm, mpi_err)
-  call mpi_debug_out(vp%comm, C_MPI_ALLREDUCE)
-
-  call pop_sub()
-  call profiling_out(C_PROFILING_VEC_INTEGRATE)
-
-end function X(vec_integrate)
-
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

@@ -71,11 +71,6 @@ module par_vec_m
   ! call X(vec_scatter)(vp, u, ul)
   ! call X(vec_scatter)(vp, v, vl)
   !
-  ! ! Calculate scalar product s=<u|v>.
-  ! wl = ul*vl
-  ! ! vec_integrate ignores ghost points (i. e. v(np_local+1:)).
-  ! s = X(vec_integrate)(vp, wl)
-  !
   ! ! Compute some operator op: vl = op ul
   ! call X(vec_ghost_update)(vp, ul)
   ! call X(nl_operator_operate)(op, ul, vl)
@@ -191,10 +186,7 @@ module par_vec_m
     ivec_ghost_update,   &
     dvec_ighost_update,  &
     zvec_ighost_update,  &
-    ivec_ighost_update,  &
-    dvec_integrate,      &
-    zvec_integrate,      &
-    ivec_integrate
+    ivec_ighost_update
 
 contains
 
