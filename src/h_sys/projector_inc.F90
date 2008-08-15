@@ -187,7 +187,7 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, ik)
   deallocate(reduce_buffer, ireduce)
 
 #ifdef HAVE_MPI
-  deallocate(reduce_buffer_dest)
+  if(mesh%parallel_in_domains) deallocate(reduce_buffer_dest)
 #endif
 
   call pop_sub()
