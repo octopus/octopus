@@ -230,7 +230,8 @@ contains
 
     ! Note that in QOCT runs, it is not acceptable to have complex time-dependent functions.
     do i = 1, ep%no_lasers
-      call laser_to_numerical(ep%lasers(i), dt, max_iter, real_part = .true.)
+      call laser_to_numerical(ep%lasers(i), dt, max_iter, &
+        new_carrier_frequency = par%w0, real_part = .true.)
     end do
 
     call parameters_init(par, ep%no_lasers, dt, max_iter, targetfluence, omegamax)
@@ -436,6 +437,7 @@ contains
 
     deallocate(delta)
   end function parameters_diff
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
@@ -586,10 +588,6 @@ contains
     do j = 1, cp%no_parameters
       call tdf_end(cp%f(j))
       call laser_get_f(ep%lasers(j), cp%f(j))
-!!$      if(cp%envelope) then
-!!$        call tdf_cosine_divide(cp%w0, cp%f(j))
-!!$      end if
-      ! WARNING: Check if this is really working...
       cp%pol(1:MAX_DIM, j) = laser_polarization(ep%lasers(j))
     end do
 
@@ -641,11 +639,7 @@ contains
     end if
 
     do j = 1, cp%no_parameters
-      if(par%envelope) then
-        call laser_set_f(ep%lasers(j), par%f(j), par%w0)
-      else
-        call laser_set_f(ep%lasers(j), par%f(j))
-      end if
+      call laser_set_f(ep%lasers(j), par%f(j))
     end do
 
     if(change_rep) then 
@@ -667,16 +661,9 @@ contains
     integer :: j
     FLOAT   :: t
 
-    if(cp%envelope) then
-      t = (val - 1)*cp%dt
-      do j = 1, cp%no_parameters
-        call laser_set_f_value(ep%lasers(j), val, real(tdf(cp%f(j), val) * cos(cp%w0*t)) )
-      end do
-    else
-      do j = 1, cp%no_parameters
-        call laser_set_f_value(ep%lasers(j), val, real(tdf(cp%f(j), val)) )
-      end do
-    end if
+    do j = 1, cp%no_parameters
+      call laser_set_f_value(ep%lasers(j), val, real(tdf(cp%f(j), val)) )
+    end do
 
   end subroutine parameters_to_h_val
   ! ---------------------------------------------------------

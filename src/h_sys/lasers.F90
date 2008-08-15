@@ -67,6 +67,7 @@ module lasers_m
     integer :: field
     CMPLX :: pol(MAX_DIM) = M_z0 ! the polarization of the laser
     type(tdf_t) :: f
+    FLOAT :: omega = M_ZERO      ! The main, "carrier", frequency.
 
     FLOAT, pointer :: v(:)
     FLOAT, pointer :: a(:, :)
@@ -102,15 +103,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine laser_set_f(l, f, w0)
+  subroutine laser_set_f(l, f)
     type(laser_t), intent(inout) :: l
     type(tdf_t),   intent(inout) :: f
-    FLOAT, intent(in), optional  :: w0
     call tdf_end(l%f)
     call tdf_copy(l%f, f)
-    if(present(w0)) then
-      call tdf_cosine_multiply(w0, l%f)
-    end if
   end subroutine laser_set_f
   ! ---------------------------------------------------------
 
@@ -126,15 +123,18 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine laser_to_numerical(l, dt, max_iter, real_part)
+  subroutine laser_to_numerical(l, dt, max_iter, new_carrier_frequency, real_part)
     type(laser_t), intent(inout)  :: l
     FLOAT,         intent(in)     :: dt
     integer,       intent(in)     :: max_iter
+    FLOAT,         intent(in)     :: new_carrier_frequency
     logical, optional, intent(in) :: real_part
 
     call push_sub('lasers.lasers_to_numerical')
 
     call tdf_to_numerical(l%f, M_ZERO, max_iter, dt)
+    call tdf_cosine_multiply(l%omega, l%f)
+    l%omega = new_carrier_frequency
 
     if(present(real_part)) then
       if(real_part) call tdf_numerical_keep_real(l%f)
@@ -142,6 +142,7 @@ contains
 
     call pop_sub()
   end subroutine laser_to_numerical
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
@@ -366,6 +367,7 @@ contains
           j = 3
         end select
 
+        l(i)%omega = M_ZERO
         call loct_parse_block_int  (blk, i-1, j+1, envelope)
 
         select case(envelope)
@@ -402,15 +404,16 @@ contains
         t0   = t0   * units_inp%time%factor
         tau1 = tau1 * units_inp%time%factor
 
+        l(i)%omega = omega0
         select case(envelope)
         case(ENVELOPE_CONSTANT)
-          call tdf_init_cw(l(i)%f, a0, omega0)
+          call tdf_init_cw(l(i)%f, a0, M_ZERO)
         case(ENVELOPE_GAUSSIAN)
-          call tdf_init_gaussian(l(i)%f, a0, omega0, t0, tau0)
+          call tdf_init_gaussian(l(i)%f, a0, M_ZERO, t0, tau0)
         case(ENVELOPE_COSINOIDAL)
-          call tdf_init_cosinoidal(l(i)%f, a0, omega0, t0, tau0)
+          call tdf_init_cosinoidal(l(i)%f, a0, M_ZERO, t0, tau0)
         case(ENVELOPE_TRAPEZOIDAL)
-          call tdf_init_trapezoidal(l(i)%f, a0, omega0, t0, tau0, tau1)
+          call tdf_init_trapezoidal(l(i)%f, a0, M_ZERO, t0, tau0, tau1)
         case(ENVELOPE_FROM_FILE)
           call tdf_init_fromfile(l(i)%f, trim(filename1), ierr)
         case(ENVELOPE_FROM_EXPR)
@@ -528,7 +531,7 @@ contains
         max_intensity = M_ZERO
         do j = 1, max_iter
           t = j * dt
-          amp = tdf(l(i)%f, t)
+          amp = tdf(l(i)%f, t) * exp(M_zI*l(i)%omega*t)
           intensity = M_ZERO
           do k = 1, MAX_DIM
             intensity = intensity + CNST(5.4525289841210) * real(amp*l(i)%pol(k))**2
@@ -564,7 +567,7 @@ contains
 
     pot = M_ZERO
     if(present(t)) then
-      amp = tdf(l%f, t)
+      amp = tdf(l%f, t) * exp(M_zI*l%omega*t)
     else
       amp = M_z1
     end if
@@ -592,7 +595,7 @@ contains
     call push_sub('lasers.laser_vector_potential')
 
     if(present(t)) then
-      a = l%a * tdf(l%f, t)
+      a = l%a * real( tdf(l%f, t) * exp(M_zI*l%omega*t) )
     else
       a = l%a
     end if
@@ -614,7 +617,7 @@ contains
     field = M_ZERO
     if(l%field .eq. E_FIELD_SCALAR_POTENTIAL) return
     if(present(t)) then
-      amp = tdf(l%f, t)
+      amp = tdf(l%f, t) * exp(M_zI*l%omega*t)
     else
       amp = M_z1
     end if
