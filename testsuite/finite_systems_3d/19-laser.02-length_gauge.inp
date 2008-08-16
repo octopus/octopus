@@ -28,8 +28,13 @@ TDTimeStep = dt
 
 omega = 0.1
 electric_amplitude = 1.0
+
 %TDExternalFields
-electric_field   | 0 | 0 | i | envelope_constant | electric_amplitude | omega
+electric_field   | 0 | 0 | i | omega | "envelope_function"
+%
+
+%TDFunctions
+"envelope_function" | tdf_cw | electric_amplitude
 %
 
 AbsorbingBoundaries = no

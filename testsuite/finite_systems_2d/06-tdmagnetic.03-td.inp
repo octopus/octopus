@@ -29,7 +29,11 @@ P_c = 137.036
 %
 
 %TDExternalFields
-magnetic_field | 0 | 0 |  -1 | envelope_trapezoidal |   P_c*1.15 | 0.0 | 150 | 100 | 25
+magnetic_field | 0 | 0 |  -1 | 0.0 | "envelope_function"
+%
+
+%TDFunctions
+"envelope_function" | tdf_trapezoidal | P_c*1.15 | 150 | 100 | 25
 %
 
 Output = wfs

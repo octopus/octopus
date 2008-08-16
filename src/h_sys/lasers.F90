@@ -48,14 +48,6 @@ module lasers_m
     laser_set_f,                  &
     laser_set_f_value
 
-  integer, parameter ::           &
-    ENVELOPE_CONSTANT      =  0,  &
-    ENVELOPE_GAUSSIAN      =  1,  &
-    ENVELOPE_COSINOIDAL    =  2,  &
-    ENVELOPE_TRAPEZOIDAL   =  3,  &
-    ENVELOPE_FROM_FILE     = 10,  &
-    ENVELOPE_FROM_EXPR     = 99
- 
   integer, public, parameter ::     &
     E_FIELD_ELECTRIC         =  1,  &
     E_FIELD_MAGNETIC         =  2,  &
@@ -65,8 +57,8 @@ module lasers_m
   type laser_t
     private
     integer :: field
-    CMPLX :: pol(MAX_DIM) = M_z0 ! the polarization of the laser
-    type(tdf_t) :: f
+    CMPLX :: pol(MAX_DIM) = M_z0 ! the polarization of the laser.
+    type(tdf_t) :: f             ! The envelope.
     FLOAT :: omega = M_ZERO      ! The main, "carrier", frequency.
 
     FLOAT, pointer :: v(:)
@@ -156,7 +148,7 @@ contains
     character(len=50) :: filename1
     character(len=200) :: scalar_pot_expression
     character(len=200) :: envelope_expression
-    FLOAT :: a0, omega0, t0, tau0, tau1, r, pot_re, pot_im
+    FLOAT :: omega0, r, pot_re, pot_im
     FLOAT, allocatable :: x(:)
 
     call push_sub('lasers.laser_init')
@@ -195,97 +187,27 @@ contains
     !% For these cases, the syntax is:
     !%
     !% <tt>%TDExternalFields
-    !% <br>&nbsp;&nbsp; type | nx | ny | nz | envelope | ...envelope descriptors...
+    !% <br>&nbsp;&nbsp; type | nx | ny | nz | omega | envelope_function_name
     !% <br>%</tt>
     !%
     !% The three (possibly complex) numbers (nx, ny, nz) mark the polarization 
-    !% direction of the field. The "envelope" field describes the temporal shape
-    !% of the field -- the options are described below. The definition and number
-    !% of the "envelope descriptors" depend on the kind of envelope chosen. The
-    !% options are:
+    !% direction of the field. The float omega will be the carrier frequency of the
+    !% pulse. The envelope of the field is a time-dependent function whose definition
+    !% must be given in a "TDFunctions". envelope_function_name is a string (and therefore
+    !% it must be surrounded by quotatin marks) that must match one of the function names
+    !% given in the first column of the "TDFunctions" block.
     !%
-    !%    (A.1) envelope_constant
-    !%
-    !% <tt>%TDExternalFields
-    !% <br>&nbsp;&nbsp; type | nx | ny | nz | envelope_constant | amplitude | omega
-    !% <br>%</tt>
-    !%
-    !% The laser will be a simple continuous wave of frequency omega, and obviously
-    !% amplitude give by the "amplitude" field. I. e.:
-    !%
-    !% <math> F(t) = F_0 Re[ \hat{p} e^{i\omega t} </math>
-    !%
-    !% The magnitude of <math>F_0</math> is given by amplitude. The polarization vector
-    !% is given by the three number (nx, ny, nz). Note that this vector may be describing
-    !% an electric field, a magnetic field, or a constant vector potential, depending
-    !% on the field type.
-    !%
-    !%    (A.2) envelope_gaussian
-    !%
-    !% <tt>%TDExternalFields
-    !% <br>&nbsp;&nbsp; type | nx | ny | nz | envelope_gaussian | amplitude | omega | tau0 | t0
-    !% <br>%</tt>
-    !% 
-    !% The envelope is a gaussian:
-    !%
-    !% <math> F(t) = F_0 exp( - (t-t_0)/(2\tau_0^2) ) Re[ \hat{p} e^{i\omega t} ] </math>
-    !%
-    !% As before <math>F_0</math> = amplitude.
-    !%
-    !%    (A.3) envelope_cosinusoidal
-    !%
-    !% <tt>%TDExternalFields
-    !% <br>&nbsp;&nbsp; type | nx | ny | nz | envelope_cosinusoidal | amplitude | omega | tau0 | t0
-    !% <br>%</tt>
-    !%
-    !% <math> F(t) =  F_0 cos( \pi/2 \frac{t-2\tau_0-t_0}{\tau0} )  Re[ \hat{p} e^{i\omega t} ] </math>
-    !%
-    !% If <math> | t - t_0 | > \tau_0 </math>, then <math> F(t) = 0 </math>.
-    !%
-    !%    (A.4) envelope_trapezoidal
-    !%
-    !% <tt>%TDExternalFields
-    !% <br>&nbsp;&nbsp; type | nx | ny | nz | envelope_trapezoidal | amplitude | omega | tau0 | t0 | tau1
-    !% <br>%</tt>
-    !%
-    !% The envelope ramps linearly during <math>tau_1</math> time units, stays constant for
-    !% <math>tau_0</math> timu units, and the decays to zero linearly again for <math>tau_1</math>
-    !% time units.
-    !%
-    !%    (A.5) envelope_fromfile
-    !%
-    !% <tt>%TDExternalFields
-    !% <br>&nbsp;&nbsp; type | nx | ny | nz | envelope_fromfile | "filename"
-    !% <br>%</tt>
-    !%
-    !% The temporal shape of the field is contained in a file called "filename". This file
-    !% should contain three columns: first column is time, second and third column are the
-    !% real part and the imaginary part of the temporal function f(t):
-    !%
-    !% <math> F(t) = Re[ \hat{p} f(t) ] </math>.
-    !%
-    !%    (A.6) envelope_fromexpr
-    !%
-    !% <tt>%TDExternalFields
-    !% <br>&nbsp;&nbsp; type | nx | ny | nz | envelope_fromexpr | "expression"
-    !% <br>%</tt>
-    !%
-    !% The temporal shape of the field is given as an expression (e.g., "cos(2.0*t)". The 
-    !% letter "t" means time, obviously. The expression is used to construct the function f
-    !% that defines the field:
-    !%
-    !% <math> F(t) = Re[ \hat{p} f(t) ] </math>.
     !%
     !% (B) type = scalar_potential
     !%
     !%
     !% <tt>%TDExternalFields
-    !% <br>&nbsp;&nbsp; scalar_potential | "scalar_expression" | ...envelope descriptors...
+    !% <br>&nbsp;&nbsp; scalar_potential | "scalar_expression" | freq | envelope_function_name
     !% <br>%</tt>
     !%
     !% The scalar potential is not just a dipole, but any expression given by the string
-    !% "scalar_expression". The temporal shape is determined by the "envelope descriptors", a number
-    !% of columns that are defined in the same way than in the previous case.
+    !% "scalar_expression". The temporal shape is determined by the envelope function
+    !% defined by "envelope_function_name".
     !% 
     !%
     !% A NOTE ON UNITS:
@@ -314,23 +236,6 @@ contains
     !%
     !% <math> I_0 = 1.327 10^13 (E_0^2) W/cm^2 </math>
     !%
-    !%Option envelope_constant 0
-    !% The envelope is just the unit function. The laser is not a pulse, but a 
-    !% continuous wave (cw).
-    !%Option envelope_gaussian 1
-    !% The envelope is a Gaussian function. To fully determine its shape, you need to 
-    !% specify the width (tau0) and the peak time (t0).
-    !%Option envelope_cosinusoidal 2
-    !% The envelope is a half-cycle of a cosine function. To fully determine its shape, 
-    !% you need to specify the width (tau0) and the peak time (t0).
-    !%Option envelope_trapezoidal 3
-    !% The envelope looks like a trapezoid: it starts at zero, ramps linearly until one during 
-    !% tau1 units of time, stays at that maximum for tau0 units of time, and then decays 
-    !% linearly to zero during tau1 units of time.
-    !%Option envelope_fromfile 10
-    !% The shape of the laser pulse is read from a file, indicated in the field "filename1".
-    !%Option envelope_fromexpr 99
-    !% The shape of the laser pulse is parsed from an expression.
     !%Option electric_field 1
     !% The external field is an electric field; the usual case when we want to describe a 
     !% laser in the length gauge.
@@ -351,8 +256,6 @@ contains
 
       do i = 1, no_l
 
-        a0 = M_ZERO; omega0 = M_ZERO; tau0 = M_ZERO; t0 = M_ZERO; tau1 = M_ZERO
-
         call loct_parse_block_int(blk, i-1, 0, l(i)%field)
 
         select case(l(i)%field)
@@ -367,58 +270,17 @@ contains
           j = 3
         end select
 
-        l(i)%omega = M_ZERO
-        call loct_parse_block_int  (blk, i-1, j+1, envelope)
-
-        select case(envelope)
-        case(ENVELOPE_CONSTANT)
-          call loct_parse_block_float(blk, i-1, j+2, a0)
-          call loct_parse_block_float(blk, i-1, j+3, omega0)
-        case(ENVELOPE_GAUSSIAN)
-          call loct_parse_block_float(blk, i-1, j+2, a0)
-          call loct_parse_block_float(blk, i-1, j+3, omega0)
-          call loct_parse_block_float(blk, i-1, j+4, tau0)
-          call loct_parse_block_float(blk, i-1, j+5, t0)
-        case(ENVELOPE_COSINOIDAL)
-          call loct_parse_block_float(blk, i-1, j+2, a0)
-          call loct_parse_block_float(blk, i-1, j+3, omega0)
-          call loct_parse_block_float(blk, i-1, j+4, tau0)
-          call loct_parse_block_float(blk, i-1, j+5, t0)
-        case(ENVELOPE_TRAPEZOIDAL)
-          call loct_parse_block_float(blk, i-1, j+2, a0)
-          call loct_parse_block_float(blk, i-1, j+3, omega0)
-          call loct_parse_block_float(blk, i-1, j+4, tau0)
-          call loct_parse_block_float(blk, i-1, j+5, t0)
-          call loct_parse_block_float(blk, i-1, j+6, tau1)
-        case(ENVELOPE_FROM_FILE)
-          call loct_parse_block_string(blk, i-1, j+2, filename1)
-        case(ENVELOPE_FROM_EXPR) ! This should be envelope_from_formula
-          call loct_parse_block_string(blk, i-1, j+2, envelope_expression)
-        case default
-          call input_error('TDExternalFields')
-        end select
-
-        a0     = a0 * units_inp%energy%factor / units_inp%length%factor
-        omega0 = omega0 * units_inp%energy%factor
-        tau0 = tau0 * units_inp%time%factor
-        t0   = t0   * units_inp%time%factor
-        tau1 = tau1 * units_inp%time%factor
-
+        call loct_parse_block_float(blk, i-1, j+1, omega0)
         l(i)%omega = omega0
-        select case(envelope)
-        case(ENVELOPE_CONSTANT)
-          call tdf_init_cw(l(i)%f, a0, M_ZERO)
-        case(ENVELOPE_GAUSSIAN)
-          call tdf_init_gaussian(l(i)%f, a0, M_ZERO, t0, tau0)
-        case(ENVELOPE_COSINOIDAL)
-          call tdf_init_cosinoidal(l(i)%f, a0, M_ZERO, t0, tau0)
-        case(ENVELOPE_TRAPEZOIDAL)
-          call tdf_init_trapezoidal(l(i)%f, a0, M_ZERO, t0, tau0, tau1)
-        case(ENVELOPE_FROM_FILE)
-          call tdf_init_fromfile(l(i)%f, trim(filename1), ierr)
-        case(ENVELOPE_FROM_EXPR)
-          call tdf_init_fromexpr(l(i)%f, trim(envelope_expression))
-        end select
+     
+        call loct_parse_block_string(blk, i-1, j+2, envelope_expression)
+
+        ! For some reason, one cannot open a block if another one is already open.
+        ! This is why I close blk before calling tdf_read, and then open it again.
+        ! This should be fixed at the parser level.
+        call loct_parse_block_end(blk)
+        call tdf_read(l(i)%f, trim(envelope_expression), ierr)
+        ierr = loct_parse_block(check_inp('TDExternalFields'), blk)
 
         l(i)%pol(:) = l(i)%pol(:)/sqrt(sum(abs(l(i)%pol(:))**2))
 
@@ -595,7 +457,7 @@ contains
     call push_sub('lasers.laser_vector_potential')
 
     if(present(t)) then
-      a = l%a * real( tdf(l%f, t) * exp(M_zI*l%omega*t) )
+      a = l%a * real( tdf(l%f, t) * exp(M_zI* l%omega *t) )
     else
       a = l%a
     end if
@@ -617,7 +479,7 @@ contains
     field = M_ZERO
     if(l%field .eq. E_FIELD_SCALAR_POTENTIAL) return
     if(present(t)) then
-      amp = tdf(l%f, t) * exp(M_zI*l%omega*t)
+       amp = tdf(l%f, t) * exp(M_zI * l%omega * t )
     else
       amp = M_z1
     end if

@@ -64,6 +64,7 @@ module tdf_m
             tdf_nfreqs,                  &
             tdf_dt,                      &
             tdf_copy,                    &
+            tdf_read,                    &
             tdf_end
 
 
@@ -75,7 +76,7 @@ module tdf_m
     TDF_TRAPEZOIDAL   =  10005,  &
     TDF_FROM_FILE     =  10006,  &
     TDF_NUMERICAL     =  10007,  &
-    TDF_FROMEXPR      =  10008,  &
+    TDF_FROM_EXPR     =  10008,  &
     TDF_SINE_SERIES   =  10009
 
   type tdf_t
@@ -108,11 +109,171 @@ module tdf_m
   contains
 
 
+
+  !------------------------------------------------------------
+  subroutine tdf_read(f, function_name, ierr)
+    type(tdf_t),      intent(inout) :: f
+    character(len=*), intent(in)    :: function_name
+    integer,          intent(out)   :: ierr
+
+    type(block_t) :: blk
+    integer :: nrows, i, function_type
+    character(len=100) :: row_name, filename, function_expression
+    FLOAT :: a0, tau0, t0, tau1
+
+    !%Variable TDExternalFields
+    !%Type block
+    !%Section Time Dependent
+    !%Description
+    !%
+    !%    (1) tdf_cw
+    !%
+    !% <tt>%TDExternalFields
+    !% <br>&nbsp;&nbsp; tdf_cw | amplitude 
+    !% <br>%</tt>
+    !%
+    !% The function is just a constant of value "amplitude".
+    !%
+    !% <math> f(t) = amplitude
+    !%
+    !%    (A.2) tdf_gaussian
+    !%
+    !% <tt>%TDExternalFields
+    !% <br>&nbsp;&nbsp; tdf_gaussian | amplitude | tau0 | t0
+    !% <br>%</tt>
+    !% 
+    !% The function is a gaussian:
+    !%
+    !% <math> f(t) = F_0 exp( - (t-t_0)/(2\tau_0^2) ) </math>
+    !%
+    !% <math>F_0</math> = amplitude.
+    !%
+    !%    (A.3) tdf_cosinoidal
+    !%
+    !% <tt>%TDExternalFields
+    !% <br>&nbsp;&nbsp; tdf_cosinoidal | amplitude | tau0 | t0
+    !% <br>%</tt>
+    !%
+    !% <math> f(t) =  F_0 cos( \pi/2 \frac{t-2\tau_0-t_0}{\tau0} )  </math>
+    !%
+    !% If <math> | t - t_0 | > \tau_0 </math>, then <math> f(t) = 0 </math>.
+    !%
+    !%    (A.4) tdf_trapezoidal
+    !%
+    !% <tt>%TDExternalFields
+    !% <br>&nbsp;&nbsp; envelope_trapezoidal | amplitude | tau0 | t0 | tau1
+    !% <br>%</tt>
+    !%
+    !% The function ramps linearly during <math>tau_1</math> time units, stays constant for
+    !% <math>tau_0</math> timu units, and the decays to zero linearly again for <math>tau_1</math>
+    !% time units.
+    !%
+    !%    (A.5) tdf_from_file
+    !%
+    !% <tt>%TDExternalFields
+    !% <br>&nbsp;&nbsp; envelope_from_file | "filename"
+    !% <br>%</tt>
+    !%
+    !% The temporal shape of the function is contained in a file called "filename". This file
+    !% should contain three columns: first column is time, second and third column are the
+    !% real part and the imaginary part of the temporal function f(t).
+    !%
+    !%    (A.6) envelope_from_expr
+    !%
+    !% <tt>%TDExternalFields
+    !% <br>&nbsp;&nbsp; envelope_from_expr | "expression"
+    !% <br>%</tt>
+    !%
+    !% The temporal shape of the field is given as an expression (e.g., "cos(2.0*t)". The 
+    !% letter "t" means time, obviously. The expression is used to construct the function f
+    !% that defines the field:
+    !%
+    !%Option tdf_cw 10002
+    !% Explained above.
+    !%Option tdf_gaussian 10003
+    !% Explained above.
+    !%Option tdf_cosinoidal 10004
+    !% Explained above.
+    !%Option tdf_trapezoidal 10005
+    !% Explained above.
+    !%Option tdf_from_file 10006
+    !% Explained above.
+    !%Option tdf_from_expr 10008
+    !% Explained above.
+    !%End
+    if(loct_parse_block(check_inp('TDFunctions'), blk) .ne. 0) then
+      ierr = -1
+      return
+    end if
+
+    nrows = loct_parse_block_n(blk)
+    row_loop: do i = 1, nrows
+      call loct_parse_block_string(blk, i-1, 0, row_name)
+      if(trim(row_name).eq.trim(function_name)) then
+
+        call loct_parse_block_int  (blk, i-1, 1, function_type)
+
+        select case(function_type)
+          case(TDF_CW)
+            call loct_parse_block_float(blk, i-1, 2, a0)
+          case(TDF_GAUSSIAN)
+            call loct_parse_block_float(blk, i-1, 2, a0)
+            call loct_parse_block_float(blk, i-1, 3, tau0)
+          case(TDF_COSINOIDAL)
+            call loct_parse_block_float(blk, i-1, 2, a0)
+            call loct_parse_block_float(blk, i-1, 3, tau0)
+            call loct_parse_block_float(blk, i-1, 4, t0)
+          case(TDF_TRAPEZOIDAL)
+            call loct_parse_block_float(blk, i-1, 2, a0)
+            call loct_parse_block_float(blk, i-1, 3, tau0)
+            call loct_parse_block_float(blk, i-1, 4, t0)
+            call loct_parse_block_float(blk, i-1, 5, tau1)
+          case(TDF_FROM_FILE)
+            call loct_parse_block_string(blk, i-1, 2, filename)
+          case(TDF_FROM_EXPR)
+            call loct_parse_block_string(blk, i-1, 2, function_expression)
+          case default
+            ierr = -2
+            call loct_parse_block_end(blk)
+            return
+        end select
+
+        a0     = a0 * units_inp%energy%factor / units_inp%length%factor
+        tau0 = tau0 * units_inp%time%factor
+        t0   = t0   * units_inp%time%factor
+        tau1 = tau1 * units_inp%time%factor
+
+        select case(function_type)
+        case(TDF_CW)
+          call tdf_init_cw(f, a0, M_ZERO)
+        case(TDF_GAUSSIAN)
+          call tdf_init_gaussian(f, a0, M_ZERO, t0, tau0)
+        case(TDF_COSINOIDAL)
+          call tdf_init_cosinoidal(f, a0, M_ZERO, t0, tau0)
+        case(TDF_TRAPEZOIDAL)
+          call tdf_init_trapezoidal(f, a0, M_ZERO, t0, tau0, tau1)
+        case(TDF_FROM_FILE)
+          call tdf_init_fromfile(f, trim(filename), ierr)
+        case(TDF_FROM_EXPR)
+          call tdf_init_fromexpr(f, trim(function_expression))
+        end select
+        ierr = 0
+        exit row_loop
+      end if
+    end do row_loop
+
+    call loct_parse_block_end(blk)
+  end subroutine tdf_read
+  !------------------------------------------------------------
+
+
+
   !------------------------------------------------------------
   integer function tdf_niter(f)
     type(tdf_t), intent(in) :: f
     tdf_niter = f%niter
   end function tdf_niter
+  !------------------------------------------------------------
 
 
   !------------------------------------------------------------
@@ -120,6 +281,7 @@ module tdf_m
     type(tdf_t), intent(in) :: f
     tdf_nfreqs = f%nfreqs
   end function tdf_nfreqs
+  !------------------------------------------------------------
 
 
   !------------------------------------------------------------
@@ -127,6 +289,7 @@ module tdf_m
     type(tdf_t), intent(in) :: f
     tdf_dt = f%dt
   end function tdf_dt
+  !------------------------------------------------------------
 
 
   !------------------------------------------------------------
@@ -138,6 +301,7 @@ module tdf_m
     nullify(f%val)
     nullify(f%coeffs)
   end subroutine tdf_init
+  !------------------------------------------------------------
 
 
   !------------------------------------------------------------
@@ -155,6 +319,7 @@ module tdf_m
 
     call pop_sub()
   end subroutine tdf_init_cw
+  !------------------------------------------------------------
 
 
   !------------------------------------------------------------
@@ -174,6 +339,7 @@ module tdf_m
 
     call pop_sub()
   end subroutine tdf_init_gaussian
+  !------------------------------------------------------------
 
 
   !------------------------------------------------------------
@@ -193,6 +359,7 @@ module tdf_m
 
     call pop_sub()
   end subroutine tdf_init_cosinoidal
+  !------------------------------------------------------------
 
 
   !------------------------------------------------------------
@@ -213,6 +380,7 @@ module tdf_m
 
     call pop_sub()
   end subroutine tdf_init_trapezoidal
+  !------------------------------------------------------------
 
 
   !------------------------------------------------------------
@@ -222,13 +390,14 @@ module tdf_m
 
     call push_sub('tdfunction.tdf_init_fromexpr')
 
-    f%mode = TDF_FROMEXPR
+    f%mode = TDF_FROM_EXPR
     f%expression = trim(expression)
     nullify(f%val)
     nullify(f%coeffs)
     
     call pop_sub()
   end subroutine tdf_init_fromexpr
+  !------------------------------------------------------------
 
 
   !------------------------------------------------------------
@@ -278,6 +447,7 @@ module tdf_m
     deallocate(t, am)
     call pop_sub()
   end subroutine tdf_init_fromfile
+  !------------------------------------------------------------
 
 
   !------------------------------------------------------------
@@ -317,6 +487,7 @@ module tdf_m
     nullify(f%coeffs)
     call pop_sub()
   end subroutine tdf_init_numerical
+  !------------------------------------------------------------
 
 
   !------------------------------------------------------------
@@ -338,6 +509,7 @@ module tdf_m
     enddo   
 
   end subroutine tdf_fourier_grid
+  !------------------------------------------------------------
 
 
   !------------------------------------------------------------
@@ -360,6 +532,8 @@ module tdf_m
     call fft_end(fft_handler)
 
   end subroutine tdf_fft_forward
+  !------------------------------------------------------------
+
 
   !------------------------------------------------------------
   subroutine tdf_fft_backward(f)
@@ -381,6 +555,7 @@ module tdf_m
     call fft_end(fft_handler)
 
   end subroutine tdf_fft_backward
+  !------------------------------------------------------------
 
 
   !------------------------------------------------------------
@@ -398,6 +573,7 @@ module tdf_m
 
     call pop_sub()
   end subroutine tdf_set_numericalc
+  !------------------------------------------------------------
 
 
   !------------------------------------------------------------
@@ -415,6 +591,7 @@ module tdf_m
 
     call pop_sub()
   end subroutine tdf_set_numericalr
+  !------------------------------------------------------------
 
 
   !------------------------------------------------------------
@@ -429,6 +606,7 @@ module tdf_m
       f%coeffs(index) = value
     end select
   end subroutine tdf_set_numericalc1
+  !------------------------------------------------------------
 
 
   !------------------------------------------------------------
@@ -443,6 +621,7 @@ module tdf_m
       f%coeffs(index) = value
     end select
   end subroutine tdf_set_numericalr1
+  !------------------------------------------------------------
 
 
   !------------------------------------------------------------
@@ -454,6 +633,7 @@ module tdf_m
     f%val(:) = real(f%val(:), REAL_PRECISION)
 
   end subroutine tdf_numerical_keep_real
+  !------------------------------------------------------------
 
 
   !------------------------------------------------------------
@@ -483,6 +663,7 @@ module tdf_m
     if (f%mode .eq. TDF_FROM_FILE) call spline_end(f%amplitude)
 
   end subroutine tdf_to_numerical
+  !------------------------------------------------------------
 
 
   !------------------------------------------------------------
@@ -569,6 +750,7 @@ module tdf_m
     end select
     
   end function tdfi
+  !------------------------------------------------------------
 
 
   !------------------------------------------------------------
@@ -626,13 +808,14 @@ module tdf_m
         y = f%val(il) + ((f%val(iu)-f%val(il))/f%dt)*(t-(il-1)*f%dt)
       end if
 
-    case(TDF_FROMEXPR)
+    case(TDF_FROM_EXPR)
       call loct_parse_expression(fre, fim, 't', t, f%expression)
       y = cmplx(fre, fim)
 
     end select
 
   end function tdft
+  !------------------------------------------------------------
 
 
   !------------------------------------------------------------
@@ -652,6 +835,7 @@ module tdf_m
 
     call pop_sub()
   end subroutine tdf_end
+  !------------------------------------------------------------
 
 
   !------------------------------------------------------------
@@ -690,6 +874,7 @@ module tdf_m
     fout%mode   = fin%mode
 
   end subroutine tdf_copy
+  !------------------------------------------------------------
 
 
   !------------------------------------------------------------
@@ -709,6 +894,7 @@ module tdf_m
     end select
 
   end subroutine tdf_scalar_multiply
+  !------------------------------------------------------------
 
 
   !------------------------------------------------------------
@@ -728,6 +914,7 @@ module tdf_m
     end do
 
   end subroutine tdf_cosine_multiply
+  !------------------------------------------------------------
 
 
   !------------------------------------------------------------
@@ -749,6 +936,7 @@ module tdf_m
     end do
 
   end subroutine tdf_cosine_divide
+  !------------------------------------------------------------
 
 
   !------------------------------------------------------------
@@ -798,6 +986,7 @@ module tdf_m
     end select
 
   end subroutine tdf_write
+  !------------------------------------------------------------
 
 
   !------------------------------------------------------------
@@ -838,6 +1027,7 @@ module tdf_m
     end select
 
   end function tdf_dot_product
+  !------------------------------------------------------------
 
 
 end module tdf_m

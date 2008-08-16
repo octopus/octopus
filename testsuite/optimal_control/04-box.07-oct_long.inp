@@ -54,12 +54,15 @@ OCTMixing = no
 #-----------------------------
 
 ampl = 0.06
-#freq = 0.157
 freq = 0.00
 t0 = stime/2
 tau0 = stime/2
 %TDExternalFields
-  electric_field | 1 | 0 | 0 | envelope_cosinusoidal | ampl | freq | tau0 | t0
+electric_field | 1 | 0 | 0 | freq | "envelope_function"
+%
+
+%TDFunctions
+"envelope_function" | tdf_cosinoidal | ampl | tau0 | t0
 %
 
 Dimensions = 1
@@ -82,8 +85,6 @@ TheoryLevel = independent_particles
 EigenSolverInitTolerance = 1.0e-6
 EigenSolverFinalTolerance = 1.0e-6
 EigenSolverMaxIter = 1000
-#Mixing = 1.0
-#TypeOfMixing = linear
 
 NumberUnoccStates = 4
 

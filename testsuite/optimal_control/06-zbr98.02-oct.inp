@@ -77,9 +77,12 @@ AbsorbingBoundaries = no
 mu0 = 3.088
 xp= 0.6
 
-
 %TDExternalFields
-scalar_potential | "mu0*(x+r0)*exp(-(x+r0)/xp)" | envelope_fromexpr | "0"
+scalar_potential | "mu0*(x+r0)*exp(-(x+r0)/xp)" | 0.0 | "envelope_function"
+%
+
+%TDFunctions
+"envelope_function" | tdf_from_expr | "0"
 %
 
 # --------------
