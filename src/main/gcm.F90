@@ -72,7 +72,7 @@ module gcm_m
 
     !%Variable GCMSlaterDeterminants
     !%Type block
-    !%Section Generator Coordinates
+    !%Section Calculation Modes::Generator Coordinates
     !%Description
     !%
     !%End

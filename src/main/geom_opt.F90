@@ -212,7 +212,7 @@ contains
       !%Variable GOMethod
       !%Type integer
       !%Default steep
-      !%Section Geometry Optimization
+      !%Section Calculation Modes::Geometry Optimization
       !%Description
       !% Method by which the minimization is performed.
       !%Option steep 1
@@ -250,7 +250,7 @@ contains
       !%Variable GOTolerance
       !%Type float
       !%Default 0.001 a.u.
-      !%Section Geometry Optimization
+      !%Section Calculation Modes::Geometry Optimization
       !%Description
       !% Convergence criterion to stop the minimization. In units of force; minimization
       !% is stopped when all forces on ions are smaller.
@@ -262,7 +262,7 @@ contains
       !%Variable GOMinimumMove
       !%Type float
       !%Default 0.0 a.u.
-      !%Section Geometry Optimization
+      !%Section Calculation Modes::Geometry Optimization
       !%Description
       !% Convergence criterion to stop the minimization. In units of length; minimization
       !% is stopped when all species coordinates change less than GOMinimumMove.
@@ -277,7 +277,7 @@ contains
       !%Variable GOStep
       !%Type float
       !%Default 0.5
-      !%Section Geometry Optimization
+      !%Section Calculation Modes::Geometry Optimization
       !%Description
       !% Initial step for the geometry optimizer.
       !%End
@@ -286,7 +286,7 @@ contains
       !%Variable GOMaxIter
       !%Type integer
       !%Default 200
-      !%Section Geometry Optimization
+      !%Section Calculation Modes::Geometry Optimization
       !%Description
       !% Even if previous convergence criterion is not satisfied, minimization will stop
       !% after this number of iterations.
@@ -300,7 +300,7 @@ contains
       !%Variable GOWhat2Minimize
       !%Type integer
       !%Default minimize_energy
-      !%Section Geometry Optimization
+      !%Section Calculation Modes::Geometry Optimization
       !%Description
       !% This rather esoteric option allows one to choose which objective function
       !% to minimize during a geometry minimization. The use of this variable may

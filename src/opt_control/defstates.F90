@@ -36,7 +36,7 @@
 
     !%Variable OCTInitialState
     !%Type integer
-    !%Section Optimal Control
+    !%Section Calculation Modes::Optimal Control
     !%Default 1
     !%Description
     !% The string OCTInitialState describes the initial state of the quantum system
@@ -74,7 +74,7 @@
       !%Variable OCTInitialTransformStates
       !%Type block
       !%Default no
-      !%Section Optimal Control
+      !%Section Calculation Modes::Optimal Control
       !%Description
       !% If OCTInitialState = oct_is_gstransformation, you must specify one
       !% OCTInitialTransformStates block, in order to specify which linear
@@ -118,7 +118,7 @@
       
       !%Variable OCTInitialUserdefined
       !%Type block
-      !%Section Optimal Control
+      !%Section Calculation Modes::Optimal Control
       !%Description
       !% 
       !% Example:

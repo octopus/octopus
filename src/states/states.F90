@@ -743,7 +743,7 @@ contains
     !%Variable ForceComplex
     !%Type logical
     !%Default no
-    !%Section States
+    !%Section Execution::Debug
     !%Description
     !% Normally Octopus determines automatically the type necessary
     !% for the wavefunctions. When set to yes this variable will

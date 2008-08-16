@@ -201,7 +201,7 @@ contains
     !%Variable WriteMatrixElements
     !%Type logical
     !%Default no
-    !%Section Unoccupied States
+    !%Section Calculation Modes::Unoccupied States
     !%Description
     !% If true outputs the following matrix elements:
     !% <ul>
@@ -233,7 +233,7 @@ contains
       !%Variable NumberUnoccStates
       !%Type integer
       !%Default 5
-      !%Section Unoccupied States
+      !%Section Calculation Modes::Unoccupied States
       !%Description
       !% How many unoccupied states to compute.
       !%End

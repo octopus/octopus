@@ -249,7 +249,7 @@ contains
     !%Variable TDTransMemTol
     !%Type float
     !%Default 1e-12
-    !%Section Transport
+    !%Section Calculation Modes::Transport
     !%Description
     !% Decides when to consider the memory coefficients converged.
     !%End
@@ -263,7 +263,7 @@ contains
     !%Variable TDTransMemMaxIter
     !%Type integer
     !%Default 500
-    !%Section Transport
+    !%Section Calculation Modes::Transport
     !%Description
     !% Sets the maximum iteration number to converge the memory coefficients.
     !%End

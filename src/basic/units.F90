@@ -91,7 +91,7 @@ contains
     !%Variable Units
     !%Type integer
     !%Default atomic
-    !%Section Generalities::Units
+    !%Section Execution::Units
     !%Description
     !% Atomic units seem to be the preferred system in the atomic and
     !% molecular physics community. Internally, the code works in
@@ -116,7 +116,7 @@ contains
     !%Variable UnitsInput
     !%Type integer
     !%Default atomic
-    !%Section Generalities::Units
+    !%Section Execution::Units
     !%Description
     !% Same as "Units", but only refers to input values.
     !%Option atomic        1
@@ -129,7 +129,7 @@ contains
     !%Variable UnitsOutput
     !%Type integer
     !%Default atomic
-    !%Section Generalities::Units
+    !%Section Execution::Units
     !%Description
     !% Same as "Units", but only refers to output values.
     !%Option atomic        1

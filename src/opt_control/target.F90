@@ -99,7 +99,7 @@ module opt_control_target_m
 
     !%Variable OCTTargetOperator
     !%Type integer
-    !%Section Optimal Control
+    !%Section Calculation Modes::Optimal Control
     !%Default 3
     !%Description
     !% The variable OCTTargetOperator prescribes which kind of target functional is
@@ -183,7 +183,7 @@ module opt_control_target_m
       !%Variable OCTExcludeStates
       !%Type integer
       !%Default 1
-      !%Section Optimal Control
+      !%Section Calculation Modes::Optimal Control
       !%Description
       !% WARNING: Experimental
       !%End
@@ -199,7 +199,7 @@ module opt_control_target_m
       !%Variable OCTTargetTransformStates
       !%Type block
       !%Default no
-      !%Section Optimal Control
+      !%Section Calculation Modes::Optimal Control
       !%Description
       !% If OCTTargetOperator = oct_tg_gstransformation, you must specify one
       !% OCTTargetTransformStates block, in order to specify which linear
@@ -249,7 +249,7 @@ module opt_control_target_m
 
       !%Variable OCTTargetDensity
       !%Type string
-      !%Section Optimal Control
+      !%Section Calculation Modes::Optimal Control
       !%Description
       !% If OCTTargetOperator = oct_tg_local, then one must supply the target density
       !% that should be searched for. This one can do by supplying a string through
@@ -260,7 +260,7 @@ module opt_control_target_m
       !%Variable OCTTargetDensityFromState
       !%Type block
       !%Default no
-      !%Section Optimal Control
+      !%Section Calculation Modes::Optimal Control
       !%Description
       !% If OCTTargetOperator = oct_tg_local, and OCTLocalTarget = "OCTTargetDensityFromState",
       !% you must specify one OCTTargetDensityState block, in order to specify which linear
@@ -328,7 +328,7 @@ module opt_control_target_m
     case(oct_tg_local)
       !%Variable OCTTargetLocal
       !%Type string
-      !%Section Optimal Control
+      !%Section Calculation Modes::Optimal Control
       !%Description
       !% If OCTTargetOperator = oct_tg_local, then one must supply the target density
       !% that should be searched for. This one can do by supplying a string through
@@ -371,7 +371,7 @@ module opt_control_target_m
       !%Variable OCTOptimizeHarmonicSpectrum
       !%Type block
       !%Default no
-      !%Section Optimal Control
+      !%Section Calculation Modes::Optimal Control
       !%Description
       !% WARNING: Experimental
       !%

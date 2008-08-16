@@ -369,7 +369,7 @@ contains
       !%Variable PeriodicDimensions
       !%Type integer
       !%Default 0
-      !%Section Mesh::Simulation Box
+      !%Section System
       !%Description
       !% Define which directions are to be considered periodic. Of course, it has to be a number
       !% from 0 to three, and it cannot be larger than Dimensions.

@@ -87,7 +87,7 @@ contains
     !%Variable stdout
     !%Type string
     !%Default "-"
-    !%Section Generalities::IO
+    !%Section Execution::IO
     !%Description
     !% The standard output by default goes to, well, to standard output. This can
     !% be changed by setting this variable: if you give it a name (other than "-")
@@ -103,7 +103,7 @@ contains
     !%Variable stderr
     !%Type string
     !%Default "-"
-    !%Section Generalities::IO
+    !%Section Execution::IO
     !%Description
     !% The standard error by default goes to, well, to standard error. This can
     !% be changed by setting this variable: if you give it a name (other than "-")
@@ -119,7 +119,7 @@ contains
     !%Variable WorkDir
     !%Type string
     !%Default "."
-    !%Section Generalities::IO
+    !%Section Execution::IO
     !%Description
     !% By default, all files are written and read from the working directory,
     !% i.e. the directory from which the executable was launched. This behavior can
@@ -133,7 +133,7 @@ contains
     !%Variable FlushMessages
     !%Type logical
     !%Default no
-    !%Section Generalities::IO
+    !%Section Execution::IO
     !%Description
     !% In addition to writing to stdout and stderr, the code messages may also be
     !% flushed to "messages.stdout" and "messages.stderr", if this variable is
@@ -151,7 +151,7 @@ contains
       !%Variable MPIDebugHook
       !%Type logical
       !%Default no
-      !%Section Generalities::Debug
+      !%Section Execution::Debug
       !%Description
       !% When debugging the code in parallel it is usually difficult to find the origin
       !% of race conditions that appear in MPI communications. This variable introduces 
@@ -197,7 +197,7 @@ contains
     !%Variable TmpDir
     !%Default "restart/"
     !%Type string
-    !%Section Generalities::IO
+    !%Section Execution::IO
     !%Description
     !% The name of the directory where octopus stores binary information
     !% like the wave-functions.
@@ -212,7 +212,7 @@ contains
     !%Variable InputDir
     !%Default "restart/"
     !%Type string
-    !%Section Generalities::IO
+    !%Section Execution::IO
     !%Description
     !% The name of the input directory where octopus should read binary information
     !% like the (re)start wave-functions.
@@ -230,7 +230,7 @@ contains
     !%Variable OutputDir
     !%Default "restart/"
     !%Type string
-    !%Section Generalities::IO
+    !%Section Execution::IO
     !%Description
     !% The name of the directory where octopus will store (hopefully) converged binary 
     !% output like the (re)start wave-functions.

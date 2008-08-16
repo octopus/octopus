@@ -125,7 +125,7 @@ contains
 
     !%Variable OCTParameterRepresentation
     !%Type integer
-    !%Section Optimal Control
+    !%Section Calculation Modes::Optimal Control
     !%Default control_parameter_real_space
     !%Description
     !% The control functions can be represented in real space (default), or expanded
@@ -151,7 +151,7 @@ contains
 
     !%Variable OCTParameterOmegaMax
     !%Type float
-    !%Section Optimal Control
+    !%Section Calculation Modes::Optimal Control
     !%Default 1.0
     !%Description
     !%
@@ -166,7 +166,7 @@ contains
 
     !%Variable OCTFixFluenceTo
     !%Type float
-    !%Section Optimal Control
+    !%Section Calculation Modes::Optimal Control
     !%Default 0.0
     !%Description
     !% The algorithm tries to obtain the specified fluence for the laser field. 
@@ -185,7 +185,7 @@ contains
 
     !%Variable OCTFixInitialFluence
     !%Type logical
-    !%Section Optimal Control
+    !%Section Calculation Modes::Optimal Control
     !%Default yes
     !%Description
     !% By default, when asking for a fixed-fluence optimization ("OCTFixFluenceTo = whatever"), 
@@ -198,7 +198,7 @@ contains
 
     !%Variable OCTControlFunctionIsEnvelope
     !%Type logical
-    !%Section Optimal Control
+    !%Section Calculation Modes::Optimal Control
     !%Default no
     !%Description
     !% 
@@ -207,7 +207,7 @@ contains
     if(par%envelope) then
       !%Variable OCTCarrierFrequency
       !%Type float
-      !%Section Optimal Control
+      !%Section Calculation Modes::Optimal Control
       !%Default 0.0
       !%Description
       !%
@@ -814,7 +814,7 @@ contains
 
     !%Variable OCTPenalty
     !%Type float
-    !%Section Optimal Control
+    !%Section Calculation Modes::Optimal Control
     !%Default 1.0
     !%Description
     !% The variable specificies the value of the penalty factor for the 
@@ -856,7 +856,7 @@ contains
 
     !%Variable OCTLaserEnvelope
     !%Type block
-    !%Section Optimal Control
+    !%Section Calculation Modes::Optimal Control
     !%Description
     !% Often a predefined time-dependent envelope on the control parameter is desired. 
     !% This can be achieved by making the penalty factor time-dependent. 

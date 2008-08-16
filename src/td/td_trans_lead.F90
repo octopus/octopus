@@ -73,7 +73,7 @@ contains
 
     !%Variable TDTransLeads
     !%Type block
-    !%Section Transport
+    !%Section Calculation Modes::Transport
     !%Description
     !% this block describes the semi-infinite periodic leads attached
     !% to the central device region. It may have on or two columns per row:

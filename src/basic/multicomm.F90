@@ -181,7 +181,7 @@ contains
 
       !%Variable ParallelizationUseTopology
       !%Type block
-      !%Section Generalities::Parallel
+      !%Section Execution::Parallelization
       !%Description
       !%
       !% When set to yes, Octopus will try to determine the topology
@@ -212,7 +212,7 @@ contains
 
       !%Variable ParallelizationGroupRanks
       !%Type block
-      !%Section Generalities::Parallel
+      !%Section Execution::Parallelization
       !%Description
       !% Specifies the size of the groups used for the parellization. For example
       !% (n_d, n_s, n_k) means we have n_p*n_s*n_k processors and that the k-points
@@ -250,7 +250,7 @@ contains
       !%Variable ParallelizationStrategy
       !%Type flag
       !%Default par_domains + par_states + par_kpoints
-      !%Section Generalities::Parallel
+      !%Section Execution::Parallelization
       !%Description
       !% Specifies what kind of parallelization strategy octopus should use.
       !% The values can be combined, for example "par_domains + par_states"

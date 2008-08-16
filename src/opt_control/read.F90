@@ -25,7 +25,7 @@
 
     !%Variable OCTScheme
     !%Type integer
-    !%Section Optimal Control
+    !%Section Calculation Modes::Optimal Control
     !%Default oct_algorithm_zbr98
     !%Description
     !% In order to find the optimal laser field for a given task, e.g., the excitation from an
@@ -105,7 +105,7 @@
 
     !%Variable OCTDoubleCheck
     !%Type logical
-    !%Section Optimal Control
+    !%Section Calculation Modes::Optimal Control
     !%Default true
     !%Description 
     !% Run a normal propagation after the optimization using the optimized field.
@@ -114,7 +114,7 @@
 
     !%Variable OCTMixing
     !%Type logical
-    !%Section Optimal Control
+    !%Section Calculation Modes::Optimal Control
     !%Default false
     !%Description 
     !% Use mixing algorithms to create the input fields in the iterative OCT schemes.
@@ -129,7 +129,7 @@
 
     !%Variable OCTDirectStep
     !%Type float
-    !%Section Optimal Control
+    !%Section Calculation Modes::Optimal Control
     !%Default 0.25
     !%Description 
     !%
@@ -138,7 +138,7 @@
 
     !%Variable OCTDumpIntermediate
     !%Type logical
-    !%Section Optimal Control
+    !%Section Calculation Modes::Optimal Control
     !%Default true
     !%Description 
     !% Writes to disk some data during the OCT algorithm at intermediate steps.
@@ -150,7 +150,7 @@
 
     !%Variable OCTNumberCheckPoints
     !%Type integer
-    !%Section Optimal Control
+    !%Section Calculation Modes::Optimal Control
     !%Default 0
     !%Description 
     !% During an OCT propagation, the code may write down at some time steps (the

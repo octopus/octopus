@@ -173,7 +173,7 @@ contains
     !%Variable ProfilingMode
     !%Default no
     !%Type logical
-    !%Section Generalities::Debug
+    !%Section Execution::Optimization
     !%Description
     !% Use this variable to run octopus in profiling mode. In this mode
     !% octopus records time spent in certain areas of the code and

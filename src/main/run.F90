@@ -77,7 +77,7 @@ contains
     !%Variable FromScratch
     !%Type logical
     !%Default 0
-    !%Section Generalities
+    !%Section Execution
     !%Description
     !% When this variable is yes, octopus will always perform a
     !% calculation from the beginning, without looking for restart

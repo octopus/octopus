@@ -45,7 +45,7 @@ program octopus
   !%Variable DevelVersion
   !%Type logical
   !%Default no
-  !%Section Generalities::Debug
+  !%Section Execution::Debug
   !%Description
   !% If true, allows the use of certain parts of the code that are
   !% still under development. This should not be used for production runs.
@@ -55,7 +55,7 @@ program octopus
   !%Variable DebugLevel
   !%Type integer
   !%Default 0
-  !%Section Generalities::Debug
+  !%Section Execution::Debug
   !%Description
   !% This variable decides whether or not to enter debug mode.
   !% If its value is 0 (the default) Octopus does not enter debug mode.
@@ -84,7 +84,7 @@ program octopus
   !%Variable CalculationMode
   !%Type integer
   !%Default gs
-  !%Section Generalities
+  !%Section Calculation Modes
   !%Description
   !% Decides what kind of calculation is to be performed.
   !%Option gs 01
@@ -135,7 +135,7 @@ program octopus
 
   !%Variable Dimensions
   !%Type integer
-  !%Section Generalities
+  !%Section System
   !%Default 3
   !%Description
   !% octopus can run in 1, 2 or 3 dimensions, depending on the value of this

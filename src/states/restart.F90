@@ -108,7 +108,7 @@ contains
     !%Variable RestartFileFormat
     !%Type integer
     !%Default restart_netcdf
-    !%Section Generalities::IO
+    !%Section Execution::IO
     !%Description
     !% Determines in which format the restart files should be written. The default
     !% is binary files (restart_binary).
@@ -142,7 +142,7 @@ contains
     !%Variable RestartDir
     !%Type string
     !%Default ''
-    !%Section Generalities
+    !%Section Execution::IO
     !%Description
     !% When Octopus reads restart files, e. g. when running a time propagation
     !% after a ground state calculcation, these files will be read from

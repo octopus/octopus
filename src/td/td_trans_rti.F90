@@ -128,7 +128,7 @@ contains
     !%Variable TDTransBiCGMaxIter
     !%Type integer
     !%Default 100
-    !%Section Transport
+    !%Section Calculation Modes::Transport
     !%Description
     !% Sets the maximum iteration number for the BiCG linear solver in
     !% the Crank-Nicholson procedure.
@@ -143,7 +143,7 @@ contains
     !%Variable TDTransBiCGTol
     !%Type integer
     !%Default 1e-12
-    !%Section Transport
+    !%Section Calculation Modes::Transport
     !%Description
     !% Sets the convergence tolerance for the residue in the BiCG linear solver
     !% in the Crank-Nicholson procedure.
@@ -158,7 +158,7 @@ contains
     !%Variable TDTransMemType
     !%Type integer
     !%Default save_cpu_time
-    !%Section Transport
+    !%Section Calculation Modes::Transport
     !%Description
     !% Decides whether the memory coefficients use lots of RAM (default)
     !% or uses a more compact scheme but with the need of more CPU-cycles.
@@ -177,7 +177,7 @@ contains
     !%Variable TDTransAdditionalTerms
     !%Type integer
     !%Default mem_term + src_term
-    !%Section Transport
+    !%Section Calculation Modes::Transport
     !%Description
     !% The TD transport propagator inserts to additional terms in
     !% the Crank-Nicholson scheme: source and memory. With this variable,
@@ -193,7 +193,7 @@ contains
     !%Variable TDTransEnergy
     !%Type float
     !%Default 0.1
-    !%Section Transport
+    !%Section Calculation Modes::Transport
     !%Description
     !% The energy for the wave function.
     !%End
@@ -208,7 +208,7 @@ contains
     !%Variable TDTransSubBand
     !%Type integer
     !%Default 1
-    !%Section Transport
+    !%Section Calculation Modes::Transport
     !%Description
     !% Chooses the subband in dimensions greater equal 2 (needed for current calculation)
     !%End
@@ -841,7 +841,7 @@ contains
       !%Variable TDTransGroundState
       !%Type integer
       !%Default -1
-      !%Section Transport
+      !%Section Calculation Modes::Transport
       !%Description
       !% Decides whether we have the groundstate calculation or the td run.
       !%End

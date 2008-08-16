@@ -72,7 +72,7 @@ contains
 
     !%Variable OCTEps
     !%Type float
-    !%Section Optimal Control
+    !%Section Calculation Modes::Optimal Control
     !%Default 1.0e-6
     !%Description
     !% Define the convergence threshold. It computes the difference between the "input"
@@ -95,7 +95,7 @@ contains
 
     !%Variable OCTMaxIter
     !%Type integer
-    !%Section Optimal Control
+    !%Section Calculation Modes::Optimal Control
     !%Default 10
     !%Description
     !% OCTMaxIter defines the maximum number of iterations.

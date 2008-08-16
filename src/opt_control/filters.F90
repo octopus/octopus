@@ -75,7 +75,7 @@ contains
         
     !%Variable OCTFilter
     !%Type block
-    !%Section Optimal Control
+    !%Section Calculation Modes::Optimal Control
     !%Description
     !% The block OCTFilter describes the type and shape of the filter function
     !% that are applied to the optimized laser field in each iteration.

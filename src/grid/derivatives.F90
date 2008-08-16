@@ -201,7 +201,7 @@ contains
     !%Variable ParallelizationOfDerivatives
     !%Type integer
     !%Default non_blocking
-    !%Section Generalities::Parallel
+    !%Section Execution::Parallelization
     !%Description
     !% This option selects how the communication required for the
     !% synchronization is performed. The default is non_blocking.
