@@ -74,7 +74,6 @@ module hamiltonian_m
     dvpsi,                 &
     dvnlpsi,               &
     dmagnus,               &
-    dkinetic,              &
     dvmask,                &
     zhpsi,                 &
     zhpsi_batch,           &
@@ -82,7 +81,6 @@ module hamiltonian_m
     zvpsi,                 &
     zvnlpsi,               &
     zmagnus,               &
-    zkinetic,              &
     zvmask,                &
     zvlasers,              &
     zvlaser_operator_linear,         &

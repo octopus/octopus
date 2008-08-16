@@ -447,7 +447,7 @@ subroutine X(magnus) (h, gr, psi, hpsi, ik, vmagnus)
 
   ispin = states_dim_get_spin_index(h%d, ik)
 
-  call X(kinetic) (h, gr, psi, hpsi)
+  call X(hpsi)(h, gr, psi, hpsi, ist = 1, ik = ik, kinetic_only = .true.)
 
   do idim = 1, h%d%dim
     call lalg_copy(NP, hpsi(:, idim), auxpsi(:, idim))
@@ -458,7 +458,7 @@ subroutine X(magnus) (h, gr, psi, hpsi, ik, vmagnus)
   hpsi(1:NP, 1) = hpsi(1:NP, 1) -  M_zI*vmagnus(1:NP, ispin, 1)*auxpsi(1:NP, 1)
   auxpsi(1:NP, 1) = vmagnus(1:NP, ispin, 1)*psi(1:NP, 1)
 
-  call X(kinetic) (h, gr, auxpsi, aux2psi)
+  call X(hpsi)(h, gr, auxpsi, aux2psi, ist = 1, ik = ik, kinetic_only = .true.)
 
   if (h%ep%non_local) call X(vnlpsi)(h, gr%m, auxpsi, aux2psi, ik)
 
@@ -517,22 +517,6 @@ subroutine X(kinetic_keep_going)(h, handle, gr, psi, lapl)
 
   call pop_sub()
 end subroutine X(kinetic_keep_going)
-
-
-! ---------------------------------------------------------
-subroutine X(kinetic) (h, gr, psi, hpsi)
-  type(hamiltonian_t), intent(inout) :: h
-  type(grid_t),        intent(inout) :: gr
-  R_TYPE,              intent(inout) :: psi(:,:)
-  R_TYPE,              intent(inout) :: hpsi(:,:) 
-
-  call push_sub('h_inc.Xkinetic')
-
-  call X(hpsi) (h, gr, psi, hpsi, ist = 1, ik = 1, kinetic_only = .true.)
-
-  call pop_sub()
-end subroutine X(kinetic)
-
 
 ! ---------------------------------------------------------
 subroutine X(kinetic_finish) (h, handle, gr, psi, lapl, hpsi)
@@ -1209,11 +1193,11 @@ FLOAT function X(electronic_kinetic_energy)(h, gr, st) result(t0)
   do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
       tpsi = R_TOTYPE(M_ZERO)
-      call X(kinetic) (h, gr, st%X(psi)(:, :, ist, ik), tpsi)
+      call X(hpsi)(h, gr, st%X(psi)(:, :, ist, ik), tpsi, ist, ik, kinetic_only = .true.)
       t(ist, ik) = X(mf_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), tpsi)
     end do
   end do
-
+  
   t0 = states_eigenvalues_sum(st, t)
 
   deallocate(tpsi, t)

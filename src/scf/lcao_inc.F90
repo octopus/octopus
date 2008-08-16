@@ -162,12 +162,13 @@ subroutine X(lcao_init) (lcao_data, gr, geo, h, states, norbs)
   type(grid_t),         intent(inout) :: gr
   type(geometry_t),     intent(in)    :: geo
   type(hamiltonian_t),  intent(inout) :: h
-  type(states_t),     intent(in)    :: states
+  type(states_t),       intent(in)    :: states
   integer,              intent(in)    :: norbs
 
   type(states_t), pointer :: st
-  integer :: ik, n1, n2, n, ierr
-  R_TYPE, allocatable :: hpsi(:,:)
+  integer :: ik, sts, ste, n1, n2, n, ierr
+  R_TYPE, allocatable :: hpsi(:, :, :)
+  type(batch_t) :: psib, hpsib
 
   call push_sub('lcao_inc.Xlcao_init')
 
@@ -190,18 +191,25 @@ subroutine X(lcao_init) (lcao_data, gr, geo, h, states, norbs)
   ALLOCATE(lcao_data%X(v)      (norbs, norbs, st%d%kpt%start:st%d%kpt%end), norbs**2*st%d%kpt%nlocal)
 
   ! Overlap and kinetic matrices.
-  ALLOCATE(hpsi(NP, st%d%dim), NP*st%d%dim)
+  ALLOCATE(hpsi(NP, st%d%dim, st%d%block_size), NP*st%d%dim*st%d%block_size)
 
   do ik = st%d%kpt%start, st%d%kpt%end
-    do n1 = 1, st%nst
+    do sts = 1, st%nst, st%d%block_size
+      ste = min(st%nst, sts + st%d%block_size - 1)
 
-      call X(kinetic) (h, gr, st%X(psi)(:, :, n1, ik), hpsi(:, :))
+      call batch_init(psib, sts, ste, st%X(psi)(:, :, sts:, ik))
+      call batch_init(hpsib, sts, ste, hpsi)
+      call X(hpsi_batch)(h, gr, psib, hpsib, ik, kinetic_only = .true.)
+      call batch_end(psib)
+      call batch_end(hpsib)
 
-      do n2 = n1, st%nst
-        lcao_data%X(k)(n1, n2, ik) = X(mf_dotp)(gr%m, st%d%dim, hpsi, st%X(psi)(:, : ,n2, ik))
-        lcao_data%X(k)(n2, n1, ik) = lcao_data%X(k)(n1, n2, ik)
-        lcao_data%X(s)(n1, n2, ik) = X(mf_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, n1, ik), st%X(psi)(:, : ,n2, ik))
-        lcao_data%X(s)(n2, n1, ik) = lcao_data%X(s)(n1, n2, ik)
+      do n1 = sts, ste
+        do n2 = n1, st%nst
+          lcao_data%X(k)(n1, n2, ik) = X(mf_dotp)(gr%m, st%d%dim, hpsi(:, :, n1 - sts + 1), st%X(psi)(:, : ,n2, ik))
+          lcao_data%X(k)(n2, n1, ik) = lcao_data%X(k)(n1, n2, ik)
+          lcao_data%X(s)(n1, n2, ik) = X(mf_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, n1, ik), st%X(psi)(:, : ,n2, ik))
+          lcao_data%X(s)(n2, n1, ik) = lcao_data%X(s)(n1, n2, ik)
+        end do
       end do
 
     end do
@@ -245,8 +253,7 @@ subroutine X(lcao_wf) (lcao_data, st, gr, h, start)
 
   do ik =  st%d%kpt%start, st%d%kpt%end
     ALLOCATE(ev(norbs), norbs)
-    call lalg_geneigensolve(norbs, lcao_data%X(hamilt) (1:norbs, 1:norbs, ik), &
-         lcao_data%X(s) (1:norbs, 1:norbs, ik), ev)
+    call lalg_geneigensolve(norbs, lcao_data%X(hamilt) (1:norbs, 1:norbs, ik), lcao_data%X(s) (1:norbs, 1:norbs, ik), ev)
 
     if(st%parallel_in_states) then
       if(st%st_start.le.start) then

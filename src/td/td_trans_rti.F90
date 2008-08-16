@@ -697,7 +697,7 @@ contains
       call apply_coupling(green_l(:, :, RIGHT), offdiag(:, :, RIGHT), green_l(:, :, RIGHT), np, RIGHT)
 
       tmp(:,:) = M_z0
-      call zkinetic(h, gr, st%zpsi(:, :, ist, 1), tmp(:,:))
+      call zhpsi(h, gr, st%zpsi(:, :, ist, 1), tmp, ist, ik = 1, kinetic_only = .true.)
       tmp(1:NP, :) = en*st%zpsi(1:NP, :, ist, 1) - tmp(1:NP, :)
       ! TODO: the static potential of the lead
       call zsymv('U', np, -M_z1, green_l(:, :, LEFT), np, st%zpsi(1:np, 1, ist, 1), 1, M_z1, tmp(1:np, 1), 1)
