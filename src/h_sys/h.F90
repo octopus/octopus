@@ -55,34 +55,38 @@ module hamiltonian_m
   implicit none
 
   private
-  public ::                &
-    hamiltonian_t,         &
-    hamiltonian_init,      &
-    hamiltonian_mg_init,   &
-    hamiltonian_end,       &
-    hamiltonian_energy,    &
-    hamiltonian_span,      &
-    dhamiltonian_eigenval, &
-    zhamiltonian_eigenval, &
+  public ::                      &
+    hamiltonian_t,               &
+    hamiltonian_init,            &
+    hamiltonian_mg_init,         &
+    hamiltonian_end,             &
+    hamiltonian_energy,          &
+    hamiltonian_span,            &
+    dhamiltonian_eigenval,       &
+    zhamiltonian_eigenval,       &
     delectronic_kinetic_energy,  &
     zelectronic_kinetic_energy,  &
     delectronic_external_energy, &
     zelectronic_external_energy, &
-    dhpsi,                 &
-    dhpsi_batch,           &
-    dhpsi_diag,            &
-    dvpsi,                 &
-    dvnlpsi,               &
-    dmagnus,               &
-    dvmask,                &
-    zhpsi,                 &
-    zhpsi_batch,           &
-    zhpsi_diag,            &
-    zvpsi,                 &
-    zvnlpsi,               &
-    zmagnus,               &
-    zvmask,                &
-    zvlasers,              &
+    dhpsi,                       &
+    zhpsi,                       &
+    dhpsi_batch,                 &
+    zhpsi_batch,                 &
+    dhpsi_diag,                  &
+    zhpsi_diag,                  &
+    dvlpsi_batch,                &
+    zvlpsi_batch,                &
+    dvnlpsi,                     &
+    zvnlpsi,                     &
+    dvnlpsi_batch,               &
+    zvnlpsi_batch,               &
+    dmagnus,                     &
+    zmagnus,                     &
+    dvpsi,                       &
+    zvpsi,                       &
+    dvmask,                      &
+    zvmask,                      &
+    zvlasers,                    &
     zvlaser_operator_linear,         &
     zvlaser_operator_quadratic,      &
     hamiltonian_inh_term,            &

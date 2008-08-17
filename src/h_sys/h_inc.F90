@@ -156,16 +156,13 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
   if (.not. kinetic_only_) then
     ! apply the potential
 
-    call X(vlpsi)(h, gr%m, epsib, hpsib, ik)
+    call X(vlpsi_batch)(h, gr%m, epsib, hpsib, ik)
 
     do ii = 1, nst
-      call set_pointers
-      
-      call X(kinetic_keep_going)(h, handles(:, ii), gr, epsi, lapl(:, :, ii))
-
-      if(h%ep%non_local) call X(vnlpsi)(h, gr%m, epsi, hpsi, ik)
-
+      call X(kinetic_keep_going)(h, handles(:, ii), gr)
     end do
+
+    if(h%ep%non_local) call X(vnlpsi_batch)(h, gr%m, epsib, hpsib, ik)
 
   end if
 
@@ -304,7 +301,7 @@ subroutine X(vpsi) (h, mesh, psi, vpsi, ik)
   call batch_init(vpsib, 1)
   call batch_add_state(vpsib, 1, vpsi)
 
-  call X(vlpsi)(h, mesh, psib, vpsib, ik)
+  call X(vlpsi_batch)(h, mesh, psib, vpsib, ik)
 
   call batch_end(psib)
   call batch_end(vpsib)
@@ -500,12 +497,10 @@ subroutine X(kinetic_start)(h, handle, gr, psi, lapl)
   call pop_sub()
 end subroutine X(kinetic_start)
 
-subroutine X(kinetic_keep_going)(h, handle, gr, psi, lapl)
+subroutine X(kinetic_keep_going)(h, handle, gr)
   type(hamiltonian_t), intent(inout) :: h
   type(der_handle_t),  intent(inout) :: handle(:)
   type(grid_t),        intent(inout) :: gr
-  R_TYPE,              intent(inout) :: psi(:,:)
-  R_TYPE,              intent(inout) :: lapl(:,:)
 
   integer :: idim
 
@@ -663,8 +658,35 @@ subroutine X(vnlpsi) (h, mesh, psi, hpsi, ik)
   call profiling_out(C_PROFILING_VNLPSI)
 end subroutine X(vnlpsi)
 
+
 ! ---------------------------------------------------------
-subroutine X(vlpsi) (h, m, psib, hpsib, ik)
+subroutine X(vnlpsi_batch) (h, mesh, psib, hpsib, ik)
+  type(hamiltonian_t), intent(in)    :: h
+  type(mesh_t),        intent(in)    :: mesh
+  type(batch_t),       intent(in)    :: psib
+  type(batch_t),       intent(out)   :: hpsib
+  integer,             intent(in)    :: ik
+
+  integer :: ii
+  R_TYPE, pointer :: psi(:, :), hpsi(:, :)
+
+  call profiling_in(C_PROFILING_VNLPSI)
+  call push_sub('h_inc.Xvnlpsi')
+
+  do ii = 1, psib%nst
+    psi  => psib%states(ii)%X(psi)
+    hpsi => hpsib%states(ii)%X(psi)
+
+    call X(project_psi)(mesh, h%ep%proj, h%ep%natoms, h%d%dim, psi, hpsi, ik)
+  end do
+
+  call pop_sub()
+  call profiling_out(C_PROFILING_VNLPSI)
+end subroutine X(vnlpsi_batch)
+
+
+! ---------------------------------------------------------
+subroutine X(vlpsi_batch) (h, m, psib, hpsib, ik)
   type(hamiltonian_t), intent(in)    :: h
   type(mesh_t),        intent(in)    :: m
   integer,             intent(in)    :: ik
@@ -704,15 +726,15 @@ subroutine X(vlpsi) (h, m, psib, hpsib, ik)
   
   call pop_sub()
   call profiling_out(C_PROFILING_VLPSI)
-end subroutine X(vlpsi)
+end subroutine X(vlpsi_batch)
 
 ! ---------------------------------------------------------
 subroutine X(vexternal) (h, gr, psi, hpsi, ik)
   type(hamiltonian_t), intent(in)    :: h
   type(grid_t),        intent(inout) :: gr
-  integer,             intent(in)    :: ik
   R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
   R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, h%d%dim)
+  integer,             intent(in)    :: ik
 
   integer :: idim
 
