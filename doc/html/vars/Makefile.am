@@ -25,21 +25,17 @@ dist_doc_DATA =     \
 	alpha.js    \
 	sections.js \
 	vars_index.html \
-	Generalities.html \
-	Geometry_Optimization.html \
-	Generator_Coordinates.html \
+	Execution.html             \
+	Calculation_Modes.html     \
 	Hamiltonian.html \
 	Linear_Response.html \
 	Math.html \
 	Mesh.html \
-	Optimal_Control.html \
 	Output.html \
 	SCF.html \
 	States.html \
 	System.html \
 	Time_Dependent.html \
-	Transport.html \
-	Unoccupied_States.html \
 	Utilities.html
 
 CLEANFILES = $(dist_doc_DATA)
