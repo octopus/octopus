@@ -664,7 +664,7 @@ subroutine X(vnlpsi_batch) (h, mesh, psib, hpsib, ik)
   type(hamiltonian_t), intent(in)    :: h
   type(mesh_t),        intent(in)    :: mesh
   type(batch_t),       intent(in)    :: psib
-  type(batch_t),       intent(out)   :: hpsib
+  type(batch_t),       intent(inout) :: hpsib
   integer,             intent(in)    :: ik
 
   integer :: ii
@@ -691,7 +691,7 @@ subroutine X(vlpsi_batch) (h, m, psib, hpsib, ik)
   type(mesh_t),        intent(in)    :: m
   integer,             intent(in)    :: ik
   type(batch_t),       intent(in)    :: psib
-  type(batch_t),       intent(out)   :: hpsib
+  type(batch_t),       intent(inout) :: hpsib
 
   integer :: idim, ip, ii, ispin
   R_TYPE, pointer :: psi(:, :), hpsi(:, :)
