@@ -693,7 +693,7 @@ subroutine X(vlpsi_batch) (h, m, psib, hpsib, ik)
   type(batch_t),       intent(in)    :: psib
   type(batch_t),       intent(inout) :: hpsib
 
-  integer :: idim, ip, ii, ispin
+  integer :: ip, ii, ispin
   R_TYPE, pointer :: psi(:, :), hpsi(:, :)
 
   call profiling_in(C_PROFILING_VLPSI)

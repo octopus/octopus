@@ -357,7 +357,7 @@ contains
     deallocate(ep%fii)
 
     do i = 1, geo%nspecies
-      call species_pot_end(geo%species(i), gr)
+      call species_pot_end(geo%species(i))
     end do
 
     if(associated(ep%vpsl)) then

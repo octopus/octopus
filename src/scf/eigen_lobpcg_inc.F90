@@ -546,7 +546,6 @@ contains
   subroutine X(lobpcg_info)(block_iter)
     integer, intent(in) :: block_iter
 
-    integer              :: i
     logical, allocatable :: mask(:)
     
     call push_sub('eigen_lobpcg_inc.X(lobpcg_info)')

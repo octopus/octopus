@@ -109,7 +109,6 @@ contains
     integer,           intent(in)  :: max_iter
 
     integer :: allocsize, id, ist, nst2, i, order, band
-    type(nl_operator_t)  :: op
     FLOAT, allocatable   :: um(:)
     FLOAT                :: emax, qmin, qmax, q, energy, deltaq
 
@@ -564,7 +563,7 @@ contains
     CMPLX, intent(out) :: y(:)
 
     CMPLX, allocatable :: diag(:, :)
-    integer            :: np, i
+    integer            :: np
 
     call push_sub('td_rti.preconditioner')
     np = gr_p%m%np
@@ -587,7 +586,7 @@ contains
     CMPLX, intent(out) :: y(:)
 
     CMPLX, allocatable :: diag(:, :)
-    integer            :: np, i
+    integer            :: np
 
     call push_sub('td_rti.preconditioner')
     np = gr_p%m%np
@@ -652,7 +651,6 @@ contains
     integer, pointer   :: lxyz(:,:)
     FLOAT              :: lsize(3), dres, dx(3)
     FLOAT, target      :: en
-    CMPLX              :: cres
 
     call push_sub('td_trans_rti.ext_eigenstate_lip_sch')
 
@@ -799,7 +797,7 @@ contains
 
     integer            :: il, it, m, cg_iter, j, order, ierr, inp, groundstate
     integer, target    :: ist, ik
-    CMPLX              :: factor, alpha, fac, f0
+    CMPLX              :: factor, fac, f0
     CMPLX, allocatable :: tmp(:, :), tmp_wf(:), tmp_mem(:, :)
     CMPLX, allocatable :: ext_wf(:,:,:,:) ! NP+2*np, ndim, nst, nik
     character(len=100) :: filename
@@ -1000,7 +998,8 @@ contains
   subroutine write_matrix(matr,np)
     CMPLX,     intent(in)  :: matr(:, :)
     integer,   intent(in)  :: np
-    integer            :: i, j
+
+    integer            :: j
 
     character(len=10) :: c_np
     write(c_np,'(i10)') np

@@ -567,7 +567,6 @@ contains
     type(oct_control_parameters_t), intent(inout) :: par
     FLOAT, intent(out)                            :: j1
 
-    integer :: j
     type(states_t) :: chi
     type(states_t) :: psi
     type(oct_control_parameters_t) :: par_chi

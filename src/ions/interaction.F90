@@ -69,7 +69,7 @@ contains
 
     if(simul_box_is_periodic(sb)) then
 
-      call ion_interaction_calculate_periodic(geo, sb, energy, force)
+      call ion_interaction_periodic(geo, sb, energy, force)
 
     else
       
@@ -107,7 +107,7 @@ contains
 
   end subroutine ion_interaction_calculate
 
-  subroutine ion_interaction_calculate_periodic(geo, sb, energy, force)
+  subroutine ion_interaction_periodic(geo, sb, energy, force)
     type(geometry_t),  target, intent(in)    :: geo
     type(simul_box_t),         intent(in)    :: sb
     FLOAT,                     intent(out)   :: energy
@@ -215,7 +215,7 @@ contains
     !
     ! energy = energy - M_PI*charge**2/(M_TWO*alpha**2*sb%rcell_volume)
     
-  end subroutine ion_interaction_calculate_periodic
+  end subroutine ion_interaction_periodic
   
 end module ion_interaction_m
 

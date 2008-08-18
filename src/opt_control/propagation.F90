@@ -535,7 +535,6 @@ module opt_control_propagation_m
     CMPLX :: d1
     CMPLX, allocatable  :: dl(:), dq(:)
     integer :: ik, p, j, no_parameters
-    FLOAT :: value
 
     call push_sub('propagation.update_field')
 

@@ -144,8 +144,7 @@ contains
     type(mesh_t), intent(in) :: m
 
     type(block_t)     :: blk
-    integer           :: i, j, ierr, envelope
-    character(len=50) :: filename1
+    integer           :: i, j, ierr
     character(len=200) :: scalar_pot_expression
     character(len=200) :: envelope_expression
     FLOAT :: omega0, r, pot_re, pot_im

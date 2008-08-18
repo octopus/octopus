@@ -464,7 +464,8 @@ contains
   subroutine write_matrix(matr, iter, np)
     CMPLX,     intent(in)  :: matr(np, np)
     integer,   intent(in)  :: iter,np
-    integer            :: i, j
+
+    integer            :: j
 
     write(*,'(a,i4,a)') "--- Matrix(",iter,") ---"
     do j = 1, np

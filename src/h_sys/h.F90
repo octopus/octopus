@@ -445,7 +445,7 @@ contains
     ! Calculate the blocks of the lead Hamiltonian and read the potential
     ! of the lead unit cell.
     subroutine init_lead_h
-      integer               :: np, il, ierr, alloc_size, ik, ist, pot, ix, iy, iz
+      integer               :: np, il, ierr, alloc_size, ik, ist, pot, ix, iy
       integer               :: green_real, green_imag, irow, diag, offdiag
       character             :: channel
       character(len=1)      :: ln(NLEADS)

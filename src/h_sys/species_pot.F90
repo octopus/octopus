@@ -103,12 +103,10 @@ contains
   end subroutine species_pot_init
 
   ! ---------------------------------------------------------
-  ! WARNING: this subroutine should be terminating something?
-  subroutine species_pot_end(this, gr)
+  subroutine species_pot_end(this)
     type(species_t),      intent(inout) :: this
-    type(grid_t),        intent(in)    :: gr
-
-
+    
+    ! for the moment there is nothing to destroy
   end subroutine species_pot_end
 
   ! ---------------------------------------------------------
