@@ -82,8 +82,6 @@ module hamiltonian_m
     zvnlpsi_batch,               &
     dmagnus,                     &
     zmagnus,                     &
-    dvpsi,                       &
-    zvpsi,                       &
     dvmask,                      &
     zvmask,                      &
     zvlasers,                    &

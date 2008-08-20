@@ -285,32 +285,6 @@ subroutine X(hpsi) (h, gr, psi, hpsi, ist, ik, t, kinetic_only)
 end subroutine X(hpsi)
 
 ! ---------------------------------------------------------
-subroutine X(vpsi) (h, mesh, psi, vpsi, ik)
-  type(hamiltonian_t), intent(in)    :: h
-  type(mesh_t),        intent(inout) :: mesh
-  integer,             intent(in)    :: ik        ! the index of the k-point
-  R_TYPE, target,      intent(inout) :: psi(:,:)  
-  R_TYPE,              intent(out)   :: vpsi(:,:)
-
-
-  type(batch_t) :: psib, vpsib
-
-  call batch_init(psib, 1)
-  call batch_add_state(psib, 1, psi)
-
-  call batch_init(vpsib, 1)
-  call batch_add_state(vpsib, 1, vpsi)
-
-  call X(vlpsi_batch)(h, mesh, psib, vpsib, ik)
-
-  call batch_end(psib)
-  call batch_end(vpsib)
-
-  if(h%ep%non_local) call X(vnlpsi)(h, mesh, psi, vpsi, ik)
-
-end subroutine X(vpsi)
-
-! ---------------------------------------------------------
 subroutine X(exchange_operator) (h, gr, psi, hpsi, ist, ik)
   type(hamiltonian_t), intent(inout) :: h
   type(grid_t),        intent(inout) :: gr
