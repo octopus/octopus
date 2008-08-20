@@ -50,15 +50,15 @@
 ! ....
 ! ---------------------------------------------------------
 Subroutine X(lcao_initial_wf) (n, m, geo, sb, psi, ispin, ik, kpoints, err)
-  integer,                  intent(in)  :: n
-  type(mesh_t),             intent(in)  :: m
-  type(simul_box_t),        intent(in)  :: sb
-  type(geometry_t), target, intent(in)  :: geo
+  integer,                  intent(in)    :: n
+  type(mesh_t),             intent(in)    :: m
+  type(simul_box_t),        intent(in)    :: sb
+  type(geometry_t), target, intent(in)    :: geo
   R_TYPE,                   intent(inout) :: psi(:, :)
-  integer,                  intent(in)  :: ispin
-  integer,                  intent(in)  :: ik
-  FLOAT,                    intent(in)  :: kpoints(:)
-  integer,                  intent(out) :: err
+  integer,                  intent(in)    :: ispin
+  integer,                  intent(in)    :: ik
+  FLOAT,                    intent(in)    :: kpoints(:)
+  integer,                  intent(out)   :: err
 
   type(species_t), pointer :: s
   type(periodic_copy_t)   :: pc
@@ -78,7 +78,7 @@ Subroutine X(lcao_initial_wf) (n, m, geo, sb, psi, ispin, ik, kpoints, err)
   wf_dim = 1
   if (ispin == SPINORS) then
     wf_dim = 2
-    norbs = norbs * 2
+    norbs = norbs*2
   end if
 
   if ((n > norbs) .or. (n < 1)) then
@@ -96,7 +96,8 @@ Subroutine X(lcao_initial_wf) (n, m, geo, sb, psi, ispin, ik, kpoints, err)
       ! orbitals in placed in psi whenever it matches "n". The index "j" runs over the orbitals
       ! of each atom; whenever j is larger than the number of orbitals that can actually be supplied
       ! by the atom, the atom is skipped.
-      i = 1; j = 0
+      i = 1
+      j = 0
       do
         j = j + 1
         do ia = 1, geo%natoms
@@ -123,7 +124,8 @@ Subroutine X(lcao_initial_wf) (n, m, geo, sb, psi, ispin, ik, kpoints, err)
 
     case(SPINORS)
 
-      i = 1; j = 0
+      i = 1
+      j = 0
       do
         j = j + 1
         do ia = 1, geo%natoms
@@ -157,27 +159,28 @@ end subroutine X(lcao_initial_wf)
 
 
 ! ---------------------------------------------------------
-subroutine X(lcao_init) (lcao_data, gr, geo, h, states, norbs)
-  type(lcao_t), target, intent(inout) :: lcao_data
+subroutine X(lcao_init) (this, gr, geo, h, st, norbs)
+  type(lcao_t),         intent(inout) :: this
   type(grid_t),         intent(inout) :: gr
   type(geometry_t),     intent(in)    :: geo
   type(hamiltonian_t),  intent(inout) :: h
-  type(states_t),       intent(in)    :: states
+  type(states_t),       intent(in)    :: st
   integer,              intent(in)    :: norbs
 
-  type(states_t), pointer :: st
   integer :: ik, sts, ste, n1, n2, n, ierr
   R_TYPE, allocatable :: hpsi(:, :, :)
   type(batch_t) :: psib, hpsib
+  integer :: kstart, kend
 
   call push_sub('lcao_inc.Xlcao_init')
 
-  st => lcao_data%st
+  kstart = this%st%d%kpt%start
+  kend = this%st%d%kpt%end
 
-  do ik = st%d%kpt%start, st%d%kpt%end
-    do n = 1, st%nst
-      call X(lcao_initial_wf) (n, gr%m, geo, gr%sb, st%X(psi)(:, :, n, ik), st%d%ispin, ik, states%d%kpoints(:, ik), ierr)
-      if(ierr.ne.0) then
+  do ik = kstart, kend
+    do n = 1, this%st%nst
+      call X(lcao_initial_wf)(n, gr%m, geo, gr%sb, this%st%X(psi)(:, :, n, ik), this%st%d%ispin, ik, st%d%kpoints(:, ik), ierr)
+      if(ierr .ne. 0) then
         write(message(1),'(a)') 'Internal error in lcao_wf'
         call write_fatal(1)
       end if
@@ -185,30 +188,30 @@ subroutine X(lcao_init) (lcao_data, gr, geo, h, states, norbs)
   end do
 
   ! Allocation of variables
-  ALLOCATE(lcao_data%X(hamilt) (norbs, norbs, st%d%kpt%start:st%d%kpt%end), norbs**2*st%d%kpt%nlocal)
-  ALLOCATE(lcao_data%X(s)      (norbs, norbs, st%d%kpt%start:st%d%kpt%end), norbs**2*st%d%kpt%nlocal)
-  ALLOCATE(lcao_data%X(k)      (norbs, norbs, st%d%kpt%start:st%d%kpt%end), norbs**2*st%d%kpt%nlocal)
-  ALLOCATE(lcao_data%X(v)      (norbs, norbs, st%d%kpt%start:st%d%kpt%end), norbs**2*st%d%kpt%nlocal)
+  ALLOCATE(this%X(hamilt) (norbs, norbs, kstart:kend), norbs**2*this%st%d%kpt%nlocal)
+  ALLOCATE(this%X(s)      (norbs, norbs, kstart:kend), norbs**2*this%st%d%kpt%nlocal)
+  ALLOCATE(this%X(k)      (norbs, norbs, kstart:kend), norbs**2*this%st%d%kpt%nlocal)
+  ALLOCATE(this%X(v)      (norbs, norbs, kstart:kend), norbs**2*this%st%d%kpt%nlocal)
 
   ! Overlap and kinetic matrices.
-  ALLOCATE(hpsi(NP, st%d%dim, st%d%block_size), NP*st%d%dim*st%d%block_size)
+  ALLOCATE(hpsi(NP, this%st%d%dim, this%st%d%block_size), NP*this%st%d%dim*st%d%block_size)
 
-  do ik = st%d%kpt%start, st%d%kpt%end
-    do sts = 1, st%nst, st%d%block_size
-      ste = min(st%nst, sts + st%d%block_size - 1)
+  do ik = kstart, kend
+    do sts = 1, this%st%nst, st%d%block_size
+      ste = min(this%st%nst, sts + st%d%block_size - 1)
 
-      call batch_init(psib, sts, ste, st%X(psi)(:, :, sts:, ik))
+      call batch_init(psib, sts, ste, this%st%X(psi)(:, :, sts:, ik))
       call batch_init(hpsib, sts, ste, hpsi)
       call X(hpsi_batch)(h, gr, psib, hpsib, ik, kinetic_only = .true.)
       call batch_end(psib)
       call batch_end(hpsib)
 
       do n1 = sts, ste
-        do n2 = n1, st%nst
-          lcao_data%X(k)(n1, n2, ik) = X(mf_dotp)(gr%m, st%d%dim, hpsi(:, :, n1 - sts + 1), st%X(psi)(:, : ,n2, ik))
-          lcao_data%X(k)(n2, n1, ik) = lcao_data%X(k)(n1, n2, ik)
-          lcao_data%X(s)(n1, n2, ik) = X(mf_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, n1, ik), st%X(psi)(:, : ,n2, ik))
-          lcao_data%X(s)(n2, n1, ik) = lcao_data%X(s)(n1, n2, ik)
+        do n2 = n1, this%st%nst
+          this%X(k)(n1, n2, ik) = X(mf_dotp)(gr%m, this%st%d%dim, hpsi(:, :, n1 - sts + 1), this%st%X(psi)(:, :, n2, ik))
+          this%X(k)(n2, n1, ik) = this%X(k)(n1, n2, ik)
+          this%X(s)(n1, n2, ik) = X(mf_dotp)(gr%m, this%st%d%dim, this%st%X(psi)(:, :, n1, ik), this%st%X(psi)(:, :, n2, ik))
+          this%X(s)(n2, n1, ik) = this%X(s)(n1, n2, ik)
         end do
       end do
 
@@ -221,8 +224,8 @@ end subroutine X(lcao_init)
 
 
 ! ---------------------------------------------------------
-subroutine X(lcao_wf) (lcao_data, st, gr, h, start)
-  type(lcao_t),        intent(inout) :: lcao_data
+subroutine X(lcao_wf) (this, st, gr, h, start)
+  type(lcao_t),        intent(inout) :: this
   type(states_t),      intent(inout) :: st
   type(grid_t),        intent(inout) :: gr
   type(hamiltonian_t), intent(in)    :: h
@@ -234,26 +237,26 @@ subroutine X(lcao_wf) (lcao_data, st, gr, h, start)
 
   call push_sub('lcao_inc.Xlcao_wf')
 
-  norbs = lcao_data%st%nst
+  norbs = this%st%nst
   dim = st%d%dim
   nst = st%nst
 
   ! Hamiltonian and overlap matrices.
   ALLOCATE(hpsi(NP_PART, dim), NP_PART*dim)
   do ik = st%d%kpt%start, st%d%kpt%end
-    do n1 = 1, lcao_data%st%nst
-      call X(vpsi)(h, gr%m, lcao_data%st%X(psi)(:,:, n1, ik), hpsi(:,:), ik)
-      do n2 = n1, lcao_data%st%nst
-        lcao_data%X(v) (n1, n2, ik) = X(mf_dotp)(gr%m, dim, hpsi, lcao_data%st%X(psi)(:, : ,n2, ik))
-        lcao_data%X(hamilt) (n1, n2, ik) = lcao_data%X(k) (n1, n2, ik) + lcao_data%X(v) (n1 , n2, ik)
-        lcao_data%X(hamilt) (n2, n1, ik) = R_CONJ(lcao_data%X(hamilt) (n1, n2, ik))
+    do n1 = 1, norbs
+      call X(vpsi)(h, gr%m, this%st%X(psi)(:,:, n1, ik), hpsi(:,:), ik)
+      do n2 = n1, norbs
+        this%X(v) (n1, n2, ik) = X(mf_dotp)(gr%m, dim, hpsi, this%st%X(psi)(:, : ,n2, ik))
+        this%X(hamilt) (n1, n2, ik) = this%X(k) (n1, n2, ik) + this%X(v) (n1 , n2, ik)
+        this%X(hamilt) (n2, n1, ik) = R_CONJ(this%X(hamilt) (n1, n2, ik))
       end do
     end do
   end do
 
   do ik =  st%d%kpt%start, st%d%kpt%end
     ALLOCATE(ev(norbs), norbs)
-    call lalg_geneigensolve(norbs, lcao_data%X(hamilt) (1:norbs, 1:norbs, ik), lcao_data%X(s) (1:norbs, 1:norbs, ik), ev)
+    call lalg_geneigensolve(norbs, this%X(hamilt) (1:norbs, 1:norbs, ik), this%X(s) (1:norbs, 1:norbs, ik), ev)
 
     if(st%parallel_in_states) then
       if(st%st_start.le.start) then
@@ -278,7 +281,7 @@ subroutine X(lcao_wf) (lcao_data, st, gr, h, start)
     do n1 = lcao_start, st%st_end
       do idim = 1, dim
         do n2 = 1, norbs
-          call lalg_axpy(NP, lcao_data%X(hamilt) (n2, n1, ik), lcao_data%st%X(psi)(:, idim, n2, ik), &
+          call lalg_axpy(NP, this%X(hamilt) (n2, n1, ik), this%st%X(psi)(:, idim, n2, ik), &
                st%X(psi)(:, idim, n1, ik))
         end do
       end do

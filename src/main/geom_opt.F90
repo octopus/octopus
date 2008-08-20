@@ -79,7 +79,7 @@ contains
 
     integer :: i, ierr, lcao_start, lcao_start_default
     real(8), allocatable :: x(:)
-    type(lcao_t) :: lcao_data
+    type(lcao_t) :: lcao
     real(8) :: energy
 
     call init_()
@@ -122,24 +122,22 @@ contains
 
       if (lcao_start > LCAO_START_NONE) then
 
-        lcao_data%state = 0 ! Uninitialized here.
-        call lcao_init(sys%gr, sys%geo, lcao_data, sys%st, h)
-        if(lcao_data%state == 1) then
+        call lcao_init(lcao, sys%gr, sys%geo, sys%st, h)
+
+        if(lcao_is_available(lcao)) then
           write(message(1),'(a,i4,a)') 'Info: Performing initial LCAO calculation with ', &
-               lcao_data%st%nst,' orbitals.'
+               lcao_num_orbitals(lcao), ' orbitals.'
           call write_info(1)
           
-          call lcao_wf(lcao_data, sys%st, sys%gr, h)
-          call lcao_end(lcao_data, sys%st%nst)
+          call lcao_wf(lcao, sys%st, sys%gr, h)
+          call lcao_end(lcao, sys%st%nst)
 
           !Just populate again the states, so that the eigenvalues are properly written
           call states_fermi(sys%st, sys%gr%m)
           call states_write_eigenvalues(stdout, sys%st%nst, sys%st, sys%gr%sb)
 
-          if (lcao_start == LCAO_START_FULL) then
-            ! Update the density and the Hamiltonian
-            call system_h_setup(sys, h)
-          end if
+          ! Update the density and the Hamiltonian
+          if (lcao_start == LCAO_START_FULL) call system_h_setup(sys, h)
 
         end if
 

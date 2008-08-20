@@ -290,7 +290,7 @@ contains
     logical, optional,   intent(in)    :: gs_run
     integer, optional,   intent(in)    :: verbosity 
 
-    type(lcao_t) :: lcao_data
+    type(lcao_t) :: lcao
 
     integer :: iter, is, idim, iatom, nspin, dim, err
     FLOAT :: evsum_out, evsum_in, forcetmp
@@ -314,8 +314,8 @@ contains
     if(present(verbosity)) verbosity_ = verbosity
 
     if(scf%lcao_restricted) then
-      call lcao_init(gr, geo, lcao_data, st, h)
-      if(.not.lcao_data%state == 1) then
+      call lcao_init(lcao, gr, geo, st, h)
+      if(.not. lcao_is_available(lcao)) then
         message(1) = 'Nothing to do'
         call write_fatal(1)
       end if
@@ -370,7 +370,7 @@ contains
       call profiling_in(C_PROFILING_SCF_CYCLE)
 
       if(scf%lcao_restricted) then
-        call lcao_wf(lcao_data, st, gr, h)
+        call lcao_wf(lcao, st, gr, h)
       else
         ! FIXME: Currently, only the eigensolver or the
         ! Lippmann-Schwinger approach can be used (exclusively),
@@ -483,7 +483,7 @@ contains
           write(message(2), '(a)')        '' 
           call write_info(2)
         end if
-        if(scf%lcao_restricted) call lcao_end(lcao_data, st%nst)
+        if(scf%lcao_restricted) call lcao_end(lcao, st%nst)
         call profiling_out(C_PROFILING_SCF_CYCLE)
         exit
       end if

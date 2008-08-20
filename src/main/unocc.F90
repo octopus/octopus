@@ -69,7 +69,7 @@ contains
     CMPLX, allocatable :: zh_psi(:,:)
     logical :: converged, l
     integer :: lcao_start, lcao_start_default, max_iter
-    type(lcao_t) :: lcao_data
+    type(lcao_t) :: lcao
 
     ! read the maximum number of eigensolver iterations
     call loct_parse_int(check_inp('MaximumIter'), 20, max_iter)
@@ -116,15 +116,14 @@ contains
       if( (ierr.ne.0) .and. (ierr >= occupied_states)) then
         message(1) = "Info:  I will perform a LCAO calculation to get reasonable starting points."
         call write_info(1)
-        lcao_data%state = 0
-        call lcao_init(sys%gr, sys%geo, lcao_data, sys%st, h)
-        if(lcao_data%state .eq. 1) then
-          call lcao_wf(lcao_data, sys%st, sys%gr, h, start = ierr+1)
-          call lcao_end(lcao_data, sys%st%nst)
+        call lcao_init(lcao, sys%gr, sys%geo, sys%st, h)
+        if(lcao_is_available(lcao)) then
+          call lcao_wf(lcao, sys%st, sys%gr, h, start = ierr+1)
+          call lcao_end(lcao, sys%st%nst)
         end if
       end if
     end if
-
+    
     message(1) = "Info:  Starting calculation of unoccupied states"
     call write_info(1)
 

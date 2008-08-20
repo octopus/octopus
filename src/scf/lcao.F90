@@ -45,11 +45,13 @@ module lcao_m
   implicit none
 
   private
-  public ::          &
-    lcao_t,          &
-    lcao_init,       &
-    lcao_wf,         &
-    lcao_end
+  public ::            &
+    lcao_t,            &
+    lcao_init,         &
+    lcao_wf,           &
+    lcao_end,          &
+    lcao_is_available, &
+    lcao_num_orbitals
 
   integer, public, parameter ::     &
     LCAO_START_NONE    = 0, &
@@ -57,6 +59,7 @@ module lcao_m
     LCAO_START_FULL    = 3
 
   type lcao_t
+    private
     integer           :: state ! 0 => non-initialized;
                                ! 1 => initialized (k, s and v1 matrices filled)
     type(states_t) :: st
@@ -75,8 +78,8 @@ module lcao_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine lcao_init(gr, geo, lcao_data, st, h)
-    type(lcao_t),         intent(out)   :: lcao_data
+  subroutine lcao_init(this, gr, geo, st, h)
+    type(lcao_t),         intent(out)   :: this
     type(grid_t),         intent(inout) :: gr
     type(geometry_t),     intent(in)    :: geo
     type(states_t),       intent(in)    :: st
@@ -84,24 +87,22 @@ contains
 
     integer :: ia, norbs, n
 
-    if(lcao_data%state == 1) return
-
     call profiling_in(C_PROFILING_LCAO_INIT)
     call push_sub('lcao.lcao_init')
 
-    call states_null(lcao_data%st)
+    call states_null(this%st)
 
     !this is to avoid a bug whe deallocating in gfortran 4.2.0 20060520
-    nullify(lcao_data%dhamilt)
-    nullify(lcao_data%ds)
-    nullify(lcao_data%dk)
-    nullify(lcao_data%dv)
-    nullify(lcao_data%zhamilt)
-    nullify(lcao_data%zs)
-    nullify(lcao_data%zk)
-    nullify(lcao_data%zv)
+    nullify(this%dhamilt)
+    nullify(this%ds)
+    nullify(this%dk)
+    nullify(this%dv)
+    nullify(this%zhamilt)
+    nullify(this%zs)
+    nullify(this%zk)
+    nullify(this%zv)
         
-    ! Fix the dimension of the LCAO problem (lcao_data%dim)
+    ! Fix the dimension of the LCAO problem (this%dim)
     norbs = 0
     do ia = 1, geo%natoms
       norbs = norbs + geo%atom(ia)%spec%niwfs
@@ -109,7 +110,7 @@ contains
     if( (st%d%ispin.eq.SPINORS) ) norbs = norbs * 2
 
     if(norbs < st%nst) then
-      lcao_data%state = 0
+      this%state = 0
       write(message(1),'(a)') 'Cannot do LCAO initial calculation because there are not enough atomic orbitals.'
       call write_warning(1)
       call pop_sub()
@@ -145,70 +146,72 @@ contains
       norbs = min(norbs, 2*st%nst)
     end if
 
-    lcao_data%st%nst = norbs
-    lcao_data%st%st_start = 1
-    lcao_data%st%st_end = norbs
-    lcao_data%st%d%dim = st%d%dim
-    lcao_data%st%d%nik = st%d%nik
-    lcao_data%st%d%ispin = st%d%ispin
-    lcao_data%st%d%block_size = st%d%block_size
-    call distributed_copy(st%d%kpt, lcao_data%st%d%kpt)
-    call states_allocate_wfns(lcao_data%st, gr%m, st%wfs_type)
+    this%st%nst = norbs
+    this%st%st_start = 1
+    this%st%st_end = norbs
+    this%st%d%dim = st%d%dim
+    this%st%d%nik = st%d%nik
+    this%st%d%ispin = st%d%ispin
+    this%st%d%block_size = st%d%block_size
+    call distributed_copy(st%d%kpt, this%st%d%kpt)
+    call states_allocate_wfns(this%st, gr%m, st%wfs_type)
 
-    if (lcao_data%st%wfs_type == M_REAL) then
-      call dlcao_init(lcao_data, gr, geo, h, st, norbs)
+    if (wfs_are_real(this%st)) then
+      call dlcao_init(this, gr, geo, h, st, norbs)
     else
-      call zlcao_init(lcao_data, gr, geo, h, st, norbs)
+      call zlcao_init(this, gr, geo, h, st, norbs)
     end if
 
-    lcao_data%state = 1
+    this%state = 1
 
     call pop_sub()
     call profiling_out(C_PROFILING_LCAO_INIT)
   end subroutine lcao_init
 
   ! ---------------------------------------------------------
-  subroutine lcao_end(lcao_data, nst)
-    type(lcao_t), intent(inout) :: lcao_data
+  subroutine lcao_end(this, nst)
+    type(lcao_t), intent(inout) :: this
     integer,         intent(in) :: nst
 
     integer :: wfs_type
 
     call push_sub('lcao.lcao_end')
 
-    call distributed_end(lcao_data%st%d%kpt)
+    call distributed_end(this%st%d%kpt)
 
-    wfs_type = lcao_data%st%wfs_type
+    wfs_type = this%st%wfs_type
 
-    if(lcao_data%st%nst >= nst) then
+    if(this%st%nst >= nst) then
       if(wfs_type == M_REAL) then
-        if(associated(lcao_data%dhamilt)) deallocate(lcao_data%dhamilt)
-        if(associated(lcao_data%ds     )) deallocate(lcao_data%ds)
-        if(associated(lcao_data%dk     )) deallocate(lcao_data%dk)
-        if(associated(lcao_data%dv     )) deallocate(lcao_data%dv)
+        if(associated(this%dhamilt)) deallocate(this%dhamilt)
+        if(associated(this%ds     )) deallocate(this%ds)
+        if(associated(this%dk     )) deallocate(this%dk)
+        if(associated(this%dv     )) deallocate(this%dv)
       else
-        if(associated(lcao_data%zhamilt)) deallocate(lcao_data%zhamilt)
-        if(associated(lcao_data%zs     )) deallocate(lcao_data%zs)
-        if(associated(lcao_data%zk     )) deallocate(lcao_data%zk)
-        if(associated(lcao_data%zv     )) deallocate(lcao_data%zv)
+        if(associated(this%zhamilt)) deallocate(this%zhamilt)
+        if(associated(this%zs     )) deallocate(this%zs)
+        if(associated(this%zk     )) deallocate(this%zk)
+        if(associated(this%zv     )) deallocate(this%zv)
       end if
     endif
 
-    if( associated(lcao_data%st%dpsi) .and. (wfs_type == M_REAL) ) then
-      deallocate(lcao_data%st%dpsi); nullify(lcao_data%st%dpsi)
+    if( associated(this%st%dpsi) .and. (wfs_type == M_REAL) ) then
+      deallocate(this%st%dpsi)
+      nullify(this%st%dpsi)
     end if
-    if( associated(lcao_data%st%zpsi) .and. (wfs_type == M_CMPLX) ) then
-      deallocate(lcao_data%st%zpsi); nullify(lcao_data%st%zpsi)
+    if( associated(this%st%zpsi) .and. (wfs_type == M_CMPLX) ) then
+      deallocate(this%st%zpsi)
+      nullify(this%st%zpsi)
     end if
 
-    lcao_data%state = 0
+    this%state = 0
     call pop_sub()
   end subroutine lcao_end
 
 
   ! ---------------------------------------------------------
-  subroutine lcao_wf(lcao_data, st, gr, h, start)
-    type(lcao_t),        intent(inout) :: lcao_data
+  subroutine lcao_wf(this, st, gr, h, start)
+    type(lcao_t),        intent(inout) :: this
     type(states_t),      intent(inout) :: st
     type(grid_t),        intent(inout) :: gr
     type(hamiltonian_t), intent(in)    :: h
@@ -216,7 +219,7 @@ contains
 
     integer :: start_
 
-    ASSERT(lcao_data%state == 1)
+    ASSERT(this%state == 1)
 
     call profiling_in(C_PROFILING_LCAO)
     call push_sub('lcao.lcao_wf')
@@ -224,16 +227,27 @@ contains
     start_ = 1
     if(present(start)) start_ = start
 
-    if (lcao_data%st%wfs_type == M_REAL) then
-      call dlcao_wf(lcao_data, st, gr, h, start_)
+    if (wfs_are_real(this%st)) then
+      call dlcao_wf(this, st, gr, h, start_)
     else
-      call zlcao_wf(lcao_data, st, gr, h, start_)
+      call zlcao_wf(this, st, gr, h, start_)
     end if
 
     call pop_sub()
     call profiling_out(C_PROFILING_LCAO)
   end subroutine lcao_wf
 
+  logical function lcao_is_available(this) result(available)
+    type(lcao_t),        intent(in) :: this
+    
+    available = this%state == 1
+  end function lcao_is_available
+
+  integer function lcao_num_orbitals(this) result(norbs)
+    type(lcao_t),        intent(in) :: this
+
+    norbs = this%st%nst
+  end function lcao_num_orbitals
 
 #include "undef.F90"
 #include "real.F90"

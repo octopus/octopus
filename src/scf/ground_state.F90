@@ -57,7 +57,7 @@ contains
     logical,             intent(inout) :: fromScratch
 
     integer      :: lcao_start, lcao_start_default
-    type(lcao_t) :: lcao_data
+    type(lcao_t) :: lcao
     type(scf_t)  :: scfv
     integer      :: ierr
 
@@ -150,15 +150,14 @@ contains
       call messages_print_var_option(stdout, 'LCAOStart', lcao_start)
       if (lcao_start > LCAO_START_NONE) then
           
-        lcao_data%state = 0 ! Uninitialized here.
-        call lcao_init(sys%gr, sys%geo, lcao_data, sys%st, h)
-        if(lcao_data%state == 1) then
+        call lcao_init(lcao, sys%gr, sys%geo, sys%st, h)
+        if(lcao_is_available(lcao)) then
           write(message(1),'(a,i4,a)') 'Info: Performing initial LCAO calculation with ', &
-               lcao_data%st%nst,' orbitals.'
+               lcao_num_orbitals(lcao),' orbitals.'
           call write_info(1)
           
-          call lcao_wf(lcao_data, sys%st, sys%gr, h)
-          call lcao_end(lcao_data, sys%st%nst)
+          call lcao_wf(lcao, sys%st, sys%gr, h)
+          call lcao_end(lcao, sys%st%nst)
 
           !Just populate again the states, so that the eigenvalues are properly written
           call states_fermi(sys%st, sys%gr%m)
@@ -181,7 +180,7 @@ contains
     end if
 
     ! run self consistency
-    if (sys%st%wfs_type == M_REAL) then
+    if (wfs_are_real(sys%st)) then
       message(1) = 'Info: SCF using real wavefunctions.'
     else
       message(1) = 'Info: SCF using complex wavefunctions.'
