@@ -122,7 +122,7 @@ contains
 
       if (lcao_start > LCAO_START_NONE) then
 
-        call lcao_init(lcao, sys%gr, sys%geo, sys%st, h)
+        call lcao_init(lcao, sys%gr, sys%geo, sys%st)
 
         if(lcao_is_available(lcao)) then
           write(message(1),'(a,i4,a)') 'Info: Performing initial LCAO calculation with ', &

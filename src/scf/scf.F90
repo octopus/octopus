@@ -314,7 +314,7 @@ contains
     if(present(verbosity)) verbosity_ = verbosity
 
     if(scf%lcao_restricted) then
-      call lcao_init(lcao, gr, geo, st, h)
+      call lcao_init(lcao, gr, geo, st)
       if(.not. lcao_is_available(lcao)) then
         message(1) = 'Nothing to do'
         call write_fatal(1)

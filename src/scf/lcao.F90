@@ -40,6 +40,7 @@ module lcao_m
   use states_m
   use states_dim_m
   use states_lalg_m
+  use states_block_m
   use h_sys_output_m
 
   implicit none
@@ -62,28 +63,19 @@ module lcao_m
     private
     integer           :: state ! 0 => non-initialized;
                                ! 1 => initialized (k, s and v1 matrices filled)
-    type(states_t) :: st
-
-    FLOAT,  pointer  :: dhamilt(:, :, :) ! hamilt stores the Hamiltonian in the LCAO subspace;
-    FLOAT,  pointer  :: ds     (:, :, :) ! s is the overlap matrix;
-    FLOAT,  pointer  :: dk     (:, :, :) ! k is the kinetic + spin orbit operator matrix;
-    FLOAT,  pointer  :: dv     (:, :, :) ! v is the potential.
-
-    CMPLX,  pointer  :: zhamilt(:, :, :) ! hamilt stores the Hamiltonian in the LCAO subspace;
-    CMPLX,  pointer  :: zs     (:, :, :) ! s is the overlap matrix;
-    CMPLX,  pointer  :: zk     (:, :, :) ! k is the kinetic + spin orbit operator matrix;
-    CMPLX,  pointer  :: zv     (:, :, :) ! v is the potential.
+    type(states_t)    :: st
+    FLOAT,  pointer   :: ds     (:, :, :) ! s is the overlap matrix;
+    CMPLX,  pointer   :: zs     (:, :, :) ! s is the overlap matrix;
   end type lcao_t
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine lcao_init(this, gr, geo, st, h)
+  subroutine lcao_init(this, gr, geo, st)
     type(lcao_t),         intent(out)   :: this
     type(grid_t),         intent(inout) :: gr
     type(geometry_t),     intent(in)    :: geo
     type(states_t),       intent(in)    :: st
-    type(hamiltonian_t),  intent(inout) :: h
 
     integer :: ia, norbs, n
 
@@ -93,14 +85,8 @@ contains
     call states_null(this%st)
 
     !this is to avoid a bug whe deallocating in gfortran 4.2.0 20060520
-    nullify(this%dhamilt)
     nullify(this%ds)
-    nullify(this%dk)
-    nullify(this%dv)
-    nullify(this%zhamilt)
     nullify(this%zs)
-    nullify(this%zk)
-    nullify(this%zv)
         
     ! Fix the dimension of the LCAO problem (this%dim)
     norbs = 0
@@ -153,13 +139,14 @@ contains
     this%st%d%nik = st%d%nik
     this%st%d%ispin = st%d%ispin
     this%st%d%block_size = st%d%block_size
+    this%st%parallel_in_states = .false.
     call distributed_copy(st%d%kpt, this%st%d%kpt)
     call states_allocate_wfns(this%st, gr%m, st%wfs_type)
 
     if (wfs_are_real(this%st)) then
-      call dlcao_init(this, gr, geo, h, st, norbs)
+      call dlcao_init(this, gr, geo, st, norbs)
     else
-      call zlcao_init(this, gr, geo, h, st, norbs)
+      call zlcao_init(this, gr, geo, st, norbs)
     end if
 
     this%state = 1
@@ -183,15 +170,9 @@ contains
 
     if(this%st%nst >= nst) then
       if(wfs_type == M_REAL) then
-        if(associated(this%dhamilt)) deallocate(this%dhamilt)
         if(associated(this%ds     )) deallocate(this%ds)
-        if(associated(this%dk     )) deallocate(this%dk)
-        if(associated(this%dv     )) deallocate(this%dv)
       else
-        if(associated(this%zhamilt)) deallocate(this%zhamilt)
         if(associated(this%zs     )) deallocate(this%zs)
-        if(associated(this%zk     )) deallocate(this%zk)
-        if(associated(this%zv     )) deallocate(this%zv)
       end if
     endif
 

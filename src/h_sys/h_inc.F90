@@ -60,7 +60,7 @@ end subroutine X(hamiltonian_eigenval)
 
 ! ---------------------------------------------------------
 subroutine X(hpsi_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
-  type(hamiltonian_t), intent(inout) :: h
+  type(hamiltonian_t), intent(in)    :: h
   type(grid_t),        intent(inout) :: gr
   type(batch_t),       intent(inout) :: psib
   type(batch_t),       intent(inout) :: hpsib
@@ -253,7 +253,7 @@ end subroutine X(get_grad)
 
 ! ---------------------------------------------------------
 subroutine X(hpsi) (h, gr, psi, hpsi, ist, ik, t, kinetic_only)
-  type(hamiltonian_t), intent(inout) :: h
+  type(hamiltonian_t), intent(in)    :: h
   type(grid_t),        intent(inout) :: gr
   integer,             intent(in)    :: ist       ! the index of the state
   integer,             intent(in)    :: ik        ! the index of the k-point
@@ -286,7 +286,7 @@ end subroutine X(hpsi)
 
 ! ---------------------------------------------------------
 subroutine X(exchange_operator) (h, gr, psi, hpsi, ist, ik)
-  type(hamiltonian_t), intent(inout) :: h
+  type(hamiltonian_t), intent(in)    :: h
   type(grid_t),        intent(inout) :: gr
   R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
   R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP, h%d%dim)
@@ -347,7 +347,7 @@ end subroutine X(exchange_operator)
 
 ! ---------------------------------------------------------
 subroutine X(oct_exchange_operator) (h, gr, psi, hpsi, ik)
-  type(hamiltonian_t), intent(inout) :: h
+  type(hamiltonian_t), intent(in)    :: h
   type(grid_t),        intent(inout) :: gr
   R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
   R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP, h%d%dim)
@@ -399,7 +399,7 @@ end subroutine X(oct_exchange_operator)
 
 ! ---------------------------------------------------------
 subroutine X(magnus) (h, gr, psi, hpsi, ik, vmagnus)
-  type(hamiltonian_t), intent(inout) :: h
+  type(hamiltonian_t), intent(in)    :: h
   type(grid_t),        intent(inout) :: gr
   integer,             intent(in)    :: ik
   R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
@@ -453,7 +453,7 @@ end subroutine X(magnus)
 ! ---------------------------------------------------------
 ! Exchange the ghost points and write the boundary points.
 subroutine X(kinetic_start)(h, handle, gr, psi, lapl)
-  type(hamiltonian_t), intent(inout) :: h
+  type(hamiltonian_t), intent(in)    :: h
   type(der_handle_t),  intent(out)   :: handle(:)
   type(grid_t),        intent(inout) :: gr
   R_TYPE,              intent(inout) :: psi(:,:)
@@ -472,7 +472,7 @@ subroutine X(kinetic_start)(h, handle, gr, psi, lapl)
 end subroutine X(kinetic_start)
 
 subroutine X(kinetic_keep_going)(h, handle, gr)
-  type(hamiltonian_t), intent(inout) :: h
+  type(hamiltonian_t), intent(in)    :: h
   type(der_handle_t),  intent(inout) :: handle(:)
   type(grid_t),        intent(inout) :: gr
 
@@ -489,7 +489,7 @@ end subroutine X(kinetic_keep_going)
 
 ! ---------------------------------------------------------
 subroutine X(kinetic_finish) (h, handle, gr, psi, lapl, hpsi)
-  type(hamiltonian_t), intent(inout) :: h
+  type(hamiltonian_t), intent(in)    :: h
   type(der_handle_t),  intent(inout) :: handle(:)
   type(grid_t),        intent(inout) :: gr
   R_TYPE,              intent(inout) :: psi(:,:)
@@ -516,7 +516,7 @@ end subroutine X(kinetic_finish)
 ! magnetic field, and the terms that come from CDFT.
 subroutine X(magnetic_terms) (gr, h, psi, hpsi, grad, ik)
   type(grid_t),        intent(inout) :: gr
-  type(hamiltonian_t), intent(inout) :: h
+  type(hamiltonian_t), intent(in)    :: h
   R_TYPE,              intent(inout) :: psi(:, :)  ! psi(NP_PART, h%d%dim)
   R_TYPE,              intent(inout) :: hpsi(:, :) ! hpsi(NP, h%d%dim)
   R_TYPE,              pointer       :: grad(:, :, :)
@@ -1172,7 +1172,7 @@ end subroutine X(vmask)
 
 ! ---------------------------------------------------------
 FLOAT function X(electronic_kinetic_energy)(h, gr, st) result(t0)
-  type(hamiltonian_t), intent(inout) :: h
+  type(hamiltonian_t), intent(in)    :: h
   type(grid_t),        intent(inout) :: gr
   type(states_t),      intent(inout) :: st
 
@@ -1203,7 +1203,7 @@ end function X(electronic_kinetic_energy)
 
 ! ---------------------------------------------------------
 FLOAT function X(electronic_external_energy)(h, gr, st) result(v)
-  type(hamiltonian_t), intent(inout) :: h
+  type(hamiltonian_t), intent(in)    :: h
   type(grid_t),        intent(inout) :: gr
   type(states_t),      intent(inout) :: st
 
@@ -1233,7 +1233,7 @@ end function X(electronic_external_energy)
 
 ! ---------------------------------------------------------
 subroutine X(hpsi_diag) (h, gr, diag, ik, t, E)
-  type(hamiltonian_t), intent(inout) :: h
+  type(hamiltonian_t), intent(in)    :: h
   type(grid_t),        intent(inout) :: gr
   integer,             intent(in)    :: ik
   R_TYPE,              intent(out)   :: diag(:,:) ! hpsi(NP, h%d%dim)

@@ -157,19 +157,15 @@ Subroutine X(lcao_initial_wf) (n, m, geo, sb, psi, ispin, ik, kpoints, err)
   call pop_sub()
 end subroutine X(lcao_initial_wf)
 
-
 ! ---------------------------------------------------------
-subroutine X(lcao_init) (this, gr, geo, h, st, norbs)
+subroutine X(lcao_init) (this, gr, geo, st, norbs)
   type(lcao_t),         intent(inout) :: this
   type(grid_t),         intent(inout) :: gr
   type(geometry_t),     intent(in)    :: geo
-  type(hamiltonian_t),  intent(inout) :: h
   type(states_t),       intent(in)    :: st
   integer,              intent(in)    :: norbs
 
-  integer :: ik, sts, ste, n1, n2, n, ierr, ii
-  R_TYPE, allocatable :: hpsi(:, :, :)
-  type(batch_t) :: psib, hpsib
+  integer :: ik, n, ierr
   integer :: kstart, kend
 
   call push_sub('lcao_inc.Xlcao_init')
@@ -188,45 +184,19 @@ subroutine X(lcao_init) (this, gr, geo, h, st, norbs)
   end do
 
   ! Allocation of variables
-  ALLOCATE(this%X(hamilt) (norbs, norbs, kstart:kend), norbs**2*this%st%d%kpt%nlocal)
-  ALLOCATE(this%X(s)      (norbs, norbs, kstart:kend), norbs**2*this%st%d%kpt%nlocal)
-  ALLOCATE(this%X(k)      (norbs, norbs, kstart:kend), norbs**2*this%st%d%kpt%nlocal)
-  ALLOCATE(this%X(v)      (norbs, norbs, kstart:kend), norbs**2*this%st%d%kpt%nlocal)
+  ALLOCATE(this%X(s)(norbs, norbs, kstart:kend), norbs**2*this%st%d%kpt%nlocal)
 
-  ! Overlap and kinetic matrices.
-  ALLOCATE(hpsi(NP, this%st%d%dim, this%st%d%block_size), NP*this%st%d%dim*st%d%block_size)
-  
   do ik = kstart, kend
-    do sts = 1, this%st%nst, st%d%block_size
-      ste = min(this%st%nst, sts + st%d%block_size - 1)
-
-      call batch_init(psib, sts, ste, this%st%X(psi)(:, :, sts:, ik))
-      call batch_init(hpsib, sts, ste, hpsi)
-      call X(hpsi_batch)(h, gr, psib, hpsib, ik, kinetic_only = .true.)
-      call batch_end(psib)
-      call batch_end(hpsib)
-      
-      ii = 1
-      do n1 = sts, ste
-        do n2 = n1, this%st%nst
-          this%X(k)(n1, n2, ik) = X(mf_dotp)(gr%m, this%st%d%dim, hpsi(:, :, ii), this%st%X(psi)(:, :, n2, ik))
-          this%X(k)(n2, n1, ik) = this%X(k)(n1, n2, ik)
-          this%X(s)(n1, n2, ik) = X(mf_dotp)(gr%m, this%st%d%dim, this%st%X(psi)(:, :, n1, ik), this%st%X(psi)(:, :, n2, ik))
-          this%X(s)(n2, n1, ik) = this%X(s)(n1, n2, ik)
-        end do
-        ii = ii + 1
-      end do
-      
-    end do
+    call states_blockt_mul(gr%m, this%st, this%st%st_start, this%st%st_end, this%st%st_start, this%st%st_end, &
+         this%st%X(psi)(:, :, :, ik), this%st%X(psi)(:, :, :, ik), this%X(s)(:, :, ik), symm = .true.)
   end do
-  deallocate(hpsi)
-  
+
   call pop_sub()
 end subroutine X(lcao_init)
 
 ! ---------------------------------------------------------
 subroutine X(lcao_wf) (this, st, gr, h, start)
-  type(lcao_t),        intent(inout) :: this
+  type(lcao_t),        intent(in)    :: this
   type(states_t),      intent(inout) :: st
   type(grid_t),        intent(inout) :: gr
   type(hamiltonian_t), intent(in)    :: h
@@ -236,33 +206,35 @@ subroutine X(lcao_wf) (this, st, gr, h, start)
   R_TYPE, allocatable :: hpsi(:, :, :)
   FLOAT, allocatable :: ev(:)
   type(batch_t) :: psib, hpsib
+  R_TYPE, allocatable :: hamilt(:, :, :)
+  integer :: kstart, kend
 
   call push_sub('lcao_inc.Xlcao_wf')
   
   norbs = this%st%nst
   dim = st%d%dim
   nst = st%nst
-  
-  ! Hamiltonian and overlap matrices.
-  ALLOCATE(hpsi(NP, dim, st%d%block_size), NP*dim*st%d%block_size)
+  kstart = this%st%d%kpt%start
+  kend = this%st%d%kpt%end
 
-  do ik = st%d%kpt%start, st%d%kpt%end
+  ALLOCATE(hpsi(NP, dim, st%d%block_size), NP*dim*st%d%block_size)
+  ALLOCATE(hamilt(norbs, norbs, kstart:kend), norbs**2*this%st%d%kpt%nlocal)
+
+  do ik = kstart, kend
     do sts = 1, norbs, st%d%block_size
       ste = min(norbs, sts + st%d%block_size - 1)
 
       call batch_init(psib, sts, ste, this%st%X(psi)(:, :, sts:, ik))
       call batch_init(hpsib, sts, ste, hpsi)
-      call X(vlpsi_batch)(h, gr%m, psib, hpsib, ik)
-      call X(vnlpsi_batch)(h, gr%m, psib, hpsib, ik)
+      call X(hpsi_batch)(h, gr, psib, hpsib, ik)
       call batch_end(psib)
       call batch_end(hpsib)
 
       ii = 1
       do n1 = sts, ste
         do n2 = n1, norbs
-          this%X(v) (n1, n2, ik) = X(mf_dotp)(gr%m, dim, hpsi(:, :, ii), this%st%X(psi)(:, :, n2, ik))
-          this%X(hamilt)(n1, n2, ik) = this%X(k)(n1, n2, ik) + this%X(v) (n1, n2, ik)
-          this%X(hamilt)(n2, n1, ik) = R_CONJ(this%X(hamilt) (n1, n2, ik))
+          hamilt(n1, n2, ik) = X(mf_dotp)(gr%m, dim, hpsi(:, :, ii), this%st%X(psi)(:, :, n2, ik))
+          hamilt(n2, n1, ik) = R_CONJ(hamilt(n1, n2, ik))
         end do
         ii = ii + 1
       end do
@@ -271,41 +243,31 @@ subroutine X(lcao_wf) (this, st, gr, h, start)
   end do
 
   deallocate(hpsi)
+
+  ALLOCATE(ev(norbs), norbs)
+
+  lcao_start = start
+  if(st%parallel_in_states .and. st%st_start > start) lcao_start = st%st_start
+
+  do ik =  kstart, kend
+    call lalg_geneigensolve(norbs, hamilt(1:norbs, 1:norbs, ik), this%X(s) (1:norbs, 1:norbs, ik), ev)
+
+    st%eigenval(start:nst, ik) = ev(start:nst)
   
-  do ik =  st%d%kpt%start, st%d%kpt%end
-    ALLOCATE(ev(norbs), norbs)
-    call lalg_geneigensolve(norbs, this%X(hamilt) (1:norbs, 1:norbs, ik), this%X(s) (1:norbs, 1:norbs, ik), ev)
-    
-    if(st%parallel_in_states) then
-      if(st%st_start.le.start) then
-        lcao_start = start
-      else
-        lcao_start = st%st_start
-      end if
-    else
-      lcao_start = start
-    end if
-    
-    do n1 = start, nst
-      st%eigenval(n1, ik) = ev(n1)
-    end do
-    
-    do n1 = lcao_start, st%st_end
-      st%X(psi)(1:NP_PART, 1:dim, n1, ik) = R_TOTYPE(M_ZERO)
-    end do
-    deallocate(ev)
-    
     ! Change of base
     do n1 = lcao_start, st%st_end
       do idim = 1, dim
+        st%X(psi)(1:NP, idim, n1, ik) = R_TOTYPE(M_ZERO)
         do n2 = 1, norbs
-          call lalg_axpy(NP, this%X(hamilt)(n2, n1, ik), this%st%X(psi)(:, idim, n2, ik), st%X(psi)(:, idim, n1, ik))
+          call lalg_axpy(NP, hamilt(n2, n1, ik), this%st%X(psi)(:, idim, n2, ik), st%X(psi)(:, idim, n1, ik))
         end do
       end do
     end do
 
   end do
-  
+
+  deallocate(ev, hamilt)
+
   call pop_sub()
 end subroutine X(lcao_wf)
 
