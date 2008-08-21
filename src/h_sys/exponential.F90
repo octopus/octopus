@@ -557,25 +557,91 @@ contains
 
   end subroutine exponential_apply
 
-  subroutine exponential_apply_batch(te, gr, h, zpsib, ik, deltat, t)
+  subroutine exponential_apply_batch(te, gr, h, psib, ik, deltat, t)
     type(exponential_t), intent(inout) :: te
     type(grid_t),        intent(inout) :: gr
     type(hamiltonian_t), intent(inout) :: h
     integer,             intent(in)    :: ik
-    type(batch_t),       intent(inout) :: zpsib
+    type(batch_t),       intent(inout) :: psib
     FLOAT,               intent(in)    :: deltat
     FLOAT,               intent(in)    :: t
     
     integer :: ii, ist
-    CMPLX, pointer :: zpsi(:, :)
-    
-    do ii = 1, zpsib%nst
-      zpsi  => zpsib%states(ii)%zpsi
-      ist   =  zpsib%states(ii)%ist
+    CMPLX, pointer :: psi(:, :)
 
-      call exponential_apply(te, gr, h, zpsi, ist, ik, deltat, t)
-    end do
+    if (te%exp_method == TAYLOR .and. .false.) then 
+      call taylor_series_batch
+    else
+      
+      do ii = 1, psib%nst
+        psi  => psib%states(ii)%zpsi
+        ist  =  psib%states(ii)%ist
+        
+        call exponential_apply(te, gr, h, psi, ist, ik, deltat, t)
+      end do
+
+    end if
     
+  contains
+    
+    subroutine taylor_series_batch()
+      CMPLX :: zfact
+      CMPLX, allocatable :: psi1(:, :, :), hpsi1(:, :, :)
+      integer :: iter, idim
+      logical :: zfact_is_real
+      integer :: st_start, st_end
+      type(batch_t) :: psi1b, hpsi1b
+
+      call push_sub('exponential.taylor_series')
+
+      ALLOCATE(psi1 (NP_PART, h%d%dim, psib%nst), NP_PART*h%d%dim*psib%nst)
+      ALLOCATE(hpsi1(NP, h%d%dim, psib%nst), NP*h%d%dim*psib%nst)
+
+      st_start = psib%states(1)%ist
+      st_end = psib%states(psib%nst)%ist
+
+      zfact = M_z1
+      zfact_is_real = .true.
+
+      do iter = 1, te%exp_order
+        zfact = zfact*(-M_zI*deltat)/iter
+        zfact_is_real = .not. zfact_is_real
+
+        call batch_init(hpsi1b, st_start, st_end, hpsi1)
+        if (iter == 1) then
+          call zpsi_batch(h, gr, psib, hpsi1b, ik)
+        else
+          call batch_init(psi1b, st_start, st_end, psi1)
+          call zpsi(h, gr, psi1b, hpsi1b, ik)
+          call batch_end(psi1b)
+        end if
+        call batch_end(hpsi1b)
+        
+        do ii = 1, psib%nst
+          if(zfact_is_real) then
+            do idim = 1, h%d%dim
+              call lalg_axpy(NP, real(zfact), hpsi1(:, idim, ii), psib%states(ii)%zpsi(:, idim))
+            end do
+          else
+            do idim = 1, h%d%dim
+              call lalg_axpy(NP, zfact, hpsi1(:, idim, ii), psib%states(ii)%zpsi(:, idim))
+            end do
+          end if
+
+          if(iter /= te%exp_order) then
+            do idim = 1, h%d%dim
+              call lalg_copy(NP, hpsi1(:, idim, ii), psi1(:, idim, ii))
+            end do
+          end if
+        end do
+
+      end do
+
+      deallocate(psi1, hpsi1)
+
+      call pop_sub()
+    end subroutine taylor_series_batch
+
   end subroutine exponential_apply_batch
 
 end module exponential_m
