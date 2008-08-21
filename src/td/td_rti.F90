@@ -20,6 +20,7 @@
 #include "global.h"
 
 module td_rti_m
+  use batch_m
   use cube_function_m
   use datasets_m
   use fourier_space_m
@@ -662,14 +663,18 @@ contains
     ! ---------------------------------------------------------
     ! Propagator with approximate enforced time-reversal symmetry
     subroutine td_app_reversal
-      integer ik, ist
+      integer :: ik, ist, sts, ste
+      type(batch_t) :: zpsib
 
       call push_sub('td_rti.td_app_reversal')
 
       ! propagate half of the time step with H(t-dt)
       do ik = 1, st%d%nik
-        do ist = st%st_start, st%st_end
-          call exponential_apply(tr%te, gr, h, st%zpsi(:,:, ist, ik), ist, ik, dt/M_TWO, t-dt)
+        do sts = st%st_start, st%st_end, st%d%block_size
+          ste = min(st%st_end, sts + st%d%block_size - 1)
+          call batch_init(zpsib, sts, ste, st%zpsi(:, :, sts:, ik))
+          call exponential_apply_batch(tr%te, gr, h, zpsib, ik, dt/M_TWO, t-dt)
+          call batch_end(zpsib)
         end do
       end do
 
@@ -686,11 +691,14 @@ contains
 
       ! propagate the other half with H(t)
       do ik = 1, st%d%nik
-        do ist = st%st_start, st%st_end
-          call exponential_apply(tr%te, gr, h, st%zpsi(:,:, ist, ik), ist, ik, dt/M_TWO, t)
+        do sts = st%st_start, st%st_end, st%d%block_size
+          ste = min(st%st_end, sts + st%d%block_size - 1)
+          call batch_init(zpsib, sts, ste, st%zpsi(:, :, sts:, ik))
+          call exponential_apply_batch(tr%te, gr, h, zpsib, ik, dt/M_TWO, t)
+          call batch_end(zpsib)
         end do
       end do
-
+      
       call pop_sub()
     end subroutine td_app_reversal
 

@@ -20,6 +20,7 @@
 #include "global.h"
 
 module exponential_m
+  use batch_m
   use cube_function_m
   use datasets_m
   use fourier_space_m
@@ -40,6 +41,7 @@ module exponential_m
     exponential_init,            &
     exponential_copy,            &
     exponential_end,             &
+    exponential_apply_batch,     &
     exponential_apply
 
   integer, public, parameter :: &
@@ -554,6 +556,27 @@ contains
     ! ---------------------------------------------------------
 
   end subroutine exponential_apply
+
+  subroutine exponential_apply_batch(te, gr, h, zpsib, ik, deltat, t)
+    type(exponential_t), intent(inout) :: te
+    type(grid_t),        intent(inout) :: gr
+    type(hamiltonian_t), intent(inout) :: h
+    integer,             intent(in)    :: ik
+    type(batch_t),       intent(inout) :: zpsib
+    FLOAT,               intent(in)    :: deltat
+    FLOAT,               intent(in)    :: t
+    
+    integer :: ii, ist
+    CMPLX, pointer :: zpsi(:, :)
+    
+    do ii = 1, zpsib%nst
+      zpsi  => zpsib%states(ii)%zpsi
+      ist   =  zpsib%states(ii)%ist
+
+      call exponential_apply(te, gr, h, zpsi, ist, ik, deltat, t)
+    end do
+    
+  end subroutine exponential_apply_batch
 
 end module exponential_m
 
