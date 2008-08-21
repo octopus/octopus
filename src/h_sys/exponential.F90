@@ -569,7 +569,7 @@ contains
     integer :: ii, ist
     CMPLX, pointer :: psi(:, :)
 
-    if (te%exp_method == TAYLOR .and. .false.) then 
+    if (te%exp_method == TAYLOR) then 
       call taylor_series_batch
     else
       
@@ -609,10 +609,10 @@ contains
 
         call batch_init(hpsi1b, st_start, st_end, hpsi1)
         if (iter == 1) then
-          call zpsi_batch(h, gr, psib, hpsi1b, ik)
+          call zhpsi_batch(h, gr, psib, hpsi1b, ik, t)
         else
           call batch_init(psi1b, st_start, st_end, psi1)
-          call zpsi(h, gr, psi1b, hpsi1b, ik)
+          call zhpsi_batch(h, gr, psi1b, hpsi1b, ik, t)
           call batch_end(psi1b)
         end if
         call batch_end(hpsi1b)
