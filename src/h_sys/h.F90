@@ -30,6 +30,7 @@ module hamiltonian_m
   use global_m
   use grid_m
   use gridhier_m
+  use hardware_m
   use lalg_basic_m
   use loct_parser_m
   use io_m

@@ -667,37 +667,61 @@ subroutine X(vlpsi_batch) (h, m, psib, hpsib, ik)
   type(batch_t),       intent(in)    :: psib
   type(batch_t),       intent(inout) :: hpsib
 
-  integer :: ip, ii, ispin
+  integer :: ip, ip2, ii, ispin, bs, ib, ipmax
   R_TYPE, pointer :: psi(:, :), hpsi(:, :)
+  FLOAT, allocatable  :: vv(:)
 
   call profiling_in(C_PROFILING_VLPSI)
   call push_sub('h_inc.Xvlpsi')
 
-  do ii = 1, psib%nst
-    psi  => psib%states(ii)%X(psi)
-    hpsi => hpsib%states(ii)%X(psi)
+  select case(h%d%ispin)
+  case(UNPOLARIZED, SPIN_POLARIZED)
+    ispin = states_dim_get_spin_index(h%d, ik)
 
-    select case(h%d%ispin)
-    case(UNPOLARIZED, SPIN_POLARIZED)
-      ispin = states_dim_get_spin_index(h%d, ik)
-      do ip = 1, m%np
-        hpsi(ip, 1) = (h%vhxc(ip, ispin) + h%ep%vpsl(ip))*psi(ip, 1)
+    bs = hardware%dblock_size
+
+    ALLOCATE(vv(1:bs), bs) 
+
+    do ip = 1, m%np, bs
+      ipmax = min(m%np, ip + bs - 1)
+      
+      ib = 1
+      do ip2 = ip, ipmax
+        vv(ib) = h%vhxc(ip2, ispin) + h%ep%vpsl(ip2)
+        ib = ib + 1
       end do
-      
-      call profiling_count_operations((R_ADD + R_MUL)*m%np)
-      
-    case(SPINORS)
+
+      do ii = 1, psib%nst
+        ib = 1
+        do ip2 = ip, ipmax
+          hpsib%states(ii)%X(psi)(ip2, 1) = vv(ib)*psib%states(ii)%X(psi)(ip2, 1)
+          ib = ib + 1
+        end do
+      end do
+
+    end do
+
+    deallocate(vv)
+
+    call profiling_count_operations((R_ADD + R_MUL*psib%nst)*m%np)
+    call profiling_count_transfers(m%np, M_ONE)
+    call profiling_count_transfers(m%np*psib%nst, R_TOTYPE(M_ONE))
+
+  case(SPINORS)
+    do ii = 1, psib%nst
+      psi  => psib%states(ii)%X(psi)
+      hpsi => hpsib%states(ii)%X(psi)
+
       do ip = 1, m%np
         hpsi(ip, 1) = (h%vhxc(ip, 1) + h%ep%vpsl(ip))*psi(ip, 1) + (h%vhxc(ip, 3) + M_zI*h%vhxc(ip, 4))*psi(ip, 2)
         hpsi(ip, 2) = (h%vhxc(ip, 2) + h%ep%vpsl(ip))*psi(ip, 2) + (h%vhxc(ip, 3) - M_zI*h%vhxc(ip, 4))*psi(ip, 1)
       end do
-      
-      call profiling_count_operations((6*R_ADD + 2*R_MUL)*m%np)
-      
-    end select
-    
-  end do
-  
+
+    end do
+    call profiling_count_operations((6*R_ADD + 2*R_MUL)*m%np*psib%nst)
+
+  end select
+
   call pop_sub()
   call profiling_out(C_PROFILING_VLPSI)
 end subroutine X(vlpsi_batch)
