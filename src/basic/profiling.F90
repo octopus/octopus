@@ -166,10 +166,6 @@ contains
   ! Create profiling subdirectory.
   subroutine profiling_init
 
-#if defined(HAVE_MPI)
-    character(len=3) :: dirnum
-#endif
-
     !%Variable ProfilingMode
     !%Default no
     !%Type logical

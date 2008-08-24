@@ -754,10 +754,9 @@ contains
   ! This subroutine calculates the total energy of the system. Basically, it
   ! adds up the KS eigenvalues, and then it subtracts the whatever double
   ! counts exist (see TDDFT theory for details).
-  subroutine hamiltonian_energy(h, gr, geo, st, iunit, full)
+  subroutine hamiltonian_energy(h, gr, st, iunit, full)
     type(hamiltonian_t), intent(inout) :: h
     type(grid_t),        intent(inout) :: gr
-    type(geometry_t),    intent(in)    :: geo
     type(states_t),      intent(inout) :: st
     integer,             intent(in)    :: iunit
     logical, optional,   intent(in)    :: full

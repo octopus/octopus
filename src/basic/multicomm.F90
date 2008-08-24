@@ -499,8 +499,8 @@ contains
       logical :: dim_mask(MAX_INDEX)
       integer :: world_group, sub_group, dummy_comm
       integer :: ii
-#endif
       integer :: i_strategy
+#endif
 
       call push_sub('multicomm.group_comm_create')
 

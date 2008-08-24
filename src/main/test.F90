@@ -93,7 +93,6 @@ program oct_test
   contains
 
   subroutine test_hartree
-    integer :: parallel_mask
     type(system_t) :: sys
 
     call system_init(sys)

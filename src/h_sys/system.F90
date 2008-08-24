@@ -174,7 +174,7 @@ contains
 
     call v_ks_calc(sys%gr, sys%ks, h, sys%st, calc_eigenval=.true.) ! get potentials
     call states_fermi(sys%st, sys%gr%m)                            ! occupations
-    call hamiltonian_energy(h, sys%gr, sys%geo, sys%st, -1)            ! total energy
+    call hamiltonian_energy(h, sys%gr, sys%st, -1)            ! total energy
 
     call pop_sub()
   end subroutine system_h_setup

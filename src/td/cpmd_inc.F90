@@ -177,12 +177,11 @@ contains
 
 end subroutine X(cpmd_propagate)
 
-subroutine X(cpmd_propagate_vel)(this, gr, h, st, iter, dt)
+subroutine X(cpmd_propagate_vel)(this, gr, h, st, dt)
   type(cpmd_t),         intent(inout) :: this
   type(grid_t),         intent(inout) :: gr
   type(hamiltonian_t),  intent(inout) :: h
   type(states_t),       intent(inout) :: st
-  integer,              intent(in)    :: iter
   FLOAT,                intent(in)    :: dt
 
   integer :: ik, ist1, ddim, np

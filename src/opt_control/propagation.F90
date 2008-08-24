@@ -127,7 +127,7 @@ module opt_control_propagation_m
       ! update
       call states_calc_dens(psi, NP_PART, psi%rho)
       call v_ks_calc(gr, sys%ks, h, psi)
-      call hamiltonian_energy(h, sys%gr, sys%geo, psi, -1)
+      call hamiltonian_energy(h, sys%gr, psi, -1)
 
       ! if td_target
       call target_tdcalc(target, gr, psi, i)

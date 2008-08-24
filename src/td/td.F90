@@ -244,13 +244,13 @@ contains
       call v_ks_calc(gr, sys%ks, h, st, calc_eigenval=.true.)
 
       ! Get the energies.
-      call hamiltonian_energy(h, sys%gr, sys%geo, st, -1)
+      call hamiltonian_energy(h, sys%gr, st, -1)
 
       if (td%dynamics == CP) then
         if(wfs_are_real(st)) then
-          call dcpmd_propagate_vel(td%cp_propagator, sys%gr, h, st, i, td%dt)
+          call dcpmd_propagate_vel(td%cp_propagator, sys%gr, h, st, td%dt)
         else
-          call zcpmd_propagate_vel(td%cp_propagator, sys%gr, h, st, i, td%dt)
+          call zcpmd_propagate_vel(td%cp_propagator, sys%gr, h, st, td%dt)
         end if
       end if
       
@@ -533,7 +533,7 @@ contains
       end if
 #endif
       call hamiltonian_span(h, minval(gr%m%h(1:NDIM)), x)
-      call hamiltonian_energy(h, gr, geo, st, -1)
+      call hamiltonian_energy(h, gr, st, -1)
 
     end subroutine init_wfs
 

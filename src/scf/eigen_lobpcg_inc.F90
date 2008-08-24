@@ -44,7 +44,9 @@
     logical            :: verbose_
     integer            :: ib, ik, psi_start, psi_end, constr_start, constr_end, bs
     integer            :: n_matvec, conv, maxiter, outcount, iblock
+#ifdef HAVE_MPI
     FLOAT, allocatable :: ldiff(:)
+#endif
 
     call push_sub('eigen_lobpcg.Xlobpcg')
 
@@ -136,17 +138,15 @@ subroutine X(lobpcg)(gr, st, h, st_start, st_end, psi, constr_start, constr_end,
   integer :: nst   ! Number of eigenstates (i. e. the blocksize).
   integer :: lnst  ! Number of local eigenstates.
 
-  integer :: ist, i, j, k, blks, conv, maxiter, nconstr, lnconstr
+  integer :: ist, i, j, k, blks, maxiter, nconstr, lnconstr
 
   integer, target      :: nuc                 ! Index set of unconverged eigenpairs.
   integer, pointer     :: uc(:), lnuc, luc(:) ! Index set of local unconverged eigenpairs.
   integer, allocatable :: all_ev(:), all_constr(:), lall_constr(:)
 
-  integer           :: iunit, hash_table_size
+  integer           :: hash_table_size
   logical           :: verbose_, no_bof, found
   logical           :: explicit_gram
-  character(len=3)  :: rank_number
-  character(len=10) :: file_name
   R_TYPE            :: beta
   type(iihash_t)    :: all_ev_inv
 
@@ -546,8 +546,6 @@ contains
   subroutine X(lobpcg_info)(block_iter)
     integer, intent(in) :: block_iter
 
-    logical, allocatable :: mask(:)
-    
     call push_sub('eigen_lobpcg_inc.X(lobpcg_info)')
 
     if(verbose_) then
@@ -584,11 +582,6 @@ contains
   subroutine X(lobpcg_unconv_ev)()
     integer           :: i, ist, j, new_nuc
     integer           :: new_uc(nuc)
-#if defined(HAVE_MPI)
-    integer           :: iunit
-    character(len=3)  :: rank_number
-    character(len=10) :: file_name
-#endif
 
     call push_sub('eigen_lobpcg_inc.Xlobpcg_unconv_ev')
 

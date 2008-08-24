@@ -401,7 +401,7 @@ contains
       evsum_out = states_eigenvalues_sum(st)
 
       ! recalculate total energy
-      call hamiltonian_energy(h, gr, geo, st, iunit = 0)
+      call hamiltonian_energy(h, gr, st, iunit = 0)
 
       ! compute convergence criteria
       scf%abs_dens = M_ZERO
@@ -662,7 +662,7 @@ contains
         iunit = 0
       end if
 
-      call hamiltonian_energy(h, gr, geo, st, iunit, full = .true.)
+      call hamiltonian_energy(h, gr, st, iunit, full = .true.)
 
       if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
       if(st%d%ispin > UNPOLARIZED) then

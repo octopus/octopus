@@ -50,9 +50,8 @@ contains
     FLOAT,                     intent(out)   :: force(:, :)
 
     type(species_t), pointer :: s
-    FLOAT :: r, rc, xi(1:MAX_DIM), dd, zi, zj
-    integer :: iatom, jatom, icopy
-    type(periodic_copy_t) :: pc
+    FLOAT :: r, dd, zi, zj
+    integer :: iatom, jatom
 
     FLOAT, parameter :: alpha = 1.1313708
 
@@ -114,7 +113,7 @@ contains
     FLOAT,                     intent(out)   :: force(:, :)
 
     type(species_t), pointer :: s
-    FLOAT :: r, rc, xi(1:MAX_DIM), dd, zi, zj
+    FLOAT :: r, xi(1:MAX_DIM), zi, zj
     integer :: iatom, jatom, icopy
     type(periodic_copy_t) :: pc
     integer :: ix, iy, iz, isph, ss
@@ -122,8 +121,6 @@ contains
     FLOAT   :: factor, charge
     CMPLX   :: sumatoms
     FLOAT, parameter :: alpha = 1.1313708
-
-    type(profile_t), save :: ion_ion_prof
 
     ! see
     ! http://www.tddft.org/programs/octopus/wiki/index.php/Developers:Ion-Ion_interaction
