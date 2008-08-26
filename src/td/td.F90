@@ -140,8 +140,8 @@ contains
 
     call init_wfs()
 
-    call td_write_init(write_handler, gr, st, geo, &
-         ion_dynamics_ions_move(td%ions), gauge_field_is_applied(h%ep%gfield), td%iter, td%dt)
+    call td_write_init(write_handler, gr, st, h, geo, &
+         ion_dynamics_ions_move(td%ions), gauge_field_is_applied(h%ep%gfield), td%iter, td%max_iter, td%dt)
 
     ! Calculate initial forces and kinetic energy
     if(ion_dynamics_ions_move(td%ions)) then
