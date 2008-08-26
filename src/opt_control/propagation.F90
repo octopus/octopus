@@ -104,8 +104,8 @@ module opt_control_propagation_m
     gr => sys%gr
 
     if(write_iter_) then
-      call td_write_init(write_handler, gr, sys%st, sys%geo, &
-        ion_dynamics_ions_move(td%ions), gauge_field_is_applied(h%ep%gfield), td%iter, td%dt)
+      call td_write_init(write_handler, gr, sys%st, h, sys%geo, &
+        ion_dynamics_ions_move(td%ions), gauge_field_is_applied(h%ep%gfield), td%iter, td%max_iter, td%dt)
       call td_write_data(write_handler, gr, psi, h, sys%outp, sys%geo, 0)
     end if
 
