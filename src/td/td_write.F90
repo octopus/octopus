@@ -111,7 +111,7 @@ contains
     type(block_t) :: blk
     character(len=100) :: filename
 
-    call push_sub('td_write.td_write_handler')
+    call push_sub('td_write.td_write_init')
 
 
     !%Variable TDOutput
@@ -173,6 +173,7 @@ contains
     !special cases
     w%out(OUT_COORDS)%write = w%out(OUT_COORDS)%write .and. ions_move
     w%out(OUT_GAUGE_FIELD)%write = w%out(OUT_GAUGE_FIELD)%write .and. with_gauge_field
+    w%out(OUT_LASER)%write = w%out(OUT_LASER)%write .and. (h%ep%no_lasers > 0)
 
     !%Variable TDDipoleLmax
     !%Type integer
@@ -310,7 +311,7 @@ contains
         call write_iter_init(w%out(OUT_ACC)%handle, first, &
           dt/units_out%time%factor, trim(io_workpath("td.general/acceleration")))
 
-      if(w%out(OUT_LASER)%write) &
+      if(w%out(OUT_LASER)%write) then
         call write_iter_init(w%out(OUT_LASER)%handle, first, &
           dt/units_out%time%factor, trim(io_workpath("td.general/laser")))
         do i = 0, max_iter
@@ -318,6 +319,8 @@ contains
           if(mod(i, 100).eq.0) call write_iter_flush(w%out(OUT_LASER)%handle)
         end do
         call write_iter_end(w%out(OUT_LASER)%handle)
+      end if
+
 
       if(w%out(OUT_ENERGY)%write) &
         call write_iter_init(w%out(OUT_ENERGY)%handle, first, &
