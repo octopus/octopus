@@ -42,7 +42,16 @@ module submesh_m
        dsm_integrate,       &
        zsm_integrate,       &
        submesh_end
- 
+
+#ifdef HAVE_MPI
+  public ::                   &
+       submesh_comm_t,        &
+       dsubmesh_comm_reduce,  &
+       zsubmesh_comm_reduce,  &
+       dsubmesh_comm_finish,  &
+       zsubmesh_comm_finish
+#endif
+
   type submesh_t
      integer               :: ns = -1        ! number of points inside the submesh
      integer               :: ns_part        ! number of points inside the submesh including ghost points
@@ -51,8 +60,22 @@ module submesh_m
      integer,      pointer :: jxyz_inv(:)    ! and the inverse
      FLOAT,        pointer :: x(:,:)
      type(mesh_t), pointer :: mesh
+     logical               :: has_points
+#ifdef HAVE_MPI
+     integer,      pointer :: psize(:)       ! the number of points each processor holds
+#endif
   end type submesh_t
   
+  type submesh_comm_t
+    private
+    integer          :: nreq
+    integer, pointer :: requests(:)
+    FLOAT,   pointer :: dallval(:, :)
+    CMPLX,   pointer :: zallval(:, :)
+  end type submesh_comm_t
+
+  integer :: tagcounter = 0
+
 contains
   
   subroutine submesh_null(sm)
@@ -217,6 +240,17 @@ contains
 
     end if
 
+    this%has_points = (this%ns > 0)
+
+#ifdef HAVE_MPI
+    if(m%parallel_in_domains) then
+      ALLOCATE(this%psize(1:m%vp%p), m%vp%p)
+      call MPI_Allgather(this%ns, 1, MPI_INTEGER, this%psize, 1, MPI_INTEGER, m%mpi_grp%comm, mpi_err)
+    else
+      nullify(this%psize)
+    end if
+#endif
+
     call profiling_out(submesh_init_prof)
     call pop_sub()
 
@@ -226,6 +260,10 @@ contains
     type(submesh_t),   intent(inout)  :: this
     
     call push_sub('submesh.submesh_end')
+
+#ifdef HAVE_MPI
+    if(associated(this%psize)) deallocate(this%psize)
+#endif
 
     if( this%ns /= -1 ) then
       nullify(this%mesh)

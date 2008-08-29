@@ -18,15 +18,16 @@
 !! $Id: submesh_inc.F90 2781 2007-03-23 10:58:32Z lorenzen $
 
 R_TYPE function X(sm_integrate)(m, sm, f) result(res)
-  type(mesh_t),    intent(in) :: m
-  type(submesh_t), intent(in) :: sm
-  R_TYPE,          intent(in) :: f(:)
-  
+  type(mesh_t),      intent(in) :: m
+  type(submesh_t),   intent(in) :: sm
+  R_TYPE,            intent(in) :: f(:)
+
 #if defined(HAVE_MPI)
   R_TYPE :: tmp
 #endif
+
   if (m%use_curvlinear) then
-    res = sum( f(1:sm%ns) * m%vol_pp(sm%jxyz(1:sm%ns)) )
+    res = sum(f(1:sm%ns)*m%vol_pp(sm%jxyz(1:sm%ns)) )
   else
     res = sum(f(1:sm%ns))*m%vol_pp(1)
   end if
@@ -38,8 +39,76 @@ R_TYPE function X(sm_integrate)(m, sm, f) result(res)
   end if
 #endif
 
-
 end function X(sm_integrate)
+
+#ifdef HAVE_MPI
+
+subroutine X(submesh_comm_reduce)(this, sm, mesh, count, val)
+  type(submesh_comm_t), intent(out)   :: this
+  type(submesh_t),      intent(in)    :: sm
+  type(mesh_t),         intent(in)    :: mesh
+  integer,              intent(in)    :: count
+  R_TYPE,               intent(inout) :: val(:)
+
+  integer :: ipart, tag
+
+  ASSERT(mesh%parallel_in_domains)
+
+  tag = tagcounter
+  tagcounter = tagcounter + 1
+
+  ALLOCATE(this%X(allval)(1:count, 1:mesh%vp%p), count*mesh%vp%p)
+
+  this%X(allval)(1:count, 1:mesh%vp%p) = M_ZERO
+
+  ALLOCATE(this%requests(1:2*mesh%vp%p), 2*mesh%vp%p)
+
+  this%nreq = 0
+
+  do ipart = 1, mesh%vp%p
+    if(ipart == mesh%vp%partno .or. sm%psize(ipart) == 0) cycle
+    this%nreq = this%nreq + 1
+    call MPI_Irecv(this%X(allval)(:, ipart), count, R_MPITYPE, ipart - 1, tag, &
+         mesh%mpi_grp%comm, this%requests(this%nreq), mpi_err)
+  end do
+
+  if(sm%has_points) then
+    do ipart = 1, mesh%vp%p
+      if(ipart == mesh%vp%partno) cycle
+      this%nreq = this%nreq + 1
+      call MPI_Isend(val, count, R_MPITYPE, ipart - 1, tag, mesh%mpi_grp%comm, this%requests(this%nreq), mpi_err)
+    end do
+  end if
+
+  this%X(allval)(1:count, mesh%vp%partno) = val(1:count)
+
+end subroutine X(submesh_comm_reduce)
+
+subroutine X(submesh_comm_finish)(this, sm, mesh, count, val)
+  type(submesh_comm_t), intent(inout) :: this
+  type(submesh_t),      intent(in)    :: sm
+  type(mesh_t),         intent(in)    :: mesh
+  integer,              intent(in)    :: count
+  R_TYPE,               intent(inout) :: val(:)
+
+  integer, allocatable :: statuses(:, :)
+  integer :: ipart
+
+  ALLOCATE(statuses(MPI_STATUS_SIZE, 1:this%nreq), this%nreq)
+
+  call MPI_Waitall(this%nreq, this%requests, statuses, mpi_err)
+
+  val(1:count) = M_ZERO
+  do ipart = 1, mesh%vp%p
+    val(1:count) = val(1:count) + this%X(allval)(1:count, ipart)
+  end do
+  
+  deallocate(statuses)
+  deallocate(this%X(allval))
+  deallocate(this%requests)
+
+end subroutine X(submesh_comm_finish)
+#endif
 
 !! Local Variables:
 !! mode: f90
