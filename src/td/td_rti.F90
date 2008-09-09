@@ -640,7 +640,7 @@ contains
 
       ! first move the ions to time t
       if(present(ions)) then
-        call ion_dynamics_propagate(ions, gr%sb, geo, ionic_dt)
+        call ion_dynamics_propagate(ions, gr%sb, geo, t, ionic_dt)
         call epot_generate(h%ep, gr, geo, st, time = t)
       end if
 
@@ -683,7 +683,7 @@ contains
 
       ! move the ions to time t
       if(present(ions)) then      
-        call ion_dynamics_propagate(ions, gr%sb, geo, ionic_dt)
+        call ion_dynamics_propagate(ions, gr%sb, geo, t, ionic_dt)
         call epot_generate(h%ep, gr, geo, st, time = t)
       end if
 
@@ -719,7 +719,7 @@ contains
       !move the ions to time t - dt/2
       if(present(ions)) then
         call ion_dynamics_save_state(ions, geo, ions_state)
-        call ion_dynamics_propagate(ions, gr%sb, geo, M_HALF*ionic_dt)
+        call ion_dynamics_propagate(ions, gr%sb, geo, t - ionic_dt/M_TWO, M_HALF*ionic_dt)
         call epot_generate(h%ep, gr, geo, st, time = t - ionic_dt/M_TWO)
       end if
       

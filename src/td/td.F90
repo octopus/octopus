@@ -229,7 +229,7 @@ contains
 
       if(ion_dynamics_ions_move(td%ions)) then 
         if(td%dynamics /= EHRENFEST .or. .not. td_rti_ions_are_propagated(td%tr)) then
-          call ion_dynamics_propagate(td%ions, sys%gr%sb, sys%geo, td%dt)
+          call ion_dynamics_propagate(td%ions, sys%gr%sb, sys%geo,  i*td%dt, td%dt)
           generate = .true.
         end if
       end if
