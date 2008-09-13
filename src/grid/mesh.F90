@@ -96,8 +96,8 @@ module mesh_m
     type(pv_t)      :: vp                  ! describes parallel vectors defined on the mesh.
     
     ! some other vars
-    integer :: nr(2,3)                  ! dimensions of the box where the points are contained
-    integer :: l(3)                     ! literally n(2,:) - n(1,:) + 1 - 2*enlarge(:)
+    integer :: nr(2, MAX_DIM)              ! dimensions of the box where the points are contained
+    integer :: l(MAX_DIM)                  ! literally n(2,:) - n(1,:) + 1 - 2*enlarge(:)
     
     FLOAT, pointer :: x(:,:)            ! The (local) points,
     FLOAT, pointer :: x_global(:,:)     ! The global points, needed for i/o on

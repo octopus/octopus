@@ -69,7 +69,7 @@ contains
     integer,           intent(in)  :: il
 
     logical :: ok
-    integer :: i, from(3), to(3), unit_cell_extent, dir, lr
+    integer :: i, from(MAX_DIM), to(MAX_DIM), unit_cell_extent, dir, lr
 
     call push_sub('ob_interface.interface_init')
 
@@ -96,7 +96,7 @@ contains
       dir = -1
     end if
     from = m%nr(lr, :) + dir*m%enlarge
-    to   = from + dir*(/intf%extent, m%l(2), m%l(3)/) - dir
+    to(1:3) = from(1:3) + dir*(/intf%extent, m%l(2), m%l(3)/) - dir
 
     call mesh_subset_indices(m, from, to, intf%index)
 

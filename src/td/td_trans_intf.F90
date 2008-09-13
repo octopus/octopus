@@ -71,8 +71,8 @@ contains
     logical :: ok
 
     integer :: il, i
-    integer :: from(3, NLEADS)
-    integer :: to(3, NLEADS)
+    integer :: from(MAX_DIM, NLEADS)
+    integer :: to(MAX_DIM, NLEADS)
 
     call push_sub('td_trans_intf.intface_init')
 
@@ -92,8 +92,8 @@ contains
     from(:, 1) = gr%m%nr(1, :) + gr%m%enlarge
     from(:, 2) = gr%m%nr(2, :) - gr%m%enlarge
     
-    to(:, 1) = from(:, 1) + (/intface%extent, gr%m%l(2), gr%m%l(3)/) - 1
-    to(:, 2) = from(:, 2) - (/intface%extent, gr%m%l(2), gr%m%l(3)/) + 1
+    to(1:3, 1) = from(1:3, 1) + (/intface%extent, gr%m%l(2), gr%m%l(3)/) - 1
+    to(1:3, 2) = from(1:3, 2) - (/intface%extent, gr%m%l(2), gr%m%l(3)/) + 1
 
     do il = 1, NLEADS
       call mesh_subset_indices(gr%m, from(:, il), to(:, il), intface%index(:, il))

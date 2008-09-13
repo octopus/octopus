@@ -72,19 +72,19 @@ module simul_box_m
     integer  :: box_shape   ! 1->sphere, 2->cylinder, 3->sphere around each atom,
                             ! 4->parallelpiped (orthonormal, up to now).
 
-    FLOAT :: h(3)           ! the (canonical) spacing between the points
-    FLOAT :: box_offset(3)  ! shifts of the origin in the respective direction
+    FLOAT :: h(MAX_DIM)     ! the (canonical) spacing between the points
+    FLOAT :: box_offset(MAX_DIM)  ! shifts of the origin in the respective direction
 
     FLOAT :: rsize          ! the radius of the sphere or of the cylinder
     FLOAT :: xsize          ! the length of the cylinder in the x direction
-    FLOAT :: lsize(3)       ! half of the length of the parallelepiped in each direction.
+    FLOAT :: lsize(MAX_DIM)       ! half of the length of the parallelepiped in each direction.
 
     type(c_ptr)   :: image    ! for the box defined through an image
     character(len=1024) :: user_def ! for the user defined box
 
-    FLOAT :: rlattice(3,3)      ! lattice primitive vectors
-    FLOAT :: klattice_unitary(3,3)      ! reciprocal lattice primitive vectors
-    FLOAT :: klattice(3,3)      ! reciprocal lattice primitive vectors
+    FLOAT :: rlattice(MAX_DIM,MAX_DIM)      ! lattice primitive vectors
+    FLOAT :: klattice_unitary(MAX_DIM,MAX_DIM)      ! reciprocal lattice primitive vectors
+    FLOAT :: klattice(MAX_DIM,MAX_DIM)      ! reciprocal lattice primitive vectors
     FLOAT :: volume_element     ! the volume element in real space
     FLOAT :: rcell_volume       ! the volume of the cell in real space
     FLOAT :: fft_alpha      ! enlargement factor for double box
@@ -912,8 +912,8 @@ contains
     FLOAT :: tmp(1:MAX_DIM)
 
 
-    tmp = dcross_product(rv(:, 2), rv(:, 3)) 
-    volume = dot_product(rv(:, 1), tmp)
+    tmp = dcross_product(rv(1:3, 2), rv(1:3, 3)) 
+    volume = dot_product(rv(1:3, 1), tmp(1:3))
 
     if ( volume < M_ZERO ) then 
       message(1) = "Your lattice vectors form a left-handed system"
@@ -1028,7 +1028,7 @@ contains
   logical function simul_box_in_box(sb, geo, x) result(in_box)
     type(simul_box_t),  intent(in) :: sb
     type(geometry_t),   intent(in) :: geo
-    FLOAT,              intent(in) :: x(:) ! x(3)
+    FLOAT,              intent(in) :: x(1:MAX_DIM)
 
     real(8), parameter :: DELTA = CNST(1e-12)
     FLOAT :: r, re, im, xx(MAX_DIM)
@@ -1038,14 +1038,14 @@ contains
     integer :: red, green, blue, ix, iy
 #endif
 
-    xx(:) = x(:) - sb%box_offset(:)
+    xx(1:MAX_DIM) = x(1:MAX_DIM) - sb%box_offset(1:MAX_DIM)
 
     !convert to the orthogonal space
     xx = matmul(xx, sb%klattice_unitary)
 
     select case(sb%box_shape)
     case(SPHERE)
-      in_box = (sqrt(sum(xx(:)**2)) <= sb%rsize+DELTA)
+      in_box = (sqrt(sum(xx(1:MAX_DIM)**2)) <= sb%rsize+DELTA)
 
     case(CYLINDER)
       r = sqrt(xx(2)**2 + xx(3)**2)

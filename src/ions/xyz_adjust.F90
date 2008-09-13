@@ -252,15 +252,18 @@ contains
   ! ---------------------------------------------------------
   subroutine rotate(geo, from, from2, to)
     type(geometry_t), intent(inout) :: geo
-    FLOAT, intent(in) :: from(3), from2(3), to(3) ! assumed to be normalize
+    FLOAT, intent(in) :: from(MAX_DIM), from2(MAX_DIM), to(MAX_DIM) ! assumed to be normalize
 
-    integer :: i
+    integer :: i, idim
     FLOAT :: m1(MAX_DIM, MAX_DIM), m2(MAX_DIM, MAX_DIM)
     FLOAT :: m3(MAX_DIM, MAX_DIM), f2(MAX_DIM), per(MAX_DIM)
     FLOAT :: alpha, r
 
     ! initialize matrices
-    m1 = M_ZERO; m1(1,1) = M_ONE; m1(2,2) = M_ONE; m1(3,3) = M_ONE
+    m1 = M_ZERO
+    do idim = 1, MAX_DIM
+      m1(idim, idim) = M_ONE
+    end do
 
     ! rotate the to axis to the z axis
     if(to(2).ne.M_ZERO) then

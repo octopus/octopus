@@ -649,7 +649,7 @@ contains
     CMPLX, allocatable :: tmp(:, :)
     integer            :: i, id, iter, ist, subband
     integer, pointer   :: lxyz(:,:)
-    FLOAT              :: lsize(3), dres, dx(3)
+    FLOAT              :: lsize(MAX_DIM), dres, dx(MAX_DIM)
     FLOAT, target      :: en
 
     call push_sub('td_trans_rti.ext_eigenstate_lip_sch')
