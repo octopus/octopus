@@ -141,7 +141,7 @@ contains
     nullify(op%m, op%i, op%w_re, op%w_im, op%ri, op%rimap, op%rimap_inv)
 
     op%n  = n
-    ALLOCATE(op%stencil(3, n), 3*n)
+    ALLOCATE(op%stencil(MAX_DIM, n), MAX_DIM*n)
 
     op%label = label
 
@@ -165,7 +165,7 @@ contains
     opo%m        => opi%m
     opo%cmplx_op =  opi%cmplx_op
     opo%nri      =  opi%nri
-    opo%stencil(1:3, 1:opo%n) = opi%stencil(1:3, 1:opi%n)
+    opo%stencil(1:MAX_DIM, 1:opo%n) = opi%stencil(1:MAX_DIM, 1:opi%n)
 
     if(opi%const_w) then
       ALLOCATE(opo%w_re(opi%n, 1), opi%n*1)
@@ -274,9 +274,9 @@ contains
         if(m%parallel_in_domains) then
           ! When running in parallel, get global number of
           ! point ii.
-          p1(:) = m%Lxyz(m%vp%local(m%vp%xlocal(m%vp%partno)+ii-1), :)
+          p1(1:MAX_DIM) = m%Lxyz(m%vp%local(m%vp%xlocal(m%vp%partno)+ii-1), 1:MAX_DIM)
         else
-          p1(:) = m%Lxyz(ii, :)
+          p1(1:MAX_DIM) = m%Lxyz(ii, 1:MAX_DIM)
         end if
 
         do jj = 1, op%n

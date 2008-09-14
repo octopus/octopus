@@ -147,7 +147,7 @@ subroutine mesh_init_stage_2(sb, mesh, geo, cv, stencil, np_stencil)
   i = (mesh%nr(2,1)-mesh%nr(1,1)+1) * (mesh%nr(2,2)-mesh%nr(1,2)+1) * (mesh%nr(2,3)-mesh%nr(1,3)+1)
   ALLOCATE(mesh%Lxyz_inv(mesh%nr(1,1):mesh%nr(2,1), mesh%nr(1,2):mesh%nr(2,2), mesh%nr(1,3):mesh%nr(2,3)),   i)
   ALLOCATE(mesh%Lxyz_tmp(mesh%nr(1,1):mesh%nr(2,1), mesh%nr(1,2):mesh%nr(2,2), mesh%nr(1,3):mesh%nr(2,3)),   i)
-  ALLOCATE(mesh%x_tmp(3, mesh%nr(1,1):mesh%nr(2,1), mesh%nr(1,2):mesh%nr(2,2), mesh%nr(1,3):mesh%nr(2,3)), 3*i)
+  ALLOCATE(mesh%x_tmp(MAX_DIM, mesh%nr(1,1):mesh%nr(2,1), mesh%nr(1,2):mesh%nr(2,2), mesh%nr(1,3):mesh%nr(2,3)), MAX_DIM*i)
 
   !$omp parallel workshare
   mesh%Lxyz_inv(:,:,:) = 0
@@ -268,25 +268,25 @@ contains
     integer :: ip
 #endif
 
-    ALLOCATE(mesh%Lxyz(mesh%np_part_global, 3), mesh%np_part_global*3)
+    ALLOCATE(mesh%Lxyz(mesh%np_part_global, MAX_DIM), mesh%np_part_global*MAX_DIM)
     if(mesh%parallel_in_domains) then
       ! Node 0 has to store all entries from x (in x_global)
       ! as well as the local set in x (see below).
-      ALLOCATE(mesh%x_global(mesh%np_part_global, 3), mesh%np_part_global*3)
+      ALLOCATE(mesh%x_global(mesh%np_part_global, MAX_DIM), mesh%np_part_global*MAX_DIM)
     else
       ! When running parallel, x is computed later.
-      ALLOCATE(mesh%x(mesh%np_part_global, 3), mesh%np_part_global*3)
+      ALLOCATE(mesh%x(mesh%np_part_global, MAX_DIM), mesh%np_part_global*MAX_DIM)
 
 #ifdef USE_OMP
       !$omp parallel 
       !$omp do
       do ip = 1, mesh%np_global
-        mesh%x(ip, 1:3) = M_ZERO
+        mesh%x(ip, 1:MAX_DIM) = M_ZERO
       end do
       !$omp end do nowait
       !$omp do
       do ip = mesh%np_global+1, mesh%np_part_global
-        mesh%x(ip, 1:3) = M_ZERO
+        mesh%x(ip, 1:MAX_DIM) = M_ZERO
       end do
       !$omp end do
       !$omp end parallel
@@ -310,9 +310,9 @@ contains
             mesh%Lxyz(il, 3) = iz
             mesh%Lxyz_inv(ix,iy,iz) = il
             if(mesh%parallel_in_domains) then
-              mesh%x_global(il, :) = mesh%x_tmp(:, ix, iy, iz)
+              mesh%x_global(il, 1:3) = mesh%x_tmp(1:3, ix, iy, iz)
             else
-              mesh%x(il,:) = mesh%x_tmp(:,ix,iy,iz)
+              mesh%x(il, 1:3) = mesh%x_tmp(1:3, ix, iy, iz)
             end if
           end if
         end do

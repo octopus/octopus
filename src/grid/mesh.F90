@@ -485,12 +485,12 @@ contains
   ! by the two corner points from and to.
   subroutine mesh_subset_indices(mesh, from, to, indices)
     type(mesh_t), intent(in)  :: mesh
-    integer,      intent(in)  :: from(3)
-    integer,      intent(in)  :: to(3)
+    integer,      intent(in)  :: from(MAX_DIM)
+    integer,      intent(in)  :: to(MAX_DIM)
     integer,      intent(out) :: indices(:)
 
-    integer :: lb(3) ! Lower bound of indices.
-    integer :: ub(3) ! Upper bound of indices.
+    integer :: lb(MAX_DIM) ! Lower bound of indices.
+    integer :: ub(MAX_DIM) ! Upper bound of indices.
 
     integer :: ix, iy, iz, i
 
@@ -518,7 +518,7 @@ contains
       do iy = lb(2), ub(2)
         do iz = lb(3), ub(3)
           indices(i) = mesh%Lxyz_inv(ix, iy, iz)
-          i          = i+1
+          i          = i + 1
         end do
       end do
     end do
@@ -532,7 +532,7 @@ contains
   ! inside the dimensions of the simulation box.
   logical function index_valid(mesh, point)
     type(mesh_t), intent(in) :: mesh
-    integer,      intent(in) :: point(3)
+    integer,      intent(in) :: point(MAX_DIM)
 
     integer :: i
     logical :: valid
