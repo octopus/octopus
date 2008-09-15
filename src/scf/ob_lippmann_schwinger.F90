@@ -94,7 +94,7 @@ contains
 
         ! Calculate right hand side e-T-V0-sum(a)[H_ca*g_a*H_ac].
         rhs(:, :) = M_z0
-        call zhpsi(h, gr, st%zphi(:, :, ist, ik), rhs(:, :), ik, ist, kinetic_only = .true.)
+        call zhpsi(h, gr, st%zphi(:, :, ist, ik), rhs(:, :), ist, ik, kinetic_only=.true.)
 
         ! Apply lead potential.
         do idim = 1, st%d%dim
