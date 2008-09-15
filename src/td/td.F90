@@ -152,7 +152,7 @@ contains
 
       call epot_forces(gr, geo, h%ep, st, td%iter*td%dt)
 
-      geo%kinetic_energy = ion_dynamics_kinetic_energy(td%ions, geo)
+      geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
 
     end if
 
@@ -260,7 +260,7 @@ contains
 
         call ion_dynamics_propagate_vel(td%ions, sys%geo)
 
-        geo%kinetic_energy = ion_dynamics_kinetic_energy(td%ions, geo)
+        geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
       end if
 
       if(gauge_field_is_applied(h%ep%gfield)) then

@@ -29,6 +29,7 @@ module td_write_m
   use grid_m
   use hamiltonian_m
   use io_m
+  use ion_dynamics_m
   use lasers_m
   use loct_m
   use loct_parser_m
@@ -76,7 +77,8 @@ module td_write_m
     OUT_PROJ        =  9, &
     OUT_MAGNETS     = 10, &
     OUT_GAUGE_FIELD = 11, &
-    OUT_MAX         = 11
+    OUT_TEMPERATURE = 12, &
+    OUT_MAX         = 12
   
   type td_write_t
     private
@@ -116,7 +118,7 @@ contains
 
     !%Variable TDOutput
     !%Type flag
-    !%Default multipoles + geometry + energy
+    !%Default multipoles + geometry + temperature + energy
     !%Section Time Dependent::TD Output
     !%Description
     !% Defines what should be output during the time-dependent simulation.
@@ -157,10 +159,17 @@ contains
     !%Option gauge_field 1024
     !% If set, outputs the vector gauge field corresponding to a uniform (but time dependent) 
     !% external electrical potential. This is only useful in a time-dependent periodic run
+    !%Option temperature 2048
+    !% If set, the ionic temperature at each step is printed.
     !%End
 
     ! by default print multipoles, coordinates and energy
-    default = 2**(OUT_MULTIPOLES - 1) + 2**(OUT_COORDS - 1) + 2**(OUT_ENERGY - 1) + 2**(OUT_GAUGE_FIELD - 1)
+    default = &
+         2**(OUT_MULTIPOLES - 1) +  &
+         2**(OUT_COORDS - 1) +      &
+         2**(OUT_TEMPERATURE - 1) + &
+         2**(OUT_ENERGY - 1) +      &
+         2**(OUT_GAUGE_FIELD - 1)
 
     call loct_parse_int(check_inp('TDOutput'), default, flags)
 
@@ -172,6 +181,7 @@ contains
 
     !special cases
     w%out(OUT_COORDS)%write = w%out(OUT_COORDS)%write .and. ions_move
+    w%out(OUT_TEMPERATURE)%write = w%out(OUT_TEMPERATURE)%write .and. ions_move
     w%out(OUT_GAUGE_FIELD)%write = w%out(OUT_GAUGE_FIELD)%write .and. with_gauge_field
     w%out(OUT_LASER)%write = w%out(OUT_LASER)%write .and. (h%ep%no_lasers > 0)
 
@@ -303,6 +313,9 @@ contains
         call write_iter_init(w%out(OUT_COORDS)%handle, first, &
           dt/units_out%time%factor, trim(io_workpath("td.general/coordinates")))
 
+      if(w%out(OUT_TEMPERATURE)%write) &
+        call write_iter_init(w%out(OUT_TEMPERATURE)%handle, first, M_ONE, trim(io_workpath("td.general/temperature")))
+
       if(w%out(OUT_POPULATIONS)%write) &
         call write_iter_init(w%out(OUT_POPULATIONS)%handle, first, &
           dt/units_out%time%factor, trim(io_workpath("td.general/populations")))
@@ -394,6 +407,9 @@ contains
 
     if(w%out(OUT_COORDS)%write) &
       call td_write_coordinates(w%out(OUT_COORDS)%handle, gr, geo, i)
+
+    if(w%out(OUT_TEMPERATURE)%write) &
+      call td_write_temperature(w%out(OUT_TEMPERATURE)%handle, geo, i)
 
     if(w%out(OUT_POPULATIONS)%write) &
       call td_write_populations(w%out(OUT_POPULATIONS)%handle, gr%m, st, &
@@ -803,6 +819,43 @@ contains
 
     call pop_sub()
   end subroutine td_write_coordinates
+
+
+  ! ---------------------------------------------------------
+  subroutine td_write_temperature(out_temperature, geo, iter)
+    type(c_ptr),       intent(in) :: out_temperature
+    type(geometry_t),  intent(in) :: geo
+    integer,           intent(in) :: iter
+
+    call push_sub('td_write.td_write_temperature')
+
+    if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
+
+    if(iter == 0) then
+      call td_write_print_header_init(out_temperature)
+
+      ! first line: column names
+      call write_iter_header_start(out_temperature)
+      call write_iter_header(out_temperature, 'Temperature')
+      call write_iter_nl(out_temperature)
+
+      ! second line: units
+      call write_iter_string(out_temperature, '#[Iter n.]')
+      call write_iter_header(out_temperature, '[' // trim(units_out%time%abbrev) // ']')
+      call write_iter_string(out_temperature, '        [K]')
+      call write_iter_nl(out_temperature)
+
+      call td_write_print_header_end(out_temperature)
+    end if
+
+    call write_iter_start(out_temperature)
+
+    call write_iter_double(out_temperature, ion_dynamics_temperature(geo), 1)
+
+    call write_iter_nl(out_temperature)
+
+    call pop_sub()
+  end subroutine td_write_temperature
 
 
   ! ---------------------------------------------------------

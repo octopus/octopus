@@ -47,10 +47,11 @@ module ion_dynamics_m
     ion_dynamics_init,                     &
     ion_dynamics_end,                      &
     ion_dynamics_propagate,                &
-    ion_dynamics_propagate_vel,     &
+    ion_dynamics_propagate_vel,            &
     ion_dynamics_save_state,               &
     ion_dynamics_restore_state,            &
     ion_dynamics_ions_move,                &
+    ion_dynamics_temperature,              &
     ion_dynamics_kinetic_energy
 
   integer, parameter ::   &
@@ -160,14 +161,14 @@ contains
         call loct_ran_end(random_gen_pointer)
       end if
 
-      kin1 = ion_dynamics_kinetic_energy(this, geo)
+      kin1 = ion_dynamics_kinetic_energy(geo)
 
       call cm_vel(geo, x)
       do i = 1, geo%natoms
         geo%atom(i)%v = geo%atom(i)%v - x
       end do
 
-      kin2 = ion_dynamics_kinetic_energy(this, geo)
+      kin2 = ion_dynamics_kinetic_energy(geo)
 
       do i = 1, geo%natoms
         geo%atom(i)%v(:) =  sqrt(kin1/kin2)*geo%atom(i)%v(:)
@@ -176,7 +177,7 @@ contains
       write(message(1),'(a,f10.4,1x,a)') 'Info: Initial velocities randomly distributed with T =', &
         temperature, 'K'
       write(message(2),'(2x,a,f8.4,1x,a)') '<K>       =', &
-        (ion_dynamics_kinetic_energy(this, geo)/geo%natoms)/units_out%energy%factor, &
+        (ion_dynamics_kinetic_energy(geo)/geo%natoms)/units_out%energy%factor, &
         units_out%energy%abbrev
       write(message(3),'(2x,a,f8.4,1x,a)') '3/2 k_B T =', &
         (M_THREE/M_TWO)*P_Kb*temperature/units_out%energy%factor, &
@@ -237,7 +238,7 @@ contains
       end if
     end if
 
-    geo%kinetic_energy = ion_dynamics_kinetic_energy(this, geo)
+    geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
 
     if(this%method == NOSE_HOOVER) then
       call loct_parse_float(check_inp("NHTStart"), CNST(1.0), this%nh_t_start)
@@ -394,8 +395,7 @@ contains
   end function ion_dynamics_ions_move
   
   ! ---------------------------------------------------------
-  FLOAT pure function ion_dynamics_kinetic_energy(this, geo) result(kinetic_energy)
-    type(ion_dynamics_t),  intent(in) :: this
+  FLOAT pure function ion_dynamics_kinetic_energy(geo) result(kinetic_energy)
     type(geometry_t),      intent(in) :: geo
 
     integer :: iatom
@@ -406,6 +406,14 @@ contains
     end do
 
   end function ion_dynamics_kinetic_energy
+
+  ! ---------------------------------------------------------
+  FLOAT pure function ion_dynamics_temperature(geo) result(temperature)
+    type(geometry_t),      intent(in) :: geo
+
+    temperature = M_TWO/M_THREE*ion_dynamics_kinetic_energy(geo)/(geo%natoms*P_Kb)
+    
+  end function ion_dynamics_temperature
 
 end module ion_dynamics_m
 
