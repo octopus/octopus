@@ -135,40 +135,48 @@ contains
     logical, optional, intent(in) :: all_nodes
 
     integer :: i
+    logical :: have_to_write
 #ifdef HAVE_MPI
     logical :: all_nodes_
-
-    all_nodes_ = .false.
-    if(present(all_nodes)) all_nodes_ = all_nodes
 #endif
 
-    if(flush_messages.and.mpi_grp_is_root(mpi_world)) then
-      open(unit=iunit_err, file='messages.stderr', &
-        action='write', position='append')
-    end if
+    have_to_write = mpi_grp_is_root(mpi_world)
 
-    ! this always writes from ALL nodes
-
-    call flush_msg(stderr, '')
-    write(msg, '(a)') '** Warning:'
-    call flush_msg(stderr, msg)
 #ifdef HAVE_MPI
-    if(all_nodes_) then
-      write(msg , '(a,i4)') '** From node = ', mpi_world%rank
-      call flush_msg(stderr, msg)
+    all_nodes_ = .false.
+    if(present(all_nodes)) then
+      have_to_write = have_to_write .or. all_nodes
+      all_nodes_ = all_nodes
     end if
 #endif
-    do i = 1, no_lines
-      write(msg , '(a,3x,a)') '**', trim(message(i))
+
+    if(have_to_write) then
+
+      if(flush_messages) open(unit=iunit_err, file='messages.stderr', action='write', position='append')
+      
+      call flush_msg(stderr, '')
+      write(msg, '(a)') '** Warning:'
       call flush_msg(stderr, msg)
-    end do
-    call flush_msg(stderr, '')
-#ifdef HAVE_FLUSH
-    call flush(stderr)
+
+#ifdef HAVE_MPI
+      if(all_nodes_) then
+        write(msg , '(a,i4)') '** From node = ', mpi_world%rank
+        call flush_msg(stderr, msg)
+      end if
 #endif
 
-    if(flush_messages.and.mpi_grp_is_root(mpi_world)) then
-      close(iunit_err)
+      do i = 1, no_lines
+        write(msg , '(a,3x,a)') '**', trim(message(i))
+        call flush_msg(stderr, msg)
+      end do
+      call flush_msg(stderr, '')
+
+#ifdef HAVE_FLUSH
+      call flush(stderr)
+#endif
+      
+      if(flush_messages) close(iunit_err)
+      
     end if
 
     return
