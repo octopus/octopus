@@ -59,6 +59,13 @@ module ion_dynamics_m
     VELOCITY_VERLET = 1,  &
     NOSE_HOOVER     = 5
 
+  type nose_hoover_t
+    private
+    FLOAT :: mass
+    FLOAT :: pos
+    FLOAT :: vel
+  end type nose_hoover_t
+
   type ion_dynamics_t
     private
     integer          :: method
@@ -70,14 +77,12 @@ module ion_dynamics_m
     FLOAT, pointer :: old_x(:, :)    
 
     ! variables for the Nose-Hoover thermostat
+    type(nose_hoover_t) :: nh1
+    type(nose_hoover_t) :: nh2
     FLOAT :: nh_t_start
     FLOAT :: nh_t_end
     FLOAT :: nh_end_time
-    FLOAT :: nh_mass
-    FLOAT :: nh_eta_old
-    FLOAT :: nh_eta
-    FLOAT :: nh_chi
-    FLOAT :: nh_e
+    FLOAT :: temp
   end type ion_dynamics_t
 
   type ion_state_t
@@ -241,24 +246,27 @@ contains
     geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
 
     if(this%method == NOSE_HOOVER) then
-      call loct_parse_float(check_inp("NHTStart"), CNST(1.0), this%nh_t_start)
+      call loct_parse_float(check_inp("NHTStart"), CNST(0.0), this%nh_t_start)
       this%nh_t_start = P_Kb*this%nh_t_start
       
-      call loct_parse_float(check_inp("NHTEnd"), CNST(500.0), this%nh_t_end)
+      call loct_parse_float(check_inp("NHTEnd"), CNST(300.0), this%nh_t_end)
       this%nh_t_end = P_Kb*this%nh_t_end
+
+      call loct_parse_float(check_inp("NHEndTime"), CNST(200.0), this%nh_end_time)
       
-      ! do not have any idea on the units ;(
-      call loct_parse_float(check_inp("NHMass"), CNST(100.0), this%nh_mass)
-      call loct_parse_float(check_inp("NHEta"), CNST(0.0), this%nh_eta)
-      call loct_parse_float(check_inp("NHEndTime"), CNST(20.0), this%nh_end_time)
+      call loct_parse_float(check_inp("NHMass"), CNST(300.0), this%nh1%mass)
+      this%nh2%mass = this%nh1%mass
+
+      this%nh1%pos = M_ZERO
+      this%nh2%pos = M_ZERO
+      this%nh1%vel = M_ZERO
+      this%nh2%vel = M_ZERO
 
       ALLOCATE(this%old_x(1:MAX_DIM, 1:geo%natoms), MAX_DIM*geo%natoms)
 
       do iatom = 1, geo%natoms
         this%old_x(1:MAX_DIM, iatom) = geo%atom(iatom)%x(1:MAX_DIM)
       end do
-
-      this%nh_eta_old = this%nh_eta
 
     end if
     
@@ -279,7 +287,8 @@ contains
     FLOAT,                intent(in)    :: dt
     
     integer :: iatom
-    FLOAT   :: temp, eta2, x2(1:MAX_DIM), d
+    FLOAT   :: eta2, x2(1:MAX_DIM), d
+    FLOAT   :: uk
 
     if(.not. ion_dynamics_ions_move(this)) return
 
@@ -301,52 +310,94 @@ contains
       call simul_box_atoms_in_box(sb, geo)
 
     case(NOSE_HOOVER)
-      if (time > this%nh_end_time) then
-        temp = this%nh_t_start + (this%nh_t_end - this%nh_t_start)*time/this%nh_end_time
+
+      ! The implementation of the Nose Hoover thermostat is based on
+      ! Understanding Molecular Simulations" by Frenkel and Smit,
+      ! Appendix E, page 540-542.
+
+      if (time < this%nh_end_time) then
+        this%temp = this%nh_t_start + (this%nh_t_end - this%nh_t_start)*time/this%nh_end_time
       else
-        temp = this%nh_t_end
+        this%temp = this%nh_t_end
       end if
 
-      this%nh_eta_old = this%nh_eta
-
-      ! propagate the thermostat
-      eta2 = this%nh_eta_old
-      this%nh_eta_old = this%nh_eta
-      this%nh_eta = CNST(2.0)*this%nh_eta_old - eta2 + dt**2/this%nh_mass*(CNST(2.0)*geo%kinetic_energy - temp*(3*geo%natoms - 1))
-      this%nh_chi = (CNST(3.0)*this%nh_eta - CNST(4.0)*this%nh_eta_old + eta2)*CNST(0.5)
-      this%nh_e   = CNST(0.5)*this%nh_mass*this%nh_chi**2 + temp*(3*geo%natoms - 1)*this%nh_eta
-      
-      ! and now the atoms
-      d = CNST(1.0)/(CNST(1.0) + CNST(0.5)*this%nh_chi*dt)
+      call chain(this, geo)
 
       do iatom = 1, geo%natoms
-        x2(1:MAX_DIM) = this%old_x(1:MAX_DIM, iatom) 
-        this%old_x(1:MAX_DIM, iatom) = geo%atom(iatom)%x(1:MAX_DIM)
-        geo%atom(iatom)%x(1:MAX_DIM) = x2(1:MAX_DIM) + d*(&
-             CNST(2.0)*geo%atom(iatom)%x(1:MAX_DIM) &
-             - CNST(2.0)*x2(1:MAX_DIM) &
-             + dt**2/geo%atom(iatom)%spec%weight*geo%atom(iatom)%f(1:MAX_DIM))
-        geo%atom(iatom)%v(1:MAX_DIM) = (geo%atom(iatom)%x(1:MAX_DIM) - x2(1:MAX_DIM))/(CNST(2.0)*dt)
+        geo%atom(iatom)%x(1:MAX_DIM) = geo%atom(iatom)%x(1:MAX_DIM) + M_HALF*dt*geo%atom(iatom)%v(1:MAX_DIM)
       enddo
+
     end select
     
   end subroutine ion_dynamics_propagate
+  
+  subroutine chain(this, geo)
+    type(ion_dynamics_t), intent(inout) :: this
+    type(geometry_t),     intent(inout) :: geo
 
+    FLOAT :: g1, g2, ss, uk, dt
+    integer :: iatom
+
+    dt = this%dt
+
+    uk = ion_dynamics_kinetic_energy(geo)
+
+    g2 = (this%nh1%mass*this%nh1%vel**2 - this%temp)/this%nh2%mass
+    this%nh2%vel = this%nh2%vel + g2*dt/CNST(4.0)
+    this%nh1%vel = this%nh1%vel*exp(-this%nh2%vel*dt/CNST(8.0))
+
+    g1 = (CNST(2.0)*uk - M_THREE*geo%natoms*this%temp)/this%nh1%mass
+    this%nh1%vel = this%nh1%vel + g1*dt/CNST(4.0)
+    this%nh1%vel = this%nh1%vel*exp(-this%nh2%vel*dt/CNST(8.0))
+    this%nh1%pos = this%nh1%pos + this%nh1%vel*dt/CNST(2.0)
+    this%nh2%pos = this%nh2%pos + this%nh2%vel*dt/CNST(2.0)
+
+    ss = exp(-this%nh1%vel*dt/CNST(2.0))
+    
+    do iatom = 1, geo%natoms
+      geo%atom(iatom)%v(1:MAX_DIM) = ss*geo%atom(iatom)%v(1:MAX_DIM)
+    enddo
+    
+    uk = uk*ss**2
+
+    this%nh1%vel = this%nh1%vel*exp(-this%nh2%vel*dt/CNST(8.0))
+    g1 = (CNST(2.0)*uk - M_THREE*geo%natoms*this%temp)/this%nh1%mass
+    this%nh1%vel = this%nh1%vel + g1*dt/CNST(4.0)
+    this%nh1%vel = this%nh1%vel*exp(-this%nh2%vel*dt/CNST(8.0))
+
+    g2 = (this%nh1%mass*this%nh1%vel**2 - this%temp)/this%nh2%mass
+    this%nh2%vel = this%nh2%vel + g2*dt/CNST(4.0)
+    
+  end subroutine chain
+  
   subroutine ion_dynamics_propagate_vel(this, geo)
-    type(ion_dynamics_t), intent(in)    :: this
+    type(ion_dynamics_t), intent(inout) :: this
     type(geometry_t),     intent(inout) :: geo
 
     integer :: iatom
 
     if(.not. ion_dynamics_ions_move(this)) return
 
-    do iatom = 1, geo%natoms
-      if(.not. geo%atom(iatom)%move) cycle
+    select case(this%method)
+    case(VELOCITY_VERLET)
+      
+      do iatom = 1, geo%natoms
+        if(.not. geo%atom(iatom)%move) cycle
+        
+        geo%atom(iatom)%v(1:MAX_DIM) = geo%atom(iatom)%v(1:MAX_DIM) &
+             + this%dt/geo%atom(iatom)%spec%weight*M_HALF*(this%oldforce(1:MAX_DIM, iatom) + geo%atom(iatom)%f(1:MAX_DIM))
+        
+      end do
+      
+    case(NOSE_HOOVER)
+      do iatom = 1, geo%natoms
+        geo%atom(iatom)%v(1:MAX_DIM) = geo%atom(iatom)%v(1:MAX_DIM) + this%dt*geo%atom(iatom)%f(1:MAX_DIM)/geo%atom(iatom)%spec%weight
+        geo%atom(iatom)%x(1:MAX_DIM) = geo%atom(iatom)%x(1:MAX_DIM) + M_HALF*this%dt*geo%atom(iatom)%v(1:MAX_DIM)
+      enddo
 
-      geo%atom(iatom)%v(1:MAX_DIM) = geo%atom(iatom)%v(1:MAX_DIM) &
-        + this%dt/geo%atom(iatom)%spec%weight*M_HALF*(this%oldforce(1:MAX_DIM, iatom) + geo%atom(iatom)%f(1:MAX_DIM))
+      call chain(this, geo)
 
-    end do
+    end select
 
   end subroutine ion_dynamics_propagate_vel
 
