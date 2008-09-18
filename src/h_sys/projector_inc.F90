@@ -35,6 +35,7 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, ik)
 #if defined(HAVE_MPI)
   R_TYPE, allocatable   :: reduce_buffer_dest(:)
   type(profile_t), save :: reduce_prof
+  type(submesh_comm_t), allocatable :: smc(:, :, :)
 #endif
 
   call push_sub('projector_inc.project_psi')
@@ -49,6 +50,10 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, ik)
   ! generate the reduce buffer and related structures
 
   ALLOCATE(ireduce(1:npj, 0:MAX_L, -MAX_L:MAX_L), npj*(MAX_L + 1)*(2*MAX_L + 1))
+#if defined(HAVE_MPI)
+  ALLOCATE(smc(1:npj, 0:MAX_L, -MAX_L:MAX_L), npj*(MAX_L + 1)*(2*MAX_L + 1))
+#endif
+
   nreduce = 0
 
   ! count the number of elements in the reduce buffer
@@ -71,7 +76,7 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, ik)
 
   ALLOCATE(reduce_buffer(1:nreduce), nreduce)
 #if defined(HAVE_MPI)
-  if(mesh%parallel_in_domains) ALLOCATE(reduce_buffer_dest(1:nreduce), nreduce)
+  if(.not. async_comm .and. mesh%parallel_in_domains) ALLOCATE(reduce_buffer_dest(1:nreduce), nreduce)
 #endif
 
   ! calculate <p|psi>
@@ -116,6 +121,14 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, ik)
           call X(hgh_project_bra)(mesh, pj(ipj)%sphere, pj(ipj)%hgh_p(ll, mm), dim, pj(ipj)%reltype, lpsi, reduce_buffer(ii:))
         end select
 
+#ifdef HAVE_MPI
+        if(async_comm .and. mesh%parallel_in_domains) then
+          call profiling_in(reduce_prof, "VNLPSI_REDUCE")
+          call X(submesh_comm_reduce)(smc(ipj, ll, mm), pj(ipj)%sphere, mesh, pj(ipj)%reduce_size, reduce_buffer(ii:))
+          call profiling_out(reduce_prof)
+        end if
+#endif
+
       end do ! mm
     end do ! ll
 
@@ -125,7 +138,7 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, ik)
 
   ! reduce <p|psi>
 #if defined(HAVE_MPI)
-  if(mesh%parallel_in_domains) then
+  if(.not. async_comm .and. mesh%parallel_in_domains) then
     call profiling_in(reduce_prof, "VNLPSI_REDUCE")
     call MPI_Allreduce(reduce_buffer, reduce_buffer_dest, nreduce, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
     call profiling_count_transfers(nreduce, reduce_buffer(1))
@@ -148,6 +161,14 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, ik)
       do mm = -ll, ll
 
         ii = ireduce(ipj, ll, mm)
+
+#ifdef HAVE_MPI
+        if(async_comm .and. mesh%parallel_in_domains) then
+          call profiling_in(reduce_prof, "VNLPSI_REDUCE")
+          call X(submesh_comm_finish)(smc(ipj, ll, mm), pj(ipj)%sphere, mesh, pj(ipj)%reduce_size, reduce_buffer(ii:))
+          call profiling_out(reduce_prof)
+        end if
+#endif
 
         select case(pj(ipj)%type)
         case(M_KB)
@@ -185,10 +206,6 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, ik)
   end do
 
   deallocate(reduce_buffer, ireduce)
-
-#ifdef HAVE_MPI
-  if(mesh%parallel_in_domains) deallocate(reduce_buffer_dest)
-#endif
 
   call pop_sub()
 end subroutine X(project_psi)
