@@ -48,6 +48,7 @@ module simul_box_m
     simul_box_dump,             &
     simul_box_init_from_file,   &
     simul_box_atoms_in_box,     &
+    lead_unit_cell_extent,      &
     operator(.eq.),             &
     assignment(=)
 
@@ -62,6 +63,8 @@ module simul_box_m
   integer, parameter, public :: &
     LEFT      = 1,              & ! Lead indices,
     RIGHT     = 2,              & ! L=1, R=2.
+    OUTER     = 1,              & ! Block indices of interface wave functions
+    INNER     = 2,              & ! for source term.
     NLEADS    = 2,              & ! Number of leads.
     TRANS_DIR = 1                 ! Transport is in x-direction.
 
@@ -101,6 +104,9 @@ module simul_box_m
     character(len=32)          :: lead_restart_dir(NLEADS) ! Directory where to find the lead restart files.
     character(len=32)          :: lead_static_dir(NLEADS)  ! Static directory of the lead ground state.
     type(simul_box_t), pointer :: lead_unit_cell(:)        ! Simulation box of the unit cells.
+    ! The next one does not really belong here but since the parsing happens in the simul_box_init
+    ! it makes things a bit easier.
+    character(len=1000)        :: lead_td_pot_formula(NLEADS) ! Td-potential of lead.
   end type simul_box_t
 
   interface operator(.eq.)
@@ -151,7 +157,8 @@ contains
         LEAD_DATASET     = 1, &
         LEAD_RESTART_DIR = 2, &
         LEAD_STATIC_DIR  = 3, &
-        ADD_UNIT_CELLS   = 4
+        ADD_UNIT_CELLS   = 4, &
+        TD_POT_FORMULA   = 5
 
       integer :: iunit, il
 
@@ -173,7 +180,6 @@ contains
       !%  lead_static_dir  | "directory" | "directory"
       !%  add_unit_cells   | nl          | nr
       !%  td_pot_formula   | "formula"   | "formula"
-      !%  td_pot_file      | "file"      | "file"
       !% %
       !% </pre>
       !%
@@ -213,10 +219,6 @@ contains
       !%Option td_pot_formula 5
       !% Defines a spatially local time-dependent potential in the leads as an
       !% analytic expression.
-      !%Option td_pot_file 6
-      !% Defines a spatially local time-dependent potential in the leads as a
-      !% datafile.
-      !% <tt>td_pot_formula</tt> and <tt>td_pot_file</tt> may only be used exclusively.
       !%End
       if(loct_parse_block(check_inp('OpenBoundaries'), blk).eq.0) then
         ! Open boundaries are only possible for rectangular simulation boxes.
@@ -297,6 +299,14 @@ contains
             ! cell at both ends to calculate the extended eigenstates.
             if(calc_mode_is(CM_GS)) then
               sb%add_unit_cells = sb%add_unit_cells + 1
+            end if
+          case(TD_POT_FORMULA)
+            sb%lead_td_pot_formula = '0'
+            call loct_parse_block_string(blk, nr, 1, sb%lead_td_pot_formula(LEFT))
+            if(ncols.eq.3) then
+              call loct_parse_block_string(blk, nr, 2, sb%lead_td_pot_formula(RIGHT))
+            else
+              sb%lead_td_pot_formula(RIGHT) = sb%lead_td_pot_formula(LEFT)
             end if
           case default
           end select
@@ -1216,7 +1226,26 @@ contains
   end subroutine read_lead_unit_cell
 
 
-  !--------------------------------------------------------------
+  ! --------------------------------------------------------------
+  ! Returns the extent of the lead unit cell of lead il in transport
+  ! direction. Returns -1 if open boundaries are not used.
+  integer function lead_unit_cell_extent(sb, il)
+    type(simul_box_t), intent(in) :: sb
+    integer                       :: il
+    
+    call push_sub('simul_box.lead_unit_cell_extent')
+    
+    if(sb%open_boundaries) then
+      lead_unit_cell_extent = int(2*sb%lead_unit_cell(il)%lsize(TRANS_DIR)/sb%h(TRANS_DIR))
+    else
+      lead_unit_cell_extent = -1
+    end if
+
+    call pop_sub()
+  end function lead_unit_cell_extent
+
+
+  ! --------------------------------------------------------------
   subroutine simul_box_init_from_file(sb, iunit)
     type(simul_box_t), intent(inout) :: sb
     integer,           intent(in)    :: iunit
@@ -1313,7 +1342,7 @@ contains
     if(.not.(sb1%h .app. sb2%h))                     return
     if(.not.(sb1%box_offset .app. sb2%box_offset))   return
     if(sb1%open_boundaries.neqv.sb2%open_boundaries)   return
-    
+
     if (sb1%open_boundaries) then
       if(any(sb1%add_unit_cells.ne.sb2%add_unit_cells))     return
       if(any(sb1%lead_restart_dir.ne.sb2%lead_restart_dir)) return
@@ -1327,7 +1356,7 @@ contains
   end function simul_box_is_eq
 
 
-  !--------------------------------------------------------------
+  ! --------------------------------------------------------------
   recursive subroutine simul_box_copy(sbout, sbin)
     type(simul_box_t), intent(out) :: sbout
     type(simul_box_t), intent(in)  :: sbin
@@ -1360,6 +1389,7 @@ contains
     end if
   end subroutine simul_box_copy
 end module simul_box_m
+
 
 !! Local Variables:
 !! mode: f90
