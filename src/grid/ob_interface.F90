@@ -55,6 +55,7 @@ module ob_interface_m
     integer          :: np
     integer, pointer :: index(:)       ! (np)
     integer          :: index_range(2)
+    logical          :: offdiag_invertible
   end type interface_t
 
 contains
@@ -62,20 +63,23 @@ contains
   ! ---------------------------------------------------------
   ! Calculate the member points of the interface region.
   subroutine interface_init(m, sb, der_discr, intf, il)
-    type(mesh_t),      intent(in)  :: m
-    type(simul_box_t), intent(in)  :: sb
+    type(mesh_t),        intent(in)  :: m
+    type(simul_box_t),   intent(in)  :: sb
     type(derivatives_t), intent(in)  :: der_discr
-    type(interface_t), intent(out) :: intf
-    integer,           intent(in)  :: il
+    type(interface_t),   intent(out) :: intf
+    integer,             intent(in)  :: il
 
     logical :: ok
     integer :: i, from(MAX_DIM), to(MAX_DIM), unit_cell_extent, dir, lr
 
     call push_sub('ob_interface.interface_init')
 
-    unit_cell_extent = int(2*sb%lead_unit_cell(il)%lsize(TRANS_DIR)/sb%h(TRANS_DIR))
-
-    intf%extent = maxval((/stencil_extent(der_discr, TRANS_DIR), unit_cell_extent/))
+    intf%extent = maxval((/stencil_extent(der_discr, TRANS_DIR), lead_unit_cell_extent(sb, il)/))
+    if(intf%extent.eq.stencil_extent(der_discr, TRANS_DIR)) then
+      intf%offdiag_invertible = .true.
+    else
+      intf%offdiag_invertible = .false.
+    end if
 
     intf%np = intf%extent*m%l(2)*m%l(3)
 
