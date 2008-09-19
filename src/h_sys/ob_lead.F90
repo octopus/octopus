@@ -26,11 +26,13 @@ module ob_lead_m
   use grid_m
   use lalg_adv_m
   use lalg_basic_m
+  use loct_parser_m
   use math_m
   use messages_m
   use nl_operator_m
   use ob_interface_m
   use simul_box_m
+  use string_m
 
   implicit none
   private
@@ -39,7 +41,8 @@ module ob_lead_m
     apply_coupling, &
     lead_diag,      &
     lead_offdiag,   &
-    lead_green
+    lead_green,     &
+    lead_td_pot
 
 contains
 
@@ -289,7 +292,7 @@ contains
       green(j, j) = green(j, j) + energy + threshold*M_zI
     end do
     det = lalg_inverter(np, green, invert = .true.)
-    call symmetric_average(green, np)
+    call matrix_symmetric_average(green, np)
     det = aimag(green(1, 1))
     do i = 2, np
       det = det + aimag(green(i, i))
@@ -326,6 +329,42 @@ contains
 
     call pop_sub()
   end subroutine apply_coupling
+
+
+  ! ---------------------------------------------------------
+  ! Calculates the time-dependent lead potential from formula string.
+  subroutine lead_td_pot(td_pot, formula, n_steps, tstep)
+    FLOAT,            intent(out) :: td_pot(0:n_steps+1, NLEADS)
+    character(len=*), intent(in)  :: formula(:)
+    integer,          intent(in)  :: n_steps
+    FLOAT,            intent(in)  :: tstep
+
+    integer             :: it, il
+    FLOAT               :: t
+    FLOAT, allocatable  :: pot_im(:)
+    character(len=1024) :: tmp_c_string
+
+    call push_sub('ob_lead.lead_td_pot')
+
+    ALLOCATE(pot_im(0:n_steps+1), n_steps+2)
+
+    ! Calculate td potential.
+    do il = 1, NLEADS
+      tmp_c_string = formula(il)
+      call conv_to_c_string(tmp_c_string)
+
+      td_pot(0, il) = M_ZERO
+      do it = 1, n_steps+1
+        t = it*tstep
+        call loct_parse_expression(td_pot(it, il), pot_im(it), &
+          M_ZERO, M_ZERO, M_ZERO, M_ZERO, t, tmp_c_string)
+      end do
+    end do
+
+    deallocate(pot_im)
+    call pop_sub()
+  end subroutine lead_td_pot
+
 end module ob_lead_m
 
 
