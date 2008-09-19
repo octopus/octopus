@@ -377,7 +377,7 @@ module blas_m
   end interface
 
   ! ----------------- symm, hemm ------------------
-  interface blas_hemm
+  interface blas_symm
     subroutine ssymm(side, uplo, m, n, alpha, a, lda, b, ldb, beta, c, ldc)
       character(1), intent(in)    :: side, uplo
       integer,      intent(in)    :: m, n, lda, ldb, ldc

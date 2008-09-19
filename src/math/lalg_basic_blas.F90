@@ -607,7 +607,7 @@ end subroutine FNAME(gemm2t_2)
 ! The following matrix multiplications all expect upper triangular matrices for a.
 ! For real matrices, a = a^T, for complex matrices a = a^H.
 
-subroutine FNAME(hemm_1)(m, n, side, alpha, a, b, beta, c)
+subroutine FNAME(symm_1)(m, n, side, alpha, a, b, beta, c)
   integer,      intent(in)    :: m, n
   character(1), intent(in)    :: side
   TYPE1,        intent(in)    :: alpha, beta, a(:, :), b(:, :)
@@ -616,16 +616,17 @@ subroutine FNAME(hemm_1)(m, n, side, alpha, a, b, beta, c)
   integer :: lda
 
   select case(side)
-    case('L', 'l')
-      lda = max(1, m)
-    case('R', 'r')
-      lda = max(1, n)
+  case('l', 'L')
+    lda = max(1, m)
+  case('r', 'R')
+    lda = max(1, n)
   end select
+  
+  call blas_symm(side, 'U', m, n, alpha, a(1, 1), lda, b(1, 1), m, beta, c(1, 1), m)
+end subroutine FNAME(symm_1)
 
-  call blas_hemm(side, 'U', m, n, alpha, a(1, 1), lda, b(1, 1), m, beta, c(1, 1), m)
-end subroutine FNAME(hemm_1)
 
-subroutine FNAME(hemm_2)(m, n, side, alpha, a, b, beta, c)
+subroutine FNAME(symm_2)(m, n, side, alpha, a, b, beta, c)
   integer,      intent(in)    :: m, n
   character(1), intent(in)    :: side
   TYPE1,        intent(in)    :: alpha, beta, a(:, :, :), b(:, :)
@@ -634,14 +635,15 @@ subroutine FNAME(hemm_2)(m, n, side, alpha, a, b, beta, c)
   integer :: lda
 
   select case(side)
-    case('L', 'l')
-      lda = max(1, m)
-    case('R', 'r')
-      lda = max(1, n)
+  case('l', 'L')
+    lda = max(1, m)
+  case('r', 'R')
+    lda = max(1, n)
   end select
+  
+  call blas_symm(side, 'U', m, n, alpha, a(1, 1, 1), lda, b(1, 1), m, beta, c(1, 1, 1), m)
+end subroutine FNAME(symm_2)
 
-  call blas_hemm(side, 'U', m, n, alpha, a(1, 1, 1), lda, b(1, 1), m, beta, c(1, 1, 1), m)
-end subroutine FNAME(hemm_2)
 
 ! Expects upper triangular matrix for c.
 ! trans = 'N' => C <- alpha*A*A^H + beta*C

@@ -41,7 +41,7 @@ module lalg_basic_m
     lalg_gemmt,  &
     lalg_gemm2t, &
     lalg_trmm,   &
-    lalg_hemm,   &
+    lalg_symm,   &
     lalg_herk
 
 
@@ -184,17 +184,17 @@ module lalg_basic_m
     module procedure trmm_1_4
   end interface
 
-  interface lalg_hemm
-    module procedure hemm_1_1
-    module procedure hemm_1_2
-    module procedure hemm_1_3
-    module procedure hemm_1_4
-    module procedure hemm_2_1
-    module procedure hemm_2_2
-    module procedure hemm_2_3
-    module procedure hemm_2_4
+  interface lalg_symm
+    module procedure symm_1_1
+    module procedure symm_1_2
+    module procedure symm_1_3
+    module procedure symm_1_4
+    module procedure symm_2_1
+    module procedure symm_2_2
+    module procedure symm_2_3
+    module procedure symm_2_4
   end interface
-
+  
   interface lalg_herk
     module procedure herk_1_1
     module procedure herk_1_2
