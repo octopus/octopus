@@ -99,7 +99,7 @@ module states_m
 
     logical            :: open_boundaries
     CMPLX, pointer     :: zphi(:, :, :, :)  ! Free states for open boundary calculations.
-    CMPLX, pointer     :: ob_intf_psi(:, :, :, :, :)
+    CMPLX, pointer     :: ob_intf_psi(:, :, :, :, :, :) ! (np, 2, st%d%dim, st%nst, st%d%nik, nleads)
     FLOAT, pointer     :: ob_rho(:, :, :)   ! Density of the lead unit cells.
     FLOAT, pointer     :: ob_eigenval(:, :) ! Eigenvalues of free states.
     type(states_dim_t) :: ob_d              ! Dims. of the unscattered systems.
@@ -297,6 +297,7 @@ contains
       st%ob_d%dim = ob_d(LEFT)
       st%ob_nst   = ob_st(LEFT)
       st%ob_d%nik = ob_k(LEFT)
+      call distributed_nullify(st%ob_d%kpt, 0)
       if((st%d%ispin.eq.UNPOLARIZED.and.st%ob_d%dim.ne.1) .or.   &
         (st%d%ispin.eq.SPIN_POLARIZED.and.st%ob_d%dim.ne.1) .or. &
         (st%d%ispin.eq.SPINORS.and.st%ob_d%dim.ne.2)) then
@@ -789,8 +790,8 @@ contains
     end if
 
     if(calc_mode_is(CM_TD).and.st%open_boundaries) then
-      alloc_size = m%lead_unit_cell(LEFT)%np*st%d%dim*st%nst*st%d%nik*NLEADS
-      ALLOCATE(st%ob_intf_psi(m%lead_unit_cell(LEFT)%np, st%d%dim, st%nst, st%d%nik, NLEADS), alloc_size)
+      alloc_size = m%lead_unit_cell(LEFT)%np*2*st%d%dim*st%nst*st%d%nik*2*NLEADS
+      ALLOCATE(st%ob_intf_psi(m%lead_unit_cell(LEFT)%np, 2, st%d%dim, st%nst, st%d%nik, NLEADS), alloc_size)
 
       st%ob_intf_psi = M_z0
     end if
