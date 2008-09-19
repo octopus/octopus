@@ -400,8 +400,12 @@ contains
         call zrestart_read_function(dir, filename, gs_mesh, tmp, err)
         ! Here we use the fact that transport is in x-direction (x is the index
         ! running slowest).
-        st%ob_intf_psi(1:lead_np, idim, ist, ik, LEFT)  = tmp(1:lead_np)
-        st%ob_intf_psi(1:lead_np, idim, ist, ik, RIGHT) = tmp(NP+lead_np+1:NP+2*lead_np)
+        ! Outer block.
+        st%ob_intf_psi(1:lead_np, OUTER, idim, ist, ik, LEFT)  = tmp(1:lead_np)
+        st%ob_intf_psi(1:lead_np, OUTER, idim, ist, ik, RIGHT) = tmp(NP+lead_np+1:NP+2*lead_np)
+        ! Inner block.
+        st%ob_intf_psi(1:lead_np, INNER, idim, ist, ik, LEFT)  = tmp(lead_np+1:2*lead_np)
+        st%ob_intf_psi(1:lead_np, INNER, idim, ist, ik, RIGHT) = tmp(NP+1:NP+lead_np)
       end if
       if(err.le.0) then
         ierr = ierr + 1
@@ -533,7 +537,7 @@ contains
         call zrestart_read_function(dir, filename, gs_mesh, tmp, err)
         ! Here we use the fact that transport is in x-direction (x is the index
         ! running slowest).
-        st%zpsi(1:NP, idim, ist, ik)                    = tmp(lead_np+1:NP+lead_np)
+        st%zpsi(1:NP, idim, ist, ik) = tmp(lead_np+1:NP+lead_np)
       end if
       if(err.le.0) then
         filled(idim, ist, ik) = .true.
