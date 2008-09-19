@@ -23,24 +23,26 @@ module td_rti_m
   use batch_m
   use cube_function_m
   use datasets_m
+  use exponential_m
+  use exponential_split_m
   use fourier_space_m
   use gauge_field_m
   use geometry_m
+  use hamiltonian_m
   use ion_dynamics_m
   use lalg_basic_m
   use lasers_m
   use loct_parser_m
   use math_m
-  use messages_m
   use mesh_function_m
+  use messages_m
+  use ob_rti_m
+  use ob_terms_m
   use profiling_m
   use sparskit_m
   use states_m
-  use exponential_m
-  use exponential_split_m
-  use td_trans_rti_m
-  use v_ks_m
   use varinfo_m
+  use v_ks_m
 
   implicit none
 
@@ -70,13 +72,13 @@ module td_rti_m
   FLOAT, parameter :: scf_threshold = CNST(1.0e-3)
 
   type td_rti_t
-    integer           :: method         ! Which evolution method to use.
-    type(exponential_t)    :: te             ! How to apply the propagator (e^{-i H \Delta t}).
-    FLOAT, pointer    :: v_old(:, :, :) ! Storage of the KS potential of previous iterations.
-    FLOAT, pointer    :: vmagnus(:, :, :) ! Auxiliary function to store the Magnus potentials.
-    type(zcf_t)       :: cf               ! Auxiliary cube for split operator methods.
-    type(transport_t) :: trans            ! For transport calculations: leads, memory
-    logical           :: scf_propagation
+    integer             :: method           ! Which evolution method to use.
+    type(exponential_t) :: te               ! How to apply the propagator (e^{-i H \Delta t}).
+    FLOAT, pointer      :: v_old(:, :, :)   ! Storage of the KS potential of previous iterations.
+    FLOAT, pointer      :: vmagnus(:, :, :) ! Auxiliary function to store the Magnus potentials.
+    type(zcf_t)         :: cf               ! Auxiliary cube for split operator methods.
+    type(ob_terms_t)    :: ob               ! For open boundaries: leads, memory
+    logical             :: scf_propagation
   end type td_rti_t
 
 #ifdef HAVE_SPARSKIT
@@ -128,15 +130,16 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_rti_init(gr, st, tr, dt, max_iter, have_fields)
-    type(grid_t),   intent(in)    :: gr
-    type(states_t), intent(in)    :: st
-    type(td_rti_t), intent(inout) :: tr
-    FLOAT,          intent(in)    :: dt
-    integer,        intent(in)    :: max_iter
-    logical,        intent(in)    :: have_fields ! whether there is an associated "field"
-                                                 ! that must be propagated (currently ions
-                                                 ! or a gauge field).
+  subroutine td_rti_init(gr, st, h, tr, dt, max_iter, have_fields)
+    type(grid_t),   intent(in)      :: gr
+    type(states_t), intent(in)      :: st
+    type(hamiltonian_t), intent(in) :: h
+    type(td_rti_t), intent(inout)   :: tr
+    FLOAT,          intent(in)      :: dt
+    integer,        intent(in)      :: max_iter
+    logical,        intent(in)      :: have_fields ! whether there is an associated "field"
+                                                   ! that must be propagated (currently ions
+                                                   ! or a gauge field).
 
     integer :: default_propagator
 
@@ -314,7 +317,7 @@ contains
     case(PROP_MAGNUS)
       ALLOCATE(tr%vmagnus(NP, st%d%nspin, 2), NP*st%d%nspin*2)
     case(PROP_CRANK_NICHOLSON_SRC_MEM)
-      call cn_src_mem_init(st, gr, tr%trans, dt, max_iter)
+      call ob_rti_init(st, gr, h, tr%ob, dt, max_iter)
     case default
       call input_error('TDEvolutionMethod')
     end select
@@ -370,7 +373,7 @@ contains
     case(PROP_SUZUKI_TROTTER, PROP_SPLIT_OPERATOR)
       call zcf_free(tr%cf)
     case(PROP_CRANK_NICHOLSON_SRC_MEM)
-      call cn_src_mem_end(tr%trans)
+      call ob_rti_end(tr%ob)
     end select
     
     call exponential_end(tr%te)       ! clean propagator method
@@ -902,11 +905,7 @@ contains
     subroutine td_crank_nicholson_src_mem()
       call push_sub('td_rti.td_crank_nicholson_src_mem')
       
-      call cn_src_mem_dt(tr%trans%intface, tr%trans%mem_type, tr%trans%mem_coeff, tr%trans%mem_sp_coeff, &
-        tr%trans%st_intface,ks, h, st, gr, tr%trans%energy, tr%trans%q, &
-        dt, t, max_iter, tr%trans%src_mem_u, tr%trans%lead%td_pot, nt, &
-        tr%trans%src_prev, tr%trans%diag, tr%trans%offdiag, tr%trans%st_psi0, &
-        tr%trans%mem_s, tr%trans%additional_terms, tr%trans%sp2full_map)
+      call cn_src_mem_dt(tr%ob, st, ks, h, gr, max_iter, dt, t, nt)
 
       call pop_sub()
     end subroutine td_crank_nicholson_src_mem
