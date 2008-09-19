@@ -100,6 +100,7 @@ contains
       this%nlocal          = total
       this%nglobal         = total
       this%parallel        = .false.
+      nullify(this%range, this%num)
       call mpi_grp_init(this%mpi_grp, -1)
       
 #ifdef HAVE_MPI
