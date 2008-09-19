@@ -66,7 +66,8 @@ module math_m
     member,                     &
     make_idx_set,               &
     infinity_norm,              &
-    symmetric_average,          &
+    matrix_symmetric_average,   &
+    matrix_symmetrize,          &
     interpolation_coefficients, &
     interpolate,                &
     get_blocks,                 &
@@ -183,8 +184,12 @@ module math_m
     module procedure dinfinity_norm, zinfinity_norm
   end interface
 
-  interface symmetric_average
-    module procedure dsymmetric_average, zsymmetric_average
+  interface matrix_symmetric_average
+    module procedure dmatrix_symmetric_average, zmatrix_symmetric_average
+  end interface
+
+  interface matrix_symmetrize
+    module procedure dmatrix_symmetrize, zmatrix_symmetrize
   end interface
 
 contains
@@ -824,7 +829,8 @@ contains
     call push_sub('math.zqmr_sym_spec_dotp')
 
     np_p => np
-    call zqmr_sym_gen_dotp(np, x, b, op, dotu_qmr, nrm2_qmr, prec, iter, residue, threshold, showprogress)
+    call zqmr_sym_gen_dotp(np, x, b, op, dotu_qmr, nrm2_qmr, prec, iter, &
+      residue, threshold, showprogress, converged)
 
     call pop_sub()
   end subroutine zqmr_sym_spec_dotp
@@ -868,7 +874,7 @@ contains
 
     np_p => np
     call zqmr_gen_dotp(np, x, b, op, opt, dotu_qmr, nrm2_qmr, &
-                       prec, prect, iter, residue, threshold, showprogress)
+      prec, prect, iter, residue, threshold, showprogress, converged)
 
     call pop_sub()
   end subroutine zqmr_spec_dotp
