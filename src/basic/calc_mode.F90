@@ -39,7 +39,6 @@ module calc_mode_m
     CM_OPT_CONTROL        =   7,  &
     CM_LR_POL             =   8,  &
     CM_CASIDA             =   9,  &
-    CM_TD_TRANSPORT       =  10,  &
     CM_VDW                =  11,  &
     CM_PHONONS_LR         =  12,  &
     CM_RAMAN              =  13,  &
@@ -74,7 +73,7 @@ module calc_mode_m
       par_mask = ibset(par_mask, P_STRATEGY_KPOINTS - 1)
 
       select case(calc_mode_id)
-      case(CM_TD_TRANSPORT, CM_TD, CM_GS)
+      case(CM_TD, CM_GS)
         par_mask = ibset(par_mask, P_STRATEGY_STATES - 1)
       case(CM_CASIDA)
         par_mask = ibset(par_mask, P_STRATEGY_OTHER - 1)
@@ -91,7 +90,7 @@ module calc_mode_m
       par_mask = ibset(par_mask, P_STRATEGY_DOMAINS - 1) ! all modes are parallel in domains
 
       select case(calc_mode_id)
-      case(CM_TD_TRANSPORT, CM_TD)
+      case(CM_TD)
         par_mask = ibset(par_mask, P_STRATEGY_STATES - 1)
       case(CM_CASIDA)
         par_mask = ibset(par_mask, P_STRATEGY_OTHER - 1)

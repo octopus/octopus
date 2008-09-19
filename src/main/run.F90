@@ -50,7 +50,6 @@ module run_prog_m
   use unocc_m
   use varinfo_m
   use vdw_m
-  use td_transport_m
 
   implicit none
 
@@ -115,8 +114,6 @@ contains
       call opt_control_run(sys, h)
     case(CM_CASIDA)
       call casida_run(sys, h, fromScratch)
-    case(CM_TD_TRANSPORT)
-      call td_transport_run(sys, h, fromScratch)
     case(CM_RAMAN)
       call raman_run(sys, h, fromscratch)
     case(CM_ONE_SHOT)
