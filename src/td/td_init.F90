@@ -148,7 +148,7 @@ subroutine td_init(sys, h, td)
   !%End
   call loct_parse_logical(check_inp("RecalculateGSDuringEvolution"), .false., td%recalculate_gs)
 
-  call td_rti_init(sys%gr, sys%st, td%tr, td%dt, td%max_iter, &
+  call td_rti_init(sys%gr, sys%st, h, td%tr, td%dt, td%max_iter, &
        ion_dynamics_ions_move(td%ions) .or. gauge_field_is_applied(h%ep%gfield))
   if(td%dynamics == BO)  call scf_init(sys%gr, sys%geo, td%scf, sys%st, h)
   if(h%ep%no_lasers>0.and.mpi_grp_is_root(mpi_world)) then
