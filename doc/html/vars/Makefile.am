@@ -21,12 +21,12 @@
 
 docdir = $(pkgdatadir)/doc/vars
 
-dist_doc_DATA =     \
-	alpha.js    \
+dist_doc_DATA = \
+	alpha.js \
 	sections.js \
 	vars_index.html \
-	Execution.html             \
-	Calculation_Modes.html     \
+	Execution.html \
+	Calculation_Modes.html \
 	Hamiltonian.html \
 	Linear_Response.html \
 	Math.html \
@@ -36,6 +36,7 @@ dist_doc_DATA =     \
 	States.html \
 	System.html \
 	Time_Dependent.html \
+	Open_Boundaries.html \
 	Utilities.html
 
 CLEANFILES = $(dist_doc_DATA)
@@ -56,7 +57,7 @@ SCF.html: RUN_SCRIPT
 States.html: RUN_SCRIPT
 System.html: RUN_SCRIPT
 Time_Dependent.html: RUN_SCRIPT
-Transport.html: RUN_SCRIPT
+Open_Boundaries.html: RUN_SCRIPT
 Unoccupied_States.html: RUN_SCRIPT
 Utilities.html: RUN_SCRIPT
 

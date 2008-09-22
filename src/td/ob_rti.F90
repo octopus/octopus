@@ -92,7 +92,7 @@ contains
     !%Variable OpenBoundariesBiCGMaxIter
     !%Type integer
     !%Default 100
-    !%Section OpenBoundaries
+    !%Section Open Boundaries
     !%Description
     !% Sets the maximum iteration number for the BiCG linear solver in
     !% the Crank-Nicholson procedure.
@@ -105,7 +105,7 @@ contains
     !%Variable OpenBoundariesBiCGTol
     !%Type integer
     !%Default 1e-12
-    !%Section OpenBoundaries
+    !%Section Open Boundaries
     !%Description
     !% Sets the convergence tolerance for the residue in the BiCG linear solver
     !% in the Crank-Nicholson procedure.
@@ -118,7 +118,7 @@ contains
     !%Variable OpenBoundariesMemType
     !%Type integer
     !%Default save_cpu_time
-    !%Section OpenBoundaries
+    !%Section Open Boundaries
     !%Description
     !% Decides whether the memory coefficients use lots of RAM (default)
     !% or uses a more compact scheme but with the need of more CPU-cycles.
@@ -136,7 +136,7 @@ contains
     !%Variable OpenBoundariesAdditionalTerms
     !%Type flag
     !%Default mem_term + src_term
-    !%Section OpenBoundaries
+    !%Section Open Boundaries
     !%Description
     !% The open boundaries propagator inserts to additional terms in
     !% the Crank-Nicholson scheme: source and memory. With this variable,
