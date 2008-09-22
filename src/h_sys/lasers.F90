@@ -380,6 +380,9 @@ contains
           '(', real(l(i)%pol(2)), ',', aimag(l(i)%pol(2)), '), ', &
           '(', real(l(i)%pol(3)), ',', aimag(l(i)%pol(3)), ')'
       end if
+      write(iunit,'(3x,a,f14.8,3a)') 'Carrier frequency = ', l(i)%omega / units_out%energy%factor, &
+        ' [', trim(units_out%energy%abbrev), ']'
+      write(iunit,'(3x,a)')       'Envelope: ' 
       call tdf_write(l(i)%f, iunit)
 
       ! 1 atomic unit of intensity = 3.5094448e+16 W / cm^2

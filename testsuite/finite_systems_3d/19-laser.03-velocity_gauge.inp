@@ -34,7 +34,7 @@ vector_amplitude = -P_c*electric_amplitude/omega
 
 %TDExternalFields
 vector_potential   | 0 | 0 | 1 | omega | "envelope1" 
-vector_potential   | 0 | 0 | 1 | 0     | "envelope2" envelope_constant | -vector_amplitude | 0.0
+vector_potential   | 0 | 0 | 1 | 0     | "envelope2"
 %
 
 %TDFunctions

@@ -946,43 +946,46 @@ module tdf_m
 
     select case(f%mode)
     case(TDF_CW)
-      write(iunit,'(3x,a)')          'Mode: continuous wave.'
-      write(iunit,'(3x,a,f10.4,3a)') 'Frequency: ', f%omega0/units_inp%energy%factor, &
+      write(iunit,'(6x,a)')          'Mode: continuous wave.'
+      write(iunit,'(6x,a,f10.4,3a)') 'Frequency: ', f%omega0/units_inp%energy%factor, &
         ' [', trim(units_inp%energy%abbrev), ']'
-      write(iunit,'(3x,a,f10.4,a)')  'Amplitude: ', f%a0, ' [a.u]'
+      write(iunit,'(6x,a,f10.4,a)')  'Amplitude: ', f%a0, ' [a.u]'
     case(TDF_GAUSSIAN)
-      write(iunit,'(3x,a)')          'Mode: Gaussian envelope.'
-      write(iunit,'(3x,a,f10.4,3a)') 'Frequency: ', f%omega0/units_inp%energy%factor, &
+      write(iunit,'(6x,a)')          'Mode: Gaussian envelope.'
+      write(iunit,'(6x,a,f10.4,3a)') 'Frequency: ', f%omega0/units_inp%energy%factor, &
         ' [', trim(units_inp%energy%abbrev), ']'
-      write(iunit,'(3x,a,f10.4,a)')  'Amplitude: ', f%a0, ' [a.u]'
-      write(iunit,'(3x,a,f10.4,3a)') 'Width:     ', f%tau0/units_inp%time%factor, &
+      write(iunit,'(6x,a,f10.4,a)')  'Amplitude: ', f%a0, ' [a.u]'
+      write(iunit,'(6x,a,f10.4,3a)') 'Width:     ', f%tau0/units_inp%time%factor, &
         ' [', trim(units_inp%time%abbrev), ']'
-      write(iunit,'(3x,a,f10.4,3a)') 'Middle t:  ', f%t0/units_inp%time%factor, &
+      write(iunit,'(6x,a,f10.4,3a)') 'Middle t:  ', f%t0/units_inp%time%factor, &
         ' [', trim(units_inp%time%abbrev), ']'
     case(TDF_COSINOIDAL)
-      write(iunit,'(3x,a)') 'Mode: cosinoidal envelope.'
-      write(iunit,'(3x,a,f10.4,3a)') 'Frequency: ', f%omega0/units_inp%energy%factor, &
+      write(iunit,'(6x,a)') 'Mode: cosinoidal envelope.'
+      write(iunit,'(6x,a,f10.4,3a)') 'Frequency: ', f%omega0/units_inp%energy%factor, &
         ' [', trim(units_inp%energy%abbrev), ']'
-      write(iunit,'(3x,a,f10.4,a)')  'Amplitude: ', f%a0, ' [a.u]'
-      write(iunit,'(3x,a,f10.4,3a)') 'Width:     ', f%tau0/units_inp%time%factor, &
+      write(iunit,'(6x,a,f10.4,a)')  'Amplitude: ', f%a0, ' [a.u]'
+      write(iunit,'(6x,a,f10.4,3a)') 'Width:     ', f%tau0/units_inp%time%factor, &
         ' [', trim(units_inp%time%abbrev), ']'
-      write(iunit,'(3x,a,f10.4,3a)') 'Middle t:  ', f%t0/units_inp%time%factor, &
+      write(iunit,'(6x,a,f10.4,3a)') 'Middle t:  ', f%t0/units_inp%time%factor, &
         ' [', trim(units_inp%time%abbrev), ']'
     case(TDF_TRAPEZOIDAL)
-      write(iunit,'(3x,a)') 'Mode: trapezoidal envelope.'
-      write(iunit,'(3x,a,f10.4,3a)') 'Frequency: ', f%omega0/units_inp%energy%factor, &
+      write(iunit,'(6x,a)') 'Mode: trapezoidal envelope.'
+      write(iunit,'(6x,a,f10.4,3a)') 'Frequency: ', f%omega0/units_inp%energy%factor, &
         ' [', trim(units_inp%energy%abbrev), ']'
-      write(iunit,'(3x,a,f10.4,a)')  'Amplitude: ', f%a0, ' [a.u]'
-      write(iunit,'(3x,a,f10.4,3a)') 'Width:     ', f%tau0/units_inp%time%factor, &
+      write(iunit,'(6x,a,f10.4,a)')  'Amplitude: ', f%a0, ' [a.u]'
+      write(iunit,'(6x,a,f10.4,3a)') 'Width:     ', f%tau0/units_inp%time%factor, &
         ' [', trim(units_inp%time%abbrev), ']'
-      write(iunit,'(3x,a,f10.4,3a)') 'Middle t:  ', f%t0/units_inp%time%factor, &
+      write(iunit,'(6x,a,f10.4,3a)') 'Middle t:  ', f%t0/units_inp%time%factor, &
         ' [', trim(units_inp%time%abbrev), ']'
-      write(iunit,'(3x,a,f10.4,3a)') 'Ramp time: ', f%tau1/units_inp%time%factor, &
+      write(iunit,'(6x,a,f10.4,3a)') 'Ramp time: ', f%tau1/units_inp%time%factor, &
         ' [', trim(units_inp%time%abbrev), ']'
     case(TDF_FROM_FILE)
-      write(iunit,'(3x,a)') 'Mode: time-dependent function read from file.'
+      write(iunit,'(6x,a)') 'Mode: time-dependent function read from file.'
     case(TDF_NUMERICAL)
-      write(iunit,'(3x,a)') 'Mode: time-dependent function stored in a numerical array.'
+      write(iunit,'(6x,a)') 'Mode: time-dependent function stored in a numerical array.'
+    case(TDF_FROM_EXPR)
+      write(iunit,'(6x,a)') 'Mode: time-dependent function parsed from the expression:'
+      write(iunit,'(6x,a)') '      f(t) = '//trim(f%expression)
     end select
 
   end subroutine tdf_write
