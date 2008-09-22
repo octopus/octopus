@@ -4,37 +4,69 @@
 #
 # This input file propagates a 1D Gaussian wavepacket through
 # left and right transparent boundaries.
-# The kinetic energy is calculated by a three-point formula.
+# The kinetic energy is calculated by a nine-point formula.
 
 DebugLevel = 0
 
-FromScratch = yes
+i = {0, 1}
 
-CalculationMode = td_transport
+%CalculationMode
+ gs      | gs      | td
+ "lead_" | "flat_" | "flat_"
+ 1       | 2       | 3
+%
+
+FromScratch = yes
 
 TheoryLevel = independent_particles
 
+Dimensions = 1
 BoxShape = parallelepiped
-
 DerivativesOrder = 1
+Spacing = 0.1
 
 TDTimeStep = 0.05
-TDMaximumIter = 100
+TDMaximumIter = 300
 TDEvolutionMethod = crank_nicholson_src_mem
-TDTransAdditionalTerms = mem_term
 
-Dimensions = 1
-Spacing = 0.1
-%Lsize
-  5 | 0 | 0
+%Species
+ "flat" | 0 | user_defined | 2.0 | "0"
 %
 
-OnlyUserDefinedInitialStates = yes
-ExtraStates = 1
-%UserDefinedStates
-   1 | 1 | 1 | formula | "exp(-x*x)"
+
+# The lead.
+lead_PeriodicDimensions = 1
+%lead_Coordinates
+ "flat" | 0 | 0 | 0
+%
+%lead_Lsize
+ DerivativesOrder*Spacing | 0 | 0
+%
+%lead_KPoints
+ 1 | 0.25 | 0 | 0
+%
+lead_Output = potential
+lead_OutputHow = binary
+
+
+# The central region.
+%flat_OpenBoundaries
+ lead_dataset     | "lead_"
+ lead_restart_dir | "lead_restart"
+ lead_static_dir  | "lead_static"
+ add_unit_cells   | 0
+%
+%flat_Coordinates
+ "flat" | 0 | 0 | 0
+%
+%flat_Lsize
+ 10 | 0 | 0
 %
 
-%Occupations
- 1.0
+
+# TD settings.
+flat_OnlyUserDefinedInitialStates = yes
+%flat_UserDefinedStates
+ 1 | 1 | 1 | formula | "exp(-0.1*x*x)*exp(-i*0.9*x)"
 %
+flat_OpenBoundariesAdditionalTerms = mem_term
