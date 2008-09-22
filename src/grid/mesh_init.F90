@@ -70,7 +70,7 @@ subroutine mesh_init_stage_1(sb, mesh, geo, cv, enlarge)
 
   if(sb%open_boundaries) then
     ! The upper boundary must be discarded to preserve periodicity in the leads.
-     ! Example in 1D, 2 point unit cell, central region of 8 unit cells, 2
+    ! Example in 1D, 2 point unit cell, central region of 8 unit cells, 2
     ! additional unit cells at each end in simulation box:
     !
     ! simulation region:        /-------------------------------\
