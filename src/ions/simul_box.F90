@@ -237,6 +237,7 @@ contains
         sb%lead_dataset     = ''
         sb%lead_restart_dir = ''
         sb%lead_static_dir  = ''
+        sb%lead_td_pot_formula = '0'
         nrows = loct_parse_block_n(blk)
         do nr = 0, nrows-1
           call loct_parse_block_int(blk, nr, 0, tag)
@@ -301,7 +302,6 @@ contains
               sb%add_unit_cells = sb%add_unit_cells + 1
             end if
           case(TD_POT_FORMULA)
-            sb%lead_td_pot_formula = '0'
             call loct_parse_block_string(blk, nr, 1, sb%lead_td_pot_formula(LEFT))
             if(ncols.eq.3) then
               call loct_parse_block_string(blk, nr, 2, sb%lead_td_pot_formula(RIGHT))
