@@ -272,6 +272,12 @@ contains
     call states_choose_kpoints(st%d, gr%sb, geo)
 
     call geometry_val_charge(geo, st%val_charge)
+
+    
+    if(gr%sb%open_boundaries) then
+      excess_charge = -st%val_charge
+    end if
+
     st%qtot = -(st%val_charge + excess_charge)
 
     nullify(st%ob_intf_psi)
