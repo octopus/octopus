@@ -118,7 +118,7 @@ contains
         call write_info(1)
         call lcao_init(lcao, sys%gr, sys%geo, sys%st)
         if(lcao_is_available(lcao)) then
-          call lcao_wf(lcao, sys%st, sys%gr, h, start = ierr+1)
+          call lcao_wf(lcao, sys%st, sys%gr, sys%geo, h, start = ierr+1)
           call lcao_end(lcao, sys%st%nst)
         end if
       end if

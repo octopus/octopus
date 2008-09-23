@@ -156,7 +156,7 @@ contains
                lcao_num_orbitals(lcao),' orbitals.'
           call write_info(1)
           
-          call lcao_wf(lcao, sys%st, sys%gr, h)
+          call lcao_wf(lcao, sys%st, sys%gr, sys%geo, h)
           call lcao_end(lcao, sys%st%nst)
 
           !Just populate again the states, so that the eigenvalues are properly written

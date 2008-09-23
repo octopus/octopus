@@ -195,10 +195,11 @@ subroutine X(lcao_init) (this, gr, geo, st, norbs)
 end subroutine X(lcao_init)
 
 ! ---------------------------------------------------------
-subroutine X(lcao_wf) (this, st, gr, h, start)
-  type(lcao_t),        intent(in)    :: this
+subroutine X(lcao_wf) (this, st, gr, geo, h, start)
+  type(lcao_t),        intent(inout) :: this
   type(states_t),      intent(inout) :: st
   type(grid_t),        intent(inout) :: gr
+  type(geometry_t),    intent(in)    :: geo
   type(hamiltonian_t), intent(in)    :: h
   integer,             intent(in)    :: start
   integer :: dim, nst, ik, n1, n2, idim, norbs, lcao_start
@@ -206,9 +207,9 @@ subroutine X(lcao_wf) (this, st, gr, h, start)
   R_TYPE, allocatable :: hpsi(:, :, :)
   FLOAT, allocatable :: ev(:)
   type(batch_t) :: psib, hpsib
-  R_TYPE, allocatable :: hamilt(:, :, :)
-  integer :: kstart, kend
-
+  R_TYPE, allocatable :: hamilt(:, :, :), lcaopsi(:, :)
+  integer :: kstart, kend, ierr
+  
   call push_sub('lcao_inc.Xlcao_wf')
   
   norbs = this%st%nst
@@ -249,25 +250,31 @@ subroutine X(lcao_wf) (this, st, gr, h, start)
   lcao_start = start
   if(st%parallel_in_states .and. st%st_start > start) lcao_start = st%st_start
 
+  ALLOCATE(lcaopsi(1:NP, 1:st%d%dim), NP*dim)
+
   do ik =  kstart, kend
     call lalg_geneigensolve(norbs, hamilt(1:norbs, 1:norbs, ik), this%X(s) (1:norbs, 1:norbs, ik), ev)
 
     st%eigenval(start:nst, ik) = ev(start:nst)
-  
+
+    st%X(psi)(1:NP, 1:dim, lcao_start:st%st_end, ik) = R_TOTYPE(M_ZERO)
+ 
     ! Change of base
-    do n1 = lcao_start, st%st_end
+    do n2 = 1, norbs
+      call X(lcao_initial_wf)(n2, gr%m, geo, gr%sb, lcaopsi, this%st%d%ispin, ik, st%d%kpoints(:, ik), ierr)
+      
       do idim = 1, dim
-        st%X(psi)(1:NP, idim, n1, ik) = R_TOTYPE(M_ZERO)
-        do n2 = 1, norbs
-          call lalg_axpy(NP, hamilt(n2, n1, ik), this%st%X(psi)(:, idim, n2, ik), st%X(psi)(:, idim, n1, ik))
+        do n1 = lcao_start, st%st_end
+          call lalg_axpy(NP, hamilt(n2, n1, ik), lcaopsi(:, idim), st%X(psi)(:, idim, n1, ik))
         end do
       end do
+      
     end do
-
+    
   end do
 
   deallocate(ev, hamilt)
-
+  
   call pop_sub()
 end subroutine X(lcao_wf)
 

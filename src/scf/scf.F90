@@ -370,7 +370,7 @@ contains
       call profiling_in(C_PROFILING_SCF_CYCLE)
 
       if(scf%lcao_restricted) then
-        call lcao_wf(lcao, st, gr, h)
+        call lcao_wf(lcao, st, gr, geo, h)
       else
         ! FIXME: Currently, only the eigensolver or the
         ! Lippmann-Schwinger approach can be used (exclusively),
