@@ -433,7 +433,7 @@ contains
 
   ! ---------------------------------------------------------
   ! A bit faster, uses twice the memory.
-  ! But it is able to calculate the memory coefficients in tje
+  ! But it is able to calculate the memory coefficients in the
   ! case that the offdiagonal block is not invertible also.
   ! coeffs(:, :, :, 0) given, calculate the subsequent ones by
   ! the recursive relation. Since the 0th coefficiant is symmetric
@@ -450,7 +450,7 @@ contains
     CMPLX,             intent(inout) :: coeffs(intf%np, intf%np, 0:iter)
 
     integer            :: i,j, k, np
-    CMPLX, allocatable :: coeff_p(:, :, :), p_prev(:, :), tmp(:, :)
+    CMPLX, allocatable :: coeff_p(:, :, :), p_prev(:, :), tmp(:, :), tmp2(:, :)
     CMPLX, allocatable :: prefactor_plus(:, :), prefactor_minus(:, :)
     FLOAT              :: norm, old_norm
 
@@ -461,6 +461,7 @@ contains
     ALLOCATE(coeff_p(np, np, 0:iter), np**2*(iter+1))
     ALLOCATE(p_prev(np, np), np**2)
     ALLOCATE(tmp(np, np), np**2)
+    ALLOCATE(tmp2(np, np), np**2)
     ALLOCATE(prefactor_plus(np, np), np**2)
     ALLOCATE(prefactor_minus(np, np), np**2)
 
@@ -475,53 +476,60 @@ contains
 
     ! Calculate p_\alpha = 1/(1 + i*delta*h_\alpha + delta^2*q_\alpha)
     coeff_p(:, :, 0) = prefactor_plus + delta**2 * coeffs(:, :, 0)
-
     call lalg_sym_inverter('U', np, coeff_p(:, :, 0))
     call matrix_symmetrize(coeff_p(:, :, 0), np)
+
+    ! We only need the inverse if (1 + i*delta*h_\alpha) in the
+    ! following.
     call lalg_sym_inverter('U', np, prefactor_plus)
     call matrix_symmetrize(prefactor_plus, np)
-
 
     ! FIXME: this routine is not able to restart because the coeff_p
     ! matrices are required. They have to be written to a file also
     ! to make restarts work.
     ASSERT(start_iter.eq.1)
 
-    ! FIXME: this loop does a lot of unecessarily repeated calculations.
-    ! It can be factored out like in the calculate_coeffs routine.
     do i = start_iter, iter
       old_norm = M_ZERO
-      do j = 1, mem_iter
 
-        p_prev = coeff_p(:, :, i)
+      ! The part of the sum independent of coeff_p(:, :, i),
+      ! accumulated in tmp2.
+      tmp2 = M_z0
+      do k = 1, i-1
+        call lalg_copy(np**2, coeffs(1, :, k), tmp(:, 1))
+        call lalg_axpy(np**2, M_z2, coeffs(:, 1, k-1), tmp(:, 1))
+        if(k.gt.1) then
+          call lalg_axpy(np**2, M_z1, coeffs(:, 1, k-2), tmp(:, 1))
+        end if
+        call lalg_symm(np, np, 'L', M_z1, tmp, coeff_p(:, :, i-k), M_z1, tmp2)
+      end do
+
+      ! The convergence loop.
+      do j = 1, mem_iter
+        call lalg_copy(np**2, coeff_p(:, 1, i), p_prev(:, 1))
 
         ! k = m.
         call apply_coupling(p_prev, offdiag, coeff_p(:, :, i), np, il)
-        coeff_p(:, :, i) = coeff_p(:, :, i) + M_TWO*coeffs(:, :, i-1)
+
+        call lalg_axpy(np**2, M_z2, coeffs(:, 1, i-1), coeff_p(:, 1, i))
 
         if(i.gt.1) then
-          coeff_p(:, :, i) = coeff_p(:, :, i) + coeffs(:, :, i-2)
+          call lalg_axpy(np**2, M_z1, coeffs(:, 1, i-2), coeff_p(:, 1, i))
         end if
 
         call lalg_symm(np, np, 'L', M_z1, coeff_p(:, :, i), coeff_p(:, :, 0), M_z0, tmp)
-        coeff_p(:, :, i) = tmp
+        call lalg_copy(np**2, tmp(:, 1), coeff_p(:, 1, i))
 
         ! k = 0.
         call lalg_symm(np, np, 'L', M_z1, coeffs(:, :, 0), p_prev, M_z1, coeff_p(:, :, i))
 
-        ! k = 1 to k = m-1.
-        do k = 1, i-1
-          tmp = coeffs(:, :, k) + M_TWO*coeffs(:, :, k-1)
-          if(k.gt.1) then
-            tmp = tmp + coeffs(:, :, k-2)
-          end if
-          call lalg_symm(np, np, 'L', M_z1, tmp, coeff_p(:, :, i-k), M_z1, coeff_p(:, :, i))
-        end do
-
-        coeff_p(:, :, i) = -delta**2 * coeff_p(:, :, i)
+        ! Add the constant part from above, and multiply with prefactors.
+        call lalg_axpy(np**2, M_z1, tmp2(:, 1), coeff_p(:, 1, i))
+        call lalg_scal(np**2, TOCMPLX(-delta**2, 0), coeff_p(:, 1, i))
         call lalg_symm(np, np, 'L', M_z1, prefactor_minus, coeff_p(:, :, i-1), M_z1, coeff_p(:, :, i))
         call lalg_symm(np, np, 'L', M_z1, prefactor_plus, coeff_p(:, :, i), M_z0, tmp)
-        coeff_p(:, :, i) = tmp
+        call lalg_copy(np**2, tmp(:, 1), coeff_p(:, 1, i))
+
         norm = infinity_norm(coeff_p(:, :, i))
         if(abs(norm-old_norm).lt.mem_tolerance) then
           exit
@@ -544,7 +552,7 @@ contains
     message(1) = ''
     call write_info(1)
 
-    deallocate(coeff_p, p_prev, tmp)
+    deallocate(coeff_p, p_prev, tmp, tmp2)
     deallocate(prefactor_plus, prefactor_minus)
 
     call pop_sub()
