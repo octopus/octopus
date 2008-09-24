@@ -49,7 +49,7 @@
 ! n = 3 => first spin-up orbital of atom 2, assigned to the spin-up component of the spinor.
 ! ....
 ! ---------------------------------------------------------
-Subroutine X(lcao_initial_wf) (n, m, geo, sb, psi, ispin, ik, kpoints, err)
+subroutine X(lcao_initial_wf) (n, m, geo, sb, psi, ispin, ik, kpoints)
   integer,                  intent(in)    :: n
   type(mesh_t),             intent(in)    :: m
   type(simul_box_t),        intent(in)    :: sb
@@ -58,7 +58,6 @@ Subroutine X(lcao_initial_wf) (n, m, geo, sb, psi, ispin, ik, kpoints, err)
   integer,                  intent(in)    :: ispin
   integer,                  intent(in)    :: ik
   FLOAT,                    intent(in)    :: kpoints(:)
-  integer,                  intent(out)   :: err
 
   type(species_t), pointer :: s
   type(periodic_copy_t)   :: pc
@@ -67,8 +66,6 @@ Subroutine X(lcao_initial_wf) (n, m, geo, sb, psi, ispin, ik, kpoints, err)
   
   
   call push_sub('lcao_inc.Xlcao_initial_wf')
-
-  err = 0
 
   norbs = 0
   do ia = 1, geo%natoms
@@ -81,11 +78,8 @@ Subroutine X(lcao_initial_wf) (n, m, geo, sb, psi, ispin, ik, kpoints, err)
     norbs = norbs*2
   end if
 
-  if ((n > norbs) .or. (n < 1)) then
-    err = 1
-    call pop_sub()
-    return
-  end if
+  ASSERT(n >= 1)
+  ASSERT(n <= norbs)
 
   psi(1:m%np, 1:wf_dim) = R_TOTYPE(M_ZERO)
   
@@ -175,48 +169,40 @@ subroutine X(lcao_wf) (this, st, gr, geo, h, start)
   type(geometry_t),    intent(in)    :: geo
   type(hamiltonian_t), intent(in)    :: h
   integer,             intent(in)    :: start
-  integer :: dim, nst, ik, n1, n2, idim, norbs, lcao_start
-  integer :: sts, ste, ii
+  integer :: nst, ik, n1, n2, idim, lcao_start
+!  integer :: sts, ste, ii
   R_TYPE, allocatable :: hpsi(:, :)
   FLOAT, allocatable :: ev(:)
-  type(batch_t) :: psib, hpsib
   R_TYPE, allocatable :: hamilt(:, :, :), lcaopsi(:, :), lcaopsi2(:, :)
-  integer :: kstart, kend, ierr
+  integer :: kstart, kend
   
   call push_sub('lcao_inc.Xlcao_wf')
   
-  norbs = this%st%nst
-  dim = st%d%dim
   nst = st%nst
-  kstart = this%st%d%kpt%start
-  kend = this%st%d%kpt%end
+  kstart = st%d%kpt%start
+  kend = st%d%kpt%end
 
   ! Allocation of variables
-  ALLOCATE(this%X(s)(norbs, norbs, kstart:kend), norbs**2*this%st%d%kpt%nlocal)
+  ALLOCATE(this%X(s)(this%norbs, this%norbs, kstart:kend), this%norbs**2*st%d%kpt%nlocal)
 
-  ALLOCATE(lcaopsi(1:NP, 1:st%d%dim), NP*dim)
-  ALLOCATE(lcaopsi2(1:NP, 1:st%d%dim), NP*dim)
-  ALLOCATE(hpsi(NP, dim), NP*dim)
-  ALLOCATE(hamilt(norbs, norbs, kstart:kend), norbs**2*this%st%d%kpt%nlocal)
+  ALLOCATE(lcaopsi(1:NP, 1:st%d%dim), NP*st%d%dim)
+  ALLOCATE(lcaopsi2(1:NP, 1:st%d%dim), NP*st%d%dim)
+  ALLOCATE(hpsi(NP, st%d%dim), NP*st%d%dim)
+  ALLOCATE(hamilt(this%norbs, this%norbs, kstart:kend), this%norbs**2*st%d%kpt%nlocal)
 
   do ik = kstart, kend
-    do n1 = 1, norbs
+    do n1 = 1, this%norbs
 
-      call X(lcao_initial_wf)(n1, gr%m, geo, gr%sb, lcaopsi, this%st%d%ispin, ik, st%d%kpoints(:, ik), ierr)
+      call X(lcao_initial_wf)(n1, gr%m, geo, gr%sb, lcaopsi, st%d%ispin, ik, st%d%kpoints(:, ik))
 
       call X(hpsi)(h, gr, lcaopsi, hpsi, n1, ik)
         
-      do n2 = n1, norbs
-        call X(lcao_initial_wf)(n2, gr%m, geo, gr%sb, lcaopsi2, this%st%d%ispin, ik, st%d%kpoints(:, ik), ierr)
+      do n2 = n1, this%norbs
+        call X(lcao_initial_wf)(n2, gr%m, geo, gr%sb, lcaopsi2, st%d%ispin, ik, st%d%kpoints(:, ik))
 
-        if(ierr .ne. 0) then
-          write(message(1),'(a)') 'Internal error in lcao_wf'
-          call write_fatal(1)
-        end if
-
-        this%X(s)(n1, n2, ik) = X(mf_dotp)(gr%m, dim, lcaopsi, lcaopsi2)
+        this%X(s)(n1, n2, ik) = X(mf_dotp)(gr%m, st%d%dim, lcaopsi, lcaopsi2)
         this%X(s)(n2, n1, ik) = R_CONJ(this%X(s)(n1, n2, ik))
-        hamilt(n1, n2, ik) = X(mf_dotp)(gr%m, dim, hpsi, lcaopsi2)
+        hamilt(n1, n2, ik) = X(mf_dotp)(gr%m, st%d%dim, hpsi, lcaopsi2)
         hamilt(n2, n1, ik) = R_CONJ(hamilt(n1, n2, ik))
       end do
     end do
@@ -224,23 +210,23 @@ subroutine X(lcao_wf) (this, st, gr, geo, h, start)
 
   deallocate(hpsi)
 
-  ALLOCATE(ev(norbs), norbs)
+  ALLOCATE(ev(this%norbs), this%norbs)
 
   lcao_start = start
   if(st%parallel_in_states .and. st%st_start > start) lcao_start = st%st_start
 
   do ik =  kstart, kend
-    call lalg_geneigensolve(norbs, hamilt(1:norbs, 1:norbs, ik), this%X(s) (1:norbs, 1:norbs, ik), ev)
+    call lalg_geneigensolve(this%norbs, hamilt(1:this%norbs, 1:this%norbs, ik), this%X(s) (1:this%norbs, 1:this%norbs, ik), ev)
 
     st%eigenval(start:nst, ik) = ev(start:nst)
 
-    st%X(psi)(1:NP, 1:dim, lcao_start:st%st_end, ik) = R_TOTYPE(M_ZERO)
+    st%X(psi)(1:NP, 1:st%d%dim, lcao_start:st%st_end, ik) = R_TOTYPE(M_ZERO)
  
     ! Change of base
-    do n2 = 1, norbs
-      call X(lcao_initial_wf)(n2, gr%m, geo, gr%sb, lcaopsi, this%st%d%ispin, ik, st%d%kpoints(:, ik), ierr)
+    do n2 = 1, this%norbs
+      call X(lcao_initial_wf)(n2, gr%m, geo, gr%sb, lcaopsi, st%d%ispin, ik, st%d%kpoints(:, ik))
       
-      do idim = 1, dim
+      do idim = 1, st%d%dim
         do n1 = lcao_start, st%st_end
           call lalg_axpy(NP, hamilt(n2, n1, ik), lcaopsi(:, idim), st%X(psi)(:, idim, n1, ik))
         end do

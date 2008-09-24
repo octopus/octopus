@@ -63,7 +63,7 @@ module lcao_m
     private
     integer           :: state ! 0 => non-initialized;
                                ! 1 => initialized (k, s and v1 matrices filled)
-    type(states_t)    :: st
+    integer           :: norbs
     FLOAT,  pointer   :: ds     (:, :, :) ! s is the overlap matrix;
     CMPLX,  pointer   :: zs     (:, :, :) ! s is the overlap matrix;
   end type lcao_t
@@ -77,25 +77,23 @@ contains
     type(geometry_t),     intent(in)    :: geo
     type(states_t),       intent(in)    :: st
 
-    integer :: ia, norbs, n
+    integer :: ia, n
 
     call profiling_in(C_PROFILING_LCAO_INIT)
     call push_sub('lcao.lcao_init')
-
-    call states_null(this%st)
 
     !this is to avoid a bug whe deallocating in gfortran 4.2.0 20060520
     nullify(this%ds)
     nullify(this%zs)
         
     ! Fix the dimension of the LCAO problem (this%dim)
-    norbs = 0
+    this%norbs = 0
     do ia = 1, geo%natoms
-      norbs = norbs + geo%atom(ia)%spec%niwfs
+      this%norbs = this%norbs + geo%atom(ia)%spec%niwfs
     end do
-    if( (st%d%ispin.eq.SPINORS) ) norbs = norbs * 2
+    if( (st%d%ispin.eq.SPINORS) ) this%norbs = this%norbs*2
 
-    if(norbs < st%nst) then
+    if(this%norbs < st%nst) then
       this%state = 0
       write(message(1),'(a)') 'Cannot do LCAO initial calculation because there are not enough atomic orbitals.'
       call write_warning(1)
@@ -125,31 +123,21 @@ contains
     !%End
     call loct_parse_int(check_inp('LCAODimension'), 0, n)
     if((n > 0) .and. (n <= st%nst)) then
-      norbs = st%nst
-    elseif( (n > st%nst) .and. (n < norbs) ) then
-      norbs = n
+      this%norbs = st%nst
+    elseif( (n > st%nst) .and. (n < this%norbs) ) then
+      this%norbs = n
     elseif( n.eq.0) then
-      norbs = min(norbs, 2*st%nst)
+      this%norbs = min(this%norbs, 2*st%nst)
     end if
 
-    this%st%nst = norbs
-    this%st%st_start = 1
-    this%st%st_end = norbs
-    this%st%d%dim = st%d%dim
-    this%st%d%nik = st%d%nik
-    this%st%d%ispin = st%d%ispin
-    this%st%d%block_size = st%d%block_size
-    this%st%parallel_in_states = .false.
-    call distributed_copy(st%d%kpt, this%st%d%kpt)
-    call states_allocate_wfns(this%st, gr%m, st%wfs_type)
-
-    if (wfs_are_real(this%st)) then
-      call dlcao_init(this, gr, geo, st, norbs)
+    if (wfs_are_real(st)) then
+      call dlcao_init(this, gr, geo, st, this%norbs)
     else
-      call zlcao_init(this, gr, geo, st, norbs)
+      call zlcao_init(this, gr, geo, st, this%norbs)
     end if
 
     this%state = 1
+    nullify(this%ds, this%zs)
 
     call pop_sub()
     call profiling_out(C_PROFILING_LCAO_INIT)
@@ -160,30 +148,12 @@ contains
     type(lcao_t), intent(inout) :: this
     integer,         intent(in) :: nst
 
-    integer :: wfs_type
-
     call push_sub('lcao.lcao_end')
 
-    call distributed_end(this%st%d%kpt)
-
-    wfs_type = this%st%wfs_type
-
-    if(this%st%nst >= nst) then
-      if(wfs_type == M_REAL) then
-        if(associated(this%ds     )) deallocate(this%ds)
-      else
-        if(associated(this%zs     )) deallocate(this%zs)
-      end if
+    if(this%norbs >= nst) then
+      if(associated(this%ds)) deallocate(this%ds)
+      if(associated(this%zs)) deallocate(this%zs)
     endif
-
-    if( associated(this%st%dpsi) .and. (wfs_type == M_REAL) ) then
-      deallocate(this%st%dpsi)
-      nullify(this%st%dpsi)
-    end if
-    if( associated(this%st%zpsi) .and. (wfs_type == M_CMPLX) ) then
-      deallocate(this%st%zpsi)
-      nullify(this%st%zpsi)
-    end if
 
     this%state = 0
     call pop_sub()
@@ -209,7 +179,7 @@ contains
     start_ = 1
     if(present(start)) start_ = start
 
-    if (wfs_are_real(this%st)) then
+    if (wfs_are_real(st)) then
       call dlcao_wf(this, st, gr, geo, h, start_)
     else
       call zlcao_wf(this, st, gr, geo, h, start_)
@@ -228,7 +198,7 @@ contains
   integer function lcao_num_orbitals(this) result(norbs)
     type(lcao_t),        intent(in) :: this
 
-    norbs = this%st%nst
+    norbs = this%norbs
   end function lcao_num_orbitals
 
 #include "undef.F90"
