@@ -65,6 +65,7 @@ module tdf_m
             tdf_dt,                      &
             tdf_copy,                    &
             tdf_read,                    &
+            tdf_is_empty,                &
             tdf_end
 
 
@@ -269,7 +270,6 @@ module tdf_m
   !------------------------------------------------------------
 
 
-
   !------------------------------------------------------------
   integer function tdf_niter(f)
     type(tdf_t), intent(in) :: f
@@ -303,6 +303,14 @@ module tdf_m
     nullify(f%val)
     nullify(f%coeffs)
   end subroutine tdf_init
+  !------------------------------------------------------------
+
+
+  !------------------------------------------------------------
+  logical function tdf_is_empty(f)
+    type(tdf_t), intent(in) :: f
+    tdf_is_empty = (f%mode == TDF_EMPTY)
+  end function tdf_is_empty
   !------------------------------------------------------------
 
 
@@ -813,6 +821,9 @@ module tdf_m
     case(TDF_FROM_EXPR)
       call loct_parse_expression(fre, fim, 't', t, f%expression)
       y = cmplx(fre, fim)
+
+    case default
+      y = M_z0
 
     end select
 

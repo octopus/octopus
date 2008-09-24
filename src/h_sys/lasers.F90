@@ -46,9 +46,12 @@ module lasers_m
     laser_polarization,           &
     laser_get_f,                  &
     laser_set_f,                  &
+    laser_get_phi,                &
+    laser_set_phi,                &
     laser_set_f_value
 
   integer, public, parameter ::     &
+    E_FIELD_NONE             =  0,  &
     E_FIELD_ELECTRIC         =  1,  &
     E_FIELD_MAGNETIC         =  2,  &
     E_FIELD_VECTOR_POTENTIAL =  3,  &
@@ -56,13 +59,14 @@ module lasers_m
 
   type laser_t
     private
-    integer :: field
-    CMPLX :: pol(MAX_DIM) = M_z0 ! the polarization of the laser.
-    type(tdf_t) :: f             ! The envelope.
-    FLOAT :: omega = M_ZERO      ! The main, "carrier", frequency.
+    integer :: field      = E_FIELD_NONE  ! which kind of external field it is (electric, magnetic...)
+    CMPLX :: pol(MAX_DIM) = M_z0          ! the polarization of the laser.
+    type(tdf_t) :: f                      ! The envelope.
+    type(tdf_t) :: phi                    ! The phase
+    FLOAT :: omega        = M_ZERO        ! The main, "carrier", frequency.
 
-    FLOAT, pointer :: v(:)
-    FLOAT, pointer :: a(:, :)
+    FLOAT, pointer :: v(:)    => NULL()
+    FLOAT, pointer :: a(:, :) => NULL()
   end type laser_t
 
 contains
@@ -101,6 +105,25 @@ contains
     call tdf_end(l%f)
     call tdf_copy(l%f, f)
   end subroutine laser_set_f
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine laser_get_phi(l, phi)
+    type(laser_t), intent(in)    :: l
+    type(tdf_t),   intent(inout) :: phi
+    call tdf_copy(phi, l%phi)
+  end subroutine laser_get_phi
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine laser_set_phi(l, phi)
+    type(laser_t), intent(inout) :: l
+    type(tdf_t),   intent(inout) :: phi
+    call tdf_end(l%phi)
+    call tdf_copy(l%phi, phi)
+  end subroutine laser_set_phi
   ! ---------------------------------------------------------
 
 
@@ -281,6 +304,16 @@ contains
         call tdf_read(l(i)%f, trim(envelope_expression), ierr)
         ierr = loct_parse_block(check_inp('TDExternalFields'), blk)
 
+        ! Check if there is a phase.
+        if(loct_parse_block_cols(blk, i-1) > j+3) then
+          call loct_parse_block_string(blk, i-1, j+3, envelope_expression)
+          call loct_parse_block_end(blk)
+          call tdf_read(l(i)%phi, trim(envelope_expression), ierr)
+          ierr = loct_parse_block(check_inp('TDExternalFields'), blk)
+        else
+          call tdf_init(l(i)%phi)
+        end if
+
         l(i)%pol(:) = l(i)%pol(:)/sqrt(sum(abs(l(i)%pol(:))**2))
 
         select case(l(i)%field)
@@ -326,6 +359,7 @@ contains
     call pop_sub()
 
   end subroutine laser_init
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
@@ -340,6 +374,7 @@ contains
     if(no_l > 0) then
       do i = 1, no_l
         call tdf_end(l(i)%f)
+        call tdf_end(l(i)%phi)
         select case(l(i)%field)
         case(E_FIELD_SCALAR_POTENTIAL)
           deallocate(l(i)%v); nullify(l(i)%v)
@@ -352,6 +387,7 @@ contains
 
     call pop_sub()
   end subroutine laser_end
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
@@ -385,6 +421,11 @@ contains
       write(iunit,'(3x,a)')       'Envelope: ' 
       call tdf_write(l(i)%f, iunit)
 
+      if(.not.tdf_is_empty(l(i)%phi)) then
+        write(iunit,'(3x,a)')       'Phase: ' 
+        call tdf_write(l(i)%phi, iunit)
+      end if
+
       ! 1 atomic unit of intensity = 3.5094448e+16 W / cm^2
       ! In a Gaussian system of units,
       ! I(t) = (1/(8\pi)) * c * E(t)^2
@@ -395,7 +436,7 @@ contains
         max_intensity = M_ZERO
         do j = 1, max_iter
           t = j * dt
-          amp = tdf(l(i)%f, t) * exp(M_zI*l(i)%omega*t)
+          amp = tdf(l(i)%f, t) * exp(M_zI * ( l(i)%omega*t + tdf(l(i)%phi, t) ) )
           intensity = M_ZERO
           do k = 1, MAX_DIM
             intensity = intensity + CNST(5.4525289841210) * real(amp*l(i)%pol(k))**2
@@ -413,6 +454,7 @@ contains
     end do
 
   end subroutine laser_write_info
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
@@ -431,7 +473,7 @@ contains
 
     pot = M_ZERO
     if(present(t)) then
-      amp = tdf(l%f, t) * exp(M_zI*l%omega*t)
+      amp = tdf(l%f, t) * exp(M_zI * ( l%omega*t + tdf(l%phi, t) ) )
     else
       amp = M_z1
     end if
@@ -448,6 +490,7 @@ contains
 
     call pop_sub()
   end subroutine laser_potential
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
@@ -459,13 +502,14 @@ contains
     call push_sub('lasers.laser_vector_potential')
 
     if(present(t)) then
-      a = l%a * real( tdf(l%f, t) * exp(M_zI* l%omega *t) )
+      a = l%a * real( tdf(l%f, t) * exp(M_zI* ( l%omega *t + tdf(l%phi, t)  ) ) )
     else
       a = l%a
     end if
 
     call pop_sub()
   end subroutine laser_vector_potential
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
@@ -481,13 +525,14 @@ contains
     field = M_ZERO
     if(l%field .eq. E_FIELD_SCALAR_POTENTIAL) return
     if(present(t)) then
-       amp = tdf(l%f, t) * exp(M_zI * l%omega * t )
+       amp = tdf(l%f, t) * exp(M_zI * ( l%omega * t + tdf(l%phi, t) ) )
     else
       amp = M_z1
     end if
     field(1:sb%dim) = field(1:sb%dim) + real(amp*l%pol(1:sb%dim))
 
   end subroutine laser_field
+  ! ---------------------------------------------------------
 
 
 
