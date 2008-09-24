@@ -165,33 +165,6 @@ subroutine X(lcao_init) (this, gr, geo, st, norbs)
   type(states_t),       intent(in)    :: st
   integer,              intent(in)    :: norbs
 
-  integer :: ik, n, ierr
-  integer :: kstart, kend
-
-  call push_sub('lcao_inc.Xlcao_init')
-
-  kstart = this%st%d%kpt%start
-  kend = this%st%d%kpt%end
-
-  do ik = kstart, kend
-    do n = 1, this%st%nst
-      call X(lcao_initial_wf)(n, gr%m, geo, gr%sb, this%st%X(psi)(:, :, n, ik), this%st%d%ispin, ik, st%d%kpoints(:, ik), ierr)
-      if(ierr .ne. 0) then
-        write(message(1),'(a)') 'Internal error in lcao_wf'
-        call write_fatal(1)
-      end if
-    end do
-  end do
-
-  ! Allocation of variables
-  ALLOCATE(this%X(s)(norbs, norbs, kstart:kend), norbs**2*this%st%d%kpt%nlocal)
-
-  do ik = kstart, kend
-    call states_blockt_mul(gr%m, this%st, this%st%st_start, this%st%st_end, this%st%st_start, this%st%st_end, &
-         this%st%X(psi)(:, :, :, ik), this%st%X(psi)(:, :, :, ik), this%X(s)(:, :, ik), symm = .true.)
-  end do
-
-  call pop_sub()
 end subroutine X(lcao_init)
 
 ! ---------------------------------------------------------
@@ -204,10 +177,10 @@ subroutine X(lcao_wf) (this, st, gr, geo, h, start)
   integer,             intent(in)    :: start
   integer :: dim, nst, ik, n1, n2, idim, norbs, lcao_start
   integer :: sts, ste, ii
-  R_TYPE, allocatable :: hpsi(:, :, :)
+  R_TYPE, allocatable :: hpsi(:, :)
   FLOAT, allocatable :: ev(:)
   type(batch_t) :: psib, hpsib
-  R_TYPE, allocatable :: hamilt(:, :, :), lcaopsi(:, :)
+  R_TYPE, allocatable :: hamilt(:, :, :), lcaopsi(:, :), lcaopsi2(:, :)
   integer :: kstart, kend, ierr
   
   call push_sub('lcao_inc.Xlcao_wf')
@@ -218,28 +191,34 @@ subroutine X(lcao_wf) (this, st, gr, geo, h, start)
   kstart = this%st%d%kpt%start
   kend = this%st%d%kpt%end
 
-  ALLOCATE(hpsi(NP, dim, st%d%block_size), NP*dim*st%d%block_size)
+  ! Allocation of variables
+  ALLOCATE(this%X(s)(norbs, norbs, kstart:kend), norbs**2*this%st%d%kpt%nlocal)
+
+  ALLOCATE(lcaopsi(1:NP, 1:st%d%dim), NP*dim)
+  ALLOCATE(lcaopsi2(1:NP, 1:st%d%dim), NP*dim)
+  ALLOCATE(hpsi(NP, dim), NP*dim)
   ALLOCATE(hamilt(norbs, norbs, kstart:kend), norbs**2*this%st%d%kpt%nlocal)
 
   do ik = kstart, kend
-    do sts = 1, norbs, st%d%block_size
-      ste = min(norbs, sts + st%d%block_size - 1)
+    do n1 = 1, norbs
 
-      call batch_init(psib, sts, ste, this%st%X(psi)(:, :, sts:, ik))
-      call batch_init(hpsib, sts, ste, hpsi)
-      call X(hpsi_batch)(h, gr, psib, hpsib, ik)
-      call batch_end(psib)
-      call batch_end(hpsib)
+      call X(lcao_initial_wf)(n1, gr%m, geo, gr%sb, lcaopsi, this%st%d%ispin, ik, st%d%kpoints(:, ik), ierr)
 
-      ii = 1
-      do n1 = sts, ste
-        do n2 = n1, norbs
-          hamilt(n1, n2, ik) = X(mf_dotp)(gr%m, dim, hpsi(:, :, ii), this%st%X(psi)(:, :, n2, ik))
-          hamilt(n2, n1, ik) = R_CONJ(hamilt(n1, n2, ik))
-        end do
-        ii = ii + 1
+      call X(hpsi)(h, gr, lcaopsi, hpsi, n1, ik)
+        
+      do n2 = n1, norbs
+        call X(lcao_initial_wf)(n2, gr%m, geo, gr%sb, lcaopsi2, this%st%d%ispin, ik, st%d%kpoints(:, ik), ierr)
+
+        if(ierr .ne. 0) then
+          write(message(1),'(a)') 'Internal error in lcao_wf'
+          call write_fatal(1)
+        end if
+
+        this%X(s)(n1, n2, ik) = X(mf_dotp)(gr%m, dim, lcaopsi, lcaopsi2)
+        this%X(s)(n2, n1, ik) = R_CONJ(this%X(s)(n1, n2, ik))
+        hamilt(n1, n2, ik) = X(mf_dotp)(gr%m, dim, hpsi, lcaopsi2)
+        hamilt(n2, n1, ik) = R_CONJ(hamilt(n1, n2, ik))
       end do
-
     end do
   end do
 
@@ -249,8 +228,6 @@ subroutine X(lcao_wf) (this, st, gr, geo, h, start)
 
   lcao_start = start
   if(st%parallel_in_states .and. st%st_start > start) lcao_start = st%st_start
-
-  ALLOCATE(lcaopsi(1:NP, 1:st%d%dim), NP*dim)
 
   do ik =  kstart, kend
     call lalg_geneigensolve(norbs, hamilt(1:norbs, 1:norbs, ik), this%X(s) (1:norbs, 1:norbs, ik), ev)
