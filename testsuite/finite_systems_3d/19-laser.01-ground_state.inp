@@ -18,11 +18,11 @@ Spacing = 0.3/0.529177
 ExcessCharge = 1
 TheoryLevel = independent_particles
 
-ConvAbsDens = 1e-6
+ConvRelDens = 5.0e-4
 
 EigenSolver = cg
-EigenSolverInitTolerance = 1e-5
-EigenSolverFinalTolerance = 1e-5
+EigenSolverInitTolerance = 1e-7
+EigenSolverFinalTolerance = 1e-7
 EigenSolverFinalToleranceIteration = 6
 EigenSolverMaxIter = 200
 
