@@ -81,19 +81,21 @@ module tdf_m
 
   type tdf_t
     private
-    integer :: mode
-    FLOAT   :: t0     ! the time at the maximum of the pulse
-    FLOAT   :: tau0   ! the width of the pulse
-    FLOAT   :: tau1   ! for the ramped shape, the length of the "ramping" intervals
-    FLOAT   :: a0
-    FLOAT   :: omega0
-    type(spline_t) :: amplitude
-    character(len=200) :: expression
-    FLOAT   :: dt     ! the time-discretization value.
-    FLOAT   :: init_time, final_time
-    integer :: niter
-    CMPLX, pointer :: val(:) => NULL()
-    integer :: nfreqs
+    integer :: mode        = TDF_EMPTY
+    FLOAT   :: t0          = M_ZERO  ! the time at the maximum of the pulse
+    FLOAT   :: tau0        = M_ZERO  ! the width of the pulse
+    FLOAT   :: tau1        = M_ZERO  ! for the ramped shape, the length of the "ramping" intervals
+    FLOAT   :: a0          = M_ZERO
+    FLOAT   :: omega0      = M_ZERO
+    FLOAT   :: dt          = M_ZERO ! the time-discretization value.
+    FLOAT   :: init_time   = M_ZERO
+    FLOAT   :: final_time  = M_ZERO
+    integer :: niter       = 0
+    integer :: nfreqs      = 0
+
+    type(spline_t)         :: amplitude
+    character(len=200)     :: expression
+    CMPLX, pointer :: val(:)    => NULL()
     FLOAT, pointer :: coeffs(:) => NULL()
   end type tdf_t
 
@@ -947,13 +949,9 @@ module tdf_m
     select case(f%mode)
     case(TDF_CW)
       write(iunit,'(6x,a)')          'Mode: continuous wave.'
-      write(iunit,'(6x,a,f10.4,3a)') 'Frequency: ', f%omega0/units_inp%energy%factor, &
-        ' [', trim(units_inp%energy%abbrev), ']'
       write(iunit,'(6x,a,f10.4,a)')  'Amplitude: ', f%a0, ' [a.u]'
     case(TDF_GAUSSIAN)
       write(iunit,'(6x,a)')          'Mode: Gaussian envelope.'
-      write(iunit,'(6x,a,f10.4,3a)') 'Frequency: ', f%omega0/units_inp%energy%factor, &
-        ' [', trim(units_inp%energy%abbrev), ']'
       write(iunit,'(6x,a,f10.4,a)')  'Amplitude: ', f%a0, ' [a.u]'
       write(iunit,'(6x,a,f10.4,3a)') 'Width:     ', f%tau0/units_inp%time%factor, &
         ' [', trim(units_inp%time%abbrev), ']'
@@ -961,8 +959,6 @@ module tdf_m
         ' [', trim(units_inp%time%abbrev), ']'
     case(TDF_COSINOIDAL)
       write(iunit,'(6x,a)') 'Mode: cosinoidal envelope.'
-      write(iunit,'(6x,a,f10.4,3a)') 'Frequency: ', f%omega0/units_inp%energy%factor, &
-        ' [', trim(units_inp%energy%abbrev), ']'
       write(iunit,'(6x,a,f10.4,a)')  'Amplitude: ', f%a0, ' [a.u]'
       write(iunit,'(6x,a,f10.4,3a)') 'Width:     ', f%tau0/units_inp%time%factor, &
         ' [', trim(units_inp%time%abbrev), ']'
@@ -970,8 +966,6 @@ module tdf_m
         ' [', trim(units_inp%time%abbrev), ']'
     case(TDF_TRAPEZOIDAL)
       write(iunit,'(6x,a)') 'Mode: trapezoidal envelope.'
-      write(iunit,'(6x,a,f10.4,3a)') 'Frequency: ', f%omega0/units_inp%energy%factor, &
-        ' [', trim(units_inp%energy%abbrev), ']'
       write(iunit,'(6x,a,f10.4,a)')  'Amplitude: ', f%a0, ' [a.u]'
       write(iunit,'(6x,a,f10.4,3a)') 'Width:     ', f%tau0/units_inp%time%factor, &
         ' [', trim(units_inp%time%abbrev), ']'
@@ -987,6 +981,10 @@ module tdf_m
       write(iunit,'(6x,a)') 'Mode: time-dependent function parsed from the expression:'
       write(iunit,'(6x,a)') '      f(t) = '//trim(f%expression)
     end select
+    if(f%omega0 .ne. M_ZERO) then
+      write(iunit,'(6x,a,f10.4,3a)') 'Frequency: ', f%omega0/units_inp%energy%factor, &
+        ' [', trim(units_inp%energy%abbrev), ']'
+    end if
 
   end subroutine tdf_write
   !------------------------------------------------------------
