@@ -143,8 +143,7 @@ module profiling_m
        C_PROFILING_XC_OEP_FULL,    &
        C_PROFILING_TIME_STEP,      &
        C_PROFILING_EIGEN_SOLVER,   &
-       C_PROFILING_LCAO,           &
-       C_PROFILING_LCAO_INIT
+       C_PROFILING_LCAO
 
   type(profile_t), save, public ::    &
        C_PROFILING_BLOCKT,            &
@@ -218,7 +217,6 @@ contains
       call profile_init(C_PROFILING_TIME_STEP	,     'TIME_STEP')
       call profile_init(C_PROFILING_EIGEN_SOLVER,     'EIGEN_SOLVER')
       call profile_init(C_PROFILING_LCAO,             'LCAO')
-      call profile_init(C_PROFILING_LCAO_INIT,        'LCAO_INIT')
       call profile_init(C_PROFILING_BLOCKT,           'BLOCKT')
       call profile_init(C_PROFILING_BLOCKT_AR,        'BLOCKT_AR')
       call profile_init(C_PROFILING_BLOCKT_MM,        'BLOCKT_MM')

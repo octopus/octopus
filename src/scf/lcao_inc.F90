@@ -22,22 +22,21 @@
 ! This routine fills state psi with an atomic orbital -- provided
 ! by the pseudopotential structure in geo.
 ! ---------------------------------------------------------
-subroutine X(lcao_initial_wf) (this, iorb, m, geo, sb, psi, ispin, ik, kpoints)
+subroutine X(lcao_initial_wf) (this, iorb, m, h, geo, sb, psi, ispin, ik)
   type(lcao_t),             intent(in)    :: this
   integer,                  intent(in)    :: iorb
   type(mesh_t),             intent(in)    :: m
   type(simul_box_t),        intent(in)    :: sb
+  type(hamiltonian_t),      intent(in)    :: h
   type(geometry_t), target, intent(in)    :: geo
   R_TYPE,                   intent(inout) :: psi(:, :)
   integer,                  intent(in)    :: ispin
   integer,                  intent(in)    :: ik
-  FLOAT,                    intent(in)    :: kpoints(:)
 
   type(species_t), pointer :: s
   type(periodic_copy_t)   :: pc
   integer :: icell, idim, k, wf_dim, iatom, jj
   FLOAT :: x(MAX_DIM), pos(MAX_DIM)
-
 
   call push_sub('lcao_inc.Xlcao_initial_wf')
 
@@ -55,38 +54,31 @@ subroutine X(lcao_initial_wf) (this, iorb, m, geo, sb, psi, ispin, ik, kpoints)
   s => geo%atom(iatom)%spec
   ASSERT(jj <= s%niwfs)
 
-  select case(ispin)
+  if (.not. simul_box_is_periodic(sb)) then
 
-  case(UNPOLARIZED, SPIN_POLARIZED)
+    do k = 1, m%np
+      x(1:calc_dim) = m%x(k, 1:calc_dim) - geo%atom(iatom)%x(1:calc_dim)
+      psi(k, idim) = species_get_iwf(s, jj, calc_dim, states_spin_channel(ispin, ik, idim), x(1:calc_dim))
+    end do
 
+  else
+
+    ASSERT(associated(h%phase))
+    
     call periodic_copy_init(pc, sb, geo%atom(iatom)%x, range = maxval(sb%lsize(1:sb%periodic_dim)))
     do icell = 1, periodic_copy_num(pc)
       pos = periodic_copy_position(pc, sb, icell)
       do k = 1, m%np
         x(1:calc_dim) = m%x(k, 1:calc_dim) - pos(1:calc_dim)
-        psi(k, 1) =  psi(k, 1) + exp(M_zI*sum(kpoints(1:calc_dim)*x(1:calc_dim)))* &
-             R_TOTYPE(species_get_iwf(s, jj, calc_dim, states_spin_channel(ispin, ik, 1), x(1:calc_dim)))
+        psi(k, idim) =  psi(k, idim) + &
+             h%phase(k, ik)*species_get_iwf(s, jj, calc_dim, states_spin_channel(ispin, ik, idim), x(1:calc_dim))
       end do
     end do
     call periodic_copy_end(pc)
-    call X(states_normalize_orbital)(m, wf_dim, psi)
-    call pop_sub()
 
-  case(SPINORS)
+  end if
 
-    call periodic_copy_init(pc, sb, geo%atom(iatom)%x, range = maxval(sb%lsize(1:sb%periodic_dim)))
-    do icell = 1, periodic_copy_num(pc)
-      pos = periodic_copy_position(pc, sb, icell)
-      do k = 1, m%np
-        x(1:calc_dim) = m%x(k, 1:calc_dim) - pos(1:calc_dim)
-        psi(k, idim) = R_TOTYPE(species_get_iwf(s, jj, calc_dim, idim, x(1:calc_dim)))
-      end do
-    end do
-    call periodic_copy_end(pc)
-    call X(states_normalize_orbital)(m, wf_dim, psi)
-    call pop_sub()
-
-  end select
+  call X(states_normalize_orbital)(m, wf_dim, psi)
 
   call pop_sub()
 end subroutine X(lcao_initial_wf)
@@ -122,12 +114,12 @@ subroutine X(lcao_wf) (this, st, gr, geo, h, start)
   do ik = kstart, kend
     do n1 = 1, this%norbs
 
-      call X(lcao_initial_wf)(this, n1, gr%m, geo, gr%sb, lcaopsi, st%d%ispin, ik, st%d%kpoints(:, ik))
+      call X(lcao_initial_wf)(this, n1, gr%m, h, geo, gr%sb, lcaopsi, st%d%ispin, ik)
 
       call X(hpsi)(h, gr, lcaopsi, hpsi, n1, ik)
         
       do n2 = n1, this%norbs
-        call X(lcao_initial_wf)(this, n2, gr%m, geo, gr%sb, lcaopsi2, st%d%ispin, ik, st%d%kpoints(:, ik))
+        call X(lcao_initial_wf)(this, n2, gr%m, h, geo, gr%sb, lcaopsi2, st%d%ispin, ik)
 
         this%X(s)(n1, n2, ik) = X(mf_dotp)(gr%m, st%d%dim, lcaopsi, lcaopsi2)
         this%X(s)(n2, n1, ik) = R_CONJ(this%X(s)(n1, n2, ik))
@@ -153,7 +145,7 @@ subroutine X(lcao_wf) (this, st, gr, geo, h, start)
  
     ! Change of base
     do n2 = 1, this%norbs
-      call X(lcao_initial_wf)(this, n2, gr%m, geo, gr%sb, lcaopsi, st%d%ispin, ik, st%d%kpoints(:, ik))
+      call X(lcao_initial_wf)(this, n2, gr%m, h, geo, gr%sb, lcaopsi, st%d%ispin, ik)
       
       do idim = 1, st%d%dim
         do n1 = lcao_start, st%st_end

@@ -402,7 +402,7 @@ contains
     h%adjoint = .false.
 
     nullify(h%phase)
-    if (simul_box_is_periodic(gr%sb)) call init_phase
+    if (simul_box_is_periodic(gr%sb)) call init_phase()
 
     if(gr%sb%open_boundaries) then
       if(h%theory_level.ne.INDEPENDENT_PARTICLES) then

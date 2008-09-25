@@ -82,7 +82,6 @@ contains
 
     integer :: ia, n, ii, jj, maxj, idim
 
-    call profiling_in(C_PROFILING_LCAO_INIT)
     call push_sub('lcao.lcao_init')
 
     ! nullify everything so we can check for associated pointers when deallocating
@@ -199,7 +198,6 @@ contains
     nullify(this%ds, this%zs)
        
     call pop_sub()
-    call profiling_out(C_PROFILING_LCAO_INIT)
   end subroutine lcao_init
 
   ! ---------------------------------------------------------

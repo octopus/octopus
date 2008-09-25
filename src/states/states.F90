@@ -1787,13 +1787,8 @@ contains
   end subroutine states_write_fermi_energy
 
   ! -------------------------------------------------------
-  integer function states_spin_channel(ispin, ik, dim)
+  integer pure function states_spin_channel(ispin, ik, dim)
     integer, intent(in) :: ispin, ik, dim
-
-    ASSERT(ispin >= UNPOLARIZED .or. ispin <= SPINORS)
-    ASSERT(ik > 0)
-    ASSERT(dim==1 .or. dim==2)
-    ASSERT(.not.(ispin.ne.3 .and. dim==2))
 
     select case(ispin)
     case(1); states_spin_channel = 1
