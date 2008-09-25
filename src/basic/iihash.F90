@@ -60,11 +60,15 @@ contains
     type(iihash_t), intent(out) :: h
     integer,        intent(in)  :: size
 
-    integer :: prime_size, i
+    integer :: prime_size, i, min_size
 
-    ASSERT(size.gt.2)
+    if(size.lt.2) then
+      min_size = 3
+    else
+      min_size = size
+    end if
 
-    prime_size = get_next_prime(size)
+    prime_size = get_next_prime(min_size)
     allocate(h%keyval(0:prime_size-1))
     do i = 0, prime_size-1
       call ialist_init(h%keyval(i))
