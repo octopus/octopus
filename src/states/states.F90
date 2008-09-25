@@ -287,7 +287,8 @@ contains
     st%open_boundaries = gr%sb%open_boundaries
     if(gr%sb%open_boundaries) then
       do il = 1, NLEADS
-        call states_look(trim(gr%sb%lead_restart_dir(il))//'/gs', gr%m, ob_k(il), ob_d(il), ob_st(il), ierr)
+        call states_look(trim(gr%sb%lead_restart_dir(il))//'/gs', mpi_world, &
+          ob_k(il), ob_d(il), ob_st(il), ierr)
         if(ierr.ne.0) then
           message(1) = 'Could not read the number of states of the periodic calculation'
           message(2) = 'from '//trim(gr%sb%lead_restart_dir(il))//'/gs.'
@@ -439,37 +440,40 @@ contains
     call pop_sub()
 
   contains
+
     subroutine read_ob_eigenval_and_occ()
       integer            :: occs, jst, ist, ik, err
       FLOAT              :: flt, eigenval, occ
       character          :: char
       character(len=256) :: restart_dir, line, chars
 
-      call push_sub('states.read_ob_eigenval')
+      call push_sub('states.read_ob_eigenval_and_occ')
 
       restart_dir = trim(gr%sb%lead_restart_dir(LEFT))//'/gs'
 
-      occs = io_open(trim(restart_dir)//'/occs', action='read', is_tmp=.true., grp=gr%m%mpi_grp)
+      occs = io_open(trim(restart_dir)//'/occs', action='read', is_tmp=.true., grp=mpi_world)
       if(occs.lt.0) then
         message(1) = 'Could not read '//trim(restart_dir)//'/occs.'
         call write_fatal(1)
       end if
 
       ! Skip two lines.
-      call iopar_read(gr%m%mpi_grp, occs, line, err); call iopar_read(gr%m%mpi_grp, occs, line, err)
+      call iopar_read(mpi_world, occs, line, err)
+      call iopar_read(mpi_world, occs, line, err)
 
       jst = 1
       do
         ! Check for end of file.
-        call iopar_read(gr%m%mpi_grp, occs, line, err)
+        call iopar_read(mpi_world, occs, line, err)
+
         read(line, '(a)') char
         if(char.eq.'%') then
           exit
         end if
-        call iopar_backspace(gr%m%mpi_grp, occs)
+        call iopar_backspace(mpi_world, occs)
 
         ! Extract eigenvalue.
-        call iopar_read(gr%m%mpi_grp, occs, line, err)
+        call iopar_read(mpi_world, occs, line, err)
         read(line, *) occ, char, eigenval, char, flt, char, flt, char, flt, char, &
           flt, chars, ik, char, ist
         if(st%d%ispin.eq.SPIN_POLARIZED) then
@@ -2057,9 +2061,9 @@ contains
   ! Reads the state stored in directory "dir", and finds out
   ! the kpoints, dim, and nst contained in it.
   ! ---------------------------------------------------------
-  subroutine states_look (dir, m, kpoints, dim, nst, ierr)
+  subroutine states_look(dir, mpi_grp, kpoints, dim, nst, ierr)
     character(len=*), intent(in)    :: dir
-    type(mesh_t),     intent(in)    :: m
+    type(mpi_grp_t),  intent(in)    :: mpi_grp
     integer,          intent(out)   :: kpoints, dim, nst, ierr
 
     character(len=256) :: line
@@ -2071,41 +2075,41 @@ contains
     call push_sub('states.states_look')
 
     ierr = 0
-    iunit  = io_open(trim(dir)//'/wfns', action='read', status='old', die=.false., is_tmp=.true., grp=m%mpi_grp)
+    iunit  = io_open(trim(dir)//'/wfns', action='read', status='old', die=.false., is_tmp=.true., grp=mpi_grp)
     if(iunit < 0) then
       ierr = -1
       call pop_sub
       return
     end if
-    iunit2 = io_open(trim(dir)//'/occs', action='read', status='old', die=.false., is_tmp=.true., grp=m%mpi_grp)
+    iunit2 = io_open(trim(dir)//'/occs', action='read', status='old', die=.false., is_tmp=.true., grp=mpi_grp)
     if(iunit2 < 0) then
-      call io_close(iunit, grp = m%mpi_grp)
+      call io_close(iunit, grp = mpi_grp)
       ierr = -1
       call pop_sub()
       return
     end if
 
     ! Skip two lines.
-    call iopar_read(m%mpi_grp, iunit, line, err); call iopar_read(m%mpi_grp, iunit, line, err)
-    call iopar_read(m%mpi_grp, iunit2, line, err); call iopar_read(m%mpi_grp, iunit2, line, err)
+    call iopar_read(mpi_grp, iunit, line, err); call iopar_read(mpi_grp, iunit, line, err)
+    call iopar_read(mpi_grp, iunit2, line, err); call iopar_read(mpi_grp, iunit2, line, err)
 
     kpoints = 1
     dim = 1
     nst = 1
     do
-      call iopar_read(m%mpi_grp, iunit, line, i)
+      call iopar_read(mpi_grp, iunit, line, i)
       read(line, '(a)') char
       if(i.ne.0.or.char=='%') exit
       read(line, *) ik, char, ist, char, idim, char, filename
       if(ik > kpoints) kpoints = ik
       if(idim == 2)    dim     = 2
       if(ist>nst)      nst     = ist
-      call iopar_read(m%mpi_grp, iunit2, line, err)
+      call iopar_read(mpi_grp, iunit2, line, err)
       read(line, *) occ, char, eigenval
     end do
 
-    call io_close(iunit, grp = m%mpi_grp)
-    call io_close(iunit2, grp = m%mpi_grp)
+    call io_close(iunit, grp = mpi_grp)
+    call io_close(iunit2, grp = mpi_grp)
     call pop_sub()
   end subroutine states_look
 

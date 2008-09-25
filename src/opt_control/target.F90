@@ -152,7 +152,7 @@ module opt_control_target_m
       call write_info(1)
       target%mode = oct_targetmode_static
 
-      call states_look (trim(restart_dir)//'gs', gr%m, ip, ip, target%st%nst, ierr)
+      call states_look (trim(restart_dir)//'gs', gr%m%mpi_grp, ip, ip, target%st%nst, ierr)
       target%st%st_start = 1
       target%st%st_end   = target%st%nst
       deallocate(target%st%occ, target%st%eigenval, target%st%momentum, target%st%node)

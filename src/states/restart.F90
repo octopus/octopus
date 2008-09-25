@@ -172,7 +172,7 @@ contains
 
     call push_sub('restart.restart_look_and_read')
 
-    call states_look(trim(restart_dir)//'gs', gr%m, kpoints, dim, nst, j)
+    call states_look(trim(restart_dir)//'gs', gr%m%mpi_grp, kpoints, dim, nst, j)
     if(j.ne.0) then
       ierr = j
       call pop_sub(); return
