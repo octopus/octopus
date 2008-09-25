@@ -21,36 +21,10 @@
 ! ---------------------------------------------------------
 ! This routine fills state psi with an atomic orbital -- provided
 ! by the pseudopotential structure in geo.
-!
-! Which state will be placed is determined by index "n". Each atom
-! provides niwfs pseudo-orbitals (this number is given in geo%atom(ia)%spec%niwfs
-! for atom number ia). This number is actually multiplied by two in case
-! of spin-unrestricted or spinors calculations.
-!
-! The pseudo-orbitals are placed in order in the following way (Natoms
-! is the total number of atoms).
-!
-! n = 1 => first orbital of atom 1,
-! n = 2 => first orbital of atom 2.
-! n = 3 => first orbital of atom 3.
-! ....
-! n = Natoms => first orbital of atom Natoms
-! n = Natoms + 1 = > second orbital of atom 1
-! ....
-!
-! If at some point in this loop an atom pseudo cannot provide the corresponding
-! orbital (because the niws orbitals have been exhausted), it moves on to the following
-! atom.
-!
-! In the spinors case, it changes a bit:
-!
-! n = 1 => first spin-up orbital of atom 1, assigned to the spin-up component of the spinor.
-! n = 2 => first spin-down orbital of atom 1, assigned to the spin-down component of the spinor.
-! n = 3 => first spin-up orbital of atom 2, assigned to the spin-up component of the spinor.
-! ....
 ! ---------------------------------------------------------
-subroutine X(lcao_initial_wf) (n, m, geo, sb, psi, ispin, ik, kpoints)
-  integer,                  intent(in)    :: n
+subroutine X(lcao_initial_wf) (this, iorb, m, geo, sb, psi, ispin, ik, kpoints)
+  type(lcao_t),             intent(in)    :: this
+  integer,                  intent(in)    :: iorb
   type(mesh_t),             intent(in)    :: m
   type(simul_box_t),        intent(in)    :: sb
   type(geometry_t), target, intent(in)    :: geo
@@ -61,105 +35,61 @@ subroutine X(lcao_initial_wf) (n, m, geo, sb, psi, ispin, ik, kpoints)
 
   type(species_t), pointer :: s
   type(periodic_copy_t)   :: pc
-  integer :: norbs, ia, i, icell, j, idim, k, wf_dim
+  integer :: icell, idim, k, wf_dim, iatom, jj
   FLOAT :: x(MAX_DIM), pos(MAX_DIM)
-  
-  
+
+
   call push_sub('lcao_inc.Xlcao_initial_wf')
 
-  norbs = 0
-  do ia = 1, geo%natoms
-    norbs = norbs + geo%atom(ia)%spec%niwfs
-  end do
-
   wf_dim = 1
-  if (ispin == SPINORS) then
-    wf_dim = 2
-    norbs = norbs*2
-  end if
+  if (ispin == SPINORS) wf_dim = 2
 
-  ASSERT(n >= 1)
-  ASSERT(n <= norbs)
+  ASSERT(iorb >= 1)
+  ASSERT(iorb <= this%maxorbs)
 
   psi(1:m%np, 1:wf_dim) = R_TOTYPE(M_ZERO)
-  
+
+  iatom = this%atom(iorb)
+  jj = this%level(iorb)
+  idim = this%ddim(iorb)
+  s => geo%atom(iatom)%spec
+  ASSERT(jj <= s%niwfs)
+
   select case(ispin)
 
-    case(UNPOLARIZED, SPIN_POLARIZED)
-      ! The index "i" goes over all the orbitals supplied by the pseudopotentials, and the
-      ! orbitals in placed in psi whenever it matches "n". The index "j" runs over the orbitals
-      ! of each atom; whenever j is larger than the number of orbitals that can actually be supplied
-      ! by the atom, the atom is skipped.
-      i = 1
-      j = 0
-      do
-        j = j + 1
-        do ia = 1, geo%natoms
-          s => geo%atom(ia)%spec
-          if(j > s%niwfs) cycle
-          if(n == i) then
-            call periodic_copy_init(pc, sb, geo%atom(ia)%x, range = maxval(sb%lsize(1:sb%periodic_dim)))
-            do icell = 1, periodic_copy_num(pc)
-              pos = periodic_copy_position(pc, sb, icell)
-              do k = 1, m%np
-                x(1:calc_dim) = m%x(k, 1:calc_dim) - pos(1:calc_dim)
-                psi(k, 1) =  psi(k, 1) + exp(M_zI*sum(kpoints(1:calc_dim)*x(1:calc_dim)))* &
-                  R_TOTYPE(species_get_iwf(s, j, calc_dim, states_spin_channel(ispin, ik, 1), x(1:calc_dim)))
-              end do
-            end do
-            call periodic_copy_end(pc)
-            call X(states_normalize_orbital)(m, wf_dim, psi)
-            call pop_sub()
-            return
-          end if
-          i = i + 1
-        end do
-      end do
+  case(UNPOLARIZED, SPIN_POLARIZED)
 
-    case(SPINORS)
-
-      i = 1
-      j = 0
-      do
-        j = j + 1
-        do ia = 1, geo%natoms
-          s => geo%atom(ia)%spec
-          if(j > s%niwfs) cycle
-          do idim = 1, 2
-            if(n == i) then
-              call periodic_copy_init(pc, sb, geo%atom(ia)%x, range = maxval(sb%lsize(1:sb%periodic_dim)))
-              do icell = 1, periodic_copy_num(pc)
-                pos = periodic_copy_position(pc, sb, icell)
-                do k = 1, m%np
-                  x(1:calc_dim) = m%x(k, 1:calc_dim) - geo%atom(ia)%x(1:calc_dim)
-                  psi(k, idim) =  &
-                       R_TOTYPE(species_get_iwf(s, j, calc_dim, idim, x(1:calc_dim)))
-                end do
-              end do
-              call periodic_copy_end(pc)
-              call X(states_normalize_orbital)(m, wf_dim, psi)
-              call pop_sub()
-              return
-            end if
-            i = i + 1
-          end do
-        end do
+    call periodic_copy_init(pc, sb, geo%atom(iatom)%x, range = maxval(sb%lsize(1:sb%periodic_dim)))
+    do icell = 1, periodic_copy_num(pc)
+      pos = periodic_copy_position(pc, sb, icell)
+      do k = 1, m%np
+        x(1:calc_dim) = m%x(k, 1:calc_dim) - pos(1:calc_dim)
+        psi(k, 1) =  psi(k, 1) + exp(M_zI*sum(kpoints(1:calc_dim)*x(1:calc_dim)))* &
+             R_TOTYPE(species_get_iwf(s, jj, calc_dim, states_spin_channel(ispin, ik, 1), x(1:calc_dim)))
       end do
+    end do
+    call periodic_copy_end(pc)
+    call X(states_normalize_orbital)(m, wf_dim, psi)
+    call pop_sub()
+
+  case(SPINORS)
+
+    call periodic_copy_init(pc, sb, geo%atom(iatom)%x, range = maxval(sb%lsize(1:sb%periodic_dim)))
+    do icell = 1, periodic_copy_num(pc)
+      pos = periodic_copy_position(pc, sb, icell)
+      do k = 1, m%np
+        x(1:calc_dim) = m%x(k, 1:calc_dim) - pos(1:calc_dim)
+        psi(k, idim) = R_TOTYPE(species_get_iwf(s, jj, calc_dim, idim, x(1:calc_dim)))
+      end do
+    end do
+    call periodic_copy_end(pc)
+    call X(states_normalize_orbital)(m, wf_dim, psi)
+    call pop_sub()
 
   end select
 
   call pop_sub()
 end subroutine X(lcao_initial_wf)
-
-! ---------------------------------------------------------
-subroutine X(lcao_init) (this, gr, geo, st, norbs)
-  type(lcao_t),         intent(inout) :: this
-  type(grid_t),         intent(inout) :: gr
-  type(geometry_t),     intent(in)    :: geo
-  type(states_t),       intent(in)    :: st
-  integer,              intent(in)    :: norbs
-
-end subroutine X(lcao_init)
 
 ! ---------------------------------------------------------
 subroutine X(lcao_wf) (this, st, gr, geo, h, start)
@@ -170,7 +100,6 @@ subroutine X(lcao_wf) (this, st, gr, geo, h, start)
   type(hamiltonian_t), intent(in)    :: h
   integer,             intent(in)    :: start
   integer :: nst, ik, n1, n2, idim, lcao_start
-!  integer :: sts, ste, ii
   R_TYPE, allocatable :: hpsi(:, :)
   FLOAT, allocatable :: ev(:)
   R_TYPE, allocatable :: hamilt(:, :, :), lcaopsi(:, :), lcaopsi2(:, :)
@@ -193,12 +122,12 @@ subroutine X(lcao_wf) (this, st, gr, geo, h, start)
   do ik = kstart, kend
     do n1 = 1, this%norbs
 
-      call X(lcao_initial_wf)(n1, gr%m, geo, gr%sb, lcaopsi, st%d%ispin, ik, st%d%kpoints(:, ik))
+      call X(lcao_initial_wf)(this, n1, gr%m, geo, gr%sb, lcaopsi, st%d%ispin, ik, st%d%kpoints(:, ik))
 
       call X(hpsi)(h, gr, lcaopsi, hpsi, n1, ik)
         
       do n2 = n1, this%norbs
-        call X(lcao_initial_wf)(n2, gr%m, geo, gr%sb, lcaopsi2, st%d%ispin, ik, st%d%kpoints(:, ik))
+        call X(lcao_initial_wf)(this, n2, gr%m, geo, gr%sb, lcaopsi2, st%d%ispin, ik, st%d%kpoints(:, ik))
 
         this%X(s)(n1, n2, ik) = X(mf_dotp)(gr%m, st%d%dim, lcaopsi, lcaopsi2)
         this%X(s)(n2, n1, ik) = R_CONJ(this%X(s)(n1, n2, ik))
@@ -224,7 +153,7 @@ subroutine X(lcao_wf) (this, st, gr, geo, h, start)
  
     ! Change of base
     do n2 = 1, this%norbs
-      call X(lcao_initial_wf)(n2, gr%m, geo, gr%sb, lcaopsi, st%d%ispin, ik, st%d%kpoints(:, ik))
+      call X(lcao_initial_wf)(this, n2, gr%m, geo, gr%sb, lcaopsi, st%d%ispin, ik, st%d%kpoints(:, ik))
       
       do idim = 1, st%d%dim
         do n1 = lcao_start, st%st_end

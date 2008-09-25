@@ -64,12 +64,15 @@ module lcao_m
     integer           :: state ! 0 => non-initialized;
                                ! 1 => initialized (k, s and v1 matrices filled)
     integer           :: norbs
-    FLOAT,  pointer   :: ds     (:, :, :) ! s is the overlap matrix;
-    CMPLX,  pointer   :: zs     (:, :, :) ! s is the overlap matrix;
+    integer           :: maxorbs
+    FLOAT,   pointer  :: ds(:, :, :) ! s is the overlap matrix;
+    CMPLX,   pointer  :: zs(:, :, :) ! s is the overlap matrix;
+    integer, pointer  :: atom(:)
+    integer, pointer  :: level(:)
+    integer, pointer  :: ddim(:)
   end type lcao_t
 
 contains
-
   ! ---------------------------------------------------------
   subroutine lcao_init(this, gr, geo, st)
     type(lcao_t),         intent(out)   :: this
@@ -77,29 +80,84 @@ contains
     type(geometry_t),     intent(in)    :: geo
     type(states_t),       intent(in)    :: st
 
-    integer :: ia, n
+    integer :: ia, n, ii, jj, maxj, idim
 
     call profiling_in(C_PROFILING_LCAO_INIT)
     call push_sub('lcao.lcao_init')
 
-    !this is to avoid a bug whe deallocating in gfortran 4.2.0 20060520
+    ! nullify everything so we can check for associated pointers when deallocating
     nullify(this%ds)
     nullify(this%zs)
-        
-    ! Fix the dimension of the LCAO problem (this%dim)
-    this%norbs = 0
-    do ia = 1, geo%natoms
-      this%norbs = this%norbs + geo%atom(ia)%spec%niwfs
-    end do
-    if( (st%d%ispin.eq.SPINORS) ) this%norbs = this%norbs*2
+    nullify(this%atom)
+    nullify(this%level)
+    nullify(this%ddim)
 
-    if(this%norbs < st%nst) then
+    ! count the number of orbitals available
+    maxj = 0
+    this%maxorbs = 0
+    do ia = 1, geo%natoms
+      maxj = max(maxj, geo%atom(ia)%spec%niwfs)
+      this%maxorbs = this%maxorbs + geo%atom(ia)%spec%niwfs
+    end do
+
+    this%maxorbs = this%maxorbs*st%d%dim
+
+    if(this%maxorbs < st%nst) then
       this%state = 0
       write(message(1),'(a)') 'Cannot do LCAO initial calculation because there are not enough atomic orbitals.'
       call write_warning(1)
       call pop_sub()
       return
     end if
+
+    ! generate tables to know which indexes each atomic orbital has
+
+    ALLOCATE(this%atom(1:this%maxorbs), this%maxorbs)
+    ALLOCATE(this%level(1:this%maxorbs), this%maxorbs)
+    ALLOCATE(this%ddim(1:this%maxorbs), this%maxorbs)
+
+    ! Each atom provides niwfs pseudo-orbitals (this number is given in
+    ! geo%atom(ia)%spec%niwfs for atom number ia). This number is
+    ! actually multiplied by two in case of spin-unrestricted or spinors
+    ! calculations.
+    !
+    ! The pseudo-orbitals are placed in order in the following way (Natoms
+    ! is the total number of atoms).
+    !
+    ! n = 1 => first orbital of atom 1,
+    ! n = 2 => first orbital of atom 2.
+    ! n = 3 => first orbital of atom 3.
+    ! ....
+    ! n = Natoms => first orbital of atom Natoms
+    ! n = Natoms + 1 = > second orbital of atom 1
+    ! ....
+    !
+    ! If at some point in this loop an atom pseudo cannot provide the corresponding
+    ! orbital (because the niws orbitals have been exhausted), it moves on to the following
+    ! atom.
+    !
+    ! In the spinors case, it changes a bit:
+    !
+    ! n = 1 => first spin-up orbital of atom 1, assigned to the spin-up component of the spinor.
+    ! n = 2 => first spin-down orbital of atom 1, assigned to the spin-down component of the spinor.
+    ! n = 3 => first spin-up orbital of atom 2, assigned to the spin-up component of the spinor.
+    
+    ii = 1
+    do jj = 1, maxj
+      do ia = 1, geo%natoms
+        do idim = 1,st%d%dim
+          if(jj > geo%atom(ia)%spec%niwfs) cycle
+
+          this%atom(ii) = ia
+          this%level(ii) = jj
+          this%ddim(ii) = idim
+
+          ii = ii + 1
+        end do
+      end do
+    end do
+
+    ASSERT(ii - 1 == this%maxorbs)
 
     !%Variable LCAODimension
     !%Type integer
@@ -113,47 +171,48 @@ contains
     !% set will be the sum of all these numbers, unless this dimension is larger than
     !% twice the number of required orbitals for the full calculation. 
     !%
-    !% This dimension however can be reduced (never increased) by making use of the 
-    !% variable LCAODimension. Note that LCAODimension cannot be smaller than the 
-    !% number of orbitals needed in the full calculation -- if LCAODimension is smaller, 
-    !% it will be changed silently increased to meet this requirement. In the same way, 
-    !% if LCAODimension is larger than the available number of atomic orbitals, 
-    !% it will be reduced. If you want to use the largest possible number, set
+    !% This dimension however can be changed by making use of this
+    !% variable. Note that LCAODimension cannot be smaller than the
+    !% number of orbitals needed in the full calculation -- if
+    !% LCAODimension is smaller, it will be silently increased to meet
+    !% this requirement. In the same way, if LCAODimension is larger
+    !% than the available number of atomic orbitals, it will be
+    !% reduced. If you want to use the largest possible number, set
     !% LCAODimension to a negative number.
     !%End
     call loct_parse_int(check_inp('LCAODimension'), 0, n)
-    if((n > 0) .and. (n <= st%nst)) then
-      this%norbs = st%nst
-    elseif( (n > st%nst) .and. (n < this%norbs) ) then
-      this%norbs = n
-    elseif( n.eq.0) then
-      this%norbs = min(this%norbs, 2*st%nst)
-    end if
 
-    if (wfs_are_real(st)) then
-      call dlcao_init(this, gr, geo, st, this%norbs)
+    if(n > 0 .and. n <= st%nst) then
+      this%norbs = st%nst
+    else if(n > st%nst .and. n <= this%maxorbs) then
+      this%norbs = n
+    else if(n == 0) then
+      this%norbs = min(this%maxorbs, 2*st%nst)
     else
-      call zlcao_init(this, gr, geo, st, this%norbs)
+      this%norbs = this%maxorbs
     end if
+   
+    ASSERT(this%norbs >= st%nst)
+    ASSERT(this%norbs <= this%maxorbs)
 
     this%state = 1
     nullify(this%ds, this%zs)
-
+       
     call pop_sub()
     call profiling_out(C_PROFILING_LCAO_INIT)
   end subroutine lcao_init
 
   ! ---------------------------------------------------------
-  subroutine lcao_end(this, nst)
+  subroutine lcao_end(this)
     type(lcao_t), intent(inout) :: this
-    integer,         intent(in) :: nst
 
     call push_sub('lcao.lcao_end')
 
-    if(this%norbs >= nst) then
-      if(associated(this%ds)) deallocate(this%ds)
-      if(associated(this%zs)) deallocate(this%zs)
-    endif
+    if(associated(this%atom)) deallocate(this%atom)
+    if(associated(this%level)) deallocate(this%level)
+    if(associated(this%ddim)) deallocate(this%ddim)
+    if(associated(this%ds)) deallocate(this%ds)
+    if(associated(this%zs)) deallocate(this%zs)
 
     this%state = 0
     call pop_sub()

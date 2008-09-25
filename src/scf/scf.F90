@@ -483,7 +483,7 @@ contains
           write(message(2), '(a)')        '' 
           call write_info(2)
         end if
-        if(scf%lcao_restricted) call lcao_end(lcao, st%nst)
+        if(scf%lcao_restricted) call lcao_end(lcao)
         call profiling_out(C_PROFILING_SCF_CYCLE)
         exit
       end if

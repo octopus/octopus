@@ -130,7 +130,7 @@ contains
           call write_info(1)
           
           call lcao_wf(lcao, sys%st, sys%gr, sys%geo, h)
-          call lcao_end(lcao, sys%st%nst)
+          call lcao_end(lcao)
 
           !Just populate again the states, so that the eigenvalues are properly written
           call states_fermi(sys%st, sys%gr%m)

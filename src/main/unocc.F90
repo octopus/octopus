@@ -119,7 +119,7 @@ contains
         call lcao_init(lcao, sys%gr, sys%geo, sys%st)
         if(lcao_is_available(lcao)) then
           call lcao_wf(lcao, sys%st, sys%gr, sys%geo, h, start = ierr+1)
-          call lcao_end(lcao, sys%st%nst)
+          call lcao_end(lcao)
         end if
       end if
     end if
