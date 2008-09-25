@@ -37,10 +37,17 @@ subroutine X(hamiltonian_eigenval)(h, gr, st, t)
   call push_sub('h_inc.Xhamiltonian_eigenval')
   ALLOCATE(Hpsi(NP, st%d%dim), NP*st%d%dim)
 
-  if(gr%sb%open_boundaries) then
+  if(gr%sb%open_boundaries.and.calc_mode_is(CM_GS)) then
     ! For open boundaries we know the eigenvalues.
     st%eigenval = st%ob_eigenval
   else
+    ! FIXMEL: for TD open boundaries this is wrong. But the GS case like above
+    ! is also wrong.
+    ! The correct way to calculate the eigenvalue here is:
+    !      / Psi_L | H_LL H_LC 0    | Psi_L \
+    ! e = <  Psi_C | H_CL H_CC H_CR | Psi_C  >
+    !      \ Psi_R | 0    H_RC H_RR | Psi_R /
+    ! But I am not sure how to calculate this right now.
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
         if(present(t)) then
