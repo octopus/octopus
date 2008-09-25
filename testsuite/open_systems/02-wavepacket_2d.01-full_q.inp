@@ -9,47 +9,68 @@
 
 DebugLevel = 0
 
-CalculationMode = td_transport
+i = {0, 1}
+
+%CalculationMode
+ gs      | gs      | td
+ "lead_" | "flat_" | "flat_"
+ 1       | 2       | 3
+%
+
+FromScratch = yes
 
 TheoryLevel = independent_particles
 
+Dimensions = 2
 BoxShape = parallelepiped
-
-DerivativesOrder = 3
+DerivativesOrder = 4
+Spacing = 0.25
+PoissonSolver = direct2d
 
 TDTimeStep = 0.075
 TDMaximumIter = 75
 TDEvolutionMethod = crank_nicholson_src_mem
 
-TDTransAdditionalTerms = mem_term
-TDTransMemType = save_cpu_time
-
-Dimensions = 2
-Spacing = 0.25
-%Lsize
-  4 | 4 | 0
+%Species
+ "flat" | 0 | user_defined | 2.0 | "0"
 %
 
-OnlyUserDefinedInitialStates = yes
-ExtraStates = 1
+# The lead.
+lead_PeriodicDimensions = 1
+%lead_Coordinates
+ "flat" | 0 | 0 | 0
+%
+%lead_Lsize
+ DerivativesOrder*Spacing | 4 | 0
+%
+%lead_KPoints
+ 1 | 0.25 | 0 | 0
+%
+lead_Output = potential
+lead_OutputHow = binary
 
+
+# The central region.
+%flat_OpenBoundaries
+ lead_dataset     | "lead_"
+ lead_restart_dir | "lead_restart"
+ lead_static_dir  | "lead_static"
+ add_unit_cells   | 0
+%
+%flat_Coordinates
+ "flat" | 0 | 0 | 0
+%
+%flat_Lsize
+ 4 | 4 | 0
+%
+
+# TD settings.
+flat_OnlyUserDefinedInitialStates = yes
 kx = 1.75
 ky = 1.0
 alpha = 0.5
 i = {0, 1}
-
-%UserDefinedStates
+%flat_UserDefinedStates
  1 | 1 | 1 | formula | "exp(i*(kx*x + ky*y))*exp(-alpha*r*r)"
 %
-
-%Occupations
- 1.0
-%
-
-FromScratch = yes
-
-OutputEvery = 2
-
-Output = wfs_sqmod + wfs
-
-OutputHow = gnuplot + plane_z
+flat_OpenBoundariesAdditionalTerms = mem_term
