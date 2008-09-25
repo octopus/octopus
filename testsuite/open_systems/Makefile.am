@@ -26,7 +26,6 @@ dist_share_DATA = \
 	01-wavepacket.02-deriv_order_4.inp \
 	01-wavepacket.test                 \
 	02-wavepacket_2d.test              \
-        02-wavepacket_2d.01-full_q.inp     \
-        02-wavepacket_2d.02-sparse_q.inp
+        02-wavepacket_2d.01-full_q.inp
 
 CLEANFILES = *~ *.bak
