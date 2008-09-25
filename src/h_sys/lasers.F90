@@ -399,7 +399,7 @@ contains
     integer,       intent(in) :: iunit
 
     FLOAT :: t, fluence, max_intensity, intensity
-    CMPLX :: amp
+    CMPLX :: amp, val
     integer :: i, j, k
 
     do i = 1, no_l
@@ -436,7 +436,8 @@ contains
         max_intensity = M_ZERO
         do j = 1, max_iter
           t = j * dt
-          amp = tdf(l(i)%f, t) * exp(M_zI * ( l(i)%omega*t + tdf(l(i)%phi, t) ) )
+          val = tdf(l(i)%f, t)
+          amp = val*exp(M_zI*(l(i)%omega*t + val))
           intensity = M_ZERO
           do k = 1, MAX_DIM
             intensity = intensity + CNST(5.4525289841210) * real(amp*l(i)%pol(k))**2
