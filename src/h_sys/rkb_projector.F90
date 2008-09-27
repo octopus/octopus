@@ -217,6 +217,8 @@ contains
     end do
 
     deallocate(bra)
+
+    call pop_sub()
   end subroutine rkb_project_bra
 
   ! ---------------------------------------------------------
@@ -230,7 +232,7 @@ contains
     integer :: idim, jdim, n_s, is
     CMPLX :: aa
 
-    call push_sub('rkb_projector.rkb_project_bra')
+    call push_sub('rkb_projector.rkb_project_ket')
 
     n_s = rkb_p%n_s
 

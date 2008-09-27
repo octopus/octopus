@@ -227,7 +227,9 @@ contains
       nullify(ps%g%drdi, ps%g%s)
       ps%g%nrval = ps_upf%np
       ALLOCATE(ps%g%rofi(ps%g%nrval), ps%g%nrval)
+      ALLOCATE(ps%g%r2ofi(ps%g%nrval), ps%g%nrval)
       ps%g%rofi = ps_upf%r
+      ps%g%r2ofi = ps%g%rofi**2
 
     end select
 
@@ -294,9 +296,9 @@ contains
   end subroutine ps_init
 
   subroutine ps_separate(ps)
-    type(ps_t),        intent(out) :: ps
+    type(ps_t),        intent(inout) :: ps
 
-    FLOAT, allocatable :: vsr(:), vlr(:), nlr(:), vion(:), r2ofi(:)
+    FLOAT, allocatable :: vsr(:), vlr(:), nlr(:), vion(:)
     FLOAT :: r
     integer :: ii
     
@@ -309,15 +311,13 @@ contains
 
     ALLOCATE(vsr(ps%g%nrval), ps%g%nrval)
     ALLOCATE(vlr(ps%g%nrval), ps%g%nrval)
-    ALLOCATE(nlr(ps%g%nrval), ps%g%nrval)
+    ALLOCATE(nlr(ps%g%nrval), ps%g%nrval) 
     ALLOCATE(vion(ps%g%nrval), ps%g%nrval)
-    ALLOCATE(r2ofi(ps%g%nrval), ps%g%nrval)
     
     vlr(1) = -ps%z_val*M_TWO/(sqrt(M_TWO*M_PI)*ps%sigma_erf)
 
     do ii = 1, ps%g%nrval
       r = ps%g%rofi(ii)
-      r2ofi(ii) = r**2
       if ( ii > 1) then
         vlr(ii)  = -ps%z_val*loct_erf(r/(ps%sigma_erf*sqrt(M_TWO)))/r
         vion(ii) = -ps%z_val/r - vlr(ii)
@@ -330,7 +330,7 @@ contains
     call spline_fit(ps%g%nrval, ps%g%rofi, vlr, ps%vlr)
 
     call spline_init(ps%vlr_sq)
-    call spline_fit(ps%g%nrval, r2ofi, vlr, ps%vlr_sq)
+    call spline_fit(ps%g%nrval, ps%g%r2ofi, vlr, ps%vlr_sq)
     
     call spline_init(ps%nlr)
     call spline_fit(ps%g%nrval, ps%g%rofi, nlr, ps%nlr)
@@ -349,7 +349,7 @@ contains
     call spline_init(ps%dvion)
     call spline_der(ps%vion, ps%dvion)
 
-    deallocate(vsr, vlr, nlr, vion, r2ofi)
+    deallocate(vsr, vlr, nlr, vion)
     
     ps%is_separated = .true.
 

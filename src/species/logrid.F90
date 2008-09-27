@@ -45,6 +45,7 @@ module logrid_m
     integer  :: nrval
 
     FLOAT, pointer :: rofi(:) ! r value of the point i
+    FLOAT, pointer :: r2ofi(:) ! r value of the point i
     FLOAT, pointer :: drdi(:) ! jacobian, i.e., the derivative of r in terms of i
     FLOAT, pointer :: s(:)    ! sqrt of drdi
   end type logrid_t
@@ -67,6 +68,7 @@ contains
     g%a = a; g%b = b; g%nrval = nrval
 
     ALLOCATE(g%rofi(nrval), nrval)
+    ALLOCATE(g%r2ofi(nrval), nrval)
     ALLOCATE(g%drdi(nrval), nrval)
     ALLOCATE(g%s(nrval),    nrval)
 
@@ -96,7 +98,9 @@ contains
     ! calculate sqrt(drdi)
     do ir = 1, g%nrval
       g%s(ir)    = sqrt(g%drdi(ir))
+      g%r2ofi(ir) = g%rofi(ir)**2
     end do
+
 
   end subroutine logrid_init
 
@@ -106,6 +110,7 @@ contains
     type(logrid_t), intent(inout) :: g
 
     if (associated(g%rofi)) deallocate(g%rofi)
+    if (associated(g%r2ofi)) deallocate(g%r2ofi)
     if (associated(g%drdi)) deallocate(g%drdi)
     if (associated(g%s)) deallocate(g%s)
 
@@ -123,10 +128,12 @@ contains
     go%nrval  = gi%nrval
 
     ALLOCATE(go%rofi(go%nrval), go%nrval)
+    ALLOCATE(go%r2ofi(go%nrval), go%nrval)
     ALLOCATE(go%drdi(go%nrval), go%nrval)
     ALLOCATE(go%s(go%nrval), go%nrval)
 
     go%rofi(:) = gi%rofi(:)
+    go%r2ofi(:) = gi%r2ofi(:)
     go%drdi(:) = gi%drdi(:)
     go%s(:)    = gi%s(:)
 
