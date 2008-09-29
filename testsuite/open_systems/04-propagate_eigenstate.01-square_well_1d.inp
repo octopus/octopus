@@ -1,0 +1,70 @@
+# -*- coding: utf-8 -*-
+#
+# $Id$
+#
+# Calculate extended eigenstate of an attractive square
+# potential barrier in 1D and propagate it.
+
+
+%CalculationMode
+ gs      | gs      | td
+ "lead_" | "well_" | "well_"
+ 1       | 2       | 3
+%
+
+FromScratch = yes
+TheoryLevel = independent_particles
+
+BoxShape = parallelepiped
+Dimensions = 1
+Spacing = 0.1
+Lx = 20
+
+TDMaximumIter = 300
+TDTimeStep = 0.5
+
+V = 0.5
+W = 10
+%Species
+ "flat" | 0 | user_defined | 2.0 | "0"
+ "well" | 0 | user_defined | 2.0 | "V*(-step(x+W/2)+step(x-W/2))"
+%
+
+
+# The lead.
+lead_PeriodicDimensions = 1
+%lead_Coordinates
+ "flat" | 0 | 0 | 0
+%
+
+%lead_Lsize
+ 40*Spacing | 0 | 0
+%
+
+%lead_KPoints
+ 1 | 0.1 | 0 | 0
+%
+
+lead_Output = potential
+lead_OutputHow = binary
+
+
+# The extended system with scattering center.
+add_ucells = 2 
+%well_OpenBoundaries
+ lead_dataset     | "lead_"
+ lead_restart_dir | "lead_restart"
+ lead_static_dir  | "lead_static"
+ add_unit_cells   | add_ucells
+%
+well_OpenBoundariesBiCGMaxIter = 1000
+
+%well_Coordinates
+ "well" | 0 | 0 | 0
+%
+
+%well_Lsize
+ 20 | 0 | 0
+%
+
+well_EigenSolverMaxiter = 5000

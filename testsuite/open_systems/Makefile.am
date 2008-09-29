@@ -24,8 +24,13 @@ sharedir = $(pkgdatadir)/testsuite/open_systems
 dist_share_DATA = \
 	01-wavepacket.01-deriv_order_1.inp \
 	01-wavepacket.02-deriv_order_4.inp \
-	01-wavepacket.test                 \
-	02-wavepacket_2d.test              \
-        02-wavepacket_2d.01-full_q.inp
+	01-wavepacket.test \
+        02-wavepacket_2d.01-full_q.inp \
+	02-wavepacket_2d.test \
+	03-extended_eigenstate.01-square_well_1d.inp \
+	03-extended_eigenstate.02-ring_leads_2d.inp \
+	03-extended_eigenstate.test \
+	04-propagate_eigenstate.01-square_well_1d.inp \
+	04-propagate_eigenstate.test
 
 CLEANFILES = *~ *.bak
