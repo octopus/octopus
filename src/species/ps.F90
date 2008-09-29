@@ -71,7 +71,8 @@ module ps_m
     FLOAT    :: z, z_val
     type(valconf_t)   :: conf
     type(logrid_t) :: g
-    type(spline_t), pointer :: Ur(:, :)     ! atomic wavefunctions
+    type(spline_t), pointer :: ur(:, :)     ! atomic wavefunctions
+    type(spline_t), pointer :: ur_sq(:, :)     ! atomic wavefunctions
 
     ! Kleynman and Bylander projectors stuff
     integer  :: l_max    ! maximum value of l to take
@@ -237,6 +238,7 @@ contains
     ALLOCATE(ps%kb   (0:ps%l_max, ps%kbc),             (ps%l_max+1)*ps%kbc)
     ALLOCATE(ps%dkb  (0:ps%l_max, ps%kbc),             (ps%l_max+1)*ps%kbc)
     ALLOCATE(ps%ur   (ps%conf%p, ps%ispin),            ps%conf%p*ps%ispin)
+    ALLOCATE(ps%ur_sq(ps%conf%p, ps%ispin),            ps%conf%p*ps%ispin)
     ALLOCATE(ps%h    (0:ps%l_max, 1:ps%kbc, 1:ps%kbc), (ps%l_max+1)*ps%kbc*ps%kbc)
     ALLOCATE(ps%k    (0:ps%l_max, 1:ps%kbc, 1:ps%kbc), (ps%l_max+1)*ps%kbc*ps%kbc)
     call spline_init(ps%kb)
@@ -557,13 +559,14 @@ contains
     call spline_end(ps%kb)
     call spline_end(ps%dkb)
     call spline_end(ps%ur)
+    call spline_end(ps%ur_sq)
 
     call spline_end(ps%vl)
     call spline_end(ps%core)
 
     call logrid_end(ps%g)
 
-    deallocate(ps%kb, ps%dkb, ps%ur, ps%h, ps%k)
+    deallocate(ps%kb, ps%dkb, ps%ur, ps%ur_sq, ps%h, ps%k)
 
     call pop_sub()
   end subroutine ps_end
@@ -635,7 +638,8 @@ contains
         do l = 1, ps%conf%p
           hato(2:psp%g%nrval) = psp%rphi(2:psp%g%nrval, l)/psp%g%rofi(2:psp%g%nrval)
           hato(1) = hato(2)
-          call spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%Ur(l, is))
+          call spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%ur(l, is))
+          call spline_fit(psp%g%nrval, psp%g%r2ofi, hato, ps%ur_sq(l, is))
         end do
       end do
       
@@ -689,6 +693,7 @@ contains
             hato(2), hato(3))
 
           call spline_fit(g%nrval, g%rofi, hato, ps%ur(l, is))
+          call spline_fit(g%nrval, g%r2ofi, hato, ps%ur_sq(l, is))
 
         end do
       end do
@@ -824,7 +829,8 @@ contains
     do is = 1, ps%ispin
       do l = 1, ps%conf%p
         hato = ps_upf%wfs(:, l)/ps%g%rofi
-        call spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%Ur(l, is))
+        call spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%ur(l, is))
+        call spline_fit(ps%g%nrval, ps%g%r2ofi, hato, ps%ur_sq(l, is))
       end do
     end do
 
