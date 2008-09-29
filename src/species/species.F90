@@ -45,6 +45,7 @@ module species_m
     species_read,              &
     species_get_nlcc,          &
     species_get_iwf,           &
+    species_get_iwf_radius,    &
     species_is_ps,             &
     species_is_local,          &
     species_real_nl_projector, &
@@ -632,7 +633,7 @@ contains
     FLOAT :: r
 
     ! only for 3D pseudopotentials, please
-    if(s%type==SPEC_PS_PSF.or.s%type==SPEC_PS_HGH.or.s%type==SPEC_PS_CPI.or.s%type==SPEC_PS_FHI.or.s%type==SPEC_PS_UPF) then
+    if(species_is_ps(s)) then
       r = sqrt(sum(x(:)**2))
       l = spline_eval(s%ps%core, r)
     else
@@ -676,6 +677,27 @@ contains
 
   end function species_get_iwf
 
+
+  ! ---------------------------------------------------------
+  FLOAT function species_get_iwf_radius(s, j, is) result(radius)
+    type(species_t),   intent(in) :: s
+    integer,           intent(in) :: j
+    integer,           intent(in) :: is
+
+    integer :: i, l, m
+    FLOAT, parameter :: threshold = CNST(0.01)
+
+    i = s%iwf_i(j, is)
+    l = s%iwf_l(j, is)
+    m = s%iwf_m(j, is)
+
+    if(species_is_ps(s)) then
+      radius = spline_cutoff_radius(s%ps%ur(i, is), threshold)
+    else
+      radius = sqrt(-M_TWO*log(threshold)/s%omega)
+    end if
+
+  end function species_get_iwf_radius
 
   ! ---------------------------------------------------------
   subroutine species_iwf_fix_qn(s, ispin)

@@ -22,7 +22,7 @@
 ! This routine fills state psi with an atomic orbital -- provided
 ! by the pseudopotential structure in geo.
 ! ---------------------------------------------------------
-subroutine X(lcao_initial_wf) (this, iorb, m, h, geo, sb, psi, ispin, ik)
+subroutine X(lcao_atomic_orbital) (this, iorb, m, h, geo, sb, psi, ispin, ik)
   type(lcao_t),             intent(in)    :: this
   integer,                  intent(in)    :: iorb
   type(mesh_t),             intent(in)    :: m
@@ -37,8 +37,10 @@ subroutine X(lcao_initial_wf) (this, iorb, m, h, geo, sb, psi, ispin, ik)
   type(periodic_copy_t)   :: pc
   integer :: icell, idim, k, wf_dim, iatom, jj, spin_channel
   FLOAT :: x(MAX_DIM), pos(MAX_DIM)
+  type(profile_t), save :: prof
 
-  call push_sub('lcao_inc.Xlcao_initial_wf')
+  call profiling_in(prof, "ATOMIC_ORBITAL")
+  call push_sub('lcao_inc.Xlcao_atomic_orbital')
 
   wf_dim = 1
   if (ispin == SPINORS) wf_dim = 2
@@ -64,9 +66,7 @@ subroutine X(lcao_initial_wf) (this, iorb, m, h, geo, sb, psi, ispin, ik)
 
   else
 
-    ASSERT(associated(h%phase))
-    
-    call periodic_copy_init(pc, sb, geo%atom(iatom)%x, range = maxval(sb%lsize(1:sb%periodic_dim)))
+    call periodic_copy_init(pc, sb, geo%atom(iatom)%x, range = species_get_iwf_radius(s, jj, spin_channel))
     do icell = 1, periodic_copy_num(pc)
       pos = periodic_copy_position(pc, sb, icell)
       do k = 1, m%np
@@ -81,7 +81,9 @@ subroutine X(lcao_initial_wf) (this, iorb, m, h, geo, sb, psi, ispin, ik)
   call X(states_normalize_orbital)(m, wf_dim, psi)
 
   call pop_sub()
-end subroutine X(lcao_initial_wf)
+  call profiling_out(prof)
+
+end subroutine X(lcao_atomic_orbital)
 
 ! ---------------------------------------------------------
 subroutine X(lcao_wf) (this, st, gr, geo, h, start)
@@ -114,12 +116,12 @@ subroutine X(lcao_wf) (this, st, gr, geo, h, start)
   do ik = kstart, kend
     do n1 = 1, this%norbs
 
-      call X(lcao_initial_wf)(this, n1, gr%m, h, geo, gr%sb, lcaopsi, st%d%ispin, ik)
+      call X(lcao_atomic_orbital)(this, n1, gr%m, h, geo, gr%sb, lcaopsi, st%d%ispin, ik)
 
       call X(hpsi)(h, gr, lcaopsi, hpsi, n1, ik)
         
       do n2 = n1, this%norbs
-        call X(lcao_initial_wf)(this, n2, gr%m, h, geo, gr%sb, lcaopsi2, st%d%ispin, ik)
+        call X(lcao_atomic_orbital)(this, n2, gr%m, h, geo, gr%sb, lcaopsi2, st%d%ispin, ik)
 
         this%X(s)(n1, n2, ik) = X(mf_dotp)(gr%m, st%d%dim, lcaopsi, lcaopsi2)
         this%X(s)(n2, n1, ik) = R_CONJ(this%X(s)(n1, n2, ik))
@@ -145,7 +147,7 @@ subroutine X(lcao_wf) (this, st, gr, geo, h, start)
  
     ! Change of base
     do n2 = 1, this%norbs
-      call X(lcao_initial_wf)(this, n2, gr%m, h, geo, gr%sb, lcaopsi, st%d%ispin, ik)
+      call X(lcao_atomic_orbital)(this, n2, gr%m, h, geo, gr%sb, lcaopsi, st%d%ispin, ik)
       
       do idim = 1, st%d%dim
         do n1 = lcao_start, st%st_end
