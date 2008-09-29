@@ -38,66 +38,67 @@ static double sph_cnsts[9] = {
 	 ylm = c * plm( cos(theta) ) * cos(m*phi)   for   m >= 0
 	 with (theta,phi) the polar angles of r, c a positive normalization
 	 constant and plm associated legendre polynomials. */
-double ylm(double x, double y, double z, int l, int m)
-{
-	double r, rx, ry, rz, cosphi, sinphi, cosm, sinm, phase;
-	int i;
-
-	if(l == 0) return sph_cnsts[0];
-
-	r = sqrt(x*x + y*y + z*z);
-
-	/* if r=0, direction is undefined => make ylm=0 except for l=0 */
-	if(r == 0.) return 0.;
-
-	rx = x/r; ry = y/r; rz = z/r;
-
-	switch(l){
-	case 1:
-		switch(m){
-		case -1: return -sph_cnsts[1]*ry;
-		case  0: return  sph_cnsts[2]*rz;
-		case  1: return -sph_cnsts[3]*rx;
-		}
-	case 2:
-		switch(m){
-		case -2: return  sph_cnsts[4]*6*rx*ry;
-		case -1: return -sph_cnsts[5]*3*ry*rz;
-		case  0: return  sph_cnsts[6]*0.5*(3*rz*rz - 1);
-		case  1: return -sph_cnsts[7]*3*rx*rz;
-		case  2: return  sph_cnsts[8]*3*(rx*rx - ry*ry);
-		}
-	}
-
-	/* get phase */
-	r = sqrt(rx*rx + ry*ry);
-	if(fabs(r) < 1e-20) /* one never knows... */
-		r = 1e-20;
-	cosphi = rx/r; sinphi = ry/r;
-		
-	/* compute sin(mphi) and cos(mphi) by adding cos/sin */
-	cosm = 1.; sinm=0.;
-	for(i=0; i<abs(m); i++){
-		double a = cosm, b = sinm;
-		cosm = a*cosphi - b*sinphi;
-		sinm = a*sinphi + b*cosphi;
-	}
-	phase = m<0 ? sinm : cosm;
-	phase = m==0 ? phase : sqrt(2.0)*phase;
-	
-	/* adding small number (~= 10^-308) to avoid floating invalids */
-	rz = rz + DBL_MIN;
-
-	r = gsl_sf_legendre_sphPlm(l, abs(m), rz);
-
-	/* I am not sure whether we are including the Condon-Shortley factor (-1)^m */
-	return r*phase;
-}
-
-/* The Fortran interface */
 
 double FC_FUNC_(oct_ylm, OCT_YLM)
-  (double *x, double *y, double *z, int *l, int *m)
+     (const double *x, const double *y, const double *z, const int *l, const int *m)
 {
-  return ylm(*x, *y, *z, *l, *m);
+  double r, r2, rr, rx, ry, rz, cosphi, sinphi, cosm, sinm, phase;
+  int i;
+
+  if(l[0] == 0) return sph_cnsts[0];
+
+  r2 = x[0]*x[0] + y[0]*y[0] + z[0]*z[0];
+
+  /* if r=0, direction is undefined => make ylm=0 except for l=0 */
+  if(r2 < 1.0e-15) return 0.0;
+
+  switch(l[0]){
+  case 1:
+    rr = 1.0/sqrt(r2);
+    switch(m[0]){
+    case -1: return -sph_cnsts[1]*rr*y[0];
+    case  0: return  sph_cnsts[2]*rr*z[0];
+    case  1: return -sph_cnsts[3]*rr*x[0];
+    }
+  case 2:
+    switch(m[0]){
+    case -2: return  sph_cnsts[4]*6.0*x[0]*y[0]/r2;
+    case -1: return -sph_cnsts[5]*3.0*y[0]*z[0]/r2;
+    case  0: return  sph_cnsts[6]*0.5*(3.0*z[0]*z[0]/r2 - 1.0);
+    case  1: return -sph_cnsts[7]*3.0*x[0]*z[0]/r2;
+    case  2: return  sph_cnsts[8]*3.0*(x[0]*x[0] - y[0]*y[0])/r2;
+    }
+  }
+
+  /* get phase */
+  rr = 1.0/sqrt(r2);
+  
+  rx = x[0]*rr;
+  ry = y[0]*rr;
+  rz = z[0]*rr;
+
+  r = hypot(rx, ry);
+  if(r < 1e-20) r = 1e-20; /* one never knows... */
+
+  cosphi = rx/r;
+  sinphi = ry/r;
+
+  /* compute sin(mphi) and cos(mphi) by adding cos/sin */
+  cosm = 1.; sinm=0.;
+  for(i = 0; i < abs(m[0]); i++){
+    double a = cosm, b = sinm;
+    cosm = a*cosphi - b*sinphi;
+    sinm = a*sinphi + b*cosphi;
+  }
+  phase = m[0] < 0 ? sinm : cosm;
+  phase = m[0] == 0 ? phase : sqrt(2.0)*phase;
+	
+  /* adding small number (~= 10^-308) to avoid floating invalids */
+  rz = rz + DBL_MIN;
+
+  r = gsl_sf_legendre_sphPlm(l[0], abs(m[0]), rz);
+
+  /* I am not sure whether we are including the Condon-Shortley factor (-1)^m */
+  return r*phase;
 }
+
