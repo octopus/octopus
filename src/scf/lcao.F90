@@ -66,8 +66,6 @@ module lcao_m
                                ! 1 => initialized (k, s and v1 matrices filled)
     integer           :: norbs
     integer           :: maxorbs
-    FLOAT,   pointer  :: ds(:, :, :) ! s is the overlap matrix;
-    CMPLX,   pointer  :: zs(:, :, :) ! s is the overlap matrix;
     integer, pointer  :: atom(:)
     integer, pointer  :: level(:)
     integer, pointer  :: ddim(:)
@@ -86,8 +84,6 @@ contains
     call push_sub('lcao.lcao_init')
 
     ! nullify everything so we can check for associated pointers when deallocating
-    nullify(this%ds)
-    nullify(this%zs)
     nullify(this%atom)
     nullify(this%level)
     nullify(this%ddim)
@@ -196,7 +192,6 @@ contains
     ASSERT(this%norbs <= this%maxorbs)
 
     this%state = 1
-    nullify(this%ds, this%zs)
        
     call pop_sub()
   end subroutine lcao_init
@@ -210,8 +205,6 @@ contains
     if(associated(this%atom)) deallocate(this%atom)
     if(associated(this%level)) deallocate(this%level)
     if(associated(this%ddim)) deallocate(this%ddim)
-    if(associated(this%ds)) deallocate(this%ds)
-    if(associated(this%zs)) deallocate(this%zs)
 
     this%state = 0
     call pop_sub()

@@ -667,7 +667,7 @@ contains
     integer,           intent(in)  :: dim
     integer,           intent(in)  :: is
     FLOAT,             intent(in)  :: pos(:)
-    FLOAT,            intent(out) :: phi(:)
+    FLOAT,             intent(out) :: phi(:)
 
     integer :: i, l, m, ip
     FLOAT :: r2, x(1:MAX_DIM)

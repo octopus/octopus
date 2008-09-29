@@ -22,7 +22,7 @@
 ! This routine fills state psi with an atomic orbital -- provided
 ! by the pseudopotential structure in geo.
 ! ---------------------------------------------------------
-subroutine X(lcao_atomic_orbital) (this, iorb, m, h, geo, sb, psi, ispin, ik)
+subroutine X(lcao_atomic_orbital) (this, iorb, m, h, geo, sb, psi, spin_channel)
   type(lcao_t),             intent(in)    :: this
   integer,                  intent(in)    :: iorb
   type(mesh_t),             intent(in)    :: m
@@ -30,12 +30,11 @@ subroutine X(lcao_atomic_orbital) (this, iorb, m, h, geo, sb, psi, ispin, ik)
   type(hamiltonian_t),      intent(in)    :: h
   type(geometry_t), target, intent(in)    :: geo
   R_TYPE,                   intent(inout) :: psi(:, :)
-  integer,                  intent(in)    :: ispin
-  integer,                  intent(in)    :: ik
+  integer,                  intent(in)    :: spin_channel
 
   type(species_t), pointer :: s
   type(periodic_copy_t)   :: pc
-  integer :: icell, idim, wf_dim, iatom, jj, spin_channel, ip
+  integer :: icell, idim, iatom, jj, ip
   FLOAT :: pos(MAX_DIM)
   FLOAT, allocatable :: ao(:)
   type(profile_t), save :: prof
@@ -43,26 +42,22 @@ subroutine X(lcao_atomic_orbital) (this, iorb, m, h, geo, sb, psi, ispin, ik)
   call profiling_in(prof, "ATOMIC_ORBITAL")
   call push_sub('lcao_inc.Xlcao_atomic_orbital')
 
-  wf_dim = 1
-  if (ispin == SPINORS) wf_dim = 2
-
   ASSERT(iorb >= 1)
   ASSERT(iorb <= this%maxorbs)
 
-  psi(1:m%np, 1:wf_dim) = R_TOTYPE(M_ZERO)
+  psi(1:m%np, 1:h%d%dim) = R_TOTYPE(M_ZERO)
 
   iatom = this%atom(iorb)
   jj = this%level(iorb)
   idim = this%ddim(iorb)
   s => geo%atom(iatom)%spec
-  spin_channel = states_spin_channel(ispin, ik, idim)
   ASSERT(jj <= s%niwfs)
 
   ALLOCATE(ao(1:m%np), m%np)
 
   if (.not. simul_box_is_periodic(sb)) then
 
-    call species_get_orbital(s, m, jj, calc_dim, spin_channel, geo%atom(iatom)%x, ao)
+    call species_get_orbital(s, m, jj, calc_dim, max(spin_channel, idim), geo%atom(iatom)%x, ao)
 
     do ip = 1, m%np
       psi(ip, idim) = ao(ip)
@@ -74,7 +69,7 @@ subroutine X(lcao_atomic_orbital) (this, iorb, m, h, geo, sb, psi, ispin, ik)
     do icell = 1, periodic_copy_num(pc)
       pos = periodic_copy_position(pc, sb, icell)
 
-      call species_get_orbital(s, m, jj, calc_dim, spin_channel, pos, ao)
+      call species_get_orbital(s, m, jj, calc_dim, max(spin_channel, idim), pos, ao)
       
       do ip = 1, m%np
         psi(ip, idim) = psi(ip, idim) + ao(ip)
@@ -98,11 +93,12 @@ subroutine X(lcao_wf) (this, st, gr, geo, h, start)
   type(geometry_t),    intent(in)    :: geo
   type(hamiltonian_t), intent(in)    :: h
   integer,             intent(in)    :: start
+
   integer :: nst, ik, n1, n2, idim, lcao_start
-  R_TYPE, allocatable :: hpsi(:, :)
+  R_TYPE, allocatable :: hpsi(:, :, :), overlap(:, :, :)
   FLOAT, allocatable :: ev(:)
-  R_TYPE, allocatable :: hamilt(:, :, :), lcaopsi(:, :), lcaopsi2(:, :)
-  integer :: kstart, kend
+  R_TYPE, allocatable :: hamilt(:, :, :), lcaopsi(:, :, :), lcaopsi2(:, :)
+  integer :: kstart, kend, ispin
   
   call push_sub('lcao_inc.Xlcao_wf')
   
@@ -111,27 +107,34 @@ subroutine X(lcao_wf) (this, st, gr, geo, h, start)
   kend = st%d%kpt%end
 
   ! Allocation of variables
-  ALLOCATE(this%X(s)(this%norbs, this%norbs, kstart:kend), this%norbs**2*st%d%kpt%nlocal)
 
-  ALLOCATE(lcaopsi(1:NP, 1:st%d%dim), NP*st%d%dim)
+  ALLOCATE(lcaopsi(1:NP, 1:st%d%dim, 1:st%d%spin_channels), NP*st%d%dim*st%d%spin_channels)
   ALLOCATE(lcaopsi2(1:NP, 1:st%d%dim), NP*st%d%dim)
-  ALLOCATE(hpsi(NP, st%d%dim), NP*st%d%dim)
+  ALLOCATE(hpsi(NP, st%d%dim, kstart:kend), NP*st%d%dim*st%d%kpt%nlocal)
   ALLOCATE(hamilt(this%norbs, this%norbs, kstart:kend), this%norbs**2*st%d%kpt%nlocal)
+  ALLOCATE(overlap(this%norbs, this%norbs, st%d%spin_channels), this%norbs**2*st%d%spin_channels)
 
-  do ik = kstart, kend
-    do n1 = 1, this%norbs
+  do n1 = 1, this%norbs
+    
+    do ispin = 1, st%d%spin_channels
+      call X(lcao_atomic_orbital)(this, n1, gr%m, h, geo, gr%sb, lcaopsi(:, :, ispin), ispin)
+    end do
 
-      call X(lcao_atomic_orbital)(this, n1, gr%m, h, geo, gr%sb, lcaopsi, st%d%ispin, ik)
+    do ik = kstart, kend
+      ispin = states_dim_get_spin_index(st%d, ik)
+      call X(hpsi)(h, gr, lcaopsi(:, :, ispin), hpsi(:, :, ik), n1, ik)
+    end do
 
-      call X(hpsi)(h, gr, lcaopsi, hpsi, n1, ik)
-        
-      do n2 = n1, this%norbs
-        call X(lcao_atomic_orbital)(this, n2, gr%m, h, geo, gr%sb, lcaopsi2, st%d%ispin, ik)
-
-        this%X(s)(n1, n2, ik) = X(mf_dotp)(gr%m, st%d%dim, lcaopsi, lcaopsi2)
-        this%X(s)(n2, n1, ik) = R_CONJ(this%X(s)(n1, n2, ik))
-        hamilt(n1, n2, ik) = X(mf_dotp)(gr%m, st%d%dim, hpsi, lcaopsi2)
-        hamilt(n2, n1, ik) = R_CONJ(hamilt(n1, n2, ik))
+    do n2 = n1, this%norbs
+      do ispin = 1, st%d%spin_channels
+        call X(lcao_atomic_orbital)(this, n2, gr%m, h, geo, gr%sb, lcaopsi2, ispin)
+        overlap(n1, n2, ispin) = X(mf_dotp)(gr%m, st%d%dim, lcaopsi(:, :, ispin), lcaopsi2)
+        overlap(n2, n1, ispin) = R_CONJ(overlap(n1, n2, ispin))
+        do ik = kstart, kend
+          if(ispin /= states_dim_get_spin_index(st%d, ik)) cycle
+          hamilt(n1, n2, ik) = X(mf_dotp)(gr%m, st%d%dim, hpsi(:, :, ik), lcaopsi2)
+          hamilt(n2, n1, ik) = R_CONJ(hamilt(n1, n2, ik))
+        end do
       end do
     end do
   end do
@@ -144,7 +147,8 @@ subroutine X(lcao_wf) (this, st, gr, geo, h, start)
   if(st%parallel_in_states .and. st%st_start > start) lcao_start = st%st_start
 
   do ik =  kstart, kend
-    call lalg_geneigensolve(this%norbs, hamilt(1:this%norbs, 1:this%norbs, ik), this%X(s) (1:this%norbs, 1:this%norbs, ik), ev)
+    ispin = states_dim_get_spin_index(st%d, ik)
+    call lalg_geneigensolve(this%norbs, hamilt(1:this%norbs, 1:this%norbs, ik), overlap(:, :, ispin), ev)
 
     st%eigenval(start:nst, ik) = ev(start:nst)
 
@@ -152,11 +156,11 @@ subroutine X(lcao_wf) (this, st, gr, geo, h, start)
  
     ! Change of base
     do n2 = 1, this%norbs
-      call X(lcao_atomic_orbital)(this, n2, gr%m, h, geo, gr%sb, lcaopsi, st%d%ispin, ik)
+      call X(lcao_atomic_orbital)(this, n2, gr%m, h, geo, gr%sb, lcaopsi2, ispin)
       
       do idim = 1, st%d%dim
         do n1 = lcao_start, st%st_end
-          call lalg_axpy(NP, hamilt(n2, n1, ik), lcaopsi(:, idim), st%X(psi)(:, idim, n1, ik))
+          call lalg_axpy(NP, hamilt(n2, n1, ik), lcaopsi2(:, idim), st%X(psi)(:, idim, n1, ik))
         end do
       end do
       
