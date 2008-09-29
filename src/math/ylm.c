@@ -39,66 +39,80 @@ static double sph_cnsts[9] = {
 	 with (theta,phi) the polar angles of r, c a positive normalization
 	 constant and plm associated legendre polynomials. */
 
-double FC_FUNC_(oct_ylm, OCT_YLM)
-     (const double *x, const double *y, const double *z, const int *l, const int *m)
+void FC_FUNC_(oct_ylm, OCT_YLM)
+     (const int * np, const double *x, const double *y, const double *z, const int *l, const int *m, double * restrict ylm)
 {
   double r, r2, rr, rx, ry, rz, cosphi, sinphi, cosm, sinm, phase;
-  int i;
+  int i, ip;
 
-  if(l[0] == 0) return sph_cnsts[0];
+  if(l[0] == 0) {
+    for (ip = 0; ip < np[0]; ip++) ylm[ip] = sph_cnsts[0];
+    return;
+  }
 
-  r2 = x[0]*x[0] + y[0]*y[0] + z[0]*z[0];
+  for (ip = 0; ip < np[0]; ip++){
 
-  /* if r=0, direction is undefined => make ylm=0 except for l=0 */
-  if(r2 < 1.0e-15) return 0.0;
+    r2 = x[ip]*x[ip] + y[ip]*y[ip] + z[ip]*z[ip];
 
-  switch(l[0]){
-  case 1:
+    /* if r=0, direction is undefined => make ylm=0 except for l=0 */
+    if(r2 < 1.0e-15){
+      ylm[ip] = 0.0;
+      continue;
+    }
+
+    switch(l[0]){
+    case 1:
+      rr = 1.0/sqrt(r2);
+      switch(m[0]){
+      case -1: ylm[ip] = -sph_cnsts[1]*rr*y[ip]; continue;
+      case  0: ylm[ip] =  sph_cnsts[2]*rr*z[ip]; continue;
+      case  1: ylm[ip] = -sph_cnsts[3]*rr*x[ip]; continue;
+      }
+    case 2:
+      switch(m[0]){
+      case -2: ylm[ip] =  sph_cnsts[4]*6.0*x[ip]*y[ip]/r2; 
+	continue;
+      case -1: ylm[ip] = -sph_cnsts[5]*3.0*y[ip]*z[ip]/r2; 
+	continue;
+      case  0: ylm[ip] =  sph_cnsts[6]*0.5*(3.0*z[ip]*z[ip]/r2 - 1.0); 
+	continue;
+      case  1: ylm[ip] = -sph_cnsts[7]*3.0*x[ip]*z[ip]/r2; 
+	continue;
+      case  2: ylm[ip] =  sph_cnsts[8]*3.0*(x[ip]*x[ip] - y[ip]*y[ip])/r2; 
+	continue;
+      }
+    }
+
+    /* get phase */
     rr = 1.0/sqrt(r2);
-    switch(m[0]){
-    case -1: return -sph_cnsts[1]*rr*y[0];
-    case  0: return  sph_cnsts[2]*rr*z[0];
-    case  1: return -sph_cnsts[3]*rr*x[0];
-    }
-  case 2:
-    switch(m[0]){
-    case -2: return  sph_cnsts[4]*6.0*x[0]*y[0]/r2;
-    case -1: return -sph_cnsts[5]*3.0*y[0]*z[0]/r2;
-    case  0: return  sph_cnsts[6]*0.5*(3.0*z[0]*z[0]/r2 - 1.0);
-    case  1: return -sph_cnsts[7]*3.0*x[0]*z[0]/r2;
-    case  2: return  sph_cnsts[8]*3.0*(x[0]*x[0] - y[0]*y[0])/r2;
-    }
-  }
-
-  /* get phase */
-  rr = 1.0/sqrt(r2);
   
-  rx = x[0]*rr;
-  ry = y[0]*rr;
-  rz = z[0]*rr;
+    rx = x[ip]*rr;
+    ry = y[ip]*rr;
+    rz = z[ip]*rr;
 
-  r = hypot(rx, ry);
-  if(r < 1e-20) r = 1e-20; /* one never knows... */
+    r = hypot(rx, ry);
+    if(r < 1e-20) r = 1e-20; /* one never knows... */
 
-  cosphi = rx/r;
-  sinphi = ry/r;
+    cosphi = rx/r;
+    sinphi = ry/r;
 
-  /* compute sin(mphi) and cos(mphi) by adding cos/sin */
-  cosm = 1.; sinm=0.;
-  for(i = 0; i < abs(m[0]); i++){
-    double a = cosm, b = sinm;
-    cosm = a*cosphi - b*sinphi;
-    sinm = a*sinphi + b*cosphi;
-  }
-  phase = m[0] < 0 ? sinm : cosm;
-  phase = m[0] == 0 ? phase : sqrt(2.0)*phase;
+    /* compute sin(mphi) and cos(mphi) by adding cos/sin */
+    cosm = 1.; sinm=0.;
+    for(i = 0; i < abs(m[0]); i++){
+      double a = cosm, b = sinm;
+      cosm = a*cosphi - b*sinphi;
+      sinm = a*sinphi + b*cosphi;
+    }
+    phase = m[0] < 0 ? sinm : cosm;
+    phase = m[0] == 0 ? phase : sqrt(2.0)*phase;
 	
-  /* adding small number (~= 10^-308) to avoid floating invalids */
-  rz = rz + DBL_MIN;
+    /* adding small number (~= 10^-308) to avoid floating invalids */
+    rz = rz + DBL_MIN;
 
-  r = gsl_sf_legendre_sphPlm(l[0], abs(m[0]), rz);
+    r = gsl_sf_legendre_sphPlm(l[0], abs(m[0]), rz);
 
-  /* I am not sure whether we are including the Condon-Shortley factor (-1)^m */
-  return r*phase;
+    /* I am not sure whether we are including the Condon-Shortley factor (-1)^m */
+    ylm[ip] = r*phase;
+  }
 }
 

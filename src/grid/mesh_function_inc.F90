@@ -750,7 +750,7 @@ subroutine X(mf_multipoles) (mesh, ff, lmax, multipole)
       do lm = -l, l
         do i = 1, mesh%np
           call mesh_r(mesh, i, r, x=x)
-          ylm = loct_ylm(x(1), x(2), x(3), l, lm)
+          call loct_ylm(1, x(1), x(2), x(3), l, lm, ylm)
           ff2(i) = ff(i) * ylm * r**l
         end do
         multipole(add_lm) = X(mf_integrate)(mesh, ff2)

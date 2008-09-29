@@ -671,18 +671,32 @@ contains
 
     integer :: i, l, m, ip
     FLOAT :: r2, x(1:MAX_DIM)
+    FLOAT, allocatable :: xf(:, :), ylm(:)
 
     i = s%iwf_i(j, is)
     l = s%iwf_l(j, is)
     m = s%iwf_m(j, is)
 
     if(species_is_ps(s)) then
+
+      ALLOCATE(xf(1:mesh%np, 1:MAX_DIM), mesh%np*MAX_DIM)
+      ALLOCATE(ylm(1:mesh%np), mesh%np)
+
       do ip = 1, mesh%np
         x(1:MAX_DIM) = mesh%x(ip, 1:MAX_DIM) - pos(1:MAX_DIM)
-        r2 = sum(x(1:MAX_DIM)**2)
-        phi(ip) = spline_eval(s%ps%ur_sq(i, is), r2)*loct_ylm(x(1), x(2), x(3), l, m)
+        phi(ip) = sum(x(1:MAX_DIM)**2)
+        xf(ip, 1:MAX_DIM) = x(1:MAX_DIM)
       end do
+
+      call spline_eval_vec(s%ps%ur_sq(i, is), mesh%np, phi)
+      call loct_ylm(mesh%np, xf(1, 1), xf(1, 2), xf(1, 3), l, m, ylm(1))
+
+      do ip = 1, mesh%np
+        phi(ip) = phi(ip)*ylm(ip)
+      end do
+
     else
+
       do ip = 1, mesh%np
         x(1:MAX_DIM) = mesh%x(ip, 1:MAX_DIM) - pos(1:MAX_DIM)
         r2 = sum(x(1:MAX_DIM)**2)

@@ -183,7 +183,7 @@
     do ii = 1, st%d%dim
       do i = 1, NP
         call mesh_r(gr%m, i, r, x = x)
-        ylm = loct_ylm(x(1), x(2), x(3), l, m)
+        call loct_ylm(1, x(1), x(2), x(3), l, m, ylm)
         multipole(i, ii) = r**l * ylm
       end do
     end do

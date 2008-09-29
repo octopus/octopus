@@ -576,7 +576,7 @@ contains
           do j = 1, k%n_multipoles
             do i = 1, NP
               call mesh_r(gr%m, i, r, x = x)
-              ylm = loct_ylm(x(1), x(2), x(3), k%l(j), k%m(j))
+              call loct_ylm(1, x(1), x(2), x(3), k%l(j), k%m(j), ylm)
               kick_function(i) = kick_function(i) + k%weight(j) * (r**k%l(j)) * ylm 
             end do
           end do

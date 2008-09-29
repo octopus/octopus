@@ -175,11 +175,12 @@ module loct_math_m
   end interface
 
   interface loct_ylm
-    function oct_ylm(x, y, z, l, m)
-      real(8) :: oct_ylm
-      real(8), intent(in) :: x, y, z
-      integer, intent(in) :: l, m
-    end function oct_ylm
+    subroutine oct_ylm(n, x, y, z, l, m, ylm)
+      integer, intent(in)  :: n
+      real(8), intent(in)  :: x, y, z
+      integer, intent(in)  :: l, m
+      real(8), intent(out) :: ylm
+    end subroutine oct_ylm
     module procedure oct_ylm4
   end interface
 
@@ -379,12 +380,16 @@ contains
     oct_legendre_sphplm4 = real(oct_legendre_sphplm(l, m, real(x, kind=8)), kind=4)
   end function oct_legendre_sphplm4
 
-  real(4) function oct_ylm4(x, y, z, l, m)
-    real(4), intent(in) :: x, y, z
-    integer, intent(in) :: l, m
+  subroutine oct_ylm4(n, x, y, z, l, m, ylm)
+    integer, intent(in)  :: n
+    real(4), intent(in)  :: x, y, z
+    integer, intent(in)  :: l, m
+    real(4), intent(out) :: ylm
 
-    oct_ylm4 = real(oct_ylm(real(x, kind=8), real(y, kind=8), real(z, kind=8), l, m), kind=4)
-  end function oct_ylm4
+    real(8) :: ylm8
+    call oct_ylm(n, real(x, kind=8), real(y, kind=8), real(z, kind=8), l, m, ylm8)
+    ylm = real(ylm, kind=4)
+  end subroutine oct_ylm4
 
   real(4) function oct_ran_gaussian4(r, sigma)
     use c_pointer_m
