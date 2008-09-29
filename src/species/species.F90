@@ -44,7 +44,6 @@ module species_m
     species_debug,             &
     species_read,              &
     species_get_nlcc,          &
-    species_get_iwf,           &
     species_get_iwf_radius,    &
     species_is_ps,             &
     species_is_local,          &
@@ -641,42 +640,6 @@ contains
     end if
 
   end function species_get_nlcc
-
-  ! ---------------------------------------------------------
-  FLOAT function species_get_iwf(s, j, dim, is, x) result(phi)
-    type(species_t),   intent(in) :: s
-    integer,           intent(in) :: j
-    integer,           intent(in) :: dim
-    integer,           intent(in) :: is
-    FLOAT,             intent(in) :: x(:)
-
-    integer :: i, l, m
-    FLOAT :: r2
-
-    i = s%iwf_i(j, is)
-    l = s%iwf_l(j, is)
-    m = s%iwf_m(j, is)
-    r2 = sum(x(1:MAX_DIM)**2)
-
-    if(species_is_ps(s)) then
-      phi = spline_eval(s%ps%ur_sq(i, is), r2)*loct_ylm(x(1), x(2), x(3), l, m)
-    else
-      phi=M_ZERO
-      select case(dim)
-      case(1)
-        phi = exp(-s%omega*r2/M_TWO) * hermite(i-1, x(1)*sqrt(s%omega) )
-      case(2)
-        phi = exp(-s%omega*r2/M_TWO) * hermite(i-1, x(1)*sqrt(s%omega) ) * &
-          hermite(l-1, x(2)*sqrt(s%omega) )
-      case(3)
-        phi = exp(-s%omega*r2/M_TWO) * hermite(i-1, x(1)*sqrt(s%omega) ) * &
-          hermite(l-1, x(2)*sqrt(s%omega) ) * &
-          hermite(m-1, x(3)*sqrt(s%omega) )
-      end select
-    end if
-
-  end function species_get_iwf
-
 
   ! ---------------------------------------------------------
   FLOAT function species_get_iwf_radius(s, j, is) result(radius)

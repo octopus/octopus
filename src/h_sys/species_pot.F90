@@ -28,6 +28,7 @@ module species_pot_m
   use grid_m
   use io_m
   use loct_parser_m
+  use loct_math_m
   use math_m
   use mesh_function_m
   use mesh_m
@@ -48,11 +49,12 @@ module species_pot_m
   implicit none
 
   private
-  public ::                   &
-    guess_density,            &
+  public ::                    &
+    guess_density,             &
     species_pot_init,          &
     species_pot_end,           &
-    species_get_density,       & 
+    species_get_density,       &
+    species_get_orbital,      &
     species_get_local
 
   integer, parameter :: INITRHO_PARAMAGNETIC  = 1, &
@@ -658,6 +660,46 @@ contains
       
   end subroutine species_get_local
 
+  subroutine species_get_orbital(s, mesh, j, dim, is, pos, phi)
+    type(species_t),   intent(in)  :: s
+    type(mesh_t),      intent(in)  :: mesh
+    integer,           intent(in)  :: j
+    integer,           intent(in)  :: dim
+    integer,           intent(in)  :: is
+    FLOAT,             intent(in)  :: pos(:)
+    FLOAT,            intent(out) :: phi(:)
+
+    integer :: i, l, m, ip
+    FLOAT :: r2, x(1:MAX_DIM)
+
+    i = s%iwf_i(j, is)
+    l = s%iwf_l(j, is)
+    m = s%iwf_m(j, is)
+
+    if(species_is_ps(s)) then
+      do ip = 1, mesh%np
+        x(1:MAX_DIM) = mesh%x(ip, 1:MAX_DIM) - pos(1:MAX_DIM)
+        r2 = sum(x(1:MAX_DIM)**2)
+        phi(ip) = spline_eval(s%ps%ur_sq(i, is), r2)*loct_ylm(x(1), x(2), x(3), l, m)
+      end do
+    else
+      do ip = 1, mesh%np
+        x(1:MAX_DIM) = mesh%x(ip, 1:MAX_DIM) - pos(1:MAX_DIM)
+        r2 = sum(x(1:MAX_DIM)**2)
+        select case(dim)
+        case(1)
+          phi(ip) = exp(-s%omega*r2/M_TWO)*hermite(i - 1, x(1)*sqrt(s%omega))
+        case(2)
+          phi(ip) = exp(-s%omega*r2/M_TWO)*hermite(i - 1, x(1)*sqrt(s%omega))*hermite(l - 1, x(2)*sqrt(s%omega))
+        case(3)
+          phi(ip) = exp(-s%omega*r2/M_TWO)*&
+               hermite(i - 1, x(1)*sqrt(s%omega))*hermite(l - 1, x(2)*sqrt(s%omega))*hermite(m - 1, x(3)*sqrt(s%omega))
+        end select
+      end do
+    end if
+
+  end subroutine species_get_orbital
+  
 end module species_pot_m
 
 !! Local Variables:

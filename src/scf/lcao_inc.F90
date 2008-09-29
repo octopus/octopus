@@ -35,8 +35,9 @@ subroutine X(lcao_atomic_orbital) (this, iorb, m, h, geo, sb, psi, ispin, ik)
 
   type(species_t), pointer :: s
   type(periodic_copy_t)   :: pc
-  integer :: icell, idim, k, wf_dim, iatom, jj, spin_channel
-  FLOAT :: x(MAX_DIM), pos(MAX_DIM)
+  integer :: icell, idim, wf_dim, iatom, jj, spin_channel, ip
+  FLOAT :: pos(MAX_DIM)
+  FLOAT, allocatable :: ao(:)
   type(profile_t), save :: prof
 
   call profiling_in(prof, "ATOMIC_ORBITAL")
@@ -57,11 +58,14 @@ subroutine X(lcao_atomic_orbital) (this, iorb, m, h, geo, sb, psi, ispin, ik)
   spin_channel = states_spin_channel(ispin, ik, idim)
   ASSERT(jj <= s%niwfs)
 
+  ALLOCATE(ao(1:m%np), m%np)
+
   if (.not. simul_box_is_periodic(sb)) then
 
-    do k = 1, m%np
-      x(1:MAX_DIM) = m%x(k, 1:MAX_DIM) - geo%atom(iatom)%x(1:MAX_DIM)
-      psi(k, idim) = species_get_iwf(s, jj, calc_dim, spin_channel, x)
+    call species_get_orbital(s, m, jj, calc_dim, spin_channel, geo%atom(iatom)%x, ao)
+
+    do ip = 1, m%np
+      psi(ip, idim) = ao(ip)
     end do
 
   else
@@ -69,10 +73,13 @@ subroutine X(lcao_atomic_orbital) (this, iorb, m, h, geo, sb, psi, ispin, ik)
     call periodic_copy_init(pc, sb, geo%atom(iatom)%x, range = species_get_iwf_radius(s, jj, spin_channel))
     do icell = 1, periodic_copy_num(pc)
       pos = periodic_copy_position(pc, sb, icell)
-      do k = 1, m%np
-        x(1:MAX_DIM) = m%x(k, 1:MAX_DIM) - pos(1:MAX_DIM)
-        psi(k, idim) = psi(k, idim) + species_get_iwf(s, jj, calc_dim, spin_channel, x)
+
+      call species_get_orbital(s, m, jj, calc_dim, spin_channel, pos, ao)
+      
+      do ip = 1, m%np
+        psi(ip, idim) = psi(ip, idim) + ao(ip)
       end do
+
     end do
     call periodic_copy_end(pc)
 
