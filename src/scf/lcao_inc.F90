@@ -35,7 +35,7 @@ subroutine X(lcao_initial_wf) (this, iorb, m, h, geo, sb, psi, ispin, ik)
 
   type(species_t), pointer :: s
   type(periodic_copy_t)   :: pc
-  integer :: icell, idim, k, wf_dim, iatom, jj
+  integer :: icell, idim, k, wf_dim, iatom, jj, spin_channel
   FLOAT :: x(MAX_DIM), pos(MAX_DIM)
 
   call push_sub('lcao_inc.Xlcao_initial_wf')
@@ -52,13 +52,14 @@ subroutine X(lcao_initial_wf) (this, iorb, m, h, geo, sb, psi, ispin, ik)
   jj = this%level(iorb)
   idim = this%ddim(iorb)
   s => geo%atom(iatom)%spec
+  spin_channel = states_spin_channel(ispin, ik, idim)
   ASSERT(jj <= s%niwfs)
 
   if (.not. simul_box_is_periodic(sb)) then
 
     do k = 1, m%np
-      x(1:calc_dim) = m%x(k, 1:calc_dim) - geo%atom(iatom)%x(1:calc_dim)
-      psi(k, idim) = species_get_iwf(s, jj, calc_dim, states_spin_channel(ispin, ik, idim), x(1:calc_dim))
+      x(1:MAX_DIM) = m%x(k, 1:MAX_DIM) - geo%atom(iatom)%x(1:MAX_DIM)
+      psi(k, idim) = species_get_iwf(s, jj, calc_dim, spin_channel, x)
     end do
 
   else
@@ -69,9 +70,8 @@ subroutine X(lcao_initial_wf) (this, iorb, m, h, geo, sb, psi, ispin, ik)
     do icell = 1, periodic_copy_num(pc)
       pos = periodic_copy_position(pc, sb, icell)
       do k = 1, m%np
-        x(1:calc_dim) = m%x(k, 1:calc_dim) - pos(1:calc_dim)
-        psi(k, idim) =  psi(k, idim) + &
-             h%phase(k, ik)*species_get_iwf(s, jj, calc_dim, states_spin_channel(ispin, ik, idim), x(1:calc_dim))
+        x(1:MAX_DIM) = m%x(k, 1:MAX_DIM) - pos(1:MAX_DIM)
+        psi(k, idim) = psi(k, idim) + h%phase(k, ik)*species_get_iwf(s, jj, calc_dim, spin_channel, x)
       end do
     end do
     call periodic_copy_end(pc)

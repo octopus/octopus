@@ -643,11 +643,11 @@ contains
 
   ! ---------------------------------------------------------
   FLOAT function species_get_iwf(s, j, dim, is, x) result(phi)
-    type(species_t), intent(in) :: s
+    type(species_t),   intent(in) :: s
     integer,           intent(in) :: j
     integer,           intent(in) :: dim
     integer,           intent(in) :: is
-    FLOAT,             intent(in) :: x(dim)
+    FLOAT,             intent(in) :: x(:)
 
     integer :: i, l, m
     FLOAT :: r2
@@ -655,10 +655,10 @@ contains
     i = s%iwf_i(j, is)
     l = s%iwf_l(j, is)
     m = s%iwf_m(j, is)
-    r2 = sum(x*x)
+    r2 = sum(x(1:MAX_DIM)**2)
 
     if(species_is_ps(s)) then
-      phi =  spline_eval(s%ps%ur(i, is), sqrt(r2)) * loct_ylm(x(1), x(2), x(3), l, m)
+      phi = spline_eval(s%ps%ur_sq(i, is), r2)*loct_ylm(x(1), x(2), x(3), l, m)
     else
       phi=M_ZERO
       select case(dim)
