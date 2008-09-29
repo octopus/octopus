@@ -153,19 +153,23 @@ subroutine X(lcao_wf) (this, st, gr, geo, h, start)
     st%eigenval(start:nst, ik) = ev(start:nst)
 
     st%X(psi)(1:NP, 1:st%d%dim, lcao_start:st%st_end, ik) = R_TOTYPE(M_ZERO)
- 
-    ! Change of base
-    do n2 = 1, this%norbs
+  end do
+  
+  ! Change of base
+  do n2 = 1, this%norbs
+    do ispin = 1, st%d%spin_channels
       call X(lcao_atomic_orbital)(this, n2, gr%m, h, geo, gr%sb, lcaopsi2, ispin)
       
-      do idim = 1, st%d%dim
-        do n1 = lcao_start, st%st_end
-          call lalg_axpy(NP, hamilt(n2, n1, ik), lcaopsi2(:, idim), st%X(psi)(:, idim, n1, ik))
+      do ik =  kstart, kend
+        if(ispin /= states_dim_get_spin_index(st%d, ik)) cycle
+        do idim = 1, st%d%dim
+          do n1 = lcao_start, st%st_end
+            call lalg_axpy(NP, hamilt(n2, n1, ik), lcaopsi2(:, idim), st%X(psi)(:, idim, n1, ik))
+          end do
         end do
       end do
       
     end do
-    
   end do
 
   deallocate(ev, hamilt)
