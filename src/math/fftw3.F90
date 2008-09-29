@@ -55,7 +55,7 @@ module fft_m
 
   ! fftw constants. this is just a copy from file fftw3.f,
   ! distributed with fftw package.
-  integer, parameter ::                &
+  integer, public, parameter ::                &
     fftw_r2hc                =      0, &
     fftw_hc2r                =      1, &
     fftw_dht                 =      2, &
@@ -224,14 +224,14 @@ contains
 
       select case(dim)
       case(3)
-        call DFFTW(plan_dft_r2c_3d) (fft_array(j)%planf, n(1), n(2), n(3), rin, cout, fftw_measure)
-        call DFFTW(plan_dft_c2r_3d) (fft_array(j)%planb, n(1), n(2), n(3), cout, rin, fftw_measure)
+        call DFFTW(plan_dft_r2c_3d) (fft_array(j)%planf, n(1), n(2), n(3), rin, cout, fftw_measure+fftw_unaligned)
+        call DFFTW(plan_dft_c2r_3d) (fft_array(j)%planb, n(1), n(2), n(3), cout, rin, fftw_measure+fftw_unaligned)
       case(2)
-        call DFFTW(plan_dft_r2c_2d) (fft_array(j)%planf, n(1), n(2), rin, cout, fftw_measure)
-        call DFFTW(plan_dft_c2r_2d) (fft_array(j)%planb, n(1), n(2), cout, rin, fftw_measure)
+        call DFFTW(plan_dft_r2c_2d) (fft_array(j)%planf, n(1), n(2), rin, cout, fftw_measure+fftw_unaligned)
+        call DFFTW(plan_dft_c2r_2d) (fft_array(j)%planb, n(1), n(2), cout, rin, fftw_measure+fftw_unaligned)
       case(1)
-        call DFFTW(plan_dft_r2c_1d) (fft_array(j)%planf, n(1), rin, cout, fftw_measure)
-        call DFFTW(plan_dft_c2r_1d) (fft_array(j)%planb, n(1), cout, rin, fftw_measure)
+        call DFFTW(plan_dft_r2c_1d) (fft_array(j)%planf, n(1), rin, cout, fftw_measure+fftw_unaligned)
+        call DFFTW(plan_dft_c2r_1d) (fft_array(j)%planb, n(1), cout, rin, fftw_measure+fftw_unaligned)
       end select
       deallocate(rin, cout)
     else

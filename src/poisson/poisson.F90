@@ -126,16 +126,39 @@ contains
     !% Interpolating Scaling Functions poisson solver.
     !%End
 
-    !---------------\--------------------------------------------------
+    !------------------------------------------------------------------
     subroutine init_1D()
-      poisson_solver = -NDIM ! internal type
+      integer :: default_solver
+
+      call push_sub('poisson.init_1D')
+
+      if(gr%sb%periodic_dim.eq.0) then
+        default_solver = DIRECT_SUM_1D
+      else
+        default_solver = FFT_SPH
+      end if
+      call loct_parse_int(check_inp('PoissonSolver'), default_solver, poisson_solver)
+      if(poisson_solver.ne.FFT_SPH.and.poisson_solver.ne.DIRECT_SUM_1D) then
+        call input_error('PoissonSolver')
+      end if
+
+      if(gr%m%use_curvlinear.and.poisson_solver.ne.DIRECT_SUM_1D) then
+        message(1) = 'If curvilinear coordinates are used in 1D, then the only working'
+        message(2) = 'Poisson solver is -1 ("direct summation in one dimension").'
+        call write_fatal(2)
+      end if
 
       call messages_print_var_option(stdout, "PoissonSolver", poisson_solver)
+      call poisson1d_init(gr)
+
+      call pop_sub()
     end subroutine init_1D
 
 
     !-----------------------------------------------------------------
     subroutine init_2D()
+      call push_sub('poisson.init_2D')
+
       call loct_parse_int(check_inp('PoissonSolver'), gr%sb%periodic_dim, poisson_solver)
       if( (poisson_solver .ne. FFT_SPH) .and. (poisson_solver .ne. DIRECT_SUM_2D) ) then
         call input_error('PoissonSolver')
@@ -149,12 +172,16 @@ contains
 
       call messages_print_var_option(stdout, "PoissonSolver", poisson_solver)
       call poisson2D_init(gr)
+
+      call pop_sub()
     end subroutine init_2D
 
 
     !-----------------------------------------------------------------
     subroutine init_3D()
       integer :: default_solver
+
+      call push_sub('poisson.init_3D')
 
 #ifndef SINGLE_PRECISION
       default_solver = ISF
@@ -202,8 +229,9 @@ contains
 
       call messages_print_var_option(stdout, "PoissonSolver", poisson_solver)
       call poisson3D_init(gr, geo)
-    end subroutine init_3D
 
+      call pop_sub()
+    end subroutine init_3D
   end subroutine poisson_init
 
 

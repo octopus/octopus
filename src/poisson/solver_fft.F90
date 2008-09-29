@@ -26,39 +26,41 @@ module poisson_fft_m
   use fourier_space_m
   use geometry_m
   use global_m
+  use grid_m
   use lalg_basic_m
   use loct_m
+  use loct_math_m
   use loct_parser_m
   use math_m
+  use mesh_function_m
   use mesh_m
   use messages_m
   use mpi_m
-  use profiling_m
-  use units_m
-  use grid_m
-  use mesh_function_m
   use par_vec_m
   use poisson_cutoffs_m
+  use profiling_m
+  use simul_box_m
   use splines_m
+  use units_m
 
   implicit none
 
   private
-  public :: & 
-       poisson_fft_build_2d, &
-       poisson_fft_build_3d, &
-       poisson_fft_end,  &
-       poisson_fft
-  
+  public ::               &
+    poisson_fft_build_1d, &
+    poisson_fft_build_2d, &
+    poisson_fft_build_3d, &
+    poisson_fft_end,      &
+    poisson_fft
 
   integer, public, parameter :: &
-       FFT_SPH       =  0, &
-       FFT_CYL       =  1, &
-       FFT_PLA       =  2, &
-       FFT_NOCUT     =  3, &
+       FFT_SPH       =  0,      &
+       FFT_CYL       =  1,      &
+       FFT_PLA       =  2,      &
+       FFT_NOCUT     =  3,      &
        FFT_CORRECTED =  4
 
-  type(dcf_t), public :: fft_cf
+  type(dcf_t), public      :: fft_cf
   type(fourier_space_op_t) :: coulb
 
 contains
@@ -315,13 +317,52 @@ contains
     call pop_sub()
   end subroutine poisson_fft_build_2d
 
+
+  !-----------------------------------------------------------------
+  subroutine poisson_fft_build_1d(gr, poisson_solver)
+    type(grid_t), intent(in) :: gr
+    integer,      intent(in) :: poisson_solver
+
+    integer            :: box(MAX_DIM), ix
+    FLOAT              :: g
+    FLOAT, allocatable :: fft_coulb_fs(:, :, :)
+
+    call push_sub('solver_fft.poisson_fft_build_1d')
+
+    ASSERT(poisson_solver.eq.FFT_SPH.and.simul_box_is_periodic(gr%sb))
+
+    box = gr%m%l
+    call dcf_new(box, fft_cf)
+    call dcf_fft_init(fft_cf, gr%sb)
+    box = fft_cf%n
+
+    ALLOCATE(fft_coulb_fs(fft_cf%nx, fft_cf%n(2), fft_cf%n(3)), fft_cf%nx*fft_cf%n(2)*fft_cf%n(3))
+
+    fft_coulb_fs = M_ZERO
+
+    ! Fourier transform of Soft Coulomb interaction.
+    do ix = 1, fft_cf%nx
+      g = ix*M_PI/gr%sb%lsize(1)
+      fft_coulb_fs(ix, 1, 1) = sqrt(M_TWO/M_PI) * loct_bessel_k0(sign(M_ONE, g)*g)
+    end do
+
+    call dfourier_space_op_init(coulb, fft_cf, fft_coulb_fs)
+    deallocate(fft_coulb_fs)
+    
+    call pop_sub()
+  end subroutine poisson_fft_build_1d
+
+
   !-----------------------------------------------------------------
   subroutine poisson_fft_end()
-      call dcf_free(fft_cf)
+    call push_sub('solver_fft.poisson_fft.end')
 
-      call dfourier_space_op_end(coulb)
+    call dcf_free(fft_cf)
+    call dfourier_space_op_end(coulb)
 
+    call pop_sub()
   end subroutine poisson_fft_end
+
 
   !-----------------------------------------------------------------
   subroutine poisson_fft(m, pot, rho, average_to_zero)

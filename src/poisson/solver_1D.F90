@@ -17,6 +17,36 @@
 !!
 !! $Id$
 
+
+!-----------------------------------------------------------------
+subroutine poisson1d_init(gr)
+  type(grid_t), intent(inout) :: gr
+
+  call push_sub('solver_1D.poisson1d_init')
+
+  ASSERT(poisson_solver.eq.FFT_SPH.or.poisson_solver.eq.DIRECT_SUM_1D)
+
+  ! Check for periodicity.
+  if(gr%sb%periodic_dim.ne.0.and.poisson_solver.ne.FFT_SPH) then
+    message(1) = 'Your system is periodic but the PoissonSolver used assumes'
+    message(2) = 'a finite system. This will most likely give wrong results.'
+    call write_warning(2)
+  end if
+  if(gr%sb%periodic_dim.eq.0.and.poisson_solver.ne.DIRECT_SUM_1D) then
+    message(1) = 'Your system is finite but the PoissonSolver used assumes'
+    message(2) = 'periodic boundary conditions. This will most likely give wrong results.'
+    call write_warning(2)
+  end if
+
+  if(poisson_solver.eq.FFT_SPH) then
+    call poisson_fft_build_1d(gr, poisson_solver)
+  end if
+
+  call pop_sub()
+end subroutine poisson1d_init
+
+
+!-----------------------------------------------------------------
 subroutine poisson1D_solve(m, pot, rho)
   type(mesh_t), intent(in) :: m
   FLOAT, intent(out) :: pot(m%np)
@@ -68,6 +98,7 @@ subroutine poisson1D_solve(m, pot, rho)
 
   call pop_sub()
 end subroutine poisson1D_solve
+
 
 !! Local Variables:
 !! mode: f90
