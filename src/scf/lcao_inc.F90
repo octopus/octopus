@@ -71,14 +71,12 @@ subroutine X(lcao_atomic_orbital) (this, iorb, m, h, geo, sb, psi, ispin, ik)
       pos = periodic_copy_position(pc, sb, icell)
       do k = 1, m%np
         x(1:MAX_DIM) = m%x(k, 1:MAX_DIM) - pos(1:MAX_DIM)
-        psi(k, idim) = psi(k, idim) + h%phase(k, ik)*species_get_iwf(s, jj, calc_dim, spin_channel, x)
+        psi(k, idim) = psi(k, idim) + species_get_iwf(s, jj, calc_dim, spin_channel, x)
       end do
     end do
     call periodic_copy_end(pc)
 
   end if
-
-  call X(states_normalize_orbital)(m, wf_dim, psi)
 
   call pop_sub()
   call profiling_out(prof)
