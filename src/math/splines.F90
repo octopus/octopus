@@ -303,21 +303,21 @@ module splines_m
       type(c_ptr), intent(in) :: spl, acc
     end function oct_spline_eval
 
-    subroutine oct_splice_eval_array(nn, xf, spl, acc)
+    subroutine oct_spline_eval_array(nn, xf, spl, acc)
       use c_pointer_m
       integer, intent(in)    :: nn
       real(8), intent(inout) :: xf
       type(c_ptr), intent(in) :: spl
       type(c_ptr), intent(in) :: acc  
-    end subroutine oct_splice_eval_array
+    end subroutine oct_spline_eval_array
 
-    subroutine oct_splice_eval_array4(nn, xf, spl, acc)
+    subroutine oct_spline_eval_array4(nn, xf, spl, acc)
       use c_pointer_m
       integer, intent(in)    :: nn
       real(4), intent(inout) :: xf
       type(c_ptr), intent(in) :: spl
       type(c_ptr), intent(in) :: acc  
-    end subroutine oct_splice_eval_array4
+    end subroutine oct_spline_eval_array4
 
     real(8) function oct_spline_eval_der(x, spl, acc)
       use c_pointer_m
