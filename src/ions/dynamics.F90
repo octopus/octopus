@@ -312,7 +312,7 @@ contains
     case(NOSE_HOOVER)
 
       ! The implementation of the Nose Hoover thermostat is based on
-      ! Understanding Molecular Simulations" by Frenkel and Smit,
+      ! Understanding Molecular Simulations by Frenkel and Smit,
       ! Appendix E, page 540-542.
 
       if (time < this%nh_end_time) then
