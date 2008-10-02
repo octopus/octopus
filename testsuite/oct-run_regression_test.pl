@@ -300,10 +300,10 @@ foreach my $octopus_exe (@executables){
       if ( $_ =~ /^match/ && !$opt_n) {
 	if(run_match_new($_)){
 	  print "$name: \t [ $color_start{green}  OK  $color_end{green} ] \n";
-	  $test_succeded = 1;
+	  $test_succeeded = 1;
 	} else {
 	  print "$name: \t [ $color_start{red} FAIL $color_end{red} ] \n";
-	  $test_succeded = 0;
+	  $test_succeeded = 0;
 	  $failures++;
 	}
       }
@@ -315,7 +315,7 @@ foreach my $octopus_exe (@executables){
   }
 
   if ($opt_l)  { system ("cat $workdir/out >> out.log"); }
-  if (!$opt_p && !$opt_m && $test_succeded) { system ("rm -rf $workdir"); }
+  if (!$opt_p && !$opt_m && $test_succeeded) { system ("rm -rf $workdir"); }
 
   print "\n";
   close(TESTSUITE)
