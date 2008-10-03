@@ -19,9 +19,11 @@
 
 #include "global.h"
 #define RESTART_DIR "kdotp/"
+#define EM_RESTART_DIR "em_resp/"
 
-module kdotp_lr_m
+module kdotp_m
   use datasets_m
+  use em_resp_calc_m
   use geometry_m
   use global_m
   use grid_m
@@ -442,7 +444,7 @@ contains
     
   end function int2str
             
-end module kdotp_lr_m
+end module kdotp_m
 
 !! Local Variables:
 !! mode: f90

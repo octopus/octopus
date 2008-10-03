@@ -38,7 +38,7 @@ module run_prog_m
   use phonons_fd_m
   use phonons_lr_m
   use pol_lr_m
-  use kdotp_lr_m
+  use kdotp_m
   use gcm_m
   use pulpo_m
   use raman_m

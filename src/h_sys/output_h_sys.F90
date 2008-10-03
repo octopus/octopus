@@ -498,3 +498,8 @@ contains
 #include "output_linear_response.F90"
 
 end module h_sys_output_m
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

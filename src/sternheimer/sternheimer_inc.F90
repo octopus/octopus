@@ -57,7 +57,7 @@ subroutine X(sternheimer_solve)(                           &
 
   character(len=100) :: dirname
 
-  call push_sub('sternheimer.sternheimer_solve')
+  call push_sub('sternheimer_inc.Xsternheimer_solve')
 
   ASSERT(nsigma == 1 .or. nsigma == 2)
 
@@ -273,7 +273,7 @@ subroutine X(sternheimer_calc_hvar)(this, sys, h, lr, nsigma, hvar)
   R_TYPE, allocatable :: tmp(:), hartree(:)
   integer :: np, i, ik, ik2
 
-  call push_sub('sternheimer_inc.sternheimer_calc_hvar')
+  call push_sub('sternheimer_inc.Xsternheimer_calc_hvar')
 
   np = sys%gr%m%np
 
