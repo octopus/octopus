@@ -77,7 +77,6 @@ core_LIBS = \
 	@GSL_LIBS@ @GD_LIBS@ @FCEXTRALIBS@
 
 external_LIBS = \
-	$(top_builddir)/external_libs/expokit/libexpokit.a \
 	$(top_builddir)/external_libs/qshep/libqshep.a     \
 	$(top_builddir)/external_libs/poisson_isf/libpoisson_isf.a
 

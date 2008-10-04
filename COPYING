@@ -23,15 +23,7 @@ are also contained in this document.
 
  Currently the following external libraries are provided:
 
-  1. Expokit
-
-      Roger B. Sidje
-      Department of Mathematics, University of Queensland 
-      Brisbane, QLD-4072, Australia
-      Email: rbs@maths.uq.edu.au
-      WWW: http://www.maths.uq.edu.au/expokit/ 
-
-  2. Metis 4.0
+  1. Metis 4.0
 
       George Karypis 
       Department of Computer Science & Engineering
@@ -40,13 +32,13 @@ are also contained in this document.
       Email: karypis@cs.umn.edu
       WWW: http://www-users.cs.umn.edu/~karypis/metis/index.html
 
-  3. qshep
+  2. qshep
 
       Robert Renka
       University of North Texas
       (817) 565-2767
 
-  4. poisson_isf: Fast Poisson Solver for free boundary conditions
+  3. poisson_isf: Fast Poisson Solver for free boundary conditions
 
       Copyright (C) Luigi Genovese, Thierry Deutsch, CEA Grenoble, 2006
       Copyright (C) Stefan Goedecker, Basel Univ, 2006
@@ -55,7 +47,7 @@ are also contained in this document.
       Public License, see http://www.gnu.org/copyleft/gpl.txt .
       WWW: http://pages.unibas.ch/comphys/comphys/SOFTWARE/
 
-  5. LibNBC 0.8.1
+  4. LibNBC 0.8.1
 
        Copyright (c) 2006 The Trustees of Indiana University and Indiana
                           University Research and Technology
@@ -63,31 +55,6 @@ are also contained in this document.
        Copyright (c) 2006 The Technical University of Chemnitz. All 
                           rights reserved.
        WWW: http://www.unixer.de/research/nbcoll/libnbc/
-
-
-                       EXPOKIT COPYRIGHT NOTICE
-
-Permission to use, copy, modify, and distribute EXPOKIT and its       
-supporting documentation for non-commercial purposes, is hereby       
-granted without fee, provided that this permission message and        
-copyright notice appear in all copies. Approval must be sought for    
-commercial purposes.                                                  
-                                                                      
-Neither the Institution (University of Queensland) nor the Authors    
-make any representations about the suitability of this software for   
-any purpose.  This software is provided ``as is'' without express or  
-implied warranty.                                                     
-                                                                      
-The work resulting from EXPOKIT has been published in ACM-Transactions
-on Mathematical Software, 24(1):130-156, 1998.                        
-                                                                      
-Certain elements of the current software may include inadequacies     
-that may be corrected at any time, as they are discovered. The Web    
-always contains the latest updates.                                   
-                                                                      
-                             Roger B. Sidje                           
-           Department of Mathematics, University of Queensland        
-     Brisbane, QLD-4072, Australia, (c) 1996-1999 All Rights Reserved 
 
 
 
