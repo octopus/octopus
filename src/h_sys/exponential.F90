@@ -24,6 +24,7 @@ module exponential_m
   use cube_function_m
   use datasets_m
   use fourier_space_m
+  use lalg_adv_m
   use lalg_basic_m
   use loct_math_m
   use loct_parser_m
@@ -392,10 +393,10 @@ contains
 
     ! ---------------------------------------------------------
     subroutine lanczos
-      integer ::  korder, n, k, iflag, lwsp, ns, i, j, l, iexph, idim
-      integer, allocatable :: ipiv(:)
-      CMPLX, allocatable :: hm(:,:), v(:,:,:), expo(:,:), wsp(:), tmp(:, :)
+      integer ::  korder, n, l, idim
+      CMPLX, allocatable :: hm(:,:), v(:,:,:), expo(:,:), tmp(:, :)
       FLOAT :: beta, res, tol !, nrm
+      CMPLX :: pp
 
       call push_sub('exponential.lanczos')
 
@@ -409,10 +410,8 @@ contains
       hm = M_z0
       expo = M_z0
 
-      lwsp = 4*(te%exp_order+1)**2+7
-      ALLOCATE(wsp(lwsp), lwsp)
-      ALLOCATE(ipiv(te%exp_order+1), (te%exp_order+1))
-
+      pp = deltat
+      if(.not. present(imag_time)) pp = -M_zI*pp
 
       ! Normalize input vector, and put it into v(:, :, 1)
       beta = zmf_nrm2(gr%m, h%d%dim, zpsi)
@@ -441,28 +440,7 @@ contains
         call zstates_gram_schmidt(gr%m, n - l + 1, h%d%dim, v(:, :, l:n), v(:, :, n + 1), &
           normalize = .true., overlap = hm(l:n, n), norm = hm(n + 1, n))
 
-        !calculate the exponential of the dense matrix using expokit
-        if(present(imag_time)) then
-          if(hamiltonian_hermitean(h)) then
-            call zhpadm(6, n, deltat, hm(1:n, 1:n), n, wsp, lwsp, ipiv(1:n), iexph, ns, iflag)
-          else
-            call zgpadm(6, n, deltat, hm(1:n, 1:n), n, wsp, lwsp, ipiv(1:n), iexph, ns, iflag)
-          end if
-        else
-          if(hamiltonian_hermitean(h)) then
-            call zhpadm(6, n, deltat, -M_zI*hm(1:n, 1:n), n, wsp, lwsp, ipiv(1:n), iexph, ns, iflag)
-          else
-            call zgpadm(6, n, deltat, -M_zI*hm(1:n, 1:n), n, wsp, lwsp, ipiv(1:n), iexph, ns, iflag)
-          end if
-        end if
-
-        k = 0
-        do i = 1, n
-          do j = 1, n
-            expo(j, i) = wsp(iexph + k)
-            k = k + 1
-          end do
-        end do
+        call zlalg_exp(n, pp, hm, expo, hamiltonian_hermitean(h))
 
         res = abs(hm(n+1, n)*abs(expo(n, 1)))
 
@@ -475,21 +453,7 @@ contains
         call write_warning(1)
       end if
 
-      if(present(imag_time)) then
-        call zgpadm(6, korder + 1, deltat, hm(1:korder + 1, 1:korder + 1), korder + 1, wsp, &
-          lwsp, ipiv(1:korder + 1), iexph, ns, iflag)
-      else
-        call zgpadm(6, korder + 1, deltat, -M_zI*hm(1:korder + 1, 1:korder + 1), korder + 1, wsp, &
-          lwsp, ipiv(1:korder + 1), iexph, ns, iflag)
-      end if
-
-      k = 0
-      do i = 1, korder+1
-        do j = 1, korder+1
-          expo(j, i) = wsp( iexph + k)
-          k = k + 1
-        end do
-      end do
+      call zlalg_exp(korder + 1, pp, hm, expo, hermitian = .false.)
 
       ! zpsi = nrm * V * expo(1:korder, 1) = nrm * V * expo * V^(T) * zpsi
       call lalg_gemv(NP, h%d%dim, korder + 1, M_z1*beta, v, expo(1:korder + 1, 1), M_z0, tmp)
@@ -500,7 +464,7 @@ contains
 
       if(present(order)) order = korder
 
-      deallocate(v, hm, expo, ipiv, wsp, tmp)
+      deallocate(v, hm, expo, tmp)
 
       call pop_sub()
     end subroutine lanczos

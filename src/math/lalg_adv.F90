@@ -40,7 +40,8 @@ module lalg_adv_m
     lalg_invert_upper_triangular, &
     lalg_invert_lower_triangular, &
     lalg_lowest_geneigensolve,    &
-    lalg_lowest_eigensolve
+    lalg_lowest_eigensolve,       &
+    zlalg_exp
 
   interface lalg_cholesky
     module procedure dcholesky, zcholesky
@@ -100,6 +101,77 @@ module lalg_adv_m
     module procedure dlowest_eigensolve, zlowest_eigensolve
   end interface
 contains
+
+  !-------------------------------------------------
+  !
+  ! This routine calculates the exponential of a matrix by using an
+  ! eigenvalue decomposition.
+  !
+  ! For the hermitian case:
+  !
+  !   A = V D V^T => exp(A) = V exp(D) V^T
+  !
+  ! and in general
+  !
+  !   A = V D V^-1 => exp(A) = V exp(D) V^-1
+  !
+  ! This is slow but it is simple to implement, and for the moment it
+  ! does not affect performance.
+  !
+  !---------------------------------------------
+
+  subroutine zlalg_exp(nn, pp, aa, ex, hermitian)
+    integer,           intent(in)      :: nn
+    CMPLX,             intent(in)      :: pp
+    CMPLX,             intent(in)      :: aa(:, :)
+    CMPLX,             intent(inout)   :: ex(:, :)
+    logical,           intent(in)      :: hermitian
+
+    CMPLX, allocatable :: evectors(:, :), zevalues(:)
+    FLOAT, allocatable :: evalues(:)
+    CMPLX :: deter
+    
+    integer :: ii
+
+    ALLOCATE(evectors(nn, nn), nn**2)
+
+    if(hermitian) then
+
+      ALLOCATE(evalues(nn), nn)
+
+      call lalg_eigensolve(nn, aa(1:nn, 1:nn), evectors, evalues)
+
+      evalues(1:nn) = exp(pp*evalues(1:nn))
+
+      do ii = 1, nn
+        ex(1:nn, ii) = evalues(1:nn)*evectors(ii, 1:nn)
+      end do
+
+      ex(1:nn, 1:nn) = matmul(evectors, ex(1:nn, 1:nn))
+
+    else
+
+      ALLOCATE(zevalues(nn), nn)
+
+      evectors(1:nn, 1:nn) = aa(1:nn, 1:nn)
+
+      call lalg_eigensolve_nonh(nn, evectors, zevalues)
+      
+      zevalues(1:nn) = exp(pp*zevalues(1:nn))
+
+      ex(1:nn, 1:nn) = evectors(1:nn, 1:nn)
+
+      deter = lalg_inverter(nn, evectors)
+      
+      do ii = 1, nn
+        evectors(1:nn, ii) = zevalues(1:nn)*evectors(1:nn, ii)
+      end do
+      
+      ex(1:nn, 1:nn) = matmul(ex(1:nn, 1:nn), evectors(1:nn, 1:nn))
+
+    end if
+
+  end subroutine zlalg_exp
 
 #ifdef HAVE_LAPACK
 #include "lalg_adv_lapack.F90"
