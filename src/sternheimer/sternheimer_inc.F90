@@ -94,6 +94,13 @@ subroutine X(sternheimer_solve)(                           &
   !self-consistency iteration for response
   iter_loop: do iter = 1, this%scftol%max_iter
 
+    ! preorthogonalization
+    if (this%preorthogonalization) then 
+      do sigma = 1, nsigma
+        call X(lr_orth_response)(m, st, lr(sigma))
+      enddo
+    endif
+
     if (this%add_fxc .or. this%add_hartree) then
        write(message(1), '(a, i3)') "LR SCF Iteration: ", iter
        call write_info(1)

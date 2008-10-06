@@ -564,8 +564,8 @@ contains
     !% <br>&nbsp;&nbsp;2.0 | 2.0 | 2.0 | 2.0 | 2.0
     !% <br>%</tt>
     !%
-    !% would fix the occupations of the five states to <i>2.0</i>. There must be,
-    !% at most, as many columns as states in the calculation. If there are less columns
+    !% would fix the occupations of the five states to <i>2.0</i>. There can be
+    !% at most as many columns as states in the calculation. If there are fewer columns
     !% than states, then the code will assume that the user is indicating the occupations
     !% of the uppermost states, assigning maximum occupation (i.e. 2 for spin-unpolarized
     !% calculations, 1 otherwise) to the lower states. If <tt>SpinComponents == polarized</tt>

@@ -76,6 +76,7 @@ module sternheimer_m
      logical :: ok
      logical :: hermitian 
      logical :: occ_response
+     logical :: preorthogonalization
      logical :: oep_kernel
      FLOAT, pointer :: fxc(:,:,:)    ! linear change of the xc potential (fxc)
      
@@ -94,6 +95,20 @@ contains
     logical, optional,   intent(in)    :: set_occ_response
 
     integer :: ham_var
+
+    !%Variable Preorthogonalization
+    !%Type logical 
+    !%Default false
+    !%Section Linear Response::Sternheimer 
+    !%Description 
+    !% Whether initial linear-response wavefunctions should be orthogonalized 
+    !% or not against the occupied states, at the start of each SCF cycle.
+    !%End 
+    if (loct_parse_isdef(check_inp(trim(prefix)//'Preorthogonalization')) /= 0) then 
+      call loct_parse_logical(check_inp(trim(prefix)//'Preorthogonalization'), .false., this%preorthogonalization) 
+    else 
+      call loct_parse_logical(check_inp('Preorthogonalization'), .false., this%preorthogonalization) 
+    end if
 
     !%Variable HamiltonianVariation
     !%Type integer
@@ -149,7 +164,14 @@ contains
     else
        write(message(2), '(2a)') trim(message(2)), ' linear response in unoccupied subspace only'
     endif
-    call write_info(2) 
+
+    message(3) = "Sternheimer preorthogonalization:"
+    if (this%preorthogonalization) then
+       write(message(3), '(2a)') trim(message(3)), ' yes'
+    else
+       write(message(3), '(2a)') trim(message(3)), ' no'
+    endif
+    call write_info(3) 
 
     call linear_solver_init(this%solver, sys%gr, prefix)
 

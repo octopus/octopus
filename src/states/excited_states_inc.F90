@@ -125,7 +125,7 @@ R_TYPE function X(states_mpmatrixelement_g)(m, st1, st2, opst2) result(st1opst2)
   ASSERT(ispin.eq.st2%d%ispin)
   nik   = st1%d%nik
   ASSERT(nik.eq.st2%d%nik)
-  ! Can only consider the number of states of the state that comes with less states.
+  ! Can only consider the number of states of the state that comes with fewer states.
   nst = min(st1%nst, st2%nst)
 
   ALLOCATE(overlap_mat(st1%nst, st2%nst, st1%d%nik), st1%nst*st2%nst*st1%d%nik)
@@ -276,7 +276,7 @@ R_TYPE function X(states_mpdotp_g)(m, st1, st2, mat) result(dotp)
   ASSERT(ispin.eq.st2%d%ispin)
   nik   = st1%d%nik
   ASSERT(nik.eq.st2%d%nik)
-  ! Can only consider the number of states of the state that comes with less states.
+  ! Can only consider the number of states of the state that comes with fewer states.
   nst = min(st1%nst, st2%nst)
 
   ALLOCATE(a(st1%nst, st2%nst, st1%d%nik), st1%nst*st2%nst*st1%d%nik)

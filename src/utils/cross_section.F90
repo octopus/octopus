@@ -74,7 +74,7 @@ program cross_section
     !      considered.
     !      (i.1) If this file signals three equivalent axes, the full tensor is
     !            calculated, and placed in "cross_section_tensor".
-    !      (i.2) If this file signals less than three equivalent axes, the full
+    !      (i.2) If this file signals fewer than three equivalent axes, the full
     !            tensor cannot be calculated, and instead a "cross_section_vector"
     !            will be generated.
     ! (ii) A file called "multipoles.1" is found. In this case, the program will

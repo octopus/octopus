@@ -428,7 +428,7 @@ contains
       end if
 
       if(any(index_range(1:mc%n_index)/mc%group_sizes(1:mc%n_index) < min_range(1:mc%n_index))) then
-        message(1) = "I have less elements in a parallel group than recommended."
+        message(1) = "I have fewer elements in a parallel group than recommended."
         message(2) = "Maybe you should reduce the number of nodes"
         call write_warning(2)
       end if
@@ -445,7 +445,7 @@ contains
         (M_ONE - frac)*CNST(100.), "% of computer time"
       if(frac < CNST(0.8)) then
         message(2) = "I decided this is too much. Change the number of processors and try again."
-        message(3) = "Usually number of processors multiple of small primes are best"
+        message(3) = "Usually a number of processors which is a multiple of small primes is best"
         call write_fatal(3)
       else
         call write_info(1)

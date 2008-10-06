@@ -77,7 +77,7 @@ contains
     !%Description
     !% Define the convergence threshold. It computes the difference between the "input"
     !% field in the iterative procedure, and the "output" field. If this difference is
-    !% less then OCTEps the iteration is stopped. This difference is defined as:
+    !% less than OCTEps the iteration is stopped. This difference is defined as:
     !% 
     !% <math>
     !% D[\epsilon^{i},\epsilon^{o}] = \int_0^T dt \vert \epsilon^{i}(t)-\epsilon^{o}(t)\vert^2\,.

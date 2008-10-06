@@ -1075,8 +1075,8 @@ contains
     !% The first column specifies the component of the spinor, 
     !% the second column the number of the state and the third 
     !% contains kpoint and spin quantum numbers. Column four
-    !% indicates that column five should be interpreted as formula
-    !% for the correspondig orbital.
+    !% indicates that column five should be interpreted as a formula
+    !% for the corresponding orbital.
     !% 
     !% Alternatively, if column four states file the state will
     !% be read from the file given in column five.
@@ -1085,7 +1085,7 @@ contains
     !% <br>&nbsp;&nbsp; 1 | 1 | 1 | file | "/path/to/file" | normalize_no
     !% <br>%</tt>
     !% 
-    !% Octopus reads first the ground state orbitals from
+    !% Octopus reads first the ground-state orbitals from
     !% the restart/gs directory. Only the states that are
     !% specified in the above block will be overwritten with
     !% the given analytical expression for the orbital.
@@ -1094,7 +1094,7 @@ contains
     !% or not. The default, i. e. no sixth column given, is to renormalize.
     !%
     !%Option file 0
-    !% Read initsial orbital from file
+    !% Read initial orbital from file
     !%Option formula 1
     !% Calculate initial orbital by given analytic expression
     !%Option normalize_yes 1

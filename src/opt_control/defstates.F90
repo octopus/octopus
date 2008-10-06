@@ -186,4 +186,8 @@
     call pop_sub()
   end subroutine initial_state_init
 
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:
 

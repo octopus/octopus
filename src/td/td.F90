@@ -448,7 +448,7 @@ contains
         !% Kohn-Sham states, and therefore restart/gs will contain more states.
         !% These states can be used in the transformation.
         !%
-        !% Note that the code will not check the orthormality of the new states!
+        !% Note that the code will not check the orthonormality of the new states!
         !%
         !% Each line provides the coefficients of the new states, in terms of
         !% the old ones.
