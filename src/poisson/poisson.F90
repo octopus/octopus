@@ -66,8 +66,8 @@ module poisson_m
 
   type hartree_t
     private
-    logical        :: increase_box
-    type(grid_t)   :: grid
+    logical                 :: increase_box
+    type(grid_t), pointer   :: grid
   end type hartree_t
 
   type(hartree_t) :: hartree_integrator
@@ -258,6 +258,8 @@ contains
 
     end select
     poisson_solver = -99
+
+    if(hartree_integrator%increase_box) deallocate(hartree_integrator%grid)
 
     call pop_sub()
   end subroutine poisson_end
