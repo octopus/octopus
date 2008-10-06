@@ -74,7 +74,7 @@ module opt_control_m
   
 
   ! For the algorithm_direct scheme:
-  type(oct_control_parameters_t) :: par_
+  type(oct_control_parameters_t), save :: par_
   type(system_t), pointer :: sys_
   type(hamiltonian_t), pointer :: h_
   type(td_t), pointer :: td_
@@ -163,37 +163,70 @@ contains
 
     call io_mkdir('opt-control')
 
+
+    ! Initialize the time propagator.
     call td_init(sys, h, td)
     if(h%theory_level .ne. INDEPENDENT_PARTICLES ) then
       call td_rti_set_scf_prop(td%tr)
     end if
 
+
+    ! Allocate the wavefunctions of sys%st
     call states_allocate_wfns(sys%st, sys%gr%m, M_CMPLX)
 
+
+    ! Read general information about how the OCT run will be made, from inp file.
     call oct_read_inp()
 
-    call parameters_set_initial(par, h%ep, sys%gr%m, td%dt, td%max_iter, &
-                                oct%mode_fixed_fluence, oct%mode_basis_set)
 
+    ! Read info about, and prepare, the control functions (a.k.a. parameters).
+    call parameters_read(h%ep, td%dt, td%max_iter, oct%mode_fixed_fluence, oct%mode_basis_set)
+    call parameters_init(par, td%dt, td%max_iter)
+    call parameters_set(par, h%ep)
+      ! This prints the initial control parameters, exactly as described in the inp file,
+      ! that is, without applying any envelope or filter.
+    call parameters_write('opt-control/initial_laser_inp', par)
+    call parameters_prepare_initial(par)
+    call parameters_to_realtime(par)
+    call parameters_to_h(par, h%ep)
+    call messages_print_stress(stdout, "TD ext. fields after processing")
+    call laser_write_info(h%ep%no_lasers, h%ep%lasers, td%dt, td%max_iter, stdout)
+    call messages_print_stress(stdout)
+    call parameters_write('opt-control/initial_laser', par)
+
+
+    ! Startup of the iterator data type (takes care of counting iterations, stopping, etc).
     call oct_iterator_init(iterator, par)
 
+
+    ! If mixing is required, the mixing machinery has to be initialized -- inside the parameters module.
     if(oct%use_mixing) call parameters_mixing_init(par)
 
+
+    ! If filters are to be used, they also have to be initialized.
     call filter_init(td%max_iter, td%dt, filter)
     call filter_write(filter)
 
+
+    ! Figure out how is the starting wave function(s), and the target.
     call initial_state_init(sys%gr, sys%geo, sys%st, initial_st)
     call target_init(sys%gr, sys%geo, sys%st, td, parameters_w0(par), target)
 
+
+    ! Sanity checks.
     call check_faulty_runmodes(sys, h, td%tr)
 
+
+    ! Informative output.
     call h_sys_output_states(initial_st, sys%gr, 'opt-control/initial', sys%outp)
     call target_output(target, sys%gr, 'opt-control/target', sys%outp)
+
 
     ! psi is the "working state".
     call states_copy(psi, initial_st)
 
-    ! mode switcher
+
+    ! mode switcher; here is where the real run is made.
     select case(oct%algorithm)
       case(oct_algorithm_zbr98)
         message(1) = "Info: Starting OCT iteration using scheme: ZBR98"

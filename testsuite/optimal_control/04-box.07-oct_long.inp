@@ -41,7 +41,7 @@ OCTFixFluenceTo = -1
 #freq = 0.5
 freq = 0.129009
 
-OCTControlFunctionIsEnvelope = yes
+OCTControlFunctionType = parameter_mode_f
 OCTCarrierFrequency = freq
 
 OCTDoubleCheck = no

@@ -42,6 +42,7 @@ module opt_control_parameters_m
 
   private
   public :: oct_control_parameters_t,     &
+            parameters_read,              &
             parameters_init,              &
             parameters_set,               &
             parameters_end,               &
@@ -58,7 +59,7 @@ module opt_control_parameters_m
             parameters_set_alpha,         &
             parameters_set_rep,           &
             parameters_to_realtime,       &
-            parameters_set_initial,       &
+            parameters_prepare_initial,   &
             parameters_fluence,           &
             parameters_j2,                &
             parameters_par_to_x,          &
@@ -77,51 +78,66 @@ module opt_control_parameters_m
     ctr_parameter_frequency_space  = 2
 
 
+  integer, parameter :: parameter_mode_none      = 0, &
+                        parameter_mode_epsilon   = 1, &
+                        parameter_mode_f         = 2, &
+                        parameter_mode_phi       = 3, &
+                        parameter_mode_f_and_phi = 4
+
+  type oct_parameters_common_t
+    private
+    integer :: representation      = 0
+    FLOAT   :: omegamax            = M_ZERO
+    FLOAT   :: targetfluence       = M_ZERO
+    logical :: fix_initial_fluence = .false.
+    logical :: envelope            = .false.
+    FLOAT   :: w0                  = M_ZERO
+
+    integer :: mode                = parameter_mode_none
+    integer :: no_parameters       = 0
+  end type oct_parameters_common_t
+
+
   type oct_control_parameters_t
     private
-    integer :: no_parameters
-    FLOAT   :: dt
-    integer :: ntiter
-    integer :: nfreqs
-    FLOAT   :: targetfluence
-    type(tdf_t), pointer :: f(:)
-    CMPLX, pointer :: pol(:, :) ! the polarization of the field, this is
-                                ! necessary to calculate the fluence.
-    FLOAT, pointer :: alpha(:)
-    type(tdf_t), pointer :: td_penalty(:)
+    integer :: no_parameters = 0
+    FLOAT   :: dt            = M_ZERO
+    integer :: ntiter        = 0
+    integer :: nfreqs        = 0
+    FLOAT   :: targetfluence = M_ZERO
+    type(tdf_t), pointer :: f(:) => NULL()
+    CMPLX, pointer :: pol(:, :)  => NULL() ! the polarization of the field, this is
+                                           ! necessary to calculate the fluence.
+    FLOAT, pointer :: alpha(:)   => NULL()
+    type(tdf_t), pointer :: td_penalty(:) => NULL()
 
-    integer :: representation
-    integer :: current_representation
-    FLOAT   :: omegamax
+    integer :: representation         = 0
+    integer :: current_representation = 0
+    FLOAT   :: omegamax               = M_ZERO
 
-    logical :: envelope
-    FLOAT   :: w0
-    FLOAT, pointer :: utransf(:, :), utransfi(:, :)
+    logical :: envelope = .false.
+    FLOAT   :: w0       = M_ZERO
+    FLOAT, pointer :: utransf(:, :)  => NULL()
+    FLOAT, pointer :: utransfi(:, :) => NULL()
   end type oct_control_parameters_t
 
+  type(oct_parameters_common_t), save :: par_common
   type(mix_t) :: parameters_mix
 
 contains
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_set_initial(par, ep, m, dt, max_iter, &
-                                    mode_fixed_fluence, mode_basis_set)
-    type(oct_control_parameters_t), intent(inout) :: par
+  subroutine parameters_read(ep, dt, max_iter, mode_fixed_fluence, mode_basis_set)
     type(epot_t), intent(inout)                   :: ep
-    type(mesh_t), intent(inout)                   :: m
     FLOAT, intent(in)                             :: dt
     integer, intent(in)                           :: max_iter
     logical, intent(out)                          :: mode_fixed_fluence
     logical, intent(out)                          :: mode_basis_set
 
-    integer :: i, mm, nn
-    FLOAT :: targetfluence, omegamax, t, det
-    logical :: fix_initial_fluence
-    type(tdf_t) :: fn, fm
-    FLOAT, allocatable :: eigenvec(:, :), eigenval(:)
+    integer :: i
 
-    call push_sub('parameters.parameters_set_initial')
+    call push_sub('parameters.parameters_read')
 
     !%Variable OCTParameterRepresentation
     !%Type integer
@@ -136,10 +152,11 @@ contains
     !%Option control_parameters_fourier_space 2
     !%
     !%End
-    call loct_parse_int(check_inp('OCTParameterRepresentation'), ctr_parameter_real_space, par%representation)
-    if(.not.varinfo_valid_option('OCTParameterRepresentation', par%representation)) &
+    call loct_parse_int(check_inp('OCTParameterRepresentation'), &
+      ctr_parameter_real_space, par_common%representation)
+    if(.not.varinfo_valid_option('OCTParameterRepresentation', par_common%representation)) &
       call input_error('OCTParameterRepresentation')
-    select case(par%representation)
+    select case(par_common%representation)
     case(ctr_parameter_real_space)
       write(message(1), '(a)') 'Info: The OCT control functions will be represented in real time.'
       call write_info(1)
@@ -156,11 +173,11 @@ contains
     !%Description
     !%
     !%End
-    call loct_parse_float(check_inp('OCTParameterOmegaMax'), M_ONE / units_inp%energy%factor, omegamax)
-    if(par%representation .eq. ctr_parameter_frequency_space) then
+    call loct_parse_float(check_inp('OCTParameterOmegaMax'), M_ONE / units_inp%energy%factor, par_common%omegamax)
+    if(par_common%representation .eq. ctr_parameter_frequency_space) then
       write(message(1), '(a)')         'Info: The representation of the OCT control parameters as a sine'
       write(message(2), '(a,f10.5,a)') '      Fourier series will be done with a cut-off of ', &
-        omegamax / units_out%energy%factor, ' ['//trim(units_out%energy%abbrev) // ']'
+        par_common%omegamax / units_out%energy%factor, ' ['//trim(units_out%energy%abbrev) // ']'
       call write_info(2)
     end if
 
@@ -181,7 +198,7 @@ contains
     !% first the code applies the envelope provided by the "OCTLaserEnvelope" input
     !% option, and afterwards it calculates the fluence.
     !%End
-    call loct_parse_float(check_inp('OCTFixFluenceTo'), M_ZERO, targetfluence)
+    call loct_parse_float(check_inp('OCTFixFluenceTo'), M_ZERO, par_common%targetfluence)
 
     !%Variable OCTFixInitialFluence
     !%Type logical
@@ -193,30 +210,48 @@ contains
     !% fluence. However, you can force the program to use that initial laser as the initial
     !% guess, no matter the fluence, by setting "OCTFixInitialFluence = no".
     !%End
-    call loct_parse_logical(check_inp('OCTFixInitialFluence'), .true., fix_initial_fluence)
+    call loct_parse_logical(check_inp('OCTFixInitialFluence'), .true., par_common%fix_initial_fluence)
 
-
-    !%Variable OCTControlFunctionIsEnvelope
-    !%Type logical
+    !%Variable OCTControlFunctionType
+    !%Type integer
     !%Section Calculation Modes::Optimal Control
-    !%Default no
+    !%Default 1
     !%Description
     !% 
+    !%Option parameter_mode_epsilon   1
+    !%
+    !%Option parameter_mode_f         2
+    !%
+    !%Option parameter_mode_phi       3
+    !%
+    !%Option parameter_mode_f_and_phi 4
+    !%
     !%End
-    call loct_parse_logical(check_inp('OCTControlFunctionIsEnvelope'), .false., par%envelope)
-    if(par%envelope) then
-      !%Variable OCTCarrierFrequency
-      !%Type float
-      !%Section Calculation Modes::Optimal Control
-      !%Default 0.0
-      !%Description
-      !%
-      !%End
-      call loct_parse_float(check_inp('OCTCarrierFrequency'), M_ZERO, par%w0)
-    else
-      par%w0 = M_ZERO
-    end if
+    call loct_parse_int(check_inp('OCTControlFunctionType'), parameter_mode_epsilon, par_common%mode)
+    if(.not.varinfo_valid_option('OCTControlFunctionType', par_common%mode)) call input_error('OCTControlFunctionType')
+    ! WARNING: This should be temporary.
+    select case(par_common%mode)
+    case(parameter_mode_phi, parameter_mode_f_and_phi)
+      write(message(1),'(a)') 'Error: The OCTControlFunctionType selected is still not implemented'
+      call write_fatal(1)
+    case(parameter_mode_f)
+      par_common%envelope = .true.
+    case default
+      par_common%envelope = .false.
+    end select
 
+    !%Variable OCTCarrierFrequency
+    !%Type float
+    !%Section Calculation Modes::Optimal Control
+    !%Default 0.0
+    !%Description
+    !%
+    !%End
+    if(par_common%envelope) then
+      call loct_parse_float(check_inp('OCTCarrierFrequency'), M_ZERO, par_common%w0)
+    else
+      par_common%w0 = M_ZERO
+    end if
 
     ! Check that the laser polarizations are not imaginary.
     do i = 1, ep%no_lasers
@@ -231,15 +266,46 @@ contains
     ! Note that in QOCT runs, it is not acceptable to have complex time-dependent functions.
     do i = 1, ep%no_lasers
       call laser_to_numerical(ep%lasers(i), dt, max_iter, &
-        new_carrier_frequency = par%w0, real_part = .true.)
+        new_carrier_frequency = par_common%w0, real_part = .true.)
     end do
 
-    call parameters_init(par, ep%no_lasers, dt, max_iter, targetfluence, omegamax)
-    call parameters_set(par, ep)
+    ! Fix the number of parameters
+    select case(par_common%mode)
+      case(parameter_mode_epsilon)
+        par_common%no_parameters = ep%no_lasers
+      case(parameter_mode_f)
+        par_common%no_parameters = 1
+      case(parameter_mode_phi)
+        par_common%no_parameters = 1
+      case(parameter_mode_f_and_phi)
+        par_common%no_parameters = 2
+    end select
 
-    ! This prints the initial control parameters, exactly as described in the inp file,
-    ! that is, without applying any envelope or filter.
-    call parameters_write('opt-control/initial_laser_inp', par)
+    mode_fixed_fluence = .false.
+    if (par_common%targetfluence .ne. M_ZERO) mode_fixed_fluence = .true.
+
+    mode_basis_set = .false.
+    if(par_common%representation .ne. ctr_parameter_real_space ) mode_basis_set = .true.
+
+
+    call pop_sub()
+  end subroutine parameters_read
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine parameters_prepare_initial(par)!, m)
+    type(oct_control_parameters_t), intent(inout) :: par
+
+    integer :: i, mm, nn
+    FLOAT :: t, det
+    logical :: fix_initial_fluence
+    type(tdf_t) :: fn, fm
+    FLOAT, allocatable :: eigenvec(:, :), eigenval(:)
+
+    call push_sub('parameters.parameters_set_initial')
+
+    fix_initial_fluence = par_common%fix_initial_fluence
 
     call parameters_apply_envelope(par)
 
@@ -269,19 +335,6 @@ contains
       call write_info(2)
       if(fix_initial_fluence) call parameters_set_fluence(par)
     end if
-
-    call parameters_to_realtime(par)
-    call parameters_to_h(par, ep)
-    call messages_print_stress(stdout, "TD ext. fields after processing")
-    call laser_write_info(ep%no_lasers, ep%lasers, dt, max_iter, stdout)
-    call messages_print_stress(stdout)
-    call parameters_write('opt-control/initial_laser', par)
-
-    mode_fixed_fluence = .false.
-    if (par%targetfluence .ne. M_ZERO) mode_fixed_fluence = .true.
-
-    mode_basis_set = .false.
-    if(par%representation .ne. ctr_parameter_real_space ) mode_basis_set = .true.
 
     if(par%envelope) then
       ! If par%envelope = .true., the object to optimize is the envelope of the
@@ -352,7 +405,7 @@ contains
     end if
 
     call pop_sub()
-  end subroutine parameters_set_initial
+  end subroutine parameters_prepare_initial
   ! ---------------------------------------------------------
 
 
@@ -538,31 +591,33 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_init(cp, no_parameters, dt, ntiter, targetfluence, omegamax)
+  subroutine parameters_init(cp, dt, ntiter)
     type(oct_control_parameters_t), intent(inout) :: cp
-    integer, intent(in) :: no_parameters   
     FLOAT, intent(in) :: dt
     integer, intent(in) :: ntiter
-    FLOAT, intent(in) :: targetfluence
-    FLOAT, intent(in) :: omegamax
 
     integer :: j
 
     call push_sub('parameters.parameters_init')
 
-    cp%current_representation = ctr_parameter_real_space
-    cp%omegamax = omegamax
 
-    cp%no_parameters = no_parameters
-    cp%dt = dt
-    cp%ntiter = ntiter
-    cp%targetfluence = targetfluence
+    cp%representation  = par_common%representation
+    cp%envelope        = par_common%envelope
+    cp%w0              = par_common%w0
+    cp%omegamax        = par_common%omegamax
+    cp%no_parameters   = par_common%no_parameters
+    cp%dt              = dt
+    cp%ntiter          = ntiter
+
+    cp%current_representation = ctr_parameter_real_space
+
+    cp%targetfluence = par_common%targetfluence
     ALLOCATE(cp%f(cp%no_parameters), cp%no_parameters)
     ALLOCATE(cp%alpha(cp%no_parameters), cp%no_parameters)
     ALLOCATE(cp%pol(MAX_DIM, cp%no_parameters), MAX_DIM*cp%no_parameters)
     cp%alpha = M_ZERO
     do j = 1, cp%no_parameters
-      call tdf_init_numerical(cp%f(j), cp%ntiter, cp%dt, omegamax = cp%omegamax)
+      call tdf_init_numerical(cp%f(j), cp%ntiter, cp%dt, omegamax = par_common%omegamax)
     end do
 
     call parameters_penalty_init(cp)

@@ -124,15 +124,21 @@ module tdf_m
     character(len=100) :: row_name, filename, function_expression
     FLOAT :: a0, tau0, t0, tau1
 
-    !%Variable TDExternalFields
+    !%Variable TDFunctions
     !%Type block
     !%Section Time Dependent
     !%Description
+    !% This block permits to specify the shape of a "time dependent function", such as the
+    !% envelope needed when using the "TDExternalFields" block. Each line in the block
+    !% permits to specify one function. The first element of each line will be a string
+    !% that defines the name of the function. The second element specifies which type
+    !% of function we are using; in the following we provide an example for each of the
+    !% possible types:
     !%
     !%    (1) tdf_cw
     !%
-    !% <tt>%TDExternalFields
-    !% <br>&nbsp;&nbsp; tdf_cw | amplitude 
+    !% <tt>%TDFunctions
+    !% <br>&nbsp;&nbsp; "function-name" | tdf_cw | amplitude 
     !% <br>%</tt>
     !%
     !% The function is just a constant of value "amplitude".
@@ -141,8 +147,8 @@ module tdf_m
     !%
     !%    (A.2) tdf_gaussian
     !%
-    !% <tt>%TDExternalFields
-    !% <br>&nbsp;&nbsp; tdf_gaussian | amplitude | tau0 | t0
+    !% <tt>%TDFunctions
+    !% <br>&nbsp;&nbsp; "function-name" | tdf_gaussian | amplitude | tau0 | t0
     !% <br>%</tt>
     !% 
     !% The function is a gaussian:
@@ -153,8 +159,8 @@ module tdf_m
     !%
     !%    (A.3) tdf_cosinoidal
     !%
-    !% <tt>%TDExternalFields
-    !% <br>&nbsp;&nbsp; tdf_cosinoidal | amplitude | tau0 | t0
+    !% <tt>%TDFunctions
+    !% <br>&nbsp;&nbsp; "function-name" | tdf_cosinoidal | amplitude | tau0 | t0
     !% <br>%</tt>
     !%
     !% <math> f(t) =  F_0 cos( \pi/2 \frac{t-2\tau_0-t_0}{\tau0} )  </math>
@@ -163,8 +169,8 @@ module tdf_m
     !%
     !%    (A.4) tdf_trapezoidal
     !%
-    !% <tt>%TDExternalFields
-    !% <br>&nbsp;&nbsp; envelope_trapezoidal | amplitude | tau0 | t0 | tau1
+    !% <tt>%TDFunctions
+    !% <br>&nbsp;&nbsp; "function-name" | tdf_trapezoidal | amplitude | tau0 | t0 | tau1
     !% <br>%</tt>
     !%
     !% The function ramps linearly during <math>tau_1</math> time units, stays constant for
@@ -173,18 +179,18 @@ module tdf_m
     !%
     !%    (A.5) tdf_from_file
     !%
-    !% <tt>%TDExternalFields
-    !% <br>&nbsp;&nbsp; envelope_from_file | "filename"
+    !% <tt>%TDFunctions
+    !% <br>&nbsp;&nbsp; "function-name" | tdf_from_file | "filename"
     !% <br>%</tt>
     !%
     !% The temporal shape of the function is contained in a file called "filename". This file
     !% should contain three columns: first column is time, second and third column are the
     !% real part and the imaginary part of the temporal function f(t).
     !%
-    !%    (A.6) envelope_from_expr
+    !%    (A.6) tdf_from_expr
     !%
-    !% <tt>%TDExternalFields
-    !% <br>&nbsp;&nbsp; envelope_from_expr | "expression"
+    !% <tt>%TDFunctions
+    !% <br>&nbsp;&nbsp; "function-name" | tdf_from_expr | "expression"
     !% <br>%</tt>
     !%
     !% The temporal shape of the field is given as an expression (e.g., "cos(2.0*t)". The 
