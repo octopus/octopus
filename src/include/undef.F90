@@ -33,6 +33,7 @@
 #undef TS
 #undef R_TYPE
 #undef R_DOUBLE
+#undef R_SINGLE  
 #undef R_MPITYPE
 #undef R_TOTYPE
 #undef R_TOPREC
