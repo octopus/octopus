@@ -83,7 +83,7 @@ module simul_box_m
     FLOAT :: lsize(MAX_DIM)       ! half of the length of the parallelepiped in each direction.
 
     type(c_ptr)   :: image    ! for the box defined through an image
-    character(len=1024) :: user_def ! for the user defined box
+    character(len=1024) :: user_def ! for the user-defined box
 
     FLOAT :: rlattice(MAX_DIM,MAX_DIM)      ! lattice primitive vectors
     FLOAT :: klattice_unitary(MAX_DIM,MAX_DIM)      ! reciprocal lattice primitive vectors
@@ -187,15 +187,15 @@ contains
       !% and the right column characteristics of the right lead analogously.
       !% If only one column is given, the value specified is used for both leads.
       !%
-      !% All entries excpet <tt>lead_dataset</tt> are optional.
+      !% All entries except <tt>lead_dataset</tt> are optional.
       !%
       !%Option lead_dataset 1
       !% Gives the name of the dataset used for the periodic calculation of the
-      !% leads groundstate. It is used, e. g., to read in the coordinates of the
+      !% leads ground state. It is used, e. g., to read in the coordinates of the
       !% atoms of the lead. Both entries for left and right have to be equal.
       !%Option lead_restart_dir 2
       !% <tt>lead_restart_dir</tt> gives the name of restart directory of the periodic
-      !% ground state calculation for the lead unit cell. Though
+      !% ground-state calculation for the lead unit cell. Though
       !% one may give different datasets for the left and right lead, they have to
       !% be identical due to the algorithm used to obtain extended eigenstates.
       !% The default is <tt>&lt;lead_dataset&gt;restart</tt>.
@@ -209,13 +209,13 @@ contains
       !% be included in the computational domain. Suitable values highly depend
       !% on the system under study but the numbers <tt>nl</tt> and <tt>nr</tt> should
       !% be taken large enough for the potential to equilibrate because we assume
-      !% instananoeus metallic screening in the leads. Furthermore, note that in
-      !% a ground state calculation, one additional unit cell is added automatically
+      !% instaneous metallic screening in the leads. Furthermore, note that in
+      !% a ground-state calculation, one additional unit cell is added automatically
       !% for each lead to the computational domain because the propagation
       !% algorithm needs the knowledge of the initial state for the first unit cell
       !% outside the simulation box. If omitted, no unit cells are included in the
-      !% simlulation region (apart from the one which is automatically added in
-      !% ground state calculations).
+      !% simulation region (apart from the one which is automatically added in
+      !% ground-state calculations).
       !%Option td_pot_formula 5
       !% Defines a spatially local time-dependent potential in the leads as an
       !% analytic expression.
@@ -296,7 +296,7 @@ contains
               message(1) = 'add_unit_cells in the OpenBoundaries block must not be negative.'
               call write_fatal(1)
             end if
-            ! If we are doing a ground state calculation add one more unit
+            ! If we are doing a ground-state calculation add one more unit
             ! cell at both ends to calculate the extended eigenstates.
             if(calc_mode_is(CM_GS)) then
               sb%add_unit_cells = sb%add_unit_cells + 1
@@ -432,7 +432,7 @@ contains
       !% Xlength
       !%Option minimum 3
       !% The simulation box will be constructed by adding spheres created around each
-      !% atom (or user defined potential), of radius Radius.
+      !% atom (or user-defined potential), of radius Radius.
       !%Option parallelepiped 4
       !% The simulation box will be a parallelpiped whose dimensions are taken from
       !% the variable lsize.
@@ -463,10 +463,10 @@ contains
       !%Type float
       !%Section Mesh::Simulation Box
       !%Description
-      !% If BoxShape is not "parallelepiped" defines the radius of the spheres or of the cylinder.
+      !% If BoxShape is not "parallelepiped", defines the radius of the spheres or of the cylinder.
       !% It has to be a positive number. If it is not defined in the input file, then the program
-      !% will attempt to fine a suitable default, but this is not always possible, in which case
-      !% the code will stop issuing this error message.
+      !% will attempt to find a suitable default. However this is not always possible, in which case
+      !% the code will stop, issuing this error message.
       !%End
       select case(sb%box_shape)
       case(SPHERE, CYLINDER)
@@ -509,7 +509,7 @@ contains
         !%
         !% where the "size*" are half the lengths of the box in each direction.
         !%
-        !% If BoxShape is "parallelpiped", this block has to be
+        !% If BoxShape is "parallelepiped", this block has to be
         !% defined in the input file. The number of columns must match
         !% the dimensionality of the calculation. If you want a cube
         !% you can also set Lsize as a single variable.
@@ -558,7 +558,7 @@ contains
 #endif
       end if     
 
-      ! read in box shape for user defined boxes
+      ! read in box shape for user-defined boxes
       if(sb%box_shape == BOX_USDEF) then
 
         !%Variable BoxShapeUsDef
@@ -964,7 +964,7 @@ contains
     character(len=15), parameter :: bs(5) = (/ &
       'sphere        ', &
       'cylinder      ', &
-      'around nuclei ', &
+      'minimum ', &
       'parallelepiped', &
       'image defined '/)
 
@@ -972,7 +972,7 @@ contains
 
     write(message(1),'(a)') 'Simulation Box:'
     if(sb%box_shape.eq.BOX_USDEF) then
-      write(message(2), '(a)') '  Type = user defined'
+      write(message(2), '(a)') '  Type = user-defined'
     else
       write(message(2), '(a,a,1x)') '  Type = ', bs(sb%box_shape)
     end if
@@ -1086,7 +1086,7 @@ contains
 #endif
 
     case(BOX_USDEF)
-      ! is it inside the user given boundaries
+      ! is it inside the user-given boundaries
       in_box =  &
         (xx(1) >= -sb%lsize(1)-DELTA.and.xx(1) <= sb%lsize(1)+DELTA).and. &
         (xx(2) >= -sb%lsize(2)-DELTA.and.xx(2) <= sb%lsize(2)+DELTA).and. &
