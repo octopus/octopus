@@ -152,21 +152,18 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
       call profiling_out(phase_prof)
     end if
 
-    call X(kinetic_start)(h, handles(:, ii), gr, epsi, lapl(:, :, ii))
+    ! start the calculation of the laplacian
+    do idim = 1, h%d%dim
+      call der_handle_init(handles(idim, ii), gr%der)
+      call X(derivatives_lapl_start)(gr%der, handles(idim, ii), epsi(:, idim), lapl(:, idim, ii), set_bc = .false.)
+    end do
 
   end do
 
   if (.not. kinetic_only_) then
     ! apply the potential
-
     call X(vlpsi_batch)(h, gr%m, epsib, hpsib, ik)
-
-    do ii = 1, nst
-      call X(kinetic_keep_going)(h, handles(:, ii), gr)
-    end do
-
     if(h%ep%non_local) call X(vnlpsi_batch)(h, gr%m, epsib, hpsib, ik)
-
   end if
 
   do ii = 1, nst
@@ -174,7 +171,14 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
 
     if (kinetic_only_) hpsi(1:gr%m%np, 1:h%d%dim) = M_ZERO
 
-    call X(kinetic_finish)(h, handles(:, ii), gr, epsi, lapl(:, :, ii), hpsi)
+    ! finish the calculation of the laplacian
+    call profiling_in(C_PROFILING_KINETIC)
+    do idim = 1, h%d%dim
+      call X(derivatives_lapl_finish)(gr%der, handles(idim, ii))
+      call lalg_axpy(NP, -M_HALF/h%mass, lapl(:, idim, ii), hpsi(:, idim))
+      call der_handle_end(handles(idim, ii))
+    end do
+    call profiling_out(C_PROFILING_KINETIC)
     
     if (.not. kinetic_only_) then
       
@@ -449,68 +453,6 @@ subroutine X(magnus) (h, gr, psi, hpsi, ik, vmagnus)
   deallocate(auxpsi, aux2psi)
   call pop_sub()
 end subroutine X(magnus)
-
-
-! ---------------------------------------------------------
-! Exchange the ghost points and write the boundary points.
-subroutine X(kinetic_start)(h, handle, gr, psi, lapl)
-  type(hamiltonian_t), intent(in)    :: h
-  type(der_handle_t),  intent(out)   :: handle(:)
-  type(grid_t),        intent(inout) :: gr
-  R_TYPE,              intent(inout) :: psi(:,:)
-  R_TYPE,              intent(out)   :: lapl(:,:)
-
-  integer :: idim
-
-  call push_sub('h_inc.Xkinetic_start')
-
-  do idim = 1, h%d%dim
-    call der_handle_init(handle(idim), gr%der)
-    call X(derivatives_lapl_start)(gr%der, handle(idim), psi(:, idim), lapl(:, idim), set_bc = .false.)
-  end do
-
-  call pop_sub()
-end subroutine X(kinetic_start)
-
-subroutine X(kinetic_keep_going)(h, handle, gr)
-  type(hamiltonian_t), intent(in)    :: h
-  type(der_handle_t),  intent(inout) :: handle(:)
-  type(grid_t),        intent(inout) :: gr
-
-  integer :: idim
-
-  call push_sub('h_inc.Xkinetic_keep_going')
-
-  do idim = 1, h%d%dim
-    call X(derivatives_lapl_keep_going)(gr%der, handle(idim))
-  end do
-
-  call pop_sub()
-end subroutine X(kinetic_keep_going)
-
-! ---------------------------------------------------------
-subroutine X(kinetic_finish) (h, handle, gr, psi, lapl, hpsi)
-  type(hamiltonian_t), intent(in)    :: h
-  type(der_handle_t),  intent(inout) :: handle(:)
-  type(grid_t),        intent(inout) :: gr
-  R_TYPE,              intent(inout) :: psi(:,:)
-  R_TYPE,              intent(inout) :: lapl(:,:)
-  R_TYPE,              intent(inout) :: hpsi(:,:)
-
-  integer             :: idim
-
-  call profiling_in(C_PROFILING_KINETIC)
-  call push_sub('h_inc.Xkinetic_finish')
-
-  do idim = 1, h%d%dim
-    call X(derivatives_lapl_finish)(gr%der, handle(idim))
-    call lalg_axpy(NP, -M_HALF/h%mass, lapl(:, idim), hpsi(:, idim))
-    call der_handle_end(handle(idim))
-  end do
-  
-  call pop_sub()
-  call profiling_out(C_PROFILING_KINETIC)
-end subroutine X(kinetic_finish)
 
 ! ---------------------------------------------------------
 ! Here we the terms arising from the presence of a possible static external
