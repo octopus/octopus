@@ -38,11 +38,7 @@ OCTParameterRepresentation = control_parameters_fourier_space
 OCTParameterOmegaMax = 0.05
 OCTFixFluenceTo = -1
 
-#freq = 0.5
-freq = 0.129009
-
 OCTControlFunctionType = parameter_mode_f
-OCTCarrierFrequency = freq
 
 OCTDoubleCheck = no
 OCTMixing = no
@@ -54,9 +50,9 @@ OCTMixing = no
 #-----------------------------
 
 ampl = 0.06
-freq = 0.00
 t0 = stime/2
 tau0 = stime/2
+freq = 0.129009
 %TDExternalFields
 electric_field | 1 | 0 | 0 | freq | "envelope_function"
 %

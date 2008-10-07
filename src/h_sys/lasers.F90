@@ -42,13 +42,15 @@ module lasers_m
     laser_potential,              &
     laser_vector_potential,       &
     laser_to_numerical,           &
+    laser_to_numerical_all,       &
     laser_kind,                   &
     laser_polarization,           &
     laser_get_f,                  &
     laser_set_f,                  &
     laser_get_phi,                &
     laser_set_phi,                &
-    laser_set_f_value
+    laser_set_f_value,            &
+    laser_carrier_frequency
 
   integer, public, parameter ::     &
     E_FIELD_NONE             =  0,  &
@@ -70,6 +72,14 @@ module lasers_m
   end type laser_t
 
 contains
+
+
+  ! ---------------------------------------------------------
+  FLOAT function laser_carrier_frequency(l) result(w0)
+    type(laser_t), intent(in) :: l
+    w0 = l%omega
+  end function laser_carrier_frequency
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
@@ -138,18 +148,39 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine laser_to_numerical(l, dt, max_iter, new_carrier_frequency, real_part)
+  subroutine laser_to_numerical_all(l, dt, max_iter, real_part)
     type(laser_t), intent(inout)  :: l
     FLOAT,         intent(in)     :: dt
     integer,       intent(in)     :: max_iter
-    FLOAT,         intent(in)     :: new_carrier_frequency
     logical, optional, intent(in) :: real_part
 
     call push_sub('lasers.lasers_to_numerical')
 
+    ! WARNING: phase is missing
     call tdf_to_numerical(l%f, M_ZERO, max_iter, dt)
     call tdf_cosine_multiply(l%omega, l%f)
-    l%omega = new_carrier_frequency
+    l%omega = M_ZERO
+
+    if(present(real_part)) then
+      if(real_part) call tdf_numerical_keep_real(l%f)
+    end if
+
+    call pop_sub()
+  end subroutine laser_to_numerical_all
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine laser_to_numerical(l, dt, max_iter, real_part)
+    type(laser_t), intent(inout)  :: l
+    FLOAT,         intent(in)     :: dt
+    integer,       intent(in)     :: max_iter
+    logical, optional, intent(in) :: real_part
+
+    call push_sub('lasers.lasers_to_numerical')
+
+    ! WARNING: phase is missing.
+    call tdf_to_numerical(l%f, M_ZERO, max_iter, dt)
 
     if(present(real_part)) then
       if(real_part) call tdf_numerical_keep_real(l%f)

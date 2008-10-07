@@ -90,9 +90,7 @@ module opt_control_parameters_m
     FLOAT   :: omegamax            = M_ZERO
     FLOAT   :: targetfluence       = M_ZERO
     logical :: fix_initial_fluence = .false.
-    logical :: envelope            = .false.
     FLOAT   :: w0                  = M_ZERO
-
     integer :: mode                = parameter_mode_none
     integer :: no_parameters       = 0
   end type oct_parameters_common_t
@@ -115,7 +113,6 @@ module opt_control_parameters_m
     integer :: current_representation = 0
     FLOAT   :: omegamax               = M_ZERO
 
-    logical :: envelope = .false.
     FLOAT   :: w0       = M_ZERO
     FLOAT, pointer :: utransf(:, :)  => NULL()
     FLOAT, pointer :: utransfi(:, :) => NULL()
@@ -234,24 +231,7 @@ contains
     case(parameter_mode_phi, parameter_mode_f_and_phi)
       write(message(1),'(a)') 'Error: The OCTControlFunctionType selected is still not implemented'
       call write_fatal(1)
-    case(parameter_mode_f)
-      par_common%envelope = .true.
-    case default
-      par_common%envelope = .false.
     end select
-
-    !%Variable OCTCarrierFrequency
-    !%Type float
-    !%Section Calculation Modes::Optimal Control
-    !%Default 0.0
-    !%Description
-    !%
-    !%End
-    if(par_common%envelope) then
-      call loct_parse_float(check_inp('OCTCarrierFrequency'), M_ZERO, par_common%w0)
-    else
-      par_common%w0 = M_ZERO
-    end if
 
     ! Check that the laser polarizations are not imaginary.
     do i = 1, ep%no_lasers
@@ -264,10 +244,19 @@ contains
     end do
 
     ! Note that in QOCT runs, it is not acceptable to have complex time-dependent functions.
+    ! Note that in QOCT runs, it is not acceptable to have complex time-dependent functions.
     do i = 1, ep%no_lasers
-      call laser_to_numerical(ep%lasers(i), dt, max_iter, &
-        new_carrier_frequency = par_common%w0, real_part = .true.)
+      select case(par_common%mode)
+      case(parameter_mode_epsilon)
+        call laser_to_numerical_all(ep%lasers(i), dt, max_iter, real_part = .true.)
+      case default
+        call laser_to_numerical(ep%lasers(i), dt, max_iter, real_part = .true.)
+      end select
     end do
+
+    ! Fix the carrier frequency
+    call obsolete_variable('OCTCarrierFrequency')
+    par_common%w0 = laser_carrier_frequency(ep%lasers(1))
 
     ! Fix the number of parameters
     select case(par_common%mode)
@@ -286,7 +275,6 @@ contains
 
     mode_basis_set = .false.
     if(par_common%representation .ne. ctr_parameter_real_space ) mode_basis_set = .true.
-
 
     call pop_sub()
   end subroutine parameters_read
@@ -336,7 +324,7 @@ contains
       if(fix_initial_fluence) call parameters_set_fluence(par)
     end if
 
-    if(par%envelope) then
+    if(par_common%mode .eq. parameter_mode_f) then
       ! If par%envelope = .true., the object to optimize is the envelope of the
       ! the laser pulse. Being e(t) the laser pulse, it is assumed that it
       ! has the form:
@@ -602,7 +590,6 @@ contains
 
 
     cp%representation  = par_common%representation
-    cp%envelope        = par_common%envelope
     cp%w0              = par_common%w0
     cp%omegamax        = par_common%omegamax
     cp%no_parameters   = par_common%no_parameters
@@ -743,7 +730,7 @@ contains
     nullify(cp%alpha)
     deallocate(cp%pol)
     nullify(cp%pol)
-    if(cp%envelope) then
+    if( par_common%mode .eq. parameter_mode_f ) then
       deallocate(cp%utransf)
       nullify(cp%utransf)
       deallocate(cp%utransfi)
@@ -802,7 +789,7 @@ contains
       call io_close(iunit)
     end do
 
-    if(cp%envelope) then
+    if(par_common%mode .eq. parameter_mode_f) then
       do j = 1, cp%no_parameters
         if(cp%no_parameters > 1) then
           write(digit,'(i2.2)') j
@@ -975,7 +962,7 @@ contains
 
     parameters_fluence = M_ZERO
     do j = 1, par%no_parameters
-      if(par%envelope) then
+      if(par_common%mode .eq. parameter_mode_f) then
         call tdf_init(f)
         call tdf_copy(f, par%f(j))
         if(par%current_representation .eq. ctr_parameter_frequency_space) then
@@ -1022,7 +1009,7 @@ contains
       do i = 1, par_%ntiter + 1
         t = (i-1) * par_%dt
         do k = 1, MAX_DIM
-          if(par%envelope) then
+          if(par_common%mode .eq. parameter_mode_f) then
             integral = integral + tdf(par_%td_penalty(j), i) * &
               real( par_%pol(k, j) * tdf(par_%f(j), i) * cos(par%w0*t) )**2 
           else
@@ -1084,7 +1071,6 @@ contains
     cp_out%representation = cp_in%representation
     cp_out%current_representation = cp_in%current_representation
     cp_out%omegamax = cp_in%omegamax
-    cp_out%envelope = cp_in%envelope
     cp_out%w0 = cp_in%w0
     ALLOCATE(cp_out%f(cp_out%no_parameters), cp_out%no_parameters)
     ALLOCATE(cp_out%alpha(cp_out%no_parameters), cp_out%no_parameters)
@@ -1098,7 +1084,7 @@ contains
       call tdf_copy(cp_out%td_penalty(j), cp_in%td_penalty(j))
       cp_out%pol(1:MAX_DIM, j) = cp_in%pol(1:MAX_DIM, j)
     end do
-    if(cp_in%envelope) then
+    if(par_common%mode .eq. parameter_mode_f) then
       ALLOCATE(cp_out%utransf(cp_out%nfreqs, cp_out%nfreqs), cp_out%nfreqs**2)
       cp_out%utransf = cp_in%utransf
       ALLOCATE(cp_out%utransfi(cp_out%nfreqs, cp_out%nfreqs), cp_out%nfreqs**2)
@@ -1127,7 +1113,7 @@ contains
     do j =  1, n
       ep(j) = tdf(par%f(1), j)
     end do
-    if(par%envelope) then
+    if(par_common%mode .eq. parameter_mode_f) then
       e = matmul(par%utransf, ep)
     else
       e = ep
@@ -1195,7 +1181,7 @@ contains
 
     e = sqrt(par%targetfluence) * e
 
-    if(par%envelope) then
+    if(par_common%mode .eq. parameter_mode_f) then
       ep = matmul(par%utransfi, e)
     else
       ep = e

@@ -388,7 +388,7 @@ module opt_control_target_m
       !%
       !% <math>\alpha(\omega) = \sum_{L=1}^{M} \frac{\alpha_L}{a_L} \sqcap( (\omega - L\omega_0)/a_L )</math>,
       !%
-      !% where <math>omega_0</math> is the carrier frequency ("OCTCarrierFrequency"). <math>M</math> is
+      !% where <math>omega_0</math> is the carrier frequency. <math>M</math> is
       !% the number of columns in the "OCTOptimizeHarmonicSpectrum". The values of $L$ will be listed
       !% in the first row of this block; <math> alpha_L </math> in the second row, and <math>a_L</math> in
       !% the third.
