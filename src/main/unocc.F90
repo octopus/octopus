@@ -23,6 +23,7 @@ module unocc_m
   use datasets_m
   use derivatives_m
   use eigensolver_m
+  use energy_m
   use external_pot_m
   use global_m
   use grid_m
@@ -101,7 +102,7 @@ contains
 
     call states_calc_dens(sys%st, sys%gr%m%np, sys%st%rho)
     call v_ks_calc(sys%gr, sys%ks, h, sys%st, calc_eigenval=.true.) ! get potentials
-    call hamiltonian_energy(h, sys%gr, sys%st, -1)             ! total energy
+    call total_energy(h, sys%gr, sys%st, -1)             ! total energy
 
     ! The initial LCAO calculation is done by default if we have pseudopotentials.
     ! Otherwise, it is not the default value and has to be enforced in the input file.

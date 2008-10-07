@@ -1,0 +1,127 @@
+!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!!
+!! This program is free software; you can redistribute it and/or modify
+!! it under the terms of the GNU General Public License as published by
+!! the Free Software Foundation; either version 2, or (at your option)
+!! any later version.
+!!
+!! This program is distributed in the hope that it will be useful,
+!! but WITHOUT ANY WARRANTY; without even the implied warranty of
+!! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!! GNU General Public License for more details.
+!!
+!! You should have received a copy of the GNU General Public License
+!! along with this program; if not, write to the Free Software
+!! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+!! 02111-1307, USA.
+!!
+!! $Id$
+
+
+! ---------------------------------------------------------
+! calculates the eigenvalues of the real orbitals
+subroutine X(calculate_eigenvalues)(h, gr, st, t)
+  type(hamiltonian_t), intent(inout) :: h
+  type(grid_t) ,       intent(inout) :: gr
+  type(states_t),      intent(inout) :: st
+  FLOAT,  optional,    intent(in)    :: t
+
+  R_TYPE, allocatable :: Hpsi(:,:)
+  R_TYPE :: e
+  integer :: ik, ist
+
+  call push_sub('energy.Xenergy_eigenvalues')
+  ALLOCATE(Hpsi(NP, st%d%dim), NP*st%d%dim)
+
+  if(gr%sb%open_boundaries.and.calc_mode_is(CM_GS)) then
+    ! For open boundaries we know the eigenvalues.
+    st%eigenval = st%ob_eigenval
+  else
+    ! FIXMEL: for TD open boundaries this is wrong. But the GS case like above
+    ! is also wrong.
+    ! The correct way to calculate the eigenvalue here is:
+    !      / Psi_L | H_LL H_LC 0    | Psi_L \
+    ! e = <  Psi_C | H_CL H_CC H_CR | Psi_C  >
+    !      \ Psi_R | 0    H_RC H_RR | Psi_R /
+    ! But I am not sure how to calculate this right now.
+    do ik = st%d%kpt%start, st%d%kpt%end
+      do ist = st%st_start, st%st_end
+        if(present(t)) then
+          call X(hpsi) (h, gr, st%X(psi)(:, :, ist, ik), hpsi, ist, ik, t)
+        else
+          call X(hpsi) (h, gr, st%X(psi)(:, :, ist, ik), hpsi, ist, ik)
+        end if
+        e = X(mf_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), Hpsi)
+        st%eigenval(ist, ik) = R_REAL(e)
+      end do
+    end do
+  end if
+
+  deallocate(Hpsi)
+  call pop_sub()
+end subroutine X(calculate_eigenvalues)
+
+! ---------------------------------------------------------
+FLOAT function X(electronic_kinetic_energy)(h, gr, st) result(t0)
+  type(hamiltonian_t), intent(in)    :: h
+  type(grid_t),        intent(inout) :: gr
+  type(states_t),      intent(inout) :: st
+
+  integer :: ik, ist
+  R_TYPE, allocatable :: tpsi(:, :)
+  FLOAT, allocatable  :: t(:, :)
+
+  call push_sub('energy.electronic_kinetic_energy')
+
+  ALLOCATE(tpsi(NP_PART, st%d%dim), NP_PART*st%d%dim)
+  ALLOCATE(t(st%st_start:st%st_end, st%d%nik), st%nst*st%d%nik)
+  t = M_ZERO
+
+  do ik = st%d%kpt%start, st%d%kpt%end
+    do ist = st%st_start, st%st_end
+      tpsi = R_TOTYPE(M_ZERO)
+      call X(hpsi)(h, gr, st%X(psi)(:, :, ist, ik), tpsi, ist, ik, kinetic_only = .true.)
+      t(ist, ik) = X(mf_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), tpsi)
+    end do
+  end do
+  
+  t0 = states_eigenvalues_sum(st, t)
+
+  deallocate(tpsi, t)
+  call pop_sub()
+end function X(electronic_kinetic_energy)
+
+! ---------------------------------------------------------
+FLOAT function X(electronic_external_energy)(h, gr, st) result(v)
+  type(hamiltonian_t), intent(in)    :: h
+  type(grid_t),        intent(inout) :: gr
+  type(states_t),      intent(inout) :: st
+
+  integer :: ik, ist
+  R_TYPE, allocatable :: vpsi(:, :)
+  FLOAT, allocatable :: t(:, :)
+
+  call push_sub('energy.electronic_external_energy')
+
+  ALLOCATE(vpsi(NP_PART, st%d%dim), NP_PART*st%d%dim)
+  ALLOCATE(t(st%st_start:st%st_end, st%d%nik), st%nst*st%d%nik)
+  t = M_ZERO
+
+  do ik = st%d%kpt%start, st%d%kpt%end
+    do ist = st%st_start, st%st_end
+      vpsi = R_TOTYPE(M_ZERO)
+      call X(vexternal) (h, gr, st%X(psi)(:, :, ist, ik), vpsi, ik)
+      t(ist, ik) = X(mf_dotp) (gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), vpsi)
+    end do
+  end do
+
+  v = states_eigenvalues_sum(st, t)
+
+  deallocate(vpsi, t)
+  call pop_sub()
+end function X(electronic_external_energy)
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

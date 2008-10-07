@@ -21,6 +21,7 @@
 
 module opt_control_propagation_m
   use datasets_m
+  use energy_m
   use varinfo_m
   use gauge_field_m
   use global_m
@@ -127,7 +128,7 @@ module opt_control_propagation_m
       ! update
       call states_calc_dens(psi, NP_PART, psi%rho)
       call v_ks_calc(gr, sys%ks, h, psi)
-      call hamiltonian_energy(h, sys%gr, psi, -1)
+      call total_energy(h, sys%gr, psi, -1)
 
       ! if td_target
       call target_tdcalc(target, gr, psi, i)
@@ -564,11 +565,8 @@ module opt_control_propagation_m
         do ik = 1, psi%d%nik
           do p = 1, psi%nst
             oppsi%zpsi(:, :, p, ik) = M_z0
-            call zvlaser_operator_quadratic(gr, h, psi%zpsi(:, :, p, ik), &
-                                         oppsi%zpsi(:, :, p, ik), ik, laser_number = j)
-            dq(j) = dq(j) + psi%occ(p, ik) * &
-                    zmf_dotp(gr%m, psi%d%dim, chi%zpsi(:, :, p, ik), &
-              oppsi%zpsi(:, :, p, ik))
+            call zvlaser_operator_quadratic(gr, h, psi%zpsi(:, :, p, ik), oppsi%zpsi(:, :, p, ik), laser_number = j)
+            dq(j) = dq(j) + psi%occ(p, ik)*zmf_dotp(gr%m, psi%d%dim, chi%zpsi(:, :, p, ik), oppsi%zpsi(:, :, p, ik))
           end do
         end do
         call states_end(oppsi)

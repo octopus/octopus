@@ -21,6 +21,7 @@
 
 module geom_opt_m
   use datasets_m
+  use energy_m
   use external_pot_m
   use geometry_m
   use global_m
@@ -111,7 +112,7 @@ contains
       call write_info(1)
       call v_ks_calc(sys%gr, sys%ks, h, sys%st, calc_eigenval=.true.) ! get potentials
       call states_fermi(sys%st, sys%gr%m)                                ! occupations
-      call hamiltonian_energy(h, sys%gr, sys%st, -1)             ! total energy
+      call total_energy(h, sys%gr, sys%st, -1)
 
       lcao_start_default = LCAO_START_FULL
       if(sys%geo%only_user_def) lcao_start_default = LCAO_START_NONE
@@ -356,7 +357,7 @@ contains
     call epot_generate(g_opt%hamilt%ep, g_opt%syst%gr, g_opt%syst%geo, g_opt%syst%st)
     call states_calc_dens(g_opt%st, g_opt%m%np, g_opt%st%rho)
     call v_ks_calc(g_opt%syst%gr, g_opt%syst%ks, g_opt%hamilt, g_opt%st, calc_eigenval=.true.)
-    call hamiltonian_energy(g_opt%hamilt, g_opt%syst%gr, g_opt%st, -1)
+    call total_energy(g_opt%hamilt, g_opt%syst%gr, g_opt%st, -1)
 
     ! do scf calculation
     call scf_run(g_opt%scfv, g_opt%syst%gr, g_opt%geo, g_opt%st, &

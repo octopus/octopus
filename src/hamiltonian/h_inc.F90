@@ -17,54 +17,6 @@
 !!
 !! $Id$
 
-
-! ---------------------------------------------------------
-! calculates the eigenvalues of the real orbitals
-subroutine X(hamiltonian_eigenval)(h, gr, st, t)
-  type(hamiltonian_t), intent(inout) :: h
-  type(grid_t) ,       intent(inout) :: gr
-  type(states_t),      intent(inout) :: st
-  FLOAT, intent(in), optional :: t
-
-  R_TYPE, allocatable :: Hpsi(:,:)
-  R_TYPE :: e
-  integer :: ik, ist
-#ifdef HAVE_MPI
-  integer :: outcount
-  FLOAT, allocatable :: send(:), recv(:)
-#endif
-
-  call push_sub('h_inc.Xhamiltonian_eigenval')
-  ALLOCATE(Hpsi(NP, st%d%dim), NP*st%d%dim)
-
-  if(gr%sb%open_boundaries.and.calc_mode_is(CM_GS)) then
-    ! For open boundaries we know the eigenvalues.
-    st%eigenval = st%ob_eigenval
-  else
-    ! FIXMEL: for TD open boundaries this is wrong. But the GS case like above
-    ! is also wrong.
-    ! The correct way to calculate the eigenvalue here is:
-    !      / Psi_L | H_LL H_LC 0    | Psi_L \
-    ! e = <  Psi_C | H_CL H_CC H_CR | Psi_C  >
-    !      \ Psi_R | 0    H_RC H_RR | Psi_R /
-    ! But I am not sure how to calculate this right now.
-    do ik = st%d%kpt%start, st%d%kpt%end
-      do ist = st%st_start, st%st_end
-        if(present(t)) then
-          call X(hpsi) (h, gr, st%X(psi)(:, :, ist, ik), hpsi, ist, ik, t)
-        else
-          call X(hpsi) (h, gr, st%X(psi)(:, :, ist, ik), hpsi, ist, ik)
-        end if
-        e = X(mf_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), Hpsi)
-        st%eigenval(ist, ik) = R_REAL(e)
-      end do
-    end do
-  end if
-
-  deallocate(Hpsi)
-  call pop_sub()
-end subroutine X(hamiltonian_eigenval)
-
 ! ---------------------------------------------------------
 subroutine X(hpsi_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
   type(hamiltonian_t), intent(in)    :: h
@@ -693,12 +645,11 @@ subroutine X(vexternal) (h, gr, psi, hpsi, ik)
 end subroutine X(vexternal)
 
 ! ---------------------------------------------------------
-subroutine X(vlaser_operator_quadratic) (gr, h, psi, hpsi, ik, laser_number)
+subroutine X(vlaser_operator_quadratic) (gr, h, psi, hpsi, laser_number)
   type(grid_t),        intent(inout) :: gr
   type(hamiltonian_t), intent(in)    :: h
   R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
   R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, h%d%dim)
-  integer,             intent(in)    :: ik
   integer,             intent(in)    :: laser_number
 
   integer :: i, k
@@ -1136,76 +1087,13 @@ subroutine X(vmask) (gr, h, st)
   call pop_sub()
 end subroutine X(vmask)
 
-
 ! ---------------------------------------------------------
-FLOAT function X(electronic_kinetic_energy)(h, gr, st) result(t0)
-  type(hamiltonian_t), intent(in)    :: h
-  type(grid_t),        intent(inout) :: gr
-  type(states_t),      intent(inout) :: st
-
-  integer :: ik, ist
-  R_TYPE, allocatable :: tpsi(:, :)
-  FLOAT, allocatable :: t(:, :)
-
-  call push_sub('h.electronic_kinetic_energy')
-
-  ALLOCATE(tpsi(NP_PART, st%d%dim), NP_PART*st%d%dim)
-  ALLOCATE(t(st%st_start:st%st_end, st%d%nik), st%nst*st%d%nik)
-  t = M_ZERO
-
-  do ik = st%d%kpt%start, st%d%kpt%end
-    do ist = st%st_start, st%st_end
-      tpsi = R_TOTYPE(M_ZERO)
-      call X(hpsi)(h, gr, st%X(psi)(:, :, ist, ik), tpsi, ist, ik, kinetic_only = .true.)
-      t(ist, ik) = X(mf_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), tpsi)
-    end do
-  end do
-  
-  t0 = states_eigenvalues_sum(st, t)
-
-  deallocate(tpsi, t)
-  call pop_sub()
-end function X(electronic_kinetic_energy)
-
-
-! ---------------------------------------------------------
-FLOAT function X(electronic_external_energy)(h, gr, st) result(v)
-  type(hamiltonian_t), intent(in)    :: h
-  type(grid_t),        intent(inout) :: gr
-  type(states_t),      intent(inout) :: st
-
-  integer :: ik, ist
-  R_TYPE, allocatable :: vpsi(:, :)
-  FLOAT, allocatable :: t(:, :)
-
-  call push_sub('h.electronic_external_energy')
-
-  ALLOCATE(vpsi(NP_PART, st%d%dim), NP_PART*st%d%dim)
-  ALLOCATE(t(st%st_start:st%st_end, st%d%nik), st%nst*st%d%nik)
-  t = M_ZERO
-
-  do ik = st%d%kpt%start, st%d%kpt%end
-    do ist = st%st_start, st%st_end
-      vpsi = R_TOTYPE(M_ZERO)
-      call X(vexternal) (h, gr, st%X(psi)(:, :, ist, ik), vpsi, ik)
-      t(ist, ik) = X(mf_dotp) (gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), vpsi)
-    end do
-  end do
-
-  v = states_eigenvalues_sum(st, t)
-
-  deallocate(vpsi, t)
-  call pop_sub()
-end function X(electronic_external_energy)
-
-! ---------------------------------------------------------
-subroutine X(hpsi_diag) (h, gr, diag, ik, t, E)
+subroutine X(hpsi_diag) (h, gr, diag, ik, t)
   type(hamiltonian_t), intent(in)    :: h
   type(grid_t),        intent(inout) :: gr
   integer,             intent(in)    :: ik
   R_TYPE,              intent(out)   :: diag(:,:) ! hpsi(NP, h%d%dim)
   FLOAT, optional,     intent(in)    :: t
-  FLOAT, optional,     intent(in)    :: E
 
   integer :: idim, ip, ispin
 

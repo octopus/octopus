@@ -22,6 +22,7 @@
 noinst_LIBRARIES = libsystem.a
 
 libsystem_a_SOURCES =         \
+	energy.F90            \
 	preconditioners.F90   \
 	linear_solver.F90     \
 	xc_OEP.F90            \
@@ -34,6 +35,7 @@ libsystem_a_SOURCES =         \
 	exponential.F90
 
 noinst_HEADERS =                     \
+	energy_inc.F90               \
 	xc_KLI_inc.F90               \
 	xc_OEP_x_inc.F90             \
 	xc_OEP_SIC_inc.F90           \
@@ -54,10 +56,11 @@ depend:
 preconditioners.o : preconditioners.F90 preconditioners_inc.F90 
 linear_solver.o : linear_solver.F90 linear_solver_inc.F90 preconditioners.o 
 xc_OEP.o : xc_OEP.F90 xc_OEP_inc.F90 xc_OEP_SIC_inc.F90 xc_OEP_x_inc.F90 xc_KLI_inc.F90 linear_solver.o 
-v_ks.o : v_ks.F90 xc_OEP.o 
-system.o : system.F90 v_ks.o 
+v_ks.o : v_ks.F90 xc_OEP.o energy.o
+system.o : system.F90 v_ks.o energy.o
 xc_OEP_kernel.o : xc_OEP_kernel.F90 xc_OEP_kernel_inc.F90 xc_OEP.o system.o 
 pert.o : pert.F90 pert_inc.F90
 output_h_sys.o : output_h_sys.F90 output_states.F90 output_h.F90 output_linear_response.F90
 exponential_split.o : exponential_split.F90
 exponential.o : exponential.F90 exponential_split.o
+energy.o : energy.F90 energy_inc.F90

@@ -21,6 +21,7 @@
 
 module v_ks_m
   use datasets_m
+  use energy_m
   use global_m
   use grid_m
   use hamiltonian_m
@@ -245,9 +246,9 @@ contains
     if(ks%frozen_hxc) then
       if(present(calc_eigenval)) then
         if (st%wfs_type == M_REAL) then
-          call dhamiltonian_eigenval(h, gr, st)
+          call dcalculate_eigenvalues(h, gr, st)
         else
-          call zhamiltonian_eigenval(h, gr, st)
+          call zcalculate_eigenvalues(h, gr, st)
         end if
       end if
       call pop_sub()
@@ -321,9 +322,9 @@ contains
 
     if(present(calc_eigenval)) then
       if (st%wfs_type == M_REAL) then
-        call dhamiltonian_eigenval(h, gr, st)
+        call dcalculate_eigenvalues(h, gr, st)
       else
-        call zhamiltonian_eigenval(h, gr, st)
+        call zcalculate_eigenvalues(h, gr, st)
       end if
     end if
 

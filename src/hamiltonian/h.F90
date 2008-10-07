@@ -61,14 +61,7 @@ module hamiltonian_m
     hamiltonian_init,            &
     hamiltonian_mg_init,         &
     hamiltonian_end,             &
-    hamiltonian_energy,          &
     hamiltonian_span,            &
-    dhamiltonian_eigenval,       &
-    zhamiltonian_eigenval,       &
-    delectronic_kinetic_energy,  &
-    zelectronic_kinetic_energy,  &
-    delectronic_external_energy, &
-    zelectronic_external_energy, &
     dhpsi,                       &
     zhpsi,                       &
     dhpsi_batch,                 &
@@ -96,12 +89,9 @@ module hamiltonian_m
     hamiltonian_remove_oct_exchange, &
     hamiltonian_adjoint,             &
     hamiltonian_not_adjoint,         &
-    hamiltonian_hermitean
-
-!!!!NEW
-  public ::                &
-    dvexternal
-!!!!ENDOFNEW
+    hamiltonian_hermitean,           &
+    dvexternal,                      &
+    zvexternal
 
   type hamiltonian_t
     ! The Hamiltonian must know what are the "dimensions" of the spaces,
@@ -684,7 +674,6 @@ contains
 
   end subroutine hamiltonian_mg_init
 
-
   ! ---------------------------------------------------------
   subroutine hamiltonian_end(h, gr, geo)
     type(hamiltonian_t), intent(inout) :: h
@@ -748,98 +737,6 @@ contains
     type(hamiltonian_t), intent(in) :: h
     hamiltonian_hermitean = .not.((h%ab .eq. IMAGINARY_ABSORBING) .or. hamiltonian_oct_exchange(h))
   end function hamiltonian_hermitean
-
-
-  ! ---------------------------------------------------------
-  ! This subroutine calculates the total energy of the system. Basically, it
-  ! adds up the KS eigenvalues, and then it subtracts the whatever double
-  ! counts exist (see TDDFT theory for details).
-  subroutine hamiltonian_energy(h, gr, st, iunit, full)
-    type(hamiltonian_t), intent(inout) :: h
-    type(grid_t),        intent(inout) :: gr
-    type(states_t),      intent(inout) :: st
-    integer,             intent(in)    :: iunit
-    logical, optional,   intent(in)    :: full
-
-    logical :: full_
-
-    call push_sub('h.hamiltonian_energy')
-
-    full_ = .false.
-    if(present(full)) full_ = full
-
-    select case(h%theory_level)
-    case(INDEPENDENT_PARTICLES)
-      h%eeigen = states_eigenvalues_sum(st)
-      h%etot   = h%ep%eii + h%eeigen
-
-    case(HARTREE)
-      if(st%wfs_type == M_REAL) then
-        h%t0     = delectronic_kinetic_energy(h, gr, st)
-        h%eext   = delectronic_external_energy(h, gr, st)
-      else
-        h%t0     = zelectronic_kinetic_energy(h, gr, st)
-        h%eext   = zelectronic_external_energy(h, gr, st)
-      end if
-      h%eeigen = states_eigenvalues_sum(st)
-      h%etot = h%ep%eii + M_HALF*(h%eeigen + h%t0 + h%eext)
-
-    case(HARTREE_FOCK)
-      if(st%wfs_type == M_REAL) then
-        h%t0     = delectronic_kinetic_energy(h, gr, st)
-        h%eext   = delectronic_external_energy(h, gr, st)
-      else
-        h%t0     = zelectronic_kinetic_energy(h, gr, st)
-        h%eext   = zelectronic_external_energy(h, gr, st)
-      end if
-      h%eeigen = states_eigenvalues_sum(st)
-      h%etot = h%ep%eii + M_HALF*(h%eeigen + h%t0 + h%eext - h%epot) + h%ec
-
-    case(KOHN_SHAM_DFT)
-      if(full_) then
-        if(st%wfs_type == M_REAL) then
-          h%t0     = delectronic_kinetic_energy(h, gr, st)
-          h%eext   = delectronic_external_energy(h, gr, st)
-        else
-          h%t0     = zelectronic_kinetic_energy(h, gr, st)
-          h%eext   = zelectronic_external_energy(h, gr, st)
-        end if
-      end if
-      h%eeigen = states_eigenvalues_sum(st)
-      h%etot   = h%ep%eii + h%eeigen - h%ehartree + h%ex + h%ec - h%epot
-
-    end select
-    
-    h%entropy = smear_calc_entropy(st%smear, st%eigenval, st%d%nik, st%nst, st%d%kweights)
-
-    if(gauge_field_is_applied(h%ep%gfield)) then
-      h%etot = h%etot + gauge_field_get_energy(h%ep%gfield, gr%sb)
-    end if
-
-    if (iunit > 0) then
-      write(message(1), '(6x,a, f18.8)')'Total       = ', h%etot     / units_out%energy%factor
-      write(message(2), '(6x,a, f18.8)')'Free        = ', (h%etot+h%entropy) / units_out%energy%factor
-      write(message(3), '(6x,a)') '-----------'
-      call write_info(3, iunit)
-
-      write(message(1), '(6x,a, f18.8)')'Ion-ion     = ', h%ep%eii   / units_out%energy%factor
-      write(message(2), '(6x,a, f18.8)')'Eigenvalues = ', h%eeigen   / units_out%energy%factor
-      write(message(3), '(6x,a, f18.8)')'Hartree     = ', h%ehartree / units_out%energy%factor
-      write(message(4), '(6x,a, f18.8)')'Int[n*v_xc] = ', h%epot     / units_out%energy%factor
-      write(message(5), '(6x,a, f18.8)')'Exchange    = ', h%ex       / units_out%energy%factor
-      write(message(6), '(6x,a, f18.8)')'Correlation = ', h%ec       / units_out%energy%factor
-      write(message(7), '(6x,a, f18.8)')'-TS         = ', h%entropy  / units_out%energy%factor
-      call write_info(7, iunit)
-      if(full_) then
-        write(message(1), '(6x,a, f18.8)')'Kinetic     = ', h%t0 / units_out%energy%factor
-        write(message(2), '(6x,a, f18.8)')'External    = ', h%eext / units_out%energy%factor
-        call write_info(2, iunit)
-      end if
-    end if
-
-    call pop_sub()
-  end subroutine hamiltonian_energy
-
 
   ! ---------------------------------------------------------
   subroutine hamiltonian_span(h, delta, emin)

@@ -21,6 +21,7 @@
 
 module phonons_fd_m
   use datasets_m
+  use energy_m
   use external_pot_m
   use geometry_m
   use global_m
@@ -150,7 +151,7 @@ contains
         call epot_generate(h%ep, gr, geo, st)
         call states_calc_dens(st, m%np, st%rho)
         call v_ks_calc(gr, ks, h, st, calc_eigenval=.true.)
-        call hamiltonian_energy (h, gr, st, -1)
+        call total_energy (h, gr, st, -1)
         call scf_run(scf, gr, geo, st, ks, h, outp, gs_run=.false., verbosity = VERB_COMPACT)
         do j = 1, geo%natoms
           forces0(j, :) = geo%atom(j)%f(:)
@@ -162,7 +163,7 @@ contains
         call epot_generate(h%ep, gr, geo, st)
         call states_calc_dens(st, m%np, st%rho)
         call v_ks_calc(gr, ks, h, st, calc_eigenval=.true.)
-        call hamiltonian_energy(h, gr, st, -1)
+        call total_energy(h, gr, st, -1)
         call scf_run(scf, gr, geo, st, ks, h, outp, gs_run=.false., verbosity = VERB_COMPACT)
         do j = 1, geo%natoms
           forces(j, :) = geo%atom(j)%f(:)

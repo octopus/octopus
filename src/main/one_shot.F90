@@ -21,6 +21,7 @@
 
 module one_shot_m
   use datasets_m
+  use energy_m
   use external_pot_m
   use geometry_m
   use global_m

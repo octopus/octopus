@@ -21,6 +21,7 @@
 
 module timedep_m
   use cpmd_m
+  use energy_m
   use global_m
   use io_m
   use datasets_m
@@ -244,7 +245,7 @@ contains
       call v_ks_calc(gr, sys%ks, h, st, calc_eigenval=.true.)
 
       ! Get the energies.
-      call hamiltonian_energy(h, sys%gr, st, -1)
+      call total_energy(h, sys%gr, st, -1)
 
       if (td%dynamics == CP) then
         if(wfs_are_real(st)) then
@@ -533,7 +534,7 @@ contains
       end if
 #endif
       call hamiltonian_span(h, minval(gr%m%h(1:NDIM)), x)
-      call hamiltonian_energy(h, gr, st, -1)
+      call total_energy(h, gr, st, -1)
 
     end subroutine init_wfs
 

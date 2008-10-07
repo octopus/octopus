@@ -21,6 +21,7 @@
 
 module ground_state_m
   use datasets_m
+  use energy_m
   use global_m
   use grid_m
   use hamiltonian_m
@@ -115,7 +116,7 @@ contains
       call write_info(1)
       call v_ks_calc(sys%gr, sys%ks, h, sys%st, calc_eigenval=.true.) ! get potentials
       call states_fermi(sys%st, sys%gr%m)                             ! occupations
-      call hamiltonian_energy(h, sys%gr, sys%st, -1)         ! total energy
+      call total_energy(h, sys%gr, sys%st, -1)         ! total energy
 
       ! The initial LCAO calculation is done by default if we have pseudopotentials.
       ! Otherwise, it is not the default value and has to be enforced in the input file.
