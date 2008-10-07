@@ -19,9 +19,9 @@
 ##
 ## $Id: Makefile.am 2995 2007-06-13 17:49:22Z xavier $
 
-noinst_LIBRARIES = libh_sys.a
+noinst_LIBRARIES = libsystem.a
 
-libh_sys_a_SOURCES =          \
+libsystem_a_SOURCES =          \
 	preconditioners.F90   \
 	linear_solver.F90     \
 	xc_OEP.F90            \ 
@@ -49,7 +49,7 @@ noinst_HEADERS =                     \
 include $(srcdir)/../common-rules.make
 
 depend:
-	@makedepf90 $(libh_sys_a_SOURCES)
+	@makedepf90 $(libsystem_a_SOURCES)
 
 preconditioners.o : preconditioners.F90 preconditioners_inc.F90 
 linear_solver.o : linear_solver.F90 linear_solver_inc.F90 preconditioners.o 

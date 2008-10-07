@@ -313,7 +313,7 @@ AC_CONFIG_FILES([Makefile
   src/states/Makefile
   src/xc/Makefile
   src/hamiltonian/Makefile
-  src/h_sys/Makefile
+  src/system/Makefile
   src/scf/Makefile
   src/td/Makefile
   src/opt_control/Makefile
