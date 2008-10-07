@@ -21,10 +21,10 @@
 
 noinst_LIBRARIES = libsystem.a
 
-libsystem_a_SOURCES =          \
+libsystem_a_SOURCES =         \
 	preconditioners.F90   \
 	linear_solver.F90     \
-	xc_OEP.F90            \ 
+	xc_OEP.F90            \
 	v_ks.F90              \
 	output_h_sys.F90      \
 	system.F90            \
