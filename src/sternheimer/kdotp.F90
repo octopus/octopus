@@ -88,6 +88,7 @@ contains
     type(grid_t),   pointer :: gr
     type(kdotp_t)           :: kdotp_vars
     type(sternheimer_t)     :: sh
+    logical                 :: calc_eff_mass
 
     type(lr_t), allocatable :: em_lr(:,:,:)
     logical                 :: calc_pol
@@ -188,14 +189,19 @@ contains
     call zcalc_dipole_periodic(sys, kdotp_vars%lr, elec_dipole(1:NDIM))
     call geometry_dipole(sys%geo, ion_dipole(1:NDIM))
     call io_output_dipole(6, elec_dipole(1:NDIM) + ion_dipole(1:NDIM), NDIM)
+    write(6, '(a)') 'Defined up to quantum of polarization.'
+    ! quantum of polarization = any lattice vector / cell volume
+    ! quantum of dipole = any lattice vector
+    write(6, '(a)')
 
-    message(1) = "Info: Calculating effective masses."
-    call write_info(1)
+    if (calc_eff_mass) then
+      message(1) = "Info: Calculating effective masses."
+      call write_info(1)
 
-    call zcalc_eff_mass_inv(sys, h, kdotp_vars%lr, kdotp_vars%perturbation, &
-         kdotp_vars%eff_mass_inv, kdotp_vars%occ_solution_method, kdotp_vars%degen_thres)
-
-    call kdotp_output(sys%st, sys%gr, kdotp_vars)
+      call zcalc_eff_mass_inv(sys, h, kdotp_vars%lr, kdotp_vars%perturbation, &
+        kdotp_vars%eff_mass_inv, kdotp_vars%occ_solution_method, kdotp_vars%degen_thres)
+      call kdotp_output(sys%st, sys%gr, kdotp_vars)
+    endif
 
     ! Now do kdotp perturbation of electric responses, if requested
     if (calc_pol) then
@@ -285,12 +291,23 @@ contains
       !%Description
       !% If true, reads wavefunctions from previous em_resp run,
       !% calculates their kdotp perturbations, and uses them to
-      !% calculate polarizability and hyperpolarizability. If false,
-      !% only calculates effective masses and dipole moments.
+      !% calculate polarizability and hyperpolarizability.
       !%End      
 
       call loct_parse_logical(check_inp('KdotP_CalculatePolarizabilities'), &
         .false., calc_pol)
+
+      !%Variable KdotP_CalculateEffectiveMasses
+      !%Type logical
+      !%Default false
+      !%Section Linear Response::KdotP
+      !%Description
+      !% If true, uses kdotp perturbations of ground-state wavefunctions
+      !% to calculate effective masses.
+      !%End      
+
+      call loct_parse_logical(check_inp('KdotP_CalculateEffectiveMasses'), &
+        .false., calc_eff_mass)
 
       if (loct_parse_block(check_inp('EMHyperpol'), blk) == 0) then
          calc_hyperpol = .true.

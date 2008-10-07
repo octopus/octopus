@@ -844,6 +844,7 @@ contains
     iunit = io_open(trim(dirname)//'/beta', action='write')
 
     if (.not. converged) write(iunit, '(a)') "# WARNING: not converged"
+    if (simul_box_is_periodic(sb)) write(iunit, '(a)') "# WARNING: Accurate calculation in periodic system requires kdotp run."
 
     write(iunit, '(2a)', advance='no') 'First hyperpolarizability tensor: beta [', trim(units_out%length%abbrev)
     write(iunit, '(a,i1)', advance='no') '^', 5
