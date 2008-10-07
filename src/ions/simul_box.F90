@@ -964,7 +964,7 @@ contains
     character(len=15), parameter :: bs(5) = (/ &
       'sphere        ', &
       'cylinder      ', &
-      'minimum ', &
+      'minimum       ', &
       'parallelepiped', &
       'image defined '/)
 
