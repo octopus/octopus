@@ -32,6 +32,7 @@ AM_FCFLAGS = \
 	@F90_MODULE_FLAG@$(top_builddir)/src/states  	 \
 	@F90_MODULE_FLAG@$(top_builddir)/src/xc      	 \
 	@F90_MODULE_FLAG@$(top_builddir)/src/h_sys   	 \
+	@F90_MODULE_FLAG@$(top_builddir)/src/hamiltonian \
 	@F90_MODULE_FLAG@$(top_builddir)/src/scf     	 \
 	@F90_MODULE_FLAG@$(top_builddir)/src/td          \
 	@F90_MODULE_FLAG@$(top_builddir)/src/opt_control \
@@ -57,11 +58,12 @@ octopus_LIBS = \
 	$(top_builddir)/src/td/libtd.a                   \
 	$(top_builddir)/src/scf/libscf.a                 \
 	$(top_builddir)/src/h_sys/libh_sys.a             \
+	$(top_builddir)/src/hamiltonian/libhamiltonian.a \
 	$(top_builddir)/src/xc/libxc.a                   \
 	$(top_builddir)/src/states/libstates.a           \
 	$(top_builddir)/src/poisson/libpoisson.a         \
 	$(top_builddir)/src/grid/libgrid.a               \
-	$(top_builddir)/src/ions/libions.a            \
+	$(top_builddir)/src/ions/libions.a               \
 	$(top_builddir)/src/species/libspecies.a         \
 	$(top_builddir)/src/beak/libbeak.a               \
 	$(top_builddir)/src/math/libmath.a               \

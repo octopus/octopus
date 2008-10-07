@@ -20,6 +20,6 @@
 ## $Id$
 
 SUBDIRS = include basic math beak species ions grid poisson states \
-	xc h_sys scf td opt_control sternheimer main utils
+	xc hamiltonian h_sys scf td opt_control sternheimer main utils
 
 

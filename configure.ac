@@ -312,6 +312,7 @@ AC_CONFIG_FILES([Makefile
   src/poisson/Makefile
   src/states/Makefile
   src/xc/Makefile
+  src/hamiltonian/Makefile
   src/h_sys/Makefile
   src/scf/Makefile
   src/td/Makefile

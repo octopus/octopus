@@ -21,46 +21,43 @@
 
 noinst_LIBRARIES = libh_sys.a
 
-libh_sys_a_SOURCES = \
-	lasers.F90 species_pot.F90 \
-	rkb_projector.F90 kb_projector.F90 hgh_projector.F90 projector.F90 \
-	epot.F90 h.F90 preconditioners.F90 linear_solver.F90 \
-	scf_tol.F90 xc_OEP.F90 v_ks.F90 \
-	output_h_sys.F90 \
-	system.F90 xc_OEP_kernel.F90 \
-	pert.F90 \
-	gauge_field.F90 ob_lead.F90 \
-	exponential_split.F90 exponential.F90
+libh_sys_a_SOURCES =          \
+	preconditioners.F90   \
+	linear_solver.F90     \
+	xc_OEP.F90            \ 
+	v_ks.F90              \
+	output_h_sys.F90      \
+	system.F90            \
+	xc_OEP_kernel.F90     \
+	pert.F90              \
+	exponential_split.F90 \
+	exponential.F90
 
-noinst_HEADERS = \
-	xc_KLI_inc.F90 xc_OEP_x_inc.F90 xc_OEP_SIC_inc.F90 xc_OEP_kernel_inc.F90 \
-	kb_projector_inc.F90 hgh_projector_inc.F90 projector_inc.F90 epot_inc.F90 \
-	xc_OEP_inc.F90 h_inc.F90 preconditioners_inc.F90 pert_inc.F90 \
-	linear_solver_inc.F90 output_h.F90 output_linear_response.F90 output_states.F90
+noinst_HEADERS =                     \
+	xc_KLI_inc.F90               \
+	xc_OEP_x_inc.F90             \
+	xc_OEP_SIC_inc.F90           \
+	xc_OEP_kernel_inc.F90        \
+	xc_OEP_inc.F90               \
+	preconditioners_inc.F90      \
+	pert_inc.F90                 \
+	linear_solver_inc.F90        \
+	output_h.F90                 \
+	output_linear_response.F90   \
+	output_states.F90
 
 include $(srcdir)/../common-rules.make
 
 depend:
 	@makedepf90 $(libh_sys_a_SOURCES)
 
-lasers.o : lasers.F90 
-species_pot.o : species_pot.F90 
-rkb_projector.o : rkb_projector.F90 species_pot.o 
-kb_projector.o : kb_projector.F90 kb_projector_inc.F90 species_pot.o 
-hgh_projector.o : hgh_projector.F90 hgh_projector_inc.F90 species_pot.o 
-projector.o : projector.F90 projector_inc.F90 rkb_projector.o kb_projector.o hgh_projector.o species_pot.o 
-epot.o : epot.F90 epot_inc.F90 projector.o lasers.o species_pot.o gauge_field.o
-h.o : h.F90 h_inc.F90 lasers.o projector.o epot.o gauge_field.o ob_lead.o
-preconditioners.o : preconditioners.F90 preconditioners_inc.F90 h.o 
-linear_solver.o : linear_solver.F90 linear_solver_inc.F90 preconditioners.o h.o 
-scf_tol.o : scf_tol.F90 
-xc_OEP.o : xc_OEP.F90 xc_OEP_inc.F90 xc_OEP_SIC_inc.F90 xc_OEP_x_inc.F90 xc_KLI_inc.F90 scf_tol.o linear_solver.o h.o 
-v_ks.o : v_ks.F90 xc_OEP.o h.o 
-system.o : system.F90 v_ks.o h.o 
-xc_OEP_kernel.o : xc_OEP_kernel.F90 xc_OEP_kernel_inc.F90 xc_OEP.o system.o h.o 
-pert.o : pert.F90 pert_inc.F90 species_pot.o projector.o h.o epot.o 
-output_h_sys.o : output_h_sys.F90 output_states.F90 output_h.F90 output_linear_response.F90 h.o
-gauge_field.o : gauge_field.F90 projector.o
-ob_lead.o: ob_lead.F90
-exponential_split.o : exponential_split.F90 epot.o h.o
-exponential.o : exponential.F90 exponential_split.o epot.o h.o
+preconditioners.o : preconditioners.F90 preconditioners_inc.F90 
+linear_solver.o : linear_solver.F90 linear_solver_inc.F90 preconditioners.o 
+xc_OEP.o : xc_OEP.F90 xc_OEP_inc.F90 xc_OEP_SIC_inc.F90 xc_OEP_x_inc.F90 xc_KLI_inc.F90 linear_solver.o 
+v_ks.o : v_ks.F90 xc_OEP.o 
+system.o : system.F90 v_ks.o 
+xc_OEP_kernel.o : xc_OEP_kernel.F90 xc_OEP_kernel_inc.F90 xc_OEP.o system.o 
+pert.o : pert.F90 pert_inc.F90
+output_h_sys.o : output_h_sys.F90 output_states.F90 output_h.F90 output_linear_response.F90
+exponential_split.o : exponential_split.F90
+exponential.o : exponential.F90 exponential_split.o
