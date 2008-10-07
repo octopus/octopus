@@ -156,7 +156,7 @@ contains
                ierr, lr=kdotp_vars%lr(idir, 1))
           
           if(ierr.ne.0) then
-             message(1) = "Could not load response wave-functions from '"//trim(tmpdir)//dirname
+             message(1) = "Could not load response wave-functions from '"//trim(tmpdir)//dirname//"'"
              call write_warning(1)
           end if
           

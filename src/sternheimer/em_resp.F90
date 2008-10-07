@@ -262,17 +262,17 @@ contains
             
             call pert_setup_dir(em_vars%perturbation, dir)
             if (wfs_are_complex(sys%st)) then 
-              call zsternheimer_solve(sh, sys, h, em_vars%lr(dir, :, ifactor), em_vars%nsigma , &
-                 em_vars%freq_factor(ifactor)*em_vars%omega(iomega) + M_zI * em_vars%eta, &
-                 em_vars%perturbation, RESTART_DIR,&
-                 em_rho_tag(em_vars%freq_factor(ifactor)*em_vars%omega(iomega), dir),&
-                 em_wfs_tag(dir, ifactor), have_restart_rho=(ierr==0))
+              call zsternheimer_solve(sh, sys, h, em_vars%lr(dir, :, ifactor), em_vars%nsigma, &
+                em_vars%freq_factor(ifactor)*em_vars%omega(iomega) + M_zI * em_vars%eta, &
+                em_vars%perturbation, RESTART_DIR, &
+                em_rho_tag(em_vars%freq_factor(ifactor)*em_vars%omega(iomega), dir), &
+                em_wfs_tag(dir, ifactor), have_restart_rho=(ierr==0))
             else
-              call dsternheimer_solve(sh, sys, h, em_vars%lr(dir, :, ifactor), em_vars%nsigma , &
-                 em_vars%freq_factor(ifactor)*em_vars%omega(iomega), &
-                 em_vars%perturbation, RESTART_DIR,&
-                 em_rho_tag(em_vars%freq_factor(ifactor)*em_vars%omega(iomega), dir),&
-                 em_wfs_tag(dir, ifactor), have_restart_rho=(ierr==0))
+              call dsternheimer_solve(sh, sys, h, em_vars%lr(dir, :, ifactor), em_vars%nsigma, &
+                em_vars%freq_factor(ifactor)*em_vars%omega(iomega), &
+                em_vars%perturbation, RESTART_DIR, &
+                em_rho_tag(em_vars%freq_factor(ifactor)*em_vars%omega(iomega), dir), &
+                em_wfs_tag(dir, ifactor), have_restart_rho=(ierr==0))
             end if
             
             em_vars%ok(ifactor) = em_vars%ok(ifactor) .and. sternheimer_has_converged(sh)
