@@ -79,8 +79,8 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
   R_TYPE, pointer :: epsi(:,:)
   R_TYPE, allocatable :: lapl(:, :, :)
   R_TYPE, pointer :: grad(:, :, :)
+  R_TYPE, allocatable :: psi_copy(:, :, :)
   type(profile_t), save :: phase_prof
-  logical, allocatable :: copy_input(:)
   logical :: kinetic_only_, apply_kpoint
   integer :: ii, ist
   R_TYPE, pointer :: psi(:, :), hpsi(:, :)
@@ -107,30 +107,26 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
 
   apply_kpoint = simul_box_is_periodic(gr%sb) .and. .not. kpoint_is_gamma(h%d, ik)
 
-  ALLOCATE(copy_input(1:nst), nst)
+  if(apply_kpoint) then 
 
-  call batch_init(epsib, nst)
+     ALLOCATE(psi_copy(1:NP_PART, 1:h%d%dim, 1:nst), NP_PART*h%d%dim*nst)
 
-  do ii = 1, nst
-    call set_pointers
+     do ii = 1, nst
+        do idim = 1, h%d%dim
+           call lalg_copy(NP, psib%states(ii)%X(psi)(:, idim), psi_copy(:, idim, ii))
+        end do
+     end do
 
-    copy_input(ii) = (ubound(psi, DIM = 1) == NP) .or. apply_kpoint
-    
-    if(copy_input(ii)) then
-      ALLOCATE(epsi(1:NP_PART, 1:h%d%dim), NP_PART*h%d%dim)
-      do idim = 1, h%d%dim
-        call lalg_copy(NP, psi(:, idim), epsi(:, idim))
-      end do
-    else
-      ASSERT(ubound(psi, DIM=1) == NP_PART)
-      epsi => psi
-    end if
-    
-    call batch_add_state(epsib, ist, epsi)
+     call batch_init(epsib, psib%states(1)%ist, psib%states(nst)%ist, psi_copy)
 
-  end do
+  else
+     
+     call batch_copy(psib, epsib)
+
+  end if
 
   ASSERT(batch_is_ok(epsib))
+
   ALLOCATE(lapl(1:NP, 1:h%d%dim, 1:nst), NP*h%d%dim*nst)
 
   ! Allocate handles
@@ -204,8 +200,6 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
       if(associated(grad)) deallocate(grad)
    
     end if
-    
-    if(copy_input(ii)) deallocate(epsi)
     
     if(apply_kpoint) then
       ! now we need to remove the exp(-i k.r) factor

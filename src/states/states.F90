@@ -508,7 +508,7 @@ contains
 
     ! FIXME: spin-polarized free states ignored.
     if(gr%sb%open_boundaries) then
-      ALLOCATE(st%zphi(NP, st%d%dim, st%ob_ncs, st%d%nik), NP*st%d%dim*st%ob_ncs*st%d%nik)
+      ALLOCATE(st%zphi(NP_PART, st%d%dim, st%ob_ncs, st%d%nik), NP*st%d%dim*st%ob_ncs*st%d%nik)
       ALLOCATE(st%ob_rho(gr%m%lead_unit_cell(LEFT)%np, st%d%nspin, NLEADS), gr%m%lead_unit_cell(LEFT)%np*st%d%nspin*NLEADS)
       st%zphi = M_z0
     else

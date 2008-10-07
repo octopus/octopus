@@ -35,6 +35,7 @@ module batch_m
        state_t,                 &
        batch_t,                 &
        batch_init,              &
+       batch_copy,              &
        batch_end,               &
        batch_add_state,         &
        batch_is_ok
@@ -95,6 +96,23 @@ contains
     
     ok = all(state_is_associated(this%states(1:this%nst)))
   end function batch_is_ok
+
+  subroutine batch_copy(bin, bout)
+    type(batch_t), intent(in)    :: bin
+    type(batch_t), intent(out)   :: bout
+
+    integer :: ii
+
+    call batch_init_empty(bout, bin%nst)
+    bout%current = bin%current
+
+    do ii = 1, bout%nst
+      bout%states(ii)%ist = bin%states(ii)%ist
+      if(associated(bin%states(ii)%dpsi)) bout%states(ii)%dpsi => bin%states(ii)%dpsi
+      if(associated(bin%states(ii)%zpsi)) bout%states(ii)%zpsi => bin%states(ii)%zpsi
+    end do
+
+  end subroutine batch_copy
 
 #include "undef.F90"
 #include "real.F90"

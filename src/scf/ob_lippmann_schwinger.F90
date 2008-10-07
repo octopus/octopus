@@ -92,6 +92,8 @@ contains
         ! Solve Schroedinger equation for this energy.
         energy = st%ob_eigenval(ist, ik)
 
+        ASSERT(ubound(st%zphi, dim = 1) >= NP_PART)
+
         ! Calculate right hand side e-T-V0-sum(a)[H_ca*g_a*H_ac].
         rhs(:, :) = M_z0
         call zhpsi(h, gr, st%zphi(:, :, ist, ik), rhs(:, :), ist, ik, kinetic_only=.true.)
