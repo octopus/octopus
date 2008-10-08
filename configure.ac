@@ -300,7 +300,6 @@ AC_CONFIG_FILES([Makefile
   external_libs/newuoa/Makefile
   external_libs/spglib/Makefile
   liboct_parser/Makefile
-  liboct/Makefile
   src/Makefile
   src/include/Makefile
   src/basic/Makefile

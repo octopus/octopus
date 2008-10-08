@@ -28,10 +28,19 @@ libbasic_a_SOURCES = \
 	units.F90 mpi_debug.F90 profiling.F90 utils.F90      \
 	multicomm.F90 periodic_table.F90 getopt_f.c command_line.F90 \
 	distributed.F90 \
-	hardware.F90 ialist.F90 iihash.F90 calc_mode.F90
+	hardware.F90 ialist.F90 iihash.F90 calc_mode.F90 \
+	recipes.c      \
+	varia.c        \
+	oct_f.c        \
+	oct_gdlib_f.c  \
+	write_iter.c   \
+	varinfo_low.c  \
+	signals.c
 
-noinst_HEADERS = \
-	mpi_debug_inc.F90 mpi_lib_inc.F90
+noinst_HEADERS =          \
+	mpi_debug_inc.F90 \
+	mpi_lib_inc.F90   \
+	varia.h
 
 include $(srcdir)/../common-rules.make
 
@@ -86,3 +95,4 @@ ialist.o : ialist.F90
 iihash.o : iihash.F90 ialist.o global.o
 calc_mode.o : calc_mode.F90 multicomm.o
 distributed.o: distributed.F90 multicomm.o
+varia.o : varia.c varia.h

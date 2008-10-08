@@ -72,7 +72,6 @@ octopus_LIBS = \
 core_LIBS = \
 	$(octopus_LIBS)                               \
 	@LIBS_LAPACK@ @LIBS_BLAS@                     \
-	$(top_builddir)/liboct/liboct.a               \
 	$(top_builddir)/liboct_parser/liboct_parser.a \
 	$(top_builddir)/libxc/src/libxc.a             \
 	-L$(top_builddir)/libstring_f -lstring_f      \
