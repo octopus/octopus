@@ -463,3 +463,12 @@ float FC_FUNC_(oct_hypotf, OCT_HYPOTF)
 {
   return hypotf(*x, *y);
 }
+
+void * FC_FUNC_(get_memory_usage, GET_MEMORY_USAGE)()
+{
+#ifdef HAVE_SBRK
+  return sbrk(0);
+#else
+  return 0;
+#endif
+}

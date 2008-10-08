@@ -78,6 +78,19 @@ program octopus
     in_debug_mode = .false.
   end if
 
+  !%Variable ReportMemory
+  !%Type logical
+  !%Default no
+  !%Section Execution::Debug
+  !%Description
+  !% If true, octopus will print as part of the screen output
+  !% information about the memory the code is using. The quantity
+  !% reported is an approximation to the size of the heap and
+  !% generally it is a lower boundary to the actual memory octopus is
+  !% using. By default this variable is set to false.
+  !%End
+  call loct_parse_logical('ReportMemory', .false., conf%report_memory)
+
   ! need to find out calc_mode already here since some of the variables here (e.g.
   ! periodic dimensions) can be different for the subsystems
 

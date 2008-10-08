@@ -39,6 +39,7 @@ module global_m
   type conf_t
     integer :: debug_level   ! How much debug should print
     logical :: devel_version ! If true then allow unstable parts of the code
+    logical :: report_memory
     character(len=256) :: share       ! Name of the share dir
     character(len=256) :: latest_svn  ! rcs info of latest svn commit
     character(len=50)  :: build_time  ! time octopus was compiled

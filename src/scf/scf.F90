@@ -88,7 +88,6 @@ module scf_m
     type(eigensolver_t) :: eigens
   end type scf_t
 
-
 contains
 
   ! ---------------------------------------------------------
@@ -560,6 +559,10 @@ contains
     ! ---------------------------------------------------------
     subroutine scf_write_iter
       character(len=50) :: str
+      FLOAT :: mem
+#ifdef HAVE_MPI
+      FLOAT :: mem_tmp
+#endif
 
       call push_sub('scf.scf_write_iter')
 
@@ -595,8 +598,18 @@ contains
         end if
 
         write(message(1),'(a)') ''
-        write(message(2),'(a,f14.2)') 'Elapsed time for SCF step:', etime
+        write(message(2),'(a,f14.2)') 'Elapsed time for SCF step :', etime
         call write_info(2)
+
+        if(conf%report_memory) then
+          mem = get_memory_usage()/(CNST(1024.0)**2)
+#ifdef HAVE_MPI
+          call MPI_Allreduce(mem, mem_tmp, 1, MPI_FLOAT, MPI_SUM, mpi_world%comm, mpi_err)
+          mem = mem_tmp
+#endif
+          write(message(1),'(a,f14.2)') 'Memory usage [Mbytes]     :', mem
+          call write_info(1)
+        end if
 
         call messages_print_stress(stdout)
         

@@ -41,7 +41,8 @@ module loct_m
     loct_isinstringlist,     &
     loct_progress_bar,       &
     loct_printRecipe,        &
-    loct_strerror
+    loct_strerror,           &
+    get_memory_usage
 
 #if defined(HAVE_GDLIB)
   public ::                    &
@@ -183,6 +184,11 @@ module loct_m
     end subroutine oct_gdimage_get_pixel_rgb
   end interface
 #endif
+
+ interface
+   integer(SIZEOF_VOIDP) function get_memory_usage()
+   end function get_memory_usage
+  end interface
 
 contains
 
