@@ -154,11 +154,20 @@ contains
     integer,       intent(in)     :: max_iter
     logical, optional, intent(in) :: real_part
 
+    integer :: j
+    FLOAT   :: t, fj, phi
+
     call push_sub('lasers.lasers_to_numerical')
 
-    ! WARNING: phase is missing
     call tdf_to_numerical(l%f, M_ZERO, max_iter, dt)
-    call tdf_cosine_multiply(l%omega, l%f)
+    do j = 1, max_iter + 1
+      t = (j-1)*dt
+      fj = tdf(l%f, j)
+      phi = tdf(l%phi, t)
+      call tdf_set_numerical(l%f, j, fj*cos(l%omega*t+phi))
+    end do
+    call tdf_end(l%phi)
+    call tdf_init_cw(l%phi, M_ZERO, M_ZERO)
     l%omega = M_ZERO
 
     if(present(real_part)) then
@@ -179,8 +188,8 @@ contains
 
     call push_sub('lasers.lasers_to_numerical')
 
-    ! WARNING: phase is missing.
     call tdf_to_numerical(l%f, M_ZERO, max_iter, dt)
+    call tdf_to_numerical(l%phi, M_ZERO, max_iter, dt)
 
     if(present(real_part)) then
       if(real_part) call tdf_numerical_keep_real(l%f)
