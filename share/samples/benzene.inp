@@ -29,9 +29,6 @@ spacing  =  0.22
 XCFunctional = lda_x + lda_c_pz
 
 MaximumIter = 200
-ConvAbsDens = 1e-5
-
-LCAOStart = yes
 
 EigenSolver = cg
 EigenSolverInitTolerance = 1e-2
@@ -40,4 +37,3 @@ EigenSolverFinalToleranceIteration = 6
 EigenSolverMaxIter = 25
 
 TypeOfMixing = broyden
-

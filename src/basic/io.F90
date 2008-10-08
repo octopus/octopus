@@ -82,7 +82,6 @@ contains
     end if
 
     lun_is_free(min_lun:max_lun)=.true.
-    print *, "ola"
     stdin = 5
 
     !%Variable stdout
@@ -101,7 +100,6 @@ contains
       open(stdout, file=filename, status='unknown')
     end if
 
-    print *, "ola"
     !%Variable stderr
     !%Type string
     !%Default "-"
@@ -118,7 +116,6 @@ contains
       open(stderr, file=filename, status='unknown')
     end if
 
-    print *, "ola"
     !%Variable WorkDir
     !%Type string
     !%Default "."
@@ -133,7 +130,6 @@ contains
     ! ... and if necessary create workdir (will not harm if work_dir is already there)
     if (work_dir.ne.'.') call loct_mkdir(trim(work_dir))
 
-    print *, "ola2", in_debug_mode
     ! create debug directory if in debugging mode
     if(in_debug_mode) then
       call loct_mkdir(trim(work_dir)//'/'//'debug')
@@ -281,7 +277,10 @@ contains
         inquire(unit=lun, opened=used, iostat=iostat)
         if (iostat .ne. 0) used = .true.
         lun_is_free(lun) = .false.
-        if (.not. used) return
+        if (.not. used) then 
+          call pop_sub()
+          return
+        end if
       end if
     end do
 
@@ -395,6 +394,7 @@ contains
           message(1) = 'Error: io_open.'
           call write_fatal(1)
         end if
+        call pop_sub()
         return
       end if
 
@@ -573,7 +573,10 @@ contains
     call push_sub('io.io_switch_status')
 
     ! only root node is taking care of file I/O
-    if(.not.mpi_grp_is_root(mpi_world)) return
+    if(.not.mpi_grp_is_root(mpi_world)) then 
+      call pop_sub()
+      return
+    end if
 
     ! remove possible leftovers first before we switch to new status
     call loct_rm_status_files(current_label)
@@ -596,7 +599,10 @@ contains
     call push_sub('io.io_debug_on_the_fly')
 
     ! only root node performs the check
-    if(.not.mpi_grp_is_root(mpi_world)) return
+    if(.not.mpi_grp_is_root(mpi_world)) then
+      call pop_sub()
+      return
+    end if
 
     if(io_file_exists('enable_debug_mode', 'Enabling DebugMode')) then
       conf%debug_level = 100
@@ -647,8 +653,6 @@ contains
     end if
 
     call pop_sub()
-    return
-
   end function io_file_exists
 
 
