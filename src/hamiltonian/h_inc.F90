@@ -27,14 +27,14 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
   FLOAT, optional,     intent(in)    :: t
   logical, optional,   intent(in)    :: kinetic_only
   
-  integer :: idim, nst
+  integer :: nst
   R_TYPE, pointer :: epsi(:,:)
   R_TYPE, allocatable :: lapl(:, :, :)
   R_TYPE, pointer :: grad(:, :, :)
   R_TYPE, allocatable :: psi_copy(:, :, :)
   type(profile_t), save :: phase_prof
   logical :: kinetic_only_, apply_kpoint
-  integer :: ii, ist
+  integer :: ii, ist, idim, ip
   R_TYPE, pointer :: psi(:, :), hpsi(:, :)
   type(batch_t) :: epsib
   type(der_handle_t), allocatable :: handles(:, :)
@@ -57,48 +57,33 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
 
   nst = psib%nst
 
-  apply_kpoint = simul_box_is_periodic(gr%sb) .and. .not. kpoint_is_gamma(h%d, ik)
-
-  if(apply_kpoint) then 
-
-     ALLOCATE(psi_copy(1:NP_PART, 1:h%d%dim, 1:nst), NP_PART*h%d%dim*nst)
-
-     do ii = 1, nst
-        do idim = 1, h%d%dim
-           call lalg_copy(NP, psib%states(ii)%X(psi)(:, idim), psi_copy(:, idim, ii))
-        end do
-     end do
-
-     call batch_init(epsib, psib%states(1)%ist, psib%states(nst)%ist, psi_copy)
-
-  else
-     
-     call batch_copy(psib, epsib)
-
-  end if
-
-  ASSERT(batch_is_ok(epsib))
-
   ALLOCATE(lapl(1:NP, 1:h%d%dim, 1:nst), NP*h%d%dim*nst)
-
-  ! Allocate handles
   ALLOCATE(handles(h%d%dim, nst), h%d%dim*nst)
 
+  apply_kpoint = simul_box_is_periodic(gr%sb) .and. .not. kpoint_is_gamma(h%d, ik)
+
+  if(apply_kpoint) then
+    ALLOCATE(psi_copy(1:NP_PART, 1:h%d%dim, 1:nst), NP_PART*h%d%dim*nst)
+    call batch_init(epsib, psib%states(1)%ist, psib%states(nst)%ist, psi_copy)
+  else
+    call batch_copy(psib, epsib)
+  end if
+   
   do ii = 1, nst
-    call set_pointers
+    call set_pointers()
 
     ! first of all, set boundary conditions
     do idim = 1, h%d%dim
-      call X(set_bc)(gr%der, epsi(:, idim))
+      call X(set_bc)(gr%der, psi(:, idim))
     end do
-    
-    if(apply_kpoint) then ! we multiply psi by exp(i k.r)
+
+    if(apply_kpoint) then ! we copy psi to epsi applying the exp(i k.r) phase
       call profiling_in(phase_prof, "PBC_PHASE_APPLY")
       
       do idim = 1, h%d%dim
-        !$omp parallel workshare
-        epsi(1:NP_PART, idim) = h%phase(1:NP_PART, ik)*epsi(1:NP_PART, idim)
-        !$omp end parallel workshare
+        do ip = 1, NP_PART
+          psi_copy(ip, idim, ii) = h%phase(ip, ik)*psi(ip, idim)
+        end do
       end do
       
       call profiling_out(phase_prof)
@@ -119,7 +104,7 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
   end if
 
   do ii = 1, nst
-    call set_pointers
+    call set_pointers()
 
     if (kinetic_only_) hpsi(1:gr%m%np, 1:h%d%dim) = M_ZERO
 
@@ -162,9 +147,9 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
       call profiling_in(phase_prof)
 
       do idim = 1, h%d%dim
-        !$omp parallel workshare
-        hpsi(1:NP, idim) = conjg(h%phase(1:NP, ik))*hpsi(1:NP, idim)
-        !$omp end parallel workshare
+        do ip = 1, NP
+          hpsi(ip, idim) = conjg(h%phase(ip, ik))*hpsi(ip, idim)
+        end do
       end do
       
       call profiling_out(phase_prof)
