@@ -381,7 +381,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_prepare_initial(par)!, m)
+  subroutine parameters_prepare_initial(par)
     type(oct_control_parameters_t), intent(inout) :: par
 
     integer :: i, mm, nn
@@ -811,7 +811,6 @@ contains
     integer, intent(in) :: val
 
     integer :: j
-    FLOAT   :: t
 
     do j = 1, cp%no_parameters
       call laser_set_f_value(ep%lasers(j), val, real(tdf(cp%f(j), val)) )
@@ -882,37 +881,71 @@ contains
     write(iunit, '(a,es20.8e3)') 'Fluence = ', parameters_fluence(par)
     call io_close(iunit)
 
-    do j = 1, cp%no_parameters
-      if(cp%no_parameters > 1) then
-        write(digit,'(i2.2)') j
-        iunit = io_open(trim(filename)//'/cp-'//digit, action='write')
-      else
-        iunit = io_open(trim(filename)//'/cp', action='write')
-      end if
-      do i = 1, cp%ntiter + 1
-        t = (i-1)*cp%dt
-        write(iunit, '(3es20.8e3)') t, tdf(par%f(j), t)
-      end do
-      call io_close(iunit)
-    end do
 
-    if(par_common%mode .eq. parameter_mode_f) then
+    select case(par_common%mode)
+    case(parameter_mode_epsilon)
+
       do j = 1, cp%no_parameters
         if(cp%no_parameters > 1) then
           write(digit,'(i2.2)') j
-          iunit = io_open(trim(filename)//'/cp_coswt-'//digit, action='write')
+          iunit = io_open(trim(filename)//'/cp-'//digit, action='write')
         else
-          iunit = io_open(trim(filename)//'/cp_coswt', action='write')
+          iunit = io_open(trim(filename)//'/cp', action='write')
         end if
+        write(iunit,'(2a20)') '#       t [a.u]      ', '        f(t)         '
         do i = 1, cp%ntiter + 1
           t = (i-1)*cp%dt
-          write(iunit, '(3es20.8e3)') t, tdf(par%f(j), t) * cos(cp%w0*t)
+          write(iunit, '(2es20.8e3)') t, real(tdf(par%f(j), t))
         end do
         call io_close(iunit)
       end do
-    end if
 
-    if(present(fourier)) then
+    case(parameter_mode_f)
+
+      do j = 1, cp%no_parameters
+        if(cp%no_parameters > 1) then
+          write(digit,'(i2.2)') j
+          iunit = io_open(trim(filename)//'/cp-'//digit, action='write')
+        else
+          iunit = io_open(trim(filename)//'/cp', action='write')
+        end if
+        write(iunit,'(3a20)') '#       t [a.u]      ', '        f(t)         ', '        E(t)         '
+        do i = 1, cp%ntiter + 1
+          t = (i-1)*cp%dt
+          write(iunit, '(3es20.8e3)') t, real(tdf(par%f(j), t)), real(tdf(par%f(j), t)) * cos(par%w0*t)
+        end do
+        call io_close(iunit)
+      end do
+
+    case(parameter_mode_phi)
+
+      ! In this case, there is only one parameter (for the moment)
+      iunit = io_open(trim(filename)//'/cp', action='write')
+      write(iunit,'(2a20)') '#       t [a.u]      ', '        phi(t)       '
+      do i = 1, cp%ntiter + 1
+        t = (i-1)*cp%dt
+        write(iunit, '(2es20.8e3)') t, real(tdf(par%f(1), t))
+      end do
+      call io_close(iunit)
+
+    case(parameter_mode_f_and_phi)
+
+      ! In this case, there is only one parameter (for the moment)
+      iunit = io_open(trim(filename)//'/cp', action='write')
+      write(iunit,'(3a20)') '#       t [a.u]      ', '        f(t)         ', &
+                            '        phi(t)       ', '        E(t)         '
+      do i = 1, cp%ntiter + 1
+        t = (i-1)*cp%dt
+        write(iunit, '(4es20.8e3)') t, real(tdf(par%f(1), t)), real(tdf(par%f(2), t)), real(tdf(par%f(1), t)) * &
+          cos(par%w0*t + real(tdf(par%f(2), t)) )
+      end do
+      call io_close(iunit)
+
+    end select
+
+    ! This Fourier analysis is only done for the case of optimization of the full electric field.
+    ! TODO: extend this to the envelope and/or phaseo optimization.
+    if(present(fourier) .and. (par_common%mode .eq. parameter_mode_epsilon) ) then
     if(fourier) then
       do j = 1, cp%no_parameters
         if(cp%no_parameters > 1) then
@@ -953,13 +986,20 @@ contains
   ! ---------------------------------------------------------
   FLOAT function parameters_fluence(par)
     type(oct_control_parameters_t), intent(in) :: par
-    integer :: j
+    integer :: j, i
+    FLOAT :: t, fi, phi
     type(tdf_t) :: f
     call push_sub('parameters.parameters_fluence')
 
     parameters_fluence = M_ZERO
-    do j = 1, par%no_parameters
-      if(par_common%mode .eq. parameter_mode_f) then
+
+    select case(par_common%mode)
+    case(parameter_mode_epsilon)
+      do j = 1, par%no_parameters
+        parameters_fluence = parameters_fluence + tdf_dot_product(par%f(j), par%f(j))
+      end do
+    case(parameter_mode_f)
+      do j = 1, par%no_parameters
         call tdf_init(f)
         call tdf_copy(f, par%f(j))
         if(par%current_representation .eq. ctr_parameter_frequency_space) then
@@ -968,10 +1008,17 @@ contains
         call tdf_cosine_multiply(par%w0, f)
         parameters_fluence = parameters_fluence + tdf_dot_product(f, f)
         call tdf_end(f)
-      else
-        parameters_fluence = parameters_fluence + tdf_dot_product(par%f(j), par%f(j))
-      end if
-    end do
+      end do
+    case(parameter_mode_phi)
+      stop 'Error.'
+    case(parameter_mode_f_and_phi)
+      do i = 1, par%ntiter + 1
+        t = (i-1)*par%dt
+        fi = tdf(par%f(1), i)
+        phi = real(tdf(par%f(2), i))
+        call tdf_set_numerical(f, i, fi*cos(par%w0*t+phi))
+      end do
+    end select
 
     call pop_sub()
   end function parameters_fluence
@@ -1132,8 +1179,7 @@ contains
     REAL_DOUBLE,                          intent(in)    :: x(:)
 
     integer :: j, k, n
-    FLOAT, allocatable :: e(:), ep(:), inverse(:, :)
-    FLOAT :: det
+    FLOAT, allocatable :: e(:), ep(:)
     call push_sub('parameters.parameters_x_to_par')
 
     n = par%nfreqs
@@ -1199,7 +1245,7 @@ contains
     CMPLX,                          intent(in)    :: dl(:), dq(:)
 
     FLOAT :: value
-    integer :: j, ntiter
+    integer :: j
 
     call push_sub('parameters.parameters_update')
 
