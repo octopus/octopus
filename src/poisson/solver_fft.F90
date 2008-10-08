@@ -329,8 +329,6 @@ contains
 
     call push_sub('solver_fft.poisson_fft_build_1d')
 
-    ASSERT(poisson_solver.eq.FFT_SPH.and.simul_box_is_periodic(gr%sb))
-
     box = gr%m%l
     call dcf_new(box, fft_cf)
     call dcf_fft_init(fft_cf, gr%sb)
