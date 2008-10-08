@@ -132,8 +132,8 @@ contains
     FLOAT,             intent(in)    :: z
 
     type(ps_psf_t) :: ps_psf ! SIESTA pseudopotential
-    type(ps_cpi_t) :: ps_cpi ! Fritz-haber pseudopotential
-    type(ps_fhi_t) :: ps_fhi ! Fritz-haber pseudopotential (from abinit)
+    type(ps_cpi_t) :: ps_cpi ! Fritz-Haber pseudopotential
+    type(ps_fhi_t) :: ps_fhi ! Fritz-Haber pseudopotential (from abinit)
     type(ps_upf_t) :: ps_upf ! In case UPF format is used
     type(hgh_t)    :: psp    ! In case Hartwigsen-Goedecker-Hutter ps are used.
 
@@ -174,7 +174,7 @@ contains
       ps%conf%p      = ps_cpi%ps_grid%no_l_channels
 
       ps%z      = z
-      ps%kbc    = 1     ! only one projector epr angular momentum
+      ps%kbc    = 1     ! only one projector per angular momentum
       ps%l_loc  = lloc  ! the local part of the pseudo
 
       ps%l_max  = min(ps%conf%p - 1, lmax)   ! Maybe the file has not enough components.
@@ -267,7 +267,7 @@ contains
 
     ! Fix the threshold to calculate the radius of the projector function localization spheres:
 
-    call obsolete_variable('SSpecieProjectorSphereThreshold', 'SpeciesProjectorSphereThreshold')
+    call obsolete_variable('SpecieProjectorSphereThreshold', 'SpeciesProjectorSphereThreshold')
 
     !%Variable SpeciesProjectorSphereThreshold
     !%Type float

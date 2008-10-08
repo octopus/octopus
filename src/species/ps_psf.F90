@@ -277,7 +277,7 @@ contains
     s(:) = g%drdi(:)**2
     a2b4 = M_FOURTH*psf_file%a**2
 
-    !  ionic pseudopotential if core-correction for hartree
+    !  ionic pseudopotential if core-correction for Hartree
     if((psf_file%icore == 'pche') .or. (psf_file%icore == 'fche')) then
       call vhrtre(psf_file%chcore, ve(:, 1), g%rofi, g%drdi, g%s, g%nrval, g%a)
       do l = 1, psf_file%npotd
@@ -287,7 +287,7 @@ contains
 
     ! Calculation of the valence screening potential from the density:
     !       ve(1:nrval) is the hartree+xc potential created by the pseudo -
-    !               valence charge distribution (everything in Rydberts, and bohrs)
+    !               valence charge distribution (everything in Rydbergs, and Bohrs)
     rho(1:g%nrval, 1) = psf_file%rho_val(1:g%nrval)
     select case(psf_file%icorr)
     case('pb')

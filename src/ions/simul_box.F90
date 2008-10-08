@@ -434,7 +434,7 @@ contains
       !% The simulation box will be constructed by adding spheres created around each
       !% atom (or user-defined potential), of radius Radius.
       !%Option parallelepiped 4
-      !% The simulation box will be a parallelpiped whose dimensions are taken from
+      !% The simulation box will be a parallelepiped whose dimensions are taken from
       !% the variable lsize.
       !%Option box_image 5
       !% The simulation box will be defined through an image. White means that the point
@@ -465,8 +465,11 @@ contains
       !%Description
       !% If BoxShape is not "parallelepiped", defines the radius of the spheres or of the cylinder.
       !% It has to be a positive number. If it is not defined in the input file, then the program
-      !% will attempt to find a suitable default. However this is not always possible, in which case
+      !% will attempt to find a suitable default. However, this is not always possible, in which case
       !% the code will stop, issuing this error message.
+      !% For the minimum option, if the radius is not specified, a radius is chosen separately for each species.
+      !% If default pseudopotentials are used, the radii are read from the "rsize" column of share/PP/defaults.
+      !% Otherwise the radii are read from the Species block.
       !%End
       select case(sb%box_shape)
       case(SPHERE, CYLINDER)
@@ -732,7 +735,7 @@ contains
       !% <br>%</tt>
       !%End
       
-      ! this has to be updated for non orthogonal grids
+      ! this has to be updated for non-orthogonal grids
       sb%rcell_volume = product(M_TWO*sb%lsize(1:sb%periodic_dim))
 
       sb%rlattice = M_ZERO

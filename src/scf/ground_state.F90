@@ -67,7 +67,7 @@ contains
     call states_distribute_nodes(sys%st, sys%mc)
     call states_allocate_wfns(sys%st, sys%gr%m)
 
-    ! Read free states for ground state open boundary calculation.
+    ! Read free states for ground-state open-boundary calculation.
     if(sys%gr%sb%open_boundaries) then
       call states_allocate_free_states(sys%st, sys%gr)
       call read_free_states(sys%st, sys%gr)

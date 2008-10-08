@@ -171,7 +171,7 @@ contains
     !%Section System::Species
     !%Description
     !% A species is by definition either an "ion" (nucleus + core electrons) described
-    !% through a pseudo-potential, or an user-defined, model potential.
+    !% through a pseudopotential, or a user-defined model potential.
     !%
     !% Note that some common pseudopotentials are distributed with the code in the
     !% directory <i>OCTOPUS-HOME/share/PP/</i>. To use these pseudopotentials you are
@@ -215,33 +215,33 @@ contains
     !% Troullier Martins pseudopotential in SIESTA format: the pseudopotential will be
     !% read from a <i>.psf</i> file, either in the working
     !% directory or in the <i>OCTOPUS-HOME/share/octopus/PP/PSF</i> directory.
-    !% The following three numbers are the atomic number, the maximum
+    !% Columns 4, 5, 6 are the atomic number, the maximum
     !% <i>l</i>-component of the pseudopotential to consider in the
     !% calculation, and the <i>l</i>-component to consider as local.
     !%Option spec_ps_hgh  101
-    !% Hartwigsen-Goedecker-Hutter pseudopotentials: the next field is
-    !% the atomic number and the last two numbers are irrelevant, since they
+    !% Hartwigsen-Goedecker-Hutter pseudopotentials: column 4 is
+    !% the atomic number and columns 5 and 6 are irrelevant, since they
     !% are not necessary to define the HGH pseudopotential.
     !%Option spec_ps_cpi  102
     !% Fritz-Haber pseudopotential: the pseudopotential will be
     !% read from a <i>.cpi</i> file, either in the working
     !% directory or in the <i>OCTOPUS-HOME/share/PP/CPI</i> directory.
-    !% The following three numbers are the atomic number, the maximum
+    !% Columns 4, 5, 6 are the atomic number, the maximum
     !% <i>l</i>-component of the pseudopotential to consider in the
     !% calculation, and the <i>l</i>-component to consider as local.
     !%Option spec_ps_fhi  103
     !% Fritz-Haber pseudopotential (ABINIT format): the pseudopotential will be
     !% read from an <i>.fhi</i> file, either in the working
     !% directory or in the <i>OCTOPUS-HOME/share/PP/FHI</i> directory.
-    !% The following three numbers are the atomic number, the maximum
+    !% Columns 4, 5, 6 are the atomic number, the maximum
     !% <i>l</i>-component of the pseudopotential to consider in the
     !% calculation, and the <i>l</i>-component to consider as local.
-    !% Note that you can use the pseudopotentials from ABINT homepage
+    !% Note that you can use the pseudopotentials from ABINIT homepage.
     !%Option spec_ps_upf  104
     !% UPF format: the pseudopotential will be
     !% read from an <i>.UPF</i> file, either in the working
     !% directory or in the <i>OCTOPUS-HOME/share/PP/UPF</i> directory.
-    !% The following number is the atomic number. The last two numbers are 
+    !% Column 4 is the atomic number. Columns 5 and 6 are 
     !% ignored, as the maximum <i>l</i>-component of the pseudopotential to
     !% consider in the calculation and the <i>l</i>-component to consider as
     !% local are indicated in the pseudopotential file are cannot be changed.
@@ -249,8 +249,10 @@ contains
     !% Atom represented with all electrons; the extra parameter is the
     !% atomic number. See the documentation of the variable 
     !% SpeciesAllElectronSigma.
-    !% 
     !% WARNING: Currently you can not use LCAO with this species.
+    !%Additionally, all the pseudopotential types (PSF, HGH, FHI, UPF) can take two extra
+    !% fields: default spacing, and default radius (used for minimum simulation box if the
+    !% radius is not specified). 
     !%End
 
     call obsolete_variable('SpecieAllElectronSigma', 'SpeciesAllElectronSigma')
@@ -285,7 +287,7 @@ contains
       n_spec_block = loct_parse_block_n(blk)
     end if
 
-    ! Find out if the seeked species is in the block
+    ! Find out if the sought species is in the block
     row = -1
     block: do i = 1, n_spec_block
       call loct_parse_block_string(blk, i-1, 0, lab)
@@ -383,7 +385,7 @@ contains
     call loct_parse_block_int   (blk, row, 2, s%type)
 
     select case(s%type)
-    case(SPEC_USDEF) ! user defined
+    case(SPEC_USDEF) ! user-defined
       call loct_parse_block_float (blk, row, 3, s%Z_val)
       call loct_parse_block_string(blk, row, 4, s%user_def)
       call conv_to_C_string(s%user_def)
@@ -462,7 +464,7 @@ contains
       print_info_ = print_info
     end if
 
-    ! masses are always in a.u.m, so convert them to a.u.
+    ! masses are always in amu, so convert them to a.u.
     s%weight =  units_inp%mass%factor * s%weight
 
     s%has_density = .false.
@@ -489,7 +491,7 @@ contains
 
     case(SPEC_USDEF)
       if(print_info_) then
-        write(message(1),'(a,a,a)')    'Species "',trim(s%label),'" is an user-defined potential.'
+        write(message(1),'(a,a,a)')    'Species "',trim(s%label),'" is a user-defined potential.'
         i = min(237, len_trim(s%user_def)-1) ! I substract 1 to avoid the non-printable C "end-of-string" character.
         write(message(2),'(a,a)')      '   Potential = ', trim(s%user_def(1:i))
         if(len(trim(s%user_def)).gt.237) then
