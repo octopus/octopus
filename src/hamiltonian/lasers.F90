@@ -21,12 +21,16 @@
 
 module lasers_m
   use datasets_m
+  use derivatives_m
   use global_m
+  use grid_m
   use io_m
   use loct_parser_m
   use mesh_m
   use messages_m
+  use profiling_m
   use simul_box_m
+  use states_dim_m
   use units_m
   use tdf_m
 
@@ -50,7 +54,12 @@ module lasers_m
     laser_get_phi,                &
     laser_set_phi,                &
     laser_set_f_value,            &
-    laser_carrier_frequency
+    laser_carrier_frequency,      &
+    laser_requires_gradient,      &
+    dvlasers,                     &
+    zvlasers,                     &
+    zvlaser_operator_linear,      &
+    zvlaser_operator_quadratic
 
   integer, public, parameter ::     &
     E_FIELD_NONE             =  0,  &
@@ -83,7 +92,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  integer function laser_kind(l)
+  integer pure function laser_kind(l)
     type(laser_t), intent(in) :: l
     laser_kind = l%field
   end function laser_kind
@@ -555,10 +564,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine laser_field(sb, l, field, t)
-    type(simul_box_t), intent(in) :: sb
-    type(laser_t),    intent(in)  :: l
-    FLOAT,            intent(out) :: field(sb%dim)
-    FLOAT, optional,  intent(in)  :: t
+    type(simul_box_t), intent(in)  :: sb
+    type(laser_t),     intent(in)  :: l
+    FLOAT,             intent(out) :: field(:)
+    FLOAT, optional,   intent(in)  :: t
 
 
     CMPLX :: amp
@@ -575,7 +584,20 @@ contains
   end subroutine laser_field
   ! ---------------------------------------------------------
 
+  logical elemental function laser_requires_gradient(this) result(req)
+    type(laser_t),  intent(in)  :: this
 
+    req = (laser_kind(this) == E_FIELD_MAGNETIC .or. laser_kind(this) == E_FIELD_VECTOR_POTENTIAL)
+    
+  end function laser_requires_gradient
+
+#include "undef.F90"
+#include "real.F90"
+#include "lasers_inc.F90"
+
+#include "undef.F90"
+#include "complex.F90"
+#include "lasers_inc.F90"
 
 end module lasers_m
 

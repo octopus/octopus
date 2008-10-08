@@ -48,7 +48,7 @@ depend:
 
 ob_lead.o: ob_lead.F90
 gauge_field.o : gauge_field.F90 projector.o
-lasers.o : lasers.F90 
+lasers.o : lasers.F90 lasers_inc.F90
 species_pot.o : species_pot.F90 
 rkb_projector.o : rkb_projector.F90 species_pot.o 
 kb_projector.o : kb_projector.F90 kb_projector_inc.F90 species_pot.o 

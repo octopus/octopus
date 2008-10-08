@@ -78,9 +78,6 @@ module hamiltonian_m
     zmagnus,                     &
     dvmask,                      &
     zvmask,                      &
-    zvlasers,                    &
-    zvlaser_operator_linear,         &
-    zvlaser_operator_quadratic,      &
     hamiltonian_inh_term,            &
     hamiltonian_set_inh,             &
     hamiltonian_remove_inh,          &

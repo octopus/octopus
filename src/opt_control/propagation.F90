@@ -550,8 +550,8 @@ module opt_control_propagation_m
       do ik = 1, psi%d%nik
         do p = 1, psi%nst
           oppsi%zpsi(:, :, p, ik) = M_z0
-          call zvlaser_operator_linear(gr, h, psi%zpsi(:, :, p, ik), &
-                                       oppsi%zpsi(:, :, p, ik), ik, laser_number = j)
+          call zvlaser_operator_linear(h%ep%lasers(j), gr, h%d, psi%zpsi(:, :, p, ik), &
+                                       oppsi%zpsi(:, :, p, ik), ik, h%ep%gyromagnetic_ratio, h%ep%a_static)
           dl(j) = dl(j) + psi%occ(p, ik) * zmf_dotp(gr%m, psi%d%dim, chi%zpsi(:, :, p, ik), &
             oppsi%zpsi(:, :, p, ik))
         end do
@@ -565,7 +565,7 @@ module opt_control_propagation_m
         do ik = 1, psi%d%nik
           do p = 1, psi%nst
             oppsi%zpsi(:, :, p, ik) = M_z0
-            call zvlaser_operator_quadratic(gr, h, psi%zpsi(:, :, p, ik), oppsi%zpsi(:, :, p, ik), laser_number = j)
+            call zvlaser_operator_quadratic(h%ep%lasers(j), gr, h%d, psi%zpsi(:, :, p, ik), oppsi%zpsi(:, :, p, ik))
             dq(j) = dq(j) + psi%occ(p, ik)*zmf_dotp(gr%m, psi%d%dim, chi%zpsi(:, :, p, ik), oppsi%zpsi(:, :, p, ik))
           end do
         end do
