@@ -132,7 +132,7 @@ subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi,  &
 #endif
 
   call profiling_in(prof, "GRAM_SCHMIDT")
-  call push_sub('states_inc.Xstates_gram_schmidt')
+  call push_sub('states_lalg_inc.Xstates_gram_schmidt')
 
   ! This routine uses blocking to optimize cache usage. One block of
   ! |phi> is loaded in cache L1 and then then we calculate the dot
@@ -231,8 +231,14 @@ subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi,  &
 
   call profiling_count_operations((R_ADD + R_MUL) * m%np * dim * nst)
 
+  ! the following ifs cannot be given as a single line (without the
+  ! then) to avoid a bug in xlf 10.1
+
   normalize_ = .false.
-  if(present(normalize)) normalize_ = normalize
+  if(present(normalize)) then
+    normalize_ = normalize
+  end if
+
   if(normalize_) then
     nrm2 = X(mf_nrm2)(m, dim, phi)
     do idim = 1, dim
@@ -240,8 +246,14 @@ subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi,  &
     end do
   end if
 
-  if(present(overlap)) overlap(1:nst) = ss(1:nst)
-  if(present(norm) .and. normalize) norm = nrm2
+  if(present(overlap)) then
+    overlap(1:nst) = ss(1:nst)
+  end if
+
+  if(present(norm)) then
+    ASSERT(normalize)
+    norm = nrm2
+  end if
 
   deallocate(ss)
 

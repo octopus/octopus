@@ -122,7 +122,7 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
       ! all functions that require the gradient or other derivatives of
       ! epsi should go after this point and calculate it using Xget_grad
 
-      ! FIX ME: here not all the possible coupling between vector
+      ! FIX ME: here not all the possible couplings between vector
       ! potentials are considered
 
       nullify(grad)
