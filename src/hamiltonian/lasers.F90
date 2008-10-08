@@ -172,7 +172,7 @@ contains
     do j = 1, max_iter + 1
       t = (j-1)*dt
       fj = tdf(l%f, j)
-      phi = tdf(l%phi, t)
+      phi = real(tdf(l%phi, t))
       call tdf_set_numerical(l%f, j, fj*cos(l%omega*t+phi))
     end do
     call tdf_end(l%phi)
@@ -523,7 +523,7 @@ contains
 
     pot = M_ZERO
     if(present(t)) then
-      amp = tdf(l%f, t) * exp(M_zI * ( l%omega*t + tdf(l%phi, t) ) )
+      amp = tdf(l%f, t) * exp(M_zI * ( l%omega*t + real(tdf(l%phi, t)) ) )
     else
       amp = M_z1
     end if
@@ -552,7 +552,7 @@ contains
     call push_sub('lasers.laser_vector_potential')
 
     if(present(t)) then
-      a = l%a * real( tdf(l%f, t) * exp(M_zI* ( l%omega *t + tdf(l%phi, t)  ) ) )
+      a = l%a * real( tdf(l%f, t) * exp(M_zI* ( l%omega *t + real(tdf(l%phi, t))  ) ) )
     else
       a = l%a
     end if
@@ -575,7 +575,7 @@ contains
     field = M_ZERO
     if(l%field .eq. E_FIELD_SCALAR_POTENTIAL) return
     if(present(t)) then
-       amp = tdf(l%f, t) * exp(M_zI * ( l%omega * t + tdf(l%phi, t) ) )
+       amp = tdf(l%f, t) * exp(M_zI * ( l%omega * t + real(tdf(l%phi, t)) ) )
     else
       amp = M_z1
     end if
