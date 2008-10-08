@@ -93,6 +93,8 @@ module opt_control_parameters_m
     FLOAT   :: w0                  = M_ZERO
     integer :: mode                = parameter_mode_none
     integer :: no_parameters       = 0
+    FLOAT,       pointer :: alpha(:)      => NULL()
+    type(tdf_t), pointer :: td_penalty(:) => NULL()
   end type oct_parameters_common_t
 
 
@@ -107,7 +109,6 @@ module opt_control_parameters_m
     CMPLX, pointer :: pol(:, :)  => NULL() ! the polarization of the field, this is
                                            ! necessary to calculate the fluence.
     FLOAT, pointer :: alpha(:)   => NULL()
-    type(tdf_t), pointer :: td_penalty(:) => NULL()
 
     integer :: representation         = 0
     integer :: current_representation = 0
@@ -132,7 +133,10 @@ contains
     logical, intent(out)                          :: mode_fixed_fluence
     logical, intent(out)                          :: mode_basis_set
 
-    integer :: i
+    character(len=1024)      :: expression
+    integer :: i, j, no_lines, steps
+    FLOAT   :: octpenalty, t, f_re, f_im
+    type(block_t)            :: blk
 
     call push_sub('parameters.parameters_read')
 
@@ -244,7 +248,6 @@ contains
     end do
 
     ! Note that in QOCT runs, it is not acceptable to have complex time-dependent functions.
-    ! Note that in QOCT runs, it is not acceptable to have complex time-dependent functions.
     do i = 1, ep%no_lasers
       select case(par_common%mode)
       case(parameter_mode_epsilon)
@@ -275,6 +278,102 @@ contains
 
     mode_basis_set = .false.
     if(par_common%representation .ne. ctr_parameter_real_space ) mode_basis_set = .true.
+
+
+    !%Variable OCTPenalty
+    !%Type float
+    !%Section Calculation Modes::Optimal Control
+    !%Default 1.0
+    !%Description
+    !% The variable specificies the value of the penalty factor for the 
+    !% integrated field strength (fluence). Large value - small fluence.
+    !% A transient shape can be specified using the block OCTLaserEnvelope.
+    !% In this case OCTPenalty is multiplied with time-dependent function. 
+    !% The value depends on the coupling between the states. A good start might be a 
+    !% value from 0.1 (strong fields) to 10 (weak fields). 
+    !%
+    !% Note that if there are several control functions, one can specify this
+    !% variable as a one-line code, each column being the penalty factor for each
+    !% of the control functions. Make sure that the number of columns is equal to the
+    !% number of control functions. If it is not a block, all control functions will
+    !% have the same penalty factor. 
+    !%
+    !% All penalty factors must be positive. 
+    !%End
+    ALLOCATE(par_common%alpha(par_common%no_parameters), par_common%no_parameters)
+    par_common%alpha = M_ZERO
+    if(loct_parse_block('OCTPenalty', blk) == 0) then
+      ! We have a block
+      i = loct_parse_block_cols(blk, 0)
+      if(i.ne.par_common%no_parameters) then
+        call input_error('OCTPenalty')
+      else
+        do j = 1, i
+          call loct_parse_block_float(blk, 0, j-1, par_common%alpha(j))
+          if(par_common%alpha(j) <= M_ZERO) call input_error('OCTPenalty')
+        end do
+      end if
+    else
+      ! We have the same penalty for all the control functions.
+      call loct_parse_float(check_inp('OCTPenalty'), M_ONE, octpenalty)
+      par_common%alpha(1:par_common%no_parameters) = octpenalty
+    end if
+
+
+    !%Variable OCTLaserEnvelope
+    !%Type block
+    !%Section Calculation Modes::Optimal Control
+    !%Description
+    !% Often a predefined time-dependent envelope on the control parameter is desired. 
+    !% This can be achieved by making the penalty factor time-dependent. 
+    !% Here, you may specify the required time dependent envelope.
+    !%
+    !% It is possible to choose different envelopes for different control parameters.
+    !% There should be one line for each control parameter. Each line should
+    !% have only one element: a string with the function that defines the
+    !% *inverse* of the time-dependent penalty, which is then defined as
+    !% 1 upon this function + 1.0e-7 (to avoid possible singularities).
+    !%
+    !% The usual choices should be functions between zero and one.
+    !%
+    !% If, instead of defining a function, the string is "default", then
+    !% the program will use the function:
+    !%
+    !% <math> \frac{1}{\alpha(t)} = \frac{1}{2}( erf(t-T/20)+ erf(-(t-T+T/20)) </math>
+    !%End
+    steps = max_iter
+    ALLOCATE(par_common%td_penalty(par_common%no_parameters), par_common%no_parameters)
+    do i = 1, par_common%no_parameters
+      call tdf_init_numerical(par_common%td_penalty(i), steps, dt, initval = M_z1)
+    end do
+
+    if (loct_parse_block(check_inp('OCTLaserEnvelope'), blk)==0) then
+      no_lines = loct_parse_block_n(blk)
+      if(no_lines .ne.par_common%no_parameters) call input_error('OCTLaserEnvelope')
+
+      do i = 1, no_lines
+        call loct_parse_block_string(blk, i-1, 0, expression)
+        if(trim(expression)=='default') then
+          do j = 1, steps + 1
+            t = (j-1)*dt
+            f_re = M_HALF * (loct_erf(t-CNST(0.05)*steps*dt) + &
+                             loct_erf(-(t-steps*dt+CNST(0.05)*steps*dt)) )
+            call tdf_set_numerical(par_common%td_penalty(i), j, &
+              TOFLOAT(M_ONE /(f_re + CNST(1.0e-7)))  )
+          end do
+        else
+          call conv_to_C_string(expression)
+          do j = 1, steps+1
+            t = (j-1)*dt
+            call loct_parse_expression(f_re, f_im, "t", real(t, 8), expression)
+            call tdf_set_numerical(par_common%td_penalty(i), j, TOFLOAT(M_ONE /(f_re + CNST(1.0e-7)))  )
+          end do
+        end if
+      end do
+
+      call loct_parse_block_end(blk)
+    end if
+
 
     call pop_sub()
   end subroutine parameters_read
@@ -607,7 +706,7 @@ contains
       call tdf_init_numerical(cp%f(j), cp%ntiter, cp%dt, omegamax = par_common%omegamax)
     end do
 
-    call parameters_penalty_init(cp)
+    cp%alpha = par_common%alpha
 
     cp%nfreqs = 0
     if(cp%representation .eq. ctr_parameter_frequency_space) then
@@ -627,11 +726,22 @@ contains
 
     call push_sub('parameters.parameters_set')
 
-    do j = 1, cp%no_parameters
-      call tdf_end(cp%f(j))
-      call laser_get_f(ep%lasers(j), cp%f(j))
-      cp%pol(1:MAX_DIM, j) = laser_polarization(ep%lasers(j))
-    end do
+    select case(par_common%mode)
+    case(parameter_mode_epsilon, parameter_mode_f)
+      do j = 1, cp%no_parameters
+        call tdf_end(cp%f(j))
+        call laser_get_f(ep%lasers(j), cp%f(j))
+        cp%pol(1:MAX_DIM, j) = laser_polarization(ep%lasers(j))
+      end do
+    case(parameter_mode_phi)
+      call tdf_end(cp%f(1))
+      call laser_get_phi(ep%lasers(1), cp%f(1))
+    case(parameter_mode_f_and_phi)
+      call tdf_end(cp%f(1))
+      call laser_get_f(ep%lasers(1), cp%f(1))
+      call tdf_end(cp%f(2))
+      call laser_get_phi(ep%lasers(1), cp%f(2))
+    end select
 
     call pop_sub()
   end subroutine parameters_set
@@ -649,7 +759,7 @@ contains
     if(cp%representation .eq. ctr_parameter_real_space) then
       do j = 1, cp%no_parameters
         do i = 1, cp%ntiter + 1
-          call tdf_set_numerical(cp%f(j), i, tdf(cp%f(j), i) / tdf(cp%td_penalty(j), i) )
+          call tdf_set_numerical(cp%f(j), i, tdf(cp%f(j), i) / tdf(par_common%td_penalty(j), i) )
         end do
       end do
     end if
@@ -720,12 +830,9 @@ contains
 
     do j = 1, cp%no_parameters
       call tdf_end(cp%f(j))
-      call tdf_end(cp%td_penalty(j))
     end do
     deallocate(cp%f)
     nullify(cp%f)
-    deallocate(cp%td_penalty)
-    nullify(cp%td_penalty)
     deallocate(cp%alpha)
     nullify(cp%alpha)
     deallocate(cp%pol)
@@ -841,116 +948,6 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_penalty_init(par)
-    type(oct_control_parameters_t), intent(inout) :: par
-
-    character(len=1024)      :: expression
-    FLOAT                    :: t, octpenalty, dt
-    real(8)                  :: f_re, f_im
-    type(block_t)            :: blk
-    integer                  :: no_lines, i, j, steps
-    call push_sub('parameters.parameters_penalty_init')
-
-    dt = par%dt
-    steps = par%ntiter
-
-    !%Variable OCTPenalty
-    !%Type float
-    !%Section Calculation Modes::Optimal Control
-    !%Default 1.0
-    !%Description
-    !% The variable specificies the value of the penalty factor for the 
-    !% integrated field strength (fluence). Large value - small fluence.
-    !% A transient shape can be specified using the block OCTLaserEnvelope.
-    !% In this case OCTPenalty is multiplied with time-dependent function. 
-    !% The value depends on the coupling between the states. A good start might be a 
-    !% value from 0.1 (strong fields) to 10 (weak fields). 
-    !%
-    !% Note that if there are several control functions, one can specify this
-    !% variable as a one-line code, each column being the penalty factor for each
-    !% of the control functions. Make sure that the number of columns is equal to the
-    !% number of control functions. If it is not a block, all control functions will
-    !% have the same penalty factor. 
-    !%
-    !% All penalty factors must be positive. 
-    !%End
-    if(loct_parse_block('OCTPenalty', blk) == 0) then
-      ! We have a block
-      i = loct_parse_block_cols(blk, 0)
-      if(i.ne.par%no_parameters) then
-        call input_error('OCTPenalty')
-      else
-        do j = 1, i
-          call loct_parse_block_float(blk, 0, j-1, par%alpha(j))
-          if(par%alpha(j) <= M_ZERO) call input_error('OCTPenalty')
-        end do
-      end if
-    else
-      ! We have the same penalty for all the control functions.
-      call loct_parse_float(check_inp('OCTPenalty'), M_ONE, octpenalty)
-      par%alpha(1:par%no_parameters) = octpenalty
-    end if
-
-    ALLOCATE(par%td_penalty(par%no_parameters), par%no_parameters)
-    do i = 1, par%no_parameters
-      call tdf_init_numerical(par%td_penalty(i), steps, dt, initval = M_z1)
-    end do
-
-    !%Variable OCTLaserEnvelope
-    !%Type block
-    !%Section Calculation Modes::Optimal Control
-    !%Description
-    !% Often a predefined time-dependent envelope on the control parameter is desired. 
-    !% This can be achieved by making the penalty factor time-dependent. 
-    !% Here, you may specify the required time dependent envelope.
-    !%
-    !% It is possible to choose different envelopes for different control parameters.
-    !% There should be one line for each control parameter. Each line should
-    !% have only one element: a string with the function that defines the
-    !% *inverse* of the time-dependent penalty, which is then defined as
-    !% 1 upon this function + 1.0e-7 (to avoid possible singularities).
-    !%
-    !% The usual choices should be functions between zero and one.
-    !%
-    !% If, instead of defining a function, the string is "default", then
-    !% the program will use the function:
-    !%
-    !% <math> \frac{1}{\alpha(t)} = \frac{1}{2}( erf(t-T/20)+ erf(-(t-T+T/20)) </math>
-    !%End
-        
-    if (loct_parse_block(check_inp('OCTLaserEnvelope'), blk)==0) then
-      no_lines = loct_parse_block_n(blk)
-      if(no_lines .ne.par%no_parameters) call input_error('OCTLaserEnvelope')
-
-      do i = 1, no_lines
-        call loct_parse_block_string(blk, i-1, 0, expression)
-        if(trim(expression)=='default') then
-          do j = 1, steps + 1
-            t = (j-1)*dt
-            f_re = M_HALF * (loct_erf(t-CNST(0.05)*steps*dt) + &
-                             loct_erf(-(t-steps*dt+CNST(0.05)*steps*dt)) )
-            call tdf_set_numerical(par%td_penalty(i), j, &
-              TOFLOAT(M_ONE /(f_re + CNST(1.0e-7)))  )
-          end do
-        else
-          call conv_to_C_string(expression)
-          do j = 1, steps+1
-            t = (j-1)*dt
-            call loct_parse_expression(f_re, f_im, "t", real(t, 8), expression)
-            call tdf_set_numerical(par%td_penalty(i), j, TOFLOAT(M_ONE /(f_re + CNST(1.0e-7)))  )
-          end do
-        end if
-      end do
-
-      call loct_parse_block_end(blk)
-    end if
-
-    call pop_sub()
-  end subroutine parameters_penalty_init
-  ! ---------------------------------------------------------
-
-
-  ! ---------------------------------------------------------
   ! Gets the fluence of the laser field, defined as:
   ! parameters_fluence = \sum_i^{no_parameters} \integrate_0^T |epsilon(t)|^2
   ! ---------------------------------------------------------
@@ -1010,10 +1007,10 @@ contains
         t = (i-1) * par_%dt
         do k = 1, MAX_DIM
           if(par_common%mode .eq. parameter_mode_f) then
-            integral = integral + tdf(par_%td_penalty(j), i) * &
+            integral = integral + tdf(par_common%td_penalty(j), i) * &
               real( par_%pol(k, j) * tdf(par_%f(j), i) * cos(par%w0*t) )**2 
           else
-            integral = integral + tdf(par_%td_penalty(j), i) * &
+            integral = integral + tdf(par_common%td_penalty(j), i) * &
               real( par_%pol(k, j) * tdf(par_%f(j), i) )**2 
           end if
         end do
@@ -1074,14 +1071,11 @@ contains
     cp_out%w0 = cp_in%w0
     ALLOCATE(cp_out%f(cp_out%no_parameters), cp_out%no_parameters)
     ALLOCATE(cp_out%alpha(cp_out%no_parameters), cp_out%no_parameters)
-    ALLOCATE(cp_out%td_penalty(cp_out%no_parameters), cp_out%no_parameters)
     ALLOCATE(cp_out%pol(MAX_DIM, cp_out%no_parameters), MAX_DIM*cp_out%no_parameters)
     do j = 1, cp_in%no_parameters
       cp_out%alpha(j) = cp_in%alpha(j)
       call tdf_init(cp_out%f(j))
       call tdf_copy(cp_out%f(j), cp_in%f(j))
-      call tdf_init(cp_out%td_penalty(j))
-      call tdf_copy(cp_out%td_penalty(j), cp_in%td_penalty(j))
       cp_out%pol(1:MAX_DIM, j) = cp_in%pol(1:MAX_DIM, j)
     end do
     if(par_common%mode .eq. parameter_mode_f) then
@@ -1213,7 +1207,7 @@ contains
       case('f')
         do j = 1, cp%no_parameters
           value = (M_ONE / parameters_alpha(cp, j)) * aimag(d1*dl(j)) / &
-           ( tdf(cp%td_penalty(j), iter) - M_TWO*aimag(dq(j)) )
+           ( tdf(par_common%td_penalty(j), iter) - M_TWO*aimag(dq(j)) )
           value = (M_ONE - delta)*tdf(cpp%f(j), iter) + delta * value
           call tdf_set_numerical(cp%f(j), iter, value)
           if(iter+1 <= cp%ntiter + 1)  call tdf_set_numerical(cp%f(j), iter+1, value)
@@ -1223,7 +1217,7 @@ contains
       case('b')
         do j = 1, cp%no_parameters
           value = (M_ONE / parameters_alpha(cp, j)) * aimag(d1*dl(j)) / &
-           ( tdf(cp%td_penalty(j), iter+1) - M_TWO*aimag(dq(j)) ) 
+           ( tdf(par_common%td_penalty(j), iter+1) - M_TWO*aimag(dq(j)) ) 
           value = (M_ONE - eta)*tdf(cpp%f(j), iter+1) + eta * value
           call tdf_set_numerical(cp%f(j), iter+1, value)
           if(iter > 0) call tdf_set_numerical(cp%f(j), iter, value)
