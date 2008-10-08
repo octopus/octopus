@@ -133,23 +133,6 @@ program octopus
 
   call calc_mode_set(inp_calc_mode)
 
-  !%Variable Dimensions
-  !%Type integer
-  !%Section System
-  !%Default 3
-  !%Description
-  !% octopus can run in 1, 2 or 3 dimensions, depending on the value of this
-  !% variable. Note that not all input variables may be available in all cases.
-  !%Option 1
-  !% The system is 1-dimensional
-  !%Option 2
-  !% The system is 2-dimensional
-  !%Option 3
-  !% The system is 3-dimensional
-  !%End
-  call loct_parse_int(check_inp('Dimensions'), 3, calc_dim)
-  if( calc_dim > 3 .or. calc_dim < 1) call input_error('Dimensions')
-
   ! loop over all datasets
   datasets: do ns = 1, no_datasets
 
@@ -160,6 +143,7 @@ program octopus
 
     ! datasets have to be available before calling the _init() functions below
     call io_init()
+
     ! now we declare octopus as running
     call io_switch_status('running')
 
@@ -200,6 +184,23 @@ program octopus
       message(2) = 'Info: Running dataset "'//trim(current_label)//'"'
       call write_info(2, stress = .true.)
     end if
+
+    !%Variable Dimensions
+    !%Type integer
+    !%Section System
+    !%Default 3
+    !%Description
+    !% octopus can run in 1, 2 or 3 dimensions, depending on the value of this
+    !% variable. Note that not all input variables may be available in all cases.
+    !%Option 1
+    !% The system is 1-dimensional
+    !%Option 2
+    !% The system is 2-dimensional
+    !%Option 3
+    !% The system is 3-dimensional
+    !%End
+    call loct_parse_int(check_inp('Dimensions'), 3, calc_dim)
+    if( calc_dim > 3 .or. calc_dim < 1) call input_error('Dimensions')
 
     ! now we really start
     call run_init()
