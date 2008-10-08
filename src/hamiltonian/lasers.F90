@@ -497,8 +497,8 @@ contains
         fluence = fluence * dt
         write(iunit,'(a,es12.6,3a)') '   Peak intensity = ', max_intensity, ' [a.u]'
         write(iunit,'(a,es12.6,3a)') '                  = ', max_intensity * 6.4364086e+15, ' [W/cm^2]'
-        write(iunit,'(a,es12.6,5a)') '   Int. intensity = ', fluence / units_out%energy%factor, &
-          ' [', trim(units_out%energy%abbrev), '/', trim(units_out%length%abbrev),'^2]'
+        write(iunit,'(a,es12.6,a)')  '   Int. intensity = ', fluence, ' [a.u]'
+        write(iunit,'(a,es12.6,a)')  '   Fluence        = ', (fluence / CNST(5.4525289841210) ), ' [a.u]'
       end if
 
     end do
