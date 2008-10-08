@@ -73,7 +73,7 @@ if test -z "${FCFLAGS}"; then
       FCFLAGS="-O3 -YEXT_NAMES=LCS -YEXT_SFX=_"
       ;;
     xlf*)
-      FCFLAGS="-O3 -qarch=auto -qtune=auto -qcache=auto"
+      FCFLAGS="-O3 -qarch=auto -qtune=auto -qcache=auto -qxlf90=autodealloc"
       ;;
     f9*)
       case "${host}" in
