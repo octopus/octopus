@@ -199,7 +199,7 @@ contains
     FLOAT                       :: d(MAX_DIM)
     type(states_dim_t), pointer :: states_dim
 
-    call push_sub('h.hamiltonian_init')
+    call push_sub('hamiltonian.hamiltonian_init')
 
     states_dim => st%d
     wfs_type   => st%wfs_type
@@ -677,7 +677,7 @@ contains
     type(grid_t),        intent(in)    :: gr
     type(geometry_t),    intent(inout) :: geo
 
-    call push_sub('h.hamiltonian_end')
+    call push_sub('hamiltonian.hamiltonian_end')
 
     if(h%multigrid_initialized) then
       call gridhier_end(h%coarse_v, gr%mgrid)
@@ -740,7 +740,7 @@ contains
     type(hamiltonian_t), intent(inout) :: h
     FLOAT,               intent(in)    :: delta, emin
 
-    call push_sub('h.hamiltonian_span')
+    call push_sub('hamiltonian.hamiltonian_span')
 
     h%spectral_middle_point = ((M_Pi**2/(2*delta**2)) + emin)/M_TWO
     h%spectral_half_span    = ((M_Pi**2/(2*delta**2)) - emin)/M_TWO
@@ -826,11 +826,11 @@ contains
 
 #include "undef.F90"
 #include "real.F90"
-#include "h_inc.F90"
+#include "hamiltonian_inc.F90"
 
 #include "undef.F90"
 #include "complex.F90"
-#include "h_inc.F90"
+#include "hamiltonian_inc.F90"
 
 end module hamiltonian_m
 

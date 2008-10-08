@@ -41,7 +41,7 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
 
 
   call profiling_in(C_PROFILING_HPSI)
-  call push_sub('h_inc.Xhpsi_batch')
+  call push_sub('hamiltonian_inc.Xhpsi_batch')
 
   kinetic_only_ = .false.
   if(present(kinetic_only)) kinetic_only_ = kinetic_only
@@ -246,7 +246,7 @@ subroutine X(exchange_operator) (h, gr, psi, hpsi, ist, ik)
   R_TYPE, allocatable :: rho(:), pot(:)
   integer :: j, k
 
-  call push_sub('h_inc.Xexchange_operator')
+  call push_sub('hamiltonian_inc.Xexchange_operator')
 
   ALLOCATE(rho(gr%m%np), gr%m%np)
   ALLOCATE(pot(gr%m%np), gr%m%np)
@@ -306,7 +306,7 @@ subroutine X(oct_exchange_operator) (h, gr, psi, hpsi, ik)
   R_TYPE, allocatable :: rho(:), pot(:)
   integer :: j, k
 
-  call push_sub('h_inc.Xexchange_operator')
+  call push_sub('hamiltonian_inc.Xexchange_operator')
 
   ALLOCATE(rho(gr%m%np), gr%m%np)
   ALLOCATE(pot(gr%m%np), gr%m%np)
@@ -362,7 +362,7 @@ subroutine X(magnus) (h, gr, psi, hpsi, ik, vmagnus)
 
   ! We will assume, for the moment, no spinors.
 
-  call push_sub('h_inc.Xmagnus')
+  call push_sub('hamiltonian_inc.Xmagnus')
 
   ALLOCATE( auxpsi(NP_PART, h%d%dim), NP_PART*h%d%dim)
   ALLOCATE(aux2psi(NP,      h%d%dim), NP*h%d%dim)
@@ -415,7 +415,7 @@ subroutine X(magnetic_terms) (gr, h, psi, hpsi, grad, ik)
   FLOAT,  allocatable :: div(:), tmp(:,:)
   R_TYPE, allocatable :: lhpsi(:, :)
 
-  call push_sub('h_inc.Xmagnetic_terms')
+  call push_sub('hamiltonian_inc.Xmagnetic_terms')
 
   if(h%d%cdft .or. associated(h%ep%A_static)) then
     call X(get_grad)(h, gr, psi, grad)
@@ -513,7 +513,7 @@ subroutine X(vnlpsi) (h, mesh, psi, hpsi, ik)
   integer,             intent(in)    :: ik
 
   call profiling_in(C_PROFILING_VNLPSI)
-  call push_sub('h_inc.Xvnlpsi')
+  call push_sub('hamiltonian_inc.Xvnlpsi')
 
   call X(project_psi)(mesh, h%ep%proj, h%ep%natoms, h%d%dim, psi, hpsi, ik)
     
@@ -534,7 +534,7 @@ subroutine X(vnlpsi_batch) (h, mesh, psib, hpsib, ik)
   R_TYPE, pointer :: psi(:, :), hpsi(:, :)
 
   call profiling_in(C_PROFILING_VNLPSI)
-  call push_sub('h_inc.Xvnlpsi')
+  call push_sub('hamiltonian_inc.Xvnlpsi')
 
   do ii = 1, psib%nst
     psi  => psib%states(ii)%X(psi)
@@ -561,7 +561,7 @@ subroutine X(vlpsi_batch) (h, m, psib, hpsib, ik)
   FLOAT, allocatable  :: vv(:)
 
   call profiling_in(C_PROFILING_VLPSI)
-  call push_sub('h_inc.Xvlpsi')
+  call push_sub('hamiltonian_inc.Xvlpsi')
 
   select case(h%d%ispin)
   case(UNPOLARIZED, SPIN_POLARIZED)
@@ -626,7 +626,7 @@ subroutine X(vexternal) (h, gr, psi, hpsi, ik)
   integer :: idim
 
   call profiling_in(C_PROFILING_VLPSI)
-  call push_sub('h_inc.Xvlpsi')
+  call push_sub('hamiltonian_inc.Xvlpsi')
 
   do idim = 1, h%d%dim
     hpsi(1:NP, idim) = hpsi(1:NP, idim) + h%ep%vpsl(1:NP)*psi(1:NP, idim)
@@ -649,7 +649,7 @@ subroutine X(vgauge) (gr, h, psi, hpsi, grad)
   integer :: ip, idim, a2
   FLOAT :: vecpot(1:MAX_DIM)
 
-  call push_sub('h_inc.Xvgauge')
+  call push_sub('hamiltonian_inc.Xvgauge')
 
   ASSERT(gauge_field_is_applied(h%ep%gfield))
 
@@ -678,7 +678,7 @@ subroutine X(vborders) (gr, h, psi, hpsi)
 
   integer :: idim
 
-  call push_sub('h_inc.Xvborders')
+  call push_sub('hamiltonian_inc.Xvborders')
 
   if(h%ab .eq. IMAGINARY_ABSORBING) then
     do idim = 1, h%d%dim
@@ -698,7 +698,7 @@ subroutine X(vmask) (gr, h, st)
 
   integer :: ik, ist, idim
 
-  call push_sub('h_inc.Xvmask')
+  call push_sub('hamiltonian_inc.Xvmask')
 
   if(h%ab == MASK_ABSORBING) then
     do ik = 1, st%d%nik
@@ -725,7 +725,7 @@ subroutine X(hpsi_diag) (h, gr, diag, ik, t)
 
   FLOAT, allocatable  :: ldiag(:)
 
-  call push_sub('h_inc.Xhpsi_diag')
+  call push_sub('hamiltonian_inc.Xhpsi_diag')
   
   ALLOCATE(ldiag(NP), NP)
 
