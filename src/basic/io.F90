@@ -67,6 +67,7 @@ contains
     logical :: file_exists, mpi_debug_hook
     integer :: sec, usec
 
+    call push_sub('io.io_init')
 
     if(present(defaults)) then
       if(defaults) then
@@ -245,14 +246,20 @@ contains
       call io_mkdir('debug')
     end if
 
+    call pop_sub()
+
   end subroutine io_init
 
 
   ! ---------------------------------------------------------
   subroutine io_end()
+    call push_sub('io.io_end')
+
     if(stderr.ne.0) call io_close(stderr)
     if(stdin .ne.5) call io_close(stdin)
     if(stdout.ne.6) call io_close(stdout)
+
+    call pop_sub()
   end subroutine io_end
 
 
@@ -262,6 +269,8 @@ contains
 
     integer :: iostat
     logical :: used
+
+    call push_sub('io.io_assign')
 
     lun = -1
 
@@ -275,6 +284,8 @@ contains
       end if
     end do
 
+    call pop_sub()
+
   end subroutine io_assign
 
 
@@ -282,8 +293,13 @@ contains
   subroutine io_free(lun)
     integer, intent(in) :: lun
 
+    call push_sub('io.io_free')
+
     if (lun .ge. min_lun .and. lun .le. max_lun) &
       lun_is_free(lun) = .true.
+
+    call pop_sub()
+
   end subroutine io_free
 
 
@@ -293,6 +309,8 @@ contains
     logical, optional, intent(in) :: is_tmp
 
     logical :: is_tmp_
+
+    call push_sub('io.io_workpath')
 
     is_tmp_ = .false.
     if(present(is_tmp)) is_tmp_ = is_tmp
@@ -309,6 +327,8 @@ contains
       end if
     end if
 
+    call pop_sub()
+
   end function io_workpath
 
 
@@ -319,10 +339,15 @@ contains
 
     logical :: is_tmp_
 
+    call push_sub('io.io_mkdir')
+
     is_tmp_ = .false.
     if(present(is_tmp)) is_tmp_ = is_tmp
 
     call loct_mkdir(trim(io_workpath(fname, is_tmp_)))
+
+    call pop_sub()
+
   end subroutine io_mkdir
 
 
@@ -339,6 +364,8 @@ contains
     logical            :: die_, is_tmp_
     integer            :: iostat
     type(mpi_grp_t)    :: grp_
+
+    call push_sub('io.io_open')
 
     if(present(grp)) then
       grp_%comm = grp%comm
@@ -402,6 +429,8 @@ contains
     end if
 #endif
 
+    call pop_sub()
+    
   end function io_open
 
 
@@ -411,6 +440,8 @@ contains
     type(mpi_grp_t),  intent(in), optional :: grp
 
     type(mpi_grp_t)    :: grp_
+
+    call push_sub('io.io_close')
 
     if(present(grp)) then
       grp_%comm = grp%comm
@@ -432,6 +463,8 @@ contains
     end if
 #endif
 
+    call pop_sub()
+
   end subroutine io_close
 
 
@@ -447,6 +480,8 @@ contains
     character(len=50) :: filename
     character(len=11) :: form
 
+    call push_sub('io.io_status')
+
     write(iunit, '(a)') '******** io_status ********'
     do i = 0, max_lun
       inquire(i, opened=opened, named=named, name=filename, form=form, iostat=iostat)
@@ -461,6 +496,8 @@ contains
     end do
     write(iunit,'(a)') '********           ********'
 
+    call pop_sub()
+
   end subroutine io_status
 
 
@@ -470,7 +507,9 @@ contains
     character(len=*), intent(in) :: filename
 
     integer :: iunit, err
-    character(len=80) :: s
+    character(len=80) :: line
+
+    call push_sub('io.io_dump_file')
 
     call io_assign(iunit)
     open(unit=iunit, file=filename, iostat=err, action='read', status='old')
@@ -481,11 +520,11 @@ contains
     end if
 
     do while(err == 0)
-      read(iunit, fmt='(a80)', iostat=err) s
+      read(iunit, fmt='(a80)', iostat=err) line
       if(err==0) then
-        write(ounit, '(a)') s
+        write(ounit, '(a)') trim(line)
         if(flush_messages.and.mpi_grp_is_root(mpi_world)) then
-          write(iunit_out, '(a)') s        
+          write(iunit_out, '(a)') trim(line)
         endif
       end if
     end do
@@ -495,6 +534,7 @@ contains
     end if
 
     call io_close(iunit)
+    call pop_sub()
 
   end subroutine io_dump_file
 
@@ -507,6 +547,8 @@ contains
     character(len = * ), intent(in)  :: path
     integer :: i, j
 
+    call push_sub('io.io_get_extension')
+
     i = index(path, ".", back = .true.)
     j = index(path(i+1:), "/")
     if(i.eq.0 .or. j.ne.0) then
@@ -514,6 +556,9 @@ contains
     else
       ext = path(i+1:)
     end if
+
+    call pop_sub()
+
   end function io_get_extension
 
 
@@ -523,6 +568,8 @@ contains
     character(len=*), intent(in) :: status
     
     integer :: iunit
+
+    call push_sub('io.io_switch_status')
 
     ! only root node is taking care of file I/O
     if(.not.mpi_grp_is_root(mpi_world)) return
@@ -535,6 +582,8 @@ contains
       action='write', status='unknown', is_tmp=.true.)
     call io_close(iunit)
 
+    call pop_sub()
+
   end subroutine io_switch_status
 
 
@@ -542,6 +591,8 @@ contains
   ! check if debug mode or message flushing should be enabled or 
   ! disabled on the fly
   subroutine io_debug_on_the_fly()
+
+    call push_sub('io.io_debug_on_the_fly')
 
     ! only root node performs the check
     if(.not.mpi_grp_is_root(mpi_world)) return
@@ -575,6 +626,8 @@ contains
       call loct_rm('disable_flush_messages')
     endif
 
+    call pop_sub()
+
   end subroutine io_debug_on_the_fly
 
   
@@ -583,6 +636,8 @@ contains
   logical function io_file_exists(filename, msg) result(file_exists)
     character(len=*), intent(in)  :: filename, msg
 
+    call push_sub('io.io_file_exists')
+
     file_exists = .false.
     inquire(file=trim(filename), exist=file_exists)
     if(file_exists) then
@@ -590,7 +645,9 @@ contains
       call write_warning(1)
     end if
 
+    call pop_sub()
     return
+
   end function io_file_exists
 
 
@@ -622,7 +679,7 @@ contains
     type(mpi_grp_t), intent(in)  :: grp
     integer,         intent(in)  :: iunit
 
-    call push_sub('out.iopar_read')
+    call push_sub('out.iopar_backspace')
 
     if(mpi_grp_is_root(grp)) then
       backspace(iunit)
@@ -639,12 +696,16 @@ contains
 
     character(len=1) :: a
 
+    call push_sub('io.io_skip_header')
+
     rewind(iunit)
     read(iunit,'(a)') a
     do while(a=='#')
       read(iunit,'(a)') a
     end do
     backspace(iunit)
+
+    call pop_sub()
 
   end subroutine io_skip_header
 
