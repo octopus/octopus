@@ -51,10 +51,10 @@ module species_m
     species_nl_projector
 
   integer, public, parameter :: &
-    SPEC_USDEF  = 123,          & ! user defined function
+    SPEC_USDEF  = 123,          & ! user-defined function
     SPEC_POINT  = 2,            & ! point charge: jellium sphere of radius 0.5 a.u.
     SPEC_JELLI  = 3,            & ! jellium sphere.
-    SPEC_ALL_E  = 124,          & ! All electron atom
+    SPEC_ALL_E  = 124,          & ! all-electron atom
     SPEC_PS_PSF = PS_TYPE_PSF,  & ! SIESTA pseudopotential
     SPEC_PS_HGH = PS_TYPE_HGH,  & ! HGH pseudopotential
     SPEC_PS_CPI = PS_TYPE_CPI,  & ! FHI pseudopotential (cpi format)
@@ -71,9 +71,9 @@ module species_m
                                   ! minus the core charge in the case of the pseudopotentials
     FLOAT   :: weight             ! mass, in atomic mass units (!= atomic units of mass)
 
-    logical :: has_density        ! true if the species has a electric density 
+    logical :: has_density        ! true if the species has an electric density 
     
-    ! for the user defined potential
+    ! for the user-defined potential
     character(len=1024) :: user_def
     FLOAT :: omega
 
@@ -182,7 +182,7 @@ contains
     !% octopus homepage</a>.
     !%
     !% The format of this block is the following: The first field is
-    !% the name of the specie, followed by the atomic mass (in atomic mass
+    !% the name of the species, followed by the atomic mass (in atomic mass
     !% units). The third field defines the type of species (the valid options
     !% are detailed below), each type needs some extra parameters given in
     !% the following fields of the row.
@@ -200,55 +200,55 @@ contains
     !%
     !%
     !%Option user_defined  123
-    !% Species with user defined potential. In this case, the fourth
+    !% Species with user-defined potential. In this case, the fourth
     !% field is the valence charge and the fifth
     !% field is a string with a mathematical expression that defines the
     !% potential (you can use any of the <i>x</i>, <i>y</i>, <i>z</i>
     !% or <i>r</i> variables).
     !%Option spec_point  2
-    !% Point charge, the fourth field is the value of the charge.
+    !% Point charge: the fourth field is the value of the charge.
     !%Option spec_jelli  3
-    !% Jellium sphere, the extra parameters are the charge of the jellium
+    !% Jellium sphere: the extra parameters are the charge of the jellium
     !% sphere (an equal value of valence charge is assumed) and the radius of
     !% the sphere.
     !%Option spec_ps_psf  100
-    !% Troullier Martins pseudopotential in SIESTA format, the pseudopotential will be
-    !% read from an <i>.psf</i> file, either in the working
+    !% Troullier Martins pseudopotential in SIESTA format: the pseudopotential will be
+    !% read from a <i>.psf</i> file, either in the working
     !% directory or in the <i>OCTOPUS-HOME/share/octopus/PP/PSF</i> directory.
     !% The following three numbers are the atomic number, the maximum
-    !% <i>l</i>-component of the pseudo-potential to consider in the
+    !% <i>l</i>-component of the pseudopotential to consider in the
     !% calculation, and the <i>l</i>-component to consider as local.
     !%Option spec_ps_hgh  101
-    !% Hartwigsen-Goedecker-Hutter pseudopotentials, the next field is
-    !% the atomic number an the last two numbers are irrelevant, since they
-    !% do are not necessary to define the HGH pseudopotentials.
+    !% Hartwigsen-Goedecker-Hutter pseudopotentials: the next field is
+    !% the atomic number and the last two numbers are irrelevant, since they
+    !% are not necessary to define the HGH pseudopotential.
     !%Option spec_ps_cpi  102
-    !% Fritz-Haber pseudopotential, the pseudopotential will be
-    !% read from an <i>.cpi</i> file, either in the working
+    !% Fritz-Haber pseudopotential: the pseudopotential will be
+    !% read from a <i>.cpi</i> file, either in the working
     !% directory or in the <i>OCTOPUS-HOME/share/PP/CPI</i> directory.
     !% The following three numbers are the atomic number, the maximum
-    !% <i>l</i>-component of the pseudo-potential to consider in the
+    !% <i>l</i>-component of the pseudopotential to consider in the
     !% calculation, and the <i>l</i>-component to consider as local.
     !%Option spec_ps_fhi  103
-    !% Fritz-Haber pseudopotential (ABINIT format), the pseudopotential will be
+    !% Fritz-Haber pseudopotential (ABINIT format): the pseudopotential will be
     !% read from an <i>.fhi</i> file, either in the working
     !% directory or in the <i>OCTOPUS-HOME/share/PP/FHI</i> directory.
     !% The following three numbers are the atomic number, the maximum
-    !% <i>l</i>-component of the pseudo-potential to consider in the
+    !% <i>l</i>-component of the pseudopotential to consider in the
     !% calculation, and the <i>l</i>-component to consider as local.
     !% Note that you can use the pseudopotentials from ABINT homepage
     !%Option spec_ps_upf  104
-    !% UPF format, the pseudopotential will be
+    !% UPF format: the pseudopotential will be
     !% read from an <i>.UPF</i> file, either in the working
     !% directory or in the <i>OCTOPUS-HOME/share/PP/UPF</i> directory.
     !% The following number is the atomic number. The last two numbers are 
-    !% ignored, as the maximum <i>l</i>-component of the pseudo-potential to
+    !% ignored, as the maximum <i>l</i>-component of the pseudopotential to
     !% consider in the calculation and the <i>l</i>-component to consider as
-    !% local are indicated in the pseudo-potential file are cannot be changed.
+    !% local are indicated in the pseudopotential file are cannot be changed.
     !%Option spec_all_e   124
-    !% Atom represented with all electrons, the extra parameter is the
+    !% Atom represented with all electrons; the extra parameter is the
     !% atomic number. See the documentation of the variable 
-    !% SpecieAllElectronSigma.
+    !% SpeciesAllElectronSigma.
     !% 
     !% WARNING: Currently you can not use LCAO with this species.
     !%End
