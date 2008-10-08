@@ -33,7 +33,8 @@ libbasic_a_SOURCES = \
 	varia.c        \
 	oct_f.c        \
 	oct_gdlib_f.c  \
-	write_iter.c   \
+	write_iter.F90 \
+	write_iter_low.c \
 	varinfo_low.c  \
 	signals.c
 
@@ -70,29 +71,30 @@ global.o: global.F90
 depend:
 	@makedepf90 $(libbasic_a_SOURCES)
 
+mpi.o : mpi.F90 
+hardware.o : hardware.F90
+ialist.o : ialist.F90
+c_pointer.o : c_pointer.F90
+command_line.o : command_line.F90
+periodic_table.o : periodic_table.F90
 loct.o : loct.F90 c_pointer.o
 string.o : string.F90 c_pointer.o
 varinfo.o : varinfo.F90 string.o c_pointer.o
-mpi.o : mpi.F90 
 global.o : global.F90 mpi.o loct.o hardware.o
 loct_parser.o : loct_parser.F90 mpi.o loct.o global.o c_pointer.o
 datasets.o : datasets.F90 loct_parser.o c_pointer.o
 messages.o : messages.F90 varinfo.o string.o mpi.o loct_parser.o loct.o global.o datasets.o 
 io.o : io.F90 mpi.o messages.o loct_parser.o loct.o global.o datasets.o 
-io_binary.o : io_binary.c 
 mpi_lib.o : mpi_lib.F90 mpi_lib_inc.F90 mpi_debug.o mpi.o messages.o global.o 
 units.o : units.F90 io.o messages.o loct_parser.o global.o datasets.o  varinfo.o
 mpi_debug.o : mpi_debug.F90 mpi_debug_inc.F90 mpi.o messages.o loct.o global.o 
 profiling.o : profiling.F90 mpi.o messages.o loct.o io.o global.o 
 utils.o : utils.F90 messages.o global.o 
 multicomm.o : multicomm.F90 varinfo.o utils.o mpi.o messages.o loct_parser.o io.o global.o datasets.o 
-periodic_table.o : periodic_table.F90 
-getopt_f.o : getopt_f.c 
-command_line.o : command_line.F90 
-c_pointer.o : c_pointer.F90
-hardware.o : hardware.F90
-ialist.o : ialist.F90
 iihash.o : iihash.F90 ialist.o global.o
 calc_mode.o : calc_mode.F90 multicomm.o
 distributed.o: distributed.F90 multicomm.o
 varia.o : varia.c varia.h
+io_binary.o : io_binary.c
+getopt_f.o : getopt_f.c
+

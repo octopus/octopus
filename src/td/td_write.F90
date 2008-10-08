@@ -23,6 +23,7 @@ module td_write_m
   use c_pointer_m
   use datasets_m
   use excited_states_m
+  use external_pot_m
   use gauge_field_m
   use geometry_m
   use global_m
@@ -31,7 +32,6 @@ module td_write_m
   use io_m
   use ion_dynamics_m
   use lasers_m
-  use loct_m
   use loct_parser_m
   use magnetic_m
   use mesh_function_m
@@ -47,7 +47,7 @@ module td_write_m
   use states_lalg_m
   use units_m
   use varinfo_m
-  use external_pot_m
+  use write_iter_m
 
   implicit none
 
