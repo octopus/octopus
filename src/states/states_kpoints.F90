@@ -188,7 +188,7 @@ subroutine states_choose_kpoints(d, sb, geo)
   
 
   ALLOCATE(natom(geo%nspecies), geo%nspecies)
-  ALLOCATE(coorat(geo%nspecies, geo%natoms, sb%dim), geo%nspecies*geo%natoms*sb%dim)
+  ALLOCATE(coorat(geo%nspecies, geo%natoms, 3), geo%nspecies*geo%natoms*3)
 
   natom  = 0
   coorat = M_ZERO
