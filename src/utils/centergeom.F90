@@ -50,7 +50,7 @@ program centergeom
   call geometry_init_species(geo)          ! we also need the masses
 
   call xyz_adjust_it(geo)
-  call atom_write_xyz(".", "adjusted", geo)
+  call atom_write_xyz(".", "adjusted", geo, 3)
 
   call geometry_end(geo)                   ! clean up
 

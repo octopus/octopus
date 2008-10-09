@@ -104,6 +104,7 @@ contains
 
     ALLOCATE(mesh%lead_unit_cell(NLEADS), NLEADS)
 
+PRINT *, "OLA"
     do il = 1, NLEADS
       m => mesh%lead_unit_cell(il)
       iunit = io_open(trim(sb%lead_restart_dir(il))//'/gs/mesh', action='read', is_tmp=.true.)
@@ -118,6 +119,7 @@ contains
       call mesh_lxyz_init_from_file(m, iunit)
       call io_close(iunit)
     end do
+print *, "ola2"
 
     call pop_sub()
   end subroutine mesh_read_lead
@@ -457,7 +459,7 @@ contains
     else ! serial mode
       do i = 1, mesh%np_part
         chi(1:sb%dim) = mesh%Lxyz(i, 1:sb%dim) * mesh%h(1:sb%dim)
-        mesh%vol_pp(i) = mesh%vol_pp(i)*curvlinear_det_Jac(sb, geo, cv, mesh%x(i, :), chi(1:sb%dim))
+        mesh%vol_pp(i) = mesh%vol_pp(i)*curvlinear_det_Jac(sb, geo, cv, mesh%x(i, 1:sb%dim), chi(1:sb%dim))
       end do
     end if
 

@@ -47,7 +47,7 @@ module curvlinear_m
     curvlinear_write_info,      &
     curvlinear_dump,            &
     curvlinear_init_from_file,  &
-    operator(.eq.)
+    curvlinear_is_eq
 
   integer, parameter, public :: &
     CURV_METHOD_UNIFORM = 1,    &
@@ -61,10 +61,6 @@ module curvlinear_m
     type(curv_briggs_t) :: briggs
     type(curv_modine_t) :: modine
   end type curvlinear_t
-
-  interface operator(.eq.)
-    module procedure curv_is_equal
-  end interface
 
   character(len=23), parameter :: dump_tag = '*** curvlinear_dump ***'
 
@@ -147,7 +143,7 @@ contains
 
     select case(cv%method)
     case(CURV_METHOD_UNIFORM)
-      x = matmul(sb%rlattice, chi)
+      x = matmul(sb%rlattice(1:sb%dim,1:sb%dim), chi(1:sb%dim))
     case(CURV_METHOD_GYGI)
       call curv_gygi_chi2x(sb, geo, cv%gygi, chi, x)
     case(CURV_METHOD_BRIGGS)
@@ -188,25 +184,30 @@ contains
     FLOAT,              intent(in)  :: x(:)    !   x(sb%dim)
     FLOAT,              intent(in)  :: chi(:)  ! chi(sb%dim)
 
-    FLOAT :: dummy(MAX_DIM), Jac(MAX_DIM, MAX_DIM)
+    FLOAT :: dummy(MAX_DIM)
+    FLOAT, allocatable :: Jac(:,:)
     integer :: i
+
+    if(cv%method.ne.CURV_METHOD_UNIFORM) ALLOCATE(Jac(sb%dim, sb%dim), sb%dim**2)
 
     select case(cv%method)
     case(CURV_METHOD_UNIFORM)
       jdet = sb%volume_element
     case(CURV_METHOD_GYGI)
-      call curv_gygi_jacobian(sb, geo, cv%gygi, x, dummy(1:sb%dim), Jac(1:sb%dim, 1:sb%dim))
+      call curv_gygi_jacobian(sb, geo, cv%gygi, x, dummy, Jac)
       jdet = M_ONE/lalg_determinant(sb%dim, Jac, invert = .false.)
     case(CURV_METHOD_BRIGGS)
-      call curv_briggs_jacobian_inv(sb, cv%briggs, chi, Jac(1:sb%dim, 1:sb%dim))
+      call curv_briggs_jacobian_inv(sb, cv%briggs, chi, Jac)
       jdet = M_ONE
       do i = 1, sb%dim
         jdet = jdet * Jac(i,i) ! Jacobian is diagonal in this method
       end do
     case(CURV_METHOD_MODINE)
-      call curv_modine_jacobian_inv(sb, geo, cv%modine, chi, dummy(1:sb%dim), Jac(1:sb%dim, 1:sb%dim))
-      jdet = M_ONE*lalg_determinant(sb%dim, Jac(1:sb%dim, 1:sb%dim), invert = .false.)
+      call curv_modine_jacobian_inv(sb, geo, cv%modine, chi, dummy, Jac)
+      jdet = M_ONE*lalg_determinant(sb%dim, Jac, invert = .false.)
     end select
+
+    if(cv%method.ne.CURV_METHOD_UNIFORM) deallocate(Jac)
 
   end function curvlinear_det_Jac
 
@@ -303,7 +304,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  logical function curv_is_equal(cv1, cv2) result(res)
+  logical function curvlinear_is_eq(cv1, cv2) result(res)
     type(curvlinear_t), intent(in) :: cv1, cv2
 
     res = .false.
@@ -325,7 +326,7 @@ contains
     end select
     res = .true.
 
-  end function curv_is_equal
+  end function curvlinear_is_eq
 
 end module curvlinear_m
 

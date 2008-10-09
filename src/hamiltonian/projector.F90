@@ -245,7 +245,7 @@ contains
         if(ll == p%lloc) cycle
         do mm = -ll, ll
           call rkb_projector_null(p%rkb_p(ll, mm))
-          call rkb_projector_init(p%rkb_p(ll, mm), p%sphere, gr, a, ll, mm, so_strength)
+          call rkb_projector_init(p%rkb_p(ll, mm), p%sphere, a, ll, mm, so_strength)
         end do
       end do
       ! for rkb, l = 0 is a normal kb

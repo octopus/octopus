@@ -187,7 +187,7 @@ contains
       g_opt%geo%atom(i+1)%x(2) = x(3*i + 2)
       g_opt%geo%atom(i+1)%x(3) = x(3*i + 3)
     end do
-    call atom_write_xyz(".", "min", g_opt%geo)
+    call atom_write_xyz(".", "min", g_opt%geo, sys%NDIM)
 
     deallocate(x)
     call scf_end(g_opt%scfv)
@@ -352,7 +352,7 @@ contains
       g_opt%geo%atom(i+1)%x(3) = x(3*i + 3)
     end do
 
-    call atom_write_xyz(".", "work-geom", g_opt%geo, append=.true.)
+    call atom_write_xyz(".", "work-geom", g_opt%geo, g_opt%syst%NDIM, append=.true.)
 
     call epot_generate(g_opt%hamilt%ep, g_opt%syst%gr, g_opt%syst%geo, g_opt%syst%st)
     call states_calc_dens(g_opt%st, g_opt%m%np, g_opt%st%rho)
@@ -397,10 +397,12 @@ contains
 
   end subroutine calc_point_ng
 
+
+  ! ---------------------------------------------------------
   subroutine write_iter_info(geom_iter, n, energy, maxdx, maxdf, x)
-    integer, intent(in) :: geom_iter, n
-    REAL_DOUBLE, intent(in) :: energy, maxdx, maxdf
-    REAL_DOUBLE, intent(in) :: x(n)
+    integer,      intent(in) :: geom_iter, n
+    REAL_DOUBLE,  intent(in) :: energy, maxdx, maxdf
+    REAL_DOUBLE,  intent(in) :: x(n)
 
     integer :: i
     character(len=256) :: c_geom_iter, title
@@ -409,7 +411,7 @@ contains
     
     write(c_geom_iter, '(a,i4.4)') "go.", geom_iter
     write(title, '(f16.10)') energy/units_out%energy%factor
-    call atom_write_xyz("geom", trim(c_geom_iter), g_opt%geo, comment=trim(title))
+    call atom_write_xyz("geom", trim(c_geom_iter), g_opt%geo, g_opt%syst%NDIM, comment=trim(title))
 
     do i = 0, g_opt%geo%natoms - 1
       g_opt%geo%atom(i+1)%x(1) = x(3*i + 1)

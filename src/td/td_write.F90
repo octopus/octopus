@@ -723,14 +723,17 @@ contains
       call td_write_print_header_end(out_multip)
     end if
 
-    ALLOCATE(nuclear_dipole(1:3), 3)
+    ALLOCATE(nuclear_dipole(1:MAX_DIM), MAX_DIM)
     ALLOCATE(multipole((lmax + 1)**2, st%d%nspin), (lmax + 1)**2*st%d%nspin)
+    nuclear_dipole(:) = M_ZERO
+    multipole   (:,:) = M_ZERO
+
     do is = 1, st%d%nspin
       call dmf_multipoles(gr%m, st%rho(:,is), lmax, multipole(:,is))
     end do
     call geometry_dipole(geo, nuclear_dipole)
     do is = 1, st%d%nspin
-      multipole(2:4, is) = nuclear_dipole(1:3) - multipole(2:4, is)
+      multipole(2:NDIM+1, is) = nuclear_dipole(1:NDIM) - multipole(2:NDIM+1, is)
     end do
 
     if(mpi_grp_is_root(mpi_world)) then

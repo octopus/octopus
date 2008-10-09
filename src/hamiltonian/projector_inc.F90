@@ -176,7 +176,7 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, ik)
         case(M_RKB)
 #ifdef R_TCOMPLEX
           if(ll /= 0) then
-            call rkb_project_ket(mesh, pj(ipj)%sphere, pj(ipj)%rkb_p(ll, mm), reduce_buffer(ii:), lpsi)
+            call rkb_project_ket(pj(ipj)%rkb_p(ll, mm), reduce_buffer(ii:), lpsi)
           else
             call zkb_project_ket(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(1, 1), dim, reduce_buffer(ii:), lpsi)
           end if

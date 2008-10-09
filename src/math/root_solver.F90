@@ -54,6 +54,7 @@ module root_solver_m
   type root_solver_t
     private
     integer :: solver_type    ! what solver to use (see ROOT_* variables above)_m
+    integer :: dim            ! dimensionality of the problem
     integer :: maxiter        ! maximal number of iterations
     integer :: usediter       ! number of actually performed iterations
     FLOAT   :: abs_tolerance
@@ -71,9 +72,10 @@ module root_solver_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine root_solver_init(rs, solver_type, maxiter, rel_tolerance, &
+  subroutine root_solver_init(rs, dimensionality, solver_type, maxiter, rel_tolerance, &
     abs_tolerance, have_polynomial, ws_radius)
     type(root_solver_t), intent(out) :: rs
+    integer,             intent(in)  :: dimensionality
     integer, optional,   intent(in)  :: solver_type, maxiter
     FLOAT, optional,     intent(in)  :: rel_tolerance, abs_tolerance, ws_radius
     logical, optional,   intent(in)  :: have_polynomial
@@ -81,6 +83,7 @@ contains
     call push_sub('root_solver.root_solver_init')
 
     ! Fill in the defaults
+    rs%dim             = dimensionality
     rs%solver_type     = ROOT_NEWTON
     rs%maxiter         = 100
     rs%rel_tolerance   = CNST(1.0e-8)
@@ -340,31 +343,28 @@ contains
 
     call push_sub('root_solver_inc.Xroot_newton')
 
-    ! Figure out the dimensionality of the problem
-    n = size(startval)
-
-    ALLOCATE(f(n), n)
-    ALLOCATE(jf(n, n), n*n)
-    ALLOCATE(delta(n, 1), n)
-    ALLOCATE(rhs(n, 1), n)
+    ALLOCATE(    f(rs%dim),         rs%dim)
+    ALLOCATE(   jf(rs%dim, rs%dim), rs%dim**2)
+    ALLOCATE(delta(rs%dim, 1),      rs%dim)
+    ALLOCATE(  rhs(rs%dim, 1),      rs%dim)
 
     root = startval
     call func(root, f, jf)
-    err = sum(f(:)*f(:))
+    err = sum(f(1:rs%dim)**2)
 
     success = .true.
     iter = 0
     do while(err > rs%abs_tolerance)
-      rhs(1:n, 1) = -f(1:n)
-      call lalg_linsyssolve(n, 1, jf, rhs, delta)
-      root(1:n) = root(1:n) + delta(1:n, 1)
+      rhs(1:rs%dim, 1) = -f(1:rs%dim)
+      call lalg_linsyssolve(rs%dim, 1, jf, rhs, delta)
+      root(1:rs%dim) = root(1:rs%dim) + delta(1:rs%dim, 1)
       iter = iter + 1
       if(iter > rs%maxiter) then
         success = .false.
         exit
       end if
       call func(root, f, jf)
-      err = sum(f(:)*f(:))
+      err = sum(f(1:rs%dim)**2)
     end do
 
     deallocate(f, jf, delta, rhs)

@@ -44,12 +44,12 @@ module simul_box_m
     simul_box_end,              &
     simul_box_write_info,       &
     simul_box_is_periodic,      &
+    simul_box_is_eq,            &
     simul_box_in_box,           &
     simul_box_dump,             &
     simul_box_init_from_file,   &
     simul_box_atoms_in_box,     &
     lead_unit_cell_extent,      &
-    operator(.eq.),             &
     assignment(=)
 
   integer, parameter, public :: &
@@ -108,10 +108,6 @@ module simul_box_m
     ! it makes things a bit easier.
     character(len=1000)        :: lead_td_pot_formula(NLEADS) ! Td-potential of lead.
   end type simul_box_t
-
-  interface operator(.eq.)
-    module procedure simul_box_is_eq
-  end interface
 
   interface assignment(=)
     module procedure simul_box_copy
@@ -971,6 +967,8 @@ contains
       'parallelepiped', &
       'image defined '/)
 
+    integer :: ii
+
     call push_sub('simul_box.simul_box_write_info')
 
     write(message(1),'(a)') 'Simulation Box:'
@@ -1007,17 +1005,21 @@ contains
     if(sb%periodic_dim > 0 .or. sb%box_shape == PARALLELEPIPED) then
       write(message(1),'(1x)')
       write(message(2),'(a,3a,a)') '  Lattice Vectors [', trim(units_out%length%abbrev), ']'
-      write(message(3),'(3f12.6)')   sb%rlattice(:,1)*M_TWO*sb%lsize(1)/units_out%length%factor
-      write(message(4),'(3f12.6)')   sb%rlattice(:,2)*M_TWO*sb%lsize(2)/units_out%length%factor
-      write(message(5),'(3f12.6)')   sb%rlattice(:,3)*M_TWO*sb%lsize(3)/units_out%length%factor
-      write(message(6),'(a,3a,a)') '  Reciprocal Lattice Vectors [', trim(units_out%length%abbrev), '^-1]'
-      write(message(7),'(3f12.6)')   sb%klattice(:,1)/units_out%length%factor
-      write(message(8),'(3f12.6)')   sb%klattice(:,2)/units_out%length%factor
-      write(message(9),'(3f12.6)')   sb%klattice(:,3)/units_out%length%factor
-      write(message(10),'(a,f12.6,3a)') &
-        '  Volume element = ', sb%volume_element/units_out%length%factor, &
+      do ii = 1, sb%dim
+        write(message(2+ii),'(9f12.6)') sb%rlattice(1:sb%dim,ii)*M_TWO*sb%lsize(ii)/units_out%length%factor
+      end do
+      call write_info(2+sb%dim, iunit)
+
+      write(message(1),'(a,3a,a)') '  Reciprocal Lattice Vectors [', trim(units_out%length%abbrev), '^-1]'
+      do ii = 1, sb%dim
+        write(message(1+ii),'(3f12.6)')   sb%klattice(1:sb%dim,ii)*units_out%length%factor
+      end do
+      call write_info(1+sb%dim, iunit)
+
+      write(message(1),'(a,f12.6,3a)') &
+        '  Volume element = ', sb%volume_element/units_out%length%factor**sb%dim, &
         ' [', trim(units_out%length%abbrev), ']'
-      call write_info(10, iunit)
+      call write_info(1, iunit)
     end if
 
     if(sb%open_boundaries) then
@@ -1041,7 +1043,7 @@ contains
   logical function simul_box_in_box(sb, geo, x) result(in_box)
     type(simul_box_t),  intent(in) :: sb
     type(geometry_t),   intent(in) :: geo
-    FLOAT,              intent(in) :: x(1:MAX_DIM)
+    FLOAT,              intent(in) :: x(:)
 
     real(8), parameter :: DELTA = CNST(1e-12)
     FLOAT :: r, re, im, xx(MAX_DIM)
@@ -1051,14 +1053,14 @@ contains
     integer :: red, green, blue, ix, iy
 #endif
 
-    xx(1:MAX_DIM) = x(1:MAX_DIM) - sb%box_offset(1:MAX_DIM)
+    xx(1:sb%dim) = x(1:sb%dim) - sb%box_offset(1:sb%dim)
 
     !convert to the orthogonal space
-    xx = matmul(xx, sb%klattice_unitary)
+    xx = matmul(xx(1:sb%dim), sb%klattice_unitary(1:sb%dim, 1:sb%dim))
 
     select case(sb%box_shape)
     case(SPHERE)
-      in_box = (sqrt(sum(xx(1:MAX_DIM)**2)) <= sb%rsize+DELTA)
+      in_box = (sqrt(sum(xx(1:sb%dim)**2)) <= sb%rsize+DELTA)
 
     case(CYLINDER)
       r = sqrt(xx(2)**2 + xx(3)**2)
@@ -1140,6 +1142,8 @@ contains
     type(simul_box_t), intent(in) :: sb
     integer,           intent(in) :: iunit
 
+    integer :: i
+
     write(iunit, '(a)')             dump_tag
     write(iunit, '(a20,i4)')        'box_shape=          ', sb%box_shape
     write(iunit, '(a20,i4)')        'dim=                ', sb%dim
@@ -1147,23 +1151,23 @@ contains
     select case(sb%box_shape)
     case(SPHERE, MINIMUM)
       write(iunit, '(a20,e22.14)')  'rsize=              ', sb%rsize
-      write(iunit, '(a20,3e22.14)') 'lsize=              ', sb%lsize(1:3)
+      write(iunit, '(a20,9e22.14)') 'lsize=              ', sb%lsize(1:MAX_DIM)
     case(CYLINDER)
       write(iunit, '(a20,e22.14)')  'rsize=              ', sb%rsize
       write(iunit, '(a20,e22.14)')  'xlength=            ', sb%xsize
-      write(iunit, '(a20,3e22.14)') 'lsize=              ', sb%lsize(1:3)
+      write(iunit, '(a20,9e22.14)') 'lsize=              ', sb%lsize(1:MAX_DIM)
     case(PARALLELEPIPED)
-      write(iunit, '(a20,3e22.14)') 'lsize=              ', sb%lsize(1:3)
+      write(iunit, '(a20,9e22.14)') 'lsize=              ', sb%lsize(1:MAX_DIM)
     case(BOX_USDEF)
-      write(iunit, '(a20,3e22.14)') 'lsize=              ', sb%lsize(1:3)
+      write(iunit, '(a20,9e22.14)') 'lsize=              ', sb%lsize(1:MAX_DIM)
       write(iunit, '(a20,a1024)')   'user_def=           ', sb%user_def
     end select
     write(iunit, '(a20,e22.14)')    'fft_alpha=          ', sb%fft_alpha
-    write(iunit, '(a20,3e22.14)')   'h=                  ', sb%h(1:3)
-    write(iunit, '(a20,3e22.14)')   'box_offset=         ', sb%box_offset(1:3)
-    write(iunit, '(a20,3e22.14)')   'rlattice(1)=        ', sb%rlattice(1:3, 1)
-    write(iunit, '(a20,3e22.14)')   'rlattice(2)=        ', sb%rlattice(1:3, 2)
-    write(iunit, '(a20,3e22.14)')   'rlattice(3)=        ', sb%rlattice(1:3, 3)
+    write(iunit, '(a20,9e22.14)')   'h=                  ', sb%h(1:MAX_DIM)
+    write(iunit, '(a20,9e22.14)')   'box_offset=         ', sb%box_offset(1:MAX_DIM)
+    do i = 1, MAX_DIM
+      write(iunit, '(a9,i1,a11,9e22.14)')   'rlattice(', i, ')=         ', sb%rlattice(1:MAX_DIM, i)
+    end do
     write(iunit, '(a20,l7)')        'open_boundaries=    ', sb%open_boundaries
     if(sb%open_boundaries) then
       write(iunit, '(a20,2i4)')     'add_unit_cells=     ', sb%add_unit_cells
@@ -1270,23 +1274,23 @@ contains
     select case(sb%box_shape)
     case(SPHERE, MINIMUM)
       read(iunit, *) str, sb%rsize
-      read(iunit, *) str, sb%lsize(1:3)
+      read(iunit, *) str, sb%lsize(1:MAX_DIM)
     case(CYLINDER)
       read(iunit, *) str, sb%rsize
       read(iunit, *) str, sb%xsize
-      read(iunit, *) str, sb%lsize(1:3)
+      read(iunit, *) str, sb%lsize(1:MAX_DIM)
     case(PARALLELEPIPED)
-      read(iunit, *) str, sb%lsize(1:3)
+      read(iunit, *) str, sb%lsize(1:MAX_DIM)
     case(BOX_USDEF)
-      read(iunit, *) str, sb%lsize(1:3)
+      read(iunit, *) str, sb%lsize(1:MAX_DIM)
       read(iunit, *) str, sb%user_def
     end select
     read(iunit, *) str, sb%fft_alpha
-    read(iunit, *) str, sb%h(1:3)
-    read(iunit, *) str, sb%box_offset(1:3)
-    read(iunit, *) str, sb%rlattice(1:3, 1)
-    read(iunit, *) str, sb%rlattice(1:3, 2)
-    read(iunit, *) str, sb%rlattice(1:3, 3)
+    read(iunit, *) str, sb%h(1:MAX_DIM)
+    read(iunit, *) str, sb%box_offset(1:MAX_DIM)
+    do idim=1, MAX_DIM
+      read(iunit, *) str, sb%rlattice(1:MAX_DIM, idim)
+    end do
 
     do idim = 1, sb%dim
       norm = lalg_nrm2(sb%dim, sb%rlattice(1:sb%dim, idim))

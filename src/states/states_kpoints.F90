@@ -188,14 +188,14 @@ subroutine states_choose_kpoints(d, sb, geo)
   
 
   ALLOCATE(natom(geo%nspecies), geo%nspecies)
-  ALLOCATE(coorat(geo%nspecies, geo%natoms, 3), geo%nspecies*geo%natoms*3)
+  ALLOCATE(coorat(geo%nspecies, geo%natoms, sb%dim), geo%nspecies*geo%natoms*sb%dim)
 
   natom  = 0
   coorat = M_ZERO
   do i = 1, geo%natoms
     is = geo%atom(i)%spec%index
     natom(is) = natom(is) + 1
-    coorat(is, natom(is), :) = geo%atom(i)%x(:)
+    coorat(is, natom(is), 1:sb%dim) = geo%atom(i)%x(1:sb%dim)
   end do
 
   do i = 1, sb%dim
@@ -259,15 +259,16 @@ end subroutine states_choose_kpoints
 
 
 ! ---------------------------------------------------------
-subroutine kpoints_write_info(d, iunit)
+subroutine kpoints_write_info(d, sbdim, iunit)
   type(states_dim_t), intent(in) :: d
-  integer, intent(in) :: iunit
+  integer,            intent(in) :: sbdim
+  integer,            intent(in) :: iunit
 
   integer :: ik
 
   call push_sub('states_kpoints.kpoints_write_info')
 
-  write(message(1),'(a,3(i3,1x))') 'Number of k points in each direction = ', d%nik_axis(:)
+  write(message(1),'(a,9(i3,1x))') 'Number of k points in each direction = ', d%nik_axis(1:sbdim)
   call write_info(1, iunit)
 
   write(message(1), '(3x,a,7x,a,9x,a,9x,a,8x,a)') 'ik', 'K_x', 'K_y', 'K_z', 'Weight'
@@ -275,7 +276,8 @@ subroutine kpoints_write_info(d, iunit)
   call write_info(2, iunit, verbose_limit=80)
 
   do ik = 1, d%nik
-     write(message(1),'(i4,1x,4f12.4)') ik,d%kpoints(:,ik)*units_out%length%factor, d%kweights(ik)
+     write(message(1),'(i4,1x,4f12.4)') &
+       ik, d%kpoints(1:sbdim,ik)*units_out%length%factor, d%kweights(ik)
      call write_info(1, iunit, verbose_limit=80)
   end do
 

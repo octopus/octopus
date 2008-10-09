@@ -75,19 +75,16 @@ contains
   end subroutine rkb_projector_null
 
   ! ---------------------------------------------------------
-  subroutine rkb_projector_init(rkb_p, sm, gr, a, l, lm, so_strength)
+  subroutine rkb_projector_init(rkb_p, sm, a, l, lm, so_strength)
     type(rkb_projector_t), intent(inout) :: rkb_p
     type(submesh_t),       intent(in)    :: sm
-    type(grid_t),          intent(in)    :: gr
     type(atom_t),          intent(in)    :: a
     integer,               intent(in)    :: l, lm
     FLOAT,                 intent(in)    :: so_strength
  
     integer :: is, i
-    FLOAT :: v, dv(3), x(MAX_DIM)
+    FLOAT :: v, dv(MAX_DIM), x(MAX_DIM)
     CMPLX :: zv
-
-
 
     rkb_p%n_s = sm%ns
 
@@ -178,7 +175,7 @@ contains
     end if
 #endif
 
-    call rkb_project_ket(mesh, sm, rkb_p, uvpsi, ppsi)
+    call rkb_project_ket(rkb_p, uvpsi, ppsi)
 
   end subroutine rkb_project
 
@@ -222,9 +219,7 @@ contains
   end subroutine rkb_project_bra
 
   ! ---------------------------------------------------------
-  subroutine rkb_project_ket(mesh, sm, rkb_p, uvpsi, psi)
-    type(mesh_t),          intent(in)    :: mesh
-    type(submesh_t),       intent(in)    :: sm
+  subroutine rkb_project_ket(rkb_p, uvpsi, psi)
     type(rkb_projector_t), intent(in)    :: rkb_p
     CMPLX,                 intent(in)    :: uvpsi(1:2, 1:2)
     CMPLX,                 intent(inout) :: psi(:, :)

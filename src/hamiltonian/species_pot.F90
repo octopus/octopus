@@ -501,7 +501,8 @@ contains
       startval(dim+1) = beta
 
       ! solve equation
-      call root_solver_init(rs, solver_type=ROOT_NEWTON, maxiter=500, abs_tolerance=CNST(1.0e-10))
+      call root_solver_init(rs, dim+1, &
+        solver_type=ROOT_NEWTON, maxiter=500, abs_tolerance=CNST(1.0e-10))
       call droot_solver_run(rs, func, x, conv, startval=startval)
 
       if(.not.conv) then

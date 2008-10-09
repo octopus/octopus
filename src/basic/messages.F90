@@ -320,6 +320,7 @@ contains
 
     iunit = mpi_world%rank + unit_offset
     write(filenum, '(i3.3)') iunit - unit_offset
+    call loct_mkdir(trim(current_label)//'debug')
     open(iunit, file=trim(current_label)//'debug/debug_trace.node.'//filenum, &
       action='write', status='unknown', position='append')
 

@@ -190,7 +190,8 @@ contains
       integer :: i, j, index
       FLOAT, allocatable :: my_csi(:), start_csi(:)
 
-      call root_solver_init(rs, solver_type = ROOT_NEWTON, maxiter = 500, abs_tolerance = CNST(1.0e-10))
+      call root_solver_init(rs, sb%dim, &
+        solver_type = ROOT_NEWTON, maxiter = 500, abs_tolerance = CNST(1.0e-10))
 
       sb_p  => sb
       geo_p => geo
@@ -370,7 +371,8 @@ contains
     logical :: conv
     type(root_solver_t) :: rs
 
-    call root_solver_init(rs, solver_type = ROOT_NEWTON, maxiter = 500, abs_tolerance = CNST(1.0e-10))
+    call root_solver_init(rs, sb%dim,  &
+      solver_type = ROOT_NEWTON, maxiter = 500, abs_tolerance = CNST(1.0e-10))
 
     sb_p  => sb
     geo_p => geo

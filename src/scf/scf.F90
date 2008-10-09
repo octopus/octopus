@@ -654,7 +654,7 @@ contains
         call grid_write_info(gr, iunit)
 
         if(simul_box_is_periodic(gr%sb)) then
-          call kpoints_write_info(st%d, iunit)
+          call kpoints_write_info(st%d, NDIM, iunit)
           write(iunit,'(1x)')
         end if
 
@@ -929,7 +929,7 @@ contains
       call push_sub('scf.write_magnetic_moments')
 
       call magnetic_moment(m, st, st%rho, mm)
-      ALLOCATE(lmm(3, geo%natoms), 3*geo%natoms)
+      ALLOCATE(lmm(MAX_DIM, geo%natoms), MAX_DIM*geo%natoms)
       call magnetic_local_moments(m, st, geo, st%rho, scf%lmm_r, lmm)
 
       if(mpi_grp_is_root(mpi_world)) then
@@ -938,7 +938,7 @@ contains
         if(st%d%ispin == SPIN_POLARIZED) then ! collinear spin
           write(iunit, '(a,f10.6)') ' mz = ', mm(3)
         else if(st%d%ispin == SPINORS) then ! non-collinear
-          write(iunit, '(1x,3(a,f10.6,3x))') 'mx = ',mm(1),'my = ',mm(2),'mz = ',mm(3)
+          write(iunit, '(1x,3(a,f10.6,3x))') 'mx = ', mm(1),'my = ', mm(2),'mz = ', mm(3)
         end if
 
         write(iunit, '(a,a,a,f7.3,a)') 'Local Magnetic Moments (sphere radius [', &
@@ -951,7 +951,7 @@ contains
         else if(st%d%ispin == SPINORS) then ! non-collinear
           write(iunit,'(a,8x,13x,a,13x,a,13x,a)') ' Ion','mx','my','mz'
           do i = 1, geo%natoms
-            write(iunit,'(i4,a10,3f15.6)') i, trim(geo%atom(i)%spec%label), lmm(1, i), lmm(2, i), lmm(3, i)
+            write(iunit,'(i4,a10,9f15.6)') i, trim(geo%atom(i)%spec%label), lmm(1:m%sb%dim, i)
           end do
         end if
 

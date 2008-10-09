@@ -812,11 +812,11 @@ contains
       call simul_box_init_from_file(old_sb, iunit_mesh)
       call io_close(iunit_mesh, grp = gr%m%mpi_grp)
 
-      if( .not. (old_cv.eq.gr%cv) ) then
+      if( .not. curvlinear_is_eq(old_cv, gr%cv) ) then
         mesh_change = .true.
         return
       end if
-      if( .not. (old_sb.eq.gr%sb) ) then
+      if( .not. simul_box_is_eq(old_sb, gr%sb) ) then
         mesh_change = .true.
         ! First, check whether the spacings are the same.
         if(old_sb%h .app. gr%sb%h) full_interpolation = .false.

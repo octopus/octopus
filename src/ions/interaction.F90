@@ -67,11 +67,8 @@ contains
     force = M_ZERO
 
     if(simul_box_is_periodic(sb)) then
-
       call ion_interaction_periodic(geo, sb, energy, force)
-
     else
-      
       ! only interaction inside the cell
       do iatom = 1, geo%natoms
         s => geo%atom(iatom)%spec
@@ -90,18 +87,17 @@ contains
 
           !the force
           dd = zi*zj/r**3
-          force(1:MAX_DIM, iatom) = force(1:MAX_DIM, iatom) + dd*(geo%atom(iatom)%x(1:MAX_DIM) - geo%atom(jatom)%x(1:MAX_DIM))
+          force(1:sb%dim, iatom) = force(1:sb%dim, iatom) + &
+            dd*(geo%atom(iatom)%x(1:sb%dim) - geo%atom(jatom)%x(1:sb%dim))
 
           !energy
           if(jatom > iatom) cycle
           energy = energy + zi*zj/r
 
         end do !jatom
-
       end do !iatom
 
     end if
-
     call profiling_out(ion_ion_prof)
 
   end subroutine ion_interaction_calculate
@@ -137,16 +133,15 @@ contains
       s => geo%atom(iatom)%spec
       if (.not. species_is_ps(s)) cycle
       zi = geo%atom(iatom)%spec%z_val
-      
+
       call periodic_copy_init(pc, sb, geo%atom(iatom)%x, CNST(5.0))
       
       do icopy = 1, periodic_copy_num(pc)
-        
         xi = periodic_copy_position(pc, sb, icopy)
         
         do jatom = 1, geo%natoms
           zj = -geo%atom(jatom)%spec%z_val
-          r = sqrt( sum( (xi - geo%atom(jatom)%x)**2 ) )
+          r = sqrt( sum( (xi(1:sb%dim) - geo%atom(jatom)%x(1:sb%dim))**2 ) )
           
           if(r < CNST(1e-5)) cycle
           
@@ -154,20 +149,18 @@ contains
           energy = energy + M_HALF*zj*zi*(M_ONE - loct_erf(alpha*r))
           
           ! force
-          force(1:MAX_DIM, jatom) = force(1:MAX_DIM, jatom) + &
-               M_HALF*zj*zi*(M_ONE - loct_erf(alpha*r))/r*(geo%atom(jatom)%x(1:MAX_DIM) - xi(1:MAX_DIM))
+          force(1:sb%dim, jatom) = force(1:sb%dim, jatom) + &
+            M_HALF*zj*zi*(M_ONE - loct_erf(alpha*r))/r*(geo%atom(jatom)%x(1:sb%dim) - xi(1:sb%dim))
         end do
         
       end do
       
       call periodic_copy_end(pc)
-      
     end do
 
     ! And the long range part, using an ewald sum
     
     isph = 100
-    
     do ix = -isph, isph
       do iy = -isph, isph
         do iz = -isph, isph
@@ -175,24 +168,26 @@ contains
           ss = ix**2 + iy**2 + iz**2
           
           if(ss == 0 .or. ss > isph**2) cycle
+
+          gg(1:sb%dim) = ix*sb%klattice(1:sb%dim, 1) + iy*sb%klattice(1:sb%dim, 2) + iz*sb%klattice(1:sb%dim, 3)
+          gg2 = sum(gg(1:sb%dim)**2)
           
-          gg(1:MAX_DIM) = ix*sb%klattice(1:MAX_DIM, 1) + iy*sb%klattice(1:MAX_DIM, 2) + iz*sb%klattice(1:MAX_DIM, 3)
-          
-          gg2 = sum(gg(1:MAX_DIM)**2)
-          
+          ! k=0 must be removed from the sum
+          if(gg2 == M_ZERO) cycle
+
           factor = M_TWO*M_PI/sb%rcell_volume*exp(-CNST(0.25)*gg2/alpha**2)/gg2
           
           sumatoms = M_Z0
           do iatom = 1, geo%natoms
             zi = geo%atom(iatom)%spec%z_val
-            xi(1:MAX_DIM) = geo%atom(iatom)%x(1:MAX_DIM)
-            sumatoms = sumatoms + zi*exp(-M_ZI*sum(gg(1:MAX_DIM)*xi(1:MAX_DIM)))
+            xi(1:sb%dim) = geo%atom(iatom)%x(1:sb%dim)
+            sumatoms = sumatoms + zi*exp(-M_ZI*sum(gg(1:sb%dim)*xi(1:sb%dim)))
           end do
           energy = energy + factor*sumatoms*conjg(sumatoms)
           
           do iatom = 1, geo%natoms
             zi = geo%atom(iatom)%spec%z_val
-            force(1:MAX_DIM, iatom) = -M_TWO*zi*factor*sumatoms
+            force(1:sb%dim, iatom) = -M_TWO*zi*factor*sumatoms
           end do
           
         end do

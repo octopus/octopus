@@ -156,18 +156,18 @@ contains
 
       do iatom = 1, geo%natoms
 
-        do idir = 1, gr%sb%dim
+        do idir = 1, NDIM
           if(this%dir == idir) cycle ! this direction is not used in the cross product
           call X(projector_commute_r)(h%ep%proj(iatom), gr, h%d%dim, idir, ik, f_in_copy, vrnl(:, :, idir))
         end do
 
-        xx(1:MAX_DIM) = geo%atom(iatom)%x(1:MAX_DIM)
+        xx(1:NDIM) = geo%atom(iatom)%x(1:NDIM)
 
         do ip = 1, NP
 
-          if(this%gauge == GAUGE_ICL) xx(1:MAX_DIM) = gr%m%x(ip, 1:MAX_DIM)
+          if(this%gauge == GAUGE_ICL) xx(1:NDIM) = gr%m%x(ip, 1:NDIM)
          
-          vv(1:MAX_DIM) = vrnl(ip, 1, 1:MAX_DIM)
+          vv(1:NDIM) = vrnl(ip, 1, 1:NDIM)
 
           cross(1) = xx(2) * vv(3) - xx(3) * vv(2)
           cross(2) = xx(3) * vv(1) - xx(1) * vv(3)

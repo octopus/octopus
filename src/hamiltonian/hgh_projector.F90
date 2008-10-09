@@ -84,7 +84,7 @@ contains
     integer,               intent(in)    :: l, lm
 
     integer :: is, i
-    FLOAT :: v, dv(3), x(MAX_DIM)
+    FLOAT :: v, dv(MAX_DIM), x(MAX_DIM)
 
     call push_sub('hgh_projector.hgh_projector_init')
 
@@ -93,17 +93,15 @@ contains
     ALLOCATE(hgh_p%lp(hgh_p%n_s, 3, 3), hgh_p%n_s*3*3)
 
     do is = 1, hgh_p%n_s
-
       x(1:MAX_DIM) = sm%x(is, 1:MAX_DIM)
 
       do i = 1, 3
-        call species_real_nl_projector(a%spec, x, l, lm, i, v, dv(1:3))
-        hgh_p%p(is, i) = v
+        call species_real_nl_projector(a%spec, x, l, lm, i, v, dv)
+        hgh_p%p (is, i) = v
         hgh_p%lp(is, 1, i) = x(2)*dv(3) - x(3)*dv(2)
         hgh_p%lp(is, 2, i) = x(3)*dv(1) - x(1)*dv(3)
         hgh_p%lp(is, 3, i) = x(1)*dv(2) - x(2)*dv(1)
       end do
-
     end do
 
     hgh_p%h(:, :) = a%spec%ps%h(l, :, :)

@@ -52,7 +52,7 @@ module curv_gygi_m
   type(geometry_t),  pointer  :: geo_p
   type(curv_gygi_t), pointer  :: cv_p
   integer :: i_p
-  FLOAT :: chi_p(3)
+  FLOAT :: chi_p(MAX_DIM)
 
 contains
 
@@ -111,7 +111,7 @@ contains
     FLOAT, intent(out)   :: f(:), jf(:, :)
 
     call curv_gygi_jacobian(sb_p, geo_p, cv_p, y, f, jf, i_p)
-    f(:) = f(:) - chi_p(:)
+    f(1:sb_p%dim) = f(1:sb_p%dim) - chi_p(1:sb_p%dim)
   end subroutine getf 
 
 
@@ -128,13 +128,14 @@ contains
     logical :: conv
     type(root_solver_t) :: rs
 
-    call root_solver_init(rs, solver_type = ROOT_NEWTON, maxiter = 500, abs_tolerance = CNST(1.0e-10))
+    call root_solver_init(rs, sb%dim,  &
+      solver_type = ROOT_NEWTON, maxiter = 500, abs_tolerance = CNST(1.0e-10))
 
-    sb_p  => sb
-    geo_p => geo
-    cv_p  => cv
-    i_p = geo%natoms
-    chi_p = chi
+    sb_p            => sb
+    geo_p           => geo
+    cv_p            => cv
+    i_p             =  geo%natoms
+    chi_p(1:sb%dim) =  chi(1:sb%dim)
 
     call droot_solver_run(rs, getf, x, conv, startval = chi)
 
@@ -142,7 +143,7 @@ contains
       do i = 1, geo%natoms
         conv = .false.
         i_p = i
-        call droot_solver_run(rs, getf, x, conv, startval = x)
+        call droot_solver_run(rs, getf, x, conv, startval = x(1:sb%dim))
       end do
     end if
 
@@ -151,14 +152,13 @@ contains
     if(.not.conv) then
       message(1) = "During the construction of the adaptive grid, the Newton-Raphson"
       message(2) = "method did not converge for point:"
-      write(message(3),'(3f14.6)') x(1:sb%dim)
+      write(message(3),'(9f14.6)') x(1:sb%dim)
       message(4) = "Try varying the Gygi parameters -- usually reducing CurvGygiA or"
       message(5) = "CurvGygiAlpha (or both) solves the problem."
       call write_fatal(5)
     end if
 
   end subroutine curv_gygi_chi2x
-
 
 
   ! ---------------------------------------------------------

@@ -487,9 +487,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine atom_write_xyz(dir, fname, geo, append, comment)
+  subroutine atom_write_xyz(dir, fname, geo, sbdim, append, comment)
     character(len=*),    intent(in) :: dir, fname
     type(geometry_t),    intent(in) :: geo
+    integer,             intent(in) :: sbdim
     logical,             intent(in), optional :: append
     character(len=*),    intent(in), optional :: comment
 
@@ -512,7 +513,7 @@ contains
       write(iunit, '(1x)')
     endif
     do i = 1, geo%natoms
-      write(iunit, '(6x,a,2x,3f12.6)') geo%atom(i)%label, geo%atom(i)%x(:)/units_out%length%factor
+      write(iunit, '(6x,a,2x,9f12.6)') geo%atom(i)%label, geo%atom(i)%x(1:sbdim)/units_out%length%factor
     end do
     call io_close(iunit)
 
@@ -522,7 +523,7 @@ contains
       write(iunit, '(1x)')
       do i = 1, geo%ncatoms
         write(iunit, '(6x,a1,2x,3f12.6,a,f12.6)') &
-           geo%catom(i)%label(1:1), geo%catom(i)%x(:)/units_out%length%factor, &
+           geo%catom(i)%label(1:1), geo%catom(i)%x(1:sbdim)/units_out%length%factor, &
            " # ", geo%catom(i)%charge
       end do
       call io_close(iunit)

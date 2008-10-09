@@ -334,7 +334,7 @@ contains
     call h_sys_output_current_flow(gr, st, dir, outp)
 
     if(iand(outp%what, output_geometry).ne.0) then
-      call atom_write_xyz(dir, "geometry", geo)
+      call atom_write_xyz(dir, "geometry", geo, NDIM)
       if(simul_box_is_periodic(gr%sb)) &
         call periodic_write_crystal(gr%sb, geo, dir)
     end if
