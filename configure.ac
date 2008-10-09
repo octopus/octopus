@@ -233,6 +233,8 @@ else
 fi
 AC_SUBST(UTILITY_PROGRAMS)
 
+AC_DEFINE(MAX_DIM, 3, [the maximum dimension of the space])
+
 dnl tell the user what we will be compiling
 echo "**********************************************"
 echo "***   octopus${EXEEXT} $msg will be generated "
