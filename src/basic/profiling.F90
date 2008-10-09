@@ -461,12 +461,12 @@ contains
 
     call push_sub('profiling.profiling_output')
 
-    filenum = '000'
+    filenum = '0000'
     dirnum  = 'ser'
 #if defined(HAVE_MPI)
     if(mpi_world%size > 1) then
-      write(filenum, '(i3.3)') mpi_world%rank
-      write(dirnum, '(i3.3)') mpi_world%size
+      write(filenum, '(i4.4)') mpi_world%rank
+      write(dirnum, '(i4.4)') mpi_world%size
     end if
 #endif
 
