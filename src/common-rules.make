@@ -83,6 +83,7 @@ external_LIBS = \
 
 if COMPILE_METIS
   external_LIBS += $(top_builddir)/external_libs/metis-4.0/libmetis.a
+  AM_CPPFLAGS += -I$(top_srcdir)/external_libs/metis-4.0/
 endif
 
 if COMPILE_LIBNBC
