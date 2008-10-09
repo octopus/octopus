@@ -95,6 +95,11 @@ module opt_control_parameters_m
     integer :: no_parameters       = 0
     FLOAT,       pointer :: alpha(:)      => NULL()
     type(tdf_t), pointer :: td_penalty(:) => NULL()
+
+    CMPLX, pointer :: pol(:, :)           => NULL() ! the polarization of the field, this is
+                                                    ! necessary to calculate the fluence.
+    type(tdf_t)    :: f ! This is the envelope of the laser field, only used in the phase-only
+                        ! optimization (necessary to store it in order to calculate fluences)
   end type oct_parameters_common_t
 
 
@@ -106,8 +111,6 @@ module opt_control_parameters_m
     integer :: nfreqs        = 0
     FLOAT   :: targetfluence = M_ZERO
     type(tdf_t), pointer :: f(:) => NULL()
-    CMPLX, pointer :: pol(:, :)  => NULL() ! the polarization of the field, this is
-                                           ! necessary to calculate the fluence.
     FLOAT, pointer :: alpha(:)   => NULL()
 
     integer :: representation         = 0
@@ -238,7 +241,11 @@ contains
     end select
 
     ! Check that the laser polarizations are not imaginary.
+    ALLOCATE(par_common%pol(MAX_DIM, ep%no_lasers), MAX_DIM*ep%no_lasers)
     do i = 1, ep%no_lasers
+
+      par_common%pol(1:MAX_DIM, i) = laser_polarization(ep%lasers(i))
+
       ! WARNING: Check if this is working....
       if(any(aimag(laser_polarization(ep%lasers(i))) .ne. M_ZERO)) then
         write(message(1),'(a)') 'For optimal control runs, you cannot specify an initial field guess'
@@ -256,6 +263,12 @@ contains
         call laser_to_numerical(ep%lasers(i), dt, max_iter, real_part = .true.)
       end select
     end do
+
+    ! For phase-only optimization, we need to store the envelope, in order to be able
+    ! to calculate the fluence.
+    if(par_common%mode .eq. parameter_mode_phi) then
+      call laser_get_phi(ep%lasers(1), par_common%f)
+    end if
 
     ! Fix the carrier frequency
     call obsolete_variable('OCTCarrierFrequency')
@@ -348,6 +361,14 @@ contains
     end do
 
     if (loct_parse_block(check_inp('OCTLaserEnvelope'), blk)==0) then
+
+      ! Cannot have this unless we have the "usual" parameter_mode_epsilon.
+      if(par_common%mode .ne. parameter_mode_epsilon) then
+        write(message(1),'(a)') 'The block "OCTLaserEnvelope" is only compatible with the option'
+        write(message(2),'(a)') '"OCTControlFunctionType = parameter_mode_epsilon".'
+        call write_fatal(2)
+      end if
+
       no_lines = loct_parse_block_n(blk)
       if(no_lines .ne.par_common%no_parameters) call input_error('OCTLaserEnvelope')
 
@@ -374,7 +395,6 @@ contains
       call loct_parse_block_end(blk)
     end if
 
-
     call pop_sub()
   end subroutine parameters_read
   ! ---------------------------------------------------------
@@ -386,13 +406,10 @@ contains
 
     integer :: i, mm, nn
     FLOAT :: t, det
-    logical :: fix_initial_fluence
     type(tdf_t) :: fn, fm
     FLOAT, allocatable :: eigenvec(:, :), eigenval(:)
 
     call push_sub('parameters.parameters_set_initial')
-
-    fix_initial_fluence = par_common%fix_initial_fluence
 
     call parameters_apply_envelope(par)
 
@@ -420,7 +437,7 @@ contains
         write(message(2), '(a,f10.5,a)') '      fluence: F = ', par%targetfluence, ' a.u.2'
       end if
       call write_info(2)
-      if(fix_initial_fluence) call parameters_set_fluence(par)
+      if(par_common%fix_initial_fluence) call parameters_set_fluence(par)
     end if
 
     if(par_common%mode .eq. parameter_mode_f) then
@@ -700,7 +717,6 @@ contains
     cp%targetfluence = par_common%targetfluence
     ALLOCATE(cp%f(cp%no_parameters), cp%no_parameters)
     ALLOCATE(cp%alpha(cp%no_parameters), cp%no_parameters)
-    ALLOCATE(cp%pol(MAX_DIM, cp%no_parameters), MAX_DIM*cp%no_parameters)
     cp%alpha = M_ZERO
     do j = 1, cp%no_parameters
       call tdf_init_numerical(cp%f(j), cp%ntiter, cp%dt, omegamax = par_common%omegamax)
@@ -731,7 +747,6 @@ contains
       do j = 1, cp%no_parameters
         call tdf_end(cp%f(j))
         call laser_get_f(ep%lasers(j), cp%f(j))
-        cp%pol(1:MAX_DIM, j) = laser_polarization(ep%lasers(j))
       end do
     case(parameter_mode_phi)
       call tdf_end(cp%f(1))
@@ -834,8 +849,6 @@ contains
     nullify(cp%f)
     deallocate(cp%alpha)
     nullify(cp%alpha)
-    deallocate(cp%pol)
-    nullify(cp%pol)
     if( par_common%mode .eq. parameter_mode_f ) then
       deallocate(cp%utransf)
       nullify(cp%utransf)
@@ -921,10 +934,11 @@ contains
 
       ! In this case, there is only one parameter (for the moment)
       iunit = io_open(trim(filename)//'/cp', action='write')
-      write(iunit,'(2a20)') '#       t [a.u]      ', '        phi(t)       '
+      write(iunit,'(3a20)') '#       t [a.u]      ', '        phi(t)       ', '        E(t)         ' 
       do i = 1, cp%ntiter + 1
         t = (i-1)*cp%dt
-        write(iunit, '(2es20.8e3)') t, real(tdf(par%f(1), t))
+        write(iunit, '(3es20.8e3)') t, real(tdf(par%f(1), t)), real(tdf(par_common%f, t)) * &
+          cos(par%w0*t + real(tdf(par%f(1), t)) )
       end do
       call io_close(iunit)
 
@@ -936,8 +950,8 @@ contains
                             '        phi(t)       ', '        E(t)         '
       do i = 1, cp%ntiter + 1
         t = (i-1)*cp%dt
-        write(iunit, '(4es20.8e3)') t, real(tdf(par%f(1), t)), real(tdf(par%f(2), t)), real(tdf(par%f(1), t)) * &
-          cos(par%w0*t + real(tdf(par%f(2), t)) )
+        write(iunit, '(4es20.8e3)') t, real(tdf(par%f(1), t)), real(tdf(par%f(2), t)), &
+          real(tdf(par%f(1), t)) * cos(par%w0*t + real(tdf(par%f(2), t)) )
       end do
       call io_close(iunit)
 
@@ -1010,7 +1024,13 @@ contains
         call tdf_end(f)
       end do
     case(parameter_mode_phi)
-      stop 'Error.'
+      do i = 1, par%ntiter + 1
+        t = (i-1)*par%dt
+        fi = tdf(par_common%f, i)
+        phi = real(tdf(par%f(1), i))
+        call tdf_set_numerical(f, i, fi*cos(par%w0*t+phi))
+      end do
+      parameters_fluence = tdf_dot_product(f, f)
     case(parameter_mode_f_and_phi)
       do i = 1, par%ntiter + 1
         t = (i-1)*par%dt
@@ -1018,6 +1038,7 @@ contains
         phi = real(tdf(par%f(2), i))
         call tdf_set_numerical(f, i, fi*cos(par%w0*t+phi))
       end do
+      parameters_fluence = tdf_dot_product(f, f)
     end select
 
     call pop_sub()
@@ -1033,8 +1054,11 @@ contains
     type(oct_control_parameters_t), target, intent(in) :: par
     type(oct_control_parameters_t), pointer :: par_
     integer :: i, j, k
-    FLOAT   :: t, integral
+    FLOAT   :: t, integral, fi, phi, tdp
+    type(tdf_t) :: f
     logical :: change_rep
+
+    call push_sub('parameters.parameters_j2')
 
     ASSERT(par%current_representation .eq. par%representation)
 
@@ -1049,28 +1073,71 @@ contains
     end if
 
     integral = M_ZERO
-    do j = 1, par_%no_parameters
-      do i = 1, par_%ntiter + 1
-        t = (i-1) * par_%dt
-        do k = 1, MAX_DIM
-          if(par_common%mode .eq. parameter_mode_f) then
-            integral = integral + tdf(par_common%td_penalty(j), i) * &
-              real( par_%pol(k, j) * tdf(par_%f(j), i) * cos(par%w0*t) )**2 
-          else
-            integral = integral + tdf(par_common%td_penalty(j), i) * &
-              real( par_%pol(k, j) * tdf(par_%f(j), i) )**2 
-          end if
+    select case(par_common%mode)
+    case(parameter_mode_epsilon)
+      do j = 1, par_%no_parameters
+        call tdf_init(f)
+        call tdf_copy(f, par_%f(j))
+        do i = 1, par_%ntiter + 1
+          t = (i-1)*par_%dt
+          fi = tdf(par_%f(j), i)
+          tdp = sqrt(real(tdf(par_common%td_penalty(j), i)))
+          call tdf_set_numerical(f, i, fi*tdp)
         end do
+        integral = integral + tdf_dot_product(par_%f(j), par_%f(j))
+        call tdf_end(f)
       end do
-    end do
-    integral = integral * par_%dt
-    j2 = - par_%alpha(1) * (integral - par%targetfluence)
+    case(parameter_mode_f)
+      do j = 1, par%no_parameters
+        call tdf_init(f)
+        call tdf_copy(f, par_%f(j))
+        if(par_%current_representation .eq. ctr_parameter_frequency_space) then
+          call tdf_sineseries_to_numerical(f)
+        end if
+        do i = 1, par_%ntiter + 1
+          t = (i-1)*par_%dt
+          fi = tdf(par_%f(j), i)
+          tdp = sqrt(real(tdf(par_common%td_penalty(j), i)))
+          call tdf_set_numerical(f, i, fi*tdp*cos(par_%w0*t))
+        end do
+        integral = integral + tdf_dot_product(f, f)
+        call tdf_end(f)
+      end do
+    case(parameter_mode_phi)
+      call tdf_init(f)
+      call tdf_copy(f, par_%f(1))
+      do i = 1, par_%ntiter + 1
+        t = (i-1)*par_%dt
+        fi = tdf(par_common%f, i)
+        phi = real(tdf(par_%f(1), i))
+        tdp = sqrt(real(tdf(par_common%td_penalty(1), i)))
+        call tdf_set_numerical(f, i, fi*cos(par_%w0*t+phi))
+      end do
+      integral = tdf_dot_product(f, f)
+      call tdf_end(f)
+    case(parameter_mode_f_and_phi)
+      call tdf_init(f)
+      call tdf_copy(f, par_%f(1))
+      do i = 1, par_%ntiter + 1
+        t = (i-1)*par_%dt
+        fi = tdf(par_%f(1), i)
+        phi = real(tdf(par_%f(2), i))
+        tdp = sqrt(real(tdf(par_common%td_penalty(1), i)))
+        call tdf_set_numerical(f, i, tdp*fi*cos(par_%w0*t+phi))
+      end do
+      integral = tdf_dot_product(f, f)
+      call tdf_end(f)
+    end select
+
+    j2 = - par_%alpha(1) * (integral - par_%targetfluence)
 
     if(change_rep) then
       call parameters_end(par_)
     else
       nullify(par_)
     end if
+
+    call pop_sub()
   end function parameters_j2
   ! ---------------------------------------------------------
 
@@ -1118,12 +1185,10 @@ contains
     cp_out%w0 = cp_in%w0
     ALLOCATE(cp_out%f(cp_out%no_parameters), cp_out%no_parameters)
     ALLOCATE(cp_out%alpha(cp_out%no_parameters), cp_out%no_parameters)
-    ALLOCATE(cp_out%pol(MAX_DIM, cp_out%no_parameters), MAX_DIM*cp_out%no_parameters)
     do j = 1, cp_in%no_parameters
       cp_out%alpha(j) = cp_in%alpha(j)
       call tdf_init(cp_out%f(j))
       call tdf_copy(cp_out%f(j), cp_in%f(j))
-      cp_out%pol(1:MAX_DIM, j) = cp_in%pol(1:MAX_DIM, j)
     end do
     if(par_common%mode .eq. parameter_mode_f) then
       ALLOCATE(cp_out%utransf(cp_out%nfreqs, cp_out%nfreqs), cp_out%nfreqs**2)

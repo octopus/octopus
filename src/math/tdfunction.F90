@@ -222,6 +222,7 @@ module tdf_m
 
         call loct_parse_block_int  (blk, i-1, 1, function_type)
 
+        a0 = M_ZERO; tau0 = M_ZERO; t0 = M_ZERO; tau1 = M_ZERO
         select case(function_type)
           case(TDF_CW)
             call loct_parse_block_float(blk, i-1, 2, a0)
@@ -247,7 +248,7 @@ module tdf_m
             return
         end select
 
-        a0     = a0 * units_inp%energy%factor / units_inp%length%factor
+        a0   = a0 * units_inp%energy%factor / units_inp%length%factor
         tau0 = tau0 * units_inp%time%factor
         t0   = t0   * units_inp%time%factor
         tau1 = tau1 * units_inp%time%factor
