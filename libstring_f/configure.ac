@@ -21,6 +21,8 @@ AC_INIT([string_f],[1.0],[octopus-devel@tddft.org],[string_f])
 AC_CONFIG_SRCDIR([string_f.h])
 AM_INIT_AUTOMAKE
 
+AC_CONFIG_HEADERS([config.h])
+
 # Installation prefix by default
 AC_PREFIX_DEFAULT([/opt/etsf])
 
