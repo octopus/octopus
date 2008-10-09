@@ -36,6 +36,7 @@ module io_m
     io_open,             &
     io_mkdir,            &
     io_init,             &
+    io_init_datasets,    &
     io_end,              &
     io_status,           &
     io_dump_file,        &
@@ -198,7 +199,13 @@ contains
       end if
     end if
 
-    ! create temporary dir (we will need it)
+  end subroutine io_init
+
+
+  ! ---------------------------------------------------------
+  ! In this routine we should put all initializations of io
+  ! taht require the current_label dataset
+  subroutine io_init_datasets()
     !%Variable TmpDir
     !%Default "restart/"
     !%Type string
@@ -212,40 +219,7 @@ contains
 
     ! create static directory
     call io_mkdir('static', is_tmp=.false.)
-
-    ! restarts from scratch will be done from here
-    !%Variable InputDir
-    !%Default "restart/"
-    !%Type string
-    !%Section Execution::IO
-    !%Description
-    !% The name of the input directory where octopus should read binary information
-    !% like the (re)start wave-functions.
-    !%End
-
-    ! disabled for the moment
-    ! call loct_parse_string('InputDir', 'restart/', inputdir)  ! Note: the default is restart/ (legacy behaviour)
-    ! call loct_stat(ierr, inputdir)
-    ! if (ierr == -1) then
-    !  write(message(1),'(a,a)') 'Could not find input directory: ', trim(inputdir)
-    !  call write_fatal(1)
-    ! end if
-
-    ! create directory for final (converged) output
-    !%Variable OutputDir
-    !%Default "restart/"
-    !%Type string
-    !%Section Execution::IO
-    !%Description
-    !% The name of the directory where octopus will store (hopefully) converged binary 
-    !% output like the (re)start wave-functions.
-    !%End
-
-    ! disabled for the moment
-    ! call loct_parse_string('OutputDir', 'restart/', outputdir) ! Again restart/ as default (legacy behaviour)
-    ! call io_mkdir(outputdir)
-
-  end subroutine io_init
+  end subroutine io_init_datasets
 
 
   ! ---------------------------------------------------------
@@ -261,25 +235,26 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine io_assign(lun)
-    integer, intent(out) :: lun
+  subroutine io_assign(got_lun)
+    integer, intent(out) :: got_lun
 
-    integer :: iostat
+    integer :: iostat, lun
     logical :: used
 
     call push_sub('io.io_assign')
 
-    lun = -1
+    got_lun = -1
 
     ! Looks for a free unit and assigns it to lun
     do lun = min_lun, max_lun
       if (lun_is_free(lun)) then
         inquire(unit=lun, opened=used, iostat=iostat)
+
         if (iostat .ne. 0) used = .true.
         lun_is_free(lun) = .false.
-        if (.not. used) then 
-          call pop_sub()
-          return
+        if (.not. used) then
+          got_lun = lun
+          exit
         end if
       end if
     end do
@@ -410,7 +385,6 @@ contains
           action=trim(action), position=trim(position_), iostat=iostat)
       endif
       
-
       if(iostat.ne.0) then
         call io_free(iunit)
         iunit = -1
@@ -573,18 +547,15 @@ contains
     call push_sub('io.io_switch_status')
 
     ! only root node is taking care of file I/O
-    if(.not.mpi_grp_is_root(mpi_world)) then 
-      call pop_sub()
-      return
+    if(mpi_grp_is_root(mpi_world)) then 
+      ! remove possible leftovers first before we switch to new status
+      call loct_rm_status_files(current_label)
+
+      ! create empty status file 
+      iunit = io_open('exec/'//trim(current_label)//'oct-status-'//trim(status), &
+        action='write', status='unknown', is_tmp=.true.)
+      call io_close(iunit)
     end if
-
-    ! remove possible leftovers first before we switch to new status
-    call loct_rm_status_files(current_label)
-
-    ! create empty status file 
-    iunit = io_open('exec/'//trim(current_label)//'oct-status-'//trim(status), &
-      action='write', status='unknown', is_tmp=.true.)
-    call io_close(iunit)
 
     call pop_sub()
 
@@ -599,39 +570,36 @@ contains
     call push_sub('io.io_debug_on_the_fly')
 
     ! only root node performs the check
-    if(.not.mpi_grp_is_root(mpi_world)) then
-      call pop_sub()
-      return
+    if(mpi_grp_is_root(mpi_world)) then
+      if(io_file_exists('enable_debug_mode', 'Enabling DebugMode')) then
+        conf%debug_level = 100
+        in_debug_mode    = .true.
+        ! this call does not hurt if the directory is already there
+        ! but is otherwise required
+        call io_mkdir('debug')
+        ! we have been notified by the user, so we can cleanup the file
+        call loct_rm('enable_debug_mode')
+        ! artificially increase sub stack to avoid underflow
+        no_sub_stack = no_sub_stack + 8
+      end if
+      if(io_file_exists('enable_flush_messages', 'Enabling flushing of messages')) then
+        flush_messages   = .true.
+        ! we have been notified by the user, so we can cleanup the file
+        call loct_rm('enable_flush_messages')
+      end if
+
+      if(io_file_exists('disable_debug_mode', 'Disabling DebugMode')) then
+        conf%debug_level = 0
+        in_debug_mode    = .false.
+        ! we have been notified by the user, so we can cleanup the file
+        call loct_rm('disable_debug_mode')
+      end if
+      if(io_file_exists('disable_flush_messages', 'Disabling flushing of messages')) then
+        flush_messages   = .false.
+        ! we have been notified by the user, so we can cleanup the file
+        call loct_rm('disable_flush_messages')
+      end if
     end if
-
-    if(io_file_exists('enable_debug_mode', 'Enabling DebugMode')) then
-      conf%debug_level = 100
-      in_debug_mode    = .true.
-      ! this call does not hurt if the directory is already there
-      ! but is otherwise required
-      call io_mkdir('debug')
-      ! we have been notified by the user, so we can cleanup the file
-      call loct_rm('enable_debug_mode')
-      ! artificially increase sub stack to avoid underflow
-      no_sub_stack = no_sub_stack + 8
-    endif
-    if(io_file_exists('enable_flush_messages', 'Enabling flushing of messages')) then
-      flush_messages   = .true.
-      ! we have been notified by the user, so we can cleanup the file
-      call loct_rm('enable_flush_messages')
-    endif
-
-    if(io_file_exists('disable_debug_mode', 'Disabling DebugMode')) then
-      conf%debug_level = 0
-      in_debug_mode    = .false.
-      ! we have been notified by the user, so we can cleanup the file
-      call loct_rm('disable_debug_mode')
-    endif
-    if(io_file_exists('disable_flush_messages', 'Disabling flushing of messages')) then
-      flush_messages   = .false.
-      ! we have been notified by the user, so we can cleanup the file
-      call loct_rm('disable_flush_messages')
-    endif
 
     call pop_sub()
 

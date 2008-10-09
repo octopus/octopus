@@ -726,8 +726,8 @@ contains
         write(iunit,'(3a)') 'Forces on the ions [', trim(units_out%force%abbrev), "]"
         write(iunit,'(a,10x,14x,a,14x,a,14x,a)') ' Ion','x','y','z'
         do i = 1, geo%natoms
-          write(iunit,'(i4,a10,3f15.6)') i, trim(geo%atom(i)%spec%label), &
-            geo%atom(i)%f(:) / units_out%force%factor
+          write(iunit,'(i4,a10,10f15.6)') i, trim(geo%atom(i)%spec%label), &
+            geo%atom(i)%f(1:NDIM) / units_out%force%factor
         end do
 
         call io_close(iunit)
@@ -763,7 +763,7 @@ contains
         end if
       end if
 
-      ALLOCATE(ang (1:st%nst, st%d%nik, 3), st%nst*st%d%nik*3)
+      ALLOCATE(ang (1:st%nst, st%d%nik, MAX_DIM), st%nst*st%d%nik*MAX_DIM)
       ALLOCATE(ang2(1:st%nst, st%d%nik), st%nst*st%d%nik)
       do ik = st%d%kpt%start, st%d%kpt%end
         do ist = st%st_start, st%st_end
@@ -774,9 +774,10 @@ contains
           end if
         end do
       end do
-      angular(1) =  states_eigenvalues_sum(st, ang(st%st_start:st%st_end, :, 1))
-      angular(2) =  states_eigenvalues_sum(st, ang(st%st_start:st%st_end, :, 2))
-      angular(3) =  states_eigenvalues_sum(st, ang(st%st_start:st%st_end, :, 3))
+
+      angular(1) =  states_eigenvalues_sum(st, ang (st%st_start:st%st_end, :, 1))
+      angular(2) =  states_eigenvalues_sum(st, ang (st%st_start:st%st_end, :, 2))
+      angular(3) =  states_eigenvalues_sum(st, ang (st%st_start:st%st_end, :, 3))
       lsquare    =  states_eigenvalues_sum(st, ang2(st%st_start:st%st_end, :))
 
       do ik = 1, st%d%nik, ns

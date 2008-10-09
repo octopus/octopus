@@ -197,8 +197,8 @@ program oscillator_strength
   ! Initialize stuff
   call global_init()
   in_debug_mode = .false.
-  call datasets_init(1)
   call io_init(defaults = .true.)
+  call datasets_init(1)
   if(in_debug_mode) then
      call io_mkdir('debug')
   end if

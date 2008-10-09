@@ -78,6 +78,9 @@ program octopus
     in_debug_mode = .false.
   end if
 
+  ! Now we can initialize the io
+  call io_init()
+
   !%Variable ReportMemory
   !%Type logical
   !%Default no
@@ -155,7 +158,7 @@ program octopus
     call calc_mode_set(dataset_runmode(current_dataset))
 
     ! datasets have to be available before calling the _init() functions below
-    call io_init()
+    call io_init_datasets()
 
     ! now we declare octopus as running
     call io_switch_status('running')

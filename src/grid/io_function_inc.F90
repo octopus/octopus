@@ -357,7 +357,7 @@ subroutine X(output_function_global) (how, dir, fname, m, sb, f, u, ierr, is_tmp
   logical,              intent(in)  :: is_tmp
 
 
-  character(len=256) :: filename
+  character(len=512) :: filename
   character(len=20)  :: mformat, mformat2, mfmtheader
   integer            :: iunit, i, j, np_max
   FLOAT              :: x0
@@ -441,7 +441,7 @@ contains
   end subroutine out_plain
 
   subroutine out_binary()
-    character(len=256) :: workdir
+    character(len=512) :: workdir
 
     workdir = io_workpath(dir, is_tmp=is_tmp)
     call write_binary(m%np_global, f, out_type, ierr, trim(workdir)//'/'//trim(fname)//'.obf')
@@ -653,6 +653,7 @@ contains
   subroutine out_netcdf()
     integer :: ncid, status, data_id, pos_id, dim_min
     integer :: dim_data_id(3), dim_pos_id(2)
+
     real(r4) :: pos(2, 3)
     type(X(cf_t)) :: c
     FLOAT, allocatable :: x(:, :, :)
@@ -667,7 +668,7 @@ contains
     call X(cf_alloc_RS) (c)
     call X(mesh_to_cube) (m, f, c)
 
-    filename = io_workpath(trim(dir)//'/'//trim(fname)//".ncdf", is_tmp=is_tmp);
+    filename = io_workpath(trim(dir)//'/'//trim(fname)//".ncdf", is_tmp=is_tmp)
 
     status = nf90_create(trim(filename), NF90_CLOBBER, ncid)
     if(status.ne.NF90_NOERR) then
@@ -701,11 +702,7 @@ contains
       call ncdf_error('nf90_def_dim', status, filename, ierr)
     end if
 
-    select case(sb%dim)
-    case(1); dim_min = 3
-    case(2); dim_min = 2
-    case(3); dim_min = 1
-    end select
+    dim_min = 3 - sb%dim + 1
 
 #if defined(SINGLE_PRECISION)
     if(status == NF90_NOERR) then
@@ -761,8 +758,9 @@ contains
     status = nf90_enddef (ncid)
 
     ! data
-    pos(1,:) = real(-(c%n(:) - 1)/2 * m%h(:) / units_out%length%factor, 4)
-    pos(2,:) = real(m%h(:) / units_out%length%factor, 4)
+    pos(:,:) = M_ZERO
+    pos(1,1:sb%dim) = real(-(c%n(1:sb%dim) - 1)/2 * m%h(1:sb%dim) / units_out%length%factor, 4)
+    pos(2,1:sb%dim) = real(m%h(1:sb%dim) / units_out%length%factor, 4)
 
     if(status == NF90_NOERR) then
       status = nf90_put_var (ncid, pos_id, pos(:,:))

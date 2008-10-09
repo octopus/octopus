@@ -151,11 +151,11 @@ module mesh_m
   end type mesh_line_t
   
   integer, parameter, public ::      &
-    LEFT_BOUNDARY_X  =  1,          &
+    LEFT_BOUNDARY_X   =  1,          &
     RIGHT_BOUNDARY_X  =  2,          &
-    LEFT_BOUNDARY_Y  =  3,          &
+    LEFT_BOUNDARY_Y   =  3,          &
     RIGHT_BOUNDARY_Y  =  4,          &
-    LEFT_BOUNDARY_Z  =  5,          &
+    LEFT_BOUNDARY_Z   =  5,          &
     RIGHT_BOUNDARY_Z  =  6,          &
     MAX_BOUNDARY_DIM  = RIGHT_BOUNDARY_Z
   
@@ -322,9 +322,9 @@ contains
     
     !find the point of the grid that is closer to the atom
     dmin = M_ZERO
-    do i=1,mesh%np
-      d = sum( ( pos(1:MAX_DIM)-mesh%x(i,1:MAX_DIM) )**2 )
-      if ( ( d < dmin ) .or. ( i == 1 ) ) then 
+    do i = 1, mesh%np
+      d = sum((pos(1:mesh%sb%dim) - mesh%x(i, 1:mesh%sb%dim))**2)
+      if((d < dmin) .or. (i == 1)) then 
         imin = i
         dmin = d 
       end if
@@ -386,6 +386,7 @@ contains
   ! --------------------------------------------------------------
   FLOAT function mesh_gcutoff(m) result(gmax)
     type(mesh_t), intent(in) :: m
+
     gmax = M_PI/(maxval(m%h))
   end function mesh_gcutoff
   
@@ -398,10 +399,10 @@ contains
     call push_sub('mesh.mesh_dump')
     
     write(iunit, '(a)')         dump_tag
-    write(iunit, '(a20,3i8)')   'nr(1, :)=           ', mesh%nr(1, :)
-    write(iunit, '(a20,3i8)')   'nr(2, :)=           ', mesh%nr(2, :)
-    write(iunit, '(a20,3i8)')   'l(:)=               ', mesh%l(:)
-    write(iunit, '(a20,3i8)')   'enlarge(:)=         ', mesh%enlarge(:)
+    write(iunit, '(a20,7i8)')   'nr(1, :)=           ', mesh%nr(1, 1:mesh%sb%dim)
+    write(iunit, '(a20,7i8)')   'nr(2, :)=           ', mesh%nr(2, 1:mesh%sb%dim)
+    write(iunit, '(a20,7i8)')   'l(:)=               ', mesh%l(1:mesh%sb%dim)
+    write(iunit, '(a20,7i8)')   'enlarge(:)=         ', mesh%enlarge(1:mesh%sb%dim)
     write(iunit, '(a20,1i10)')  'np=                 ', mesh%np
     write(iunit, '(a20,1i10)')  'np_part=            ', mesh%np_part
     write(iunit, '(a20,1i10)')  'np_global=          ', mesh%np_global
@@ -428,10 +429,10 @@ contains
       if(trim(line).eq.dump_tag) exit
     end do
 
-    read(iunit, '(a20,3i8)') str, mesh%nr(1, :)
-    read(iunit, '(a20,3i8)') str, mesh%nr(2, :)
-    read(iunit, '(a20,3i8)') str, mesh%l(:)
-    read(iunit, '(a20,3i8)') str, mesh%enlarge(:)
+    read(iunit, '(a20,7i8)')  str, mesh%nr(1, 1:mesh%sb%dim)
+    read(iunit, '(a20,7i8)')  str, mesh%nr(2, 1:mesh%sb%dim)
+    read(iunit, '(a20,7i8)')  str, mesh%l(1:mesh%sb%dim)
+    read(iunit, '(a20,7i8)')  str, mesh%enlarge(1:mesh%sb%dim)
     read(iunit, '(a20,1i10)') str, mesh%np
     read(iunit, '(a20,1i10)') str, mesh%np_part
     read(iunit, '(a20,1i10)') str, mesh%np_global
@@ -454,7 +455,7 @@ contains
     call push_sub('mesh.Lxyz_dump')
 
     do ip = 1, mesh%np_part
-      write(iunit, '(3i8)') mesh%Lxyz(ip, :)
+      write(iunit, '(7i8)') mesh%Lxyz(ip, 1:mesh%sb%dim)
     end do
 
     call pop_sub()
@@ -472,7 +473,7 @@ contains
     call push_sub('mesh.mesh_lxyz_init_from_file')
 
     do ip = 1, mesh%np_part
-      read(iunit, '(3i8)') mesh%lxyz(ip, :)
+      read(iunit, '(7i8)') mesh%lxyz(ip, 1:mesh%sb%dim)
       mesh%lxyz_inv(mesh%lxyz(ip, 1), mesh%lxyz(ip, 2), mesh%lxyz(ip, 3)) = ip
     end do
 

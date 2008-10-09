@@ -198,6 +198,9 @@ contains
     !% <br>&nbsp;&nbsp;'H_all'   |  1.0079 | spec_all_e   | 1   
     !% <br>%</tt>
     !%
+    !% Additionally, all the pseudopotential types (PSF, HGH, FHI, UPF) can take two extra
+    !% fields: default spacing, and default radius (used for minimum simulation box if the
+    !% radius is not specified). 
     !%
     !%Option user_defined  123
     !% Species with user-defined potential. In this case, the fourth
@@ -250,9 +253,6 @@ contains
     !% atomic number. See the documentation of the variable 
     !% SpeciesAllElectronSigma.
     !% WARNING: Currently you can not use LCAO with this species.
-    !%Additionally, all the pseudopotential types (PSF, HGH, FHI, UPF) can take two extra
-    !% fields: default spacing, and default radius (used for minimum simulation box if the
-    !% radius is not specified). 
     !%End
 
     call obsolete_variable('SpecieAllElectronSigma', 'SpeciesAllElectronSigma')

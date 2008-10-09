@@ -575,27 +575,24 @@ contains
       sub_stack(50) = 'push_sub'
       message(1) = 'Too many recursion levels (max=50)'
       call write_fatal(1)
-    else
-      sub_stack(no_sub_stack)  = trim(sub_name)
-      time_stack(no_sub_stack) = loct_clock()
-
-      if(conf%debug_level.ge.100) then
-        call open_debug_trace(iunit)
-        call push_sub_write(iunit)
-        ! close file to ensure flushing
-        close(iunit)
-      end if
-
-      ! also write to stderr if we are node 0
-      if(conf%debug_level.gt.1) then
-        if (mpi_grp_is_root(mpi_world)) call push_sub_write(stderr)
-      end if
     end if
 
-    return
+    sub_stack(no_sub_stack)  = trim(sub_name)
+    time_stack(no_sub_stack) = loct_clock()
+
+    if(conf%debug_level.ge.100) then
+      call open_debug_trace(iunit)
+      call push_sub_write(iunit)
+      ! close file to ensure flushing
+      close(iunit)
+    end if
+
+    ! also write to stderr if we are node 0
+    if(conf%debug_level.gt.1) then
+      if (mpi_grp_is_root(mpi_world)) call push_sub_write(stderr)
+    end if
 
   contains
-
 
     subroutine push_sub_write(iunit_out)
       integer,  intent(in) :: iunit_out
@@ -623,27 +620,26 @@ contains
     call loct_gettimeofday(sec, usec)
     call epoch_time_diff(sec, usec)
 
-    if(no_sub_stack > 0) then
-
-      if(conf%debug_level.ge.100) then
-        call open_debug_trace(iunit)
-        call pop_sub_write(iunit)
-        ! close file to ensure flushing
-        close(iunit)
-      end if
-      
-      ! also write to stderr if we are node 0
-      if(conf%debug_level.gt.1) then
-        if (mpi_grp_is_root(mpi_world)) call pop_sub_write(stderr)
-      end if
-
-      no_sub_stack = no_sub_stack - 1
-    else
+    if(no_sub_stack <= 0) then
       no_sub_stack = 1
       sub_stack(1) = 'pop_sub'
       message(1) = 'Too few recursion levels'
       call write_fatal(1)
     end if
+
+    if(conf%debug_level.ge.100) then
+      call open_debug_trace(iunit)
+      call pop_sub_write(iunit)
+      ! close file to ensure flushing
+      close(iunit)
+    end if
+      
+    ! also write to stderr if we are node 0
+    if(conf%debug_level.gt.1) then
+      if (mpi_grp_is_root(mpi_world)) call pop_sub_write(stderr)
+    end if
+    
+    no_sub_stack = no_sub_stack - 1
 
   contains
 

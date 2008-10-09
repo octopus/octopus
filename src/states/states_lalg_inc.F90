@@ -406,9 +406,9 @@ subroutine X(states_angular_momentum)(gr, phi, l, l2)
 
   call push_sub('states_inc.Xstates_angular_momemtum')
 
-  ASSERT(gr%m%sb%dim .ne.1)
+  ASSERT(NDIM .ne.1)
 
-  select case(gr%m%sb%dim)
+  select case(NDIM)
   case(3)
     ALLOCATE(lpsi(NP_PART, 3), NP_PART*3)
   case(2)
@@ -425,7 +425,7 @@ subroutine X(states_angular_momentum)(gr, phi, l, l2)
     l = M_ZERO
 #else
     call X(f_angular_momentum)(gr%sb, gr%m, gr%der, phi(:, idim), lpsi)
-    select case(gr%m%sb%dim)
+    select case(NDIM)
     case(3)
       l(1) = l(1) + X(mf_dotp)(gr%m, phi(:, idim), lpsi(:, 1))
       l(2) = l(2) + X(mf_dotp)(gr%m, phi(:, idim), lpsi(:, 2))
