@@ -110,6 +110,7 @@ module opt_control_parameters_m
     integer :: ntiter        = 0
     integer :: nfreqs        = 0
     FLOAT   :: targetfluence = M_ZERO
+    FLOAT   :: intphi        = M_ZERO
     type(tdf_t), pointer :: f(:) => NULL()
     FLOAT, pointer :: alpha(:)   => NULL()
 
@@ -235,7 +236,7 @@ contains
     if(.not.varinfo_valid_option('OCTControlFunctionType', par_common%mode)) call input_error('OCTControlFunctionType')
     ! WARNING: This should be temporary.
     select case(par_common%mode)
-    case(parameter_mode_phi, parameter_mode_f_and_phi)
+    case(parameter_mode_f_and_phi)
       write(message(1),'(a)') 'Error: The OCTControlFunctionType selected is still not implemented'
       call write_fatal(1)
     end select
@@ -267,7 +268,7 @@ contains
     ! For phase-only optimization, we need to store the envelope, in order to be able
     ! to calculate the fluence.
     if(par_common%mode .eq. parameter_mode_phi) then
-      call laser_get_phi(ep%lasers(1), par_common%f)
+      call laser_get_f(ep%lasers(1), par_common%f)
     end if
 
     ! Fix the carrier frequency
@@ -440,6 +441,15 @@ contains
       if(par_common%fix_initial_fluence) call parameters_set_fluence(par)
     end if
 
+    ! Now we ave to find the "fluence" of the phase, in order to keep it constant.
+    if(par_common%mode .eq. parameter_mode_phi) then
+      par%intphi = tdf_dot_product(par%f(1), par%f(1))
+      if(par%intphi <= M_ZERO) then
+        write(message(1), '(a)') 'You must supply a non-null initial-guess phase.'
+        call write_fatal(1)
+      end if
+    end if
+
     if(par_common%mode .eq. parameter_mode_f) then
       ! If par%envelope = .true., the object to optimize is the envelope of the
       ! the laser pulse. Being e(t) the laser pulse, it is assumed that it
@@ -525,6 +535,8 @@ contains
     type(oct_control_parameters_t), intent(inout) :: par
     integer :: j
 
+    call push_sub('parameters.parameters_set_rep')
+
     if(par%current_representation .eq. par%representation) return
 
     select case(par%current_representation)
@@ -539,6 +551,7 @@ contains
     end select
     par%current_representation = par%representation
 
+    call pop_sub()
   end subroutine parameters_set_rep
   ! ---------------------------------------------------------
 
@@ -547,6 +560,7 @@ contains
   subroutine parameters_to_realtime(par)
     type(oct_control_parameters_t), intent(inout) :: par
     integer :: j
+    call push_sub('parameters.parameters_to_realtime')
 
     if(par%current_representation .eq. ctr_parameter_real_space) return
 
@@ -555,6 +569,7 @@ contains
     end do
     par%current_representation = ctr_parameter_real_space
 
+    call pop_sub()
   end subroutine parameters_to_realtime
   ! ---------------------------------------------------------
 
@@ -565,6 +580,8 @@ contains
     integer :: i, j
     FLOAT, allocatable :: delta(:)
     integer :: nfreqs
+
+    call push_sub('parameters.parameters_diff')
 
     ASSERT(p%current_representation .eq. q%current_representation)
 
@@ -593,6 +610,7 @@ contains
     end select
 
     deallocate(delta)
+    call pop_sub()
   end function parameters_diff
   ! ---------------------------------------------------------
 
@@ -613,6 +631,8 @@ contains
 
     integer :: nfreqs
 
+    call push_sub('parameters.parameters_mixing_init')
+
     select case(par%representation)
     case(ctr_parameter_real_space)
       call mix_init(parameters_mix, par%ntiter + 1, par%no_parameters, 1)
@@ -621,6 +641,7 @@ contains
       call mix_init(parameters_mix, nfreqs, par%no_parameters, 1)
     end select
 
+    call pop_sub()
   end subroutine parameters_mixing_init
   ! ---------------------------------------------------------
 
@@ -805,9 +826,14 @@ contains
       change_rep = .false.
     end if
 
-    do j = 1, cp%no_parameters
-      call laser_set_f(ep%lasers(j), par%f(j))
-    end do
+    select case(par_common%mode)
+    case(parameter_mode_epsilon, parameter_mode_f)
+      do j = 1, cp%no_parameters
+        call laser_set_f(ep%lasers(j), par%f(j))
+      end do
+    case(parameter_mode_phi)
+      call laser_set_phi(ep%lasers(1), par%f(1))
+    end select
 
     if(change_rep) then 
       call parameters_end(par)
@@ -934,10 +960,11 @@ contains
 
       ! In this case, there is only one parameter (for the moment)
       iunit = io_open(trim(filename)//'/cp', action='write')
-      write(iunit,'(3a20)') '#       t [a.u]      ', '        phi(t)       ', '        E(t)         ' 
+      write(iunit,'(4a20)') '#       t [a.u]      ', '        f(t)         ', &
+                            '        phi(t)       ', '        E(t)         ' 
       do i = 1, cp%ntiter + 1
         t = (i-1)*cp%dt
-        write(iunit, '(3es20.8e3)') t, real(tdf(par%f(1), t)), real(tdf(par_common%f, t)) * &
+        write(iunit, '(4es20.8e3)') t, real(tdf(par_common%f, t)), real(tdf(par%f(1), t)), real(tdf(par_common%f, t)) * &
           cos(par%w0*t + real(tdf(par%f(1), t)) )
       end do
       call io_close(iunit)
@@ -1024,14 +1051,22 @@ contains
         call tdf_end(f)
       end do
     case(parameter_mode_phi)
+      call tdf_init(f)
+      call tdf_copy(f, par%f(1))
+      if(par%current_representation .eq. ctr_parameter_frequency_space) then
+        call tdf_sineseries_to_numerical(f)
+      end if
       do i = 1, par%ntiter + 1
         t = (i-1)*par%dt
         fi = tdf(par_common%f, i)
-        phi = real(tdf(par%f(1), i))
-        call tdf_set_numerical(f, i, fi*cos(par%w0*t+phi))
+        phi = real(tdf(f, i)) 
+        call tdf_set_numerical(f, i, fi *cos(par%w0*t+phi))
       end do
       parameters_fluence = tdf_dot_product(f, f)
+      call tdf_end(f)
     case(parameter_mode_f_and_phi)
+      call tdf_init(f)
+      call tdf_copy(f, par%f(1))
       do i = 1, par%ntiter + 1
         t = (i-1)*par%dt
         fi = tdf(par%f(1), i)
@@ -1039,6 +1074,7 @@ contains
         call tdf_set_numerical(f, i, fi*cos(par%w0*t+phi))
       end do
       parameters_fluence = tdf_dot_product(f, f)
+      call tdf_end(f)
     end select
 
     call pop_sub()
@@ -1145,15 +1181,17 @@ contains
   ! ---------------------------------------------------------
   subroutine parameters_set_fluence(par)
     type(oct_control_parameters_t), intent(inout) :: par
-
     FLOAT   :: old_fluence
     integer :: j
+
+    call push_sub('parameters.parameters_set_fluence')
 
     old_fluence = parameters_fluence(par) 
     do j = 1, par%no_parameters
       call tdf_scalar_multiply( sqrt(par%targetfluence/old_fluence) , par%f(j) )
     end do
 
+    call pop_sub()
   end subroutine parameters_set_fluence
   ! ---------------------------------------------------------
 
@@ -1179,6 +1217,7 @@ contains
     cp_out%ntiter = cp_in%ntiter
     cp_out%nfreqs = cp_in%nfreqs
     cp_out%targetfluence = cp_in%targetfluence
+    cp_out%intphi = cp_in%intphi
     cp_out%representation = cp_in%representation
     cp_out%current_representation = cp_in%current_representation
     cp_out%omegamax = cp_in%omegamax
@@ -1284,7 +1323,12 @@ contains
     end do
     e(n) = e(n) * sin(x(n-1))
 
-    e = sqrt(par%targetfluence) * e
+    select case(par_common%mode)
+    case(parameter_mode_epsilon, parameter_mode_f)
+      e = sqrt(par%targetfluence) * e
+    case(parameter_mode_phi)
+      e = sqrt(par%intphi)*e
+    end select
 
     if(par_common%mode .eq. parameter_mode_f) then
       ep = matmul(par%utransfi, e)
