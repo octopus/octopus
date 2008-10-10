@@ -96,6 +96,7 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, ex, ec, ip, qtot, vxc)
         case(XC_FAMILY_MGGA)
           message(1) = 'Meta-GGAs are currently disabled.'
           call write_fatal(1)
+
         case default
           cycle
         end select
@@ -125,7 +126,11 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, ex, ec, ip, qtot, vxc)
           call write_fatal(1)
           ! call XC_F90(mgga)(functl(ixc)%conf, l_dens(1), l_gdens(1,1), l_tau(1), &
           !   e, l_dedd(1), l_dedgd(1,1), l_dedtau(1))
+
+        case default
+          cycle
         end select
+
       end if
 
       if(functl(ixc)%type == XC_EXCHANGE) then
