@@ -34,7 +34,7 @@ match ; Occupation [4down] ; GREP(static/info, '4   dn', 28) ;   0.000000
 # Now we repeat the calculation but making use of the l=1 component
 # of the pseudopotencial to build the local component.
 Input: 01-carbon_atom.02-ground_state.inp
-match ; Total energy       ; GREP(static/info, 'Total       =', 20) ; -146.81378481
+match ; Total energy       ; GREP(static/info, 'Total       =', 20) ; -146.81362567
 match ; Eigenvalue   [1up] ; GREP(static/info, '1   up', 13) ; -14.466667
 match ; Occupation   [1up] ; GREP(static/info, '1   up', 28) ;   1.000000
 match ; Eigenvalue [4down] ; GREP(static/info, '4   dn', 13) ;  -3.683497
