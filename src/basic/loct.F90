@@ -29,7 +29,6 @@ module loct_m
     loct_clock,              &
     loct_gettimeofday,       &
     loct_nanosleep,          &
-    loct_getmem,             &
     loct_getcwd,             &
     loct_sysname,            &
     loct_mkdir,              &
@@ -78,11 +77,6 @@ module loct_m
     subroutine oct_nanosleep(sec, usec)
       integer, intent(in) :: sec, usec
     end subroutine oct_nanosleep
-  end interface
-
-  interface loct_getmem
-    integer function oct_getmem()
-    end function oct_getmem
   end interface
 
   interface loct_sysname

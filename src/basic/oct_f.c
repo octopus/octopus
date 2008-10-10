@@ -228,33 +228,6 @@ void FC_FUNC_(oct_nanosleep, OCT_NANOSLEEP)
 }
 
 
-/* this function is *not* portable. Should get rid of this! */
-int FC_FUNC_(oct_getmem, OCT_GETMEM)
-     ()
-{
-#ifdef linux
-  static size_t pagesize = 0;
-  FILE *f;
-  int pid;
-  unsigned long mem;
-  char s[256];
-  
-  if(pagesize == 0)
-    pagesize = sysconf(_SC_PAGESIZE);
-  
-  pid = getpid();
-  sprintf(s, "%s%d%s", "/proc/", pid, "/statm");
-  if((f = fopen(s, "r")) == NULL) return -1;
-  fscanf(f, "%lu", &mem);
-  fclose(f);
-  
-  return (mem*pagesize) >> 10;
-#else
-  return -1;
-#endif
-}
-
-
 void FC_FUNC_(oct_sysname, OCT_SYSNAME)
 		 (STR_F_TYPE name STR_ARG1)
 {
@@ -423,7 +396,24 @@ float FC_FUNC_(oct_hypotf, OCT_HYPOTF)
 
 void * FC_FUNC_(get_memory_usage, GET_MEMORY_USAGE)()
 {
-#ifdef HAVE_SBRK
+#ifdef linux
+  static size_t pagesize = 0;
+  FILE *f;
+  int pid;
+  unsigned long mem;
+  char s[256];
+  
+  if(pagesize == 0)
+    pagesize = sysconf(_SC_PAGESIZE);
+  
+  pid = getpid();
+  sprintf(s, "%s%d%s", "/proc/", pid, "/statm");
+  if((f = fopen(s, "r")) == NULL) return -1;
+  fscanf(f, "%lu", &mem);
+  fclose(f);
+  
+  return (void *) (mem*pagesize);
+#elif HAVE_SBRK
   return sbrk(0);
 #else
   return 0;
