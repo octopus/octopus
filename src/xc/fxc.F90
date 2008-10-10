@@ -59,6 +59,18 @@ subroutine xc_get_fxc(xcs, m, rho, ispin, fxc)
         case(XC_FAMILY_LDA)
           call XC_F90(lda_fxc)(functl(ixc)%conf, l_dens(1), l_dedd(1))
           
+        case(XC_FAMILY_GGA)
+          message(1) = 'GGAs are currently disabled.'
+          call write_fatal(1)
+
+        case(XC_FAMILY_HYB_GGA)
+          message(1) = 'Hyb-GGAs are currently disabled.'
+          call write_fatal(1)
+
+        case(XC_FAMILY_MGGA)
+          message(1) = 'Meta-GGAs are currently disabled.'
+          call write_fatal(1)
+
         case default
           cycle
         end select
