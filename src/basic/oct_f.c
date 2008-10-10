@@ -174,49 +174,6 @@ void FC_FUNC_(oct_progress_bar, OCT_PROGRESS_BAR)
   progress_bar(*a, *max);
 }
 
-/* -------------------------- interface to METIS ----------------------------- */
-#if defined(HAVE_METIS)
-#include <metis.h>
-
-void FC_FUNC_(oct_metis_part_mesh_nodal, OCT_METIS_PART_MESH_NODAL)
-  (int *ne, int *nn, idxtype *elmnts, int *etype, int *numflag, int *nparts, 
-   int *edgecut, idxtype *epart, idxtype *npart)
-{
-  METIS_PartMeshNodal(ne, nn, elmnts, etype, numflag, nparts, edgecut, epart, npart);
-}
-
-void FC_FUNC_(oct_metis_part_mesh_dual, OCT_METIS_PART_MESH_DUAL)
-  (int *ne, int *nn, idxtype *elmnts, int *etype, int *numflag, int *nparts, 
-   int *edgecut, idxtype *epart, idxtype *npart)
-{
-  METIS_PartMeshDual(ne, nn, elmnts, etype, numflag, nparts, edgecut, epart, npart);
-}
-
-void FC_FUNC_(oct_metis_part_graph_recursive, OCT_METIS_PART_GRAPH_RECURSIVE)
-  (int *n, idxtype *xadj, idxtype *adjncy, idxtype *vwgt,
-   idxtype *adjwgt, int *wgtflag, int *numflag, int *nparts,
-   int *options, int *edgecut, idxtype *part)
-{
-  METIS_PartGraphRecursive(n, xadj, adjncy, vwgt, adjwgt, wgtflag, numflag, nparts, options, edgecut, part);
-}
-
-void FC_FUNC_(oct_metis_part_graph_kway, OCT_METIS_PART_GRAPH_KWAY)
-  (int *n, idxtype *xadj, idxtype *adjncy, idxtype *vwgt,
-   idxtype *adjwgt, int *wgtflag, int *numflag, int *nparts,
-   int *options, int *edgecut, idxtype *part)
-{
-  METIS_PartGraphKway(n, xadj, adjncy, vwgt, adjwgt, wgtflag, numflag, nparts, options, edgecut, part);
-}
-
-void FC_FUNC_(oct_metis_part_graph_vkway, OCT_METIS_PART_GRAPH_VKWAY)
-  (int *n, idxtype *xadj, idxtype *adjncy, idxtype *vwgt,
-   idxtype *adjwgt, int *wgtflag, int *numflag, int *nparts,
-   int *options, int *edgecut, idxtype *part)
-{
-  METIS_PartGraphVKway(n, xadj, adjncy, vwgt, adjwgt, wgtflag, numflag, nparts, options, edgecut, part);
-}
-#endif
-
 /* ------------------------------ some stuff  -------------------------------- */
 void FC_FUNC_(oct_gettimeofday, OCT_GETTIMEOFDAY)
   (int *sec, int *usec)

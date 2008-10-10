@@ -27,6 +27,7 @@ libgrid_a_SOURCES = \
 	submesh.F90 stencil_star.F90 stencil_variational.F90 stencil_cube.F90 \
 	stencil_starplus.F90 derivatives.F90 cube_function.F90 fourier_space.F90 mesh_function.F90 \
 	basins.F90 io_function.F90 multigrid.F90 gridhier.F90 double_grid.F90 grid.F90 \
+	metis.c \
 	ob_interface.F90
 
 noinst_HEADERS = \
