@@ -234,12 +234,17 @@ contains
     !%End
     call loct_parse_int(check_inp('OCTControlFunctionType'), parameter_mode_epsilon, par_common%mode)
     if(.not.varinfo_valid_option('OCTControlFunctionType', par_common%mode)) call input_error('OCTControlFunctionType')
-    ! WARNING: This should be temporary.
-    select case(par_common%mode)
-    case(parameter_mode_f_and_phi)
-      write(message(1),'(a)') 'Error: The OCTControlFunctionType selected is still not implemented'
-      call write_fatal(1)
-    end select
+     select case(par_common%mode)
+    case(parameter_mode_f, parameter_mode_phi, parameter_mode_f_and_phi)
+      if(par_common%representation .ne. ctr_parameter_frequency_space) then
+        write(message(1),'(a)') 'If "OCTControlFunctionType = parameter_mode_f", '
+        write(message(2),'(a)') '   "OCTControlFunctionType = parameter_mode_phi", '
+        write(message(3),'(a)') 'or "OCTControlFunctionType = parameter_mode_f_and_phi", then'
+        write(message(4),'(a)') 'the control parameter representation cannot be real time, i.e. you must have'
+        write(message(5),'(a)') '"OCTParameterRepresentation = control_parameters_fourier_space".'
+        call write_fatal(5)
+      end if
+     end select
 
     ! Check that the laser polarizations are not imaginary.
     ALLOCATE(par_common%pol(MAX_DIM, ep%no_lasers), MAX_DIM*ep%no_lasers)
@@ -875,9 +880,11 @@ contains
     nullify(cp%f)
     deallocate(cp%alpha)
     nullify(cp%alpha)
-    if( par_common%mode .eq. parameter_mode_f ) then
+    if(associated(cp%utransf)) then
       deallocate(cp%utransf)
       nullify(cp%utransf)
+    end if
+    if(associated(cp%utransfi)) then
       deallocate(cp%utransfi)
       nullify(cp%utransfi)
     end if
@@ -1026,11 +1033,23 @@ contains
   ! parameters_fluence = \sum_i^{no_parameters} \integrate_0^T |epsilon(t)|^2
   ! ---------------------------------------------------------
   FLOAT function parameters_fluence(par)
-    type(oct_control_parameters_t), intent(in) :: par
+    type(oct_control_parameters_t), target, intent(in) :: par
+    type(oct_control_parameters_t), pointer :: par_
     integer :: j, i
     FLOAT :: t, fi, phi
     type(tdf_t) :: f
+    logical :: change_rep
     call push_sub('parameters.parameters_fluence')
+
+    if(par%current_representation .eq. ctr_parameter_frequency_space) then
+      ALLOCATE(par_, 1)
+      call parameters_copy(par_, par)
+      call parameters_to_realtime(par_)
+      change_rep = .true.
+    else
+      par_ => par
+      change_rep = .false.
+    end if
 
     parameters_fluence = M_ZERO
 
@@ -1066,16 +1085,22 @@ contains
       call tdf_end(f)
     case(parameter_mode_f_and_phi)
       call tdf_init(f)
-      call tdf_copy(f, par%f(1))
-      do i = 1, par%ntiter + 1
-        t = (i-1)*par%dt
-        fi = tdf(par%f(1), i)
-        phi = real(tdf(par%f(2), i))
+      call tdf_copy(f, par_%f(1))
+      do i = 1, par_%ntiter + 1
+        t = (i-1)*par_%dt
+        fi = tdf(par_%f(1), i)
+        phi = real(tdf(par_%f(2), i))
         call tdf_set_numerical(f, i, fi*cos(par%w0*t+phi))
       end do
       parameters_fluence = tdf_dot_product(f, f)
       call tdf_end(f)
     end select
+
+    if(change_rep) then
+      call parameters_end(par_)
+    else
+      nullify(par_)
+    end if
 
     call pop_sub()
   end function parameters_fluence
@@ -1229,9 +1254,11 @@ contains
       call tdf_init(cp_out%f(j))
       call tdf_copy(cp_out%f(j), cp_in%f(j))
     end do
-    if(par_common%mode .eq. parameter_mode_f) then
+    if(associated(cp_in%utransf)) then
       ALLOCATE(cp_out%utransf(cp_out%nfreqs, cp_out%nfreqs), cp_out%nfreqs**2)
       cp_out%utransf = cp_in%utransf
+    end if
+    if(associated(cp_in%utransfi)) then
       ALLOCATE(cp_out%utransfi(cp_out%nfreqs, cp_out%nfreqs), cp_out%nfreqs**2)
       cp_out%utransfi = cp_in%utransfi
     end if
