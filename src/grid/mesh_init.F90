@@ -740,9 +740,31 @@ subroutine mesh_partition(m, stencil, np_stencil, part)
   character(len=3)     :: filenum
   integer, allocatable :: votes(:, :)
   integer :: ip, rr
+  integer :: library
+  integer, parameter :: METIS = 2, ZOLTAN = 3
 
   call push_sub('mesh_init.mesh_partition')
 
+  !%Variable MeshPartition
+  !%Type integer
+  !%Default metis
+  !%Section Execution::Parallelization
+  !%Description
+  !% Decides which library to use to perform the mesh partition. By
+  !% default metis is used.
+  !%Option metis 2
+  !% Metis.
+  !%Option zoltan 3
+  !% Zoltan.
+  !%End
+  
+  call loct_parse_int(check_inp('MeshPartition'), METIS,  library)
+
+  ! Get number of partitions.
+  call MPI_Comm_Size(m%mpi_grp%comm, p, mpi_err)
+
+  select case(library)
+  case(METIS)
   options = (/1, 2, 1, 1, 0/) ! Use heavy edge matching in METIS.
 
   ! Shortcut (number of vertices).
@@ -753,9 +775,6 @@ subroutine mesh_partition(m, stencil, np_stencil, part)
 
   ALLOCATE(xadj(nv + 1), nv + 1)
   ALLOCATE(adjncy(2*m%sb%dim*nv), 2*m%sb%dim*nv)
-
-  ! Get number of partitions.
-  call MPI_Comm_Size(m%mpi_grp%comm, p, mpi_err)
 
   ! Set directions of possible neighbours.
   ! With this ordering of the directions it is possible
@@ -858,6 +877,16 @@ subroutine mesh_partition(m, stencil, np_stencil, part)
       0, 0, 0, 1, p, options, edgecut, part)
   end if
 
+  case(ZOLTAN)
+
+    !assign all points to one node
+    call zoltan_partition(m%sb%dim, m%np_global, m%np_part_global, m%x_global, m%mpi_grp%rank + 1, part(1))
+    
+  end select
+  
+  ASSERT(all(part(1:m%np_global) > 0))
+  ASSERT(all(part(1:m%np_global) <= p))
+
   if(in_debug_mode.and.mpi_grp_is_root(mpi_world)) then
     ! Debug output. Write points of each partition in a different file.
     do i = 1, p
@@ -882,7 +911,7 @@ subroutine mesh_partition(m, stencil, np_stencil, part)
   ALLOCATE(votes(1:p, m%np_global + 1:m%np_part_global), p*(m%np_part_global - m%np_global))
 
   !now assign boundary points
-
+  
   !count the boundary points that each point needs
   votes = 0
   do i = 1, m%np_global
@@ -910,7 +939,6 @@ subroutine mesh_partition(m, stencil, np_stencil, part)
 
   call MPI_Barrier(m%mpi_grp%comm, mpi_err)
 
-  deallocate(xadj, adjncy)
   call pop_sub()
 
 end subroutine mesh_partition

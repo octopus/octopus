@@ -86,6 +86,11 @@ if COMPILE_METIS
   AM_CPPFLAGS += -I$(top_srcdir)/external_libs/metis-4.0/
 endif
 
+if COMPILE_ZOLTAN
+  external_LIBS += $(top_builddir)/external_libs/zoltan/libzoltan.a
+  AM_CPPFLAGS += -I$(top_srcdir)/external_libs/zoltan/include
+endif
+
 if COMPILE_LIBNBC
   external_LIBS += $(top_builddir)/external_libs/libnbc/libnbc.a
 endif

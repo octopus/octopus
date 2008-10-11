@@ -129,6 +129,8 @@ dnl check for newuoa
 ACX_NEWUOA
 AM_CONDITIONAL(COMPILE_NEWUOA, test x${HAVE_NEWUOA} = x1)
 
+dnl If in parallel, enable zoltan compilation
+AM_CONDITIONAL(COMPILE_ZOLTAN, test x"$enable_mpi" != x"no")
 
 dnl if libnbc is enabled, check for C MPI
 if test x"$acx_libnbc_ok" == x"yes"; then
@@ -301,6 +303,7 @@ AC_CONFIG_FILES([Makefile
   external_libs/libnbc/Makefile
   external_libs/newuoa/Makefile
   external_libs/spglib/Makefile
+  external_libs/zoltan/Makefile
   liboct_parser/Makefile
   src/Makefile
   src/include/Makefile

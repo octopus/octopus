@@ -20,6 +20,7 @@
 #include "global.h"
 
 module mesh_m
+  use datasets_m
   use curvlinear_m
   use geometry_m
   use global_m
@@ -28,11 +29,13 @@ module mesh_m
   use mesh_lib_m
   use messages_m
   use mpi_m
+  use loct_parser_m
   use par_vec_m
   use profiling_m
   use simul_box_m
   use units_m
-  
+  use zoltan_m
+
   implicit none
   
   private
