@@ -452,8 +452,8 @@ contains
   subroutine profiling_output
     integer          :: ii
     integer          :: iunit
-    character(len=3) :: filenum
-    character(len=3) :: dirnum
+    character(len=4) :: filenum
+    character(len=4) :: dirnum
     real(8)          :: total_time
     type(profile_t), pointer :: prof
 
