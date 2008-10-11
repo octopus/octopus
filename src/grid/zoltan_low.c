@@ -85,9 +85,8 @@ void get_objects_coords(void *data, int num_gids, int num_lids, int num_objs,
 /* ZOLTAN_GEOM_MULTI_FN callback.
 ** Returns coordinates of objects listed in gids and lids.
 */
-  int i, id, id3;
+  int i, id;
   int idir;
-  int next = 0;
   
   if (numDim != mesh.dim){
     *err = 1;
@@ -162,11 +161,6 @@ void FC_FUNC_(zoltan_partition, ZOLTAN_PARTITION)(const int * sbdim,
   rc = Zoltan_Set_Param(zz, "RETURN_LISTS", "PARTITION ASSIGNMENTS"); 
   assert(rc == ZOLTAN_OK);
 
-  /* Set RCB parameters */
-  Zoltan_Set_Param(zz, "KEEP_CUTS", "1"); 
-  Zoltan_Set_Param(zz, "RCB_OUTPUT_LEVEL", "0");
-  Zoltan_Set_Param(zz, "RCB_RECTILINEAR_BLOCKS", "1"); 
-
   rc = Zoltan_Set_Num_Obj_Fn(zz, get_num_objects, NULL);
   assert(rc == ZOLTAN_OK);
 
@@ -192,9 +186,9 @@ void FC_FUNC_(zoltan_partition, ZOLTAN_PARTITION)(const int * sbdim,
 		       &import_procs,      /* NULL */
 		       &import_to_part,    /* NULL */
 		       &num_export,        /* number of points in this processor */
-		       &export_global_ids, /* the partition to which each processor is assigned */
+		       &export_global_ids, 
 		       &export_local_ids,
-		       &export_procs,
+		       &export_procs,      /* the partition to which each processor is assigned */
 		       &export_to_part);
 
   assert(num_export == get_num_objects(NULL, &rc));
@@ -203,6 +197,11 @@ void FC_FUNC_(zoltan_partition, ZOLTAN_PARTITION)(const int * sbdim,
 
   /* broadcast the partition results */
   MPI_Bcast(part, mesh.np, MPI_INT, 0, MPI_COMM_WORLD);
+
+  Zoltan_LB_Free_Part (&export_global_ids,
+		       &export_local_ids,
+		       &export_procs, 
+		       &export_to_part);
 
 }
 
