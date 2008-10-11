@@ -9,11 +9,6 @@
 
 # The following line helps the test harness recover from build errors.
 
-all-local:
-	@echo ""
-	@echo "Trilinos package Zoltan subdirectory src built successfully."
-	@echo ""
-
 ALL_H = \
 	$(srcdir)/all/all_allo_const.h
 
@@ -417,7 +412,4 @@ EXTRA_DIST = $(ZOLTAN_H) \
     $(srcdir)/Utilities/DDirectory/README \
     $(srcdir)/Utilities/README \
     $(NATIVE_ZOLTAN_BUILD) \
-    $(srcdir)/util/build_trilinos_runtests \
-    $(srcdir)/fdriver_old/README \
-    $(srcdir)/fdriver_old/makefile \
     $(ZOLTAN_POSTPROCESS)
