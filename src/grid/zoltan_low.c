@@ -32,6 +32,9 @@ typedef struct {
   double * x_global;
   int * part;
   int ipart;
+  int nedges;
+  int * xedges;
+  int * edges;
 } mesh_t;
 
 static mesh_t mesh;
@@ -109,13 +112,62 @@ void get_objects_coords(void *data, int num_gids, int num_lids, int num_objs,
 
 } 
 
-void FC_FUNC_(zoltan_partition, ZOLTAN_PARTITION)(const int * sbdim, 
+/* graph functions */
+
+void get_num_edges(void *data, int dim_gid, int dim_lid, int num_objs, 
+  ZOLTAN_ID_PTR global_ids, ZOLTAN_ID_PTR local_ids, int *num_edges, int *err){
+
+  int iobj;
+  int gid;
+
+  for(iobj = 0; iobj < num_objs; iobj++) {
+    gid = global_ids[iobj];
+    assert(gid >= 0);
+    num_edges[iobj] = mesh.xedges[gid + 1] - mesh.xedges[gid];
+    assert(num_edges[iobj] > 0);
+    assert(num_edges[iobj] <= 2*mesh.dim);
+  }
+  *err = 0;
+}
+
+void get_edges(void *data, int dim_gid, int dim_lid, ZOLTAN_ID_PTR global_id, ZOLTAN_ID_PTR local_id, 
+  ZOLTAN_ID_PTR nbor_global_id, int *nbor_procs, int wgt_dim, float *ewgts, int *err){
+
+  int iedge;
+  int gid = global_id[0];
+  int ii;
+
+  assert(gid >= 0);
+  assert(gid < mesh.np);
+
+  ii = 0;
+  for(iedge = mesh.xedges[gid]; iedge < mesh.xedges[gid + 1]; iedge++){
+    nbor_global_id[ii] = mesh.edges[iedge - 1] - 1;
+    assert(nbor_global_id[ii] < mesh.np);
+    assert(nbor_global_id[ii] >= 0);
+    nbor_procs[ii] = mesh.part[nbor_global_id[ii]] - 1; 
+    ii++;
+  }
+  
+  assert(ii == mesh.xedges[gid + 1] - mesh.xedges[gid]);
+  
+  *err = 0;
+
+}
+
+#define GEOMETRIC  2
+#define GRAPH      3
+#define HYPERGRAPH 4
+
+void FC_FUNC_(zoltan_partition, ZOLTAN_PARTITION)(const int * method,
+						  const int * sbdim, 
 						  const int * np, 
 						  const int * np_part_global, 
 						  double * x_global,
+						  int * xedges,
+						  int * edges,
 						  const int * ipart,
 						  int * part){
-  void * data;
   struct Zoltan_Struct *zz;
   int ii;
   char argv[] = "octopus_mpi";
@@ -141,6 +193,8 @@ void FC_FUNC_(zoltan_partition, ZOLTAN_PARTITION)(const int * sbdim,
   mesh.np = np[0];
   mesh.np_part_global = np_part_global[0];
   mesh.x_global = x_global;
+  mesh.xedges = xedges;
+  mesh.edges = edges;
   mesh.ipart = ipart[0];
   mesh.part = part;
 
@@ -154,7 +208,21 @@ void FC_FUNC_(zoltan_partition, ZOLTAN_PARTITION)(const int * sbdim,
   rc = Zoltan_Set_Param(zz, "DEBUG_LEVEL", "0");
 
   /* the method to partition the grid */
-  rc = Zoltan_Set_Param(zz, "LB_METHOD", "RCB");
+  switch(*method){
+  case(GEOMETRIC):
+    rc = Zoltan_Set_Param(zz, "LB_METHOD", "RCB");
+    break;
+  case(GRAPH):
+    rc = Zoltan_Set_Param(zz, "LB_METHOD", "GRAPH");
+    break;
+  case(HYPERGRAPH):
+    rc = Zoltan_Set_Param(zz, "LB_METHOD", "HYPERGRAPH");
+    break;
+  }
+  assert(rc == ZOLTAN_OK);
+
+  /* we tell zoltan to start the partition from scratch */
+  rc = Zoltan_Set_Param(zz, "LB_APPROACH", "PARTITION");
   assert(rc == ZOLTAN_OK);
 
   /* tell zoltan that we want a list of the assignment of all points as a result */
@@ -171,6 +239,12 @@ void FC_FUNC_(zoltan_partition, ZOLTAN_PARTITION)(const int * sbdim,
   assert(rc == ZOLTAN_OK);
 
   rc = Zoltan_Set_Geom_Multi_Fn(zz, get_objects_coords, NULL);
+  assert(rc == ZOLTAN_OK);
+
+  rc = Zoltan_Set_Num_Edges_Multi_Fn(zz, get_num_edges, NULL);
+  assert(rc == ZOLTAN_OK);
+
+  rc = Zoltan_Set_Edge_List_Fn(zz, get_edges, NULL);
   assert(rc == ZOLTAN_OK);
 
   Zoltan_LB_Partition (zz,

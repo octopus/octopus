@@ -739,7 +739,7 @@ subroutine mesh_partition(m, stencil, np_stencil, part)
   integer              :: iunit          ! For debug output to files.
   character(len=3)     :: filenum
   integer, allocatable :: votes(:, :)
-  integer :: ip, rr
+  integer :: ip, rr, method
   integer :: library
   integer, parameter :: METIS = 2, ZOLTAN = 3
 
@@ -762,10 +762,6 @@ subroutine mesh_partition(m, stencil, np_stencil, part)
 
   ! Get number of partitions.
   call MPI_Comm_Size(m%mpi_grp%comm, p, mpi_err)
-
-  select case(library)
-  case(METIS)
-  options = (/1, 2, 1, 1, 0/) ! Use heavy edge matching in METIS.
 
   ! Shortcut (number of vertices).
   nv = m%np_global
@@ -853,6 +849,11 @@ subroutine mesh_partition(m, stencil, np_stencil, part)
     end if
   end if
 
+  select case(library)
+  case(METIS)
+
+  options = (/1, 2, 1, 1, 0/) ! Use heavy edge matching in METIS.
+
   ! Partition graph.
   ! Recursive bisection is better for small number of partitions (<8),
   ! multilevel k-way otherwise (cf. METIS manual).
@@ -879,8 +880,15 @@ subroutine mesh_partition(m, stencil, np_stencil, part)
 
   case(ZOLTAN)
 
+    if(p .lt. 8) then
+      method = GEOMETRIC
+    else
+      method = GRAPH
+    end if
+
     !assign all points to one node
-    call zoltan_partition(m%sb%dim, m%np_global, m%np_part_global, m%x_global, m%mpi_grp%rank + 1, part(1))
+    call zoltan_partition(method, m%sb%dim, m%np_global, m%np_part_global, &
+         m%x_global(1, 1), xadj(1), adjncy(1), m%mpi_grp%rank + 1, part(1))
     
   end select
   

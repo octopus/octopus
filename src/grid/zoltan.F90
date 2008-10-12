@@ -22,12 +22,22 @@
 module zoltan_m
   private
   
+  public :: zoltan_partition
+  
+  integer, public ::    &
+       GEOMETRIC  = 2,  &
+       GRAPH      = 3,  &
+       HYPERGRAPH = 4
+
   interface
-    subroutine zoltan_partition(sbdim, np_global, np_part_global, x_global, ipart, part)
+    subroutine zoltan_partition(method, sbdim, np_global, np_part_global, x_global, xedges, edges, ipart, part)
+      integer, intent(in)    :: method
       integer, intent(in)    :: sbdim
       integer, intent(in)    :: np_global
       integer, intent(in)    :: np_part_global
       FLOAT,   intent(in)    :: x_global
+      integer, intent(in)    :: xedges
+      integer, intent(in)    :: edges
       integer, intent(in)    :: ipart
       integer, intent(out)   :: part
     end subroutine zoltan_partition
