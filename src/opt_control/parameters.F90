@@ -67,6 +67,7 @@ module opt_control_parameters_m
             parameters_update,            &
             parameters_number,            &
             parameters_nfreqs,            &
+            parameters_dim,               &
             parameters_w0,                &
             parameters_alpha,             &
             parameters_targetfluence,     &
@@ -447,16 +448,23 @@ contains
     end if
 
     ! Now we ave to find the "fluence" of the phase, in order to keep it constant.
-    if(par_common%mode .eq. parameter_mode_phi) then
+    select case(par_common%mode)
+    case(parameter_mode_phi)
       par%intphi = tdf_dot_product(par%f(1), par%f(1))
       if(par%intphi <= M_ZERO) then
         write(message(1), '(a)') 'You must supply a non-null initial-guess phase.'
         call write_fatal(1)
       end if
-    end if
+    case(parameter_mode_f_and_phi)
+      par%intphi = tdf_dot_product(par%f(2), par%f(2))
+      if(par%intphi <= M_ZERO) then
+        write(message(1), '(a)') 'You must supply a non-null initial-guess phase.'
+        call write_fatal(1)
+      end if
+    end select
 
     if(par_common%mode .eq. parameter_mode_f) then
-      ! If par%envelope = .true., the object to optimize is the envelope of the
+      ! If the object to optimize is the envelope of the
       ! the laser pulse. Being e(t) the laser pulse, it is assumed that it
       ! has the form:
       !   e(t) = f(t) cos(w0*t),
@@ -838,6 +846,9 @@ contains
       end do
     case(parameter_mode_phi)
       call laser_set_phi(ep%lasers(1), par%f(1))
+    case(parameter_mode_f_and_phi)
+      call laser_set_f(ep%lasers(1), par%f(1))
+      call laser_set_phi(ep%lasers(1), par%f(2))
     end select
 
     if(change_rep) then 
@@ -980,7 +991,7 @@ contains
 
       ! In this case, there is only one parameter (for the moment)
       iunit = io_open(trim(filename)//'/cp', action='write')
-      write(iunit,'(3a20)') '#       t [a.u]      ', '        f(t)         ', &
+      write(iunit,'(4a20)') '#       t [a.u]      ', '        f(t)         ', &
                             '        phi(t)       ', '        E(t)         '
       do i = 1, cp%ntiter + 1
         t = (i-1)*cp%dt
@@ -1271,33 +1282,97 @@ contains
   subroutine parameters_par_to_x(par, x)
     type(oct_control_parameters_t), intent(in)    :: par
     REAL_DOUBLE,                    intent(inout) :: x(:)
-    integer :: j, k, n
+    integer :: j, k, n, m
     FLOAT :: sumx2
     FLOAT, allocatable :: ep(:), e(:)
 
-    n = par%nfreqs
-    ALLOCATE(e(n), n)
-    ALLOCATE(ep(n), n)
-
-    ASSERT(n-1 .eq. size(x))
     ASSERT(par%current_representation .eq. ctr_parameter_frequency_space)
 
-    do j =  1, n
-      ep(j) = tdf(par%f(1), j)
-    end do
-    if(par_common%mode .eq. parameter_mode_f) then
-      e = matmul(par%utransf, ep)
-    else
-      e = ep
-    end if
-    x(n-1) = atan2(e(n), e(n-1))
-    do k = n-2, 1, -1
-      sumx2 = M_ZERO
-      do j = n, k+1, -1
-        sumx2 = sumx2 + e(j)**2
+    select case(par_common%mode)
+    case(parameter_mode_epsilon)
+      n = parameters_dim(par)+1
+      ALLOCATE(e(n), n)
+      ALLOCATE(ep(n), n)
+      ASSERT(n-1 .eq. size(x))
+      do j =  1, n
+        ep(j) = tdf(par%f(1), j)
       end do
-      x(k) = atan2(sqrt(sumx2), e(k))
-    end do
+      e = ep
+      x(n-1) = atan2(e(n), e(n-1))
+      do k = n-2, 1, -1
+        sumx2 = M_ZERO
+        do j = n, k+1, -1
+          sumx2 = sumx2 + e(j)**2
+        end do
+        x(k) = atan2(sqrt(sumx2), e(k))
+      end do
+
+    case(parameter_mode_f)
+      n = parameters_dim(par)+1
+      ALLOCATE(e(n), n)
+      ALLOCATE(ep(n), n)
+      ASSERT(n-1 .eq. size(x))
+      do j =  1, n
+        ep(j) = tdf(par%f(1), j)
+      end do
+      e = matmul(par%utransf, ep)
+      x(n-1) = atan2(e(n), e(n-1))
+      do k = n-2, 1, -1
+        sumx2 = M_ZERO
+        do j = n, k+1, -1
+          sumx2 = sumx2 + e(j)**2
+        end do
+        x(k) = atan2(sqrt(sumx2), e(k))
+      end do
+
+    case(parameter_mode_phi)
+      n = parameters_dim(par)+1
+      ALLOCATE(e(n), n)
+      ALLOCATE(ep(n), n)
+      ASSERT(n-1 .eq. size(x))
+      do j =  1, n
+        ep(j) = tdf(par%f(1), j)
+      end do
+      e = ep
+      x(n-1) = atan2(e(n), e(n-1))
+      do k = n-2, 1, -1
+        sumx2 = M_ZERO
+        do j = n, k+1, -1
+          sumx2 = sumx2 + e(j)**2
+        end do
+        x(k) = atan2(sqrt(sumx2), e(k))
+      end do
+
+    case(parameter_mode_f_and_phi)
+      n = parameters_dim(par)+2
+      m = n/2
+      ALLOCATE(e(n), n)
+      ALLOCATE(ep(n), n)
+      do j =  1, m
+        ep(j) = tdf(par%f(1), j)
+      end do
+      do j =  m+1, n
+        ep(j) = tdf(par%f(2), j)
+      end do
+      e = ep
+      x(m-1) = atan2(e(m), e(m-1))
+      do k = m-2, 1, -1
+        sumx2 = M_ZERO
+        do j = m, k+1, -1
+          sumx2 = sumx2 + e(j)**2
+        end do
+        x(k) = atan2(sqrt(sumx2), e(k))
+      end do
+      x(2*m-2) = atan2(e(2*m), e(2*m-1))
+      do k = 2*m-3, m, -1
+        sumx2 = M_ZERO
+        do j = 2*m, k+1, -1
+          sumx2 = sumx2 + e(j)**2
+        end do
+        x(k) = atan2(sqrt(sumx2), e(k))
+      end do
+
+    end select
 
     deallocate(e, ep)
   end subroutine parameters_par_to_x
@@ -1324,44 +1399,54 @@ contains
     if(n.eq.2) then
       e(1) = cos(x(1))
       e(2) = sin(x(1))
-      call pop_sub()
-      return
     elseif(n.eq.3) then
       e(1) = cos(x(1))
       e(2) = sin(x(1))*cos(x(2))
       e(3) = sin(x(1))*sin(x(2))
-      call pop_sub()
-      return
+    else
+      e(1) = cos(x(1))
+      e(2) = sin(x(1))*cos(x(2))
+      e(3) = sin(x(1))*sin(x(2))*cos(x(3))
+      do j = 4, n - 1
+        e(j) = M_ONE
+        do k = 1, j - 1
+          e(j) = e(j) * sin(x(k))
+        end do
+        e(j) = e(j) * cos(x(j))
+      end do
+      e(n) = M_ONE
+      do k = 1, n - 2
+        e(n) = e(n) * sin(x(k))
+      end do
+      e(n) = e(n) * sin(x(n-1))
     end if
 
-    e(1) = cos(x(1))
-    e(2) = sin(x(1))*cos(x(2))
-    e(3) = sin(x(1))*sin(x(2))*cos(x(3))
-    do j = 4, n - 1
-      e(j) = M_ONE
-      do k = 1, j - 1
-        e(j) = e(j) * sin(x(k))
-      end do
-      e(j) = e(j) * cos(x(j))
-    end do
-    e(n) = M_ONE
-    do k = 1, n - 2
-      e(n) = e(n) * sin(x(k))
-    end do
-    e(n) = e(n) * sin(x(n-1))
+!!$    select case(par_common%mode)
+!!$    case(parameter_mode_epsilon, parameter_mode_f)
+!!$      e = sqrt(par%targetfluence) * e
+!!$    case(parameter_mode_phi)
+!!$      e = sqrt(par%intphi)*e
+!!$    end select
+!!$
+!!$    if(par_common%mode .eq. parameter_mode_f) then
+!!$      ep = matmul(par%utransfi, e)
+!!$    else
+!!$      ep = e
+!!$    end if
 
     select case(par_common%mode)
-    case(parameter_mode_epsilon, parameter_mode_f)
+    case(parameter_mode_epsilon)
       e = sqrt(par%targetfluence) * e
+      ep = e
+    case(parameter_mode_f)
+      e = sqrt(par%targetfluence) * e
+      ep = matmul(par%utransfi, e)
     case(parameter_mode_phi)
       e = sqrt(par%intphi)*e
+      ep = e
     end select
 
-    if(par_common%mode .eq. parameter_mode_f) then
-      ep = matmul(par%utransfi, e)
-    else
-      ep = e
-    end if
+
     call tdf_set_numerical(par%f(1), ep)
 
     deallocate(e, ep)
@@ -1442,6 +1527,21 @@ contains
     type(oct_control_parameters_t), intent(in) :: par
     parameters_nfreqs = par%nfreqs
   end function parameters_nfreqs
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  integer function parameters_dim(par)
+    type(oct_control_parameters_t), intent(in) :: par
+    select case(par_common%mode)
+    case(parameter_mode_epsilon, parameter_mode_f)
+      parameters_dim = par%nfreqs-1
+    case(parameter_mode_phi)
+      parameters_dim = par%nfreqs-1
+    case(parameter_mode_f_and_phi)
+      parameters_dim = (par%nfreqs-1)*2
+    end select
+  end function parameters_dim
   ! ---------------------------------------------------------
 
 

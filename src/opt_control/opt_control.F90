@@ -413,14 +413,14 @@ contains
       integer :: ierr, maxiter
       REAL_DOUBLE :: minvalue, step
       REAL_DOUBLE, allocatable :: x(:)
-      integer :: nfreqs
+      integer :: dim
 
       call push_sub('opt_control.scheme_direct')
 
       call parameters_set_rep(par)
 
-      nfreqs = parameters_nfreqs(par)
-      ALLOCATE(x(nfreqs-1), nfreqs-1)
+      dim = parameters_dim(par)
+      ALLOCATE(x(dim), dim)
 
       ! Set the module pointers, so that the calc_point and write_iter_info routines
       ! can use them.
@@ -433,7 +433,7 @@ contains
       step = oct%direct_step * M_PI
       maxiter = oct_iterator_maxiter(iterator)
 
-      ierr = loct_minimize_direct(MINMETHOD_NMSIMPLEX, nfreqs-1, x(1), step,&
+      ierr = loct_minimize_direct(MINMETHOD_NMSIMPLEX, dim, x(1), step,&
                real(oct_iterator_tolerance(iterator), 8), maxiter, &
                direct_opt_calc, direct_opt_write_info, minvalue)
 
@@ -460,14 +460,14 @@ contains
       integer :: ierr, iprint, npt, maxfun, nvariables, sizeofw
       REAL_DOUBLE :: minvalue, rhobeg, rhoend
       REAL_DOUBLE, allocatable :: x(:), w(:)
-      integer :: nfreqs
+      integer :: dim
 
       call push_sub('opt_control.scheme_direct')
 
       call parameters_set_rep(par)
 
-      nfreqs = parameters_nfreqs(par)
-      ALLOCATE(x(nfreqs-1), nfreqs-1)
+      dim = parameters_dim(par)
+      ALLOCATE(x(dim), dim)
 
       ! Set the module pointers, so that the calc_point and write_iter_info routines
       ! can use them.
@@ -478,7 +478,7 @@ contains
 
       call parameters_par_to_x(par, x)
 
-      nvariables = parameters_nfreqs(par) - 1 
+      nvariables = parameters_dim(par)
       iprint = 2
       npt = 2*nvariables + 1
       rhoend = oct_iterator_tolerance(iterator)
