@@ -30,7 +30,7 @@ module zoltan_m
        HYPERGRAPH = 4
 
   interface
-    subroutine zoltan_partition(method, sbdim, np_global, np_part_global, x_global, xedges, edges, ipart, part)
+    subroutine zoltan_partition(method, sbdim, np_global, np_part_global, x_global, xedges, edges, ipart, part, fcomm)
       integer, intent(in)    :: method
       integer, intent(in)    :: sbdim
       integer, intent(in)    :: np_global
@@ -40,6 +40,7 @@ module zoltan_m
       integer, intent(in)    :: edges
       integer, intent(in)    :: ipart
       integer, intent(out)   :: part
+      integer, intent(in)    :: fcomm
     end subroutine zoltan_partition
   end interface
 

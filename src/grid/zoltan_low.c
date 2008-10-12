@@ -167,12 +167,15 @@ void FC_FUNC_(zoltan_partition, ZOLTAN_PARTITION)(const int * method,
 						  int * xedges,
 						  int * edges,
 						  const int * ipart,
-						  int * part){
+						  int * part,
+						  int * fcomm
+						  ){
   struct Zoltan_Struct *zz;
   int ii;
   char argv[] = "octopus_mpi";
   float version;
   int rc;
+  MPI_Comm comm;
 
   /* all these variables are for the partition function */
   int changes;
@@ -203,7 +206,9 @@ void FC_FUNC_(zoltan_partition, ZOLTAN_PARTITION)(const int * method,
 
   Zoltan_Initialize(1, &argv, &version);
 
-  zz = Zoltan_Create(MPI_COMM_WORLD);
+  comm = MPI_Comm_f2c(*fcomm);
+
+  zz = Zoltan_Create(comm);
 
   rc = Zoltan_Set_Param(zz, "DEBUG_LEVEL", "0");
 
@@ -251,9 +256,8 @@ void FC_FUNC_(zoltan_partition, ZOLTAN_PARTITION)(const int * method,
 		       &changes, /* boolean indicating if the partition has changed */
 		       &num_gid_entries, /* number of dimension of the global indexes, 1 for us */
 		       &num_lid_entries, /* number of dimension of the local indexes, 1 for us */
-		       /* since we use "RESULT_LISTS" = "PARTITION
-			  ASSIGNMENTS" many arguments don't have
-			  values */
+		       /* since we use "RESULT_LISTS" = "PARTITION_ASSIGNMENTS" 
+			  many arguments don't have values */
 		       &num_import,        /* -1 */
 		       &import_global_ids, /* NULL */
 		       &import_local_ids,  /* NULL */
@@ -270,12 +274,14 @@ void FC_FUNC_(zoltan_partition, ZOLTAN_PARTITION)(const int * method,
   if(mesh.ipart == 1) for(ii = 0; ii < mesh.np; ii++) part[ii] = export_procs[ii] + 1;
 
   /* broadcast the partition results */
-  MPI_Bcast(part, mesh.np, MPI_INT, 0, MPI_COMM_WORLD);
+  MPI_Bcast(part, mesh.np, MPI_INT, 0, comm);
 
   Zoltan_LB_Free_Part (&export_global_ids,
 		       &export_local_ids,
 		       &export_procs, 
 		       &export_to_part);
+
+  Zoltan_Destroy(&zz);
 
 }
 

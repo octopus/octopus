@@ -888,7 +888,7 @@ subroutine mesh_partition(m, stencil, np_stencil, part)
 
     !assign all points to one node
     call zoltan_partition(method, m%sb%dim, m%np_global, m%np_part_global, &
-         m%x_global(1, 1), xadj(1), adjncy(1), m%mpi_grp%rank + 1, part(1))
+         m%x_global(1, 1), xadj(1), adjncy(1), m%mpi_grp%rank + 1, part(1), m%mpi_grp%comm)
     
   end select
   
