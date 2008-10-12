@@ -463,7 +463,8 @@ contains
       end if
     end select
 
-    if(par_common%mode .eq. parameter_mode_f) then
+    if( (par_common%mode .eq. parameter_mode_f) .or. &
+        (par_common%mode .eq. parameter_mode_f_and_phi) ) then
       ! If the object to optimize is the envelope of the
       ! the laser pulse. Being e(t) the laser pulse, it is assumed that it
       ! has the form:
@@ -1354,7 +1355,8 @@ contains
       do j =  m+1, n
         ep(j) = tdf(par%f(2), j)
       end do
-      e = ep
+      e(1:m) = matmul(par%utransf, ep(1:m))
+      e(m+1:2*m) = ep(m+1:2*m)
       x(m-1) = atan2(e(m), e(m-1))
       do k = m-2, 1, -1
         sumx2 = M_ZERO
@@ -1384,70 +1386,135 @@ contains
     type(oct_control_parameters_t), intent(inout) :: par
     REAL_DOUBLE,                          intent(in)    :: x(:)
 
-    integer :: j, k, n
+    integer :: j, k, n, dim
     FLOAT, allocatable :: e(:), ep(:)
     call push_sub('parameters.parameters_x_to_par')
 
-    n = par%nfreqs
-    ASSERT(n-1 .eq. size(x))
     ASSERT(par%current_representation .eq. ctr_parameter_frequency_space)
 
-    ALLOCATE(e(n), n)
-    ALLOCATE(ep(n), n)
-    e = M_ZERO; ep = M_ZERO
+    select case(par_common%mode)
 
-    if(n.eq.2) then
-      e(1) = cos(x(1))
-      e(2) = sin(x(1))
-    elseif(n.eq.3) then
-      e(1) = cos(x(1))
-      e(2) = sin(x(1))*cos(x(2))
-      e(3) = sin(x(1))*sin(x(2))
-    else
-      e(1) = cos(x(1))
-      e(2) = sin(x(1))*cos(x(2))
-      e(3) = sin(x(1))*sin(x(2))*cos(x(3))
-      do j = 4, n - 1
-        e(j) = M_ONE
-        do k = 1, j - 1
-          e(j) = e(j) * sin(x(k))
+    case(parameter_mode_epsilon, parameter_mode_f, parameter_mode_phi)
+      n = par%nfreqs
+      ASSERT(n-1 .eq. size(x))
+
+      ALLOCATE(e(n), n)
+      ALLOCATE(ep(n), n)
+      e = M_ZERO; ep = M_ZERO
+
+      if(n.eq.2) then
+        e(1) = cos(x(1))
+        e(2) = sin(x(1))
+      elseif(n.eq.3) then
+        e(1) = cos(x(1))
+        e(2) = sin(x(1))*cos(x(2))
+        e(3) = sin(x(1))*sin(x(2))
+      else
+        e(1) = cos(x(1))
+        e(2) = sin(x(1))*cos(x(2))
+        e(3) = sin(x(1))*sin(x(2))*cos(x(3))
+        do j = 4, n - 1
+          e(j) = M_ONE
+          do k = 1, j - 1
+            e(j) = e(j) * sin(x(k))
+          end do
+          e(j) = e(j) * cos(x(j))
         end do
-        e(j) = e(j) * cos(x(j))
-      end do
-      e(n) = M_ONE
-      do k = 1, n - 2
-        e(n) = e(n) * sin(x(k))
-      end do
-      e(n) = e(n) * sin(x(n-1))
-    end if
+        e(n) = M_ONE
+        do k = 1, n - 2
+          e(n) = e(n) * sin(x(k))
+        end do
+        e(n) = e(n) * sin(x(n-1))
+      end if
 
-!!$    select case(par_common%mode)
-!!$    case(parameter_mode_epsilon, parameter_mode_f)
-!!$      e = sqrt(par%targetfluence) * e
-!!$    case(parameter_mode_phi)
-!!$      e = sqrt(par%intphi)*e
-!!$    end select
-!!$
-!!$    if(par_common%mode .eq. parameter_mode_f) then
-!!$      ep = matmul(par%utransfi, e)
-!!$    else
-!!$      ep = e
-!!$    end if
+    case(parameter_mode_f_and_phi)
+
+      n = par%nfreqs
+      dim = parameters_dim(par) ! This should be equal to 2*n-2
+
+      ALLOCATE(e(2*n), 2*n)
+      ALLOCATE(ep(2*n), 2*n)
+      e = M_ZERO; ep = M_ZERO
+
+      ! First, we set the components of the envelope
+      if(n.eq.2) then
+        e(1) = cos(x(1))
+        e(2) = sin(x(1))
+      elseif(n.eq.3) then
+        e(1) = cos(x(1))
+        e(2) = sin(x(1))*cos(x(2))
+        e(3) = sin(x(2))*sin(x(2))
+      else
+        e(1) = cos(x(1))
+        e(2) = sin(x(1))*cos(x(2))
+        e(3) = sin(x(1))*sin(x(2))*cos(x(3))
+        do j = 4, n - 1
+          e(j) = M_ONE
+          do k = 1, j - 1
+            e(j) = e(j) * sin(x(k))
+          end do
+          e(j) = e(j) * cos(x(j))
+        end do
+        e(n) = M_ONE
+        do k = 1, n - 2
+          e(n) = e(n) * sin(x(k))
+        end do
+        e(n) = e(n) * sin(x(n-1))
+      end if
+
+      ! Now, for the phase
+      if(n.eq.2) then
+        e(n+1) = cos(x(n-1+1))
+        e(n+2) = sin(x(n-1+1))
+      elseif(n.eq.3) then
+        e(n+1) = cos(x(n-1+1))
+        e(n+2) = sin(x(n-1+1))*cos(x(n-1+2))
+        e(n+3) = sin(x(n-1+2))*sin(x(n-1+2))
+      else
+        e(n+1) = cos(x(n-1+1))
+        e(n+2) = sin(x(n-1+1))*cos(x(n-1+2))
+        e(n+3) = sin(x(n-1+1))*sin(x(n-1+2))*cos(x(n-1+3))
+        do j = 4, n - 1
+          e(n+j) = M_ONE
+          do k = 1, j - 1
+            e(n+j) = e(n+j) * sin(x(n-1+k))
+          end do
+          e(n+j) = e(n+j) * cos(x(n-1+j))
+        end do
+        e(n+n) = M_ONE
+        do k = 1, n - 2
+          e(n+n) = e(n+n) * sin(x(n-1+k))
+        end do
+        e(n+n) = e(n+n) * sin(x(n-1+n-1))
+      end if
+
+    end select
 
     select case(par_common%mode)
     case(parameter_mode_epsilon)
       e = sqrt(par%targetfluence) * e
       ep = e
+      call tdf_set_numerical(par%f(1), ep)
+
     case(parameter_mode_f)
       e = sqrt(par%targetfluence) * e
       ep = matmul(par%utransfi, e)
+      call tdf_set_numerical(par%f(1), ep)
+
     case(parameter_mode_phi)
       e = sqrt(par%intphi)*e
       ep = e
+      call tdf_set_numerical(par%f(1), ep)
+
+    case(parameter_mode_f_and_phi)
+      e(1:n)     = sqrt(par%targetfluence) * e(1:n)
+      ep(1:n) = matmul(par%utransfi, e(1:n))
+      ep(n+1:2*n) = sqrt(par%intphi) * e(n+1:2*n)
+      call tdf_set_numerical(par%f(1), ep(1:n))
+      call tdf_set_numerical(par%f(2), ep(n+1:2*n))
+
     end select
 
-
-    call tdf_set_numerical(par%f(1), ep)
 
     deallocate(e, ep)
     call pop_sub()
