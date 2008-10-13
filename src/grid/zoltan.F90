@@ -30,17 +30,18 @@ module zoltan_m
        HYPERGRAPH = 4
 
   interface
-    subroutine zoltan_partition(method, sbdim, np_global, np_part_global, x_global, xedges, edges, ipart, part, fcomm)
-      integer, intent(in)    :: method
-      integer, intent(in)    :: sbdim
-      integer, intent(in)    :: np_global
-      integer, intent(in)    :: np_part_global
-      FLOAT,   intent(in)    :: x_global
-      integer, intent(in)    :: xedges
-      integer, intent(in)    :: edges
-      integer, intent(in)    :: ipart
-      integer, intent(out)   :: part
-      integer, intent(in)    :: fcomm
+    subroutine zoltan_partition(method, sbdim, np_global, np_part_global, x_global, estart, xedges, edges, ipart, part, fcomm)
+      integer, intent(in)    :: method  
+      integer, intent(in)    :: sbdim             ! the dimension of the space
+      integer, intent(in)    :: np_global         ! the number of points to partition
+      integer, intent(in)    :: np_part_global    ! the number of points including boundaries (required by x_global)
+      FLOAT,   intent(in)    :: x_global          ! the coordinates of the points
+      integer, intent(in)    :: estart            ! (local) where do the points for this partition start
+      integer, intent(in)    :: xedges            ! (local) stores the position of each point in the array of the edges
+      integer, intent(in)    :: edges             ! (local) the array of edges
+      integer, intent(in)    :: ipart             ! (local) the index of the current partition
+      integer, intent(inout) :: part              ! marks to which partition belongs each point
+      integer, intent(in)    :: fcomm             ! the communicator
     end subroutine zoltan_partition
   end interface
 

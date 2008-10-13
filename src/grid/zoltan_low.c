@@ -33,6 +33,7 @@ typedef struct {
   int * part;
   int ipart;
   int nedges;
+  int estart;
   int * xedges;
   int * edges;
 } mesh_t;
@@ -121,7 +122,7 @@ void get_num_edges(void *data, int dim_gid, int dim_lid, int num_objs,
   int gid;
 
   for(iobj = 0; iobj < num_objs; iobj++) {
-    gid = global_ids[iobj];
+    gid = global_ids[iobj] - mesh.estart;
     assert(gid >= 0);
     num_edges[iobj] = mesh.xedges[gid + 1] - mesh.xedges[gid];
     assert(num_edges[iobj] > 0);
@@ -137,8 +138,11 @@ void get_edges(void *data, int dim_gid, int dim_lid, ZOLTAN_ID_PTR global_id, ZO
   int gid = global_id[0];
   int ii;
 
-  assert(gid >= 0);
   assert(gid < mesh.np);
+  
+  gid -= mesh.estart;
+
+  assert(gid >= 0);
 
   ii = 0;
   for(iedge = mesh.xedges[gid]; iedge < mesh.xedges[gid + 1]; iedge++){
@@ -164,6 +168,7 @@ void FC_FUNC_(zoltan_partition, ZOLTAN_PARTITION)(const int * method,
 						  const int * np, 
 						  const int * np_part_global, 
 						  double * x_global,
+						  int * estart,
 						  int * xedges,
 						  int * edges,
 						  const int * ipart,
@@ -197,12 +202,10 @@ void FC_FUNC_(zoltan_partition, ZOLTAN_PARTITION)(const int * method,
   mesh.np_part_global = np_part_global[0];
   mesh.x_global = x_global;
   mesh.xedges = xedges;
+  mesh.estart = estart[0] - 1; /* convert to C index convention */
   mesh.edges = edges;
   mesh.ipart = ipart[0];
   mesh.part = part;
-
-  /* assign all points to the first node */
-  for(ii = 0; ii < mesh.np; ii++) part[ii] = 1;
 
   Zoltan_Initialize(1, &argv, &version);
 
@@ -226,7 +229,8 @@ void FC_FUNC_(zoltan_partition, ZOLTAN_PARTITION)(const int * method,
   }
   assert(rc == ZOLTAN_OK);
 
-  /* we tell zoltan to start the partition from scratch */
+  /* since our original distribution is very bad, we tell zoltan to
+     start the partition from scratch */
   rc = Zoltan_Set_Param(zz, "LB_APPROACH", "PARTITION");
   assert(rc == ZOLTAN_OK);
 
@@ -269,12 +273,13 @@ void FC_FUNC_(zoltan_partition, ZOLTAN_PARTITION)(const int * method,
 		       &export_procs,      /* the partition to which each processor is assigned */
 		       &export_to_part);
 
-  assert(num_export == get_num_objects(NULL, &rc));
+  /* safety measure */
+  for(ii = 0; ii < mesh.np; ii++) part[ii] = -1; 
 
-  if(mesh.ipart == 1) for(ii = 0; ii < mesh.np; ii++) part[ii] = export_procs[ii] + 1;
-
-  /* broadcast the partition results */
-  MPI_Bcast(part, mesh.np, MPI_INT, 0, comm);
+  /* convert to fortran index convention and place it in the
+     correspondind region of the part array (the algathering will be
+     performed by the caller) */
+  for(ii = 0; ii < num_export; ii++) part[mesh.estart + ii] = export_procs[ii] + 1; 
 
   Zoltan_LB_Free_Part (&export_global_ids,
 		       &export_local_ids,

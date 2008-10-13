@@ -104,7 +104,6 @@ contains
 
     ALLOCATE(mesh%lead_unit_cell(NLEADS), NLEADS)
 
-PRINT *, "OLA"
     do il = 1, NLEADS
       m => mesh%lead_unit_cell(il)
       iunit = io_open(trim(sb%lead_restart_dir(il))//'/gs/mesh', action='read', is_tmp=.true.)
@@ -119,7 +118,6 @@ PRINT *, "OLA"
       call mesh_lxyz_init_from_file(m, iunit)
       call io_close(iunit)
     end do
-print *, "ola2"
 
     call pop_sub()
   end subroutine mesh_read_lead
@@ -733,15 +731,17 @@ subroutine mesh_partition(m, stencil, np_stencil, part)
                                          ! xadj has nv+1 entries because last entry contains the total
                                          ! number of edges.
   integer              :: p              ! Number of partitions.
+  integer              :: ipart          ! number of the current partition
   integer, allocatable :: xadj(:)        ! Indices of adjacency list in adjncy.
   integer, allocatable :: adjncy(:)      ! Adjacency lists.
   integer              :: options(5)     ! Options to METIS.
   integer              :: iunit          ! For debug output to files.
   character(len=3)     :: filenum
   integer, allocatable :: votes(:, :)
-  integer :: ip, rr, method
+  integer :: ip, rr, method, ii
   integer :: library
   integer, parameter :: METIS = 2, ZOLTAN = 3
+  integer, allocatable :: start(:), final(:), lsize(:)
 
   call push_sub('mesh_init.mesh_partition')
 
@@ -758,16 +758,36 @@ subroutine mesh_partition(m, stencil, np_stencil, part)
   !% Zoltan.
   !%End
   
-  call loct_parse_int(check_inp('MeshPartition'), METIS,  library)
+  call loct_parse_int(check_inp('MeshPartition'), METIS, library)
 
   ! Get number of partitions.
-  call MPI_Comm_Size(m%mpi_grp%comm, p, mpi_err)
+  p = m%mpi_grp%size
+  ipart = m%mpi_grp%rank + 1
+
+  ALLOCATE(start(1:p), p)
+  ALLOCATE(final(1:p), p)
+  ALLOCATE(lsize(1:p), p)
+
+  ! If we use zoltan we divide the space in a basic way, to balance
+  ! the memory for the graph. 
+  if(library == METIS) then
+
+    start(1:p) = 1
+    final(1:p) = m%np_global
+    lsize(1:p) = m%np_global
+
+  else
+
+    call multicomm_divide_range(m%np_global, p, start, final, lsize)
+
+    do ii = 1, p
+      part(start(ii):final(ii)) = ii
+    end do
+
+  end if
 
   ! Shortcut (number of vertices).
-  nv = m%np_global
-
-  ! Get space for partitioning.
-  part = 1
+  nv = lsize(ipart)
 
   ALLOCATE(xadj(nv + 1), nv + 1)
   ALLOCATE(adjncy(2*m%sb%dim*nv), 2*m%sb%dim*nv)
@@ -888,8 +908,18 @@ subroutine mesh_partition(m, stencil, np_stencil, part)
 
     !assign all points to one node
     call zoltan_partition(method, m%sb%dim, m%np_global, m%np_part_global, &
-         m%x_global(1, 1), xadj(1), adjncy(1), m%mpi_grp%rank + 1, part(1), m%mpi_grp%comm)
+         m%x_global(1, 1),  start(ipart), xadj(1), adjncy(1), ipart, part(1), m%mpi_grp%comm)
     
+    ! we use xadj as a buffer
+    xadj(1:lsize(ipart)) = part(start(ipart):final(ipart))
+    
+    ASSERT(all(xadj(1:lsize(ipart)) > 0))
+
+    part(1:m%np_global) = 0 ! so we catch non-initialized values
+
+    ! we collect part from all processors
+    call MPI_Allgatherv(xadj, lsize(ipart), MPI_INTEGER, part, lsize, start - 1, MPI_INTEGER, m%mpi_grp%comm, mpi_err)
+
   end select
   
   ASSERT(all(part(1:m%np_global) > 0))

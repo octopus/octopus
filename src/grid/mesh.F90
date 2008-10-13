@@ -28,6 +28,7 @@ module mesh_m
   use math_m
   use mesh_lib_m
   use messages_m
+  use multicomm_m
   use mpi_m
   use loct_parser_m
   use par_vec_m
