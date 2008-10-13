@@ -334,9 +334,9 @@ contains
   ! ---------------------------------------------------------
   ! Calculates the time-dependent lead potential from formula string.
   subroutine lead_td_pot(td_pot, formula, n_steps, tstep)
+    integer,          intent(in)  :: n_steps
     FLOAT,            intent(out) :: td_pot(0:n_steps+1, NLEADS)
     character(len=*), intent(in)  :: formula(:)
-    integer,          intent(in)  :: n_steps
     FLOAT,            intent(in)  :: tstep
 
     integer             :: it, il

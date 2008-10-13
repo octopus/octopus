@@ -9,7 +9,9 @@ if [ -x "$(which svn)" ] && svn info > /dev/null 2>&1 ; then
 else
 	find . -type f ! -name ChangeLog ! -name \*.svn\* \
 	    ! -name \*.o ! -name \*.a ! -name \*.so \
-	    -exec grep '$Id:' \{\} \; | \
-	    tr -d \#\!\* | awk '{print $3,"["$2,$4"]"}' | \
-	    grep -v 'qw(' | sort | tail -1
+            -exec grep '$Id:' \{\} \; \
+            | grep '$Id: ' \
+            | tr -d \#\!\* | awk '{print $3,"["$2,$4"]"}' \
+            | grep -v 'qw(' | sort -n | tail -1
+
 fi
