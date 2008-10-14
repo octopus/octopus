@@ -622,7 +622,7 @@ module opt_control_target_m
     type(states_t), intent(inout)   :: psi
 
     integer :: i, p, j, k, maxiter, nomegas
-    FLOAT :: t, omega, deltaw, j1_, a
+    FLOAT :: t, omega, deltaw, j1_, a, maxhh, loghw
     CMPLX :: dw
     FLOAT, allocatable :: local_function(:), dipole(:), ddipole(:)
     CMPLX, allocatable :: opsi(:, :)
@@ -692,13 +692,16 @@ module opt_control_target_m
       dipole(maxiter) = (ddipole(maxiter) - ddipole(maxiter - 1))/target%dt
 
       ! This is hard coded here; probably it should be set in a more smart way.
-      nomegas = 20
-
+      nomegas = 1000
+      ! WARNING: temporarily, the code is just considering the maximum, and
+      ! not integrating over an interval. It remains to be seen which way is
+      ! better, or if we need to keep both.
       j1 = M_ZERO
       do j = 1, target%hhg_nks
 
         a = target%hhg_a(j) * target%hhg_w0
         deltaw = a / (nomegas-1)
+        maxhh = CNST(-1.0e10)
         do k = 1, nomegas
           omega = target%hhg_k(j) * target%hhg_w0 - a*M_HALF + deltaw * (k-1)
           dw = M_z0
@@ -708,8 +711,16 @@ module opt_control_target_m
           end do
           j1_ = (target%hhg_alpha(j) / a) * log(conjg(dw)*dw * (target%dt)**2) * deltaw
           if(k.eq.1 .or. k.eq.nomegas) j1_ = M_HALF * j1_
-          j1 = j1 + j1_ 
+          !j1 = j1 + j1_
+          loghw = log(conjg(dw)*dw * (target%dt)**2)
+          if( loghw > maxhh ) then
+            maxhh = log(conjg(dw)*dw * (target%dt)**2)
+          end if
         end do
+        !write(0, *) '=========================================================='
+        !write(0, *) j, target%hhg_k(j), target%hhg_alpha(j), maxhh
+        !write(0, *) '=========================================================='
+        j1 = j1 + target%hhg_alpha(j) * maxhh
 
       end do
 

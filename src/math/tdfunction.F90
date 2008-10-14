@@ -435,15 +435,17 @@ module tdf_m
     iunit = io_open(trim(filename), action='read', status='old')
 
     ! count lines in file
-    ! WARNING: This job should be done by loct_number_of_lines
-    ! WARNING: We should allow for the possibility of a header.
+    call io_skip_header(iunit)
     lines = 0
     do
-      read(iunit, *, err=100, end=100) dummy, dummy, dummy
+      read(iunit, *, err=100, end=100) dummy, dummy
       lines = lines + 1
     end do
 100 continue
     rewind(iunit)
+    call io_skip_header(iunit)
+
+    write(0, *) lines
 
     ! allocate and read info
     ALLOCATE( t(lines), lines)

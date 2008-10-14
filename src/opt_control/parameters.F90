@@ -950,7 +950,7 @@ contains
         else
           iunit = io_open(trim(filename)//'/cp', action='write')
         end if
-        write(iunit,'(2a20)') '#       t [a.u]      ', '        f(t)         '
+        write(iunit,'(2a20)') '#       t [a.u]      ', '        e(t)         '
         do i = 1, cp%ntiter + 1
           t = (i-1)*cp%dt
           write(iunit, '(2es20.8e3)') t, real(tdf(par%f(j), t))
@@ -967,10 +967,10 @@ contains
         else
           iunit = io_open(trim(filename)//'/cp', action='write')
         end if
-        write(iunit,'(3a20)') '#       t [a.u]      ', '        f(t)         ', '        E(t)         '
+        write(iunit,'(3a20)') '#       t [a.u]      ', '        e(t)         ', '        f(t)         '
         do i = 1, cp%ntiter + 1
           t = (i-1)*cp%dt
-          write(iunit, '(3es20.8e3)') t, real(tdf(par%f(j), t)), real(tdf(par%f(j), t)) * cos(par%w0*t)
+          write(iunit, '(3es20.8e3)') t, real(tdf(par%f(j), t)) * cos(par%w0*t), real(tdf(par%f(j), t))
         end do
         call io_close(iunit)
       end do
@@ -979,12 +979,12 @@ contains
 
       ! In this case, there is only one parameter (for the moment)
       iunit = io_open(trim(filename)//'/cp', action='write')
-      write(iunit,'(4a20)') '#       t [a.u]      ', '        f(t)         ', &
-                            '        phi(t)       ', '        E(t)         ' 
+      write(iunit,'(4a20)') '#       t [a.u]      ', '        e(t)         ', &
+                            '         f(t)        ', '       phi(t)        ' 
       do i = 1, cp%ntiter + 1
         t = (i-1)*cp%dt
-        write(iunit, '(4es20.8e3)') t, real(tdf(par_common%f, t)), real(tdf(par%f(1), t)), real(tdf(par_common%f, t)) * &
-          cos(par%w0*t + real(tdf(par%f(1), t)) )
+        write(iunit, '(4es20.8e3)') t, real(tdf(par_common%f, t)) * &
+          cos(par%w0*t + real(tdf(par%f(1), t)) ), real(tdf(par_common%f, t)), real(tdf(par%f(1), t))
       end do
       call io_close(iunit)
 
@@ -992,12 +992,12 @@ contains
 
       ! In this case, there is only one parameter (for the moment)
       iunit = io_open(trim(filename)//'/cp', action='write')
-      write(iunit,'(4a20)') '#       t [a.u]      ', '        f(t)         ', &
-                            '        phi(t)       ', '        E(t)         '
+      write(iunit,'(4a20)') '#       t [a.u]      ', '        e(t)         ', &
+                            '         f(t)        ', '       phi(t)        '
       do i = 1, cp%ntiter + 1
         t = (i-1)*cp%dt
-        write(iunit, '(4es20.8e3)') t, real(tdf(par%f(1), t)), real(tdf(par%f(2), t)), &
-          real(tdf(par%f(1), t)) * cos(par%w0*t + real(tdf(par%f(2), t)) )
+        write(iunit, '(4es20.8e3)') t, real(tdf(par_common%f, t)) * &
+          cos(par%w0*t + real(tdf(par%f(1), t)) ), real(tdf(par_common%f, t)), real(tdf(par%f(1), t))
       end do
       call io_close(iunit)
 
