@@ -712,24 +712,25 @@ end subroutine mesh_init_stage_3
 ! be zero. comm is used to get the number of partitions.
 ! ---------------------------------------------------------------
 subroutine mesh_partition(m, stencil, np_stencil, part)
-  type(mesh_t), intent(in)  :: m
-  integer,      intent(in)  :: stencil(:, :)
-  integer,      intent(in)  :: np_stencil
-  integer,      intent(out) :: part(:)
+  type(mesh_t),    intent(in)  :: m
+  integer, target, intent(in)  :: stencil(:, :)
+  integer,         intent(in)  :: np_stencil
+  integer,         intent(out) :: part(:)
 
   integer              :: i, j           ! Counter.
   integer              :: ix, iy, iz     ! Counters to iterate over grid.
   integer              :: jx, jy, jz     ! Coordinates of neighbours.
   integer              :: ne             ! Number of edges.
   integer              :: nv             ! Number of vertices.
-  integer              :: d(3, 6)        ! Directions of neighbour points.
+  integer, pointer     :: d(:, :)        ! Directions of neighbour points.
+  integer              :: nd
   integer              :: edgecut        ! Number of edges cut by partitioning.
-                                         ! Number of vertices (nv) is equal to number of
-                                         ! points np_global and maximum number of edges (ne) is 2*m%sb%dim*np_global
-                                         ! (there are a little less because points on the border have less
-                                         ! than two neighbours per dimension).
-                                         ! xadj has nv+1 entries because last entry contains the total
-                                         ! number of edges.
+  ! Number of vertices (nv) is equal to number of
+  ! points np_global and maximum number of edges (ne) is 2*m%sb%dim*np_global
+  ! (there are a little less because points on the border have less
+  ! than two neighbours per dimension).
+  ! xadj has nv+1 entries because last entry contains the total
+  ! number of edges.
   integer              :: p              ! Number of partitions.
   integer              :: ipart          ! number of the current partition
   integer, allocatable :: xadj(:)        ! Indices of adjacency list in adjncy.
@@ -757,8 +758,8 @@ subroutine mesh_partition(m, stencil, np_stencil, part)
   !%Option zoltan 3
   !% Zoltan.
   !%End
-  
-  call loct_parse_int(check_inp('MeshPartition'), METIS, library)
+
+  call loct_parse_int(check_inp('MeshPartition'), ZOLTAN, library)
 
   ! Get number of partitions.
   p = m%mpi_grp%size
@@ -768,41 +769,48 @@ subroutine mesh_partition(m, stencil, np_stencil, part)
   ALLOCATE(final(1:p), p)
   ALLOCATE(lsize(1:p), p)
 
-  ! If we use zoltan we divide the space in a basic way, to balance
-  ! the memory for the graph. 
-  if(library == METIS) then
+  select case(library)
+  case(METIS)
 
     start(1:p) = 1
     final(1:p) = m%np_global
     lsize(1:p) = m%np_global
 
-  else
+    ALLOCATE(d(3, 6), 18)
 
+    nd = 2*m%sb%dim
+
+    ! Set directions of possible neighbours.
+    ! With this ordering of the directions it is possible
+    ! to iterate over d(:, i) with i=1, ..., 2*m%sb%dim,
+    ! i. e. this works for dim=1, ..., 3 without any special
+    ! cases.
+    d(:, 1) = (/ 1,  0,  0/)
+    d(:, 2) = (/-1,  0,  0/)
+    d(:, 3) = (/ 0,  1,  0/)
+    d(:, 4) = (/ 0, -1,  0/)
+    d(:, 5) = (/ 0,  0,  1/)
+    d(:, 6) = (/ 0,  0, -1/)
+
+  case(ZOLTAN)
+
+    ! If we use zoltan we divide the space in a basic way, to balance
+    ! the memory for the graph. 
     call multicomm_divide_range(m%np_global, p, start, final, lsize)
 
     do ii = 1, p
       part(start(ii):final(ii)) = ii
     end do
 
-  end if
+    nd = np_stencil
+    d => stencil
+
+  end select
 
   ! Shortcut (number of vertices).
   nv = lsize(ipart)
-
   ALLOCATE(xadj(nv + 1), nv + 1)
-  ALLOCATE(adjncy(2*m%sb%dim*nv), 2*m%sb%dim*nv)
-
-  ! Set directions of possible neighbours.
-  ! With this ordering of the directions it is possible
-  ! to iterate over d(:, i) with i=1, ..., 2*m%sb%dim,
-  ! i. e. this works for dim=1, ..., 3 without any special
-  ! cases.
-  d(:, 1) = (/ 1,  0,  0/)
-  d(:, 2) = (/-1,  0,  0/)
-  d(:, 3) = (/ 0,  1,  0/)
-  d(:, 4) = (/ 0, -1,  0/)
-  d(:, 5) = (/ 0,  0,  1/)
-  d(:, 6) = (/ 0,  0, -1/)
+  ALLOCATE(adjncy(nd*nv), nd*nv)
 
   ! Create graph with each point being
   ! represenetd by a vertice and edges between
@@ -817,7 +825,7 @@ subroutine mesh_partition(m, stencil, np_stencil, part)
     ! Set entry in index table.
     xadj(i) = ne
     ! Check all possible neighbours.
-    do j = 1, 2*m%sb%dim
+    do j = 1, nd 
       ! Store coordinates of possible neighbors, they
       ! are needed several times in the check below.
       jx = ix + d(1, j)
@@ -830,7 +838,7 @@ subroutine mesh_partition(m, stencil, np_stencil, part)
            jx >= m%nr(1, 1) .and. jx <= m%nr(2, 1) .and.  &
            jy >= m%nr(1, 2) .and. jy <= m%nr(2, 2) .and.  &
            jz >= m%nr(1, 3) .and. jz <= m%nr(2, 3)        &
-        ) then
+           ) then
         ! Only points inside the mesh or its enlargement
         ! are included in the graph.
         if(m%Lxyz_tmp(jx, jy, jz) /= 0 .and. m%Lxyz_inv(jx, jy, jz) <= nv) then
@@ -871,48 +879,60 @@ subroutine mesh_partition(m, stencil, np_stencil, part)
 
   select case(library)
   case(METIS)
+    deallocate(d)
 
-  options = (/1, 2, 1, 1, 0/) ! Use heavy edge matching in METIS.
+    options = (/1, 2, 1, 1, 0/) ! Use heavy edge matching in METIS.
 
-  ! Partition graph.
-  ! Recursive bisection is better for small number of partitions (<8),
-  ! multilevel k-way otherwise (cf. METIS manual).
-  ! If the graph contains no vertices, METIS cannot be called. This seems
-  ! to happen, e. g., when using minimum BoxShape without any atoms in the
-  ! input file.
-  if(nv.eq.0) then
-    message(1) = 'The mesh is empty and cannot be partitioned.'
-    call write_fatal(1)
-  end if
-  if(p == 1) then
-    part(:) = 1
-  else if(p .lt. 8) then
-    message(1) = 'Info: Using multilevel recursive bisection to partition mesh.'
-    call write_info(1)
-    call oct_metis_part_graph_recursive(nv, xadj, adjncy, &
-      0, 0, 0, 1, p, options, edgecut, part)
-  else
-    message(1) = 'Info: Using multilevel k-way algorithm to partition mesh.'
-    call write_info(1)
-    call oct_metis_part_graph_kway(nv, xadj, adjncy, &
-      0, 0, 0, 1, p, options, edgecut, part)
-  end if
+    ! Partition graph.
+    ! Recursive bisection is better for small number of partitions (<8),
+    ! multilevel k-way otherwise (cf. METIS manual).
+    ! If the graph contains no vertices, METIS cannot be called. This seems
+    ! to happen, e. g., when using minimum BoxShape without any atoms in the
+    ! input file.
+    if(nv.eq.0) then
+      message(1) = 'The mesh is empty and cannot be partitioned.'
+      call write_fatal(1)
+    end if
+    if(p == 1) then
+      part(:) = 1
+    else if(p .lt. 8) then
+      message(1) = 'Info: Using Metis multilevel recursive bisection to partition mesh.'
+      call write_info(1)
+      call oct_metis_part_graph_recursive(nv, xadj, adjncy, &
+           0, 0, 0, 1, p, options, edgecut, part)
+    else
+      message(1) = 'Info: Using Metis multilevel k-way algorithm to partition mesh.'
+      call write_info(1)
+      call oct_metis_part_graph_kway(nv, xadj, adjncy, &
+           0, 0, 0, 1, p, options, edgecut, part)
+    end if
 
   case(ZOLTAN)
 
     if(p .lt. 8) then
-      method = GEOMETRIC
+      method = RCB
     else
       method = GRAPH
     end if
 
+
+    select case(method)
+    case(RCB)
+      message(1) = 'Info: Using Zoltan Recursive Coordinate Bisection algorithm to partition the mesh.'
+    case(GRAPH)
+      message(1) = 'Info: Using Zoltan Graph partition algorithm to partition the mesh.'
+    case(HYPERGRAPH)
+      message(1) = 'Info: Using Zoltan Hypergraph partition algorithm to partition the mesh.'
+    end select
+    call write_info(1)
+
     !assign all points to one node
     call zoltan_partition(method, m%sb%dim, m%np_global, m%np_part_global, &
          m%x_global(1, 1),  start(ipart), xadj(1), adjncy(1), ipart, part(1), m%mpi_grp%comm)
-    
+
     ! we use xadj as a buffer
     xadj(1:lsize(ipart)) = part(start(ipart):final(ipart))
-    
+
     ASSERT(all(xadj(1:lsize(ipart)) > 0))
 
     part(1:m%np_global) = 0 ! so we catch non-initialized values
@@ -921,7 +941,7 @@ subroutine mesh_partition(m, stencil, np_stencil, part)
     call MPI_Allgatherv(xadj, lsize(ipart), MPI_INTEGER, part, lsize, start - 1, MPI_INTEGER, m%mpi_grp%comm, mpi_err)
 
   end select
-  
+
   ASSERT(all(part(1:m%np_global) > 0))
   ASSERT(all(part(1:m%np_global) <= p))
 
@@ -930,7 +950,7 @@ subroutine mesh_partition(m, stencil, np_stencil, part)
     do i = 1, p
       write(filenum, '(i3.3)') i
       iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &
-         action='write')
+           action='write')
       do j = 1, m%np_global
         if(part(j).eq.i) write(iunit, '(i8,3f18.8)') j, m%x_global(j, :)
       end do
@@ -939,7 +959,7 @@ subroutine mesh_partition(m, stencil, np_stencil, part)
     ! Write points from enlargement to file with number p+1.
     write(filenum, '(i3.3)') p+1
     iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &
-       action='write')
+         action='write')
     do i = m%np_global+1, m%np_part_global
       write(iunit, '(i8,3f18.8)') i, m%x_global(i, :)
     end do
@@ -949,7 +969,7 @@ subroutine mesh_partition(m, stencil, np_stencil, part)
   ALLOCATE(votes(1:p, m%np_global + 1:m%np_part_global), p*(m%np_part_global - m%np_global))
 
   !now assign boundary points
-  
+
   !count the boundary points that each point needs
   votes = 0
   do i = 1, m%np_global

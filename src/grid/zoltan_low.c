@@ -126,7 +126,6 @@ void get_num_edges(void *data, int dim_gid, int dim_lid, int num_objs,
     assert(gid >= 0);
     num_edges[iobj] = mesh.xedges[gid + 1] - mesh.xedges[gid];
     assert(num_edges[iobj] > 0);
-    assert(num_edges[iobj] <= 2*mesh.dim);
   }
   *err = 0;
 }
@@ -159,7 +158,7 @@ void get_edges(void *data, int dim_gid, int dim_lid, ZOLTAN_ID_PTR global_id, ZO
 
 }
 
-#define GEOMETRIC  2
+#define RCB        2
 #define GRAPH      3
 #define HYPERGRAPH 4
 
@@ -217,7 +216,7 @@ void FC_FUNC_(zoltan_partition, ZOLTAN_PARTITION)(const int * method,
 
   /* the method to partition the grid */
   switch(*method){
-  case(GEOMETRIC):
+  case(RCB):
     rc = Zoltan_Set_Param(zz, "LB_METHOD", "RCB");
     break;
   case(GRAPH):

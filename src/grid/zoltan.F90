@@ -24,9 +24,9 @@ module zoltan_m
   
   public :: zoltan_partition
   
-  integer, public ::    &
-       GEOMETRIC  = 2,  &
-       GRAPH      = 3,  &
+  integer, public, parameter ::    &
+       RCB        = 2,             &
+       GRAPH      = 3,             &
        HYPERGRAPH = 4
 
   interface
