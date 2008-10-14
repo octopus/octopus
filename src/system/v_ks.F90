@@ -85,26 +85,26 @@ contains
     !%Default dft
     !%Section Hamiltonian
     !%Description
-    !% The calculations can be run with three different "theory levels"
+    !% The calculations can be run with three different "theory levels":
     !%Option independent_particles 2
     !% Particles will be considered as independent, i.e. as non-interacting.
     !% This mode is mainly used for testing purposes, as the code is usually 
     !% much faster with independent_particles.
     !%Option hartree 1
     !% Calculation within the Hartree method. Note that, contrary to what many people
-    !% may think, the Hartree potential is self-interaction free. Therefore, this run 
+    !% may think, the Hartree potential is self-interaction-free. Therefore, this run 
     !% mode will not yield the same result as dft without exchange-correlation.
     !% 
     !% At the moment, I am not completely sure of the implementation, so I am
     !% marking it with development version only.
     !%Option hartree_fock 3
-    !% This is the traditional Hartree-Fock scheme. As the Hartree scheme it is full
-    !% self-interaction free. This mode is extremely slow. It is often more convinient
+    !% This is the traditional Hartree-Fock scheme. Like the Hartree scheme it is fully
+    !% self-interaction-free. This mode is extremely slow. It is often more convinient
     !% to use dft within the OEP scheme to get similar (but not the same) results.
     !% 
     !% Note that within this scheme you can use a correlation functional, or a hybrid
     !% functional (see XCFunctional). In the latter case, you will be following the
-    !% quantum chemistry recipe to use hybrids.
+    !% quantum-chemistry recipe to use hybrids.
     !%Option dft 4
     !% This is the default density-functional theory scheme. Note that you can also use 
     !% hybrids in this scheme, but they will be handled the "DFT" way, i.e., solving the

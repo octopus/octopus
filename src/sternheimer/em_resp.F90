@@ -54,8 +54,9 @@ module pol_lr_m
   private
 
   public :: &
-       pol_lr_run,       &
-       read_wfs,         &
+       pol_lr_run,             &
+       read_wfs,               &
+       out_polarizability,     &
        out_hyperpolarizability
 
   type em_resp_t
@@ -562,7 +563,8 @@ contains
       call io_mkdir(trim(dirname))
 
       if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
-        call out_polarizability()
+        call out_polarizability(st, gr, em_vars%alpha(1:MAX_DIM, 1:MAX_DIM, ifactor), &
+          em_vars%freq_factor(ifactor) * em_vars%omega(iomega), em_vars%ok(ifactor), dirname)
         if(em_vars%calc_hyperpol) call out_hyperpolarizability(gr%sb, em_vars%beta, em_vars%ok(ifactor), dirname)
       else if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
         call out_susceptibility()
@@ -579,78 +581,6 @@ contains
     end do
 
   contains
-
-    ! ---------------------------------------------------------
-    ! Note: this should be in spectrum.F90
-    subroutine cross_section_header(out_file)
-      integer, intent(in) :: out_file
-
-      character(len=80) :: header_string
-      integer :: i, k
-
-      !this header is the same as spectrum.F90
-      write(out_file, '(a1, a20)', advance = 'no') '#', str_center("Energy", 20)
-      write(out_file, '(a20)', advance = 'no') str_center("(1/3)*Tr[sigma]", 20)
-      write(out_file, '(a20)', advance = 'no') str_center("Anisotropy[sigma]", 20)
-
-      do i = 1, 3
-        do k = 1, 3
-          write(header_string,'(a6,i1,a1,i1,a1)') 'sigma(',i,',',k,')'
-          write(out_file, '(a20)', advance = 'no') str_center(trim(header_string), 20)
-        end do
-      end do
-
-      write(out_file, *)
-      write(out_file, '(a1,a20)', advance = 'no') '#', str_center('['//trim(units_out%energy%abbrev) // ']', 20)
-      do i = 1, 11
-        write(out_file, '(a20)', advance = 'no')  str_center('['//trim(units_out%length%abbrev) //'^2]', 20)
-      end do
-      write(out_file,*)
-    end subroutine cross_section_header
-
-
-    ! ---------------------------------------------------------
-    subroutine out_polarizability()
-      FLOAT :: cross(MAX_DIM, MAX_DIM), crossp(MAX_DIM, MAX_DIM)
-      FLOAT :: average, anisotropy
-      
-
-      iunit = io_open(trim(dirname)//'/alpha', action='write')
-
-      if (.not.em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
-      write(iunit, '(2a)', advance='no') '# Polarizability tensor [', &
-        trim(units_out%length%abbrev)
-      if(NDIM.ne.1) write(iunit, '(a,i1)', advance='no') '^', NDIM
-      write(iunit, '(a)') ']'
-
-      call io_output_tensor(iunit, TOFLOAT(em_vars%alpha(:,:, ifactor)), NDIM, units_out%length%factor**NDIM)
-
-      call io_close(iunit)
-
-      ! CROSS SECTION (THE COMPLEX PART OF POLARIZABILITY)
-      if( wfs_are_complex(st)) then 
-        cross(1:MAX_DIM, 1:MAX_DIM) = aimag(em_vars%alpha(1:MAX_DIM, 1:MAX_DIM, ifactor)) * &
-          em_vars%freq_factor(ifactor)*em_vars%omega(iomega)/units_out%energy%factor * M_FOUR * M_PI / P_c 
-        
-        iunit = io_open(trim(dirname)//'/cross_section', action='write')
-        if (.not.em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
-
-        average = M_THIRD*(cross(1, 1) + cross(2, 2) + cross(3, 3))
-        crossp(:, :) = matmul(cross(:, :), cross(:, :))
-        anisotropy = &
-             M_THIRD*(M_THREE*(crossp(1, 1) + crossp(2, 2) + crossp(3, 3)) - (cross(1, 1) + cross(2, 2) + cross(3, 3))**2)
-          
-        call cross_section_header(iunit)
-        write(iunit,'(3e20.8)', advance = 'no') &
-          em_vars%freq_factor(ifactor)*em_vars%omega(iomega) / units_out%energy%factor, average , sqrt(max(anisotropy, M_ZERO))
-        write(iunit,'(9e20.8)', advance = 'no') cross(1:3, 1:3)
-        write(iunit,'(a)', advance = 'yes')
-
-        call io_close(iunit)
-      end if
-
-    end subroutine out_polarizability
-
 
     ! ---------------------------------------------------------
     subroutine out_susceptibility()
@@ -828,6 +758,88 @@ contains
 
 
   ! ---------------------------------------------------------
+  subroutine out_polarizability(st, gr, alpha, omega, converged, dirname)
+    type(states_t),    intent(in) :: st
+    type(grid_t),      intent(in) :: gr
+    CMPLX,             intent(in) :: alpha(:, :)
+    FLOAT,             intent(in) :: omega
+    logical,           intent(in) :: converged
+    character(len=*),  intent(in) :: dirname
+
+    FLOAT :: cross(MAX_DIM, MAX_DIM), crossp(MAX_DIM, MAX_DIM)
+    FLOAT :: average, anisotropy
+    integer iunit
+    
+    iunit = io_open(trim(dirname)//'/alpha', action='write')
+
+    if (.not.converged) write(iunit, '(a)') "# WARNING: not converged"
+    if (simul_box_is_periodic(gr%sb)) write(iunit, '(a)') "# WARNING: Accurate calculation in periodic system requires kdotp run."
+    write(iunit, '(2a)', advance='no') '# Polarizability tensor [', &
+      trim(units_out%length%abbrev)
+    if(NDIM.ne.1) write(iunit, '(a,i1)', advance='no') '^', NDIM
+    write(iunit, '(a)') ']'
+
+    call io_output_tensor(iunit, TOFLOAT(alpha(1:MAX_DIM, 1:MAX_DIM)), NDIM, units_out%length%factor**NDIM)
+
+    call io_close(iunit)
+
+    ! CROSS SECTION (THE COMPLEX PART OF POLARIZABILITY)
+    if(wfs_are_complex(st)) then 
+      cross(1:MAX_DIM, 1:MAX_DIM) = aimag(alpha(1:MAX_DIM, 1:MAX_DIM)) * &
+        omega / units_out%energy%factor * M_FOUR * M_PI / P_c 
+        
+      iunit = io_open(trim(dirname)//'/cross_section', action='write')
+      if (.not. converged) write(iunit, '(a)') "# WARNING: not converged"
+      if (simul_box_is_periodic(gr%sb)) write(iunit, '(a)') "# WARNING: Accurate calculation in periodic system requires kdotp run."
+
+      average = M_THIRD * (cross(1, 1) + cross(2, 2) + cross(3, 3))
+      crossp(:, :) = matmul(cross(:, :), cross(:, :))
+      anisotropy = &
+        M_THIRD*(M_THREE*(crossp(1, 1) + crossp(2, 2) + crossp(3, 3)) - (cross(1, 1) + cross(2, 2) + cross(3, 3))**2)
+          
+      call cross_section_header(iunit)
+      write(iunit,'(3e20.8)', advance = 'no') &
+        omega / units_out%energy%factor, average, sqrt(max(anisotropy, M_ZERO))
+      write(iunit,'(9e20.8)', advance = 'no') cross(1:3, 1:3)
+      write(iunit,'(a)', advance = 'yes')
+
+      call io_close(iunit)
+    end if
+
+  contains
+
+    ! ---------------------------------------------------------
+    ! Note: this should be in spectrum.F90
+    subroutine cross_section_header(out_file)
+      integer, intent(in) :: out_file
+
+      character(len=80) :: header_string
+      integer :: i, k
+
+      !this header is the same as spectrum.F90
+      write(out_file, '(a1, a20)', advance = 'no') '#', str_center("Energy", 20)
+      write(out_file, '(a20)', advance = 'no') str_center("(1/3)*Tr[sigma]", 20)
+      write(out_file, '(a20)', advance = 'no') str_center("Anisotropy[sigma]", 20)
+
+      do i = 1, 3
+        do k = 1, 3
+          write(header_string,'(a6,i1,a1,i1,a1)') 'sigma(',i,',',k,')'
+          write(out_file, '(a20)', advance = 'no') str_center(trim(header_string), 20)
+        end do
+      end do
+
+      write(out_file, *)
+      write(out_file, '(a1,a20)', advance = 'no') '#', str_center('['//trim(units_out%energy%abbrev) // ']', 20)
+      do i = 1, 11
+        write(out_file, '(a20)', advance = 'no')  str_center('['//trim(units_out%length%abbrev) //'^2]', 20)
+      end do
+      write(out_file,*)
+    end subroutine cross_section_header
+
+  end subroutine out_polarizability
+
+
+  ! ---------------------------------------------------------
   subroutine out_hyperpolarizability(sb, beta, converged, dirname)
     type(simul_box_t),  intent(in) :: sb
     CMPLX,              intent(in) :: beta(:, :, :)
@@ -840,7 +852,7 @@ contains
     CMPLX :: bpar(1:MAX_DIM), bper(1:MAX_DIM), bk(1:MAX_DIM)
     integer :: i, j, k, iunit
 
-    ! Output first hyperpolarizabilty (beta)
+    ! Output first hyperpolarizability (beta)
     iunit = io_open(trim(dirname)//'/beta', action='write')
 
     if (.not. converged) write(iunit, '(a)') "# WARNING: not converged"
