@@ -33,6 +33,7 @@ module restart_m
   use math_m
   use mesh_function_m
   use mesh_m
+  use mesh_init_m
   use messages_m
   use mpi_m
   use simul_box_m
