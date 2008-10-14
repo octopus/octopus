@@ -20,14 +20,44 @@
 #include "global.h"
   
 module zoltan_m
+  use messages_m
+  
   private
   
-  public :: zoltan_partition
+  public ::                         &
+       zoltan_partition,            &
+       zoltan_method_info,          &
+       zoltan_method_is_geometric 
   
+  ! this values have to match with the ones defined in zoltan_low.c
   integer, public, parameter ::    &
        RCB        = 2,             &
-       GRAPH      = 3,             &
-       HYPERGRAPH = 4
+       RIB        = 3,             &
+       HSFC       = 4,             &
+       REFTREE    = 5,             &
+       GRAPH      = 6,             &
+       HYPERGRAPH = 7
+
+  !%Variable MeshPartition
+  !%Type integer
+  !%Default metis
+  !%Section Execution::Parallelization
+  !%Description
+  !% Decides which algorithm is used to partition the mesh. By default
+  !% graph partitioning for is used for 8 or more partitions and rcb for less.
+  !%Option rcb 2
+  !% Recursive coordinate bisection partitioning.
+  !%Option rib 3
+  !% Recursive inertial bisection partitioning.
+  !%Option hsfc 4
+  !% Hilbert space-filling curve partioning.
+  !%Option reftree 5
+  !% Refinement tree based partitioning.
+  !%Option graph 6
+  !% Graph partitioning
+  !%Option hypergraph 7
+  !% Hypergraph partitioning.
+  !%End
 
   interface
     subroutine zoltan_partition(method, sbdim, np_global, np_part_global, x_global, estart, xedges, edges, ipart, part, fcomm)
@@ -44,6 +74,35 @@ module zoltan_m
       integer, intent(in)    :: fcomm             ! the communicator
     end subroutine zoltan_partition
   end interface
+
+contains
+
+  subroutine zoltan_method_info(method)
+    integer, intent(in) :: method
+  
+    select case(method)
+    case(RCB)
+      message(1) = 'Info: Using Zoltan recursive coordinate bisection algorithm to partition the mesh.'
+    case(RIB)
+      message(1) = 'Info: Using Zoltan recursive inertial bisection algorithm to partition the mesh.'
+    case(HSFC)
+      message(1) = 'Info: Using Zoltan Hilbert space-filling curve partitioning to partition the mesh.'
+    case(REFTREE)
+      message(1) = 'Info: Using Zoltan refinement tree based partitioning to partition the mesh.'
+    case(GRAPH)
+      message(1) = 'Info: Using Zoltan graph partition algorithm to partition the mesh.'
+    case(HYPERGRAPH)
+      message(1) = 'Info: Using Zoltan hypergraph partition algorithm to partition the mesh.'
+    end select
+    call write_info(1)
+
+  end subroutine zoltan_method_info
+
+  logical function zoltan_method_is_geometric(method) result(geometric)
+    integer, intent(in) :: method
+
+    geometric = method == RCB .or. method == RIB .or. method == HSFC .or. method == REFTREE
+  end function zoltan_method_is_geometric
 
 end module zoltan_m
 

@@ -739,16 +739,25 @@ subroutine mesh_partition(m, stencil, np_stencil, part)
   integer              :: iunit          ! For debug output to files.
   character(len=3)     :: filenum
   integer, allocatable :: votes(:, :)
-  integer :: ip, rr, method, ii
+  integer :: ip, rr, ii
+  integer :: default_method, method
   integer :: library
   integer, parameter :: METIS = 2, ZOLTAN = 3
   integer, allocatable :: start(:), final(:), lsize(:)
 
+  type(profile_t), save :: prof
+
+  call profiling_in(prof, "MESH_PARTITION")
   call push_sub('mesh_init.mesh_partition')
 
-  !%Variable MeshPartition
+  if(m%np_global == 0) then
+    message(1) = 'The mesh is empty and cannot be partitioned.'
+    call write_fatal(1)
+  end if
+  
+  !%Variable MeshPartitionPackage
   !%Type integer
-  !%Default metis
+  !%Default zoltan
   !%Section Execution::Parallelization
   !%Description
   !% Decides which library to use to perform the mesh partition. By
@@ -758,8 +767,15 @@ subroutine mesh_partition(m, stencil, np_stencil, part)
   !%Option zoltan 3
   !% Zoltan.
   !%End
+  call loct_parse_int(check_inp('MeshPartitionPackage'), ZOLTAN, library)
 
-  call loct_parse_int(check_inp('MeshPartition'), ZOLTAN, library)
+  if(p .lt. 8) then
+    default_method = RCB
+  else
+    default_method = GRAPH
+  end if
+  ! Documentation is in zoltan.F90
+  call loct_parse_int(check_inp('MeshPartition'), default_method, method)
 
   ! Get number of partitions.
   p = m%mpi_grp%size
@@ -810,71 +826,75 @@ subroutine mesh_partition(m, stencil, np_stencil, part)
   ! Shortcut (number of vertices).
   nv = lsize(ipart)
   ALLOCATE(xadj(nv + 1), nv + 1)
-  ALLOCATE(adjncy(nd*nv), nd*nv)
 
-  ! Create graph with each point being
-  ! represenetd by a vertice and edges between
-  ! neighboured points.
-  ne = 1
-  ! Iterate over number of vertices.
-  do i = 1, nv
-    ! Get coordinates of point i (vertex i).
-    ix      = m%Lxyz(i, 1)
-    iy      = m%Lxyz(i, 2)
-    iz      = m%Lxyz(i, 3)
-    ! Set entry in index table.
-    xadj(i) = ne
-    ! Check all possible neighbours.
-    do j = 1, nd 
-      ! Store coordinates of possible neighbors, they
-      ! are needed several times in the check below.
-      jx = ix + d(1, j)
-      jy = iy + d(2, j)
-      jz = iz + d(3, j)
-      ! Only if the neighbour is in the surrounding box,
-      ! Lxyz_tmp has an entry for this point, otherweise
-      ! it is out of bounds.
-      if(&
-           jx >= m%nr(1, 1) .and. jx <= m%nr(2, 1) .and.  &
-           jy >= m%nr(1, 2) .and. jy <= m%nr(2, 2) .and.  &
-           jz >= m%nr(1, 3) .and. jz <= m%nr(2, 3)        &
-           ) then
-        ! Only points inside the mesh or its enlargement
-        ! are included in the graph.
-        if(m%Lxyz_tmp(jx, jy, jz) /= 0 .and. m%Lxyz_inv(jx, jy, jz) <= nv) then
-          ! Store a new edge and increment edge counter.
-          adjncy(ne) = m%Lxyz_inv(jx, jy, jz)
-          ne         = ne + 1
+  if(library == METIS .or. .not. zoltan_method_is_geometric(method)) then !calculate the graphs
+    ALLOCATE(adjncy(nd*nv), nd*nv)
+
+    ! Create graph with each point being
+    ! represenetd by a vertice and edges between
+    ! neighboured points.
+    ne = 1
+    ! Iterate over number of vertices.
+    do i = 1, nv
+      ! Get coordinates of point i (vertex i).
+      ix      = m%Lxyz(i, 1)
+      iy      = m%Lxyz(i, 2)
+      iz      = m%Lxyz(i, 3)
+      ! Set entry in index table.
+      xadj(i) = ne
+      ! Check all possible neighbours.
+      do j = 1, nd 
+        ! Store coordinates of possible neighbors, they
+        ! are needed several times in the check below.
+        jx = ix + d(1, j)
+        jy = iy + d(2, j)
+        jz = iz + d(3, j)
+        ! Only if the neighbour is in the surrounding box,
+        ! Lxyz_tmp has an entry for this point, otherweise
+        ! it is out of bounds.
+        if(&
+             jx >= m%nr(1, 1) .and. jx <= m%nr(2, 1) .and.  &
+             jy >= m%nr(1, 2) .and. jy <= m%nr(2, 2) .and.  &
+             jz >= m%nr(1, 3) .and. jz <= m%nr(2, 3)        &
+             ) then
+          ! Only points inside the mesh or its enlargement
+          ! are included in the graph.
+          if(m%Lxyz_tmp(jx, jy, jz) /= 0 .and. m%Lxyz_inv(jx, jy, jz) <= nv) then
+            ! Store a new edge and increment edge counter.
+            adjncy(ne) = m%Lxyz_inv(jx, jy, jz)
+            ne         = ne + 1
+          end if
         end if
-      end if
-    end do
-  end do
-  ne         = ne - 1 ! We start with ne=1 for simplicity. This is off by one
-  ! in the end --> -1.
-  xadj(nv + 1) = ne + 1 ! Set number of edges plus 1 as last index.
-  ! The reason is: neighbours of node i are stored
-  ! in adjncy(xadj(i):xadj(i+1)-1). Setting the last
-  ! index as mentioned makes special handling of
-  ! last element unnecessary (this indicing is a
-  ! METIS requirement).
-
-  if(in_debug_mode) then
-    ! DEBUG output. Write graph to file mesh_graph.txt.
-    message(1) = 'Info: Adjacency lists of the graph representing the grid'
-    message(2) = 'Info: are stored in debug/mesh_partition/mesh_graph.txt.'
-    message(3) = 'Info: Compatible with METIS programs pmetis and kmetis.'
-    message(4) = 'Info: First line contains number of vertices and edges.'
-    message(5) = 'Info: Edges are not directed and appear twice in the lists.'
-    call write_info(5)
-    if(mpi_grp_is_root(mpi_world)) then
-      call io_mkdir('debug/mesh_partition')
-      iunit = io_open('debug/mesh_partition/mesh_graph.txt', action='write')
-      write(iunit, *) nv, ne/2
-      do i = 1, nv
-        write(iunit, *) adjncy(xadj(i):xadj(i+1) - 1)
       end do
-      call io_close(iunit)
+    end do
+    ne         = ne - 1 ! We start with ne=1 for simplicity. This is off by one
+    ! in the end --> -1.
+    xadj(nv + 1) = ne + 1 ! Set number of edges plus 1 as last index.
+    ! The reason is: neighbours of node i are stored
+    ! in adjncy(xadj(i):xadj(i+1)-1). Setting the last
+    ! index as mentioned makes special handling of
+    ! last element unnecessary (this indicing is a
+    ! METIS requirement).
+
+    if(in_debug_mode) then
+      ! DEBUG output. Write graph to file mesh_graph.txt.
+      message(1) = 'Info: Adjacency lists of the graph representing the grid'
+      message(2) = 'Info: are stored in debug/mesh_partition/mesh_graph.txt.'
+      message(3) = 'Info: Compatible with METIS programs pmetis and kmetis.'
+      message(4) = 'Info: First line contains number of vertices and edges.'
+      message(5) = 'Info: Edges are not directed and appear twice in the lists.'
+      call write_info(5)
+      if(mpi_grp_is_root(mpi_world)) then
+        call io_mkdir('debug/mesh_partition')
+        iunit = io_open('debug/mesh_partition/mesh_graph.txt', action='write')
+        write(iunit, *) nv, ne/2
+        do i = 1, nv
+          write(iunit, *) adjncy(xadj(i):xadj(i+1) - 1)
+        end do
+        call io_close(iunit)
+      end if
     end if
+
   end if
 
   select case(library)
@@ -889,42 +909,26 @@ subroutine mesh_partition(m, stencil, np_stencil, part)
     ! If the graph contains no vertices, METIS cannot be called. This seems
     ! to happen, e. g., when using minimum BoxShape without any atoms in the
     ! input file.
-    if(nv.eq.0) then
-      message(1) = 'The mesh is empty and cannot be partitioned.'
-      call write_fatal(1)
-    end if
-    if(p == 1) then
-      part(:) = 1
-    else if(p .lt. 8) then
-      message(1) = 'Info: Using Metis multilevel recursive bisection to partition mesh.'
-      call write_info(1)
-      call oct_metis_part_graph_recursive(nv, xadj, adjncy, &
-           0, 0, 0, 1, p, options, edgecut, part)
-    else
-      message(1) = 'Info: Using Metis multilevel k-way algorithm to partition mesh.'
-      call write_info(1)
-      call oct_metis_part_graph_kway(nv, xadj, adjncy, &
-           0, 0, 0, 1, p, options, edgecut, part)
-    end if
-
-  case(ZOLTAN)
-
-    if(p .lt. 8) then
-      method = RCB
-    else
-      method = GRAPH
-    end if
-
 
     select case(method)
     case(RCB)
-      message(1) = 'Info: Using Zoltan Recursive Coordinate Bisection algorithm to partition the mesh.'
+      message(1) = 'Info: Using Metis multilevel recursive bisection to partition the mesh.'
+      call write_info(1)
+      call oct_metis_part_graph_recursive(nv, xadj, adjncy, &
+           0, 0, 0, 1, p, options, edgecut, part)
     case(GRAPH)
-      message(1) = 'Info: Using Zoltan Graph partition algorithm to partition the mesh.'
-    case(HYPERGRAPH)
-      message(1) = 'Info: Using Zoltan Hypergraph partition algorithm to partition the mesh.'
+      message(1) = 'Info: Using Metis multilevel k-way algorithm to partition the mesh.'
+      call write_info(1)
+      call oct_metis_part_graph_kway(nv, xadj, adjncy, &
+           0, 0, 0, 1, p, options, edgecut, part)
+    case default
+      message(1) = 'Error: Selected partition method is not available in Metis'
+      call write_fatal(1)
     end select
-    call write_info(1)
+
+  case(ZOLTAN)
+
+    call zoltan_method_info(method)
 
     !assign all points to one node
     call zoltan_partition(method, m%sb%dim, m%np_global, m%np_part_global, &
@@ -944,27 +948,6 @@ subroutine mesh_partition(m, stencil, np_stencil, part)
 
   ASSERT(all(part(1:m%np_global) > 0))
   ASSERT(all(part(1:m%np_global) <= p))
-
-  if(in_debug_mode.and.mpi_grp_is_root(mpi_world)) then
-    ! Debug output. Write points of each partition in a different file.
-    do i = 1, p
-      write(filenum, '(i3.3)') i
-      iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &
-           action='write')
-      do j = 1, m%np_global
-        if(part(j).eq.i) write(iunit, '(i8,3f18.8)') j, m%x_global(j, :)
-      end do
-      call io_close(iunit)
-    end do
-    ! Write points from enlargement to file with number p+1.
-    write(filenum, '(i3.3)') p+1
-    iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &
-         action='write')
-    do i = m%np_global+1, m%np_part_global
-      write(iunit, '(i8,3f18.8)') i, m%x_global(i, :)
-    end do
-    call io_close(iunit)
-  end if
 
   ALLOCATE(votes(1:p, m%np_global + 1:m%np_part_global), p*(m%np_part_global - m%np_global))
 
@@ -995,9 +978,41 @@ subroutine mesh_partition(m, stencil, np_stencil, part)
     end if
   end do
 
+  if(in_debug_mode.and.mpi_grp_is_root(mpi_world)) then
+    ! Debug output. Write points of each partition in a different file.
+    do i = 1, p
+
+      write(filenum, '(i3.3)') i
+
+      iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &
+           action='write')
+      do j = 1, m%np_global
+        if(part(j).eq.i) write(iunit, '(i8,3f18.8)') j, m%x_global(j, :)
+      end do
+      call io_close(iunit)
+
+      iunit = io_open('debug/mesh_partition/mesh_partition_all.'//filenum, &
+           action='write')
+      do j = 1, m%np_part_global
+        if(part(j).eq.i) write(iunit, '(i8,3f18.8)') j, m%x_global(j, :)
+      end do
+      call io_close(iunit)
+
+    end do
+    ! Write points from enlargement to file with number p+1.
+    write(filenum, '(i3.3)') p+1
+    iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &
+         action='write')
+    do i = m%np_global+1, m%np_part_global
+      write(iunit, '(i8,3f18.8)') i, m%x_global(i, :)
+    end do
+    call io_close(iunit)
+  end if
+
   call MPI_Barrier(m%mpi_grp%comm, mpi_err)
 
   call pop_sub()
+  call profiling_out(prof)
 
 end subroutine mesh_partition
 #endif

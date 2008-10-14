@@ -158,9 +158,15 @@ void get_edges(void *data, int dim_gid, int dim_lid, ZOLTAN_ID_PTR global_id, ZO
 
 }
 
-#define RCB        2
-#define GRAPH      3
-#define HYPERGRAPH 4
+/* these values have to match with the ones defined in zoltan.F90 and
+   mesh_init.F90*/
+
+#define RCB         2
+#define RIB         3
+#define HSFC        4
+#define REFTREE     5
+#define GRAPH       6
+#define HYPERGRAPH  7
 
 void FC_FUNC_(zoltan_partition, ZOLTAN_PARTITION)(const int * method,
 						  const int * sbdim, 
@@ -219,6 +225,15 @@ void FC_FUNC_(zoltan_partition, ZOLTAN_PARTITION)(const int * method,
   case(RCB):
     rc = Zoltan_Set_Param(zz, "LB_METHOD", "RCB");
     break;
+  case(RIB):
+    rc = Zoltan_Set_Param(zz, "LB_METHOD", "RCB");
+    break;
+  case(HSFC):
+    rc = Zoltan_Set_Param(zz, "LB_METHOD", "HSFC");
+    break;
+  case(REFTREE):
+    rc = Zoltan_Set_Param(zz, "LB_METHOD", "REFTREE");
+    break;
   case(GRAPH):
     rc = Zoltan_Set_Param(zz, "LB_METHOD", "GRAPH");
     break;
@@ -226,33 +241,42 @@ void FC_FUNC_(zoltan_partition, ZOLTAN_PARTITION)(const int * method,
     rc = Zoltan_Set_Param(zz, "LB_METHOD", "HYPERGRAPH");
     break;
   }
+
   assert(rc == ZOLTAN_OK);
 
-  /* since our original distribution is very bad, we tell zoltan to
-     start the partition from scratch */
-  rc = Zoltan_Set_Param(zz, "LB_APPROACH", "PARTITION");
-  assert(rc == ZOLTAN_OK);
-
-  /* tell zoltan that we want a list of the assignment of all points as a result */
-  rc = Zoltan_Set_Param(zz, "RETURN_LISTS", "PARTITION ASSIGNMENTS"); 
-  assert(rc == ZOLTAN_OK);
-
+  /* always required callbacks */
   rc = Zoltan_Set_Num_Obj_Fn(zz, get_num_objects, NULL);
   assert(rc == ZOLTAN_OK);
 
   rc = Zoltan_Set_Obj_List_Fn(zz, get_local_objects_list, NULL);
   assert(rc == ZOLTAN_OK);
 
-  rc = Zoltan_Set_Num_Geom_Fn(zz, get_dimension, NULL);
-  assert(rc == ZOLTAN_OK);
+  if(*method == RCB || *method == RIB || *method == HSFC || *method == REFTREE) {
+    /* register geometry callbacks */
+    rc = Zoltan_Set_Num_Geom_Fn(zz, get_dimension, NULL);
+    assert(rc == ZOLTAN_OK);
+    
+    rc = Zoltan_Set_Geom_Multi_Fn(zz, get_objects_coords, NULL);
+    assert(rc == ZOLTAN_OK);
+  }
 
-  rc = Zoltan_Set_Geom_Multi_Fn(zz, get_objects_coords, NULL);
-  assert(rc == ZOLTAN_OK);
+  if(*method == GRAPH || *method == HYPERGRAPH ) {
+    /* since our original distribution is very bad, we tell zoltan to
+       start the partition from scratch */
+    rc = Zoltan_Set_Param(zz, "LB_APPROACH", "PARTITION");
+    assert(rc == ZOLTAN_OK);
 
-  rc = Zoltan_Set_Num_Edges_Multi_Fn(zz, get_num_edges, NULL);
-  assert(rc == ZOLTAN_OK);
+    /* register graph callbacks */
+    rc = Zoltan_Set_Num_Edges_Multi_Fn(zz, get_num_edges, NULL);
+    assert(rc == ZOLTAN_OK);
+    
+    rc = Zoltan_Set_Edge_List_Fn(zz, get_edges, NULL);
+    assert(rc == ZOLTAN_OK);
+  }
 
-  rc = Zoltan_Set_Edge_List_Fn(zz, get_edges, NULL);
+  /* tell zoltan that we want a list of the assignment of all local
+     points as a result */
+  rc = Zoltan_Set_Param(zz, "RETURN_LISTS", "PARTITION ASSIGNMENTS"); 
   assert(rc == ZOLTAN_OK);
 
   Zoltan_LB_Partition (zz,
