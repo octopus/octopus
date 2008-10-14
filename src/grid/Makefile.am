@@ -27,13 +27,14 @@ libgrid_a_SOURCES = \
 	submesh.F90 stencil_star.F90 stencil_variational.F90 stencil_cube.F90 \
 	stencil_starplus.F90 derivatives.F90 cube_function.F90 fourier_space.F90 mesh_function.F90 \
 	basins.F90 io_function.F90 multigrid.F90 gridhier.F90 double_grid.F90 grid.F90 \
+	mesh_init.F90 \
 	metis.c \
 	ob_interface.F90 \
 	zoltan_low.c     \
 	zoltan.F90
 
 noinst_HEADERS = \
-	mesh_init.F90 par_vec_inc.F90 derivatives_inc.F90 cube_function_inc.F90 fourier_space_inc.F90 \
+	par_vec_inc.F90 derivatives_inc.F90 cube_function_inc.F90 fourier_space_inc.F90 \
 	mesh_function_inc.F90 double_grid_apply.F90 \
 	submesh_inc.F90 io_function_inc.F90 nl_operator_inc.F90 \
 	multigrid_inc.F90 gridhier_inc.F90
@@ -49,8 +50,9 @@ curv_modine.o : curv_modine.F90
 curvlinear.o : curvlinear.F90  curv_modine.o curv_gygi.o curv_briggs.o 
 mesh_lib.o : mesh_lib.F90 
 par_vec.o : par_vec.F90 par_vec_inc.F90 mesh_lib.o 
-mesh.o : mesh.F90 mesh_init.F90  par_vec.o mesh_lib.o curvlinear.o zoltan.o
-scalar_mesh.o : scalar_mesh.F90 
+mesh.o : mesh.F90 par_vec.o mesh_lib.o curvlinear.o
+mesh_init.o : mesh_init.F90 mesh.o par_vec.o zoltan.o
+scalar_mesh.o : scalar_mesh.F90
 nl_operator.o : nl_operator.F90 nl_operator_inc.F90 par_vec.o mesh.o mesh_lib.o 
 submesh.o : submesh.F90 submesh_inc.F90  mesh.o 
 stencil_star.o : stencil_star.F90 nl_operator.o 
@@ -63,9 +65,9 @@ fourier_space.o : fourier_space.F90 fourier_space_inc.F90 cube_function.o mesh.o
 mesh_function.o : mesh_function.F90 mesh_function_inc.F90 par_vec.o mesh.o 
 basins.o : basins.F90 par_vec.o mesh_lib.o mesh.o 
 io_function.o : io_function.F90 io_function_inc.F90 par_vec.o mesh.o  cube_function.o 
-multigrid.o : multigrid.F90 multigrid_inc.F90 mesh.o curvlinear.o derivatives.o
+multigrid.o : multigrid.F90 multigrid_inc.F90 mesh.o curvlinear.o derivatives.o mesh_init.o
 double_grid.o : double_grid.F90 double_grid_apply.F90 submesh.o mesh_function.o mesh.o curvlinear.o 
-grid.o : grid.F90  multigrid.o mesh.o double_grid.o curvlinear.o ob_interface.o
+grid.o : grid.F90  multigrid.o mesh.o double_grid.o curvlinear.o ob_interface.o mesh_init.o
 gridhier.o : gridhier.F90 gridhier_inc.F90 multigrid.o
 ob_interface.o : ob_interface.F90 derivatives.o mesh.o
 zoltan_low.c : zoltan_low.c

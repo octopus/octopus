@@ -28,6 +28,7 @@ module grid_m
   use global_m
   use ob_interface_m
   use mesh_m
+  use mesh_init_m
   use messages_m
   use mpi_m
   use multicomm_m

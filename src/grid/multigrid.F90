@@ -27,6 +27,7 @@ module multigrid_m
   use global_m
   use loct_parser_m
   use mesh_m
+  use mesh_init_m
   use messages_m
 
   implicit none

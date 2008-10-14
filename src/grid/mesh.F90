@@ -35,7 +35,6 @@ module mesh_m
   use profiling_m
   use simul_box_m
   use units_m
-  use zoltan_m
 
   implicit none
   
@@ -44,10 +43,8 @@ module mesh_m
     mesh_t,                    &
     mesh_plane_t,              &
     mesh_line_t,               &
-    mesh_init_stage_1,         &
-    mesh_init_stage_2,         &
-    mesh_init_stage_3,         &
     mesh_init_from_file,       &
+    mesh_lxyz_init_from_file,  &
     mesh_dump,                 &
     mesh_lxyz_dump,            &
     mesh_end,                  &
@@ -162,8 +159,6 @@ module mesh_m
     LEFT_BOUNDARY_Z   =  5,          &
     RIGHT_BOUNDARY_Z  =  6,          &
     MAX_BOUNDARY_DIM  = RIGHT_BOUNDARY_Z
-  
-  type(profile_t), save :: mesh_init_prof
   
   character(len=17), parameter :: dump_tag = '*** mesh_dump ***'
   
@@ -629,8 +624,6 @@ contains
     ipp = m%Lxyz_inv(ix(1), ix(2), ix(3))
     
   end function mesh_periodic_point
-  
-#include "mesh_init.F90"
   
 end module mesh_m
 

@@ -17,6 +17,39 @@
 !!
 !! $Id$
 
+#include "global.h"
+
+module mesh_init_m
+  use datasets_m
+  use curvlinear_m
+  use geometry_m
+  use global_m
+  use io_m
+  use math_m
+  use mesh_m
+  use mesh_lib_m
+  use messages_m
+  use multicomm_m
+  use mpi_m
+  use loct_parser_m
+  use par_vec_m
+  use profiling_m
+  use simul_box_m
+  use units_m
+  use zoltan_m
+
+  implicit none
+  
+  private
+  public ::                    &
+    mesh_init_stage_1,         &
+    mesh_init_stage_2,         &
+    mesh_init_stage_3
+
+  type(profile_t), save :: mesh_init_prof
+  
+contains
+
 #define ENLARGEMENT_POINT 2
 #define INNER_POINT 1
 ! ---------------------------------------------------------
@@ -754,7 +787,7 @@ subroutine mesh_partition(m, stencil, np_stencil, part)
     message(1) = 'The mesh is empty and cannot be partitioned.'
     call write_fatal(1)
   end if
-  
+
   !%Variable MeshPartitionPackage
   !%Type integer
   !%Default zoltan
@@ -1016,6 +1049,7 @@ subroutine mesh_partition(m, stencil, np_stencil, part)
 
 end subroutine mesh_partition
 #endif
+end module mesh_init_m
 
 !! Local Variables:
 !! mode: f90
