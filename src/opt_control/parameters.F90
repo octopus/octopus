@@ -441,7 +441,7 @@ contains
         write(message(2), '(a,f10.5,a)') '      fluence as the input external fields: F = ', par%targetfluence, ' a.u.'
       else
         write(message(1), '(a)')         'Info: The QOCT run will attempt to find a solution with a predefined'
-        write(message(2), '(a,f10.5,a)') '      fluence: F = ', par%targetfluence, ' a.u.2'
+        write(message(2), '(a,f10.5,a)') '      fluence: F = ', par%targetfluence, ' a.u.'
       end if
       call write_info(2)
       if(par_common%fix_initial_fluence) call parameters_set_fluence(par)
@@ -449,17 +449,12 @@ contains
 
     ! Now we ave to find the "fluence" of the phase, in order to keep it constant.
     select case(par_common%mode)
-    case(parameter_mode_phi)
+    case(parameter_mode_phi, parameter_mode_f_and_phi)
       par%intphi = tdf_dot_product(par%f(1), par%f(1))
       if(par%intphi <= M_ZERO) then
-        write(message(1), '(a)') 'You must supply a non-null initial-guess phase.'
-        call write_fatal(1)
-      end if
-    case(parameter_mode_f_and_phi)
-      par%intphi = tdf_dot_product(par%f(2), par%f(2))
-      if(par%intphi <= M_ZERO) then
-        write(message(1), '(a)') 'You must supply a non-null initial-guess phase.'
-        call write_fatal(1)
+        par%intphi = (M_PI/M_TWO)**2*par%dt*par%ntiter
+      else
+        par%intphi = tdf_dot_product(par%f(1), par%f(1))
       end if
     end select
 
@@ -551,7 +546,9 @@ contains
 
     call push_sub('parameters.parameters_set_rep')
 
-    if(par%current_representation .eq. par%representation) return
+    if(par%current_representation .eq. par%representation) then
+      call pop_sub(); return
+    end if
 
     select case(par%current_representation)
     case(ctr_parameter_frequency_space)
@@ -576,7 +573,9 @@ contains
     integer :: j
     call push_sub('parameters.parameters_to_realtime')
 
-    if(par%current_representation .eq. ctr_parameter_real_space) return
+    if(par%current_representation .eq. ctr_parameter_real_space) then
+      call pop_sub(); return
+    end if
 
     do j = 1, par%no_parameters
       call tdf_sineseries_to_numerical(par%f(j))

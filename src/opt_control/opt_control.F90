@@ -253,7 +253,7 @@ contains
         call write_info(1)
         call scheme_straight_iteration
       case(oct_algorithm_direct)
-        message(1) = "Info: Starting OCT iterations using scheme: DIRECT OPTIMIZATION"
+        message(1) = "Info: Starting OCT iterations using scheme: DIRECT OPTIMIZATION (NELDER-MEAD)"
         call write_info(1)
         call scheme_direct
       case(oct_algorithm_newuoa)
