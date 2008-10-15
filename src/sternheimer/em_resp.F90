@@ -101,7 +101,6 @@ contains
 
     FLOAT :: closest_omega
 
-
     call push_sub('em_resp.pol_lr_run')
 
     gr => sys%gr
@@ -345,7 +344,7 @@ contains
       integer   :: number, j, k
       FLOAT     :: omega_ini, omega_fin, domega
 
-      call push_sub('em_resp.parse_input')
+      call push_sub('em_resp.pol_lr_run.parse_input')
 
       call obsolete_variable('PolFreqs               ', 'EMFreqs             ')
       call obsolete_variable('PolHyper               ', 'EMHyperpol          ')
@@ -461,6 +460,8 @@ contains
     ! ---------------------------------------------------------
     subroutine info()
 
+      call push_sub('em_resp.pol_lr_run.info')
+
       call pert_info(em_vars%perturbation, stdout)
       if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
         if(em_vars%calc_hyperpol) then 
@@ -487,6 +488,8 @@ contains
 
       call messages_print_stress(stdout)
 
+      call pop_sub()
+
     end subroutine info
 
   end subroutine pol_lr_run
@@ -501,10 +504,9 @@ contains
 
     integer :: kpoints, nst, ierr, dim
       
-    !check how many wfs we have
-
     call push_sub('em_resp.read_wfs')
 
+    !check how many wfs we have
     call states_look(trim(restart_dir)//'gs', gr%m%mpi_grp, kpoints, dim, nst, ierr)
 
     if(ierr.ne.0) then
@@ -557,6 +559,8 @@ contains
     integer :: iunit, ifactor
     character(len=80) :: dirname, str_tmp
 
+    call push_sub('em_resp.em_resp_output')
+
     do ifactor = 1, em_vars%nfactor
       str_tmp = freq2str(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)/units_out%energy%factor)
       write(dirname, '(a, a)') 'linear/freq_', trim(str_tmp)
@@ -580,11 +584,15 @@ contains
       call out_circular_dichroism
     end do
 
+    call pop_sub()
+
   contains
 
     ! ---------------------------------------------------------
     subroutine out_susceptibility()
       FLOAT :: to_ppmcgs
+
+      call push_sub('em_resp.em_resp_output.out_susceptibility')
 
       iunit = io_open(trim(dirname)//'/susceptibility', action='write')
 
@@ -619,6 +627,7 @@ contains
       write(iunit, '(1x)')
 
       call io_close(iunit)      
+      call pop_sub()
     end subroutine out_susceptibility
 
     ! ---------------------------------------------------------
@@ -626,6 +635,8 @@ contains
       CMPLX   :: proj
       integer :: ist, ivar, ik, dir, sigma
       character(len=80) :: fname
+
+      call push_sub('em_resp.em_resp_output.out_projections')
 
       do ik = 1, st%d%nik
         do dir = 1, NDIM
@@ -677,12 +688,16 @@ contains
         end do ! dir
       end do !ik
 
+      call pop_sub()
+
     end subroutine out_projections
 
 
     ! ---------------------------------------------------------
     subroutine out_wavefunctions()
       integer :: dir, isigma
+
+      call push_sub('em_resp.em_resp_output.out_wavefunctions')
 
       do dir = 1, NDIM
         if(wfs_are_complex(st)) then 
@@ -708,13 +723,19 @@ contains
         end if
       end do
 
+      call pop_sub()
+
     end subroutine out_wavefunctions
     
+
+  ! ---------------------------------------------------------
     subroutine out_circular_dichroism
       type(pert_t) :: angular_momentum
       integer :: idir
       FLOAT :: ff
       CMPLX :: dic
+
+      call push_sub('em_resp.em_resp_output.out_circular_dichroism')
 
       if(wfs_are_complex(st) .and. em_vars%nsigma == 2) then       
 
@@ -749,8 +770,9 @@ contains
         write(iunit, '(3e20.8)') em_vars%omega(iomega), aimag(dic)/(M_PI*units_out%length%factor**3), ff/units_out%length%factor**4
 
         call io_close(iunit)
-
       end if
+      
+      call pop_sub()
 
     end subroutine out_circular_dichroism
     
@@ -770,6 +792,8 @@ contains
     FLOAT :: average, anisotropy
     integer iunit
     
+    call push_sub('em_resp.out_polarizability')
+
     iunit = io_open(trim(dirname)//'/alpha', action='write')
 
     if (.not.converged) write(iunit, '(a)') "# WARNING: not converged"
@@ -805,6 +829,8 @@ contains
 
       call io_close(iunit)
     end if
+    
+    call pop_sub()
 
   contains
 
@@ -815,6 +841,8 @@ contains
 
       character(len=80) :: header_string
       integer :: i, k
+
+      call push_sub('em_resp.out_polarizability.cross_section_header')
 
       !this header is the same as spectrum.F90
       write(out_file, '(a1, a20)', advance = 'no') '#', str_center("Energy", 20)
@@ -834,6 +862,8 @@ contains
         write(out_file, '(a20)', advance = 'no')  str_center('['//trim(units_out%length%abbrev) //'^2]', 20)
       end do
       write(out_file,*)
+
+      call pop_sub()
     end subroutine cross_section_header
 
   end subroutine out_polarizability
@@ -846,11 +876,11 @@ contains
     logical,            intent(in) :: converged
     character(len=*),   intent(in) :: dirname
 
-
     character, parameter :: axis(1:3) = (/ 'x', 'y', 'z' /)
-
     CMPLX :: bpar(1:MAX_DIM), bper(1:MAX_DIM), bk(1:MAX_DIM)
     integer :: i, j, k, iunit
+
+    call push_sub('em_resp_out_hyperpolarizability')
 
     ! Output first hyperpolarizability (beta)
     iunit = io_open(trim(dirname)//'/beta', action='write')
@@ -909,6 +939,7 @@ contains
     endif
 
     call io_close(iunit)
+    call pop_sub()
 
   end subroutine out_hyperpolarizability
 
