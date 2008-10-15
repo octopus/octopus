@@ -449,12 +449,19 @@ contains
 
     ! Now we ave to find the "fluence" of the phase, in order to keep it constant.
     select case(par_common%mode)
-    case(parameter_mode_phi, parameter_mode_f_and_phi)
+    case(parameter_mode_phi)
       par%intphi = tdf_dot_product(par%f(1), par%f(1))
       if(par%intphi <= M_ZERO) then
         par%intphi = (M_PI/M_TWO)**2*par%dt*par%ntiter
       else
         par%intphi = tdf_dot_product(par%f(1), par%f(1))
+      end if
+    case(parameter_mode_f_and_phi)
+      par%intphi = tdf_dot_product(par%f(2), par%f(2))
+      if(par%intphi <= M_ZERO) then
+        par%intphi = (M_PI/M_TWO)**2*par%dt*par%ntiter
+      else
+        par%intphi = tdf_dot_product(par%f(2), par%f(2))
       end if
     end select
 
@@ -995,8 +1002,8 @@ contains
                             '         f(t)        ', '       phi(t)        '
       do i = 1, cp%ntiter + 1
         t = (i-1)*cp%dt
-        write(iunit, '(4es20.8e3)') t, real(tdf(par_common%f, t)) * &
-          cos(par%w0*t + real(tdf(par%f(1), t)) ), real(tdf(par_common%f, t)), real(tdf(par%f(1), t))
+        write(iunit, '(4es20.8e3)') t, real(tdf(par%f(1), t)) * &
+          cos(par%w0*t + real(tdf(par%f(2), t)) ), real(tdf(par%f(1), t)), real(tdf(par%f(2), t))
       end do
       call io_close(iunit)
 
@@ -1352,7 +1359,7 @@ contains
         ep(j) = tdf(par%f(1), j)
       end do
       do j =  m+1, n
-        ep(j) = tdf(par%f(2), j)
+        ep(j) = tdf(par%f(2), j-m)
       end do
       e(1:m) = matmul(par%utransf, ep(1:m))
       e(m+1:2*m) = ep(m+1:2*m)
@@ -1372,7 +1379,6 @@ contains
         end do
         x(k) = atan2(sqrt(sumx2), e(k))
       end do
-
     end select
 
     deallocate(e, ep)
