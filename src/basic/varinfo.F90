@@ -161,11 +161,11 @@ contains
         call print_C_string(iunit, name, advance='no')
         write(iunit, '(a)', advance='no') ']'
         if(present(pre)) then
-          write(iunit, '(3a)') ' (', pre, ')'
+          write(iunit, '(3a)') ' (', trim(pre), ')'
         else
           write(iunit, '(1x)')
         end if
-        ! uncoment to print the description of the options
+        ! uncomment to print the description of the options
         !call print_C_string(iunit, desc, pre='  > ')
 
         return
