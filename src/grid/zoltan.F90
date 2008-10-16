@@ -79,22 +79,25 @@ contains
 
   subroutine zoltan_method_info(method)
     integer, intent(in) :: method
+
+    message(1) = 'Info: Using Zoltan to partition the mesh.'
   
     select case(method)
     case(RCB)
-      message(1) = 'Info: Using Zoltan recursive coordinate bisection algorithm to partition the mesh.'
+      message(2) = '      Recursive coordinate bisection partitioning.'
     case(RIB)
-      message(1) = 'Info: Using Zoltan recursive inertial bisection algorithm to partition the mesh.'
+      message(2) = '      Recursive inertial bisection partitioning.'
     case(HSFC)
-      message(1) = 'Info: Using Zoltan Hilbert space-filling curve partitioning to partition the mesh.'
+      message(2) = '      Hilbert space-filling curve partitioning.'
     case(REFTREE)
-      message(1) = 'Info: Using Zoltan refinement tree based partitioning to partition the mesh.'
+      message(2) = '      Refinement tree based partitioning.'
     case(GRAPH)
-      message(1) = 'Info: Using Zoltan graph partition algorithm to partition the mesh.'
+      message(2) = '      Graph partition algorithm.'
     case(HYPERGRAPH)
-      message(1) = 'Info: Using Zoltan hypergraph partition algorithm to partition the mesh.'
+      message(2) = '      Hypergraph partition algorithm.'
     end select
-    call write_info(1)
+    message(3) = ''
+    call write_info(3)
 
   end subroutine zoltan_method_info
 

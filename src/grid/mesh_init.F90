@@ -402,19 +402,35 @@ contains
 
     ! Write information about partitions.
     message(1) = 'Info: Mesh partition:'
-    call write_info(1)
+    message(2) = ''
+    call write_info(2)
+
+    write(message(1),'(a)') &
+         '                 Neighbours         Ghost points'
+    write(message(2),'(a,i5,a,i10)') &
+         '      Average  :      ', sum(nnb)/mesh%vp%p, '           ', sum(mesh%vp%np_ghost)/mesh%vp%p
+    write(message(3),'(a,i5,a,i10)') &
+         '      Minimum  :      ', minval(nnb),        '           ', minval(mesh%vp%np_ghost)
+    write(message(4),'(a,i5,a,i10)') &
+         '      Maximum  :      ', maxval(nnb),        '           ', maxval(mesh%vp%np_ghost)
+    message(5) = ''
+    call write_info(5)
+
     do ipart = 1, mesh%vp%p
       write(message(1),'(a,i5)')  &
-           'Info: Nodes in domain-group ', ipart
+           '      Nodes in domain-group  ', ipart
       write(message(2),'(a,i10,a,i10)') &
-           '      Neighbours   :', nnb(ipart), &
-           '      Local points    :', mesh%vp%np_local(ipart)
+           '        Neighbours     :', nnb(ipart), &
+           '        Local points    :', mesh%vp%np_local(ipart)
       write(message(3),'(a,i10,a,i10)') &
-           '      Ghost points :', mesh%vp%np_ghost(ipart), &
-           '      Boundary points :', mesh%vp%np_bndry(ipart)
+           '        Ghost points   :', mesh%vp%np_ghost(ipart), &
+           '        Boundary points :', mesh%vp%np_bndry(ipart)
       call write_info(3)
     end do
     deallocate(nnb)
+
+    message(1) = ''
+    call write_info(1)
 
     ! Set local point numbers.
     mesh%np      = mesh%vp%np_local(mesh%vp%partno)
