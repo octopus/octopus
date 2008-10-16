@@ -779,15 +779,15 @@ yydestruct (yytype, yyvaluep)
 
 #ifdef YYPARSE_PARAM
 # if defined (__STDC__) || defined (__cplusplus)
-int yyparse (void *YYPARSE_PARAM);
+static int yyparse (void *YYPARSE_PARAM);
 # else
-int yyparse ();
+static int yyparse ();
 # endif
 #else /* ! YYPARSE_PARAM */
 #if defined (__STDC__) || defined (__cplusplus)
-int yyparse (void);
+static int yyparse (void);
 #else
-int yyparse ();
+static int yyparse ();
 #endif
 #endif /* ! YYPARSE_PARAM */
 
@@ -810,17 +810,17 @@ int yynerrs;
 
 #ifdef YYPARSE_PARAM
 # if defined (__STDC__) || defined (__cplusplus)
-int yyparse (void *YYPARSE_PARAM)
+static int yyparse (void *YYPARSE_PARAM)
 # else
-int yyparse (YYPARSE_PARAM)
+static int yyparse (YYPARSE_PARAM)
   void *YYPARSE_PARAM;
 # endif
 #else /* ! YYPARSE_PARAM */
 #if defined (__STDC__) || defined (__cplusplus)
-int
+static int
 yyparse (void)
 #else
-int
+static int
 yyparse ()
 
 #endif

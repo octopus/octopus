@@ -33,8 +33,8 @@ static char *par_string;
 static int par_pos;
 parse_result par_res;
 
-int yylex();
-int yyerror (char *s)  /* Called by yyparse on error */
+static int yylex();
+static int yyerror (char *s)  /* Called by yyparse on error */
 {
   /* Do nothing */
   /* printf("%s\n", s); */
@@ -73,7 +73,7 @@ int get_real(char *s, double *d)
   return n;
 }
 
-int yylex (){
+static int yylex (){
   int c;
   char *symbuf = 0;
   int length = 0;
