@@ -70,5 +70,5 @@ double_grid.o : double_grid.F90 double_grid_apply.F90 submesh.o mesh_function.o 
 grid.o : grid.F90  multigrid.o mesh.o double_grid.o curvlinear.o ob_interface.o mesh_init.o
 gridhier.o : gridhier.F90 gridhier_inc.F90 multigrid.o
 ob_interface.o : ob_interface.F90 derivatives.o mesh.o
-zoltan_low.c : zoltan_low.c
+zoltan_low.o : zoltan_low.c
 zoltan.o : zoltan.F90

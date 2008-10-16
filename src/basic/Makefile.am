@@ -97,4 +97,4 @@ distributed.o: distributed.F90 multicomm.o
 varia.o : varia.c varia.h
 io_binary.o : io_binary.c
 getopt_f.o : getopt_f.c
-
+write_iter.o : write_iter.F90 c_pointer.o
