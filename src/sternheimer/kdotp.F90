@@ -386,7 +386,7 @@ contains
 
       call pert_info(kdotp_vars%perturbation, stdout)
 
-      write(message(1),'(a)') 'Effective masses'
+      write(message(1),'(a)') 'k.p perturbation theory'
       call messages_print_stress(stdout, trim(message(1)))
 
       if (kdotp_vars%occ_solution_method == 0) then

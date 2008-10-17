@@ -239,7 +239,7 @@ contains
     !% in turn calculated considering the nature of the species supplied in the
     !% <tt>Species</tt> block, and the value of the <tt>ExcessCharge</tt> variable.
     !% However, one may command <tt>octopus</tt> to put more states, which is necessary if one wants to
-    !% use fractional occupational numbers, either fixed from the origin through
+    !% use fractional occupational numbers, either fixed from the beginning through
     !% the <tt>Occupations</tt> block or by prescribing
     !% an electronic temperature with <tt>Smearing</tt>.
     !%
@@ -282,7 +282,7 @@ contains
 
     nullify(st%ob_intf_psi)
     st%open_boundaries = .false.
-    ! When doing open boundary calculations the number of free states is
+    ! When doing open-boundary calculations the number of free states is
     ! determined by the previous periodic calculation.
     st%open_boundaries = gr%sb%open_boundaries
     if(gr%sb%open_boundaries) then
@@ -590,9 +590,13 @@ contains
     !% <br>%</tt>
     !%
     !% Note that in this case the first state is absent, the code will calculate four states
-    !% (two because there are four electrons, plus two because ExtraStates = 2), and since
+    !% (two because there are four electrons, plus two because <tt>ExtraStates</tt> = 2), and since
     !% it finds only three columns, it will occupy the first state with one electron for each
     !% of the spin options.
+    !%
+    !% If the sum of occupations is not equal to the total charge set by <tt>ExcessCharge</tt>,
+    !% an error message is printed. If FromScratch = no, this block is ignored when restart information
+    !% is read, and the previous occupations are used.
     !%End
 
     if(st%open_boundaries) then
@@ -610,7 +614,7 @@ contains
         if(ncols > st%nst) then
           call input_error("Occupations")
         end if
-        ! Now we fill al the "missing" states with the maximum occupation.
+        ! Now we fill all the "missing" states with the maximum occupation.
         do i = 1, st%d%nik
           do j = 1, st%nst - ncols
             if(st%d%ispin == UNPOLARIZED) then
