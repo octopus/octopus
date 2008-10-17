@@ -20,8 +20,8 @@
       call doutput_function(outp%how, dir, "v0", m, sb, v0(:, 1), u, err)
       deallocate(v0)
 
-      if(h%ep%classic_pot > 0) then
-        call doutput_function(outp%how, dir, "vc", m, sb, h%ep%Vclassic, u, err)
+      if(h%ep%classical_pot > 0) then
+        call doutput_function(outp%how, dir, "vc", m, sb, h%ep%Vclassical, u, err)
       end if
 
       if(h%theory_level.ne.INDEPENDENT_PARTICLES) then
@@ -32,9 +32,9 @@
 
           ! finally the full KS potential (without non-local PP contributions)
           write(fname, '(a,i1)') 'vks-', is
-          if (h%ep%classic_pot > 0) then
+          if (h%ep%classical_pot > 0) then
             call doutput_function(outp%how, dir, fname, m, sb, &
-              h%ep%vpsl + h%ep%Vclassic + h%vhartree + h%vxc(:, is), u, err)
+              h%ep%vpsl + h%ep%Vclassical + h%vhartree + h%vxc(:, is), u, err)
           else
             call doutput_function(outp%how, dir, fname, m, sb, &
               h%ep%vpsl + h%vhartree + h%vxc(:, is), u, err)
@@ -56,3 +56,8 @@
 
     call pop_sub()
   end subroutine h_sys_output_hamiltonian
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:
