@@ -46,7 +46,9 @@ module fft_m
     dfft_forward,  &
     zfft_forward,  &
     dfft_backward, &
-    zfft_backward 
+    zfft_backward, &
+    dfft_forward1, &
+    dfft_backward1
 
   ! global constants
   integer, public, parameter ::                &
@@ -334,6 +336,23 @@ contains
 
 
   ! ---------------------------------------------------------
+  ! these routines simply call fftw
+  ! first the real to complex versions
+  subroutine dfft_forward1(fft, r, c)
+    type(fft_t), intent(in)  :: fft
+    FLOAT,       intent(in)  :: r(:)
+    CMPLX,       intent(out) :: c(:)
+
+    call push_sub('fftw3.dfft_forward')
+
+    call DFFTW(execute_dft_r2c) (fft%planf, r, c)
+
+    call pop_sub()
+
+  end subroutine dfft_forward1
+
+
+  ! ---------------------------------------------------------
   subroutine dfft_backward(fft, c, r)
     type(fft_t), intent(in) :: fft
     CMPLX, intent(in)  :: c(fft%n(1), fft%n(2), fft%n(3))
@@ -350,6 +369,25 @@ contains
     call pop_sub()
 
   end subroutine dfft_backward
+
+
+  ! ---------------------------------------------------------
+  subroutine dfft_backward1(fft, c, r)
+    type(fft_t), intent(in) :: fft
+    CMPLX, intent(in)  :: c(fft%n(1))
+    FLOAT, intent(out) :: r(fft%n(1))
+
+    call push_sub('fftw3.dfft_backward')
+    
+    call DFFTW(execute_dft_c2r) (fft%planb, c, r)
+
+    ! multiply by 1/(N1*N2*N2)
+    call lalg_scal(fft%n(1), &
+      M_ONE/real(fft%n(1), REAL_PRECISION), r)
+
+    call pop_sub()
+
+  end subroutine dfft_backward1
 
 
   ! ---------------------------------------------------------

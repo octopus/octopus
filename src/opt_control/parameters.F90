@@ -265,9 +265,9 @@ contains
     do i = 1, ep%no_lasers
       select case(par_common%mode)
       case(parameter_mode_epsilon)
-        call laser_to_numerical_all(ep%lasers(i), dt, max_iter, real_part = .true.)
+        call laser_to_numerical_all(ep%lasers(i), dt, max_iter)
       case default
-        call laser_to_numerical(ep%lasers(i), dt, max_iter, real_part = .true.)
+        call laser_to_numerical(ep%lasers(i), dt, max_iter)
       end select
     end do
 
@@ -364,7 +364,7 @@ contains
     steps = max_iter
     ALLOCATE(par_common%td_penalty(par_common%no_parameters), par_common%no_parameters)
     do i = 1, par_common%no_parameters
-      call tdf_init_numerical(par_common%td_penalty(i), steps, dt, initval = M_z1)
+      call tdf_init_numerical(par_common%td_penalty(i), steps, dt, initval = M_ONE)
     end do
 
     if (loct_parse_block(check_inp('OCTLaserEnvelope'), blk)==0) then
@@ -416,7 +416,7 @@ contains
     type(tdf_t) :: fn, fm
     FLOAT, allocatable :: eigenvec(:, :), eigenval(:)
 
-    call push_sub('parameters.parameters_set_initial')
+    call push_sub('parameters.parameters_prepare_initial')
 
     call parameters_apply_envelope(par)
 
@@ -492,8 +492,8 @@ contains
 
       do mm = 1, par%nfreqs
         do nn = mm, par%nfreqs
-          call tdf_init_numerical(fn, par%ntiter, par%dt, initval = M_z0, omegamax = par%omegamax)
-          call tdf_init_numerical(fm, par%ntiter, par%dt, initval = M_z0, omegamax = par%omegamax)
+          call tdf_init_numerical(fn, par%ntiter, par%dt, initval = M_ZERO, omegamax = par%omegamax)
+          call tdf_init_numerical(fm, par%ntiter, par%dt, initval = M_ZERO, omegamax = par%omegamax)
           call tdf_numerical_to_sineseries(fn, par%omegamax)
           call tdf_numerical_to_sineseries(fm, par%omegamax)
           call tdf_set_numerical(fm, mm, M_ONE)
@@ -877,7 +877,7 @@ contains
     integer :: j
 
     do j = 1, cp%no_parameters
-      call laser_set_f_value(ep%lasers(j), val, real(tdf(cp%f(j), val)) )
+      call laser_set_f_value(ep%lasers(j), val, tdf(cp%f(j), val) )
     end do
 
   end subroutine parameters_to_h_val
@@ -959,7 +959,7 @@ contains
         write(iunit,'(2a20)') '#       t [a.u]      ', '        e(t)         '
         do i = 1, cp%ntiter + 1
           t = (i-1)*cp%dt
-          write(iunit, '(2es20.8e3)') t, real(tdf(par%f(j), t))
+          write(iunit, '(2es20.8e3)') t, tdf(par%f(j), t)
         end do
         call io_close(iunit)
       end do
@@ -976,7 +976,7 @@ contains
         write(iunit,'(3a20)') '#       t [a.u]      ', '        e(t)         ', '        f(t)         '
         do i = 1, cp%ntiter + 1
           t = (i-1)*cp%dt
-          write(iunit, '(3es20.8e3)') t, real(tdf(par%f(j), t)) * cos(par%w0*t), real(tdf(par%f(j), t))
+          write(iunit, '(3es20.8e3)') t, tdf(par%f(j), t) * cos(par%w0*t), tdf(par%f(j), t)
         end do
         call io_close(iunit)
       end do
@@ -989,8 +989,8 @@ contains
                             '         f(t)        ', '       phi(t)        ' 
       do i = 1, cp%ntiter + 1
         t = (i-1)*cp%dt
-        write(iunit, '(4es20.8e3)') t, real(tdf(par_common%f, t)) * &
-          cos(par%w0*t + real(tdf(par%f(1), t)) ), real(tdf(par_common%f, t)), real(tdf(par%f(1), t))
+        write(iunit, '(4es20.8e3)') t, tdf(par_common%f, t) * &
+          cos(par%w0*t + tdf(par%f(1), t) ), tdf(par_common%f, t), tdf(par%f(1), t)
       end do
       call io_close(iunit)
 
@@ -1002,8 +1002,8 @@ contains
                             '         f(t)        ', '       phi(t)        '
       do i = 1, cp%ntiter + 1
         t = (i-1)*cp%dt
-        write(iunit, '(4es20.8e3)') t, real(tdf(par%f(1), t)) * &
-          cos(par%w0*t + real(tdf(par%f(2), t)) ), real(tdf(par%f(1), t)), real(tdf(par%f(2), t))
+        write(iunit, '(4es20.8e3)') t, tdf(par%f(1), t) * &
+          cos(par%w0*t + tdf(par%f(2), t) ), tdf(par%f(1), t), tdf(par%f(2), t)
       end do
       call io_close(iunit)
 
@@ -1023,10 +1023,10 @@ contains
         call tdf_init(g)
         call tdf_copy(g, par%f(j))
         call tdf_fft_forward(g)
-        ALLOCATE(wgrid(0:cp%ntiter), cp%ntiter+1)
+        ALLOCATE(wgrid((cp%ntiter+1)/2+1), (cp%ntiter+1)/2+1)
         call tdf_fourier_grid(g, wgrid)
-        do i = 0, cp%ntiter
-          write(iunit, '(3es30.16e4)') wgrid(i), tdf(g, i+1)
+        do i = 1, (cp%ntiter+1)/2+1
+          write(iunit, '(3es30.16e4)') wgrid(i), tdfw(g, i)
         end do
         deallocate(wgrid)
         call tdf_end(g)
@@ -1132,7 +1132,7 @@ contains
   FLOAT function parameters_j2(par) result(j2)
     type(oct_control_parameters_t), target, intent(in) :: par
     type(oct_control_parameters_t), pointer :: par_
-    integer :: i, j, k
+    integer :: i, j
     FLOAT   :: t, integral, fi, phi, tdp
     type(tdf_t) :: f
     logical :: change_rep
@@ -1254,6 +1254,8 @@ contains
     type(oct_control_parameters_t), intent(in)    :: cp_in
     integer :: j
 
+    call push_sub('parameters.parameters_copy')
+
     cp_out%targetfluence = cp_in%targetfluence
     cp_out%no_parameters = cp_in%no_parameters
     cp_out%dt = cp_in%dt
@@ -1281,6 +1283,7 @@ contains
       cp_out%utransfi = cp_in%utransfi
     end if
 
+    call pop_sub()
   end subroutine parameters_copy
   ! ---------------------------------------------------------
 

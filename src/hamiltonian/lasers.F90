@@ -157,11 +157,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine laser_to_numerical_all(l, dt, max_iter, real_part)
+  subroutine laser_to_numerical_all(l, dt, max_iter)
     type(laser_t), intent(inout)  :: l
     FLOAT,         intent(in)     :: dt
     integer,       intent(in)     :: max_iter
-    logical, optional, intent(in) :: real_part
 
     integer :: j
     FLOAT   :: t, fj, phi
@@ -172,16 +171,12 @@ contains
     do j = 1, max_iter + 1
       t = (j-1)*dt
       fj = tdf(l%f, j)
-      phi = real(tdf(l%phi, t))
+      phi = tdf(l%phi, t)
       call tdf_set_numerical(l%f, j, fj*cos(l%omega*t+phi))
     end do
     call tdf_end(l%phi)
     call tdf_init_cw(l%phi, M_ZERO, M_ZERO)
     l%omega = M_ZERO
-
-    if(present(real_part)) then
-      if(real_part) call tdf_numerical_keep_real(l%f)
-    end if
 
     call pop_sub()
   end subroutine laser_to_numerical_all
@@ -189,20 +184,15 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine laser_to_numerical(l, dt, max_iter, real_part)
+  subroutine laser_to_numerical(l, dt, max_iter)
     type(laser_t), intent(inout)  :: l
     FLOAT,         intent(in)     :: dt
     integer,       intent(in)     :: max_iter
-    logical, optional, intent(in) :: real_part
 
     call push_sub('lasers.lasers_to_numerical')
 
     call tdf_to_numerical(l%f, M_ZERO, max_iter, dt)
     call tdf_to_numerical(l%phi, M_ZERO, max_iter, dt)
-
-    if(present(real_part)) then
-      if(real_part) call tdf_numerical_keep_real(l%f)
-    end if
 
     call pop_sub()
   end subroutine laser_to_numerical
@@ -523,7 +513,7 @@ contains
 
     pot = M_ZERO
     if(present(t)) then
-      amp = tdf(l%f, t) * exp(M_zI * ( l%omega*t + real(tdf(l%phi, t)) ) )
+      amp = tdf(l%f, t) * exp(M_zI * ( l%omega*t + tdf(l%phi, t) ) )
     else
       amp = M_z1
     end if
@@ -552,7 +542,7 @@ contains
     call push_sub('lasers.laser_vector_potential')
 
     if(present(t)) then
-      a = l%a * real( tdf(l%f, t) * exp(M_zI* ( l%omega *t + real(tdf(l%phi, t))  ) ) )
+      a = l%a * real( tdf(l%f, t) * exp(M_zI* ( l%omega *t + tdf(l%phi, t)  ) ) )
     else
       a = l%a
     end if
@@ -575,7 +565,7 @@ contains
     field = M_ZERO
     if(l%field .eq. E_FIELD_SCALAR_POTENTIAL) return
     if(present(t)) then
-       amp = tdf(l%f, t) * exp(M_zI * ( l%omega * t + real(tdf(l%phi, t)) ) )
+      amp = tdf(l%f, t) * exp(M_zI * ( l%omega * t + tdf(l%phi, t) ) )
     else
       amp = M_z1
     end if

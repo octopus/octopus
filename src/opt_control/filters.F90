@@ -139,6 +139,7 @@ contains
         call loct_parse_block_string(blk, i-1, 1, filter%expression(i))
         call conv_to_C_string(filter%expression(i))
         call tdf_init_numerical(filter%f(i), steps, dt)
+        call tdf_fft_forward(filter%f(i))
       end do
       call build_filter(filter)
 
@@ -173,8 +174,8 @@ contains
       select case(filter%domain(i))
       case(filter_freq)
        call tdf_fft_forward(f)
-       do j = 1, steps + 1
-         call tdf_set_numerical(f, j, tdf(f, j)* tdf(filter%f(i), j) )
+       do j = 1, (steps + 1)/2+1
+         call tdf_set_fourier(f, j, tdfw(f, j)* tdfw(filter%f(i), j) )
        end do
        call tdf_fft_backward(f)
       case(filter_time)
@@ -210,25 +211,25 @@ contains
       steps = tdf_niter(filter%f(i))
       dt = tdf_dt(filter%f(i))
 
-      ALLOCATE(ff(steps+1), steps+1)
-      ALLOCATE(grid(0:steps), steps+1)
+      ALLOCATE(ff((steps+1)/2+1), (steps+1)/2+1)
+      ALLOCATE(grid((steps+1)/2+1), (steps+1)/2+1)
       ff = M_z0
       grid = M_ZERO
 
       select case(filter%domain(i))
       case(filter_time)
-        do ip=0, steps
-          t = ip*dt
+        do ip = 1, steps + 1
+          t = (ip-1)*dt
           call loct_parse_expression(f_re, f_im, "t", real(t, 8), filter%expression(i))
-          ff(ip+1) = f_re + M_zI*f_im
+          ff(ip) = f_re + M_zI*f_im
         end do
       
       case(filter_freq)
         call tdf_fourier_grid(filter%f(i), grid)
         ff = M_z1
-        do ip=0, steps
+        do ip = 1, (steps + 1)/2+1
           call loct_parse_expression(f_re, f_im, "w", real(grid(ip), 8), filter%expression(i))
-          ff(ip+1) = f_re + M_zI*f_im
+          ff(ip) = f_re + M_zI*f_im
         end do
        
       case default
@@ -237,7 +238,7 @@ contains
         call write_fatal(2)
       end select
 
-      call tdf_set_numerical(filter%f(i), ff)
+      call tdf_set_fourier(filter%f(i), ff)
 
       deallocate(ff)
       deallocate(grid)
@@ -272,17 +273,17 @@ contains
 
       if(filter%domain(kk) .eq. filter_freq) then
         iunit = io_open(filename, action='write')
-        ALLOCATE(wgrid(0:max_iter), max_iter+1)
+        ALLOCATE(wgrid((max_iter+1)/2+1), (max_iter+1)/2+1)
         call tdf_fourier_grid(filter%f(kk), wgrid)
-        do i = 0, max_iter
-          write(iunit, '(3es30.16e4)') wgrid(i), tdf(filter%f(kk), i+1)
+        do i = 1, (max_iter + 1)/2+1
+          write(iunit, '(3es30.16e4)') wgrid(i), tdfw(filter%f(kk), i)
         end do
         deallocate(wgrid)
         call io_close(iunit)
       else
         iunit = io_open(filename, action='write')
-        do i = 0, max_iter
-          write(iunit, '(4ES30.16E4)') i*dt, tdf(filter%f(kk), i+1)
+        do i = 1, max_iter + 1
+          write(iunit, '(4ES30.16E4)') (i-1)*dt, tdf(filter%f(kk), i)
         end do
         call io_close(iunit)
       end if
