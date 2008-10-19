@@ -174,7 +174,7 @@ contains
       select case(filter%domain(i))
       case(filter_freq)
        call tdf_fft_forward(f)
-       do j = 1, (steps + 1)/2+1
+       do j = 1, steps/2+1
          call tdf_set_fourier(f, j, tdfw(f, j)* tdfw(filter%f(i), j) )
        end do
        call tdf_fft_backward(f)
@@ -227,7 +227,7 @@ contains
       case(filter_freq)
         call tdf_fourier_grid(filter%f(i), grid)
         ff = M_z1
-        do ip = 1, (steps + 1)/2+1
+        do ip = 1, steps/2+1
           call loct_parse_expression(f_re, f_im, "w", real(grid(ip), 8), filter%expression(i))
           ff(ip) = f_re + M_zI*f_im
         end do
@@ -273,9 +273,9 @@ contains
 
       if(filter%domain(kk) .eq. filter_freq) then
         iunit = io_open(filename, action='write')
-        ALLOCATE(wgrid((max_iter+1)/2+1), (max_iter+1)/2+1)
+        ALLOCATE(wgrid(max_iter/2+1), max_iter/2+1)
         call tdf_fourier_grid(filter%f(kk), wgrid)
-        do i = 1, (max_iter + 1)/2+1
+        do i = 1, max_iter/2+1
           write(iunit, '(3es30.16e4)') wgrid(i), tdfw(filter%f(kk), i)
         end do
         deallocate(wgrid)

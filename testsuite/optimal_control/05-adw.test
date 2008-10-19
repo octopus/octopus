@@ -40,5 +40,5 @@ match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 2  ', 40) ; 0.580009
 # given in the paper (not exactly, due probably to small numerical 
 # differences).
 Input: 05-adw.03-filter_indirect.inp
-match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; 0.16348443 
-match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 2  ', 40) ; 0.41583572
+match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; 0.16295537
+match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 2  ', 40) ; 0.40582774

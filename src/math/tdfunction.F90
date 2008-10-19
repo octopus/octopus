@@ -523,7 +523,7 @@ module tdf_m
       end if
     end if
 
-    n(1:3) = (/ f%niter+1, 1, 1 /)
+    n(1:3) = (/ f%niter, 1, 1 /)
     call fft_init(n, fft_real, f%fft_handler, optimize = .false.)
 
     nullify(f%coeffs)
@@ -542,7 +542,7 @@ module tdf_m
     call push_sub('tdfunction.tdf_fourier_grid')
 
     wgrid = M_ZERO
-    steps = f%niter + 1
+    steps = f%niter
 
     df = M_ONE/(real(steps, REAL_PRECISION) * f%dt)
     do i = 1, int((steps)/2) + 1
@@ -562,8 +562,8 @@ module tdf_m
     call push_sub('tdfunction.tdf_fft_forward')
 
     steps = f%niter
-    ALLOCATE(f%valw((steps+1)/2+1), (steps+1)/2+1)
-    call dfft_forward1(f%fft_handler, f%val, f%valw)
+    ALLOCATE(f%valw(steps/2+1), steps/2+1)
+    call dfft_forward1(f%fft_handler, f%val(1:f%niter), f%valw)
     deallocate(f%val); nullify(f%val)
 
     f%mode = TDF_FOURIER_SERIES
@@ -582,7 +582,8 @@ module tdf_m
 
     steps = f%niter
     ALLOCATE(f%val(steps+1), steps+1)
-    call dfft_backward1(f%fft_handler, f%valw, f%val)
+    call dfft_backward1(f%fft_handler, f%valw, f%val(1:f%niter))
+    f%val(f%niter+1) = f%val(1)
     deallocate(f%valw); nullify(f%valw)
 
     f%mode = TDF_NUMERICAL
@@ -675,7 +676,7 @@ module tdf_m
     f%mode = TDF_NUMERICAL
     if (f%mode .eq. TDF_FROM_FILE) call spline_end(f%amplitude)
 
-    n(1:3) = (/ f%niter+1, 1, 1 /)
+    n(1:3) = (/ f%niter, 1, 1 /)
     call fft_init(n, fft_real, f%fft_handler, optimize = .false.)
 
   end subroutine tdf_to_numerical
@@ -748,7 +749,7 @@ module tdf_m
     deallocate(f%coeffs); nullify(f%coeffs)
     f%mode = TDF_NUMERICAL
 
-    n(1:3) = (/ f%niter+1, 1, 1 /)
+    n(1:3) = (/ f%niter, 1, 1 /)
     call fft_init(n, fft_real, f%fft_handler, optimize = .false.)
 
   end subroutine tdf_sineseries_to_numerical
