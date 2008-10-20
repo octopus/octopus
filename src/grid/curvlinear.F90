@@ -143,7 +143,7 @@ contains
 
     select case(cv%method)
     case(CURV_METHOD_UNIFORM)
-      x = matmul(sb%rlattice(1:sb%dim,1:sb%dim), chi(1:sb%dim))
+      x(1:sb%dim) = matmul(sb%rlattice(1:sb%dim,1:sb%dim), chi(1:sb%dim))
     case(CURV_METHOD_GYGI)
       call curv_gygi_chi2x(sb, geo, cv%gygi, chi, x)
     case(CURV_METHOD_BRIGGS)
