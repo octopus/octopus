@@ -468,6 +468,7 @@ contains
   subroutine multires()
     integer :: order, nn, ii, jj, kk
     FLOAT, allocatable :: pos(:), ww(:)
+    integer, allocatable :: posi(:)
     
     order = 2
     
@@ -475,9 +476,12 @@ contains
 
     ALLOCATE(ww(1:nn), nn)
     ALLOCATE(pos(1:nn), nn)
+    ALLOCATE(posi(1:nn), nn)
 
     do ii = 1, order
-      pos(ii) = 1 + 2*(ii - 1)
+      posi(ii) = 1 + 2*(ii - 1)
+      posi(order + ii) = -posi(ii)
+      pos(ii) =  posi(ii)
       pos(order + ii) = -pos(ii)
     end do
     
@@ -496,7 +500,7 @@ contains
         do ii = 1, nn
           do jj = 1, nn
             do kk = 1, nn
-              f(ip) = f(ip) + ww(ii)*ww(jj)*ww(kk)*f(der%m%Lxyz_inv(ix + pos(ii)*dx, iy + pos(jj)*dy, iz + pos(kk)*dz))
+              f(ip) = f(ip) + ww(ii)*ww(jj)*ww(kk)*f(der%m%Lxyz_inv(ix + posi(ii)*dx, iy + posi(jj)*dy, iz + posi(kk)*dz))
             end do
           end do
         end do

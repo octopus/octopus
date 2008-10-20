@@ -841,7 +841,7 @@ subroutine mesh_partition(m, stencil, np_stencil, part)
   !%Option zoltan 3
   !% Zoltan.
   !%End
-  call loct_parse_int(check_inp('MeshPartitionPackage'), ZOLTAN, library)
+  call loct_parse_int(check_inp('MeshPartitionPackage'), METIS, library)
 
   if(p .lt. 8) then
     default_method = RCB
