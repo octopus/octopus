@@ -26,9 +26,7 @@
 #define FFT_MAX 10
 #define NULL -1
 
-#if   HAVE_FFT == 2
-# include "fftw2.F90"
-#elif HAVE_FFT == 3
+#if HAVE_FFT == 3
 # include "fftw3.F90"
 #elif HAVE_FFT == cuda
 # include "fft_cuda_inc.F90"

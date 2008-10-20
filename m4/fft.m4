@@ -24,7 +24,6 @@ acx_fft_ok=no
 
 AC_ARG_WITH(fft, [  --with-fft=ARG    fft support
       ARG=fftw3       FFTW3 support through libfftw3 (default)
-      ARG=fftw2       FFTW2 support through libfftw
       ARG=cuda        NVIDIA CUFFT Library (single precision only, experimental)],
   [fft=$withval], [fft=fftw3])
 
@@ -37,15 +36,6 @@ case $fft in
     else
       fft_func="dfftw_plan_dft_1d"
       fft_libs="fftw3"
-    fi
-    ;;
-  fftw2*)
-    fft=2
-    if test "x${SINGLE_PRECISION}" != x; then
-      AC_MSG_ERROR([Version 2 of FFTW can not be used with single precision])
-    else
-      fft_func="fftw3d_f77_create_plan"
-      fft_libs="fftw dfftw"
     fi
     ;;
   cuda*)
@@ -132,22 +122,6 @@ esac
       fi
     done
 
-    dnl if we have fftw2, search also for the real transforms
-    if test "${fft}" = "2"; then
-      if test $acx_fft_ok = yes; then
-
-        acx_fft_ok=no;
-
-        AC_CHECK_FUNC(rfftw3d_f77_create_plan, [acx_fft_ok=yes])
-
-        for fftl in rfftw drfftw; do
-          if test $acx_fft_ok = no; then
-            AC_CHECK_LIB($fftl, rfftw3d_f77_create_plan,
-              [acx_fft_ok=yes; LIBS_FFT="$LIBS_FFT -l$fftl"], [], [$LIBS_FFT $FLIBS])
-          fi
-        done
-      fi
-    fi
   fi
 
 AC_SUBST(LIBS_FFT)
@@ -155,7 +129,7 @@ LIBS="$acx_fft_save_LIBS"
 
 # Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
 if test x"$acx_fft_ok" = xyes; then
-  AC_DEFINE_UNQUOTED(HAVE_FFT, [$fft], [FFT library (fftw2 | fftw3 | cuda)])
+  AC_DEFINE_UNQUOTED(HAVE_FFT, [$fft], [FFT library (fftw3 | cuda)])
   $1
 else
   if test $acx_fft_ok != disable; then
