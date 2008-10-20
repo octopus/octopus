@@ -410,28 +410,7 @@ subroutine X(set_bc)(der, f)
     !$omp end parallel workshare
   end if
 
-
-  if(simul_box_multires(der%m%sb) .and. .false.) then
-    do ip = bndry_start, bndry_end
-      ix = der%m%Lxyz(ip, 1)
-      iy = der%m%Lxyz(ip, 2)
-      iz = der%m%Lxyz(ip, 3)
-      dx = abs(mod(ix, 2))
-      dy = abs(mod(iy, 2))
-      dz = abs(mod(iz, 2))
-      if(dx + dy + dz > 0) then ! this is a boundary point of the inner region
-        f(ip) = CNST(0.125)*(&
-             f(der%m%Lxyz_inv(ix + dx, iy + dy, iz + dz)) + &
-             f(der%m%Lxyz_inv(ix - dx, iy + dy, iz + dz)) + &
-             f(der%m%Lxyz_inv(ix + dx, iy - dy, iz + dz)) + &
-             f(der%m%Lxyz_inv(ix + dx, iy + dy, iz - dz)) + &
-             f(der%m%Lxyz_inv(ix + dx, iy - dy, iz - dz)) + &
-             f(der%m%Lxyz_inv(ix - dx, iy + dy, iz - dz)) + &
-             f(der%m%Lxyz_inv(ix - dx, iy - dy, iz + dz)) + &
-             f(der%m%Lxyz_inv(ix - dx, iy - dy, iz - dz)))
-      end if
-    end do
-  end if
+  if(simul_box_multires(der%m%sb)) call multires()
 
   if(der%periodic_bc) then
 
@@ -483,6 +462,50 @@ subroutine X(set_bc)(der, f)
 
   call profiling_out(set_bc_prof)
   call pop_sub()
+
+contains 
+
+  subroutine multires()
+    integer :: order, nn, ii, jj, kk
+    FLOAT, allocatable :: pos(:), ww(:)
+    
+    order = 2
+    
+    nn = 2*order
+
+    ALLOCATE(ww(1:nn), nn)
+    ALLOCATE(pos(1:nn), nn)
+
+    do ii = 1, order
+      pos(ii) = 1 + 2*(ii - 1)
+      pos(order + ii) = -pos(ii)
+    end do
+    
+    call interpolation_coefficients(nn, pos, M_ZERO, ww)
+
+    do ip = bndry_start, bndry_end
+      ix = der%m%Lxyz(ip, 1)
+      iy = der%m%Lxyz(ip, 2)
+      iz = der%m%Lxyz(ip, 3)
+      dx = abs(mod(ix, 2))
+      dy = abs(mod(iy, 2))
+      dz = abs(mod(iz, 2))
+
+      if(dx + dy + dz > 0) then ! this is a boundary point of the inner region
+
+        do ii = 1, nn
+          do jj = 1, nn
+            do kk = 1, nn
+              f(ip) = f(ip) + ww(ii)*ww(jj)*ww(kk)*f(der%m%Lxyz_inv(ix + pos(ii)*dx, iy + pos(jj)*dy, iz + pos(kk)*dz))
+            end do
+          end do
+        end do
+        
+      end if
+      
+    end do
+
+  end subroutine multires
 
 end subroutine X(set_bc)
 
