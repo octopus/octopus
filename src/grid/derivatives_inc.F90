@@ -380,7 +380,7 @@ subroutine X(set_bc)(der, f)
 
   integer :: bndry_start, bndry_end
   integer :: p
-  integer :: iper
+  integer :: iper, ip, ix, iy, iz, dx, dy, dz
   type(profile_t), save :: set_bc_prof, comm_prof
 #ifdef HAVE_MPI
   integer :: ipart, nreq
@@ -394,22 +394,43 @@ subroutine X(set_bc)(der, f)
 
   p = der%m%vp%partno
    
+  ! The boundary points are at different locations depending on the presence
+  ! of ghost points due to domain parallelization.
+  if(der%m%parallel_in_domains) then
+    bndry_start = der%m%vp%np_local(p) + der%m%vp%np_ghost(p) + 1
+    bndry_end   = der%m%vp%np_local(p) + der%m%vp%np_ghost(p) + der%m%vp%np_bndry(p)
+  else
+    bndry_start = der%m%np+1
+    bndry_end   = der%m%np_part
+  end if
+
   if(der%zero_bc) then
-    
-    ! The boundary points are at different locations depending on the presence
-    ! of ghost points due to domain parallelization.
-    if(der%m%parallel_in_domains) then
-      bndry_start = der%m%vp%np_local(p) + der%m%vp%np_ghost(p) + 1
-      bndry_end   = der%m%vp%np_local(p) + der%m%vp%np_ghost(p) + der%m%vp%np_bndry(p)
-    else
-      bndry_start = der%m%np+1
-      bndry_end   = der%m%np_part
-    end if
-    
     !$omp parallel workshare
     f(bndry_start:bndry_end) = R_TOTYPE(M_ZERO)
     !$omp end parallel workshare
-    
+  end if
+
+
+  if(simul_box_multires(der%m%sb) .and. .false.) then
+    do ip = bndry_start, bndry_end
+      ix = der%m%Lxyz(ip, 1)
+      iy = der%m%Lxyz(ip, 2)
+      iz = der%m%Lxyz(ip, 3)
+      dx = abs(mod(ix, 2))
+      dy = abs(mod(iy, 2))
+      dz = abs(mod(iz, 2))
+      if(dx + dy + dz > 0) then ! this is a boundary point of the inner region
+        f(ip) = CNST(0.125)*(&
+             f(der%m%Lxyz_inv(ix + dx, iy + dy, iz + dz)) + &
+             f(der%m%Lxyz_inv(ix - dx, iy + dy, iz + dz)) + &
+             f(der%m%Lxyz_inv(ix + dx, iy - dy, iz + dz)) + &
+             f(der%m%Lxyz_inv(ix + dx, iy + dy, iz - dz)) + &
+             f(der%m%Lxyz_inv(ix + dx, iy - dy, iz - dz)) + &
+             f(der%m%Lxyz_inv(ix - dx, iy + dy, iz - dz)) + &
+             f(der%m%Lxyz_inv(ix - dx, iy - dy, iz + dz)) + &
+             f(der%m%Lxyz_inv(ix - dx, iy - dy, iz - dz)))
+      end if
+    end do
   end if
 
   if(der%periodic_bc) then

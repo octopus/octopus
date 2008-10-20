@@ -107,6 +107,7 @@ module mesh_m
     ! There is a redundancy in these two
     ! entries.
     ! In serial: x_global => x.
+    integer, pointer :: resolution(:, :, :)
     FLOAT, pointer :: vol_pp(:)         ! Element of volume for integrations
     ! for local points.
     integer :: nper                     ! the number of points that correpond to pbc
@@ -559,6 +560,7 @@ contains
     integer :: il, ipart
     call push_sub('mesh.mesh_end')
 
+    DEALLOC(m%resolution)
     DEALLOC(m%lxyz)
     DEALLOC(m%lxyz_inv)
     DEALLOC(m%x)

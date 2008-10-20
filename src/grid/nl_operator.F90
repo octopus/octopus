@@ -281,7 +281,8 @@ contains
 
         do jj = 1, op%n
           ! Get global index of p1 plus current stencil point.
-          st1(jj) = mesh_index(m%sb%dim, m%nr, m%Lxyz_inv, p1(:) + op%stencil(:, jj))
+          st1(jj) = mesh_index(m%sb%dim, m%nr, m%Lxyz_inv, &
+               p1(1:MAX_DIM) + m%resolution(p1(1), p1(2), p1(3))*op%stencil(1:MAX_DIM, jj))
 #ifdef HAVE_MPI
           if(m%parallel_in_domains) then
             ! When running parallel, translate this global
@@ -289,6 +290,7 @@ contains
             st1(jj) = vec_global2local(m%vp, st1(jj), m%vp%partno)
           end if
 #endif
+          ASSERT(st1(jj) > 0)
         end do
 
         st1(1:op%n) = st1(1:op%n) - ii

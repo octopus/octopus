@@ -50,6 +50,7 @@ module simul_box_m
     simul_box_init_from_file,   &
     simul_box_atoms_in_box,     &
     lead_unit_cell_extent,      &
+    simul_box_multires,         &
     assignment(=)
 
   integer, parameter, public :: &
@@ -84,6 +85,8 @@ module simul_box_m
 
     type(c_ptr)   :: image    ! for the box defined through an image
     character(len=1024) :: user_def ! for the user-defined box
+
+    FLOAT :: inner_size
 
     FLOAT :: rlattice(MAX_DIM,MAX_DIM)      ! lattice primitive vectors
     FLOAT :: klattice_unitary(MAX_DIM,MAX_DIM)      ! reciprocal lattice primitive vectors
@@ -391,6 +394,24 @@ contains
       call loct_parse_int(check_inp('PeriodicDimensions'), 0, sb%periodic_dim)
       if ((sb%periodic_dim < 0) .or. (sb%periodic_dim > 3) .or. (sb%periodic_dim > sb%dim)) &
         call input_error('PeriodicDimensions')
+
+      !%Variable HighResolutionArea
+      !%Type float
+      !%Default 1.0
+      !%Section Mesh
+      !%Description
+      !% (Experimental) When this variable is set, octopus will use a
+      !% multiresolution grid with a central region with the specified
+      !% spacing and an outer region with double the spacing. This
+      !% variable controls the size of the inner region as a fraction
+      !% (in each direction) of the simulation box. So for instance if
+      !% your box is a sphere of radius 10, and you set
+      !% HighResolutionArea to 0.5, you will get a sphere of radius 5
+      !% with higher resolution. By default this variable is set to 1,
+      !% so this feature is disabled.
+      !%End
+      call loct_parse_float(check_inp('HighResolutionArea'), M_ONE, sb%inner_size)
+      sb%inner_size = min(sb%inner_size, M_ONE)
 
       call pop_sub()
     end subroutine read_misc
@@ -1040,23 +1061,32 @@ contains
 
 
   !--------------------------------------------------------------
-  logical function simul_box_in_box(sb, geo, x) result(in_box)
+  logical function simul_box_in_box(sb, geo, x, inner_box) result(in_box)
     type(simul_box_t),  intent(in) :: sb
     type(geometry_t),   intent(in) :: geo
     FLOAT,              intent(in) :: x(:)
+    logical, optional,  intent(in) :: inner_box
 
     real(8), parameter :: DELTA = CNST(1e-12)
     FLOAT :: r, re, im, xx(MAX_DIM)
     real(8) :: llimit(MAX_DIM), ulimit(MAX_DIM)
+    real(8) :: factor
 
 #if defined(HAVE_GDLIB)
     integer :: red, green, blue, ix, iy
 #endif
 
+    factor = M_ONE
+    if(present(inner_box)) then
+      if(inner_box) factor = sb%inner_size
+    end if
+
     xx(1:sb%dim) = x(1:sb%dim) - sb%box_offset(1:sb%dim)
 
     !convert to the orthogonal space
-    xx = matmul(xx(1:sb%dim), sb%klattice_unitary(1:sb%dim, 1:sb%dim))
+    xx(1:sb%dim) = matmul(xx(1:sb%dim), sb%klattice_unitary(1:sb%dim, 1:sb%dim))
+
+    xx(1:sb%dim) = xx(1:sb%dim)/factor
 
     select case(sb%box_shape)
     case(SPHERE)
@@ -1064,23 +1094,20 @@ contains
 
     case(CYLINDER)
       r = sqrt(xx(2)**2 + xx(3)**2)
-      in_box = (r<=sb%rsize+DELTA .and. abs(xx(1))<=sb%xsize+DELTA)
+      in_box = (r<=sb%rsize+DELTA .and. abs(xx(1)) <= sb%xsize+DELTA)
 
     case(MINIMUM)
       in_box = in_minimum()
 
-    case(PARALLELEPIPED)
-      llimit = -sb%lsize - DELTA
-      ulimit =  sb%lsize + DELTA
+    case(PARALLELEPIPED) 
+      llimit(1:sb%dim) = -sb%lsize(1:sb%dim) - DELTA
+      ulimit(1:sb%dim) =  sb%lsize(1:sb%dim) + DELTA
       ulimit(1:sb%periodic_dim) = sb%lsize(1:sb%periodic_dim) - DELTA
       if(sb%open_boundaries) then
         ulimit(TRANS_DIR) = sb%lsize(TRANS_DIR) - DELTA
       end if
 
-      in_box = &
-        xx(1) >= llimit(1) .and. xx(1) <= ulimit(1) .and. &
-        xx(2) >= llimit(2) .and. xx(2) <= ulimit(2) .and. &
-        xx(3) >= llimit(3) .and. xx(3) <= ulimit(3)
+      in_box = all(xx(1:sb%dim) >= llimit(1:sb%dim) .and. xx(1:sb%dim) <= ulimit(1:sb%dim))
 
 #if defined(HAVE_GDLIB)
     case(BOX_IMAGE)
@@ -1113,7 +1140,7 @@ contains
 
       in_minimum = .false.
       do i = 1, geo%natoms
-        r = sqrt(sum((xx(:) - geo%atom(i)%x(:))**2))
+        r = sqrt(sum((xx(1:sb%dim) - geo%atom(i)%x(1:sb%dim))**2))
         if(sb%rsize > M_ZERO) then
           radius = sb%rsize
         else
@@ -1388,6 +1415,7 @@ contains
     sbout%open_boundaries         = sbin%open_boundaries
     sbout%add_unit_cells          = sbin%add_unit_cells
     sbout%lead_restart_dir        = sbin%lead_restart_dir
+    sbout%inner_size              = sbin%inner_size
     if(associated(sbin%lead_unit_cell)) then
       ALLOCATE(sbout%lead_unit_cell(NLEADS), NLEADS)
       do il = 1, NLEADS
@@ -1395,6 +1423,13 @@ contains
       end do
     end if
   end subroutine simul_box_copy
+
+  logical function simul_box_multires(this) result(mr)
+    type(simul_box_t), intent(in) :: this
+
+    mr = abs(this%inner_size - M_ONE) > M_EPSILON
+  end function simul_box_multires
+
 end module simul_box_m
 
 

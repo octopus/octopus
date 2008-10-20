@@ -70,7 +70,13 @@ subroutine mesh_init_stage_1(sb, mesh, geo, cv, enlarge)
   mesh%sb => sb   ! keep an internal pointer
   mesh%h  =  sb%h ! this number can change in the following
   mesh%use_curvlinear = cv%method.ne.CURV_METHOD_UNIFORM
+
+  ! multiresolution requires the curvilinear coordinates machinery
+  mesh%use_curvlinear = mesh%use_curvlinear .or. simul_box_multires(sb)
+
   mesh%enlarge = enlarge
+
+  if(simul_box_multires(sb)) mesh%enlarge = mesh%enlarge*2
 
   ! adjust nr
   mesh%nr = 0
@@ -168,6 +174,7 @@ subroutine mesh_init_stage_2(sb, mesh, geo, cv, stencil, np_stencil)
 
   integer :: i, j, k, il, ik, ix, iy, iz, is
   FLOAT   :: chi(MAX_DIM)
+  logical :: inside
 
   call push_sub('mesh_init.mesh_init_stage_2')
   call profiling_in(mesh_init_prof)
@@ -181,6 +188,7 @@ subroutine mesh_init_stage_2(sb, mesh, geo, cv, stencil, np_stencil)
   ALLOCATE(mesh%Lxyz_inv(mesh%nr(1,1):mesh%nr(2,1), mesh%nr(1,2):mesh%nr(2,2), mesh%nr(1,3):mesh%nr(2,3)),   i)
   ALLOCATE(mesh%Lxyz_tmp(mesh%nr(1,1):mesh%nr(2,1), mesh%nr(1,2):mesh%nr(2,2), mesh%nr(1,3):mesh%nr(2,3)),   i)
   ALLOCATE(mesh%x_tmp(MAX_DIM, mesh%nr(1,1):mesh%nr(2,1), mesh%nr(1,2):mesh%nr(2,2), mesh%nr(1,3):mesh%nr(2,3)), MAX_DIM*i)
+  ALLOCATE(mesh%resolution(mesh%nr(1,1):mesh%nr(2,1), mesh%nr(1,2):mesh%nr(2,2), mesh%nr(1,3):mesh%nr(2,3)), i)
 
   !$omp parallel workshare
   mesh%Lxyz_inv(:,:,:) = 0
@@ -188,7 +196,7 @@ subroutine mesh_init_stage_2(sb, mesh, geo, cv, stencil, np_stencil)
   mesh%x_tmp(:,:,:,:)  = M_ZERO
   !$omp end parallel workshare
 
-  ! We label 2 the points inside the mesh + enlargement
+  ! We label the points inside the mesh + enlargement
   !$omp parallel do private(iy, iz, chi, i, j, k) if(.not. mesh%use_curvlinear)
   do ix = mesh%nr(1,1), mesh%nr(2,1)
     chi(1) = real(ix, REAL_PRECISION) * mesh%h(1) + sb%box_offset(1)
@@ -201,15 +209,23 @@ subroutine mesh_init_stage_2(sb, mesh, geo, cv, stencil, np_stencil)
 
         call curvlinear_chi2x(sb, geo, cv, chi(:), mesh%x_tmp(:, ix, iy, iz))
 
-        if(simul_box_in_box(sb, geo, mesh%x_tmp(:, ix, iy, iz))) then
+        inside = simul_box_in_box(sb, geo, mesh%x_tmp(:, ix, iy, iz), inner_box = .true.)
+        mesh%resolution(ix, iy, iz) = 1
+        if(.not. inside) mesh%resolution(ix, iy, iz) = 2
+        inside = inside .or. (simul_box_in_box(sb, geo, mesh%x_tmp(:, ix, iy, iz)) .and. &
+             mod(ix, 2) == 0 .and. mod(iy, 2) == 0 .and. mod(iz, 2) == 0)
+
+        if(inside) then
           do is = 1, np_stencil
-            i = ix + stencil(1, is)
-            j = iy + stencil(2, is)
-            k = iz + stencil(3, is)
+            i = ix + mesh%resolution(ix, iy, iz)*stencil(1, is)
+            j = iy + mesh%resolution(ix, iy, iz)*stencil(2, is)
+            k = iz + mesh%resolution(ix, iy, iz)*stencil(3, is)
             if(  &
                  i >= mesh%nr(1,1) .and. i <= mesh%nr(2,1) .and. &
                  j >= mesh%nr(1,2) .and. j <= mesh%nr(2,2) .and. &
-                 k >= mesh%nr(1,3) .and. k <= mesh%nr(2,3)) mesh%Lxyz_tmp(i, j, k) = ENLARGEMENT_POINT
+                 k >= mesh%nr(1,3) .and. k <= mesh%nr(2,3)) then
+              mesh%Lxyz_tmp(i, j, k) = ENLARGEMENT_POINT
+            end if
           end do
         end if
 
@@ -218,18 +234,24 @@ subroutine mesh_init_stage_2(sb, mesh, geo, cv, stencil, np_stencil)
   end do
   !$omp end parallel do
 
-  ! we label 1 the points inside the mesh, and we count the points
+  ! we label the points inside the mesh, and we count the points
   il = 0
   ik = 0
   do ix = mesh%nr(1,1), mesh%nr(2,1)
     do iy = mesh%nr(1,2), mesh%nr(2,2)
       do iz = mesh%nr(1,3), mesh%nr(2,3)
-        if(simul_box_in_box(sb, geo, mesh%x_tmp(:, ix, iy, iz))) then
+
+        inside = simul_box_in_box(sb, geo, mesh%x_tmp(:, ix, iy, iz), inner_box = .true.)
+        inside = inside .or. (simul_box_in_box(sb, geo, mesh%x_tmp(:, ix, iy, iz)) .and. &
+             mod(ix, 2) == 0 .and. mod(iy, 2) == 0 .and. mod(iz, 2) == 0)
+
+        if(inside) then
           mesh%Lxyz_tmp(ix, iy, iz) = INNER_POINT
           ik = ik + 1
         end if
 
         if(mesh%Lxyz_tmp(ix, iy, iz) > 0) il = il + 1
+
       end do
     end do
   end do
@@ -466,7 +488,7 @@ contains
   subroutine mesh_get_vol_pp(sb)
     type(simul_box_t), intent(in) :: sb
 
-    integer :: i
+    integer :: i, jj(1:MAX_DIM)
     FLOAT   :: chi(MAX_DIM)
 #if defined(HAVE_MPI)
     integer :: k
@@ -505,8 +527,10 @@ contains
 #endif
     else ! serial mode
       do i = 1, mesh%np_part
-        chi(1:sb%dim) = mesh%Lxyz(i, 1:sb%dim) * mesh%h(1:sb%dim)
-        mesh%vol_pp(i) = mesh%vol_pp(i)*curvlinear_det_Jac(sb, geo, cv, mesh%x(i, 1:sb%dim), chi(1:sb%dim))
+        jj(1:sb%dim) = mesh%Lxyz(i, 1:sb%dim)
+        jj(sb%dim + 1:MAX_DIM) = 0
+        chi(1:sb%dim) = jj(1:sb%dim)*mesh%h(1:sb%dim)
+        mesh%vol_pp(i) = mesh%resolution(jj(1), jj(2), jj(3))**sb%dim*mesh%vol_pp(i)*curvlinear_det_Jac(sb, geo, cv, mesh%x(i, 1:sb%dim), chi(1:sb%dim))
       end do
     end if
 
