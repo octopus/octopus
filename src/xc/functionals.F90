@@ -237,7 +237,7 @@ contains
     end if
 
     if(functl%id == XC_LDA_C_2D_PRM08) then
-      call XC_F90(lda_c_2d_prm08_set_params)(functl%conf, nel)
+      call XC_F90(lda_c_2d_prm08_set_par)(functl%conf, nel)
     end if
 
     call pop_sub()
