@@ -367,10 +367,10 @@ contains
 
       ! Get the *local* xc term
       if(h%d%cdft) then
-        call xc_get_vxc_and_axc(gr, ks%xc, rho, st%j, st%d%ispin, h%vxc, h%axc, &
+        call xc_get_vxc_and_axc(gr, ks%xc, st, rho, st%j, st%d%ispin, h%vxc, h%axc, &
              h%ex, h%ec, h%exc_j, -minval(st%eigenval(st%nst, :)), st%qtot)
       else
-        call xc_get_vxc(gr, ks%xc, rho, st%d%ispin, h%ex, h%ec, &
+        call xc_get_vxc(gr, ks%xc, st, rho, st%d%ispin, h%ex, h%ec, &
              -minval(st%eigenval(st%nst, :)), st%qtot, vxc=h%vxc)
       end if
       deallocate(rho)

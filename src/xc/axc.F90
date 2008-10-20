@@ -18,9 +18,10 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-subroutine xc_get_vxc_and_axc(gr, xcs, rho, j, ispin, vxc, axc, ex, ec, exc_j, ip, qtot)
+subroutine xc_get_vxc_and_axc(gr, xcs, st, rho, j, ispin, vxc, axc, ex, ec, exc_j, ip, qtot)
   type(grid_t),       intent(inout) :: gr
   type(xc_t),         intent(in)    :: xcs
+  type(states_t),     intent(inout) :: st
   FLOAT,              intent(in)    :: rho(:, :), j(:,:,:)
   integer,            intent(in)    :: ispin
   FLOAT,              intent(inout) :: vxc(:,:), axc(:,:,:)
@@ -35,7 +36,7 @@ subroutine xc_get_vxc_and_axc(gr, xcs, rho, j, ispin, vxc, axc, ex, ec, exc_j, i
   call push_sub('xc_axc.xc_get_vxc_and_axc')
 
   !xc energy and potential in the absence of external magnetic fields
-  call xc_get_vxc(gr, xcs, rho, ispin, ex, ec, ip, qtot, vxc=vxc)
+  call xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc=vxc)
 
   !do we have a current-dependent xc?
   if(iand(xcs%family, XC_FAMILY_LCA) == 0) then

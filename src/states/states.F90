@@ -1989,7 +1989,7 @@ contains
               !     t = ( tau(1)              tau(3) + i tau(4) ) 
               !         ( tau(3) - i tau(4)   tau(2)            )
               if(present( tau)) then
-                tau (1:NP, 2)        = tau (1:NP, 2)        + ww*abs(gwf_psi(1:NP, i_dim, 2))**2
+                tau (1:NP, 2) = tau (1:NP, 2) + ww*abs(gwf_psi(1:NP, i_dim, 2))**2
                 do ii = 1, NP
                   c_tmp = conjg(gwf_psi(ii, i_dim, 1))*gwf_psi(ii, i_dim, 2)
                   tau(ii, 3) = tau(ii, 3) + ww* real(c_tmp)

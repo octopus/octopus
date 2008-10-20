@@ -18,16 +18,17 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-subroutine xc_get_vxc(gr, xcs, rho, ispin, ex, ec, ip, qtot, vxc)
+subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc)
   type(grid_t),       intent(inout) :: gr
   type(xc_t), target, intent(in)    :: xcs
+  type(states_t),     intent(inout) :: st
   FLOAT,              intent(in)    :: rho(:, :)
   integer,            intent(in)    :: ispin
   FLOAT,              intent(inout) :: ex, ec
   FLOAT,              intent(in)    :: ip, qtot
   FLOAT, optional,    intent(inout) :: vxc(:,:)
 
-  FLOAT :: l_dens(MAX_SPIN), l_dedd(MAX_SPIN), l_sigma(3), l_vsigma(3)!, l_tau(MAX_SPIN) , l_dedtau(MAX_SPIN)
+  FLOAT :: l_dens(MAX_SPIN), l_dedd(MAX_SPIN), l_sigma(3), l_vsigma(3), l_tau(MAX_SPIN) !, l_dedtau(MAX_SPIN)
   FLOAT, allocatable :: dens(:,:), dedd(:,:), ex_per_vol(:), ec_per_vol(:)
   FLOAT, allocatable :: gdens(:,:,:), dedgd(:,:,:)
   FLOAT, allocatable :: tau(:,:), dedtau(:,:)
@@ -62,7 +63,7 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, ex, ec, ip, qtot, vxc)
   ! This is a bit ugly (why functl(1) and not functl(2)?, but for the moment it works.
   spin_channels = functl(1)%spin_channels
 
-  call  lda_init()
+  call lda_init()
   if(gga.or.mgga) call  gga_init()
   if(       mgga) call mgga_init()
 
@@ -72,13 +73,13 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, ex, ec, ip, qtot, vxc)
     ! make a local copy with the correct memory order
     l_dens(1:spin_channels) = dens (jj, 1:spin_channels)
     if(gga.or.mgga) then
-      l_sigma(1) = sum(gdens(jj, :,1)*gdens(jj, :,1))
+      l_sigma(1) = sum(gdens(jj, :, 1)*gdens(jj, :, 1))
       if(ispin /= UNPOLARIZED) then
-        l_sigma(2) = sum(gdens(jj, :,1)*gdens(jj, :,2))
-        l_sigma(3) = sum(gdens(jj, :,2)*gdens(jj, :,2))
+        l_sigma(2) = sum(gdens(jj, :, 1)*gdens(jj, :, 2))
+        l_sigma(3) = sum(gdens(jj, :, 2)*gdens(jj, :, 2))
       end if
     end if
-!    if(mgga) l_tau  (:)   = tau  (jj, :)
+    if(mgga) l_tau(1:spin_channels) = tau(jj, 1:spin_channels)
 
     ! Calculate the potential/gradient density in local reference frame.
     functl_loop: do ixc = 1, 2
@@ -94,8 +95,7 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, ex, ec, ip, qtot, vxc)
           call write_fatal(1)
           !call XC_F90(hyb_gga_exc)(functl(ixc)%conf, l_dens(1), l_sigma(1), e)
         case(XC_FAMILY_MGGA)
-          message(1) = 'Meta-GGAs are currently disabled.'
-          call write_fatal(1)
+          call XC_F90(mgga_exc)(functl(ixc)%conf, l_dens(1), l_sigma(1), l_tau(1), e)
 
         case default
           cycle
@@ -348,40 +348,13 @@ contains
   !   *) allocate the kinetic energy density, dedtau, and local variants
   !   *) calculates tau either from a GEA or from the orbitals
   subroutine mgga_init()
-    integer :: i, is
-    FLOAT   :: f, d
-    FLOAT, allocatable :: n2dens(:)
-
     ALLOCATE(tau   (NP,      spin_channels), NP     *spin_channels)
     ALLOCATE(dedtau(NP_PART, spin_channels), NP_PART*spin_channels)
     tau    = M_ZERO
     dedtau = M_ZERO
 
-    ASSERT(xcs%mGGA_implementation==1.or.xcs%mGGA_implementation==2)
-
     ! calculate tau
-    select case(xcs%mGGA_implementation)
-    case (1)  ! GEA implementation
-      ALLOCATE(n2dens(NP), NP)
-      f = CNST(3.0)/CNST(10.0) * (M_SIX*M_PI*M_PI)**M_TWOTHIRD
-
-      do is = 1, spin_channels
-        call dderivatives_lapl(gr%der, dens(:, is), n2dens(:))
-
-        do i = 1, NP
-          d          = max(dens(i, is), CNST(1e-14))
-          tau(i, is) = f * d**(M_FIVE/M_THREE) + &
-            sum(gdens(i, :, is)**2)/(CNST(72.0)*d) + &
-            n2dens(i)/M_SIX
-        end do
-      end do
-
-      deallocate(n2dens)
-
-    case(2) ! OEP implementation
-      message(1) = 'Error: mgga_init: not yet implemented'
-      call write_fatal(1)
-    end select
+    call states_calc_tau_jp_gn(gr, st, tau=tau)
 
   end subroutine mgga_init
 

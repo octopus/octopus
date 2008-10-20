@@ -272,6 +272,8 @@ contains
       !% LDA: Attacalite et al functional for the 2D electron gas
       !%Option lda_c_prm08               16000
       !% LDA: Pittalis, Rasanen & Marques correlation in 2D
+      !%Option lda_c_vBH                 17000
+      !% LDA: von Barth & Hedin
       !%Option lda_xc_teter93            20
       !% LDA: Teter 93 pade parametrization
       !%Option gga_x_pbe                101
@@ -316,6 +318,12 @@ contains
       !% GGA: Armiento & Mattsson 05 exchange
       !%Option gga_x_pbea               121
       !% GGA: Madsen 07 (PBE-like)
+      !%Option gga_x_mpbe               122
+      !% GGA: Adamo & Barone modification to PBE
+      !%Option gga_x_xpbe               123
+      !% GGA: xPBE reparametrization by Xu & Goddard
+      !%Option gga_x_2d_b86_mgc         124
+      !% GGA: Becke 86 MGC for 2D systems
       !%Option gga_c_pbe                130000
       !% GGA: Perdew, Burke & Ernzerhof correlation
       !%Option gga_c_lyp                131000
@@ -328,6 +336,10 @@ contains
       !% GGA: Perdew & Wang 91
       !%Option gga_c_am05               135000
       !% GGA: Armiento & Mattsson 05 correlation
+      !%Option gga_c_xpbe               136000
+      !% GGA: xPBE reparametrization by Xu & Goddard
+      !%Option gga_c_lm                 137000
+      !% GGA: Langreth and Mehl correlation
       !%Option gga_xc_lb                160
       !% GGA: van Leeuwen & Baerends (xc)
       !%Option gga_xc_hcth_93           161
@@ -354,10 +366,22 @@ contains
       !% Hybrid (GGA): aka PBE0 or PBE1PBE
       !%Option hyb_gga_xc_x3lyp         411000
       !% Hybrid (GGA): maybe the best hybrid around
-      !%Option mgga_x_tpss              201
-      !% MGGA (not working)
-      !%Option mgga_c_tpss              202000
-      !% MGGA (not working)
+      !%Option hyb_gga_xc_b1wc          412000
+      !% Hybrid (GGA): Becke 1-parameter mixture of WC and EXX
+      !%Option mgga_x_lta               201
+      !% MGGA: Local tau approximation of Ernzerhof & Scuseria
+      !%Option mgga_x_tpss              202
+      !% MGGA: Perdew, Tao, Staroverov & Scuseria exchange
+      !%Option mgga_x_m06l              204
+      !% MGGA: Zhao, Truhlar exchange
+      !%Option mgga_x_gvt4              205
+      !% MGGA: GVT4 from Van Voorhis and Scuseria (exchange part of VSxc)
+      !%Option mgga_x_tau_hcth          206
+      !% MGGA: tau-HCTH from Boese and Handy
+      !%Option mgga_c_tpss              231000
+      !% MGGA: Perdew, Tao, Staroverov & Scuseria correlation
+      !%Option mgga_c_vsxc              232000
+      !% MGGA: VSxc from Van Voorhis and Scuseria (correlation part)
       !%Option oep_x                    901
       !% OEP: Exact exchange
       !%End

@@ -81,7 +81,7 @@ contains
     E_Hartree = h%ehartree
 
     ! Get exchange-correlation energies
-    call xc_get_vxc(sys%gr, sys%ks%xc, sys%st%rho, sys%st%d%ispin, E_x, E_c, &
+    call xc_get_vxc(sys%gr, sys%ks%xc, sys%st, sys%st%rho, sys%st%d%ispin, E_x, E_c, &
       M_ZERO, sys%st%qtot)
 
     E_tot = E_t + E_ext + E_Hartree + E_x + E_c + h%ep%eii
