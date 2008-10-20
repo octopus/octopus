@@ -372,11 +372,11 @@ contains
       !% MGGA: Local tau approximation of Ernzerhof & Scuseria
       !%Option mgga_x_tpss              202
       !% MGGA: Perdew, Tao, Staroverov & Scuseria exchange
-      !%Option mgga_x_m06l              204
+      !%Option mgga_x_m06l              203
       !% MGGA: Zhao, Truhlar exchange
-      !%Option mgga_x_gvt4              205
+      !%Option mgga_x_gvt4              204
       !% MGGA: GVT4 from Van Voorhis and Scuseria (exchange part of VSxc)
-      !%Option mgga_x_tau_hcth          206
+      !%Option mgga_x_tau_hcth          205
       !% MGGA: tau-HCTH from Boese and Handy
       !%Option mgga_c_tpss              231000
       !% MGGA: Perdew, Tao, Staroverov & Scuseria correlation

@@ -206,7 +206,7 @@ contains
     select case(functl%family)
     case(XC_FAMILY_LDA)
 
-      if(functl%id==XC_LDA_C_AMGB.and.ndim.ne.2) then
+      if(functl%id==XC_LDA_C_2D_AMGB.and.ndim.ne.2) then
         message(1) = 'Functional AMGB only allowed in 2D'
         call write_fatal(1)
       end if
@@ -236,8 +236,8 @@ contains
       functl%type = -1
     end if
 
-    if(functl%id == XC_LDA_C_PRM08) then
-      call XC_F90(lda_c_prm08_set_params)(functl%conf, nel)
+    if(functl%id == XC_LDA_C_2D_PRM08) then
+      call XC_F90(lda_c_2d_prm08_set_params)(functl%conf, nel)
     end if
 
     call pop_sub()
