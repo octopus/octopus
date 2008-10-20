@@ -224,7 +224,7 @@ contains
         
         select case(calc_dim)
         case(3); default = default + XC_LDA_C_PZ_MOD*1000
-        case(2); default = default + XC_LDA_C_AMGB*1000
+        case(2); default = default + XC_LDA_C_2D_AMGB*1000
         end select
       end if
 
@@ -268,9 +268,9 @@ contains
       !% LDA: Perdew & Wang (Modified to match the original PBE routine)
       !%Option lda_c_ob_pw               14000
       !% LDA: Ortiz & Ballone (PW-type parametrization)
-      !%Option lda_c_amgb                15000
+      !%Option lda_c_2d_amgb             15000
       !% LDA: Attacalite et al functional for the 2D electron gas
-      !%Option lda_c_prm08               16000
+      !%Option lda_c_2d_prm08            16000
       !% LDA: Pittalis, Rasanen & Marques correlation in 2D
       !%Option lda_c_vBH                 17000
       !% LDA: von Barth & Hedin
