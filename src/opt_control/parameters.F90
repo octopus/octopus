@@ -66,7 +66,6 @@ module opt_control_parameters_m
             parameters_x_to_par,          &
             parameters_update,            &
             parameters_number,            &
-            parameters_nfreqs,            &
             parameters_dim,               &
             parameters_w0,                &
             parameters_alpha,             &
@@ -110,7 +109,7 @@ module opt_control_parameters_m
     integer :: no_parameters = 0
     FLOAT   :: dt            = M_ZERO
     integer :: ntiter        = 0
-    integer :: nfreqs        = 0
+    integer :: dim           = 0
     FLOAT   :: targetfluence = M_ZERO
     FLOAT   :: intphi        = M_ZERO
     type(tdf_t), pointer :: f(:) => NULL()
@@ -262,10 +261,7 @@ contains
     ! Check that the laser polarizations are not imaginary.
     ALLOCATE(par_common%pol(MAX_DIM, ep%no_lasers), MAX_DIM*ep%no_lasers)
     do i = 1, ep%no_lasers
-
       par_common%pol(1:MAX_DIM, i) = laser_polarization(ep%lasers(i))
-
-      ! WARNING: Check if this is working....
       if(any(aimag(laser_polarization(ep%lasers(i))) .ne. M_ZERO)) then
         write(message(1),'(a)') 'For optimal control runs, you cannot specify an initial field guess'
         write(message(2),'(a)') 'with complex polarization direction'
@@ -436,14 +432,14 @@ contains
     call parameters_set_rep(par)
     if( (par%representation .eq. ctr_sine_fourier_series) .or. &
         (par%representation .eq. ctr_fourier_series) ) then
-      if(par%nfreqs <= 1) then
+      if(par%dim <= 1) then 
         write(message(1), '(a)')    'Error: The dimension of the basis set used to represent the control'
         write(message(2), '(a)')    '       functions must be larger than one. The input options that you'
         write(message(3), '(a)')    '       supply do not meet this criterion.'
         call write_fatal(3)
       end if
       write(message(1), '(a)')      'Info: The expansion of the control parameters in a sine Fourier series'
-      write(message(2), '(a,i6,a)') '      expansion implies the use of ', par%nfreqs, ' basis set functions.'
+      write(message(2), '(a,i6,a)') '      expansion implies the use of ', par%dim, ' basis set functions.'
       call write_info(2)
     end if
 
@@ -496,15 +492,15 @@ contains
       ! The inverse matrix U^{-1} is placed in par%utransfi.
       !
       ! This scan probably be optimized in some way?
-      ALLOCATE(eigenvec(par%nfreqs, par%nfreqs), par%nfreqs*par%nfreqs)
-      ALLOCATE(eigenval(par%nfreqs), par%nfreqs)
-      ALLOCATE(par%utransf (par%nfreqs, par%nfreqs), par%nfreqs*par%nfreqs)
-      ALLOCATE(par%utransfi(par%nfreqs, par%nfreqs), par%nfreqs*par%nfreqs)
+      ALLOCATE(eigenvec(par%dim, par%dim), par%dim*par%dim)
+      ALLOCATE(eigenval(par%dim), par%dim)
+      ALLOCATE(par%utransf (par%dim, par%dim), par%dim*par%dim)
+      ALLOCATE(par%utransfi(par%dim, par%dim), par%dim*par%dim)
       par%utransf  = M_ZERO
       par%utransfi = M_ZERO
 
-      do mm = 1, par%nfreqs
-        do nn = mm, par%nfreqs
+      do mm = 1, par%dim
+        do nn = mm, par%dim
           call tdf_init_numerical(fn, par%ntiter, par%dt, initval = M_ZERO, omegamax = par%omegamax)
           call tdf_init_numerical(fm, par%ntiter, par%dt, initval = M_ZERO, omegamax = par%omegamax)
           call tdf_numerical_to_sineseries(fn, par%omegamax)
@@ -528,22 +524,22 @@ contains
           call tdf_end(fn)
         end do
       end do
-      do mm = 1, par%nfreqs
+      do mm = 1, par%dim
         do nn = 1, mm - 1
           par%utransf(mm, nn) = par%utransf(nn, mm)
         end do
       end do
 
-      call lalg_eigensolve(par%nfreqs, par%utransf, eigenvec, eigenval)
-      do mm = 1, par%nfreqs
-        do nn = 1, par%nfreqs
+      call lalg_eigensolve(par%dim, par%utransf, eigenvec, eigenval)
+      do mm = 1, par%dim
+        do nn = 1, par%dim
           eigenvec(mm, nn) = eigenvec(mm, nn) * sqrt(eigenval(nn))
         end do
       end do
 
       par%utransf = transpose(eigenvec)
       par%utransfi = par%utransf
-      det =  lalg_inverter(par%nfreqs, par%utransfi)
+      det =  lalg_inverter(par%dim, par%utransfi)
 
     end if
 
@@ -620,39 +616,17 @@ contains
   ! ---------------------------------------------------------
   FLOAT function parameters_diff(p, q) result(res)
     type(oct_control_parameters_t), intent(in) :: p, q
-    integer :: i, j
-    FLOAT, allocatable :: delta(:)
-    integer :: nfreqs
+    integer :: i
 
     call push_sub('parameters.parameters_diff')
 
     ASSERT(p%current_representation .eq. q%current_representation)
 
-    select case(p%current_representation)
-    case(ctr_real_space)
-      res = M_ZERO
-      ALLOCATE(delta(p%ntiter + 1), p%ntiter +1)
-      do i = 1, p%no_parameters
-        do j = 1, p%ntiter + 1
-          delta(j) = abs(tdf(p%f(i), j) - tdf(q%f(i), j))**2
-        end do
-        res = res + sum(delta)*p%dt
-      end do
+    res = M_ZERO
+    do i = 1, p%no_parameters
+      res = res + tdf_diff(p%f(i), q%f(i))
+    end do
 
-    case(ctr_sine_fourier_series)
-      nfreqs = tdf_nfreqs(p%f(1))
-      res = M_ZERO
-      ALLOCATE(delta(nfreqs), nfreqs +1)
-      do i = 1, p%no_parameters
-        do j = 1, nfreqs
-          delta(j) = abs(tdf(p%f(i), j) - tdf(q%f(i), j))**2
-        end do
-        res = res + sum(delta)
-      end do
-
-    end select
-
-    deallocate(delta)
     call pop_sub()
   end function parameters_diff
   ! ---------------------------------------------------------
@@ -672,7 +646,7 @@ contains
   subroutine parameters_mixing_init(par)
     type(oct_control_parameters_t), intent(in) :: par
 
-    integer :: nfreqs
+    integer :: dim
 
     call push_sub('parameters.parameters_mixing_init')
 
@@ -680,8 +654,8 @@ contains
     case(ctr_real_space)
       call mix_init(parameters_mix, par%ntiter + 1, par%no_parameters, 1)
     case(ctr_sine_fourier_series)
-      nfreqs = tdf_nfreqs(par%f(1))
-      call mix_init(parameters_mix, nfreqs, par%no_parameters, 1)
+      dim = tdf_sine_nfreqs(par%f(1))
+      call mix_init(parameters_mix, dim, par%no_parameters, 1)
     end select
 
     call pop_sub()
@@ -702,7 +676,7 @@ contains
     type(oct_control_parameters_t), intent(in) :: par_in, par_out
     type(oct_control_parameters_t), intent(inout) :: par_new
 
-    integer :: i, j, nfreqs
+    integer :: i, j, dim
     FLOAT, allocatable :: e_in(:, :, :), e_out(:, :, :), e_new(:, :, :)
     call push_sub('parameters.parameters_mixing')
 
@@ -734,12 +708,12 @@ contains
 
     case(ctr_sine_fourier_series)
 
-      nfreqs = tdf_nfreqs(par_in%f(1))
-      ALLOCATE(e_in (nfreqs, par_in%no_parameters, 1), nfreqs*par_in%no_parameters)
-      ALLOCATE(e_out(nfreqs, par_in%no_parameters, 1), nfreqs*par_in%no_parameters)
-      ALLOCATE(e_new(nfreqs, par_in%no_parameters, 1), nfreqs*par_in%no_parameters)
+      dim = tdf_sine_nfreqs(par_in%f(1))
+      ALLOCATE(e_in (dim, par_in%no_parameters, 1), dim*par_in%no_parameters)
+      ALLOCATE(e_out(dim, par_in%no_parameters, 1), dim*par_in%no_parameters)
+      ALLOCATE(e_new(dim, par_in%no_parameters, 1), dim*par_in%no_parameters)
       do i = 1, par_in%no_parameters
-        do j = 1, nfreqs
+        do j = 1, dim
           e_in (j, i, 1) = tdf(par_in%f(i), j)
           e_out(j, i, 1) = tdf(par_out%f(i), j)
         end do
@@ -787,7 +761,14 @@ contains
     end do
 
     cp%alpha = par_common%alpha
-    cp%nfreqs = tdf_nfreqs(cp%f(1))
+    select case(cp%representation)
+    case(ctr_real_space)
+      cp%dim = ntiter
+    case(ctr_sine_fourier_series)
+      cp%dim = tdf_sine_nfreqs(cp%f(1))
+    case(ctr_fourier_series)
+      cp%dim = 2*tdf_nfreqs(cp%f(1))+1
+    end select
       
     call pop_sub()
   end subroutine parameters_init
@@ -1279,7 +1260,7 @@ contains
     cp_out%no_parameters = cp_in%no_parameters
     cp_out%dt = cp_in%dt
     cp_out%ntiter = cp_in%ntiter
-    cp_out%nfreqs = cp_in%nfreqs
+    cp_out%dim = cp_in%dim
     cp_out%targetfluence = cp_in%targetfluence
     cp_out%intphi = cp_in%intphi
     cp_out%representation = cp_in%representation
@@ -1294,11 +1275,11 @@ contains
       call tdf_copy(cp_out%f(j), cp_in%f(j))
     end do
     if(associated(cp_in%utransf)) then
-      ALLOCATE(cp_out%utransf(cp_out%nfreqs, cp_out%nfreqs), cp_out%nfreqs**2)
+      ALLOCATE(cp_out%utransf(cp_out%dim, cp_out%dim), cp_out%dim**2)
       cp_out%utransf = cp_in%utransf
     end if
     if(associated(cp_in%utransfi)) then
-      ALLOCATE(cp_out%utransfi(cp_out%nfreqs, cp_out%nfreqs), cp_out%nfreqs**2)
+      ALLOCATE(cp_out%utransfi(cp_out%dim, cp_out%dim), cp_out%dim**2)
       cp_out%utransfi = cp_in%utransfi
     end if
 
@@ -1422,7 +1403,7 @@ contains
     select case(par_common%mode)
 
     case(parameter_mode_epsilon, parameter_mode_f, parameter_mode_phi)
-      n = par%nfreqs
+      n = par%dim
       ASSERT(n-1 .eq. size(x))
 
       ALLOCATE(e(n), n)
@@ -1456,7 +1437,7 @@ contains
 
     case(parameter_mode_f_and_phi)
 
-      n = par%nfreqs
+      n = par%dim
       dim = parameters_dim(par) ! This should be equal to 2*n-2
 
       ALLOCATE(e(2*n), 2*n)
@@ -1617,23 +1598,15 @@ contains
 
 
   ! ---------------------------------------------------------
-  integer function parameters_nfreqs(par)
-    type(oct_control_parameters_t), intent(in) :: par
-    parameters_nfreqs = par%nfreqs
-  end function parameters_nfreqs
-  ! ---------------------------------------------------------
-
-
-  ! ---------------------------------------------------------
   integer function parameters_dim(par)
     type(oct_control_parameters_t), intent(in) :: par
     select case(par_common%mode)
     case(parameter_mode_epsilon, parameter_mode_f)
-      parameters_dim = par%nfreqs-1
+      parameters_dim = par%dim-1
     case(parameter_mode_phi)
-      parameters_dim = par%nfreqs-1
+      parameters_dim = par%dim-1
     case(parameter_mode_f_and_phi)
-      parameters_dim = (par%nfreqs-1)*2
+      parameters_dim = (par%dim-1)*2
     end select
   end function parameters_dim
   ! ---------------------------------------------------------

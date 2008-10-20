@@ -52,9 +52,9 @@ module tdf_m
             tdf,                         &
             tdfw,                        &
             tdf_dot_product,             &
+            tdf_diff,                    &
             tdf_scalar_multiply,         &
             tdf_cosine_multiply,         &
-            tdf_cosine_divide,           &
             tdf_fft_forward,             &
             tdf_fft_backward,            &
             tdf_sineseries_to_numerical, &
@@ -62,6 +62,7 @@ module tdf_m
             tdf_fourier_grid,            &
             tdf_write,                   &
             tdf_niter,                   &
+            tdf_sine_nfreqs,             &
             tdf_nfreqs,                  &
             tdf_dt,                      &
             tdf_copy,                    &
@@ -95,6 +96,7 @@ module tdf_m
     FLOAT   :: init_time   = M_ZERO
     FLOAT   :: final_time  = M_ZERO
     integer :: niter       = 0
+    integer :: sine_nfreqs = 0
     integer :: nfreqs      = 0
 
     type(spline_t)         :: amplitude
@@ -303,6 +305,13 @@ module tdf_m
     type(tdf_t), intent(in) :: f
     tdf_nfreqs = f%nfreqs
   end function tdf_nfreqs
+  !------------------------------------------------------------
+
+  !------------------------------------------------------------
+  integer function tdf_sine_nfreqs(f)
+    type(tdf_t), intent(in) :: f
+    tdf_sine_nfreqs = f%sine_nfreqs
+  end function tdf_sine_nfreqs
   !------------------------------------------------------------
 
 
@@ -515,11 +524,19 @@ module tdf_m
     f%init_time = M_ZERO
     f%final_time = f%dt * f%niter
 
-    f%nfreqs = f%niter
+    f%sine_nfreqs = f%niter
     if(present(omegamax)) then
       if(omegamax > M_ZERO) then
         bigt = f%final_time - f%init_time
-        f%nfreqs = int(bigt * omegamax / M_PI) + 1
+        f%sine_nfreqs = int(bigt * omegamax / M_PI) + 1
+      end if
+    end if
+
+    f%sine_nfreqs = f%niter/2+1
+    if(present(omegamax)) then
+      if(omegamax > M_ZERO) then
+        bigt = f%final_time - f%init_time
+        f%sine_nfreqs = int(bigt * omegamax / (M_TWO * M_PI) ) + 1
       end if
     end if
 
@@ -603,7 +620,7 @@ module tdf_m
     case(TDF_NUMERICAL)
       f%val(1:f%niter+1) = values(1:f%niter+1)
     case(TDF_SINE_SERIES)
-      f%coeffs(1:f%nfreqs) = values(1:f%nfreqs)
+      f%coeffs(1:f%sine_nfreqs) = values(1:f%sine_nfreqs)
     end select
 
     call pop_sub()
@@ -688,7 +705,7 @@ module tdf_m
     type(tdf_t), intent(inout) :: f
     FLOAT, intent(in) :: omegamax
 
-    integer :: j, k, nfreqs
+    integer :: j, k, sine_nfreqs
     FLOAT :: bigt, t, omega
 
     ASSERT(f%mode .eq. TDF_NUMERICAL)
@@ -696,15 +713,15 @@ module tdf_m
     bigt = f%final_time - f%init_time
 
     if(omegamax > M_ZERO) then
-      nfreqs = int(bigt * omegamax / M_PI) + 1
+      sine_nfreqs = int(bigt * omegamax / M_PI) + 1
     else
-      nfreqs = f%niter
+      sine_nfreqs = f%niter
     end if
 
-    f%nfreqs = nfreqs
-    ALLOCATE(f%coeffs(nfreqs), nfreqs)
+    f%sine_nfreqs = sine_nfreqs
+    ALLOCATE(f%coeffs(sine_nfreqs), sine_nfreqs)
 
-    do j = 1, nfreqs
+    do j = 1, sine_nfreqs
       omega = (M_PI/bigt) * j
       f%coeffs(j) = M_ZERO
       do k = 2, f%niter
@@ -739,7 +756,7 @@ module tdf_m
     do k = 1, f%niter + 1
       t = (k-1)*f%dt
       f%val(k) = M_ZERO
-      do j = 1, f%nfreqs
+      do j = 1, f%sine_nfreqs
         omega = (M_PI/bigt) * j
         f%val(k) = f%val(k) + sin(omega*t) * f%coeffs(j)
       end do
@@ -899,7 +916,8 @@ module tdf_m
     fout%final_time = fin%final_time
     fout%init_time  = fin%init_time
     fout%expression = fin%expression
-    fout%nfreqs     = fin%nfreqs
+    fout%sine_nfreqs = fin%sine_nfreqs
+    fout%nfreqs = fin%nfreqs
     if(fin%mode .eq. TDF_FROM_FILE) then
       fout%amplitude = fin%amplitude
     end if
@@ -914,7 +932,7 @@ module tdf_m
       call fft_copy(fin%fft_handler, fout%fft_handler)
     end if
     if(fin%mode .eq. TDF_SINE_SERIES) then
-      ALLOCATE(fout%coeffs(fout%nfreqs), fout%nfreqs)
+      ALLOCATE(fout%coeffs(fout%sine_nfreqs), fout%sine_nfreqs)
       fout%coeffs = fin%coeffs
     end if
     fout%mode   = fin%mode
@@ -963,28 +981,6 @@ module tdf_m
     end do
 
   end subroutine tdf_cosine_multiply
-  !------------------------------------------------------------
-
-
-  !------------------------------------------------------------
-  subroutine tdf_cosine_divide(omega, f) 
-    FLOAT, intent(in) :: omega
-    type(tdf_t), intent(inout) :: f
-
-    integer :: j
-    FLOAT :: t
-
-    ! For the moment, we will just assume that f and g are of the same type.
-    ASSERT(f%mode .eq. TDF_NUMERICAL)
-
-
-    ! WARNING: no check is done for the case cos(omega*t) = 0
-    do j = 1, f%niter + 1
-      t = f%init_time + (j-1)*f%dt
-      f%val(j) = f%val(j) / cos(omega*t)
-    end do
-
-  end subroutine tdf_cosine_divide
   !------------------------------------------------------------
 
 
@@ -1065,7 +1061,7 @@ module tdf_m
 
     case(TDF_SINE_SERIES)
       ! We assume that the frequencies grid is the same for both functions
-      do i = 1, f%nfreqs
+      do i = 1, f%sine_nfreqs
         fg = fg + f%coeffs(i) * g%coeffs(i)
       end do
     case(TDF_FOURIER_SERIES)
@@ -1084,5 +1080,48 @@ module tdf_m
   end function tdf_dot_product
   !------------------------------------------------------------
 
+
+  !------------------------------------------------------------
+  ! Returns the difference of f and g, defined as:
+  !    < f-g | f-g > = \int_0^T dt (f^*(t)-g^*(t))*(f(t)-g(t))
+  ! It assumes that both f and m are in the same mode, otherwise
+  ! it will fail and stop the code.
+  !------------------------------------------------------------
+  FLOAT function tdf_diff(f, g) result (fg)
+    type(tdf_t), intent(in) :: f, g
+    integer :: i
+    type(tdf_t) :: fminusg
+
+    call push_sub('tdfunction.tdf_diff')
+
+    ! For the moment, we will just assume that f and g are of the same type.
+    ASSERT(f%mode .eq. g%mode)
+
+    call tdf_copy(fminusg, f)
+
+    select case(f%mode)
+    case(TDF_NUMERICAL)
+      do i = 1, f%niter
+        fminusg%val(i) = fminusg%val(i) - g%val(i)
+      end do
+    case(TDF_SINE_SERIES)
+      ! We assume that the frequencies grid is the same for both functions
+      do i = 1, f%sine_nfreqs
+        fminusg%coeffs(i) = fminusg%coeffs(i) - g%coeffs(i)
+      end do
+    case(TDF_FOURIER_SERIES)
+      do i = 1, f%niter/2+1
+        fminusg%valw(i) = fminusg%valw(i) - g%valw(i)
+      end do
+    case default
+      stop 'Error'
+    end select
+
+    fg = tdf_dot_product(fminusg, fminusg)
+
+    call tdf_end(fminusg)
+    call pop_sub()
+  end function tdf_diff
+  !------------------------------------------------------------
 
 end module tdf_m
