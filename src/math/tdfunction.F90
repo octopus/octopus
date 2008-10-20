@@ -558,16 +558,16 @@ module tdf_m
   subroutine tdf_fft_forward(f)
     type(tdf_t), intent(inout) :: f
     integer :: steps
-
     call push_sub('tdfunction.tdf_fft_forward')
 
     steps = f%niter
     ALLOCATE(f%valw(steps/2+1), steps/2+1)
     call dfft_forward1(f%fft_handler, f%val(1:f%niter), f%valw)
-    deallocate(f%val); nullify(f%val)
 
+    f%valw = f%valw * f%dt * sqrt(M_ONE/(f%final_time-f%init_time))
     f%mode = TDF_FOURIER_SERIES
 
+    deallocate(f%val); nullify(f%val)
     call pop_sub()
   end subroutine tdf_fft_forward
   !------------------------------------------------------------
@@ -577,17 +577,17 @@ module tdf_m
   subroutine tdf_fft_backward(f)
     type(tdf_t), intent(inout) :: f
     integer :: steps
-
     call push_sub('tdfunction.tdf_fft_backward')
 
     steps = f%niter
     ALLOCATE(f%val(steps+1), steps+1)
     call dfft_backward1(f%fft_handler, f%valw, f%val(1:f%niter))
-    f%val(f%niter+1) = f%val(1)
-    deallocate(f%valw); nullify(f%valw)
 
+    f%val(f%niter+1) = f%val(1)
+    f%val = f%val * f%niter * sqrt(M_ONE/(f%final_time-f%init_time))
     f%mode = TDF_NUMERICAL
 
+    deallocate(f%valw); nullify(f%valw)
     call pop_sub()
   end subroutine tdf_fft_backward
   !------------------------------------------------------------
@@ -1056,15 +1056,22 @@ module tdf_m
     select case(f%mode)
     case(TDF_NUMERICAL)
       ! We assume that the grid is the same for both functions.
-      do i = 1, f%niter + 1
+      fg = M_HALF * f%val(1) * g%val(1)
+      do i = 2, f%niter
         fg = fg + f%val(i) * g%val(i)
       end do
+      fg = fg + M_HALF * f%val(f%niter+1) * g%val(f%niter+1)
       fg = fg * f%dt
 
     case(TDF_SINE_SERIES)
       ! We assume that the frequencies grid is the same for both functions
       do i = 1, f%nfreqs
         fg = fg + f%coeffs(i) * g%coeffs(i)
+      end do
+    case(TDF_FOURIER_SERIES)
+      fg = conjg(f%valw(1))*f%valw(1)
+      do i = 2, f%niter/2+1
+        fg = fg + M_TWO * conjg(f%valw(i)) * f%valw(i)
       end do
     case default
       do i = 1, f%niter + 1

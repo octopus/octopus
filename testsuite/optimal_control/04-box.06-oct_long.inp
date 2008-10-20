@@ -34,7 +34,7 @@ OCTTargetOperator = oct_tg_gstransformation
 %
 
 OCTScheme = oct_algorithm_direct
-OCTParameterRepresentation = control_parameters_fourier_space
+OCTParameterRepresentation = control_sine_fourier_series
 OCTParameterOmegaMax = 0.10
 OCTFixFluenceTo = -1
 

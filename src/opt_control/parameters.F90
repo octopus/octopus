@@ -75,8 +75,9 @@ module opt_control_parameters_m
 
 
   integer, parameter ::                 &
-    ctr_parameter_real_space       = 1, &
-    ctr_parameter_frequency_space  = 2
+    ctr_real_space           = 1, &
+    ctr_sine_fourier_series  = 2, &
+    ctr_fourier_series       = 3
 
 
   integer, parameter :: parameter_mode_none      = 0, &
@@ -153,23 +154,28 @@ contains
     !% The control functions can be represented in real space (default), or expanded
     !% in a finite basis set (now, the only basis set defined in the code for this is
     !% a sine Fourier series). 
-    !%Option control_parameters_real_space 1
+    !%Option control_real_space 1
     !%
-    !%Option control_parameters_fourier_space 2
+    !%Option control_sine_fourier_series 2
+    !%
+    !%Option control_fourier_series 3
     !%
     !%End
     call loct_parse_int(check_inp('OCTParameterRepresentation'), &
-      ctr_parameter_real_space, par_common%representation)
+      ctr_real_space, par_common%representation)
     if(.not.varinfo_valid_option('OCTParameterRepresentation', par_common%representation)) &
       call input_error('OCTParameterRepresentation')
     select case(par_common%representation)
-    case(ctr_parameter_real_space)
+    case(ctr_real_space)
       write(message(1), '(a)') 'Info: The OCT control functions will be represented in real time.'
       call write_info(1)
-    case(ctr_parameter_frequency_space)
+    case(ctr_sine_fourier_series)
       write(message(1), '(a)') 'Info: The OCT control functions will be represented as a sine '
       write(message(2), '(a)') '      Fourier series.'
       call write_info(2)
+    case(ctr_fourier_series)
+      write(message(1), '(a)') 'Info: The OCT control functions will be represented as a Fourier series.'
+      call write_info(1)
     end select
 
     !%Variable OCTParameterOmegaMax
@@ -180,8 +186,13 @@ contains
     !%
     !%End
     call loct_parse_float(check_inp('OCTParameterOmegaMax'), M_ONE / units_inp%energy%factor, par_common%omegamax)
-    if(par_common%representation .eq. ctr_parameter_frequency_space) then
+    if(par_common%representation .eq. ctr_sine_fourier_series) then
       write(message(1), '(a)')         'Info: The representation of the OCT control parameters as a sine'
+      write(message(2), '(a,f10.5,a)') '      Fourier series will be done with a cut-off of ', &
+        par_common%omegamax / units_out%energy%factor, ' ['//trim(units_out%energy%abbrev) // ']'
+      call write_info(2)
+    elseif(par_common%representation .eq. ctr_fourier_series) then
+      write(message(1), '(a)')         'Info: The representation of the OCT control parameters as a'
       write(message(2), '(a,f10.5,a)') '      Fourier series will be done with a cut-off of ', &
         par_common%omegamax / units_out%energy%factor, ' ['//trim(units_out%energy%abbrev) // ']'
       call write_info(2)
@@ -237,12 +248,13 @@ contains
     if(.not.varinfo_valid_option('OCTControlFunctionType', par_common%mode)) call input_error('OCTControlFunctionType')
      select case(par_common%mode)
     case(parameter_mode_f, parameter_mode_phi, parameter_mode_f_and_phi)
-      if(par_common%representation .ne. ctr_parameter_frequency_space) then
+      if(par_common%representation .eq. ctr_real_space) then
         write(message(1),'(a)') 'If "OCTControlFunctionType = parameter_mode_f", '
         write(message(2),'(a)') '   "OCTControlFunctionType = parameter_mode_phi", '
         write(message(3),'(a)') 'or "OCTControlFunctionType = parameter_mode_f_and_phi", then'
         write(message(4),'(a)') 'the control parameter representation cannot be real time, i.e. you must have'
-        write(message(5),'(a)') '"OCTParameterRepresentation = control_parameters_fourier_space".'
+        write(message(5),'(a)') '"OCTParameterRepresentation = control_sine_fourier_series". or'
+        write(message(6),'(a)') '"OCTParameterRepresentation = control_fourier_series".'
         call write_fatal(5)
       end if
      end select
@@ -297,7 +309,7 @@ contains
     if (par_common%targetfluence .ne. M_ZERO) mode_fixed_fluence = .true.
 
     mode_basis_set = .false.
-    if(par_common%representation .ne. ctr_parameter_real_space ) mode_basis_set = .true.
+    if(par_common%representation .ne. ctr_real_space ) mode_basis_set = .true.
 
 
     !%Variable OCTPenalty
@@ -422,7 +434,8 @@ contains
 
     ! Move to the sine-Fourier space if required.
     call parameters_set_rep(par)
-    if(par%representation .eq. ctr_parameter_frequency_space) then
+    if( (par%representation .eq. ctr_sine_fourier_series) .or. &
+        (par%representation .eq. ctr_fourier_series) ) then
       if(par%nfreqs <= 1) then
         write(message(1), '(a)')    'Error: The dimension of the basis set used to represent the control'
         write(message(2), '(a)')    '       functions must be larger than one. The input options that you'
@@ -558,11 +571,15 @@ contains
     end if
 
     select case(par%current_representation)
-    case(ctr_parameter_frequency_space)
+    case(ctr_sine_fourier_series)
       do j = 1, par%no_parameters
         call tdf_sineseries_to_numerical(par%f(j))
       end do
-    case(ctr_parameter_real_space)
+    case(ctr_fourier_series)
+      do j = 1, par%no_parameters
+        call tdf_fft_forward(par%f(j))
+      end do
+    case(ctr_real_space)
       do j = 1, par%no_parameters
         call tdf_numerical_to_sineseries(par%f(j), par%omegamax)
       end do
@@ -580,14 +597,20 @@ contains
     integer :: j
     call push_sub('parameters.parameters_to_realtime')
 
-    if(par%current_representation .eq. ctr_parameter_real_space) then
+    select case(par%current_representation)
+    case(ctr_real_space)
       call pop_sub(); return
-    end if
-
-    do j = 1, par%no_parameters
-      call tdf_sineseries_to_numerical(par%f(j))
-    end do
-    par%current_representation = ctr_parameter_real_space
+    case(ctr_sine_fourier_series)
+      do j = 1, par%no_parameters
+        call tdf_sineseries_to_numerical(par%f(j))
+      end do
+      par%current_representation = ctr_real_space
+    case(ctr_fourier_series)
+      do j = 1, par%no_parameters
+        call tdf_fft_backward(par%f(j))
+      end do
+      par%current_representation = ctr_real_space
+    end select
 
     call pop_sub()
   end subroutine parameters_to_realtime
@@ -606,7 +629,7 @@ contains
     ASSERT(p%current_representation .eq. q%current_representation)
 
     select case(p%current_representation)
-    case(ctr_parameter_real_space)
+    case(ctr_real_space)
       res = M_ZERO
       ALLOCATE(delta(p%ntiter + 1), p%ntiter +1)
       do i = 1, p%no_parameters
@@ -616,7 +639,7 @@ contains
         res = res + sum(delta)*p%dt
       end do
 
-    case(ctr_parameter_frequency_space)
+    case(ctr_sine_fourier_series)
       nfreqs = tdf_nfreqs(p%f(1))
       res = M_ZERO
       ALLOCATE(delta(nfreqs), nfreqs +1)
@@ -654,9 +677,9 @@ contains
     call push_sub('parameters.parameters_mixing_init')
 
     select case(par%representation)
-    case(ctr_parameter_real_space)
+    case(ctr_real_space)
       call mix_init(parameters_mix, par%ntiter + 1, par%no_parameters, 1)
-    case(ctr_parameter_frequency_space)
+    case(ctr_sine_fourier_series)
       nfreqs = tdf_nfreqs(par%f(1))
       call mix_init(parameters_mix, nfreqs, par%no_parameters, 1)
     end select
@@ -692,7 +715,7 @@ contains
 
 
     select case(par_in%representation)
-    case(ctr_parameter_real_space)
+    case(ctr_real_space)
 
       ALLOCATE(e_in (par_in%ntiter+1, par_in%no_parameters, 1), (par_in%ntiter+1)*par_in%no_parameters)
       ALLOCATE(e_out(par_in%ntiter+1, par_in%no_parameters, 1), (par_in%ntiter+1)*par_in%no_parameters)
@@ -709,7 +732,7 @@ contains
         call tdf_set_numerical(par_new%f(i), e_new(:, i, 1))
       end do
 
-    case(ctr_parameter_frequency_space)
+    case(ctr_sine_fourier_series)
 
       nfreqs = tdf_nfreqs(par_in%f(1))
       ALLOCATE(e_in (nfreqs, par_in%no_parameters, 1), nfreqs*par_in%no_parameters)
@@ -753,7 +776,7 @@ contains
     cp%dt              = dt
     cp%ntiter          = ntiter
 
-    cp%current_representation = ctr_parameter_real_space
+    cp%current_representation = ctr_real_space
 
     cp%targetfluence = par_common%targetfluence
     ALLOCATE(cp%f(cp%no_parameters), cp%no_parameters)
@@ -764,12 +787,8 @@ contains
     end do
 
     cp%alpha = par_common%alpha
-
-    cp%nfreqs = 0
-    if(cp%representation .eq. ctr_parameter_frequency_space) then
-      cp%nfreqs = tdf_nfreqs(cp%f(1))
-    end if
-
+    cp%nfreqs = tdf_nfreqs(cp%f(1))
+      
     call pop_sub()
   end subroutine parameters_init
   ! ---------------------------------------------------------
@@ -812,7 +831,7 @@ contains
     call push_sub('parameters.parameters_apply_envelope')
 
     ! Do not apply the envelope if the parameters are represented as a sine Fourier series.
-    if(cp%representation .eq. ctr_parameter_real_space) then
+    if(cp%representation .eq. ctr_real_space) then
       do j = 1, cp%no_parameters
         do i = 1, cp%ntiter + 1
           call tdf_set_numerical(cp%f(j), i, tdf(cp%f(j), i) / tdf(par_common%td_penalty(j), i) )
@@ -836,7 +855,7 @@ contains
     call push_sub('parameters.parameters_to_h')
 
     ! First, check that we are in the real space representation.
-    if(cp%current_representation .eq. ctr_parameter_frequency_space) then
+    if(cp%current_representation .eq. ctr_sine_fourier_series) then
       ALLOCATE(par, 1)
       call parameters_copy(par, cp)
       call parameters_to_realtime(par)
@@ -931,7 +950,7 @@ contains
     call io_mkdir(trim(filename))
 
     ! First, check that we are in the real space representation.
-    if(cp%current_representation .eq. ctr_parameter_frequency_space) then
+    if(cp%current_representation .eq. ctr_sine_fourier_series) then
       ALLOCATE(par, 1)
       call parameters_copy(par, cp)
       call parameters_to_realtime(par)
@@ -1059,7 +1078,7 @@ contains
     logical :: change_rep
     call push_sub('parameters.parameters_fluence')
 
-    if(par%current_representation .eq. ctr_parameter_frequency_space) then
+    if(par%current_representation .eq. ctr_sine_fourier_series) then
       ALLOCATE(par_, 1)
       call parameters_copy(par_, par)
       call parameters_to_realtime(par_)
@@ -1080,7 +1099,7 @@ contains
       do j = 1, par%no_parameters
         call tdf_init(f)
         call tdf_copy(f, par%f(j))
-        if(par%current_representation .eq. ctr_parameter_frequency_space) then
+        if(par%current_representation .eq. ctr_sine_fourier_series) then
           call tdf_sineseries_to_numerical(f)
         end if
         call tdf_cosine_multiply(par%w0, f)
@@ -1090,7 +1109,7 @@ contains
     case(parameter_mode_phi)
       call tdf_init(f)
       call tdf_copy(f, par%f(1))
-      if(par%current_representation .eq. ctr_parameter_frequency_space) then
+      if(par%current_representation .eq. ctr_sine_fourier_series) then
         call tdf_sineseries_to_numerical(f)
       end if
       do i = 1, par%ntiter + 1
@@ -1141,7 +1160,7 @@ contains
 
     ASSERT(par%current_representation .eq. par%representation)
 
-    if(par%current_representation .eq. ctr_parameter_frequency_space) then
+    if(par%current_representation .eq. ctr_sine_fourier_series) then
       ALLOCATE(par_, 1)
       call parameters_copy(par_, par)
       call parameters_to_realtime(par_)
@@ -1170,7 +1189,7 @@ contains
       do j = 1, par%no_parameters
         call tdf_init(f)
         call tdf_copy(f, par_%f(j))
-        if(par_%current_representation .eq. ctr_parameter_frequency_space) then
+        if(par_%current_representation .eq. ctr_sine_fourier_series) then
           call tdf_sineseries_to_numerical(f)
         end if
         do i = 1, par_%ntiter + 1
@@ -1296,7 +1315,7 @@ contains
     FLOAT :: sumx2
     FLOAT, allocatable :: ep(:), e(:)
 
-    ASSERT(par%current_representation .eq. ctr_parameter_frequency_space)
+    ASSERT(par%current_representation .eq. ctr_sine_fourier_series)
 
     select case(par_common%mode)
     case(parameter_mode_epsilon)
@@ -1398,7 +1417,7 @@ contains
     FLOAT, allocatable :: e(:), ep(:)
     call push_sub('parameters.parameters_x_to_par')
 
-    ASSERT(par%current_representation .eq. ctr_parameter_frequency_space)
+    ASSERT(par%current_representation .eq. ctr_sine_fourier_series)
 
     select case(par_common%mode)
 
