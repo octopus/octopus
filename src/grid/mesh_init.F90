@@ -530,7 +530,8 @@ contains
         jj(1:sb%dim) = mesh%Lxyz(i, 1:sb%dim)
         jj(sb%dim + 1:MAX_DIM) = 0
         chi(1:sb%dim) = jj(1:sb%dim)*mesh%h(1:sb%dim)
-        mesh%vol_pp(i) = mesh%resolution(jj(1), jj(2), jj(3))**sb%dim*mesh%vol_pp(i)*curvlinear_det_Jac(sb, geo, cv, mesh%x(i, 1:sb%dim), chi(1:sb%dim))
+        mesh%vol_pp(i) = mesh%resolution(jj(1), jj(2), jj(3))**sb%dim*&
+             mesh%vol_pp(i)*curvlinear_det_Jac(sb, geo, cv, mesh%x(i, 1:sb%dim), chi(1:sb%dim))
       end do
     end if
 
