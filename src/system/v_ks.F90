@@ -143,7 +143,7 @@ contains
         !%Section Hamiltonian::XC
         !%Description
         !% This variable controls which Self Interaction Correction to use. Note that
-        !% this correction will be applyed to the functional chosen by 'XFunctional' and
+        !% this correction will be applied to the functional chosen by 'XFunctional' and
         !% 'CFunctional'
         !%Option sic_none 1
         !% No Self Interaction Correction
@@ -280,6 +280,7 @@ contains
         !$omp parallel workshare
         h%vxc      = M_ZERO
         !$omp end parallel workshare
+        if(iand(h%xc_family, XC_FAMILY_MGGA).ne.0) h%vtau = M_ZERO
         if(h%d%cdft) h%axc = M_ZERO
         if(ks%theory_level.ne.HARTREE) call v_a_xc()
       !end if
@@ -371,7 +372,7 @@ contains
              h%ex, h%ec, h%exc_j, -minval(st%eigenval(st%nst, :)), st%qtot)
       else
         call xc_get_vxc(gr, ks%xc, st, rho, st%d%ispin, h%ex, h%ec, &
-             -minval(st%eigenval(st%nst, :)), st%qtot, vxc=h%vxc)
+             -minval(st%eigenval(st%nst, :)), st%qtot, vxc=h%vxc, vtau=h%vtau)
       end if
       deallocate(rho)
 

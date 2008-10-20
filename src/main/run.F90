@@ -178,7 +178,7 @@ contains
     if(.not. calc_mode_is(CM_PULPO_A_FEIRA)) then
       call units_init()
       call system_init(sys)
-      call hamiltonian_init(h, sys%gr, sys%geo, sys%st, sys%ks%theory_level)
+      call hamiltonian_init(h, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family)
       call epot_generate(h%ep, sys%gr, sys%geo, sys%st)
       call restart_init()
     end if

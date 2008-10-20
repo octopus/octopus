@@ -33,6 +33,7 @@ module hamiltonian_m
   use hardware_m
   use lalg_basic_m
   use loct_parser_m
+  use XC_F90(lib_m)
   use io_m
   use io_function_m
   use mesh_m
@@ -99,6 +100,7 @@ module hamiltonian_m
     FLOAT, pointer :: vxc(:,:)    ! xc potential
     FLOAT, pointer :: vhxc(:,:)   ! xc potential + hartree potential
     FLOAT, pointer :: axc(:,:,:)  ! xc vector-potential divided by c
+    FLOAT, pointer :: vtau(:,:)   ! Derivative of e_xc w.r.t. tau
 
     FLOAT :: exx_coef ! how much of exx to mix
 
@@ -120,6 +122,7 @@ module hamiltonian_m
              entropy     ! Entropy (-TS)
 
     integer :: theory_level    ! copied from sys%ks
+    integer :: xc_family       ! copied from sys%ks
 
     type(epot_t) :: ep         ! handles the external potential
 
@@ -187,12 +190,13 @@ module hamiltonian_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_init(h, gr, geo, st, theory_level)
+  subroutine hamiltonian_init(h, gr, geo, st, theory_level, xc_family)
     type(hamiltonian_t),    intent(out)   :: h
     type(grid_t),           intent(inout) :: gr
     type(geometry_t),       intent(inout) :: geo
     type(states_t), target, intent(inout) :: st
     integer,                intent(in)    :: theory_level
+    integer,                intent(in)    :: xc_family
 
     integer                     :: i, j, n, ispin
     integer, pointer            :: wfs_type
@@ -206,6 +210,7 @@ contains
 
     ! make a couple of local copies
     h%theory_level = theory_level
+    h%xc_family    = xc_family
     call states_dim_copy(h%d, states_dim)
 
     ! initialize variables
@@ -219,6 +224,11 @@ contains
     ALLOCATE(h%vhartree(NP),        NP)
     ALLOCATE(h%vxc(NP, h%d%nspin), NP*h%d%nspin)
     ALLOCATE(h%vhxc(NP, h%d%nspin), NP*h%d%nspin)
+    if(iand(h%xc_family, XC_FAMILY_MGGA).ne.0) then
+      ALLOCATE(h%vtau(NP, h%d%nspin), NP*h%d%nspin)
+    else
+      nullify(h%vtau)
+    end if
 
     !$omp parallel workshare
     h%vhartree(1:NP) = M_ZERO
@@ -228,6 +238,8 @@ contains
       !$omp parallel workshare
       h%vhxc(1:NP, ispin) = M_ZERO
       h%vxc(1:NP, ispin) = M_ZERO
+      if(iand(h%xc_family, XC_FAMILY_MGGA).ne.0) &
+        h%vtau(1:NP, ispin) = M_ZERO
       !$omp end parallel workshare
     end do
 
@@ -241,7 +253,6 @@ contains
 
     !Initialize external potential
     call epot_init(h%ep, gr, geo, h%d%ispin)
-
 
     !Static magnetic field requires complex wave-functions
     if (associated(h%ep%B_field) .or. gauge_field_is_applied(h%ep%gfield)) wfs_type = M_CMPLX
@@ -708,6 +719,10 @@ contains
     if(associated(h%b_ind)) then
       deallocate(h%b_ind)
       nullify(h%b_ind)
+    end if
+
+    if(iand(h%xc_family, XC_FAMILY_MGGA).ne.0) then
+      deallocate(h%vtau); nullify(h%vtau)
     end if
 
     call epot_end(h%ep, gr, geo)

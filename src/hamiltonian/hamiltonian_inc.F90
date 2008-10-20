@@ -28,10 +28,11 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
   logical, optional,   intent(in)    :: kinetic_only
   
   integer :: nst
-  R_TYPE, pointer :: epsi(:,:)
+  R_TYPE, pointer     :: epsi(:,:)
   R_TYPE, allocatable :: lapl(:, :, :)
-  R_TYPE, pointer :: grad(:, :, :)
+  R_TYPE, pointer     :: grad(:, :, :)
   R_TYPE, allocatable :: psi_copy(:, :, :)
+
   type(profile_t), save :: phase_prof
   logical :: kinetic_only_, apply_kpoint
   integer :: ii, ist, idim, ip
@@ -128,7 +129,6 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
       nullify(grad)
       
       if (present(t)) then
-
         ! lasers
         if(h%ep%no_lasers > 0) then
           if(any(laser_requires_gradient(h%ep%lasers(1:h%ep%no_lasers)))) call X(get_grad)(h, gr, epsi, grad)
@@ -139,8 +139,11 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
       end if
       
       if(h%theory_level == HARTREE .or. h%theory_level == HARTREE_FOCK) &
-           call X(exchange_operator)(h, gr, epsi, hpsi, ist, ik)
+        call X(exchange_operator)(h, gr, epsi, hpsi, ist, ik)
       
+      if(iand(h%xc_family, XC_FAMILY_MGGA).ne.0) &
+        call X(h_mgga_terms) (h, gr, epsi, hpsi, ik, grad)
+
       if(hamiltonian_oct_exchange(h)) call X(oct_exchange_operator)(h, gr, epsi, hpsi, ik)
       
       call X(magnetic_terms) (gr, h, epsi, hpsi, grad, ik)
@@ -691,6 +694,43 @@ end subroutine X(vborders)
 
 
 ! ---------------------------------------------------------
+subroutine X(h_mgga_terms) (h, gr, psi, hpsi, ik, grad)
+  type(hamiltonian_t), intent(in)    :: h
+  type(grid_t),        intent(inout) :: gr
+  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
+  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, h%d%dim)
+  integer,             intent(in)    :: ik
+  R_TYPE,              pointer       :: grad(:, :, :)
+
+  integer :: ispace, idim, ispin
+  R_TYPE, allocatable :: cgrad(:,:), diverg(:)
+
+  call push_sub('hamiltonian_inc.Xh_mgga_terms')
+
+  call X(get_grad)(h, gr, psi, grad)
+  ispin = states_dim_get_spin_index(h%d, ik)
+
+  ALLOCATE(cgrad(1:NP_PART, 1:MAX_DIM), NP_PART*MAX_DIM)
+  ALLOCATE(diverg(1:NP), NP)
+
+  do idim = 1, h%d%dim
+    do ispace = 1, gr%sb%dim
+      cgrad(1:NP, ispace) = grad(1:NP, ispace, idim)*h%vtau(1:NP, ispin)
+      call X(set_bc)(gr%der, cgrad(:, ispace))
+    end do
+
+    call X(derivatives_div)(gr%der, cgrad, diverg)
+
+    !hpsi(1:NP, idim) = hpsi(1:NP, idim) -  diverg(1:NP)
+  end do
+
+  deallocate(cgrad, diverg)
+
+  call pop_sub()
+end subroutine X(h_mgga_terms)
+
+
+! ---------------------------------------------------------
 subroutine X(vmask) (gr, h, st)
   type(grid_t),        intent(in)    :: gr
   type(hamiltonian_t), intent(in)    :: h
@@ -753,6 +793,7 @@ subroutine X(hpsi_diag) (h, gr, diag, ik, t)
     
   call pop_sub()
 end subroutine X(hpsi_diag)
+
 
 !! Local Variables:
 !! mode: f90

@@ -18,7 +18,7 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc)
+subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc, vtau)
   type(grid_t),       intent(inout) :: gr
   type(xc_t), target, intent(in)    :: xcs
   type(states_t),     intent(inout) :: st
@@ -27,11 +27,12 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc)
   FLOAT,              intent(inout) :: ex, ec
   FLOAT,              intent(in)    :: ip, qtot
   FLOAT, optional,    intent(inout) :: vxc(:,:)
+  FLOAT, optional,    intent(inout) :: vtau(:,:)
 
-  FLOAT :: l_dens(MAX_SPIN), l_dedd(MAX_SPIN), l_sigma(3), l_vsigma(3), l_tau(MAX_SPIN) !, l_dedtau(MAX_SPIN)
+  FLOAT :: l_dens(MAX_SPIN), l_dedd(MAX_SPIN), l_sigma(3), l_vsigma(3), l_tau(MAX_SPIN) , l_dedtau(MAX_SPIN)
   FLOAT, allocatable :: dens(:,:), dedd(:,:), ex_per_vol(:), ec_per_vol(:)
   FLOAT, allocatable :: gdens(:,:,:), dedgd(:,:,:)
-  FLOAT, allocatable :: tau(:,:), dedtau(:,:)
+  FLOAT, allocatable :: tau(:,:)
 
   integer :: jj, ixc, spin_channels
   FLOAT   :: e, r
@@ -122,10 +123,8 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc)
             e, l_dedd(1), l_vsigma(1))
 
         case(XC_FAMILY_MGGA)
-          message(1) = 'Meta-GGAs are currently disabled.'
-          call write_fatal(1)
-          ! call XC_F90(mgga)(functl(ixc)%conf, l_dens(1), l_gdens(1,1), l_tau(1), &
-          !   e, l_dedd(1), l_dedgd(1,1), l_dedtau(1))
+          call XC_F90(mgga_vxc)(functl(ixc)%conf, l_dens(1), l_sigma(1), l_tau(1), &
+            e, l_dedd(1), l_vsigma(1), l_dedtau(1))
 
         case default
           cycle
@@ -143,7 +142,7 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc)
       if(present(vxc)) then
         dedd(jj,1:spin_channels) = dedd(jj,1:spin_channels) + l_dedd(1:spin_channels)
 
-        if(gga.or.mgga) then
+        if((functl(ixc)%family == XC_FAMILY_GGA).or.(functl(ixc)%family == XC_FAMILY_MGGA)) then
           dedgd(jj,:,1) = dedgd(jj,:,1) + M_TWO*l_vsigma(1)*gdens(jj,:,1)
           if(ispin /= UNPOLARIZED) then
             dedgd(jj,:,1) = dedgd(jj,:,1) + l_vsigma(2)*gdens(jj,:,2)
@@ -152,7 +151,7 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc)
         end if
 
         if(functl(ixc)%family == XC_FAMILY_MGGA) then
-          ! dedtau(jj,:)   = dedtau(jj,:)   + l_dedtau(:)
+          vtau(jj, 1:spin_channels) = vtau(jj, 1:spin_channels) + l_dedtau(1:spin_channels)
         end if
       end if
 
@@ -349,12 +348,10 @@ contains
   !   *) calculates tau either from a GEA or from the orbitals
   subroutine mgga_init()
     ALLOCATE(tau   (NP,      spin_channels), NP     *spin_channels)
-    ALLOCATE(dedtau(NP_PART, spin_channels), NP_PART*spin_channels)
-    tau    = M_ZERO
-    dedtau = M_ZERO
 
     ! calculate tau
     call states_calc_tau_jp_gn(gr, st, tau=tau)
+    tau(:,:) = tau(:,:) / M_TWO
 
   end subroutine mgga_init
 
@@ -362,48 +359,13 @@ contains
   ! ---------------------------------------------------------
   ! clean up memory allocates in mgga_init
   subroutine mgga_end()
-    deallocate(tau, dedtau)
+    deallocate(tau)
   end subroutine mgga_end
 
 
   ! ---------------------------------------------------------
   ! calculate the mgga contribution to vxc
   subroutine mgga_process()
-    integer :: i, is
-    FLOAT   :: d, f
-    FLOAT, allocatable :: gf(:)
-
-    ASSERT(xcs%mGGA_implementation==1.or.xcs%mGGA_implementation==2)
-
-    ! calculate tau
-    select case(xcs%mGGA_implementation)
-    case (1) ! GEA implementation
-      f = CNST(3.0)/CNST(10.0) * (M_SIX*M_PI*M_PI)**M_TWOTHIRD
-      ALLOCATE(gf(NP), NP)
-
-      do is = 1, spin_channels
-        call dderivatives_lapl(gr%der, dedtau(:,is), gf(:))
-
-        do i = 1, NP
-          d = max(dens(i, is), CNST(1e-14))
-          dedd(i, is) = dedd(i, is) + dedtau(i, is) * &
-            (f*d**M_TWOTHIRD - sum(gdens(i, :, is)**2)/(CNST(72.0)*d*d))
-
-          ! add the laplacian of the functional derivative of Exc with respect to tau
-          dedd(i, is) = dedd(i, is) + dedtau(i, is) * &
-            gf(i)/M_SIX
-
-          dedgd(i, :, is) = dedgd(i, :, is) + dedtau(i, is) * &
-            M_TWO*gdens(i, :, is)/(CNST(72.0)*d)
-        end do
-      end do
-
-      deallocate(gf)
-
-    case (2) ! OEP implementation
-      message(1) = 'Error: mgga_process: not yet implemented'
-      call write_fatal(1)
-    end select
   end subroutine mgga_process
 
 end subroutine xc_get_vxc
