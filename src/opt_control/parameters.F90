@@ -43,6 +43,7 @@ module opt_control_parameters_m
   private
   public :: oct_control_parameters_t,     &
             parameters_read,              &
+            parameters_close,             &
             parameters_init,              &
             parameters_set,               &
             parameters_end,               &
