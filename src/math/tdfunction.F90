@@ -499,12 +499,12 @@ module tdf_m
 
 
   !------------------------------------------------------------
-  subroutine tdf_init_numerical(f, niter, dt, initval, omegamax)
+  subroutine tdf_init_numerical(f, niter, dt, omegamax, initval)
     type(tdf_t), intent(inout) :: f
     integer, intent(in) :: niter
     FLOAT, intent(in)   :: dt
+    FLOAT, intent(in)   :: omegamax
     FLOAT, intent(in), optional :: initval
-    FLOAT, intent(in), optional :: omegamax
 
     integer :: n(3)
     FLOAT :: bigt
@@ -524,20 +524,18 @@ module tdf_m
     f%init_time = M_ZERO
     f%final_time = f%dt * f%niter
 
-    f%sine_nfreqs = f%niter
-    if(present(omegamax)) then
-      if(omegamax > M_ZERO) then
-        bigt = f%final_time - f%init_time
-        f%sine_nfreqs = int(bigt * omegamax / M_PI) + 1
-      end if
+    if(omegamax > M_ZERO) then
+      bigt = f%final_time - f%init_time
+      f%sine_nfreqs = int(bigt * omegamax / M_PI) + 1
+    else
+      f%sine_nfreqs = f%niter
     end if
 
-    f%sine_nfreqs = f%niter/2+1
-    if(present(omegamax)) then
-      if(omegamax > M_ZERO) then
-        bigt = f%final_time - f%init_time
-        f%sine_nfreqs = int(bigt * omegamax / (M_TWO * M_PI) ) + 1
-      end if
+    if(omegamax > M_ZERO) then
+      bigt = f%final_time - f%init_time
+      f%nfreqs = int(bigt * omegamax / (M_TWO * M_PI) ) + 1
+    else
+      f%nfreqs = f%niter/2+1
     end if
 
     n(1:3) = (/ f%niter, 1, 1 /)
@@ -668,60 +666,48 @@ module tdf_m
 
 
   !------------------------------------------------------------
-  subroutine tdf_to_numerical(f, t0, niter, dt)
+  subroutine tdf_to_numerical(f, niter, dt, omegamax)
     type(tdf_t), intent(inout) :: f
-    FLOAT,       intent(in)    :: t0
     integer,     intent(in)    :: niter
     FLOAT,       intent(in)    :: dt
+    FLOAT,       intent(in)    :: omegamax
 
     FLOAT :: t
-    integer :: j, n(3)
+    integer :: j!, n(3)
+    FLOAT, allocatable :: val(:)
 
     if(f%mode .eq. TDF_NUMERICAL) return
+    call push_sub('tdfunction.tdf_to_numerical')
 
-    ALLOCATE(f%val(niter+1), niter+1)
+    ALLOCATE(val(niter+1), niter+1)
 
-    f%init_time = t0
     do j = 1, niter + 1
-      t = t0 + (j-1)*dt
-      f%val(j) = tdf(f, t)
+      t = (j-1)*dt
+      val(j) = tdf(f, t)
     end do
-    f%final_time = t
 
-    f%dt = dt
-    f%niter = niter
-    f%mode = TDF_NUMERICAL
-    if (f%mode .eq. TDF_FROM_FILE) call spline_end(f%amplitude)
+    call tdf_end(f)
+    call tdf_init_numerical(f, niter, dt, omegamax)
+    call tdf_set_numerical(f, val)
 
-    n(1:3) = (/ f%niter, 1, 1 /)
-    call fft_init(n, fft_real, f%fft_handler, optimize = .false.)
-
+    deallocate(val)
+    call pop_sub()
   end subroutine tdf_to_numerical
   !------------------------------------------------------------
 
 
   !------------------------------------------------------------
-  subroutine tdf_numerical_to_sineseries(f, omegamax)
+  subroutine tdf_numerical_to_sineseries(f)
     type(tdf_t), intent(inout) :: f
-    FLOAT, intent(in) :: omegamax
 
-    integer :: j, k, sine_nfreqs
+    integer :: j, k
     FLOAT :: bigt, t, omega
 
     ASSERT(f%mode .eq. TDF_NUMERICAL)
 
     bigt = f%final_time - f%init_time
-
-    if(omegamax > M_ZERO) then
-      sine_nfreqs = int(bigt * omegamax / M_PI) + 1
-    else
-      sine_nfreqs = f%niter
-    end if
-
-    f%sine_nfreqs = sine_nfreqs
-    ALLOCATE(f%coeffs(sine_nfreqs), sine_nfreqs)
-
-    do j = 1, sine_nfreqs
+    ALLOCATE(f%coeffs(f%sine_nfreqs), f%sine_nfreqs)
+    do j = 1, f%sine_nfreqs
       omega = (M_PI/bigt) * j
       f%coeffs(j) = M_ZERO
       do k = 2, f%niter

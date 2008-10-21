@@ -157,17 +157,18 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine laser_to_numerical_all(l, dt, max_iter)
+  subroutine laser_to_numerical_all(l, dt, max_iter, omegamax)
     type(laser_t), intent(inout)  :: l
     FLOAT,         intent(in)     :: dt
     integer,       intent(in)     :: max_iter
+    FLOAT,         intent(in)     :: omegamax
 
     integer :: j
     FLOAT   :: t, fj, phi
 
     call push_sub('lasers.lasers_to_numerical')
 
-    call tdf_to_numerical(l%f, M_ZERO, max_iter, dt)
+    call tdf_to_numerical(l%f, max_iter, dt, omegamax)
     do j = 1, max_iter + 1
       t = (j-1)*dt
       fj = tdf(l%f, j)
@@ -184,15 +185,16 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine laser_to_numerical(l, dt, max_iter)
+  subroutine laser_to_numerical(l, dt, max_iter, omegamax)
     type(laser_t), intent(inout)  :: l
     FLOAT,         intent(in)     :: dt
     integer,       intent(in)     :: max_iter
+    FLOAT,         intent(in)     :: omegamax
 
     call push_sub('lasers.lasers_to_numerical')
 
-    call tdf_to_numerical(l%f, M_ZERO, max_iter, dt)
-    call tdf_to_numerical(l%phi, M_ZERO, max_iter, dt)
+    call tdf_to_numerical(l%f, max_iter, dt, omegamax)
+    call tdf_to_numerical(l%phi, max_iter, dt, omegamax)
 
     call pop_sub()
   end subroutine laser_to_numerical

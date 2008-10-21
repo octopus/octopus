@@ -273,9 +273,9 @@ contains
     do i = 1, ep%no_lasers
       select case(par_common%mode)
       case(parameter_mode_epsilon)
-        call laser_to_numerical_all(ep%lasers(i), dt, max_iter)
+        call laser_to_numerical_all(ep%lasers(i), dt, max_iter, par_common%omegamax)
       case default
-        call laser_to_numerical(ep%lasers(i), dt, max_iter)
+        call laser_to_numerical(ep%lasers(i), dt, max_iter, par_common%omegamax)
       end select
     end do
 
@@ -372,7 +372,7 @@ contains
     steps = max_iter
     ALLOCATE(par_common%td_penalty(par_common%no_parameters), par_common%no_parameters)
     do i = 1, par_common%no_parameters
-      call tdf_init_numerical(par_common%td_penalty(i), steps, dt, initval = M_ONE)
+      call tdf_init_numerical(par_common%td_penalty(i), steps, dt, -M_ONE, initval = M_ONE)
     end do
 
     if (loct_parse_block(check_inp('OCTLaserEnvelope'), blk)==0) then
@@ -501,10 +501,10 @@ contains
 
       do mm = 1, par%dim
         do nn = mm, par%dim
-          call tdf_init_numerical(fn, par%ntiter, par%dt, initval = M_ZERO, omegamax = par%omegamax)
-          call tdf_init_numerical(fm, par%ntiter, par%dt, initval = M_ZERO, omegamax = par%omegamax)
-          call tdf_numerical_to_sineseries(fn, par%omegamax)
-          call tdf_numerical_to_sineseries(fm, par%omegamax)
+          call tdf_init_numerical(fn, par%ntiter, par%dt, par%omegamax, initval = M_ZERO)
+          call tdf_init_numerical(fm, par%ntiter, par%dt, par%omegamax, initval = M_ZERO)
+          call tdf_numerical_to_sineseries(fn)
+          call tdf_numerical_to_sineseries(fm)
           call tdf_set_numerical(fm, mm, M_ONE)
           call tdf_set_numerical(fn, nn, M_ONE)
 
@@ -517,8 +517,8 @@ contains
             call tdf_set_numerical(fn, i, tdf(fn, i)*cos(par%w0*t))
           end do
           par%utransf(mm, nn) = tdf_dot_product(fm, fn)
-          call tdf_numerical_to_sineseries(fn, par%omegamax)
-          call tdf_numerical_to_sineseries(fm, par%omegamax)
+          call tdf_numerical_to_sineseries(fn)
+          call tdf_numerical_to_sineseries(fm)
 
           call tdf_end(fm)
           call tdf_end(fn)
@@ -577,7 +577,7 @@ contains
       end do
     case(ctr_real_space)
       do j = 1, par%no_parameters
-        call tdf_numerical_to_sineseries(par%f(j), par%omegamax)
+        call tdf_numerical_to_sineseries(par%f(j))!
       end do
     end select
     par%current_representation = par%representation
@@ -757,7 +757,7 @@ contains
     ALLOCATE(cp%alpha(cp%no_parameters), cp%no_parameters)
     cp%alpha = M_ZERO
     do j = 1, cp%no_parameters
-      call tdf_init_numerical(cp%f(j), cp%ntiter, cp%dt, omegamax = par_common%omegamax)
+      call tdf_init_numerical(cp%f(j), cp%ntiter, cp%dt, par_common%omegamax)
     end do
 
     cp%alpha = par_common%alpha
