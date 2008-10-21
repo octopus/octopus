@@ -103,6 +103,7 @@ module tdf_m
     character(len=200)     :: expression
     FLOAT, pointer :: val(:)    => NULL()
     CMPLX, pointer :: valw(:)   => NULL()
+    FLOAT, pointer :: valww(:)  => NULL()
     FLOAT, pointer :: coeffs(:) => NULL()
     type(fft_t) :: fft_handler
   end type tdf_t
@@ -331,6 +332,7 @@ module tdf_m
     f%dt = M_ZERO
     nullify(f%val)
     nullify(f%valw)
+    nullify(f%valww)
     nullify(f%coeffs)
   end subroutine tdf_init
   !------------------------------------------------------------
@@ -356,6 +358,7 @@ module tdf_m
     f%omega0 = omega0
     nullify(f%val)
     nullify(f%valw)
+    nullify(f%valww)
     nullify(f%coeffs)
 
     call pop_sub()
@@ -377,6 +380,7 @@ module tdf_m
     f%tau0 = tau0
     nullify(f%val)
     nullify(f%valw)
+    nullify(f%valww)
     nullify(f%coeffs)
 
     call pop_sub()
@@ -398,6 +402,7 @@ module tdf_m
     f%tau0 = tau0
     nullify(f%val)
     nullify(f%valw)
+    nullify(f%valww)
     nullify(f%coeffs)
 
     call pop_sub()
@@ -420,6 +425,7 @@ module tdf_m
     f%tau1 = tau1
     nullify(f%val)
     nullify(f%valw)
+    nullify(f%valww)
     nullify(f%coeffs)
 
     call pop_sub()
@@ -438,6 +444,7 @@ module tdf_m
     f%expression = trim(expression)
     nullify(f%val)
     nullify(f%valw)
+    nullify(f%valww)
     nullify(f%coeffs)
     
     call pop_sub()
@@ -491,6 +498,7 @@ module tdf_m
 
     nullify(f%val)
     nullify(f%valw)
+    nullify(f%valww)
     nullify(f%coeffs)
     deallocate(t, am)
     call pop_sub()
@@ -572,7 +580,7 @@ module tdf_m
   !------------------------------------------------------------
   subroutine tdf_fft_forward(f)
     type(tdf_t), intent(inout) :: f
-    integer :: steps
+    integer :: steps, j
     call push_sub('tdfunction.tdf_fft_forward')
 
     steps = f%niter
@@ -581,6 +589,15 @@ module tdf_m
 
     f%valw = f%valw * f%dt * sqrt(M_ONE/(f%final_time-f%init_time))
     f%mode = TDF_FOURIER_SERIES
+
+    ALLOCATE(f%valww(2*f%nfreqs+1), 2*f%nfreqs+1)
+    f%valww(1) = f%valw(1)
+    do j = 2, f%nfreqs+1
+      f%valww(j) = (sqrt(M_TWO)) * real(f%valw(j))
+    end do
+    do j = f%nfreqs+2, 2*f%nfreqs+1
+      f%valww(j) = - (sqrt(M_TWO)) * aimag(f%valw(j-f%nfreqs-1))
+    end do
 
     deallocate(f%val); nullify(f%val)
     call pop_sub()
@@ -602,6 +619,7 @@ module tdf_m
     f%val = f%val * f%niter * sqrt(M_ONE/(f%final_time-f%init_time))
     f%mode = TDF_NUMERICAL
 
+    deallocate(f%valww); nullify(f%valww)
     deallocate(f%valw); nullify(f%valw)
     call pop_sub()
   end subroutine tdf_fft_backward
@@ -781,6 +799,8 @@ module tdf_m
       y = f%val(i)
     case(TDF_SINE_SERIES)
       y = f%coeffs(i)
+    case(TDF_FOURIER_SERIES)
+      y = f%valww(i)
     end select
     
   end function tdfi
@@ -868,6 +888,7 @@ module tdf_m
       call fft_end(f%fft_handler)
     case(TDF_FOURIER_SERIES)
       deallocate(f%valw); nullify(f%valw)
+      deallocate(f%valww); nullify(f%valww)
       call fft_end(f%fft_handler)
     case(TDF_SINE_SERIES)
       deallocate(f%coeffs); nullify(f%coeffs)
@@ -913,8 +934,10 @@ module tdf_m
       call fft_copy(fin%fft_handler, fout%fft_handler)
     end if
     if(fin%mode .eq. TDF_FOURIER_SERIES) then
-      ALLOCATE(fout%valw((fout%niter+1)/2+1), (fout%niter+1)/2+1)
+      ALLOCATE(fout%valw(fout%niter/2+1), fout%niter/2+1)
       fout%valw  = fin%valw
+      ALLOCATE(fout%valww(2*fout%nfreqs+1), 2*fout%nfreqs+1)
+      fout%valww  = fin%valww
       call fft_copy(fin%fft_handler, fout%fft_handler)
     end if
     if(fin%mode .eq. TDF_SINE_SERIES) then
@@ -940,6 +963,7 @@ module tdf_m
       f%val = alpha*f%val
     case(TDF_FOURIER_SERIES)
       f%valw = alpha*f%valw
+      f%valww = alpha*f%valww
     case(TDF_SINE_SERIES)
       f%coeffs = alpha*f%coeffs
     case(TDF_FROM_FILE)
@@ -1051,10 +1075,7 @@ module tdf_m
         fg = fg + f%coeffs(i) * g%coeffs(i)
       end do
     case(TDF_FOURIER_SERIES)
-      fg = conjg(f%valw(1))*f%valw(1)
-      do i = 2, f%niter/2+1
-        fg = fg + M_TWO * conjg(f%valw(i)) * f%valw(i)
-      end do
+      fg = dot_product(f%valww, g%valww)
     case default
       do i = 1, f%niter + 1
         t = (i-1) * f%dt

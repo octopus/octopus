@@ -51,7 +51,7 @@ module filter_m
     integer, pointer :: domain(:)
   end type filter_t
 
-  integer, parameter, public  :: &
+  integer, parameter, public  ::  &
     filter_freq = 1,              &
     filter_time = 2
   
@@ -83,9 +83,7 @@ contains
     !% Each line of the block describes a filter; this way you can actually have more
     !% than one filter function (e.g. a filter in time and two in frequency space). 
     !% The filters are applied in the given order, i.e., first the filter specified 
-    !% by the first line is applied, then second line. This order is important if 
-    !% the filters are conjugated, like time and frequency. If they are conjugated 
-    !% the second filter can lift the action of the first one. Use with care.
+    !% by the first line is applied, then second line. 
     !% The syntax of each line is, then:
     !%
     !% <tt>%OCTFilter
@@ -97,17 +95,9 @@ contains
     !%  
     !% (i) frequency_filter : Specifies a spectral filter.
     !% 
-    !% (ii) time_filter: Specifies a time-dependent envelope similar to a 
-    !% time-dependent penalty. Use it in the case of a fixed fluence where a 
-    !% time-dependent penalty is not possible.
-    !%  
-    !% An example for the block is:
-    !% <tt>%OCTFilter
-    !% <br>&nbsp;&nbsp;time_filter | "exp(-gamma*( t - stime/4 )^2  )" 
-    !% <br>&nbsp;&nbsp;time_filter | "exp(-gamma*( t - stime/4 )^2  )" 
-    !% <br>%</tt>
-    !% 
-    !% Or a spectral Gaussian Filter at w=0.1567:
+    !% (ii) time_filter: DISABLED IN THIS VERSION.
+    !%
+    !% Example:
     !%
     !% <tt>%OCTFilter
     !% <br>&nbsp;&nbsp;time | "exp(-80*( w + 0.1567 )^2  ) + exp(-80*( w - 0.1567 )^2  )"
@@ -118,8 +108,6 @@ contains
     !%
     !%Option frequency_filter 1
     !% The filter is applied in the frequency domain
-    !%Option time_filter 2
-    !% The filter is applied in the time domain.
     !%End
     if( loct_parse_block(check_inp('OCTFilter'),blk) == 0 ) then
       no_f = loct_parse_block_n(blk)
@@ -178,10 +166,6 @@ contains
          call tdf_set_fourier(f, j, tdfw(f, j)* tdfw(filter%f(i), j) )
        end do
        call tdf_fft_backward(f)
-      case(filter_time)
-       do j = 1, steps + 1
-         call tdf_set_numerical(f, j, tdf(f, j)* tdf(filter%f(i), j) )
-       end do
       case default
         message(1) = "...I don't know this filter type..."
         call write_fatal(1)
@@ -217,13 +201,6 @@ contains
       grid = M_ZERO
 
       select case(filter%domain(i))
-      case(filter_time)
-        do ip = 1, steps + 1
-          t = (ip-1)*dt
-          call loct_parse_expression(f_re, f_im, "t", real(t, 8), filter%expression(i))
-          ff(ip) = f_re + M_zI*f_im
-        end do
-      
       case(filter_freq)
         call tdf_fourier_grid(filter%f(i), grid)
         ff = M_z1
@@ -267,27 +244,16 @@ contains
 
     do kk = 1, filter%no_filters
       write(filename,'(a,i2.2)') 'opt-control/filter', kk
-
       max_iter = tdf_niter(filter%f(kk))
       dt = tdf_dt(filter%f(kk))
-
-      if(filter%domain(kk) .eq. filter_freq) then
-        iunit = io_open(filename, action='write')
-        ALLOCATE(wgrid(max_iter/2+1), max_iter/2+1)
-        call tdf_fourier_grid(filter%f(kk), wgrid)
-        do i = 1, max_iter/2+1
-          write(iunit, '(3es30.16e4)') wgrid(i), tdfw(filter%f(kk), i)
-        end do
-        deallocate(wgrid)
-        call io_close(iunit)
-      else
-        iunit = io_open(filename, action='write')
-        do i = 1, max_iter + 1
-          write(iunit, '(4ES30.16E4)') (i-1)*dt, tdf(filter%f(kk), i)
-        end do
-        call io_close(iunit)
-      end if
-
+      iunit = io_open(filename, action='write')
+      ALLOCATE(wgrid(max_iter/2+1), max_iter/2+1)
+      call tdf_fourier_grid(filter%f(kk), wgrid)
+      do i = 1, max_iter/2+1
+        write(iunit, '(3es30.16e4)') wgrid(i), tdfw(filter%f(kk), i)
+      end do
+      deallocate(wgrid)
+      call io_close(iunit)
     end do
 
     call pop_sub()
