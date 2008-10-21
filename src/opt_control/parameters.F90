@@ -124,7 +124,7 @@ module opt_control_parameters_m
     FLOAT, pointer :: utransfi(:, :) => NULL()
   end type oct_control_parameters_t
 
-  type(oct_parameters_common_t), save :: par_common
+  type(oct_parameters_common_t), pointer :: par_common => null()
   type(mix_t) :: parameters_mix
 
 contains
@@ -144,6 +144,8 @@ contains
     type(block_t)            :: blk
 
     call push_sub('parameters.parameters_read')
+
+    if(.not. associated(par_common)) ALLOCATE(par_common, 1)
 
     !%Variable OCTParameterRepresentation
     !%Type integer
@@ -1632,6 +1634,11 @@ contains
 
   end subroutine parameters_filter
   ! ---------------------------------------------------------
+
+  subroutine parameters_close()
+
+    if(associated(par_common)) deallocate(par_common)
+  end subroutine parameters_close
 
 end module opt_control_parameters_m
 

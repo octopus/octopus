@@ -276,6 +276,7 @@ contains
     call states_end(psi)
     call states_end(initial_st)
     call target_end(target)
+    call parameters_close()
    
     call pop_sub()
 
