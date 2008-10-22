@@ -462,7 +462,7 @@ contains
     call push_sub('profiling.profiling_output')
 
     filenum = '0000'
-    dirnum  = 'ser'
+    dirnum  = 'ser '
 #if defined(HAVE_MPI)
     if(mpi_world%size > 1) then
       write(filenum, '(i4.4)') mpi_world%rank
@@ -470,12 +470,12 @@ contains
     end if
 #endif
 
-    if(mpi_grp_is_root(mpi_world)) call io_mkdir('profiling.'//dirnum)
+    if(mpi_grp_is_root(mpi_world)) call io_mkdir('profiling.'//trim(dirnum))
 #ifdef HAVE_MPI
     call MPI_Barrier(mpi_world%comm, mpi_err)
 #endif
 
-    iunit = io_open('profiling.'//dirnum//'/profiling.'//filenum, action='write')
+    iunit = io_open('profiling.'//trim(dirnum)//'/profiling.'//filenum, action='write')
     if(iunit.lt.0) then
       message(1) = 'Could not write profiling results.'
       call write_warning(1)
