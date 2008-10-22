@@ -131,7 +131,7 @@ subroutine zcalc_polarizability_periodic(sys, em_lr, kdotp_lr, nsigma, zpol, ndi
   ndir_ = sys%NDIM
   if(present(ndir)) ndir_ = ndir
 
-  ! alpha_ij(w) = -e sum(m occ, k) [(<u_mk(0)|-id/dk_i)|u_mkj(1)(w)> + <u_mkj(1)(-w)|(id/dk_i|u_mk(0)>)]
+  ! alpha_ij(w) = -e sum(m occ, k) [(<u_mk(0)|id/dk_i)|u_mkj(1)(w)> + <u_mkj(1)(-w)|(id/dk_i|u_mk(0)>)]
   ! Smearing is not implemented here yet?
 
   do dir1 = 1, ndir_
@@ -143,14 +143,14 @@ subroutine zcalc_polarizability_periodic(sys, em_lr, kdotp_lr, nsigma, zpol, ndi
         term = M_ZERO
         do ist = 1, sys%st%nst
           do idim = 1, sys%st%d%dim
-            subterm = M_zI * zmf_dotp(m, kdotp_lr(dir1)%zdl_psi(1:m%np, idim, ist, ik), &
+            subterm = - M_zI * zmf_dotp(m, conjg(kdotp_lr(dir1)%zdl_psi(1:m%np, idim, ist, ik)), &
               em_lr(dir2, 1)%zdl_psi(1:m%np, idim, ist, ik))
             term = term + subterm
 
             if(nsigma == 1) then
               term = term + conjg(subterm)
             else
-              term = term - M_zI * zmf_dotp(m, em_lr(dir2, 2)%zdl_psi(1:m%np, idim, ist, ik), & 
+              term = term - M_zI * zmf_dotp(m, conjg(em_lr(dir2, 2)%zdl_psi(1:m%np, idim, ist, ik)), & 
                 kdotp_lr(dir1)%zdl_psi(1:m%np, idim, ist, ik))
             end if
           enddo

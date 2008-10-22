@@ -109,7 +109,7 @@ contains
     call parse_input()
 
     em_vars%nfactor = 1
-    if(em_vars%calc_hyperpol) em_vars%nfactor=3
+    if(em_vars%calc_hyperpol) em_vars%nfactor = 3
 
     ! in effect, nsigma = 1 only if hyperpol not being calculated, and the only frequency is zero
     if(em_vars%calc_hyperpol .or. (em_vars%nomega > 1) .or. (abs(em_vars%omega(1)) >= M_EPSILON) ) then
@@ -780,24 +780,35 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine out_polarizability(st, gr, alpha, omega, converged, dirname)
+  subroutine out_polarizability(st, gr, alpha, omega, converged, dirname, periodic_warn)
     type(states_t),    intent(in) :: st
     type(grid_t),      intent(in) :: gr
     CMPLX,             intent(in) :: alpha(:, :)
     FLOAT,             intent(in) :: omega
     logical,           intent(in) :: converged
     character(len=*),  intent(in) :: dirname
+    logical, optional, intent(in) :: periodic_warn
 
     FLOAT :: cross(MAX_DIM, MAX_DIM), crossp(MAX_DIM, MAX_DIM)
     FLOAT :: average, anisotropy
     integer iunit
+    logical :: periodic_warn_
     
     call push_sub('em_resp.out_polarizability')
 
     iunit = io_open(trim(dirname)//'/alpha', action='write')
 
     if (.not.converged) write(iunit, '(a)') "# WARNING: not converged"
-    if (simul_box_is_periodic(gr%sb)) write(iunit, '(a)') "# WARNING: Accurate calculation in periodic system requires kdotp run."
+
+    if (.not. present(periodic_warn)) then
+      periodic_warn_ = .true.
+    else
+      periodic_warn_ = periodic_warn
+    endif
+    if (simul_box_is_periodic(gr%sb) .and. periodic_warn_) then
+      write(iunit, '(a)') "# WARNING: Accurate calculation in periodic system requires kdotp run."
+    endif
+
     write(iunit, '(2a)', advance='no') '# Polarizability tensor [', &
       trim(units_out%length%abbrev)
     if(NDIM.ne.1) write(iunit, '(a,i1)', advance='no') '^', NDIM

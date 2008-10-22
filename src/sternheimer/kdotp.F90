@@ -45,6 +45,7 @@ module kdotp_m
   use pol_lr_m
   use restart_m
   use states_m
+  use states_lalg_m
   use sternheimer_m
   use string_m
   use system_m
@@ -97,11 +98,12 @@ contains
     integer                 :: em_nsigma
     CMPLX                   :: alpha(MAX_DIM, MAX_DIM, 3) ! the linear polarizability
 
-    integer            :: idir, ierr, size, is, ist, ik
-    character(len=100) :: dirname, str_tmp
-    FLOAT              :: elec_dipole(1:MAX_DIM) ! electronic contribution
-    FLOAT              :: ion_dipole(1:MAX_DIM)  ! ionic contribution
-    integer            :: isigma, ifactor
+    integer              :: idir, ierr, size, is, ist, ik
+    character(len=100)   :: dirname, str_tmp
+    FLOAT                :: elec_dipole(1:MAX_DIM) ! electronic contribution
+    FLOAT                :: ion_dipole(1:MAX_DIM)  ! ionic contribution
+    integer              :: isigma, ifactor
+    logical, allocatable :: orth_mask(:)
 
     call push_sub('kdotp.kdotp_lr_run')
 
@@ -137,14 +139,24 @@ contains
       call lr_allocate(kdotp_vars%lr(idir, 1), sys%st, sys%gr%m)
 
       if(fromScratch .and. kdotp_vars%initialization .eq. 1) then
+        ALLOCATE(orth_mask(sys%st%nst), sys%st%nst)
+
         do is = 1, sys%st%d%dim
           do ist = 1, sys%st%nst
+             orth_mask(1:sys%st%nst) = .true.
+             orth_mask(ist) = .false.
+
             do ik = 1, sys%st%d%nik
               kdotp_vars%lr(idir, 1)%zdl_psi(1:gr%m%np, is, ist, ik) &
                 = -M_zI * gr%m%x(1:gr%m%np, idir) * sys%st%zpsi(1:gr%m%np, is, ist, ik)
+              ! orthogonalize against unperturbed wfn to remove component unaccessible to perturbation theory
+              call zstates_gram_schmidt(gr%m, sys%st%nst, sys%st%d%dim, sys%st%zpsi(1:gr%m%np, 1:1, 1:sys%st%nst, ik), &
+                 kdotp_vars%lr(idir, 1)%zdl_psi(1:gr%m%np, 1:1, ist, ik), mask = orth_mask(1:sys%st%nst))
             enddo
           enddo
         enddo
+
+        deallocate(orth_mask)
       endif
       ! this is the exact solution in the limit of no dispersion, i.e. non-interacting unit cells
       ! |u_i(1)> = -i r_i |u(0)>
@@ -239,7 +251,7 @@ contains
           alpha(:, :, ifactor))
 !        omega = em_vars%freq_factor(ifactor)*em_vars%omega(iomega)
         call out_polarizability(sys%st, sys%gr, alpha(:, :, ifactor), &
-          M_ZERO, .true., dirname)
+          M_ZERO, .true., dirname, periodic_warn = .false.)
         ! FIX ME: the frequency needs to be supplied here to calculate cross-section
       enddo
 
@@ -362,17 +374,16 @@ contains
       if (loct_parse_block(check_inp('EMHyperpol'), blk) == 0) then
         calc_hyperpol = .true.
         em_nfactor = 3
-
+        em_nsigma = 2
+      else
+        calc_hyperpol = .false.
+        em_nfactor = 1
+        ! FIX ME: need to actually read in the frequency here
         if (loct_parse_block(check_inp('EMFreqs'), blk) == 0) then
           em_nsigma = 2
         else ! omega = 0, static case
           em_nsigma = 1  
         endif
-
-      else
-        calc_hyperpol = .false.
-        em_nfactor = 1
-        em_nsigma = 1
       endif
 
       call pop_sub()

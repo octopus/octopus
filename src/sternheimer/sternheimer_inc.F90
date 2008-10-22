@@ -264,6 +264,7 @@ subroutine X(sternheimer_solve)(                           &
   deallocate(dl_rhoin)
   deallocate(dl_rhonew)
   deallocate(dl_rhotmp)
+  deallocate(orth_mask)
 
   call pop_sub()
 
