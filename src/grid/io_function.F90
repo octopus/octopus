@@ -175,7 +175,7 @@ contains
 
   ! -------------------------------------------------------------------
   ! Use this function to quickly plot functions for debugging purposes:
-  ! call doutput_function(output_fill_how("AxisX_and_PlaneX_and_DX", &
+  ! call doutput_function(io_function_fill_how("AxisX_and_PlaneX_and_DX", &
   !                       ".", "func", m, func, M_ONE, ierr)
   ! -------------------------------------------------------------------
   integer function io_function_fill_how(where) result(how)
