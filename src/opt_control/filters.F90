@@ -144,7 +144,7 @@ contains
     type(tdf_t), intent(inout) :: f
     type(filter_t), intent(in) :: filter
 
-    integer        :: steps, no_f, i, j
+    integer        :: no_f, i, j, nfreqs
 
     call push_sub('filters.filter_apply')
 
@@ -157,15 +157,20 @@ contains
       write(message(1),'(a,i2)') "Info: Applying filter "         
       call write_info(1)
 
-      steps = tdf_niter(filter%f(i)) 
+      nfreqs = tdf_nfreqs(f)
 
       select case(filter%domain(i))
       case(filter_freq)
        call tdf_fft_forward(f)
-       do j = 1, steps/2+1
-         call tdf_set_fourier(f, j, tdfw(f, j)* tdfw(filter%f(i), j) )
+       call tdf_set_numerical(f, 1, tdf(f, 1)*tdf(filter%f(i), 1))
+       do j = 2, nfreqs !+ 1
+         call tdf_set_numerical(f, j, tdf(f, j)*tdf(filter%f(i), j) / sqrt(M_TWO))
+       end do
+       do j = nfreqs + 1, 2*nfreqs - 1
+         call tdf_set_numerical(f, j, tdf(f, j)*tdf(filter%f(i), j-nfreqs+1) / sqrt(M_TWO) )
        end do
        call tdf_fft_backward(f)
+
       case default
         message(1) = "...I don't know this filter type..."
         call write_fatal(1)
@@ -182,9 +187,8 @@ contains
   subroutine build_filter(filter)
     type(filter_t), intent(inout) :: filter
 
-    integer :: i, ip, steps
+    integer :: i, ip, j, nfreqs
     real(8) :: f_re, f_im
-    FLOAT   :: t, dt
     CMPLX, allocatable :: ff(:)
     FLOAT, allocatable :: grid(:)
 
@@ -192,11 +196,10 @@ contains
 
     do i = 1, filter%no_filters
 
-      steps = tdf_niter(filter%f(i))
-      dt = tdf_dt(filter%f(i))
+      nfreqs = tdf_nfreqs(filter%f(i))
 
-      ALLOCATE(ff((steps+1)/2+1), (steps+1)/2+1)
-      ALLOCATE(grid((steps+1)/2+1), (steps+1)/2+1)
+      ALLOCATE(ff(tdf_nfreqs(filter%f(i))), tdf_nfreqs(filter%f(i)))
+      ALLOCATE(grid(tdf_nfreqs(filter%f(i))), tdf_nfreqs(filter%f(i)))
       ff = M_z0
       grid = M_ZERO
 
@@ -204,7 +207,7 @@ contains
       case(filter_freq)
         call tdf_fourier_grid(filter%f(i), grid)
         ff = M_z1
-        do ip = 1, steps/2+1
+        do ip = 1, tdf_nfreqs(filter%f(i))
           call loct_parse_expression(f_re, f_im, "w", real(grid(ip), 8), filter%expression(i))
           ff(ip) = f_re + M_zI*f_im
         end do
@@ -215,7 +218,14 @@ contains
         call write_fatal(2)
       end select
 
-      call tdf_set_fourier(filter%f(i), ff)
+      call tdf_set_numerical(filter%f(i), 1, real(ff(1), REAL_PRECISION))
+      do j = 2, nfreqs !+ 1
+         call tdf_set_numerical(filter%f(i), j, sqrt(M_TWO)*real(ff(j), REAL_PRECISION))
+      end do
+      ! WARNING: all the sine coefficients (imaginary part of ff) should be null.
+      do j = nfreqs + 1, 2*nfreqs - 1
+         call tdf_set_numerical(filter%f(i), j, -sqrt(M_TWO)*aimag(ff(j-nfreqs+1)))
+      end do
 
       deallocate(ff)
       deallocate(grid)
@@ -250,7 +260,7 @@ contains
       ALLOCATE(wgrid(max_iter/2+1), max_iter/2+1)
       call tdf_fourier_grid(filter%f(kk), wgrid)
       do i = 1, max_iter/2+1
-        write(iunit, '(3es30.16e4)') wgrid(i), tdfw(filter%f(kk), i)
+        write(iunit, '(3es30.16e4)') wgrid(i), tdf(filter%f(kk), i)
       end do
       deallocate(wgrid)
       call io_close(iunit)

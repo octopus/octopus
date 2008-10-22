@@ -47,10 +47,8 @@ module tdf_m
             tdf_init_fromexpr,           &
             tdf_init_numerical,          &
             tdf_set_numerical,           &
-            tdf_set_fourier,             &
             tdf_to_numerical,            &
             tdf,                         &
-            tdfw,                        &
             tdf_dot_product,             &
             tdf_diff,                    &
             tdf_scalar_multiply,         &
@@ -102,7 +100,6 @@ module tdf_m
     type(spline_t)         :: amplitude
     character(len=200)     :: expression
     FLOAT, pointer :: val(:)    => NULL()
-    CMPLX, pointer :: valw(:)   => NULL()
     FLOAT, pointer :: valww(:)  => NULL()
     FLOAT, pointer :: coeffs(:) => NULL()
     type(fft_t) :: fft_handler
@@ -111,11 +108,6 @@ module tdf_m
   interface tdf_set_numerical
     module procedure tdf_set_numericalr, &
                      tdf_set_numericalr1
-  end interface
-
-  interface tdf_set_fourier
-    module procedure tdf_set_numericalw, &
-                     tdf_set_numericalw1
   end interface
 
   interface tdf
@@ -331,7 +323,6 @@ module tdf_m
     f%niter = 0
     f%dt = M_ZERO
     nullify(f%val)
-    nullify(f%valw)
     nullify(f%valww)
     nullify(f%coeffs)
   end subroutine tdf_init
@@ -357,7 +348,6 @@ module tdf_m
     f%a0 = a0
     f%omega0 = omega0
     nullify(f%val)
-    nullify(f%valw)
     nullify(f%valww)
     nullify(f%coeffs)
 
@@ -379,7 +369,6 @@ module tdf_m
     f%t0 = t0
     f%tau0 = tau0
     nullify(f%val)
-    nullify(f%valw)
     nullify(f%valww)
     nullify(f%coeffs)
 
@@ -401,7 +390,6 @@ module tdf_m
     f%t0 = t0
     f%tau0 = tau0
     nullify(f%val)
-    nullify(f%valw)
     nullify(f%valww)
     nullify(f%coeffs)
 
@@ -424,7 +412,6 @@ module tdf_m
     f%tau0 = tau0
     f%tau1 = tau1
     nullify(f%val)
-    nullify(f%valw)
     nullify(f%valww)
     nullify(f%coeffs)
 
@@ -443,7 +430,6 @@ module tdf_m
     f%mode = TDF_FROM_EXPR
     f%expression = trim(expression)
     nullify(f%val)
-    nullify(f%valw)
     nullify(f%valww)
     nullify(f%coeffs)
     
@@ -497,7 +483,6 @@ module tdf_m
     call spline_fit(lines, t, am, f%amplitude)
 
     nullify(f%val)
-    nullify(f%valw)
     nullify(f%valww)
     nullify(f%coeffs)
     deallocate(t, am)
@@ -580,25 +565,24 @@ module tdf_m
   !------------------------------------------------------------
   subroutine tdf_fft_forward(f)
     type(tdf_t), intent(inout) :: f
-    integer :: steps, j
+    integer :: j
+    CMPLX, allocatable :: tmp(:)
     call push_sub('tdfunction.tdf_fft_forward')
 
-    steps = f%niter
-    ALLOCATE(f%valw(steps/2+1), steps/2+1)
-    call dfft_forward1(f%fft_handler, f%val(1:f%niter), f%valw)
-
-    f%valw = f%valw * f%dt * sqrt(M_ONE/(f%final_time-f%init_time))
+    ALLOCATE(tmp(f%niter/2+1), f%niter/2+1)
+    call dfft_forward1(f%fft_handler, f%val(1:f%niter), tmp)
+    tmp = tmp * f%dt * sqrt(M_ONE/(f%final_time-f%init_time))
     f%mode = TDF_FOURIER_SERIES
-
-    ALLOCATE(f%valww(2*f%nfreqs+1), 2*f%nfreqs+1)
-    f%valww(1) = f%valw(1)
-    do j = 2, f%nfreqs+1
-      f%valww(j) = (sqrt(M_TWO)) * real(f%valw(j))
+    ALLOCATE(f%valww(2*(f%nfreqs-1)+1), 2*(f%nfreqs-1)+1)
+    f%valww(1) = tmp(1)
+    do j = 2, f%nfreqs
+      f%valww(j) = (sqrt(M_TWO)) * real(tmp(j))
     end do
-    do j = f%nfreqs+2, 2*f%nfreqs+1
-      f%valww(j) = - (sqrt(M_TWO)) * aimag(f%valw(j-f%nfreqs-1))
+    do j = f%nfreqs+1, 2*f%nfreqs-1
+      f%valww(j) = - (sqrt(M_TWO)) * aimag(tmp(j-f%nfreqs+1))
     end do
 
+    deallocate(tmp)
     deallocate(f%val); nullify(f%val)
     call pop_sub()
   end subroutine tdf_fft_forward
@@ -608,19 +592,26 @@ module tdf_m
   !------------------------------------------------------------
   subroutine tdf_fft_backward(f)
     type(tdf_t), intent(inout) :: f
-    integer :: steps
+    integer :: j
+    CMPLX, allocatable :: tmp(:)
+
     call push_sub('tdfunction.tdf_fft_backward')
 
-    steps = f%niter
-    ALLOCATE(f%val(steps+1), steps+1)
-    call dfft_backward1(f%fft_handler, f%valw, f%val(1:f%niter))
-
+    ALLOCATE(tmp(f%niter/2+1), f%niter/2+1)
+    tmp = M_z0
+    tmp(1) = f%valww(1)
+    do j = 2, f%nfreqs
+      tmp(j) = cmplx( (sqrt(M_TWO)/M_TWO)*f%valww(j) , &
+                         -(sqrt(M_TWO)/M_TWO)*f%valww(j+f%nfreqs-1) , REAL_PRECISION)
+    end do
+    ALLOCATE(f%val(f%niter+1), f%niter+1)
+    call dfft_backward1(f%fft_handler, tmp, f%val(1:f%niter))
     f%val(f%niter+1) = f%val(1)
     f%val = f%val * f%niter * sqrt(M_ONE/(f%final_time-f%init_time))
     f%mode = TDF_NUMERICAL
 
+    deallocatE(tmp)
     deallocate(f%valww); nullify(f%valww)
-    deallocate(f%valw); nullify(f%valw)
     call pop_sub()
   end subroutine tdf_fft_backward
   !------------------------------------------------------------
@@ -637,34 +628,12 @@ module tdf_m
       f%val(1:f%niter+1) = values(1:f%niter+1)
     case(TDF_SINE_SERIES)
       f%coeffs(1:f%sine_nfreqs) = values(1:f%sine_nfreqs)
+    case(TDF_FOURIER_SERIES)
+      f%valww(1:f%nfreqs) = values(1:f%nfreqs)
     end select
 
     call pop_sub()
   end subroutine tdf_set_numericalr
-  !------------------------------------------------------------
-
-
-  !------------------------------------------------------------
-  subroutine tdf_set_numericalw(f, values)
-    type(tdf_t), intent(inout) :: f
-    CMPLX,       intent(in) :: values(:)
-    call push_sub("tdfunction.tdf_set_numericalw") 
-    ASSERT(f%mode .eq. TDF_FOURIER_SERIES)
-    f%valw(1:(f%niter+1)/2+1) = values(1:(f%niter+1)/2+1)
-    call pop_sub()
-  end subroutine tdf_set_numericalw
-  !------------------------------------------------------------
-
-  !------------------------------------------------------------
-  subroutine tdf_set_numericalw1(f, index, value)
-    type(tdf_t), intent(inout) :: f
-    integer, intent(in) :: index
-    CMPLX,       intent(in) :: value
-    call push_sub("tdfunction.tdf_set_numericalw") 
-    ASSERT(f%mode .eq. TDF_FOURIER_SERIES)
-    f%valw(index) = value
-    call pop_sub()
-  end subroutine tdf_set_numericalw1
   !------------------------------------------------------------
 
 
@@ -678,6 +647,8 @@ module tdf_m
       f%val(index) = value
     case(TDF_SINE_SERIES)
       f%coeffs(index) = value
+    case(TDF_FOURIER_SERIES)
+      f%valww(index) = value
     end select
   end subroutine tdf_set_numericalr1
   !------------------------------------------------------------
@@ -691,7 +662,7 @@ module tdf_m
     FLOAT,       intent(in)    :: omegamax
 
     FLOAT :: t
-    integer :: j!, n(3)
+    integer :: j
     FLOAT, allocatable :: val(:)
 
     if(f%mode .eq. TDF_NUMERICAL) return
@@ -774,15 +745,6 @@ module tdf_m
     call fft_init(n, fft_real, f%fft_handler, optimize = .false.)
 
   end subroutine tdf_sineseries_to_numerical
-  !------------------------------------------------------------
-
-
-  !------------------------------------------------------------
-  CMPLX function tdfw(f, i) result(y)
-    type(tdf_t), intent(in) :: f
-    integer, intent(in)     :: i
-    y = f%valw(i)
-  end function tdfw
   !------------------------------------------------------------
 
 
@@ -887,7 +849,6 @@ module tdf_m
       deallocate(f%val); nullify(f%val)
       call fft_end(f%fft_handler)
     case(TDF_FOURIER_SERIES)
-      deallocate(f%valw); nullify(f%valw)
       deallocate(f%valww); nullify(f%valww)
       call fft_end(f%fft_handler)
     case(TDF_SINE_SERIES)
@@ -934,8 +895,6 @@ module tdf_m
       call fft_copy(fin%fft_handler, fout%fft_handler)
     end if
     if(fin%mode .eq. TDF_FOURIER_SERIES) then
-      ALLOCATE(fout%valw(fout%niter/2+1), fout%niter/2+1)
-      fout%valw  = fin%valw
       ALLOCATE(fout%valww(2*fout%nfreqs+1), 2*fout%nfreqs+1)
       fout%valww  = fin%valww
       call fft_copy(fin%fft_handler, fout%fft_handler)
@@ -962,7 +921,6 @@ module tdf_m
     case(TDF_NUMERICAL)
       f%val = alpha*f%val
     case(TDF_FOURIER_SERIES)
-      f%valw = alpha*f%valw
       f%valww = alpha*f%valww
     case(TDF_SINE_SERIES)
       f%coeffs = alpha*f%coeffs
@@ -1117,8 +1075,8 @@ module tdf_m
         fminusg%coeffs(i) = fminusg%coeffs(i) - g%coeffs(i)
       end do
     case(TDF_FOURIER_SERIES)
-      do i = 1, f%niter/2+1
-        fminusg%valw(i) = fminusg%valw(i) - g%valw(i)
+      do i = 1, 2*(f%nfreqs-1)+1
+        fminusg%valww(i) = fminusg%valww(i) - g%valww(i)
       end do
     case default
       stop 'Error'

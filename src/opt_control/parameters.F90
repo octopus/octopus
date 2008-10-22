@@ -187,7 +187,7 @@ contains
     !%Description
     !%
     !%End
-    call loct_parse_float(check_inp('OCTParameterOmegaMax'), M_ONE / units_inp%energy%factor, par_common%omegamax)
+    call loct_parse_float(check_inp('OCTParameterOmegaMax'), - M_ONE, par_common%omegamax)
     if(par_common%representation .eq. ctr_sine_fourier_series) then
       write(message(1), '(a)')         'Info: The representation of the OCT control parameters as a sine'
       write(message(2), '(a,f10.5,a)') '      Fourier series will be done with a cut-off of ', &
@@ -948,7 +948,6 @@ contains
     write(iunit, '(a,es20.8e3)') 'Fluence = ', parameters_fluence(par)
     call io_close(iunit)
 
-
     select case(par_common%mode)
     case(parameter_mode_epsilon)
 
@@ -1026,10 +1025,10 @@ contains
         call tdf_init(g)
         call tdf_copy(g, par%f(j))
         call tdf_fft_forward(g)
-        ALLOCATE(wgrid((cp%ntiter+1)/2+1), (cp%ntiter+1)/2+1)
+        ALLOCATE(wgrid(cp%ntiter/2+1), cp%ntiter/2+1)
         call tdf_fourier_grid(g, wgrid)
-        do i = 1, (cp%ntiter+1)/2+1
-          write(iunit, '(3es30.16e4)') wgrid(i), tdfw(g, i)
+        do i = 1, (cp%dim-1)/2
+          write(iunit, '(3es30.16e4)') wgrid(i), tdf(g, i)
         end do
         deallocate(wgrid)
         call tdf_end(g)
