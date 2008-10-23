@@ -252,3 +252,8 @@ contains
   end subroutine basins_write
 
 end module basins_m
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:
