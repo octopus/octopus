@@ -895,7 +895,7 @@ module tdf_m
       call fft_copy(fin%fft_handler, fout%fft_handler)
     end if
     if(fin%mode .eq. TDF_FOURIER_SERIES) then
-      ALLOCATE(fout%valww(2*fout%nfreqs+1), 2*fout%nfreqs+1)
+      ALLOCATE(fout%valww(2*fout%nfreqs-1), 2*fout%nfreqs-1)
       fout%valww  = fin%valww
       call fft_copy(fin%fft_handler, fout%fft_handler)
     end if
