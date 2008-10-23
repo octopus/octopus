@@ -830,24 +830,15 @@ contains
 
   ! ---------------------------------------------------------
   subroutine parameters_to_h(cp, ep)
-    type(oct_control_parameters_t), target, intent(in) :: cp
+    type(oct_control_parameters_t), intent(in) :: cp
     type(epot_t), intent(inout) :: ep
 
     integer :: j
-    logical :: change_rep
-    type(oct_control_parameters_t), pointer :: par
+    type(oct_control_parameters_t) :: par
     call push_sub('parameters.parameters_to_h')
 
-    ! First, check that we are in the real space representation.
-    if(cp%current_representation .eq. ctr_sine_fourier_series) then
-      ALLOCATE(par, 1)
-      call parameters_copy(par, cp)
-      call parameters_to_realtime(par)
-      change_rep = .true.
-    else
-      par => cp
-      change_rep = .false.
-    end if
+    call parameters_copy(par, cp)
+    call parameters_to_realtime(par)
 
     select case(par_common%mode)
     case(parameter_mode_epsilon, parameter_mode_f)
@@ -861,11 +852,7 @@ contains
       call laser_set_phi(ep%lasers(1), par%f(2))
     end select
 
-    if(change_rep) then 
-      call parameters_end(par)
-    else
-      nullify(par)
-    end if
+    call parameters_end(par)
     call pop_sub()
   end subroutine parameters_to_h
   ! ---------------------------------------------------------
@@ -918,31 +905,22 @@ contains
   ! ---------------------------------------------------------
   subroutine parameters_write(filename, cp, fourier)
     character(len=*), intent(in) :: filename
-    type(oct_control_parameters_t), intent(in), target :: cp
+    type(oct_control_parameters_t), intent(in) :: cp
     logical, optional, intent(in) :: fourier
 
     type(tdf_t) :: g
     integer :: i, j, iunit
-    logical :: change_rep
     FLOAT :: t
     FLOAT, allocatable :: wgrid(:)
     character(len=2) :: digit
-    type(oct_control_parameters_t), pointer :: par
+    type(oct_control_parameters_t) :: par
 
     call push_sub('parameters.parameters_write')
 
     call io_mkdir(trim(filename))
 
-    ! First, check that we are in the real space representation.
-    if(cp%current_representation .eq. ctr_sine_fourier_series) then
-      ALLOCATE(par, 1)
-      call parameters_copy(par, cp)
-      call parameters_to_realtime(par)
-      change_rep = .true.
-    else
-      par => cp
-      change_rep = .false.
-    end if
+    call parameters_copy(par, cp)
+    call parameters_to_realtime(par)
 
     iunit = io_open(trim(filename)//'/Fluence', action='write')
     write(iunit, '(a,es20.8e3)') 'Fluence = ', parameters_fluence(par)
@@ -1037,12 +1015,7 @@ contains
     end if
     end if
 
-    if(change_rep) then 
-      call parameters_end(par)
-    else
-      nullify(par)
-    end if
-
+    call parameters_end(par)
     call pop_sub()
   end subroutine parameters_write
   ! ---------------------------------------------------------
