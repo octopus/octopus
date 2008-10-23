@@ -770,7 +770,7 @@ contains
     case(ctr_sine_fourier_series)
       cp%dim = tdf_sine_nfreqs(cp%f(1))
     case(ctr_fourier_series)
-      cp%dim = 2*tdf_nfreqs(cp%f(1))+1
+      cp%dim = 2*(tdf_nfreqs(cp%f(1))-1)+1
     end select
       
     call pop_sub()
@@ -1053,48 +1053,34 @@ contains
   ! parameters_fluence = \sum_i^{no_parameters} \integrate_0^T |epsilon(t)|^2
   ! ---------------------------------------------------------
   FLOAT function parameters_fluence(par)
-    type(oct_control_parameters_t), target, intent(in) :: par
-    type(oct_control_parameters_t), pointer :: par_
+    type(oct_control_parameters_t), intent(in) :: par
+    type(oct_control_parameters_t)             :: par_
     integer :: j, i
     FLOAT :: t, fi, phi
     type(tdf_t) :: f
-    logical :: change_rep
     call push_sub('parameters.parameters_fluence')
 
-    if(par%current_representation .eq. ctr_sine_fourier_series) then
-      ALLOCATE(par_, 1)
-      call parameters_copy(par_, par)
-      call parameters_to_realtime(par_)
-      change_rep = .true.
-    else
-      par_ => par
-      change_rep = .false.
-    end if
+    call parameters_copy(par_, par)
+    call parameters_to_realtime(par_)
 
     parameters_fluence = M_ZERO
 
     select case(par_common%mode)
     case(parameter_mode_epsilon)
-      do j = 1, par%no_parameters
-        parameters_fluence = parameters_fluence + tdf_dot_product(par%f(j), par%f(j))
+      do j = 1, par_%no_parameters
+        parameters_fluence = parameters_fluence + tdf_dot_product(par_%f(j), par_%f(j))
       end do
     case(parameter_mode_f)
       do j = 1, par%no_parameters
         call tdf_init(f)
-        call tdf_copy(f, par%f(j))
-        if(par%current_representation .eq. ctr_sine_fourier_series) then
-          call tdf_sineseries_to_numerical(f)
-        end if
+        call tdf_copy(f, par_%f(j))
         call tdf_cosine_multiply(par%w0, f)
         parameters_fluence = parameters_fluence + tdf_dot_product(f, f)
         call tdf_end(f)
       end do
     case(parameter_mode_phi)
       call tdf_init(f)
-      call tdf_copy(f, par%f(1))
-      if(par%current_representation .eq. ctr_sine_fourier_series) then
-        call tdf_sineseries_to_numerical(f)
-      end if
+      call tdf_copy(f, par_%f(1))
       do i = 1, par%ntiter + 1
         t = (i-1)*par%dt
         fi = tdf(par_common%f, i)
@@ -1116,12 +1102,7 @@ contains
       call tdf_end(f)
     end select
 
-    if(change_rep) then
-      call parameters_end(par_)
-    else
-      nullify(par_)
-    end if
-
+    call parameters_end(par_)
     call pop_sub()
   end function parameters_fluence
   ! ---------------------------------------------------------
@@ -1132,26 +1113,18 @@ contains
   ! by a penalty function.
   ! ---------------------------------------------------------
   FLOAT function parameters_j2(par) result(j2)
-    type(oct_control_parameters_t), target, intent(in) :: par
-    type(oct_control_parameters_t), pointer :: par_
+    type(oct_control_parameters_t), intent(in) :: par
+    type(oct_control_parameters_t)             :: par_
     integer :: i, j
     FLOAT   :: t, integral, fi, phi, tdp
     type(tdf_t) :: f
-    logical :: change_rep
 
     call push_sub('parameters.parameters_j2')
 
     ASSERT(par%current_representation .eq. par%representation)
 
-    if(par%current_representation .eq. ctr_sine_fourier_series) then
-      ALLOCATE(par_, 1)
-      call parameters_copy(par_, par)
-      call parameters_to_realtime(par_)
-      change_rep = .true.
-    else
-      par_ => par
-      change_rep = .false.
-    end if
+    call parameters_copy(par_, par)
+    call parameters_to_realtime(par_)
 
     integral = M_ZERO
     select case(par_common%mode)
@@ -1169,7 +1142,7 @@ contains
         call tdf_end(f)
       end do
     case(parameter_mode_f)
-      do j = 1, par%no_parameters
+      do j = 1, par_%no_parameters
         call tdf_init(f)
         call tdf_copy(f, par_%f(j))
         if(par_%current_representation .eq. ctr_sine_fourier_series) then
@@ -1212,12 +1185,7 @@ contains
 
     j2 = - par_%alpha(1) * (integral - par_%targetfluence)
 
-    if(change_rep) then
-      call parameters_end(par_)
-    else
-      nullify(par_)
-    end if
-
+    call parameters_end(par_)
     call pop_sub()
   end function parameters_j2
   ! ---------------------------------------------------------
