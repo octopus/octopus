@@ -260,12 +260,12 @@ contains
       !%Section Time Dependent::TD Output
       !%Description
       !% [WARNING: This is a *very* experimental feature] The population of the excited states
-      !% (as defined by <Phi_I|Phi(t)> where |Phi(t)> is the many-body time dependent state at
-      !% time t, and |Phi_I> is the excited state of interest) can be approximated -- not clear 
+      !% (as defined by <Phi_I|Phi(t)> where |Phi(t)> is the many-body time-dependent state at
+      !% time t, and |Phi_I> is the excited state of interest) can be approximated -- it is not clear 
       !% how well--  by substituting those real many-body states by the time-dependent Kohn-Sham
       !% determinant and by some modification of the Kohn-Sham ground state determinant (e.g.,
-      !% a simple HOMO-LUMO substitution, or the Casida ansatz for excited statesi in linear
-      !% response theory. If you set TDOuput to contain, you may ask for these approximated
+      !% a simple HOMO-LUMO substitution, or the Casida ansatz for excited states in linear
+      !% response theory. If you set TDOutput to contain, you may ask for these approximated
       !% populations for a number of excited states, which will be described in the files specified
       !% in this block: each line should be the name of a file that contains one excited state.
       !%

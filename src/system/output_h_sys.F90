@@ -148,17 +148,16 @@ contains
     !% Prints the electron localization function in Fourier space. The output file is called
     !% "elf_FS-i", where i stands for the spin channel. (EXPERIMENTAL)
     !%Option Bader 512
-    !% Prints the Laplacian of the density that, according to [1], shows lone pairs, 
-    !% bonded charge concentrations and regions subject to electrophilic or nucleophilic attack.
-    !% 
-    !% [1] Bader, RF Atoms in Molecules: A Quantum Theory (Oxford, Oxford, 1990)
+    !% Prints the Laplacian of the density which shows lone pairs, bonded charge concentrations
+    !% and regions subject to electrophilic or nucleophilic attack.
+    !% See Bader, RF Atoms in Molecules: A Quantum Theory (Oxford, Oxford, 1990)
     !%Option el_pressure 1024
-    !% Prints the electronic pressure. See Tao, Vignale, and Tokatly, arXiv:0801.2117v1
+    !% Prints the electronic pressure. See Tao, Vignale, and Tokatly, Phys Rev Lett 100, 206405
     !%Option ksdipole 2048
-    !% Prints out the multipole matrix elements between Kohn-Sham states (or just the single 
-    !% particle states, in independent electrons mode). Note that regardless of the name
-    !% ("ksdipole"), the program may print higher order multipoles (the order can be
-    !% set with the variable OuputMatrixElementsL.
+    !% Prints out the multipole matrix elements between Kohn-Sham states (or just the single-
+    !% particle states, in independent-electrons mode). Note that despite the name
+    !% ("ksdipole"), the program may print higher-order multipoles (the order can be
+    !% set with the variable OutputMatrixElementsL).
     !%Option pol_density 4096
     !% Prints out the density of dipole moment. For pol and pol_lr modules, 
     !% prints the density of polarizability.
@@ -171,15 +170,15 @@ contains
     !% <math>\tau_\sigma(\vec{r}) = \sum_{i=1}^{N_\sigma} 
     !%  \vert \nabla \phi_{i\sigma}(\vec{r}) \vert^2\,. </math>
     !%
-    !% The index <math>\sigma</math> is the spin index for spin-polarized cases,
-    !% or in case you are using spinors. For spin-unpolarized calculations, you
-    !% get the total kinetic energy density. The previous expression assumes full 
+    !% The index <math>\sigma</math> is the spin index for the spin-polarized case,
+    !% or if you are using spinors. For spin-unpolarized calculations, you
+    !% get the total kinetic-energy density. The previous expression assumes full 
     !% or null occupations. If fractional occupation numbers, each term in the sum
-    !% is weigthed by the occupation. Also, if we are working with an infinite 
-    !% system, all k-points are summed up, with its corresponding weight. The
+    !% is weighted by the occupation. Also, if we are working with an infinite 
+    !% system, all k-points are summed up, with their corresponding weights. The
     !% files will be called "tau-1" and "tau-2", if the spin-resolved kinetic
     !% energy density is produced (runs in spin-polarized and spinors mode), or
-    !% only "tau" if the run is in spin unpolarized mode.
+    !% only "tau" if the run is in spin-unpolarized mode.
     !%Option dos 65536
     !% Prints out the density of states.
     !%End
@@ -205,13 +204,13 @@ contains
     end if
 
     if(iand(outp%what, output_ksdipole).ne.0) then
-      !%Variable OuputMatrixElementsL
+      !%Variable OutputMatrixElementsL
       !%Type integer
       !%Default 1
       !%Section Output
       !%Description
-      !% If Ouput contains ksdipole, then this variable decides which matrix
-      !% elements are printed out: e.g., if OuputMatrixElementsL = 1, then the
+      !% If Output contains ksdipole, then this variable decides which matrix
+      !% elements are printed out: e.g., if OutputMatrixElementsL = 1, then the
       !% program will plot three files, matrix_elements.x (x=1,2,3), containing
       !% respectively the (1,-1), (1,0) and (1,1) multipole matrix elements
       !% between Kohn-Sham states.
