@@ -190,14 +190,11 @@ subroutine mesh_init_stage_2(sb, mesh, geo, cv, stencil, np_stencil)
   ALLOCATE(mesh%x_tmp(MAX_DIM, mesh%nr(1,1):mesh%nr(2,1), mesh%nr(1,2):mesh%nr(2,2), mesh%nr(1,3):mesh%nr(2,3)), MAX_DIM*i)
   ALLOCATE(mesh%resolution(mesh%nr(1,1):mesh%nr(2,1), mesh%nr(1,2):mesh%nr(2,2), mesh%nr(1,3):mesh%nr(2,3)), i)
 
-  !$omp parallel workshare
   mesh%Lxyz_inv(:,:,:) = 0
   mesh%Lxyz_tmp(:,:,:) = 0
   mesh%x_tmp(:,:,:,:)  = M_ZERO
-  !$omp end parallel workshare
 
   ! We label the points inside the mesh + enlargement
-  !$omp parallel do private(iy, iz, chi, i, j, k) if(.not. mesh%use_curvlinear)
   do ix = mesh%nr(1,1), mesh%nr(2,1)
     chi(1) = real(ix, REAL_PRECISION) * mesh%h(1) + sb%box_offset(1)
 
@@ -232,7 +229,6 @@ subroutine mesh_init_stage_2(sb, mesh, geo, cv, stencil, np_stencil)
       end do
     end do
   end do
-  !$omp end parallel do
 
   ! we label the points inside the mesh, and we count the points
   il = 0
@@ -319,10 +315,6 @@ contains
   subroutine create_x_Lxyz()
     integer :: il, ix, iy, iz
 
-#ifdef USE_OMP
-    integer :: ip
-#endif
-
     ALLOCATE(mesh%Lxyz(mesh%np_part_global, MAX_DIM), mesh%np_part_global*MAX_DIM)
     if(mesh%parallel_in_domains) then
       ! Node 0 has to store all entries from x (in x_global)
@@ -332,26 +324,10 @@ contains
       ! When running parallel, x is computed later.
       ALLOCATE(mesh%x(mesh%np_part_global, MAX_DIM), mesh%np_part_global*MAX_DIM)
 
-#ifdef USE_OMP
-      !$omp parallel 
-      !$omp do
-      do ip = 1, mesh%np_global
-        mesh%x(ip, 1:MAX_DIM) = M_ZERO
-      end do
-      !$omp end do nowait
-      !$omp do
-      do ip = mesh%np_global+1, mesh%np_part_global
-        mesh%x(ip, 1:MAX_DIM) = M_ZERO
-      end do
-      !$omp end do
-      !$omp end parallel
-#endif
-
       ! This is a bit ugly: x_global is needed in out_in
       ! but in the serial case it is the same as x
       mesh%x_global => mesh%x
     end if
-
 
     ! first we fill the points in the inner mesh
     il = 0

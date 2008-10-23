@@ -81,11 +81,9 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
     if(apply_kpoint) then ! we copy psi to epsi applying the exp(i k.r) phase
       call profiling_in(phase_prof, "PBC_PHASE_APPLY")
       
-      do idim = 1, h%d%dim
-        do ip = 1, NP_PART
-          psi_copy(ip, idim, ii) = h%phase(ip, ik)*psi(ip, idim)
-        end do
-      end do
+      forall (idim = 1:h%d%dim, ip = 1:NP_PART)
+        psi_copy(ip, idim, ii) = h%phase(ip, ik)*psi(ip, idim)
+      end forall
       
       call profiling_out(phase_prof)
     end if
@@ -158,12 +156,10 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
       ! now we need to remove the exp(-i k.r) factor
       call profiling_in(phase_prof)
 
-      do idim = 1, h%d%dim
-        do ip = 1, NP
-          hpsi(ip, idim) = conjg(h%phase(ip, ik))*hpsi(ip, idim)
-        end do
-      end do
-      
+      forall (idim = 1:h%d%dim, ip = 1:NP)
+        hpsi(ip, idim) = conjg(h%phase(ip, ik))*hpsi(ip, idim)
+      end forall
+  
       call profiling_out(phase_prof)
     end if
 
@@ -559,7 +555,7 @@ subroutine X(vlpsi_batch) (h, m, psib, hpsib, ik)
   type(batch_t),       intent(in)    :: psib
   type(batch_t),       intent(inout) :: hpsib
 
-  integer :: ip, ip2, ii, ispin, bs, ib, ipmax
+  integer :: ip, ip2, ii, ispin, bs, ipmax
   R_TYPE, pointer :: psi(:, :), hpsi(:, :)
   FLOAT, allocatable  :: vv(:)
 
@@ -576,21 +572,13 @@ subroutine X(vlpsi_batch) (h, m, psib, hpsib, ik)
 
     do ip = 1, m%np, bs
       ipmax = min(m%np, ip + bs - 1)
+
+      forall (ip2 = ip:ipmax) vv(ip2 - ip + 1) = h%vhxc(ip2, ispin) + h%ep%vpsl(ip2)
+
+      forall (ii = 1:psib%nst, ip2 = ip:ipmax)
+        hpsib%states(ii)%X(psi)(ip2, 1) = vv(ip2 - ip + 1)*psib%states(ii)%X(psi)(ip2, 1)
+      end forall
       
-      ib = 1
-      do ip2 = ip, ipmax
-        vv(ib) = h%vhxc(ip2, ispin) + h%ep%vpsl(ip2)
-        ib = ib + 1
-      end do
-
-      do ii = 1, psib%nst
-        ib = 1
-        do ip2 = ip, ipmax
-          hpsib%states(ii)%X(psi)(ip2, 1) = vv(ib)*psib%states(ii)%X(psi)(ip2, 1)
-          ib = ib + 1
-        end do
-      end do
-
     end do
 
     deallocate(vv)

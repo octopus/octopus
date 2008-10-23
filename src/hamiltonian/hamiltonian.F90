@@ -230,19 +230,13 @@ contains
       nullify(h%vtau)
     end if
 
-    !$omp parallel workshare
     h%vhartree(1:NP) = M_ZERO
-    !$omp end parallel workshare
 
     do ispin = 1, h%d%nspin
-      !$omp parallel workshare
       h%vhxc(1:NP, ispin) = M_ZERO
       h%vxc(1:NP, ispin) = M_ZERO
-      if(iand(h%xc_family, XC_FAMILY_MGGA).ne.0) &
-        h%vtau(1:NP, ispin) = M_ZERO
-      !$omp end parallel workshare
+      if(iand(h%xc_family, XC_FAMILY_MGGA).ne.0) h%vtau(1:NP, ispin) = M_ZERO
     end do
-
 
     if (h%d%cdft) then
       ALLOCATE(h%axc(NP, NDIM, h%d%nspin), NP*NDIM*h%d%nspin)
@@ -427,13 +421,9 @@ contains
 
       ALLOCATE(h%phase(1:NP_PART, 1:h%d%nik), NP_PART*h%d%nik)
 
-      do ik = 1, h%d%nik
-        !$omp parallel do
-        do ip = 1, NP_PART
-          h%phase(ip, ik) = exp(-M_zI*sum(gr%m%x(ip, 1:MAX_DIM)* h%d%kpoints(1:MAX_DIM, ik)))
-        end do
-        !$omp end parallel do
-      end do
+      forall (ik = 1:h%d%nik, ip = 1:NP_PART)
+        h%phase(ip, ik) = exp(-M_zI*sum(gr%m%x(ip, 1:MAX_DIM)* h%d%kpoints(1:MAX_DIM, ik)))
+      end forall
       
     end subroutine init_phase
     
