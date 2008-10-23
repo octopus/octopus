@@ -868,8 +868,8 @@ module tdf_m
 
     call push_sub('tdfunction.tdf_copy')
 
-    ASSERT( (fin%mode >= TDF_EMPTY)  .and. (fin%mode <= TDF_SINE_SERIES) )
-    ASSERT( (fout%mode >= TDF_EMPTY)  .and. (fout%mode <= TDF_SINE_SERIES) )
+    ASSERT( (fin%mode >= TDF_EMPTY)  .and. (fin%mode <= TDF_FOURIER_SERIES) )
+    ASSERT( (fout%mode >= TDF_EMPTY)  .and. (fout%mode <= TDF_FOURIER_SERIES) )
 
     call tdf_end(fout)
     call tdf_init(fout)

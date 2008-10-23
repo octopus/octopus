@@ -569,10 +569,10 @@ contains
       call pop_sub(); return
     end if
 
-    select case(par%current_representation)
+    select case(par%representation)
     case(ctr_sine_fourier_series)
       do j = 1, par%no_parameters
-        call tdf_sineseries_to_numerical(par%f(j))
+        call tdf_numerical_to_sineseries(par%f(j))!
       end do
     case(ctr_fourier_series)
       do j = 1, par%no_parameters
@@ -580,7 +580,7 @@ contains
       end do
     case(ctr_real_space)
       do j = 1, par%no_parameters
-        call tdf_numerical_to_sineseries(par%f(j))!
+        call tdf_sineseries_to_numerical(par%f(j))
       end do
     end select
     par%current_representation = par%representation
@@ -1298,7 +1298,7 @@ contains
     FLOAT :: sumx2
     FLOAT, allocatable :: ep(:), e(:)
 
-    ASSERT(par%current_representation .eq. ctr_sine_fourier_series)
+    ASSERT(par%current_representation .ne. ctr_real_space)
 
     select case(par_common%mode)
     case(parameter_mode_epsilon)
@@ -1400,7 +1400,7 @@ contains
     FLOAT, allocatable :: e(:), ep(:)
     call push_sub('parameters.parameters_x_to_par')
 
-    ASSERT(par%current_representation .eq. ctr_sine_fourier_series)
+    ASSERT(par%current_representation .ne. ctr_real_space)
 
     select case(par_common%mode)
 
