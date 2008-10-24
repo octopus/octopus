@@ -143,7 +143,7 @@ contains
     !% "elf-i", where i stands for the spin channel.
     !%Option ELF_basins 128
     !% Prints out the basins of attraction of the ELF. The output file is called
-    !% "elf_basins-i", where i stands for the spin channel.
+    !% "elf_rs_basins-i", where i stands for the spin channel.
     !%Option ELF_FS 256
     !% Prints the electron localization function in Fourier space. The output file is called
     !% "elf_FS-i", where i stands for the spin channel. (EXPERIMENTAL)
@@ -184,7 +184,7 @@ contains
     !%End
     call loct_parse_int(check_inp('Output'), 0, outp%what)
 
-    ! can not calculate the ELF in 1D
+    ! cannot calculate the ELF in 1D
     if(sb%dim == 1) outp%what = iand(outp%what, not(output_elf + output_elf_basins))
 
     if(.not.varinfo_valid_option('Output', outp%what, is_flag=.true.)) then
@@ -197,7 +197,7 @@ contains
       !%Default "1-1024"
       !%Section Output
       !%Description
-      !% Which wavefunctions to print, in list form, i.e., "1-5" to print the first
+      !% Which wavefunctions to print, in list form: i.e., "1-5" to print the first
       !% five states, "2,3" to print the second and the third state, etc.
       !%End
       call loct_parse_string(check_inp('OutputWfsNumber'), "1-1024", outp%wfs_list)

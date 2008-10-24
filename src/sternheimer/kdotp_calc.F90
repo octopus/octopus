@@ -131,7 +131,7 @@ subroutine zcalc_polarizability_periodic(sys, em_lr, kdotp_lr, nsigma, zpol, ndi
   ndir_ = sys%NDIM
   if(present(ndir)) ndir_ = ndir
 
-  ! alpha_ij(w) = -e sum(m occ, k) [(<u_mk(0)|id/dk_i)|u_mkj(1)(w)> + <u_mkj(1)(-w)|(id/dk_i|u_mk(0)>)]
+  ! alpha_ij(w) = -e sum(m occ, k) [(<u_mk(0)|-id/dk_i)|u_mkj(1)(w)> + <u_mkj(1)(-w)|(-id/dk_i|u_mk(0)>)]
   ! Smearing is not implemented here yet?
 
   do dir1 = 1, ndir_
@@ -143,14 +143,14 @@ subroutine zcalc_polarizability_periodic(sys, em_lr, kdotp_lr, nsigma, zpol, ndi
         term = M_ZERO
         do ist = 1, sys%st%nst
           do idim = 1, sys%st%d%dim
-            subterm = - M_zI * zmf_dotp(m, conjg(kdotp_lr(dir1)%zdl_psi(1:m%np, idim, ist, ik)), &
+            subterm = M_zI * zmf_dotp(m, kdotp_lr(dir1)%zdl_psi(1:m%np, idim, ist, ik), &
               em_lr(dir2, 1)%zdl_psi(1:m%np, idim, ist, ik))
             term = term + subterm
 
             if(nsigma == 1) then
               term = term + conjg(subterm)
             else
-              term = term - M_zI * zmf_dotp(m, conjg(em_lr(dir2, 2)%zdl_psi(1:m%np, idim, ist, ik)), & 
+              term = term - M_zI * zmf_dotp(m, em_lr(dir2, 2)%zdl_psi(1:m%np, idim, ist, ik), & 
                 kdotp_lr(dir1)%zdl_psi(1:m%np, idim, ist, ik))
             end if
           enddo
@@ -243,7 +243,7 @@ subroutine zcalc_eff_mass_inv(sys, h, lr, perturbation, eff_mass_inv, &
           endif
 
           ! contribution from Sternheimer equation
-          term = zmf_dotp(m, proj_dl_psi(1:m%np, 1), conjg(pertpsi(idir1, 1:m%np)))
+          term = zmf_dotp(m, proj_dl_psi(1:m%np, 1), pertpsi(idir1, 1:m%np))
           eff_mass_inv(ik, ist, idir1, idir2) = eff_mass_inv(ik, ist, idir1, idir2) + M_TWO * term
 !          write(*,*) "unocc: ", eff_mass_inv(ik, ist, idir1, idir2)
 
@@ -253,8 +253,8 @@ subroutine zcalc_eff_mass_inv(sys, h, lr, perturbation, eff_mass_inv, &
           !   conjugate as the (ist2,ist) term.  same will apply to hyperpolarizability
              do ist2 = 1, sys%st%nst
                 if (ist2 == ist .or. abs(sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik)) < degen_thres) cycle
-                term = zmf_dotp(m, conjg(pertpsi(idir1, 1:m%np)), sys%st%zpsi(1:m%np, 1, ist2, ik)) * &
-                     zmf_dotp(m, conjg(sys%st%zpsi(1:m%np, 1, ist2, ik)), pertpsi(idir2, 1:m%np)) / &
+                term = zmf_dotp(m, pertpsi(idir1, 1:m%np), sys%st%zpsi(1:m%np, 1, ist2, ik)) * &
+                     zmf_dotp(m, sys%st%zpsi(1:m%np, 1, ist2, ik), pertpsi(idir2, 1:m%np)) / &
                      (sys%st%eigenval(ist, ik) - sys%st%eigenval(ist2, ik))
                 eff_mass_inv(ik, ist, idir1, idir2) = eff_mass_inv(ik, ist, idir1, idir2) + M_TWO * term
 !                write(*,'(a,i2,a,f20.6)') "occ(", ist2, "): ", eff_mass_inv(ik, ist, idir1, idir2)
