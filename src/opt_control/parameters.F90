@@ -38,6 +38,10 @@ module opt_control_parameters_m
   use mix_m
   use filter_m
 
+!!!!NEW
+  use math_m
+!!!!ENDOFNEW
+
   implicit none
 
   private
@@ -1237,7 +1241,7 @@ contains
     REAL_DOUBLE,                    intent(inout) :: x(:)
     integer :: j, k, n, m
     FLOAT :: sumx2
-    FLOAT, allocatable :: ep(:), e(:)
+    FLOAT, allocatable :: ep(:), e(:), y(:)
 
     ASSERT(par%current_representation .ne. ctr_real_space)
 
@@ -1246,61 +1250,50 @@ contains
       n = parameters_dim(par)+1
       ALLOCATE(e(n), n)
       ALLOCATE(ep(n), n)
+      ALLOCATE(y(n), n)
       ASSERT(n-1 .eq. size(x))
       do j =  1, n
         ep(j) = tdf(par%f(1), j)
       end do
       e = ep
-      x(n-1) = atan2(e(n), e(n-1))
-      do k = n-2, 1, -1
-        sumx2 = M_ZERO
-        do j = n, k+1, -1
-          sumx2 = sumx2 + e(j)**2
-        end do
-        x(k) = atan2(sqrt(sumx2), e(k))
-      end do
+      call cartesian2hyperspherical(e, y)
+      x(1:n-1) = y(2:n)
+      deallocate(y, e, ep)
 
     case(parameter_mode_f)
       n = parameters_dim(par)+1
       ALLOCATE(e(n), n)
       ALLOCATE(ep(n), n)
+      ALLOCATE(y(n), n)
       ASSERT(n-1 .eq. size(x))
       do j =  1, n
         ep(j) = tdf(par%f(1), j)
       end do
       e = matmul(par%utransf, ep)
-      x(n-1) = atan2(e(n), e(n-1))
-      do k = n-2, 1, -1
-        sumx2 = M_ZERO
-        do j = n, k+1, -1
-          sumx2 = sumx2 + e(j)**2
-        end do
-        x(k) = atan2(sqrt(sumx2), e(k))
-      end do
+      call cartesian2hyperspherical(e, y)
+      x(1:n-1) = y(2:n)
+      deallocate(y, e, ep)
 
     case(parameter_mode_phi)
       n = parameters_dim(par)+1
       ALLOCATE(e(n), n)
       ALLOCATE(ep(n), n)
+      ALLOCATE(y(n), n)
       ASSERT(n-1 .eq. size(x))
       do j =  1, n
         ep(j) = tdf(par%f(1), j)
       end do
       e = ep
-      x(n-1) = atan2(e(n), e(n-1))
-      do k = n-2, 1, -1
-        sumx2 = M_ZERO
-        do j = n, k+1, -1
-          sumx2 = sumx2 + e(j)**2
-        end do
-        x(k) = atan2(sqrt(sumx2), e(k))
-      end do
+      call cartesian2hyperspherical(e, y)
+      x(1:n-1) = y(2:n)
+      deallocate(y, e, ep)
 
     case(parameter_mode_f_and_phi)
       n = parameters_dim(par)+2
       m = n/2
       ALLOCATE(e(n), n)
       ALLOCATE(ep(n), n)
+      ALLOCATE(y(m), m)
       do j =  1, m
         ep(j) = tdf(par%f(1), j)
       end do
@@ -1309,25 +1302,13 @@ contains
       end do
       e(1:m) = matmul(par%utransf, ep(1:m))
       e(m+1:2*m) = ep(m+1:2*m)
-      x(m-1) = atan2(e(m), e(m-1))
-      do k = m-2, 1, -1
-        sumx2 = M_ZERO
-        do j = m, k+1, -1
-          sumx2 = sumx2 + e(j)**2
-        end do
-        x(k) = atan2(sqrt(sumx2), e(k))
-      end do
-      x(2*m-2) = atan2(e(2*m), e(2*m-1))
-      do k = 2*m-3, m, -1
-        sumx2 = M_ZERO
-        do j = 2*m, k+1, -1
-          sumx2 = sumx2 + e(j)**2
-        end do
-        x(k) = atan2(sqrt(sumx2), e(k))
-      end do
+      call cartesian2hyperspherical(e(1:m), y)
+      x(1:m-1) = y(2:m)
+      call cartesian2hyperspherical(e(m+1:2*m), y)
+      x(m:2*m-2) = y(2:m)
+      deallocate(y, e, ep)
     end select
 
-    deallocate(e, ep)
   end subroutine parameters_par_to_x
   ! ---------------------------------------------------------
 
@@ -1338,7 +1319,8 @@ contains
     REAL_DOUBLE,                          intent(in)    :: x(:)
 
     integer :: j, k, n, dim
-    FLOAT, allocatable :: e(:), ep(:)
+    FLOAT, allocatable :: e(:), ep(:), y(:)
+
     call push_sub('parameters.parameters_x_to_par')
 
     ASSERT(par%current_representation .ne. ctr_real_space)
@@ -1348,96 +1330,25 @@ contains
     case(parameter_mode_epsilon, parameter_mode_f, parameter_mode_phi)
       n = par%dim
       ASSERT(n-1 .eq. size(x))
-
       ALLOCATE(e(n), n)
       ALLOCATE(ep(n), n)
       e = M_ZERO; ep = M_ZERO
+ 
+      ALLOCATE(y(n), n)
+      y(1) = M_ONE
+      y(2:n) = x(1:n-1)
+      call hyperspherical2cartesian(y, e)
 
-      if(n.eq.2) then
-        e(1) = cos(x(1))
-        e(2) = sin(x(1))
-      elseif(n.eq.3) then
-        e(1) = cos(x(1))
-        e(2) = sin(x(1))*cos(x(2))
-        e(3) = sin(x(1))*sin(x(2))
-      else
-        e(1) = cos(x(1))
-        e(2) = sin(x(1))*cos(x(2))
-        e(3) = sin(x(1))*sin(x(2))*cos(x(3))
-        do j = 4, n - 1
-          e(j) = M_ONE
-          do k = 1, j - 1
-            e(j) = e(j) * sin(x(k))
-          end do
-          e(j) = e(j) * cos(x(j))
-        end do
-        e(n) = M_ONE
-        do k = 1, n - 2
-          e(n) = e(n) * sin(x(k))
-        end do
-        e(n) = e(n) * sin(x(n-1))
-      end if
 
     case(parameter_mode_f_and_phi)
 
       n = par%dim
       dim = parameters_dim(par) ! This should be equal to 2*n-2
-
       ALLOCATE(e(2*n), 2*n)
       ALLOCATE(ep(2*n), 2*n)
       e = M_ZERO; ep = M_ZERO
 
-      ! First, we set the components of the envelope
-      if(n.eq.2) then
-        e(1) = cos(x(1))
-        e(2) = sin(x(1))
-      elseif(n.eq.3) then
-        e(1) = cos(x(1))
-        e(2) = sin(x(1))*cos(x(2))
-        e(3) = sin(x(2))*sin(x(2))
-      else
-        e(1) = cos(x(1))
-        e(2) = sin(x(1))*cos(x(2))
-        e(3) = sin(x(1))*sin(x(2))*cos(x(3))
-        do j = 4, n - 1
-          e(j) = M_ONE
-          do k = 1, j - 1
-            e(j) = e(j) * sin(x(k))
-          end do
-          e(j) = e(j) * cos(x(j))
-        end do
-        e(n) = M_ONE
-        do k = 1, n - 2
-          e(n) = e(n) * sin(x(k))
-        end do
-        e(n) = e(n) * sin(x(n-1))
-      end if
-
-      ! Now, for the phase
-      if(n.eq.2) then
-        e(n+1) = cos(x(n-1+1))
-        e(n+2) = sin(x(n-1+1))
-      elseif(n.eq.3) then
-        e(n+1) = cos(x(n-1+1))
-        e(n+2) = sin(x(n-1+1))*cos(x(n-1+2))
-        e(n+3) = sin(x(n-1+2))*sin(x(n-1+2))
-      else
-        e(n+1) = cos(x(n-1+1))
-        e(n+2) = sin(x(n-1+1))*cos(x(n-1+2))
-        e(n+3) = sin(x(n-1+1))*sin(x(n-1+2))*cos(x(n-1+3))
-        do j = 4, n - 1
-          e(n+j) = M_ONE
-          do k = 1, j - 1
-            e(n+j) = e(n+j) * sin(x(n-1+k))
-          end do
-          e(n+j) = e(n+j) * cos(x(n-1+j))
-        end do
-        e(n+n) = M_ONE
-        do k = 1, n - 2
-          e(n+n) = e(n+n) * sin(x(n-1+k))
-        end do
-        e(n+n) = e(n+n) * sin(x(n-1+n-1))
-      end if
+      ! WARNING: code missing.
 
     end select
 
@@ -1467,7 +1378,7 @@ contains
     end select
 
 
-    deallocate(e, ep)
+    deallocate(y, e, ep)
     call pop_sub()
   end subroutine parameters_x_to_par
   ! ---------------------------------------------------------

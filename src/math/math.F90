@@ -72,7 +72,10 @@ module math_m
     interpolate,                &
     get_blocks,                 &
     even,                       &
-    odd
+    odd,                        &
+    cartesian2hyperspherical,   &
+    hyperspherical2cartesian
+
 
 
   ! ---------------------------------------------------------
@@ -193,6 +196,7 @@ module math_m
   end interface
 
 contains
+
 
   ! ---------------------------------------------------------
   ! Checks if a divides b.
@@ -1422,6 +1426,89 @@ contains
     ASSERT(npos == ip - 1)
 
   end subroutine get_blocks
+
+
+  ! ---------------------------------------------------------
+  ! Performs a transformation from the cartesian coordinates
+  ! of a n-th dimensional vector, to hyperspherical
+  ! coordinates
+  ! ---------------------------------------------------------
+  subroutine cartesian2hyperspherical(x, u)
+    FLOAT, intent(in)  :: x(:)
+    FLOAT, intent(out) :: u(:)
+
+    integer :: n, k, j
+    FLOAT :: sumx2
+
+    call push_sub('math.cartesian2hyperspherical')
+
+    n = size(x)
+    ASSERT(n>1)
+    ASSERT(size(u).eq.n)
+
+    u(1) = sqrt(dot_product(x, x))
+
+    u(n) = atan2(x(n), x(n-1))
+    do k = n-2, 1, -1
+      sumx2 = M_ZERO
+      do j = n, k+1, -1
+        sumx2 = sumx2 + x(j)**2
+      end do
+      u(k+1) = atan2(sqrt(sumx2), x(k))
+    end do
+
+    call pop_sub()
+  end subroutine cartesian2hyperspherical
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  ! Performs the inverse transformation of
+  ! cartesian2hyperspherical
+  ! ---------------------------------------------------------
+  subroutine hyperspherical2cartesian(u, x)
+    FLOAT, intent(in)  :: u(:)
+    FLOAT, intent(out) :: x(:)
+
+    integer :: n, i, j, k
+
+    call push_sub('math.hyperspherical2cartesian')
+
+    n = size(u)
+    ASSERT(n>1)
+    ASSERT(size(x).eq.n)
+
+    if(n.eq.2) then
+      x(1) = cos(u(2))
+      x(2) = sin(u(3))
+    elseif(n.eq.3) then
+      x(1) = cos(u(2))
+      x(2) = sin(u(2))*cos(u(3))
+      x(3) = sin(u(2))*sin(u(3))
+    else
+      x(1) = cos(u(2))
+      x(2) = sin(u(2))*cos(u(3))
+      x(3) = sin(u(2))*sin(u(3))*cos(u(4))
+      do j = 4, n - 1
+        x(j) = M_ONE
+        do k = 1, j - 1
+          x(j) = x(j) * sin(u(k+1))
+        end do
+        x(j) = x(j) * cos(u(j+1))
+      end do
+      x(n) = M_ONE
+      do k = 1, n - 2
+        x(n) = x(n) * sin(u(k+1))
+      end do
+      x(n) = x(n) * sin(u(n))
+    end if
+
+    x = x * u(1)
+ 
+    call pop_sub()
+  end subroutine hyperspherical2cartesian
+  ! ---------------------------------------------------------
+
 
 
 #include "undef.F90"
