@@ -470,7 +470,7 @@ contains
       ! 1 atomic unit of intensity = 3.5094448e+16 W / cm^2
       ! In a Gaussian system of units,
       ! I(t) = (1/(8\pi)) * c * E(t)^2
-      ! (c\pi) * c = 5.4525289841210 a.u.
+      ! (1/(8\pi)) * c = 5.4525289841210 a.u.
       if(l(i)%field .eq. E_FIELD_ELECTRIC) then
         fluence = M_ZERO
 
@@ -478,7 +478,7 @@ contains
         do j = 1, max_iter
           t = j * dt
           val = tdf(l(i)%f, t)
-          amp = val*exp(M_zI*(l(i)%omega*t + val))
+          amp = val*exp(M_zI*(l(i)%omega*t + tdf(l(i)%phi, t)))
           intensity = M_ZERO
           do k = 1, MAX_DIM
             intensity = intensity + CNST(5.4525289841210) * real(amp*l(i)%pol(k))**2
