@@ -38,7 +38,7 @@ module subspace_m
   use preconditioners_m
   use profiling_m
   use states_m
-  use states_lalg_m
+  use states_calc_m
   use states_block_m
 
   implicit none

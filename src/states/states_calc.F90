@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-module states_lalg_m
+module states_calc_m
   use derivatives_m
   use calc_mode_m
   use crystal_m
@@ -93,7 +93,7 @@ contains
 
     integer :: ik
 
-    call push_sub('states_lalg.rotate_states')
+    call push_sub('states_calc.rotate_states')
 
     if(st%wfs_type == M_REAL) then
       do ik = 1, st%d%nik
@@ -141,7 +141,7 @@ contains
     FLOAT,   allocatable :: eigenval_sorted(:)
     FLOAT :: degen_thres, evis, evjs
 
-    call push_sub('states_lalg.states_degeneracy_matrix')
+    call push_sub('states_calc.states_degeneracy_matrix')
 
     ALLOCATE(eigenval_sorted(st%nst*st%d%nik),   st%nst*st%d%nik)
     ALLOCATE(         sindex(st%nst*st%d%nik),   st%nst*st%d%nik)
@@ -232,14 +232,14 @@ contains
 
 #include "undef.F90"
 #include "real.F90"
-#include "states_lalg_inc.F90"
+#include "states_calc_inc.F90"
 
 #include "undef.F90"
 #include "complex.F90"
-#include "states_lalg_inc.F90"
+#include "states_calc_inc.F90"
 #include "undef.F90"
 
-end module states_lalg_m
+end module states_calc_m
 
 
 !! Local Variables:

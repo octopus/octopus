@@ -49,7 +49,7 @@ module scf_m
   use solids_m
   use states_m
   use states_dim_m
-  use states_lalg_m
+  use states_calc_m
   use units_m
   use v_ks_m
   use varinfo_m

@@ -132,7 +132,7 @@ subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi,  &
 #endif
 
   call profiling_in(prof, "GRAM_SCHMIDT")
-  call push_sub('states_lalg_inc.Xstates_gram_schmidt')
+  call push_sub('states_calc_inc.Xstates_gram_schmidt')
 
   ! This routine uses blocking to optimize cache usage. One block of
   ! |phi> is loaded in cache L1 and then then we calculate the dot

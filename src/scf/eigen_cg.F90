@@ -36,7 +36,7 @@ module eigen_cg_m
   use preconditioners_m
   use profiling_m
   use states_m
-  use states_lalg_m
+  use states_calc_m
   use units_m
 
   implicit none

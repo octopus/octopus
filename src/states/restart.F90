@@ -39,7 +39,7 @@ module restart_m
   use simul_box_m
   use states_m
   use states_dim_m
-  use states_lalg_m
+  use states_calc_m
   use string_m
   use units_m
   use varinfo_m

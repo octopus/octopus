@@ -32,7 +32,7 @@ module opt_control_target_m
   use string_m
   use states_m
   use states_dim_m
-  use states_lalg_m
+  use states_calc_m
   use excited_states_m
   use grid_m
   use h_sys_output_m

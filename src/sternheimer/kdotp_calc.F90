@@ -29,7 +29,7 @@ module kdotp_calc_m
   use pert_m
   use profiling_m
   use states_m
-  use states_lalg_m
+  use states_calc_m
   use sternheimer_m
   use system_m
 

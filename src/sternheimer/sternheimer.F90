@@ -43,7 +43,7 @@ module sternheimer_m
   use scf_tol_m
   use states_m
   use states_dim_m
-  use states_lalg_m
+  use states_calc_m
   use string_m
   use system_m
   use units_m

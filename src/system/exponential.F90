@@ -30,7 +30,7 @@ module exponential_m
   use loct_parser_m
   use mesh_function_m
   use profiling_m
-  use states_lalg_m
+  use states_calc_m
   use exponential_split_m
   use varinfo_m
 

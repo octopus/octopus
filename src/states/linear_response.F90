@@ -32,7 +32,7 @@ module linear_response_m
   use smear_m
   use states_m
   use states_dim_m
-  use states_lalg_m
+  use states_calc_m
   use units_m
 
   implicit none

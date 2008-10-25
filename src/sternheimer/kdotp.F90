@@ -45,7 +45,7 @@ module kdotp_m
   use pol_lr_m
   use restart_m
   use states_m
-  use states_lalg_m
+  use states_calc_m
   use sternheimer_m
   use string_m
   use system_m

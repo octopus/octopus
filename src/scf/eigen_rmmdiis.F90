@@ -37,7 +37,7 @@ module eigen_rmmdiis_m
   use preconditioners_m
   use profiling_m
   use states_m
-  use states_lalg_m
+  use states_calc_m
   use subspace_m
   use units_m
 
