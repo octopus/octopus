@@ -25,11 +25,13 @@
 ! magnetic fields.
 !--------------------------------------------------------------
 module tdf_m
+  use c_pointer_m
   use datasets_m
   use global_m
   use io_m
   use messages_m
   use loct_parser_m
+  use loct_math_m
   use splines_m
   use units_m
   use fft_m
@@ -47,6 +49,7 @@ module tdf_m
             tdf_init_fromexpr,           &
             tdf_init_numerical,          &
             tdf_set_numerical,           &
+            tdf_set_random,              &
             tdf_to_numerical,            &
             tdf,                         &
             tdf_dot_product,             &
@@ -67,7 +70,6 @@ module tdf_m
             tdf_read,                    &
             tdf_is_empty,                &
             tdf_end
-
 
 
   integer, parameter ::      &
@@ -629,7 +631,7 @@ module tdf_m
     case(TDF_SINE_SERIES)
       f%coeffs(1:f%sine_nfreqs) = values(1:f%sine_nfreqs)
     case(TDF_FOURIER_SERIES)
-      f%valww(1:f%nfreqs) = values(1:f%nfreqs)
+      f%valww(1:2*f%nfreqs-1) = values(1:2*f%nfreqs-1)
     end select
 
     call pop_sub()
@@ -651,7 +653,46 @@ module tdf_m
       f%valww(index) = value
     end select
   end subroutine tdf_set_numericalr1
-  !------------------------------------------------------------
+  !------------------------------------------------------------ 
+
+
+  !------------------------------------------------------------ 
+  subroutine tdf_set_random(f)
+    type(tdf_t), intent(inout) :: f
+
+    type(c_ptr) :: random_gen_pointer
+    integer :: i, n, j, k
+    FLOAT :: fdotf, nrm
+    FLOAT, allocatable :: e(:)
+
+    call push_sub('tdfunction.tdf_set_random')
+
+    select case(f%mode)
+    case(TDF_FOURIER_SERIES)
+
+      fdotf = tdf_dot_product(f, f)
+
+      call loct_ran_init(random_gen_pointer)
+
+      n = 2*f%nfreqs-1
+      ALLOCATE(e(n), n)
+      do i = 1, n
+        e(i) = loct_ran_gaussian(random_gen_pointer, M_ONE)
+      end do
+      nrm = sqrt(dot_product(e, e))
+      e = sqrt(fdotf) * e/ nrm
+
+      call tdf_set_numerical(f, e)
+
+      call loct_ran_end(random_gen_pointer)
+      deallocate(e)
+    case default
+      stop 'Error'
+    end select
+
+    call pop_sub()
+  end subroutine tdf_set_random
+  !------------------------------------------------------------ 
 
 
   !------------------------------------------------------------

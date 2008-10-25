@@ -706,13 +706,14 @@ module opt_control_target_m
           omega = target%hhg_k(j) * target%hhg_w0 - a*M_HALF + deltaw * (k-1)
           dw = M_z0
           do i = 0, maxiter
-            t = (i-1)*target%dt
+            t = i*target%dt
             dw = dw + dipole(i) * exp(-M_zI*omega*t)
           end do
           j1_ = (target%hhg_alpha(j) / a) * log(conjg(dw)*dw * (target%dt)**2) * deltaw
           if(k.eq.1 .or. k.eq.nomegas) j1_ = M_HALF * j1_
           !j1 = j1 + j1_
           loghw = log(conjg(dw)*dw * (target%dt)**2)
+          !write(0, '(2i6,3f20.8)') j, target%hhg_k(j), target%hhg_alpha(j), omega, loghw
           if( loghw > maxhh ) then
             maxhh = log(conjg(dw)*dw * (target%dt)**2)
           end if
