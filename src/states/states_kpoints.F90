@@ -104,7 +104,7 @@ subroutine states_choose_kpoints(d, sb, geo)
       end do
     end do
 
-    d%kpoints = d%kpoints / units_inp%length%factor !K points have 1/lenght units
+    d%kpoints = d%kpoints / units_inp%length%factor !K points have 1/length units
 
     call print_kpoints_debug
     call pop_sub()

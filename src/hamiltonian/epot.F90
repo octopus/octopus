@@ -29,6 +29,7 @@ module external_pot_m
   use io_m
   use ion_interaction_m
   use lalg_basic_m
+  use lalg_adv_m
   use loct_parser_m
   use splines_m
   use magnetic_m
@@ -66,7 +67,8 @@ module external_pot_m
     epot_end,                  &
     epot_generate,             &
     epot_forces,               &
-    epot_local_potential
+    epot_local_potential,      &
+    epot_dipole_periodic
 
 
   type epot_t
@@ -528,16 +530,16 @@ contains
     !$omp end parallel workshare
 #endif
 
-    !Local potential, we can get it by solving the poisson equation
-    !(for all electron species or pseudopotentials in periodic
+    !Local potential, we can get it by solving the Poisson equation
+    !(for all-electron species or pseudopotentials in periodic
     !systems) or by applying it directly to the grid
 
     if(a%spec%has_density .or. (species_is_ps(a%spec) .and. simul_box_is_periodic(gr%sb))) then
 
       ALLOCATE(rho(1:mesh%np), mesh%np)
 
-      !this has to be optimized so the poisson solution is made once
-      !for all species, perhaps even include it in the hartree term
+      !this has to be optimized so the Poisson solution is made once
+      !for all species, perhaps even include it in the Hartree term
       call species_get_density(a%spec, a%x, gr, geo, rho)
 
       vl(1:mesh%np) = M_ZERO   ! vl has to be initialized before entering routine
@@ -681,6 +683,58 @@ contains
     call profiling_out(forces_prof)
 
   end subroutine epot_forces
+
+  ! ---------------------------------------------------------
+  ! Uses the single-point Berry's phase method to calculate dipole moment in a periodic system
+  ! This is only accurate in the limit of a large supercell.
+  ! It is implemented only for a parallelepiped.
+  ! mu = - eL/2*pi Im ln <Psi|exp(-i(2*pi/L)x)|Psi>
+  ! E Yaschenko, L Fu, L Resca, R Resta, Phys. Rev. B 58, 1222-1229 (1998)
+  FLOAT function epot_dipole_periodic(st, gr, dir) result(dipole)
+    type(states_t), intent(in) :: st
+    type(grid_t),   intent(in) :: gr
+    integer,        intent(in) :: dir
+
+    integer ik, ist, ist2, idim
+    CMPLX, allocatable :: matrix(:, :)
+    CMPLX det
+
+    call push_sub('epot.epot_dipole_periodic')
+
+    ALLOCATE(matrix(st%nst, st%nst), st%nst * st%nst)
+
+    if (st%d%nik * st%smear%el_per_state .ne. 2) then
+      message(1) = "Single-point Berry's phase method for dipole should not be used when there is more than one k-point."
+      call write_warning(1)
+    endif
+    ! in this case, finite differences should be used to construct derivatives with respect to k
+
+    do ik = 1, st%d%nik ! determinants for different spins multiply since matrix is block diagonal
+      do ist = 1, st%nst
+        do ist2 = 1, st%nst
+          do idim = 1, st%d%dim
+            if (ist .le. ist2) then
+              write(*,*) 'matrix(', ist, ', ', ist2, ') = ', matrix(ist, ist2)
+              matrix(ist, ist2) = zmf_dotp(gr%m, st%zpsi(1:gr%m%np, idim, ist, ik), &
+                                  exp(- M_zI * (M_Pi / gr%sb%lsize(dir)) * gr%m%x(1:gr%m%np, dir)) * &
+                                  st%zpsi(1:gr%m%np, idim, ist2, ik))
+              ! factor of two removed from exp since actual lattice vector is 2 * lsize
+              ! zmf_dotp conjugates the left argument
+            else
+              ! enforce Hermiticity of matrix
+              matrix(ist, ist2) = conjg(matrix(ist2, ist))
+            endif
+          enddo ! idim
+        enddo !ist2
+      enddo !ist
+    enddo !ik
+
+    det = lalg_determinant(st%nst, matrix(1:st%nst, 1:st%nst), invert = .false.)
+    dipole = -(2 * gr%sb%lsize(dir) / (2 * M_Pi)) * aimag(log(det)) * st%smear%el_per_state
+
+    deallocate(matrix)
+    call pop_sub()
+  end function epot_dipole_periodic
 
 #include "undef.F90"
 #include "real.F90"

@@ -67,7 +67,7 @@ module states_dim_m
     SPIN_POLARIZED = 2,         &
     SPINORS        = 3
 
-  ! Spin polarized k indices for non-periodic systems.
+  ! Spin-polarized k-indices for non-periodic systems.
   integer, public, parameter :: &
     SPIN_DOWN = 1,              &
     SPIN_UP   = 2

@@ -74,6 +74,8 @@ contains
 
 
 ! ---------------------------------------------------------
+! This routine cannot be used with d/dk wavefunctions calculated
+! by perturbation theory.
 subroutine zcalc_dipole_periodic(sys, lr, dipole)
   type(system_t),         intent(inout) :: sys
   type(lr_t),             intent(in)    :: lr(:,:)

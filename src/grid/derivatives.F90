@@ -181,11 +181,11 @@ contains
     !%Default 4
     !%Section Mesh::Derivatives
     !%Description
-    !% This variable gives the dicretization order for the approximation of
+    !% This variable gives the discretization order for the approximation of
     !% the differential operators. This means, basically, that
     !% <tt>DerivativesOrder</tt> points are used in each positive/negative
     !% spatial direction, e. g. <tt>DerivativesOrder = 1</tt> would give
-    !% the well-known three-point-formula in 1D.
+    !% the well-known three-point formula in 1D.
     !% The number of points actually used for the Laplacian
     !% depends on the stencil used:
     !%

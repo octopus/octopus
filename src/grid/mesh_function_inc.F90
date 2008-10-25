@@ -61,7 +61,7 @@ end function X(mf_integrate)
 ! but using the mesh_aux defined as a global object in this
 ! module. This way it can be called by external libraries,
 ! passing only the two vectors. First, one has to 
-! make sure that mesh_aux is pointint to some defined
+! make sure that mesh_aux is pointing to some defined
 ! mesh data structure, by calling mesh_init_mesh_aux.
 ! ---------------------------------------------------------
 R_TYPE function X(mf_dotp_aux)(f1, f2) result(dotp)
@@ -255,7 +255,7 @@ end function X(mf_moment)
 
 
 ! ---------------------------------------------------------
-! This subroutine generates a gaussian wave-function in a
+! This subroutine generates a Gaussian wave-function at a
 ! random position in space
 subroutine X(mf_random)(m, f, seed)
   type(mesh_t), intent(in)  :: m

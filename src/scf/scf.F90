@@ -164,7 +164,7 @@ contains
     !%
     !% <math>\epsilon = {1 \over E} \sum_{j=1}^{N_{occ}} \vert \epsilon_j^{out}-\epsilon_j^{inp}\vert</math>.
     !%
-    !% <i>E</i> is the sum of the eigenvalues. A zero value(the default)  means do not use this criterion.
+    !% <i>E</i> is the sum of the eigenvalues. A zero value (the default) means do not use this criterion.
     !%End
     call loct_parse_float(check_inp('ConvRelEv'), M_ZERO, scf%conv_rel_ev)
 
@@ -643,7 +643,7 @@ contains
       character(len=*), intent(in) :: dir, fname
 
       FLOAT :: e_dip(4, st%d%nspin), n_dip(MAX_DIM)
-      integer :: iunit, i, j
+      integer :: iunit, ispin, idir, iatom
 
       call push_sub('scf.scf_write_static')
 
@@ -684,24 +684,31 @@ contains
         if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
       end if
 
-
       ! Next lines of code calculate the dipole of the molecule, summing the electronic and
       ! ionic contributions.
-      do j = 1, st%d%nspin
-        call dmf_multipoles(gr%m, st%rho(:,j), 1, e_dip(:, j))
+      do ispin = 1, st%d%nspin
+        call dmf_multipoles(gr%m, st%rho(:, ispin), 1, e_dip(:, ispin))
       end do
-      do j = 1, 3
-        e_dip(j+1, 1) = sum(e_dip(j+1, :))
+
+      do idir = 1, 3
+        e_dip(idir + 1, 1) = sum(e_dip(idir + 1, :))
       end do
+
+      ! Replace dipole in periodic directions with single-point Berry's phase calculation
+      do idir = 1, gr%sb%periodic_dim
+        e_dip(idir + 1, 1) = epot_dipole_periodic(st, gr, idir)         
+      enddo
+
       call geometry_dipole(geo, n_dip)
       n_dip(1:NDIM) = n_dip(1:NDIM) - e_dip(2:NDIM+1, 1)
 
       if(mpi_grp_is_root(mpi_world)) then
-        if(simul_box_is_periodic(gr%sb)) then
-          write(iunit,'(a)') 'WARNING: Accurate calculation of dipole in periodic system requires kdotp run.'
-        endif
-
         call io_output_dipole(iunit, n_dip, NDIM)
+        
+        if (simul_box_is_periodic(gr%sb)) then
+           write(iunit, '(a)') "Defined only up to quantum of polarization (e * lattice vector)."
+           write(iunit, '(a)') "Single-point Berry's phase method only accurate for large supercells."
+        endif
       end if
 
       ! Output expectation values of the momentum operator
@@ -725,9 +732,9 @@ contains
 
         write(iunit,'(3a)') 'Forces on the ions [', trim(units_out%force%abbrev), "]"
         write(iunit,'(a,10x,14x,a,14x,a,14x,a)') ' Ion','x','y','z'
-        do i = 1, geo%natoms
-          write(iunit,'(i4,a10,10f15.6)') i, trim(geo%atom(i)%spec%label), &
-            geo%atom(i)%f(1:NDIM) / units_out%force%factor
+        do iatom = 1, geo%natoms
+          write(iunit,'(i4,a10,10f15.6)') iatom, trim(geo%atom(iatom)%spec%label), &
+            geo%atom(iatom)%f(1:NDIM) / units_out%force%factor
         end do
 
         call io_close(iunit)

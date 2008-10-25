@@ -100,8 +100,6 @@ contains
 
     integer              :: idir, ierr, size, is, ist, ik
     character(len=100)   :: dirname, str_tmp
-    FLOAT                :: elec_dipole(1:MAX_DIM) ! electronic contribution
-    FLOAT                :: ion_dipole(1:MAX_DIM)  ! ionic contribution
     integer              :: isigma, ifactor
     logical, allocatable :: orth_mask(:)
 
@@ -195,16 +193,6 @@ contains
         kdotp_rho_tag(idir), kdotp_wfs_tag(idir), have_restart_rho=(ierr==0))
       kdotp_vars%ok = kdotp_vars%ok .and. sternheimer_has_converged(sh)         
     end do ! idir
-
-    ! calculate dipole
-    write(6, '(a)')
-    call zcalc_dipole_periodic(sys, kdotp_vars%lr, elec_dipole(1:NDIM))
-    call geometry_dipole(sys%geo, ion_dipole(1:NDIM))
-    call io_output_dipole(6, elec_dipole(1:NDIM) + ion_dipole(1:NDIM), NDIM)
-    write(6, '(a)') 'Defined up to quantum of polarization.'
-    ! quantum of polarization = any lattice vector / cell volume
-    ! quantum of dipole = any lattice vector
-    write(6, '(a)')
 
     ! calculate effective masses
     if (calc_eff_mass) then

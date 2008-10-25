@@ -125,7 +125,7 @@ contains
     !% "wf-k-p-i", where k stands for the <i>k</i> number, p for the state, and
     !% i for the spin channel.
     !%Option wfs_sqmod 8
-    !% Prints out squared module of wave-functions. 
+    !% Prints out squared modulus of the wave-functions. 
     !% The output file is called "sqm-wf-k-p-i",
     !% where k stands for the <i>k</i> number, p for the state,
     !% and i for the spin channel.
