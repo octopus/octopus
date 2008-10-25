@@ -37,7 +37,7 @@ subroutine td_calc_tacc(gr, geo, st, h, acc, t)
   FLOAT,               intent(out)   :: acc(MAX_DIM)
 
   FLOAT :: field(MAX_DIM), x(MAX_DIM)
-  CMPLX, allocatable :: hzpsi(:,:), hhzpsi(:,:), xzpsi(:,:,:), vnl_xzpsi(:,:), conj(:)
+  CMPLX, allocatable :: hzpsi(:,:), hhzpsi(:,:), xzpsi(:,:,:), vnl_xzpsi(:,:)
   integer  :: j, k, i, ik, ist, idim
 
 #if defined(HAVE_MPI)
@@ -72,7 +72,6 @@ subroutine td_calc_tacc(gr, geo, st, h, acc, t)
   x = M_ZERO
   ALLOCATE(hzpsi (NP, st%d%dim), NP*st%d%dim)
   ALLOCATE(hhzpsi(3, NP),        3*NP)
-  ALLOCATE(conj  (NP),           NP)
 
   do ik = 1, st%d%nik
     do ist = st%st_start, st%st_end
@@ -93,8 +92,7 @@ subroutine td_calc_tacc(gr, geo, st, h, acc, t)
         call zvnlpsi(h, gr%m, xzpsi(:,:, j), vnl_xzpsi(:,:), ik)
 
         do idim = 1, st%d%dim
-          conj = conjg(hzpsi(1:NP, idim))
-          x(j) = x(j) - 2*st%occ(ist, ik)*zmf_dotp(gr%m, conj, vnl_xzpsi(:, idim) )
+          x(j) = x(j) - 2*st%occ(ist, ik)*zmf_dotp(gr%m, hzpsi(1:NP, idim), vnl_xzpsi(:, idim) )
         end do
       end do
 
@@ -109,16 +107,15 @@ subroutine td_calc_tacc(gr, geo, st, h, acc, t)
         vnl_xzpsi = M_z0
         call zvnlpsi(h, gr%m, xzpsi(:,:, j), vnl_xzpsi(:,:), ik)
         do idim = 1, st%d%dim
-          conj = conjg(st%zpsi(1:NP, idim, ist, ik))
           x(j) = x(j) + 2*st%occ(ist, ik)* &
-            zmf_dotp(gr%m, conj, vnl_xzpsi(:, idim) )
+            zmf_dotp(gr%m, st%zpsi(1:NP, idim, ist, ik), vnl_xzpsi(:, idim) )
         end do
       end do
       deallocate(xzpsi, vnl_xzpsi)
 
     end do
   end do
-  deallocate(hzpsi, hhzpsi, conj)
+  deallocate(hzpsi, hhzpsi)
 
 #if defined(HAVE_MPI)
   if(st%parallel_in_states) then
