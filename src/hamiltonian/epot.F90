@@ -685,9 +685,9 @@ contains
   end subroutine epot_forces
 
   ! ---------------------------------------------------------
-  ! Uses the single-point Berry's phase method to calculate dipole moment in a periodic system
+  ! Uses the single-point Berry`s phase method to calculate dipole moment in a periodic system
   ! This is only accurate in the limit of a large supercell.
-  ! It is implemented only for a parallelepiped.
+  ! It is implemented only for an orthogonal unit cell.
   ! mu = - eL/2*pi Im ln <Psi|exp(-i(2*pi/L)x)|Psi>
   ! E Yaschenko, L Fu, L Resca, R Resta, Phys. Rev. B 58, 1222-1229 (1998)
   FLOAT function epot_dipole_periodic(st, gr, dir) result(dipole)

@@ -694,7 +694,7 @@ contains
         e_dip(idir + 1, 1) = sum(e_dip(idir + 1, :))
       end do
 
-      ! Replace dipole in periodic directions with single-point Berry's phase calculation
+      ! Replace dipole in periodic directions with single-point Berry`s phase calculation
       do idir = 1, gr%sb%periodic_dim
         e_dip(idir + 1, 1) = epot_dipole_periodic(st, gr, idir)         
       enddo
