@@ -24,7 +24,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
   type(states_t),   intent(inout)  :: st
   FLOAT,            intent(in)     :: time
 
-  integer :: iatom, ist, ik, idim, idir, np
+  integer :: iatom, ist, ik, idim, idir, np, ip
 
   R_TYPE :: psi_proj_gpsi
   R_TYPE, allocatable :: gpsi(:, :, :)
@@ -70,10 +70,8 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
         call X(derivatives_grad)(gr%fine%der, psi(:, idim), gpsi(:, :, idim))
 
         !accumulate to calculate the gradient of the density
-        do idir = 1, NDIM
-          grho(1:np, idir) = grho(1:np, idir) + &
-               st%d%kweights(ik)*st%occ(ist, ik)*M_TWO*R_REAL(psi(1:np, idim)*R_CONJ(gpsi(1:np, idir, idim)))
-        end do
+        forall (idir = 1:NDIM, ip = 1:np) grho(ip, idir) = grho(ip, idir) + &
+             st%d%kweights(ik)*st%occ(ist, ik)*M_TWO*R_REAL(psi(ip, idim)*R_CONJ(gpsi(ip, idir, idim)))
       end do
 
       call profiling_count_operations(np*st%d%dim*NDIM*(2 + R_MUL))
@@ -191,9 +189,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
   end if
 #endif
 
-  do iatom = 1, geo%natoms
-    geo%atom(iatom)%f(1:MAX_DIM) = geo%atom(iatom)%f(1:MAX_DIM) + force(1:MAX_DIM, iatom)
-  end do
+  forall (iatom = 1:geo%natoms, idir = 1:MAX_DIM) geo%atom(iatom)%f(idir) = geo%atom(iatom)%f(idir) + force(idir, iatom)
   
   deallocate(force)
   

@@ -268,19 +268,17 @@ subroutine X(states_normalize_orbital)(m, dim, psi)
   R_TYPE,          intent(inout) :: psi(:,:)
 
   FLOAT   :: norm
-  integer :: idim
+  integer :: idim, ip
 
   call push_sub('states_inc.Xstates_normalize_orbital')
 
   norm = X(mf_nrm2) (m, dim, psi)
   norm = sqrt(norm)
 
-  do idim = 1, dim
-    !$omp parallel workshare
-    psi(1:m%np, idim) = psi(1:m%np, idim)/norm
-    !$omp end parallel workshare
-  end do
-
+  !$omp parallel workshare
+  forall (idim = 1:dim, ip = 1:m%np) psi(ip, idim) = psi(ip, idim)/norm
+  !$omp end parallel workshare
+  
   call pop_sub()
 end subroutine X(states_normalize_orbital)
 
@@ -293,6 +291,7 @@ FLOAT function X(states_residue)(m, dim, hf, e, f) result(r)
 
   R_TYPE, allocatable :: res(:,:)
   type(profile_t), save :: prof
+  integer :: ip, idim
 
   call push_sub('states_inc.Xstates_residue')
 
@@ -301,7 +300,7 @@ FLOAT function X(states_residue)(m, dim, hf, e, f) result(r)
   ALLOCATE(res(m%np_part, dim), m%np_part*dim)
 
   !$omp parallel workshare
-  res(1:m%np, 1:dim) = hf(1:m%np, 1:dim) - e*f(1:m%np, 1:dim)
+  forall (idim = 1:dim, ip = 1:m%np) res(ip, idim) = hf(ip, idim) - e*f(ip, idim)
   !$omp end parallel workshare
 
   call profiling_count_operations(dim*m%np*(R_ADD + R_MUL))
@@ -553,9 +552,9 @@ subroutine X(states_linear_combination)(st, mesh, transf, psi)
   
   do ip = 1, mesh%np
     do idim = 1, st%d%dim
-      
-      psiold(st%st_start:st%st_end) = psi(ip, idim, st%st_start:st%st_end)
-      
+
+      forall (ist = st%st_start:st%st_end) psiold(ist) = psi(ip, idim, ist)
+
       do ist = st%st_start, st%st_end
         aa = M_ZERO
         do jst = st%st_start, st%st_end

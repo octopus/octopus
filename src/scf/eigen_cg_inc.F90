@@ -161,15 +161,13 @@ subroutine X(eigensolver_cg2) (gr, st, h, pre, tol, niter, converged, ik, diff, 
         !gamma = gg/gg0        ! (Fletcher-Reeves)
         gamma = (gg - gg1)/gg0   ! (Polack-Ribiere)
         gg0 = gg
-
+        
         norma = gamma*cg0*sin(theta)
-
-        do idim = 1, st%d%dim
-          do ip = 1, NP
-            cg(ip, idim) = gamma*cg(ip, idim) + g(ip, idim) - norma*st%X(psi)(ip, idim, p, ik)
-          end do
-        end do
-
+        
+        forall (idim = 1:st%d%dim, ip = 1:NP)
+          cg(ip, idim) = gamma*cg(ip, idim) + g(ip, idim) - norma*st%X(psi)(ip, idim, p, ik)
+        end forall
+        
         call profiling_count_operations(st%d%dim*NP*(2*R_ADD + 2*R_MUL))
 
       end if
@@ -209,12 +207,10 @@ subroutine X(eigensolver_cg2) (gr, st, h, pre, tol, niter, converged, ik, diff, 
       a0 = cos(theta)
       b0 = sin(theta)/cg0
 
-      do idim = 1, st%d%dim
-        do ip = 1, NP
-          st%X(psi)(ip, idim, p, ik) = a0*st%X(psi)(ip, idim, p, ik) + b0*cg(ip, idim)
-          h_psi(ip, idim) = a0*h_psi(ip, idim) + b0*ppsi(ip, idim)
-        end do
-      end do
+      forall (idim = 1:st%d%dim, ip = 1:NP)
+        st%X(psi)(ip, idim, p, ik) = a0*st%X(psi)(ip, idim, p, ik) + b0*cg(ip, idim)
+        h_psi(ip, idim) = a0*h_psi(ip, idim) + b0*ppsi(ip, idim)
+      end forall
 
       call profiling_count_operations(st%d%dim*NP*(2*R_ADD + 4*R_MUL))
 

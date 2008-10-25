@@ -29,7 +29,7 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, ik)
   R_TYPE,            intent(inout) :: ppsi(:, :)  ! ppsi(1:mesh%np, dim)
   integer,           intent(in)    :: ik
 
-  integer :: ipj, nreduce, ii, ns, idim, ll, mm
+  integer :: ipj, nreduce, ii, ns, idim, ll, mm, is
   R_TYPE, allocatable :: reduce_buffer(:), lpsi(:, :)
   integer, allocatable :: ireduce(:, :, :)
 #if defined(HAVE_MPI)
@@ -91,10 +91,10 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, ik)
 
     do idim = 1, dim
       if(simul_box_is_periodic(mesh%sb)) then
-        lpsi(1:ns, idim) = psi(pj(ipj)%sphere%jxyz(1:ns), idim)*pj(ipj)%phase(1:ns, ik)
+        forall (is = 1:ns) lpsi(is, idim) = psi(pj(ipj)%sphere%jxyz(is), idim)*pj(ipj)%phase(is, ik)
         call profiling_count_operations(ns*R_MUL)
       else
-        lpsi(1:ns, idim) = psi(pj(ipj)%sphere%jxyz(1:ns), idim)
+        forall (is = 1:ns) lpsi(is, idim) = psi(pj(ipj)%sphere%jxyz(is), idim)
       end if
     end do
 
@@ -192,11 +192,11 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, ik)
 
     do idim = 1, dim
       if(simul_box_is_periodic(mesh%sb)) then
-        ppsi(pj(ipj)%sphere%jxyz(1:ns), idim) = &
-          ppsi(pj(ipj)%sphere%jxyz(1:ns), idim) + lpsi(1:ns, idim)*conjg(pj(ipj)%phase(1:ns, ik))
+        forall (is = 1:ns) ppsi(pj(ipj)%sphere%jxyz(is), idim) = &
+             ppsi(pj(ipj)%sphere%jxyz(is), idim) + lpsi(is, idim)*conjg(pj(ipj)%phase(is, ik))
         call profiling_count_operations(ns*(R_ADD + R_MUL))
       else
-        ppsi(pj(ipj)%sphere%jxyz(1:ns), idim) = ppsi(pj(ipj)%sphere%jxyz(1:ns), idim) + lpsi(1:ns, idim)
+        forall (is = 1:ns) ppsi(pj(ipj)%sphere%jxyz(is), idim) = ppsi(pj(ipj)%sphere%jxyz(is), idim) + lpsi(is, idim)
         call profiling_count_operations(ns*R_ADD)
       end if
     end do
@@ -219,7 +219,7 @@ R_TYPE function X(psia_project_psib)(pj, dim, psia, psib, ik) result(apb)
   R_TYPE,            intent(inout) :: psib(:, :)  ! psib(1:mesh%np, dim)
   integer,           intent(in)    :: ik
 
-  integer ::  ns, idim, ll, mm, nc, size
+  integer ::  ns, idim, ll, mm, nc, size, is
   R_TYPE, allocatable :: lpsi(:, :), plpsi(:,:)
   R_TYPE, allocatable :: uvpsi(:, :, :, :)
 #if defined(HAVE_MPI)
@@ -239,9 +239,9 @@ R_TYPE function X(psia_project_psib)(pj, dim, psia, psib, ik) result(apb)
 
   do idim = 1, dim
     if(simul_box_is_periodic(mesh%sb)) then
-      lpsi(1:ns, idim) = psib(pj%sphere%jxyz(1:ns), idim)*pj%phase(1:ns, ik)
+      forall (is = 1:ns) lpsi(is, idim) = psib(pj%sphere%jxyz(is), idim)*pj%phase(is, ik)
     else
-      lpsi(1:ns, idim) = psib(pj%sphere%jxyz(1:ns), idim)
+      forall (is = 1:ns) lpsi(is, idim) = psib(pj%sphere%jxyz(is), idim)
     end if
   end do
 
@@ -249,9 +249,9 @@ R_TYPE function X(psia_project_psib)(pj, dim, psia, psib, ik) result(apb)
 
     do idim = 1, dim
       if(simul_box_is_periodic(mesh%sb)) then
-        plpsi(1:ns, idim) = psia(pj%sphere%jxyz(1:ns), idim)*pj%phase(1:ns, ik)
+        forall (is = 1:ns) plpsi(is, idim) = psia(pj%sphere%jxyz(is), idim)*pj%phase(is, ik)
       else
-        plpsi(1:ns, idim) = psia(pj%sphere%jxyz(1:ns), idim)
+        forall (is = 1:ns) plpsi(is, idim) = psia(pj%sphere%jxyz(is), idim)
       end if
     end do
 
@@ -295,9 +295,9 @@ R_TYPE function X(psia_project_psib)(pj, dim, psia, psib, ik) result(apb)
     apb = M_ZERO
     do idim = 1, dim
       if(simul_box_is_periodic(mesh%sb)) then
-        plpsi(1:ns, idim) = R_CONJ(psia(pj%sphere%jxyz(1:ns), idim))*plpsi(1:ns, idim)*conjg(pj%phase(1:ns, ik))
+        forall (is = 1:ns) plpsi(is, idim) = R_CONJ(psia(pj%sphere%jxyz(is), idim))*plpsi(is, idim)*conjg(pj%phase(is, ik))
       else
-        plpsi(1:ns, idim) = R_CONJ(psia(pj%sphere%jxyz(1:ns), idim))*plpsi(1:ns, idim)
+        forall (is = 1:ns) plpsi(is, idim) = R_CONJ(psia(pj%sphere%jxyz(is), idim))*plpsi(is, idim)
       end if
       apb = apb + X(sm_integrate)(mesh, pj%sphere, plpsi(1:ns, idim))
     end do
