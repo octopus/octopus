@@ -263,9 +263,7 @@ contains
 
 
     if(ks%theory_level==INDEPENDENT_PARTICLES.or.amaldi_factor==M_ZERO) then
-      !$omp parallel workshare
       h%vhxc     = M_ZERO
-      !$omp end parallel workshare
       h%epot     = M_ZERO
       h%ehartree = M_ZERO
       h%ex       = M_ZERO
@@ -277,9 +275,7 @@ contains
         h%ehartree = M_ZERO
         call v_ks_hartree(gr, st, h, amaldi_factor)
 
-        !$omp parallel workshare
         h%vxc      = M_ZERO
-        !$omp end parallel workshare
         if(iand(h%xc_family, XC_FAMILY_MGGA).ne.0) h%vtau = M_ZERO
         if(h%d%cdft) h%axc = M_ZERO
         if(ks%theory_level.ne.HARTREE) call v_a_xc()
@@ -287,20 +283,14 @@ contains
 
       ! Build Hartree + xc potential
 
-      !$omp parallel workshare
       h%vhxc(1:NP, 1) = h%vxc(1:NP, 1) + h%vhartree(1:NP)
-      !$omp end parallel workshare
 
       if(h%d%ispin > UNPOLARIZED) then
-        !$omp parallel workshare
         h%vhxc(1:NP, 2) = h%vxc(1:NP, 2) + h%vhartree(1:NP)
-        !$omp end parallel workshare
       end if
 
       if(h%d%ispin == SPINORS) then
-        !$omp parallel workshare
         h%vhxc(1:NP, 3:4) = h%vxc(1:NP, 3:4)
-        !$omp end parallel workshare        
       end if
 
     end if
@@ -357,9 +347,7 @@ contains
       ! Add, if it exists, the frozen density from the inner orbitals.
       if(associated(st%frozen_rho)) then
         do is = 1, st%d%spin_channels
-          !$omp parallel workshare
           rho(1:NP, is) = rho(1:NP, is) + st%frozen_rho(1:NP, is)
-          !$omp end parallel workshare
         end do
       end if
 
@@ -422,21 +410,15 @@ contains
     ALLOCATE(rho(NP), NP)
 
     ! calculate the total density
-    !$omp parallel workshare
     rho(1:NP) = st%rho(1:NP, 1)
-    !$omp end parallel workshare
     do is = 2, h%d%spin_channels
-      !$omp parallel workshare
       rho(1:NP) = rho(1:NP) + st%rho(1:NP, is)
-      !$omp end parallel workshare
     end do
 
     ! Add, if it exists, the frozen density from the inner orbitals.
     if(associated(st%frozen_rho)) then
       do is = 1, h%d%spin_channels
-        !$omp parallel workshare
         rho(1:NP) = rho(1:NP) + st%frozen_rho(1:NP, is)
-        !$omp end parallel workshare
       end do
     end if
 

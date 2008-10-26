@@ -68,9 +68,7 @@ subroutine X(subspace_diag)(gr, st, h, ik, diff)
     ! Renormalize.
     do ist = st%st_start, st%st_end
       nrm2 = X(mf_nrm2)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik))
-      !$omp parallel workshare
       st%X(psi)(1:NP, 1:st%d%dim, ist, ik) = st%X(psi)(1:NP, 1:st%d%dim, ist, ik)/nrm2
-      !$omp end parallel workshare
     end do
 
     ! Recalculate the residues if requested by the diff argument.
@@ -130,9 +128,7 @@ subroutine X(subspace_diag_par_states)(gr, st, h, ik, diff)
   call lalg_eigensolve(st%nst, h_subspace, vec, st%eigenval(:, ik))
 
   ! The new states are the given by the eigenvectors of the matrix.
-  !$omp parallel workshare
   f(1:NP, 1:st%d%dim, st%st_start:st%st_end) = st%X(psi)(1:NP, 1:st%d%dim, st%st_start:st%st_end, ik)
-  !$omp end parallel workshare
 
   call states_block_matr_mul(gr%m, st, st%st_start, st%st_end, st%st_start, st%st_end, &
        f, vec, st%X(psi)(:, :, :, ik))
@@ -140,9 +136,7 @@ subroutine X(subspace_diag_par_states)(gr, st, h, ik, diff)
   ! Renormalize.
   do i = st%st_start, st%st_end
     nrm2 = X(mf_nrm2)(gr%m, st%d%dim, st%X(psi)(:, :, i, ik))
-    !$omp parallel workshare
     st%X(psi)(1:NP, 1:st%d%dim, i, ik) = st%X(psi)(1:NP, 1:st%d%dim, i, ik)/nrm2
-    !$omp end parallel workshare
   end do
 
   ! Recalculate the residues if requested by the diff argument.

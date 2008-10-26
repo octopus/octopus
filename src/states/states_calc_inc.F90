@@ -275,9 +275,7 @@ subroutine X(states_normalize_orbital)(m, dim, psi)
   norm = X(mf_nrm2) (m, dim, psi)
   norm = sqrt(norm)
 
-  !$omp parallel workshare
   forall (idim = 1:dim, ip = 1:m%np) psi(ip, idim) = psi(ip, idim)/norm
-  !$omp end parallel workshare
   
   call pop_sub()
 end subroutine X(states_normalize_orbital)
@@ -299,9 +297,7 @@ FLOAT function X(states_residue)(m, dim, hf, e, f) result(r)
 
   ALLOCATE(res(m%np_part, dim), m%np_part*dim)
 
-  !$omp parallel workshare
   forall (idim = 1:dim, ip = 1:m%np) res(ip, idim) = hf(ip, idim) - e*f(ip, idim)
-  !$omp end parallel workshare
 
   call profiling_count_operations(dim*m%np*(R_ADD + R_MUL))
 

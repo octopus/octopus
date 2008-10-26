@@ -48,9 +48,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
 
   force = M_ZERO
 
-  !$omp parallel workshare
   grho(1:np, 1:NDIM) = M_ZERO
-  !$omp end parallel workshare    
 
   !THE NON-LOCAL PART (parallel in states and k points)
   do ik = st%d%kpt%start, st%d%kpt%end

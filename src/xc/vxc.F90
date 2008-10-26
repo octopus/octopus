@@ -68,7 +68,6 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc, vtau)
   if(gga.or.mgga) call  gga_init()
   if(       mgga) call mgga_init()
 
-  !$omp parallel do private(l_dens, l_sigma, ixc, l_dedd, r, e, l_vsigma)
   space_loop: do jj = 1, NP
 
     ! make a local copy with the correct memory order
@@ -201,7 +200,6 @@ contains
       dedd       = M_ZERO
     end if
 
-    !$omp parallel do private(d, dtot, dpol)
     do ii = 1, NP
       d(1:spin_channels) = rho(ii, 1:spin_channels)
 
@@ -219,7 +217,6 @@ contains
         dens(ii, 2) = max(M_HALF*(dtot - dpol), M_ZERO)
       end select
     end do
-    !$omp end parallel do
 
   end subroutine lda_init
 

@@ -404,9 +404,7 @@ subroutine X(set_bc)(der, f)
   end if
 
   if(der%zero_bc) then
-    !$omp parallel workshare
     f(bndry_start:bndry_end) = R_TOTYPE(M_ZERO)
-    !$omp end parallel workshare
   end if
 
   if(simul_box_multires(der%m%sb)) call multires()
@@ -439,11 +437,9 @@ subroutine X(set_bc)(der, f)
     end if
 #endif
 
-    !$omp parallel do
     do iper = 1, der%m%nper
       f(der%m%per_points(iper)) = f(der%m%per_map(iper))
     end do
-    !$omp end parallel do
 
 #ifdef HAVE_MPI
     if(der%m%parallel_in_domains) then
@@ -553,11 +549,9 @@ subroutine X(set_bc_batch)(der, fb)
     end if
 
     if(der%zero_bc) then
-      !$omp parallel workshare
       forall (ist = 1:fb%nst, idim = 1:fb%dim, ip = bndry_start:bndry_end)
         fb%states(ist)%X(psi)(ip, idim) = R_TOTYPE(M_ZERO)
       end forall
-      !$omp end parallel workshare
     end if
 
     if(der%periodic_bc) then
@@ -599,11 +593,9 @@ subroutine X(set_bc_batch)(der, fb)
       end if
 #endif
 
-      !$omp parallel workshare
       forall (ist = 1:fb%nst, idim = 1:fb%dim, ip = 1:der%m%nper)
         fb%states(ist)%X(psi)(der%m%per_points(ip), idim) = fb%states(ist)%X(psi)(der%m%per_map(ip), idim)
       end forall
-      !$omp end parallel workshare
 
 #ifdef HAVE_MPI
       if(der%m%parallel_in_domains) then

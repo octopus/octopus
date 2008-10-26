@@ -63,10 +63,7 @@ subroutine X(eigensolver_cg2) (gr, st, h, pre, tol, niter, converged, ik, diff, 
   ALLOCATE( ppsi(NP, st%d%dim), NP*st%d%dim)
 
   do idim = 1, st%d%dim
-    !$omp parallel workshare
-    cg(1:NP, idim) = R_TOTYPE(M_ZERO)
-    cg(NP+1:NP_PART, idim) = R_TOTYPE(M_ZERO)
-    !$omp end parallel workshare
+    cg(1:NP_PART, idim) = R_TOTYPE(M_ZERO)
   end do
 
   ! Set the diff to zero, since it is intent(out)

@@ -175,31 +175,25 @@ subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ist, ik, x, y, omega)
   ALLOCATE(Hp(NP, st%d%dim),      NP     *st%d%dim)
   ALLOCATE(Hs(NP, st%d%dim),      NP     *st%d%dim)
 
-  !$omp parallel workshare
   r = R_TOTYPE(M_ZERO)
   p = R_TOTYPE(M_ZERO)
   s = R_TOTYPE(M_ZERO)
   rs = R_TOTYPE(M_ZERO)
   Hp = R_TOTYPE(M_ZERO)
   Hs = R_TOTYPE(M_ZERO)
-  !$omp end parallel workshare
 
   ! this will store the preconditioned functions
   ALLOCATE(phat(NP_PART, st%d%dim), NP_PART * st%d%dim)
   ALLOCATE(shat(NP_PART, st%d%dim), NP_PART * st%d%dim)
 
-  !$omp parallel workshare
   phat = R_TOTYPE(M_ZERO)
   shat = R_TOTYPE(M_ZERO)
-  !$omp end parallel workshare
 
   ! Initial residue
   call X(ls_solver_operator) (h, gr, st, ist, ik, omega, x, Hp)
 
-  !$omp parallel workshare
   r(1:NP, 1:st%d%dim) = y(1:NP, 1:st%d%dim) - Hp(1:NP, 1:st%d%dim)
   rs(1:NP, 1:st%d%dim) = r(1:NP, 1:st%d%dim)
-  !$omp end parallel workshare
 
   gamma = X(mf_nrm2)(gr%m, st%d%dim, r)
 
@@ -217,11 +211,9 @@ subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ist, ik, x, y, omega)
     else
       beta = rho_1/rho_2*alpha/w
       do idim = 1, st%d%dim
-        !$omp parallel do
         do ip = 1, NP
           p(ip, idim) = r(ip, idim) + beta*(p(ip, idim) - w*Hp(ip, idim))
         end do
-        !$omp end parallel do
       end do
     end if
 
@@ -232,11 +224,9 @@ subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ist, ik, x, y, omega)
     alpha = rho_1/X(mf_dotp)(gr%m, st%d%dim, rs, Hp)
 
     do idim = 1, st%d%dim
-      !$omp parallel do
       do ip = 1, NP
         s(ip, idim) = r(ip, idim) - alpha*Hp(ip, idim)
       end do
-      !$omp end parallel do
     end do
 
     gamma = X(mf_nrm2) (gr%m, st%d%dim, s)
@@ -254,12 +244,10 @@ subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ist, ik, x, y, omega)
     w = X(mf_dotp)(gr%m, st%d%dim, Hs, s)/X(mf_dotp) (gr%m, st%d%dim, Hs, Hs)
 
     do idim = 1, st%d%dim
-      !$omp parallel do
       do ip = 1, NP
         x(ip, idim) = x(ip, idim) + alpha*phat(ip, idim) + w*shat(ip, idim)
         r(ip, idim) = s(ip, idim) - w*Hs(ip, idim)
       end do
-      !$omp end parallel do
     end do
 
     rho_2 = rho_1

@@ -111,9 +111,7 @@ contains
 
     ALLOCATE(this%jxyz_inv(0:this%np_part), this%np_part+1)
 
-    !$omp parallel workshare
     this%jxyz_inv(0:this%np_part) = 0
-    !$omp end parallel workshare
 
     ! The spheres are generated differently for periodic coordinates,
     ! mainly for performance reasons.

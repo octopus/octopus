@@ -156,9 +156,8 @@ contains
 
     ! Local part of the pseudopotentials
     ALLOCATE(ep%vpsl(NP), NP)
-    !$omp parallel workshare
+
     ep%vpsl(1:NP) = M_ZERO
-    !$omp end parallel workshare
 
     ep%classical_pot = 0
     if(geo%ncatoms > 0) then
@@ -524,11 +523,6 @@ contains
     call profiling_in(prof, "EPOT_LOCAL")
 
     ALLOCATE(vl(1:mesh%np_part), mesh%np_part)
-#ifdef USE_OMP
-    !$omp parallel workshare
-    vl(1:mesh%np) = M_ZERO
-    !$omp end parallel workshare
-#endif
 
     !Local potential, we can get it by solving the Poisson equation
     !(for all-electron species or pseudopotentials in periodic
@@ -555,9 +549,7 @@ contains
 
     end if
 
-    !$omp parallel workshare
     vpsl(1:mesh%np) = vpsl(1:mesh%np) + vl(1:mesh%np)
-    !$omp end parallel workshare
 
     !the localized part
     if(species_is_ps(a%spec)) then

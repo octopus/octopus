@@ -780,10 +780,7 @@ contains
       do ik = st%d%kpt%start, st%d%kpt%end
         do ist = st%st_start, st%st_end
           do idim = 1, st%d%dim
-            !$omp parallel workshare
-            st%dpsi(1:m%np, idim, ist, ik) = M_ZERO
-            st%dpsi(m%np+1:m%np_part, idim, ist, ik) = M_ZERO
-            !$omp end parallel workshare
+            st%dpsi(1:m%np_part, idim, ist, ik) = M_ZERO
           end do
         end do
       end do
@@ -794,11 +791,8 @@ contains
       do ik = st%d%kpt%start, st%d%kpt%end
         do ist = st%st_start, st%st_end
           do idim = 1, st%d%dim
-            !$omp parallel workshare
-            st%zpsi(1:m%np, idim, ist, ik) = M_Z0
-            st%zpsi(m%np+1:m%np_part, idim, ist, ik) = M_Z0
-            !$omp end parallel workshare
-          end do
+            st%zpsi(1:m%np_part, idim, ist, ik) = M_Z0
+           end do
         end do
       end do
     end if

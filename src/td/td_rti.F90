@@ -595,9 +595,7 @@ contains
 
         ALLOCATE(zpsi1(NP_PART, st%d%dim), NP_PART*st%d%dim)
 
-        !$omp parallel workshare
         st%rho(1:NP, 1:st%d%nspin) = M_ZERO
-        !$omp end parallel workshare
 
         do ik = 1, st%d%nik
           do ist = st%st_start, st%st_end
