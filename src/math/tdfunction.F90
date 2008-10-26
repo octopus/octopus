@@ -56,10 +56,12 @@ module tdf_m
             tdf_diff,                    &
             tdf_scalar_multiply,         &
             tdf_cosine_multiply,         &
-            tdf_fft_forward,             &
-            tdf_fft_backward,            &
-            tdf_sineseries_to_numerical, &
+            tdf_numerical_to_fourier,    &
+            tdf_fourier_to_numerical,    &
             tdf_numerical_to_sineseries, &
+            tdf_sineseries_to_numerical, &
+            tdf_numerical_to_zerofourier,&
+            tdf_zerofourier_to_numerical,&
             tdf_fourier_grid,            &
             tdf_write,                   &
             tdf_niter,                   &
@@ -82,7 +84,8 @@ module tdf_m
     TDF_NUMERICAL     =  10007,  &
     TDF_FROM_EXPR     =  10008,  &
     TDF_SINE_SERIES   =  10009,  &
-    TDF_FOURIER_SERIES=  10010
+    TDF_FOURIER_SERIES=  10010,  &
+    TDF_ZERO_FOURIER  =  10011
 
   type tdf_t
     private
@@ -565,11 +568,11 @@ module tdf_m
 
 
   !------------------------------------------------------------
-  subroutine tdf_fft_forward(f)
+  subroutine tdf_numerical_to_fourier(f)
     type(tdf_t), intent(inout) :: f
     integer :: j
     CMPLX, allocatable :: tmp(:)
-    call push_sub('tdfunction.tdf_fft_forward')
+    call push_sub('tdfunction.tdf_numerical_to_fourier')
 
     ALLOCATE(tmp(f%niter/2+1), f%niter/2+1)
     call dfft_forward1(f%fft_handler, f%val(1:f%niter), tmp)
@@ -587,17 +590,17 @@ module tdf_m
     deallocate(tmp)
     deallocate(f%val); nullify(f%val)
     call pop_sub()
-  end subroutine tdf_fft_forward
+  end subroutine tdf_numerical_to_fourier
   !------------------------------------------------------------
 
 
   !------------------------------------------------------------
-  subroutine tdf_fft_backward(f)
+  subroutine tdf_fourier_to_numerical(f)
     type(tdf_t), intent(inout) :: f
     integer :: j
     CMPLX, allocatable :: tmp(:)
 
-    call push_sub('tdfunction.tdf_fft_backward')
+    call push_sub('tdfunction.tdf_fourier_to_numerical')
 
     ALLOCATE(tmp(f%niter/2+1), f%niter/2+1)
     tmp = M_z0
@@ -615,7 +618,34 @@ module tdf_m
     deallocatE(tmp)
     deallocate(f%valww); nullify(f%valww)
     call pop_sub()
-  end subroutine tdf_fft_backward
+  end subroutine tdf_fourier_to_numerical
+  !------------------------------------------------------------
+
+
+  !------------------------------------------------------------
+  subroutine tdf_numerical_to_zerofourier(f)
+    type(tdf_t), intent(inout) :: f
+    call push_sub('tdfunction.tdf_numerical_to_zerofourier')
+
+    call tdf_numerical_to_fourier(f)
+    f%valww(1) = M_ZERO
+    f%mode = TDF_ZERO_FOURIER
+
+    call pop_sub()
+  end subroutine tdf_numerical_to_zerofourier
+  !------------------------------------------------------------
+
+
+  !------------------------------------------------------------
+  subroutine tdf_zerofourier_to_numerical(f)
+    type(tdf_t), intent(inout) :: f
+    call push_sub('tdfunction.tdf_zerofourier_to_numerical')
+
+    ASSERT(f%valww(1).eq.M_ZERO)
+    call tdf_fourier_to_numerical(f)
+
+    call pop_sub()
+  end subroutine tdf_zerofourier_to_numerical
   !------------------------------------------------------------
 
 
@@ -632,6 +662,9 @@ module tdf_m
       f%coeffs(1:f%sine_nfreqs) = values(1:f%sine_nfreqs)
     case(TDF_FOURIER_SERIES)
       f%valww(1:2*f%nfreqs-1) = values(1:2*f%nfreqs-1)
+    case(TDF_ZERO_FOURIER)
+      f%valww(1) = M_ZERO
+      f%valww(2:2*f%nfreqs-1) = values(1:2*f%nfreqs-2)
     end select
 
     call pop_sub()
@@ -651,6 +684,8 @@ module tdf_m
       f%coeffs(index) = value
     case(TDF_FOURIER_SERIES)
       f%valww(index) = value
+    case(TDF_ZERO_FOURIER)
+      f%valww(index+1) = value
     end select
   end subroutine tdf_set_numericalr1
   !------------------------------------------------------------ 
@@ -804,6 +839,8 @@ module tdf_m
       y = f%coeffs(i)
     case(TDF_FOURIER_SERIES)
       y = f%valww(i)
+    case(TDF_ZERO_FOURIER)
+      y = f%valww(i+1)
     end select
     
   end function tdfi
@@ -909,8 +946,8 @@ module tdf_m
 
     call push_sub('tdfunction.tdf_copy')
 
-    ASSERT( (fin%mode >= TDF_EMPTY)  .and. (fin%mode <= TDF_FOURIER_SERIES) )
-    ASSERT( (fout%mode >= TDF_EMPTY)  .and. (fout%mode <= TDF_FOURIER_SERIES) )
+    ASSERT( (fin%mode >= TDF_EMPTY)  .and. (fin%mode <= TDF_ZERO_FOURIER) )
+    ASSERT( (fout%mode >= TDF_EMPTY)  .and. (fout%mode <= TDF_ZERO_FOURIER) )
 
     call tdf_end(fout)
     call tdf_init(fout)
@@ -936,6 +973,11 @@ module tdf_m
       call fft_copy(fin%fft_handler, fout%fft_handler)
     end if
     if(fin%mode .eq. TDF_FOURIER_SERIES) then
+      ALLOCATE(fout%valww(2*fout%nfreqs-1), 2*fout%nfreqs-1)
+      fout%valww  = fin%valww
+      call fft_copy(fin%fft_handler, fout%fft_handler)
+    end if
+    if(fin%mode .eq. TDF_ZERO_FOURIER) then
       ALLOCATE(fout%valww(2*fout%nfreqs-1), 2*fout%nfreqs-1)
       fout%valww  = fin%valww
       call fft_copy(fin%fft_handler, fout%fft_handler)

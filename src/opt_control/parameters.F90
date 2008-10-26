@@ -78,7 +78,8 @@ module opt_control_parameters_m
   integer, parameter ::                 &
     ctr_real_space           = 1, &
     ctr_sine_fourier_series  = 2, &
-    ctr_fourier_series       = 3
+    ctr_fourier_series       = 3, &
+    ctr_zero_fourier_series  = 4
 
 
   integer, parameter :: parameter_mode_none      = 0, &
@@ -163,6 +164,8 @@ contains
     !%
     !%Option control_fourier_series 3
     !%
+    !%Option control_zero_fourier_series 4
+    !%
     !%End
     call loct_parse_int(check_inp('OCTParameterRepresentation'), &
       ctr_real_space, par_common%representation)
@@ -179,6 +182,10 @@ contains
     case(ctr_fourier_series)
       write(message(1), '(a)') 'Info: The OCT control functions will be represented as a Fourier series.'
       call write_info(1)
+    case(ctr_zero_fourier_series)
+      write(message(1), '(a)') 'Info: The OCT control functions will be represented as a Fourier series,'
+      write(message(2), '(a)') '      in which the zero-frequency component is assumed to be zero.'
+      call write_info(1)
     end select
 
     !%Variable OCTParameterOmegaMax
@@ -189,16 +196,10 @@ contains
     !%
     !%End
     call loct_parse_float(check_inp('OCTParameterOmegaMax'), - M_ONE, par_common%omegamax)
-    if(par_common%representation .eq. ctr_sine_fourier_series) then
-      write(message(1), '(a)')         'Info: The representation of the OCT control parameters as a sine'
-      write(message(2), '(a,f10.5,a)') '      Fourier series will be done with a cut-off of ', &
+    if(par_common%representation .ne. ctr_real_space) then
+      write(message(1), '(a)')         'Info: The representation of the OCT control parameters will be restricted'
+      write(message(2), '(a,f10.5,a)') '      with an energy cut-off of ', &
         par_common%omegamax / units_out%energy%factor, ' ['//trim(units_out%energy%abbrev) // ']'
-      call write_info(2)
-    elseif(par_common%representation .eq. ctr_fourier_series) then
-      write(message(1), '(a)')         'Info: The representation of the OCT control parameters as a'
-      write(message(2), '(a,f10.5,a)') '      Fourier series will be done with a cut-off of ', &
-        par_common%omegamax / units_out%energy%factor, ' ['//trim(units_out%energy%abbrev) // ']'
-      call write_info(2)
     end if
 
     !%Variable OCTFixFluenceTo
@@ -435,7 +436,8 @@ contains
     ! Move to the sine-Fourier space if required.
     call parameters_set_rep(par)
     if( (par%representation .eq. ctr_sine_fourier_series) .or. &
-        (par%representation .eq. ctr_fourier_series) ) then
+        (par%representation .eq. ctr_fourier_series)      .or. &
+        (par%representation .eq. ctr_zero_fourier_series) ) then
       if(par%dim <= 1) then 
         write(message(1), '(a)')    'Error: The dimension of the basis set used to represent the control'
         write(message(2), '(a)')    '       functions must be larger than one. The input options that you'
@@ -480,6 +482,9 @@ contains
 
     if( (par_common%mode .eq. parameter_mode_f) .or. &
         (par_common%mode .eq. parameter_mode_f_and_phi) ) then
+      ! WARNING: This assertion should be lifted whenever the code below is generalized
+      !          to the other cases.
+      ASSERT(par_common%representation .eq. ctr_sine_fourier_series)
       ! If the object to optimize is the envelope of the
       ! the laser pulse. Being e(t) the laser pulse, it is assumed that it
       ! has the form:
@@ -577,7 +582,11 @@ contains
       end do
     case(ctr_fourier_series)
       do j = 1, par%no_parameters
-        call tdf_fft_forward(par%f(j))
+        call tdf_numerical_to_fourier(par%f(j))
+      end do
+    case(ctr_zero_fourier_series)
+      do j = 1, par%no_parameters
+        call tdf_numerical_to_zerofourier(par%f(j))
       end do
     case(ctr_real_space)
       do j = 1, par%no_parameters
@@ -604,14 +613,17 @@ contains
       do j = 1, par%no_parameters
         call tdf_sineseries_to_numerical(par%f(j))
       end do
-      par%current_representation = ctr_real_space
     case(ctr_fourier_series)
       do j = 1, par%no_parameters
-        call tdf_fft_backward(par%f(j))
+        call tdf_fourier_to_numerical(par%f(j))
       end do
-      par%current_representation = ctr_real_space
+    case(ctr_zero_fourier_series)
+      do j = 1, par%no_parameters
+        call tdf_zerofourier_to_numerical(par%f(j))
+      end do
     end select
 
+    par%current_representation = ctr_real_space
     call pop_sub()
   end subroutine parameters_to_realtime
   ! ---------------------------------------------------------
@@ -772,6 +784,8 @@ contains
       cp%dim = tdf_sine_nfreqs(cp%f(1))
     case(ctr_fourier_series)
       cp%dim = 2*(tdf_nfreqs(cp%f(1))-1)+1
+    case(ctr_zero_fourier_series)
+      cp%dim = 2*(tdf_nfreqs(cp%f(1))-1)
     end select
       
     call pop_sub()
@@ -1003,7 +1017,7 @@ contains
         end if
         call tdf_init(g)
         call tdf_copy(g, par%f(j))
-        call tdf_fft_forward(g)
+        call tdf_numerical_to_fourier(g)
         ALLOCATE(wgrid(cp%ntiter/2+1), cp%ntiter/2+1)
         call tdf_fourier_grid(g, wgrid)
         do i = 1, (cp%dim-1)/2

@@ -127,7 +127,7 @@ contains
         call loct_parse_block_string(blk, i-1, 1, filter%expression(i))
         call conv_to_C_string(filter%expression(i))
         call tdf_init_numerical(filter%f(i), steps, dt, -M_ONE)
-        call tdf_fft_forward(filter%f(i))
+        call tdf_numerical_to_fourier(filter%f(i))
       end do
       call build_filter(filter)
 
@@ -161,7 +161,7 @@ contains
 
       select case(filter%domain(i))
       case(filter_freq)
-       call tdf_fft_forward(f)
+       call tdf_numerical_to_fourier(f)
        call tdf_set_numerical(f, 1, tdf(f, 1)*tdf(filter%f(i), 1))
        do j = 2, nfreqs !+ 1
          call tdf_set_numerical(f, j, tdf(f, j)*tdf(filter%f(i), j) / sqrt(M_TWO))
@@ -169,7 +169,7 @@ contains
        do j = nfreqs + 1, 2*nfreqs - 1
          call tdf_set_numerical(f, j, tdf(f, j)*tdf(filter%f(i), j-nfreqs+1) / sqrt(M_TWO) )
        end do
-       call tdf_fft_backward(f)
+       call tdf_fourier_to_numerical(f)
 
       case default
         message(1) = "...I don't know this filter type..."
