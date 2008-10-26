@@ -514,6 +514,62 @@ contains
 end subroutine X(set_bc)
 
 ! ---------------------------------------------------------
+! Set all boundary points in f to zero to implement zero
+! boundary conditions for the derivatives.
+subroutine X(set_bc_batch)(der, fb)
+  type(derivatives_t), intent(in)    :: der
+  type(batch_t),       intent(inout) :: fb
+
+  integer :: ip, idim, ist
+  integer :: pp, bndry_start, bndry_end
+  call push_sub('derivatives_inc.Xset_bc_batch')
+
+
+  if(simul_box_multires(der%m%sb) .or. (der%periodic_bc .and. der%m%parallel_in_domains)) then
+    
+    do ist = 1, fb%nst
+      do idim = 1, fb%dim
+        call X(set_bc)(der, fb%states(ist)%X(psi)(:, idim))
+      end do
+    end do
+
+  else
+
+    pp = der%m%vp%partno
+   
+    ! The boundary points are at different locations depending on the presence
+    ! of ghost points due to domain parallelization.
+    if(der%m%parallel_in_domains) then
+      bndry_start = der%m%vp%np_local(pp) + der%m%vp%np_ghost(pp) + 1
+      bndry_end   = der%m%vp%np_local(pp) + der%m%vp%np_ghost(pp) + der%m%vp%np_bndry(pp)
+    else
+      bndry_start = der%m%np+1
+      bndry_end   = der%m%np_part
+    end if
+
+    if(der%zero_bc) then
+      !$omp parallel workshare
+      forall (ist = 1:fb%nst, idim = 1:fb%dim, ip = bndry_start:bndry_end)
+        fb%states(ist)%X(psi)(ip, idim) = R_TOTYPE(M_ZERO)
+      end forall
+      !$omp end parallel workshare
+    end if
+
+  end if
+
+  if(der%periodic_bc) then
+    !$omp parallel workshare
+    forall (ist = 1:fb%nst, idim = 1:fb%dim, ip = 1:der%m%nper)
+      fb%states(ist)%X(psi)(der%m%per_points(ip), idim) = fb%states(ist)%X(psi)(der%m%per_map(ip), idim)
+    end forall
+    !$omp end parallel workshare
+  end if
+
+  call pop_sub()
+
+end subroutine X(set_bc_batch)
+
+! ---------------------------------------------------------
 ! The action of the angular momentum operator (three spatial components).
 ! In case of real functions, it does not include the -i prefactor
 ! (L = -i r ^ nabla).

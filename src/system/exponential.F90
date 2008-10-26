@@ -571,11 +571,11 @@ contains
         zfact = zfact*(-M_zI*deltat)/iter
         zfact_is_real = .not. zfact_is_real
 
-        call batch_init(hpsi1b, st_start, st_end, hpsi1)
+        call batch_init(hpsi1b, h%d%dim, st_start, st_end, hpsi1)
         if (iter == 1) then
           call zhpsi_batch(h, gr, psib, hpsi1b, ik, t)
         else
-          call batch_init(psi1b, st_start, st_end, psi1)
+          call batch_init(psi1b, h%d%dim, st_start, st_end, psi1)
           call zhpsi_batch(h, gr, psi1b, hpsi1b, ik, t)
           call batch_end(psi1b)
         end if

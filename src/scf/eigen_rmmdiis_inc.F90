@@ -80,8 +80,8 @@ subroutine X(eigensolver_rmmdiis) (gr, st, h, pre, tol, niter, converged, ik, di
       
       ! apply the hamiltonian over the initial vector
 
-      call batch_init(psib, num_in_block)
-      call batch_init(hpsib, num_in_block)
+      call batch_init(psib, h%d%dim, num_in_block)
+      call batch_init(hpsib, h%d%dim, num_in_block)
 
       ib = 0
       do ist = psi_start, psi_end
@@ -125,8 +125,8 @@ subroutine X(eigensolver_rmmdiis) (gr, st, h, pre, tol, niter, converged, ik, di
       end do
 
       ! apply the hamiltonian to the residuals
-      call batch_init(psib, num_in_block)
-      call batch_init(hpsib, num_in_block)
+      call batch_init(psib, h%d%dim, num_in_block)
+      call batch_init(hpsib, h%d%dim, num_in_block)
 
       ib = 0
       do ist = psi_start, psi_end

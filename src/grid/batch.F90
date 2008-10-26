@@ -50,6 +50,7 @@ module batch_m
     type(state_t), pointer :: states(:)
     integer                :: nst
     integer                :: current
+    integer                :: dim
   end type batch_t
 
   interface batch_init
@@ -79,11 +80,13 @@ contains
     deallocate(this%states)
   end subroutine batch_end
 
-  subroutine batch_init_empty(this, nst)
+  subroutine batch_init_empty(this, dim, nst)
     type(batch_t), intent(out)   :: this
+    integer,       intent(in)    :: dim
     integer,       intent(in)    :: nst
     
     this%nst = nst
+    this%dim = dim
     this%current = 1
 
     ALLOCATE(this%states(1:nst), nst)
@@ -103,7 +106,7 @@ contains
 
     integer :: ii
 
-    call batch_init_empty(bout, bin%nst)
+    call batch_init_empty(bout, bin%dim, bin%nst)
     bout%current = bin%current
 
     do ii = 1, bout%nst

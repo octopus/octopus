@@ -276,8 +276,8 @@ subroutine X(lobpcg)(gr, st, h, st_start, st_end, psi, constr_start, constr_end,
   end if
 
   ! Get initial Ritz-values and -vectors.
-  call batch_init(psib, st_start, st_end, st%X(psi)(:, :, :, ik))
-  call batch_init(hpsib, st_start, st_end, h_psi)
+  call batch_init(psib, st%d%dim, st_start, st_end, st%X(psi)(:, :, :, ik))
+  call batch_init(hpsib, st%d%dim, st_start, st_end, h_psi)
 
   call X(hpsi_batch)(h, gr, psib, hpsib, ik)
   
@@ -356,8 +356,8 @@ subroutine X(lobpcg)(gr, st, h, st_start, st_end, psi, constr_start, constr_end,
 
     ! Apply Hamiltonian to residuals.
 
-    call batch_init(psib, lnuc)
-    call batch_init(hpsib, lnuc)
+    call batch_init(psib, st%d%dim, lnuc)
+    call batch_init(hpsib, st%d%dim, lnuc)
     
     do i = 1, lnuc
       ist = luc(i)

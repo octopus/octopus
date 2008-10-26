@@ -65,18 +65,15 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
 
   if(apply_kpoint) then
     ALLOCATE(psi_copy(1:NP_PART, 1:h%d%dim, 1:nst), NP_PART*h%d%dim*nst)
-    call batch_init(epsib, psib%states(1)%ist, psib%states(nst)%ist, psi_copy)
+    call batch_init(epsib, h%d%dim, psib%states(1)%ist, psib%states(nst)%ist, psi_copy)
   else
     call batch_copy(psib, epsib)
   end if
-   
+
+  call X(set_bc_batch)(gr%der, psib)
+
   do ii = 1, nst
     call set_pointers()
-
-    ! first of all, set boundary conditions
-    do idim = 1, h%d%dim
-      call X(set_bc)(gr%der, psi(:, idim))
-    end do
 
     if(apply_kpoint) then ! we copy psi to epsi applying the exp(i k.r) phase
       call profiling_in(phase_prof, "PBC_PHASE_APPLY")
@@ -218,9 +215,9 @@ subroutine X(hpsi) (h, gr, psi, hpsi, ist, ik, t, kinetic_only)
   kinetic_only_ = .false.
   if(present(kinetic_only)) kinetic_only_ = kinetic_only
 
-  call batch_init(psib, 1)
+  call batch_init(psib, h%d%dim, 1)
   call batch_add_state(psib, ist, psi)
-  call batch_init(hpsib, 1)
+  call batch_init(hpsib, h%d%dim, 1)
   call batch_add_state(hpsib, ist, hpsi)
 
   if(present(t)) then

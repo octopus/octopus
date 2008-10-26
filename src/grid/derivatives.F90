@@ -20,6 +20,7 @@
 #include "global.h"
 
 module derivatives_m
+  use batch_m
   use datasets_m
   use global_m
   use lalg_adv_m
@@ -58,6 +59,9 @@ module derivatives_m
     dderivatives_div,       &
     dderivatives_curl,      &
     dset_bc,                &
+    zset_bc,                &
+    dset_bc_batch,          &
+    zset_bc_batch,          &
     zderivatives_lapl,      &
     zderivatives_lapl_start,&
     zderivatives_lapl_finish,&
@@ -67,7 +71,6 @@ module derivatives_m
     zderivatives_oper,      &
     zderivatives_div,       &
     zderivatives_curl,      &
-    zset_bc,                &
     stencil_extent,         &
     der_handle_t,           &
     der_handle_init,        &

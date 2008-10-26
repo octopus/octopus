@@ -675,7 +675,7 @@ contains
       do ik = 1, st%d%nik
         do sts = st%st_start, st%st_end, st%d%block_size
           ste = min(st%st_end, sts + st%d%block_size - 1)
-          call batch_init(zpsib, sts, ste, st%zpsi(:, :, sts:, ik))
+          call batch_init(zpsib, st%d%dim, sts, ste, st%zpsi(:, :, sts:, ik))
           call exponential_apply_batch(tr%te, gr, h, zpsib, ik, dt/M_TWO, t-dt)
           call batch_end(zpsib)
         end do
@@ -696,7 +696,7 @@ contains
       do ik = 1, st%d%nik
         do sts = st%st_start, st%st_end, st%d%block_size
           ste = min(st%st_end, sts + st%d%block_size - 1)
-          call batch_init(zpsib, sts, ste, st%zpsi(:, :, sts:, ik))
+          call batch_init(zpsib, h%d%dim, sts, ste, st%zpsi(:, :, sts:, ik))
           call exponential_apply_batch(tr%te, gr, h, zpsib, ik, dt/M_TWO, t)
           call batch_end(zpsib)
         end do

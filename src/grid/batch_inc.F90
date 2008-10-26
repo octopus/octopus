@@ -17,15 +17,16 @@
 !!
 !! $Id: batch_inc.F90 4298 2008-06-18 15:03:00Z dstrubbe $
 
-subroutine X(batch_init_contiguous)(this, st_start, st_end, psi)
+subroutine X(batch_init_contiguous)(this, dim, st_start, st_end, psi)
   type(batch_t),  intent(out)   :: this
+  integer,        intent(in)    :: dim
   integer,        intent(in)    :: st_start
   integer,        intent(in)    :: st_end
   R_TYPE, target, intent(in)    :: psi(:, :, st_start:)
 
   integer :: ist
 
-  call batch_init_empty(this, st_end - st_start + 1)
+  call batch_init_empty(this, dim, st_end - st_start + 1)
 
   do ist = st_start, st_end
     call X(batch_add_state)(this, ist, psi(:, :, ist))
