@@ -52,9 +52,9 @@ match ; J1 5th iteration  ; GREP(opt-control/convergence, ' 5  ', 40) ; 0.786856
 
 # Then, run the optimization for "a few" iterations with the DIRECT OPTIMIZATION scheme
 Input: 04-box.06-oct_long.inp
-match ; J1 4th evaluation  ; GREP(opt-control/convergence, ' 4  ', 40) ; 0.62549487
+match ; J1 5th evaluation  ; GREP(opt-control/convergence, ' 5  ', 40) ; 0.62549487
 
 # Then, run the optimization also with DIRECT OPTIMIZATION scheme, but optimizing
 # the envelope of the laser field only.
 Input: 04-box.07-oct_long.inp
-match ; J1 6th evaluation  ; GREP(opt-control/convergence, ' 6  ', 40) ; 0.59890231
+match ; J1 7th evaluation  ; GREP(opt-control/convergence, ' 7  ', 40) ; 0.59890231

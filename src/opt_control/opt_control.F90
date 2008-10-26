@@ -414,11 +414,20 @@ contains
       integer :: ierr, maxiter
       REAL_DOUBLE :: minvalue, step
       REAL_DOUBLE, allocatable :: x(:)
+      FLOAT :: f
       integer :: dim
+      type(states_t) :: psi
 
       call push_sub('opt_control.scheme_direct')
 
       call parameters_set_rep(par)
+
+      call states_copy(psi, initial_st)
+      call propagate_forward(sys, h, td, par, target, psi)
+      f = - j1_functional(target, sys%gr, psi)
+      if(oct%dump_intermediate) call iterator_write(iterator, par)
+      call iteration_manager_direct(-f, par, iterator)
+      call states_end(psi)
 
       dim = parameters_dim(par)
       ALLOCATE(x(dim), dim)
@@ -461,11 +470,20 @@ contains
       integer :: ierr, iprint, npt, maxfun, nvariables, sizeofw
       REAL_DOUBLE :: minvalue, rhobeg, rhoend
       REAL_DOUBLE, allocatable :: x(:), w(:)
+      FLOAT :: f
       integer :: dim
+      type(states_t) :: psi
 
       call push_sub('opt_control.scheme_direct')
 
       call parameters_set_rep(par)
+
+      call states_copy(psi, initial_st)
+      call propagate_forward(sys, h, td, par, target, psi)
+      f = - j1_functional(target, sys%gr, psi)
+      if(oct%dump_intermediate) call iterator_write(iterator, par)
+      call iteration_manager_direct(-f, par, iterator)      
+      call states_end(psi)
 
       dim = parameters_dim(par)
       ALLOCATE(x(dim), dim)

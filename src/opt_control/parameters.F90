@@ -37,10 +37,7 @@ module opt_control_parameters_m
   use mesh_m
   use mix_m
   use filter_m
-
-!!!!NEW
   use math_m
-!!!!ENDOFNEW
 
   implicit none
 
@@ -1237,7 +1234,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine parameters_par_to_x(par, x)
-    type(oct_control_parameters_t), intent(in)    :: par
+    type(oct_control_parameters_t), intent(inout) :: par
     REAL_DOUBLE,                    intent(inout) :: x(:)
     integer :: j, k, n, m
     FLOAT :: sumx2
@@ -1280,6 +1277,10 @@ contains
       ALLOCATE(ep(n), n)
       ALLOCATE(y(n), n)
       ASSERT(n-1 .eq. size(x))
+      if(tdf_dot_product(par%f(1), par%f(1)) <= M_ZERO) then
+        call tdf_set_numerical(par%f(1), 1, sqrt(par%intphi))
+        call tdf_set_random(par%f(1))
+      end if
       do j =  1, n
         ep(j) = tdf(par%f(1), j)
       end do
@@ -1294,6 +1295,10 @@ contains
       ALLOCATE(e(n), n)
       ALLOCATE(ep(n), n)
       ALLOCATE(y(m), m)
+      if(tdf_dot_product(par%f(2), par%f(2)) <= M_ZERO) then
+        call tdf_set_numerical(par%f(1), 1, sqrt(par%intphi))
+        call tdf_set_random(par%f(2))
+      end if
       do j =  1, m
         ep(j) = tdf(par%f(1), j)
       end do
@@ -1348,6 +1353,13 @@ contains
       ALLOCATE(ep(2*n), 2*n)
       e = M_ZERO; ep = M_ZERO
 
+      ALLOCATE(y(n), n)
+      y(1) = M_ONE
+      y(2:n) = x(1:n-1)
+      call hyperspherical2cartesian(y, e(1:n))
+      y(1) = M_ONE
+      y(2:n) = x(n:2*n-2)
+      call hyperspherical2cartesian(y, e(n+1:2*n))
       ! WARNING: code missing.
 
     end select

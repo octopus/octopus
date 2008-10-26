@@ -240,8 +240,13 @@ contains
       delta = M_ZERO
     end if
 
-    write(message(1), '(a,i5)') 'Function evaluation #', iterator%ctr_iter
-    call messages_print_stress(stdout, trim(message(1)))
+    if(iterator%ctr_iter .eq. 0) then
+      write(message(1), '(a)') 'Initial-guess field'
+      call messages_print_stress(stdout, trim(message(1)))
+    else
+      write(message(1), '(a,i5)') 'Function evaluation #', iterator%ctr_iter
+      call messages_print_stress(stdout, trim(message(1)))
+    end if
 
     write(message(1), '(6x,a,f12.5)')    " => J1       = ", j1
     write(message(2), '(6x,a,f12.5)')    " => J        = ", j
