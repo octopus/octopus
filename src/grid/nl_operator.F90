@@ -320,15 +320,6 @@ contains
         ALLOCATE(op%rimap(1:op%np), op%np)
         ALLOCATE(op%rimap_inv(1:op%nri + 1), op%nri + 1)
         current = 0
-#ifdef USE_OMP
-        op%rimap_inv(1) = 0
-        !$omp parallel do
-        do ii = 1, op%nri
-          op%ri(1:op%n, ii) = 0
-          op%rimap_inv(ii) = 0
-        end do
-        !$omp end parallel do
-#endif
       end if
 
     end do

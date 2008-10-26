@@ -161,7 +161,6 @@ contains
       ALLOCATE(this%x(this%ns_part, 0:MAX_DIM), this%ns_part * (MAX_DIM + 1))
       
       ! Generate the table and the positions
-      !$omp parallel do private(ix, iy, iz, ip, is)
       do iz = nmin(3), nmax(3)
         do iy = nmin(2), nmax(2)
           do ix = nmin(1), nmax(1)
@@ -183,7 +182,6 @@ contains
           end do
         end do
       end do
-      !$omp end parallel do
 
     ! This is the case for a periodic system
     else
@@ -293,12 +291,9 @@ contains
     ALLOCATE(sm_out%x(1:sm_out%ns_part, 0:MAX_DIM), sm_out%ns_part*(MAX_DIM + 1))
     ALLOCATE(sm_out%jxyz_inv(0:sm_out%np_part), sm_out%np_part+1)
 
-    
-    !$omp parallel workshare
     sm_out%jxyz(1:sm_out%ns_part) = sm_in%jxyz(1:sm_in%ns_part)
     sm_out%x(1:sm_out%ns_part, 0:MAX_DIM) = sm_in%x(1:sm_in%ns_part, 0:MAX_DIM)
     sm_out%jxyz_inv(0:sm_out%np_part) = sm_in%jxyz_inv(0:sm_out%np_part)
-    !$omp end parallel workshare
 
     call pop_sub()
 

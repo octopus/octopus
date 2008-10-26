@@ -688,21 +688,17 @@ subroutine X(mf_put_radial_spline)(m, spl, center, f, add)
   
   if( add_ ) then 
 
-    !$omp parallel do private(r)
     do ip = 1, m%np
       r = sqrt(sum((m%x(ip, 1:MAX_DIM) - center(1:MAX_DIM))**2))
       f(ip) = f(ip) + spline_eval(spl, r)
     end do
-    !$omp end parallel do
 
   else
 
-    !$omp parallel do private(r)
      do ip = 1, m%np
       r = sqrt(sum((m%x(ip, 1:MAX_DIM) - center(1:MAX_DIM))**2))
       f(ip) = spline_eval(spl, r)
     end do
-    !$omp end parallel do
 
   end if
 

@@ -474,9 +474,7 @@ contains
 
     ALLOCATE(mesh%vol_pp(mesh%np_part), mesh%np_part)
 
-    !$omp parallel workshare
     mesh%vol_pp(:) = product(mesh%h(1:sb%dim))
-    !$omp end parallel workshare
 
     if(mesh%parallel_in_domains) then
 #if defined(HAVE_MPI)
