@@ -444,7 +444,7 @@ contains
         write(message(3), '(a)')    '       supply do not meet this criterion.'
         call write_fatal(3)
       end if
-      write(message(1), '(a)')      'Info: The expansion of the control parameters in a sine Fourier series'
+      write(message(1), '(a)')      'Info: The expansion of the control parameters in a Fourier series'
       write(message(2), '(a,i6,a)') '      expansion implies the use of ', par%dim, ' basis set functions.'
       call write_info(2)
     end if
@@ -1126,7 +1126,7 @@ contains
           tdp = sqrt(real(tdf(par_common%td_penalty(j), i)))
           call tdf_set_numerical(f, i, fi*tdp)
         end do
-        integral = integral + tdf_dot_product(par_%f(j), par_%f(j))
+        integral = integral + tdf_dot_product(f, f)
         call tdf_end(f)
       end do
     case(parameter_mode_f)

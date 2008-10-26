@@ -220,19 +220,18 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine iteration_manager_direct(j1, par, iterator, dx)
-    REAL_DOUBLE, intent(in) :: j1
+  subroutine iteration_manager_direct(j, par, iterator, dx)
+    REAL_DOUBLE, intent(in) :: j
     type(oct_control_parameters_t), intent(in)  :: par
     type(oct_iterator_t), intent(inout) :: iterator
     FLOAT, optional, intent(in) :: dx
 
-
-    FLOAT :: j, j2, fluence, delta
+    FLOAT :: j1, j2, fluence, delta
     call push_sub('iter.iteration_manager_direct')
 
     fluence = parameters_fluence(par)
     j2 = parameters_j2(par)
-    j  = j1 + j2
+    j1 = j - j2
 
     if(present(dx)) then
       delta = dx
