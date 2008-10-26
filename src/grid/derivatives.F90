@@ -51,7 +51,6 @@ module derivatives_m
     dderivatives_lapl,      &
     dderivatives_lapl_start,&
     dderivatives_lapl_finish,&
-    dderivatives_lapl_keep_going,&
     derivatives_lapl_diag,  &
     dderivatives_laplt,     &
     dderivatives_grad,      &
@@ -65,7 +64,6 @@ module derivatives_m
     zderivatives_lapl,      &
     zderivatives_lapl_start,&
     zderivatives_lapl_finish,&
-    zderivatives_lapl_keep_going,&
     zderivatives_laplt,     &
     zderivatives_grad,      &
     zderivatives_oper,      &
@@ -127,7 +125,6 @@ module derivatives_m
     FLOAT, pointer :: dlapl(:)
     CMPLX, pointer :: zlapl(:)
     logical :: ghost_update
-    logical :: dealloc_f
   end type der_handle_t
 
   type(profile_t), save :: set_bc_prof, set_bc_comm_prof
