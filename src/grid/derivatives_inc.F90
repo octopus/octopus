@@ -381,7 +381,6 @@ subroutine X(set_bc)(der, f)
   integer :: bndry_start, bndry_end
   integer :: p
   integer :: iper, ip, ix, iy, iz, dx, dy, dz
-  type(profile_t), save :: set_bc_prof, comm_prof
 #ifdef HAVE_MPI
   integer :: ipart, nreq
   integer, allocatable :: req(:), statuses(:, :)
@@ -416,7 +415,7 @@ subroutine X(set_bc)(der, f)
 
 #ifdef HAVE_MPI
     if(der%m%parallel_in_domains) then
-      call profiling_in(comm_prof, 'SET_BC_COMMUNICATION')
+      call profiling_in(set_bc_comm_prof, 'SET_BC_COMMUNICATION')
       ! get the points from other nodes
       ALLOCATE(req(2*der%m%vp%p), 2*der%m%vp%p)
 
@@ -436,7 +435,7 @@ subroutine X(set_bc)(der, f)
 
       call profiling_count_transfers(sum(der%m%nrecv(1:der%m%vp%p) + der%m%nrecv(1:der%m%vp%p)), f(1))
 
-      call profiling_out(comm_prof)
+      call profiling_out(set_bc_comm_prof)
     end if
 #endif
 
@@ -448,13 +447,13 @@ subroutine X(set_bc)(der, f)
 
 #ifdef HAVE_MPI
     if(der%m%parallel_in_domains) then
-      call profiling_in(comm_prof)
+      call profiling_in(set_bc_comm_prof)
 
       ALLOCATE(statuses(MPI_STATUS_SIZE, nreq), MPI_STATUS_SIZE*nreq)
       call MPI_Waitall(nreq, req, statuses, mpi_err)
       deallocate(statuses, req)
 
-      call profiling_out(comm_prof)
+      call profiling_out(set_bc_comm_prof)
     end if
 #endif
 
@@ -522,11 +521,15 @@ subroutine X(set_bc_batch)(der, fb)
 
   integer :: ip, idim, ist
   integer :: pp, bndry_start, bndry_end
+#ifdef HAVE_MPI
+  integer :: ipart, nreq
+  integer, allocatable :: req(:), statuses(:, :)
+#endif
+
   call push_sub('derivatives_inc.Xset_bc_batch')
 
+  if(simul_box_multires(der%m%sb)) then
 
-  if(simul_box_multires(der%m%sb) .or. (der%periodic_bc .and. der%m%parallel_in_domains)) then
-    
     do ist = 1, fb%nst
       do idim = 1, fb%dim
         call X(set_bc)(der, fb%states(ist)%X(psi)(:, idim))
@@ -535,8 +538,10 @@ subroutine X(set_bc_batch)(der, fb)
 
   else
 
+    call profiling_in(set_bc_prof, 'SET_BC')
+
     pp = der%m%vp%partno
-   
+
     ! The boundary points are at different locations depending on the presence
     ! of ghost points due to domain parallelization.
     if(der%m%parallel_in_domains) then
@@ -555,14 +560,67 @@ subroutine X(set_bc_batch)(der, fb)
       !$omp end parallel workshare
     end if
 
-  end if
+    if(der%periodic_bc) then
 
-  if(der%periodic_bc) then
-    !$omp parallel workshare
-    forall (ist = 1:fb%nst, idim = 1:fb%dim, ip = 1:der%m%nper)
-      fb%states(ist)%X(psi)(der%m%per_points(ip), idim) = fb%states(ist)%X(psi)(der%m%per_map(ip), idim)
-    end forall
-    !$omp end parallel workshare
+#ifdef HAVE_MPI
+      if(der%m%parallel_in_domains) then
+        call profiling_in(set_bc_comm_prof, 'SET_BC_COMMUNICATION')
+
+        ! get the points that are copies from other nodes
+        ALLOCATE(req(2*der%m%vp%p*fb%dim*fb%nst), 2*der%m%vp%p*fb%dim*fb%nst)
+
+        nreq = 0
+
+        do ist = 1, fb%nst
+          do idim = 1, fb%dim
+            do ipart = 1, der%m%vp%p
+              if(ipart == der%m%vp%partno .or. der%m%nrecv(ipart) == 0) cycle
+              nreq = nreq + 1
+              call MPI_Irecv(fb%states(ist)%X(psi)(:, idim), 1, der%m%X(recv_type)(ipart), ipart - 1, 3, &
+                   der%m%vp%comm, req(nreq), mpi_err)
+            end do
+          end do
+        end do
+
+        do ist = 1, fb%nst
+          do idim = 1, fb%dim
+            do ipart = 1, der%m%vp%p
+              if(ipart == der%m%vp%partno .or. der%m%nsend(ipart) == 0) cycle
+              nreq = nreq + 1
+              call MPI_Isend(fb%states(ist)%X(psi)(:, idim), 1, der%m%X(send_type)(ipart), ipart - 1, 3, &
+                   der%m%vp%comm, req(nreq), mpi_err)
+            end do
+          end do
+        end do
+        
+        call profiling_count_transfers(sum(der%m%nsend(1:der%m%vp%p) + der%m%nrecv(1:der%m%vp%p))*fb%dim*fb%nst, R_TOTYPE(M_ONE))
+
+        call profiling_out(set_bc_comm_prof)
+      end if
+#endif
+
+      !$omp parallel workshare
+      forall (ist = 1:fb%nst, idim = 1:fb%dim, ip = 1:der%m%nper)
+        fb%states(ist)%X(psi)(der%m%per_points(ip), idim) = fb%states(ist)%X(psi)(der%m%per_map(ip), idim)
+      end forall
+      !$omp end parallel workshare
+
+#ifdef HAVE_MPI
+      if(der%m%parallel_in_domains) then
+        call profiling_in(set_bc_comm_prof)
+
+        ALLOCATE(statuses(MPI_STATUS_SIZE, nreq), MPI_STATUS_SIZE*nreq)
+        call MPI_Waitall(nreq, req, statuses, mpi_err)
+        deallocate(statuses, req)
+
+        call profiling_out(set_bc_comm_prof)
+      end if
+#endif
+
+    end if
+
+    call profiling_out(set_bc_prof)
+
   end if
 
   call pop_sub()

@@ -130,6 +130,8 @@ module derivatives_m
     logical :: dealloc_f
   end type der_handle_t
 
+  type(profile_t), save :: set_bc_prof, set_bc_comm_prof
+
 contains
 
   ! ---------------------------------------------------------
