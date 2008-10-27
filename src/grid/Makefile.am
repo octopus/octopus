@@ -55,7 +55,7 @@ par_vec.o : par_vec.F90 par_vec_inc.F90 mesh_lib.o
 mesh.o : mesh.F90 par_vec.o mesh_lib.o curvlinear.o
 mesh_init.o : mesh_init.F90 mesh.o par_vec.o zoltan.o
 scalar_mesh.o : scalar_mesh.F90
-nl_operator.o : nl_operator.F90 nl_operator_inc.F90 par_vec.o mesh.o mesh_lib.o 
+nl_operator.o : nl_operator.F90 nl_operator_inc.F90 par_vec.o mesh.o mesh_lib.o batch.o
 submesh.o : submesh.F90 submesh_inc.F90  mesh.o 
 stencil_star.o : stencil_star.F90 nl_operator.o 
 stencil_variational.o : stencil_variational.F90 nl_operator.o 

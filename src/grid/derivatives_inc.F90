@@ -102,6 +102,77 @@ subroutine X(derivatives_lapl_finish)(der, handle)
 end subroutine X(derivatives_lapl_finish)
 
 ! ---------------------------------------------------------
+subroutine X(derivatives_lapl_batch_start)(der, handle, ff, lapl, ghost_update, set_bc)
+  type(derivatives_t),       intent(in)    :: der
+  type(der_handle_t),        intent(inout) :: handle(:, :)
+  type(batch_t),             intent(inout) :: ff
+  type(batch_t),             intent(inout) :: lapl
+  logical, optional,         intent(in)    :: ghost_update
+  logical, optional,         intent(in)    :: set_bc
+
+  logical :: set_bc_
+#ifdef HAVE_MPI
+  integer :: ist, idim
+#endif
+  call push_sub('derivatives_inc.Xderivatives_lapl_start')
+
+
+  handle(1, 1)%ghost_update = .true.
+  if(present(ghost_update)) handle(1, 1)%ghost_update = ghost_update
+
+  set_bc_ = .true.
+  if(present(set_bc)) set_bc_ = set_bc
+
+  if(set_bc_) call X(set_bc_batch)(der, ff)
+
+#ifdef HAVE_MPI
+  if(derivatives_overlap(der) .and. der%m%parallel_in_domains .and. handle(1, 1)%ghost_update) then
+    do ist = 1, ff%nst
+      do idim = 1, ff%dim
+        call X(vec_ighost_update)(der%m%vp, ff%states(ist)%X(psi)(:, idim), handle(idim, ist)%pv_h)
+      end do
+    end do
+  end if
+#endif
+
+  call pop_sub()
+end subroutine X(derivatives_lapl_batch_start)
+
+! ---------------------------------------------------------
+subroutine X(derivatives_lapl_batch_finish)(der, handle, ff, lapl)
+  type(derivatives_t),       intent(in)    :: der
+  type(der_handle_t),        intent(inout) :: handle(:, :)
+  type(batch_t),             intent(inout) :: ff
+  type(batch_t),             intent(inout) :: lapl
+
+#ifdef HAVE_MPI
+  integer :: ist, idim
+#endif
+
+  call push_sub('derivatives_inc.Xderivatives_lapl_finish')
+
+#ifdef HAVE_MPI
+  if(derivatives_overlap(der) .and. der%m%parallel_in_domains .and. handle(1, 1)%ghost_update) then
+
+    call X(nl_operator_operate_batch)(der%lapl, ff, lapl, ghost_update = .false., points = OP_INNER)
+    do ist = 1, ff%nst
+      do idim = 1, ff%dim
+        call pv_handle_wait(handle(idim, ist)%pv_h)
+      end do
+    end do
+    call X(nl_operator_operate_batch)(der%lapl, ff, lapl, ghost_update = .false., points = OP_OUTER)
+    
+    call pop_sub()
+    return
+  end if
+#endif
+
+  call X(nl_operator_operate_batch)(der%lapl, ff, lapl, ghost_update = handle(1, 1)%ghost_update)
+  
+  call pop_sub()
+end subroutine X(derivatives_lapl_batch_finish)
+
+! ---------------------------------------------------------
 subroutine X(derivatives_lapl)(der, f, lapl, ghost_update, set_bc)
   type(derivatives_t),       intent(in)    :: der
   R_TYPE,                    intent(inout) :: f(:)     ! f(m%np_part)

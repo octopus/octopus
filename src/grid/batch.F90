@@ -97,7 +97,7 @@ contains
   logical function batch_is_ok(this) result(ok)
     type(batch_t), intent(in)   :: this
     
-    ok = all(state_is_associated(this%states(1:this%nst)))
+    ok = (this%nst >= 1) .and. all(state_is_associated(this%states(1:this%nst)))
   end function batch_is_ok
 
   subroutine batch_copy(bin, bout)

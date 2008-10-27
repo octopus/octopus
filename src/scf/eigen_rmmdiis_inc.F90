@@ -124,6 +124,8 @@ subroutine X(eigensolver_rmmdiis) (gr, st, h, pre, tol, niter, converged, ik, di
         call  X(preconditioner_apply)(pre, gr, h, residuals(:, :, ib), preres(:, :, ib))
       end do
 
+      if(num_in_block == 0) exit
+
       ! apply the hamiltonian to the residuals
       call batch_init(psib, h%d%dim, num_in_block)
       call batch_init(hpsib, h%d%dim, num_in_block)

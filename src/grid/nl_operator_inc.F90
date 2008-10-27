@@ -346,6 +346,31 @@ subroutine X(nl_operator_operate)(op, fi, fo, ghost_update, profile, points)
   call pop_sub()
 end subroutine X(nl_operator_operate)
 
+! ---------------------------------------------------------
+subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, points)
+  type(nl_operator_t), intent(in)    :: op
+  type(batch_t),       intent(inout) :: fi
+  type(batch_t),       intent(inout) :: fo
+  logical, optional,   intent(in)    :: ghost_update
+  integer, optional,   intent(in)    :: points
+
+  integer :: idim, ist, points_
+  logical :: update
+
+  points_ = OP_ALL
+  if(present(points)) points_ = points
+
+  update = .true.
+  if(present(ghost_update)) update = ghost_update
+
+  do ist = 1, fi%nst
+    do idim = 1, fi%dim
+      call X(nl_operator_operate)(op, fi%states(ist)%X(psi)(:, idim), fo%states(ist)%X(psi)(:, idim), &
+           ghost_update = update, profile = .true., points = points_)
+    end do
+  end do
+
+end subroutine X(nl_operator_operate_batch)
 
 ! ---------------------------------------------------------
 subroutine X(nl_operator_operate_diag)(op, fo)

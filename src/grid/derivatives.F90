@@ -43,38 +43,38 @@ module derivatives_m
   implicit none
 
   private
-  public ::                 &
-    derivatives_t,          &
-    derivatives_init,       &
-    derivatives_end,        &
-    derivatives_build,      &
-    dderivatives_lapl,      &
-    dderivatives_lapl_start,&
-    dderivatives_lapl_finish,&
-    derivatives_lapl_diag,  &
-    dderivatives_laplt,     &
-    dderivatives_grad,      &
-    dderivatives_oper,      &
-    dderivatives_div,       &
-    dderivatives_curl,      &
-    dset_bc,                &
-    zset_bc,                &
-    dset_bc_batch,          &
-    zset_bc_batch,          &
-    zderivatives_lapl,      &
-    zderivatives_lapl_start,&
-    zderivatives_lapl_finish,&
-    zderivatives_laplt,     &
-    zderivatives_grad,      &
-    zderivatives_oper,      &
-    zderivatives_div,       &
-    zderivatives_curl,      &
-    stencil_extent,         &
-    der_handle_t,           &
-    der_handle_init,        &
-    der_handle_end,         &
-    df_angular_momentum,    &
-    zf_angular_momentum,    &
+  public ::                             &
+    derivatives_t,                      &
+    derivatives_init,                   &
+    derivatives_end,                    &
+    derivatives_build,                  &
+    dderivatives_lapl,                  &
+    zderivatives_lapl,                  &
+    dderivatives_lapl_batch_start,      &
+    dderivatives_lapl_batch_finish,     &
+    zderivatives_lapl_batch_start,      &
+    zderivatives_lapl_batch_finish,     &
+    derivatives_lapl_diag,              &
+    dderivatives_laplt,                 &
+    zderivatives_laplt,                 &
+    dderivatives_grad,                  &
+    zderivatives_grad,                  &
+    dderivatives_oper,                  &
+    zderivatives_oper,                  &
+    dderivatives_div,                   &
+    zderivatives_div,                   &
+    dderivatives_curl,                  &
+    zderivatives_curl,                  &
+    dset_bc,                            &
+    zset_bc,                            &
+    dset_bc_batch,                      &
+    zset_bc_batch,                      &
+    stencil_extent,                     &
+    der_handle_t,                       &
+    der_handle_init,                    &
+    der_handle_end,                     &
+    df_angular_momentum,                &
+    zf_angular_momentum,                &
     df_l2, zf_l2
 
   integer, parameter ::     &

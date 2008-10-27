@@ -37,7 +37,7 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
   logical :: kinetic_only_, apply_kpoint
   integer :: ii, ist, idim, ip
   R_TYPE, pointer :: psi(:, :), hpsi(:, :)
-  type(batch_t) :: epsib
+  type(batch_t) :: epsib, laplb
   type(der_handle_t), allocatable :: handles(:, :)
 
 
@@ -57,9 +57,9 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
   ASSERT(psib%nst == hpsib%nst)
 
   nst = psib%nst
-
+  
   ALLOCATE(lapl(1:NP, 1:h%d%dim, 1:nst), NP*h%d%dim*nst)
-  ALLOCATE(handles(h%d%dim, nst), h%d%dim*nst)
+  call batch_init(laplb, h%d%dim, psib%states(1)%ist, psib%states(nst)%ist, lapl)
 
   apply_kpoint = simul_box_is_periodic(gr%sb) .and. .not. kpoint_is_gamma(h%d, ik)
 
@@ -85,19 +85,26 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
       call profiling_out(phase_prof)
     end if
 
-    ! start the calculation of the laplacian
-    do idim = 1, h%d%dim
-      call der_handle_init(handles(idim, ii), gr%der)
-      call X(derivatives_lapl_start)(gr%der, handles(idim, ii), epsi(:, idim), lapl(:, idim, ii), set_bc = .false.)
-    end do
-
   end do
 
+  ! start the calculation of the laplacian
+  ALLOCATE(handles(h%d%dim, nst), h%d%dim*nst)
+
+  do ii = 1, nst
+    do idim = 1, h%d%dim
+      call der_handle_init(handles(idim, ii), gr%der)
+    end do
+  end do
+
+  call X(derivatives_lapl_batch_start)(gr%der, handles, epsib, laplb, set_bc = .false.)
+    
   if (.not. kinetic_only_) then
     ! apply the potential
     call X(vlpsi_batch)(h, gr%m, epsib, hpsib, ik)
     if(h%ep%non_local) call X(vnlpsi_batch)(h, gr%m, epsib, hpsib, ik)
   end if
+
+  call X(derivatives_lapl_batch_finish)(gr%der, handles, epsib, laplb)
 
   do ii = 1, nst
     call set_pointers()
@@ -107,7 +114,6 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
     ! finish the calculation of the laplacian
     call profiling_in(C_PROFILING_KINETIC)
     do idim = 1, h%d%dim
-      call X(derivatives_lapl_finish)(gr%der, handles(idim, ii))
       call lalg_axpy(NP, -M_HALF/h%mass, lapl(:, idim, ii), hpsi(:, idim))
       call der_handle_end(handles(idim, ii))
     end do

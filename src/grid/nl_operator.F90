@@ -20,6 +20,7 @@
 #include "global.h"
 
 module nl_operator_m
+  use batch_m
   use datasets_m
   use global_m
   use io_m
@@ -46,6 +47,8 @@ module nl_operator_m
     nl_operator_transpose,      &
     dnl_operator_operate,       &
     znl_operator_operate,       &
+    dnl_operator_operate_batch, &
+    znl_operator_operate_batch, &
     dnl_operator_operate_diag,  &
     znl_operator_operate_diag,  &
     nl_operator_end,            &
