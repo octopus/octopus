@@ -68,7 +68,7 @@ module opt_control_parameters_m
             parameters_x_to_par,          &
             parameters_update,            &
             parameters_number,            &
-            parameters_dim,               &
+            parameters_dog,               &
             parameters_w0,                &
             parameters_alpha,             &
             parameters_targetfluence,     &
@@ -435,6 +435,7 @@ contains
 
     ! Move to the sine-Fourier space if required.
     call parameters_set_rep(par)
+
     if( (par%representation .eq. ctr_sine_fourier_series) .or. &
         (par%representation .eq. ctr_fourier_series)      .or. &
         (par%representation .eq. ctr_zero_fourier_series) ) then
@@ -467,7 +468,7 @@ contains
     case(parameter_mode_phi)
       par%intphi = tdf_dot_product(par%f(1), par%f(1))
       if(par%intphi <= M_ZERO) then
-        par%intphi = (M_PI/M_TWO)**2*par%dt*par%ntiter
+        par%intphi = CNST(0.1)*(M_PI/M_TWO)**2*par%dt*par%ntiter
       else
         par%intphi = tdf_dot_product(par%f(1), par%f(1))
       end if
@@ -777,6 +778,7 @@ contains
     end do
 
     cp%alpha = par_common%alpha
+
     select case(cp%representation)
     case(ctr_real_space)
       cp%dim = ntiter
@@ -1254,11 +1256,13 @@ contains
     FLOAT :: sumx2
     FLOAT, allocatable :: ep(:), e(:), y(:)
 
+    call push_sub('parameters.parameters_par_to_x')
+
     ASSERT(par%current_representation .ne. ctr_real_space)
 
     select case(par_common%mode)
     case(parameter_mode_epsilon)
-      n = parameters_dim(par)+1
+      n = par%dim
       ALLOCATE(e(n), n)
       ALLOCATE(ep(n), n)
       ALLOCATE(y(n), n)
@@ -1272,7 +1276,7 @@ contains
       deallocate(y, e, ep)
 
     case(parameter_mode_f)
-      n = parameters_dim(par)+1
+      n = par%dim
       ALLOCATE(e(n), n)
       ALLOCATE(ep(n), n)
       ALLOCATE(y(n), n)
@@ -1286,7 +1290,7 @@ contains
       deallocate(y, e, ep)
 
     case(parameter_mode_phi)
-      n = parameters_dim(par)+1
+      n = par%dim
       ALLOCATE(e(n), n)
       ALLOCATE(ep(n), n)
       ALLOCATE(y(n), n)
@@ -1304,13 +1308,13 @@ contains
       deallocate(y, e, ep)
 
     case(parameter_mode_f_and_phi)
-      n = parameters_dim(par)+2
-      m = n/2
+      n = 2*par%dim
+      m = par%dim
       ALLOCATE(e(n), n)
       ALLOCATE(ep(n), n)
       ALLOCATE(y(m), m)
       if(tdf_dot_product(par%f(2), par%f(2)) <= M_ZERO) then
-        call tdf_set_numerical(par%f(1), 1, sqrt(par%intphi))
+        call tdf_set_numerical(par%f(2), 1, sqrt(par%intphi))
         call tdf_set_random(par%f(2))
       end if
       do j =  1, m
@@ -1328,6 +1332,7 @@ contains
       deallocate(y, e, ep)
     end select
 
+    call pop_sub()
   end subroutine parameters_par_to_x
   ! ---------------------------------------------------------
 
@@ -1362,7 +1367,6 @@ contains
     case(parameter_mode_f_and_phi)
 
       n = par%dim
-      dim = parameters_dim(par) ! This should be equal to 2*n-2
       ALLOCATE(e(2*n), 2*n)
       ALLOCATE(ep(2*n), 2*n)
       e = M_ZERO; ep = M_ZERO
@@ -1374,7 +1378,6 @@ contains
       y(1) = M_ONE
       y(2:n) = x(n:2*n-2)
       call hyperspherical2cartesian(y, e(n+1:2*n))
-      ! WARNING: code missing.
 
     end select
 
@@ -1402,7 +1405,6 @@ contains
       call tdf_set_numerical(par%f(2), ep(n+1:2*n))
 
     end select
-
 
     deallocate(y, e, ep)
     call pop_sub()
@@ -1453,7 +1455,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  FLOAT function parameters_alpha(par, j)
+  FLOAT pure function parameters_alpha(par, j)
     type(oct_control_parameters_t), intent(in) :: par
     integer,                        intent(in) :: j
     parameters_alpha = par%alpha(j)
@@ -1462,7 +1464,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  FLOAT function parameters_targetfluence(par)
+  FLOAT pure function parameters_targetfluence(par)
     type(oct_control_parameters_t), intent(in) :: par
     parameters_targetfluence = par%targetfluence
   end function parameters_targetfluence
@@ -1470,7 +1472,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  integer function parameters_number(par)
+  integer pure function parameters_number(par)
     type(oct_control_parameters_t), intent(in) :: par
     parameters_number = par%no_parameters
   end function parameters_number
@@ -1478,22 +1480,22 @@ contains
 
 
   ! ---------------------------------------------------------
-  integer function parameters_dim(par)
+  integer pure function parameters_dog(par)
     type(oct_control_parameters_t), intent(in) :: par
     select case(par_common%mode)
     case(parameter_mode_epsilon, parameter_mode_f)
-      parameters_dim = par%dim-1
+      parameters_dog = par%dim-1
     case(parameter_mode_phi)
-      parameters_dim = par%dim-1
+      parameters_dog = par%dim-1
     case(parameter_mode_f_and_phi)
-      parameters_dim = (par%dim-1)*2
+      parameters_dog = (par%dim-1)*2
     end select
-  end function parameters_dim
+  end function parameters_dog
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  FLOAT function parameters_w0(par)
+  FLOAT pure function parameters_w0(par)
     type(oct_control_parameters_t), intent(in) :: par
     parameters_w0 = par%w0
   end function parameters_w0

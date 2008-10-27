@@ -429,7 +429,7 @@ contains
       call iteration_manager_direct(-f, par, iterator)
       call states_end(psi)
 
-      dim = parameters_dim(par)
+      dim = parameters_dog(par)
       ALLOCATE(x(dim), dim)
 
       ! Set the module pointers, so that the calc_point and write_iter_info routines
@@ -485,7 +485,7 @@ contains
       call iteration_manager_direct(-f, par, iterator)      
       call states_end(psi)
 
-      dim = parameters_dim(par)
+      dim = parameters_dog(par)
       ALLOCATE(x(dim), dim)
 
       ! Set the module pointers, so that the calc_point and write_iter_info routines
@@ -497,7 +497,7 @@ contains
 
       call parameters_par_to_x(par, x)
 
-      nvariables = parameters_dim(par)
+      nvariables = parameters_dog(par)
       iprint = 2
       npt = 2*nvariables + 1
       rhoend = oct_iterator_tolerance(iterator)

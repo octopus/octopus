@@ -291,7 +291,7 @@ module tdf_m
 
 
   !------------------------------------------------------------
-  integer function tdf_niter(f)
+  integer pure function tdf_niter(f)
     type(tdf_t), intent(in) :: f
     tdf_niter = f%niter
   end function tdf_niter
@@ -299,14 +299,14 @@ module tdf_m
 
 
   !------------------------------------------------------------
-  integer function tdf_nfreqs(f)
+  integer pure function tdf_nfreqs(f)
     type(tdf_t), intent(in) :: f
     tdf_nfreqs = f%nfreqs
   end function tdf_nfreqs
   !------------------------------------------------------------
 
   !------------------------------------------------------------
-  integer function tdf_sine_nfreqs(f)
+  integer pure function tdf_sine_nfreqs(f)
     type(tdf_t), intent(in) :: f
     tdf_sine_nfreqs = f%sine_nfreqs
   end function tdf_sine_nfreqs
@@ -314,7 +314,7 @@ module tdf_m
 
 
   !------------------------------------------------------------
-  FLOAT function tdf_dt(f)
+  FLOAT pure function tdf_dt(f)
     type(tdf_t), intent(in) :: f
     tdf_dt = f%dt
   end function tdf_dt
@@ -549,18 +549,26 @@ module tdf_m
   subroutine tdf_fourier_grid(f, wgrid)
     type(tdf_t), intent(in) :: f
     FLOAT, intent(inout)    :: wgrid(:)
-    integer :: i, steps
+    integer :: i
     FLOAT   :: df
 
     call push_sub('tdfunction.tdf_fourier_grid')
 
     wgrid = M_ZERO
-    steps = f%niter
-
-    df = M_ONE/(real(steps, REAL_PRECISION) * f%dt)
-    do i = 1, int((steps)/2) + 1
-       wgrid(i)   = real(i-1, REAL_PRECISION) * df * M_TWO * M_PI
-    enddo
+    select case(f%mode)
+    case(TDF_FOURIER_SERIES, TDF_ZERO_FOURIER)
+      df = M_TWO * M_PI / (f%final_time-f%init_time)
+      do i = 1, f%nfreqs
+         wgrid(i) = (i-1)*df
+      enddo
+    case(TDF_SINE_SERIES)
+      df = M_PI / (f%final_time-f%init_time)
+      do i = 1, f%sine_nfreqs
+         wgrid(i) = i*df
+      enddo
+    case default
+      stop 'Error'
+    end select
 
     call pop_sub()
   end subroutine tdf_fourier_grid
@@ -702,28 +710,29 @@ module tdf_m
 
     call push_sub('tdfunction.tdf_set_random')
 
+    fdotf = tdf_dot_product(f, f)
+    call loct_ran_init(random_gen_pointer)
+
     select case(f%mode)
     case(TDF_FOURIER_SERIES)
-
-      fdotf = tdf_dot_product(f, f)
-
-      call loct_ran_init(random_gen_pointer)
-
       n = 2*f%nfreqs-1
-      ALLOCATE(e(n), n)
-      do i = 1, n
-        e(i) = loct_ran_gaussian(random_gen_pointer, M_ONE)
-      end do
-      nrm = sqrt(dot_product(e, e))
-      e = sqrt(fdotf) * e/ nrm
-
-      call tdf_set_numerical(f, e)
-
-      call loct_ran_end(random_gen_pointer)
-      deallocate(e)
+    case(TDF_ZERO_FOURIER)
+      n = 2*f%nfreqs-2
+    case(TDF_SINE_SERIES)
+      n = f%sine_nfreqs
     case default
       stop 'Error'
     end select
+
+    ALLOCATE(e(n), n)
+    do i = 1, n
+      e(i) = loct_ran_gaussian(random_gen_pointer, M_ONE)
+    end do
+    nrm = sqrt(dot_product(e, e))
+    e = sqrt(fdotf) * e/ nrm
+    call tdf_set_numerical(f, e)
+    call loct_ran_end(random_gen_pointer)
+    deallocate(e)
 
     call pop_sub()
   end subroutine tdf_set_random
@@ -1117,6 +1126,9 @@ module tdf_m
       end do
     case(TDF_FOURIER_SERIES)
       fg = dot_product(f%valww, g%valww)
+    case(TDF_ZERO_FOURIER)
+      ASSERT(f%valww(1).eq.M_ZERO)
+      fg = dot_product(f%valww, g%valww)
     case default
       do i = 1, f%niter + 1
         t = (i-1) * f%dt
@@ -1157,7 +1169,7 @@ module tdf_m
       do i = 1, f%sine_nfreqs
         fminusg%coeffs(i) = fminusg%coeffs(i) - g%coeffs(i)
       end do
-    case(TDF_FOURIER_SERIES)
+    case(TDF_FOURIER_SERIES, TDF_ZERO_FOURIER)
       do i = 1, 2*(f%nfreqs-1)+1
         fminusg%valww(i) = fminusg%valww(i) - g%valww(i)
       end do
