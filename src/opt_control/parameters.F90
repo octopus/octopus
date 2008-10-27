@@ -925,7 +925,6 @@ contains
     type(oct_control_parameters_t), intent(in) :: cp
     logical, optional, intent(in) :: fourier
 
-    type(tdf_t) :: g
     integer :: i, j, iunit
     FLOAT :: t
     FLOAT, allocatable :: wgrid(:)
@@ -1006,9 +1005,7 @@ contains
 
     end select
 
-    ! This Fourier analysis is only done for the case of optimization of the full electric field.
-    ! TODO: extend this to the envelope and/or phaseo optimization.
-    if(present(fourier) .and. (par_common%mode .eq. parameter_mode_epsilon) ) then
+    if(present(fourier)) then
     if(fourier) then
       do j = 1, cp%no_parameters
         if(cp%no_parameters > 1) then
@@ -1017,16 +1014,14 @@ contains
         else
           iunit = io_open(trim(filename)//'/cpw', action='write')
         end if
-        call tdf_init(g)
-        call tdf_copy(g, par%f(j))
-        call tdf_numerical_to_fourier(g)
-        ALLOCATE(wgrid(cp%ntiter/2+1), cp%ntiter/2+1)
-        call tdf_fourier_grid(g, wgrid)
-        do i = 1, (cp%dim-1)/2
-          write(iunit, '(3es30.16e4)') wgrid(i), tdf(g, i)
+        call tdf_numerical_to_fourier(par%f(j))
+        ALLOCATE(wgrid(tdf_nfreqs(par%f(j))), tdf_nfreqs(par%f(j)))
+        call tdf_fourier_grid(par%f(j), wgrid)
+        write(iunit, '(3es20.8e3)') wgrid(1), tdf(par%f(j), 1), M_ZERO
+        do i = 2, tdf_nfreqs(par%f(j))
+          write(iunit, '(3es20.8e3)') wgrid(i), tdf(par%f(j), i), tdf(par%f(j), (tdf_nfreqs(par%f(j))-1)+i)
         end do
         deallocate(wgrid)
-        call tdf_end(g)
         call io_close(iunit)
       end do
     end if
