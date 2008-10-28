@@ -165,6 +165,15 @@
     !%End
     call loct_parse_int(check_inp('OCTNumberCheckPoints'), 0, oct%number_checkpoints)
 
+    !%Variable OCTRandomInitialGuess
+    !%Type logical
+    !%Section Calculation Modes::Optimal Control
+    !%Default false
+    !%Description 
+    !%
+    !%End
+    call loct_parse_logical(check_inp('OCTRandomInitialGuess'), .false., oct%random_initial_guess)
+
     call pop_sub()
   end subroutine oct_read_inp
 

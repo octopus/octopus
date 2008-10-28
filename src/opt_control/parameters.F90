@@ -67,6 +67,7 @@ module opt_control_parameters_m
             parameters_j2,                &
             parameters_par_to_x,          &
             parameters_x_to_par,          &
+            parameters_randomize,         &
             parameters_update,            &
             parameters_number,            &
             parameters_dog,               &
@@ -1243,6 +1244,26 @@ contains
 
 
   ! ---------------------------------------------------------
+  subroutine parameters_randomize(par)
+    type(oct_control_parameters_t), intent(inout) :: par
+
+     integer :: j
+     call push_sub('parameters.parameters_randomize')
+
+     ASSERT(par%representation .ne. ctr_real_space)
+
+     call parameters_set_rep(par)
+
+     do j = 1, par%no_parameters
+       call tdf_set_random(par%f(j))
+     end do
+
+     call pop_sub()
+  end subroutine parameters_randomize
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
   subroutine parameters_par_to_x(par, x)
     type(oct_control_parameters_t), intent(inout) :: par
     REAL_DOUBLE,                    intent(inout) :: x(:)
@@ -1346,6 +1367,7 @@ contains
     select case(par_common%mode)
 
     case(parameter_mode_epsilon, parameter_mode_f, parameter_mode_phi)
+
       n = par%dim
       ASSERT(n-1 .eq. size(x))
       ALLOCATE(e(n), n)
@@ -1356,7 +1378,6 @@ contains
       y(1) = M_ONE
       y(2:n) = x(1:n-1)
       call hyperspherical2cartesian(y, e)
-
 
     case(parameter_mode_f_and_phi)
 

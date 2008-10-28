@@ -429,10 +429,12 @@ contains
       call iteration_manager_direct(-f, par, iterator)
       call states_end(psi)
 
+      if(oct%random_initial_guess) call parameters_randomize(par)
+
       dim = parameters_dog(par)
       ALLOCATE(x(dim), dim)
 
-      ! Set the module pointers, so that the calc_point and write_iter_info routines
+      ! Set the module pointers, so that the direct_opt_calc and direct_opt_write_info routines
       ! can use them.
       call parameters_copy(par_, par)
       sys_      => sys
@@ -484,6 +486,8 @@ contains
       if(oct%dump_intermediate) call iterator_write(iterator, par)
       call iteration_manager_direct(-f, par, iterator)      
       call states_end(psi)
+
+      if(oct%random_initial_guess) call parameters_randomize(par)
 
       dim = parameters_dog(par)
       ALLOCATE(x(dim), dim)

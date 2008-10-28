@@ -33,6 +33,7 @@ module opt_control_constants_m
     logical :: oct_double_check
     logical :: dump_intermediate
     integer :: number_checkpoints
+    logical :: random_initial_guess
   end type oct_t
 
   integer, parameter ::  &
