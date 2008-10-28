@@ -139,7 +139,7 @@ contains
 
     call push_sub('iter.oct_iterator_end')
 
-    call parameters_write('opt-control/laser.bestJ1', iterator%best_par, fourier = .true.)
+    call parameters_write('opt-control/laser.bestJ1', iterator%best_par)
 
     call parameters_end(iterator%best_par)
     call io_close(iterator%convergence_iunit)

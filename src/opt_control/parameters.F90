@@ -25,6 +25,7 @@ module opt_control_parameters_m
   use datasets_m
   use varinfo_m
   use global_m
+  use mpi_m
   use messages_m
   use io_m
   use units_m
@@ -920,16 +921,17 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_write(filename, cp, fourier)
+  subroutine parameters_write(filename, cp)
     character(len=*), intent(in) :: filename
     type(oct_control_parameters_t), intent(in) :: cp
-    logical, optional, intent(in) :: fourier
 
     integer :: i, j, iunit
     FLOAT :: t
     FLOAT, allocatable :: wgrid(:)
     character(len=2) :: digit
     type(oct_control_parameters_t) :: par
+
+    if(.not.mpi_grp_is_root(mpi_world)) return
 
     call push_sub('parameters.parameters_write')
 
@@ -1005,27 +1007,24 @@ contains
 
     end select
 
-    if(present(fourier)) then
-    if(fourier) then
-      do j = 1, cp%no_parameters
-        if(cp%no_parameters > 1) then
-          write(digit,'(i2.2)') j
-          iunit = io_open(trim(filename)//'/cpw-'//digit, action='write')
-        else
-          iunit = io_open(trim(filename)//'/cpw', action='write')
-        end if
-        call tdf_numerical_to_fourier(par%f(j))
-        ALLOCATE(wgrid(tdf_nfreqs(par%f(j))), tdf_nfreqs(par%f(j)))
-        call tdf_fourier_grid(par%f(j), wgrid)
-        write(iunit, '(3es20.8e3)') wgrid(1), tdf(par%f(j), 1), M_ZERO
-        do i = 2, tdf_nfreqs(par%f(j))
-          write(iunit, '(3es20.8e3)') wgrid(i), tdf(par%f(j), i), tdf(par%f(j), (tdf_nfreqs(par%f(j))-1)+i)
-        end do
-        deallocate(wgrid)
-        call io_close(iunit)
+    do j = 1, cp%no_parameters
+      if(cp%no_parameters > 1) then
+        write(digit,'(i2.2)') j
+        iunit = io_open(trim(filename)//'/cpw-'//digit, action='write')
+      else
+        iunit = io_open(trim(filename)//'/cpw', action='write')
+      end if
+      call tdf_numerical_to_fourier(par%f(j))
+      ALLOCATE(wgrid(tdf_nfreqs(par%f(j))), tdf_nfreqs(par%f(j)))
+      call tdf_fourier_grid(par%f(j), wgrid)
+      write(iunit, '(3a20)') '#      w [a.u]      ', '         a0         ', '         b0         '
+      write(iunit, '(3es20.8e3)') wgrid(1), tdf(par%f(j), 1), M_ZERO
+      do i = 2, tdf_nfreqs(par%f(j))
+        write(iunit, '(3es20.8e3)') wgrid(i), tdf(par%f(j), i), tdf(par%f(j), (tdf_nfreqs(par%f(j))-1)+i)
       end do
-    end if
-    end if
+      deallocate(wgrid)
+      call io_close(iunit)
+    end do
 
     call parameters_end(par)
     call pop_sub()

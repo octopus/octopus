@@ -23,6 +23,7 @@ module lasers_m
   use datasets_m
   use derivatives_m
   use global_m
+  use mpi_m
   use grid_m
   use io_m
   use loct_parser_m
@@ -443,6 +444,10 @@ contains
     CMPLX :: amp, val
     integer :: i, j, k
 
+    if(.not.mpi_grp_is_root(mpi_world)) return
+
+    call push_sub('lasers.laser_write_info')
+
     do i = 1, no_l
       write(iunit,'(i2,a)') i,':'
       select case(l(i)%field)
@@ -495,6 +500,7 @@ contains
 
     end do
 
+    call pop_sub()
   end subroutine laser_write_info
   ! ---------------------------------------------------------
 
