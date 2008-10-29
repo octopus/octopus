@@ -182,6 +182,8 @@ LIBS="${FCEXTRALIBS} $FCLIBS"
 dnl Sometimes Fortran may use the flush function, sometimes not.
 ACX_FORTRAN_CHECK_FUNC(flush)
 
+ACX_FORTRAN_LOC
+
 dnl check whether we have or not a compiler that allows for very long lines...
 ACX_LONG_FORTRAN_LINES
 

@@ -164,3 +164,29 @@ m4_define([AC_LANG_PREPROC(Fortran)],[
   if test -z "$FCCPP"; then FCCPP="/lib/cpp -C -ansi"; fi
   AC_SUBST(FCCPP)
 ])
+
+###############################################
+# ACX_FORTRAN_LOC checks for the presence of the loc intrinsics
+# --------------------------
+AC_DEFUN([ACX_FORTRAN_LOC], [
+    AC_MSG_CHECKING(for loc)
+    AC_LINK_IFELSE(
+    [
+    AC_LANG_PROGRAM(,
+      [	
+          implicit none
+      
+          integer :: ii, jj
+
+          ii = loc(jj)
+      ])
+    ],
+    [
+      AC_MSG_RESULT(yes)
+      AC_DEFINE(HAVE_FORTRAN_LOC, 1,
+                [Define if the compiler provides the loc instrinsic])
+    ],
+    [
+      AC_MSG_RESULT(no)
+    ])
+])
