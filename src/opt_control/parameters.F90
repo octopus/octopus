@@ -144,8 +144,8 @@ contains
     logical, intent(out)                          :: mode_basis_set
 
     character(len=1024)      :: expression
-    integer :: i, j, no_lines, steps
-    FLOAT   :: octpenalty, t, f_re, f_im
+    integer :: i, j, no_lines, steps, iunit
+    FLOAT   :: octpenalty, t, f_re, f_im, total_time
     type(block_t)            :: blk
 
     call push_sub('parameters.parameters_read')
@@ -374,7 +374,7 @@ contains
     !% If, instead of defining a function, the string is "default", then
     !% the program will use the function:
     !%
-    !% <math> \frac{1}{\alpha(t)} = \frac{1}{2}( erf(t-T/20)+ erf(-(t-T+T/20)) </math>
+    !% <math> \frac{1}{\alpha(t)} = \frac{1}{2}( erf((100/T)*(t-T/20))+ erf(-(100/T)*(t-T+T/20)) </math>
     !%End
     steps = max_iter
     ALLOCATE(par_common%td_penalty(par_common%no_parameters), par_common%no_parameters)
@@ -396,11 +396,12 @@ contains
 
       do i = 1, no_lines
         call loct_parse_block_string(blk, i-1, 0, expression)
+        total_time = steps*dt
         if(trim(expression)=='default') then
           do j = 1, steps + 1
             t = (j-1)*dt
-            f_re = M_HALF * (loct_erf(t-CNST(0.05)*steps*dt) + &
-                             loct_erf(-(t-steps*dt+CNST(0.05)*steps*dt)) )
+            f_re = M_HALF * (loct_erf((CNST(100.0)/total_time)*(t-CNST(0.05)*total_time)) + &
+                             loct_erf(-(CNST(100.0)/total_time)*(t-total_time+CNST(0.05)*total_time)) )
             call tdf_set_numerical(par_common%td_penalty(i), j, &
               TOFLOAT(M_ONE /(f_re + CNST(1.0e-7)))  )
           end do
@@ -413,6 +414,20 @@ contains
           end do
         end if
       end do
+
+      if(mpi_grp_is_root(mpi_world)) then
+        iunit = io_open('opt-control/td_penalty', action='write' )
+        do j = 1, steps+1
+          t = (j-1)*dt
+          write(iunit, '(f14.8)', advance='no') t
+          do i = 1, par_common%no_parameters - 1
+            write(iunit, '(es20.8e3)') M_ONE/tdf(par_common%td_penalty(i), j)
+          end do
+          write(iunit, '(es20.8e3)') M_ONE/tdf(par_common%td_penalty(par_common%no_parameters), j)
+        end do
+        write(iunit,'()')
+        call io_close(iunit)
+      end if
 
       call loct_parse_block_end(blk)
     end if
