@@ -212,6 +212,7 @@ contains
 
     integer :: ii, jj, ir, ip, p1(MAX_DIM), time, current, maxp, iinner, iouter
     integer, allocatable :: st1(:), st2(:)
+    FLOAT :: dbest, zbest
 
     call push_sub('nl_operator.nl_operator_build')
 
@@ -394,8 +395,11 @@ contains
     end if
 
     if(op%const_w .and. .not. op%cmplx_op) then
-      call dnl_operator_tune(op)
-      call znl_operator_tune(op)
+      call dnl_operator_tune(op, dbest)
+      call znl_operator_tune(op, zbest)
+      
+      write(message(1), '(a,i7,a,i7)') 'Info: '//trim(op%label)//' throughput (MFlops) real =', int(dbest), ' complex =', int(zbest)
+      call write_info(1)
     end if
 
     call pop_sub()

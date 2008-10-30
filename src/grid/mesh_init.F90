@@ -184,7 +184,7 @@ subroutine mesh_init_stage_2(sb, mesh, geo, cv, stencil, np_stencil)
   mesh%nr(2,:) = mesh%nr(2,:) + mesh%enlarge(:)
 
   ! allocate the xyz arrays
-  i = (mesh%nr(2,1)-mesh%nr(1,1)+1) * (mesh%nr(2,2)-mesh%nr(1,2)+1) * (mesh%nr(2,3)-mesh%nr(1,3)+1)
+  i = (mesh%nr(2,1) - mesh%nr(1,1) + 1)*(mesh%nr(2,2) - mesh%nr(1,2) + 1)*(mesh%nr(2,3) - mesh%nr(1,3) + 1)
   ALLOCATE(mesh%Lxyz_inv(mesh%nr(1,1):mesh%nr(2,1), mesh%nr(1,2):mesh%nr(2,2), mesh%nr(1,3):mesh%nr(2,3)),   i)
   ALLOCATE(mesh%Lxyz_tmp(mesh%nr(1,1):mesh%nr(2,1), mesh%nr(1,2):mesh%nr(2,2), mesh%nr(1,3):mesh%nr(2,3)),   i)
   ALLOCATE(mesh%x_tmp(MAX_DIM, mesh%nr(1,1):mesh%nr(2,1), mesh%nr(1,2):mesh%nr(2,2), mesh%nr(1,3):mesh%nr(2,3)), MAX_DIM*i)
@@ -314,7 +314,7 @@ contains
   ! ---------------------------------------------------------
   subroutine create_x_Lxyz()
     integer :: il, ix, iy, iz
-    integer :: ixb, iyb, izb, bsize
+    integer :: ixb, iyb, izb, bsize, bsizez
 
     ALLOCATE(mesh%Lxyz(mesh%np_part_global, MAX_DIM), mesh%np_part_global*MAX_DIM)
     if(mesh%parallel_in_domains) then
@@ -330,26 +330,39 @@ contains
       mesh%x_global => mesh%x
     end if
 
-    !%Variable MeshBlockSize
     !%Type integer
-    !%Default 128
+    !%Default 20
     !%Section Execution::Optimization
     !%Description
     !% To improve memory access locality when calculating derivatives,
-    !% octopus orders mesh points by cubic blocks. This variable
-    !% controls the size of this blocks. The default is 128.
+    !% Octopus orders mesh points in blocks. This variable controls
+    !% the size of this blocks in the X and Y directions. The default
+    !% is 20. (This variable only affects the performance of octopus
+    !% and not the results.)
     !%End
-    call loct_parse_int(check_inp('MeshBlockSize'), 128, bsize)
+    call loct_parse_int(check_inp('MeshBlockSizeXY'), 20, bsize)
+
+    !%Type integer
+    !%Default 100
+    !%Section Execution::Optimization
+    !%Description
+    !% To improve memory access locality when calculating derivatives,
+    !% Octopus orders mesh points in blocks. This variable controls
+    !% the size of this blocks in the Z direction. The default is
+    !% 100. (This variable only affects the performance of octopus and
+    !% not the results.)
+    !%End
+    call loct_parse_int(check_inp('MeshBlockSizeZ'), 100, bsizez)
 
     ! first we fill the points in the inner mesh
     il = 0
     do ixb = mesh%nr(1,1), mesh%nr(2,1), bsize
       do iyb = mesh%nr(1,2), mesh%nr(2,2), bsize
-        do izb = mesh%nr(1,3), mesh%nr(2,3), bsize
+        do izb = mesh%nr(1,3), mesh%nr(2,3), bsizez
 
           do ix = ixb, min(ixb + bsize - 1, mesh%nr(2,1))
             do iy = iyb, min(iyb + bsize - 1, mesh%nr(2,2))
-              do iz = izb, min(izb + bsize - 1, mesh%nr(2,3))
+              do iz = izb, min(izb + bsizez - 1, mesh%nr(2,3))
                 
                 if(mesh%Lxyz_tmp(ix, iy, iz) == INNER_POINT) then
                   il = il + 1
@@ -375,11 +388,11 @@ contains
     ! and now the points from the enlargement
     do ixb = mesh%nr(1,1), mesh%nr(2,1), bsize
       do iyb = mesh%nr(1,2), mesh%nr(2,2), bsize
-        do izb = mesh%nr(1,3), mesh%nr(2,3), bsize
+        do izb = mesh%nr(1,3), mesh%nr(2,3), bsizez
 
           do ix = ixb, min(ixb + bsize - 1, mesh%nr(2,1))
             do iy = iyb, min(iyb + bsize - 1, mesh%nr(2,2))
-              do iz = izb, min(izb + bsize - 1, mesh%nr(2,3))
+              do iz = izb, min(izb + bsizez - 1, mesh%nr(2,3))
                 
                 if(mesh%Lxyz_tmp(ix, iy, iz) == ENLARGEMENT_POINT) then
                   il = il + 1

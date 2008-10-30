@@ -24,9 +24,10 @@
 !
 ! ---------------------------------------------------------
 
-subroutine X(nl_operator_tune)(op)
+subroutine X(nl_operator_tune)(op, best)
   type(nl_operator_t), intent(inout) :: op
-  
+  FLOAT,  optional,    intent(out)   :: best
+
   R_TYPE, allocatable :: in(:), out(:)
   real(8) :: noperations, flops(OP_MIN:OP_MAX), itime, ftime, bwidth(OP_MIN:OP_MAX), dvolume
   integer :: method, ii, reps, iunit
@@ -112,6 +113,8 @@ subroutine X(nl_operator_tune)(op)
     if(flops(method) > flops(op%X(function))) op%X(function) = method
   end do
 
+  if(present(best)) best = flops(op%X(function))/CNST(1e6)
+
 #ifdef HAVE_MPI      
   call MPI_Comm_rank(MPI_COMM_WORLD, rank, ierr)
   if(rank == 0) then
@@ -148,7 +151,7 @@ subroutine X(nl_operator_tune)(op)
     write(iunit, '(a)') " "
     
     call io_close(iunit)
-    
+
 #ifdef HAVE_MPI      
   end if
 #endif
