@@ -314,6 +314,7 @@ contains
   ! ---------------------------------------------------------
   subroutine create_x_Lxyz()
     integer :: il, ix, iy, iz
+    integer :: ixb, iyb, izb, bsize
 
     ALLOCATE(mesh%Lxyz(mesh%np_part_global, MAX_DIM), mesh%np_part_global*MAX_DIM)
     if(mesh%parallel_in_domains) then
@@ -329,48 +330,78 @@ contains
       mesh%x_global => mesh%x
     end if
 
+    !%Variable MeshBlockSize
+    !%Type integer
+    !%Default 128
+    !%Section Execution::Optimization
+    !%Description
+    !% To improve memory access locality when calculating derivatives,
+    !% octopus orders mesh points by cubic blocks. This variable
+    !% controls the size of this blocks. The default is 128.
+    !%End
+    call loct_parse_int(check_inp('MeshBlockSize'), 128, bsize)
+
     ! first we fill the points in the inner mesh
     il = 0
-    do ix = mesh%nr(1,1), mesh%nr(2,1)
-      do iy = mesh%nr(1,2), mesh%nr(2,2)
-        do iz = mesh%nr(1,3), mesh%nr(2,3)
-          if(mesh%Lxyz_tmp(ix, iy, iz) == INNER_POINT) then
-            il = il + 1
-            mesh%Lxyz(il, 1) = ix
-            mesh%Lxyz(il, 2) = iy
-            mesh%Lxyz(il, 3) = iz
-            mesh%Lxyz_inv(ix,iy,iz) = il
-            if(mesh%parallel_in_domains) then
-              mesh%x_global(il, 1:3) = mesh%x_tmp(1:3, ix, iy, iz)
-            else
-              mesh%x(il, 1:3) = mesh%x_tmp(1:3, ix, iy, iz)
-            end if
-          end if
+    do ixb = mesh%nr(1,1), mesh%nr(2,1), bsize
+      do iyb = mesh%nr(1,2), mesh%nr(2,2), bsize
+        do izb = mesh%nr(1,3), mesh%nr(2,3), bsize
+
+          do ix = ixb, min(ixb + bsize - 1, mesh%nr(2,1))
+            do iy = iyb, min(iyb + bsize - 1, mesh%nr(2,2))
+              do iz = izb, min(izb + bsize - 1, mesh%nr(2,3))
+                
+                if(mesh%Lxyz_tmp(ix, iy, iz) == INNER_POINT) then
+                  il = il + 1
+                  mesh%Lxyz(il, 1) = ix
+                  mesh%Lxyz(il, 2) = iy
+                  mesh%Lxyz(il, 3) = iz
+                  mesh%Lxyz_inv(ix,iy,iz) = il
+                  if(mesh%parallel_in_domains) then
+                    mesh%x_global(il, 1:3) = mesh%x_tmp(1:3, ix, iy, iz)
+                  else
+                    mesh%x(il, 1:3) = mesh%x_tmp(1:3, ix, iy, iz)
+                  end if
+                end if
+                
+              end do
+            end do
+          end do
+          
         end do
       end do
     end do
 
     ! and now the points from the enlargement
-    do ix = mesh%nr(1,1), mesh%nr(2,1)
-      do iy = mesh%nr(1,2), mesh%nr(2,2)
-        do iz = mesh%nr(1,3), mesh%nr(2,3)
+    do ixb = mesh%nr(1,1), mesh%nr(2,1), bsize
+      do iyb = mesh%nr(1,2), mesh%nr(2,2), bsize
+        do izb = mesh%nr(1,3), mesh%nr(2,3), bsize
 
-          if(mesh%Lxyz_tmp(ix, iy, iz) == ENLARGEMENT_POINT) then
-            il = il + 1
-            mesh%Lxyz(il, 1) = ix
-            mesh%Lxyz(il, 2) = iy
-            mesh%Lxyz(il, 3) = iz
-            mesh%Lxyz_inv(ix,iy,iz) = il
-            if(mesh%parallel_in_domains) then
-              mesh%x_global(il, :) = mesh%x_tmp(:, ix, iy, iz)
-            else
-              mesh%x(il,:) = mesh%x_tmp(:,ix,iy,iz)
-            end if
-          end if
+          do ix = ixb, min(ixb + bsize - 1, mesh%nr(2,1))
+            do iy = iyb, min(iyb + bsize - 1, mesh%nr(2,2))
+              do iz = izb, min(izb + bsize - 1, mesh%nr(2,3))
+                
+                if(mesh%Lxyz_tmp(ix, iy, iz) == ENLARGEMENT_POINT) then
+                  il = il + 1
+                  mesh%Lxyz(il, 1) = ix
+                  mesh%Lxyz(il, 2) = iy
+                  mesh%Lxyz(il, 3) = iz
+                  mesh%Lxyz_inv(ix,iy,iz) = il
+                  if(mesh%parallel_in_domains) then
+                    mesh%x_global(il, :) = mesh%x_tmp(:, ix, iy, iz)
+                  else
+                    mesh%x(il,:) = mesh%x_tmp(:,ix,iy,iz)
+                  end if
+                end if
+                
+              end do
+            end do
+          end do
 
         end do
       end do
     end do
+
   end subroutine create_x_Lxyz
 
 
