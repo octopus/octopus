@@ -682,6 +682,8 @@ contains
   ! It is implemented only for an orthogonal unit cell.
   ! mu = - eL/2*pi Im ln <Psi|exp(-i(2*pi/L)x)|Psi>
   ! E Yaschenko, L Fu, L Resca, R Resta, Phys. Rev. B 58, 1222-1229 (1998)
+  ! Single-point Berry's phase method for dipole should not be used when there is more than one k-point.
+  ! in this case, finite differences should be used to construct derivatives with respect to k
   FLOAT function epot_dipole_periodic(st, gr, dir) result(dipole)
     type(states_t), intent(in) :: st
     type(grid_t),   intent(in) :: gr
@@ -695,18 +697,11 @@ contains
 
     ALLOCATE(matrix(st%nst, st%nst), st%nst * st%nst)
 
-    if (st%d%nik * st%smear%el_per_state .ne. 2) then
-      message(1) = "Single-point Berry's phase method for dipole should not be used when there is more than one k-point."
-      call write_warning(1)
-    endif
-    ! in this case, finite differences should be used to construct derivatives with respect to k
-
-    do ik = 1, st%d%nik ! determinants for different spins multiply since matrix is block diagonal
+    do ik = 1, st%d%nik ! determinants for different spins multiply since matrix is block-diagonal
       do ist = 1, st%nst
         do ist2 = 1, st%nst
           do idim = 1, st%d%dim
             if (ist .le. ist2) then
-              write(*,*) 'matrix(', ist, ', ', ist2, ') = ', matrix(ist, ist2)
               matrix(ist, ist2) = zmf_dotp(gr%m, st%zpsi(1:gr%m%np, idim, ist, ik), &
                                   exp(- M_zI * (M_Pi / gr%sb%lsize(dir)) * gr%m%x(1:gr%m%np, dir)) * &
                                   st%zpsi(1:gr%m%np, idim, ist2, ik))

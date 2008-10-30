@@ -143,7 +143,7 @@ contains
     !% "elf-i", where i stands for the spin channel.
     !%Option ELF_basins 128
     !% Prints out the basins of attraction of the ELF. The output file is called
-    !% "elf_rs_basins-i", where i stands for the spin channel.
+    !% "elf_rs_basins.info".
     !%Option ELF_FS 256
     !% Prints the electron localization function in Fourier space. The output file is called
     !% "elf_FS-i", where i stands for the spin channel. (EXPERIMENTAL)

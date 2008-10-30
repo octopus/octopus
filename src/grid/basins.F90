@@ -240,12 +240,12 @@ contains
 
     do ii = 1, this%number
       write(iunit, '(a,i5)') '# ', ii
-      write(iunit, '(a,3(f12.6,a))') '  x   = (', &
+      write(iunit, '(a,3(f12.6,a))') '  position = (', &
          mesh%x(this%position(ii), 1), ',', &
          mesh%x(this%position(ii), 2), ',', &
          mesh%x(this%position(ii), 3), ')'
-      write(iunit, '(a,f12.6)') '  val = ', this%value(ii)
-      write(iunit, '(a,f12.6)') '  vol = ', this%volume(ii)
+      write(iunit, '(a,f12.6)') '  value = ', this%value(ii)
+      write(iunit, '(a,f12.6)') '  volume = ', this%volume(ii)
       write(iunit, '(a,f12.6)') '  population = ', this%population(ii)
     end do
 
