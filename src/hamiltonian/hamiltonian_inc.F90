@@ -169,6 +169,7 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
   end do
 
   call batch_end(epsib)
+  call batch_end(laplb)
 
   call pop_sub()
   call profiling_out(C_PROFILING_HPSI)
