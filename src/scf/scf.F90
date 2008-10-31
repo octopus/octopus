@@ -710,7 +710,8 @@ contains
            write(iunit, '(a)') "Single-point Berry's phase method only accurate for large supercells."
 
            if (st%d%nik * st%smear%el_per_state .ne. 2) then
-              write(iunit, '(a)') "WARNING: Single-point Berry's phase method for dipole should not be used when there is more than one k-point."
+              write(iunit, '(a)') &
+                   "WARNING: Single-point Berry's phase method for dipole should not be used when there is more than one k-point."
            endif
         endif
       end if
