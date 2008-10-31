@@ -682,7 +682,7 @@ contains
   ! It is implemented only for an orthogonal unit cell.
   ! mu = - eL/2*pi Im ln <Psi|exp(-i(2*pi/L)x)|Psi>
   ! E Yaschenko, L Fu, L Resca, R Resta, Phys. Rev. B 58, 1222-1229 (1998)
-  ! Single-point Berry's phase method for dipole should not be used when there is more than one k-point.
+  ! Single-point Berry`s phase method for dipole should not be used when there is more than one k-point.
   ! in this case, finite differences should be used to construct derivatives with respect to k
   FLOAT function epot_dipole_periodic(st, gr, dir) result(dipole)
     type(states_t), intent(in) :: st
