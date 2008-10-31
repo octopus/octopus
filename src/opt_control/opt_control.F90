@@ -422,6 +422,9 @@ contains
 
       call parameters_set_rep(par)
 
+      dim = parameters_dog(par)
+      ALLOCATE(x(dim), dim)
+
       call states_copy(psi, initial_st)
       call propagate_forward(sys, h, td, par, target, psi)
       f = - j1_functional(target, sys%gr, psi) - parameters_j2(par)
@@ -430,9 +433,6 @@ contains
       call states_end(psi)
 
       if(oct%random_initial_guess) call parameters_randomize(par)
-
-      dim = parameters_dog(par)
-      ALLOCATE(x(dim), dim)
 
       ! Set the module pointers, so that the direct_opt_calc and direct_opt_write_info routines
       ! can use them.
@@ -480,6 +480,9 @@ contains
 
       call parameters_set_rep(par)
 
+      dim = parameters_dog(par)
+      ALLOCATE(x(dim), dim)
+
       call states_copy(psi, initial_st)
       call propagate_forward(sys, h, td, par, target, psi)
       f = - j1_functional(target, sys%gr, psi) - parameters_j2(par)
@@ -488,9 +491,6 @@ contains
       call states_end(psi)
 
       if(oct%random_initial_guess) call parameters_randomize(par)
-
-      dim = parameters_dog(par)
-      ALLOCATE(x(dim), dim)
 
       ! Set the module pointers, so that the calc_point and write_iter_info routines
       ! can use them.

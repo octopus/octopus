@@ -29,6 +29,7 @@ module math_m
   use messages_m
   use loct_m
   use blas_m
+  use lalg_adv_m
 
   implicit none
 
@@ -60,7 +61,8 @@ module math_m
     operator(.app.),            &
     math_xor,                   &
     dcross_product,             &
-    zcross_product,             &
+    zcross_product
+  public ::                     &
     hypot,                      &
     ddelta,                     &
     member,                     &
@@ -74,7 +76,9 @@ module math_m
     even,                       &
     odd,                        &
     cartesian2hyperspherical,   &
-    hyperspherical2cartesian
+    hyperspherical2cartesian,   &
+    hypersphere_cut,            &
+    hypersphere_cut_back
 
 
 
@@ -1444,17 +1448,15 @@ contains
 
     n = size(x)
     ASSERT(n>1)
-    ASSERT(size(u).eq.n)
+    ASSERT(size(u).eq.n-1)
 
-    u(1) = sqrt(dot_product(x, x))
-
-    u(n) = atan2(x(n), x(n-1))
+    u(n-1) = atan2(x(n), x(n-1))
     do k = n-2, 1, -1
       sumx2 = M_ZERO
       do j = n, k+1, -1
         sumx2 = sumx2 + x(j)**2
       end do
-      u(k+1) = atan2(sqrt(sumx2), x(k))
+      u(k) = atan2(sqrt(sumx2), x(k))
     end do
 
     call pop_sub()
@@ -1470,43 +1472,111 @@ contains
     FLOAT, intent(in)  :: u(:)
     FLOAT, intent(out) :: x(:)
 
-    integer :: n, i, j, k
+    integer :: n, j, k
 
     call push_sub('math.hyperspherical2cartesian')
 
-    n = size(u)
+    n = size(x)
     ASSERT(n>1)
-    ASSERT(size(x).eq.n)
+    ASSERT(size(u).eq.n-1)
 
     if(n.eq.2) then
-      x(1) = cos(u(2))
-      x(2) = sin(u(3))
+      x(1) = cos(u(1))
+      x(2) = sin(u(2))
     elseif(n.eq.3) then
-      x(1) = cos(u(2))
-      x(2) = sin(u(2))*cos(u(3))
-      x(3) = sin(u(2))*sin(u(3))
+      x(1) = cos(u(1))
+      x(2) = sin(u(1))*cos(u(2))
+      x(3) = sin(u(1))*sin(u(2))
     else
-      x(1) = cos(u(2))
-      x(2) = sin(u(2))*cos(u(3))
-      x(3) = sin(u(2))*sin(u(3))*cos(u(4))
+      x(1) = cos(u(1))
+      x(2) = sin(u(1))*cos(u(2))
+      x(3) = sin(u(1))*sin(u(2))*cos(u(3))
       do j = 4, n - 1
         x(j) = M_ONE
         do k = 1, j - 1
-          x(j) = x(j) * sin(u(k+1))
+          x(j) = x(j) * sin(u(k))
         end do
-        x(j) = x(j) * cos(u(j+1))
+        x(j) = x(j) * cos(u(j))
       end do
       x(n) = M_ONE
       do k = 1, n - 2
-        x(n) = x(n) * sin(u(k+1))
+        x(n) = x(n) * sin(u(k))
       end do
-      x(n) = x(n) * sin(u(n))
+      x(n) = x(n) * sin(u(n-1))
     end if
 
-    x = x * u(1)
- 
     call pop_sub()
   end subroutine hyperspherical2cartesian
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine  hypersphere_cut(x, a, y)
+    FLOAT, intent(in)  :: x(:)
+    FLOAT, intent(in)  :: a(:)
+    FLOAT, intent(out) :: y(:)
+
+    integer :: n, j, k
+    FLOAT, allocatable :: alpha(:, :), eigenvectors(:, :), eigenvalues(:)
+
+    call push_sub('math.hypersphere_cut')
+
+    n = size(x) + 1
+
+    ALLOCATE(alpha(n-1, n-1), (n-1)*(n-1))
+    ALLOCATE(eigenvectors(n-1, n-1), (n-1)*(n-1))
+    ALLOCATE(eigenvalues(n-1), n-1)
+
+    forall(j=1:n-1)
+      forall(k=1:n-1) alpha(j, k) = a(j)*a(k)
+      alpha(j, j) = alpha(j, j) + M_ONE
+    end forall
+
+    call lalg_eigensolve(n-1, alpha, eigenvectors, eigenvalues)
+    forall(j=1:n-1, k=1:n-1) eigenvectors(j, k) = eigenvectors(j, k)*sqrt(eigenvalues(k))
+
+    alpha = transpose(eigenvectors)
+    y = matmul(alpha, x(1:n-1))
+
+    deallocate(alpha, eigenvectors, eigenvalues)
+    call pop_sub()
+  end subroutine hypersphere_cut
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine  hypersphere_cut_back(y, a, x)
+    FLOAT, intent(in)  :: y(:)
+    FLOAT, intent(in)  :: a(:)
+    FLOAT, intent(out) :: x(:)
+
+    integer :: n, j, k
+    FLOAT, allocatable :: alpha(:, :), eigenvectors(:, :), eigenvalues(:)
+    FLOAT :: det
+
+    call push_sub('math.hypersphere_cut_back')
+
+    n = size(x) + 1
+
+    ALLOCATE(alpha(n-1, n-1), (n-1)*(n-1))
+    ALLOCATE(eigenvectors(n-1, n-1), (n-1)*(n-1))
+    ALLOCATE(eigenvalues(n-1), n-1)
+
+    forall(j=1:n-1)
+      forall(k=1:n-1) alpha(j, k) = a(j)*a(k)
+      alpha(j, j) = alpha(j, j) + M_ONE
+    end forall
+
+    call lalg_eigensolve(n-1, alpha, eigenvectors, eigenvalues)
+    forall(j=1:n-1, k=1:n-1) eigenvectors(j, k) = eigenvectors(j, k)*sqrt(eigenvalues(k))
+
+    alpha = transpose(eigenvectors)
+    det = lalg_inverter(n-1, alpha)
+    x(1:n-1) = matmul(alpha, y)
+
+    deallocate(alpha, eigenvectors, eigenvalues)
+    call pop_sub()
+  end subroutine hypersphere_cut_back
   ! ---------------------------------------------------------
 
 

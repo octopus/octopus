@@ -633,10 +633,13 @@ module tdf_m
   !------------------------------------------------------------
   subroutine tdf_numerical_to_zerofourier(f)
     type(tdf_t), intent(inout) :: f
+    FLOAT :: s
     call push_sub('tdfunction.tdf_numerical_to_zerofourier')
 
     call tdf_numerical_to_fourier(f)
     f%valww(1) = M_ZERO
+    s = sum(f%valww(2:f%nfreqs+1))
+    f%valww(2:f%nfreqs+1) = f%valww(2:f%nfreqs+1) - s/f%nfreqs
     f%mode = TDF_ZERO_FOURIER
 
     call pop_sub()
@@ -704,7 +707,7 @@ module tdf_m
     type(tdf_t), intent(inout) :: f
 
     type(c_ptr) :: random_gen_pointer
-    integer :: i, n, j, k
+    integer :: i, n
     FLOAT :: fdotf, nrm
     FLOAT, allocatable :: e(:)
 
@@ -730,10 +733,17 @@ module tdf_m
     end do
     nrm = sqrt(dot_product(e, e))
     e = sqrt(fdotf) * e/ nrm
+
+    if(f%mode .eq. TDF_ZERO_FOURIER) then
+      e(1:f%nfreqs-1) = e(1:f%nfreqs-1) - sum(e(1:f%nfreqs-1))/(f%nfreqs-1)
+      nrm = sqrt(dot_product(e, e))
+      e = sqrt(fdotf) * e/ nrm
+    end if
+
     call tdf_set_numerical(f, e)
     call loct_ran_end(random_gen_pointer)
-    deallocate(e)
 
+    deallocate(e)
     call pop_sub()
   end subroutine tdf_set_random
   !------------------------------------------------------------ 

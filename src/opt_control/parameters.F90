@@ -441,11 +441,6 @@ contains
   subroutine parameters_prepare_initial(par)
     type(oct_control_parameters_t), intent(inout) :: par
 
-    integer :: i, mm, nn
-    FLOAT :: t, det
-    type(tdf_t) :: fn, fm
-    FLOAT, allocatable :: eigenvec(:, :), eigenval(:)
-
     call push_sub('parameters.parameters_prepare_initial')
 
     call parameters_apply_envelope(par)
@@ -498,77 +493,9 @@ contains
       end if
     end select
 
-    if( (par_common%mode .eq. parameter_mode_f) .or. &
-        (par_common%mode .eq. parameter_mode_f_and_phi) ) then
-      ! WARNING: This assertion should be lifted whenever the code below is generalized
-      !          to the other cases.
-      ASSERT(par_common%representation .eq. ctr_sine_fourier_series)
-      ! If the object to optimize is the envelope of the
-      ! the laser pulse. Being e(t) the laser pulse, it is assumed that it
-      ! has the form:
-      !   e(t) = f(t) cos(w0*t),
-      ! where f(t) is the envelope. This is then expanded in a basis set:
-      !   f(t) = sum_{n=1}^N f_n g_n(t).
-      ! The fluence F[e] is then given by:
-      !   F[e] = sum_{m=1}^N sum_{n=1}^N f_m f_n S_{nm},
-      !   S_{nm} = \int_{0}^{T} dt g_n(t) g_m(t) cos^2(w0*t).
-      ! The following lines of code calculate a matrix U, placed in par%utransf,
-      ! that performs the transformation of variables that takes {f_n} to
-      ! {h_n}, (\vec{h} = U\vec{f}), such that
-      !   F[e] = sum-{m=1}^N h_n^2.
-      ! The inverse matrix U^{-1} is placed in par%utransfi.
-      !
-      ! This scan probably be optimized in some way?
-      ALLOCATE(eigenvec(par%dim, par%dim), par%dim*par%dim)
-      ALLOCATE(eigenval(par%dim), par%dim)
-      ALLOCATE(par%utransf (par%dim, par%dim), par%dim*par%dim)
-      ALLOCATE(par%utransfi(par%dim, par%dim), par%dim*par%dim)
-      par%utransf  = M_ZERO
-      par%utransfi = M_ZERO
 
-      do mm = 1, par%dim
-        do nn = mm, par%dim
-          call tdf_init_numerical(fn, par%ntiter, par%dt, par%omegamax, initval = M_ZERO)
-          call tdf_init_numerical(fm, par%ntiter, par%dt, par%omegamax, initval = M_ZERO)
-          call tdf_numerical_to_sineseries(fn)
-          call tdf_numerical_to_sineseries(fm)
-          call tdf_set_numerical(fm, mm, M_ONE)
-          call tdf_set_numerical(fn, nn, M_ONE)
 
-          call tdf_sineseries_to_numerical(fm)
-          call tdf_sineseries_to_numerical(fn)
-
-          do i = 1, par%ntiter + 1
-            t = (i-1)*par%dt
-            call tdf_set_numerical(fm, i, tdf(fm, i)*cos(par%w0*t))
-            call tdf_set_numerical(fn, i, tdf(fn, i)*cos(par%w0*t))
-          end do
-          par%utransf(mm, nn) = tdf_dot_product(fm, fn)
-          call tdf_numerical_to_sineseries(fn)
-          call tdf_numerical_to_sineseries(fm)
-
-          call tdf_end(fm)
-          call tdf_end(fn)
-        end do
-      end do
-      do mm = 1, par%dim
-        do nn = 1, mm - 1
-          par%utransf(mm, nn) = par%utransf(nn, mm)
-        end do
-      end do
-
-      call lalg_eigensolve(par%dim, par%utransf, eigenvec, eigenval)
-      do mm = 1, par%dim
-        do nn = 1, par%dim
-          eigenvec(mm, nn) = eigenvec(mm, nn) * sqrt(eigenval(nn))
-        end do
-      end do
-
-      par%utransf = transpose(eigenvec)
-      par%utransfi = par%utransf
-      det =  lalg_inverter(par%dim, par%utransfi)
-
-    end if
+    call parameters_trans_matrix(par)
 
     call pop_sub()
   end subroutine parameters_prepare_initial
@@ -1279,170 +1206,6 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_par_to_x(par, x)
-    type(oct_control_parameters_t), intent(inout) :: par
-    REAL_DOUBLE,                    intent(inout) :: x(:)
-    integer :: j, k, n, m
-    FLOAT :: sumx2
-    FLOAT, allocatable :: ep(:), e(:), y(:)
-
-    call push_sub('parameters.parameters_par_to_x')
-
-    ASSERT(par%current_representation .ne. ctr_real_space)
-
-    select case(par_common%mode)
-    case(parameter_mode_epsilon)
-      n = par%dim
-      ALLOCATE(e(n), n)
-      ALLOCATE(ep(n), n)
-      ALLOCATE(y(n), n)
-      ASSERT(n-1 .eq. size(x))
-      do j =  1, n
-        ep(j) = tdf(par%f(1), j)
-      end do
-      e = ep
-      call cartesian2hyperspherical(e, y)
-      x(1:n-1) = y(2:n)
-      deallocate(y, e, ep)
-
-    case(parameter_mode_f)
-      n = par%dim
-      ALLOCATE(e(n), n)
-      ALLOCATE(ep(n), n)
-      ALLOCATE(y(n), n)
-      ASSERT(n-1 .eq. size(x))
-      do j =  1, n
-        ep(j) = tdf(par%f(1), j)
-      end do
-      e = matmul(par%utransf, ep)
-      call cartesian2hyperspherical(e, y)
-      x(1:n-1) = y(2:n)
-      deallocate(y, e, ep)
-
-    case(parameter_mode_phi)
-      n = par%dim
-      ALLOCATE(e(n), n)
-      ALLOCATE(ep(n), n)
-      ALLOCATE(y(n), n)
-      ASSERT(n-1 .eq. size(x))
-      if(tdf_dot_product(par%f(1), par%f(1)) <= M_ZERO) then
-        call tdf_set_numerical(par%f(1), 1, sqrt(par%intphi))
-        call tdf_set_random(par%f(1))
-      end if
-      do j =  1, n
-        ep(j) = tdf(par%f(1), j)
-      end do
-      e = ep
-      call cartesian2hyperspherical(e, y)
-      x(1:n-1) = y(2:n)
-      deallocate(y, e, ep)
-
-    case(parameter_mode_f_and_phi)
-      n = 2*par%dim
-      m = par%dim
-      ALLOCATE(e(n), n)
-      ALLOCATE(ep(n), n)
-      ALLOCATE(y(m), m)
-      if(tdf_dot_product(par%f(2), par%f(2)) <= M_ZERO) then
-        call tdf_set_numerical(par%f(2), 1, sqrt(par%intphi))
-        call tdf_set_random(par%f(2))
-      end if
-      do j =  1, m
-        ep(j) = tdf(par%f(1), j)
-      end do
-      do j =  m+1, n
-        ep(j) = tdf(par%f(2), j-m)
-      end do
-      e(1:m) = matmul(par%utransf, ep(1:m))
-      e(m+1:2*m) = ep(m+1:2*m)
-      call cartesian2hyperspherical(e(1:m), y)
-      x(1:m-1) = y(2:m)
-      call cartesian2hyperspherical(e(m+1:2*m), y)
-      x(m:2*m-2) = y(2:m)
-      deallocate(y, e, ep)
-    end select
-
-    call pop_sub()
-  end subroutine parameters_par_to_x
-  ! ---------------------------------------------------------
-
-
-  ! ---------------------------------------------------------
-  subroutine parameters_x_to_par(par, x)
-    type(oct_control_parameters_t), intent(inout) :: par
-    REAL_DOUBLE,                          intent(in)    :: x(:)
-
-    integer :: j, k, n, dim
-    FLOAT, allocatable :: e(:), ep(:), y(:)
-
-    call push_sub('parameters.parameters_x_to_par')
-
-    ASSERT(par%current_representation .ne. ctr_real_space)
-
-    select case(par_common%mode)
-
-    case(parameter_mode_epsilon, parameter_mode_f, parameter_mode_phi)
-
-      n = par%dim
-      ASSERT(n-1 .eq. size(x))
-      ALLOCATE(e(n), n)
-      ALLOCATE(ep(n), n)
-      e = M_ZERO; ep = M_ZERO
- 
-      ALLOCATE(y(n), n)
-      y(1) = M_ONE
-      y(2:n) = x(1:n-1)
-      call hyperspherical2cartesian(y, e)
-
-    case(parameter_mode_f_and_phi)
-
-      n = par%dim
-      ALLOCATE(e(2*n), 2*n)
-      ALLOCATE(ep(2*n), 2*n)
-      e = M_ZERO; ep = M_ZERO
-
-      ALLOCATE(y(n), n)
-      y(1) = M_ONE
-      y(2:n) = x(1:n-1)
-      call hyperspherical2cartesian(y, e(1:n))
-      y(1) = M_ONE
-      y(2:n) = x(n:2*n-2)
-      call hyperspherical2cartesian(y, e(n+1:2*n))
-
-    end select
-
-    select case(par_common%mode)
-    case(parameter_mode_epsilon)
-      e = sqrt(par%targetfluence) * e
-      ep = e
-      call tdf_set_numerical(par%f(1), ep)
-
-    case(parameter_mode_f)
-      e = sqrt(par%targetfluence) * e
-      ep = matmul(par%utransfi, e)
-      call tdf_set_numerical(par%f(1), ep)
-
-    case(parameter_mode_phi)
-      e = sqrt(par%intphi)*e
-      ep = e
-      call tdf_set_numerical(par%f(1), ep)
-
-    case(parameter_mode_f_and_phi)
-      e(1:n)     = sqrt(par%targetfluence) * e(1:n)
-      ep(1:n) = matmul(par%utransfi, e(1:n))
-      ep(n+1:2*n) = sqrt(par%intphi) * e(n+1:2*n)
-      call tdf_set_numerical(par%f(1), ep(1:n))
-      call tdf_set_numerical(par%f(2), ep(n+1:2*n))
-
-    end select
-
-    deallocate(y, e, ep)
-    call pop_sub()
-  end subroutine parameters_x_to_par
-  ! ---------------------------------------------------------
-
-
-  ! ---------------------------------------------------------
   subroutine parameters_update(cp, cpp, dir, iter, delta, eta, d1, dl, dq)
     type(oct_control_parameters_t), intent(inout) :: cp
     type(oct_control_parameters_t), intent(in)    :: cpp
@@ -1512,14 +1275,22 @@ contains
   ! ---------------------------------------------------------
   integer pure function parameters_dog(par)
     type(oct_control_parameters_t), intent(in) :: par
+    integer :: i
+
+    if(par%representation .eq. ctr_zero_fourier_series) then
+      i = 2
+    else
+      i = 1
+    end if
     select case(par_common%mode)
     case(parameter_mode_epsilon, parameter_mode_f)
-      parameters_dog = par%dim-1
+      parameters_dog = par%dim-i
     case(parameter_mode_phi)
-      parameters_dog = par%dim-1
+      parameters_dog = par%dim-i
     case(parameter_mode_f_and_phi)
-      parameters_dog = (par%dim-1)*2
+      parameters_dog = (par%dim-i)*2
     end select
+
   end function parameters_dog
   ! ---------------------------------------------------------
 
@@ -1545,10 +1316,15 @@ contains
   end subroutine parameters_filter
   ! ---------------------------------------------------------
 
+
+  ! ---------------------------------------------------------
   subroutine parameters_close()
 
     if(associated(par_common)) deallocate(par_common)
   end subroutine parameters_close
+  ! ---------------------------------------------------------
+
+#include "parameters_trans.F90"
 
 end module opt_control_parameters_m
 
