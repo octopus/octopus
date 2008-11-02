@@ -92,7 +92,7 @@
       ep = matmul(par%utransfi, e)
       call tdf_set_numerical(par%f(1), ep)
     else
-      call hyperspherical2cartesian(x, e)
+      call hyperspherical2cartesian(x(1:n-1), e)
       e = sqrt(par%targetfluence) * e
       ep = matmul(par%utransfi, e)
       call tdf_set_numerical(par%f(1), ep)

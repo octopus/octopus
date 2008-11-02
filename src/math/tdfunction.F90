@@ -35,6 +35,7 @@ module tdf_m
   use splines_m
   use units_m
   use fft_m
+  use mpi_m
 
   implicit none
 
@@ -713,9 +714,6 @@ module tdf_m
 
     call push_sub('tdfunction.tdf_set_random')
 
-    fdotf = tdf_dot_product(f, f)
-    call loct_ran_init(random_gen_pointer)
-
     select case(f%mode)
     case(TDF_FOURIER_SERIES)
       n = 2*f%nfreqs-1
@@ -726,23 +724,32 @@ module tdf_m
     case default
       stop 'Error'
     end select
-
     ALLOCATE(e(n), n)
-    do i = 1, n
-      e(i) = loct_ran_gaussian(random_gen_pointer, M_ONE)
-    end do
-    nrm = sqrt(dot_product(e, e))
-    e = sqrt(fdotf) * e/ nrm
 
-    if(f%mode .eq. TDF_ZERO_FOURIER) then
-      e(1:f%nfreqs-1) = e(1:f%nfreqs-1) - sum(e(1:f%nfreqs-1))/(f%nfreqs-1)
+    if( mpi_grp_is_root(mpi_world)) then
+      fdotf = tdf_dot_product(f, f)
+      call loct_ran_init(random_gen_pointer)
+
+      do i = 1, n
+        e(i) = loct_ran_gaussian(random_gen_pointer, M_ONE)
+      end do
       nrm = sqrt(dot_product(e, e))
       e = sqrt(fdotf) * e/ nrm
+
+      if(f%mode .eq. TDF_ZERO_FOURIER) then
+        e(1:f%nfreqs-1) = e(1:f%nfreqs-1) - sum(e(1:f%nfreqs-1))/(f%nfreqs-1)
+        nrm = sqrt(dot_product(e, e))
+        e = sqrt(fdotf) * e/ nrm
+      end if
+
+      call loct_ran_end(random_gen_pointer)
     end if
 
-    call tdf_set_numerical(f, e)
-    call loct_ran_end(random_gen_pointer)
+#ifdef HAVE_MPI
+    call MPI_Bcast(e(1), n, MPI_FLOAT, 0, mpi_world%comm, mpi_err)
+#endif
 
+    call tdf_set_numerical(f, e)
     deallocate(e)
     call pop_sub()
   end subroutine tdf_set_random
