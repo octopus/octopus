@@ -39,6 +39,7 @@ module submesh_m
        submesh_null,        &
        submesh_init_sphere, &
        submesh_copy,        &
+       submesh_get_inv,     &
        dsm_integrate,       &
        zsm_integrate,       &
        submesh_end
@@ -57,7 +58,6 @@ module submesh_m
      integer               :: ns_part        ! number of points inside the submesh including ghost points
      integer               :: np_part
      integer,      pointer :: jxyz(:)        ! index in the mesh of the points inside the sphere
-     integer,      pointer :: jxyz_inv(:)    ! and the inverse
      FLOAT,        pointer :: x(:,:)
      type(mesh_t), pointer :: mesh
      logical               :: has_points
@@ -84,7 +84,6 @@ contains
     sm%ns = -1
     sm%np_part = 0
     nullify(sm%jxyz)
-    nullify(sm%jxyz_inv)
 
   end subroutine submesh_null
 
@@ -100,7 +99,7 @@ contains
     integer :: icell, is, isb, ip, ix, iy, iz
     type(profile_t), save :: submesh_init_prof
     type(periodic_copy_t) :: pp
-    
+    integer, allocatable :: jxyz_inv(:)
     integer :: nmax(1:MAX_DIM), nmin(1:MAX_DIM)
 
     call push_sub('submesh.submesh_init_sphere')
@@ -109,13 +108,12 @@ contains
     this%np_part = m%np_part
     this%mesh => m
 
-    ALLOCATE(this%jxyz_inv(0:this%np_part), this%np_part+1)
-
-    this%jxyz_inv(0:this%np_part) = 0
-
     ! The spheres are generated differently for periodic coordinates,
     ! mainly for performance reasons.
     if(.not. simul_box_is_periodic(sb)) then 
+
+      ALLOCATE(jxyz_inv(0:this%np_part), this%np_part+1)
+      jxyz_inv(0:this%np_part) = 0
       
       nmin = 0
       nmax = 0
@@ -145,10 +143,10 @@ contains
               if(ip > m%np) then
                 ! boundary points are marked as negative values
                 isb = isb + 1
-                this%jxyz_inv(ip) = -isb
+                jxyz_inv(ip) = -isb
               else
                 is = is + 1
-                this%jxyz_inv(ip) = is
+                jxyz_inv(ip) = is
               end if
             end if
           end do
@@ -169,12 +167,12 @@ contains
             if(ip == 0) cycle
             if(m%parallel_in_domains) ip = vec_global2local(m%vp, ip, m%vp%partno)
 #endif
-            is = this%jxyz_inv(ip)
+            is = jxyz_inv(ip)
             if(is == 0) cycle
             if(is < 0) then
               ! it is a boundary point, move it to ns+1:ns_part range
               is = -is + this%ns
-              this%jxyz_inv(ip) = is
+              jxyz_inv(ip) = is
             end if
             this%jxyz(is) = ip
             this%x(is, 1:MAX_DIM) = m%x(ip, 1:MAX_DIM) - center(1:MAX_DIM)
@@ -224,7 +222,6 @@ contains
           if(r2 > rc**2 ) cycle
           is = is + 1
           this%jxyz(is) = ip
-          this%jxyz_inv(ip) = is
           this%x(is, 0) = sqrt(r2)
           this%x(is, 1:MAX_DIM) = x(1:MAX_DIM)
          end do
@@ -265,7 +262,6 @@ contains
       nullify(this%mesh)
       this%ns = -1
       deallocate(this%jxyz)
-      deallocate(this%jxyz_inv)
       deallocate(this%x)
     end if
 
@@ -289,15 +285,25 @@ contains
     
     ALLOCATE(sm_out%jxyz(1:sm_out%ns_part), sm_out%ns_part)
     ALLOCATE(sm_out%x(1:sm_out%ns_part, 0:MAX_DIM), sm_out%ns_part*(MAX_DIM + 1))
-    ALLOCATE(sm_out%jxyz_inv(0:sm_out%np_part), sm_out%np_part+1)
 
     sm_out%jxyz(1:sm_out%ns_part) = sm_in%jxyz(1:sm_in%ns_part)
     sm_out%x(1:sm_out%ns_part, 0:MAX_DIM) = sm_in%x(1:sm_in%ns_part, 0:MAX_DIM)
-    sm_out%jxyz_inv(0:sm_out%np_part) = sm_in%jxyz_inv(0:sm_out%np_part)
 
     call pop_sub()
 
   end subroutine submesh_copy
+
+  subroutine submesh_get_inv(this, jxyz_inv)
+    type(submesh_t),      intent(in)   :: this
+    integer,              intent(out)  :: jxyz_inv(:)
+
+    integer :: is
+
+    jxyz_inv(1:this%np_part) = 0
+
+    forall (is = 1:this%ns) jxyz_inv(this%jxyz(is)) = is
+
+  end subroutine submesh_get_inv
 
 #include "undef.F90"
 #include "real.F90"

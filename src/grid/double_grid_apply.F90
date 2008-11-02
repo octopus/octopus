@@ -19,7 +19,7 @@
 
 subroutine double_grid_apply (this, s, m, sm, x_atom, vl, l, lm, ic)
   type(double_grid_t),    intent(in)    :: this
-  type(species_t),         intent(in)    :: s
+  type(species_t),        intent(in)    :: s
   type(mesh_t),           intent(in)    :: m
   type(submesh_t),        intent(in)    :: sm
   FLOAT,                  intent(in)    :: x_atom(1:MAX_DIM)
@@ -35,6 +35,7 @@ subroutine double_grid_apply (this, s, m, sm, x_atom, vl, l, lm, ic)
   integer :: is, is2, ip
   integer :: ii, jj, kk, ll, mm, nn
   integer :: start(1:3), pp, qq, rr
+  integer, allocatable :: jxyz_inv(:)
 
   FLOAT, allocatable :: vs(:)
 
@@ -64,6 +65,9 @@ subroutine double_grid_apply (this, s, m, sm, x_atom, vl, l, lm, ic)
     call profiling_in(profiler, profiler_label)
 
     ASSERT(.not. simul_box_is_periodic(m%sb))
+
+    ALLOCATE(jxyz_inv(1:sm%np_part), sm%np_part)
+    call submesh_get_inv(sm, jxyz_inv)
 
 #ifdef USE_OMP
     vl(1:sm%ns) = M_ZERO
@@ -125,7 +129,7 @@ subroutine double_grid_apply (this, s, m, sm, x_atom, vl, l, lm, ic)
                     !map the global point to a local point
                     if (m%parallel_in_domains) ip = vec_global2local(m%vp, ip, m%vp%partno)
 #endif
-                    is2 = sm%jxyz_inv(ip)
+                    is2 = jxyz_inv(ip)
                     vs(is2) = vs(is2)  + this%co(ll)*this%co(mm)*this%co(nn)*vv
 
                     rr = rr + kk
