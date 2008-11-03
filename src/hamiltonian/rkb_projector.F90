@@ -54,11 +54,6 @@ module rkb_projector_m
     CMPLX,   pointer :: bra(:, :)
     CMPLX,   pointer :: ket(:, :, :, :)
     FLOAT            :: f(2, 2, 2)
-
-    ! The following variables are only used to compute the forces,
-    ! because in that case we will ignore the spin-orbit coupling.
-    FLOAT,   pointer :: p(:, :)     ! projectors
-    FLOAT            :: e(2)        ! KB energies
   end type rkb_projector_t
 
 
@@ -70,7 +65,6 @@ contains
 
     nullify(rkb_p%bra)
     nullify(rkb_p%ket)
-    nullify(rkb_p%p)
 
   end subroutine rkb_projector_null
 
@@ -91,7 +85,7 @@ contains
     !Allocate memory
     ALLOCATE(rkb_p%bra(rkb_p%n_s, 2),        rkb_p%n_s*2)
     ALLOCATE(rkb_p%ket(rkb_p%n_s, 2, 2, 2),  rkb_p%n_s*2*2*2)
-    ALLOCATE(rkb_p%p(rkb_p%n_s, 2),          rkb_p%n_s*2)
+!    ALLOCATE(rkb_p%p(rkb_p%n_s, 2),          rkb_p%n_s*2)
 
     !Build projectors
     do is = 1, rkb_p%n_s
@@ -116,9 +110,6 @@ contains
         else
           rkb_p%ket(is, i, 1, 2) = M_z0
         end if
-        
-        call species_real_nl_projector(a%spec, x, l, lm, i, v, dv)
-        rkb_p%p(is, i) = v
       end do
     end do
     
@@ -136,11 +127,6 @@ contains
     rkb_p%f(1, :, :) = rkb_p%f(1, :, :)*a%spec%ps%h(l, 1, 1)
     rkb_p%f(2, :, :) = rkb_p%f(2, :, :)*a%spec%ps%h(l, 2, 2)
 
-    ! The projectors used to compute the forces should be averaged. 
-    ! The weights are included in the KB energies
-    rkb_p%e(1) = a%spec%ps%h(l, 1, 1)*real(l+1, REAL_PRECISION)/real(2*l+1, REAL_PRECISION)
-    rkb_p%e(2) = a%spec%ps%h(l, 2, 2)*real(l,   REAL_PRECISION)/real(2*l+1, REAL_PRECISION)
-
   end subroutine rkb_projector_init
 
   ! ---------------------------------------------------------
@@ -149,7 +135,6 @@ contains
 
     if (associated(rkb_p%bra)) deallocate(rkb_p%bra)
     if (associated(rkb_p%ket)) deallocate(rkb_p%ket)
-    if (associated(rkb_p%p))   deallocate(rkb_p%p)
 
   end subroutine rkb_projector_end
 

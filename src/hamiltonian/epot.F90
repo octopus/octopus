@@ -319,8 +319,12 @@ contains
     !% Tuning of the spin-orbit coupling strength: setting this value to zero turns off spin-orbit terms in
     !% the hamiltonian, and setting it to one corresponds to full spin-orbit.
     !%End
-    call loct_parse_float(check_inp('SOStrength'), M_ONE, ep%so_strength)
-    
+    if (ep%reltype == SPIN_ORBIT) then
+      call loct_parse_float(check_inp('SOStrength'), M_ONE, ep%so_strength)
+    else
+      ep%so_strength = M_ONE
+    end if
+
     ALLOCATE(ep%proj(geo%natoms), geo%natoms)
     do i = 1, geo%natoms
       call projector_null(ep%proj(i))

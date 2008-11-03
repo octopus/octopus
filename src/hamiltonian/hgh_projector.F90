@@ -76,12 +76,13 @@ contains
   end subroutine hgh_projector_null
 
   ! ---------------------------------------------------------
-  subroutine hgh_projector_init(hgh_p, sm, gr, a, l, lm)
+  subroutine hgh_projector_init(hgh_p, sm, gr, a, l, lm, so_strength)
     type(hgh_projector_t), intent(inout) :: hgh_p
     type(submesh_t),       intent(in)    :: sm
     type(grid_t),          intent(in)    :: gr
     type(atom_t),          intent(in)    :: a
     integer,               intent(in)    :: l, lm
+    FLOAT,                 intent(in)    :: so_strength
 
     integer :: is, i
     FLOAT :: v, dv(MAX_DIM), x(MAX_DIM)
@@ -105,7 +106,7 @@ contains
     end do
 
     hgh_p%h(:, :) = a%spec%ps%h(l, :, :)
-    hgh_p%k(:, :) = a%spec%ps%k(l, :, :)
+    hgh_p%k(:, :) = a%spec%ps%k(l, :, :)*so_strength
 
     call pop_sub()
   end subroutine hgh_projector_init
