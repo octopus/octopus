@@ -704,12 +704,13 @@ module tdf_m
 
 
   !------------------------------------------------------------ 
-  subroutine tdf_set_random(f)
-    type(tdf_t), intent(inout) :: f
+  subroutine tdf_set_random(f, fdotf)
+    type(tdf_t), intent(inout)  :: f
+    FLOAT, intent(in), optional :: fdotf
 
     type(c_ptr) :: random_gen_pointer
     integer :: i, n
-    FLOAT :: fdotf, nrm
+    FLOAT :: fdotf_, nrm
     FLOAT, allocatable :: e(:)
 
     call push_sub('tdfunction.tdf_set_random')
@@ -727,19 +728,24 @@ module tdf_m
     ALLOCATE(e(n), n)
 
     if( mpi_grp_is_root(mpi_world)) then
-      fdotf = tdf_dot_product(f, f)
+      if(present(fdotf)) then
+        fdotf_ = fdotf
+      else
+        fdotf_ = tdf_dot_product(f, f)
+      end if
+
       call loct_ran_init(random_gen_pointer)
 
       do i = 1, n
         e(i) = loct_ran_gaussian(random_gen_pointer, M_ONE)
       end do
       nrm = sqrt(dot_product(e, e))
-      e = sqrt(fdotf) * e/ nrm
+      e = sqrt(fdotf_) * e/ nrm
 
       if(f%mode .eq. TDF_ZERO_FOURIER) then
         e(1:f%nfreqs-1) = e(1:f%nfreqs-1) - sum(e(1:f%nfreqs-1))/(f%nfreqs-1)
         nrm = sqrt(dot_product(e, e))
-        e = sqrt(fdotf) * e/ nrm
+        e = sqrt(fdotf_) * e/ nrm
       end if
 
       call loct_ran_end(random_gen_pointer)

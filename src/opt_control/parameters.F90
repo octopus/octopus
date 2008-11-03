@@ -487,13 +487,11 @@ contains
     case(parameter_mode_f_and_phi)
       par%intphi = tdf_dot_product(par%f(2), par%f(2))
       if(par%intphi <= M_ZERO) then
-        par%intphi = (M_PI/M_TWO)**2*par%dt*par%ntiter
+        par%intphi = (CNST(0.1)*M_PI)**2*par%dt*par%ntiter
       else
         par%intphi = tdf_dot_product(par%f(2), par%f(2))
       end if
     end select
-
-
 
     call parameters_trans_matrix(par)
 
@@ -1196,9 +1194,17 @@ contains
 
      call parameters_set_rep(par)
 
-     do j = 1, par%no_parameters
-       call tdf_set_random(par%f(j))
-     end do
+     select case(par_common%mode)
+     case(parameter_mode_epsilon, parameter_mode_f)
+       do j = 1, par%no_parameters
+         call tdf_set_random(par%f(j))
+       end do
+     case(parameter_mode_phi)
+       call tdf_set_random(par%f(1))
+     case(parameter_mode_f_and_phi)
+       call tdf_set_random(par%f(1))
+       call tdf_set_random(par%f(2), par%intphi)
+     end select
 
      call pop_sub()
   end subroutine parameters_randomize
