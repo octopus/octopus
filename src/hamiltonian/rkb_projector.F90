@@ -85,7 +85,6 @@ contains
     !Allocate memory
     ALLOCATE(rkb_p%bra(rkb_p%n_s, 2),        rkb_p%n_s*2)
     ALLOCATE(rkb_p%ket(rkb_p%n_s, 2, 2, 2),  rkb_p%n_s*2*2*2)
-!    ALLOCATE(rkb_p%p(rkb_p%n_s, 2),          rkb_p%n_s*2)
 
     !Build projectors
     do is = 1, rkb_p%n_s
