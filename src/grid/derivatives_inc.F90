@@ -616,7 +616,8 @@ subroutine X(set_bc_batch)(der, fb)
           end do
         end do
         
-        call profiling_count_transfers(sum(der%m%nsend(1:der%m%vp%p) + der%m%nrecv(1:der%m%vp%p))*fb%dim*fb%nst, R_TOTYPE(M_ONE))
+        call profiling_count_transfers(sum(der%m%nsend(1:der%m%vp%p) + der%m%nrecv(1:der%m%vp%p))*fb%dim*fb%nst, &
+             R_TOTYPE(M_ONE))
 
         call profiling_out(set_bc_comm_prof)
       end if
