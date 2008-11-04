@@ -609,12 +609,12 @@ contains
 
     call push_sub('parameters.parameters_mixing_init')
 
+    ! WARNING: probably one does not need a select case here, but just put par%dim
     select case(par%representation)
     case(ctr_real_space)
       call mix_init(parameters_mix, par%ntiter + 1, par%no_parameters, 1)
-    case(ctr_sine_fourier_series)
-      dim = tdf_sine_nfreqs(par%f(1))
-      call mix_init(parameters_mix, dim, par%no_parameters, 1)
+    case(ctr_sine_fourier_series, ctr_fourier_series, ctr_zero_fourier_series)
+      call mix_init(parameters_mix, par%dim, par%no_parameters, 1)
     end select
 
     call pop_sub()
@@ -665,9 +665,9 @@ contains
         call tdf_set_numerical(par_new%f(i), e_new(:, i, 1))
       end do
 
-    case(ctr_sine_fourier_series)
+    case(ctr_sine_fourier_series, ctr_fourier_series, ctr_zero_fourier_series)
 
-      dim = tdf_sine_nfreqs(par_in%f(1))
+      dim = par_in%dim
       ALLOCATE(e_in (dim, par_in%no_parameters, 1), dim*par_in%no_parameters)
       ALLOCATE(e_out(dim, par_in%no_parameters, 1), dim*par_in%no_parameters)
       ALLOCATE(e_new(dim, par_in%no_parameters, 1), dim*par_in%no_parameters)
