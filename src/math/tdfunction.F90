@@ -472,8 +472,6 @@ module tdf_m
     rewind(iunit)
     call io_skip_header(iunit)
 
-    write(0, *) lines
-
     ! allocate and read info
     ALLOCATE( t(lines), lines)
     ALLOCATE(am(lines), lines)
@@ -639,8 +637,8 @@ module tdf_m
 
     call tdf_numerical_to_fourier(f)
     f%valww(1) = M_ZERO
-    s = sum(f%valww(2:f%nfreqs+1))
-    f%valww(2:f%nfreqs+1) = f%valww(2:f%nfreqs+1) - s/f%nfreqs
+    s = sum(f%valww(2:f%nfreqs))
+    f%valww(2:f%nfreqs) = f%valww(2:f%nfreqs) - s/f%nfreqs
     f%mode = TDF_ZERO_FOURIER
 
     call pop_sub()
