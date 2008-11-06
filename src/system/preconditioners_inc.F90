@@ -55,6 +55,9 @@ subroutine X(preconditioner_apply)(pre, gr, h, a, b, omega)
       call lalg_scal(NP, R_TOTYPE(M_ONE/(M_TWO*M_PI)), b(:,idim))
     end do
 
+  case(PRE_MULTIGRID)
+    call multigrid()
+
   case default
    write(message(1), '(a,i4,a)') "Error: unknown preconditioner ", pre%which, "."
    call write_fatal(1)
@@ -81,6 +84,102 @@ contains
 
     deallocate(diag)
   end subroutine apply_D_inverse
+
+  subroutine multigrid
+    FLOAT :: step
+
+    R_TYPE, allocatable :: d0(:), q0(:)
+    R_TYPE, allocatable :: r1(:), d1(:), q1(:)
+    R_TYPE, allocatable :: r2(:), d2(:), q2(:)
+
+    type(mesh_t), pointer :: mesh0, mesh1, mesh2
+
+    integer :: idim, ip
+    
+    mesh0 => gr%mgrid%level(0)%m
+    mesh1 => gr%mgrid%level(1)%m
+    mesh2 => gr%mgrid%level(2)%m
+
+    ALLOCATE(d0(1:mesh0%np_part), mesh0%np_part)
+    ALLOCATE(q0(1:mesh0%np), mesh0%np)
+
+    ALLOCATE(r1(1:mesh1%np), mesh1%np)
+    ALLOCATE(d1(1:mesh1%np_part), mesh1%np_part)
+    ALLOCATE(q1(1:mesh1%np), mesh1%np)
+
+    ALLOCATE(r2(1:mesh2%np), mesh2%np)
+    ALLOCATE(d2(1:mesh2%np_part), mesh2%np_part)
+    ALLOCATE(q2(1:mesh2%np), mesh2%np)
+
+    step = CNST(0.66666666)/pre%diag_lapl(1)
+
+    do idim = 1, h%d%dim
+
+      d0 = M_ZERO
+      q0 = M_ZERO
+      r1 = M_ZERO
+      d1 = M_ZERO
+      q1 = M_ZERO
+      r2 = M_ZERO
+      d2 = M_ZERO
+      q2 = M_ZERO
+
+      ! move to level  1
+      call X(multigrid_fine2coarse)(gr%mgrid, 1, a(:, idim), r1, FULLWEIGHT)
+
+      forall (ip = 1:mesh1%np)
+        r1(ip) = -r1(ip)
+        d1(ip) = CNST(4.0)*step*r1(ip)
+      end forall
+
+      call X(derivatives_lapl)(gr%mgrid%level(1)%der, d1, q1)
+
+      forall (ip = 1:mesh1%np) q1(ip) = CNST(-0.5)*q1(ip) - r1(ip)
+
+      ! move to level  2
+
+      call X(multigrid_fine2coarse)(gr%mgrid, 2, q1, r2, FULLWEIGHT)
+
+      forall (ip = 1:mesh2%np) d2(ip) = CNST(16.0)*step*r2(ip)
+
+      call X(derivatives_lapl)(gr%mgrid%level(2)%der, d2, q2)
+
+      forall (ip = 1:mesh2%np)
+        q2(ip) = CNST(-0.5)*q2(ip) - r2(ip)
+        d2(ip) = d2(ip) - CNST(16.0)*step*q2(ip)
+      end forall
+
+      ! back to level 1
+
+      call X(multigrid_coarse2fine)(gr%mgrid%level(2), d2, q1)
+
+      forall (ip = 1:mesh1%np) d1(ip) = d1(ip) - q1(ip)
+
+      call X(derivatives_lapl)(gr%mgrid%level(1)%der, d1, q1)
+
+      forall (ip = 1:mesh1%np) 
+        q1(ip) = CNST(-0.5)*q1(ip) - r1(ip)
+        d1(ip) = d1(ip) - CNST(4.0)*step*q1(ip)
+      end forall
+
+      ! and finally back to level 0
+
+      call X(multigrid_coarse2fine)(gr%mgrid%level(1), d1, d0)
+
+      forall (ip = 1:mesh0%np) d0(ip) = -d0(ip)
+
+      call X(derivatives_lapl)(gr%mgrid%level(0)%der, d0, q0)
+
+      forall (ip = 1:mesh0%np) 
+        q0(ip) = CNST(-0.5)*q0(ip) - a(ip, idim)
+        d0(ip) = d0(ip) - step*q0(ip)
+        b(ip, idim) = -d0(ip)
+      end forall
+
+    end do
+
+  end subroutine multigrid
+
 
 end subroutine X(preconditioner_apply)
 

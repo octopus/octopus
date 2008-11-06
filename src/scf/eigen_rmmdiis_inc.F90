@@ -64,7 +64,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, h, pre, tol, niter, converged, ik, di
 
   call X(subspace_diag)(gr, st, h, ik, diff)
 
-  ntimes = niter/2
+  ntimes = 1
   niter = 0
 
   converged = 0

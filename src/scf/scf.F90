@@ -43,6 +43,7 @@ module scf_m
   use multigrid_m
   use h_sys_output_m
   use ob_lippmann_schwinger_m
+  use preconditioners_m
   use profiling_m
   use restart_m
   use simul_box_m
@@ -232,7 +233,7 @@ contains
     ! now the eigensolver stuff
     call eigensolver_init(gr, scf%eigens, st)
 
-    if(scf%eigens%es_type == RS_MG) then
+    if(scf%eigens%es_type == RS_MG .or. preconditioner_is_multigrid(scf%eigens%pre)) then
       if(.not. associated(gr%mgrid)) then
         ALLOCATE(gr%mgrid, 1)
         call multigrid_init(geo, gr%cv,gr%m, gr%der, gr%mgrid)

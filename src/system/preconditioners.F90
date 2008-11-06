@@ -27,7 +27,9 @@ module preconditioners_m
   use hamiltonian_m
   use lalg_basic_m
   use loct_parser_m
+  use mesh_m
   use messages_m
+  use multigrid_m
   use nl_operator_m
   use poisson_m
   use profiling_m
@@ -41,15 +43,17 @@ module preconditioners_m
     PRE_NONE      = 0,              &
     PRE_SMOOTHING = 1,              &
     PRE_JACOBI    = 2,              &
-    PRE_POISSON   = 3
+    PRE_POISSON   = 3,              &
+    PRE_MULTIGRID = 7
   
   public ::                         &
     preconditioner_t,               &
     preconditioner_init,            &
     preconditioner_end,             &
+    preconditioner_is_multigrid,    &
     dpreconditioner_apply,          &
     zpreconditioner_apply
-  
+
   type preconditioner_t
     integer :: which
 
@@ -86,6 +90,8 @@ contains
     !%Option pre_poisson 3
     !% Uses the full Laplacian as preconditioner. The inverse is calculated through
     !% the solution of the Poisson equation. This is, of course, very slow.
+    !%Option pre_multigrid 7
+    !% Multigrid preconditioner.
     !%End
     prefix_ = ""
     if(present(prefix)) prefix_ = prefix
@@ -112,7 +118,7 @@ contains
       this%op%w_re(1, 1) = alpha
       this%op%w_re(2:,1) = M_HALF * (M_ONE - alpha)/NDIM
 
-    case(PRE_JACOBI)
+    case(PRE_JACOBI, PRE_MULTIGRID)
       ALLOCATE(this%diag_lapl(NP), NP)
       call derivatives_lapl_diag(gr%der, this%diag_lapl)
       call lalg_scal(NP, -M_HALF, this%diag_lapl(:))
@@ -129,12 +135,17 @@ contains
     case(PRE_SMOOTHING)
       call nl_operator_end(this%op)
 
-    case(PRE_JACOBI)
+    case(PRE_JACOBI, PRE_MULTIGRID)
       deallocate(this%diag_lapl)
     end select
 
   end subroutine preconditioner_end
 
+  logical pure function preconditioner_is_multigrid(this) result(req)
+    type(preconditioner_t), intent(in) :: this
+
+    req = (this%which == PRE_MULTIGRID)
+  end function preconditioner_is_multigrid
 
 #include "undef.F90"
 #include "complex.F90"
