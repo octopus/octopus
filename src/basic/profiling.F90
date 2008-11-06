@@ -109,6 +109,10 @@ module profiling_m
          profiling_count_tran_complex_8
   end interface
 
+  interface profiling_count_operations
+    module procedure iprofiling_count_operations, dprofiling_count_operations
+  end interface
+
   type(profile_pointer_t)  :: current !the currently active profile
   type(profile_pointer_t)  :: profile_list(MAX_PROFILES) !the list of all profilers
   integer                  :: last_profile
@@ -348,13 +352,21 @@ contains
 
   end subroutine profiling_out
 
-  subroutine profiling_count_operations(ops)
+  subroutine iprofiling_count_operations(ops)
     integer,         intent(in)    :: ops
 
     if(.not.in_profiling_mode) return
 
     current%p%op_count = current%p%op_count + dble(ops)
-  end subroutine profiling_count_operations
+  end subroutine iprofiling_count_operations
+
+  subroutine dprofiling_count_operations(ops)
+    real(8),         intent(in)    :: ops
+
+    if(.not.in_profiling_mode) return
+
+    current%p%op_count = current%p%op_count + ops
+  end subroutine dprofiling_count_operations
 
   subroutine profiling_count_tran_int(trf, type)
     integer,         intent(in)    :: trf

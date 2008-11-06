@@ -539,6 +539,9 @@ subroutine X(states_linear_combination)(st, mesh, transf, psi)
   
   R_TYPE :: aa
   integer :: ist, jst, ip, idim
+  type(profile_t), save :: prof
+
+  call profiling_in(prof, "STATES_ROTATE")
 
 #ifdef HAVE_MPI
   ASSERT(.not. st%parallel_in_states)
@@ -561,9 +564,13 @@ subroutine X(states_linear_combination)(st, mesh, transf, psi)
       
     end do
   end do
-  
+
+  call profiling_count_operations((R_ADD + R_MUL)*dble(mesh%np)*st%d%dim*st%lnst**2)
+
   deallocate(psiold)
   
+  call profiling_out(prof)
+
 end subroutine X(states_linear_combination)
 
 

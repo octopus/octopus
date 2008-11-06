@@ -317,7 +317,7 @@ contains
                eigens%converged(ik), ik, eigens%diff(:, ik), h%d%block_size)
         end select
 
-        call dsubspace_diag(gr, st, h, ik, eigens%diff(:, ik))
+        if(eigens%es_type /= RS_RMMDIIS) call dsubspace_diag(gr, st, h, ik, eigens%diff(:, ik))
 
       else
 
@@ -343,7 +343,7 @@ contains
                eigens%converged(ik), ik, eigens%diff(:, ik), h%d%block_size)
         end select
 
-        call zsubspace_diag(gr, st, h, ik, eigens%diff(:, ik))
+        if(eigens%es_type /= RS_RMMDIIS) call zsubspace_diag(gr, st, h, ik, eigens%diff(:, ik))
 
       end if
 
