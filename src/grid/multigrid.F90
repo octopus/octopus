@@ -29,6 +29,7 @@ module multigrid_m
   use mesh_m
   use mesh_init_m
   use messages_m
+  use par_vec_m
 
   implicit none
 
@@ -172,7 +173,8 @@ contains
     type(multigrid_level_t), intent(inout) :: tt
     type(mesh_t),            intent(in)    :: fine, coarse
 
-    integer :: i, i1, i2, i4, i8, pt
+    integer :: i, i1, i2, i4, i8, pt, ig
+    integer :: ii, jj
     integer :: x(MAX_DIM), mod2(MAX_DIM)
 
     call push_sub('multigrid.multigrid_get_transfer_tables')
@@ -180,8 +182,20 @@ contains
     tt%n_coarse = coarse%np
     ALLOCATE(tt%to_coarse(tt%n_coarse), tt%n_coarse)
 
+    ! GENERATE THE TABLE TO MAP FROM THE FINE TO THE COARSE GRID
     do i = 1, tt%n_coarse
-      tt%to_coarse(i) = fine%Lxyz_inv(2*coarse%Lxyz(i, 1), 2*coarse%Lxyz(i, 2), 2*coarse%Lxyz(i, 3))
+      ig = i
+#ifdef HAVE_MPI
+      ! translate to a global index of the coarse grid
+      if(coarse%parallel_in_domains) ig = coarse%vp%local(ig - 1 + coarse%vp%xlocal(coarse%vp%partno))
+#endif
+      ! locate the equivalent global fine grid point
+      ig = fine%Lxyz_inv(2*coarse%Lxyz(ig, 1), 2*coarse%Lxyz(ig, 2), 2*coarse%Lxyz(ig, 3))
+#ifdef HAVE_MPI
+      ! translate to a local number of the fine grid
+      if(fine%parallel_in_domains) ig = vec_global2local(fine%vp, ig, fine%vp%partno)
+#endif
+      tt%to_coarse(i) = ig
     end do
 
     ! count
@@ -193,7 +207,12 @@ contains
     tt%n_fine4 = 0
     tt%n_fine8 = 0
     do i = 1, tt%n_fine
-      mod2 = mod(fine%Lxyz(i,:), 2)
+      ig = i
+#ifdef HAVE_MPI
+      ! translate to a global index
+      if(fine%parallel_in_domains) ig = fine%vp%local(ig - 1 + fine%vp%xlocal(fine%vp%partno))
+#endif
+      mod2 = mod(fine%Lxyz(ig, :), 2)
       
       pt = sum(abs(mod2(1:3)))
       
@@ -223,8 +242,13 @@ contains
     ! and now build the tables
     i1 = 0;  i2 = 0;  i4 = 0;  i8 = 0
     do i = 1, fine%np
-      x(1:3)    = fine%Lxyz(i, 1:3)/2
-      mod2(1:3) = mod(fine%Lxyz(i, 1:3), 2)
+      ig = i
+#ifdef HAVE_MPI
+      ! translate to a global index
+      if(fine%parallel_in_domains) ig = fine%vp%local(ig - 1 + fine%vp%xlocal(fine%vp%partno))
+#endif
+      x(1:3)    = fine%Lxyz(ig, 1:3)/2
+      mod2(1:3) = mod(fine%Lxyz(ig, 1:3), 2)
 
       pt = sum(abs(mod2(1:3)))
 
@@ -261,6 +285,35 @@ contains
     end do
 
     ASSERT(i1 == tt%n_fine1 .and. i2 == tt%n_fine2 .and. i4 == tt%n_fine4 .and. i8 == tt%n_fine8)
+
+    ! translate to local points.
+#ifdef HAVE_MPI
+    if (coarse%parallel_in_domains) then
+
+      do ii = 1, tt%n_fine1
+        tt%to_fine1(1, ii) = vec_global2local(coarse%vp, tt%to_fine1(1, ii), coarse%vp%partno)
+      end do
+
+      do ii = 1, tt%n_fine2
+        do jj = 1, 2
+          tt%to_fine2(jj, ii) = vec_global2local(coarse%vp, tt%to_fine2(jj, ii), coarse%vp%partno)
+        end do
+      end do
+
+      do ii = 1, tt%n_fine4
+        do jj = 1, 4
+          tt%to_fine4(jj, ii) = vec_global2local(coarse%vp, tt%to_fine4(jj, ii), coarse%vp%partno)
+        end do
+      end do
+
+      do ii = 1, tt%n_fine8
+        do jj = 1, 8
+          tt%to_fine8(jj, ii) = vec_global2local(coarse%vp, tt%to_fine8(jj, ii), coarse%vp%partno)
+        end do
+      end do
+
+    end if
+#endif
 
     call pop_sub()
   end subroutine multigrid_get_transfer_tables
