@@ -32,6 +32,7 @@ module poisson_multigrid_m
   use mesh_function_m
   use messages_m
   use multigrid_m
+  use par_vec_m
   use poisson_corrections_m
   use varinfo_m
 
@@ -208,8 +209,8 @@ contains
     ALLOCATE(vh_correction(gr%m%np), gr%m%np)
     call gridhier_init(phi, gr%mgrid, add_points_for_boundaries=.true.)
     call gridhier_init(phi_ini, gr%mgrid, add_points_for_boundaries=.false.)
-    call gridhier_init(tau, gr%mgrid, add_points_for_boundaries=.false.)
-    call gridhier_init(err, gr%mgrid, add_points_for_boundaries=.false.)
+    call gridhier_init(tau, gr%mgrid, add_points_for_boundaries=.true.)
+    call gridhier_init(err, gr%mgrid, add_points_for_boundaries=.true.)
 
     call correct_rho(this%corrector, gr%m, rho, tau%level(0)%p, vh_correction)
     call lalg_scal(NP, -M_FOUR*M_PI, tau%level(0)%p)
@@ -364,6 +365,13 @@ contains
     select case(this%relaxation_method)
 
     case(GAUSS_SEIDEL)
+
+      call dset_bc(der, pot)
+
+#ifdef HAVE_MPI
+      if(m%parallel_in_domains) call dvec_ghost_update(m%vp, pot)
+#endif
+
       factor = CNST(-1.0)/der%lapl%w_re(der%lapl%stencil_center, 1)*this%relax_factor
 
       n=der%lapl%n

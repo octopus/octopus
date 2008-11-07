@@ -213,12 +213,6 @@ contains
         call write_fatal(2)
       end if
 
-      if(gr%m%parallel_in_domains .and. poisson_solver.eq.MULTIGRILLA) then
-        message(1) = 'When running in parallel in domains, you cannot use: '
-        message(2) = 'PoissonSolver = multigrid'
-        call write_fatal(2)
-      end if
-
       if( (gr%sb%box_shape .eq. MINIMUM) .and. (poisson_solver .eq. CG_CORRECTED) ) then
         message(1) = 'When using the "minimum" box shape and the "cg_corrected"'
         message(2) = 'Poisson solver, we have observed "sometimes" some non-'

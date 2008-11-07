@@ -21,9 +21,9 @@
 
   ! ---------------------------------------------------------
   subroutine X(multigrid_coarse2fine)(level, f_coarse, f_fine)
-    type(multigrid_level_t), intent(in)  :: level
-    R_TYPE,                  intent(in)  :: f_coarse(:)
-    R_TYPE,                  intent(out) :: f_fine(:)
+    type(multigrid_level_t), intent(in)    :: level
+    R_TYPE,                  intent(inout) :: f_coarse(:)
+    R_TYPE,                  intent(out)   :: f_fine(:)
 
     FLOAT, pointer :: vol_pp(:)
 
@@ -32,6 +32,12 @@
     FLOAT   :: vol_total
 
     call push_sub('multigrid.multigrid_coarse2fine')
+
+    call X(set_bc)(level%der, f_coarse)
+
+#ifdef HAVE_MPI
+    if(level%m%parallel_in_domains) call X(vec_ghost_update)(level%m%vp, f_coarse)
+#endif
 
     vol_pp => level%m%vol_pp
 
@@ -67,11 +73,11 @@
 
   ! ---------------------------------------------------------
   subroutine X(multigrid_fine2coarse)(mgrid, ilevel, f_fine, f_coarse, method_p)
-    type(multigrid_t), intent(in)  :: mgrid
-    integer,           intent(in)  :: ilevel
-    R_TYPE,            intent(in)  :: f_fine(:)
-    R_TYPE,            intent(out) :: f_coarse(:)
-    integer, optional, intent(in)  :: method_p
+    type(multigrid_t), intent(in)    :: mgrid
+    integer,           intent(in)    :: ilevel
+    R_TYPE,            intent(inout) :: f_fine(:)
+    R_TYPE,            intent(out)   :: f_coarse(:)
+    integer, optional, intent(in)    :: method_p
 
     integer :: method
 
@@ -121,10 +127,10 @@
 
   ! ---------------------------------------------------------
   subroutine X(multigrid_restriction)(mgrid, ilevel, f_fine, f_coarse)
-    type(multigrid_t), intent(in)  :: mgrid
-    integer,           intent(in)  :: ilevel
-    R_TYPE,            intent(in)  :: f_fine(:)
-    R_TYPE,            intent(out) :: f_coarse(:)
+    type(multigrid_t), intent(in)    :: mgrid
+    integer,           intent(in)    :: ilevel
+    R_TYPE,            intent(inout) :: f_fine(:)
+    R_TYPE,            intent(out)   :: f_coarse(:)
 
     FLOAT :: weight(-1:1,-1:1,-1:1)
 
@@ -150,6 +156,12 @@
     fine_mesh => mgrid%level(ilevel-1)%m
     coarse_mesh => mgrid%level(ilevel)%m
 
+    call X(set_bc)(mgrid%level(ilevel-1)%der, f_fine)
+
+#ifdef HAVE_MPI
+    if(fine_mesh%parallel_in_domains) call X(vec_ghost_update)(fine_mesh%vp, f_fine)
+#endif
+
     do n = 1, level%n_coarse
       fn = level%to_coarse(n)
 #ifdef HAVE_MPI
@@ -169,8 +181,8 @@
             ! translate to a local index
             if(fine_mesh%parallel_in_domains) fn = vec_global2local(fine_mesh%vp, fn, fine_mesh%vp%partno)
 #endif
-            ! this has to be fixed for periodic systems
-            if(fn <= fine_mesh%np) f_coarse(n) = f_coarse(n) + weight(di, dj, dk)*f_fine(fn)*fine_mesh%vol_pp(fn)
+
+            f_coarse(n) = f_coarse(n) + weight(di, dj, dk)*f_fine(fn)*fine_mesh%vol_pp(fn)
 
           end do
         end do
