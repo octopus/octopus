@@ -265,13 +265,14 @@ end subroutine mesh_init_stage_2
 ! mpi_grp is the communicator group that will be used for
 ! this mesh.
 ! ---------------------------------------------------------
-subroutine mesh_init_stage_3(mesh, geo, cv, stencil, np_stencil, mpi_grp)
+subroutine mesh_init_stage_3(mesh, geo, cv, stencil, np_stencil, mpi_grp, parent)
   type(mesh_t),       intent(inout) :: mesh
   type(geometry_t),   intent(in)    :: geo
   type(curvlinear_t), intent(in)    :: cv
   integer, optional,  intent(in)    :: stencil(:, :)
   integer, optional,  intent(in)    :: np_stencil
   type(mpi_grp_t), optional,  intent(in) :: mpi_grp
+  type(mesh_t), optional, intent(in) :: parent
 
   call push_sub('mesh_init.mesh_init_stage_3')
   call profiling_in(mesh_init_prof)
@@ -421,13 +422,28 @@ contains
   ! ---------------------------------------------------------
   subroutine do_partition()
 #if defined(HAVE_METIS) && defined(HAVE_MPI)
-    integer :: i, j, ipart, jpart
+    integer :: i, j, ipart, jpart, ip, ix, iy, iz
     integer, allocatable :: part(:), nnb(:)
 
     mesh%mpi_grp = mpi_grp
 
     ALLOCATE(part(mesh%np_part_global), mesh%np_part_global)
-    call mesh_partition(mesh, stencil, np_stencil, part)
+
+    if(.not. present(parent)) then
+      call mesh_partition(mesh, stencil, np_stencil, part)
+    else
+      ! if there is a parent grid, use its partition
+      do ip = 1, mesh%np_global
+        ix = 2*mesh%Lxyz(ip, 1)
+        iy = 2*mesh%Lxyz(ip, 2)
+        iz = 2*mesh%Lxyz(ip, 3)
+        i = parent%Lxyz_inv(ix, iy, iz)
+        part(ip) = parent%vp%part(i)
+      end do
+    end if
+
+    call mesh_partition_boundaries(mesh, stencil, np_stencil, part)
+
     call vec_init(mesh%mpi_grp%comm, 0, part, mesh%np_global, mesh%np_part_global,  &
       mesh%nr, mesh%Lxyz_inv, mesh%Lxyz, stencil, np_stencil, mesh%sb%dim, mesh%vp)
     deallocate(part)
@@ -829,9 +845,7 @@ subroutine mesh_partition(m, stencil, np_stencil, part)
   integer, allocatable :: adjncy(:)      ! Adjacency lists.
   integer              :: options(5)     ! Options to METIS.
   integer              :: iunit          ! For debug output to files.
-  character(len=3)     :: filenum
-  integer, allocatable :: votes(:, :)
-  integer :: ip, rr, ii
+  integer :: ii
   integer :: default_method, method
   integer :: library
   integer, parameter :: METIS = 2, ZOLTAN = 3
@@ -1041,6 +1055,29 @@ subroutine mesh_partition(m, stencil, np_stencil, part)
   ASSERT(all(part(1:m%np_global) > 0))
   ASSERT(all(part(1:m%np_global) <= p))
 
+  call pop_sub()
+  call profiling_out(prof)
+
+end subroutine mesh_partition
+
+subroutine mesh_partition_boundaries(m, stencil, np_stencil, part)
+  type(mesh_t),    intent(in)    :: m
+  integer, target, intent(in)    :: stencil(:, :)
+  integer,         intent(in)    :: np_stencil
+  integer,         intent(inout) :: part(:)
+
+  integer              :: i, j           ! Counter.
+  integer              :: jx, jy, jz     ! Coordinates of neighbours.
+  integer              :: p              ! Number of partitions.
+  integer              :: iunit          ! For debug output to files.
+  character(len=3)     :: filenum
+  integer, allocatable :: votes(:, :)
+  integer :: ip, rr
+
+  call push_sub('mesh_init.mesh_partition_boundaries')
+
+  p = m%mpi_grp%size
+
   ALLOCATE(votes(1:p, m%np_global + 1:m%np_part_global), p*(m%np_part_global - m%np_global))
 
   !now assign boundary points
@@ -1104,9 +1141,9 @@ subroutine mesh_partition(m, stencil, np_stencil, part)
   call MPI_Barrier(m%mpi_grp%comm, mpi_err)
 
   call pop_sub()
-  call profiling_out(prof)
 
-end subroutine mesh_partition
+end subroutine mesh_partition_boundaries
+
 #endif
 end module mesh_init_m
 

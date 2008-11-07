@@ -138,7 +138,7 @@ contains
 
       if(m%parallel_in_domains) then
         call mesh_init_stage_3(mgrid%level(i)%m, geo, cv, &
-          mgrid%level(i)%der%lapl%stencil, mgrid%level(i)%der%lapl%n, m%mpi_grp)
+          mgrid%level(i)%der%lapl%stencil, mgrid%level(i)%der%lapl%n, m%mpi_grp, parent = mgrid%level(i - 1)%m)
       else
         call mesh_init_stage_3(mgrid%level(i)%m, geo, cv)
       end if
