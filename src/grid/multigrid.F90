@@ -77,12 +77,14 @@ module multigrid_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine multigrid_init(geo, cv, m, der, mgrid)
-    type(geometry_t),      intent(in)  :: geo
-    type(curvlinear_t),    intent(in)  :: cv
-    type(mesh_t),  target, intent(in)  :: m
+  subroutine multigrid_init(mgrid, geo, cv, m, der, n_stencil, stencil)
+    type(multigrid_t),             intent(out) :: mgrid
+    type(geometry_t),              intent(in)  :: geo
+    type(curvlinear_t),            intent(in)  :: cv
+    type(mesh_t),          target, intent(in)  :: m
     type(derivatives_t),   target, intent(in)  :: der
-    type(multigrid_t),     intent(out) :: mgrid
+    integer,                       intent(in)  :: n_stencil
+    integer,                       intent(in)  :: stencil(:, :)
 
     integer :: i, n_levels, np
 
@@ -138,8 +140,8 @@ contains
       call derivatives_init(mgrid%level(i)%der, m%sb, cv%method.ne.CURV_METHOD_UNIFORM)
 
       if(m%parallel_in_domains) then
-        call mesh_init_stage_3(mgrid%level(i)%m, geo, cv, &
-          mgrid%level(i)%der%lapl%stencil, mgrid%level(i)%der%lapl%n, m%mpi_grp, parent = mgrid%level(i - 1)%m)
+        call mesh_init_stage_3(mgrid%level(i)%m, geo, cv, stencil, n_stencil, m%mpi_grp, &
+             parent = mgrid%level(i - 1)%m)
       else
         call mesh_init_stage_3(mgrid%level(i)%m, geo, cv)
       end if

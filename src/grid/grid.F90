@@ -35,6 +35,7 @@ module grid_m
   use multigrid_m
   use loct_parser_m
   use simul_box_m
+  use stencil_cube_m
 
   implicit none
 
@@ -58,6 +59,8 @@ module grid_m
     type(multigrid_t), pointer  :: mgrid
     type(double_grid_t)         :: dgrid
     logical                     :: have_fine_mesh
+    integer                     :: n_stencil
+    integer, pointer            :: stencil(:, :)
   end type grid_t
 
 
@@ -96,9 +99,31 @@ contains
     ! now we generate create the mesh and the derivatives
     call mesh_init_stage_1(gr%sb, gr%m, geo, gr%cv, &
          enlarge = max(gr%der%n_ghost, double_grid_enlarge(gr%dgrid)))
-    call mesh_init_stage_2(gr%sb, gr%m, geo, gr%cv, gr%der%lapl%stencil, gr%der%lapl%n)
+
+    call generate_stencil()
+
+    call mesh_init_stage_2(gr%sb, gr%m, geo, gr%cv, gr%stencil, gr%n_stencil)
 
     call pop_sub()
+
+  contains
+    
+    subroutine generate_stencil()
+      integer :: ncube
+      integer, allocatable :: cube(:, :)
+
+      ncube = stencil_cube_size_lapl(gr%sb%dim, order = 1)
+
+      ALLOCATE(cube(1:MAX_DIM, ncube), MAX_DIM*ncube)
+      
+      call stencil_cube_get_lapl(gr%sb%dim, order = 1, stencil = cube)
+
+      ALLOCATE(gr%stencil(1:MAX_DIM, gr%der%lapl%n + ncube), MAX_DIM*(gr%der%lapl%n + ncube))
+
+      call stencil_union(gr%sb%dim, ncube, cube,  gr%der%lapl%n, gr%der%lapl%stencil, gr%n_stencil, gr%stencil)
+
+    end subroutine generate_stencil
+
   end subroutine grid_init_stage_1
 
 
@@ -115,9 +140,7 @@ contains
 
     if(multicomm_strategy_is_parallel(mc, P_STRATEGY_DOMAINS)) then
       call mpi_grp_init(grp, mc%group_comm(P_STRATEGY_DOMAINS))
-      call mesh_init_stage_3(gr%m, geo, gr%cv,  &
-        gr%der%lapl%stencil,        &
-        gr%der%lapl%n, grp)
+      call mesh_init_stage_3(gr%m, geo, gr%cv, gr%stencil, gr%n_stencil, grp)
     else
       call mesh_init_stage_3(gr%m, geo, gr%cv)
     end if
@@ -146,8 +169,7 @@ contains
       call derivatives_init(gr%fine%der, gr%m%sb, gr%cv%method .ne. CURV_METHOD_UNIFORM)
       
       if(gr%m%parallel_in_domains) then
-        call mesh_init_stage_3(gr%fine%m, geo, gr%cv, &
-             gr%fine%der%lapl%stencil, gr%fine%der%lapl%n, gr%m%mpi_grp)
+        call mesh_init_stage_3(gr%fine%m, geo, gr%cv, gr%stencil, gr%n_stencil, gr%m%mpi_grp)
       else
         call mesh_init_stage_3(gr%fine%m, geo, gr%cv)
       end if
@@ -201,6 +223,8 @@ contains
       nullify(gr%intf)
     end if
 
+    deallocate(gr%stencil)
+
     call pop_sub()
   end subroutine grid_end
 
@@ -238,7 +262,7 @@ contains
     type(geometry_t), intent(in) :: geo
 
     ALLOCATE(gr%mgrid, 1)
-    call multigrid_init(geo, gr%cv, gr%m, gr%der, gr%mgrid)
+    call multigrid_init(gr%mgrid, geo, gr%cv, gr%m, gr%der, gr%n_stencil, gr%stencil)
 
   end subroutine grid_create_multigrid
 
@@ -278,12 +302,15 @@ contains
       call write_fatal(1)
     end select
 
+    grout%n_stencil = grin%n_stencil
+    ALLOCATE(grout%stencil(1:MAX_DIM, 1:grout%n_stencil), MAX_DIM*grout%n_stencil)
+
+    grout%stencil(1:MAX_DIM, 1:grout%n_stencil) = grin%stencil(1:MAX_DIM, 1:grout%n_stencil)
+
     call grid_init_stage_1(grout, geo)
 
     if(grin%m%parallel_in_domains) then
-      call mesh_init_stage_3(grout%m, geo, grout%cv,  &
-        grout%der%lapl%stencil,        &
-        grout%der%lapl%n, grin%m%mpi_grp)
+      call mesh_init_stage_3(grout%m, geo, grout%cv, grout%stencil, grout%n_stencil, grin%m%mpi_grp)
     else
       call mesh_init_stage_3(grout%m, geo, grout%cv)
     end if

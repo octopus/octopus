@@ -65,6 +65,7 @@ module derivatives_m
     zderivatives_div,                   &
     dderivatives_curl,                  &
     zderivatives_curl,                  &
+    stencil_union,                      &
     dset_bc,                            &
     zset_bc,                            &
     dset_bc_batch,                      &
@@ -566,6 +567,46 @@ contains
 
   end subroutine derivatives_build
 
+  !-------------------------------------------------------
+  subroutine stencil_union(dim, nst1, st1, nst2, st2, nstu, stu)
+    integer, intent(in)  :: dim
+    integer, intent(in)  :: nst1
+    integer, intent(in)  :: st1(:, :)
+    integer, intent(in)  :: nst2
+    integer, intent(in)  :: st2(:, :)
+    integer, intent(out) :: nstu
+    integer, intent(out) :: stu(:, :)
+
+    integer :: idir, ii, jj
+    logical :: not_in_st1
+
+    ! copy the first stencil
+    forall (idir = 1:dim, ii = 1:nst1) stu(idir, ii) = st1(idir, ii)
+    
+    nstu = nst1
+
+    do ii = 1, nst2
+
+      not_in_st1 = .true.
+
+      ! check whether that point was already in the stencil
+      do jj = 1, nst1
+        if(all(st1(1:dim, jj) == st2(1:dim, ii))) then
+          not_in_st1 = .false.
+          exit
+        end if
+      end do
+
+      if(not_in_st1) then !add it
+        nstu = nstu + 1
+        stu(1:dim, nstu) = st2(1:dim, ii)
+      end if
+      
+    end do
+
+    stu(dim + 1:MAX_DIM, 1:nstu) = 0
+
+  end subroutine stencil_union
 
   ! ---------------------------------------------------------
   subroutine make_discretization(dim, m, pol, rhs, n, op)
