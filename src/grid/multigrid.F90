@@ -30,6 +30,7 @@ module multigrid_m
   use mesh_init_m
   use messages_m
   use par_vec_m
+  use stencil_m
 
   implicit none
 
@@ -77,14 +78,13 @@ module multigrid_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine multigrid_init(mgrid, geo, cv, m, der, n_stencil, stencil)
+  subroutine multigrid_init(mgrid, geo, cv, m, der, stencil)
     type(multigrid_t),             intent(out) :: mgrid
     type(geometry_t),              intent(in)  :: geo
     type(curvlinear_t),            intent(in)  :: cv
     type(mesh_t),          target, intent(in)  :: m
     type(derivatives_t),   target, intent(in)  :: der
-    integer,                       intent(in)  :: n_stencil
-    integer,                       intent(in)  :: stencil(:, :)
+    type(stencil_t),               intent(in)  :: stencil
 
     integer :: i, n_levels, np
 
@@ -135,13 +135,12 @@ contains
       ALLOCATE(mgrid%level(i)%m, 1)
       ALLOCATE(mgrid%level(i)%der, 1)
       
-      call multigrid_mesh_half(geo, cv, mgrid%level(i-1)%m, mgrid%level(i)%m, stencil, n_stencil)
+      call multigrid_mesh_half(geo, cv, mgrid%level(i-1)%m, mgrid%level(i)%m, stencil)
 
       call derivatives_init(mgrid%level(i)%der, m%sb, cv%method.ne.CURV_METHOD_UNIFORM)
 
       if(m%parallel_in_domains) then
-        call mesh_init_stage_3(mgrid%level(i)%m, geo, cv, stencil, n_stencil, m%mpi_grp, &
-             parent = mgrid%level(i - 1)%m)
+        call mesh_init_stage_3(mgrid%level(i)%m, geo, cv, stencil, m%mpi_grp, parent = mgrid%level(i - 1)%m)
       else
         call mesh_init_stage_3(mgrid%level(i)%m, geo, cv)
       end if
@@ -324,13 +323,12 @@ contains
   ! Creates a mesh that has twice the spacing betwen the points than the in mesh.
   ! This is used in the multi-grid routines
   !---------------------------------------------------------------------------------*/
-  subroutine multigrid_mesh_half(geo, cv, mesh_in, mesh_out, stencil, np_stencil)
-    type(geometry_t),   intent(in)  :: geo
-    type(curvlinear_t), intent(in)  :: cv
-    type(mesh_t),       intent(in)  :: mesh_in
+  subroutine multigrid_mesh_half(geo, cv, mesh_in, mesh_out, stencil)
+    type(geometry_t),   intent(in)    :: geo
+    type(curvlinear_t), intent(in)    :: cv
+    type(mesh_t),       intent(in)    :: mesh_in
     type(mesh_t),       intent(inout) :: mesh_out
-    integer,            intent(in)  :: stencil(:, :)
-    integer,            intent(in)  :: np_stencil
+    type(stencil_t),    intent(in)    :: stencil
 
     call push_sub('multigrid.multigrid_mesh_half')
 
@@ -345,18 +343,17 @@ contains
 
     mesh_out%enlarge = mesh_in%enlarge
     
-    call mesh_init_stage_2(mesh_out%sb, mesh_out, geo, cv, stencil, np_stencil)
+    call mesh_init_stage_2(mesh_out%sb, mesh_out, geo, cv, stencil)
 
     call pop_sub()
   end subroutine multigrid_mesh_half
 
-  subroutine multigrid_mesh_double(geo, cv, mesh_in, mesh_out, stencil, np_stencil)
-    type(geometry_t),   intent(in)  :: geo
-    type(curvlinear_t), intent(in)  :: cv
-    type(mesh_t),       intent(in)  :: mesh_in
+  subroutine multigrid_mesh_double(geo, cv, mesh_in, mesh_out, stencil)    
+    type(geometry_t),   intent(in)    :: geo
+    type(curvlinear_t), intent(in)    :: cv
+    type(mesh_t),       intent(in)    :: mesh_in
     type(mesh_t),       intent(inout) :: mesh_out
-    integer,            intent(in)  :: stencil(:, :)
-    integer,            intent(in)  :: np_stencil
+    type(stencil_t),    intent(in)    :: stencil
 
     call push_sub('multigrid.multigrid_mesh_double')
 
@@ -371,7 +368,7 @@ contains
     
     mesh_out%enlarge = mesh_in%enlarge
     
-    call mesh_init_stage_2(mesh_out%sb, mesh_out, geo, cv, stencil, np_stencil)
+    call mesh_init_stage_2(mesh_out%sb, mesh_out, geo, cv, stencil)
 
     call pop_sub()
   end subroutine multigrid_mesh_double

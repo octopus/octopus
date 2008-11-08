@@ -52,7 +52,7 @@ curv_briggs.o : curv_briggs.F90
 curv_modine.o : curv_modine.F90  
 curvlinear.o : curvlinear.F90  curv_modine.o curv_gygi.o curv_briggs.o 
 mesh_lib.o : mesh_lib.F90 
-par_vec.o : par_vec.F90 par_vec_inc.F90 mesh_lib.o 
+par_vec.o : par_vec.F90 par_vec_inc.F90 mesh_lib.o stencil.o
 mesh.o : mesh.F90 par_vec.o mesh_lib.o curvlinear.o
 mesh_init.o : mesh_init.F90 mesh.o par_vec.o zoltan.o
 scalar_mesh.o : scalar_mesh.F90

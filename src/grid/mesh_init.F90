@@ -35,6 +35,7 @@ module mesh_init_m
   use par_vec_m
   use profiling_m
   use simul_box_m
+  use stencil_m
   use units_m
   use zoltan_m
 
@@ -164,13 +165,12 @@ end subroutine mesh_init_stage_1
 
 
 ! ---------------------------------------------------------
-subroutine mesh_init_stage_2(sb, mesh, geo, cv, stencil, np_stencil)
+subroutine mesh_init_stage_2(sb, mesh, geo, cv, stencil)
   type(simul_box_t),  intent(in)    :: sb
   type(mesh_t),       intent(inout) :: mesh
   type(geometry_t),   intent(in)    :: geo
   type(curvlinear_t), intent(in)    :: cv
-  integer,            intent(in)    :: stencil(:, :)
-  integer,            intent(in)    :: np_stencil
+  type(stencil_t),    intent(in)    :: stencil
 
   integer :: i, j, k, il, ik, ix, iy, iz, is
   FLOAT   :: chi(MAX_DIM)
@@ -213,10 +213,10 @@ subroutine mesh_init_stage_2(sb, mesh, geo, cv, stencil, np_stencil)
              mod(ix, 2) == 0 .and. mod(iy, 2) == 0 .and. mod(iz, 2) == 0)
 
         if(inside) then
-          do is = 1, np_stencil
-            i = ix + mesh%resolution(ix, iy, iz)*stencil(1, is)
-            j = iy + mesh%resolution(ix, iy, iz)*stencil(2, is)
-            k = iz + mesh%resolution(ix, iy, iz)*stencil(3, is)
+          do is = 1, stencil%size
+            i = ix + mesh%resolution(ix, iy, iz)*stencil%points(1, is)
+            j = iy + mesh%resolution(ix, iy, iz)*stencil%points(2, is)
+            k = iz + mesh%resolution(ix, iy, iz)*stencil%points(3, is)
             if(  &
                  i >= mesh%nr(1,1) .and. i <= mesh%nr(2,1) .and. &
                  j >= mesh%nr(1,2) .and. j <= mesh%nr(2,2) .and. &
@@ -265,14 +265,13 @@ end subroutine mesh_init_stage_2
 ! mpi_grp is the communicator group that will be used for
 ! this mesh.
 ! ---------------------------------------------------------
-subroutine mesh_init_stage_3(mesh, geo, cv, stencil, np_stencil, mpi_grp, parent)
-  type(mesh_t),       intent(inout) :: mesh
-  type(geometry_t),   intent(in)    :: geo
-  type(curvlinear_t), intent(in)    :: cv
-  integer, optional,  intent(in)    :: stencil(:, :)
-  integer, optional,  intent(in)    :: np_stencil
-  type(mpi_grp_t), optional,  intent(in) :: mpi_grp
-  type(mesh_t), optional, intent(in) :: parent
+subroutine mesh_init_stage_3(mesh, geo, cv, stencil, mpi_grp, parent)
+  type(mesh_t),              intent(inout) :: mesh
+  type(geometry_t),          intent(in)    :: geo
+  type(curvlinear_t),        intent(in)    :: cv
+  type(stencil_t), optional, intent(in)    :: stencil
+  type(mpi_grp_t), optional, intent(in)    :: mpi_grp
+  type(mesh_t), optional,    intent(in)    :: parent
 
   call push_sub('mesh_init.mesh_init_stage_3')
   call profiling_in(mesh_init_prof)
@@ -284,8 +283,8 @@ subroutine mesh_init_stage_3(mesh, geo, cv, stencil, np_stencil, mpi_grp, parent
   call create_x_Lxyz()
 
   if(mesh%parallel_in_domains) then
-    ASSERT(present(stencil).and.present(np_stencil))
-
+    ASSERT(present(stencil))
+    
     call do_partition()
   else
     call mpi_grp_init(mesh%mpi_grp, -1)
@@ -430,7 +429,7 @@ contains
     ALLOCATE(part(mesh%np_part_global), mesh%np_part_global)
 
     if(.not. present(parent)) then
-      call mesh_partition(mesh, stencil, np_stencil, part)
+      call mesh_partition(mesh, stencil, part)
     else
       ! if there is a parent grid, use its partition
       do ip = 1, mesh%np_global
@@ -442,10 +441,10 @@ contains
       end do
     end if
 
-    call mesh_partition_boundaries(mesh, stencil, np_stencil, part)
+    call mesh_partition_boundaries(mesh, stencil, part)
 
     call vec_init(mesh%mpi_grp%comm, 0, part, mesh%np_global, mesh%np_part_global,  &
-      mesh%nr, mesh%Lxyz_inv, mesh%Lxyz, stencil, np_stencil, mesh%sb%dim, mesh%vp)
+      mesh%nr, mesh%Lxyz_inv, mesh%Lxyz, stencil, mesh%sb%dim, mesh%vp)
     deallocate(part)
 
     ALLOCATE(nnb(1:mesh%vp%p), mesh%vp%p)
@@ -819,11 +818,10 @@ end subroutine mesh_init_stage_3
 ! inner mesh and the enlargement. All other entries have to
 ! be zero. comm is used to get the number of partitions.
 ! ---------------------------------------------------------------
-subroutine mesh_partition(m, stencil, np_stencil, part)
-  type(mesh_t),    intent(in)  :: m
-  integer, target, intent(in)  :: stencil(:, :)
-  integer,         intent(in)  :: np_stencil
-  integer,         intent(out) :: part(:)
+subroutine mesh_partition(m, stencil, part)
+  type(mesh_t),            intent(in)  :: m
+  type(stencil_t), target, intent(in)  :: stencil
+  integer,                 intent(out) :: part(:)
 
   integer              :: i, j           ! Counter.
   integer              :: ix, iy, iz     ! Counters to iterate over grid.
@@ -924,8 +922,8 @@ subroutine mesh_partition(m, stencil, np_stencil, part)
       part(start(ii):final(ii)) = ii
     end do
 
-    nd = np_stencil
-    d => stencil
+    nd = stencil%size
+    d => stencil%points
 
   end select
 
@@ -1060,10 +1058,9 @@ subroutine mesh_partition(m, stencil, np_stencil, part)
 
 end subroutine mesh_partition
 
-subroutine mesh_partition_boundaries(m, stencil, np_stencil, part)
+subroutine mesh_partition_boundaries(m, stencil, part)
   type(mesh_t),    intent(in)    :: m
-  integer, target, intent(in)    :: stencil(:, :)
-  integer,         intent(in)    :: np_stencil
+  type(stencil_t), intent(in)    :: stencil
   integer,         intent(inout) :: part(:)
 
   integer              :: i, j           ! Counter.
@@ -1085,10 +1082,10 @@ subroutine mesh_partition_boundaries(m, stencil, np_stencil, part)
   !count the boundary points that each point needs
   votes = 0
   do i = 1, m%np_global
-    do j = 1, np_stencil
-      jx = m%Lxyz(i, 1) + stencil(1, j)
-      jy = m%Lxyz(i, 2) + stencil(2, j)
-      jz = m%Lxyz(i, 3) + stencil(3, j)
+    do j = 1, stencil%size
+      jx = m%Lxyz(i, 1) + stencil%points(1, j)
+      jy = m%Lxyz(i, 2) + stencil%points(2, j)
+      jz = m%Lxyz(i, 3) + stencil%points(3, j)
       ip = m%Lxyz_inv(jx, jy, jz)
       if(ip > m%np_global) votes(part(i), ip) = votes(part(i), ip) + 1
     end do

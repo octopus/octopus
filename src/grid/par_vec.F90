@@ -52,7 +52,6 @@ module par_vec_m
   ! ! initialized and given.
   ! ! m          = sys%gr%m
   ! ! stencil    = op%stencil
-  ! ! np_stencil = op%n
   !
   ! FLOAT              :: s
   ! FLOAT              :: u(np_global), v(np_global)
@@ -90,6 +89,7 @@ module par_vec_m
   use mpi_debug_m
   use mpi_m
   use profiling_m
+  use stencil_m
 
   implicit none
 
@@ -193,23 +193,7 @@ contains
   ! Initializes a pv_type object (parallel vector).
   ! It computes the local to global and global to local index tables
   ! and the ghost point exchange.
-  ! The format for the stencil is: stencil(3, i) for i=1, ..., np_stencil
-  ! (as for type(nl_operator_t)).
-  ! For example a stencil like (in x-y-plane)
-  !          .
-  !        .....
-  !          .
-  ! is coded as
-  !   stencil(:, 1) = (/ 0,  1,  0/)
-  !   stencil(:, 2) = (/-2,  0,  0/)
-  !   stencil(:, 3) = (/-1,  0,  0/)
-  !   stencil(:, 3) = (/ 0,  0,  0/)
-  !   stencil(:, 5) = (/ 1,  0,  0/)
-  !   stencil(:, 6) = (/ 2,  0,  0/)
-  !   stencil(:, 7) = (/ 0, -1,  0/)
-  ! The points are relative to the "application point" of the stencil.
-  ! (This is the same format as used in type(nl_operator_t), so
-  ! just passing op%stencil is possible.)
+  !
   ! Note: we can not pass in the i(:, :) array from the stencil
   ! because it is not yet computed (it is local to a node and
   ! must be initialized some time after vec_init is run).
@@ -217,25 +201,20 @@ contains
   ! from how it is in the rest of the code (for historical reasons
   ! and also because the vec_init has more a global than a local point
   ! of view on the mesh): See the comments in the parameter list.
-  subroutine vec_init(comm, root, part, np, np_part, nr, &
-    Lxyz_inv, Lxyz, stencil, np_stencil, dim, vp)
-    integer,       intent(in)  :: comm         ! Communicator to use.
-    integer,       intent(in)  :: root         ! The master node.
+  subroutine vec_init(comm, root, part, np, np_part, nr, Lxyz_inv, Lxyz, stencil, dim, vp)
+    integer,         intent(in)  :: comm         ! Communicator to use.
+    integer,         intent(in)  :: root         ! The master node.
+
     ! The next seven entries come from the mesh.
-    integer,       intent(in)  :: part(:)      ! Point -> partition.
-    integer,       intent(in)  :: np           ! m%np_global
-    integer,       intent(in)  :: np_part      ! m%np_part_global
-    integer,       intent(in)  :: nr(2, 3)     ! m%nr
-    integer,       intent(in)  :: Lxyz_inv(nr(1,1):nr(2,1), &
-                                           nr(1,2):nr(2,2), &
-                                           nr(1,3):nr(2,3))
-                                               ! m%Lxyz_inv
-    integer,       intent(in)  :: Lxyz(:, :)   ! m%Lxyz
-    integer,       intent(in)  :: stencil(:,:) ! The stencil for which to
-    ! calculate ghost points.
-    integer,       intent(in)  :: np_stencil   ! Num. of points in stencil.
-    integer,       intent(in)  :: dim          ! Number of dimensions.
-    type(pv_t), intent(out) :: vp           ! Description of partition.
+    integer,         intent(in)  :: part(:)      ! Point -> partition.
+    integer,         intent(in)  :: np           ! m%np_global
+    integer,         intent(in)  :: np_part      ! m%np_part_global
+    integer,         intent(in)  :: nr(2, 3)     ! m%nr
+    integer,         intent(in)  :: Lxyz_inv(nr(1,1):nr(2,1), nr(1,2):nr(2,2), nr(1,3):nr(2,3)) ! m%Lxyz_inv
+    integer,         intent(in)  :: Lxyz(:, :)   ! m%Lxyz
+    type(stencil_t), intent(in)  :: stencil      ! The stencil for which to calculate ghost points.
+    integer,         intent(in)  :: dim          ! Number of dimensions.
+    type(pv_t),      intent(out) :: vp           ! Description of partition.
 
     ! Careful: MPI counts node ranks from 0 to numproc-1.
     ! Partition numbers from METIS range from 1 to numproc.
@@ -346,11 +325,11 @@ contains
         ! Get coordinates of current point.
         p1 = Lxyz(vp%local(i), :)
         ! For all points in stencil.
-        do j = 1, np_stencil
+        do j = 1, stencil%size
           ! Get point number of possible ghost point.
           ! mesh_index takes care of periodic dimensions and
           ! out points that would be out of the box etc.
-          k = mesh_index(dim, nr, Lxyz_inv, p1(:) + stencil(:, j))
+          k = mesh_index(dim, nr, Lxyz_inv, p1(:) + stencil%points(:, j))
           ASSERT(k.ne.0)
           ! If this index k does not belong to partition of node r,
           ! then k is a ghost point for r with part(k) now being

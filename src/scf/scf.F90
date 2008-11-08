@@ -236,7 +236,7 @@ contains
     if(scf%eigens%es_type == RS_MG .or. preconditioner_is_multigrid(scf%eigens%pre)) then
       if(.not. associated(gr%mgrid)) then
         ALLOCATE(gr%mgrid, 1)
-        call multigrid_init(gr%mgrid, geo, gr%cv,gr%m, gr%der, gr%stencil%size, gr%stencil%points)
+        call multigrid_init(gr%mgrid, geo, gr%cv,gr%m, gr%der, gr%stencil)
       end if
       call hamiltonian_mg_init(h, gr)
     end if

@@ -107,7 +107,7 @@ contains
     call stencil_cube_get_lapl(cube, gr%sb%dim, order = 1)
     call stencil_union(gr%sb%dim, cube, gr%der%lapl%stencil, gr%stencil)
       
-    call mesh_init_stage_2(gr%sb, gr%m, geo, gr%cv, gr%stencil%points, gr%stencil%size)
+    call mesh_init_stage_2(gr%sb, gr%m, geo, gr%cv, gr%stencil)
 
     call pop_sub()
 
@@ -127,7 +127,7 @@ contains
 
     if(multicomm_strategy_is_parallel(mc, P_STRATEGY_DOMAINS)) then
       call mpi_grp_init(grp, mc%group_comm(P_STRATEGY_DOMAINS))
-      call mesh_init_stage_3(gr%m, geo, gr%cv, gr%stencil%points, gr%stencil%size, grp)
+      call mesh_init_stage_3(gr%m, geo, gr%cv, gr%stencil, grp)
     else
       call mesh_init_stage_3(gr%m, geo, gr%cv)
     end if
@@ -151,12 +151,12 @@ contains
       ALLOCATE(gr%fine%m, 1)
       ALLOCATE(gr%fine%der, 1)
       
-      call multigrid_mesh_double(geo, gr%cv, gr%m, gr%fine%m, gr%stencil%points, gr%stencil%size)
+      call multigrid_mesh_double(geo, gr%cv, gr%m, gr%fine%m, gr%stencil)
       
       call derivatives_init(gr%fine%der, gr%m%sb, gr%cv%method .ne. CURV_METHOD_UNIFORM)
       
       if(gr%m%parallel_in_domains) then
-        call mesh_init_stage_3(gr%fine%m, geo, gr%cv, gr%stencil%points, gr%stencil%size, gr%m%mpi_grp)
+        call mesh_init_stage_3(gr%fine%m, geo, gr%cv, gr%stencil, gr%m%mpi_grp)
       else
         call mesh_init_stage_3(gr%fine%m, geo, gr%cv)
       end if
@@ -249,7 +249,7 @@ contains
     type(geometry_t), intent(in) :: geo
 
     ALLOCATE(gr%mgrid, 1)
-    call multigrid_init(gr%mgrid, geo, gr%cv, gr%m, gr%der, gr%stencil%size, gr%stencil%points)
+    call multigrid_init(gr%mgrid, geo, gr%cv, gr%m, gr%der, gr%stencil)
 
   end subroutine grid_create_multigrid
 
@@ -294,7 +294,7 @@ contains
     call grid_init_stage_1(grout, geo)
 
     if(grin%m%parallel_in_domains) then
-      call mesh_init_stage_3(grout%m, geo, grout%cv, grout%stencil%points, grout%stencil%size, grin%m%mpi_grp)
+      call mesh_init_stage_3(grout%m, geo, grout%cv, grout%stencil, grin%m%mpi_grp)
     else
       call mesh_init_stage_3(grout%m, geo, grout%cv)
     end if
