@@ -55,10 +55,10 @@ subroutine X(nl_operator_tune)(op, best)
   call push_sub('nl_operator_inc.Xnl_operator_tune')
   
   !count the total number of floating point operations  
-  noperations =  op%m%np * op%n * M_TWO * R_OPS
+  noperations =  op%m%np*op%stencil%size*M_TWO*R_OPS
 
   !the volume of data that has to be moved in bytes
-  dvolume = (op%m%np_part + op%m%np) * R_OPS * R_SIZE + (op%nri + 1)* op%n * M_FOUR
+  dvolume = (op%m%np_part + op%m%np) * R_OPS * R_SIZE + (op%nri + 1)*op%stencil%size*M_FOUR
 
   !measure performance of each function
   ALLOCATE(in(1:op%m%np_part), op%m%np_part)
@@ -132,7 +132,7 @@ subroutine X(nl_operator_tune)(op, best)
 #endif
     write (iunit, '(a,i8)') 'Grid points    = ', op%m%np
     write (iunit, '(a,i8)') 'Stencils       = ', op%nri
-    write (iunit, '(a,i8)') 'Stencil points = ', op%n
+    write (iunit, '(a,i8)') 'Stencil points = ', op%stencil%size
     
     do method = OP_MIN, OP_MAX
 #ifdef R_TCOMPLEX
@@ -297,15 +297,15 @@ subroutine X(nl_operator_operate)(op, fi, fo, ghost_update, profile, points)
     if(op%cmplx_op) then
 
       if(op%const_w) then
-        call X(operate)(op%n, nri, op%w_re(:, 1), ri, imin, imax, fi, fo, op%w_im(:, 1))
+        call X(operate)(op%stencil%size, nri, op%w_re(:, 1), ri, imin, imax, fi, fo, op%w_im(:, 1))
       else
-        call X(operate_nc)(op%n, nri, op%w_re, ri, imin, imax, fi, fo, op%w_im)
+        call X(operate_nc)(op%stencil%size, nri, op%w_re, ri, imin, imax, fi, fo, op%w_im)
       end if
 
     else
 
       if(.not. op%const_w) then
-        call X(operate_nc)(op%n, nri, op%w_re, ri, imin, imax, fi, fo)
+        call X(operate_nc)(op%stencil%size, nri, op%w_re, ri, imin, imax, fi, fo)
       else
 
         !$omp parallel private(ini, nri_loc, ws)
@@ -318,13 +318,13 @@ subroutine X(nl_operator_operate)(op, fi, fo, ghost_update, profile, points)
 
         select case(op%X(function))
         case(OP_FORTRAN)
-          call X(operate)(op%n, nri, op%w_re(:, 1), ri, imin, imax, fi, fo)
+          call X(operate)(op%stencil%size, nri, op%w_re(:, 1), ri, imin, imax, fi, fo)
         case(OP_C)
-          call X(operate_ri)(op%n, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), imax(ini), fi(1), fo(1))
+          call X(operate_ri)(op%stencil%size, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), imax(ini), fi(1), fo(1))
         case(OP_VEC)
-          call X(operate_ri_vec)(op%n, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), imax(ini), fi(1), fo(1))
+          call X(operate_ri_vec)(op%stencil%size, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), imax(ini), fi(1), fo(1))
         case(OP_AS)
-          nns(1) = op%n
+          nns(1) = op%stencil%size
           nns(2) = nri_loc
           call X(operate_as)(nns, op%w_re(1, 1), ri(1, ini), imin(ini), imax(ini), fi(1), fo(1), ws(1))
         end select
@@ -336,9 +336,9 @@ subroutine X(nl_operator_operate)(op, fi, fo, ghost_update, profile, points)
 
     if(profile_) then
       if(op%cmplx_op) then
-        call profiling_count_operations((imax(nri) - imin(1))*op%n*(R_ADD + R_MUL))
+        call profiling_count_operations((imax(nri) - imin(1))*op%stencil%size*(R_ADD + R_MUL))
       else 
-        call profiling_count_operations((imax(nri) - imin(1))*op%n*2*R_ADD)
+        call profiling_count_operations((imax(nri) - imin(1))*op%stencil%size*2*R_ADD)
       end if
     end if
 
@@ -385,16 +385,16 @@ subroutine X(nl_operator_operate_diag)(op, fo)
   if(op%cmplx_op) then
 #ifdef R_TCOMPLEX
     if(op%const_w) then
-      fo(1:op%np) = cmplx(op%w_re(op%stencil_center, 1), op%w_im(op%stencil_center, 1))
+      fo(1:op%np) = cmplx(op%w_re(op%stencil%center, 1), op%w_im(op%stencil%center, 1))
     else
-      fo(1:op%np) = cmplx(op%w_re(op%stencil_center, 1:op%np), op%w_im(op%stencil_center, 1:op%np))
+      fo(1:op%np) = cmplx(op%w_re(op%stencil%center, 1:op%np), op%w_im(op%stencil%center, 1:op%np))
     end if
 #endif
   else
     if(op%const_w) then
-      fo(1:op%np) = op%w_re(op%stencil_center, 1)
+      fo(1:op%np) = op%w_re(op%stencil%center, 1)
     else
-      fo(1:op%np) = op%w_re(op%stencil_center, 1:op%np)
+      fo(1:op%np) = op%w_re(op%stencil%center, 1:op%np)
     end if
   end if
   

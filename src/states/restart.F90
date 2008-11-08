@@ -772,7 +772,7 @@ contains
     ! ---------------------------------------------------------
     subroutine interpolation_init
       call mesh_init_stage_1(old_sb, old_mesh, geo, old_cv, gr%der%n_ghost)
-      call mesh_init_stage_2(old_sb, old_mesh, geo, old_cv, gr%der%lapl%stencil, gr%der%lapl%n)
+      call mesh_init_stage_2(old_sb, old_mesh, geo, old_cv, gr%stencil%points, gr%stencil%size)
       call mesh_init_stage_3(old_mesh, geo, old_cv)
 
       if (st%wfs_type == M_REAL) then

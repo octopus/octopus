@@ -372,9 +372,9 @@ contains
       if(m%parallel_in_domains) call dvec_ghost_update(m%vp, pot)
 #endif
 
-      factor = CNST(-1.0)/der%lapl%w_re(der%lapl%stencil_center, 1)*this%relax_factor
+      factor = CNST(-1.0)/der%lapl%w_re(der%lapl%stencil%center, 1)*this%relax_factor
 
-      n=der%lapl%n
+      n=der%lapl%stencil%size
 
       ALLOCATE(w(1:n), n)
       
@@ -390,7 +390,7 @@ contains
         do t = 0, steps
           do i = 1, m%np
             point_lap = sum(der%lapl%w_re(1:n,i)*pot(der%lapl%i(1:n,i)))
-            pot(i) = pot(i) - CNST(0.7)/der%lapl%w_re(der%lapl%stencil_center,i)*(point_lap-rho(i))
+            pot(i) = pot(i) - CNST(0.7)/der%lapl%w_re(der%lapl%stencil%center,i)*(point_lap-rho(i))
           end do
         end do
       end if

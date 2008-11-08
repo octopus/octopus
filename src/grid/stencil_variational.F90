@@ -138,15 +138,9 @@ contains
     integer, intent(in) :: dir
     integer, intent(in) :: order
 
-    integer :: extent
-
     call push_sub('stencil_variational.stencil_variational_extent')
 
-    extent = 0
-    if(dir.ge.1.or.dir.le.3) then
-      extent = order
-    end if
-    stencil_variational_extent = extent
+    stencil_variational_extent = order
 
     call pop_sub()
   end function stencil_variational_extent

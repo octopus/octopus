@@ -34,6 +34,7 @@ module nl_operator_m
   use mpi_m
   use par_vec_m
   use profiling_m
+  use stencil_m
 
   implicit none
 
@@ -67,11 +68,9 @@ module nl_operator_m
   end type nl_operator_index_t
 
   type nl_operator_t
+    type(stencil_t)       :: stencil
     type(mesh_t), pointer :: m         ! pointer to the underlying mesh
-    integer               :: n         ! number of points in discrete operator
     integer               :: np        ! number of points in mesh
-    integer, pointer      :: stencil(:,:)
-    integer               :: stencil_center ! center point of stencil
 
     ! When running in parallel mode, the next three
     ! arrays are unique on each node.
@@ -132,19 +131,13 @@ contains
   end function op_function_name
 
   ! ---------------------------------------------------------
-  subroutine nl_operator_init(op, n, label)
+  subroutine nl_operator_init(op, label)
     type(nl_operator_t), intent(out) :: op
-    integer,             intent(in)  :: n
     character(len=*),    intent(in)  :: label
-
-    ASSERT(n  > 0)
 
     call push_sub('nl_operator.nl_operator_init')
 
     nullify(op%m, op%i, op%w_re, op%w_im, op%ri, op%rimap, op%rimap_inv)
-
-    op%n  = n
-    ALLOCATE(op%stencil(MAX_DIM, n), MAX_DIM*n)
 
     op%label = label
 
@@ -159,7 +152,7 @@ contains
 
     call push_sub('nl_operator.nl_operator_equal')
 
-    call nl_operator_init(opo, opi%n, opi%label)
+    call nl_operator_init(opo, opi%label)
 
     opo%dfunction = opi%dfunction
     opo%zfunction = opi%zfunction
@@ -168,21 +161,22 @@ contains
     opo%m        => opi%m
     opo%cmplx_op =  opi%cmplx_op
     opo%nri      =  opi%nri
-    opo%stencil(1:MAX_DIM, 1:opo%n) = opi%stencil(1:MAX_DIM, 1:opi%n)
+
+    call stencil_copy(opi%stencil, opo%stencil)
 
     if(opi%const_w) then
-      ALLOCATE(opo%w_re(opi%n, 1), opi%n*1)
+      ALLOCATE(opo%w_re(opi%stencil%size, 1), opi%stencil%size*1)
       if (opi%cmplx_op) then
-        ALLOCATE(opo%w_im(opi%n, 1), opi%n*1)
+        ALLOCATE(opo%w_im(opi%stencil%size, 1), opi%stencil%size*1)
       end if
     else
-      ALLOCATE(opo%w_re(opi%n, opi%np), opi%n*opi%np)
+      ALLOCATE(opo%w_re(opi%stencil%size, opi%np), opi%stencil%size*opi%np)
       if (opi%cmplx_op) then
-        ALLOCATE(opo%w_im(opi%n, opi%np), opi%n*opi%np)
+        ALLOCATE(opo%w_im(opi%stencil%size, opi%np), opi%stencil%size*opi%np)
       end if
     end if
 
-    ALLOCATE(opo%ri(1:opo%n, 1:opo%nri), opo%n*opo%nri)
+    ALLOCATE(opo%ri(1:opo%stencil%size, 1:opo%nri), opo%stencil%size*opo%nri)
     ALLOCATE(opo%rimap(1:opo%np), opo%np)
     ALLOCATE(opo%rimap_inv(1:opo%nri+1), opo%nri+1)
 
@@ -192,7 +186,7 @@ contains
 
     ASSERT(associated(opi%ri))
 
-    opo%ri(1:opi%n, 1:opi%nri) = opi%ri(1:opi%n, 1:opi%nri)
+    opo%ri(1:opi%stencil%size, 1:opi%nri) = opi%ri(1:opi%stencil%size, 1:opi%nri)
     opo%rimap(1:opo%np)        = opi%rimap(1:opo%np)
     opo%rimap_inv(1:opo%nri + 1) = opi%rimap_inv(1:opo%nri + 1)
     
@@ -235,16 +229,16 @@ contains
 
     ! allocate weights op%w
     if(op%const_w) then
-      ALLOCATE(op%w_re(op%n, 1), op%n*1)
+      ALLOCATE(op%w_re(op%stencil%size, 1), op%stencil%size*1)
       if (op%cmplx_op) then
-        ALLOCATE(op%w_im(op%n, 1), op%n*1)
+        ALLOCATE(op%w_im(op%stencil%size, 1), op%stencil%size*1)
       end if
       message(1) = 'Info: nl_operator_build: working with constant weights.'
       if(in_debug_mode) call write_info(1)
     else
-      ALLOCATE(op%w_re(op%n, op%np), op%n*op%np)
+      ALLOCATE(op%w_re(op%stencil%size, op%np), op%stencil%size*op%np)
       if (op%cmplx_op) then
-        ALLOCATE(op%w_im(op%n, op%np), op%n*op%np)
+        ALLOCATE(op%w_im(op%stencil%size, op%np), op%stencil%size*op%np)
       end if
       message(1) = 'Info: nl_operator_build: working with non-constant weights.'
       if(in_debug_mode) call write_info(1)
@@ -254,21 +248,9 @@ contains
     op%w_re = M_ZERO
     if (op%cmplx_op) op%w_im = M_ZERO
 
-    ! store center point of the stencil
-    do ii = 1, op%n
-      if(                              & 
-        op%stencil(1, ii) .eq. 0 .and.  &
-        op%stencil(2, ii) .eq. 0 .and.  &
-        op%stencil(3, ii) .eq. 0        &
-        ) then
-        op%stencil_center = ii
-        exit
-      end if
-    end do
-
     ! Build lookup table
-    ALLOCATE(st1(1:op%n), op%n)
-    ALLOCATE(st2(1:op%n), op%n)
+    ALLOCATE(st1(1:op%stencil%size), op%stencil%size)
+    ALLOCATE(st2(1:op%stencil%size), op%stencil%size)
 
     op%nri = 0
 
@@ -283,10 +265,10 @@ contains
           p1(1:MAX_DIM) = m%Lxyz(ii, 1:MAX_DIM)
         end if
 
-        do jj = 1, op%n
+        do jj = 1, op%stencil%size
           ! Get global index of p1 plus current stencil point.
           st1(jj) = mesh_index(m%sb%dim, m%nr, m%Lxyz_inv, &
-               p1(1:MAX_DIM) + m%resolution(p1(1), p1(2), p1(3))*op%stencil(1:MAX_DIM, jj))
+               p1(1:MAX_DIM) + m%resolution(p1(1), p1(2), p1(3))*op%stencil%points(1:MAX_DIM, jj))
 #ifdef HAVE_MPI
           if(m%parallel_in_domains) then
             ! When running parallel, translate this global
@@ -297,7 +279,7 @@ contains
           ASSERT(st1(jj) > 0)
         end do
 
-        st1(1:op%n) = st1(1:op%n) - ii
+        st1(1:op%stencil%size) = st1(1:op%stencil%size) - ii
 
         ! if the stencil changes
         if ( maxval(abs(st1 - st2)) > 0 ) then 
@@ -310,7 +292,7 @@ contains
           !second time, store
           if( time == 2 ) then
             current = current + 1
-            op%ri(1:op%n, current) = st1(1:op%n)
+            op%ri(1:op%stencil%size, current) = st1(1:op%stencil%size)
           end if
         end if
 
@@ -320,7 +302,7 @@ contains
 
       !after counting, allocate
       if (time == 1 ) then 
-        ALLOCATE(op%ri(1:op%n, op%nri), op%n*op%nri)
+        ALLOCATE(op%ri(1:op%stencil%size, op%nri), op%stencil%size*op%nri)
         ALLOCATE(op%rimap(1:op%np), op%np)
         ALLOCATE(op%rimap_inv(1:op%nri + 1), op%nri + 1)
         current = 0
@@ -350,7 +332,7 @@ contains
       op%outer%nri = 0
       do ir = 1, op%nri
         ip = op%rimap_inv(ir)
-        maxp = ip + maxval(op%ri(1:op%n, ir))
+        maxp = ip + maxval(op%ri(1:op%stencil%size, ir))
         if (maxp <= np) then
           !inner point
           op%inner%nri = op%inner%nri + 1
@@ -366,30 +348,30 @@ contains
       
       ALLOCATE(op%inner%imin(1:op%inner%nri + 1), op%inner%nri + 1)
       ALLOCATE(op%inner%imax(1:op%inner%nri), op%inner%nri)
-      ALLOCATE(op%inner%ri(1:op%n, 1:op%inner%nri), op%inner%nri)
+      ALLOCATE(op%inner%ri(1:op%stencil%size, 1:op%inner%nri), op%inner%nri)
 
       ALLOCATE(op%outer%imin(1:op%outer%nri + 1), op%outer%nri + 1)
       ALLOCATE(op%outer%imax(1:op%outer%nri), op%outer%nri)
-      ALLOCATE(op%outer%ri(1:op%n, 1:op%outer%nri), op%outer%nri)
+      ALLOCATE(op%outer%ri(1:op%stencil%size, 1:op%outer%nri), op%outer%nri)
 
       !now popluate the arrays
       iinner = 0
       iouter = 0
       do ir = 1, op%nri
         ip = op%rimap_inv(ir)
-        maxp = ip + maxval(op%ri(1:op%n, ir))
+        maxp = ip + maxval(op%ri(1:op%stencil%size, ir))
         if (maxp <= np) then
           !inner point
           iinner = iinner + 1
           op%inner%imin(iinner) = ip
           op%inner%imax(iinner) = op%rimap_inv(ir + 1)
-          op%inner%ri(1:op%n, iinner) = op%ri(1:op%n, ir)
+          op%inner%ri(1:op%stencil%size, iinner) = op%ri(1:op%stencil%size, ir)
         else
           !outer point
           iouter = iouter + 1
           op%outer%imin(iouter) = ip
           op%outer%imax(iouter) = op%rimap_inv(ir + 1)
-          op%outer%ri(1:op%n, iouter) = op%ri(1:op%n, ir)
+          op%outer%ri(1:op%stencil%size, iouter) = op%ri(1:op%stencil%size, ir)
         end if
       end do
     end if
@@ -421,10 +403,10 @@ contains
     opt%w_re = M_ZERO
     if (op%cmplx_op) opt%w_im = M_ZERO
     do i = 1, op%np
-      do j = 1, op%n
+      do j = 1, op%stencil%size
         index = nl_operator_get_index(op, j, i)
         if(index <= op%np) then
-          do l = 1, op%n
+          do l = 1, op%stencil%size
             k = nl_operator_get_index(op, l, index)
             if( k == i ) then
               if(.not.op%const_w) then
@@ -469,7 +451,7 @@ contains
       ALLOCATE(opg, 1)
       ALLOCATE(opgt, 1)
       call nl_operator_allgather(op, opg)
-      call nl_operator_init(opgt, op%n, op%label)
+      call nl_operator_init(opgt, op%label)
       call nl_operator_equal(opgt, opg)
       ALLOCATE(vol_pp(m%np_global), m%np_global)
       call dvec_allgather(m%vp, vol_pp, m%vol_pp)
@@ -485,10 +467,10 @@ contains
     opgt%w_re = M_ZERO
     if (op%cmplx_op) opgt%w_im = M_ZERO
     do i = 1, m%np_global
-      do j = 1, op%n
+      do j = 1, op%stencil%size
         index = nl_operator_get_index(opg, j, i)
         if(index <= m%np_global) then
-          do l = 1, op%n
+          do l = 1, op%stencil%size
             k = nl_operator_get_index(opg, l, index)
             if( k == i ) then
               if(.not.op%const_w) then
@@ -544,7 +526,7 @@ contains
       ALLOCATE(opg, 1)
       ALLOCATE(opgt, 1)
       call nl_operator_allgather(op, opg)
-      call nl_operator_init(opgt, op%n, op%label)
+      call nl_operator_init(opgt, op%label)
       opgt = opg
       ALLOCATE(vol_pp(m%np_global), m%np_global)
       call dvec_allgather(m%vp, vol_pp, m%vol_pp)
@@ -560,10 +542,10 @@ contains
     opgt%w_re = M_ZERO
     if (op%cmplx_op) opgt%w_im = M_ZERO
     do i = 1, m%np_global
-      do j = 1, op%n
+      do j = 1, op%stencil%size
         index = nl_operator_get_index(opg, j, i)
         if(index <= m%np_global) then
-          do l = 1, op%n
+          do l = 1, op%stencil%size
             k = nl_operator_get_index(opg, l, index)
             if( k == i ) then
               if(.not.op%const_w) then
@@ -626,7 +608,7 @@ contains
     ! Gather op%i and - if necessary - op%w_re and op%w_im.
     ! Collect for every point in the stencil in a single step.
     ! This permits to use ivec_gather.
-    do i = 1, op%n
+    do i = 1, op%stencil%size
       call ivec_gather(op%m%vp, opg%i(i, :), op%i(i, :))
     end do
     if(op%m%vp%rank.eq.op%m%vp%root) then
@@ -637,7 +619,7 @@ contains
     ! Weights have to be collected only if they are
     ! not constant.
     if(.not.op%const_w) then
-      do i = 1, op%n
+      do i = 1, op%stencil%size
         call dvec_gather(op%m%vp, opg%w_re(i, :), op%w_re(i, :))
         if(op%cmplx_op) call dvec_gather(op%m%vp, opg%w_im(i, :), op%w_im(i, :))
       end do
@@ -659,10 +641,10 @@ contains
 
     call push_sub('nl_operator.nl_operator_scatter')
 
-    call nl_operator_init(op, opg%n, op%label)
+    call nl_operator_init(op, op%label)
     call nl_operator_build(opg%m, op, opg%m%np, opg%const_w, opg%cmplx_op)
 
-    do i = 1, opg%n
+    do i = 1, opg%stencil%size
       call dvec_scatter(opg%m%vp, opg%w_re(i, :), op%w_re(i, :))
       if(opg%cmplx_op) then
         call dvec_scatter(opg%m%vp, opg%w_im(i, :), op%w_im(i, :))
@@ -695,7 +677,7 @@ contains
     ! Gather op%i and - if necessary - op%w_re and op%w_im.
     ! Collect for every point in the stencil in a single step.
     ! This permits to use ivec_gather.
-    do i = 1, op%n
+    do i = 1, op%stencil%size
       call ivec_allgather(op%m%vp, opg%i(i, :), op%i(i, :))
     end do
     call nl_operator_translate_indices(opg)
@@ -703,7 +685,7 @@ contains
     ! Weights have to be collected only if they are
     ! not constant.
     if(.not.op%const_w) then
-      do i = 1, op%n
+      do i = 1, op%stencil%size
         call dvec_allgather(op%m%vp, opg%w_re(i, :), op%w_re(i, :))
         if(op%cmplx_op) call dvec_allgather(op%m%vp, opg%w_im(i, :), op%w_im(i, :))
       end do
@@ -729,22 +711,24 @@ contains
 
     call push_sub('nl_operator.nl_operator_common_copy')
 
-    call nl_operator_init(opg, op%n, op%label)
-    ALLOCATE(opg%i(op%n, op%m%np_global), op%n*op%m%np_global)
+    call nl_operator_init(opg, op%label)
+
+    call stencil_copy(op%stencil, opg%stencil)
+
+    ALLOCATE(opg%i(op%stencil%size, op%m%np_global), op%stencil%size*op%m%np_global)
     if(op%const_w) then
-      ALLOCATE(opg%w_re(op%n, 1), op%n*1)
+      ALLOCATE(opg%w_re(op%stencil%size, 1), op%stencil%size*1)
       if(op%cmplx_op) then
-        ALLOCATE(opg%w_im(op%n, 1), op%n*1)
+        ALLOCATE(opg%w_im(op%stencil%size, 1), op%stencil%size*1)
       end if
     else
-      ALLOCATE(opg%w_re(op%n, op%m%np_global), op%n*op%m%np_global)
+      ALLOCATE(opg%w_re(op%stencil%size, op%m%np_global), op%stencil%size*op%m%np_global)
       if(op%cmplx_op) then
-        ALLOCATE(opg%w_im(op%n, op%m%np_global), op%n*op%m%np_global)
+        ALLOCATE(opg%w_im(op%stencil%size, op%m%np_global), op%stencil%size*op%m%np_global)
       end if
     end if
     opg%m        => op%m
     opg%np       =  op%m%np_global
-    opg%stencil  =  op%stencil
     opg%cmplx_op =  op%cmplx_op
     opg%const_w  =  op%const_w
     opg%nri      =  op%nri
@@ -773,7 +757,7 @@ contains
 
     ASSERT(associated(opg%i))
 
-    do i = 1, opg%n
+    do i = 1, opg%stencil%size
       do j = 1, opg%m%np_global
         il = opg%m%vp%np_local(opg%m%vp%part(j))
         ig = il+opg%m%vp%np_ghost(opg%m%vp%part(j))
@@ -838,7 +822,7 @@ contains
       k = 1
       do i = 1, op%m%np_global
         if(.not.op%const_w) k = i
-        do j = 1, op%n
+        do j = 1, op%stencil%size
           index = nl_operator_get_index(opg, j, i)
           if(index <= op%m%np_global) then
             a(i, index) = opg%w_re(j, k)
@@ -889,7 +873,7 @@ contains
       k = 1
       do i = 1, op%m%np_global
         if(.not.op%const_w) k = i
-        do j = 1, op%n
+        do j = 1, op%stencil%size
           index = nl_operator_get_index(opg, j, i)
           if(index <= op%m%np_global) then
             a(i, index) = opg%w_re(j, k)
@@ -925,7 +909,7 @@ contains
 
     call nl_operator_equal(op, op_ref)
     do i = 1, op%np
-      do j = 1, op%n
+      do j = 1, op%stencil%size
         index = nl_operator_get_index(op, j, i)
         if(index <= op%np) &
           op%w_re(j, i) = a(i, index)
@@ -1041,10 +1025,6 @@ contains
     if(associated(op%w_re)) then
       deallocate(op%w_re)
       nullify(op%w_re)
-    end if
-    if(associated(op%stencil)) then
-      deallocate(op%stencil)
-      nullify(op%stencil)
     end if
     if (op%cmplx_op) then
       if(associated(op%w_im)) then

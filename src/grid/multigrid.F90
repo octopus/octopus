@@ -135,7 +135,7 @@ contains
       ALLOCATE(mgrid%level(i)%m, 1)
       ALLOCATE(mgrid%level(i)%der, 1)
       
-      call multigrid_mesh_half(geo, cv, mgrid%level(i-1)%m, mgrid%level(i)%m, der%lapl%stencil, der%lapl%n)
+      call multigrid_mesh_half(geo, cv, mgrid%level(i-1)%m, mgrid%level(i)%m, stencil, n_stencil)
 
       call derivatives_init(mgrid%level(i)%der, m%sb, cv%method.ne.CURV_METHOD_UNIFORM)
 

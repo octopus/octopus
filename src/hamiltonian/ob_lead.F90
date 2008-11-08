@@ -66,11 +66,11 @@ contains
     do i = 1, intf%np
       n = intf%index(i)
       ! ... find the points they are coupled to.
-      do k = 1, lapl%n
+      do k = 1, lapl%stencil%size
         k_stencil = lapl%m%lxyz_inv(          &
-          lapl%m%lxyz(n,1)+lapl%stencil(1,k), &
-          lapl%m%lxyz(n,2)+lapl%stencil(2,k), &
-          lapl%m%lxyz(n,3)+lapl%stencil(3,k))
+          lapl%m%lxyz(n,1)+lapl%stencil%points(1,k), &
+          lapl%m%lxyz(n,2)+lapl%stencil%points(2,k), &
+          lapl%m%lxyz(n,3)+lapl%stencil%points(3,k))
         ! If the coupling point is in the interface...
         if(k_stencil.le.lapl%np.and. &
           member_of_interface(k_stencil, intf)) then
@@ -141,12 +141,12 @@ contains
     do j = 1, intf%np
       n = intf%index(j)
       ! k iterates over all stencil points.
-      do k = 1, lapl%n
+      do k = 1, lapl%stencil%size
         ! Get point number of coupling point.
         k_stencil = lapl%m%lxyz_inv(            &
-          lapl%m%lxyz(n, 1)+lapl%stencil(1, k), &
-          lapl%m%lxyz(n, 2)+lapl%stencil(2, k), &
-          lapl%m%lxyz(n, 3)+lapl%stencil(3, k))
+          lapl%m%lxyz(n, 1)+lapl%stencil%points(1, k), &
+          lapl%m%lxyz(n, 2)+lapl%stencil%points(2, k), &
+          lapl%m%lxyz(n, 3)+lapl%stencil%points(3, k))
 
         ! Get coordinates of current interface point n and current stencil point k_stencil.
         p_n = lapl%m%lxyz(n, :)

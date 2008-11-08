@@ -65,7 +65,6 @@ module derivatives_m
     zderivatives_div,                   &
     dderivatives_curl,                  &
     zderivatives_curl,                  &
-    stencil_union,                      &
     dset_bc,                            &
     zset_bc,                            &
     dset_bc_batch,                      &
@@ -261,7 +260,7 @@ contains
     der%n_ghost(:) = 0
     do i = 1, der%dim
       if(der%boundaries(i) == DER_BC_ZERO_F .or. der%boundaries(i) == DER_BC_PERIOD) then
-        der%n_ghost(i) = maxval(abs(der%lapl%stencil(i,:)))
+        der%n_ghost(i) = maxval(abs(der%lapl%stencil%points(i,:)))
       end if
     end do
 
@@ -318,33 +317,21 @@ contains
   subroutine derivatives_get_stencil_lapl(der)
     type(derivatives_t), intent(inout) :: der
 
-    integer :: n
-
     call push_sub('derivatives.derivatives_get_stencil_lapl')
 
     ASSERT(associated(der%lapl))
 
-    ! get size of stencil
-    select case(der%stencil_type)
-    case(DER_STAR,DER_VARIATIONAL)
-      n = stencil_star_size_lapl(der%dim, der%order)
-    case(DER_CUBE)
-      n = stencil_cube_size_lapl(der%dim, der%order)
-    case(DER_STARPLUS)
-      n = stencil_starplus_size_lapl(der%dim, der%order)
-    end select
-
     ! initialize nl operator
-    call nl_operator_init(der%lapl, n, "Laplacian")
+    call nl_operator_init(der%lapl, "Laplacian")
 
     ! create stencil
     select case(der%stencil_type)
     case(DER_STAR, DER_VARIATIONAL)
-      call stencil_star_get_lapl(der%dim, der%order, der%lapl%stencil)
+      call stencil_star_get_lapl(der%lapl%stencil, der%dim, der%order)
     case(DER_CUBE)
-      call stencil_cube_get_lapl(der%dim, der%order, der%lapl%stencil)
+      call stencil_cube_get_lapl(der%lapl%stencil, der%dim, der%order)
     case(DER_STARPLUS)
-      call stencil_starplus_get_lapl(der%dim, der%order, der%lapl%stencil)
+      call stencil_starplus_get_lapl(der%lapl%stencil, der%dim, der%order)
     end select
 
     call pop_sub()
@@ -374,38 +361,28 @@ contains
   subroutine derivatives_get_stencil_grad(der)
     type(derivatives_t), intent(inout) :: der
 
-    integer :: i, n
+    integer :: i
     character :: dirchar
 
     call push_sub('derivatives.derivatives_get_stencil_grad')
 
     ASSERT(associated(der%grad))
 
-    ! get size of stencil
-    select case(der%stencil_type)
-    case(DER_STAR, DER_VARIATIONAL)
-      n = stencil_star_size_grad(der%order)
-    case(DER_CUBE)
-      n = stencil_cube_size_grad(der%dim, der%order)
-    case(DER_STARPLUS)
-      n = stencil_starplus_size_grad(der%dim, der%order)
-    end select
-
     ! initialize nl operator
     do i = 1, der%dim
       if(i == 1) dirchar = 'X'
       if(i == 2) dirchar = 'Y'
       if(i == 3) dirchar = 'Z'
-      call nl_operator_init(der%grad(i), n, "Gradient "//dirchar)
+      call nl_operator_init(der%grad(i), "Gradient "//dirchar)
 
       ! create stencil
       select case(der%stencil_type)
       case(DER_STAR, DER_VARIATIONAL)
-        call stencil_star_get_grad(i, der%order, der%grad(i)%stencil)
+        call stencil_star_get_grad(der%grad(i)%stencil, i, der%order)
       case(DER_CUBE)
-        call stencil_cube_get_grad(der%dim, der%order, der%grad(i)%stencil)
+        call stencil_cube_get_grad(der%grad(i)%stencil, der%dim, der%order)
       case(DER_STARPLUS)
-        call stencil_starplus_get_grad(der%dim, i, der%order, der%grad(i)%stencil)
+        call stencil_starplus_get_grad(der%grad(i)%stencil, der%dim, i, der%order)
       end select
     end do
 
@@ -449,8 +426,8 @@ contains
 
     case(DER_STAR) ! laplacian and gradient have different stencils
       do i = 1, der%dim + 1
-        ALLOCATE(polynomials(der%dim, der%op(i)%n), der%dim*der%op(i)%n)
-        ALLOCATE(rhs(der%op(i)%n, 1), der%op(i)%n*1)
+        ALLOCATE(polynomials(der%dim, der%op(i)%stencil%size), der%dim*der%op(i)%stencil%size)
+        ALLOCATE(rhs(der%op(i)%stencil%size, 1), der%op(i)%stencil%size*1)
 
         if(i <= der%dim) then  ! gradient
           call stencil_star_polynomials_grad(i, der%order, polynomials)
@@ -465,8 +442,8 @@ contains
       end do
 
     case(DER_CUBE) ! laplacian and gradient have similar stencils
-      ALLOCATE(polynomials(der%dim, der%op(1)%n), der%dim*der%op(1)%n)
-      ALLOCATE(rhs(der%op(1)%n, der%dim+1), der%op(1)%n*(der%dim+1))
+      ALLOCATE(polynomials(der%dim, der%op(1)%stencil%size), der%dim*der%op(1)%stencil%size)
+      ALLOCATE(rhs(der%op(1)%stencil%size, der%dim + 1), der%op(1)%stencil%size*(der%dim+1))
       call stencil_cube_polynomials_lapl(der%dim, der%order, polynomials)
 
       do i = 1, der%dim
@@ -480,15 +457,15 @@ contains
 
     case(DER_STARPLUS)
       do i = 1, der%dim
-        ALLOCATE(polynomials(der%dim, der%op(i)%n), der%dim*der%op(i)%n)
-        ALLOCATE(rhs(der%op(i)%n, 1), der%op(i)%n*1)
+        ALLOCATE(polynomials(der%dim, der%op(i)%stencil%size), der%dim*der%op(i)%stencil%size)
+        ALLOCATE(rhs(der%op(i)%stencil%size, 1), der%op(i)%stencil%size*1)
         call stencil_starplus_pol_grad(der%dim, i, der%order, polynomials)
         call get_rhs_grad(i, rhs(:, 1))
         call make_discretization(der%dim, der%m, polynomials, rhs, 1, der%op(i:i))
         deallocate(polynomials, rhs)
       end do
-      ALLOCATE(polynomials(der%dim, der%op(der%dim+1)%n), der%dim*der%op(der%dim+1)%n)
-      ALLOCATE(rhs(der%op(i)%n, 1), der%op(i)%n*1)
+      ALLOCATE(polynomials(der%dim, der%op(der%dim+1)%stencil%size), der%dim*der%op(der%dim+1)%stencil%size)
+      ALLOCATE(rhs(der%op(i)%stencil%size, 1), der%op(i)%stencil%size*1)
       call stencil_starplus_pol_lapl(der%dim, der%order, polynomials)
       call get_rhs_lapl(rhs(:, 1))
       call make_discretization(der%dim, der%m, polynomials, rhs, 1, der%op(der%dim+1:der%dim+1))
@@ -503,14 +480,14 @@ contains
     ! Here the Laplacian is forced to be self-adjoint, and the gradient to be skew-selfadjoint
     if(m%use_curvlinear) then
       do i = 1, der%dim
-        call nl_operator_init(auxop, der%grad(i)%n, "auxop")
+        call nl_operator_init(auxop, "auxop")
         auxop%stencil = der%grad(i)%stencil
         call nl_operator_build(m, auxop, der%m%np, const_w = const_w_, cmplx_op = cmplx_op_)
         call nl_operator_skewadjoint(der%grad(i), auxop, der%m)
         call nl_operator_equal(der%grad(i), auxop)
         call nl_operator_end(auxop)
       end do
-      call nl_operator_init(auxop, der%lapl%n, "auxop")
+      call nl_operator_init(auxop, "auxop")
       auxop%stencil = der%lapl%stencil
       call nl_operator_build(m, auxop, der%m%np, const_w = const_w_, cmplx_op = cmplx_op_)
       call nl_operator_selfadjoint(der%lapl, auxop, der%m)
@@ -532,7 +509,7 @@ contains
       ! find right hand side for operator
       rhs(:) = M_ZERO
       do i = 1, der%dim
-        do j = 1, der%lapl%n
+        do j = 1, der%lapl%stencil%size
           this_one = .true.
           do k = 1, der%dim
             if(k == i .and. polynomials(k, j).ne.2) this_one = .false.
@@ -554,7 +531,7 @@ contains
 
       ! find right hand side for operator
       rhs(:) = M_ZERO
-      do j = 1, der%grad(dir)%n
+      do j = 1, der%grad(dir)%stencil%size
         this_one = .true.
         do k = 1, der%dim
           if(k == dir .and. polynomials(k, j).ne.1) this_one = .false.
@@ -567,54 +544,13 @@ contains
 
   end subroutine derivatives_build
 
-  !-------------------------------------------------------
-  subroutine stencil_union(dim, nst1, st1, nst2, st2, nstu, stu)
-    integer, intent(in)  :: dim
-    integer, intent(in)  :: nst1
-    integer, intent(in)  :: st1(:, :)
-    integer, intent(in)  :: nst2
-    integer, intent(in)  :: st2(:, :)
-    integer, intent(out) :: nstu
-    integer, intent(out) :: stu(:, :)
-
-    integer :: idir, ii, jj
-    logical :: not_in_st1
-
-    ! copy the first stencil
-    forall (idir = 1:dim, ii = 1:nst1) stu(idir, ii) = st1(idir, ii)
-    
-    nstu = nst1
-
-    do ii = 1, nst2
-
-      not_in_st1 = .true.
-
-      ! check whether that point was already in the stencil
-      do jj = 1, nst1
-        if(all(st1(1:dim, jj) == st2(1:dim, ii))) then
-          not_in_st1 = .false.
-          exit
-        end if
-      end do
-
-      if(not_in_st1) then !add it
-        nstu = nstu + 1
-        stu(1:dim, nstu) = st2(1:dim, ii)
-      end if
-      
-    end do
-
-    stu(dim + 1:MAX_DIM, 1:nstu) = 0
-
-  end subroutine stencil_union
-
   ! ---------------------------------------------------------
   subroutine make_discretization(dim, m, pol, rhs, n, op)
     integer,                intent(in)    :: dim
     type(mesh_t),           intent(in)    :: m
-    integer,                intent(in)    :: pol(:,:)  ! pol(dim, op%n)
+    integer,                intent(in)    :: pol(:,:)
     integer,                intent(in)    :: n
-    FLOAT,                  intent(inout) :: rhs(:,:)   ! rhs_(op%n, n)
+    FLOAT,                  intent(inout) :: rhs(:,:)
     type(nl_operator_t),    intent(inout) :: op(:)
 
     integer :: p, p_max, i, j, k, pow_max
@@ -623,8 +559,8 @@ contains
 
     call push_sub('derivatives.make_discretization')
 
-    ALLOCATE(mat(op(1)%n, op(1)%n), op(1)%n*op(1)%n)
-    ALLOCATE(sol(op(1)%n, n), op(1)%n*n)
+    ALLOCATE(mat(op(1)%stencil%size, op(1)%stencil%size), op(1)%stencil%size*op(1)%stencil%size)
+    ALLOCATE(sol(op(1)%stencil%size, n), op(1)%stencil%size*n)
 
     message(1) = 'Info: Generating weights for finite-difference discretization.'
     call write_info(1)
@@ -640,7 +576,7 @@ contains
 
     do p = 1, p_max
       mat(1,:) = M_ONE
-      do i = 1, op(1)%n
+      do i = 1, op(1)%stencil%size
         x(1:dim) = m%x(p + op(1)%ri(i, op(1)%rimap(p)), 1:dim) - m%x(p, 1:dim)
 
         ! calculate powers
@@ -652,7 +588,7 @@ contains
         end do
 
         ! generate the matrix
-        do j = 2, op(1)%n
+        do j = 2, op(1)%stencil%size
           mat(j, i) = powers(1, pol(1, j))
           do k = 2, dim
             mat(j, i) = mat(j, i)*powers(k, pol(k, j))
@@ -660,7 +596,7 @@ contains
         end do
       end do
 
-      call lalg_linsyssolve(op(1)%n, n, mat, rhs, sol)
+      call lalg_linsyssolve(op(1)%stencil%size, n, mat, rhs, sol)
       do i = 1, n
         op(i)%w_re(:, p) = sol(:, n)
       end do

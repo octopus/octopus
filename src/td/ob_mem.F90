@@ -138,7 +138,7 @@ contains
     do il = 1, NLEADS
       ! Try to read the coefficients from file
       call read_coeffs(trim(restart_dir)//'open_boundaries/', saved_iter, ob%mem_coeff(:, :, :, il),     &
-        ob%mem_sp_coeff(:, :, il), ob%mem_s(:, :, :, il), calc_dim, max_iter, np, spacing, delta, op%n, &
+        ob%mem_sp_coeff(:, :, il), ob%mem_s(:, :, :, il), calc_dim, max_iter, np, spacing, delta, op%stencil%size, &
         ob%mem_type, np*order, il)
 
       if (saved_iter.lt.max_iter) then ! Calculate missing coefficients.
@@ -188,7 +188,7 @@ contains
           if(mpi_grp_is_root(mpi_grp)) then
             call write_coeffs(trim(restart_dir)//'open_boundaries/', ob%mem_coeff(:, :, :, il),          &
               ob%mem_sp_coeff(:, :, il), ob%mem_s(:, :, :, il), calc_dim, max_iter, intface(il)%np, spacing, &
-              delta, op%n, ob%mem_type, np*order, il)
+              delta, op%stencil%size, ob%mem_type, np*order, il)
           end if
         end if
       else

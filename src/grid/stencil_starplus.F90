@@ -21,6 +21,7 @@
 
 module stencil_starplus_m
   use messages_m
+  use stencil_m
 
   private
   public ::                     &
@@ -90,138 +91,141 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine stencil_starplus_get_lapl(dim, order, stencil)
-    integer, intent(in)  :: dim
-    integer, intent(in)  :: order
-    integer, intent(out) :: stencil(:,:)
+  subroutine stencil_starplus_get_lapl(this, dim, order)
+    type(stencil_t), intent(out) :: this
+    integer,         intent(in)  :: dim
+    integer,         intent(in)  :: order
 
     integer :: i, j, n
 
     call push_sub('stencil_starplus.stencil_starplus_get_lapl')
 
-    stencil = 0
+    call stencil_allocate(this, stencil_starplus_size_lapl(dim, order))
+
     n = 1
     select case(dim)
     case(1)
-      stencil(:,:) = 0
       n = 1
       do i = 1, dim
         do j = -order, order
           if(j == 0) cycle
           n = n + 1
-          stencil(i, n) = j
+          this%points(i, n) = j
         end do
       end do
     case(2)
-      stencil(:,:) = 0
       n = 1
       do i = 1, dim
         do j = -order, order
           if(j == 0) cycle
           n = n + 1
-          stencil(i, n) = j
+          this%points(i, n) = j
         end do
       end do
-      n = n + 1; stencil(1:2, n) = (/ -2,  1 /)
-      n = n + 1; stencil(1:2, n) = (/ -2, -1 /)
-      n = n + 1; stencil(1:2, n) = (/ -1,  2 /)
-      n = n + 1; stencil(1:2, n) = (/ -1,  1 /)
-      n = n + 1; stencil(1:2, n) = (/ -1, -1 /)
-      n = n + 1; stencil(1:2, n) = (/ -1, -2 /)
-      n = n + 1; stencil(1:2, n) = (/  1,  2 /)
-      n = n + 1; stencil(1:2, n) = (/  1,  1 /)
-      n = n + 1; stencil(1:2, n) = (/  1, -1 /)
-      n = n + 1; stencil(1:2, n) = (/  1, -2 /)
-      n = n + 1; stencil(1:2, n) = (/  2,  1 /)
-      n = n + 1; stencil(1:2, n) = (/  2, -1 /)
+      n = n + 1; this%points(1:2, n) = (/ -2,  1 /)
+      n = n + 1; this%points(1:2, n) = (/ -2, -1 /)
+      n = n + 1; this%points(1:2, n) = (/ -1,  2 /)
+      n = n + 1; this%points(1:2, n) = (/ -1,  1 /)
+      n = n + 1; this%points(1:2, n) = (/ -1, -1 /)
+      n = n + 1; this%points(1:2, n) = (/ -1, -2 /)
+      n = n + 1; this%points(1:2, n) = (/  1,  2 /)
+      n = n + 1; this%points(1:2, n) = (/  1,  1 /)
+      n = n + 1; this%points(1:2, n) = (/  1, -1 /)
+      n = n + 1; this%points(1:2, n) = (/  1, -2 /)
+      n = n + 1; this%points(1:2, n) = (/  2,  1 /)
+      n = n + 1; this%points(1:2, n) = (/  2, -1 /)
     case(3)
-      stencil(:,:) = 0
       n = 1
       do i = 1, dim
         do j = -order, order
           if(j == 0) cycle
           n = n + 1
-          stencil(i, n) = j
+          this%points(i, n) = j
         end do
       end do
-      n = n + 1; stencil(1:3, n) = (/ -2,  1, 0 /)
-      n = n + 1; stencil(1:3, n) = (/ -2, -1, 0 /)
-      n = n + 1; stencil(1:3, n) = (/ -1,  2, 0 /)
-      n = n + 1; stencil(1:3, n) = (/ -1,  1, 0 /)
-      n = n + 1; stencil(1:3, n) = (/ -1, -1, 0 /)
-      n = n + 1; stencil(1:3, n) = (/ -1, -2, 0 /)
-      n = n + 1; stencil(1:3, n) = (/  1,  2, 0 /)
-      n = n + 1; stencil(1:3, n) = (/  1,  1, 0 /)
-      n = n + 1; stencil(1:3, n) = (/  1, -1, 0 /)
-      n = n + 1; stencil(1:3, n) = (/  1, -2, 0 /)
-      n = n + 1; stencil(1:3, n) = (/  2,  1, 0 /)
-      n = n + 1; stencil(1:3, n) = (/  2, -1, 0 /)
+      n = n + 1; this%points(1:3, n) = (/ -2,  1, 0 /)
+      n = n + 1; this%points(1:3, n) = (/ -2, -1, 0 /)
+      n = n + 1; this%points(1:3, n) = (/ -1,  2, 0 /)
+      n = n + 1; this%points(1:3, n) = (/ -1,  1, 0 /)
+      n = n + 1; this%points(1:3, n) = (/ -1, -1, 0 /)
+      n = n + 1; this%points(1:3, n) = (/ -1, -2, 0 /)
+      n = n + 1; this%points(1:3, n) = (/  1,  2, 0 /)
+      n = n + 1; this%points(1:3, n) = (/  1,  1, 0 /)
+      n = n + 1; this%points(1:3, n) = (/  1, -1, 0 /)
+      n = n + 1; this%points(1:3, n) = (/  1, -2, 0 /)
+      n = n + 1; this%points(1:3, n) = (/  2,  1, 0 /)
+      n = n + 1; this%points(1:3, n) = (/  2, -1, 0 /)
 
-      n = n + 1; stencil(1:3, n) = (/ -2, 0,  1 /)
-      n = n + 1; stencil(1:3, n) = (/ -2, 0, -1 /)
-      n = n + 1; stencil(1:3, n) = (/ -1, 0,  2 /)
-      n = n + 1; stencil(1:3, n) = (/ -1, 0,  1 /)
-      n = n + 1; stencil(1:3, n) = (/ -1, 0, -1 /)
-      n = n + 1; stencil(1:3, n) = (/ -1, 0, -2 /)
-      n = n + 1; stencil(1:3, n) = (/  1, 0,  2 /)
-      n = n + 1; stencil(1:3, n) = (/  1, 0,  1 /)
-      n = n + 1; stencil(1:3, n) = (/  1, 0, -1 /)
-      n = n + 1; stencil(1:3, n) = (/  1, 0, -2 /)
-      n = n + 1; stencil(1:3, n) = (/  2, 0,  1 /)
-      n = n + 1; stencil(1:3, n) = (/  2, 0, -1 /)
+      n = n + 1; this%points(1:3, n) = (/ -2, 0,  1 /)
+      n = n + 1; this%points(1:3, n) = (/ -2, 0, -1 /)
+      n = n + 1; this%points(1:3, n) = (/ -1, 0,  2 /)
+      n = n + 1; this%points(1:3, n) = (/ -1, 0,  1 /)
+      n = n + 1; this%points(1:3, n) = (/ -1, 0, -1 /)
+      n = n + 1; this%points(1:3, n) = (/ -1, 0, -2 /)
+      n = n + 1; this%points(1:3, n) = (/  1, 0,  2 /)
+      n = n + 1; this%points(1:3, n) = (/  1, 0,  1 /)
+      n = n + 1; this%points(1:3, n) = (/  1, 0, -1 /)
+      n = n + 1; this%points(1:3, n) = (/  1, 0, -2 /)
+      n = n + 1; this%points(1:3, n) = (/  2, 0,  1 /)
+      n = n + 1; this%points(1:3, n) = (/  2, 0, -1 /)
 
-      n = n + 1; stencil(1:3, n) = (/ 0, -2,  1 /)
-      n = n + 1; stencil(1:3, n) = (/ 0, -2, -1 /)
-      n = n + 1; stencil(1:3, n) = (/ 0, -1,  2 /)
-      n = n + 1; stencil(1:3, n) = (/ 0, -1,  1 /)
-      n = n + 1; stencil(1:3, n) = (/ 0, -1, -1 /)
-      n = n + 1; stencil(1:3, n) = (/ 0, -1, -2 /)
-      n = n + 1; stencil(1:3, n) = (/ 0,  1,  2 /)
-      n = n + 1; stencil(1:3, n) = (/ 0,  1,  1 /)
-      n = n + 1; stencil(1:3, n) = (/ 0,  1, -1 /)
-      n = n + 1; stencil(1:3, n) = (/ 0,  1, -2 /)
-      n = n + 1; stencil(1:3, n) = (/ 0,  2,  1 /)
-      n = n + 1; stencil(1:3, n) = (/ 0,  2, -1 /)
+      n = n + 1; this%points(1:3, n) = (/ 0, -2,  1 /)
+      n = n + 1; this%points(1:3, n) = (/ 0, -2, -1 /)
+      n = n + 1; this%points(1:3, n) = (/ 0, -1,  2 /)
+      n = n + 1; this%points(1:3, n) = (/ 0, -1,  1 /)
+      n = n + 1; this%points(1:3, n) = (/ 0, -1, -1 /)
+      n = n + 1; this%points(1:3, n) = (/ 0, -1, -2 /)
+      n = n + 1; this%points(1:3, n) = (/ 0,  1,  2 /)
+      n = n + 1; this%points(1:3, n) = (/ 0,  1,  1 /)
+      n = n + 1; this%points(1:3, n) = (/ 0,  1, -1 /)
+      n = n + 1; this%points(1:3, n) = (/ 0,  1, -2 /)
+      n = n + 1; this%points(1:3, n) = (/ 0,  2,  1 /)
+      n = n + 1; this%points(1:3, n) = (/ 0,  2, -1 /)
 
-      n = n + 1; stencil(1:3, n) = (/ -1, -1, -1 /)
-      n = n + 1; stencil(1:3, n) = (/ -1, -1,  1 /)
-      n = n + 1; stencil(1:3, n) = (/ -1,  1, -1 /)
-      n = n + 1; stencil(1:3, n) = (/ -1,  1,  1 /)
-      n = n + 1; stencil(1:3, n) = (/  1, -1, -1 /)
-      n = n + 1; stencil(1:3, n) = (/  1, -1,  1 /)
-      n = n + 1; stencil(1:3, n) = (/  1,  1, -1 /)
-      n = n + 1; stencil(1:3, n) = (/  1,  1,  1 /)
+      n = n + 1; this%points(1:3, n) = (/ -1, -1, -1 /)
+      n = n + 1; this%points(1:3, n) = (/ -1, -1,  1 /)
+      n = n + 1; this%points(1:3, n) = (/ -1,  1, -1 /)
+      n = n + 1; this%points(1:3, n) = (/ -1,  1,  1 /)
+      n = n + 1; this%points(1:3, n) = (/  1, -1, -1 /)
+      n = n + 1; this%points(1:3, n) = (/  1, -1,  1 /)
+      n = n + 1; this%points(1:3, n) = (/  1,  1, -1 /)
+      n = n + 1; this%points(1:3, n) = (/  1,  1,  1 /)
 
     end select
+
+    call stencil_init_center(this)
 
     call pop_sub()
   end subroutine stencil_starplus_get_lapl
 
 
   ! ---------------------------------------------------------
-  subroutine stencil_starplus_get_grad(dim, dir, order, stencil)
-    integer, intent(in)  :: dim
-    integer, intent(in)  :: dir
-    integer, intent(in)  :: order
-    integer, intent(out) :: stencil(:,:)
+  subroutine stencil_starplus_get_grad(this, dim, dir, order)
+    type(stencil_t), intent(out) :: this
+    integer,         intent(in)  :: dim
+    integer,         intent(in)  :: dir
+    integer,         intent(in)  :: order
 
     integer :: i, n, j
 
     call push_sub('stencil_starplus.stencil_star_get_grad')
 
-    stencil(:, :) = 0
+    call stencil_allocate(this, stencil_starplus_size_grad(dim, order))
+
     n = 1
     do i = -order, order
-      stencil(dir, n) = i
+      this%points(dir, n) = i
       n = n + 1
     end do
     do j = 1, dim
       if(j==dir) cycle
-      stencil(j, n) = -1
+      this%points(j, n) = -1
       n = n + 1
-      stencil(j, n) =  1
+      this%points(j, n) =  1
       n = n + 1
     end do
+
+    call stencil_init_center(this)
 
     call pop_sub()
   end subroutine stencil_starplus_get_grad

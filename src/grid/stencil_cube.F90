@@ -21,6 +21,7 @@
 
 module stencil_cube_m
   use messages_m
+  use stencil_m
 
   implicit none
 
@@ -72,28 +73,29 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine stencil_cube_get_lapl(dim, order, stencil)
-    integer, intent(in)  :: dim
-    integer, intent(in)  :: order
-    integer, intent(out) :: stencil(:,:)
+  subroutine stencil_cube_get_lapl(this, dim, order)
+    type(stencil_t), intent(out) :: this
+    integer,         intent(in)  :: dim
+    integer,         intent(in)  :: order
 
     integer :: i, j, k, n
 
     call push_sub('stencil_cube.stencil_cube_get_lapl')
 
-    stencil(:,:) = 0
+    call stencil_allocate(this, stencil_cube_size_lapl(dim, order))
+
     n = 1
     select case(dim)
     case(1)
       do i = -order, order
-        stencil(1, n) = i
+        this%points(1, n) = i
         n = n + 1
       end do
     case(2)
       do i = -order, order
         do j = -order, order
-          stencil(1, n) = i
-          stencil(2, n) = j
+          this%points(1, n) = i
+          this%points(2, n) = j
           n = n + 1
         end do
       end do
@@ -101,14 +103,16 @@ contains
       do i = -order, order
         do j = -order, order
           do k = -order, order
-            stencil(1, n) = i
-            stencil(2, n) = j
-            stencil(3, n) = k
+            this%points(1, n) = i
+            this%points(2, n) = j
+            this%points(3, n) = k
             n = n + 1
           end do
         end do
       end do
     end select
+
+    call stencil_init_center(this)
 
     call pop_sub()
   end subroutine stencil_cube_get_lapl
@@ -170,12 +174,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine stencil_cube_get_grad(dim, order, stencil)
-    integer, intent(in)  :: dim
-    integer, intent(in)  :: order
-    integer, intent(out) :: stencil(:,:)
+  subroutine stencil_cube_get_grad(this, dim, order)
+    type(stencil_t), intent(out) :: this
+    integer,         intent(in)  :: dim
+    integer,         intent(in)  :: order
 
-    call stencil_cube_get_lapl(dim, order, stencil)
+    call stencil_cube_get_lapl(this, dim, order)
   end subroutine stencil_cube_get_grad
 
 

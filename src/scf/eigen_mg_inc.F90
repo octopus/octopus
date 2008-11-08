@@ -113,7 +113,7 @@ subroutine X(coordinate_relaxation)(gr, mesh, h, nst, steps, ik, psi, aa, cc)
         ! apply the hamiltonian in the point
             
         alpha = M_ZERO
-        do is = 1, gr%der%lapl%n
+        do is = 1, gr%der%lapl%stencil%size
           inb = ip + gr%der%lapl%ri(is, gr%der%lapl%rimap(ip))
           alpha = alpha + gr%der%lapl%w_re(is, 1)*psi(inb, 1, ist)
         end do
@@ -125,7 +125,7 @@ subroutine X(coordinate_relaxation)(gr, mesh, h, nst, steps, ik, psi, aa, cc)
         s1 = M_ZERO
         s2 = M_ZERO
         s3 = M_ZERO
-        do ist2 = 1, ist - 1 
+        do ist2 = 1, ist - 1
           s1 = s1 + ww/cc(ist2, ist2)*beta(ist2)**2
           s2 = s2 + ww/cc(ist2, ist2)*beta(ist2)*cc(ist, ist2)
           s3 = s3 + ww/cc(ist2, ist2)*cc(ist, ist2)**2

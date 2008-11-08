@@ -24,6 +24,7 @@ module stencil_star_m
   use math_m
   use messages_m
   use nl_operator_m
+  use stencil_m
 
   implicit none
 
@@ -61,39 +62,36 @@ contains
     integer, intent(in) :: dir
     integer, intent(in) :: order
 
-    integer :: extent
-
     call push_sub('stencil_star.stencil_star_extent')
 
-    extent = 0
-    if(dir.ge.1.or.dir.le.3) then
-      extent = order
-    end if
-    stencil_star_extent = extent
+    stencil_star_extent = order
 
     call pop_sub()
   end function stencil_star_extent
   
 
   ! ---------------------------------------------------------
-  subroutine stencil_star_get_lapl(dim, order, stencil)
-    integer, intent(in)  :: dim
-    integer, intent(in)  :: order
-    integer, intent(out) :: stencil(:,:)
+  subroutine stencil_star_get_lapl(this, dim, order)
+    type(stencil_t), intent(out) :: this
+    integer,         intent(in)  :: dim
+    integer,         intent(in)  :: order
 
-    integer :: i, j, n
+    integer :: ii, jj, nn
 
     call push_sub('stencil_star.stencil_star_get_lapl')
 
-    stencil(:,:) = 0
-    n = 1
-    do i = 1, dim
-      do j = -order, order
-        if(j == 0) cycle
-        n = n + 1
-        stencil(i, n) = j
+    call stencil_allocate(this, stencil_star_size_lapl(dim, order))
+
+    nn = 1
+    do ii = 1, dim
+      do jj = -order, order
+        if(jj == 0) cycle
+        nn = nn + 1
+        this%points(ii, nn) = jj
       end do
     end do
+
+    call stencil_init_center(this)
 
     call pop_sub()
   end subroutine stencil_star_get_lapl
@@ -175,21 +173,24 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine stencil_star_get_grad(dir, order, stencil)
+  subroutine stencil_star_get_grad(this, dir, order)
+    type(stencil_t), intent(out) :: this
     integer, intent(in)  :: dir
     integer, intent(in)  :: order
-    integer, intent(out) :: stencil(:,:)
 
     integer :: i, n
 
     call push_sub('stencil_star.stencil_star_get_grad')
 
-    stencil(:,:) = 0
+    call stencil_allocate(this, stencil_star_size_grad(order))
+
     n = 1
     do i = -order, order
-      stencil(dir, n) = i
+      this%points(dir, n) = i
       n = n + 1
     end do
+
+    call stencil_init_center(this)
 
     call pop_sub()
   end subroutine stencil_star_get_grad
