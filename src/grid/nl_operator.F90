@@ -1045,6 +1045,8 @@ contains
       nullify(op%rimap_inv)
     end if
 
+    call stencil_end(op%stencil)
+
     call pop_sub()
   end subroutine nl_operator_end
 

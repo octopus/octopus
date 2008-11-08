@@ -106,7 +106,8 @@ contains
     ! multigrid) and the laplacian.
     call stencil_cube_get_lapl(cube, gr%sb%dim, order = 1)
     call stencil_union(gr%sb%dim, cube, gr%der%lapl%stencil, gr%stencil)
-      
+    call stencil_end(cube)
+    
     call mesh_init_stage_2(gr%sb, gr%m, geo, gr%cv, gr%stencil)
 
     call pop_sub()
