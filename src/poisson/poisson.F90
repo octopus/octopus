@@ -157,12 +157,26 @@ contains
 
     !-----------------------------------------------------------------
     subroutine init_2D()
+      integer :: default_solver
       call push_sub('poisson.init_2D')
 
+      if (gr%sb%periodic_dim > 0) then 
+        default_solver = gr%sb%periodic_dim
+      else
+        default_solver = FFT_SPH
+      end if
+
       call loct_parse_int(check_inp('PoissonSolver'), gr%sb%periodic_dim, poisson_solver)
-      if( (poisson_solver .ne. FFT_SPH) .and. (poisson_solver .ne. DIRECT_SUM_2D) ) then
+      if( (poisson_solver .ne. FFT_SPH)         .and. &
+          (poisson_solver .ne. DIRECT_SUM_2D)   .and. &
+          (poisson_solver .ne. 1)               .and. &
+          (poisson_solver .ne. 2)               .and. &
+          (poisson_solver .ne. 3)                       ) then
         call input_error('PoissonSolver')
       end if
+
+      ! In 2D, periodic in two dimensions means no cut-off at all.
+      if(poisson_solver .eq. 2) poisson_solver = 3
 
       if(gr%m%use_curvlinear .and. (poisson_solver .ne. -NDIM) ) then
         message(1) = 'If curvilinear coordinates are used in 2D, then the only working'

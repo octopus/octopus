@@ -23,9 +23,8 @@ subroutine poisson2D_init(gr)
 
   call push_sub('poisson2D.poisson2D_init')
 
-
-  ASSERT(poisson_solver == FFT_SPH .or. poisson_solver == DIRECT_SUM_2D)
-  if (poisson_solver == FFT_SPH) call poisson_fft_build_2d(gr, poisson_solver)
+  if (poisson_solver >= FFT_SPH .and. poisson_solver <= 3) &
+    call poisson_fft_build_2d(gr, poisson_solver)
 
   call pop_sub()
 
