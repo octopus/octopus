@@ -105,7 +105,7 @@ contains
 
     ALLOCATE(r1(1:mesh1%np), mesh1%np)
     ALLOCATE(d1(1:mesh1%np_part), mesh1%np_part)
-    ALLOCATE(q1(1:mesh1%np), mesh1%np)
+    ALLOCATE(q1(1:mesh1%np_part), mesh1%np)
 
     ALLOCATE(r2(1:mesh2%np), mesh2%np)
     ALLOCATE(d2(1:mesh2%np_part), mesh2%np_part)

@@ -418,7 +418,7 @@ subroutine X(set_bc)(der, f)
   call push_sub('derivatives_inc.Xset_bc')
   call profiling_in(set_bc_prof, 'SET_BC')
   
-  ASSERT(ubound(f, DIM=1) == der%m%np_part)
+  ASSERT(ubound(f, DIM=1) >= der%m%np_part)
 
   p = der%m%vp%partno
    

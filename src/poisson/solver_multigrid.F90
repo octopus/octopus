@@ -41,9 +41,7 @@ module poisson_multigrid_m
   integer, parameter ::       &
     GAUSS_SEIDEL        = 1,  &
     GAUSS_JACOBI        = 2,  &
-    GAUSS_JACOBI2       = 3,  &
-    CONJUGATE_GRADIENTS = 5
-
+    GAUSS_JACOBI2       = 3
 
   private
   public ::                   &
@@ -74,12 +72,13 @@ contains
   ! ---------------------------------------------------------
   subroutine poisson_multigrid_init(this, m, ml, thr)
     type(mg_solver_t), intent(inout) :: this
-    type(mesh_t), intent(inout) :: m
-    integer, intent(in) :: ml
-    FLOAT, intent(in)   :: thr
+    type(mesh_t),      intent(inout) :: m
+    integer,           intent(in)    :: ml
+    FLOAT,             intent(in)    :: thr
 
     call push_sub('poisson_multigrid.poisson_multigrid_init')
     call poisson_corrections_init(this%corrector, ml, m)
+
     this%threshold = thr
 
     !%Variable PoissonSolverMGPresmoothingSteps
@@ -142,8 +141,6 @@ contains
     !% Gauss-Jacobi
     !%Option gauss_jacobi2 3
     !% Alternative implementation of Gauss-Jacobi.
-    !%Option cg 5
-    !% Conjugate-gradients
     !%End
     if ( m%use_curvlinear ) then
       call loct_parse_int(check_inp('PoissonSolverMGRelaxationMethod'), GAUSS_JACOBI, this%relaxation_method)
@@ -165,7 +162,7 @@ contains
     !% overrelaxation does nos help in a multigrid scheme.
     !%End
     if ( this%relaxation_method == GAUSS_JACOBI) then
-      call loct_parse_float(check_inp('PoissonSolverMGRelaxationFactor'), CNST(0.5), this%relax_factor )
+      call loct_parse_float(check_inp('PoissonSolverMGRelaxationFactor'), CNST(0.6666), this%relax_factor )
     else
       call loct_parse_float(check_inp('PoissonSolverMGRelaxationFactor'), M_ONE, this%relax_factor)
     end if
@@ -188,13 +185,12 @@ contains
 
   ! ---------------------------------------------------------
   subroutine poisson_multigrid_solver(this, gr, pot, rho)
-    type(mg_solver_t), intent(in) :: this
+    type(mg_solver_t), intent(in)    :: this
+    type(grid_t),      intent(inout) :: gr
+    FLOAT,             intent(inout) :: pot(:)
+    FLOAT,             intent(in)    :: rho(:)
 
-    type(grid_t), intent(inout) :: gr
-    FLOAT, intent(inout) :: pot(:)
-    FLOAT, intent(in)    :: rho(:)
-
-    integer :: l, cl, t, np, curr_l
+    integer :: lev, cl, t, np, curr_l, ip
     FLOAT :: res, fmg_threshold = CNST(0.1)
     FLOAT, allocatable :: vh_correction(:)
 
@@ -207,6 +203,7 @@ contains
 
     ! correction for treating boundaries
     ALLOCATE(vh_correction(gr%m%np), gr%m%np)
+
     call gridhier_init(phi, gr%mgrid, add_points_for_boundaries=.true.)
     call gridhier_init(phi_ini, gr%mgrid, add_points_for_boundaries=.false.)
     call gridhier_init(tau, gr%mgrid, add_points_for_boundaries=.true.)
@@ -215,7 +212,7 @@ contains
     call correct_rho(this%corrector, gr%m, rho, tau%level(0)%p, vh_correction)
     call lalg_scal(NP, -M_FOUR*M_PI, tau%level(0)%p)
 
-    phi%level(0)%p(1:NP) = pot(1:NP) - vh_correction(1:NP)
+    forall (ip = 1:NP) phi%level(0)%p(ip) = pot(ip) - vh_correction(ip)
 
     cl = gr%mgrid%n_levels
 
@@ -237,16 +234,16 @@ contains
       if(res < this%threshold) then
         if(curr_l > 0 ) then
           call dmultigrid_coarse2fine(gr%mgrid%level(curr_l), phi%level(curr_l)%p, phi%level(curr_l-1)%p)
-          curr_l = curr_l-1
+          curr_l = curr_l - 1
         else
           exit
         end if
       end if
 
       if(0 == t .and. res > fmg_threshold) then
-        curr_l = max(cl-1, 0)
-        do l= 0, curr_l - 1
-          call dmultigrid_fine2coarse(gr%mgrid, l+1, tau%level(l)%p, tau%level(l+1)%p, this%restriction_method)
+        curr_l = max(cl - 1, 0)
+        do lev = 0, curr_l - 1
+          call dmultigrid_fine2coarse(gr%mgrid, lev + 1, tau%level(lev)%p, tau%level(lev + 1)%p, this%restriction_method)
         end do
       end  if
 
@@ -258,7 +255,8 @@ contains
       call write_warning(2)
     end if
 
-    pot(1:gr%m%np) = phi%level(0)%p(1:gr%m%np) + vh_correction(1:gr%m%np)
+    forall (ip = 1:NP) pot(ip) = phi%level(0)%p(ip) + vh_correction(ip)
+
     deallocate(vh_correction)
 
     call gridhier_end(phi, gr%mgrid)
@@ -271,17 +269,23 @@ contains
   contains
 
     ! ---------------------------------------------------------
-    FLOAT function residue(l, phi, rho, tmp) result(res)
-      integer, intent(in) :: l
-      FLOAT, pointer  :: phi(:)
-      FLOAT, pointer  :: rho(:)
-      FLOAT, pointer  :: tmp(:)
+    FLOAT function residue(level, phi, rho, tmp) result(res)
+      integer, intent(in)    :: level
+      FLOAT,   intent(inout) :: phi(:)
+      FLOAT,   intent(in)    :: rho(:)
+      FLOAT,   intent(inout) :: tmp(:)
+
       type(mesh_t), pointer :: m
+      integer :: ip
+
       call push_sub('poisson_multigrid.residue')
 
-      m => gr%mgrid%level(l)%m
-      call dderivatives_lapl(gr%mgrid%level(l)%der, phi, tmp)
-      tmp(1:m%np) = tmp(1:m%np) - rho(1:m%np)
+      m => gr%mgrid%level(level)%m
+
+      call dderivatives_lapl(gr%mgrid%level(level)%der, phi, tmp)
+
+      forall (ip = 1:m%np) tmp(ip) = tmp(ip) - rho(ip)
+
       res = dmf_nrm2(m, tmp)
 
       call pop_sub()
@@ -291,6 +295,8 @@ contains
     subroutine vcycle_fas(fl)
       integer, intent(in) :: fl
 
+      integer :: l
+
       call push_sub('poisson_multigrid.vcycle_fas')
 
       do l = fl, cl
@@ -299,7 +305,7 @@ contains
         phi_ini%level(l)%p(1:np) = phi%level(l)%p(1:np)
 
         ! presmoothing
-        call multigrid_relax(this, gr,gr%mgrid%level(l)%m,gr%mgrid%level(l)%der, &
+        call multigrid_relax(this, gr%mgrid%level(l)%m, gr%mgrid%level(l)%der, &
           phi%level(l)%p, tau%level(l)%p , this%presteps)
 
         if (l /= cl ) then
@@ -323,7 +329,7 @@ contains
       do l = cl, fl, -1
        
         ! postsmoothing
-        call multigrid_relax(this, gr, gr%mgrid%level(l)%m, gr%mgrid%level(l)%der, &
+        call multigrid_relax(this, gr%mgrid%level(l)%m, gr%mgrid%level(l)%der, &
           phi%level(l)%p, tau%level(l)%p , this%poststeps)
 
         if(l /= fl) then
@@ -345,18 +351,16 @@ contains
   end subroutine poisson_multigrid_solver
 
   ! ---------------------------------------------------------
-  subroutine multigrid_relax(this, gr, m, der, pot, rho, steps)
-    type(mg_solver_t), intent(in) :: this
-
-    type(grid_t),          intent(in)    :: gr
-    type(mesh_t),  target, intent(in)    :: m
-    type(derivatives_t), target, intent(inout) :: der
-    FLOAT,            intent(inout) :: pot(:)  ! pot(m%np)
-    FLOAT,            intent(in)    :: rho(:)  ! rho(m%np)
-    integer,          intent(in)    :: steps
+  subroutine multigrid_relax(this, m, der, pot, rho, steps)
+    type(mg_solver_t),   intent(in)    :: this
+    type(mesh_t),        intent(in)    :: m
+    type(derivatives_t), intent(inout) :: der
+    FLOAT,               intent(inout) :: pot(:)
+    FLOAT,               intent(in)    :: rho(:)
+    integer,             intent(in)    :: steps
 
     integer :: t
-    integer :: i, n, iter
+    integer :: i, n
     FLOAT   :: point_lap, factor
     FLOAT, allocatable :: w(:), lpot(:), ldiag(:)
 
@@ -374,7 +378,7 @@ contains
 
       factor = CNST(-1.0)/der%lapl%w_re(der%lapl%stencil%center, 1)*this%relax_factor
 
-      n=der%lapl%stencil%size
+      n = der%lapl%stencil%size
 
       ALLOCATE(w(1:n), n)
       
@@ -399,27 +403,19 @@ contains
 
     case(GAUSS_JACOBI)
 
-      ALLOCATE(lpot(1:m%np_part), m%np_part)
+      ALLOCATE(lpot(1:m%np), m%np_part)
       ALLOCATE(ldiag(1:m%np), m%np)
 
-      call derivatives_lapl_diag(gr%der, ldiag)
+      call derivatives_lapl_diag(der, ldiag)
 
-      do t=1,steps
+      do t = 1, steps
         call dderivatives_lapl(der, pot, lpot)
-        pot(1:m%np)=pot(1:m%np) - this%relax_factor/ldiag(1:m%np)*(lpot(1:m%np)-rho(1:m%np)) 
+        pot(1:m%np) = pot(1:m%np) - this%relax_factor/ldiag(1:m%np)*(lpot(1:m%np) - rho(1:m%np)) 
       end do
 
       deallocate(ldiag)
       deallocate(lpot)
       
-
-    case(CONJUGATE_GRADIENTS)
-      iter = steps
-      mesh_pointer => m ; der_pointer => der
-      call dconjugate_gradients(m%np, pot(1:m%np), rho(1:m%np), &
-        internal_laplacian_op, internal_dotp, iter, threshold=CNST(1.0e-12))
-      nullify(mesh_pointer) ; nullify(der_pointer)
-
     end select
 
     call pop_sub()
