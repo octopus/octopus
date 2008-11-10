@@ -75,8 +75,8 @@ contains
     this%nbmax(1:pd) = int((this%pos_chi(1:pd) + range)/sb%lsize(1:pd) + 0.5)
 
     !there are no copies in non-periodic directions
-    this%nbmin(pd + 1:sb%dim) = 0
-    this%nbmax(pd + 1:sb%dim) = 0
+    this%nbmin(pd + 1:MAX_DIM) = 0
+    this%nbmax(pd + 1:MAX_DIM) = 0
 
   end subroutine periodic_copy_init
 
