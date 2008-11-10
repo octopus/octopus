@@ -224,8 +224,8 @@ subroutine states_choose_kpoints(d, sb, geo)
     ALLOCATE(d%kpoints(3, d%nik), 3*d%nik)
     ALLOCATE(d%kweights  (d%nik),   d%nik)
     do i = 1,3
-      d%kpoints(i,::2)  = kp(i, nk)*sb%klattice(i,i)
-      d%kpoints(i,2::2) = kp(i, nk)*sb%klattice(i,i)
+      d%kpoints(i,::2)  = kp(i, 1:nk)*sb%klattice(i,i)
+      d%kpoints(i,2::2) = kp(i, 1:nk)*sb%klattice(i,i)
     end do
     d%kweights(::2)  = kw(1:nk)
     d%kweights(2::2) = kw(1:nk)
