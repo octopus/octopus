@@ -137,7 +137,7 @@ contains
 
     ! build density ...
     select case (s%type)
-    case (SPEC_USDEF, SPEC_ALL_E, SPEC_PS_CPI, SPEC_PS_FHI) ! ... from userdef
+    case (SPEC_USDEF, SPEC_ALL_E, SPEC_CHARGE_DENSITY, SPEC_PS_CPI, SPEC_PS_FHI) ! ... from userdef
       do i = 1, spin_channels
         rho(1:m%np, i) = M_ONE
         x = (real(s%z_val, REAL_PRECISION)/real(spin_channels, REAL_PRECISION)) / dmf_integrate(m, rho(:, i))
@@ -449,9 +449,9 @@ contains
 
     type(root_solver_t) :: rs
     logical :: conv
-    integer :: dim
+    integer :: dim, i
     FLOAT   :: x(1:MAX_DIM+1), chi0(MAX_DIM), startval(MAX_DIM + 1)
-    FLOAT   :: delta, alpha, beta
+    FLOAT   :: delta, alpha, beta, xx(MAX_DIM), r, imrho, rerho
     integer :: icell
     type(periodic_copy_t) :: pp
 
@@ -466,7 +466,7 @@ contains
         call dmf_put_radial_spline(gr%m, s%ps%nlr, periodic_copy_position(pp, gr%sb, icell), rho, add = .true.)
       end do
       call periodic_copy_end(pp)
-
+      
     case(SPEC_ALL_E)
 
       ! --------------------------------------------------------------
@@ -515,6 +515,22 @@ contains
 
       nullify(m_p)
       deallocate(grho_p, rho_p)
+
+    case(SPEC_CHARGE_DENSITY)
+
+      call periodic_copy_init(pp, gr%sb, pos, range = M_FOUR * maxval(gr%sb%lsize(1:gr%sb%dim)))
+      do i = 1, gr%m%np
+        rho(i) = M_ZERO
+        do icell = 1, periodic_copy_num(pp)
+          call mesh_r(gr%m, i, r, x = xx, a = pos)
+          xx = xx + periodic_copy_position(pp, gr%sb, icell)
+          r = sqrt(dot_product(xx(1:gr%sb%dim), xx(1:gr%sb%dim)))
+          call loct_parse_expression(rerho, imrho, xx(1), xx(2), xx(3), r, M_ZERO, trim(s%rho))
+          rho(i) = rho(i) - rerho
+        end do
+      end do
+      call periodic_copy_end(pp)
+
     end select
 
     call pop_sub()
@@ -652,7 +668,7 @@ contains
         end do
         call spline_eval_vec(s%ps%vlr_sq, mesh%np, vl)
         
-      case(SPEC_ALL_E)
+      case(SPEC_ALL_E, SPEC_CHARGE_DENSITY)
         vl(1:mesh%np) = M_ZERO
         
       end select

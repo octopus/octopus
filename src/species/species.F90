@@ -55,6 +55,7 @@ module species_m
     SPEC_POINT  = 2,            & ! point charge: jellium sphere of radius 0.5 a.u.
     SPEC_JELLI  = 3,            & ! jellium sphere.
     SPEC_ALL_E  = 124,          & ! all-electron atom
+    SPEC_CHARGE_DENSITY = 125,  &
     SPEC_PS_PSF = PS_TYPE_PSF,  & ! SIESTA pseudopotential
     SPEC_PS_HGH = PS_TYPE_HGH,  & ! HGH pseudopotential
     SPEC_PS_CPI = PS_TYPE_CPI,  & ! FHI pseudopotential (cpi format)
@@ -86,6 +87,9 @@ module species_m
 
     ! If we have an all-electron atom:
     FLOAT :: sigma
+
+    ! If we have a charge distribution creating the potential:
+    character(len=200) :: rho
 
     ! the default values for the spacing and atomic radius
     FLOAT :: def_rsize, def_h
@@ -253,6 +257,8 @@ contains
     !% atomic number. See the documentation of the variable 
     !% SpeciesAllElectronSigma.
     !% WARNING: Currently you can not use LCAO with this species.
+    !%Option spec_charge_density 125
+    !% The potential is created by a distribution of charge.
     !%End
 
     call obsolete_variable('SpecieAllElectronSigma', 'SpeciesAllElectronSigma')
@@ -409,6 +415,12 @@ contains
       s%Z_val = s%Z
       read_data = 4
 
+    case(SPEC_CHARGE_DENSITY)
+      call loct_parse_block_float(blk, row, 3, s%Z)
+      call loct_parse_block_string(blk, row, 4, s%rho)
+      s%Z_val = s%Z
+      read_data = 5
+
     case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF) ! a pseudopotential file
       n = loct_parse_block_cols(blk, row)
 
@@ -499,7 +511,7 @@ contains
         end if
         call write_info(2)
       end if
-      s%niwfs = 2*s%z_val
+      s%niwfs = int(max(2*s%z_val, CNST(1.0)))
       call loct_parse_expression(pot_re, pot_im, CNST(0.01), M_ZERO,   &
         M_ZERO, CNST(0.01), M_ZERO, s%user_def)
       s%omega = sqrt( abs(M_TWO / CNST(1.0e-4) * pot_re ))
@@ -527,6 +539,16 @@ contains
         write(message(3),'(a)')  '   Potential will be calulated solving poisson equation'
         write(message(4),'(a)')  '   for a delta density distribution.'
         call write_info(4)
+      end if
+
+    case(SPEC_CHARGE_DENSITY)
+      s%niwfs = int(max(2*s%z_val, CNST(1.0)))
+      s%has_density = .true.
+      if(print_info_) then
+        write(message(1),'(a,a,a)')    'Species "',trim(s%label),'" is a distribution of charge:'
+        write(message(2),'(a,a)')      '   rho = ', trim(s%rho)
+        write(message(3),'(a,f11.6)')  '   Z = ', s%z_val
+        call write_info(3)
       end if
     end select
 
