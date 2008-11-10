@@ -29,6 +29,7 @@ module eigensolver_m
   use hamiltonian_m
   use lalg_adv_m
   use lalg_basic_m
+  use loct_m
   use loct_parser_m
   use varinfo_m
   use math_m
@@ -294,6 +295,10 @@ contains
         end if
       end if
 
+      if(mpi_grp_is_root(mpi_world) .and. eigensolver_has_progress_bar(eigens)) then
+        call loct_progress_bar(-1, st%nst*st%d%nik)
+      end if
+
       if (st%wfs_type == M_REAL) then
 
         select case(eigens%es_type)
@@ -317,7 +322,7 @@ contains
                eigens%converged(ik), ik, eigens%diff(:, ik), h%d%block_size)
         end select
 
-        if(eigens%es_type /= RS_RMMDIIS) call dsubspace_diag(gr, st, h, ik, eigens%diff(:, ik))
+        call dsubspace_diag(gr, st, h, ik, eigens%diff(:, ik))
 
       else
 
@@ -343,12 +348,16 @@ contains
                eigens%converged(ik), ik, eigens%diff(:, ik), h%d%block_size)
         end select
 
-        if(eigens%es_type /= RS_RMMDIIS) call zsubspace_diag(gr, st, h, ik, eigens%diff(:, ik))
+        call zsubspace_diag(gr, st, h, ik, eigens%diff(:, ik))
 
       end if
 
       eigens%matvec = eigens%matvec + maxiter
     end do ik_loop
+
+    if(mpi_grp_is_root(mpi_world) .and. eigensolver_has_progress_bar(eigens)) then
+      write(stdout, '(1x)')
+    end if
 
     if(present(conv)) conv = all(eigens%converged(st%d%kpt%start:st%d%kpt%end) == st%nst)
 
@@ -375,6 +384,18 @@ contains
     
   end function eigensolver_parallel_in_states
     
+  logical function eigensolver_has_progress_bar(this) result(has)
+    type(eigensolver_t), intent(in) :: this
+
+    has = .false.
+
+    select case(this%es_type)
+    case(RS_RMMDIIS, RS_CG, RS_CG_NEW)
+      has = .true.
+    end select
+
+  end function eigensolver_has_progress_bar
+  
 #include "undef.F90"
 #include "real.F90"
 #include "eigen_mg_inc.F90"

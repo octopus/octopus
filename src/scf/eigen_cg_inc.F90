@@ -241,6 +241,10 @@ subroutine X(eigensolver_cg2) (gr, st, h, pre, tol, niter, converged, ik, diff, 
       diff(p) = res
     end if
 
+    if(mpi_grp_is_root(mpi_world)) then
+      call loct_progress_bar(st%d%nik*ik +  p - 1, st%nst*st%d%nik)
+    end if
+
   end do eigenfunction_loop
 
   ! Deallocation of variables
@@ -432,6 +436,10 @@ subroutine X(eigensolver_cg2_new) (gr, st, h, tol, niter, converged, ik, diff, v
         write(message(1),'(a,a,i5,a,e8.2,a)') trim(message(2))," not converged. Iterations:", i, '   [Res = ',res,']'
       end if
       call write_info(1)
+    end if
+
+    if(mpi_grp_is_root(mpi_world)) then
+      call loct_progress_bar(st%d%nik*ik +  ist - 1, st%nst*st%d%nik)
     end if
 
   end do states

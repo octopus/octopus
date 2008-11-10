@@ -194,6 +194,9 @@ subroutine X(eigensolver_rmmdiis) (gr, st, h, pre, tol, niter, converged, ik, di
 
     end do
 
+    if(mpi_grp_is_root(mpi_world)) then
+      call loct_progress_bar(st%d%nik*ik +  psi_end - 1, st%nst*st%d%nik)
+    end if
   end do
 
 #if defined(HAVE_MPI)
