@@ -535,10 +535,9 @@ subroutine X(states_linear_combination)(st, mesh, transf, psi)
   R_TYPE,              intent(in)    :: transf(:, :)
   R_TYPE,              intent(inout) :: psi(:, :, :)
   
-  R_TYPE, allocatable :: psiold(:)
+  R_TYPE, allocatable :: psinew(:, :)
   
-  R_TYPE :: aa
-  integer :: ist, jst, ip, idim
+  integer :: ist, idim, block_size, size, sp
   type(profile_t), save :: prof
 
   call profiling_in(prof, "STATES_ROTATE")
@@ -547,28 +546,31 @@ subroutine X(states_linear_combination)(st, mesh, transf, psi)
   ASSERT(.not. st%parallel_in_states)
 #endif
 
-  ALLOCATE(psiold(st%st_start:st%st_end), st%lnst)
+  block_size = hardware%X(block_size)
+
+  ALLOCATE(psinew(block_size, 1:st%nst), block_size*st%nst)
   
-  do ip = 1, mesh%np
+  do sp = 1, mesh%np, block_size
+    size = min(block_size, mesh%np - sp + 1)
+
     do idim = 1, st%d%dim
-
-      forall (ist = st%st_start:st%st_end) psiold(ist) = psi(ip, idim, ist)
-
-      do ist = st%st_start, st%st_end
-        aa = M_ZERO
-        do jst = st%st_start, st%st_end
-          aa = aa + transf(jst, ist)*psiold(jst)
-        end do
-        psi(ip, idim, ist) = aa
-      end do
       
+      call blas_gemm('N', 'N', &
+           size, st%nst, st%nst, &
+           R_TOTYPE(M_ONE), psi(sp, idim, st%st_start), mesh%np_part*st%d%dim, &
+           transf(1, 1), st%nst, &
+           R_TOTYPE(M_ZERO), psinew(1, 1), block_size)
+      
+      do ist = 1, st%nst
+        call blas_copy(size, psinew(1, ist), 1, psi(sp, idim, ist), 1)
+      end do
+     
     end do
+
   end do
 
-  call profiling_count_operations((R_ADD + R_MUL)*dble(mesh%np)*st%d%dim*st%lnst**2)
+  call profiling_count_operations((R_ADD + R_MUL)*dble(mesh%np)*st%d%dim*st%nst**2)
 
-  deallocate(psiold)
-  
   call profiling_out(prof)
 
 end subroutine X(states_linear_combination)
