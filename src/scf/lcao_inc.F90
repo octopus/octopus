@@ -94,7 +94,7 @@ subroutine X(lcao_wf) (this, st, gr, geo, h, start)
   type(hamiltonian_t), intent(in)    :: h
   integer,             intent(in)    :: start
 
-  integer :: nst, ik, n1, n2, idim, lcao_start
+  integer :: nst, ik, n1, n2, idim, lcao_start, ie, max
   R_TYPE, allocatable :: hpsi(:, :, :), overlap(:, :, :)
   FLOAT, allocatable :: ev(:)
   R_TYPE, allocatable :: hamilt(:, :, :), lcaopsi(:, :, :), lcaopsi2(:, :)
@@ -120,8 +120,15 @@ subroutine X(lcao_wf) (this, st, gr, geo, h, start)
   ALLOCATE(hamilt(this%norbs, this%norbs, kstart:kend), this%norbs**2*st%d%kpt%nlocal)
   ALLOCATE(overlap(this%norbs, this%norbs, st%d%spin_channels), this%norbs**2*st%d%spin_channels)
 
-
   call init_orbitals()
+
+  ie = 0
+  max = this%norbs*(this%norbs + 1)/2
+
+  message(1) = "Info: Getting hamiltonian matrix elements"
+  call write_info(1)
+
+  if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, max)
 
   do n1 = 1, this%norbs
     
@@ -147,8 +154,14 @@ subroutine X(lcao_wf) (this, st, gr, geo, h, start)
           hamilt(n2, n1, ik) = R_CONJ(hamilt(n1, n2, ik))
         end do
       end do
+      
+      ie = ie + 1
     end do
+
+    if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ie, max)
   end do
+
+  if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
 
   deallocate(hpsi)
 

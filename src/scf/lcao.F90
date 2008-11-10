@@ -29,7 +29,9 @@ module lcao_m
   use hamiltonian_m
   use lalg_adv_m
   use lalg_basic_m
+  use loct_m
   use loct_parser_m
+  use mpi_m
   use mesh_m
   use mesh_function_m
   use messages_m
