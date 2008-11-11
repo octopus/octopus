@@ -20,6 +20,7 @@
 #include "global.h"
 
 module subspace_m
+  use batch_m
   use datasets_m
   use global_m
   use grid_m

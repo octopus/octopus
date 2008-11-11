@@ -26,10 +26,11 @@ subroutine X(subspace_diag)(gr, st, h, ik, diff)
   integer,             intent(in)    :: ik
   FLOAT, optional,     intent(out)   :: diff(:)
 
-  R_TYPE, allocatable :: h_subspace(:, :), vec(:, :), f(:, :)
-  integer             :: ist, jst
+  R_TYPE, allocatable :: h_subspace(:, :), vec(:, :), f(:, :, :)
+  integer             :: ist, ist2, jst, size
   FLOAT               :: nrm2
   type(profile_t),     save    :: diagon_prof
+  type(batch_t) :: psib, hpsib
 
   call push_sub('eigen_inc.Xeigen_diagon_subspace')
   call profiling_in(diagon_prof, "SUBSPACE_DIAG")
@@ -46,17 +47,28 @@ subroutine X(subspace_diag)(gr, st, h, ik, diff)
 
     ALLOCATE(h_subspace(st%nst, st%nst), st%nst*st%nst)
     ALLOCATE(vec(st%nst, st%nst), st%nst*st%nst)
-    ALLOCATE(f(NP, st%d%dim), NP*st%d%dim)
+    ALLOCATE(f(NP, st%d%dim, st%d%block_size), NP*st%d%dim*st%d%block_size)
 
     ! Calculate the matrix representation of the Hamiltonian in the subspace <psi|H|psi>.
-    do ist = st%st_start, st%st_end
-      call X(hpsi)(h, gr, st%X(psi)(:, :, ist, ik), f, ist, ik)
-      do jst = ist, st%st_end
-        h_subspace(ist, jst) = X(mf_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, jst, ik), f)
-        h_subspace(jst, ist) = R_CONJ(h_subspace(ist, jst))
-      end do
-    end do
+    do ist = st%st_start, st%st_end, st%d%block_size
+      size = min(st%d%block_size, st%st_end - ist + 1)
 
+      call batch_init(psib, h%d%dim, ist, ist + size - 1, st%X(psi)(:, :, ist:, ik))
+      call batch_init(hpsib, h%d%dim, ist, ist + size - 1, f)
+
+      call X(hpsi_batch)(h, gr, psib, hpsib, ik)
+
+      call batch_end(psib)
+      call batch_end(hpsib)
+
+      do ist2 = 1, size
+        do jst = ist + ist2 - 1, st%st_end
+          h_subspace(ist + ist2 - 1, jst) = X(mf_dotp)(gr%m, st%d%dim, st%X(psi)(:,:, jst, ik), f(:, :, ist2))
+          h_subspace(jst, ist + ist2 - 1) = R_CONJ(h_subspace(ist + ist2 - 1, jst))
+        end do
+      end do
+
+    end do
 
     ! Diagonalize the hamiltonian in the subspace.
     call lalg_eigensolve(st%nst, h_subspace, vec, st%eigenval(:, ik))
@@ -74,8 +86,8 @@ subroutine X(subspace_diag)(gr, st, h, ik, diff)
     ! Recalculate the residues if requested by the diff argument.
     if(present(diff)) then 
       do ist = st%st_start, st%st_end
-        call X(Hpsi)(h, gr, st%X(psi)(:, :, ist, ik) , f, ist, ik)
-        diff(ist) = X(states_residue)(gr%m, st%d%dim, f, st%eigenval(ist, ik), st%X(psi)(:, :, ist, ik))
+        call X(Hpsi)(h, gr, st%X(psi)(:, :, ist, ik) , f(:, :, 1), ist, ik)
+        diff(ist) = X(states_residue)(gr%m, st%d%dim, f(:, :, 1), st%eigenval(ist, ik), st%X(psi)(:, :, ist, ik))
       end do
     end if
 
