@@ -89,7 +89,7 @@ contains
     FLOAT :: step
 
     R_TYPE, allocatable :: d0(:), q0(:)
-    R_TYPE, allocatable :: r1(:), d1(:), q1(:)
+    R_TYPE, allocatable :: r1(:), d1(:), q1(:), t1(:)
     R_TYPE, allocatable :: r2(:), d2(:), q2(:)
 
     type(mesh_t), pointer :: mesh0, mesh1, mesh2
@@ -105,7 +105,8 @@ contains
 
     ALLOCATE(r1(1:mesh1%np), mesh1%np)
     ALLOCATE(d1(1:mesh1%np_part), mesh1%np_part)
-    ALLOCATE(q1(1:mesh1%np_part), mesh1%np)
+    ALLOCATE(q1(1:mesh1%np_part), mesh1%np_part)
+    ALLOCATE(t1(1:mesh1%np_part), mesh1%np_part)
 
     ALLOCATE(r2(1:mesh2%np), mesh2%np)
     ALLOCATE(d2(1:mesh2%np_part), mesh2%np_part)
@@ -151,9 +152,12 @@ contains
 
       ! back to level 1
 
-      call X(multigrid_coarse2fine)(gr%mgrid%level(2), d2, q1)
+      call X(multigrid_coarse2fine)(gr%mgrid%level(2), d2, t1)
 
-      forall (ip = 1:mesh1%np) d1(ip) = d1(ip) - q1(ip)
+      forall (ip = 1:mesh1%np) 
+        q1(ip) = q1(ip) + t1(ip)
+        d1(ip) = d1(ip) - q1(ip)
+      end forall
 
       call X(derivatives_lapl)(gr%mgrid%level(1)%der, d1, q1)
 
