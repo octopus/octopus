@@ -62,8 +62,6 @@ subroutine X(eigensolver_rmmdiis) (gr, st, h, pre, tol, niter, converged, ik, di
   ALLOCATE(conv(st%st_start:st%st_end), st%lnst)
   conv = .false.
 
-  call X(subspace_diag)(gr, st, h, ik, diff)
-
   ntimes = 1
   niter = 0
 

@@ -25,5 +25,5 @@ match ; Force        ; GREP(static/info, 'Forces on the ions', 20, 2) ; 0.008845
 
 Input: 12-forces.03-N2_gs.inp
 match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -19.45292278
-match ; Force        ; GREP(static/info, 'Forces on the ions', 20, 2) ; -2.663544
+match ; Force        ; GREP(static/info, 'Forces on the ions', 20, 2) ; -2.663750
 

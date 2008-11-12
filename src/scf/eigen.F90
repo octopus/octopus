@@ -256,7 +256,7 @@ contains
     logical,    optional, intent(in)    :: verbose
 
     logical :: verbose_
-    integer :: maxiter, ik, ns
+    integer :: maxiter, ik, ns, ist
     FLOAT :: tol
 #ifdef HAVE_MPI
     logical :: conv_reduced
@@ -294,12 +294,20 @@ contains
           call write_info(1)
         end if
       end if
+      
+      if(eigens%converged(ik) == 0) then
+        if (wfs_are_real(st)) then
+          call dsubspace_diag(gr, st, h, ik, eigens%diff(:, ik))
+        else
+          call zsubspace_diag(gr, st, h, ik, eigens%diff(:, ik))
+        end if
+      end if
 
       if(mpi_grp_is_root(mpi_world) .and. eigensolver_has_progress_bar(eigens)) then
         call loct_progress_bar(-1, st%nst*st%d%nik)
       end if
 
-      if (st%wfs_type == M_REAL) then
+      if (wfs_are_real(st)) then
 
         select case(eigens%es_type)
         case(RS_CG_NEW)
