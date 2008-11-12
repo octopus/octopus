@@ -451,7 +451,7 @@ contains
     logical :: conv
     integer :: dim, i
     FLOAT   :: x(1:MAX_DIM+1), chi0(MAX_DIM), startval(MAX_DIM + 1)
-    FLOAT   :: delta, alpha, beta, xx(MAX_DIM), r, imrho, rerho
+    FLOAT   :: delta, alpha, beta, xx(MAX_DIM), yy(MAX_DIM), r, imrho, rerho
     integer :: icell
     type(periodic_copy_t) :: pp
 
@@ -518,17 +518,21 @@ contains
 
     case(SPEC_CHARGE_DENSITY)
 
-      call periodic_copy_init(pp, gr%sb, pos, range = M_FOUR * maxval(gr%sb%lsize(1:gr%sb%dim)))
-      do i = 1, gr%m%np
-        rho(i) = M_ZERO
-        do icell = 1, periodic_copy_num(pp)
+      call periodic_copy_init(pp, gr%sb, spread(M_ZERO, dim=1, ncopies = MAX_DIM), &
+        range = M_TWO * maxval(gr%sb%lsize(1:gr%sb%dim)))
+
+      rho = M_ZERO
+      do icell = 1, periodic_copy_num(pp)
+        yy = periodic_copy_position(pp, gr%sb, icell)
+        do i = 1, gr%m%np
           call mesh_r(gr%m, i, r, x = xx, a = pos)
-          xx = xx + periodic_copy_position(pp, gr%sb, icell)
+          xx(1:gr%sb%dim) = xx(1:gr%sb%dim) + yy(1:gr%sb%dim)
           r = sqrt(dot_product(xx(1:gr%sb%dim), xx(1:gr%sb%dim)))
           call loct_parse_expression(rerho, imrho, xx(1), xx(2), xx(3), r, M_ZERO, trim(s%rho))
           rho(i) = rho(i) - rerho
         end do
       end do
+
       call periodic_copy_end(pp)
 
     end select
