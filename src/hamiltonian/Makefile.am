@@ -35,6 +35,7 @@ libhamiltonian_a_SOURCES = \
 	ob_lead.F90
 
 noinst_HEADERS =              \
+	lasers_inc.F90        \
 	kb_projector_inc.F90  \
 	hgh_projector_inc.F90 \
 	projector_inc.F90     \

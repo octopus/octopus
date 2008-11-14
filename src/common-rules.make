@@ -114,10 +114,6 @@ SUFFIXES = _oct.f90 .F90 .o .S .s
 	@CC@ -c -o $@ $*.s
 	@rm -f $*.s
 
-# Like below but for .S -> .s
-.S.s:
-	@FCCPP@ @CPPFLAGS@ $(INCLUDES) $(DEFAULT_INCLUDES) $(AM_CPPFLAGS) $< > $*.s
-
 # Compilation is a two step process: first we preprocess F90 files
 # to generate _oct.f90 files. Then, we compiler this _oct.f90 into
 # an object file and delete the intermediate file.
