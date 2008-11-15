@@ -421,7 +421,7 @@ contains
     type(grid_t), intent(inout) :: gr
 
     FLOAT, allocatable :: rho(:), vh(:), vh_exact(:), rhop(:), x(:, :)
-    FLOAT :: alpha, beta, r, delta, norm, rnd
+    FLOAT :: alpha, beta, r, delta, norm, rnd, ralpha
     integer :: i, k, ierr, iunit, n, n_gaussians
 
     call push_sub('poisson.poisson_test')
@@ -482,8 +482,14 @@ contains
             vh_exact(i) = vh_exact(i) + (M_TWO/sqrt(M_PI))/alpha
           end if
         case(2)
-          vh_exact(i) = vh_exact(i) + beta * (M_PI)**(M_THREE*M_HALF) * alpha * exp(-r**2/(M_TWO*alpha**2)) * &
-            loct_bessel_in(0, r**2/(M_TWO*alpha**2))
+          ralpha = r**2/(M_TWO*alpha**2)
+          if(ralpha < CNST(20.0)) then
+            vh_exact(i) = vh_exact(i) + beta * (M_PI)**(M_THREE*M_HALF) * alpha * exp(-r**2/(M_TWO*alpha**2)) * &
+              loct_bessel_in(0, r**2/(M_TWO*alpha**2))
+          else
+            vh_exact(i) = vh_exact(i) + beta * (M_PI)**(M_THREE*M_HALF) * alpha * &
+                          (M_ONE/sqrt(M_TWO*M_PI*ralpha)) 
+          end if
         end select
       end do
     end do
@@ -498,12 +504,12 @@ contains
     iunit = io_open("hartree_results", action='write')
     write(iunit, '(a,f10.2)' ) 'Hartree test = ', delta
     call io_close(iunit)
-    call doutput_function (io_function_fill_how('AxisX'), ".", "poisson_test_rho.x", gr%m, gr%sb, rho, M_ONE, ierr)
-    call doutput_function (io_function_fill_how('AxisX'), ".", "poisson_test_exact.x", gr%m, gr%sb, vh_exact, M_ONE, ierr)
-    call doutput_function (io_function_fill_how('AxisX'), ".", "poisson_test_numerical.x", gr%m, gr%sb, vh, M_ONE, ierr)
-    call doutput_function (io_function_fill_how('AxisY'), ".", "poisson_test_rho.y", gr%m, gr%sb, rho, M_ONE, ierr)
-    call doutput_function (io_function_fill_how('AxisY'), ".", "poisson_test_exact.y", gr%m, gr%sb, vh_exact, M_ONE, ierr)
-    call doutput_function (io_function_fill_how('AxisY'), ".", "poisson_test_numerical.y", gr%m, gr%sb, vh, M_ONE, ierr)
+    call doutput_function (io_function_fill_how('AxisX'), ".", "poisson_test_rho", gr%m, gr%sb, rho, M_ONE, ierr)
+    call doutput_function (io_function_fill_how('AxisX'), ".", "poisson_test_exact", gr%m, gr%sb, vh_exact, M_ONE, ierr)
+    call doutput_function (io_function_fill_how('AxisX'), ".", "poisson_test_numerical", gr%m, gr%sb, vh, M_ONE, ierr)
+    call doutput_function (io_function_fill_how('AxisY'), ".", "poisson_test_rho", gr%m, gr%sb, rho, M_ONE, ierr)
+    call doutput_function (io_function_fill_how('AxisY'), ".", "poisson_test_exact", gr%m, gr%sb, vh_exact, M_ONE, ierr)
+    call doutput_function (io_function_fill_how('AxisY'), ".", "poisson_test_numerical", gr%m, gr%sb, vh, M_ONE, ierr)
 
     deallocate(rho, rhop, vh, vh_exact, x)
     call pop_sub()
