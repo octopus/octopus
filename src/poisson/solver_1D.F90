@@ -39,7 +39,7 @@ subroutine poisson1d_init(gr)
   end if
 
   if(poisson_solver.eq.FFT_SPH) then
-    call poisson_fft_build_1d(gr, poisson_solver)
+    call poisson_fft_build_1d(gr)
   end if
 
   call pop_sub()

@@ -28,6 +28,7 @@
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_sf.h>
+#include <gsl/gsl_sf_expint.h>
 #include <gsl/gsl_vector.h>
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_permutation.h>
@@ -134,6 +135,12 @@ double FC_FUNC_(oct_legendre_sphplm, OCT_LEGENDRE_SPHPLM)
 		 (int *l, int *m, double *x)
 {
   return gsl_sf_legendre_sphPlm(*l, *m, *x);
+}
+
+double FC_FUNC(oct_sine_integral, OCT_SINE_INTEGRAL)
+     (double *x)
+{
+  return gsl_sf_Si(*x);
 }
 
 

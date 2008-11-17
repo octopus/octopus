@@ -2,10 +2,13 @@
 #include <math.h>
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_sf_bessel.h>
+#include <gsl/gsl_sf_expint.h>
 #include <gsl/gsl_errno.h>
 #include <assert.h>
 
 #include <config.h>
+
+#define M_EULER_MASCHERONI 0.5772156649015328606065120
 
 struct parameters
 { 
@@ -162,4 +165,112 @@ double FC_FUNC_(c_poisson_cutoff_fin_cylinder, C_POISSON_CUTOFF_FIN_CYLINDER)
   (double *gx, double *gperp, double *xsize, double *rsize)
 {
   return poisson_finite_cylinder(*gx, *gperp, *xsize, *rsize);
+}
+
+
+static double bessel_J0(double w, void *p)
+{
+  return gsl_sf_bessel_J0(w);
+}
+
+
+/* --------------------- Interface to Fortran ---------------------- */
+double FC_FUNC_(c_poisson_cutoff_fin_2d, C_POISSON_CUTOFF_FIN_2D)
+  (double *x, double *y)
+{
+  double result, error;
+  const size_t wrk_size = 500;
+  const double epsilon_abs = 1e-3;
+  const double epsilon_rel = 1e-3;
+
+  gsl_integration_workspace * ws = gsl_integration_workspace_alloc (wrk_size);
+  gsl_function F;
+
+  F.function = &bessel_J0;
+  gsl_integration_qag(&F, *x, *y, epsilon_abs, epsilon_rel, 
+  			wrk_size, 3, ws, &result, &error);
+  return result;
+}
+
+
+struct parameters_2d_1d
+{ 
+  double gx;
+  double gy;
+  double rc; 
+}; 
+
+
+static double cutoff_2d_1d(double w, void *p)
+{
+  double k0arg, k0;
+  struct parameters_2d_1d *params = (struct parameters_2d_1d *)p;
+  double  gx = (params->gx);
+  double  gy = (params->gy);
+
+  k0arg = fabs(w*gx);
+  if(k0arg < 0.05){
+    k0 = - (log(k0arg/2) + M_EULER_MASCHERONI);
+  }
+  else if(k0arg < 50.0 ){
+    k0 = gsl_sf_bessel_K0(k0arg);
+  }else{
+    k0 = sqrt(2.0*M_PI/k0arg)*exp(-k0arg);
+  }
+  return 4.0*cos(w*gy)*k0;
+}
+
+
+
+/* Int_0^mu dy cos(a*y) log(abs(b*y)) = 
+   (1/a) * (log(|b*mu|)*sin(a*mu) - Si(a*mu) )    */
+double FC_FUNC(intcoslog, INTCOSLOG)(double *mu, double *a, double *b)
+{
+  if(fabs(*a)>0.0){
+    return (1.0/(*a)) * (log((*b)*(*mu))*sin((*a)*(*mu)) - gsl_sf_Si((*a)*(*mu)) );
+  }else{
+    return (*mu)*(log((*mu)*(*b)) - 1.0);
+  }
+}
+
+
+
+/* --------------------- Interface to Fortran ---------------------- */
+double FC_FUNC_(c_poisson_cutoff_2d_1d, C_POISSON_CUTOFF_2D_1D)
+     (double *gy, double *gx, double *rc)
+{
+  double result, error, res, b;
+  struct parameters_2d_1d params;
+  const size_t wrk_size = 5000;
+  const double epsilon_abs = 1e-3;
+  const double epsilon_rel = 1e-3;
+
+  double mu;
+  gsl_integration_workspace * ws = gsl_integration_workspace_alloc (wrk_size);
+  gsl_function F;
+
+  mu = 0.1/(*gx);
+  b  = fabs((*gx))/2.0;
+
+  params.gx = *gx;
+  params.gy = *gy;
+  params.rc = *rc;
+
+  F.function = &cutoff_2d_1d;
+  F.params = &params;
+
+  res = -4.0 * FC_FUNC_(intcoslog, INTCOSLOG)(&mu, gy, &b);
+
+  if( fabs(*gy) > 0.0) {
+    res = res - (4.0 * M_EULER_MASCHERONI / (*gy)) * sin( (*gy)*mu );
+  }else{
+    res = res - 4.0 * M_EULER_MASCHERONI * mu;
+  }
+  
+  gsl_integration_qag(&F, mu, (*rc), epsilon_abs, epsilon_rel, 
+  			wrk_size, 3, ws, &result, &error);
+  res = res + result;
+
+  gsl_integration_workspace_free (ws);
+  return res;
 }

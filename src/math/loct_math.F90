@@ -40,6 +40,7 @@ module loct_math_m
     loct_bessel_k1,          &
     loct_sph_bessel,         &
     loct_legendre_sphplm,    &
+    loct_sine_integral,      &
     loct_ran_init,           &
     loct_ran_end,            &
     loct_ran_gaussian,       &
@@ -173,6 +174,14 @@ module loct_math_m
     end function oct_legendre_sphplm
     module procedure oct_legendre_sphplm4
   end interface
+
+  interface loct_sine_integral
+    function oct_sine_integral(x)
+      real(8) :: oct_sine_integral
+      real(8) :: x
+    end function oct_sine_integral
+    module procedure oct_sine_integral4
+  end interface loct_sine_integral
 
   interface loct_ylm
     subroutine oct_ylm(n, x, y, z, l, m, ylm)
@@ -379,6 +388,12 @@ contains
 
     oct_legendre_sphplm4 = real(oct_legendre_sphplm(l, m, real(x, kind=8)), kind=4)
   end function oct_legendre_sphplm4
+
+  real(4) function oct_sine_integral4(x)
+    real(4), intent(in)  :: x
+
+    oct_sine_integral4 = real(oct_sine_integral(real(x, kind=8)), kind=4)
+  end function oct_sine_integral4
 
   subroutine oct_ylm4(n, x, y, z, l, m, ylm)
     integer, intent(in)  :: n

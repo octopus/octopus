@@ -421,7 +421,7 @@ contains
     type(grid_t), intent(inout) :: gr
 
     FLOAT, allocatable :: rho(:), vh(:), vh_exact(:), rhop(:), x(:, :)
-    FLOAT :: alpha, beta, r, delta, norm, rnd, ralpha
+    FLOAT :: alpha, beta, r, delta, norm, rnd, ralpha, range
     integer :: i, k, ierr, iunit, n, n_gaussians
 
     call push_sub('poisson.poisson_test')
@@ -433,7 +433,7 @@ contains
       return
     endif
 
-    n_gaussians = 5
+    n_gaussians = 4
 
     ALLOCATE(     rho(NP), NP)
     ALLOCATE(    rhop(NP), NP)
@@ -449,13 +449,15 @@ contains
     write(message(1), '(a)') 'Building the Gaussian distribution of charge...'
     call write_info(1)
 
+    range = CNST(8.0)
+
     rho = M_ZERO
     do n = 1, n_gaussians
       norm = M_ZERO
-      do while(abs(norm-M_ONE)> CNST(1.0e-6))
+      do while(abs(norm-M_ONE)> CNST(1.0e-4))
         do k = 1, gr%m%sb%dim
           call random_number(rnd)
-          x(k, n) = -gr%m%sb%lsize(k) + rnd*M_TWO*gr%m%sb%lsize(k)
+          x(k, n) = range * rnd 
         end do
         r = sqrt(sum(x(:, n)*x(:,n)))
         do i = 1, NP
@@ -464,6 +466,7 @@ contains
         end do
         norm = dmf_integrate(gr%m, rhop)
       end do
+      rhop = (-1)**n * rhop
       rho = rho + rhop
     end do
     write(message(1), '(a,f14.6)') 'Total charge of the Gaussian distribution', dmf_integrate(gr%m, rho)
@@ -483,11 +486,11 @@ contains
           end if
         case(2)
           ralpha = r**2/(M_TWO*alpha**2)
-          if(ralpha < CNST(20.0)) then
-            vh_exact(i) = vh_exact(i) + beta * (M_PI)**(M_THREE*M_HALF) * alpha * exp(-r**2/(M_TWO*alpha**2)) * &
+          if(ralpha < CNST(100.0)) then
+            vh_exact(i) = vh_exact(i) + (-1)**n * beta * (M_PI)**(M_THREE*M_HALF) * alpha * exp(-r**2/(M_TWO*alpha**2)) * &
               loct_bessel_in(0, r**2/(M_TWO*alpha**2))
           else
-            vh_exact(i) = vh_exact(i) + beta * (M_PI)**(M_THREE*M_HALF) * alpha * &
+            vh_exact(i) = vh_exact(i) + (-1)**n * beta * (M_PI)**(M_THREE*M_HALF) * alpha * &
                           (M_ONE/sqrt(M_TWO*M_PI*ralpha)) 
           end if
         end select

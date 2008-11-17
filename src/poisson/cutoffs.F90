@@ -35,7 +35,10 @@ module poisson_cutoffs_m
     poisson_cutoff_inf_cylinder,  &
     poisson_cutoff_fin_cylinder,  &
     poisson_cutoff_slab,          &
-    besselint
+    poisson_cutoff_fin_2D,        &
+    poisson_cutoff_2D_1D,         &
+    poisson_cutoff_intcoslog
+
 
   interface poisson_cutoff_fin_cylinder
     real(8) function c_poisson_cutoff_fin_cylinder(gx, gperp, xsize, rsize)
@@ -43,9 +46,52 @@ module poisson_cutoffs_m
     end function c_poisson_cutoff_fin_cylinder
     module procedure poisson_cutoff_fin_cylinder4
   end interface
+
+  interface poisson_cutoff_fin_2D
+    real(8) function c_poisson_cutoff_fin_2d(x, y)
+      real(8), intent(in) :: x, y
+    end function c_poisson_cutoff_fin_2d
+    module procedure poisson_cutoff_fin_2d4
+  end interface
+
+  interface poisson_cutoff_2d_1d
+    real(8) function c_poisson_cutoff_2d_1d(gy, gx, r_c)
+      real(8), intent(in) :: gy, gx, r_c
+    end function c_poisson_cutoff_2d_1d
+    module procedure poisson_cutoff_2d_1d4
+  end interface poisson_cutoff_2d_1d
+
+  interface poisson_cutoff_intcoslog
+    real(8) function intcoslog(mu, gx, gy)
+      real(8), intent(in) :: mu, gx, gy
+    end function intcoslog
+  end interface poisson_cutoff_intcoslog
+
   
 contains
 
+
+  ! ---------------------------------------------------------
+  real(4) function poisson_cutoff_fin_2d4(x, y)
+    real(4), intent(in) :: x, y
+    real(8) :: res8
+    res8 = c_poisson_cutoff_fin_2d(real(x, 8), real(y, 8))
+    poisson_cutoff_fin_2d4 = real(res8, 4)
+  end function poisson_cutoff_fin_2d4
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  real(4) function poisson_cutoff_2d_1d4(gy, gx, r_c)
+    real(4), intent(in) :: gy, gx, r_c
+    real(8) :: res8
+    res8 = c_poisson_cutoff_2d_1d(real(gy, 8), real(gx, 8), real(r_c, 8))
+    poisson_cutoff_2d_1d4 = real(res8, 4)
+  end function poisson_cutoff_2d_1d4
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
   real(4) function poisson_cutoff_fin_cylinder4(gx, gperp, xsize, rsize)
     real(4), intent(in) :: gx, gperp, rsize, xsize
     real(8) :: res8
@@ -53,7 +99,9 @@ contains
     res8 = c_poisson_cutoff_fin_cylinder(real(gx, 8), real(gperp, 8), real(xsize, 8), real(rsize, 8))
     poisson_cutoff_fin_cylinder4 = real(res8, 4)
   end function poisson_cutoff_fin_cylinder4
+  ! ---------------------------------------------------------
   
+
   ! ---------------------------------------------------------
   FLOAT function poisson_cutoff_sphere(x, r) result(cutoff)
     FLOAT, intent(in) ::  x, r
@@ -61,6 +109,7 @@ contains
     cutoff = M_ONE - cos(x*r)
 
   end function poisson_cutoff_sphere
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
@@ -103,69 +152,6 @@ contains
     end if
 
   end function poisson_cutoff_slab
-
-
   ! ---------------------------------------------------------
-  ! F(x) = (1/x) Integrate[ BesselJ[0, r], {0, x, r} ] = 
-  !      = HypergeometricPFQ[ {1/2}, {1,3/2}, -x*x/r ] = 
-  !      = (1/x) * 2 * sum_{k=0}^{\infty} BesselJ[k, x]
-  FLOAT function besselint(x) result(y)
-    FLOAT, intent(in) :: x
-    integer :: k, nmax
-    real(8) :: z, s
-    real(8), allocatable :: bess(:)
-
-    real(8), parameter :: large = CNST(1.0e10)
-
-    if(x < CNST(0.2)) then
-      y = M_ONE - (M_ONE/CNST(12.0))*x**2
-      return
-    end if
-
-    nmax = 0
-
-    main_loop: do 
-      nmax = nmax + 100
-      if(.not.allocated(bess)) ALLOCATE(bess(0:nmax), nmax+1)
-
-      ! We need to do a backwards recursion since otherwise it is unstable.
-      bess(0:nmax) = M_ZERO
-      bess(nmax) = M_ZERO
-      bess(nmax-1) = M_ONE
-      s = bess(nmax)
-      do k = nmax - 2, 0, -1
-         bess(k) = (M_TWO*(k+1)/x)*bess(k+1) - bess(k+2)
-         if(bess(k) > large) then
-           bess(k:nmax) = bess(k:nmax) / large
-           s = s / large
-         end if
-         if(mod(k,2).eq.0) s = s + bess(k)
-      end do
-      s = 2*s - bess(0)
-      do k = 0, nmax
-        bess(k) = bess(k)/s
-      end do
-
-      y = CNST(0.0)
-      k = 2
-      ! In the sum, I use the recursion relation to eliminate half of the terms.
-      do 
-        if(k + sqrt(CNST(40.0)*k) > nmax) exit ! Beyond this value, bess(k) could be imprecise.
-        if(mod(k-2,4).eq.0) then
-          z = 2*k*bess(k)/x**2
-          y = y + z
-          if(abs(z) < CNST(1.0e-9)) exit main_loop
-        end if
-        k = k + 1
-      end do
-
-      deallocate(bess)
-
-    end do main_loop
-
-    if(allocated(bess)) deallocate(bess)
-    y = CNST(2.0)*y
-  end function besselint
-
 
 end module poisson_cutoffs_m
