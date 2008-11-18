@@ -259,7 +259,7 @@ double FC_FUNC_(c_poisson_cutoff_2d_1d, C_POISSON_CUTOFF_2D_1D)
   F.function = &cutoff_2d_1d;
   F.params = &params;
 
-  res = -4.0 * FC_FUNC_(intcoslog, INTCOSLOG)(&mu, gy, &b);
+  res = -4.0 * FC_FUNC(intcoslog, INTCOSLOG)(&mu, gy, &b);
 
   if( fabs(*gy) > 0.0) {
     res = res - (4.0 * M_EULER_MASCHERONI / (*gy)) * sin( (*gy)*mu );
