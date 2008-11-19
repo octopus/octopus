@@ -137,7 +137,7 @@ double FC_FUNC_(oct_legendre_sphplm, OCT_LEGENDRE_SPHPLM)
   return gsl_sf_legendre_sphPlm(*l, *m, *x);
 }
 
-double FC_FUNC(oct_sine_integral, OCT_SINE_INTEGRAL)
+double FC_FUNC_(oct_sine_integral, OCT_SINE_INTEGRAL)
      (double *x)
 {
   return gsl_sf_Si(*x);
