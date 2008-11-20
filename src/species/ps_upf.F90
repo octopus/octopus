@@ -292,14 +292,18 @@ contains
     !Extra inforamation
     if (tag_isdef(unit, "PP_ADDINFO")) then
       ps_upf%kb_nc = 2
-
       call init_tag(unit, "PP_ADDINFO", .true.)
-
+      do i = 1, ps_upf%n_wfs
+        read(unit,*) dummy
+        if (ps_upf%l(i) > 0) then
+          read(unit,*) dummy
+        end if
+      end do
       ALLOCATE(ps_upf%proj_j(ps_upf%n_proj), ps_upf%n_proj)
       do i = 1, ps_upf%n_proj
-        read(unit,*) dummy, dummy, ps_upf%proj_j(i)
+        read(unit,*) dummy, ps_upf%proj_j(i)
       end do
-
+      read(unit,*) dummy
       call check_end_tag(unit, "PP_ADDINFO")
     else
       nullify(ps_upf%proj_j)
