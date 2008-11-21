@@ -27,7 +27,7 @@ function X(ks_matrix_elements) (cas, st, m, dv) result(x)
   FLOAT :: x(cas%n_pairs)
 
   R_TYPE, allocatable :: f(:)
-  integer :: k, ia, i, a, sigma
+  integer :: k, ia, i, a, sigma, idim
 
   ALLOCATE(f(m%np), m%np)
   do ia = 1, cas%n_pairs
@@ -35,7 +35,9 @@ function X(ks_matrix_elements) (cas, st, m, dv) result(x)
     a     = cas%pair(ia)%a
     sigma = cas%pair(ia)%sigma
     do k = 1, m%np
-      f(k) = dv(k) * R_CONJ(st%X(psi) (k, 1, i, sigma)) * st%X(psi) (k, 1, a, sigma)
+      do idim = 1, st%d%dim
+        f(k) = dv(k) * R_CONJ(st%X(psi) (k, idim, i, sigma)) * st%X(psi) (k, idim, a, sigma)
+      end do
     end do
     x(ia) = X(mf_integrate)(m, f)
   end do
@@ -69,7 +71,7 @@ subroutine X(transition_density) (cas, st, m, ia, n0I)
   integer,        intent(in)  :: ia
   R_TYPE,         intent(out) :: n0I(:)
 
-  integer :: i, jb
+  integer :: i, jb, idim
   R_TYPE, allocatable :: x(:)
 
   call push_sub('casida.transition_density')
@@ -78,8 +80,10 @@ subroutine X(transition_density) (cas, st, m, ia, n0I)
 
   do i = 1, m%np
     do jb = 1, cas%n_pairs
-      x(jb) = R_CONJ(st%X(psi)(i, 1, cas%pair(jb)%i, cas%pair(jb)%sigma)) * &
-           st%X(psi)(i, 1, cas%pair(jb)%a, cas%pair(jb)%sigma)
+      do idim = 1, st%d%dim
+        x(jb) = R_CONJ(st%X(psi)(i, idim, cas%pair(jb)%i, cas%pair(jb)%sigma)) * &
+             st%X(psi)(i, idim, cas%pair(jb)%a, cas%pair(jb)%sigma)
+      end do
     end do
     n0I(i) = X(transition_matrix_element) (cas, ia, x)
   end do

@@ -84,7 +84,7 @@ contains
     logical,             intent(inout) :: fromScratch
 
     type(casida_t) :: cas
-    integer :: i, ierr, n_filled, n_partially_filled, n_half_filled
+    integer :: i, ierr, nk, n_filled, n_partially_filled, n_half_filled
     character(len=80) :: trandens
 
     call push_sub('casida.casida_run')
@@ -103,18 +103,20 @@ contains
       call write_fatal(1)
     end if
 
-    ALLOCATE(cas%n_occ(sys%st%d%nspin), sys%st%d%nspin)
-    ALLOCATE(cas%n_unocc(sys%st%d%nspin), sys%st%d%nspin)
+    nk = 1
+    if (sys%st%d%ispin == SPIN_POLARIZED) nk = 2
+    ALLOCATE(cas%n_occ(nk), nk)
+    ALLOCATE(cas%n_unocc(nk), nk)
 
     cas%n_occ(:) = 0
-    do i = 1, sys%st%d%nspin
+    do i = 1, nk
       call occupied_states(sys%st, i, n_filled, n_partially_filled, n_half_filled)
       cas%n_occ(i) = n_filled + n_partially_filled + n_half_filled
       cas%n_unocc(i) = sys%st%nst - cas%n_occ(i)
     end do
 
     select case(sys%st%d%ispin)
-    case(UNPOLARIZED)
+    case(UNPOLARIZED, SPINORS)
       write(message(1),'(a,i4,a)') "Info: Found",cas%n_occ(1)," occupied states."
       write(message(2),'(a,i4,a)') "Info: Found",cas%n_unocc(1)," unoccupied states."
       call write_info(2)
@@ -131,6 +133,7 @@ contains
     message(1) = 'Info: Setting up Hamiltonian.'
     call write_info(1)
     call system_h_setup(sys, h)
+
 
     !%Variable LinearResponseKohnShamStates
     !%Type string
@@ -170,7 +173,7 @@ contains
     call loct_parse_string(check_inp('LinearResponseTransitionDensities'), "0", trandens)
 
     ! Initialize structure
-    call casida_type_init(cas, sys%gr%sb%dim, sys%st%d%nspin, sys%mc)
+    call casida_type_init(cas, sys%gr%sb%dim, nk, sys%mc)
 
     if(fromScratch) call loct_rm(trim(tmpdir)//'casida')
 
@@ -182,19 +185,22 @@ contains
     call casida_work(sys, h, cas)
     call casida_write(cas, 'eps-diff')
 
-    ! Then, calculate the excitation energies by making use of the Petersilka approximation
-    message(1) = "Info: Calculating resonance energies a la Petersilka"
-    call write_info(1)
-    cas%type = CASIDA_PETERSILKA
-    call casida_work(sys, h, cas)
-    call casida_write(cas, 'petersilka')
+    if (sys%st%d%ispin /= SPINORS) then
+      ! Then, calculate the excitation energies by making use of the Petersilka approximation
+      message(1) = "Info: Calculating resonance energies a la Petersilka"
+      call write_info(1)
+      cas%type = CASIDA_PETERSILKA
+      call casida_work(sys, h, cas)
+      call casida_write(cas, 'petersilka')
 
-    ! And finally, solve the full Casida problem.
-    message(1) = "Info: Calculating resonance energies a la Casida"
-    call write_info(1)
-    cas%type = CASIDA_CASIDA
-    call casida_work(sys, h, cas)
-    call casida_write(cas, 'casida')
+      ! And finally, solve the full Casida problem.
+      message(1) = "Info: Calculating resonance energies a la Casida"
+      call write_info(1)
+      cas%type = CASIDA_CASIDA
+      call casida_work(sys, h, cas)
+      call casida_write(cas, 'casida')
+
+    end if
 
     ! Calculate and write the transition matrix
     if (sys%st%wfs_type == M_REAL) then
@@ -210,9 +216,9 @@ contains
 
   ! ---------------------------------------------------------
   ! allocates stuff, and constructs the arrays pair_i and pair_j
-  subroutine casida_type_init(cas, dim, nspin, mc)
+  subroutine casida_type_init(cas, dim, nk, mc)
     type(casida_t), intent(inout) :: cas
-    integer, intent(in) :: dim, nspin
+    integer, intent(in) :: dim, nk
     type(multicomm_t), intent(in) :: mc
 
     integer :: i, a, j, k
@@ -221,7 +227,7 @@ contains
 
     ! count pairs
     cas%n_pairs = 0
-    do k = 1, nspin
+    do k = 1, nk
       do a = cas%n_occ(k)+1, cas%n_occ(k) + cas%n_unocc(k)
         if(loct_isinstringlist(a, cas%wfn_list)) then
           do i = 1, cas%n_occ(k)
@@ -248,7 +254,7 @@ contains
 
     ! create pairs
     j = 1
-    do k = 1, nspin
+    do k = 1, nk
       do a = cas%n_occ(k)+1, cas%n_occ(k) + cas%n_unocc(k)
         if(loct_isinstringlist(a, cas%wfn_list)) then
           do i = 1, cas%n_occ(k)
@@ -324,23 +330,25 @@ contains
     ! load saved matrix elements
     call load_saved()
 
-    ! This is to be allocated here, and is used inside K_term.
-    ALLOCATE(pot(m%np), m%np)
-    j_old = -1; b_old = -1; mu_old = -1
+    if (cas%type /= CASIDA_EPS_DIFF) then
+      ! This is to be allocated here, and is used inside K_term.
+      ALLOCATE(pot(m%np), m%np)
+      j_old = -1; b_old = -1; mu_old = -1
+      
+      ! We calculate here the kernel, since it will be needed later.
+      ALLOCATE(rho(m%np, st%d%nspin), m%np*st%d%nspin)
+      ALLOCATE(fxc(m%np, st%d%nspin, st%d%nspin), m%np*st%d%nspin*st%d%nspin)
+      rho = M_ZERO; fxc = M_ZERO
 
-    ! We calculate here the kernel, since it will be needed later.
-    ALLOCATE(rho(m%np, st%d%nspin), m%np*st%d%nspin)
-    ALLOCATE(fxc(m%np, st%d%nspin, st%d%nspin), m%np*st%d%nspin*st%d%nspin)
-    rho = M_ZERO; fxc = M_ZERO
-
-    if(st%nlcc) then
-      do is = 1, st%d%spin_channels
-        rho(1:m%np, is) = st%rho(1:m%np, is) + st%rho_core(1:m%np)/st%d%spin_channels
-      end do
-    else
-      rho(1:m%np, 1:st%d%nspin) = st%rho(1:m%np, 1:st%d%nspin)
+      if(st%nlcc) then
+        do is = 1, st%d%spin_channels
+          rho(1:m%np, is) = st%rho(1:m%np, is) + st%rho_core(1:m%np)/st%d%spin_channels
+        end do
+      else
+        rho(1:m%np, 1:st%d%nspin) = st%rho(1:m%np, 1:st%d%nspin)
+      end if
+      call xc_get_fxc(sys%ks%xc, m, rho, st%d%ispin, fxc)
     end if
-    call xc_get_fxc(sys%ks%xc, m, rho, st%d%ispin, fxc)
 
     select case(cas%type)
     case(CASIDA_EPS_DIFF)
@@ -352,7 +360,9 @@ contains
     end select
 
     ! clean up
-    deallocate(fxc, rho, pot, saved_K)
+    if (cas%type /= CASIDA_EPS_DIFF) then
+      deallocate(fxc, rho, pot, saved_K)
+    end if
 
     call pop_sub()
   contains
@@ -388,16 +398,29 @@ contains
         if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ia, cas%n_pairs)
       end do
 
+
       ALLOCATE(x(cas%n_pairs), cas%n_pairs)
       ALLOCATE(deltav(m%np), m%np)
+
       do k = 1, m%sb%dim
+
+        deltav(1:m%np) = m%x(1:m%np, k)
         
         !WARNING: should x always be real?
-        x = dks_matrix_elements(cas, st, m, deltav)
+        if (st%wfs_type == M_REAL) then
+          x = dks_matrix_elements(cas, st, m, deltav)
+        else
+          x = zks_matrix_elements(cas, st, m, deltav)
+        end if
+        
+        cas%tm(:, k) = M_TWO*x(:)**2*cas%w(:)
 
-        !FIXME: Calculate the oscillator strengths and matrix elements a la Petersilka
       end do
       deallocate(x, deltav)
+
+      do ia = 1, cas%n_pairs
+        cas%f(ia) = (M_TWO/m%sb%dim)*sum((abs(cas%tm(ia, :)))**2)
+      end do
 
       if(mpi_grp_is_root(mpi_world)) write(*, "(1x)")
 
@@ -604,7 +627,10 @@ contains
       call push_sub('casida.load_saved')
 
       iunit = io_open(trim(tmpdir)//'casida', action='read', status='old', die=.false., is_tmp=.true.)
-      if( iunit <= 0) return
+      if( iunit <= 0) then
+        call pop_sub()
+        return
+      end if
 
       do
         read(iunit, fmt=*, iostat=err) ia, jb, val
@@ -704,7 +730,6 @@ contains
 #include "undef.F90"
 #include "real.F90"
 #include "casida_inc.F90"
-
 #include "undef.F90"
 #include "complex.F90"
 #include "casida_inc.F90"
