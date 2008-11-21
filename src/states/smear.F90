@@ -74,7 +74,7 @@ contains
 
     !%Variable SmearingFunction
     !%Type integer
-    !%Default fermi_dirac
+    !%Default semiconducting
     !%Section States
     !%Description
     !% This is the function used to smear the electronic occupations

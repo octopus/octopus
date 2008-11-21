@@ -60,7 +60,7 @@ module geometry_m
 
   type atom_t
     character(len=15) :: label
-    type(species_t), pointer :: spec              ! pointer to species
+    type(species_t), pointer :: spec             ! pointer to species
     FLOAT :: x(MAX_DIM), v(MAX_DIM), f(MAX_DIM)  ! position/velocity/force of atom in real space
     logical :: move                              ! should I move this atom in the optimization mode
   end type atom_t
@@ -82,12 +82,12 @@ module geometry_m
     integer :: nspecies
     type(species_t), pointer :: species(:)
 
-    logical :: only_user_def        ! Do we want to treat only user defined species?
+    logical :: only_user_def        ! Do we want to treat only user-defined species?
 
-    FLOAT :: kinetic_energy    ! the ion-ion energy
+    FLOAT :: kinetic_energy         ! the ion-ion energy
 
-    logical :: nlpp                 ! is any species having non-local pp
-    logical :: nlcc                 ! is any species having non-local core corrections?
+    logical :: nlpp                 ! does any species having non-local pp
+    logical :: nlcc                 ! does any species having non-local core corrections?
 
     type(distributed_t) :: atoms
   end type geometry_t
@@ -181,9 +181,9 @@ contains
     !% <br>&nbsp;&nbsp;'O' | &nbsp;0.56415 | 0.0 | 0.0 | no
     !% <br>%</tt>
     !%
-    !% The first line defines a Carbon atom at coordinates ("-0.56415", "0.0", "0.0"),
+    !% The first line defines a carbon atom at coordinates ("-0.56415", "0.0", "0.0"),
     !% that is _not_ allowed to move during dynamical simulations. The second line has
-    !% a similar meaning. This block obviously defines a Carbon monoxide molecule, if the
+    !% a similar meaning. This block obviously defines a carbon monoxide molecule, if the
     !% input units are AA. Note that in this way it is possible to fix some of the atoms (this
     !% is not possible when specifying the coordinates through a "PDBCoordinates" or
     !% "XYZCoordinates" file). It is always possible to fix _all_ atoms using the "MoveIons" directive.

@@ -128,7 +128,7 @@ contains
     ! if the system is periodic we have to add the energy of the
     ! interaction with the copies
     
-    ! the short range part is calculated directly
+    ! the short-range part is calculated directly
     do iatom = 1, geo%natoms
       s => geo%atom(iatom)%spec
       if (.not. species_is_ps(s)) cycle
@@ -158,7 +158,7 @@ contains
       call periodic_copy_end(pc)
     end do
 
-    ! And the long range part, using an ewald sum
+    ! And the long-range part, using an Ewald sum
     
     isph = 100
     do ix = -isph, isph

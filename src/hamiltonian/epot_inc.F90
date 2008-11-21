@@ -37,6 +37,8 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
   type(profile_t), save :: prof
 #endif
 
+  call push_sub('epot_inc.Xcalc_forces_from_potential')
+
   np = gr%fine%m%np
 
   ALLOCATE(gpsi(np, 1:NDIM, st%d%dim), np*NDIM*st%d%dim)
@@ -190,6 +192,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
   forall (iatom = 1:geo%natoms, idir = 1:MAX_DIM) geo%atom(iatom)%f(idir) = geo%atom(iatom)%f(idir) + force(idir, iatom)
   
   deallocate(force)
+  call pop_sub()
   
 end subroutine X(calc_forces_from_potential)
 
