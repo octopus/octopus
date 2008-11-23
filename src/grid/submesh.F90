@@ -57,21 +57,21 @@ module submesh_m
      integer               :: ns = -1        ! number of points inside the submesh
      integer               :: ns_part        ! number of points inside the submesh including ghost points
      integer               :: np_part
-     integer,      pointer :: jxyz(:)        ! index in the mesh of the points inside the sphere
-     FLOAT,        pointer :: x(:,:)
+     integer,      pointer :: jxyz(:) => null()       ! index in the mesh of the points inside the sphere
+     FLOAT,        pointer :: x(:,:)  => null()
      type(mesh_t), pointer :: mesh
      logical               :: has_points
 #ifdef HAVE_MPI
-     integer,      pointer :: psize(:)       ! the number of points each processor holds
+     integer,      pointer :: psize(:) => null()      ! the number of points each processor holds
 #endif
   end type submesh_t
   
   type submesh_comm_t
     private
     integer          :: nreq
-    integer, pointer :: requests(:)
-    FLOAT,   pointer :: dallval(:, :)
-    CMPLX,   pointer :: zallval(:, :)
+    integer, pointer :: requests(:) => null()
+    FLOAT,   pointer :: dallval(:, :) => null()
+    CMPLX,   pointer :: zallval(:, :) => null()
   end type submesh_comm_t
 
   integer :: tagcounter = 0
@@ -84,6 +84,8 @@ contains
     sm%ns = -1
     sm%np_part = 0
     nullify(sm%jxyz)
+    nullify(sm%x)
+    nullify(sm%psize)
 
   end subroutine submesh_null
 
