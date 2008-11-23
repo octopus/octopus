@@ -85,7 +85,9 @@ contains
     sm%np_part = 0
     nullify(sm%jxyz)
     nullify(sm%x)
+#ifdef HAVE_MPI
     nullify(sm%psize)
+#endif
 
   end subroutine submesh_null
 
