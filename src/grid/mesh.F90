@@ -429,6 +429,8 @@ contains
       if(trim(line).eq.dump_tag) exit
     end do
 
+    ASSERT(mesh%sb%dim > 0 .and. mesh%sb%dim <= MAX_DIM)
+
     read(iunit, '(a20,7i8)')  str, mesh%nr(1, 1:mesh%sb%dim)
     read(iunit, '(a20,7i8)')  str, mesh%nr(2, 1:mesh%sb%dim)
     read(iunit, '(a20,7i8)')  str, mesh%l(1:mesh%sb%dim)
@@ -471,6 +473,8 @@ contains
     integer :: ip
 
     call push_sub('mesh.mesh_lxyz_init_from_file')
+
+    ASSERT(mesh%sb%dim > 0 .and. mesh%sb%dim <= MAX_DIM)
 
     do ip = 1, mesh%np_part
       read(iunit, '(7i8)') mesh%lxyz(ip, 1:mesh%sb%dim)
