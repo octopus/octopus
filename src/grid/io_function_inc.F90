@@ -361,7 +361,6 @@ subroutine X(output_function_global) (how, dir, fname, m, sb, f, u, ierr, is_tmp
   character(len=20)  :: mformat, mformat2, mfmtheader
   integer            :: iunit, i, j, np_max
   FLOAT              :: x0
-  logical            :: gnuplot_mode = .false.
 
   call profiling_in(write_prof, "DISK_WRITE")
   call push_sub('out_inc.Xoutput_function_global')
@@ -378,12 +377,6 @@ subroutine X(output_function_global) (how, dir, fname, m, sb, f, u, ierr, is_tmp
     mformat2   = '(i6,5es34.24E3)'
     mfmtheader = '(a,a10,5a23)'
 #endif
-
-  if(iand(how, output_gnuplot)   .ne.0) then
-    gnuplot_mode = .true.
-    mformat    = '(4f23.14)'
-    mformat2   = '(i6,5f34.24)'
-  end if
 
   np_max = m%np_global
   ! should we output boundary points?
@@ -472,25 +465,38 @@ contains
   subroutine out_plane(d1, d2, d3)
     integer, intent(in) :: d1, d2, d3
 
+    integer :: ix, iy, iz, i
+
     filename = trim(dir)//'/'//trim(fname)//"."//index2axis(d1)//"=0"
     iunit = io_open(filename, action='write', is_tmp=is_tmp)
 
     write(iunit, mfmtheader, iostat=ierr) '#', index2axis(d2), index2axis(d3), 'Re', 'Im'
-    x0 = m%x_global(1, d2)
-    if(gnuplot_mode) write(iunit, mformat)
+    write(iunit, mformat)
 
-    do i = 1, np_max
-      if(gnuplot_mode.and.x0 /= m%x_global(i, d2)) then
-        write(iunit, mformat, iostat=ierr)  ! write extra lines for gnuplot grid mode
-        x0 = m%x_global(i, d2)
-      end if
-      if(m%Lxyz(i, d1) == 0) then  ! are we in the plane?
+    do ix = m%nr(1, d1), m%nr(2, d1)
+      select case(d1)
+      case(1); i = m%lxyz_inv(ix, 1, 1)
+      case(2); i = m%lxyz_inv(1, ix, 1)
+      case(3); i = m%lxyz_inv(1, 1, ix)
+      end select
+      if(m%Lxyz(i, d1) == 0) exit
+    end do
+    do iy = m%nr(1, d2), m%nr(2, d2)
+      write(iunit, *)
+      do iz= m%nr(1, d3), m%nr(2, d3)
+        select case(d1)
+        case(1); i = m%lxyz_inv(ix, iy, iz)
+        case(2); i = m%lxyz_inv(iy, ix, iz)
+        case(3); i = m%lxyz_inv(iy, iz, ix)
+        end select
+        if(i<=m%np_global .and. i> 0) then
           write(iunit, mformat, iostat=ierr)  &
             m%x_global(i, d2), m%x_global(i, d3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
-      end if
+        end if
+      end do
     end do
 
-    if(gnuplot_mode) write(iunit, mformat, iostat=ierr)
+    write(iunit, mformat, iostat=ierr)
     call io_close(iunit)
 
   end subroutine out_plane
@@ -577,10 +583,10 @@ contains
 
     write(iunit, mfmtheader, iostat=ierr) '#', 'Index', 'x', 'y', 'z', 'Re', 'Im'
     x0 = m%x_global(1,1)
-    if(ierr == 0.and.gnuplot_mode) write(iunit, mformat, iostat=ierr)
+    if(ierr == 0) write(iunit, mformat, iostat=ierr)
 
     do i= 1, np_max
-       if (ierr == 0.and.gnuplot_mode.and.x0 /= m%x_global(i, 1)) then
+       if (ierr == 0.and.x0 /= m%x_global(i, 1)) then
           write(iunit, mformat, iostat=ierr)      ! write extra lines for gnuplot grid mode
           x0 = m%x_global(i, 1)
        end if
@@ -588,7 +594,7 @@ contains
             m%x_global(i,2), m%x_global(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
     end do
 
-    if(ierr == 0.and.gnuplot_mode) write(iunit, mformat, iostat=ierr)
+    if(ierr == 0) write(iunit, mformat, iostat=ierr)
     call io_close(iunit)
   end subroutine out_mesh_index
 

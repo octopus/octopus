@@ -136,7 +136,7 @@ contains
     !% The output can also be used to display the mesh directly. A gnuplot script for mesh vizualization
     !% can be found under <tt>PREFIX/share/octopus/util/display_mesh_index.gp</tt>
     !%Option gnuplot 1024
-    !% Adds newlines to the plane cuts, so that gnuplot can print them in 3D
+    !% Obsolete.
     !%Option matlab 2048
     !% In combination with plane_x, plane_y and plane_z this option produces output files 
     !% which are suitable for 2D Matlab functions like mesh(), surf() or waterfall(). To load 
@@ -192,7 +192,6 @@ contains
     if(index(where, "Plain").ne.0)     how = ior(how, output_plain)
     if(index(where, "Binary").ne.0)    how = ior(how, output_binary)
     if(index(where, "MeshIndex").ne.0) how = ior(how, output_mesh_index)
-    if(index(where, "Gnuplot").ne.0)   how = ior(how, output_gnuplot)
 #if defined(HAVE_NETCDF)
     if(index(where, "NETCDF").ne.0) how = ior(how, output_netcdf)
 #endif
