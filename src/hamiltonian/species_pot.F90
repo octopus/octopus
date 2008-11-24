@@ -121,7 +121,7 @@ contains
 
     integer :: i, in_points, n, icell
     FLOAT :: r, x, pos(1:MAX_DIM)
-    FLOAT :: psi1, psi2
+    FLOAT :: psi1, psi2, xx(MAX_DIM), yy(MAX_DIM), rerho, imrho
     type(species_t), pointer :: s
 #if defined(HAVE_MPI)
     integer :: in_points_red
@@ -137,12 +137,35 @@ contains
 
     ! build density ...
     select case (s%type)
-    case (SPEC_USDEF, SPEC_ALL_E, SPEC_CHARGE_DENSITY, SPEC_PS_CPI, SPEC_PS_FHI) ! ... from userdef
+    case (SPEC_USDEF, SPEC_ALL_E, SPEC_PS_CPI, SPEC_PS_FHI) ! ... from userdef
       do i = 1, spin_channels
         rho(1:m%np, i) = M_ONE
         x = (real(s%z_val, REAL_PRECISION)/real(spin_channels, REAL_PRECISION)) / dmf_integrate(m, rho(:, i))
         rho(1:m%np, i) = x * rho(1:m%np, i)
       end do
+
+    case (SPEC_CHARGE_DENSITY)
+      ! We put, for the electron density, the same as the positive density that create the external potential.
+
+      call periodic_copy_init(pp, sb, spread(M_ZERO, dim=1, ncopies = MAX_DIM), &
+        range = M_TWO * maxval(sb%lsize(1:sb%dim)))
+
+      rho = M_ZERO
+      do icell = 1, periodic_copy_num(pp)
+        yy = periodic_copy_position(pp, sb, icell)
+        do i = 1, m%np
+          call mesh_r(m, i, r, x = xx, a = atom%x)
+          xx(1:sb%dim) = xx(1:sb%dim) + yy(1:sb%dim)
+          r = sqrt(dot_product(xx(1:sb%dim), xx(1:sb%dim)))
+          call loct_parse_expression(rerho, imrho, xx(1), xx(2), xx(3), r, M_ZERO, trim(s%rho))
+          rho(i, 1) = rho(i, 1) + rerho
+        end do
+      end do
+      call periodic_copy_end(pp)
+      if(spin_channels > 1) then
+        rho(:, 1) = M_HALF*rho(:, 1)
+        rho(:, 2) = rho(:, 1)
+      end if
 
     case (SPEC_POINT, SPEC_JELLI) ! ... from jellium
       in_points = 0
