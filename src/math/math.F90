@@ -769,7 +769,7 @@ contains
 
     integer :: i
 
-    call push_sub('math.idx_set')
+    call push_sub('math.make_idx_set')
 
     if(present(in)) then
       length = ubound(in, 1)
@@ -958,7 +958,7 @@ contains
     FLOAT               :: log_res, log_thr
     integer             :: ilog_res, ilog_thr
 
-    call push_sub('math_cg_inc.zqmr_sym_gen_dotp')
+    call push_sub('math.zqmr_sym_gen_dotp')
 
     if(present(converged)) then
       converged = .false.
@@ -1181,7 +1181,7 @@ contains
     FLOAT               :: log_res, log_thr
     integer             :: ilog_res, ilog_thr
 
-    call push_sub('math_cg_inc.zqmr_gen_dotp')
+    call push_sub('math.zqmr_gen_dotp')
 
     if(present(converged)) then
       converged = .false.
