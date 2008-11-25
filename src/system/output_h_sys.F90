@@ -93,7 +93,8 @@ module h_sys_output_m
     output_r              =  8192,    &
     output_ked            = 16384,    &
     output_j_flow         = 32768,    &
-    output_dos            = 65536
+    output_dos            = 65536,    &
+    output_tpa            =131072
 
 contains
 
@@ -181,6 +182,8 @@ contains
     !% only "tau" if the run is in spin-unpolarized mode.
     !%Option dos 65536
     !% Prints out the density of states.
+    !%Option tpa 131072
+    !% Prints out the transition potential approximation (tpa) matrix elements
     !%End
     call loct_parse_int(check_inp('Output'), 0, outp%what)
 

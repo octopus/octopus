@@ -146,6 +146,10 @@
       call states_write_dos (trim(dir), st)
     end if
 
+    if(iand(outp%what, output_tpa).ne.0) then
+      call states_write_tpa (trim(dir), gr, st)
+    end if
+
     call pop_sub()
 
   end subroutine h_sys_output_states

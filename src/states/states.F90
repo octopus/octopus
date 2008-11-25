@@ -70,6 +70,7 @@ module states_m
     states_deallocate_free_states,    &
     states_write_eigenvalues,         &
     states_write_dos,                 &
+    states_write_tpa,                 &
     states_write_bands,               &
     states_write_fermi_energy,        &
     states_spin_channel,              &
@@ -1560,6 +1561,106 @@ contains
     call pop_sub()
   end subroutine states_write_bands
 
+  ! ---------------------------------------------------------
+  subroutine states_write_tpa(dir, gr, st)
+    character(len=*), intent(in) :: dir
+    type(grid_t),     intent(in) :: gr
+    type(states_t),   intent(in) :: st
+
+    type(block_t) :: blk
+    integer       :: ncols, ip, icoord, ist, ik, tpa_initialst, tpa_initialk
+    integer       :: iunit
+
+    FLOAT, allocatable  :: ff(:)
+    FLOAT, allocatable  :: osc(:)
+    FLOAT               :: transition_energy, osc_strength
+    FLOAT, parameter    :: M_THRESHOLD = CNST(1.0e-6)
+
+    call push_sub('states.states_write_tpa')
+
+    ! find the orbital with half occupation
+    tpa_initialst = -1
+    do ist = 1, st%nst
+      do ik = 1, st%d%nik
+        if (abs(st%occ(ist,ik)-0.5) .lt. M_THRESHOLD) then
+          tpa_initialst = ist
+          tpa_initialk  = ik
+        end if
+      end do
+    end do
+
+    ! make sure that half occupancy was found
+    if(tpa_initialst.eq.-1) then
+      if(mpi_grp_is_root(mpi_world)) then
+        message(1) = 'No orbital with half occupancy found. TPA output is not written.'
+        call write_warning(1)
+        return
+      end if
+    end if
+
+    ! calculate the matrix elements
+
+    ALLOCATE(ff(gr%m%np), gr%m%np)
+    ALLOCATE(osc(gr%m%sb%dim), gr%m%sb%dim)
+
+    ! root writes output to file
+
+    if(mpi_grp_is_root(mpi_world)) then
+
+      iunit = io_open(trim(dir)//'/'//trim('tpa_xas'), action='write')    
+
+      ! header
+      select case(gr%m%sb%dim)
+        case(1); write(message(1), '(a1,3(a15,1x))') '#', 'E' , '<x>', '<f>'
+        case(2); write(message(1), '(a1,4(a15,1x))') '#', 'E' , '<x>', '<y>', '<f>'
+        case(3); write(message(1), '(a1,5(a15,1x))') '#', 'E' , '<x>', '<y>', '<z>', '<f>'
+      end select
+
+      call write_info(1,iunit)
+
+    end if
+
+    do ist = 1,st%nst
+
+      ! final states are the unoccupied ones
+      if (abs(st%occ(ist,tpa_initialk)) .lt. M_THRESHOLD) then
+
+        osc_strength=M_ZERO;
+        transition_energy=st%eigenval(ist,tpa_initialk)-st%eigenval(tpa_initialst,tpa_initialk)
+
+        do icoord=1,gr%m%sb%dim    ! for x,y,z
+
+          ff(1:gr%m%np) = st%dpsi(1:gr%m%np,1,tpa_initialst,tpa_initialk) * &
+                       &  gr%m%x(1:gr%m%np,icoord)                        * &
+                       &  st%dpsi(1:gr%m%np,1,ist,tpa_initialk)
+          osc(icoord)  = dmf_integrate(gr%m, ff)
+          osc_strength = osc_strength + 2.0/real(gr%m%sb%dim)*transition_energy*abs(osc(icoord))**2.0
+
+        end do
+
+        ! write oscillator strengths into file
+        if(mpi_grp_is_root(mpi_world)) then
+
+          write(message(1), '(1x,5(es15.8,x))') transition_energy/units_out%energy%factor, osc_strength,osc(:)
+          call write_info(1,iunit)
+
+        end if
+
+      end if
+
+    end do
+
+    ! finally close the file
+    if(mpi_grp_is_root(mpi_world)) then
+      call io_close(iunit)
+    end if
+
+    deallocate(ff);
+    deallocate(osc);
+  
+    call pop_sub()
+ 
+  end subroutine states_write_tpa
 
   ! ---------------------------------------------------------
   subroutine states_write_dos(dir, st)
