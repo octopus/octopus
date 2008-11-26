@@ -109,7 +109,7 @@ contains
 
 
     FLOAT :: rmin
-    integer :: ierr, first, i, flags, iout, default
+    integer :: ierr, first, i, j, flags, iout, default
     type(block_t) :: blk
     character(len=100) :: filename
 
@@ -215,7 +215,7 @@ contains
       call states_copy(w%gs_st, st)
       ! WARNING: should be first deallocate, then nullify?
       nullify(w%gs_st%zpsi, w%gs_st%node, w%gs_st%occ, w%gs_st%eigenval)
-      call states_look (trim(restart_dir)//'gs', gr%m%mpi_grp, i, i, w%gs_st%nst, ierr)
+      call states_look (trim(restart_dir)//'gs', gr%m%mpi_grp, i, j, w%gs_st%nst, ierr)
 
       if(w%out(OUT_POPULATIONS)%write) then ! do only this when not calculating populations
         ! We will store the ground-state Kohn-Sham system by all processors.
