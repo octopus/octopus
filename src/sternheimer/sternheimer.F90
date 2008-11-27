@@ -37,6 +37,7 @@ module sternheimer_m
   use multigrid_m
   use mix_m
   use h_sys_output_m
+  use preconditioners_m
   use poisson_m
   use pert_m
   use restart_m
@@ -175,7 +176,7 @@ contains
 
     call linear_solver_init(this%solver, sys%gr, prefix)
 
-    if(this%solver%solver == LS_MULTIGRID) then
+    if(this%solver%solver == LS_MULTIGRID .or. preconditioner_is_multigrid(this%solver%pre)) then
       if(.not. associated(sys%gr%mgrid)) then
         ALLOCATE(sys%gr%mgrid, 1)
         call multigrid_init(sys%gr%mgrid, sys%geo, sys%gr%cv, sys%gr%m, sys%gr%der, sys%gr%stencil)
