@@ -20,6 +20,7 @@
 #include "global.h"
 
 module mesh_function_m
+  use batch_m
   use global_m
   use lalg_basic_m
   use loct_math_m
@@ -40,6 +41,8 @@ module mesh_function_m
     zmf_integrate,         &
     dmf_dotp,              &
     zmf_dotp,              &
+    dmf_dotp_batch,        &
+    zmf_dotp_batch,        &
     dmf_nrm2,              &
     zmf_nrm2,              &
     dmf_moment,            &

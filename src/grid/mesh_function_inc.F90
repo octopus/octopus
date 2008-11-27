@@ -759,6 +759,22 @@ subroutine X(mf_multipoles) (mesh, ff, lmax, multipole)
   call pop_sub()
 end subroutine X(mf_multipoles)
 
+subroutine X(mf_dotp_batch)(mesh, aa, bb, dot)
+  type(mesh_t),   intent(in)  :: mesh
+  type(batch_t),  intent(in)  :: aa
+  type(batch_t),  intent(in)  :: bb
+  R_TYPE,         intent(out) :: dot(:, :)
+
+  integer :: ist, jst
+  
+  do ist = 1, aa%nst
+    do jst = 1, bb%nst
+      dot(aa%states(ist)%ist, bb%states(jst)%ist) = X(mf_dotp)(mesh, aa%dim, aa%states(ist)%X(psi), bb%states(jst)%X(psi))
+    end do
+  end do
+  
+end subroutine X(mf_dotp_batch)
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8
