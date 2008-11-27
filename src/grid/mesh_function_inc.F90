@@ -760,13 +760,15 @@ subroutine X(mf_multipoles) (mesh, ff, lmax, multipole)
 end subroutine X(mf_multipoles)
 
 subroutine X(mf_dotp_batch)(mesh, aa, bb, dot)
-  type(mesh_t),   intent(in)  :: mesh
-  type(batch_t),  intent(in)  :: aa
-  type(batch_t),  intent(in)  :: bb
-  R_TYPE,         intent(out) :: dot(:, :)
+  type(mesh_t),   intent(in)    :: mesh
+  type(batch_t),  intent(in)    :: aa
+  type(batch_t),  intent(in)    :: bb
+  R_TYPE,         intent(inout) :: dot(:, :)
 
   integer :: ist, jst
   
+  ASSERT(aa%dim == bb%dim)
+
   do ist = 1, aa%nst
     do jst = 1, bb%nst
       dot(aa%states(ist)%ist, bb%states(jst)%ist) = X(mf_dotp)(mesh, aa%dim, aa%states(ist)%X(psi), bb%states(jst)%X(psi))

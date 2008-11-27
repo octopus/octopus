@@ -59,15 +59,20 @@ subroutine X(subspace_diag)(gr, st, h, ik, diff)
       call X(hpsi_batch)(h, gr, psib, hpsib, ik)
 
       call batch_end(psib)
+
+      call batch_init(psib, h%d%dim, ist, st%nst, st%X(psi)(:, :, ist:st%nst, ik))
+
+      call X(mf_dotp_batch)(gr%m, hpsib, psib, h_subspace)
+
       call batch_end(hpsib)
+      call batch_end(psib)
 
-      do ist2 = 1, size
-        do jst = ist + ist2 - 1, st%st_end
-          h_subspace(ist + ist2 - 1, jst) = X(mf_dotp)(gr%m, st%d%dim, st%X(psi)(:,:, jst, ik), f(:, :, ist2))
-          h_subspace(jst, ist + ist2 - 1) = R_CONJ(h_subspace(ist + ist2 - 1, jst))
-        end do
+    end do
+
+    do ist = st%st_start, st%st_end
+      do jst = st%st_start, st%st_end
+        h_subspace(jst, ist) = R_CONJ(h_subspace(ist, jst))
       end do
-
     end do
 
     ! Diagonalize the hamiltonian in the subspace.
