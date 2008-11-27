@@ -96,6 +96,8 @@ contains
     type(eigensolver_t), intent(out)   :: eigens
     type(states_t),       intent(in)    :: st
 
+    integer :: default_iter
+
     call push_sub('eigen.eigensolver_init')
 
     !%Variable Eigensolver
@@ -124,7 +126,11 @@ contains
     !% Optimal Block Preconditioned Conjugate Gradient Method. SIAM
     !% Journal on Scientific Computing, 23(2):517­541, 2001.
     !%Option rmmdiis 10
-    !% Residual minimization scheme, direct inversion in the iterative subspace.
+    !% Residual minimization scheme, direct inversion in the iterative
+    !% subspace, combine it with the multigrid preconditioner. This is
+    !% copy of GPAW eigensolver (bugs are ours). There are some
+    !% convergency problems with this eigensolver, but if it works it
+    !% is very fast.
     !%Option multigrid 7
     !% Multigrid eigensolver (experimental).
     !%End
@@ -145,6 +151,8 @@ contains
     !%End
     call loct_parse_logical(check_inp('EigensolverVerbose'), .false., eigens%verbose)
 
+    default_iter = 25
+
     select case(eigens%es_type)
     case(RS_CG_NEW)
     case(RS_MG)
@@ -164,6 +172,7 @@ contains
       if(eigens%imag_time <= M_ZERO) call input_error('EigensolverImaginaryTime')
     case(RS_LOBPCG)
     case(RS_RMMDIIS)
+      default_iter = 1
     case default
       call input_error('Eigensolver')
     end select
@@ -208,9 +217,11 @@ contains
     !%Description
     !% Determines the maximum number of iterations that the
     !% eigensolver will perform if the desired tolerance is not
-    !% achieved. The default is 25 iterations.
+    !% achieved. The default is 25 iterations for all eigensolvers
+    !% except for the rmmdiis that only performs one iteration (only
+    !% increase it if you know what you are doing).
     !%End
-    call loct_parse_int(check_inp('EigensolverMaxIter'), 25, eigens%es_maxiter)
+    call loct_parse_int(check_inp('EigensolverMaxIter'), default_iter, eigens%es_maxiter)
     if(eigens%es_maxiter < 1) call input_error('EigensolverMaxIter')
 
     select case(eigens%es_type)
@@ -308,7 +319,7 @@ contains
       end if
 
       if (wfs_are_real(st)) then
-
+        
         select case(eigens%es_type)
         case(RS_CG_NEW)
           call deigensolver_cg2_new(gr, st, h, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik), verbose = verbose_)
