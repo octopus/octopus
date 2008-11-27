@@ -27,7 +27,7 @@ subroutine X(subspace_diag)(gr, st, h, ik, diff)
   FLOAT, optional,     intent(out)   :: diff(:)
 
   R_TYPE, allocatable :: h_subspace(:, :), vec(:, :), f(:, :, :)
-  integer             :: ist, ist2, jst, size
+  integer             :: ist, ist2, jst, size, idim
   FLOAT               :: nrm2
   type(profile_t),     save    :: diagon_prof
   type(batch_t) :: psib, hpsib
@@ -85,17 +85,32 @@ subroutine X(subspace_diag)(gr, st, h, ik, diff)
     ! Renormalize.
     do ist = st%st_start, st%st_end
       nrm2 = X(mf_nrm2)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik))
-      st%X(psi)(1:NP, 1:st%d%dim, ist, ik) = st%X(psi)(1:NP, 1:st%d%dim, ist, ik)/nrm2
+      do idim = 1, st%d%dim
+        call lalg_scal(gr%m%np, M_ONE/nrm2, st%X(psi)(:, idim, ist, ik))
+      end do
     end do
 
     ! Recalculate the residues if requested by the diff argument.
     if(present(diff)) then 
-      do ist = st%st_start, st%st_end
-        call X(Hpsi)(h, gr, st%X(psi)(:, :, ist, ik) , f(:, :, 1), ist, ik)
-        diff(ist) = X(states_residue)(gr%m, st%d%dim, f(:, :, 1), st%eigenval(ist, ik), st%X(psi)(:, :, ist, ik))
-      end do
-    end if
+      
+      do ist = st%st_start, st%st_end, st%d%block_size
+        size = min(st%d%block_size, st%st_end - ist + 1)
+        
+        call batch_init(psib, h%d%dim, ist, ist + size - 1, st%X(psi)(:, :, ist:, ik))
+        call batch_init(hpsib, h%d%dim, ist, ist + size - 1, f)
+        
+        call X(hpsi_batch)(h, gr, psib, hpsib, ik)
 
+        call batch_end(psib)
+        call batch_end(hpsib)
+        
+        do ist2 = ist, ist + size - 1
+          diff(ist2) = X(states_residue)(gr%m, st%d%dim, f(:, :, ist2 - ist + 1), st%eigenval(ist2, ik), st%X(psi)(:, :, ist2, ik))
+        end do
+      end do
+
+    end if
+    
     deallocate(f, h_subspace, vec)
 
 #ifdef HAVE_MPI
