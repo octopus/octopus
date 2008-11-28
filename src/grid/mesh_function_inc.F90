@@ -766,15 +766,34 @@ subroutine X(mf_dotp_batch)(mesh, aa, bb, dot)
   R_TYPE,         intent(inout) :: dot(:, :)
 
   integer :: ist, jst
-  
+  R_TYPE, allocatable :: dd(:, :)
+#ifdef HAVE_MPI
+  R_TYPE, allocatable :: ddtmp(:, :)
+#endif
+
   ASSERT(aa%dim == bb%dim)
 
+  ALLOCATE(dd(1:aa%nst, 1:bb%nst), aa%nst*bb%nst)
+  
   do ist = 1, aa%nst
     do jst = 1, bb%nst
-      dot(aa%states(ist)%ist, bb%states(jst)%ist) = X(mf_dotp)(mesh, aa%dim, aa%states(ist)%X(psi), bb%states(jst)%X(psi))
+      dd(ist, jst) = X(mf_dotp)(mesh, aa%dim, aa%states(ist)%X(psi), bb%states(jst)%X(psi), reduce = .false.)
     end do
   end do
-  
+
+#ifdef HAVE_MPI
+  if(mesh%parallel_in_domains) then
+    ALLOCATE(ddtmp(1:aa%nst, 1:bb%nst), aa%nst*bb%nst)
+    forall(ist = 1:aa%nst, jst = 1:bb%nst) ddtmp(ist, jst) = dd(ist, jst)
+    call MPI_Allreduce(ddtmp, dd, aa%nst*bb%nst, R_MPITYPE, MPI_SUM, mesh%mpi_grp%comm, mpi_err)
+    deallocate(ddtmp)
+  end if
+#endif
+
+  forall(ist = 1:aa%nst, jst = 1:bb%nst) dot(aa%states(ist)%ist, bb%states(jst)%ist) = dd(ist, jst)
+
+  deallocate(dd)
+
 end subroutine X(mf_dotp_batch)
 
 !! Local Variables:
