@@ -157,30 +157,33 @@
       par%utransfi = M_ZERO
 
       do mm = 1, par%dim
+        call tdf_init_numerical(fm, par%ntiter, par%dt, par%omegamax, initval = M_ZERO)
+        call tdf_numerical_to_sineseries(fm)
+        call tdf_set_numerical(fm, mm, M_ONE)
+        call tdf_sineseries_to_numerical(fm)
+        do i = 1, par%ntiter + 1
+          t = (i-1)*par%dt
+          call tdf_set_numerical(fm, i, tdf(fm, i)*cos(par%w0*t))
+        end do
+
         do nn = mm, par%dim
           call tdf_init_numerical(fn, par%ntiter, par%dt, par%omegamax, initval = M_ZERO)
-          call tdf_init_numerical(fm, par%ntiter, par%dt, par%omegamax, initval = M_ZERO)
           call tdf_numerical_to_sineseries(fn)
-          call tdf_numerical_to_sineseries(fm)
-          call tdf_set_numerical(fm, mm, M_ONE)
           call tdf_set_numerical(fn, nn, M_ONE)
-
-          call tdf_sineseries_to_numerical(fm)
           call tdf_sineseries_to_numerical(fn)
-
           do i = 1, par%ntiter + 1
             t = (i-1)*par%dt
-            call tdf_set_numerical(fm, i, tdf(fm, i)*cos(par%w0*t))
             call tdf_set_numerical(fn, i, tdf(fn, i)*cos(par%w0*t))
           end do
           par%utransf(mm, nn) = tdf_dot_product(fm, fn)
           call tdf_numerical_to_sineseries(fn)
-          call tdf_numerical_to_sineseries(fm)
-
-          call tdf_end(fm)
           call tdf_end(fn)
         end do
+
+        call tdf_numerical_to_sineseries(fm)
+        call tdf_end(fm)
       end do
+
       do mm = 1, par%dim
         do nn = 1, mm - 1
           par%utransf(mm, nn) = par%utransf(nn, mm)
