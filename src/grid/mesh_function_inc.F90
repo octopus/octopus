@@ -765,21 +765,60 @@ subroutine X(mf_dotp_batch)(mesh, aa, bb, dot)
   type(batch_t),  intent(in)    :: bb
   R_TYPE,         intent(inout) :: dot(:, :)
 
-  integer :: ist, jst
+  integer :: ist, jst, idim, sp, block_size, ep, ip
+  R_TYPE :: ss
   R_TYPE, allocatable :: dd(:, :)
 #ifdef HAVE_MPI
   R_TYPE, allocatable :: ddtmp(:, :)
 #endif
+  type(profile_t), save :: prof
 
+  call profiling_in(prof, "DOTP_BATCH")
+  
   ASSERT(aa%dim == bb%dim)
 
   ALLOCATE(dd(1:aa%nst, 1:bb%nst), aa%nst*bb%nst)
+
+  dd = R_TOTYPE(M_ZERO)
   
-  do ist = 1, aa%nst
-    do jst = 1, bb%nst
-      dd(ist, jst) = X(mf_dotp)(mesh, aa%dim, aa%states(ist)%X(psi), bb%states(jst)%X(psi), reduce = .false.)
+  block_size = hardware%X(block_size)
+
+  do idim = 1, aa%dim
+    do sp = 1, mesh%np, block_size
+      ep = min(mesh%np, sp + block_size - 1)
+
+      if(mesh%use_curvlinear) then
+
+        do ist = 1, aa%nst
+          do jst = 1, bb%nst
+            
+            ss = M_ZERO
+            do ip = sp, ep
+              ss = ss + mesh%vol_pp(ip)*aa%states(ist)%X(psi)(ip, idim)*bb%states(jst)%X(psi)(ip, idim)
+            end do
+            dd(ist, jst) = dd(ist, jst) + ss
+            
+          end do
+        end do
+
+      else
+
+        do ist = 1, aa%nst
+          do jst = 1, bb%nst
+            dd(ist, jst) = dd(ist, jst) + &
+                 mesh%vol_pp(1)*blas_dot(ep - sp + 1, aa%states(ist)%X(psi)(sp, idim), 1, bb%states(jst)%X(psi)(sp, idim), 1)
+          end do
+        end do
+
+      end if
     end do
   end do
+
+  if(mesh%use_curvlinear) then
+    call profiling_count_operations(dble(mesh%np)*aa%nst*bb%nst*(R_ADD + 2*R_MUL))
+  else
+    call profiling_count_operations(dble(mesh%np)*aa%nst*bb%nst*(R_ADD + R_MUL))
+  end if
 
 #ifdef HAVE_MPI
   if(mesh%parallel_in_domains) then
@@ -793,6 +832,8 @@ subroutine X(mf_dotp_batch)(mesh, aa, bb, dot)
   forall(ist = 1:aa%nst, jst = 1:bb%nst) dot(aa%states(ist)%ist, bb%states(jst)%ist) = dd(ist, jst)
 
   deallocate(dd)
+
+  call profiling_out(prof)
 
 end subroutine X(mf_dotp_batch)
 
