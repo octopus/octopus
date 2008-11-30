@@ -794,7 +794,7 @@ subroutine X(mf_dotp_batch)(mesh, aa, bb, dot)
             
             ss = M_ZERO
             do ip = sp, ep
-              ss = ss + mesh%vol_pp(ip)*aa%states(ist)%X(psi)(ip, idim)*bb%states(jst)%X(psi)(ip, idim)
+              ss = ss + mesh%vol_pp(ip)*R_CONJ(aa%states(ist)%X(psi)(ip, idim))*bb%states(jst)%X(psi)(ip, idim)
             end do
             dd(ist, jst) = dd(ist, jst) + ss
             

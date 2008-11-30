@@ -62,7 +62,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, h, pre, tol, niter, converged, ik, di
   ALLOCATE(conv(st%st_start:st%st_end), st%lnst)
   conv = .false.
 
-  ntimes = 1
+  ntimes = niter
   niter = 0
 
   converged = 0
