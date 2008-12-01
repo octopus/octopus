@@ -75,7 +75,7 @@ module tdf_m
             tdf_end
 
 
-  integer, parameter ::      &
+  integer, public, parameter ::  &
     TDF_EMPTY         =  10001,  &
     TDF_CW            =  10002,  &
     TDF_GAUSSIAN      =  10003,  &
@@ -496,12 +496,13 @@ module tdf_m
 
 
   !------------------------------------------------------------
-  subroutine tdf_init_numerical(f, niter, dt, omegamax, initval)
+  subroutine tdf_init_numerical(f, niter, dt, omegamax, initval, rep)
     type(tdf_t), intent(inout) :: f
     integer, intent(in) :: niter
     FLOAT, intent(in)   :: dt
     FLOAT, intent(in)   :: omegamax
     FLOAT, intent(in), optional :: initval
+    integer, intent(in), optional :: rep
 
     integer :: n(3)
     FLOAT :: bigt
@@ -538,7 +539,26 @@ module tdf_m
     n(1:3) = (/ f%niter, 1, 1 /)
     call fft_init(n, fft_real, f%fft_handler, optimize = .false.)
 
-    nullify(f%coeffs)
+    if(present(rep)) then
+      select case(rep)
+        case(TDF_SINE_SERIES)
+          ALLOCATE(f%coeffs(f%sine_nfreqs), f%sine_nfreqs)
+          f%coeffs = M_ZERO
+          deallocate(f%val); nullify(f%val)
+          f%mode = TDF_SINE_SERIES
+        case(TDF_FOURIER_SERIES)
+          ALLOCATE(f%valww(2*(f%nfreqs-1)+1), 2*(f%nfreqs-1)+1)
+          f%valww = M_ZERO
+          deallocate(f%val); nullify(f%val)
+          f%mode = TDF_FOURIER_SERIES
+        case(TDF_ZERO_FOURIER)
+          ALLOCATE(f%valww(2*(f%nfreqs-1)+1), 2*(f%nfreqs-1)+1)
+          f%valww = M_ZERO
+          deallocate(f%val); nullify(f%val)
+          f%mode = TDF_ZERO_FOURIER
+      end select
+    end if
+
     call pop_sub()
   end subroutine tdf_init_numerical
   !------------------------------------------------------------

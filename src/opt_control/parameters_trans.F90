@@ -132,9 +132,6 @@
 
     if( (par_common%mode .eq. parameter_mode_f) .or. &
         (par_common%mode .eq. parameter_mode_f_and_phi) ) then
-      ! WARNING: This assertion should be lifted whenever the code below is generalized
-      !          to the other cases.
-      ASSERT(par_common%representation .eq. ctr_sine_fourier_series)
       ! If the object to optimize is the envelope of the
       ! the laser pulse. Being e(t) the laser pulse, it is assumed that it
       ! has the form:
@@ -157,30 +154,33 @@
       par%utransfi = M_ZERO
 
       do mm = 1, par%dim
-        call tdf_init_numerical(fm, par%ntiter, par%dt, par%omegamax, initval = M_ZERO)
-        call tdf_numerical_to_sineseries(fm)
+        call tdf_init_numerical(fm, par%ntiter, par%dt, par%omegamax, rep = par_common%representation)
         call tdf_set_numerical(fm, mm, M_ONE)
-        call tdf_sineseries_to_numerical(fm)
+        select case(par_common%representation)
+          case(ctr_sine_fourier_series); call tdf_sineseries_to_numerical(fm)
+          case(ctr_fourier_series);      call tdf_fourier_to_numerical(fm)
+          case(ctr_zero_fourier_series); call tdf_zerofourier_to_numerical(fm)
+        end select
         do i = 1, par%ntiter + 1
           t = (i-1)*par%dt
           call tdf_set_numerical(fm, i, tdf(fm, i)*cos(par%w0*t))
         end do
 
         do nn = mm, par%dim
-          call tdf_init_numerical(fn, par%ntiter, par%dt, par%omegamax, initval = M_ZERO)
-          call tdf_numerical_to_sineseries(fn)
+          call tdf_init_numerical(fn, par%ntiter, par%dt, par%omegamax, rep = par_common%representation)
           call tdf_set_numerical(fn, nn, M_ONE)
-          call tdf_sineseries_to_numerical(fn)
+          select case(par_common%representation)
+            case(ctr_sine_fourier_series); call tdf_sineseries_to_numerical(fn)
+            case(ctr_fourier_series);      call tdf_fourier_to_numerical(fn)
+            case(ctr_zero_fourier_series); call tdf_zerofourier_to_numerical(fn)
+          end select
           do i = 1, par%ntiter + 1
             t = (i-1)*par%dt
             call tdf_set_numerical(fn, i, tdf(fn, i)*cos(par%w0*t))
           end do
           par%utransf(mm, nn) = tdf_dot_product(fm, fn)
-          call tdf_numerical_to_sineseries(fn)
           call tdf_end(fn)
         end do
-
-        call tdf_numerical_to_sineseries(fm)
         call tdf_end(fm)
       end do
 

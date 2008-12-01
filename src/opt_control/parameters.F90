@@ -62,6 +62,7 @@ module opt_control_parameters_m
             parameters_set_alpha,         &
             parameters_set_rep,           &
             parameters_to_realtime,       &
+            parameters_to_basis,          &
             parameters_prepare_initial,   &
             parameters_fluence,           &
             parameters_j2,                &
@@ -77,11 +78,11 @@ module opt_control_parameters_m
             parameters_filter
 
 
-  integer, parameter ::                 &
-    ctr_real_space           = 1, &
-    ctr_sine_fourier_series  = 2, &
-    ctr_fourier_series       = 3, &
-    ctr_zero_fourier_series  = 4
+  integer, parameter ::               &
+    ctr_real_space           = TDF_NUMERICAL,      &
+    ctr_sine_fourier_series  = TDF_SINE_SERIES,    &
+    ctr_fourier_series       = TDF_FOURIER_SERIES, &
+    ctr_zero_fourier_series  = TDF_ZERO_FOURIER
 
 
   integer, parameter :: parameter_mode_none      = 0, &
@@ -160,13 +161,13 @@ contains
     !% The control functions can be represented in real space (default), or expanded
     !% in a finite basis set (now, the only basis set defined in the code for this is
     !% a sine Fourier series). 
-    !%Option control_real_space 1
+    !%Option control_real_space 10007
     !%
-    !%Option control_sine_fourier_series 2
+    !%Option control_sine_fourier_series 10009
     !%
-    !%Option control_fourier_series 3
+    !%Option control_fourier_series 10010
     !%
-    !%Option control_zero_fourier_series 4
+    !%Option control_zero_fourier_series 10011
     !%
     !%End
     call loct_parse_int(check_inp('OCTParameterRepresentation'), &
@@ -276,7 +277,6 @@ contains
       end if
     end do
 
-    ! Note that in QOCT runs, it is not acceptable to have complex time-dependent functions.
     do i = 1, ep%no_lasers
       select case(par_common%mode)
       case(parameter_mode_epsilon)
@@ -511,35 +511,47 @@ contains
   subroutine parameters_set_rep(par)
     type(oct_control_parameters_t), intent(inout) :: par
     integer :: j
-
     call push_sub('parameters.parameters_set_rep')
 
-    if(par%current_representation .eq. par%representation) then
-      call pop_sub(); return
+    if(par%current_representation .ne. par%representation) then
+      if(par%representation .eq. ctr_real_space) then
+        call parameters_to_realtime(par)
+      else
+        call parameters_to_basis(par)
+      end if
+      par%current_representation = par%representation
     end if
-
-    select case(par%representation)
-    case(ctr_sine_fourier_series)
-      do j = 1, par%no_parameters
-        call tdf_numerical_to_sineseries(par%f(j))!
-      end do
-    case(ctr_fourier_series)
-      do j = 1, par%no_parameters
-        call tdf_numerical_to_fourier(par%f(j))
-      end do
-    case(ctr_zero_fourier_series)
-      do j = 1, par%no_parameters
-        call tdf_numerical_to_zerofourier(par%f(j))
-      end do
-    case(ctr_real_space)
-      do j = 1, par%no_parameters
-        call tdf_sineseries_to_numerical(par%f(j))
-      end do
-    end select
-    par%current_representation = par%representation
 
     call pop_sub()
   end subroutine parameters_set_rep
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine parameters_to_basis(par)
+    type(oct_control_parameters_t), intent(inout) :: par
+    integer :: j
+    call push_sub('parameters.parameters_to_basis')
+
+    if(par%current_representation.eq.ctr_real_space) then
+      select case(par%representation)
+      case(ctr_sine_fourier_series)
+        do j = 1, par%no_parameters
+          call tdf_numerical_to_sineseries(par%f(j))
+        end do
+      case(ctr_fourier_series)
+        do j = 1, par%no_parameters
+          call tdf_numerical_to_fourier(par%f(j))
+        end do
+      case(ctr_zero_fourier_series)
+        do j = 1, par%no_parameters
+          call tdf_numerical_to_zerofourier(par%f(j))
+        end do
+      end select
+    end if
+
+    call pop_sub()
+  end subroutine parameters_to_basis
   ! ---------------------------------------------------------
 
 

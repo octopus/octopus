@@ -506,6 +506,63 @@ module opt_control_propagation_m
 
 
   ! ---------------------------------------------------------
+  subroutine calculate_g(oct, gr, h, psi, chi, cp, dl, dq, d1)
+    type(oct_t),                    intent(in)    :: oct
+    type(grid_t),                   intent(inout) :: gr
+    type(hamiltonian_t),            intent(in)    :: h
+    type(states_t),                 intent(inout) :: psi
+    type(states_t),                 intent(inout) :: chi
+    type(oct_control_parameters_t), intent(in)    :: cp
+    FLOAT,                          intent(inout) :: dl(:), dq(:), d1
+
+    type(states_t) :: oppsi
+    integer :: no_parameters, j, ik, p
+
+    call push_sub('propagation.calculate_g')
+
+    no_parameters = parameters_number(cp)
+
+    do j = 1, no_parameters
+      call states_copy(oppsi, psi)
+      dl(j) = M_z0
+      do ik = 1, psi%d%nik
+        do p = 1, psi%nst
+          oppsi%zpsi(:, :, p, ik) = M_z0
+          call zvlaser_operator_linear(h%ep%lasers(j), gr, h%d, psi%zpsi(:, :, p, ik), &
+                                       oppsi%zpsi(:, :, p, ik), ik, h%ep%gyromagnetic_ratio, h%ep%a_static)
+          dl(j) = dl(j) + psi%occ(p, ik) * zmf_dotp(gr%m, psi%d%dim, chi%zpsi(:, :, p, ik), &
+            oppsi%zpsi(:, :, p, ik))
+        end do
+      end do
+      call states_end(oppsi)
+
+      ! The quadratic part should only be computed if necessary.
+      if(laser_kind(h%ep%lasers(j)).eq.E_FIELD_MAGNETIC ) then
+        oppsi = psi
+        dq(j) = M_z0
+        do ik = 1, psi%d%nik
+          do p = 1, psi%nst
+            oppsi%zpsi(:, :, p, ik) = M_z0
+            call zvlaser_operator_quadratic(h%ep%lasers(j), gr, h%d, psi%zpsi(:, :, p, ik), oppsi%zpsi(:, :, p, ik))
+            dq(j) = dq(j) + psi%occ(p, ik)*zmf_dotp(gr%m, psi%d%dim, chi%zpsi(:, :, p, ik), oppsi%zpsi(:, :, p, ik))
+          end do
+        end do
+        call states_end(oppsi)
+      else
+        dq(j) = M_z0
+      end if
+    end do
+
+    d1 = M_z1
+    if(oct%algorithm .eq. oct_algorithm_zbr98) d1 = zstates_mpdotp(gr%m, psi, chi)
+
+    call pop_sub()
+  end subroutine calculate_g
+  ! ---------------------------------------------------------
+
+
+
+  ! ---------------------------------------------------------
   ! Calculates the value of the control parameters at iteration
   ! iter, from the state psi and the Lagrange-multiplier chi.
   !

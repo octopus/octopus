@@ -187,7 +187,6 @@ contains
       ! that is, without applying any envelope or filter.
     call parameters_write('opt-control/initial_laser_inp', par)
     call parameters_prepare_initial(par)
-    call parameters_to_realtime(par)
     call parameters_to_h(par, h%ep)
     call messages_print_stress(stdout, "TD ext. fields after processing")
     call laser_write_info(h%ep%no_lasers, h%ep%lasers, td%dt, td%max_iter, stdout)
