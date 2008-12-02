@@ -294,6 +294,10 @@ contains
 
     if(st%d%nspin == 2) ns = 2
 
+    if(mpi_grp_is_root(mpi_world) .and. eigensolver_has_progress_bar(eigens)) then
+      call loct_progress_bar(-1, st%nst*st%d%nik)
+    end if
+
     ik_loop: do ik = st%d%kpt%start, st%d%kpt%end
       maxiter = eigens%es_maxiter
       if(verbose_) then
@@ -312,10 +316,6 @@ contains
         else
           call zsubspace_diag(gr, st, h, ik, eigens%diff(:, ik))
         end if
-      end if
-
-      if(mpi_grp_is_root(mpi_world) .and. eigensolver_has_progress_bar(eigens)) then
-        call loct_progress_bar(-1, st%nst*st%d%nik)
       end if
 
       if (wfs_are_real(st)) then

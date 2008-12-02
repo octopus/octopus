@@ -707,13 +707,14 @@ subroutine X(h_mgga_terms) (h, gr, psi, hpsi, ik, grad)
 
   do idim = 1, h%d%dim
     do ispace = 1, gr%sb%dim
-      cgrad(1:NP, ispace) = grad(1:NP, ispace, idim)*h%vtau(1:NP, ispin)
+      cgrad(1:NP, ispace) = M_TWO*grad(1:NP, ispace, idim)*h%vtau(1:NP, ispin)
       call X(set_bc)(gr%der, cgrad(:, ispace))
     end do
 
+    diverg(1:NP) = M_ZERO
     call X(derivatives_div)(gr%der, cgrad, diverg)
 
-    !hpsi(1:NP, idim) = hpsi(1:NP, idim) -  diverg(1:NP)
+    hpsi(1:NP, idim) = hpsi(1:NP, idim) - diverg(1:NP)
   end do
 
   deallocate(cgrad, diverg)

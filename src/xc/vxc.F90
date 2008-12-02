@@ -118,7 +118,7 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc, vtau)
           end if
           
         case(XC_FAMILY_HYB_GGA)
-          call XC_F90(hyb_gga)(functl(ixc)%conf, l_dens(1), l_sigma(1), &
+          call XC_F90(hyb_gga_vxc)(functl(ixc)%conf, l_dens(1), l_sigma(1), &
             e, l_dedd(1), l_vsigma(1))
 
         case(XC_FAMILY_MGGA)
