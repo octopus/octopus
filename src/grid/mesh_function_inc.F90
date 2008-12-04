@@ -158,8 +158,9 @@ R_TYPE function X(mf_dotp_2)(mesh, dim, f1, f2, reduce, dotu) result(dotp)
      ! no complex conjugation.  Default is false.
 
   integer :: idim
+  logical :: dotu_
 #ifdef HAVE_MPI
-  logical :: reduce_, dotu_
+  logical :: reduce_
   R_TYPE :: dotp_tmp
 #endif
 
