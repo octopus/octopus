@@ -77,25 +77,26 @@ subroutine X(solve_HXeY) (this, h, gr, st, ist, ik, x, y, omega)
   call profiling_out(prof)
   call pop_sub()
 
-  contains
-
-    FLOAT function mf_nrm2_qmr(x)
-      CMPLX, intent(in) :: x(:)
-
-      mf_nrm2_qmr = zmf_nrm2(gr%m, x)
-
-    end function mf_nrm2_qmr
-
-    CMPLX function mf_dotu_qmr(x,y)
-      CMPLX, intent(in) :: x(:)
-      CMPLX, intent(in) :: y(:)
-
-      mf_dotu_qmr = zmf_dotp(gr%m, x, y, dotu = .true.)
-
-    end function mf_dotu_qmr
-
 end subroutine X(solve_HXeY)
 
+#ifdef R_TCOMPLEX
+
+FLOAT function mf_nrm2_qmr(x)
+  CMPLX, intent(in) :: x(:)
+  
+  mf_nrm2_qmr = zmf_nrm2(args%gr%m, x)
+  
+end function mf_nrm2_qmr
+
+CMPLX function mf_dotu_qmr(x,y)
+  CMPLX, intent(in) :: x(:)
+  CMPLX, intent(in) :: y(:)
+  
+  mf_dotu_qmr = zmf_dotp(args%gr%m, x, y, dotu = .true.)
+  
+end function mf_dotu_qmr
+
+#endif  
 
 ! ---------------------------------------------------------
 !Conjugate gradients
