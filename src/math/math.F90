@@ -507,13 +507,13 @@ contains
   ! ---------------------------------------------------------
   ! Compute the weights for finite-difference calculations:
   !
-  !  N -> highest order fo the derivative to be approximated
+  !  N -> highest order of the derivative to be approximated
   !  M -> number of grid points to be used in the approximation.
   !
   !  c(j,k,i) -> ith order derivative at kth-order approximation
   !              j=0,k: the coefficients acting of each point
   !
-  !  side -> -1 left sided, +1 right sided, 0 centered (default)
+  !  side -> -1 left-sided, +1 right-sided, 0 centered (default)
   subroutine weights(N, M, cc, side)
     integer, intent(in) :: N, M
     FLOAT, intent(out) :: cc(0:M, 0:M, 0:N)
@@ -920,7 +920,7 @@ contains
     residue, threshold, showprogress, converged)
     integer,           intent(in)    :: np    ! number of points
     CMPLX,             intent(inout) :: x(:)  ! the initial guess and the result
-    CMPLX,             intent(in)    :: b(:)  ! th right side
+    CMPLX,             intent(in)    :: b(:)  ! the right side
     interface
       subroutine op(x, y)                     ! the matrix A as operator
         CMPLX, intent(in)  :: x(:)

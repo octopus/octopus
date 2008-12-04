@@ -71,14 +71,18 @@ end function X(mf_dotp_aux)
 
 ! ---------------------------------------------------------
 ! this function returns the dot product between two vectors
-R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce) result(dotp)
+R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu) result(dotp)
   type(mesh_t),      intent(in) :: mesh
   R_TYPE,            intent(in) :: f1(:), f2(:)
   logical, optional, intent(in) :: reduce
+  logical, optional, intent(in) :: dotu
+     ! if true, use lalg_dotu instead of lalg_dot;
+     ! no complex conjugation.  Default is false.
+     ! has no effect if working with real version
 
   R_TYPE, allocatable :: l(:)
   R_TYPE              :: dotp_tmp
-  logical             :: reduce_
+  logical             :: reduce_, dotu_
 
   call profiling_in(C_PROFILING_MF_DOTP)
   call push_sub('mf_inc.Xmf_dotp')
@@ -88,17 +92,38 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce) result(dotp)
     reduce_ = reduce
   end if
 
+  dotu_ = .false.
+  if(present(dotu)) then
+    dotu_ = dotu
+  end if
+
   if(mesh%use_curvlinear) then
     ALLOCATE(l(mesh%np), mesh%np)
     l(1:mesh%np) = f1(1:mesh%np) * mesh%vol_pp(1:mesh%np)
-    dotp_tmp  = lalg_dot(mesh%np, l(:),  f2(:))
 
+! preprocessor conditionals necessary since lalg_dotu only exists for complex input
+#ifdef R_TCOMPLEX
+    if (.not. dotu_) then
+#endif
+      dotp_tmp  = lalg_dot(mesh%np, l(:),  f2(:))
+#ifdef R_TCOMPLEX
+    else
+      dotp_tmp  = lalg_dotu(mesh%np, l(:),  f2(:))
+    endif
+#endif
     call profiling_count_operations(mesh%np*(2*R_ADD + R_MUL))
 
     deallocate(l)
   else
-    dotp_tmp = lalg_dot(mesh%np, f1(:),  f2(:))*mesh%vol_pp(1)
-    
+#ifdef R_TCOMPLEX
+    if (.not. dotu_) then
+#endif
+      dotp_tmp = lalg_dot(mesh%np, f1(:),  f2(:))*mesh%vol_pp(1)
+#ifdef R_TCOMPLEX
+    else
+      dotp_tmp = lalg_dotu(mesh%np, f1(:),  f2(:))*mesh%vol_pp(1)
+    endif
+#endif
     call profiling_count_operations(mesh%np*(R_ADD + R_MUL))
 
   end if
@@ -123,23 +148,31 @@ end function X(mf_dotp_1)
 
 
 ! ---------------------------------------------------------
-R_TYPE function X(mf_dotp_2)(mesh, dim, f1, f2, reduce) result(dotp)
+R_TYPE function X(mf_dotp_2)(mesh, dim, f1, f2, reduce, dotu) result(dotp)
   type(mesh_t),      intent(in) :: mesh
   integer,           intent(in) :: dim
   R_TYPE,            intent(in) :: f1(:,:), f2(:,:)
   logical, optional, intent(in) :: reduce
+  logical, optional, intent(in) :: dotu
+     ! if true, use lalg_dotu instead of lalg_dot;
+     ! no complex conjugation.  Default is false.
 
   integer :: idim
 #ifdef HAVE_MPI
-  logical :: reduce_
+  logical :: reduce_, dotu_
   R_TYPE :: dotp_tmp
 #endif
 
   call push_sub('mesh_function_inc.Xmf_dotp')
 
+  dotu_ = .false.
+  if(present(dotu)) then
+    dotu_ = dotu
+  end if
+
   dotp = R_TOTYPE(M_ZERO)
   do idim = 1, dim
-    dotp = dotp + X(mf_dotp_1)(mesh, f1(:, idim), f2(:, idim), reduce = .false.)
+    dotp = dotp + X(mf_dotp_1)(mesh, f1(:, idim), f2(:, idim), reduce = .false., dotu = dotu_)
   end do
 
 #ifdef HAVE_MPI

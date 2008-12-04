@@ -32,6 +32,7 @@ subroutine X(solve_HXeY) (this, h, gr, st, ist, ik, x, y, omega)
   R_TYPE,                        intent(in)    :: y(:,:)   ! y(NP, d%dim)
   R_TYPE,                        intent(in)    :: omega
 
+  call push_sub('linear_solver_inc.Xsolve_HXeY')
   call profiling_in(prof, "LINEAR_SOLVER")
 
   select case(this%solver)
@@ -57,7 +58,7 @@ subroutine X(solve_HXeY) (this, h, gr, st, ist, ik, x, y, omega)
 
     this%iter = this%max_iter
     
-    call zqmr_sym(NP, x(:, 1), y(:, 1), X(ls_solver_operator_na), X(ls_preconditioner), &
+    call zqmr_sym(NP, x(:, 1), y(:, 1), X(ls_solver_operator_na), mf_dotu_qmr, mf_nrm2_qmr, X(ls_preconditioner), &
          this%iter, residue = this%abs_psi, threshold = this%tol, showprogress = .false.)
 #else
     write(message(1), '(a,i2)') "Linear-response solver QMR not available for real wavefunctions."
@@ -74,6 +75,24 @@ subroutine X(solve_HXeY) (this, h, gr, st, ist, ik, x, y, omega)
   end select
 
   call profiling_out(prof)
+  call pop_sub()
+
+  contains
+
+    FLOAT function mf_nrm2_qmr(x)
+      CMPLX, intent(in) :: x(:)
+
+      mf_nrm2_qmr = zmf_nrm2(gr%m, x)
+
+    end function mf_nrm2_qmr
+
+    CMPLX function mf_dotu_qmr(x,y)
+      CMPLX, intent(in) :: x(:)
+      CMPLX, intent(in) :: y(:)
+
+      mf_dotu_qmr = zmf_dotp(gr%m, x, y, dotu = .true.)
+
+    end function mf_dotu_qmr
 
 end subroutine X(solve_HXeY)
 
@@ -96,7 +115,7 @@ subroutine X(ls_solver_cg) (ls, h, gr, st, ist, ik, x, y, omega)
   integer :: iter, idim
   logical :: conv_last, conv
 
-  call push_sub('linear_response_solvers.Xls_solver_cg')
+  call push_sub('linear_solver_inc.Xls_solver_cg')
 
   ALLOCATE( r(NP, st%d%dim),      NP      * st%d%dim)
   ALLOCATE( p(NP_PART, st%d%dim), NP_PART * st%d%dim)
@@ -166,7 +185,7 @@ subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ist, ik, x, y, omega)
   integer :: iter, idim, ip
   FLOAT :: gamma
 
-  call push_sub('linear_response_solver.Xls_solver_bicgstab')
+  call push_sub('linear_solver_inc.Xls_solver_bicgstab')
 
   ALLOCATE( r(NP, st%d%dim),      NP     *st%d%dim)
   ALLOCATE( p(NP_PART, st%d%dim), NP_PART*st%d%dim)
@@ -289,6 +308,8 @@ subroutine X(ls_solver_multigrid) (ls, h, gr, st, ist, ik, x, y, omega)
   R_TYPE, allocatable :: diag(:,:), hx(:,:), res(:,:)
   integer :: iter
 
+  call push_sub('linear_solver_inc.Xls_solver_multigrid')
+
   ALLOCATE(diag(NP, st%d%dim), NP * st%d%dim)
   ALLOCATE(hx(NP, st%d%dim), NP * st%d%dim)
   ALLOCATE(res(NP, st%d%dim), NP * st%d%dim)
@@ -317,6 +338,8 @@ subroutine X(ls_solver_multigrid) (ls, h, gr, st, ist, ik, x, y, omega)
   end do
 
   ls%iter = iter
+
+  call pop_sub()
 
 contains 
 
@@ -361,6 +384,9 @@ subroutine X(ls_solver_operator) (h, gr, st, ist, ik, omega, x, hx)
   integer :: idim, jst
   FLOAT   :: alpha_j, proj, dsmear
 
+!  enabling this causes trouble for some reason in debug mode
+!  call push_sub('linear_solver_inc.Xls_solver_operator')
+
   call X(Hpsi)(h, gr, x, Hx, ist, ik)
 
   !Hx = Hx + omega*x
@@ -386,6 +412,8 @@ subroutine X(ls_solver_operator) (h, gr, st, ist, ik, omega, x, hx)
 
   end do
 
+!  call pop_sub()
+
 end subroutine X(ls_solver_operator)
 
 
@@ -397,6 +425,9 @@ subroutine X(ls_solver_operator_na) (x, hx)
   R_TYPE, allocatable :: tmpx(:, :)
   R_TYPE, allocatable :: tmpy(:, :)
 
+!  enabling this causes trouble for some reason in debug mode
+!  call push_sub('linear_solver_inc.Xls_solver_operator_na')
+
   ALLOCATE(tmpx(args%gr%m%np_part, 1), args%gr%m%np_part)
   ALLOCATE(tmpy(args%gr%m%np_part, 1), args%gr%m%np_part)
 
@@ -405,6 +436,8 @@ subroutine X(ls_solver_operator_na) (x, hx)
   call lalg_copy(args%gr%m%np, tmpy(:, 1), hx)
 
   deallocate(tmpx, tmpy)
+
+!  call pop_sub()
 
 end subroutine X(ls_solver_operator_na)
 
@@ -417,6 +450,8 @@ subroutine X(ls_preconditioner) (x, hx)
   R_TYPE, allocatable :: tmpx(:, :)
   R_TYPE, allocatable :: tmpy(:, :)
 
+  call push_sub('linear_solver_inc.Xls_preconditioner')
+
   ALLOCATE(tmpx(args%gr%m%np_part, 1), args%gr%m%np_part)
   ALLOCATE(tmpy(args%gr%m%np_part, 1), args%gr%m%np_part)
 
@@ -425,6 +460,7 @@ subroutine X(ls_preconditioner) (x, hx)
   call lalg_copy(args%gr%m%np, tmpy(:, 1), hx)
 
   deallocate(tmpx, tmpy)
+  call pop_sub()
 
 end subroutine X(ls_preconditioner)
 
@@ -444,6 +480,8 @@ subroutine X(ls_solver_sos) (ls, h, gr, st, ist, ik, x, y, omega)
   R_TYPE  :: aa
   FLOAT   :: alpha_j, dsmear
   R_TYPE, allocatable  :: rr(:, :)
+
+  call push_sub('linear_solver_inc.Xls_solver_sos')
 
   x(1:NP, 1:st%d%dim) = M_ZERO
   
@@ -471,6 +509,7 @@ subroutine X(ls_solver_sos) (ls, h, gr, st, ist, ik, x, y, omega)
   ls%iter = 1
 
   deallocate(rr)
+  call pop_sub()
 
 end subroutine X(ls_solver_sos)
 
