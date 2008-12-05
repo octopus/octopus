@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2002-2008 M. Marques, A. Castro, A. Rubio, G. Bertsch, M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -295,9 +295,6 @@ contains
       call init_tag(unit, "PP_ADDINFO", .true.)
       do i = 1, ps_upf%n_wfs
         read(unit,*) dummy
-        if (ps_upf%l(i) > 0) then
-          read(unit,*) dummy
-        end if
       end do
       ALLOCATE(ps_upf%proj_j(ps_upf%n_proj), ps_upf%n_proj)
       do i = 1, ps_upf%n_proj
