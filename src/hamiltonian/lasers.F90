@@ -335,6 +335,7 @@ contains
         end select
 
         call loct_parse_block_float(blk, i-1, j+1, omega0)
+        omega0 = omega0*units_inp%energy%factor
         l(i)%omega = omega0
      
         call loct_parse_block_string(blk, i-1, j+2, envelope_expression)

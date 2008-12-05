@@ -187,7 +187,7 @@ module tdf_m
     !% <br>%</tt>
     !%
     !% The function ramps linearly during <math>tau_1</math> time units, stays constant for
-    !% <math>tau_0</math> timu units, and the decays to zero linearly again for <math>tau_1</math>
+    !% <math>tau_0</math> time units, and the decays to zero linearly again for <math>tau_1</math>
     !% time units.
     !%
     !%    (A.5) tdf_from_file
@@ -242,6 +242,7 @@ module tdf_m
           case(TDF_GAUSSIAN)
             call loct_parse_block_float(blk, i-1, 2, a0)
             call loct_parse_block_float(blk, i-1, 3, tau0)
+            call loct_parse_block_float(blk, i-1, 4, t0)
           case(TDF_COSINOIDAL)
             call loct_parse_block_float(blk, i-1, 2, a0)
             call loct_parse_block_float(blk, i-1, 3, tau0)
@@ -953,7 +954,7 @@ module tdf_m
       end if
 
     case(TDF_FROM_EXPR)
-      call loct_parse_expression(fre, fim, 't', t, f%expression)
+      call loct_parse_expression(fre, fim, 't', t/units_inp%time%factor, f%expression)
       y = cmplx(fre, fim)
 
     case default
