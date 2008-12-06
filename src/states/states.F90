@@ -1572,9 +1572,13 @@ contains
     integer       :: iunit
 
     FLOAT, allocatable  :: ff(:)
+    CMPLX, allocatable  :: cff(:)
     FLOAT, allocatable  :: osc(:)
-    FLOAT               :: transition_energy, osc_strength
+    FLOAT               :: transition_energy, osc_strength, dsf
+
     FLOAT, parameter    :: M_THRESHOLD = CNST(1.0e-6)
+    logical             :: use_qvector = .false.
+    FLOAT, allocatable  :: qvector(:)
 
     call push_sub('states.states_write_tpa')
 
@@ -1592,15 +1596,60 @@ contains
     ! make sure that half occupancy was found
     if(tpa_initialst.eq.-1) then
       if(mpi_grp_is_root(mpi_world)) then
+
         message(1) = 'No orbital with half occupancy found. TPA output is not written.'
         call write_warning(1)
+
+        call pop_sub()
         return
+
       end if
+    end if
+
+    !%Variable MomentumTransfer
+    !%Type block
+    !%Section States
+    !%Description
+    !% Momentum transfer vector q to be used when calculating matrix elements
+    !% <f|exp(iq.r)|i>. This enables the calculation of dynamic structure factor,
+    !% which is closely related to generalized oscillator strengths.
+    !% If the vector is not given but tpa output is requested (Output=tpa),
+    !% only the oscillator strengths are written in the output file.
+    !% For example, to use q = ( 0.1 , 0.2 , 0.3 ), set
+    !% <tt>%MomentumTransfer
+    !% <br>&nbsp;&nbsp; 0.1 | 0.2 | 0.3
+    !% <br>%</tt>
+    !%End
+    if(loct_parse_block(check_inp('MomentumTransfer'),blk)==0) then
+
+      ! check if input makes sense
+      ncols = loct_parse_block_cols(blk, 0)
+
+      if(ncols .ne. gr%m%sb%dim ) then ! wrong size
+
+        if(mpi_grp_is_root(mpi_world)) then
+          message(1) = 'Inconsistent size of momentum transfer vector. It is not used in TPA calculation.'
+          call write_warning(1)
+        end if
+
+      else ! correct size
+
+        use_qvector = .true.
+        ALLOCATE(qvector(gr%m%sb%dim),gr%m%sb%dim)
+
+        do icoord = 1,gr%m%sb%dim    !for x,y,z
+          call loct_parse_block_float(blk, 0, icoord-1, qvector(icoord))
+          qvector(icoord) = qvector(icoord) / units_inp%length%factor 
+        end do
+
+      end if
+
     end if
 
     ! calculate the matrix elements
 
     ALLOCATE(ff(gr%m%np), gr%m%np)
+    if(use_qvector) ALLOCATE(cff(gr%m%np), gr%m%np)
     ALLOCATE(osc(gr%m%sb%dim), gr%m%sb%dim)
 
     ! root writes output to file
@@ -1610,16 +1659,27 @@ contains
       iunit = io_open(trim(dir)//'/'//trim('tpa_xas'), action='write')    
 
       ! header
-      select case(gr%m%sb%dim)
-        case(1); write(message(1), '(a1,3(a15,1x))') '#', 'E' , '<x>', '<f>'
-        case(2); write(message(1), '(a1,4(a15,1x))') '#', 'E' , '<x>', '<y>', '<f>'
-        case(3); write(message(1), '(a1,5(a15,1x))') '#', 'E' , '<x>', '<y>', '<z>', '<f>'
-      end select
-
-      call write_info(1,iunit)
+      if(use_qvector) then
+        write (message(1),'(a1,a30,3(es14.5,1x),a1)') '#', ' momentum transfer vector : (', &
+                                                     & qvector(:)*units_out%length%factor,')'
+        select case(gr%m%sb%dim)
+          case(1); write(message(2), '(a1,4(a15,1x))') '#', 'E' , '<x>', '<f>', 'S(q,omega)'
+          case(2); write(message(2), '(a1,5(a15,1x))') '#', 'E' , '<x>', '<y>', '<f>', 'S(q,omega)'
+          case(3); write(message(2), '(a1,6(a15,1x))') '#', 'E' , '<x>', '<y>', '<z>', '<f>', 'S(q,omega)'
+        end select
+        call write_info(2,iunit)
+      else
+        select case(gr%m%sb%dim)
+          case(1); write(message(1), '(a1,3(a15,1x))') '#', 'E' , '<x>', '<f>'
+          case(2); write(message(1), '(a1,4(a15,1x))') '#', 'E' , '<x>', '<y>', '<f>'
+          case(3); write(message(1), '(a1,5(a15,1x))') '#', 'E' , '<x>', '<y>', '<z>', '<f>'
+        end select
+        call write_info(1,iunit)
+      end if
 
     end if
 
+    ! loop through every state
     do ist = 1,st%nst
 
       ! final states are the unoccupied ones
@@ -1628,6 +1688,7 @@ contains
         osc_strength=M_ZERO;
         transition_energy=st%eigenval(ist,tpa_initialk)-st%eigenval(tpa_initialst,tpa_initialk)
 
+        ! dipole matrix elements <f|x|i> etc. -> oscillator strengths
         do icoord=1,gr%m%sb%dim    ! for x,y,z
 
           ff(1:gr%m%np) = st%dpsi(1:gr%m%np,1,tpa_initialst,tpa_initialk) * &
@@ -1638,10 +1699,27 @@ contains
 
         end do
 
-        ! write oscillator strengths into file
+        ! matrix elements <f|exp(iq.r)|i> -> dynamic structure factor
+        if (use_qvector) then
+
+          cff(1:gr%m%np) = cmplx(st%dpsi(1:gr%m%np,1,tpa_initialst,tpa_initialk)) * &
+                       &   cmplx(st%dpsi(1:gr%m%np,1,ist,tpa_initialk))
+          do icoord=1,gr%m%sb%dim    ! for x,y,z
+            cff(1:gr%m%np) = cff(1:gr%m%np) * exp(M_zI*gr%m%x(1:gr%m%np,icoord)*qvector(icoord))
+          end do
+
+          dsf = abs(zmf_integrate(gr%m, cff))**2.0
+        end if
+
+        ! write oscillator strengths (+ dynamic structure factor if qvector if given) into file
         if(mpi_grp_is_root(mpi_world)) then
 
-          write(message(1), '(1x,5(es15.8,x))') transition_energy/units_out%energy%factor, osc_strength,osc(:)
+          select case(use_qvector)
+            case(.true.);  write(message(1), '(1x,6(es15.8,x))') transition_energy/units_out%energy%factor, osc(:), osc_strength, &
+                                                               & dsf*units_out%energy%factor
+            case(.false.); write(message(1), '(1x,5(es15.8,x))') transition_energy/units_out%energy%factor, osc(:), osc_strength
+          end select
+
           call write_info(1,iunit)
 
         end if
@@ -1656,7 +1734,9 @@ contains
     end if
 
     deallocate(ff);
+    if(use_qvector) deallocate(cff);
     deallocate(osc);
+    if (use_qvector) deallocate(qvector)
   
     call pop_sub()
  

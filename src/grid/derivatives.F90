@@ -478,7 +478,7 @@ contains
     end select
 
     ! Here the Laplacian is forced to be self-adjoint, and the gradient to be skew-selfadjoint
-    if(m%use_curvlinear) then
+    if(m%use_curvlinear .and. (.not. simul_box_multires(der%m%sb))) then
       do i = 1, der%dim
         call nl_operator_init(auxop, "auxop")
         auxop%stencil = der%grad(i)%stencil

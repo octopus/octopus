@@ -494,7 +494,7 @@ contains
     FLOAT, allocatable :: pos(:), ww(:)
     integer, allocatable :: posi(:)
     
-    order = 2
+    order = 3
     
     nn = 2*order
 
