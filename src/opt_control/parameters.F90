@@ -409,7 +409,7 @@ contains
           call conv_to_C_string(expression)
           do j = 1, steps+1
             t = (j-1)*dt
-            call loct_parse_expression(f_re, f_im, "t", real(t, 8), expression)
+            call loct_parse_expression(f_re, f_im, "t", t, expression)
             call tdf_set_numerical(par_common%td_penalty(i), j, TOFLOAT(M_ONE /(f_re + CNST(1.0e-7)))  )
           end do
         end if

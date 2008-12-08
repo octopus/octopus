@@ -65,10 +65,19 @@ module poisson_cutoffs_m
     real(8) function intcoslog(mu, gx, gy)
       real(8), intent(in) :: mu, gx, gy
     end function intcoslog
+    module procedure poisson_cutoff_intcoslog4
   end interface poisson_cutoff_intcoslog
 
   
 contains
+
+
+  ! ---------------------------------------------------------
+  real(4) function poisson_cutoff_intcoslog4(mu, gx, gy)
+    real(4), intent(in) :: mu, gx, gy
+    poisson_cutoff_intcoslog4 = intcoslog(real(mu, 8), real(gx, 8), real(gy, 8))  
+  end function poisson_cutoff_intcoslog4
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------

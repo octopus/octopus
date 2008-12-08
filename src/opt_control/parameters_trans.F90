@@ -19,17 +19,19 @@
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_par_to_x(par, x)
+  subroutine parameters_par_to_x(par, xx)
     type(oct_control_parameters_t), intent(inout) :: par
-    REAL_DOUBLE,                    intent(inout) :: x(:)
+    REAL_DOUBLE,                    intent(inout) :: xx(:)
     integer :: j, n
-    FLOAT, allocatable :: ep(:), e(:), y(:), a(:)
+    FLOAT, allocatable :: ep(:), e(:), y(:), a(:), x(:)
 
     call push_sub('parameters.parameters_par_to_x')
 
     n = par%dim
     ALLOCATE(e(n), n)
     ALLOCATE(ep(n), n)
+    ALLOCATE(x(size(xx)), size(xx))
+    x = xx
 
     ASSERT(par%current_representation .ne. ctr_real_space)
 
@@ -46,6 +48,7 @@
 
       call hypersphere_cut(ep(2:n), a, y)
       call cartesian2hyperspherical(y, x(1:n-2))
+      deallocate(a, y)
      else
       call cartesian2hyperspherical(e, x(1:n-1))
     end if
@@ -58,18 +61,19 @@
       call cartesian2hyperspherical(e, x(n:2*n-2))
     end if
 
-    deallocate(e, ep)
+    xx = x
+    deallocate(e, ep, x) 
     call pop_sub()
   end subroutine parameters_par_to_x
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_x_to_par(par, x)
+  subroutine parameters_x_to_par(par, xx)
     type(oct_control_parameters_t), intent(inout) :: par
-    REAL_DOUBLE,                          intent(in)    :: x(:)
+    REAL_DOUBLE,                          intent(in)    :: xx(:)
 
-    FLOAT, allocatable :: y(:), a(:), e(:), ep(:)
+    FLOAT, allocatable :: y(:), a(:), e(:), ep(:), x(:)
     integer :: n
 
     call push_sub('parameters.parameters_x_to_par')
@@ -79,6 +83,8 @@
     n = par%dim
     ALLOCATE(e(n), n)
     ALLOCATE(ep(n), n)
+    ALLOCATE(x(size(xx)), size(xx))
+    x = xx
 
     if(par%representation .eq. ctr_zero_fourier_series) then
       call hyperspherical2cartesian(x, ep(2:n))
@@ -91,6 +97,7 @@
       e = sqrt(par%targetfluence) * e
       ep = matmul(par%utransfi, e)
       call tdf_set_numerical(par%f(1), ep)
+      deallocate(a, y)
     else
       call hyperspherical2cartesian(x(1:n-1), e)
       e = sqrt(par%targetfluence) * e
@@ -104,7 +111,7 @@
       call tdf_set_numerical(par%f(2), ep)
     end if
 
-    deallocate(e, ep)
+    deallocate(e, ep, x)
     call pop_sub()
   end subroutine parameters_x_to_par
   ! ---------------------------------------------------------

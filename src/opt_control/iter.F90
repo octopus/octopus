@@ -221,7 +221,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine iteration_manager_direct(j, par, iterator, dx)
-    REAL_DOUBLE, intent(in) :: j
+    FLOAT, intent(in) :: j
     type(oct_control_parameters_t), intent(in)  :: par
     type(oct_iterator_t), intent(inout) :: iterator
     FLOAT, optional, intent(in) :: dx

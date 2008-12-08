@@ -100,7 +100,7 @@ contains
       call propagate_forward(sys_, h_, td_, par_, target, psi)
       f = - j1_functional(target, sys_%gr, psi) - parameters_j2(par_)
       if(oct%dump_intermediate) call iterator_write(iterator, par_)
-      call iteration_manager_direct(-f, par_, iterator)
+      call iteration_manager_direct(real(-f, REAL_PRECISION), par_, iterator)
       call states_end(psi)
     else
       call parameters_copy(par_new, par_)
@@ -108,7 +108,7 @@ contains
       delta = parameters_diff(par_, par_new)
       f = - oct%eta * j1 + oct%delta * delta
       if(oct%dump_intermediate) call iterator_write(iterator, par_)
-      call iteration_manager_direct(-f, par_, iterator, delta)
+      call iteration_manager_direct(real(-f, REAL_PRECISION), par_, iterator, delta)
       call parameters_end(par_new)
     end if
 
