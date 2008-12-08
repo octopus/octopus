@@ -86,12 +86,12 @@ subroutine mesh_init_stage_1(sb, mesh, geo, cv, enlarge)
     out = .false.
     do while(.not.out)
       j      = j + 1
-      chi(i) = j*mesh%h(i)
+      chi(i) = real(j, REAL_PRECISION)*mesh%h(i)
       if ( mesh%use_curvlinear ) then
         call curvlinear_chi2x(sb, geo, cv, chi(1:sb%dim), x(1:sb%dim))
-        out = (x(i) > sb%lsize(i)+CNST(1.0e-10))
+        out = (x(i) > nearest(sb%lsize(i), M_ONE))
       else
-        out = (chi(i) > sb%lsize(i)+CNST(1.0e-10))
+        out = (chi(i) > nearest(sb%lsize(i), M_ONE))
       end if
     end do
     mesh%nr(2, i) = j - 1
