@@ -242,7 +242,7 @@ subroutine X(eigensolver_cg2) (gr, st, h, pre, tol, niter, converged, ik, diff, 
     end if
 
     if(mpi_grp_is_root(mpi_world)) then
-      call loct_progress_bar(st%nst*(ik-1) +  p - 1, st%nst*st%d%nik)
+      call loct_progress_bar(st%nst*(ik - 1) +  p, st%nst*st%d%nik)
     end if
 
   end do eigenfunction_loop
@@ -439,7 +439,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, h, tol, niter, converged, ik, diff, v
     end if
 
     if(mpi_grp_is_root(mpi_world)) then
-      call loct_progress_bar(st%nst*(ik-1) +  ist - 1, st%nst*st%d%nik)
+      call loct_progress_bar(st%nst*(ik - 1) + ist, st%nst*st%d%nik)
     end if
 
   end do states
