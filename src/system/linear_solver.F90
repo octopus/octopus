@@ -35,6 +35,7 @@ module linear_solver_m
   use profiling_m
   use preconditioners_m
   use smear_m
+  use solvers_m
   use states_m
 
   implicit none

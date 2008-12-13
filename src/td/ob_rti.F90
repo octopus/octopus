@@ -39,6 +39,7 @@ module ob_rti_m
   use ob_src_m
   use ob_terms_m  
   use simul_box_m
+  use solvers_m
   use states_m
   use varinfo_m
   use v_ks_m

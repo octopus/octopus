@@ -36,6 +36,7 @@ module ob_lippmann_schwinger_m
   use ob_interface_m
   use ob_lead_m
   use simul_box_m
+  use solvers_m
   use states_m
 
   implicit none
