@@ -39,8 +39,9 @@ R_TYPE function X(mf_integrate) (mesh, f) result(d)
     end do
   else
     do ip = 1, mesh%np
-      d = d + f(ip)*mesh%vol_pp(1)
+      d = d + f(ip)
     end do
+    d = d*mesh%vol_pp(1)
   end if
 
 #ifdef HAVE_MPI
@@ -83,6 +84,7 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu) result(dotp)
   R_TYPE, allocatable :: l(:)
   R_TYPE              :: dotp_tmp
   logical             :: reduce_, dotu_
+  integer             :: ip
 
   call profiling_in(C_PROFILING_MF_DOTP)
   call push_sub('mf_inc.Xmf_dotp')
@@ -98,22 +100,22 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu) result(dotp)
   end if
 
   if(mesh%use_curvlinear) then
-    ALLOCATE(l(mesh%np), mesh%np)
-    l(1:mesh%np) = f1(1:mesh%np) * mesh%vol_pp(1:mesh%np)
-
-! preprocessor conditionals necessary since lalg_dotu only exists for complex input
+    dotp_tmp = M_ZERO
+    ! preprocessor conditionals necessary since lalg_dotu only exists for complex input
 #ifdef R_TCOMPLEX
     if (.not. dotu_) then
 #endif
-      dotp_tmp  = lalg_dot(mesh%np, l(:),  f2(:))
+      do ip = 1, mesh%np
+        dotp_tmp = dotp_tmp + mesh%vol_pp(ip)*R_CONJ(f1(ip))*f2(ip)
+      end do
 #ifdef R_TCOMPLEX
     else
-      dotp_tmp  = lalg_dotu(mesh%np, l(:),  f2(:))
+      do ip = 1, mesh%np
+        dotp_tmp = dotp_tmp + mesh%vol_pp(ip)*f1(ip)*f2(ip)
+      end do
     endif
 #endif
     call profiling_count_operations(mesh%np*(2*R_ADD + R_MUL))
-
-    deallocate(l)
   else
 #ifdef R_TCOMPLEX
     if (.not. dotu_) then
@@ -131,8 +133,7 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu) result(dotp)
   if(mesh%parallel_in_domains.and.reduce_) then
 #if defined(HAVE_MPI)
     call profiling_in(C_PROFILING_MF_DOTP_ALLREDUCE)
-    call MPI_Allreduce(dotp_tmp, dotp, 1, R_MPITYPE, &
-      MPI_SUM, mesh%vp%comm, mpi_err)
+    call MPI_Allreduce(dotp_tmp, dotp, 1, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
     call profiling_out(C_PROFILING_MF_DOTP_ALLREDUCE)
 #else
     ASSERT(.false.)

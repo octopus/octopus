@@ -208,7 +208,7 @@ subroutine mesh_init_stage_2(sb, mesh, geo, cv, stencil)
 
         inside = simul_box_in_box(sb, geo, mesh%x_tmp(:, ix, iy, iz), inner_box = .true.)
         mesh%resolution(ix, iy, iz) = 1
-        if(.not. inside) mesh%resolution(ix, iy, iz) = 2
+        if(.not. inside .and. simul_box_multires(sb)) mesh%resolution(ix, iy, iz) = 2
         inside = inside .or. (simul_box_in_box(sb, geo, mesh%x_tmp(:, ix, iy, iz)) .and. &
              mod(ix, 2) == 0 .and. mod(iy, 2) == 0 .and. mod(iz, 2) == 0)
 
