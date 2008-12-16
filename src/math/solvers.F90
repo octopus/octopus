@@ -211,7 +211,7 @@ contains
     CMPLX, allocatable  :: r(:), v(:), z(:), q(:), p(:), deltax(:), deltar(:)
     CMPLX               :: eta, delta, epsilon, beta
     FLOAT               :: rho, xsi, gamma, alpha, theta, threshold_, res, oldtheta, oldgamma, oldrho
-    integer             :: max_iter, err
+    integer             :: max_iter, err, ip
     logical             :: showprogress_
     FLOAT               :: log_res, log_thr
     integer             :: ilog_res, ilog_thr
@@ -241,10 +241,12 @@ contains
     ALLOCATE(deltar(np), np)
 
     ! use v as temp var
-    call lalg_copy(np, b, r)
     call op(x, v)
-    call lalg_axpy(np, -M_z1, v, r)
-    call lalg_copy(np, r, v)
+
+    forall (ip = 1:np) 
+      r(ip) = b(ip) - v(ip)
+      v(ip) = r(ip)
+    end forall
 
     rho = nrm2(v)
 
@@ -276,8 +278,8 @@ contains
           exit
         end if
         alpha = alpha*xsi/rho
-        call lalg_scal(np, M_z1/rho, v)
-        call lalg_scal(np, M_z1/xsi, z)
+        call lalg_scal(np, M_ONE/rho, v)
+        call lalg_scal(np, M_ONE/xsi, z)
 
         delta = dotu(v, z)
 
@@ -288,8 +290,7 @@ contains
         if(iter == 1) then
           call lalg_copy(np, z, q)
         else
-          call lalg_scal(np, -rho*delta/epsilon, q)
-          call lalg_axpy(np, M_z1, z, q)
+          forall (ip = 1:np) q(ip) = -rho*delta/epsilon*q(ip) + z(ip)
         end if
         call op(q, p)
         call lalg_scal(np, alpha, p)
@@ -301,14 +302,13 @@ contains
           exit
         end if
         beta = epsilon/delta
-        call lalg_scal(np, -beta, v)
-        call lalg_axpy(np, M_z1, p, v)
+        forall (ip = 1:np) v(ip) = -beta*v(ip) + p(ip)        
         oldrho = rho
 
         rho = nrm2(v)
 
         call prec(v, z)
-        call lalg_scal(np, M_z1/alpha, z)
+        call lalg_scal(np, M_ONE/alpha, z)
 
         xsi = nrm2(z)
 
@@ -321,19 +321,32 @@ contains
           exit
         end if
         eta = -eta*oldrho*gamma**2/(beta*oldgamma**2)
+
         if(iter == 1) then
-          call lalg_copy(np, q, deltax)
-          call lalg_scal(np, eta*alpha, deltax)
-          call lalg_copy(np, p, deltar)
-          call lalg_scal(np, eta, deltar)
+
+          forall (ip = 1:np) 
+            deltax(ip) = eta*alpha*q(ip)
+            x(ip) = x(ip) + deltax(ip)
+          end forall
+
+          forall (ip = 1:np)
+            deltar(ip) = eta*p(ip)
+            r(ip) = r(ip) - deltar(ip)
+          end forall
+
         else
-          call lalg_scal(np, (oldtheta*gamma)**2, deltax)
-          call lalg_axpy(np, eta*alpha, q, deltax)
-          call lalg_scal(np, (oldtheta*gamma)**2, deltar)
-          call lalg_axpy(np, eta, p, deltar)
+
+          forall (ip = 1:np) 
+            deltax(ip) = (oldtheta*gamma)**2*deltax(ip) + eta*alpha*q(ip)
+            x(ip) = x(ip) + deltax(ip)
+          end forall
+
+          forall (ip = 1:np) 
+            deltar(ip) = (oldtheta*gamma)**2*deltar(ip) + eta*p(ip)
+            r(ip) = r(ip) - deltar(ip)
+          end forall
+
         end if
-        call lalg_axpy(np, M_z1, deltax, x)
-        call lalg_axpy(np, -M_z1, deltar, r)
 
         res = nrm2(r)/nrm2(x)
 

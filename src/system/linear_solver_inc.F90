@@ -58,7 +58,7 @@ subroutine X(solve_HXeY) (this, h, gr, st, ist, ik, x, y, omega)
 
     this%iter = this%max_iter
     
-    call zqmr_sym(NP, x(:, 1), y(:, 1), X(ls_solver_operator_na), mf_dotu_qmr, mf_nrm2_qmr, X(ls_preconditioner), &
+    call zqmr_sym(NP, x(:, 1), y(:, 1), X(ls_solver_operator_na), ls_dotu_qmr, ls_nrm2_qmr, X(ls_preconditioner), &
          this%iter, residue = this%abs_psi, threshold = this%tol, showprogress = .false.)
 #else
     write(message(1), '(a,i2)') "Linear-response solver QMR not available for real wavefunctions. Use ForceComplex."
@@ -81,20 +81,20 @@ end subroutine X(solve_HXeY)
 
 #ifdef R_TCOMPLEX
 
-FLOAT function mf_nrm2_qmr(x)
+FLOAT function ls_nrm2_qmr(x)
   CMPLX, intent(in) :: x(:)
   
-  mf_nrm2_qmr = zmf_nrm2(args%gr%m, x)
+  ls_nrm2_qmr = zmf_nrm2(args%gr%m, x)
   
-end function mf_nrm2_qmr
+end function ls_nrm2_qmr
 
-CMPLX function mf_dotu_qmr(x,y)
+CMPLX function ls_dotu_qmr(x,y)
   CMPLX, intent(in) :: x(:)
   CMPLX, intent(in) :: y(:)
   
-  mf_dotu_qmr = zmf_dotp(args%gr%m, x, y, dotu = .true.)
+  ls_dotu_qmr = zmf_dotp(args%gr%m, x, y, dotu = .true.)
   
-end function mf_dotu_qmr
+end function ls_dotu_qmr
 
 #endif  
 
@@ -430,7 +430,7 @@ subroutine X(ls_solver_operator_na) (x, hx)
 !  call push_sub('linear_solver_inc.Xls_solver_operator_na')
 
   ALLOCATE(tmpx(args%gr%m%np_part, 1), args%gr%m%np_part)
-  ALLOCATE(tmpy(args%gr%m%np_part, 1), args%gr%m%np_part)
+  ALLOCATE(tmpy(args%gr%m%np, 1), args%gr%m%np)
 
   call lalg_copy(args%gr%m%np, x, tmpx(:, 1))
   call X(ls_solver_operator)(args%h, args%gr, args%st, args%ist, args%ik, args%X(omega), tmpx, tmpy)
