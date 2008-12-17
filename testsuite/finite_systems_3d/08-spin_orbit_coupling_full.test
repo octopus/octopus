@@ -47,10 +47,10 @@ match ; <Sz>        1 ; GREP(static/info, ' 1   --', 52) ;  0.5000
 match ; <Sz>        3 ; GREP(static/info, ' 3   --', 52) ;  0.5000
 match ; <Sz>        5 ; GREP(static/info, ' 5   --', 52) ;  0.4714
 match ; <Sz>        7 ; GREP(static/info, ' 7   --', 52) ;  0.1288
-match ; <Sz>        9 ; GREP(static/info, ' 9   --', 52) ; -0.0820
-match ; <Sz>       11 ; GREP(static/info, '11   --', 52) ;  0.1273
+match ; <Sz>        9 ; GREP(static/info, ' 9   --', 52) ; -0.0847
+match ; <Sz>       11 ; GREP(static/info, '11   --', 52) ;  0.1300
 match ; <Sz>       13 ; GREP(static/info, '13   --', 52) ; -0.1012
 match ; <Sz>       15 ; GREP(static/info, '15   --', 52) ;  0.4557
 
-match ; Force         ; GREP(static/info, 'Forces on the ions', 20, 2) ; -0.664385
+match ; Force         ; GREP(static/info, 'Forces on the ions', 20, 2) ; -0.664587
 
