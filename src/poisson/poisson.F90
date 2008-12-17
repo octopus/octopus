@@ -480,9 +480,9 @@ contains
         select case(calc_dim)
         case(3)
           if(r > r_small) then
-            vh_exact(i) = vh_exact(i) + loct_erf(r/alpha)/r
+            vh_exact(i) = vh_exact(i) + (-1)**n * loct_erf(r/alpha)/r
           else
-            vh_exact(i) = vh_exact(i) + (M_TWO/sqrt(M_PI))/alpha
+            vh_exact(i) = vh_exact(i) + (-1)**n * (M_TWO/sqrt(M_PI))/alpha
           end if
         case(2)
           ralpha = r**2/(M_TWO*alpha**2)
