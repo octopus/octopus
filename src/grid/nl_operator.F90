@@ -333,7 +333,7 @@ contains
       op%inner%nri = 0
       op%outer%nri = 0
       do ir = 1, op%nri
-        maxp = op%rimap_inv(ir + 1) - 1 + maxval(op%ri(1:op%stencil%size, ir))
+        maxp = op%rimap_inv(ir + 1) + maxval(op%ri(1:op%stencil%size, ir))
         if (maxp <= np) then
           !inner point
           op%inner%nri = op%inner%nri + 1
@@ -359,7 +359,7 @@ contains
       iinner = 0
       iouter = 0
       do ir = 1, op%nri
-        maxp = op%rimap_inv(ir + 1) - 1 + maxval(op%ri(1:op%stencil%size, ir))
+        maxp = op%rimap_inv(ir + 1) + maxval(op%ri(1:op%stencil%size, ir))
         if (maxp <= np) then
           !inner point
           iinner = iinner + 1
@@ -374,6 +374,14 @@ contains
           op%outer%ri(1:op%stencil%size, iouter) = op%ri(1:op%stencil%size, ir)
         end if
       end do
+      
+      !verify that all points in the inner operator are actually inner
+      do ir = 1, op%inner%nri
+        do ii = op%inner%imin(ir) + 1, op%inner%imax(ir)
+          ASSERT(all(ii + op%inner%ri(1:op%stencil%size, ir) <= m%np))
+        end do
+      end do
+      
     end if
 #endif
 
