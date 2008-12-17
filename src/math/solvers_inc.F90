@@ -99,7 +99,7 @@ subroutine X(sym_conjugate_gradients)(np, x, b, op, dotp, iter, residue, thresho
   FLOAT               :: threshold_
   integer             :: max_iter
 
-  call push_sub('math_cg_inc.Xsym_conjugate_gradients')
+  call push_sub('solvers_inc.Xsym_conjugate_gradients')
 
   if(present(threshold)) then
     threshold_ = threshold
@@ -169,7 +169,7 @@ subroutine X(bi_conjugate_gradients)(np, x, b, op, opt, dotp, iter, residue, thr
   FLOAT               :: alpha, beta, gamma, err, threshold_
   integer             :: max_iter
 
-  call push_sub('math_cg_inc.Xbi_conjugate_gradients')
+  call push_sub('solvers_inc.Xbi_conjugate_gradients')
 
   if(present(threshold)) then
     threshold_ = threshold
@@ -222,6 +222,537 @@ subroutine X(bi_conjugate_gradients)(np, x, b, op, opt, dotp, iter, residue, thr
   call pop_sub()
 end subroutine X(bi_conjugate_gradients)
 
+  ! ---------------------------------------------------------
+  subroutine X(qmr_sym_spec_dotp)(np, x, b, op, prec, iter, residue, threshold, showprogress, converged)
+    integer, target,   intent(in)    :: np    ! number of points
+    R_TYPE,             intent(inout) :: x(:)  ! initial guess and result
+    R_TYPE,             intent(in)    :: b(:)  ! the right side
+    interface
+      subroutine op(x, y)                     ! the matrix A as operator, y <- Ax
+        R_TYPE, intent(in)  :: x(:)
+        R_TYPE, intent(out) :: y(:)
+      end subroutine op
+    end interface
+    interface
+      subroutine prec(x, y)                   ! preconditioner
+        R_TYPE, intent(in)  :: x(:)
+        R_TYPE, intent(out) :: y(:)
+      end subroutine prec
+    end interface
+    integer,           intent(inout) :: iter  ! [in] number of max iterations, [out] used iterations
+    FLOAT, optional,   intent(out)   :: residue ! residue = abs(Ax-b)
+    FLOAT, optional,   intent(in)    :: threshold ! convergence threshold
+    logical, optional, intent(in)    :: showprogress ! show progress bar
+    logical, optional, intent(out)   :: converged ! is the algorithm converged
+
+    call push_sub('solvers_inc.Xqmr_sym_spec_dotp')
+
+    np_p => np
+    call X(qmr_sym_gen_dotp)(np, x, b, op, X(dotu_qmr), X(nrm2_qmr), prec, iter, &
+      residue, threshold, showprogress, converged)
+
+    call pop_sub()
+  end subroutine X(qmr_sym_spec_dotp)
+
+  ! ---------------------------------------------------------
+  subroutine X(qmr_spec_dotp)(np, x, b, op, opt, prec, prect, iter, residue, threshold, showprogress, converged)
+    integer, target,   intent(in)    :: np    ! number of points
+    R_TYPE,             intent(inout) :: x(:)  ! initial guess and the result
+    R_TYPE,             intent(in)    :: b(:)  ! the right side
+    interface
+      subroutine op(x, y)                     ! the matrix A as operator y <- A*x
+        R_TYPE, intent(in)  :: x(:)
+        R_TYPE, intent(out) :: y(:)
+      end subroutine op
+    end interface
+    interface
+      subroutine opt(x, y)                    ! the transposed matrix A as operator y <- A^T*x
+        R_TYPE, intent(in)  :: x(:)
+        R_TYPE, intent(out) :: y(:)
+      end subroutine opt
+    end interface
+    interface
+      subroutine prec(x, y)                   ! the preconditioner
+        R_TYPE, intent(in)  :: x(:)
+        R_TYPE, intent(out) :: y(:)
+      end subroutine prec
+    end interface
+    interface
+      subroutine prect(x, y)                  ! the transposed preconditioner
+        R_TYPE, intent(in)  :: x(:)
+        R_TYPE, intent(out) :: y(:)
+      end subroutine prect
+    end interface
+    integer,           intent(inout) :: iter  ! [in] number of max iterations, [out] used iterations
+    FLOAT, optional,   intent(out)   :: residue ! residue = abs(Ax-b)
+    FLOAT, optional,   intent(in)    :: threshold ! convergence threshold
+    logical, optional, intent(in)    :: showprogress ! show progress bar
+    logical, optional, intent(out)   :: converged ! is the algorithm converged
+
+    call push_sub('solvers_inc.Xqmr_spec_dotp')
+
+    np_p => np
+    call X(qmr_gen_dotp)(np, x, b, op, opt, X(dotu_qmr), X(nrm2_qmr), &
+      prec, prect, iter, residue, threshold, showprogress, converged)
+
+    call pop_sub()
+  end subroutine X(qmr_spec_dotp)
+
+
+  ! ---------------------------------------------------------
+  FLOAT function X(nrm2_qmr)(x)
+    R_TYPE, intent(in) :: x(:)
+
+    call push_sub('solvers_inc.Xnrm2_qmr')
+
+    X(nrm2_qmr) = lalg_nrm2(np_p, x(:))
+
+    call pop_sub()
+  end function X(nrm2_qmr)
+
+
+  ! ---------------------------------------------------------
+  ! for complex symmetric matrices
+  subroutine X(qmr_sym_gen_dotp)(np, x, b, op, dotu, nrm2, prec, iter, &
+    residue, threshold, showprogress, converged)
+    integer,           intent(in)    :: np    ! number of points
+    R_TYPE,             intent(inout) :: x(:)  ! the initial guess and the result
+    R_TYPE,             intent(in)    :: b(:)  ! the right side
+    interface
+      subroutine op(x, y)                     ! the matrix A as operator
+        R_TYPE, intent(in)  :: x(:)
+        R_TYPE, intent(out) :: y(:)
+      end subroutine op
+    end interface
+    interface 
+      R_TYPE function dotu(x, y)               ! the dot product (must be x^T*y, not daggered)
+        R_TYPE, intent(in) :: x(:)
+        R_TYPE, intent(in) :: y(:)
+      end function dotu
+    end interface
+    interface 
+      FLOAT function nrm2(x)                  ! the 2-norm of the vector x
+        R_TYPE, intent(in) :: x(:)
+      end function nrm2
+    end interface
+    interface
+      subroutine prec(x, y)                   ! the preconditioner
+        R_TYPE, intent(in)  :: x(:)
+        R_TYPE, intent(out) :: y(:)
+      end subroutine prec
+    end interface
+    integer,           intent(inout) :: iter  ! [in] the maximum number of iterations, [out] used iterations
+    FLOAT, optional,   intent(out)   :: residue ! the residue = abs(Ax-b)
+    FLOAT, optional,   intent(in)    :: threshold ! convergence threshold
+    logical, optional, intent(in)    :: showprogress ! should there be a progress bar
+    logical, optional, intent(out)   :: converged ! has the algorithm converged
+
+    R_TYPE, allocatable  :: r(:), v(:), z(:), q(:), p(:), deltax(:), deltar(:)
+    R_TYPE               :: eta, delta, epsilon, beta
+    FLOAT               :: rho, xsi, gamma, alpha, theta, threshold_, res, oldtheta, oldgamma, oldrho
+    integer             :: max_iter, err, ip
+    logical             :: showprogress_
+    FLOAT               :: log_res, log_thr
+    integer             :: ilog_res, ilog_thr
+
+    call push_sub('solvers_inc.Xqmr_sym_gen_dotp')
+
+    if(present(converged)) then
+      converged = .false.
+    end if
+    if(present(threshold)) then
+      threshold_ = threshold
+    else
+      threshold_ = CNST(1.0e-6)
+    end if
+    if(present(showprogress)) then
+      showprogress_ = showprogress
+    else
+      showprogress_ = .false.
+    end if
+
+    ALLOCATE(r(np), np)
+    ALLOCATE(v(np), np)
+    ALLOCATE(z(np), np)
+    ALLOCATE(q(np), np)
+    ALLOCATE(p(np), np)
+    ALLOCATE(deltax(np), np)
+    ALLOCATE(deltar(np), np)
+
+    ! use v as temp var
+    call op(x, v)
+
+    forall (ip = 1:np) 
+      r(ip) = b(ip) - v(ip)
+      v(ip) = r(ip)
+    end forall
+
+    rho = nrm2(v)
+
+    max_iter = iter
+    iter     = 0
+    err      = 0
+    res      = rho
+
+    ! If rho is basically zero we are already done.
+    if(abs(rho).gt.M_EPSILON) then
+      call prec(v, z)
+
+      xsi = nrm2(z)
+
+      gamma = M_ONE
+      eta   = -M_ONE
+      alpha = M_ONE
+      theta = M_ZERO
+
+      ! initialize progress bar
+      log_thr = -log(threshold_)
+      ilog_thr = M_TEN**2*log_thr
+      if(showprogress_) call loct_progress_bar(-1, ilog_thr)
+
+      do while(iter < max_iter)
+        iter = iter + 1
+        if((abs(rho) < M_EPSILON) .or. (abs(xsi) < M_EPSILON)) then
+          err = 1
+          exit
+        end if
+        alpha = alpha*xsi/rho
+        call lalg_scal(np, M_ONE/rho, v)
+        call lalg_scal(np, M_ONE/xsi, z)
+
+        delta = dotu(v, z)
+
+        if(abs(delta) < M_EPSILON) then
+          err = 2
+          exit
+        end if
+        if(iter == 1) then
+          call lalg_copy(np, z, q)
+        else
+          forall (ip = 1:np) q(ip) = -rho*delta/epsilon*q(ip) + z(ip)
+        end if
+        call op(q, p)
+        call lalg_scal(np, alpha, p)
+
+        epsilon = dotu(q, p)
+
+        if(abs(epsilon) < M_EPSILON) then
+          err = 3
+          exit
+        end if
+        beta = epsilon/delta
+        forall (ip = 1:np) v(ip) = -beta*v(ip) + p(ip)        
+        oldrho = rho
+
+        rho = nrm2(v)
+
+        call prec(v, z)
+        call lalg_scal(np, M_ONE/alpha, z)
+
+        xsi = nrm2(z)
+
+        oldtheta = theta
+        theta    = rho/(gamma*abs(beta))
+        oldgamma = gamma
+        gamma    = M_ONE/sqrt(M_ONE+theta**2)
+        if(abs(gamma) < M_EPSILON) then
+          err = 4
+          exit
+        end if
+        eta = -eta*oldrho*gamma**2/(beta*oldgamma**2)
+
+        if(iter == 1) then
+
+          forall (ip = 1:np) 
+            deltax(ip) = eta*alpha*q(ip)
+            x(ip) = x(ip) + deltax(ip)
+          end forall
+
+          forall (ip = 1:np)
+            deltar(ip) = eta*p(ip)
+            r(ip) = r(ip) - deltar(ip)
+          end forall
+
+        else
+
+          forall (ip = 1:np) 
+            deltax(ip) = (oldtheta*gamma)**2*deltax(ip) + eta*alpha*q(ip)
+            x(ip) = x(ip) + deltax(ip)
+          end forall
+
+          forall (ip = 1:np) 
+            deltar(ip) = (oldtheta*gamma)**2*deltar(ip) + eta*p(ip)
+            r(ip) = r(ip) - deltar(ip)
+          end forall
+
+        end if
+
+        res = nrm2(r)/nrm2(x)
+
+        log_res = -log(res)
+        if(log_res < 0) log_res = 0
+        ilog_res = M_TEN**2*log_res
+        if(showprogress_)  call loct_progress_bar(ilog_res, ilog_thr)
+        if(res < threshold_) exit
+      end do
+    end if
+
+    if((err.eq.0).and.(iter.eq.max_iter)) err = 5
+
+    select case(err)
+    case(0)
+      ! converged
+      if(present(converged)) then
+        converged = .true.
+      end if
+    case(1)
+      write(message(1), '(a)') "QMR failure, can't continue: b or P*b is the zero vector!"
+      call write_fatal(1)
+    case(2)
+      write(message(1), '(a)') "QMR failure, can't continue: v^T*z is zero!"
+      call write_fatal(1)
+    case(3)
+      write(message(1), '(a)') "QMR failure, can't continue: q^T*p is zero!"
+      call write_fatal(1)
+    case(4)
+      write(message(1), '(a)') "QMR failure, can't continue: gamma is zero!"
+      call write_fatal(1)
+    case(5)
+      write(message(1), '(a)') "QMR Solver not converged!"
+      call write_warning(1)
+      if(present(converged)) then
+        converged = .false.
+      end if
+    end select
+    if(showprogress_) write(*,*) ''
+
+    if(present(residue)) residue = res
+
+    deallocate(r, v, z, q, p, deltax, deltar)
+
+    call pop_sub()
+  end subroutine X(qmr_sym_gen_dotp)
+
+  ! ---------------------------------------------------------
+  ! for general complex matrices
+  ! taken from 'An Implementation of the QMR Method based on Coupled Two-Term Recurrences' by
+  ! R. W. Freund and N. M. Nachtigal (page 25)
+  subroutine X(qmr_gen_dotp)(np, x, b, op, opt, dotu, nrm2, prec, prect, iter, &
+    residue, threshold, showprogress, converged)
+    integer,           intent(in)    :: np    ! number of points
+    R_TYPE,             intent(inout) :: x(:)  ! initial guess and result
+    R_TYPE,             intent(in)    :: b(:)  ! right side
+    interface
+      subroutine op(x, y)                     ! the matrix A as operator: y <- A*x
+        R_TYPE, intent(in)  :: x(:)
+        R_TYPE, intent(out) :: y(:)
+      end subroutine op
+    end interface
+    interface
+      subroutine opt(x, y)                    ! the transposed matrix A as operator: y <- A^T*x
+        R_TYPE, intent(in)  :: x(:)
+        R_TYPE, intent(out) :: y(:)
+      end subroutine opt
+    end interface
+    interface 
+      R_TYPE function dotu(x, y)               ! the dot product
+        R_TYPE, intent(in) :: x(:)
+        R_TYPE, intent(in) :: y(:)
+      end function dotu
+    end interface
+    interface 
+      FLOAT function nrm2(x)                  ! the 2-norm of a vector
+        R_TYPE, intent(in) :: x(:)
+      end function nrm2
+    end interface
+    interface
+      subroutine prec(x, y)                   ! preconditioner
+        R_TYPE, intent(in)  :: x(:)
+        R_TYPE, intent(out) :: y(:)
+      end subroutine prec
+    end interface
+    interface
+      subroutine prect(x, y)                  ! transposed preconditioner
+        R_TYPE, intent(in)  :: x(:)
+        R_TYPE, intent(out) :: y(:)
+      end subroutine prect
+    end interface
+    integer,           intent(inout) :: iter  ! [in] the maximum number of iterations, [out] used iterations
+    FLOAT, optional,   intent(out)   :: residue ! the residue = abs(Ax-b)
+    FLOAT, optional,   intent(in)    :: threshold ! convergence threshold
+    logical, optional, intent(in)    :: showprogress ! should there be a progress bar
+    logical, optional, intent(out)   :: converged ! has the algorithm converged
+
+    R_TYPE, allocatable  :: r(:), v(:), w(:), z(:), q(:), p(:), deltax(:), tmp(:)
+    R_TYPE               :: eta, delta, epsilon, beta
+    FLOAT               :: rho, xsi, gamma, theta, threshold_, res, oldtheta, oldgamma, oldrho, nw
+    integer             :: max_iter, err
+    logical             :: showprogress_
+    FLOAT               :: log_res, log_thr
+    integer             :: ilog_res, ilog_thr
+
+    call push_sub('solvers_inc.Xqmr_gen_dotp')
+
+    if(present(converged)) then
+      converged = .false.
+    end if
+    if(present(threshold)) then
+      threshold_ = threshold
+    else
+      threshold_ = CNST(1.0e-6)
+    end if
+    if(present(showprogress)) then
+      showprogress_ = showprogress
+    else
+      showprogress_ = .false.
+    end if
+
+    ALLOCATE(r(np), np)
+    ALLOCATE(v(np), np)
+    ALLOCATE(w(np), np)
+    ALLOCATE(z(np), np)
+    ALLOCATE(q(np), np)
+    ALLOCATE(p(np), np)
+    ALLOCATE(tmp(np), np)
+    ALLOCATE(deltax(np), np)
+
+    ! r = b-Ax
+    call lalg_copy(np, b, r)
+    call op(x, tmp)
+    call lalg_axpy(np, -M_ONE, tmp, r)
+    rho = nrm2(r)
+    max_iter = iter
+    iter     = 0
+    err      = 0
+    res      = rho
+
+! If rho is basically zero we are already done.
+    if(abs(rho).gt.M_EPSILON) then
+      call lalg_copy(np, r, v)
+      call lalg_scal(np, M_ONE/rho, v)
+      call lalg_copy(np, r, w)
+      call prect(w, z)
+      xsi = nrm2(z)
+      call lalg_scal(np, M_ONE/xsi, w)
+      epsilon = M_ONE
+      gamma = M_ONE
+      xsi = M_ONE
+      theta = M_ZERO
+      eta   = -M_ONE
+
+      ! initialize progress bar
+      log_thr = -log(threshold_)
+      ilog_thr = M_TEN**2*log_thr
+      if(showprogress_) call loct_progress_bar(-1, ilog_thr)
+
+      do while(iter < max_iter)
+        iter = iter + 1
+        call prec(v, z)
+        delta = dotu(w, z)
+        if(abs(delta) < M_EPSILON) then
+          err = 2
+          exit
+        end if
+
+        if(iter == 1) then
+          call lalg_copy(np, z, p)
+          call prect(w, q)
+        else
+          call lalg_scal(np, -xsi*delta/epsilon, p)
+          call lalg_axpy(np, M_ONE, z, p)
+          call prect(w, z)
+          call lalg_scal(np, -rho*delta/epsilon, q)
+          call lalg_axpy(np, M_ONE, z, q)
+        end if
+
+        call op(p,tmp)
+        epsilon = dotu(q, tmp)
+        if(abs(epsilon) < M_EPSILON) then
+          err = 3
+          exit
+        end if
+        beta = epsilon/delta
+        call lalg_scal(np, -beta, v)
+        call lalg_axpy(np, M_ONE, tmp, v)
+        oldrho = rho
+        rho = nrm2(v)
+        nw = nrm2(w)
+        call lalg_scal(np, -beta, w)
+        call opt(q,tmp)
+        call lalg_axpy(np, M_ONE, tmp, w)
+        xsi = nrm2(z)
+
+        oldtheta = theta
+        theta    = nrm2(w)*rho/(gamma*abs(beta)*nw)
+        theta    = rho/(gamma*abs(beta))
+        oldgamma = gamma
+        gamma    = M_ONE/sqrt(M_ONE+theta**2)
+        if(abs(gamma) < M_EPSILON) then
+          err = 4
+          exit
+        end if
+        eta = -eta*oldrho*gamma**2/(beta*oldgamma**2)
+
+        if(iter == 1) then        
+          call lalg_copy(np, p, deltax)
+          call lalg_scal(np, eta, deltax)
+          call lalg_copy(np, deltax, x)
+        else
+          call lalg_scal(np, (oldtheta*gamma)**2, deltax)
+          call lalg_axpy(np, eta, p, deltax)
+          call lalg_axpy(np, M_ONE, deltax, x)
+        end if
+        call lalg_scal(np, M_ONE/rho, v)
+        call lalg_scal(np, M_ONE/xsi, w)
+
+        call lalg_copy(np, b, r)
+        call op(x, tmp)
+        call lalg_axpy(np, -M_ONE, tmp, r)
+        res = nrm2(r)/nrm2(x)
+
+        log_res = -log(res)
+        if(log_res < 0) log_res = 0
+        ilog_res = M_TEN**2*log_res
+        if(showprogress_)  call loct_progress_bar(ilog_res, ilog_thr)
+        if(res < threshold_) exit
+      end do
+    end if
+
+    if((err.eq.0).and.(iter.eq.max_iter)) err = 5
+
+    select case(err)
+    case(0)
+      ! converged
+      if(present(converged)) then
+        converged = .true.
+      end if
+    case(1)
+      write(message(1), '(a)') "QMR failure, can't continue: b or P*b is the zero vector!"
+      call write_fatal(1)
+    case(2)
+      write(message(1), '(a)') "QMR failure, can't continue: z^T*y is zero!"
+      call write_fatal(1)
+    case(3)
+      write(message(1), '(a)') "QMR failure, can't continue: q^T*p is zero!"
+      call write_fatal(1)
+    case(4)
+      write(message(1), '(a)') "QMR failure, can't continue: gamma is zero!"
+      call write_fatal(1)
+    case(5)
+      write(message(1), '(a)') "QMR Solver not converged!"
+      call write_warning(1)
+      if(present(converged)) then
+        converged = .false.
+      end if
+    end select
+    if(showprogress_) write(*,*) ''
+
+    if(present(residue)) residue = res
+
+    deallocate(r, v, w, z, q, p, deltax, tmp)
+
+    call pop_sub()
+  end subroutine X(qmr_gen_dotp)
 
 !! Local Variables:
 !! mode: f90

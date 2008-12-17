@@ -47,7 +47,6 @@ subroutine X(solve_HXeY) (this, h, gr, st, ist, ik, x, y, omega)
     call X(ls_solver_multigrid)(this, h, gr, st, ist, ik, x, y, omega)
 
   case(LS_QMR)
-#ifdef R_TCOMPLEX
     args%ls       => this
     args%h        => h
     args%gr       => gr 
@@ -58,12 +57,8 @@ subroutine X(solve_HXeY) (this, h, gr, st, ist, ik, x, y, omega)
 
     this%iter = this%max_iter
     
-    call zqmr_sym(NP, x(:, 1), y(:, 1), X(ls_solver_operator_na), ls_dotu_qmr, ls_nrm2_qmr, X(ls_preconditioner), &
+    call X(qmr_sym)(NP, x(:, 1), y(:, 1), X(ls_solver_operator_na), X(ls_dotu_qmr), X(ls_nrm2_qmr), X(ls_preconditioner), &
          this%iter, residue = this%abs_psi, threshold = this%tol, showprogress = .false.)
-#else
-    write(message(1), '(a,i2)') "Linear-response solver QMR not available for real wavefunctions. Use ForceComplex."
-    call write_fatal(1)
-#endif
 
   case(LS_SOS)
     call X(ls_solver_sos)(this, h, gr, st, ist, ik, x, y, omega)
@@ -79,24 +74,20 @@ subroutine X(solve_HXeY) (this, h, gr, st, ist, ik, x, y, omega)
 
 end subroutine X(solve_HXeY)
 
-#ifdef R_TCOMPLEX
+FLOAT function X(ls_nrm2_qmr)(x)
+  R_TYPE, intent(in) :: x(:)
+  
+  X(ls_nrm2_qmr) = X(mf_nrm2)(args%gr%m, x)
+  
+end function X(ls_nrm2_qmr)
 
-FLOAT function ls_nrm2_qmr(x)
-  CMPLX, intent(in) :: x(:)
+R_TYPE function X(ls_dotu_qmr)(x,y)
+  R_TYPE, intent(in) :: x(:)
+  R_TYPE, intent(in) :: y(:)
   
-  ls_nrm2_qmr = zmf_nrm2(args%gr%m, x)
+  X(ls_dotu_qmr) = X(mf_dotp)(args%gr%m, x, y, dotu = .true.)
   
-end function ls_nrm2_qmr
-
-CMPLX function ls_dotu_qmr(x,y)
-  CMPLX, intent(in) :: x(:)
-  CMPLX, intent(in) :: y(:)
-  
-  ls_dotu_qmr = zmf_dotp(args%gr%m, x, y, dotu = .true.)
-  
-end function ls_dotu_qmr
-
-#endif  
+end function X(ls_dotu_qmr)
 
 ! ---------------------------------------------------------
 !Conjugate gradients
