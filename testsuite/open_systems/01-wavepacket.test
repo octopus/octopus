@@ -8,7 +8,7 @@ Arch       : Linux g22 2.6.22.6-desktop-2 #1 SMP PREEMPT Sun Sep 16 19:50:33 CES
 Release    : 2.2.0pre1
 Programs   : octopus
 TestGroups : short-run
-Enabled    : Yes
+Enabled    : No
 
 # We check the transparent boundary conditions for different
 # discretization orders in 1D by looking at the total charge in the

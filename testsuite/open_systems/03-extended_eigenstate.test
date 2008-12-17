@@ -7,7 +7,7 @@ Arch       : Linux louis 2.6.25-2-amd64 #1 SMP Tue May 27 12:45:24 UTC 2008 x86_
 Release    : 3.1.0pre1
 Programs   : octopus
 TestGroups : short-run
-Enabled    : Yes
+Enabled    : No
 
 # Calculate eigenstate of 1d attractive square potential barrier.
 Input: 03-extended_eigenstate.01-square_well_1d.inp
