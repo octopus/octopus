@@ -204,9 +204,12 @@ contains
     logical, optional,    intent(in)    :: const_w  ! are the weights constant (independent of the point)
     logical, optional,    intent(in)    :: cmplx_op ! do we have complex weights?
 
-    integer :: ii, jj, ir, ip, p1(MAX_DIM), time, current, maxp, iinner, iouter
+    integer :: ii, jj, p1(MAX_DIM), time, current
     integer, allocatable :: st1(:), st2(:)
     FLOAT :: dbest, zbest
+#ifdef HAVE_MPI
+    integer :: ir, maxp, iinner, iouter
+#endif
 
     call push_sub('nl_operator.nl_operator_build')
 
@@ -322,17 +325,15 @@ contains
     nullify(op%inner%imin, op%inner%imax, op%inner%ri)
     nullify(op%outer%imin, op%outer%imax, op%inner%ri)
 
+#ifdef HAVE_MPI
     if(op%m%parallel_in_domains) then
-      !NOTE: this separation is not correctly done for 1D
-
       !now build the arrays required to apply the nl_operator by parts
 
       !count points
       op%inner%nri = 0
       op%outer%nri = 0
       do ir = 1, op%nri
-        ip = op%rimap_inv(ir)
-        maxp = ip + maxval(op%ri(1:op%stencil%size, ir))
+        maxp = op%rimap_inv(ir + 1) - 1 + maxval(op%ri(1:op%stencil%size, ir))
         if (maxp <= np) then
           !inner point
           op%inner%nri = op%inner%nri + 1
@@ -354,27 +355,27 @@ contains
       ALLOCATE(op%outer%imax(1:op%outer%nri), op%outer%nri)
       ALLOCATE(op%outer%ri(1:op%stencil%size, 1:op%outer%nri), op%outer%nri)
 
-      !now popluate the arrays
+      !now populate the arrays
       iinner = 0
       iouter = 0
       do ir = 1, op%nri
-        ip = op%rimap_inv(ir)
-        maxp = ip + maxval(op%ri(1:op%stencil%size, ir))
+        maxp = op%rimap_inv(ir + 1) - 1 + maxval(op%ri(1:op%stencil%size, ir))
         if (maxp <= np) then
           !inner point
           iinner = iinner + 1
-          op%inner%imin(iinner) = ip
+          op%inner%imin(iinner) = op%rimap_inv(ir)
           op%inner%imax(iinner) = op%rimap_inv(ir + 1)
           op%inner%ri(1:op%stencil%size, iinner) = op%ri(1:op%stencil%size, ir)
         else
           !outer point
           iouter = iouter + 1
-          op%outer%imin(iouter) = ip
+          op%outer%imin(iouter) = op%rimap_inv(ir)
           op%outer%imax(iouter) = op%rimap_inv(ir + 1)
           op%outer%ri(1:op%stencil%size, iouter) = op%ri(1:op%stencil%size, ir)
         end if
       end do
     end if
+#endif
 
     if(op%const_w .and. .not. op%cmplx_op) then
       call dnl_operator_tune(op, dbest)

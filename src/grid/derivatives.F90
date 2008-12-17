@@ -216,11 +216,7 @@ contains
     !% Non-blocking collective communication (requires libnbc).
     !%End
     
-    if ( der%dim > 1) then
-      call loct_parse_int(check_inp('ParallelizationOfDerivatives'), NON_BLOCKING, der%comm_method)
-    else
-      der%comm_method = BLOCKING
-    end if
+    call loct_parse_int(check_inp('ParallelizationOfDerivatives'), NON_BLOCKING, der%comm_method)
     
     if(.not. varinfo_valid_option('ParallelizationOfDerivatives', der%comm_method)) then
       call input_error('ParallelizationOfDerivatives')
