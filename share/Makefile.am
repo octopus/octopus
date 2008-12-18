@@ -27,9 +27,20 @@ dist_share_DATA = logo variables varinfo filter_mask.data
 CLEANFILES = variables varinfo varinfo_orig
 EXTRA_DIST = variables.local
 
+dist_share_DATA = filter_mask.data
+
 varinfo: RUN_SCRIPT
 
 variables: RUN_SCRIPT
 
 RUN_SCRIPT:
 	$(top_srcdir)/build/mk_varinfo.pl -s $(top_srcdir) -b $(top_builddir)
+
+check:
+	@for f in $(dist_share_DATA); do \
+	  if [ ! -e $$f -o $$f -ot $(srcdir)/$$f ]; then \
+	    cp $(srcdir)/$$f $$f; \
+	  fi \
+	done
+
+check-full: check

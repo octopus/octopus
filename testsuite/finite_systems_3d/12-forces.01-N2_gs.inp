@@ -27,3 +27,5 @@ EigenSolverMaxIter = 20
 PoissonSolver = fft_corrected
 
 ParallelizationStrategy=par_domains
+
+FilterPotentials=filter_TS
