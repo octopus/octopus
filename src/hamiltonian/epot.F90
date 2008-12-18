@@ -485,14 +485,18 @@ contains
       ep%non_local = .true.
       call projector_end(ep%proj(ia))
       call projector_init(ep%proj(ia), gr%m, sb, atm, st%d%dim, ep%reltype)
-      if(simul_box_is_periodic(sb)) call projector_init_phases(ep%proj(ia), st%d%nik, st%d%kpoints)
+      if(simul_box_is_periodic(sb) .or. associated(ep%a_static)) then
+        call projector_init_phases(ep%proj(ia), st%d%nik, st%d%kpoints, vec_pot_var = ep%a_static)
+      end if
       call projector_build(ep%proj(ia), gr, atm, ep%so_strength)
 
       ! the projectors in the fine grid
       if(gr%have_fine_mesh) then
         call projector_end(ep%proj_fine(ia))
         call projector_init(ep%proj_fine(ia), gr%fine%m, sb, atm, st%d%dim, ep%reltype)
-        if(simul_box_is_periodic(sb)) call projector_init_phases(ep%proj_fine(ia), st%d%nik, st%d%kpoints)
+        if(simul_box_is_periodic(sb) .or. associated(ep%a_static)) then
+          call projector_init_phases(ep%proj_fine(ia), st%d%nik, st%d%kpoints, vec_pot_var = ep%a_static)
+        end if
         call projector_build(ep%proj_fine(ia), gr, atm, ep%so_strength)
       end if
 

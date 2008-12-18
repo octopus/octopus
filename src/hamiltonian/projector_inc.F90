@@ -90,7 +90,7 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, ik)
     !copy psi to the small spherical grid
 
     do idim = 1, dim
-      if(simul_box_is_periodic(mesh%sb)) then
+      if(associated(pj(ipj)%phase)) then
         forall (is = 1:ns) lpsi(is, idim) = psi(pj(ipj)%sphere%jxyz(is), idim)*pj(ipj)%phase(is, ik)
         call profiling_count_operations(ns*R_MUL)
       else
@@ -191,7 +191,7 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, ik)
     !put the result back in the complete grid
 
     do idim = 1, dim
-      if(simul_box_is_periodic(mesh%sb)) then
+      if(associated(pj(ipj)%phase)) then
         forall (is = 1:ns) ppsi(pj(ipj)%sphere%jxyz(is), idim) = &
              ppsi(pj(ipj)%sphere%jxyz(is), idim) + lpsi(is, idim)*conjg(pj(ipj)%phase(is, ik))
         call profiling_count_operations(ns*(R_ADD + R_MUL))
