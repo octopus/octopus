@@ -253,7 +253,7 @@ contains
 
 !!!!NEW  NICOLE AND MATTHIEU
       
-      ! Density matrix stuff, don't do it for each iteration
+      ! Density matrix stuff, do not do it for each iteration
       !  Alberto: the limit on dimensions and the choice of dimensions to collapse in
       !  the density matrix starts intervening here.
       !
@@ -274,8 +274,8 @@ contains
         !  only important for printout, so it is ok
         origin=(npointsx/2+1)*gr%m%h(1)
       
-       ! ASSERT(n1 .eq. gr%m%nr(1, 2))
-       ! ASSERT(n2 .eq. gr%m%nr(2, 2))
+       ! _ASSERT(n1 .eq. gr%m%nr(1, 2))
+       ! _ASSERT(n2 .eq. gr%m%nr(2, 2))
         ALLOCATE(densmatr(npointsx, npointsx), npointsx**2 )
         ALLOCATE(evectors(npointsx, npointsx), npointsx**2 )
         ALLOCATE(evalues(npointsx), npointsx)
@@ -299,11 +299,11 @@ contains
          ! jj is the index corresponging to x
          ! kk is the index corresponding to xprime
       
-         ! Finds out if (jj, kk) belongs to the grid, and which point it is.
+         ! /* Finds out if (jj, kk) belongs to the grid, and which point it is.
          ! If it does not belong to the grid, the wavefunction is null 
          ! there and so is the density matrix.
          !   MJV 4-12-2008 commented: in general case for npointsx/=npointsy this is
-         !   not appropriate: x, x' is not a point in normal 2D space
+         !   not appropriate: x, x' is not a point in normal 2D space */
          ! j = gr%m%lxyz_inv(jj, kk, 0)
          ! if(j.eq.0) exit xloop
           
