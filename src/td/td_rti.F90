@@ -295,10 +295,10 @@ contains
 
     select case(tr%method)
     case(PROP_SPLIT_OPERATOR)
-      call zcf_new(gr%m%l, tr%cf)
+      call zcf_new(gr%m%idx%ll, tr%cf)
       call zcf_fft_init(tr%cf, gr%sb)
     case(PROP_SUZUKI_TROTTER)
-      call zcf_new(gr%m%l, tr%cf)
+      call zcf_new(gr%m%idx%ll, tr%cf)
       call zcf_fft_init(tr%cf, gr%sb)
     case(PROP_REVERSAL)
     case(PROP_APP_REVERSAL)

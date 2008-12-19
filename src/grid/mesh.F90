@@ -57,9 +57,9 @@ module mesh_m
     mesh_subset_indices,       &
     mesh_periodic_point,       &
     translate_point
-  
+
   ! Describes mesh distribution to nodes.
-  
+
   ! Some general things:
   ! All members of type(mesh_t) are equal on all
   ! nodes when running parallel except
@@ -68,6 +68,7 @@ module mesh_m
   ! These four are defined for all the points the node is responsible for.
   type mesh_t
     type(simul_box_t), pointer :: sb
+    type(index_t)              :: idx
     logical :: use_curvlinear
     
     FLOAT :: h(MAX_DIM)         ! the (constant) spacing between the points
@@ -83,11 +84,7 @@ module mesh_m
     
     integer  :: enlarge(MAX_DIM) ! number of points to add for boundary conditions
     
-    integer, pointer :: Lxyz(:,:)       ! return x, y and z for each point
-    integer, pointer :: Lxyz_inv(:,:,:) ! return points # for each xyz
-    
     FLOAT,   pointer :: x_tmp(:,:,:,:)  ! temporary arrays that we have to keep between calls to
-    integer, pointer :: Lxyz_tmp(:,:,:) ! init_1 and init_2
     
     integer, pointer :: boundary_indices(:,:) ! contains the list of mesh indices for boundary points
     integer          :: boundary_np(6)        ! total number of boundary points
@@ -95,10 +92,6 @@ module mesh_m
     logical         :: parallel_in_domains ! will I run parallel in domains?
     type(mpi_grp_t) :: mpi_grp             ! the mpi group describing parallelization in domains
     type(pv_t)      :: vp                  ! describes parallel vectors defined on the mesh.
-    
-    ! some other vars
-    integer :: nr(2, MAX_DIM)              ! dimensions of the box where the points are contained
-    integer :: l(MAX_DIM)                  ! literally n(2,:) - n(1,:) + 1 - 2*enlarge(:)
     
     FLOAT, pointer :: x(:,:)            ! The (local) points,
     FLOAT, pointer :: x_global(:,:)     ! The global points, needed for i/o on
@@ -178,10 +171,10 @@ contains
     
     ! double mesh with 2n points
     do i = 1, sb%periodic_dim
-      db(i) = m%l(i)
+      db(i) = m%idx%ll(i)
     end do
     do i = sb%periodic_dim + 1, sb%dim
-      db(i) = nint(sb%fft_alpha*(m%l(i)-1)) + 1
+      db(i) = nint(sb%fft_alpha*(m%idx%ll(i)-1)) + 1
     end do
     
   end subroutine mesh_double_box
@@ -360,13 +353,13 @@ contains
     
     ASSERT(index >= 1 .and. index <= mesh%np)
     
-    ixyz(:) = mesh%Lxyz(index, :)
+    ixyz(:) = mesh%idx%Lxyz(index, :)
     
     do id = 1, mesh%sb%dim
       ixyz(id) = ixyz(id) + tdist(id)
     end do
     
-    tindex = mesh_index(mesh%sb%dim, mesh%nr, mesh%Lxyz_inv, ixyz) 
+    tindex = mesh_index(mesh%sb%dim, mesh%idx%nr, mesh%idx%Lxyz_inv, ixyz) 
     
     ! check if the translated point is still inside the domain and return
     ! a negative index otherwise to indicate that the requested translation
@@ -399,16 +392,16 @@ contains
     call push_sub('mesh.mesh_dump')
     
     write(iunit, '(a)')         dump_tag
-    write(iunit, '(a20,7i8)')   'nr(1, :)=           ', mesh%nr(1, 1:mesh%sb%dim)
-    write(iunit, '(a20,7i8)')   'nr(2, :)=           ', mesh%nr(2, 1:mesh%sb%dim)
-    write(iunit, '(a20,7i8)')   'l(:)=               ', mesh%l(1:mesh%sb%dim)
+    write(iunit, '(a20,7i8)')   'nr(1, :)=           ', mesh%idx%nr(1, 1:mesh%sb%dim)
+    write(iunit, '(a20,7i8)')   'nr(2, :)=           ', mesh%idx%nr(2, 1:mesh%sb%dim)
+    write(iunit, '(a20,7i8)')   'l(:)=               ', mesh%idx%ll(1:mesh%sb%dim)
     write(iunit, '(a20,7i8)')   'enlarge(:)=         ', mesh%enlarge(1:mesh%sb%dim)
     write(iunit, '(a20,1i10)')  'np=                 ', mesh%np
     write(iunit, '(a20,1i10)')  'np_part=            ', mesh%np_part
     write(iunit, '(a20,1i10)')  'np_global=          ', mesh%np_global
     write(iunit, '(a20,1i10)')  'np_part_global=     ', mesh%np_part_global
     
-    call pop_sub()
+    call pop_sub() 
   end subroutine mesh_dump
   
   
@@ -431,15 +424,15 @@ contains
 
     ASSERT(mesh%sb%dim > 0 .and. mesh%sb%dim <= MAX_DIM)
 
-    read(iunit, '(a20,7i8)')  str, mesh%nr(1, 1:mesh%sb%dim)
-    read(iunit, '(a20,7i8)')  str, mesh%nr(2, 1:mesh%sb%dim)
-    read(iunit, '(a20,7i8)')  str, mesh%l(1:mesh%sb%dim)
+    read(iunit, '(a20,7i8)')  str, mesh%idx%nr(1, 1:mesh%sb%dim)
+    read(iunit, '(a20,7i8)')  str, mesh%idx%nr(2, 1:mesh%sb%dim)
+    read(iunit, '(a20,7i8)')  str, mesh%idx%ll(1:mesh%sb%dim)
     read(iunit, '(a20,7i8)')  str, mesh%enlarge(1:mesh%sb%dim)
     read(iunit, '(a20,1i10)') str, mesh%np
     read(iunit, '(a20,1i10)') str, mesh%np_part
     read(iunit, '(a20,1i10)') str, mesh%np_global
     read(iunit, '(a20,1i10)') str, mesh%np_part_global
-    nullify(mesh%lxyz, mesh%lxyz_inv, mesh%x_tmp, mesh%lxyz_tmp, mesh%boundary_indices, mesh%x, &
+    nullify(mesh%idx%lxyz, mesh%idx%lxyz_inv, mesh%x_tmp, mesh%idx%lxyz_tmp, mesh%boundary_indices, mesh%x, &
       mesh%x_global, mesh%vol_pp, mesh%per_points, mesh%per_map, mesh%lead_unit_cell)
     mesh%parallel_in_domains = .false.
 
@@ -457,7 +450,7 @@ contains
     call push_sub('mesh.Lxyz_dump')
 
     do ip = 1, mesh%np_part
-      write(iunit, '(7i8)') mesh%Lxyz(ip, 1:mesh%sb%dim)
+      write(iunit, '(7i8)') mesh%idx%Lxyz(ip, 1:mesh%sb%dim)
     end do
 
     call pop_sub()
@@ -477,8 +470,8 @@ contains
     ASSERT(mesh%sb%dim > 0 .and. mesh%sb%dim <= MAX_DIM)
 
     do ip = 1, mesh%np_part
-      read(iunit, '(7i8)') mesh%lxyz(ip, 1:mesh%sb%dim)
-      mesh%lxyz_inv(mesh%lxyz(ip, 1), mesh%lxyz(ip, 2), mesh%lxyz(ip, 3)) = ip
+      read(iunit, '(7i8)') mesh%idx%lxyz(ip, 1:mesh%sb%dim)
+      mesh%idx%lxyz_inv(mesh%idx%lxyz(ip, 1), mesh%idx%lxyz(ip, 2), mesh%idx%lxyz(ip, 3)) = ip
     end do
 
     call pop_sub()
@@ -522,7 +515,7 @@ contains
     do ix = lb(1), ub(1)
       do iy = lb(2), ub(2)
         do iz = lb(3), ub(3)
-          indices(i) = mesh%Lxyz_inv(ix, iy, iz)
+          indices(i) = mesh%idx%Lxyz_inv(ix, iy, iz)
           i          = i + 1
         end do
       end do
@@ -546,7 +539,7 @@ contains
 
     valid = .true.
     do i = 1, 3
-      if(point(i).lt.mesh%nr(1, i).or.point(i).gt.mesh%nr(2, i)) then
+      if(point(i).lt.mesh%idx%nr(1, i).or.point(i).gt.mesh%idx%nr(2, i)) then
         valid = .false.
       end if
     end do
@@ -565,8 +558,8 @@ contains
     call push_sub('mesh.mesh_end')
 
     DEALLOC(m%resolution)
-    DEALLOC(m%lxyz)
-    DEALLOC(m%lxyz_inv)
+    DEALLOC(m%idx%lxyz)
+    DEALLOC(m%idx%lxyz_inv)
     DEALLOC(m%x)
     DEALLOC(m%vol_pp)
 
@@ -618,16 +611,16 @@ contains
     
     integer :: ix(MAX_DIM), nr(2, MAX_DIM), idim
     
-    ix = m%Lxyz(ip, :)
-    nr(1, :) = m%nr(1, :) + m%enlarge(:)
-    nr(2, :) = m%nr(2, :) - m%enlarge(:)
+    ix = m%idx%Lxyz(ip, :)
+    nr(1, :) = m%idx%nr(1, :) + m%enlarge(:)
+    nr(2, :) = m%idx%nr(2, :) - m%enlarge(:)
     
     do idim = 1, m%sb%periodic_dim
-      if(ix(idim) < nr(1, idim)) ix(idim) = ix(idim) + m%l(idim)
-      if(ix(idim) > nr(2, idim)) ix(idim) = ix(idim) - m%l(idim)
+      if(ix(idim) < nr(1, idim)) ix(idim) = ix(idim) + m%idx%ll(idim)
+      if(ix(idim) > nr(2, idim)) ix(idim) = ix(idim) - m%idx%ll(idim)
     end do
     
-    ipp = m%Lxyz_inv(ix(1), ix(2), ix(3))
+    ipp = m%idx%Lxyz_inv(ix(1), ix(2), ix(3))
     
   end function mesh_periodic_point
   

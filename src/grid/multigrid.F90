@@ -175,7 +175,9 @@ contains
     type(mesh_t),            intent(in)    :: fine, coarse
 
     integer :: i, i1, i2, i4, i8, pt, ig
+#ifdef HAVE_MPI
     integer :: ii, jj
+#endif
     integer :: x(MAX_DIM), mod2(MAX_DIM)
 
     call push_sub('multigrid.multigrid_get_transfer_tables')
@@ -191,7 +193,7 @@ contains
       if(coarse%parallel_in_domains) ig = coarse%vp%local(ig - 1 + coarse%vp%xlocal(coarse%vp%partno))
 #endif
       ! locate the equivalent global fine grid point
-      ig = fine%Lxyz_inv(2*coarse%Lxyz(ig, 1), 2*coarse%Lxyz(ig, 2), 2*coarse%Lxyz(ig, 3))
+      ig = fine%idx%Lxyz_inv(2*coarse%idx%Lxyz(ig, 1), 2*coarse%idx%Lxyz(ig, 2), 2*coarse%idx%Lxyz(ig, 3))
 #ifdef HAVE_MPI
       ! translate to a local number of the fine grid
       if(fine%parallel_in_domains) ig = vec_global2local(fine%vp, ig, fine%vp%partno)
@@ -213,7 +215,7 @@ contains
       ! translate to a global index
       if(fine%parallel_in_domains) ig = fine%vp%local(ig - 1 + fine%vp%xlocal(fine%vp%partno))
 #endif
-      mod2 = mod(fine%Lxyz(ig, :), 2)
+      mod2 = mod(fine%idx%Lxyz(ig, :), 2)
       
       pt = sum(abs(mod2(1:3)))
       
@@ -248,38 +250,38 @@ contains
       ! translate to a global index
       if(fine%parallel_in_domains) ig = fine%vp%local(ig - 1 + fine%vp%xlocal(fine%vp%partno))
 #endif
-      x(1:3)    = fine%Lxyz(ig, 1:3)/2
-      mod2(1:3) = mod(fine%Lxyz(ig, 1:3), 2)
+      x(1:3)    = fine%idx%Lxyz(ig, 1:3)/2
+      mod2(1:3) = mod(fine%idx%Lxyz(ig, 1:3), 2)
 
       pt = sum(abs(mod2(1:3)))
 
       select case(pt)
       case(0)
         i1 = i1 + 1
-        tt%to_fine1(1, i1) = coarse%Lxyz_inv(x(1), x(2), x(3))
+        tt%to_fine1(1, i1) = coarse%idx%Lxyz_inv(x(1), x(2), x(3))
         
       case(1)
         i2 = i2 + 1
-        tt%to_fine2(1, i2) = coarse%Lxyz_inv(x(1)          , x(2)          , x(3)          )
-        tt%to_fine2(2, i2) = coarse%Lxyz_inv(x(1) + mod2(1), x(2) + mod2(2), x(3) + mod2(3))
+        tt%to_fine2(1, i2) = coarse%idx%Lxyz_inv(x(1)          , x(2)          , x(3)          )
+        tt%to_fine2(2, i2) = coarse%idx%Lxyz_inv(x(1) + mod2(1), x(2) + mod2(2), x(3) + mod2(3))
         
       case(2)
         i4 = i4 + 1
-        tt%to_fine4(1, i4) = coarse%Lxyz_inv(x(1)          , x(2) + mod2(2), x(3) + mod2(3))
-        tt%to_fine4(2, i4) = coarse%Lxyz_inv(x(1) + mod2(1), x(2)          , x(3) + mod2(3))
-        tt%to_fine4(3, i4) = coarse%Lxyz_inv(x(1) + mod2(1), x(2) + mod2(2), x(3)          )
-        tt%to_fine4(4, i4) = coarse%Lxyz_inv(x(1) + mod2(1), x(2) + mod2(2), x(3) + mod2(3))
+        tt%to_fine4(1, i4) = coarse%idx%Lxyz_inv(x(1)          , x(2) + mod2(2), x(3) + mod2(3))
+        tt%to_fine4(2, i4) = coarse%idx%Lxyz_inv(x(1) + mod2(1), x(2)          , x(3) + mod2(3))
+        tt%to_fine4(3, i4) = coarse%idx%Lxyz_inv(x(1) + mod2(1), x(2) + mod2(2), x(3)          )
+        tt%to_fine4(4, i4) = coarse%idx%Lxyz_inv(x(1) + mod2(1), x(2) + mod2(2), x(3) + mod2(3))
         
       case(3)
         i8 = i8 + 1
-        tt%to_fine8(1, i8) = coarse%Lxyz_inv(x(1)          , x(2)          , x(3)          )
-        tt%to_fine8(2, i8) = coarse%Lxyz_inv(x(1) + mod2(1), x(2)          , x(3)          )
-        tt%to_fine8(3, i8) = coarse%Lxyz_inv(x(1)          , x(2) + mod2(2), x(3)          )
-        tt%to_fine8(4, i8) = coarse%Lxyz_inv(x(1)          , x(2)          , x(3) + mod2(3))
-        tt%to_fine8(5, i8) = coarse%Lxyz_inv(x(1)          , x(2) + mod2(2), x(3) + mod2(3))
-        tt%to_fine8(6, i8) = coarse%Lxyz_inv(x(1) + mod2(1), x(2)          , x(3) + mod2(3))
-        tt%to_fine8(7, i8) = coarse%Lxyz_inv(x(1) + mod2(1), x(2) + mod2(2), x(3)          )
-        tt%to_fine8(8, i8) = coarse%Lxyz_inv(x(1) + mod2(1), x(2) + mod2(2), x(3) + mod2(3))
+        tt%to_fine8(1, i8) = coarse%idx%Lxyz_inv(x(1)          , x(2)          , x(3)          )
+        tt%to_fine8(2, i8) = coarse%idx%Lxyz_inv(x(1) + mod2(1), x(2)          , x(3)          )
+        tt%to_fine8(3, i8) = coarse%idx%Lxyz_inv(x(1)          , x(2) + mod2(2), x(3)          )
+        tt%to_fine8(4, i8) = coarse%idx%Lxyz_inv(x(1)          , x(2)          , x(3) + mod2(3))
+        tt%to_fine8(5, i8) = coarse%idx%Lxyz_inv(x(1)          , x(2) + mod2(2), x(3) + mod2(3))
+        tt%to_fine8(6, i8) = coarse%idx%Lxyz_inv(x(1) + mod2(1), x(2)          , x(3) + mod2(3))
+        tt%to_fine8(7, i8) = coarse%idx%Lxyz_inv(x(1) + mod2(1), x(2) + mod2(2), x(3)          )
+        tt%to_fine8(8, i8) = coarse%idx%Lxyz_inv(x(1) + mod2(1), x(2) + mod2(2), x(3) + mod2(3))
         
       end select
       
@@ -338,8 +340,8 @@ contains
     mesh_out%use_curvlinear =  mesh_in%use_curvlinear
 
     mesh_out%h(:)    = 2*mesh_in%h(:)
-    mesh_out%nr(:,:) = mesh_in%nr(:,:)/2
-    mesh_out%l(:)    = mesh_out%nr(2, :) - mesh_out%nr(1, :) + 1
+    mesh_out%idx%nr(:,:) = mesh_in%idx%nr(:,:)/2
+    mesh_out%idx%ll(:)    = mesh_out%idx%nr(2, :) - mesh_out%idx%nr(1, :) + 1
 
     mesh_out%enlarge = mesh_in%enlarge
     
@@ -363,8 +365,8 @@ contains
     mesh_out%use_curvlinear =  mesh_in%use_curvlinear
     
     mesh_out%h(:)    = M_HALF*mesh_in%h(:)
-    mesh_out%nr(:,:) = mesh_in%nr(:,:)*2
-    mesh_out%l(:)    = mesh_out%nr(2, :) - mesh_out%nr(1, :) + 1
+    mesh_out%idx%nr(:,:) = mesh_in%idx%nr(:,:)*2
+    mesh_out%idx%ll(:)    = mesh_out%idx%nr(2, :) - mesh_out%idx%nr(1, :) + 1
     
     mesh_out%enlarge = mesh_in%enlarge
     

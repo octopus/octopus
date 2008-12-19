@@ -81,7 +81,7 @@ contains
       intf%offdiag_invertible = .false.
     end if
 
-    intf%np = intf%extent*m%l(2)*m%l(3)
+    intf%np = intf%extent*m%idx%ll(2)*m%idx%ll(3)
 
     ALLOCATE(intf%index(intf%np), intf%np)
 
@@ -99,8 +99,8 @@ contains
       lr  = 2
       dir = -1
     end if
-    from = m%nr(lr, :) + dir*m%enlarge
-    to(1:3) = from(1:3) + dir*(/intf%extent, m%l(2), m%l(3)/) - dir
+    from = m%idx%nr(lr, :) + dir*m%enlarge
+    to(1:3) = from(1:3) + dir*(/intf%extent, m%idx%ll(2), m%idx%ll(3)/) - dir
 
     call mesh_subset_indices(m, from, to, intf%index)
 

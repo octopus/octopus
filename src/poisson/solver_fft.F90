@@ -87,7 +87,7 @@ contains
       call mesh_double_box(gr%sb, gr%m, db)                 ! get dimensions of the double box
       if (poisson_solver == FFT_SPH) db(:) = maxval(db)
     else
-      db(:) = gr%m%l(:)
+      db(:) = gr%m%idx%ll(:)
     end if
 
     ! allocate cube function where we will perform the ffts
@@ -381,7 +381,7 @@ contains
 
     call push_sub('solver_fft.poisson_fft_build_2d_2d')
 
-    db(:) = gr%m%l(:)
+    db(:) = gr%m%idx%ll(:)
     ! allocate cube function where we will perform the ffts
     call dcf_new(db, fft_cf)      
     ! initialize fft
@@ -421,7 +421,7 @@ contains
 
     call push_sub('solver_fft.poisson_fft_build_1d')
 
-    box = gr%m%l
+    box = gr%m%idx%ll
     call dcf_new(box, fft_cf)
     call dcf_fft_init(fft_cf, gr%sb)
     box = fft_cf%n

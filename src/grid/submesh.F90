@@ -127,8 +127,8 @@ contains
       nmax(1:sb%dim) = int((center(1:sb%dim) + abs(rc) - sb%box_offset(1:sb%dim))/m%h(1:sb%dim)) + 1
 
       ! make sure that the cube is inside the grid
-      nmin(1:MAX_DIM) = max(m%nr(1, 1:MAX_DIM), nmin(1:MAX_DIM))
-      nmax(1:MAX_DIM) = min(m%nr(2, 1:MAX_DIM), nmax(1:MAX_DIM))
+      nmin(1:MAX_DIM) = max(m%idx%nr(1, 1:MAX_DIM), nmin(1:MAX_DIM))
+      nmax(1:MAX_DIM) = min(m%idx%nr(2, 1:MAX_DIM), nmax(1:MAX_DIM))
 
       ! Get the total number of points inside the sphere
       is = 0   ! this index counts inner points
@@ -136,7 +136,7 @@ contains
       do iz = nmin(3), nmax(3)
         do iy = nmin(2), nmax(2)
           do ix = nmin(1), nmax(1)
-            ip = m%Lxyz_inv(ix, iy, iz)
+            ip = m%idx%Lxyz_inv(ix, iy, iz)
 #if defined(HAVE_MPI)
             if(ip == 0) cycle
             if(m%parallel_in_domains) ip = vec_global2local(m%vp, ip, m%vp%partno)
@@ -166,7 +166,7 @@ contains
       do iz = nmin(3), nmax(3)
         do iy = nmin(2), nmax(2)
           do ix = nmin(1), nmax(1)
-            ip = m%Lxyz_inv(ix, iy, iz)
+            ip = m%idx%Lxyz_inv(ix, iy, iz)
 #if defined(HAVE_MPI)
             if(ip == 0) cycle
             if(m%parallel_in_domains) ip = vec_global2local(m%vp, ip, m%vp%partno)

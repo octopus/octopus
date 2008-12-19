@@ -142,14 +142,14 @@ subroutine X(input_function_global)(filename, m, f, ierr, is_tmp)
 #if defined(HAVE_NETCDF)
   case("ncdf")
 #if defined(R_TCOMPLEX)
-     call X(cf_new)(m%l, c); call dcf_new(m%l, re); call dcf_new(m%l, im)
+     call X(cf_new)(m%idx%ll, c); call dcf_new(m%l, re); call dcf_new(m%l, im)
      call X(cf_alloc_RS)(c); call dcf_alloc_RS(re); call dcf_alloc_RS(im)
      call read_netcdf()
      c%RS = re%RS + M_zI*im%RS
      call X(cube_to_mesh) (m, c, f)
      call X(cf_free)(c); call dcf_free(re); call dcf_free(im)
 #else
-     call X(cf_new)(m%l, c)
+     call X(cf_new)(m%idx%ll, c)
      call X(cf_alloc_RS)(c)
      call read_netcdf()
      call X(cube_to_mesh) (m, c, f)
@@ -451,7 +451,7 @@ contains
 
     write(iunit, mfmtheader, iostat=ierr) '#', index2axis(d1), 'Re', 'Im'
     do i = 1, np_max
-      if(m%Lxyz(i, d2)==0.and.m%Lxyz(i, d3)==0) then     
+      if(m%idx%Lxyz(i, d2)==0.and.m%idx%Lxyz(i, d3)==0) then     
         write(iunit, mformat, iostat=ierr) m%x_global(i, d1), R_REAL(f(i))/u, R_AIMAG(f(i))/u
       end if
     end do
@@ -473,21 +473,21 @@ contains
     write(iunit, mfmtheader, iostat=ierr) '#', index2axis(d2), index2axis(d3), 'Re', 'Im'
     write(iunit, mformat)
 
-    do ix = m%nr(1, d1), m%nr(2, d1)
+    do ix = m%idx%nr(1, d1), m%idx%nr(2, d1)
       select case(d1)
-      case(1); i = m%lxyz_inv(ix, 1, 1)
-      case(2); i = m%lxyz_inv(1, ix, 1)
-      case(3); i = m%lxyz_inv(1, 1, ix)
+      case(1); i = m%idx%Lxyz_inv(ix, 1, 1)
+      case(2); i = m%idx%Lxyz_inv(1, ix, 1)
+      case(3); i = m%idx%Lxyz_inv(1, 1, ix)
       end select
-      if(m%Lxyz(i, d1) == 0) exit
+      if(m%idx%Lxyz(i, d1) == 0) exit
     end do
-    do iy = m%nr(1, d2), m%nr(2, d2)
+    do iy = m%idx%nr(1, d2), m%idx%nr(2, d2)
       write(iunit, *)
-      do iz= m%nr(1, d3), m%nr(2, d3)
+      do iz= m%idx%nr(1, d3), m%idx%nr(2, d3)
         select case(d1)
-        case(1); i = m%lxyz_inv(ix, iy, iz)
-        case(2); i = m%lxyz_inv(iy, ix, iz)
-        case(3); i = m%lxyz_inv(iy, iz, ix)
+        case(1); i = m%idx%Lxyz_inv(ix, iy, iz)
+        case(2); i = m%idx%Lxyz_inv(iy, ix, iz)
+        case(3); i = m%idx%Lxyz_inv(iy, iz, ix)
         end select
         if(i<=m%np_global .and. i> 0) then
           write(iunit, mformat, iostat=ierr)  &
@@ -510,14 +510,14 @@ contains
     integer :: min_d2, min_d3, max_d2, max_d3
     FLOAT, allocatable :: out_vec(:)
     
-    min_d2 = m%nr(1, d2) + m%enlarge(d2)
-    max_d2 = m%nr(2, d2) - m%enlarge(d2)
-    min_d3 = m%nr(1, d3) + m%enlarge(d3)
-    max_d3 = m%nr(2, d3) - m%enlarge(d3)    
+    min_d2 = m%idx%nr(1, d2) + m%enlarge(d2)
+    max_d2 = m%idx%nr(2, d2) - m%enlarge(d2)
+    min_d3 = m%idx%nr(1, d3) + m%enlarge(d3)
+    max_d3 = m%idx%nr(2, d3) - m%enlarge(d3)    
     
     if(iand(how, boundary_points).ne.0) then
-      min_d2 = m%nr(1, d2); max_d2 = m%nr(2, d2); 
-      min_d3 = m%nr(1, d3); max_d3 = m%nr(2, d3); 
+      min_d2 = m%idx%nr(1, d2); max_d2 = m%idx%nr(2, d2); 
+      min_d3 = m%idx%nr(1, d3); max_d3 = m%idx%nr(2, d3); 
     end if
 
     select case(out_what)      
@@ -545,9 +545,9 @@ contains
       do iy = min_d3, max_d3
         
         select case(d1)
-        case(1); i = m%Lxyz_inv( 0, ix, iy)    ! plane_x
-        case(2); i = m%Lxyz_inv(ix,  0, iy)    ! plane_y
-        case(3); i = m%Lxyz_inv(ix, iy,  0)    ! plane_z
+        case(1); i = m%idx%Lxyz_inv( 0, ix, iy)    ! plane_x
+        case(2); i = m%idx%Lxyz_inv(ix,  0, iy)    ! plane_y
+        case(3); i = m%idx%Lxyz_inv(ix, iy,  0)    ! plane_z
         end select
 
         select case(out_what)
@@ -607,7 +607,7 @@ contains
     type(X(cf_t)) :: c
 
     ! put values in a nice cube
-    call X(cf_new) (m%l, c)
+    call X(cf_new) (m%idx%ll, c)
     call X(cf_alloc_RS) (c)
     call X(mesh_to_cube) (m, f, c)
 
@@ -670,7 +670,7 @@ contains
     ierr = 0
 
     ! put values in a nice cube
-    call X(cf_new) (m%l, c)
+    call X(cf_new) (m%idx%ll, c)
     call X(cf_alloc_RS) (c)
     call X(mesh_to_cube) (m, f, c)
 

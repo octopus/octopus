@@ -263,14 +263,14 @@ contains
         if(m%parallel_in_domains) then
           ! When running in parallel, get global number of
           ! point ii.
-          p1(1:MAX_DIM) = m%Lxyz(m%vp%local(m%vp%xlocal(m%vp%partno)+ii-1), 1:MAX_DIM)
+          p1(1:MAX_DIM) = m%idx%Lxyz(m%vp%local(m%vp%xlocal(m%vp%partno)+ii-1), 1:MAX_DIM)
         else
-          p1(1:MAX_DIM) = m%Lxyz(ii, 1:MAX_DIM)
+          p1(1:MAX_DIM) = m%idx%Lxyz(ii, 1:MAX_DIM)
         end if
 
         do jj = 1, op%stencil%size
           ! Get global index of p1 plus current stencil point.
-          st1(jj) = mesh_index(m%sb%dim, m%nr, m%Lxyz_inv, &
+          st1(jj) = mesh_index(m%sb%dim, m%idx%nr, m%idx%Lxyz_inv, &
                p1(1:MAX_DIM) + m%resolution(p1(1), p1(2), p1(3))*op%stencil%points(1:MAX_DIM, jj))
 #ifdef HAVE_MPI
           if(m%parallel_in_domains) then

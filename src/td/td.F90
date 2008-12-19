@@ -263,10 +263,10 @@ contains
       
        do mm=1, 2 !loop over excited states
       
-        nx1 = gr%m%nr(1, 1)
-        nx2 = gr%m%nr(2, 1)
-        ny1 = gr%m%nr(1, 1)
-        ny2 = gr%m%nr(2, 1)
+        nx1 = gr%m%idx%nr(1, 1)
+        nx2 = gr%m%idx%nr(2, 1)
+        ny1 = gr%m%idx%nr(1, 1)
+        ny2 = gr%m%idx%nr(2, 1)
         npointsx = nx2-nx1+1
         npointsy = ny2-ny1+1
         ! not always the real origin if the box is shifted, no?
@@ -274,8 +274,8 @@ contains
         !  only important for printout, so it is ok
         origin=(npointsx/2+1)*gr%m%h(1)
       
-       ! _ASSERT(n1 .eq. gr%m%nr(1, 2))
-       ! _ASSERT(n2 .eq. gr%m%nr(2, 2))
+       ! _ASSERT(n1 .eq. gr%m%idx%nr(1, 2))
+       ! _ASSERT(n2 .eq. gr%m%idx%nr(2, 2))
         ALLOCATE(densmatr(npointsx, npointsx), npointsx**2 )
         ALLOCATE(evectors(npointsx, npointsx), npointsx**2 )
         ALLOCATE(evalues(npointsx), npointsx)
@@ -304,7 +304,7 @@ contains
          ! there and so is the density matrix.
          !   MJV 4-12-2008 commented: in general case for npointsx/=npointsy this is
          !   not appropriate: x, x' is not a point in normal 2D space */
-         ! j = gr%m%lxyz_inv(jj, kk, 0)
+         ! j = gr%m%idx%Lxyz_inv(jj, kk, 0)
          ! if(j.eq.0) exit xloop
           
           ! it looks like this is stored but not used...
@@ -312,12 +312,12 @@ contains
           
           x2loop: do ll = ny1, ny2
           ! Finds Psi(jj, ll)
-            j = gr%m%lxyz_inv(jj, ll, 0)
+            j = gr%m%idx%Lxyz_inv(jj, ll, 0)
             if(j.eq.0) exit x2loop
             psi = st%zpsi(j, 1, mm, 1)
                   
           ! Finds Psi^*(kk, ll)
-            j = gr%m%lxyz_inv(kk, ll, 0)
+            j = gr%m%idx%Lxyz_inv(kk, ll, 0)
             if(j.eq.0) exit x2loop
             psidagger = conjg(st%zpsi(j, 1, mm, 1))
       

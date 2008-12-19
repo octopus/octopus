@@ -132,9 +132,9 @@ subroutine X(mesh_to_cube) (m, mf, cf)
   cf%RS =  M_ZERO
 
   do i = 1, m%np_global
-    ix = m%Lxyz(i, 1) + c(1)
-    iy = m%Lxyz(i, 2) + c(2)
-    iz = m%Lxyz(i, 3) + c(3)
+    ix = m%idx%Lxyz(i, 1) + c(1)
+    iy = m%idx%Lxyz(i, 2) + c(2)
+    iz = m%idx%Lxyz(i, 3) + c(3)
 
     cf%RS(ix, iy, iz) = mf(i)
   end do
@@ -154,9 +154,9 @@ subroutine X(cube_to_mesh) (m, cf, mf)
   c(:) =  cf%n(:)/2 + 1
 
   do i = 1, m%np_global
-    ix = m%Lxyz(i, 1) + c(1)
-    iy = m%Lxyz(i, 2) + c(2)
-    iz = m%Lxyz(i, 3) + c(3)
+    ix = m%idx%Lxyz(i, 1) + c(1)
+    iy = m%idx%Lxyz(i, 2) + c(2)
+    iz = m%idx%Lxyz(i, 3) + c(3)
     mf(i) = cf%RS(ix, iy, iz)
   end do
 

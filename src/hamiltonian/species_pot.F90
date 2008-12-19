@@ -613,7 +613,7 @@ contains
       if(m_p%parallel_in_domains) &
         j  = m_p%vp%local(m_p%vp%xlocal(m_p%vp%partno)+i-1)
 
-      chi(1:dim) = m_p%Lxyz(j, 1:dim) * m_p%h(1:dim) + m_p%sb%box_offset(1:dim) 
+      chi(1:dim) = m_p%idx%Lxyz(j, 1:dim) * m_p%h(1:dim) + m_p%sb%box_offset(1:dim) 
 
       r = sqrt( sum( (chi(1:dim) - xin(1:dim))**2 ) )
 

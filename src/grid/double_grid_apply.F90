@@ -113,7 +113,7 @@ subroutine double_grid_apply (this, s, m, sm, x_atom, vl, l, lm, ic)
               end if
             end if
 #endif
-            start(1:3) = m%Lxyz(ip, 1:3) + this%interpolation_min * (/ii, jj, kk/)
+            start(1:3) = m%idx%Lxyz(ip, 1:3) + this%interpolation_min * (/ii, jj, kk/)
             
             pp = start(1)
             do ll = this%interpolation_min, this%interpolation_max
@@ -124,7 +124,7 @@ subroutine double_grid_apply (this, s, m, sm, x_atom, vl, l, lm, ic)
                 rr = start(3)
                 do nn = this%interpolation_min, this%interpolation_max
 
-                    ip = m%Lxyz_inv(pp, qq, rr)
+                    ip = m%idx%Lxyz_inv(pp, qq, rr)
 #ifdef HAVE_MPI      
                     !map the global point to a local point
                     if (m%parallel_in_domains) ip = vec_global2local(m%vp, ip, m%vp%partno)

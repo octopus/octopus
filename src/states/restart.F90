@@ -905,8 +905,8 @@ contains
     sb       => gr%sb
     m_lead   => gr%m%lead_unit_cell(LEFT)
     m_center => gr%m
-    lead_nr(1, :) = m_lead%nr(1, :)+m_lead%enlarge
-    lead_nr(1, :) = m_lead%nr(2, :)-m_lead%enlarge
+    lead_nr(1, :) = m_lead%idx%nr(1, :)+m_lead%enlarge
+    lead_nr(1, :) = m_lead%idx%nr(2, :)-m_lead%enlarge
 
     ALLOCATE(tmp(m_lead%np, st%d%dim), m_lead%np*st%d%dim)
     restart_dir = trim(sb%lead_restart_dir(LEFT))//'/gs'

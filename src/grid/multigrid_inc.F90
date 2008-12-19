@@ -168,14 +168,14 @@
       ! translate to a global index
       if(fine_mesh%parallel_in_domains) fn = fine_mesh%vp%local(fn - 1 + fine_mesh%vp%xlocal(fine_mesh%vp%partno))
 #endif
-      fi(:) = fine_mesh%Lxyz(fn, :)
+      fi(:) = fine_mesh%idx%Lxyz(fn, :)
 
       f_coarse(n) = M_ZERO
 
       do di = -1, 1
         do dj = -1, 1
           do dk = -1, 1
-            fn = fine_mesh%Lxyz_inv(fi(1) + di, fi(2) + dj, fi(3) + dk)
+            fn = fine_mesh%idx%Lxyz_inv(fi(1) + di, fi(2) + dj, fi(3) + dk)
 
 #ifdef HAVE_MPI
             ! translate to a local index

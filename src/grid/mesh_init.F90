@@ -80,7 +80,7 @@ subroutine mesh_init_stage_1(sb, mesh, geo, cv, enlarge)
   if(simul_box_multires(sb)) mesh%enlarge = mesh%enlarge*2
 
   ! adjust nr
-  mesh%nr = 0
+  mesh%idx%nr = 0
   do i = 1, sb%dim
     chi = M_ZERO; j = 0
     out = .false.
@@ -94,18 +94,18 @@ subroutine mesh_init_stage_1(sb, mesh, geo, cv, enlarge)
         out = (chi(i) > nearest(sb%lsize(i), M_ONE))
       end if
     end do
-    mesh%nr(2, i) = j - 1
+    mesh%idx%nr(2, i) = j - 1
   end do
 
   ! we have a symmetric mesh (for now)
-  mesh%nr(1,:) = -mesh%nr(2,:)
+  mesh%idx%nr(1,:) = -mesh%idx%nr(2,:)
 
   ! we have to adjust a couple of things for the periodic directions
   do i = 1, sb%periodic_dim
     !the spacing has to be a divisor of the box size
-    mesh%h(i)     = sb%lsize(i)/real(mesh%nr(2, i))
+    mesh%h(i)     = sb%lsize(i)/real(mesh%idx%nr(2, i))
     !the upper boundary does not have to be included (as it is a copy of the lower boundary)
-    mesh%nr(2, i) = mesh%nr(2, i) - 1
+    mesh%idx%nr(2, i) = mesh%idx%nr(2, i) - 1
   end do
 
   if(sb%open_boundaries) then
@@ -119,14 +119,14 @@ subroutine mesh_init_stage_1(sb, mesh, geo, cv, enlarge)
     !                       L   |               C               |^  R
     !
     ! The indicated point (^) must be omitted to preserve correct periodicity.
-    mesh%nr(2, TRANS_DIR) = mesh%nr(2, TRANS_DIR) - 1
+    mesh%idx%nr(2, TRANS_DIR) = mesh%idx%nr(2, TRANS_DIR) - 1
 
     call mesh_read_lead()
   else
     nullify(mesh%lead_unit_cell)
   end if
 
-  mesh%l(:) = mesh%nr(2, :) - mesh%nr(1, :) + 1
+  mesh%idx%ll(:) = mesh%idx%nr(2, :) - mesh%idx%nr(1, :) + 1
 
   call profiling_out(mesh_init_prof)
   call pop_sub()
@@ -139,10 +139,13 @@ contains
 
     integer               :: alloc_size
     type(mesh_t), pointer :: m
+    integer :: nr(1:2, 1:MAX_DIM)
 
     call push_sub('mesh_init.mesh_read_lead')
 
     ALLOCATE(mesh%lead_unit_cell(NLEADS), NLEADS)
+
+    nr = m%idx%nr
 
     do il = 1, NLEADS
       m => mesh%lead_unit_cell(il)
@@ -151,9 +154,9 @@ contains
       call io_close(iunit)
 
       ! Read the lxyz maps.
-      ALLOCATE(m%lxyz(m%np_part, 3), m%np_global*3)
-      alloc_size = (m%nr(2, 1)-m%nr(1, 1)+1) * (m%nr(2, 2)-m%nr(1, 2)+1) * (m%nr(2, 3)-m%nr(1, 3)+1)
-      ALLOCATE(m%lxyz_inv(m%nr(1, 1):m%nr(2, 1), m%nr(1, 2):m%nr(2, 2), m%nr(1, 3):m%nr(2, 3)), alloc_size)
+      ALLOCATE(m%idx%Lxyz(m%np_part, 3), m%np_global*3)
+      alloc_size = (nr(2, 1) - nr(1, 1) + 1)*(nr(2, 2) - nr(1, 2) + 1)*(nr(2, 3) - nr(1, 3) + 1)
+      ALLOCATE(m%idx%Lxyz_inv(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)), alloc_size)
       iunit = io_open(trim(sb%lead_restart_dir(il))//'/gs/Lxyz', action='read', is_tmp=.true.)
       call mesh_lxyz_init_from_file(m, iunit)
       call io_close(iunit)
@@ -174,34 +177,37 @@ subroutine mesh_init_stage_2(sb, mesh, geo, cv, stencil)
 
   integer :: i, j, k, il, ik, ix, iy, iz, is
   FLOAT   :: chi(MAX_DIM)
+  integer :: nr(1:2, 1:MAX_DIM)
   logical :: inside
 
   call push_sub('mesh_init.mesh_init_stage_2')
   call profiling_in(mesh_init_prof)
 
   ! enlarge mesh for boundary points
-  mesh%nr(1,:) = mesh%nr(1,:) - mesh%enlarge(:)
-  mesh%nr(2,:) = mesh%nr(2,:) + mesh%enlarge(:)
+  mesh%idx%nr(1,:) = mesh%idx%nr(1,:) - mesh%enlarge(:)
+  mesh%idx%nr(2,:) = mesh%idx%nr(2,:) + mesh%enlarge(:)
+
+  nr = mesh%idx%nr
 
   ! allocate the xyz arrays
-  i = (mesh%nr(2,1) - mesh%nr(1,1) + 1)*(mesh%nr(2,2) - mesh%nr(1,2) + 1)*(mesh%nr(2,3) - mesh%nr(1,3) + 1)
-  ALLOCATE(mesh%Lxyz_inv(mesh%nr(1,1):mesh%nr(2,1), mesh%nr(1,2):mesh%nr(2,2), mesh%nr(1,3):mesh%nr(2,3)),   i)
-  ALLOCATE(mesh%Lxyz_tmp(mesh%nr(1,1):mesh%nr(2,1), mesh%nr(1,2):mesh%nr(2,2), mesh%nr(1,3):mesh%nr(2,3)),   i)
-  ALLOCATE(mesh%x_tmp(MAX_DIM, mesh%nr(1,1):mesh%nr(2,1), mesh%nr(1,2):mesh%nr(2,2), mesh%nr(1,3):mesh%nr(2,3)), MAX_DIM*i)
-  ALLOCATE(mesh%resolution(mesh%nr(1,1):mesh%nr(2,1), mesh%nr(1,2):mesh%nr(2,2), mesh%nr(1,3):mesh%nr(2,3)), i)
+  i = (nr(2, 1) - nr(1, 1) + 1)*(nr(2, 2) - nr(1, 2) + 1)*(nr(2, 3) - nr(1, 3) + 1)
+  ALLOCATE(mesh%idx%Lxyz_inv(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)), i)
+  ALLOCATE(mesh%idx%Lxyz_tmp(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)), i)
+  ALLOCATE(mesh%x_tmp(MAX_DIM, nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)), MAX_DIM*i)
+  ALLOCATE(mesh%resolution(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)), i)
 
-  mesh%Lxyz_inv(:,:,:) = 0
-  mesh%Lxyz_tmp(:,:,:) = 0
+  mesh%idx%Lxyz_inv(:,:,:) = 0
+  mesh%idx%Lxyz_tmp(:,:,:) = 0
   mesh%x_tmp(:,:,:,:)  = M_ZERO
 
   ! We label the points inside the mesh + enlargement
-  do ix = mesh%nr(1,1), mesh%nr(2,1)
+  do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
     chi(1) = real(ix, REAL_PRECISION) * mesh%h(1) + sb%box_offset(1)
 
-    do iy = mesh%nr(1,2), mesh%nr(2,2)
+    do iy = mesh%idx%nr(1,2), mesh%idx%nr(2,2)
       chi(2) = real(iy, REAL_PRECISION) * mesh%h(2) + sb%box_offset(2)
 
-      do iz = mesh%nr(1,3), mesh%nr(2,3)
+      do iz = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
         chi(3) = real(iz, REAL_PRECISION) * mesh%h(3) + sb%box_offset(3)
 
         call curvlinear_chi2x(sb, geo, cv, chi(:), mesh%x_tmp(:, ix, iy, iz))
@@ -218,10 +224,10 @@ subroutine mesh_init_stage_2(sb, mesh, geo, cv, stencil)
             j = iy + mesh%resolution(ix, iy, iz)*stencil%points(2, is)
             k = iz + mesh%resolution(ix, iy, iz)*stencil%points(3, is)
             if(  &
-                 i >= mesh%nr(1,1) .and. i <= mesh%nr(2,1) .and. &
-                 j >= mesh%nr(1,2) .and. j <= mesh%nr(2,2) .and. &
-                 k >= mesh%nr(1,3) .and. k <= mesh%nr(2,3)) then
-              mesh%Lxyz_tmp(i, j, k) = ENLARGEMENT_POINT
+                 i >= mesh%idx%nr(1,1) .and. i <= mesh%idx%nr(2,1) .and. &
+                 j >= mesh%idx%nr(1,2) .and. j <= mesh%idx%nr(2,2) .and. &
+                 k >= mesh%idx%nr(1,3) .and. k <= mesh%idx%nr(2,3)) then
+              mesh%idx%Lxyz_tmp(i, j, k) = ENLARGEMENT_POINT
             end if
           end do
         end if
@@ -233,20 +239,20 @@ subroutine mesh_init_stage_2(sb, mesh, geo, cv, stencil)
   ! we label the points inside the mesh, and we count the points
   il = 0
   ik = 0
-  do ix = mesh%nr(1,1), mesh%nr(2,1)
-    do iy = mesh%nr(1,2), mesh%nr(2,2)
-      do iz = mesh%nr(1,3), mesh%nr(2,3)
+  do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
+    do iy = mesh%idx%nr(1,2), mesh%idx%nr(2,2)
+      do iz = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
 
         inside = simul_box_in_box(sb, geo, mesh%x_tmp(:, ix, iy, iz), inner_box = .true.)
         inside = inside .or. (simul_box_in_box(sb, geo, mesh%x_tmp(:, ix, iy, iz)) .and. &
              mod(ix, 2) == 0 .and. mod(iy, 2) == 0 .and. mod(iz, 2) == 0)
 
         if(inside) then
-          mesh%Lxyz_tmp(ix, iy, iz) = INNER_POINT
+          mesh%idx%Lxyz_tmp(ix, iy, iz) = INNER_POINT
           ik = ik + 1
         end if
 
-        if(mesh%Lxyz_tmp(ix, iy, iz) > 0) il = il + 1
+        if(mesh%idx%Lxyz_tmp(ix, iy, iz) > 0) il = il + 1
 
       end do
     end do
@@ -302,7 +308,7 @@ subroutine mesh_init_stage_3(mesh, geo, cv, stencil, mpi_grp, parent)
   call mesh_get_vol_pp(mesh%sb)
 
   ! these large arrays were allocated in mesh_init_1, and are no longer needed
-  deallocate(mesh%Lxyz_tmp, mesh%x_tmp)
+  deallocate(mesh%idx%Lxyz_tmp, mesh%x_tmp)
 
   call mesh_pbc_init()
 
@@ -316,7 +322,7 @@ contains
     integer :: il, ix, iy, iz
     integer :: ixb, iyb, izb, bsize, bsizez
 
-    ALLOCATE(mesh%Lxyz(mesh%np_part_global, MAX_DIM), mesh%np_part_global*MAX_DIM)
+    ALLOCATE(mesh%idx%Lxyz(mesh%np_part_global, MAX_DIM), mesh%np_part_global*MAX_DIM)
     if(mesh%parallel_in_domains) then
       ! Node 0 has to store all entries from x (in x_global)
       ! as well as the local set in x (see below).
@@ -356,20 +362,20 @@ contains
 
     ! first we fill the points in the inner mesh
     il = 0
-    do ixb = mesh%nr(1,1), mesh%nr(2,1), bsize
-      do iyb = mesh%nr(1,2), mesh%nr(2,2), bsize
-        do izb = mesh%nr(1,3), mesh%nr(2,3), bsizez
+    do ixb = mesh%idx%nr(1,1), mesh%idx%nr(2,1), bsize
+      do iyb = mesh%idx%nr(1,2), mesh%idx%nr(2,2), bsize
+        do izb = mesh%idx%nr(1,3), mesh%idx%nr(2,3), bsizez
 
-          do ix = ixb, min(ixb + bsize - 1, mesh%nr(2,1))
-            do iy = iyb, min(iyb + bsize - 1, mesh%nr(2,2))
-              do iz = izb, min(izb + bsizez - 1, mesh%nr(2,3))
+          do ix = ixb, min(ixb + bsize - 1, mesh%idx%nr(2,1))
+            do iy = iyb, min(iyb + bsize - 1, mesh%idx%nr(2,2))
+              do iz = izb, min(izb + bsizez - 1, mesh%idx%nr(2,3))
                 
-                if(mesh%Lxyz_tmp(ix, iy, iz) == INNER_POINT) then
+                if(mesh%idx%Lxyz_tmp(ix, iy, iz) == INNER_POINT) then
                   il = il + 1
-                  mesh%Lxyz(il, 1) = ix
-                  mesh%Lxyz(il, 2) = iy
-                  mesh%Lxyz(il, 3) = iz
-                  mesh%Lxyz_inv(ix,iy,iz) = il
+                  mesh%idx%Lxyz(il, 1) = ix
+                  mesh%idx%Lxyz(il, 2) = iy
+                  mesh%idx%Lxyz(il, 3) = iz
+                  mesh%idx%Lxyz_inv(ix,iy,iz) = il
                   if(mesh%parallel_in_domains) then
                     mesh%x_global(il, 1:3) = mesh%x_tmp(1:3, ix, iy, iz)
                   else
@@ -386,20 +392,20 @@ contains
     end do
 
     ! and now the points from the enlargement
-    do ixb = mesh%nr(1,1), mesh%nr(2,1), bsize
-      do iyb = mesh%nr(1,2), mesh%nr(2,2), bsize
-        do izb = mesh%nr(1,3), mesh%nr(2,3), bsizez
+    do ixb = mesh%idx%nr(1,1), mesh%idx%nr(2,1), bsize
+      do iyb = mesh%idx%nr(1,2), mesh%idx%nr(2,2), bsize
+        do izb = mesh%idx%nr(1,3), mesh%idx%nr(2,3), bsizez
 
-          do ix = ixb, min(ixb + bsize - 1, mesh%nr(2,1))
-            do iy = iyb, min(iyb + bsize - 1, mesh%nr(2,2))
-              do iz = izb, min(izb + bsizez - 1, mesh%nr(2,3))
+          do ix = ixb, min(ixb + bsize - 1, mesh%idx%nr(2,1))
+            do iy = iyb, min(iyb + bsize - 1, mesh%idx%nr(2,2))
+              do iz = izb, min(izb + bsizez - 1, mesh%idx%nr(2,3))
                 
-                if(mesh%Lxyz_tmp(ix, iy, iz) == ENLARGEMENT_POINT) then
+                if(mesh%idx%Lxyz_tmp(ix, iy, iz) == ENLARGEMENT_POINT) then
                   il = il + 1
-                  mesh%Lxyz(il, 1) = ix
-                  mesh%Lxyz(il, 2) = iy
-                  mesh%Lxyz(il, 3) = iz
-                  mesh%Lxyz_inv(ix,iy,iz) = il
+                  mesh%idx%Lxyz(il, 1) = ix
+                  mesh%idx%Lxyz(il, 2) = iy
+                  mesh%idx%Lxyz(il, 3) = iz
+                  mesh%idx%Lxyz_inv(ix,iy,iz) = il
                   if(mesh%parallel_in_domains) then
                     mesh%x_global(il, :) = mesh%x_tmp(:, ix, iy, iz)
                   else
@@ -433,10 +439,10 @@ contains
     else
       ! if there is a parent grid, use its partition
       do ip = 1, mesh%np_global
-        ix = 2*mesh%Lxyz(ip, 1)
-        iy = 2*mesh%Lxyz(ip, 2)
-        iz = 2*mesh%Lxyz(ip, 3)
-        i = parent%Lxyz_inv(ix, iy, iz)
+        ix = 2*mesh%idx%Lxyz(ip, 1)
+        iy = 2*mesh%idx%Lxyz(ip, 2)
+        iz = 2*mesh%idx%Lxyz(ip, 3)
+        i = parent%idx%Lxyz_inv(ix, iy, iz)
         part(ip) = parent%vp%part(i)
       end do
     end if
@@ -444,7 +450,7 @@ contains
     call mesh_partition_boundaries(mesh, stencil, part)
 
     call vec_init(mesh%mpi_grp%comm, 0, part, mesh%np_global, mesh%np_part_global,  &
-      mesh%nr, mesh%Lxyz_inv, mesh%Lxyz, stencil, mesh%sb%dim, mesh%vp)
+      mesh%idx%nr, mesh%idx%Lxyz_inv, mesh%idx%Lxyz, stencil, mesh%sb%dim, mesh%vp)
     deallocate(part)
 
     ALLOCATE(nnb(1:mesh%vp%p), mesh%vp%p)
@@ -501,18 +507,18 @@ contains
     ! Do the inner points
     do i = 1, mesh%np
       j  = mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno)+i-1)
-      mesh%x(i, :) = mesh%x_tmp(:, mesh%Lxyz(j, 1), mesh%Lxyz(j, 2), mesh%Lxyz(j, 3))
+      mesh%x(i, :) = mesh%x_tmp(:, mesh%idx%Lxyz(j, 1), mesh%idx%Lxyz(j, 2), mesh%idx%Lxyz(j, 3))
     end do
     ! Do the ghost points
     do i = 1, mesh%vp%np_ghost(mesh%vp%partno)
       j = mesh%vp%ghost(mesh%vp%xghost(mesh%vp%partno)+i-1)
-      mesh%x(i+mesh%np, :) = mesh%x_tmp(:, mesh%Lxyz(j, 1), mesh%Lxyz(j, 2), mesh%Lxyz(j, 3))
+      mesh%x(i+mesh%np, :) = mesh%x_tmp(:, mesh%idx%Lxyz(j, 1), mesh%idx%Lxyz(j, 2), mesh%idx%Lxyz(j, 3))
     end do
     ! Do the boundary points
     do i = 1, mesh%vp%np_bndry(mesh%vp%partno)
       j = mesh%vp%bndry(mesh%vp%xbndry(mesh%vp%partno)+i-1)
       mesh%x(i + mesh%np + mesh%vp%np_ghost(mesh%vp%partno), :) = &
-        mesh%x_tmp(:, mesh%Lxyz(j, 1), mesh%Lxyz(j, 2), mesh%Lxyz(j, 3))
+        mesh%x_tmp(:, mesh%idx%Lxyz(j, 1), mesh%idx%Lxyz(j, 2), mesh%idx%Lxyz(j, 3))
     end do
 #endif
   end subroutine do_partition
@@ -540,19 +546,19 @@ contains
       ! Do the inner points.
       do i = 1, mesh%np
         k = mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno)+i-1)
-        chi(1:sb%dim) = mesh%Lxyz(k, 1:sb%dim) * mesh%h(1:sb%dim)
+        chi(1:sb%dim) = mesh%idx%Lxyz(k, 1:sb%dim) * mesh%h(1:sb%dim)
         mesh%vol_pp(i) = mesh%vol_pp(i)*curvlinear_det_Jac(sb, geo, cv, mesh%x(i, :), chi(1:sb%dim))
       end do
       ! Do the ghost points.
       do i = 1, mesh%vp%np_ghost(mesh%vp%partno)
         k = mesh%vp%ghost(mesh%vp%xghost(mesh%vp%partno)+i-1)
-        chi(1:sb%dim) = mesh%Lxyz(k, 1:sb%dim) * mesh%h(1:sb%dim)
+        chi(1:sb%dim) = mesh%idx%Lxyz(k, 1:sb%dim) * mesh%h(1:sb%dim)
         mesh%vol_pp(i+mesh%np) = mesh%vol_pp(i+mesh%np)*curvlinear_det_Jac(sb, geo, cv, mesh%x(i+mesh%np, :), chi(1:sb%dim))
       end do
       ! Do the boundary points.
       do i = 1, mesh%vp%np_bndry(mesh%vp%partno)
         k = mesh%vp%bndry(mesh%vp%xbndry(mesh%vp%partno)+i-1)
-        chi(1:sb%dim) = mesh%Lxyz(k, 1:sb%dim) * mesh%h(1:sb%dim)
+        chi(1:sb%dim) = mesh%idx%Lxyz(k, 1:sb%dim) * mesh%h(1:sb%dim)
         mesh%vol_pp(i+mesh%np+mesh%vp%np_ghost(mesh%vp%partno)) = &
           mesh%vol_pp(i+mesh%np+mesh%vp%np_ghost(mesh%vp%partno)) &
           *curvlinear_det_Jac(sb, geo, cv, mesh%x(i+mesh%np+mesh%vp%np_ghost(mesh%vp%partno), :), chi(1:sb%dim))
@@ -560,7 +566,7 @@ contains
 #endif
     else ! serial mode
       do i = 1, mesh%np_part
-        jj(1:sb%dim) = mesh%Lxyz(i, 1:sb%dim)
+        jj(1:sb%dim) = mesh%idx%Lxyz(i, 1:sb%dim)
         jj(sb%dim + 1:MAX_DIM) = 0
         chi(1:sb%dim) = jj(1:sb%dim)*mesh%h(1:sb%dim)
         mesh%vol_pp(i) = mesh%resolution(jj(1), jj(2), jj(3))**sb%dim*&
@@ -941,9 +947,9 @@ subroutine mesh_partition(m, stencil, part)
     ! Iterate over number of vertices.
     do i = 1, nv
       ! Get coordinates of point i (vertex i).
-      ix      = m%Lxyz(i, 1)
-      iy      = m%Lxyz(i, 2)
-      iz      = m%Lxyz(i, 3)
+      ix      = m%idx%Lxyz(i, 1)
+      iy      = m%idx%Lxyz(i, 2)
+      iz      = m%idx%Lxyz(i, 3)
       ! Set entry in index table.
       xadj(i) = ne
       ! Check all possible neighbours.
@@ -957,15 +963,15 @@ subroutine mesh_partition(m, stencil, part)
         ! Lxyz_tmp has an entry for this point, otherweise
         ! it is out of bounds.
         if(&
-             jx >= m%nr(1, 1) .and. jx <= m%nr(2, 1) .and.  &
-             jy >= m%nr(1, 2) .and. jy <= m%nr(2, 2) .and.  &
-             jz >= m%nr(1, 3) .and. jz <= m%nr(2, 3)        &
+             jx >= m%idx%nr(1, 1) .and. jx <= m%idx%nr(2, 1) .and.  &
+             jy >= m%idx%nr(1, 2) .and. jy <= m%idx%nr(2, 2) .and.  &
+             jz >= m%idx%nr(1, 3) .and. jz <= m%idx%nr(2, 3)        &
              ) then
           ! Only points inside the mesh or its enlargement
           ! are included in the graph.
-          if(m%Lxyz_tmp(jx, jy, jz) /= 0 .and. m%Lxyz_inv(jx, jy, jz) <= nv) then
+          if(m%idx%Lxyz_tmp(jx, jy, jz) /= 0 .and. m%idx%Lxyz_inv(jx, jy, jz) <= nv) then
             ! Store a new edge and increment edge counter.
-            adjncy(ne) = m%Lxyz_inv(jx, jy, jz)
+            adjncy(ne) = m%idx%Lxyz_inv(jx, jy, jz)
             ne         = ne + 1
           end if
         end if
@@ -1083,10 +1089,10 @@ subroutine mesh_partition_boundaries(m, stencil, part)
   votes = 0
   do i = 1, m%np_global
     do j = 1, stencil%size
-      jx = m%Lxyz(i, 1) + stencil%points(1, j)
-      jy = m%Lxyz(i, 2) + stencil%points(2, j)
-      jz = m%Lxyz(i, 3) + stencil%points(3, j)
-      ip = m%Lxyz_inv(jx, jy, jz)
+      jx = m%idx%Lxyz(i, 1) + stencil%points(1, j)
+      jy = m%idx%Lxyz(i, 2) + stencil%points(2, j)
+      jz = m%idx%Lxyz(i, 3) + stencil%points(3, j)
+      ip = m%idx%Lxyz_inv(jx, jy, jz)
       if(ip > m%np_global) votes(part(i), ip) = votes(part(i), ip) + 1
     end do
   end do

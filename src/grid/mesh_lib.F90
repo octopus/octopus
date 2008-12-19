@@ -24,8 +24,17 @@ module mesh_lib_m
   implicit none
 
   private
-  public :: mesh_index
-
+  public :: mesh_index,    &
+            index_t
+  
+  type index_t
+    integer, pointer :: Lxyz(:,:)       ! return x, y and z for each point
+    integer, pointer :: Lxyz_inv(:,:,:) ! return points # for each xyz
+    integer, pointer :: Lxyz_tmp(:,:,:) ! init_1 and init_2
+    ! some other vars
+    integer :: nr(2, MAX_DIM)              ! dimensions of the box where the points are contained
+    integer :: ll(MAX_DIM)                  ! literally n(2,:) - n(1,:) + 1 - 2*enlarge(:)
+  end type index_t
 
 contains
   ! this function takes care of the boundary conditions

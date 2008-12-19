@@ -92,7 +92,7 @@ contains
 
     call push_sub('poisson_isf.poisson_isf_init')
 
-    call dcf_new(m%l, rho_cf)
+    call dcf_new(m%idx%ll, rho_cf)
 
     ! The serial version is always needed (as used, e.g., in the casida runmode)
     call calculate_dimensions(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3), &

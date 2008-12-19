@@ -512,9 +512,9 @@ contains
     call interpolation_coefficients(nn, pos, M_ZERO, ww)
 
     do ip = bndry_start, bndry_end
-      ix = der%m%Lxyz(ip, 1)
-      iy = der%m%Lxyz(ip, 2)
-      iz = der%m%Lxyz(ip, 3)
+      ix = der%m%idx%Lxyz(ip, 1)
+      iy = der%m%idx%Lxyz(ip, 2)
+      iz = der%m%idx%Lxyz(ip, 3)
       dx = abs(mod(ix, 2))
       dy = abs(mod(iy, 2))
       dz = abs(mod(iz, 2))
@@ -524,7 +524,7 @@ contains
         do ii = 1, nn
           do jj = 1, nn
             do kk = 1, nn
-              f(ip) = f(ip) + ww(ii)*ww(jj)*ww(kk)*f(der%m%Lxyz_inv(ix + posi(ii)*dx, iy + posi(jj)*dy, iz + posi(kk)*dz))
+              f(ip) = f(ip) + ww(ii)*ww(jj)*ww(kk)*f(der%m%idx%Lxyz_inv(ix + posi(ii)*dx, iy + posi(jj)*dy, iz + posi(kk)*dz))
             end do
           end do
         end do

@@ -209,9 +209,9 @@ contains
     integer,         intent(in)  :: part(:)      ! Point -> partition.
     integer,         intent(in)  :: np           ! m%np_global
     integer,         intent(in)  :: np_part      ! m%np_part_global
-    integer,         intent(in)  :: nr(2, 3)     ! m%nr
-    integer,         intent(in)  :: Lxyz_inv(nr(1,1):nr(2,1), nr(1,2):nr(2,2), nr(1,3):nr(2,3)) ! m%Lxyz_inv
-    integer,         intent(in)  :: Lxyz(:, :)   ! m%Lxyz
+    integer,         intent(in)  :: nr(2, 3)     ! m%idx%nr
+    integer,         intent(in)  :: Lxyz_inv(nr(1,1):nr(2,1), nr(1,2):nr(2,2), nr(1,3):nr(2,3)) ! m%idx%Lxyz_inv
+    integer,         intent(in)  :: Lxyz(:, :)   ! m%idx%Lxyz
     type(stencil_t), intent(in)  :: stencil      ! The stencil for which to calculate ghost points.
     integer,         intent(in)  :: dim          ! Number of dimensions.
     type(pv_t),      intent(out) :: vp           ! Description of partition.

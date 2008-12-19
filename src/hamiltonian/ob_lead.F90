@@ -67,10 +67,10 @@ contains
       n = intf%index(i)
       ! ... find the points they are coupled to.
       do k = 1, lapl%stencil%size
-        k_stencil = lapl%m%lxyz_inv(          &
-          lapl%m%lxyz(n,1)+lapl%stencil%points(1,k), &
-          lapl%m%lxyz(n,2)+lapl%stencil%points(2,k), &
-          lapl%m%lxyz(n,3)+lapl%stencil%points(3,k))
+        k_stencil = lapl%m%idx%Lxyz_inv(          &
+          lapl%m%idx%Lxyz(n,1)+lapl%stencil%points(1,k), &
+          lapl%m%idx%Lxyz(n,2)+lapl%stencil%points(2,k), &
+          lapl%m%idx%Lxyz(n,3)+lapl%stencil%points(3,k))
         ! If the coupling point is in the interface...
         if(k_stencil.le.lapl%np.and. &
           member_of_interface(k_stencil, intf)) then
@@ -143,14 +143,14 @@ contains
       ! k iterates over all stencil points.
       do k = 1, lapl%stencil%size
         ! Get point number of coupling point.
-        k_stencil = lapl%m%lxyz_inv(            &
-          lapl%m%lxyz(n, 1)+lapl%stencil%points(1, k), &
-          lapl%m%lxyz(n, 2)+lapl%stencil%points(2, k), &
-          lapl%m%lxyz(n, 3)+lapl%stencil%points(3, k))
+        k_stencil = lapl%m%idx%Lxyz_inv(            &
+          lapl%m%idx%Lxyz(n, 1)+lapl%stencil%points(1, k), &
+          lapl%m%idx%Lxyz(n, 2)+lapl%stencil%points(2, k), &
+          lapl%m%idx%Lxyz(n, 3)+lapl%stencil%points(3, k))
 
         ! Get coordinates of current interface point n and current stencil point k_stencil.
-        p_n = lapl%m%lxyz(n, :)
-        p_k = lapl%m%lxyz(k_stencil, :)
+        p_n = lapl%m%idx%Lxyz(n, :)
+        p_k = lapl%m%idx%Lxyz(k_stencil, :)
 
         ! Now, we shift the stencil by the size of one unit cell (intf%extent)
         ! and check if the coupling point with point number n_matr is in the interface.
@@ -174,7 +174,7 @@ contains
         x_shift           = abs(p_k(TRANS_DIR)-p_n(TRANS_DIR))
         p_matr            = p_n
         p_matr(TRANS_DIR) = p_matr(TRANS_DIR) + dir*(intf%extent-x_shift)
-        n_matr            = lapl%m%lxyz_inv(p_matr(1), p_matr(2), p_matr(3))
+        n_matr            = lapl%m%idx%Lxyz_inv(p_matr(1), p_matr(2), p_matr(3))
 
         if(member_of_interface(n_matr, intf)) then
           n_matr = interface_index(n_matr, intf)

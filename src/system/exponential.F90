@@ -192,7 +192,7 @@ contains
       if (te%exp_order < 2) call input_error('TDExpOrder')
 
     else if(te%exp_method==SPLIT_OPERATOR.or.te%exp_method==SUZUKI_TROTTER) then
-      call zcf_new(gr%m%l, te%cf)
+      call zcf_new(gr%m%idx%ll, te%cf)
       call zcf_fft_init(te%cf, gr%sb)
     end if
 

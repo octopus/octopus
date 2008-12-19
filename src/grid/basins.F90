@@ -149,9 +149,9 @@ contains
 
       if(mesh%parallel_in_domains) then
         ! When running in parallel, get global number of point i.
-        point(:) = mesh%Lxyz(mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno)+ii-1), :)
+        point(:) = mesh%idx%Lxyz(mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno)+ii-1), :)
       else
-        point(:) = mesh%Lxyz(ii, :)
+        point(:) = mesh%idx%Lxyz(ii, :)
       end if
 
       f_max   = f(ii)
@@ -166,7 +166,7 @@ contains
             point2(2) = point2(2) + yy
             point2(3) = point2(3) + zz
 
-            index = mesh_index(mesh%sb%dim, mesh%nr, mesh%Lxyz_inv, point2)
+            index = mesh_index(mesh%sb%dim, mesh%idx%nr, mesh%idx%Lxyz_inv, point2)
 
             if(index <= 0 .or. index > mesh%np) cycle
             if(this%map(index) == -2) cycle

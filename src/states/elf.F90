@@ -201,10 +201,10 @@ contains
     end if
  
     if (st%wfs_type == M_REAL) then
-      call dcf_new(gr%m%l, dcf_tmp)
+      call dcf_new(gr%m%idx%ll, dcf_tmp)
       call dcf_fft_init(dcf_tmp, gr%sb)
     else
-      call zcf_new(gr%m%l, zcf_tmp)
+      call zcf_new(gr%m%idx%ll, zcf_tmp)
       call zcf_fft_init(zcf_tmp, gr%sb)
     end if
 

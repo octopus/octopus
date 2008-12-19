@@ -60,7 +60,7 @@ subroutine PES_rc_init(v, m, st, save_iter)
     ! adjust units
     x = x*units_inp%length%factor
 
-    v%points(i) = m%Lxyz_inv(int(x(1)/m%h(1)), int(x(2)/m%h(2)), int(x(3)/m%h(3)))
+    v%points(i) = m%idx%Lxyz_inv(int(x(1)/m%h(1)), int(x(2)/m%h(2)), int(x(3)/m%h(3)))
   end do
 
   call loct_parse_block_end(blk)

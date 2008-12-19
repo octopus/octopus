@@ -337,12 +337,12 @@ end subroutine X(mf_random)
 ! argument j is the dimension which is not integrated.
 ! The input function f is a normal function defined on
 ! the mesh, whereas the output function is a 1D array
-! of mesh%l(j) + 2*mesh%enlarge(j) elements.
+! of mesh%idx%ll(j) + 2*mesh%enlarge(j) elements.
 !
 ! In order to retrieve the coordinate v of u(n), one needs
 ! to do:
-!  k = gr%m%nr(1, j) + n - 1
-!  i = gr%m%lxyz_inv(k, 0, 0) ! Assuming j = 1
+!  k = gr%m%idx%nr(1, j) + n - 1
+!  i = gr%m%idx%Lxyz_inv(k, 0, 0) ! Assuming j = 1
 !  if(i>0) v = gr%m%x(i, j)   ! I do not understand why
 !                             ! we need i>0...
 !
@@ -360,11 +360,11 @@ subroutine X(mf_partial_integrate)(mesh, j, f, u)
   ASSERT(.not.(mesh%parallel_in_domains))
   ASSERT(.not.(mesh%use_curvlinear))
 
-  k = mesh%l(j)+2*mesh%enlarge(j)
+  k = mesh%idx%ll(j)+2*mesh%enlarge(j)
 
   u(1:k) = M_ZERO
   do i = 1, mesh%np
-     m = mesh%lxyz(i, j) - mesh%nr(1, j) + 1
+     m = mesh%idx%Lxyz(i, j) - mesh%idx%nr(1, j) + 1
      u(m) = u(m) + f(i)
   end do
 
@@ -403,10 +403,10 @@ subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, u, f)
       k = i
       if(mesh_out%parallel_in_domains) &
         k = mesh_out%vp%local(mesh_out%vp%xlocal(mesh_out%vp%partno)+i-1)
-      ix = mesh_out%lxyz(k, 1); if ( ix < mesh_in%nr(1, 1) .or. ix > mesh_in%nr(2, 1) ) cycle
-      iy = mesh_out%lxyz(k, 2); if ( iy < mesh_in%nr(1, 2) .or. iy > mesh_in%nr(2, 2) ) cycle
-      iz = mesh_out%lxyz(k, 3); if ( iz < mesh_in%nr(1, 3) .or. iz > mesh_in%nr(2, 3) ) cycle
-      j = mesh_in%lxyz_inv(ix, iy, iz)
+      ix = mesh_out%idx%Lxyz(k, 1); if ( ix < mesh_in%idx%nr(1, 1) .or. ix > mesh_in%idx%nr(2, 1) ) cycle
+      iy = mesh_out%idx%Lxyz(k, 2); if ( iy < mesh_in%idx%nr(1, 2) .or. iy > mesh_in%idx%nr(2, 2) ) cycle
+      iz = mesh_out%idx%Lxyz(k, 3); if ( iz < mesh_in%idx%nr(1, 3) .or. iz > mesh_in%idx%nr(2, 3) ) cycle
+      j = mesh_in%idx%Lxyz_inv(ix, iy, iz)
 
       if(mesh_in%parallel_in_domains) then
         if(j > 0 .and. j <= mesh_in%np_global) f(i) = f_global(j)
