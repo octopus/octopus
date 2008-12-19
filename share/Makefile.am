@@ -27,8 +27,6 @@ dist_share_DATA = logo variables varinfo filter_mask.data
 CLEANFILES = variables varinfo varinfo_orig
 EXTRA_DIST = variables.local
 
-dist_share_DATA = filter_mask.data
-
 varinfo: RUN_SCRIPT
 
 variables: RUN_SCRIPT
