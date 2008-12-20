@@ -201,7 +201,7 @@ contains
   ! from how it is in the rest of the code (for historical reasons
   ! and also because the vec_init has more a global than a local point
   ! of view on the mesh): See the comments in the parameter list.
-  subroutine vec_init(comm, root, part, np, np_part, nr, Lxyz_inv, Lxyz, stencil, dim, vp)
+  subroutine vec_init(comm, root, part, np, np_part, idx, stencil, dim, vp)
     integer,         intent(in)  :: comm         ! Communicator to use.
     integer,         intent(in)  :: root         ! The master node.
 
@@ -209,9 +209,7 @@ contains
     integer,         intent(in)  :: part(:)      ! Point -> partition.
     integer,         intent(in)  :: np           ! m%np_global
     integer,         intent(in)  :: np_part      ! m%np_part_global
-    integer,         intent(in)  :: nr(2, 3)     ! m%idx%nr
-    integer,         intent(in)  :: Lxyz_inv(nr(1,1):nr(2,1), nr(1,2):nr(2,2), nr(1,3):nr(2,3)) ! m%idx%Lxyz_inv
-    integer,         intent(in)  :: Lxyz(:, :)   ! m%idx%Lxyz
+    type(index_t),   intent(in)  :: idx
     type(stencil_t), intent(in)  :: stencil      ! The stencil for which to calculate ghost points.
     integer,         intent(in)  :: dim          ! Number of dimensions.
     type(pv_t),      intent(out) :: vp           ! Description of partition.
@@ -323,13 +321,12 @@ contains
       ! Check all points of this node.
       do i = vp%xlocal(r), vp%xlocal(r)+vp%np_local(r)-1
         ! Get coordinates of current point.
-        p1 = Lxyz(vp%local(i), :)
+        call index_to_coords(idx, dim, vp%local(i), p1)
+
         ! For all points in stencil.
         do j = 1, stencil%size
           ! Get point number of possible ghost point.
-          ! mesh_index takes care of periodic dimensions and
-          ! out points that would be out of the box etc.
-          k = mesh_index(dim, nr, Lxyz_inv, p1(:) + stencil%points(:, j))
+          k = index_from_coords(idx, dim, p1(:) + stencil%points(:, j))
           ASSERT(k.ne.0)
           ! If this index k does not belong to partition of node r,
           ! then k is a ghost point for r with part(k) now being
@@ -396,7 +393,7 @@ contains
             action='write')
           do i = 1, vp%np_ghost(r)
             j = vp%ghost(vp%xghost(r)+i-1)
-            write(iunit, '(4i8)') j, Lxyz(j, :)
+            write(iunit, '(4i8)') j, idx%Lxyz(j, :)
           end do
           call io_close(iunit)
         end do

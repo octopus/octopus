@@ -166,7 +166,7 @@ contains
             point2(2) = point2(2) + yy
             point2(3) = point2(3) + zz
 
-            index = mesh_index(mesh%sb%dim, mesh%idx%nr, mesh%idx%Lxyz_inv, point2)
+            index = index_from_coords(mesh%idx, mesh%sb%dim, point2)
 
             if(index <= 0 .or. index > mesh%np) cycle
             if(this%map(index) == -2) cycle

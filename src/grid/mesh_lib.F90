@@ -24,52 +24,49 @@ module mesh_lib_m
   implicit none
 
   private
-  public :: mesh_index,    &
-            index_t
+  public ::                  &
+       index_t,              &
+       index_from_coords,    &
+       index_to_coords
   
   type index_t
+    integer          :: nr(2, MAX_DIM)              ! dimensions of the box where the points are contained
+    integer          :: ll(MAX_DIM)                 ! literally n(2,:) - n(1,:) + 1 - 2*enlarge(:)
     integer, pointer :: Lxyz(:,:)       ! return x, y and z for each point
     integer, pointer :: Lxyz_inv(:,:,:) ! return points # for each xyz
     integer, pointer :: Lxyz_tmp(:,:,:) ! init_1 and init_2
-    ! some other vars
-    integer :: nr(2, MAX_DIM)              ! dimensions of the box where the points are contained
-    integer :: ll(MAX_DIM)                  ! literally n(2,:) - n(1,:) + 1 - 2*enlarge(:)
   end type index_t
 
 contains
+
   ! this function takes care of the boundary conditions
   ! for a given x,y,z it returns the true index of the point
-  integer function mesh_index(dim, nr, Lxyz_inv, ix_) result(index)
-    integer, intent(in) :: dim               ! Number of dimensions.
-    integer, intent(in) :: nr(:, :)          ! Dimensions of the box.
-                                             ! (x, y, z) to point-no.
-    integer, intent(in) :: &
-      Lxyz_inv(            &
-      nr(1,1):nr(2,1),     &
-      nr(1,2):nr(2,2),     &
-      nr(1,3):nr(2,3))
-    integer, intent(in) :: ix_(:)            ! Coodinates of requested point.
+  integer pure function index_from_coords(idx, dim, ix) result(index)
+    type(index_t),      intent(in)    :: idx
+    integer,            intent(in)    :: dim
+    integer,            intent(in)    :: ix(:)  ! Coodinates of requested point.
 
+    integer :: ix2(MAX_DIM), idir
 
-    integer :: i, ix(MAX_DIM)      ! ix has to go until 3, not sb%dim
+    forall (idir = 1:dim) ix2(idir) = ix(idir)
+    forall (idir = dim + 1:MAX_DIM) ix2(idir) = 0
 
-    ix = 0
-    ix(1:dim) = ix_(1:dim) ! make a local copy that we can change
-
-    index = 1
-    do i = 1, dim
-      if(ix(i) < nr(1, i)) then    ! first look left
-        ix(i) = nr(1, i)
-        index = 0
-      else if(ix(i) > nr(2, i)) then  ! the same, but on the right
-        ix(i) = nr(2, i)
-        index = 0
-      end if
-    end do
+    ! FIXME 4D
+    index = idx%Lxyz_inv(ix2(1), ix2(2), ix2(3))
     
-    if(index.ne.0) index = Lxyz_inv(ix(1), ix(2), ix(3))
+  end function index_from_coords
+  
+  subroutine index_to_coords(idx, dim, ip, ix)
+    type(index_t),      intent(in)    :: idx
+    integer,            intent(in)    :: dim
+    integer,            intent(in)    :: ip
+    integer,            intent(out)   :: ix(:)  ! Coodinates of requested point.
 
-  end function mesh_index
+    integer :: idir 
+
+    forall (idir = 1:dim) ix(idir) = idx%Lxyz(ip, idir)
+
+  end subroutine index_to_coords
 
 end module mesh_lib_m
 

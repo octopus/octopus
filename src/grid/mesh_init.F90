@@ -449,8 +449,7 @@ contains
 
     call mesh_partition_boundaries(mesh, stencil, part)
 
-    call vec_init(mesh%mpi_grp%comm, 0, part, mesh%np_global, mesh%np_part_global,  &
-      mesh%idx%nr, mesh%idx%Lxyz_inv, mesh%idx%Lxyz, stencil, mesh%sb%dim, mesh%vp)
+    call vec_init(mesh%mpi_grp%comm, 0, part, mesh%np_global, mesh%np_part_global, mesh%idx, stencil, mesh%sb%dim, mesh%vp)
     deallocate(part)
 
     ALLOCATE(nnb(1:mesh%vp%p), mesh%vp%p)

@@ -200,7 +200,6 @@ FLOAT function X(mf_nrm2_1)(mesh, f, reduce) result(nrm2)
   R_TYPE,       intent(in) :: f(:)
   logical, optional, intent(in) :: reduce
 
-  R_TYPE, allocatable :: l(:)
   FLOAT               :: nrm2_tmp
   logical             :: reduce_
 

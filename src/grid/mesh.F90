@@ -359,7 +359,7 @@ contains
       ixyz(id) = ixyz(id) + tdist(id)
     end do
     
-    tindex = mesh_index(mesh%sb%dim, mesh%idx%nr, mesh%idx%Lxyz_inv, ixyz) 
+    tindex = index_from_coords(mesh%idx, mesh%sb%dim, ixyz) 
     
     ! check if the translated point is still inside the domain and return
     ! a negative index otherwise to indicate that the requested translation
