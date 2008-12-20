@@ -84,7 +84,7 @@ module par_vec_m
   use iihash_m
   use io_m
   use math_m
-  use mesh_lib_m
+  use index_m
   use messages_m
   use mpi_debug_m
   use mpi_m

@@ -22,7 +22,7 @@
 module basins_m
   use global_m
   use mesh_m
-  use mesh_lib_m
+  use index_m
   use messages_m
   use par_vec_m
 

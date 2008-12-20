@@ -26,7 +26,7 @@ module mesh_m
   use global_m
   use io_m
   use math_m
-  use mesh_lib_m
+  use index_m
   use messages_m
   use multicomm_m
   use mpi_m

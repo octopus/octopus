@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-module mesh_lib_m
+module index_m
 
   implicit none
 
@@ -39,12 +39,15 @@ module mesh_lib_m
 
 contains
 
-  ! this function takes care of the boundary conditions
-  ! for a given x,y,z it returns the true index of the point
+  !
+  ! This function takes care of the boundary conditions for a given
+  ! vector of integer coordinates it returns the true _global_ index
+  ! of the point.
+  !
   integer pure function index_from_coords(idx, dim, ix) result(index)
     type(index_t),      intent(in)    :: idx
     integer,            intent(in)    :: dim
-    integer,            intent(in)    :: ix(:)  ! Coodinates of requested point.
+    integer,            intent(in)    :: ix(:)
 
     integer :: ix2(MAX_DIM), idir
 
@@ -55,12 +58,16 @@ contains
     index = idx%Lxyz_inv(ix2(1), ix2(2), ix2(3))
     
   end function index_from_coords
-  
+
+  !
+  ! Given a _global_ point index, this function returns the set of
+  ! integer coordinates of the point.
+  !
   subroutine index_to_coords(idx, dim, ip, ix)
     type(index_t),      intent(in)    :: idx
     integer,            intent(in)    :: dim
     integer,            intent(in)    :: ip
-    integer,            intent(out)   :: ix(:)  ! Coodinates of requested point.
+    integer,            intent(out)   :: ix(:)
 
     integer :: idir 
 
@@ -68,7 +75,7 @@ contains
 
   end subroutine index_to_coords
 
-end module mesh_lib_m
+end module index_m
 
 !! Local Variables:
 !! mode: f90

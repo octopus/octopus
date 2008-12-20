@@ -23,7 +23,8 @@ noinst_LIBRARIES = libgrid.a
 
 libgrid_a_SOURCES = \
 	curv_gygi.F90 curv_briggs.F90 curv_modine.F90 curvlinear.F90 \
-	mesh_lib.F90 par_vec.F90 mesh.F90 scalar_mesh.F90 nl_operator.F90 \
+	index.F90 \
+	par_vec.F90 mesh.F90 scalar_mesh.F90 nl_operator.F90 \
 	submesh.F90 stencil_star.F90 stencil_variational.F90 stencil_cube.F90 \
 	stencil.F90 \
 	stencil_starplus.F90 derivatives.F90 cube_function.F90 fourier_space.F90 mesh_function.F90 \
@@ -51,12 +52,12 @@ curv_gygi.o : curv_gygi.F90
 curv_briggs.o : curv_briggs.F90  
 curv_modine.o : curv_modine.F90  
 curvlinear.o : curvlinear.F90  curv_modine.o curv_gygi.o curv_briggs.o 
-mesh_lib.o : mesh_lib.F90 
-par_vec.o : par_vec.F90 par_vec_inc.F90 mesh_lib.o stencil.o
-mesh.o : mesh.F90 par_vec.o mesh_lib.o curvlinear.o
+index.o : index.F90 
+par_vec.o : par_vec.F90 par_vec_inc.F90 index.o stencil.o
+mesh.o : mesh.F90 par_vec.o index.o curvlinear.o
 mesh_init.o : mesh_init.F90 mesh.o par_vec.o zoltan.o
 scalar_mesh.o : scalar_mesh.F90
-nl_operator.o : nl_operator.F90 nl_operator_inc.F90 par_vec.o mesh.o mesh_lib.o batch.o stencil.o
+nl_operator.o : nl_operator.F90 nl_operator_inc.F90 par_vec.o mesh.o index.o batch.o stencil.o
 submesh.o : submesh.F90 submesh_inc.F90  mesh.o 
 stencil_star.o : stencil_star.F90 nl_operator.o stencil.o
 stencil_variational.o : stencil_variational.F90 nl_operator.o stencil.o
@@ -66,7 +67,7 @@ derivatives.o : derivatives.F90 derivatives_inc.F90 stencil_variational.o stenci
 cube_function.o : cube_function.F90 cube_function_inc.F90  mesh.o 
 fourier_space.o : fourier_space.F90 fourier_space_inc.F90 cube_function.o mesh.o 
 mesh_function.o : mesh_function.F90 mesh_function_inc.F90 par_vec.o mesh.o 
-basins.o : basins.F90 par_vec.o mesh_lib.o mesh.o 
+basins.o : basins.F90 par_vec.o index.o mesh.o 
 io_function.o : io_function.F90 io_function_inc.F90 par_vec.o mesh.o  cube_function.o 
 multigrid.o : multigrid.F90 multigrid_inc.F90 mesh.o curvlinear.o derivatives.o mesh_init.o
 double_grid.o : double_grid.F90 double_grid_apply.F90 submesh.o mesh_function.o mesh.o curvlinear.o 

@@ -27,7 +27,7 @@ module nl_operator_m
   use loct_m
   use loct_parser_m
   use math_m
-  use mesh_lib_m
+  use index_m
   use mesh_m
   use messages_m
   use multicomm_m
