@@ -514,8 +514,8 @@ contains
             fname = 'debug/open_boundaries/v_lead-'//trim(LEAD_NAME(il))//'-'//trim(channel)
             pot = io_open(trim(fname), action='write', is_tmp=.false., grp=gr%m%mpi_grp)
             m => gr%m%lead_unit_cell(LEFT)
-            do ix = m%idx%nr(1, 1)+m%enlarge(1), m%idx%nr(2, 1)-m%enlarge(1)
-              do iy = m%idx%nr(1, 2)+m%enlarge(2), m%idx%nr(2, 2)-m%enlarge(2)
+            do ix = m%idx%nr(1, 1)+m%idx%enlarge(1), m%idx%nr(2, 1)-m%idx%enlarge(1)
+              do iy = m%idx%nr(1, 2)+m%idx%enlarge(2), m%idx%nr(2, 2)-m%idx%enlarge(2)
                 write(pot, '(2i8,f16.8)') ix, iy, h%lead_vks(m%idx%Lxyz_inv(ix, iy, 0), ispin, il)
               end do
             end do

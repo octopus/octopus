@@ -359,7 +359,7 @@ subroutine X(mf_partial_integrate)(mesh, j, f, u)
   ASSERT(.not.(mesh%parallel_in_domains))
   ASSERT(.not.(mesh%use_curvlinear))
 
-  k = mesh%idx%ll(j)+2*mesh%enlarge(j)
+  k = mesh%idx%ll(j) + 2*mesh%idx%enlarge(j)
 
   u(1:k) = M_ZERO
   do i = 1, mesh%np

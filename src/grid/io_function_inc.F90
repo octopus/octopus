@@ -510,10 +510,10 @@ contains
     integer :: min_d2, min_d3, max_d2, max_d3
     FLOAT, allocatable :: out_vec(:)
     
-    min_d2 = m%idx%nr(1, d2) + m%enlarge(d2)
-    max_d2 = m%idx%nr(2, d2) - m%enlarge(d2)
-    min_d3 = m%idx%nr(1, d3) + m%enlarge(d3)
-    max_d3 = m%idx%nr(2, d3) - m%enlarge(d3)    
+    min_d2 = m%idx%nr(1, d2) + m%idx%enlarge(d2)
+    max_d2 = m%idx%nr(2, d2) - m%idx%enlarge(d2)
+    min_d3 = m%idx%nr(1, d3) + m%idx%enlarge(d3)
+    max_d3 = m%idx%nr(2, d3) - m%idx%enlarge(d3)    
     
     if(iand(how, boundary_points).ne.0) then
       min_d2 = m%idx%nr(1, d2); max_d2 = m%idx%nr(2, d2); 

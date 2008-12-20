@@ -82,8 +82,6 @@ module mesh_m
     integer  :: np_global        ! Global number of points in mesh.
     integer  :: np_part_global   ! Global number of inner points and boundary points.
     
-    integer  :: enlarge(MAX_DIM) ! number of points to add for boundary conditions
-    
     FLOAT,   pointer :: x_tmp(:,:,:,:)  ! temporary arrays that we have to keep between calls to
     
     integer, pointer :: boundary_indices(:,:) ! contains the list of mesh indices for boundary points
@@ -395,7 +393,7 @@ contains
     write(iunit, '(a20,7i8)')   'nr(1, :)=           ', mesh%idx%nr(1, 1:mesh%sb%dim)
     write(iunit, '(a20,7i8)')   'nr(2, :)=           ', mesh%idx%nr(2, 1:mesh%sb%dim)
     write(iunit, '(a20,7i8)')   'l(:)=               ', mesh%idx%ll(1:mesh%sb%dim)
-    write(iunit, '(a20,7i8)')   'enlarge(:)=         ', mesh%enlarge(1:mesh%sb%dim)
+    write(iunit, '(a20,7i8)')   'enlarge(:)=         ', mesh%idx%enlarge(1:mesh%sb%dim)
     write(iunit, '(a20,1i10)')  'np=                 ', mesh%np
     write(iunit, '(a20,1i10)')  'np_part=            ', mesh%np_part
     write(iunit, '(a20,1i10)')  'np_global=          ', mesh%np_global
@@ -427,7 +425,7 @@ contains
     read(iunit, '(a20,7i8)')  str, mesh%idx%nr(1, 1:mesh%sb%dim)
     read(iunit, '(a20,7i8)')  str, mesh%idx%nr(2, 1:mesh%sb%dim)
     read(iunit, '(a20,7i8)')  str, mesh%idx%ll(1:mesh%sb%dim)
-    read(iunit, '(a20,7i8)')  str, mesh%enlarge(1:mesh%sb%dim)
+    read(iunit, '(a20,7i8)')  str, mesh%idx%enlarge(1:mesh%sb%dim)
     read(iunit, '(a20,1i10)') str, mesh%np
     read(iunit, '(a20,1i10)') str, mesh%np_part
     read(iunit, '(a20,1i10)') str, mesh%np_global
@@ -612,8 +610,8 @@ contains
     integer :: ix(MAX_DIM), nr(2, MAX_DIM), idim
     
     ix = m%idx%Lxyz(ip, :)
-    nr(1, :) = m%idx%nr(1, :) + m%enlarge(:)
-    nr(2, :) = m%idx%nr(2, :) - m%enlarge(:)
+    nr(1, :) = m%idx%nr(1, :) + m%idx%enlarge(:)
+    nr(2, :) = m%idx%nr(2, :) - m%idx%enlarge(:)
     
     do idim = 1, m%sb%periodic_dim
       if(ix(idim) < nr(1, idim)) ix(idim) = ix(idim) + m%idx%ll(idim)

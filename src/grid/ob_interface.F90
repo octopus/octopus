@@ -99,7 +99,7 @@ contains
       lr  = 2
       dir = -1
     end if
-    from = m%idx%nr(lr, :) + dir*m%enlarge
+    from = m%idx%nr(lr, :) + dir*m%idx%enlarge
     to(1:3) = from(1:3) + dir*(/intf%extent, m%idx%ll(2), m%idx%ll(3)/) - dir
 
     call mesh_subset_indices(m, from, to, intf%index)

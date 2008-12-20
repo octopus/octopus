@@ -343,7 +343,7 @@ contains
     mesh_out%idx%nr(:,:) = mesh_in%idx%nr(:,:)/2
     mesh_out%idx%ll(:)    = mesh_out%idx%nr(2, :) - mesh_out%idx%nr(1, :) + 1
 
-    mesh_out%enlarge = mesh_in%enlarge
+    mesh_out%idx%enlarge = mesh_in%idx%enlarge
     
     call mesh_init_stage_2(mesh_out%sb, mesh_out, geo, cv, stencil)
 
@@ -368,7 +368,7 @@ contains
     mesh_out%idx%nr(:,:) = mesh_in%idx%nr(:,:)*2
     mesh_out%idx%ll(:)    = mesh_out%idx%nr(2, :) - mesh_out%idx%nr(1, :) + 1
     
-    mesh_out%enlarge = mesh_in%enlarge
+    mesh_out%idx%enlarge = mesh_in%idx%enlarge
     
     call mesh_init_stage_2(mesh_out%sb, mesh_out, geo, cv, stencil)
 

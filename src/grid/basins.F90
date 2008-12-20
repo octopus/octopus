@@ -145,13 +145,14 @@ contains
 
       FLOAT   :: f_max
       integer :: xx, yy, zz, index
-      integer :: point(3), point2(3)
+      integer :: point(MAX_DIM), point2(MAX_DIM)
 
+      point = 0
       if(mesh%parallel_in_domains) then
         ! When running in parallel, get global number of point i.
-        point(:) = mesh%idx%Lxyz(mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno)+ii-1), :)
+        call index_to_coords(mesh%idx, mesh%sb%dim, mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno) + ii - 1), point)
       else
-        point(:) = mesh%idx%Lxyz(ii, :)
+        call index_to_coords(mesh%idx, mesh%sb%dim, ii, point)
       end if
 
       f_max   = f(ii)

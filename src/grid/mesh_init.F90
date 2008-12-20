@@ -75,9 +75,9 @@ subroutine mesh_init_stage_1(sb, mesh, geo, cv, enlarge)
   ! multiresolution requires the curvilinear coordinates machinery
   mesh%use_curvlinear = mesh%use_curvlinear .or. simul_box_multires(sb)
 
-  mesh%enlarge = enlarge
+  mesh%idx%enlarge = enlarge
 
-  if(simul_box_multires(sb)) mesh%enlarge = mesh%enlarge*2
+  if(simul_box_multires(sb)) mesh%idx%enlarge = mesh%idx%enlarge*2
 
   ! adjust nr
   mesh%idx%nr = 0
@@ -184,8 +184,8 @@ subroutine mesh_init_stage_2(sb, mesh, geo, cv, stencil)
   call profiling_in(mesh_init_prof)
 
   ! enlarge mesh for boundary points
-  mesh%idx%nr(1,:) = mesh%idx%nr(1,:) - mesh%enlarge(:)
-  mesh%idx%nr(2,:) = mesh%idx%nr(2,:) + mesh%enlarge(:)
+  mesh%idx%nr(1,:) = mesh%idx%nr(1,:) - mesh%idx%enlarge(:)
+  mesh%idx%nr(2,:) = mesh%idx%nr(2,:) + mesh%idx%enlarge(:)
 
   nr = mesh%idx%nr
 
