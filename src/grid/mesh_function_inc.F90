@@ -81,7 +81,6 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu) result(dotp)
      ! no complex conjugation.  Default is false.
      ! has no effect if working with real version
 
-  R_TYPE, allocatable :: l(:)
   R_TYPE              :: dotp_tmp
   logical             :: reduce_, dotu_
   integer             :: ip
@@ -202,6 +201,7 @@ FLOAT function X(mf_nrm2_1)(mesh, f, reduce) result(nrm2)
 
   FLOAT               :: nrm2_tmp
   logical             :: reduce_
+  R_TYPE, allocatable :: l(:)
 
   call profiling_in(C_PROFILING_MF_NRM2)
   call push_sub('mf_inc.Xmf_nrm2')
