@@ -105,7 +105,7 @@ contains
       end if
 
       ! We do not compute the density from the random wave-functions. 
-      ! Instead, we try to get a better guess for the density.
+      ! Instead, we try to get a better guess
 
       call guess_density(sys%gr%m, sys%gr%sb, sys%geo, sys%st%qtot, sys%st%d%nspin, &
         sys%st%d%spin_channels, sys%st%rho)

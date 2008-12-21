@@ -22,6 +22,7 @@
 
 module raman_m
   use datasets_m
+  use em_resp_calc_m
   use geometry_m
   use global_m
   use grid_m
@@ -44,6 +45,7 @@ module raman_m
   use string_m
   use system_m
   use units_m
+  use phonons_lr_m
 
   implicit none
 
@@ -59,29 +61,64 @@ contains
     type(hamiltonian_t),    intent(inout) :: h
     logical,                intent(in)    :: fromscratch
 
-    type(sternheimer_t) :: sh
-    type(lr_t)          :: lr(1:1)
+    type(lr_t)          :: psi_elec(MAX_DIM)
+    type(lr_t)          :: psi_vib(1)
+
+    integer :: idir, ierr, sigma
+    character(len=100) :: dirname, str_tmp
+
+    integer :: nnm, inm
 
     !CONSTRUCT
-
-    call push_sub('raman.raman')
+    call push_sub('raman.raman_run')
 
     call read_wfs(sys%st, sys%gr, sys%geo, .false.)
-
-    message(1) = 'Info: Setting up Hamiltonian for linear response'
-    call write_info(1)
-
-    call system_h_setup(sys, h)
-    call sternheimer_init(sh, sys, h, "VM")
-
-    call lr_init(lr(1))
-    call lr_allocate(lr(1), sys%st, sys%gr%m)
-
-    message(1) = "HELLO WORLD!"
-    call write_info(1)
     
-    call lr_dealloc(lr(1))
-    call sternheimer_end(sh)
+    ! read electric perturbation
+    sigma = 1
+    do idir = 1, sys%gr%sb%dim
+      call lr_init(psi_elec(idir))
+      call lr_allocate(psi_elec(idir), sys%st, sys%gr%m)
+
+      str_tmp =  em_wfs_tag(idir, 1)
+      write(dirname,'(3a, i1)') "em_resp/", trim(str_tmp), '_', sigma
+      call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, ierr, lr = psi_elec(idir))
+      
+      if(ierr.ne.0) then
+        message(1) = "Could not load response wave-functions from '"//trim(tmpdir)//dirname
+        call write_fatal(1)
+      end if
+
+    end do
+
+    call lr_init(psi_vib(1))
+    call lr_allocate(psi_vib(1), sys%st, sys%gr%m)
+
+    !
+    ! Calculate the number of vibrational modes (here we should
+    ! consider the possibility of linear molecules and not only two
+    ! atoms).
+    !
+    if(sys%geo%natoms > 2) then 
+      nnm = (sys%geo%natoms - 2)*sys%gr%sb%dim
+    else
+      nnm = (sys%geo%natoms - 2)*sys%gr%sb%dim + 1
+    end if
+
+    ! iterate over normal modes 
+    do inm = 1, nnm
+      !read vibronic perturbation
+      call restart_read(trim(restart_dir)//'vib_modes/'//trim(phn_nm_wfs_tag(inm))//'_1', &
+           sys%st, sys%gr, sys%geo, ierr, lr = psi_vib(1))
+      if(ierr.ne.0) then
+        message(1) = "Could not load vibrational response wave-functions"
+        call write_fatal(1)
+      end if
+    end do
+
+    call lr_dealloc(psi_elec(1))
+    call lr_dealloc(psi_vib(1))
+
     call states_deallocate_wfns(sys%st)
 
     call pop_sub()
