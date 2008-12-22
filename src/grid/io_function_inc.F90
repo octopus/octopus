@@ -142,7 +142,7 @@ subroutine X(input_function_global)(filename, m, f, ierr, is_tmp)
 #if defined(HAVE_NETCDF)
   case("ncdf")
 #if defined(R_TCOMPLEX)
-     call X(cf_new)(m%idx%ll, c); call dcf_new(m%l, re); call dcf_new(m%l, im)
+     call X(cf_new)(m%idx%ll, c); call dcf_new(m%idx%ll, re); call dcf_new(m%idx%ll, im)
      call X(cf_alloc_RS)(c); call dcf_alloc_RS(re); call dcf_alloc_RS(im)
      call read_netcdf()
      c%RS = re%RS + M_zI*im%RS
