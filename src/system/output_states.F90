@@ -150,6 +150,10 @@
       call states_write_tpa (trim(dir), gr, st)
     end if
 
+    if(iand(outp%what, output_density_matrix).ne.0) then
+      call states_write_density_matrix(trim(dir), gr, st)
+    end if
+
     call pop_sub()
 
   end subroutine h_sys_output_states

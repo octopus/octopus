@@ -60,26 +60,7 @@ module timedep_m
   use math_m
   use lasers_m
 
-!!!NEW NICOLE AND MATTHIEU
-
-  use lalg_adv_m
-
-!!!ENDOFNEW
-
   implicit none
-
-!!!!NEW NICOLE AND MATTHIEU
-  integer :: nx1, nx2, ny1,ny2, npointsx, npointsy, kk, jj, ll, mm, nn,j, err_code, iunit
-  logical :: bof
-  character(len=100) :: dirname, filename
-  CMPLX, allocatable :: densmatr(:, :), evectors(:, :), wavef(:,:)
-  CMPLX, allocatable :: WORK(:)
-  CMPLX :: psi, psidagger
-  FLOAT, allocatable :: evalues(:), sqrdensity(:), density(:), graddens(:)
-  FLOAT, allocatable :: hartreep(:), potential(:)
-  FLOAT:: checksum, origin
-!!!!ENDOFNEW
-
 
   private
   public ::               &
@@ -130,7 +111,6 @@ contains
     type(geometry_t), pointer :: geo
     logical                   :: stopping
     integer                   :: i, ii, ik, ierr, iatom
-    integer                   :: outputdensitymatrix
     real(8)                   :: etime
     logical                   :: generate
     FLOAT                     :: gauge_force(1:MAX_DIM)
@@ -197,7 +177,6 @@ contains
 
     if(td%iter == 0) call td_run_zero_iter()
 
-
     !call td_check_trotter(td, sys, h)
     td%iter = td%iter + 1
 
@@ -210,38 +189,6 @@ contains
     call write_info(1)
     call messages_print_stress(stdout)
 
-!!!!NEW  NICOLE AND MATTHIEU
-    !%Variable OutputDensityMatrix
-    !%Type integer
-    !%Default 0
-    !%Section Output
-    !%Description
-    !% If OutputDensityMatrix/=0, calculate and output the reduced density
-    !% matrix. For the moment the trace is made over the second dimension, and
-    !% the code is limited to 2D. The idea is to model N particles in 1D as a N
-    !% dimensional non-interacting problem, then to trace out N-1 coordinates.
-    !% 
-    !% WARNING: NOT TESTED YET.
-    !%End
-    ! second argument is default value
-    call loct_parse_int(check_inp('OutputDensityMatrix'), 0, outputdensitymatrix)
-    if (outputdensitymatrix /= 0) then
-      write(message(1),'(3a)') 'Info: The density matrix will be', &
-        'calculated, traced over the second dimension, diagonalized, and ', &
-        'output.'
-      call write_info(1)
-      write(message(1),'(1a)') 'Limited to 2D systems for the moment.'
-      call write_info(1)
-    end if
-    ! NOTES:
-    !   could be made into block to be able to specify which dimensions to trace
-    !   in principle all combinations are interesting, but this means we need to
-    !   be able to output density matrices for multiple particles or multiple
-    !   dimensions. The current 1D 1-particle case is simple.
-
-!!!!ENDOFNEW  NICOLE AND MATTHIEU
-
-
     ii = 1
     stopping = .false.
     etime = loct_clock()
@@ -249,212 +196,6 @@ contains
     ! at td%max_iter*dt. The index i runs from 1 to td%max_iter, and
     ! step "i" means propagation from (i-1)*dt to i*dt.
     propagation: do i = td%iter, td%max_iter
-
-
-!!!!NEW  NICOLE AND MATTHIEU
-      
-      ! Density matrix stuff, do not do it for each iteration
-      !  Alberto: the limit on dimensions and the choice of dimensions to collapse in
-      !  the density matrix starts intervening here.
-      !
-      !  All this stuff should be in a subroutine
-      !
-      if( (i<10 .or. mod(i,200)==0 ) .and. gr%sb%dim == 2 .and. outputdensitymatrix/=0) then  
-      
-       do mm=1, 2 !loop over excited states
-      
-        nx1 = gr%m%idx%nr(1, 1)
-        nx2 = gr%m%idx%nr(2, 1)
-        ny1 = gr%m%idx%nr(1, 1)
-        ny2 = gr%m%idx%nr(2, 1)
-        npointsx = nx2-nx1+1
-        npointsy = ny2-ny1+1
-        ! not always the real origin if the box is shifted, no?
-        !  which happens to be my case...
-        !  only important for printout, so it is ok
-        origin=(npointsx/2+1)*gr%m%h(1)
-      
-       ! _ASSERT(n1 .eq. gr%m%idx%nr(1, 2))
-       ! _ASSERT(n2 .eq. gr%m%idx%nr(2, 2))
-        ALLOCATE(densmatr(npointsx, npointsx), npointsx**2 )
-        ALLOCATE(evectors(npointsx, npointsx), npointsx**2 )
-        ALLOCATE(evalues(npointsx), npointsx)
-        ALLOCATE(wavef(npointsx, npointsx), npointsx**2 )
-        ALLOCATE(sqrdensity(npointsx),npointsx)   
-        ALLOCATE(graddens(npointsx),npointsx)
-        ALLOCATE(potential(npointsx),npointsx)
-        ALLOCATE(density(npointsx),npointsx)
-        ALLOCATE(hartreep(npointsx),npointsx)
-        
-        densmatr = M_z0
-        graddens=0d0
-        potential=0d0
-        hartreep=0d0
-      
-      ! Calculates
-      ! densmatr(x, xprime) = 2 \int dx_2 Psi^\dagger (xprime, x_2) Psi(x, x_2)
-        xloop: do jj = nx1, nx2
-         xprimeloop: do kk = nx1, nx2
-         ! Calculates densmatr(jj, kk)
-         ! jj is the index corresponging to x
-         ! kk is the index corresponding to xprime
-      
-         ! /* Finds out if (jj, kk) belongs to the grid, and which point it is.
-         ! If it does not belong to the grid, the wavefunction is null 
-         ! there and so is the density matrix.
-         !   MJV 4-12-2008 commented: in general case for npointsx/=npointsy this is
-         !   not appropriate: x, x' is not a point in normal 2D space */
-         ! j = gr%m%idx%Lxyz_inv(jj, kk, 0)
-         ! if(j.eq.0) exit xloop
-          
-          ! it looks like this is stored but not used...
-          wavef(jj-nx1+1, kk-nx1+1) = st%zpsi(j, 1, mm, 1)
-          
-          x2loop: do ll = ny1, ny2
-          ! Finds Psi(jj, ll)
-            j = gr%m%idx%Lxyz_inv(jj, ll, 0)
-            if(j.eq.0) exit x2loop
-            psi = st%zpsi(j, 1, mm, 1)
-                  
-          ! Finds Psi^*(kk, ll)
-            j = gr%m%idx%Lxyz_inv(kk, ll, 0)
-            if(j.eq.0) exit x2loop
-            psidagger = conjg(st%zpsi(j, 1, mm, 1))
-      
-            densmatr(jj-nx1+1, kk-nx1+1) = densmatr(jj-nx1+1, kk-nx1+1) + &
-                   CNST(2.0) * psidagger * psi * gr%m%h(2)
-            
-          end do x2loop
-      
-         end do xprimeloop
-        end do xloop
-        
-        do ll=1, npointsx
-         density(ll)= real(densmatr(ll,ll))
-         sqrdensity(ll)=sqrt(density(ll))
-        enddo
-        
-        do ll=1, npointsx
-         do jj=1, npointsx
-          hartreep(ll)=hartreep(ll)+density(jj)/(sqrt(((ll-jj)*gr%m%h(1))**2+1))
-         enddo
-         hartreep(ll)=0.5*hartreep(ll)*gr%m%h(1)
-        enddo
-        
-        do ll=1, npointsx
-      !   if(sqrdensity(ll)>1d-6) then
-         graddens(ll)=(-sqrdensity(ll+2)-sqrdensity(ll-2) & 
-                      & +16d0*(sqrdensity(ll+1)+sqrdensity(ll-1))&
-                      & -30d0*sqrdensity(ll))/(12d0*gr%m%h(1)**2)
-         
-         potential(ll)=graddens(ll)/(2d0*sqrdensity(ll))
-      !   endif
-        enddo
-                       
-      !Diagonalize the density matrix
-         
-        call lalg_eigensolve(npointsx,densmatr,evectors,evalues,bof,err_code)
-      
-      !Write everything into files
-      !NOTE: The highest eigenvalues are the last ones not the first!!!
-      !      Writing is therefore in reverse order
-      
-       
-        evectors=evectors/sqrt(gr%m%h(1))
-        evalues=evalues*gr%m%h(1)
-        
-        write(dirname,'(a,i6.6)') 'Tdstep_', i
-        call loct_mkdir(dirname)
-            
-        write(filename,'(a,i6.6,a,i2.2)') 'Tdstep_',i,'/occnumb_',mm
-        iunit=io_open(filename,action='write')
-      
-        do jj=npointsx, 1, -1
-         write(iunit,'(i4.4,es11.3)') npointsx-jj+1, evalues(jj)
-        enddo
-            
-        call io_close(iunit)
-            
-        do jj=npointsx-10, npointsx
-         write(filename,'(a,i6.6,a,i2.2,a,i4.4)') 'Tdstep_',i,'/natorb_', mm, '_', npointsx-jj+1
-         iunit=io_open(filename,action='write')
-      
-         do ll=1, npointsx
-          write(iunit,'(es11.3,es11.3,es11.3)') ll*gr%m%h(1)-origin, real(evectors(ll,jj)), & 
-                                          & aimag(evectors(ll,jj))
-             
-         enddo
-         call io_close(iunit)
-        enddo
-             
-        write(filename,'(a,i6.6,a,i2.2)') 'Tdstep_',i,'/densmatr_', mm
-        iunit=io_open(filename,action='write')
-        do jj=1, npointsx
-         do ll=1, npointsx
-          write(iunit,'(es11.3,es11.3)') jj*gr%m%h(1)-origin, &
-                 & ll*gr%m%h(1)-origin, real(densmatr(jj,ll)), aimag(densmatr(jj,ll))
-         enddo
-        enddo
-             
-        call io_close(iunit)
-        
-        write(filename,'(a,i6.6,a,i2.2)') 'Tdstep_',i,'/potential_', mm
-        iunit=io_open(filename,action='write')
-        do ll=1, npointsx
-         write(iunit,'(es11.3,es11.3,es11.3,es11.3)') ll*gr%m%h(1)-origin, potential(ll), &
-                   & hartreep(ll), potential(ll)-hartreep(ll)
-        enddo
-             
-        call io_close(iunit)
-        
-        !Diagonalize 2 particle wave function as well
-        
-      !  call lalg_eigensolve(npointsx,wavef,evectors,evalues,bof,err_code)
-         
-      !  evectors=evectors/sqrt(gr%m%h(1))
-      !  evalues=evalues*gr%m%h(1)
-        
-      !  write(filename,'(a,i6.6,a,i2.2)') 'Tdstep_',i,'/wavefeva_',mm
-      !  iunit=io_open(filename,action='write')
-      
-      !  do jj=npointsx, 1, -1
-      !   write(iunit,'(i4.4,es11.3)') npointsx-jj+1, evalues(jj)
-      !  enddo
-            
-      !  call io_close(iunit)
-            
-      !  do jj=1, npointsx
-      !   write(filename,'(a,i6.6,a,i2.2,a,i4.4)') 'Tdstep_',i,'/wavefeve_', mm, '_', npointsx-jj+1
-      !   iunit=io_open(filename,action='write')
-      
-      !   do ll=1, npointsx
-      !    write(iunit,'(es11.3,es11.3,es11.3)') ll*gr%m%h(1)-origin, real(evectors(ll,jj)), & 
-      !                                    & aimag(evectors(ll,jj))
-             
-      !   enddo
-      !   call io_close(iunit)
-      !  enddo
-         
-      !   write(filename,'(a,i6.6,a,i2.2)') 'Tdstep_',i,'/wavef_',mm
-      !   iunit=io_open(filename,action='write')
-         
-      !   do jj=1, npointsx
-      !    do ll=1, npointsx
-      !write(iunit,'(i6.4,i6.4,es11.3, es11.3)') jj,ll,real(wavef(jj,ll)),aimag(wavef(jj,ll)) 
-      !    enddo
-      !   enddo
-      
-             
-       
-       DEALLOCATE(densmatr,evectors,evalues,wavef,sqrdensity,graddens,potential)
-       DEALLOCATE(density,hartreep)     
-      
-       enddo
-      endif
-       
-!!!!ENDOFNEW  NICOLE AND MATTHIEU
-
-
 
       if(clean_stop()) stopping = .true.
       call profiling_in(C_PROFILING_TIME_STEP)

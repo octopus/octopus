@@ -94,7 +94,8 @@ module h_sys_output_m
     output_ked            = 16384,    &
     output_j_flow         = 32768,    &
     output_dos            = 65536,    &
-    output_tpa            =131072
+    output_tpa            =131072,    &
+    output_density_matrix =262144
 
 contains
 
@@ -184,6 +185,13 @@ contains
     !% Prints out the density of states.
     !%Option tpa 131072
     !% Prints out the transition potential approximation (tpa) matrix elements
+    !%Option density_matrix 262144
+    !% Calculates, and outputs, the reduced density
+    !% matrix. For the moment the trace is made over the second dimension, and
+    !% the code is limited to 2D. The idea is to model N particles in 1D as a N
+    !% dimensional non-interacting problem, then to trace out N-1 coordinates.
+    !% 
+    !% WARNING: NOT TESTED YET.
     !%End
     call loct_parse_int(check_inp('Output'), 0, outp%what)
 
@@ -192,6 +200,18 @@ contains
 
     if(.not.varinfo_valid_option('Output', outp%what, is_flag=.true.)) then
       call input_error('Output')
+    end if
+
+    if(iand(outp%what, output_density_matrix).ne.0) then
+      write(message(1),'(a)') 'Info: The density matrix will be calculsted, traced'
+      write(message(2),'(a)') 'over the second dimension, diagonalized, and output.'
+      write(message(3),'(a)') 'Limited to 2D systems for the moment.'
+      call write_info(3)
+      ! NOTES:
+      !   could be made into block to be able to specify which dimensions to trace
+      !   in principle all combinations are interesting, but this means we need to
+      !   be able to output density matrices for multiple particles or multiple
+      !   dimensions. The current 1D 1-particle case is simple.
     end if
 
     if(iand(outp%what, output_wfs).ne.0  .or.  iand(outp%what, output_wfs_sqmod).ne.0 ) then

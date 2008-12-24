@@ -48,6 +48,7 @@ module states_m
   use states_dim_m
   use units_m
   use varinfo_m
+  use lalg_adv_m
 
   implicit none
 
@@ -71,6 +72,7 @@ module states_m
     states_write_eigenvalues,         &
     states_write_dos,                 &
     states_write_tpa,                 &
+    states_write_density_matrix,      &
     states_write_bands,               &
     states_write_fermi_energy,        &
     states_spin_channel,              &
@@ -1964,6 +1966,209 @@ contains
 
     call pop_sub()
   end subroutine states_write_fermi_energy
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine states_write_density_matrix(dir, gr, st)
+    character(len=*), intent(in) :: dir
+    type(grid_t),     intent(in) :: gr
+    type(states_t),   intent(in) :: st
+
+    integer :: mm, nx1, nx2, ny1, ny2, npointsx, npointsy, jj, kk, ll, j, err_code, iunit
+    logical :: bof
+    FLOAT :: origin
+    character(len=200) :: dirname, filename
+    CMPLX :: psi, psidagger
+    CMPLX, allocatable :: densmatr(:, :), evectors(:, :), wavef(:,:)
+    FLOAT, allocatable :: evalues(:), sqrdensity(:), density(:), graddens(:)
+    FLOAT, allocatable :: hartreep(:), potential(:)
+
+    dirname = trim(dir)//'/density-matrix'
+    call loct_mkdir(trim(dirname))
+
+    ! WARNING: instead of "x" and "y", this should allow for an arbitrary number of dimensions.
+    nx1 = gr%m%idx%nr(1, 1)
+    nx2 = gr%m%idx%nr(2, 1)
+    ny1 = gr%m%idx%nr(1, 1)
+    ny2 = gr%m%idx%nr(2, 1)
+    npointsx = nx2-nx1+1
+    npointsy = ny2-ny1+1
+    ! not always the real origin if the box is shifted, no?
+    !  which happens to be my case...
+    !  only important for printout, so it is ok
+    origin=(npointsx/2+1)*gr%m%h(1)
+
+    do mm = 1, 2 !loop over states. WARNING: should run over all states, not only the first two.
+
+      ! _ASSERT(n1 .eq. gr%m%idx%nr(1, 2))
+      ! _ASSERT(n2 .eq. gr%m%idx%nr(2, 2))
+      ALLOCATE(densmatr(npointsx, npointsx), npointsx**2 )
+      ALLOCATE(evectors(npointsx, npointsx), npointsx**2 )
+      ALLOCATE(evalues(npointsx), npointsx)
+      ALLOCATE(wavef(npointsx, npointsx), npointsx**2 )
+      ALLOCATE(sqrdensity(npointsx),npointsx)   
+      ALLOCATE(graddens(npointsx),npointsx)
+      ALLOCATE(potential(npointsx),npointsx)
+      ALLOCATE(density(npointsx),npointsx)
+      ALLOCATE(hartreep(npointsx),npointsx)
+
+      densmatr  = M_z0
+      graddens  = M_ZERO
+      potential = M_ZERO
+      hartreep  = M_ZERO
+
+      ! Calculates
+      ! densmatr(x, xprime) = 2 \int dx_2 Psi^\dagger (xprime, x_2) Psi(x, x_2)
+      xloop: do jj = nx1, nx2
+        xprimeloop: do kk = nx1, nx2
+
+          ! Calculates densmatr(jj, kk)
+          ! jj is the index corresponging to x
+          ! kk is the index corresponding to xprime
+
+          ! /* Finds out if (jj, kk) belongs to the grid, and which point it is.
+          ! If it does not belong to the grid, the wavefunction is null 
+          ! there and so is the density matrix.
+          !   MJV 4-12-2008 commented: in general case for npointsx/=npointsy this is
+          !   not appropriate: x, x' is not a point in normal 2D space */
+          j = gr%m%idx%Lxyz_inv(jj, kk, 0)
+          ! if(j.eq.0) exit xloop
+          ! it looks like this is stored but not used...
+          wavef(jj-nx1+1, kk-nx1+1) = st%zpsi(j, 1, mm, 1)
+
+          x2loop: do ll = ny1, ny2
+            ! Finds Psi(jj, ll)
+            j = gr%m%idx%Lxyz_inv(jj, ll, 0)
+            if(j.eq.0) exit x2loop
+            psi = st%zpsi(j, 1, mm, 1)
+                  
+            ! Finds Psi^*(kk, ll)
+            j = gr%m%idx%Lxyz_inv(kk, ll, 0)
+            if(j.eq.0) exit x2loop
+            psidagger = conjg(st%zpsi(j, 1, mm, 1))
+       
+            densmatr(jj-nx1+1, kk-nx1+1) = densmatr(jj-nx1+1, kk-nx1+1) + &
+                   CNST(2.0) * psidagger * psi * gr%m%h(2)
+          end do x2loop
+
+        end do xprimeloop
+      end do xloop
+
+
+      do ll = 1, npointsx
+        density(ll)= real(densmatr(ll,ll))
+        sqrdensity(ll)=sqrt(density(ll))
+      end do
+        
+      do ll = 1, npointsx
+        do jj=1, npointsx
+          hartreep(ll)=hartreep(ll)+density(jj)/(sqrt(((ll-jj)*gr%m%h(1))**2+1))
+        end do
+        hartreep(ll)=0.5*hartreep(ll)*gr%m%h(1)
+      end do
+        
+      do ll= 1, npointsx
+        ! if(sqrdensity(ll)>1d-6) then
+        graddens(ll)=(-sqrdensity(ll+2)-sqrdensity(ll-2) & 
+          & +16d0*(sqrdensity(ll+1)+sqrdensity(ll-1))&
+          & -30d0*sqrdensity(ll))/(12d0*gr%m%h(1)**2)
+         
+        potential(ll)=graddens(ll)/(2d0*sqrdensity(ll))
+        ! endif
+      end do
+
+      !Diagonalize the density matrix
+         
+      call lalg_eigensolve(npointsx, densmatr, evectors, evalues, bof, err_code)
+      
+      !Write everything into files
+      !NOTE: The highest eigenvalues are the last ones not the first!!!
+      !      Writing is therefore in reverse order
+      evectors = evectors/sqrt(gr%m%h(1))
+      evalues  = evalues*gr%m%h(1)
+
+      write(filename,'(a,i2.2)') trim(dirname)//'/occnumb_',mm
+      iunit = io_open(trim(filename), action='write')
+
+      do jj = npointsx, 1, -1
+        write(iunit,'(i4.4,es11.3)') npointsx-jj+1, evalues(jj)
+      end do
+            
+      call io_close(iunit)
+
+      do jj = npointsx-10, npointsx
+        write(filename,'(a,i2.2,a,i4.4)') trim(dirname)//'/natorb_', mm, '_', npointsx-jj+1
+        iunit = io_open(filename, action='write')
+        do ll = 1, npointsx
+          write(iunit,'(es11.3,es11.3,es11.3)') ll*gr%m%h(1)-origin, real(evectors(ll,jj)), & 
+            & aimag(evectors(ll,jj))
+        end do
+        call io_close(iunit)
+      end do
+
+      write(filename,'(a,i2.2)') trim(dirname)//'/densmatr_', mm
+      iunit = io_open(filename,action='write')
+      do jj = 1, npointsx
+        do ll = 1, npointsx
+          write(iunit,'(es11.3,es11.3)') jj*gr%m%h(1)-origin, &
+            & ll*gr%m%h(1)-origin, real(densmatr(jj,ll)), aimag(densmatr(jj,ll))
+        end do
+      end do
+      call io_close(iunit)
+
+      write(filename,'(a,i2.2)') trim(dirname)//'/potential_', mm
+      iunit = io_open(filename,action='write')
+      do ll=1, npointsx
+        write(iunit,'(es11.3,es11.3,es11.3,es11.3)') ll*gr%m%h(1)-origin, potential(ll), &
+          & hartreep(ll), potential(ll)-hartreep(ll)
+      end do
+      call io_close(iunit)
+
+      !Diagonalize 2 particle wave function as well
+        
+      !  call lalg_eigensolve(npointsx,wavef,evectors,evalues,bof,err_code)
+         
+      !  evectors=evectors/sqrt(gr%m%h(1))
+      !  evalues=evalues*gr%m%h(1)
+        
+      !  write(filename,'(a,i6.6,a,i2.2)') 'Tdstep_',i,'/wavefeva_',mm
+      !  iunit=io_open(filename,action='write')
+      
+      !  do jj=npointsx, 1, -1
+      !   write(iunit,'(i4.4,es11.3)') npointsx-jj+1, evalues(jj)
+      !  enddo
+            
+      !  call io_close(iunit)
+            
+      !  do jj=1, npointsx
+      !   write(filename,'(a,i6.6,a,i2.2,a,i4.4)') 'Tdstep_',i,'/wavefeve_', mm, '_', npointsx-jj+1
+      !   iunit=io_open(filename,action='write')
+      
+      !   do ll=1, npointsx
+      !    write(iunit,'(es11.3,es11.3,es11.3)') ll*gr%m%h(1)-origin, real(evectors(ll,jj)), & 
+      !                                    & aimag(evectors(ll,jj))
+             
+      !   enddo
+      !   call io_close(iunit)
+      !  enddo
+         
+      !   write(filename,'(a,i6.6,a,i2.2)') 'Tdstep_',i,'/wavef_',mm
+      !   iunit=io_open(filename,action='write')
+         
+      !   do jj=1, npointsx
+      !    do ll=1, npointsx
+      !write(iunit,'(i6.4,i6.4,es11.3, es11.3)') jj,ll,real(wavef(jj,ll)),aimag(wavef(jj,ll)) 
+      !    enddo
+      !   enddo
+
+      deallocate(densmatr, evectors, evalues, wavef, sqrdensity, graddens, potential, density, hartreep)
+
+    end do
+
+  end subroutine states_write_density_matrix
+  ! ---------------------------------------------------------
+
 
   ! -------------------------------------------------------
   integer pure function states_spin_channel(ispin, ik, dim)
