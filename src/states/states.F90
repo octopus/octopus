@@ -1570,7 +1570,7 @@ contains
     type(states_t),   intent(in) :: st
 
     type(block_t) :: blk
-    integer       :: ncols, ip, icoord, ist, ik, tpa_initialst, tpa_initialk
+    integer       :: ncols, icoord, ist, ik, tpa_initialst, tpa_initialk
     integer       :: iunit
 
     FLOAT, allocatable  :: ff(:)
@@ -1975,7 +1975,8 @@ contains
     type(grid_t),     intent(in) :: gr
     type(states_t),   intent(in) :: st
 
-    integer :: mm, nx1, nx2, ny1, ny2, npointsx, npointsy, jj, kk, ll, j, err_code, iunit
+    integer :: mm, jj, kk, ll, j, err_code, iunit, ndims
+    integer, allocatable :: n1(:), n2(:), npoints(:)
     logical :: bof
     FLOAT :: origin
     character(len=200) :: dirname, filename
@@ -1984,34 +1985,47 @@ contains
     FLOAT, allocatable :: evalues(:), sqrdensity(:), density(:), graddens(:)
     FLOAT, allocatable :: hartreep(:), potential(:)
 
+    call push_sub('states.states_write_density_matrix')
+
+    ! This is the root directory where everything will be written.
     dirname = trim(dir)//'/density-matrix'
     call loct_mkdir(trim(dirname))
 
-    ! WARNING: instead of "x" and "y", this should allow for an arbitrary number of dimensions.
-    nx1 = gr%m%idx%nr(1, 1)
-    nx2 = gr%m%idx%nr(2, 1)
-    ny1 = gr%m%idx%nr(1, 1)
-    ny2 = gr%m%idx%nr(2, 1)
-    npointsx = nx2-nx1+1
-    npointsy = ny2-ny1+1
+    ! The algorithm should consider how many dimensions the wavefunction has (ndims),
+    ! and how many (and which) dimensions should be integrated away. For the moment
+    ! being, we assume there are only two dimensions and we trace away the second one.
+    ndims = gr%sb%dim
+
+
+    ! Allocatation of the arrays that store the limiting indexes for each direction,
+    ! and the total number of points.
+    ALLOCATE(n1(ndims), ndims)
+    ALLOCATE(n2(ndims), ndims)
+    ALLOCATE(npoints(ndims), ndims)
+    do j = 1, ndims
+      n1(j) = gr%m%idx%nr(1, j)
+      n2(j) = gr%m%idx%nr(2, j)
+      npoints(j) = n2(j) - n1(j) + 1
+    end do
+
+
     ! not always the real origin if the box is shifted, no?
     !  which happens to be my case...
     !  only important for printout, so it is ok
-    origin=(npointsx/2+1)*gr%m%h(1)
+    origin=(npoints(1)/2+1)*gr%m%h(1)
 
-    do mm = 1, 2 !loop over states. WARNING: should run over all states, not only the first two.
+    
+    states_loop: do mm = 1, st%nst
 
-      ! _ASSERT(n1 .eq. gr%m%idx%nr(1, 2))
-      ! _ASSERT(n2 .eq. gr%m%idx%nr(2, 2))
-      ALLOCATE(densmatr(npointsx, npointsx), npointsx**2 )
-      ALLOCATE(evectors(npointsx, npointsx), npointsx**2 )
-      ALLOCATE(evalues(npointsx), npointsx)
-      ALLOCATE(wavef(npointsx, npointsx), npointsx**2 )
-      ALLOCATE(sqrdensity(npointsx),npointsx)   
-      ALLOCATE(graddens(npointsx),npointsx)
-      ALLOCATE(potential(npointsx),npointsx)
-      ALLOCATE(density(npointsx),npointsx)
-      ALLOCATE(hartreep(npointsx),npointsx)
+      ALLOCATE(densmatr(npoints(1), npoints(2)), npoints(1)*npoints(2) )
+      ALLOCATE(evectors(npoints(1), npoints(2)), npoints(1)*npoints(2) )
+      ALLOCATE(evalues(npoints(1)), npoints(1))
+      ALLOCATE(wavef(npoints(1), npoints(2)), npoints(1)*npoints(2) )
+      ALLOCATE(sqrdensity(npoints(1)), npoints(1))   
+      ALLOCATE(graddens(npoints(1)), npoints(1))
+      ALLOCATE(potential(npoints(1)), npoints(1))
+      ALLOCATE(density(npoints(1)), npoints(1))
+      ALLOCATE(hartreep(npoints(1)), npoints(1))
 
       densmatr  = M_z0
       graddens  = M_ZERO
@@ -2020,8 +2034,8 @@ contains
 
       ! Calculates
       ! densmatr(x, xprime) = 2 \int dx_2 Psi^\dagger (xprime, x_2) Psi(x, x_2)
-      xloop: do jj = nx1, nx2
-        xprimeloop: do kk = nx1, nx2
+      xloop: do jj = n1(1), n2(1)
+        xprimeloop: do kk = n1(1), n2(1)
 
           ! Calculates densmatr(jj, kk)
           ! jj is the index corresponging to x
@@ -2035,20 +2049,32 @@ contains
           j = gr%m%idx%Lxyz_inv(jj, kk, 0)
           ! if(j.eq.0) exit xloop
           ! it looks like this is stored but not used...
-          wavef(jj-nx1+1, kk-nx1+1) = st%zpsi(j, 1, mm, 1)
+          !if(wfs_are_real(st)) then
+          !  wavef(jj-n1(1)+1, kk-n1(1)+1) = st%dpsi(j, 1, mm, 1)
+          !else
+          !  wavef(jj-n1(1)+1, kk-n1(1)+1) = st%zpsi(j, 1, mm, 1)
+          !end if
 
-          x2loop: do ll = ny1, ny2
+          x2loop: do ll = n1(2), n2(2)
             ! Finds Psi(jj, ll)
             j = gr%m%idx%Lxyz_inv(jj, ll, 0)
             if(j.eq.0) exit x2loop
-            psi = st%zpsi(j, 1, mm, 1)
+            if(wfs_are_real(st)) then
+              psi = st%dpsi(j, 1, mm, 1)
+            else
+              psi = st%zpsi(j, 1, mm, 1)
+            end if
                   
             ! Finds Psi^*(kk, ll)
             j = gr%m%idx%Lxyz_inv(kk, ll, 0)
             if(j.eq.0) exit x2loop
-            psidagger = conjg(st%zpsi(j, 1, mm, 1))
+            if(wfs_are_real(st)) then
+              psidagger = st%dpsi(j, 1, mm, 1)
+            else
+              psidagger = conjg(st%zpsi(j, 1, mm, 1))
+            end if
        
-            densmatr(jj-nx1+1, kk-nx1+1) = densmatr(jj-nx1+1, kk-nx1+1) + &
+            densmatr(jj-n1(1)+1, kk-n1(1)+1) = densmatr(jj-n1(1)+1, kk-n1(1)+1) + &
                    CNST(2.0) * psidagger * psi * gr%m%h(2)
           end do x2loop
 
@@ -2056,31 +2082,30 @@ contains
       end do xloop
 
 
-      do ll = 1, npointsx
+      do ll = 1, npoints(1)
         density(ll)= real(densmatr(ll,ll))
         sqrdensity(ll)=sqrt(density(ll))
       end do
         
-      do ll = 1, npointsx
-        do jj=1, npointsx
-          hartreep(ll)=hartreep(ll)+density(jj)/(sqrt(((ll-jj)*gr%m%h(1))**2+1))
+      do ll = 1, npoints(1)
+        do jj = 1, npoints(1)
+          hartreep(ll) = hartreep(ll)+density(jj)/(sqrt(((ll-jj)*gr%m%h(1))**2+1))
         end do
-        hartreep(ll)=0.5*hartreep(ll)*gr%m%h(1)
+        hartreep(ll) = 0.5*hartreep(ll)*gr%m%h(1)
       end do
-        
-      do ll= 1, npointsx
-        ! if(sqrdensity(ll)>1d-6) then
-        graddens(ll)=(-sqrdensity(ll+2)-sqrdensity(ll-2) & 
-          & +16d0*(sqrdensity(ll+1)+sqrdensity(ll-1))&
-          & -30d0*sqrdensity(ll))/(12d0*gr%m%h(1)**2)
-         
-        potential(ll)=graddens(ll)/(2d0*sqrdensity(ll))
-        ! endif
+
+      ! WARNING: This gradient probably could be improved.
+      do ll = 3, npoints(1) - 2
+        if(sqrdensity(ll) > CNST(1.0e-12) ) then
+          graddens(ll) = (-sqrdensity(ll+2)-sqrdensity(ll-2) & 
+            & +16d0*(sqrdensity(ll+1)+sqrdensity(ll-1))&
+            & -30d0*sqrdensity(ll))/(12d0*gr%m%h(1)**2)
+          potential(ll)=graddens(ll)/(2d0*sqrdensity(ll))
+        endif
       end do
 
       !Diagonalize the density matrix
-         
-      call lalg_eigensolve(npointsx, densmatr, evectors, evalues, bof, err_code)
+      call lalg_eigensolve(npoints(1), densmatr, evectors, evalues, bof, err_code)
       
       !Write everything into files
       !NOTE: The highest eigenvalues are the last ones not the first!!!
@@ -2091,16 +2116,16 @@ contains
       write(filename,'(a,i2.2)') trim(dirname)//'/occnumb_',mm
       iunit = io_open(trim(filename), action='write')
 
-      do jj = npointsx, 1, -1
-        write(iunit,'(i4.4,es11.3)') npointsx-jj+1, evalues(jj)
+      do jj = npoints(1), 1, -1
+        write(iunit,'(i4.4,es11.3)') npoints(1)-jj+1, evalues(jj)
       end do
             
       call io_close(iunit)
 
-      do jj = npointsx-10, npointsx
-        write(filename,'(a,i2.2,a,i4.4)') trim(dirname)//'/natorb_', mm, '_', npointsx-jj+1
+      do jj = npoints(1)-10, npoints(1)
+        write(filename,'(a,i2.2,a,i4.4)') trim(dirname)//'/natorb_', mm, '_', npoints(1)-jj+1
         iunit = io_open(filename, action='write')
-        do ll = 1, npointsx
+        do ll = 1, npoints(1)
           write(iunit,'(es11.3,es11.3,es11.3)') ll*gr%m%h(1)-origin, real(evectors(ll,jj)), & 
             & aimag(evectors(ll,jj))
         end do
@@ -2109,8 +2134,8 @@ contains
 
       write(filename,'(a,i2.2)') trim(dirname)//'/densmatr_', mm
       iunit = io_open(filename,action='write')
-      do jj = 1, npointsx
-        do ll = 1, npointsx
+      do jj = 1, npoints(1)
+        do ll = 1, npoints(1)
           write(iunit,'(es11.3,es11.3)') jj*gr%m%h(1)-origin, &
             & ll*gr%m%h(1)-origin, real(densmatr(jj,ll)), aimag(densmatr(jj,ll))
         end do
@@ -2119,7 +2144,7 @@ contains
 
       write(filename,'(a,i2.2)') trim(dirname)//'/potential_', mm
       iunit = io_open(filename,action='write')
-      do ll=1, npointsx
+      do ll=1, npoints(1)
         write(iunit,'(es11.3,es11.3,es11.3,es11.3)') ll*gr%m%h(1)-origin, potential(ll), &
           & hartreep(ll), potential(ll)-hartreep(ll)
       end do
@@ -2164,8 +2189,10 @@ contains
 
       deallocate(densmatr, evectors, evalues, wavef, sqrdensity, graddens, potential, density, hartreep)
 
-    end do
+    end do states_loop
 
+    deallocate(n1, n2, npoints)
+    call pop_sub()
   end subroutine states_write_density_matrix
   ! ---------------------------------------------------------
 
