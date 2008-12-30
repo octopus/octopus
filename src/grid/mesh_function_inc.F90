@@ -82,7 +82,10 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu) result(dotp)
      ! has no effect if working with real version
 
   R_TYPE              :: dotp_tmp
-  logical             :: reduce_, dotu_
+  logical             :: reduce_
+#ifdef R_TCOMPLEX
+  logical             :: dotu_
+#endif
   integer             :: ip
 
   call profiling_in(C_PROFILING_MF_DOTP)
@@ -93,10 +96,12 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu) result(dotp)
     reduce_ = reduce
   end if
 
+#ifdef R_TCOMPLEX
   dotu_ = .false.
   if(present(dotu)) then
     dotu_ = dotu
   end if
+#endif
 
   if(mesh%use_curvlinear) then
     dotp_tmp = M_ZERO

@@ -287,8 +287,6 @@ contains
     FLOAT,                intent(in)    :: dt
     
     integer :: iatom
-    FLOAT   :: eta2, x2(1:MAX_DIM), d
-    FLOAT   :: uk
 
     if(.not. ion_dynamics_ions_move(this)) return
 

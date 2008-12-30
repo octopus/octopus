@@ -127,7 +127,10 @@ module derivatives_m
     logical :: ghost_update
   end type der_handle_t
 
-  type(profile_t), save :: set_bc_prof, set_bc_comm_prof
+  type(profile_t), save :: set_bc_prof
+#ifdef HAVE_MPI
+  type(profile_t), save :: set_bc_comm_prof
+#endif
 
 contains
 

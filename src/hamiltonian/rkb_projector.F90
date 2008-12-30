@@ -77,7 +77,7 @@ contains
     FLOAT,                 intent(in)    :: so_strength
  
     integer :: is, i
-    FLOAT :: v, dv(MAX_DIM), x(MAX_DIM)
+    FLOAT :: x(MAX_DIM)
     CMPLX :: zv
 
     rkb_p%n_s = sm%ns

@@ -889,9 +889,9 @@ contains
     type(states_t),       intent(inout) :: st
     type(grid_t), target, intent(in)    :: gr
     
-    integer                    :: k, ik, ist, idim, jst, err, wfns, occs, x_width, x_offset
+    integer                    :: k, ik, ist, idim, jst, err, wfns, occs
     integer                    :: k_ik, k_ist, k_idim, k_index 
-    integer                    :: ix, iy, iz, ip, iunit, lead_nr(2, MAX_DIM)
+    integer                    :: ip, lead_nr(2, MAX_DIM)
     character(len=256)         :: line, fname, filename, restart_dir, chars
     character                  :: char
     FLOAT                      :: occ, eval, k_x, k_y, k_z, w_k

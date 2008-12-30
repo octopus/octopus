@@ -552,7 +552,12 @@ contains
   recursive subroutine mesh_end(m)
     type(mesh_t), intent(inout) :: m
 
-    integer :: il, ipart
+    integer :: il
+
+#ifdef HAVE_MPI
+    integer :: ipart
+#endif
+
     call push_sub('mesh.mesh_end')
 
     DEALLOC(m%resolution)

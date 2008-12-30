@@ -70,7 +70,7 @@ contains
     integer,             intent(in)  :: il
 
     logical :: ok
-    integer :: i, from(MAX_DIM), to(MAX_DIM), unit_cell_extent, dir, lr
+    integer :: i, from(MAX_DIM), to(MAX_DIM), dir, lr
 
     call push_sub('ob_interface.interface_init')
 
