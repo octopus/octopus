@@ -876,6 +876,90 @@ subroutine X(mf_dotp_batch)(mesh, aa, bb, dot)
 
 end subroutine X(mf_dotp_batch)
 
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine X(mf_calculate_gamma)(m, psi, gamma)
+  type(mesh_t), intent(in) :: m
+  R_TYPE, intent(in)       :: psi(:)
+  CMPLX, intent(out)       :: gamma(:, :)
+
+  integer :: ndims, j, jj, kk, ll
+  integer, allocatable :: n1(:), n2(:), coords(:), npoints(:)
+  R_TYPE :: val, valdagger
+  R_TYPE, allocatable :: psi_global(:)
+
+  call push_sub('mesh_function_inc.mf_calculate_gamma')
+
+
+  ! In case of running parallel in domains, we need to operate psi_global, which 
+  ! contains the full wave function after "gathering" all the domains.
+  ALLOCATE(psi_global(m%np_part_global), m%np_part_global)
+  if(m%parallel_in_domains) then
+    call X(vec_gather)(m%vp, psi_global, psi)
+  else
+    psi_global(1:m%np_part_global) = psi(1:m%np_part_global)
+  end if
+
+!!$  if(m%vp%rank.ne.m%vp%root) then
+!!$    deallocate(psi_global)
+!!$    call pop_sub()
+!!$    return
+!!$  end if
+
+  ! The algorithm should consider how many dimensions the wavefunction has (ndims),
+  ! and how many (and which) dimensions should be integrated away. For the moment
+  ! being, we assume there are only two dimensions and we trace away the second one.
+  ndims = m%sb%dim
+
+
+  ! Allocatation of the arrays that store the limiting indexes for each direction,
+  ! and the total number of points.
+  ALLOCATE(n1(ndims), ndims)
+  ALLOCATE(n2(ndims), ndims)
+  ALLOCATE(coords(ndims), ndims)
+  ALLOCATE(npoints(ndims), ndims)
+  do j = 1, ndims
+    n1(j) = m%idx%nr(1, j)
+    n2(j) = m%idx%nr(2, j)
+    npoints(j) = n2(j) - n1(j) + 1
+  end do
+
+  gamma = R_TOTYPE(M_ZERO)
+  ! Calculates
+  ! densmatr(x, xprime) = 2 \int dx_2 Psi^\dagger (xprime, x_2) Psi(x, x_2)
+  xloop: do jj = n1(1), n2(1)
+    xprimeloop: do kk = n1(1), n2(1)
+
+      x2loop: do ll = n1(2), n2(2)
+
+        ! Finds psi(jj, ll)
+        coords(1) = jj
+        coords(2) = ll
+        j = index_from_coords(m%idx, ndims, coords )
+        if(j.eq.0) exit x2loop
+        val = psi_global(j)
+
+        ! Finds psi^*(kk, ll)
+        coords(1) = kk
+        coords(2) = ll
+        j = index_from_coords(m%idx, ndims, coords )
+        if(j.eq.0) exit x2loop
+        valdagger = R_CONJ(psi_global(j))
+
+        gamma(jj-n1(1)+1, kk-n1(1)+1) = gamma(jj-n1(1)+1, kk-n1(1)+1) + &
+                   CNST(2.0) * valdagger * val * m%h(2)
+
+      end do x2loop
+
+    end do xprimeloop
+  end do xloop
+
+
+  deallocate(n1, n2, coords, npoints, psi_global)
+  call pop_sub()
+end subroutine X(mf_calculate_gamma)
+
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

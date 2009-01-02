@@ -2013,7 +2013,6 @@ contains
     !  which happens to be my case...
     !  only important for printout, so it is ok
     origin=(npoints(1)/2+1)*gr%m%h(1)
-
     
     states_loop: do mm = 1, st%nst
 
@@ -2032,55 +2031,11 @@ contains
       potential = M_ZERO
       hartreep  = M_ZERO
 
-      ! Calculates
-      ! densmatr(x, xprime) = 2 \int dx_2 Psi^\dagger (xprime, x_2) Psi(x, x_2)
-      xloop: do jj = n1(1), n2(1)
-        xprimeloop: do kk = n1(1), n2(1)
-
-          ! Calculates densmatr(jj, kk)
-          ! jj is the index corresponging to x
-          ! kk is the index corresponding to xprime
-
-          ! /* Finds out if (jj, kk) belongs to the grid, and which point it is.
-          ! If it does not belong to the grid, the wavefunction is null 
-          ! there and so is the density matrix.
-          !   MJV 4-12-2008 commented: in general case for npointsx/=npointsy this is
-          !   not appropriate: x, x' is not a point in normal 2D space */
-          j = gr%m%idx%Lxyz_inv(jj, kk, 0)
-          ! if(j.eq.0) exit xloop
-          ! it looks like this is stored but not used...
-          !if(wfs_are_real(st)) then
-          !  wavef(jj-n1(1)+1, kk-n1(1)+1) = st%dpsi(j, 1, mm, 1)
-          !else
-          !  wavef(jj-n1(1)+1, kk-n1(1)+1) = st%zpsi(j, 1, mm, 1)
-          !end if
-
-          x2loop: do ll = n1(2), n2(2)
-            ! Finds Psi(jj, ll)
-            j = gr%m%idx%Lxyz_inv(jj, ll, 0)
-            if(j.eq.0) exit x2loop
-            if(wfs_are_real(st)) then
-              psi = st%dpsi(j, 1, mm, 1)
-            else
-              psi = st%zpsi(j, 1, mm, 1)
-            end if
-                  
-            ! Finds Psi^*(kk, ll)
-            j = gr%m%idx%Lxyz_inv(kk, ll, 0)
-            if(j.eq.0) exit x2loop
-            if(wfs_are_real(st)) then
-              psidagger = st%dpsi(j, 1, mm, 1)
-            else
-              psidagger = conjg(st%zpsi(j, 1, mm, 1))
-            end if
-       
-            densmatr(jj-n1(1)+1, kk-n1(1)+1) = densmatr(jj-n1(1)+1, kk-n1(1)+1) + &
-                   CNST(2.0) * psidagger * psi * gr%m%h(2)
-          end do x2loop
-
-        end do xprimeloop
-      end do xloop
-
+      if(wfs_are_real(st)) then
+        call dmf_calculate_gamma(gr%m, st%dpsi(:, 1, mm, 1), densmatr)
+      else
+        call zmf_calculate_gamma(gr%m, st%zpsi(:, 1, mm, 1), densmatr)
+      end if
 
       do ll = 1, npoints(1)
         density(ll)= real(densmatr(ll,ll))
