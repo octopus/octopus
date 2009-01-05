@@ -24,6 +24,7 @@ module xc_m
   use derivatives_m
   use global_m
   use grid_m
+  use io_function_m
   use lalg_basic_m
   use loct_parser_m
   use XC_F90(lib_m)

@@ -895,7 +895,9 @@ subroutine X(mf_calculate_gamma)(m, psi, gamma)
   ! contains the full wave function after "gathering" all the domains.
   ALLOCATE(psi_global(m%np_part_global), m%np_part_global)
   if(m%parallel_in_domains) then
+#if defined(HAVE_MPI)
     call X(vec_gather)(m%vp, psi_global, psi)
+#endif
   else
     psi_global(1:m%np_part_global) = psi(1:m%np_part_global)
   end if
