@@ -1975,12 +1975,11 @@ contains
     type(grid_t),     intent(in) :: gr
     type(states_t),   intent(in) :: st
 
-    integer :: mm, jj, kk, ll, j, err_code, iunit, ndims
+    integer :: mm, jj, ll, j, err_code, iunit, ndims
     integer, allocatable :: n1(:), n2(:), npoints(:)
     logical :: bof
     FLOAT :: origin
     character(len=200) :: dirname, filename
-    CMPLX :: psi, psidagger
     CMPLX, allocatable :: densmatr(:, :), evectors(:, :), wavef(:,:)
     FLOAT, allocatable :: evalues(:), sqrdensity(:), density(:), graddens(:)
     FLOAT, allocatable :: hartreep(:), potential(:)
@@ -2005,7 +2004,7 @@ contains
     do j = 1, ndims
       n1(j) = gr%m%idx%nr(1, j)
       n2(j) = gr%m%idx%nr(2, j)
-      npoints(j) = n2(j) - n1(j) + 1
+      npoints(j) = gr%m%idx%ll(j)
     end do
 
 
@@ -2014,6 +2013,7 @@ contains
     !  only important for printout, so it is ok
     origin=(npoints(1)/2+1)*gr%m%h(1)
     
+
     states_loop: do mm = 1, st%nst
 
       ALLOCATE(densmatr(npoints(1), npoints(2)), npoints(1)*npoints(2) )
@@ -2037,73 +2037,78 @@ contains
         call zmf_calculate_gamma(gr%m, st%zpsi(:, 1, mm, 1), densmatr)
       end if
 
-      do ll = 1, npoints(1)
-        density(ll)= real(densmatr(ll,ll))
-        sqrdensity(ll)=sqrt(density(ll))
-      end do
-        
-      do ll = 1, npoints(1)
-        do jj = 1, npoints(1)
-          hartreep(ll) = hartreep(ll)+density(jj)/(sqrt(((ll-jj)*gr%m%h(1))**2+1))
-        end do
-        hartreep(ll) = 0.5*hartreep(ll)*gr%m%h(1)
-      end do
+      ! Only node zero writes.
+      if(mpi_grp_is_root(mpi_world)) then
 
-      ! WARNING: This gradient probably could be improved.
-      do ll = 3, npoints(1) - 2
-        if(sqrdensity(ll) > CNST(1.0e-12) ) then
-          graddens(ll) = (-sqrdensity(ll+2)-sqrdensity(ll-2) & 
-            & +16d0*(sqrdensity(ll+1)+sqrdensity(ll-1))&
-            & -30d0*sqrdensity(ll))/(12d0*gr%m%h(1)**2)
-          potential(ll)=graddens(ll)/(2d0*sqrdensity(ll))
-        endif
-      end do
-
-      !Diagonalize the density matrix
-      call lalg_eigensolve(npoints(1), densmatr, evectors, evalues, bof, err_code)
-      
-      !Write everything into files
-      !NOTE: The highest eigenvalues are the last ones not the first!!!
-      !      Writing is therefore in reverse order
-      evectors = evectors/sqrt(gr%m%h(1))
-      evalues  = evalues*gr%m%h(1)
-
-      write(filename,'(a,i2.2)') trim(dirname)//'/occnumb_',mm
-      iunit = io_open(trim(filename), action='write')
-
-      do jj = npoints(1), 1, -1
-        write(iunit,'(i4.4,es11.3)') npoints(1)-jj+1, evalues(jj)
-      end do
-            
-      call io_close(iunit)
-
-      do jj = npoints(1)-10, npoints(1)
-        write(filename,'(a,i2.2,a,i4.4)') trim(dirname)//'/natorb_', mm, '_', npoints(1)-jj+1
-        iunit = io_open(filename, action='write')
         do ll = 1, npoints(1)
-          write(iunit,'(es11.3,es11.3,es11.3)') ll*gr%m%h(1)-origin, real(evectors(ll,jj)), & 
-            & aimag(evectors(ll,jj))
+          density(ll)= real(densmatr(ll,ll))
+          sqrdensity(ll)=sqrt(density(ll))
+        end do
+        
+        do ll = 1, npoints(1)
+          do jj = 1, npoints(1)
+            hartreep(ll) = hartreep(ll)+density(jj)/(sqrt(((ll-jj)*gr%m%h(1))**2+1))
+          end do
+          hartreep(ll) = 0.5*hartreep(ll)*gr%m%h(1)
+        end do
+
+        ! WARNING: This gradient probably could be improved.
+        do ll = 3, npoints(1) - 2
+          if(sqrdensity(ll) > CNST(1.0e-12) ) then
+            graddens(ll) = (-sqrdensity(ll+2)-sqrdensity(ll-2) & 
+              & +16d0*(sqrdensity(ll+1)+sqrdensity(ll-1))&
+              & -30d0*sqrdensity(ll))/(12d0*gr%m%h(1)**2)
+            potential(ll)=graddens(ll)/(2d0*sqrdensity(ll))
+          endif
+        end do
+
+        !Diagonalize the density matrix
+        call lalg_eigensolve(npoints(1), densmatr, evectors, evalues, bof, err_code)
+      
+        !Write everything into files
+        !NOTE: The highest eigenvalues are the last ones not the first!!!
+        !      Writing is therefore in reverse order
+        evectors = evectors/sqrt(gr%m%h(1))
+        evalues  = evalues*gr%m%h(1)
+
+        write(filename,'(a,i2.2)') trim(dirname)//'/occnumb_',mm
+        iunit = io_open(trim(filename), action='write')
+
+        do jj = npoints(1), 1, -1
+          write(iunit,'(i4.4,es11.3)') npoints(1)-jj+1, evalues(jj)
+        end do
+            
+        call io_close(iunit)
+
+        do jj = npoints(1)-10, npoints(1)
+          write(filename,'(a,i2.2,a,i4.4)') trim(dirname)//'/natorb_', mm, '_', npoints(1)-jj+1
+          iunit = io_open(filename, action='write')
+          do ll = 1, npoints(1)
+            write(iunit,'(es11.3,es11.3,es11.3)') ll*gr%m%h(1)-origin, real(evectors(ll,jj)), & 
+              & aimag(evectors(ll,jj))
+          end do
+        call io_close(iunit)
+        end do
+
+        write(filename,'(a,i2.2)') trim(dirname)//'/densmatr_', mm
+        iunit = io_open(filename,action='write')
+        do jj = 1, npoints(1)
+          do ll = 1, npoints(1)
+            write(iunit,'(es11.3,es11.3)') jj*gr%m%h(1)-origin, &
+              & ll*gr%m%h(1)-origin, real(densmatr(jj,ll)), aimag(densmatr(jj,ll))
+          end do
         end do
         call io_close(iunit)
-      end do
 
-      write(filename,'(a,i2.2)') trim(dirname)//'/densmatr_', mm
-      iunit = io_open(filename,action='write')
-      do jj = 1, npoints(1)
-        do ll = 1, npoints(1)
-          write(iunit,'(es11.3,es11.3)') jj*gr%m%h(1)-origin, &
-            & ll*gr%m%h(1)-origin, real(densmatr(jj,ll)), aimag(densmatr(jj,ll))
+        write(filename,'(a,i2.2)') trim(dirname)//'/potential_', mm
+        iunit = io_open(filename,action='write')
+        do ll=1, npoints(1)
+          write(iunit,'(es11.3,es11.3,es11.3,es11.3)') ll*gr%m%h(1)-origin, potential(ll), &
+            & hartreep(ll), potential(ll)-hartreep(ll)
         end do
-      end do
-      call io_close(iunit)
+        call io_close(iunit)
 
-      write(filename,'(a,i2.2)') trim(dirname)//'/potential_', mm
-      iunit = io_open(filename,action='write')
-      do ll=1, npoints(1)
-        write(iunit,'(es11.3,es11.3,es11.3,es11.3)') ll*gr%m%h(1)-origin, potential(ll), &
-          & hartreep(ll), potential(ll)-hartreep(ll)
-      end do
-      call io_close(iunit)
+      end if
 
       !Diagonalize 2 particle wave function as well
         

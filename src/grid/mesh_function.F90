@@ -35,6 +35,7 @@ module mesh_function_m
   use par_vec_m
   use profiling_m
   use qshepmod_m
+  use cube_function_m
 
   implicit none
 
