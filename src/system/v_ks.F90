@@ -51,7 +51,7 @@ module v_ks_m
     v_ks_freeze_hxc
 
 
-  integer, parameter :: &
+  integer, parameter, public :: &
     sic_none   = 1,     &  ! no self interaction correction
     sic_pz     = 2,     &  ! SIC a la Perdew Zunger (OEP way)
     sic_amaldi = 3         ! Amaldi correction term
@@ -368,10 +368,10 @@ contains
         ! The OEP family has to handle specially
         if (st%wfs_type == M_REAL) then
           call dxc_oep_calc(ks%oep, ks%xc, (ks%sic_type==sic_pz),  &
-            gr, h, st, h%vxc, h%ex, h%ec)
+            gr, h, st, h%ex, h%ec, vxc=h%vxc)
         else
           call zxc_oep_calc(ks%oep, ks%xc, (ks%sic_type==sic_pz),  &
-            gr, h, st, h%vxc, h%ex, h%ec)
+            gr, h, st, h%ex, h%ec, vxc=h%vxc)
         end if
       end if
 

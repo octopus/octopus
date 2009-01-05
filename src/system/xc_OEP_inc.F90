@@ -27,7 +27,7 @@
 ! of how xc is defined and calculated.
 
 ! ---------------------------------------------------------
-subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, h, st, vxc, ex, ec)
+subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, h, st, ex, ec, vxc)
   use xc_functl_m
 
   type(xc_oep_t),      intent(inout) :: oep
@@ -36,8 +36,8 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, h, st, vxc, ex, ec)
   type(grid_t),        intent(inout) :: gr
   type(hamiltonian_t), intent(inout) :: h
   type(states_t),      intent(inout) :: st
-  FLOAT,               intent(inout) :: vxc(:,:) !vxc(NP, st%d%nspin)
   FLOAT,               intent(inout) :: ex, ec
+  FLOAT, optional,     intent(inout) :: vxc(:,:) !vxc(NP, st%d%nspin)
 
   FLOAT :: e
   integer :: is, ist, ixc
@@ -92,20 +92,22 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, h, st, vxc, ex, ec)
     end if
 #endif
 
-    ! solve the KLI equation
-    if(oep%level.ne.XC_OEP_FULL.or.first) then
-      first = .false.
+    if(present(vxc)) then
+      ! solve the KLI equation
+      if(oep%level.ne.XC_OEP_FULL.or.first) then
+        first = .false.
 
-      oep%vxc = M_ZERO
-      call X(xc_KLI_solve) (gr%m, st, is, oep)
+        oep%vxc = M_ZERO
+        call X(xc_KLI_solve) (gr%m, st, is, oep)
+      end if
+
+      ! if asked, solve the full OEP equation
+      if(oep%level == XC_OEP_FULL) then
+        call X(xc_oep_solve)(gr, h, st, is, vxc(:,is), oep)
+      end if
+
+      vxc(1:NP, is) = vxc(1:NP, is) + oep%vxc(1:NP)
     end if
-
-    ! if asked, solve the full OEP equation
-    if(oep%level == XC_OEP_FULL) then
-      call X(xc_oep_solve)(gr, h, st, is, vxc(:,is), oep)
-    end if
-
-    vxc(1:NP, is) = vxc(1:NP, is) + oep%vxc(1:NP)
   end do spin
 
   deallocate(oep%eigen_type, oep%eigen_index, oep%X(lxc), oep%uxc_bar)

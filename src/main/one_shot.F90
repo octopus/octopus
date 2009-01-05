@@ -39,6 +39,7 @@ module one_shot_m
   use v_ks_m
   use varinfo_m
   use xc_m
+  use xc_OEP_m
   use h_sys_output_m
 
   implicit none
@@ -83,6 +84,15 @@ contains
     ! Get exchange-correlation energies
     call xc_get_vxc(sys%gr, sys%ks%xc, sys%st, sys%st%rho, sys%st%d%ispin, E_x, E_c, &
       M_ZERO, sys%st%qtot)
+
+    ! The OEP family has to handle specially
+    if (sys%st%wfs_type == M_REAL) then
+      call dxc_oep_calc(sys%ks%oep, sys%ks%xc, (sys%ks%sic_type==sic_pz),  &
+        sys%gr, h, sys%st, E_x, E_c)
+    else
+      call zxc_oep_calc(sys%ks%oep, sys%ks%xc, (sys%ks%sic_type==sic_pz),  &
+        sys%gr, h, sys%st, E_x, E_c)
+    end if
 
     E_tot = E_t + E_ext + E_Hartree + E_x + E_c + h%ep%eii
 
