@@ -256,7 +256,7 @@ contains
     ierr = loct_parse_input(trim(conf%share)//'/variables')
     if(ierr .ne. 0) then
       write(6,'(a)') '*** Fatal Error (description follows)'
-      write(6,'(a)') 'Can not open variables file: '//trim(conf%share)//'/variables'
+      write(6,'(a)') 'Cannot open variables file: '//trim(conf%share)//'/variables'
 #ifdef HAVE_MPI
       call MPI_Finalize(mpi_err)
 #endif
@@ -268,7 +268,7 @@ contains
     if(ierr .ne. 0) then 
       write(6,'(a)') '*** Fatal Error (description follows)' 
       write(6,'(a)') 'Error initializing liboct' 
-      write(6,'(a)') 'Can not open input file!' 
+      write(6,'(a)') 'Cannot open input file!' 
       write(6,'(a)') 'Please provide an input file with name inp in the current workdir'
 #ifdef HAVE_MPI
       call MPI_Finalize(mpi_err)

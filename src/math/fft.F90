@@ -19,7 +19,7 @@
 
 #include "global.h"
 #ifndef HAVE_FFT
-#error Can not compile without FFTW
+#error Cannot compile without FFTW
 #endif
 
 ! this is the maximum number of different FFTWs we are allowed to have

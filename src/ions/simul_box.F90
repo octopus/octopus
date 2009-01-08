@@ -472,7 +472,7 @@ contains
       ! ignore box_shape in 1D
       if(sb%dim==1.and.sb%box_shape /= PARALLELEPIPED) sb%box_shape=SPHERE
 
-      ! Can not use images in 1D or 3D
+      ! Cannot use images in 1D or 3D
       if(sb%dim/=2.and.sb%box_shape == BOX_IMAGE) call input_error('BoxShape')
 
       sb%rsize = -M_ONE
