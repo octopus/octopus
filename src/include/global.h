@@ -19,8 +19,8 @@
 
 #include "config_F90.h"
 
-#define NP      gr%m%np
-#define NP_PART gr%m%np_part
+#define NP      gr%mesh%np
+#define NP_PART gr%mesh%np_part
 
 #define MAX_SPIN 4
 #define NDIM    gr%sb%dim

@@ -134,7 +134,7 @@ contains
 
     do idir = 1, NDIM
       call lr_init(kdotp_vars%lr(idir, 1))
-      call lr_allocate(kdotp_vars%lr(idir, 1), sys%st, sys%gr%m)
+      call lr_allocate(kdotp_vars%lr(idir, 1), sys%st, sys%gr%mesh)
 
       if(fromScratch .and. kdotp_vars%initialization .eq. 1) then
         ALLOCATE(orth_mask(sys%st%nst), sys%st%nst)
@@ -145,11 +145,11 @@ contains
              orth_mask(ist) = .false.
 
             do ik = 1, sys%st%d%nik
-              kdotp_vars%lr(idir, 1)%zdl_psi(1:gr%m%np, is, ist, ik) &
-                = -M_zI * gr%m%x(1:gr%m%np, idir) * sys%st%zpsi(1:gr%m%np, is, ist, ik)
+              kdotp_vars%lr(idir, 1)%zdl_psi(1:gr%mesh%np, is, ist, ik) &
+                = -M_zI * gr%mesh%x(1:gr%mesh%np, idir) * sys%st%zpsi(1:gr%mesh%np, is, ist, ik)
               ! orthogonalize against unperturbed wfn to remove component unaccessible to perturbation theory
-              call zstates_gram_schmidt(gr%m, sys%st%nst, sys%st%d%dim, sys%st%zpsi(1:gr%m%np, 1:1, 1:sys%st%nst, ik), &
-                 kdotp_vars%lr(idir, 1)%zdl_psi(1:gr%m%np, 1:1, ist, ik), mask = orth_mask(1:sys%st%nst))
+              call zstates_gram_schmidt(gr%mesh, sys%st%nst, sys%st%d%dim, sys%st%zpsi(1:gr%mesh%np, 1:1, 1:sys%st%nst, ik), &
+                 kdotp_vars%lr(idir, 1)%zdl_psi(1:gr%mesh%np, 1:1, ist, ik), mask = orth_mask(1:sys%st%nst))
             enddo
           enddo
         enddo
@@ -213,7 +213,7 @@ contains
         do ifactor = 1, em_nfactor
           do isigma = 1, em_nsigma
             call lr_init(em_lr(idir, isigma, ifactor))
-            call lr_allocate(em_lr(idir, isigma, ifactor), sys%st, sys%gr%m)
+            call lr_allocate(em_lr(idir, isigma, ifactor), sys%st, sys%gr%mesh)
 
             str_tmp = em_wfs_tag(idir, ifactor)
             write(dirname,'(3a, i1)') EM_RESTART_DIR, trim(str_tmp), '_', isigma

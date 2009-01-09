@@ -192,7 +192,7 @@ contains
       if (te%exp_order < 2) call input_error('TDExpOrder')
 
     else if(te%exp_method==SPLIT_OPERATOR.or.te%exp_method==SUZUKI_TROTTER) then
-      call zcf_new(gr%m%idx%ll, te%cf)
+      call zcf_new(gr%mesh%idx%ll, te%cf)
       call zcf_fft_init(te%cf, gr%sb)
     end if
 
@@ -414,7 +414,7 @@ contains
       if(.not. present(imag_time)) pp = -M_zI*pp
 
       ! Normalize input vector, and put it into v(:, :, 1)
-      beta = zmf_nrm2(gr%m, h%d%dim, zpsi)
+      beta = zmf_nrm2(gr%mesh, h%d%dim, zpsi)
       v(1:NP, 1:h%d%dim, 1) = zpsi(1:NP, 1:h%d%dim)/beta
 
       ! This is the Lanczos loop...
@@ -437,7 +437,7 @@ contains
         end if
 
         !orthogonalize against previous vectors
-        call zstates_gram_schmidt(gr%m, n - l + 1, h%d%dim, v(:, :, l:n), v(:, :, n + 1), &
+        call zstates_gram_schmidt(gr%mesh, n - l + 1, h%d%dim, v(:, :, l:n), v(:, :, n + 1), &
           normalize = .true., overlap = hm(l:n, n), norm = hm(n + 1, n))
 
         call zlalg_exp(n, pp, hm, expo, hamiltonian_hermitean(h))
@@ -480,9 +480,9 @@ contains
       end if
 
       call zexp_vlpsi (gr, h, zpsi, ik, t, -M_zI*deltat/M_TWO)
-      if(h%ep%non_local) call zexp_vnlpsi (gr%m, h, zpsi, -M_zI*deltat/M_TWO, .true.)
+      if(h%ep%non_local) call zexp_vnlpsi (gr%mesh, h, zpsi, -M_zI*deltat/M_TWO, .true.)
       call zexp_kinetic(gr, h, zpsi, te%cf, -M_zI*deltat)
-      if(h%ep%non_local) call zexp_vnlpsi (gr%m, h, zpsi, -M_zI*deltat/M_TWO, .false.)
+      if(h%ep%non_local) call zexp_vnlpsi (gr%mesh, h, zpsi, -M_zI*deltat/M_TWO, .false.)
       call zexp_vlpsi (gr, h, zpsi, ik, t, -M_zI*deltat/M_TWO)
 
       if(present(order)) order = 0
@@ -508,9 +508,9 @@ contains
 
       do k = 1, 5
         call zexp_vlpsi (gr, h, zpsi, ik, t, -M_zI*dt(k)/M_TWO)
-        if (h%ep%non_local) call zexp_vnlpsi (gr%m, h, zpsi, -M_zI*dt(k)/M_TWO, .true.)
+        if (h%ep%non_local) call zexp_vnlpsi (gr%mesh, h, zpsi, -M_zI*dt(k)/M_TWO, .true.)
         call zexp_kinetic(gr, h, zpsi, te%cf, -M_zI*dt(k))
-        if (h%ep%non_local) call zexp_vnlpsi (gr%m, h, zpsi, -M_zI*dt(k)/M_TWO, .false.)
+        if (h%ep%non_local) call zexp_vnlpsi (gr%mesh, h, zpsi, -M_zI*dt(k)/M_TWO, .false.)
         call zexp_vlpsi (gr, h, zpsi, ik, t, -M_zI*dt(k)/M_TWO)
       end do
 

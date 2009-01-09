@@ -76,7 +76,7 @@ contains
     call loct_parse_int(check_inp('MaximumIter'), 20, max_iter)
 
     occupied_states = sys%st%nst
-    call init_(sys%gr%m, sys%st)
+    call init_(sys%gr%mesh, sys%st)
     total_states = sys%st%nst
 
     call restart_read (trim(restart_dir)//'gs', sys%st, sys%gr, sys%geo, ierr)
@@ -100,7 +100,7 @@ contains
     message(1) = 'Info:  Setting up Hamiltonian.'
     call write_info(1)
 
-    call states_calc_dens(sys%st, sys%gr%m%np, sys%st%rho)
+    call states_calc_dens(sys%st, sys%gr%mesh%np, sys%st%rho)
     call v_ks_calc(sys%gr, sys%ks, h, sys%st, calc_eigenval=.true.) ! get potentials
     call total_energy(h, sys%gr, sys%st, -1)             ! total energy
 
@@ -131,19 +131,19 @@ contains
     ! First, get the residues of the occupied states.
     ! These are assumed to be converged; otherwise one should do a SCF calculation.
     if (sys%st%wfs_type == M_REAL) then
-      ALLOCATE(dh_psi(sys%gr%m%np, h%d%dim), sys%gr%m%np*h%d%dim)
+      ALLOCATE(dh_psi(sys%gr%mesh%np, h%d%dim), sys%gr%mesh%np*h%d%dim)
     else
-      ALLOCATE(zh_psi(sys%gr%m%np, h%d%dim), sys%gr%m%np*h%d%dim)
+      ALLOCATE(zh_psi(sys%gr%mesh%np, h%d%dim), sys%gr%mesh%np*h%d%dim)
     end if
     do ik = 1, sys%st%d%nik
       do p = 1, eigens%converged(ik)
         if (sys%st%wfs_type == M_REAL) then
           call dHpsi(h, sys%gr, sys%st%dpsi(:,:, p, ik) ,dh_psi, p, ik)
-          eigens%diff(p, ik) = dstates_residue(sys%gr%m, sys%st%d%dim, dh_psi, sys%st%eigenval(p, ik), &
+          eigens%diff(p, ik) = dstates_residue(sys%gr%mesh, sys%st%d%dim, dh_psi, sys%st%eigenval(p, ik), &
                sys%st%dpsi(:, :, p, ik))
         else
           call zHpsi(h, sys%gr, sys%st%zpsi(:,:, p, ik) , zh_psi, p, ik)
-          eigens%diff(p, ik) = zstates_residue(sys%gr%m, sys%st%d%dim, zh_psi, sys%st%eigenval(p, ik), &
+          eigens%diff(p, ik) = zstates_residue(sys%gr%mesh, sys%st%d%dim, zh_psi, sys%st%eigenval(p, ik), &
                sys%st%zpsi(:, :, p, ik))
         end if
       end do
@@ -194,7 +194,7 @@ contains
     
     if(simul_box_is_periodic(sys%gr%sb).and. sys%st%d%nik>sys%st%d%nspin) then
       call states_write_bands('static', sys%st%nst, sys%st, sys%gr%sb)
-      call states_write_fermi_energy('static', sys%st, sys%gr%m, sys%gr%sb)
+      call states_write_fermi_energy('static', sys%st, sys%gr%mesh, sys%gr%sb)
       call states_degeneracy_matrix(sys%st)
     end if
 

@@ -100,8 +100,8 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
     
   if (.not. kinetic_only_) then
     ! apply the potential
-    call X(vlpsi_batch)(h, gr%m, epsib, hpsib, ik)
-    if(h%ep%non_local) call X(vnlpsi_batch)(h, gr%m, epsib, hpsib, ik)
+    call X(vlpsi_batch)(h, gr%mesh, epsib, hpsib, ik)
+    if(h%ep%non_local) call X(vnlpsi_batch)(h, gr%mesh, epsib, hpsib, ik)
   end if
 
   call X(derivatives_lapl_batch_finish)(gr%der, handles, epsib, laplb)
@@ -109,7 +109,7 @@ subroutine X(hpsi_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
   do ii = 1, nst
     call set_pointers()
 
-    if (kinetic_only_) hpsi(1:gr%m%np, 1:h%d%dim) = M_ZERO
+    if (kinetic_only_) hpsi(1:gr%mesh%np, 1:h%d%dim) = M_ZERO
 
     ! finish the calculation of the laplacian
     call profiling_in(C_PROFILING_KINETIC)
@@ -251,8 +251,8 @@ subroutine X(exchange_operator) (h, gr, psi, hpsi, ist, ik)
 
   call push_sub('hamiltonian_inc.Xexchange_operator')
 
-  ALLOCATE(rho(gr%m%np), gr%m%np)
-  ALLOCATE(pot(gr%m%np), gr%m%np)
+  ALLOCATE(rho(gr%mesh%np), gr%mesh%np)
+  ALLOCATE(pot(gr%mesh%np), gr%mesh%np)
 
   ! WARNING: this can be very condensed
   select case(h%d%ispin)
@@ -264,11 +264,11 @@ subroutine X(exchange_operator) (h, gr, psi, hpsi, ist, ik)
       if(h%theory_level == HARTREE .and. j .ne. ist) cycle
 
       pot = M_ZERO
-      do k = 1, gr%m%np
+      do k = 1, gr%mesh%np
         rho(k) = R_CONJ(h%st%X(psi)(k, 1, j, ik)) * psi(k, 1)
       end do
       call X(poisson_solve)(gr, pot, rho)
-      do k = 1, gr%m%np
+      do k = 1, gr%mesh%np
         hpsi(k, 1) = hpsi(k, 1) - h%exx_coef * (h%st%occ(j, ik)/M_TWO) * h%st%X(psi)(k, 1, j, ik)*pot(k)
       end do
     end do 
@@ -281,11 +281,11 @@ subroutine X(exchange_operator) (h, gr, psi, hpsi, ist, ik)
       if(h%theory_level == HARTREE .and. j .ne. ist) cycle
 
       pot = M_ZERO
-      do k = 1, gr%m%np
+      do k = 1, gr%mesh%np
         rho(k) = R_CONJ(h%st%X(psi)(k, 1, j, ik)) * psi(k, 1)
       end do
       call X(poisson_solve)(gr, pot, rho)
-      do k = 1, gr%m%np
+      do k = 1, gr%mesh%np
         hpsi(k, 1) = hpsi(k, 1) - h%exx_coef * h%st%occ(j, ik) * h%st%X(psi)(k, 1, j, ik)*pot(k)
       end do
     end do 
@@ -311,18 +311,18 @@ subroutine X(oct_exchange_operator) (h, gr, psi, hpsi, ik)
 
   call push_sub('hamiltonian_inc.Xexchange_operator')
 
-  ALLOCATE(rho(gr%m%np), gr%m%np)
-  ALLOCATE(pot(gr%m%np), gr%m%np)
+  ALLOCATE(rho(gr%mesh%np), gr%mesh%np)
+  ALLOCATE(pot(gr%mesh%np), gr%mesh%np)
 
   select case(h%d%ispin)
   case(UNPOLARIZED)
     do j = 1, h%oct_st%nst
       pot = M_ZERO
-      do k = 1, gr%m%np
+      do k = 1, gr%mesh%np
         rho(k) = R_CONJ(h%oct_st%X(psi)(k, 1, j, ik)) * psi(k, 1)
       end do
       call X(poisson_solve)(gr, pot, rho)
-      do k = 1, gr%m%np
+      do k = 1, gr%mesh%np
         hpsi(k, 1) = hpsi(k, 1) +  M_TWO * M_z1 * (h%oct_st%occ(j, ik)/M_TWO) * &
                      h%oct_st%X(psi)(k, 1, j, ik) * R_AIMAG(pot(k))
       end do
@@ -332,11 +332,11 @@ subroutine X(oct_exchange_operator) (h, gr, psi, hpsi, ik)
     do j = 1, h%oct_st%nst
       if(h%oct_st%occ(j, ik) <= M_ZERO) cycle
       pot = M_ZERO
-      do k = 1, gr%m%np
+      do k = 1, gr%mesh%np
         rho(k) = R_CONJ(h%oct_st%X(psi)(k, 1, j, ik)) * psi(k, 1)
       end do
       call X(poisson_solve)(gr, pot, rho)
-      do k = 1, gr%m%np
+      do k = 1, gr%mesh%np
         hpsi(k, 1) = hpsi(k, 1) +  M_TWO * M_z1 * h%oct_st%occ(j, ik) * &
           h%oct_st%X(psi)(k, 1, j, ik)*R_AIMAG(pot(k))
       end do
@@ -378,14 +378,14 @@ subroutine X(magnus) (h, gr, psi, hpsi, ik, vmagnus)
     call lalg_copy(NP, hpsi(:, idim), auxpsi(:, idim))
   end do
 
-  if (h%ep%non_local) call X(vnlpsi)(h, gr%m, psi, auxpsi, ik)
+  if (h%ep%non_local) call X(vnlpsi)(h, gr%mesh, psi, auxpsi, ik)
 
   hpsi(1:NP, 1) = hpsi(1:NP, 1) -  M_zI*vmagnus(1:NP, ispin, 1)*auxpsi(1:NP, 1)
   auxpsi(1:NP, 1) = vmagnus(1:NP, ispin, 1)*psi(1:NP, 1)
 
   call X(hpsi)(h, gr, auxpsi, aux2psi, ist = 1, ik = ik, kinetic_only = .true.)
 
-  if (h%ep%non_local) call X(vnlpsi)(h, gr%m, auxpsi, aux2psi, ik)
+  if (h%ep%non_local) call X(vnlpsi)(h, gr%mesh, auxpsi, aux2psi, ik)
 
   hpsi(1:NP, 1) = hpsi(1:NP, 1) + M_zI*aux2psi(1:NP, 1)
 
@@ -395,7 +395,7 @@ subroutine X(magnus) (h, gr, psi, hpsi, ik, vmagnus)
 
   hpsi(1:NP, 1) = hpsi(1:NP, 1) + vmagnus(1:NP, ispin, 2)*psi(1:NP, 1)
 
-  if (h%ep%non_local) call X(vnlpsi)(h, gr%m, psi, Hpsi, ik)
+  if (h%ep%non_local) call X(vnlpsi)(h, gr%mesh, psi, Hpsi, ik)
 
   call X(vborders) (gr, h, psi, hpsi)
 
@@ -627,7 +627,7 @@ subroutine X(vexternal) (h, gr, psi, hpsi, ik)
     hpsi(1:NP, idim) = hpsi(1:NP, idim) + h%ep%vpsl(1:NP)*psi(1:NP, idim)
   end do
 
-  if(h%ep%non_local) call X(vnlpsi)(h, gr%m, psi, hpsi, ik)
+  if(h%ep%non_local) call X(vnlpsi)(h, gr%mesh, psi, hpsi, ik)
 
   call pop_sub()
   call profiling_out(C_PROFILING_VLPSI)

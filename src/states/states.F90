@@ -115,8 +115,8 @@ module states_m
     character(len=1024), pointer :: user_def_states(:,:,:) ! (st%d%dim, st%nst, st%d%nik)
 
     ! the densities and currents (after all we are doing DFT :)
-    FLOAT, pointer :: rho(:,:)      ! rho(gr%m%np_part, st%d%nspin)
-    FLOAT, pointer :: j(:,:,:)      !   j(gr%m%np_part, gr%sb%dim, st%d%nspin)
+    FLOAT, pointer :: rho(:,:)      ! rho(gr%mesh%np_part, st%d%nspin)
+    FLOAT, pointer :: j(:,:,:)      !   j(gr%mesh%np_part, gr%sb%dim, st%d%nspin)
 
     logical        :: nlcc          ! do we have non-linear core corrections
     FLOAT, pointer :: rho_core(:)   ! core charge for nl core corrections
@@ -512,7 +512,7 @@ contains
     ! FIXME: spin-polarized free states ignored.
     if(gr%sb%open_boundaries) then
       ALLOCATE(st%zphi(NP_PART, st%d%dim, st%ob_ncs, st%d%nik), NP*st%d%dim*st%ob_ncs*st%d%nik)
-      ALLOCATE(st%ob_rho(gr%m%lead_unit_cell(LEFT)%np, st%d%nspin, NLEADS), gr%m%lead_unit_cell(LEFT)%np*st%d%nspin*NLEADS)
+      ALLOCATE(st%ob_rho(gr%mesh%lead_unit_cell(LEFT)%np, st%d%nspin, NLEADS), gr%mesh%lead_unit_cell(LEFT)%np*st%d%nspin*NLEADS)
       st%zphi = M_z0
     else
       nullify(st%zphi)
@@ -847,7 +847,7 @@ contains
     st%j    = M_ZERO
     st%nlcc = geo%nlcc
     if(st%nlcc) then
-      ALLOCATE(st%rho_core(gr%m%np), gr%m%np)
+      ALLOCATE(st%rho_core(gr%mesh%np), gr%mesh%np)
       st%rho_core(:) = M_ZERO
     end if
 
@@ -1627,7 +1627,7 @@ contains
       ! check if input makes sense
       ncols = loct_parse_block_cols(blk, 0)
 
-      if(ncols .ne. gr%m%sb%dim ) then ! wrong size
+      if(ncols .ne. gr%mesh%sb%dim ) then ! wrong size
 
         if(mpi_grp_is_root(mpi_world)) then
           message(1) = 'Inconsistent size of momentum transfer vector. It is not used in TPA calculation.'
@@ -1637,9 +1637,9 @@ contains
       else ! correct size
 
         use_qvector = .true.
-        ALLOCATE(qvector(gr%m%sb%dim),gr%m%sb%dim)
+        ALLOCATE(qvector(gr%mesh%sb%dim),gr%mesh%sb%dim)
 
-        do icoord = 1,gr%m%sb%dim    !for x,y,z
+        do icoord = 1,gr%mesh%sb%dim    !for x,y,z
           call loct_parse_block_float(blk, 0, icoord-1, qvector(icoord))
           qvector(icoord) = qvector(icoord) / units_inp%length%factor 
         end do
@@ -1650,9 +1650,9 @@ contains
 
     ! calculate the matrix elements
 
-    ALLOCATE(ff(gr%m%np), gr%m%np)
-    if(use_qvector) ALLOCATE(cff(gr%m%np), gr%m%np)
-    ALLOCATE(osc(gr%m%sb%dim), gr%m%sb%dim)
+    ALLOCATE(ff(gr%mesh%np), gr%mesh%np)
+    if(use_qvector) ALLOCATE(cff(gr%mesh%np), gr%mesh%np)
+    ALLOCATE(osc(gr%mesh%sb%dim), gr%mesh%sb%dim)
 
     ! root writes output to file
 
@@ -1664,14 +1664,14 @@ contains
       if(use_qvector) then
         write (message(1),'(a1,a30,3(es14.5,1x),a1)') '#', ' momentum transfer vector : (', &
                                                      & qvector(:)*units_out%length%factor,')'
-        select case(gr%m%sb%dim)
+        select case(gr%mesh%sb%dim)
           case(1); write(message(2), '(a1,4(a15,1x))') '#', 'E' , '<x>', '<f>', 'S(q,omega)'
           case(2); write(message(2), '(a1,5(a15,1x))') '#', 'E' , '<x>', '<y>', '<f>', 'S(q,omega)'
           case(3); write(message(2), '(a1,6(a15,1x))') '#', 'E' , '<x>', '<y>', '<z>', '<f>', 'S(q,omega)'
         end select
         call write_info(2,iunit)
       else
-        select case(gr%m%sb%dim)
+        select case(gr%mesh%sb%dim)
           case(1); write(message(1), '(a1,3(a15,1x))') '#', 'E' , '<x>', '<f>'
           case(2); write(message(1), '(a1,4(a15,1x))') '#', 'E' , '<x>', '<y>', '<f>'
           case(3); write(message(1), '(a1,5(a15,1x))') '#', 'E' , '<x>', '<y>', '<z>', '<f>'
@@ -1691,26 +1691,26 @@ contains
         transition_energy=st%eigenval(ist,tpa_initialk)-st%eigenval(tpa_initialst,tpa_initialk)
 
         ! dipole matrix elements <f|x|i> etc. -> oscillator strengths
-        do icoord=1,gr%m%sb%dim    ! for x,y,z
+        do icoord=1,gr%mesh%sb%dim    ! for x,y,z
 
-          ff(1:gr%m%np) = st%dpsi(1:gr%m%np,1,tpa_initialst,tpa_initialk) * &
-                       &  gr%m%x(1:gr%m%np,icoord)                        * &
-                       &  st%dpsi(1:gr%m%np,1,ist,tpa_initialk)
-          osc(icoord)  = dmf_integrate(gr%m, ff)
-          osc_strength = osc_strength + 2.0/real(gr%m%sb%dim)*transition_energy*abs(osc(icoord))**2.0
+          ff(1:gr%mesh%np) = st%dpsi(1:gr%mesh%np,1,tpa_initialst,tpa_initialk) * &
+                       &  gr%mesh%x(1:gr%mesh%np,icoord)                        * &
+                       &  st%dpsi(1:gr%mesh%np,1,ist,tpa_initialk)
+          osc(icoord)  = dmf_integrate(gr%mesh, ff)
+          osc_strength = osc_strength + 2.0/real(gr%mesh%sb%dim)*transition_energy*abs(osc(icoord))**2.0
 
         end do
 
         ! matrix elements <f|exp(iq.r)|i> -> dynamic structure factor
         if (use_qvector) then
 
-          cff(1:gr%m%np) = cmplx(st%dpsi(1:gr%m%np,1,tpa_initialst,tpa_initialk)) * &
-                       &   cmplx(st%dpsi(1:gr%m%np,1,ist,tpa_initialk))
-          do icoord=1,gr%m%sb%dim    ! for x,y,z
-            cff(1:gr%m%np) = cff(1:gr%m%np) * exp(M_zI*gr%m%x(1:gr%m%np,icoord)*qvector(icoord))
+          cff(1:gr%mesh%np) = cmplx(st%dpsi(1:gr%mesh%np,1,tpa_initialst,tpa_initialk)) * &
+                       &   cmplx(st%dpsi(1:gr%mesh%np,1,ist,tpa_initialk))
+          do icoord=1,gr%mesh%sb%dim    ! for x,y,z
+            cff(1:gr%mesh%np) = cff(1:gr%mesh%np) * exp(M_zI*gr%mesh%x(1:gr%mesh%np,icoord)*qvector(icoord))
           end do
 
-          dsf = abs(zmf_integrate(gr%m, cff))**2.0
+          dsf = abs(zmf_integrate(gr%mesh, cff))**2.0
         end if
 
         ! write oscillator strengths (+ dynamic structure factor if qvector if given) into file
@@ -2002,16 +2002,16 @@ contains
     ALLOCATE(n2(ndims), ndims)
     ALLOCATE(npoints(ndims), ndims)
     do j = 1, ndims
-      n1(j) = gr%m%idx%nr(1, j)
-      n2(j) = gr%m%idx%nr(2, j)
-      npoints(j) = gr%m%idx%ll(j)
+      n1(j) = gr%mesh%idx%nr(1, j)
+      n2(j) = gr%mesh%idx%nr(2, j)
+      npoints(j) = gr%mesh%idx%ll(j)
     end do
 
 
     ! not always the real origin if the box is shifted, no?
     !  which happens to be my case...
     !  only important for printout, so it is ok
-    origin=(npoints(1)/2+1)*gr%m%h(1)
+    origin=(npoints(1)/2+1)*gr%mesh%h(1)
     
 
     states_loop: do mm = 1, st%nst
@@ -2032,9 +2032,9 @@ contains
       hartreep  = M_ZERO
 
       if(wfs_are_real(st)) then
-        call dmf_calculate_gamma(gr%m, st%dpsi(:, 1, mm, 1), densmatr)
+        call dmf_calculate_gamma(gr%mesh, st%dpsi(:, 1, mm, 1), densmatr)
       else
-        call zmf_calculate_gamma(gr%m, st%zpsi(:, 1, mm, 1), densmatr)
+        call zmf_calculate_gamma(gr%mesh, st%zpsi(:, 1, mm, 1), densmatr)
       end if
 
       ! Only node zero writes.
@@ -2047,9 +2047,9 @@ contains
         
         do ll = 1, npoints(1)
           do jj = 1, npoints(1)
-            hartreep(ll) = hartreep(ll)+density(jj)/(sqrt(((ll-jj)*gr%m%h(1))**2+1))
+            hartreep(ll) = hartreep(ll)+density(jj)/(sqrt(((ll-jj)*gr%mesh%h(1))**2+1))
           end do
-          hartreep(ll) = 0.5*hartreep(ll)*gr%m%h(1)
+          hartreep(ll) = 0.5*hartreep(ll)*gr%mesh%h(1)
         end do
 
         ! WARNING: This gradient probably could be improved.
@@ -2057,7 +2057,7 @@ contains
           if(sqrdensity(ll) > CNST(1.0e-12) ) then
             graddens(ll) = (-sqrdensity(ll+2)-sqrdensity(ll-2) & 
               & +16d0*(sqrdensity(ll+1)+sqrdensity(ll-1))&
-              & -30d0*sqrdensity(ll))/(12d0*gr%m%h(1)**2)
+              & -30d0*sqrdensity(ll))/(12d0*gr%mesh%h(1)**2)
             potential(ll)=graddens(ll)/(2d0*sqrdensity(ll))
           endif
         end do
@@ -2068,8 +2068,8 @@ contains
         !Write everything into files
         !NOTE: The highest eigenvalues are the last ones not the first!!!
         !      Writing is therefore in reverse order
-        evectors = evectors/sqrt(gr%m%h(1))
-        evalues  = evalues*gr%m%h(1)
+        evectors = evectors/sqrt(gr%mesh%h(1))
+        evalues  = evalues*gr%mesh%h(1)
 
         write(filename,'(a,i2.2)') trim(dirname)//'/occnumb_',mm
         iunit = io_open(trim(filename), action='write')
@@ -2084,7 +2084,7 @@ contains
           write(filename,'(a,i2.2,a,i4.4)') trim(dirname)//'/natorb_', mm, '_', npoints(1)-jj+1
           iunit = io_open(filename, action='write')
           do ll = 1, npoints(1)
-            write(iunit,'(es11.3,es11.3,es11.3)') ll*gr%m%h(1)-origin, real(evectors(ll,jj)), & 
+            write(iunit,'(es11.3,es11.3,es11.3)') ll*gr%mesh%h(1)-origin, real(evectors(ll,jj)), & 
               & aimag(evectors(ll,jj))
           end do
         call io_close(iunit)
@@ -2094,8 +2094,8 @@ contains
         iunit = io_open(filename,action='write')
         do jj = 1, npoints(1)
           do ll = 1, npoints(1)
-            write(iunit,'(es11.3,es11.3)') jj*gr%m%h(1)-origin, &
-              & ll*gr%m%h(1)-origin, real(densmatr(jj,ll)), aimag(densmatr(jj,ll))
+            write(iunit,'(es11.3,es11.3)') jj*gr%mesh%h(1)-origin, &
+              & ll*gr%mesh%h(1)-origin, real(densmatr(jj,ll)), aimag(densmatr(jj,ll))
           end do
         end do
         call io_close(iunit)
@@ -2103,7 +2103,7 @@ contains
         write(filename,'(a,i2.2)') trim(dirname)//'/potential_', mm
         iunit = io_open(filename,action='write')
         do ll=1, npoints(1)
-          write(iunit,'(es11.3,es11.3,es11.3,es11.3)') ll*gr%m%h(1)-origin, potential(ll), &
+          write(iunit,'(es11.3,es11.3,es11.3,es11.3)') ll*gr%mesh%h(1)-origin, potential(ll), &
             & hartreep(ll), potential(ll)-hartreep(ll)
         end do
         call io_close(iunit)
@@ -2114,8 +2114,8 @@ contains
         
       !  call lalg_eigensolve(npointsx,wavef,evectors,evalues,bof,err_code)
          
-      !  evectors=evectors/sqrt(gr%m%h(1))
-      !  evalues=evalues*gr%m%h(1)
+      !  evectors=evectors/sqrt(gr%mesh%h(1))
+      !  evalues=evalues*gr%mesh%h(1)
         
       !  write(filename,'(a,i6.6,a,i2.2)') 'Tdstep_',i,'/wavefeva_',mm
       !  iunit=io_open(filename,action='write')
@@ -2131,7 +2131,7 @@ contains
       !   iunit=io_open(filename,action='write')
       
       !   do ll=1, npointsx
-      !    write(iunit,'(es11.3,es11.3,es11.3)') ll*gr%m%h(1)-origin, real(evectors(ll,jj)), & 
+      !    write(iunit,'(es11.3,es11.3,es11.3)') ll*gr%mesh%h(1)-origin, real(evectors(ll,jj)), & 
       !                                    & aimag(evectors(ll,jj))
              
       !   enddo
@@ -2385,12 +2385,14 @@ contains
 
         do i_dim = 1, NDIM
           if(present(jp)) then
-            call MPI_Allreduce(jp(1, i_dim, is), tmp_reduce(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+            call MPI_Allreduce(jp(1, i_dim, is), tmp_reduce(1), NP, MPI_FLOAT, MPI_SUM, &
+                 st%mpi_grp%comm, mpi_err)
             jp(1:NP, i_dim, is) = tmp_reduce(1:NP)
           end if
 
           if(present(grho)) then
-            call MPI_Allreduce(grho(1, i_dim, is), tmp_reduce(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+            call MPI_Allreduce(grho(1, i_dim, is), tmp_reduce(1), NP, MPI_FLOAT, MPI_SUM, &
+                 st%mpi_grp%comm, mpi_err)
             grho(1:NP, i_dim, is) = tmp_reduce(1:NP)
           end if
         end do
@@ -2512,7 +2514,7 @@ contains
     end if
 
     if(.not.associated(st%frozen_rho)) then
-      ALLOCATE(st%frozen_rho(gr%m%np, st%d%dim), gr%m%np * st%d%dim)
+      ALLOCATE(st%frozen_rho(gr%mesh%np, st%d%dim), gr%mesh%np * st%d%dim)
       st%frozen_rho = M_ZERO
     end if
 
@@ -2520,10 +2522,10 @@ contains
     do ik = 1, st%d%nik
       do ist = st%st_start, st%st_end
         if(ist > n) cycle
-        call states_dens_accumulate(st, gr%m%np, st%frozen_rho, ist, ik)
+        call states_dens_accumulate(st, gr%mesh%np, st%frozen_rho, ist, ik)
       end do
     end do
-    call states_dens_reduce(st, gr%m%np, st%frozen_rho)
+    call states_dens_reduce(st, gr%mesh%np, st%frozen_rho)
 
     call states_copy(staux, st)
 
@@ -2531,7 +2533,7 @@ contains
 
     call states_deallocate_wfns(st)
     call states_distribute_nodes(st, mc)
-    call states_allocate_wfns(st, gr%m, M_CMPLX)
+    call states_allocate_wfns(st, gr%mesh, M_CMPLX)
 
 #if defined(HAVE_MPI) 
 
@@ -2540,10 +2542,10 @@ contains
         do ist = staux%st_start, staux%st_end
           if(ist <= n) cycle
           if(.not.state_is_local(st, ist-n)) then
-            call mpi_send(staux%zpsi(1, 1, ist, ik), gr%m%np_part*st%d%dim, MPI_CMPLX, staux%node(ist), &
+            call mpi_send(staux%zpsi(1, 1, ist, ik), gr%mesh%np_part*st%d%dim, MPI_CMPLX, staux%node(ist), &
               ist, st%mpi_grp%comm, mpi_err)
 
-            call mpi_recv(st%zpsi(1, 1, ist-n, ik), gr%m%np_part*st%d%dim, MPI_CMPLX, st%node(ist-n), &
+            call mpi_recv(st%zpsi(1, 1, ist-n, ik), gr%mesh%np_part*st%d%dim, MPI_CMPLX, st%node(ist-n), &
               ist, st%mpi_grp%comm, mpi_err)
           else
             st%zpsi(:, :, ist-n, ik) = staux%zpsi(:, :, ist, ik)

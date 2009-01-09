@@ -12,7 +12,7 @@ subroutine X(xc_oep_kernel_calc)(sys, h, lr, nsigma, fxcn)
   FLOAT, parameter :: tol=1e-4
   integer :: np, ii, kk, ip, iis, kks
   
-  np = sys%gr%m%np
+  np = sys%gr%mesh%np
 
   ALLOCATE(r(1:np), np)
   ALLOCATE(s(1:np), np)

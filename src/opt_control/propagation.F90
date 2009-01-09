@@ -530,7 +530,7 @@ module opt_control_propagation_m
           oppsi%zpsi(:, :, p, ik) = M_z0
           call zvlaser_operator_linear(h%ep%lasers(j), gr, h%d, psi%zpsi(:, :, p, ik), &
                                        oppsi%zpsi(:, :, p, ik), ik, h%ep%gyromagnetic_ratio, h%ep%a_static)
-          dl(j) = dl(j) + psi%occ(p, ik) * zmf_dotp(gr%m, psi%d%dim, chi%zpsi(:, :, p, ik), &
+          dl(j) = dl(j) + psi%occ(p, ik) * zmf_dotp(gr%mesh, psi%d%dim, chi%zpsi(:, :, p, ik), &
             oppsi%zpsi(:, :, p, ik))
         end do
       end do
@@ -544,7 +544,7 @@ module opt_control_propagation_m
           do p = 1, psi%nst
             oppsi%zpsi(:, :, p, ik) = M_z0
             call zvlaser_operator_quadratic(h%ep%lasers(j), gr, h%d, psi%zpsi(:, :, p, ik), oppsi%zpsi(:, :, p, ik))
-            dq(j) = dq(j) + psi%occ(p, ik)*zmf_dotp(gr%m, psi%d%dim, chi%zpsi(:, :, p, ik), oppsi%zpsi(:, :, p, ik))
+            dq(j) = dq(j) + psi%occ(p, ik)*zmf_dotp(gr%mesh, psi%d%dim, chi%zpsi(:, :, p, ik), oppsi%zpsi(:, :, p, ik))
           end do
         end do
         call states_end(oppsi)
@@ -554,7 +554,7 @@ module opt_control_propagation_m
     end do
 
     d1 = M_z1
-    if(oct%algorithm .eq. oct_algorithm_zbr98) d1 = zstates_mpdotp(gr%m, psi, chi)
+    if(oct%algorithm .eq. oct_algorithm_zbr98) d1 = zstates_mpdotp(gr%mesh, psi, chi)
 
     call pop_sub()
   end subroutine calculate_g
@@ -609,7 +609,7 @@ module opt_control_propagation_m
           oppsi%zpsi(:, :, p, ik) = M_z0
           call zvlaser_operator_linear(h%ep%lasers(j), gr, h%d, psi%zpsi(:, :, p, ik), &
                                        oppsi%zpsi(:, :, p, ik), ik, h%ep%gyromagnetic_ratio, h%ep%a_static)
-          dl(j) = dl(j) + psi%occ(p, ik) * zmf_dotp(gr%m, psi%d%dim, chi%zpsi(:, :, p, ik), &
+          dl(j) = dl(j) + psi%occ(p, ik) * zmf_dotp(gr%mesh, psi%d%dim, chi%zpsi(:, :, p, ik), &
             oppsi%zpsi(:, :, p, ik))
         end do
       end do
@@ -623,7 +623,7 @@ module opt_control_propagation_m
           do p = 1, psi%nst
             oppsi%zpsi(:, :, p, ik) = M_z0
             call zvlaser_operator_quadratic(h%ep%lasers(j), gr, h%d, psi%zpsi(:, :, p, ik), oppsi%zpsi(:, :, p, ik))
-            dq(j) = dq(j) + psi%occ(p, ik)*zmf_dotp(gr%m, psi%d%dim, chi%zpsi(:, :, p, ik), oppsi%zpsi(:, :, p, ik))
+            dq(j) = dq(j) + psi%occ(p, ik)*zmf_dotp(gr%mesh, psi%d%dim, chi%zpsi(:, :, p, ik), oppsi%zpsi(:, :, p, ik))
           end do
         end do
         call states_end(oppsi)
@@ -633,7 +633,7 @@ module opt_control_propagation_m
     end do
 
     d1 = M_z1
-    if(oct%algorithm .eq. oct_algorithm_zbr98) d1 = zstates_mpdotp(gr%m, psi, chi)
+    if(oct%algorithm .eq. oct_algorithm_zbr98) d1 = zstates_mpdotp(gr%mesh, psi, chi)
 
     call parameters_update(cp, cpp, dir, iter, oct%delta, oct%eta, d1, dl, dq)
 
@@ -698,8 +698,8 @@ module opt_control_propagation_m
        call states_copy(stored_st, psi)
        write(filename,'(a,i4.4)') trim(prop%dirname)//'/', j
        call restart_read(trim(filename), stored_st, gr, geo, ierr)
-       prev_overlap = zstates_mpdotp(gr%m, stored_st, stored_st)
-       overlap = zstates_mpdotp(gr%m, stored_st, psi)
+       prev_overlap = zstates_mpdotp(gr%mesh, stored_st, stored_st)
+       overlap = zstates_mpdotp(gr%mesh, stored_st, psi)
        if( abs(overlap - prev_overlap) > WARNING_THRESHOLD ) then
           write(message(1), '(a,es13.4)') &
             "WARNING: forward-backward propagation produced an error of", abs(overlap-prev_overlap)

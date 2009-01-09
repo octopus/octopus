@@ -84,10 +84,10 @@ contains
     
     ! double the box to perform the fourier transforms
     if(poisson_solver.ne.FFT_CORRECTED) then
-      call mesh_double_box(gr%sb, gr%m, db)                 ! get dimensions of the double box
+      call mesh_double_box(gr%sb, gr%mesh, db)                 ! get dimensions of the double box
       if (poisson_solver == FFT_SPH) db(:) = maxval(db)
     else
-      db(:) = gr%m%idx%ll(:)
+      db(:) = gr%mesh%idx%ll(:)
     end if
 
     ! allocate cube function where we will perform the ffts
@@ -101,13 +101,13 @@ contains
 
     if (poisson_solver <= FFT_PLA .and. poisson_solver .ne. FFT_CORRECTED) then
       call loct_parse_float(check_inp('PoissonCutoffRadius'),&
-        maxval(db(:)*gr%m%h(:)/M_TWO)/units_inp%length%factor , r_c)
+        maxval(db(:)*gr%mesh%h(:)/M_TWO)/units_inp%length%factor , r_c)
       r_c = r_c*units_inp%length%factor
       write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &
         trim(units_out%length%abbrev), '] = ',       &
         r_c/units_out%length%factor
       call write_info(1)
-      if ( r_c > maxval(db(:)*gr%m%h(:)/M_TWO) + DELTA_R) then
+      if ( r_c > maxval(db(:)*gr%mesh%h(:)/M_TWO) + DELTA_R) then
         message(1) = 'Poisson cutoff radius is larger than cell size.'
         message(2) = 'You can see electrons in next cell(s).'
         call write_warning(2)
@@ -118,7 +118,7 @@ contains
     ALLOCATE(fft_Coulb_FS(fft_cf%nx, fft_cf%n(2), fft_cf%n(3)), fft_cf%nx*fft_cf%n(2)*fft_cf%n(3))
     fft_Coulb_FS = M_ZERO
 
-    temp(:) = M_TWO*M_PI/(db(:)*gr%m%h(:))
+    temp(:) = M_TWO*M_PI/(db(:)*gr%mesh%h(:))
 
     if( (poisson_solver .eq. FFT_CYL)  .and. (gr%sb%periodic_dim == 0) ) then
       ngp = 8*db(2)
@@ -136,7 +136,7 @@ contains
         xmax = sqrt((temp(2)*db(2)/2)**2 + (temp(3)*db(3)/2)**2)
         do k = 1, ngp
           x(k) = (k-1)*(xmax/(ngp-1))
-          y(k) = poisson_cutoff_fin_cylinder(gx, x(k), M_TWO*gr%m%sb%xsize, M_TWO*gr%m%sb%rsize)
+          y(k) = poisson_cutoff_fin_cylinder(gx, x(k), M_TWO*gr%mesh%sb%xsize, M_TWO*gr%mesh%sb%rsize)
         end do
         call spline_fit(ngp, x, y, cylinder_cutoff_f)
       end if
@@ -148,9 +148,9 @@ contains
 
           gg(:) = temp(:)*ixx(:)
 
-          gg(:) = matmul(gg, gr%m%sb%klattice_unitary)
-          do idim = 1, gr%m%sb%dim
-            gg(idim) = gg(idim) / lalg_nrm2(MAX_DIM, gr%m%sb%klattice_unitary(:, idim))
+          gg(:) = matmul(gg, gr%mesh%sb%klattice_unitary)
+          do idim = 1, gr%mesh%sb%dim
+            gg(idim) = gg(idim) / lalg_nrm2(MAX_DIM, gr%mesh%sb%klattice_unitary(:, idim))
           end do
 
           modg2 = sum(gg(:)**2)
@@ -201,7 +201,7 @@ contains
                 fft_Coulb_FS(ix, iy, iz) = -(M_HALF*log(r_c) - M_FOURTH)*r_c**2
               else if (gr%sb%periodic_dim == 0) then
                 fft_Coulb_FS(ix, iy, iz) = poisson_cutoff_fin_cylinder(M_ZERO, M_ZERO, &
-                  M_TWO*gr%m%sb%xsize, M_TWO*gr%m%sb%rsize)
+                  M_TWO*gr%mesh%sb%xsize, M_TWO*gr%mesh%sb%rsize)
               end if
 
             case(FFT_PLA)
@@ -251,7 +251,7 @@ contains
     call push_sub('solver_fft.poisson_fft_build_2d_0d')
 
     ! double the box to perform the fourier transforms
-    call mesh_double_box(gr%sb, gr%m, db)                 ! get dimensions of the double box
+    call mesh_double_box(gr%sb, gr%mesh, db)                 ! get dimensions of the double box
     db(1:2) = maxval(db)
 
     ! allocate cube function where we will perform the ffts
@@ -262,13 +262,13 @@ contains
     db = fft_cf%n              
 
     call loct_parse_float(check_inp('PoissonCutoffRadius'),&
-      maxval(db(:)*gr%m%h(:)/M_TWO)/units_inp%length%factor , r_c)
+      maxval(db(:)*gr%mesh%h(:)/M_TWO)/units_inp%length%factor , r_c)
     r_c = r_c*units_inp%length%factor
     write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &
       trim(units_out%length%abbrev), '] = ',       &
       r_c/units_out%length%factor
     call write_info(1)
-    if ( r_c > maxval(db(:)*gr%m%h(:)/M_TWO) + DELTA_R) then
+    if ( r_c > maxval(db(:)*gr%mesh%h(:)/M_TWO) + DELTA_R) then
       message(1) = 'Poisson cutoff radius is larger than cell size.'
       message(2) = 'You can see electrons in next cell(s).'
       call write_warning(2)
@@ -278,7 +278,7 @@ contains
     ! store the fourier transform of the Coulomb interaction
     ALLOCATE(fft_Coulb_FS(fft_cf%nx, fft_cf%n(2), fft_cf%n(3)), fft_cf%nx*fft_cf%n(2)*fft_cf%n(3))
     fft_Coulb_FS = M_ZERO
-    temp(:) = M_TWO*M_PI/(db(:)*gr%m%h(:))
+    temp(:) = M_TWO*M_PI/(db(:)*gr%mesh%h(:))
 
     maxf = r_c * sqrt((temp(1)*db(1)/2)**2 + (temp(2)*db(2)/2)**2)
     dk = CNST(0.25) ! This seems to be reasonable.
@@ -327,7 +327,7 @@ contains
     call push_sub('solver_fft.poisson_fft_build_2d_1d')
 
     ! double the box to perform the fourier transforms
-    call mesh_double_box(gr%sb, gr%m, db)                 ! get dimensions of the double box
+    call mesh_double_box(gr%sb, gr%mesh, db)                 ! get dimensions of the double box
 
     ! allocate cube function where we will perform the ffts
     call dcf_new(db, fft_cf)      
@@ -341,7 +341,7 @@ contains
     ! store the fourier transform of the Coulomb interaction
     ALLOCATE(fft_Coulb_FS(fft_cf%nx, fft_cf%n(2), fft_cf%n(3)), fft_cf%nx*fft_cf%n(2)*fft_cf%n(3))
     fft_Coulb_FS = M_ZERO
-    temp(:) = M_TWO*M_PI/(db(:)*gr%m%h(:))
+    temp(:) = M_TWO*M_PI/(db(:)*gr%mesh%h(:))
 
     ! First, the term ix = 0 => gx = 0.
     fft_coulb_fs(1, 1, 1) = -M_FOUR * r_c * (log(r_c)-M_ONE)
@@ -381,7 +381,7 @@ contains
 
     call push_sub('solver_fft.poisson_fft_build_2d_2d')
 
-    db(:) = gr%m%idx%ll(:)
+    db(:) = gr%mesh%idx%ll(:)
     ! allocate cube function where we will perform the ffts
     call dcf_new(db, fft_cf)      
     ! initialize fft
@@ -392,7 +392,7 @@ contains
     ! store the fourier transform of the Coulomb interaction
     ALLOCATE(fft_Coulb_FS(fft_cf%nx, fft_cf%n(2), fft_cf%n(3)), fft_cf%nx*fft_cf%n(2)*fft_cf%n(3))
     fft_Coulb_FS = M_ZERO
-    temp(:) = M_TWO*M_PI/(db(:)*gr%m%h(:))
+    temp(:) = M_TWO*M_PI/(db(:)*gr%mesh%h(:))
 
     do iy = 1, db(2)
       ixx(2) = pad_feq(iy, db(2), .true.)
@@ -421,7 +421,7 @@ contains
 
     call push_sub('solver_fft.poisson_fft_build_1d')
 
-    box = gr%m%idx%ll
+    box = gr%mesh%idx%ll
     call dcf_new(box, fft_cf)
     call dcf_fft_init(fft_cf, gr%sb)
     box = fft_cf%n

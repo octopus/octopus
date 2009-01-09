@@ -104,7 +104,7 @@ contains
 
       ! store the ranges for these two indices (serves as initial guess
       ! for parallelization strategy)
-      index_range(1) = sys%gr%m%np_global     ! Number of points in mesh
+      index_range(1) = sys%gr%mesh%np_global     ! Number of points in mesh
       index_range(2) = sys%st%nst             ! Number of states
       index_range(3) = sys%st%d%nik           ! Number of kpoints
       index_range(4) = 100000                 ! Some large number
@@ -126,7 +126,7 @@ contains
         
         do i=1, sys%NDIM
           write(fname, '(a,i1)') 'r-', i
-          call doutput_function(sys%outp%how, 'exec/', fname, sys%gr%m, sys%gr%sb, sys%gr%m%x(:,i), u, ierr)
+          call doutput_function(sys%outp%how, 'exec/', fname, sys%gr%mesh, sys%gr%sb, sys%gr%mesh%x(:,i), u, ierr)
         end do
         
       end if
@@ -170,11 +170,11 @@ contains
 
     call push_sub('systm.hamiltonian_setup')
 
-    call states_fermi(sys%st, sys%gr%m)
-    call states_calc_dens(sys%st, sys%gr%m%np, sys%st%rho)
+    call states_fermi(sys%st, sys%gr%mesh)
+    call states_calc_dens(sys%st, sys%gr%mesh%np, sys%st%rho)
 
     call v_ks_calc(sys%gr, sys%ks, h, sys%st, calc_eigenval=.true.) ! get potentials
-    call states_fermi(sys%st, sys%gr%m)                            ! occupations
+    call states_fermi(sys%st, sys%gr%mesh)                            ! occupations
     call total_energy(h, sys%gr, sys%st, -1)
 
     call pop_sub()

@@ -67,7 +67,7 @@ subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
 
       ! The exchange energy.
       ex_ = ex_ - M_HALF*oep%sfact*oep%socc*st%occ(i, is)* &
-        dmf_dotp(gr%m, vxc(1:NP, 1), R_ABS(st%X(psi)(1:NP, 1, i, is))**2)
+        dmf_dotp(gr%mesh, vxc(1:NP, 1), R_ABS(st%X(psi)(1:NP, 1, i, is))**2)
 
       oep%X(lxc)(1:NP, i) = oep%X(lxc)(1:NP, i) - vxc(1:NP, 1)*R_CONJ(st%X(psi) (1:NP, 1, i, is))
     end if

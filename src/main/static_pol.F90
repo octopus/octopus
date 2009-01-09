@@ -135,7 +135,7 @@ contains
         write(message(2), '(a,i1,a,i1)')'Info: Calculating dipole moment for field ', i, ', #',k
         call write_info(2)
 
-        h%ep%vpsl(1:NP) = vpsl_save(1:NP) + (-1)**k*gr%m%x(1:NP, i)*e_field
+        h%ep%vpsl(1:NP) = vpsl_save(1:NP) + (-1)**k*gr%mesh%x(1:NP, i)*e_field
 
         call scf_run(scfv, sys%gr, sys%geo, st, sys%ks, h, sys%outp, gs_run=.false., verbosity = VERB_COMPACT)
 
@@ -146,7 +146,7 @@ contains
 
         ! calculate dipole
         do j = 1, NDIM
-          dipole(i, j, k) = dmf_moment(gr%m, trrho, j, 1)
+          dipole(i, j, k) = dmf_moment(gr%mesh, trrho, j, 1)
         end do
 
         call output_cycle_()
@@ -177,7 +177,7 @@ contains
 
         ! calculate dipole
     do j = 1, NDIM
-       center_dipole(j) = dmf_moment(gr%m, trrho, j, 1)
+       center_dipole(j) = dmf_moment(gr%mesh, trrho, j, 1)
     end do
 
     call scf_end(scfv)
@@ -196,7 +196,7 @@ contains
       gr  => sys%gr
       st => sys%st
 
-      call states_allocate_wfns(st, gr%m)
+      call states_allocate_wfns(st, gr%mesh)
 
       !%Variable POLStaticField
       !%Type float
@@ -252,13 +252,14 @@ contains
         if(k == 1) then 
           lr_rho(1:NP, 1:st%d%nspin) = st%rho(1:NP, 1:st%d%nspin)
         else
-          lr_rho(1:NP, 1:st%d%nspin) = (st%rho(1:NP, 1:st%d%nspin) - lr_rho(1:NP, 1:st%d%nspin)) / (M_TWO*e_field)
+          lr_rho(1:NP, 1:st%d%nspin) = &
+               (st%rho(1:NP, 1:st%d%nspin) - lr_rho(1:NP, 1:st%d%nspin)) / (M_TWO*e_field)
 
           !write
           do is = 1, st%d%nspin
             write(fname, '(a,a,i1,a,i1)') 'fd_density', '-', is, '-', i
             call doutput_function(sys%outp%how, "linear", trim(fname),&
-                gr%m, gr%sb, lr_rho(:, is), M_ONE, ierr)
+                gr%mesh, gr%sb, lr_rho(:, is), M_ONE, ierr)
           end do
 
         end if
@@ -273,17 +274,19 @@ contains
           call elf_calc(st, gr, lr_elf, lr_elfd)
           
           !numerical derivative
-           lr_elf(1:NP, 1:st%d%nspin) = ( lr_elf(1:NP, 1:st%d%nspin) -  elf(1:NP, 1:st%d%nspin)) / (M_TWO*e_field)
-          lr_elfd(1:NP, 1:st%d%nspin) = (lr_elfd(1:NP, 1:st%d%nspin) - elfd(1:NP, 1:st%d%nspin)) / (M_TWO*e_field)
+           lr_elf(1:NP, 1:st%d%nspin) = &
+                ( lr_elf(1:NP, 1:st%d%nspin) -  elf(1:NP, 1:st%d%nspin)) / (M_TWO*e_field)
+          lr_elfd(1:NP, 1:st%d%nspin) = &
+               (lr_elfd(1:NP, 1:st%d%nspin) - elfd(1:NP, 1:st%d%nspin)) / (M_TWO*e_field)
 
           !write
           do is = 1, st%d%nspin
             write(fname, '(a,a,i1,a,i1)') 'fd_elf', '-', is, '-', i
             call doutput_function(sys%outp%how, "linear", trim(fname),&
-                gr%m, gr%sb, lr_elf(:, is), M_ONE, ierr)
+                gr%mesh, gr%sb, lr_elf(:, is), M_ONE, ierr)
             write(fname, '(a,a,i1,a,i1)') 'fd_D', '-', is, '-', i
             call doutput_function(sys%outp%how, "linear", trim(fname),&
-                gr%m, gr%sb, lr_elfd(:, is), M_ONE, ierr)
+                gr%mesh, gr%sb, lr_elfd(:, is), M_ONE, ierr)
           end do
         end if
 

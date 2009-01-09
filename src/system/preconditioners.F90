@@ -99,7 +99,7 @@ contains
     prefix_ = ""
     if(present(prefix)) prefix_ = prefix
 
-    if(gr%m%use_curvlinear) then
+    if(gr%mesh%use_curvlinear) then
       default = PRE_NONE
     else
       default = PRE_SMOOTHING
@@ -122,19 +122,19 @@ contains
       ! the smoothing has a star stencil like the laplacian
       call nl_operator_init(this%op, "Preconditioner")
       call stencil_star_get_lapl(this%op%stencil, NDIM, 1)
-      call nl_operator_build(gr%m, this%op, NP, const_w = .not. gr%m%use_curvlinear)
+      call nl_operator_build(gr%mesh, this%op, NP, const_w = .not. gr%mesh%use_curvlinear)
       
       ns = this%op%stencil%size
 
       if (this%op%const_w) then
         maxp = 1
       else
-        maxp = gr%m%np
+        maxp = gr%mesh%np
       end if
 
       do ip = 1,maxp
 
-        vol = sum(gr%m%vol_pp(ip + this%op%ri(1:ns, this%op%rimap(ip))))
+        vol = sum(gr%mesh%vol_pp(ip + this%op%ri(1:ns, this%op%rimap(ip))))
 
         do is = 1, ns
           if(is /= this%op%stencil%center) then
@@ -143,7 +143,7 @@ contains
             this%op%w_re(is, ip) = alpha
           end if
           ip2 = ip + this%op%ri(is, this%op%rimap(ip))
-          this%op%w_re(is, ip) = this%op%w_re(is, ip)*(ns*gr%m%vol_pp(ip2)/vol)
+          this%op%w_re(is, ip) = this%op%w_re(is, ip)*(ns*gr%mesh%vol_pp(ip2)/vol)
         end do
       end do
       

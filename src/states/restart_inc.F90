@@ -30,7 +30,7 @@ subroutine X(restart_write_function)(dir, filename, gr, f, ierr, size)
   call push_sub('restart_inc.Xrestart_write_function')
 
   call X(output_function) (restart_format, trim(dir), trim(filename), &
-    gr%m, gr%sb, f(:), M_ONE, ierr, is_tmp=.true.)
+    gr%mesh, gr%sb, f(:), M_ONE, ierr, is_tmp=.true.)
 
   call pop_sub()
 end subroutine X(restart_write_function)
@@ -90,7 +90,7 @@ subroutine X(restart_read_lr_rho)(lr, gr, nspin, restart_subdir, rho_tag, ierr)
   ierr = 0;
   do is = 1, nspin
     write(fname, '(a, i1,a)') trim(rho_tag)//'_', is
-    call X(restart_read_function)(trim(restart_dir)//trim(restart_subdir), fname, gr%m,&
+    call X(restart_read_function)(trim(restart_dir)//trim(restart_subdir), fname, gr%mesh,&
          lr%X(dl_rho)(:, is), s_ierr)
     if( s_ierr /=0 ) ierr = s_ierr;
   end do

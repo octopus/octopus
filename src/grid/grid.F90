@@ -52,7 +52,7 @@ module grid_m
 
   type grid_t
     type(simul_box_t)           :: sb
-    type(mesh_t)                :: m
+    type(mesh_t)                :: mesh
     type(interface_t), pointer  :: intf(:)
     type(multigrid_level_t)     :: fine
     type(derivatives_t)         :: der
@@ -99,7 +99,7 @@ contains
     call double_grid_init(gr%dgrid, gr%sb)
 
     ! now we generate create the mesh and the derivatives
-    call mesh_init_stage_1(gr%sb, gr%m, geo, gr%cv, &
+    call mesh_init_stage_1(gr%sb, gr%mesh, geo, gr%cv, &
          enlarge = max(gr%der%n_ghost, double_grid_enlarge(gr%dgrid)))
 
     ! the stencil used to generate the grid is a union of a cube (for
@@ -108,7 +108,7 @@ contains
     call stencil_union(gr%sb%dim, cube, gr%der%lapl%stencil, gr%stencil)
     call stencil_end(cube)
     
-    call mesh_init_stage_2(gr%sb, gr%m, geo, gr%cv, gr%stencil)
+    call mesh_init_stage_2(gr%sb, gr%mesh, geo, gr%cv, gr%stencil)
 
     call pop_sub()
 
@@ -128,21 +128,21 @@ contains
 
     if(multicomm_strategy_is_parallel(mc, P_STRATEGY_DOMAINS)) then
       call mpi_grp_init(grp, mc%group_comm(P_STRATEGY_DOMAINS))
-      call mesh_init_stage_3(gr%m, geo, gr%cv, gr%stencil, grp)
+      call mesh_init_stage_3(gr%mesh, geo, gr%cv, gr%stencil, grp)
     else
-      call mesh_init_stage_3(gr%m, geo, gr%cv)
+      call mesh_init_stage_3(gr%mesh, geo, gr%cv)
     end if
 
     if(gr%sb%open_boundaries) then
       ALLOCATE(gr%intf(NLEADS), NLEADS)
       do il = 1, NLEADS
-        call interface_init(gr%m, gr%sb, gr%der, gr%intf(il), il)
+        call interface_init(gr%mesh, gr%sb, gr%der, gr%intf(il), il)
       end do
     else
       nullify(gr%intf)
     end if
 
-    call derivatives_build(gr%der, gr%m)
+    call derivatives_build(gr%der, gr%mesh)
 
     ! initialize a finer mesh to hold the density, for this we use the
     ! multigrid routines
@@ -152,24 +152,24 @@ contains
       ALLOCATE(gr%fine%m, 1)
       ALLOCATE(gr%fine%der, 1)
       
-      call multigrid_mesh_double(geo, gr%cv, gr%m, gr%fine%m, gr%stencil)
+      call multigrid_mesh_double(geo, gr%cv, gr%mesh, gr%fine%m, gr%stencil)
       
-      call derivatives_init(gr%fine%der, gr%m%sb, gr%cv%method .ne. CURV_METHOD_UNIFORM)
+      call derivatives_init(gr%fine%der, gr%mesh%sb, gr%cv%method .ne. CURV_METHOD_UNIFORM)
       
-      if(gr%m%parallel_in_domains) then
-        call mesh_init_stage_3(gr%fine%m, geo, gr%cv, gr%stencil, gr%m%mpi_grp)
+      if(gr%mesh%parallel_in_domains) then
+        call mesh_init_stage_3(gr%fine%m, geo, gr%cv, gr%stencil, gr%mesh%mpi_grp)
       else
         call mesh_init_stage_3(gr%fine%m, geo, gr%cv)
       end if
       
-      call multigrid_get_transfer_tables(gr%fine, gr%fine%m, gr%m)
+      call multigrid_get_transfer_tables(gr%fine, gr%fine%m, gr%mesh)
       
       call derivatives_build(gr%fine%der, gr%fine%m)
       
       call mesh_write_info(gr%fine%m, stdout)
 
     else
-      gr%fine%m => gr%m
+      gr%fine%m => gr%mesh
       gr%fine%der => gr%der
     end if
 
@@ -199,7 +199,7 @@ contains
     call double_grid_end(gr%dgrid)
 
     call derivatives_end(gr%der)
-    call mesh_end(gr%m)
+    call mesh_end(gr%mesh)
 
     if(associated(gr%mgrid)) then
       call multigrid_end(gr%mgrid)
@@ -231,13 +231,13 @@ contains
 
     call messages_print_stress(iunit, "Grid")
     call simul_box_write_info(gr%sb, iunit)
-    call mesh_write_info(gr%m, iunit)
+    call mesh_write_info(gr%mesh, iunit)
     if(gr%sb%open_boundaries) then
       do il = 1, NLEADS
         call interface_write_info(gr%intf(il), il, iunit)
       end do
     end if
-    if (gr%m%use_curvlinear) then
+    if (gr%mesh%use_curvlinear) then
       call curvlinear_write_info(gr%cv, iunit)
     end if
     call messages_print_stress(iunit)
@@ -250,7 +250,7 @@ contains
     type(geometry_t), intent(in) :: geo
 
     ALLOCATE(gr%mgrid, 1)
-    call multigrid_init(gr%mgrid, geo, gr%cv, gr%m, gr%der, gr%stencil)
+    call multigrid_init(gr%mgrid, geo, gr%cv, gr%mesh, gr%der, gr%stencil)
 
   end subroutine grid_create_multigrid
 
@@ -294,13 +294,13 @@ contains
 
     call grid_init_stage_1(grout, geo)
 
-    if(grin%m%parallel_in_domains) then
-      call mesh_init_stage_3(grout%m, geo, grout%cv, grout%stencil, grin%m%mpi_grp)
+    if(grin%mesh%parallel_in_domains) then
+      call mesh_init_stage_3(grout%mesh, geo, grout%cv, grout%stencil, grin%mesh%mpi_grp)
     else
-      call mesh_init_stage_3(grout%m, geo, grout%cv)
+      call mesh_init_stage_3(grout%mesh, geo, grout%cv)
     end if
 
-    call derivatives_build(grout%der, grout%m)
+    call derivatives_build(grout%der, grout%mesh)
 
     ! multigrids are not initialized by default
     nullify(grout%mgrid)

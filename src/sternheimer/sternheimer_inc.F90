@@ -61,11 +61,11 @@ subroutine X(sternheimer_solve)(                           &
 
   ASSERT(nsigma == 1 .or. nsigma == 2)
 
-  m => sys%gr%m
+  m => sys%gr%mesh
   st => sys%st
   
-  call mix_init(this%mixer, sys%gr%m%np, sys%st%d%nspin, 1, func_type=sys%st%wfs_type)
-  call mesh_init_mesh_aux(sys%gr%m)
+  call mix_init(this%mixer, sys%gr%mesh%np, sys%st%d%nspin, 1, func_type=sys%st%wfs_type)
+  call mesh_init_mesh_aux(sys%gr%mesh)
   
   ALLOCATE(tmp(m%np),m%np)
   ALLOCATE(Y(m%np, 1, nsigma), m%np * 1 * nsigma)
@@ -134,7 +134,7 @@ subroutine X(sternheimer_solve)(                           &
           ! |Y> := (1 - |ist><ist|)|Y>
 !           alternative direct method below
 !             Y(1:m%np, 1, sigma) = Y(1:m%np, 1, sigma) - st%X(psi)(1:m%np, 1, ist, ik) * &
-!               X(mf_integrate)(sys%gr%m, st%X(psi)(1:m%np, 1, ist, ik) * Y(1:m%np, 1, sigma))
+!               X(mf_integrate)(sys%gr%mesh, st%X(psi)(1:m%np, 1, ist, ik) * Y(1:m%np, 1, sigma))
 
             orth_mask(1:st%nst) = .true.
             orth_mask(ist) = .false.
@@ -283,7 +283,7 @@ subroutine X(sternheimer_calc_hvar)(this, sys, h, lr, nsigma, hvar)
 
   call push_sub('sternheimer_inc.Xsternheimer_calc_hvar')
 
-  np = sys%gr%m%np
+  np = sys%gr%mesh%np
 
   if (this%add_hartree) then 
 

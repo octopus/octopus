@@ -589,7 +589,7 @@ contains
     new_nuc = 0
     do i = 1, lnuc
       ist = luc(i)
-      diff(ist) = X(mf_nrm2)(gr%m, st%d%dim, res(:, :, ist))
+      diff(ist) = X(mf_nrm2)(gr%mesh, st%d%dim, res(:, :, ist))
       if(diff(ist).ge.tol) then
         new_uc(j) = ist
         new_nuc   = new_nuc+1
@@ -638,7 +638,7 @@ contains
 
     chol_failure = .false.
     ALLOCATE(vv(nuc, nuc), nuc**2)
-    call states_blockt_mul(gr%m, st, v_start, v_end, v_start, v_end, vs, vs, vv, xpsi1=UC, xpsi2=UC, symm=.true.)
+    call states_blockt_mul(gr%mesh, st, v_start, v_end, v_start, v_end, vs, vs, vv, xpsi1=UC, xpsi2=UC, symm=.true.)
     call profiling_in(C_PROFILING_LOBPCG_CHOL)
     call lalg_cholesky(nuc, vv, bof=chol_failure)
     call profiling_out(C_PROFILING_LOBPCG_CHOL)
@@ -679,13 +679,13 @@ contains
     ALLOCATE(tmp2(nconstr, nidx), nconstr*nidx)
     ALLOCATE(tmp3(nconstr, nidx), nconstr*nidx)
 
-    call states_blockt_mul(gr%m, st, constr_start, constr_end, constr_start, constr_end, &
+    call states_blockt_mul(gr%mesh, st, constr_start, constr_end, constr_start, constr_end, &
       constr, constr, tmp1, xpsi1=all_constr, xpsi2=all_constr)
     det = lalg_inverter(nconstr, tmp1, invert=.true.)
-    call states_blockt_mul(gr%m, st, constr_start, constr_end, vs_start, vs_end, &
+    call states_blockt_mul(gr%mesh, st, constr_start, constr_end, vs_start, vs_end, &
       constr, vs, tmp2, xpsi1=all_constr, xpsi2=idx(1:nidx))
     call lalg_gemm(nconstr, nidx, nconstr, R_TOTYPE(M_ONE), tmp1, tmp2, R_TOTYPE(M_ZERO), tmp3)
-    call states_block_matr_mul_add(gr%m, st, -R_TOTYPE(M_ONE), constr_start, constr_end, vs_start, vs_end, &
+    call states_block_matr_mul_add(gr%mesh, st, -R_TOTYPE(M_ONE), constr_start, constr_end, vs_start, vs_end, &
       constr, tmp3, R_TOTYPE(M_ONE), vs, xpsi=all_constr, xres=idx(1:nidx))
 
     deallocate(tmp1, tmp2, tmp3)
@@ -704,7 +704,7 @@ contains
 
     call push_sub('eigen_lobpcg_inc.Xblockt_mul')
 
-    call states_blockt_mul(gr%m, st, st_start, st_end, st_start, st_end, &
+    call states_blockt_mul(gr%mesh, st, st_start, st_end, st_start, st_end, &
       psi1, psi2, res, xpsi1=xpsi1, xpsi2=xpsi2, symm=symm)
 
     call pop_sub()
@@ -723,7 +723,7 @@ contains
 
     call push_sub('eigen_lobpcg_inc.block_matr_mul_add')
 
-    call states_block_matr_mul_add(gr%m, st, alpha, st_start, st_end, st_start, st_end, &
+    call states_block_matr_mul_add(gr%mesh, st, alpha, st_start, st_end, st_start, st_end, &
       psi, matr, beta, res, xpsi=xpsi, xres=xres)
 
     call pop_sub()
@@ -740,7 +740,7 @@ contains
 
     call push_sub('eigen_lobpcg_inc.block_matr_mul_add')
 
-    call states_block_matr_mul(gr%m, st, st_start, st_end, st_start, st_end, &
+    call states_block_matr_mul(gr%mesh, st, st_start, st_end, st_start, st_end, &
       psi, matr, res, xpsi=xpsi, xres=xres)
 
     call pop_sub()

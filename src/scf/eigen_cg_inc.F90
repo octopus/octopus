@@ -83,14 +83,14 @@ subroutine X(eigensolver_cg2) (gr, st, h, pre, tol, niter, converged, ik, diff, 
 
     ! Orthogonalize starting eigenfunctions to those already calculated...
     if(p > 1) then
-      call X(states_gram_schmidt)(gr%m, p - 1, st%d%dim, st%X(psi)(:, :, :, ik), st%X(psi)(:, :, p, ik), normalize = .true.)
+      call X(states_gram_schmidt)(gr%mesh, p - 1, st%d%dim, st%X(psi)(:, :, :, ik), st%X(psi)(:, :, p, ik), normalize = .true.)
     end if
 
     ! Calculate starting gradient: |hpsi> = H|psi>
     call X(Hpsi)(h, gr, st%X(psi)(:,:, p, ik) , h_psi, p, ik)
 
     ! Calculates starting eigenvalue: e(p) = <psi(p)|H|psi>
-    st%eigenval(p, ik) = R_REAL(X(mf_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), h_psi))
+    st%eigenval(p, ik) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, st%X(psi)(:,:, p, ik), h_psi))
 
     ! Starts iteration for this band
     iter_loop: do iter = 1, maxter
@@ -99,14 +99,14 @@ subroutine X(eigensolver_cg2) (gr, st, h, pre, tol, niter, converged, ik, diff, 
       call  X(preconditioner_apply)(pre, gr, h, h_psi(:,:), g(:,:))
       call  X(preconditioner_apply)(pre, gr, h, st%X(psi)(:,:, p, ik), ppsi(:,:))
 
-      es(1) = X(mf_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), g, reduce = .false.)
-      es(2) = X(mf_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), ppsi, reduce = .false.)
+      es(1) = X(mf_dotp) (gr%mesh, st%d%dim, st%X(psi)(:,:, p, ik), g, reduce = .false.)
+      es(2) = X(mf_dotp) (gr%mesh, st%d%dim, st%X(psi)(:,:, p, ik), ppsi, reduce = .false.)
 
 #ifdef HAVE_MPI
-      if(gr%m%parallel_in_domains) then
+      if(gr%mesh%parallel_in_domains) then
         sb(1) = es(1)
         sb(2) = es(2)
-        call MPI_Allreduce(sb, es, 2, R_MPITYPE, MPI_SUM, gr%m%vp%comm, mpi_err)
+        call MPI_Allreduce(sb, es, 2, R_MPITYPE, MPI_SUM, gr%mesh%vp%comm, mpi_err)
       end if
 #endif  
 
@@ -117,10 +117,10 @@ subroutine X(eigensolver_cg2) (gr, st, h, pre, tol, niter, converged, ik, diff, 
       end do
 
       ! Orthogonalize to lowest eigenvalues (already calculated)
-      if(p > 1) call X(states_gram_schmidt)(gr%m, p - 1, st%d%dim, st%X(psi)(:, :, :, ik), g, normalize = .false.)
+      if(p > 1) call X(states_gram_schmidt)(gr%mesh, p - 1, st%d%dim, st%X(psi)(:, :, :, ik), g, normalize = .false.)
 
       if(iter .ne. 1) then
-        gg1 = X(mf_dotp) (gr%m, st%d%dim, g, g0, reduce = .false.)
+        gg1 = X(mf_dotp) (gr%mesh, st%d%dim, g, g0, reduce = .false.)
       else
         gg1 = M_ZERO
       end if
@@ -128,13 +128,13 @@ subroutine X(eigensolver_cg2) (gr, st, h, pre, tol, niter, converged, ik, diff, 
       ! Approximate inverse preconditioner...
       call  X(preconditioner_apply)(pre, gr, h, g(:,:), g0(:,:))
 
-      gg = X(mf_dotp) (gr%m, st%d%dim, g, g0, reduce = .false.)
+      gg = X(mf_dotp) (gr%mesh, st%d%dim, g, g0, reduce = .false.)
 
 #ifdef HAVE_MPI
-      if(gr%m%parallel_in_domains) then
+      if(gr%mesh%parallel_in_domains) then
         sb(1) = gg1
         sb(2) = gg
-        call MPI_Allreduce(sb, rb, 2, R_MPITYPE, MPI_SUM, gr%m%vp%comm, mpi_err)
+        call MPI_Allreduce(sb, rb, 2, R_MPITYPE, MPI_SUM, gr%mesh%vp%comm, mpi_err)
         gg1 = rb(1)
         gg  = rb(2)
       end if
@@ -173,16 +173,16 @@ subroutine X(eigensolver_cg2) (gr, st, h, pre, tol, niter, converged, ik, diff, 
       call X(Hpsi) (h, gr, cg, ppsi, p, ik)
 
       ! Line minimization.
-      a0 = X(mf_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), ppsi, reduce = .false.)
-      b0 = X(mf_dotp) (gr%m, st%d%dim, cg(:,:), ppsi, reduce = .false.)
-      cg0 = X(mf_nrm2) (gr%m, st%d%dim, cg(:,:), reduce = .false.)
+      a0 = X(mf_dotp) (gr%mesh, st%d%dim, st%X(psi)(:,:, p, ik), ppsi, reduce = .false.)
+      b0 = X(mf_dotp) (gr%mesh, st%d%dim, cg(:,:), ppsi, reduce = .false.)
+      cg0 = X(mf_nrm2) (gr%mesh, st%d%dim, cg(:,:), reduce = .false.)
 
 #ifdef HAVE_MPI
-      if(gr%m%parallel_in_domains) then
+      if(gr%mesh%parallel_in_domains) then
         sb(1) = a0
         sb(2) = b0
         sb(3) = cg0**2
-        call MPI_Allreduce(sb, rb, 3, R_MPITYPE, MPI_SUM, gr%m%vp%comm, mpi_err)
+        call MPI_Allreduce(sb, rb, 3, R_MPITYPE, MPI_SUM, gr%mesh%vp%comm, mpi_err)
         a0 = rb(1)
         b0 = rb(2)
         cg0 = sqrt(rb(3))
@@ -211,7 +211,7 @@ subroutine X(eigensolver_cg2) (gr, st, h, pre, tol, niter, converged, ik, diff, 
 
       call profiling_count_operations(st%d%dim*NP*(2*R_ADD + 4*R_MUL))
 
-      res = X(states_residue)(gr%m, st%d%dim, h_psi, st%eigenval(p, ik), st%X(psi)(:, :, p, ik))
+      res = X(states_residue)(gr%mesh, st%d%dim, h_psi, st%eigenval(p, ik), st%X(psi)(:, :, p, ik))
 
       if(in_debug_mode) then
         write(message(1), '(a,i4,a,i4,a,i4,a,f12.6)') 'Debug: CG Eigensolver - ik', ik, ' ist ', p, ' iter ', iter, ' res ', res
@@ -314,7 +314,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, h, tol, niter, converged, ik, diff, v
   states: do ist = conv + 1, nst
 
     ! Orthogonalize starting eigenfunctions to those already calculated...
-    call X(states_gram_schmidt_full)(st, ist, gr%m, dim, st%X(psi)(:, :, :, ik), start=ist)
+    call X(states_gram_schmidt_full)(st, ist, gr%mesh, dim, st%X(psi)(:, :, :, ik), start=ist)
 
     do idim = 1, st%d%dim
       call lalg_copy(NP, st%X(psi)(:, idim, ist, ik), psi(:, idim))
@@ -347,10 +347,10 @@ subroutine X(eigensolver_cg2_new) (gr, st, h, tol, niter, converged, ik, diff, v
       end do
 
       ! lambda = <psi|H|psi> = <psi|phi>
-      lambda = X(mf_dotp)(gr%m, dim, psi, phi)
+      lambda = X(mf_dotp)(gr%mesh, dim, psi, phi)
 
       ! Check convergence
-      res = X(states_residue)(gr%m, dim, phi, lambda, psi)
+      res = X(states_residue)(gr%mesh, dim, phi, lambda, psi)
       if(present(diff)) diff(ist) = res
       if(res < tol) then
         conv = conv + 1
@@ -365,10 +365,10 @@ subroutine X(eigensolver_cg2_new) (gr, st, h, tol, niter, converged, ik, diff, v
       end do
 
       if(ist > 1) &
-           call X(states_gram_schmidt)(gr%m, ist - 1, dim, st%X(psi)(:, :, :, ik), sd, normalize = .false., mask = orthogonal)
+           call X(states_gram_schmidt)(gr%mesh, ist - 1, dim, st%X(psi)(:, :, :, ik), sd, normalize = .false., mask = orthogonal)
 
       ! Get conjugate-gradient vector
-      dot = X(mf_nrm2)(gr%m, dim, sd)**2
+      dot = X(mf_nrm2)(gr%mesh, dim, sd)**2
       gamma = dot/mu
       mu    = dot
 
@@ -378,7 +378,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, h, tol, niter, converged, ik, diff, v
         end do
       end do
 
-      dump = X(mf_dotp)(gr%m, dim, psi, cg)
+      dump = X(mf_dotp)(gr%mesh, dim, psi, cg)
 
       do idim = 1, st%d%dim
         do ip = 1, NP
@@ -386,7 +386,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, h, tol, niter, converged, ik, diff, v
         end do
       end do
 
-      dump = X(mf_nrm2)(gr%m, dim, cgp)
+      dump = X(mf_nrm2)(gr%mesh, dim, cgp)
 
       do idim = 1, st%d%dim
         call lalg_scal(NP, M_ONE/dump, cgp(:, idim))
@@ -396,8 +396,8 @@ subroutine X(eigensolver_cg2_new) (gr, st, h, tol, niter, converged, ik, diff, v
 
       niter = niter + 1
 
-      alpha = -lambda + X(mf_dotp)(gr%m, dim, cgp, hcgp)
-      beta  = M_TWO*X(mf_dotp)(gr%m, dim, cgp, phi)
+      alpha = -lambda + X(mf_dotp)(gr%mesh, dim, cgp, hcgp)
+      beta  = M_TWO*X(mf_dotp)(gr%mesh, dim, cgp, phi)
       theta = M_HALF*atan(-beta/alpha)
       ctheta = cos(theta)
       stheta = sin(theta)

@@ -179,7 +179,7 @@ contains
     if(this%solver%solver == LS_MULTIGRID .or. preconditioner_is_multigrid(this%solver%pre)) then
       if(.not. associated(sys%gr%mgrid)) then
         ALLOCATE(sys%gr%mgrid, 1)
-        call multigrid_init(sys%gr%mgrid, sys%geo, sys%gr%cv, sys%gr%m, sys%gr%der, sys%gr%stencil)
+        call multigrid_init(sys%gr%mgrid, sys%geo, sys%gr%cv, sys%gr%mesh, sys%gr%der, sys%gr%stencil)
       end if
       call hamiltonian_mg_init(h, sys%gr)
     end if
@@ -191,7 +191,7 @@ contains
        call scf_tol_init(this%scftol, prefix) ! read from input
     endif
 
-    if(this%add_fxc) call sternheimer_build_fxc(this, sys%gr%m, sys%st, sys%ks) 
+    if(this%add_fxc) call sternheimer_build_fxc(this, sys%gr%mesh, sys%st, sys%ks) 
 
   end subroutine sternheimer_init
 

@@ -63,7 +63,7 @@ subroutine X(eigensolver_evolution) (gr, st, h, tol, niter, converged, ik, diff,
     ! [Comp. Mat. Science 34, 188 (2005)]
     do i = 1, st%nst
       do j = i, st%nst
-        m(i, j) = X(mf_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, i, ik), st%X(psi)(:, :, j, ik) )
+        m(i, j) = X(mf_dotp)(gr%mesh, st%d%dim, st%X(psi)(:, :, i, ik), st%X(psi)(:, :, j, ik) )
       end do
     end do
     call lalg_eigensolve(st%nst, m, c, eig)
@@ -71,7 +71,7 @@ subroutine X(eigensolver_evolution) (gr, st, h, tol, niter, converged, ik, diff,
       c(:, i) = c(:, i) / sqrt(eig(i))
     end do
     ! Internally the BLAS does the Winograd-Strassen algorithm?
-    call lalg_gemm(gr%m%np_part * st%d%dim, st%nst, st%nst, R_TOTYPE(M_ONE), &
+    call lalg_gemm(gr%mesh%np_part * st%d%dim, st%nst, st%nst, R_TOTYPE(M_ONE), &
          st%X(psi)(:, :, :, ik), c, R_TOTYPE(M_ZERO), phi)
     do i = 1, st%nst
       st%X(psi)(:, :, i, ik) = phi(:, :, st%nst -i + 1)
@@ -80,8 +80,8 @@ subroutine X(eigensolver_evolution) (gr, st, h, tol, niter, converged, ik, diff,
     ! Get the eigenvalues and the residues.
     do ist = conv + 1, st%nst
       call X(hpsi)(h, gr, st%X(psi)(:, :, ist, ik), hpsi, ist, ik)
-      st%eigenval(ist, ik) = X(mf_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), hpsi)
-      diff(ist) = X(states_residue)(gr%m, st%d%dim, hpsi, st%eigenval(ist, ik), st%X(psi)(:, :, ist, ik))
+      st%eigenval(ist, ik) = X(mf_dotp)(gr%mesh, st%d%dim, st%X(psi)(:, :, ist, ik), hpsi)
+      diff(ist) = X(states_residue)(gr%mesh, st%d%dim, hpsi, st%eigenval(ist, ik), st%X(psi)(:, :, ist, ik))
     end do
 
     ! Reordering.... (maybe this is unnecessary since the orthonormalization already orders them...)

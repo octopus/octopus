@@ -53,12 +53,12 @@ subroutine X(eigensolver_mg) (gr, st, h, tol, niter, converged, ik, diff)
 
       cc(ist, ist) = M_ONE
       do ist2 = 1, ist - 1
-        cc(ist, ist2) = X(mf_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), st%X(psi)(:, :, ist2, ik))
+        cc(ist, ist2) = X(mf_dotp)(gr%mesh, st%d%dim, st%X(psi)(:, :, ist, ik), st%X(psi)(:, :, ist2, ik))
       end do
 
     end do
 
-    call X(coordinate_relaxation)(gr, gr%m, h, st%nst, 10, ik, st%X(psi)(:, :, :, ik), aa, cc)
+    call X(coordinate_relaxation)(gr, gr%mesh, h, st%nst, 10, ik, st%X(psi)(:, :, :, ik), aa, cc)
 
     ! normalize
     do ist = 1, st%nst      

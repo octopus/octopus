@@ -100,7 +100,7 @@ contains
     subroutine init_()
 
       call push_sub('phonons.phonons_run')
-      call states_allocate_wfns(sys%st, sys%gr%m)
+      call states_allocate_wfns(sys%st, sys%gr%mesh)
 
     end subroutine init_
 
@@ -131,7 +131,7 @@ contains
     integer :: i, j, alpha, beta
     FLOAT, allocatable :: forces(:,:), forces0(:,:)
 
-    m   => gr%m
+    m   => gr%mesh
 
     call scf_init(gr, geo, scf, st, h)
     ALLOCATE(forces0(geo%natoms, 3), geo%natoms*3)

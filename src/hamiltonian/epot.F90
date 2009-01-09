@@ -176,12 +176,12 @@ contains
         call write_info(1)
 
         ALLOCATE(ep%Vclassical(NP), NP)
-        call epot_generate_classical(ep, gr%m, geo)
+        call epot_generate_classical(ep, gr%mesh, geo)
       end if
     end if
 
     ! lasers
-    call laser_init(ep%no_lasers, ep%lasers, gr%m)
+    call laser_init(ep%no_lasers, ep%lasers, gr%mesh)
 
     ! No more "UserDefinedTDPotential" from this version on.
     call obsolete_variable('UserDefinedTDPotential', 'TDExternalFields')
@@ -208,7 +208,7 @@ contains
       ! Compute the scalar potential
       ALLOCATE(ep%v_static(NP), NP)
       do i = 1, NP
-        ep%v_static(i) = sum(gr%m%x(i,:)*ep%E_field(:))
+        ep%v_static(i) = sum(gr%mesh%x(i,:)*ep%E_field(:))
       end do
     end if
 
@@ -248,7 +248,7 @@ contains
       ALLOCATE(ep%A_static(NP, NDIM), NP*NDIM)
       ALLOCATE(x(NDIM), NDIM)
       do i = 1, NP
-        x(1:NDIM) = gr%m%x(i, 1:NDIM)
+        x(1:NDIM) = gr%mesh%x(i, 1:NDIM)
         select case (NDIM)
         case (2)
           ep%A_static(i, :) = (/x(2), -x(1)/)*ep%B_field(3)
@@ -445,7 +445,7 @@ contains
     call push_sub('epot.epot_generate')
 
     sb  => gr%sb
-    m   => gr%m
+    m   => gr%mesh
 
     time_ = M_ZERO
     if (present(time)) time_ = time
@@ -454,9 +454,9 @@ contains
     ep%vpsl = M_ZERO
     do ia = geo%atoms%start, geo%atoms%end
       if(st%nlcc) then
-        call epot_local_potential(ep, gr, gr%m, geo, geo%atom(ia), ep%vpsl, time_, st%rho_core)
+        call epot_local_potential(ep, gr, gr%mesh, geo, geo%atom(ia), ep%vpsl, time_, st%rho_core)
       else
-        call epot_local_potential(ep, gr, gr%m, geo, geo%atom(ia), ep%vpsl, time_)
+        call epot_local_potential(ep, gr, gr%mesh, geo, geo%atom(ia), ep%vpsl, time_)
       end if
     end do
 
@@ -484,7 +484,7 @@ contains
       if(.not. species_is_ps(atm%spec)) cycle
       ep%non_local = .true.
       call projector_end(ep%proj(ia))
-      call projector_init(ep%proj(ia), gr%m, sb, atm, st%d%dim, ep%reltype)
+      call projector_init(ep%proj(ia), gr%mesh, sb, atm, st%d%dim, ep%reltype)
       if(simul_box_is_periodic(sb) .or. associated(ep%a_static)) then
         call projector_init_phases(ep%proj(ia), st%d%nik, st%d%kpoints, vec_pot_var = ep%a_static)
       end if
@@ -710,9 +710,9 @@ contains
         do ist2 = 1, st%nst
           do idim = 1, st%d%dim
             if (ist .le. ist2) then
-              matrix(ist, ist2) = zmf_dotp(gr%m, st%zpsi(1:gr%m%np, idim, ist, ik), &
-                                  exp(- M_zI * (M_Pi / gr%sb%lsize(dir)) * gr%m%x(1:gr%m%np, dir)) * &
-                                  st%zpsi(1:gr%m%np, idim, ist2, ik))
+              matrix(ist, ist2) = zmf_dotp(gr%mesh, st%zpsi(1:gr%mesh%np, idim, ist, ik), &
+                                  exp(- M_zI * (M_Pi / gr%sb%lsize(dir)) * gr%mesh%x(1:gr%mesh%np, dir)) * &
+                                  st%zpsi(1:gr%mesh%np, idim, ist2, ik))
               ! factor of two removed from exp since actual lattice vector is 2 * lsize
               ! zmf_dotp conjugates the left argument
             else

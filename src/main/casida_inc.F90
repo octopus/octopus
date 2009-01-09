@@ -104,17 +104,17 @@ subroutine X(get_transition_densities) (cas, sys, trandens)
   R_TYPE, allocatable :: n0I(:)
   call push_sub('casida.get_transition_densities')
 
-  ALLOCATE(n0I(sys%gr%m%np), sys%gr%m%np)
+  ALLOCATE(n0I(sys%gr%mesh%np), sys%gr%mesh%np)
   n0I = M_ZERO
 
   do ia = 1, cas%n_pairs
     if(loct_isinstringlist(ia, trandens)) then
-      call X(transition_density) (cas, sys%st, sys%gr%m, ia, n0I)
+      call X(transition_density) (cas, sys%st, sys%gr%mesh, ia, n0I)
       write(intstr,'(i5)') ia
       write(intstr,'(i1)') len(trim(adjustl(intstr)))
       write(filename,'(a,i'//trim(intstr)//')') 'n0',ia
       call X(output_function)(sys%outp%how, "linear", trim(filename), &
-                              sys%gr%m, sys%gr%sb, n0I, M_ONE, ierr)
+                              sys%gr%mesh, sys%gr%sb, n0I, M_ONE, ierr)
     end if
   end do
 

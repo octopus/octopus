@@ -67,13 +67,13 @@ contains
     end if
 
     temp = M_ZERO
-    temp(1:NDIM) = (M_TWO*M_Pi)/(cf%n(1:NDIM)*gr%m%h(1:NDIM))
+    temp(1:NDIM) = (M_TWO*M_Pi)/(cf%n(1:NDIM)*gr%mesh%h(1:NDIM))
 
     call zcf_alloc_RS(cf)
     call zcf_alloc_FS(cf)
 
     do idim = 1, h%d%dim
-      call zmesh_to_cube(gr%m, psi(:, idim), cf)
+      call zmesh_to_cube(gr%mesh, psi(:, idim), cf)
       call zcf_RS2FS(cf)
 
       do iz = 1, cf%n(3)
@@ -90,7 +90,7 @@ contains
       end do
 
       call zcf_FS2RS(cf)
-      call zcube_to_mesh(gr%m, cf, psi(:, idim))
+      call zcube_to_mesh(gr%mesh, cf, psi(:, idim))
     end do
 
     call zcf_free_RS(cf)
@@ -135,7 +135,7 @@ contains
       select case(laser_kind(h%ep%lasers(i)))
       case(E_FIELD_ELECTRIC)
         ALLOCATE(pot(NP), NP)
-        call laser_potential(gr%sb, h%ep%lasers(i), gr%m, pot, t)
+        call laser_potential(gr%sb, h%ep%lasers(i), gr%mesh, pot, t)
         psi(1:NP, ik) = exp( factor * pot(1:NP) ) * psi(1:NP, ik) 
         deallocate(pot)
       case(E_FIELD_MAGNETIC, E_FIELD_VECTOR_POTENTIAL)

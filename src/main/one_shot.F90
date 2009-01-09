@@ -58,7 +58,7 @@ contains
     FLOAT :: E_tot, E_t, E_ext, E_Hartree, E_x, E_c
 
     ! load wave-functions
-    call states_allocate_wfns(sys%st, sys%gr%m)
+    call states_allocate_wfns(sys%st, sys%gr%mesh)
     call restart_read(trim(tmpdir)//'gs', sys%st, sys%gr, sys%geo, ierr)
     if(ierr.ne.0) then
       message(1) = "Could not load wave-functions"
@@ -66,7 +66,7 @@ contains
     end if
 
     ! generate density
-    call states_calc_dens(sys%st, sys%gr%m%np, sys%st%rho)
+    call states_calc_dens(sys%st, sys%gr%mesh%np, sys%st%rho)
 
     ! kinetic energy + local potential + Hartree + xc
     if(sys%st%wfs_type == M_REAL) then

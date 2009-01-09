@@ -131,9 +131,9 @@ contains
     ! Alocate wave-functions during time-propagation
     if(td%dynamics == EHRENFEST) then
       !complex wfs are required for ehrefenst
-      call states_allocate_wfns(st, gr%m, M_CMPLX)
+      call states_allocate_wfns(st, gr%mesh, M_CMPLX)
     else
-      call states_allocate_wfns(st, gr%m)
+      call states_allocate_wfns(st, gr%mesh)
     end if
 
     ! CP has to be initialized after wavefunction type is set
@@ -163,7 +163,7 @@ contains
       if(td%iter > 0) then
         call td_read_gauge_field()
       else
-        call gauge_field_init_vec_pot(h%ep%gfield, gr%m, gr%sb, st, td%dt)
+        call gauge_field_init_vec_pot(h%ep%gfield, gr%mesh, gr%sb, st, td%dt)
       end if
 
       gauge_force = gauge_field_get_force(h%ep%gfield, gr, geo, h%ep%proj, h%phase, st)
@@ -279,7 +279,7 @@ contains
       call td_write_iter(write_handler, gr, st, h, geo, td%kick, td%dt, i)
 
 #if !defined(DISABLE_PES)
-      call PES_doit(td%PESv, gr%m, st, ii, td%dt, h%ab_pot)
+      call PES_doit(td%PESv, gr%mesh, st, ii, td%dt, h%ab_pot)
 #endif
 
       ! write down data
@@ -389,9 +389,9 @@ contains
         do i = 1, 2
           do is = 1, st%d%nspin
             write(filename,'(a,i2.2,i3.3)') trim(tmpdir)//'td/vprev_', i, is
-            call dinput_function(trim(filename)//'.obf', gr%m, td%tr%v_old(1:NP, is, i), ierr)
+            call dinput_function(trim(filename)//'.obf', gr%mesh, td%tr%v_old(1:NP, is, i), ierr)
             ! If we do not succeed, try netcdf
-            if(ierr > 0) call dinput_function(trim(filename)//'.ncdf', gr%m, td%tr%v_old(1:NP, is, i), ierr)
+            if(ierr > 0) call dinput_function(trim(filename)//'.ncdf', gr%mesh, td%tr%v_old(1:NP, is, i), ierr)
             if(ierr > 0) then
               write(message(1), '(3a)') 'Unsuccessful read of "', trim(filename), '"'
               call write_fatal(1)
@@ -428,7 +428,7 @@ contains
         ! according to the settings in the input file the routine 
         ! overwrites orbitals that were read from restart/gs 
         if(loct_parse_isdef(check_inp('UserDefinedStates')).ne.0) then
-          call restart_read_user_def_orbitals(gr%m, st)
+          call restart_read_user_def_orbitals(gr%mesh, st)
         end if
 
         !%Variable TransformStates
@@ -466,7 +466,7 @@ contains
                 call loct_parse_block_cmplx(blk, ist-1, jst-1, rotation_matrix(ist, jst))
               end do
             end do
-            call rotate_states(gr%m, st, stin, rotation_matrix)
+            call rotate_states(gr%mesh, st, stin, rotation_matrix)
             deallocate(rotation_matrix)
             call states_end(stin)
           else
@@ -533,7 +533,7 @@ contains
         call MPI_Bcast(x, 1, MPI_FLOAT, 0, st%mpi_grp%comm, mpi_err)
       end if
 #endif
-      call hamiltonian_span(h, minval(gr%m%h(1:NDIM)), x)
+      call hamiltonian_span(h, minval(gr%mesh%h(1:NDIM)), x)
       call total_energy(h, gr, st, -1)
 
     end subroutine init_wfs
@@ -576,14 +576,14 @@ contains
           kick_function = M_ZERO
           do j = 1, k%n_multipoles
             do i = 1, NP
-              call mesh_r(gr%m, i, r, x = x)
+              call mesh_r(gr%mesh, i, r, x = x)
               call loct_ylm(1, x(1), x(2), x(3), k%l(j), k%m(j), ylm)
               kick_function(i) = kick_function(i) + k%weight(j) * (r**k%l(j)) * ylm 
             end do
           end do
         else
           do i = 1, NP
-            kick_function(i) = sum(gr%m%x(i, 1:NDIM)*k%pol(1:NDIM, k%pol_dir))
+            kick_function(i) = sum(gr%mesh%x(i, 1:NDIM)*k%pol(1:NDIM, k%pol_dir))
           end do
         end if
         
@@ -748,7 +748,7 @@ contains
           do is = 1, st%d%nspin
             write(filename,'(a6,i2.2,i3.3)') 'vprev_', i, is
             call doutput_function(restart_format, trim(tmpdir)//"td", &
-              filename, gr%m, gr%sb, td%tr%v_old(1:NP, is, i), M_ONE, ierr, is_tmp = .true.)
+              filename, gr%mesh, gr%sb, td%tr%v_old(1:NP, is, i), M_ONE, ierr, is_tmp = .true.)
             if(ierr.ne.0) then
               write(message(1), '(3a)') 'Unsuccessful write of "', trim(filename), '"'
               call write_fatal(1)

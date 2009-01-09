@@ -103,13 +103,13 @@ subroutine X(eigensolver_rmmdiis) (gr, st, h, pre, tol, niter, converged, ik, di
         ib = ib + 1
         if(conv(ist)) cycle
 
-        st%eigenval(ist, ik) = X(mf_dotp)(gr%m, st%d%dim, st%X(psi)(:,:, ist, ik) , residuals(:, :, ib))
+        st%eigenval(ist, ik) = X(mf_dotp)(gr%mesh, st%d%dim, st%X(psi)(:,:, ist, ik) , residuals(:, :, ib))
         
         do idim = 1, st%d%dim
           call lalg_axpy(NP, -st%eigenval(ist, ik), st%X(psi)(:, idim, ist, ik), residuals(:, idim, ib))
         end do
 
-        error = X(mf_nrm2)(gr%m, st%d%dim, residuals(:, :, ib))
+        error = X(mf_nrm2)(gr%mesh, st%d%dim, residuals(:, :, ib))
 
         if(error < tol) then
           num_in_block = num_in_block - 1
@@ -154,15 +154,15 @@ subroutine X(eigensolver_rmmdiis) (gr, st, h, pre, tol, niter, converged, ik, di
         end do
 
         ! the size of the correction
-        lambda(1, ib) = X(mf_dotp)(gr%m, st%d%dim, residuals(:, :, ib), resres(:, :, ib), reduce = .false.)
-        lambda(2, ib) = X(mf_dotp)(gr%m, st%d%dim, resres(:, :, ib), resres(:, :, ib), reduce = .false.)
+        lambda(1, ib) = X(mf_dotp)(gr%mesh, st%d%dim, residuals(:, :, ib), resres(:, :, ib), reduce = .false.)
+        lambda(2, ib) = X(mf_dotp)(gr%mesh, st%d%dim, resres(:, :, ib), resres(:, :, ib), reduce = .false.)
       end do
 
 #ifdef HAVE_MPI
-      if(gr%m%parallel_in_domains) then
+      if(gr%mesh%parallel_in_domains) then
         !reduce the two values together
         ALLOCATE(lambda_tmp(1:2, 1:blocksize), 2*blocksize) 
-        call MPI_Allreduce(lambda, lambda_tmp, 2*blocksize, R_MPITYPE, MPI_SUM, gr%m%vp%comm, mpi_err)
+        call MPI_Allreduce(lambda, lambda_tmp, 2*blocksize, R_MPITYPE, MPI_SUM, gr%mesh%vp%comm, mpi_err)
         lambda(1:2, 1:blocksize) = lambda_tmp(1:2, 1:blocksize)
         deallocate(lambda_tmp)
       end if
@@ -206,7 +206,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, h, pre, tol, niter, converged, ik, di
   end if
 #endif
 
-  call X(states_gram_schmidt_full)(st, st%nst, gr%m, st%d%dim, st%X(psi)(:, :, :, ik))
+  call X(states_gram_schmidt_full)(st, st%nst, gr%mesh, st%d%dim, st%X(psi)(:, :, :, ik))
 
   call pop_sub()
 

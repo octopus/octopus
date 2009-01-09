@@ -172,7 +172,7 @@ contains
 
 
     ! Allocate the wavefunctions of sys%st
-    call states_allocate_wfns(sys%st, sys%gr%m, M_CMPLX)
+    call states_allocate_wfns(sys%st, sys%gr%mesh, M_CMPLX)
 
 
     ! Read general information about how the OCT run will be made, from inp file.

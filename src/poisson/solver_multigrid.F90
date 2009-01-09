@@ -202,14 +202,14 @@ contains
     call push_sub('poisson_multigrid.poisson_multigrid_solver');
 
     ! correction for treating boundaries
-    ALLOCATE(vh_correction(gr%m%np), gr%m%np)
+    ALLOCATE(vh_correction(gr%mesh%np), gr%mesh%np)
 
     call gridhier_init(phi, gr%mgrid, add_points_for_boundaries=.true.)
     call gridhier_init(phi_ini, gr%mgrid, add_points_for_boundaries=.false.)
     call gridhier_init(tau, gr%mgrid, add_points_for_boundaries=.true.)
     call gridhier_init(err, gr%mgrid, add_points_for_boundaries=.true.)
 
-    call correct_rho(this%corrector, gr%m, rho, tau%level(0)%p, vh_correction)
+    call correct_rho(this%corrector, gr%mesh, rho, tau%level(0)%p, vh_correction)
     call lalg_scal(NP, -M_FOUR*M_PI, tau%level(0)%p)
 
     forall (ip = 1:NP) phi%level(0)%p(ip) = pot(ip) - vh_correction(ip)

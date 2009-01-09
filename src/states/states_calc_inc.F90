@@ -347,7 +347,7 @@ subroutine X(states_calc_momentum)(gr, st)
         ! since the expectation value of the momentum operator is real
         ! for square integrable wfns this integral should be purely imaginary 
         ! for complex wfns but real for real wfns (see case distinction below)
-        expect_val_p = X(mf_dotp)(gr%m, st%d%dim, &
+        expect_val_p = X(mf_dotp)(gr%mesh, st%d%dim, &
           st%X(psi)(1:NP, 1:st%d%dim, ist, ik), grad(1:NP, 1:st%d%dim, i))
 
         ! In the case of real wave functions we do not include the 
@@ -419,19 +419,19 @@ subroutine X(states_angular_momentum)(gr, phi, l, l2)
 #if defined(R_TREAL)
     l = M_ZERO
 #else
-    call X(f_angular_momentum)(gr%sb, gr%m, gr%der, phi(:, idim), lpsi)
+    call X(f_angular_momentum)(gr%sb, gr%mesh, gr%der, phi(:, idim), lpsi)
     select case(NDIM)
     case(3)
-      l(1) = l(1) + X(mf_dotp)(gr%m, phi(:, idim), lpsi(:, 1))
-      l(2) = l(2) + X(mf_dotp)(gr%m, phi(:, idim), lpsi(:, 2))
-      l(3) = l(3) + X(mf_dotp)(gr%m, phi(:, idim), lpsi(:, 3))
+      l(1) = l(1) + X(mf_dotp)(gr%mesh, phi(:, idim), lpsi(:, 1))
+      l(2) = l(2) + X(mf_dotp)(gr%mesh, phi(:, idim), lpsi(:, 2))
+      l(3) = l(3) + X(mf_dotp)(gr%mesh, phi(:, idim), lpsi(:, 3))
     case(2)
-      l(3) = l(3) + X(mf_dotp)(gr%m, phi(:, idim), lpsi(:, 1))
+      l(3) = l(3) + X(mf_dotp)(gr%mesh, phi(:, idim), lpsi(:, 1))
     end select
 #endif
     if(present(l2)) then
-      call X(f_l2)(gr%sb, gr%m, gr%der, phi(:, idim), lpsi(:, 1))
-      l2 = l2 + X(mf_dotp)(gr%m, phi(:, idim), lpsi(:, 1))
+      call X(f_l2)(gr%sb, gr%mesh, gr%der, phi(:, idim), lpsi(:, 1))
+      l2 = l2 + X(mf_dotp)(gr%mesh, phi(:, idim), lpsi(:, 1))
     end if
   end do
 

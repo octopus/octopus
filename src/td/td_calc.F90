@@ -83,32 +83,32 @@ subroutine td_calc_tacc(gr, geo, st, h, acc, t)
       xzpsi = M_z0
       do k = 1, NP
         do j = 1, NDIM
-          xzpsi(k, 1:st%d%dim, j) = gr%m%x(k, j)*st%zpsi(k, 1:st%d%dim, ist, ik)
+          xzpsi(k, 1:st%d%dim, j) = gr%mesh%x(k, j)*st%zpsi(k, 1:st%d%dim, ist, ik)
         end do
       end do
 
       do j = 1, NDIM
         vnl_xzpsi = M_z0
-        call zvnlpsi(h, gr%m, xzpsi(:,:, j), vnl_xzpsi(:,:), ik)
+        call zvnlpsi(h, gr%mesh, xzpsi(:,:, j), vnl_xzpsi(:,:), ik)
 
         do idim = 1, st%d%dim
-          x(j) = x(j) - 2*st%occ(ist, ik)*zmf_dotp(gr%m, hzpsi(1:NP, idim), vnl_xzpsi(:, idim) )
+          x(j) = x(j) - 2*st%occ(ist, ik)*zmf_dotp(gr%mesh, hzpsi(1:NP, idim), vnl_xzpsi(:, idim) )
         end do
       end do
 
       xzpsi = M_z0
       do k = 1, NP
         do j = 1, NDIM
-          xzpsi(k, 1:st%d%dim, j) = gr%m%x(k, j)*hzpsi(k, 1:st%d%dim)
+          xzpsi(k, 1:st%d%dim, j) = gr%mesh%x(k, j)*hzpsi(k, 1:st%d%dim)
         end do
       end do
 
       do j = 1, NDIM
         vnl_xzpsi = M_z0
-        call zvnlpsi(h, gr%m, xzpsi(:,:, j), vnl_xzpsi(:,:), ik)
+        call zvnlpsi(h, gr%mesh, xzpsi(:,:, j), vnl_xzpsi(:,:), ik)
         do idim = 1, st%d%dim
           x(j) = x(j) + 2*st%occ(ist, ik)* &
-            zmf_dotp(gr%m, st%zpsi(1:NP, idim, ist, ik), vnl_xzpsi(:, idim) )
+            zmf_dotp(gr%mesh, st%zpsi(1:NP, idim, ist, ik), vnl_xzpsi(:, idim) )
         end do
       end do
       deallocate(xzpsi, vnl_xzpsi)

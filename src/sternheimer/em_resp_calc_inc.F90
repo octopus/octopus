@@ -372,10 +372,10 @@ subroutine X(lr_calc_beta) (sh, sys, h, em_lr, dipole, beta, kdotp_lr, kdotp_em_
 
   call profiling_in(beta_prof, "CALC_BETA")
 
-  np   =  sys%gr%m%np
+  np   =  sys%gr%mesh%np
   ndim =  sys%gr%sb%dim
   st   => sys%st
-  mesh => sys%gr%m
+  mesh => sys%gr%mesh
 
   write(message(1), '(a)') 'Info: Calculating hyperpolarizability tensor'
   call write_info(1)

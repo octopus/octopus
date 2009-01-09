@@ -65,7 +65,7 @@ contains
     call push_sub('gs.ground_state_run')
 
     call states_distribute_nodes(sys%st, sys%mc)
-    call states_allocate_wfns(sys%st, sys%gr%m)
+    call states_allocate_wfns(sys%st, sys%gr%mesh)
 
     ! Read free states for ground-state open-boundary calculation.
     if(sys%gr%sb%open_boundaries) then
@@ -100,14 +100,14 @@ contains
         sys%st%zpsi(1:sys%NP, :, :, :) = sys%st%zphi(1:sys%NP, :, :, :)
       else
         ! Randomly generate the initial wave-functions.
-        call states_generate_random(sys%st, sys%gr%m)
-        call states_orthogonalize(sys%st, sys%gr%m)
+        call states_generate_random(sys%st, sys%gr%mesh)
+        call states_orthogonalize(sys%st, sys%gr%mesh)
       end if
 
       ! We do not compute the density from the random wave-functions. 
       ! Instead, we try to get a better guess
 
-      call guess_density(sys%gr%m, sys%gr%sb, sys%geo, sys%st%qtot, sys%st%d%nspin, &
+      call guess_density(sys%gr%mesh, sys%gr%sb, sys%geo, sys%st%qtot, sys%st%d%nspin, &
         sys%st%d%spin_channels, sys%st%rho)
 
       ! setup Hamiltonian (we do not call system_h_setup here because we do not want to
@@ -115,7 +115,7 @@ contains
       message(1) = 'Info: Setting up Hamiltonian.'
       call write_info(1)
       call v_ks_calc(sys%gr, sys%ks, h, sys%st, calc_eigenval=.true.) ! get potentials
-      call states_fermi(sys%st, sys%gr%m)                             ! occupations
+      call states_fermi(sys%st, sys%gr%mesh)                             ! occupations
       call total_energy(h, sys%gr, sys%st, -1)         ! total energy
 
       ! The initial LCAO calculation is done by default if we have pseudopotentials.
@@ -161,7 +161,7 @@ contains
           call lcao_end(lcao)
 
           !Just populate again the states, so that the eigenvalues are properly written
-          call states_fermi(sys%st, sys%gr%m)
+          call states_fermi(sys%st, sys%gr%mesh)
           call states_write_eigenvalues(stdout, sys%st%nst, sys%st, sys%gr%sb)
 
           if (lcao_start == LCAO_START_FULL) then

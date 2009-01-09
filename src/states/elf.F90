@@ -201,10 +201,10 @@ contains
     end if
  
     if (st%wfs_type == M_REAL) then
-      call dcf_new(gr%m%idx%ll, dcf_tmp)
+      call dcf_new(gr%mesh%idx%ll, dcf_tmp)
       call dcf_fft_init(dcf_tmp, gr%sb)
     else
-      call zcf_new(gr%m%idx%ll, zcf_tmp)
+      call zcf_new(gr%mesh%idx%ll, zcf_tmp)
       call zcf_fft_init(zcf_tmp, gr%sb)
     end if
 
@@ -223,16 +223,16 @@ contains
           do idim = 1, st%d%dim
             
             if (st%wfs_type == M_REAL) then
-              call dmf2mf_RS2FS(gr%m, st%dpsi(:, idim, ist, ik), psi_fs(:), dcf_tmp)
+              call dmf2mf_RS2FS(gr%mesh, st%dpsi(:, idim, ist, ik), psi_fs(:), dcf_tmp)
               call zderivatives_grad(gr%der, psi_fs(:), gpsi)
               do i = 1, NDIM
-                gpsi(:,i) = gpsi(:,i) * gr%m%h(i)**2 * real(dcf_tmp%n(i), REAL_PRECISION) / (M_TWO*M_PI)
+                gpsi(:,i) = gpsi(:,i) * gr%mesh%h(i)**2 * real(dcf_tmp%n(i), REAL_PRECISION) / (M_TWO*M_PI)
               end do
             else
-              call zmf2mf_RS2FS(gr%m, st%zpsi(:, idim, ist, ik), psi_fs(:), zcf_tmp)
+              call zmf2mf_RS2FS(gr%mesh, st%zpsi(:, idim, ist, ik), psi_fs(:), zcf_tmp)
               call zderivatives_grad(gr%der, psi_fs(:), gpsi)
               do i = 1, NDIM
-                gpsi(:,i) = gpsi(:,i) * gr%m%h(i)**2 * real(zcf_tmp%n(i), REAL_PRECISION) / (M_TWO*M_PI)
+                gpsi(:,i) = gpsi(:,i) * gr%mesh%h(i)**2 * real(zcf_tmp%n(i), REAL_PRECISION) / (M_TWO*M_PI)
               end do
             end if
 

@@ -158,7 +158,7 @@ contains
 
           do sigma = 1, em_vars%nsigma
             call lr_init(em_vars%lr(dir, sigma, ifactor))
-            call lr_allocate(em_vars%lr(dir, sigma, ifactor), sys%st, sys%gr%m)
+            call lr_allocate(em_vars%lr(dir, sigma, ifactor), sys%st, sys%gr%mesh)
           end do
 
           ierr = 0
@@ -181,8 +181,8 @@ contains
                  em_vars%freq_factor(ifactor)*em_vars%omega(iomega) == & 
                  em_vars%freq_factor(ifactor-1)*em_vars%omega(iomega) ) then
               
-              call lr_copy(sys%st, sys%gr%m, em_vars%lr(dir, 1, ifactor-1), em_vars%lr(dir, 1, ifactor))
-              call lr_copy(sys%st, sys%gr%m, em_vars%lr(dir, 2, ifactor-1), em_vars%lr(dir, 2, ifactor))
+              call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(dir, 1, ifactor-1), em_vars%lr(dir, 1, ifactor))
+              call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(dir, 2, ifactor-1), em_vars%lr(dir, 2, ifactor))
               
               have_to_calculate = .false.
               
@@ -192,8 +192,8 @@ contains
             if( have_to_calculate .and. & 
                  em_vars%freq_factor(ifactor) == -em_vars%freq_factor(ifactor-1) ) then 
               
-              call lr_copy(sys%st, sys%gr%m, em_vars%lr(dir, 1, ifactor-1), em_vars%lr(dir, 2, ifactor))
-              call lr_copy(sys%st, sys%gr%m, em_vars%lr(dir, 2, ifactor-1), em_vars%lr(dir, 1, ifactor))
+              call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(dir, 1, ifactor-1), em_vars%lr(dir, 2, ifactor))
+              call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(dir, 2, ifactor-1), em_vars%lr(dir, 1, ifactor))
               
               have_to_calculate = .false.
               
@@ -507,7 +507,7 @@ contains
     call push_sub('em_resp.read_wfs')
 
     !check how many wfs we have
-    call states_look(trim(restart_dir)//'gs', gr%m%mpi_grp, kpoints, dim, nst, ierr)
+    call states_look(trim(restart_dir)//'gs', gr%mesh%mpi_grp, kpoints, dim, nst, ierr)
 
     if(ierr.ne.0) then
       message(1) = 'Could not properly read wave-functions from "'//trim(restart_dir)//'gs".'
@@ -519,9 +519,9 @@ contains
     deallocate(st%eigenval, st%occ)
 
     if ( complex_wfs ) then 
-      call states_allocate_wfns(st, gr%m, M_CMPLX)
+      call states_allocate_wfns(st, gr%mesh, M_CMPLX)
     else 
-      call states_allocate_wfns(st, gr%m, M_REAL)
+      call states_allocate_wfns(st, gr%mesh, M_REAL)
     end if
 
     ALLOCATE(st%eigenval(st%nst, st%d%nik), st%nst*st%d%nik)
@@ -667,10 +667,10 @@ contains
 
                 if(wfs_are_complex(st)) then
                   proj = &
-                       zmf_dotp(gr%m, st%d%dim, st%zpsi(:, :, ist, ik), em_vars%lr(dir, sigma, ifactor)%zdl_psi(:, :, ivar, ik))
+                       zmf_dotp(gr%mesh, st%d%dim, st%zpsi(:, :, ist, ik), em_vars%lr(dir, sigma, ifactor)%zdl_psi(:, :, ivar, ik))
                 else
                   proj = &
-                       dmf_dotp(gr%m, st%d%dim, st%dpsi(:, :, ist, ik), em_vars%lr(dir, sigma, ifactor)%ddl_psi(:, :, ivar, ik))
+                       dmf_dotp(gr%mesh, st%d%dim, st%dpsi(:, :, ist, ik), em_vars%lr(dir, sigma, ifactor)%ddl_psi(:, :, ivar, ik))
                 end if
                   
                 if( sigma == em_vars%nsigma .and. ivar == em_vars%lr(dir, 1, 1)%nst) then 

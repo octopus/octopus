@@ -174,7 +174,7 @@ subroutine X(oep_x) (gr, st, is, oep, ex, exx_coef)
 
           ex = ex - exx_coef* M_HALF * r * &
               oep%sfact * oep%socc*st%occ(ist, is) * oep%socc*st%occ(jst, is) * &
-              R_REAL(X(mf_dotp)(gr%m, st%X(psi)(1:NP, 1, jst, is), wf_ist(:)*F_ij(:)))
+              R_REAL(X(mf_dotp)(gr%mesh, st%X(psi)(1:NP, 1, jst, is), wf_ist(:)*F_ij(:)))
         end do
 
         if(st%node(ist) == st%mpi_grp%rank) then

@@ -62,7 +62,7 @@ subroutine X(subspace_diag)(gr, st, h, ik, diff)
 
       call batch_init(psib, h%d%dim, ist, st%nst, st%X(psi)(:, :, ist:st%nst, ik))
 
-      call X(mf_dotp_batch)(gr%m, hpsib, psib, h_subspace)
+      call X(mf_dotp_batch)(gr%mesh, hpsib, psib, h_subspace)
 
       call batch_end(hpsib)
       call batch_end(psib)
@@ -80,13 +80,13 @@ subroutine X(subspace_diag)(gr, st, h, ik, diff)
 
     ! Calculate the new eigenfunctions as a linear combination of the
     ! old ones.
-    call X(states_linear_combination)(st, gr%m, vec, st%X(psi)(:, :, :, ik))
+    call X(states_linear_combination)(st, gr%mesh, vec, st%X(psi)(:, :, :, ik))
 
     ! Renormalize.
     do ist = st%st_start, st%st_end
-      nrm2 = X(mf_nrm2)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik))
+      nrm2 = X(mf_nrm2)(gr%mesh, st%d%dim, st%X(psi)(:, :, ist, ik))
       do idim = 1, st%d%dim
-        call lalg_scal(gr%m%np, M_ONE/nrm2, st%X(psi)(:, idim, ist, ik))
+        call lalg_scal(gr%mesh%np, M_ONE/nrm2, st%X(psi)(:, idim, ist, ik))
       end do
     end do
 
@@ -105,7 +105,7 @@ subroutine X(subspace_diag)(gr, st, h, ik, diff)
         call batch_end(hpsib)
         
         do ist2 = ist, ist + size - 1
-          diff(ist2) = X(states_residue)(gr%m, st%d%dim, f(:, :, ist2 - ist + 1), st%eigenval(ist2, ik), st%X(psi)(:, :, ist2, ik))
+          diff(ist2) = X(states_residue)(gr%mesh, st%d%dim, f(:, :, ist2 - ist + 1), st%eigenval(ist2, ik), st%X(psi)(:, :, ist2, ik))
         end do
       end do
 
@@ -153,7 +153,7 @@ subroutine X(subspace_diag_par_states)(gr, st, h, ik, diff)
   do i = st%st_start, st%st_end
     call X(hpsi)(h, gr, st%X(psi)(:, :, i, ik), f(:, :, i), i, ik)
   end do
-  call states_blockt_mul(gr%m, st, st%st_start, st%st_end, st%st_start, st%st_end, &
+  call states_blockt_mul(gr%mesh, st, st%st_start, st%st_end, st%st_start, st%st_end, &
        st%X(psi)(:, :, :, ik), f, h_subspace, symm=.true.)
 
   ! Diagonalize the hamiltonian in the subspace.
@@ -162,12 +162,12 @@ subroutine X(subspace_diag_par_states)(gr, st, h, ik, diff)
   ! The new states are the given by the eigenvectors of the matrix.
   f(1:NP, 1:st%d%dim, st%st_start:st%st_end) = st%X(psi)(1:NP, 1:st%d%dim, st%st_start:st%st_end, ik)
 
-  call states_block_matr_mul(gr%m, st, st%st_start, st%st_end, st%st_start, st%st_end, &
+  call states_block_matr_mul(gr%mesh, st, st%st_start, st%st_end, st%st_start, st%st_end, &
        f, vec, st%X(psi)(:, :, :, ik))
 
   ! Renormalize.
   do i = st%st_start, st%st_end
-    nrm2 = X(mf_nrm2)(gr%m, st%d%dim, st%X(psi)(:, :, i, ik))
+    nrm2 = X(mf_nrm2)(gr%mesh, st%d%dim, st%X(psi)(:, :, i, ik))
     st%X(psi)(1:NP, 1:st%d%dim, i, ik) = st%X(psi)(1:NP, 1:st%d%dim, i, ik)/nrm2
   end do
 
@@ -175,7 +175,7 @@ subroutine X(subspace_diag_par_states)(gr, st, h, ik, diff)
   if(present(diff)) then 
     do i = st%st_start, st%st_end
       call X(Hpsi)(h, gr, st%X(psi)(:, :, i, ik) , f(:, :, st%st_start), i, ik)
-      diff(i) = X(states_residue)(gr%m, st%d%dim, f(:, :, st%st_start), st%eigenval(i, ik), &
+      diff(i) = X(states_residue)(gr%mesh, st%d%dim, f(:, :, st%st_start), st%eigenval(i, ik), &
            st%X(psi)(:, :, i, ik))
     end do
 

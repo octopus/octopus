@@ -236,7 +236,7 @@ contains
     mapping_p  => ob%sp2full_map
 
     ! For the dot product passed to BiCG routine.
-    call mesh_init_mesh_aux(gr%m)
+    call mesh_init_mesh_aux(gr%mesh)
 
     m   = timestep-1
     inp = intf_np
@@ -375,11 +375,11 @@ contains
     CMPLX, allocatable :: tmp(:, :)
     call push_sub('ob_rti.h_eff_backward')
     
-    ALLOCATE(tmp(gr_p%m%np_part, 1),gr_p%m%np_part)
+    ALLOCATE(tmp(gr_p%mesh%np_part, 1),gr_p%mesh%np_part)
     ! Propagate backward.
-    call lalg_copy(gr_p%m%np, x, tmp(:, 1))
+    call lalg_copy(gr_p%mesh%np, x, tmp(:, 1))
     call apply_h_eff(h_p, gr_p, mem_p, intf_p, M_ONE, dt_p, t_p, ist_p, ik_p, tmp)
-    call lalg_copy(gr_p%m%np, tmp(:, 1), y)
+    call lalg_copy(gr_p%mesh%np, tmp(:, 1), y)
 
     deallocate(tmp)
     call pop_sub()
@@ -396,11 +396,11 @@ contains
     CMPLX, allocatable :: tmp(:, :)
     call push_sub('ob_rti.h_eff_backward_t')
     
-    ALLOCATE(tmp(gr_p%m%np_part, 1),gr_p%m%np_part)
+    ALLOCATE(tmp(gr_p%mesh%np_part, 1),gr_p%mesh%np_part)
     ! Propagate backward.
-    call lalg_copy(gr_p%m%np, x, tmp(:, 1))
+    call lalg_copy(gr_p%mesh%np, x, tmp(:, 1))
     call apply_h_eff(h_p, gr_p, mem_p, intf_p, M_ONE, dt_p, t_p, ist_p, ik_p, tmp, .true.)
-    call lalg_copy(gr_p%m%np, tmp(:, 1), y)
+    call lalg_copy(gr_p%mesh%np, tmp(:, 1), y)
 
     deallocate(tmp)
     call pop_sub()
@@ -417,11 +417,11 @@ contains
     CMPLX, allocatable :: tmp(:, :)
     call push_sub('ob_rti.h_eff_backward_dagger')
     
-    ALLOCATE(tmp(gr_p%m%np_part, 1),gr_p%m%np_part)
+    ALLOCATE(tmp(gr_p%mesh%np_part, 1),gr_p%mesh%np_part)
     ! Propagate backward.
-    call lalg_copy(gr_p%m%np, x, tmp(:, 1))
+    call lalg_copy(gr_p%mesh%np, x, tmp(:, 1))
     call apply_h_eff_dagger(h_p, gr_p, mem_p, intf_p, dt_p, t_p, ist_p, ik_p, tmp)
-    call lalg_copy(gr_p%m%np, tmp(:, 1), y)
+    call lalg_copy(gr_p%mesh%np, tmp(:, 1), y)
 
     deallocate(tmp)
     call pop_sub()
@@ -438,11 +438,11 @@ contains
     CMPLX, allocatable :: tmp(:, :)
     call push_sub('ob_rti.h_eff_backward_sp')
     
-    ALLOCATE(tmp(gr_p%m%np_part, 1),gr_p%m%np_part)
+    ALLOCATE(tmp(gr_p%mesh%np_part, 1),gr_p%mesh%np_part)
     ! Propagate backward.
-    call lalg_copy(gr_p%m%np, x, tmp(:, 1))
+    call lalg_copy(gr_p%mesh%np, x, tmp(:, 1))
     call apply_h_eff_sp(h_p, gr_p, sp_mem_p, intf_p, M_ONE, dt_p, t_p, ist_p, ik_p, tmp, mem_s_p, mapping_p)
-    call lalg_copy(gr_p%m%np, tmp(:, 1), y)
+    call lalg_copy(gr_p%mesh%np, tmp(:, 1), y)
 
     deallocate(tmp)
     call pop_sub()
@@ -459,11 +459,11 @@ contains
     CMPLX, allocatable :: tmp(:, :)
     call push_sub('ob_rti.h_eff_backward_sp_t')
     
-    ALLOCATE(tmp(gr_p%m%np_part, 1),gr_p%m%np_part)
+    ALLOCATE(tmp(gr_p%mesh%np_part, 1),gr_p%mesh%np_part)
     ! Propagate backward.
-    call lalg_copy(gr_p%m%np, x, tmp(:, 1))
+    call lalg_copy(gr_p%mesh%np, x, tmp(:, 1))
     call apply_h_eff_sp(h_p, gr_p, sp_mem_p, intf_p, M_ONE, dt_p, t_p, ist_p, ik_p, tmp, mem_s_p, mapping_p, .true.)
-    call lalg_copy(gr_p%m%np, tmp(:, 1), y)
+    call lalg_copy(gr_p%mesh%np, tmp(:, 1), y)
 
     deallocate(tmp)
     call pop_sub()
@@ -717,7 +717,7 @@ contains
     integer            :: np
 
     call push_sub('ob_rti.preconditioner')
-    np = gr_p%m%np
+    np = gr_p%mesh%np
 
     y(:) = x(:) ! no preconditioner
 !     AL LOCATE(diag(np, 1), np)

@@ -39,12 +39,12 @@ subroutine X(cpmd_propagate)(this, gr, h, st, iter, dt)
 
   call profiling_in(cpmd_prop, "CP_PROPAGATION")
 
-  np = gr%m%np
+  np = gr%mesh%np
   ddim = st%d%dim
 
   ALLOCATE(xx(1:st%nst, 1:st%nst), st%nst**2)
-  ALLOCATE(hpsi(1:gr%m%np, 1:st%d%dim), gr%m%np*st%d%dim)
-  ALLOCATE(psi(1:gr%m%np, 1:st%d%dim), gr%m%np*st%d%dim)
+  ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim), gr%mesh%np*st%d%dim)
+  ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim), gr%mesh%np*st%d%dim)
 
   this%ecorr = M_ZERO
 
@@ -70,7 +70,7 @@ subroutine X(cpmd_propagate)(this, gr, h, st, iter, dt)
 
         ! calculate the velocity and the fictitious electronic energy
         hpsi(1:np, 1:ddim) = abs(psi(1:np, 1:ddim) - this%X(psi2)(1:np, 1:ddim, ist1, ik))/(M_TWO*dt) !(4.7)
-        this%ecorr = this%ecorr + this%emass*X(mf_nrm2)(gr%m, ddim, hpsi)**2 !(2.11)
+        this%ecorr = this%ecorr + this%emass*X(mf_nrm2)(gr%mesh, ddim, hpsi)**2 !(2.11)
 
         do idim = 1, ddim
           ! store the old wavefunctions
@@ -85,14 +85,14 @@ subroutine X(cpmd_propagate)(this, gr, h, st, iter, dt)
       call calc_xx
 
       ! psi <= psi + X * psi2
-      call states_block_matr_mul_add(gr%m, st, one, st%st_start, st%st_end, st%st_start, st%st_end, &
+      call states_block_matr_mul_add(gr%mesh, st, one, st%st_start, st%st_end, st%st_start, st%st_end, &
         this%X(psi2)(:, :, :, ik), xx, one, st%X(psi)(:, :, :, ik)) !(4.3)
 
       call profiling_out(cpmd_orth)
 
     case(VEL_VERLET)
 
-      ALLOCATE(oldpsi(1:gr%m%np_part, 1:st%d%dim, st%st_start:st%st_end), gr%m%np_part*st%d%dim*st%lnst)
+      ALLOCATE(oldpsi(1:gr%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end), gr%mesh%np_part*st%d%dim*st%lnst)
 
       do ist1 = st%st_start, st%st_end
         
@@ -119,11 +119,11 @@ subroutine X(cpmd_propagate)(this, gr, h, st, iter, dt)
       call calc_xx
 
       ! psi <= psi + X * oldpsi
-      call states_block_matr_mul_add(gr%m, st, one, st%st_start, st%st_end, st%st_start, st%st_end, &
+      call states_block_matr_mul_add(gr%mesh, st, one, st%st_start, st%st_end, st%st_start, st%st_end, &
         oldpsi, xx, one, st%X(psi)(:, :, :, ik)) !(4.3)
 
       ! psi2 <= psi2 + 1/dt * X * oldpsi
-      call states_block_matr_mul_add(gr%m, st, one/dt, st%st_start, st%st_end, st%st_start, st%st_end, &
+      call states_block_matr_mul_add(gr%mesh, st, one/dt, st%st_start, st%st_end, st%st_start, st%st_end, &
         oldpsi, xx, one, this%X(psi2)(:, :, :, ik)) !(4.9) 1st part
 
       call profiling_out(cpmd_orth)
@@ -157,9 +157,9 @@ contains
       end do
     end do
 
-    call states_blockt_mul(gr%m, st, st%st_start, st%st_end, st%st_start, st%st_end, &
+    call states_blockt_mul(gr%mesh, st, st%st_start, st%st_end, st%st_start, st%st_end, &
       st%X(psi)(:, :, :, ik), st%X(psi)(:, :, :, ik), aa, symm=.true.)
-    call states_blockt_mul(gr%m, st, st%st_start, st%st_end, st%st_start, st%st_end, &
+    call states_blockt_mul(gr%mesh, st, st%st_start, st%st_end, st%st_start, st%st_end, &
       oldpsi, st%X(psi)(:, :, :, ik), bb, symm=.false.)
 
     xx = M_HALF*(ii - aa) !(4.6)
@@ -195,10 +195,10 @@ subroutine X(cpmd_propagate_vel)(this, gr, h, st, dt)
 
   call profiling_in(cpmd_prop, "CP_PROPAGATION")
 
-  np = gr%m%np
+  np = gr%mesh%np
   ddim = st%d%dim
 
-  ALLOCATE(hpsi(1:gr%m%np, 1:st%d%dim), gr%m%np*st%d%dim)
+  ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim), gr%mesh%np*st%d%dim)
   ALLOCATE(yy(1:st%nst, 1:st%nst), st%nst**2)
 
   this%ecorr = M_ZERO
@@ -214,7 +214,7 @@ subroutine X(cpmd_propagate_vel)(this, gr, h, st, dt)
       this%X(psi2)(1:np, 1:ddim, ist1, ik) = &
         this%X(psi2)(1:np, 1:ddim, ist1, ik) + dt*M_HALF/this%emass*(-st%occ(ist1, ik)*hpsi(1:np, 1:ddim)) !(4.9) 2nd part
 
-      this%ecorr = this%ecorr + this%emass*X(mf_nrm2)(gr%m, ddim, this%X(psi2)(:, :, ist1, ik))**2 !(2.11)
+      this%ecorr = this%ecorr + this%emass*X(mf_nrm2)(gr%mesh, ddim, this%X(psi2)(:, :, ist1, ik))**2 !(2.11)
 
     end do
 
@@ -223,7 +223,7 @@ subroutine X(cpmd_propagate_vel)(this, gr, h, st, dt)
     call calc_yy
 
     ! psi2 <= psi2 + Y * psi
-    call states_block_matr_mul_add(gr%m, st, one, st%st_start, st%st_end, st%st_start, st%st_end, &
+    call states_block_matr_mul_add(gr%mesh, st, one, st%st_start, st%st_end, st%st_start, st%st_end, &
       st%X(psi)(:, :, :, ik), yy, one, this%X(psi2)(:, :, :, ik)) !(4.11)
 
     call calc_yy
@@ -244,7 +244,7 @@ contains
 
     ALLOCATE(cc(1:st%nst, 1:st%nst), st%nst**2)
 
-    call states_blockt_mul(gr%m, st, st%st_start, st%st_end, st%st_start, st%st_end, &
+    call states_blockt_mul(gr%mesh, st, st%st_start, st%st_end, st%st_start, st%st_end, &
       this%X(psi2)(:, :, :, ik), st%X(psi)(:, :, :, ik), cc, symm=.false.)
 
     yy = -M_HALF*(cc + transpose(cc))

@@ -80,7 +80,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, h, st, ex, ec, vxc)
 
     ! calculate uxc_bar for the occupied states
     do ist = st%st_start, st%st_end
-      oep%uxc_bar(ist) = X(mf_dotp)(gr%m, st%X(psi)(1:NP, 1, ist, is) , oep%X(lxc)(1:NP, ist))
+      oep%uxc_bar(ist) = X(mf_dotp)(gr%mesh, st%X(psi)(1:NP, 1, ist, is) , oep%X(lxc)(1:NP, ist))
     end do
 
 #if defined(HAVE_MPI)
@@ -98,7 +98,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, h, st, ex, ec, vxc)
         first = .false.
 
         oep%vxc = M_ZERO
-        call X(xc_KLI_solve) (gr%m, st, is, oep)
+        call X(xc_KLI_solve) (gr%mesh, st, is, oep)
       end if
 
       ! if asked, solve the full OEP equation
@@ -140,10 +140,10 @@ subroutine X(xc_oep_solve) (gr, h, st, is, vxc, oep)
 
   vxc_old(1:NP) = vxc(1:NP)
 
-  if(.not. lr_is_allocated(oep%lr)) call lr_allocate(oep%lr, st, gr%m) 
+  if(.not. lr_is_allocated(oep%lr)) call lr_allocate(oep%lr, st, gr%mesh) 
 
   do ist = 1, st%nst
-    call X(lr_orth_vector) (gr%m, st, oep%lr%X(dl_psi)(:,:, ist, is), ist, is)
+    call X(lr_orth_vector) (gr%mesh, st, oep%lr%X(dl_psi)(:,:, ist, is), ist, is)
   end do
 
   ! fix xc potential (needed for Hpsi)
@@ -154,17 +154,17 @@ subroutine X(xc_oep_solve) (gr, h, st, is, vxc, oep)
     s = M_ZERO
     do ist = 1, st%nst
       ! evaluate right-hand side
-      vxc_bar    = dmf_dotp(gr%m, (R_ABS(st%X(psi)(1:NP, 1, ist, is)))**2, oep%vxc(1:NP))
+      vxc_bar    = dmf_dotp(gr%mesh, (R_ABS(st%X(psi)(1:NP, 1, ist, is)))**2, oep%vxc(1:NP))
       b(1:NP, 1) =  -(oep%vxc(1:NP) - (vxc_bar - oep%uxc_bar(ist)))*R_CONJ(st%X(psi)(1:NP, 1, ist, is)) &
         + oep%X(lxc)(1:NP, ist)
 
-      call X(lr_orth_vector) (gr%m, st, b, ist, is)
+      call X(lr_orth_vector) (gr%mesh, st, b, ist, is)
 
       ! and we now solve the equation [h-eps_i] psi_i = b_i
       call X(solve_HXeY) (oep%solver, h, gr, st, ist, is, oep%lr%X(dl_psi)(:,:, ist, is), b, &
            R_TOTYPE(-st%eigenval(ist, is)))
       
-      call X(lr_orth_vector) (gr%m, st, oep%lr%X(dl_psi)(:,:, ist, is), ist, is)
+      call X(lr_orth_vector) (gr%mesh, st, oep%lr%X(dl_psi)(:,:, ist, is), ist, is)
 
       ! calculate this funny function s
       s(1:NP) = s(1:NP) + M_TWO*R_REAL(oep%lr%X(dl_psi)(1:NP, 1, ist, is)*st%X(psi)(1:NP, 1, ist, is))
@@ -174,12 +174,12 @@ subroutine X(xc_oep_solve) (gr, h, st, is, vxc, oep)
 
     do ist = 1, st%nst
       if(oep%eigen_type(ist) == 2) then
-        vxc_bar = dmf_dotp(gr%m, (R_ABS(st%X(psi)(1:NP, 1, ist, is)))**2, oep%vxc(1:NP))
+        vxc_bar = dmf_dotp(gr%mesh, (R_ABS(st%X(psi)(1:NP, 1, ist, is)))**2, oep%vxc(1:NP))
         oep%vxc(1:NP) = oep%vxc(1:NP) - (vxc_bar - oep%uxc_bar(ist))
       end if
     end do
 
-    f = dmf_nrm2(gr%m, s)
+    f = dmf_nrm2(gr%mesh, s)
     if(f < oep%scftol%conv_abs_dens) exit
   end do
 

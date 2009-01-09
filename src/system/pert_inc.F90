@@ -96,7 +96,7 @@ contains
   subroutine electric()
 
     call push_sub('pert_inc.X(pert_apply).electric')
-    f_out(1:NP) = f_in(1:NP) * gr%m%x(1:NP, this%dir)
+    f_out(1:NP) = f_in(1:NP) * gr%mesh%x(1:NP, this%dir)
     call pop_sub()
 
   end subroutine electric
@@ -109,7 +109,7 @@ contains
     call push_sub('pert_inc.X(pert_apply).kdotp')
 
     ALLOCATE(cpsi(1:NP_PART, h%d%dim), NP_PART * h%d%dim)
-    ALLOCATE(grad(gr%m%np, gr%sb%dim), gr%m%np * gr%sb%dim)
+    ALLOCATE(grad(gr%mesh%np, gr%sb%dim), gr%mesh%np * gr%sb%dim)
 
     call X(derivatives_grad) (gr%der, f_in_copy, grad, set_bc = .false.)
     ! set_bc done already separately
@@ -142,10 +142,10 @@ contains
 
     call push_sub('pert_inc.X(pert_apply).magnetic')
 
-    ALLOCATE(lf(gr%m%np, gr%sb%dim), gr%m%np * gr%sb%dim)
+    ALLOCATE(lf(gr%mesh%np, gr%sb%dim), gr%mesh%np * gr%sb%dim)
 
     ! Note that we leave out the term 1/P_c
-    call X(f_angular_momentum) (gr%sb, gr%m, gr%der, f_in_copy, lf, set_bc = .false.)
+    call X(f_angular_momentum) (gr%sb, gr%mesh, gr%der, f_in_copy, lf, set_bc = .false.)
     f_out(1:NP) = M_HALF * lf(1:NP, this%dir)
 
     deallocate(lf)
@@ -165,7 +165,7 @@ contains
 
         do ip = 1, NP
 
-          if(this%gauge == GAUGE_ICL) xx(1:NDIM) = gr%m%x(ip, 1:NDIM)
+          if(this%gauge == GAUGE_ICL) xx(1:NDIM) = gr%mesh%x(ip, 1:NDIM)
          
           vv(1:NDIM) = vrnl(ip, 1, 1:NDIM)
 
@@ -241,7 +241,7 @@ subroutine X(ionic_perturbation)(this, gr, geo, h, ik, f_in, f_out, iatom, idir)
 
   ALLOCATE(vloc(1:NP), NP)
   vloc(1:NP) = M_ZERO
-  call epot_local_potential(h%ep, gr, gr%m, geo, atm, vloc, CNST(0.0))
+  call epot_local_potential(h%ep, gr, gr%mesh, geo, atm, vloc, CNST(0.0))
 
   ALLOCATE(fin(1:NP_PART, 1), NP_PART)
   call lalg_copy(NP_PART, f_in, fin(:, 1))
@@ -249,14 +249,14 @@ subroutine X(ionic_perturbation)(this, gr, geo, h, ik, f_in, f_out, iatom, idir)
   !d^T v |f>
   ALLOCATE(fout(1:NP_PART, 1), NP_PART)
   fout(1:NP, 1) = vloc(1:NP) * fin(1:NP, 1)
-  call X(project_psi)(gr%m, h%ep%proj(iatom:iatom), 1, 1, fin, fout, ik)
+  call X(project_psi)(gr%mesh, h%ep%proj(iatom:iatom), 1, 1, fin, fout, ik)
   call X(derivatives_oper)(gr%der%grad(idir), gr%der, fout(:,1), f_out)
 
   !v d |f>
   ALLOCATE(grad(1:NP, 1), NP)
   call X(derivatives_oper)(gr%der%grad(idir), gr%der, fin(:,1), grad(:,1))
   fout(1:NP, 1) = vloc(1:NP) * grad(1:NP, 1)
-  call X(project_psi)(gr%m, h%ep%proj(iatom:iatom), 1, 1, grad, fout, ik)
+  call X(project_psi)(gr%mesh, h%ep%proj(iatom:iatom), 1, 1, grad, fout, ik)
   f_out(1:NP) = -f_out(1:NP) + fout(1:NP, 1)
 
   deallocate(grad, fin, fout, vloc)
@@ -304,8 +304,8 @@ contains
     call push_sub('pert_inc.Xpert_apply_order2.magnetic')
 
     do ip = 1, NP
-      rdelta = sum(gr%m%x(ip, 1:MAX_DIM)**2) * ddelta(this%dir, this%dir2)
-      f_out(ip) = M_FOURTH * (rdelta - gr%m%x(ip, this%dir)*gr%m%x(ip, this%dir2)) * f_in(ip)
+      rdelta = sum(gr%mesh%x(ip, 1:MAX_DIM)**2) * ddelta(this%dir, this%dir2)
+      f_out(ip) = M_FOURTH * (rdelta - gr%mesh%x(ip, this%dir)*gr%mesh%x(ip, this%dir2)) * f_in(ip)
     end do
 
     ! gauge correction
@@ -328,7 +328,7 @@ contains
           case(GAUGE_GIPAW)
             cross1 = X(cross_product)(bdir(:, 2), R_TOTYPE(geo%atom(iatom)%x))
           case(GAUGE_ICL)
-            cross1 = X(cross_product)(bdir(:, 2), R_TOTYPE(gr%m%x(ip, :)))
+            cross1 = X(cross_product)(bdir(:, 2), R_TOTYPE(gr%mesh%x(ip, :)))
           end select
 
           f_in2(ip, 1:gr%sb%dim) = cross1(1:gr%sb%dim) * f_in(ip)
@@ -342,10 +342,10 @@ contains
             call X(projector_commute_r)(h%ep%proj(iatom), gr, h%d%dim, idir2, ik, f_in2(:, idir2), vrnl(:, :))
 
             ! -x vnl |f>
-            dnl(1:NP, idir) = dnl(1:NP, idir) - gr%m%x(1:NP, idir) * vrnl(1:NP, 1)
+            dnl(1:NP, idir) = dnl(1:NP, idir) - gr%mesh%x(1:NP, idir) * vrnl(1:NP, 1)
 
             ! vnl x |f>
-            xf(1:NP) = gr%m%x(1:NP, idir) * f_in2(1:NP, idir2)
+            xf(1:NP) = gr%mesh%x(1:NP, idir) * f_in2(1:NP, idir2)
             call X(projector_commute_r)(h%ep%proj(iatom), gr, h%d%dim, idir2, ik, xf, vrnl(:, :))
 
             dnl(1:NP, idir) = dnl(1:NP, idir) + vrnl(1:NP, 1)
@@ -357,7 +357,7 @@ contains
           case(GAUGE_GIPAW)
             cross1 = X(cross_product)(bdir(:, 1), R_TOTYPE(geo%atom(iatom)%x))
           case(GAUGE_ICL)
-            cross1 = X(cross_product)(bdir(:, 1), R_TOTYPE(gr%m%x(ip, :)))
+            cross1 = X(cross_product)(bdir(:, 1), R_TOTYPE(gr%mesh%x(ip, :)))
           end select
 
           contr = M_ZERO
@@ -438,27 +438,27 @@ subroutine X(ionic_perturbation_order_2) (this, gr, geo, h, ik, f_in, f_out, iat
   ALLOCATE(vloc(1:NP), NP)
 
   vloc(1:NP) = M_ZERO
-  call epot_local_potential(h%ep, gr, gr%m, geo, atm, vloc, CNST(0.0))
+  call epot_local_potential(h%ep, gr, gr%mesh, geo, atm, vloc, CNST(0.0))
 
   call lalg_copy(NP_PART, f_in, fin(:, 1))    
 
   !di^T dj^T v |f>
   tmp1(1:NP, 1) = vloc(1:NP) * fin(1:NP, 1)
-  call X(project_psi)(gr%m, h%ep%proj(iatom:iatom), 1, 1, fin, tmp1, ik)
+  call X(project_psi)(gr%mesh, h%ep%proj(iatom:iatom), 1, 1, fin, tmp1, ik)
   call X(derivatives_oper)(gr%der%grad(idir), gr%der, tmp1(:,1), tmp2(:,1))
   call X(derivatives_oper)(gr%der%grad(jdir), gr%der, tmp2(:,1), f_out)
 
   !di^T v dj |f>
   call X(derivatives_oper)(gr%der%grad(jdir), gr%der, fin(:,1), tmp1(:,1))
   tmp2(1:NP, 1) = vloc(1:NP) * tmp1(1:NP, 1)
-  call X(project_psi)(gr%m, h%ep%proj(iatom:iatom), 1, 1, tmp1, tmp2, ik)
+  call X(project_psi)(gr%mesh, h%ep%proj(iatom:iatom), 1, 1, tmp1, tmp2, ik)
   call X(derivatives_oper)(gr%der%grad(idir), gr%der, tmp2(:,1), tmp1(:,1))
   f_out(1:NP) = f_out(1:NP) - tmp1(1:NP, 1)
 
   !dj^T v di |f>
   call X(derivatives_oper)(gr%der%grad(idir), gr%der, fin(:,1), tmp1(:,1))
   tmp2(1:NP, 1) = vloc(1:NP) * tmp1(1:NP, 1)
-  call X(project_psi)(gr%m, h%ep%proj(iatom:iatom), 1, 1, tmp1, tmp2, ik)
+  call X(project_psi)(gr%mesh, h%ep%proj(iatom:iatom), 1, 1, tmp1, tmp2, ik)
   call X(derivatives_oper)(gr%der%grad(jdir), gr%der, tmp2(:,1), tmp1(:,1))
   f_out(1:NP) = f_out(1:NP) - tmp1(1:NP, 1)
 
@@ -466,7 +466,7 @@ subroutine X(ionic_perturbation_order_2) (this, gr, geo, h, ik, f_in, f_out, iat
   call X(derivatives_oper)(gr%der%grad(idir), gr%der, fin(:,1), tmp1(:,1))
   call X(derivatives_oper)(gr%der%grad(jdir), gr%der, tmp1(:,1), tmp2(:,1))
   tmp1(1:NP, 1) = vloc(1:NP) * tmp2(1:NP, 1)
-  call X(project_psi)(gr%m, h%ep%proj(iatom:iatom), 1, 1, tmp2, tmp1, ik)
+  call X(project_psi)(gr%mesh, h%ep%proj(iatom:iatom), 1, 1, tmp2, tmp1, ik)
   f_out(1:NP) = f_out(1:NP) + tmp1(1:NP, 1)
 
   call pop_sub()
@@ -551,7 +551,7 @@ R_TYPE function X(pert_expectation_value) (this, gr, geo, h, st, psia, psib, per
 
   call X(pert_expectation_density)(this, gr, geo, h, st, psia, psib, density, pert_order = order)
 
-  expval = X(mf_integrate)(gr%m, density)
+  expval = X(mf_integrate)(gr%mesh, density)
 
 #ifdef HAVE_MPI
     ! reduce density

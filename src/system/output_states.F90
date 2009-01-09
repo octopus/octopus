@@ -36,7 +36,7 @@
     if(iand(outp%what, output_density).ne.0) then
       do is = 1, st%d%nspin
         write(fname, '(a,i1)') 'density-', is
-        call doutput_function(outp%how, dir, fname, gr%m, gr%sb, &
+        call doutput_function(outp%how, dir, fname, gr%mesh, gr%sb, &
           st%rho(:, is), u, ierr, is_tmp = .false.)
       end do
     end if
@@ -45,9 +45,9 @@
       ALLOCATE(dtmp(NP), NP)
       do idim=1, NDIM
         do is = 1, st%d%nspin
-          dtmp(1:NP)=st%rho(1:NP,is)*gr%m%x(1:NP,idim)
+          dtmp(1:NP)=st%rho(1:NP,is)*gr%mesh%x(1:NP,idim)
           write(fname, '(a,i1,a,i1)') 'dipole_density-', is, '-',idim
-          call doutput_function(outp%how, dir, fname, gr%m, gr%sb, &
+          call doutput_function(outp%how, dir, fname, gr%mesh, gr%sb, &
             dtmp(:), u, ierr, is_tmp = .false.)
         end do
       end do
@@ -60,7 +60,7 @@
       do is = 1, st%d%nspin
         do id = 1, NDIM
           write(fname, '(a,i1,a,a)') 'current-', is, '-', index2axis(id)
-          call doutput_function(outp%how, dir, fname, gr%m, gr%sb, &
+          call doutput_function(outp%how, dir, fname, gr%mesh, gr%sb, &
             st%j(:, id, is), u, ierr, is_tmp = .false.)
         end do
       end do
@@ -73,10 +73,10 @@
             do idim = 1, st%d%dim
               write(fname, '(a,i3.3,a,i4.4,a,i1)') 'wf-', ik, '-', ist, '-', idim
               if (st%wfs_type == M_REAL) then
-                call doutput_function(outp%how, dir, fname, gr%m, gr%sb, &
+                call doutput_function(outp%how, dir, fname, gr%mesh, gr%sb, &
                      st%dpsi(1:, idim, ist, ik), sqrt(u), ierr, is_tmp = .false.)
               else
-                call zoutput_function(outp%how, dir, fname, gr%m, gr%sb, &
+                call zoutput_function(outp%how, dir, fname, gr%mesh, gr%sb, &
                      st%zpsi(1:, idim, ist, ik), sqrt(u), ierr, is_tmp = .false.)
               end if
             end do
@@ -97,7 +97,7 @@
               else
                 dtmp = abs(st%zpsi(:, idim, ist, ik))**2
               end if
-              call doutput_function (outp%how, dir, fname, gr%m, gr%sb, &
+              call doutput_function (outp%how, dir, fname, gr%mesh, gr%sb, &
                 dtmp, u, ierr, is_tmp = .false.)
             end do
           end do
@@ -107,17 +107,17 @@
     end if
 
     if(iand(outp%what, output_ked).ne.0) then
-      ALLOCATE(elf(gr%m%np, st%d%nspin),gr%m%np*st%d%nspin)
+      ALLOCATE(elf(gr%mesh%np, st%d%nspin),gr%mesh%np*st%d%nspin)
       call states_calc_tau_jp_gn(gr, st, tau=elf)
       select case(st%d%ispin)
         case(UNPOLARIZED)
           write(fname, '(a)') 'tau'
-          call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, &
+          call doutput_function(outp%how, dir, trim(fname), gr%mesh, gr%sb, &
             elf(:,1), M_ONE, ierr, is_tmp = .false.)
         case(SPIN_POLARIZED, SPINORS)
           do is = 1, 2
             write(fname, '(a,a,i1)') 'tau', '-', is
-            call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, &
+            call doutput_function(outp%how, dir, trim(fname), gr%mesh, gr%sb, &
               elf(:, is), M_ONE, ierr, is_tmp = .false.)
           end do
       end select
@@ -186,11 +186,11 @@
       write(iunit, fmt = '(a)')    '# Units = ['//trim(units_out%length%abbrev)//']'
     end if
 
-    ALLOCATE(multipole(gr%m%np_part, st%d%dim), gr%m%np_part)
+    ALLOCATE(multipole(gr%mesh%np_part, st%d%dim), gr%mesh%np_part)
     multipole = M_ZERO
     do ii = 1, st%d%dim
       do i = 1, NP
-        call mesh_r(gr%m, i, r, x = x)
+        call mesh_r(gr%mesh, i, r, x = x)
         call loct_ylm(1, x(1), x(2), x(3), l, m, ylm)
         multipole(i, ii) = r**l * ylm
       end do
@@ -199,12 +199,12 @@
     do ii = 1, st%nst
       do jj = 1, st%nst
         if (st%wfs_type == M_REAL) then 
-          write(iunit,fmt = '(f20.10)', advance = 'no') dmf_dotp(gr%m, st%d%dim, &
+          write(iunit,fmt = '(f20.10)', advance = 'no') dmf_dotp(gr%mesh, st%d%dim, &
             st%dpsi(:, :, ii, 1), &
             st%dpsi(:, :, jj, 1) * multipole(:, :)) / units_out%length%factor**l
 
         else
-          multip_element = zmf_dotp(gr%m, st%d%dim, &
+          multip_element = zmf_dotp(gr%mesh, st%d%dim, &
             st%zpsi(:, :, ii, 1), &
             st%zpsi(:, :, jj, 1) * multipole(:, :)) / units_out%length%factor**l
 
@@ -273,9 +273,9 @@
       end do
 
       select case(NDIM)
-      case(3); flow = mf_surface_integral (gr%m, j, outp%plane)
-      case(2); flow = mf_line_integral (gr%m, j, outp%line)
-      case(1); flow = j(mesh_nearest_point(gr%m, outp%line%origin(1), dmin, rankmin), 1)
+      case(3); flow = mf_surface_integral (gr%mesh, j, outp%plane)
+      case(2); flow = mf_line_integral (gr%mesh, j, outp%line)
+      case(1); flow = j(mesh_nearest_point(gr%mesh, outp%line%origin(1), dmin, rankmin), 1)
       end select
 
       deallocate(j)

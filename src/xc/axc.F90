@@ -78,7 +78,7 @@ subroutine xc_get_vxc_and_axc(gr, xcs, st, rho, j, ispin, vxc, axc, ex, ec, exc_
         e, l_dedd(1), l_dedv(1,1))
     end select
 
-    exc_j = exc_j + sum(l_dens(:)) * e * gr%m%vol_pp(i)
+    exc_j = exc_j + sum(l_dens(:)) * e * gr%mesh%vol_pp(i)
 
     ! store results
     dedd(i,:) = dedd(i,:) + l_dedd

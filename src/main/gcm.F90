@@ -99,7 +99,7 @@ module gcm_m
     ! Copy the basic structure in sys%st to all of the members of phi.
     do i = 1, ndeterminants
       call states_copy(phi(i), sys%st)
-      call states_allocate_wfns(phi(i), gr%m)
+      call states_allocate_wfns(phi(i), gr%mesh)
       ALLOCATE(phi(i)%eigenval(phi(i)%nst, phi(i)%d%nik), phi(i)%nst*phi(i)%d%nik)
       ALLOCATE(phi(i)%momentum(3, phi(i)%nst, phi(i)%d%nik), phi(i)%nst*phi(i)%d%nik)
       ALLOCATE(phi(i)%occ(phi(i)%nst, phi(i)%d%nik), phi(i)%nst*phi(i)%d%nik)
@@ -138,7 +138,7 @@ module gcm_m
         rho(j) = phi(i)%rho(j, 1)
       end do
       call dpoisson_solve(gr, vh, rho)
-      uh = M_HALF*dmf_integrate(gr%m, vh * rho)
+      uh = M_HALF*dmf_integrate(gr%mesh, vh * rho)
 
       !Exchange contribution
       if(phi(i)%nst > 1) then
@@ -149,7 +149,7 @@ module gcm_m
               rho(n) = phi(i)%dpsi(n, 1, j, 1)*phi(i)%dpsi(n, 1, k, 1)
             end do
             call dpoisson_solve(gr, vh, rho)
-            ex = ex - dmf_integrate(gr%m, vh*rho)
+            ex = ex - dmf_integrate(gr%mesh, vh*rho)
           end do
         end do
       else
@@ -184,11 +184,11 @@ module gcm_m
           call dhpsi(h, gr, phi(j)%dpsi(:, :, k, 1), opst%dpsi(:, :, k, 1), ist = k, ik = 1, kinetic_only = .true.)
           call dvexternal (h, gr, phi(j)%dpsi(:, :, k, 1), opst%dpsi(:, :, k, 1), 1)
         end do
-        kij = dstates_mpmatrixelement(gr%m, phi(i), phi(j), opst)
+        kij = dstates_mpmatrixelement(gr%mesh, phi(i), phi(j), opst)
         call states_end(opst)
 
-        call dstates_matrix(gr%m, phi(i), phi(j), overlap_matrix)
-        smatrix(i, j) = dstates_mpdotp(gr%m, phi(i), phi(j), overlap_matrix)
+        call dstates_matrix(gr%mesh, phi(i), phi(j), overlap_matrix)
+        smatrix(i, j) = dstates_mpdotp(gr%mesh, phi(i), phi(j), overlap_matrix)
 
         uh =  mpdotp_twobody(phi(i), phi(j), gr)
 
@@ -269,7 +269,7 @@ module gcm_m
         rho(k) = st1%dpsi(k, 1, 1, 1) * st2%dpsi(k, 1, 1, 1)
       end do
       call dpoisson_solve(gr, vh, rho)
-      st1opst2 =  dmf_integrate(gr%m, vh(:) * rho(:))
+      st1opst2 =  dmf_integrate(gr%mesh, vh(:) * rho(:))
 
       deallocate(rho, vh)
 
@@ -293,7 +293,7 @@ module gcm_m
               do i = 1, NP
                 rho(i) = st1%dpsi(i, 1, k2, 1)*st2%dpsi(i, 1, l2, 1)
               end do
-              mat(k1, l1, k2, l2) = dmf_integrate(gr%m, vh(:)*rho(:))
+              mat(k1, l1, k2, l2) = dmf_integrate(gr%mesh, vh(:)*rho(:))
             end do
           end do
 

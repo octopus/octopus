@@ -146,11 +146,11 @@ subroutine X(lcao_wf) (this, st, gr, geo, h, start)
 
         call get_ao(n2, ispin, lcaopsi2, use_psi = .true.)
 
-        overlap(n1, n2, ispin) = X(mf_dotp)(gr%m, st%d%dim, lcaopsi(:, :, ispin), lcaopsi2)
+        overlap(n1, n2, ispin) = X(mf_dotp)(gr%mesh, st%d%dim, lcaopsi(:, :, ispin), lcaopsi2)
         overlap(n2, n1, ispin) = R_CONJ(overlap(n1, n2, ispin))
         do ik = kstart, kend
           if(ispin /= states_dim_get_spin_index(st%d, ik)) cycle
-          hamilt(n1, n2, ik) = X(mf_dotp)(gr%m, st%d%dim, hpsi(:, :, ik), lcaopsi2)
+          hamilt(n1, n2, ik) = X(mf_dotp)(gr%mesh, st%d%dim, hpsi(:, :, ik), lcaopsi2)
           hamilt(n2, n1, ik) = R_CONJ(hamilt(n1, n2, ik))
         end do
       end do
@@ -224,7 +224,7 @@ contains
         cst(iorb, ispin) = ist
         ck(iorb, ispin) = ik
 
-        call X(lcao_atomic_orbital)(this, iorb, gr%m, h, geo, gr%sb, st%X(psi)(:, :, ist, ik), ispin)
+        call X(lcao_atomic_orbital)(this, iorb, gr%mesh, h, geo, gr%sb, st%X(psi)(:, :, ist, ik), ispin)
 
         if(ispin < st%d%spin_channels) then
           ispin = ispin + 1
@@ -252,7 +252,7 @@ contains
       
       do iorb = iorb, this%norbs
         do ispin = 1, st%d%spin_channels
-          call X(lcao_atomic_orbital)(this, iorb, gr%m, h, geo, gr%sb, ao, ispin)
+          call X(lcao_atomic_orbital)(this, iorb, gr%mesh, h, geo, gr%sb, ao, ispin)
           buff(1:NP, 1:st%d%dim, iorb, ispin) = ao(1:NP, 1:st%d%dim)
         end do
       end do
@@ -278,7 +278,7 @@ contains
           call lalg_copy(NP, st%X(psi)(:, idim, cst(iorb, ispin), ck(iorb, ispin)), ao(:, idim))
         end do
       else
-        call X(lcao_atomic_orbital)(this, iorb, gr%m, h, geo, gr%sb, ao, ispin)
+        call X(lcao_atomic_orbital)(this, iorb, gr%mesh, h, geo, gr%sb, ao, ispin)
       end if
     end if
 

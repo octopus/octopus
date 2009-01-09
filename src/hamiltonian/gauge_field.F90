@@ -245,9 +245,9 @@ contains
     FLOAT :: force_tmp(1:MAX_DIM)
 #endif
 
-    ALLOCATE(epsi(gr%m%np_part, st%d%dim), gr%m%np_part*st%d%dim)
-    ALLOCATE(gpsi(gr%m%np, 1:NDIM, st%d%dim), gr%m%np*NDIM*st%d%dim)
-    ALLOCATE(cpsi(gr%m%np, st%d%dim), gr%m%np*st%d%dim)
+    ALLOCATE(epsi(gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
+    ALLOCATE(gpsi(gr%mesh%np, 1:NDIM, st%d%dim), gr%mesh%np*NDIM*st%d%dim)
+    ALLOCATE(cpsi(gr%mesh%np, st%d%dim), gr%mesh%np*st%d%dim)
 
     force(1:MAX_DIM) = M_ZERO
     
@@ -277,7 +277,7 @@ contains
         
         do idir = 1, gr%sb%dim
           force(idir) = force(idir) + M_FOUR*M_PI*P_c/gr%sb%rcell_volume*st%d%kweights(ik)*st%occ(ist, ik)*&
-               aimag(zmf_dotp(gr%m, st%d%dim, epsi, gpsi(:, idir, :)))
+               aimag(zmf_dotp(gr%mesh, st%d%dim, epsi, gpsi(:, idir, :)))
         end do
         
       end do

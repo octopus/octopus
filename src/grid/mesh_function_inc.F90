@@ -345,9 +345,9 @@ end subroutine X(mf_random)
 !
 ! In order to retrieve the coordinate v of u(n), one needs
 ! to do:
-!  k = gr%m%idx%nr(1, j) + n - 1
-!  i = gr%m%idx%Lxyz_inv(k, 0, 0) ! Assuming j = 1
-!  if(i>0) v = gr%m%x(i, j)   ! I do not understand why
+!  k = gr%mesh%idx%nr(1, j) + n - 1
+!  i = gr%mesh%idx%Lxyz_inv(k, 0, 0) ! Assuming j = 1
+!  if(i>0) v = gr%mesh%x(i, j)   ! I do not understand why
 !                             ! we need i>0...
 !
 ! WARNING: It will stop if one is using curvilinear

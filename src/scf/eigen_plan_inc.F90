@@ -149,20 +149,20 @@ subroutine X(eigensolver_plan) (gr, st, hamilt, pre, tol, niter, converged, ik, 
       ortho: do
         if(i>d2) exit ortho
         do ii = 1, nec
-          av(ii, 1, d1 + 1) = X(mf_dotp)(gr%m, dim, eigenvec(:,:,ii), v(:,:,i))
+          av(ii, 1, d1 + 1) = X(mf_dotp)(gr%mesh, dim, eigenvec(:,:,ii), v(:,:,i))
           do idim = 1, dim
             call lalg_axpy(NP, -av(ii, 1, d1 + 1), eigenvec(:, idim, ii), v(:, idim, i))
           end do
         end do
         do ii = 1, i - 1
-          av(ii, 1, d1 + 1) = X(mf_dotp)(gr%m, dim, v(:, :, ii), v(:, :, i))
+          av(ii, 1, d1 + 1) = X(mf_dotp)(gr%mesh, dim, v(:, :, ii), v(:, :, i))
           do idim = 1, dim
             call lalg_axpy(NP, -av(ii, 1, d1 + 1), v(:, idim, ii), v(:, idim, i))
           end do
         end do
-        x = X(mf_nrm2)(gr%m, dim, v(:, :, i))
+        x = X(mf_nrm2)(gr%mesh, dim, v(:, :, i))
         if(x .le. M_EPSILON) then
-          call X(mf_random)(gr%m, v(:, 1, i))
+          call X(mf_random)(gr%mesh, v(:, 1, i))
         else
           do idim = 1, dim
             call lalg_scal(NP, R_TOTYPE(M_ONE/x), v(:, idim, i))
@@ -185,7 +185,7 @@ subroutine X(eigensolver_plan) (gr, st, hamilt, pre, tol, niter, converged, ik, 
       ! part of  the matrix since it is symmetric (LAPACK routine only need the upper triangle)
       do i = d1 + 1, d2
         do ii = 1, i
-          h(ii, i) = X(mf_dotp)(gr%m, dim, v(:, :, ii), av(:, :, i))
+          h(ii, i) = X(mf_dotp)(gr%mesh, dim, v(:, :, ii), av(:, :, i))
         end do
       end do
 
@@ -239,7 +239,7 @@ subroutine X(eigensolver_plan) (gr, st, hamilt, pre, tol, niter, converged, ik, 
         ! Forms the first winsiz rows of H = V^T A V
         do i = 1, winsiz
           do ii = 1, i
-            h(ii, i) = X(mf_dotp)(gr%m, dim, v(:, :, ii), av(:, :, i))
+            h(ii, i) = X(mf_dotp)(gr%mesh, dim, v(:, :, ii), av(:, :, i))
           end do
         end do
         d1 = winsiz
@@ -312,7 +312,7 @@ contains
     call push_sub('eigen_plan.residual')
 
     res = hv - e*v
-    r = X(mf_nrm2)(gr%m, dim, res)
+    r = X(mf_nrm2)(gr%mesh, dim, res)
 
     call pop_sub()
   end subroutine residual

@@ -227,8 +227,8 @@ contains
     ! Handle mixing now...
     dim = 1
     if (h%d%cdft) dim = 1 + NDIM
-    call mix_init(scf%smix, gr%m%np, dim, st%d%nspin)
-    call mesh_init_mesh_aux(gr%m)
+    call mix_init(scf%smix, gr%mesh%np, dim, st%d%nspin)
+    call mesh_init_mesh_aux(gr%mesh)
 
     ! now the eigensolver stuff
     call eigensolver_init(gr, scf%eigens, st)
@@ -236,7 +236,7 @@ contains
     if(scf%eigens%es_type == RS_MG .or. preconditioner_is_multigrid(scf%eigens%pre)) then
       if(.not. associated(gr%mgrid)) then
         ALLOCATE(gr%mgrid, 1)
-        call multigrid_init(gr%mgrid, geo, gr%cv,gr%m, gr%der, gr%stencil)
+        call multigrid_init(gr%mgrid, geo, gr%cv,gr%mesh, gr%der, gr%stencil)
       end if
       call hamiltonian_mg_init(h, gr)
     end if
@@ -385,7 +385,7 @@ contains
       end if
 
       ! occupations
-      call states_fermi(st, gr%m)
+      call states_fermi(st, gr%mesh)
 
       ! compute output density, potential (if needed) and eigenvalues sum
       call states_calc_dens(st, NP, st%rho)
@@ -410,7 +410,7 @@ contains
       do is = 1, nspin
         do idim = 1, dim
           tmp = abs(rhoin(1:NP, idim, is) - rhoout(1:NP, idim, is))
-          scf%abs_dens = scf%abs_dens + dmf_integrate(gr%m, tmp)
+          scf%abs_dens = scf%abs_dens + dmf_integrate(gr%mesh, tmp)
         end do
       end do
       deallocate(tmp)
@@ -548,7 +548,7 @@ contains
 
     if(simul_box_is_periodic(gr%sb).and.st%d%nik > st%d%nspin) then
       call states_write_bands('static', st%nst, st, gr%sb)
-      call states_write_fermi_energy('static', st, gr%m, gr%sb)
+      call states_write_fermi_energy('static', st, gr%mesh, gr%sb)
       call states_degeneracy_matrix(st)
     end if
 
@@ -595,7 +595,7 @@ contains
         end if
 
         if(st%d%ispin > UNPOLARIZED) then
-          call write_magnetic_moments(stdout, gr%m, st)
+          call write_magnetic_moments(stdout, gr%mesh, st)
         end if
 
         write(message(1),'(a)') ''
@@ -681,14 +681,14 @@ contains
 
       if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
       if(st%d%ispin > UNPOLARIZED) then
-        call write_magnetic_moments(iunit, gr%m, st)
+        call write_magnetic_moments(iunit, gr%mesh, st)
         if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
       end if
 
       ! Next lines of code calculate the dipole of the molecule, summing the electronic and
       ! ionic contributions.
       do ispin = 1, st%d%nspin
-        call dmf_multipoles(gr%m, st%rho(:, ispin), 1, e_dip(:, ispin))
+        call dmf_multipoles(gr%mesh, st%rho(:, ispin), 1, e_dip(:, ispin))
       end do
 
       do idir = 1, 3

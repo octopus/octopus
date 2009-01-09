@@ -316,7 +316,7 @@ contains
 
     ! some shortcuts
     st => sys%st
-    m  => sys%gr%m
+    m  => sys%gr%mesh
 
     ! initialize stuff
     ALLOCATE(saved_K(cas%n_pairs, cas%n_pairs), cas%n_pairs*cas%n_pairs)

@@ -77,7 +77,7 @@ end subroutine X(solve_HXeY)
 FLOAT function X(ls_nrm2_qmr)(x)
   R_TYPE, intent(in) :: x(:)
   
-  X(ls_nrm2_qmr) = X(mf_nrm2)(args%gr%m, x)
+  X(ls_nrm2_qmr) = X(mf_nrm2)(args%gr%mesh, x)
   
 end function X(ls_nrm2_qmr)
 
@@ -85,7 +85,7 @@ R_TYPE function X(ls_dotu_qmr)(x,y)
   R_TYPE, intent(in) :: x(:)
   R_TYPE, intent(in) :: y(:)
   
-  X(ls_dotu_qmr) = X(mf_dotp)(args%gr%m, x, y, dotu = .true.)
+  X(ls_dotu_qmr) = X(mf_dotp)(args%gr%mesh, x, y, dotu = .true.)
   
 end function X(ls_dotu_qmr)
 
@@ -124,7 +124,7 @@ subroutine X(ls_solver_cg) (ls, h, gr, st, ist, ik, x, y, omega)
   conv_last = .false.
   gamma     = M_ONE
   do iter = 1, ls%max_iter
-    gamma = X(mf_dotp)(gr%m, st%d%dim, r, r)
+    gamma = X(mf_dotp)(gr%mesh, st%d%dim, r, r)
 
     conv = ( abs(gamma) < ls%tol**2)
     if(conv.and.conv_last) exit
@@ -132,7 +132,7 @@ subroutine X(ls_solver_cg) (ls, h, gr, st, ist, ik, x, y, omega)
     
     call X(ls_solver_operator)(h, gr, st, ist, ik, omega, p, Hp)
 
-    alpha = gamma/X(mf_dotp) (gr%m, st%d%dim, p, Hp)
+    alpha = gamma/X(mf_dotp) (gr%mesh, st%d%dim, p, Hp)
 
     do idim = 1, st%d%dim
       !r = r - alpha*Hp
@@ -142,7 +142,7 @@ subroutine X(ls_solver_cg) (ls, h, gr, st, ist, ik, x, y, omega)
     end do
 
 
-    beta = X(mf_dotp)(gr%m, st%d%dim, r, r)/gamma
+    beta = X(mf_dotp)(gr%mesh, st%d%dim, r, r)/gamma
 
     p(1:NP, 1:st%d%dim) = r(1:NP, 1:st%d%dim) + beta*p(1:NP, 1:st%d%dim)
 
@@ -206,12 +206,12 @@ subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ist, ik, x, y, omega)
   r(1:NP, 1:st%d%dim) = y(1:NP, 1:st%d%dim) - Hp(1:NP, 1:st%d%dim)
   rs(1:NP, 1:st%d%dim) = r(1:NP, 1:st%d%dim)
 
-  gamma = X(mf_nrm2)(gr%m, st%d%dim, r)
+  gamma = X(mf_nrm2)(gr%mesh, st%d%dim, r)
 
   conv_last = .false.
   do iter = 1, ls%max_iter
 
-    rho_1 = X(mf_dotp) (gr%m, st%d%dim, rs, r)
+    rho_1 = X(mf_dotp) (gr%mesh, st%d%dim, rs, r)
 
     if( abs(rho_1) < M_EPSILON ) exit
 
@@ -232,7 +232,7 @@ subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ist, ik, x, y, omega)
     call X(preconditioner_apply)(ls%pre, gr, h, p, phat, omega)
     call X(ls_solver_operator)(h, gr, st, ist, ik, omega, phat, Hp)
     
-    alpha = rho_1/X(mf_dotp)(gr%m, st%d%dim, rs, Hp)
+    alpha = rho_1/X(mf_dotp)(gr%mesh, st%d%dim, rs, Hp)
 
     do idim = 1, st%d%dim
       do ip = 1, NP
@@ -240,7 +240,7 @@ subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ist, ik, x, y, omega)
       end do
     end do
 
-    gamma = X(mf_nrm2) (gr%m, st%d%dim, s)
+    gamma = X(mf_nrm2) (gr%mesh, st%d%dim, s)
 
     if( gamma < ls%tol ) then
       do idim = 1, st%d%dim 
@@ -252,7 +252,7 @@ subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ist, ik, x, y, omega)
     call X(preconditioner_apply)(ls%pre, gr, h, s, shat, omega)
     call X(ls_solver_operator)(h, gr, st, ist, ik, omega, shat, Hs)
 
-    w = X(mf_dotp)(gr%m, st%d%dim, Hs, s)/X(mf_dotp) (gr%m, st%d%dim, Hs, Hs)
+    w = X(mf_dotp)(gr%mesh, st%d%dim, Hs, s)/X(mf_dotp) (gr%mesh, st%d%dim, Hs, Hs)
 
     do idim = 1, st%d%dim
       do ip = 1, NP
@@ -263,7 +263,7 @@ subroutine X(ls_solver_bicgstab) (ls, h, gr, st, ist, ik, x, y, omega)
 
     rho_2 = rho_1
 
-    gamma = X(mf_nrm2)(gr%m, st%d%dim, r)
+    gamma = X(mf_nrm2)(gr%mesh, st%d%dim, r)
     conv = (gamma < ls%tol)
 
     if( conv .and. conv_last ) then 
@@ -318,12 +318,12 @@ subroutine X(ls_solver_multigrid) (ls, h, gr, st, ist, ik, x, y, omega)
     !calculate the residue
     call X(ls_solver_operator)(h, gr, st, ist, ik, omega, x, hx)
     res(1:NP, 1:st%d%dim) = hx(1:NP, 1:st%d%dim) - y(1:NP, 1:st%d%dim)
-    ls%abs_psi = X(mf_nrm2)(gr%m, st%d%dim, res)
+    ls%abs_psi = X(mf_nrm2)(gr%mesh, st%d%dim, res)
 
     if(ls%abs_psi < ls%tol) exit
 
     if(in_debug_mode) then 
-      write(message(1), *)  "Multigrid: iter ", iter,  ls%abs_psi, abs(X(mf_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), x))
+      write(message(1), *)  "Multigrid: iter ", iter,  ls%abs_psi, abs(X(mf_dotp)(gr%mesh, st%d%dim, st%X(psi)(:, :, ist, ik), x))
       call write_info(1)
     end if
 
@@ -346,7 +346,7 @@ contains
       call X(ls_solver_operator)(h, gr, st, ist, ik, omega, x, hx)
 
       do idim = 1, st%d%dim
-        do ip = 1, gr%m%np
+        do ip = 1, gr%mesh%np
           rr = hx(ip, idim) - y(ip, idim)
           x(ip, idim) = x(ip, idim) - CNST(0.666666) * rr / diag(ip, idim)
         end do
@@ -354,7 +354,7 @@ contains
 
     end do
 
-    call X(lr_orth_vector)(gr%m, st, x, ist, ik)
+    call X(lr_orth_vector)(gr%mesh, st, x, ist, ik)
 
   end subroutine smoothing
 
@@ -397,7 +397,7 @@ subroutine X(ls_solver_operator) (h, gr, st, ist, ik, omega, x, hx)
     alpha_j = max(st%smear%e_fermi + M_THREE * dsmear - st%eigenval(jst, ik), M_ZERO)
     if(alpha_j == M_ZERO) cycle
       
-    proj = X(mf_dotp) (gr%m, st%d%dim, st%X(psi)(:, :, jst, ik), x)
+    proj = X(mf_dotp) (gr%mesh, st%d%dim, st%X(psi)(:, :, jst, ik), x)
     do idim = 1, st%d%dim
       call lalg_axpy(NP, R_TOTYPE(alpha_j * proj), st%X(psi)(:, idim, jst, ik), Hx(:, idim))
     end do
@@ -420,12 +420,12 @@ subroutine X(ls_solver_operator_na) (x, hx)
 !  enabling this causes trouble for some reason in debug mode
 !  call push_sub('linear_solver_inc.Xls_solver_operator_na')
 
-  ALLOCATE(tmpx(args%gr%m%np_part, 1), args%gr%m%np_part)
-  ALLOCATE(tmpy(args%gr%m%np, 1), args%gr%m%np)
+  ALLOCATE(tmpx(args%gr%mesh%np_part, 1), args%gr%mesh%np_part)
+  ALLOCATE(tmpy(args%gr%mesh%np, 1), args%gr%mesh%np)
 
-  call lalg_copy(args%gr%m%np, x, tmpx(:, 1))
+  call lalg_copy(args%gr%mesh%np, x, tmpx(:, 1))
   call X(ls_solver_operator)(args%h, args%gr, args%st, args%ist, args%ik, args%X(omega), tmpx, tmpy)
-  call lalg_copy(args%gr%m%np, tmpy(:, 1), hx)
+  call lalg_copy(args%gr%mesh%np, tmpy(:, 1), hx)
 
   deallocate(tmpx, tmpy)
 
@@ -444,12 +444,12 @@ subroutine X(ls_preconditioner) (x, hx)
 
   call push_sub('linear_solver_inc.Xls_preconditioner')
 
-  ALLOCATE(tmpx(args%gr%m%np_part, 1), args%gr%m%np_part)
-  ALLOCATE(tmpy(args%gr%m%np_part, 1), args%gr%m%np_part)
+  ALLOCATE(tmpx(args%gr%mesh%np_part, 1), args%gr%mesh%np_part)
+  ALLOCATE(tmpy(args%gr%mesh%np_part, 1), args%gr%mesh%np_part)
 
-  call lalg_copy(args%gr%m%np, x, tmpx(:, 1))
+  call lalg_copy(args%gr%mesh%np, x, tmpx(:, 1))
   call X(preconditioner_apply)(args%ls%pre, args%gr, args%h, tmpx, tmpy, args%X(omega))
-  call lalg_copy(args%gr%m%np, tmpy(:, 1), hx)
+  call lalg_copy(args%gr%mesh%np, tmpy(:, 1), hx)
 
   deallocate(tmpx, tmpy)
   call pop_sub()
@@ -481,7 +481,7 @@ subroutine X(ls_solver_sos) (ls, h, gr, st, ist, ik, x, y, omega)
   do jst = 1, st%nst
     alpha_j = max(st%smear%e_fermi + M_THREE*dsmear - st%eigenval(jst, ik), M_ZERO)
 
-    aa = X(mf_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, jst, ik), y)
+    aa = X(mf_dotp)(gr%mesh, st%d%dim, st%X(psi)(:, :, jst, ik), y)
     aa = aa/(st%eigenval(jst, ik) - st%eigenval(ist, ik) + alpha_j + omega)
 
     do idim = 1, st%d%dim
@@ -497,7 +497,7 @@ subroutine X(ls_solver_sos) (ls, h, gr, st, ist, ik, x, y, omega)
     call lalg_axpy(NP, -M_ONE, y(:, idim), rr(:, idim))
   end do
   
-  ls%abs_psi = X(mf_nrm2)(gr%m, st%d%dim, rr)
+  ls%abs_psi = X(mf_nrm2)(gr%mesh, st%d%dim, rr)
   ls%iter = 1
 
   deallocate(rr)

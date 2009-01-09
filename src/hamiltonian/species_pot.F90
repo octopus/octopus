@@ -86,7 +86,7 @@ contains
       call ps_getradius(this%ps)
 
       if(filter .ne. PS_FILTER_NONE) then 
-        call ps_filter(this%ps, filter, mesh_gcutoff(gr%m))
+        call ps_filter(this%ps, filter, mesh_gcutoff(gr%mesh))
         call ps_getradius(this%ps) ! radius may have changed
       end if
 
@@ -486,7 +486,7 @@ contains
       rho = M_ZERO
       call periodic_copy_init(pp, gr%sb, pos, range = spline_cutoff_radius(s%ps%nlr, s%ps%projectors_sphere_threshold))
       do icell = 1, periodic_copy_num(pp)
-        call dmf_put_radial_spline(gr%m, s%ps%nlr, periodic_copy_position(pp, gr%sb, icell), rho, add = .true.)
+        call dmf_put_radial_spline(gr%mesh, s%ps%nlr, periodic_copy_position(pp, gr%sb, icell), rho, add = .true.)
       end do
       call periodic_copy_end(pp)
       
@@ -497,17 +497,17 @@ contains
       ! sketched in Modine et al. [Phys. Rev. B 55, 10289 (1997)],
       ! section II.B
       ! --------------------------------------------------------------
-      dim = gr%m%sb%dim
+      dim = gr%mesh%sb%dim
 
-      ALLOCATE(rho_p(gr%m%np), gr%m%np)
-      ALLOCATE(grho_p(gr%m%np, dim+1), 4*gr%m%np)
+      ALLOCATE(rho_p(gr%mesh%np), gr%mesh%np)
+      ALLOCATE(grho_p(gr%mesh%np, dim+1), 4*gr%mesh%np)
 
-      m_p   => gr%m
+      m_p   => gr%mesh
       pos_p = pos
 
       ! Initial guess.
-      call curvlinear_x2chi(gr%m%sb, geo, gr%cv, pos, chi0)
-      delta   = gr%m%h(1)
+      call curvlinear_x2chi(gr%mesh%sb, geo, gr%cv, pos, chi0)
+      delta   = gr%mesh%h(1)
       alpha   = sqrt(M_TWO)*s%sigma*delta
       alpha_p = alpha  ! global copy of alpha
       beta    = M_ONE
@@ -520,7 +520,7 @@ contains
 
       ! get a better estimate for beta
       call getrho(startval)
-      beta = M_ONE / dmf_integrate(gr%m, rho_p)
+      beta = M_ONE / dmf_integrate(gr%mesh, rho_p)
       startval(dim+1) = beta
 
       ! solve equation
@@ -547,8 +547,8 @@ contains
       rho = M_ZERO
       do icell = 1, periodic_copy_num(pp)
         yy = periodic_copy_position(pp, gr%sb, icell)
-        do i = 1, gr%m%np
-          call mesh_r(gr%m, i, r, x = xx, a = pos)
+        do i = 1, gr%mesh%np
+          call mesh_r(gr%mesh, i, r, x = xx, a = pos)
           xx(1:gr%sb%dim) = xx(1:gr%sb%dim) + yy(1:gr%sb%dim)
           r = sqrt(dot_product(xx(1:gr%sb%dim), xx(1:gr%sb%dim)))
           call loct_parse_expression(rerho, imrho, xx(1), xx(2), xx(3), r, M_ZERO, trim(s%rho))

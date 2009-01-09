@@ -152,7 +152,7 @@ module opt_control_target_m
       call write_info(1)
       target%mode = oct_targetmode_static
 
-      call states_look (trim(restart_dir)//'gs', gr%m%mpi_grp, ip, ip, target%st%nst, ierr)
+      call states_look (trim(restart_dir)//'gs', gr%mesh%mpi_grp, ip, ip, target%st%nst, ierr)
       target%st%st_start = 1
       target%st%st_end   = target%st%nst
       deallocate(target%st%occ, target%st%eigenval, target%st%momentum, target%st%node)
@@ -164,7 +164,7 @@ module opt_control_target_m
         deallocate(target%st%spin)
         ALLOCATE(target%st%spin(3, target%st%nst, target%st%d%nik), target%st%nst*target%st%d%nik*3)
       end if
-      call states_allocate_wfns(target%st, gr%m, M_CMPLX)
+      call states_allocate_wfns(target%st, gr%mesh, M_CMPLX)
       target%st%node(:)  = 0
 
       call restart_read(trim(restart_dir)//'gs', target%st, gr, geo, ierr)
@@ -221,7 +221,7 @@ module opt_control_target_m
               call loct_parse_block_cmplx(blk, ist-1, jst-1, rotation_matrix(ist, jst))
             end do
           end do
-          call rotate_states(gr%m, target%st, tmp_st, rotation_matrix)
+          call rotate_states(gr%mesh, target%st, tmp_st, rotation_matrix)
           deallocate(rotation_matrix)
           call states_end(tmp_st)
           call loct_parse_block_end(blk)
@@ -290,7 +290,7 @@ module opt_control_target_m
                 call loct_parse_block_cmplx(blk, ist-1, jst-1, rotation_matrix(ist, jst))
               end do
             end do
-            call rotate_states(gr%m, target%st, tmp_st, rotation_matrix)
+            call rotate_states(gr%mesh, target%st, tmp_st, rotation_matrix)
             deallocate(rotation_matrix)
             call states_calc_dens(target%st, NP_PART, target%st%rho)
             do ip = 1, NP
@@ -308,14 +308,14 @@ module opt_control_target_m
 
           call conv_to_C_string(expression)
           do ip = 1, NP
-            call mesh_r(gr%m, ip, r, x = x)
+            call mesh_r(gr%mesh, ip, r, x = x)
             ! parse user defined expression
             call loct_parse_expression(psi_re, psi_im, &
               x(1), x(2), x(3), r, M_ZERO, expression)
             target%rho(ip) = psi_re
           end do
           ! Normalize
-          r = dmf_integrate(gr%m, target%rho)
+          r = dmf_integrate(gr%mesh, target%rho)
           target%rho = (-target%st%val_charge) * target%rho/r
         end if
 
@@ -342,7 +342,7 @@ module opt_control_target_m
         call loct_parse_string('OCTTargetLocal', "0", expression)
         call conv_to_C_string(expression)
         do ip = 1, NP
-          call mesh_r(gr%m, ip, r, x = x)
+          call mesh_r(gr%mesh, ip, r, x = x)
           ! parse user defined expression
           call loct_parse_expression(psi_re, psi_im, &
             x(1), x(2), x(3), r, M_ZERO, expression)
@@ -479,14 +479,14 @@ module opt_control_target_m
 
     select case(target%type)
     case(oct_tg_local)
-      call doutput_function(outp%how, trim(dir), 'local_target', gr%m, gr%sb, &
+      call doutput_function(outp%how, trim(dir), 'local_target', gr%mesh, gr%sb, &
         target%rho, M_ONE, ierr)
     case(oct_tg_td_local)
       call tdtarget_build_tdlocal(target, gr, M_ZERO)
-      call doutput_function(outp%how, trim(dir), 'td_local_target', gr%m, gr%sb, &
+      call doutput_function(outp%how, trim(dir), 'td_local_target', gr%mesh, gr%sb, &
         target%rho, M_ONE, ierr)
     case(oct_tg_density)
-      call doutput_function(outp%how, trim(dir), 'density_target', gr%m, gr%sb, &
+      call doutput_function(outp%how, trim(dir), 'density_target', gr%mesh, gr%sb, &
         target%rho, M_ONE, ierr)
     case(oct_tg_excited)
       call h_sys_output_states(target%est%st, gr, trim(dir)//'/st', outp)
@@ -532,7 +532,7 @@ module opt_control_target_m
           do j = 1, NP
             opsi(j, 1) = target%rho(j) * psi%zpsi(j, 1, p, 1)
           end do
-          target%td_fitness(i) = target%td_fitness(i) + zmf_dotp(gr%m, psi%d%dim, psi%zpsi(:, :, p, 1), opsi(:, :))
+          target%td_fitness(i) = target%td_fitness(i) + zmf_dotp(gr%mesh, psi%d%dim, psi%zpsi(:, :, p, 1), opsi(:, :))
         end do
         deallocate(opsi)
       case(SPIN_POLARIZED); stop 'Error'
@@ -543,7 +543,7 @@ module opt_control_target_m
 
       ALLOCATE(multipole(4, psi%d%nspin), 4*psi%d%nspin)
       do is = 1, psi%d%nspin
-        call dmf_multipoles(gr%m, psi%rho(:, is), 1, multipole(:, is))
+        call dmf_multipoles(gr%mesh, psi%rho(:, is), 1, multipole(:, is))
       end do
       target%td_fitness(i) = sum(multipole(2, 1:psi%d%spin_channels))
       deallocate(multipole)
@@ -600,7 +600,7 @@ module opt_control_target_m
     call push_sub('target.target_build_tdlocal')
 
     do i = 1, NP
-      call mesh_r(gr%m, i, r, x = xx)
+      call mesh_r(gr%mesh, i, r, x = xx)
       call loct_parse_expression(re, im, xx(1), xx(2), xx(3), r, t, target%td_local_target)
       target%rho(i) = re
     end do
@@ -636,7 +636,7 @@ module opt_control_target_m
       do i = 1, NP
         local_function(i) = - ( sqrt(psi%rho(i, 1)) - sqrt(target%rho(i)) )**2
       end do
-      j1 = dmf_integrate(gr%m, local_function)
+      j1 = dmf_integrate(gr%mesh, local_function)
       deallocate(local_function)
 
     case(oct_tg_local)
@@ -651,7 +651,7 @@ module opt_control_target_m
           do j = 1, NP
             opsi(j, 1) = target%rho(j) * psi%zpsi(j, 1, p, 1)
           end do
-          j1 = j1 + zmf_dotp(gr%m, psi%d%dim, psi%zpsi(:, :, p, 1), opsi(:, :))
+          j1 = j1 + zmf_dotp(gr%mesh, psi%d%dim, psi%zpsi(:, :, p, 1), opsi(:, :))
         end do
         deallocate(opsi)
       case(SPIN_POLARIZED); stop 'Error'
@@ -662,13 +662,13 @@ module opt_control_target_m
       j1 = sum(target%td_fitness) 
 
     case(oct_tg_excited)
-      j1 = abs(zstates_mpdotp(gr%m, target%est, psi))**2
+      j1 = abs(zstates_mpdotp(gr%mesh, target%est, psi))**2
 
     case(oct_tg_exclude_state)
 
       j1 = M_ONE
       do i = 1, target%excluded_states
-        j1 = j1 - abs(zmf_dotp(gr%m, psi%d%dim, target%st%zpsi(:, :, i, 1), psi%zpsi(:, :, 1, 1)))**2
+        j1 = j1 - abs(zmf_dotp(gr%mesh, psi%d%dim, target%st%zpsi(:, :, i, 1), psi%zpsi(:, :, 1, 1)))**2
       end do
 
     case(oct_tg_hhg)
@@ -728,7 +728,7 @@ module opt_control_target_m
       deallocate(dipole, ddipole)
 
     case default
-      j1 = abs(zstates_mpdotp(gr%m, psi, target%st))**2
+      j1 = abs(zstates_mpdotp(gr%mesh, psi, target%st))**2
 
     end select
 
@@ -826,13 +826,13 @@ module opt_control_target_m
       ALLOCATE(mk(NP_PART, psi_in%d%dim), NP_PART * psi_in%d%dim)
       ALLOCATE(lambda(n_pairs, n_pairs), n_pairs*n_pairs)
 
-      call zstates_matrix(gr%m, target%est%st, psi_in, mat)
+      call zstates_matrix(gr%mesh, target%est%st, psi_in, mat)
 
       do ia = 1, n_pairs
         cI(ia) = target%est%weight(ia)
         call zstates_matrix_swap(mat, target%est%pair(ia))
         mm(1:nst, 1:nst, 1:kpoints, ia) = mat(1:nst, 1:kpoints, 1:kpoints)
-        dI(ia) = zstates_mpdotp(gr%m, target%est%st, psi_in, mat)
+        dI(ia) = zstates_mpdotp(gr%mesh, target%est%st, psi_in, mat)
         if(abs(dI(ia)) > CNST(1.0e-12)) then
           do ik = 1, kpoints
             zdet = lalg_inverter(nst, mm(1:nst, 1:nst, ik, ia))
@@ -905,7 +905,7 @@ module opt_control_target_m
 
       chi_out%zpsi(:, :, 1, 1) = psi_in%zpsi(:, :, 1, 1)
       do p = 1, target%excluded_states
-        olap = zmf_dotp(gr%m, psi_in%d%dim, target%st%zpsi(:, :, p, 1), psi_in%zpsi(:, :, 1, 1))
+        olap = zmf_dotp(gr%mesh, psi_in%d%dim, target%st%zpsi(:, :, p, 1), psi_in%zpsi(:, :, 1, 1))
         chi_out%zpsi(:, :, 1, 1) = chi_out%zpsi(:, :, 1, 1) - olap*target%st%zpsi(:, :, p, 1)
       end do
 
@@ -915,7 +915,7 @@ module opt_control_target_m
       case(oct_algorithm_zbr98)
         call states_copy(chi_out, target%st)
       case default
-        olap = zstates_mpdotp(gr%m, target%st, psi_in)
+        olap = zstates_mpdotp(gr%mesh, target%st, psi_in)
         do ik = 1, psi_in%d%nik
           do p  = psi_in%st_start, psi_in%st_end
             chi_out%zpsi(:, :, p, ik) = olap*target%st%zpsi(:, :, p, ik)

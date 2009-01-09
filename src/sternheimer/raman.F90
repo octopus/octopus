@@ -78,7 +78,7 @@ contains
     sigma = 1
     do idir = 1, sys%gr%sb%dim
       call lr_init(psi_elec(idir))
-      call lr_allocate(psi_elec(idir), sys%st, sys%gr%m)
+      call lr_allocate(psi_elec(idir), sys%st, sys%gr%mesh)
 
       str_tmp =  em_wfs_tag(idir, 1)
       write(dirname,'(3a, i1)') "em_resp/", trim(str_tmp), '_', sigma
@@ -92,7 +92,7 @@ contains
     end do
 
     call lr_init(psi_vib(1))
-    call lr_allocate(psi_vib(1), sys%st, sys%gr%m)
+    call lr_allocate(psi_vib(1), sys%st, sys%gr%mesh)
 
     !
     ! Calculate the number of vibrational modes (here we should

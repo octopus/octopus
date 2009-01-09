@@ -351,7 +351,7 @@ contains
     character(len=*),     intent(in)    :: dir
     
     call h_sys_output_states(st, gr, dir, outp)
-    call h_sys_output_hamiltonian(h, gr%m, gr%sb, dir, outp)
+    call h_sys_output_hamiltonian(h, gr%mesh, gr%sb, dir, outp)
     call h_sys_output_localization_funct(st, h, gr, dir, outp)
     call h_sys_output_current_flow(gr, st, dir, outp)
 
@@ -389,13 +389,13 @@ contains
       ! output ELF in real space
       if(iand(outp%what, output_elf).ne.0) then
         write(fname, '(a)') 'elf_rs'
-        call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, &
+        call doutput_function(outp%how, dir, trim(fname), gr%mesh, gr%sb, &
           f_loc(:,imax), M_ONE, ierr, is_tmp = .false.)
 
         if(st%d%ispin.ne.UNPOLARIZED) then
           do is = 1, 2
             write(fname, '(a,a,i1)') 'elf_rs', '-', is
-            call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, &
+            call doutput_function(outp%how, dir, trim(fname), gr%mesh, gr%sb, &
               f_loc(:, is), M_ONE, ierr, is_tmp = .false.)
           end do
         end if
@@ -410,7 +410,7 @@ contains
       call elf_calc_fs(st, gr, f_loc)
       do is = 1, st%d%nspin
         write(fname, '(a,a,i1)') 'elf_fs', '-', is
-        call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, &
+        call doutput_function(outp%how, dir, trim(fname), gr%mesh, gr%sb, &
           f_loc(:,is), M_ONE, ierr, is_tmp = .false.)
       end do
     end if
@@ -420,7 +420,7 @@ contains
       do is = 1, st%d%nspin
         call dderivatives_lapl(gr%der, st%rho(:,is), f_loc(:,is))
         write(fname, '(a,a,i1)') 'bader', '-', is
-        call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, &
+        call doutput_function(outp%how, dir, trim(fname), gr%mesh, gr%sb, &
           f_loc(:,is), M_ONE, ierr, is_tmp = .false.)
 
         write(fname, '(a,a,i1)') 'bader_basins', '-', is
@@ -431,7 +431,7 @@ contains
     ! Now the pressure
     if(iand(outp%what, output_el_pressure).ne.0) then
       call h_sys_calc_electronic_pressure(st, h, gr, f_loc(:,1))
-      call doutput_function(outp%how, dir, "el_pressure", gr%m, gr%sb, &
+      call doutput_function(outp%how, dir, "el_pressure", gr%mesh, gr%sb, &
         f_loc(:,1), M_ONE, ierr, is_tmp = .false.)
     end if
 
@@ -447,15 +447,15 @@ contains
       type(basins_t)     :: basins
       integer            :: iunit
 
-      call basins_init(basins, gr%m)
-      call basins_analyze(basins, gr%m, st%d%nspin, ff(:), st%rho, CNST(0.01))
+      call basins_init(basins, gr%mesh)
+      call basins_analyze(basins, gr%mesh, st%d%nspin, ff(:), st%rho, CNST(0.01))
 
-      call doutput_function(outp%how, dir, trim(filename), gr%m, gr%sb, &
+      call doutput_function(outp%how, dir, trim(filename), gr%mesh, gr%sb, &
         real(basins%map, REAL_PRECISION), M_ONE, ierr, is_tmp = .false.)
         
       write(fname,'(4a)') trim(dir), '/', trim(filename), '.info'
       iunit = io_open(file=trim(fname), action = 'write')
-      call basins_write(basins, gr%m, iunit)
+      call basins_write(basins, gr%mesh, iunit)
       call io_close(iunit)
 
       call basins_end(basins)

@@ -160,8 +160,8 @@ contains
 
     call push_sub('ob_lippmann_schwinger.dotu')
 
-    np_part = gr_p%m%np_part
-    np      = gr_p%m%np
+    np_part = gr_p%mesh%np_part
+    np      = gr_p%mesh%np
     dim     = st_p%d%dim
 
     dot = M_ZERO
@@ -193,8 +193,8 @@ contains
 
     call push_sub('ob_lippmann_schwinger.nrm2')
 
-    np_part = gr_p%m%np_part
-    np      = gr_p%m%np
+    np_part = gr_p%mesh%np_part
+    np      = gr_p%mesh%np
     dim     = st_p%d%dim
 
     nrm = M_ZERO
@@ -235,8 +235,8 @@ contains
 
     call push_sub('ob_lippmann_schwinger.lhs')
 
-    np      = gr_p%m%np
-    np_part = gr_p%m%np_part
+    np      = gr_p%mesh%np
+    np_part = gr_p%mesh%np_part
     dim     = st_p%d%dim
 
     ALLOCATE(tmp_x(np_part, dim), np_part*dim)

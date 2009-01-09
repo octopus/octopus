@@ -142,7 +142,7 @@ contains
         call input_error('PoissonSolver')
       end if
 
-      if(gr%m%use_curvlinear.and.poisson_solver.ne.DIRECT_SUM_1D) then
+      if(gr%mesh%use_curvlinear.and.poisson_solver.ne.DIRECT_SUM_1D) then
         message(1) = 'If curvilinear coordinates are used in 1D, then the only working'
         message(2) = 'Poisson solver is -1 ("direct summation in one dimension").'
         call write_fatal(2)
@@ -178,7 +178,7 @@ contains
       ! In 2D, periodic in two dimensions means no cut-off at all.
       if(poisson_solver .eq. 2) poisson_solver = 3
 
-      if(gr%m%use_curvlinear .and. (poisson_solver .ne. -NDIM) ) then
+      if(gr%mesh%use_curvlinear .and. (poisson_solver .ne. -NDIM) ) then
         message(1) = 'If curvilinear coordinates are used in 2D, then the only working'
         message(2) = 'Poisson solver is -2 ("direct summation in two dimensions")'
         call write_fatal(2)
@@ -203,7 +203,7 @@ contains
       default_solver = FFT_SPH
 #endif
 
-      if (gr%m%use_curvlinear) default_solver = CG_CORRECTED
+      if (gr%mesh%use_curvlinear) default_solver = CG_CORRECTED
       if (gr%sb%periodic_dim > 0) default_solver = gr%sb%periodic_dim
       
       call loct_parse_int(check_inp('PoissonSolver'), default_solver, poisson_solver)
@@ -221,7 +221,7 @@ contains
         call write_warning(3)
       end if
 
-      if(gr%m%use_curvlinear .and. (poisson_solver.ne.CG_CORRECTED)) then
+      if(gr%mesh%use_curvlinear .and. (poisson_solver.ne.CG_CORRECTED)) then
         message(1) = 'If curvilinear coordinates are used, then the only working'
         message(2) = 'Poisson solvers is cg_corrected'
         call write_fatal(2)
@@ -292,8 +292,8 @@ contains
       all_nodes_value = .true.
     end if
 
-    ALLOCATE(aux1(gr%m%np), gr%m%np)
-    ALLOCATE(aux2(gr%m%np), gr%m%np)
+    ALLOCATE(aux1(gr%mesh%np), gr%mesh%np)
+    ALLOCATE(aux2(gr%mesh%np), gr%mesh%np)
 
     ! first the real part
     aux1(1:NP) = real(rho(1:NP))
@@ -342,44 +342,44 @@ contains
 
     select case(poisson_solver)
     case(DIRECT_SUM_1D)
-      call poisson1d_solve(gr%m, pot, rho)
+      call poisson1d_solve(gr%mesh, pot, rho)
 
     case(DIRECT_SUM_2D)
-      call poisson2d_solve(gr%m, pot, rho)
+      call poisson2d_solve(gr%mesh, pot, rho)
 
     case(CG)
-      call poisson_cg1(gr%m, corrector, gr%der, pot, rho)
+      call poisson_cg1(gr%mesh, corrector, gr%der, pot, rho)
 
     case(CG_CORRECTED)
       if(hartree_integrator%increase_box) then
-        ALLOCATE(potp(hartree_integrator%grid%m%np), hartree_integrator%grid%m%np)
-        ALLOCATE(rhop(hartree_integrator%grid%m%np), hartree_integrator%grid%m%np)
-        ALLOCATE(rho_corrected(gr%m%np), gr%m%np)
-        ALLOCATE(vh_correction(gr%m%np), gr%m%np)
+        ALLOCATE(potp(hartree_integrator%grid%mesh%np), hartree_integrator%grid%mesh%np)
+        ALLOCATE(rhop(hartree_integrator%grid%mesh%np), hartree_integrator%grid%mesh%np)
+        ALLOCATE(rho_corrected(gr%mesh%np), gr%mesh%np)
+        ALLOCATE(vh_correction(gr%mesh%np), gr%mesh%np)
 
         potp = M_ZERO; rhop = M_ZERO; rho_corrected = M_ZERO; vh_correction = M_ZERO
-        call correct_rho(corrector, gr%m, rho, rho_corrected, vh_correction)
+        call correct_rho(corrector, gr%mesh, rho, rho_corrected, vh_correction)
 
         pot(1:NP) = pot(1:NP) - vh_correction(1:NP)
 
-        call dmf_interpolate(gr%m, hartree_integrator%grid%m, full_interpolation = .false., u = rho_corrected, f = rhop)
-        call dmf_interpolate(gr%m, hartree_integrator%grid%m, full_interpolation = .false., u = pot, f = potp)
+        call dmf_interpolate(gr%mesh, hartree_integrator%grid%mesh, full_interpolation = .false., u = rho_corrected, f = rhop)
+        call dmf_interpolate(gr%mesh, hartree_integrator%grid%mesh, full_interpolation = .false., u = pot, f = potp)
 
-        call poisson_cg2(hartree_integrator%grid%m, hartree_integrator%grid%der, potp, rhop)
+        call poisson_cg2(hartree_integrator%grid%mesh, hartree_integrator%grid%der, potp, rhop)
 
-        call dmf_interpolate(hartree_integrator%grid%m, gr%m, full_interpolation = .false., u = potp, f = pot)
+        call dmf_interpolate(hartree_integrator%grid%mesh, gr%mesh, full_interpolation = .false., u = potp, f = pot)
         pot(1:NP) = pot(1:NP) + vh_correction(1:NP)
 
         deallocate(rho_corrected, vh_correction)
         deallocate(potp, rhop)
       else
-        ALLOCATE(rho_corrected(gr%m%np), gr%m%np)
-        ALLOCATE(vh_correction(gr%m%np), gr%m%np)
+        ALLOCATE(rho_corrected(gr%mesh%np), gr%mesh%np)
+        ALLOCATE(vh_correction(gr%mesh%np), gr%mesh%np)
 
-        call correct_rho(corrector, gr%m, rho, rho_corrected, vh_correction)
+        call correct_rho(corrector, gr%mesh, rho, rho_corrected, vh_correction)
 
         pot(1:NP) = pot(1:NP) - vh_correction(1:NP)
-        call poisson_cg2(gr%m, gr%der, pot, rho_corrected)
+        call poisson_cg2(gr%mesh, gr%der, pot, rho_corrected)
         pot(1:NP) = pot(1:NP) + vh_correction(1:NP)
 
         deallocate(rho_corrected, vh_correction)
@@ -389,20 +389,20 @@ contains
       call poisson_multigrid_solver(mg, gr, pot, rho)
 
     case(FFT_SPH,FFT_CYL,FFT_PLA,FFT_NOCUT)
-      call poisson_fft(gr%m, pot, rho)
+      call poisson_fft(gr%mesh, pot, rho)
 
     case(FFT_CORRECTED)
-      ALLOCATE(rho_corrected(gr%m%np), gr%m%np)
-      ALLOCATE(vh_correction(gr%m%np), gr%m%np)
+      ALLOCATE(rho_corrected(gr%mesh%np), gr%mesh%np)
+      ALLOCATE(vh_correction(gr%mesh%np), gr%mesh%np)
 
-      call correct_rho(corrector, gr%m, rho, rho_corrected, vh_correction)
-      call poisson_fft(gr%m, pot, rho_corrected, average_to_zero = .true.)
+      call correct_rho(corrector, gr%mesh, rho, rho_corrected, vh_correction)
+      call poisson_fft(gr%mesh, pot, rho_corrected, average_to_zero = .true.)
 
       pot(1:NP) = pot(1:NP) + vh_correction(1:NP)
       deallocate(rho_corrected, vh_correction)
 
     case(ISF)
-      call poisson_isf_solve(gr%m, pot, rho, all_nodes_value)
+      call poisson_isf_solve(gr%mesh, pot, rho, all_nodes_value)
       
     end select
 
@@ -439,11 +439,11 @@ contains
     ALLOCATE(    rhop(NP), NP)
     ALLOCATE(      vh(NP), NP)
     ALLOCATE(vh_exact(NP), NP)
-    ALLOCATE(x(gr%m%sb%dim, n_gaussians), gr%m%sb%dim*n_gaussians)
+    ALLOCATE(x(gr%mesh%sb%dim, n_gaussians), gr%mesh%sb%dim*n_gaussians)
 
     rho = M_ZERO; vh = M_ZERO; vh_exact = M_ZERO
 
-    alpha = CNST(4.0) * gr%m%h(1)
+    alpha = CNST(4.0) * gr%mesh%h(1)
     beta = M_ONE / ( alpha**calc_dim * sqrt(M_PI)**calc_dim )
 
     write(message(1), '(a)') 'Building the Gaussian distribution of charge...'
@@ -455,28 +455,28 @@ contains
     do n = 1, n_gaussians
       norm = M_ZERO
       do while(abs(norm-M_ONE)> CNST(1.0e-4))
-        do k = 1, gr%m%sb%dim
+        do k = 1, gr%mesh%sb%dim
           call random_number(rnd)
           x(k, n) = range * rnd 
         end do
         r = sqrt(sum(x(:, n)*x(:,n)))
         do i = 1, NP
-          call mesh_r(gr%m, i, r, a = x(:, n))
+          call mesh_r(gr%mesh, i, r, a = x(:, n))
           rhop(i) = beta*exp(-(r/alpha)**2)
         end do
-        norm = dmf_integrate(gr%m, rhop)
+        norm = dmf_integrate(gr%mesh, rhop)
       end do
       rhop = (-1)**n * rhop
       rho = rho + rhop
     end do
-    write(message(1), '(a,f14.6)') 'Total charge of the Gaussian distribution', dmf_integrate(gr%m, rho)
+    write(message(1), '(a,f14.6)') 'Total charge of the Gaussian distribution', dmf_integrate(gr%mesh, rho)
     call write_info(1)
 
     ! This builds analytically its potential
     vh_exact = M_ZERO
     do n = 1, n_gaussians
       do i = 1, NP
-        call mesh_r(gr%m, i, r, a = x(:, n))
+        call mesh_r(gr%mesh, i, r, a = x(:, n))
         select case(calc_dim)
         case(3)
           if(r > r_small) then
@@ -501,18 +501,18 @@ contains
     call dpoisson_solve(gr, vh, rho)
 
     ! And this compares.
-    delta = dmf_nrm2(gr%m, vh-vh_exact)
+    delta = dmf_nrm2(gr%mesh, vh-vh_exact)
 
     ! Output
     iunit = io_open("hartree_results", action='write')
     write(iunit, '(a,f10.2)' ) 'Hartree test = ', delta
     call io_close(iunit)
-    call doutput_function (io_function_fill_how('AxisX'), ".", "poisson_test_rho", gr%m, gr%sb, rho, M_ONE, ierr)
-    call doutput_function (io_function_fill_how('AxisX'), ".", "poisson_test_exact", gr%m, gr%sb, vh_exact, M_ONE, ierr)
-    call doutput_function (io_function_fill_how('AxisX'), ".", "poisson_test_numerical", gr%m, gr%sb, vh, M_ONE, ierr)
-    call doutput_function (io_function_fill_how('AxisY'), ".", "poisson_test_rho", gr%m, gr%sb, rho, M_ONE, ierr)
-    call doutput_function (io_function_fill_how('AxisY'), ".", "poisson_test_exact", gr%m, gr%sb, vh_exact, M_ONE, ierr)
-    call doutput_function (io_function_fill_how('AxisY'), ".", "poisson_test_numerical", gr%m, gr%sb, vh, M_ONE, ierr)
+    call doutput_function (io_function_fill_how('AxisX'), ".", "poisson_test_rho", gr%mesh, gr%sb, rho, M_ONE, ierr)
+    call doutput_function (io_function_fill_how('AxisX'), ".", "poisson_test_exact", gr%mesh, gr%sb, vh_exact, M_ONE, ierr)
+    call doutput_function (io_function_fill_how('AxisX'), ".", "poisson_test_numerical", gr%mesh, gr%sb, vh, M_ONE, ierr)
+    call doutput_function (io_function_fill_how('AxisY'), ".", "poisson_test_rho", gr%mesh, gr%sb, rho, M_ONE, ierr)
+    call doutput_function (io_function_fill_how('AxisY'), ".", "poisson_test_exact", gr%mesh, gr%sb, vh_exact, M_ONE, ierr)
+    call doutput_function (io_function_fill_how('AxisY'), ".", "poisson_test_numerical", gr%mesh, gr%sb, vh, M_ONE, ierr)
 
     deallocate(rho, rhop, vh, vh_exact, x)
     call pop_sub()

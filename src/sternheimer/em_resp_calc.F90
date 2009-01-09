@@ -76,7 +76,7 @@ contains
 
     call push_sub('em_resp.lr_calc_current')
 
-    if(.not. associated(lr%dl_j)) ALLOCATE(lr%dl_j(gr%m%np, MAX_DIM, st%d%nspin), gr%m%np*MAX_DIM*st%d%nspin)
+    if(.not. associated(lr%dl_j)) ALLOCATE(lr%dl_j(gr%mesh%np, MAX_DIM, st%d%nspin), gr%mesh%np*MAX_DIM*st%d%nspin)
 
     np = NP
     ndim = NDIM

@@ -100,7 +100,7 @@ contains
     call vibrations_init(vib, geo, gr%sb)
 
     call lr_init(lr(1))
-    call lr_allocate(lr(1), st, gr%m)
+    call lr_allocate(lr(1), st, gr%mesh)
 
     ALLOCATE(infrared(natoms*ndim, ndim), natoms*ndim**2)
 
@@ -271,7 +271,7 @@ contains
       integer :: ik, ist, idim, inm
 
       call lr_init(lrtmp)
-      call lr_allocate(lrtmp, st, gr%m)
+      call lr_allocate(lrtmp, st, gr%mesh)
 
       lr(1)%ddl_psi = M_ZERO
 
@@ -289,7 +289,7 @@ contains
               do ist = st%st_start, st%st_end
                 do idim = 1, st%d%dim
 
-                  call lalg_axpy(gr%m%np, vib%normal_mode(imat, inm), &
+                  call lalg_axpy(gr%mesh%np, vib%normal_mode(imat, inm), &
                     lrtmp%ddl_psi(:, idim, ist, ik), lr(1)%ddl_psi(:, idim, ist, ik))
                   
                 end do
@@ -324,7 +324,7 @@ contains
 
     call push_sub('em_resp.read_wfs')
 
-    call states_look(trim(restart_dir)//'gs', gr%m%mpi_grp, kpoints, dim, nst, ierr)
+    call states_look(trim(restart_dir)//'gs', gr%mesh%mpi_grp, kpoints, dim, nst, ierr)
     if(ierr.ne.0) then
       message(1) = 'Could not properly read wave-functions from "'//trim(restart_dir)//'gs".'
       call write_fatal(1)
@@ -335,9 +335,9 @@ contains
     deallocate(st%eigenval, st%occ)
 
     if ( complex_wfs ) then 
-      call states_allocate_wfns(st, gr%m, M_CMPLX)
+      call states_allocate_wfns(st, gr%mesh, M_CMPLX)
     else 
-      call states_allocate_wfns(st, gr%m, M_REAL)
+      call states_allocate_wfns(st, gr%mesh, M_REAL)
     end if
 
     ALLOCATE(st%eigenval(st%nst, st%d%nik), st%nst*st%d%nik)

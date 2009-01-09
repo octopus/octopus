@@ -173,7 +173,7 @@ contains
 
     call push_sub('restart.restart_look_and_read')
 
-    call states_look(trim(restart_dir)//'gs', gr%m%mpi_grp, kpoints, dim, nst, j)
+    call states_look(trim(restart_dir)//'gs', gr%mesh%mpi_grp, kpoints, dim, nst, j)
     if(j.ne.0) then
       ierr = j
       call pop_sub(); return
@@ -183,7 +183,7 @@ contains
     st%st_end = nst
     deallocate(st%eigenval, st%occ)
 
-    call states_allocate_wfns(st, gr%m)
+    call states_allocate_wfns(st, gr%mesh)
 
     ALLOCATE(st%eigenval(st%nst, st%d%nik), st%nst*st%d%nik)
     ALLOCATE(st%occ(st%nst, st%d%nik), st%nst*st%d%nik)
@@ -248,11 +248,11 @@ contains
       write(iunit_mesh,'(a)') '# except for the geometry of the system.'
       call curvlinear_dump(gr%cv, iunit_mesh)
       call simul_box_dump(gr%sb, iunit_mesh)
-      call mesh_dump(gr%m, iunit_mesh)
+      call mesh_dump(gr%mesh, iunit_mesh)
       call io_close(iunit_mesh)
 
       iunit_mesh = io_open(trim(dir)//'/Lxyz', action='write', is_tmp=.true.)
-      call mesh_Lxyz_dump(gr%m, iunit_mesh)
+      call mesh_Lxyz_dump(gr%mesh, iunit_mesh)
       call io_close(iunit_mesh)      
 
       iunit_states = io_open(trim(dir)//'/states', action='write', is_tmp=.true.)
@@ -348,23 +348,23 @@ contains
     ierr = 0
 
     ! Read the mesh of the ground state calculation.
-    io_mesh = io_open(trim(dir)//'/mesh', action='read', status='old', die=.false., is_tmp=.true., grp=gr%m%mpi_grp)
+    io_mesh = io_open(trim(dir)//'/mesh', action='read', status='old', die=.false., is_tmp=.true., grp=gr%mesh%mpi_grp)
     if(io_mesh.lt.0) then
       ierr = -1
-      call io_close(io_mesh, grp=gr%m%mpi_grp)
+      call io_close(io_mesh, grp=gr%mesh%mpi_grp)
       call pop_sub()
       return
     end if
     call mesh_init_from_file(gs_mesh, io_mesh)
 
-    io_wfns  = io_open(trim(dir)//'/wfns', action='read', status='old', die=.false., is_tmp=.true., grp=gr%m%mpi_grp)
+    io_wfns  = io_open(trim(dir)//'/wfns', action='read', status='old', die=.false., is_tmp=.true., grp=gr%mesh%mpi_grp)
     if(io_wfns.lt.0) then
       ierr = -1
     end if
 
-    io_occs = io_open(trim(dir)//'/occs', action='read', status='old', die=.false., is_tmp = .true., grp = gr%m%mpi_grp)
+    io_occs = io_open(trim(dir)//'/occs', action='read', status='old', die=.false., is_tmp = .true., grp = gr%mesh%mpi_grp)
     if(io_occs.lt.0) then
-      if(io_wfns.gt.0) call io_close(io_wfns, grp=gr%m%mpi_grp)
+      if(io_wfns.gt.0) call io_close(io_wfns, grp=gr%mesh%mpi_grp)
       ierr = -1
     end if
 
@@ -377,23 +377,23 @@ contains
     end if
 
     ! Skip two lines.
-    call iopar_read(gr%m%mpi_grp, io_wfns, line, err); call iopar_read(gr%m%mpi_grp, io_wfns, line, err)
-    call iopar_read(gr%m%mpi_grp, io_occs, line, err); call iopar_read(gr%m%mpi_grp, io_occs, line, err)
+    call iopar_read(gr%mesh%mpi_grp, io_wfns, line, err); call iopar_read(gr%mesh%mpi_grp, io_wfns, line, err)
+    call iopar_read(gr%mesh%mpi_grp, io_occs, line, err); call iopar_read(gr%mesh%mpi_grp, io_occs, line, err)
 
-    lead_np = gr%m%lead_unit_cell(LEFT)%np
+    lead_np = gr%mesh%lead_unit_cell(LEFT)%np
     ALLOCATE(tmp(NP+2*lead_np), NP+2*lead_np)
     
     do
-      call iopar_read(gr%m%mpi_grp, io_wfns, line, i)
+      call iopar_read(gr%mesh%mpi_grp, io_wfns, line, i)
       read(line, '(a)') char
       if(i.ne.0.or.char.eq.'%') exit
 
-      call iopar_backspace(gr%m%mpi_grp, io_wfns)
+      call iopar_backspace(gr%mesh%mpi_grp, io_wfns)
 
-      call iopar_read(gr%m%mpi_grp, io_wfns, line, err)
+      call iopar_read(gr%mesh%mpi_grp, io_wfns, line, err)
       read(line, *) ik, char, ist, char, idim, char, filename
 
-      call iopar_read(gr%m%mpi_grp, io_occs, line, err)
+      call iopar_read(gr%mesh%mpi_grp, io_occs, line, err)
       read(line, *) st%occ(ist, ik), char, st%eigenval(ist, ik)
 
       if(ist.ge.st%st_start .and. ist.le.st%st_end) then
@@ -438,8 +438,8 @@ contains
       end if
     end if
 
-    call io_close(io_wfns, gr%m%mpi_grp)
-    call io_close(io_occs, gr%m%mpi_grp)
+    call io_close(io_wfns, gr%mesh%mpi_grp)
+    call io_close(io_occs, gr%mesh%mpi_grp)
 
     deallocate(tmp)
 
@@ -482,23 +482,23 @@ contains
     ierr = 0
 
     ! Read the mesh of the ground state calculation.
-    io_mesh = io_open(trim(dir)//'/mesh', action='read', status='old', die=.false., is_tmp=.true., grp=gr%m%mpi_grp)
+    io_mesh = io_open(trim(dir)//'/mesh', action='read', status='old', die=.false., is_tmp=.true., grp=gr%mesh%mpi_grp)
     if(io_mesh.lt.0) then
       ierr = -1
-      call io_close(io_mesh, grp=gr%m%mpi_grp)
+      call io_close(io_mesh, grp=gr%mesh%mpi_grp)
       call pop_sub()
       return
     end if
     call mesh_init_from_file(gs_mesh, io_mesh)
 
-    io_wfns  = io_open(trim(dir)//'/wfns', action='read', status='old', die=.false., is_tmp=.true., grp=gr%m%mpi_grp)
+    io_wfns  = io_open(trim(dir)//'/wfns', action='read', status='old', die=.false., is_tmp=.true., grp=gr%mesh%mpi_grp)
     if(io_wfns.lt.0) then
       ierr = -1
     end if
 
-    io_occs = io_open(trim(dir)//'/occs', action='read', status='old', die=.false., is_tmp = .true., grp = gr%m%mpi_grp)
+    io_occs = io_open(trim(dir)//'/occs', action='read', status='old', die=.false., is_tmp = .true., grp = gr%mesh%mpi_grp)
     if(io_occs.lt.0) then
-      if(io_wfns.gt.0) call io_close(io_wfns, grp=gr%m%mpi_grp)
+      if(io_wfns.gt.0) call io_close(io_wfns, grp=gr%mesh%mpi_grp)
       ierr = -1
     end if
 
@@ -514,23 +514,23 @@ contains
     filled = .false.
 
     ! Skip two lines.
-    call iopar_read(gr%m%mpi_grp, io_wfns, line, err); call iopar_read(gr%m%mpi_grp, io_wfns, line, err)
-    call iopar_read(gr%m%mpi_grp, io_occs, line, err); call iopar_read(gr%m%mpi_grp, io_occs, line, err)
+    call iopar_read(gr%mesh%mpi_grp, io_wfns, line, err); call iopar_read(gr%mesh%mpi_grp, io_wfns, line, err)
+    call iopar_read(gr%mesh%mpi_grp, io_occs, line, err); call iopar_read(gr%mesh%mpi_grp, io_occs, line, err)
 
-    lead_np = gr%m%lead_unit_cell(LEFT)%np
+    lead_np = gr%mesh%lead_unit_cell(LEFT)%np
     ALLOCATE(tmp(NP+2*lead_np), NP+2*lead_np)
     
     do
-      call iopar_read(gr%m%mpi_grp, io_wfns, line, i)
+      call iopar_read(gr%mesh%mpi_grp, io_wfns, line, i)
       read(line, '(a)') char
       if(i.ne.0.or.char.eq.'%') exit
 
-      call iopar_backspace(gr%m%mpi_grp, io_wfns)
+      call iopar_backspace(gr%mesh%mpi_grp, io_wfns)
 
-      call iopar_read(gr%m%mpi_grp, io_wfns, line, err)
+      call iopar_read(gr%mesh%mpi_grp, io_wfns, line, err)
       read(line, *) ik, char, ist, char, idim, char, filename
 
-      call iopar_read(gr%m%mpi_grp, io_occs, line, err)
+      call iopar_read(gr%mesh%mpi_grp, io_occs, line, err)
       read(line, *) st%occ(ist, ik), char, st%eigenval(ist, ik)
 
       if(ist.ge.st%st_start .and. ist.le.st%st_end) then
@@ -570,8 +570,8 @@ contains
       end if
     end if
 
-    call io_close(io_wfns, gr%m%mpi_grp)
-    call io_close(io_occs, gr%m%mpi_grp)
+    call io_close(io_wfns, gr%mesh%mpi_grp)
+    call io_close(io_occs, gr%mesh%mpi_grp)
 
     deallocate(filled, tmp)
 
@@ -627,14 +627,14 @@ contains
     ierr = 0
 
     ! open files to read
-    iunit  = io_open(trim(dir)//'/wfns', action='read', status='old', die=.false., is_tmp = .true., grp = gr%m%mpi_grp)
+    iunit  = io_open(trim(dir)//'/wfns', action='read', status='old', die=.false., is_tmp = .true., grp = gr%mesh%mpi_grp)
     if(iunit < 0) then
       ierr = -1
     end if
 
-    iunit2 = io_open(trim(dir)//'/occs', action='read', status='old', die=.false., is_tmp = .true., grp = gr%m%mpi_grp)
+    iunit2 = io_open(trim(dir)//'/occs', action='read', status='old', die=.false., is_tmp = .true., grp = gr%mesh%mpi_grp)
     if(iunit2 < 0) then
-      if(iunit > 0) call io_close(iunit, grp = gr%m%mpi_grp)
+      if(iunit > 0) call io_close(iunit, grp = gr%mesh%mpi_grp)
       ierr = -1
     end if
 
@@ -654,39 +654,39 @@ contains
     filled = .false.
 
     ! Skip two lines.
-    call iopar_read(gr%m%mpi_grp, iunit,  line, err); call iopar_read(gr%m%mpi_grp, iunit,  line, err)
-    call iopar_read(gr%m%mpi_grp, iunit2, line, err); call iopar_read(gr%m%mpi_grp, iunit2, line, err)
+    call iopar_read(gr%mesh%mpi_grp, iunit,  line, err); call iopar_read(gr%mesh%mpi_grp, iunit,  line, err)
+    call iopar_read(gr%mesh%mpi_grp, iunit2, line, err); call iopar_read(gr%mesh%mpi_grp, iunit2, line, err)
 
     do
-      call iopar_read(gr%m%mpi_grp, iunit, line, i)
+      call iopar_read(gr%mesh%mpi_grp, iunit, line, i)
       read(line, '(a)') char
       if(i.ne.0.or.char=='%') exit
 
-      call iopar_backspace(gr%m%mpi_grp, iunit)
+      call iopar_backspace(gr%mesh%mpi_grp, iunit)
 
-      call iopar_read(gr%m%mpi_grp, iunit, line, err)
+      call iopar_read(gr%mesh%mpi_grp, iunit, line, err)
       read(line, *) ik, char, ist, char, idim, char, filename
       if(index_is_wrong()) then
-        call iopar_read(gr%m%mpi_grp, iunit2, line, err)
+        call iopar_read(gr%mesh%mpi_grp, iunit2, line, err)
         cycle
       end if
 
-      call iopar_read(gr%m%mpi_grp, iunit2, line, err)
+      call iopar_read(gr%mesh%mpi_grp, iunit2, line, err)
       read(line, *) st%occ(ist, ik), char, st%eigenval(ist, ik)
 
       if(ist >= st%st_start .and. ist <= st%st_end) then
         if(.not.mesh_change) then
           if( .not. present(lr) ) then 
             if (st%wfs_type == M_REAL) then
-              call drestart_read_function(dir, filename, gr%m, st%dpsi(:, idim, ist, ik), err)
+              call drestart_read_function(dir, filename, gr%mesh, st%dpsi(:, idim, ist, ik), err)
             else
-              call zrestart_read_function(dir, filename, gr%m, st%zpsi(:, idim, ist, ik), err)
+              call zrestart_read_function(dir, filename, gr%mesh, st%zpsi(:, idim, ist, ik), err)
             end if
           else
             if (st%wfs_type == M_REAL) then
-              call drestart_read_function(dir, filename, gr%m, lr%ddl_psi(:, idim, ist, ik), err)
+              call drestart_read_function(dir, filename, gr%mesh, lr%ddl_psi(:, idim, ist, ik), err)
             else
-              call zrestart_read_function(dir, filename, gr%m, lr%zdl_psi(:, idim, ist, ik), err)
+              call zrestart_read_function(dir, filename, gr%mesh, lr%zdl_psi(:, idim, ist, ik), err)
             end if
           end if
           if(err <= 0) then
@@ -697,16 +697,16 @@ contains
           if (st%wfs_type == M_REAL) then
             call drestart_read_function(dir, filename, old_mesh, dphi, err)
             if( .not. present(lr) ) then 
-              call dmf_interpolate(old_mesh, gr%m, full_interpolation, dphi, st%dpsi(:, idim, ist, ik))
+              call dmf_interpolate(old_mesh, gr%mesh, full_interpolation, dphi, st%dpsi(:, idim, ist, ik))
             else
-              call dmf_interpolate(old_mesh, gr%m, full_interpolation, dphi, lr%ddl_psi(:, idim, ist, ik))
+              call dmf_interpolate(old_mesh, gr%mesh, full_interpolation, dphi, lr%ddl_psi(:, idim, ist, ik))
             end if
           else
             call zrestart_read_function(dir, filename, old_mesh, zphi, err)
             if( .not. present(lr) ) then 
-              call zmf_interpolate(old_mesh, gr%m, full_interpolation, zphi, st%zpsi(:, idim, ist, ik))
+              call zmf_interpolate(old_mesh, gr%mesh, full_interpolation, zphi, st%zpsi(:, idim, ist, ik))
             else
-              call zmf_interpolate(old_mesh, gr%m, full_interpolation, zphi, lr%zdl_psi(:, idim, ist, ik))
+              call zmf_interpolate(old_mesh, gr%mesh, full_interpolation, zphi, lr%zdl_psi(:, idim, ist, ik))
             end if
           end if
           if(err <= 0) then
@@ -718,7 +718,7 @@ contains
     end do
 
     if(present(iter)) then
-      call iopar_read(gr%m%mpi_grp, iunit, line, err)
+      call iopar_read(gr%mesh%mpi_grp, iunit, line, err)
       read(line, *) filename, filename, iter
     end if
 
@@ -760,8 +760,8 @@ contains
     end if
 
     deallocate(filled)
-    call io_close(iunit, grp = gr%m%mpi_grp)
-    call io_close(iunit2, grp = gr%m%mpi_grp)
+    call io_close(iunit, grp = gr%mesh%mpi_grp)
+    call io_close(iunit2, grp = gr%mesh%mpi_grp)
 
     if(mesh_change) call interpolation_end()
 
@@ -805,13 +805,13 @@ contains
 #endif
       if(present(iter)) return ! No interpolation, in case we are in the td part.
 
-      iunit_mesh  = io_open(trim(dir)//'/mesh', action='read', status='old', die=.false., grp = gr%m%mpi_grp)
+      iunit_mesh  = io_open(trim(dir)//'/mesh', action='read', status='old', die=.false., grp = gr%mesh%mpi_grp)
       if(iunit_mesh < 0) return
 
       read(iunit_mesh, *); read(iunit_mesh, *); read(iunit_mesh, *)
       call curvlinear_init_from_file(old_cv, iunit_mesh)
       call simul_box_init_from_file(old_sb, iunit_mesh)
-      call io_close(iunit_mesh, grp = gr%m%mpi_grp)
+      call io_close(iunit_mesh, grp = gr%mesh%mpi_grp)
 
       if( .not. curvlinear_is_eq(old_cv, gr%cv) ) then
         mesh_change = .true.
@@ -856,13 +856,13 @@ contains
               if(first > ist) first = ist
             end if
 
-            call states_generate_random(st, gr%m, ist, ist)
+            call states_generate_random(st, gr%mesh, ist, ist)
             st%occ(ist, ik) = M_ZERO
           end do
         end do
       end do
 
-      if(first.ne.st%st_end+1) call states_orthogonalize(st, gr%m, first)
+      if(first.ne.st%st_end+1) call states_orthogonalize(st, gr%mesh, first)
 
     end subroutine fill
 
@@ -903,45 +903,45 @@ contains
     call push_sub('states.states_read_free_states')
 
     sb       => gr%sb
-    m_lead   => gr%m%lead_unit_cell(LEFT)
-    m_center => gr%m
+    m_lead   => gr%mesh%lead_unit_cell(LEFT)
+    m_center => gr%mesh
     lead_nr(1, :) = m_lead%idx%nr(1, :)+m_lead%idx%enlarge
     lead_nr(1, :) = m_lead%idx%nr(2, :)-m_lead%idx%enlarge
 
     ALLOCATE(tmp(m_lead%np, st%d%dim), m_lead%np*st%d%dim)
     restart_dir = trim(sb%lead_restart_dir(LEFT))//'/gs'
 
-    wfns = io_open(trim(restart_dir)//'/wfns', action='read', is_tmp=.true., grp=gr%m%mpi_grp)
+    wfns = io_open(trim(restart_dir)//'/wfns', action='read', is_tmp=.true., grp=gr%mesh%mpi_grp)
     if(wfns.lt.0) then
       message(1) = 'Could not read '//trim(restart_dir)//'/wfns.'
       call write_fatal(1)
     end if
-    occs = io_open(trim(restart_dir)//'/occs', action='read', is_tmp=.true., grp=gr%m%mpi_grp)
+    occs = io_open(trim(restart_dir)//'/occs', action='read', is_tmp=.true., grp=gr%mesh%mpi_grp)
     if(occs.lt.0) then
       message(1) = 'Could not read '//trim(restart_dir)//'/occs.'
       call write_fatal(1)
     end if
 
     ! Skip two lines.
-    call iopar_read(gr%m%mpi_grp, wfns, line, err); call iopar_read(gr%m%mpi_grp, wfns, line, err)
-    call iopar_read(gr%m%mpi_grp, occs, line, err); call iopar_read(gr%m%mpi_grp, occs, line, err)
+    call iopar_read(gr%mesh%mpi_grp, wfns, line, err); call iopar_read(gr%mesh%mpi_grp, wfns, line, err)
+    call iopar_read(gr%mesh%mpi_grp, occs, line, err); call iopar_read(gr%mesh%mpi_grp, occs, line, err)
 
     jst = 1
     st%ob_rho = M_ZERO
     do
       ! Check for end of file. Check only one of the two files assuming
       ! they are written correctly, i. e. of same length.
-      call iopar_read(gr%m%mpi_grp, wfns, line, err)
+      call iopar_read(gr%mesh%mpi_grp, wfns, line, err)
       read(line, '(a)') char
       if(char.eq.'%') then
         exit
       end if
-      call iopar_backspace(gr%m%mpi_grp, wfns)
+      call iopar_backspace(gr%mesh%mpi_grp, wfns)
 
-      call iopar_read(gr%m%mpi_grp, wfns, line, err)
+      call iopar_read(gr%mesh%mpi_grp, wfns, line, err)
       read(line, *) ik, char, ist, char, idim, char, fname
 
-      call iopar_read(gr%m%mpi_grp, occs, line, err)
+      call iopar_read(gr%mesh%mpi_grp, occs, line, err)
       read(line, *) occ, char, eval, char, k_x, char, k_y, char, k_z, char, w_k, char, &
         chars, char, k_ik, char, k_ist, char, k_idim
 
@@ -971,7 +971,7 @@ contains
 
       ! Apply phase.
       do ip = 1, NP
-        phase = exp(-M_zI*sum(gr%m%x(ip, 1:MAX_DIM)*st%ob_d%kpoints(1:MAX_DIM, ik)))
+        phase = exp(-M_zI*sum(gr%mesh%x(ip, 1:MAX_DIM)*st%ob_d%kpoints(1:MAX_DIM, ik)))
         st%zphi(ip, idim, jst, k_index) = phase*st%zphi(ip, idim, jst, k_index)
       end do
 

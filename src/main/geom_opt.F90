@@ -98,12 +98,12 @@ contains
     if(fromscratch) then
 
       ! Randomly generate the initial wave-functions
-      call states_generate_random(sys%st, sys%gr%m)
-      call states_orthogonalize(sys%st, sys%gr%m)
+      call states_generate_random(sys%st, sys%gr%mesh)
+      call states_orthogonalize(sys%st, sys%gr%mesh)
 
       ! We do not compute the density from the random wave-functions. 
       ! Instead, we try to get a better guess for the density
-      call guess_density(sys%gr%m, sys%gr%sb, sys%geo, sys%st%qtot, sys%st%d%nspin, &
+      call guess_density(sys%gr%mesh, sys%gr%sb, sys%geo, sys%st%qtot, sys%st%d%nspin, &
            sys%st%d%spin_channels, sys%st%rho)
 
       ! setup Hamiltonian (we do not call system_h_setup here because we do not want to
@@ -111,7 +111,7 @@ contains
       message(1) = 'Info: Setting up Hamiltonian.'
       call write_info(1)
       call v_ks_calc(sys%gr, sys%ks, h, sys%st, calc_eigenval=.true.) ! get potentials
-      call states_fermi(sys%st, sys%gr%m)                                ! occupations
+      call states_fermi(sys%st, sys%gr%mesh)                                ! occupations
       call total_energy(h, sys%gr, sys%st, -1)
 
       lcao_start_default = LCAO_START_FULL
@@ -134,7 +134,7 @@ contains
           call lcao_end(lcao)
 
           !Just populate again the states, so that the eigenvalues are properly written
-          call states_fermi(sys%st, sys%gr%m)
+          call states_fermi(sys%st, sys%gr%mesh)
           call states_write_eigenvalues(stdout, sys%st%nst, sys%st, sys%gr%sb)
 
           ! Update the density and the Hamiltonian
@@ -199,10 +199,10 @@ contains
     subroutine init_()
       call push_sub('geom_opt.geom_opt_run')
 
-      call states_allocate_wfns(sys%st, sys%gr%m)
+      call states_allocate_wfns(sys%st, sys%gr%mesh)
 
       ! shortcuts
-      g_opt%m      => sys%gr%m
+      g_opt%m      => sys%gr%mesh
       g_opt%geo    => sys%geo
       g_opt%st     => sys%st
       g_opt%hamilt => h

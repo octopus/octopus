@@ -119,12 +119,12 @@ contains
     
     nullify(this%dpsi2, this%zpsi2)
 
-    size = gr%m%np_part * st%d%dim * st%lnst * st%d%nik
+    size = gr%mesh%np_part * st%d%dim * st%lnst * st%d%nik
 
     if(wfs_are_real(st)) then
-      ALLOCATE(this%dpsi2(gr%m%np_part, st%d%dim, st%st_start:st%st_end, st%d%nik), size)
+      ALLOCATE(this%dpsi2(gr%mesh%np_part, st%d%dim, st%st_start:st%st_end, st%d%nik), size)
     else
-      ALLOCATE(this%zpsi2(gr%m%np_part, st%d%dim, st%st_start:st%st_end, st%d%nik), size)
+      ALLOCATE(this%zpsi2(gr%mesh%np_part, st%d%dim, st%st_start:st%st_end, st%d%nik), size)
     end if
 
     call pop_sub()
@@ -170,9 +170,9 @@ contains
           if (ist < st%st_start .or.  ist > st%st_end) cycle
           write(filename,'(i10.10)') ii
           if(wfs_are_real(st)) then
-            call drestart_write_function(trim(tmpdir)//'td/cpmd', filename, gr, this%dpsi2(:, idim, ist, ik), err, gr%m%np)
+            call drestart_write_function(trim(tmpdir)//'td/cpmd', filename, gr, this%dpsi2(:, idim, ist, ik), err, gr%mesh%np)
           else
-            call zrestart_write_function(trim(tmpdir)//'td/cpmd', filename, gr, this%zpsi2(:, idim, ist, ik), err, gr%m%np)
+            call zrestart_write_function(trim(tmpdir)//'td/cpmd', filename, gr, this%zpsi2(:, idim, ist, ik), err, gr%mesh%np)
           end if
         end do
       end do
@@ -203,9 +203,9 @@ contains
           if (ist < st%st_start .or.  ist > st%st_end) cycle
           write(filename,'(i10.10)') ii
           if(wfs_are_real(st)) then
-            call drestart_read_function(trim(tmpdir)//'td/cpmd', filename, gr%m, this%dpsi2(:, idim, ist, ik), ierr)
+            call drestart_read_function(trim(tmpdir)//'td/cpmd', filename, gr%mesh, this%dpsi2(:, idim, ist, ik), ierr)
           else
-            call zrestart_read_function(trim(tmpdir)//'td/cpmd', filename, gr%m, this%zpsi2(:, idim, ist, ik), ierr)
+            call zrestart_read_function(trim(tmpdir)//'td/cpmd', filename, gr%mesh, this%zpsi2(:, idim, ist, ik), ierr)
           end if
           if(ierr /= 0) return
         end do

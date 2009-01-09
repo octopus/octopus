@@ -215,7 +215,7 @@ contains
       call states_copy(w%gs_st, st)
       ! WARNING: should be first deallocate, then nullify?
       nullify(w%gs_st%zpsi, w%gs_st%node, w%gs_st%occ, w%gs_st%eigenval)
-      call states_look (trim(restart_dir)//'gs', gr%m%mpi_grp, i, j, w%gs_st%nst, ierr)
+      call states_look (trim(restart_dir)//'gs', gr%mesh%mpi_grp, i, j, w%gs_st%nst, ierr)
 
       if(w%out(OUT_POPULATIONS)%write) then ! do only this when not calculating populations
         ! We will store the ground-state Kohn-Sham system by all processors.
@@ -244,7 +244,7 @@ contains
       if(w%gs_st%d%ispin == SPINORS) then
         ALLOCATE(w%gs_st%spin(3, w%gs_st%nst, w%gs_st%d%nik), w%gs_st%nst*w%gs_st%d%nik*3)
       end if
-      call states_allocate_wfns(w%gs_st, gr%m, M_CMPLX)
+      call states_allocate_wfns(w%gs_st, gr%mesh, M_CMPLX)
       w%gs_st%node(:)  = 0
       call restart_read(trim(restart_dir)//'gs', w%gs_st, gr, geo, ierr)
       if(ierr.ne.0 .and.ierr.ne.(w%gs_st%st_end-w%gs_st%st_start+1)*w%gs_st%d%nik*w%gs_st%d%dim) then
@@ -412,7 +412,7 @@ contains
       call td_write_temperature(w%out(OUT_TEMPERATURE)%handle, geo, i)
 
     if(w%out(OUT_POPULATIONS)%write) &
-      call td_write_populations(w%out(OUT_POPULATIONS)%handle, gr%m, st, &
+      call td_write_populations(w%out(OUT_POPULATIONS)%handle, gr%mesh, st, &
         w%gs_st, w%n_excited_states, w%excited_st, dt, i)
 
     if(w%out(OUT_ACC)%write) &
@@ -476,7 +476,7 @@ contains
 
     ! The expectation value of the spin operator is half the total magnetic moment
     ! This has to be calculated by all nodes
-    call magnetic_moment(gr%m, st, st%rho, spin)
+    call magnetic_moment(gr%mesh, st, st%rho, spin)
     spin = M_HALF*spin
 
     if(mpi_grp_is_root(mpi_world)) then ! only first node outputs
@@ -531,7 +531,7 @@ contains
 
     !get the atoms magnetization. This has to be calculated by all nodes
     ALLOCATE(lmm(3, geo%natoms), 3*geo%natoms)
-    call magnetic_local_moments(gr%m, st, geo, st%rho, lmm_r, lmm)
+    call magnetic_local_moments(gr%mesh, st, geo, st%rho, lmm_r, lmm)
 
     if(mpi_grp_is_root(mpi_world)) then ! only first node outputs
 
@@ -729,7 +729,7 @@ contains
     multipole   (:,:) = M_ZERO
 
     do is = 1, st%d%nspin
-      call dmf_multipoles(gr%m, st%rho(:,is), lmax, multipole(:,is))
+      call dmf_multipoles(gr%mesh, st%rho(:,is), lmax, multipole(:,is))
     end do
     call geometry_dipole(geo, nuclear_dipole)
     do is = 1, st%d%nspin
@@ -1311,7 +1311,7 @@ contains
         do ist = max(gs_st%st_start, st%st_start), st%st_end
           do uist = gs_st%st_start, gs_st%st_end
             projections(ist, uist, ik) = &
-              zmf_dotp(gr%m, st%d%dim, st%zpsi(:, :, ist, ik), gs_st%zpsi(:, :, uist, ik))
+              zmf_dotp(gr%mesh, st%d%dim, st%zpsi(:, :, ist, ik), gs_st%zpsi(:, :, uist, ik))
           end do
         end do
       end do
@@ -1338,11 +1338,11 @@ contains
           do uist = gs_st%st_start, gs_st%st_end
             
             do idim = 1, st%d%dim
-              xpsi(1:NP, idim) = gr%m%x(1:NP, dir) * gs_st%zpsi(1:NP, idim, uist, ik)
+              xpsi(1:NP, idim) = gr%mesh%x(1:NP, dir) * gs_st%zpsi(1:NP, idim, uist, ik)
             end do
 
             projections(ist, uist, ik) = n_dip(dir) - &
-              zmf_dotp(gr%m, st%d%dim, st%zpsi(:, :, ist, ik), xpsi(:, :))
+              zmf_dotp(gr%mesh, st%d%dim, st%zpsi(:, :, ist, ik), xpsi(:, :))
 
           end do
         end do

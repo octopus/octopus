@@ -364,7 +364,7 @@ subroutine X(projector_commute_r)(pj, gr, dim, idir, ik, psi, cpsi)
 
   call push_sub('projector_inc.Xprojector_commute_r')
 
-  cpsi(1:gr%m%np, 1:dim) = M_ZERO
+  cpsi(1:gr%mesh%np, 1:dim) = M_ZERO
 
   if(pj%type .ne. M_NONE) then
 
@@ -376,7 +376,7 @@ subroutine X(projector_commute_r)(pj, gr, dim, idir, ik, psi, cpsi)
     ALLOCATE(xplpsi(ns, dim), ns * dim)
     ALLOCATE(pxlpsi(ns, dim), ns * dim)
 
-    if(simul_box_is_periodic(gr%m%sb)) then
+    if(simul_box_is_periodic(gr%mesh%sb)) then
       do idim = 1, dim
         lpsi(1:ns, idim) = psi(jxyz(1:ns)) * pj%phase(1:ns, ik)
       end do
@@ -387,7 +387,7 @@ subroutine X(projector_commute_r)(pj, gr, dim, idir, ik, psi, cpsi)
     end if
 
     ! x V_nl |psi>
-    call X(project_sphere)(gr%m, pj, dim, lpsi, xplpsi)
+    call X(project_sphere)(gr%mesh, pj, dim, lpsi, xplpsi)
     do idim = 1, dim
       xplpsi(1:ns, idim) = smx(1:ns, idir) * xplpsi(1:ns, idim)
     end do
@@ -396,10 +396,10 @@ subroutine X(projector_commute_r)(pj, gr, dim, idir, ik, psi, cpsi)
     do idim = 1, dim
       lpsi(1:ns, idim) = smx(1:ns, idir) * lpsi(1:ns, idim)
     end do
-    call X(project_sphere)(gr%m, pj, dim, lpsi, pxlpsi)
+    call X(project_sphere)(gr%mesh, pj, dim, lpsi, pxlpsi)
     
     ! |cpsi> += x V_nl |psi> - V_nl x |psi> 
-    if(simul_box_is_periodic(gr%m%sb)) then
+    if(simul_box_is_periodic(gr%mesh%sb)) then
       do idim = 1, dim
         cpsi(jxyz(1:ns), idim) = cpsi(jxyz(1:ns), idim) + &
           (xplpsi(1:ns, idim) - pxlpsi(1:ns, idim)) * R_CONJ(pj%phase(1:ns, ik))

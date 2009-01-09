@@ -212,7 +212,7 @@ contains
 
       do dir = 1, ndir
         call lr_init(lr(dir,1))
-        call lr_allocate(lr(dir,1), sys%st, sys%gr%m)
+        call lr_allocate(lr(dir,1), sys%st, sys%gr%mesh)
 
         ! load wave-functions
         if(.not.fromScratch) then

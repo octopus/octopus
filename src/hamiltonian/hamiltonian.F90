@@ -352,7 +352,7 @@ contains
       ALLOCATE(h%ab_pot(NP), NP)
       h%ab_pot = M_ZERO
       do i = 1, NP
-        call mesh_inborder(gr%m, i, n, d, h%ab_width)
+        call mesh_inborder(gr%mesh, i, n, d, h%ab_width)
         if(n>0) then
           do j = 1, n
             h%ab_pot(i) = h%ab_pot(i) + h%ab_height * sin(d(j)*M_PI/(M_TWO*h%ab_width))**2
@@ -422,7 +422,7 @@ contains
       ALLOCATE(h%phase(1:NP_PART, 1:h%d%nik), NP_PART*h%d%nik)
 
       forall (ik = 1:h%d%nik, ip = 1:NP_PART)
-        h%phase(ip, ik) = exp(-M_zI*sum(gr%m%x(ip, 1:MAX_DIM)* h%d%kpoints(1:MAX_DIM, ik)))
+        h%phase(ip, ik) = exp(-M_zI*sum(gr%mesh%x(ip, 1:MAX_DIM)* h%d%kpoints(1:MAX_DIM, ik)))
       end forall
       
     end subroutine init_phase
@@ -460,14 +460,14 @@ contains
           ! Try vks-ispin first.
           ! OBF.
           fname = trim(gr%sb%lead_static_dir(il))//'/vks-'//trim(channel)//'.obf'
-          call dinput_function(trim(fname), gr%m%lead_unit_cell(il), h%lead_vks(:, ispin, il), ierr)
+          call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), h%lead_vks(:, ispin, il), ierr)
           if(ierr.eq.0) then
             message(1) = 'Info: Successfully read KS potential of the '//trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
             call write_info(1)
           else
             ! NetCDF.
             fname = trim(gr%sb%lead_static_dir(il))//'/vks-'//trim(channel)//'.ncdf'
-            call dinput_function(trim(fname), gr%m%lead_unit_cell(il), h%lead_vks(:, ispin, il), ierr)
+            call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), h%lead_vks(:, ispin, il), ierr)
             if(ierr.eq.0) then
               message(1) = 'Info: Successfully read KS potential of the '//trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
               call write_info(1)
@@ -475,7 +475,7 @@ contains
               ! Now try v0.
               ! OBF.
               fname = trim(gr%sb%lead_static_dir(il))//'/v0.obf'
-              call dinput_function(trim(fname), gr%m%lead_unit_cell(il), h%lead_vks(:, ispin, il), ierr)
+              call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), h%lead_vks(:, ispin, il), ierr)
               if(ierr.eq.0) then
                 message(1) = 'Info: Successfully read external potential of the '// &
                   trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
@@ -483,7 +483,7 @@ contains
               else
                 ! NetCDF.
                 fname = trim(gr%sb%lead_static_dir(il))//'/v0.ncdf'
-                call dinput_function(trim(fname), gr%m%lead_unit_cell(il), h%lead_vks(:, ispin, il), ierr)
+                call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), h%lead_vks(:, ispin, il), ierr)
                 if(ierr.eq.0) then
                   message(1) = 'Info: Successfully read external potential of the '// &
                     trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
@@ -512,8 +512,8 @@ contains
           if(in_debug_mode) then
             call io_mkdir('debug/open_boundaries')
             fname = 'debug/open_boundaries/v_lead-'//trim(LEAD_NAME(il))//'-'//trim(channel)
-            pot = io_open(trim(fname), action='write', is_tmp=.false., grp=gr%m%mpi_grp)
-            m => gr%m%lead_unit_cell(LEFT)
+            pot = io_open(trim(fname), action='write', is_tmp=.false., grp=gr%mesh%mpi_grp)
+            m => gr%mesh%lead_unit_cell(LEFT)
             do ix = m%idx%nr(1, 1)+m%idx%enlarge(1), m%idx%nr(2, 1)-m%idx%enlarge(1)
               do iy = m%idx%nr(1, 2)+m%idx%enlarge(2), m%idx%nr(2, 2)-m%idx%enlarge(2)
                 write(pot, '(2i8,f16.8)') ix, iy, h%lead_vks(m%idx%Lxyz_inv(ix, iy, 0), ispin, il)
@@ -528,14 +528,14 @@ contains
         h%lead_vhartree(:, il) = M_ZERO
         if(h%theory_level.ne.INDEPENDENT_PARTICLES) then
           fname = trim(gr%sb%lead_static_dir(il))//'/vh.obf'
-          call dinput_function(trim(fname), gr%m%lead_unit_cell(il), h%lead_vhartree(:, il), ierr)
+          call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), h%lead_vhartree(:, il), ierr)
           if(ierr.eq.0) then
             message(1) = 'Info: Successfully read Hartree potential of the '//trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
             call write_info(1)
           else
             ! NetCDF.
             fname = trim(gr%sb%lead_static_dir(il))//'/vh.ncdf'
-            call dinput_function(trim(fname), gr%m%lead_unit_cell(il), h%lead_vhartree(:, il), ierr)
+            call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), h%lead_vhartree(:, il), ierr)
             if(ierr.eq.0) then
               message(1) = 'Info: Successfully read Hartree potential of the '//trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
               call write_info(1)
@@ -566,7 +566,7 @@ contains
             call io_mkdir('debug/open_boundaries')
             write(fname, '(3a,i1.1)') 'debug/open_boundaries/diag-', &
               trim(LEAD_NAME(il)), '-', ispin
-            diag = io_open(fname, action='write', grp=gr%m%mpi_grp, is_tmp=.false.)
+            diag = io_open(fname, action='write', grp=gr%mesh%mpi_grp, is_tmp=.false.)
             write(fmt, '(a,i6,a)') '(', gr%intf(il)%np, 'e14.4)'
             do irow = 1, gr%intf(il)%np
               write(diag, fmt) h%lead_h_diag(:, :, ispin, il)
@@ -579,7 +579,7 @@ contains
         if(in_debug_mode) then
           write(fname, '(2a)') 'debug/open_boundaries/offdiag-', &
             trim(LEAD_NAME(il))
-          offdiag = io_open(fname, action='write', grp=gr%m%mpi_grp, is_tmp=.false.)
+          offdiag = io_open(fname, action='write', grp=gr%mesh%mpi_grp, is_tmp=.false.)
           write(fmt, '(a,i6,a)') '(', gr%intf(il)%np, 'e14.4)'
           do irow = 1, gr%intf(il)%np
             write(offdiag, fmt) h%lead_h_offdiag(:, :, il)
@@ -631,8 +631,8 @@ contains
                     trim(LEAD_NAME(il)), '-', ist, '-', ik, '-', ispin, '.real'
                   write(fname_imag, '(3a,i4.4,a,i3.3,a,i1.1,a)') 'debug/open_boundaries/green-', &
                     trim(LEAD_NAME(il)), '-', ist, '-', ik, '-', ispin, '.imag'
-                  green_real = io_open(fname_real, action='write', grp=gr%m%mpi_grp, is_tmp=.false.)
-                  green_imag = io_open(fname_imag, action='write', grp=gr%m%mpi_grp, is_tmp=.false.)
+                  green_real = io_open(fname_real, action='write', grp=gr%mesh%mpi_grp, is_tmp=.false.)
+                  green_imag = io_open(fname_imag, action='write', grp=gr%mesh%mpi_grp, is_tmp=.false.)
 
                   write(fmt, '(a,i6,a)') '(', gr%intf(il)%np, 'e14.4)'
                   do irow = 1, gr%intf(il)%np

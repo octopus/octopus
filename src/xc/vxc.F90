@@ -108,7 +108,7 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc, vtau)
           
         case(XC_FAMILY_GGA)
           if(functl(ixc)%id == XC_GGA_XC_LB) then
-            call mesh_r(gr%m, jj, r)
+            call mesh_r(gr%mesh, jj, r)
             call XC_F90(gga_lb_modified)(functl(ixc)%conf, l_dens(1), l_sigma(1), &
               r, l_dedd(1))
             e = M_ZERO; l_vsigma = M_ZERO
@@ -165,8 +165,8 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc, vtau)
   end if
 
   ! integrate eneries per unit volume
-  ex = dmf_integrate(gr%m, ex_per_vol)
-  ec = dmf_integrate(gr%m, ec_per_vol)
+  ex = dmf_integrate(gr%mesh, ex_per_vol)
+  ec = dmf_integrate(gr%mesh, ec_per_vol)
 
   ! clean up allocated memory
   call  lda_end()
@@ -320,7 +320,7 @@ contains
       do is = 1, spin_channels
         call dderivatives_grad(gr%der, dedd(:, is), gf(:,:))
         do i = 1, NP
-          ex_per_vol(i) = ex_per_vol(i) - dens(i, is) * sum(gr%m%x(i,:)*gf(i,:))
+          ex_per_vol(i) = ex_per_vol(i) - dens(i, is) * sum(gr%mesh%x(i,:)*gf(i,:))
         end do
       end do
 

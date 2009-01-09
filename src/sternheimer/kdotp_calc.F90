@@ -84,7 +84,7 @@ subroutine zcalc_dipole_periodic(sys, lr, dipole)
   integer idir, ist, ik, idim
   type(mesh_t), pointer :: m
   CMPLX :: term, moment
-  m => sys%gr%m
+  m => sys%gr%mesh
 
   ! mu_i = sum(m occ, k) <u_mk(0)|(-id/dk_i|u_mk(0)>)
   !      = Im sum(m occ, k) <u_mk(0)|(d/dk_i|u_mk(0)>)
@@ -126,7 +126,7 @@ subroutine zcalc_polarizability_periodic(sys, em_lr, kdotp_lr, nsigma, zpol, ndi
   integer :: dir1, dir2, ndir_, ist, ik, idim
   CMPLX :: term, subterm
   type(mesh_t), pointer :: m
-  m => sys%gr%m
+  m => sys%gr%mesh
 
   call push_sub('kdotp_calc.zcalc_polarizability_periodic')
 
@@ -194,7 +194,7 @@ subroutine zcalc_eff_mass_inv(sys, h, lr, perturbation, eff_mass_inv, &
 
   call push_sub('kdotp_calc.zcalc_eff_mass_inv')
 
-  m => sys%gr%m
+  m => sys%gr%mesh
 
   ALLOCATE(pertpsi(sys%gr%sb%dim, m%np), sys%gr%sb%dim * m%np)
   ALLOCATE(proj_dl_psi(m%np, 1), m%np * 1) ! second index should be sys%st%d%dim, i.e. spinors

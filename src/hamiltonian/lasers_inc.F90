@@ -108,7 +108,7 @@ subroutine X(vlaser_operator_linear) (laser, gr, std, psi, hpsi, ik, gyromagneti
       ALLOCATE(v(NP), NP)
       v = M_ZERO
     end if
-    call laser_potential(gr%sb, laser, gr%m, v)
+    call laser_potential(gr%sb, laser, gr%mesh, v)
     electric_field = .true.
   case(E_FIELD_ELECTRIC)
     if(.not. allocated(v)) then 
@@ -117,7 +117,7 @@ subroutine X(vlaser_operator_linear) (laser, gr, std, psi, hpsi, ik, gyromagneti
       ALLOCATE(pot(NP), NP)
       pot = M_ZERO
     end if
-    call laser_potential(gr%sb, laser, gr%m, pot)
+    call laser_potential(gr%sb, laser, gr%mesh, pot)
     v = v + pot
     electric_field = .true.
     deallocate(pot)
@@ -270,7 +270,7 @@ subroutine X(vlasers) (lasers, nlasers, gr, std, psi, hpsi, grad, ik, t, gyromag
       end if
       ALLOCATE(pot(NP), NP)
       pot = M_ZERO
-      call laser_potential(gr%sb, lasers(i), gr%m, pot, t)
+      call laser_potential(gr%sb, lasers(i), gr%mesh, pot, t)
       v = v + pot
       electric_field = .true.
       deallocate(pot)

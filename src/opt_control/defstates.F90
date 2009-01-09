@@ -96,7 +96,7 @@
               call loct_parse_block_cmplx(blk, ist-1, jst-1, rotation_matrix(ist, jst))
             end do
           end do
-          call rotate_states(gr%m, initial_state, tmp_st, rotation_matrix)
+          call rotate_states(gr%mesh, initial_state, tmp_st, rotation_matrix)
           deallocate(rotation_matrix)
           call states_end(tmp_st)
         else
@@ -152,8 +152,8 @@
                 ! convert to C string
                 call conv_to_C_string(initial_state%user_def_states(id, is, ik))
                 
-                do ip = 1, gr%m%np
-                  x = gr%m%x(ip, :)
+                do ip = 1, gr%mesh%np
+                  x = gr%mesh%x(ip, :)
                   r = sqrt(sum(x(:)**2))
                   
                   ! parse user defined expressions
@@ -164,7 +164,7 @@
                   initial_state%zpsi(ip, id, is, ik) = psi_re + M_zI*psi_im
                 end do
                 ! normalize orbital
-                call zstates_normalize_orbital(gr%m, initial_state%d%dim, initial_state%zpsi(:,:, is, ik))
+                call zstates_normalize_orbital(gr%mesh, initial_state%d%dim, initial_state%zpsi(:,:, is, ik))
               end do
             end do
           enddo

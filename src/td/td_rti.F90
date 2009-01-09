@@ -295,10 +295,10 @@ contains
 
     select case(tr%method)
     case(PROP_SPLIT_OPERATOR)
-      call zcf_new(gr%m%idx%ll, tr%cf)
+      call zcf_new(gr%mesh%idx%ll, tr%cf)
       call zcf_fft_init(tr%cf, gr%sb)
     case(PROP_SUZUKI_TROTTER)
-      call zcf_new(gr%m%idx%ll, tr%cf)
+      call zcf_new(gr%mesh%idx%ll, tr%cf)
       call zcf_fft_init(tr%cf, gr%sb)
     case(PROP_REVERSAL)
     case(PROP_APP_REVERSAL)
@@ -463,7 +463,7 @@ contains
       d_max = M_ZERO
       do is = 1, st%d%nspin
         dtmp(1:NP) = h%vhxc(1:NP, is) - tr%v_old(1:NP, is, 0)
-        d = dmf_nrm2(gr%m, dtmp)
+        d = dmf_nrm2(gr%mesh, dtmp)
         if(d > d_max) d_max = d
       end do
       deallocate(dtmp)
@@ -494,7 +494,7 @@ contains
           d_max = M_ZERO
           do is = 1, st%d%nspin
             dtmp(1:NP) = h%vhxc(1:NP, is) - vaux(1:NP, is)
-            d = dmf_nrm2(gr%m, dtmp)
+            d = dmf_nrm2(gr%mesh, dtmp)
             if(d > d_max) d_max = d
           end do
           deallocate(dtmp)
@@ -527,9 +527,9 @@ contains
       call v_ks_calc(gr, ks, h, st)
       do ik = 1, st%d%nik
         do ist = 1, st%nst
-          if (h%ep%non_local) call zexp_vnlpsi (gr%m, h, st%zpsi(:, :, ist, ik), -M_zI*dt, .true.)
+          if (h%ep%non_local) call zexp_vnlpsi (gr%mesh, h, st%zpsi(:, :, ist, ik), -M_zI*dt, .true.)
           call zexp_vlpsi (gr, h, st%zpsi(:, :, ist, ik), ik, t-dt*M_HALF, -M_zI*dt)
-          if (h%ep%non_local) call zexp_vnlpsi (gr%m, h, st%zpsi(:, :, ist, ik), -M_zI*dt, .false.)
+          if (h%ep%non_local) call zexp_vnlpsi (gr%mesh, h, st%zpsi(:, :, ist, ik), -M_zI*dt, .false.)
         end do
       end do
       do ik = 1, st%d%nik
@@ -564,11 +564,11 @@ contains
         do ik = 1, st%d%nik
           do ist = 1, st%nst
             call zexp_vlpsi (gr, h, st%zpsi(:, :, ist, ik), ik, time(k), -M_zI*dtime(k)/M_TWO)
-            if (h%ep%non_local) call zexp_vnlpsi (gr%m, h, &
+            if (h%ep%non_local) call zexp_vnlpsi (gr%mesh, h, &
               st%zpsi(:, :, ist, ik), -M_zI*dtime(k)/M_TWO, .true.)
 
             call zexp_kinetic(gr, h, st%zpsi(:, :, ist, ik), tr%cf, -M_zI*dtime(k))
-            if (h%ep%non_local) call zexp_vnlpsi (gr%m, h, &
+            if (h%ep%non_local) call zexp_vnlpsi (gr%mesh, h, &
               st%zpsi(:, :, ist, ik), -M_zI*dtime(k)/M_TWO, .false.)
             call zexp_vlpsi (gr, h, st%zpsi(:, :, ist, ik), ik, time(k), -M_zI*dtime(k)/M_TWO)
           end do
@@ -870,7 +870,7 @@ contains
           select case(laser_kind(h%ep%lasers(i)))
           case(E_FIELD_ELECTRIC)
             ALLOCATE(pot(NP), NP)
-            call laser_potential(gr%sb, h%ep%lasers(i), gr%m, pot, t-dt+time(j))
+            call laser_potential(gr%sb, h%ep%lasers(i), gr%mesh, pot, t-dt+time(j))
             do is = 1, st%d%nspin
               vaux(:, is, j) = vaux(:, is, j) + pot(:)
             end do

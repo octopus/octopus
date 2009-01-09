@@ -103,12 +103,12 @@ subroutine td_init(sys, h, td)
   end if
   
   ! Initialize the kick (if optical spectrum calculations are to be performed)
-  call kick_init(td%kick, sys%st%d%nspin, sys%gr%m%sb%dim)
+  call kick_init(td%kick, sys%st%d%nspin, sys%gr%mesh%sb%dim)
 
   ! now the photoelectron stuff
 #if !defined(DISABLE_PES)
   call loct_parse_int(check_inp('AbsorbingBoundaries'), 0, dummy)
-  call PES_init(td%PESv, sys%gr%m, sys%gr%sb, sys%st, dummy, sys%outp%iter)
+  call PES_init(td%PESv, sys%gr%mesh, sys%gr%sb, sys%st, dummy, sys%outp%iter)
 #endif
 
   !%Variable TDDynamics

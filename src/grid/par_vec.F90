@@ -50,7 +50,7 @@ module par_vec_m
   !
   ! ! Initialize parallelization with mesh m and operator op
   ! ! initialized and given.
-  ! ! m          = sys%gr%m
+  ! ! m          = sys%gr%mesh
   ! ! stencil    = op%stencil
   !
   ! FLOAT              :: s

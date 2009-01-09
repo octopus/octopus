@@ -378,15 +378,15 @@ contains
       ! Now we calculate Int[n vxc] = h%epot
       select case(h%d%ispin)
       case(UNPOLARIZED)
-        h%epot = h%epot + dmf_dotp(gr%m, st%rho(:, 1), h%vxc(:, 1))
+        h%epot = h%epot + dmf_dotp(gr%mesh, st%rho(:, 1), h%vxc(:, 1))
       case(SPIN_POLARIZED)
-        h%epot = h%epot + dmf_dotp(gr%m, st%rho(:, 1), h%vxc(:, 1)) &
-             + dmf_dotp(gr%m, st%rho(:, 2), h%vxc(:, 2))
+        h%epot = h%epot + dmf_dotp(gr%mesh, st%rho(:, 1), h%vxc(:, 1)) &
+             + dmf_dotp(gr%mesh, st%rho(:, 2), h%vxc(:, 2))
       case(SPINORS)
-        h%epot = h%epot + dmf_dotp(gr%m, st%rho(:, 1), h%vxc(:, 1)) &
-             + dmf_dotp(gr%m, st%rho(:, 2), h%vxc(:, 2)) &
-             + M_TWO*dmf_dotp(gr%m, st%rho(:, 3), h%vxc(:, 3)) &
-             + M_TWO*dmf_dotp(gr%m, st%rho(:, 4), h%vxc(:, 4))
+        h%epot = h%epot + dmf_dotp(gr%mesh, st%rho(:, 1), h%vxc(:, 1)) &
+             + dmf_dotp(gr%mesh, st%rho(:, 2), h%vxc(:, 2)) &
+             + M_TWO*dmf_dotp(gr%mesh, st%rho(:, 3), h%vxc(:, 3)) &
+             + M_TWO*dmf_dotp(gr%mesh, st%rho(:, 4), h%vxc(:, 4))
 
       end select
 
@@ -429,7 +429,7 @@ contains
     call dpoisson_solve(gr, h%vhartree, rho)
 
     ! Get the Hartree energy
-    h%ehartree = M_HALF*dmf_dotp(gr%m, rho, h%vhartree)
+    h%ehartree = M_HALF*dmf_dotp(gr%mesh, rho, h%vhartree)
 
     deallocate(rho)
   end subroutine v_ks_hartree
