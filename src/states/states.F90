@@ -86,8 +86,8 @@ module states_m
     states_freeze_orbitals
 
   public ::                           &
-    wfs_are_complex,                  &
-    wfs_are_real,                     &
+    states_are_complex,               &
+    states_are_real,                  &
     assignment(=)
 
   type states_t
@@ -2031,7 +2031,7 @@ contains
       potential = M_ZERO
       hartreep  = M_ZERO
 
-      if(wfs_are_real(st)) then
+      if(states_are_real(st)) then
         call dmf_calculate_gamma(gr%mesh, st%dpsi(:, 1, mm, 1), densmatr)
       else
         call zmf_calculate_gamma(gr%mesh, st%zpsi(:, 1, mm, 1), densmatr)
@@ -2238,17 +2238,17 @@ contains
 
 
   ! ---------------------------------------------------------
-  logical function wfs_are_complex(st) result (wac)
+  logical function states_are_complex(st) result (wac)
     type(states_t),    intent(in) :: st
     wac = (st%wfs_type == M_CMPLX)
-  end function wfs_are_complex
+  end function states_are_complex
 
 
   ! ---------------------------------------------------------
-  logical function wfs_are_real(st) result (war)
+  logical function states_are_real(st) result (war)
     type(states_t),    intent(in) :: st
     war = (st%wfs_type == M_REAL)
-  end function wfs_are_real
+  end function states_are_real
 
 
   ! ---------------------------------------------------------

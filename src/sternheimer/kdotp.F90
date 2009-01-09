@@ -128,7 +128,7 @@ contains
     call write_info(1)
     call system_h_setup(sys, h)
     
-    call sternheimer_init(sh, sys, h, "KdotP_", hermitian = wfs_are_real(sys%st), &
+    call sternheimer_init(sh, sys, h, "KdotP_", hermitian = states_are_real(sys%st), &
          set_ham_var = 0, set_occ_response = (kdotp_vars%occ_solution_method == 0))
     ! ham_var_set = 0 results in HamiltonianVariation = V_ext_only
 

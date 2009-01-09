@@ -122,7 +122,7 @@ contains
     if(present(start)) start_ = start
     
     do ik = st%d%kpt%start, st%d%kpt%end
-      if (wfs_are_real(st)) then
+      if (states_are_real(st)) then
         call dstates_gram_schmidt_full(st, st%nst, m, st%d%dim, st%dpsi(:, :, :, ik), start)
       else
         call zstates_gram_schmidt_full(st, st%nst, m, st%d%dim, st%zpsi(:, :, :, ik), start)

@@ -121,7 +121,7 @@ contains
 
     size = gr%mesh%np_part * st%d%dim * st%lnst * st%d%nik
 
-    if(wfs_are_real(st)) then
+    if(states_are_real(st)) then
       ALLOCATE(this%dpsi2(gr%mesh%np_part, st%d%dim, st%st_start:st%st_end, st%d%nik), size)
     else
       ALLOCATE(this%zpsi2(gr%mesh%np_part, st%d%dim, st%st_start:st%st_end, st%d%nik), size)
@@ -169,7 +169,7 @@ contains
           ii = ii + 1
           if (ist < st%st_start .or.  ist > st%st_end) cycle
           write(filename,'(i10.10)') ii
-          if(wfs_are_real(st)) then
+          if(states_are_real(st)) then
             call drestart_write_function(trim(tmpdir)//'td/cpmd', filename, gr, this%dpsi2(:, idim, ist, ik), err, gr%mesh%np)
           else
             call zrestart_write_function(trim(tmpdir)//'td/cpmd', filename, gr, this%zpsi2(:, idim, ist, ik), err, gr%mesh%np)
@@ -202,7 +202,7 @@ contains
           ii = ii + 1
           if (ist < st%st_start .or.  ist > st%st_end) cycle
           write(filename,'(i10.10)') ii
-          if(wfs_are_real(st)) then
+          if(states_are_real(st)) then
             call drestart_read_function(trim(tmpdir)//'td/cpmd', filename, gr%mesh, this%dpsi2(:, idim, ist, ik), ierr)
           else
             call zrestart_read_function(trim(tmpdir)//'td/cpmd', filename, gr%mesh, this%zpsi2(:, idim, ist, ik), ierr)

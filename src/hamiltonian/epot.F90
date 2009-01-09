@@ -649,7 +649,7 @@ contains
       geo%atom(i)%f(1:MAX_DIM) = ep%fii(1:MAX_DIM, i)
     end do
     
-    if (wfs_are_real(st) ) then 
+    if (states_are_real(st) ) then 
       call dcalc_forces_from_potential(gr, geo, ep, st, time)
     else
       call zcalc_forces_from_potential(gr, geo, ep, st, time)

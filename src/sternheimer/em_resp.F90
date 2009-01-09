@@ -120,7 +120,7 @@ contains
        ! only considering positive values
     endif
     
-    complex_response = (em_vars%eta /= M_ZERO ) .or. wfs_are_complex(sys%st)
+    complex_response = (em_vars%eta /= M_ZERO ) .or. states_are_complex(sys%st)
 
     ALLOCATE(em_vars%lr(1:NDIM, 1:em_vars%nsigma, 1:em_vars%nfactor), NDIM*em_vars%nsigma*em_vars%nfactor)
 
@@ -134,10 +134,10 @@ contains
     call system_h_setup(sys, h)
     
     if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
-       call sternheimer_init(sh, sys, h, "EM", hermitian = wfs_are_real(sys%st), set_ham_var = 0)
+       call sternheimer_init(sh, sys, h, "EM", hermitian = states_are_real(sys%st), set_ham_var = 0)
        ! set HamiltonVariation to V_ext_only, in magnetic case
     else
-       call sternheimer_init(sh, sys, h, "EM", hermitian = wfs_are_real(sys%st))
+       call sternheimer_init(sh, sys, h, "EM", hermitian = states_are_real(sys%st))
        ! otherwise, use default, which is hartree + fxc
     endif
 
@@ -221,7 +221,7 @@ contains
                end if
 
               !try to load restart density
-              if (wfs_are_complex(sys%st)) then 
+              if (states_are_complex(sys%st)) then 
                 call zrestart_read_lr_rho(em_vars%lr(dir, 1, ifactor), sys%gr, sys%st%d%nspin, &
                      RESTART_DIR, &
                      em_rho_tag(em_vars%freq_factor(ifactor)*em_vars%omega(iomega), dir), ierr)
@@ -239,7 +239,7 @@ contains
                 
                 !attempt to read 
                 if(ierr == 0 ) then 
-                  if (wfs_are_complex(sys%st)) then 
+                  if (states_are_complex(sys%st)) then 
                     call zrestart_read_lr_rho(em_vars%lr(dir, 1, ifactor), sys%gr, sys%st%d%nspin, &
                          RESTART_DIR, em_rho_tag(closest_omega, dir), ierr)
                   else 
@@ -251,7 +251,7 @@ contains
               end if
 
               if(ierr == 0 .and. em_vars%nsigma == 2 ) then 
-                if (wfs_are_complex(sys%st)) then 
+                if (states_are_complex(sys%st)) then 
                   em_vars%lr(dir, 2, ifactor)%zdl_rho = conjg(em_vars%lr(dir, 1, ifactor)%zdl_rho)
                 else 
                   em_vars%lr(dir, 2, ifactor)%ddl_rho = em_vars%lr(dir, 1, ifactor)%ddl_rho
@@ -261,7 +261,7 @@ contains
             end if ! .not. fromscratch
             
             call pert_setup_dir(em_vars%perturbation, dir)
-            if (wfs_are_complex(sys%st)) then 
+            if (states_are_complex(sys%st)) then 
               call zsternheimer_solve(sh, sys, h, em_vars%lr(dir, :, ifactor), em_vars%nsigma, &
                 em_vars%freq_factor(ifactor)*em_vars%omega(iomega) + M_zI * em_vars%eta, &
                 em_vars%perturbation, RESTART_DIR, &
@@ -285,7 +285,7 @@ contains
       if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
         ! calculate polarizability
         do ifactor = 1, em_vars%nfactor
-          if(wfs_are_complex(sys%st)) then 
+          if(states_are_complex(sys%st)) then 
             call zlr_calc_polarizability_finite(sys, h, em_vars%lr(:, :, ifactor), em_vars%nsigma, &
                  em_vars%perturbation, em_vars%alpha(:, :, ifactor))
           else
@@ -296,7 +296,7 @@ contains
         
         ! calculate hyperpolarizability
         if(em_vars%calc_hyperpol) then
-          if(wfs_are_complex(sys%st)) then
+          if(states_are_complex(sys%st)) then
             call zlr_calc_beta(sh, sys, h, em_vars%lr, em_vars%perturbation, em_vars%beta)
           else
             call dlr_calc_beta(sh, sys, h, em_vars%lr, em_vars%perturbation, em_vars%beta)
@@ -305,7 +305,7 @@ contains
       
       else if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
         do ifactor = 1, em_vars%nfactor
-          if(wfs_are_complex(sys%st)) then 
+          if(states_are_complex(sys%st)) then 
             call zlr_calc_susceptibility(sys, h, em_vars%lr(:,:, ifactor), em_vars%nsigma, em_vars%perturbation, &
                em_vars%chi_para(:,:, ifactor), em_vars%chi_dia(:,:, ifactor))
           else
@@ -476,7 +476,7 @@ contains
         call messages_print_stress(stdout, trim(message(1)))
       end if
 
-      if (wfs_are_real(sys%st)) then 
+      if (states_are_real(sys%st)) then 
         message(1) = 'Wavefunctions type: Real'
       else
         message(1) = 'Wavefunctions type: Complex'
@@ -665,7 +665,7 @@ contains
             do ivar = 1, em_vars%lr(dir, 1, 1)%nst
               do sigma = 1, em_vars%nsigma
 
-                if(wfs_are_complex(st)) then
+                if(states_are_complex(st)) then
                   proj = &
                        zmf_dotp(gr%mesh, st%d%dim, st%zpsi(:, :, ist, ik), em_vars%lr(dir, sigma, ifactor)%zdl_psi(:, :, ivar, ik))
                 else
@@ -700,7 +700,7 @@ contains
       call push_sub('em_resp.em_resp_output.out_wavefunctions')
 
       do dir = 1, NDIM
-        if(wfs_are_complex(st)) then 
+        if(states_are_complex(st)) then 
 
           if(NDIM==3) then
             if(iand(outp%what, output_elf).ne.0) &
@@ -737,7 +737,7 @@ contains
 
       call push_sub('em_resp.em_resp_output.out_circular_dichroism')
 
-      if(wfs_are_complex(st) .and. em_vars%nsigma == 2) then       
+      if(states_are_complex(st) .and. em_vars%nsigma == 2) then       
 
         message(1) = "Info: Calculating circular dichroism"
         call write_info(1)
@@ -819,7 +819,7 @@ contains
     call io_close(iunit)
 
     ! CROSS SECTION (THE COMPLEX PART OF POLARIZABILITY)
-    if(wfs_are_complex(st)) then 
+    if(states_are_complex(st)) then 
       cross(1:MAX_DIM, 1:MAX_DIM) = aimag(alpha(1:MAX_DIM, 1:MAX_DIM)) * &
         omega / units_out%energy%factor * M_FOUR * M_PI / P_c 
         

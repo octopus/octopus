@@ -232,7 +232,7 @@ contains
     start_ = 1
     if(present(start)) start_ = start
 
-    if (wfs_are_real(st)) then
+    if (states_are_real(st)) then
       call dlcao_wf(this, st, gr, geo, h, start_)
     else
       call zlcao_wf(this, st, gr, geo, h, start_)

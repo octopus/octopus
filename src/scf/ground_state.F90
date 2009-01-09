@@ -181,7 +181,7 @@ contains
     end if
 
     ! run self consistency
-    if (wfs_are_real(sys%st)) then
+    if (states_are_real(sys%st)) then
       message(1) = 'Info: SCF using real wavefunctions.'
     else
       message(1) = 'Info: SCF using complex wavefunctions.'

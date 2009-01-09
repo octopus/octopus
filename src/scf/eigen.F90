@@ -311,14 +311,14 @@ contains
       end if
       
       if(eigens%converged(ik) == 0) then
-        if (wfs_are_real(st)) then
+        if (states_are_real(st)) then
           call dsubspace_diag(gr, st, h, ik, eigens%diff(:, ik))
         else
           call zsubspace_diag(gr, st, h, ik, eigens%diff(:, ik))
         end if
       end if
 
-      if (wfs_are_real(st)) then
+      if (states_are_real(st)) then
         
         select case(eigens%es_type)
         case(RS_CG_NEW)

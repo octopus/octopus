@@ -105,7 +105,7 @@ contains
 
     size = m%np_part * st%d%dim * st%nst * st%d%nik
 
-    if (wfs_are_complex(st)) then 
+    if (states_are_complex(st)) then 
 
       ALLOCATE(lr%zdl_psi(m%np_part, st%d%dim, st%nst, st%d%nik), size)
       ALLOCATE(lr%zdl_rho(m%np, st%d%nspin), m%np*st%d%nspin)
@@ -176,7 +176,7 @@ contains
     call push_sub('linear_response.lr_copy')
 
     do ik = 1, st%d%nspin
-      if( wfs_are_complex(st)) then
+      if( states_are_complex(st)) then
         call lalg_copy(m%np, src%zdl_rho(:, ik), dest%zdl_rho(:, ik))
       else
         call lalg_copy(m%np, src%ddl_rho(:, ik), dest%ddl_rho(:, ik))
@@ -186,7 +186,7 @@ contains
     do ik = 1, st%d%nik
       do ist = 1, st%nst
         do idim = 1, st%d%dim
-          if( wfs_are_complex(st)) then
+          if( states_are_complex(st)) then
             call lalg_copy(m%np_part, src%zdl_psi(:, idim, ist, ik), dest%zdl_psi(:, idim, ist, ik))
           else 
             call lalg_copy(m%np_part, src%ddl_psi(:, idim, ist, ik), dest%ddl_psi(:, idim, ist, ik))
