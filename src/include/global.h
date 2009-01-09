@@ -92,3 +92,6 @@
 
 #define   TOFLOAT(x) real(x, REAL_PRECISION)
 #define   TOCMPLX(x, y) cmplx(x, y, REAL_PRECISION)
+
+#define M_ONE CNST(1.0)
+#define M_ZERO CNST(0.0)

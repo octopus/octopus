@@ -332,8 +332,8 @@ contains
     prefactor_minus(:, :) = -M_zI*delta*diag(:, :)
 
     do i = 1, np
-      prefactor_plus(i, i)  = M_one + prefactor_plus(i, i)
-      prefactor_minus(i, i) = M_one + prefactor_minus(i, i)
+      prefactor_plus(i, i)  = M_ONE + prefactor_plus(i, i)
+      prefactor_minus(i, i) = M_ONE + prefactor_minus(i, i)
     end do
 
     ! If we are in 1D and have only a number we can calculate the coefficients explicitly.
@@ -470,8 +470,8 @@ contains
     prefactor_minus = -M_zI*delta*diag(:, :)
 
     do i = 1, np
-      prefactor_plus(i, i)  = M_one + prefactor_plus(i, i)
-      prefactor_minus(i, i) = M_one + prefactor_minus(i, i)
+      prefactor_plus(i, i)  = M_ONE + prefactor_plus(i, i)
+      prefactor_minus(i, i) = M_ONE + prefactor_minus(i, i)
     end do
 
     ! Calculate p_\alpha = 1/(1 + i*delta*h_\alpha + delta^2*q_\alpha)

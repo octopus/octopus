@@ -65,8 +65,6 @@ module global_m
   ! some mathematical constants
   FLOAT, public, parameter :: M_Pi        = CNST(3.1415926535897932384626433832795029)
   FLOAT, public, parameter :: M_E         = CNST(2.7182818284590452353602874713526625)  
-  FLOAT, public, parameter :: M_ZERO      = CNST(0.0)
-  FLOAT, public, parameter :: M_ONE       = CNST(1.0)
   FLOAT, public, parameter :: M_TWO       = CNST(2.0)
   FLOAT, public, parameter :: M_THREE     = CNST(3.0)
   FLOAT, public, parameter :: M_FOUR      = CNST(4.0)
