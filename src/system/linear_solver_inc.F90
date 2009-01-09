@@ -306,7 +306,7 @@ subroutine X(ls_solver_multigrid) (ls, h, gr, st, ist, ik, x, y, omega)
   ALLOCATE(hx(NP, st%d%dim), NP * st%d%dim)
   ALLOCATE(res(NP, st%d%dim), NP * st%d%dim)
 
-  call X(Hpsi_diag)(h, gr, diag, ik)
+  call X(hamiltonian_diagonal)(h, gr, diag, ik)
   diag(1:NP, 1:st%d%dim) = diag(1:NP, 1:st%d%dim) + omega
 
   do iter = 1, ls%max_iter
@@ -379,7 +379,7 @@ subroutine X(ls_solver_operator) (h, gr, st, ist, ik, omega, x, hx)
 !  enabling this causes trouble for some reason in debug mode
 !  call push_sub('linear_solver_inc.Xls_solver_operator')
 
-  call X(Hpsi)(h, gr, x, Hx, ist, ik)
+  call X(hamiltonian_apply)(h, gr, x, Hx, ist, ik)
 
   !Hx = Hx + omega*x
   do idim = 1, st%d%dim

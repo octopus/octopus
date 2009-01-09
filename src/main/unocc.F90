@@ -138,11 +138,11 @@ contains
     do ik = 1, sys%st%d%nik
       do p = 1, eigens%converged(ik)
         if (sys%st%wfs_type == M_REAL) then
-          call dHpsi(h, sys%gr, sys%st%dpsi(:,:, p, ik) ,dh_psi, p, ik)
+          call dhamiltonian_apply(h, sys%gr, sys%st%dpsi(:,:, p, ik) ,dh_psi, p, ik)
           eigens%diff(p, ik) = dstates_residue(sys%gr%mesh, sys%st%d%dim, dh_psi, sys%st%eigenval(p, ik), &
                sys%st%dpsi(:, :, p, ik))
         else
-          call zHpsi(h, sys%gr, sys%st%zpsi(:,:, p, ik) , zh_psi, p, ik)
+          call zhamiltonian_apply(h, sys%gr, sys%st%zpsi(:,:, p, ik) , zh_psi, p, ik)
           eigens%diff(p, ik) = zstates_residue(sys%gr%mesh, sys%st%d%dim, zh_psi, sys%st%eigenval(p, ik), &
                sys%st%zpsi(:, :, p, ik))
         end if

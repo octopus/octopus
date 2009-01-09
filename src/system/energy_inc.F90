@@ -47,9 +47,9 @@ subroutine X(calculate_eigenvalues)(h, gr, st, t)
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
         if(present(t)) then
-          call X(hpsi) (h, gr, st%X(psi)(:, :, ist, ik), hpsi, ist, ik, t)
+          call X(hamiltonian_apply) (h, gr, st%X(psi)(:, :, ist, ik), hpsi, ist, ik, t)
         else
-          call X(hpsi) (h, gr, st%X(psi)(:, :, ist, ik), hpsi, ist, ik)
+          call X(hamiltonian_apply) (h, gr, st%X(psi)(:, :, ist, ik), hpsi, ist, ik)
         end if
         e = X(mf_dotp)(gr%mesh, st%d%dim, st%X(psi)(:, :, ist, ik), Hpsi)
         st%eigenval(ist, ik) = R_REAL(e)
@@ -80,7 +80,7 @@ FLOAT function X(electronic_kinetic_energy)(h, gr, st) result(t0)
   do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
       tpsi = R_TOTYPE(M_ZERO)
-      call X(hpsi)(h, gr, st%X(psi)(:, :, ist, ik), tpsi, ist, ik, kinetic_only = .true.)
+      call X(hamiltonian_apply)(h, gr, st%X(psi)(:, :, ist, ik), tpsi, ist, ik, kinetic_only = .true.)
       t(ist, ik) = X(mf_dotp)(gr%mesh, st%d%dim, st%X(psi)(:, :, ist, ik), tpsi)
     end do
   end do

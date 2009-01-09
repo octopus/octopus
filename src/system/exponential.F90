@@ -284,7 +284,7 @@ contains
       if(apply_magnus) then
         call zmagnus(h, gr, psi, oppsi, ik, vmagnus)
       else
-        call zHpsi(h, gr, psi, oppsi, ist, ik, t)
+        call zhamiltonian_apply(h, gr, psi, oppsi, ist, ik, t)
       end if
 
     end subroutine operate
@@ -573,10 +573,10 @@ contains
 
         call batch_init(hpsi1b, h%d%dim, st_start, st_end, hpsi1)
         if (iter == 1) then
-          call zhpsi_batch(h, gr, psib, hpsi1b, ik, t)
+          call zhamiltonian_apply_batch(h, gr, psib, hpsi1b, ik, t)
         else
           call batch_init(psi1b, h%d%dim, st_start, st_end, psi1)
-          call zhpsi_batch(h, gr, psi1b, hpsi1b, ik, t)
+          call zhamiltonian_apply_batch(h, gr, psi1b, hpsi1b, ik, t)
           call batch_end(psi1b)
         end if
         call batch_end(hpsi1b)

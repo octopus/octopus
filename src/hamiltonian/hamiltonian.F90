@@ -57,28 +57,28 @@ module hamiltonian_m
   implicit none
 
   private
-  public ::                      &
-    hamiltonian_t,               &
-    hamiltonian_init,            &
-    hamiltonian_mg_init,         &
-    hamiltonian_end,             &
-    hamiltonian_span,            &
-    dhpsi,                       &
-    zhpsi,                       &
-    dhpsi_batch,                 &
-    zhpsi_batch,                 &
-    dhpsi_diag,                  &
-    zhpsi_diag,                  &
-    dvlpsi_batch,                &
-    zvlpsi_batch,                &
-    dvnlpsi,                     &
-    zvnlpsi,                     &
-    dvnlpsi_batch,               &
-    zvnlpsi_batch,               &
-    dmagnus,                     &
-    zmagnus,                     &
-    dvmask,                      &
-    zvmask,                      &
+  public ::                          &
+    hamiltonian_t,                   &
+    hamiltonian_init,                &
+    hamiltonian_mg_init,             &
+    hamiltonian_end,                 &
+    hamiltonian_span,                &
+    dhamiltonian_apply,              &
+    zhamiltonian_apply,              &
+    dhamiltonian_apply_batch,        &
+    zhamiltonian_apply_batch,        &
+    dhamiltonian_diagonal,           &
+    zhamiltonian_diagonal,           &
+    dvlpsi_batch,                    &
+    zvlpsi_batch,                    &
+    dvnlpsi,                         &
+    zvnlpsi,                         &
+    dvnlpsi_batch,                   &
+    zvnlpsi_batch,                   &
+    dmagnus,                         &
+    zmagnus,                         &
+    dvmask,                          &
+    zvmask,                          &
     hamiltonian_inh_term,            &
     hamiltonian_set_inh,             &
     hamiltonian_remove_inh,          &

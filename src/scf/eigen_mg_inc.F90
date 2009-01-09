@@ -96,7 +96,7 @@ subroutine X(coordinate_relaxation)(gr, mesh, h, nst, steps, ik, psi, aa, cc)
   ALLOCATE(beta(1:nst), nst)
   ALLOCATE(hdiag(1:mesh%np, 1:h%d%dim), NP*h%d%dim)
 
-  call X(hpsi_diag) (h, gr, hdiag, ik)
+  call X(hamiltonian_diagonal) (h, gr, hdiag, ik)
 
   do iter = 1, steps
     

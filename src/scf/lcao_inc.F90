@@ -138,7 +138,7 @@ subroutine X(lcao_wf) (this, st, gr, geo, h, start)
 
     do ik = kstart, kend
       ispin = states_dim_get_spin_index(st%d, ik)
-      call X(hpsi)(h, gr, lcaopsi(:, :, ispin), hpsi(:, :, ik), n1, ik)
+      call X(hamiltonian_apply)(h, gr, lcaopsi(:, :, ispin), hpsi(:, :, ik), n1, ik)
     end do
 
     do n2 = n1, this%norbs

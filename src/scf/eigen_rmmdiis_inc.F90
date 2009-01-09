@@ -89,7 +89,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, h, pre, tol, niter, converged, ik, di
         call batch_add_state(hpsib, ist, residuals(:, :, ib))
       end do
 
-      call X(hpsi_batch)(h, gr, psib, hpsib, ik)
+      call X(hamiltonian_apply_batch)(h, gr, psib, hpsib, ik)
 
       niter = niter + num_in_block
       
@@ -136,7 +136,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, h, pre, tol, niter, converged, ik, di
         call batch_add_state(hpsib, ist, resres(:, :, ib))
       end do
 
-      call X(hpsi_batch)(h, gr, psib, hpsib, ik)
+      call X(hamiltonian_apply_batch)(h, gr, psib, hpsib, ik)
 
       niter = niter + num_in_block
       

@@ -18,7 +18,7 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-subroutine X(hpsi_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
+subroutine X(hamiltonian_apply_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
   type(hamiltonian_t), intent(in)    :: h
   type(grid_t),        intent(inout) :: gr
   type(batch_t),       intent(inout) :: psib
@@ -183,7 +183,7 @@ contains
     ist  =  psib%states(ii)%ist
   end subroutine set_pointers
 
-end subroutine X(hpsi_batch)
+end subroutine X(hamiltonian_apply_batch)
 
 ! ---------------------------------------------------------
 
@@ -206,7 +206,7 @@ subroutine X(get_grad)(h, gr, psi, grad)
 end subroutine X(get_grad)       
 
 ! ---------------------------------------------------------
-subroutine X(hpsi) (h, gr, psi, hpsi, ist, ik, t, kinetic_only)
+subroutine X(hamiltonian_apply) (h, gr, psi, hpsi, ist, ik, t, kinetic_only)
   type(hamiltonian_t), intent(in)    :: h
   type(grid_t),        intent(inout) :: gr
   integer,             intent(in)    :: ist       ! the index of the state
@@ -228,15 +228,15 @@ subroutine X(hpsi) (h, gr, psi, hpsi, ist, ik, t, kinetic_only)
   call batch_add_state(hpsib, ist, hpsi)
 
   if(present(t)) then
-    call X(hpsi_batch)(h, gr, psib, hpsib, ik, t, kinetic_only = kinetic_only_)
+    call X(hamiltonian_apply_batch)(h, gr, psib, hpsib, ik, t, kinetic_only = kinetic_only_)
   else
-    call X(hpsi_batch)(h, gr, psib, hpsib, ik, kinetic_only = kinetic_only_)
+    call X(hamiltonian_apply_batch)(h, gr, psib, hpsib, ik, kinetic_only = kinetic_only_)
   end if
 
   call batch_end(psib)
   call batch_end(hpsib)
 
-end subroutine X(hpsi)
+end subroutine X(hamiltonian_apply)
 
 ! ---------------------------------------------------------
 subroutine X(exchange_operator) (h, gr, psi, hpsi, ist, ik)
@@ -372,7 +372,7 @@ subroutine X(magnus) (h, gr, psi, hpsi, ik, vmagnus)
 
   ispin = states_dim_get_spin_index(h%d, ik)
 
-  call X(hpsi)(h, gr, psi, hpsi, ist = 1, ik = ik, kinetic_only = .true.)
+  call X(hamiltonian_apply)(h, gr, psi, hpsi, ist = 1, ik = ik, kinetic_only = .true.)
 
   do idim = 1, h%d%dim
     call lalg_copy(NP, hpsi(:, idim), auxpsi(:, idim))
@@ -383,7 +383,7 @@ subroutine X(magnus) (h, gr, psi, hpsi, ik, vmagnus)
   hpsi(1:NP, 1) = hpsi(1:NP, 1) -  M_zI*vmagnus(1:NP, ispin, 1)*auxpsi(1:NP, 1)
   auxpsi(1:NP, 1) = vmagnus(1:NP, ispin, 1)*psi(1:NP, 1)
 
-  call X(hpsi)(h, gr, auxpsi, aux2psi, ist = 1, ik = ik, kinetic_only = .true.)
+  call X(hamiltonian_apply)(h, gr, auxpsi, aux2psi, ist = 1, ik = ik, kinetic_only = .true.)
 
   if (h%ep%non_local) call X(vnlpsi)(h, gr%mesh, auxpsi, aux2psi, ik)
 
@@ -747,7 +747,7 @@ subroutine X(vmask) (gr, h, st)
 end subroutine X(vmask)
 
 ! ---------------------------------------------------------
-subroutine X(hpsi_diag) (h, gr, diag, ik, t)
+subroutine X(hamiltonian_diagonal) (h, gr, diag, ik, t)
   type(hamiltonian_t), intent(in)    :: h
   type(grid_t),        intent(inout) :: gr
   integer,             intent(in)    :: ik
@@ -785,7 +785,7 @@ subroutine X(hpsi_diag) (h, gr, diag, ik, t)
   end select
     
   call pop_sub()
-end subroutine X(hpsi_diag)
+end subroutine X(hamiltonian_diagonal)
 
 
 !! Local Variables:

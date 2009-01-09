@@ -279,7 +279,7 @@ subroutine X(lobpcg)(gr, st, h, st_start, st_end, psi, constr_start, constr_end,
   call batch_init(psib, st%d%dim, st_start, st_end, st%X(psi)(:, :, :, ik))
   call batch_init(hpsib, st%d%dim, st_start, st_end, h_psi)
 
-  call X(hpsi_batch)(h, gr, psib, hpsib, ik)
+  call X(hamiltonian_apply_batch)(h, gr, psib, hpsib, ik)
   
   call batch_end(psib)
   call batch_end(hpsib)
@@ -365,7 +365,7 @@ subroutine X(lobpcg)(gr, st, h, st_start, st_end, psi, constr_start, constr_end,
       call batch_add_state(hpsib, ist, h_res(:, :, ist))
     end do
 
-    call X(hpsi_batch)(h, gr, psib, hpsib, ik)
+    call X(hamiltonian_apply_batch)(h, gr, psib, hpsib, ik)
 
     niter = niter + lnuc
 

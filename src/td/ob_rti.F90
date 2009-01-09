@@ -722,7 +722,7 @@ contains
     y(:) = x(:) ! no preconditioner
 !     AL LOCATE(diag(np, 1), np)
 
-!     call zhpsi_diag(h_p, gr_p, diag, 1)
+!     call zhamiltonian_diagonal(h_p, gr_p, diag, 1)
 
 !     diag(:, 1) = M_z1 + M_HALF*dt_p*M_zI*diag(:,1) 
 !     y(1:np)    = x(1:np)/diag(1:np, 1)
