@@ -164,18 +164,18 @@ contains
 
 
   !----------------------------------------------------------
-  subroutine system_h_setup(sys, h)
+  subroutine system_h_setup(sys, hm)
     type(system_t),      intent(inout) :: sys
-    type(hamiltonian_t), intent(inout) :: h
+    type(hamiltonian_t), intent(inout) :: hm
 
     call push_sub('systm.hamiltonian_setup')
 
     call states_fermi(sys%st, sys%gr%mesh)
     call states_calc_dens(sys%st, sys%gr%mesh%np, sys%st%rho)
 
-    call v_ks_calc(sys%gr, sys%ks, h, sys%st, calc_eigenval=.true.) ! get potentials
+    call v_ks_calc(sys%gr, sys%ks, hm, sys%st, calc_eigenval=.true.) ! get potentials
     call states_fermi(sys%st, sys%gr%mesh)                            ! occupations
-    call total_energy(h, sys%gr, sys%st, -1)
+    call total_energy(hm, sys%gr, sys%st, -1)
 
     call pop_sub()
   end subroutine system_h_setup

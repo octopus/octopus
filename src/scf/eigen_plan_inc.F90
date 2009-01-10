@@ -27,10 +27,10 @@
 !! We also implement the "smoothing" preconditioning described in that paper.
 
 
-subroutine X(eigensolver_plan) (gr, st, hamilt, pre, tol, niter, converged, ik, diff)
+subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff)
   type(grid_t),                intent(inout) :: gr
   type(states_t),              intent(inout) :: st
-  type(hamiltonian_t),         intent(inout) :: hamilt
+  type(hamiltonian_t),         intent(inout) :: hm
   type(preconditioner_t),      intent(in)    :: pre
   FLOAT,                       intent(in)    :: tol
   integer,                     intent(inout) :: niter
@@ -177,7 +177,7 @@ subroutine X(eigensolver_plan) (gr, st, hamilt, pre, tol, niter, converged, ik, 
           call lalg_copy(NP, v(:, idim, d1 + i), aux(:, idim))
         end do
         av(:, :, d1 + i) = R_TOTYPE(M_ZERO)
-        call X(hamiltonian_apply)(hamilt, gr, aux, av(:, :, d1 + i), d1+i, ik)
+        call X(hamiltonian_apply)(hm, gr, aux, av(:, :, d1 + i), d1+i, ik)
       end do
       matvec = matvec + blk
 
@@ -279,7 +279,7 @@ subroutine X(eigensolver_plan) (gr, st, hamilt, pre, tol, niter, converged, ik, 
       do idim = 1, dim
         call lalg_copy(NP, av(:, idim, d1 + 1), aux(:, idim))
       end do
-      call X(preconditioner_apply)(pre, gr, hamilt, aux(:,:), v(:,:, d1+1))
+      call X(preconditioner_apply)(pre, gr, hm, aux(:,:), v(:,:, d1+1))
 
     end do inner_loop
   end do outer_loop

@@ -56,9 +56,9 @@ module raman_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine raman_run(sys, h, fromscratch)
+  subroutine raman_run(sys, hm, fromscratch)
     type(system_t),         intent(inout) :: sys
-    type(hamiltonian_t),    intent(inout) :: h
+    type(hamiltonian_t),    intent(inout) :: hm
     logical,                intent(in)    :: fromscratch
 
     type(lr_t)          :: psi_elec(MAX_DIM)

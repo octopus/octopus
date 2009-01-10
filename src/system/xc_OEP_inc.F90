@@ -27,14 +27,14 @@
 ! of how xc is defined and calculated.
 
 ! ---------------------------------------------------------
-subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, h, st, ex, ec, vxc)
+subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
   use xc_functl_m
 
   type(xc_oep_t),      intent(inout) :: oep
   type(xc_t),          intent(in)    :: xcs
   logical,             intent(in)    :: apply_sic_pz
   type(grid_t),        intent(inout) :: gr
-  type(hamiltonian_t), intent(inout) :: h
+  type(hamiltonian_t), intent(inout) :: hm
   type(states_t),      intent(inout) :: st
   FLOAT,               intent(inout) :: ex, ec
   FLOAT, optional,     intent(inout) :: vxc(:,:) !vxc(NP, st%d%nspin)
@@ -103,7 +103,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, h, st, ex, ec, vxc)
 
       ! if asked, solve the full OEP equation
       if(oep%level == XC_OEP_FULL) then
-        call X(xc_oep_solve)(gr, h, st, is, vxc(:,is), oep)
+        call X(xc_oep_solve)(gr, hm, st, is, vxc(:,is), oep)
       end if
 
       vxc(1:NP, is) = vxc(1:NP, is) + oep%vxc(1:NP)
@@ -118,9 +118,9 @@ end subroutine X(xc_OEP_calc)
 
 
 ! ---------------------------------------------------------
-subroutine X(xc_oep_solve) (gr, h, st, is, vxc, oep)
+subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
   type(grid_t),        intent(inout) :: gr
-  type(hamiltonian_t), intent(inout) :: h
+  type(hamiltonian_t), intent(inout) :: hm
   type(states_t),      intent(in)    :: st
   integer,             intent(in)    :: is
   FLOAT,               intent(inout) :: vxc(:) ! vxc(NP)
@@ -161,7 +161,7 @@ subroutine X(xc_oep_solve) (gr, h, st, is, vxc, oep)
       call X(lr_orth_vector) (gr%mesh, st, b, ist, is)
 
       ! and we now solve the equation [h-eps_i] psi_i = b_i
-      call X(solve_HXeY) (oep%solver, h, gr, st, ist, is, oep%lr%X(dl_psi)(:,:, ist, is), b, &
+      call X(solve_HXeY) (oep%solver, hm, gr, st, ist, is, oep%lr%X(dl_psi)(:,:, ist, is), b, &
            R_TOTYPE(-st%eigenval(ist, is)))
       
       call X(lr_orth_vector) (gr%mesh, st, oep%lr%X(dl_psi)(:,:, ist, is), ist, is)

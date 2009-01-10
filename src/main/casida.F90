@@ -78,9 +78,9 @@ module casida_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine casida_run(sys, h, fromScratch)
+  subroutine casida_run(sys, hm, fromScratch)
     type(system_t),      intent(inout) :: sys
-    type(hamiltonian_t), intent(inout) :: h
+    type(hamiltonian_t), intent(inout) :: hm
     logical,             intent(inout) :: fromScratch
 
     type(casida_t) :: cas
@@ -132,7 +132,7 @@ contains
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian.'
     call write_info(1)
-    call system_h_setup(sys, h)
+    call system_h_setup(sys, hm)
 
 
     !%Variable LinearResponseKohnShamStates
@@ -182,7 +182,7 @@ contains
     message(1) = "Info: Approximating resonance energies through KS eigenvalue differences"
     call write_info(1)
     cas%type = CASIDA_EPS_DIFF
-    call casida_work(sys, h, cas)
+    call casida_work(sys, hm, cas)
     call casida_write(cas, 'eps-diff')
 
     if (sys%st%d%ispin /= SPINORS) then
@@ -190,14 +190,14 @@ contains
       message(1) = "Info: Calculating resonance energies a la Petersilka"
       call write_info(1)
       cas%type = CASIDA_PETERSILKA
-      call casida_work(sys, h, cas)
+      call casida_work(sys, hm, cas)
       call casida_write(cas, 'petersilka')
 
       ! And finally, solve the full Casida problem.
       message(1) = "Info: Calculating resonance energies a la Casida"
       call write_info(1)
       cas%type = CASIDA_CASIDA
-      call casida_work(sys, h, cas)
+      call casida_work(sys, hm, cas)
       call casida_write(cas, 'casida')
 
     end if
@@ -297,9 +297,9 @@ contains
   ! ---------------------------------------------------------
   ! this subroutine calculates electronic excitation energies using
   ! the matrix formulation of M. Petersilka, or of M. Casida
-  subroutine casida_work(sys, h, cas)
+  subroutine casida_work(sys, hm, cas)
     type(system_t), target, intent(inout) :: sys
-    type(hamiltonian_t),    intent(in)    :: h
+    type(hamiltonian_t),    intent(in)    :: hm
     type(casida_t),         intent(inout) :: cas
 
     logical, allocatable :: saved_K(:, :)         ! which matrix elements have been loaded
@@ -606,7 +606,7 @@ contains
       !  first the Hartree part (only works for real wfs...)
       if( j.ne.j_old  .or.   b.ne.b_old   .or.  mu.ne.mu_old) then
         pot(1:m%np) = M_ZERO
-        if(h%theory_level.ne.INDEPENDENT_PARTICLES) call dpoisson_solve(sys%gr, pot, rho_j, all_nodes=.false.)
+        if(hm%theory_level.ne.INDEPENDENT_PARTICLES) call dpoisson_solve(sys%gr, pot, rho_j, all_nodes=.false.)
       end if
 
       K_term = dmf_dotp(m, rho_i(:), pot(:))

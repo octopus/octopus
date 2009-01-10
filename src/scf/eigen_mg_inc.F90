@@ -18,10 +18,10 @@
 !! $Id: eigen_mg_inc.F90 4195 2008-05-25 18:15:35Z xavier $
 
 ! ---------------------------------------------------------
-subroutine X(eigensolver_mg) (gr, st, h, tol, niter, converged, ik, diff)
+subroutine X(eigensolver_mg) (gr, st, hm, tol, niter, converged, ik, diff)
   type(grid_t),           intent(inout) :: gr
   type(states_t),         intent(inout) :: st
-  type(hamiltonian_t),    intent(inout) :: h
+  type(hamiltonian_t),    intent(inout) :: hm
   FLOAT,                  intent(in)    :: tol
   integer,                intent(inout) :: niter
   integer,                intent(inout) :: converged
@@ -40,7 +40,7 @@ subroutine X(eigensolver_mg) (gr, st, h, tol, niter, converged, ik, diff)
 
   do iter = 1, niter
 
-    call X(subspace_diag)(gr, st, h, ik, diff)
+    call X(subspace_diag)(gr, st, hm, ik, diff)
 
     do ist = 1, st%nst
       print*, iter, ist, st%eigenval(ist, ik), diff(ist)
@@ -58,7 +58,7 @@ subroutine X(eigensolver_mg) (gr, st, h, tol, niter, converged, ik, diff)
 
     end do
 
-    call X(coordinate_relaxation)(gr, gr%mesh, h, st%nst, 10, ik, st%X(psi)(:, :, :, ik), aa, cc)
+    call X(coordinate_relaxation)(gr, gr%mesh, hm, st%nst, 10, ik, st%X(psi)(:, :, :, ik), aa, cc)
 
     ! normalize
     do ist = 1, st%nst      
@@ -67,17 +67,17 @@ subroutine X(eigensolver_mg) (gr, st, h, tol, niter, converged, ik, diff)
 
   end do
 
-  call X(subspace_diag)(gr, st, h, ik, diff)
+  call X(subspace_diag)(gr, st, hm, ik, diff)
 
   niter = iter*10
 
   call pop_sub()
 end subroutine X(eigensolver_mg)
 
-subroutine X(coordinate_relaxation)(gr, mesh, h, nst, steps, ik, psi, aa, cc)
+subroutine X(coordinate_relaxation)(gr, mesh, hm, nst, steps, ik, psi, aa, cc)
   type(grid_t),           intent(inout) :: gr
   type(mesh_t),           intent(inout) :: mesh
-  type(hamiltonian_t),    intent(inout) :: h
+  type(hamiltonian_t),    intent(inout) :: hm
   integer,                intent(in)    :: nst
   integer,                intent(in)    :: steps
   integer,                intent(in)    :: ik
@@ -94,9 +94,9 @@ subroutine X(coordinate_relaxation)(gr, mesh, h, nst, steps, ik, psi, aa, cc)
 
   ALLOCATE(sigma(1:nst), nst)
   ALLOCATE(beta(1:nst), nst)
-  ALLOCATE(hdiag(1:mesh%np, 1:h%d%dim), NP*h%d%dim)
+  ALLOCATE(hdiag(1:mesh%np, 1:hm%d%dim), NP*hm%d%dim)
 
-  call X(hamiltonian_diagonal) (h, gr, hdiag, ik)
+  call X(hamiltonian_diagonal) (hm, gr, hdiag, ik)
 
   do iter = 1, steps
     
@@ -104,7 +104,7 @@ subroutine X(coordinate_relaxation)(gr, mesh, h, nst, steps, ik, psi, aa, cc)
       
       vv = sqrt(mesh%vol_pp(ip))
       dh = hdiag(ip, 1)
-      pot = h%vhxc(ip, 1) + h%ep%vpsl(ip)
+      pot = hm%vhxc(ip, 1) + hm%ep%vpsl(ip)
       
       do ist = 1, nst
         

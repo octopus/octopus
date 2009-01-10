@@ -17,10 +17,10 @@
 !!
 !! $Id: cpmd_inc.F90 3694 2008-02-15 13:37:54Z marques $
 
-subroutine X(cpmd_propagate)(this, gr, h, st, iter, dt)
+subroutine X(cpmd_propagate)(this, gr, hm, st, iter, dt)
   type(cpmd_t), target, intent(inout) :: this
   type(grid_t),         intent(inout) :: gr
-  type(hamiltonian_t),  intent(inout) :: h
+  type(hamiltonian_t),  intent(inout) :: hm
   type(states_t),       intent(inout) :: st
   integer,              intent(in)    :: iter
   FLOAT,                intent(in)    :: dt
@@ -62,7 +62,7 @@ subroutine X(cpmd_propagate)(this, gr, h, st, iter, dt)
         if(iter == 1) this%X(psi2)(1:np, 1:ddim, ist1, ik) = st%X(psi)(1:np, 1:ddim, ist1, ik)
 
         ! calculate the "force"
-        call X(hamiltonian_apply)(h, gr, st%X(psi)(:, :, ist1, ik), hpsi, ist1, ik)
+        call X(hamiltonian_apply)(hm, gr, st%X(psi)(:, :, ist1, ik), hpsi, ist1, ik)
 
         ! propagate the wavefunctions
         psi(1:np, 1:ddim) = M_TWO*st%X(psi)(1:np, 1:ddim, ist1, ik) - this%X(psi2)(1:np, 1:ddim, ist1, ik) &
@@ -97,7 +97,7 @@ subroutine X(cpmd_propagate)(this, gr, h, st, iter, dt)
       do ist1 = st%st_start, st%st_end
         
         ! calculate the "force"
-        call X(hamiltonian_apply)(h, gr, st%X(psi)(:, :, ist1, ik), hpsi, ist1, ik)
+        call X(hamiltonian_apply)(hm, gr, st%X(psi)(:, :, ist1, ik), hpsi, ist1, ik)
         
         if(iter == 1) then 
           ! give the initial conditions
@@ -177,10 +177,10 @@ contains
 
 end subroutine X(cpmd_propagate)
 
-subroutine X(cpmd_propagate_vel)(this, gr, h, st, dt)
+subroutine X(cpmd_propagate_vel)(this, gr, hm, st, dt)
   type(cpmd_t),         intent(inout) :: this
   type(grid_t),         intent(inout) :: gr
-  type(hamiltonian_t),  intent(inout) :: h
+  type(hamiltonian_t),  intent(inout) :: hm
   type(states_t),       intent(inout) :: st
   FLOAT,                intent(in)    :: dt
 
@@ -208,7 +208,7 @@ subroutine X(cpmd_propagate_vel)(this, gr, h, st, dt)
     do ist1 = st%st_start, st%st_end
 
       ! calculate the "force"
-      call X(hamiltonian_apply)(h, gr, st%X(psi)(:, :, ist1, ik), hpsi, ist1, ik)
+      call X(hamiltonian_apply)(hm, gr, st%X(psi)(:, :, ist1, ik), hpsi, ist1, ik)
 
       ! we have to complete the propagation of psi2 from the previous step
       this%X(psi2)(1:np, 1:ddim, ist1, ik) = &

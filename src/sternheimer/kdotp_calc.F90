@@ -170,10 +170,10 @@ end subroutine zcalc_polarizability_periodic
 
 
 ! ---------------------------------------------------------
-subroutine zcalc_eff_mass_inv(sys, h, lr, perturbation, eff_mass_inv, &
+subroutine zcalc_eff_mass_inv(sys, hm, lr, perturbation, eff_mass_inv, &
   occ_solution_method, degen_thres)
   type(system_t),         intent(inout) :: sys
-  type(hamiltonian_t),    intent(in)    :: h
+  type(hamiltonian_t),    intent(in)    :: hm
   type(lr_t),             intent(in)    :: lr(:,:)
   type(pert_t),           intent(inout) :: perturbation
   FLOAT,                  intent(out)   :: eff_mass_inv(:, :, :, :)
@@ -208,7 +208,7 @@ subroutine zcalc_eff_mass_inv(sys, h, lr, perturbation, eff_mass_inv, &
 
       do idir1 = 1, sys%gr%sb%dim
         call pert_setup_dir(perturbation, idir1)
-        call zpert_apply (perturbation, sys%gr, sys%geo, h, ik, &
+        call zpert_apply (perturbation, sys%gr, sys%geo, hm, ik, &
           sys%st%zpsi(1:m%np, 1, ist, ik), pertpsi(idir1, 1:m%np))
       enddo
 

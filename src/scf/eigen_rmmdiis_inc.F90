@@ -27,10 +27,10 @@
 ! process.
 !
 ! ---------------------------------------------------------
-subroutine X(eigensolver_rmmdiis) (gr, st, h, pre, tol, niter, converged, ik, diff, blocksize)
+subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, diff, blocksize)
   type(grid_t),        intent(inout) :: gr
   type(states_t),      intent(inout) :: st
-  type(hamiltonian_t), intent(inout) :: h
+  type(hamiltonian_t), intent(inout) :: hm
   type(preconditioner_t), intent(in) :: pre
   FLOAT,               intent(in)    :: tol
   integer,             intent(inout) :: niter
@@ -78,8 +78,8 @@ subroutine X(eigensolver_rmmdiis) (gr, st, h, pre, tol, niter, converged, ik, di
       
       ! apply the hamiltonian over the initial vector
 
-      call batch_init(psib, h%d%dim, num_in_block)
-      call batch_init(hpsib, h%d%dim, num_in_block)
+      call batch_init(psib, hm%d%dim, num_in_block)
+      call batch_init(hpsib, hm%d%dim, num_in_block)
 
       ib = 0
       do ist = psi_start, psi_end
@@ -89,7 +89,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, h, pre, tol, niter, converged, ik, di
         call batch_add_state(hpsib, ist, residuals(:, :, ib))
       end do
 
-      call X(hamiltonian_apply_batch)(h, gr, psib, hpsib, ik)
+      call X(hamiltonian_apply_batch)(hm, gr, psib, hpsib, ik)
 
       niter = niter + num_in_block
       
@@ -119,14 +119,14 @@ subroutine X(eigensolver_rmmdiis) (gr, st, h, pre, tol, niter, converged, ik, di
           cycle
         end if
 
-        call  X(preconditioner_apply)(pre, gr, h, residuals(:, :, ib), preres(:, :, ib))
+        call  X(preconditioner_apply)(pre, gr, hm, residuals(:, :, ib), preres(:, :, ib))
       end do
 
       if(num_in_block == 0) exit
 
       ! apply the hamiltonian to the residuals
-      call batch_init(psib, h%d%dim, num_in_block)
-      call batch_init(hpsib, h%d%dim, num_in_block)
+      call batch_init(psib, hm%d%dim, num_in_block)
+      call batch_init(hpsib, hm%d%dim, num_in_block)
 
       ib = 0
       do ist = psi_start, psi_end
@@ -136,7 +136,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, h, pre, tol, niter, converged, ik, di
         call batch_add_state(hpsib, ist, resres(:, :, ib))
       end do
 
-      call X(hamiltonian_apply_batch)(h, gr, psib, hpsib, ik)
+      call X(hamiltonian_apply_batch)(hm, gr, psib, hpsib, ik)
 
       niter = niter + num_in_block
       
@@ -179,7 +179,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, h, pre, tol, niter, converged, ik, di
           call lalg_axpy(NP, M_HALF*lambda(1, ib), resres(:, idim, ib), residuals(:, idim, ib))
         end do
 
-        call X(preconditioner_apply)(pre, gr, h, residuals(:, :, ib), preres(:, :, ib))
+        call X(preconditioner_apply)(pre, gr, hm, residuals(:, :, ib), preres(:, :, ib))
 
         !now correct psi
         do idim = 1, st%d%dim

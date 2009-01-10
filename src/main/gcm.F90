@@ -53,9 +53,9 @@ module gcm_m
   ! Very preliminary implementation of the generator coodinates DFT scheme
   ! proposed by K. Capelle [K. Capelle, J. Chem. Phys. 119, 1285 (2003).
   ! ---------------------------------------------------------
-  subroutine gcm_run(sys, h)
+  subroutine gcm_run(sys, hm)
     type(system_t),      intent(inout) :: sys
-    type(hamiltonian_t), intent(inout) :: h
+    type(hamiltonian_t), intent(inout) :: hm
 
     type(states_t), allocatable :: phi(:)
     type(block_t) :: blk
@@ -130,8 +130,8 @@ module gcm_m
       call states_calc_dens(phi(i), NP, phi(i)%rho)
 
       ! First, the one-body part of the total energy:
-      etot(i) = delectronic_kinetic_energy(h, gr, phi(i)) + &
-                delectronic_external_energy(h, gr, phi(i))
+      etot(i) = delectronic_kinetic_energy(hm, gr, phi(i)) + &
+                delectronic_external_energy(hm, gr, phi(i))
 
       ! Coulomb contribution.
       do j = 1, NP
@@ -156,7 +156,7 @@ module gcm_m
         ex = - M_HALF * uh
       end if
 
-      etot(i) = etot(i) + uh + ex + h%ep%eii
+      etot(i) = etot(i) + uh + ex + hm%ep%eii
       hmatrix(i, i) = etot(i)
     end do
 
@@ -181,8 +181,8 @@ module gcm_m
         call states_copy(opst, phi(j))
         do k = 1, phi(j)%nst
           opst%dpsi(:, :, k, 1) = M_ZERO
-          call dhamiltonian_apply(h, gr, phi(j)%dpsi(:, :, k, 1), opst%dpsi(:, :, k, 1), ist = k, ik = 1, kinetic_only = .true.)
-          call dvexternal (h, gr, phi(j)%dpsi(:, :, k, 1), opst%dpsi(:, :, k, 1), 1)
+          call dhamiltonian_apply(hm, gr, phi(j)%dpsi(:, :, k, 1), opst%dpsi(:, :, k, 1), ist = k, ik = 1, kinetic_only = .true.)
+          call dvexternal (hm, gr, phi(j)%dpsi(:, :, k, 1), opst%dpsi(:, :, k, 1), 1)
         end do
         kij = dstates_mpmatrixelement(gr%mesh, phi(i), phi(j), opst)
         call states_end(opst)
@@ -192,7 +192,7 @@ module gcm_m
 
         uh =  mpdotp_twobody(phi(i), phi(j), gr)
 
-        gamma = kij + uh + h%ep%eii
+        gamma = kij + uh + hm%ep%eii
         hmatrix(i, j) = gamma
 
         deallocate(overlap_matrix)

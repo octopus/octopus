@@ -342,17 +342,17 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine h_sys_output_all(outp, gr, geo, st, h, dir)
+  subroutine h_sys_output_all(outp, gr, geo, st, hm, dir)
     type(grid_t),         intent(inout) :: gr
     type(geometry_t),     intent(in)    :: geo
     type(states_t),       intent(inout) :: st
-    type(hamiltonian_t),  intent(in)    :: h
+    type(hamiltonian_t),  intent(in)    :: hm
     type(h_sys_output_t), intent(in)    :: outp
     character(len=*),     intent(in)    :: dir
     
     call h_sys_output_states(st, gr, dir, outp)
-    call h_sys_output_hamiltonian(h, gr%mesh, gr%sb, dir, outp)
-    call h_sys_output_localization_funct(st, h, gr, dir, outp)
+    call h_sys_output_hamiltonian(hm, gr%mesh, gr%sb, dir, outp)
+    call h_sys_output_localization_funct(st, hm, gr, dir, outp)
     call h_sys_output_current_flow(gr, st, dir, outp)
 
     if(iand(outp%what, output_geometry).ne.0) then
@@ -363,9 +363,9 @@ contains
     
   end subroutine h_sys_output_all
 
-  subroutine h_sys_output_localization_funct(st, h, gr, dir, outp)
+  subroutine h_sys_output_localization_funct(st, hm, gr, dir, outp)
     type(states_t),         intent(inout) :: st
-    type(hamiltonian_t),    intent(in)    :: h
+    type(hamiltonian_t),    intent(in)    :: hm
     type(grid_t),           intent(inout) :: gr
     character(len=*),       intent(in)    :: dir
     type(h_sys_output_t),   intent(in)    :: outp
@@ -430,7 +430,7 @@ contains
 
     ! Now the pressure
     if(iand(outp%what, output_el_pressure).ne.0) then
-      call h_sys_calc_electronic_pressure(st, h, gr, f_loc(:,1))
+      call h_sys_calc_electronic_pressure(st, hm, gr, f_loc(:,1))
       call doutput_function(outp%how, dir, "el_pressure", gr%mesh, gr%sb, &
         f_loc(:,1), M_ONE, ierr, is_tmp = .false.)
     end if
@@ -465,9 +465,9 @@ contains
   end subroutine h_sys_output_localization_funct
 
   
-  subroutine h_sys_calc_electronic_pressure(st, h, gr, pressure)
+  subroutine h_sys_calc_electronic_pressure(st, hm, gr, pressure)
     type(states_t),         intent(inout) :: st
-    type(hamiltonian_t),    intent(in)    :: h
+    type(hamiltonian_t),    intent(in)    :: hm
     type(grid_t),           intent(inout) :: gr
     FLOAT,                  intent(out)   :: pressure(:)
 
@@ -499,7 +499,7 @@ contains
         dens**(M_FIVE/M_THREE)
 
       ! add xc pressure
-      pressure(ii) = pressure(ii) + (dens*h%vxc(ii,1) - h%ex - h%ec)
+      pressure(ii) = pressure(ii) + (dens*hm%vxc(ii,1) - hm%ex - hm%ec)
 
       pressure(ii) = pressure(ii)/p_tf
       pressure(ii) = M_HALF*(M_ONE + pressure(ii)/sqrt(M_ONE + pressure(ii)**2))

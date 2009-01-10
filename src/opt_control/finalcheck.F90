@@ -19,9 +19,9 @@
 
 
   ! ---------------------------------------------------------
-  subroutine oct_finalcheck(sys, h, td)
+  subroutine oct_finalcheck(sys, hm, td)
     type(system_t), intent(inout)      :: sys
-    type(hamiltonian_t), intent(inout) :: h
+    type(hamiltonian_t), intent(inout) :: hm
     type(td_t), intent(inout)          :: td
 
     type(states_t) :: psi
@@ -40,7 +40,7 @@
 
     call states_copy(psi, initial_st)
 
-    call propagate_forward(sys, h, td, par, target, psi, write_iter = .true.)
+    call propagate_forward(sys, hm, td, par, target, psi, write_iter = .true.)
 
     j1 = j1_functional(target, sys%gr, psi)
     fluence = parameters_fluence(par)

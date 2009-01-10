@@ -18,10 +18,10 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-subroutine X(eigensolver_evolution) (gr, st, h, tol, niter, converged, ik, diff, tau)
+subroutine X(eigensolver_evolution) (gr, st, hm, tol, niter, converged, ik, diff, tau)
   type(grid_t), target,intent(inout) :: gr
   type(states_t),      intent(inout) :: st
-  type(hamiltonian_t), target, intent(inout)    :: h
+  type(hamiltonian_t), target, intent(inout)    :: hm
   FLOAT,               intent(in)    :: tol
   integer,             intent(inout) :: niter
   integer,             intent(inout) :: converged
@@ -79,7 +79,7 @@ subroutine X(eigensolver_evolution) (gr, st, h, tol, niter, converged, ik, diff,
 
     ! Get the eigenvalues and the residues.
     do ist = conv + 1, st%nst
-      call X(hamiltonian_apply)(h, gr, st%X(psi)(:, :, ist, ik), hpsi, ist, ik)
+      call X(hamiltonian_apply)(hm, gr, st%X(psi)(:, :, ist, ik), hpsi, ist, ik)
       st%eigenval(ist, ik) = X(mf_dotp)(gr%mesh, st%d%dim, st%X(psi)(:, :, ist, ik), hpsi)
       diff(ist) = X(states_residue)(gr%mesh, st%d%dim, hpsi, st%eigenval(ist, ik), st%X(psi)(:, :, ist, ik))
     end do
@@ -114,7 +114,7 @@ contains
 #else
     zpsi => psi
 #endif
-    call exponential_apply(te, gr, h, zpsi, ist, ik, -tau, M_ZERO, order = j, imag_time = .true.)
+    call exponential_apply(te, gr, hm, zpsi, ist, ik, -tau, M_ZERO, order = j, imag_time = .true.)
 #if defined(R_TREAL)
     psi = zpsi
     deallocate(zpsi)

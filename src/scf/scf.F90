@@ -92,12 +92,12 @@ module scf_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine scf_init(gr, geo, scf, st, h)
+  subroutine scf_init(gr, geo, scf, st, hm)
     type(grid_t),        intent(inout) :: gr
     type(geometry_t),    intent(in)    :: geo
     type(scf_t),         intent(inout) :: scf
     type(states_t),      intent(in)    :: st
-    type(hamiltonian_t), intent(inout) :: h
+    type(hamiltonian_t), intent(inout) :: hm
 
     integer :: dim
     FLOAT :: rmin
@@ -219,14 +219,14 @@ contains
     if(.not.varinfo_valid_option('What2Mix', scf%what2mix)) call input_error('What2Mix')
     call messages_print_var_option(stdout, "What2Mix", scf%what2mix, "what to mix during SCF cycles")
 
-    if (scf%what2mix == MIXPOT.and.h%theory_level==INDEPENDENT_PARTICLES) then
+    if (scf%what2mix == MIXPOT.and.hm%theory_level==INDEPENDENT_PARTICLES) then
       message(1) = "Input: Cannot mix the potential with non-interacting particles."
       call write_fatal(1)
     end if
 
     ! Handle mixing now...
     dim = 1
-    if (h%d%cdft) dim = 1 + NDIM
+    if (hm%d%cdft) dim = 1 + NDIM
     call mix_init(scf%smix, gr%mesh%np, dim, st%d%nspin)
     call mesh_init_mesh_aux(gr%mesh)
 
@@ -238,7 +238,7 @@ contains
         ALLOCATE(gr%mgrid, 1)
         call multigrid_init(gr%mgrid, geo, gr%cv,gr%mesh, gr%der, gr%stencil)
       end if
-      call hamiltonian_mg_init(h, gr)
+      call hamiltonian_mg_init(hm, gr)
     end if
 
     !%Variable SCFinLCAO
@@ -280,13 +280,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine scf_run(scf, gr, geo, st, ks, h, outp, gs_run, verbosity)
+  subroutine scf_run(scf, gr, geo, st, ks, hm, outp, gs_run, verbosity)
     type(scf_t),         intent(inout) :: scf
     type(grid_t),        intent(inout) :: gr
     type(geometry_t),    intent(inout) :: geo
     type(states_t),      intent(inout) :: st
     type(v_ks_t),        intent(inout) :: ks
-    type(hamiltonian_t), intent(inout) :: h
+    type(hamiltonian_t), intent(inout) :: hm
     type(h_sys_output_t),intent(in)    :: outp
     logical, optional,   intent(in)    :: gs_run
     integer, optional,   intent(in)    :: verbosity 
@@ -325,7 +325,7 @@ contains
     nspin = st%d%nspin
 
     dim = 1
-    if (h%d%cdft) dim = 1 + NDIM
+    if (hm%d%cdft) dim = 1 + NDIM
 
     ALLOCATE(rhoout(NP, dim, nspin), NP*dim*nspin)
     ALLOCATE(rhoin (NP, dim, nspin), NP*dim*nspin)
@@ -341,9 +341,9 @@ contains
       ALLOCATE( vin(NP, dim, nspin), NP*dim*nspin)
       ALLOCATE(vnew(NP, dim, nspin), NP*dim*nspin)
 
-      vin(1:NP, 1, 1:nspin) = h%vhxc(1:NP, 1:nspin)
+      vin(1:NP, 1, 1:nspin) = hm%vhxc(1:NP, 1:nspin)
       vout = M_ZERO
-      if (st%d%cdft) vin(1:NP, 2:dim, 1:nspin) = h%axc(1:NP, 1:NDIM, 1:nspin)
+      if (st%d%cdft) vin(1:NP, 2:dim, 1:nspin) = hm%axc(1:NP, 1:NDIM, 1:nspin)
     else
       ALLOCATE(rhonew(NP, dim, nspin), NP*dim*nspin)
     end if
@@ -354,7 +354,7 @@ contains
       ALLOCATE(forcein(geo%natoms, NDIM), geo%natoms*NDIM)
       ALLOCATE(forceout(geo%natoms, NDIM), geo%natoms*NDIM)
       ALLOCATE(forcediff(NDIM), NDIM)
-      call epot_forces(gr, geo, h%ep, st)
+      call epot_forces(gr, geo, hm%ep, st)
       do iatom = 1, geo%natoms
         forcein(iatom,1:NDIM) = geo%atom(iatom)%f(1:NDIM)
       end do
@@ -371,16 +371,16 @@ contains
       call profiling_in(C_PROFILING_SCF_CYCLE)
 
       if(scf%lcao_restricted) then
-        call lcao_wf(lcao, st, gr, geo, h)
+        call lcao_wf(lcao, st, gr, geo, hm)
       else
         ! FIXME: Currently, only the eigensolver or the
         ! Lippmann-Schwinger approach can be used (exclusively),
         ! i. e. no bound states for open boundaries.
         if(gr%sb%open_boundaries) then
-          call lippmann_schwinger(scf%eigens, h, gr, st)
+          call lippmann_schwinger(scf%eigens, hm, gr, st)
         else
           scf%eigens%converged = 0
-          call eigensolver_run(scf%eigens, gr, st, h, iter)
+          call eigensolver_run(scf%eigens, gr, st, hm, iter)
         end if
       end if
 
@@ -390,19 +390,19 @@ contains
       ! compute output density, potential (if needed) and eigenvalues sum
       call states_calc_dens(st, NP, st%rho)
       rhoout(1:NP, 1, 1:nspin) = st%rho(1:NP, 1:nspin)
-      if (h%d%cdft) then
+      if (hm%d%cdft) then
         call calc_physical_current(gr, st, st%j)
         rhoout(1:NP, 2:dim, 1:nspin) = st%j(1:NP, 1:NDIM, 1:nspin)
       end if
       if (scf%what2mix == MIXPOT) then
-        call v_ks_calc(gr, ks, h, st)
-        vout(1:NP, 1, 1:nspin) = h%vhxc(1:NP, 1:nspin)
-        if (h%d%cdft) vout(1:NP, 2:dim, 1:nspin) = h%axc(1:NP, 1:NDIM, 1:nspin)
+        call v_ks_calc(gr, ks, hm, st)
+        vout(1:NP, 1, 1:nspin) = hm%vhxc(1:NP, 1:nspin)
+        if (hm%d%cdft) vout(1:NP, 2:dim, 1:nspin) = hm%axc(1:NP, 1:NDIM, 1:nspin)
       end if
       evsum_out = states_eigenvalues_sum(st)
 
       ! recalculate total energy
-      call total_energy(h, gr, st, iunit = 0)
+      call total_energy(hm, gr, st, iunit = 0)
 
       ! compute convergence criteria
       scf%abs_dens = M_ZERO
@@ -417,7 +417,7 @@ contains
 
       ! compute forces only if they are used as convergence criteria
       if (scf%conv_abs_force > M_ZERO .or. scf%conv_rel_force > M_ZERO) then
-        call epot_forces(gr, geo, h%ep, st)
+        call epot_forces(gr, geo, hm%ep, st)
         scf%abs_force = M_ZERO
         scf%rel_force = M_ZERO
         do iatom = 1, geo%natoms
@@ -455,13 +455,13 @@ contains
         ! mix input and output densities and compute new potential
         call dmixing(scf%smix, iter, rhoin, rhoout, rhonew, dmf_dotp_aux)
         st%rho(1:NP,1:nspin) = rhonew(1:NP, 1, 1:nspin)
-        if (h%d%cdft) st%j(1:NP,1:NDIM,1:nspin) = rhonew(1:NP, 2:dim, 1:nspin)
-        call v_ks_calc(gr, ks, h, st)
+        if (hm%d%cdft) st%j(1:NP,1:NDIM,1:nspin) = rhonew(1:NP, 2:dim, 1:nspin)
+        call v_ks_calc(gr, ks, hm, st)
       case (MIXPOT)
         ! mix input and output potentials
         call dmixing(scf%smix, iter, vin, vout, vnew, dmf_dotp_aux)
-        h%vhxc(1:NP, 1:nspin) = vnew(1:NP, 1, 1:nspin)
-        if (h%d%cdft) h%axc(1:NP, 1:NDIM, 1:nspin) = vnew(1:NP, 2:dim, 1:nspin)
+        hm%vhxc(1:NP, 1:nspin) = vnew(1:NP, 1, 1:nspin)
+        if (hm%d%cdft) hm%axc(1:NP, 1:NDIM, 1:nspin) = vnew(1:NP, 2:dim, 1:nspin)
       end select
 
       ! Are we asked to stop? (Whenever Fortran is ready for signals, this should go away)
@@ -491,15 +491,15 @@ contains
 
       if(outp%duringscf .and. gs_run_) then
         write(dirname,'(a,i4.4)') "scf.",iter
-        call h_sys_output_all(outp, gr, geo, st, h, dirname)
+        call h_sys_output_all(outp, gr, geo, st, hm, dirname)
       end if
 
       ! save information for the next iteration
       rhoin(1:NP, 1, 1:nspin) = st%rho(1:NP, 1:nspin)
-      if (h%d%cdft) rhoin(1:NP, 2:dim, 1:nspin) = st%j(1:NP, 1:NDIM, 1:nspin)
+      if (hm%d%cdft) rhoin(1:NP, 2:dim, 1:nspin) = st%j(1:NP, 1:NDIM, 1:nspin)
       if (scf%what2mix == MIXPOT) then
-        vin(1:NP, 1, 1:nspin) = h%vhxc(1:NP, 1:nspin)
-        if (h%d%cdft) vin(1:NP, 2:dim, 1:nspin) = h%axc(1:NP, 1:NDIM, 1:nspin)
+        vin(1:NP, 1, 1:nspin) = hm%vhxc(1:NP, 1:nspin)
+        if (hm%d%cdft) vin(1:NP, 2:dim, 1:nspin) = hm%axc(1:NP, 1:NDIM, 1:nspin)
       end if
       evsum_in = evsum_out
       if (scf%conv_abs_force > M_ZERO .or. scf%conv_rel_force > M_ZERO) then
@@ -519,7 +519,7 @@ contains
     end do
 
     if (scf%what2mix == MIXPOT) then
-      call v_ks_calc(gr, ks, h, st)
+      call v_ks_calc(gr, ks, hm, st)
       deallocate(vout, vin, vnew)
     else
       deallocate(rhonew)
@@ -532,7 +532,7 @@ contains
     end if
 
     ! calculate forces
-    call epot_forces(gr, geo, h%ep, st)
+    call epot_forces(gr, geo, hm%ep, st)
 
     if (st%wfs_type == M_REAL) then
       call dstates_calc_momentum(gr, st)
@@ -543,7 +543,7 @@ contains
     if(gs_run_) then 
       ! output final information
       call scf_write_static("static", "info")
-      call h_sys_output_all(outp, gr, geo, st, h, "static")
+      call h_sys_output_all(outp, gr, geo, st, hm, "static")
     end if
 
     if(simul_box_is_periodic(gr%sb).and.st%d%nik > st%d%nspin) then
@@ -572,7 +572,7 @@ contains
         write(str, '(a,i5)') 'SCF CYCLE ITER #' ,iter
         call messages_print_stress(stdout, trim(str))
 
-        write(message(1),'(a,es15.8,2(a,es9.2))') ' etot = ', h%etot/units_out%energy%factor, &
+        write(message(1),'(a,es15.8,2(a,es9.2))') ' etot = ', hm%etot/units_out%energy%factor, &
              ' abs_ev   = ', scf%abs_ev/units_out%energy%factor, ' rel_ev   = ', scf%rel_ev
         write(message(2),'(23x,2(a,es9.2))') &
              ' abs_dens = ', scf%abs_dens, ' rel_dens = ', scf%rel_dens
@@ -621,14 +621,14 @@ contains
         if (scf%conv_abs_force > M_ZERO .or. scf%conv_rel_force > M_ZERO) then
         write(message(1),'(a,i4,a,es15.8, 2(a,es9.2), a, f7.1, a)') &
              'iter ', iter, &
-             ' : etot ', h%etot/units_out%energy%factor, &
+             ' : etot ', hm%etot/units_out%energy%factor, &
              ' : abs_dens', scf%abs_dens, &
              ' : abs_force', scf%abs_force/units_out%force%factor, &
              ' : etime ', etime, 's'
         else
         write(message(1),'(a,i4,a,es15.8, a,es9.2, a, f7.1, a)') &
              'iter ', iter, &
-             ' : etot ', h%etot/units_out%energy%factor, &
+             ' : etot ', hm%etot/units_out%energy%factor, &
              ' : abs_dens', scf%abs_dens, &
              ' : etime ', etime, 's'
         end if
@@ -677,7 +677,7 @@ contains
         iunit = 0
       end if
 
-      call total_energy(h, gr, st, iunit, full = .true.)
+      call total_energy(hm, gr, st, iunit, full = .true.)
 
       if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
       if(st%d%ispin > UNPOLARIZED) then

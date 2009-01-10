@@ -73,7 +73,7 @@ module linear_solver_m
 
   type linear_solver_args_t
     type(linear_solver_t), pointer :: ls
-    type(hamiltonian_t),   pointer :: h
+    type(hamiltonian_t),   pointer :: hm
     type(grid_t),          pointer :: gr
     type(states_t),        pointer :: st
     integer                        :: ist

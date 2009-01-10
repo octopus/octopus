@@ -43,9 +43,9 @@ contains
   ! ---------------------------------------------------------
   ! Calculates psi = exp{factor*T} psi
   ! where T is the kinetic energy operator
-  subroutine zexp_kinetic (gr, h, psi, cf, factor)
+  subroutine zexp_kinetic (gr, hm, psi, cf, factor)
     type(grid_t),        intent(in)    :: gr
-    type(hamiltonian_t), intent(in)    :: h
+    type(hamiltonian_t), intent(in)    :: hm
     CMPLX,               intent(inout) :: psi(:,:) ! (NP_PART, dim)
     type(zcf_t),         intent(inout) :: cf
     CMPLX,               intent(in)    :: factor
@@ -60,8 +60,8 @@ contains
       call write_fatal(1)
     end if
 
-    if(h%cutoff > M_ZERO) then
-      cutoff = h%cutoff
+    if(hm%cutoff > M_ZERO) then
+      cutoff = hm%cutoff
     else
       cutoff = CNST(1e10)
     end if
@@ -72,7 +72,7 @@ contains
     call zcf_alloc_RS(cf)
     call zcf_alloc_FS(cf)
 
-    do idim = 1, h%d%dim
+    do idim = 1, hm%d%dim
       call zmesh_to_cube(gr%mesh, psi(:, idim), cf)
       call zcf_RS2FS(cf)
 
@@ -103,9 +103,9 @@ contains
   ! ---------------------------------------------------------
   ! Calculates psi = exp{factor*V_KS(t)} psi
   ! where V_KS is the Kohn-Sham potential
-  subroutine zexp_vlpsi(gr, h, psi, ik, t, factor)
+  subroutine zexp_vlpsi(gr, hm, psi, ik, t, factor)
     type(grid_t),        intent(in)    :: gr
-    type(hamiltonian_t), intent(in)    :: h
+    type(hamiltonian_t), intent(in)    :: hm
     CMPLX,               intent(inout) :: psi(:,:) ! (NP_PART, NDIM)
     integer,             intent(in)    :: ik
     FLOAT,               intent(in)    :: t
@@ -117,25 +117,25 @@ contains
     call push_sub('exponential_split.vlpsi')
 
     ! WARNING: spinors not yet supported.
-    select case(h%d%ispin)
+    select case(hm%d%ispin)
     case(UNPOLARIZED)
-      psi(1:NP, 1) = exp(factor*(h%ep%vpsl(1:NP)+h%vhxc(1:NP, 1)))*psi(1:NP, 1)
+      psi(1:NP, 1) = exp(factor*(hm%ep%vpsl(1:NP)+hm%vhxc(1:NP, 1)))*psi(1:NP, 1)
     case(SPIN_POLARIZED)
       if(modulo(ik+1, 2) == 0) then ! we have a spin down
-        psi(1:NP, 1) = exp(factor*(h%ep%vpsl(1:NP)+h%vhxc(1:NP, 1)))*psi(1:NP, 1)
+        psi(1:NP, 1) = exp(factor*(hm%ep%vpsl(1:NP)+hm%vhxc(1:NP, 1)))*psi(1:NP, 1)
       else
-        psi(1:NP, 1) = exp(factor*(h%ep%vpsl(1:NP)+h%vhxc(1:NP, 2)))*psi(1:NP, 1)
+        psi(1:NP, 1) = exp(factor*(hm%ep%vpsl(1:NP)+hm%vhxc(1:NP, 2)))*psi(1:NP, 1)
       end if
     case(SPINORS)
       message(1) = 'Internal error in exp_vlpsi'
       call write_fatal(1)
     end select
 
-    do i = 1, h%ep%no_lasers
-      select case(laser_kind(h%ep%lasers(i)))
+    do i = 1, hm%ep%no_lasers
+      select case(laser_kind(hm%ep%lasers(i)))
       case(E_FIELD_ELECTRIC)
         ALLOCATE(pot(NP), NP)
-        call laser_potential(gr%sb, h%ep%lasers(i), gr%mesh, pot, t)
+        call laser_potential(gr%sb, hm%ep%lasers(i), gr%mesh, pot, t)
         psi(1:NP, ik) = exp( factor * pot(1:NP) ) * psi(1:NP, ik) 
         deallocate(pot)
       case(E_FIELD_MAGNETIC, E_FIELD_VECTOR_POTENTIAL)
@@ -153,10 +153,10 @@ contains
   ! ---------------------------------------------------------
   ! calculates psi = exp{factor V_nlpp} psi
   ! where V_nlpp is the non-local part of the pseudpotential
-  subroutine zexp_vnlpsi (m, h, psi, factor_, order_)
+  subroutine zexp_vnlpsi (m, hm, psi, factor_, order_)
     type(mesh_t),        intent(in) :: m
-    type(hamiltonian_t), intent(in) :: h
-    CMPLX,            intent(inout) :: psi(m%np, h%d%dim)
+    type(hamiltonian_t), intent(in) :: hm
+    CMPLX,            intent(inout) :: psi(m%np, hm%d%dim)
     CMPLX,               intent(in) :: factor_
     logical,             intent(in) :: order_
 
@@ -169,42 +169,42 @@ contains
     message(1) = 'Error: zexp_vnlpsi is currently broken.'
     call write_fatal(1)
 
-!    ALLOCATE(initzpsi(m%np, 1:h%d%dim), m%np*h%d%dim)
+!    ALLOCATE(initzpsi(m%np, 1:hm%d%dim), m%np*hm%d%dim)
 !   just to avoid compiler warnings due to unused variables
 !    factor   = factor_
 !    order    = order_
 !    initzpsi = psi
 
 !!$
-!!$    dimension_loop: do idim = 1, h%d%dim
+!!$    dimension_loop: do idim = 1, hm%d%dim
 !!$
 !!$    if(order) then
-!!$      step = 1;  ivnl_start = 1; ivnl_end = h%ep%nvnl
+!!$      step = 1;  ivnl_start = 1; ivnl_end = hm%ep%nvnl
 !!$    else
-!!$      step = -1; ivnl_start = h%ep%nvnl; ivnl_end  = 1
+!!$      step = -1; ivnl_start = hm%ep%nvnl; ivnl_end  = 1
 !!$    end if
 !!$
 !!$    do ivnl = ivnl_start, ivnl_end, step
 !!$!      /*
-!!$       AL LOCATE( lpsi(h%ep%vnl(ivnl)%n), h%ep%vnl(ivnl)%n)
-!!$       AL LOCATE(lhpsi(h%ep%vnl(ivnl)%n), h%ep%vnl(ivnl)%n)
+!!$       AL LOCATE( lpsi(hm%ep%vnl(ivnl)%n), hm%ep%vnl(ivnl)%n)
+!!$       AL LOCATE(lhpsi(hm%ep%vnl(ivnl)%n), hm%ep%vnl(ivnl)%n)
 !!$!      */
-!!$       lpsi(:) = initzpsi(h%ep%vnl(ivnl)%jxyz(:), idim)
+!!$       lpsi(:) = initzpsi(hm%ep%vnl(ivnl)%jxyz(:), idim)
 !!$       lhpsi(:) = M_z0
 !!$
 !!$       if(order) then
-!!$          kbc_start = 1; kbc_end = h%ep%vnl(ivnl)%c
+!!$          kbc_start = 1; kbc_end = hm%ep%vnl(ivnl)%c
 !!$       else
-!!$          kbc_start = h%ep%vnl(ivnl)%c; kbc_end = 1
+!!$          kbc_start = hm%ep%vnl(ivnl)%c; kbc_end = 1
 !!$       end if
 !!$
 !!$       do ikbc = kbc_start, kbc_end, step
 !!$          do jkbc = kbc_start, kbc_end, step
 !!$            stop 'does not work because of vol_pp'
-!!$!             p2 = sum(h%ep%vnl(ivnl)%uv(:, ikbc)*h%ep%vnl(ivnl)%uv(:, ikbc))*m%vol_pp
-!!$             ctemp = h%ep%vnl(ivnl)%uvu(ikbc, jkbc)*p2*factor
-!!$!             uvpsi = sum(h%ep%vnl(ivnl)%uv(:, ikbc)*lpsi(:))*m%vol_pp*(exp(ctemp)-M_z1)/p2
-!!$             lhpsi(:) = lhpsi(:) + uvpsi*h%ep%vnl(ivnl)%uv(:, jkbc)
+!!$!             p2 = sum(hm%ep%vnl(ivnl)%uv(:, ikbc)*hm%ep%vnl(ivnl)%uv(:, ikbc))*m%vol_pp
+!!$             ctemp = hm%ep%vnl(ivnl)%uvu(ikbc, jkbc)*p2*factor
+!!$!             uvpsi = sum(hm%ep%vnl(ivnl)%uv(:, ikbc)*lpsi(:))*m%vol_pp*(exp(ctemp)-M_z1)/p2
+!!$             lhpsi(:) = lhpsi(:) + uvpsi*hm%ep%vnl(ivnl)%uv(:, jkbc)
 !!$          end do
 !!$       end do
 !!$

@@ -19,10 +19,10 @@
 
 ! ---------------------------------------------------------
 ! This routine diagonalises the Hamiltonian in the subspace defined by the states.
-subroutine X(subspace_diag)(gr, st, h, ik, diff)
+subroutine X(subspace_diag)(gr, st, hm, ik, diff)
   type(grid_t),        intent(inout) :: gr
   type(states_t),      intent(inout) :: st
-  type(hamiltonian_t), intent(inout) :: h
+  type(hamiltonian_t), intent(inout) :: hm
   integer,             intent(in)    :: ik
   FLOAT, optional,     intent(out)   :: diff(:)
 
@@ -38,9 +38,9 @@ subroutine X(subspace_diag)(gr, st, h, ik, diff)
 #ifdef HAVE_MPI
   if(st%parallel_in_states) then
     if(present(diff)) then
-      call X(subspace_diag_par_states)(gr, st, h, ik, diff)
+      call X(subspace_diag_par_states)(gr, st, hm, ik, diff)
     else
-      call X(subspace_diag_par_states)(gr, st, h, ik)
+      call X(subspace_diag_par_states)(gr, st, hm, ik)
     end if
   else
 #endif
@@ -53,14 +53,14 @@ subroutine X(subspace_diag)(gr, st, h, ik, diff)
     do ist = st%st_start, st%st_end, st%d%block_size
       size = min(st%d%block_size, st%st_end - ist + 1)
 
-      call batch_init(psib, h%d%dim, ist, ist + size - 1, st%X(psi)(:, :, ist:, ik))
-      call batch_init(hpsib, h%d%dim, ist, ist + size - 1, f)
+      call batch_init(psib, hm%d%dim, ist, ist + size - 1, st%X(psi)(:, :, ist:, ik))
+      call batch_init(hpsib, hm%d%dim, ist, ist + size - 1, f)
 
-      call X(hamiltonian_apply_batch)(h, gr, psib, hpsib, ik)
+      call X(hamiltonian_apply_batch)(hm, gr, psib, hpsib, ik)
 
       call batch_end(psib)
 
-      call batch_init(psib, h%d%dim, ist, st%nst, st%X(psi)(:, :, ist:st%nst, ik))
+      call batch_init(psib, hm%d%dim, ist, st%nst, st%X(psi)(:, :, ist:st%nst, ik))
 
       call X(mf_dotp_batch)(gr%mesh, hpsib, psib, h_subspace)
 
@@ -96,10 +96,10 @@ subroutine X(subspace_diag)(gr, st, h, ik, diff)
       do ist = st%st_start, st%st_end, st%d%block_size
         size = min(st%d%block_size, st%st_end - ist + 1)
         
-        call batch_init(psib, h%d%dim, ist, ist + size - 1, st%X(psi)(:, :, ist:, ik))
-        call batch_init(hpsib, h%d%dim, ist, ist + size - 1, f)
+        call batch_init(psib, hm%d%dim, ist, ist + size - 1, st%X(psi)(:, :, ist:, ik))
+        call batch_init(hpsib, hm%d%dim, ist, ist + size - 1, f)
         
-        call X(hamiltonian_apply_batch)(h, gr, psib, hpsib, ik)
+        call X(hamiltonian_apply_batch)(hm, gr, psib, hpsib, ik)
 
         call batch_end(psib)
         call batch_end(hpsib)
@@ -128,10 +128,10 @@ end subroutine X(subspace_diag)
 ! the states, this version is aware of parallelization in states but
 ! consumes more memory.
 !
-subroutine X(subspace_diag_par_states)(gr, st, h, ik, diff)
+subroutine X(subspace_diag_par_states)(gr, st, hm, ik, diff)
   type(grid_t),        intent(inout) :: gr
   type(states_t),      intent(inout) :: st
-  type(hamiltonian_t), intent(inout) :: h
+  type(hamiltonian_t), intent(inout) :: hm
   integer,             intent(in)    :: ik
   FLOAT, optional,     intent(out)   :: diff(1:st%nst)
 
@@ -151,7 +151,7 @@ subroutine X(subspace_diag_par_states)(gr, st, h, ik, diff)
 
   ! Calculate the matrix representation of the Hamiltonian in the subspace <psi|H|psi>.
   do i = st%st_start, st%st_end
-    call X(hamiltonian_apply)(h, gr, st%X(psi)(:, :, i, ik), f(:, :, i), i, ik)
+    call X(hamiltonian_apply)(hm, gr, st%X(psi)(:, :, i, ik), f(:, :, i), i, ik)
   end do
   call states_blockt_mul(gr%mesh, st, st%st_start, st%st_end, st%st_start, st%st_end, &
        st%X(psi)(:, :, :, ik), f, h_subspace, symm=.true.)
@@ -174,7 +174,7 @@ subroutine X(subspace_diag_par_states)(gr, st, h, ik, diff)
   ! Recalculate the residues if requested by the diff argument.
   if(present(diff)) then 
     do i = st%st_start, st%st_end
-      call X(hamiltonian_apply)(h, gr, st%X(psi)(:, :, i, ik) , f(:, :, st%st_start), i, ik)
+      call X(hamiltonian_apply)(hm, gr, st%X(psi)(:, :, i, ik) , f(:, :, st%st_start), i, ik)
       diff(i) = X(states_residue)(gr%mesh, st%d%dim, f(:, :, st%st_start), st%eigenval(i, ik), &
            st%X(psi)(:, :, i, ik))
     end do

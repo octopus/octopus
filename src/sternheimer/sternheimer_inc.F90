@@ -25,11 +25,11 @@
 !--------------------------------------------------------------
 
 subroutine X(sternheimer_solve)(                           &
-     this, sys, h, lr, nsigma, omega, perturbation,        &
+     this, sys, hm, lr, nsigma, omega, perturbation,        &
      restart_dir, rho_tag, wfs_tag, have_restart_rho)
   type(sternheimer_t),    intent(inout) :: this
   type(system_t), target, intent(inout) :: sys
-  type(hamiltonian_t),    intent(inout) :: h
+  type(hamiltonian_t),    intent(inout) :: hm
   type(lr_t),             intent(inout) :: lr(:) 
   integer,                intent(in)    :: nsigma 
   R_TYPE,                 intent(in)    :: omega
@@ -114,7 +114,7 @@ subroutine X(sternheimer_solve)(                           &
     call write_info(2)
 
     dl_rhoin(1:m%np, 1:st%d%nspin, 1) = lr(1)%X(dl_rho)(1:m%np, 1:st%d%nspin)
-    call X(sternheimer_calc_hvar)(this, sys, h, lr, nsigma, hvar)
+    call X(sternheimer_calc_hvar)(this, sys, hm, lr, nsigma, hvar)
 
     do ik = 1, st%d%nik
       !now calculate response for each state
@@ -126,7 +126,7 @@ subroutine X(sternheimer_solve)(                           &
         do sigma = 1, nsigma
           !calculate the RHS of the Sternheimer eq
           Y(1:m%np, 1, sigma) = R_TOTYPE(M_ZERO)
-          call X(pert_apply)(perturbation, sys%gr, sys%geo, h, ik, st%X(psi)(1:m%np_part, 1, ist, ik), Y(1:m%np, 1, sigma))
+          call X(pert_apply)(perturbation, sys%gr, sys%geo, hm, ik, st%X(psi)(1:m%np_part, 1, ist, ik), Y(1:m%np, 1, sigma))
           Y(1:m%np, 1, sigma) = -Y(1:m%np, 1, sigma) - hvar(1:m%np, is, sigma) * st%X(psi)(1:m%np, 1, ist, ik)
 
           if (this%occ_response) then
@@ -152,7 +152,7 @@ subroutine X(sternheimer_solve)(                           &
           end if
 
           !solve the Sternheimer equation
-          call X(solve_HXeY) (this%solver, h, sys%gr, sys%st, ist, ik, &
+          call X(solve_HXeY) (this%solver, hm, sys%gr, sys%st, ist, ik, &
              lr(sigma)%X(dl_psi)(1:m%np_part, 1:st%d%dim, ist, ik), &
              Y(1:m%np, 1:1, sigma), -sys%st%eigenval(ist, ik) + omega_sigma)
           
@@ -270,10 +270,10 @@ subroutine X(sternheimer_solve)(                           &
 
 end subroutine X(sternheimer_solve)
 
-subroutine X(sternheimer_calc_hvar)(this, sys, h, lr, nsigma, hvar)
+subroutine X(sternheimer_calc_hvar)(this, sys, hm, lr, nsigma, hvar)
   type(sternheimer_t),    intent(inout) :: this
   type(system_t),         intent(inout) :: sys
-  type(hamiltonian_t),    intent(inout) :: h
+  type(hamiltonian_t),    intent(inout) :: hm
   type(lr_t),             intent(inout) :: lr(:) 
   integer,                intent(in)    :: nsigma 
   R_TYPE,                 intent(out)   :: hvar(:,:,:)
@@ -314,7 +314,7 @@ subroutine X(sternheimer_calc_hvar)(this, sys, h, lr, nsigma, hvar)
           hvar(1:np, ik, 1) = hvar(1:np, ik, 1) + this%fxc(1:np, ik, ik2)*lr(1)%X(dl_rho)(1:np, ik2)
         end do
       else
-        call X(xc_oep_kernel_calc)(sys, h, lr, nsigma, hartree(:))
+        call X(xc_oep_kernel_calc)(sys, hm, lr, nsigma, hartree(:))
         hvar(1:np, ik, 1) = hvar(1:np, ik, 1) + hartree(1:np)
       end if
     end if

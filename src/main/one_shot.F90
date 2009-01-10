@@ -50,9 +50,9 @@ module one_shot_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine one_shot_run(sys, h)
+  subroutine one_shot_run(sys, hm)
     type(system_t),              intent(inout) :: sys
-    type(hamiltonian_t),         intent(inout) :: h
+    type(hamiltonian_t),         intent(inout) :: hm
 
     integer :: ierr
     FLOAT :: E_tot, E_t, E_ext, E_Hartree, E_x, E_c
@@ -70,16 +70,16 @@ contains
 
     ! kinetic energy + local potential + Hartree + xc
     if(sys%st%wfs_type == M_REAL) then
-      E_t     = delectronic_kinetic_energy(h, sys%gr, sys%st)
-      E_ext   = delectronic_external_energy(h, sys%gr, sys%st)
+      E_t     = delectronic_kinetic_energy(hm, sys%gr, sys%st)
+      E_ext   = delectronic_external_energy(hm, sys%gr, sys%st)
     else
-      E_t     = zelectronic_kinetic_energy(h, sys%gr, sys%st)
-      E_ext   = zelectronic_external_energy(h, sys%gr, sys%st)
+      E_t     = zelectronic_kinetic_energy(hm, sys%gr, sys%st)
+      E_ext   = zelectronic_external_energy(hm, sys%gr, sys%st)
     end if
 
     ! Get the Hartree energy
-    call v_ks_hartree(sys%gr, sys%st, h)
-    E_Hartree = h%ehartree
+    call v_ks_hartree(sys%gr, sys%st, hm)
+    E_Hartree = hm%ehartree
 
     ! Get exchange-correlation energies
     call xc_get_vxc(sys%gr, sys%ks%xc, sys%st, sys%st%rho, sys%st%d%ispin, E_x, E_c, &
@@ -88,17 +88,17 @@ contains
     ! The OEP family has to handle specially
     if (sys%st%wfs_type == M_REAL) then
       call dxc_oep_calc(sys%ks%oep, sys%ks%xc, (sys%ks%sic_type==sic_pz),  &
-        sys%gr, h, sys%st, E_x, E_c)
+        sys%gr, hm, sys%st, E_x, E_c)
     else
       call zxc_oep_calc(sys%ks%oep, sys%ks%xc, (sys%ks%sic_type==sic_pz),  &
-        sys%gr, h, sys%st, E_x, E_c)
+        sys%gr, hm, sys%st, E_x, E_c)
     end if
 
-    E_tot = E_t + E_ext + E_Hartree + E_x + E_c + h%ep%eii
+    E_tot = E_t + E_ext + E_Hartree + E_x + E_c + hm%ep%eii
 
     call messages_print_stress(stdout, "Energy")
     write(message(1), '(6x,a, f18.8)')'Total       = ', E_tot     / units_out%energy%factor
-    write(message(2), '(6x,a, f18.8)')'Ion-ion     = ', h%ep%eii  / units_out%energy%factor
+    write(message(2), '(6x,a, f18.8)')'Ion-ion     = ', hm%ep%eii  / units_out%energy%factor
     write(message(3), '(6x,a, f18.8)')'Kinetic     = ', E_t       / units_out%energy%factor
     write(message(4), '(6x,a, f18.8)')'External    = ', E_ext     / units_out%energy%factor
     write(message(5), '(6x,a, f18.8)')'Hartree     = ', E_Hartree / units_out%energy%factor
@@ -107,7 +107,7 @@ contains
     call write_info(7, stdout)
     call messages_print_stress(stdout)
 
-    call h_sys_output_all(sys%outp, sys%gr, sys%geo, sys%st, h, "static")
+    call h_sys_output_all(sys%outp, sys%gr, sys%geo, sys%st, hm, "static")
 
     call states_deallocate_wfns(sys%st)
 

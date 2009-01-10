@@ -1,8 +1,8 @@
 
 
-subroutine X(xc_oep_kernel_calc)(sys, h, lr, nsigma, fxcn)
+subroutine X(xc_oep_kernel_calc)(sys, hm, lr, nsigma, fxcn)
   type(system_t),     intent(inout):: sys
-  type(hamiltonian_t),intent(in)   :: h
+  type(hamiltonian_t),intent(in)   :: hm
   type(lr_t),         intent(in)   :: lr(:)
   integer,            intent(in)   :: nsigma
   R_TYPE,             intent(out)  :: fxcn(:)
@@ -24,7 +24,7 @@ subroutine X(xc_oep_kernel_calc)(sys, h, lr, nsigma, fxcn)
     end if
   end do
 
-  fxcn(1:np) = fxcn(1:np) * h%vxc(1:np, 1)
+  fxcn(1:np) = fxcn(1:np) * hm%vxc(1:np, 1)
 
   do ii = 1, sys%st%nst
     do iis = 1, nsigma

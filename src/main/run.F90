@@ -60,7 +60,7 @@ module run_prog_m
     run_end
 
   type(system_t)      :: sys
-  type(hamiltonian_t) :: h
+  type(hamiltonian_t) :: hm
 
   integer, parameter :: LR = 1, FD = 2
 
@@ -87,42 +87,42 @@ contains
 
     select case(calc_mode())
     case(CM_GS)
-      call ground_state_run(sys, h, fromScratch)
+      call ground_state_run(sys, hm, fromScratch)
     case(CM_UNOCC)
-      call unocc_run(sys, h, fromScratch)
+      call unocc_run(sys, hm, fromScratch)
     case(CM_TD)
-      call td_run(sys, h, fromScratch)
+      call td_run(sys, hm, fromScratch)
     case(CM_LR_POL)
       select case(get_resp_method())
       case(FD)
-        call static_pol_run(sys, h, fromScratch)
+        call static_pol_run(sys, hm, fromScratch)
       case(LR)
-        call pol_lr_run(sys, h, fromScratch)
+        call pol_lr_run(sys, hm, fromScratch)
       end select
     case(CM_VDW)
-      call vdW_run(sys, h, fromScratch)
+      call vdW_run(sys, hm, fromScratch)
     case(CM_GEOM_OPT)
-      call geom_opt_run(sys, h, fromScratch)
+      call geom_opt_run(sys, hm, fromScratch)
     case(CM_PHONONS_LR)
       select case(get_resp_method())
       case(FD)
-        call phonons_run(sys, h)
+        call phonons_run(sys, hm)
       case(LR)
-        call phonons_lr_run(sys, h, fromscratch)
+        call phonons_lr_run(sys, hm, fromscratch)
       end select
     case(CM_OPT_CONTROL)
-      call opt_control_run(sys, h)
+      call opt_control_run(sys, hm)
     case(CM_CASIDA)
-      call casida_run(sys, h, fromScratch)
+      call casida_run(sys, hm, fromScratch)
     case(CM_RAMAN)
-      call raman_run(sys, h, fromscratch)
+      call raman_run(sys, hm, fromscratch)
     case(CM_ONE_SHOT)
-      call one_shot_run(sys, h)
+      call one_shot_run(sys, hm)
     case(CM_KDOTP)
-      call kdotp_lr_run(sys, h, fromScratch)
+      call kdotp_lr_run(sys, hm, fromScratch)
 !!!!NEW
     case(CM_GCM)
-      call gcm_run(sys, h)
+      call gcm_run(sys, hm)
 !!!!ENDOFNEW
     case(CM_PULPO_A_FEIRA)
       call pulpo_print()
@@ -178,8 +178,8 @@ contains
     if(.not. calc_mode_is(CM_PULPO_A_FEIRA)) then
       call units_init()
       call system_init(sys)
-      call hamiltonian_init(h, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family)
-      call epot_generate(h%ep, sys%gr, sys%geo, sys%st)
+      call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family)
+      call epot_generate(hm%ep, sys%gr, sys%geo, sys%st)
       call restart_init()
     end if
   end subroutine run_init
@@ -188,7 +188,7 @@ contains
   ! ---------------------------------------------------------
   subroutine run_end()
     if(.not. calc_mode_is(CM_PULPO_A_FEIRA)) then
-       call hamiltonian_end(h, sys%gr, sys%geo)
+       call hamiltonian_end(hm, sys%gr, sys%geo)
        call system_end(sys)
     end if
 

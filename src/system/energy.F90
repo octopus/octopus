@@ -56,8 +56,8 @@ contains
   ! This subroutine calculates the total energy of the system. Basically, it
   ! adds up the KS eigenvalues, and then it subtracts the whatever double
   ! counts exist (see TDDFT theory for details).
-  subroutine total_energy(h, gr, st, iunit, full)
-    type(hamiltonian_t), intent(inout) :: h
+  subroutine total_energy(hm, gr, st, iunit, full)
+    type(hamiltonian_t), intent(inout) :: hm
     type(grid_t),        intent(inout) :: gr
     type(states_t),      intent(inout) :: st
     integer,             intent(in)    :: iunit
@@ -70,71 +70,71 @@ contains
     full_ = .false.
     if(present(full)) full_ = full
 
-    select case(h%theory_level)
+    select case(hm%theory_level)
     case(INDEPENDENT_PARTICLES)
-      h%eeigen = states_eigenvalues_sum(st)
-      h%etot   = h%ep%eii + h%eeigen
+      hm%eeigen = states_eigenvalues_sum(st)
+      hm%etot   = hm%ep%eii + hm%eeigen
 
     case(HARTREE)
       if(st%wfs_type == M_REAL) then
-        h%t0     = delectronic_kinetic_energy(h, gr, st)
-        h%eext   = delectronic_external_energy(h, gr, st)
+        hm%t0     = delectronic_kinetic_energy(hm, gr, st)
+        hm%eext   = delectronic_external_energy(hm, gr, st)
       else
-        h%t0     = zelectronic_kinetic_energy(h, gr, st)
-        h%eext   = zelectronic_external_energy(h, gr, st)
+        hm%t0     = zelectronic_kinetic_energy(hm, gr, st)
+        hm%eext   = zelectronic_external_energy(hm, gr, st)
       end if
-      h%eeigen = states_eigenvalues_sum(st)
-      h%etot = h%ep%eii + M_HALF*(h%eeigen + h%t0 + h%eext)
+      hm%eeigen = states_eigenvalues_sum(st)
+      hm%etot = hm%ep%eii + M_HALF*(hm%eeigen + hm%t0 + hm%eext)
 
     case(HARTREE_FOCK)
       if(st%wfs_type == M_REAL) then
-        h%t0     = delectronic_kinetic_energy(h, gr, st)
-        h%eext   = delectronic_external_energy(h, gr, st)
+        hm%t0     = delectronic_kinetic_energy(hm, gr, st)
+        hm%eext   = delectronic_external_energy(hm, gr, st)
       else
-        h%t0     = zelectronic_kinetic_energy(h, gr, st)
-        h%eext   = zelectronic_external_energy(h, gr, st)
+        hm%t0     = zelectronic_kinetic_energy(hm, gr, st)
+        hm%eext   = zelectronic_external_energy(hm, gr, st)
       end if
-      h%eeigen = states_eigenvalues_sum(st)
-      h%etot = h%ep%eii + M_HALF*(h%eeigen + h%t0 + h%eext - h%epot) + h%ec
+      hm%eeigen = states_eigenvalues_sum(st)
+      hm%etot = hm%ep%eii + M_HALF*(hm%eeigen + hm%t0 + hm%eext - hm%epot) + hm%ec
 
     case(KOHN_SHAM_DFT)
       if(full_) then
         if(st%wfs_type == M_REAL) then
-          h%t0     = delectronic_kinetic_energy(h, gr, st)
-          h%eext   = delectronic_external_energy(h, gr, st)
+          hm%t0     = delectronic_kinetic_energy(hm, gr, st)
+          hm%eext   = delectronic_external_energy(hm, gr, st)
         else
-          h%t0     = zelectronic_kinetic_energy(h, gr, st)
-          h%eext   = zelectronic_external_energy(h, gr, st)
+          hm%t0     = zelectronic_kinetic_energy(hm, gr, st)
+          hm%eext   = zelectronic_external_energy(hm, gr, st)
         end if
       end if
-      h%eeigen = states_eigenvalues_sum(st)
-      h%etot   = h%ep%eii + h%eeigen - h%ehartree + h%ex + h%ec - h%epot
+      hm%eeigen = states_eigenvalues_sum(st)
+      hm%etot   = hm%ep%eii + hm%eeigen - hm%ehartree + hm%ex + hm%ec - hm%epot
 
     end select
     
-    h%entropy = smear_calc_entropy(st%smear, st%eigenval, st%d%nik, st%nst, st%d%kweights)
+    hm%entropy = smear_calc_entropy(st%smear, st%eigenval, st%d%nik, st%nst, st%d%kweights)
 
-    if(gauge_field_is_applied(h%ep%gfield)) then
-      h%etot = h%etot + gauge_field_get_energy(h%ep%gfield, gr%sb)
+    if(gauge_field_is_applied(hm%ep%gfield)) then
+      hm%etot = hm%etot + gauge_field_get_energy(hm%ep%gfield, gr%sb)
     end if
 
     if (iunit > 0) then
-      write(message(1), '(6x,a, f18.8)')'Total       = ', h%etot     / units_out%energy%factor
-      write(message(2), '(6x,a, f18.8)')'Free        = ', (h%etot+h%entropy) / units_out%energy%factor
+      write(message(1), '(6x,a, f18.8)')'Total       = ', hm%etot     / units_out%energy%factor
+      write(message(2), '(6x,a, f18.8)')'Free        = ', (hm%etot+hm%entropy) / units_out%energy%factor
       write(message(3), '(6x,a)') '-----------'
       call write_info(3, iunit)
 
-      write(message(1), '(6x,a, f18.8)')'Ion-ion     = ', h%ep%eii   / units_out%energy%factor
-      write(message(2), '(6x,a, f18.8)')'Eigenvalues = ', h%eeigen   / units_out%energy%factor
-      write(message(3), '(6x,a, f18.8)')'Hartree     = ', h%ehartree / units_out%energy%factor
-      write(message(4), '(6x,a, f18.8)')'Int[n*v_xc] = ', h%epot     / units_out%energy%factor
-      write(message(5), '(6x,a, f18.8)')'Exchange    = ', h%ex       / units_out%energy%factor
-      write(message(6), '(6x,a, f18.8)')'Correlation = ', h%ec       / units_out%energy%factor
-      write(message(7), '(6x,a, f18.8)')'-TS         = ', h%entropy  / units_out%energy%factor
+      write(message(1), '(6x,a, f18.8)')'Ion-ion     = ', hm%ep%eii   / units_out%energy%factor
+      write(message(2), '(6x,a, f18.8)')'Eigenvalues = ', hm%eeigen   / units_out%energy%factor
+      write(message(3), '(6x,a, f18.8)')'Hartree     = ', hm%ehartree / units_out%energy%factor
+      write(message(4), '(6x,a, f18.8)')'Int[n*v_xc] = ', hm%epot     / units_out%energy%factor
+      write(message(5), '(6x,a, f18.8)')'Exchange    = ', hm%ex       / units_out%energy%factor
+      write(message(6), '(6x,a, f18.8)')'Correlation = ', hm%ec       / units_out%energy%factor
+      write(message(7), '(6x,a, f18.8)')'-TS         = ', hm%entropy  / units_out%energy%factor
       call write_info(7, iunit)
       if(full_) then
-        write(message(1), '(6x,a, f18.8)')'Kinetic     = ', h%t0 / units_out%energy%factor
-        write(message(2), '(6x,a, f18.8)')'External    = ', h%eext / units_out%energy%factor
+        write(message(1), '(6x,a, f18.8)')'Kinetic     = ', hm%t0 / units_out%energy%factor
+        write(message(2), '(6x,a, f18.8)')'External    = ', hm%eext / units_out%energy%factor
         call write_info(2, iunit)
       end if
     end if

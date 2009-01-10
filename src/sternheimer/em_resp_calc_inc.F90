@@ -238,9 +238,9 @@ end subroutine X(lr_calc_elf)
 
 ! ---------------------------------------------------------
 ! Periodic version is in kdotp_calc.F90 since it requires d/dk wfns
-subroutine X(lr_calc_polarizability_finite)(sys, h, lr, nsigma, perturbation, zpol, ndir)
+subroutine X(lr_calc_polarizability_finite)(sys, hm, lr, nsigma, perturbation, zpol, ndir)
   type(system_t),         intent(inout) :: sys
-  type(hamiltonian_t),    intent(inout) :: h
+  type(hamiltonian_t),    intent(inout) :: hm
   type(lr_t),             intent(inout) :: lr(:,:)
   integer,                intent(in)    :: nsigma
   type(pert_t),           intent(inout) :: perturbation
@@ -260,14 +260,14 @@ subroutine X(lr_calc_polarizability_finite)(sys, h, lr, nsigma, perturbation, zp
   do dir1 = 1, ndir_
     do dir2 = 1, sys%gr%sb%dim
       call pert_setup_dir(perturbation, dir1)
-      zpol(dir1, dir2) = -X(pert_expectation_value)(perturbation, sys%gr, sys%geo, h, &
+      zpol(dir1, dir2) = -X(pert_expectation_value)(perturbation, sys%gr, sys%geo, hm, &
         sys%st, sys%st%X(psi), lr(dir2, 1)%X(dl_psi))
 
       if(nsigma == 1) then
         zpol(dir1, dir2) = zpol(dir1, dir2) + R_CONJ(zpol(dir1, dir2))
       else
         zpol(dir1, dir2) = zpol(dir1, dir2) &
-          - X(pert_expectation_value)(perturbation, sys%gr, sys%geo, h, &
+          - X(pert_expectation_value)(perturbation, sys%gr, sys%geo, hm, &
           sys%st, lr(dir2, 2)%X(dl_psi), sys%st%X(psi))
       end if
     end do
@@ -279,9 +279,9 @@ end subroutine X(lr_calc_polarizability_finite)
 
 
 ! ---------------------------------------------------------
-subroutine X(lr_calc_susceptibility)(sys, h, lr, nsigma, perturbation, chi_para, chi_dia)
+subroutine X(lr_calc_susceptibility)(sys, hm, lr, nsigma, perturbation, chi_para, chi_dia)
   type(system_t),         intent(inout) :: sys
-  type(hamiltonian_t),    intent(inout) :: h
+  type(hamiltonian_t),    intent(inout) :: hm
   type(lr_t),             intent(inout) :: lr(:,:)
   integer,                intent(in)    :: nsigma
   type(pert_t),           intent(inout) :: perturbation
@@ -303,20 +303,20 @@ subroutine X(lr_calc_susceptibility)(sys, h, lr, nsigma, perturbation, chi_para,
 
       call pert_setup_dir(perturbation, dir1, dir2)
 
-      trace = X(pert_expectation_value)(perturbation, sys%gr, sys%geo,h,sys%st, sys%st%X(psi), lr(dir2, 1)%X(dl_psi))
+      trace = X(pert_expectation_value)(perturbation, sys%gr, sys%geo, hm, sys%st, sys%st%X(psi), lr(dir2, 1)%X(dl_psi))
       
       if (nsigma == 1) then 
         trace = trace + R_CONJ(trace)
       else
         trace = trace + &
-          X(pert_expectation_value)(perturbation, sys%gr, sys%geo,h,sys%st, lr(dir2, 2)%X(dl_psi), sys%st%X(psi))
+          X(pert_expectation_value)(perturbation, sys%gr, sys%geo, hm, sys%st, lr(dir2, 2)%X(dl_psi), sys%st%X(psi))
       end if
      
       ! first the paramagnetic term 
       chi_para(dir1, dir2) = chi_para(dir1, dir2) + trace
 
       chi_dia(dir1, dir2) = chi_dia(dir1, dir2) + &
-        X(pert_expectation_value)(perturbation, sys%gr, sys%geo,h,sys%st, sys%st%X(psi), sys%st%X(psi), pert_order=2)
+        X(pert_expectation_value)(perturbation, sys%gr, sys%geo, hm, sys%st, sys%st%X(psi), sys%st%X(psi), pert_order=2)
 
     end do
   end do
@@ -337,7 +337,7 @@ end subroutine X(lr_calc_susceptibility)
 
 
 ! ---------------------------------------------------------
-subroutine X(lr_calc_beta) (sh, sys, h, em_lr, dipole, beta, kdotp_lr, kdotp_em_lr)
+subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em_lr)
 ! Note: correctness for spinors is unclear
 ! See (16) in X Andrade et al., J. Chem. Phys. 126, 184106 (2006) for finite systems
 ! and (10) in A Dal Corso et al., Phys. Rev. B 15, 15638 (1996) for periodic systems
@@ -347,7 +347,7 @@ subroutine X(lr_calc_beta) (sh, sys, h, em_lr, dipole, beta, kdotp_lr, kdotp_em_
 ! kdotp_em_lr(dir1, dir2, sigma, omega) = kdotp perturbation of electric-perturbed wfns
   type(sternheimer_t),     intent(inout) :: sh
   type(system_t), target,  intent(inout) :: sys
-  type(hamiltonian_t),     intent(inout) :: h
+  type(hamiltonian_t),     intent(inout) :: hm
   type(lr_t),              intent(inout) :: em_lr(:,:,:)
   type(pert_t),            intent(inout) :: dipole
   CMPLX,                   intent(out)   :: beta(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM)
@@ -395,7 +395,7 @@ subroutine X(lr_calc_beta) (sh, sys, h, em_lr, dipole, beta, kdotp_lr, kdotp_em_
   do ifreq = 1, 3
     do idir = 1, ndim
       do idim = 1, st%d%dim
-        call X(sternheimer_calc_hvar)(sh, sys, h, em_lr(idir, :, ifreq), 2, hvar(:, :, :, idim, idir, ifreq))
+        call X(sternheimer_calc_hvar)(sh, sys, hm, em_lr(idir, :, ifreq), 2, hvar(:, :, :, idim, idir, ifreq))
       end do !idim
     end do !idir
   end do !ifreq
@@ -431,7 +431,7 @@ subroutine X(lr_calc_beta) (sh, sys, h, em_lr, dipole, beta, kdotp_lr, kdotp_em_
                   else
                     call pert_setup_dir(dipole, u(2))
                     call X(pert_apply) &
-                      (dipole, sys%gr, sys%geo, h, ik, em_lr(u(3), isigma, w(3))%X(dl_psi)(:, idim, ist, ik), tmp)
+                      (dipole, sys%gr, sys%geo, hm, ik, em_lr(u(3), isigma, w(3))%X(dl_psi)(:, idim, ist, ik), tmp)
                   endif
 
                   do ip = 1, np
@@ -451,7 +451,7 @@ subroutine X(lr_calc_beta) (sh, sys, h, em_lr, dipole, beta, kdotp_lr, kdotp_em_
                         tmp(1:np) = - M_zI * kdotp_lr(u(2))%X(dl_psi)(1:np, idim, ist, ik) 
                       else
                         call pert_setup_dir(dipole, u(2))
-                        call X(pert_apply)(dipole, sys%gr, sys%geo, h, ik, st%X(psi)(:, idim, ist, ik), tmp)
+                        call X(pert_apply)(dipole, sys%gr, sys%geo, hm, ik, st%X(psi)(:, idim, ist, ik), tmp)
                       endif
 
                       do ip = 1, np

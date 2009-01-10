@@ -18,9 +18,9 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-subroutine td_init(sys, h, td)
+subroutine td_init(sys, hm, td)
   type(system_t),        intent(inout) :: sys
-  type(hamiltonian_t),   intent(inout) :: h
+  type(hamiltonian_t),   intent(inout) :: hm
   type(td_t),            intent(out)   :: td
 
   integer :: dummy
@@ -148,12 +148,12 @@ subroutine td_init(sys, h, td)
   !%End
   call loct_parse_logical(datasets_check("RecalculateGSDuringEvolution"), .false., td%recalculate_gs)
 
-  call td_rti_init(sys%gr, sys%st, h, td%tr, td%dt, td%max_iter, &
-       ion_dynamics_ions_move(td%ions) .or. gauge_field_is_applied(h%ep%gfield))
-  if(td%dynamics == BO)  call scf_init(sys%gr, sys%geo, td%scf, sys%st, h)
-  if(h%ep%no_lasers>0.and.mpi_grp_is_root(mpi_world)) then
+  call td_rti_init(sys%gr, sys%st, hm, td%tr, td%dt, td%max_iter, &
+       ion_dynamics_ions_move(td%ions) .or. gauge_field_is_applied(hm%ep%gfield))
+  if(td%dynamics == BO)  call scf_init(sys%gr, sys%geo, td%scf, sys%st, hm)
+  if(hm%ep%no_lasers>0.and.mpi_grp_is_root(mpi_world)) then
     call messages_print_stress(stdout, "Time-dependent external fields")
-    call laser_write_info(h%ep%no_lasers, h%ep%lasers, td%dt, td%max_iter, stdout)
+    call laser_write_info(hm%ep%no_lasers, hm%ep%lasers, td%dt, td%max_iter, stdout)
     call messages_print_stress(stdout)
   end if
 

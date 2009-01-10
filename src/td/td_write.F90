@@ -95,11 +95,11 @@ module td_write_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine td_write_init(w, gr, st, h, geo, ions_move, with_gauge_field, iter, max_iter, dt)
+  subroutine td_write_init(w, gr, st, hm, geo, ions_move, with_gauge_field, iter, max_iter, dt)
     type(td_write_t), intent(out) :: w
     type(grid_t),     intent(in)  :: gr
     type(states_t),   intent(in)  :: st
-    type(hamiltonian_t), intent(inout) :: h
+    type(hamiltonian_t), intent(inout) :: hm
     type(geometry_t), intent(in)  :: geo
     logical,          intent(in)  :: ions_move
     logical,          intent(in)  :: with_gauge_field
@@ -183,7 +183,7 @@ contains
     w%out(OUT_COORDS)%write = w%out(OUT_COORDS)%write .and. ions_move
     w%out(OUT_TEMPERATURE)%write = w%out(OUT_TEMPERATURE)%write .and. ions_move
     w%out(OUT_GAUGE_FIELD)%write = w%out(OUT_GAUGE_FIELD)%write .and. with_gauge_field
-    w%out(OUT_LASER)%write = w%out(OUT_LASER)%write .and. (h%ep%no_lasers > 0)
+    w%out(OUT_LASER)%write = w%out(OUT_LASER)%write .and. (hm%ep%no_lasers > 0)
 
     !%Variable TDDipoleLmax
     !%Type integer
@@ -328,7 +328,7 @@ contains
         call write_iter_init(w%out(OUT_LASER)%handle, first, &
           dt/units_out%time%factor, trim(io_workpath("td.general/laser")))
         do i = 0, max_iter
-          call td_write_laser(w%out(OUT_LASER)%handle, gr, h, dt, i)
+          call td_write_laser(w%out(OUT_LASER)%handle, gr, hm, dt, i)
           if(mod(i, 100).eq.0) call write_iter_flush(w%out(OUT_LASER)%handle)
         end do
         call write_iter_end(w%out(OUT_LASER)%handle)
@@ -378,11 +378,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_iter(w, gr, st, h, geo, kick, dt, i)
+  subroutine td_write_iter(w, gr, st, hm, geo, kick, dt, i)
     type(td_write_t),       intent(in) :: w
     type(grid_t),        intent(inout) :: gr
     type(states_t),      intent(inout) :: st
-    type(hamiltonian_t), intent(inout) :: h
+    type(hamiltonian_t), intent(inout) :: hm
     type(geometry_t),    intent(inout) :: geo
     type(kick_t),           intent(in) :: kick
     FLOAT,                  intent(in) :: dt
@@ -394,7 +394,7 @@ contains
       call td_write_multipole(w%out(OUT_MULTIPOLES)%handle, gr, geo, st, w%lmax, kick, i)
     
     if(w%out(OUT_ANGULAR)%write) &
-      call td_write_angular(w%out(OUT_ANGULAR)%handle, gr, geo, h, st, kick, i)
+      call td_write_angular(w%out(OUT_ANGULAR)%handle, gr, geo, hm, st, kick, i)
 
     if(w%out(OUT_SPIN)%write) &
       call td_write_spin(w%out(OUT_SPIN)%handle, gr, st, i)
@@ -416,27 +416,27 @@ contains
         w%gs_st, w%n_excited_states, w%excited_st, dt, i)
 
     if(w%out(OUT_ACC)%write) &
-      call td_write_acc(w%out(OUT_ACC)%handle, gr, geo, st, h, dt, i)
+      call td_write_acc(w%out(OUT_ACC)%handle, gr, geo, st, hm, dt, i)
 
     ! td_write_laser no longer called here, because the whole laser is printed
     ! out at the beginning.
 
     if(w%out(OUT_ENERGY)%write) &
-      call td_write_energy(w%out(OUT_ENERGY)%handle, h, i, geo%kinetic_energy)
+      call td_write_energy(w%out(OUT_ENERGY)%handle, hm, i, geo%kinetic_energy)
 
     if(w%out(OUT_GAUGE_FIELD)%write) &
-      call td_write_gauge_field(w%out(OUT_GAUGE_FIELD)%handle, h, gr, i)
+      call td_write_gauge_field(w%out(OUT_GAUGE_FIELD)%handle, hm, gr, i)
 
     call pop_sub()
   end subroutine td_write_iter
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_data(w, gr, st, h, outp, geo, iter)
+  subroutine td_write_data(w, gr, st, hm, outp, geo, iter)
     type(td_write_t),     intent(in)    :: w
     type(grid_t),         intent(inout) :: gr
     type(states_t),       intent(inout) :: st
-    type(hamiltonian_t),  intent(in)    :: h
+    type(hamiltonian_t),  intent(in)    :: hm
     type(h_sys_output_t), intent(in)    :: outp
     type(geometry_t),     intent(in)    :: geo
     integer,              intent(in)    :: iter
@@ -456,7 +456,7 @@ contains
     ! now write down the rest
     write(filename, '(a,i7.7)') "td.", iter  ! name of directory
 
-    call h_sys_output_all(outp, gr, geo, st, h, filename)
+    call h_sys_output_all(outp, gr, geo, st, hm, filename)
 
     call pop_sub()
   end subroutine td_write_data
@@ -573,11 +573,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_angular(out_angular, gr, geo, h, st, kick, iter)
+  subroutine td_write_angular(out_angular, gr, geo, hm, st, kick, iter)
     type(c_ptr),            intent(in)    :: out_angular
     type(grid_t),           intent(inout) :: gr
     type(geometry_t),       intent(inout) :: geo
-    type(hamiltonian_t),    intent(inout) :: h
+    type(hamiltonian_t),    intent(inout) :: hm
     type(states_t),         intent(inout) :: st
     type(kick_t),           intent(in)    :: kick
     integer,                intent(in)    :: iter
@@ -604,7 +604,7 @@ contains
     do idir = 1, 3
        call pert_setup_dir(angular_momentum, idir)
        !we have to multiply by 2, because is the perturbation returns L/2
-       angular(idir) = M_TWO * zpert_expectation_value(angular_momentum, gr, geo, h, st, st%zpsi, st%zpsi)
+       angular(idir) = M_TWO * zpert_expectation_value(angular_momentum, gr, geo, hm, st, st%zpsi, st%zpsi)
     end do
 
     call pert_end(angular_momentum)
@@ -939,12 +939,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_acc(out_acc, gr, geo, st, h, dt, iter)
+  subroutine td_write_acc(out_acc, gr, geo, st, hm, dt, iter)
     type(c_ptr),         intent(in)    :: out_acc
     type(grid_t),        intent(inout) :: gr
     type(geometry_t),    intent(inout) :: geo
     type(states_t),      intent(inout) :: st
-    type(hamiltonian_t), intent(inout) :: h
+    type(hamiltonian_t), intent(inout) :: hm
     FLOAT,               intent(in)    :: dt
     integer,             intent(in)    :: iter
 
@@ -975,7 +975,7 @@ contains
       call td_write_print_header_end(out_acc)
     end if
 
-    call td_calc_tacc(gr, geo, st, h, acc, dt*i)
+    call td_calc_tacc(gr, geo, st, hm, acc, dt*i)
 
     call write_iter_start(out_acc)
     call write_iter_double(out_acc, acc/units_out%acceleration%factor, NDIM)
@@ -985,10 +985,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_laser(out_laser, gr, h, dt, iter)
+  subroutine td_write_laser(out_laser, gr, hm, dt, iter)
     type(c_ptr),         intent(in) :: out_laser
     type(grid_t),        intent(in) :: gr
-    type(hamiltonian_t), intent(in) :: h
+    type(hamiltonian_t), intent(in) :: hm
     FLOAT,               intent(in) :: dt
     integer,             intent(in) :: iter
 
@@ -1011,8 +1011,8 @@ contains
       call write_iter_nl(out_laser)
 
       call write_iter_header_start(out_laser)
-      do i = 1, h%ep%no_lasers
-        select case(laser_kind(h%ep%lasers(i)))
+      do i = 1, hm%ep%no_lasers
+        select case(laser_kind(hm%ep%lasers(i)))
         case(E_FIELD_ELECTRIC)
           do j = 1, NDIM
             write(aux, '(a,i1,a)') 'E(', j, ')'
@@ -1038,8 +1038,8 @@ contains
       ! Note that we do not print out units of E, B, or A, but rather units of e*E, e*B, e*A.
       ! (force, force, and energy, respectively). The reason is that the units of E, B or A 
       ! are ugly.
-      do i = 1, h%ep%no_lasers
-        select case(laser_kind(h%ep%lasers(i)))
+      do i = 1, hm%ep%no_lasers
+        select case(laser_kind(hm%ep%lasers(i)))
         case(E_FIELD_ELECTRIC, E_FIELD_MAGNETIC)
           aux = '[' // trim(units_out%energy%abbrev) // ' / ' // trim(units_inp%length%abbrev) // ']'
           do j = 1, NDIM
@@ -1059,10 +1059,10 @@ contains
 
     call write_iter_start(out_laser)
 
-    do i = 1, h%ep%no_lasers
+    do i = 1, hm%ep%no_lasers
       field = M_ZERO
-      call laser_field(gr%sb, h%ep%lasers(i), field, iter*dt)
-      select case(laser_kind(h%ep%lasers(i)))
+      call laser_field(gr%sb, hm%ep%lasers(i), field, iter*dt)
+      select case(laser_kind(hm%ep%lasers(i)))
       case(E_FIELD_ELECTRIC, E_FIELD_MAGNETIC)
         field = field * units_inp%length%factor / units_inp%energy%factor
       case(E_FIELD_VECTOR_POTENTIAL)
@@ -1078,9 +1078,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_energy(out_energy, h, iter, ke)
+  subroutine td_write_energy(out_energy, hm, iter, ke)
     type(c_ptr),         intent(in) :: out_energy
-    type(hamiltonian_t), intent(in) :: h
+    type(hamiltonian_t), intent(in) :: hm
     integer,             intent(in) :: iter
     FLOAT,               intent(in) :: ke
 
@@ -1115,24 +1115,24 @@ contains
     end if
 
     call write_iter_start(out_energy)
-    call write_iter_double(out_energy, (h%etot+ke)/units_out%energy%factor, 1)
+    call write_iter_double(out_energy, (hm%etot+ke)/units_out%energy%factor, 1)
     call write_iter_double(out_energy, ke/units_out%energy%factor, 1)
-    call write_iter_double(out_energy, h%ep%eii /units_out%energy%factor, 1)
-    call write_iter_double(out_energy, (h%etot-h%ep%eii)/units_out%energy%factor, 1)
-    call write_iter_double(out_energy, h%eeigen /units_out%energy%factor, 1)
-    call write_iter_double(out_energy, h%ehartree /units_out%energy%factor, 1)
-    call write_iter_double(out_energy, h%epot /units_out%energy%factor, 1)
-    call write_iter_double(out_energy, h%ex  /units_out%energy%factor, 1)
-    call write_iter_double(out_energy, h%ec  /units_out%energy%factor, 1)
+    call write_iter_double(out_energy, hm%ep%eii /units_out%energy%factor, 1)
+    call write_iter_double(out_energy, (hm%etot-hm%ep%eii)/units_out%energy%factor, 1)
+    call write_iter_double(out_energy, hm%eeigen /units_out%energy%factor, 1)
+    call write_iter_double(out_energy, hm%ehartree /units_out%energy%factor, 1)
+    call write_iter_double(out_energy, hm%epot /units_out%energy%factor, 1)
+    call write_iter_double(out_energy, hm%ex  /units_out%energy%factor, 1)
+    call write_iter_double(out_energy, hm%ec  /units_out%energy%factor, 1)
     call write_iter_nl(out_energy)
 
 
   end subroutine td_write_energy
 
   ! ---------------------------------------------------------
-  subroutine td_write_gauge_field(out_gauge, h, gr, iter)
+  subroutine td_write_gauge_field(out_gauge, hm, gr, iter)
     type(c_ptr),         intent(in) :: out_gauge
-    type(hamiltonian_t), intent(in) :: h
+    type(hamiltonian_t), intent(in) :: hm
     type(grid_t),        intent(in) :: gr
     integer,             intent(in) :: iter
     
@@ -1179,9 +1179,9 @@ contains
     call write_iter_start(out_gauge)
 
     ! TODO: put the appropriate units here 
-    call write_iter_double(out_gauge, gauge_field_get_vec_pot(h%ep%gfield), NDIM)
-    call write_iter_double(out_gauge, gauge_field_get_vec_pot_vel(h%ep%gfield), NDIM)
-    call write_iter_double(out_gauge, gauge_field_get_vec_pot_acc(h%ep%gfield), NDIM)
+    call write_iter_double(out_gauge, gauge_field_get_vec_pot(hm%ep%gfield), NDIM)
+    call write_iter_double(out_gauge, gauge_field_get_vec_pot_vel(hm%ep%gfield), NDIM)
+    call write_iter_double(out_gauge, gauge_field_get_vec_pot_acc(hm%ep%gfield), NDIM)
     call write_iter_nl(out_gauge)
     call pop_sub()
     

@@ -77,9 +77,9 @@ module opt_control_propagation_m
   ! field specified in par. If write_iter is present and is
   ! set to .true., writes down through the td_write module.
   ! ---------------------------------------------------------
-  subroutine propagate_forward(sys, h, td, par, target, psi, prop, write_iter)
+  subroutine propagate_forward(sys, hm, td, par, target, psi, prop, write_iter)
     type(system_t),             intent(inout)  :: sys
-    type(hamiltonian_t),        intent(inout)  :: h
+    type(hamiltonian_t),        intent(inout)  :: hm
     type(td_t),                 intent(inout)  :: td
     type(oct_control_parameters_t), intent(in) :: par
     type(target_t),             intent(inout)  :: target
@@ -97,7 +97,7 @@ module opt_control_propagation_m
     message(1) = "Info: Forward propagation."
     call write_info(1)
 
-    call parameters_to_h(par, h%ep)
+    call parameters_to_h(par, hm%ep)
 
     write_iter_ = .false.
     if(present(write_iter)) write_iter_ = write_iter
@@ -105,42 +105,42 @@ module opt_control_propagation_m
     gr => sys%gr
 
     if(write_iter_) then
-      call td_write_init(write_handler, gr, sys%st, h, sys%geo, &
-        ion_dynamics_ions_move(td%ions), gauge_field_is_applied(h%ep%gfield), td%iter, td%max_iter, td%dt)
-      call td_write_data(write_handler, gr, psi, h, sys%outp, sys%geo, 0)
+      call td_write_init(write_handler, gr, sys%st, hm, sys%geo, &
+        ion_dynamics_ions_move(td%ions), gauge_field_is_applied(hm%ep%gfield), td%iter, td%max_iter, td%dt)
+      call td_write_data(write_handler, gr, psi, hm, sys%outp, sys%geo, 0)
     end if
 
-    call hamiltonian_not_adjoint(h)
+    call hamiltonian_not_adjoint(hm)
 
     ! setup the hamiltonian
     call states_calc_dens(psi, NP_PART, psi%rho)
-    call v_ks_calc(gr, sys%ks, h, psi)
-    call td_rti_run_zero_iter(h, td%tr)
+    call v_ks_calc(gr, sys%ks, hm, psi)
+    call td_rti_run_zero_iter(hm, td%tr)
 
     if(present(prop)) call oct_prop_output(prop, 0, psi, gr)
     ii = 1
     do i = 1, td%max_iter
       ! time iterate wavefunctions
-      call td_rti_dt(sys%ks, h, gr, psi, td%tr, i*td%dt, td%dt, td%max_iter, i)
+      call td_rti_dt(sys%ks, hm, gr, psi, td%tr, i*td%dt, td%dt, td%max_iter, i)
 
       if(present(prop)) call oct_prop_output(prop, i, psi, gr)
 
       ! update
       call states_calc_dens(psi, NP_PART, psi%rho)
-      call v_ks_calc(gr, sys%ks, h, psi)
-      call total_energy(h, sys%gr, psi, -1)
+      call v_ks_calc(gr, sys%ks, hm, psi)
+      call total_energy(hm, sys%gr, psi, -1)
 
       ! if td_target
       call target_tdcalc(target, gr, psi, i)
 
       ! only write in final run
       if(write_iter_) then
-        call td_write_iter(write_handler, gr, psi, h, sys%geo, td%kick, td%dt, i)
+        call td_write_iter(write_handler, gr, psi, hm, sys%geo, td%kick, td%dt, i)
         ii = ii + 1 
         if(ii==sys%outp%iter+1 .or. i == td%max_iter) then ! output
           if(i == td%max_iter) sys%outp%iter = ii - 1
           ii = i
-          call td_write_data(write_handler, gr, psi, h, sys%outp, sys%geo, i) 
+          call td_write_data(write_handler, gr, psi, hm, sys%outp, sys%geo, i) 
         end if
       end if
     end do
@@ -155,9 +155,9 @@ module opt_control_propagation_m
   ! Performs a full bacward propagation of state psi, with the
   ! external fields specified in hamiltonian h.
   ! ---------------------------------------------------------
-  subroutine propagate_backward(sys, h, td, psi, prop)
+  subroutine propagate_backward(sys, hm, td, psi, prop)
     type(system_t),          intent(inout) :: sys
-    type(hamiltonian_t),     intent(inout) :: h
+    type(hamiltonian_t),     intent(inout) :: hm
     type(td_t),              intent(inout) :: td
     type(states_t),          intent(inout) :: psi
     type(oct_prop_t),        intent(in)    :: prop
@@ -172,19 +172,19 @@ module opt_control_propagation_m
 
     gr => sys%gr
 
-    call hamiltonian_adjoint(h)
+    call hamiltonian_adjoint(hm)
 
     ! setup the hamiltonian
     call states_calc_dens(psi, NP_PART, psi%rho)
-    call v_ks_calc(gr, sys%ks, h, psi)
-    call td_rti_run_zero_iter(h, td%tr)
+    call v_ks_calc(gr, sys%ks, hm, psi)
+    call td_rti_run_zero_iter(hm, td%tr)
 
     call oct_prop_output(prop, td%max_iter, psi, gr)
     do i = td%max_iter, 1, -1
-      call td_rti_dt(sys%ks, h, gr, psi, td%tr, (i-1)*td%dt, -td%dt, td%max_iter, i)
+      call td_rti_dt(sys%ks, hm, gr, psi, td%tr, (i-1)*td%dt, -td%dt, td%max_iter, i)
       call oct_prop_output(prop, i-1, psi, gr)
       call states_calc_dens(psi, NP_PART, psi%rho)
-      call v_ks_calc(gr, sys%ks, h, psi)
+      call v_ks_calc(gr, sys%ks, hm, psi)
     end do
 
     call pop_sub()
@@ -205,11 +205,11 @@ module opt_control_propagation_m
   ! fly, so that the propagation of psi is performed with the
   ! "new" parameters.
   ! --------------------------------------------------------
-  subroutine fwd_step(oct, sys, td, h, target, par, par_chi, psi, prop_chi, prop_psi)
+  subroutine fwd_step(oct, sys, td, hm, target, par, par_chi, psi, prop_chi, prop_psi)
     type(oct_t), intent(in)                       :: oct
     type(system_t), intent(inout)                 :: sys
     type(td_t), intent(inout)                     :: td
-    type(hamiltonian_t), intent(inout)            :: h
+    type(hamiltonian_t), intent(inout)            :: hm
     type(target_t), intent(inout)                 :: target
     type(oct_control_parameters_t), intent(inout) :: par
     type(oct_control_parameters_t), intent(in)    :: par_chi
@@ -234,7 +234,7 @@ module opt_control_propagation_m
     gr => sys%gr
     call td_rti_copy(tr_chi, td%tr)
 
-    aux_fwd_propagation = (target_mode(target) == oct_targetmode_td .or. (h%theory_level.ne.INDEPENDENT_PARTICLES))
+    aux_fwd_propagation = (target_mode(target) == oct_targetmode_td .or. (hm%theory_level.ne.INDEPENDENT_PARTICLES))
     if(aux_fwd_propagation) then
       call states_copy(psi2, psi)
       call parameters_copy(par_prev, par)
@@ -244,12 +244,12 @@ module opt_control_propagation_m
     ! setup forward propagation
     call states_densities_init(psi, gr, sys%geo)
     call states_calc_dens(psi, NP_PART, psi%rho)
-    call v_ks_calc(gr, sys%ks, h, psi)
-    call td_rti_run_zero_iter(h, td%tr)
-    call td_rti_run_zero_iter(h, tr_chi)
+    call v_ks_calc(gr, sys%ks, hm, psi)
+    call td_rti_run_zero_iter(hm, td%tr)
+    call td_rti_run_zero_iter(hm, tr_chi)
     if(aux_fwd_propagation) then
       call td_rti_copy(tr_psi2, td%tr)
-      call td_rti_run_zero_iter(h, tr_psi2)
+      call td_rti_run_zero_iter(hm, tr_psi2)
     end if
 
     call oct_prop_output(prop_psi, 0, psi, gr)
@@ -258,23 +258,23 @@ module opt_control_propagation_m
 
     do i = 1, td%max_iter
       if(aux_fwd_propagation) then
-        call update_hamiltonian_psi(i, gr, sys%ks, h, td, target, par_prev, psi2)
-        call td_rti_dt(sys%ks, h, gr, psi2, tr_psi2, i*td%dt, td%dt, td%max_iter, i)
+        call update_hamiltonian_psi(i, gr, sys%ks, hm, td, target, par_prev, psi2)
+        call td_rti_dt(sys%ks, hm, gr, psi2, tr_psi2, i*td%dt, td%dt, td%max_iter, i)
       end if
-      call update_field(oct, i, par, gr, td, h, psi, chi, par_chi, dir = 'f')
-      call update_hamiltonian_chi(i, gr, sys%ks, h, td, target, par_chi, psi2)
-      call td_rti_dt(sys%ks, h, gr, chi, tr_chi, i*td%dt, td%dt, td%max_iter, i)
-      call update_hamiltonian_psi(i, gr, sys%ks, h, td, target, par, psi)
-      call td_rti_dt(sys%ks, h, gr, psi, td%tr, i*td%dt, td%dt, td%max_iter, i)
+      call update_field(oct, i, par, gr, td, hm, psi, chi, par_chi, dir = 'f')
+      call update_hamiltonian_chi(i, gr, sys%ks, hm, td, target, par_chi, psi2)
+      call td_rti_dt(sys%ks, hm, gr, chi, tr_chi, i*td%dt, td%dt, td%max_iter, i)
+      call update_hamiltonian_psi(i, gr, sys%ks, hm, td, target, par, psi)
+      call td_rti_dt(sys%ks, hm, gr, psi, td%tr, i*td%dt, td%dt, td%max_iter, i)
       call target_tdcalc(target, gr, psi, i) 
       call oct_prop_output(prop_psi, i, psi, gr)
       call oct_prop_check(prop_chi, chi, gr, sys%geo, i)
     end do
 
     call states_calc_dens(psi, NP_PART, psi%rho)
-    call v_ks_calc(gr, sys%ks, h, psi)
+    call v_ks_calc(gr, sys%ks, hm, psi)
 
-    if(target_mode(target) == oct_targetmode_td .or. (h%theory_level.ne.INDEPENDENT_PARTICLES) ) then
+    if(target_mode(target) == oct_targetmode_td .or. (hm%theory_level.ne.INDEPENDENT_PARTICLES) ) then
       call states_end(psi2)
       call parameters_end(par_prev)
     end if
@@ -296,11 +296,11 @@ module opt_control_propagation_m
   ! par_chi = par_chi[|psi>, |chi>]
   ! |chi> --> U[par_chi](0, T)|chi>
   ! --------------------------------------------------------
-  subroutine bwd_step(oct, sys, td, h, target, par, par_chi, chi, prop_chi, prop_psi) 
+  subroutine bwd_step(oct, sys, td, hm, target, par, par_chi, chi, prop_chi, prop_psi) 
     type(oct_t), intent(in)                       :: oct
     type(system_t), intent(inout)                 :: sys
     type(td_t), intent(inout)                     :: td
-    type(hamiltonian_t), intent(inout)            :: h
+    type(hamiltonian_t), intent(inout)            :: hm
     type(target_t), intent(inout)                 :: target
     type(oct_control_parameters_t), intent(in)    :: par
     type(oct_control_parameters_t), intent(inout) :: par_chi
@@ -326,25 +326,25 @@ module opt_control_propagation_m
     call oct_prop_read_state(prop_psi, psi, gr, sys%geo, td%max_iter)
 
     call states_calc_dens(psi, NP_PART, psi%rho)
-    call v_ks_calc(gr, sys%ks, h, psi)
-    call td_rti_run_zero_iter(h, td%tr)
-    call td_rti_run_zero_iter(h, tr_chi)
+    call v_ks_calc(gr, sys%ks, hm, psi)
+    call td_rti_run_zero_iter(hm, td%tr)
+    call td_rti_run_zero_iter(hm, tr_chi)
 
     td%dt = -td%dt
     call oct_prop_output(prop_chi, td%max_iter, chi, gr)
     do i = td%max_iter, 1, -1
       call oct_prop_check(prop_psi, psi, gr, sys%geo, i)
-      call update_field(oct, i, par_chi, gr, td, h, psi, chi, par, dir = 'b')
-      call update_hamiltonian_chi(i-1, gr, sys%ks, h, td, target, par_chi, psi)
-      call td_rti_dt(sys%ks, h, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%max_iter, i)
+      call update_field(oct, i, par_chi, gr, td, hm, psi, chi, par, dir = 'b')
+      call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, target, par_chi, psi)
+      call td_rti_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%max_iter, i)
       call oct_prop_output(prop_chi, i-1, chi, gr)
-      call update_hamiltonian_psi(i-1, gr, sys%ks, h, td, target, par, psi)
-      call td_rti_dt(sys%ks, h, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%max_iter, i)
+      call update_hamiltonian_psi(i-1, gr, sys%ks, hm, td, target, par, psi)
+      call td_rti_dt(sys%ks, hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%max_iter, i)
     end do
     td%dt = -td%dt
 
     call states_calc_dens(psi, NP_PART, psi%rho)
-    call v_ks_calc(gr, sys%ks, h, psi)
+    call v_ks_calc(gr, sys%ks, hm, psi)
 
     call states_end(psi)
     call td_rti_end(tr_chi)
@@ -365,11 +365,11 @@ module opt_control_propagation_m
   !
   ! par_chi = par_chi[|psi>, |chi>]
   ! --------------------------------------------------------
-  subroutine bwd_step_2(oct, sys, td, h, target, par, par_chi, chi, prop_chi, prop_psi) 
+  subroutine bwd_step_2(oct, sys, td, hm, target, par, par_chi, chi, prop_chi, prop_psi) 
     type(oct_t), intent(in)                       :: oct
     type(system_t), intent(inout)                 :: sys
     type(td_t), intent(inout)                     :: td
-    type(hamiltonian_t), intent(inout)            :: h
+    type(hamiltonian_t), intent(inout)            :: hm
     type(target_t), intent(inout)                 :: target
     type(oct_control_parameters_t), intent(in)    :: par
     type(oct_control_parameters_t), intent(inout) :: par_chi
@@ -395,25 +395,25 @@ module opt_control_propagation_m
     call oct_prop_read_state(prop_psi, psi, gr, sys%geo, td%max_iter)
 
     call states_calc_dens(psi, NP_PART, psi%rho)
-    call v_ks_calc(gr, sys%ks, h, psi)
-    call td_rti_run_zero_iter(h, td%tr)
-    call td_rti_run_zero_iter(h, tr_chi)
+    call v_ks_calc(gr, sys%ks, hm, psi)
+    call td_rti_run_zero_iter(hm, td%tr)
+    call td_rti_run_zero_iter(hm, tr_chi)
 
     td%dt = -td%dt
     call oct_prop_output(prop_chi, td%max_iter, chi, gr)
     do i = td%max_iter, 1, -1
       call oct_prop_check(prop_psi, psi, gr, sys%geo, i)
-      call update_field(oct, i, par_chi, gr, td, h, psi, chi, par, dir = 'b')
-      call update_hamiltonian_chi(i-1, gr, sys%ks, h, td, target, par, psi)
-      call td_rti_dt(sys%ks, h, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%max_iter, i)
+      call update_field(oct, i, par_chi, gr, td, hm, psi, chi, par, dir = 'b')
+      call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, target, par, psi)
+      call td_rti_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%max_iter, i)
       call oct_prop_output(prop_chi, i-1, chi, gr)
-      call update_hamiltonian_psi(i-1, gr, sys%ks, h, td, target, par, psi)
-      call td_rti_dt(sys%ks, h, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%max_iter, i)
+      call update_hamiltonian_psi(i-1, gr, sys%ks, hm, td, target, par, psi)
+      call td_rti_dt(sys%ks, hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%max_iter, i)
     end do
     td%dt = -td%dt
 
     call states_calc_dens(psi, NP_PART, psi%rho)
-    call v_ks_calc(gr, sys%ks, h, psi)
+    call v_ks_calc(gr, sys%ks, hm, psi)
 
     call td_rti_end(tr_chi)
 
@@ -424,11 +424,11 @@ module opt_control_propagation_m
   ! ----------------------------------------------------------
   !
   ! ----------------------------------------------------------
-  subroutine update_hamiltonian_chi(iter, gr, ks, h, td, target, par_chi, st)
+  subroutine update_hamiltonian_chi(iter, gr, ks, hm, td, target, par_chi, st)
     integer, intent(in)                        :: iter
     type(grid_t), intent(inout)                :: gr
     type(v_ks_t), intent(inout)                :: ks
-    type(hamiltonian_t), intent(inout)         :: h
+    type(hamiltonian_t), intent(inout)         :: hm
     type(td_t), intent(inout)                  :: td
     type(target_t), intent(inout)              :: target
     type(oct_control_parameters_t), intent(in) :: par_chi
@@ -440,23 +440,23 @@ module opt_control_propagation_m
 
     if(target_mode(target) == oct_targetmode_td) then
       call target_inh(st, gr, target, td%dt*iter, inh)
-      call hamiltonian_set_inh(h, inh)
+      call hamiltonian_set_inh(hm, inh)
     end if
 
-    if(h%theory_level.ne.INDEPENDENT_PARTICLES) then
-      call hamiltonian_set_oct_exchange(h, st)
+    if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
+      call hamiltonian_set_oct_exchange(hm, st)
     end if
 
-    call hamiltonian_adjoint(h)
+    call hamiltonian_adjoint(hm)
 
     do j = iter - 2, iter + 2
       if(j >= 0 .and. j<=td%max_iter) then
-        call parameters_to_h_val(par_chi, h%ep, j+1)
+        call parameters_to_h_val(par_chi, hm%ep, j+1)
       end if
     end do
-    if(h%theory_level.ne.INDEPENDENT_PARTICLES) then
+    if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
       call states_calc_dens(st, NP_PART, st%rho)
-      call v_ks_calc(gr, ks, h, st)
+      call v_ks_calc(gr, ks, hm, st)
     end if
 
     call pop_sub()
@@ -467,11 +467,11 @@ module opt_control_propagation_m
   ! ----------------------------------------------------------
   !
   ! ----------------------------------------------------------
-  subroutine update_hamiltonian_psi(iter, gr, ks, h, td, target, par, st)
+  subroutine update_hamiltonian_psi(iter, gr, ks, hm, td, target, par, st)
     integer, intent(in)                        :: iter
     type(grid_t), intent(inout)                :: gr
     type(v_ks_t), intent(inout)                :: ks
-    type(hamiltonian_t), intent(inout)         :: h
+    type(hamiltonian_t), intent(inout)         :: hm
     type(td_t), intent(inout)                  :: td
     type(target_t), intent(inout)              :: target
     type(oct_control_parameters_t), intent(in) :: par
@@ -481,23 +481,23 @@ module opt_control_propagation_m
     call push_sub('propagation.update_hamiltonian_psi')
 
     if(target_mode(target) == oct_targetmode_td) then
-      call hamiltonian_remove_inh(h)
+      call hamiltonian_remove_inh(hm)
     end if
 
-    if(h%theory_level.ne.INDEPENDENT_PARTICLES) then
-      call hamiltonian_remove_oct_exchange(h)
+    if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
+      call hamiltonian_remove_oct_exchange(hm)
     end if
 
-    call hamiltonian_not_adjoint(h)
+    call hamiltonian_not_adjoint(hm)
 
     do j = iter - 2, iter + 2
       if(j >= 0 .and. j<=td%max_iter) then
-        call parameters_to_h_val(par, h%ep, j+1)
+        call parameters_to_h_val(par, hm%ep, j+1)
       end if
     end do
-    if(h%theory_level.ne.INDEPENDENT_PARTICLES) then
+    if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
       call states_calc_dens(st, NP_PART, st%rho)
-      call v_ks_calc(gr, ks, h, st)
+      call v_ks_calc(gr, ks, hm, st)
     end if
 
     call pop_sub()
@@ -506,10 +506,10 @@ module opt_control_propagation_m
 
 
   ! ---------------------------------------------------------
-  subroutine calculate_g(oct, gr, h, psi, chi, cp, dl, dq, d1)
+  subroutine calculate_g(oct, gr, hm, psi, chi, cp, dl, dq, d1)
     type(oct_t),                    intent(in)    :: oct
     type(grid_t),                   intent(inout) :: gr
-    type(hamiltonian_t),            intent(in)    :: h
+    type(hamiltonian_t),            intent(in)    :: hm
     type(states_t),                 intent(inout) :: psi
     type(states_t),                 intent(inout) :: chi
     type(oct_control_parameters_t), intent(in)    :: cp
@@ -528,8 +528,8 @@ module opt_control_propagation_m
       do ik = 1, psi%d%nik
         do p = 1, psi%nst
           oppsi%zpsi(:, :, p, ik) = M_z0
-          call zvlaser_operator_linear(h%ep%lasers(j), gr, h%d, psi%zpsi(:, :, p, ik), &
-                                       oppsi%zpsi(:, :, p, ik), ik, h%ep%gyromagnetic_ratio, h%ep%a_static)
+          call zvlaser_operator_linear(hm%ep%lasers(j), gr, hm%d, psi%zpsi(:, :, p, ik), &
+                                       oppsi%zpsi(:, :, p, ik), ik, hm%ep%gyromagnetic_ratio, hm%ep%a_static)
           dl(j) = dl(j) + psi%occ(p, ik) * zmf_dotp(gr%mesh, psi%d%dim, chi%zpsi(:, :, p, ik), &
             oppsi%zpsi(:, :, p, ik))
         end do
@@ -537,13 +537,13 @@ module opt_control_propagation_m
       call states_end(oppsi)
 
       ! The quadratic part should only be computed if necessary.
-      if(laser_kind(h%ep%lasers(j)).eq.E_FIELD_MAGNETIC ) then
+      if(laser_kind(hm%ep%lasers(j)).eq.E_FIELD_MAGNETIC ) then
         oppsi = psi
         dq(j) = M_z0
         do ik = 1, psi%d%nik
           do p = 1, psi%nst
             oppsi%zpsi(:, :, p, ik) = M_z0
-            call zvlaser_operator_quadratic(h%ep%lasers(j), gr, h%d, psi%zpsi(:, :, p, ik), oppsi%zpsi(:, :, p, ik))
+            call zvlaser_operator_quadratic(hm%ep%lasers(j), gr, hm%d, psi%zpsi(:, :, p, ik), oppsi%zpsi(:, :, p, ik))
             dq(j) = dq(j) + psi%occ(p, ik)*zmf_dotp(gr%mesh, psi%d%dim, chi%zpsi(:, :, p, ik), oppsi%zpsi(:, :, p, ik))
           end do
         end do
@@ -576,13 +576,13 @@ module opt_control_propagation_m
   !
   ! cp = (1-eta)*cpp - (eta/alpha) * <chi|V|Psi>
   ! ---------------------------------------------------------
-  subroutine update_field(oct, iter, cp, gr, td, h, psi, chi, cpp, dir)
+  subroutine update_field(oct, iter, cp, gr, td, hm, psi, chi, cpp, dir)
     type(oct_t), intent(in) :: oct
     integer, intent(in)        :: iter
     type(oct_control_parameters_t), intent(inout) :: cp
     type(grid_t), intent(inout)   :: gr
     type(td_t), intent(in)     :: td
-    type(hamiltonian_t), intent(in) :: h
+    type(hamiltonian_t), intent(in) :: hm
     type(states_t), intent(inout) :: psi
     type(states_t), intent(inout) :: chi
     type(oct_control_parameters_t), intent(in) :: cpp
@@ -607,8 +607,8 @@ module opt_control_propagation_m
       do ik = 1, psi%d%nik
         do p = 1, psi%nst
           oppsi%zpsi(:, :, p, ik) = M_z0
-          call zvlaser_operator_linear(h%ep%lasers(j), gr, h%d, psi%zpsi(:, :, p, ik), &
-                                       oppsi%zpsi(:, :, p, ik), ik, h%ep%gyromagnetic_ratio, h%ep%a_static)
+          call zvlaser_operator_linear(hm%ep%lasers(j), gr, hm%d, psi%zpsi(:, :, p, ik), &
+                                       oppsi%zpsi(:, :, p, ik), ik, hm%ep%gyromagnetic_ratio, hm%ep%a_static)
           dl(j) = dl(j) + psi%occ(p, ik) * zmf_dotp(gr%mesh, psi%d%dim, chi%zpsi(:, :, p, ik), &
             oppsi%zpsi(:, :, p, ik))
         end do
@@ -616,13 +616,13 @@ module opt_control_propagation_m
       call states_end(oppsi)
 
       ! The quadratic part should only be computed if necessary.
-      if(laser_kind(h%ep%lasers(j)).eq.E_FIELD_MAGNETIC ) then
+      if(laser_kind(hm%ep%lasers(j)).eq.E_FIELD_MAGNETIC ) then
         oppsi = psi
         dq(j) = M_z0
         do ik = 1, psi%d%nik
           do p = 1, psi%nst
             oppsi%zpsi(:, :, p, ik) = M_z0
-            call zvlaser_operator_quadratic(h%ep%lasers(j), gr, h%d, psi%zpsi(:, :, p, ik), oppsi%zpsi(:, :, p, ik))
+            call zvlaser_operator_quadratic(hm%ep%lasers(j), gr, hm%d, psi%zpsi(:, :, p, ik), oppsi%zpsi(:, :, p, ik))
             dq(j) = dq(j) + psi%occ(p, ik)*zmf_dotp(gr%mesh, psi%d%dim, chi%zpsi(:, :, p, ik), oppsi%zpsi(:, :, p, ik))
           end do
         end do

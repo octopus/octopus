@@ -81,9 +81,9 @@ module kdotp_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine kdotp_lr_run(sys, h, fromScratch)
+  subroutine kdotp_lr_run(sys, hm, fromScratch)
     type(system_t), target, intent(inout) :: sys
-    type(hamiltonian_t),    intent(inout) :: h
+    type(hamiltonian_t),    intent(inout) :: hm
     logical,                intent(inout) :: fromScratch
 
     type(grid_t),   pointer :: gr
@@ -126,9 +126,9 @@ contains
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian for linear response'
     call write_info(1)
-    call system_h_setup(sys, h)
+    call system_h_setup(sys, hm)
     
-    call sternheimer_init(sh, sys, h, "KdotP_", hermitian = states_are_real(sys%st), &
+    call sternheimer_init(sh, sys, hm, "KdotP_", hermitian = states_are_real(sys%st), &
          set_ham_var = 0, set_occ_response = (kdotp_vars%occ_solution_method == 0))
     ! ham_var_set = 0 results in HamiltonianVariation = V_ext_only
 
@@ -188,7 +188,7 @@ contains
       write(message(1), '(a,i3)') 'Info: Calculating response for direction ', idir
       call write_info(1)
       call pert_setup_dir(kdotp_vars%perturbation, idir)
-      call zsternheimer_solve(sh, sys, h, kdotp_vars%lr(idir,:), 1, &
+      call zsternheimer_solve(sh, sys, hm, kdotp_vars%lr(idir,:), 1, &
         M_zI * kdotp_vars%eta, kdotp_vars%perturbation, RESTART_DIR, &
         kdotp_rho_tag(idir), kdotp_wfs_tag(idir), have_restart_rho=(ierr==0))
       kdotp_vars%ok = kdotp_vars%ok .and. sternheimer_has_converged(sh)         
@@ -199,7 +199,7 @@ contains
       message(1) = "Info: Calculating effective masses."
       call write_info(1)
 
-      call zcalc_eff_mass_inv(sys, h, kdotp_vars%lr, kdotp_vars%perturbation, &
+      call zcalc_eff_mass_inv(sys, hm, kdotp_vars%lr, kdotp_vars%perturbation, &
         kdotp_vars%eff_mass_inv, kdotp_vars%occ_solution_method, kdotp_vars%degen_thres)
       call kdotp_output(sys%st, sys%gr, kdotp_vars)
     endif

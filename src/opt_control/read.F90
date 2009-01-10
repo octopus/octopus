@@ -181,16 +181,16 @@
   ! ---------------------------------------------------------
   ! Tries to avoid ill defined combinations of run modes.
   ! ---------------------------------------------------------
-  subroutine check_faulty_runmodes(sys, h, tr)
+  subroutine check_faulty_runmodes(sys, hm, tr)
     type(system_t),                 intent(in)    :: sys
-    type(hamiltonian_t),            intent(in)    :: h
+    type(hamiltonian_t),            intent(in)    :: hm
     type(td_rti_t),                 intent(in)    :: tr
 
     integer :: no_electrons, n_filled, n_partially_filled, n_half_filled
     call push_sub('read.check_faulty_runmodes')
 
     ! Only dipole approximation in length gauge.
-    if(h%gauge.ne.LENGTH) then
+    if(hm%gauge.ne.LENGTH) then
       write(message(1),'(a)') "So far only length gauge is supported in optimal control runs."
       call write_fatal(1)
     end if
@@ -302,8 +302,8 @@
       end if
     end if
 
-    if( h%theory_level.ne.INDEPENDENT_PARTICLES ) then
-      if(h%theory_level.ne.KOHN_SHAM_DFT) then
+    if( hm%theory_level.ne.INDEPENDENT_PARTICLES ) then
+      if(hm%theory_level.ne.KOHN_SHAM_DFT) then
         write(message(1), '(a)') 'In optimal control theory mode, you can only use either independent'
         write(message(2), '(a)') 'particles "TheoryLevel = independent_particles", or Kohn-Sham DFT'
         write(message(3), '(a)') '"TheoryLevel = dft".'
@@ -316,7 +316,7 @@
       end if
     end if
 
-    if( h%ab .eq. MASK_ABSORBING) then
+    if( hm%ab .eq. MASK_ABSORBING) then
       write(message(1), '(a)') 'Cannot do QOCT with mask absorbing boundaries. Use either'
       write(message(2), '(a)') '"AbsorbingBoudaries = sin2" or "AbsorbingBoundaries = no".'
       call write_fatal(2)

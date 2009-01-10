@@ -22,12 +22,12 @@
 ! This routine fills state psi with an atomic orbital -- provided
 ! by the pseudopotential structure in geo.
 ! ---------------------------------------------------------
-subroutine X(lcao_atomic_orbital) (this, iorb, m, h, geo, sb, psi, spin_channel)
+subroutine X(lcao_atomic_orbital) (this, iorb, m, hm, geo, sb, psi, spin_channel)
   type(lcao_t),             intent(in)    :: this
   integer,                  intent(in)    :: iorb
   type(mesh_t),             intent(in)    :: m
   type(simul_box_t),        intent(in)    :: sb
-  type(hamiltonian_t),      intent(in)    :: h
+  type(hamiltonian_t),      intent(in)    :: hm
   type(geometry_t), target, intent(in)    :: geo
   R_TYPE,                   intent(inout) :: psi(:, :)
   integer,                  intent(in)    :: spin_channel
@@ -45,7 +45,7 @@ subroutine X(lcao_atomic_orbital) (this, iorb, m, h, geo, sb, psi, spin_channel)
   ASSERT(iorb >= 1)
   ASSERT(iorb <= this%maxorbs)
 
-  psi(1:m%np, 1:h%d%dim) = R_TOTYPE(M_ZERO)
+  psi(1:m%np, 1:hm%d%dim) = R_TOTYPE(M_ZERO)
 
   iatom = this%atom(iorb)
   jj = this%level(iorb)
@@ -86,12 +86,12 @@ subroutine X(lcao_atomic_orbital) (this, iorb, m, h, geo, sb, psi, spin_channel)
 end subroutine X(lcao_atomic_orbital)
 
 ! ---------------------------------------------------------
-subroutine X(lcao_wf) (this, st, gr, geo, h, start)
+subroutine X(lcao_wf) (this, st, gr, geo, hm, start)
   type(lcao_t),        intent(inout) :: this
   type(states_t),      intent(inout) :: st
   type(grid_t),        intent(inout) :: gr
   type(geometry_t),    intent(in)    :: geo
-  type(hamiltonian_t), intent(in)    :: h
+  type(hamiltonian_t), intent(in)    :: hm
   integer,             intent(in)    :: start
 
   integer :: nst, ik, n1, n2, idim, lcao_start, ie, max
@@ -138,7 +138,7 @@ subroutine X(lcao_wf) (this, st, gr, geo, h, start)
 
     do ik = kstart, kend
       ispin = states_dim_get_spin_index(st%d, ik)
-      call X(hamiltonian_apply)(h, gr, lcaopsi(:, :, ispin), hpsi(:, :, ik), n1, ik)
+      call X(hamiltonian_apply)(hm, gr, lcaopsi(:, :, ispin), hpsi(:, :, ik), n1, ik)
     end do
 
     do n2 = n1, this%norbs
@@ -224,7 +224,7 @@ contains
         cst(iorb, ispin) = ist
         ck(iorb, ispin) = ik
 
-        call X(lcao_atomic_orbital)(this, iorb, gr%mesh, h, geo, gr%sb, st%X(psi)(:, :, ist, ik), ispin)
+        call X(lcao_atomic_orbital)(this, iorb, gr%mesh, hm, geo, gr%sb, st%X(psi)(:, :, ist, ik), ispin)
 
         if(ispin < st%d%spin_channels) then
           ispin = ispin + 1
@@ -252,7 +252,7 @@ contains
       
       do iorb = iorb, this%norbs
         do ispin = 1, st%d%spin_channels
-          call X(lcao_atomic_orbital)(this, iorb, gr%mesh, h, geo, gr%sb, ao, ispin)
+          call X(lcao_atomic_orbital)(this, iorb, gr%mesh, hm, geo, gr%sb, ao, ispin)
           buff(1:NP, 1:st%d%dim, iorb, ispin) = ao(1:NP, 1:st%d%dim)
         end do
       end do
@@ -278,7 +278,7 @@ contains
           call lalg_copy(NP, st%X(psi)(:, idim, cst(iorb, ispin), ck(iorb, ispin)), ao(:, idim))
         end do
       else
-        call X(lcao_atomic_orbital)(this, iorb, gr%mesh, h, geo, gr%sb, ao, ispin)
+        call X(lcao_atomic_orbital)(this, iorb, gr%mesh, hm, geo, gr%sb, ao, ispin)
       end if
     end if
 

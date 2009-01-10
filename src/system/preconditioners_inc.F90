@@ -18,10 +18,10 @@
 !! $Id$
 
 ! --------------------------------------------------------- 
-subroutine X(preconditioner_apply)(pre, gr, h, a, b, omega)
+subroutine X(preconditioner_apply)(pre, gr, hm, a, b, omega)
   type(preconditioner_t), intent(in)    :: pre
   type(grid_t),           intent(inout) :: gr
-  type(hamiltonian_t),    intent(inout) :: h
+  type(hamiltonian_t),    intent(inout) :: hm
   R_TYPE,                 intent(inout) :: a(:,:)
   R_TYPE,                 intent(out)   :: b(:,:)
   R_TYPE,       optional, intent(in)    :: omega
@@ -37,12 +37,12 @@ subroutine X(preconditioner_apply)(pre, gr, h, a, b, omega)
 
   select case(pre%which)
   case(PRE_NONE)
-    do idim = 1, h%d%dim
+    do idim = 1, hm%d%dim
       call lalg_copy(NP, a(:,idim), b(:,idim))
     end do
 
   case(PRE_SMOOTHING)
-    do idim = 1, h%d%dim
+    do idim = 1, hm%d%dim
       call X(derivatives_oper)(pre%op, gr%der, a(:, idim), b(:, idim))
     end do
 
@@ -50,7 +50,7 @@ subroutine X(preconditioner_apply)(pre, gr, h, a, b, omega)
     call apply_D_inverse(a, b)
 
   case(PRE_POISSON)
-    do idim = 1, h%d%dim
+    do idim = 1, hm%d%dim
       call X(poisson_solve) (gr, b(:, idim), a(:, idim), all_nodes=.false.)
       call lalg_scal(NP, R_TOTYPE(M_ONE/(M_TWO*M_PI)), b(:,idim))
     end do
@@ -76,8 +76,8 @@ contains
 
     ALLOCATE(diag(NP), NP)
 
-    do idim = 1, h%d%dim
-      diag(:) = pre%diag_lapl(1:NP) + h%ep%vpsl(1:NP) + h%vhxc(1:NP, idim)
+    do idim = 1, hm%d%dim
+      diag(:) = pre%diag_lapl(1:NP) + hm%ep%vpsl(1:NP) + hm%vhxc(1:NP, idim)
 
       b(1:NP,idim) = a(1:NP,idim)/(diag(1:NP) + omega_)
     end do
@@ -114,7 +114,7 @@ contains
 
     step = CNST(0.66666666)/pre%diag_lapl(1)
 
-    do idim = 1, h%d%dim
+    do idim = 1, hm%d%dim
 
       d0 = M_ZERO
       q0 = M_ZERO

@@ -59,9 +59,9 @@ module unocc_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine unocc_run(sys, h, fromscratch)
+  subroutine unocc_run(sys, hm, fromscratch)
     type(system_t),      intent(inout) :: sys
-    type(hamiltonian_t), intent(inout) :: h
+    type(hamiltonian_t), intent(inout) :: hm
     logical,             intent(inout) :: fromscratch
 
     type(eigensolver_t) :: eigens
@@ -101,8 +101,8 @@ contains
     call write_info(1)
 
     call states_calc_dens(sys%st, sys%gr%mesh%np, sys%st%rho)
-    call v_ks_calc(sys%gr, sys%ks, h, sys%st, calc_eigenval=.true.) ! get potentials
-    call total_energy(h, sys%gr, sys%st, -1)             ! total energy
+    call v_ks_calc(sys%gr, sys%ks, hm, sys%st, calc_eigenval=.true.) ! get potentials
+    call total_energy(hm, sys%gr, sys%st, -1)             ! total energy
 
     ! The initial LCAO calculation is done by default if we have pseudopotentials.
     ! Otherwise, it is not the default value and has to be enforced in the input file.
@@ -119,7 +119,7 @@ contains
         call write_info(1)
         call lcao_init(lcao, sys%gr, sys%geo, sys%st)
         if(lcao_is_available(lcao)) then
-          call lcao_wf(lcao, sys%st, sys%gr, sys%geo, h, start = ierr+1)
+          call lcao_wf(lcao, sys%st, sys%gr, sys%geo, hm, start = ierr+1)
           call lcao_end(lcao)
         end if
       end if
@@ -131,18 +131,18 @@ contains
     ! First, get the residues of the occupied states.
     ! These are assumed to be converged; otherwise one should do a SCF calculation.
     if (sys%st%wfs_type == M_REAL) then
-      ALLOCATE(dh_psi(sys%gr%mesh%np, h%d%dim), sys%gr%mesh%np*h%d%dim)
+      ALLOCATE(dh_psi(sys%gr%mesh%np, hm%d%dim), sys%gr%mesh%np*hm%d%dim)
     else
-      ALLOCATE(zh_psi(sys%gr%mesh%np, h%d%dim), sys%gr%mesh%np*h%d%dim)
+      ALLOCATE(zh_psi(sys%gr%mesh%np, hm%d%dim), sys%gr%mesh%np*hm%d%dim)
     end if
     do ik = 1, sys%st%d%nik
       do p = 1, eigens%converged(ik)
         if (sys%st%wfs_type == M_REAL) then
-          call dhamiltonian_apply(h, sys%gr, sys%st%dpsi(:,:, p, ik) ,dh_psi, p, ik)
+          call dhamiltonian_apply(hm, sys%gr, sys%st%dpsi(:,:, p, ik) ,dh_psi, p, ik)
           eigens%diff(p, ik) = dstates_residue(sys%gr%mesh, sys%st%d%dim, dh_psi, sys%st%eigenval(p, ik), &
                sys%st%dpsi(:, :, p, ik))
         else
-          call zhamiltonian_apply(h, sys%gr, sys%st%zpsi(:,:, p, ik) , zh_psi, p, ik)
+          call zhamiltonian_apply(hm, sys%gr, sys%st%zpsi(:,:, p, ik) , zh_psi, p, ik)
           eigens%diff(p, ik) = zstates_residue(sys%gr%mesh, sys%st%d%dim, zh_psi, sys%st%eigenval(p, ik), &
                sys%st%zpsi(:, :, p, ik))
         end if
@@ -157,7 +157,7 @@ contains
     do iter = 1, max_iter
       write(message(1), '(a,i3)') "Info: Unoccupied states iteration ", iter
       call write_info(1)
-      call eigensolver_run(eigens, sys%gr, sys%st, h, 1, converged, verbose = .true.)
+      call eigensolver_run(eigens, sys%gr, sys%st, hm, 1, converged, verbose = .true.)
 
       if(converged) exit
     end do
@@ -211,7 +211,7 @@ contains
     !% in the directory matrix_elements
     !%End
     call loct_parse_logical(datasets_check('WriteMatrixElements'), .false., l)
-    if(l) call write_matrix_elements(sys, h)
+    if(l) call write_matrix_elements(sys, hm)
 
     ! output wave-functions
     call h_sys_output_states(sys%st, sys%gr, "static", sys%outp)
@@ -283,9 +283,9 @@ contains
 
   ! ---------------------------------------------------------
   ! warning: only works for spin-unpolarized and 1 k-point
-  subroutine write_matrix_elements(sys, h)
+  subroutine write_matrix_elements(sys, hm)
     type(system_t),         intent(inout) :: sys
-    type(hamiltonian_t),    intent(in)    :: h
+    type(hamiltonian_t),    intent(in)    :: hm
 
     call io_mkdir("matrix_elements")
 
@@ -295,9 +295,9 @@ contains
     message(1) = "  :: one-body"
     call write_info(1)
     if (sys%st%wfs_type == M_REAL) then
-      call done_body(sys%gr, sys%geo, sys%st, h)
+      call done_body(sys%gr, sys%geo, sys%st, hm)
     else
-      call zone_body(sys%gr, sys%geo, sys%st, h)
+      call zone_body(sys%gr, sys%geo, sys%st, hm)
     end if
 
     message(1) = "  :: two-body"

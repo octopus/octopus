@@ -190,8 +190,8 @@ module hamiltonian_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_init(h, gr, geo, st, theory_level, xc_family)
-    type(hamiltonian_t),    intent(out)   :: h
+  subroutine hamiltonian_init(hm, gr, geo, st, theory_level, xc_family)
+    type(hamiltonian_t),    intent(out)   :: hm
     type(grid_t),           intent(inout) :: gr
     type(geometry_t),       intent(inout) :: geo
     type(states_t), target, intent(inout) :: st
@@ -209,49 +209,49 @@ contains
     wfs_type   => st%wfs_type
 
     ! make a couple of local copies
-    h%theory_level = theory_level
-    h%xc_family    = xc_family
-    call states_dim_copy(h%d, states_dim)
+    hm%theory_level = theory_level
+    hm%xc_family    = xc_family
+    call states_dim_copy(hm%d, states_dim)
 
     ! initialize variables
-    h%epot = M_ZERO
-    h%ex = M_ZERO; h%ec = M_ZERO
-    h%etot = M_ZERO
+    hm%epot = M_ZERO
+    hm%ex = M_ZERO; hm%ec = M_ZERO
+    hm%etot = M_ZERO
 
     ! allocate potentials and density of the cores
-    ! In the case of spinors, vxc_11 = h%vxc(:, 1), vxc_22 = h%vxc(:, 2), Re(vxc_12) = h%vxc(:. 3);
-    ! Im(vxc_12) = h%vxc(:, 4)
-    ALLOCATE(h%vhartree(NP),        NP)
-    ALLOCATE(h%vxc(NP, h%d%nspin), NP*h%d%nspin)
-    ALLOCATE(h%vhxc(NP, h%d%nspin), NP*h%d%nspin)
-    if(iand(h%xc_family, XC_FAMILY_MGGA).ne.0) then
-      ALLOCATE(h%vtau(NP, h%d%nspin), NP*h%d%nspin)
+    ! In the case of spinors, vxc_11 = hm%vxc(:, 1), vxc_22 = hm%vxc(:, 2), Re(vxc_12) = hm%vxc(:. 3);
+    ! Im(vxc_12) = hm%vxc(:, 4)
+    ALLOCATE(hm%vhartree(NP),        NP)
+    ALLOCATE(hm%vxc(NP, hm%d%nspin), NP*hm%d%nspin)
+    ALLOCATE(hm%vhxc(NP, hm%d%nspin), NP*hm%d%nspin)
+    if(iand(hm%xc_family, XC_FAMILY_MGGA).ne.0) then
+      ALLOCATE(hm%vtau(NP, hm%d%nspin), NP*hm%d%nspin)
     else
-      nullify(h%vtau)
+      nullify(hm%vtau)
     end if
 
-    h%vhartree(1:NP) = M_ZERO
+    hm%vhartree(1:NP) = M_ZERO
 
-    do ispin = 1, h%d%nspin
-      h%vhxc(1:NP, ispin) = M_ZERO
-      h%vxc(1:NP, ispin) = M_ZERO
-      if(iand(h%xc_family, XC_FAMILY_MGGA).ne.0) h%vtau(1:NP, ispin) = M_ZERO
+    do ispin = 1, hm%d%nspin
+      hm%vhxc(1:NP, ispin) = M_ZERO
+      hm%vxc(1:NP, ispin) = M_ZERO
+      if(iand(hm%xc_family, XC_FAMILY_MGGA).ne.0) hm%vtau(1:NP, ispin) = M_ZERO
     end do
 
-    if (h%d%cdft) then
-      ALLOCATE(h%axc(NP, NDIM, h%d%nspin), NP*NDIM*h%d%nspin)
-      h%axc = M_ZERO
+    if (hm%d%cdft) then
+      ALLOCATE(hm%axc(NP, NDIM, hm%d%nspin), NP*NDIM*hm%d%nspin)
+      hm%axc = M_ZERO
     else
-      nullify(h%axc)
+      nullify(hm%axc)
     end if
 
     !Initialize external potential
-    call epot_init(h%ep, gr, geo, h%d%ispin)
+    call epot_init(hm%ep, gr, geo, hm%d%ispin)
 
     !Static magnetic field requires complex wave-functions
-    if (associated(h%ep%B_field) .or. gauge_field_is_applied(h%ep%gfield)) wfs_type = M_CMPLX
+    if (associated(hm%ep%B_field) .or. gauge_field_is_applied(hm%ep%gfield)) wfs_type = M_CMPLX
 
-    call loct_parse_logical(datasets_check('CalculateSelfInducedMagneticField'), .false., h%self_induced_magnetic)
+    call loct_parse_logical(datasets_check('CalculateSelfInducedMagneticField'), .false., hm%self_induced_magnetic)
     !%Variable CalculateSelfInducedMagneticField
     !%Type logical
     !%Default no
@@ -275,17 +275,17 @@ contains
     !% and printed out, if the Output variable contains the "potential" keyword (the prefix
     !% of the output files are "Bind").
     !%End
-    if(h%self_induced_magnetic) then
+    if(hm%self_induced_magnetic) then
       select case(NDIM)
       case(3)
-        ALLOCATE(h%a_ind(NP_PART, MAX_DIM), NP_PART*MAX_DIM)
-        ALLOCATE(h%b_ind(NP_PART, MAX_DIM), NP_PART*MAX_DIM)
+        ALLOCATE(hm%a_ind(NP_PART, MAX_DIM), NP_PART*MAX_DIM)
+        ALLOCATE(hm%b_ind(NP_PART, MAX_DIM), NP_PART*MAX_DIM)
       case(2)
-        ALLOCATE(h%a_ind(NP_PART, 2), NP_PART*2)
-        ALLOCATE(h%b_ind(NP_PART, 1), NP_PART)
+        ALLOCATE(hm%a_ind(NP_PART, 2), NP_PART*2)
+        ALLOCATE(hm%b_ind(NP_PART, 1), NP_PART)
       end select
     else
-      nullify(h%a_ind, h%b_ind)
+      nullify(hm%a_ind, hm%b_ind)
     end if
 
     !%Variable TDGauge
@@ -299,9 +299,9 @@ contains
     !%Option velocity 2
     !% Velocity gauge.
     !%End
-    call loct_parse_int(datasets_check('TDGauge'), LENGTH, h%gauge)
-    if(.not.varinfo_valid_option('TDGauge', h%gauge)) call input_error('TDGauge')
-    call messages_print_var_option(stdout, "TDGauge", h%gauge)
+    call loct_parse_int(datasets_check('TDGauge'), LENGTH, hm%gauge)
+    if(.not.varinfo_valid_option('TDGauge', hm%gauge)) call input_error('TDGauge')
+    call messages_print_var_option(stdout, "TDGauge", hm%gauge)
 
     !%Variable AbsorbingBoundaries
     !%Type integer
@@ -318,13 +318,13 @@ contains
     !%Option mask 2
     !% A mask is applied to the wave-functions at the boundaries.
     !%End
-    call loct_parse_int(datasets_check('AbsorbingBoundaries'), NOT_ABSORBING, h%ab)
-    if(.not.varinfo_valid_option('AbsorbingBoundaries', h%ab)) call input_error('AbsorbingBoundaries')
-    call messages_print_var_option(stdout, "AbsorbingBoundaries", h%ab)
+    call loct_parse_int(datasets_check('AbsorbingBoundaries'), NOT_ABSORBING, hm%ab)
+    if(.not.varinfo_valid_option('AbsorbingBoundaries', hm%ab)) call input_error('AbsorbingBoundaries')
+    call messages_print_var_option(stdout, "AbsorbingBoundaries", hm%ab)
     
-    nullify(h%ab_pot)
+    nullify(hm%ab_pot)
 
-    absorbing_boundaries: if(h%ab.ne.NOT_ABSORBING) then
+    absorbing_boundaries: if(hm%ab.ne.NOT_ABSORBING) then
       !%Variable ABWidth
       !%Type float
       !%Default 0.4 a.u.
@@ -332,9 +332,9 @@ contains
       !%Description
       !% Width of the region used to apply the absorbing boundaries.
       !%End
-      call loct_parse_float(datasets_check('ABWidth'), CNST(0.4)/units_inp%length%factor, h%ab_width)
-      h%ab_width  = h%ab_width * units_inp%length%factor
-      if(h%ab == 1) then
+      call loct_parse_float(datasets_check('ABWidth'), CNST(0.4)/units_inp%length%factor, hm%ab_width)
+      hm%ab_width  = hm%ab_width * units_inp%length%factor
+      if(hm%ab == 1) then
         !%Variable ABHeight
         !%Type float
         !%Default -0.2 a.u.
@@ -342,34 +342,34 @@ contains
         !%Description 
         !% When <tt>AbsorbingBoundaries == sin2</tt>, is the height of the imaginary potential.
         !%End
-        call loct_parse_float(datasets_check('ABHeight'), -CNST(0.2)/units_inp%energy%factor, h%ab_height)
-        h%ab_height = h%ab_height * units_inp%energy%factor
+        call loct_parse_float(datasets_check('ABHeight'), -CNST(0.2)/units_inp%energy%factor, hm%ab_height)
+        hm%ab_height = hm%ab_height * units_inp%energy%factor
       else
-        h%ab_height = M_ONE
+        hm%ab_height = M_ONE
       end if
 
       ! generate boundary potential...
-      ALLOCATE(h%ab_pot(NP), NP)
-      h%ab_pot = M_ZERO
+      ALLOCATE(hm%ab_pot(NP), NP)
+      hm%ab_pot = M_ZERO
       do i = 1, NP
-        call mesh_inborder(gr%mesh, i, n, d, h%ab_width)
+        call mesh_inborder(gr%mesh, i, n, d, hm%ab_width)
         if(n>0) then
           do j = 1, n
-            h%ab_pot(i) = h%ab_pot(i) + h%ab_height * sin(d(j)*M_PI/(M_TWO*h%ab_width))**2
+            hm%ab_pot(i) = hm%ab_pot(i) + hm%ab_height * sin(d(j)*M_PI/(M_TWO*hm%ab_width))**2
           end do
         end if
-        if(abs(h%ab_pot(i)) > abs(h%ab_height)) h%ab_pot(i) = h%ab_height
+        if(abs(hm%ab_pot(i)) > abs(hm%ab_height)) hm%ab_pot(i) = hm%ab_height
       end do
 
     end if absorbing_boundaries
 
     ! Cutoff applied to the kinetic term.
     ! it is used *both* in the calculation of the derivatives and in the split operator method
-    call loct_parse_float(datasets_check('KineticCutoff'), -M_ONE, h%cutoff)
-    if(h%cutoff > M_ZERO) then
-      h%cutoff = h%cutoff * units_inp%energy%factor
+    call loct_parse_float(datasets_check('KineticCutoff'), -M_ONE, hm%cutoff)
+    if(hm%cutoff > M_ZERO) then
+      hm%cutoff = hm%cutoff * units_inp%energy%factor
       write(message(1),'(a,f7.2,a)') 'Info: The kinetic operator will have a cutoff of',&
-        h%cutoff/units_out%energy%factor, units_out%energy%abbrev
+        hm%cutoff/units_out%energy%factor, units_out%energy%abbrev
       write(message(2),'(a)')        '      (only if DerivativesSpace = 1 is set)'
       call write_info(2)
     end if
@@ -384,20 +384,20 @@ contains
     !% This is useful to describe non-electronic systems, of for
     !% esoteric purposes.
     !%End
-    call loct_parse_float(datasets_check('ParticleMass'), M_ONE, h%mass)
+    call loct_parse_float(datasets_check('ParticleMass'), M_ONE, hm%mass)
 
-    call states_null(h%st)
+    call states_null(hm%st)
 
-    call hamiltonian_remove_inh(h)
-    call hamiltonian_remove_oct_exchange(h)
+    call hamiltonian_remove_inh(hm)
+    call hamiltonian_remove_oct_exchange(hm)
 
-    h%adjoint = .false.
+    hm%adjoint = .false.
 
-    nullify(h%phase)
+    nullify(hm%phase)
     if (simul_box_is_periodic(gr%sb)) call init_phase()
 
     if(gr%sb%open_boundaries) then
-      if(h%theory_level.ne.INDEPENDENT_PARTICLES) then
+      if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
         message(1) = 'Open boundary calculations for interacting electrons are'
         message(2) = 'not yet possible. Please include'
         message(3) = ''
@@ -409,7 +409,7 @@ contains
       call init_lead_h
     end if
 
-    h%multigrid_initialized = .false.
+    hm%multigrid_initialized = .false.
 
     call pop_sub()
 
@@ -419,10 +419,10 @@ contains
     subroutine init_phase
       integer :: ip, ik
 
-      ALLOCATE(h%phase(1:NP_PART, 1:h%d%nik), NP_PART*h%d%nik)
+      ALLOCATE(hm%phase(1:NP_PART, 1:hm%d%nik), NP_PART*hm%d%nik)
 
-      forall (ik = 1:h%d%nik, ip = 1:NP_PART)
-        h%phase(ip, ik) = exp(-M_zI*sum(gr%mesh%x(ip, 1:MAX_DIM)* h%d%kpoints(1:MAX_DIM, ik)))
+      forall (ik = 1:hm%d%nik, ip = 1:NP_PART)
+        hm%phase(ip, ik) = exp(-M_zI*sum(gr%mesh%x(ip, 1:MAX_DIM)* hm%d%kpoints(1:MAX_DIM, ik)))
       end forall
       
     end subroutine init_phase
@@ -450,24 +450,24 @@ contains
       ! that order (Octopus binary and NetCDF format). If none of the
       ! two can be found, a warning is emittedg and zero potential
       ! assumed.
-      ALLOCATE(h%lead_vks(np, h%d%nspin, NLEADS), np*h%d%nspin*NLEADS)
-      ALLOCATE(h%lead_vhartree(np, NLEADS), np*NLEADS)
+      ALLOCATE(hm%lead_vks(np, hm%d%nspin, NLEADS), np*hm%d%nspin*NLEADS)
+      ALLOCATE(hm%lead_vhartree(np, NLEADS), np*NLEADS)
 
       do il = 1, NLEADS
-        do ispin = 1, h%d%nspin
+        do ispin = 1, hm%d%nspin
           write(channel, '(i1)') ispin
 
           ! Try vks-ispin first.
           ! OBF.
           fname = trim(gr%sb%lead_static_dir(il))//'/vks-'//trim(channel)//'.obf'
-          call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), h%lead_vks(:, ispin, il), ierr)
+          call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), hm%lead_vks(:, ispin, il), ierr)
           if(ierr.eq.0) then
             message(1) = 'Info: Successfully read KS potential of the '//trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
             call write_info(1)
           else
             ! NetCDF.
             fname = trim(gr%sb%lead_static_dir(il))//'/vks-'//trim(channel)//'.ncdf'
-            call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), h%lead_vks(:, ispin, il), ierr)
+            call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), hm%lead_vks(:, ispin, il), ierr)
             if(ierr.eq.0) then
               message(1) = 'Info: Successfully read KS potential of the '//trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
               call write_info(1)
@@ -475,7 +475,7 @@ contains
               ! Now try v0.
               ! OBF.
               fname = trim(gr%sb%lead_static_dir(il))//'/v0.obf'
-              call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), h%lead_vks(:, ispin, il), ierr)
+              call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), hm%lead_vks(:, ispin, il), ierr)
               if(ierr.eq.0) then
                 message(1) = 'Info: Successfully read external potential of the '// &
                   trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
@@ -483,7 +483,7 @@ contains
               else
                 ! NetCDF.
                 fname = trim(gr%sb%lead_static_dir(il))//'/v0.ncdf'
-                call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), h%lead_vks(:, ispin, il), ierr)
+                call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), hm%lead_vks(:, ispin, il), ierr)
                 if(ierr.eq.0) then
                   message(1) = 'Info: Successfully read external potential of the '// &
                     trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
@@ -499,7 +499,7 @@ contains
                   message(7) = 'in your periodic run. Octopus now assumes zero potential'
                   message(8) = 'in the leads. This is most likely not what you want.'
                   call write_warning(8)
-                  h%lead_vks(:, ispin, il) = M_ZERO
+                  hm%lead_vks(:, ispin, il) = M_ZERO
                 end if
               end if
             end if
@@ -516,7 +516,7 @@ contains
             m => gr%mesh%lead_unit_cell(LEFT)
             do ix = m%idx%nr(1, 1)+m%idx%enlarge(1), m%idx%nr(2, 1)-m%idx%enlarge(1)
               do iy = m%idx%nr(1, 2)+m%idx%enlarge(2), m%idx%nr(2, 2)-m%idx%enlarge(2)
-                write(pot, '(2i8,f16.8)') ix, iy, h%lead_vks(m%idx%Lxyz_inv(ix, iy, 0), ispin, il)
+                write(pot, '(2i8,f16.8)') ix, iy, hm%lead_vks(m%idx%Lxyz_inv(ix, iy, 0), ispin, il)
               end do
             end do
             call io_close(pot)
@@ -525,17 +525,17 @@ contains
 
         ! Read Hartree potential.
         ! OBF.
-        h%lead_vhartree(:, il) = M_ZERO
-        if(h%theory_level.ne.INDEPENDENT_PARTICLES) then
+        hm%lead_vhartree(:, il) = M_ZERO
+        if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
           fname = trim(gr%sb%lead_static_dir(il))//'/vh.obf'
-          call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), h%lead_vhartree(:, il), ierr)
+          call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), hm%lead_vhartree(:, il), ierr)
           if(ierr.eq.0) then
             message(1) = 'Info: Successfully read Hartree potential of the '//trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
             call write_info(1)
           else
             ! NetCDF.
             fname = trim(gr%sb%lead_static_dir(il))//'/vh.ncdf'
-            call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), h%lead_vhartree(:, il), ierr)
+            call dinput_function(trim(fname), gr%mesh%lead_unit_cell(il), hm%lead_vhartree(:, il), ierr)
             if(ierr.eq.0) then
               message(1) = 'Info: Successfully read Hartree potential of the '//trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
               call write_info(1)
@@ -555,12 +555,12 @@ contains
       end do
 
       ! Calculate the diagonal and offdiagonal blocks of the lead Hamiltonian.
-      ALLOCATE(h%lead_h_diag(np, np, st%d%dim, NLEADS), np**2*st%d%dim*NLEADS)
-      ALLOCATE(h%lead_h_offdiag(np, np, NLEADS), np**2*NLEADS)
+      ALLOCATE(hm%lead_h_diag(np, np, st%d%dim, NLEADS), np**2*st%d%dim*NLEADS)
+      ALLOCATE(hm%lead_h_offdiag(np, np, NLEADS), np**2*NLEADS)
       do il = 1, NLEADS
-        do ispin = 1, h%d%nspin
-          call lead_diag(gr%der%lapl, h%lead_vks(:, ispin, il), &
-            gr%intf(il), h%lead_h_diag(:, :, ispin, il))
+        do ispin = 1, hm%d%nspin
+          call lead_diag(gr%der%lapl, hm%lead_vks(:, ispin, il), &
+            gr%intf(il), hm%lead_h_diag(:, :, ispin, il))
           ! In debug mode write the diagonal block to a file.
           if(in_debug_mode) then
             call io_mkdir('debug/open_boundaries')
@@ -569,20 +569,20 @@ contains
             diag = io_open(fname, action='write', grp=gr%mesh%mpi_grp, is_tmp=.false.)
             write(fmt, '(a,i6,a)') '(', gr%intf(il)%np, 'e14.4)'
             do irow = 1, gr%intf(il)%np
-              write(diag, fmt) h%lead_h_diag(:, :, ispin, il)
+              write(diag, fmt) hm%lead_h_diag(:, :, ispin, il)
             end do
             call io_close(diag)
           end if
         end do
         call lead_offdiag(gr%der%lapl, gr%intf(il), il, &
-          h%lead_h_offdiag(:, :, il))
+          hm%lead_h_offdiag(:, :, il))
         if(in_debug_mode) then
           write(fname, '(2a)') 'debug/open_boundaries/offdiag-', &
             trim(LEAD_NAME(il))
           offdiag = io_open(fname, action='write', grp=gr%mesh%mpi_grp, is_tmp=.false.)
           write(fmt, '(a,i6,a)') '(', gr%intf(il)%np, 'e14.4)'
           do irow = 1, gr%intf(il)%np
-            write(offdiag, fmt) h%lead_h_offdiag(:, :, il)
+            write(offdiag, fmt) hm%lead_h_offdiag(:, :, il)
           end do
           call io_close(offdiag)
         end if
@@ -590,8 +590,8 @@ contains
 
       ! Calculate Green function of the leads.
       ! FIXME: For spinors, this calculation is almost certainly wrong.
-      alloc_size = np**2*h%d%nspin*st%ob_ncs*st%d%nik*NLEADS
-      ALLOCATE(h%lead_green(np, np, h%d%nspin, st%ob_ncs, st%d%nik, NLEADS), alloc_size)
+      alloc_size = np**2*hm%d%nspin*st%ob_ncs*st%d%nik*NLEADS
+      ALLOCATE(hm%lead_green(np, np, hm%d%nspin, st%ob_ncs, st%d%nik, NLEADS), alloc_size)
 
       if(calc_mode_is(CM_GS)) then
         call messages_print_stress(stdout, 'Lead Green functions')
@@ -601,8 +601,8 @@ contains
           do ist = 1, st%ob_ncs
             energy = st%ob_eigenval(ist, ik)
             do il = 1, NLEADS
-              do ispin = 1, h%d%nspin
-                select case(h%d%ispin)
+              do ispin = 1, hm%d%nspin
+                select case(hm%d%ispin)
                 case(UNPOLARIZED)
                   spin = '--'
                 case(SPIN_POLARIZED)
@@ -621,8 +621,8 @@ contains
                 end select
                 write(message(1), '(i4,3x,a2,5x,a1,1x,f12.6)') ist, spin, ln(il), energy
                 call write_info(1)
-                call lead_green(energy, h%lead_h_diag(:, :, ispin, il), h%lead_h_offdiag(:, :, il), &
-                  np, h%lead_green(:, :, ispin, ist, ik, il), gr%sb%h(TRANS_DIR))
+                call lead_green(energy, hm%lead_h_diag(:, :, ispin, il), hm%lead_h_offdiag(:, :, il), &
+                  np, hm%lead_green(:, :, ispin, ist, ik, il), gr%sb%h(TRANS_DIR))
 
                 ! Write the entire Green function to a file.
                 if(in_debug_mode) then
@@ -636,8 +636,8 @@ contains
 
                   write(fmt, '(a,i6,a)') '(', gr%intf(il)%np, 'e14.4)'
                   do irow = 1, gr%intf(il)%np
-                    write(green_real, fmt) real(h%lead_green(irow, :, ispin, ist, ik, il))
-                    write(green_imag, fmt) aimag(h%lead_green(irow, :, ispin, ist, ik, il))
+                    write(green_real, fmt) real(hm%lead_green(irow, :, ispin, ist, ik, il))
+                    write(green_imag, fmt) aimag(hm%lead_green(irow, :, ispin, ist, ik, il))
                   end do
                   call io_close(green_real); call io_close(green_imag)
                 end if
@@ -652,82 +652,82 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_mg_init(h, gr)
-    type(hamiltonian_t), intent(inout) :: h
+  subroutine hamiltonian_mg_init(hm, gr)
+    type(hamiltonian_t), intent(inout) :: hm
     type(grid_t),        intent(inout) :: gr
 
     integer :: level
 
     call push_sub('epot.epot_mg_init')
     
-    h%multigrid_initialized = .true.
+    hm%multigrid_initialized = .true.
 
-    call gridhier_init(h%coarse_v, gr%mgrid, add_points_for_boundaries=.false.)
+    call gridhier_init(hm%coarse_v, gr%mgrid, add_points_for_boundaries=.false.)
 
-    h%coarse_v%level(0)%p(1:NP) = h%ep%vpsl(1:NP) + h%vhxc(1:NP, 1)
+    hm%coarse_v%level(0)%p(1:NP) = hm%ep%vpsl(1:NP) + hm%vhxc(1:NP, 1)
 
     do level = 1, gr%mgrid%n_levels
-      call dmultigrid_fine2coarse(gr%mgrid, level, h%coarse_v%level(level - 1)%p, h%coarse_v%level(level)%p, INJECTION)
+      call dmultigrid_fine2coarse(gr%mgrid, level, hm%coarse_v%level(level - 1)%p, hm%coarse_v%level(level)%p, INJECTION)
     end do
 
   end subroutine hamiltonian_mg_init
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_end(h, gr, geo)
-    type(hamiltonian_t), intent(inout) :: h
+  subroutine hamiltonian_end(hm, gr, geo)
+    type(hamiltonian_t), intent(inout) :: hm
     type(grid_t),        intent(in)    :: gr
     type(geometry_t),    intent(inout) :: geo
 
     call push_sub('hamiltonian.hamiltonian_end')
 
-    if(h%multigrid_initialized) then
-      call gridhier_end(h%coarse_v, gr%mgrid)
+    if(hm%multigrid_initialized) then
+      call gridhier_end(hm%coarse_v, gr%mgrid)
     end if
 
-    if(associated(h%phase)) deallocate(h%phase)
+    if(associated(hm%phase)) deallocate(hm%phase)
 
-    if(associated(h%vhartree)) then
-      deallocate(h%vhartree)
-      nullify(h%vhartree)
+    if(associated(hm%vhartree)) then
+      deallocate(hm%vhartree)
+      nullify(hm%vhartree)
     end if
-    if(associated(h%vhxc)) then
-      deallocate(h%vhxc)
-      nullify(h%vhxc)
+    if(associated(hm%vhxc)) then
+      deallocate(hm%vhxc)
+      nullify(hm%vhxc)
     end if
-    if(associated(h%vxc)) then
-      deallocate(h%vxc)
-      nullify(h%vxc)
+    if(associated(hm%vxc)) then
+      deallocate(hm%vxc)
+      nullify(hm%vxc)
     end if
-    if(associated(h%axc)) then
-      deallocate(h%axc)
-      nullify(h%axc)
+    if(associated(hm%axc)) then
+      deallocate(hm%axc)
+      nullify(hm%axc)
     end if
-    if(associated(h%a_ind)) then
-      deallocate(h%a_ind)
-      nullify(h%a_ind)
+    if(associated(hm%a_ind)) then
+      deallocate(hm%a_ind)
+      nullify(hm%a_ind)
     end if
-    if(associated(h%b_ind)) then
-      deallocate(h%b_ind)
-      nullify(h%b_ind)
-    end if
-
-    if(iand(h%xc_family, XC_FAMILY_MGGA).ne.0) then
-      deallocate(h%vtau); nullify(h%vtau)
+    if(associated(hm%b_ind)) then
+      deallocate(hm%b_ind)
+      nullify(hm%b_ind)
     end if
 
-    call epot_end(h%ep, gr, geo)
-
-    if(associated(h%ab_pot)) then
-      deallocate(h%ab_pot); nullify(h%ab_pot)
+    if(iand(hm%xc_family, XC_FAMILY_MGGA).ne.0) then
+      deallocate(hm%vtau); nullify(hm%vtau)
     end if
 
-    DEALLOC(h%lead_h_diag)
-    DEALLOC(h%lead_h_offdiag)
-    DEALLOC(h%lead_vks)
-    DEALLOC(h%lead_vhartree)
-    DEALLOC(h%lead_green)
+    call epot_end(hm%ep, gr, geo)
 
-    call states_dim_end(h%d)
+    if(associated(hm%ab_pot)) then
+      deallocate(hm%ab_pot); nullify(hm%ab_pot)
+    end if
+
+    DEALLOC(hm%lead_h_diag)
+    DEALLOC(hm%lead_h_offdiag)
+    DEALLOC(hm%lead_vks)
+    DEALLOC(hm%lead_vhartree)
+    DEALLOC(hm%lead_green)
+
+    call states_dim_end(hm%d)
 
     call pop_sub()
   end subroutine hamiltonian_end
@@ -735,95 +735,95 @@ contains
 
   ! ---------------------------------------------------------
   ! True if the Hamiltonian is Hermitean, false otherwise
-  logical function hamiltonian_hermitean(h)
-    type(hamiltonian_t), intent(in) :: h
-    hamiltonian_hermitean = .not.((h%ab .eq. IMAGINARY_ABSORBING) .or. hamiltonian_oct_exchange(h))
+  logical function hamiltonian_hermitean(hm)
+    type(hamiltonian_t), intent(in) :: hm
+    hamiltonian_hermitean = .not.((hm%ab .eq. IMAGINARY_ABSORBING) .or. hamiltonian_oct_exchange(hm))
   end function hamiltonian_hermitean
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_span(h, delta, emin)
-    type(hamiltonian_t), intent(inout) :: h
+  subroutine hamiltonian_span(hm, delta, emin)
+    type(hamiltonian_t), intent(inout) :: hm
     FLOAT,               intent(in)    :: delta, emin
 
     call push_sub('hamiltonian.hamiltonian_span')
 
-    h%spectral_middle_point = ((M_Pi**2/(2*delta**2)) + emin)/M_TWO
-    h%spectral_half_span    = ((M_Pi**2/(2*delta**2)) - emin)/M_TWO
+    hm%spectral_middle_point = ((M_Pi**2/(2*delta**2)) + emin)/M_TWO
+    hm%spectral_half_span    = ((M_Pi**2/(2*delta**2)) - emin)/M_TWO
 
     call pop_sub()
   end subroutine hamiltonian_span
 
 
   ! ---------------------------------------------------------
-  logical function hamiltonian_inh_term(h) result(inh)
-    type(hamiltonian_t), intent(in) :: h
-    inh = h%inh_term
+  logical function hamiltonian_inh_term(hm) result(inh)
+    type(hamiltonian_t), intent(in) :: hm
+    inh = hm%inh_term
   end function hamiltonian_inh_term
 
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_set_inh(h, st)
-    type(hamiltonian_t), intent(inout) :: h
+  subroutine hamiltonian_set_inh(hm, st)
+    type(hamiltonian_t), intent(inout) :: hm
     type(states_t), target, intent(in) :: st
-    h%inh_st => st
-    h%inh_term = .true.
+    hm%inh_st => st
+    hm%inh_term = .true.
   end subroutine hamiltonian_set_inh
 
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_remove_inh(h)
-    type(hamiltonian_t), intent(inout) :: h
-    nullify(h%inh_st)
-    h%inh_term = .false.
+  subroutine hamiltonian_remove_inh(hm)
+    type(hamiltonian_t), intent(inout) :: hm
+    nullify(hm%inh_st)
+    hm%inh_term = .false.
   end subroutine hamiltonian_remove_inh
 
 
   ! ---------------------------------------------------------
-  logical function hamiltonian_oct_exchange(h) result(oct_exchange)
-    type(hamiltonian_t), intent(in) :: h
-    oct_exchange = h%oct_exchange
+  logical function hamiltonian_oct_exchange(hm) result(oct_exchange)
+    type(hamiltonian_t), intent(in) :: hm
+    oct_exchange = hm%oct_exchange
   end function hamiltonian_oct_exchange
 
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_set_oct_exchange(h, st)
-    type(hamiltonian_t), intent(inout) :: h
+  subroutine hamiltonian_set_oct_exchange(hm, st)
+    type(hamiltonian_t), intent(inout) :: hm
     type(states_t),      intent(in)    :: st
     ! In this release, no non-local part for the QOCT Hamiltonian.
-    nullify(h%oct_st)
-    h%oct_exchange = .false.
-    !h%oct_st => st
-    !h%oct_exchange = .true.
+    nullify(hm%oct_st)
+    hm%oct_exchange = .false.
+    !hm%oct_st => st
+    !hm%oct_exchange = .true.
   end subroutine hamiltonian_set_oct_exchange
 
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_remove_oct_exchange(h)
-    type(hamiltonian_t), intent(inout) :: h
-    nullify(h%oct_st)
-    h%oct_exchange = .false.
+  subroutine hamiltonian_remove_oct_exchange(hm)
+    type(hamiltonian_t), intent(inout) :: hm
+    nullify(hm%oct_st)
+    hm%oct_exchange = .false.
   end subroutine hamiltonian_remove_oct_exchange
 
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_adjoint(h)
-    type(hamiltonian_t), intent(inout) :: h
-    if(.not.h%adjoint) then
-      h%adjoint = .true.
-      if(h%ab .eq. IMAGINARY_ABSORBING) then
-        h%ab_pot = -h%ab_pot
+  subroutine hamiltonian_adjoint(hm)
+    type(hamiltonian_t), intent(inout) :: hm
+    if(.not.hm%adjoint) then
+      hm%adjoint = .true.
+      if(hm%ab .eq. IMAGINARY_ABSORBING) then
+        hm%ab_pot = -hm%ab_pot
       end if
     endif
   end subroutine hamiltonian_adjoint
 
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_not_adjoint(h)
-    type(hamiltonian_t), intent(inout) :: h
-    if(h%adjoint) then
-      h%adjoint = .false.
-      if(h%ab .eq. IMAGINARY_ABSORBING) then
-        h%ab_pot = -h%ab_pot
+  subroutine hamiltonian_not_adjoint(hm)
+    type(hamiltonian_t), intent(inout) :: hm
+    if(hm%adjoint) then
+      hm%adjoint = .false.
+      if(hm%ab .eq. IMAGINARY_ABSORBING) then
+        hm%ab_pot = -hm%ab_pot
       end if
     endif
   end subroutine hamiltonian_not_adjoint

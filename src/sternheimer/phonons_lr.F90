@@ -59,9 +59,9 @@ module phonons_lr_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine phonons_lr_run(sys, h, fromscratch)
+  subroutine phonons_lr_run(sys, hm, fromscratch)
     type(system_t), target, intent(inout) :: sys
-    type(hamiltonian_t),    intent(inout) :: h
+    type(hamiltonian_t),    intent(inout) :: hm
     logical,                intent(in)    :: fromscratch
 
     type(sternheimer_t) :: sh
@@ -95,8 +95,8 @@ contains
     message(1) = 'Info: Setting up Hamiltonian for linear response'
     call write_info(1)
 
-    call system_h_setup(sys, h)
-    call sternheimer_init(sh, sys, h, "VM")
+    call system_h_setup(sys, hm)
+    call sternheimer_init(sh, sys, hm, "VM")
     call vibrations_init(vib, geo, gr%sb)
 
     call lr_init(lr(1))
@@ -126,7 +126,7 @@ contains
       call pert_setup_atom(ionic_pert, iatom)
       call pert_setup_dir(ionic_pert, idir)
       
-      call dsternheimer_solve(sh, sys, h, lr, 1, M_ZERO, ionic_pert, &
+      call dsternheimer_solve(sh, sys, hm, lr, 1, M_ZERO, ionic_pert, &
         RESTART_DIR, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir))
       
       do jmat = 1, vib%num_modes
@@ -137,17 +137,17 @@ contains
         call pert_setup_dir(ionic_pert, jdir, idir)
         
         vib%dyn_matrix(imat, jmat) = vib%dyn_matrix(imat, jmat) &
-          -dpert_expectation_value(ionic_pert, gr, geo, h, st, lr(1)%ddl_psi, st%dpsi)&
-          -dpert_expectation_value(ionic_pert, gr, geo, h, st, st%dpsi, lr(1)%ddl_psi)&
-          -dpert_expectation_value(ionic_pert, gr, geo, h, st, st%dpsi, st%dpsi, pert_order = 2)
+          -dpert_expectation_value(ionic_pert, gr, geo, hm, st, lr(1)%ddl_psi, st%dpsi)&
+          -dpert_expectation_value(ionic_pert, gr, geo, hm, st, st%dpsi, lr(1)%ddl_psi)&
+          -dpert_expectation_value(ionic_pert, gr, geo, hm, st, st%dpsi, st%dpsi, pert_order = 2)
         
       end do
       
       do jdir = 1, ndim
         call pert_setup_dir(electric_pert, jdir)
         infrared(imat, jdir) = &
-          dpert_expectation_value(electric_pert, gr, geo, h, st, lr(1)%ddl_psi, st%dpsi) + &
-          dpert_expectation_value(electric_pert, gr, geo, h, st, st%dpsi, lr(1)%ddl_psi)
+          dpert_expectation_value(electric_pert, gr, geo, hm, st, lr(1)%ddl_psi, st%dpsi) + &
+          dpert_expectation_value(electric_pert, gr, geo, hm, st, st%dpsi, lr(1)%ddl_psi)
       end do
 
     end do

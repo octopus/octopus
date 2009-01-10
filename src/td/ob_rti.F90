@@ -61,7 +61,7 @@ module ob_rti_m
   FLOAT   :: cg_tol
 
   ! Pointers for the h_eff_backward(t) operator for the iterative linear solver.
-  type(hamiltonian_t), pointer :: h_p
+  type(hamiltonian_t), pointer :: hm_p
   type(grid_t), pointer        :: gr_p
   CMPLX, pointer               :: mem_p(:, :, :), sp_mem_p(:, :), mem_s_p(:, :, :, :), green_l_p(:, :, :)
   type(interface_t), pointer   :: intf_p(:)
@@ -72,10 +72,10 @@ contains
 
   ! ---------------------------------------------------------
   ! Initialize propagator.
-  subroutine ob_rti_init(st, gr, h, ob, dt, max_iter)
+  subroutine ob_rti_init(st, gr, hm, ob, dt, max_iter)
     type(states_t),      intent(in)  :: st
     type(grid_t),        intent(in)  :: gr
-    type(hamiltonian_t), intent(in)  :: h
+    type(hamiltonian_t), intent(in)  :: hm
     type(ob_terms_t),    intent(out) :: ob
     FLOAT,               intent(in)  :: dt
     integer,             intent(in)  :: max_iter
@@ -170,7 +170,7 @@ contains
     call ob_rti_write_info(ob, st, gr, max_iter, order)
 
     ! Initialize source and memory terms.
-    call ob_mem_init(gr%intf, h, ob, dt/M_TWO, max_iter, gr%der%lapl, &
+    call ob_mem_init(gr%intf, hm, ob, dt/M_TWO, max_iter, gr%der%lapl, &
       gr%sb%h(TRANS_DIR), order, st%mpi_grp)
     call ob_src_init(ob, st, gr%intf(LEFT)%np)
 
@@ -188,11 +188,11 @@ contains
   ! Crank-Nicholson timestep with source and memory.
   ! Only non-interacting electrons for the moment, so no
   ! predictor-corrector scheme.
-  subroutine cn_src_mem_dt(ob, st, ks, h, gr, max_iter, dt, t, timestep)
+  subroutine cn_src_mem_dt(ob, st, ks, hm, gr, max_iter, dt, t, timestep)
     type(ob_terms_t), target,    intent(inout) :: ob
     type(states_t),              intent(inout) :: st
     type(v_ks_t),                intent(in)    :: ks
-    type(hamiltonian_t), target, intent(inout) :: h
+    type(hamiltonian_t), target, intent(inout) :: hm
     type(grid_t), target,        intent(inout) :: gr
     integer,                     intent(in)    :: max_iter
     FLOAT, target,               intent(in)    :: dt
@@ -222,7 +222,7 @@ contains
 
     ! Set pointers to communicate with with backward propagator passed
     ! to iterative linear solver.
-    h_p        => h
+    hm_p       => hm
     gr_p       => gr
     mem_p      => ob%mem_coeff(:, :, 0, :)
     sp_mem_p   => ob%mem_sp_coeff(:, 0, :)
@@ -254,10 +254,10 @@ contains
       do ist = st%st_start, st%st_end
         ! 1. Apply effective Hamiltonian.
         if(ob%mem_type.eq.SAVE_CPU_TIME) then
-          call apply_h_eff(h, gr, ob%mem_coeff(:, :, 0, :), gr%intf, -M_ONE, dt, t, &
+          call apply_h_eff(hm, gr, ob%mem_coeff(:, :, 0, :), gr%intf, -M_ONE, dt, t, &
             ist, ik, st%zpsi(:, :, ist, ik))
         else
-          call apply_h_eff_sp(h, gr, ob%mem_sp_coeff(:, 0, :), gr%intf, -M_ONE, dt, t, &
+          call apply_h_eff_sp(hm, gr, ob%mem_sp_coeff(:, 0, :), gr%intf, -M_ONE, dt, t, &
             ist, ik, st%zpsi(:, :, ist, ik), ob%mem_s(:, :, :, :), ob%sp2full_map)
         end if
 
@@ -269,13 +269,13 @@ contains
             if(ob%mem_type.eq.SAVE_CPU_TIME) then
               tmp_mem(:, :) = ob%mem_coeff(:, :, m, il)
               if(m.gt.0) tmp_mem(:, :) = tmp_mem(:, :) + ob%mem_coeff(:, :, m-1, il)
-              call calc_source_wf(max_iter, m, inp, il, h%lead_h_offdiag(:, :, il), tmp_mem, dt, &
+              call calc_source_wf(max_iter, m, inp, il, hm%lead_h_offdiag(:, :, il), tmp_mem, dt, &
                 st%ob_intf_psi(:, :, 1, ist, ik, il), ob%src_mem_u(:, il), f0, fac,              &
                 lambda(m, 0, max_iter, ob%src_mem_u(:, il)), ob%src_prev(:, 1, ist, ik, il))
             else
               tmp_mem(:, 1) = ob%mem_sp_coeff(:, m, il)
               if(m.gt.0) tmp_mem(:, 1) = tmp_mem(:, 1) + ob%mem_sp_coeff(:, m-1, il)
-              call calc_source_wf_sp(max_iter, m, inp, il, h%lead_h_offdiag(:, :, il),     &
+              call calc_source_wf_sp(max_iter, m, inp, il, hm%lead_h_offdiag(:, :, il),     &
                 tmp_mem(:, 1), dt, order, gr%sb%dim, st%ob_intf_psi(:, :, 1, ist, ik, il), &
                 ob%mem_s(:, :, :, il), ob%sp2full_map, ob%src_mem_u(:, il), f0, fac,   &
                 lambda(m, 0, max_iter, ob%src_mem_u(:, il)), ob%src_prev(:, 1, ist, ik, il))
@@ -378,7 +378,7 @@ contains
     ALLOCATE(tmp(gr_p%mesh%np_part, 1),gr_p%mesh%np_part)
     ! Propagate backward.
     call lalg_copy(gr_p%mesh%np, x, tmp(:, 1))
-    call apply_h_eff(h_p, gr_p, mem_p, intf_p, M_ONE, dt_p, t_p, ist_p, ik_p, tmp)
+    call apply_h_eff(hm_p, gr_p, mem_p, intf_p, M_ONE, dt_p, t_p, ist_p, ik_p, tmp)
     call lalg_copy(gr_p%mesh%np, tmp(:, 1), y)
 
     deallocate(tmp)
@@ -399,7 +399,7 @@ contains
     ALLOCATE(tmp(gr_p%mesh%np_part, 1),gr_p%mesh%np_part)
     ! Propagate backward.
     call lalg_copy(gr_p%mesh%np, x, tmp(:, 1))
-    call apply_h_eff(h_p, gr_p, mem_p, intf_p, M_ONE, dt_p, t_p, ist_p, ik_p, tmp, .true.)
+    call apply_h_eff(hm_p, gr_p, mem_p, intf_p, M_ONE, dt_p, t_p, ist_p, ik_p, tmp, .true.)
     call lalg_copy(gr_p%mesh%np, tmp(:, 1), y)
 
     deallocate(tmp)
@@ -420,7 +420,7 @@ contains
     ALLOCATE(tmp(gr_p%mesh%np_part, 1),gr_p%mesh%np_part)
     ! Propagate backward.
     call lalg_copy(gr_p%mesh%np, x, tmp(:, 1))
-    call apply_h_eff_dagger(h_p, gr_p, mem_p, intf_p, dt_p, t_p, ist_p, ik_p, tmp)
+    call apply_h_eff_dagger(hm_p, gr_p, mem_p, intf_p, dt_p, t_p, ist_p, ik_p, tmp)
     call lalg_copy(gr_p%mesh%np, tmp(:, 1), y)
 
     deallocate(tmp)
@@ -441,7 +441,7 @@ contains
     ALLOCATE(tmp(gr_p%mesh%np_part, 1),gr_p%mesh%np_part)
     ! Propagate backward.
     call lalg_copy(gr_p%mesh%np, x, tmp(:, 1))
-    call apply_h_eff_sp(h_p, gr_p, sp_mem_p, intf_p, M_ONE, dt_p, t_p, ist_p, ik_p, tmp, mem_s_p, mapping_p)
+    call apply_h_eff_sp(hm_p, gr_p, sp_mem_p, intf_p, M_ONE, dt_p, t_p, ist_p, ik_p, tmp, mem_s_p, mapping_p)
     call lalg_copy(gr_p%mesh%np, tmp(:, 1), y)
 
     deallocate(tmp)
@@ -462,7 +462,7 @@ contains
     ALLOCATE(tmp(gr_p%mesh%np_part, 1),gr_p%mesh%np_part)
     ! Propagate backward.
     call lalg_copy(gr_p%mesh%np, x, tmp(:, 1))
-    call apply_h_eff_sp(h_p, gr_p, sp_mem_p, intf_p, M_ONE, dt_p, t_p, ist_p, ik_p, tmp, mem_s_p, mapping_p, .true.)
+    call apply_h_eff_sp(hm_p, gr_p, sp_mem_p, intf_p, M_ONE, dt_p, t_p, ist_p, ik_p, tmp, mem_s_p, mapping_p, .true.)
     call lalg_copy(gr_p%mesh%np, tmp(:, 1), y)
 
     deallocate(tmp)
@@ -494,8 +494,8 @@ contains
 
   ! ---------------------------------------------------------
   ! Propagate forward/backward with effective Hamiltonian.
-  subroutine apply_h_eff(h, gr, mem, intf, sign, dt, t, ist, ik, zpsi, transposed)
-    type(hamiltonian_t), intent(inout) :: h
+  subroutine apply_h_eff(hm, gr, mem, intf, sign, dt, t, ist, ik, zpsi, transposed)
+    type(hamiltonian_t), intent(inout) :: hm
     type(grid_t),        intent(inout) :: gr
     CMPLX, target,       intent(in)    :: mem(:, :, :)
     type(interface_t),   intent(in)    :: intf(NLEADS)
@@ -527,7 +527,7 @@ contains
     ! Apply (1 - i\delta H_{CC}^{(m)}) to zpsi.
     ! td_exp_dt with Taylor expansion calculates exp(-i dt H), i. e. the
     ! minus is already built in.
-    call exponential_apply(taylor_1st, gr, h, zpsi, ist, ik, -sign*dt/M_TWO, t-dt)
+    call exponential_apply(taylor_1st, gr, hm, zpsi, ist, ik, -sign*dt/M_TWO, t-dt)
     if(present(transposed)) then
       if(transposed) zpsi = conjg(zpsi)
     end if
@@ -545,8 +545,8 @@ contains
 
   ! ---------------------------------------------------------
   ! Propagate forward/backward with effective Hamiltonian.
-  subroutine apply_h_eff_dagger(h, gr, mem, intf, dt, t, ist, ik, zpsi)
-    type(hamiltonian_t), intent(inout) :: h
+  subroutine apply_h_eff_dagger(hm, gr, mem, intf, dt, t, ist, ik, zpsi)
+    type(hamiltonian_t), intent(inout) :: hm
     type(grid_t),        intent(inout) :: gr
     CMPLX, target,       intent(in)    :: mem(:, :, :)
     type(interface_t),   intent(in)    :: intf(NLEADS)
@@ -568,7 +568,7 @@ contains
     ! Apply (1 - i\delta H_{CC}^{(m)}) to zpsi.
     ! td_exp_dt with Taylor expansion calculates exp(-i dt H), i. e. the
     ! minus is already built in.
-    call exponential_apply(taylor_1st, gr, h, zpsi, ist, ik, dt/M_TWO, t-dt)
+    call exponential_apply(taylor_1st, gr, hm, zpsi, ist, ik, dt/M_TWO, t-dt)
 
     ! Apply modification: sign \delta^2 Q zpsi
     do il = 1, NLEADS
@@ -583,8 +583,8 @@ contains
 
   ! ---------------------------------------------------------
   ! Propagate forward/backward with effective Hamiltonian.
-  subroutine apply_h_eff_sp(h, gr, sp_mem, intf, sign, dt, t, ist, ik, zpsi, mem_s, mapping, transposed)
-    type(hamiltonian_t), intent(inout) :: h
+  subroutine apply_h_eff_sp(hm, gr, sp_mem, intf, sign, dt, t, ist, ik, zpsi, mem_s, mapping, transposed)
+    type(hamiltonian_t), intent(inout) :: hm
     type(grid_t),        intent(inout) :: gr
     CMPLX, target,       intent(in)    :: sp_mem(:, :)
     type(interface_t),   intent(in)    :: intf(NLEADS)
@@ -615,7 +615,7 @@ contains
     ! Apply (1 - i\delta H_{CC}^{(m)}) to zpsi.
     ! td_exp_dt with Taylor expansion calculates exp(-i dt H), i. e. the
     ! minus is already built in.
-    call exponential_apply(taylor_1st, gr, h, zpsi, ist, ik, -sign*dt/M_TWO, t-dt)
+    call exponential_apply(taylor_1st, gr, hm, zpsi, ist, ik, -sign*dt/M_TWO, t-dt)
 
     if(present(transposed)) then
       if(transposed) zpsi = conjg(zpsi)
@@ -722,7 +722,7 @@ contains
     y(:) = x(:) ! no preconditioner
 !     AL LOCATE(diag(np, 1), np)
 
-!     call zhamiltonian_diagonal(h_p, gr_p, diag, 1)
+!     call zhamiltonian_diagonal(hm_p, gr_p, diag, 1)
 
 !     diag(:, 1) = M_z1 + M_HALF*dt_p*M_zI*diag(:,1) 
 !     y(1:np)    = x(1:np)/diag(1:np, 1)

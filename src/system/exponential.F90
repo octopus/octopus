@@ -219,17 +219,17 @@ contains
   end subroutine exponential_copy
 
   ! ---------------------------------------------------------
-  subroutine exponential_apply(te, gr, h, zpsi, ist, ik, deltat, t, order, vmagnus, imag_time)
+  subroutine exponential_apply(te, gr, hm, zpsi, ist, ik, deltat, t, order, vmagnus, imag_time)
     type(exponential_t), intent(inout) :: te
     type(grid_t),        intent(inout) :: gr
-    type(hamiltonian_t), intent(inout) :: h
+    type(hamiltonian_t), intent(inout) :: hm
     integer,             intent(in)    :: ist
     integer,             intent(in)    :: ik
     CMPLX,               intent(inout) :: zpsi(:, :)
     FLOAT,               intent(in)    :: deltat, t
     integer, optional,   intent(out)   :: order ! For the methods that rely on Hamiltonian-vector
                                                 ! multiplication, the number of these.
-    FLOAT,   optional,   intent(in)    :: vmagnus(NP, h%d%nspin, 2)
+    FLOAT,   optional,   intent(in)    :: vmagnus(NP, hm%d%nspin, 2)
     logical, optional,   intent(in)    :: imag_time
 
     CMPLX   :: timestep
@@ -282,9 +282,9 @@ contains
       CMPLX, intent(inout) :: oppsi(:, :)
 
       if(apply_magnus) then
-        call zmagnus(h, gr, psi, oppsi, ik, vmagnus)
+        call zmagnus(hm, gr, psi, oppsi, ik, vmagnus)
       else
-        call zhamiltonian_apply(h, gr, psi, oppsi, ist, ik, t)
+        call zhamiltonian_apply(hm, gr, psi, oppsi, ist, ik, t)
       end if
 
     end subroutine operate
@@ -299,8 +299,8 @@ contains
 
       call push_sub('exponential.taylor_series')
 
-      ALLOCATE(zpsi1 (NP_PART, h%d%dim), NP_PART*h%d%dim)
-      ALLOCATE(hzpsi1(NP,      h%d%dim), NP     *h%d%dim)
+      ALLOCATE(zpsi1 (NP_PART, hm%d%dim), NP_PART*hm%d%dim)
+      ALLOCATE(hzpsi1(NP,      hm%d%dim), NP     *hm%d%dim)
 
       zfact = M_z1
       zfact_is_real = .true.
@@ -316,17 +316,17 @@ contains
         end if
 
         if(zfact_is_real) then
-          do idim = 1, h%d%dim
+          do idim = 1, hm%d%dim
             call lalg_axpy(NP, real(zfact), hzpsi1(:, idim), zpsi(:, idim))
           end do
         else
-          do idim = 1, h%d%dim
+          do idim = 1, hm%d%dim
             call lalg_axpy(NP, zfact, hzpsi1(:, idim), zpsi(:, idim))
           end do
         end if
 
         if(i .ne. te%exp_order) then
-          do idim = 1, h%d%dim
+          do idim = 1, hm%d%dim
             call lalg_copy(NP, hzpsi1(:, idim), zpsi1(:, idim))
           end do
         end if
@@ -361,28 +361,28 @@ contains
 
       call push_sub('exponential.cheby')
 
-      ALLOCATE(zpsi1(NP_PART, h%d%dim, 0:2), NP_PART*h%d%dim*3)
+      ALLOCATE(zpsi1(NP_PART, hm%d%dim, 0:2), NP_PART*hm%d%dim*3)
       zpsi1 = M_z0
       do j = te%exp_order-1, 0, -1
-        do idim = 1, h%d%dim
+        do idim = 1, hm%d%dim
           call lalg_copy(NP, zpsi1(:, idim, 1), zpsi1(:, idim, 2))
           call lalg_copy(NP, zpsi1(:, idim, 0), zpsi1(:, idim, 1))
         end do
 
         call operate(zpsi1(:, :, 1), zpsi1(:, :, 0))
-        zfact = 2*(-M_zI)**j*loct_bessel(j, h%spectral_half_span*deltat)
+        zfact = 2*(-M_zI)**j*loct_bessel(j, hm%spectral_half_span*deltat)
 
-        do idim = 1, h%d%dim
-          call lalg_axpy(NP, -h%spectral_middle_point, zpsi1(:, idim, 1), zpsi1(:, idim, 0))
-          call lalg_scal(NP, M_TWO/h%spectral_half_span, zpsi1(:, idim, 0))
+        do idim = 1, hm%d%dim
+          call lalg_axpy(NP, -hm%spectral_middle_point, zpsi1(:, idim, 1), zpsi1(:, idim, 0))
+          call lalg_scal(NP, M_TWO/hm%spectral_half_span, zpsi1(:, idim, 0))
           call lalg_axpy(NP, zfact, zpsi(:, idim), zpsi1(:, idim, 0))
           call lalg_axpy(NP, -M_ONE, zpsi1(:, idim, 2),  zpsi1(:, idim, 0))
         end do
       end do
 
       zpsi(:, :) = M_HALF*(zpsi1(:, :, 0) - zpsi1(:, :, 2))
-      do idim = 1, h%d%dim
-        call lalg_scal(NP, exp(-M_zI*h%spectral_middle_point*deltat), zpsi(:, idim))
+      do idim = 1, hm%d%dim
+        call lalg_scal(NP, exp(-M_zI*hm%spectral_middle_point*deltat), zpsi(:, idim))
       end do
       deallocate(zpsi1)
 
@@ -394,7 +394,7 @@ contains
     ! ---------------------------------------------------------
     subroutine lanczos
       integer ::  korder, n, l, idim
-      CMPLX, allocatable :: hm(:,:), v(:,:,:), expo(:,:), tmp(:, :)
+      CMPLX, allocatable :: hamilt(:,:), v(:,:,:), expo(:,:), tmp(:, :)
       FLOAT :: beta, res, tol !, nrm
       CMPLX :: pp
 
@@ -402,26 +402,26 @@ contains
 
       tol    = te%lanczos_tol
 
-      ALLOCATE(v(NP, h%d%dim, te%exp_order+1), NP*h%d%dim*(te%exp_order+1))
-      ALLOCATE(tmp(NP, h%d%dim), NP*h%d%dim)
-      ALLOCATE(hm(te%exp_order+1, te%exp_order+1), (te%exp_order+1)*(te%exp_order+1))
+      ALLOCATE(v(NP, hm%d%dim, te%exp_order+1), NP*hm%d%dim*(te%exp_order+1))
+      ALLOCATE(tmp(NP, hm%d%dim), NP*hm%d%dim)
+      ALLOCATE(hamilt(te%exp_order+1, te%exp_order+1), (te%exp_order+1)*(te%exp_order+1))
       ALLOCATE(expo(te%exp_order+1, te%exp_order+1), (te%exp_order+1)*(te%exp_order+1))
 
-      hm = M_z0
+      hamilt = M_z0
       expo = M_z0
 
       pp = deltat
       if(.not. present(imag_time)) pp = -M_zI*pp
 
       ! Normalize input vector, and put it into v(:, :, 1)
-      beta = zmf_nrm2(gr%mesh, h%d%dim, zpsi)
-      v(1:NP, 1:h%d%dim, 1) = zpsi(1:NP, 1:h%d%dim)/beta
+      beta = zmf_nrm2(gr%mesh, hm%d%dim, zpsi)
+      v(1:NP, 1:hm%d%dim, 1) = zpsi(1:NP, 1:hm%d%dim)/beta
 
       ! This is the Lanczos loop...
       do n = 1, te%exp_order
 
         !copy v(:, :, n) to an array of size 1:NP_PART
-        do idim = 1, h%d%dim
+        do idim = 1, hm%d%dim
           call lalg_copy(NP, v(:, idim, n), zpsi(:, idim))
         end do
 
@@ -430,21 +430,21 @@ contains
         
         korder = n
 
-        if(hamiltonian_hermitean(h)) then
+        if(hamiltonian_hermitean(hm)) then
           l = max(1, n - 1)
         else
           l = 1
         end if
 
         !orthogonalize against previous vectors
-        call zstates_gram_schmidt(gr%mesh, n - l + 1, h%d%dim, v(:, :, l:n), v(:, :, n + 1), &
-          normalize = .true., overlap = hm(l:n, n), norm = hm(n + 1, n))
+        call zstates_gram_schmidt(gr%mesh, n - l + 1, hm%d%dim, v(:, :, l:n), v(:, :, n + 1), &
+          normalize = .true., overlap = hamilt(l:n, n), norm = hamilt(n + 1, n))
 
-        call zlalg_exp(n, pp, hm, expo, hamiltonian_hermitean(h))
+        call zlalg_exp(n, pp, hamilt, expo, hamiltonian_hermitean(hm))
 
-        res = abs(hm(n+1, n)*abs(expo(n, 1)))
+        res = abs(hamilt(n+1, n)*abs(expo(n, 1)))
 
-        if(abs(hm(n+1, n)) < CNST(1.0e4)*M_EPSILON) exit ! (very unlikely) happy breakdown!!! Yuppi!!!
+        if(abs(hamilt(n+1, n)) < CNST(1.0e4)*M_EPSILON) exit ! (very unlikely) happy breakdown!!! Yuppi!!!
         if(n > 2 .and. res < tol) exit
       end do
 
@@ -453,18 +453,18 @@ contains
         call write_warning(1)
       end if
 
-      call zlalg_exp(korder + 1, pp, hm, expo, hermitian = .false.)
+      call zlalg_exp(korder + 1, pp, hamilt, expo, hermitian = .false.)
 
       ! zpsi = nrm * V * expo(1:korder, 1) = nrm * V * expo * V^(T) * zpsi
-      call lalg_gemv(NP, h%d%dim, korder + 1, M_z1*beta, v, expo(1:korder + 1, 1), M_z0, tmp)
+      call lalg_gemv(NP, hm%d%dim, korder + 1, M_z1*beta, v, expo(1:korder + 1, 1), M_z0, tmp)
 
-      do idim = 1, h%d%dim
+      do idim = 1, hm%d%dim
         call lalg_copy(NP, tmp(:, idim), zpsi(:, idim))
       end do
 
       if(present(order)) order = korder
 
-      deallocate(v, hm, expo, tmp)
+      deallocate(v, hamilt, expo, tmp)
 
       call pop_sub()
     end subroutine lanczos
@@ -474,16 +474,16 @@ contains
     subroutine split
       call push_sub('exponential.split')
 
-      if(h%gauge == VELOCITY) then
+      if(hm%gauge == VELOCITY) then
         message(1) = 'Split operator does not work well if velocity gauge is used.'
         call write_fatal(1)
       end if
 
-      call zexp_vlpsi (gr, h, zpsi, ik, t, -M_zI*deltat/M_TWO)
-      if(h%ep%non_local) call zexp_vnlpsi (gr%mesh, h, zpsi, -M_zI*deltat/M_TWO, .true.)
-      call zexp_kinetic(gr, h, zpsi, te%cf, -M_zI*deltat)
-      if(h%ep%non_local) call zexp_vnlpsi (gr%mesh, h, zpsi, -M_zI*deltat/M_TWO, .false.)
-      call zexp_vlpsi (gr, h, zpsi, ik, t, -M_zI*deltat/M_TWO)
+      call zexp_vlpsi (gr, hm, zpsi, ik, t, -M_zI*deltat/M_TWO)
+      if(hm%ep%non_local) call zexp_vnlpsi (gr%mesh, hm, zpsi, -M_zI*deltat/M_TWO, .true.)
+      call zexp_kinetic(gr, hm, zpsi, te%cf, -M_zI*deltat)
+      if(hm%ep%non_local) call zexp_vnlpsi (gr%mesh, hm, zpsi, -M_zI*deltat/M_TWO, .false.)
+      call zexp_vlpsi (gr, hm, zpsi, ik, t, -M_zI*deltat/M_TWO)
 
       if(present(order)) order = 0
       call pop_sub()
@@ -497,7 +497,7 @@ contains
 
       call push_sub('exponential.suzuki')
 
-      if(h%gauge == 2) then
+      if(hm%gauge == 2) then
         message(1) = 'Suzuki-Trotter operator does not work well if velocity gauge is used.'
         call write_fatal(1)
       end if
@@ -507,11 +507,11 @@ contains
       dt(1:5) = pp(1:5)*deltat
 
       do k = 1, 5
-        call zexp_vlpsi (gr, h, zpsi, ik, t, -M_zI*dt(k)/M_TWO)
-        if (h%ep%non_local) call zexp_vnlpsi (gr%mesh, h, zpsi, -M_zI*dt(k)/M_TWO, .true.)
-        call zexp_kinetic(gr, h, zpsi, te%cf, -M_zI*dt(k))
-        if (h%ep%non_local) call zexp_vnlpsi (gr%mesh, h, zpsi, -M_zI*dt(k)/M_TWO, .false.)
-        call zexp_vlpsi (gr, h, zpsi, ik, t, -M_zI*dt(k)/M_TWO)
+        call zexp_vlpsi (gr, hm, zpsi, ik, t, -M_zI*dt(k)/M_TWO)
+        if (hm%ep%non_local) call zexp_vnlpsi (gr%mesh, hm, zpsi, -M_zI*dt(k)/M_TWO, .true.)
+        call zexp_kinetic(gr, hm, zpsi, te%cf, -M_zI*dt(k))
+        if (hm%ep%non_local) call zexp_vnlpsi (gr%mesh, hm, zpsi, -M_zI*dt(k)/M_TWO, .false.)
+        call zexp_vlpsi (gr, hm, zpsi, ik, t, -M_zI*dt(k)/M_TWO)
       end do
 
       if(present(order)) order = 0
@@ -521,10 +521,10 @@ contains
 
   end subroutine exponential_apply
 
-  subroutine exponential_apply_batch(te, gr, h, psib, ik, deltat, t)
+  subroutine exponential_apply_batch(te, gr, hm, psib, ik, deltat, t)
     type(exponential_t), intent(inout) :: te
     type(grid_t),        intent(inout) :: gr
-    type(hamiltonian_t), intent(inout) :: h
+    type(hamiltonian_t), intent(inout) :: hm
     integer,             intent(in)    :: ik
     type(batch_t),       intent(inout) :: psib
     FLOAT,               intent(in)    :: deltat
@@ -541,7 +541,7 @@ contains
         psi  => psib%states(ii)%zpsi
         ist  =  psib%states(ii)%ist
         
-        call exponential_apply(te, gr, h, psi, ist, ik, deltat, t)
+        call exponential_apply(te, gr, hm, psi, ist, ik, deltat, t)
       end do
 
     end if
@@ -558,8 +558,8 @@ contains
 
       call push_sub('exponential.taylor_series')
 
-      ALLOCATE(psi1 (NP_PART, h%d%dim, psib%nst), NP_PART*h%d%dim*psib%nst)
-      ALLOCATE(hpsi1(NP, h%d%dim, psib%nst), NP*h%d%dim*psib%nst)
+      ALLOCATE(psi1 (NP_PART, hm%d%dim, psib%nst), NP_PART*hm%d%dim*psib%nst)
+      ALLOCATE(hpsi1(NP, hm%d%dim, psib%nst), NP*hm%d%dim*psib%nst)
 
       st_start = psib%states(1)%ist
       st_end = psib%states(psib%nst)%ist
@@ -571,29 +571,29 @@ contains
         zfact = zfact*(-M_zI*deltat)/iter
         zfact_is_real = .not. zfact_is_real
 
-        call batch_init(hpsi1b, h%d%dim, st_start, st_end, hpsi1)
+        call batch_init(hpsi1b, hm%d%dim, st_start, st_end, hpsi1)
         if (iter == 1) then
-          call zhamiltonian_apply_batch(h, gr, psib, hpsi1b, ik, t)
+          call zhamiltonian_apply_batch(hm, gr, psib, hpsi1b, ik, t)
         else
-          call batch_init(psi1b, h%d%dim, st_start, st_end, psi1)
-          call zhamiltonian_apply_batch(h, gr, psi1b, hpsi1b, ik, t)
+          call batch_init(psi1b, hm%d%dim, st_start, st_end, psi1)
+          call zhamiltonian_apply_batch(hm, gr, psi1b, hpsi1b, ik, t)
           call batch_end(psi1b)
         end if
         call batch_end(hpsi1b)
         
         do ii = 1, psib%nst
           if(zfact_is_real) then
-            do idim = 1, h%d%dim
+            do idim = 1, hm%d%dim
               call lalg_axpy(NP, real(zfact), hpsi1(:, idim, ii), psib%states(ii)%zpsi(:, idim))
             end do
           else
-            do idim = 1, h%d%dim
+            do idim = 1, hm%d%dim
               call lalg_axpy(NP, zfact, hpsi1(:, idim, ii), psib%states(ii)%zpsi(:, idim))
             end do
           end if
 
           if(iter /= te%exp_order) then
-            do idim = 1, h%d%dim
+            do idim = 1, hm%d%dim
               call lalg_copy(NP, hpsi1(:, idim, ii), psi1(:, idim, ii))
             end do
           end if

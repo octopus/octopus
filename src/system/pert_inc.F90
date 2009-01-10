@@ -18,13 +18,13 @@
 !! $Id: pert_inc.F90 2548 2006-11-06 21:42:27Z xavier $
 
 ! --------------------------------------------------------------------------
-subroutine X(pert_apply) (this, gr, geo, h, ik, f_in, f_out)
+subroutine X(pert_apply) (this, gr, geo, hm, ik, f_in, f_out)
 ! Returns f_out = H' f_in, where H' is perturbation Hamiltonian
 ! Note that e^ikr phase is applied to f_in, then is removed afterward
   type(pert_t),         intent(in)    :: this
   type(grid_t),         intent(inout) :: gr
   type(geometry_t),     intent(in)    :: geo
-  type(hamiltonian_t),  intent(in)    :: h
+  type(hamiltonian_t),  intent(in)    :: hm
   integer,              intent(in)    :: ik
   R_TYPE,               intent(in)    :: f_in(:)
   R_TYPE,               intent(out)   :: f_out(:)
@@ -45,12 +45,12 @@ subroutine X(pert_apply) (this, gr, geo, h, ik, f_in, f_out)
   endif
   ! no derivatives in electric, so ghost points not needed
 
-  apply_kpoint = simul_box_is_periodic(gr%sb) .and. .not. kpoint_is_gamma(h%d, ik) &
+  apply_kpoint = simul_box_is_periodic(gr%sb) .and. .not. kpoint_is_gamma(hm%d, ik) &
     .and. this%pert_type /= PERTURBATION_ELECTRIC
   ! electric does not need it since (e^-ikr)r(e^ikr) = r
 
   if (apply_kpoint) then
-    f_in_copy(1:NP_PART) = h%phase(1:NP_PART, ik) * f_in_copy(1:NP_PART)
+    f_in_copy(1:NP_PART) = hm%phase(1:NP_PART, ik) * f_in_copy(1:NP_PART)
   endif
 
   select case(this%pert_type)
@@ -72,7 +72,7 @@ subroutine X(pert_apply) (this, gr, geo, h, ik, f_in, f_out)
   end select
   
   if (apply_kpoint) then
-    f_out(1:NP) = conjg(h%phase(1:NP, ik)) * f_out(1:NP)
+    f_out(1:NP) = conjg(hm%phase(1:NP, ik)) * f_out(1:NP)
   endif
 
   if (this%pert_type /= PERTURBATION_ELECTRIC) then
@@ -108,7 +108,7 @@ contains
 
     call push_sub('pert_inc.X(pert_apply).kdotp')
 
-    ALLOCATE(cpsi(1:NP_PART, h%d%dim), NP_PART * h%d%dim)
+    ALLOCATE(cpsi(1:NP_PART, hm%d%dim), NP_PART * hm%d%dim)
     ALLOCATE(grad(gr%mesh%np, gr%sb%dim), gr%mesh%np * gr%sb%dim)
 
     call X(derivatives_grad) (gr%der, f_in_copy, grad, set_bc = .false.)
@@ -121,7 +121,7 @@ contains
     if (this%use_nonlocalpps) then
       do iatom = 1, geo%natoms
         if(species_is_ps(geo%atom(iatom)%spec)) then
-          call X(projector_commute_r(h%ep%proj(iatom), gr, h%d%dim, this%dir, ik, f_in_copy, cpsi(:, :)))
+          call X(projector_commute_r(hm%ep%proj(iatom), gr, hm%d%dim, this%dir, ik, f_in_copy, cpsi(:, :)))
           f_out(1:NP) = f_out(1:NP) - M_zI * cpsi(1:NP, 1)
           ! using only the first spinor component
         end if
@@ -151,14 +151,14 @@ contains
     deallocate(lf)
 
     if(this%gauge == GAUGE_GIPAW .or. this%gauge == GAUGE_ICL) then
-      ALLOCATE(vrnl(NP, h%d%dim, gr%sb%dim), NP * h%d%dim * gr%sb%dim)
-      vrnl(1:NP, 1:h%d%dim, this%dir) = M_ZERO
+      ALLOCATE(vrnl(NP, hm%d%dim, gr%sb%dim), NP * hm%d%dim * gr%sb%dim)
+      vrnl(1:NP, 1:hm%d%dim, this%dir) = M_ZERO
 
       do iatom = 1, geo%natoms
 
         do idir = 1, NDIM
           if(this%dir == idir) cycle ! this direction is not used in the cross product
-          call X(projector_commute_r)(h%ep%proj(iatom), gr, h%d%dim, idir, ik, f_in_copy, vrnl(:, :, idir))
+          call X(projector_commute_r)(hm%ep%proj(iatom), gr, hm%d%dim, idir, ik, f_in_copy, vrnl(:, :, idir))
         end do
 
         xx(1:NDIM) = geo%atom(iatom)%x(1:NDIM)
@@ -203,7 +203,7 @@ contains
 
         if (this%ionic%pure_dir .and. iatom /= this%atom1 .and. idir /= this%dir) cycle
 
-        call X(ionic_perturbation)(this, gr, geo, h, ik, f_in_copy, tmp, iatom, idir)
+        call X(ionic_perturbation)(this, gr, geo, hm, ik, f_in_copy, tmp, iatom, idir)
         
         call lalg_axpy(NP, this%ionic%mix1(iatom, idir), tmp, f_out)
 
@@ -218,11 +218,11 @@ contains
 end subroutine X(pert_apply)
 
   ! --------------------------------------------------------------------------
-subroutine X(ionic_perturbation)(this, gr, geo, h, ik, f_in, f_out, iatom, idir)
+subroutine X(ionic_perturbation)(this, gr, geo, hm, ik, f_in, f_out, iatom, idir)
   type(pert_t),         intent(in)    :: this
   type(grid_t),         intent(inout) :: gr
   type(geometry_t),     intent(in)    :: geo
-  type(hamiltonian_t),  intent(in)    :: h
+  type(hamiltonian_t),  intent(in)    :: hm
   integer,              intent(in)    :: ik
   R_TYPE,               intent(in)    :: f_in(:)
   R_TYPE,               intent(out)   :: f_out(:)
@@ -241,7 +241,7 @@ subroutine X(ionic_perturbation)(this, gr, geo, h, ik, f_in, f_out, iatom, idir)
 
   ALLOCATE(vloc(1:NP), NP)
   vloc(1:NP) = M_ZERO
-  call epot_local_potential(h%ep, gr, gr%mesh, geo, atm, vloc, CNST(0.0))
+  call epot_local_potential(hm%ep, gr, gr%mesh, geo, atm, vloc, CNST(0.0))
 
   ALLOCATE(fin(1:NP_PART, 1), NP_PART)
   call lalg_copy(NP_PART, f_in, fin(:, 1))
@@ -249,14 +249,14 @@ subroutine X(ionic_perturbation)(this, gr, geo, h, ik, f_in, f_out, iatom, idir)
   !d^T v |f>
   ALLOCATE(fout(1:NP_PART, 1), NP_PART)
   fout(1:NP, 1) = vloc(1:NP) * fin(1:NP, 1)
-  call X(project_psi)(gr%mesh, h%ep%proj(iatom:iatom), 1, 1, fin, fout, ik)
+  call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, 1, fin, fout, ik)
   call X(derivatives_oper)(gr%der%grad(idir), gr%der, fout(:,1), f_out)
 
   !v d |f>
   ALLOCATE(grad(1:NP, 1), NP)
   call X(derivatives_oper)(gr%der%grad(idir), gr%der, fin(:,1), grad(:,1))
   fout(1:NP, 1) = vloc(1:NP) * grad(1:NP, 1)
-  call X(project_psi)(gr%mesh, h%ep%proj(iatom:iatom), 1, 1, grad, fout, ik)
+  call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, 1, grad, fout, ik)
   f_out(1:NP) = -f_out(1:NP) + fout(1:NP, 1)
 
   deallocate(grad, fin, fout, vloc)
@@ -265,11 +265,11 @@ subroutine X(ionic_perturbation)(this, gr, geo, h, ik, f_in, f_out, iatom, idir)
 end subroutine X(ionic_perturbation)
 
 ! --------------------------------------------------------------------------
-subroutine X(pert_apply_order_2) (this, gr, geo, h, ik, f_in, f_out)
+subroutine X(pert_apply_order_2) (this, gr, geo, hm, ik, f_in, f_out)
   type(pert_t),         intent(in)    :: this
   type(grid_t),         intent(inout) :: gr
   type(geometry_t),     intent(in)    :: geo
-  type(hamiltonian_t),  intent(in)    :: h
+  type(hamiltonian_t),  intent(in)    :: hm
   integer,              intent(in)    :: ik
   R_TYPE,               intent(in)    :: f_in(:)
   R_TYPE,               intent(out)   :: f_out(:)
@@ -315,7 +315,7 @@ contains
       bdir(this%dir2, 2)   = M_ONE
 
       ALLOCATE(f_in2(NP_PART, NDIM), NP_PART * NDIM)
-      ALLOCATE(vrnl(NP_PART, h%d%dim), NP_PART * h%d%dim)
+      ALLOCATE(vrnl(NP_PART, hm%d%dim), NP_PART * hm%d%dim)
       ALLOCATE(dnl(NP, NDIM), NP * NDIM)
       ALLOCATE(xf(NP), NP)
 
@@ -339,14 +339,14 @@ contains
         do idir = 1, gr%sb%dim
           do idir2 = 1, gr%sb%dim
             !calculate dnl |f_in2> = -[x,vnl] |f_in2>
-            call X(projector_commute_r)(h%ep%proj(iatom), gr, h%d%dim, idir2, ik, f_in2(:, idir2), vrnl(:, :))
+            call X(projector_commute_r)(hm%ep%proj(iatom), gr, hm%d%dim, idir2, ik, f_in2(:, idir2), vrnl(:, :))
 
             ! -x vnl |f>
             dnl(1:NP, idir) = dnl(1:NP, idir) - gr%mesh%x(1:NP, idir) * vrnl(1:NP, 1)
 
             ! vnl x |f>
             xf(1:NP) = gr%mesh%x(1:NP, idir) * f_in2(1:NP, idir2)
-            call X(projector_commute_r)(h%ep%proj(iatom), gr, h%d%dim, idir2, ik, xf, vrnl(:, :))
+            call X(projector_commute_r)(hm%ep%proj(iatom), gr, hm%d%dim, idir2, ik, xf, vrnl(:, :))
 
             dnl(1:NP, idir) = dnl(1:NP, idir) + vrnl(1:NP, 1)
           end do
@@ -395,7 +395,7 @@ contains
                .and. iatom /= this%atom1 .and. idir /= this%dir &
                .and. iatom /= this%atom2 .and. jdir /= this%dir2) cycle
           
-          call X(ionic_perturbation_order_2)(this, gr, geo, h, ik, f_in, tmp, iatom, idir, jdir)
+          call X(ionic_perturbation_order_2)(this, gr, geo, hm, ik, f_in, tmp, iatom, idir, jdir)
           
           call lalg_axpy(NP, this%ionic%mix1(iatom, idir) * this%ionic%mix2(iatom, jdir), tmp, f_out)
           
@@ -411,11 +411,11 @@ contains
 end subroutine X(pert_apply_order_2)
 
 ! --------------------------------------------------------------------------
-subroutine X(ionic_perturbation_order_2) (this, gr, geo, h, ik, f_in, f_out, iatom, idir, jdir)
+subroutine X(ionic_perturbation_order_2) (this, gr, geo, hm, ik, f_in, f_out, iatom, idir, jdir)
   type(pert_t),        intent(in)    :: this
   type(grid_t),        intent(inout) :: gr
   type(geometry_t),    intent(in)    :: geo
-  type(hamiltonian_t), intent(in)    :: h
+  type(hamiltonian_t), intent(in)    :: hm
   integer,             intent(in)    :: ik
   R_TYPE,              intent(in)    :: f_in(:)
   R_TYPE,              intent(out)   :: f_out(:)
@@ -438,27 +438,27 @@ subroutine X(ionic_perturbation_order_2) (this, gr, geo, h, ik, f_in, f_out, iat
   ALLOCATE(vloc(1:NP), NP)
 
   vloc(1:NP) = M_ZERO
-  call epot_local_potential(h%ep, gr, gr%mesh, geo, atm, vloc, CNST(0.0))
+  call epot_local_potential(hm%ep, gr, gr%mesh, geo, atm, vloc, CNST(0.0))
 
   call lalg_copy(NP_PART, f_in, fin(:, 1))    
 
   !di^T dj^T v |f>
   tmp1(1:NP, 1) = vloc(1:NP) * fin(1:NP, 1)
-  call X(project_psi)(gr%mesh, h%ep%proj(iatom:iatom), 1, 1, fin, tmp1, ik)
+  call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, 1, fin, tmp1, ik)
   call X(derivatives_oper)(gr%der%grad(idir), gr%der, tmp1(:,1), tmp2(:,1))
   call X(derivatives_oper)(gr%der%grad(jdir), gr%der, tmp2(:,1), f_out)
 
   !di^T v dj |f>
   call X(derivatives_oper)(gr%der%grad(jdir), gr%der, fin(:,1), tmp1(:,1))
   tmp2(1:NP, 1) = vloc(1:NP) * tmp1(1:NP, 1)
-  call X(project_psi)(gr%mesh, h%ep%proj(iatom:iatom), 1, 1, tmp1, tmp2, ik)
+  call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, 1, tmp1, tmp2, ik)
   call X(derivatives_oper)(gr%der%grad(idir), gr%der, tmp2(:,1), tmp1(:,1))
   f_out(1:NP) = f_out(1:NP) - tmp1(1:NP, 1)
 
   !dj^T v di |f>
   call X(derivatives_oper)(gr%der%grad(idir), gr%der, fin(:,1), tmp1(:,1))
   tmp2(1:NP, 1) = vloc(1:NP) * tmp1(1:NP, 1)
-  call X(project_psi)(gr%mesh, h%ep%proj(iatom:iatom), 1, 1, tmp1, tmp2, ik)
+  call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, 1, tmp1, tmp2, ik)
   call X(derivatives_oper)(gr%der%grad(jdir), gr%der, tmp2(:,1), tmp1(:,1))
   f_out(1:NP) = f_out(1:NP) - tmp1(1:NP, 1)
 
@@ -466,7 +466,7 @@ subroutine X(ionic_perturbation_order_2) (this, gr, geo, h, ik, f_in, f_out, iat
   call X(derivatives_oper)(gr%der%grad(idir), gr%der, fin(:,1), tmp1(:,1))
   call X(derivatives_oper)(gr%der%grad(jdir), gr%der, tmp1(:,1), tmp2(:,1))
   tmp1(1:NP, 1) = vloc(1:NP) * tmp2(1:NP, 1)
-  call X(project_psi)(gr%mesh, h%ep%proj(iatom:iatom), 1, 1, tmp2, tmp1, ik)
+  call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, 1, tmp2, tmp1, ik)
   f_out(1:NP) = f_out(1:NP) + tmp1(1:NP, 1)
 
   call pop_sub()
@@ -474,11 +474,11 @@ subroutine X(ionic_perturbation_order_2) (this, gr, geo, h, ik, f_in, f_out, iat
 end subroutine X(ionic_perturbation_order_2)
 
 ! --------------------------------------------------------------------------
-subroutine X(pert_expectation_density) (this, gr, geo, h, st, psia, psib, density, pert_order)
+subroutine X(pert_expectation_density) (this, gr, geo, hm, st, psia, psib, density, pert_order)
   type(pert_t),         intent(in)    :: this
   type(grid_t),         intent(inout) :: gr
   type(geometry_t),     intent(in)    :: geo
-  type(hamiltonian_t),  intent(in)    :: h
+  type(hamiltonian_t),  intent(in)    :: hm
   type(states_t),       intent(in)    :: st
   R_TYPE,               pointer       :: psia(:, :, :, :)
   R_TYPE,               pointer       :: psib(:, :, :, :)
@@ -504,10 +504,10 @@ subroutine X(pert_expectation_density) (this, gr, geo, h, st, psia, psib, densit
       do idim = 1, st%d%dim
 
         if(order == 1) then 
-          call X(pert_apply) (this, gr, geo, h, ik, psib(:, idim, ist, ik), pertpsib)
+          call X(pert_apply) (this, gr, geo, hm, ik, psib(:, idim, ist, ik), pertpsib)
           ikweight = st%d%kweights(ik)*st%smear%el_per_state
         else
-          call X(pert_apply_order_2) (this, gr, geo, h, ik, psib(:, idim, ist, ik), pertpsib)
+          call X(pert_apply_order_2) (this, gr, geo, hm, ik, psib(:, idim, ist, ik), pertpsib)
           ikweight = st%d%kweights(ik)*st%occ(ist, ik)
         end if
 
@@ -524,11 +524,11 @@ subroutine X(pert_expectation_density) (this, gr, geo, h, st, psia, psib, densit
 end subroutine X(pert_expectation_density)
 
 ! --------------------------------------------------------------------------
-R_TYPE function X(pert_expectation_value) (this, gr, geo, h, st, psia, psib, pert_order) result(expval)
+R_TYPE function X(pert_expectation_value) (this, gr, geo, hm, st, psia, psib, pert_order) result(expval)
   type(pert_t),         intent(in)    :: this
   type(grid_t),         intent(inout) :: gr
   type(geometry_t),     intent(in)    :: geo
-  type(hamiltonian_t),  intent(in)    :: h
+  type(hamiltonian_t),  intent(in)    :: hm
   type(states_t),       intent(in)    :: st
   R_TYPE,               pointer       :: psia(:, :, :, :)
   R_TYPE,               pointer       :: psib(:, :, :, :)
@@ -549,7 +549,7 @@ R_TYPE function X(pert_expectation_value) (this, gr, geo, h, st, psia, psib, per
 
   ALLOCATE(density(1:NP), NP)
 
-  call X(pert_expectation_density)(this, gr, geo, h, st, psia, psib, density, pert_order = order)
+  call X(pert_expectation_density)(this, gr, geo, hm, st, psia, psib, density, pert_order = order)
 
   expval = X(mf_integrate)(gr%mesh, density)
 

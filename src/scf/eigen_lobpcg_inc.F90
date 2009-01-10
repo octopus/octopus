@@ -29,10 +29,10 @@
 ! ---------------------------------------------------------
 ! Driver for the LOBPCG eigensolver that performs a per block,
 ! per k-point iteration.
-  subroutine X(eigensolver_lobpcg)(gr, st, h, pre, tol, niter, converged, ik, diff, block_size, verbose)
+  subroutine X(eigensolver_lobpcg)(gr, st, hm, pre, tol, niter, converged, ik, diff, block_size, verbose)
     type(grid_t),           intent(inout) :: gr
     type(states_t),         intent(inout) :: st
-    type(hamiltonian_t),    intent(inout) :: h
+    type(hamiltonian_t),    intent(inout) :: hm
     type(preconditioner_t), intent(in)    :: pre
     FLOAT,                  intent(in)    :: tol
     integer,                intent(inout) :: niter
@@ -76,7 +76,7 @@
 
       n_matvec = maxiter
 
-      call X(lobpcg)(gr, st, h, psi_start, psi_end, st%X(psi)(:, :, psi_start:psi_end, ik), &
+      call X(lobpcg)(gr, st, hm, psi_start, psi_end, st%X(psi)(:, :, psi_start:psi_end, ik), &
            constr_start, constr_end, st%X(psi)(:, :, constr_start:constr_end, ik),             &
            ik, pre, tol, n_matvec, conv, diff, iblock, verbose_)
 
@@ -114,11 +114,11 @@
 !
 ! There is also a wiki page at
 ! http://www.tddft.org/programs/octopus/wiki/index.php/Developers:LOBPCG
-subroutine X(lobpcg)(gr, st, h, st_start, st_end, psi, constr_start, constr_end, constr, &
+subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end, constr, &
   ik, pre, tol, niter, converged, diff, ib, verbose)
   type(grid_t),           intent(inout) :: gr
   type(states_t),         intent(inout) :: st
-  type(hamiltonian_t),    intent(inout) :: h
+  type(hamiltonian_t),    intent(inout) :: hm
   integer,                intent(in)    :: st_start
   integer,                intent(in)    :: st_end
   R_TYPE, target,         intent(inout) :: psi(NP_PART, st%d%dim, st_start:st_end)
@@ -279,7 +279,7 @@ subroutine X(lobpcg)(gr, st, h, st_start, st_end, psi, constr_start, constr_end,
   call batch_init(psib, st%d%dim, st_start, st_end, st%X(psi)(:, :, :, ik))
   call batch_init(hpsib, st%d%dim, st_start, st_end, h_psi)
 
-  call X(hamiltonian_apply_batch)(h, gr, psib, hpsib, ik)
+  call X(hamiltonian_apply_batch)(hm, gr, psib, hpsib, ik)
   
   call batch_end(psib)
   call batch_end(hpsib)
@@ -333,7 +333,7 @@ subroutine X(lobpcg)(gr, st, h, st_start, st_end, psi, constr_start, constr_end,
     ! Apply the preconditioner.
     do i = 1, lnuc
       ist = luc(i)
-      call X(preconditioner_apply)(pre, gr, h, res(:, :, ist), tmp(:, :, ist))
+      call X(preconditioner_apply)(pre, gr, hm, res(:, :, ist), tmp(:, :, ist))
       call lalg_copy(np, tmp(:, 1, ist), res(:, 1, ist))
     end do
 
@@ -365,7 +365,7 @@ subroutine X(lobpcg)(gr, st, h, st_start, st_end, psi, constr_start, constr_end,
       call batch_add_state(hpsib, ist, h_res(:, :, ist))
     end do
 
-    call X(hamiltonian_apply_batch)(h, gr, psib, hpsib, ik)
+    call X(hamiltonian_apply_batch)(hm, gr, psib, hpsib, ik)
 
     niter = niter + lnuc
 

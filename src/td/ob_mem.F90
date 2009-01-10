@@ -66,10 +66,10 @@ contains
   ! ---------------------------------------------------------
   ! Allocate (machine) memory for the memory coefficents and
   ! calculate them.
-  subroutine ob_mem_init(intface, h, ob, delta, max_iter, op, &
+  subroutine ob_mem_init(intface, hm, ob, delta, max_iter, op, &
     spacing, order, mpi_grp)
     type(interface_t),   intent(in)    :: intface(NLEADS)
-    type(hamiltonian_t), intent(in)    :: h
+    type(hamiltonian_t), intent(in)    :: hm
     type(ob_terms_t),    intent(inout) :: ob
     FLOAT,               intent(in)    :: delta
     integer,             intent(in)    :: max_iter
@@ -154,12 +154,12 @@ contains
         ! Initialize progress bar.
         call loct_progress_bar(-1, max_iter+1)
 
-        ! FIXME: the spinor index of h%lead_h_diag is ignored here.
-        ASSERT(h%d%ispin.ne.SPINORS)
+        ! FIXME: the spinor index of hm%lead_h_diag is ignored here.
+        ASSERT(hm%d%ispin.ne.SPINORS)
         if(saved_iter.eq.0) then 
           ! Get anchor for recursion.
-          call approx_coeff0(intface(il), delta, il, h%lead_h_diag(:, :, 1, il),              &
-            h%lead_h_offdiag(:, :, il), ob%mem_coeff(:, :, 0, il), ob%mem_sp_coeff(:, 0, il), &
+          call approx_coeff0(intface(il), delta, il, hm%lead_h_diag(:, :, 1, il),              &
+            hm%lead_h_offdiag(:, :, il), ob%mem_coeff(:, :, 0, il), ob%mem_sp_coeff(:, 0, il), &
             ob%mem_s(:,:,:,il), order, ob%mem_type, ob%sp2full_map, spacing)
           call loct_progress_bar(1, max_iter+1)
         end if
@@ -167,16 +167,16 @@ contains
         select case(ob%mem_type)
         case(SAVE_CPU_TIME)
           if(intface(il)%offdiag_invertible) then
-            call calculate_coeffs(il, saved_iter+1, max_iter, delta, intface(il), h%lead_h_diag(:, :, 1, il), &
-              h%lead_h_offdiag(:, :, il), ob%mem_coeff(:, :, :, il), spacing)
+            call calculate_coeffs(il, saved_iter+1, max_iter, delta, intface(il), hm%lead_h_diag(:, :, 1, il), &
+              hm%lead_h_offdiag(:, :, il), ob%mem_coeff(:, :, :, il), spacing)
           else
-            call calculate_coeffs_ni(il, saved_iter+1, max_iter, delta, intface(il), h%lead_h_diag(:, :, 1, il), &
-              h%lead_h_offdiag(:, :, il), ob%mem_coeff(:, :, :, il))
+            call calculate_coeffs_ni(il, saved_iter+1, max_iter, delta, intface(il), hm%lead_h_diag(:, :, 1, il), &
+              hm%lead_h_offdiag(:, :, il), ob%mem_coeff(:, :, :, il))
           end if
         case(SAVE_RAM_USAGE) ! FIXME: only 2D.
           ASSERT(calc_dim.eq.2)
-          call calculate_sp_coeffs(il, saved_iter+1, max_iter, delta, intface(il), h%lead_h_diag(:, :, 1, il), &
-            h%lead_h_offdiag(:, :, il), ob%mem_sp_coeff(:, :, il), ob%mem_s(:, :, :, il), np*order,            &
+          call calculate_sp_coeffs(il, saved_iter+1, max_iter, delta, intface(il), hm%lead_h_diag(:, :, 1, il), &
+            hm%lead_h_offdiag(:, :, il), ob%mem_sp_coeff(:, :, il), ob%mem_s(:, :, :, il), np*order,            &
             order, calc_dim, ob%sp2full_map, spacing)
         end select
 

@@ -28,11 +28,11 @@
 ! WARNING: This subroutine only works if ions are not
 !          allowed to move
 ! ---------------------------------------------------------
-subroutine td_calc_tacc(gr, geo, st, h, acc, t)
+subroutine td_calc_tacc(gr, geo, st, hm, acc, t)
   type(grid_t),        intent(inout) :: gr
   type(geometry_t),    intent(inout) :: geo
   type(states_t),      intent(inout) :: st
-  type(hamiltonian_t), intent(inout) :: h
+  type(hamiltonian_t), intent(inout) :: hm
   FLOAT,               intent(in)    :: t
   FLOAT,               intent(out)   :: acc(MAX_DIM)
 
@@ -50,7 +50,7 @@ subroutine td_calc_tacc(gr, geo, st, h, acc, t)
   ! force exerted by the electrons on the ions. COMMENT: This has to be thought about.
   ! Maybe we are forgetting something....
   x = M_ZERO
-  call epot_forces(gr, geo, h%ep, st)
+  call epot_forces(gr, geo, hm%ep, st)
   do i = 1, geo%natoms
     x = x - geo%atom(i)%f
   end do
@@ -58,12 +58,12 @@ subroutine td_calc_tacc(gr, geo, st, h, acc, t)
 
   ! Adds the laser contribution : i<[V_laser, p]>
   ! WARNING: this ignores the possibility of non-electric td external fields.
-  do j = 1, h%ep%no_lasers
-    call laser_field(gr%sb, h%ep%lasers(j), field, t)
+  do j = 1, hm%ep%no_lasers
+    call laser_field(gr%sb, hm%ep%lasers(j), field, t)
     acc(1:NDIM) = acc(1:NDIM) - st%qtot*field(1:NDIM)
   end do
 
-  if(.not. h%ep%non_local) then
+  if(.not. hm%ep%non_local) then
     call pop_sub()
     return
   end if
@@ -76,7 +76,7 @@ subroutine td_calc_tacc(gr, geo, st, h, acc, t)
   do ik = 1, st%d%nik
     do ist = st%st_start, st%st_end
 
-      call zhamiltonian_apply(h, gr, st%zpsi(:, :, ist, ik), hzpsi(:,:), ist, ik, t)
+      call zhamiltonian_apply(hm, gr, st%zpsi(:, :, ist, ik), hzpsi(:,:), ist, ik, t)
 
       ALLOCATE(xzpsi    (NP, st%d%dim, 3), NP*st%d%dim*3)
       ALLOCATE(vnl_xzpsi(NP, st%d%dim),    NP*st%d%dim)
@@ -89,7 +89,7 @@ subroutine td_calc_tacc(gr, geo, st, h, acc, t)
 
       do j = 1, NDIM
         vnl_xzpsi = M_z0
-        call zvnlpsi(h, gr%mesh, xzpsi(:,:, j), vnl_xzpsi(:,:), ik)
+        call zvnlpsi(hm, gr%mesh, xzpsi(:,:, j), vnl_xzpsi(:,:), ik)
 
         do idim = 1, st%d%dim
           x(j) = x(j) - 2*st%occ(ist, ik)*zmf_dotp(gr%mesh, hzpsi(1:NP, idim), vnl_xzpsi(:, idim) )
@@ -105,7 +105,7 @@ subroutine td_calc_tacc(gr, geo, st, h, acc, t)
 
       do j = 1, NDIM
         vnl_xzpsi = M_z0
-        call zvnlpsi(h, gr%mesh, xzpsi(:,:, j), vnl_xzpsi(:,:), ik)
+        call zvnlpsi(hm, gr%mesh, xzpsi(:,:, j), vnl_xzpsi(:,:), ik)
         do idim = 1, st%d%dim
           x(j) = x(j) + 2*st%occ(ist, ik)* &
             zmf_dotp(gr%mesh, st%zpsi(1:NP, idim, ist, ik), vnl_xzpsi(:, idim) )

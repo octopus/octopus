@@ -99,9 +99,9 @@ module timedep_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine td_run(sys, h, fromScratch)
+  subroutine td_run(sys, hm, fromScratch)
     type(system_t), target, intent(inout) :: sys
-    type(hamiltonian_t),    intent(inout) :: h
+    type(hamiltonian_t),    intent(inout) :: hm
     logical,                intent(inout) :: fromScratch
 
     type(td_t)                :: td
@@ -124,7 +124,7 @@ contains
 
     call ion_dynamics_init(td%ions, sys%geo)
 
-    call td_init(sys, h, td)
+    call td_init(sys, hm, td)
 
     call states_distribute_nodes(st, sys%mc)
 
@@ -141,36 +141,36 @@ contains
 
     call init_wfs()
 
-    call td_write_init(write_handler, gr, st, h, geo, &
-         ion_dynamics_ions_move(td%ions), gauge_field_is_applied(h%ep%gfield), td%iter, td%max_iter, td%dt)
+    call td_write_init(write_handler, gr, st, hm, geo, &
+         ion_dynamics_ions_move(td%ions), gauge_field_is_applied(hm%ep%gfield), td%iter, td%max_iter, td%dt)
 
     ! Calculate initial forces and kinetic energy
     if(ion_dynamics_ions_move(td%ions)) then
       if(td%iter > 0) then
         call td_read_coordinates()
-        call epot_generate(h%ep, gr, geo, st)
+        call epot_generate(hm%ep, gr, geo, st)
       end if
 
-      call epot_forces(gr, geo, h%ep, st, td%iter*td%dt)
+      call epot_forces(gr, geo, hm%ep, st, td%iter*td%dt)
 
       geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
 
     end if
 
     ! Calculate initial value of the gauge vector field
-    if (gauge_field_is_applied(h%ep%gfield)) then
+    if (gauge_field_is_applied(hm%ep%gfield)) then
 
       if(td%iter > 0) then
         call td_read_gauge_field()
       else
-        call gauge_field_init_vec_pot(h%ep%gfield, gr%mesh, gr%sb, st, td%dt)
+        call gauge_field_init_vec_pot(hm%ep%gfield, gr%mesh, gr%sb, st, td%dt)
       end if
 
-      gauge_force = gauge_field_get_force(h%ep%gfield, gr, geo, h%ep%proj, h%phase, st)
+      gauge_force = gauge_field_get_force(hm%ep%gfield, gr, geo, hm%ep%proj, hm%phase, st)
 
       do iatom = 1, geo%natoms
-         call projector_init_phases(h%ep%proj(iatom), st%d%nik, st%d%kpoints, &
-              vec_pot = gauge_field_get_vec_pot(h%ep%gfield)/P_c, vec_pot_var = h%ep%a_static)
+         call projector_init_phases(hm%ep%proj(iatom), st%d%nik, st%d%kpoints, &
+              vec_pot = gauge_field_get_vec_pot(hm%ep%gfield)/P_c, vec_pot_var = hm%ep%a_static)
       end do
 
     end if
@@ -204,23 +204,23 @@ contains
       select case(td%dynamics)
       case(EHRENFEST)
         if(ion_dynamics_ions_move(td%ions)) then
-          call td_rti_dt(sys%ks, h, gr, st, td%tr, i*td%dt, td%dt / td%mu, td%max_iter, i, gauge_force, &
+          call td_rti_dt(sys%ks, hm, gr, st, td%tr, i*td%dt, td%dt / td%mu, td%max_iter, i, gauge_force, &
             ions = td%ions, geo = sys%geo, ionic_dt = td%dt)
         else
-          call td_rti_dt(sys%ks, h, gr, st, td%tr, i*td%dt, td%dt / td%mu, td%max_iter, i, gauge_force)
+          call td_rti_dt(sys%ks, hm, gr, st, td%tr, i*td%dt, td%dt / td%mu, td%max_iter, i, gauge_force)
         end if
       case(BO)
-        call scf_run(td%scf, sys%gr, geo, st, sys%ks, h, sys%outp, gs_run = .false., verbosity = VERB_NO)
+        call scf_run(td%scf, sys%gr, geo, st, sys%ks, hm, sys%outp, gs_run = .false., verbosity = VERB_NO)
       case(CP)
         if(states_are_real(st)) then
-          call dcpmd_propagate(td%cp_propagator, sys%gr, h, st, i, td%dt)
+          call dcpmd_propagate(td%cp_propagator, sys%gr, hm, st, i, td%dt)
         else
-          call zcpmd_propagate(td%cp_propagator, sys%gr, h, st, i, td%dt)
+          call zcpmd_propagate(td%cp_propagator, sys%gr, hm, st, i, td%dt)
         end if
       end select
 
       ! mask function?
-      call zvmask(gr, h, st)
+      call zvmask(gr, hm, st)
 
       ! update density
       call states_calc_dens(st, NP, st%rho)
@@ -234,52 +234,52 @@ contains
         end if
       end if
 
-      if(gauge_field_is_applied(h%ep%gfield) .and. .not. td_rti_ions_are_propagated(td%tr)) then
-        call gauge_field_propagate(h%ep%gfield, gauge_force, td%dt)
+      if(gauge_field_is_applied(hm%ep%gfield) .and. .not. td_rti_ions_are_propagated(td%tr)) then
+        call gauge_field_propagate(hm%ep%gfield, gauge_force, td%dt)
       end if
       
-      if(generate) call epot_generate(h%ep, gr, sys%geo, st, time = i*td%dt)
+      if(generate) call epot_generate(hm%ep, gr, sys%geo, st, time = i*td%dt)
 
       ! update hamiltonian and eigenvalues (fermi is *not* called)
-      call v_ks_calc(gr, sys%ks, h, st, calc_eigenval=.true.)
+      call v_ks_calc(gr, sys%ks, hm, st, calc_eigenval=.true.)
 
       ! Get the energies.
-      call total_energy(h, sys%gr, st, -1)
+      call total_energy(hm, sys%gr, st, -1)
 
       if (td%dynamics == CP) then
         if(states_are_real(st)) then
-          call dcpmd_propagate_vel(td%cp_propagator, sys%gr, h, st, td%dt)
+          call dcpmd_propagate_vel(td%cp_propagator, sys%gr, hm, st, td%dt)
         else
-          call zcpmd_propagate_vel(td%cp_propagator, sys%gr, h, st, td%dt)
+          call zcpmd_propagate_vel(td%cp_propagator, sys%gr, hm, st, td%dt)
         end if
       end if
       
       ! Recalculate forces, update velocities...
       if(ion_dynamics_ions_move(td%ions)) then
-        call epot_forces(gr, sys%geo, h%ep, st, i*td%dt)
+        call epot_forces(gr, sys%geo, hm%ep, st, i*td%dt)
 
         call ion_dynamics_propagate_vel(td%ions, sys%geo)
 
         geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
       end if
 
-      if(gauge_field_is_applied(h%ep%gfield)) then
+      if(gauge_field_is_applied(hm%ep%gfield)) then
 
-        gauge_force = gauge_field_get_force(h%ep%gfield, gr, geo, h%ep%proj, h%phase, st)
+        gauge_force = gauge_field_get_force(hm%ep%gfield, gr, geo, hm%ep%proj, hm%phase, st)
 
-        call gauge_field_propagate_vel(h%ep%gfield, gauge_force, td%dt)
+        call gauge_field_propagate_vel(hm%ep%gfield, gauge_force, td%dt)
 
         do iatom = 1, geo%natoms
-          call projector_init_phases(h%ep%proj(iatom), st%d%nik, st%d%kpoints, &
-               vec_pot = gauge_field_get_vec_pot(h%ep%gfield)/P_c, vec_pot_var = h%ep%a_static)
+          call projector_init_phases(hm%ep%proj(iatom), st%d%nik, st%d%kpoints, &
+               vec_pot = gauge_field_get_vec_pot(hm%ep%gfield)/P_c, vec_pot_var = hm%ep%a_static)
         end do
 
       end if
 
-      call td_write_iter(write_handler, gr, st, h, geo, td%kick, td%dt, i)
+      call td_write_iter(write_handler, gr, st, hm, geo, td%kick, td%dt, i)
 
 #if !defined(DISABLE_PES)
-      call PES_doit(td%PESv, gr%mesh, st, ii, td%dt, h%ab_pot)
+      call PES_doit(td%PESv, gr%mesh, st, ii, td%dt, hm%ab_pot)
 #endif
 
       ! write down data
@@ -304,13 +304,13 @@ contains
       if(td%dynamics /= CP) then 
         write(message(1), '(i7,1x,2f14.6,f14.3, i10)') i, &
              i*td%dt       / units_out%time%factor, &
-             (h%etot + geo%kinetic_energy) / units_out%energy%factor, &
+             (hm%etot + geo%kinetic_energy) / units_out%energy%factor, &
              loct_clock() - etime
       else
         write(message(1), '(i7,1x,3f14.6,f14.3, i10)') i, &
              i*td%dt       / units_out%time%factor, &
-             (h%etot + geo%kinetic_energy) / units_out%energy%factor, &
-             (h%etot + geo%kinetic_energy + cpmd_electronic_energy(td%cp_propagator)) / units_out%energy%factor, &
+             (hm%etot + geo%kinetic_energy) / units_out%energy%factor, &
+             (hm%etot + geo%kinetic_energy + cpmd_electronic_energy(td%cp_propagator)) / units_out%energy%factor, &
              loct_clock() - etime
       end if
       call write_info(1)
@@ -320,11 +320,11 @@ contains
         if(i == td%max_iter) sys%outp%iter = ii - 1
         ii = 1
         call td_save_restart(i)
-        call td_write_data(write_handler, gr, st, h, sys%outp, geo, i)
+        call td_write_data(write_handler, gr, st, hm, sys%outp, geo, i)
         if( (ion_dynamics_ions_move(td%ions)) .and. td%recalculate_gs) then
           call messages_print_stress(stdout, 'Recalculating the ground state.')
           fromScratch = .false.
-          call ground_state_run(sys, h, fromScratch)
+          call ground_state_run(sys, hm, fromScratch)
           call restart_read(trim(restart_dir)//'td', st, gr, geo, ierr, i)
           call messages_print_stress(stdout, "Time-Dependent simulation proceeds")
           if(td%dynamics /= CP) then 
@@ -511,20 +511,20 @@ contains
           ' orbitals have been frozen.', st%nst, ' will be propagated.'
         call write_info(1)
         call states_calc_dens(st, NP, st%rho)
-        call v_ks_calc(gr, sys%ks, h, st, calc_eigenval=.true.)
+        call v_ks_calc(gr, sys%ks, hm, st, calc_eigenval=.true.)
       elseif(freeze_orbitals < 0) then
         ! This means SAE approximation. We calculate the Hxc first, then freezer all
         ! orbitals minus one.
         write(message(1),'(a)') 'Info: The single-active-electron approximation will be used.'
         call write_info(1)
         call states_calc_dens(st, NP, st%rho)
-        call v_ks_calc(gr, sys%ks, h, st, calc_eigenval=.true.)
+        call v_ks_calc(gr, sys%ks, hm, st, calc_eigenval=.true.)
         call states_freeze_orbitals(st, gr, sys%mc, n = st%nst-1)
         call v_ks_freeze_hxc(sys%ks)
       else
         ! Normal run.
         call states_calc_dens(st, NP, st%rho)
-        call v_ks_calc(gr, sys%ks, h, st, calc_eigenval=.true.)
+        call v_ks_calc(gr, sys%ks, hm, st, calc_eigenval=.true.)
       end if
 
       x = minval(st%eigenval(st%st_start, :))
@@ -533,8 +533,8 @@ contains
         call MPI_Bcast(x, 1, MPI_FLOAT, 0, st%mpi_grp%comm, mpi_err)
       end if
 #endif
-      call hamiltonian_span(h, minval(gr%mesh%h(1:NDIM)), x)
-      call total_energy(h, gr, st, -1)
+      call hamiltonian_span(hm, minval(gr%mesh%h(1:NDIM)), x)
+      call total_energy(hm, gr, st, -1)
 
     end subroutine init_wfs
 
@@ -543,12 +543,12 @@ contains
     subroutine td_run_zero_iter()
       call push_sub('td.td_run_zero_iter')
 
-      call td_write_iter(write_handler, gr, st, h, geo, td%kick, td%dt, 0)
+      call td_write_iter(write_handler, gr, st, hm, geo, td%kick, td%dt, 0)
 
       ! I apply the delta electric field *after* td_write_iter, otherwise the
       ! dipole matrix elements in write_proj are wrong
       call apply_delta_field(td%kick)
-      call td_rti_run_zero_iter(h, td%tr)
+      call td_rti_run_zero_iter(hm, td%tr)
 
       call pop_sub()
     end subroutine td_run_zero_iter
@@ -719,8 +719,8 @@ contains
       read(iunit, '(3es20.12)', advance='no') vecpot_vel(1:NDIM)
       read(iunit, '(3es20.12)', advance='no') dummy(1:NDIM) ! skip the accel field.
 
-      call gauge_field_set_vec_pot(h%ep%gfield, vecpot)
-      call gauge_field_set_vec_pot_vel(h%ep%gfield, vecpot_vel)
+      call gauge_field_set_vec_pot(hm%ep%gfield, vecpot)
+      call gauge_field_set_vec_pot_vel(hm%ep%gfield, vecpot_vel)
  
       call io_close(iunit)
       call pop_sub()

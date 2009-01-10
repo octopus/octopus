@@ -84,7 +84,7 @@ module td_rti_m
 #ifdef HAVE_SPARSKIT
   type(sparskit_solver_t), pointer, private :: tdsk
   type(grid_t),            pointer, private :: grid_p
-  type(hamiltonian_t),     pointer, private :: h_p
+  type(hamiltonian_t),     pointer, private :: hm_p
   type(td_rti_t),          pointer, private :: tr_p
   CMPLX, allocatable,      private :: zpsi_tmp(:,:,:,:)
   integer,                 private :: ik_op, ist_op, idim_op
@@ -130,10 +130,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_rti_init(gr, st, h, tr, dt, max_iter, have_fields)
+  subroutine td_rti_init(gr, st, hm, tr, dt, max_iter, have_fields)
     type(grid_t),   intent(in)      :: gr
     type(states_t), intent(in)      :: st
-    type(hamiltonian_t), intent(in) :: h
+    type(hamiltonian_t), intent(in) :: hm
     type(td_rti_t), intent(inout)   :: tr
     FLOAT,          intent(in)      :: dt
     integer,        intent(in)      :: max_iter
@@ -317,7 +317,7 @@ contains
     case(PROP_MAGNUS)
       ALLOCATE(tr%vmagnus(NP, st%d%nspin, 2), NP*st%d%nspin*2)
     case(PROP_CRANK_NICHOLSON_SRC_MEM)
-      call ob_rti_init(st, gr, h, tr%ob, dt, max_iter)
+      call ob_rti_init(st, gr, hm, tr%ob, dt, max_iter)
     case default
       call input_error('TDEvolutionMethod')
     end select
@@ -381,13 +381,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_rti_run_zero_iter(h, tr)
-    type(hamiltonian_t), intent(in)    :: h
+  subroutine td_rti_run_zero_iter(hm, tr)
+    type(hamiltonian_t), intent(in)    :: hm
     type(td_rti_t),      intent(inout) :: tr
 
-    tr%v_old(:, :, 2) = h%vhxc(:, :)
-    tr%v_old(:, :, 3) = h%vhxc(:, :)
-    tr%v_old(:, :, 1) = h%vhxc(:, :)
+    tr%v_old(:, :, 2) = hm%vhxc(:, :)
+    tr%v_old(:, :, 3) = hm%vhxc(:, :)
+    tr%v_old(:, :, 1) = hm%vhxc(:, :)
   end subroutine td_rti_run_zero_iter
 
 
@@ -395,9 +395,9 @@ contains
   ! Propagates st from t-dt to t.
   ! If dt<0, it propagates *backwards* from t+|dt| to t
   ! ---------------------------------------------------------
-  subroutine td_rti_dt(ks, h, gr, st, tr, t, dt, max_iter, nt, gauge_force, ions, geo, ionic_dt)
+  subroutine td_rti_dt(ks, hm, gr, st, tr, t, dt, max_iter, nt, gauge_force, ions, geo, ionic_dt)
     type(v_ks_t),                    intent(inout) :: ks
-    type(hamiltonian_t), target,     intent(inout) :: h
+    type(hamiltonian_t), target,     intent(inout) :: hm
     type(grid_t),        target,     intent(inout) :: gr
     type(states_t),      target,     intent(inout) :: st
     type(td_rti_t),      target,     intent(inout) :: tr
@@ -424,12 +424,12 @@ contains
       ASSERT(present(ionic_dt))
     end if
 
-    if(gauge_field_is_applied(h%ep%gfield)) then
+    if(gauge_field_is_applied(hm%ep%gfield)) then
       ASSERT(present(gauge_force))
     end if
 
     self_consistent = .false.
-    if(h%theory_level .ne. INDEPENDENT_PARTICLES) then
+    if(hm%theory_level .ne. INDEPENDENT_PARTICLES) then
       if( (t < 3*dt)  .or.  (tr%scf_propagation) ) then
         self_consistent = .true.
         ALLOCATE(zpsi1(NP_PART, st%d%dim, st%st_start:st%st_end, st%d%nik), NP_PART*st%d%dim*st%lnst*st%d%nik)
@@ -439,7 +439,7 @@ contains
 
     call lalg_copy(NP, st%d%nspin, tr%v_old(:, :, 2), tr%v_old(:, :, 3))
     call lalg_copy(NP, st%d%nspin, tr%v_old(:, :, 1), tr%v_old(:, :, 2))
-    call lalg_copy(NP, st%d%nspin, h%vhxc(:, :),      tr%v_old(:, :, 1))
+    call lalg_copy(NP, st%d%nspin, hm%vhxc(:, :),      tr%v_old(:, :, 1))
     call interpolate( (/t-dt, t-2*dt, t-3*dt/), tr%v_old(:, :, 1:3), t, tr%v_old(:, :, 0))
 
     select case(tr%method)
@@ -458,11 +458,11 @@ contains
 
       ! First, compare the new potential to the extrapolated one.
       call states_calc_dens(st, NP, st%rho)
-      call v_ks_calc(gr, ks, h, st)
+      call v_ks_calc(gr, ks, hm, st)
       ALLOCATE(dtmp(NP), NP)
       d_max = M_ZERO
       do is = 1, st%d%nspin
-        dtmp(1:NP) = h%vhxc(1:NP, is) - tr%v_old(1:NP, is, 0)
+        dtmp(1:NP) = hm%vhxc(1:NP, is) - tr%v_old(1:NP, is, 0)
         d = dmf_nrm2(gr%mesh, dtmp)
         if(d > d_max) d_max = d
       end do
@@ -475,8 +475,8 @@ contains
         do iter = 1, 10
 
           st%zpsi = zpsi1
-          tr%v_old(:, :, 0) = h%vhxc(:, :)
-          vaux(:, :) = h%vhxc(:, :)
+          tr%v_old(:, :, 0) = hm%vhxc(:, :)
+          vaux(:, :) = hm%vhxc(:, :)
           select case(tr%method)
           case(PROP_SPLIT_OPERATOR);          call td_split_operator
           case(PROP_SUZUKI_TROTTER);          call td_suzuki_trotter
@@ -489,11 +489,11 @@ contains
           end select
 
           call states_calc_dens(st, NP, st%rho)
-          call v_ks_calc(gr, ks, h, st)
+          call v_ks_calc(gr, ks, hm, st)
           ALLOCATE(dtmp(NP), NP)
           d_max = M_ZERO
           do is = 1, st%d%nspin
-            dtmp(1:NP) = h%vhxc(1:NP, is) - vaux(1:NP, is)
+            dtmp(1:NP) = hm%vhxc(1:NP, is) - vaux(1:NP, is)
             d = dmf_nrm2(gr%mesh, dtmp)
             if(d > d_max) d_max = d
           end do
@@ -520,21 +520,21 @@ contains
 
       do ik = 1, st%d%nik
         do ist = 1, st%nst
-          call zexp_kinetic(gr, h, st%zpsi(:, :, ist, ik), tr%cf, -M_HALF*M_zI*dt)
+          call zexp_kinetic(gr, hm, st%zpsi(:, :, ist, ik), tr%cf, -M_HALF*M_zI*dt)
         end do
       end do
       call states_calc_dens(st, NP, st%rho)
-      call v_ks_calc(gr, ks, h, st)
+      call v_ks_calc(gr, ks, hm, st)
       do ik = 1, st%d%nik
         do ist = 1, st%nst
-          if (h%ep%non_local) call zexp_vnlpsi (gr%mesh, h, st%zpsi(:, :, ist, ik), -M_zI*dt, .true.)
-          call zexp_vlpsi (gr, h, st%zpsi(:, :, ist, ik), ik, t-dt*M_HALF, -M_zI*dt)
-          if (h%ep%non_local) call zexp_vnlpsi (gr%mesh, h, st%zpsi(:, :, ist, ik), -M_zI*dt, .false.)
+          if (hm%ep%non_local) call zexp_vnlpsi (gr%mesh, hm, st%zpsi(:, :, ist, ik), -M_zI*dt, .true.)
+          call zexp_vlpsi (gr, hm, st%zpsi(:, :, ist, ik), ik, t-dt*M_HALF, -M_zI*dt)
+          if (hm%ep%non_local) call zexp_vnlpsi (gr%mesh, hm, st%zpsi(:, :, ist, ik), -M_zI*dt, .false.)
         end do
       end do
       do ik = 1, st%d%nik
         do ist = 1, st%nst
-          call zexp_kinetic(gr, h, st%zpsi(:, :, ist, ik), tr%cf, -M_HALF*M_zI*dt)
+          call zexp_kinetic(gr, hm, st%zpsi(:, :, ist, ik), tr%cf, -M_HALF*M_zI*dt)
         end do
       end do
 
@@ -560,17 +560,17 @@ contains
       time(5) = t-dt+(pp(1)+pp(2)+pp(3)+pp(4)+pp(5)/M_TWO)*dt
 
       do k = 1, 5
-        call interpolate( (/t, t-dt, t-2*dt/), tr%v_old(:, :, 0:2), time(k), h%vhxc(:, :))
+        call interpolate( (/t, t-dt, t-2*dt/), tr%v_old(:, :, 0:2), time(k), hm%vhxc(:, :))
         do ik = 1, st%d%nik
           do ist = 1, st%nst
-            call zexp_vlpsi (gr, h, st%zpsi(:, :, ist, ik), ik, time(k), -M_zI*dtime(k)/M_TWO)
-            if (h%ep%non_local) call zexp_vnlpsi (gr%mesh, h, &
+            call zexp_vlpsi (gr, hm, st%zpsi(:, :, ist, ik), ik, time(k), -M_zI*dtime(k)/M_TWO)
+            if (hm%ep%non_local) call zexp_vnlpsi (gr%mesh, hm, &
               st%zpsi(:, :, ist, ik), -M_zI*dtime(k)/M_TWO, .true.)
 
-            call zexp_kinetic(gr, h, st%zpsi(:, :, ist, ik), tr%cf, -M_zI*dtime(k))
-            if (h%ep%non_local) call zexp_vnlpsi (gr%mesh, h, &
+            call zexp_kinetic(gr, hm, st%zpsi(:, :, ist, ik), tr%cf, -M_zI*dtime(k))
+            if (hm%ep%non_local) call zexp_vnlpsi (gr%mesh, hm, &
               st%zpsi(:, :, ist, ik), -M_zI*dtime(k)/M_TWO, .false.)
-            call zexp_vlpsi (gr, h, st%zpsi(:, :, ist, ik), ik, time(k), -M_zI*dtime(k)/M_TWO)
+            call zexp_vlpsi (gr, hm, st%zpsi(:, :, ist, ik), ik, time(k), -M_zI*dtime(k)/M_TWO)
           end do
         end do
       end do
@@ -587,11 +587,11 @@ contains
 
       call push_sub('td_rti.td_reversal')
 
-      if(h%theory_level.ne.INDEPENDENT_PARTICLES) then
+      if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
 
         ALLOCATE(vhxc_t1(NP, st%d%nspin), NP*st%d%nspin)
         ALLOCATE(vhxc_t2(NP, st%d%nspin), NP*st%d%nspin)
-        call lalg_copy(NP, st%d%nspin, h%vhxc, vhxc_t1)
+        call lalg_copy(NP, st%d%nspin, hm%vhxc, vhxc_t1)
 
         ALLOCATE(zpsi1(NP_PART, st%d%dim), NP_PART*st%d%dim)
 
@@ -606,7 +606,7 @@ contains
             end do
             
             !propagate the state dt with H(t-dt)
-            call exponential_apply(tr%te, gr, h, st%zpsi(:,:, ist, ik), ist, ik, dt, t-dt)
+            call exponential_apply(tr%te, gr, hm, st%zpsi(:,:, ist, ik), ist, ik, dt, t-dt)
             
             !calculate the contribution to the density
             call states_dens_accumulate(st, NP, st%rho, ist, ik)
@@ -624,16 +624,16 @@ contains
         ! finish the calculation of the density
         call states_dens_reduce(st, NP, st%rho)
 
-        call v_ks_calc(gr, ks, h, st)
+        call v_ks_calc(gr, ks, hm, st)
 
-        call lalg_copy(NP, st%d%nspin, h%vhxc, vhxc_t2)
-        call lalg_copy(NP, st%d%nspin, vhxc_t1, h%vhxc)
+        call lalg_copy(NP, st%d%nspin, hm%vhxc, vhxc_t2)
+        call lalg_copy(NP, st%d%nspin, vhxc_t1, hm%vhxc)
       end if
 
       ! propagate dt/2 with H(t-dt)
       do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
-          call exponential_apply(tr%te, gr, h, st%zpsi(:,:, ist, ik), ist, ik, dt/M_TWO, t-dt)
+          call exponential_apply(tr%te, gr, hm, st%zpsi(:,:, ist, ik), ist, ik, dt/M_TWO, t-dt)
         end do
       end do
 
@@ -642,20 +642,20 @@ contains
       ! first move the ions to time t
       if(present(ions)) then
         call ion_dynamics_propagate(ions, gr%sb, geo, t, ionic_dt)
-        call epot_generate(h%ep, gr, geo, st, time = t)
+        call epot_generate(hm%ep, gr, geo, st, time = t)
       end if
 
-      if(gauge_field_is_applied(h%ep%gfield)) call gauge_field_propagate(h%ep%gfield, gauge_force, dt)
+      if(gauge_field_is_applied(hm%ep%gfield)) call gauge_field_propagate(hm%ep%gfield, gauge_force, dt)
 
-      if(h%theory_level.ne.INDEPENDENT_PARTICLES)  call lalg_copy(NP, st%d%nspin, vhxc_t2, h%vhxc)
+      if(hm%theory_level.ne.INDEPENDENT_PARTICLES)  call lalg_copy(NP, st%d%nspin, vhxc_t2, hm%vhxc)
 
       do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
-          call exponential_apply(tr%te, gr, h, st%zpsi(:,:, ist, ik), ist, ik, dt/M_TWO, t)
+          call exponential_apply(tr%te, gr, hm, st%zpsi(:,:, ist, ik), ist, ik, dt/M_TWO, t)
         end do
       end do
 
-      if(h%theory_level.ne.INDEPENDENT_PARTICLES) deallocate(vhxc_t1, vhxc_t2)
+      if(hm%theory_level.ne.INDEPENDENT_PARTICLES) deallocate(vhxc_t1, vhxc_t2)
 
       call pop_sub()
     end subroutine td_reversal
@@ -674,28 +674,28 @@ contains
         do sts = st%st_start, st%st_end, st%d%block_size
           ste = min(st%st_end, sts + st%d%block_size - 1)
           call batch_init(zpsib, st%d%dim, sts, ste, st%zpsi(:, :, sts:, ik))
-          call exponential_apply_batch(tr%te, gr, h, zpsib, ik, dt/M_TWO, t-dt)
+          call exponential_apply_batch(tr%te, gr, hm, zpsib, ik, dt/M_TWO, t-dt)
           call batch_end(zpsib)
         end do
       end do
 
       ! interpolate the hamiltonian to time t
-      call lalg_copy(NP, st%d%nspin, tr%v_old(:, :, 0), h%vhxc)
+      call lalg_copy(NP, st%d%nspin, tr%v_old(:, :, 0), hm%vhxc)
 
       ! move the ions to time t
       if(present(ions)) then      
         call ion_dynamics_propagate(ions, gr%sb, geo, t, ionic_dt)
-        call epot_generate(h%ep, gr, geo, st, time = t)
+        call epot_generate(hm%ep, gr, geo, st, time = t)
       end if
 
-      if(gauge_field_is_applied(h%ep%gfield)) call gauge_field_propagate(h%ep%gfield, gauge_force, dt)
+      if(gauge_field_is_applied(hm%ep%gfield)) call gauge_field_propagate(hm%ep%gfield, gauge_force, dt)
 
       ! propagate the other half with H(t)
       do ik = 1, st%d%nik
         do sts = st%st_start, st%st_end, st%d%block_size
           ste = min(st%st_end, sts + st%d%block_size - 1)
-          call batch_init(zpsib, h%d%dim, sts, ste, st%zpsi(:, :, sts:, ik))
-          call exponential_apply_batch(tr%te, gr, h, zpsib, ik, dt/M_TWO, t)
+          call batch_init(zpsib, hm%d%dim, sts, ste, st%zpsi(:, :, sts:, ik))
+          call exponential_apply_batch(tr%te, gr, hm, zpsib, ik, dt/M_TWO, t)
           call batch_end(zpsib)
         end do
       end do
@@ -713,34 +713,34 @@ contains
 
       call push_sub('td_rti.exponentialonential_midpoint')
 
-      if(h%theory_level.ne.INDEPENDENT_PARTICLES) then
-        call interpolate( (/t, t-dt, t-2*dt/), tr%v_old(:, :, 0:2), t-dt/M_TWO, h%vhxc(:, :))
+      if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
+        call interpolate( (/t, t-dt, t-2*dt/), tr%v_old(:, :, 0:2), t-dt/M_TWO, hm%vhxc(:, :))
       end if
 
       !move the ions to time t - dt/2
       if(present(ions)) then
         call ion_dynamics_save_state(ions, geo, ions_state)
         call ion_dynamics_propagate(ions, gr%sb, geo, t - ionic_dt/M_TWO, M_HALF*ionic_dt)
-        call epot_generate(h%ep, gr, geo, st, time = t - ionic_dt/M_TWO)
+        call epot_generate(hm%ep, gr, geo, st, time = t - ionic_dt/M_TWO)
       end if
       
-      if(gauge_field_is_applied(h%ep%gfield)) then
-        vecpot = gauge_field_get_vec_pot(h%ep%gfield)
-        vecpot_vel = gauge_field_get_vec_pot_vel(h%ep%gfield)
-        call gauge_field_propagate(h%ep%gfield, gauge_force, M_HALF*dt)
+      if(gauge_field_is_applied(hm%ep%gfield)) then
+        vecpot = gauge_field_get_vec_pot(hm%ep%gfield)
+        vecpot_vel = gauge_field_get_vec_pot_vel(hm%ep%gfield)
+        call gauge_field_propagate(hm%ep%gfield, gauge_force, M_HALF*dt)
       end if
 
       do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
-          call exponential_apply(tr%te, gr, h, st%zpsi(:,:, ist, ik), ist, ik, dt, t - dt/M_TWO)
+          call exponential_apply(tr%te, gr, hm, st%zpsi(:,:, ist, ik), ist, ik, dt, t - dt/M_TWO)
         end do
       end do
 
       if(present(ions)) call ion_dynamics_restore_state(ions, geo, ions_state)
 
-      if(gauge_field_is_applied(h%ep%gfield)) then
-        call gauge_field_set_vec_pot(h%ep%gfield, vecpot)
-        call gauge_field_set_vec_pot_vel(h%ep%gfield, vecpot_vel)
+      if(gauge_field_is_applied(hm%ep%gfield)) then
+        call gauge_field_set_vec_pot(hm%ep%gfield, vecpot)
+        call gauge_field_set_vec_pot_vel(hm%ep%gfield, vecpot_vel)
       end if
 
       call pop_sub()
@@ -774,20 +774,20 @@ contains
       tr%te%exp_method = 3 ! == taylor expansion
       tr%te%exp_order  = 1
 
-      if(h%theory_level.ne.INDEPENDENT_PARTICLES) then
+      if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
         ALLOCATE(zpsi_rhs_pred(NP_PART, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik), isize)
         zpsi_rhs_pred = st%zpsi ! store zpsi for predictor step
         
         ALLOCATE(vhxc_t1(NP, st%d%nspin), NP*st%d%nspin)
         ALLOCATE(vhxc_t2(NP, st%d%nspin), NP*st%d%nspin)
-        vhxc_t1 = h%vhxc
+        vhxc_t1 = hm%vhxc
 
         ! get rhs of CN linear system (rhs1 = (1-i\delta t/2 H_n)\psi^n)
         do ik = 1, st%d%nik
           do ist = st%st_start, st%st_end
-            call exponential_apply(tr%te, gr, h, zpsi_rhs_pred(:, :, ist, ik), ist, ik, dt/M_TWO, t-dt)
+            call exponential_apply(tr%te, gr, hm, zpsi_rhs_pred(:, :, ist, ik), ist, ik, dt/M_TWO, t-dt)
             if(hamiltonian_inh_term(h)) then
-              zpsi_rhs_pred(:, :, ist, ik) = zpsi_rhs_pred(:, :, ist, ik) + dt * h%inh_st%zpsi(:, :, ist, ik)
+              zpsi_rhs_pred(:, :, ist, ik) = zpsi_rhs_pred(:, :, ist, ik) + dt * hm%inh_st%zpsi(:, :, ist, ik)
             end if
           end do
         end do
@@ -805,19 +805,19 @@ contains
         end do
 
         call states_calc_dens(st, NP, st%rho)
-        call v_ks_calc(gr, ks, h, st)
+        call v_ks_calc(gr, ks, hm, st)
 
-        vhxc_t2 = h%vhxc
+        vhxc_t2 = hm%vhxc
         ! compute potential at n+1/2 as average
-        h%vhxc = (vhxc_t1 + vhxc_t2)/M_TWO
+        hm%vhxc = (vhxc_t1 + vhxc_t2)/M_TWO
       end if
 
       ! get rhs of CN linear system (rhs2 = (1-i\delta t H_{n+1/2})\psi^n)
       do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
-          call exponential_apply(tr%te, gr, h, zpsi_rhs_corr(:, :, ist, ik), ist, ik, dt/M_TWO, t-dt)
+          call exponential_apply(tr%te, gr, hm, zpsi_rhs_corr(:, :, ist, ik), ist, ik, dt/M_TWO, t-dt)
           if(hamiltonian_inh_term(h)) then
-            zpsi_rhs_corr(:, :, ist, ik) = zpsi_rhs_corr(:, :, ist, ik) + dt * h%inh_st%zpsi(:, :, ist, ik)
+            zpsi_rhs_corr(:, :, ist, ik) = zpsi_rhs_corr(:, :, ist, ik) + dt * hm%inh_st%zpsi(:, :, ist, ik)
           end if
         end do
       end do
@@ -834,7 +834,7 @@ contains
         end do
       end do
       
-      if(h%theory_level.ne.INDEPENDENT_PARTICLES) deallocate(vhxc_t1, vhxc_t2, zpsi_rhs_pred)
+      if(hm%theory_level.ne.INDEPENDENT_PARTICLES) deallocate(vhxc_t1, vhxc_t2, zpsi_rhs_pred)
       deallocate(zpsi_rhs_corr)
 
       call pop_sub()
@@ -856,9 +856,9 @@ contains
       time(1) = (M_HALF-sqrt(M_THREE)/M_SIX)*dt
       time(2) = (M_HALF+sqrt(M_THREE)/M_SIX)*dt
 
-      if(h%theory_level.ne.INDEPENDENT_PARTICLES) then
+      if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
         do j = 1, 2
-          call interpolate( (/t, t-dt, t-2*dt/), tr%v_old(:, :, 0:2), time(j)-dt, h%vhxc(:, :))
+          call interpolate( (/t, t-dt, t-2*dt/), tr%v_old(:, :, 0:2), time(j)-dt, hm%vhxc(:, :))
         end do
       else
         vaux = M_ZERO
@@ -866,11 +866,11 @@ contains
 
       do j = 1, 2
         ! WARNING: This should be carefully tested, and extended to allow for velocity-gauge laser fields.
-        do i = 1, h%ep%no_lasers
-          select case(laser_kind(h%ep%lasers(i)))
+        do i = 1, hm%ep%no_lasers
+          select case(laser_kind(hm%ep%lasers(i)))
           case(E_FIELD_ELECTRIC)
             ALLOCATE(pot(NP), NP)
-            call laser_potential(gr%sb, h%ep%lasers(i), gr%mesh, pot, t-dt+time(j))
+            call laser_potential(gr%sb, hm%ep%lasers(i), gr%mesh, pot, t-dt+time(j))
             do is = 1, st%d%nspin
               vaux(:, is, j) = vaux(:, is, j) + pot(:)
             end do
@@ -888,7 +888,7 @@ contains
 
       do k = 1, st%d%nik
         do ist = st%st_start, st%st_end
-          call exponential_apply(tr%te, gr, h, st%zpsi(:,:, ist, k), ist, k, dt, M_ZERO, &
+          call exponential_apply(tr%te, gr, hm, st%zpsi(:,:, ist, k), ist, k, dt, M_ZERO, &
             vmagnus = tr%vmagnus)
         end do
       end do
@@ -903,7 +903,7 @@ contains
     subroutine td_crank_nicholson_src_mem()
       call push_sub('td_rti.td_crank_nicholson_src_mem')
       
-      call cn_src_mem_dt(tr%ob, st, ks, h, gr, max_iter, dt, t, nt)
+      call cn_src_mem_dt(tr%ob, st, ks, hm, gr, max_iter, dt, t, nt)
 
       call pop_sub()
     end subroutine td_crank_nicholson_src_mem

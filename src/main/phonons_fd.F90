@@ -50,9 +50,9 @@ module phonons_fd_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine phonons_run(sys, h)
+  subroutine phonons_run(sys, hm)
     type(system_t),      intent(inout) :: sys
-    type(hamiltonian_t), intent(inout) :: h
+    type(hamiltonian_t), intent(inout) :: hm
 
     type(vibrations_t) :: vib
     integer :: ierr
@@ -69,7 +69,7 @@ contains
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian.'
     call write_info(1)
-    call system_h_setup(sys, h)
+    call system_h_setup(sys, hm)
 
     call vibrations_init(vib, sys%geo, sys%gr%sb)
 
@@ -86,7 +86,7 @@ contains
     vib%disp = vib%disp*units_inp%length%factor
 
     ! calculate dynamical matrix
-    call get_dyn_matrix(sys%gr, sys%geo, sys%mc, sys%st, sys%ks, h, sys%outp, vib)
+    call get_dyn_matrix(sys%gr, sys%geo, sys%mc, sys%st, sys%ks, hm, sys%outp, vib)
 
     call vibrations_output(vib, "_fd")
     
@@ -115,13 +115,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine get_dyn_matrix(gr, geo, mc, st, ks, h, outp, vib)
+  subroutine get_dyn_matrix(gr, geo, mc, st, ks, hm, outp, vib)
     type(grid_t), target, intent(inout) :: gr
     type(geometry_t),     intent(inout) :: geo
     type(multicomm_t),    intent(in)    :: mc
     type(states_t),       intent(inout) :: st
     type(v_ks_t),         intent(inout) :: ks
-    type(hamiltonian_t),  intent(inout) :: h
+    type(hamiltonian_t),  intent(inout) :: hm
     type(h_sys_output_t), intent(in)    :: outp
     type(vibrations_t),      intent(inout) :: vib
 
@@ -133,7 +133,7 @@ contains
 
     m   => gr%mesh
 
-    call scf_init(gr, geo, scf, st, h)
+    call scf_init(gr, geo, scf, st, hm)
     ALLOCATE(forces0(geo%natoms, 3), geo%natoms*3)
     ALLOCATE(forces (geo%natoms, 3), geo%natoms*3)
     forces = M_ZERO
@@ -148,11 +148,11 @@ contains
         geo%atom(i)%x(alpha) = geo%atom(i)%x(alpha) + vib%disp
 
         ! first force
-        call epot_generate(h%ep, gr, geo, st)
+        call epot_generate(hm%ep, gr, geo, st)
         call states_calc_dens(st, m%np, st%rho)
-        call v_ks_calc(gr, ks, h, st, calc_eigenval=.true.)
-        call total_energy (h, gr, st, -1)
-        call scf_run(scf, gr, geo, st, ks, h, outp, gs_run=.false., verbosity = VERB_COMPACT)
+        call v_ks_calc(gr, ks, hm, st, calc_eigenval=.true.)
+        call total_energy (hm, gr, st, -1)
+        call scf_run(scf, gr, geo, st, ks, hm, outp, gs_run=.false., verbosity = VERB_COMPACT)
         do j = 1, geo%natoms
           forces0(j, :) = geo%atom(j)%f(:)
         end do
@@ -160,11 +160,11 @@ contains
         geo%atom(i)%x(alpha) = geo%atom(i)%x(alpha) - M_TWO*vib%disp
 
         ! second force
-        call epot_generate(h%ep, gr, geo, st)
+        call epot_generate(hm%ep, gr, geo, st)
         call states_calc_dens(st, m%np, st%rho)
-        call v_ks_calc(gr, ks, h, st, calc_eigenval=.true.)
-        call total_energy(h, gr, st, -1)
-        call scf_run(scf, gr, geo, st, ks, h, outp, gs_run=.false., verbosity = VERB_COMPACT)
+        call v_ks_calc(gr, ks, hm, st, calc_eigenval=.true.)
+        call total_energy(hm, gr, st, -1)
+        call scf_run(scf, gr, geo, st, ks, hm, outp, gs_run=.false., verbosity = VERB_COMPACT)
         do j = 1, geo%natoms
           forces(j, :) = geo%atom(j)%f(:)
         end do

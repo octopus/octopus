@@ -52,9 +52,9 @@ module static_pol_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine static_pol_run(sys, h, fromScratch)
+  subroutine static_pol_run(sys, hm, fromScratch)
     type(system_t), target, intent(inout) :: sys
-    type(hamiltonian_t),    intent(inout) :: h
+    type(hamiltonian_t),    intent(inout) :: hm
     logical,                intent(inout) :: fromScratch
     type(scf_t)             :: scfv
     type(grid_t),   pointer :: gr    ! shortcuts
@@ -86,7 +86,7 @@ contains
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian.'
     call write_info(1)
-    call system_h_setup (sys, h)
+    call system_h_setup (sys, hm)
 
     ! Allocate the dipole...
     ALLOCATE(dipole(NDIM, NDIM, 2), NDIM*NDIM*2)
@@ -120,7 +120,7 @@ contains
 
     ! Save local pseudopotential
     ALLOCATE(Vpsl_save(NP), NP)
-    Vpsl_save = h%ep%Vpsl
+    Vpsl_save = hm%ep%Vpsl
 
     ! Allocate the trrho to the contain the trace of the density.
     ALLOCATE(trrho(NP), NP)
@@ -128,16 +128,16 @@ contains
 
     call output_init_()
 
-    call scf_init(gr, sys%geo, scfv, st, h)
+    call scf_init(gr, sys%geo, scfv, st, hm)
     do i = i_start, NDIM
       do k = 1, 2
         write(message(1), '(a)')
         write(message(2), '(a,i1,a,i1)')'Info: Calculating dipole moment for field ', i, ', #',k
         call write_info(2)
 
-        h%ep%vpsl(1:NP) = vpsl_save(1:NP) + (-1)**k*gr%mesh%x(1:NP, i)*e_field
+        hm%ep%vpsl(1:NP) = vpsl_save(1:NP) + (-1)**k*gr%mesh%x(1:NP, i)*e_field
 
-        call scf_run(scfv, sys%gr, sys%geo, st, sys%ks, h, sys%outp, gs_run=.false., verbosity = VERB_COMPACT)
+        call scf_run(scfv, sys%gr, sys%geo, st, sys%ks, hm, sys%outp, gs_run=.false., verbosity = VERB_COMPACT)
 
         trrho = M_ZERO
         do is = 1, st%d%spin_channels
@@ -166,9 +166,9 @@ contains
     
     ! now calculate the dipole without field
 
-    h%ep%vpsl(1:NP) = vpsl_save(1:NP)
+    hm%ep%vpsl(1:NP) = vpsl_save(1:NP)
     
-    call scf_run(scfv, sys%gr, sys%geo, st, sys%ks, h, sys%outp, gs_run=.false., verbosity = VERB_COMPACT)
+    call scf_run(scfv, sys%gr, sys%geo, st, sys%ks, hm, sys%outp, gs_run=.false., verbosity = VERB_COMPACT)
     
     trrho = M_ZERO
     do is = 1, st%d%spin_channels

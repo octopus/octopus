@@ -227,10 +227,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine v_ks_calc(gr, ks, h, st, calc_eigenval)
+  subroutine v_ks_calc(gr, ks, hm, st, calc_eigenval)
     type(grid_t),        intent(inout) :: gr
     type(v_ks_t),        intent(inout) :: ks
-    type(hamiltonian_t), intent(inout) :: h
+    type(hamiltonian_t), intent(inout) :: hm
     type(states_t),      intent(inout) :: st
     logical,      optional, intent(in) :: calc_eigenval
 
@@ -242,20 +242,20 @@ contains
 
     ! If the Hxc term is frozen, there is nothing to do, except we 
     ! maybe have to calculat the eigenvalues (and WARNING: MISSING
-    ! h%epot)
+    ! hm%epot)
     if(ks%frozen_hxc) then
       if(present(calc_eigenval)) then
         if (st%wfs_type == M_REAL) then
-          call dcalculate_eigenvalues(h, gr, st)
+          call dcalculate_eigenvalues(hm, gr, st)
         else
-          call zcalculate_eigenvalues(h, gr, st)
+          call zcalculate_eigenvalues(hm, gr, st)
         end if
       end if
       call pop_sub()
       return
     end if
 
-    h%epot     = M_ZERO
+    hm%epot     = M_ZERO
 
     ! check if we should introduce the amaldi SIC correction
     amaldi_factor = M_ONE
@@ -263,59 +263,59 @@ contains
 
 
     if(ks%theory_level==INDEPENDENT_PARTICLES.or.amaldi_factor==M_ZERO) then
-      h%vhxc     = M_ZERO
-      h%epot     = M_ZERO
-      h%ehartree = M_ZERO
-      h%ex       = M_ZERO
-      h%ec       = M_ZERO
+      hm%vhxc     = M_ZERO
+      hm%epot     = M_ZERO
+      hm%ehartree = M_ZERO
+      hm%ex       = M_ZERO
+      hm%ec       = M_ZERO
     else
       ! The next 2 lines are a hack to be able to perform an IP/RPA calculation
       !if(RPA_first) then
       !  RPA_first = .false.
-        h%ehartree = M_ZERO
-        call v_ks_hartree(gr, st, h, amaldi_factor)
+        hm%ehartree = M_ZERO
+        call v_ks_hartree(gr, st, hm, amaldi_factor)
 
-        h%vxc      = M_ZERO
-        if(iand(h%xc_family, XC_FAMILY_MGGA).ne.0) h%vtau = M_ZERO
-        if(h%d%cdft) h%axc = M_ZERO
+        hm%vxc      = M_ZERO
+        if(iand(hm%xc_family, XC_FAMILY_MGGA).ne.0) hm%vtau = M_ZERO
+        if(hm%d%cdft) hm%axc = M_ZERO
         if(ks%theory_level.ne.HARTREE) call v_a_xc()
       !end if
 
       ! Build Hartree + xc potential
 
-      h%vhxc(1:NP, 1) = h%vxc(1:NP, 1) + h%vhartree(1:NP)
+      hm%vhxc(1:NP, 1) = hm%vxc(1:NP, 1) + hm%vhartree(1:NP)
 
-      if(h%d%ispin > UNPOLARIZED) then
-        h%vhxc(1:NP, 2) = h%vxc(1:NP, 2) + h%vhartree(1:NP)
+      if(hm%d%ispin > UNPOLARIZED) then
+        hm%vhxc(1:NP, 2) = hm%vxc(1:NP, 2) + hm%vhartree(1:NP)
       end if
 
-      if(h%d%ispin == SPINORS) then
-        h%vhxc(1:NP, 3:4) = h%vxc(1:NP, 3:4)
+      if(hm%d%ispin == SPINORS) then
+        hm%vhxc(1:NP, 3:4) = hm%vxc(1:NP, 3:4)
       end if
 
     end if
     
     if(ks%theory_level==HARTREE.or.ks%theory_level==HARTREE_FOCK) then
-      call states_end(h%st)
-      call states_copy(h%st, st)
+      call states_end(hm%st)
+      call states_copy(hm%st, st)
     end if
     if(ks%theory_level==HARTREE_FOCK) then
-      h%exx_coef = ks%xc%exx_coef
+      hm%exx_coef = ks%xc%exx_coef
     else if (ks%theory_level==HARTREE) then
-      h%exx_coef = M_ONE
+      hm%exx_coef = M_ONE
     end if
 
     ! Calculate the potential vector induced by the electronic current
     ! WARNING: calculating the self-induced magnetic field here only makes
     ! sense if it is going to be used in the Hamiltonian, which does not happen
     ! now. Otherwise one could just calculate it at the end of the calculation.
-    if(h%self_induced_magnetic) call magnetic_induced(gr, st, h%a_ind, h%b_ind)
+    if(hm%self_induced_magnetic) call magnetic_induced(gr, st, hm%a_ind, hm%b_ind)
 
     if(present(calc_eigenval)) then
       if (st%wfs_type == M_REAL) then
-        call dcalculate_eigenvalues(h, gr, st)
+        call dcalculate_eigenvalues(hm, gr, st)
       else
-        call zcalculate_eigenvalues(h, gr, st)
+        call zcalculate_eigenvalues(hm, gr, st)
       end if
     end if
 
@@ -330,9 +330,9 @@ contains
 
       call profiling_in(C_PROFILING_XC)
 
-      h%ex = M_ZERO
-      h%ec = M_ZERO
-      h%exc_j = M_ZERO
+      hm%ex = M_ZERO
+      hm%ec = M_ZERO
+      hm%exc_j = M_ZERO
 
       ! get density taking into account non-linear core corrections, and the Amaldi SIC correction
       ALLOCATE(rho(NP, st%d%nspin), NP*st%d%nspin)
@@ -355,12 +355,12 @@ contains
       if(ks%sic_type == sic_amaldi) rho(1:NP,:) = amaldi_factor*rho(1:NP,:)
 
       ! Get the *local* xc term
-      if(h%d%cdft) then
-        call xc_get_vxc_and_axc(gr, ks%xc, st, rho, st%j, st%d%ispin, h%vxc, h%axc, &
-             h%ex, h%ec, h%exc_j, -minval(st%eigenval(st%nst, :)), st%qtot)
+      if(hm%d%cdft) then
+        call xc_get_vxc_and_axc(gr, ks%xc, st, rho, st%j, st%d%ispin, hm%vxc, hm%axc, &
+             hm%ex, hm%ec, hm%exc_j, -minval(st%eigenval(st%nst, :)), st%qtot)
       else
-        call xc_get_vxc(gr, ks%xc, st, rho, st%d%ispin, h%ex, h%ec, &
-             -minval(st%eigenval(st%nst, :)), st%qtot, vxc=h%vxc, vtau=h%vtau)
+        call xc_get_vxc(gr, ks%xc, st, rho, st%d%ispin, hm%ex, hm%ec, &
+             -minval(st%eigenval(st%nst, :)), st%qtot, vxc=hm%vxc, vtau=hm%vtau)
       end if
       deallocate(rho)
 
@@ -368,25 +368,25 @@ contains
         ! The OEP family has to handle specially
         if (st%wfs_type == M_REAL) then
           call dxc_oep_calc(ks%oep, ks%xc, (ks%sic_type==sic_pz),  &
-            gr, h, st, h%ex, h%ec, vxc=h%vxc)
+            gr, hm, st, hm%ex, hm%ec, vxc=hm%vxc)
         else
           call zxc_oep_calc(ks%oep, ks%xc, (ks%sic_type==sic_pz),  &
-            gr, h, st, h%ex, h%ec, vxc=h%vxc)
+            gr, hm, st, hm%ex, hm%ec, vxc=hm%vxc)
         end if
       end if
 
-      ! Now we calculate Int[n vxc] = h%epot
-      select case(h%d%ispin)
+      ! Now we calculate Int[n vxc] = hm%epot
+      select case(hm%d%ispin)
       case(UNPOLARIZED)
-        h%epot = h%epot + dmf_dotp(gr%mesh, st%rho(:, 1), h%vxc(:, 1))
+        hm%epot = hm%epot + dmf_dotp(gr%mesh, st%rho(:, 1), hm%vxc(:, 1))
       case(SPIN_POLARIZED)
-        h%epot = h%epot + dmf_dotp(gr%mesh, st%rho(:, 1), h%vxc(:, 1)) &
-             + dmf_dotp(gr%mesh, st%rho(:, 2), h%vxc(:, 2))
+        hm%epot = hm%epot + dmf_dotp(gr%mesh, st%rho(:, 1), hm%vxc(:, 1)) &
+             + dmf_dotp(gr%mesh, st%rho(:, 2), hm%vxc(:, 2))
       case(SPINORS)
-        h%epot = h%epot + dmf_dotp(gr%mesh, st%rho(:, 1), h%vxc(:, 1)) &
-             + dmf_dotp(gr%mesh, st%rho(:, 2), h%vxc(:, 2)) &
-             + M_TWO*dmf_dotp(gr%mesh, st%rho(:, 3), h%vxc(:, 3)) &
-             + M_TWO*dmf_dotp(gr%mesh, st%rho(:, 4), h%vxc(:, 4))
+        hm%epot = hm%epot + dmf_dotp(gr%mesh, st%rho(:, 1), hm%vxc(:, 1)) &
+             + dmf_dotp(gr%mesh, st%rho(:, 2), hm%vxc(:, 2)) &
+             + M_TWO*dmf_dotp(gr%mesh, st%rho(:, 3), hm%vxc(:, 3)) &
+             + M_TWO*dmf_dotp(gr%mesh, st%rho(:, 4), hm%vxc(:, 4))
 
       end select
 
@@ -398,9 +398,9 @@ contains
 
   ! ---------------------------------------------------------
   ! Hartree contribution to the xc potential
-  subroutine v_ks_hartree(gr, st, h, amaldi_factor)
+  subroutine v_ks_hartree(gr, st, hm, amaldi_factor)
     type(grid_t),        intent(inout) :: gr
-    type(hamiltonian_t), intent(inout) :: h
+    type(hamiltonian_t), intent(inout) :: hm
     type(states_t),      intent(in)    :: st
     FLOAT, optional,     intent(in)    :: amaldi_factor
 
@@ -411,13 +411,13 @@ contains
 
     ! calculate the total density
     rho(1:NP) = st%rho(1:NP, 1)
-    do is = 2, h%d%spin_channels
+    do is = 2, hm%d%spin_channels
       rho(1:NP) = rho(1:NP) + st%rho(1:NP, is)
     end do
 
     ! Add, if it exists, the frozen density from the inner orbitals.
     if(associated(st%frozen_rho)) then
-      do is = 1, h%d%spin_channels
+      do is = 1, hm%d%spin_channels
         rho(1:NP) = rho(1:NP) + st%frozen_rho(1:NP, is)
       end do
     end if
@@ -426,10 +426,10 @@ contains
     if(present(amaldi_factor)) rho = amaldi_factor*rho
 
     ! solve the poisson equation
-    call dpoisson_solve(gr, h%vhartree, rho)
+    call dpoisson_solve(gr, hm%vhartree, rho)
 
     ! Get the Hartree energy
-    h%ehartree = M_HALF*dmf_dotp(gr%mesh, rho, h%vhartree)
+    hm%ehartree = M_HALF*dmf_dotp(gr%mesh, rho, hm%vhartree)
 
     deallocate(rho)
   end subroutine v_ks_hartree

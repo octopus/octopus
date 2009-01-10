@@ -18,8 +18,8 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-subroutine X(hamiltonian_apply_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
-  type(hamiltonian_t), intent(in)    :: h
+subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, t, kinetic_only)
+  type(hamiltonian_t), intent(in)    :: hm
   type(grid_t),        intent(inout) :: gr
   type(batch_t),       intent(inout) :: psib
   type(batch_t),       intent(inout) :: hpsib
@@ -47,7 +47,7 @@ subroutine X(hamiltonian_apply_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
   kinetic_only_ = .false.
   if(present(kinetic_only)) kinetic_only_ = kinetic_only
 
-  if(present(t).and.h%d%cdft) then
+  if(present(t).and.hm%d%cdft) then
     message(1) = "TDCDFT not yet implemented"
     call write_fatal(1)
   end if
@@ -58,14 +58,14 @@ subroutine X(hamiltonian_apply_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
 
   nst = psib%nst
   
-  ALLOCATE(lapl(1:NP, 1:h%d%dim, 1:nst), NP*h%d%dim*nst)
-  call batch_init(laplb, h%d%dim, psib%states(1)%ist, psib%states(nst)%ist, lapl)
+  ALLOCATE(lapl(1:NP, 1:hm%d%dim, 1:nst), NP*hm%d%dim*nst)
+  call batch_init(laplb, hm%d%dim, psib%states(1)%ist, psib%states(nst)%ist, lapl)
 
-  apply_kpoint = simul_box_is_periodic(gr%sb) .and. .not. kpoint_is_gamma(h%d, ik)
+  apply_kpoint = simul_box_is_periodic(gr%sb) .and. .not. kpoint_is_gamma(hm%d, ik)
 
   if(apply_kpoint) then
-    ALLOCATE(psi_copy(1:NP_PART, 1:h%d%dim, 1:nst), NP_PART*h%d%dim*nst)
-    call batch_init(epsib, h%d%dim, psib%states(1)%ist, psib%states(nst)%ist, psi_copy)
+    ALLOCATE(psi_copy(1:NP_PART, 1:hm%d%dim, 1:nst), NP_PART*hm%d%dim*nst)
+    call batch_init(epsib, hm%d%dim, psib%states(1)%ist, psib%states(nst)%ist, psi_copy)
   else
     call batch_copy(psib, epsib)
   end if
@@ -78,8 +78,8 @@ subroutine X(hamiltonian_apply_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
     if(apply_kpoint) then ! we copy psi to epsi applying the exp(i k.r) phase
       call profiling_in(phase_prof, "PBC_PHASE_APPLY")
       
-      forall (idim = 1:h%d%dim, ip = 1:NP_PART)
-        psi_copy(ip, idim, ii) = h%phase(ip, ik)*psi(ip, idim)
+      forall (idim = 1:hm%d%dim, ip = 1:NP_PART)
+        psi_copy(ip, idim, ii) = hm%phase(ip, ik)*psi(ip, idim)
       end forall
       
       call profiling_out(phase_prof)
@@ -88,10 +88,10 @@ subroutine X(hamiltonian_apply_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
   end do
 
   ! start the calculation of the laplacian
-  ALLOCATE(handles(h%d%dim, nst), h%d%dim*nst)
+  ALLOCATE(handles(hm%d%dim, nst), hm%d%dim*nst)
 
   do ii = 1, nst
-    do idim = 1, h%d%dim
+    do idim = 1, hm%d%dim
       call der_handle_init(handles(idim, ii), gr%der)
     end do
   end do
@@ -100,8 +100,8 @@ subroutine X(hamiltonian_apply_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
     
   if (.not. kinetic_only_) then
     ! apply the potential
-    call X(vlpsi_batch)(h, gr%mesh, epsib, hpsib, ik)
-    if(h%ep%non_local) call X(vnlpsi_batch)(h, gr%mesh, epsib, hpsib, ik)
+    call X(vlpsi_batch)(hm, gr%mesh, epsib, hpsib, ik)
+    if(hm%ep%non_local) call X(vnlpsi_batch)(hm, gr%mesh, epsib, hpsib, ik)
   end if
 
   call X(derivatives_lapl_batch_finish)(gr%der, handles, epsib, laplb)
@@ -109,12 +109,12 @@ subroutine X(hamiltonian_apply_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
   do ii = 1, nst
     call set_pointers()
 
-    if (kinetic_only_) hpsi(1:gr%mesh%np, 1:h%d%dim) = M_ZERO
+    if (kinetic_only_) hpsi(1:gr%mesh%np, 1:hm%d%dim) = M_ZERO
 
     ! finish the calculation of the laplacian
     call profiling_in(C_PROFILING_KINETIC)
-    do idim = 1, h%d%dim
-      call lalg_axpy(NP, -M_HALF/h%mass, lapl(:, idim, ii), hpsi(:, idim))
+    do idim = 1, hm%d%dim
+      call lalg_axpy(NP, -M_HALF/hm%mass, lapl(:, idim, ii), hpsi(:, idim))
       call der_handle_end(handles(idim, ii))
     end do
     call profiling_out(C_PROFILING_KINETIC)
@@ -131,25 +131,25 @@ subroutine X(hamiltonian_apply_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
       
       if (present(t)) then
         ! lasers
-        if(h%ep%no_lasers > 0) then
-          if(any(laser_requires_gradient(h%ep%lasers(1:h%ep%no_lasers)))) call X(get_grad)(h, gr, epsi, grad)
-          call X(vlasers)(h%ep%lasers, h%ep%no_lasers, gr, h%d, epsi, hpsi, grad, ik, t, h%ep%gyromagnetic_ratio, h%ep%a_static)
+        if(hm%ep%no_lasers > 0) then
+          if(any(laser_requires_gradient(hm%ep%lasers(1:hm%ep%no_lasers)))) call X(get_grad)(hm, gr, epsi, grad)
+          call X(vlasers)(hm%ep%lasers, hm%ep%no_lasers, gr, hm%d, epsi, hpsi, grad, ik, t, hm%ep%gyromagnetic_ratio, hm%ep%a_static)
         end if
 
-        if (gauge_field_is_applied(h%ep%gfield)) call X(vgauge)(gr, h, epsi, hpsi, grad)
+        if (gauge_field_is_applied(hm%ep%gfield)) call X(vgauge)(gr, hm, epsi, hpsi, grad)
       end if
       
-      if(h%theory_level == HARTREE .or. h%theory_level == HARTREE_FOCK) &
-        call X(exchange_operator)(h, gr, epsi, hpsi, ist, ik)
+      if(hm%theory_level == HARTREE .or. hm%theory_level == HARTREE_FOCK) &
+        call X(exchange_operator)(hm, gr, epsi, hpsi, ist, ik)
       
-      if(iand(h%xc_family, XC_FAMILY_MGGA).ne.0) &
-        call X(h_mgga_terms) (h, gr, epsi, hpsi, ik, grad)
+      if(iand(hm%xc_family, XC_FAMILY_MGGA).ne.0) &
+        call X(h_mgga_terms) (hm, gr, epsi, hpsi, ik, grad)
 
-      if(hamiltonian_oct_exchange(h)) call X(oct_exchange_operator)(h, gr, epsi, hpsi, ik)
+      if(hamiltonian_oct_exchange(hm)) call X(oct_exchange_operator)(hm, gr, epsi, hpsi, ik)
       
-      call X(magnetic_terms) (gr, h, epsi, hpsi, grad, ik)
+      call X(magnetic_terms) (gr, hm, epsi, hpsi, grad, ik)
       
-      if(present(t)) call X(vborders) (gr, h, epsi, hpsi)
+      if(present(t)) call X(vborders) (gr, hm, epsi, hpsi)
 
       if(associated(grad)) deallocate(grad)
    
@@ -159,8 +159,8 @@ subroutine X(hamiltonian_apply_batch) (h, gr, psib, hpsib, ik, t, kinetic_only)
       ! now we need to remove the exp(-i k.r) factor
       call profiling_in(phase_prof)
 
-      forall (idim = 1:h%d%dim, ip = 1:NP)
-        hpsi(ip, idim) = conjg(h%phase(ip, ik))*hpsi(ip, idim)
+      forall (idim = 1:hm%d%dim, ip = 1:NP)
+        hpsi(ip, idim) = conjg(hm%phase(ip, ik))*hpsi(ip, idim)
       end forall
   
       call profiling_out(phase_prof)
@@ -187,8 +187,8 @@ end subroutine X(hamiltonian_apply_batch)
 
 ! ---------------------------------------------------------
 
-subroutine X(get_grad)(h, gr, psi, grad)
-  type(hamiltonian_t), intent(in)    :: h
+subroutine X(get_grad)(hm, gr, psi, grad)
+  type(hamiltonian_t), intent(in)    :: hm
   type(grid_t),        intent(inout) :: gr
   R_TYPE,              intent(inout) :: psi(:, :)
   R_TYPE,              pointer       :: grad(:, :, :)
@@ -196,8 +196,8 @@ subroutine X(get_grad)(h, gr, psi, grad)
   integer :: idim
 
   if( .not. associated(grad)) then
-    ALLOCATE(grad(1:NP, 1:MAX_DIM, 1:h%d%dim), NP*MAX_DIM*h%d%dim)
-    do idim = 1, h%d%dim 
+    ALLOCATE(grad(1:NP, 1:MAX_DIM, 1:hm%d%dim), NP*MAX_DIM*hm%d%dim)
+    do idim = 1, hm%d%dim 
       ! boundary points were already set by the Laplacian
       call X(derivatives_grad)(gr%der, psi(:, idim), grad(:, :, idim), ghost_update = .false., set_bc = .false.)
     end do
@@ -206,13 +206,13 @@ subroutine X(get_grad)(h, gr, psi, grad)
 end subroutine X(get_grad)       
 
 ! ---------------------------------------------------------
-subroutine X(hamiltonian_apply) (h, gr, psi, hpsi, ist, ik, t, kinetic_only)
-  type(hamiltonian_t), intent(in)    :: h
+subroutine X(hamiltonian_apply) (hm, gr, psi, hpsi, ist, ik, t, kinetic_only)
+  type(hamiltonian_t), intent(in)    :: hm
   type(grid_t),        intent(inout) :: gr
   integer,             intent(in)    :: ist       ! the index of the state
   integer,             intent(in)    :: ik        ! the index of the k-point
-  R_TYPE, target,      intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
-  R_TYPE,              intent(out)   :: hpsi(:,:) ! hpsi(NP, h%d%dim)
+  R_TYPE, target,      intent(inout) :: psi(:,:)  ! psi(NP_PART, hm%d%dim)
+  R_TYPE,              intent(out)   :: hpsi(:,:) ! hpsi(NP, hm%d%dim)
   FLOAT, optional,     intent(in)    :: t
   logical, optional,   intent(in)    :: kinetic_only
 
@@ -222,15 +222,15 @@ subroutine X(hamiltonian_apply) (h, gr, psi, hpsi, ist, ik, t, kinetic_only)
   kinetic_only_ = .false.
   if(present(kinetic_only)) kinetic_only_ = kinetic_only
 
-  call batch_init(psib, h%d%dim, 1)
+  call batch_init(psib, hm%d%dim, 1)
   call batch_add_state(psib, ist, psi)
-  call batch_init(hpsib, h%d%dim, 1)
+  call batch_init(hpsib, hm%d%dim, 1)
   call batch_add_state(hpsib, ist, hpsi)
 
   if(present(t)) then
-    call X(hamiltonian_apply_batch)(h, gr, psib, hpsib, ik, t, kinetic_only = kinetic_only_)
+    call X(hamiltonian_apply_batch)(hm, gr, psib, hpsib, ik, t, kinetic_only = kinetic_only_)
   else
-    call X(hamiltonian_apply_batch)(h, gr, psib, hpsib, ik, kinetic_only = kinetic_only_)
+    call X(hamiltonian_apply_batch)(hm, gr, psib, hpsib, ik, kinetic_only = kinetic_only_)
   end if
 
   call batch_end(psib)
@@ -239,11 +239,11 @@ subroutine X(hamiltonian_apply) (h, gr, psi, hpsi, ist, ik, t, kinetic_only)
 end subroutine X(hamiltonian_apply)
 
 ! ---------------------------------------------------------
-subroutine X(exchange_operator) (h, gr, psi, hpsi, ist, ik)
-  type(hamiltonian_t), intent(in)    :: h
+subroutine X(exchange_operator) (hm, gr, psi, hpsi, ist, ik)
+  type(hamiltonian_t), intent(in)    :: hm
   type(grid_t),        intent(inout) :: gr
-  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
-  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP, h%d%dim)
+  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, hm%d%dim)
+  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP, hm%d%dim)
   integer,             intent(in)    :: ist       ! the index of the state
   integer,             intent(in)    :: ik        ! the index of the k-point
   R_TYPE, allocatable :: rho(:), pot(:)
@@ -255,38 +255,38 @@ subroutine X(exchange_operator) (h, gr, psi, hpsi, ist, ik)
   ALLOCATE(pot(gr%mesh%np), gr%mesh%np)
 
   ! WARNING: this can be very condensed
-  select case(h%d%ispin)
+  select case(hm%d%ispin)
   case(UNPOLARIZED)
-    do j = 1, h%st%nst
-      if(h%st%occ(j, ik) <= M_ZERO) cycle
+    do j = 1, hm%st%nst
+      if(hm%st%occ(j, ik) <= M_ZERO) cycle
 
       ! in Hartree we just remove the self-interaction
-      if(h%theory_level == HARTREE .and. j .ne. ist) cycle
+      if(hm%theory_level == HARTREE .and. j .ne. ist) cycle
 
       pot = M_ZERO
       do k = 1, gr%mesh%np
-        rho(k) = R_CONJ(h%st%X(psi)(k, 1, j, ik)) * psi(k, 1)
+        rho(k) = R_CONJ(hm%st%X(psi)(k, 1, j, ik)) * psi(k, 1)
       end do
       call X(poisson_solve)(gr, pot, rho)
       do k = 1, gr%mesh%np
-        hpsi(k, 1) = hpsi(k, 1) - h%exx_coef * (h%st%occ(j, ik)/M_TWO) * h%st%X(psi)(k, 1, j, ik)*pot(k)
+        hpsi(k, 1) = hpsi(k, 1) - hm%exx_coef * (hm%st%occ(j, ik)/M_TWO) * hm%st%X(psi)(k, 1, j, ik)*pot(k)
       end do
     end do 
 
   case(SPIN_POLARIZED)
-    do j = 1, h%st%nst
-      if(h%st%occ(j, ik) <= M_ZERO) cycle
+    do j = 1, hm%st%nst
+      if(hm%st%occ(j, ik) <= M_ZERO) cycle
 
       ! in Hartree we just remove the self-interaction
-      if(h%theory_level == HARTREE .and. j .ne. ist) cycle
+      if(hm%theory_level == HARTREE .and. j .ne. ist) cycle
 
       pot = M_ZERO
       do k = 1, gr%mesh%np
-        rho(k) = R_CONJ(h%st%X(psi)(k, 1, j, ik)) * psi(k, 1)
+        rho(k) = R_CONJ(hm%st%X(psi)(k, 1, j, ik)) * psi(k, 1)
       end do
       call X(poisson_solve)(gr, pot, rho)
       do k = 1, gr%mesh%np
-        hpsi(k, 1) = hpsi(k, 1) - h%exx_coef * h%st%occ(j, ik) * h%st%X(psi)(k, 1, j, ik)*pot(k)
+        hpsi(k, 1) = hpsi(k, 1) - hm%exx_coef * hm%st%occ(j, ik) * hm%st%X(psi)(k, 1, j, ik)*pot(k)
       end do
     end do 
 
@@ -300,11 +300,11 @@ end subroutine X(exchange_operator)
 
 
 ! ---------------------------------------------------------
-subroutine X(oct_exchange_operator) (h, gr, psi, hpsi, ik)
-  type(hamiltonian_t), intent(in)    :: h
+subroutine X(oct_exchange_operator) (hm, gr, psi, hpsi, ik)
+  type(hamiltonian_t), intent(in)    :: hm
   type(grid_t),        intent(inout) :: gr
-  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
-  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP, h%d%dim)
+  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, hm%d%dim)
+  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP, hm%d%dim)
   integer,             intent(in)    :: ik
   R_TYPE, allocatable :: rho(:), pot(:)
   integer :: j, k
@@ -314,31 +314,31 @@ subroutine X(oct_exchange_operator) (h, gr, psi, hpsi, ik)
   ALLOCATE(rho(gr%mesh%np), gr%mesh%np)
   ALLOCATE(pot(gr%mesh%np), gr%mesh%np)
 
-  select case(h%d%ispin)
+  select case(hm%d%ispin)
   case(UNPOLARIZED)
-    do j = 1, h%oct_st%nst
+    do j = 1, hm%oct_st%nst
       pot = M_ZERO
       do k = 1, gr%mesh%np
-        rho(k) = R_CONJ(h%oct_st%X(psi)(k, 1, j, ik)) * psi(k, 1)
+        rho(k) = R_CONJ(hm%oct_st%X(psi)(k, 1, j, ik)) * psi(k, 1)
       end do
       call X(poisson_solve)(gr, pot, rho)
       do k = 1, gr%mesh%np
-        hpsi(k, 1) = hpsi(k, 1) +  M_TWO * M_z1 * (h%oct_st%occ(j, ik)/M_TWO) * &
-                     h%oct_st%X(psi)(k, 1, j, ik) * R_AIMAG(pot(k))
+        hpsi(k, 1) = hpsi(k, 1) +  M_TWO * M_z1 * (hm%oct_st%occ(j, ik)/M_TWO) * &
+                     hm%oct_st%X(psi)(k, 1, j, ik) * R_AIMAG(pot(k))
       end do
     end do 
 
   case(SPIN_POLARIZED)
-    do j = 1, h%oct_st%nst
-      if(h%oct_st%occ(j, ik) <= M_ZERO) cycle
+    do j = 1, hm%oct_st%nst
+      if(hm%oct_st%occ(j, ik) <= M_ZERO) cycle
       pot = M_ZERO
       do k = 1, gr%mesh%np
-        rho(k) = R_CONJ(h%oct_st%X(psi)(k, 1, j, ik)) * psi(k, 1)
+        rho(k) = R_CONJ(hm%oct_st%X(psi)(k, 1, j, ik)) * psi(k, 1)
       end do
       call X(poisson_solve)(gr, pot, rho)
       do k = 1, gr%mesh%np
-        hpsi(k, 1) = hpsi(k, 1) +  M_TWO * M_z1 * h%oct_st%occ(j, ik) * &
-          h%oct_st%X(psi)(k, 1, j, ik)*R_AIMAG(pot(k))
+        hpsi(k, 1) = hpsi(k, 1) +  M_TWO * M_z1 * hm%oct_st%occ(j, ik) * &
+          hm%oct_st%X(psi)(k, 1, j, ik)*R_AIMAG(pot(k))
       end do
     end do 
 
@@ -352,13 +352,13 @@ end subroutine X(oct_exchange_operator)
 
 
 ! ---------------------------------------------------------
-subroutine X(magnus) (h, gr, psi, hpsi, ik, vmagnus)
-  type(hamiltonian_t), intent(in)    :: h
+subroutine X(magnus) (hm, gr, psi, hpsi, ik, vmagnus)
+  type(hamiltonian_t), intent(in)    :: hm
   type(grid_t),        intent(inout) :: gr
   integer,             intent(in)    :: ik
-  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
-  R_TYPE,              intent(out)   :: hpsi(:,:) ! hpsi(NP, h%d%dim)
-  FLOAT,               intent(in)    :: vmagnus(NP, h%d%nspin, 2)
+  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, hm%d%dim)
+  R_TYPE,              intent(out)   :: hpsi(:,:) ! hpsi(NP, hm%d%dim)
+  FLOAT,               intent(in)    :: vmagnus(NP, hm%d%nspin, 2)
 
   R_TYPE, allocatable :: auxpsi(:, :), aux2psi(:, :)
   integer :: idim, ispin
@@ -367,37 +367,37 @@ subroutine X(magnus) (h, gr, psi, hpsi, ik, vmagnus)
 
   call push_sub('hamiltonian_inc.Xmagnus')
 
-  ALLOCATE( auxpsi(NP_PART, h%d%dim), NP_PART*h%d%dim)
-  ALLOCATE(aux2psi(NP,      h%d%dim), NP*h%d%dim)
+  ALLOCATE( auxpsi(NP_PART, hm%d%dim), NP_PART*hm%d%dim)
+  ALLOCATE(aux2psi(NP,      hm%d%dim), NP*hm%d%dim)
 
-  ispin = states_dim_get_spin_index(h%d, ik)
+  ispin = states_dim_get_spin_index(hm%d, ik)
 
-  call X(hamiltonian_apply)(h, gr, psi, hpsi, ist = 1, ik = ik, kinetic_only = .true.)
+  call X(hamiltonian_apply)(hm, gr, psi, hpsi, ist = 1, ik = ik, kinetic_only = .true.)
 
-  do idim = 1, h%d%dim
+  do idim = 1, hm%d%dim
     call lalg_copy(NP, hpsi(:, idim), auxpsi(:, idim))
   end do
 
-  if (h%ep%non_local) call X(vnlpsi)(h, gr%mesh, psi, auxpsi, ik)
+  if (hm%ep%non_local) call X(vnlpsi)(hm, gr%mesh, psi, auxpsi, ik)
 
   hpsi(1:NP, 1) = hpsi(1:NP, 1) -  M_zI*vmagnus(1:NP, ispin, 1)*auxpsi(1:NP, 1)
   auxpsi(1:NP, 1) = vmagnus(1:NP, ispin, 1)*psi(1:NP, 1)
 
-  call X(hamiltonian_apply)(h, gr, auxpsi, aux2psi, ist = 1, ik = ik, kinetic_only = .true.)
+  call X(hamiltonian_apply)(hm, gr, auxpsi, aux2psi, ist = 1, ik = ik, kinetic_only = .true.)
 
-  if (h%ep%non_local) call X(vnlpsi)(h, gr%mesh, auxpsi, aux2psi, ik)
+  if (hm%ep%non_local) call X(vnlpsi)(hm, gr%mesh, auxpsi, aux2psi, ik)
 
   hpsi(1:NP, 1) = hpsi(1:NP, 1) + M_zI*aux2psi(1:NP, 1)
 
-  do idim = 1, h%d%dim
-    hpsi(1:NP, idim) = hpsi(1:NP, idim) + h%ep%Vpsl(1:NP)*psi(1:NP,idim)
+  do idim = 1, hm%d%dim
+    hpsi(1:NP, idim) = hpsi(1:NP, idim) + hm%ep%Vpsl(1:NP)*psi(1:NP,idim)
   end do
 
   hpsi(1:NP, 1) = hpsi(1:NP, 1) + vmagnus(1:NP, ispin, 2)*psi(1:NP, 1)
 
-  if (h%ep%non_local) call X(vnlpsi)(h, gr%mesh, psi, Hpsi, ik)
+  if (hm%ep%non_local) call X(vnlpsi)(hm, gr%mesh, psi, Hpsi, ik)
 
-  call X(vborders) (gr, h, psi, hpsi)
+  call X(vborders) (gr, hm, psi, hpsi)
 
   deallocate(auxpsi, aux2psi)
   call pop_sub()
@@ -406,11 +406,11 @@ end subroutine X(magnus)
 ! ---------------------------------------------------------
 ! Here we the terms arising from the presence of a possible static external
 ! magnetic field, and the terms that come from CDFT.
-subroutine X(magnetic_terms) (gr, h, psi, hpsi, grad, ik)
+subroutine X(magnetic_terms) (gr, hm, psi, hpsi, grad, ik)
   type(grid_t),        intent(inout) :: gr
-  type(hamiltonian_t), intent(in)    :: h
-  R_TYPE,              intent(inout) :: psi(:, :)  ! psi(NP_PART, h%d%dim)
-  R_TYPE,              intent(inout) :: hpsi(:, :) ! hpsi(NP, h%d%dim)
+  type(hamiltonian_t), intent(in)    :: hm
+  R_TYPE,              intent(inout) :: psi(:, :)  ! psi(NP_PART, hm%d%dim)
+  R_TYPE,              intent(inout) :: hpsi(:, :) ! hpsi(NP, hm%d%dim)
   R_TYPE,              pointer       :: grad(:, :, :)
   integer,             intent(in)    :: ik
 
@@ -420,26 +420,26 @@ subroutine X(magnetic_terms) (gr, h, psi, hpsi, grad, ik)
 
   call push_sub('hamiltonian_inc.Xmagnetic_terms')
 
-  if(h%d%cdft .or. associated(h%ep%A_static)) then
-    call X(get_grad)(h, gr, psi, grad)
+  if(hm%d%cdft .or. associated(hm%ep%A_static)) then
+    call X(get_grad)(hm, gr, psi, grad)
   else
     call pop_sub()
     return
   endif
 
   ! If we are using CDFT:
-  if(h%d%cdft) then
+  if(hm%d%cdft) then
 
     ALLOCATE(div(NP), NP)
     ALLOCATE(tmp(NP_PART, NDIM), NP_PART*NDIM)
-    select case (h%d%ispin)
+    select case (hm%d%ispin)
     case(UNPOLARIZED)
-      tmp(1:NP, :) = h%axc(1:NP, :, 1)
+      tmp(1:NP, :) = hm%axc(1:NP, :, 1)
     case(SPIN_POLARIZED)
       if(modulo(ik+1, 2) == 0) then ! we have a spin down
-        tmp(1:NP, :) = h%axc(1:NP, :, 1)
+        tmp(1:NP, :) = hm%axc(1:NP, :, 1)
       else
-        tmp(1:NP, :) = h%axc(1:NP, :, 2)
+        tmp(1:NP, :) = hm%axc(1:NP, :, 2)
       end if
     case(SPINORS)
       write(message(1),'(a)') 'Current DFT not yet functional in spinors mode, sorry.'
@@ -449,17 +449,17 @@ subroutine X(magnetic_terms) (gr, h, psi, hpsi, grad, ik)
     hpsi(1:NP, 1) = hpsi(1:NP, 1) - M_HALF*M_zI*div*psi(1:NP, 1)
     deallocate(div, tmp)
 
-    select case (h%d%ispin)
+    select case (hm%d%ispin)
     case(UNPOLARIZED)
       do k = 1, NP
-        hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(h%axc(k, 1:NDIM, 1), grad(k, 1:NDIM, 1))
+        hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(hm%axc(k, 1:NDIM, 1), grad(k, 1:NDIM, 1))
       end do
     case(SPIN_POLARIZED)
       do k = 1, NP
         if(modulo(ik+1, 2) == 0) then ! we have a spin down
-          hpsi(k, 1) = hpsi(k, 1) -  M_zI*dot_product(h%axc(k, 1:NDIM, 1), grad(k, 1:NDIM, 1))
+          hpsi(k, 1) = hpsi(k, 1) -  M_zI*dot_product(hm%axc(k, 1:NDIM, 1), grad(k, 1:NDIM, 1))
         else
-          hpsi(k, 1) = hpsi(k, 1) -  M_zI*dot_product(h%axc(k, 1:NDIM, 2), grad(k, 1:NDIM, 1))
+          hpsi(k, 1) = hpsi(k, 1) -  M_zI*dot_product(hm%axc(k, 1:NDIM, 2), grad(k, 1:NDIM, 1))
         end if
       end do
     case(SPINORS)
@@ -469,37 +469,37 @@ subroutine X(magnetic_terms) (gr, h, psi, hpsi, grad, ik)
   endif !CDT
 
   ! If we have an external magnetic field
-  if (associated(h%ep%A_static)) then
+  if (associated(hm%ep%A_static)) then
     do k = 1, NP
-      hpsi(k, :) = hpsi(k, :) + M_HALF*dot_product(h%ep%A_static(k, 1:NDIM), h%ep%A_static(k, 1:NDIM))*psi(k, :)
-      select case(h%d%ispin)
+      hpsi(k, :) = hpsi(k, :) + M_HALF*dot_product(hm%ep%A_static(k, 1:NDIM), hm%ep%A_static(k, 1:NDIM))*psi(k, :)
+      select case(hm%d%ispin)
       case(UNPOLARIZED, SPIN_POLARIZED)
-        hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(h%ep%A_static(k, 1:NDIM), grad(k, 1:NDIM, 1))
+        hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(hm%ep%A_static(k, 1:NDIM), grad(k, 1:NDIM, 1))
       case (SPINORS)
-        do idim = 1, h%d%dim
-          hpsi(k, idim) = hpsi(k, idim) - M_zI*dot_product(h%ep%A_static(k, 1:NDIM), grad(k, 1:NDIM, idim))
+        do idim = 1, hm%d%dim
+          hpsi(k, idim) = hpsi(k, idim) - M_zI*dot_product(hm%ep%A_static(k, 1:NDIM), grad(k, 1:NDIM, idim))
         end do
       end select
     end do
   end if
 
   ! Zeeman term
-  if (associated(h%ep%B_field) .and. h%d%ispin /= UNPOLARIZED) then
-    ALLOCATE(lhpsi(NP, h%d%dim), NP*h%d%dim)
-    select case (h%d%ispin)
+  if (associated(hm%ep%B_field) .and. hm%d%ispin /= UNPOLARIZED) then
+    ALLOCATE(lhpsi(NP, hm%d%dim), NP*hm%d%dim)
+    select case (hm%d%ispin)
     case (SPIN_POLARIZED)
       if(modulo(ik+1, 2) == 0) then ! we have a spin down
-        lhpsi(1:NP, 1) = - M_HALF/P_C*sqrt(dot_product(h%ep%B_field, h%ep%B_field))*psi(1:NP, 1)
+        lhpsi(1:NP, 1) = - M_HALF/P_C*sqrt(dot_product(hm%ep%B_field, hm%ep%B_field))*psi(1:NP, 1)
       else
-        lhpsi(1:NP, 1) = + M_HALF/P_C*sqrt(dot_product(h%ep%B_field, h%ep%B_field))*psi(1:NP, 1)
+        lhpsi(1:NP, 1) = + M_HALF/P_C*sqrt(dot_product(hm%ep%B_field, hm%ep%B_field))*psi(1:NP, 1)
       end if
     case (SPINORS)
-      lhpsi(1:NP, 1) = M_HALF/P_C*( h%ep%B_field(3)*psi(1:NP, 1) &
-                                 + (h%ep%B_field(1) - M_zI*h%ep%B_field(2))*psi(1:NP, 2))
-      lhpsi(1:NP, 2) = M_HALF/P_C*(-h%ep%B_field(3)*psi(1:NP, 2) &
-                                 + (h%ep%B_field(1) + M_zI*h%ep%B_field(2))*psi(1:NP, 1))
+      lhpsi(1:NP, 1) = M_HALF/P_C*( hm%ep%B_field(3)*psi(1:NP, 1) &
+                                 + (hm%ep%B_field(1) - M_zI*hm%ep%B_field(2))*psi(1:NP, 2))
+      lhpsi(1:NP, 2) = M_HALF/P_C*(-hm%ep%B_field(3)*psi(1:NP, 2) &
+                                 + (hm%ep%B_field(1) + M_zI*hm%ep%B_field(2))*psi(1:NP, 1))
     end select
-    hpsi(1:NP, :) = hpsi(1:NP, :) + (h%ep%gyromagnetic_ratio * M_HALF) * lhpsi(1:NP, :)
+    hpsi(1:NP, :) = hpsi(1:NP, :) + (hm%ep%gyromagnetic_ratio * M_HALF) * lhpsi(1:NP, :)
     deallocate(lhpsi)
   end if
 
@@ -508,17 +508,17 @@ end subroutine X(magnetic_terms)
 
 
 ! ---------------------------------------------------------
-subroutine X(vnlpsi) (h, mesh, psi, hpsi, ik)
-  type(hamiltonian_t), intent(in)    :: h
+subroutine X(vnlpsi) (hm, mesh, psi, hpsi, ik)
+  type(hamiltonian_t), intent(in)    :: hm
   type(mesh_t),        intent(inout) :: mesh
-  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
-  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, h%d%dim)
+  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, hm%d%dim)
+  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, hm%d%dim)
   integer,             intent(in)    :: ik
 
   call profiling_in(C_PROFILING_VNLPSI)
   call push_sub('hamiltonian_inc.Xvnlpsi')
 
-  call X(project_psi)(mesh, h%ep%proj, h%ep%natoms, h%d%dim, psi, hpsi, ik)
+  call X(project_psi)(mesh, hm%ep%proj, hm%ep%natoms, hm%d%dim, psi, hpsi, ik)
     
   call pop_sub()
   call profiling_out(C_PROFILING_VNLPSI)
@@ -526,8 +526,8 @@ end subroutine X(vnlpsi)
 
 
 ! ---------------------------------------------------------
-subroutine X(vnlpsi_batch) (h, mesh, psib, hpsib, ik)
-  type(hamiltonian_t), intent(in)    :: h
+subroutine X(vnlpsi_batch) (hm, mesh, psib, hpsib, ik)
+  type(hamiltonian_t), intent(in)    :: hm
   type(mesh_t),        intent(in)    :: mesh
   type(batch_t),       intent(in)    :: psib
   type(batch_t),       intent(inout) :: hpsib
@@ -543,7 +543,7 @@ subroutine X(vnlpsi_batch) (h, mesh, psib, hpsib, ik)
     psi  => psib%states(ii)%X(psi)
     hpsi => hpsib%states(ii)%X(psi)
 
-    call X(project_psi)(mesh, h%ep%proj, h%ep%natoms, h%d%dim, psi, hpsi, ik)
+    call X(project_psi)(mesh, hm%ep%proj, hm%ep%natoms, hm%d%dim, psi, hpsi, ik)
   end do
 
   call pop_sub()
@@ -552,8 +552,8 @@ end subroutine X(vnlpsi_batch)
 
 
 ! ---------------------------------------------------------
-subroutine X(vlpsi_batch) (h, m, psib, hpsib, ik)
-  type(hamiltonian_t), intent(in)    :: h
+subroutine X(vlpsi_batch) (hm, m, psib, hpsib, ik)
+  type(hamiltonian_t), intent(in)    :: hm
   type(mesh_t),        intent(in)    :: m
   integer,             intent(in)    :: ik
   type(batch_t),       intent(in)    :: psib
@@ -566,9 +566,9 @@ subroutine X(vlpsi_batch) (h, m, psib, hpsib, ik)
   call profiling_in(C_PROFILING_VLPSI)
   call push_sub('hamiltonian_inc.Xvlpsi')
 
-  select case(h%d%ispin)
+  select case(hm%d%ispin)
   case(UNPOLARIZED, SPIN_POLARIZED)
-    ispin = states_dim_get_spin_index(h%d, ik)
+    ispin = states_dim_get_spin_index(hm%d, ik)
 
     bs = hardware%dblock_size
 
@@ -577,7 +577,7 @@ subroutine X(vlpsi_batch) (h, m, psib, hpsib, ik)
     do ip = 1, m%np, bs
       ipmax = min(m%np, ip + bs - 1)
 
-      forall (ip2 = ip:ipmax) vv(ip2 - ip + 1) = h%vhxc(ip2, ispin) + h%ep%vpsl(ip2)
+      forall (ip2 = ip:ipmax) vv(ip2 - ip + 1) = hm%vhxc(ip2, ispin) + hm%ep%vpsl(ip2)
 
       forall (ii = 1:psib%nst, ip2 = ip:ipmax)
         hpsib%states(ii)%X(psi)(ip2, 1) = vv(ip2 - ip + 1)*psib%states(ii)%X(psi)(ip2, 1)
@@ -597,8 +597,8 @@ subroutine X(vlpsi_batch) (h, m, psib, hpsib, ik)
       hpsi => hpsib%states(ii)%X(psi)
 
       do ip = 1, m%np
-        hpsi(ip, 1) = (h%vhxc(ip, 1) + h%ep%vpsl(ip))*psi(ip, 1) + (h%vhxc(ip, 3) + M_zI*h%vhxc(ip, 4))*psi(ip, 2)
-        hpsi(ip, 2) = (h%vhxc(ip, 2) + h%ep%vpsl(ip))*psi(ip, 2) + (h%vhxc(ip, 3) - M_zI*h%vhxc(ip, 4))*psi(ip, 1)
+        hpsi(ip, 1) = (hm%vhxc(ip, 1) + hm%ep%vpsl(ip))*psi(ip, 1) + (hm%vhxc(ip, 3) + M_zI*hm%vhxc(ip, 4))*psi(ip, 2)
+        hpsi(ip, 2) = (hm%vhxc(ip, 2) + hm%ep%vpsl(ip))*psi(ip, 2) + (hm%vhxc(ip, 3) - M_zI*hm%vhxc(ip, 4))*psi(ip, 1)
       end do
 
     end do
@@ -611,11 +611,11 @@ subroutine X(vlpsi_batch) (h, m, psib, hpsib, ik)
 end subroutine X(vlpsi_batch)
 
 ! ---------------------------------------------------------
-subroutine X(vexternal) (h, gr, psi, hpsi, ik)
-  type(hamiltonian_t), intent(in)    :: h
+subroutine X(vexternal) (hm, gr, psi, hpsi, ik)
+  type(hamiltonian_t), intent(in)    :: hm
   type(grid_t),        intent(inout) :: gr
-  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
-  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, h%d%dim)
+  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, hm%d%dim)
+  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, hm%d%dim)
   integer,             intent(in)    :: ik
 
   integer :: idim
@@ -623,22 +623,22 @@ subroutine X(vexternal) (h, gr, psi, hpsi, ik)
   call profiling_in(C_PROFILING_VLPSI)
   call push_sub('hamiltonian_inc.Xvlpsi')
 
-  do idim = 1, h%d%dim
-    hpsi(1:NP, idim) = hpsi(1:NP, idim) + h%ep%vpsl(1:NP)*psi(1:NP, idim)
+  do idim = 1, hm%d%dim
+    hpsi(1:NP, idim) = hpsi(1:NP, idim) + hm%ep%vpsl(1:NP)*psi(1:NP, idim)
   end do
 
-  if(h%ep%non_local) call X(vnlpsi)(h, gr%mesh, psi, hpsi, ik)
+  if(hm%ep%non_local) call X(vnlpsi)(hm, gr%mesh, psi, hpsi, ik)
 
   call pop_sub()
   call profiling_out(C_PROFILING_VLPSI)
 end subroutine X(vexternal)
 
 ! ---------------------------------------------------------
-subroutine X(vgauge) (gr, h, psi, hpsi, grad)
+subroutine X(vgauge) (gr, hm, psi, hpsi, grad)
   type(grid_t),        intent(inout) :: gr
-  type(hamiltonian_t), intent(in)    :: h
-  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
-  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, h%d%dim)
+  type(hamiltonian_t), intent(in)    :: hm
+  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, hm%d%dim)
+  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, hm%d%dim)
   R_TYPE,              pointer       :: grad(:, :, :)
 
   integer :: ip, idim, a2
@@ -646,14 +646,14 @@ subroutine X(vgauge) (gr, h, psi, hpsi, grad)
 
   call push_sub('hamiltonian_inc.Xvgauge')
 
-  ASSERT(gauge_field_is_applied(h%ep%gfield))
+  ASSERT(gauge_field_is_applied(hm%ep%gfield))
 
-  call X(get_grad)(h, gr, psi, grad)
+  call X(get_grad)(hm, gr, psi, grad)
 
-  vecpot = gauge_field_get_vec_pot(h%ep%gfield)/P_c
+  vecpot = gauge_field_get_vec_pot(hm%ep%gfield)/P_c
   a2 = sum(vecpot(1:MAX_DIM)**2)
   
-  do idim = 1, h%d%dim
+  do idim = 1, hm%d%dim
     do ip = 1, NP
       hpsi(ip, idim) = hpsi(ip, idim) + &
            M_HALF*a2*psi(ip, idim) + M_zI*dot_product(vecpot(1:MAX_DIM), grad(ip, 1:MAX_DIM, idim))
@@ -665,19 +665,19 @@ end subroutine X(vgauge)
 
 
 ! ---------------------------------------------------------
-subroutine X(vborders) (gr, h, psi, hpsi)
+subroutine X(vborders) (gr, hm, psi, hpsi)
   type(grid_t),        intent(inout) :: gr
-  type(hamiltonian_t), intent(in)    :: h
-  R_TYPE,              intent(in)    :: psi(:,:)  ! psi(NP_PART, h%d%dim)
-  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, h%d%dim)
+  type(hamiltonian_t), intent(in)    :: hm
+  R_TYPE,              intent(in)    :: psi(:,:)  ! psi(NP_PART, hm%d%dim)
+  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, hm%d%dim)
 
   integer :: idim
 
   call push_sub('hamiltonian_inc.Xvborders')
 
-  if(h%ab .eq. IMAGINARY_ABSORBING) then
-    do idim = 1, h%d%dim
-      hpsi(1:NP, idim) = hpsi(1:NP, idim) + M_zI*h%ab_pot(1:NP)*psi(1:NP, idim)
+  if(hm%ab .eq. IMAGINARY_ABSORBING) then
+    do idim = 1, hm%d%dim
+      hpsi(1:NP, idim) = hpsi(1:NP, idim) + M_zI*hm%ab_pot(1:NP)*psi(1:NP, idim)
     end do
   end if
 
@@ -686,11 +686,11 @@ end subroutine X(vborders)
 
 
 ! ---------------------------------------------------------
-subroutine X(h_mgga_terms) (h, gr, psi, hpsi, ik, grad)
-  type(hamiltonian_t), intent(in)    :: h
+subroutine X(h_mgga_terms) (hm, gr, psi, hpsi, ik, grad)
+  type(hamiltonian_t), intent(in)    :: hm
   type(grid_t),        intent(inout) :: gr
-  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
-  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, h%d%dim)
+  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, hm%d%dim)
+  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, hm%d%dim)
   integer,             intent(in)    :: ik
   R_TYPE,              pointer       :: grad(:, :, :)
 
@@ -699,15 +699,15 @@ subroutine X(h_mgga_terms) (h, gr, psi, hpsi, ik, grad)
 
   call push_sub('hamiltonian_inc.Xh_mgga_terms')
 
-  call X(get_grad)(h, gr, psi, grad)
-  ispin = states_dim_get_spin_index(h%d, ik)
+  call X(get_grad)(hm, gr, psi, grad)
+  ispin = states_dim_get_spin_index(hm%d, ik)
 
   ALLOCATE(cgrad(1:NP_PART, 1:MAX_DIM), NP_PART*MAX_DIM)
   ALLOCATE(diverg(1:NP), NP)
 
-  do idim = 1, h%d%dim
+  do idim = 1, hm%d%dim
     do ispace = 1, gr%sb%dim
-      cgrad(1:NP, ispace) = M_TWO*grad(1:NP, ispace, idim)*h%vtau(1:NP, ispin)
+      cgrad(1:NP, ispace) = M_TWO*grad(1:NP, ispace, idim)*hm%vtau(1:NP, ispin)
       call X(set_bc)(gr%der, cgrad(:, ispace))
     end do
 
@@ -724,20 +724,20 @@ end subroutine X(h_mgga_terms)
 
 
 ! ---------------------------------------------------------
-subroutine X(vmask) (gr, h, st)
+subroutine X(vmask) (gr, hm, st)
   type(grid_t),        intent(in)    :: gr
-  type(hamiltonian_t), intent(in)    :: h
+  type(hamiltonian_t), intent(in)    :: hm
   type(states_t),      intent(inout) :: st
 
   integer :: ik, ist, idim
 
   call push_sub('hamiltonian_inc.Xvmask')
 
-  if(h%ab == MASK_ABSORBING) then
+  if(hm%ab == MASK_ABSORBING) then
     do ik = 1, st%d%nik
       do ist = st%st_start, st%st_end
         do idim = 1, st%d%dim
-           st%X(psi)(1:NP, idim, ist, ik) = st%X(psi)(1:NP, idim, ist, ik)*(M_ONE - h%ab_pot(1:NP))
+           st%X(psi)(1:NP, idim, ist, ik) = st%X(psi)(1:NP, idim, ist, ik)*(M_ONE - hm%ab_pot(1:NP))
         end do
       end do
     end do
@@ -747,11 +747,11 @@ subroutine X(vmask) (gr, h, st)
 end subroutine X(vmask)
 
 ! ---------------------------------------------------------
-subroutine X(hamiltonian_diagonal) (h, gr, diag, ik, t)
-  type(hamiltonian_t), intent(in)    :: h
+subroutine X(hamiltonian_diagonal) (hm, gr, diag, ik, t)
+  type(hamiltonian_t), intent(in)    :: hm
   type(grid_t),        intent(inout) :: gr
   integer,             intent(in)    :: ik
-  R_TYPE,              intent(out)   :: diag(:,:) ! hpsi(NP, h%d%dim)
+  R_TYPE,              intent(out)   :: diag(:,:) ! hpsi(NP, hm%d%dim)
   FLOAT, optional,     intent(in)    :: t
 
   integer :: idim, ip, ispin
@@ -766,20 +766,20 @@ subroutine X(hamiltonian_diagonal) (h, gr, diag, ik, t)
 
   call derivatives_lapl_diag(gr%der, ldiag)
 
-  do idim = 1, h%d%dim
-    diag(1:NP, idim) = -M_HALF/h%mass*ldiag(1:NP)
+  do idim = 1, hm%d%dim
+    diag(1:NP, idim) = -M_HALF/hm%mass*ldiag(1:NP)
   end do
 
-  select case(h%d%ispin)
+  select case(hm%d%ispin)
 
   case(UNPOLARIZED, SPIN_POLARIZED)
-    ispin = states_dim_get_spin_index(h%d, ik)
-    diag(1:NP, 1) = diag(1:NP, 1) + h%vhxc(1:NP, ispin) + h%ep%vpsl(1:NP)
+    ispin = states_dim_get_spin_index(hm%d, ik)
+    diag(1:NP, 1) = diag(1:NP, 1) + hm%vhxc(1:NP, ispin) + hm%ep%vpsl(1:NP)
     
   case(SPINORS)
     do ip = 1, NP
-      diag(ip, 1) = diag(ip, 1) + h%vhxc(ip, 1) + h%ep%vpsl(ip)
-      diag(ip, 2) = diag(ip, 2) + h%vhxc(ip, 2) + h%ep%vpsl(ip)
+      diag(ip, 1) = diag(ip, 1) + hm%vhxc(ip, 1) + hm%ep%vpsl(ip)
+      diag(ip, 2) = diag(ip, 2) + hm%vhxc(ip, 2) + hm%ep%vpsl(ip)
     end do
     
   end select

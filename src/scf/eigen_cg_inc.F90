@@ -19,10 +19,10 @@
 
 ! ---------------------------------------------------------
 ! conjugate-gradients method.
-subroutine X(eigensolver_cg2) (gr, st, h, pre, tol, niter, converged, ik, diff, verbose)
+subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff, verbose)
   type(grid_t),        intent(inout) :: gr
   type(states_t),      intent(inout) :: st
-  type(hamiltonian_t), intent(inout) :: h
+  type(hamiltonian_t), intent(inout) :: hm
   type(preconditioner_t), intent(in) :: pre
   FLOAT,               intent(in)    :: tol
   integer,             intent(inout) :: niter
@@ -87,7 +87,7 @@ subroutine X(eigensolver_cg2) (gr, st, h, pre, tol, niter, converged, ik, diff, 
     end if
 
     ! Calculate starting gradient: |hpsi> = H|psi>
-    call X(hamiltonian_apply)(h, gr, st%X(psi)(:,:, p, ik) , h_psi, p, ik)
+    call X(hamiltonian_apply)(hm, gr, st%X(psi)(:,:, p, ik) , h_psi, p, ik)
 
     ! Calculates starting eigenvalue: e(p) = <psi(p)|H|psi>
     st%eigenval(p, ik) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, st%X(psi)(:,:, p, ik), h_psi))
@@ -96,8 +96,8 @@ subroutine X(eigensolver_cg2) (gr, st, h, pre, tol, niter, converged, ik, diff, 
     iter_loop: do iter = 1, maxter
 
       ! inverse preconditioner....
-      call  X(preconditioner_apply)(pre, gr, h, h_psi(:,:), g(:,:))
-      call  X(preconditioner_apply)(pre, gr, h, st%X(psi)(:,:, p, ik), ppsi(:,:))
+      call  X(preconditioner_apply)(pre, gr, hm, h_psi(:,:), g(:,:))
+      call  X(preconditioner_apply)(pre, gr, hm, st%X(psi)(:,:, p, ik), ppsi(:,:))
 
       es(1) = X(mf_dotp) (gr%mesh, st%d%dim, st%X(psi)(:,:, p, ik), g, reduce = .false.)
       es(2) = X(mf_dotp) (gr%mesh, st%d%dim, st%X(psi)(:,:, p, ik), ppsi, reduce = .false.)
@@ -126,7 +126,7 @@ subroutine X(eigensolver_cg2) (gr, st, h, pre, tol, niter, converged, ik, diff, 
       end if
 
       ! Approximate inverse preconditioner...
-      call  X(preconditioner_apply)(pre, gr, h, g(:,:), g0(:,:))
+      call  X(preconditioner_apply)(pre, gr, hm, g(:,:), g0(:,:))
 
       gg = X(mf_dotp) (gr%mesh, st%d%dim, g, g0, reduce = .false.)
 
@@ -170,7 +170,7 @@ subroutine X(eigensolver_cg2) (gr, st, h, pre, tol, niter, converged, ik, diff, 
       end if
 
       ! cg contains now the conjugate gradient
-      call X(hamiltonian_apply) (h, gr, cg, ppsi, p, ik)
+      call X(hamiltonian_apply) (hm, gr, cg, ppsi, p, ik)
 
       ! Line minimization.
       a0 = X(mf_dotp) (gr%mesh, st%d%dim, st%X(psi)(:,:, p, ik), ppsi, reduce = .false.)
@@ -257,10 +257,10 @@ end subroutine X(eigensolver_cg2)
 
 ! ---------------------------------------------------------
 ! The algorithm is essentially taken from Jiang et al. Phys. Rev. B 68, 165337 (2003).
-subroutine X(eigensolver_cg2_new) (gr, st, h, tol, niter, converged, ik, diff, verbose)
+subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff, verbose)
   type(grid_t),        intent(inout) :: gr
   type(states_t),      intent(inout) :: st
-  type(hamiltonian_t), intent(inout) :: h
+  type(hamiltonian_t), intent(inout) :: hm
   FLOAT,               intent(in)    :: tol
   integer,             intent(inout) :: niter
   integer,             intent(inout) :: converged
@@ -321,7 +321,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, h, tol, niter, converged, ik, diff, v
     end do
 
     ! Calculate starting gradient: |hpsi> = H|psi>
-    call X(hamiltonian_apply)(h, gr, psi, phi, ist, ik)
+    call X(hamiltonian_apply)(hm, gr, psi, phi, ist, ik)
     niter = niter + 1
 
     ! Initial settings for scalar variables.
@@ -392,7 +392,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, h, tol, niter, converged, ik, diff, v
         call lalg_scal(NP, M_ONE/dump, cgp(:, idim))
       end do
 
-      call X(hamiltonian_apply)(h, gr, cgp, hcgp, ist, ik)
+      call X(hamiltonian_apply)(hm, gr, cgp, hcgp, ist, ik)
 
       niter = niter + 1
 

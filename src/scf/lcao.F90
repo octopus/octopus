@@ -214,12 +214,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine lcao_wf(this, st, gr, geo, h, start)
+  subroutine lcao_wf(this, st, gr, geo, hm, start)
     type(lcao_t),        intent(inout) :: this
     type(states_t),      intent(inout) :: st
     type(grid_t),        intent(inout) :: gr
     type(geometry_t),    intent(in)    :: geo
-    type(hamiltonian_t), intent(in)    :: h
+    type(hamiltonian_t), intent(in)    :: hm
     integer, optional,   intent(in)    :: start
 
     integer :: start_
@@ -233,9 +233,9 @@ contains
     if(present(start)) start_ = start
 
     if (states_are_real(st)) then
-      call dlcao_wf(this, st, gr, geo, h, start_)
+      call dlcao_wf(this, st, gr, geo, hm, start_)
     else
-      call zlcao_wf(this, st, gr, geo, h, start_)
+      call zlcao_wf(this, st, gr, geo, hm, start_)
     end if
 
     call pop_sub()

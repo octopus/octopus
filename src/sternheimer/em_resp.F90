@@ -86,9 +86,9 @@ module pol_lr_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine pol_lr_run(sys, h, fromScratch)
+  subroutine pol_lr_run(sys, hm, fromScratch)
     type(system_t), target, intent(inout) :: sys
-    type(hamiltonian_t),    intent(inout) :: h
+    type(hamiltonian_t),    intent(inout) :: hm
     logical,                intent(inout) :: fromScratch
 
     type(grid_t),   pointer :: gr
@@ -131,13 +131,13 @@ contains
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian for linear response'
     call write_info(1)
-    call system_h_setup(sys, h)
+    call system_h_setup(sys, hm)
     
     if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
-       call sternheimer_init(sh, sys, h, "EM", hermitian = states_are_real(sys%st), set_ham_var = 0)
+       call sternheimer_init(sh, sys, hm, "EM", hermitian = states_are_real(sys%st), set_ham_var = 0)
        ! set HamiltonVariation to V_ext_only, in magnetic case
     else
-       call sternheimer_init(sh, sys, h, "EM", hermitian = states_are_real(sys%st))
+       call sternheimer_init(sh, sys, hm, "EM", hermitian = states_are_real(sys%st))
        ! otherwise, use default, which is hartree + fxc
     endif
 
@@ -262,13 +262,13 @@ contains
             
             call pert_setup_dir(em_vars%perturbation, dir)
             if (states_are_complex(sys%st)) then 
-              call zsternheimer_solve(sh, sys, h, em_vars%lr(dir, :, ifactor), em_vars%nsigma, &
+              call zsternheimer_solve(sh, sys, hm, em_vars%lr(dir, :, ifactor), em_vars%nsigma, &
                 em_vars%freq_factor(ifactor)*em_vars%omega(iomega) + M_zI * em_vars%eta, &
                 em_vars%perturbation, RESTART_DIR, &
                 em_rho_tag(em_vars%freq_factor(ifactor)*em_vars%omega(iomega), dir), &
                 em_wfs_tag(dir, ifactor), have_restart_rho=(ierr==0))
             else
-              call dsternheimer_solve(sh, sys, h, em_vars%lr(dir, :, ifactor), em_vars%nsigma, &
+              call dsternheimer_solve(sh, sys, hm, em_vars%lr(dir, :, ifactor), em_vars%nsigma, &
                 em_vars%freq_factor(ifactor)*em_vars%omega(iomega), &
                 em_vars%perturbation, RESTART_DIR, &
                 em_rho_tag(em_vars%freq_factor(ifactor)*em_vars%omega(iomega), dir), &
@@ -286,10 +286,10 @@ contains
         ! calculate polarizability
         do ifactor = 1, em_vars%nfactor
           if(states_are_complex(sys%st)) then 
-            call zlr_calc_polarizability_finite(sys, h, em_vars%lr(:, :, ifactor), em_vars%nsigma, &
+            call zlr_calc_polarizability_finite(sys, hm, em_vars%lr(:, :, ifactor), em_vars%nsigma, &
                  em_vars%perturbation, em_vars%alpha(:, :, ifactor))
           else
-            call dlr_calc_polarizability_finite(sys, h, em_vars%lr(:, :, ifactor), em_vars%nsigma, &
+            call dlr_calc_polarizability_finite(sys, hm, em_vars%lr(:, :, ifactor), em_vars%nsigma, &
                 em_vars%perturbation, em_vars%alpha(:, :, ifactor))
           end if
         end do
@@ -297,25 +297,25 @@ contains
         ! calculate hyperpolarizability
         if(em_vars%calc_hyperpol) then
           if(states_are_complex(sys%st)) then
-            call zlr_calc_beta(sh, sys, h, em_vars%lr, em_vars%perturbation, em_vars%beta)
+            call zlr_calc_beta(sh, sys, hm, em_vars%lr, em_vars%perturbation, em_vars%beta)
           else
-            call dlr_calc_beta(sh, sys, h, em_vars%lr, em_vars%perturbation, em_vars%beta)
+            call dlr_calc_beta(sh, sys, hm, em_vars%lr, em_vars%perturbation, em_vars%beta)
           end if
         end if
       
       else if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
         do ifactor = 1, em_vars%nfactor
           if(states_are_complex(sys%st)) then 
-            call zlr_calc_susceptibility(sys, h, em_vars%lr(:,:, ifactor), em_vars%nsigma, em_vars%perturbation, &
+            call zlr_calc_susceptibility(sys, hm, em_vars%lr(:,:, ifactor), em_vars%nsigma, em_vars%perturbation, &
                em_vars%chi_para(:,:, ifactor), em_vars%chi_dia(:,:, ifactor))
           else
-            call dlr_calc_susceptibility(sys, h, em_vars%lr(:,:, ifactor), em_vars%nsigma, em_vars%perturbation, &
+            call dlr_calc_susceptibility(sys, hm, em_vars%lr(:,:, ifactor), em_vars%nsigma, em_vars%perturbation, &
                em_vars%chi_para(:,:, ifactor), em_vars%chi_dia(:,:, ifactor))
           end if
         end do
       end if
 
-      call em_resp_output(sys%st, sys%gr, h, sys%geo, sys%outp, em_vars, iomega)
+      call em_resp_output(sys%st, sys%gr, hm, sys%geo, sys%outp, em_vars, iomega)
 
     end do
 
@@ -547,10 +547,10 @@ contains
   end subroutine read_wfs
 
   ! ---------------------------------------------------------
-  subroutine em_resp_output(st, gr, h, geo, outp, em_vars, iomega)
+  subroutine em_resp_output(st, gr, hm, geo, outp, em_vars, iomega)
     type(states_t),       intent(inout) :: st
     type(grid_t),         intent(inout) :: gr
-    type(hamiltonian_t),  intent(inout) :: h
+    type(hamiltonian_t),  intent(inout) :: hm
     type(geometry_t),     intent(inout) :: geo
     type(h_sys_output_t), intent(in)    :: outp
     type(em_resp_t),      intent(inout) :: em_vars
@@ -748,8 +748,8 @@ contains
         do idir = 1, 3
           call pert_setup_dir(angular_momentum, idir)
           dic = dic &
-               + zpert_expectation_value(angular_momentum, gr, geo, h, st, em_vars%lr(idir, 1, ifactor)%zdl_psi, st%zpsi) &
-               - zpert_expectation_value(angular_momentum, gr, geo, h, st, em_vars%lr(idir, 2, ifactor)%zdl_psi, st%zpsi)
+               + zpert_expectation_value(angular_momentum, gr, geo, hm, st, em_vars%lr(idir, 1, ifactor)%zdl_psi, st%zpsi) &
+               - zpert_expectation_value(angular_momentum, gr, geo, hm, st, em_vars%lr(idir, 2, ifactor)%zdl_psi, st%zpsi)
         end do
         
         call pert_end(angular_momentum)

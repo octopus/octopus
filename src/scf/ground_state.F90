@@ -52,9 +52,9 @@ module ground_state_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine ground_state_run(sys, h, fromScratch)
+  subroutine ground_state_run(sys, hm, fromScratch)
     type(system_t),      intent(inout) :: sys
-    type(hamiltonian_t), intent(inout) :: h
+    type(hamiltonian_t), intent(inout) :: hm
     logical,             intent(inout) :: fromScratch
 
     integer      :: lcao_start, lcao_start_default
@@ -114,9 +114,9 @@ contains
       ! overwrite the guess density)
       message(1) = 'Info: Setting up Hamiltonian.'
       call write_info(1)
-      call v_ks_calc(sys%gr, sys%ks, h, sys%st, calc_eigenval=.true.) ! get potentials
+      call v_ks_calc(sys%gr, sys%ks, hm, sys%st, calc_eigenval=.true.) ! get potentials
       call states_fermi(sys%st, sys%gr%mesh)                             ! occupations
-      call total_energy(h, sys%gr, sys%st, -1)         ! total energy
+      call total_energy(hm, sys%gr, sys%st, -1)         ! total energy
 
       ! The initial LCAO calculation is done by default if we have pseudopotentials.
       ! Otherwise, it is not the default value and has to be enforced in the input file.
@@ -157,7 +157,7 @@ contains
                lcao_num_orbitals(lcao),' orbitals.'
           call write_info(1)
           
-          call lcao_wf(lcao, sys%st, sys%gr, sys%geo, h)
+          call lcao_wf(lcao, sys%st, sys%gr, sys%geo, hm)
           call lcao_end(lcao)
 
           !Just populate again the states, so that the eigenvalues are properly written
@@ -166,7 +166,7 @@ contains
 
           if (lcao_start == LCAO_START_FULL) then
             ! Update the density and the Hamiltonian
-            call system_h_setup(sys, h)
+            call system_h_setup(sys, hm)
           end if
 
         end if
@@ -176,7 +176,7 @@ contains
       ! setup Hamiltonian
       message(1) = 'Info: Setting up Hamiltonian.'
       call write_info(1)
-      call system_h_setup(sys, h)
+      call system_h_setup(sys, hm)
 
     end if
 
@@ -188,8 +188,8 @@ contains
     end if
     call write_info(1)
 
-    call scf_init(sys%gr, sys%geo, scfv, sys%st, h)
-    call scf_run(scfv, sys%gr, sys%geo, sys%st, sys%ks, h, sys%outp)
+    call scf_init(sys%gr, sys%geo, scfv, sys%st, hm)
+    call scf_run(scfv, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp)
     call scf_end(scfv)
 
     ! clean up

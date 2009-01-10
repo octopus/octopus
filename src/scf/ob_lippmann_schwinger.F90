@@ -50,7 +50,7 @@ module ob_lippmann_schwinger_m
   FLOAT, pointer               :: energy_p
   CMPLX, pointer               :: green_p(:, :, :, :)
   type(grid_t), pointer        :: gr_p
-  type(hamiltonian_t), pointer :: h_p
+  type(hamiltonian_t), pointer :: hm_p
   type(states_t), pointer      :: st_p
 
 contains
@@ -58,9 +58,9 @@ contains
   ! ---------------------------------------------------------
   ! Solve the Lippmann-Schwinger equation for the open boundary
   ! system. Use convergence criteria in eigens.
-  subroutine lippmann_schwinger(eigens, h, gr, st)
+  subroutine lippmann_schwinger(eigens, hm, gr, st)
     type(eigensolver_t),        intent(out)   :: eigens
-    type(hamiltonian_t), target, intent(inout) :: h
+    type(hamiltonian_t), target, intent(inout) :: hm
     type(grid_t), target,        intent(inout) :: gr
     type(states_t), target,      intent(inout) :: st
 
@@ -84,7 +84,7 @@ contains
     ik_p     => ik
     green_p  => green
     gr_p     => gr
-    h_p      => h
+    hm_p      => hm
     st_p     => st
     energy_p => energy
 
@@ -97,13 +97,13 @@ contains
 
         ! Calculate right hand side e-T-V0-sum(a)[H_ca*g_a*H_ac].
         rhs(:, :) = M_z0
-        call zhamiltonian_apply(h, gr, st%zphi(:, :, ist, ik), rhs(:, :), ist, ik, kinetic_only=.true.)
+        call zhamiltonian_apply(hm, gr, st%zphi(:, :, ist, ik), rhs(:, :), ist, ik, kinetic_only=.true.)
 
         ! Apply lead potential.
         do idim = 1, st%d%dim
           do ip = 1, NP
             ip_lead = mod(ip-1, gr%intf(LEFT)%np) + 1
-            rhs(ip, idim) = rhs(ip, idim) + h%lead_vks(ip_lead, idim, LEFT)*st%zphi(ip, idim, ist, ik)
+            rhs(ip, idim) = rhs(ip, idim) + hm%lead_vks(ip_lead, idim, LEFT)*st%zphi(ip, idim, ist, ik)
           end do
         end do
 
@@ -117,8 +117,8 @@ contains
         do il = 1, NLEADS
           do idim = 1, st%d%dim
             np_intf = gr%intf(il)%np
-            call lalg_copy(np_intf**2, h%lead_green(:, 1, idim, ist, ik, il), green(:, 1, idim, il))
-            call apply_coupling(green(:, :, idim, il), h%lead_h_offdiag(:, :, il), &
+            call lalg_copy(np_intf**2, hm%lead_green(:, 1, idim, ist, ik, il), green(:, 1, idim, il))
+            call apply_coupling(green(:, :, idim, il), hm%lead_h_offdiag(:, :, il), &
               green(:, :, idim, il), np_intf, il)
           end do
         end do
@@ -245,7 +245,7 @@ contains
     do idim = 1, dim
       call lalg_copy(np, x(l(idim):u(idim)), tmp_x(:, idim))
     end do
-    call zhamiltonian_apply(h_p, gr_p, tmp_x, tmp_y, ist_p, ik_p)
+    call zhamiltonian_apply(hm_p, gr_p, tmp_x, tmp_y, ist_p, ik_p)
 
     ! y <- e x - tmp_y
     do idim = 1, dim

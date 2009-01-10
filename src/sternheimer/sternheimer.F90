@@ -75,7 +75,7 @@ module sternheimer_m
      logical :: add_fxc
      logical :: add_hartree
      logical :: ok
-     logical :: hermitian 
+     logical :: hmermitian 
      logical :: occ_response
      logical :: preorthogonalization
      logical :: oep_kernel
@@ -86,10 +86,10 @@ module sternheimer_m
 contains
   
   !-----------------------------------------------------------
-  subroutine sternheimer_init(this, sys, h, prefix, hermitian, set_ham_var, set_occ_response)
+  subroutine sternheimer_init(this, sys, hm, prefix, hermitian, set_ham_var, set_occ_response)
     type(sternheimer_t), intent(out)   :: this
     type(system_t),      intent(inout) :: sys
-    type(hamiltonian_t), intent(inout) :: h
+    type(hamiltonian_t), intent(inout) :: hm
     character(len=*),    intent(in)    :: prefix
     logical, optional,   intent(in)    :: hermitian
     integer, optional,   intent(in)    :: set_ham_var
@@ -133,7 +133,7 @@ contains
 
     if(present(set_ham_var)) then
       ham_var = set_ham_var
-    else if(h%theory_level .ne. INDEPENDENT_PARTICLES) then
+    else if(hm%theory_level .ne. INDEPENDENT_PARTICLES) then
       if (loct_parse_isdef(datasets_check(trim(prefix)//'HamiltonianVariation')) /= 0) then
         call loct_parse_int(datasets_check(trim(prefix)//'HamiltonianVariation'), 3, ham_var)
       else
@@ -141,7 +141,7 @@ contains
       end if
     end if
 
-    if(h%theory_level.ne.INDEPENDENT_PARTICLES) then
+    if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
       this%add_fxc = ((ham_var / 2) == 1)
       this%add_hartree = (mod(ham_var, 2) == 1)
     else
@@ -181,7 +181,7 @@ contains
         ALLOCATE(sys%gr%mgrid, 1)
         call multigrid_init(sys%gr%mgrid, sys%geo, sys%gr%cv, sys%gr%mesh, sys%gr%der, sys%gr%stencil)
       end if
-      call hamiltonian_mg_init(h, sys%gr)
+      call hamiltonian_mg_init(hm, sys%gr)
     end if
 
     ! will not converge for non-self-consistent calculation unless LRTolScheme = fixed

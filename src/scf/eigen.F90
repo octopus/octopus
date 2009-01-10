@@ -257,11 +257,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine eigensolver_run(eigens, gr, st, h, iter, conv, verbose)
+  subroutine eigensolver_run(eigens, gr, st, hm, iter, conv, verbose)
     type(eigensolver_t), intent(inout) :: eigens
     type(grid_t),         intent(inout) :: gr
     type(states_t),       intent(inout) :: st
-    type(hamiltonian_t),  intent(inout) :: h
+    type(hamiltonian_t),  intent(inout) :: hm
     integer,              intent(in)    :: iter
     logical,    optional, intent(inout) :: conv
     logical,    optional, intent(in)    :: verbose
@@ -312,9 +312,9 @@ contains
       
       if(eigens%converged(ik) == 0) then
         if (states_are_real(st)) then
-          call dsubspace_diag(gr, st, h, ik, eigens%diff(:, ik))
+          call dsubspace_diag(gr, st, hm, ik, eigens%diff(:, ik))
         else
-          call zsubspace_diag(gr, st, h, ik, eigens%diff(:, ik))
+          call zsubspace_diag(gr, st, hm, ik, eigens%diff(:, ik))
         end if
       end if
 
@@ -322,52 +322,52 @@ contains
         
         select case(eigens%es_type)
         case(RS_CG_NEW)
-          call deigensolver_cg2_new(gr, st, h, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik), verbose = verbose_)
+          call deigensolver_cg2_new(gr, st, hm, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik), verbose = verbose_)
         case(RS_CG)
-          call deigensolver_cg2(gr, st, h, eigens%pre, tol, maxiter, &
+          call deigensolver_cg2(gr, st, hm, eigens%pre, tol, maxiter, &
                eigens%converged(ik), ik, eigens%diff(:, ik), verbose = verbose_)
         case(RS_PLAN)
-          call deigensolver_plan(gr, st, h, eigens%pre, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
+          call deigensolver_plan(gr, st, hm, eigens%pre, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_EVO)
-          call deigensolver_evolution(gr, st, h, tol, maxiter, &
+          call deigensolver_evolution(gr, st, hm, tol, maxiter, &
                eigens%converged(ik), ik, eigens%diff(:, ik), tau = eigens%imag_time)
         case(RS_LOBPCG)
-          call deigensolver_lobpcg(gr, st, h, eigens%pre, tol, maxiter, &
-               eigens%converged(ik), ik, eigens%diff(:, ik), h%d%block_size, verbose = verbose_)
+          call deigensolver_lobpcg(gr, st, hm, eigens%pre, tol, maxiter, &
+               eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size, verbose = verbose_)
         case(RS_MG)
-          call deigensolver_mg(gr, st, h, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
+          call deigensolver_mg(gr, st, hm, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_RMMDIIS)
-          call deigensolver_rmmdiis(gr, st, h, eigens%pre, tol, maxiter, &
-               eigens%converged(ik), ik, eigens%diff(:, ik), h%d%block_size)
+          call deigensolver_rmmdiis(gr, st, hm, eigens%pre, tol, maxiter, &
+               eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size)
         end select
 
-        call dsubspace_diag(gr, st, h, ik, eigens%diff(:, ik))
+        call dsubspace_diag(gr, st, hm, ik, eigens%diff(:, ik))
 
       else
 
         select case(eigens%es_type)
         case(RS_CG_NEW)
-          call zeigensolver_cg2_new(gr, st, h, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik), verbose = verbose_)
+          call zeigensolver_cg2_new(gr, st, hm, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik), verbose = verbose_)
         case(RS_CG)
-          call zeigensolver_cg2(gr, st, h, eigens%pre, tol, maxiter, &
+          call zeigensolver_cg2(gr, st, hm, eigens%pre, tol, maxiter, &
                eigens%converged(ik), ik, eigens%diff(:, ik), verbose = verbose_)
         case(RS_PLAN)
-          call zeigensolver_plan(gr, st, h, eigens%pre, tol, maxiter, &
+          call zeigensolver_plan(gr, st, hm, eigens%pre, tol, maxiter, &
                eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_EVO)
-          call zeigensolver_evolution(gr, st, h, tol, maxiter, &
+          call zeigensolver_evolution(gr, st, hm, tol, maxiter, &
                eigens%converged(ik), ik, eigens%diff(:, ik), tau = eigens%imag_time)
         case(RS_LOBPCG)
-          call zeigensolver_lobpcg(gr, st, h, eigens%pre, tol, maxiter, &
-               eigens%converged(ik), ik, eigens%diff(:, ik), h%d%block_size, verbose = verbose_)
+          call zeigensolver_lobpcg(gr, st, hm, eigens%pre, tol, maxiter, &
+               eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size, verbose = verbose_)
         case(RS_MG)
-          call zeigensolver_mg(gr, st, h, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
+          call zeigensolver_mg(gr, st, hm, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_RMMDIIS)
-          call zeigensolver_rmmdiis(gr, st, h, eigens%pre, tol, maxiter, &
-               eigens%converged(ik), ik, eigens%diff(:, ik), h%d%block_size)
+          call zeigensolver_rmmdiis(gr, st, hm, eigens%pre, tol, maxiter, &
+               eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size)
         end select
 
-        call zsubspace_diag(gr, st, h, ik, eigens%diff(:, ik))
+        call zsubspace_diag(gr, st, hm, ik, eigens%diff(:, ik))
 
       end if
 

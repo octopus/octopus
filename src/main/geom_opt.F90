@@ -58,7 +58,7 @@ module geom_opt_m
     ! shortcuts
     type(scf_t)                  :: scfv
     type(geometry_t),    pointer :: geo
-    type(hamiltonian_t), pointer :: hamilt
+    type(hamiltonian_t), pointer :: hm
     type(system_t),      pointer :: syst
     type(mesh_t),        pointer :: m
     type(states_t),      pointer :: st
@@ -73,9 +73,9 @@ module geom_opt_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine geom_opt_run(sys, h, fromscratch)
+  subroutine geom_opt_run(sys, hm, fromscratch)
     type(system_t), target,      intent(inout) :: sys
-    type(hamiltonian_t), target, intent(inout) :: h
+    type(hamiltonian_t), target, intent(inout) :: hm
     logical,                     intent(inout) :: fromscratch
 
     integer :: i, ierr, lcao_start, lcao_start_default
@@ -110,9 +110,9 @@ contains
       ! overwrite the guess density)
       message(1) = 'Info: Setting up Hamiltonian.'
       call write_info(1)
-      call v_ks_calc(sys%gr, sys%ks, h, sys%st, calc_eigenval=.true.) ! get potentials
+      call v_ks_calc(sys%gr, sys%ks, hm, sys%st, calc_eigenval=.true.) ! get potentials
       call states_fermi(sys%st, sys%gr%mesh)                                ! occupations
-      call total_energy(h, sys%gr, sys%st, -1)
+      call total_energy(hm, sys%gr, sys%st, -1)
 
       lcao_start_default = LCAO_START_FULL
       if(sys%geo%only_user_def) lcao_start_default = LCAO_START_NONE
@@ -130,7 +130,7 @@ contains
                lcao_num_orbitals(lcao), ' orbitals.'
           call write_info(1)
           
-          call lcao_wf(lcao, sys%st, sys%gr, sys%geo, h)
+          call lcao_wf(lcao, sys%st, sys%gr, sys%geo, hm)
           call lcao_end(lcao)
 
           !Just populate again the states, so that the eigenvalues are properly written
@@ -138,7 +138,7 @@ contains
           call states_write_eigenvalues(stdout, sys%st%nst, sys%st, sys%gr%sb)
 
           ! Update the density and the Hamiltonian
-          if (lcao_start == LCAO_START_FULL) call system_h_setup(sys, h)
+          if (lcao_start == LCAO_START_FULL) call system_h_setup(sys, hm)
 
         end if
 
@@ -149,11 +149,11 @@ contains
       ! setup Hamiltonian
       message(1) = 'Info: Setting up Hamiltonian.'
       call write_info(1)
-      call system_h_setup(sys, h)
+      call system_h_setup(sys, hm)
 
     end if
 
-    call scf_init(sys%gr, sys%geo, g_opt%scfv, sys%st, h)
+    call scf_init(sys%gr, sys%geo, g_opt%scfv, sys%st, hm)
 
     !Initial point
     ALLOCATE(x(3*g_opt%geo%natoms), 3*g_opt%geo%natoms)
@@ -205,7 +205,7 @@ contains
       g_opt%m      => sys%gr%mesh
       g_opt%geo    => sys%geo
       g_opt%st     => sys%st
-      g_opt%hamilt => h
+      g_opt%hm     => hm
       g_opt%syst   => sys
 
       !%Variable GOMethod
@@ -327,7 +327,7 @@ contains
       nullify(g_opt%m)
       nullify(g_opt%geo)
       nullify(g_opt%st)
-      nullify(g_opt%hamilt)
+      nullify(g_opt%hm)
       nullify(g_opt%syst)
     end subroutine end_
 
@@ -354,14 +354,14 @@ contains
 
     call atom_write_xyz(".", "work-geom", g_opt%geo, g_opt%syst%NDIM, append=.true.)
 
-    call epot_generate(g_opt%hamilt%ep, g_opt%syst%gr, g_opt%syst%geo, g_opt%syst%st)
+    call epot_generate(g_opt%hm%ep, g_opt%syst%gr, g_opt%syst%geo, g_opt%syst%st)
     call states_calc_dens(g_opt%st, g_opt%m%np, g_opt%st%rho)
-    call v_ks_calc(g_opt%syst%gr, g_opt%syst%ks, g_opt%hamilt, g_opt%st, calc_eigenval=.true.)
-    call total_energy(g_opt%hamilt, g_opt%syst%gr, g_opt%st, -1)
+    call v_ks_calc(g_opt%syst%gr, g_opt%syst%ks, g_opt%hm, g_opt%st, calc_eigenval=.true.)
+    call total_energy(g_opt%hm, g_opt%syst%gr, g_opt%st, -1)
 
     ! do scf calculation
     call scf_run(g_opt%scfv, g_opt%syst%gr, g_opt%geo, g_opt%st, &
-      g_opt%syst%ks, g_opt%hamilt, g_opt%syst%outp, verbosity = VERB_COMPACT)
+      g_opt%syst%ks, g_opt%hm, g_opt%syst%outp, verbosity = VERB_COMPACT)
 
     ! store results
     if(getgrad .eq. 1) then
@@ -379,7 +379,7 @@ contains
       end do
       f = sqrt(f)
     else
-      f = g_opt%hamilt%etot
+      f = g_opt%hm%etot
     end if
 
     call pop_sub()

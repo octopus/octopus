@@ -19,11 +19,11 @@
 
 
 ! ---------------------------------------------------------
-subroutine X(one_body) (gr, geo, st, h)
+subroutine X(one_body) (gr, geo, st, hm)
   type(grid_t),        intent(inout) :: gr
   type(geometry_t),    intent(in)    :: geo
   type(states_t),      intent(inout) :: st
-  type(hamiltonian_t), intent(in) :: h
+  type(hamiltonian_t), intent(in) :: hm
 
   integer i, j, iunit, idir, iatom, np
   R_TYPE :: me, exp_r, exp_g, corr
@@ -39,7 +39,7 @@ subroutine X(one_body) (gr, geo, st, h)
       if(j > i) cycle
       
       me = st%eigenval(i,1) - X(mf_integrate) (gr%mesh, R_CONJ(st%X(psi) (1:np, 1, i, 1)) * &
-           h%Vhxc(1:np, 1) * st%X(psi) (1:np, 1, j, 1))
+           hm%Vhxc(1:np, 1) * st%X(psi) (1:np, 1, j, 1))
 
       write(iunit, *) i, j, me
     end do
@@ -68,7 +68,7 @@ subroutine X(one_body) (gr, geo, st, h)
          
          corr = M_ZERO
          do iatom = 1, geo%natoms
-           call X(projector_commute_r)(h%ep%proj(iatom), gr, 1, idir, 1, st%X(psi)(1:np, 1, j, 1), cpsi)
+           call X(projector_commute_r)(hm%ep%proj(iatom), gr, 1, idir, 1, st%X(psi)(1:np, 1, j, 1), cpsi)
            corr = corr + &
                 X(mf_integrate)(gr%mesh, R_CONJ(st%X(psi)(1:np, 1, i, 1)) * cpsi(1:np, 1))
          end do
