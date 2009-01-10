@@ -121,16 +121,7 @@ module profiling_m
   !should be moved to their respective modules.
   !i.e. DO NOT PUT NEW PROFILES HERE
 
-  type(profile_t), save, public ::    &
-       C_PROFILING_COMPLETE_DATASET,  &
-       C_PROFILING_MF_INTEGRATE,      &
-       C_PROFILING_MF_DOTP,           &
-       C_PROFILING_MF_NRM2,           &
-       C_PROFILING_GHOST_UPDATE,      &
-       C_PROFILING_VEC_INTEGRATE,     &
-       C_PROFILING_SCF_CYCLE,         &
-       C_PROFILING_MF_DOTP_ALLREDUCE, &
-       C_PROFILING_HPSI
+  type(profile_t), save, public :: C_PROFILING_COMPLETE_DATASET
 
   type(profile_t), save, public :: &
        C_PROFILING_KINETIC,        &
@@ -141,13 +132,8 @@ module profiling_m
        C_PROFILING_XC_OEP,         &
        C_PROFILING_XC_EXX,         &
        C_PROFILING_XC_SIC,         &
-       C_PROFILING_XC_KLI
-
-  type(profile_t), save, public :: &
        C_PROFILING_XC_OEP_FULL,    &
-       C_PROFILING_TIME_STEP,      &
-       C_PROFILING_EIGEN_SOLVER,   &
-       C_PROFILING_LCAO
+       C_PROFILING_XC_KLI
 
   type(profile_t), save, public ::    &
        C_PROFILING_BLOCKT,            &
@@ -200,14 +186,6 @@ contains
   contains
     subroutine init_profiles
       call profile_init(C_PROFILING_COMPLETE_DATASET, 'COMPLETE_DATASET')
-      call profile_init(C_PROFILING_MF_INTEGRATE,     'MF_INTEGRATE')
-      call profile_init(C_PROFILING_MF_DOTP,          'MF_DOTP')
-      call profile_init(C_PROFILING_MF_NRM2,          'MF_NRM2')
-      call profile_init(C_PROFILING_GHOST_UPDATE,     'GHOST_UPDATE')
-      call profile_init(C_PROFILING_VEC_INTEGRATE,    'VEC_INTEGRATE')
-      call profile_init(C_PROFILING_SCF_CYCLE,        'SCF_CYCLE')
-      call profile_init(C_PROFILING_MF_DOTP_ALLREDUCE,'MF_DOTP_ALLREDUCE')
-      call profile_init(C_PROFILING_HPSI,             'HPSI')
       call profile_init(C_PROFILING_KINETIC,          'KINETIC')
       call profile_init(C_PROFILING_VLPSI,            'VLPSI')
       call profile_init(C_PROFILING_VNLPSI,           'VNLPSI')
@@ -218,9 +196,6 @@ contains
       call profile_init(C_PROFILING_XC_SIC,           'XC_SIC')
       call profile_init(C_PROFILING_XC_KLI,           'XC_KLI')
       call profile_init(C_PROFILING_XC_OEP_FULL,      'XC_OEP_FULL')
-      call profile_init(C_PROFILING_TIME_STEP	,     'TIME_STEP')
-      call profile_init(C_PROFILING_EIGEN_SOLVER,     'EIGEN_SOLVER')
-      call profile_init(C_PROFILING_LCAO,             'LCAO')
       call profile_init(C_PROFILING_BLOCKT,           'BLOCKT')
       call profile_init(C_PROFILING_BLOCKT_AR,        'BLOCKT_AR')
       call profile_init(C_PROFILING_BLOCKT_MM,        'BLOCKT_MM')

@@ -39,9 +39,9 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, t, kinetic_only)
   R_TYPE, pointer :: psi(:, :), hpsi(:, :)
   type(batch_t) :: epsib, laplb
   type(der_handle_t), allocatable :: handles(:, :)
+  type(profile_t), save :: prof
 
-
-  call profiling_in(C_PROFILING_HPSI)
+  call profiling_in(prof, "HAMILTONIAN")
   call push_sub('hamiltonian_inc.Xhpsi_batch')
 
   kinetic_only_ = .false.
@@ -172,7 +172,7 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, t, kinetic_only)
   call batch_end(laplb)
 
   call pop_sub()
-  call profiling_out(C_PROFILING_HPSI)
+  call profiling_out(prof)
 
 contains
 

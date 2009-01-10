@@ -246,7 +246,7 @@ subroutine X(vec_ghost_update)(vp, v_local)
 
   R_TYPE,  pointer :: ghost_send(:)          ! Send buffer.
 
-  call profiling_in(C_PROFILING_GHOST_UPDATE)
+  call profiling_in(C_PROFILING_GHOST_UPDATE, "GHOST_UPDATE")
 
   call push_sub('par_vec.Xvec_ghost_update')
 
@@ -290,7 +290,7 @@ subroutine X(vec_ighost_update)(vp, v_local, handle)
 
   integer :: ipart, pos
 
-  call profiling_in(C_PROFILING_GHOST_UPDATE)
+  call profiling_in(C_PROFILING_GHOST_UPDATE, "GHOST_UPDATE")
 
   call push_sub('par_vec.Xvec_ighost_update')
 

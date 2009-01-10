@@ -29,7 +29,7 @@ R_TYPE function X(mf_integrate) (mesh, f) result(d)
   R_TYPE :: d_local
 #endif
 
-  call profiling_in(C_PROFILING_MF_INTEGRATE)
+  call profiling_in(C_PROFILING_MF_INTEGRATE, 'MF_INTEGRATE')
   call push_sub('mf_inc.Xmf_integrate')
 
   d = M_ZERO
@@ -46,8 +46,10 @@ R_TYPE function X(mf_integrate) (mesh, f) result(d)
 
 #ifdef HAVE_MPI
   if(mesh%parallel_in_domains) then
+    call profiling_in(C_PROFILING_MF_REDUCE, "MF_REDUCE")
     d_local = d
     call MPI_Allreduce(d_local, d, 1, R_MPITYPE, MPI_SUM, mesh%mpi_grp%comm, mpi_err)
+    call profiling_out(C_PROFILING_MF_REDUCE)
   end if
 #endif
   
@@ -88,7 +90,7 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu) result(dotp)
 #endif
   integer             :: ip
 
-  call profiling_in(C_PROFILING_MF_DOTP)
+  call profiling_in(C_PROFILING_MF_DOTP, "MF_DOTP")
   call push_sub('mf_inc.Xmf_dotp')
 
   reduce_ = .true.
@@ -136,9 +138,9 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu) result(dotp)
 
   if(mesh%parallel_in_domains.and.reduce_) then
 #if defined(HAVE_MPI)
-    call profiling_in(C_PROFILING_MF_DOTP_ALLREDUCE)
+    call profiling_in(C_PROFILING_MF_REDUCE, "MF_REDUCE")
     call MPI_Allreduce(dotp_tmp, dotp, 1, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
-    call profiling_out(C_PROFILING_MF_DOTP_ALLREDUCE)
+    call profiling_out(C_PROFILING_MF_REDUCE)
 #else
     ASSERT(.false.)
 #endif
@@ -186,10 +188,10 @@ R_TYPE function X(mf_dotp_2)(mesh, dim, f1, f2, reduce, dotu) result(dotp)
   if(present(reduce)) reduce_ = reduce
 
   if(mesh%parallel_in_domains.and.reduce_) then
-    call profiling_in(C_PROFILING_MF_DOTP_ALLREDUCE)
+    call profiling_in(C_PROFILING_MF_REDUCE, "MF_REDUCE")
     dotp_tmp = dotp
     call MPI_Allreduce(dotp_tmp, dotp, 1, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
-    call profiling_out(C_PROFILING_MF_DOTP_ALLREDUCE)
+    call profiling_out(C_PROFILING_MF_REDUCE)
   end if
 #endif
 
@@ -208,7 +210,7 @@ FLOAT function X(mf_nrm2_1)(mesh, f, reduce) result(nrm2)
   logical             :: reduce_
   R_TYPE, allocatable :: l(:)
 
-  call profiling_in(C_PROFILING_MF_NRM2)
+  call profiling_in(C_PROFILING_MF_NRM2, "MF_NRM2")
   call push_sub('mf_inc.Xmf_nrm2')
 
   if(mesh%use_curvlinear) then
@@ -228,9 +230,9 @@ FLOAT function X(mf_nrm2_1)(mesh, f, reduce) result(nrm2)
   if(mesh%parallel_in_domains .and. reduce_) then
 #if defined(HAVE_MPI)
     nrm2_tmp = nrm2_tmp**2
-    call profiling_in(C_PROFILING_MF_DOTP_ALLREDUCE)
+    call profiling_in(C_PROFILING_MF_REDUCE, "MF_REDUCE")
     call MPI_Allreduce(nrm2_tmp, nrm2, 1, MPI_FLOAT, MPI_SUM, mesh%vp%comm, mpi_err)
-    call profiling_out(C_PROFILING_MF_DOTP_ALLREDUCE)
+    call profiling_out(C_PROFILING_MF_REDUCE)
     nrm2 = sqrt(nrm2)
 #else
     ASSERT(.false.)

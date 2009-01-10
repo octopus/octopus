@@ -155,6 +155,8 @@ module par_vec_m
     CMPLX,   pointer :: zghost_send(:)
   end type pv_handle_t
 
+  type(profile_t), save :: C_PROFILING_GHOST_UPDATE
+
   public ::              &
     pv_handle_t,         &
     pv_handle_init,      &

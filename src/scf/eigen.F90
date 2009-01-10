@@ -272,8 +272,9 @@ contains
 #ifdef HAVE_MPI
     logical :: conv_reduced
 #endif
+    type(profile_t), save :: prof
 
-    call profiling_in(C_PROFILING_EIGEN_SOLVER)
+    call profiling_in(prof, "EIGEN_SOLVER")
     call push_sub('eigen.eigensolver_run')
 
     verbose_ = eigens%verbose; if(present(verbose)) verbose_ = verbose
@@ -388,7 +389,7 @@ contains
 #endif
 
     call pop_sub()
-    call profiling_out(C_PROFILING_EIGEN_SOLVER)
+    call profiling_out(prof)
   end subroutine eigensolver_run
 
   logical function eigensolver_parallel_in_states(this) result(par_stat)

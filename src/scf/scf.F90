@@ -292,6 +292,7 @@ contains
     integer, optional,   intent(in)    :: verbosity 
 
     type(lcao_t) :: lcao
+    type(profile_t), save :: prof
 
     integer :: iter, is, idim, iatom, nspin, dim, err
     FLOAT :: evsum_out, evsum_in, forcetmp
@@ -368,7 +369,7 @@ contains
     ! SCF cycle
     itime = loct_clock()
     do iter = 1, scf%max_iter
-      call profiling_in(C_PROFILING_SCF_CYCLE)
+      call profiling_in(prof, "SCF_CYCLE")
 
       if(scf%lcao_restricted) then
         call lcao_wf(lcao, st, gr, geo, hm)
@@ -485,7 +486,7 @@ contains
           call write_info(2)
         end if
         if(scf%lcao_restricted) call lcao_end(lcao)
-        call profiling_out(C_PROFILING_SCF_CYCLE)
+        call profiling_out(prof)
         exit
       end if
 
@@ -507,7 +508,7 @@ contains
       end if
 
       if(forced_finish) then
-        call profiling_out(C_PROFILING_SCF_CYCLE)
+        call profiling_out(prof)
         exit
       end if
 
@@ -515,7 +516,7 @@ contains
       call io_debug_on_the_fly()
 
 
-      call profiling_out(C_PROFILING_SCF_CYCLE)
+      call profiling_out(prof)
     end do
 
     if (scf%what2mix == MIXPOT) then

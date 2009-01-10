@@ -115,6 +115,8 @@ contains
     logical                   :: generate
     FLOAT                     :: gauge_force(1:MAX_DIM)
 
+    type(profile_t), save :: prof
+
     call push_sub('td.td_run')
 
     ! some shortcuts
@@ -198,7 +200,7 @@ contains
     propagation: do i = td%iter, td%max_iter
 
       if(clean_stop()) stopping = .true.
-      call profiling_in(C_PROFILING_TIME_STEP)
+      call profiling_in(prof, "TIME_STEP")
       
       ! time iterate wavefunctions
       select case(td%dynamics)
@@ -288,7 +290,7 @@ contains
       ! check if debug mode should be enabled or disabled on the fly
       call io_debug_on_the_fly()
 
-      call profiling_out(C_PROFILING_TIME_STEP)
+      call profiling_out(prof)
       if (stopping) exit
 
     end do propagation

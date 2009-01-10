@@ -99,6 +99,12 @@ module mesh_function_m
 
   type(mesh_t), pointer :: mesh_aux
 
+  type(profile_t), save ::            &
+       C_PROFILING_MF_INTEGRATE,      &
+       C_PROFILING_MF_DOTP,           &
+       C_PROFILING_MF_NRM2,           &
+       C_PROFILING_MF_REDUCE
+
 contains
 
   subroutine mesh_init_mesh_aux(m)

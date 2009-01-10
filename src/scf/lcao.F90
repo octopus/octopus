@@ -223,10 +223,11 @@ contains
     integer, optional,   intent(in)    :: start
 
     integer :: start_
+    type(profile_t), save :: prof
 
     ASSERT(this%state == 1)
 
-    call profiling_in(C_PROFILING_LCAO)
+    call profiling_in(prof, "LCAO")
     call push_sub('lcao.lcao_wf')
 
     start_ = 1
@@ -239,7 +240,7 @@ contains
     end if
 
     call pop_sub()
-    call profiling_out(C_PROFILING_LCAO)
+    call profiling_out(prof)
   end subroutine lcao_wf
 
   logical function lcao_is_available(this) result(available)
