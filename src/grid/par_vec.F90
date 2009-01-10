@@ -109,7 +109,7 @@ module par_vec_m
     integer, pointer :: rcounts(:)
 
     ! The following members are set independent of the nodes.
-    integer                 :: p                    ! Number of partitions.
+    integer                 :: npart                    ! Number of partitions.
     integer                 :: root                 ! The master node.
     integer                 :: comm                 ! MPI communicator to use.
     integer                 :: np                   ! Number of points in mesh.
@@ -425,7 +425,7 @@ contains
     vp%root   = root
     vp%np     = np
     vp%np_enl = np_enl
-    vp%p      = p
+    vp%npart      = p
     vp%part   = part
 
     call init_mpi_datatypes
@@ -442,12 +442,12 @@ contains
       integer, allocatable :: blocklengths(:), displacements(:), offsets(:)
       integer :: ii, kk, ipart, total, ierr, nblocks
 
-      ALLOCATE(vp%isend_type(1:vp%p), vp%p)
-      ALLOCATE(vp%dsend_type(1:vp%p), vp%p)
-      ALLOCATE(vp%zsend_type(1:vp%p), vp%p)
+      ALLOCATE(vp%isend_type(1:vp%npart), vp%npart)
+      ALLOCATE(vp%dsend_type(1:vp%npart), vp%npart)
+      ALLOCATE(vp%zsend_type(1:vp%npart), vp%npart)
 
       ! Iterate over all possible receivers.
-      do ipart = 1, vp%p
+      do ipart = 1, vp%npart
         total = vp%np_ghost_neigh(ipart, vp%partno)
 
         if(total == 0) cycle
@@ -489,19 +489,19 @@ contains
       ! each partition r wants to have from the current partiton
       ! vp%partno.
       
-      ALLOCATE(vp%sdispls(1:vp%p), vp%p)
-      ALLOCATE(vp%rdispls(1:vp%p), vp%p)
-      ALLOCATE(vp%rcounts(1:vp%p), vp%p)
+      ALLOCATE(vp%sdispls(1:vp%npart), vp%npart)
+      ALLOCATE(vp%rdispls(1:vp%npart), vp%npart)
+      ALLOCATE(vp%rcounts(1:vp%npart), vp%npart)
 
       vp%sdispls(1) = 0
-      do ipart = 2, vp%p
+      do ipart = 2, vp%npart
         vp%sdispls(ipart) = vp%sdispls(ipart - 1) + vp%np_ghost_neigh(ipart - 1, vp%partno)
       end do
 
       ! This is like in vec_scatter/gather.
-      vp%rdispls(1:vp%p) = vp%xghost_neigh(vp%partno, 1:vp%p) - vp%xghost(vp%partno)
+      vp%rdispls(1:vp%npart) = vp%xghost_neigh(vp%partno, 1:vp%npart) - vp%xghost(vp%partno)
       
-      vp%rcounts(1:vp%p) = vp%np_ghost_neigh(vp%partno, 1:vp%p)
+      vp%rcounts(1:vp%npart) = vp%np_ghost_neigh(vp%partno, 1:vp%npart)
 
     end subroutine init_mpi_datatypes
 
@@ -522,7 +522,7 @@ contains
 
     if(associated(vp%isend_type)) then
 
-      do ipart = 1, vp%p
+      do ipart = 1, vp%npart
         if(vp%np_ghost_neigh(ipart, vp%partno) == 0) cycle
         call MPI_Type_free(vp%isend_type(ipart), mpi_err)
         call MPI_Type_free(vp%dsend_type(ipart), mpi_err)
@@ -585,7 +585,7 @@ contains
       nullify(vp%ghost)
     end if
     if(associated(vp%global)) then
-      do r = 1, vp%p
+      do r = 1, vp%npart
         call iihash_end(vp%global(r))
       end do
       deallocate(vp%global)
@@ -609,8 +609,8 @@ contains
       call NBCF_Newhandle(this%nbc_h)
 #endif
     case(NON_BLOCKING)
-      ALLOCATE(this%requests(1:vp%p*2), vp%p*2)
-      ALLOCATE(this%status(MPI_STATUS_SIZE, 1:vp%p*2), vp%p*2)
+      ALLOCATE(this%requests(1:vp%npart*2), vp%npart*2)
+      ALLOCATE(this%status(MPI_STATUS_SIZE, 1:vp%npart*2), vp%npart*2)
     end select
     nullify(this%ighost_send, this%dghost_send, this%zghost_send)
   end subroutine pv_handle_init

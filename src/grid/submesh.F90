@@ -241,7 +241,7 @@ contains
 
 #ifdef HAVE_MPI
     if(m%parallel_in_domains) then
-      ALLOCATE(this%psize(1:m%vp%p), m%vp%p)
+      ALLOCATE(this%psize(1:m%vp%npart), m%vp%npart)
       call MPI_Allgather(this%ns, 1, MPI_INTEGER, this%psize, 1, MPI_INTEGER, m%mpi_grp%comm, mpi_err)
     else
       nullify(this%psize)

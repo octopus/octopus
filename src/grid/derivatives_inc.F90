@@ -444,23 +444,23 @@ subroutine X(set_bc)(der, f)
     if(der%m%parallel_in_domains) then
       call profiling_in(set_bc_comm_prof, 'SET_BC_COMMUNICATION')
       ! get the points from other nodes
-      ALLOCATE(req(2*der%m%vp%p), 2*der%m%vp%p)
+      ALLOCATE(req(2*der%m%vp%npart), 2*der%m%vp%npart)
 
       nreq = 0
 
-      do ipart = 1, der%m%vp%p
+      do ipart = 1, der%m%vp%npart
         if(ipart == p .or. der%m%nsend(ipart) == 0) cycle
         nreq = nreq + 1
         call MPI_Isend(f, 1, der%m%X(send_type)(ipart), ipart - 1, 3, der%m%vp%comm, req(nreq), mpi_err)
       end do
 
-      do ipart = 1, der%m%vp%p
+      do ipart = 1, der%m%vp%npart
         if(ipart == p .or. der%m%nrecv(ipart) == 0) cycle
         nreq = nreq + 1
         call MPI_Irecv(f, 1, der%m%X(recv_type)(ipart), ipart - 1, 3, der%m%vp%comm, req(nreq), mpi_err)
       end do
 
-      call profiling_count_transfers(sum(der%m%nrecv(1:der%m%vp%p) + der%m%nrecv(1:der%m%vp%p)), f(1))
+      call profiling_count_transfers(sum(der%m%nrecv(1:der%m%vp%npart) + der%m%nrecv(1:der%m%vp%npart)), f(1))
 
       call profiling_out(set_bc_comm_prof)
     end if
@@ -590,13 +590,13 @@ subroutine X(set_bc_batch)(der, fb)
         call profiling_in(set_bc_comm_prof, 'SET_BC_COMMUNICATION')
 
         ! get the points that are copies from other nodes
-        ALLOCATE(req(2*der%m%vp%p*fb%dim*fb%nst), 2*der%m%vp%p*fb%dim*fb%nst)
+        ALLOCATE(req(2*der%m%vp%npart*fb%dim*fb%nst), 2*der%m%vp%npart*fb%dim*fb%nst)
 
         nreq = 0
 
         do ist = 1, fb%nst
           do idim = 1, fb%dim
-            do ipart = 1, der%m%vp%p
+            do ipart = 1, der%m%vp%npart
               if(ipart == der%m%vp%partno .or. der%m%nrecv(ipart) == 0) cycle
               nreq = nreq + 1
               call MPI_Irecv(fb%states(ist)%X(psi)(:, idim), 1, der%m%X(recv_type)(ipart), ipart - 1, 3, &
@@ -607,7 +607,7 @@ subroutine X(set_bc_batch)(der, fb)
 
         do ist = 1, fb%nst
           do idim = 1, fb%dim
-            do ipart = 1, der%m%vp%p
+            do ipart = 1, der%m%vp%npart
               if(ipart == der%m%vp%partno .or. der%m%nsend(ipart) == 0) cycle
               nreq = nreq + 1
               call MPI_Isend(fb%states(ist)%X(psi)(:, idim), 1, der%m%X(send_type)(ipart), ipart - 1, 3, &
@@ -616,7 +616,7 @@ subroutine X(set_bc_batch)(der, fb)
           end do
         end do
         
-        call profiling_count_transfers(sum(der%m%nsend(1:der%m%vp%p) + der%m%nrecv(1:der%m%vp%p))*fb%dim*fb%nst, &
+        call profiling_count_transfers(sum(der%m%nsend(1:der%m%vp%npart) + der%m%nrecv(1:der%m%vp%npart))*fb%dim*fb%nst, &
              R_TOTYPE(M_ONE))
 
         call profiling_out(set_bc_comm_prof)

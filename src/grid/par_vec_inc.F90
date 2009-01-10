@@ -39,14 +39,14 @@ subroutine X(vec_scatter)(vp, v, v_local)
   call push_sub('par_vec.Xvec_scatter')
 
   ! Skip the MPI call if domain parallelization is not used.
-  if(vp%p.lt.2) then
+  if(vp%npart.lt.2) then
     v_local(1:vp%np) = v(1:vp%np)
     return
   end if
 
   ! Unfortunately, vp%xlocal ist not quite the required
   ! displacement vector.
-  ALLOCATE(displs(vp%p), vp%p)
+  ALLOCATE(displs(vp%npart), vp%npart)
   displs = vp%xlocal-1
 
   ALLOCATE(v_tmp(1), 1)
@@ -62,8 +62,8 @@ subroutine X(vec_scatter)(vp, v, v_local)
   end if
 
   ! Careful: MPI rank numbers range from 0 to mpiv%numprocs-1
-  ! But partition numbers from 1 to vp%p with usually
-  ! vp%p = mpiv%numprocs.
+  ! But partition numbers from 1 to vp%npart with usually
+  ! vp%npart = mpiv%numprocs.
   call mpi_debug_in(vp%comm, C_MPI_SCATTERV)
   call MPI_Scatterv(v_tmp, vp%np_local, displs, R_MPITYPE, v_local, &
                     vp%np_local(vp%partno), R_MPITYPE,              &
@@ -93,7 +93,7 @@ subroutine X(vec_scatter_bndry)(vp, v, v_local)
 
   call push_sub('par_vec.Xvec_scatter_bndry')
 
-  ALLOCATE(displs(vp%p), vp%p)
+  ALLOCATE(displs(vp%npart), vp%npart)
   displs = vp%xbndry-1
 
   ! Fill send buffer.
@@ -109,8 +109,8 @@ subroutine X(vec_scatter_bndry)(vp, v, v_local)
   end if
 
   ! Careful: MPI rank numbers range from 0 to mpiv%numprocs-1
-  ! But partition numbers from 1 to vp%p with usually
-  ! vp%p = mpiv%numprocs.
+  ! But partition numbers from 1 to vp%npart with usually
+  ! vp%npart = mpiv%numprocs.
   call mpi_debug_in(vp%comm, C_MPI_SCATTERV)
   call MPI_Scatterv(v_tmp, vp%np_bndry, displs, R_MPITYPE,                     &
                     v_local(vp%np_local(vp%partno)+vp%np_ghost(vp%partno)+1:), &
@@ -158,14 +158,14 @@ subroutine X(vec_gather)(vp, v, v_local)
   call push_sub('par_vec.Xvec_gather')
 
   ! Skip the MPI call if domain parallelization is not used.
-  if(vp%p.lt.2) then
+  if(vp%npart.lt.2) then
     v(1:vp%np) = v_local(1:vp%np)
     return
   end if
 
   ! Unfortunately, vp%xlocal ist not quite the required
   ! displacement vector.
-  ALLOCATE(displs(vp%p), vp%p)
+  ALLOCATE(displs(vp%npart), vp%npart)
   displs = vp%xlocal-1
 
   ALLOCATE(v_tmp(vp%np), vp%np)
@@ -210,7 +210,7 @@ subroutine X(vec_allgather)(vp, v, v_local)
 
   ! Unfortunately, vp%xlocal ist not quite the required
   ! displacement vector.
-  ALLOCATE(displs(vp%p), vp%p)
+  ALLOCATE(displs(vp%npart), vp%npart)
   displs = vp%xlocal-1
 
   ALLOCATE(v_tmp(vp%np), vp%np)
@@ -311,7 +311,7 @@ subroutine X(vec_ighost_update)(vp, v_local, handle)
     ! use a series of p2p non-blocking calls
     
     handle%nnb = 0
-    do ipart = 1, vp%p
+    do ipart = 1, vp%npart
       if(vp%np_ghost_neigh(ipart, vp%partno) == 0) cycle
       
       handle%nnb = handle%nnb + 1
@@ -320,7 +320,7 @@ subroutine X(vec_ighost_update)(vp, v_local, handle)
       
     end do
     
-    do ipart = 1, vp%p
+    do ipart = 1, vp%npart
       if(vp%np_ghost_neigh(vp%partno, ipart) == 0) cycle
       
       handle%nnb = handle%nnb + 1
@@ -357,7 +357,7 @@ subroutine X(vec_ghost_update_prepare) (vp, v_local, ghost_send)
   ! Collect all local points that have to be sent to neighbours.
   j = 1
   ! Iterate over all possible receivers.
-  do r = 1, vp%p
+  do r = 1, vp%npart
     ! Iterate over all ghost points that r wants.
     do i = 0, vp%np_ghost_neigh(r, vp%partno)-1
       ! Get global number k of i-th ghost point.

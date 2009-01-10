@@ -302,7 +302,7 @@ subroutine mesh_init_stage_3(mesh, geo, cv, stencil, mpi_grp, parent)
     ! These must be initialized for vec_gather, vec_scatter to work
     ! as copy operations when running without domain parallelization.
     mesh%vp%np = mesh%np_global
-    mesh%vp%p  = 1
+    mesh%vp%npart  = 1
   end if
 
   call mesh_get_vol_pp(mesh%sb)
@@ -452,14 +452,14 @@ contains
     call vec_init(mesh%mpi_grp%comm, 0, part, mesh%np_global, mesh%np_part_global, mesh%idx, stencil, mesh%sb%dim, mesh%vp)
     deallocate(part)
 
-    ALLOCATE(nnb(1:mesh%vp%p), mesh%vp%p)
+    ALLOCATE(nnb(1:mesh%vp%npart), mesh%vp%npart)
     nnb = 0
-    do jpart = 1, mesh%vp%p
-      do ipart = 1, mesh%vp%p
+    do jpart = 1, mesh%vp%npart
+      do ipart = 1, mesh%vp%npart
         if (ipart == jpart) cycle
         if (mesh%vp%np_ghost_neigh(jpart, ipart) /= 0) nnb(jpart) = nnb(jpart) + 1
       end do
-      ASSERT(nnb(jpart) >= 0 .and. nnb(jpart) < mesh%vp%p)
+      ASSERT(nnb(jpart) >= 0 .and. nnb(jpart) < mesh%vp%npart)
     end do
 
     ! Write information about partitions.
@@ -470,7 +470,7 @@ contains
     write(message(1),'(a)') &
          '                 Neighbours         Ghost points'
     write(message(2),'(a,i5,a,i10)') &
-         '      Average  :      ', sum(nnb)/mesh%vp%p, '           ', sum(mesh%vp%np_ghost)/mesh%vp%p
+         '      Average  :      ', sum(nnb)/mesh%vp%npart, '           ', sum(mesh%vp%np_ghost)/mesh%vp%npart
     write(message(3),'(a,i5,a,i10)') &
          '      Minimum  :      ', minval(nnb),        '           ', minval(mesh%vp%np_ghost)
     write(message(4),'(a,i5,a,i10)') &
@@ -478,7 +478,7 @@ contains
     message(5) = ''
     call write_info(5)
 
-    do ipart = 1, mesh%vp%p
+    do ipart = 1, mesh%vp%npart
       write(message(1),'(a,i5)')  &
            '      Nodes in domain-group  ', ipart
       write(message(2),'(a,i10,a,i10)') &
@@ -644,9 +644,9 @@ contains
 
 #ifdef HAVE_MPI
       if(mesh%parallel_in_domains) then
-        ALLOCATE(recv_points(1:nper_recv, 1:mesh%vp%p), nper_recv*mesh%vp%p)
-        ALLOCATE(recv_rem_points(1:nper_recv, 1:mesh%vp%p), nper_recv*mesh%vp%p)
-        ALLOCATE(mesh%nrecv(1:mesh%vp%p), mesh%vp%p)
+        ALLOCATE(recv_points(1:nper_recv, 1:mesh%vp%npart), nper_recv*mesh%vp%npart)
+        ALLOCATE(recv_rem_points(1:nper_recv, 1:mesh%vp%npart), nper_recv*mesh%vp%npart)
+        ALLOCATE(mesh%nrecv(1:mesh%vp%npart), mesh%vp%npart)
         mesh%nrecv = 0
       end if
 #endif
@@ -679,7 +679,7 @@ contains
 #ifdef HAVE_MPI
         else if(ip /= ip_inner) then ! the point is in another node
           ! find in which paritition it is
-          do ipart = 1, mesh%vp%p
+          do ipart = 1, mesh%vp%npart
             if(ipart == mesh%vp%partno) cycle
 
             ip_inner = vec_global2local(mesh%vp, ip_inner_global, ipart)
@@ -706,7 +706,7 @@ contains
       if(mesh%parallel_in_domains) then
 
         ! first we allocate the buffer to be able to use MPI_Bsend
-        bsize = mesh%vp%p - 1 + nper_recv + MPI_BSEND_OVERHEAD*2*(mesh%vp%p - 1)
+        bsize = mesh%vp%npart - 1 + nper_recv + MPI_BSEND_OVERHEAD*2*(mesh%vp%npart - 1)
         ALLOCATE(send_buffer(1:bsize), bsize)
         call MPI_Buffer_attach(send_buffer, bsize*4, mpi_err)
 
@@ -715,29 +715,29 @@ contains
         ! but this way it seems simpler to implement.
         
         ! We send the number of points we expect to receive.
-        do ipart = 1, mesh%vp%p
+        do ipart = 1, mesh%vp%npart
           if(ipart == mesh%vp%partno) cycle
           call MPI_Bsend(mesh%nrecv(ipart), 1, MPI_INTEGER, ipart - 1, 0, mesh%vp%comm, mpi_err)
         end do
 
         ! And we receive it
-        ALLOCATE(mesh%nsend(1:mesh%vp%p), mesh%vp%p)
+        ALLOCATE(mesh%nsend(1:mesh%vp%npart), mesh%vp%npart)
         mesh%nsend = 0
-        do ipart = 1, mesh%vp%p
+        do ipart = 1, mesh%vp%npart
           if(ipart == mesh%vp%partno) cycle
           call MPI_Recv(mesh%nsend(ipart), 1, MPI_INTEGER, ipart - 1, 0, mesh%vp%comm, status, mpi_err)
         end do
 
         ! Now we send the indexes of the points
-        do ipart = 1, mesh%vp%p
+        do ipart = 1, mesh%vp%npart
           if(ipart == mesh%vp%partno .or. mesh%nrecv(ipart) == 0) cycle
           call MPI_Bsend(recv_rem_points(:, ipart), mesh%nrecv(ipart), MPI_INTEGER, ipart - 1, 1, mesh%vp%comm, mpi_err)
         end do
 
-        ALLOCATE(send_points(1:maxval(mesh%nsend), 1:mesh%vp%p), maxval(mesh%nsend)*mesh%vp%p)
+        ALLOCATE(send_points(1:maxval(mesh%nsend), 1:mesh%vp%npart), maxval(mesh%nsend)*mesh%vp%npart)
 
         ! And we receive them
-        do ipart = 1, mesh%vp%p
+        do ipart = 1, mesh%vp%npart
           if(ipart == mesh%vp%partno .or. mesh%nsend(ipart) == 0) cycle
           call MPI_Recv(send_points(:, ipart), mesh%nsend(ipart), MPI_INTEGER, &
                ipart - 1, 1, mesh%vp%comm, status, mpi_err)
@@ -749,17 +749,17 @@ contains
         ! Now we have all the indexes required locally, so we can
         ! build the mpi datatypes
 
-        ALLOCATE(mesh%dsend_type(1:mesh%vp%p), mesh%vp%p)
-        ALLOCATE(mesh%zsend_type(1:mesh%vp%p), mesh%vp%p)
-        ALLOCATE(mesh%drecv_type(1:mesh%vp%p), mesh%vp%p)
-        ALLOCATE(mesh%zrecv_type(1:mesh%vp%p), mesh%vp%p)
+        ALLOCATE(mesh%dsend_type(1:mesh%vp%npart), mesh%vp%npart)
+        ALLOCATE(mesh%zsend_type(1:mesh%vp%npart), mesh%vp%npart)
+        ALLOCATE(mesh%drecv_type(1:mesh%vp%npart), mesh%vp%npart)
+        ALLOCATE(mesh%zrecv_type(1:mesh%vp%npart), mesh%vp%npart)
 
         maxmax = max(maxval(mesh%nsend), maxval(mesh%nrecv))
 
         ALLOCATE(blocklengths(1:maxmax), maxmax)
         ALLOCATE(offsets(1:maxmax), maxmax)
 
-        do ipart = 1, mesh%vp%p
+        do ipart = 1, mesh%vp%npart
           if(ipart == mesh%vp%partno) cycle
 
           if(mesh%nsend(ipart) > 0) then

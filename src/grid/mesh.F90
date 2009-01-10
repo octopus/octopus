@@ -572,7 +572,7 @@ contains
       call vec_end(m%vp)
       if(simul_box_is_periodic(m%sb)) then
 
-        do ipart = 1, m%vp%p
+        do ipart = 1, m%vp%npart
           if(m%nsend(ipart) /= 0) then 
             call MPI_Type_free(m%dsend_type(ipart), mpi_err)
             call MPI_Type_free(m%zsend_type(ipart), mpi_err)

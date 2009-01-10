@@ -57,15 +57,15 @@ subroutine X(submesh_comm_reduce)(this, sm, mesh, count, val)
   tag = tagcounter
   tagcounter = tagcounter + 1
 
-  ALLOCATE(this%X(allval)(1:count, 1:mesh%vp%p), count*mesh%vp%p)
+  ALLOCATE(this%X(allval)(1:count, 1:mesh%vp%npart), count*mesh%vp%npart)
 
-  this%X(allval)(1:count, 1:mesh%vp%p) = M_ZERO
+  this%X(allval)(1:count, 1:mesh%vp%npart) = M_ZERO
 
-  ALLOCATE(this%requests(1:2*mesh%vp%p), 2*mesh%vp%p)
+  ALLOCATE(this%requests(1:2*mesh%vp%npart), 2*mesh%vp%npart)
 
   this%nreq = 0
 
-  do ipart = 1, mesh%vp%p
+  do ipart = 1, mesh%vp%npart
     if(ipart == mesh%vp%partno .or. sm%psize(ipart) == 0) cycle
     this%nreq = this%nreq + 1
     call MPI_Irecv(this%X(allval)(:, ipart), count, R_MPITYPE, ipart - 1, tag, &
@@ -73,7 +73,7 @@ subroutine X(submesh_comm_reduce)(this, sm, mesh, count, val)
   end do
 
   if(sm%has_points) then
-    do ipart = 1, mesh%vp%p
+    do ipart = 1, mesh%vp%npart
       if(ipart == mesh%vp%partno) cycle
       this%nreq = this%nreq + 1
       call MPI_Isend(val, count, R_MPITYPE, ipart - 1, tag, mesh%mpi_grp%comm, this%requests(this%nreq), mpi_err)
@@ -99,7 +99,7 @@ subroutine X(submesh_comm_finish)(this, sm, mesh, count, val)
   call MPI_Waitall(this%nreq, this%requests, statuses, mpi_err)
 
   val(1:count) = M_ZERO
-  do ipart = 1, mesh%vp%p
+  do ipart = 1, mesh%vp%npart
     val(1:count) = val(1:count) + this%X(allval)(1:count, ipart)
   end do
   
