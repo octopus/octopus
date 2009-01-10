@@ -71,7 +71,7 @@ program harmonic_spectrum
   !%Option "-"
   !% Circularly polarized field, clockwise.
   !%End
-  call loct_parse_string(check_inp('HarmonicSpectrumPolarization'), 'z', txt)
+  call loct_parse_string(datasets_check('HarmonicSpectrumPolarization'), 'z', txt)
   sh%pol = txt(1:1)
   if(sh%pol.ne.'x' .and. sh%pol.ne.'y' .and. sh%pol.ne.'z' .and. &
     sh%pol.ne.'+' .and. sh%pol.ne.'-') then
@@ -93,7 +93,7 @@ program harmonic_spectrum
   !%Option hs_from_acceleration 2
   !% Calculate the harmonic spectrum by reading the acceleration file.
   !%End
-  call loct_parse_int(check_inp('HarmonicSpectrumMode'), HS_FROM_MULT, mode)
+  call loct_parse_int(datasets_check('HarmonicSpectrumMode'), HS_FROM_MULT, mode)
   if(.not.varinfo_valid_option('HarmonicSpectrumMode', mode)) call input_error('HarmonicSpectrumMode')
 
   select case(mode)

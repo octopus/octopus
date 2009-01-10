@@ -83,7 +83,7 @@ contains
     !% information.
     !%End
 
-    call loct_parse_logical(check_inp('fromScratch'), .false., fromScratch)
+    call loct_parse_logical(datasets_check('fromScratch'), .false., fromScratch)
 
     select case(calc_mode())
     case(CM_GS)
@@ -157,7 +157,7 @@ contains
     !% mainly because is simple and for useful for testing purposes.
     !%End
     
-    call loct_parse_int(check_inp('ResponseMethod'), LR, get_resp_method)
+    call loct_parse_int(datasets_check('ResponseMethod'), LR, get_resp_method)
 
     if(.not.varinfo_valid_option('ResponseMethod', get_resp_method)) then
       call input_error('ResponseMethod')

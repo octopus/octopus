@@ -300,10 +300,10 @@ contains
       !% evaluate the contributions in the occupied subspace.
       !%End      
 
-      call loct_parse_int(check_inp('KdotP_OccupiedSolutionMethod'), &
+      call loct_parse_int(datasets_check('KdotP_OccupiedSolutionMethod'), &
         0, kdotp_vars%occ_solution_method)
 
-      call loct_parse_float(check_inp('DegeneracyThreshold'), &
+      call loct_parse_float(datasets_check('DegeneracyThreshold'), &
         CNST(1e-5), kdotp_vars%degen_thres)
       ! Note: this variable is defined in src/states.F90, in states_degeneracy_matrix
 
@@ -315,7 +315,7 @@ contains
       !% Imaginary frequency added to Sternheimer equation which may improve convergence.
       !%End
 
-      call loct_parse_float(check_inp('KdotP_Eta'), M_ZERO, kdotp_vars%eta)
+      call loct_parse_float(datasets_check('KdotP_Eta'), M_ZERO, kdotp_vars%eta)
       kdotp_vars%eta = kdotp_vars%eta*units_inp%energy%factor
 
       !%Variable KdotP_Initialization
@@ -332,7 +332,7 @@ contains
       !% non-interacting unit cells: |u_i(1)> = -i r_i |u(0)>
       !%End
 
-      call loct_parse_int(check_inp('KdotP_Initialization'), 0, kdotp_vars%initialization)
+      call loct_parse_int(datasets_check('KdotP_Initialization'), 0, kdotp_vars%initialization)
 
       !%Variable KdotP_CalculatePolarizabilities
       !%Type logical
@@ -344,7 +344,7 @@ contains
       !% calculate polarizability and hyperpolarizability.
       !%End      
 
-      call loct_parse_logical(check_inp('KdotP_CalculatePolarizabilities'), &
+      call loct_parse_logical(datasets_check('KdotP_CalculatePolarizabilities'), &
         .false., calc_pol)
 
       !%Variable KdotP_CalculateEffectiveMasses
@@ -356,10 +356,10 @@ contains
       !% to calculate effective masses.
       !%End      
 
-      call loct_parse_logical(check_inp('KdotP_CalculateEffectiveMasses'), &
+      call loct_parse_logical(datasets_check('KdotP_CalculateEffectiveMasses'), &
         .false., calc_eff_mass)
 
-      if (loct_parse_block(check_inp('EMHyperpol'), blk) == 0) then
+      if (loct_parse_block(datasets_check('EMHyperpol'), blk) == 0) then
         calc_hyperpol = .true.
         em_nfactor = 3
         em_nsigma = 2
@@ -367,7 +367,7 @@ contains
         calc_hyperpol = .false.
         em_nfactor = 1
         ! FIX ME: need to actually read in the frequency here
-        if (loct_parse_block(check_inp('EMFreqs'), blk) == 0) then
+        if (loct_parse_block(datasets_check('EMFreqs'), blk) == 0) then
           em_nsigma = 2
         else ! omega = 0, static case
           em_nsigma = 1  

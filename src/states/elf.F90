@@ -56,7 +56,7 @@ contains
     !% default; however, for research purposes it may be useful not to add it.
     !% If this feature proves to be useless, this option should go away.
     !%End
-    call loct_parse_logical(check_inp('ElfWithCurrentTerm'), .true., with_current_term)
+    call loct_parse_logical(datasets_check('ElfWithCurrentTerm'), .true., with_current_term)
   end subroutine elf_init
 
   ! ---------------------------------------------------------

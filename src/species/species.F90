@@ -284,12 +284,12 @@ contains
     !%
     !% For a precise description, see [N. A. Modine, Phys. Rev. B 55, 10289 (1997)]
     !%End
-    call loct_parse_float(check_inp('SpeciesAllElectronSigma'), CNST(0.25), s%sigma)
+    call loct_parse_float(datasets_check('SpeciesAllElectronSigma'), CNST(0.25), s%sigma)
     if(s%sigma <= M_ZERO) call input_error('SpeciesAllElectronSigma')
 
     ! First, find out if there is a Species block.
     n_spec_block = 0
-    if(loct_parse_block(check_inp('Species'), blk) == 0) then
+    if(loct_parse_block(datasets_check('Species'), blk) == 0) then
       n_spec_block = loct_parse_block_n(blk)
     end if
 

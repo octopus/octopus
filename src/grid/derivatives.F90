@@ -169,16 +169,16 @@ contains
     !% The star, plus a number of off-axis points.
     !%End
     if(use_curvilinear) then
-      call loct_parse_int(check_inp('DerivativesStencil'), DER_STARPLUS, der%stencil_type)
+      call loct_parse_int(datasets_check('DerivativesStencil'), DER_STARPLUS, der%stencil_type)
     else
-      call loct_parse_int(check_inp('DerivativesStencil'), DER_STAR, der%stencil_type)
+      call loct_parse_int(datasets_check('DerivativesStencil'), DER_STAR, der%stencil_type)
     endif
     if(.not.varinfo_valid_option('DerivativesStencil', der%stencil_type)) call input_error('DerivativesStencil')
     call messages_print_var_option(stdout, "DerivativesStencil", der%stencil_type)
 
     if(use_curvilinear  .and.  der%stencil_type < DER_CUBE) call input_error('DerivativesStencil')
     if(der%stencil_type == DER_VARIATIONAL) then
-      call loct_parse_float(check_inp('DerivativesLaplacianFilter'), M_ONE, der%lapl_cutoff)
+      call loct_parse_float(datasets_check('DerivativesLaplacianFilter'), M_ONE, der%lapl_cutoff)
     end if
 
     !%Variable DerivativesOrder
@@ -201,7 +201,7 @@ contains
     !% <tt>stencil_starplus</tt>: 2*<tt>DerivativesOrder</tt>+1+n with n being 12
     !% in 2D and 44 in 3D.
     !%End
-    call loct_parse_int(check_inp('DerivativesOrder'), 4, der%order)
+    call loct_parse_int(datasets_check('DerivativesOrder'), 4, der%order)
 
 #ifdef HAVE_MPI
     !%Variable ParallelizationOfDerivatives
@@ -219,7 +219,7 @@ contains
     !% Non-blocking collective communication (requires libnbc).
     !%End
     
-    call loct_parse_int(check_inp('ParallelizationOfDerivatives'), NON_BLOCKING, der%comm_method)
+    call loct_parse_int(datasets_check('ParallelizationOfDerivatives'), NON_BLOCKING, der%comm_method)
     
     if(.not. varinfo_valid_option('ParallelizationOfDerivatives', der%comm_method)) then
       call input_error('ParallelizationOfDerivatives')
@@ -244,7 +244,7 @@ contains
     call derivatives_get_stencil_grad(der)
 
     ! find out the bounday conditions
-    call loct_parse_int(check_inp('DerivativesBoundaries'), DER_BC_ZERO_F, i)
+    call loct_parse_int(datasets_check('DerivativesBoundaries'), DER_BC_ZERO_F, i)
     if((i < DER_BC_ZERO_F).or.(i > DER_BC_PERIOD)) then
       write(message(1), '(a,i2,a)') 'DerivativesBoundaries = "', i, '" is unknown to octopus'
       call write_fatal(1)

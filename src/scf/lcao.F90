@@ -178,7 +178,7 @@ contains
     !% reduced. If you want to use the largest possible number, set
     !% LCAODimension to a negative number.
     !%End
-    call loct_parse_int(check_inp('LCAODimension'), 0, n)
+    call loct_parse_int(datasets_check('LCAODimension'), 0, n)
 
     if(n > 0 .and. n <= st%nst) then
       this%norbs = st%nst

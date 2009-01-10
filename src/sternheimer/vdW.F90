@@ -143,10 +143,10 @@ contains
       !% How many points to use in the Gauss-Legendre integration to obtain the
       !% van der Waals coefficients
       !%End
-      call  loct_parse_int(check_inp('vdW_npoints'), 6, gaus_leg_n)
+      call  loct_parse_int(datasets_check('vdW_npoints'), 6, gaus_leg_n)
 
       ! TODO: symmetry stuff should be general
-      call loct_parse_int(check_inp('TDPolarizationEquivAxes'), 0, equiv_axes)
+      call loct_parse_int(datasets_check('TDPolarizationEquivAxes'), 0, equiv_axes)
 
       select case(equiv_axes)
       case(3);      ndir = 1

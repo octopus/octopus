@@ -135,7 +135,7 @@ contains
     !%Option none 0
     !% Zero perturbation, for use in testing.
     !%End 
-    call loct_parse_int(check_inp('RespPerturbationType'), PERTURBATION_ELECTRIC, ii)
+    call loct_parse_int(datasets_check('RespPerturbationType'), PERTURBATION_ELECTRIC, ii)
 
     call pert_init2(this, ii, gr, geo)
 
@@ -177,7 +177,7 @@ contains
       !% ICL correction: Ismail-Beigi, Chang, and Louie, PRL 87, 097402 (2001).
       !%End
       
-      call loct_parse_int(check_inp('MagneticGaugeCorrection'), GAUGE_GIPAW, this%gauge)
+      call loct_parse_int(datasets_check('MagneticGaugeCorrection'), GAUGE_GIPAW, this%gauge)
       if(.not.varinfo_valid_option('MagneticGaugeCorrection', this%gauge)) &
            call input_error('MagneticGaugeCorrection')
 
@@ -198,7 +198,7 @@ contains
       !% the kdotp perturbation, which is due to non-local pseudopotentials.
       !%End
 
-      call loct_parse_logical(check_inp('KdotP_UseNonLocalPseudopotential'), &
+      call loct_parse_logical(datasets_check('KdotP_UseNonLocalPseudopotential'), &
         .true., this%use_nonlocalpps)
     endif
 

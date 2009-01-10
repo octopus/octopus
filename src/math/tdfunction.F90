@@ -223,7 +223,7 @@ module tdf_m
     !%Option tdf_from_expr 10008
     !% Explained above.
     !%End
-    if(loct_parse_block(check_inp('TDFunctions'), blk) .ne. 0) then
+    if(loct_parse_block(datasets_check('TDFunctions'), blk) .ne. 0) then
       ierr = -1
       return
     end if

@@ -285,7 +285,7 @@ contains
     !% absolute value of the projector functions, at points outside the localization sphere, is 
     !% below a certain threshold. This threshold is set the SpecieProjectorSphereThreshold.
     !%End
-    call loct_parse_float(check_inp('SpeciesProjectorSphereThreshold'), &
+    call loct_parse_float(datasets_check('SpeciesProjectorSphereThreshold'), &
       CNST(0.001), ps%projectors_sphere_threshold)
     if(ps%projectors_sphere_threshold <= M_ZERO) call input_error('SpeciesProjectorSphereThreshold')
 

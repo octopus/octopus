@@ -43,7 +43,7 @@ subroutine PES_rc_init(v, m, st, save_iter)
   !% <br>%
   !% </tt>
   !%End
-  if (loct_parse_block(check_inp('PES_rc_points'), blk) < 0) call input_error('PES_rc_points')
+  if (loct_parse_block(datasets_check('PES_rc_points'), blk) < 0) call input_error('PES_rc_points')
 
   v%npoints = loct_parse_block_n(blk)
 

@@ -427,7 +427,7 @@ contains
         ! check if we should deploy user-defined wavefunctions. 
         ! according to the settings in the input file the routine 
         ! overwrites orbitals that were read from restart/gs 
-        if(loct_parse_isdef(check_inp('UserDefinedStates')).ne.0) then
+        if(loct_parse_isdef(datasets_check('UserDefinedStates')).ne.0) then
           call restart_read_user_def_orbitals(gr%mesh, st)
         end if
 
@@ -454,8 +454,8 @@ contains
         !% Each line provides the coefficients of the new states, in terms of
         !% the old ones.
         !%End
-        if(loct_parse_isdef(check_inp('TransformStates')).ne.0) then
-          if(loct_parse_block(check_inp('TransformStates'), blk) == 0) then
+        if(loct_parse_isdef(datasets_check('TransformStates')).ne.0) then
+          if(loct_parse_block(datasets_check('TransformStates'), blk) == 0) then
             call states_copy(stin, st)
             deallocate(stin%zpsi)
             call restart_look_and_read(trim(restart_dir)//'gs', stin, gr, sys%geo, ierr)
@@ -503,7 +503,7 @@ contains
       !% It is almost equivalent to setting "TDFreezeOrbitals = N-1", where N is the number
       !% of orbitals, but not completely.
       !%End
-      call loct_parse_int(check_inp('TDFreezeOrbitals'), 0, freeze_orbitals)
+      call loct_parse_int(datasets_check('TDFreezeOrbitals'), 0, freeze_orbitals)
       if(freeze_orbitals > 0) then
         ! In this case, we first freeze the orbitals, then calculate the Hxc potential.
         call states_freeze_orbitals(st, gr, sys%mc, freeze_orbitals)
@@ -769,7 +769,7 @@ contains
       integer  :: spin, state
       FLOAT    :: new_occ
       
-      if(loct_parse_block(check_inp('ModifyOccupations'), blk) == 0) then
+      if(loct_parse_block(datasets_check('ModifyOccupations'), blk) == 0) then
         nrow = loct_parse_block_n(blk)
         
         do i=0,(nrow-1)

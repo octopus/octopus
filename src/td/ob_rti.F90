@@ -98,7 +98,7 @@ contains
     !% Sets the maximum iteration number for the BiCG linear solver in
     !% the Crank-Nicholson procedure.
     !%End
-    call loct_parse_int(check_inp('OpenBoundariesBiCGMaxIter'), 100, cg_max_iter)
+    call loct_parse_int(datasets_check('OpenBoundariesBiCGMaxIter'), 100, cg_max_iter)
     if(cg_max_iter.le.0) then
       call input_error('OpenBoundariesBiCGMaxIter')
     end if
@@ -111,7 +111,7 @@ contains
     !% Sets the convergence tolerance for the residue in the BiCG linear solver
     !% in the Crank-Nicholson procedure.
     !%End
-    call loct_parse_float(check_inp('OpenBoundariesBiCGTol'), CNST(1e-12), cg_tol)
+    call loct_parse_float(datasets_check('OpenBoundariesBiCGTol'), CNST(1e-12), cg_tol)
     if(cg_tol.le.M_ZERO) then
       call input_error('OpenBoundariesBiCGTol')
     end if
@@ -129,7 +129,7 @@ contains
     !%Option save_ram_usage 2
     !% Use the RAM saving, CPU intensive procedure
     !%End
-    call loct_parse_int(check_inp('OpenBoundariesMemType'), SAVE_CPU_TIME, ob%mem_type)
+    call loct_parse_int(datasets_check('OpenBoundariesMemType'), SAVE_CPU_TIME, ob%mem_type)
     if(.not.varinfo_valid_option('OpenBoundariesMemType', ob%mem_type)) then
       call input_error('OpenBoundariesMemType')
     end if
@@ -148,7 +148,7 @@ contains
     !%Option src_term 2
     !% If present, include source term in propagator
     !%End
-    call loct_parse_int(check_inp('OpenBoundariesAdditionalTerms'), MEM_TERM_FLAG+SRC_TERM_FLAG, ob%additional_terms)
+    call loct_parse_int(datasets_check('OpenBoundariesAdditionalTerms'), MEM_TERM_FLAG+SRC_TERM_FLAG, ob%additional_terms)
     if(.not.varinfo_valid_option('OpenBoundariesAdditionalTerms', ob%additional_terms, is_flag=.true.)) then
       call input_error('OpenBoundariesAdditionalTerms')
     end if

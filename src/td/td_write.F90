@@ -171,7 +171,7 @@ contains
          2**(OUT_ENERGY - 1) +      &
          2**(OUT_GAUGE_FIELD - 1)
 
-    call loct_parse_int(check_inp('TDOutput'), default, flags)
+    call loct_parse_int(datasets_check('TDOutput'), default, flags)
 
     if(.not.varinfo_valid_option('TDOutput', flags, is_flag = .true.)) call input_error('TDOutput')
 
@@ -193,7 +193,7 @@ contains
     !% Maximum multi-pole of the density output to the file <tt>td.general/multipoles</tt>
     !% during a time-dependent simulation. Must be 0 &lt; <tt>TDDipoleLmax &lt; 5</tt>.
     !%End
-    call loct_parse_int(check_inp('TDDipoleLmax'), 1, w%lmax)
+    call loct_parse_int(datasets_check('TDDipoleLmax'), 1, w%lmax)
     if (w%lmax < 0 .or. w%lmax > 4) then
       write(message(1), '(a,i6,a)') "Input: '", w%lmax, "' is not a valid TDDipoleLmax"
       message(2) = '(0 <= TDDipoleLmax <= 4 )'
@@ -208,7 +208,7 @@ contains
     end if
 
     call geometry_min_distance(geo, rmin)
-    call loct_parse_float(check_inp('LocalMagneticMomentsSphereRadius'), rmin*M_HALF/units_inp%length%factor, w%lmm_r)
+    call loct_parse_float(datasets_check('LocalMagneticMomentsSphereRadius'), rmin*M_HALF/units_inp%length%factor, w%lmm_r)
     w%lmm_r = w%lmm_r * units_inp%length%factor
 
     if( (w%out(OUT_PROJ)%write)  .or.  (w%out(OUT_POPULATIONS)%write) ) then
@@ -230,7 +230,7 @@ contains
         !% is set by the number of states in the propagation and the number of uncoccupied states
         !% available
         !%End
-        call loct_parse_int(check_inp('TDProjStateStart'), 1, w%gs_st%st_start)
+        call loct_parse_int(datasets_check('TDProjStateStart'), 1, w%gs_st%st_start)
       else
         w%gs_st%st_start = 1
       end if

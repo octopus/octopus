@@ -193,7 +193,7 @@ contains
     !% 
     !% WARNING: NOT TESTED YET.
     !%End
-    call loct_parse_int(check_inp('Output'), 0, outp%what)
+    call loct_parse_int(datasets_check('Output'), 0, outp%what)
 
     ! cannot calculate the ELF in 1D
     if(sb%dim == 1) outp%what = iand(outp%what, not(output_elf + output_elf_basins))
@@ -223,7 +223,7 @@ contains
       !% Which wavefunctions to print, in list form: i.e., "1-5" to print the first
       !% five states, "2,3" to print the second and the third state, etc.
       !%End
-      call loct_parse_string(check_inp('OutputWfsNumber'), "1-1024", outp%wfs_list)
+      call loct_parse_string(datasets_check('OutputWfsNumber'), "1-1024", outp%wfs_list)
     end if
 
     if(iand(outp%what, output_ksdipole).ne.0) then
@@ -238,10 +238,10 @@ contains
       !% respectively the (1,-1), (1,0) and (1,1) multipole matrix elements
       !% between Kohn-Sham states.
       !%End
-      call loct_parse_int(check_inp('OutputMatrixElementsL'), 1, outp%ksmultipoles)
+      call loct_parse_int(datasets_check('OutputMatrixElementsL'), 1, outp%ksmultipoles)
     end if
 
-    if(loct_parse_block(check_inp('CurrentThroughPlane'), blk) == 0) then
+    if(loct_parse_block(datasets_check('CurrentThroughPlane'), blk) == 0) then
       outp%what = ior(outp%what, output_j_flow)
 
       select case(sb%dim)
@@ -332,9 +332,9 @@ contains
     !% The output is saved when the iteration number is a multiple of the
     !% <tt>OutputEvery</tt> variable.
     !%End
-    call loct_parse_int(check_inp('OutputEvery'), 1000, outp%iter)
+    call loct_parse_int(datasets_check('OutputEvery'), 1000, outp%iter)
 
-    call loct_parse_logical(check_inp('OutputDuringSCF'), .false., outp%duringscf)
+    call loct_parse_logical(datasets_check('OutputDuringSCF'), .false., outp%duringscf)
 
     if(outp%what.ne.0) call io_function_read_how(sb, outp%how)
 

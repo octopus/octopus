@@ -100,7 +100,7 @@ contains
     db = fft_cf%n
 
     if (poisson_solver <= FFT_PLA .and. poisson_solver .ne. FFT_CORRECTED) then
-      call loct_parse_float(check_inp('PoissonCutoffRadius'),&
+      call loct_parse_float(datasets_check('PoissonCutoffRadius'),&
         maxval(db(:)*gr%mesh%h(:)/M_TWO)/units_inp%length%factor , r_c)
       r_c = r_c*units_inp%length%factor
       write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &
@@ -261,7 +261,7 @@ contains
     ! dimensions may have been optimized
     db = fft_cf%n              
 
-    call loct_parse_float(check_inp('PoissonCutoffRadius'),&
+    call loct_parse_float(datasets_check('PoissonCutoffRadius'),&
       maxval(db(:)*gr%mesh%h(:)/M_TWO)/units_inp%length%factor , r_c)
     r_c = r_c*units_inp%length%factor
     write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &

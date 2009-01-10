@@ -71,7 +71,7 @@ contains
     !% Rev. B 52, R2229 (1995)]
     !% It must be larger than zero.
     !%End
-    call loct_parse_float(check_inp('CurvGygiA'), M_HALF, cv%A)
+    call loct_parse_float(datasets_check('CurvGygiA'), M_HALF, cv%A)
     !%Variable CurvGygiAlpha
     !%Type float
     !%Section Mesh::Curvilinear::Gygi
@@ -83,7 +83,7 @@ contains
     !% The default is two atomic units.
     !% It must be larger than zero.
     !%End
-    call loct_parse_float(check_inp('CurvGygiAlpha'), M_TWO/units_inp%length%factor, cv%alpha)
+    call loct_parse_float(datasets_check('CurvGygiAlpha'), M_TWO/units_inp%length%factor, cv%alpha)
     !%Variable CurvGygiBeta
     !%Type float
     !%Section Mesh::Curvilinear::Gygi
@@ -93,7 +93,7 @@ contains
     !% Phys. Rev. B 52, R2229 (1995)]. The default is four atomic units.
     !% It must be larger than zero.
     !%End
-    call loct_parse_float(check_inp('CurvGygiBeta'),  M_FOUR/units_inp%length%factor, cv%beta)
+    call loct_parse_float(datasets_check('CurvGygiBeta'),  M_FOUR/units_inp%length%factor, cv%beta)
 
     if(cv%a<=M_ZERO)     call input_error('CurvGygiA')
     if(cv%alpha<=M_ZERO) call input_error('CurvGygiAlpha')

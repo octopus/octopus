@@ -82,7 +82,7 @@ contains
     !% <tt>Displacement</tt> controls how much the atoms are to be moved in order to calculate the 
     !% dynamical matrix.
     !%End
-    call loct_parse_float(check_inp('Displacement'), CNST(0.01)/units_inp%length%factor, vib%disp)
+    call loct_parse_float(datasets_check('Displacement'), CNST(0.01)/units_inp%length%factor, vib%disp)
     vib%disp = vib%disp*units_inp%length%factor
 
     ! calculate dynamical matrix

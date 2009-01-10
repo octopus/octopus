@@ -39,9 +39,9 @@ subroutine X(ode_solver_init)(os)
   !%Option ode_pd89 4
   !% Prince-Dormand solver
   !%End
-  call loct_parse_int(check_inp('ODESolver'),       ODE_RK4, os%solver_type)
+  call loct_parse_int(datasets_check('ODESolver'),       ODE_RK4, os%solver_type)
   if( os%solver_type.lt.ODE_MINVAL.or.os%solver_type.gt.ODE_MAXVAL ) then
-    call input_error(check_inp('ODESolver'))
+    call input_error(datasets_check('ODESolver'))
   end if
 
   !%Variable ODESolverNSteps
@@ -52,7 +52,7 @@ subroutine X(ode_solver_init)(os)
   !% Number of steps which the chosen ODE solver should perform
   !% in the integration interval [a,b] of the ODE.
   !%End
-  call loct_parse_int(check_inp('ODESolverNSteps'),     100, os%nsteps)
+  call loct_parse_int(datasets_check('ODESolverNSteps'),     100, os%nsteps)
 
   call X(ode_solver_create)(os)
 

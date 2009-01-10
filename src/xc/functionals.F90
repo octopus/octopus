@@ -94,7 +94,7 @@ contains
     !%Option lca_lch 302
     !% Lee, Colwell & Handy
     !%End
-    call loct_parse_int(check_inp('JFunctional'), XC_LCA_OMC, functl%id)
+    call loct_parse_int(datasets_check('JFunctional'), XC_LCA_OMC, functl%id)
 
     ! initialize
     select case(functl%id)
@@ -152,8 +152,8 @@ contains
     case(XC_FAMILY_GGA)
       call XC_F90(gga_init)(functl%conf, functl%info, functl%id, spin_channels)
       if(functl%id == XC_GGA_XC_LB) then
-        call loct_parse_int  (check_inp('LB94_modified'),             0, functl%LB94_modified)
-        call loct_parse_float(check_inp('LB94_threshold'), CNST(1.0e-6), functl%LB94_threshold)
+        call loct_parse_int  (datasets_check('LB94_modified'),             0, functl%LB94_modified)
+        call loct_parse_float(datasets_check('LB94_threshold'), CNST(1.0e-6), functl%LB94_threshold)
       end if
 
     case(XC_FAMILY_HYB_GGA)
@@ -214,7 +214,7 @@ contains
       if(functl%id.ne.XC_LDA_C_XALPHA) then
         call XC_F90(lda_init)(functl%conf, functl%info, functl%id, spin_channels)
       else
-        call loct_parse_float(check_inp('Xalpha'), M_ONE, alpha)
+        call loct_parse_float(datasets_check('Xalpha'), M_ONE, alpha)
         call XC_F90(lda_init)(functl%conf, functl%info, XC_LDA_C_XALPHA, &
           spin_channels, ndim, alpha)
       end if

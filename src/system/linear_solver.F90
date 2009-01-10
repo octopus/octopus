@@ -128,10 +128,10 @@ contains
     defsolver_ = LS_BICGSTAB
     if(present(def_solver)) defsolver_ = def_solver
 
-    if (loct_parse_isdef(check_inp(trim(prefix)//"LinearSolver")) /= 0 ) then 
-      call loct_parse_int  (check_inp(trim(prefix)//"LinearSolver"), defsolver_, fsolver)
+    if (loct_parse_isdef(datasets_check(trim(prefix)//"LinearSolver")) /= 0 ) then 
+      call loct_parse_int  (datasets_check(trim(prefix)//"LinearSolver"), defsolver_, fsolver)
     else
-      call loct_parse_int  (check_inp("LinearSolver"), defsolver_, fsolver)
+      call loct_parse_int  (datasets_check("LinearSolver"), defsolver_, fsolver)
     end if
 
     !the last 2 digits select the linear solver
@@ -147,10 +147,10 @@ contains
     !% Maximum number of iterations the linear solver does, even if
     !% convergence is not achieved.
     !%End
-    if (loct_parse_isdef(check_inp(trim(prefix)//"LinearSolverMaxIter")) /= 0) then 
-      call loct_parse_int  (check_inp(trim(prefix)//"LinearSolverMaxIter"), 1000, this%max_iter)
+    if (loct_parse_isdef(datasets_check(trim(prefix)//"LinearSolverMaxIter")) /= 0) then 
+      call loct_parse_int  (datasets_check(trim(prefix)//"LinearSolverMaxIter"), 1000, this%max_iter)
     else
-      call loct_parse_int  (check_inp("LinearSolverMaxIter"), 1000, this%max_iter)
+      call loct_parse_int  (datasets_check("LinearSolverMaxIter"), 1000, this%max_iter)
     end if
 
     !%Variable LinearSolverInitTol
@@ -161,11 +161,11 @@ contains
     !% This is the tolerance to determine that the linear solver has converged,
     !% for the first SCF iteration. Ignored if LRTolScheme = fixed.
     !%End
-    if (loct_parse_isdef(check_inp(trim(prefix)//"LinearSolverInitTol")) /= 0) then 
-      call loct_parse_float(check_inp(trim(prefix)//"LinearSolverInitTol"), &
+    if (loct_parse_isdef(datasets_check(trim(prefix)//"LinearSolverInitTol")) /= 0) then 
+      call loct_parse_float(datasets_check(trim(prefix)//"LinearSolverInitTol"), &
         CNST(1e-2), this%initial_tol)
     else
-      call loct_parse_float(check_inp("LinearSolverInitTol"), &
+      call loct_parse_float(datasets_check("LinearSolverInitTol"), &
         CNST(1e-2), this%initial_tol)
     end if
 
@@ -176,11 +176,11 @@ contains
     !%Description
     !% This is the tolerance to determine that the linear solver has converged.
     !%End
-    if (loct_parse_isdef(check_inp(trim(prefix)//"LinearSolverTol")) /= 0) then 
-      call loct_parse_float(check_inp(trim(prefix)//"LinearSolverTol"), &
+    if (loct_parse_isdef(datasets_check(trim(prefix)//"LinearSolverTol")) /= 0) then 
+      call loct_parse_float(datasets_check(trim(prefix)//"LinearSolverTol"), &
         CNST(1e-6), this%final_tol)
     else
-      call loct_parse_float(check_inp("LinearSolverTol"), &
+      call loct_parse_float(datasets_check("LinearSolverTol"), &
         CNST(1e-6), this%final_tol)
     end if
 

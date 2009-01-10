@@ -80,7 +80,7 @@ subroutine states_choose_kpoints(d, sb, geo)
   !%
   !%End
 
-  if(loct_parse_block(check_inp('KPoints'), blk) == 0) then
+  if(loct_parse_block(datasets_check('KPoints'), blk) == 0) then
 
     if (d%ispin == 2) then
       message(1) = 'Not implemented yet.'
@@ -135,7 +135,7 @@ subroutine states_choose_kpoints(d, sb, geo)
   !%
   !%End
 
-  if(loct_parse_block(check_inp('KPointsMonkhorstPack'), blk) .ne. 0) then
+  if(loct_parse_block(datasets_check('KPointsMonkhorstPack'), blk) .ne. 0) then
     message(1) = 'The system is periodic and neither the KPoints or KPointsMonkhorstPack blocks have been given.'
     call write_fatal(1)
   end if
@@ -170,7 +170,7 @@ subroutine states_choose_kpoints(d, sb, geo)
   !% sampling will range over the full Brillouin zone. The default is
   !% yes.
   !%End
-  call loct_parse_logical(check_inp('KPointsUseSymmetries'), .true., use_symmetries)
+  call loct_parse_logical(datasets_check('KPointsUseSymmetries'), .true., use_symmetries)
 
   !%Variable KPointsUseTimeReversal
   !%Type logical
@@ -184,7 +184,7 @@ subroutine states_choose_kpoints(d, sb, geo)
   !% yes. If KPointsUseSymmetries = no, this variable is ignored, and time-reversal
   !% symmetry is not used.
   !%End
-  call loct_parse_logical(check_inp('KPointsUseTimeReversal'), .true., use_time_reversal)
+  call loct_parse_logical(datasets_check('KPointsUseTimeReversal'), .true., use_time_reversal)
   
 
   ALLOCATE(natom(geo%nspecies), geo%nspecies)
@@ -327,7 +327,7 @@ logical function in_wigner_seitz_cell(k_point, klattice) result(in_cell)
   !%Option dodecahedron 3
   !% The cell is dodecaedral.
   !%End
-  call loct_parse_int(check_inp('KPointsCellType'), CUBE, ws_cell_type)
+  call loct_parse_int(datasets_check('KPointsCellType'), CUBE, ws_cell_type)
 
   ! the number of Bragg planes corresponds to the coordination number
   ! of the respective Bravais lattice

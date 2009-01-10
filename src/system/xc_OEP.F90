@@ -119,7 +119,7 @@ contains
     !%Option oep_full 5
     !% Full solution of OEP equation using the approach of S. Kuemmel (half implemented)
     !%End
-    call loct_parse_int(check_inp('OEP_level'), XC_OEP_KLI, oep%level)
+    call loct_parse_int(datasets_check('OEP_level'), XC_OEP_KLI, oep%level)
     if(.not.varinfo_valid_option('OEP_level', oep%level)) call input_error('OEP_level')
 
     if(oep%level.ne.XC_OEP_NONE) then
@@ -128,7 +128,7 @@ contains
           message(1) = "FULL OEP is not implemented yet."
           call write_fatal(1)
         end if
-        call loct_parse_float(check_inp('OEP_mixing'), M_ONE, oep%mixing)
+        call loct_parse_float(datasets_check('OEP_mixing'), M_ONE, oep%mixing)
       end if
 
       ! this routine is only prepared for finite systems, and ispin = 1, 2

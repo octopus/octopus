@@ -37,7 +37,7 @@ subroutine td_init(sys, h, td)
   !% Time-step for the time propagation. The default is 0.07
   !% [hbar/Hartree].
   !%End
-  call loct_parse_float(check_inp('TDTimeStep'), CNST(0.07)/units_inp%time%factor, td%dt)
+  call loct_parse_float(datasets_check('TDTimeStep'), CNST(0.07)/units_inp%time%factor, td%dt)
   td%dt = td%dt * units_inp%time%factor
   if (td%dt <= M_ZERO) then
     write(message(1),'(a,f14.6,a)') "Input: '", td%dt, "' is not a valid TDTimeStep"
@@ -77,7 +77,7 @@ subroutine td_init(sys, h, td)
   !%
   !%End
 
-  call loct_parse_float(check_inp('TDIonicTimeScale'), CNST(1.0), td%mu)
+  call loct_parse_float(datasets_check('TDIonicTimeScale'), CNST(1.0), td%mu)
 
   !%Variable TDMaximumIter
   !%Type integer
@@ -94,7 +94,7 @@ subroutine td_init(sys, h, td)
   !%
   !%End 
 
-  call loct_parse_int(check_inp('TDMaximumIter'), 1500, td%max_iter)
+  call loct_parse_int(datasets_check('TDMaximumIter'), 1500, td%max_iter)
 
   if(td%max_iter < 1) then
     write(message(1), '(a,i6,a)') "Input: '", td%max_iter, "' is not a valid TDMaximumIter"
@@ -107,7 +107,7 @@ subroutine td_init(sys, h, td)
 
   ! now the photoelectron stuff
 #if !defined(DISABLE_PES)
-  call loct_parse_int(check_inp('AbsorbingBoundaries'), 0, dummy)
+  call loct_parse_int(datasets_check('AbsorbingBoundaries'), 0, dummy)
   call PES_init(td%PESv, sys%gr%mesh, sys%gr%sb, sys%st, dummy, sys%outp%iter)
 #endif
 
@@ -126,7 +126,7 @@ subroutine td_init(sys, h, td)
   !% Carr-Parrinelo molecular dynamics.
   !%End
 
-  call loct_parse_int(check_inp('TDDynamics'), EHRENFEST, td%dynamics)
+  call loct_parse_int(datasets_check('TDDynamics'), EHRENFEST, td%dynamics)
   if(.not.varinfo_valid_option('TDDynamics', td%dynamics)) call input_error('TDDynamics')
   call messages_print_var_option(stdout, 'TDDynamics', td%dynamics)
 
@@ -146,7 +146,7 @@ subroutine td_init(sys, h, td)
   !% The recalculation is not done every time step, but only every
   !% OutputEvery time steps.
   !%End
-  call loct_parse_logical(check_inp("RecalculateGSDuringEvolution"), .false., td%recalculate_gs)
+  call loct_parse_logical(datasets_check("RecalculateGSDuringEvolution"), .false., td%recalculate_gs)
 
   call td_rti_init(sys%gr, sys%st, h, td%tr, td%dt, td%max_iter, &
        ion_dynamics_ions_move(td%ions) .or. gauge_field_is_applied(h%ep%gfield))

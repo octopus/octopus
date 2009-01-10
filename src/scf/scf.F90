@@ -112,7 +112,7 @@ contains
     !% Maximum number of SCF iterations. The code will stop even if convergence
     !% has not been achieved. <tt>0</tt> means unlimited.
     !%End
-    call loct_parse_int  (check_inp('MaximumIter'), 200, scf%max_iter)
+    call loct_parse_int  (datasets_check('MaximumIter'), 200, scf%max_iter)
 
     !%Variable ConvAbsDens
     !%Type float
@@ -125,7 +125,7 @@ contains
     !%
     !% A zero value (the default) means do not use this criterion.
     !%End
-    call loct_parse_float(check_inp('ConvAbsDens'), M_ZERO, scf%conv_abs_dens)
+    call loct_parse_float(datasets_check('ConvAbsDens'), M_ZERO, scf%conv_abs_dens)
 
     !%Variable ConvRelDens
     !%Type float
@@ -140,7 +140,7 @@ contains
     !% zero value means do not use this criterion. By default this
     !% value is set to 1e-3.
     !%End
-    call loct_parse_float(check_inp('ConvRelDens'), CNST(1e-3), scf%conv_rel_dens)
+    call loct_parse_float(datasets_check('ConvRelDens'), CNST(1e-3), scf%conv_rel_dens)
 
     !%Variable ConvAbsEv
     !%Type float
@@ -153,7 +153,7 @@ contains
     !%
     !% A zero value (the default) means do not use this criterion.
     !%End
-    call loct_parse_float(check_inp('ConvAbsEv'), M_ZERO, scf%conv_abs_ev)
+    call loct_parse_float(datasets_check('ConvAbsEv'), M_ZERO, scf%conv_abs_ev)
     scf%conv_abs_ev = scf%conv_abs_ev * units_inp%energy%factor
 
     !%Variable ConvRelEv
@@ -167,7 +167,7 @@ contains
     !%
     !% <i>E</i> is the sum of the eigenvalues. A zero value (the default) means do not use this criterion.
     !%End
-    call loct_parse_float(check_inp('ConvRelEv'), M_ZERO, scf%conv_rel_ev)
+    call loct_parse_float(datasets_check('ConvRelEv'), M_ZERO, scf%conv_rel_ev)
 
     !%Variable ConvAbsForce
     !%Type float
@@ -178,7 +178,7 @@ contains
     !% maximum variation of any component of the ionic forces in consecutive iterations.
     !% A zero value (the default) means do not use this criterion.
     !%End
-    call loct_parse_float(check_inp('ConvAbsForce'), M_ZERO, scf%conv_abs_force)
+    call loct_parse_float(datasets_check('ConvAbsForce'), M_ZERO, scf%conv_abs_force)
     scf%conv_abs_force = scf%conv_abs_force * units_inp%force%factor
 
     !%Variable ConvRelForce
@@ -190,7 +190,7 @@ contains
     !% absolute convergence divided by the modulus of the force on the ion where the force changes the most.
     !% A zero value (the default) means do not use this criterion.
     !%End
-    call loct_parse_float(check_inp('ConvRelForce'), M_ZERO, scf%conv_rel_force)
+    call loct_parse_float(datasets_check('ConvRelForce'), M_ZERO, scf%conv_rel_force)
 
     if(scf%max_iter <= 0 .and. &
       scf%conv_abs_dens <= M_ZERO .and. scf%conv_rel_dens <= M_ZERO .and. &
@@ -215,7 +215,7 @@ contains
     !%Option density 2
     !% The density
     !%End
-    call loct_parse_int(check_inp('What2Mix'), MIXDENS, scf%what2mix)
+    call loct_parse_int(datasets_check('What2Mix'), MIXDENS, scf%what2mix)
     if(.not.varinfo_valid_option('What2Mix', scf%what2mix)) call input_error('What2Mix')
     call messages_print_var_option(stdout, "What2Mix", scf%what2mix, "what to mix during SCF cycles")
 
@@ -251,7 +251,7 @@ contains
     !% calculation within the LCAO subspace, then restart from that point for
     !% an unrestricted calculation).
     !%End
-    call loct_parse_logical(check_inp('SCFinLCAO'), .false., scf%lcao_restricted)
+    call loct_parse_logical(datasets_check('SCFinLCAO'), .false., scf%lcao_restricted)
     if(scf%lcao_restricted) then
       message(1) = 'Info: SCF restricted to LCAO subspace'
       call write_info(1)
@@ -259,7 +259,7 @@ contains
 
     call geometry_min_distance(geo, rmin)
     if(geo%natoms == 1) rmin = CNST(100.0)
-    call loct_parse_float(check_inp('LocalMagneticMomentsSphereRadius'), rmin*M_HALF/units_inp%length%factor, scf%lmm_r)
+    call loct_parse_float(datasets_check('LocalMagneticMomentsSphereRadius'), rmin*M_HALF/units_inp%length%factor, scf%lmm_r)
     scf%lmm_r = scf%lmm_r * units_inp%length%factor
 
     call pop_sub()

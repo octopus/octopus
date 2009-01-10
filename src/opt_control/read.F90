@@ -75,7 +75,7 @@
     !%Option oct_algorithm_newuoa 8
     !% Direct optimization with the newuoa algorithm (experimental)
     !%End
-    call loct_parse_int(check_inp('OCTScheme'), oct_algorithm_zr98, oct%algorithm)
+    call loct_parse_int(datasets_check('OCTScheme'), oct_algorithm_zr98, oct%algorithm)
     if(.not.varinfo_valid_option('OCTScheme', oct%algorithm)) call input_error('OCTScheme')
     select case(oct%algorithm)
     case(oct_algorithm_mt03)
@@ -87,12 +87,12 @@
     case(oct_algorithm_str_iter)
       oct%delta = M_ZERO; oct%eta = M_ONE
     case(oct_algorithm_direct)
-      call loct_parse_float(check_inp('OCTEta'), M_ONE, oct%eta)
-      call loct_parse_float(check_inp('OCTDelta'), M_ZERO, oct%delta)
+      call loct_parse_float(datasets_check('OCTEta'), M_ONE, oct%eta)
+      call loct_parse_float(datasets_check('OCTDelta'), M_ZERO, oct%delta)
     case(oct_algorithm_newuoa)
 #if defined(HAVE_NEWUOA)
-      call loct_parse_float(check_inp('OCTEta'), M_ONE, oct%eta)
-      call loct_parse_float(check_inp('OCTDelta'), M_ZERO, oct%delta)
+      call loct_parse_float(datasets_check('OCTEta'), M_ONE, oct%eta)
+      call loct_parse_float(datasets_check('OCTDelta'), M_ZERO, oct%delta)
 #else
       write(message(1), '(a)') '"OCTScheme = oct_algorithm_newuoa" is only possible if the newuoa'
       write(message(2), '(a)') 'code has been compiled. You must configure octopus passing the'
@@ -110,7 +110,7 @@
     !%Description 
     !% Run a normal propagation after the optimization using the optimized field.
     !%End
-    call loct_parse_logical(check_inp('OCTDoubleCheck'), .true., oct%oct_double_check)
+    call loct_parse_logical(datasets_check('OCTDoubleCheck'), .true., oct%oct_double_check)
 
     !%Variable OCTMixing
     !%Type logical
@@ -125,7 +125,7 @@
     !% Using "TypeOfMixing = broyden", "Mixing = 0.1" and "MixNumberSteps = 3" seems
     !% to work in many cases, but your mileage may vary.
     !%End
-    call loct_parse_logical(check_inp('OCTMixing'), .false., oct%use_mixing)
+    call loct_parse_logical(datasets_check('OCTMixing'), .false., oct%use_mixing)
 
     !%Variable OCTDirectStep
     !%Type float
@@ -134,7 +134,7 @@
     !%Description 
     !%
     !%End
-    call loct_parse_float(check_inp('OCTDirectStep'), CNST(0.25), oct%direct_step)
+    call loct_parse_float(datasets_check('OCTDirectStep'), CNST(0.25), oct%direct_step)
 
     !%Variable OCTDumpIntermediate
     !%Type logical
@@ -146,7 +146,7 @@
     !% purposes. Nevertheless, since the whole OCT infrastructure is at a very
     !% preliminary developing stage, it is set to true by default.
     !%End
-    call loct_parse_logical(check_inp('OCTDumpIntermediate'), .true., oct%dump_intermediate)
+    call loct_parse_logical(datasets_check('OCTDumpIntermediate'), .true., oct%dump_intermediate)
 
     !%Variable OCTNumberCheckPoints
     !%Type integer
@@ -163,7 +163,7 @@
     !% If the backward (or forward) propagation is not retracing the steps of the previous
     !% forward (or backward) propation, the code will emit a warning.
     !%End
-    call loct_parse_int(check_inp('OCTNumberCheckPoints'), 0, oct%number_checkpoints)
+    call loct_parse_int(datasets_check('OCTNumberCheckPoints'), 0, oct%number_checkpoints)
 
     !%Variable OCTRandomInitialGuess
     !%Type logical
@@ -172,7 +172,7 @@
     !%Description 
     !%
     !%End
-    call loct_parse_logical(check_inp('OCTRandomInitialGuess'), .false., oct%random_initial_guess)
+    call loct_parse_logical(datasets_check('OCTRandomInitialGuess'), .false., oct%random_initial_guess)
 
     call pop_sub()
   end subroutine oct_read_inp

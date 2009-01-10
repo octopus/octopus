@@ -52,7 +52,7 @@ program xyzanim
   xyzfile = 'td.general/movie.xyz'
 
   ! how often do we sample?
-  call loct_parse_int(check_inp('AnimationSampling'), 100, sampling)
+  call loct_parse_int(datasets_check('AnimationSampling'), 100, sampling)
   if(sampling < 1) then
     message(1) = 'Sampling rate (AnimationSampling) should be bigger than 0'
     call write_fatal(1)

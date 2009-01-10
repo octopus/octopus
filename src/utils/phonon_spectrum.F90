@@ -58,9 +58,9 @@ program phonon_spectrum
   call units_init()
 
   !These variables are documented in src/td/spectrum.F90
-  call loct_parse_int(check_inp('TDMaximumIter'), 1500, max_iter)
-  call loct_parse_float(check_inp('SpecStartTime'),  M_ZERO, start_time)
-  call loct_parse_float(check_inp('SpecEndTime'),  -M_ONE, end_time)
+  call loct_parse_int(datasets_check('TDMaximumIter'), 1500, max_iter)
+  call loct_parse_float(datasets_check('SpecStartTime'),  M_ZERO, start_time)
+  call loct_parse_float(datasets_check('SpecEndTime'),  -M_ONE, end_time)
 
 
   !%Variable SpecVibrational
@@ -75,7 +75,7 @@ program phonon_spectrum
   !%Option infrared    2
   !% Infrared spectrum obtained from the dipole moment.
   !%End
-  call loct_parse_int  (check_inp('SpecVibrational'), SPEC_VIBRATIONAL, mode)
+  call loct_parse_int  (datasets_check('SpecVibrational'), SPEC_VIBRATIONAL, mode)
   if(.not.varinfo_valid_option('SpecVibrational', mode)) call input_error('SpecVibrational')
 
   if (end_time < M_ZERO) end_time = huge(REAL_PRECISION)

@@ -67,7 +67,7 @@ program oct_test
   !if(.not.varinfo_valid_option('CalculationMode', calc_mode)) call input_error('CalculationMode')
   call datasets_init(which_test)
 
-  call loct_parse_int(check_inp('Dimensions'), 3, calc_dim)
+  call loct_parse_int(datasets_check('Dimensions'), 3, calc_dim)
   if( calc_dim > 3 .or. calc_dim < 1) call input_error('Dimensions')
 
   call io_init()

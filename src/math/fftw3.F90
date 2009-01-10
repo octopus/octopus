@@ -123,7 +123,7 @@ contains
     !% In some cases, namely when using
     !% the split-operator, or Suzuki-Trotter propagators, this option should be turned off.
     !%End
-    call loct_parse_logical(check_inp('FFTOptimize'), .true., fft_optimize)
+    call loct_parse_logical(datasets_check('FFTOptimize'), .true., fft_optimize)
     do i = 1, FFT_MAX
       fft_refs(i) = NULL
     end do

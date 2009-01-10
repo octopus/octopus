@@ -146,7 +146,7 @@ contains
       !% Using the LCAO density as a new guess density may improve the convergence, but can
       !% also slow it down or yield wrong results (especially for spin-polarized calculations).
       !%End
-      call loct_parse_int(check_inp('LCAOStart'), lcao_start_default, lcao_start)
+      call loct_parse_int(datasets_check('LCAOStart'), lcao_start_default, lcao_start)
       if(.not.varinfo_valid_option('LCAOStart', lcao_start)) call input_error('LCAOStart')
       call messages_print_var_option(stdout, 'LCAOStart', lcao_start)
       if (lcao_start > LCAO_START_NONE) then

@@ -98,7 +98,7 @@ contains
     !% wavefunctions in the Car-Parrinelo formalism.
     !%End
     
-    call loct_parse_float(check_inp('CPElectronicMass'), CNST(1.0), this%emass)
+    call loct_parse_float(datasets_check('CPElectronicMass'), CNST(1.0), this%emass)
 
     !%Variable CPMethod
     !%Type integer
@@ -113,7 +113,7 @@ contains
     !% RATTLE/Velocity Verlet integrator.
     !%End
 
-    call loct_parse_int(check_inp('CPMethod'), VERLET, this%method)
+    call loct_parse_int(datasets_check('CPMethod'), VERLET, this%method)
     if(.not.varinfo_valid_option('CPMethod', this%method)) call input_error('CPMethod')
     call messages_print_var_option(stdout, 'CPMethod', this%method)
     

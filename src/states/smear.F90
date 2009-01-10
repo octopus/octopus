@@ -92,7 +92,7 @@ contains
     !%Option spline_smearing 5
     !% Nearly identical to Gaussian smearing
     !%End
-    call loct_parse_int(check_inp('SmearingFunction'), SMEAR_SEMICONDUCTOR, this%method)
+    call loct_parse_int(datasets_check('SmearingFunction'), SMEAR_SEMICONDUCTOR, this%method)
     if(.not.varinfo_valid_option('SmearingFunction', this%method)) call input_error('SmearingFunction')
     call messages_print_var_option(stdout, 'SmearingFunction', this%method)
 
@@ -107,7 +107,7 @@ contains
     !%End
     this%dsmear = CNST(1e-14)
     if(this%method.ne.SMEAR_SEMICONDUCTOR) then
-      call loct_parse_float(check_inp('Smearing'), CNST(0.1)/(M_TWO*P_Ry), this%dsmear)
+      call loct_parse_float(datasets_check('Smearing'), CNST(0.1)/(M_TWO*P_Ry), this%dsmear)
       this%dsmear = this%dsmear * units_inp%energy%factor
     end if
 
@@ -127,7 +127,7 @@ contains
       !%Description
       !% Sets the order of the Methfessel-Paxton smearing function
       !%End
-      call loct_parse_int(check_inp('SmearingMPOrder'), 1, this%MP_n)
+      call loct_parse_int(datasets_check('SmearingMPOrder'), 1, this%MP_n)
     end if
 
   end subroutine smear_init

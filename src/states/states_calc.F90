@@ -172,7 +172,7 @@ contains
     !% A state j with energy E_j will be considered degenerate with a state
     !% with energy E_i, if  E_i - threshold < E_j < E_i + threshold.
     !%End
-    call loct_parse_float(check_inp('DegeneracyThreshold'), CNST(1e-5), degen_thres)    
+    call loct_parse_float(datasets_check('DegeneracyThreshold'), CNST(1e-5), degen_thres)    
 
     ! setup degeneracy matrix. the matrix summarizes the degeneracy relations 
     ! among the states

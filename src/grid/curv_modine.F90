@@ -129,8 +129,8 @@ contains
     type(geometry_t),    target, intent(in)   :: geo
     type(curv_modine_t), target, intent(out)  :: cv
 
-    call loct_parse_float(check_inp('CurvModineXBar'), M_ONE/M_THREE, cv%xbar)
-    call loct_parse_float(check_inp('CurvModineJBar'), M_HALF, cv%Jbar)
+    call loct_parse_float(datasets_check('CurvModineXBar'), M_ONE/M_THREE, cv%xbar)
+    call loct_parse_float(datasets_check('CurvModineJBar'), M_HALF, cv%Jbar)
 
     cv%L = M_ZERO
     cv%L(1:sb%dim) = sb%lsize(1:sb%dim) / cv%Jbar
@@ -144,8 +144,8 @@ contains
     ALLOCATE(cv%Jrange(geo%natoms), geo%natoms)
 
     ! WARNING: the reading has to be done for each atom kind
-    call loct_parse_float(check_inp('CurvModineJlocal'), CNST(0.25), cv%Jlocal(1))
-    call loct_parse_float(check_inp('CurvModineJrange'), M_TWO/units_inp%length%factor, cv%Jrange(1))
+    call loct_parse_float(datasets_check('CurvModineJlocal'), CNST(0.25), cv%Jlocal(1))
+    call loct_parse_float(datasets_check('CurvModineJrange'), M_TWO/units_inp%length%factor, cv%Jrange(1))
 
     if(cv%Jlocal(1)<M_ZERO.or.cv%Jlocal(1)>M_ONE) then
       message(1) = 'The parameter "CurvModineJlocal" must lie between 0 and 1.'

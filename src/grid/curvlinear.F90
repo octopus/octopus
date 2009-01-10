@@ -99,7 +99,7 @@ contains
     !% Modine [N.A. Modine, G. Zumbach and E. Kaxiras, Phys. Rev. B 55, 10289 (1997)]
     !% (NOT WORKING)
     !%End
-    call loct_parse_int(check_inp('CurvMethod'), CURV_METHOD_UNIFORM, cv%method)
+    call loct_parse_int(datasets_check('CurvMethod'), CURV_METHOD_UNIFORM, cv%method)
     if(.not.varinfo_valid_option('CurvMethod', cv%method)) call input_error('CurvMethod')
     call messages_print_var_option(stdout, "CurvMethod", cv%method)
 

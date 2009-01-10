@@ -137,7 +137,7 @@ contains
       else
         default_solver = FFT_SPH
       end if
-      call loct_parse_int(check_inp('PoissonSolver'), default_solver, poisson_solver)
+      call loct_parse_int(datasets_check('PoissonSolver'), default_solver, poisson_solver)
       if(poisson_solver.ne.FFT_SPH.and.poisson_solver.ne.DIRECT_SUM_1D) then
         call input_error('PoissonSolver')
       end if
@@ -166,7 +166,7 @@ contains
         default_solver = FFT_SPH
       end if
 
-      call loct_parse_int(check_inp('PoissonSolver'), gr%sb%periodic_dim, poisson_solver)
+      call loct_parse_int(datasets_check('PoissonSolver'), gr%sb%periodic_dim, poisson_solver)
       if( (poisson_solver .ne. FFT_SPH)         .and. &
           (poisson_solver .ne. DIRECT_SUM_2D)   .and. &
           (poisson_solver .ne. 1)               .and. &
@@ -206,7 +206,7 @@ contains
       if (gr%mesh%use_curvlinear) default_solver = CG_CORRECTED
       if (gr%sb%periodic_dim > 0) default_solver = gr%sb%periodic_dim
       
-      call loct_parse_int(check_inp('PoissonSolver'), default_solver, poisson_solver)
+      call loct_parse_int(datasets_check('PoissonSolver'), default_solver, poisson_solver)
       if(poisson_solver < FFT_SPH .or. poisson_solver > ISF ) then
         call input_error('PoissonSolver')
       end if

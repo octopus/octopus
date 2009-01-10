@@ -314,7 +314,7 @@ contains
     !%End
 
     no_l = 0
-    if(loct_parse_block(check_inp('TDExternalFields'), blk) == 0) then
+    if(loct_parse_block(datasets_check('TDExternalFields'), blk) == 0) then
       no_l = loct_parse_block_n(blk)
       ALLOCATE(l(no_l), no_l)
 
@@ -345,14 +345,14 @@ contains
         ! This should be fixed at the parser level.
         call loct_parse_block_end(blk)
         call tdf_read(l(i)%f, trim(envelope_expression), ierr)
-        ierr = loct_parse_block(check_inp('TDExternalFields'), blk)
+        ierr = loct_parse_block(datasets_check('TDExternalFields'), blk)
 
         ! Check if there is a phase.
         if(loct_parse_block_cols(blk, i-1) > j+3) then
           call loct_parse_block_string(blk, i-1, j+3, envelope_expression)
           call loct_parse_block_end(blk)
           call tdf_read(l(i)%phi, trim(envelope_expression), ierr)
-          ierr = loct_parse_block(check_inp('TDExternalFields'), blk)
+          ierr = loct_parse_block(datasets_check('TDExternalFields'), blk)
         else
           call tdf_init(l(i)%phi)
         end if

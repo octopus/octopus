@@ -134,7 +134,7 @@ contains
     !%Option multigrid 7
     !% Multigrid eigensolver (experimental).
     !%End
-    call loct_parse_int(check_inp('Eigensolver'), RS_CG, eigens%es_type)
+    call loct_parse_int(datasets_check('Eigensolver'), RS_CG, eigens%es_type)
 
     if(st%parallel_in_states .and. .not. eigensolver_parallel_in_states(eigens)) then
       message(1) = "The selected eigensolver is not parallel in states."
@@ -149,7 +149,7 @@ contains
     !%Description
     !% If enabled the eigensolver prints additional information.
     !%End
-    call loct_parse_logical(check_inp('EigensolverVerbose'), .false., eigens%verbose)
+    call loct_parse_logical(datasets_check('EigensolverVerbose'), .false., eigens%verbose)
 
     default_iter = 25
 
@@ -168,7 +168,7 @@ contains
       !% method to obtain the lowest eigenvalues/eigenvectors.
       !% It must satisfy EigensolverImaginaryTime > 0.
       !%End
-      call loct_parse_float(check_inp('EigensolverImaginaryTime'), CNST(10.0), eigens%imag_time)
+      call loct_parse_float(datasets_check('EigensolverImaginaryTime'), CNST(10.0), eigens%imag_time)
       if(eigens%imag_time <= M_ZERO) call input_error('EigensolverImaginaryTime')
     case(RS_LOBPCG)
     case(RS_RMMDIIS)
@@ -185,7 +185,7 @@ contains
     !%Description
     !% This is the initial tolerance for the eigenvectors.
     !%End
-    call loct_parse_float(check_inp('EigensolverInitTolerance'), CNST(1.0e-6), eigens%init_tol)
+    call loct_parse_float(datasets_check('EigensolverInitTolerance'), CNST(1.0e-6), eigens%init_tol)
     if(eigens%init_tol < 0) call input_error('EigensolverInitTolerance')
 
     !%Variable EigensolverFinalTolerance
@@ -195,7 +195,7 @@ contains
     !%Description
     !% This is the final tolerance for the eigenvectors. Must be smaller than <tt>EigensolverInitTolerance</tt>.
     !%End
-    call loct_parse_float(check_inp('EigensolverFinalTolerance'), CNST(1.0e-6), eigens%final_tol)
+    call loct_parse_float(datasets_check('EigensolverFinalTolerance'), CNST(1.0e-6), eigens%final_tol)
     if(eigens%final_tol < 0 .or. eigens%final_tol > eigens%init_tol) call input_error('EigensolverFinalTolerance')
 
     !%Variable EigensolverFinalToleranceIteration
@@ -207,7 +207,7 @@ contains
     !% to go from <tt>EigensolverInitTolerance</tt> to <tt>EigensolverFinalTolerance</tt>.
     !% Must be larger than 1.
     !%End
-    call loct_parse_int(check_inp('EigensolverFinalToleranceIteration'), 7, eigens%final_tol_iter)
+    call loct_parse_int(datasets_check('EigensolverFinalToleranceIteration'), 7, eigens%final_tol_iter)
     if(eigens%final_tol_iter <= 1) call input_error('EigensolverFinalToleranceIteration')
 
     !%Variable EigensolverMaxIter
@@ -221,7 +221,7 @@ contains
     !% except for the rmmdiis that only performs one iteration (only
     !% increase it if you know what you are doing).
     !%End
-    call loct_parse_int(check_inp('EigensolverMaxIter'), default_iter, eigens%es_maxiter)
+    call loct_parse_int(datasets_check('EigensolverMaxIter'), default_iter, eigens%es_maxiter)
     if(eigens%es_maxiter < 1) call input_error('EigensolverMaxIter')
 
     select case(eigens%es_type)

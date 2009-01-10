@@ -69,19 +69,19 @@ subroutine poisson3D_init(gr, geo)
 
   select case(poisson_solver)
   case(CG)
-     call loct_parse_int(check_inp('PoissonSolverMaxMultipole'), 4, maxl)
+     call loct_parse_int(datasets_check('PoissonSolverMaxMultipole'), 4, maxl)
      write(message(1),'(a,i2)')'Info: Boundary conditions fixed up to L =',  maxl
      call write_info(1)
-     call loct_parse_float(check_inp('PoissonSolverThreshold'), CNST(1.0e-6), threshold)
+     call loct_parse_float(datasets_check('PoissonSolverThreshold'), CNST(1.0e-6), threshold)
      call poisson_corrections_init(corrector, maxl, gr%mesh)
      call poisson_cg_init(gr%mesh, maxl, threshold)
 
   case(CG_CORRECTED)
-     call loct_parse_int(check_inp('PoissonSolverMaxMultipole'), 4, maxl)
-     call loct_parse_float(check_inp('PoissonSolverThreshold'), CNST(1.0e-6), threshold)
+     call loct_parse_int(datasets_check('PoissonSolverMaxMultipole'), 4, maxl)
+     call loct_parse_float(datasets_check('PoissonSolverThreshold'), CNST(1.0e-6), threshold)
      write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
      call write_info(1)
-     call loct_parse_logical(check_inp('PoissonSolverIncreaseBox'), .false., hartree_integrator%increase_box)
+     call loct_parse_logical(datasets_check('PoissonSolverIncreaseBox'), .false., hartree_integrator%increase_box)
      if(gr%mesh%sb%box_shape .eq. SPHERE) hartree_integrator%increase_box = .false.
      if(hartree_integrator%increase_box) then
        write(message(1),'(a)') "Info: Poisson' equation will be solved in a larger grid."
@@ -94,8 +94,8 @@ subroutine poisson3D_init(gr, geo)
 
 
   case(MULTIGRILLA)
-     call loct_parse_int(check_inp('PoissonSolverMaxMultipole'), 4, maxl)
-     call loct_parse_float(check_inp('PoissonSolverThreshold'), CNST(1.0e-6), threshold)
+     call loct_parse_int(datasets_check('PoissonSolverMaxMultipole'), 4, maxl)
+     call loct_parse_float(datasets_check('PoissonSolverThreshold'), CNST(1.0e-6), threshold)
      write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
      call write_info(1)
 
@@ -111,7 +111,7 @@ subroutine poisson3D_init(gr, geo)
   if (poisson_solver <= FFT_CORRECTED) call poisson_fft_build_3d(gr, poisson_solver)
 
   if (poisson_solver == FFT_CORRECTED) then
-     call loct_parse_int(check_inp('PoissonSolverMaxMultipole'), 2, maxl)
+     call loct_parse_int(datasets_check('PoissonSolverMaxMultipole'), 2, maxl)
      write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
      call write_info(1)
      call poisson_corrections_init(corrector, maxl, gr%mesh)

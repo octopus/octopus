@@ -215,7 +215,7 @@ program octopus
     !%Option 3
     !% The system is 3-dimensional
     !%End
-    call loct_parse_int(check_inp('Dimensions'), 3, calc_dim)
+    call loct_parse_int(datasets_check('Dimensions'), 3, calc_dim)
     if( calc_dim > 3 .or. calc_dim < 1) call input_error('Dimensions')
 
     ! now we really start

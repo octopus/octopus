@@ -251,7 +251,7 @@ contains
     !Static magnetic field requires complex wave-functions
     if (associated(h%ep%B_field) .or. gauge_field_is_applied(h%ep%gfield)) wfs_type = M_CMPLX
 
-    call loct_parse_logical(check_inp('CalculateSelfInducedMagneticField'), .false., h%self_induced_magnetic)
+    call loct_parse_logical(datasets_check('CalculateSelfInducedMagneticField'), .false., h%self_induced_magnetic)
     !%Variable CalculateSelfInducedMagneticField
     !%Type logical
     !%Default no
@@ -299,7 +299,7 @@ contains
     !%Option velocity 2
     !% Velocity gauge.
     !%End
-    call loct_parse_int(check_inp('TDGauge'), LENGTH, h%gauge)
+    call loct_parse_int(datasets_check('TDGauge'), LENGTH, h%gauge)
     if(.not.varinfo_valid_option('TDGauge', h%gauge)) call input_error('TDGauge')
     call messages_print_var_option(stdout, "TDGauge", h%gauge)
 
@@ -318,7 +318,7 @@ contains
     !%Option mask 2
     !% A mask is applied to the wave-functions at the boundaries.
     !%End
-    call loct_parse_int(check_inp('AbsorbingBoundaries'), NOT_ABSORBING, h%ab)
+    call loct_parse_int(datasets_check('AbsorbingBoundaries'), NOT_ABSORBING, h%ab)
     if(.not.varinfo_valid_option('AbsorbingBoundaries', h%ab)) call input_error('AbsorbingBoundaries')
     call messages_print_var_option(stdout, "AbsorbingBoundaries", h%ab)
     
@@ -332,7 +332,7 @@ contains
       !%Description
       !% Width of the region used to apply the absorbing boundaries.
       !%End
-      call loct_parse_float(check_inp('ABWidth'), CNST(0.4)/units_inp%length%factor, h%ab_width)
+      call loct_parse_float(datasets_check('ABWidth'), CNST(0.4)/units_inp%length%factor, h%ab_width)
       h%ab_width  = h%ab_width * units_inp%length%factor
       if(h%ab == 1) then
         !%Variable ABHeight
@@ -342,7 +342,7 @@ contains
         !%Description 
         !% When <tt>AbsorbingBoundaries == sin2</tt>, is the height of the imaginary potential.
         !%End
-        call loct_parse_float(check_inp('ABHeight'), -CNST(0.2)/units_inp%energy%factor, h%ab_height)
+        call loct_parse_float(datasets_check('ABHeight'), -CNST(0.2)/units_inp%energy%factor, h%ab_height)
         h%ab_height = h%ab_height * units_inp%energy%factor
       else
         h%ab_height = M_ONE
@@ -365,7 +365,7 @@ contains
 
     ! Cutoff applied to the kinetic term.
     ! it is used *both* in the calculation of the derivatives and in the split operator method
-    call loct_parse_float(check_inp('KineticCutoff'), -M_ONE, h%cutoff)
+    call loct_parse_float(datasets_check('KineticCutoff'), -M_ONE, h%cutoff)
     if(h%cutoff > M_ZERO) then
       h%cutoff = h%cutoff * units_inp%energy%factor
       write(message(1),'(a,f7.2,a)') 'Info: The kinetic operator will have a cutoff of',&
@@ -384,7 +384,7 @@ contains
     !% This is useful to describe non-electronic systems, of for
     !% esoteric purposes.
     !%End
-    call loct_parse_float(check_inp('ParticleMass'), M_ONE, h%mass)
+    call loct_parse_float(datasets_check('ParticleMass'), M_ONE, h%mass)
 
     call states_null(h%st)
 

@@ -157,7 +157,7 @@ contains
     !%Option binary 16384
     !% Plain binary, new format.
     !%End
-    call loct_parse_int(check_inp('OutputHow'), 0, how)
+    call loct_parse_int(datasets_check('OutputHow'), 0, how)
     if(.not.varinfo_valid_option('OutputHow', how, is_flag=.true.)) then
       call input_error('OutputHow')
     end if

@@ -28,7 +28,7 @@ module datasets_m
   public ::        &
     datasets_init, &
     datasets_end,  &
-    check_inp
+    datasets_check
 
   ! variables to treat multi datasets
   character(len=32), public, allocatable :: dataset_label(:)
@@ -142,7 +142,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  character(len=64) function check_inp(variable) result(var_name)
+  character(len=64) function datasets_check(variable) result(var_name)
     character(len = * ), intent(in)  :: variable
     character(len = 64)              :: composite_name
 
@@ -157,7 +157,7 @@ contains
       var_name = variable
     end if
 
-  end function check_inp
+  end function datasets_check
 
 end module datasets_m
 

@@ -58,7 +58,7 @@ program dielectric_function
 
   call spectrum_init(s)
     
-  if(loct_parse_block(check_inp('GaugeVectorField'), blk) == 0) then
+  if(loct_parse_block(datasets_check('GaugeVectorField'), blk) == 0) then
     
     do ii = 1, MAX_DIM
       call loct_parse_block_float(blk, 0, ii - 1, vecpot0(ii))

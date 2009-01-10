@@ -51,7 +51,7 @@
     !%Option oct_is_userdefined 4
     !% start in a userdefined state 
     !%End
-    call loct_parse_int(check_inp('OCTInitialState'), oct_is_groundstate, istype)
+    call loct_parse_int(datasets_check('OCTInitialState'), oct_is_groundstate, istype)
     if(.not.varinfo_valid_option('OCTInitialState', istype)) call input_error('OCTInitialState')    
 
     select case(istype)
@@ -84,8 +84,8 @@
       !% The syntax is equivalent to the one used for the TransformStates
       !% block.
       !%End
-      if(loct_parse_isdef(check_inp('OCTInitialTransformStates')).ne.0) then
-        if(loct_parse_block(check_inp('OCTInitialTransformStates'), blk) == 0) then
+      if(loct_parse_isdef(datasets_check('OCTInitialTransformStates')).ne.0) then
+        if(loct_parse_block(datasets_check('OCTInitialTransformStates'), blk) == 0) then
           tmp_st = initial_state
           deallocate(tmp_st%zpsi)
           call restart_look_and_read("tmp", tmp_st, gr, geo, ierr)
@@ -128,7 +128,7 @@
       !% <br>%</tt>
       !%  
       !%End
-      if(loct_parse_block(check_inp('OCTInitialUserdefined'),blk)==0) then
+      if(loct_parse_block(datasets_check('OCTInitialUserdefined'),blk)==0) then
         
         no_states = loct_parse_block_n(blk)
         do ib = 1, no_states

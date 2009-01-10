@@ -73,10 +73,10 @@ contains
     def_maximumiter_ = 200
     if(present(def_maximumiter)) def_maximumiter_ = def_maximumiter
 
-    if (loct_parse_isdef(check_inp(trim(prefix)//'LRMaximumIter')) /= 0) then 
-      call loct_parse_int(check_inp(trim(prefix)//'LRMaximumIter'), def_maximumiter_, this%max_iter)
+    if (loct_parse_isdef(datasets_check(trim(prefix)//'LRMaximumIter')) /= 0) then 
+      call loct_parse_int(datasets_check(trim(prefix)//'LRMaximumIter'), def_maximumiter_, this%max_iter)
     else
-      call loct_parse_int(check_inp('LRMaximumIter'), def_maximumiter_, this%max_iter)
+      call loct_parse_int(datasets_check('LRMaximumIter'), def_maximumiter_, this%max_iter)
     end if
     
     !%Variable LRConvAbsDens
@@ -87,11 +87,11 @@ contains
     !% The tolerance in the variation of the density, to determine if
     !% the SCF for linear response is converged.
     !%End
-    if (loct_parse_isdef(check_inp(trim(prefix)//'LRConvAnsDens')) /= 0 ) then 
-      call loct_parse_float(check_inp(trim(prefix)//"LRConvAbsDens"), &
+    if (loct_parse_isdef(datasets_check(trim(prefix)//'LRConvAnsDens')) /= 0 ) then 
+      call loct_parse_float(datasets_check(trim(prefix)//"LRConvAbsDens"), &
         CNST(1e-5), this%conv_abs_dens)
     else
-      call loct_parse_float(check_inp("LRConvAbsDens"), &
+      call loct_parse_float(datasets_check("LRConvAbsDens"), &
         CNST(1e-5), this%conv_abs_dens)
     end if
 
@@ -114,10 +114,10 @@ contains
     if (present(set_scheme)) then
        this%scheme = set_scheme
     else
-       if (loct_parse_isdef(check_inp(trim(prefix)//'LRTolScheme')) /= 0 ) then
-          call loct_parse_int(check_inp(trim(prefix)//'LRTolScheme'), SCF_ADAPTIVE, this%scheme)
+       if (loct_parse_isdef(datasets_check(trim(prefix)//'LRTolScheme')) /= 0 ) then
+          call loct_parse_int(datasets_check(trim(prefix)//'LRTolScheme'), SCF_ADAPTIVE, this%scheme)
        else
-          call loct_parse_int(check_inp('LRTolScheme'), SCF_ADAPTIVE, this%scheme)
+          call loct_parse_int(datasets_check('LRTolScheme'), SCF_ADAPTIVE, this%scheme)
        end if
     endif
 
@@ -135,11 +135,11 @@ contains
       !% This factor controls how much the tolerance is increased at
       !% first iterations. Larger values means larger tolerance.
       !%End
-      if (loct_parse_isdef(check_inp(trim(prefix)//'LRAdaptiveTolFactor')) /=0 ) then 
-        call loct_parse_float(check_inp(trim(prefix)//'LRAdaptiveTolFactor'), &
+      if (loct_parse_isdef(datasets_check(trim(prefix)//'LRAdaptiveTolFactor')) /=0 ) then 
+        call loct_parse_float(datasets_check(trim(prefix)//'LRAdaptiveTolFactor'), &
           CNST(0.5), this%dynamic_tol_factor)
       else
-        call loct_parse_float(check_inp('LRAdaptiveTolFactor'), &
+        call loct_parse_float(datasets_check('LRAdaptiveTolFactor'), &
           CNST(0.5), this%dynamic_tol_factor)
       end if
 

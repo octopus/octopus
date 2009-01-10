@@ -73,7 +73,7 @@ contains
     type(lcao_t) :: lcao
 
     ! read the maximum number of eigensolver iterations
-    call loct_parse_int(check_inp('MaximumIter'), 20, max_iter)
+    call loct_parse_int(datasets_check('MaximumIter'), 20, max_iter)
 
     occupied_states = sys%st%nst
     call init_(sys%gr%mesh, sys%st)
@@ -109,7 +109,7 @@ contains
     lcao_start_default = LCAO_START_FULL
     if(sys%geo%only_user_def) lcao_start_default = LCAO_START_NONE
 
-    call loct_parse_int(check_inp('LCAOStart'), lcao_start_default, lcao_start)
+    call loct_parse_int(datasets_check('LCAOStart'), lcao_start_default, lcao_start)
     if(.not.varinfo_valid_option('LCAOStart', lcao_start)) call input_error('LCAOStart')
     call messages_print_var_option(stdout, 'LCAOStart', lcao_start)
 
@@ -210,7 +210,7 @@ contains
     !% </ul>
     !% in the directory matrix_elements
     !%End
-    call loct_parse_logical(check_inp('WriteMatrixElements'), .false., l)
+    call loct_parse_logical(datasets_check('WriteMatrixElements'), .false., l)
     if(l) call write_matrix_elements(sys, h)
 
     ! output wave-functions
@@ -237,7 +237,7 @@ contains
       !%Description
       !% How many unoccupied states to compute.
       !%End
-      call loct_parse_int(check_inp('NumberUnoccStates'), 5, nus)
+      call loct_parse_int(datasets_check('NumberUnoccStates'), 5, nus)
       if(nus <= 0) then
         message(1) = "Input: NumberUnoccStates must be > 0"
         call write_fatal(1)

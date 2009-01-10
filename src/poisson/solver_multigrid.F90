@@ -89,7 +89,7 @@ contains
     !% Number of gauss-seidel smoothing steps before coarse level
     !% correction in multigrid Poisson solver.
     !%End
-    call loct_parse_int(check_inp('PoissonSolverMGPresmoothingSteps'), 2, this%presteps)
+    call loct_parse_int(datasets_check('PoissonSolverMGPresmoothingSteps'), 2, this%presteps)
 
     !%Variable PoissonSolverMGPostsmoothingSteps
     !%Type integer
@@ -99,7 +99,7 @@ contains
     !% Number of gauss-seidel smoothing steps after coarse level
     !% correction in multigrid Poisson solver
     !%End
-    call loct_parse_int(check_inp('PoissonSolverMGPostsmoothingSteps'), 3, this%poststeps)
+    call loct_parse_int(datasets_check('PoissonSolverMGPostsmoothingSteps'), 3, this%poststeps)
 
     !%Variable PoissonSolverMGMaxCycles
     !%Type integer
@@ -109,7 +109,7 @@ contains
     !% Maximum number of multigrid cycles that are performed if
     !% convergence is not achieved
     !%End
-    call loct_parse_int(check_inp('PoissonSolverMGMaxCycles'), 40, this%maxcycles)
+    call loct_parse_int(datasets_check('PoissonSolverMGMaxCycles'), 40, this%maxcycles)
 
     !%Variable PoissonSolverMGRestrictionMethod
     !%Type integer
@@ -122,7 +122,7 @@ contains
     !%Option fullweight 2
     !% Fullweight restriction
     !%End
-    call loct_parse_int(check_inp('PoissonSolverMGRestrictionMethod'), 2, this%restriction_method)
+    call loct_parse_int(datasets_check('PoissonSolverMGRestrictionMethod'), 2, this%restriction_method)
     if(.not.varinfo_valid_option('PoissonSolverMGRestrictionMethod', this%restriction_method)) &
        call input_error('PoissonSolverMGRestrictionMethod')
     call messages_print_var_option(stdout, "PoissonSolverMGRestrictionMethod", this%restriction_method)
@@ -143,9 +143,9 @@ contains
     !% Alternative implementation of Gauss-Jacobi.
     !%End
     if ( m%use_curvlinear ) then
-      call loct_parse_int(check_inp('PoissonSolverMGRelaxationMethod'), GAUSS_JACOBI, this%relaxation_method)
+      call loct_parse_int(datasets_check('PoissonSolverMGRelaxationMethod'), GAUSS_JACOBI, this%relaxation_method)
     else
-      call loct_parse_int(check_inp('PoissonSolverMGRelaxationMethod'), GAUSS_SEIDEL, this%relaxation_method)
+      call loct_parse_int(datasets_check('PoissonSolverMGRelaxationMethod'), GAUSS_SEIDEL, this%relaxation_method)
     end if
 
     if(.not.varinfo_valid_option('PoissonSolverMGRelaxationMethod', this%relaxation_method)) &
@@ -162,9 +162,9 @@ contains
     !% overrelaxation does nos help in a multigrid scheme.
     !%End
     if ( this%relaxation_method == GAUSS_JACOBI) then
-      call loct_parse_float(check_inp('PoissonSolverMGRelaxationFactor'), CNST(0.6666), this%relax_factor )
+      call loct_parse_float(datasets_check('PoissonSolverMGRelaxationFactor'), CNST(0.6666), this%relax_factor )
     else
-      call loct_parse_float(check_inp('PoissonSolverMGRelaxationFactor'), M_ONE, this%relax_factor)
+      call loct_parse_float(datasets_check('PoissonSolverMGRelaxationFactor'), M_ONE, this%relax_factor)
     end if
 
     call pop_sub()

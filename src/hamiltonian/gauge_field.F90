@@ -106,7 +106,7 @@ contains
     
     ! Read the initial gauge vector field
     
-    if(loct_parse_block(check_inp('GaugeVectorField'), blk) == 0) then
+    if(loct_parse_block(datasets_check('GaugeVectorField'), blk) == 0) then
       
       this%with_gauge_field = .true.
       

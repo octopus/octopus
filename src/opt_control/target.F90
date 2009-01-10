@@ -129,7 +129,7 @@ module opt_control_target_m
     !%Option oct_tg_hhg 9
     !% The target is the optimization of the HHG yield.
     !%End
-    call loct_parse_int(check_inp('OCTTargetOperator'), oct_tg_gstransformation, target%type)
+    call loct_parse_int(datasets_check('OCTTargetOperator'), oct_tg_gstransformation, target%type)
     if(.not.varinfo_valid_option('OCTTargetOperator', target%type)) call input_error('OCTTargetOperator')
 
     call states_copy(target%st, stin)
@@ -187,7 +187,7 @@ module opt_control_target_m
       !%Description
       !% WARNING: Experimental
       !%End
-      call loct_parse_int(check_inp('OCTExcludeStates'), 1, target%excluded_states)
+      call loct_parse_int(datasets_check('OCTExcludeStates'), 1, target%excluded_states)
       call restart_look_and_read("tmp", target%st, gr, geo, ierr)
 
     case(oct_tg_gstransformation)  
@@ -209,8 +209,8 @@ module opt_control_target_m
       !% The syntax is equivalent to the one used for the TransformStates
       !% block.
       !%End
-      if(loct_parse_isdef(check_inp('OCTTargetTransformStates')).ne.0) then
-        if(loct_parse_block(check_inp('OCTTargetTransformStates'), blk) == 0) then
+      if(loct_parse_isdef(datasets_check('OCTTargetTransformStates')).ne.0) then
+        if(loct_parse_block(datasets_check('OCTTargetTransformStates'), blk) == 0) then
           call states_copy(tmp_st, target%st)
           deallocate(tmp_st%zpsi)
           call restart_look_and_read("tmp", tmp_st, gr, geo, ierr)
@@ -279,7 +279,7 @@ module opt_control_target_m
 
         if(trim(expression).eq.'OCTTargetDensityFromState') then
 
-          if(loct_parse_block(check_inp('OCTTargetDensityFromState'), blk) == 0) then
+          if(loct_parse_block(datasets_check('OCTTargetDensityFromState'), blk) == 0) then
             tmp_st = target%st
             deallocate(tmp_st%zpsi)
             call restart_look_and_read("tmp", tmp_st, gr, geo, ierr)
@@ -356,7 +356,7 @@ module opt_control_target_m
 
     case(oct_tg_td_local)
       target%mode = oct_targetmode_td
-      if(loct_parse_block(check_inp('OCTTdTarget'),blk)==0) then
+      if(loct_parse_block(datasets_check('OCTTdTarget'),blk)==0) then
         call loct_parse_block_string(blk, 0, 0, target%td_local_target)
         call conv_to_C_string(target%td_local_target)
         ALLOCATE(target%rho(NP), NP)
@@ -403,8 +403,8 @@ module opt_control_target_m
       !%
       !%End
       target%mode = oct_targetmode_td 
-      if(loct_parse_isdef(check_inp('OCTOptimizeHarmonicSpectrum')).ne.0) then
-        if(loct_parse_block(check_inp('OCTOptimizeHarmonicSpectrum'), blk) == 0) then
+      if(loct_parse_isdef(datasets_check('OCTOptimizeHarmonicSpectrum')).ne.0) then
+        if(loct_parse_block(datasets_check('OCTOptimizeHarmonicSpectrum'), blk) == 0) then
           target%hhg_nks = loct_parse_block_cols(blk, 0)
           ALLOCATE(target%hhg_k(target%hhg_nks), target%hhg_nks)
           ALLOCATE(target%hhg_alpha(target%hhg_nks), target%hhg_nks)

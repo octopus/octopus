@@ -130,7 +130,7 @@ contains
     !%Option gaussian 3
     !% Gaussian damping
     !%End
-    call loct_parse_int  (check_inp('SpecDampMode'), SPECTRUM_DAMP_POLYNOMIAL, s%damp)
+    call loct_parse_int  (datasets_check('SpecDampMode'), SPECTRUM_DAMP_POLYNOMIAL, s%damp)
     if(.not.varinfo_valid_option('SpecDampMode', s%damp)) call input_error('SpecDampMode')
     call messages_print_var_option(stdout, 'SpecDampMode', s%damp)
 
@@ -147,7 +147,7 @@ contains
     !%Option exponential 1
     !% Exponential transform <math>\int dt \exp(-wt) f(t)</math>
     !%End
-    call loct_parse_int  (check_inp('SpecTransform'), SPECTRUM_TRANSFORM_SIN, s%transform)
+    call loct_parse_int  (datasets_check('SpecTransform'), SPECTRUM_TRANSFORM_SIN, s%transform)
     if(.not.varinfo_valid_option('SpecTransform', s%transform)) call input_error('SpecTransform')
     call messages_print_var_option(stdout, 'SpecTransform', s%transform)
 
@@ -159,7 +159,7 @@ contains
     !% Processing is done for the given function in a time-window that starts at the
     !% value of this variable.
     !%End
-    call loct_parse_float(check_inp('SpecStartTime'),  M_ZERO,      s%start_time)
+    call loct_parse_float(datasets_check('SpecStartTime'),  M_ZERO,      s%start_time)
 
     !%Variable SpecEndTime
     !%Type integer
@@ -169,7 +169,7 @@ contains
     !% Processing is done for the given function in a time-window that ends at the
     !% value of this variable.
     !%End
-    call loct_parse_float(check_inp('SpecEndTime'),   -M_ONE,       s%end_time)
+    call loct_parse_float(datasets_check('SpecEndTime'),   -M_ONE,       s%end_time)
 
     !%Variable SpecEnergyStep
     !%Type integer
@@ -178,7 +178,7 @@ contains
     !%Description
     !% Sampling rate for the spectrum.
     !%End
-    call loct_parse_float(check_inp('SpecEnergyStep'), CNST(0.01)/(M_TWO*P_Ry*units_inp%energy%factor),&
+    call loct_parse_float(datasets_check('SpecEnergyStep'), CNST(0.01)/(M_TWO*P_Ry*units_inp%energy%factor),&
          s%energy_step)
     
 
@@ -189,7 +189,7 @@ contains
     !%Description
     !% The Fourier transform is calculated for energies smaller than this value.
     !%End
-    call loct_parse_float(check_inp('SpecMaxEnergy'), CNST(20.0)/(M_TWO*P_Ry*units_inp%energy%factor),&
+    call loct_parse_float(datasets_check('SpecMaxEnergy'), CNST(20.0)/(M_TWO*P_Ry*units_inp%energy%factor),&
          s%max_energy)
 
     !%Variable SpecDampFactor
@@ -200,7 +200,7 @@ contains
     !% If <tt>SpecDampMode</tt> is set to "exp", the damping parameter of the exponential
     !% is fixed through this variable.
     !%End
-    call loct_parse_float(check_inp('SpecDampFactor'),  CNST(0.15), s%damp_factor)
+    call loct_parse_float(datasets_check('SpecDampFactor'),  CNST(0.15), s%damp_factor)
 
     s%start_time      = s%start_time      * units_inp%time%factor
     s%end_time        = s%end_time        * units_inp%time%factor
@@ -343,7 +343,7 @@ contains
     !%
     !% Note that the "strength" here described is non-dimensional.
     !%End
-    call loct_parse_float(check_inp('TDDeltaStrength'), M_ZERO, k%delta_strength)
+    call loct_parse_float(datasets_check('TDDeltaStrength'), M_ZERO, k%delta_strength)
 
     if(abs(k%delta_strength) == M_ZERO) then
       k%delta_strength_mode = 0
@@ -379,7 +379,7 @@ contains
     !% A combination of the two above. Note that this mode
     !% is only possible if the run is done in spin-polarized mode, or with spinors.
     !%End
-    call loct_parse_int(check_inp('TDDeltaStrengthMode'), KICK_DENSITY_MODE, k%delta_strength_mode)
+    call loct_parse_int(datasets_check('TDDeltaStrengthMode'), KICK_DENSITY_MODE, k%delta_strength_mode)
     select case (k%delta_strength_mode)
     case (KICK_DENSITY_MODE)
     case (KICK_SPIN_MODE, KICK_SPIN_DENSITY_MODE)
@@ -404,7 +404,7 @@ contains
     !%
     !% This feature allows to calculate quadrupole, octupole, etc., response functions.
     !%End
-    if(loct_parse_block(check_inp('TDKickFunction'), blk)==0) then
+    if(loct_parse_block(datasets_check('TDKickFunction'), blk)==0) then
       n_rows = loct_parse_block_n(blk)
       k%n_multipoles = n_rows
       ALLOCATE(k%l(n_rows), n_rows)
@@ -434,7 +434,7 @@ contains
     !% be used by oct-cross-section to rebuild the full polarizability tensor just from the
     !% first 3-TDPolarizationEquivAxes directions.
     !%End
-    call loct_parse_int(check_inp('TDPolarizationEquivAxes'), 0, k%pol_equiv_axes)
+    call loct_parse_int(datasets_check('TDPolarizationEquivAxes'), 0, k%pol_equiv_axes)
 
     
     !%Variable TDPolarizationDirection
@@ -453,7 +453,7 @@ contains
     !%
     !%End
 
-    call loct_parse_int(check_inp('TDPolarizationDirection'), 0, k%pol_dir)
+    call loct_parse_int(datasets_check('TDPolarizationDirection'), 0, k%pol_dir)
 
     if(k%pol_dir < 1 .or. k%pol_dir > dim) call input_error('TDPolarizationDirection')
 
@@ -489,7 +489,7 @@ contains
     !%End
 
     k%pol(:, :) = M_ZERO
-    if(loct_parse_block(check_inp('TDPolarization'), blk)==0) then
+    if(loct_parse_block(datasets_check('TDPolarization'), blk)==0) then
       n_rows = loct_parse_block_n(blk)
 
       if(n_rows < dim) call input_error('TDPolarization')
@@ -524,7 +524,7 @@ contains
     !% a second symmetry operation (B) that takes you the second axis (p2) to the
     !% third (p3). Then wprime = A^{-1} p3.
     !%End
-    if(loct_parse_block(check_inp('TDPolarizationWprime'), blk)==0) then
+    if(loct_parse_block(datasets_check('TDPolarizationWprime'), blk)==0) then
       do i = 1, 3
         call loct_parse_block_float(blk, 0, i-1, k%wprime(i))
       end do

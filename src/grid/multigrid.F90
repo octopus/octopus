@@ -104,7 +104,7 @@ contains
     !% Calculate the optimal number of levels for the grid.
     !%End
 
-    call loct_parse_int(check_inp('MultigridLevels'), 0, n_levels)
+    call loct_parse_int(datasets_check('MultigridLevels'), 0, n_levels)
 
     if ( n_levels <= 0 )then
       n_levels=n_levels-3

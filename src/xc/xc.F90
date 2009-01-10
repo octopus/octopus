@@ -201,7 +201,7 @@ contains
         !% Use the OEP equation to obtain the xc potential. This is the "correct" way
         !% to do it within DFT
         !%End
-        call loct_parse_int(check_inp('MGGAimplementation'), 1, xcs%mGGA_implementation)
+        call loct_parse_int(datasets_check('MGGAimplementation'), 1, xcs%mGGA_implementation)
         if(.not.varinfo_valid_option('MGGAimplementation', xcs%mGGA_implementation)) &
           call input_error('xcs%mGGA_implementation')
       end if
@@ -387,7 +387,7 @@ contains
       !% OEP: Exact exchange
       !%End
 
-      call loct_parse_int(check_inp('XCFunctional'), default, val)
+      call loct_parse_int(datasets_check('XCFunctional'), default, val)
 
       c_id = val / 1000
       x_id = val - c_id*1000
@@ -405,7 +405,7 @@ contains
       !% The same functional defined by XCFunctional
       !%End
 
-      call loct_parse_int(check_inp('XCKernel'), -1, val)
+      call loct_parse_int(datasets_check('XCKernel'), -1, val)
 
       if( -1 == val ) then
         ck_id = c_id

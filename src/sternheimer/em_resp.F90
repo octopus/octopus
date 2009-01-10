@@ -373,7 +373,7 @@ contains
       !%
       !%End
 
-      if (loct_parse_block(check_inp('EMFreqs'), blk) == 0) then 
+      if (loct_parse_block(datasets_check('EMFreqs'), blk) == 0) then 
 
         nrow = loct_parse_block_n(blk)
         em_vars%nomega = 0
@@ -423,7 +423,7 @@ contains
       !% Imaginary part of the frequency.
       !%End
 
-      call loct_parse_float(check_inp('EMEta'), M_ZERO, em_vars%eta)
+      call loct_parse_float(datasets_check('EMEta'), M_ZERO, em_vars%eta)
       em_vars%eta = em_vars%eta*units_inp%energy%factor
 
       ! reset the values of these variables
@@ -441,7 +441,7 @@ contains
         !% the dynamic hyperpolarizability.
         !%End
 
-        if (loct_parse_block(check_inp('EMHyperpol'), blk) == 0) then 
+        if (loct_parse_block(datasets_check('EMHyperpol'), blk) == 0) then 
           call loct_parse_block_float(blk, 0, 0, em_vars%freq_factor(1))
           call loct_parse_block_float(blk, 0, 1, em_vars%freq_factor(2))
           call loct_parse_block_float(blk, 0, 2, em_vars%freq_factor(3))

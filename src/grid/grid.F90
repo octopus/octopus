@@ -85,7 +85,7 @@ contains
     !% disable.
     !%End
     if (gr%sb%dim == 3) then 
-      call loct_parse_logical(check_inp('UseFineMesh'), .false., gr%have_fine_mesh)
+      call loct_parse_logical(datasets_check('UseFineMesh'), .false., gr%have_fine_mesh)
     else
       gr%have_fine_mesh = .false.
     end if

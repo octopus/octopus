@@ -200,7 +200,7 @@ contains
       !%
       !%End
   
-      call loct_parse_logical(check_inp('ParallelizationUseTopology'), .false., mc%use_topology)
+      call loct_parse_logical(datasets_check('ParallelizationUseTopology'), .false., mc%use_topology)
 
       mc%use_topology = mc%use_topology .and. multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)
       mc%use_topology = mc%use_topology .and. multicomm_strategy_is_parallel(mc, P_STRATEGY_DOMAINS)
@@ -219,7 +219,7 @@ contains
       !% should be divided in n_k groups, the states in n_s groups, and each state
       !% in n_d domains.
       !%End
-      if(loct_parse_block(check_inp('ParallelizationGroupRanks'), blk) == 0) then
+      if(loct_parse_block(datasets_check('ParallelizationGroupRanks'), blk) == 0) then
         call read_block(blk)
         call loct_parse_block_end(blk)
       else
@@ -275,7 +275,7 @@ contains
         par_mask = ibclr(par_mask, P_STRATEGY_DOMAINS - 1)
 #endif
 
-        call loct_parse_int(check_inp('ParallelizationStrategy'), default_mask, mc%par_strategy)
+        call loct_parse_int(datasets_check('ParallelizationStrategy'), default_mask, mc%par_strategy)
 
         if(.not.varinfo_valid_option('ParallelizationStrategy', mc%par_strategy, is_flag=.true.)) then
           call input_error('ParallelizationStrategy')

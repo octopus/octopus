@@ -206,7 +206,7 @@ contains
       !% Magnitude of the static field used to calculate the static polarizability
       !% (<tt>CalculationMode = pol</tt>)
       !%End
-      call loct_parse_float(check_inp('POLStaticField'), &
+      call loct_parse_float(datasets_check('POLStaticField'), &
          CNST(0.01)/units_inp%energy%factor*units_inp%length%factor, e_field)
       e_field = e_field * units_inp%energy%factor / units_inp%length%factor
       if (e_field <= M_ZERO) then

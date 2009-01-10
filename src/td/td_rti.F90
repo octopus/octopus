@@ -273,7 +273,7 @@ contains
     else
       default_propagator = PROP_REVERSAL
     end if
-    call loct_parse_int(check_inp('TDEvolutionMethod'), default_propagator, tr%method)
+    call loct_parse_int(datasets_check('TDEvolutionMethod'), default_propagator, tr%method)
     if(.not.varinfo_valid_option('TDEVolutionMethod', tr%method)) call input_error('TDEvolutionMethod')
 
     if(gr%sb%open_boundaries.and.tr%method.ne.PROP_CRANK_NICHOLSON_SRC_MEM) then

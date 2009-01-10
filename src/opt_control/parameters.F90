@@ -170,7 +170,7 @@ contains
     !%Option control_zero_fourier_series 10011
     !%
     !%End
-    call loct_parse_int(check_inp('OCTParameterRepresentation'), &
+    call loct_parse_int(datasets_check('OCTParameterRepresentation'), &
       ctr_real_space, par_common%representation)
     if(.not.varinfo_valid_option('OCTParameterRepresentation', par_common%representation)) &
       call input_error('OCTParameterRepresentation')
@@ -198,7 +198,7 @@ contains
     !%Description
     !%
     !%End
-    call loct_parse_float(check_inp('OCTParameterOmegaMax'), - M_ONE, par_common%omegamax)
+    call loct_parse_float(datasets_check('OCTParameterOmegaMax'), - M_ONE, par_common%omegamax)
     if(par_common%representation .ne. ctr_real_space) then
       write(message(1), '(a)')         'Info: The representation of the OCT control parameters will be restricted'
       write(message(2), '(a,f10.5,a)') '      with an energy cut-off of ', &
@@ -222,7 +222,7 @@ contains
     !% first the code applies the envelope provided by the "OCTLaserEnvelope" input
     !% option, and afterwards it calculates the fluence.
     !%End
-    call loct_parse_float(check_inp('OCTFixFluenceTo'), M_ZERO, par_common%targetfluence)
+    call loct_parse_float(datasets_check('OCTFixFluenceTo'), M_ZERO, par_common%targetfluence)
 
     !%Variable OCTFixInitialFluence
     !%Type logical
@@ -234,7 +234,7 @@ contains
     !% fluence. However, you can force the program to use that initial laser as the initial
     !% guess, no matter the fluence, by setting "OCTFixInitialFluence = no".
     !%End
-    call loct_parse_logical(check_inp('OCTFixInitialFluence'), .true., par_common%fix_initial_fluence)
+    call loct_parse_logical(datasets_check('OCTFixInitialFluence'), .true., par_common%fix_initial_fluence)
 
     !%Variable OCTControlFunctionType
     !%Type integer
@@ -251,7 +251,7 @@ contains
     !%Option parameter_mode_f_and_phi 4
     !%
     !%End
-    call loct_parse_int(check_inp('OCTControlFunctionType'), parameter_mode_epsilon, par_common%mode)
+    call loct_parse_int(datasets_check('OCTControlFunctionType'), parameter_mode_epsilon, par_common%mode)
     if(.not.varinfo_valid_option('OCTControlFunctionType', par_common%mode)) call input_error('OCTControlFunctionType')
      select case(par_common%mode)
     case(parameter_mode_f, parameter_mode_phi, parameter_mode_f_and_phi)
@@ -350,7 +350,7 @@ contains
       end if
     else
       ! We have the same penalty for all the control functions.
-      call loct_parse_float(check_inp('OCTPenalty'), M_ONE, octpenalty)
+      call loct_parse_float(datasets_check('OCTPenalty'), M_ONE, octpenalty)
       par_common%alpha(1:par_common%no_parameters) = octpenalty
     end if
 
@@ -382,7 +382,7 @@ contains
       call tdf_init_numerical(par_common%td_penalty(i), steps, dt, -M_ONE, initval = M_ONE)
     end do
 
-    if (loct_parse_block(check_inp('OCTLaserEnvelope'), blk)==0) then
+    if (loct_parse_block(datasets_check('OCTLaserEnvelope'), blk)==0) then
 
       ! Cannot have this unless we have the "usual" parameter_mode_epsilon.
       if(par_common%mode .ne. parameter_mode_epsilon) then

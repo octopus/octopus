@@ -271,7 +271,7 @@ contains
       !% vector has the same direction as a vector provided by the user. In this case,
       !% the <tt>AtomsMagnetDirection</tt> block has to be set.
       !%End
-      call loct_parse_int(check_inp('GuessMagnetDensity'), INITRHO_FERROMAGNETIC, gmd_opt)
+      call loct_parse_int(datasets_check('GuessMagnetDensity'), INITRHO_FERROMAGNETIC, gmd_opt)
       if(.not.varinfo_valid_option('GuessMagnetDensity', gmd_opt)) call input_error('GuessMagnetDensity')
       call messages_print_var_option(stdout, 'GuessMagnetDensity', gmd_opt)
     end if
@@ -344,7 +344,7 @@ contains
       !% For spin-polarized calculations the vectors should have only one component and
       !% for non-collinear spin calculations they should have three components.
       !%End
-      if(loct_parse_block(check_inp('AtomsMagnetDirection'), blk) < 0) then
+      if(loct_parse_block(datasets_check('AtomsMagnetDirection'), blk) < 0) then
         message(1) = "AtomsMagnetDirection block is not defined "
         call write_fatal(1)
       end if

@@ -219,7 +219,7 @@ contains
       !% Defines a spatially local time-dependent potential in the leads as an
       !% analytic expression.
       !%End
-      if(loct_parse_block(check_inp('OpenBoundaries'), blk).eq.0) then
+      if(loct_parse_block(datasets_check('OpenBoundaries'), blk).eq.0) then
         ! Open boundaries are only possible for rectangular simulation boxes.
         if(sb%box_shape.ne.PARALLELEPIPED) then
           message(1) = 'Open boundaries are only possible with a parallelepiped'
@@ -365,7 +365,7 @@ contains
       !% the section that refers to Poisson equation, and to the local potential for details
       !% [The default value of two is typically good].
       !%End
-      call loct_parse_float(check_inp('DoubleFFTParameter'), M_TWO, sb%fft_alpha)
+      call loct_parse_float(datasets_check('DoubleFFTParameter'), M_TWO, sb%fft_alpha)
       if (sb%fft_alpha < M_ONE .or. sb%fft_alpha > M_THREE ) then
         write(message(1), '(a,f12.5,a)') "Input: '", sb%fft_alpha, &
           "' is not a valid DoubleFFTParameter"
@@ -391,7 +391,7 @@ contains
       !%Option 3
       !% The x, y, and z directions are periodic (bulk)
       !%End
-      call loct_parse_int(check_inp('PeriodicDimensions'), 0, sb%periodic_dim)
+      call loct_parse_int(datasets_check('PeriodicDimensions'), 0, sb%periodic_dim)
       if ((sb%periodic_dim < 0) .or. (sb%periodic_dim > 3) .or. (sb%periodic_dim > sb%dim)) &
         call input_error('PeriodicDimensions')
 
@@ -410,7 +410,7 @@ contains
       !% with higher resolution. By default this variable is set to 1,
       !% so this feature is disabled.
       !%End
-      call loct_parse_float(check_inp('HighResolutionArea'), M_ONE, sb%inner_size)
+      call loct_parse_float(datasets_check('HighResolutionArea'), M_ONE, sb%inner_size)
       sb%inner_size = min(sb%inner_size, M_ONE)
 
       call pop_sub()
@@ -459,7 +459,7 @@ contains
       !%Option user_defined 123
       !% The shape of the simulation box will be read from the variable <tt>BoxShapeUsDef</tt>
       !%End
-      call loct_parse_int(check_inp('BoxShape'), MINIMUM, sb%box_shape)
+      call loct_parse_int(datasets_check('BoxShape'), MINIMUM, sb%box_shape)
       if(.not.varinfo_valid_option('BoxShape', sb%box_shape)) call input_error('BoxShape')
       select case(sb%box_shape)
       case(SPHERE,MINIMUM,BOX_IMAGE,BOX_USDEF)
@@ -490,13 +490,13 @@ contains
       !%End
       select case(sb%box_shape)
       case(SPHERE, CYLINDER)
-        call loct_parse_float(check_inp('radius'), def_rsize/units_inp%length%factor, sb%rsize)
+        call loct_parse_float(datasets_check('radius'), def_rsize/units_inp%length%factor, sb%rsize)
         if(sb%rsize < CNST(0.0)) call input_error('radius')
         sb%rsize = sb%rsize * units_inp%length%factor
         if(def_rsize>M_ZERO) call check_def(def_rsize, sb%rsize, 'radius')
       case(MINIMUM)
         default=sb%rsize
-        call loct_parse_float(check_inp('radius'), default, sb%rsize)
+        call loct_parse_float(datasets_check('radius'), default, sb%rsize)
         sb%rsize = sb%rsize * units_inp%length%factor
         if(sb%rsize < M_ZERO .and. def_rsize < M_ZERO) call input_error('Radius')
       end select
@@ -508,7 +508,7 @@ contains
         !%Description
         !% If BoxShape is "cylinder", it is half the total length of the cylinder.
         !%End
-        call loct_parse_float(check_inp('xlength'), M_ONE/units_inp%length%factor, sb%xsize)
+        call loct_parse_float(datasets_check('xlength'), M_ONE/units_inp%length%factor, sb%xsize)
         sb%xsize = sb%xsize * units_inp%length%factor
         sb%lsize(1) = sb%xsize
         if(def_rsize>M_ZERO.and.sb%periodic_dim==0) call check_def(def_rsize, sb%xsize, 'xlength')
@@ -535,14 +535,14 @@ contains
         !% you can also set Lsize as a single variable.
         !%End
 
-        if(loct_parse_block(check_inp('Lsize'), blk) == 0) then
+        if(loct_parse_block(datasets_check('Lsize'), blk) == 0) then
           if(loct_parse_block_cols(blk,0) < sb%dim) call input_error('Lsize')
           do i = 1, sb%dim
             call loct_parse_block_float(blk, 0, i-1, sb%lsize(i))
           end do
           call loct_parse_block_end(blk)
         else
-          call loct_parse_float(check_inp('Lsize'), -M_ONE, sb%lsize(1))
+          call loct_parse_float(datasets_check('Lsize'), -M_ONE, sb%lsize(1))
           if(sb%lsize(1).eq.-M_ONE) then
             call input_error('Lsize')
           end if
@@ -565,7 +565,7 @@ contains
         !% Name of the file that contains the image that defines the simulation box.
         !%End
 #if defined(HAVE_GDLIB)        
-        call loct_parse_string(check_inp("BoxShapeImage"), "", filename)
+        call loct_parse_string(datasets_check("BoxShapeImage"), "", filename)
         sb%image = loct_gdimage_create_from(filename)
         if(.not.c_associated(sb%image)) then
           message(1) = "Could not open file '" // filename // "'"
@@ -590,7 +590,7 @@ contains
         !% with axis parallel to the z axis
         !%End
         
-        call loct_parse_string(check_inp("BoxShapeUsDef"), "x^2+y^2+z^2 < 4", sb%user_def)
+        call loct_parse_string(datasets_check("BoxShapeUsDef"), "x^2+y^2+z^2 < 4", sb%user_def)
         call conv_to_C_string(sb%user_def)
       end if
 
@@ -656,14 +656,14 @@ contains
       !% <br>%</tt>
       !%End
 
-      if(loct_parse_block(check_inp('Spacing'), blk) == 0) then
+      if(loct_parse_block(datasets_check('Spacing'), blk) == 0) then
         if(loct_parse_block_cols(blk,0) < sb%dim) call input_error('Spacing')
         do i = 1, sb%dim
           call loct_parse_block_float(blk, 0, i-1, sb%h(i))
         end do
         call loct_parse_block_end(blk)
       else
-        call loct_parse_float(check_inp('Spacing'), sb%h(1), sb%h(1))
+        call loct_parse_float(datasets_check('Spacing'), sb%h(1), sb%h(1))
         sb%h(1:sb%dim) = sb%h(1)
       end if
 
@@ -705,13 +705,13 @@ contains
       !% the (x,y,z) value of the zero.
       !%End
       sb%box_offset = M_ZERO
-      if(loct_parse_block(check_inp('BoxOffset'), blk) == 0) then
+      if(loct_parse_block(datasets_check('BoxOffset'), blk) == 0) then
         do i = 1, sb%dim
           call loct_parse_block_float(blk, 0, i-1, sb%box_offset(i))
         end do
         call loct_parse_block_end(blk)
       else
-        call loct_parse_float(check_inp('BoxOffset'), M_ZERO, sb%box_offset(1))
+        call loct_parse_float(datasets_check('BoxOffset'), M_ZERO, sb%box_offset(1))
         sb%box_offset(1:sb%dim) = sb%box_offset(1)
       end if
       sb%box_offset(:) = sb%box_offset(:)*units_inp%length%factor
@@ -760,7 +760,7 @@ contains
         sb%rlattice(idim, idim) = M_ONE
       end do
 
-      if (loct_parse_block(check_inp('LatticeVectors'), blk) == 0) then 
+      if (loct_parse_block(datasets_check('LatticeVectors'), blk) == 0) then 
         do idim = 1, sb%dim
           do jdim = 1, sb%dim
             call loct_parse_block_float(blk, idim - 1,  jdim - 1, sb%rlattice(jdim, idim))

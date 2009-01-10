@@ -105,13 +105,13 @@ contains
       default = PRE_SMOOTHING
     end if
 
-    if (loct_parse_isdef(check_inp(trim(prefix_)//'Preconditioner')) /= 0 ) then 
-      call loct_parse_int(check_inp(trim(prefix_)//'Preconditioner'), PRE_SMOOTHING, this%which)
+    if (loct_parse_isdef(datasets_check(trim(prefix_)//'Preconditioner')) /= 0 ) then 
+      call loct_parse_int(datasets_check(trim(prefix_)//'Preconditioner'), PRE_SMOOTHING, this%which)
       if(.not.varinfo_valid_option('Preconditioner', this%which)) &
         call input_error('Preconditioner')
       call messages_print_var_option(stdout, 'Preconditioner', this%which, prefix_)
     else
-      call loct_parse_int(check_inp('Preconditioner'), PRE_SMOOTHING, this%which)
+      call loct_parse_int(datasets_check('Preconditioner'), PRE_SMOOTHING, this%which)
       if(.not.varinfo_valid_option('Preconditioner', this%which)) &
         call input_error('Preconditioner')
       call messages_print_var_option(stdout, 'Preconditioner', this%which)

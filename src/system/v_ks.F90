@@ -110,7 +110,7 @@ contains
     !% hybrids in this scheme, but they will be handled the "DFT" way, i.e., solving the
     !% OEP equation.
     !%End
-    call loct_parse_int(check_inp('TheoryLevel'), KOHN_SHAM_DFT, ks%theory_level)
+    call loct_parse_int(datasets_check('TheoryLevel'), KOHN_SHAM_DFT, ks%theory_level)
     if(.not.varinfo_valid_option('TheoryLevel', ks%theory_level)) call input_error('TheoryLevel')
 
     call obsolete_variable('NonInteractingElectrons', 'TheoryLevel')
@@ -152,7 +152,7 @@ contains
         !%Option sic_amaldi 3
         !% Amaldi correction term (NOT WORKING)
         !%End
-        call loct_parse_int(check_inp('SICCorrection'), sic_none, ks%sic_type)
+        call loct_parse_int(datasets_check('SICCorrection'), sic_none, ks%sic_type)
         if(.not.varinfo_valid_option('SICCorrection', ks%sic_type)) call input_error('SICCorrection')
 
         ! Perdew Zunger corrections

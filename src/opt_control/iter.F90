@@ -90,7 +90,7 @@ contains
     !% point of the QOCT equations, i.e. a critical point of the QOCT functional (not
     !% necessarily a maximum, and not necessarily the global maximum). 
     !%End
-    call loct_parse_float(check_inp('OCTEps'), CNST(1.0e-6), iterator%eps)
+    call loct_parse_float(datasets_check('OCTEps'), CNST(1.0e-6), iterator%eps)
     if(iterator%eps < M_ZERO) iterator%eps = tiny(CNST(1.0))
 
     !%Variable OCTMaxIter
@@ -101,7 +101,7 @@ contains
     !% OCTMaxIter defines the maximum number of iterations.
     !% Typical values range from 10-100.
     !%End
-    call loct_parse_int(check_inp('OCTMaxIter'), 10, iterator%ctr_iter_max)
+    call loct_parse_int(datasets_check('OCTMaxIter'), 10, iterator%ctr_iter_max)
 
     if( iterator%ctr_iter_max < 0 .and. iterator%eps < M_ZERO ) then
       message(1) = "OptControlMaxIter and OptControlEps can not be both <0"

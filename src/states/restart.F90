@@ -123,7 +123,7 @@ contains
 
     default = RESTART_BINARY
 
-    call loct_parse_int(check_inp('RestartFileFormat'), default, parsed)
+    call loct_parse_int(datasets_check('RestartFileFormat'), default, parsed)
 #ifndef HAVE_NETCDF
     if (parsed == RESTART_NETCDF) then 
       write(message(1),'(a)') 'Error: Octopus was compiled without NetCDF support but'
@@ -151,7 +151,7 @@ contains
     !% <tt>TmpDir</tt> but in a transport calculation, e. g., the output of
     !% a peridioc dataset is required to calculate the extended ground state.
     !%End
-    call loct_parse_string(check_inp('RestartDir'), tmpdir, restart_dir)
+    call loct_parse_string(datasets_check('RestartDir'), tmpdir, restart_dir)
     ! Append "/" if necessary.
     if(scan(restart_dir, '/', .true.).lt.1) then
       restart_dir = trim(restart_dir)//'/'
@@ -1103,7 +1103,7 @@ contains
     !%Option normalize_no 0
     !% Do not normalize orbitals
     !%End
-    if(loct_parse_block(check_inp('UserDefinedStates'), blk) == 0) then
+    if(loct_parse_block(datasets_check('UserDefinedStates'), blk) == 0) then
 
       call messages_print_stress(stdout, trim('Substitution of orbitals'))
 

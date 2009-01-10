@@ -105,10 +105,10 @@ contains
     !% Whether initial linear-response wavefunctions should be orthogonalized 
     !% or not against the occupied states, at the start of each SCF cycle.
     !%End 
-    if (loct_parse_isdef(check_inp(trim(prefix)//'Preorthogonalization')) /= 0) then 
-      call loct_parse_logical(check_inp(trim(prefix)//'Preorthogonalization'), .false., this%preorthogonalization) 
+    if (loct_parse_isdef(datasets_check(trim(prefix)//'Preorthogonalization')) /= 0) then 
+      call loct_parse_logical(datasets_check(trim(prefix)//'Preorthogonalization'), .false., this%preorthogonalization) 
     else 
-      call loct_parse_logical(check_inp('Preorthogonalization'), .false., this%preorthogonalization) 
+      call loct_parse_logical(datasets_check('Preorthogonalization'), .false., this%preorthogonalization) 
     end if
 
     !%Variable HamiltonianVariation
@@ -134,10 +134,10 @@ contains
     if(present(set_ham_var)) then
       ham_var = set_ham_var
     else if(h%theory_level .ne. INDEPENDENT_PARTICLES) then
-      if (loct_parse_isdef(check_inp(trim(prefix)//'HamiltonianVariation')) /= 0) then
-        call loct_parse_int(check_inp(trim(prefix)//'HamiltonianVariation'), 3, ham_var)
+      if (loct_parse_isdef(datasets_check(trim(prefix)//'HamiltonianVariation')) /= 0) then
+        call loct_parse_int(datasets_check(trim(prefix)//'HamiltonianVariation'), 3, ham_var)
       else
-        call loct_parse_int(check_inp('HamiltonianVariation'), 3, ham_var)
+        call loct_parse_int(datasets_check('HamiltonianVariation'), 3, ham_var)
       end if
     end if
 

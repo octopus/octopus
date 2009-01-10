@@ -77,7 +77,7 @@ module gcm_m
     !%Description
     !%
     !%End
-    if(loct_parse_block(check_inp('GCMSlaterDeterminants'), blk) .ne. 0) then
+    if(loct_parse_block(datasets_check('GCMSlaterDeterminants'), blk) .ne. 0) then
       write(message(1),'(a)') 'If you run in "CalculationMode = gcm" mode, then you must'
       write(message(2),'(a)') 'supply also a "GCMSlaterDeterminants" block.'
       call write_fatal(2)

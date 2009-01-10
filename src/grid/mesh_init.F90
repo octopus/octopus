@@ -346,7 +346,7 @@ contains
     !% is 20. (This variable only affects the performance of octopus
     !% and not the results.)
     !%End
-    call loct_parse_int(check_inp('MeshBlockSizeXY'), 20, bsize)
+    call loct_parse_int(datasets_check('MeshBlockSizeXY'), 20, bsize)
 
     !%Type integer
     !%Default 100
@@ -358,7 +358,7 @@ contains
     !% 100. (This variable only affects the performance of octopus and
     !% not the results.)
     !%End
-    call loct_parse_int(check_inp('MeshBlockSizeZ'), 100, bsizez)
+    call loct_parse_int(datasets_check('MeshBlockSizeZ'), 100, bsizez)
 
     ! first we fill the points in the inner mesh
     il = 0
@@ -876,7 +876,7 @@ subroutine mesh_partition(m, stencil, part)
   !%Option zoltan 3
   !% Zoltan.
   !%End
-  call loct_parse_int(check_inp('MeshPartitionPackage'), METIS, library)
+  call loct_parse_int(datasets_check('MeshPartitionPackage'), METIS, library)
 
   if(p .lt. 8) then
     default_method = RCB
@@ -884,7 +884,7 @@ subroutine mesh_partition(m, stencil, part)
     default_method = GRAPH
   end if
   ! Documentation is in zoltan.F90
-  call loct_parse_int(check_inp('MeshPartition'), default_method, method)
+  call loct_parse_int(datasets_check('MeshPartition'), default_method, method)
 
   ! Get number of partitions.
   p = m%mpi_grp%size
