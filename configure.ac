@@ -297,7 +297,7 @@ LINK="$FC $FCFLAGS $LDFLAGS -o \$@"
 AC_SUBST(LINK)
 AC_SUBST(FCEXTRALIBS)
 
-AC_CONFIG_FILES([Makefile 
+AC_CONFIG_FILES([Makefile
   external_libs/Makefile
   external_libs/metis-4.0/Makefile
   external_libs/qshep/Makefile
@@ -340,7 +340,7 @@ AC_CONFIG_FILES([Makefile
   share/PP/UPF/Makefile
   share/recipes/Makefile
   share/recipes/en/Makefile
-  share/recipes/es/Makefile 
+  share/recipes/es/Makefile
   share/recipes/it/Makefile
   share/util/Makefile
   share/samples/Makefile
@@ -353,8 +353,7 @@ AC_CONFIG_FILES([Makefile
   testsuite/linear_response/Makefile
   testsuite/optimal_control/Makefile
   testsuite/open_systems/Makefile
-  testsuite/periodic_systems/Makefile
-])
+  testsuite/periodic_systems/Makefile])
 AC_CONFIG_FILES([testsuite/oct-run_testsuite], [chmod +x testsuite/oct-run_testsuite])
 
 AC_OUTPUT
