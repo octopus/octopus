@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-module run_prog_m
+module run_m
   use calc_mode_m
   use casida_m
   use datasets_m
@@ -200,7 +200,7 @@ contains
 
   end subroutine run_end
 
-end module run_prog_m
+end module run_m
 
 !! Local Variables:
 !! mode: f90

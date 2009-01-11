@@ -29,7 +29,7 @@ program octopus
   use messages_m
   use mpi_m
   use profiling_m
-  use run_prog_m
+  use run_m
   use string_m
   use varinfo_m
 
