@@ -102,4 +102,9 @@ typedef struct {
 # endif
 #endif /* x86 */
 
+/* some compilers do not have implemented some SSE functions, so let us check */
+#if defined(USE_VECTORS) && ! defined(HAVE__MM_MALLOC)
+#  undef USE_VECTORS
+#endif
+
 #endif /* OCTOPUS_BEAK_H */
