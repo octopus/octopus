@@ -265,7 +265,7 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opn,
       a0 = _mm_setzero_pd();      
       for(j = 0; j < n; j++) {
 	ffi[j] = fi + index[j];
-	a0 = _mm_add_pd(a0, _mm_mul_pd(vw[j], _mm_loadu_pd(ffi[j] + i)));
+	a0 = _mm_add_pd(a0, _mm_mul_pd(vw[j], _mm_loadu_pd((double *)(ffi[j] + i))));
       }
       _mm_storeu_pd(fo + i, a0);
       i++;
@@ -275,15 +275,15 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opn,
 	a0 = a1 = a2 = a3 = _mm_setzero_pd();
       
 	for(j = 0; j < n; j++) {
-	  a0 = _mm_add_pd(a0, _mm_mul_pd(vw[j], _mm_loadu_pd(ffi[j] + i + 0)));
-	  a1 = _mm_add_pd(a1, _mm_mul_pd(vw[j], _mm_loadu_pd(ffi[j] + i + 1)));
-	  a2 = _mm_add_pd(a2, _mm_mul_pd(vw[j], _mm_loadu_pd(ffi[j] + i + 2)));
-	  a3 = _mm_add_pd(a3, _mm_mul_pd(vw[j], _mm_loadu_pd(ffi[j] + i + 3)));
+	  a0 = _mm_add_pd(a0, _mm_mul_pd(vw[j], _mm_loadu_pd((double *) (ffi[j] + i + 0))));
+	  a1 = _mm_add_pd(a1, _mm_mul_pd(vw[j], _mm_loadu_pd((double *) (ffi[j] + i + 1))));
+	  a2 = _mm_add_pd(a2, _mm_mul_pd(vw[j], _mm_loadu_pd((double *) (ffi[j] + i + 2))));
+	  a3 = _mm_add_pd(a3, _mm_mul_pd(vw[j], _mm_loadu_pd((double *) (ffi[j] + i + 3))));
 	}
-	_mm_storeu_pd(fo + i    , a0);
-	_mm_storeu_pd(fo + i + 1, a1);
-	_mm_storeu_pd(fo + i + 2, a2);
-	_mm_storeu_pd(fo + i + 3, a3);
+	_mm_storeu_pd((double *) (fo + i    ), a0);
+	_mm_storeu_pd((double *) (fo + i + 1), a1);
+	_mm_storeu_pd((double *) (fo + i + 2), a2);
+	_mm_storeu_pd((double *) (fo + i + 3), a3);
       }
 
       for (; i < rimap_inv_max[l]; i++){
