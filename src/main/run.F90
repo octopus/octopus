@@ -179,7 +179,7 @@ contains
       call units_init()
       call system_init(sys)
       call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family)
-      call epot_generate(hm%ep, sys%gr, sys%geo, sys%st)
+      call hamiltonian_epot_generate(hm, sys%gr, sys%geo, sys%st)
       call restart_init()
     end if
   end subroutine run_init

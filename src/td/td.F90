@@ -150,7 +150,7 @@ contains
     if(ion_dynamics_ions_move(td%ions)) then
       if(td%iter > 0) then
         call td_read_coordinates()
-        call epot_generate(hm%ep, gr, geo, st)
+        call hamiltonian_epot_generate(hm, gr, geo, st)
       end if
 
       call epot_forces(gr, geo, hm%ep, st, td%iter*td%dt)
@@ -240,7 +240,7 @@ contains
         call gauge_field_propagate(hm%ep%gfield, gauge_force, td%dt)
       end if
       
-      if(generate) call epot_generate(hm%ep, gr, sys%geo, st, time = i*td%dt)
+      if(generate) call hamiltonian_epot_generate(hm, gr, sys%geo, st, time = i*td%dt)
 
       ! update hamiltonian and eigenvalues (fermi is *not* called)
       call v_ks_calc(gr, sys%ks, hm, st, calc_eigenval=.true.)

@@ -561,6 +561,7 @@ contains
 
       do k = 1, 5
         call interpolate( (/t, t-dt, t-2*dt/), tr%v_old(:, :, 0:2), time(k), hm%vhxc(:, :))
+        call hamiltonian_update_potential(hm, gr%mesh)
         do ik = 1, st%d%nik
           do ist = 1, st%nst
             call zexp_vlpsi (gr, hm, st%zpsi(:, :, ist, ik), ik, time(k), -M_zI*dtime(k)/M_TWO)
@@ -628,6 +629,7 @@ contains
 
         call lalg_copy(NP, st%d%nspin, hm%vhxc, vhxc_t2)
         call lalg_copy(NP, st%d%nspin, vhxc_t1, hm%vhxc)
+        call hamiltonian_update_potential(hm, gr%mesh)
       end if
 
       ! propagate dt/2 with H(t-dt)
@@ -642,12 +644,15 @@ contains
       ! first move the ions to time t
       if(present(ions)) then
         call ion_dynamics_propagate(ions, gr%sb, geo, t, ionic_dt)
-        call epot_generate(hm%ep, gr, geo, st, time = t)
+        call hamiltonian_epot_generate(hm, gr, geo, st, time = t)
       end if
 
       if(gauge_field_is_applied(hm%ep%gfield)) call gauge_field_propagate(hm%ep%gfield, gauge_force, dt)
 
-      if(hm%theory_level.ne.INDEPENDENT_PARTICLES)  call lalg_copy(NP, st%d%nspin, vhxc_t2, hm%vhxc)
+      if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
+        call lalg_copy(NP, st%d%nspin, vhxc_t2, hm%vhxc)
+        call hamiltonian_update_potential(hm, gr%mesh)
+      end if
 
       do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
@@ -681,11 +686,12 @@ contains
 
       ! interpolate the hamiltonian to time t
       call lalg_copy(NP, st%d%nspin, tr%v_old(:, :, 0), hm%vhxc)
+      call hamiltonian_update_potential(hm, gr%mesh)
 
       ! move the ions to time t
       if(present(ions)) then      
         call ion_dynamics_propagate(ions, gr%sb, geo, t, ionic_dt)
-        call epot_generate(hm%ep, gr, geo, st, time = t)
+        call hamiltonian_epot_generate(hm, gr, geo, st, time = t)
       end if
 
       if(gauge_field_is_applied(hm%ep%gfield)) call gauge_field_propagate(hm%ep%gfield, gauge_force, dt)
@@ -715,13 +721,14 @@ contains
 
       if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
         call interpolate( (/t, t-dt, t-2*dt/), tr%v_old(:, :, 0:2), t-dt/M_TWO, hm%vhxc(:, :))
+        call hamiltonian_update_potential(hm, gr%mesh)
       end if
 
       !move the ions to time t - dt/2
       if(present(ions)) then
         call ion_dynamics_save_state(ions, geo, ions_state)
         call ion_dynamics_propagate(ions, gr%sb, geo, t - ionic_dt/M_TWO, M_HALF*ionic_dt)
-        call epot_generate(hm%ep, gr, geo, st, time = t - ionic_dt/M_TWO)
+        call hamiltonian_epot_generate(hm, gr, geo, st, time = t - ionic_dt/M_TWO)
       end if
       
       if(gauge_field_is_applied(hm%ep%gfield)) then
@@ -810,6 +817,7 @@ contains
         vhxc_t2 = hm%vhxc
         ! compute potential at n+1/2 as average
         hm%vhxc = (vhxc_t1 + vhxc_t2)/M_TWO
+        call hamiltonian_update_potential(hm, gr%mesh)
       end if
 
       ! get rhs of CN linear system (rhs2 = (1-i\delta t H_{n+1/2})\psi^n)
@@ -859,6 +867,7 @@ contains
       if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
         do j = 1, 2
           call interpolate( (/t, t-dt, t-2*dt/), tr%v_old(:, :, 0:2), time(j)-dt, hm%vhxc(:, :))
+          call hamiltonian_update_potential(hm, gr%mesh)
         end do
       else
         vaux = M_ZERO

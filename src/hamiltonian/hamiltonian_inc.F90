@@ -577,10 +577,8 @@ subroutine X(vlpsi_batch) (hm, m, psib, hpsib, ik)
     do ip = 1, m%np, bs
       ipmax = min(m%np, ip + bs - 1)
 
-      forall (ip2 = ip:ipmax) vv(ip2 - ip + 1) = hm%vhxc(ip2, ispin) + hm%ep%vpsl(ip2)
-
       forall (ii = 1:psib%nst, ip2 = ip:ipmax)
-        hpsib%states(ii)%X(psi)(ip2, 1) = vv(ip2 - ip + 1)*psib%states(ii)%X(psi)(ip2, 1)
+        hpsib%states(ii)%X(psi)(ip2, 1) = hm%total_potential(ip2, ispin)*psib%states(ii)%X(psi)(ip2, 1)
       end forall
       
     end do

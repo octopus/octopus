@@ -148,7 +148,7 @@ contains
         geo%atom(i)%x(alpha) = geo%atom(i)%x(alpha) + vib%disp
 
         ! first force
-        call epot_generate(hm%ep, gr, geo, st)
+        call hamiltonian_epot_generate(hm, gr, geo, st)
         call states_calc_dens(st, m%np, st%rho)
         call v_ks_calc(gr, ks, hm, st, calc_eigenval=.true.)
         call total_energy (hm, gr, st, -1)
@@ -160,7 +160,7 @@ contains
         geo%atom(i)%x(alpha) = geo%atom(i)%x(alpha) - M_TWO*vib%disp
 
         ! second force
-        call epot_generate(hm%ep, gr, geo, st)
+        call hamiltonian_epot_generate(hm, gr, geo, st)
         call states_calc_dens(st, m%np, st%rho)
         call v_ks_calc(gr, ks, hm, st, calc_eigenval=.true.)
         call total_energy(hm, gr, st, -1)

@@ -136,6 +136,7 @@ contains
         call write_info(2)
 
         hm%ep%vpsl(1:NP) = vpsl_save(1:NP) + (-1)**k*gr%mesh%x(1:NP, i)*e_field
+        call hamiltonian_update_potential(hm, gr%mesh)
 
         call scf_run(scfv, sys%gr, sys%geo, st, sys%ks, hm, sys%outp, gs_run=.false., verbosity = VERB_COMPACT)
 
@@ -167,7 +168,8 @@ contains
     ! now calculate the dipole without field
 
     hm%ep%vpsl(1:NP) = vpsl_save(1:NP)
-    
+    call hamiltonian_update_potential(hm, gr%mesh)
+
     call scf_run(scfv, sys%gr, sys%geo, st, sys%ks, hm, sys%outp, gs_run=.false., verbosity = VERB_COMPACT)
     
     trrho = M_ZERO

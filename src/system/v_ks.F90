@@ -295,6 +295,8 @@ contains
 
     end if
     
+    call hamiltonian_update_potential(hm, gr%mesh)
+    
     if(ks%theory_level==HARTREE.or.ks%theory_level==HARTREE_FOCK) then
       call states_end(hm%st)
       call states_copy(hm%st, st)

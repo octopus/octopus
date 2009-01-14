@@ -88,6 +88,8 @@ module hamiltonian_m
     hamiltonian_adjoint,             &
     hamiltonian_not_adjoint,         &
     hamiltonian_hermitean,           &
+    hamiltonian_epot_generate,       &
+    hamiltonian_update_potential,    &
     dvexternal,                      &
     zvexternal
 
@@ -170,6 +172,9 @@ module hamiltonian_m
     logical :: multigrid_initialized
     type(dgridhier_t) :: coarse_v
 
+    FLOAT, pointer :: total_potential(:, :)
+    FLOAT, pointer :: total_static_vector_potential(:)
+    FLOAT, pointer :: total_vector_potential(:, :)
   end type hamiltonian_t
 
   integer, public, parameter :: &
@@ -204,6 +209,8 @@ contains
     type(states_dim_t), pointer :: states_dim
 
     call push_sub('hamiltonian.hamiltonian_init')
+
+    nullify(hm%total_potential, hm%total_vector_potential, hm%total_static_vector_potential)
 
     states_dim => st%d
     wfs_type   => st%wfs_type
@@ -680,6 +687,10 @@ contains
 
     call push_sub('hamiltonian.hamiltonian_end')
 
+    if(associated(hm%total_potential))  deallocate(hm%total_potential)
+    if(associated(hm%total_vector_potential)) deallocate(hm%total_vector_potential)
+    if(associated(hm%total_static_vector_potential))  deallocate(hm%total_static_vector_potential)
+
     if(hm%multigrid_initialized) then
       call gridhier_end(hm%coarse_v, gr%mgrid)
     end if
@@ -828,6 +839,38 @@ contains
     endif
   end subroutine hamiltonian_not_adjoint
 
+  subroutine hamiltonian_update_potential(this, mesh)
+    type(hamiltonian_t), intent(inout) :: this
+    type(mesh_t),        intent(in)    :: mesh
+
+    integer :: ispin, ip
+
+    if(.not. associated(this%total_potential)) then
+      ALLOCATE(this%total_potential(1:mesh%np, this%d%nspin), mesh%np*this%d%nspin)
+    end if
+
+    forall (ispin = 1:this%d%nspin, ip = 1:mesh%np)
+      this%total_potential(ip, ispin) = this%vhxc(ip, ispin) + this%ep%vpsl(ip)
+    end forall
+
+  end subroutine hamiltonian_update_potential
+
+  subroutine hamiltonian_epot_generate(this, gr, geo, st, time)
+    type(hamiltonian_t), intent(inout) :: this
+    type(grid_t), target,  intent(inout) :: gr
+    type(geometry_t),      intent(inout) :: geo
+    type(states_t),        intent(inout) :: st
+    FLOAT,       optional, intent(in)    :: time
+
+    if(present(time)) then
+      call epot_generate(this%ep, gr, geo, st, time)
+    else
+      call epot_generate(this%ep, gr, geo, st)
+    end if
+
+    call hamiltonian_update_potential(this, gr%mesh)
+
+  end subroutine hamiltonian_epot_generate
 
 #include "undef.F90"
 #include "real.F90"
