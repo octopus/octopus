@@ -23,6 +23,7 @@ module hamiltonian_m
   use batch_m
   use calc_mode_m
   use datasets_m
+  use em_field_m
   use derivatives_m
   use external_pot_m
   use gauge_field_m
@@ -172,9 +173,7 @@ module hamiltonian_m
     logical :: multigrid_initialized
     type(dgridhier_t) :: coarse_v
 
-    FLOAT, pointer :: total_potential(:, :)
-    FLOAT, pointer :: total_static_vector_potential(:)
-    FLOAT, pointer :: total_vector_potential(:, :)
+    type(em_field_t), pointer :: total(:) ! one electromagnetic field per spin channel
   end type hamiltonian_t
 
   integer, public, parameter :: &
@@ -209,8 +208,6 @@ contains
     type(states_dim_t), pointer :: states_dim
 
     call push_sub('hamiltonian.hamiltonian_init')
-
-    nullify(hm%total_potential, hm%total_vector_potential, hm%total_static_vector_potential)
 
     states_dim => st%d
     wfs_type   => st%wfs_type
@@ -417,6 +414,8 @@ contains
     end if
 
     hm%multigrid_initialized = .false.
+
+    ALLOCATE(hm%total(1:hm%d%nspin), hm%d%nspin)
 
     call pop_sub()
 
@@ -685,11 +684,15 @@ contains
     type(grid_t),        intent(in)    :: gr
     type(geometry_t),    intent(inout) :: geo
 
+    integer :: ispin
+
     call push_sub('hamiltonian.hamiltonian_end')
 
-    if(associated(hm%total_potential))  deallocate(hm%total_potential)
-    if(associated(hm%total_vector_potential)) deallocate(hm%total_vector_potential)
-    if(associated(hm%total_static_vector_potential))  deallocate(hm%total_static_vector_potential)
+    do ispin = 1, hm%d%nspin
+      call em_field_end(hm%total(ispin))
+    end do
+
+    deallocate(hm%total)
 
     if(hm%multigrid_initialized) then
       call gridhier_end(hm%coarse_v, gr%mgrid)
@@ -845,13 +848,15 @@ contains
 
     integer :: ispin, ip
 
-    if(.not. associated(this%total_potential)) then
-      ALLOCATE(this%total_potential(1:mesh%np, this%d%nspin), mesh%np*this%d%nspin)
-    end if
+    do ispin = 1, this%d%nspin
+      
+      if(.not. associated(this%total(ispin)%potential)) then
+        ALLOCATE(this%total(ispin)%potential(1:mesh%np), mesh%np)
+      end if
 
-    forall (ispin = 1:this%d%nspin, ip = 1:mesh%np)
-      this%total_potential(ip, ispin) = this%vhxc(ip, ispin) + this%ep%vpsl(ip)
-    end forall
+      forall (ip = 1:mesh%np) this%total(ispin)%potential(ip) = this%vhxc(ip, ispin) + this%ep%vpsl(ip)
+      
+    end do
 
   end subroutine hamiltonian_update_potential
 

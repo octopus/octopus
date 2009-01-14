@@ -561,7 +561,6 @@ subroutine X(vlpsi_batch) (hm, m, psib, hpsib, ik)
 
   integer :: ip, ip2, ii, ispin, bs, ipmax
   R_TYPE, pointer :: psi(:, :), hpsi(:, :)
-  FLOAT, allocatable  :: vv(:)
 
   call profiling_in(C_PROFILING_VLPSI)
   call push_sub('hamiltonian_inc.Xvlpsi')
@@ -569,27 +568,10 @@ subroutine X(vlpsi_batch) (hm, m, psib, hpsib, ik)
   select case(hm%d%ispin)
   case(UNPOLARIZED, SPIN_POLARIZED)
     ispin = states_dim_get_spin_index(hm%d, ik)
-
-    bs = hardware%dblock_size
-
-    ALLOCATE(vv(1:bs), bs) 
-
-    do ip = 1, m%np, bs
-      ipmax = min(m%np, ip + bs - 1)
-
-      forall (ii = 1:psib%nst, ip2 = ip:ipmax)
-        hpsib%states(ii)%X(psi)(ip2, 1) = hm%total_potential(ip2, ispin)*psib%states(ii)%X(psi)(ip2, 1)
-      end forall
-      
-    end do
-
-    deallocate(vv)
-
-    call profiling_count_operations((R_ADD + R_MUL*psib%nst)*m%np)
-    call profiling_count_transfers(m%np, M_ONE)
-    call profiling_count_transfers(m%np*psib%nst, R_TOTYPE(M_ONE))
+    call X(em_field_apply_batch)(hm%total(ispin), m, psib, hpsib)
 
   case(SPINORS)
+    !the spinor case is more complicated since it mixes the two components.
     do ii = 1, psib%nst
       psi  => psib%states(ii)%X(psi)
       hpsi => hpsib%states(ii)%X(psi)
