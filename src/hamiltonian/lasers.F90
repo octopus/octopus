@@ -631,7 +631,9 @@ contains
       call laser_vector_potential(laser, pot, time)
       call laser_field(mesh%sb, laser, mag, time)
 
-      forall(idir = 1:mesh%sb%dim, ip = 1:mesh%np) em_field%vector_potential(ip, idir) = em_field%vector_potential(ip, idir) + pot(ip, idir)
+      forall(idir = 1:mesh%sb%dim, ip = 1:mesh%np) 
+        em_field%vector_potential(ip, idir) = em_field%vector_potential(ip, idir) + pot(ip, idir)
+      end forall
       forall(idir = 1:mesh%sb%dim) em_field%uniform_magnetic_field(idir) = em_field%uniform_magnetic_field(idir) + mag(idir)
 
     case(E_FIELD_VECTOR_POTENTIAL)
@@ -641,7 +643,9 @@ contains
       end if
       
       call laser_field(mesh%sb, laser, mag, time)
-      forall(idir = 1:mesh%sb%dim, ip = 1:mesh%np) em_field%vector_potential(ip, idir) = em_field%vector_potential(ip, idir) + mag(idir)
+      forall(idir = 1:mesh%sb%dim, ip = 1:mesh%np) 
+        em_field%vector_potential(ip, idir) = em_field%vector_potential(ip, idir) + mag(idir)
+      end forall
       
     end select
     
