@@ -22,6 +22,7 @@
 module lasers_m
   use datasets_m
   use derivatives_m
+  use em_field_m
   use global_m
   use mpi_m
   use grid_m
@@ -589,6 +590,63 @@ contains
     req = (laser_kind(this) == E_FIELD_MAGNETIC .or. laser_kind(this) == E_FIELD_VECTOR_POTENTIAL)
     
   end function laser_requires_gradient
+
+  ! ---------------------------------------------------------
+  subroutine lasers_get_potentials(laser, mesh, time, em_field)
+    type(laser_t),       intent(in)    :: laser
+    type(mesh_t),        intent(inout) :: mesh
+    FLOAT,               intent(in)    :: time
+    type(em_field_t),    intent(inout) :: em_field
+    
+    FLOAT, allocatable :: pot(:, :)
+    FLOAT :: mag(1:MAX_DIM)
+    integer :: ip, idir
+
+    call push_sub('lasers.lasers_get_potential')
+    
+    select case(laser_kind(laser))
+
+    case(E_FIELD_SCALAR_POTENTIAL, E_FIELD_ELECTRIC)
+      if(.not. associated(em_field%potential)) then 
+        ALLOCATE(em_field%potential(mesh%np), mesh%np)
+        em_field%potential = M_ZERO
+      end if
+      
+      ALLOCATE(pot(mesh%np, 1), mesh%np)
+      
+      call laser_potential(mesh%sb, laser, mesh, pot(:, 1), time)
+      
+      forall(ip = 1:mesh%np) em_field%potential(ip) = em_field%potential(ip) + pot(ip, 1)
+
+      deallocate(pot)
+      
+    case(E_FIELD_MAGNETIC)
+      if(.not. associated(em_field%vector_potential)) then 
+        ALLOCATE(em_field%vector_potential(mesh%np, mesh%sb%dim), mesh%np*mesh%sb%dim)
+        em_field%vector_potential = M_ZERO
+      end if
+
+      ALLOCATE(pot(mesh%np, mesh%sb%dim), mesh%np*mesh%sb%dim)
+
+      call laser_vector_potential(laser, pot, time)
+      call laser_field(mesh%sb, laser, mag, time)
+
+      forall(idir = 1:mesh%sb%dim, ip = 1:mesh%np) em_field%vector_potential(ip, idir) = em_field%vector_potential(ip, idir) + pot(ip, idir)
+      forall(idir = 1:mesh%sb%dim) em_field%uniform_magnetic_field(idir) = em_field%uniform_magnetic_field(idir) + mag(idir)
+
+    case(E_FIELD_VECTOR_POTENTIAL)
+      if(.not. associated(em_field%vector_potential)) then 
+        ALLOCATE(em_field%uniform_vector_potential(MAX_DIM), MAX_DIM)
+        em_field%uniform_vector_potential(1:MAX_DIM) = M_ZERO
+      end if
+      
+      call laser_field(mesh%sb, laser, mag, time)
+      forall(idir = 1:mesh%sb%dim) em_field%uniform_vector_potential(idir) = em_field%uniform_vector_potential(idir) + mag(idir)
+      
+    end select
+    
+    call pop_sub()
+  end subroutine lasers_get_potentials
 
 #include "undef.F90"
 #include "real.F90"
