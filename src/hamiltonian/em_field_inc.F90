@@ -45,7 +45,6 @@ subroutine X(em_field_apply_batch)(this, mesh, psib, vpsib)
   end if
 
   ASSERT(.not. associated(this%vector_potential))
-  ASSERT(.not. associated(this%uniform_vector_potential))
   ASSERT(.not. associated(this%uniform_magnetic_field))
 
 end subroutine X(em_field_apply_batch)

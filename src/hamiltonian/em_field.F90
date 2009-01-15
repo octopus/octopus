@@ -61,7 +61,6 @@ module em_field_m
   type em_field_t
     FLOAT, pointer :: potential(:)                => null()
     FLOAT, pointer :: vector_potential(:, :)      => null()
-    FLOAT, pointer :: uniform_vector_potential(:) => null()
     FLOAT, pointer :: uniform_magnetic_field(:)   => null()
   end type em_field_t
 
@@ -73,7 +72,6 @@ contains
 
     if(associated(this%potential))                deallocate(this%potential)
     if(associated(this%vector_potential))         deallocate(this%vector_potential)
-    if(associated(this%uniform_vector_potential)) deallocate(this%uniform_vector_potential)
     if(associated(this%uniform_magnetic_field))   deallocate(this%uniform_magnetic_field)
 
   end subroutine em_field_end

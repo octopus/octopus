@@ -636,12 +636,12 @@ contains
 
     case(E_FIELD_VECTOR_POTENTIAL)
       if(.not. associated(em_field%vector_potential)) then 
-        ALLOCATE(em_field%uniform_vector_potential(MAX_DIM), MAX_DIM)
-        em_field%uniform_vector_potential(1:MAX_DIM) = M_ZERO
+        ALLOCATE(em_field%vector_potential(mesh%np, MAX_DIM), MAX_DIM)
+        em_field%vector_potential(mesh%np, 1:MAX_DIM) = M_ZERO
       end if
       
       call laser_field(mesh%sb, laser, mag, time)
-      forall(idir = 1:mesh%sb%dim) em_field%uniform_vector_potential(idir) = em_field%uniform_vector_potential(idir) + mag(idir)
+      forall(idir = 1:mesh%sb%dim, ip = 1:mesh%np) em_field%vector_potential(ip, idir) = em_field%vector_potential(ip, idir) + mag(idir)
       
     end select
     
