@@ -34,9 +34,9 @@ module em_field_m
   use mesh_m
   use messages_m
   use simul_box_m
+  use states_dim_m
   use units_m
   use logrid_m
-  use ps_m
   use species_m
   use solids_m
   use geometry_m

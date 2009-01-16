@@ -49,6 +49,27 @@ subroutine X(em_field_apply_batch)(this, mesh, psib, vpsib)
 
 end subroutine X(em_field_apply_batch)
 
+subroutine X(em_field_apply)(this, std, mesh, time, psi, vpsi)
+  type(em_field_t),    intent(in)    :: this
+  type(states_dim_t),  intent(in)    :: std
+  type(mesh_t),        intent(in)    :: mesh
+  FLOAT,               intent(in)    :: time
+  R_TYPE, target,      intent(inout) :: psi(:,:)
+  R_TYPE,              intent(out)   :: vpsi(:,:)
+
+  type(batch_t) :: psib, vpsib
+
+  call batch_init(psib, std%dim, 1)
+  call batch_add_state(psib, 1, psi)
+  call batch_init(vpsib, std%dim, 1)
+  call batch_add_state(vpsib, 1, vpsi)
+
+  call X(em_field_apply_batch)(this, mesh, psib, vpsib)
+
+  call batch_end(psib)
+  call batch_end(vpsib)
+end subroutine X(em_field_apply)
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8
