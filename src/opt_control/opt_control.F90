@@ -495,7 +495,7 @@ contains
       ! can use them.
       call parameters_copy(par_, par)
       sys_      => sys
-      hm_        => h
+      hm_        => hm
       td_       => td
 
       call parameters_par_to_x(par, x)
