@@ -59,7 +59,8 @@ module states_dim_m
     states_dim_get_spin_index,        &
     kpoints_write_info,               &
     kpoints_distribute,               &
-    kpoint_is_gamma
+    kpoint_is_gamma,                  &
+    kpoint_index
 
   ! Parameters...
   integer, public, parameter :: &

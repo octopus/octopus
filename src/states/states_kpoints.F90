@@ -317,7 +317,7 @@ logical function in_wigner_seitz_cell(k_point, klattice) result(in_cell)
   !%Section Mesh::KPoints
   !%Description
   !% Determines which shape of Wigner-Seitz cell Octopus should use
-  !% for a full K point sampling (currently this is not automatically
+  !% for a full k-point sampling (currently this is not automatically
   !% determined from atomic positions and has to be specified
   !% manually). By default a cube is chosen.
   !%Option cube 1
@@ -325,7 +325,7 @@ logical function in_wigner_seitz_cell(k_point, klattice) result(in_cell)
   !%Option octahedron 2
   !% The cell is octahedral.
   !%Option dodecahedron 3
-  !% The cell is dodecaedral.
+  !% The cell is dodecahedral.
   !%End
   call loct_parse_int(datasets_check('KPointsCellType'), CUBE, ws_cell_type)
 
@@ -405,6 +405,22 @@ logical pure function kpoint_is_gamma(this, ik)
   kpoint_is_gamma = (maxval(abs(this%kpoints(:, ik))) < M_EPSILON)
 
 end function kpoint_is_gamma
+
+integer function kpoint_index(this, ik) result(index)
+  type(states_dim_t), intent(in) :: this
+  integer,            intent(in) :: ik
+
+  if (this%nspin == 2) then
+    if (states_dim_get_spin_index(this, ik) == 1) then
+      index = (ik + 1) / 2
+    else
+      index = ik / 2
+    endif
+  else
+     index = ik
+  endif
+
+end function kpoint_index
 
 !! Local Variables:
 !! mode: f90

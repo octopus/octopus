@@ -19,6 +19,7 @@
 
 #include "global.h"
 #define RESTART_DIR "kdotp/"
+#define OUTPUT_DIR "kdotp/"
 #define EM_RESTART_DIR "em_resp/"
 
 module kdotp_m
@@ -46,6 +47,7 @@ module kdotp_m
   use restart_m
   use states_m
   use states_calc_m
+  use states_dim_m
   use sternheimer_m
   use string_m
   use system_m
@@ -177,7 +179,7 @@ contains
     end do
 
     call io_mkdir(trim(tmpdir)//RESTART_DIR)
-    call io_mkdir('kdotp/')
+    call io_mkdir(OUTPUT_DIR)
     call info()
     message(1) = "Info: Calculating kdotp linear response of ground-state wavefunctions."
     call write_info(1)
@@ -427,20 +429,8 @@ contains
     call messages_print_stress(stdout, 'Degenerate subspaces')
 
     do ik = 1, st%d%nik
-      ! figure out the actual spin and k-point
-      ! this is not as elegant as using mod and int, but much easier to understand
-      if (st%d%nspin == 1) then
-        ispin = 1
-        ik2 = ik
-      else
-        if (mod(ik, 2) == 1) then
-           ispin = 1
-           ik2 = (ik + 1) / 2
-        else
-           ispin = 2
-           ik2 = ik / 2
-        endif
-      endif
+      ispin = states_dim_get_spin_index(st%d, ik)
+      ik2 = kpoint_index(st%d, ik)
 
       tmp = int2str(ik2)
       write(*, '(3a, i1)') 'k-point ', trim(tmp), ', spin ', ispin 
@@ -470,7 +460,7 @@ contains
       write(*,*)
 
       tmp = int2str(ik2)
-      write(filename, '(3a, i1)') 'kdotp/kpoint_', trim(tmp), '_', ispin
+      write(filename, '(3a, i1)') OUTPUT_DIR//'kpoint_', trim(tmp), '_', ispin
       iunit = io_open(trim(filename), action='write')
       write(iunit,'(a, i10)') '# spin    index = ', ispin
       write(iunit,'(a, i10)') '# k-point index = ', ik2

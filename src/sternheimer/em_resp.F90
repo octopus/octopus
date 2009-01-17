@@ -19,6 +19,9 @@
 
 #include "global.h"
 #define RESTART_DIR "em_resp/"
+#define OUTPUT_DIR "linear/"
+#define KDOTP_RESTART_DIR "kdotp/"
+! there must be a way to make sure this is identical to what is specified in kdotp.F90
 
 module pol_lr_m
   use datasets_m
@@ -147,7 +150,7 @@ contains
     message(1) = "Info: Calculating polarizabilities."
     call write_info(1)
 
-    call io_mkdir('linear/')
+    call io_mkdir(OUTPUT_DIR)
 
     do iomega = 1, em_vars%nomega
 
@@ -563,7 +566,7 @@ contains
 
     do ifactor = 1, em_vars%nfactor
       str_tmp = freq2str(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)/units_out%energy%factor)
-      write(dirname, '(a, a)') 'linear/freq_', trim(str_tmp)
+      write(dirname, '(a, a)') OUTPUT_DIR//'freq_', trim(str_tmp)
       call io_mkdir(trim(dirname))
 
       if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
@@ -577,7 +580,7 @@ contains
       call out_projections()
 
       str_tmp = freq2str(em_vars%omega(iomega)/units_out%energy%factor)
-      write(dirname, '(a, a)') 'linear/freq_', trim(str_tmp)
+      write(dirname, '(a, a)') OUTPUT_DIR//'freq_', trim(str_tmp)
       call io_mkdir(dirname)
       call out_wavefunctions()
 
