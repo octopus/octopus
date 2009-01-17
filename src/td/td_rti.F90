@@ -81,6 +81,7 @@ module td_rti_m
     type(ob_terms_t)    :: ob               ! For open boundaries: leads, memory
     logical             :: scf_propagation
     FLOAT, pointer      :: prev_psi(:, :, :, :)
+    logical             :: first
   end type td_rti_t
 
 #ifdef HAVE_SPARSKIT
@@ -270,7 +271,7 @@ contains
     !% Crank-Nicholson propagator with source and memory term for transport
     !% calculations.
     !%Option visscher 8
-    !% Visscher integration scheme. Computational Physics 5 596 (1991).
+    !% (experimental) Visscher integration scheme. Computational Physics 5 596 (1991).
     !%End
 
     if(gr%sb%open_boundaries) then
@@ -350,6 +351,7 @@ contains
     if(tr%method == PROP_VISSCHER) then
       size = gr%mesh%np*st%d%dim*st%lnst*st%d%kpt%nlocal
       ALLOCATE(tr%prev_psi(1:gr%mesh%np, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end), size)
+      tr%first = .true.
     else
       nullify(tr%prev_psi)
     end if
@@ -938,40 +940,88 @@ contains
     ! Propagator with approximate enforced time-reversal symmetry
     subroutine td_visscher
       integer :: ik, ist, idim, ip
-      FLOAT, pointer :: dpsi(:, :), hpsi(:, :)
+      FLOAT, allocatable :: dpsi(:, :), hpsi(:, :)
+      CMPLX, allocatable :: zpsi(:,:)
 
       call push_sub('td_rti.td_app_reversal')
-
+      
       ALLOCATE(dpsi(1:gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
       ALLOCATE(hpsi(1:gr%mesh%np, st%d%dim), gr%mesh%np)
+
+      ! we have to initialize the imaginary part of \psi at dt/2, we
+      ! use a simple exponential propagator for this, it could be
+      ! easily replaced by an exponential midpoint rule propagator if
+      ! necessary
+      if(tr%first) then
+        ALLOCATE(zpsi(1:gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
+        do ik = 1, st%d%nik
+          do ist = st%st_start, st%st_end
+            do idim = 1, st%d%dim
+              call lalg_copy(gr%mesh%np, st%zpsi(:, idim, ist, ik), zpsi(:, idim))
+            end do
+            call exponential_apply(tr%te, gr, hm, zpsi, ist, ik, dt/M_TWO, t - dt)
+            forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) tr%prev_psi(ip, idim, ist, ik) = aimag(zpsi(ip, idim))
+          end do
+        end do
+        deallocate(zpsi)
+        tr%first = .false.
+      end if
       
+      !propagate the hamiltonian to t - dt/2
+
+      if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
+        call interpolate( (/t, t-dt, t-2*dt/), tr%v_old(:, :, 0:2), t-dt/M_TWO, hm%vhxc(:, :))
+        call hamiltonian_update_potential(hm, gr%mesh)
+      end if
+
+      if(present(ions)) then
+        call ion_dynamics_propagate(ions, gr%sb, geo, t - ionic_dt/M_TWO, M_HALF*ionic_dt)
+        call hamiltonian_epot_generate(hm, gr, geo, st, time = t - ionic_dt/M_TWO)
+      end if
+      
+      if(gauge_field_is_applied(hm%ep%gfield)) call gauge_field_propagate(hm%ep%gfield, gauge_force, M_HALF*dt)
+
+      ! propagate the real part
+      do ik = 1, st%d%nik
+        do ist = st%st_start, st%st_end
+          
+          forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) dpsi(ip, idim) = tr%prev_psi(ip, idim, ist, ik)
+          call dhamiltonian_apply(hm, gr, dpsi, hpsi, ist, ik, t - dt/2)
+          forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) 
+            st%zpsi(ip, idim, ist, ik) = real(st%zpsi(ip, idim, ist, ik)) + dt*hpsi(ip, idim)
+          end forall
+
+        end do
+      end do
+
+      ! propagate the hamiltonian to time t
+      call lalg_copy(NP, st%d%nspin, tr%v_old(:, :, 0), hm%vhxc)
+      call hamiltonian_update_potential(hm, gr%mesh)
+
+      if(present(ions)) then
+        call ion_dynamics_propagate(ions, gr%sb, geo, t, M_HALF*ionic_dt)
+        call hamiltonian_epot_generate(hm, gr, geo, st, time = t)
+      end if
+
+      if(gauge_field_is_applied(hm%ep%gfield)) call gauge_field_propagate(hm%ep%gfield, gauge_force, M_HALF*dt)
+
+      ! propagate the imaginary part
       do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
 
-         if(t - dt == M_ZERO) then
-            forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-              tr%prev_psi(ip, idim, ist, ik) = M_ZERO
-            end forall
-          end if
-          
-          ! propagate the real part
-          forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) dpsi(ip, idim) = tr%prev_psi(ip, idim, ist, ik)
-          call dhamiltonian_apply(hm, gr, dpsi, hpsi, ist, ik, t)
-          forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) st%zpsi(ip, idim, ist, ik) = st%zpsi(ip, idim, ist, ik) + dt*hpsi(ip, idim)
-
-          ! the imaginary part is at middle times is calculated as the average
+          ! the imaginary part is calculated as the average
+          ! this is the first half
           forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) 
             st%zpsi(ip, idim, ist, ik) = real(st%zpsi(ip, idim, ist, ik)) + CNST(0.5)*M_ZI*tr%prev_psi(ip, idim, ist, ik)
           end forall
 
-          ! propagate the imaginary part
           forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) dpsi(ip, idim) = real(st%zpsi(ip, idim, ist, ik))
           call dhamiltonian_apply(hm, gr, dpsi, hpsi, ist, ik, t)
           forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) 
             tr%prev_psi(ip, idim, ist, ik) = tr%prev_psi(ip, idim, ist, ik) - dt*hpsi(ip, idim)
           end forall
           
-          ! the imaginary part is at middle times is calculated as the average
+          ! this is the second half
           forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) 
             st%zpsi(ip, idim, ist, ik) = st%zpsi(ip, idim, ist, ik) + CNST(0.5)*M_ZI*tr%prev_psi(ip, idim, ist, ik)
           end forall
@@ -1030,8 +1080,12 @@ contains
   logical pure function td_rti_ions_are_propagated(tr) result(propagated)
     type(td_rti_t), intent(in) :: tr
 
-    propagated = .false.
-    if(tr%method == PROP_REVERSAL .or. tr%method == PROP_APP_REVERSAL) propagated = .true.
+    select case(tr%method)
+    case(PROP_REVERSAL, PROP_APP_REVERSAL, PROP_VISSCHER)
+      propagated = .true.
+    case default
+      propagated = .false.
+    end select
 
   end function td_rti_ions_are_propagated
 
