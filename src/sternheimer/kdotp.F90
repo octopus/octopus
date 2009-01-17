@@ -24,6 +24,7 @@
 
 module kdotp_m
   use datasets_m
+  use em_resp_m
   use em_resp_calc_m
   use geometry_m
   use global_m
@@ -43,7 +44,6 @@ module kdotp_m
   use mix_m
   use h_sys_output_m
   use pert_m
-  use pol_lr_m
   use restart_m
   use states_m
   use states_calc_m

@@ -22,6 +22,7 @@
 
 module vdw_m
   use datasets_m
+  use em_resp_m
   use em_resp_calc_m
   use gauss_legendre_m
   use global_m
@@ -39,16 +40,14 @@ module vdw_m
   use mix_m
   use mpi_m
   use h_sys_output_m
-  use poisson_m
   use pert_m
+  use poisson_m
   use restart_m
   use states_m
   use sternheimer_m
   use string_m
   use system_m
   use units_m
-
-  use pol_lr_m
 
   implicit none
 

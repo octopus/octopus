@@ -23,6 +23,7 @@ module run_m
   use calc_mode_m
   use casida_m
   use datasets_m
+  use em_resp_m
   use external_pot_m
   use fft_m
   use geom_opt_m
@@ -37,7 +38,6 @@ module run_m
   use opt_control_m
   use phonons_fd_m
   use phonons_lr_m
-  use pol_lr_m
   use kdotp_m
   use gcm_m
   use pulpo_m
@@ -97,7 +97,7 @@ contains
       case(FD)
         call static_pol_run(sys, hm, fromScratch)
       case(LR)
-        call pol_lr_run(sys, hm, fromScratch)
+        call em_resp_run(sys, hm, fromScratch)
       end select
     case(CM_VDW)
       call vdW_run(sys, hm, fromScratch)

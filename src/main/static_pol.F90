@@ -22,7 +22,7 @@
 module static_pol_m
   use datasets_m
   use elf_m
-  use pol_lr_m
+  use em_resp_m
   use geometry_m
   use global_m
   use grid_m

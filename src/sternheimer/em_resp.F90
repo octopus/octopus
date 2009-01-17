@@ -23,7 +23,7 @@
 #define KDOTP_RESTART_DIR "kdotp/"
 ! there must be a way to make sure this is identical to what is specified in kdotp.F90
 
-module pol_lr_m
+module em_resp_m
   use datasets_m
   use em_resp_calc_m
   use geometry_m
@@ -57,7 +57,7 @@ module pol_lr_m
   private
 
   public :: &
-       pol_lr_run,             &
+       em_resp_run,             &
        read_wfs,               &
        out_polarizability,     &
        out_hyperpolarizability
@@ -89,7 +89,7 @@ module pol_lr_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine pol_lr_run(sys, hm, fromScratch)
+  subroutine em_resp_run(sys, hm, fromScratch)
     type(system_t), target, intent(inout) :: sys
     type(hamiltonian_t),    intent(inout) :: hm
     logical,                intent(inout) :: fromScratch
@@ -104,7 +104,7 @@ contains
 
     FLOAT :: closest_omega
 
-    call push_sub('em_resp.pol_lr_run')
+    call push_sub('em_resp.em_resp_run')
 
     gr => sys%gr
     ndim = sys%gr%sb%dim
@@ -347,7 +347,7 @@ contains
       integer   :: number, j, k
       FLOAT     :: omega_ini, omega_fin, domega
 
-      call push_sub('em_resp.pol_lr_run.parse_input')
+      call push_sub('em_resp.em_resp_run.parse_input')
 
       call obsolete_variable('PolFreqs               ', 'EMFreqs             ')
       call obsolete_variable('PolHyper               ', 'EMHyperpol          ')
@@ -463,7 +463,7 @@ contains
     ! ---------------------------------------------------------
     subroutine info()
 
-      call push_sub('em_resp.pol_lr_run.info')
+      call push_sub('em_resp.em_resp_run.info')
 
       call pert_info(em_vars%perturbation, stdout)
       if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
@@ -495,7 +495,7 @@ contains
 
     end subroutine info
 
-  end subroutine pol_lr_run
+  end subroutine em_resp_run
 
 
   ! ---------------------------------------------------------
@@ -957,7 +957,7 @@ contains
 
   end subroutine out_hyperpolarizability
 
-end module pol_lr_m
+end module em_resp_m
 
 !! Local Variables:
 !! mode: f90
