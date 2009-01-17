@@ -67,7 +67,8 @@ module td_rti_m
     PROP_EXPONENTIAL_MIDPOINT    = 4, &
     PROP_CRANK_NICHOLSON         = 5, &
     PROP_MAGNUS                  = 6, &
-    PROP_CRANK_NICHOLSON_SRC_MEM = 7
+    PROP_CRANK_NICHOLSON_SRC_MEM = 7, &
+    PROP_VISSCHER                = 8
 
   FLOAT, parameter :: scf_threshold = CNST(1.0e-3)
 
@@ -79,6 +80,7 @@ module td_rti_m
     type(zcf_t)         :: cf               ! Auxiliary cube for split operator methods.
     type(ob_terms_t)    :: ob               ! For open boundaries: leads, memory
     logical             :: scf_propagation
+    FLOAT, pointer      :: prev_psi(:, :, :, :)
   end type td_rti_t
 
 #ifdef HAVE_SPARSKIT
@@ -141,7 +143,7 @@ contains
                                                    ! that must be propagated (currently ions
                                                    ! or a gauge field).
 
-    integer :: default_propagator
+    integer :: default_propagator, size
 
     call push_sub('td_rti.td_rti_init')
 
@@ -267,7 +269,10 @@ contains
     !%Option crank_nicholson_src_mem 7
     !% Crank-Nicholson propagator with source and memory term for transport
     !% calculations.
+    !%Option visscher 8
+    !% Visscher integration scheme. Computational Physics 5 596 (1991).
     !%End
+
     if(gr%sb%open_boundaries) then
       default_propagator = PROP_CRANK_NICHOLSON_SRC_MEM
     else
@@ -318,6 +323,7 @@ contains
       ALLOCATE(tr%vmagnus(NP, st%d%nspin, 2), NP*st%d%nspin*2)
     case(PROP_CRANK_NICHOLSON_SRC_MEM)
       call ob_rti_init(st, gr, hm, tr%ob, dt, max_iter)
+    case(PROP_VISSCHER)
     case default
       call input_error('TDEvolutionMethod')
     end select
@@ -341,6 +347,13 @@ contains
     ! (unless we are doing a QOCT run)
     tr%scf_propagation = .false.
 
+    if(tr%method == PROP_VISSCHER) then
+      size = gr%mesh%np*st%d%dim*st%lnst*st%d%kpt%nlocal
+      ALLOCATE(tr%prev_psi(1:gr%mesh%np, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end), size)
+    else
+      nullify(tr%prev_psi)
+    end if
+
     call pop_sub()
   end subroutine td_rti_init
 
@@ -355,6 +368,8 @@ contains
   ! ---------------------------------------------------------
   subroutine td_rti_end(tr)
     type(td_rti_t), intent(inout) :: tr
+
+    if(associated(tr%prev_psi)) deallocate(tr%prev_psi)
 
     ! sanity check
     ASSERT(associated(tr%v_old)) 
@@ -451,6 +466,7 @@ contains
     case(PROP_CRANK_NICHOLSON);         call td_crank_nicholson
     case(PROP_MAGNUS);                  call td_magnus
     case(PROP_CRANK_NICHOLSON_SRC_MEM); call td_crank_nicholson_src_mem
+    case(PROP_VISSCHER);                call td_visscher
     end select
 
     if(self_consistent) then
@@ -486,6 +502,7 @@ contains
           case(PROP_CRANK_NICHOLSON);         call td_crank_nicholson
           case(PROP_MAGNUS);                  call td_magnus
           case(PROP_CRANK_NICHOLSON_SRC_MEM); call td_crank_nicholson_src_mem
+          case(PROP_VISSCHER);                call td_visscher
           end select
 
           call states_calc_dens(st, NP, st%rho)
@@ -916,6 +933,55 @@ contains
 
       call pop_sub()
     end subroutine td_crank_nicholson_src_mem
+
+    ! ---------------------------------------------------------
+    ! Propagator with approximate enforced time-reversal symmetry
+    subroutine td_visscher
+      integer :: ik, ist, idim, ip
+      FLOAT, pointer :: dpsi(:, :), hpsi(:, :)
+
+      call push_sub('td_rti.td_app_reversal')
+
+      ALLOCATE(dpsi(1:gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
+      ALLOCATE(hpsi(1:gr%mesh%np, st%d%dim), gr%mesh%np)
+      
+      do ik = 1, st%d%nik
+        do ist = st%st_start, st%st_end
+
+         if(t - dt == M_ZERO) then
+            forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np)
+              tr%prev_psi(ip, idim, ist, ik) = M_ZERO
+            end forall
+          end if
+          
+          ! propagate the real part
+          forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) dpsi(ip, idim) = tr%prev_psi(ip, idim, ist, ik)
+          call dhamiltonian_apply(hm, gr, dpsi, hpsi, ist, ik, t)
+          forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) st%zpsi(ip, idim, ist, ik) = st%zpsi(ip, idim, ist, ik) + dt*hpsi(ip, idim)
+
+          ! the imaginary part is at middle times is calculated as the average
+          forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) 
+            st%zpsi(ip, idim, ist, ik) = real(st%zpsi(ip, idim, ist, ik)) + CNST(0.5)*M_ZI*tr%prev_psi(ip, idim, ist, ik)
+          end forall
+
+          ! propagate the imaginary part
+          forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) dpsi(ip, idim) = real(st%zpsi(ip, idim, ist, ik))
+          call dhamiltonian_apply(hm, gr, dpsi, hpsi, ist, ik, t)
+          forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) 
+            tr%prev_psi(ip, idim, ist, ik) = tr%prev_psi(ip, idim, ist, ik) - dt*hpsi(ip, idim)
+          end forall
+          
+          ! the imaginary part is at middle times is calculated as the average
+          forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) 
+            st%zpsi(ip, idim, ist, ik) = st%zpsi(ip, idim, ist, ik) + CNST(0.5)*M_ZI*tr%prev_psi(ip, idim, ist, ik)
+          end forall
+
+        end do
+      end do
+
+      call pop_sub()
+    end subroutine td_visscher
+
   end subroutine td_rti_dt
 
 
