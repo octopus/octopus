@@ -1,0 +1,30 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: 24-cpmd.test 3344 2007-10-13 13:38:03Z acastro $
+
+Test       : Visscher propagator
+Author     : Xavier
+Release    : 3.1.0pre1
+Programs   : octopus_mpi; octopus
+TestGroups : short-run
+Enabled    : Yes
+
+#This test checks the time propagation
+
+# ground state
+Processors : 1
+Input      : 07-visscher.01-gs.inp
+match ; Initial energy ; GREP(static/info, 'Total       =', 20) ; -11.00353072
+
+Processors : 4
+Input      : 07-visscher.02-td.inp
+match ; Energy [step  1] ; LINE(td.general/energy, -41, 30) ; -1.098162577741e+01
+match ; Energy [step 10] ; LINE(td.general/energy, -31, 30) ; -1.098155135224e+01
+match ; Energy [step 20] ; LINE(td.general/energy, -21, 30) ; -1.098147635943e+01
+match ; Energy [step 30] ; LINE(td.general/energy, -11, 30) ; -1.098140063765e+01
+match ; Energy [step 40] ; LINE(td.general/energy,  -1, 30) ; -1.098132419337e+01
+
+match ; Forces [step  1] ; LINE(td.general/coordinates, -41, 270) ; 1.700891538586e-01
+match ; Forces [step 10] ; LINE(td.general/coordinates, -31, 270) ; 1.675208428715e-01
+match ; Forces [step 20] ; LINE(td.general/coordinates, -21, 270) ; 1.672066391044e-01
+match ; Forces [step 30] ; LINE(td.general/coordinates, -11, 270) ; 1.672352458128e-01
+match ; Forces [step 40] ; LINE(td.general/coordinates,  -1, 270) ; 1.674039849005e-01

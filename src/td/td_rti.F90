@@ -333,8 +333,9 @@ contains
     if(have_fields) then
       if(tr%method /= PROP_REVERSAL .and.    &
          tr%method /= PROP_APP_REVERSAL .and. &
+         tr%method /= PROP_VISSCHER .and. &
          tr%method /= PROP_EXPONENTIAL_MIDPOINT) then
-        message(1) = "To move the ions or put a gauge field use the etrs, aetrs or exp_mid propagators." 
+        message(1) = "To move the ions or put a gauge field use the etrs, aetrs, visscher or exp_mid propagators." 
         call write_fatal(1)
       end if
     end if
