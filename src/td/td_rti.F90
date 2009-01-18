@@ -949,47 +949,85 @@ contains
       ALLOCATE(dpsi(1:gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
       ALLOCATE(hpsi(1:gr%mesh%np, st%d%dim), gr%mesh%np)
 
-      ! we have to initialize the imaginary part of \psi at dt/2, we
-      ! use a simple exponential propagator for this, it could be
-      ! easily replaced by an exponential midpoint rule propagator if
-      ! necessary
+      ! we have to initialize the imaginary part of \psi at dt/2, so we
+      ! use the exponential midpoint rule.
       if(tr%first) then
+
+        !propagate the hamiltonian to t - dt/4
+        if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
+          call interpolate( (/t, t-dt, t-2*dt/), tr%v_old(:, :, 0:2), t - CNST(0.75)*dt, hm%vhxc(:, :))
+        end if
+        
+        if(present(ions)) then
+          call ion_dynamics_propagate(ions, gr%sb, geo, t - CNST(0.75)*ionic_dt, CNST(0.25)*ionic_dt)
+          call hamiltonian_epot_generate(hm, gr, geo, st, time = t - CNST(0.75)/M_FOUR)
+        else
+          call hamiltonian_update_potential(hm, gr%mesh)
+        end if
+        
+        if(gauge_field_is_applied(hm%ep%gfield)) call gauge_field_propagate(hm%ep%gfield, gauge_force, CNST(0.25)*dt)
+        
         ALLOCATE(zpsi(1:gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
         do ik = 1, st%d%nik
           do ist = st%st_start, st%st_end
             do idim = 1, st%d%dim
               call lalg_copy(gr%mesh%np, st%zpsi(:, idim, ist, ik), zpsi(:, idim))
             end do
-            call exponential_apply(tr%te, gr, hm, zpsi, ist, ik, dt/M_TWO, t - dt)
+            call exponential_apply(tr%te, gr, hm, zpsi, ist, ik, dt/M_TWO, t - CNST(0.75)*dt)
             forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) tr%prev_psi(ip, idim, ist, ik) = aimag(zpsi(ip, idim))
           end do
         end do
         deallocate(zpsi)
         tr%first = .false.
+        
+        !finish to propagate the hamiltonian to t - dt/2
+        
+        if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
+          call interpolate( (/t, t-dt, t-2*dt/), tr%v_old(:, :, 0:2), t - CNST(0.5)*dt, hm%vhxc(:, :))
+        end if
+        
+        if(present(ions)) then
+          call ion_dynamics_propagate(ions, gr%sb, geo, t - CNST(0.5)*ionic_dt, CNST(0.25)*ionic_dt)
+          call hamiltonian_epot_generate(hm, gr, geo, st, time = t - CNST(0.5)/M_FOUR)
+        else
+          call hamiltonian_update_potential(hm, gr%mesh)
+        end if
+        
+        if(gauge_field_is_applied(hm%ep%gfield)) call gauge_field_propagate(hm%ep%gfield, gauge_force, CNST(0.25)*dt)
+        
+      else
+        
+        !directly propagate the hamiltonian to t - dt/2
+        
+        if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
+          call interpolate( (/t, t-dt, t-2*dt/), tr%v_old(:, :, 0:2), t-dt/M_TWO, hm%vhxc(:, :))
+          call hamiltonian_update_potential(hm, gr%mesh)
+        end if
+        
+        if(present(ions)) then
+          call ion_dynamics_propagate(ions, gr%sb, geo, t - ionic_dt/M_TWO, M_HALF*ionic_dt)
+          call hamiltonian_epot_generate(hm, gr, geo, st, time = t - ionic_dt/M_TWO)
+        end if
+        
+        if(gauge_field_is_applied(hm%ep%gfield)) call gauge_field_propagate(hm%ep%gfield, gauge_force, M_HALF*dt)
+        
       end if
-      
-      !propagate the hamiltonian to t - dt/2
-
-      if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
-        call interpolate( (/t, t-dt, t-2*dt/), tr%v_old(:, :, 0:2), t-dt/M_TWO, hm%vhxc(:, :))
-        call hamiltonian_update_potential(hm, gr%mesh)
-      end if
-
-      if(present(ions)) then
-        call ion_dynamics_propagate(ions, gr%sb, geo, t - ionic_dt/M_TWO, M_HALF*ionic_dt)
-        call hamiltonian_epot_generate(hm, gr, geo, st, time = t - ionic_dt/M_TWO)
-      end if
-      
-      if(gauge_field_is_applied(hm%ep%gfield)) call gauge_field_propagate(hm%ep%gfield, gauge_force, M_HALF*dt)
 
       ! propagate the real part
       do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
           
-          forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) dpsi(ip, idim) = tr%prev_psi(ip, idim, ist, ik)
+          do idim = 1, st%d%dim
+            call lalg_copy(gr%mesh%np, tr%prev_psi(:, idim, ist, ik), dpsi(:, idim))
+          end do
+
           call dhamiltonian_apply(hm, gr, dpsi, hpsi, ist, ik, t - dt/2)
+
           forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) 
-            st%zpsi(ip, idim, ist, ik) = real(st%zpsi(ip, idim, ist, ik)) + dt*hpsi(ip, idim)
+            st%zpsi(ip, idim, ist, ik) = real(st%zpsi(ip, idim, ist, ik)) + cmplx(dt*hpsi(ip, idim), &
+                 ! the imaginary part is calculated as the average
+                 ! this is the first half
+                 CNST(0.5)*tr%prev_psi(ip, idim, ist, ik), REAL_PRECISION)
           end forall
 
         end do
@@ -1010,21 +1048,15 @@ contains
       do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
 
-          ! the imaginary part is calculated as the average
-          ! this is the first half
-          forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) 
-            st%zpsi(ip, idim, ist, ik) = real(st%zpsi(ip, idim, ist, ik)) + CNST(0.5)*M_ZI*tr%prev_psi(ip, idim, ist, ik)
-          end forall
-
           forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) dpsi(ip, idim) = real(st%zpsi(ip, idim, ist, ik))
+
           call dhamiltonian_apply(hm, gr, dpsi, hpsi, ist, ik, t)
-          forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) 
+
+          forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np)
             tr%prev_psi(ip, idim, ist, ik) = tr%prev_psi(ip, idim, ist, ik) - dt*hpsi(ip, idim)
-          end forall
-          
-          ! this is the second half
-          forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) 
-            st%zpsi(ip, idim, ist, ik) = st%zpsi(ip, idim, ist, ik) + CNST(0.5)*M_ZI*tr%prev_psi(ip, idim, ist, ik)
+            ! this is the second half of the average
+            st%zpsi(ip, idim, ist, ik) = st%zpsi(ip, idim, ist, ik) + &
+                 cmplx(M_ZERO, CNST(0.5)*tr%prev_psi(ip, idim, ist, ik), REAL_PRECISION)
           end forall
 
         end do
