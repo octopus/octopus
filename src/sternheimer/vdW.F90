@@ -202,7 +202,7 @@ contains
       end if
 
       ! we always need complex response
-      call read_wfs(sys%st, sys%gr, sys%geo, .true.)
+      call restart_look_and_read(sys%st, sys%gr, sys%geo, is_complex = .true.)
 
       ! setup Hamiltonian
       message(1) = 'Info: Setting up Hamiltonian for linear response'

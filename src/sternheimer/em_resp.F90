@@ -57,8 +57,7 @@ module em_resp_m
   private
 
   public :: &
-       em_resp_run,             &
-       read_wfs,               &
+       em_resp_run,            &
        out_polarizability,     &
        out_hyperpolarizability
 
@@ -127,7 +126,7 @@ contains
 
     ALLOCATE(em_vars%lr(1:NDIM, 1:em_vars%nsigma, 1:em_vars%nfactor), NDIM*em_vars%nsigma*em_vars%nfactor)
 
-    call read_wfs(sys%st, sys%gr, sys%geo, complex_response)
+    call restart_look_and_read(sys%st, sys%gr, sys%geo, is_complex = complex_response)
 
     em_vars%lr(1:NDIM, 1:em_vars%nsigma, 1:em_vars%nfactor)%nst = sys%st%nst
 
@@ -497,57 +496,6 @@ contains
 
   end subroutine em_resp_run
 
-
-  ! ---------------------------------------------------------
-  subroutine read_wfs(st, gr, geo, complex_wfs)
-    type(states_t),   intent(inout) :: st
-    type(grid_t),     intent(in)    :: gr
-    type(geometry_t), intent(in)    :: geo
-    logical,          intent(in)    :: complex_wfs
-
-    integer :: kpoints, nst, ierr, dim
-      
-    call push_sub('em_resp.read_wfs')
-
-    !check how many wfs we have
-    call states_look(trim(restart_dir)//'gs', gr%mesh%mpi_grp, kpoints, dim, nst, ierr)
-
-    if(ierr.ne.0) then
-      message(1) = 'Could not properly read wave-functions from "'//trim(restart_dir)//'gs".'
-      call write_fatal(1)
-    end if
-
-    st%nst    = nst
-    st%st_end = nst
-    deallocate(st%eigenval, st%occ)
-
-    if ( complex_wfs ) then 
-      call states_allocate_wfns(st, gr%mesh, M_CMPLX)
-    else 
-      call states_allocate_wfns(st, gr%mesh, M_REAL)
-    end if
-
-    ALLOCATE(st%eigenval(st%nst, st%d%nik), st%nst*st%d%nik)
-    ALLOCATE(st%occ(st%nst, st%d%nik), st%nst*st%d%nik)
-
-    if(st%d%ispin == SPINORS) then
-      ALLOCATE(st%spin(3, st%nst, st%d%nik), st%nst*st%d%nik)
-      st%spin = M_ZERO
-    end if
-    st%eigenval = huge(REAL_PRECISION)
-    st%occ      = M_ZERO
-
-    ! load wave-functions
-    call restart_read(trim(restart_dir)//'gs', st, gr, geo, ierr)  
-    if(ierr.ne.0) then
-      message(1) = "Could not read KS orbitals from '"//trim(restart_dir)//"gs'"
-      message(2) = "Please run a calculation of the ground state first!"
-      call write_fatal(2)
-    end if
-
-    call pop_sub()
-
-  end subroutine read_wfs
 
   ! ---------------------------------------------------------
   subroutine em_resp_output(st, gr, hm, geo, outp, em_vars, iomega)

@@ -188,7 +188,7 @@ module opt_control_target_m
       !% WARNING: Experimental
       !%End
       call loct_parse_int(datasets_check('OCTExcludeStates'), 1, target%excluded_states)
-      call restart_look_and_read("tmp", target%st, gr, geo, ierr)
+      call restart_look_and_read(target%st, gr, geo, specify_dir = "tmp")
 
     case(oct_tg_gstransformation)  
 
@@ -213,7 +213,7 @@ module opt_control_target_m
         if(loct_parse_block(datasets_check('OCTTargetTransformStates'), blk) == 0) then
           call states_copy(tmp_st, target%st)
           deallocate(tmp_st%zpsi)
-          call restart_look_and_read("tmp", tmp_st, gr, geo, ierr)
+          call restart_look_and_read(tmp_st, gr, geo, specify_dir = "tmp")
           ALLOCATE(rotation_matrix(target%st%nst, tmp_st%nst), target%st%nst*tmp_st%nst)
           rotation_matrix = M_z0
           do ist = 1, target%st%nst
@@ -282,7 +282,7 @@ module opt_control_target_m
           if(loct_parse_block(datasets_check('OCTTargetDensityFromState'), blk) == 0) then
             tmp_st = target%st
             deallocate(tmp_st%zpsi)
-            call restart_look_and_read("tmp", tmp_st, gr, geo, ierr)
+            call restart_look_and_read(tmp_st, gr, geo, specify_dir = "tmp")
             ALLOCATE(rotation_matrix(target%st%nst, tmp_st%nst), target%st%nst*tmp_st%nst)
             rotation_matrix = M_z0
             do ist = 1, target%st%nst
@@ -947,3 +947,8 @@ module opt_control_target_m
 
 
 end module opt_control_target_m
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

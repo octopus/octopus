@@ -53,8 +53,7 @@ module phonons_lr_m
   private
   public :: &
        phonons_lr_run,    &
-       phn_nm_wfs_tag,    &
-       read_wfs
+       phn_nm_wfs_tag
   
 contains
 
@@ -90,7 +89,7 @@ contains
     call push_sub('phonons_lr.phonons_lr_run')
 
     call parse_input()
-    call read_wfs(st, gr, geo, .false.)
+    call restart_look_and_read(st, gr, geo, is_complex = .false.)
 
     message(1) = 'Info: Setting up Hamiltonian for linear response'
     call write_info(1)
@@ -310,57 +309,6 @@ contains
 
   end subroutine phonons_lr_run
 
-
-  ! ---------------------------------------------------------
-  subroutine read_wfs(st, gr, geo, complex_wfs)
-    type(states_t),   intent(inout) :: st
-    type(grid_t),     intent(in)    :: gr
-    type(geometry_t), intent(in)    :: geo
-    logical,          intent(in)    :: complex_wfs
-
-    integer :: kpoints, nst, ierr, dim
-      
-    !check how many wfs we have
-
-    call push_sub('em_resp.read_wfs')
-
-    call states_look(trim(restart_dir)//'gs', gr%mesh%mpi_grp, kpoints, dim, nst, ierr)
-    if(ierr.ne.0) then
-      message(1) = 'Could not properly read wave-functions from "'//trim(restart_dir)//'gs".'
-      call write_fatal(1)
-    end if
-
-    st%nst    = nst
-    st%st_end = nst
-    deallocate(st%eigenval, st%occ)
-
-    if ( complex_wfs ) then 
-      call states_allocate_wfns(st, gr%mesh, M_CMPLX)
-    else 
-      call states_allocate_wfns(st, gr%mesh, M_REAL)
-    end if
-
-    ALLOCATE(st%eigenval(st%nst, st%d%nik), st%nst*st%d%nik)
-    ALLOCATE(st%occ(st%nst, st%d%nik), st%nst*st%d%nik)
-
-    if(st%d%ispin == SPINORS) then
-      ALLOCATE(st%spin(3, st%nst, st%d%nik), st%nst*st%d%nik*3)
-      st%spin = M_ZERO
-    end if
-    st%eigenval = huge(REAL_PRECISION)
-    st%occ      = M_ZERO
-
-    ! load wave-functions
-    call restart_read(trim(restart_dir)//'gs', st, gr, geo, ierr)
-    if(ierr.ne.0) then
-      message(1) = "Could not read KS orbitals from '"//trim(restart_dir)//"gs'"
-      message(2) = "Please run a calculation of the ground state first!"
-      call write_fatal(2)
-    end if
-
-    call pop_sub()
-
-  end subroutine read_wfs
 
   character(len=100) function phn_rho_tag(iatom, dir) result(str)
     integer, intent(in) :: iatom, dir

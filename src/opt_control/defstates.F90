@@ -88,7 +88,7 @@
         if(loct_parse_block(datasets_check('OCTInitialTransformStates'), blk) == 0) then
           tmp_st = initial_state
           deallocate(tmp_st%zpsi)
-          call restart_look_and_read("tmp", tmp_st, gr, geo, ierr)
+          call restart_look_and_read(tmp_st, gr, geo, specify_dir = "tmp")
           ALLOCATE(rotation_matrix(initial_state%nst, tmp_st%nst), initial_state%nst*tmp_st%nst)
           rotation_matrix = M_z0
           do ist = 1, initial_state%nst

@@ -120,7 +120,7 @@ contains
 
     call parse_input()
 
-    call read_wfs(sys%st, sys%gr, sys%geo, .true.)
+    call restart_look_and_read(sys%st, sys%gr, sys%geo, is_complex = .true.)
     ! even if wfs are real, the response must be allowed to be complex
 
     kdotp_vars%lr(1:NDIM, 1:1)%nst = sys%st%nst

@@ -19,6 +19,7 @@
 
 #include "global.h"
 #define RESTART_DIR "raman/"
+#define EM_RESTART_DIR "em_resp/"
 
 module raman_m
   use datasets_m
@@ -72,8 +73,9 @@ contains
     !CONSTRUCT
     call push_sub('raman.raman_run')
 
-    call read_wfs(sys%st, sys%gr, sys%geo, .false.)
-    
+    call restart_look_and_read(sys%st, sys%gr, sys%geo, is_complex = .false.)
+    ! why do the wavefunctions have to be real?
+
     ! read electric perturbation
     sigma = 1
     do idir = 1, sys%gr%sb%dim
@@ -81,7 +83,7 @@ contains
       call lr_allocate(psi_elec(idir), sys%st, sys%gr%mesh)
 
       str_tmp =  em_wfs_tag(idir, 1)
-      write(dirname,'(3a, i1)') "em_resp/", trim(str_tmp), '_', sigma
+      write(dirname,'(3a, i1)') EM_RESTART_DIR, trim(str_tmp), '_', sigma
       call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, ierr, lr = psi_elec(idir))
       
       if(ierr.ne.0) then

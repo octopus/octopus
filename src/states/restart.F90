@@ -162,28 +162,45 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine restart_look_and_read(dir, st, gr, geo, ierr)
-    character(len=*),  intent(in)  :: dir
-    type(states_t), intent(inout)  :: st
-    type(grid_t),      intent(in)  :: gr
-    type(geometry_t),  intent(in)  :: geo
-    integer,           intent(out) :: ierr
+  subroutine restart_look_and_read(st, gr, geo, is_complex, specify_dir)
+    type(states_t),             intent(inout) :: st
+    type(grid_t),               intent(in)    :: gr
+    type(geometry_t),           intent(in)    :: geo
+    logical, optional,          intent(in)    :: is_complex
+    character(len=*), optional, intent(in)    :: specify_dir
 
-    integer :: kpoints, dim, nst, j
+    integer :: kpoints, dim, nst, ierr
+    character(len=80) dir
 
     call push_sub('restart.restart_look_and_read')
 
-    call states_look(trim(restart_dir)//'gs', gr%mesh%mpi_grp, kpoints, dim, nst, j)
-    if(j.ne.0) then
-      ierr = j
-      call pop_sub(); return
+    if(present(specify_dir)) then
+       dir = specify_dir
+    else
+       dir = restart_dir
+    endif
+
+    !check how many wfs we have
+    call states_look(trim(dir)//'gs', gr%mesh%mpi_grp, kpoints, dim, nst, ierr)
+    if(ierr.ne.0) then
+      message(1) = 'Could not properly read wave-functions from "'//trim(dir)//'gs".'
+      call write_fatal(1)
     end if
 
     st%nst    = nst
     st%st_end = nst
     deallocate(st%eigenval, st%occ)
 
-    call states_allocate_wfns(st, gr%mesh)
+    if (present(is_complex)) then
+      if ( is_complex ) then 
+        call states_allocate_wfns(st, gr%mesh, M_CMPLX)
+      else 
+        call states_allocate_wfns(st, gr%mesh, M_REAL)
+      end if
+    else
+      ! allow states_allocate_wfns to decide for itself whether complex or real needed
+      call states_allocate_wfns(st, gr%mesh)
+    endif
 
     ALLOCATE(st%eigenval(st%nst, st%d%nik), st%nst*st%d%nik)
     ALLOCATE(st%occ(st%nst, st%d%nik), st%nst*st%d%nik)
@@ -195,7 +212,13 @@ contains
     st%eigenval = huge(REAL_PRECISION)
     st%occ      = M_ZERO
 
-    call restart_read(trim(restart_dir)//'gs', st, gr, geo, ierr)
+    ! load wave-functions
+    call restart_read(trim(dir)//'gs', st, gr, geo, ierr)
+    if(ierr.ne.0) then
+      message(1) = "Could not read KS orbitals from '"//trim(dir)//"gs'"
+      message(2) = "Please run a calculation of the ground state first!"
+      call write_fatal(2)
+    end if
 
     call pop_sub()
   end subroutine restart_look_and_read

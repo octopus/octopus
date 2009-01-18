@@ -94,14 +94,10 @@ contains
       call write_fatal(1)
     end if
 
-    message(1) = 'Info: Starting linear response calculation.'
+    message(1) = 'Info: Starting linear-response calculation.'
     call write_info(1)
 
-    call restart_look_and_read(trim(restart_dir)//'gs', sys%st, sys%gr, sys%geo, ierr)
-    if(ierr.ne.0) then
-      message(1) = 'Could not properly read wave-functions from "'//trim(restart_dir)//'gs".'
-      call write_fatal(1)
-    end if
+    call restart_look_and_read(sys%st, sys%gr, sys%geo, specify_dir = trim(restart_dir)//'gs')
 
     nk = 1
     if (sys%st%d%ispin == SPIN_POLARIZED) nk = 2

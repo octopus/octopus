@@ -460,7 +460,7 @@ contains
           if(loct_parse_block(datasets_check('TransformStates'), blk) == 0) then
             call states_copy(stin, st)
             deallocate(stin%zpsi)
-            call restart_look_and_read(trim(restart_dir)//'gs', stin, gr, sys%geo, ierr)
+            call restart_look_and_read(stin, gr, sys%geo, specify_dir = trim(restart_dir)//'gs')
             ALLOCATE(rotation_matrix(st%nst, stin%nst), st%nst*stin%nst)
             rotation_matrix = M_z0
             do ist = 1, st%nst
