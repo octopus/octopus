@@ -118,7 +118,7 @@ contains
     !%Option restart_binary 3
     !% Octopus Binary Format, the new and more flexible binary format
     !% of Octopus. It is faster and produces smaller files than NetCDF
-    !% and it is platform independent.
+    !% and it is platform-independent.
     !%End
 
     default = RESTART_BINARY
@@ -145,11 +145,11 @@ contains
     !%Default ''
     !%Section Execution::IO
     !%Description
-    !% When Octopus reads restart files, e. g. when running a time propagation
-    !% after a ground state calculcation, these files will be read from
+    !% When Octopus reads restart files, e. g. when running a time-propagation
+    !% after a ground-state calculation, these files will be read from
     !% <tt>&lt;RestartDir&gt/</tt>. Usually, <tt>RestartDir</tt> is
-    !% <tt>TmpDir</tt> but in a transport calculation, e. g., the output of
-    !% a peridioc dataset is required to calculate the extended ground state.
+    !% <tt>TmpDir</tt> but in a transport calculation, the output of
+    !% a periodic dataset is required to calculate the extended ground state.
     !%End
     call loct_parse_string(datasets_check('RestartDir'), tmpdir, restart_dir)
     ! Append "/" if necessary.

@@ -97,7 +97,7 @@ contains
     message(1) = 'Info: Starting linear-response calculation.'
     call write_info(1)
 
-    call restart_look_and_read(sys%st, sys%gr, sys%geo, specify_dir = trim(restart_dir)//'gs')
+    call restart_look_and_read(sys%st, sys%gr, sys%geo)
 
     nk = 1
     if (sys%st%d%ispin == SPIN_POLARIZED) nk = 2
