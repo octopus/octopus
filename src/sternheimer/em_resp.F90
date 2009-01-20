@@ -141,7 +141,7 @@ contains
        ! otherwise, use default, which is hartree + fxc
     endif
 
-    call io_mkdir(trim(tmpdir)//RESTART_DIR)
+    call io_mkdir(trim(tmpdir)//EM_RESP_RESTART_DIR)
     call info()
 
     message(1) = "Info: Calculating polarizabilities."
@@ -209,7 +209,7 @@ contains
                if(iomega == 1) then
                   do sigma = 1, em_vars%nsigma
                      str_tmp =  em_wfs_tag(dir, ifactor)
-                     write(dirname,'(3a, i1)') RESTART_DIR, trim(str_tmp), '_', sigma
+                     write(dirname,'(3a, i1)') EM_RESP_RESTART_DIR, trim(str_tmp), '_', sigma
                      call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, &
                           ierr, lr=em_vars%lr(dir, sigma, ifactor))
 
@@ -223,11 +223,11 @@ contains
               !try to load restart density
               if (states_are_complex(sys%st)) then 
                 call zrestart_read_lr_rho(em_vars%lr(dir, 1, ifactor), sys%gr, sys%st%d%nspin, &
-                     RESTART_DIR, &
+                     EM_RESP_RESTART_DIR, &
                      em_rho_tag(em_vars%freq_factor(ifactor)*em_vars%omega(iomega), dir), ierr)
               else 
                 call drestart_read_lr_rho(em_vars%lr(dir, 1, ifactor), sys%gr, sys%st%d%nspin, &
-                     RESTART_DIR, &
+                     EM_RESP_RESTART_DIR, &
                      em_rho_tag(em_vars%freq_factor(ifactor)*em_vars%omega(iomega), dir), ierr)
               end if
 
@@ -235,16 +235,16 @@ contains
               if(ierr /= 0) then 
                 
                 closest_omega = em_vars%freq_factor(ifactor)*em_vars%omega(iomega)
-                call oct_search_file_lr(closest_omega, dir, ierr, trim(tmpdir)//RESTART_DIR)
+                call oct_search_file_lr(closest_omega, dir, ierr, trim(tmpdir)//EM_RESP_RESTART_DIR)
                 
                 !attempt to read 
                 if(ierr == 0 ) then 
                   if (states_are_complex(sys%st)) then 
                     call zrestart_read_lr_rho(em_vars%lr(dir, 1, ifactor), sys%gr, sys%st%d%nspin, &
-                         RESTART_DIR, em_rho_tag(closest_omega, dir), ierr)
+                         EM_RESP_RESTART_DIR, em_rho_tag(closest_omega, dir), ierr)
                   else 
                     call drestart_read_lr_rho(em_vars%lr(dir, 1, ifactor), sys%gr, sys%st%d%nspin, &
-                         RESTART_DIR, em_rho_tag(closest_omega, dir), ierr)
+                         EM_RESP_RESTART_DIR, em_rho_tag(closest_omega, dir), ierr)
                   end if
                 end if
                 
@@ -264,13 +264,13 @@ contains
             if (states_are_complex(sys%st)) then 
               call zsternheimer_solve(sh, sys, hm, em_vars%lr(dir, :, ifactor), em_vars%nsigma, &
                 em_vars%freq_factor(ifactor)*em_vars%omega(iomega) + M_zI * em_vars%eta, &
-                em_vars%perturbation, RESTART_DIR, &
+                em_vars%perturbation, EM_RESP_RESTART_DIR, &
                 em_rho_tag(em_vars%freq_factor(ifactor)*em_vars%omega(iomega), dir), &
                 em_wfs_tag(dir, ifactor), have_restart_rho=(ierr==0))
             else
               call dsternheimer_solve(sh, sys, hm, em_vars%lr(dir, :, ifactor), em_vars%nsigma, &
                 em_vars%freq_factor(ifactor)*em_vars%omega(iomega), &
-                em_vars%perturbation, RESTART_DIR, &
+                em_vars%perturbation, EM_RESP_RESTART_DIR, &
                 em_rho_tag(em_vars%freq_factor(ifactor)*em_vars%omega(iomega), dir), &
                 em_wfs_tag(dir, ifactor), have_restart_rho=(ierr==0))
             end if
