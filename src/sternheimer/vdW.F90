@@ -18,7 +18,7 @@
 !! $Id: em_resp.F90 2647 2007-01-09 18:02:46Z lorenzen $
 
 #include "global.h"
-#define RESTART_DIR "pol_lr/"
+! defines VDW_RESTART_DIR
 
 module vdw_m
   use datasets_m
@@ -215,7 +215,7 @@ contains
 
         ! load wave-functions
         if(.not.fromScratch) then
-          write(dirname,'(a,i1,a)') RESTART_DIR//"wfs_", dir, "_1_1"
+          write(dirname,'(a,i1,a)') VDW_RESTART_DIR//"wfs_", dir, "_1_1"
           call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, &
             ierr, lr=lr(dir,1))
           
@@ -226,7 +226,7 @@ contains
         end if
       end do
 
-      call io_mkdir(trim(tmpdir)//RESTART_DIR)
+      call io_mkdir(trim(tmpdir)//VDW_RESTART_DIR)
       call io_mkdir('linear/')
     end subroutine init
 
@@ -246,7 +246,7 @@ contains
 
         call pert_setup_dir(perturbation, dir)
         call zsternheimer_solve(sh, sys, hm, lr(dir, :), 1,  omega, perturbation, &
-             RESTART_DIR, em_rho_tag(real(omega),dir), em_wfs_tag(dir,1))
+             VDW_RESTART_DIR, em_rho_tag(real(omega),dir), em_wfs_tag(dir,1))
       end do
 
       call zlr_calc_polarizability_finite(sys, hm, lr(:,:), 1, perturbation, alpha(:,:), ndir)

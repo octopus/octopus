@@ -18,9 +18,8 @@
 !! $Id: kdotp.F90 4145 2008-05-02 23:29:41Z xavier $
 
 #include "global.h"
-#define RESTART_DIR "kdotp/"
+! defines KDOTP_RESTART_DIR
 #define OUTPUT_DIR "kdotp/"
-#define EM_RESTART_DIR "em_resp/"
 
 module kdotp_m
   use datasets_m
@@ -164,7 +163,7 @@ contains
       ! load wave-functions
       if(.not.fromScratch) then
          str_tmp =  kdotp_wfs_tag(idir)
-         write(dirname,'(3a)') RESTART_DIR, trim(str_tmp), '_1'
+         write(dirname,'(3a)') KDOTP_RESTART_DIR, trim(str_tmp), '_1'
          ! 1 is the sigma index which is used in em_resp
          call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, &
                ierr, lr=kdotp_vars%lr(idir, 1))
@@ -178,7 +177,7 @@ contains
 
     end do
 
-    call io_mkdir(trim(tmpdir)//RESTART_DIR)
+    call io_mkdir(trim(tmpdir)//KDOTP_RESTART_DIR)
     call io_mkdir(OUTPUT_DIR)
     call info()
     message(1) = "Info: Calculating kdotp linear response of ground-state wavefunctions."
@@ -191,7 +190,7 @@ contains
       call write_info(1)
       call pert_setup_dir(kdotp_vars%perturbation, idir)
       call zsternheimer_solve(sh, sys, hm, kdotp_vars%lr(idir,:), 1, &
-        M_zI * kdotp_vars%eta, kdotp_vars%perturbation, RESTART_DIR, &
+        M_zI * kdotp_vars%eta, kdotp_vars%perturbation, KDOTP_RESTART_DIR, &
         kdotp_rho_tag(idir), kdotp_wfs_tag(idir), have_restart_rho=(ierr==0))
       kdotp_vars%ok = kdotp_vars%ok .and. sternheimer_has_converged(sh)         
     end do ! idir
@@ -218,7 +217,7 @@ contains
             call lr_allocate(em_lr(idir, isigma, ifactor), sys%st, sys%gr%mesh)
 
             str_tmp = em_wfs_tag(idir, ifactor)
-            write(dirname,'(3a, i1)') EM_RESTART_DIR, trim(str_tmp), '_', isigma
+            write(dirname,'(3a, i1)') EM_RESP_RESTART_DIR, trim(str_tmp), '_', isigma
             call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, &
               ierr, lr=em_lr(idir, isigma, ifactor))
          

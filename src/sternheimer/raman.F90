@@ -18,8 +18,6 @@
 !! $Id: em_resp.F90 2686 2007-02-03 22:10:51Z xavier $
 
 #include "global.h"
-#define RESTART_DIR "raman/"
-#define EM_RESTART_DIR "em_resp/"
 
 module raman_m
   use datasets_m
@@ -82,7 +80,7 @@ contains
       call lr_allocate(psi_elec(idir), sys%st, sys%gr%mesh)
 
       str_tmp =  em_wfs_tag(idir, 1)
-      write(dirname,'(3a, i1)') EM_RESTART_DIR, trim(str_tmp), '_', sigma
+      write(dirname,'(3a, i1)') EM_RESP_RESTART_DIR, trim(str_tmp), '_', sigma
       call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, ierr, lr = psi_elec(idir))
       
       if(ierr.ne.0) then
@@ -109,7 +107,7 @@ contains
     ! iterate over normal modes 
     do inm = 1, nnm
       !read vibronic perturbation
-      call restart_read(trim(restart_dir)//'vib_modes/'//trim(phn_nm_wfs_tag(inm))//'_1', &
+      call restart_read(trim(restart_dir)//PHONONS_RESTART_DIR//trim(phn_nm_wfs_tag(inm))//'_1', &
            sys%st, sys%gr, sys%geo, ierr, lr = psi_vib(1))
       if(ierr.ne.0) then
         message(1) = "Could not load vibrational response wave-functions"

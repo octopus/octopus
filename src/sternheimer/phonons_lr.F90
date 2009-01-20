@@ -18,7 +18,7 @@
 !! $Id: em_resp.F90 2686 2007-02-03 22:10:51Z xavier $
 
 #include "global.h"
-#define RESTART_DIR "vib_modes/"
+! defines PHONONS_RESTART_DIR
 
 module phonons_lr_m
   use datasets_m
@@ -118,7 +118,7 @@ contains
       if (.not. fromscratch) then
         message(1) = "Loading restart wave functions for linear response."
         call write_info(1)
-        call restart_read(trim(restart_dir)//'vib_modes/'//trim(phn_wfs_tag(iatom, idir))//'_1',&
+        call restart_read(trim(restart_dir)//PHONONS_RESTART_DIR//trim(phn_wfs_tag(iatom, idir))//'_1',&
           st, gr, geo, ierr, lr = lr(1))
       end if
       
@@ -126,7 +126,7 @@ contains
       call pert_setup_dir(ionic_pert, idir)
       
       call dsternheimer_solve(sh, sys, hm, lr, 1, M_ZERO, ionic_pert, &
-        RESTART_DIR, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir))
+        PHONONS_RESTART_DIR, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir))
       
       do jmat = 1, vib%num_modes
         jatom = vibrations_get_atom(vib, jmat)
@@ -281,7 +281,7 @@ contains
 
             imat = vibrations_get_index(vib, iatom, idir)
 
-            call restart_read(trim(restart_dir)//'vib_modes/'//trim(phn_wfs_tag(iatom, idir))//'_1',&
+            call restart_read(trim(restart_dir)//PHONONS_RESTART_DIR//trim(phn_wfs_tag(iatom, idir))//'_1',&
                  st, gr, geo, ierr, lr = lrtmp)
             
             do ik = 1, st%d%nik
@@ -298,7 +298,7 @@ contains
           end do
         end do
         
-        call restart_write(io_workpath(trim(tmpdir)//'vib_modes/'//trim(phn_nm_wfs_tag(inm))//'_1'), &
+        call restart_write(io_workpath(trim(tmpdir)//PHONONS_RESTART_DIR//trim(phn_nm_wfs_tag(inm))//'_1'), &
           st, gr, ierr, lr = lr(1))
         
       end do

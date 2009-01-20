@@ -18,10 +18,8 @@
 !! $Id$
 
 #include "global.h"
-#define RESTART_DIR "em_resp/"
+! defines EM_RESP_RESTART_DIR
 #define OUTPUT_DIR "linear/"
-#define KDOTP_RESTART_DIR "kdotp/"
-! there must be a way to make sure this is identical to what is specified in kdotp.F90
 
 module em_resp_m
   use datasets_m

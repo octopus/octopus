@@ -95,3 +95,8 @@
 
 #define M_ONE CNST(1.0)
 #define M_ZERO CNST(0.0)
+
+#define EM_RESP_RESTART_DIR "em_resp/"
+#define KDOTP_RESTART_DIR "kdotp/"
+#define PHONONS_RESTART_DIR "vib_modes/"
+#define VDW_RESTART_DIR "pol_lr/"
