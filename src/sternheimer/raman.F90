@@ -73,8 +73,7 @@ contains
     !CONSTRUCT
     call push_sub('raman.raman_run')
 
-    call restart_look_and_read(sys%st, sys%gr, sys%geo, is_complex = .false.)
-    ! why do the wavefunctions have to be real?
+    call restart_look_and_read(sys%st, sys%gr, sys%geo)
 
     ! read electric perturbation
     sigma = 1

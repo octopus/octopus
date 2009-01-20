@@ -89,7 +89,7 @@ contains
     call push_sub('phonons_lr.phonons_lr_run')
 
     call parse_input()
-    call restart_look_and_read(st, gr, geo, is_complex = .false.)
+    call restart_look_and_read(st, gr, geo)
 
     message(1) = 'Info: Setting up Hamiltonian for linear response'
     call write_info(1)
