@@ -97,7 +97,7 @@ contains
     type(grid_t),   pointer :: gr
     type(em_resp_t)         :: em_vars
     type(sternheimer_t)     :: sh
-    type(lr_t)              :: kdotp_lr(NDIM, 1)
+    type(lr_t)              :: kdotp_lr(MAX_DIM, 1)
 
     integer :: sigma, ndim, i, dir, ierr, iomega, ifactor
     character(len=100) :: dirname, str_tmp
@@ -190,13 +190,7 @@ contains
 
           ierr = 0
 
-          str_tmp = freq2str(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)/units_out%energy%factor)
-          write(message(1), '(a,i1,2a)') 'Info: Calculating response for direction ', dir, &
-            ' and frequency ' , trim(str_tmp)
-          call write_info(1)
-
           have_to_calculate = .true.
-          
           ! if this frequency is zero and this is not the first
           ! iteration we do not have to do anything
           if( iomega > 1 .and. em_vars%freq_factor(ifactor) == M_ZERO) have_to_calculate = .false. 
@@ -229,6 +223,11 @@ contains
           end if
 
           if(have_to_calculate) then 
+
+            str_tmp = freq2str(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)/units_out%energy%factor)
+            write(message(1), '(a,i1,2a)') 'Info: Calculating response for direction ', dir, &
+              ' and frequency ' , trim(str_tmp)
+            call write_info(1)
 
             if(.not. fromscratch) then 
 
@@ -787,7 +786,6 @@ contains
     FLOAT :: cross(MAX_DIM, MAX_DIM), crossp(MAX_DIM, MAX_DIM)
     FLOAT :: average, anisotropy
     integer iunit
-    logical :: periodic_warn_
     
     call push_sub('em_resp.out_polarizability')
 
