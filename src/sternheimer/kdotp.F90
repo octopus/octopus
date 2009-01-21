@@ -23,8 +23,6 @@
 
 module kdotp_m
   use datasets_m
-  use em_resp_m
-  use em_resp_calc_m
   use geometry_m
   use global_m
   use grid_m
@@ -92,16 +90,8 @@ contains
     type(sternheimer_t)     :: sh
     logical                 :: calc_eff_mass
 
-    type(lr_t), allocatable :: em_lr(:,:,:)
-    logical                 :: calc_pol
-    logical                 :: calc_hyperpol
-    integer                 :: em_nfactor
-    integer                 :: em_nsigma
-    CMPLX                   :: alpha(MAX_DIM, MAX_DIM, 3) ! the linear polarizability
-
     integer              :: idir, ierr, size, is, ist, ik
     character(len=100)   :: dirname, str_tmp
-    integer              :: isigma, ifactor
     logical, allocatable :: orth_mask(:)
 
     call push_sub('kdotp.kdotp_lr_run')
@@ -205,62 +195,6 @@ contains
       call kdotp_output(sys%st, sys%gr, kdotp_vars)
     endif
 
-    ! calculate polarizability
-    if (calc_pol) then
-      ALLOCATE(em_lr(1:NDIM, 1:em_nsigma, 1:em_nfactor), NDIM * em_nsigma * em_nfactor)
-
-      ! load em_resp wavefunctions
-      do idir = 1, NDIM
-        do ifactor = 1, em_nfactor
-          do isigma = 1, em_nsigma
-            call lr_init(em_lr(idir, isigma, ifactor))
-            call lr_allocate(em_lr(idir, isigma, ifactor), sys%st, sys%gr%mesh)
-
-            str_tmp = em_wfs_tag(idir, ifactor)
-            write(dirname,'(3a, i1)') EM_RESP_RESTART_DIR, trim(str_tmp), '_', isigma
-            call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, &
-              ierr, lr=em_lr(idir, isigma, ifactor))
-         
-            if(ierr .ne. 0) then
-              message(1) = "Could not load electric response wave-functions from '"//trim(tmpdir)//dirname//"'"
-              call write_warning(1)
-            end if
-          enddo
-        enddo
-      enddo
-
-      message(1) = "Info: Calculating polarizabilities."
-      call write_info(1)
-
-      do ifactor = 1, em_nfactor
-        write(dirname, '(a, a)') 'linear_kdotp/'
-        call io_mkdir(trim(dirname))
-
-        call zcalc_polarizability_periodic(sys, em_lr(:, :, ifactor), kdotp_vars%lr(:, 1), em_nsigma, &
-          alpha(:, :, ifactor))
-!        omega = em_vars%freq_factor(ifactor)*em_vars%omega(iomega)
-        call out_polarizability(sys%st, sys%gr, alpha(:, :, ifactor), &
-          M_ZERO, .true., dirname, periodic_warn = .false.)
-        ! FIX ME: the frequency needs to be supplied here to calculate cross-section
-      enddo
-
-      if (calc_hyperpol) then
-         ! Now do kdotp perturbation of electric responses, if requested
-         message(1) = "Info: Calculating kdotp linear response of electric LR wavefunctions."
-         call write_info(1)
-      endif ! calc_hyperpol
-
-      do idir = 1, NDIM
-        do isigma = 1, em_nsigma
-          do ifactor = 1, em_nfactor
-            call lr_dealloc(em_lr(idir, isigma, ifactor))
-          end do
-        end do
-      end do
-
-      deallocate(em_lr)
-    endif ! calc_pol
-
     ! clean up some things
     do idir = 1, NDIM
       call lr_dealloc(kdotp_vars%lr(idir, 1))
@@ -335,19 +269,6 @@ contains
 
       call loct_parse_int(datasets_check('KdotP_Initialization'), 0, kdotp_vars%initialization)
 
-      !%Variable KdotP_CalculatePolarizabilities
-      !%Type logical
-      !%Default false
-      !%Section Linear Response::KdotP
-      !%Description
-      !% If true, reads wavefunctions from previous em_resp run,
-      !% calculates their kdotp perturbations, and uses them to
-      !% calculate polarizability and hyperpolarizability.
-      !%End      
-
-      call loct_parse_logical(datasets_check('KdotP_CalculatePolarizabilities'), &
-        .false., calc_pol)
-
       !%Variable KdotP_CalculateEffectiveMasses
       !%Type logical
       !%Default false
@@ -359,21 +280,6 @@ contains
 
       call loct_parse_logical(datasets_check('KdotP_CalculateEffectiveMasses'), &
         .false., calc_eff_mass)
-
-      if (loct_parse_block(datasets_check('EMHyperpol'), blk) == 0) then
-        calc_hyperpol = .true.
-        em_nfactor = 3
-        em_nsigma = 2
-      else
-        calc_hyperpol = .false.
-        em_nfactor = 1
-        ! FIX ME: need to actually read in the frequency here
-        if (loct_parse_block(datasets_check('EMFreqs'), blk) == 0) then
-          em_nsigma = 2
-        else ! omega = 0, static case
-          em_nsigma = 1  
-        endif
-      endif
 
       call pop_sub()
 

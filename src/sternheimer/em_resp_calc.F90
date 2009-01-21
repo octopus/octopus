@@ -50,6 +50,7 @@ module em_resp_calc_m
      zlr_calc_elf,                     &
      dlr_calc_polarizability_finite,   &
      zlr_calc_polarizability_finite,   &
+     zlr_calc_polarizability_periodic, &
      dlr_calc_susceptibility,          &
      zlr_calc_susceptibility,          &
      dlr_calc_beta,                    &
@@ -134,6 +135,61 @@ contains
     call pop_sub()
 
   end subroutine lr_calc_current
+
+
+! ---------------------------------------------------------
+subroutine zlr_calc_polarizability_periodic(sys, em_lr, kdotp_lr, nsigma, zpol, ndir)
+  type(system_t),         intent(inout) :: sys
+  type(lr_t),             intent(inout) :: em_lr(:,:)
+  type(lr_t),             intent(inout) :: kdotp_lr(:)
+  integer,                intent(in)    :: nsigma
+  CMPLX,                  intent(out)   :: zpol(1:MAX_DIM, 1:MAX_DIM)
+  integer, optional,      intent(in)    :: ndir
+
+  integer :: dir1, dir2, ndir_, ist, ik, idim
+  CMPLX :: term, subterm
+  type(mesh_t), pointer :: m
+  m => sys%gr%mesh
+
+  call push_sub('em_resp_calc.zlr_calc_polarizability_periodic')
+
+  ndir_ = sys%NDIM
+  if(present(ndir)) ndir_ = ndir
+
+  ! alpha_ij(w) = -e sum(m occ, k) [(<u_mk(0)|-id/dk_i)|u_mkj(1)(w)> + <u_mkj(1)(-w)|(-id/dk_i|u_mk(0)>)]
+  ! Smearing is not implemented here yet?
+
+  do dir1 = 1, ndir_
+    do dir2 = 1, sys%gr%sb%dim
+
+      zpol(dir1, dir2) = M_ZERO
+
+      do ik = 1, sys%st%d%nik
+        term = M_ZERO
+        do ist = 1, sys%st%nst
+          do idim = 1, sys%st%d%dim
+            subterm = M_zI * zmf_dotp(m, kdotp_lr(dir1)%zdl_psi(1:m%np, idim, ist, ik), &
+              em_lr(dir2, 1)%zdl_psi(1:m%np, idim, ist, ik))
+            term = term + subterm
+
+            if(nsigma == 1) then
+              term = term + conjg(subterm)
+            else
+              term = term - M_zI * zmf_dotp(m, em_lr(dir2, 2)%zdl_psi(1:m%np, idim, ist, ik), & 
+                kdotp_lr(dir1)%zdl_psi(1:m%np, idim, ist, ik))
+            end if
+          enddo
+        enddo
+
+        zpol(dir1, dir2) = zpol(dir1, dir2) + &
+          term * sys%st%d%kweights(ik) * sys%st%smear%el_per_state
+      enddo
+    enddo
+  enddo
+
+  call pop_sub()
+
+end subroutine zlr_calc_polarizability_periodic
 
 
 ! ---------------------------------------------------------

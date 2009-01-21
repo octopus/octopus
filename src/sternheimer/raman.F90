@@ -36,15 +36,14 @@ module raman_m
   use mesh_m
   use messages_m
   use h_sys_output_m
-  use phonons_lr_m
   use pert_m
+  use phonons_lr_m
   use restart_m
   use states_m
   use sternheimer_m
   use string_m
   use system_m
   use units_m
-  use phonons_lr_m
 
   implicit none
 

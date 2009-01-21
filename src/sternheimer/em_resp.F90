@@ -30,6 +30,8 @@ module em_resp_m
   use hamiltonian_m
   use io_m
   use io_function_m
+  use kdotp_m
+  use kdotp_calc_m
   use lalg_basic_m
   use loct_parser_m
   use linear_response_m
@@ -80,7 +82,8 @@ module em_resp_m
     CMPLX   :: chi_para(MAX_DIM, MAX_DIM, 3)     ! The paramagnetic part of the susceptibility
     CMPLX   :: chi_dia (MAX_DIM, MAX_DIM, 3)     ! The diamagnetic  part of the susceptibility
 
-    logical :: ok(1:3)
+    logical :: ok(1:3)                           ! whether calculation is converged
+    logical :: force_no_kdotp                    ! whether to use kdotp run for periodic system
   end type em_resp_t
 
 contains
@@ -94,10 +97,11 @@ contains
     type(grid_t),   pointer :: gr
     type(em_resp_t)         :: em_vars
     type(sternheimer_t)     :: sh
+    type(lr_t)              :: kdotp_lr(NDIM, 1)
 
     integer :: sigma, ndim, i, dir, ierr, iomega, ifactor
     character(len=100) :: dirname, str_tmp
-    logical :: complex_response, have_to_calculate
+    logical :: complex_response, have_to_calculate, use_kdotp
 
     FLOAT :: closest_omega
 
@@ -107,6 +111,32 @@ contains
     ndim = sys%gr%sb%dim
 
     call parse_input()
+
+    use_kdotp = simul_box_is_periodic(gr%sb) .and. .not. em_vars%force_no_kdotp
+
+    ! read kdotp wavefunctions if necessary
+    if (use_kdotp) then
+      message(1) = "Reading kdotp wavefunctions since system is periodic"
+      call write_info(1)
+
+      do dir = 1, NDIM
+        call lr_init(kdotp_lr(dir, 1))
+        call lr_allocate(kdotp_lr(dir, 1), sys%st, sys%gr%mesh)
+
+        ! load wave-functions
+        str_tmp = kdotp_wfs_tag(dir)
+        write(dirname,'(3a)') "kdotp/", trim(str_tmp), '_1'
+        ! 1 is the sigma index which is used in em_resp
+        call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, &
+          ierr, lr=kdotp_lr(dir, 1))
+
+        if(ierr.ne.0) then
+          message(1) = "Could not load kdotp wavefunctions from '"//trim(tmpdir)//dirname//"'"
+          message(2) = "Previous kdotp calculation required."
+          call write_fatal(2)
+        end if
+      end do
+    endif
 
     em_vars%nfactor = 1
     if(em_vars%calc_hyperpol) em_vars%nfactor = 3
@@ -143,9 +173,6 @@ contains
 
     call io_mkdir(trim(tmpdir)//EM_RESP_RESTART_DIR)
     call info()
-
-    message(1) = "Info: Calculating polarizabilities."
-    call write_info(1)
 
     call io_mkdir(OUTPUT_DIR)
 
@@ -282,18 +309,24 @@ contains
         end do ! dir
       end do ! ifactor
       
+      message(1) = "Info: Calculating polarizabilities."
+      call write_info(1)
+
       if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
         ! calculate polarizability
         do ifactor = 1, em_vars%nfactor
-          if(states_are_complex(sys%st)) then 
+          if(use_kdotp) then
+            call zlr_calc_polarizability_periodic(sys, em_vars%lr(:, :, ifactor), kdotp_lr(:, 1), &
+              em_vars%nsigma, em_vars%alpha(:, :, ifactor))
+          else if(states_are_complex(sys%st)) then
             call zlr_calc_polarizability_finite(sys, hm, em_vars%lr(:, :, ifactor), em_vars%nsigma, &
-                 em_vars%perturbation, em_vars%alpha(:, :, ifactor))
+              em_vars%perturbation, em_vars%alpha(:, :, ifactor))
           else
             call dlr_calc_polarizability_finite(sys, hm, em_vars%lr(:, :, ifactor), em_vars%nsigma, &
-                em_vars%perturbation, em_vars%alpha(:, :, ifactor))
+              em_vars%perturbation, em_vars%alpha(:, :, ifactor))
           end if
         end do
-        
+
         ! calculate hyperpolarizability
         if(em_vars%calc_hyperpol) then
           if(states_are_complex(sys%st)) then
@@ -451,6 +484,20 @@ contains
           em_vars%calc_hyperpol = .true.
         end if
       end if
+
+      !%Variable EMForceNoKdotP
+      !%Type logical
+      !%Default false
+      !%Section Linear Response::Polarizabilities
+      !%Description
+      !% If the system is periodic, by default wavefunctions from a previous kdotp run will
+      !% be read, to be used in the formulas for the polarizability and
+      !% hyperpolarizability in the quantum theory of polarization. For testing purposes,
+      !% you can set this variable to true to disregard the kdotp run, and use the formulas
+      !% for the finite system. This variable has no effect for a finite system.
+      !%End
+
+      call loct_parse_logical(datasets_check('EMForceNoKdotP'), .false., em_vars%force_no_kdotp)
 
       call pop_sub()
 
@@ -729,14 +776,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine out_polarizability(st, gr, alpha, omega, converged, dirname, periodic_warn)
+  subroutine out_polarizability(st, gr, alpha, omega, converged, dirname)
     type(states_t),    intent(in) :: st
     type(grid_t),      intent(in) :: gr
     CMPLX,             intent(in) :: alpha(:, :)
     FLOAT,             intent(in) :: omega
     logical,           intent(in) :: converged
     character(len=*),  intent(in) :: dirname
-    logical, optional, intent(in) :: periodic_warn
 
     FLOAT :: cross(MAX_DIM, MAX_DIM), crossp(MAX_DIM, MAX_DIM)
     FLOAT :: average, anisotropy
@@ -748,15 +794,6 @@ contains
     iunit = io_open(trim(dirname)//'/alpha', action='write')
 
     if (.not.converged) write(iunit, '(a)') "# WARNING: not converged"
-
-    if (.not. present(periodic_warn)) then
-      periodic_warn_ = .true.
-    else
-      periodic_warn_ = periodic_warn
-    endif
-    if (simul_box_is_periodic(gr%sb) .and. periodic_warn_) then
-      write(iunit, '(a)') "# WARNING: Accurate calculation in periodic system requires kdotp run."
-    endif
 
     write(iunit, '(2a)', advance='no') '# Polarizability tensor [', &
       trim(units_out%length%abbrev)
@@ -774,7 +811,6 @@ contains
         
       iunit = io_open(trim(dirname)//'/cross_section', action='write')
       if (.not. converged) write(iunit, '(a)') "# WARNING: not converged"
-      if (simul_box_is_periodic(gr%sb)) write(iunit, '(a)') "# WARNING: Accurate calculation in periodic system requires kdotp run."
 
       average = M_THIRD * (cross(1, 1) + cross(2, 2) + cross(3, 3))
       crossp(:, :) = matmul(cross(:, :), cross(:, :))
@@ -846,7 +882,6 @@ contains
     iunit = io_open(trim(dirname)//'/beta', action='write')
 
     if (.not. converged) write(iunit, '(a)') "# WARNING: not converged"
-    if (simul_box_is_periodic(sb)) write(iunit, '(a)') "# WARNING: Accurate calculation in periodic system requires kdotp run."
 
     write(iunit, '(2a)', advance='no') 'First hyperpolarizability tensor: beta [', trim(units_out%length%abbrev)
     write(iunit, '(a,i1)', advance='no') '^', 5
