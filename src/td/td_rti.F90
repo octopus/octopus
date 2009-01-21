@@ -75,12 +75,14 @@ module td_rti_m
   type td_rti_t
     integer             :: method           ! Which evolution method to use.
     type(exponential_t) :: te               ! How to apply the propagator (e^{-i H \Delta t}).
-    FLOAT, pointer      :: v_old(:, :, :)   ! Storage of the KS potential of previous iterations.
-    FLOAT, pointer      :: vmagnus(:, :, :) ! Auxiliary function to store the Magnus potentials.
+    FLOAT, pointer      :: v_old(:, :, :) => null()
+                                            ! Storage of the KS potential of previous iterations.
+    FLOAT, pointer      :: vmagnus(:, :, :) => null() 
+                                            ! Auxiliary function to store the Magnus potentials.
     type(zcf_t)         :: cf               ! Auxiliary cube for split operator methods.
     type(ob_terms_t)    :: ob               ! For open boundaries: leads, memory
     logical             :: scf_propagation
-    FLOAT, pointer      :: prev_psi(:, :, :, :)
+    FLOAT, pointer      :: prev_psi(:, :, :, :) => null()
     logical             :: first
   end type td_rti_t
 
@@ -101,7 +103,7 @@ contains
   subroutine td_rti_copy(tro, tri)
     type(td_rti_t), intent(inout) :: tro
     type(td_rti_t), intent(in)    :: tri
-    integer :: np, nspin
+    integer :: np, nspin, nl1, nu1, nl2, nu2, nl3, nu3, nl4, nu4
 
     call push_sub('tr_rti.tr_rti_copy')
 
@@ -127,6 +129,20 @@ contains
     tro%v_old(:, :, :) = M_ZERO
     call exponential_copy(tro%te, tri%te)
     tro%scf_propagation = tri%scf_propagation
+
+    if(associated(tri%prev_psi)) then
+      nl1 = lbound(tri%prev_psi, 1)
+      nu1 = ubound(tri%prev_psi, 1)
+      nl2 = lbound(tri%prev_psi, 2)
+      nu2 = ubound(tri%prev_psi, 2)
+      nl3 = lbound(tri%prev_psi, 3)
+      nu3 = ubound(tri%prev_psi, 3)
+      nl4 = lbound(tri%prev_psi, 4)
+      nu4 = ubound(tri%prev_psi, 4)
+      np = (nu1-nl1+1)*(nu2-nl2+1)*(nu3-nl3+1)*(nu4-nl4+1)
+      ALLOCATE(tro%prev_psi(nl1:nu1, nl2:nu2, nl3:nu3, nl4:nu4), np)
+      tro%prev_psi = tri%prev_psi
+    end if
 
     call pop_sub()
   end subroutine td_rti_copy
