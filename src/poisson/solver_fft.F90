@@ -412,8 +412,9 @@ contains
 
 
   !-----------------------------------------------------------------
-  subroutine poisson_fft_build_1d(gr)
+  subroutine poisson_fft_build_1d(gr, poisson_soft_coulomb_param)
     type(grid_t), intent(in) :: gr
+    FLOAT,        intent(in) :: poisson_soft_coulomb_param
 
     integer            :: box(MAX_DIM), ix
     FLOAT              :: g
@@ -432,8 +433,8 @@ contains
 
     ! Fourier transform of Soft Coulomb interaction.
     do ix = 1, fft_cf%nx
-      g = ix*M_PI/gr%sb%lsize(1)
-      fft_coulb_fs(ix, 1, 1) = sqrt(M_TWO/M_PI) * loct_bessel_k0(sign(M_ONE, g)*g)
+      g = ix*M_PI/gr%sb%lsize(1) ! note that g is always positive with this definition
+      fft_coulb_fs(ix, 1, 1) = sqrt(M_TWO/M_PI) * loct_bessel_k0(poisson_soft_coulomb_param*g)
     end do
 
     call dfourier_space_op_init(coulb, fft_cf, fft_coulb_fs)

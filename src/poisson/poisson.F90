@@ -62,6 +62,7 @@ module poisson_m
     ISF           =  8
 
   integer :: poisson_solver = -99
+  FLOAT   :: poisson_soft_coulomb_param = M_ONE
   type(mg_solver_t) :: mg
 
   type hartree_t

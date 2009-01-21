@@ -26,6 +26,8 @@ subroutine poisson1d_init(gr)
 
   ASSERT(poisson_solver.eq.FFT_SPH.or.poisson_solver.eq.DIRECT_SUM_1D)
 
+  call loct_parse_float(datasets_check('Poisson1DSoftCoulombParam'), M_ONE, poisson_soft_coulomb_param)
+
   ! Check for periodicity.
   if(gr%sb%periodic_dim.ne.0.and.poisson_solver.ne.FFT_SPH) then
     message(1) = 'Your system is periodic but the PoissonSolver used assumes'
@@ -39,7 +41,7 @@ subroutine poisson1d_init(gr)
   end if
 
   if(poisson_solver.eq.FFT_SPH) then
-    call poisson_fft_build_1d(gr)
+    call poisson_fft_build_1d(gr, poisson_soft_coulomb_param)
   end if
 
   call pop_sub()
@@ -72,7 +74,7 @@ subroutine poisson1D_solve(m, pot, rho)
       x = m%x_global(i, 1)
       do j = 1, m%np
         y = m%x(j, 1)
-        pvec(j) = rho(j)/sqrt(M_ONE + (x-y)**2)
+        pvec(j) = rho(j)/sqrt(poisson_soft_coulomb_param**2 + (x-y)**2)
       end do
       tmp = dmf_integrate(m, pvec)
       if (m%vp%part(i).eq.m%vp%partno) then
@@ -89,7 +91,7 @@ subroutine poisson1D_solve(m, pot, rho)
       x = m%x(i, 1)
       do j=1, m%np
         y = m%x(j, 1)
-        pot(i) = pot(i) + rho(j)/sqrt(M_ONE + (x-y)**2) * m%vol_pp(j)
+        pot(i) = pot(i) + rho(j)/sqrt(poisson_soft_coulomb_param**2 + (x-y)**2) * m%vol_pp(j)
       end do
     end do
 #ifdef HAVE_MPI
