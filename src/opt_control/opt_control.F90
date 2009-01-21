@@ -59,6 +59,9 @@ module opt_control_m
   use opt_control_parameters_m
   use opt_control_iter_m
   use opt_control_target_m
+#if defined(HAVE_NEWUOA)
+  use newuoa_m
+#endif
 
   implicit none
 
@@ -468,8 +471,8 @@ contains
     ! ---------------------------------------------------------
     subroutine scheme_newuoa
 #if defined(HAVE_NEWUOA)
-      integer :: ierr, iprint, npt, maxfun, nvariables, sizeofw
-      REAL_DOUBLE :: minvalue, rhobeg, rhoend
+      integer :: iprint, npt, maxfun, nvariables, sizeofw
+      REAL_DOUBLE :: rhobeg, rhoend
       REAL_DOUBLE, allocatable :: x(:), w(:)
       FLOAT :: f
       integer :: dim
@@ -510,7 +513,8 @@ contains
       ALLOCATE(w(sizeofw), sizeofw)
       w = M_ZERO
       
-      call newuoa(nvariables, npt, x(1:nvariables), rhobeg, rhoend, iprint, maxfun, w, direct_opt_calc)
+      call newuoa(nvariables, npt, x(1:nvariables), rhobeg, rhoend, iprint, &
+        maxfun, w, direct_opt_calc)
 
       deallocate(x, w)
       call pop_sub()

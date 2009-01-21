@@ -97,6 +97,7 @@ endif
 
 if COMPILE_NEWUOA
   external_LIBS += $(top_builddir)/external_libs/newuoa/libnewuoa.a
+  AM_FCFLAGS += @F90_MODULE_FLAG@$(top_builddir)/external_libs/newuoa
 endif
 
 all_LIBS = $(core_LIBS) @LIBS_FFT@ @LIBS_SPARSKIT@ \

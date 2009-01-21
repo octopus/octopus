@@ -23,7 +23,8 @@ if COMPILE_NEWUOA
   noinst_LIBRARIES = libnewuoa.a
 endif
 
-libnewuoa_a_SOURCES = bigden.f90 biglag.f90 newuob.f90 trsapp.f90 update.f90 newuoa.f90
+##libnewuoa_a_SOURCES = bigden.f90 biglag.f90 newuob.f90 trsapp.f90 update.f90 newuoa.f90
+libnewuoa_a_SOURCES = newuoa_mod.f90
 
 # how to compile a f90 file :)
 .f90.o:
