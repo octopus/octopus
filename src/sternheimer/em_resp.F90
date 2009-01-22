@@ -315,13 +315,13 @@ contains
         ! calculate polarizability
         do ifactor = 1, em_vars%nfactor
           if(use_kdotp) then
-            call zlr_calc_polarizability_periodic(sys, em_vars%lr(:, :, ifactor), kdotp_lr(:, 1), &
+            call zcalc_polarizability_periodic(sys, em_vars%lr(:, :, ifactor), kdotp_lr(:, 1), &
               em_vars%nsigma, em_vars%alpha(:, :, ifactor))
           else if(states_are_complex(sys%st)) then
-            call zlr_calc_polarizability_finite(sys, hm, em_vars%lr(:, :, ifactor), em_vars%nsigma, &
+            call zcalc_polarizability_finite(sys, hm, em_vars%lr(:, :, ifactor), em_vars%nsigma, &
               em_vars%perturbation, em_vars%alpha(:, :, ifactor))
           else
-            call dlr_calc_polarizability_finite(sys, hm, em_vars%lr(:, :, ifactor), em_vars%nsigma, &
+            call dcalc_polarizability_finite(sys, hm, em_vars%lr(:, :, ifactor), em_vars%nsigma, &
               em_vars%perturbation, em_vars%alpha(:, :, ifactor))
           end if
         end do

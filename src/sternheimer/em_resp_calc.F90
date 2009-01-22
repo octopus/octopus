@@ -48,9 +48,9 @@ module em_resp_calc_m
      lr_calc_current,                  &
      dlr_calc_elf,                     &
      zlr_calc_elf,                     &
-     dlr_calc_polarizability_finite,   &
-     zlr_calc_polarizability_finite,   &
-     zlr_calc_polarizability_periodic, &
+     dcalc_polarizability_finite,      &
+     zcalc_polarizability_finite,      &
+     zcalc_polarizability_periodic,    &
      dlr_calc_susceptibility,          &
      zlr_calc_susceptibility,          &
      dlr_calc_beta,                    &
@@ -138,7 +138,7 @@ contains
 
 
 ! ---------------------------------------------------------
-subroutine zlr_calc_polarizability_periodic(sys, em_lr, kdotp_lr, nsigma, zpol, ndir)
+subroutine zcalc_polarizability_periodic(sys, em_lr, kdotp_lr, nsigma, zpol, ndir)
   type(system_t),         intent(inout) :: sys
   type(lr_t),             intent(inout) :: em_lr(:,:)
   type(lr_t),             intent(inout) :: kdotp_lr(:)
@@ -151,7 +151,7 @@ subroutine zlr_calc_polarizability_periodic(sys, em_lr, kdotp_lr, nsigma, zpol, 
   type(mesh_t), pointer :: m
   m => sys%gr%mesh
 
-  call push_sub('em_resp_calc.zlr_calc_polarizability_periodic')
+  call push_sub('em_resp_calc.zcalc_polarizability_periodic')
 
   ndir_ = sys%NDIM
   if(present(ndir)) ndir_ = ndir
@@ -189,7 +189,7 @@ subroutine zlr_calc_polarizability_periodic(sys, em_lr, kdotp_lr, nsigma, zpol, 
 
   call pop_sub()
 
-end subroutine zlr_calc_polarizability_periodic
+end subroutine zcalc_polarizability_periodic
 
 
 ! ---------------------------------------------------------

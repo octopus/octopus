@@ -238,7 +238,7 @@ end subroutine X(lr_calc_elf)
 
 ! ---------------------------------------------------------
 ! Periodic version is in kdotp_calc.F90 since it requires d/dk wfns
-subroutine X(lr_calc_polarizability_finite)(sys, hm, lr, nsigma, perturbation, zpol, ndir)
+subroutine X(calc_polarizability_finite)(sys, hm, lr, nsigma, perturbation, zpol, ndir)
   type(system_t),         intent(inout) :: sys
   type(hamiltonian_t),    intent(inout) :: hm
   type(lr_t),             intent(inout) :: lr(:,:)
@@ -249,7 +249,7 @@ subroutine X(lr_calc_polarizability_finite)(sys, hm, lr, nsigma, perturbation, z
 
   integer :: dir1, dir2, ndir_
 
-  call push_sub('em_resp_calc_inc.Xlr_calc_polarizability_finite')
+  call push_sub('em_resp_calc_inc.Xcalc_polarizability_finite')
 
   ndir_ = sys%NDIM
   if(present(ndir)) ndir_ = ndir
@@ -275,7 +275,7 @@ subroutine X(lr_calc_polarizability_finite)(sys, hm, lr, nsigma, perturbation, z
 
   call pop_sub()
 
-end subroutine X(lr_calc_polarizability_finite)
+end subroutine X(calc_polarizability_finite)
 
 
 ! ---------------------------------------------------------
