@@ -473,17 +473,19 @@ contains
 #if defined(HAVE_NEWUOA)
       integer :: iprint, npt, maxfun, nvariables, sizeofw
       REAL_DOUBLE :: rhobeg, rhoend
-      REAL_DOUBLE, allocatable :: x(:), w(:)
+      REAL_DOUBLE, allocatable :: x(:), w(:), xl(:), xu(:)
       FLOAT :: f
       integer :: dim
       type(states_t) :: psi
-
       call push_sub('opt_control.scheme_direct')
 
       call parameters_set_rep(par)
 
       dim = parameters_dog(par)
       ALLOCATE(x(dim), dim)
+      ALLOCATE(xl(dim), dim)
+      ALLOCATE(xu(dim), dim)
+      call parameters_bounds(par, xl, xu)
 
       call states_copy(psi, initial_st)
       call propagate_forward(sys, hm, td, par, target, psi)
@@ -516,7 +518,7 @@ contains
       call newuoa(nvariables, npt, x(1:nvariables), rhobeg, rhoend, iprint, &
         maxfun, w, direct_opt_calc)
 
-      deallocate(x, w)
+      deallocate(x, xl, xu, w)
       call pop_sub()
 #endif
     end subroutine scheme_newuoa

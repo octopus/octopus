@@ -71,6 +71,7 @@ module opt_control_parameters_m
             parameters_randomize,         &
             parameters_update,            &
             parameters_number,            &
+            parameters_bounds,            &
             parameters_dog,               &
             parameters_w0,                &
             parameters_alpha,             &
@@ -1287,6 +1288,34 @@ contains
     type(oct_control_parameters_t), intent(in) :: par
     parameters_number = par%no_parameters
   end function parameters_number
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine parameters_bounds(par, lower_bounds, upper_bounds)
+    type(oct_control_parameters_t), intent(in)  :: par
+    FLOAT,                          intent(out) :: lower_bounds(:)
+    FLOAT,                          intent(out) :: upper_bounds(:)
+    integer :: dog
+
+    call push_sub('parameters.parameters_bounds')
+
+    upper_bounds = M_PI
+    dog = parameters_dog(par)
+
+    select case(par_common%mode)
+    case(parameter_mode_epsilon, parameter_mode_f, parameter_mode_phi)
+      lower_bounds(1:dog-1) = M_ZERO
+      lower_bounds(dog)     = -M_PI
+    case(parameter_mode_f_and_phi)
+      lower_bounds(1:(dog/2)-1)   = M_ZERO
+      lower_bounds(dog/2)         = -M_PI
+      lower_bounds(dog/2+1:dog-1) = M_ZERO
+      lower_bounds(dog)           = -M_PI
+    end select
+
+    call pop_sub()
+  end subroutine parameters_bounds
   ! ---------------------------------------------------------
 
 
