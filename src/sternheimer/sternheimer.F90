@@ -99,16 +99,16 @@ contains
 
     !%Variable Preorthogonalization
     !%Type logical 
-    !%Default false
+    !%Default true
     !%Section Linear Response::Sternheimer 
     !%Description 
     !% Whether initial linear-response wavefunctions should be orthogonalized 
     !% or not against the occupied states, at the start of each SCF cycle.
     !%End 
     if (loct_parse_isdef(datasets_check(trim(prefix)//'Preorthogonalization')) /= 0) then 
-      call loct_parse_logical(datasets_check(trim(prefix)//'Preorthogonalization'), .false., this%preorthogonalization) 
+      call loct_parse_logical(datasets_check(trim(prefix)//'Preorthogonalization'), .true., this%preorthogonalization) 
     else 
-      call loct_parse_logical(datasets_check('Preorthogonalization'), .false., this%preorthogonalization) 
+      call loct_parse_logical(datasets_check('Preorthogonalization'), .true., this%preorthogonalization) 
     end if
 
     !%Variable HamiltonianVariation

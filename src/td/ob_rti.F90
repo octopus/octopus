@@ -125,9 +125,9 @@ contains
     !% or uses a more compact scheme but with the need of more CPU-cycles.
     !%
     !%Option save_cpu_time 1
-    !% Use the memory intensive procedure
+    !% Use the memory-intensive procedure
     !%Option save_ram_usage 2
-    !% Use the RAM saving, CPU intensive procedure
+    !% Use the RAM-saving, CPU-intensive procedure
     !%End
     call loct_parse_int(datasets_check('OpenBoundariesMemType'), SAVE_CPU_TIME, ob%mem_type)
     if(.not.varinfo_valid_option('OpenBoundariesMemType', ob%mem_type)) then
@@ -139,7 +139,7 @@ contains
     !%Default mem_term + src_term
     !%Section Open Boundaries
     !%Description
-    !% The open boundaries propagator inserts to additional terms in
+    !% The open-boundaries propagator inserts two additional terms in
     !% the Crank-Nicholson scheme: source and memory. With this variable,
     !% one or both of them can be switched off.
     !%
@@ -310,7 +310,7 @@ contains
         ! Use QMR-solver since it is faster and more stable than BiCG.
         select case(ob%mem_type)
         case(SAVE_CPU_TIME)
-          ! Use for non magnetic case.
+          ! Use for non-magnetic case.
           ! Either the stable symmetric QMR solver
           call zqmr_sym(NP, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_backward, precond_prop, &
             cg_iter, residue=dres, threshold=cg_tol, showprogress=.false.)

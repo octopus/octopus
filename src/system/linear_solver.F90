@@ -99,7 +99,7 @@ contains
 
     !%Variable LinearSolver
     !%Type integer
-    !%Default bicgstab
+    !%Default qmr
     !%Section Linear Response::Solver
     !%Description
     !% To calculate response using density functional perturbation
@@ -125,7 +125,7 @@ contains
     !% wavefunctions. You need unoccupied states to use this method.
     !%End
 
-    defsolver_ = LS_BICGSTAB
+    defsolver_ = LS_QMR
     if(present(def_solver)) defsolver_ = def_solver
 
     if (loct_parse_isdef(datasets_check(trim(prefix)//"LinearSolver")) /= 0 ) then 
