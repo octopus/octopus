@@ -629,22 +629,26 @@ contains
     type(mesh_t)         :: old_mesh
     type(curvlinear_t)   :: old_cv
     type(simul_box_t)    :: old_sb
-    logical              :: mesh_change, full_interpolation, boolean
+    logical              :: mesh_change, full_interpolation, gs_allocated, lr_allocated
 
     call push_sub('restart.restart_read')
 
-    write(message(1), '(a,i5)') 'Info: Loading restart information'
+    if(.not. present(lr)) then 
+      write(message(1), '(a,i5)') 'Info: Loading restart information'
+    else
+      write(message(1), '(a,i5)') 'Info: Loading restart information for linear response'
+    end if
     call write_info(1)
 
     ! sanity check
-    boolean = (associated(st%dpsi) .and. st%wfs_type == M_REAL) .or. &
+    gs_allocated = (associated(st%dpsi) .and. st%wfs_type == M_REAL) .or. &
       (associated(st%zpsi) .and. st%wfs_type == M_CMPLX)
-    ASSERT(boolean)
+    ASSERT(gs_allocated)
 
     if(present(lr)) then 
-      boolean = (associated(lr%ddl_psi) .and. st%wfs_type == M_REAL) .or. &
+      lr_allocated = (associated(lr%ddl_psi) .and. st%wfs_type == M_REAL) .or. &
         (associated(lr%zdl_psi) .and. st%wfs_type == M_CMPLX)
-      ASSERT(boolean)
+      ASSERT(lr_allocated)
     endif
 
     ierr = 0
@@ -765,7 +769,7 @@ contains
       call write_info(1)
       call messages_print_stress(stdout)
     else
-      ! Everything o. k.
+      ! Everything o.k.
       if(ierr == st%nst*st%d%nik*st%d%dim) then
         ierr = 0
       else

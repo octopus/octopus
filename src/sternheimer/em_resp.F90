@@ -112,8 +112,10 @@ contains
 
     call parse_input()
 
-    use_kdotp = simul_box_is_periodic(gr%sb) .and. .not. em_vars%force_no_kdotp
+    complex_response = (em_vars%eta /= M_ZERO ) .or. states_are_complex(sys%st)
+    call restart_look_and_read(sys%st, sys%gr, sys%geo, is_complex = complex_response)
 
+    use_kdotp = simul_box_is_periodic(gr%sb) .and. .not. em_vars%force_no_kdotp
     ! read kdotp wavefunctions if necessary
     if (use_kdotp) then
       message(1) = "Reading kdotp wavefunctions since system is periodic"
@@ -131,7 +133,7 @@ contains
           ierr, lr=kdotp_lr(dir, 1))
 
         if(ierr.ne.0) then
-          message(1) = "Could not load kdotp wavefunctions from '"//trim(tmpdir)//dirname//"'"
+          message(1) = "Could not load kdotp wavefunctions from '"//trim(tmpdir)//trim(dirname)//"'"
           message(2) = "Previous kdotp calculation required."
           call write_fatal(2)
         end if
@@ -150,12 +152,7 @@ contains
        ! only considering positive values
     endif
     
-    complex_response = (em_vars%eta /= M_ZERO ) .or. states_are_complex(sys%st)
-
     ALLOCATE(em_vars%lr(1:NDIM, 1:em_vars%nsigma, 1:em_vars%nfactor), NDIM*em_vars%nsigma*em_vars%nfactor)
-
-    call restart_look_and_read(sys%st, sys%gr, sys%geo, is_complex = complex_response)
-
     em_vars%lr(1:NDIM, 1:em_vars%nsigma, 1:em_vars%nfactor)%nst = sys%st%nst
 
     ! setup Hamiltonian
@@ -240,7 +237,7 @@ contains
                           ierr, lr=em_vars%lr(dir, sigma, ifactor))
 
                      if(ierr.ne.0) then
-                        message(1) = "Could not load response wave-functions from '"//trim(tmpdir)//dirname
+                        message(1) = "Could not load response wave-functions from '"//trim(tmpdir)//trim(dirname)//"'"
                         call write_warning(1)
                      end if
                   end do
