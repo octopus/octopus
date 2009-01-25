@@ -56,6 +56,8 @@ module mesh_m
     mesh_nearest_point,        &
     mesh_subset_indices,       &
     mesh_periodic_point,       &
+    mesh_global_memory,        &
+    mesh_local_memory,         &
     translate_point
 
   ! Describes mesh distribution to nodes.
@@ -627,6 +629,29 @@ contains
     
   end function mesh_periodic_point
   
+  real(8) pure function mesh_global_memory(mesh) result(memory)
+    type(mesh_t), intent(in) :: mesh
+    
+    memory = 0.0_8
+    
+    ! Lxyz_inv and resolution
+    memory = memory + dble(2*SIZEOF_UNSIGNED_INT*product(mesh%idx%nr(2, 1:mesh%sb%dim) - mesh%idx%nr(1, 1:mesh%sb%dim) + 1))
+    ! Lxyz
+    memory = memory + dble(SIZEOF_UNSIGNED_INT*mesh%np_part_global*MAX_DIM)
+    ! x_global
+    memory = memory + dble(REAL_PRECISION*mesh%np_part_global*MAX_DIM)
+
+  end function mesh_global_memory
+
+  real(8) pure function mesh_local_memory(mesh) result(memory)
+    type(mesh_t), intent(in) :: mesh
+    
+    memory = 0.0_8
+    
+    ! x
+    memory = memory + dble(REAL_PRECISION*mesh%np_part*MAX_DIM)
+  end function mesh_local_memory
+
 end module mesh_m
 
 

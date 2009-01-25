@@ -45,6 +45,7 @@ module calc_mode_m
     CM_ONE_SHOT           =  14,  &
     CM_KDOTP              =  15,  &
     CM_GCM                =  16,  &
+    CM_MEMORY             =  17,  &
     CM_PULPO_A_FEIRA      =  99
 
   contains

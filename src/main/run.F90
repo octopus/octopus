@@ -33,6 +33,7 @@ module run_m
   use loct_parser_m
   use messages_m
   use mpi_debug_m
+  use memory_m
   use multicomm_m
   use one_shot_m
   use opt_control_m
@@ -120,10 +121,10 @@ contains
       call one_shot_run(sys, hm)
     case(CM_KDOTP)
       call kdotp_lr_run(sys, hm, fromScratch)
-!!!!NEW
+    case(CM_MEMORY)
+      call memory_run(sys, hm)
     case(CM_GCM)
       call gcm_run(sys, hm)
-!!!!ENDOFNEW
     case(CM_PULPO_A_FEIRA)
       call pulpo_print()
     end select

@@ -83,6 +83,7 @@ module states_m
     state_is_local,                   &
     states_dump,                      &
     states_distribute_nodes,          &
+    states_wfns_memory,               &
     states_freeze_orbitals
 
   public ::                           &
@@ -2588,6 +2589,17 @@ contains
     call states_end(staux)
     call pop_sub()
   end subroutine states_freeze_orbitals
+
+  real(8) function states_wfns_memory(st, mesh) result(memory)
+    type(states_t), intent(in) :: st
+    type(mesh_t),   intent(in) :: mesh
+    
+    memory = 0.0_8
+
+    ! orbitals
+    memory = memory + dble(REAL_PRECISION*mesh%np_part_global*st%d%dim*st%nst*st%d%kpt%nglobal)
+
+  end function states_wfns_memory
 
 end module states_m
 

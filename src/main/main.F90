@@ -136,6 +136,8 @@ program octopus
   !% Calculation of effective masses by k.p perturbation theory
   !%Option gcm 16
   !% Generator-Coordinates calculation (experimental).
+  !%Option memory 17
+  !% It tells you the approximate amount of memory octopus will need to run.
   !%Option recipe 99
   !% Prints out a tasty recipe
   !%End

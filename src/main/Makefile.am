@@ -25,7 +25,8 @@ bin_PROGRAMS = octopus oct-test
 
 octopus_SOURCES = \
 	one_shot.F90 unocc.F90 static_pol.F90 geom_opt.F90 phonons_fd.F90 \
-	casida.F90 pulpo.F90 gcm.F90 run.F90 main.F90
+	casida.F90 pulpo.F90 gcm.F90 run.F90 main.F90 \
+	memory.F90
 
 octopus_LDADD = $(all_LIBS)
 
@@ -47,5 +48,6 @@ phonons_fd.o : phonons_fd.F90
 casida.o : casida.F90 casida_inc.F90 
 pulpo.o : pulpo.F90 
 gcm.o : gcm.F90
-run.o : run.F90 unocc.o static_pol.o pulpo.o phonons_fd.o geom_opt.o casida.o 
+run.o : run.F90 unocc.o static_pol.o pulpo.o phonons_fd.o geom_opt.o casida.o memory.o
 main.o : main.F90 run.o 
+memory.o : memory.F90
