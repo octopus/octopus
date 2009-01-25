@@ -124,8 +124,6 @@ contains
     geo => sys%geo
     st  => sys%st
 
-    call ion_dynamics_init(td%ions, sys%geo)
-
     call td_init(sys, hm, td)
 
     call states_distribute_nodes(st, sys%mc)

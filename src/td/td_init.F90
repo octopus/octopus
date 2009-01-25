@@ -21,11 +21,13 @@
 subroutine td_init(sys, hm, td)
   type(system_t),        intent(inout) :: sys
   type(hamiltonian_t),   intent(inout) :: hm
-  type(td_t),            intent(out)   :: td
+  type(td_t),            intent(inout)   :: td
 
   integer :: dummy
 
   call push_sub('td_init.td_init')
+
+  call ion_dynamics_init(td%ions, sys%geo)
 
   td%iter = 0
 
