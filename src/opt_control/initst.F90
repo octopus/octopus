@@ -17,6 +17,35 @@
 !!
 !! $Id: opt_control.F90 2870 2007-04-28 06:26:47Z acastro $
 
+#include "global.h"
+
+module opt_control_initst_m
+  use datasets_m
+  use varinfo_m
+  use messages_m
+  use loct_parser_m
+  use global_m
+  use string_m
+  use states_m
+  use states_calc_m
+  use grid_m
+  use geometry_m
+  use restart_m
+
+  implicit none
+
+  private
+  public :: initial_state_init
+
+  integer, parameter ::  &
+    oct_is_groundstate      = 1,      &
+    oct_is_excited          = 2,      &
+    oct_is_gstransformation = 3,      &
+    oct_is_userdefined      = 4         
+
+
+  contains
+
 
   ! ---------------------------------------------------------
   subroutine initial_state_init(gr, geo, st, initial_state)
@@ -185,6 +214,8 @@
     
     call pop_sub()
   end subroutine initial_state_init
+
+end module opt_control_initst_m
 
 !! Local Variables:
 !! mode: f90

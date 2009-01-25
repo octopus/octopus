@@ -59,6 +59,7 @@ module opt_control_m
   use opt_control_parameters_m
   use opt_control_iter_m
   use opt_control_target_m
+  use opt_control_initst_m
 #if defined(HAVE_NEWUOA)
   use newuoa_m
 #endif
@@ -69,11 +70,11 @@ module opt_control_m
   public :: opt_control_run
 
   ! Module variables
-  type(filter_t)       :: filter
-  type(oct_t)          :: oct
-  type(oct_iterator_t) :: iterator
-  type(target_t)       :: target
-  type(states_t)       :: initial_st
+  type(filter_t), save       :: filter
+  type(oct_t), save          :: oct
+  type(oct_iterator_t), save :: iterator
+  type(target_t), save       :: target
+  type(states_t), save       :: initial_st
   
 
   ! For the algorithm_direct scheme:
@@ -723,7 +724,6 @@ contains
 
 
 #include "read.F90"
-#include "defstates.F90"
 #include "finalcheck.F90"
 
 end module opt_control_m

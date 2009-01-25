@@ -58,20 +58,35 @@ module opt_control_target_m
             j1_functional,  &
             calc_chi
 
+  integer, public, parameter ::       &
+    oct_tg_groundstate      = 1,      &
+    oct_tg_excited          = 2,      &
+    oct_tg_gstransformation = 3,      &
+    oct_tg_userdefined      = 4,      &
+    oct_tg_density          = 5,      &        
+    oct_tg_local            = 6,      &
+    oct_tg_td_local         = 7,      &
+    oct_tg_exclude_state    = 8,      &
+    oct_tg_hhg              = 9
+
+  integer, public, parameter ::       &
+    oct_targetmode_static = 0,        &
+    oct_targetmode_td     = 1
+
   type target_t
     private
     integer :: type
     integer :: mode
     type(states_t) :: st
     type(excited_states_t) :: est
-    FLOAT, pointer :: rho(:)
-    FLOAT, pointer :: td_fitness(:)
+    FLOAT, pointer :: rho(:) => null()
+    FLOAT, pointer :: td_fitness(:) => null()
     character(len=200) :: td_local_target
     integer :: excluded_states
     integer :: hhg_nks
-    integer, pointer :: hhg_k(:)
-    FLOAT,   pointer :: hhg_alpha(:)
-    FLOAT,   pointer :: hhg_a(:)
+    integer, pointer :: hhg_k(:) => null()
+    FLOAT,   pointer :: hhg_alpha(:) => null()
+    FLOAT,   pointer :: hhg_a(:) => null()
     FLOAT   :: hhg_w0
     FLOAT   :: dt
   end type target_t

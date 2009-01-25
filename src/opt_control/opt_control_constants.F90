@@ -37,23 +37,6 @@ module opt_control_constants_m
   end type oct_t
 
   integer, parameter ::  &
-    oct_is_groundstate      = 1,      &
-    oct_is_excited          = 2,      &
-    oct_is_gstransformation = 3,      &
-    oct_is_userdefined      = 4         
-    
-  integer, parameter ::  &
-    oct_tg_groundstate      = 1,      &
-    oct_tg_excited          = 2,      &
-    oct_tg_gstransformation = 3,      &
-    oct_tg_userdefined      = 4,      &
-    oct_tg_density          = 5,      &        
-    oct_tg_local            = 6,      &
-    oct_tg_td_local         = 7,      &
-    oct_tg_exclude_state    = 8,      &
-    oct_tg_hhg              = 9
-
-  integer, parameter ::  &
     oct_algorithm_zbr98              = 1,       &
     oct_algorithm_zr98               = 2,       &
     oct_algorithm_wg05               = 3,       &
@@ -63,8 +46,4 @@ module opt_control_constants_m
     oct_algorithm_direct             = 7,       &
     oct_algorithm_newuoa             = 8
  
-  integer, parameter ::  &
-    oct_targetmode_static = 0,     &
-    oct_targetmode_td     = 1
-
 end module opt_control_constants_m
