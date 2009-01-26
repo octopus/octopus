@@ -241,7 +241,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
       diff(p) = res
     end if
 
-    if(mpi_grp_is_root(mpi_world)) then
+    if(mpi_grp_is_root(mpi_world).and..not.verbose) then
       call loct_progress_bar(st%nst*(ik - 1) +  p, st%nst*st%d%nik)
     end if
 

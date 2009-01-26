@@ -65,9 +65,7 @@ contains
     logical,             intent(inout) :: fromscratch
 
     type(eigensolver_t) :: eigens
-    integer :: iunit, ierr, ik, p, occupied_states, total_states, iter
-    FLOAT, allocatable :: dh_psi(:,:)
-    CMPLX, allocatable :: zh_psi(:,:)
+    integer :: iunit, ierr, occupied_states, total_states, iter
     logical :: converged, l
     integer :: lcao_start, lcao_start_default, max_iter
     type(lcao_t) :: lcao
@@ -128,31 +126,8 @@ contains
     message(1) = "Info:  Starting calculation of unoccupied states"
     call write_info(1)
 
-    ! First, get the residues of the occupied states.
-    ! These are assumed to be converged; otherwise one should do a SCF calculation.
-    if (sys%st%wfs_type == M_REAL) then
-      ALLOCATE(dh_psi(sys%gr%mesh%np, hm%d%dim), sys%gr%mesh%np*hm%d%dim)
-    else
-      ALLOCATE(zh_psi(sys%gr%mesh%np, hm%d%dim), sys%gr%mesh%np*hm%d%dim)
-    end if
-    do ik = 1, sys%st%d%nik
-      do p = 1, eigens%converged(ik)
-        if (sys%st%wfs_type == M_REAL) then
-          call dhamiltonian_apply(hm, sys%gr, sys%st%dpsi(:,:, p, ik) ,dh_psi, p, ik)
-          eigens%diff(p, ik) = dstates_residue(sys%gr%mesh, sys%st%d%dim, dh_psi, sys%st%eigenval(p, ik), &
-               sys%st%dpsi(:, :, p, ik))
-        else
-          call zhamiltonian_apply(hm, sys%gr, sys%st%zpsi(:,:, p, ik) , zh_psi, p, ik)
-          eigens%diff(p, ik) = zstates_residue(sys%gr%mesh, sys%st%d%dim, zh_psi, sys%st%eigenval(p, ik), &
-               sys%st%zpsi(:, :, p, ik))
-        end if
-      end do
-    end do
-    if (sys%st%wfs_type == M_REAL) then
-      deallocate(dh_psi)
-    else
-      deallocate(zh_psi)
-    end if
+    ! reset this variable, so that the eigensolver passes through all states
+    eigens%converged(:) = 0
 
     do iter = 1, max_iter
       write(message(1), '(a,i3)') "Info: Unoccupied states iteration ", iter
@@ -161,6 +136,7 @@ contains
 
       if(converged) exit
     end do
+    stop
 
     ! write restart information.
     call restart_write (trim(tmpdir)//'gs', sys%st, sys%gr, ierr)
