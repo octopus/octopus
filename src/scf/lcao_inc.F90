@@ -171,7 +171,6 @@ subroutine X(lcao_wf) (this, st, gr, geo, hm, start)
     ispin = states_dim_get_spin_index(st%d, ik)
     call lalg_geneigensolve(this%norbs, hamilt(1:this%norbs, 1:this%norbs, ik), overlap(:, :, ispin), ev)
 
-    print *, lcao_start, nst
     st%eigenval(lcao_start:nst, ik) = ev(lcao_start:nst)
 
     st%X(psi)(1:NP, 1:st%d%dim, lcao_start:st%st_end, ik) = R_TOTYPE(M_ZERO)
