@@ -136,7 +136,6 @@ contains
 
       if(converged) exit
     end do
-    stop
 
     ! write restart information.
     call restart_write (trim(tmpdir)//'gs', sys%st, sys%gr, ierr)
