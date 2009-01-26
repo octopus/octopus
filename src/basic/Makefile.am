@@ -41,6 +41,7 @@ libbasic_a_SOURCES = \
 noinst_HEADERS =          \
 	mpi_debug_inc.F90 \
 	mpi_lib_inc.F90   \
+	loct_inc.F90 \
 	varia.h
 
 include $(srcdir)/../common-rules.make
@@ -77,7 +78,7 @@ ialist.o : ialist.F90
 c_pointer.o : c_pointer.F90
 command_line.o : command_line.F90
 periodic_table.o : periodic_table.F90
-loct.o : loct.F90 c_pointer.o
+loct.o : loct.F90 loct_inc.F90 c_pointer.o
 string.o : string.F90 c_pointer.o
 varinfo.o : varinfo.F90 string.o c_pointer.o
 global.o : global.F90 mpi.o loct.o hardware.o

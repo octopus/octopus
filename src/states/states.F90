@@ -876,24 +876,8 @@ contains
     stout%lnst       = stin%lnst
     stout%st_start   = stin%st_start
     stout%st_end     = stin%st_end
-    if(associated(stin%dpsi)) then
-      i = size(stin%dpsi, 1)*stin%d%dim*(stin%st_end-stin%st_start+1)*stin%d%nik
-      ALLOCATE(stout%dpsi(size(stin%dpsi, 1), stin%d%dim, stin%st_start:stin%st_end, stin%d%nik), i)
-      do k = 1, stin%d%nik
-        do j = stin%st_start, stin%st_end
-          stout%dpsi(:, :, j, k) = stin%dpsi(:, :, j, k)
-        end do
-      end do
-    end if
-    if(associated(stin%zpsi)) then
-      i = size(stin%zpsi, 1)*stin%d%dim*(stin%st_end-stin%st_start+1)*stin%d%nik
-      ALLOCATE(stout%zpsi(size(stin%zpsi, 1), stin%d%dim, stin%st_start:stin%st_end, stin%d%nik), i)
-      do k = 1, stin%d%nik
-        do j = stin%st_start, stin%st_end
-          stout%zpsi(:, :, j, k) = stin%zpsi(:, :, j, k)
-        end do
-      end do
-    end if
+    call loct_pointer_copy(stout%dpsi, stin%dpsi)
+    call loct_pointer_copy(stout%zpsi, stin%zpsi)
     if(associated(stin%user_def_states)) then
       j = size(stin%user_def_states, 1)
       k = size(stin%user_def_states, 2)
@@ -902,69 +886,21 @@ contains
       ALLOCATE(stout%user_def_states(j, k, l), i)
       stout%user_def_states = stin%user_def_states
     end if
-    if(associated(stin%rho)) then
-      i = size(stin%rho, 1)*size(stin%rho, 2)
-      ALLOCATE(stout%rho(size(stin%rho, 1), size(stin%rho, 2)), i)
-      stout%rho = stin%rho
-    end if
-    if(associated(stin%j)) then
-      i = size(stin%j, 1)*size(stin%j, 2)*size(stin%j, 3)
-      ALLOCATE(stout%j(size(stin%j, 1), size(stin%j, 2), size(stin%j, 3)), i)
-      do j = 1, size(stin%j, 3)
-        do k = 1, size(stin%j, 2)
-          stout%j(:, k, j) = stin%j(:, k, j)
-        end do
-      end do
-    end if
+    call loct_pointer_copy(stout%rho, stin%rho)
+    call loct_pointer_copy(stout%j, stin%j)
     stout%nlcc = stin%nlcc
-    if(associated(stin%rho_core)) then
-      i = size(stin%rho_core, 1)
-      ALLOCATE(stout%rho_core(size(stin%rho_core, 1)), i)
-      stout%rho_core = stin%rho_core
-    end if
-    if(associated(stin%frozen_rho)) then
-      i = size(stin%frozen_rho, 1)*size(stin%frozen_rho, 2)
-      ALLOCATE(stout%frozen_rho(size(stin%frozen_rho, 1), size(stin%frozen_rho, 2)), i)
-      stout%frozen_rho = stin%frozen_rho
-    end if
-    if(associated(stin%eigenval)) then
-      i = (stin%st_end-stin%st_start)*stin%d%nik
-      ALLOCATE(stout%eigenval(stin%st_start:stin%st_end, stin%d%nik), i)
-      stout%eigenval = stin%eigenval
-    end if
+    call loct_pointer_copy(stout%rho_core, stin%rho_core)
+    call loct_pointer_copy(stout%frozen_rho, stin%frozen_rho)
+    call loct_pointer_copy(stout%eigenval, stin%eigenval)
     stout%fixed_occ = stin%fixed_occ
-    if(associated(stin%occ)) then
-      i = size(stin%occ, 1)*size(stin%occ, 2)
-      ALLOCATE(stout%occ(size(stin%occ, 1), size(stin%occ, 2)), i)
-      stout%occ = stin%occ
-    end if
+    call loct_pointer_copy(stout%occ, stin%occ)
     stout%fixed_spins = stin%fixed_spins
-    if(associated(stin%spin)) then
-      i = size(stin%spin, 1)*size(stin%spin, 2)*size(stin%spin, 3)
-      ALLOCATE(stout%spin(size(stin%spin, 1), size(stin%spin, 2), size(stin%spin, 3)), i)
-      stout%spin = stin%spin
-    end if
-    if(associated(stin%momentum)) then
-      i = size(stin%momentum, 1)*size(stin%momentum, 2)*size(stin%momentum, 3)
-      ALLOCATE(stout%momentum(size(stin%momentum, 1), size(stin%momentum, 2), size(stin%momentum, 3)), i)
-      stout%momentum = stin%momentum
-    end if
-    if(associated(stin%node)) then
-      i = size(stin%node)
-      ALLOCATE(stout%node(size(stin%node)), i)
-      stout%node = stin%node
-    end if
+    call loct_pointer_copy(stout%spin, stin%spin)
+    call loct_pointer_copy(stout%momentum, stin%momentum)
+    call loct_pointer_copy(stout%node, stin%node)
     call mpi_grp_copy(stout%mpi_grp, stin%mpi_grp)
-    if(associated(stin%st_range)) then
-      i = size(stin%st_range, 1)*size(stin%st_range, 2)
-      ALLOCATE(stout%st_range(2,0:stin%mpi_grp%size-1), i)
-      stout%st_range = stin%st_range
-    end if
-    if(associated(stin%st_num)) then
-      i = size(stin%st_num, 1)
-      ALLOCATE(stout%st_num(0:stin%mpi_grp%size-1), i)
-      stout%st_num = stin%st_num
-    end if
+    call loct_pointer_copy(stout%st_range, stin%st_range)
+    call loct_pointer_copy(stout%st_num, stin%st_num)
 
     if(stin%parallel_in_states) call multicomm_all_pairs_copy(stout%ap, stin%ap)
 

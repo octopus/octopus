@@ -20,6 +20,7 @@
 #include "global.h"
 
 module td_rti_m
+  use loct_m
   use batch_m
   use cube_function_m
   use datasets_m
@@ -103,8 +104,6 @@ contains
   subroutine td_rti_copy(tro, tri)
     type(td_rti_t), intent(inout) :: tro
     type(td_rti_t), intent(in)    :: tri
-    integer :: np, nspin, nl1, nu1, nl2, nu2, nl3, nu3, nl4, nu4
-
     call push_sub('tr_rti.tr_rti_copy')
 
     tro%method = tri%method
@@ -115,34 +114,16 @@ contains
     case(PROP_SUZUKI_TROTTER)
       call zcf_new_from(tro%cf, tri%cf)
     case(PROP_MAGNUS)
-      np = size(tri%vmagnus, 1)
-      nspin = size(tri%vmagnus, 2)
-      ALLOCATE(tro%vmagnus(np, nspin, 2), np*nspin*2)
+      call loct_pointer_copy(tro%vmagnus, tri%vmagnus)
     case(PROP_CRANK_NICHOLSON_SRC_MEM)
       message(1) = 'Internal error at td_rti_copy'
       call write_fatal(1)
     end select
 
-    np = size(tri%v_old, 1)
-    nspin = size(tri%v_old, 2)
-    ALLOCATE(tro%v_old(np, nspin, 0:3), np*nspin*(3+1))
-    tro%v_old(:, :, :) = M_ZERO
+    call loct_pointer_copy(tro%v_old, tri%v_old)
     call exponential_copy(tro%te, tri%te)
     tro%scf_propagation = tri%scf_propagation
-
-    if(associated(tri%prev_psi)) then
-      nl1 = lbound(tri%prev_psi, 1)
-      nu1 = ubound(tri%prev_psi, 1)
-      nl2 = lbound(tri%prev_psi, 2)
-      nu2 = ubound(tri%prev_psi, 2)
-      nl3 = lbound(tri%prev_psi, 3)
-      nu3 = ubound(tri%prev_psi, 3)
-      nl4 = lbound(tri%prev_psi, 4)
-      nu4 = ubound(tri%prev_psi, 4)
-      np = (nu1-nl1+1)*(nu2-nl2+1)*(nu3-nl3+1)*(nu4-nl4+1)
-      ALLOCATE(tro%prev_psi(nl1:nu1, nl2:nu2, nl3:nu3, nl4:nu4), np)
-      tro%prev_psi = tri%prev_psi
-    end if
+    call loct_pointer_copy(tro%prev_psi, tri%prev_psi)
 
     call pop_sub()
   end subroutine td_rti_copy
