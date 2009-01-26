@@ -295,7 +295,7 @@ contains
 
     if(st%d%nspin == 2) ns = 2
 
-    if(mpi_grp_is_root(mpi_world) .and. eigensolver_has_progress_bar(eigens) .and. .not.verbose) then
+    if(mpi_grp_is_root(mpi_world) .and. eigensolver_has_progress_bar(eigens) .and. .not.verbose_) then
       call loct_progress_bar(-1, st%nst*st%d%nik)
     end if
 
