@@ -237,7 +237,6 @@ end subroutine X(lr_calc_elf)
 
 
 ! ---------------------------------------------------------
-! Periodic version is in kdotp_calc.F90 since it requires d/dk wfns
 subroutine X(calc_polarizability_finite)(sys, hm, lr, nsigma, perturbation, zpol, ndir)
   type(system_t),         intent(inout) :: sys
   type(hamiltonian_t),    intent(inout) :: hm

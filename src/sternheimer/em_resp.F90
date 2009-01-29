@@ -799,7 +799,7 @@ contains
 
     call io_close(iunit)
 
-    ! CROSS SECTION (THE COMPLEX PART OF POLARIZABILITY)
+    ! CROSS SECTION (THE IMAGINARY PART OF POLARIZABILITY)
     if(states_are_complex(st)) then 
       cross(1:MAX_DIM, 1:MAX_DIM) = aimag(alpha(1:MAX_DIM, 1:MAX_DIM)) * &
         omega / units_out%energy%factor * M_FOUR * M_PI / P_c 

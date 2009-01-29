@@ -35,7 +35,7 @@ program octopus
 
   implicit none
 
-  integer :: ns, inp_calc_mode
+  integer :: ns, inp_calc_mode, lenFCFLAGS
   type(block_t) :: blk
   character(len=256) :: sys_name
 
@@ -89,7 +89,7 @@ program octopus
   !% If true, octopus will print as part of the screen output
   !% information about the memory the code is using. The quantity
   !% reported is an approximation to the size of the heap and
-  !% generally it is a lower boundary to the actual memory octopus is
+  !% generally it is a lower bound to the actual memory octopus is
   !% using. By default this variable is set to false.
   !%End
   call loct_parse_logical('ReportMemory', .false., conf%report_memory)
@@ -181,7 +181,15 @@ program octopus
     message(4) = str_center("svn revision: " // trim(conf%latest_svn) , 70)
     message(5) = ""
     message(6) = str_center("Compiler: "//trim(conf%compiler), 70)
-    message(7) = str_center("Compiler flags: "//trim(conf%fcflags), max(70, len(trim(conf%fcflags))+17))
+
+    lenFCFLAGS = len(trim(conf%fcflags))
+    if(lenFCFLAGS + 17 .le. 80) then
+       message(7) = str_center("Compiler flags: "//trim(conf%fcflags), max(70, len(trim(conf%fcflags))+17))
+    else
+       message(7) = "Compiler flags: "//trim(conf%fcflags)
+       ! allow full string to be written out
+    endif
+
     message(8) = ""
     call write_info(8)
 
