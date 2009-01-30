@@ -34,6 +34,7 @@ module nl_operator_m
   use mpi_m
   use par_vec_m
   use profiling_m
+  use simul_box_m
   use stencil_m
 
   implicit none
@@ -272,8 +273,12 @@ contains
         do jj = 1, op%stencil%size
           ! Get global index of p1 plus current stencil point.
           !FIXME 4D
-          st1(jj) = index_from_coords(m%idx, m%sb%dim, &
-               p1(1:MAX_DIM) + m%resolution(p1(1), p1(2), p1(3))*op%stencil%points(1:MAX_DIM, jj))
+          if(simul_box_multires(m%sb)) then
+            st1(jj) = index_from_coords(m%idx, m%sb%dim, &
+                 p1(1:MAX_DIM) + m%resolution(p1(1), p1(2), p1(3))*op%stencil%points(1:MAX_DIM, jj))
+          else
+            st1(jj) = index_from_coords(m%idx, m%sb%dim, p1(1:MAX_DIM) + op%stencil%points(1:MAX_DIM, jj))
+          end if
 #ifdef HAVE_MPI
           if(m%parallel_in_domains) then
             ! When running parallel, translate this global

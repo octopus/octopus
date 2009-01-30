@@ -177,7 +177,7 @@ subroutine mesh_init_stage_2(sb, mesh, geo, cv, stencil)
 
   integer :: i, j, k, il, ik, ix, iy, iz, is
   FLOAT   :: chi(MAX_DIM)
-  integer :: nr(1:2, 1:MAX_DIM)
+  integer :: nr(1:2, 1:MAX_DIM), res
   logical :: inside
 
   call push_sub('mesh_init.mesh_init_stage_2')
@@ -194,7 +194,12 @@ subroutine mesh_init_stage_2(sb, mesh, geo, cv, stencil)
   ALLOCATE(mesh%idx%Lxyz_inv(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)), i)
   ALLOCATE(mesh%idx%Lxyz_tmp(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)), i)
   ALLOCATE(mesh%x_tmp(MAX_DIM, nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)), MAX_DIM*i)
-  ALLOCATE(mesh%resolution(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)), i)
+
+  if(simul_box_multires(sb)) then 
+    ALLOCATE(mesh%resolution(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)), i)
+  else
+    nullify(mesh%resolution)
+  end if
 
   mesh%idx%Lxyz_inv(:,:,:) = 0
   mesh%idx%Lxyz_tmp(:,:,:) = 0
@@ -213,16 +218,21 @@ subroutine mesh_init_stage_2(sb, mesh, geo, cv, stencil)
         call curvlinear_chi2x(sb, geo, cv, chi(:), mesh%x_tmp(:, ix, iy, iz))
 
         inside = simul_box_in_box(sb, geo, mesh%x_tmp(:, ix, iy, iz), inner_box = .true.)
-        mesh%resolution(ix, iy, iz) = 1
-        if(.not. inside .and. simul_box_multires(sb)) mesh%resolution(ix, iy, iz) = 2
-        inside = inside .or. (simul_box_in_box(sb, geo, mesh%x_tmp(:, ix, iy, iz)) .and. &
+        if(simul_box_multires(sb)) then
+          mesh%resolution(ix, iy, iz) = 1
+          if(.not. inside .and. simul_box_multires(sb)) mesh%resolution(ix, iy, iz) = 2
+          inside = inside .or. (simul_box_in_box(sb, geo, mesh%x_tmp(:, ix, iy, iz)) .and. &
              mod(ix, 2) == 0 .and. mod(iy, 2) == 0 .and. mod(iz, 2) == 0)
+          res = mesh%resolution(ix, iy, iz)
+        else
+          res = 1
+        end if
 
         if(inside) then
           do is = 1, stencil%size
-            i = ix + mesh%resolution(ix, iy, iz)*stencil%points(1, is)
-            j = iy + mesh%resolution(ix, iy, iz)*stencil%points(2, is)
-            k = iz + mesh%resolution(ix, iy, iz)*stencil%points(3, is)
+            i = ix + res*stencil%points(1, is)
+            j = iy + res*stencil%points(2, is)
+            k = iz + res*stencil%points(3, is)
             if(  &
                  i >= mesh%idx%nr(1,1) .and. i <= mesh%idx%nr(2,1) .and. &
                  j >= mesh%idx%nr(1,2) .and. j <= mesh%idx%nr(2,2) .and. &
@@ -568,8 +578,12 @@ contains
         jj(1:sb%dim) = mesh%idx%Lxyz(i, 1:sb%dim)
         jj(sb%dim + 1:MAX_DIM) = 0
         chi(1:sb%dim) = jj(1:sb%dim)*mesh%h(1:sb%dim)
-        mesh%vol_pp(i) = mesh%resolution(jj(1), jj(2), jj(3))**sb%dim*&
-             mesh%vol_pp(i)*curvlinear_det_Jac(sb, geo, cv, mesh%x(i, 1:sb%dim), chi(1:sb%dim))
+        if(simul_box_multires(mesh%sb)) then
+          mesh%vol_pp(i) = mesh%resolution(jj(1), jj(2), jj(3))**sb%dim*&
+               mesh%vol_pp(i)*curvlinear_det_Jac(sb, geo, cv, mesh%x(i, 1:sb%dim), chi(1:sb%dim))
+        else
+          mesh%vol_pp(i) = mesh%vol_pp(i)*curvlinear_det_Jac(sb, geo, cv, mesh%x(i, 1:sb%dim), chi(1:sb%dim))
+        end if
       end do
     end if
 
