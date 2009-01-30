@@ -63,6 +63,7 @@ module opt_control_propagation_m
 
 
   type oct_prop_t
+    private
     integer :: number_checkpoints
     integer, pointer :: iter(:)
     integer :: niter

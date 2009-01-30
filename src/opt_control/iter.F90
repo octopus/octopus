@@ -25,7 +25,6 @@ module opt_control_iter_m
   use io_m
   use global_m
   use loct_parser_m
-  use opt_control_constants_m
   use opt_control_parameters_m
   use grid_m
   use states_m

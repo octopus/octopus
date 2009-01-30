@@ -161,28 +161,28 @@
       par%utransfi = M_ZERO
 
       do mm = 1, par%dim
-        call tdf_init_numerical(fm, par%ntiter, par%dt, par%omegamax, rep = par_common%representation)
+        call tdf_init_numerical(fm, tdf_niter(par%f(1)), tdf_dt(par%f(1)), par%omegamax, rep = par_common%representation)
         call tdf_set_numerical(fm, mm, M_ONE)
         select case(par_common%representation)
           case(ctr_sine_fourier_series); call tdf_sineseries_to_numerical(fm)
           case(ctr_fourier_series);      call tdf_fourier_to_numerical(fm)
           case(ctr_zero_fourier_series); call tdf_zerofourier_to_numerical(fm)
         end select
-        do i = 1, par%ntiter + 1
-          t = (i-1)*par%dt
+        do i = 1, tdf_niter(fm) + 1
+          t = (i-1)*tdf_dt(fm)
           call tdf_set_numerical(fm, i, tdf(fm, i)*cos(par%w0*t))
         end do
 
         do nn = mm, par%dim
-          call tdf_init_numerical(fn, par%ntiter, par%dt, par%omegamax, rep = par_common%representation)
+          call tdf_init_numerical(fn, tdf_niter(par%f(1)), tdf_dt(par%f(1)), par%omegamax, rep = par_common%representation)
           call tdf_set_numerical(fn, nn, M_ONE)
           select case(par_common%representation)
             case(ctr_sine_fourier_series); call tdf_sineseries_to_numerical(fn)
             case(ctr_fourier_series);      call tdf_fourier_to_numerical(fn)
             case(ctr_zero_fourier_series); call tdf_zerofourier_to_numerical(fn)
           end select
-          do i = 1, par%ntiter + 1
-            t = (i-1)*par%dt
+          do i = 1, tdf_niter(fn) + 1
+            t = (i-1)*tdf_dt(fn)
             call tdf_set_numerical(fn, i, tdf(fn, i)*cos(par%w0*t))
           end do
           par%utransf(mm, nn) = tdf_dot_product(fm, fn)

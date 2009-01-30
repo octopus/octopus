@@ -551,7 +551,7 @@ contains
       call propagate_forward(sys, hm, td, par, target, psi, prop_psi)
     end if
 
-    call calc_chi(oct, target, sys%gr, psi, chi)
+    call target_get_state(target, chi)
     call bwd_step(oct, sys, td, hm, target, par, par_chi, chi, prop_chi, prop_psi)
 
     call states_end(psi)
@@ -592,7 +592,7 @@ contains
     call parameters_copy(parp, par)
 
     call states_copy(chi, psi)
-    call calc_chi(oct, target, sys%gr, psi, chi)
+    call calc_chi(target, sys%gr, psi, chi)
     call bwd_step(oct, sys, td, hm, target, par, parp, chi, prop_chi, prop_psi)
 
     call parameters_filter(parp, filter)
@@ -650,7 +650,7 @@ contains
 
     ! Set the boundary condition for the backward propagation.
     call states_copy(chi, psi)
-    call calc_chi(oct, target, sys%gr, psi, chi)
+    call calc_chi(target, sys%gr, psi, chi)
 
     ! Backward propagation, while at the same time finding the output field, 
     ! which is placed at par_chi
@@ -707,7 +707,7 @@ contains
     end if
     
     call states_copy(chi, psi)
-    call calc_chi(oct, target, sys%gr, psi, chi)
+    call calc_chi(target, sys%gr, psi, chi)
     call bwd_step(oct, sys, td, hm, target, par, par_chi, chi, prop_chi, prop_psi)
 
     call states_end(psi)

@@ -42,20 +42,20 @@ module opt_control_target_m
   use mesh_function_m
   use restart_m
   use timedep_m
-  use opt_control_constants_m
 
   implicit none
 
   private
-  public :: target_t,       &
-            target_init,    &
-            target_end,     &
-            target_output,  &
-            target_tdcalc,  &
-            target_inh,     &
-            target_mode,    &
-            target_type,    &
-            j1_functional,  &
+  public :: target_t,         &
+            target_get_state, &
+            target_init,      &
+            target_end,       &
+            target_output,    &
+            target_tdcalc,    &
+            target_inh,       &
+            target_mode,      &
+            target_type,      &
+            j1_functional,    &
             calc_chi
 
   integer, public, parameter ::       &
@@ -76,7 +76,6 @@ module opt_control_target_m
   type target_t
     private
     integer :: type
-    integer :: mode
     type(states_t) :: st
     type(excited_states_t) :: est
     FLOAT, pointer :: rho(:) => null()
@@ -92,6 +91,15 @@ module opt_control_target_m
   end type target_t
 
   contains
+
+
+  ! ----------------------------------------------------------------------
+  subroutine target_get_state(target, st)
+    type(target_t), intent(in)    :: target
+    type(states_t), intent(inout) :: st
+    call states_copy(st, target%st)
+  end subroutine target_get_state
+  ! ----------------------------------------------------------------------
 
 
   ! ----------------------------------------------------------------------
@@ -154,7 +162,6 @@ module opt_control_target_m
     case(oct_tg_groundstate)
       message(1) =  'Info: Using Ground State for TargetOperator'
       call write_info(1)
-      target%mode = oct_targetmode_static
       call restart_read(trim(restart_dir)//'gs', target%st, gr, geo, ierr)
       if(ierr.ne.0) then
         write(message(1),'(a)') 'Could not read ground-state wavefunctions from '//trim(restart_dir)//'gs.'
@@ -165,7 +172,6 @@ module opt_control_target_m
 
       message(1) =  'Info: TargetOperator is a linear combination of Slater determinants.'
       call write_info(1)
-      target%mode = oct_targetmode_static
 
       call states_look (trim(restart_dir)//'gs', gr%mesh%mpi_grp, ip, ip, target%st%nst, ierr)
       target%st%st_start = 1
@@ -194,7 +200,6 @@ module opt_control_target_m
       message(1) =  'Info: The target functional is the exclusion of a number of states defined by'
       message(2) =  '      "OCTExcludeStates".'
       call write_info(2)
-      target%mode = oct_targetmode_static
       !%Variable OCTExcludeStates
       !%Type integer
       !%Default 1
@@ -209,7 +214,6 @@ module opt_control_target_m
 
       message(1) =  'Info: Using Superposition of States for TargetOperator'
       call write_info(1)
-      target%mode = oct_targetmode_static
 
       !%Variable OCTTargetTransformStates
       !%Type block
@@ -260,7 +264,6 @@ module opt_control_target_m
 
       message(1) =  'Info: Target is a density.'
       call write_info(1)
-      target%mode = oct_targetmode_static
 
       !%Variable OCTTargetDensity
       !%Type string
@@ -349,7 +352,6 @@ module opt_control_target_m
       !% that should be searched for. This one can do by supplying a string through
       !% the variable OCTLocalTarget.
       !%End
-      target%mode = oct_targetmode_static
 
       if(loct_parse_isdef('OCTTargetLocal').ne.0) then
         ALLOCATE(target%rho(NP), NP)
@@ -370,7 +372,6 @@ module opt_control_target_m
       end if
 
     case(oct_tg_td_local)
-      target%mode = oct_targetmode_td
       if(loct_parse_block(datasets_check('OCTTdTarget'),blk)==0) then
         call loct_parse_block_string(blk, 0, 0, target%td_local_target)
         call conv_to_C_string(target%td_local_target)
@@ -417,7 +418,6 @@ module opt_control_target_m
       !% <br>%</tt>
       !%
       !%End
-      target%mode = oct_targetmode_td 
       if(loct_parse_isdef(datasets_check('OCTOptimizeHarmonicSpectrum')).ne.0) then
         if(loct_parse_block(datasets_check('OCTOptimizeHarmonicSpectrum'), blk) == 0) then
           target%hhg_nks = loct_parse_block_cols(blk, 0)
@@ -452,6 +452,7 @@ module opt_control_target_m
 
     call pop_sub()
   end subroutine target_init
+  ! ----------------------------------------------------------------------
 
 
   ! ----------------------------------------------------------------------
@@ -472,12 +473,13 @@ module opt_control_target_m
       deallocate(target%hhg_alpha); nullify(target%hhg_alpha)
       deallocate(target%hhg_a); nullify(target%hhg_a)
     end if
-    if(target%mode.eq.oct_targetmode_td) then
+    if(target_mode(target).eq.oct_targetmode_td) then
       deallocate(target%td_fitness); nullify(target%td_fitness)
     end if
 
     call pop_sub()
   end subroutine target_end
+  ! ----------------------------------------------------------------------
 
 
   ! ----------------------------------------------------------------------
@@ -512,6 +514,7 @@ module opt_control_target_m
 
     call pop_sub()
   end subroutine target_output
+  ! ----------------------------------------------------------------------
 
 
   ! ---------------------------------------------------------
@@ -529,7 +532,7 @@ module opt_control_target_m
     FLOAT, allocatable :: multipole(:, :)
     integer :: p, j, is
 
-    if(target%mode .ne. oct_targetmode_td) return
+    if(target_mode(target) .ne. oct_targetmode_td) return
 
     call push_sub('target.target_tdcalc')
 
@@ -569,6 +572,7 @@ module opt_control_target_m
 
     call pop_sub()
   end subroutine target_tdcalc
+  ! ----------------------------------------------------------------------
 
 
   ! ---------------------------------------------------------------
@@ -603,6 +607,7 @@ module opt_control_target_m
 
     call pop_sub()
   end subroutine target_inh
+  !----------------------------------------------------------
 
 
   !----------------------------------------------------------
@@ -755,8 +760,7 @@ module opt_control_target_m
   ! ---------------------------------------------------------
   ! calculate |chi(T)> = \hat{O}(T) |psi(T)>
   ! ---------------------------------------------------------
-  subroutine calc_chi(oct, target, gr, psi_in, chi_out)
-    type(oct_t),       intent(in)    :: oct
+  subroutine calc_chi(target, gr, psi_in, chi_out)
     type(target_t),    intent(inout) :: target
     type(grid_t),      intent(inout) :: gr
     type(states_t),    intent(inout) :: psi_in
@@ -926,17 +930,12 @@ module opt_control_target_m
 
     case default
 
-      select case(oct%algorithm)
-      case(oct_algorithm_zbr98)
-        call states_copy(chi_out, target%st)
-      case default
-        olap = zstates_mpdotp(gr%mesh, target%st, psi_in)
-        do ik = 1, psi_in%d%nik
-          do p  = psi_in%st_start, psi_in%st_end
-            chi_out%zpsi(:, :, p, ik) = olap*target%st%zpsi(:, :, p, ik)
-          end do
+      olap = zstates_mpdotp(gr%mesh, target%st, psi_in)
+      do ik = 1, psi_in%d%nik
+        do p  = psi_in%st_start, psi_in%st_end
+          chi_out%zpsi(:, :, p, ik) = olap*target%st%zpsi(:, :, p, ik)
         end do
-      end select
+      end do
 
     end select
 
@@ -946,9 +945,14 @@ module opt_control_target_m
 
 
   ! ----------------------------------------------------------------------
-  integer function target_mode(target)
+  integer pure function target_mode(target)
     type(target_t), intent(in) :: target
-    target_mode = target%mode
+    select case(target%type)
+    case(oct_tg_td_local, oct_tg_hhg)
+      target_mode = oct_targetmode_td
+    case default
+      target_mode = oct_targetmode_static
+    end select
   end function target_mode
   ! ----------------------------------------------------------------------
 

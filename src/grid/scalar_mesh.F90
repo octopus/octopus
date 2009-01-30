@@ -317,7 +317,7 @@ contains
 
     call push_sub('scalar_mesh.scalar_mesh_write')
     ! output scalar mesh
-    iunit = io_open(STATIC_DIR//trim(filename), action='write')
+    iunit = io_open(STATIC_DIR//'/'//trim(filename), action='write')
     write(iunit,'(a)') '# index    gridpoint             integration weight'
     do i = 1, sm%np
       write(iunit,'(1x,i4,2x,2F22.16)') i, sm%mesh(i), sm%weights(i)

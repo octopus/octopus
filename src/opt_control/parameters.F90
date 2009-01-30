@@ -20,6 +20,7 @@
 #include "global.h"
 
 module opt_control_parameters_m
+  use loct_m
   use lalg_adv_m
   use string_m
   use datasets_m
@@ -114,8 +115,6 @@ module opt_control_parameters_m
   type oct_control_parameters_t
     private
     integer :: no_parameters = 0
-    FLOAT   :: dt            = M_ZERO
-    integer :: ntiter        = 0
     integer :: dim           = 0
     FLOAT   :: targetfluence = M_ZERO
     FLOAT   :: intphi        = M_ZERO
@@ -131,7 +130,7 @@ module opt_control_parameters_m
     FLOAT, pointer :: utransfi(:, :) => NULL()
   end type oct_control_parameters_t
 
-  type(oct_parameters_common_t), pointer :: par_common => null()
+  type(oct_parameters_common_t), save :: par_common
   type(mix_t) :: parameters_mix
 
 contains
@@ -151,8 +150,6 @@ contains
     type(block_t)            :: blk
 
     call push_sub('parameters.parameters_read')
-
-    if(.not. associated(par_common)) ALLOCATE(par_common, 1)
 
     !%Variable OCTParameterRepresentation
     !%Type integer
@@ -442,6 +439,9 @@ contains
   subroutine parameters_prepare_initial(par)
     type(oct_control_parameters_t), intent(inout) :: par
 
+    FLOAT   :: dt
+    integer :: ntiter
+
     call push_sub('parameters.parameters_prepare_initial')
 
     call parameters_apply_envelope(par)
@@ -481,14 +481,19 @@ contains
     case(parameter_mode_phi)
       par%intphi = tdf_dot_product(par%f(1), par%f(1))
       if(par%intphi <= M_ZERO) then
-        par%intphi = CNST(0.1)*(M_PI/M_TWO)**2*par%dt*par%ntiter
+        dt = tdf_dt(par%f(1))
+        ntiter = tdf_niter(par%f(1))
+
+        par%intphi = CNST(0.1)*(M_PI/M_TWO)**2*dt*ntiter
       else
         par%intphi = tdf_dot_product(par%f(1), par%f(1))
       end if
     case(parameter_mode_f_and_phi)
       par%intphi = tdf_dot_product(par%f(2), par%f(2))
       if(par%intphi <= M_ZERO) then
-        par%intphi = (CNST(0.1)*M_PI)**2*par%dt*par%ntiter
+        dt = tdf_dt(par%f(1))
+        ntiter = tdf_niter(par%f(1))
+        par%intphi = (CNST(0.1)*M_PI)**2*dt*ntiter
       else
         par%intphi = tdf_dot_product(par%f(2), par%f(2))
       end if
@@ -511,7 +516,6 @@ contains
   ! ---------------------------------------------------------
   subroutine parameters_set_rep(par)
     type(oct_control_parameters_t), intent(inout) :: par
-    integer :: j
     call push_sub('parameters.parameters_set_rep')
 
     if(par%current_representation .ne. par%representation) then
@@ -625,7 +629,8 @@ contains
     ! WARNING: probably one does not need a select case here, but just put par%dim
     select case(par%representation)
     case(ctr_real_space)
-      call mix_init(parameters_mix, par%ntiter + 1, par%no_parameters, 1)
+      dim = tdf_niter(par%f(1)) + 1
+      call mix_init(parameters_mix, dim, par%no_parameters, 1)
     case(ctr_sine_fourier_series, ctr_fourier_series, ctr_zero_fourier_series)
       call mix_init(parameters_mix, par%dim, par%no_parameters, 1)
     end select
@@ -648,7 +653,7 @@ contains
     type(oct_control_parameters_t), intent(in) :: par_in, par_out
     type(oct_control_parameters_t), intent(inout) :: par_new
 
-    integer :: i, j, dim
+    integer :: i, j, dim, ntiter
     FLOAT, allocatable :: e_in(:, :, :), e_out(:, :, :), e_new(:, :, :)
     call push_sub('parameters.parameters_mixing')
 
@@ -663,11 +668,13 @@ contains
     select case(par_in%representation)
     case(ctr_real_space)
 
-      ALLOCATE(e_in (par_in%ntiter+1, par_in%no_parameters, 1), (par_in%ntiter+1)*par_in%no_parameters)
-      ALLOCATE(e_out(par_in%ntiter+1, par_in%no_parameters, 1), (par_in%ntiter+1)*par_in%no_parameters)
-      ALLOCATE(e_new(par_in%ntiter+1, par_in%no_parameters, 1), (par_in%ntiter+1)*par_in%no_parameters)
+      ntiter = tdf_niter(par_in%f(1))
+
+      ALLOCATE(e_in (ntiter+1, par_in%no_parameters, 1), (ntiter+1)*par_in%no_parameters)
+      ALLOCATE(e_out(ntiter+1, par_in%no_parameters, 1), (ntiter+1)*par_in%no_parameters)
+      ALLOCATE(e_new(ntiter+1, par_in%no_parameters, 1), (ntiter+1)*par_in%no_parameters)
       do i = 1, par_in%no_parameters
-        do j = 1, par_in%ntiter + 1
+        do j = 1, ntiter + 1
           e_in (j, i, 1) = tdf(par_in%f(i), j)
           e_out(j, i, 1) = tdf(par_out%f(i), j)
         end do
@@ -719,8 +726,6 @@ contains
     cp%w0              = par_common%w0
     cp%omegamax        = par_common%omegamax
     cp%no_parameters   = par_common%no_parameters
-    cp%dt              = dt
-    cp%ntiter          = ntiter
 
     cp%current_representation = ctr_real_space
 
@@ -729,7 +734,7 @@ contains
     ALLOCATE(cp%alpha(cp%no_parameters), cp%no_parameters)
     cp%alpha = M_ZERO
     do j = 1, cp%no_parameters
-      call tdf_init_numerical(cp%f(j), cp%ntiter, cp%dt, par_common%omegamax)
+      call tdf_init_numerical(cp%f(j), ntiter, dt, par_common%omegamax)
     end do
 
     cp%alpha = par_common%alpha
@@ -789,7 +794,7 @@ contains
     ! Do not apply the envelope if the parameters are represented as a sine Fourier series.
     if(cp%representation .eq. ctr_real_space) then
       do j = 1, cp%no_parameters
-        do i = 1, cp%ntiter + 1
+        do i = 1, tdf_niter(cp%f(j)) + 1
           call tdf_set_numerical(cp%f(j), i, tdf(cp%f(j), i) / tdf(par_common%td_penalty(j), i) )
         end do
       end do
@@ -909,8 +914,8 @@ contains
           iunit = io_open(trim(filename)//'/cp', action='write')
         end if
         write(iunit,'(2a20)') '#       t [a.u]      ', '        e(t)         '
-        do i = 1, cp%ntiter + 1
-          t = (i-1)*cp%dt
+        do i = 1, tdf_niter(par%f(j)) + 1
+          t = (i-1)*tdf_dt(par%f(j))
           write(iunit, '(2es20.8e3)') t, tdf(par%f(j), t)
         end do
         call io_close(iunit)
@@ -926,8 +931,8 @@ contains
           iunit = io_open(trim(filename)//'/cp', action='write')
         end if
         write(iunit,'(3a20)') '#       t [a.u]      ', '        e(t)         ', '        f(t)         '
-        do i = 1, cp%ntiter + 1
-          t = (i-1)*cp%dt
+        do i = 1, tdf_niter(par%f(j)) + 1
+          t = (i-1)*tdf_dt(par%f(j))
           write(iunit, '(3es20.8e3)') t, tdf(par%f(j), t) * cos(par%w0*t), tdf(par%f(j), t)
         end do
         call io_close(iunit)
@@ -939,8 +944,8 @@ contains
       iunit = io_open(trim(filename)//'/cp', action='write')
       write(iunit,'(4a20)') '#       t [a.u]      ', '        e(t)         ', &
                             '         f(t)        ', '       phi(t)        ' 
-      do i = 1, cp%ntiter + 1
-        t = (i-1)*cp%dt
+      do i = 1, tdf_niter(par%f(j)) + 1
+        t = (i-1)*tdf_dt(par%f(j))
         write(iunit, '(4es20.8e3)') t, tdf(par_common%f, t) * &
           cos(par%w0*t + tdf(par%f(1), t) ), tdf(par_common%f, t), tdf(par%f(1), t)
       end do
@@ -952,8 +957,8 @@ contains
       iunit = io_open(trim(filename)//'/cp', action='write')
       write(iunit,'(4a20)') '#       t [a.u]      ', '        e(t)         ', &
                             '         f(t)        ', '       phi(t)        '
-      do i = 1, cp%ntiter + 1
-        t = (i-1)*cp%dt
+      do i = 1, tdf_niter(par%f(j)) + 1
+        t = (i-1)*tdf_dt(par%f(j))
         write(iunit, '(4es20.8e3)') t, tdf(par%f(1), t) * &
           cos(par%w0*t + tdf(par%f(2), t) ), tdf(par%f(1), t), tdf(par%f(2), t)
       end do
@@ -1019,8 +1024,8 @@ contains
     case(parameter_mode_phi)
       call tdf_init(f)
       call tdf_copy(f, par_%f(1))
-      do i = 1, par%ntiter + 1
-        t = (i-1)*par%dt
+      do i = 1, tdf_niter(f) + 1
+        t = (i-1)*tdf_dt(f)
         fi = tdf(par_common%f, i)
         phi = real(tdf(f, i)) 
         call tdf_set_numerical(f, i, fi *cos(par%w0*t+phi))
@@ -1030,8 +1035,8 @@ contains
     case(parameter_mode_f_and_phi)
       call tdf_init(f)
       call tdf_copy(f, par_%f(1))
-      do i = 1, par_%ntiter + 1
-        t = (i-1)*par_%dt
+      do i = 1, tdf_niter(f) + 1
+        t = (i-1)*tdf_dt(f)
         fi = tdf(par_%f(1), i)
         phi = real(tdf(par_%f(2), i))
         call tdf_set_numerical(f, i, fi*cos(par%w0*t+phi))
@@ -1070,8 +1075,8 @@ contains
       do j = 1, par_%no_parameters
         call tdf_init(f)
         call tdf_copy(f, par_%f(j))
-        do i = 1, par_%ntiter + 1
-          t = (i-1)*par_%dt
+        do i = 1, tdf_niter(f) + 1
+          t = (i-1)*tdf_dt(f)
           fi = tdf(par_%f(j), i)
           tdp = sqrt(real(tdf(par_common%td_penalty(j), i)))
           call tdf_set_numerical(f, i, fi*tdp)
@@ -1086,8 +1091,8 @@ contains
         if(par_%current_representation .eq. ctr_sine_fourier_series) then
           call tdf_sineseries_to_numerical(f)
         end if
-        do i = 1, par_%ntiter + 1
-          t = (i-1)*par_%dt
+        do i = 1, tdf_niter(f) + 1
+          t = (i-1)*tdf_dt(f)
           fi = tdf(par_%f(j), i)
           tdp = sqrt(real(tdf(par_common%td_penalty(j), i)))
           call tdf_set_numerical(f, i, fi*tdp*cos(par_%w0*t))
@@ -1098,8 +1103,8 @@ contains
     case(parameter_mode_phi)
       call tdf_init(f)
       call tdf_copy(f, par_%f(1))
-      do i = 1, par_%ntiter + 1
-        t = (i-1)*par_%dt
+      do i = 1, tdf_niter(f) + 1
+        t = (i-1)*tdf_dt(f)
         fi = tdf(par_common%f, i)
         phi = real(tdf(par_%f(1), i))
         tdp = sqrt(real(tdf(par_common%td_penalty(1), i)))
@@ -1110,8 +1115,8 @@ contains
     case(parameter_mode_f_and_phi)
       call tdf_init(f)
       call tdf_copy(f, par_%f(1))
-      do i = 1, par_%ntiter + 1
-        t = (i-1)*par_%dt
+      do i = 1, tdf_niter(f) + 1
+        t = (i-1)*tdf_dt(f)
         fi = tdf(par_%f(1), i)
         phi = real(tdf(par_%f(2), i))
         tdp = sqrt(real(tdf(par_common%td_penalty(1), i)))
@@ -1161,13 +1166,10 @@ contains
     type(oct_control_parameters_t), intent(inout) :: cp_out
     type(oct_control_parameters_t), intent(in)    :: cp_in
     integer :: j
-
     call push_sub('parameters.parameters_copy')
 
     cp_out%targetfluence = cp_in%targetfluence
     cp_out%no_parameters = cp_in%no_parameters
-    cp_out%dt = cp_in%dt
-    cp_out%ntiter = cp_in%ntiter
     cp_out%dim = cp_in%dim
     cp_out%targetfluence = cp_in%targetfluence
     cp_out%intphi = cp_in%intphi
@@ -1175,21 +1177,14 @@ contains
     cp_out%current_representation = cp_in%current_representation
     cp_out%omegamax = cp_in%omegamax
     cp_out%w0 = cp_in%w0
+    call loct_pointer_copy(cp_out%alpha, cp_in%alpha)
     ALLOCATE(cp_out%f(cp_out%no_parameters), cp_out%no_parameters)
-    ALLOCATE(cp_out%alpha(cp_out%no_parameters), cp_out%no_parameters)
     do j = 1, cp_in%no_parameters
-      cp_out%alpha(j) = cp_in%alpha(j)
       call tdf_init(cp_out%f(j))
       call tdf_copy(cp_out%f(j), cp_in%f(j))
     end do
-    if(associated(cp_in%utransf)) then
-      ALLOCATE(cp_out%utransf(cp_out%dim, cp_out%dim), cp_out%dim**2)
-      cp_out%utransf = cp_in%utransf
-    end if
-    if(associated(cp_in%utransfi)) then
-      ALLOCATE(cp_out%utransfi(cp_out%dim, cp_out%dim), cp_out%dim**2)
-      cp_out%utransfi = cp_in%utransfi
-    end if
+    call loct_pointer_copy(cp_out%utransf, cp_in%utransf)
+    call loct_pointer_copy(cp_out%utransfi, cp_in%utransfi)
 
     call pop_sub()
   end subroutine parameters_copy
@@ -1246,8 +1241,8 @@ contains
            ( tdf(par_common%td_penalty(j), iter) - M_TWO*aimag(dq(j)) )
           value = (M_ONE - delta)*tdf(cpp%f(j), iter) + delta * value
           call tdf_set_numerical(cp%f(j), iter, value)
-          if(iter+1 <= cp%ntiter + 1)  call tdf_set_numerical(cp%f(j), iter+1, value)
-          if(iter+2 <= cp%ntiter + 1)  call tdf_set_numerical(cp%f(j), iter+2, value)
+          if(iter+1 <= tdf_niter(cp%f(j)) + 1)  call tdf_set_numerical(cp%f(j), iter+1, value)
+          if(iter+2 <= tdf_niter(cp%f(j)) + 1)  call tdf_set_numerical(cp%f(j), iter+2, value)
         end do
 
       case('b')
@@ -1366,8 +1361,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine parameters_close()
-
-    if(associated(par_common)) deallocate(par_common)
+    ! Here par_commons data should be deallocated.
   end subroutine parameters_close
   ! ---------------------------------------------------------
 
