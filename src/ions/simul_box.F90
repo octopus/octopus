@@ -1424,7 +1424,7 @@ contains
     end if
   end subroutine simul_box_copy
 
-  logical function simul_box_multires(this) result(mr)
+  logical pure function simul_box_multires(this) result(mr)
     type(simul_box_t), intent(in) :: this
 
     mr = abs(this%inner_size - M_ONE) > M_EPSILON

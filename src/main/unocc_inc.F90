@@ -57,7 +57,7 @@ subroutine X(one_body) (gr, geo, st, hm)
       if(st%occ(i, 1) < CNST(0.0001)) cycle
       if(st%occ(j, 1) > CNST(0.0001)) cycle
 
-      call X(derivatives_grad)(gr%der, st%X(psi)(1:np, 1, j, 1), gpsi(1:NP_PART, 1:MAX_DIM))
+      call X(derivatives_grad)(gr%der, st%X(psi)(:, 1, j, 1), gpsi)
        
       do idir = 1, 3
          exp_r = X(mf_integrate) (gr%mesh, R_CONJ(st%X(psi) (1:np, 1, i, 1)) * &
@@ -107,7 +107,7 @@ subroutine X(two_body) (gr, st)
     do j = 1, st%nst
       if(j > i) cycle
 
-      n(:) = R_CONJ(st%X(psi) (:, 1, i, 1)) * st%X(psi) (:, 1, j, 1)
+      n(1:NP) = R_CONJ(st%X(psi) (1:NP, 1, i, 1)) * st%X(psi) (1:NP, 1, j, 1)
       call X(poisson_solve) (gr, v, n, all_nodes=.false.)
 
       do k = 1, st%nst

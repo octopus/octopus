@@ -634,8 +634,12 @@ contains
     
     memory = 0.0_8
     
-    ! Lxyz_inv and resolution
-    memory = memory + dble(2*SIZEOF_UNSIGNED_INT*product(mesh%idx%nr(2, 1:mesh%sb%dim) - mesh%idx%nr(1, 1:mesh%sb%dim) + 1))
+    ! Lxyz_inv
+    memory = memory + dble(SIZEOF_UNSIGNED_INT*product(mesh%idx%nr(2, 1:mesh%sb%dim) - mesh%idx%nr(1, 1:mesh%sb%dim) + 1))
+    ! resolution
+    if(simul_box_multires(mesh%sb)) then
+      memory = memory + dble(SIZEOF_UNSIGNED_INT*product(mesh%idx%nr(2, 1:mesh%sb%dim) - mesh%idx%nr(1, 1:mesh%sb%dim) + 1))
+    end if
     ! Lxyz
     memory = memory + dble(SIZEOF_UNSIGNED_INT*mesh%np_part_global*MAX_DIM)
     ! x_global
