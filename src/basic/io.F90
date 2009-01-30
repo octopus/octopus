@@ -218,7 +218,7 @@ contains
     call io_mkdir(tmpdir, is_tmp=.true.)
 
     ! create static directory
-    call io_mkdir('static', is_tmp=.false.)
+    call io_mkdir(STATIC_DIR, is_tmp=.false.)
   end subroutine io_init_datasets
 
 

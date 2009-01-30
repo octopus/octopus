@@ -50,10 +50,10 @@ module solids_m
 contains
 
   subroutine periodic_copy_init(this, sb, pos, range)
-    type(periodic_copy_t), intent(out)   :: this
-    type(simul_box_t),       intent(in)    :: sb
-    FLOAT,                   intent(in)    :: pos(1:MAX_DIM)
-    FLOAT,                   intent(in)    :: range
+    type(periodic_copy_t), intent(out) :: this
+    type(simul_box_t),     intent(in)  :: sb
+    FLOAT,                 intent(in)  :: pos(1:MAX_DIM)
+    FLOAT,                 intent(in)  :: range
 
     integer :: pd
     
@@ -131,7 +131,7 @@ contains
   end function periodic_copy_position
 
   ! This subroutine creates a crystal by replicating the geometry and
-  ! writes the result to 'static/crystal.xyz'
+  ! writes the result to dir//'crystal.xyz'
   subroutine periodic_write_crystal(sb, geo, dir)
     type(simul_box_t), intent(in) :: sb
     type(geometry_t),  intent(in) :: geo 

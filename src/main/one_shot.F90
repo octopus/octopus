@@ -107,7 +107,7 @@ contains
     call write_info(7, stdout)
     call messages_print_stress(stdout)
 
-    call h_sys_output_all(sys%outp, sys%gr, sys%geo, sys%st, hm, "static")
+    call h_sys_output_all(sys%outp, sys%gr, sys%geo, sys%st, hm, STATIC_DIR)
 
     call states_deallocate_wfns(sys%st)
 

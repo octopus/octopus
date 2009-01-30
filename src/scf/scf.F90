@@ -544,13 +544,13 @@ contains
 
     if(gs_run_) then 
       ! output final information
-      call scf_write_static("static", "info")
-      call h_sys_output_all(outp, gr, geo, st, hm, "static")
+      call scf_write_static(STATIC_DIR, "info")
+      call h_sys_output_all(outp, gr, geo, st, hm, STATIC_DIR)
     end if
 
     if(simul_box_is_periodic(gr%sb).and.st%d%nik > st%d%nspin) then
-      call states_write_bands('static', st%nst, st, gr%sb)
-      call states_write_fermi_energy('static', st, gr%mesh, gr%sb)
+      call states_write_bands(STATIC_DIR, st%nst, st, gr%sb)
+      call states_write_fermi_energy(STATIC_DIR, st, gr%mesh, gr%sb)
       call states_degeneracy_matrix(st)
     end if
 
@@ -915,7 +915,7 @@ contains
       end do
 
       ! also write to disk for further processing
-      iunit2 = io_open('static/momentum', action='write')
+      iunit2 = io_open(STATIC_DIR//'/momentum', action='write')
 
       do ik = 1, st%d%nik
         do j = 1, st%nst

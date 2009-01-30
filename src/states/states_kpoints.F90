@@ -62,14 +62,14 @@ subroutine states_choose_kpoints(d, sb, geo)
   !%Type block
   !%Section Mesh::KPoints
   !%Description
-  !% This block defines an explicit set of k-points and its weights for
-  !% a periodic-system calculation. The first column is the weights
-  !% of each kpoint and the following are the components of the k-point
+  !% This block defines an explicit set of k-points and their weights for
+  !% a periodic-system calculation. The first column is the weight
+  !% of each k-point and the following are the components of the k-point
   !% vector. You only need to specify the components for the
   !% periodic directions. Note that the k-points should be given in
   !% reciprocal-space coordinates (not in reduced coordinates), i.e.
   !% what Octopus writes in a line in the standard output as
-  !% <tt>#k =   1, k = (    0.154000,    0.154000,    0.154000)</tt>
+  !% <tt>#k =   1, k = (    0.154000,    0.154000,    0.154000)</tt>.
   !%
   !% For example, if you want to include only the gamma point, you can
   !% use:
@@ -87,9 +87,9 @@ subroutine states_choose_kpoints(d, sb, geo)
       call write_fatal(1)
     end if
 
-    !we have a block with the kpoints given explicitily
+    !we have a block with the k-points given explicitly
     d%nik = loct_parse_block_n(blk)
-    write(message(1), '(a,i4,a)') 'Input: ', d%nik, ' K Points will be read from the input file'
+    write(message(1), '(a,i4,a)') 'Input: ', d%nik, ' k-points will be read from the input file'
     call write_info(1)
 
     ALLOCATE(d%kpoints(MAX_DIM, d%nik), MAX_DIM*d%nik)
@@ -117,17 +117,17 @@ subroutine states_choose_kpoints(d, sb, geo)
   !%Section Mesh::KPoints
   !%Description
   !% When this block is given (and the KPoints block is not present),
-  !% K points are arranged in a Monkhorst Pack grid.
+  !% k-points are arranged in a Monkhorst-Pack grid.
   !%
   !% The first row of the block is a triplet of integers defining the
-  !% number of K points to be used along each direction in the
+  !% number of k-points to be used along each direction in the
   !% reciprocal space. The numbers refer to the whole Brillouin zone,
-  !% and the actual number of kpoints is usually reduced exploiting
+  !% and the actual number of k-points is usually reduced exploiting
   !% the symmetries of the system.  An optional second row can specify
-  !% a shift in the K points.
+  !% a shift in the k-points.
   !%
   !% For example, the following input samples the BZ with 100 points in the 
-  !% xy plane of the reciprocal space
+  !% xy plane of the reciprocal space:
   !%
   !% <tt>%KPointsMP
   !% <br>&nbsp;&nbsp;10 | 10 | 1
@@ -135,11 +135,31 @@ subroutine states_choose_kpoints(d, sb, geo)
   !%
   !%End
 
+! default when nothing specified: gamma point only
   if(loct_parse_block(datasets_check('KPointsMonkhorstPack'), blk) .ne. 0) then
-    message(1) = 'The system is periodic and neither the KPoints or KPointsMonkhorstPack blocks have been given.'
-    call write_fatal(1)
+!    message(1) = 'The system is periodic and neither the KPoints nor KPointsMonkhorstPack blocks has been given.'
+!    call write_fatal(1)
+    if (d%ispin == 2) then
+      message(1) = 'Not implemented yet.'
+      call write_fatal(1)
+    end if
+
+    d%nik = 1
+
+    ALLOCATE(d%kpoints(MAX_DIM, d%nik), MAX_DIM*d%nik)
+    ALLOCATE(d%kweights(d%nik), d%nik)
+
+    d%kweights(1) = M_ONE
+    do idim = 1, sb%periodic_dim
+      d%kpoints(idim, 1) = M_ZERO
+    end do
+
+    call print_kpoints_debug
+    call pop_sub()
+    return
   end if
 
+! now deal with Monkhorst-Pack
   d%nik_axis = 1
   do i = 1, sb%periodic_dim
     call loct_parse_block_int(blk, 0, i-1, d%nik_axis(i))

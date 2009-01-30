@@ -146,8 +146,8 @@ contains
 
     ! write output file
     if(mpi_grp_is_root(mpi_world)) then
-      call io_mkdir('static')
-      iunit = io_open('static/eigenvalues', action='write')
+      call io_mkdir(STATIC_DIR)
+      iunit = io_open(STATIC_DIR//'eigenvalues', action='write')
       
       if(converged) then
         write(iunit,'(a)') 'All unoccupied states converged.'
@@ -168,8 +168,8 @@ contains
     end if
     
     if(simul_box_is_periodic(sys%gr%sb).and. sys%st%d%nik>sys%st%d%nspin) then
-      call states_write_bands('static', sys%st%nst, sys%st, sys%gr%sb)
-      call states_write_fermi_energy('static', sys%st, sys%gr%mesh, sys%gr%sb)
+      call states_write_bands(STATIC_DIR, sys%st%nst, sys%st, sys%gr%sb)
+      call states_write_fermi_energy(STATIC_DIR, sys%st, sys%gr%mesh, sys%gr%sb)
       call states_degeneracy_matrix(sys%st)
     end if
 
@@ -189,7 +189,7 @@ contains
     if(l) call write_matrix_elements(sys, hm)
 
     ! output wave-functions
-    call h_sys_output_states(sys%st, sys%gr, "static", sys%outp)
+    call h_sys_output_states(sys%st, sys%gr, STATIC_DIR, sys%outp)
 
     call end_()
 

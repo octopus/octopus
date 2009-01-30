@@ -94,7 +94,7 @@ module derivatives_m
     integer               :: order         ! order of the discretization (value depends on stencil)
     integer               :: stencil_type  ! type of discretization
 
-    integer               :: boundaries(MAX_DIM) ! bounday conditions
+    integer               :: boundaries(MAX_DIM) ! boundary conditions
     logical               :: zero_bc
     logical               :: periodic_bc
 
