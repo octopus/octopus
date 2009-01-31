@@ -45,7 +45,7 @@ subroutine X(sternheimer_solve)(                           &
   R_TYPE, allocatable :: Y(:, :, :), hvar(:, :, :)
   R_TYPE, allocatable :: tmp(:)
   real(8):: abs_dens
-  R_TYPE :: omega_sigma
+  R_TYPE :: omega_sigma, proj
   logical, allocatable :: orth_mask(:)
 
   logical :: conv_last, conv, states_conv
@@ -53,7 +53,7 @@ subroutine X(sternheimer_solve)(                           &
   type(mesh_t), pointer :: m
   type(states_t), pointer :: st
 
-  integer total_iter
+  integer :: total_iter, idim
 
   character(len=100) :: dirname
 
@@ -130,18 +130,13 @@ subroutine X(sternheimer_solve)(                           &
           Y(1:m%np, 1, sigma) = -Y(1:m%np, 1, sigma) - hvar(1:m%np, is, sigma) * st%X(psi)(1:m%np, 1, ist, ik)
 
           if (this%occ_response) then
-          ! project out only the component of the unperturbed wavefunction
-          ! |Y> := (1 - |ist><ist|)|Y>
-!           alternative direct method below
-!             Y(1:m%np, 1, sigma) = Y(1:m%np, 1, sigma) - st%X(psi)(1:m%np, 1, ist, ik) * &
-!               X(mf_integrate)(sys%gr%mesh, st%X(psi)(1:m%np, 1, ist, ik) * Y(1:m%np, 1, sigma))
-
-            orth_mask(1:st%nst) = .true.
-            orth_mask(ist) = .false.
-            call X(states_gram_schmidt)(m, st%nst, st%d%dim, st%X(psi)(1:m%np, 1:1, 1:st%nst, ik), &
-              Y(1:m%np, 1:1, sigma), mask = orth_mask(1:st%nst))
+            ! project out only the component of the unperturbed wavefunction
+            proj = X(mf_dotp)(m, st%d%dim, st%X(psi)(:, :, ist, ik), y(:, :, sigma))
+            do idim = 1, st%d%dim
+              call lalg_axpy(m%np, -proj, st%X(psi)(:, idim, ist, ik), y(:, idim, sigma))
+            end do
           else
-          ! project RHS onto the unoccupied states
+            ! project RHS onto the unoccupied states
             call X(lr_orth_vector)(m, st, Y(1:m%np, 1:1, sigma), ist, ik)
           endif
         
@@ -158,12 +153,11 @@ subroutine X(sternheimer_solve)(                           &
 
           !re-orthogonalize the resulting vector
           if (this%occ_response) then
-            orth_mask(1:st%nst) = .true.
-            orth_mask(ist) = .false.
-            call X(states_gram_schmidt)(m, st%nst, st%d%dim, st%X(psi)(1:m%np, 1:1, 1:st%nst, ik), &
-                 lr(sigma)%X(dl_psi)(1:m%np_part, 1:st%d%dim, ist, ik), mask = orth_mask(1:st%nst))
+            proj = X(mf_dotp)(m, st%d%dim, st%X(psi)(:, :, ist, ik), lr(sigma)%X(dl_psi)(:, :, ist, ik))
+            do idim = 1, st%d%dim
+              call lalg_axpy(m%np, -proj, st%X(psi)(:, idim, ist, ik), lr(sigma)%X(dl_psi)(:, idim, ist, ik))
+            end do
           else
-          ! project RHS onto the unoccupied states
             call X(lr_orth_vector)(m, st, lr(sigma)%X(dl_psi)(1:m%np_part, 1:st%d%dim, ist, ik), ist, ik)
           endif
 

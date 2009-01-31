@@ -21,7 +21,7 @@
 ! ---------------------------------------------------------
 ! This subroutine calculates the solution of (H + omega) x = y
 ! ---------------------------------------------------------
-subroutine X(solve_HXeY) (this, hm, gr, st, ist, ik, x, y, omega)
+subroutine X(solve_HXeY) (this, hm, gr, st, ist, ik, x, y, omega, occ_response)
   type(linear_solver_t), target, intent(inout) :: this
   type(hamiltonian_t),   target, intent(inout) :: hm
   type(grid_t),          target, intent(inout) :: gr
@@ -31,9 +31,15 @@ subroutine X(solve_HXeY) (this, hm, gr, st, ist, ik, x, y, omega)
   R_TYPE,                        intent(inout) :: x(:,:)   ! x(NP, d%dim)
   R_TYPE,                        intent(in)    :: y(:,:)   ! y(NP, d%dim)
   R_TYPE,                        intent(in)    :: omega
+  logical, optional,             intent(in)    :: occ_response
+
+  logical :: occ_response_
 
   call push_sub('linear_solver_inc.Xsolve_HXeY')
   call profiling_in(prof, "LINEAR_SOLVER")
+
+  occ_response_ = .true.
+  if(present(occ_response)) occ_response_ = occ_response
 
   select case(this%solver)
 
@@ -41,7 +47,7 @@ subroutine X(solve_HXeY) (this, hm, gr, st, ist, ik, x, y, omega)
     call X(ls_solver_cg)       (this, hm, gr, st, ist, ik, x, y, omega)
 
   case(LS_BICGSTAB)
-    call X(ls_solver_bicgstab) (this, hm, gr, st, ist, ik, x, y, omega)
+    call X(ls_solver_bicgstab) (this, hm, gr, st, ist, ik, x, y, omega, occ_response)
 
   case(LS_MULTIGRID)
     call X(ls_solver_multigrid)(this, hm, gr, st, ist, ik, x, y, omega)
@@ -159,7 +165,7 @@ end subroutine X(ls_solver_cg)
 ! ---------------------------------------------------------
 !BICONJUGATE GRADIENTS STABILIZED
 !see http://math.nist.gov/iml++/bicgstab.h.txt
-subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, omega)
+subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, omega, occ_response)
   type(linear_solver_t),          intent(inout) :: ls
   type(hamiltonian_t), intent(inout) :: hm
   type(grid_t),        intent(inout) :: gr
@@ -169,6 +175,7 @@ subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, omega)
   R_TYPE,              intent(inout) :: x(:,:)   ! x(NP, st%d%dim)
   R_TYPE,              intent(in)    :: y(:,:)   ! y(NP, st%d%dim)
   R_TYPE,              intent(in)    :: omega
+  logical,             intent(in)    :: occ_response
 
   R_TYPE, allocatable :: r(:,:), Hp(:,:), rs(:,:), Hs(:,:), p(:,:), s(:,:)
   R_TYPE, pointer :: phat(:,:), shat(:,:)
@@ -176,7 +183,7 @@ subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, omega)
   logical :: conv_last, conv
   integer :: iter, idim, ip
   FLOAT :: gamma
-
+  
   call push_sub('linear_solver_inc.Xls_solver_bicgstab')
 
   ALLOCATE( r(NP, st%d%dim),      NP     *st%d%dim)
@@ -204,6 +211,18 @@ subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, omega)
   call X(ls_solver_operator) (hm, gr, st, ist, ik, omega, x, Hp)
 
   r(1:NP, 1:st%d%dim) = y(1:NP, 1:st%d%dim) - Hp(1:NP, 1:st%d%dim)
+
+  !re-orthogonalize r, this helps considerably with convergence
+  if (occ_response) then
+    alpha = X(mf_dotp)(gr%mesh, st%d%dim, st%X(psi)(:, :, ist, ik), r)
+    do idim = 1, st%d%dim
+      call lalg_axpy(gr%mesh%np, -alpha, st%X(psi)(:, idim, ist, ik), r(:, idim))
+    end do
+  else
+    ! project RHS onto the unoccupied states
+    call X(lr_orth_vector)(gr%mesh, st, r, ist, ik)
+  endif
+          
   rs(1:NP, 1:st%d%dim) = r(1:NP, 1:st%d%dim)
 
   gamma = X(mf_nrm2)(gr%mesh, st%d%dim, r)
@@ -213,7 +232,11 @@ subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, omega)
 
     rho_1 = X(mf_dotp) (gr%mesh, st%d%dim, rs, r)
 
-    if( abs(rho_1) < M_EPSILON ) exit
+    if( abs(rho_1) < M_EPSILON ) then 
+!      call X(lr_orth_vector)(gr%mesh, st, x, ist, ik)
+!      call X(lr_orth_vector)(gr%mesh, st, r, ist, ik)
+      exit
+    end if
 
     if( iter == 1 ) then
       do idim = 1, st%d%dim
@@ -274,7 +297,9 @@ subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, omega)
     if( abs(w) < M_EPSILON ) exit
 
   end do
-    
+
+!  print*, abs(X(mf_dotp)(gr%mesh, st%d%dim, x, st%X(psi)(:, :, ist, ik)))
+
   ls%iter = iter
   ls%abs_psi = gamma
 
