@@ -155,7 +155,18 @@ subroutine X(sternheimer_solve)(                           &
           call X(solve_HXeY) (this%solver, hm, sys%gr, sys%st, ist, ik, &
              lr(sigma)%X(dl_psi)(1:m%np_part, 1:st%d%dim, ist, ik), &
              Y(1:m%np, 1:1, sigma), -sys%st%eigenval(ist, ik) + omega_sigma)
-          
+
+          !re-orthogonalize the resulting vector
+          if (this%occ_response) then
+            orth_mask(1:st%nst) = .true.
+            orth_mask(ist) = .false.
+            call X(states_gram_schmidt)(m, st%nst, st%d%dim, st%X(psi)(1:m%np, 1:1, 1:st%nst, ik), &
+                 lr(sigma)%X(dl_psi)(1:m%np_part, 1:st%d%dim, ist, ik), mask = orth_mask(1:st%nst))
+          else
+          ! project RHS onto the unoccupied states
+            call X(lr_orth_vector)(m, st, lr(sigma)%X(dl_psi)(1:m%np_part, 1:st%d%dim, ist, ik), ist, ik)
+          endif
+
           ! print the norm of the variations, and the number of
           ! iterations and residual of the linear solver
           dpsimod = X(mf_nrm2)(m, st%d%dim, lr(sigma)%X(dl_psi)(1:m%np, 1:st%d%dim, ist, ik))
