@@ -35,6 +35,7 @@ module gcm_m
   use excited_states_m
   use restart_m
   use poisson_m
+  use profiling_m
   use mesh_function_m
   use lalg_adv_m
   use lalg_basic_m

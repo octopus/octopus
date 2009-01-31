@@ -21,6 +21,7 @@
 
 module stencil_starplus_m
   use messages_m
+  use profiling_m
   use stencil_m
 
   private

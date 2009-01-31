@@ -26,6 +26,7 @@ module poisson_isf_m
   use mesh_m
   use mpi_m
   use par_vec_m
+  use profiling_m
 
   implicit none
 

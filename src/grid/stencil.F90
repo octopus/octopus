@@ -20,7 +20,9 @@
 #include "global.h"
 
 module stencil_m
+  use global_m
   use messages_m
+  use profiling_m
 
   implicit none
 

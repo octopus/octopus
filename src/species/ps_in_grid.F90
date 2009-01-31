@@ -24,6 +24,7 @@ module ps_in_grid_m
   use global_m
   use logrid_m
   use messages_m
+  use profiling_m
 
   implicit none
 

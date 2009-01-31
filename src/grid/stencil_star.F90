@@ -24,6 +24,7 @@ module stencil_star_m
   use math_m
   use messages_m
   use nl_operator_m
+  use profiling_m
   use stencil_m
 
   implicit none

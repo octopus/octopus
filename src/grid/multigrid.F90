@@ -31,6 +31,7 @@ module multigrid_m
   use messages_m
   use par_vec_m
   use stencil_m
+  use profiling_m
 
   implicit none
 

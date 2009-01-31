@@ -30,6 +30,7 @@ module opt_control_initst_m
   use states_calc_m
   use grid_m
   use geometry_m
+  use profiling_m
   use restart_m
 
   implicit none

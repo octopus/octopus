@@ -36,6 +36,7 @@ module tdf_m
   use units_m
   use fft_m
   use mpi_m
+  use profiling_m
 
   implicit none
 

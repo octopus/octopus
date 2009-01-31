@@ -25,6 +25,7 @@ module ps_psf_m
   use io_m
   use logrid_m
   use messages_m
+  use profiling_m
   use ps_in_grid_m
   use ps_psf_file_m
 

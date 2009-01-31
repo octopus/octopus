@@ -27,6 +27,7 @@ program cross_section
   use loct_parser_m
   use io_m
   use units_m
+  use profiling_m
   use spectrum_m
 
   implicit none

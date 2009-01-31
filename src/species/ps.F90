@@ -35,6 +35,7 @@ module ps_m
   use ps_in_grid_m
   use ps_psf_m
   use ps_upf_m
+  use profiling_m
   use spline_filter_m
   implicit none
 

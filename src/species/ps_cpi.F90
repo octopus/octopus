@@ -25,6 +25,7 @@ module ps_cpi_m
   use io_m
   use logrid_m
   use messages_m
+  use profiling_m
   use ps_cpi_file_m
   use ps_in_grid_m
 

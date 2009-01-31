@@ -34,6 +34,7 @@ module poisson_multigrid_m
   use multigrid_m
   use par_vec_m
   use poisson_corrections_m
+  use profiling_m
   use varinfo_m
 
   implicit none

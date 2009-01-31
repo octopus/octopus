@@ -32,6 +32,7 @@ module system_m
   use multicomm_m
   use h_sys_output_m
   use io_function_m
+  use profiling_m
   use poisson_m
   use simul_box_m
   use states_m

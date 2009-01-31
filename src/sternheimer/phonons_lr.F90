@@ -39,6 +39,7 @@ module phonons_lr_m
   use h_sys_output_m
   use vibrations_m
   use projector_m
+  use profiling_m
   use pert_m
   use restart_m
   use states_m

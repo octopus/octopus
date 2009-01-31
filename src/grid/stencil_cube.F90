@@ -21,6 +21,7 @@
 
 module stencil_cube_m
   use messages_m
+  use profiling_m
   use stencil_m
 
   implicit none

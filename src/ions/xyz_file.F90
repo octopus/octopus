@@ -21,9 +21,11 @@
 
 module xyz_file_m
   use datasets_m
+  use global_m
   use io_m
   use loct_parser_m
   use messages_m
+  use profiling_m
   use string_m
   use units_m
 

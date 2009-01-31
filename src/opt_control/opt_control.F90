@@ -63,6 +63,7 @@ module opt_control_m
 #if defined(HAVE_NEWUOA)
   use newuoa_m
 #endif
+  use profiling_m
 
   implicit none
 

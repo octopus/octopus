@@ -28,6 +28,7 @@ module PES_m
   use loct_parser_m
   use mesh_m
   use messages_m
+  use profiling_m
   use simul_box_m
   use states_m
   use units_m

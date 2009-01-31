@@ -31,6 +31,7 @@ module geom_opt_m
   use loct_math_m
   use mesh_m
   use messages_m
+  use profiling_m
   use restart_m
   use scf_m
   use states_m

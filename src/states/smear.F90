@@ -28,6 +28,7 @@ module smear_m
   use global_m
   use math_m
   use messages_m
+  use profiling_m
   use units_m
   use varinfo_m
 

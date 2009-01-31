@@ -37,6 +37,7 @@ module ob_src_m
   use nl_operator_m
   use ob_mem_m
   use ob_terms_m
+  use profiling_m
   use simul_box_m
   use states_m
   use system_m

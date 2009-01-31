@@ -40,6 +40,7 @@ module profiling_m
     profiling_out,                      &
     profiling_count_operations,         &
     profiling_count_transfers,          &
+    profiling_memory,                   &
     profiling_output
 
 
@@ -116,7 +117,11 @@ module profiling_m
   type(profile_pointer_t)  :: current !the currently active profile
   type(profile_pointer_t)  :: profile_list(MAX_PROFILES) !the list of all profilers
   integer                  :: last_profile
-  
+  integer                  :: mem_prof_count
+  real(8)                  :: start_time
+  integer                  :: mem_iunit
+
+
   !For the moment we will have the profiler objects here, but they
   !should be moved to their respective modules.
   !i.e. DO NOT PUT NEW PROFILES HERE
@@ -153,7 +158,10 @@ contains
 
   ! ---------------------------------------------------------
   ! Create profiling subdirectory.
-  subroutine profiling_init
+  subroutine profiling_init()
+
+    character(len=4) :: filenum
+    character(len=4) :: dirnum
 
     !%Variable ProfilingMode
     !%Default no
@@ -174,6 +182,25 @@ contains
     if(.not.in_profiling_mode) return
 
     call push_sub('profiling.profiling_init')
+
+    ! initialize memory profiling
+
+    mem_prof_count = 0
+    start_time = loct_clock()
+
+    filenum = '0000'
+    dirnum  = 'ser '
+#if defined(HAVE_MPI)
+    if(mpi_world%size > 1) then
+      write(filenum, '(i4.4)') mpi_world%rank
+      write(dirnum, '(i4.4)') mpi_world%size
+    end if
+#endif
+
+    call io_mkdir('profiling.'//trim(dirnum))
+    mem_iunit = io_open('profiling.'//trim(dirnum)//'/space.'//trim(filenum), action='write')
+
+    ! initialize time profiling
 
     last_profile = 0
 
@@ -214,9 +241,14 @@ contains
 
   subroutine profiling_end
     integer :: ii
+    
+    if(.not. in_profiling_mode) return
+
     do ii = 1, last_profile
       call profile_end(profile_list(ii)%p)
     end do
+    call io_close(mem_iunit)
+
   end subroutine profiling_end
 
   ! ---------------------------------------------------------
@@ -508,6 +540,20 @@ contains
 
     call pop_sub()
   end subroutine profiling_output
+
+  subroutine profiling_memory(file, line)
+    character(len=*), intent(in) :: file
+    integer,          intent(in) :: line
+
+    ! this code is not thread safe, so we disable it for OpenMP
+#ifndef USE_OMP
+    
+    write(mem_iunit, '(i16, f16.6, i32, a, i16)') mem_prof_count, loct_clock() - start_time, get_memory_usage(), " "//file, line
+    mem_prof_count = mem_prof_count + 1
+
+#endif
+
+  end subroutine profiling_memory
 
 end module profiling_m
 

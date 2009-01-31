@@ -42,6 +42,7 @@ module vdw_m
   use h_sys_output_m
   use pert_m
   use poisson_m
+  use profiling_m
   use restart_m
   use states_m
   use sternheimer_m

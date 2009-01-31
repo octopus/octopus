@@ -34,6 +34,7 @@ module phonons_fd_m
   use messages_m
   use multicomm_m
   use h_sys_output_m
+  use profiling_m
   use vibrations_m
   use restart_m
   use scf_m

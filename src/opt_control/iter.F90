@@ -30,6 +30,7 @@ module opt_control_iter_m
   use states_m
   use h_sys_output_m
   use messages_m
+  use profiling_m
 
   implicit none
 

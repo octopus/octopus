@@ -28,6 +28,7 @@ module gridhier_m
   use mesh_m
   use messages_m
   use multigrid_m
+  use profiling_m
 
   implicit none
 

@@ -54,6 +54,7 @@
     use mpi_m
     use utils_m
     use varinfo_m
+    use profiling_m
 #if defined(USE_OMP)
     use omp_lib
 #endif

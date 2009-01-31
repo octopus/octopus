@@ -40,6 +40,7 @@ module opt_control_target_m
   use geometry_m
   use mesh_m
   use mesh_function_m
+  use profiling_m
   use restart_m
   use timedep_m
 

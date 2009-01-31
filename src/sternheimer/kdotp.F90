@@ -41,6 +41,7 @@ module kdotp_m
   use mix_m
   use h_sys_output_m
   use pert_m
+  use profiling_m
   use restart_m
   use states_m
   use states_calc_m

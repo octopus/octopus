@@ -31,6 +31,7 @@ module simul_box_m
   use loct_parser_m
   use math_m
   use messages_m
+  use profiling_m
   use string_m
   use units_m
   use varinfo_m

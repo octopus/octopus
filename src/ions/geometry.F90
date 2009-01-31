@@ -30,6 +30,7 @@ module geometry_m
   use messages_m
   use multicomm_m
   use mpi_m
+  use profiling_m
   use species_m
   use string_m
   use units_m

@@ -31,6 +31,7 @@ module exponential_split_m
   use hamiltonian_m
   use mesh_m
   use messages_m
+  use profiling_m
   use simul_box_m
   use states_m
   use states_dim_m

@@ -26,6 +26,7 @@ module root_solver_m
   use loct_parser_m
   use messages_m
   use ode_solver_m
+  use profiling_m
 
   implicit none
 

@@ -26,6 +26,7 @@ module hgh_projector_m
   use mesh_m
   use messages_m
   use simul_box_m
+  use profiling_m
   use ps_m
   use species_m
   use submesh_m

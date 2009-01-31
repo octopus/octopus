@@ -24,6 +24,7 @@ module ps_fhi_m
   use global_m
   use io_m
   use messages_m
+  use profiling_m
   use ps_cpi_file_m
   use ps_cpi_m
   use ps_fhi_file_m

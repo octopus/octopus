@@ -30,6 +30,7 @@ module math_m
   use loct_m
   use blas_m
   use lalg_adv_m
+  use profiling_m
 
   implicit none
 

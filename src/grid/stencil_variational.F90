@@ -43,6 +43,7 @@
 module stencil_variational_m
   use global_m
   use messages_m
+  use profiling_m
   use nl_operator_m
 
   implicit none

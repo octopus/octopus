@@ -33,6 +33,7 @@ module energy_m
   use mesh_m
   use mesh_function_m
   use messages_m
+  use profiling_m
   use smear_m
   use states_m
   use units_m

@@ -9,6 +9,7 @@ module crystal_m
   use global_m
   use lalg_adv_m
   use messages_m
+  use profiling_m
   use units_m
 
   implicit none

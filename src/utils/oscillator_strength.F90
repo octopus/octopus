@@ -28,6 +28,7 @@ module oscillator_strength_m
   use loct_parser_m
   use io_m
   use units_m
+  use profiling_m
   use spectrum_m
   use loct_m
 
@@ -155,6 +156,7 @@ program oscillator_strength
   use units_m
   use spectrum_m
   use loct_m
+  use profiling_m
   use command_line_m
   use oscillator_strength_m
 
@@ -234,6 +236,7 @@ subroutine read_resonances_file(order, ffile, search_interval, final_time, nfreq
   use spectrum_m
   use lalg_adv_m
   use oscillator_strength_m
+  use profiling_m
 
   implicit none
 
@@ -373,6 +376,7 @@ subroutine analyze_signal(order, omega, search_interval, final_time, nresonances
   use spectrum_m
   use lalg_adv_m
   use oscillator_strength_m
+  use profiling_m
 
   implicit none
 
@@ -499,6 +503,7 @@ subroutine write_polarizability(nfrequencies, nresonances, dw, w, c0I2, gamma)
   use messages_m
   use datasets_m
   use io_m
+  use profiling_m
 
   implicit none
 
@@ -548,6 +553,7 @@ subroutine find_resonance(omega, leftbound, rightbound, nfrequencies)
   use units_m
   use spectrum_m
   use oscillator_strength_m
+  use profiling_m
 
   implicit none
 
@@ -610,6 +616,7 @@ subroutine resonance_first_order(omega, power, nw_subtracted, dw, leftbound, rig
   use units_m
   use spectrum_m
   use oscillator_strength_m
+  use profiling_m
 
   implicit none
 
@@ -663,6 +670,7 @@ subroutine resonance_second_order(omega, power, nw_subtracted, leftbound, rightb
   use units_m
   use spectrum_m
   use oscillator_strength_m
+  use profiling_m
 
   implicit none
 
@@ -722,6 +730,7 @@ subroutine generate_signal(order, observable)
 
   use oscillator_strength_m, only : local_operator_t, &
                                     local_operator_copy
+  use profiling_m
 
   implicit none
 
@@ -941,6 +950,7 @@ subroutine modify_ot(time_steps, dt, order, ot, omega, power)
   use units_m
   use spectrum_m
   use string_m
+  use profiling_m
 
   implicit none
 
@@ -981,6 +991,7 @@ subroutine write_ot(nspin, time_steps, dt, kick, units, order, ot, observable)
   use units_m
   use spectrum_m
   use string_m
+  use profiling_m
 
   implicit none
 
@@ -1050,6 +1061,7 @@ subroutine read_ot(nspin, order, nw_subtracted)
   use spectrum_m
   use string_m
   use oscillator_strength_m
+  use profiling_m
 
   implicit none
 
@@ -1153,6 +1165,7 @@ subroutine print_omega_file(omega, search_interval, final_time, nfrequencies)
   use spectrum_m
   use lalg_adv_m
   use oscillator_strength_m
+  use profiling_m
 
   implicit none
 

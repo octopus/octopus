@@ -7,6 +7,7 @@ module xc_OEP_kernel_m
   use linear_response_m
   use messages_m
   use poisson_m
+  use profiling_m
   use states_m
   use system_m
   use xc_OEP_m

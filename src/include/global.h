@@ -51,10 +51,16 @@
 
 #if defined(LONG_LINES)
 #  define ALLOCATE(x, size) allocate(x, stat=global_alloc_err); \
+     if(in_profiling_mode)  call profiling_memory(__FILE__, __LINE__); \
      if(global_alloc_err.ne.0) call alloc_error((size), __FILE__, __LINE__)
 #else
 #  define ALLOCATE(x, size) \
      allocate(x, stat=global_alloc_err)                 \newline \
+     if(in_profiling_mode) then                         \newline \
+       call profiling_memory(&                          \newline \
+  __FILE__, &                                           \newline \
+  __LINE__)                                             \newline \
+     end if                                             \newline \
      if(global_alloc_err.ne.0) then                     \newline \
        call alloc_error((size),  &                      \newline \
   __FILE__, &                                           \newline \

@@ -26,6 +26,7 @@ module poisson_cg_m
   use mesh_m
   use messages_m
   use poisson_corrections_m
+  use profiling_m
   use solvers_m
 
   implicit none

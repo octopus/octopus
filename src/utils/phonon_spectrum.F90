@@ -27,6 +27,7 @@ program phonon_spectrum
   use datasets_m
   use io_m
   use loct_parser_m
+  use profiling_m
   use units_m
   use varinfo_m
 

@@ -205,6 +205,8 @@ module splines_m
   use loct_math_m
   use messages_m
   use c_pointer_m
+  use profiling_m
+
   implicit none
 
   ! Define the which routines can be seen from the outside

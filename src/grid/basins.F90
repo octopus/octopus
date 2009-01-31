@@ -25,6 +25,7 @@ module basins_m
   use index_m
   use messages_m
   use par_vec_m
+  use profiling_m
 
   implicit none
 

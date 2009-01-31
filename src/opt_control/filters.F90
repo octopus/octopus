@@ -28,6 +28,7 @@ module filter_m
   use string_m
   use loct_parser_m
   use fft_m
+  use profiling_m
   use units_m
   use tdf_m
 

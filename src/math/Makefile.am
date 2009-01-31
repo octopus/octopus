@@ -54,4 +54,4 @@ oct_gsl_f.o : oct_gsl_f.c
 ylm.o : ylm.c
 fft_cuda.o : fft_cuda.c
 filters.o: filters.F90 splines.o
-solvers.o : solvers.F90 solvers_inc.F90
+solvers.o : solvers.F90 solvers_inc.F90 lalg_adv.o

@@ -34,6 +34,7 @@ module curv_modine_m
   use loct_parser_m
   use messages_m
   use root_solver_m
+  use profiling_m
   use simul_box_m
   use units_m
 

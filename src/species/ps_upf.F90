@@ -24,6 +24,7 @@ module ps_upf_m
   use messages_m
   use atomic_m
   use io_m
+  use profiling_m
 
   implicit none
 

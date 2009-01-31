@@ -29,6 +29,7 @@ module ob_interface_m
   use math_m
   use mesh_m
   use messages_m
+  use profiling_m
   use simul_box_m
 
   implicit none

@@ -39,6 +39,7 @@ module sternheimer_m
   use h_sys_output_m
   use preconditioners_m
   use poisson_m
+  use profiling_m
   use pert_m
   use restart_m
   use scf_tol_m

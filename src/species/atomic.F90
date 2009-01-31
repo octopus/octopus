@@ -25,6 +25,7 @@ module atomic_m
   use xc_f90_lib_m ! this is the double precision version
   use logrid_m
   use messages_m
+  use profiling_m
   use periodic_table_m
 
   implicit none

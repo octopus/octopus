@@ -28,6 +28,7 @@ module excited_states_m
   use messages_m
   use mpi_m
   use grid_m
+  use profiling_m
   use states_m
   use states_dim_m
   use states_calc_m

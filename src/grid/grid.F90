@@ -34,6 +34,7 @@ module grid_m
   use multicomm_m
   use multigrid_m
   use loct_parser_m
+  use profiling_m
   use simul_box_m
   use stencil_m
   use stencil_cube_m

@@ -29,6 +29,7 @@ module ps_hgh_m
   use loct_math_m
   use logrid_m
   use messages_m
+  use profiling_m
 
   implicit none
 

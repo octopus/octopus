@@ -36,6 +36,7 @@ module static_pol_m
   use mesh_m
   use messages_m
   use h_sys_output_m
+  use profiling_m
   use restart_m
   use scf_m
   use states_m

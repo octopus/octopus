@@ -26,6 +26,7 @@ module mpi_lib_m
   use messages_m
   use mpi_m
   use mpi_debug_m
+  use profiling_m
 
   implicit none
 

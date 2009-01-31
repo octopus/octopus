@@ -26,6 +26,7 @@ module batch_m
   use lalg_basic_m
   use loct_parser_m
   use messages_m
+  use profiling_m
   use varinfo_m
 
   implicit none

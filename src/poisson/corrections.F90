@@ -27,6 +27,7 @@ module poisson_corrections_m
   use mesh_function_m
   use mesh_m
   use messages_m
+  use profiling_m
 
   implicit none
 

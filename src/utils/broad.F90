@@ -26,6 +26,7 @@ program broad
   use io_m
   use units_m
   use loct_parser_m
+  use profiling_m
 
   implicit none
 

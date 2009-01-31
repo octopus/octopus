@@ -28,6 +28,7 @@ program dielectric_function
   use io_m
   use units_m
   use spectrum_m
+  use profiling_m
 
   implicit none
 

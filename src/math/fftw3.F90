@@ -31,6 +31,7 @@ module fft_m
   use loct_parser_m
   use lalg_basic_m
   use c_pointer_m
+  use profiling_m
 
   implicit none
 

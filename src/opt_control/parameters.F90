@@ -40,6 +40,7 @@ module opt_control_parameters_m
   use mix_m
   use filter_m
   use math_m
+  use profiling_m
 
   implicit none
 

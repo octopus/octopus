@@ -28,6 +28,7 @@ module kb_projector_m
   use messages_m
   use simul_box_m
   use profiling_m
+  use profiling_m
   use ps_m
   use submesh_m
   use geometry_m

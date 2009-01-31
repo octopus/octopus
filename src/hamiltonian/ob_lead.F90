@@ -30,6 +30,7 @@ module ob_lead_m
   use math_m
   use messages_m
   use nl_operator_m
+  use profiling_m
   use ob_interface_m
   use simul_box_m
   use string_m
