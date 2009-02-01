@@ -193,19 +193,9 @@ subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, omega, occ_resp
   ALLOCATE(Hp(NP, st%d%dim),      NP     *st%d%dim)
   ALLOCATE(Hs(NP, st%d%dim),      NP     *st%d%dim)
 
-  r = R_TOTYPE(M_ZERO)
-  p = R_TOTYPE(M_ZERO)
-  s = R_TOTYPE(M_ZERO)
-  rs = R_TOTYPE(M_ZERO)
-  Hp = R_TOTYPE(M_ZERO)
-  Hs = R_TOTYPE(M_ZERO)
-
   ! this will store the preconditioned functions
   ALLOCATE(phat(NP_PART, st%d%dim), NP_PART * st%d%dim)
   ALLOCATE(shat(NP_PART, st%d%dim), NP_PART * st%d%dim)
-
-  phat = R_TOTYPE(M_ZERO)
-  shat = R_TOTYPE(M_ZERO)
 
   ! Initial residue
   call X(ls_solver_operator) (hm, gr, st, ist, ik, omega, x, Hp)
