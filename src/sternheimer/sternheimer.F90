@@ -84,6 +84,8 @@ module sternheimer_m
      
   end type sternheimer_t
   
+  type(profile_t), save :: prof, prof_hvar
+
 contains
   
   !-----------------------------------------------------------

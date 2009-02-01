@@ -47,7 +47,7 @@ subroutine X(solve_HXeY) (this, hm, gr, st, ist, ik, x, y, omega, occ_response)
     call X(ls_solver_cg)       (this, hm, gr, st, ist, ik, x, y, omega)
 
   case(LS_BICGSTAB)
-    call X(ls_solver_bicgstab) (this, hm, gr, st, ist, ik, x, y, omega, occ_response)
+    call X(ls_solver_bicgstab) (this, hm, gr, st, ist, ik, x, y, omega, occ_response_)
 
   case(LS_MULTIGRID)
     call X(ls_solver_multigrid)(this, hm, gr, st, ist, ik, x, y, omega)
@@ -210,7 +210,7 @@ subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, omega, occ_resp
   ! Initial residue
   call X(ls_solver_operator) (hm, gr, st, ist, ik, omega, x, Hp)
 
-  r(1:NP, 1:st%d%dim) = y(1:NP, 1:st%d%dim) - Hp(1:NP, 1:st%d%dim)
+  forall(idim = 1:st%d%dim, ip = 1:NP) r(ip, idim) = y(ip, idim) - Hp(ip, idim)
 
   !re-orthogonalize r, this helps considerably with convergence
   if (occ_response) then
@@ -223,7 +223,9 @@ subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, omega, occ_resp
     call X(lr_orth_vector)(gr%mesh, st, r, ist, ik)
   endif
           
-  rs(1:NP, 1:st%d%dim) = r(1:NP, 1:st%d%dim)
+  do idim = 1, st%d%dim
+    call lalg_copy(NP, r(:, idim), rs(:, idim))
+  end do
 
   gamma = X(mf_nrm2)(gr%mesh, st%d%dim, r)
 
@@ -232,11 +234,7 @@ subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, omega, occ_resp
 
     rho_1 = X(mf_dotp) (gr%mesh, st%d%dim, rs, r)
 
-    if( abs(rho_1) < M_EPSILON ) then 
-!      call X(lr_orth_vector)(gr%mesh, st, x, ist, ik)
-!      call X(lr_orth_vector)(gr%mesh, st, r, ist, ik)
-      exit
-    end if
+    if( abs(rho_1) < M_EPSILON ) exit
 
     if( iter == 1 ) then
       do idim = 1, st%d%dim
@@ -244,11 +242,7 @@ subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, omega, occ_resp
       end do
     else
       beta = rho_1/rho_2*alpha/w
-      do idim = 1, st%d%dim
-        do ip = 1, NP
-          p(ip, idim) = r(ip, idim) + beta*(p(ip, idim) - w*Hp(ip, idim))
-        end do
-      end do
+      forall(idim = 1:st%d%dim, ip = 1:NP) p(ip, idim) = r(ip, idim) + beta*(p(ip, idim) - w*Hp(ip, idim))
     end if
 
     ! preconditioning 
@@ -257,11 +251,7 @@ subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, omega, occ_resp
     
     alpha = rho_1/X(mf_dotp)(gr%mesh, st%d%dim, rs, Hp)
 
-    do idim = 1, st%d%dim
-      do ip = 1, NP
-        s(ip, idim) = r(ip, idim) - alpha*Hp(ip, idim)
-      end do
-    end do
+    forall(idim = 1:st%d%dim, ip = 1:NP) s(ip, idim) = r(ip, idim) - alpha*Hp(ip, idim)
 
     gamma = X(mf_nrm2) (gr%mesh, st%d%dim, s)
 
@@ -277,12 +267,10 @@ subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, omega, occ_resp
 
     w = X(mf_dotp)(gr%mesh, st%d%dim, Hs, s)/X(mf_dotp) (gr%mesh, st%d%dim, Hs, Hs)
 
-    do idim = 1, st%d%dim
-      do ip = 1, NP
-        x(ip, idim) = x(ip, idim) + alpha*phat(ip, idim) + w*shat(ip, idim)
-        r(ip, idim) = s(ip, idim) - w*Hs(ip, idim)
-      end do
-    end do
+    forall(idim = 1:st%d%dim, ip = 1:NP)
+      x(ip, idim) = x(ip, idim) + alpha*phat(ip, idim) + w*shat(ip, idim)
+      r(ip, idim) = s(ip, idim) - w*Hs(ip, idim)
+    end forall
 
     rho_2 = rho_1
 
@@ -297,8 +285,6 @@ subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, omega, occ_resp
     if( abs(w) < M_EPSILON ) exit
 
   end do
-
-!  print*, abs(X(mf_dotp)(gr%mesh, st%d%dim, x, st%X(psi)(:, :, ist, ik)))
 
   ls%iter = iter
   ls%abs_psi = gamma
@@ -401,8 +387,7 @@ subroutine X(ls_solver_operator) (hm, gr, st, ist, ik, omega, x, hx)
   integer :: idim, jst
   FLOAT   :: alpha_j, proj, dsmear
 
-!  enabling this causes trouble for some reason in debug mode
-!  call push_sub('linear_solver_inc.Xls_solver_operator')
+  call push_sub('linear_solver_inc.Xls_solver_operator')
 
   call X(hamiltonian_apply)(hm, gr, x, Hx, ist, ik)
 
@@ -411,8 +396,10 @@ subroutine X(ls_solver_operator) (hm, gr, st, ist, ik, omega, x, hx)
     call lalg_axpy(NP, omega, x(:, idim), Hx(:, idim))
   end do
 
-  if(st%smear%fixed_occ .or. st%smear%method == SMEAR_SEMICONDUCTOR) &
+  if(st%smear%fixed_occ .or. st%smear%method == SMEAR_SEMICONDUCTOR) then
+    call pop_sub()
     return
+  end if
 
   ! This is the Q term in Eq. (11) of PRB 51, 6773 (1995)
   ASSERT(.not.st%parallel_in_states)
@@ -429,7 +416,7 @@ subroutine X(ls_solver_operator) (hm, gr, st, ist, ik, omega, x, hx)
 
   end do
 
-!  call pop_sub()
+  call pop_sub()
 
 end subroutine X(ls_solver_operator)
 
@@ -442,9 +429,6 @@ subroutine X(ls_solver_operator_na) (x, hx)
   R_TYPE, allocatable :: tmpx(:, :)
   R_TYPE, allocatable :: tmpy(:, :)
 
-!  enabling this causes trouble for some reason in debug mode
-!  call push_sub('linear_solver_inc.Xls_solver_operator_na')
-
   ALLOCATE(tmpx(args%gr%mesh%np_part, 1), args%gr%mesh%np_part)
   ALLOCATE(tmpy(args%gr%mesh%np, 1), args%gr%mesh%np)
 
@@ -453,8 +437,6 @@ subroutine X(ls_solver_operator_na) (x, hx)
   call lalg_copy(args%gr%mesh%np, tmpy(:, 1), hx)
 
   deallocate(tmpx, tmpy)
-
-!  call pop_sub()
 
 end subroutine X(ls_solver_operator_na)
 

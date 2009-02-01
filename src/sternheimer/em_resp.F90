@@ -411,6 +411,10 @@ contains
         !count the number of frequencies
         do i = 0, nrow-1
           call loct_parse_block_int(blk, i, 0, number)
+          if(number < 1) then
+            message(1) = "EMFreqs: invalid number of frequencies"
+            call write_fatal(1)
+          end if
           em_vars%nomega = em_vars%nomega + number
         end do
 

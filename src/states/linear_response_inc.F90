@@ -94,15 +94,20 @@ subroutine X(lr_build_dl_rho) (m, st, lr, nsigma)
   type(lr_t),     intent(inout) :: lr(:)
   integer,        intent(in)    :: nsigma
 
-  integer :: i, ist, ik, ik2, sp
+  integer :: ip, ist, ik, ik2, sp, isigma
   CMPLX   :: c
   R_TYPE  :: d
 
   call push_sub('linear_response_inc.Xlr_build_dl_rho')
 
+  if(st%d%ispin == SPINORS) then
+    message(1) = "Not yet implemented - please fix me"
+    call write_fatal(1)
+  end if
+  
   ! initialize density
-  do i = 1, nsigma
-    lr(i)%X(dl_rho)(:, :) = M_ZERO
+  do isigma = 1, nsigma
+    lr(isigma)%X(dl_rho)(:, :) = M_ZERO
   end do
 
   sp = 1
@@ -111,27 +116,22 @@ subroutine X(lr_build_dl_rho) (m, st, lr, nsigma)
   ! calculate density
   do ik = 1, st%d%nik, sp
     do ist  = st%st_start, st%st_end
-      do i = 1, m%np
+      do ip = 1, m%np
 
         do ik2 = ik, ik+sp-1 ! this loop takes care of the SPIN_POLARIZED case
           d = st%d%kweights(ik2) * st%smear%el_per_state
 
           if(nsigma == 1) then  ! either omega purely real or purely imaginary
-            d = d * st%X(psi)(i, 1, ist, ik2)*R_CONJ(lr(1)%X(dl_psi)(i, 1, ist, ik2))
-            lr(1)%X(dl_rho)(i, 1) = lr(1)%X(dl_rho)(i, 1) + d + R_CONJ(d)
+            d = d * st%X(psi)(ip, 1, ist, ik2)*R_CONJ(lr(1)%X(dl_psi)(ip, 1, ist, ik2))
+            lr(1)%X(dl_rho)(ip, 1) = lr(1)%X(dl_rho)(ip, 1) + d + R_CONJ(d)
           else
             c = d * (                                                             &
-              R_CONJ(st%X(psi)(i, 1, ist, ik2))*lr(1)%X(dl_psi)(i, 1, ist, ik2) + &
-              st%X(psi)(i, 1, ist, ik2)*R_CONJ(lr(2)%X(dl_psi)(i, 1, ist, ik2)))
-            lr(1)%X(dl_rho)(i, 1) = lr(1)%X(dl_rho)(i, 1) + c
-            lr(2)%X(dl_rho)(i, 1) = lr(2)%X(dl_rho)(i, 1) + R_CONJ(c)
+              R_CONJ(st%X(psi)(ip, 1, ist, ik2))*lr(1)%X(dl_psi)(ip, 1, ist, ik2) + &
+              st%X(psi)(ip, 1, ist, ik2)*R_CONJ(lr(2)%X(dl_psi)(ip, 1, ist, ik2)))
+            lr(1)%X(dl_rho)(ip, 1) = lr(1)%X(dl_rho)(ip, 1) + c
+            lr(2)%X(dl_rho)(ip, 1) = lr(2)%X(dl_rho)(ip, 1) + R_CONJ(c)
           end if
         end do
-
-        if(st%d%ispin == SPINORS) then
-          message(1) = "Not yet implemented - please fix me"
-          call write_fatal(1)
-        end if
 
       end do
     end do

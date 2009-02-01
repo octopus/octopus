@@ -58,6 +58,7 @@ subroutine X(sternheimer_solve)(                           &
   character(len=100) :: dirname
 
   call push_sub('sternheimer_inc.Xsternheimer_solve')
+  call profiling_in(prof, "STERNHEIMER")
 
   ASSERT(nsigma == 1 .or. nsigma == 2)
 
@@ -149,7 +150,7 @@ subroutine X(sternheimer_solve)(                           &
           !solve the Sternheimer equation
           call X(solve_HXeY) (this%solver, hm, sys%gr, sys%st, ist, ik, &
              lr(sigma)%X(dl_psi)(1:m%np_part, 1:st%d%dim, ist, ik), &
-             Y(1:m%np, 1:1, sigma), -sys%st%eigenval(ist, ik) + omega_sigma)
+             Y(1:m%np, 1:1, sigma), -sys%st%eigenval(ist, ik) + omega_sigma, this%occ_response)
 
           !re-orthogonalize the resulting vector
           if (this%occ_response) then
@@ -271,6 +272,7 @@ subroutine X(sternheimer_solve)(                           &
   deallocate(dl_rhotmp)
   deallocate(orth_mask)
 
+  call profiling_out(prof)
   call pop_sub()
 
 end subroutine X(sternheimer_solve)
@@ -287,6 +289,7 @@ subroutine X(sternheimer_calc_hvar)(this, sys, hm, lr, nsigma, hvar)
   integer :: np, i, ik, ik2
 
   call push_sub('sternheimer_inc.Xsternheimer_calc_hvar')
+  call profiling_in(prof_hvar, "STERNHEIMER_HVAR")
 
   np = sys%gr%mesh%np
 
@@ -329,6 +332,7 @@ subroutine X(sternheimer_calc_hvar)(this, sys, hm, lr, nsigma, hvar)
 
   if (this%add_hartree) deallocate(hartree)
 
+  call profiling_out(prof_hvar)
   call pop_sub()
 end subroutine X(sternheimer_calc_hvar)
 
