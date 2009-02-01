@@ -129,18 +129,19 @@ contains
       
       !%Variable LRAdaptiveTolFactor
       !%Type float
-      !%Default 0.5
+      !%Default 0.9
       !%Section Linear Response::SCF in LR calculations
       !%Description
-      !% This factor controls how much the tolerance is increased at
-      !% first iterations. Larger values means larger tolerance.
+      !% This factor controls how much the tolerance is decreased
+      !% during the self-consistency process. Smaller values mean that
+      !% tolerance is decreased faster. The default is 0.9.
       !%End
       if (loct_parse_isdef(datasets_check(trim(prefix)//'LRAdaptiveTolFactor')) /=0 ) then 
         call loct_parse_float(datasets_check(trim(prefix)//'LRAdaptiveTolFactor'), &
-          CNST(0.5), this%dynamic_tol_factor)
+          CNST(0.9), this%dynamic_tol_factor)
       else
         call loct_parse_float(datasets_check('LRAdaptiveTolFactor'), &
-          CNST(0.5), this%dynamic_tol_factor)
+          CNST(0.9), this%dynamic_tol_factor)
       end if
 
     end if
