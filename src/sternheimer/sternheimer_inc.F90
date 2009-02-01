@@ -109,7 +109,7 @@ subroutine X(sternheimer_solve)(                           &
     ! otherwise it is not actually SCF, and there can only be one pass through
 
     write(message(1), '(a, f20.6, a, f20.6, a, i1)') &
-         "Frequency: ", R_REAL(omega), " Eta : ", R_AIMAG(omega)
+         "Frequency: ", R_REAL(omega)/units_inp%energy%factor, " Eta : ", R_AIMAG(omega)/units_inp%energy%factor
     write(message(2), '(a)') &
          '   ik  ist                norm   iters            residual'
     call write_info(2)
@@ -245,7 +245,7 @@ subroutine X(sternheimer_solve)(                           &
       write(message(1), '(a, i4, a)') &
            'Info: SCF for response converged in ', iter, ' iterations.'
       write(message(2), '(a, i8)') &
-           '      Total hamiltonian applications:', total_iter * linear_solver_ops_per_iter(this%solver)
+           '      Total hamiltonian applications:', total_iter*linear_solver_ops_per_iter(this%solver)
       call write_info(2)
       exit
 
