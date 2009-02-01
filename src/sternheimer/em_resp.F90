@@ -762,9 +762,10 @@ contains
              str_center('['//trim(units_out%length%abbrev) //'^4]', 20)
 
         ff = M_ZERO
-        if(em_vars%omega(iomega) .ne. 0) ff = real(dic) * P_C/(M_THREE*em_vars%omega(iomega))
+        if(em_vars%omega(iomega) .ne. 0) ff = real(dic)*P_C/(M_THREE*em_vars%omega(iomega))
 
-        write(iunit, '(3e20.8)') em_vars%omega(iomega), aimag(dic)/(M_PI*units_out%length%factor**3), ff/units_out%length%factor**4
+        write(iunit, '(3e20.8)') em_vars%omega(iomega)/units_inp%energy%factor, &
+             aimag(dic)/(M_PI*units_out%length%factor**3), ff/units_out%length%factor**4
 
         call io_close(iunit)
       end if
