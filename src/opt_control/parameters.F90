@@ -613,7 +613,6 @@ contains
   FLOAT function parameters_dotp(x, y) result(res)
     FLOAT, intent(in) :: x(:)
     FLOAT, intent(in) :: y(:)
-    
     res = sum(x(:)*y(:))
   end function parameters_dotp
   ! ---------------------------------------------------------
@@ -622,20 +621,8 @@ contains
   ! ---------------------------------------------------------
   subroutine parameters_mixing_init(par)
     type(oct_control_parameters_t), intent(in) :: par
-
-    integer :: dim
-
     call push_sub('parameters.parameters_mixing_init')
-
-    ! WARNING: probably one does not need a select case here, but just put par%dim
-    select case(par%representation)
-    case(ctr_real_space)
-      dim = tdf_niter(par%f(1)) + 1
-      call mix_init(parameters_mix, dim, par%no_parameters, 1)
-    case(ctr_sine_fourier_series, ctr_fourier_series, ctr_zero_fourier_series)
-      call mix_init(parameters_mix, par%dim, par%no_parameters, 1)
-    end select
-
+    call mix_init(parameters_mix, par%dim, par%no_parameters, 1)
     call pop_sub()
   end subroutine parameters_mixing_init
   ! ---------------------------------------------------------
@@ -665,46 +652,21 @@ contains
     ASSERT(par_out%representation .eq. par_out%current_representation)
     ASSERT(par_new%representation .eq. par_new%current_representation)
 
-
-    select case(par_in%representation)
-    case(ctr_real_space)
-
-      ntiter = tdf_niter(par_in%f(1))
-
-      ALLOCATE(e_in (ntiter+1, par_in%no_parameters, 1), (ntiter+1)*par_in%no_parameters)
-      ALLOCATE(e_out(ntiter+1, par_in%no_parameters, 1), (ntiter+1)*par_in%no_parameters)
-      ALLOCATE(e_new(ntiter+1, par_in%no_parameters, 1), (ntiter+1)*par_in%no_parameters)
-      do i = 1, par_in%no_parameters
-        do j = 1, ntiter + 1
-          e_in (j, i, 1) = tdf(par_in%f(i), j)
-          e_out(j, i, 1) = tdf(par_out%f(i), j)
-        end do
+    dim = par_in%dim
+    ALLOCATE(e_in (dim, par_in%no_parameters, 1), dim*par_in%no_parameters)
+    ALLOCATE(e_out(dim, par_in%no_parameters, 1), dim*par_in%no_parameters)
+    ALLOCATE(e_new(dim, par_in%no_parameters, 1), dim*par_in%no_parameters)
+    do i = 1, par_in%no_parameters
+      do j = 1, dim
+        e_in (j, i, 1) = tdf(par_in%f(i), j)
+        e_out(j, i, 1) = tdf(par_out%f(i), j)
       end do
-      e_new = M_ZERO
-      call dmixing(parameters_mix, iter, e_in, e_out, e_new, parameters_dotp)
-      do i = 1, par_out%no_parameters
-        call tdf_set_numerical(par_new%f(i), e_new(:, i, 1))
-      end do
-
-    case(ctr_sine_fourier_series, ctr_fourier_series, ctr_zero_fourier_series)
-
-      dim = par_in%dim
-      ALLOCATE(e_in (dim, par_in%no_parameters, 1), dim*par_in%no_parameters)
-      ALLOCATE(e_out(dim, par_in%no_parameters, 1), dim*par_in%no_parameters)
-      ALLOCATE(e_new(dim, par_in%no_parameters, 1), dim*par_in%no_parameters)
-      do i = 1, par_in%no_parameters
-        do j = 1, dim
-          e_in (j, i, 1) = tdf(par_in%f(i), j)
-          e_out(j, i, 1) = tdf(par_out%f(i), j)
-        end do
-      end do
-      e_new = M_ZERO
-      call dmixing(parameters_mix, iter, e_in, e_out, e_new, parameters_dotp)
-      do i = 1, par_out%no_parameters
-        call tdf_set_numerical(par_new%f(i), e_new(:, i, 1))
-      end do
-
-    end select
+    end do
+    e_new = M_ZERO
+    call dmixing(parameters_mix, iter, e_in, e_out, e_new, parameters_dotp)
+    do i = 1, par_out%no_parameters
+      call tdf_set_numerical(par_new%f(i), e_new(:, i, 1))
+    end do
 
     deallocate(e_in, e_out, e_new)
     call pop_sub()
@@ -722,27 +684,22 @@ contains
 
     call push_sub('parameters.parameters_init')
 
-
     cp%representation  = par_common%representation
     cp%w0              = par_common%w0
     cp%omegamax        = par_common%omegamax
     cp%no_parameters   = par_common%no_parameters
-
     cp%current_representation = ctr_real_space
-
     cp%targetfluence = par_common%targetfluence
+    call loct_pointer_copy(cp%alpha, par_common%alpha)
+
     ALLOCATE(cp%f(cp%no_parameters), cp%no_parameters)
-    ALLOCATE(cp%alpha(cp%no_parameters), cp%no_parameters)
-    cp%alpha = M_ZERO
     do j = 1, cp%no_parameters
       call tdf_init_numerical(cp%f(j), ntiter, dt, par_common%omegamax)
     end do
 
-    cp%alpha = par_common%alpha
-
     select case(cp%representation)
     case(ctr_real_space)
-      cp%dim = ntiter
+      cp%dim = ntiter + 1
     case(ctr_sine_fourier_series)
       cp%dim = tdf_sine_nfreqs(cp%f(1))
     case(ctr_fourier_series)
