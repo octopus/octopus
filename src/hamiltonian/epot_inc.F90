@@ -149,7 +149,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
     
     vloc(1:np) = M_ZERO
     
-    call epot_local_potential(ep, gr, gr%fine%m, geo, geo%atom(iatom), vloc, time)
+    call epot_local_potential(ep, gr, gr%fine%m, geo, iatom, vloc, time)
     
     do idir = 1, NDIM
       force(idir, iatom) = -dmf_dotp(gr%fine%m, grho(:, idir), vloc)

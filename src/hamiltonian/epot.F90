@@ -61,15 +61,15 @@ module external_pot_m
   implicit none
 
   private
-  public ::                    &
-    epot_t,                    &
-    epot_init,                 &
-    epot_end,                  &
-    epot_generate,             &
-    epot_forces,               &
-    epot_local_potential,      &
+  public ::                        &
+    epot_t,                        &
+    epot_init,                     &
+    epot_end,                      &
+    epot_generate,                 &
+    epot_forces,                   &
+    epot_local_potential,          &
+    epot_precalc_local_potential,  &
     epot_dipole_periodic
-
 
   type epot_t
     ! Classical charges:
@@ -104,7 +104,9 @@ module external_pot_m
     ! the ion-ion energy and force
     FLOAT          :: eii
     FLOAT, pointer :: fii(:, :)
-
+    
+    real(4), pointer :: local_potential(:,:)
+    logical        :: local_potential_precalculated
   end type epot_t
 
   integer, public, parameter :: &
@@ -358,6 +360,9 @@ contains
     call loct_parse_logical(datasets_check('ParallelizationProjectorAsync'), .false., async_comm)
 #endif
 
+    nullify(ep%local_potential)
+    ep%local_potential_precalculated = .false.
+
     call pop_sub()
   end subroutine epot_init
 
@@ -371,6 +376,8 @@ contains
     integer :: i, iproj
 
     call push_sub('epot.epot_end')
+
+    DEALLOC(ep%local_potential)
 
     deallocate(ep%fii)
 
@@ -454,9 +461,9 @@ contains
     ep%vpsl = M_ZERO
     do ia = geo%atoms%start, geo%atoms%end
       if(st%nlcc) then
-        call epot_local_potential(ep, gr, gr%mesh, geo, geo%atom(ia), ep%vpsl, time_, st%rho_core)
+        call epot_local_potential(ep, gr, gr%mesh, geo, ia, ep%vpsl, time_, st%rho_core)
       else
-        call epot_local_potential(ep, gr, gr%mesh, geo, geo%atom(ia), ep%vpsl, time_)
+        call epot_local_potential(ep, gr, gr%mesh, geo, ia, ep%vpsl, time_)
       end if
     end do
 
@@ -508,20 +515,19 @@ contains
 
     call pop_sub()
     call profiling_out(epot_generate_prof)
-
   end subroutine epot_generate
 
-  subroutine epot_local_potential(ep, gr, mesh, geo, a, vpsl, time, rho_core)
+  subroutine epot_local_potential(ep, gr, mesh, geo, iatom, vpsl, time, rho_core)
     type(epot_t),             intent(in)    :: ep
     type(grid_t),             intent(inout) :: gr
     type(mesh_t),             intent(inout) :: mesh
     type(geometry_t),         intent(in)    :: geo
-    type(atom_t),             intent(inout) :: a
+    integer,                  intent(in)    :: iatom
     FLOAT,                    intent(inout) :: vpsl(:)
     FLOAT,                    intent(in)    :: time
     FLOAT,          optional, pointer       :: rho_core(:)
 
-    integer :: i
+    integer :: i, ip
     FLOAT :: x(MAX_DIM), radius
     FLOAT, allocatable  :: rho(:), vl(:)
     type(submesh_t)  :: sphere
@@ -530,55 +536,64 @@ contains
     call push_sub('epot.epot_local_potential')
     call profiling_in(prof, "EPOT_LOCAL")
 
-    ALLOCATE(vl(1:mesh%np_part), mesh%np_part)
-
-    !Local potential, we can get it by solving the Poisson equation
-    !(for all-electron species or pseudopotentials in periodic
-    !systems) or by applying it directly to the grid
-
-    if(a%spec%has_density .or. (species_is_ps(a%spec) .and. simul_box_is_periodic(gr%sb))) then
-
-      ALLOCATE(rho(1:mesh%np), mesh%np)
-
-      !this has to be optimized so the Poisson solution is made once
-      !for all species, perhaps even include it in the Hartree term
-      call species_get_density(a%spec, a%x, gr, geo, rho)
-
-      vl(1:mesh%np) = M_ZERO   ! vl has to be initialized before entering routine
-      ! and our best guess for the potential is zero
-      call dpoisson_solve(gr, vl, rho)
-
-      deallocate(rho)
+    if(ep%local_potential_precalculated) then
+      
+      forall(ip = 1:mesh%np) vpsl(ip) = vpsl(ip) + ep%local_potential(ip, iatom)
 
     else
+      
+      ALLOCATE(vl(1:mesh%np_part), mesh%np_part)
+      
+      !Local potential, we can get it by solving the Poisson equation
+      !(for all-electron species or pseudopotentials in periodic
+      !systems) or by applying it directly to the grid
+      
+      if(geo%atom(iatom)%spec%has_density .or. (species_is_ps(geo%atom(iatom)%spec) .and. simul_box_is_periodic(gr%sb))) then
+        
+        ALLOCATE(rho(1:mesh%np), mesh%np)
+        
+        !this has to be optimized so the Poisson solution is made once
+        !for all species, perhaps even include it in the Hartree term
+        call species_get_density(geo%atom(iatom)%spec, geo%atom(iatom)%x, gr, geo, rho)
+        
+        vl(1:mesh%np) = M_ZERO   ! vl has to be initialized before entering routine
+        ! and our best guess for the potential is zero
+        call dpoisson_solve(gr, vl, rho)
+        
+        deallocate(rho)
+        
+      else
+        
+        !Local potential
+        call species_get_local(geo%atom(iatom)%spec, mesh, geo%atom(iatom)%x(1:NDIM), vl, time)
+        
+      end if
+      
+      vpsl(1:mesh%np) = vpsl(1:mesh%np) + vl(1:mesh%np)
 
-      !Local potential
-      call species_get_local(a%spec, mesh, a%x(1:NDIM), vl, time)
+
+      !the localized part
+      if(species_is_ps(geo%atom(iatom)%spec)) then
+        
+        radius = double_grid_get_rmax(gr%dgrid, geo%atom(iatom)%spec, mesh) + mesh%h(1)
+        
+        call submesh_init_sphere(sphere, gr%sb, mesh, geo%atom(iatom)%x, radius)
+        call double_grid_apply_local(gr%dgrid, geo%atom(iatom)%spec, mesh, sphere, geo%atom(iatom)%x, vl(1:sphere%ns))
+        
+        vpsl(sphere%jxyz(1:sphere%ns)) = vpsl(sphere%jxyz(1:sphere%ns)) + vl(1:sphere%ns)
+        call submesh_end(sphere)
+        
+      end if
+      
+      deallocate(vl)
 
     end if
-
-    vpsl(1:mesh%np) = vpsl(1:mesh%np) + vl(1:mesh%np)
-
-    !the localized part
-    if(species_is_ps(a%spec)) then
-
-      radius = double_grid_get_rmax(gr%dgrid, a%spec, mesh) + mesh%h(1)
-
-      call submesh_init_sphere(sphere, gr%sb, mesh, a%x, radius)
-      call double_grid_apply_local(gr%dgrid, a%spec, mesh, sphere, a%x, vl(1:sphere%ns))
-
-      vpsl(sphere%jxyz(1:sphere%ns)) = vpsl(sphere%jxyz(1:sphere%ns)) + vl(1:sphere%ns)
-      call submesh_end(sphere)
-
-    end if
-
-    deallocate(vl)
 
     !Non-local core corrections
-    if(present(rho_core) .and. a%spec%nlcc .and. species_is_ps(a%spec)) then
+    if(present(rho_core) .and. geo%atom(iatom)%spec%nlcc .and. species_is_ps(geo%atom(iatom)%spec)) then
       do i = 1, mesh%np
-        x(1:NDIM) = mesh%x(i, 1:NDIM) - a%x(1:NDIM)
-        rho_core(i) = rho_core(i) + species_get_nlcc(a%spec, x)
+        x(1:NDIM) = mesh%x(i, 1:NDIM) - geo%atom(iatom)%x(1:NDIM)
+        rho_core(i) = rho_core(i) + species_get_nlcc(geo%atom(iatom)%spec, x)
       end do
     end if
 
@@ -730,6 +745,34 @@ contains
     deallocate(matrix)
     call pop_sub()
   end function epot_dipole_periodic
+
+  subroutine epot_precalc_local_potential(ep, gr, mesh, geo, time)
+    type(epot_t),             intent(inout) :: ep
+    type(grid_t),             intent(inout) :: gr
+    type(mesh_t),             intent(inout) :: mesh
+    type(geometry_t),         intent(inout) :: geo
+    FLOAT,                    intent(in)    :: time
+
+    integer :: iatom
+    FLOAT, allocatable :: tmp(:)
+
+    if(.not. associated(ep%local_potential)) then
+      ALLOCATE(ep%local_potential(1:mesh%np, 1:geo%natoms), mesh%np*geo%natoms)
+    end if
+
+    ep%local_potential_precalculated = .false.
+
+    ALLOCATE(tmp(1:mesh%np), mesh%np)
+
+    do iatom = 1, geo%natoms
+      tmp(1:mesh%np) = M_ZERO
+      call epot_local_potential(ep, gr, mesh, geo, iatom, tmp, time)
+      ep%local_potential(1:mesh%np, iatom) = tmp(1:mesh%np)
+    end do
+
+    ep%local_potential_precalculated = .true.
+
+  end subroutine epot_precalc_local_potential
 
 #include "undef.F90"
 #include "real.F90"

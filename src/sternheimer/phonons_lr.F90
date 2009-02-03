@@ -99,6 +99,8 @@ contains
     call sternheimer_init(sh, sys, hm, "VM")
     call vibrations_init(vib, geo, gr%sb)
 
+    call epot_precalc_local_potential(hm%ep, sys%gr, sys%gr%mesh, sys%geo, time = M_ZERO)
+
     call lr_init(lr(1))
     call lr_allocate(lr(1), st, gr%mesh)
 

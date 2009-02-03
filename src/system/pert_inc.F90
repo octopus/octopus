@@ -233,31 +233,29 @@ subroutine X(ionic_perturbation)(this, gr, geo, hm, ik, f_in, f_out, iatom, idir
 
   R_TYPE, allocatable :: grad(:,:), fin(:, :), fout(:, :)
   FLOAT,  allocatable :: vloc(:)
-  type(atom_t), pointer :: atm
+  integer :: ip
 
   call push_sub('pert_inc.Xionic_perturbation')
 
-  atm => geo%atom(iatom)
-
   ALLOCATE(vloc(1:NP), NP)
   vloc(1:NP) = M_ZERO
-  call epot_local_potential(hm%ep, gr, gr%mesh, geo, atm, vloc, CNST(0.0))
+  call epot_local_potential(hm%ep, gr, gr%mesh, geo, iatom, vloc, CNST(0.0))
 
   ALLOCATE(fin(1:NP_PART, 1), NP_PART)
   call lalg_copy(NP_PART, f_in, fin(:, 1))
 
   !d^T v |f>
   ALLOCATE(fout(1:NP_PART, 1), NP_PART)
-  fout(1:NP, 1) = vloc(1:NP) * fin(1:NP, 1)
+  forall(ip = 1:NP) fout(ip, 1) = vloc(ip)*fin(ip, 1)
   call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, 1, fin, fout, ik)
   call X(derivatives_oper)(gr%der%grad(idir), gr%der, fout(:,1), f_out)
 
   !v d |f>
   ALLOCATE(grad(1:NP, 1), NP)
   call X(derivatives_oper)(gr%der%grad(idir), gr%der, fin(:,1), grad(:,1))
-  fout(1:NP, 1) = vloc(1:NP) * grad(1:NP, 1)
+  forall(ip = 1:NP) fout(ip, 1) = vloc(ip)*grad(ip, 1)
   call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, 1, grad, fout, ik)
-  f_out(1:NP) = -f_out(1:NP) + fout(1:NP, 1)
+  forall(ip = 1:NP) f_out(ip) = -f_out(ip) + fout(ip, 1)
 
   deallocate(grad, fin, fout, vloc)
   call pop_sub()
@@ -394,10 +392,10 @@ contains
           if (this%ionic%pure_dir &
                .and. iatom /= this%atom1 .and. idir /= this%dir &
                .and. iatom /= this%atom2 .and. jdir /= this%dir2) cycle
-          
+
           call X(ionic_perturbation_order_2)(this, gr, geo, hm, ik, f_in, tmp, iatom, idir, jdir)
           
-          call lalg_axpy(NP, this%ionic%mix1(iatom, idir) * this%ionic%mix2(iatom, jdir), tmp, f_out)
+          call lalg_axpy(NP, this%ionic%mix1(iatom, idir)*this%ionic%mix2(iatom, jdir), tmp, f_out)
           
         end do
       end do
@@ -426,48 +424,46 @@ subroutine X(ionic_perturbation_order_2) (this, gr, geo, hm, ik, f_in, f_out, ia
   R_TYPE, allocatable :: fin(:, :)
   R_TYPE, allocatable :: tmp1(:, :), tmp2(:,:)
   FLOAT,  allocatable :: vloc(:)
-  type(atom_t), pointer :: atm
+  integer :: ip
 
   call push_sub('pert_inc.Xionic_perturbation_order2')
-
-  atm => geo%atom(iatom)
 
   ALLOCATE(fin(1:NP_PART, 1), NP_PART)
   ALLOCATE(tmp1(1:NP_PART, 1), NP_PART)
   ALLOCATE(tmp2(1:NP_PART, 1), NP_PART)
   ALLOCATE(vloc(1:NP), NP)
 
-  vloc(1:NP) = M_ZERO
-  call epot_local_potential(hm%ep, gr, gr%mesh, geo, atm, vloc, CNST(0.0))
+  forall(ip = 1:NP) vloc(ip) = M_ZERO
+  call epot_local_potential(hm%ep, gr, gr%mesh, geo, iatom, vloc, CNST(0.0))
 
   call lalg_copy(NP_PART, f_in, fin(:, 1))    
 
   !di^T dj^T v |f>
-  tmp1(1:NP, 1) = vloc(1:NP) * fin(1:NP, 1)
+  forall(ip = 1:NP) tmp1(ip, 1) = vloc(ip)*fin(ip, 1)
   call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, 1, fin, tmp1, ik)
   call X(derivatives_oper)(gr%der%grad(idir), gr%der, tmp1(:,1), tmp2(:,1))
   call X(derivatives_oper)(gr%der%grad(jdir), gr%der, tmp2(:,1), f_out)
 
   !di^T v dj |f>
   call X(derivatives_oper)(gr%der%grad(jdir), gr%der, fin(:,1), tmp1(:,1))
-  tmp2(1:NP, 1) = vloc(1:NP) * tmp1(1:NP, 1)
+  forall(ip = 1:NP) tmp2(ip, 1) = vloc(ip)*tmp1(ip, 1)
   call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, 1, tmp1, tmp2, ik)
   call X(derivatives_oper)(gr%der%grad(idir), gr%der, tmp2(:,1), tmp1(:,1))
-  f_out(1:NP) = f_out(1:NP) - tmp1(1:NP, 1)
+  forall(ip = 1:NP) f_out(ip) = f_out(ip) - tmp1(ip, 1)
 
   !dj^T v di |f>
   call X(derivatives_oper)(gr%der%grad(idir), gr%der, fin(:,1), tmp1(:,1))
-  tmp2(1:NP, 1) = vloc(1:NP) * tmp1(1:NP, 1)
+  forall(ip = 1:NP) tmp2(ip, 1) = vloc(ip)*tmp1(ip, 1)
   call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, 1, tmp1, tmp2, ik)
   call X(derivatives_oper)(gr%der%grad(jdir), gr%der, tmp2(:,1), tmp1(:,1))
-  f_out(1:NP) = f_out(1:NP) - tmp1(1:NP, 1)
+  forall(ip = 1:NP) f_out(ip) = f_out(ip) - tmp1(ip, 1)
 
   !v di dj |f>
   call X(derivatives_oper)(gr%der%grad(idir), gr%der, fin(:,1), tmp1(:,1))
   call X(derivatives_oper)(gr%der%grad(jdir), gr%der, tmp1(:,1), tmp2(:,1))
-  tmp1(1:NP, 1) = vloc(1:NP) * tmp2(1:NP, 1)
+  forall(ip = 1:NP) tmp1(ip, 1) = vloc(ip)*tmp2(ip, 1)
   call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, 1, tmp2, tmp1, ik)
-  f_out(1:NP) = f_out(1:NP) + tmp1(1:NP, 1)
+  forall(ip = 1:NP) f_out(ip) = f_out(ip) + tmp1(ip, 1)
 
   call pop_sub()
 
