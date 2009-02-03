@@ -169,17 +169,16 @@ contains
 
     do iatom = 1, this%natoms
       do idir = 1, this%ndim
-
         imat = vibrations_get_index(this, iatom, idir)
 
         do jatom = 1, this%natoms
           do jdir = 1, this%ndim
-            
             jmat = vibrations_get_index(this, jatom, jdir)
-            write(iunit, '(f14.3)', advance='no') this%dyn_matrix(imat, jmat) * hartree_to_cm_inv ! output cm^-1
+            write(iunit, '(i6, i3, i6, i3, f16.4)') iatom, idir, jatom, jdir, &
+                 this%dyn_matrix(imat, jmat) * hartree_to_cm_inv ! output cm^-1
           end do
         end do
-        write(iunit, '(1x)')
+
       end do
     end do
 

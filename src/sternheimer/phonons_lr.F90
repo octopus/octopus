@@ -1,4 +1,4 @@
-!! Copyright (C) 2004 Xavier Andrade, Eugene S. Kadantsev (ekadants@mjs1.phy.queensu.ca)
+!! Copyright (C) 2007 Xavier Andrade
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -134,15 +134,14 @@ contains
       do jmat = 1, vib%num_modes
         jatom = vibrations_get_atom(vib, jmat)
         jdir  = vibrations_get_dir (vib, jmat)
-        
+
         call pert_setup_atom(ionic_pert, jatom, iatom)
         call pert_setup_dir(ionic_pert, jdir, idir)
         
         vib%dyn_matrix(imat, jmat) = vib%dyn_matrix(imat, jmat) &
-          -dpert_expectation_value(ionic_pert, gr, geo, hm, st, lr(1)%ddl_psi, st%dpsi)&
-          -dpert_expectation_value(ionic_pert, gr, geo, hm, st, st%dpsi, lr(1)%ddl_psi)&
+          -M_TWO*dpert_expectation_value(ionic_pert, gr, geo, hm, st, st%dpsi, lr(1)%ddl_psi) &
           -dpert_expectation_value(ionic_pert, gr, geo, hm, st, st%dpsi, st%dpsi, pert_order = 2)
-        
+
       end do
       
       do jdir = 1, ndim
@@ -152,7 +151,7 @@ contains
           dpert_expectation_value(electric_pert, gr, geo, hm, st, st%dpsi, lr(1)%ddl_psi)
       end do
 
-    end do
+    end do 
 
     call pert_end(ionic_pert)
     call pert_end(electric_pert)
