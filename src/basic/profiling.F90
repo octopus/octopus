@@ -120,7 +120,7 @@ module profiling_m
   integer                  :: mem_prof_count
   real(8)                  :: start_time
   integer                  :: mem_iunit
-
+  integer(8)               :: last_mem
 
   !For the moment we will have the profiler objects here, but they
   !should be moved to their respective modules.
@@ -203,6 +203,7 @@ contains
     ! initialize time profiling
 
     last_profile = 0
+    last_mem = 0
 
     nullify(current%p)
 
@@ -547,9 +548,15 @@ contains
 
     ! this code is not thread safe, so we disable it for OpenMP
 #ifndef USE_OMP
-    
-    write(mem_iunit, '(i16, f16.6, i32, a, i16)') mem_prof_count, loct_clock() - start_time, get_memory_usage(), " "//file, line
-    mem_prof_count = mem_prof_count + 1
+
+    integer(8) :: mem
+
+    mem = get_memory_usage()
+    if(mem /= last_mem) then 
+      write(mem_iunit, '(i16, f16.6, i32, a, i16)') mem_prof_count, loct_clock() - start_time, mem, " "//file, line
+      mem_prof_count = mem_prof_count + 1
+      last_mem = mem
+    end if
 
 #endif
 
