@@ -131,7 +131,7 @@ contains
       call dsternheimer_solve(sh, sys, hm, lr, 1, M_ZERO, ionic_pert, &
         PHONONS_RESTART_DIR, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir))
       
-      do jmat = 1, vib%num_modes
+      do jmat = imat, vib%num_modes 
         jatom = vibrations_get_atom(vib, jmat)
         jdir  = vibrations_get_dir (vib, jmat)
 
@@ -141,6 +141,8 @@ contains
         vib%dyn_matrix(imat, jmat) = vib%dyn_matrix(imat, jmat) &
           -M_TWO*dpert_expectation_value(ionic_pert, gr, geo, hm, st, st%dpsi, lr(1)%ddl_psi) &
           -dpert_expectation_value(ionic_pert, gr, geo, hm, st, st%dpsi, st%dpsi, pert_order = 2)
+
+        vib%dyn_matrix(jmat, imat) = vib%dyn_matrix(imat, jmat)
 
       end do
       
