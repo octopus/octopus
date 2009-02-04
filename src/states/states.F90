@@ -97,12 +97,12 @@ module states_m
 
     integer :: wfs_type             ! real (M_REAL) or complex (M_CMPLX) wavefunctions
     ! pointers to the wavefunctions 
-    logical :: only_userdef_istates ! only use user-defined states initial states in propagation
+    logical :: only_userdef_istates ! only use user-defined states as initial states in propagation
     FLOAT, pointer :: dpsi(:,:,:,:) ! dpsi(sys%NP_PART, st%d%dim, st%nst, st%d%nik)
     CMPLX, pointer :: zpsi(:,:,:,:) ! zpsi(sys%NP_PART, st%d%dim, st%nst, st%d%nik)
 
     logical            :: open_boundaries
-    CMPLX, pointer     :: zphi(:, :, :, :)  ! Free states for open boundary calculations.
+    CMPLX, pointer     :: zphi(:, :, :, :)  ! Free states for open-boundary calculations.
     CMPLX, pointer     :: ob_intf_psi(:, :, :, :, :, :) ! (np, 2, st%d%dim, st%nst, st%d%nik, nleads)
     FLOAT, pointer     :: ob_rho(:, :, :)   ! Density of the lead unit cells.
     FLOAT, pointer     :: ob_eigenval(:, :) ! Eigenvalues of free states.
@@ -112,7 +112,7 @@ module states_m
                                             ! ob_ncs = ob_nst*st%ob_d%nik / st%d%nik
     FLOAT, pointer     :: ob_occ(:, :)
 
-    ! used for the user defined wavefunctions (they are stored as formula strings)
+    ! used for the user-defined wavefunctions (they are stored as formula strings)
     character(len=1024), pointer :: user_def_states(:,:,:) ! (st%d%dim, st%nst, st%d%nik)
 
     ! the densities and currents (after all we are doing DFT :)

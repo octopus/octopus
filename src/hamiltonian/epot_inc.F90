@@ -52,7 +52,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time)
 
   grho(1:np, 1:NDIM) = M_ZERO
 
-  !THE NON-LOCAL PART (parallel in states and k points)
+  !THE NON-LOCAL PART (parallel in states and k-points)
   do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
       

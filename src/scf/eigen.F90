@@ -203,7 +203,7 @@ contains
     !%Default 7
     !%Section SCF::Eigensolver
     !%Description
-    !% Determines how many interactions are needed 
+    !% Determines how many iterations are needed 
     !% to go from <tt>EigensolverInitTolerance</tt> to <tt>EigensolverFinalTolerance</tt>.
     !% Must be larger than 1.
     !%End
