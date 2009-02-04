@@ -41,29 +41,31 @@ module pert_m
   use states_m
   use states_dim_m
   use varinfo_m
+  use vibrations_m
   use mpi_m
 
   implicit none
 
   private
-  public ::                    &
-     pert_t,                   &
-     pert_init,                &
-     pert_end,                 &
-     pert_info,                &
-     pert_setup_dir,           &
-     pert_setup_atom,          &
-     pert_setup_mixed_dir,     &
-     pert_type,                &
-     dpert_apply,              &
-     zpert_apply,              &
-     dpert_apply_order_2,      &
-     zpert_apply_order_2,      &
-     dpert_expectation_value , &
-     zpert_expectation_value,  &
-     dpert_expectation_density,&
-     zpert_expectation_density
-
+  public ::                         &
+     pert_t,                        &
+     pert_init,                     &
+     pert_end,                      &
+     pert_info,                     &
+     pert_setup_dir,                &
+     pert_setup_atom,               &
+     pert_setup_mixed_dir,          &
+     pert_type,                     &
+     dpert_apply,                   &
+     zpert_apply,                   &
+     dpert_apply_order_2,           &
+     zpert_apply_order_2,           &
+     dpert_expectation_value,       &
+     zpert_expectation_value,       &
+     dpert_expectation_density,     &
+     zpert_expectation_density,     &
+     dionic_pert_matrix_elements_2, &
+     zionic_pert_matrix_elements_2
 
   integer, public, parameter :: &
      PERTURBATION_ELECTRIC = 1, &

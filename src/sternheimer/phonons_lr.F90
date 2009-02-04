@@ -101,9 +101,6 @@ contains
 
     call epot_precalc_local_potential(hm%ep, sys%gr, sys%gr%mesh, sys%geo, time = M_ZERO)
 
-    call lr_init(lr(1))
-    call lr_allocate(lr(1), st, gr%mesh)
-
     ALLOCATE(infrared(natoms*ndim, ndim), natoms*ndim**2)
 
     !CALCULATE
@@ -111,8 +108,14 @@ contains
     !the ionic contribution
     call build_ionic_dyn_matrix()
 
+    !the  <phi0 | v2 | phi0> term
+    call dionic_pert_matrix_elements_2(ionic_pert, sys%gr, sys%geo, hm, 1, st, st%dpsi(:, :, :, 1), vib, CNST(-1.0), vib%dyn_matrix)
+
     call pert_init(ionic_pert, PERTURBATION_IONIC, gr, geo)
     call pert_init(electric_pert, PERTURBATION_ELECTRIC, gr, geo)
+
+    call lr_init(lr(1))
+    call lr_allocate(lr(1), st, gr%mesh)
 
     do imat = 1, vib%num_modes
       iatom = vibrations_get_atom(vib, imat)
@@ -139,9 +142,8 @@ contains
         call pert_setup_dir(ionic_pert, jdir, idir)
         
         vib%dyn_matrix(imat, jmat) = vib%dyn_matrix(imat, jmat) &
-          -M_TWO*dpert_expectation_value(ionic_pert, gr, geo, hm, st, st%dpsi, lr(1)%ddl_psi) &
-          -dpert_expectation_value(ionic_pert, gr, geo, hm, st, st%dpsi, st%dpsi, pert_order = 2)
-
+          -M_TWO*dpert_expectation_value(ionic_pert, gr, geo, hm, st, st%dpsi, lr(1)%ddl_psi)
+        
         vib%dyn_matrix(jmat, imat) = vib%dyn_matrix(imat, jmat)
 
       end do

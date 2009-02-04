@@ -436,8 +436,8 @@ subroutine X(ionic_perturbation_order_2) (this, gr, geo, hm, ik, f_in, f_out, ia
   forall(ip = 1:NP) vloc(ip) = M_ZERO
   call epot_local_potential(hm%ep, gr, gr%mesh, geo, iatom, vloc, CNST(0.0))
 
-  call lalg_copy(NP_PART, f_in, fin(:, 1))    
-
+  call lalg_copy(NP_PART, f_in, fin(:, 1))
+   
   !di^T dj^T v |f>
   forall(ip = 1:NP) tmp1(ip, 1) = vloc(ip)*fin(ip, 1)
   call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, 1, fin, tmp1, ik)
@@ -468,6 +468,71 @@ subroutine X(ionic_perturbation_order_2) (this, gr, geo, hm, ik, f_in, f_out, ia
   call pop_sub()
 
 end subroutine X(ionic_perturbation_order_2)
+
+! --------------------------------------------------------------------------
+subroutine X(ionic_pert_matrix_elements_2)(this, gr, geo, hm, ik, st, psi, vib, factor, matrix)
+  type(pert_t),        intent(in)    :: this
+  type(grid_t),        intent(inout) :: gr
+  type(geometry_t),    intent(in)    :: geo
+  type(hamiltonian_t), intent(in)    :: hm
+  integer,             intent(in)    :: ik
+  type(states_t),      intent(in)    :: st
+  R_TYPE,              intent(inout) :: psi(:, :, :)
+  type(vibrations_t),  intent(in)    :: vib
+  R_TYPE,              intent(in)    :: factor
+  R_TYPE,              intent(inout) :: matrix(:, :)
+
+  integer :: ist, idim, ip
+  integer :: imat, jmat, iatom, idir, jdir
+  FLOAT, allocatable :: vloc(:)
+  R_TYPE, allocatable :: gpsi(:, :, :), g2psi(:, :, :, :), tmp1(:, :)
+  R_TYPE :: dot
+
+  ALLOCATE(vloc(1:NP), NP)
+  ALLOCATE(gpsi(1:gr%mesh%np_part, 1:st%d%dim, 1:gr%sb%dim), gr%mesh%np_part*st%d%dim*gr%sb%dim)
+  ALLOCATE(g2psi(1:gr%mesh%np_part, 1:st%d%dim, 1:gr%sb%dim, 1:gr%sb%dim), gr%mesh%np_part*st%d%dim*gr%sb%dim**2)
+  ALLOCATE(tmp1(1:gr%mesh%np, 1:st%d%dim), gr%mesh%np*st%d%dim)
+
+  do ist = 1, st%nst
+    do idim = 1, st%d%dim
+      call X(derivatives_grad)(gr%der, psi(:, idim, ist), gpsi(:, idim, :))
+      do idir = 1, gr%sb%dim
+        call X(derivatives_grad)(gr%der, gpsi(:, idim, idir), g2psi(:, idim, idir, :))
+      end do
+    end do
+    
+    do imat = 1, vib%num_modes
+      iatom = vibrations_get_atom(vib, imat)
+      idir  = vibrations_get_dir (vib, imat)
+
+      forall(ip = 1:NP) vloc(ip) = M_ZERO
+      call epot_local_potential(hm%ep, gr, gr%mesh, geo, iatom, vloc, CNST(0.0))
+
+      do jdir = 1, gr%sb%dim
+        jmat = vibrations_get_index(vib, iatom, jdir)
+
+        dot = M_ZERO
+
+        !2<f|dj^T v di |f>
+        forall (idim = 1:st%d%dim, ip = 1:NP) tmp1(ip, idim) = vloc(ip)*gpsi(ip, idim, idir)
+        call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, st%d%dim, gpsi(:, :, idir), tmp1, ik)
+        dot = dot + CNST(2.0)*X(mf_dotp)(gr%mesh, st%d%dim, gpsi(:, :, jdir), tmp1)
+
+        !2<f|di^T dj^T v |f> 
+        forall (idim = 1:st%d%dim, ip = 1:NP) tmp1(ip, idim) = vloc(ip)*psi(ip, idim, ist)
+        call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, st%d%dim, psi(:, :, ist), tmp1, ik)
+        dot = dot + CNST(2.0)*X(mf_dotp)(gr%mesh, st%d%dim, g2psi(:, :, idir, jdir), tmp1)
+
+        dot = dot*st%occ(ist, ik)*factor
+        
+        matrix(imat, jmat) = matrix(imat, jmat) + dot
+
+      end do
+
+    end do
+  end do
+  
+end subroutine X(ionic_pert_matrix_elements_2)
 
 ! --------------------------------------------------------------------------
 subroutine X(pert_expectation_density) (this, gr, geo, hm, st, psia, psib, density, pert_order)
