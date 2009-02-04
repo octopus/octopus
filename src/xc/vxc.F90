@@ -335,7 +335,7 @@ contains
   !   *) allocate the kinetic energy density, dedtau, and local variants
   !   *) calculates tau either from a GEA or from the orbitals
   subroutine mgga_init()
-    ALLOCATE(tau(NP_PART, spin_channels), NP*spin_channels)
+    ALLOCATE(tau(NP, spin_channels), NP*spin_channels)
 
     ! calculate tau
     call states_calc_tau_jp_gn(gr, st, tau=tau)

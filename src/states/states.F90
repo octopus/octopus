@@ -84,7 +84,8 @@ module states_m
     states_dump,                      &
     states_distribute_nodes,          &
     states_wfns_memory,               &
-    states_freeze_orbitals
+    states_freeze_orbitals,           &
+    states_total_density
 
   public ::                           &
     states_are_complex,               &
@@ -2526,6 +2527,42 @@ contains
     call pop_sub()
   end subroutine states_freeze_orbitals
 
+
+  ! ---------------------------------------------------------
+  ! this routine calculates the total electronic density,
+  ! which is the sum of the part coming from the orbitals, the
+  ! non-linear core corrections and the frozen orbitals
+  subroutine states_total_density(st, mesh, rho)
+    type(states_t), intent(in)  :: st
+    type(mesh_t),   intent(in)  :: mesh
+    FLOAT,          intent(out) :: rho(:,:)
+
+    integer :: is, ip
+
+    call push_sub('states.states_total_density')
+
+    if(associated(st%rho_core)) then
+      forall(is = 1:st%d%spin_channels, ip = 1:mesh%np)
+        rho(ip, is) = st%rho(ip, is) + st%rho_core(ip)/st%d%spin_channels
+      end forall
+    else
+      forall(is = 1:st%d%spin_channels, ip = 1:mesh%np)
+        rho(ip, is) = st%rho(ip, is)
+      end forall
+    end if
+
+    ! Add, if it exists, the frozen density from the inner orbitals.
+    if(associated(st%frozen_rho)) then
+      forall(is = 1:st%d%spin_channels, ip = 1:mesh%np)
+        rho(ip, is) = rho(ip, is) + st%frozen_rho(ip, is)
+      end forall
+    end if
+
+    call pop_sub()
+  end subroutine states_total_density
+
+
+  ! ---------------------------------------------------------
   real(8) function states_wfns_memory(st, mesh) result(memory)
     type(states_t), intent(in) :: st
     type(mesh_t),   intent(in) :: mesh

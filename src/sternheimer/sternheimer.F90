@@ -212,38 +212,30 @@ contains
 
 
   !-----------------------------------------------------------
-  subroutine sternheimer_build_fxc(this, m, st, ks)
+  subroutine sternheimer_build_fxc(this, mesh, st, ks)
     type(sternheimer_t), intent(inout) :: this
-    type(mesh_t),        intent(in)    :: m
+    type(mesh_t),        intent(in)    :: mesh
     type(states_t),      intent(in)    :: st
     type(v_ks_t),        intent(in)    :: ks
 
     FLOAT, allocatable :: rho(:, :)
-    integer :: is
 
     call push_sub('sternheimer.sternheimer_build_fxc')
 
-    ALLOCATE(this%fxc(m%np, st%d%nspin, st%d%nspin), m%np*st%d%nspin*st%d%nspin)
+    ALLOCATE(this%fxc(mesh%np, st%d%nspin, st%d%nspin), mesh%np*st%d%nspin*st%d%nspin)
+    this%fxc = M_ZERO
 
     if( iand(ks%xc%kernel_family, XC_FAMILY_OEP) == 0 ) then 
-      
-      ALLOCATE(rho(m%np, st%d%nspin), m%np*st%d%nspin)
-      if(st%nlcc) then
-        do is = 1, st%d%spin_channels
-          rho(1:m%np, is) = st%rho(1:m%np, is) + st%rho_core(1:m%np)/st%d%spin_channels
-        end do
-      else
-        rho(1:m%np, 1:st%d%nspin) = st%rho(1:m%np, 1:st%d%nspin)
-      end if
-      this%fxc = M_ZERO
-      call xc_get_fxc(ks%xc, m, rho, st%d%ispin, this%fxc)
-      deallocate(rho)
       this%oep_kernel = .false.
-    else
 
-      call xc_oep_kernel_init(ks%oep)
+      ALLOCATE(rho(mesh%np, st%d%nspin), mesh%np*st%d%nspin)
+      call states_total_density(st, mesh, rho)
+      call xc_get_fxc(ks%xc, mesh, rho, st%d%ispin, this%fxc)
+      deallocate(rho)
+    else
       this%oep_kernel = .true.
 
+      call xc_oep_kernel_init(ks%oep)
     end if
 
     call pop_sub()

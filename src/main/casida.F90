@@ -335,15 +335,9 @@ contains
       ! We calculate here the kernel, since it will be needed later.
       ALLOCATE(rho(m%np, st%d%nspin), m%np*st%d%nspin)
       ALLOCATE(fxc(m%np, st%d%nspin, st%d%nspin), m%np*st%d%nspin*st%d%nspin)
-      rho = M_ZERO; fxc = M_ZERO
+      fxc = M_ZERO
 
-      if(st%nlcc) then
-        do is = 1, st%d%spin_channels
-          rho(1:m%np, is) = st%rho(1:m%np, is) + st%rho_core(1:m%np)/st%d%spin_channels
-        end do
-      else
-        rho(1:m%np, 1:st%d%nspin) = st%rho(1:m%np, 1:st%d%nspin)
-      end if
+      call states_total_density(st, m, rho)
       call xc_get_fxc(sys%ks%xc, m, rho, st%d%ispin, fxc)
     end if
 

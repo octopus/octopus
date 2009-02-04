@@ -338,20 +338,7 @@ contains
 
       ! get density taking into account non-linear core corrections, and the Amaldi SIC correction
       ALLOCATE(rho(NP, st%d%nspin), NP*st%d%nspin)
-      if(associated(st%rho_core)) then
-        do is = 1, st%d%spin_channels
-          rho(1:NP, is) = st%rho(1:NP, is) + st%rho_core(1:NP)/st%d%spin_channels
-        end do
-      else
-        rho(1:NP, :) = st%rho(1:NP, :)
-      end if
-
-      ! Add, if it exists, the frozen density from the inner orbitals.
-      if(associated(st%frozen_rho)) then
-        do is = 1, st%d%spin_channels
-          rho(1:NP, is) = rho(1:NP, is) + st%frozen_rho(1:NP, is)
-        end do
-      end if
+      call states_total_density(st, gr%mesh, rho)
 
       ! Amaldi correction
       if(ks%sic_type == sic_amaldi) rho(1:NP,:) = amaldi_factor*rho(1:NP,:)

@@ -31,6 +31,7 @@ module one_shot_m
   use loct_math_m
   use mesh_m
   use messages_m
+  use profiling_m
   use restart_m
   use scf_m
   use states_m
@@ -55,6 +56,7 @@ contains
     type(hamiltonian_t),         intent(inout) :: hm
 
     integer :: ierr
+    FLOAT, allocatable :: rho(:,:)
     FLOAT :: E_tot, E_t, E_ext, E_Hartree, E_x, E_c
 
     ! load wave-functions
@@ -82,8 +84,11 @@ contains
     E_Hartree = hm%ehartree
 
     ! Get exchange-correlation energies
-    call xc_get_vxc(sys%gr, sys%ks%xc, sys%st, sys%st%rho, sys%st%d%ispin, E_x, E_c, &
+    ALLOCATE(rho(sys%NP, sys%st%d%nspin), sys%NP*sys%st%d%nspin)
+    call states_total_density(sys%st, sys%gr%mesh, rho)
+    call xc_get_vxc(sys%gr, sys%ks%xc, sys%st, rho, sys%st%d%ispin, E_x, E_c, &
       M_ZERO, sys%st%qtot)
+    deallocate(rho)
 
     ! The OEP family has to handle specially
     if (sys%st%wfs_type == M_REAL) then
