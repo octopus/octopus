@@ -364,7 +364,7 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
 
   R_TYPE, allocatable :: hvar(:, :, :, :, :, :)
   R_TYPE, allocatable :: tmp(:)
-  FLOAT,  allocatable :: kxc(:, :, :, :)
+  FLOAT,  allocatable :: rho(:,:), kxc(:, :, :, :)
   R_TYPE, allocatable :: hpol_density(:)
 
   call push_sub('em_resp_inc.Xlr_calc_beta')
@@ -385,7 +385,12 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
   !calculate kxc, the derivative of fxc
   ALLOCATE(kxc(1:np, 1:st%d%nspin, 1:st%d%nspin, 1:st%d%nspin), np*st%d%nspin**3)
   kxc = M_ZERO
-  call xc_get_kxc(sys%ks%xc, mesh, st%rho, st%d%ispin, kxc)
+
+  ALLOCATE(rho(np, st%d%nspin), np*st%d%nspin)
+  call states_total_density(st, mesh, rho)
+
+  call xc_get_kxc(sys%ks%xc, mesh, rho, st%d%ispin, kxc)
+  deallocate(rho)
 
   ALLOCATE(tmp(1:np), np)
   ALLOCATE(hvar(1:np, 1:st%d%nspin, 1:2, 1:st%d%dim, 1:ndim, 1:3), np*st%d%nspin*2*st%d%dim*ndim*3)
