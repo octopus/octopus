@@ -79,8 +79,8 @@ module scf_m
     FLOAT :: lmm_r
 
     ! several convergence criteria
-    FLOAT :: conv_abs_dens, conv_rel_dens, conv_abs_ev, conv_rel_ev, conv_abs_force, conv_rel_force
-    FLOAT :: abs_dens, rel_dens, abs_ev, rel_ev, abs_force, rel_force
+    FLOAT :: conv_abs_dens, conv_rel_dens, conv_abs_ev, conv_rel_ev, conv_abs_force
+    FLOAT :: abs_dens, rel_dens, abs_ev, rel_ev, abs_force
 
     integer :: what2mix
     logical :: lcao_restricted
@@ -169,7 +169,10 @@ contains
     !%End
     call loct_parse_float(datasets_check('ConvRelEv'), M_ZERO, scf%conv_rel_ev)
 
-    !%Variable ConvAbsForce
+    call obsolete_variable("ConvAbsForce", "ConvForce")
+    call obsolete_variable("ConvRelForce", "ConvForce")
+
+    !%Variable ConvForce
     !%Type float
     !%Default 0.0
     !%Section SCF::Convergence
@@ -178,27 +181,16 @@ contains
     !% maximum variation of any component of the ionic forces in consecutive iterations.
     !% A zero value (the default) means do not use this criterion.
     !%End
-    call loct_parse_float(datasets_check('ConvAbsForce'), M_ZERO, scf%conv_abs_force)
+    call loct_parse_float(datasets_check('ConvForce'), M_ZERO, scf%conv_abs_force)
     scf%conv_abs_force = scf%conv_abs_force * units_inp%force%factor
-
-    !%Variable ConvRelForce
-    !%Type float
-    !%Default 0.0
-    !%Section SCF::Convergence
-    !%Description
-    !% Relative convergence of the forces:
-    !% absolute convergence divided by the modulus of the force on the ion where the force changes the most.
-    !% A zero value (the default) means do not use this criterion.
-    !%End
-    call loct_parse_float(datasets_check('ConvRelForce'), M_ZERO, scf%conv_rel_force)
 
     if(scf%max_iter <= 0 .and. &
       scf%conv_abs_dens <= M_ZERO .and. scf%conv_rel_dens <= M_ZERO .and. &
       scf%conv_abs_ev <= M_ZERO .and. scf%conv_rel_ev <= M_ZERO .and. &
-      scf%conv_abs_force <= M_ZERO .and. scf%conv_rel_force <= M_ZERO) then
+      scf%conv_abs_force <= M_ZERO) then
       message(1) = "Input: Not all convergence criteria can be <= 0"
       message(2) = "Please set one of the following:"
-      message(3) = "MaximumIter | ConvAbsDens | ConvRelDens | ConvAbsEv | ConvRelEv | ConvAbsForce | ConvRelForce"
+      message(3) = "MaximumIter | ConvAbsDens | ConvRelDens | ConvAbsEv | ConvRelEv | ConvForce "
       call write_fatal(3)
     end if
 
@@ -351,7 +343,7 @@ contains
     evsum_in = states_eigenvalues_sum(st)
 
     ! allocate and compute forces only if they are used as convergence criteria
-    if (scf%conv_abs_force > M_ZERO .or. scf%conv_rel_force > M_ZERO) then
+    if (scf%conv_abs_force > M_ZERO) then
       ALLOCATE(forcein(geo%natoms, NDIM), geo%natoms*NDIM)
       ALLOCATE(forceout(geo%natoms, NDIM), geo%natoms*NDIM)
       ALLOCATE(forcediff(NDIM), NDIM)
@@ -417,17 +409,15 @@ contains
       deallocate(tmp)
 
       ! compute forces only if they are used as convergence criteria
-      if (scf%conv_abs_force > M_ZERO .or. scf%conv_rel_force > M_ZERO) then
+      if (scf%conv_abs_force > M_ZERO) then
         call epot_forces(gr, geo, hm%ep, st)
         scf%abs_force = M_ZERO
-        scf%rel_force = M_ZERO
         do iatom = 1, geo%natoms
           forceout(iatom,1:NDIM) = geo%atom(iatom)%f(1:NDIM)
           forcediff(1:NDIM) = abs( forceout(iatom,1:NDIM) - forcein(iatom,1:NDIM) )
           forcetmp = maxval( forcediff )
           if ( forcetmp > scf%abs_force ) then
             scf%abs_force = forcetmp
-            scf%rel_force = scf%abs_force / sqrt( dot_product( forcediff, forcediff ) )
           end if
         end do
       end if
@@ -442,7 +432,6 @@ contains
         (scf%conv_abs_dens  <= M_ZERO .or. scf%abs_dens  <= scf%conv_abs_dens)  .and. &
         (scf%conv_rel_dens  <= M_ZERO .or. scf%rel_dens  <= scf%conv_rel_dens)  .and. &
         (scf%conv_abs_force <= M_ZERO .or. scf%abs_force <= scf%conv_abs_force) .and. &
-        (scf%conv_rel_force <= M_ZERO .or. scf%rel_force <= scf%conv_rel_force) .and. &
         (scf%conv_abs_ev    <= M_ZERO .or. scf%abs_ev    <= scf%conv_abs_ev)    .and. &
         (scf%conv_rel_ev    <= M_ZERO .or. scf%rel_ev    <= scf%conv_rel_ev)
 
@@ -504,7 +493,7 @@ contains
         if (hm%d%cdft) vin(1:NP, 2:dim, 1:nspin) = hm%axc(1:NP, 1:NDIM, 1:nspin)
       end if
       evsum_in = evsum_out
-      if (scf%conv_abs_force > M_ZERO .or. scf%conv_rel_force > M_ZERO) then
+      if (scf%conv_abs_force > M_ZERO) then
         forcein(1:geo%natoms, 1:NDIM) = forceout(1:geo%natoms, 1:NDIM)
       end if
 
@@ -579,9 +568,9 @@ contains
         write(message(2),'(23x,2(a,es9.2))') &
              ' abs_dens = ', scf%abs_dens, ' rel_dens = ', scf%rel_dens
         ! write info about forces only if they are used as convergence criteria
-        if (scf%conv_abs_force > M_ZERO .or. scf%conv_rel_force > M_ZERO) then
-          write(message(3),'(23x,2(a,es9.2))') &
-               ' abs_force   = ', scf%abs_force/units_out%force%factor, ' rel_force   = ', scf%rel_force
+        if (scf%conv_abs_force > M_ZERO) then
+          write(message(3),'(23x,a,es9.2)') &
+             ' force    = ', scf%abs_force/units_out%force%factor
           call write_info(3)
         else
           call write_info(2)
@@ -620,12 +609,12 @@ contains
 
       if ( verbosity_ == VERB_COMPACT ) then
         ! write info about forces only if they are used as convergence criteria
-        if (scf%conv_abs_force > M_ZERO .or. scf%conv_rel_force > M_ZERO) then
+        if (scf%conv_abs_force > M_ZERO) then
         write(message(1),'(a,i4,a,es15.8, 2(a,es9.2), a, f7.1, a)') &
              'iter ', iter, &
              ' : etot ', hm%etot/units_out%energy%factor, &
              ' : abs_dens', scf%abs_dens, &
-             ' : abs_force', scf%abs_force/units_out%force%factor, &
+             ' : force ', scf%abs_force/units_out%force%factor, &
              ' : etime ', etime, 's'
         else
         write(message(1),'(a,i4,a,es15.8, a,es9.2, a, f7.1, a)') &
