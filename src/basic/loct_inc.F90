@@ -19,31 +19,37 @@
 
   subroutine SUBNAME(loct_pointer_copy_1)(o, i)
     TYPE, pointer :: o(:), i(:)
-    integer :: nl, nu
+    integer :: nl1, nu1
+    integer :: i1
+
     if(associated(i)) then
-      nl = lbound(i, 1)
-      nu = ubound(i, 1)
-      allocate(o(nl:nu))
-      o = i
+      nl1 = lbound(i, 1)
+      nu1 = ubound(i, 1)
+      allocate(o(nl1:nu1))
+      forall (i1 = nl1:nu1) o(i1) = i(i1)
     end if
   end subroutine SUBNAME(loct_pointer_copy_1)
 
   subroutine SUBNAME(loct_pointer_copy_2)(o, i)
     TYPE, pointer :: o(:, :), i(:, :)
     integer :: nl1, nu1, nl2, nu2
+    integer :: i1, i2
+
     if(associated(i)) then
       nl1 = lbound(i, 1)
       nu1 = ubound(i, 1)
       nl2 = lbound(i, 2)
       nu2 = ubound(i, 2)
       allocate(o(nl1:nu1, nl2:nu2))
-      o = i
+      forall (i1 = nl1:nu1, i2 = nl2:nu2) o(i1, i2) = i(i1, i2)
       end if
   end subroutine SUBNAME(loct_pointer_copy_2)
 
   subroutine SUBNAME(loct_pointer_copy_3)(o, i)
     TYPE, pointer :: o(:, :, :), i(:, :, :)
     integer :: nl1, nu1, nl2, nu2, nl3, nu3
+    integer :: i1, i2, i3
+
     if(associated(i)) then
       nl1 = lbound(i, 1)
       nu1 = ubound(i, 1)
@@ -52,13 +58,15 @@
       nl3 = lbound(i, 3)
       nu3 = ubound(i, 3)
       allocate(o(nl1:nu1, nl2:nu2, nl3:nu3))
-      o = i
+      forall (i1 = nl1:nu1, i2 = nl2:nu2, i3 = nl3:nu3) o(i1, i2, i3) = i(i1, i2, i3)
     end if
   end subroutine SUBNAME(loct_pointer_copy_3)
 
   subroutine SUBNAME(loct_pointer_copy_4)(o, i)
     TYPE, pointer :: o(:, :, :, :), i(:, :, :, :)
     integer :: nl1, nu1, nl2, nu2, nl3, nu3, nl4, nu4
+    integer :: i1, i2, i3, i4
+
     if(associated(i)) then
       nl1 = lbound(i, 1)
       nu1 = ubound(i, 1)
@@ -69,6 +77,6 @@
       nl4 = lbound(i, 4)
       nu4 = ubound(i, 4)
       allocate(o(nl1:nu1, nl2:nu2, nl3:nu3, nl4:nu4))
-      o = i
+      forall (i1 = nl1:nu1, i2 = nl2:nu2, i3 = nl3:nu3, i4 = nl4:nu4) o(i1, i2, i3, i4) = i(i1, i2, i3, i4)
     end if
   end subroutine SUBNAME(loct_pointer_copy_4)
