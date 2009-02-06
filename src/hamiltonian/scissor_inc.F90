@@ -25,8 +25,10 @@ subroutine X(scissor_init)(this,st, gap, psi)
 
   ASSERT(.not. this%apply)
 
+  this%apply = .true.
   this%gap = gap
   this%X(psi) => psi
+  this%st => st
 end subroutine X(scissor_init)
 
 subroutine X(scissor_apply)(this, mesh, ik, psi, spsi)
@@ -39,10 +41,13 @@ subroutine X(scissor_apply)(this, mesh, ik, psi, spsi)
   integer :: ist, idim
   R_TYPE  :: dot
 
+  ASSERT(this%apply)
+  ASSERT(associated(this%X(psi)))
+  ASSERT(associated(this%st))
+
   do idim = 1, this%st%d%dim
     call lalg_axpy(mesh%np, this%gap, psi(:, idim), spsi(:, idim))
   end do
-  
   do ist = 1, this%st%nst
     dot = X(mf_dotp)(mesh, this%st%d%dim, this%X(psi)(:, :, ist, ik), psi)
     do idim = 1, this%st%d%dim
