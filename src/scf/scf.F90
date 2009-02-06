@@ -635,7 +635,7 @@ contains
       character(len=*), intent(in) :: dir, fname
 
       FLOAT :: e_dip(4, st%d%nspin), n_dip(MAX_DIM)
-      integer :: iunit, ispin, idir, iatom
+      integer :: iunit, ispin, idir, iatom, nquantumpol
 
       call push_sub('scf.scf_write_static')
 
@@ -678,21 +678,33 @@ contains
 
       ! Next lines of code calculate the dipole of the molecule, summing the electronic and
       ! ionic contributions.
+
       do ispin = 1, st%d%nspin
         call dmf_multipoles(gr%mesh, st%rho(:, ispin), 1, e_dip(:, ispin))
       end do
 
-      do idir = 1, 3
-        e_dip(idir + 1, 1) = sum(e_dip(idir + 1, :))
-      end do
-
-      ! Replace dipole in periodic directions with single-point Berry`s phase calculation
-      do idir = 1, gr%sb%periodic_dim
-        e_dip(idir + 1, 1) = epot_dipole_periodic(st, gr, idir)         
-      enddo
-
       call geometry_dipole(geo, n_dip)
-      n_dip(1:NDIM) = n_dip(1:NDIM) - e_dip(2:NDIM+1, 1)
+
+      do idir = 1, 3
+        ! in periodic directions use single-point Berry`s phase calculation
+        if(idir .le. gr%sb%periodic_dim) then
+          n_dip(idir) = n_dip(idir) - epot_dipole_periodic(st, gr, idir)
+          
+          ! use quantum of polarization to reduce to smallest possible magnitude
+          nquantumpol = FLOOR(n_dip(idir)/(2 * gr%sb%lsize(idir)))
+          if(n_dip(idir) .lt. M_ZERO) then
+             nquantumpol = nquantumpol + 1
+             ! this makes that if n_dip = -1.1 R, it becomes -0.1 R, not 0.9 R
+          endif
+
+          n_dip(idir) = n_dip(idir) - nquantumpol * (2 * gr%sb%lsize(idir))
+
+        ! in aperiodic directions use normal dipole formula
+        else
+          e_dip(idir + 1, 1) = sum(e_dip(idir + 1, :))
+          n_dip(idir) = n_dip(idir) - e_dip(idir + 1, 1)         
+        endif
+      end do
 
       if(mpi_grp_is_root(mpi_world)) then
         call io_output_dipole(iunit, n_dip, NDIM)
@@ -706,7 +718,9 @@ contains
                    "WARNING: Single-point Berry's phase method for dipole should not be used when there is more than one k-point."
            endif
         endif
-      end if
+        
+        write(iunit, *)
+      endif
 
       ! Output expectation values of the momentum operator
       call write_momentum(iunit)

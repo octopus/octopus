@@ -44,7 +44,8 @@ module smear_m
     smear_calc_entropy,               &
     smear_delta_function,             &
     smear_step_function,              &
-    smear_entropy_function
+    smear_entropy_function,           &
+    smear_is_semiconducting
 
   type smear_t
     integer :: method       ! which smearing function to take
@@ -504,6 +505,13 @@ contains
     end select
 
   end function smear_entropy_function
+
+  logical function smear_is_semiconducting(this) result(answer)
+    type(smear_t), intent(in) :: this
+
+    answer = this%method .eq. SMEAR_SEMICONDUCTOR
+
+  end function smear_is_semiconducting
 
 end module smear_m
 

@@ -42,6 +42,7 @@ module external_pot_m
   use logrid_m
   use poisson_cutoffs_m
   use ps_m
+  use smear_m
   use species_m
   use species_pot_m
   use spline_filter_m
@@ -718,12 +719,19 @@ contains
 
     call push_sub('epot.epot_dipole_periodic')
 
+    if(.not. smear_is_semiconducting(st%smear)) then
+      message(1) = "Error: cannot do single-point Berry's phase dipole calculation without integer occupations."
+      call write_fatal(1)
+    endif
+
     ALLOCATE(matrix(st%nst, st%nst), st%nst * st%nst)
+
+! TODO: add in sum over k-points in orthogonal directions here
 
     do ik = 1, st%d%nik ! determinants for different spins multiply since matrix is block-diagonal
       do ist = 1, st%nst
         do ist2 = 1, st%nst
-          do idim = 1, st%d%dim
+          do idim = 1, st%d%dim ! spinor components
             if (ist .le. ist2) then
               matrix(ist, ist2) = zmf_dotp(gr%mesh, st%zpsi(1:gr%mesh%np, idim, ist, ik), &
                                   exp(- M_zI * (M_Pi / gr%sb%lsize(dir)) * gr%mesh%x(1:gr%mesh%np, dir)) * &
