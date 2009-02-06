@@ -191,3 +191,50 @@ void FC_FUNC_(zoperate_ri,ZOPERATE_RI)(const int * opn,
   }
 
 }
+
+
+void FC_FUNC_(dgauss_seidel,DGAUSS_SEIDEL)(const int * opn, 
+				           const ffloat * restrict w, 
+				           const int * opnri,
+				           const int * opri,
+				           const int * rimap_inv,
+				           const int * rimap_inv_max,
+					   ffloat * factor,
+				           ffloat * pot, 
+				           ffloat * rho){
+
+  const int n = opn[0];
+  const int nri = opnri[0];
+
+  int l, i, j;
+  const int * index;
+  register ffloat a0, a1, a2, a3;
+  register ffloat a4, a5, a6, a7;
+  const ffloat * ffi[MAX_OP_N];
+  register const ffloat fac = factor[0];
+  assert(MAX_OP_N >= n);
+
+  for (l = 0; l < nri ; l++) {
+
+    index  = opri + n*l;
+
+    i = rimap_inv[l];
+
+    a0 = 0.0;
+    for(j = 0; j < n ; j++) {
+      ffi[j] = pot + index[j];
+      a0 += w[j]*ffi[j][i];
+    }
+    pot[i] += fac*(a0 - rho[i]);
+    i++;
+
+    for (; i < rimap_inv_max[l]; i++){
+      a0 = 0.0;
+      for(j = 0; j < n; j++) a0 += w[j] * ffi[j][i];
+      pot[i] += fac*(a0 - rho[i]);
+    }
+
+  }
+
+}
+

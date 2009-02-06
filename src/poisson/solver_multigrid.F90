@@ -364,8 +364,10 @@ contains
     integer :: i, n
     FLOAT   :: point_lap, factor
     FLOAT, allocatable :: w(:), lpot(:), ldiag(:)
+    type(profile_t), save :: prof
 
     call push_sub('poisson_multigrid.multigrid_relax')
+    call profiling_in(prof, "MG_RELAX")
 
     select case(this%relaxation_method)
 
@@ -386,11 +388,11 @@ contains
       if(der%lapl%const_w) then
         call lalg_copy(n, der%lapl%w_re(1:n, 1), w)
         do t = 0, steps
-          do i = 1, m%np, 1
-            point_lap = sum( w(1:n)*pot(i + der%lapl%ri(1:n, der%lapl%rimap(i) )) )
-            pot(i) = pot(i)+factor*(point_lap-rho(i))
-          end do
+          call dgauss_seidel(der%lapl%stencil%size, der%lapl%w_re(1, 1), der%lapl%nri, &
+               der%lapl%ri(1, 1), der%lapl%rimap_inv(1), der%lapl%rimap_inv(2),      &
+               factor, pot, rho)
         end do
+        call profiling_count_operations(m%np*steps*(n + 3))
       else
         do t = 0, steps
           do i = 1, m%np
@@ -419,6 +421,7 @@ contains
       
     end select
 
+    call profiling_out(prof)
     call pop_sub()
 
   end subroutine multigrid_relax
