@@ -74,7 +74,7 @@ AC_FUNC_VPRINTF
 AC_CHECK_FUNCS([getcwd gettimeofday mkdir pow sqrt strcasecmp strdup \
 strerror strncasecmp strndup uname tcgetpgrp scandir alphasort \
 sigaction malloc realloc opendir readdir closedir strchr strtod assert \
-posix_memalign _mm_malloc perror strcasestr sbrk])
+posix_memalign perror strcasestr sbrk])
 
 AC_CHECK_LIB([numa], [numa_available])
 
