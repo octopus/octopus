@@ -48,6 +48,7 @@ module hamiltonian_m
   use projector_m
   use simul_box_m
   use smear_m
+  use scissor_m
   use states_m
   use states_dim_m
   use units_m
@@ -174,6 +175,7 @@ module hamiltonian_m
     type(dgridhier_t) :: coarse_v
 
     type(em_field_t), pointer :: total(:) ! one electromagnetic field per spin channel
+    type(scissor_t) :: scissor
   end type hamiltonian_t
 
   integer, public, parameter :: &
@@ -416,6 +418,8 @@ contains
     hm%multigrid_initialized = .false.
 
     ALLOCATE(hm%total(1:hm%d%nspin), hm%d%nspin)
+
+    call scissor_nullify(hm%scissor)
 
     call pop_sub()
 
@@ -742,7 +746,7 @@ contains
     DEALLOC(hm%lead_green)
 
     call states_dim_end(hm%d)
-
+    call scissor_end(hm%scissor)
     call pop_sub()
   end subroutine hamiltonian_end
 

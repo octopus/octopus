@@ -153,6 +153,8 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, t, kinetic_only)
 
       if(associated(grad)) deallocate(grad)
    
+      if(hm%scissor%apply) call X(scissor_apply)(hm%scissor, gr%mesh, ik, epsi, hpsi)
+
     end if
     
     if(apply_kpoint) then
