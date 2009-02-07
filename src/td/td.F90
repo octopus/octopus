@@ -112,12 +112,11 @@ contains
     type(states_t),   pointer :: st
     type(geometry_t), pointer :: geo
     logical                   :: stopping
-    integer                   :: i, ii, ik, ierr, iatom
+    integer                   :: i, ii, ik, ierr, iatom, ist
     real(8)                   :: etime
     logical                   :: generate
     FLOAT                     :: gauge_force(1:MAX_DIM)
     CMPLX, allocatable        :: gspsi(:, :, :, :)
-
 
     type(profile_t), save :: prof
 
@@ -209,7 +208,16 @@ contains
 
       if(clean_stop()) stopping = .true.
       call profiling_in(prof, "TIME_STEP")
-      
+
+      if(td%scissor > M_EPSILON) then
+        do ik = 1, st%d%nik
+          do ist = 1, st%nst
+            gspsi(1:gr%mesh%np, 1:st%d%dim, ist, ik) = &
+                 exp(-M_HALF*M_ZI*td%dt*st%eigenval(ist, ik))*gspsi(1:gr%mesh%np, 1:st%d%dim, ist, ik)
+          end do
+        end do
+      end if
+
       ! time iterate wavefunctions
       select case(td%dynamics)
       case(EHRENFEST)
@@ -291,6 +299,15 @@ contains
 #if !defined(DISABLE_PES)
       call PES_doit(td%PESv, gr%mesh, st, ii, td%dt, hm%ab_pot)
 #endif
+
+      if(td%scissor > M_EPSILON) then
+        do ik = 1, st%d%nik
+          do ist = 1, st%nst
+            gspsi(1:gr%mesh%np, 1:st%d%dim, ist, ik) = &
+                 exp(-M_HALF*M_ZI*td%dt*st%eigenval(ist, ik))*gspsi(1:gr%mesh%np, 1:st%d%dim, ist, ik)
+          end do
+        end do
+      end if
 
       ! write down data
       call check_point()
