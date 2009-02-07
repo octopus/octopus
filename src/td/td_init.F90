@@ -21,7 +21,7 @@
 subroutine td_init(sys, hm, td)
   type(system_t),        intent(inout) :: sys
   type(hamiltonian_t),   intent(inout) :: hm
-  type(td_t),            intent(inout)   :: td
+  type(td_t),            intent(inout) :: td
 
   integer :: dummy
 
@@ -149,6 +149,18 @@ subroutine td_init(sys, hm, td)
   !% OutputEvery time steps.
   !%End
   call loct_parse_logical(datasets_check("RecalculateGSDuringEvolution"), .false., td%recalculate_gs)
+
+  !%Variable TDScissor
+  !%Type float
+  !%Default 0.0
+  !%Section Time Dependent
+  !%Description
+  !% (experimental) If set, a scissor operator will be applied in the
+  !% Hamiltonian, shifting the excitation energies by the amount
+  !% specified. By default is not applied.
+  !%End
+  call loct_parse_float(datasets_check('TDScissor'), CNST(0.0), td%scissor)
+  td%scissor = td%scissor*units_inp%energy%factor
 
   call td_rti_init(sys%gr, sys%st, hm, td%tr, td%dt, td%max_iter, &
        ion_dynamics_ions_move(td%ions) .or. gauge_field_is_applied(hm%ep%gfield))

@@ -42,6 +42,7 @@ module timedep_m
   use profiling_m
   use projector_m
   use scf_m
+  use scissor_m
   use states_m
   use states_dim_m
   use states_calc_m
@@ -93,6 +94,7 @@ module timedep_m
 #endif
     FLOAT                :: mu
     integer              :: dynamics
+    FLOAT                :: scissor
   end type td_t
 
 
@@ -114,6 +116,8 @@ contains
     real(8)                   :: etime
     logical                   :: generate
     FLOAT                     :: gauge_force(1:MAX_DIM)
+    CMPLX, allocatable        :: gspsi(:, :, :, :)
+
 
     type(profile_t), save :: prof
 
@@ -140,6 +144,12 @@ contains
     if(td%dynamics == CP) call cpmd_init(td%cp_propagator, sys%gr, sys%st)
 
     call init_wfs()
+
+    if(td%scissor > M_EPSILON) then
+      ALLOCATE(gspsi(1:gr%mesh%np, 1:st%d%dim, 1:st%nst, 1:st%d%nik), 1)
+      gspsi(1:gr%mesh%np, 1:st%d%dim, 1:st%nst, 1:st%d%nik) = st%zpsi(1:gr%mesh%np, 1:st%d%dim, 1:st%nst, 1:st%d%nik)
+      call scissor_init(hm%scissor, st, td%scissor, gspsi)
+    end if
 
     call td_write_init(write_handler, gr, st, hm, geo, &
          ion_dynamics_ions_move(td%ions), gauge_field_is_applied(hm%ep%gfield), td%iter, td%max_iter, td%dt)
