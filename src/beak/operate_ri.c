@@ -199,17 +199,16 @@ void FC_FUNC_(dgauss_seidel,DGAUSS_SEIDEL)(const int * opn,
 				           const int * opri,
 				           const int * rimap_inv,
 				           const int * rimap_inv_max,
-					   ffloat * factor,
+					   ffloat * restrict factor,
 				           ffloat * pot, 
-				           ffloat * rho){
+				           ffloat * restrict rho){
 
   const int n = opn[0];
   const int nri = opnri[0];
 
   int l, i, j;
   const int * index;
-  register ffloat a0, a1, a2, a3;
-  register ffloat a4, a5, a6, a7;
+  register ffloat a0;
   const ffloat * ffi[MAX_OP_N];
   register const ffloat fac = factor[0];
   assert(MAX_OP_N >= n);

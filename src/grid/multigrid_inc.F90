@@ -33,6 +33,8 @@
 
     call push_sub('multigrid.multigrid_coarse2fine')
 
+    call profiling_in(interp_prof, "MG_INTERPOLATION")
+
     call X(set_bc)(level%der, f_coarse)
 
 #ifdef HAVE_MPI
@@ -67,7 +69,7 @@
       f_fine(i) = f_fine(i)/vol_total
 
     end do
-
+    call profiling_out(interp_prof)
     call pop_sub()
   end subroutine X(multigrid_coarse2fine)
 
@@ -114,6 +116,7 @@
     type(multigrid_level_t), pointer :: level
 
     call push_sub('multigrid.multigrid_injection')
+    call profiling_in(injection_prof, "MG_INJECTION")
 
     ASSERT(ilevel>0.and.ilevel<=mgrid%n_levels)
 
@@ -122,6 +125,7 @@
       f_coarse(i) = f_fine(level%to_coarse(i))
     end do
 
+    call profiling_out(injection_prof)
     call pop_sub()
   end subroutine X(multigrid_injection)
 
@@ -139,6 +143,7 @@
     type(mesh_t), pointer :: fine_mesh, coarse_mesh
 
     call push_sub('multigrid.multigrid_restriction')
+    call profiling_in(restrict_prof, "MG_RESTRICTION")
 
     ASSERT(ilevel>0.and.ilevel<=mgrid%n_levels)
 
@@ -191,6 +196,8 @@
       f_coarse(n) = f_coarse(n)/coarse_mesh%vol_pp(n)
     end do
 
+    call profiling_count_operations(level%n_coarse*(27*3 + 1))
+    call profiling_out(restrict_prof)
     call pop_sub()
   end subroutine X(multigrid_restriction)
 

@@ -76,6 +76,8 @@ module multigrid_m
     integer, pointer :: ep_part(:)
   end type multigrid_t
 
+  type(profile_t), save :: interp_prof, injection_prof, restrict_prof
+
 contains
 
   ! ---------------------------------------------------------

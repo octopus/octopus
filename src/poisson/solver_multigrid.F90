@@ -88,9 +88,9 @@ contains
     !%Section Hamiltonian::Poisson::Multigrid
     !%Description
     !% Number of gauss-seidel smoothing steps before coarse level
-    !% correction in multigrid Poisson solver.
+    !% correction in multigrid Poisson solver. By default 3.
     !%End
-    call loct_parse_int(datasets_check('PoissonSolverMGPresmoothingSteps'), 2, this%presteps)
+    call loct_parse_int(datasets_check('PoissonSolverMGPresmoothingSteps'), 3, this%presteps)
 
     !%Variable PoissonSolverMGPostsmoothingSteps
     !%Type integer
@@ -98,19 +98,19 @@ contains
     !%Section Hamiltonian::Poisson::Multigrid
     !%Description
     !% Number of gauss-seidel smoothing steps after coarse level
-    !% correction in multigrid Poisson solver
+    !% correction in multigrid Poisson solver. By default 3.
     !%End
-    call loct_parse_int(datasets_check('PoissonSolverMGPostsmoothingSteps'), 3, this%poststeps)
+    call loct_parse_int(datasets_check('PoissonSolverMGPostsmoothingSteps'), 4, this%poststeps)
 
     !%Variable PoissonSolverMGMaxCycles
     !%Type integer
-    !%Default 20
+    !%Default 60
     !%Section Hamiltonian::Poisson::Multigrid
     !%Description
     !% Maximum number of multigrid cycles that are performed if
-    !% convergence is not achieved
+    !% convergence is not achieved. By default 60.
     !%End
-    call loct_parse_int(datasets_check('PoissonSolverMGMaxCycles'), 40, this%maxcycles)
+    call loct_parse_int(datasets_check('PoissonSolverMGMaxCycles'), 60, this%maxcycles)
 
     !%Variable PoissonSolverMGRestrictionMethod
     !%Type integer
@@ -296,14 +296,14 @@ contains
     subroutine vcycle_fas(fl)
       integer, intent(in) :: fl
 
-      integer :: l
+      integer :: l, ip
 
       call push_sub('poisson_multigrid.vcycle_fas')
 
       do l = fl, cl
         ! store the initial approximation
         np = gr%mgrid%level(l)%m%np
-        phi_ini%level(l)%p(1:np) = phi%level(l)%p(1:np)
+        call lalg_copy(np, phi%level(l)%p, phi_ini%level(l)%p)
 
         ! presmoothing
         call multigrid_relax(this, gr%mgrid%level(l)%m, gr%mgrid%level(l)%der, &
@@ -315,7 +315,7 @@ contains
 
           ! error calculation
           call dderivatives_lapl(gr%mgrid%level(l)%der, phi%level(l)%p, err%level(l)%p)
-          err%level(l)%p(1:np) = err%level(l)%p(1:np) - tau%level(l)%p(1:np)
+          forall(ip = 1:np) err%level(l)%p(ip) = err%level(l)%p(ip) - tau%level(l)%p(ip)
 
           ! transfer error to coarser grid
           call dmultigrid_fine2coarse(gr%mgrid, l+1, err%level(l)%p, tau%level(l+1)%p, this%restriction_method)
@@ -323,7 +323,7 @@ contains
           ! the other part of the error
           call dderivatives_lapl(gr%mgrid%level(l + 1)%der, phi%level(l + 1)%p, err%level(l + 1)%p)
           np = gr%mgrid%level(l + 1)%m%np
-          tau%level(l + 1)%p(1:np) = err%level(l + 1)%p(1:np) - tau%level(l + 1)%p(1:np)
+          forall(ip = 1:np) tau%level(l + 1)%p(ip) = err%level(l + 1)%p(ip) - tau%level(l + 1)%p(ip)
         end if
       end do
 
@@ -331,18 +331,18 @@ contains
        
         ! postsmoothing
         call multigrid_relax(this, gr%mgrid%level(l)%m, gr%mgrid%level(l)%der, &
-          phi%level(l)%p, tau%level(l)%p , this%poststeps)
+          phi%level(l)%p, tau%level(l)%p, this%poststeps)
 
         if(l /= fl) then
           ! calculate correction as the diference with the
           ! original grid in this level
           np = gr%mgrid%level(l)%m%np
-          phi%level(l)%p(1:np) = phi%level(l)%p(1:np) - phi_ini%level(l)%p(1:np)
+          forall(ip = 1:np) phi%level(l)%p(ip) = phi%level(l)%p(ip) - phi_ini%level(l)%p(ip)
 
           ! transfer correction to finer level
           call dmultigrid_coarse2fine(gr%mgrid%level(l), phi%level(l)%p, err%level(l-1)%p)
           np = gr%mgrid%level(l-1)%m%np
-          phi%level(l - 1)%p(1:np) = phi%level(l - 1)%p(1:np) + err%level(l - 1)%p(1:np)
+          forall(ip = 1:np) phi%level(l - 1)%p(ip) = phi%level(l - 1)%p(ip) + err%level(l - 1)%p(ip)
         end if
       end do
 
@@ -363,11 +363,11 @@ contains
     integer :: t
     integer :: i, n
     FLOAT   :: point_lap, factor
-    FLOAT, allocatable :: w(:), lpot(:), ldiag(:)
+    FLOAT, allocatable :: lpot(:), ldiag(:)
     type(profile_t), save :: prof
 
     call push_sub('poisson_multigrid.multigrid_relax')
-    call profiling_in(prof, "MG_RELAX")
+    call profiling_in(prof, "MG_GAUSS_SEIDEL")
 
     select case(this%relaxation_method)
 
@@ -383,26 +383,21 @@ contains
 
       n = der%lapl%stencil%size
 
-      ALLOCATE(w(1:n), n)
-      
       if(der%lapl%const_w) then
-        call lalg_copy(n, der%lapl%w_re(1:n, 1), w)
-        do t = 0, steps
+        do t = 1, steps
           call dgauss_seidel(der%lapl%stencil%size, der%lapl%w_re(1, 1), der%lapl%nri, &
-               der%lapl%ri(1, 1), der%lapl%rimap_inv(1), der%lapl%rimap_inv(2),      &
-               factor, pot, rho)
+               der%lapl%ri(1, 1), der%lapl%rimap_inv(1), der%lapl%rimap_inv(2),        &
+               factor, pot(1), rho(1))
         end do
-        call profiling_count_operations(m%np*steps*(n + 3))
+        call profiling_count_operations(m%np*(steps + 1)*(2*n + 3))
       else
-        do t = 0, steps
+        do t = 1, steps
           do i = 1, m%np
             point_lap = sum(der%lapl%w_re(1:n,i)*pot(der%lapl%i(1:n,i)))
             pot(i) = pot(i) - CNST(0.7)/der%lapl%w_re(der%lapl%stencil%center,i)*(point_lap-rho(i))
           end do
         end do
       end if
-
-      deallocate(w)
 
     case(GAUSS_JACOBI)
 
