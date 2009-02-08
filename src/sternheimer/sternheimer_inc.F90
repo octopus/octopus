@@ -91,16 +91,16 @@ subroutine X(sternheimer_solve)(                           &
   call write_info(1)
 
   total_iter = 0
-    
+
+  ! preorthogonalization
+  if (this%preorthogonalization) then 
+    do sigma = 1, nsigma
+      call X(lr_orth_response)(m, st, lr(sigma))
+    enddo
+  endif
+   
   !self-consistency iteration for response
   iter_loop: do iter = 1, this%scftol%max_iter
-
-    ! preorthogonalization
-    if (this%preorthogonalization) then 
-      do sigma = 1, nsigma
-        call X(lr_orth_response)(m, st, lr(sigma))
-      enddo
-    endif
 
     if (this%add_fxc .or. this%add_hartree) then
        write(message(1), '(a, i3)') "LR SCF Iteration: ", iter
@@ -152,15 +152,17 @@ subroutine X(sternheimer_solve)(                           &
              lr(sigma)%X(dl_psi)(1:m%np_part, 1:st%d%dim, ist, ik), &
              Y(1:m%np, 1:1, sigma), -sys%st%eigenval(ist, ik) + omega_sigma, this%occ_response)
 
-          !re-orthogonalize the resulting vector
-          if (this%occ_response) then
-            proj = X(mf_dotp)(m, st%d%dim, st%X(psi)(:, :, ist, ik), lr(sigma)%X(dl_psi)(:, :, ist, ik))
-            do idim = 1, st%d%dim
-              call lalg_axpy(m%np, -proj, st%X(psi)(:, idim, ist, ik), lr(sigma)%X(dl_psi)(:, idim, ist, ik))
-            end do
-          else
-            call X(lr_orth_vector)(m, st, lr(sigma)%X(dl_psi)(1:m%np_part, 1:st%d%dim, ist, ik), ist, ik)
-          endif
+          if (this%preorthogonalization) then 
+            !re-orthogonalize the resulting vector
+            if (this%occ_response) then
+              proj = X(mf_dotp)(m, st%d%dim, st%X(psi)(:, :, ist, ik), lr(sigma)%X(dl_psi)(:, :, ist, ik))
+              do idim = 1, st%d%dim
+                call lalg_axpy(m%np, -proj, st%X(psi)(:, idim, ist, ik), lr(sigma)%X(dl_psi)(:, idim, ist, ik))
+              end do
+            else
+              call X(lr_orth_vector)(m, st, lr(sigma)%X(dl_psi)(1:m%np_part, 1:st%d%dim, ist, ik), ist, ik)
+            endif
+          end if
 
           ! print the norm of the variations, and the number of
           ! iterations and residual of the linear solver
