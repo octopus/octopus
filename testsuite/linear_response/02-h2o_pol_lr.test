@@ -21,7 +21,7 @@ match ; Polarizability ZZ w=0.0    ; LINE(linear/freq_0.0000/alpha, 4, 45) ; 23.
 
 match ; Polarizability XX w=0.1    ; LINE(linear/freq_0.1000/alpha, 2,  5) ; 15.943344
 match ; Polarizability YY w=0.1    ; LINE(linear/freq_0.1000/alpha, 3, 25) ; 12.856808
-match ; Polarizability ZZ w=0.1    ; LINE(linear/freq_0.1000/alpha, 4, 45) ; 29.766869
+match ; Polarizability ZZ w=0.1    ; LINE(linear/freq_0.1000/alpha, 4, 45) ; 29.766976
 
 Input: 02-h2o_pol_lr.03_h2o_dyn_pol_cmplx.inp
 Precision : 0.001
