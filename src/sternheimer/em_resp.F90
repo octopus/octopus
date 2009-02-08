@@ -174,17 +174,21 @@ contains
 
     call io_mkdir(OUTPUT_DIR)
 
+    do ifactor = 1, em_vars%nfactor
+      do dir = 1, sys%gr%sb%dim
+        do sigma = 1, em_vars%nsigma
+          call lr_init(em_vars%lr(dir, sigma, ifactor))
+          call lr_allocate(em_vars%lr(dir, sigma, ifactor), sys%st, sys%gr%mesh)
+        end do
+      end do
+    end do
+
     do iomega = 1, em_vars%nomega
 
       em_vars%ok(1:3) = .true.
 
       do ifactor = 1, em_vars%nfactor
         do dir = 1, sys%gr%sb%dim
-
-          do sigma = 1, em_vars%nsigma
-            call lr_init(em_vars%lr(dir, sigma, ifactor))
-            call lr_allocate(em_vars%lr(dir, sigma, ifactor), sys%st, sys%gr%mesh)
-          end do
 
           ierr = 0
 
