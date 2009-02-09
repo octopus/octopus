@@ -50,6 +50,7 @@ module messages_m
     messages_print_stress,    &
     messages_print_var_info,  &
     messages_print_var_option,&
+    messages_print_var_value, &
     obsolete_variable
 
   character(len=256), dimension(20), public :: message    ! to be output by fatal, warning
@@ -67,6 +68,21 @@ module messages_m
   ! max_lun is currently 99, i.e. we can hardwire unit_offset above 1000
   integer, parameter, private :: unit_offset = 1000
   character(len=512), private :: msg
+
+
+  ! ---------------------------------------------------------
+  ! Prints out to iunit a message in the form:
+  ! ["InputVariable" = value]
+  ! where "InputVariable" is given by var.
+  ! Since the variable can be integer, real, or logical, we
+  ! need a generic interface.
+  ! ---------------------------------------------------------
+  interface messages_print_var_value
+    module procedure messages_print_var_valuei
+    module procedure messages_print_var_valuer
+    module procedure messages_print_var_valuel
+  end interface messages_print_var_value
+
 
   integer, public :: global_alloc_err
 contains
@@ -370,6 +386,43 @@ contains
 #endif
     stop
   end subroutine input_error
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine messages_print_var_valuei(iunit, var, value)
+    integer,          intent(in) :: iunit
+    character(len=*), intent(in) :: var
+    integer,          intent(in) :: value
+    character(len=10) :: intstring
+    write(intstring,'(i10)') value
+    write(iunit,'(a)') 'Input: ['//trim(var)//' = '//trim(adjustl(intstring))//']'
+  end subroutine messages_print_var_valuei
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine messages_print_var_valuer(iunit, var, value)
+    integer,          intent(in) :: iunit
+    character(len=*), intent(in) :: var
+    FLOAT,            intent(in) :: value
+    character(len=10) :: floatstring
+    write(floatstring,'(g10.4)') value
+    write(iunit,'(a)') 'Input: ['//trim(var)//' = '//trim(adjustl(floatstring))//']'
+  end subroutine messages_print_var_valuer
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine messages_print_var_valuel(iunit, var, value)
+    integer,          intent(in) :: iunit
+    character(len=*), intent(in) :: var
+    logical,          intent(in) :: value
+    character(len=1) :: lstring
+    write(lstring,'(l1)') value
+    write(iunit,'(a)') 'Input: ['//trim(var)//' = '//lstring//']'
+  end subroutine messages_print_var_valuel
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------

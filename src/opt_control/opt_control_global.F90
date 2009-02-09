@@ -1,0 +1,253 @@
+!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!!
+!! This program is free software; you can redistribute it and/or modify
+!! it under the terms of the GNU General Public License as published by
+!! the Free Software Foundation; either version 2, or (at your option)
+!! any later version.
+!!
+!! This program is distributed in the hope that it will be useful,
+!! but WITHOUT ANY WARRANTY; without even the implied warranty of
+!! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!! GNU General Public License for more details.
+!!
+!! You should have received a copy of the GNU General Public License
+!! along with this program; if not, write to the Free Software
+!! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+!! 02111-1307, USA.
+!!
+!! $Id: opt_control.F90 3099 2007-07-23 14:21:35Z lorenzen $
+
+#include "global.h"
+
+! ----------------------------------------------------------------------
+! This module contains the definition of the oct_t data type, which
+! contains some of the basic information about how the OCT run will
+! be done.
+! The "oct" variable (whose datatype is oct_t) is declared in the main
+! OCT module, oct_control_m (as a module variable). It is initialized
+! by calling oct_read_inp, defined below in this module.
+! ----------------------------------------------------------------------
+module opt_control_global_m
+  use datasets_m
+  use varinfo_m
+  use global_m
+  use loct_parser_m
+  use messages_m
+
+  implicit none
+
+  type oct_t
+    logical :: mode_fixed_fluence
+    integer :: algorithm
+    FLOAT   :: eta, delta
+    FLOAT   :: direct_step
+    logical :: use_mixing
+    logical :: oct_double_check
+    logical :: dump_intermediate
+    integer :: number_checkpoints
+    logical :: random_initial_guess
+  end type oct_t
+
+  ! These are the possible QOCT schemes or algorithms; the component "algorithm"
+  ! of the oct_t datatype can get any of these values.
+  integer, parameter ::  &
+    oct_algorithm_zbr98              = 1,       &
+    oct_algorithm_zr98               = 2,       &
+    oct_algorithm_wg05               = 3,       &
+    oct_algorithm_mt03               = 4,       &
+    oct_algorithm_krotov             = 5,       &
+    oct_algorithm_str_iter           = 6,       &
+    oct_algorithm_direct             = 7,       &
+    oct_algorithm_newuoa             = 8
+
+  contains
+
+  ! ---------------------------------------------------------
+  ! Reads, from the inp file, some global information about how the QOCT run
+  ! should be. It uses this information to fill the "oct" variable. All the components
+  ! of oct are filled, except for mode_fixed_fluence, which is filled when the control
+  ! parameters module is initialized.
+  ! ---------------------------------------------------------
+  subroutine oct_read_inp(oct)
+    type(oct_t), intent(inout) :: oct
+    call push_sub('opt_control_read.oct_read_inp')  
+
+    call messages_print_stress(stdout, "OCT run mode")
+
+    !%Variable OCTScheme
+    !%Type integer
+    !%Section Calculation Modes::Optimal Control
+    !%Default oct_algorithm_zbr98
+    !%Description
+    !% In order to find the optimal laser field for a given task, e.g., the excitation from an
+    !% initial state to a predefined final state at the final time, optimal control theory can 
+    !% be applied to quantum mechanics. The mathematical derivation leads a set of equations 
+    !% which require the propagation of the wavefunction and a lagrange multiplier (sometimes
+    !% comparable to a wavefunction). Several schemes have been sought to solve these control 
+    !% equations which boils down to forward and backward propagations. However, the order in
+    !% which these equations are solved makes a huge difference. Some schemes can be proven 
+    !% to increase the value of the target functional (merit function) in each step. (In 
+    !% practice this can be violated if the accuracy of the numerical time propagation is
+    !% small. Most likely in 3D.)
+    !%Option oct_algorithm_zbr98 1 
+    !% Backward-Forward-Backward scheme described in JCP 108, 1953 (1998).
+    !% Only possible if targetoperator is a projection operator
+    !% Provides the fastest and most stable convergence.
+    !% Monotonic convergence.
+    !%Option oct_algorithm_zr98  2
+    !% Forward-Backward-Forward scheme described in JCP 109,385 (1998).
+    !% Works for projection and local target operators
+    !% Convergence is stable but slower than ZBR98. 
+    !% Note that local operators show an extremely slow convergence.
+    !% Monotonic convergence.
+    !%Option oct_algorithm_wg05  3
+    !% Forward-Backward scheme described in J. Opt. B. 7 300 (2005).
+    !% Works for all kind target operators and 
+    !% can be used with all kind of filters and allows a fixed fluence.
+    !% The price is a rather instable convergence. 
+    !% If the restrictions set by the filter and fluence are reasonable, a good overlap can be 
+    !% expected with 20 iterations.
+    !% No monotonic convergence.
+    !%Option oct_algorithm_mt03 4
+    !% Basically an improved and generalized scheme. 
+    !% Comparable to ZBR98/ZR98. See [Y. Maday and G. Turinici, J. Chem. Phys. 118, 
+    !% 8191 (2003)].
+    !%Option oct_algorithm_krotov 5
+    !% The procedure reported in [D. Tannor, V. Kazakov and V.
+    !% Orlov, in "Time Dependent Quantum Molecular Dynamics", edited by J. Broeckhove
+    !% and L. Lathouweres (Plenum, New York, 1992), pp. 347-360].
+    !%Option oct_algorithm_straight_iteration 6
+    !% Straight iteration: one forward and one backward propagation is performed at each
+    !% iteration, both with the same control field. An output field is calculated with the
+    !% resulting wave functions. Note that this scheme typically does not converge, unless
+    !% some mixing ("OCTMixing = yes") is used.
+    !%Option oct_algorithm_direct 7
+    !% This is a "direct" optimization scheme. This means that we do not make use of the
+    !% "usual" QOCT equations (backward-forward propagations, etc), but we use some gradient-free
+    !% maximization algorithm for the function that we want to optimize. In this case, the
+    !% maximization algorithm is the Nelder-Mead algorithm as implemeted in the GSL. The function
+    !% values are obtained by successive forward propagations.
+    !%Option oct_algorithm_newuoa 8
+    !% This is exactly the same as oct_algorithm_direct, except in this case the maximization
+    !% algorithm is the so-called NEWUOA algorithm [M. J. D. Powell, IMA J. Numer. Analysis
+    !% 28, 649-664 (2008)].
+    !%End
+    call loct_parse_int(datasets_check('OCTScheme'), oct_algorithm_zr98, oct%algorithm)
+    if(.not.varinfo_valid_option('OCTScheme', oct%algorithm)) call input_error('OCTScheme')
+    call messages_print_var_option(stdout, "OCTScheme", oct%algorithm)
+    select case(oct%algorithm)
+    case(oct_algorithm_mt03)
+      oct%delta = M_TWO; oct%eta = M_ZERO
+    case(oct_algorithm_zr98)
+      oct%delta = M_ONE; oct%eta = M_ONE
+    case(oct_algorithm_krotov)
+      oct%delta = M_ONE; oct%eta = M_ZERO
+    case(oct_algorithm_str_iter)
+      oct%delta = M_ZERO; oct%eta = M_ONE
+    case(oct_algorithm_direct)
+      call loct_parse_float(datasets_check('OCTEta'), M_ONE, oct%eta)
+      call loct_parse_float(datasets_check('OCTDelta'), M_ZERO, oct%delta)
+    case(oct_algorithm_newuoa)
+#if defined(HAVE_NEWUOA)
+      call loct_parse_float(datasets_check('OCTEta'), M_ONE, oct%eta)
+      call loct_parse_float(datasets_check('OCTDelta'), M_ZERO, oct%delta)
+#else
+      write(message(1), '(a)') '"OCTScheme = oct_algorithm_newuoa" is only possible if the newuoa'
+      write(message(2), '(a)') 'code has been compiled. You must configure octopus passing the'
+      write(message(3), '(a)') 'the "--enable-newuoa" switch.'
+      call write_fatal(3)
+#endif
+    case default
+      oct%delta = M_ONE; oct%eta = M_ONE
+    end select
+
+    !%Variable OCTDoubleCheck
+    !%Type logical
+    !%Section Calculation Modes::Optimal Control
+    !%Default true
+    !%Description 
+    !% Run a normal propagation after the optimization using the optimized field.
+    !%End
+    call loct_parse_logical(datasets_check('OCTDoubleCheck'), .true., oct%oct_double_check)
+    call messages_print_var_value(stdout, "OCTDoubleCheck", oct%oct_double_check)
+
+    !%Variable OCTMixing
+    !%Type logical
+    !%Section Calculation Modes::Optimal Control
+    !%Default false
+    !%Description 
+    !% Use mixing algorithms to create the input fields in the iterative OCT schemes.
+    !% Note that this idea is still a little bit experimental, and depending on the
+    !% kind of mixing that you use, and the parameters that you set, it may or may
+    !% not accelerate the convergence, or even spoil the convergence.
+    !%
+    !% Using "TypeOfMixing = broyden", "Mixing = 0.1" and "MixNumberSteps = 3" seems
+    !% to work in many cases, but your mileage may vary.
+    !%End
+    call loct_parse_logical(datasets_check('OCTMixing'), .false., oct%use_mixing)
+    call messages_print_var_value(stdout, "OCTMixing", oct%use_mixing)
+
+    !%Variable OCTDirectStep
+    !%Type float
+    !%Section Calculation Modes::Optimal Control
+    !%Default 0.25
+    !%Description 
+    !% If you choose "OCTScheme = oct_algorithm_direct" or "OCTScheme = oct_algorithm_newuoa",
+    !% the algorithms necessitate an initial "step" to perform the direct search for the
+    !% optimal value. The precise meaning of this "step" differ.
+    !%End
+    call loct_parse_float(datasets_check('OCTDirectStep'), CNST(0.25), oct%direct_step)
+    call messages_print_var_value(stdout, "OCTDirectStep", oct%direct_step)
+
+    !%Variable OCTDumpIntermediate
+    !%Type logical
+    !%Section Calculation Modes::Optimal Control
+    !%Default true
+    !%Description 
+    !% Writes to disk some data during the OCT algorithm at intermediate steps.
+    !% This is rather technical and it should be considered only for debugging
+    !% purposes. Nevertheless, since the whole OCT infrastructure is at a very
+    !% preliminary developing stage, it is set to true by default.
+    !%End
+    call loct_parse_logical(datasets_check('OCTDumpIntermediate'), .true., oct%dump_intermediate)
+    call messages_print_var_value(stdout, "OCTDumpIntermediate", oct%dump_intermediate)
+
+    !%Variable OCTNumberCheckPoints
+    !%Type integer
+    !%Section Calculation Modes::Optimal Control
+    !%Default 0
+    !%Description 
+    !% During an OCT propagation, the code may write down at some time steps (the
+    !% "check points", the wavefunctions. When the inverse backward or forward propagation
+    !% is performed in a following step, the wave function should reverse its path
+    !% (almost) exactly. This can be checked to make sure that it is the case -- otherwise
+    !% one should try reducing the time-step, or altering in some other way the
+    !% variables that control the propagation.
+    !%
+    !% If the backward (or forward) propagation is not retracing the steps of the previous
+    !% forward (or backward) propation, the code will emit a warning.
+    !%End
+    call loct_parse_int(datasets_check('OCTNumberCheckPoints'), 0, oct%number_checkpoints)
+    call messages_print_var_value(stdout, "OCTNumberCheckPoints", oct%number_checkpoints)
+
+    !%Variable OCTRandomInitialGuess
+    !%Type logical
+    !%Section Calculation Modes::Optimal Control
+    !%Default false
+    !%Description 
+    !% The initial field to start the optimization search is usually given in the inp file,
+    !% through a "TDExternalFields" block. However, you can start from a random guess if you
+    !% set this variable to true.
+    !%
+    !% Note, however, that this is only valid for the "direct" optimization schemes; moreover
+    !% you still need to provide a "TDExternalFields" block.
+    !%End
+    call loct_parse_logical(datasets_check('OCTRandomInitialGuess'), .false., oct%random_initial_guess)
+    call messages_print_var_value(stdout, "OCTRandomInitialGuess", oct%random_initial_guess)
+
+    call messages_print_stress(stdout)
+    call pop_sub()
+  end subroutine oct_read_inp
+
+ 
+end module opt_control_global_m

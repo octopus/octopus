@@ -54,7 +54,7 @@ module opt_control_m
   use v_ks_m
   use external_pot_m
   use restart_m
-  use opt_control_constants_m
+  use opt_control_global_m
   use opt_control_propagation_m
   use opt_control_parameters_m
   use opt_control_iter_m
@@ -181,11 +181,11 @@ contains
 
 
     ! Read general information about how the OCT run will be made, from inp file.
-    call oct_read_inp()
+    call oct_read_inp(oct)
 
 
     ! Read info about, and prepare, the control functions (a.k.a. parameters).
-    call parameters_read(hm%ep, td%dt, td%max_iter, oct%mode_fixed_fluence, oct%mode_basis_set)
+    call parameters_mod_init(hm%ep, td%dt, td%max_iter, oct%mode_fixed_fluence)
     call parameters_init(par, td%dt, td%max_iter)
     call parameters_set(par, hm%ep)
       ! This prints the initial control parameters, exactly as described in the inp file,
@@ -724,7 +724,7 @@ contains
   ! ---------------------------------------------------------
 
 
-#include "read.F90"
+#include "check_input.F90"
 #include "finalcheck.F90"
 
 end module opt_control_m

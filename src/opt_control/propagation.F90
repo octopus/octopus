@@ -41,7 +41,7 @@ module opt_control_propagation_m
   use restart_m
   use td_rti_m
   use td_write_m
-  use opt_control_constants_m
+  use opt_control_global_m
   use opt_control_target_m
   use opt_control_parameters_m
   use profiling_m

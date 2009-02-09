@@ -22,11 +22,11 @@
 noinst_LIBRARIES = libopt_control.a
 
 libopt_control_a_SOURCES = \
-	opt_control_constants.F90 filters.F90 parameters.F90 iter.F90 \
+	opt_control_global.F90 filters.F90 parameters.F90 iter.F90 \
 	target.F90 propagation.F90 initst.F90 opt_control.F90
 
 noinst_HEADERS = \
-	parameters_trans.F90 read.F90 finalcheck.F90 
+	parameters_trans.F90 check_input.F90 finalcheck.F90 
 
 include $(srcdir)/../common-rules.make
 
@@ -34,12 +34,12 @@ depend:
 	@makedepf90 $(libopt_control_a_SOURCES)
 
 
-opt_control_constants.o : opt_control_constants.F90 
+opt_control_global.o : opt_control_global.F90 
 filters.o : filters.F90 
 parameters.o : parameters.F90 parameters_trans.F90 filters.o 
-iter.o : iter.F90 parameters.o opt_control_constants.o 
-target.o : target.F90 opt_control_constants.o 
+iter.o : iter.F90 parameters.o opt_control_global.o 
+target.o : target.F90 opt_control_global.o 
 initst.o: initst.F90 
-propagation.o : propagation.F90 parameters.o target.o opt_control_constants.o 
-opt_control.o : opt_control.F90 finalcheck.F90 initst.F90 read.F90 target.o iter.o parameters.o \
-  propagation.o opt_control_constants.o filters.o 
+propagation.o : propagation.F90 parameters.o target.o opt_control_global.o 
+opt_control.o : opt_control.F90 finalcheck.F90 initst.F90 check_input.F90 target.o \
+  iter.o parameters.o propagation.o opt_control_global.o filters.o 

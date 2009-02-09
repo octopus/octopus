@@ -46,9 +46,10 @@ module opt_control_parameters_m
 
   private
   public :: oct_control_parameters_t,     &
-            parameters_read,              &
+            parameters_mod_init,          &
             parameters_close,             &
             parameters_init,              &
+            parameters_representation,    &
             parameters_set,               &
             parameters_end,               &
             parameters_copy,              &
@@ -81,7 +82,7 @@ module opt_control_parameters_m
             parameters_filter
 
 
-  integer, parameter ::               &
+  integer, public, parameter ::                    &
     ctr_real_space           = TDF_NUMERICAL,      &
     ctr_sine_fourier_series  = TDF_SINE_SERIES,    &
     ctr_fourier_series       = TDF_FOURIER_SERIES, &
@@ -138,12 +139,20 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_read(ep, dt, max_iter, mode_fixed_fluence, mode_basis_set)
+  ! Initializes the module, should be the first subroutine to be called (the last one
+  ! should be parameters_close, when the module is no longer to be used.
+  !
+  ! It fills the module variable "par_common", whose type is par_common_t, with 
+  ! information obtained from the inp file.
+  !
+  ! Output argument "mode_fixed_fluence" is also given a value, depending on whether
+  ! the user requires a fixed-fluence run (.true.) or not (.false.).
+  ! ---------------------------------------------------------
+  subroutine parameters_mod_init(ep, dt, max_iter, mode_fixed_fluence)
     type(epot_t), intent(inout)                   :: ep
     FLOAT, intent(in)                             :: dt
     integer, intent(in)                           :: max_iter
     logical, intent(out)                          :: mode_fixed_fluence
-    logical, intent(out)                          :: mode_basis_set
 
     character(len=1024)      :: expression
     integer :: i, j, no_lines, steps, iunit
@@ -158,16 +167,19 @@ contains
     !%Default control_parameter_real_space
     !%Description
     !% The control functions can be represented in real space (default), or expanded
-    !% in a finite basis set (now, the only basis set defined in the code for this is
-    !% a sine Fourier series). 
+    !% in a finite basis set.
     !%Option control_real_space 10007
-    !%
+    !% The control function is discretized in real time. The dimension of the problem is
+    !% therefore the number of time steps, which can be very large.
     !%Option control_sine_fourier_series 10009
-    !%
+    !% The control function is expanded in a sine Fourier series (which implies that it
+    !% it starts and ends at zero).
     !%Option control_fourier_series 10010
-    !%
+    !% The control function is expanded as a full Fourier series (although it must, of 
+    !% course, be a real function).
     !%Option control_zero_fourier_series 10011
-    !%
+    !% The control function is expanded as a Fourier series, but assuming that the zero
+    !% frequency component is zero.
     !%End
     call loct_parse_int(datasets_check('OCTParameterRepresentation'), &
       ctr_real_space, par_common%representation)
@@ -193,11 +205,12 @@ contains
     !%Variable OCTParameterOmegaMax
     !%Type float
     !%Section Calculation Modes::Optimal Control
-    !%Default 1.0
+    !%Default -1.0
     !%Description
-    !%
+    !% The Fourier series that can be used to represent the control functions must be truncated;
+    !% the truncation is given by a cut-off frequency which is determined by this variable.
     !%End
-    call loct_parse_float(datasets_check('OCTParameterOmegaMax'), - M_ONE, par_common%omegamax)
+    call loct_parse_float(datasets_check('OCTParameterOmegaMax'), -M_ONE, par_common%omegamax)
     if(par_common%representation .ne. ctr_real_space) then
       write(message(1), '(a)')         'Info: The representation of the OCT control parameters will be restricted'
       write(message(2), '(a,f10.5,a)') '      with an energy cut-off of ', &
@@ -240,15 +253,27 @@ contains
     !%Section Calculation Modes::Optimal Control
     !%Default 1
     !%Description
-    !% 
+    !% The control function may fully determine the time-dependent form of the external field, or 
+    !% only the envelope function of this external field, or its phase. Or, we may have two different
+    !% control functions, one of them providing the phase and the other one, the envelope.
+    !%
+    !% Note that in the "usual" QOCT runs, only the first option is allowed. The other options work
+    !% only for the "direct" optimization schemes.
     !%Option parameter_mode_epsilon   1
-    !%
+    !% In this case, the control function determines the full control function. That is, if we are
+    !% considering the electric field of a laser, the time-dependent electric field.
     !%Option parameter_mode_f         2
-    !%
+    !% The optimization process attempts to find the best possible envelope. The full control field
+    !% is this envelope times a cosine function with a "carrier" frequency. This carrier frequencey
+    !% is given by the carrier frequency of the "TDExternalFields" in the inp file.
     !%Option parameter_mode_phi       3
-    !%
+    !% The optimization process attempts to find the best possible time-dependent phase. That is,
+    !% the external field would be given by a function in the form e(t) = f(t)*cos(w0*t+phi(t)), where
+    !% f(t) is an "envelope", w0 a carrier frequency, and phi(t) the td phase that we wish to
+    !% optimize.
     !%Option parameter_mode_f_and_phi 4
-    !%
+    !% A combination of parameter_mode_f and parameter_mode_phi: we have two control functions, one
+    !% for the envelope and another one for the phase.
     !%End
     call loct_parse_int(datasets_check('OCTControlFunctionType'), parameter_mode_epsilon, par_common%mode)
     if(.not.varinfo_valid_option('OCTControlFunctionType', par_common%mode)) call input_error('OCTControlFunctionType')
@@ -309,9 +334,6 @@ contains
 
     mode_fixed_fluence = .false.
     if (par_common%targetfluence .ne. M_ZERO) mode_fixed_fluence = .true.
-
-    mode_basis_set = .false.
-    if(par_common%representation .ne. ctr_real_space ) mode_basis_set = .true.
 
 
     !%Variable OCTPenalty
@@ -432,7 +454,14 @@ contains
     end if
 
     call pop_sub()
-  end subroutine parameters_read
+  end subroutine parameters_mod_init
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  integer pure function parameters_representation()
+    parameters_representation = par_common%representation
+  end function parameters_representation
   ! ---------------------------------------------------------
 
 
