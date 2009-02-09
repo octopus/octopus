@@ -339,9 +339,11 @@ contains
             ! only sigma = 1 need be used, since should only depend on density, and n(-w) = n(w)*
             ! time = M_ZERO
             if(states_are_complex(sys%st)) then
-              call zcalc_forces_from_potential(sys%gr, sys%geo, hm%ep, sys%st, M_ZERO, lr = em_vars%lr(idir, 1, ifactor), lr_dir = idir)
+              call zcalc_forces_from_potential(sys%gr, sys%geo, hm%ep, sys%st, M_ZERO, &
+                lr = em_vars%lr(idir, 1, ifactor), lr_dir = idir)
             else
-              call dcalc_forces_from_potential(sys%gr, sys%geo, hm%ep, sys%st, M_ZERO, lr = em_vars%lr(idir, 1, ifactor), lr_dir = idir)
+              call dcalc_forces_from_potential(sys%gr, sys%geo, hm%ep, sys%st, M_ZERO, &
+                lr = em_vars%lr(idir, 1, ifactor), lr_dir = idir)
             endif
           enddo
         enddo

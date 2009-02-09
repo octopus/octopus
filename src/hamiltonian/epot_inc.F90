@@ -23,7 +23,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr_dir)
   type(epot_t),     intent(in)     :: ep
   type(states_t),   intent(inout)  :: st
   FLOAT,            intent(in)     :: time
-  type(lr_t), optional, intent(in) :: lr
+  type(lr_t), optional, intent(inout) :: lr
   integer,    optional, intent(in) :: lr_dir    
   ! provide these optional arguments to calculate Born effective charges rather than forces
   ! lr should be the wfns from electric perturbation in the lr_dir direction
@@ -45,7 +45,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr_dir)
 
   call push_sub('epot_inc.Xcalc_forces_from_potential')
 
-  ASSERT(present(lr) .eq. present(lr_dir))
+  ASSERT(present(lr) .eqv. present(lr_dir))
   ! need both to calculate Born charges
 
   np = gr%fine%m%np
