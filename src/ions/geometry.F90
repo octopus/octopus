@@ -63,6 +63,9 @@ module geometry_m
     character(len=15) :: label
     type(species_t), pointer :: spec             ! pointer to species
     FLOAT :: x(MAX_DIM), v(MAX_DIM), f(MAX_DIM)  ! position/velocity/force of atom in real space
+    CMPLX :: Born_charge(MAX_DIM, MAX_DIM)       ! (frequency-dependent) Born effective charges
+                                                 ! Z*(field dir, force dir)
+                                                 ! = Z*(polarization dir, displacement dir)
     logical :: move                              ! should I move this atom in the optimization mode
   end type atom_t
 
@@ -85,10 +88,10 @@ module geometry_m
 
     logical :: only_user_def        ! Do we want to treat only user-defined species?
 
-    FLOAT :: kinetic_energy         ! the ion-ion energy
+    FLOAT :: kinetic_energy         ! the ion kinetic energy
 
-    logical :: nlpp                 ! does any species having non-local pp
-    logical :: nlcc                 ! does any species having non-local core corrections?
+    logical :: nlpp                 ! does any species have non-local pp?
+    logical :: nlcc                 ! does any species have non-local core corrections?
 
     type(distributed_t) :: atoms
   end type geometry_t

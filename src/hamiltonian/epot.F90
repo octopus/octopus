@@ -30,6 +30,7 @@ module external_pot_m
   use ion_interaction_m
   use lalg_basic_m
   use lalg_adv_m
+  use linear_response_m
   use loct_parser_m
   use splines_m
   use magnetic_m
@@ -70,7 +71,9 @@ module external_pot_m
     epot_forces,                   &
     epot_local_potential,          &
     epot_precalc_local_potential,  &
-    epot_dipole_periodic
+    epot_dipole_periodic,          &
+    dcalc_forces_from_potential,   &
+    zcalc_forces_from_potential
 
   type epot_t
     ! Classical charges:
@@ -304,7 +307,7 @@ contains
     call loct_parse_int(datasets_check('RelativisticCorrection'), NOREL, ep%reltype)
     if(.not.varinfo_valid_option('RelativisticCorrection', ep%reltype)) call input_error('RelativisticCorrection')
     if (ispin /= SPINORS .and. ep%reltype == SPIN_ORBIT) then
-      message(1) = "The Spin-orbit term can only be applied when using Spinors."
+      message(1) = "The spin-orbit term can only be applied when using spinors."
       call write_fatal(1)
     end if
     ! This is temporary...

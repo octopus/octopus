@@ -24,6 +24,7 @@
 module em_resp_m
   use datasets_m
   use em_resp_calc_m
+  use external_pot_m
   use geometry_m
   use global_m
   use grid_m
@@ -100,7 +101,7 @@ contains
     type(sternheimer_t)     :: sh
     type(lr_t)              :: kdotp_lr(MAX_DIM, 1)
 
-    integer :: sigma, ndim, i, dir, ierr, iomega, ifactor
+    integer :: sigma, ndim, i, idir, ierr, iomega, ifactor
     character(len=100) :: dirname, str_tmp
     logical :: complex_response, have_to_calculate, use_kdotp
 
@@ -122,16 +123,16 @@ contains
       message(1) = "Reading kdotp wavefunctions since system is periodic"
       call write_info(1)
 
-      do dir = 1, NDIM
-        call lr_init(kdotp_lr(dir, 1))
-        call lr_allocate(kdotp_lr(dir, 1), sys%st, sys%gr%mesh)
+      do idir = 1, NDIM
+        call lr_init(kdotp_lr(idir, 1))
+        call lr_allocate(kdotp_lr(idir, 1), sys%st, sys%gr%mesh)
 
         ! load wave-functions
-        str_tmp = kdotp_wfs_tag(dir)
+        str_tmp = kdotp_wfs_tag(idir)
         write(dirname,'(3a)') "kdotp/", trim(str_tmp), '_1'
         ! 1 is the sigma index which is used in em_resp
         call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, &
-          ierr, lr=kdotp_lr(dir, 1))
+          ierr, lr=kdotp_lr(idir, 1))
 
         if(ierr.ne.0) then
           message(1) = "Could not load kdotp wavefunctions from '"//trim(tmpdir)//trim(dirname)//"'"
@@ -175,10 +176,10 @@ contains
     call io_mkdir(OUTPUT_DIR)
 
     do ifactor = 1, em_vars%nfactor
-      do dir = 1, sys%gr%sb%dim
+      do idir = 1, sys%gr%sb%dim
         do sigma = 1, em_vars%nsigma
-          call lr_init(em_vars%lr(dir, sigma, ifactor))
-          call lr_allocate(em_vars%lr(dir, sigma, ifactor), sys%st, sys%gr%mesh)
+          call lr_init(em_vars%lr(idir, sigma, ifactor))
+          call lr_allocate(em_vars%lr(idir, sigma, ifactor), sys%st, sys%gr%mesh)
         end do
       end do
     end do
@@ -188,7 +189,7 @@ contains
       em_vars%ok(1:3) = .true.
 
       do ifactor = 1, em_vars%nfactor
-        do dir = 1, sys%gr%sb%dim
+        do idir = 1, sys%gr%sb%dim
 
           ierr = 0
 
@@ -204,8 +205,8 @@ contains
                  em_vars%freq_factor(ifactor)*em_vars%omega(iomega) == & 
                  em_vars%freq_factor(ifactor-1)*em_vars%omega(iomega) ) then
               
-              call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(dir, 1, ifactor-1), em_vars%lr(dir, 1, ifactor))
-              call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(dir, 2, ifactor-1), em_vars%lr(dir, 2, ifactor))
+              call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 1, ifactor-1), em_vars%lr(idir, 1, ifactor))
+              call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 2, ifactor-1), em_vars%lr(idir, 2, ifactor))
               
               have_to_calculate = .false.
               
@@ -215,8 +216,8 @@ contains
             if( have_to_calculate .and. & 
                  em_vars%freq_factor(ifactor) == -em_vars%freq_factor(ifactor-1) ) then 
               
-              call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(dir, 1, ifactor-1), em_vars%lr(dir, 2, ifactor))
-              call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(dir, 2, ifactor-1), em_vars%lr(dir, 1, ifactor))
+              call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 1, ifactor-1), em_vars%lr(idir, 2, ifactor))
+              call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 2, ifactor-1), em_vars%lr(idir, 1, ifactor))
               
               have_to_calculate = .false.
               
@@ -227,7 +228,7 @@ contains
           if(have_to_calculate) then 
 
             str_tmp = freq2str(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)/units_out%energy%factor)
-            write(message(1), '(a,i1,2a)') 'Info: Calculating response for direction ', dir, &
+            write(message(1), '(a,i1,2a)') 'Info: Calculating response for direction ', idir, &
               ' and frequency ' , trim(str_tmp)
             call write_info(1)
 
@@ -236,10 +237,10 @@ contains
                ! try to load wavefunctions, if first frequency; otherwise will already be initialized
                if(iomega == 1) then
                   do sigma = 1, em_vars%nsigma
-                     str_tmp =  em_wfs_tag(dir, ifactor)
+                     str_tmp =  em_wfs_tag(idir, ifactor)
                      write(dirname,'(3a, i1)') EM_RESP_RESTART_DIR, trim(str_tmp), '_', sigma
                      call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, &
-                          ierr, lr=em_vars%lr(dir, sigma, ifactor))
+                          ierr, lr=em_vars%lr(idir, sigma, ifactor))
 
                      if(ierr.ne.0) then
                         message(1) = "Could not load response wave-functions from '"//trim(tmpdir)//trim(dirname)//"'"
@@ -250,29 +251,29 @@ contains
 
               !try to load restart density
               if (states_are_complex(sys%st)) then 
-                call zrestart_read_lr_rho(em_vars%lr(dir, 1, ifactor), sys%gr, sys%st%d%nspin, &
+                call zrestart_read_lr_rho(em_vars%lr(idir, 1, ifactor), sys%gr, sys%st%d%nspin, &
                      EM_RESP_RESTART_DIR, &
-                     em_rho_tag(em_vars%freq_factor(ifactor)*em_vars%omega(iomega), dir), ierr)
+                     em_rho_tag(em_vars%freq_factor(ifactor)*em_vars%omega(iomega), idir), ierr)
               else 
-                call drestart_read_lr_rho(em_vars%lr(dir, 1, ifactor), sys%gr, sys%st%d%nspin, &
+                call drestart_read_lr_rho(em_vars%lr(idir, 1, ifactor), sys%gr, sys%st%d%nspin, &
                      EM_RESP_RESTART_DIR, &
-                     em_rho_tag(em_vars%freq_factor(ifactor)*em_vars%omega(iomega), dir), ierr)
+                     em_rho_tag(em_vars%freq_factor(ifactor)*em_vars%omega(iomega), idir), ierr)
               end if
 
               !search for the density of the closest frequency
               if(ierr /= 0) then 
                 
                 closest_omega = em_vars%freq_factor(ifactor)*em_vars%omega(iomega)
-                call oct_search_file_lr(closest_omega, dir, ierr, trim(tmpdir)//EM_RESP_RESTART_DIR)
+                call oct_search_file_lr(closest_omega, idir, ierr, trim(tmpdir)//EM_RESP_RESTART_DIR)
                 
                 !attempt to read 
                 if(ierr == 0 ) then 
                   if (states_are_complex(sys%st)) then 
-                    call zrestart_read_lr_rho(em_vars%lr(dir, 1, ifactor), sys%gr, sys%st%d%nspin, &
-                         EM_RESP_RESTART_DIR, em_rho_tag(closest_omega, dir), ierr)
+                    call zrestart_read_lr_rho(em_vars%lr(idir, 1, ifactor), sys%gr, sys%st%d%nspin, &
+                         EM_RESP_RESTART_DIR, em_rho_tag(closest_omega, idir), ierr)
                   else 
-                    call drestart_read_lr_rho(em_vars%lr(dir, 1, ifactor), sys%gr, sys%st%d%nspin, &
-                         EM_RESP_RESTART_DIR, em_rho_tag(closest_omega, dir), ierr)
+                    call drestart_read_lr_rho(em_vars%lr(idir, 1, ifactor), sys%gr, sys%st%d%nspin, &
+                         EM_RESP_RESTART_DIR, em_rho_tag(closest_omega, idir), ierr)
                   end if
                 end if
                 
@@ -280,41 +281,42 @@ contains
 
               if(ierr == 0 .and. em_vars%nsigma == 2 ) then 
                 if (states_are_complex(sys%st)) then 
-                  em_vars%lr(dir, 2, ifactor)%zdl_rho = conjg(em_vars%lr(dir, 1, ifactor)%zdl_rho)
+                  em_vars%lr(idir, 2, ifactor)%zdl_rho = conjg(em_vars%lr(idir, 1, ifactor)%zdl_rho)
                 else 
-                  em_vars%lr(dir, 2, ifactor)%ddl_rho = em_vars%lr(dir, 1, ifactor)%ddl_rho
+                  em_vars%lr(idir, 2, ifactor)%ddl_rho = em_vars%lr(idir, 1, ifactor)%ddl_rho
                 end if
               end if
 
             end if ! .not. fromscratch
             
-            call pert_setup_dir(em_vars%perturbation, dir)
+            call pert_setup_dir(em_vars%perturbation, idir)
             if (states_are_complex(sys%st)) then 
-              call zsternheimer_solve(sh, sys, hm, em_vars%lr(dir, :, ifactor), em_vars%nsigma, &
+              call zsternheimer_solve(sh, sys, hm, em_vars%lr(idir, :, ifactor), em_vars%nsigma, &
                 em_vars%freq_factor(ifactor)*em_vars%omega(iomega) + M_zI * em_vars%eta, &
                 em_vars%perturbation, EM_RESP_RESTART_DIR, &
-                em_rho_tag(em_vars%freq_factor(ifactor)*em_vars%omega(iomega), dir), &
-                em_wfs_tag(dir, ifactor), have_restart_rho=(ierr==0))
+                em_rho_tag(em_vars%freq_factor(ifactor)*em_vars%omega(iomega), idir), &
+                em_wfs_tag(idir, ifactor), have_restart_rho=(ierr==0))
             else
-              call dsternheimer_solve(sh, sys, hm, em_vars%lr(dir, :, ifactor), em_vars%nsigma, &
+              call dsternheimer_solve(sh, sys, hm, em_vars%lr(idir, :, ifactor), em_vars%nsigma, &
                 em_vars%freq_factor(ifactor)*em_vars%omega(iomega), &
                 em_vars%perturbation, EM_RESP_RESTART_DIR, &
-                em_rho_tag(em_vars%freq_factor(ifactor)*em_vars%omega(iomega), dir), &
-                em_wfs_tag(dir, ifactor), have_restart_rho=(ierr==0))
+                em_rho_tag(em_vars%freq_factor(ifactor)*em_vars%omega(iomega), idir), &
+                em_wfs_tag(idir, ifactor), have_restart_rho=(ierr==0))
             end if
             
             em_vars%ok(ifactor) = em_vars%ok(ifactor) .and. sternheimer_has_converged(sh)
             
           end if
 
-        end do ! dir
+        end do ! idir
       end do ! ifactor
       
-      message(1) = "Info: Calculating polarizabilities."
-      call write_info(1)
-
       if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
+
         ! calculate polarizability
+         message(1) = "Info: Calculating polarizabilities."
+         call write_info(1)
+
         do ifactor = 1, em_vars%nfactor
           if(use_kdotp) then
             call zcalc_polarizability_periodic(sys, em_vars%lr(:, :, ifactor), kdotp_lr(:, 1), &
@@ -328,8 +330,27 @@ contains
           end if
         end do
 
+        ! calculate Born effective charges
+         message(1) = "Info: Calculating (frequency-dependent) Born effective charges."
+         call write_info(1)
+
+        do ifactor = 1, em_vars%nfactor
+          do idir = 1, sys%gr%sb%dim
+            ! only sigma = 1 need be used, since should only depend on density, and n(-w) = n(w)*
+            ! time = M_ZERO
+            if(states_are_complex(sys%st)) then
+              call zcalc_forces_from_potential(sys%gr, sys%geo, hm%ep, sys%st, M_ZERO, lr = em_vars%lr(idir, 1, ifactor), lr_dir = idir)
+            else
+              call dcalc_forces_from_potential(sys%gr, sys%geo, hm%ep, sys%st, M_ZERO, lr = em_vars%lr(idir, 1, ifactor), lr_dir = idir)
+            endif
+          enddo
+        enddo
+
         ! calculate hyperpolarizability
         if(em_vars%calc_hyperpol) then
+          message(1) = "Info: Calculating hyperpolarizabilities."
+          call write_info(1)
+
           if(states_are_complex(sys%st)) then
             call zlr_calc_beta(sh, sys, hm, em_vars%lr, em_vars%perturbation, em_vars%beta)
           else
@@ -338,6 +359,9 @@ contains
         end if
       
       else if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
+        message(1) = "Info: Calculating magnetic susceptibilities."
+        call write_info(1)
+
         do ifactor = 1, em_vars%nfactor
           if(states_are_complex(sys%st)) then 
             call zlr_calc_susceptibility(sys, hm, em_vars%lr(:,:, ifactor), em_vars%nsigma, em_vars%perturbation, &
@@ -353,10 +377,10 @@ contains
 
     end do
 
-    do dir = 1, ndim
+    do idir = 1, ndim
       do sigma = 1, em_vars%nsigma
         do ifactor = 1, em_vars%nfactor
-          call lr_dealloc(em_vars%lr(dir, sigma, ifactor))
+          call lr_dealloc(em_vars%lr(idir, sigma, ifactor))
         end do
       end do
     end do
@@ -567,9 +591,11 @@ contains
       write(dirname, '(a, a)') OUTPUT_DIR//'freq_', trim(str_tmp)
       call io_mkdir(trim(dirname))
 
+! TODO: make out_polarizability and out_susceptibility subroutines of this subroutine again
       if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
         call out_polarizability(st, gr, em_vars%alpha(1:MAX_DIM, 1:MAX_DIM, ifactor), &
           em_vars%freq_factor(ifactor) * em_vars%omega(iomega), em_vars%ok(ifactor), dirname)
+        call out_Born_charges()
         if(em_vars%calc_hyperpol) call out_hyperpolarizability(gr%sb, em_vars%beta, em_vars%ok(ifactor), dirname)
       else if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
         call out_susceptibility()
@@ -588,6 +614,28 @@ contains
     call pop_sub()
 
   contains
+
+    ! ---------------------------------------------------------
+    subroutine out_Born_charges()
+      integer iatom, idir
+
+      call push_sub('em_resp.em_resp_output.out_Born_charges')
+      iunit = io_open(trim(dirname)//'/Born_charges', action='write')
+
+      write(iunit,'(a)') '# (Frequency-dependent) Born effective charges'
+
+      do iatom = 1, geo%natoms
+         write(iunit,'(a)')
+         write(iunit,'(i5,a10)') iatom, trim(geo%atom(iatom)%spec%label)
+         write(iunit,'(a)') 'Real part:'
+         call io_output_tensor(iunit, TOFLOAT(real(geo%atom(iatom)%Born_charge(:,:))), NDIM, M_ONE)
+         write(iunit,'(a)') 'Imaginary part:'
+         call io_output_tensor(iunit, TOFLOAT(aimag(geo%atom(iatom)%Born_charge(:,:))), NDIM, M_ONE)
+      enddo
+
+      call io_close(iunit)
+      call pop_sub()
+    end subroutine out_Born_charges
 
     ! ---------------------------------------------------------
     subroutine out_susceptibility()
@@ -746,7 +794,7 @@ contains
         call pert_init(angular_momentum, PERTURBATION_MAGNETIC, gr, geo)
         
         dic = M_ZERO
-        do idir = 1, 3
+        do idir = 1, gr%sb%dim
           call pert_setup_dir(angular_momentum, idir)
           dic = dic &
                + zpert_expectation_value(angular_momentum, gr, geo, hm, st, em_vars%lr(idir, 1, ifactor)%zdl_psi, st%zpsi) &
