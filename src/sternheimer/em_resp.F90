@@ -120,7 +120,7 @@ contains
     use_kdotp = simul_box_is_periodic(gr%sb) .and. .not. em_vars%force_no_kdotp
     ! read kdotp wavefunctions if necessary
     if (use_kdotp) then
-      message(1) = "Reading kdotp wavefunctions since system is periodic"
+      message(1) = "Reading kdotp wavefunctions since system is periodic."
       call write_info(1)
 
       do idir = 1, NDIM
@@ -619,7 +619,8 @@ contains
 
     ! ---------------------------------------------------------
     subroutine out_Born_charges()
-      integer iatom, idir
+      integer iatom, idir, idir2
+      FLOAT :: phase(1:MAX_DIM, 1:MAX_DIM)
 
       call push_sub('em_resp.em_resp_output.out_Born_charges')
       iunit = io_open(trim(dirname)//'/Born_charges', action='write')
@@ -629,10 +630,13 @@ contains
       do iatom = 1, geo%natoms
          write(iunit,'(a)')
          write(iunit,'(i5,a10)') iatom, trim(geo%atom(iatom)%spec%label)
-         write(iunit,'(a)') 'Real part:'
-         call io_output_tensor(iunit, TOFLOAT(real(geo%atom(iatom)%Born_charge(:,:))), NDIM, M_ONE)
-         write(iunit,'(a)') 'Imaginary part:'
-         call io_output_tensor(iunit, TOFLOAT(aimag(geo%atom(iatom)%Born_charge(:,:))), NDIM, M_ONE)
+
+         write(iunit,'(a)') 'Magnitude:'
+         call io_output_tensor(iunit, TOFLOAT(abs(geo%atom(iatom)%Born_charge(:,:))), NDIM, M_ONE)
+
+         write(iunit,'(a)') 'Phase:'
+         phase = atan2(aimag(geo%atom(iatom)%Born_charge(:,:)),real(geo%atom(iatom)%Born_charge(:,:)))
+         call io_output_tensor(iunit, phase, NDIM, M_ONE)
       enddo
 
       call io_close(iunit)

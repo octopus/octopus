@@ -18,18 +18,18 @@
 !! $Id$
 
 subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr_dir)
-  type(grid_t),     intent(inout)  :: gr
-  type(geometry_t), intent(inout)  :: geo
-  type(epot_t),     intent(in)     :: ep
-  type(states_t),   intent(inout)  :: st
-  FLOAT,            intent(in)     :: time
+  type(grid_t),         intent(inout) :: gr
+  type(geometry_t),     intent(inout) :: geo
+  type(epot_t),         intent(in)    :: ep
+  type(states_t),       intent(inout) :: st
+  FLOAT,                intent(in)    :: time
   type(lr_t), optional, intent(inout) :: lr
-  integer,    optional, intent(in) :: lr_dir    
+  integer,       optional, intent(in) :: lr_dir    
   ! provide these optional arguments to calculate Born effective charges rather than forces
   ! lr should be the wfns from electric perturbation in the lr_dir direction
   ! for each atom, Z*(i,j) = dF(j)/dE(i)
 
-  integer :: iatom, ist, ik, idim, idir, np, ip, factor
+  integer :: iatom, ist, ik, idim, idir, np, ip
 
   R_TYPE, pointer     :: psi(:, :)
   R_TYPE, pointer     :: dl_psi(:, :)
@@ -193,8 +193,6 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr_dir)
       geo%atom(iatom)%f(1:MAX_DIM) = geo%atom(iatom)%f(1:MAX_DIM) + real(force(1:MAX_DIM, iatom))
     endif
   end do
-
-  write(*,*) 'done with non-local part of force'
 
   ! THE LOCAL PART (parallel in atoms)
 
