@@ -339,7 +339,6 @@ contains
           do idir = 1, sys%gr%sb%dim
             ! time = M_ZERO
             if(states_are_complex(sys%st)) then
-              write(*,*) 'states are complex'
               call zcalc_forces_from_potential(sys%gr, sys%geo, hm%ep, sys%st, M_ZERO, &
                 lr = em_vars%lr(idir, 1, ifactor), lr2 = em_vars%lr(idir, 2, ifactor), &
                 lr_dir = idir, Born_sum = em_vars%Born_sum(idir, :))

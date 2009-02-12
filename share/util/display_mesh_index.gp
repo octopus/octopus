@@ -7,7 +7,7 @@
 
 unset key
 unset label
-!tail -n +2 mesh_index | awk '{print "set label \"" $1"\" at "$2+0.07","$3","$4}' > mesh_index.tmp
+!tail -n +2 mesh_index | awk '(NF > 0) {print "set label \"" $1"\" at "$2+0.07","$3","$4}' > mesh_index.tmp
 set xlabel "x"
 set ylabel "y"
 set zlabel "z"
