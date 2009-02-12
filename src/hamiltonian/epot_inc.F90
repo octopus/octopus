@@ -52,9 +52,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
 
   call push_sub('epot_inc.Xcalc_forces_from_potential')
 
-  ASSERT(present(lr) .eqv. present(lr_dir) &
-       .and. present(lr) .eqv. present(lr2) &
-       .and. present(lr) .eqv. present(Born_sum))
+  ASSERT(present(lr) .eqv. present(lr_dir) .and. present(lr) .eqv. present(lr2) .and. present(lr) .eqv. present(Born_sum))
   ! need all to calculate Born charges
 
   np = gr%fine%m%np

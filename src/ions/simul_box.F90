@@ -82,7 +82,7 @@ module simul_box_m
 
     FLOAT :: rsize          ! the radius of the sphere or of the cylinder
     FLOAT :: xsize          ! the length of the cylinder in the x direction
-    FLOAT :: lsize(MAX_DIM)       ! half of the length of the parallelepiped in each direction.
+    FLOAT :: lsize(MAX_DIM) ! half of the length of the parallelepiped in each direction.
 
     type(c_ptr)   :: image    ! for the box defined through an image
     character(len=1024) :: user_def ! for the user-defined box
@@ -888,9 +888,9 @@ contains
     type(simul_box_t), intent(in)    :: sb
     type(geometry_t),  intent(inout) :: geo
 
-    ! this function checks that the atoms are inside the box if the
-    ! system is periodic, the atoms are moved inside the box, if the
-    ! system is finite a warning is emitted.
+    ! this function checks that the atoms are inside the box. if not:
+    ! if the system is periodic, the atoms are moved inside the box;
+    ! if the system is finite, a warning is emitted.
 
     integer :: iatom, pd, idir
     FLOAT :: xx(1:MAX_DIM)

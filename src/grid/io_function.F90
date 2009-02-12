@@ -162,7 +162,12 @@ contains
       call input_error('OutputHow')
     end if
 
-    ! some modes are not available in some circunstances, so we reset how
+    if(how .eq. 0) then
+      write(message(1), '(a)') 'Must specify output method with variable OutputHow.'
+      call write_fatal(1)
+     endif
+
+    ! some modes are not available in some circumstances, so we reset how
     if(sb%dim == 1) how = iand(how, not(output_axis_y + output_plane_z))
     if(sb%dim <= 2) how = iand(how, not(output_axis_z + &
       output_plane_x + output_plane_y + output_dx))
