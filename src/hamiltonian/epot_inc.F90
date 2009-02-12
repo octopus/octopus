@@ -17,24 +17,31 @@
 !!
 !! $Id$
 
-subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr_dir)
+subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir, Born_sum)
   type(grid_t),         intent(inout) :: gr
   type(geometry_t),     intent(inout) :: geo
   type(epot_t),         intent(in)    :: ep
   type(states_t),       intent(inout) :: st
   FLOAT,                intent(in)    :: time
   type(lr_t), optional, intent(inout) :: lr
-  integer,       optional, intent(in) :: lr_dir    
+  type(lr_t), optional, intent(inout) :: lr2
+  integer,    optional, intent(in)    :: lr_dir
+  CMPLX,      optional, intent(out)   :: Born_sum(:)
   ! provide these optional arguments to calculate Born effective charges rather than forces
-  ! lr should be the wfns from electric perturbation in the lr_dir direction
+  ! lr, lr2 should be the wfns from electric perturbation in the lr_dir direction
+  ! lr is for +omega, lr2 is for -omega.
   ! for each atom, Z*(i,j) = dF(j)/dE(i)
+  ! Born_sum is the sum over atoms of a given tensor component of the Born charges,
+  !   which should be zero if the acoustic sum rule is satisfied
 
   integer :: iatom, ist, ik, idim, idir, np, ip
 
   R_TYPE, pointer     :: psi(:, :)
   R_TYPE, pointer     :: dl_psi(:, :)
+  R_TYPE, pointer     :: dl_psi2(:, :)
   R_TYPE, allocatable :: grad_psi(:, :, :)
   R_TYPE, allocatable :: grad_dl_psi(:, :, :)
+  R_TYPE, allocatable :: grad_dl_psi2(:, :, :)
   FLOAT,  allocatable :: vloc(:)
   CMPLX,  allocatable :: grad_rho(:, :), force(:, :)
 #ifdef HAVE_MPI
@@ -45,13 +52,16 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr_dir)
 
   call push_sub('epot_inc.Xcalc_forces_from_potential')
 
-  ASSERT(present(lr) .eqv. present(lr_dir))
-  ! need both to calculate Born charges
+  ASSERT(present(lr) .eqv. present(lr_dir) &
+       .and. present(lr) .eqv. present(lr2) &
+       .and. present(lr) .eqv. present(Born_sum))
+  ! need all to calculate Born charges
 
   np = gr%fine%m%np
 
   if(present(lr)) then
     ALLOCATE(grad_dl_psi(np, 1:NDIM, st%d%dim), np*NDIM*st%d%dim)
+    ALLOCATE(grad_dl_psi2(np, 1:NDIM, st%d%dim), np*NDIM*st%d%dim)
   endif
   ALLOCATE(grad_psi(np, 1:NDIM, st%d%dim), np*NDIM*st%d%dim)
   ALLOCATE(grad_rho(np, MAX_DIM), np*MAX_DIM)
@@ -63,6 +73,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr_dir)
      ALLOCATE(psi(gr%fine%m%np_part, st%d%dim), gr%fine%m%np_part*st%d%dim)
      if(present(lr)) then
        ALLOCATE(dl_psi(gr%fine%m%np_part, st%d%dim), gr%fine%m%np_part*st%d%dim)
+       ALLOCATE(dl_psi2(gr%fine%m%np_part, st%d%dim), gr%fine%m%np_part*st%d%dim)
      endif
   endif
 
@@ -76,6 +87,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr_dir)
 
           if (present(lr)) then
             call X(multigrid_coarse2fine)(gr%fine, lr%X(dl_psi)(:, idim, ist, ik), dl_psi(:, idim))
+            call X(multigrid_coarse2fine)(gr%fine, lr2%X(dl_psi)(:, idim, ist, ik), dl_psi2(:, idim))
           endif
         end do
       else
@@ -83,6 +95,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr_dir)
 
         if (present(lr)) then
           dl_psi => lr%X(dl_psi)(:, :, ist, ik)
+          dl_psi2 => lr2%X(dl_psi)(:, :, ist, ik)
         endif
       end if
 
@@ -93,17 +106,18 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr_dir)
 
         if (present(lr)) then
           call X(derivatives_grad)(gr%fine%der, dl_psi(:, idim), grad_dl_psi(:, :, idim))
+          call X(derivatives_grad)(gr%fine%der, dl_psi2(:, idim), grad_dl_psi2(:, :, idim))
         endif
 
         !accumulate to calculate the gradient of the density
-        ! is -sigma needed here too? is Z* linear in density? no, yes
         if (present(lr)) then
           forall (idir = 1:NDIM, ip = 1:np) &
-            grad_rho(ip, idir) = grad_rho(ip, idir) + st%d%kweights(ik) * st%occ(ist, ik) * M_TWO * &
-            (R_CONJ(dl_psi(ip, idim)) * grad_psi(ip, idir, idim) + R_CONJ(psi(ip, idim)) * grad_dl_psi(ip, idir, idim))
+            grad_rho(ip, idir) = grad_rho(ip, idir) + st%d%kweights(ik) * st%occ(ist, ik) * &
+            (R_CONJ(grad_psi(ip, idir, idim)) * dl_psi(ip, idim) + R_CONJ(psi(ip, idim)) * grad_dl_psi(ip, idir, idim) &
+            + R_CONJ(dl_psi2(ip, idim)) * grad_psi(ip, idir, idim) + R_CONJ(grad_dl_psi2(ip, idir, idim)) * psi(ip, idim))
         else
           forall (idir = 1:NDIM, ip = 1:np) grad_rho(ip, idir) = grad_rho(ip, idir) + &
-               st%d%kweights(ik)*st%occ(ist, ik)*M_TWO*R_CONJ(psi(ip, idim))*grad_psi(ip, idir, idim)
+               st%d%kweights(ik) * st%occ(ist, ik) * M_TWO * R_CONJ(psi(ip, idim)) * grad_psi(ip, idir, idim)
         endif
       end do
 
@@ -116,11 +130,13 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr_dir)
         do idir = 1, NDIM
 
           if(present(lr)) then
-            force(idir, iatom) = force(idir, iatom) - M_TWO * st%occ(ist, ik) * &
-              (X(psia_project_psib)(ep%proj_fine(iatom), st%d%dim, dl_psi, grad_psi(:, idir, :), ik) &
-              + X(psia_project_psib)(ep%proj_fine(iatom), st%d%dim, psi, grad_dl_psi(:, idir, :), ik))
+            force(idir, iatom) = force(idir, iatom) - st%d%kweights(ik) * st%occ(ist, ik) * &
+               (X(psia_project_psib)(ep%proj_fine(iatom), st%d%dim, grad_psi(:, idir, :), dl_psi, ik) &
+              + X(psia_project_psib)(ep%proj_fine(iatom), st%d%dim, psi, grad_dl_psi(:, idir, :), ik) &
+              + X(psia_project_psib)(ep%proj_fine(iatom), st%d%dim, dl_psi2, grad_psi(:, idir, :), ik) &
+              + X(psia_project_psib)(ep%proj_fine(iatom), st%d%dim, grad_dl_psi2(:, idir, :), psi, ik))
           else
-            force(idir, iatom) = force(idir, iatom) - M_TWO * st%occ(ist, ik) * &
+            force(idir, iatom) = force(idir, iatom) - M_TWO * st%d%kweights(ik) * st%occ(ist, ik) * &
               X(psia_project_psib)(ep%proj_fine(iatom), st%d%dim, psi, grad_psi(:, idir, :), ik)
           endif
 
@@ -134,12 +150,14 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr_dir)
     deallocate(psi)
     if(present(lr)) then
       deallocate(dl_psi)
+      deallocate(dl_psi2)
     endif
   endif
 
   deallocate(grad_psi)
   if(present(lr)) then
     deallocate(grad_dl_psi)
+    deallocate(grad_dl_psi2)
   endif
 
 #if defined(HAVE_MPI)
@@ -244,14 +262,23 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr_dir)
 #endif
 
   if(present(lr)) then
+    Born_sum(1:MAX_DIM) = M_ZERO 
+
     do iatom = 1, geo%natoms
       geo%atom(iatom)%Born_charge(lr_dir, lr_dir) = geo%atom(iatom)%Born_charge(lr_dir, lr_dir) + geo%atom(iatom)%spec%Z_val
       do idir = 1, MAX_DIM
         geo%atom(iatom)%Born_charge(lr_dir, idir) = geo%atom(iatom)%Born_charge(lr_dir, idir) + force(idir, iatom)
-!        write(*,'(a,i4,a,f4.1,a,i4,a,i4,a,)') 'iatom = ', iatom, ', Z = ', geo%atom(iatom)%spec%Z_val, ', lr_dir = ', lr_dir, ', idir = ', idir
-!        write(*,'(a,f10.6,a,f10.6)') 'Re Born = ', real(geo%atom(iatom)%Born_charge(lr_dir, idir)), ', Im Born = ', aimag(geo%atom(iatom)%Born_charge(lr_dir, idir))
+        Born_sum(idir) = Born_sum(idir) + geo%atom(iatom)%Born_charge(lr_dir, idir)
       enddo
     enddo
+
+    ! enforce acoustic sum rule: sum(iatom) Z*(iatom,idir,idir2) = 0
+    do iatom = 1, geo%natoms
+      do idir = 1, MAX_DIM
+        geo%atom(iatom)%Born_charge(lr_dir, idir) = geo%atom(iatom)%Born_charge(lr_dir, idir) - Born_sum(idir) / geo%natoms
+      enddo
+    enddo
+
   else
     forall (iatom = 1:geo%natoms, idir = 1:MAX_DIM) geo%atom(iatom)%f(idir) = geo%atom(iatom)%f(idir) + real(force(idir, iatom))
   endif

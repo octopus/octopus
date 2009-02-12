@@ -86,6 +86,7 @@ module em_resp_m
 
     logical :: ok(1:3)                           ! whether calculation is converged
     logical :: force_no_kdotp                    ! whether to use kdotp run for periodic system
+    CMPLX :: Born_sum(MAX_DIM, MAX_DIM)          ! sum over atoms of Born charge tensors
   end type em_resp_t
 
 contains
@@ -336,23 +337,22 @@ contains
 
         do ifactor = 1, em_vars%nfactor
           do idir = 1, sys%gr%sb%dim
-            ! only sigma = 1 need be used, since should only depend on density, and n(-w) = n(w)*
             ! time = M_ZERO
             if(states_are_complex(sys%st)) then
+              write(*,*) 'states are complex'
               call zcalc_forces_from_potential(sys%gr, sys%geo, hm%ep, sys%st, M_ZERO, &
-                lr = em_vars%lr(idir, 1, ifactor), lr_dir = idir)
+                lr = em_vars%lr(idir, 1, ifactor), lr2 = em_vars%lr(idir, 2, ifactor), &
+                lr_dir = idir, Born_sum = em_vars%Born_sum(idir, :))
             else
               call dcalc_forces_from_potential(sys%gr, sys%geo, hm%ep, sys%st, M_ZERO, &
-                lr = em_vars%lr(idir, 1, ifactor), lr_dir = idir)
+                lr = em_vars%lr(idir, 1, ifactor), lr2 = em_vars%lr(idir, 2, ifactor), &
+                lr_dir = idir, Born_sum = em_vars%Born_sum(idir, :))
             endif
           enddo
         enddo
 
         ! calculate hyperpolarizability
         if(em_vars%calc_hyperpol) then
-          message(1) = "Info: Calculating hyperpolarizabilities."
-          call write_info(1)
-
           if(states_are_complex(sys%st)) then
             call zlr_calc_beta(sh, sys, hm, em_vars%lr, em_vars%perturbation, em_vars%beta)
           else
@@ -638,6 +638,13 @@ contains
          phase = atan2(aimag(geo%atom(iatom)%Born_charge(:,:)),real(geo%atom(iatom)%Born_charge(:,:)))
          call io_output_tensor(iunit, phase, NDIM, M_ONE)
       enddo
+
+      write(iunit,'(a)')
+      write(iunit,'(a)') '# Sum of Born effective charges before correction to satisfy acoustic sum rule.' 
+      write(iunit,'(a)') 'Real:'
+      call io_output_tensor(iunit, real(em_vars%Born_sum(:, :)), NDIM, M_ONE)
+      write(iunit,'(a)') 'Imaginary:'
+      call io_output_tensor(iunit, aimag(em_vars%Born_sum(:, :)), NDIM, M_ONE)
 
       call io_close(iunit)
       call pop_sub()
