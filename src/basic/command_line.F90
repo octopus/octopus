@@ -87,6 +87,9 @@ module command_line_m
       real(8) :: damping
       character(len=*) :: file
     end subroutine getopt_oscillator_strength
+    subroutine getopt_harmonic_spectrum(w0)
+      real(8) :: w0
+    end subroutine getopt_harmonic_spectrum
   end interface
 
   contains

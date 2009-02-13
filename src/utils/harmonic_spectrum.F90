@@ -20,6 +20,7 @@
 #include "global.h"
 
 program harmonic_spectrum
+  use command_line_m
   use global_m
   use messages_m
   use datasets_m
@@ -32,13 +33,27 @@ program harmonic_spectrum
   implicit none
 
   character(len=100) :: txt
-  integer :: mode
+  integer :: mode, ierr
+  FLOAT :: w0
   type(spec_t) :: s
-  type(spec_sh_t) :: sh
+  character :: pol
+  logical :: get_maxima
 
   integer, parameter :: &
     HS_FROM_MULT = 1,   &
     HS_FROM_ACC  = 2
+
+  call getopt_init(ierr)
+  if(ierr.ne.0) then
+    get_maxima = .false. 
+    ! Since we cannot get the fundamental frequency, we do not get the maxima.
+  else
+    get_maxima = .true.
+    w0 = M_ZERO
+    call getopt_harmonic_spectrum(w0)
+    if(w0 <= M_ZERO) get_maxima = .false.
+  end if
+
 
   ! Initialize stuff
   call global_init()
@@ -72,9 +87,9 @@ program harmonic_spectrum
   !% Circularly polarized field, clockwise.
   !%End
   call loct_parse_string(datasets_check('HarmonicSpectrumPolarization'), 'z', txt)
-  sh%pol = txt(1:1)
-  if(sh%pol.ne.'x' .and. sh%pol.ne.'y' .and. sh%pol.ne.'z' .and. &
-    sh%pol.ne.'+' .and. sh%pol.ne.'-') then
+  pol = txt(1:1)
+  if(pol.ne.'x' .and. pol.ne.'y' .and. pol.ne.'z' .and. &
+     pol.ne.'+' .and. pol.ne.'-') then
     call input_error('HarmonicSpectrumPolarization')
   end if
 
@@ -94,16 +109,19 @@ program harmonic_spectrum
   !% Calculate the harmonic spectrum by reading the acceleration file.
   !%End
   call loct_parse_int(datasets_check('HarmonicSpectrumMode'), HS_FROM_MULT, mode)
-  if(.not.varinfo_valid_option('HarmonicSpectrumMode', mode)) call input_error('HarmonicSpectrumMode')
+  if(.not.varinfo_valid_option('HarmonicSpectrumMode', mode)) &
+    call input_error('HarmonicSpectrumMode')
 
-  select case(mode)
-  case(HS_FROM_MULT)
-    call spectrum_hs_from_mult('hs-mult', s, sh)
-  case(HS_FROM_ACC)
-    call spectrum_hs_from_acc('hs-acc', s, sh)
-  end select
-
-  deallocate(sh%sp)
+  if(.not.get_maxima) then
+    select case(mode)
+    case(HS_FROM_MULT)
+      call spectrum_hs_from_mult('hs-mult', s, pol)
+    case(HS_FROM_ACC)
+      call spectrum_hs_from_acc('hs-acc', s, pol)
+    end select
+  else
+    call spectrum_hs_maxima('hs-maxima', s, pol, w0)
+  end if
 
   call io_end()
   call datasets_end()

@@ -26,6 +26,7 @@ module spectrum_m
   use io_m
   use lalg_adv_m
   use loct_parser_m
+  use loct_math_m
   use messages_m
   use profiling_m
   use string_m
@@ -38,12 +39,12 @@ module spectrum_m
   public ::                        &
     spec_t,                        &
     kick_t,                        &
-    spec_sh_t,                     &
     spectrum_init,                 &
     spectrum_cross_section,        &
     spectrum_cross_section_tensor, &
     spectrum_rotatory_strength,    &
     spectrum_hs_from_mult,         &
+    spectrum_hs_maxima,            &
     spectrum_hs_from_acc,          &
     spectrum_mult_info,            &
     spectrum_fix_time_limits,      &
@@ -98,14 +99,11 @@ module spectrum_m
     FLOAT, pointer    :: weight(:)
   end type kick_t
 
-  type spec_sh_t
-    ! input
-    character :: pol
-
-    ! output
-    integer :: no_e ! dimensions of sp
-    FLOAT, pointer :: sp(:) ! do not forget to deallocate this
-  end type spec_sh_t
+  ! Module variables, necessary to compute the function hsfunction, called by
+  ! the C function loct_1dminimize
+  FLOAT :: time_step_
+  CMPLX, allocatable :: dipole_(:)
+  integer :: is_, ie_
 
 contains
 
@@ -1003,15 +1001,15 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine spectrum_hs_from_mult(out_file, s, sh)
+  subroutine spectrum_hs_from_mult(out_file, s, pol)
     character(len=*),   intent(in) :: out_file
     type(spec_t),    intent(inout) :: s
-    type(spec_sh_t), intent(inout) :: sh
+    character , intent(in) :: pol
 
-    integer :: i, j, iunit, nspin, time_steps, is, ie, ntiter, lmax
+    integer :: i, j, iunit, nspin, time_steps, is, ie, ntiter, lmax, no_e
     FLOAT :: dt, dump
     type(kick_t) :: kick
-    FLOAT, allocatable :: d(:,:)
+    FLOAT, allocatable :: d(:,:), sp(:)
     CMPLX :: c
     CMPLX, allocatable :: dipole(:), ddipole(:)
     type(unit_system_t) :: file_units
@@ -1032,7 +1030,7 @@ contains
 
     do i = 1, time_steps
       read(iunit, *) j, dump, dump, d
-      select case(sh%pol)
+      select case(pol)
       case('x')
         dipole(i) = -sum(d(1, :))
       case('y')
@@ -1048,6 +1046,7 @@ contains
     end do
     deallocate(d)
     dipole(0) = dipole(1)
+    call io_close(iunit)
 
     ! we now calculate the first time derivative
     ALLOCATE(ddipole(0:time_steps), time_steps+1)
@@ -1066,43 +1065,164 @@ contains
     deallocate(ddipole)
 
     ! now we Fourier transform
-    sh%no_e = s%max_energy / s%energy_step
-    ALLOCATE(sh%sp(0:sh%no_e), sh%no_e+1)
-    sh%sp = M_ZERO
+    no_e = s%max_energy / s%energy_step
+    ALLOCATE(sp(0:no_e), no_e+1)
+    sp = M_ZERO
 
-    do i = 0, sh%no_e
+    do i = 0, no_e
       c = M_z0
       do j = is, ie
         c = c + exp(M_zI * i * s%energy_step * j * dt)*dipole(j)
       end do
-      sh%sp(i) = abs(c)**2*dt**2
+      sp(i) = abs(c)**2*dt**2
     end do
     deallocate(dipole)
 
     ! output
     if(trim(out_file) .ne. '-') then
-      iunit = io_open(trim(out_file) // "." // trim(sh%pol), action='write')
+      iunit = io_open(trim(out_file) // "." // trim(pol), action='write')
       write(iunit, '(a1,a20,a20)') '#', str_center("w", 20), str_center("H(w)", 20)
       write(iunit, '(a1,a20,a20)') '#', str_center('['//trim(units_out%energy%abbrev) // ']', 20), &
          str_center('[('//trim(units_out%length%abbrev)//'/'//trim(units_out%time%abbrev)//')^2]' , 20)
-      do i = 0, sh%no_e
+      do i = 0, no_e
         write(iunit, '(1x,2e20.8)') i*s%energy_step / units_out%energy%factor, &
-          sh%sp(i) / (units_out%length%factor / units_out%time%factor)**2
+          sp(i) / (units_out%length%factor / units_out%time%factor)**2
       end do
       call io_close(iunit)
     end if
 
+    deallocate(sp)
   end subroutine spectrum_hs_from_mult
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  subroutine spectrum_hs_from_acc(out_file, s, sh)
+  subroutine hsfunction(omega, power)
+    FLOAT, intent(in)   :: omega
+    FLOAT, intent(out)  :: power
+
+    CMPLX   :: c
+    integer :: j
+
+    c = M_z0
+    do j = is_, ie_
+      c = c + exp(M_zI * omega * j * time_step_)*dipole_(j)
+    end do
+    power = -abs(c)**2*time_step_**2
+
+  end subroutine hsfunction
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine spectrum_hs_maxima(out_file, s, pol, w0)
     character(len=*),   intent(in) :: out_file
     type(spec_t),    intent(inout) :: s
-    type(spec_sh_t), intent(inout) :: sh
+    character , intent(in) :: pol
+    FLOAT, intent(in) :: w0
 
-    integer :: i, j, iunit, time_steps, is, ie, ntiter
+    integer :: i, j, iunit, nspin, time_steps, ntiter, lmax, ierr
+    FLOAT :: dt, dump, omega, hsval, minval, maxval, x
+    type(kick_t) :: kick
+    FLOAT, allocatable :: d(:,:)
+    CMPLX :: c
+    CMPLX, allocatable :: ddipole(:)
+    type(unit_system_t) :: file_units
+
+    call io_assign(iunit)
+    iunit = io_open('multipoles', action='read', status='old', die=.false.)
+    if(iunit < 0) then
+      iunit = io_open('td.general/multipoles', action='read', status='old')
+    end if
+    call spectrum_mult_info(iunit, nspin, kick, time_steps, dt, file_units, lmax=lmax)
+    call spectrum_fix_time_limits(time_steps, dt, s%start_time, s%end_time, is_, ie_, ntiter)
+
+    call io_skip_header(iunit)
+
+    ! load dipole from file
+    ALLOCATE(dipole_(0:time_steps), time_steps+1)
+    ALLOCATE(d(3, nspin), 3*nspin)
+
+    do i = 1, time_steps
+      read(iunit, *) j, dump, dump, d
+      select case(pol)
+      case('x')
+        dipole_(i) = -sum(d(1, :))
+      case('y')
+        dipole_(i) = -sum(d(2, :))
+      case('z')
+        dipole_(i) =  sum(d(3, :))
+      case('+')
+        dipole_(i) = -sum(d(1, :) + M_zI*d(2, :)) / sqrt(M_TWO)
+      case('-')
+        dipole_(i) = -sum(d(1, :) - M_zI*d(2, :)) / sqrt(M_TWO)
+      end select
+      dipole_(i) = dipole_(i) * units_out%length%factor 
+    end do
+    deallocate(d)
+    dipole_(0) = dipole_(1)
+    call io_close(iunit)
+
+    ! we now calculate the first time derivative
+    ALLOCATE(ddipole(0:time_steps), time_steps+1)
+    ddipole(0) = (dipole_(1) - dipole_(0))/dt
+    do i = 1, time_steps - 1
+      ddipole(i) = (dipole_(i + 1) - dipole_(i - 1))/(M_TWO*dt)
+    end do
+    ddipole(time_steps) = (dipole_(time_steps) - dipole_(time_steps - 1))/dt
+
+    ! and the second time derivative
+    dipole_(0) = (ddipole(1) - ddipole(0))/dt
+    do i = 1, time_steps - 1
+      dipole_(i) = (ddipole(i + 1) - ddipole(i - 1))/(M_TWO*dt)
+    end do
+    dipole_(time_steps) = (ddipole(time_steps) - ddipole(time_steps - 1))/dt
+    deallocate(ddipole)
+
+    time_step_ = dt
+
+    iunit = io_open(trim(out_file) // "." // trim(pol), action='write')
+    write(iunit, '(a1,a20,a20)') '#', str_center("w", 20), str_center("H(w)", 20)
+    write(iunit, '(a1,a20,a20)') '#', &
+      str_center('['//trim(units_out%energy%abbrev) // ']', 20), &
+      str_center('[('//trim(units_out%length%abbrev)//'/'//trim(units_out%time%abbrev)//')^2]' , 20)
+
+    ! output
+    omega = w0
+    do while(omega < s%max_energy)
+
+      minval = max(M_ZERO, omega - w0)
+      maxval = omega + w0
+      x = omega
+      call loct_1dminimize(minval, maxval, x, hsfunction, ierr)
+
+      if(ierr .ne. 0) then
+        write(message(1),'(a)') 'Could not find a maximum.'      
+        call write_fatal(1)
+      end if
+      call hsfunction(x, hsval)
+      hsval = -hsval
+
+      write(iunit, '(1x,2e20.8)') x/units_out%energy%factor, &
+        hsval/(units_out%length%factor / units_out%time%factor)**2
+
+      omega = omega + 2*w0
+    end do
+    call io_close(iunit)
+
+  end subroutine spectrum_hs_maxima
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine spectrum_hs_from_acc(out_file, s, pol)
+    character(len=*),   intent(in) :: out_file
+    type(spec_t),    intent(inout) :: s
+    character, intent(in) :: pol
+
+    integer :: i, j, iunit, time_steps, is, ie, ntiter, no_e, ierr
     FLOAT :: dt, dummy, a(MAX_DIM)
+    FLOAT, allocatable :: sp(:)
     CMPLX, allocatable :: acc(:)
     CMPLX :: c
 
@@ -1114,8 +1234,13 @@ contains
     acc = M_ZERO
     call io_skip_header(iunit)
     do i = 1, time_steps
-      read(iunit, *) j, dummy, a
-      select case(sh%pol)
+      a = M_ZERO
+      read(iunit, '(28x,e20.12)', advance = 'no', iostat = ierr) a(1)
+      j = 2
+      do while( (ierr.eq.0) .and. (j <= MAX_DIM) )
+        read(iunit, '(e20.12)', advance = 'no', iostat = ierr) a(j)
+      end do
+      select case(pol)
       case('x')
         acc(i) = a(1)
       case('y')
@@ -1129,34 +1254,36 @@ contains
       end select
       acc(i) = acc(i) * units_out%acceleration%factor
     end do
+    close(iunit)
 
     ! now we Fourier transform
-    sh%no_e = s%max_energy / s%energy_step
-    ALLOCATE(sh%sp(0:sh%no_e), sh%no_e+1)
-    sh%sp = M_ZERO
+    no_e = s%max_energy / s%energy_step
+    ALLOCATE(sp(0:no_e), no_e+1)
+    sp = M_ZERO
 
-    do i = 0, sh%no_e
+    do i = 0, no_e
       c = M_z0
       do j = is, ie
         c = c + exp(M_zI * i * s%energy_step * j * dt)*acc(j)
       end do
-      sh%sp(i) = abs(c)**2*dt**2
+      sp(i) = abs(c)**2*dt**2
     end do
     deallocate(acc)
 
     ! output
     if(trim(out_file) .ne. '-') then
-      iunit = io_open(trim(out_file) // "." // trim(sh%pol), action='write')
+      iunit = io_open(trim(out_file) // "." // trim(pol), action='write')
       write(iunit, '(a1,a20,a20)') '#', str_center("w", 20), str_center("H(w)", 20)
       write(iunit, '(a1,a20,a20)') '#', str_center('['//trim(units_out%energy%abbrev) // ']', 20), &
          str_center('[('//trim(units_out%length%abbrev)//'/'//trim(units_out%time%abbrev)//')^2]' , 20)
-      do i = 0, sh%no_e
+      do i = 0, no_e
         write(iunit, '(2e15.6)') i*s%energy_step / units_out%energy%factor, &
-          sh%sp(i) / (units_out%length%factor / units_out%time%factor)**2
+          sp(i) / (units_out%length%factor / units_out%time%factor)**2
       end do
       call io_close(iunit)
     end if
 
+    deallocate(sp)
   end subroutine spectrum_hs_from_acc
 
 

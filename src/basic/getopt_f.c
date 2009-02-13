@@ -40,6 +40,8 @@ void FC_FUNC_(set_clarg, SET_CLARG)(int *i, STR_F_TYPE arg STR_ARG1)
 { argv[*i] = TO_C_STR1(arg);}
 
 
+/* FUNCTIONS TO BE USED BY THE PROGRAM oct-oscillator-strength */
+
 void oscillator_strength_help(){
   printf("Usage: oct-oscillator_strength [OPTIONS] [w]\n");
   printf("\n");
@@ -88,11 +90,6 @@ void oscillator_strength_help(){
 }
 
 /***************************************************************/
-
-
-
-
-/* FUNCTIONS TO BE USED BY THE PROGRAM oct-oscillator-strength */
 
 void FC_FUNC_(getopt_oscillator_strength, GETOPT_OSCILLATOR_STRENGTH)
   (int *mode, double *omega, double *searchinterval, int *order, 
@@ -180,4 +177,45 @@ void FC_FUNC_(getopt_oscillator_strength, GETOPT_OSCILLATOR_STRENGTH)
   }
 
 }
+/***************************************************************/
+
+
+/* FUNCTIONS TO BE USED BY THE PROGRAM oct-harmonic-spectrum */
+
+
+void harmonic_spectrum_help(){
+  printf("Usage: oct-harmonic-spectrum [OPTIONS] \n");
+  printf("\n");
+  printf("Options:\n");
+  printf("  -h              Print this help and exits.\n");
+  printf("  -w <freq>       Specifies the fundamental frequency.\n");
+  exit(-1);
+}
+
+void FC_FUNC_(getopt_harmonic_spectrum, GETOPT_HARMONIC_SPECTRUM)
+     (double *w0)
+{
+  int c;
+
+  while (1) {
+    c = getopt(argc, argv, "hw:");
+    if (c == -1) break;
+    switch (c) {
+
+    case 'h':
+      harmonic_spectrum_help();
+      break;
+
+    case 'w':
+      *w0 = (double)atof(optarg);
+      break;
+
+    case '?':
+      harmonic_spectrum_help();
+    }
+  }
+
+}
+
+
 /***************************************************************/
