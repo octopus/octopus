@@ -117,7 +117,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
             + R_CONJ(dl_psi2(ip, idim)) * grad_psi(ip, idir, idim) + R_CONJ(grad_dl_psi2(ip, idir, idim)) * psi(ip, idim))
         else
           forall (idir = 1:NDIM, ip = 1:np) grad_rho(ip, idir) = grad_rho(ip, idir) + &
-               st%d%kweights(ik) * st%occ(ist, ik) * M_TWO * R_CONJ(psi(ip, idim)) * grad_psi(ip, idir, idim)
+            st%d%kweights(ik) * st%occ(ist, ik) * M_TWO * R_CONJ(psi(ip, idim)) * grad_psi(ip, idir, idim)
         endif
       end do
 
@@ -206,7 +206,6 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
   do iatom = 1, geo%natoms
     if(present(lr)) then
       geo%atom(iatom)%Born_charge(lr_dir, 1:MAX_DIM) = force(1:MAX_DIM, iatom)
-      ! the force has other contributions from Hartree and Vxc, but the Born charge does not 
     else
       geo%atom(iatom)%f(1:MAX_DIM) = geo%atom(iatom)%f(1:MAX_DIM) + real(force(1:MAX_DIM, iatom))
     endif

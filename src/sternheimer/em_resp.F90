@@ -339,12 +339,18 @@ contains
           do idir = 1, sys%gr%sb%dim
             ! time = M_ZERO
             if(states_are_complex(sys%st)) then
-              call zcalc_forces_from_potential(sys%gr, sys%geo, hm%ep, sys%st, M_ZERO, &
-                lr = em_vars%lr(idir, 1, ifactor), lr2 = em_vars%lr(idir, 2, ifactor), &
-                lr_dir = idir, Born_sum = em_vars%Born_sum(idir, :))
+              if(em_vars%nsigma == 2) then
+                call zcalc_forces_from_potential(sys%gr, sys%geo, hm%ep, sys%st, M_ZERO, &
+                  lr = em_vars%lr(idir, 1, ifactor), lr2 = em_vars%lr(idir, 2, ifactor), &
+                  lr_dir = idir, Born_sum = em_vars%Born_sum(idir, :))
+              else
+                call zcalc_forces_from_potential(sys%gr, sys%geo, hm%ep, sys%st, M_ZERO, &
+                  lr = em_vars%lr(idir, 1, ifactor), lr2 = em_vars%lr(idir, 1, ifactor), &
+                  lr_dir = idir, Born_sum = em_vars%Born_sum(idir, :))
+              endif
             else
               call dcalc_forces_from_potential(sys%gr, sys%geo, hm%ep, sys%st, M_ZERO, &
-                lr = em_vars%lr(idir, 1, ifactor), lr2 = em_vars%lr(idir, 2, ifactor), &
+                lr = em_vars%lr(idir, 1, ifactor), lr2 = em_vars%lr(idir, 1, ifactor), &
                 lr_dir = idir, Born_sum = em_vars%Born_sum(idir, :))
             endif
           enddo
