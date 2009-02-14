@@ -281,7 +281,7 @@ contains
 
       call push_sub('poisson_multigrid.residue')
 
-      m => gr%mgrid%level(level)%m
+      m => gr%mgrid%level(level)%mesh
 
       call dderivatives_lapl(gr%mgrid%level(level)%der, phi, tmp)
 
@@ -302,11 +302,11 @@ contains
 
       do l = fl, cl
         ! store the initial approximation
-        np = gr%mgrid%level(l)%m%np
+        np = gr%mgrid%level(l)%mesh%np
         call lalg_copy(np, phi%level(l)%p, phi_ini%level(l)%p)
 
         ! presmoothing
-        call multigrid_relax(this, gr%mgrid%level(l)%m, gr%mgrid%level(l)%der, &
+        call multigrid_relax(this, gr%mgrid%level(l)%mesh, gr%mgrid%level(l)%der, &
           phi%level(l)%p, tau%level(l)%p , this%presteps)
 
         if (l /= cl ) then
@@ -322,7 +322,7 @@ contains
 
           ! the other part of the error
           call dderivatives_lapl(gr%mgrid%level(l + 1)%der, phi%level(l + 1)%p, err%level(l + 1)%p)
-          np = gr%mgrid%level(l + 1)%m%np
+          np = gr%mgrid%level(l + 1)%mesh%np
           forall(ip = 1:np) tau%level(l + 1)%p(ip) = err%level(l + 1)%p(ip) - tau%level(l + 1)%p(ip)
         end if
       end do
@@ -330,18 +330,18 @@ contains
       do l = cl, fl, -1
        
         ! postsmoothing
-        call multigrid_relax(this, gr%mgrid%level(l)%m, gr%mgrid%level(l)%der, &
+        call multigrid_relax(this, gr%mgrid%level(l)%mesh, gr%mgrid%level(l)%der, &
           phi%level(l)%p, tau%level(l)%p, this%poststeps)
 
         if(l /= fl) then
           ! calculate correction as the diference with the
           ! original grid in this level
-          np = gr%mgrid%level(l)%m%np
+          np = gr%mgrid%level(l)%mesh%np
           forall(ip = 1:np) phi%level(l)%p(ip) = phi%level(l)%p(ip) - phi_ini%level(l)%p(ip)
 
           ! transfer correction to finer level
           call dmultigrid_coarse2fine(gr%mgrid%level(l), phi%level(l)%p, err%level(l-1)%p)
-          np = gr%mgrid%level(l-1)%m%np
+          np = gr%mgrid%level(l-1)%mesh%np
           forall(ip = 1:np) phi%level(l - 1)%p(ip) = phi%level(l - 1)%p(ip) + err%level(l - 1)%p(ip)
         end if
       end do

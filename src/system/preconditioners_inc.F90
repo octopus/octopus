@@ -96,9 +96,9 @@ contains
 
     integer :: idim, ip
     
-    mesh0 => gr%mgrid%level(0)%m
-    mesh1 => gr%mgrid%level(1)%m
-    mesh2 => gr%mgrid%level(2)%m
+    mesh0 => gr%mgrid%level(0)%mesh
+    mesh1 => gr%mgrid%level(1)%mesh
+    mesh2 => gr%mgrid%level(2)%mesh
 
     ALLOCATE(d0(1:mesh0%np_part), mesh0%np_part)
     ALLOCATE(q0(1:mesh0%np), mesh0%np)
