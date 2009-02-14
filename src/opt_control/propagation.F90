@@ -446,7 +446,7 @@ module opt_control_propagation_m
     end if
 
     if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
-      call hamiltonian_set_oct_exchange(hm, st)
+      call hamiltonian_set_oct_exchange(hm)
     end if
 
     call hamiltonian_adjoint(hm)

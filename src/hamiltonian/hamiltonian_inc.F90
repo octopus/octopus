@@ -561,7 +561,7 @@ subroutine X(vlpsi_batch) (hm, m, psib, hpsib, ik)
   type(batch_t),       intent(in)    :: psib
   type(batch_t),       intent(inout) :: hpsib
 
-  integer :: ip, ip2, ii, ispin, bs, ipmax
+  integer :: ip, ii, ispin
   R_TYPE, pointer :: psi(:, :), hpsi(:, :)
 
   call profiling_in(C_PROFILING_VLPSI)
@@ -729,12 +729,11 @@ subroutine X(vmask) (gr, hm, st)
 end subroutine X(vmask)
 
 ! ---------------------------------------------------------
-subroutine X(hamiltonian_diagonal) (hm, gr, diag, ik, t)
+subroutine X(hamiltonian_diagonal) (hm, gr, diag, ik)
   type(hamiltonian_t), intent(in)    :: hm
   type(grid_t),        intent(inout) :: gr
   integer,             intent(in)    :: ik
   R_TYPE,              intent(out)   :: diag(:,:) ! hpsi(NP, hm%d%dim)
-  FLOAT, optional,     intent(in)    :: t
 
   integer :: idim, ip, ispin
 

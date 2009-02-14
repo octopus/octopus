@@ -56,7 +56,9 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
   ASSERT(present(lr) .eqv. present(lr2))
   ASSERT(present(lr) .eqv. present(Born_sum))
   ! need all to calculate Born charges
-  ASSERT(lr_dir > 0 .and. lr_dir <= NDIM)
+  if(present(lr_dir)) then
+    ASSERT(lr_dir > 0 .and. lr_dir <= NDIM)
+  end if
 
   np = gr%fine%mesh%np
   ! if there is no fine mesh, gr%fine%mesh => gr%mesh according to grid.F90

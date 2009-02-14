@@ -804,9 +804,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_set_oct_exchange(hm, st)
+  subroutine hamiltonian_set_oct_exchange(hm)
     type(hamiltonian_t), intent(inout) :: hm
-    type(states_t),      intent(in)    :: st
     ! In this release, no non-local part for the QOCT Hamiltonian.
     nullify(hm%oct_st)
     hm%oct_exchange = .false.
