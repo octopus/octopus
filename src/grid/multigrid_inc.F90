@@ -38,10 +38,10 @@
     call X(set_bc)(level%der, f_coarse)
 
 #ifdef HAVE_MPI
-    if(level%m%parallel_in_domains) call X(vec_ghost_update)(level%m%vp, f_coarse)
+    if(level%mesh%parallel_in_domains) call X(vec_ghost_update)(level%mesh%vp, f_coarse)
 #endif
 
-    vol_pp => level%m%vol_pp
+    vol_pp => level%mesh%vol_pp
 
     i1 = 0;  i2 = 0;  i4 = 0;  i8 = 0;
     do i = 1, level%n_fine
@@ -158,8 +158,8 @@
 
     level => mgrid%level(ilevel)
 
-    fine_mesh => mgrid%level(ilevel-1)%m
-    coarse_mesh => mgrid%level(ilevel)%m
+    fine_mesh => mgrid%level(ilevel-1)%mesh
+    coarse_mesh => mgrid%level(ilevel)%mesh
 
     call X(set_bc)(mgrid%level(ilevel-1)%der, f_fine)
 

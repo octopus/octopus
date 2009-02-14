@@ -54,7 +54,7 @@ module multigrid_m
     FULLWEIGHT = 2
 
   type multigrid_level_t
-    type(mesh_t),  pointer  :: m
+    type(mesh_t),  pointer  :: mesh
     type(derivatives_t),   pointer  :: der
 
     integer          ::  n_coarse
@@ -81,11 +81,11 @@ module multigrid_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine multigrid_init(mgrid, geo, cv, m, der, stencil)
+  subroutine multigrid_init(mgrid, geo, cv, mesh, der, stencil)
     type(multigrid_t),             intent(out) :: mgrid
     type(geometry_t),              intent(in)  :: geo
     type(curvlinear_t),            intent(in)  :: cv
-    type(mesh_t),          target, intent(in)  :: m
+    type(mesh_t),          target, intent(in)  :: mesh
     type(derivatives_t),   target, intent(in)  :: der
     type(stencil_t),               intent(in)  :: stencil
 
@@ -111,7 +111,7 @@ contains
 
     if ( n_levels <= 0 )then
       n_levels=n_levels-3
-      np=m%np
+      np=mesh%np
 
       do while ( np > 1 )
         np=np/8
@@ -125,34 +125,34 @@ contains
 
     ALLOCATE(mgrid%level(0:n_levels), n_levels+1)
 
-    mgrid%level(0)%m   => m
+    mgrid%level(0)%mesh   => mesh
     mgrid%level(0)%der => der
 
-    mgrid%level(0)%n_fine = m%np
-    ALLOCATE(mgrid%level(0)%fine_i(m%np), m%np)
+    mgrid%level(0)%n_fine = mesh%np
+    ALLOCATE(mgrid%level(0)%fine_i(mesh%np), mesh%np)
 
     write(message(1), '(a,i3)') "Multigrid levels:", n_levels+1
     call write_info(1)
 
     do i = 1, mgrid%n_levels
-      ALLOCATE(mgrid%level(i)%m, 1)
+      ALLOCATE(mgrid%level(i)%mesh, 1)
       ALLOCATE(mgrid%level(i)%der, 1)
       
-      call multigrid_mesh_half(geo, cv, mgrid%level(i-1)%m, mgrid%level(i)%m, stencil)
+      call multigrid_mesh_half(geo, cv, mgrid%level(i-1)%mesh, mgrid%level(i)%mesh, stencil)
 
-      call derivatives_init(mgrid%level(i)%der, m%sb, cv%method.ne.CURV_METHOD_UNIFORM)
+      call derivatives_init(mgrid%level(i)%der, mesh%sb, cv%method.ne.CURV_METHOD_UNIFORM)
 
-      if(m%parallel_in_domains) then
-        call mesh_init_stage_3(mgrid%level(i)%m, geo, cv, stencil, m%mpi_grp, parent = mgrid%level(i - 1)%m)
+      if(mesh%parallel_in_domains) then
+        call mesh_init_stage_3(mgrid%level(i)%mesh, geo, cv, stencil, mesh%mpi_grp, parent = mgrid%level(i - 1)%mesh)
       else
-        call mesh_init_stage_3(mgrid%level(i)%m, geo, cv)
+        call mesh_init_stage_3(mgrid%level(i)%mesh, geo, cv)
       end if
 
-      call multigrid_get_transfer_tables(mgrid%level(i), mgrid%level(i-1)%m, mgrid%level(i)%m)
+      call multigrid_get_transfer_tables(mgrid%level(i), mgrid%level(i-1)%mesh, mgrid%level(i)%mesh)
 
-      call derivatives_build(mgrid%level(i)%der, mgrid%level(i)%m)
+      call derivatives_build(mgrid%level(i)%der, mgrid%level(i)%mesh)
 
-      call mesh_write_info(mgrid%level(i)%m, stdout)
+      call mesh_write_info(mgrid%level(i)%mesh, stdout)
 
     end do
     
@@ -163,8 +163,8 @@ contains
     mgrid%tp = 0
     do i = 0, mgrid%n_levels    
       mgrid%sp(i) = 1 + mgrid%tp
-      mgrid%ep(i) = mgrid%tp + mgrid%level(i)%m%np
-      mgrid%tp = mgrid%tp + mgrid%level(i)%m%np_part
+      mgrid%ep(i) = mgrid%tp + mgrid%level(i)%mesh%np
+      mgrid%tp = mgrid%tp + mgrid%level(i)%mesh%np_part
       mgrid%ep_part(i) = mgrid%tp      
     end do
 
@@ -397,9 +397,9 @@ contains
       level => mgrid%level(i)
 
       call derivatives_end(level%der)
-      call mesh_end(level%m)
-      deallocate(level%m, level%der)
-      nullify   (level%m, level%der)
+      call mesh_end(level%mesh)
+      deallocate(level%mesh, level%der)
+      nullify   (level%mesh, level%der)
 
       deallocate(level%to_coarse, level%to_fine1, level%to_fine2, &
         level%to_fine4, level%to_fine8, level%fine_i)

@@ -150,27 +150,27 @@ contains
     
     if(gr%have_fine_mesh) then
       
-      ALLOCATE(gr%fine%m, 1)
+      ALLOCATE(gr%fine%mesh, 1)
       ALLOCATE(gr%fine%der, 1)
       
-      call multigrid_mesh_double(geo, gr%cv, gr%mesh, gr%fine%m, gr%stencil)
+      call multigrid_mesh_double(geo, gr%cv, gr%mesh, gr%fine%mesh, gr%stencil)
       
       call derivatives_init(gr%fine%der, gr%mesh%sb, gr%cv%method .ne. CURV_METHOD_UNIFORM)
       
       if(gr%mesh%parallel_in_domains) then
-        call mesh_init_stage_3(gr%fine%m, geo, gr%cv, gr%stencil, gr%mesh%mpi_grp)
+        call mesh_init_stage_3(gr%fine%mesh, geo, gr%cv, gr%stencil, gr%mesh%mpi_grp)
       else
-        call mesh_init_stage_3(gr%fine%m, geo, gr%cv)
+        call mesh_init_stage_3(gr%fine%mesh, geo, gr%cv)
       end if
       
-      call multigrid_get_transfer_tables(gr%fine, gr%fine%m, gr%mesh)
+      call multigrid_get_transfer_tables(gr%fine, gr%fine%mesh, gr%mesh)
       
-      call derivatives_build(gr%fine%der, gr%fine%m)
+      call derivatives_build(gr%fine%der, gr%fine%mesh)
       
-      call mesh_write_info(gr%fine%m, stdout)
+      call mesh_write_info(gr%fine%mesh, stdout)
 
     else
-      gr%fine%m => gr%mesh
+      gr%fine%mesh => gr%mesh
       gr%fine%der => gr%der
     end if
 
@@ -192,8 +192,8 @@ contains
 
     if(gr%have_fine_mesh) then
       call derivatives_end(gr%fine%der)
-      call mesh_end(gr%fine%m)
-      deallocate(gr%fine%m, gr%fine%der)
+      call mesh_end(gr%fine%mesh)
+      deallocate(gr%fine%mesh, gr%fine%der)
       deallocate(gr%fine%to_coarse, gr%fine%to_fine1, gr%fine%to_fine2, gr%fine%to_fine4, gr%fine%to_fine8, gr%fine%fine_i)
     end if
 

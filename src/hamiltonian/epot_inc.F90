@@ -56,8 +56,10 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
   ASSERT(present(lr) .eqv. present(lr2))
   ASSERT(present(lr) .eqv. present(Born_sum))
   ! need all to calculate Born charges
+  ASSERT(lr_dir > 0 .and. lr_dir <= NDIM)
 
-  np = gr%fine%m%np
+  np = gr%fine%mesh%np
+  ! if there is no fine mesh, gr%fine%mesh => gr%mesh according to grid.F90
 
   if(present(lr)) then
     ALLOCATE(grad_dl_psi(np, 1:NDIM, st%d%dim), np*NDIM*st%d%dim)
@@ -70,10 +72,10 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
   force = M_ZERO
 
   if(gr%have_fine_mesh) then
-     ALLOCATE(psi(gr%fine%m%np_part, st%d%dim), gr%fine%m%np_part*st%d%dim)
+     ALLOCATE(psi(gr%fine%mesh%np_part, st%d%dim), gr%fine%mesh%np_part*st%d%dim)
      if(present(lr)) then
-       ALLOCATE(dl_psi(gr%fine%m%np_part, st%d%dim), gr%fine%m%np_part*st%d%dim)
-       ALLOCATE(dl_psi2(gr%fine%m%np_part, st%d%dim), gr%fine%m%np_part*st%d%dim)
+       ALLOCATE(dl_psi(gr%fine%mesh%np_part, st%d%dim), gr%fine%mesh%np_part*st%d%dim)
+       ALLOCATE(dl_psi2(gr%fine%mesh%np_part, st%d%dim), gr%fine%mesh%np_part*st%d%dim)
      endif
   endif
 
@@ -219,11 +221,11 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
     
     vloc(1:np) = M_ZERO
     
-    call epot_local_potential(ep, gr, gr%fine%m, geo, iatom, vloc, time)
+    call epot_local_potential(ep, gr, gr%fine%mesh, geo, iatom, vloc, time)
     
     do idir = 1, NDIM
-      force(idir, iatom) = -dmf_dotp(gr%fine%m, real(grad_rho(:, idir)), vloc) &
-                           - M_zI * dmf_dotp(gr%fine%m, aimag(grad_rho(:, idir)), vloc)
+      force(idir, iatom) = -dmf_dotp(gr%fine%mesh, real(grad_rho(:, idir)), vloc) &
+                           - M_zI * dmf_dotp(gr%fine%mesh, aimag(grad_rho(:, idir)), vloc)
     end do
 
   end do

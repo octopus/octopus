@@ -443,7 +443,7 @@ contains
     FLOAT   :: time_
     integer :: ia
     type(atom_t),      pointer :: atm
-    type(mesh_t),      pointer :: m
+    type(mesh_t),      pointer :: mesh
     type(simul_box_t), pointer :: sb
     type(profile_t), save :: epot_generate_prof
 
@@ -455,8 +455,8 @@ contains
     call profiling_in(epot_generate_prof, "EPOT_GENERATE")
     call push_sub('epot.epot_generate')
 
-    sb  => gr%sb
-    m   => gr%mesh
+    sb   => gr%sb
+    mesh => gr%mesh
 
     time_ = M_ZERO
     if (present(time)) time_ = time
@@ -504,7 +504,7 @@ contains
       ! the projectors in the fine grid
       if(gr%have_fine_mesh) then
         call projector_end(ep%proj_fine(ia))
-        call projector_init(ep%proj_fine(ia), gr%fine%m, sb, atm, st%d%dim, ep%reltype)
+        call projector_init(ep%proj_fine(ia), gr%fine%mesh, sb, atm, st%d%dim, ep%reltype)
         if(simul_box_is_periodic(sb) .or. associated(ep%a_static)) then
           call projector_init_phases(ep%proj_fine(ia), st%d%nik, st%d%kpoints, vec_pot_var = ep%a_static)
         end if
@@ -514,8 +514,8 @@ contains
     end do
 
     ! add static electric fields
-    if (ep%classical_pot > 0)     ep%vpsl(1:m%np) = ep%vpsl(1:m%np) + ep%Vclassical(1:m%np)
-    if (associated(ep%e_field)) ep%vpsl(1:m%np) = ep%vpsl(1:m%np) + ep%v_static(1:m%np)
+    if (ep%classical_pot > 0)     ep%vpsl(1:mesh%np) = ep%vpsl(1:mesh%np) + ep%Vclassical(1:mesh%np)
+    if (associated(ep%e_field)) ep%vpsl(1:mesh%np) = ep%vpsl(1:mesh%np) + ep%v_static(1:mesh%np)
 
     call pop_sub()
     call profiling_out(epot_generate_prof)
