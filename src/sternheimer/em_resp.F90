@@ -815,13 +815,13 @@ contains
         do idir = 1, gr%sb%dim
           call pert_setup_dir(angular_momentum, idir)
           dic = dic &
-               + zpert_expectation_value(angular_momentum, gr, geo, hm, st, em_vars%lr(idir, 1, ifactor)%zdl_psi, st%zpsi) &
-               - zpert_expectation_value(angular_momentum, gr, geo, hm, st, em_vars%lr(idir, 2, ifactor)%zdl_psi, st%zpsi)
+               + zpert_expectation_value(angular_momentum, gr, geo, hm, st, st%zpsi, em_vars%lr(idir, 1, ifactor)%zdl_psi) &
+               + zpert_expectation_value(angular_momentum, gr, geo, hm, st, em_vars%lr(idir, 2, ifactor)%zdl_psi, st%zpsi)
         end do
         
         call pert_end(angular_momentum)
         
-        dic = dic*M_zI/P_c
+        dic = dic*M_zI*M_HALF
 
         iunit = io_open(trim(dirname)//'/rotatory_strength', action='write')
 
@@ -832,10 +832,10 @@ contains
              str_center('['//trim(units_out%length%abbrev) //'^4]', 20)
 
         ff = M_ZERO
-        if(em_vars%omega(iomega) .ne. 0) ff = real(dic)*P_C/(M_THREE*em_vars%omega(iomega))
+        if(em_vars%omega(iomega) .ne. 0) ff = real(dic)/(M_THREE*em_vars%omega(iomega))
 
         write(iunit, '(3e20.8)') em_vars%omega(iomega)/units_inp%energy%factor, &
-             aimag(dic)/(M_PI*units_out%length%factor**3), ff/units_out%length%factor**4
+             aimag(dic)/(P_C*M_PI*units_out%length%factor**3), ff/units_out%length%factor**4
 
         call io_close(iunit)
       end if
