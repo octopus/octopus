@@ -107,8 +107,6 @@ module opt_control_parameters_m
     FLOAT,       pointer :: alpha(:)      => NULL()
     type(tdf_t), pointer :: td_penalty(:) => NULL()
 
-    CMPLX, pointer :: pol(:, :)           => NULL() ! the polarization of the field, this is
-                                                    ! necessary to calculate the fluence.
     type(tdf_t)    :: f ! This is the envelope of the laser field, only used in the phase-only
                         ! optimization (necessary to store it in order to calculate fluences)
   end type oct_parameters_common_t
@@ -160,6 +158,8 @@ contains
     type(block_t)            :: blk
 
     call push_sub('parameters.parameters_read')
+
+    call messages_print_stress(stdout, "OCT: Info about control functions")
 
     !%Variable OCTParameterRepresentation
     !%Type integer
@@ -277,7 +277,7 @@ contains
     !%End
     call loct_parse_int(datasets_check('OCTControlFunctionType'), parameter_mode_epsilon, par_common%mode)
     if(.not.varinfo_valid_option('OCTControlFunctionType', par_common%mode)) call input_error('OCTControlFunctionType')
-     select case(par_common%mode)
+    select case(par_common%mode)
     case(parameter_mode_f, parameter_mode_phi, parameter_mode_f_and_phi)
       if(par_common%representation .eq. ctr_real_space) then
         write(message(1),'(a)') 'If "OCTControlFunctionType = parameter_mode_f", '
@@ -288,18 +288,8 @@ contains
         write(message(6),'(a)') '"OCTParameterRepresentation = control_fourier_series".'
         call write_fatal(5)
       end if
-     end select
-
-    ! Check that the laser polarizations are not imaginary.
-    ALLOCATE(par_common%pol(MAX_DIM, ep%no_lasers), MAX_DIM*ep%no_lasers)
-    do i = 1, ep%no_lasers
-      par_common%pol(1:MAX_DIM, i) = laser_polarization(ep%lasers(i))
-      if(any(aimag(laser_polarization(ep%lasers(i))) .ne. M_ZERO)) then
-        write(message(1),'(a)') 'For optimal control runs, you cannot specify an initial field guess'
-        write(message(2),'(a)') 'with complex polarization direction'
-        call write_fatal(2)
-      end if
-    end do
+    end select
+    call messages_print_var_option(stdout, 'OCTControlFunctionType', par_common%mode)
 
     do i = 1, ep%no_lasers
       select case(par_common%mode)
@@ -422,7 +412,7 @@ contains
           do j = 1, steps + 1
             t = (j-1)*dt
             f_re = M_HALF * (loct_erf((CNST(100.0)/total_time)*(t-CNST(0.05)*total_time)) + &
-                             loct_erf(-(CNST(100.0)/total_time)*(t-total_time+CNST(0.05)*total_time)) )
+              loct_erf(-(CNST(100.0)/total_time)*(t-total_time+CNST(0.05)*total_time)) )
             call tdf_set_numerical(par_common%td_penalty(i), j, &
               TOFLOAT(M_ONE /(f_re + CNST(1.0e-7)))  )
           end do
@@ -431,7 +421,8 @@ contains
           do j = 1, steps+1
             t = (j-1)*dt
             call loct_parse_expression(f_re, f_im, "t", t, expression)
-            call tdf_set_numerical(par_common%td_penalty(i), j, TOFLOAT(M_ONE /(f_re + CNST(1.0e-7)))  )
+            call tdf_set_numerical(par_common%td_penalty(i), j, &
+              TOFLOAT(M_ONE /(f_re + CNST(1.0e-7)))  )
           end do
         end if
       end do
@@ -453,6 +444,7 @@ contains
       call loct_parse_block_end(blk)
     end if
 
+    call messages_print_stress(stdout)
     call pop_sub()
   end subroutine parameters_mod_init
   ! ---------------------------------------------------------
@@ -506,7 +498,7 @@ contains
       if(par_common%fix_initial_fluence) call parameters_set_fluence(par)
     end if
 
-    ! Now we ave to find the "fluence" of the phase, in order to keep it constant.
+    ! Now we have to find the "fluence" of the phase, in order to keep it constant.
     select case(par_common%mode)
     case(parameter_mode_phi)
       par%intphi = tdf_dot_product(par%f(1), par%f(1))
@@ -670,7 +662,7 @@ contains
     type(oct_control_parameters_t), intent(in) :: par_in, par_out
     type(oct_control_parameters_t), intent(inout) :: par_new
 
-    integer :: i, j, dim, ntiter
+    integer :: i, j, dim!, ntiter
     FLOAT, allocatable :: e_in(:, :, :), e_out(:, :, :), e_new(:, :, :)
     call push_sub('parameters.parameters_mixing')
 
@@ -703,6 +695,11 @@ contains
   ! ---------------------------------------------------------
 
 
+  ! ---------------------------------------------------------
+  ! Before using an oct_control_parameters_t variable, it needs
+  ! to be initialized, either by call ing parameters_init, or
+  ! by copying anther initialized variable through
+  ! parameters_copy.
   ! ---------------------------------------------------------
   subroutine parameters_init(cp, dt, ntiter)
     type(oct_control_parameters_t), intent(inout) :: cp
@@ -871,9 +868,10 @@ contains
     character(len=*), intent(in) :: filename
     type(oct_control_parameters_t), intent(in) :: cp
 
-    integer :: i, j, iunit
-    FLOAT :: t
-    FLOAT, allocatable :: wgrid(:)
+    integer :: i, j, k, iunit, niter, nfreqs
+    FLOAT :: t, wmax, dw, w, wa, wb, dt
+    FLOAT, allocatable :: func(:, :)
+    CMPLX :: ft, ez, ezdt
     character(len=2) :: digit
     type(oct_control_parameters_t) :: par
 
@@ -890,6 +888,9 @@ contains
     write(iunit, '(a,es20.8e3)') 'Fluence = ', parameters_fluence(par)
     call io_close(iunit)
 
+    niter = tdf_niter(par%f(1))
+    ALLOCATE(func(niter+1, cp%no_parameters), (niter+1)*cp%no_parameters)
+
     select case(par_common%mode)
     case(parameter_mode_epsilon)
 
@@ -904,6 +905,7 @@ contains
         do i = 1, tdf_niter(par%f(j)) + 1
           t = (i-1)*tdf_dt(par%f(j))
           write(iunit, '(2es20.8e3)') t, tdf(par%f(j), t)
+          func(i, j) = tdf(par%f(j), t)
         end do
         call io_close(iunit)
       end do
@@ -921,6 +923,7 @@ contains
         do i = 1, tdf_niter(par%f(j)) + 1
           t = (i-1)*tdf_dt(par%f(j))
           write(iunit, '(3es20.8e3)') t, tdf(par%f(j), t) * cos(par%w0*t), tdf(par%f(j), t)
+          func(i, j) = tdf(par%f(j), t) * cos(par%w0*t)
         end do
         call io_close(iunit)
       end do
@@ -935,6 +938,7 @@ contains
         t = (i-1)*tdf_dt(par%f(j))
         write(iunit, '(4es20.8e3)') t, tdf(par_common%f, t) * &
           cos(par%w0*t + tdf(par%f(1), t) ), tdf(par_common%f, t), tdf(par%f(1), t)
+        func(i, 1) = tdf(par_common%f, t) * cos(par%w0*t + tdf(par%f(1), t) )
       end do
       call io_close(iunit)
 
@@ -948,29 +952,77 @@ contains
         t = (i-1)*tdf_dt(par%f(j))
         write(iunit, '(4es20.8e3)') t, tdf(par%f(1), t) * &
           cos(par%w0*t + tdf(par%f(2), t) ), tdf(par%f(1), t), tdf(par%f(2), t)
+        func(i, 1) = tdf(par%f(1), t) * cos(par%w0*t + tdf(par%f(2), t) )
       end do
       call io_close(iunit)
 
     end select
 
-    do j = 1, cp%no_parameters
-      if(cp%no_parameters > 1) then
-        write(digit,'(i2.2)') j
-        iunit = io_open(trim(filename)//'/cpw-'//digit, action='write')
-      else
-        iunit = io_open(trim(filename)//'/cpw', action='write')
-      end if
-      call tdf_numerical_to_fourier(par%f(j))
-      ALLOCATE(wgrid(tdf_nfreqs(par%f(j))), tdf_nfreqs(par%f(j)))
-      call tdf_fourier_grid(par%f(j), wgrid)
-      write(iunit, '(3a20)') '#      w [a.u]      ', '         a0         ', '         b0         '
-      write(iunit, '(3es20.8e3)') wgrid(1), tdf(par%f(j), 1), M_ZERO
-      do i = 2, tdf_nfreqs(par%f(j))
-        write(iunit, '(3es20.8e3)') wgrid(i), tdf(par%f(j), i), tdf(par%f(j), (tdf_nfreqs(par%f(j))-1)+i)
+
+    !Now, the Fourier transforms.
+    select case(par_common%mode)
+    case(parameter_mode_epsilon)
+
+      do j = 1, cp%no_parameters
+        if(cp%no_parameters > 1) then
+          write(digit,'(i2.2)') j
+          iunit = io_open(trim(filename)//'/cpw-'//digit, action='write')
+        else
+          iunit = io_open(trim(filename)//'/cpw', action='write')
+        end if
+        write(iunit,'(3a20)') '#       w [a.u]      ', '      Re[e(w)]       ', &
+                              '      Im[e(w)]       '
+
+        nfreqs = 1000
+        wa = M_ZERO
+        wb = M_THREE ! hard coded to three atomic units... this should be improved.
+        wmax = wb
+        dw = wmax/(nfreqs-1)
+        dt = tdf_dt(par%f(1))
+
+        do k = 1, nfreqs
+          w = wa + (k-1)*dw
+          ft = M_z0
+          ez = M_z1
+          ezdt = exp(M_zI*w*tdf_dt(par%f(j)))
+          do i = 1, niter + 1
+            t = (i-1)*dt
+            ft = ft + func(i, j)*ez
+            ez = ez*ezdt
+          end do
+          ft = ft*dt
+          write(iunit,'(3es20.8e3)') w, real(ft), aimag(ft)
+        end do
       end do
-      deallocate(wgrid)
+
+    case(parameter_mode_f, parameter_mode_phi, parameter_mode_f_and_phi)
+      iunit = io_open(trim(filename)//'/cpw', action='write')
+      write(iunit,'(3a20)') '#       w [a.u]      ', '      Re[e(w)]       ', &
+                            '      Im[e(w)]       '
+      
+      nfreqs = 1000
+      wa = cp%w0 - M_THREE * cp%omegamax
+      wb = cp%w0 + M_THREE * cp%omegamax
+      wmax = CNST(6.0)*cp%omegamax
+      dw = wmax/(nfreqs-1)
+      dt = tdf_dt(par%f(1))
+
+      do j = 1, nfreqs
+        w = wa + (j-1)*dw
+        ft = M_z0
+        ez = M_z1
+        ezdt = exp(M_zI*w*tdf_dt(par%f(1)))
+        do i = 1, niter + 1
+          t = (i-1)*dt
+          ft = ft + func(i, 1)*ez
+          ez = ez*ezdt
+        end do
+        ft = ft*dt
+        write(iunit,'(3es20.8e3)') w, real(ft), aimag(ft)
+      end do
+
       call io_close(iunit)
-    end do
+    end select
 
     call parameters_end(par)
     call pop_sub()
@@ -1306,6 +1358,7 @@ contains
     type(oct_control_parameters_t), intent(in) :: par
     integer :: i
 
+    parameters_dog = 0
     if(par%representation .eq. ctr_zero_fourier_series) then
       i = 2
     else

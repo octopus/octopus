@@ -159,6 +159,8 @@ module opt_control_target_m
     if(.not.varinfo_valid_option('OCTTargetOperator', target%type)) call input_error('OCTTargetOperator')
 
     call states_copy(target%st, stin)
+    call states_allocate_wfns(target%st, gr%mesh, M_CMPLX)
+
     nullify(target%td_fitness)
 
     select case(target%type)

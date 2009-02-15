@@ -63,6 +63,7 @@ module opt_control_initst_m
     call push_sub('defstates.initial_state_init')
 
     call states_copy(initial_state, st)
+    call states_allocate_wfns(initial_state, gr%mesh, M_CMPLX)
 
     !%Variable OCTInitialState
     !%Type integer

@@ -263,7 +263,7 @@ module opt_control_propagation_m
         call update_hamiltonian_psi(i, gr, sys%ks, hm, td, target, par_prev, psi2)
         call td_rti_dt(sys%ks, hm, gr, psi2, tr_psi2, i*td%dt, td%dt, td%max_iter, i)
       end if
-      call update_field(oct, i, par, gr, td, hm, psi, chi, par_chi, dir = 'f')
+      call update_field(oct, i, par, gr, hm, psi, chi, par_chi, dir = 'f')
       call update_hamiltonian_chi(i, gr, sys%ks, hm, td, target, par_chi, psi2)
       call td_rti_dt(sys%ks, hm, gr, chi, tr_chi, i*td%dt, td%dt, td%max_iter, i)
       call update_hamiltonian_psi(i, gr, sys%ks, hm, td, target, par, psi)
@@ -336,7 +336,7 @@ module opt_control_propagation_m
     call oct_prop_output(prop_chi, td%max_iter, chi, gr)
     do i = td%max_iter, 1, -1
       call oct_prop_check(prop_psi, psi, gr, sys%geo, i)
-      call update_field(oct, i, par_chi, gr, td, hm, psi, chi, par, dir = 'b')
+      call update_field(oct, i, par_chi, gr, hm, psi, chi, par, dir = 'b')
       call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, target, par_chi, psi)
       call td_rti_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%max_iter, i)
       call oct_prop_output(prop_chi, i-1, chi, gr)
@@ -405,7 +405,7 @@ module opt_control_propagation_m
     call oct_prop_output(prop_chi, td%max_iter, chi, gr)
     do i = td%max_iter, 1, -1
       call oct_prop_check(prop_psi, psi, gr, sys%geo, i)
-      call update_field(oct, i, par_chi, gr, td, hm, psi, chi, par, dir = 'b')
+      call update_field(oct, i, par_chi, gr, hm, psi, chi, par, dir = 'b')
       call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, target, par, psi)
       call td_rti_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%max_iter, i)
       call oct_prop_output(prop_chi, i-1, chi, gr)
@@ -508,21 +508,19 @@ module opt_control_propagation_m
 
 
   ! ---------------------------------------------------------
-  subroutine calculate_g(oct, gr, hm, psi, chi, cp, dl, dq, d1)
-    type(oct_t),                    intent(in)    :: oct
+  subroutine calculate_g(gr, hm, psi, chi, dl, dq)
     type(grid_t),                   intent(inout) :: gr
     type(hamiltonian_t),            intent(in)    :: hm
     type(states_t),                 intent(inout) :: psi
     type(states_t),                 intent(inout) :: chi
-    type(oct_control_parameters_t), intent(in)    :: cp
-    FLOAT,                          intent(inout) :: dl(:), dq(:), d1
+    CMPLX,                          intent(inout) :: dl(:), dq(:)
 
     type(states_t) :: oppsi
     integer :: no_parameters, j, ik, p
 
     call push_sub('propagation.calculate_g')
 
-    no_parameters = parameters_number(cp)
+    no_parameters = hm%ep%no_lasers
 
     do j = 1, no_parameters
       call states_copy(oppsi, psi)
@@ -555,9 +553,6 @@ module opt_control_propagation_m
       end if
     end do
 
-    d1 = M_z1
-    if(oct%algorithm .eq. oct_algorithm_zbr98) d1 = zstates_mpdotp(gr%mesh, psi, chi)
-
     call pop_sub()
   end subroutine calculate_g
   ! ---------------------------------------------------------
@@ -578,23 +573,20 @@ module opt_control_propagation_m
   !
   ! cp = (1-eta)*cpp - (eta/alpha) * <chi|V|Psi>
   ! ---------------------------------------------------------
-  subroutine update_field(oct, iter, cp, gr, td, hm, psi, chi, cpp, dir)
+  subroutine update_field(oct, iter, cp, gr, hm, psi, chi, cpp, dir)
     type(oct_t), intent(in) :: oct
     integer, intent(in)        :: iter
     type(oct_control_parameters_t), intent(inout) :: cp
     type(grid_t), intent(inout)   :: gr
-    type(td_t), intent(in)     :: td
     type(hamiltonian_t), intent(in) :: hm
     type(states_t), intent(inout) :: psi
     type(states_t), intent(inout) :: chi
     type(oct_control_parameters_t), intent(in) :: cpp
     character(len=1),intent(in) :: dir
 
-    type(states_t) :: oppsi
-    
     CMPLX :: d1
     CMPLX, allocatable  :: dl(:), dq(:)
-    integer :: ik, p, j, no_parameters
+    integer :: no_parameters
 
     call push_sub('propagation.update_field')
 
@@ -603,40 +595,9 @@ module opt_control_propagation_m
     ALLOCATE(dl(no_parameters), no_parameters)
     ALLOCATE(dq(no_parameters), no_parameters)
 
-    do j = 1, no_parameters
-      oppsi = psi
-      dl(j) = M_z0
-      do ik = 1, psi%d%nik
-        do p = 1, psi%nst
-          oppsi%zpsi(:, :, p, ik) = M_z0
-          call zvlaser_operator_linear(hm%ep%lasers(j), gr, hm%d, psi%zpsi(:, :, p, ik), &
-                                       oppsi%zpsi(:, :, p, ik), ik, hm%ep%gyromagnetic_ratio, hm%ep%a_static)
-          dl(j) = dl(j) + psi%occ(p, ik) * zmf_dotp(gr%mesh, psi%d%dim, chi%zpsi(:, :, p, ik), &
-            oppsi%zpsi(:, :, p, ik))
-        end do
-      end do
-      call states_end(oppsi)
-
-      ! The quadratic part should only be computed if necessary.
-      if(laser_kind(hm%ep%lasers(j)).eq.E_FIELD_MAGNETIC ) then
-        oppsi = psi
-        dq(j) = M_z0
-        do ik = 1, psi%d%nik
-          do p = 1, psi%nst
-            oppsi%zpsi(:, :, p, ik) = M_z0
-            call zvlaser_operator_quadratic(hm%ep%lasers(j), gr, hm%d, psi%zpsi(:, :, p, ik), oppsi%zpsi(:, :, p, ik))
-            dq(j) = dq(j) + psi%occ(p, ik)*zmf_dotp(gr%mesh, psi%d%dim, chi%zpsi(:, :, p, ik), oppsi%zpsi(:, :, p, ik))
-          end do
-        end do
-        call states_end(oppsi)
-      else
-        dq(j) = M_z0
-      end if
-    end do
-
+    call calculate_g(gr, hm, psi, chi, dl, dq)
     d1 = M_z1
     if(oct%algorithm .eq. oct_algorithm_zbr98) d1 = zstates_mpdotp(gr%mesh, psi, chi)
-
     call parameters_update(cp, cpp, dir, iter, oct%delta, oct%eta, d1, dl, dq)
 
     deallocate(dl, dq)

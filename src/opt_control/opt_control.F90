@@ -176,10 +176,6 @@ contains
     end if
 
 
-    ! Allocate the wavefunctions of sys%st
-    call states_allocate_wfns(sys%st, sys%gr%mesh, M_CMPLX)
-
-
     ! Read general information about how the OCT run will be made, from inp file.
     call oct_read_inp(oct)
 
@@ -473,11 +469,10 @@ contains
     ! ---------------------------------------------------------
     subroutine scheme_newuoa
 #if defined(HAVE_NEWUOA)
-      integer :: iprint, npt, maxfun, nvariables, sizeofw
+      integer :: iprint, npt, maxfun, sizeofw, dim
       REAL_DOUBLE :: rhobeg, rhoend
       REAL_DOUBLE, allocatable :: x(:), w(:), xl(:), xu(:)
       FLOAT :: f
-      integer :: dim
       type(states_t) :: psi
       call push_sub('opt_control.scheme_direct')
 
@@ -507,18 +502,15 @@ contains
 
       call parameters_par_to_x(par, x)
 
-      nvariables = parameters_dog(par)
       iprint = 2
-      npt = 2*nvariables + 1
+      npt = 2*dim + 1
       rhoend = oct_iterator_tolerance(iterator)
       rhobeg = oct%direct_step * M_PI
       maxfun = oct_iterator_maxiter(iterator)
-      sizeofw = (npt + 13)*(npt + nvariables) + 3 * nvariables*(nvariables + 3)/2 
+      sizeofw = (npt + 13)*(npt + dim) + 3 * dim*(dim + 3)/2 
       ALLOCATE(w(sizeofw), sizeofw)
       w = M_ZERO
-      
-      call newuoa(nvariables, npt, x(1:nvariables), rhobeg, rhoend, iprint, &
-        maxfun, w, direct_opt_calc)
+      call newuoa(dim, npt, x, rhobeg, rhoend, iprint, maxfun, w, direct_opt_calc)
 
       deallocate(x, xl, xu, w)
       call pop_sub()
