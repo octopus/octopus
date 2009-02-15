@@ -45,15 +45,18 @@ program harmonic_spectrum
 
   call getopt_init(ierr)
   if(ierr.ne.0) then
-    get_maxima = .false. 
-    ! Since we cannot get the fundamental frequency, we do not get the maxima.
-  else
-    get_maxima = .true.
-    w0 = M_ZERO
-    call getopt_harmonic_spectrum(w0)
-    if(w0 <= M_ZERO) get_maxima = .false.
+    write(stderr, '(a)') "Your fortran compiler doesn't support command line arguments;"
+    write(stderr, '(a)') "the oct-harmonic-spectrum command is not available."
+    stop
   end if
 
+  ! These are the default values.
+  get_maxima = .true.
+  w0 = M_ZERO
+  pol = 'x'
+  mode = 1
+  call getopt_harmonic_spectrum(w0, mode, pol)
+  if(w0 <= M_ZERO) get_maxima = .false.
 
   ! Initialize stuff
   call global_init()
@@ -67,61 +70,38 @@ program harmonic_spectrum
 
   call spectrum_init(s)
 
-  !%Variable HarmonicSpectrumPolarization
-  !%Type string
-  !%Default "z"
-  !%Section Utilities::oct-harmonic-spectrum
-  !%Description
-  !% The oct-harmonic-spectrum utility program needs to know the direction along
-  !% which the emission radiation is considered to be polarized. It may be
-  !% linearly polarized or circularly polarized.
-  !%Option "x"
-  !% Linearly polarized field in the x direction.
-  !%Option "y"
-  !% Linearly polarized field in the y direction.
-  !%Option "z"
-  !% Linearly polarized field in the z direction.
-  !%Option "+"
-  !% Circularly polarized field, counterclockwise.
-  !%Option "-"
-  !% Circularly polarized field, clockwise.
-  !%End
-  call loct_parse_string(datasets_check('HarmonicSpectrumPolarization'), 'z', txt)
-  pol = txt(1:1)
-  if(pol.ne.'x' .and. pol.ne.'y' .and. pol.ne.'z' .and. &
-     pol.ne.'+' .and. pol.ne.'-') then
-    call input_error('HarmonicSpectrumPolarization')
+  call obsolete_variable('HarmonicSpectrumPolarization')
+  call obsolete_variable('HarmonicSpectrumMode')
+
+  if( (pol.ne.'x') .and. &
+      (pol.ne.'y') .and. &
+      (pol.ne.'z') .and. &
+      (pol.ne.'+') .and. &
+      (pol.ne.'-') ) then
+    message(1) = 'The polarization direction given in the command line is not valid.'
+    call write_fatal(1)
+  end if
+  if( (mode.ne.HS_FROM_MULT) .and. &
+      (mode .ne.HS_FROM_ACC) ) then
+    message(1) = 'The harmonic spectrum mode given in the command line is not valid.'
+    call write_fatal(1)
   end if
 
-  !%Variable HarmonicSpectrumMode
-  !%Type integer
-  !%Default hs_from_dipole
-  !%Section Utilities::oct-harmonic-spectrum
-  !%Description
-  !% The oct-harmonic-spectrum may calculate the spectrum in two alternative ways,
-  !% mathematically equivalent but numerically diferent: by reading the dipole
-  !% moment (from the multipoles file) and calculating the acceleration numerically
-  !% from it, or by reading directly the acceleration from the acceleration file,
-  !% which may also be generated during a time-dependent run of octopus.
-  !%Option hs_from_dipole 1
-  !% Calculate the harmonic spectrum by numerically differentiating the multipoles file.
-  !%Option hs_from_acceleration 2
-  !% Calculate the harmonic spectrum by reading the acceleration file.
-  !%End
-  call loct_parse_int(datasets_check('HarmonicSpectrumMode'), HS_FROM_MULT, mode)
-  if(.not.varinfo_valid_option('HarmonicSpectrumMode', mode)) &
-    call input_error('HarmonicSpectrumMode')
-
-  if(.not.get_maxima) then
-    select case(mode)
-    case(HS_FROM_MULT)
+  select case(mode)
+  case(HS_FROM_MULT)
+    if(get_maxima) then
+      call spectrum_hs_from_mult('hs-mult-maxima', s, pol, w0)
+    else
       call spectrum_hs_from_mult('hs-mult', s, pol)
-    case(HS_FROM_ACC)
+    end if
+  case(HS_FROM_ACC)
+    if(get_maxima) then
+      call spectrum_hs_from_acc('hs-acc-maxima', s, pol, w0)
+    else
       call spectrum_hs_from_acc('hs-acc', s, pol)
-    end select
-  else
-    call spectrum_hs_maxima('hs-maxima', s, pol, w0)
-  end if
+    end if
+  end select
+
 
   call io_end()
   call datasets_end()

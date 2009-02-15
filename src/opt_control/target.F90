@@ -43,6 +43,8 @@ module opt_control_target_m
   use profiling_m
   use restart_m
   use timedep_m
+  use spectrum_m
+  use math_m
 
   implicit none
 
@@ -642,10 +644,10 @@ module opt_control_target_m
     type(grid_t),   intent(inout)   :: gr
     type(states_t), intent(inout)   :: psi
 
-    integer :: i, p, j, k, maxiter, nomegas
-    FLOAT :: t, omega, deltaw, j1_, a, maxhh, loghw
-    CMPLX :: dw
-    FLOAT, allocatable :: local_function(:), dipole(:), ddipole(:)
+    integer :: i, p, j, k, maxiter
+    FLOAT :: t, omega, a, maxhh, w
+    FLOAT, allocatable :: local_function(:)
+    CMPLX, allocatable :: ddipole(:)
     CMPLX, allocatable :: opsi(:, :)
 
     call push_sub('target.j1_functional')
@@ -689,64 +691,35 @@ module opt_control_target_m
 
       j1 = M_ONE
       do i = 1, target%excluded_states
-        j1 = j1 - abs(zmf_dotp(gr%mesh, psi%d%dim, target%st%zpsi(:, :, i, 1), psi%zpsi(:, :, 1, 1)))**2
+        j1 = j1 - abs(zmf_dotp(gr%mesh, psi%d%dim, &
+          target%st%zpsi(:, :, i, 1), psi%zpsi(:, :, 1, 1)))**2
       end do
 
     case(oct_tg_hhg)
+
       maxiter = size(target%td_fitness) - 1
-      ALLOCATE( dipole(0:maxiter), maxiter+1)
       ALLOCATE(ddipole(0:maxiter), maxiter+1)
-      dipole = M_ZERO; ddipole = M_ZERO
-      dipole(0:maxiter) = target%td_fitness(0:maxiter)
 
-      ! we now calculate the first time derivative
-      ddipole(0) = (dipole(1) - dipole(0))/target%dt
+      ddipole(0) = M_ZERO
       do i = 1, maxiter - 1
-        ddipole(i) = (dipole(i + 1) - dipole(i - 1))/(M_TWO*target%dt)
+        ddipole(i) = (target%td_fitness(i-1)+target%td_fitness(i+1)- &
+                      M_TWO*target%td_fitness(i))/target%dt**2
       end do
-      ddipole(maxiter) = (dipole(maxiter) - dipole(maxiter - 1))/target%dt
-      ! and the second time derivative
-      dipole(0) = (ddipole(1) - ddipole(0))/target%dt
-      do i = 1, maxiter - 1
-        dipole(i) = (ddipole(i + 1) - ddipole(i - 1))/(M_TWO*target%dt)
-      end do
-      dipole(maxiter) = (ddipole(maxiter) - ddipole(maxiter - 1))/target%dt
+      call interpolate( target%dt*(/ -3, -2, -1 /),   &
+                        ddipole(maxiter-3:maxiter-1), &
+                        M_ZERO, &
+                        ddipole(maxiter) )
 
-      ! This is hard coded here; probably it should be set in a more smart way.
-      nomegas = 1000
-      ! WARNING: temporarily, the code is just considering the maximum, and
-      ! not integrating over an interval. It remains to be seen which way is
-      ! better, or if we need to keep both.
-      j1 = M_ZERO
+      call spectrum_hsfunction_init(target%dt, 0, maxiter, maxiter, ddipole)
       do j = 1, target%hhg_nks
-
         a = target%hhg_a(j) * target%hhg_w0
-        deltaw = a / (nomegas-1)
-        maxhh = CNST(-1.0e10)
-        do k = 1, nomegas
-          omega = target%hhg_k(j) * target%hhg_w0 - a*M_HALF + deltaw * (k-1)
-          dw = M_z0
-          do i = 0, maxiter
-            t = i*target%dt
-            dw = dw + dipole(i) * exp(-M_zI*omega*t)
-          end do
-          j1_ = (target%hhg_alpha(j) / a) * log(conjg(dw)*dw * (target%dt)**2) * deltaw
-          if(k.eq.1 .or. k.eq.nomegas) j1_ = M_HALF * j1_
-          !j1 = j1 + j1_
-          loghw = log(conjg(dw)*dw * (target%dt)**2)
-          !write(0, '(2i6,3f20.8)') j, target%hhg_k(j), target%hhg_alpha(j), omega, loghw
-          if( loghw > maxhh ) then
-            maxhh = log(conjg(dw)*dw * (target%dt)**2)
-          end if
-        end do
-        !write(0, *) '=========================================================='
-        !write(0, *) j, target%hhg_k(j), target%hhg_alpha(j), maxhh
-        !write(0, *) '=========================================================='
-        j1 = j1 + target%hhg_alpha(j) * maxhh
-
+        w = target%hhg_k(j)*target%hhg_w0
+        call spectrum_hsfunction_min(w -a, w +a, w, omega, maxhh)
+        j1 = j1 + target%hhg_alpha(j) * log(-maxhh)
       end do
+      call spectrum_hsfunction_end()
 
-      deallocate(dipole, ddipole)
+      deallocate(ddipole)
 
     case default
       j1 = abs(zstates_mpdotp(gr%mesh, psi, target%st))**2

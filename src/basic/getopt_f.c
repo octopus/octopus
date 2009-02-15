@@ -189,16 +189,34 @@ void harmonic_spectrum_help(){
   printf("Options:\n");
   printf("  -h              Print this help and exits.\n");
   printf("  -w <freq>       Specifies the fundamental frequency.\n");
+  printf("  -p <pol>        Specifies the direction of the light polarization.\n");
+  printf("                  The oct-harmonic-spectrum utility program needs to know\n");
+  printf("                  the direction along which the emission radiation is\n");
+  printf("                  considered to be polarized. It may be linearly polarized\n");
+  printf("                  or circularly polarized. The valid options are:\n");
+  printf("                     'x' : Linearly polarized field in the x direction.\n");
+  printf("                     'y' : Linearly polarized field in the x direction.\n");
+  printf("                     'z' : Linearly polarized field in the x direction.\n");
+  printf("                     '+' : Circularly polarized field, counterclockwise.\n");
+  printf("                     '-' : Circularly polarized field, clockwise.\n");
+  printf("                  The default is 'x'\n");
+  printf("  -m <mode>       Whether the harmonic spectrum is computed by taking the\n");
+  printf("                  second derivative of the dipole moment numerically, or by\n");
+  printf("                  making use of the acceleration operator, stored in the\n:");
+  printf("                  'acceleration' file. The options are:\n");
+  printf("                     '1' : use the dipole, take second derivative numerically.\n");
+  printf("                     '2' : use the acceleration file.\n");
+  printf("                  The default is '1'\n");
   exit(-1);
 }
 
 void FC_FUNC_(getopt_harmonic_spectrum, GETOPT_HARMONIC_SPECTRUM)
-     (double *w0)
+     (double *w0, int *m, STR_F_TYPE pol STR_ARG1)
 {
   int c;
 
   while (1) {
-    c = getopt(argc, argv, "hw:");
+    c = getopt(argc, argv, "hw:p:m:");
     if (c == -1) break;
     switch (c) {
 
@@ -208,6 +226,14 @@ void FC_FUNC_(getopt_harmonic_spectrum, GETOPT_HARMONIC_SPECTRUM)
 
     case 'w':
       *w0 = (double)atof(optarg);
+      break;
+
+    case 'p':
+      TO_F_STR1(optarg, pol);
+      break;
+
+    case 'm':
+      *m = (int)atoi(optarg);
       break;
 
     case '?':
