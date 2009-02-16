@@ -460,7 +460,7 @@ contains
       !% is contained in the simulation box, while any other color means that the point is out.
       !%Option user_defined 123
       !% The shape of the simulation box will be read from the variable <tt>BoxShapeUsDef</tt>
-      !%Option hypercube 7
+      !%Option hypercube 6
       !% (experimental) The simulation box will an hypercube or
       !% hyperparallelepiped, this is equivalent to the
       !% <tt>parallelepiped</tt> box but it can work with an arbitrary
@@ -991,12 +991,13 @@ contains
     type(simul_box_t), intent(in) :: sb
     integer,           intent(in) :: iunit
 
-    character(len=15), parameter :: bs(5) = (/ &
+    character(len=15), parameter :: bs(6) = (/ &
       'sphere        ', &
       'cylinder      ', &
       'minimum       ', &
       'parallelepiped', &
-      'image defined '/)
+      'image defined ', &
+      'hypercube     '/)
 
     integer :: ii
 

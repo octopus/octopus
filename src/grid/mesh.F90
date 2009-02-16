@@ -446,12 +446,13 @@ contains
     type(mesh_t), intent(in) :: mesh
     integer,      intent(in) :: iunit
 
-    integer :: ip
+    integer :: ip, ix(1:MAX_DIM)
 
     call push_sub('mesh.Lxyz_dump')
 
     do ip = 1, mesh%np_part
-      write(iunit, '(7i8)') mesh%idx%Lxyz(ip, 1:mesh%sb%dim)
+      call index_to_coords(mesh%idx, mesh%sb%dim, ip, ix)
+      write(iunit, '(7i8)') ix(1:mesh%sb%dim)
     end do
 
     call pop_sub()

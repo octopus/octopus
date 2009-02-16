@@ -28,12 +28,14 @@ module hypercube_m
 
   private
 
-  public ::                  &
-       hypercube_t,          &
-       hypercube_init,       &
-       hypercube_end,        &
-       hypercube_i_to_x,     &
-       hypercube_x_to_i
+  public ::                           &
+       hypercube_t,                   &
+       hypercube_init,                &
+       hypercube_end,                 &
+       hypercube_i_to_x,              &
+       hypercube_x_to_i,              &
+       hypercube_number_inner_points, &
+       hypercube_number_total_points
 
   type hypercube_t
     integer, pointer :: boxdim(:)
@@ -63,17 +65,17 @@ contains
       this%boxdim(1) = this%boxdim(1)*(npoints(jj)-2*enlarge)
     enddo
 
-!all other boxes are boundary points
-
-do ii=2, ndim+1
-  do jj=1, ii-2
-    this%boxdim(ii)=this%boxdim(ii)*(npoints(jj)-2*enlarge)
-  enddo
-  this%boxdim(ii)=this%boxdim(ii)*2*enlarge
-  do jj=ii, ndim
-    this%boxdim(ii)=this%boxdim(ii)*npoints(jj)
-  enddo
-enddo
+    !all other boxes are boundary points
+    
+    do ii=2, ndim+1
+      do jj=1, ii-2
+        this%boxdim(ii)=this%boxdim(ii)*(npoints(jj)-2*enlarge)
+      enddo
+      this%boxdim(ii)=this%boxdim(ii)*2*enlarge
+      do jj=ii, ndim
+        this%boxdim(ii)=this%boxdim(ii)*npoints(jj)
+      enddo
+    enddo
 
   end subroutine hypercube_init
 
@@ -238,5 +240,17 @@ enddo
     deallocate(border, npoints)
 
   end subroutine hypercube_i_to_x
+
+  pure integer function hypercube_number_inner_points(this) result(number)
+    type(hypercube_t), intent(in)  :: this
+    
+    number = this%boxdim(1)
+  end function hypercube_number_inner_points
+
+  pure integer function hypercube_number_total_points(this) result(number)
+    type(hypercube_t), intent(in)  :: this
+    
+    number = sum(this%boxdim)
+  end function hypercube_number_total_points
   
 end module hypercube_m

@@ -130,8 +130,6 @@ subroutine mesh_init_stage_1(sb, mesh, geo, cv, enlarge)
 
   mesh%idx%ll(:) = mesh%idx%nr(2, :) - mesh%idx%nr(1, :) + 1
 
-  if(mesh%idx%sb%box_shape == HYPERCUBE) call hypercube_init(mesh%idx%hypercube, sb%dim, mesh%idx%nr, mesh%idx%enlarge(1))
-
   call profiling_out(mesh_init_prof)
   call pop_sub()
 
@@ -190,6 +188,21 @@ subroutine mesh_init_stage_2(sb, mesh, geo, cv, stencil)
   ! enlarge mesh for boundary points
   mesh%idx%nr(1,:) = mesh%idx%nr(1,:) - mesh%idx%enlarge(:)
   mesh%idx%nr(2,:) = mesh%idx%nr(2,:) + mesh%idx%enlarge(:)
+
+  if(mesh%idx%sb%box_shape == HYPERCUBE) then
+    call hypercube_init(mesh%idx%hypercube, sb%dim, mesh%idx%nr, mesh%idx%enlarge(1))
+    mesh%np_part_global = hypercube_number_total_points(mesh%idx%hypercube)
+    mesh%np_global      = hypercube_number_inner_points(mesh%idx%hypercube)
+
+    nullify(mesh%idx%Lxyz_inv)
+    nullify(mesh%idx%Lxyz_tmp)
+    nullify(mesh%idx%Lxyz)
+    nullify(mesh%x_tmp)
+
+    call profiling_out(mesh_init_prof)
+    call pop_sub()
+    return
+  end if
 
   nr = mesh%idx%nr
 
@@ -293,6 +306,9 @@ subroutine mesh_init_stage_3(mesh, geo, cv, stencil, mpi_grp, parent)
   type(mpi_grp_t), optional, intent(in)    :: mpi_grp
   type(mesh_t), optional,    intent(in)    :: parent
 
+  integer :: ip, ix(1:MAX_DIM)
+  FLOAT   :: chi(1:MAX_DIM)
+
   call push_sub('mesh_init.mesh_init_stage_3')
   call profiling_in(mesh_init_prof)
 
@@ -300,8 +316,30 @@ subroutine mesh_init_stage_3(mesh, geo, cv, stencil, mpi_grp, parent)
   mesh%parallel_in_domains = .false.
   if(present(mpi_grp)) mesh%parallel_in_domains = .true.
 
-  call create_x_Lxyz()
 
+  if(mesh%parallel_in_domains) then
+    ! Node 0 has to store all entries from x (in x_global)
+    ! as well as the local set in x (see below).
+    ALLOCATE(mesh%x_global(mesh%np_part_global, MAX_DIM), mesh%np_part_global*MAX_DIM)
+  else
+    ! When running parallel, x is computed later.
+    ALLOCATE(mesh%x(mesh%np_part_global, MAX_DIM), mesh%np_part_global*MAX_DIM)
+    ! in the serial case x_global is the same as x
+    mesh%x_global => mesh%x
+  end if
+
+  if(mesh%idx%sb%box_shape /= HYPERCUBE) then
+    call create_x_Lxyz()
+  else
+    ! generate x_global directly
+    do ip = 1, mesh%np_part_global
+      call index_to_coords(mesh%idx, mesh%sb%dim, ip, ix)
+      chi(1:mesh%sb%dim) = ix(1:mesh%sb%dim)*mesh%h(1:mesh%sb%dim)
+      chi(mesh%sb%dim + 1:MAX_DIM) = M_ZERO
+      call curvlinear_chi2x(mesh%sb, geo, cv, chi, mesh%x_global(ip, :))
+    end do
+  end if
+  
   if(mesh%parallel_in_domains) then
     ASSERT(present(stencil))
     
@@ -322,7 +360,8 @@ subroutine mesh_init_stage_3(mesh, geo, cv, stencil, mpi_grp, parent)
   call mesh_get_vol_pp(mesh%sb)
 
   ! these large arrays were allocated in mesh_init_1, and are no longer needed
-  deallocate(mesh%idx%Lxyz_tmp, mesh%x_tmp)
+  DEALLOC(mesh%idx%Lxyz_tmp)
+  DEALLOC(mesh%x_tmp)
 
   call mesh_pbc_init()
 
@@ -337,18 +376,6 @@ contains
     integer :: ixb, iyb, izb, bsize, bsizez
 
     ALLOCATE(mesh%idx%Lxyz(mesh%np_part_global, MAX_DIM), mesh%np_part_global*MAX_DIM)
-    if(mesh%parallel_in_domains) then
-      ! Node 0 has to store all entries from x (in x_global)
-      ! as well as the local set in x (see below).
-      ALLOCATE(mesh%x_global(mesh%np_part_global, MAX_DIM), mesh%np_part_global*MAX_DIM)
-    else
-      ! When running parallel, x is computed later.
-      ALLOCATE(mesh%x(mesh%np_part_global, MAX_DIM), mesh%np_part_global*MAX_DIM)
-
-      ! This is a bit ugly: x_global is needed in out_in
-      ! but in the serial case it is the same as x
-      mesh%x_global => mesh%x
-    end if
 
     !%Type integer
     !%Default 20
@@ -579,15 +606,16 @@ contains
 #endif
     else ! serial mode
       do i = 1, mesh%np_part
-        jj(1:sb%dim) = mesh%idx%Lxyz(i, 1:sb%dim)
+        if(mesh%idx%sb%box_shape /= HYPERCUBE) then
+          jj(1:sb%dim) = mesh%idx%Lxyz(i, 1:sb%dim)
+        else
+          call index_to_coords(mesh%idx, sb%dim, i, jj)
+        end if
         jj(sb%dim + 1:MAX_DIM) = 0
         chi(1:sb%dim) = jj(1:sb%dim)*mesh%h(1:sb%dim)
-        if(simul_box_multires(mesh%sb)) then
-          mesh%vol_pp(i) = mesh%resolution(jj(1), jj(2), jj(3))**sb%dim*&
-               mesh%vol_pp(i)*curvlinear_det_Jac(sb, geo, cv, mesh%x(i, 1:sb%dim), chi(1:sb%dim))
-        else
-          mesh%vol_pp(i) = mesh%vol_pp(i)*curvlinear_det_Jac(sb, geo, cv, mesh%x(i, 1:sb%dim), chi(1:sb%dim))
-        end if
+
+        mesh%vol_pp(i) = mesh%vol_pp(i)*curvlinear_det_Jac(sb, geo, cv, mesh%x(i, 1:sb%dim), chi(1:sb%dim))
+        if(simul_box_multires(mesh%sb)) mesh%vol_pp(i) = mesh%resolution(jj(1), jj(2), jj(3))**sb%dim
       end do
     end if
 
