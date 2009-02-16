@@ -806,7 +806,7 @@ contains
 
       if(states_are_complex(st) .and. em_vars%nsigma == 2) then       
 
-        message(1) = "Info: Calculating circular dichroism"
+        message(1) = "Info: Calculating rotatory response."
         call write_info(1)
 
         call pert_init(angular_momentum, PERTURBATION_MAGNETIC, gr, geo)
