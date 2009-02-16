@@ -162,7 +162,7 @@ contains
     else
       !just return the full grid
       nrk = nx*ny*nz
-      rk(1:MAX_DIM, 1:nrk) = xk(1:MAX_DIM, 1:nrk)
+      rk(1:3, 1:nrk) = xk(1:3, 1:nrk)
       w(1:nrk) = M_ONE/real(nrk, REAL_PRECISION)
     end if
     

@@ -340,6 +340,7 @@ contains
     nullify(mesh_out%lead_unit_cell)
 
     mesh_out%sb             => mesh_in%sb
+    mesh_out%idx%sb         => mesh_in%idx%sb
     mesh_out%use_curvlinear =  mesh_in%use_curvlinear
 
     mesh_out%h(:)    = 2*mesh_in%h(:)
@@ -365,6 +366,7 @@ contains
     nullify(mesh_out%lead_unit_cell)
 
     mesh_out%sb             => mesh_in%sb
+    mesh_out%idx%sb         => mesh_in%idx%sb
     mesh_out%use_curvlinear =  mesh_in%use_curvlinear
     
     mesh_out%h(:)    = M_HALF*mesh_in%h(:)

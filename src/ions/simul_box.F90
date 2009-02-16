@@ -952,7 +952,7 @@ contains
     FLOAT :: tmp(1:MAX_DIM)
 
 
-    tmp = dcross_product(rv(1:3, 2), rv(1:3, 3)) 
+    tmp(1:3) = dcross_product(rv(1:3, 2), rv(1:3, 3)) 
     volume = dot_product(rv(1:3, 1), tmp(1:3))
 
     if ( volume < M_ZERO ) then 
@@ -960,9 +960,9 @@ contains
       call write_fatal(1)
     end if
 
-    kv(:, 1) = dcross_product(rv(:, 2), rv(:, 3))/volume
-    kv(:, 2) = dcross_product(rv(:, 3), rv(:, 1))/volume
-    kv(:, 3) = dcross_product(rv(:, 1), rv(:, 2))/volume    
+    kv(1:3, 1) = dcross_product(rv(:, 2), rv(:, 3))/volume
+    kv(1:3, 2) = dcross_product(rv(:, 3), rv(:, 1))/volume
+    kv(1:3, 3) = dcross_product(rv(:, 1), rv(:, 2))/volume    
   end subroutine reciprocal_lattice
 
 

@@ -293,7 +293,7 @@ contains
   ! --------------------------------------------------------------------------
   subroutine magnetic()
     R_TYPE, allocatable :: f_in2(:,:), dnl(:,:), vrnl(:,:), xf(:)
-    R_TYPE :: cross1(1:MAX_DIM), bdir(1:MAX_DIM, 2)
+    R_TYPE :: cross1(1:3), bdir(1:MAX_DIM, 2)
     FLOAT  :: rdelta
     R_TYPE :: contr
 
