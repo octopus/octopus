@@ -1,4 +1,4 @@
-!! Copyright (C) 2009 N. Helbig
+!! Copyright (C) 2009 N. Helbig, X. Andrade
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-module hypercube
+module hypercube_m
   use global_m
   use messages_m
   use profiling_m
@@ -29,22 +29,70 @@ module hypercube
   private
 
   public ::                  &
+       hypercube_t,          &
+       hypercube_init,       &
+       hypercube_end,        &
        hypercube_i_to_x,     &
        hypercube_x_to_i
 
+  type hypercube_t
+    integer, pointer :: boxdim(:)
+  end type hypercube_t
+
 contains
 
-  subroutine hypercube_x_to_i(ndim, nr, enlarge, boxdim, coord, icoord)
-    integer, intent(in ):: ndim, enlarge
-    integer, intent(in) :: coord(1:ndim), boxdim(1:ndim+1)
-    integer, intent(in) :: nr(1:2,1:ndim)
-    integer, intent(out):: icoord
+  subroutine hypercube_init(this, ndim, nr, enlarge)
+    type(hypercube_t), intent(out) :: this
+    integer,           intent(in)  :: ndim
+    integer,           intent(in)  :: nr(:, :)
+    integer,           intent(in)  :: enlarge
+
+    integer, allocatable :: npoints(:)
+    integer :: ii, jj
+
+    ALLOCATE(this%boxdim(1:ndim + 1), ndim + 1)
+    ALLOCATE(npoints(1:ndim), ndim)
+
+    forall (ii = 1:ndim) npoints(ii) = nr(2,ii) - nr(1,ii) + 1
+    
+    !number of points in each box
+    this%boxdim=1
+
+    !first box is inner points
+    do jj=1, ndim
+      this%boxdim(1) = this%boxdim(1)*(npoints(jj)-2*enlarge)
+    enddo
+
+!all other boxes are boundary points
+
+do ii=2, ndim+1
+  do jj=1, ii-2
+    this%boxdim(ii)=this%boxdim(ii)*(npoints(jj)-2*enlarge)
+  enddo
+  this%boxdim(ii)=this%boxdim(ii)*2*enlarge
+  do jj=ii, ndim
+    this%boxdim(ii)=this%boxdim(ii)*npoints(jj)
+  enddo
+enddo
+
+  end subroutine hypercube_init
+
+  subroutine hypercube_end(this)
+    type(hypercube_t), intent(inout) :: this
+
+    deallocate(this%boxdim)
+  end subroutine hypercube_end
+
+  subroutine hypercube_x_to_i(this, ndim, nr, enlarge, coord, icoord)
+    type(hypercube_t), intent(in)  :: this
+    integer,           intent(in)  :: ndim, enlarge
+    integer,           intent(in)  :: coord(1:ndim)
+    integer,           intent(in)  :: nr(1:2,1:ndim)
+    integer,           intent(out) :: icoord
 
     integer:: boxnumb
     integer, allocatable:: border(:), npoints(:), lowerb(:), tempcoord(:)
     integer:: ii, jj
-
-    call push_sub('hypercube.hypercube_x_to_i')
 
     ALLOCATE(border(1:ndim), ndim)
     ALLOCATE(npoints(1:ndim), ndim)
@@ -84,7 +132,7 @@ contains
         icoord = icoord + tempcoord(ii) - border(ii)
       enddo
       icoord = icoord+1
-      if(icoord > boxdim(1) .or. icoord < 1) then
+      if(icoord > this%boxdim(1) .or. icoord < 1) then
         message(1) = "Hypercube: Error, box point outside box"
         call write_fatal(1)
       endif
@@ -99,33 +147,30 @@ contains
         icoord = icoord + (tempcoord(jj) - lowerb(jj))
       enddo
       icoord = icoord + 1    
-      if(icoord > boxdim(boxnumb) .or. icoord < 1) then
+      if(icoord > this%boxdim(boxnumb) .or. icoord < 1) then
         message(1) = "Hypercube: Error, box point outside box"
         call write_fatal(1)
       else
         do jj= 1, boxnumb - 1
-          icoord = icoord + boxdim(jj)
+          icoord = icoord + this%boxdim(jj)
         enddo
       endif
     endif
 
     deallocate(border, npoints)
 
-    call pop_sub()
-
   end subroutine hypercube_x_to_i
 
-  subroutine hypercube_i_to_x(ndim, nr, enlarge, boxdim, coord, icoord)
-    integer, intent(in) :: ndim, enlarge
-    integer, intent(in) :: icoord, boxdim(1:ndim+1)
-    integer, intent(in) :: nr(1:2,1:ndim)
-    integer, intent(out):: coord(1:ndim)
+  subroutine hypercube_i_to_x(this, ndim, nr, enlarge, icoord, coord)
+    type(hypercube_t), intent(in)  :: this
+    integer,           intent(in)  :: ndim, enlarge
+    integer,           intent(in)  :: nr(1:2,1:ndim)
+    integer,           intent(in)  :: icoord
+    integer,           intent(out) :: coord(1:ndim)
 
     integer:: boxnumb, tempcoord
     integer, allocatable:: border(:), npoints(:), lowerb(:)
     integer:: ii, jj
-
-    call push_sub('hypercube.hypercube_i_to_x')
 
     ALLOCATE(border(1:ndim), ndim)
     ALLOCATE(npoints(1:ndim), ndim)
@@ -136,7 +181,7 @@ contains
     jj = 0
 
     do ii = 1, ndim
-      jj = jj + boxdim(ii)  
+      jj = jj + this%boxdim(ii)  
       if(icoord > jj) then
         boxnumb = ii + 1
       endif
@@ -163,10 +208,10 @@ contains
       do ii = 1, boxnumb - 2
         npoints(ii) = npoints(ii) - 2*enlarge
         lowerb(ii) = nr(1,ii) + 2*enlarge
-        tempcoord = tempcoord - boxdim(ii)
+        tempcoord = tempcoord - this%boxdim(ii)
       enddo
       npoints(boxnumb - 1) = 2*enlarge
-      tempcoord = tempcoord - boxdim(boxnumb-1)
+      tempcoord = tempcoord - this%boxdim(boxnumb-1)
       tempcoord = tempcoord - 1
       do ii = 1, ndim
         coord(ii) = mod(tempcoord, npoints(ii))
@@ -192,8 +237,6 @@ contains
 
     deallocate(border, npoints)
 
-    call pop_sub()
-
   end subroutine hypercube_i_to_x
   
-end module hypercube
+end module hypercube_m

@@ -60,6 +60,7 @@ module simul_box_m
     MINIMUM        = 3,         &
     PARALLELEPIPED = 4,         &
     BOX_IMAGE      = 5,         &
+    HYPERCUBE      = 6,         &
     BOX_USDEF      = 123
 
   integer, parameter, public :: &
@@ -459,7 +460,13 @@ contains
       !% is contained in the simulation box, while any other color means that the point is out.
       !%Option user_defined 123
       !% The shape of the simulation box will be read from the variable <tt>BoxShapeUsDef</tt>
+      !%Option hypercube 7
+      !% (experimental) The simulation box will an hypercube or
+      !% hyperparallelepiped, this is equivalent to the
+      !% <tt>parallelepiped</tt> box but it can work with an arbitrary
+      !% number of dimensions.
       !%End
+
       call loct_parse_int(datasets_check('BoxShape'), MINIMUM, sb%box_shape)
       if(.not.varinfo_valid_option('BoxShape', sb%box_shape)) call input_error('BoxShape')
       select case(sb%box_shape)
@@ -516,24 +523,26 @@ contains
       end if
 
       sb%lsize = M_ZERO
-      if(sb%box_shape == PARALLELEPIPED .or. sb%box_shape == BOX_IMAGE .or. sb%box_shape == BOX_USDEF) then
+      if(sb%box_shape == PARALLELEPIPED .or.sb%box_shape == HYPERCUBE .or. &
+           sb%box_shape == BOX_IMAGE .or. sb%box_shape == BOX_USDEF) then
 
         !%Variable Lsize
         !%Type block
         !%Section Mesh::Simulation Box
         !%Description
-        !% In case BoxShape is "parallelepiped", "box_image", or "user_defined", this is assumed to be a block of the form:
+        !% In case BoxShape is "parallelepiped", "hypercube",
+        !% "box_image", or "user_defined", this is assumed to be a
+        !% block of the form:
         !%
         !% <tt>%Lsize
-        !% <br>&nbsp;&nbsp;sizex | sizey | sizez
+        !% <br>&nbsp;&nbsp;sizex | sizey | sizez | ...
         !% <br>%</tt>
         !%
         !% where the "size*" are half the lengths of the box in each direction.
         !%
-        !% If BoxShape is "parallelepiped", this block has to be
-        !% defined in the input file. The number of columns must match
-        !% the dimensionality of the calculation. If you want a cube
-        !% you can also set Lsize as a single variable.
+        !% The number of columns must match the dimensionality of the
+        !% calculation. If you want a cube you can also set Lsize as a
+        !% single variable.
         !%End
 
         if(loct_parse_block(datasets_check('Lsize'), blk) == 0) then
@@ -1100,7 +1109,7 @@ contains
     case(MINIMUM)
       in_box = in_minimum()
 
-    case(PARALLELEPIPED) 
+    case(PARALLELEPIPED, HYPERCUBE) 
       llimit(1:sb%dim) = -sb%lsize(1:sb%dim) - DELTA
       ulimit(1:sb%dim) =  sb%lsize(1:sb%dim) + DELTA
       ulimit(1:sb%periodic_dim) = sb%lsize(1:sb%periodic_dim) - DELTA

@@ -24,6 +24,7 @@ module mesh_init_m
   use curvlinear_m
   use geometry_m
   use global_m
+  use hypercube_m
   use io_m
   use math_m
   use mesh_m
@@ -68,7 +69,8 @@ subroutine mesh_init_stage_1(sb, mesh, geo, cv, enlarge)
   call push_sub('mesh_init.mesh_init_stage_1')
   call profiling_in(mesh_init_prof, "MESH_INIT")
 
-  mesh%sb => sb   ! keep an internal pointer
+  mesh%sb => sb     ! keep an internal pointer
+  mesh%idx%sb => sb
   mesh%h  =  sb%h ! this number can change in the following
   mesh%use_curvlinear = cv%method.ne.CURV_METHOD_UNIFORM
 
@@ -127,6 +129,8 @@ subroutine mesh_init_stage_1(sb, mesh, geo, cv, enlarge)
   end if
 
   mesh%idx%ll(:) = mesh%idx%nr(2, :) - mesh%idx%nr(1, :) + 1
+
+  if(mesh%idx%sb%box_shape == HYPERCUBE) call hypercube_init(mesh%idx%hypercube, sb%dim, mesh%idx%nr, mesh%idx%enlarge(1))
 
   call profiling_out(mesh_init_prof)
   call pop_sub()

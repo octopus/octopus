@@ -24,6 +24,7 @@ module mesh_m
   use curvlinear_m
   use geometry_m
   use global_m
+  use hypercube_m
   use io_m
   use math_m
   use index_m
@@ -561,6 +562,8 @@ contains
 #endif
 
     call push_sub('mesh.mesh_end')
+
+    if(m%idx%sb%box_shape == HYPERCUBE) call hypercube_end(m%idx%hypercube)
 
     DEALLOC(m%resolution)
     DEALLOC(m%idx%lxyz)

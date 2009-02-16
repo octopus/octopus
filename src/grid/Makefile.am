@@ -53,7 +53,7 @@ curv_gygi.o : curv_gygi.F90
 curv_briggs.o : curv_briggs.F90  
 curv_modine.o : curv_modine.F90  
 curvlinear.o : curvlinear.F90  curv_modine.o curv_gygi.o curv_briggs.o 
-index.o : index.F90 
+index.o : index.F90 hypercube.o
 par_vec.o : par_vec.F90 par_vec_inc.F90 index.o stencil.o
 mesh.o : mesh.F90 par_vec.o index.o curvlinear.o
 mesh_init.o : mesh_init.F90 mesh.o par_vec.o zoltan.o
