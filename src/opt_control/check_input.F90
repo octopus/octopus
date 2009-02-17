@@ -157,9 +157,12 @@
     end if
 
     if( hm%ab .eq. MASK_ABSORBING) then
-      write(message(1), '(a)') 'Cannot do QOCT with mask absorbing boundaries. Use either'
-      write(message(2), '(a)') '"AbsorbingBoudaries = sin2" or "AbsorbingBoundaries = no".'
-      call write_fatal(2)
+      if( (oct%algorithm .ne. oct_algorithm_direct) .and. &
+          (oct%algorithm .ne. oct_algorithm_newuoa) ) then
+        write(message(1), '(a)') 'Cannot do QOCT with mask absorbing boundaries. Use either'
+        write(message(2), '(a)') '"AbsorbingBoudaries = sin2" or "AbsorbingBoundaries = no".'
+        call write_fatal(2)
+      end if
     end if
 
     if(target_type(target) .eq. oct_tg_exclude_state ) then
