@@ -478,7 +478,7 @@ contains
     integer :: icell
     type(periodic_copy_t) :: pp
 
-    call push_sub('species_grid.species_get_density')
+    call push_sub('species_pot.species_get_density')
 
     select case(s%type)
 
