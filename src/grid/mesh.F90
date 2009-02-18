@@ -425,6 +425,9 @@ contains
 
     ASSERT(mesh%sb%dim > 0 .and. mesh%sb%dim <= MAX_DIM)
 
+    mesh%idx%nr = 0
+    mesh%idx%ll = 0
+    mesh%idx%enlarge = 0
     read(iunit, '(a20,7i8)')  str, mesh%idx%nr(1, 1:mesh%sb%dim)
     read(iunit, '(a20,7i8)')  str, mesh%idx%nr(2, 1:mesh%sb%dim)
     read(iunit, '(a20,7i8)')  str, mesh%idx%ll(1:mesh%sb%dim)
@@ -434,7 +437,7 @@ contains
     read(iunit, '(a20,1i10)') str, mesh%np_global
     read(iunit, '(a20,1i10)') str, mesh%np_part_global
     nullify(mesh%idx%lxyz, mesh%idx%lxyz_inv, mesh%x_tmp, mesh%idx%lxyz_tmp, mesh%boundary_indices, mesh%x, &
-      mesh%x_global, mesh%vol_pp, mesh%per_points, mesh%per_map, mesh%lead_unit_cell)
+      mesh%x_global, mesh%vol_pp, mesh%per_points, mesh%per_map, mesh%lead_unit_cell, mesh%resolution)
     mesh%parallel_in_domains = .false.
 
     call pop_sub()
@@ -465,15 +468,18 @@ contains
     type(mesh_t), intent(inout) :: mesh
     integer,      intent(in)    :: iunit
 
-    integer :: ip
+    integer :: ip, idir, ix(MAX_DIM)
 
     call push_sub('mesh.mesh_lxyz_init_from_file')
 
     ASSERT(mesh%sb%dim > 0 .and. mesh%sb%dim <= MAX_DIM)
 
     do ip = 1, mesh%np_part
-      read(iunit, '(7i8)') mesh%idx%lxyz(ip, 1:mesh%sb%dim)
-      mesh%idx%lxyz_inv(mesh%idx%lxyz(ip, 1), mesh%idx%lxyz(ip, 2), mesh%idx%lxyz(ip, 3)) = ip
+      read(iunit, '(7i8)') mesh%idx%Lxyz(ip, 1:mesh%sb%dim)
+      forall (idir = 1:mesh%sb%dim) ix(idir) = mesh%idx%Lxyz(ip, idir)
+      forall (idir = mesh%sb%dim + 1:MAX_DIM) ix(idir) = 0
+      ! FIXME 4D
+      mesh%idx%Lxyz_inv(ix(1), ix(2), ix(3)) = ip
     end do
 
     call pop_sub()
@@ -553,10 +559,12 @@ contains
 
 
   ! --------------------------------------------------------------
-  recursive subroutine mesh_end(m)
-    type(mesh_t), intent(inout) :: m
+  recursive subroutine mesh_end(m, is_lead)
+    type(mesh_t), intent(inout)   :: m
+    logical, intent(in), optional :: is_lead
 
     integer :: il
+    logical :: is_lead_
 
 #ifdef HAVE_MPI
     integer :: ipart
@@ -564,7 +572,15 @@ contains
 
     call push_sub('mesh.mesh_end')
 
-    if(m%idx%sb%box_shape == HYPERCUBE) call hypercube_end(m%idx%hypercube)
+    if (present(is_lead)) then
+      is_lead_ = is_lead
+    else
+      is_lead_ = .false.
+    end if
+
+    if (.not.is_lead_) then
+      if(m%idx%sb%box_shape == HYPERCUBE) call hypercube_end(m%idx%hypercube)
+    end if
 
     DEALLOC(m%resolution)
     DEALLOC(m%idx%lxyz)
@@ -601,8 +617,9 @@ contains
 
     if(associated(m%lead_unit_cell)) then
       do il = 1, NLEADS
-        call mesh_end(m%lead_unit_cell(il))
+        call mesh_end(m%lead_unit_cell(il), .true.)
       end do
+      nullify(m%lead_unit_cell)
     end if
     
     call pop_sub()
