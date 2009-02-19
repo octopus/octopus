@@ -786,10 +786,10 @@ contains
       end do
 
       call reciprocal_lattice(sb%rlattice, sb%klattice_unitary, sb%volume_element)
-
+      
       sb%klattice = M_ZERO
       do idim = 1, sb%periodic_dim
-        sb%klattice(:, idim) = sb%klattice_unitary(:, idim)*M_TWO*M_PI/(M_TWO*sb%lsize(idim))
+        sb%klattice(1:MAX_DIM, idim) = sb%klattice_unitary(1:MAX_DIM, idim)*M_TWO*M_PI/(M_TWO*sb%lsize(idim))
       end do
 
       call pop_sub()
@@ -951,6 +951,8 @@ contains
 
     FLOAT :: tmp(1:MAX_DIM)
 
+    
+    kv = M_ZERO
 
     tmp(1:3) = dcross_product(rv(1:3, 2), rv(1:3, 3)) 
     volume = dot_product(rv(1:3, 1), tmp(1:3))

@@ -432,7 +432,7 @@ contains
       ALLOCATE(hm%phase(1:NP_PART, 1:hm%d%nik), NP_PART*hm%d%nik)
 
       forall (ik = 1:hm%d%nik, ip = 1:NP_PART)
-        hm%phase(ip, ik) = exp(-M_zI*sum(gr%mesh%x(ip, 1:MAX_DIM)* hm%d%kpoints(1:MAX_DIM, ik)))
+        hm%phase(ip, ik) = exp(-M_zI*sum(gr%mesh%x(ip, 1:gr%mesh%sb%dim)* hm%d%kpoints(1:gr%mesh%sb%dim, ik)))
       end forall
       
     end subroutine init_phase

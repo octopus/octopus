@@ -59,14 +59,13 @@ contains
     
     !  now only for cubic crystals. will be made general later on
     
-    a = al
+    a(1:3 ,1:3) = al(1:3, 1:3)
     nx = nk_axis(1)
     ny = nk_axis(2)
     nz = nk_axis(3)
     sx = k_shift(1)
     sy = k_shift(2)
     sz = k_shift(3)
-    
     
     !      compute reciprocal lattice and reset scales.
     !               T                       T        -1          T -1
