@@ -43,7 +43,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
   R_TYPE, allocatable :: grad_dl_psi(:, :, :)
   R_TYPE, allocatable :: grad_dl_psi2(:, :, :)
   FLOAT,  allocatable :: vloc(:)
-  CMPLX,  allocatable :: grad_rho(:, :), force(:, :)
+  CMPLX,  allocatable :: grad_rho(:, :), force(:, :), zvloc(:)
 #ifdef HAVE_MPI
   integer, allocatable :: recv_count(:), recv_displ(:)
   CMPLX, allocatable  :: force_local(:, :), grad_rho_local(:, :)
@@ -172,13 +172,13 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
     !reduce the force
     ALLOCATE(force_local(1:MAX_DIM, 1:geo%natoms), MAX_DIM*geo%natoms)
     force_local = force
-    call MPI_Allreduce(force_local, force, MAX_DIM*geo%natoms, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+    call MPI_Allreduce(force_local, force, MAX_DIM*geo%natoms, MPI_CMPLX, MPI_SUM, st%mpi_grp%comm, mpi_err)
     deallocate(force_local)
 
     !reduce the gradient of the density
     ALLOCATE(grad_rho_local(np, MAX_DIM), np*MAX_DIM)
     call lalg_copy(np, MAX_DIM, grad_rho, grad_rho_local)
-    call MPI_Allreduce(grad_rho_local, grad_rho, np*MAX_DIM, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+    call MPI_Allreduce(grad_rho_local, grad_rho, np*MAX_DIM, MPI_CMPLX, MPI_SUM, st%mpi_grp%comm, mpi_err)
     deallocate(grad_rho_local)
 
     call profiling_out(prof)
@@ -192,13 +192,13 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
     !reduce the force
     ALLOCATE(force_local(1:MAX_DIM, 1:geo%natoms), MAX_DIM*geo%natoms)
     force_local = force
-    call MPI_Allreduce(force_local, force, MAX_DIM*geo%natoms, MPI_FLOAT, MPI_SUM, st%d%kpt%mpi_grp%comm, mpi_err)
+    call MPI_Allreduce(force_local, force, MAX_DIM*geo%natoms, MPI_CMPLX, MPI_SUM, st%d%kpt%mpi_grp%comm, mpi_err)
     deallocate(force_local)
     
     !reduce the gradient of the density
     ALLOCATE(grad_rho_local(np, MAX_DIM), np*MAX_DIM)
     call lalg_copy(np, MAX_DIM, grad_rho, grad_rho_local)
-    call MPI_Allreduce(grad_rho_local, grad_rho, np*MAX_DIM, MPI_FLOAT, MPI_SUM, st%d%kpt%mpi_grp%comm, mpi_err)
+    call MPI_Allreduce(grad_rho_local, grad_rho, np*MAX_DIM, MPI_CMPLX, MPI_SUM, st%d%kpt%mpi_grp%comm, mpi_err)
     deallocate(grad_rho_local)
 
     call profiling_out(prof)
@@ -218,6 +218,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
   ! THE LOCAL PART (parallel in atoms)
 
   ALLOCATE(vloc(1:np), np)
+  ALLOCATE(zvloc(1:np), np)
   
   do iatom = geo%atoms%start, geo%atoms%end
     
@@ -225,9 +226,10 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
     
     call epot_local_potential(ep, gr, gr%fine%mesh, geo, iatom, vloc, time)
     
+    forall(ip = 1:np) zvloc(ip) = vloc(ip)
+
     do idir = 1, NDIM
-      force(idir, iatom) = -dmf_dotp(gr%fine%mesh, real(grad_rho(:, idir)), vloc) &
-                           - M_zI * dmf_dotp(gr%fine%mesh, aimag(grad_rho(:, idir)), vloc)
+      force(idir, iatom) = -zmf_dotp(gr%fine%mesh, zvloc, grad_rho(:, idir))
     end do
 
   end do
@@ -253,8 +255,8 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
     force_local(1:MAX_DIM, 1:geo%atoms%nlocal) = force(1:MAX_DIM, geo%atoms%start:geo%atoms%end)
 
     call MPI_Allgatherv(&
-         force_local, MAX_DIM*geo%atoms%nlocal, MPI_FLOAT, &
-         force, recv_count(1), recv_displ, MPI_FLOAT, &
+         force_local, MAX_DIM*geo%atoms%nlocal, MPI_CMPLX, &
+         force, recv_count(1), recv_displ, MPI_CMPLX, &
          geo%atoms%mpi_grp%comm, mpi_err)
 
     deallocate(recv_count, recv_displ, force_local)
