@@ -174,8 +174,9 @@ contains
     call pop_sub()
   end subroutine projector_init
 
-  subroutine projector_init_phases(this, nkpoints, kpoints, vec_pot, vec_pot_var)
+  subroutine projector_init_phases(this, sb, nkpoints, kpoints, vec_pot, vec_pot_var)
     type(projector_t), intent(inout) :: this
+    type(simul_box_t), intent(in)    :: sb
     integer,           intent(in)    :: nkpoints
     FLOAT,             intent(in)    :: kpoints(:, :)
     FLOAT, optional,   intent(in)    :: vec_pot(1:MAX_DIM)
@@ -188,7 +189,7 @@ contains
     call push_sub('projector.projector_init_phases')
 
     ns = this%sphere%ns
-    ndim = this%sphere%mesh%sb%dim
+    ndim = sb%dim
 
     if(.not. associated(this%phase)) then
       ALLOCATE(this%phase(1:ns, 1:nkpoints), ns*nkpoints)

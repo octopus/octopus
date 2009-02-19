@@ -497,7 +497,7 @@ contains
       call projector_end(ep%proj(ia))
       call projector_init(ep%proj(ia), gr%mesh, sb, atm, st%d%dim, ep%reltype)
       if(simul_box_is_periodic(sb) .or. associated(ep%a_static)) then
-        call projector_init_phases(ep%proj(ia), st%d%nik, st%d%kpoints, vec_pot_var = ep%a_static)
+        call projector_init_phases(ep%proj(ia), sb, st%d%nik, st%d%kpoints, vec_pot_var = ep%a_static)
       end if
       call projector_build(ep%proj(ia), gr, atm, ep%so_strength)
 
@@ -506,7 +506,7 @@ contains
         call projector_end(ep%proj_fine(ia))
         call projector_init(ep%proj_fine(ia), gr%fine%mesh, sb, atm, st%d%dim, ep%reltype)
         if(simul_box_is_periodic(sb) .or. associated(ep%a_static)) then
-          call projector_init_phases(ep%proj_fine(ia), st%d%nik, st%d%kpoints, vec_pot_var = ep%a_static)
+          call projector_init_phases(ep%proj_fine(ia), sb, st%d%nik, st%d%kpoints, vec_pot_var = ep%a_static)
         end if
         call projector_build(ep%proj_fine(ia), gr, atm, ep%so_strength)
       end if
