@@ -237,7 +237,11 @@ else
 fi
 AC_SUBST(UTILITY_PROGRAMS)
 
-AC_DEFINE(MAX_DIM, 3, [the maximum dimension of the space])
+AC_ARG_WITH(max-dim, [  --with-max-dim=NDIM     maximum number of dimension Octopus can use,
+                          the default is 3 (other values are experimental)],
+  [maxdim=$withval], [maxdim=3])
+
+AC_DEFINE_UNQUOTED(MAX_DIM, $maxdim, [the maximum dimension of the space])
 
 dnl tell the user what we will be compiling
 echo "**********************************************"
