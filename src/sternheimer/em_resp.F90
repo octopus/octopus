@@ -1025,7 +1025,7 @@ contains
       enddo
 
       HRS_D = beta(1, 1, 2) * beta(2, 3, 3) &
-            + beta(2, 2, 3) * beta(3, 1, 1) + &
+            + beta(2, 2, 3) * beta(3, 1, 1) &
             + beta(3, 3, 1) * beta(1, 2, 2)
 
       HRS_E = beta(1, 2, 3)**2
