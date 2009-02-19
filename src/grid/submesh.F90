@@ -196,7 +196,7 @@ contains
 
       call periodic_copy_init(pp, sb, center(1:MAX_DIM), rc)
       
-      ALLOCATE(center_copies(1:MAX_DIM, periodic_copy_num(pp)), MAX_DIM * periodic_copy_num(pp))
+      ALLOCATE(center_copies(1:MAX_DIM, periodic_copy_num(pp)), MAX_DIM*periodic_copy_num(pp))
 
       do icell = 1, periodic_copy_num(pp)
         center_copies(1:MAX_DIM, icell) = periodic_copy_position(pp, sb, icell)

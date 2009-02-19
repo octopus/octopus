@@ -218,15 +218,9 @@ program octopus
     !%Description
     !% octopus can run in 1, 2 or 3 dimensions, depending on the value of this
     !% variable. Note that not all input variables may be available in all cases.
-    !%Option 1
-    !% The system is 1-dimensional
-    !%Option 2
-    !% The system is 2-dimensional
-    !%Option 3
-    !% The system is 3-dimensional
     !%End
     call loct_parse_int(datasets_check('Dimensions'), 3, calc_dim)
-    if( calc_dim > 3 .or. calc_dim < 1) call input_error('Dimensions')
+    if( calc_dim > MAX_DIM .or. calc_dim < 1) call input_error('Dimensions')
 
     ! now we really start
     call run_init()

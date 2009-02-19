@@ -1455,9 +1455,9 @@ contains
         do ik = 1, st%d%nik, ns
           do is = 0, ns-1
             write(iunit(is), '(1x,6f14.8,3x,f14.8)')            &
-              st%d%kpoints(1:MAX_DIM, ik+is),                   & ! unscaled
-              st%d%kpoints(1:MAX_DIM, ik+is)/factor(1:MAX_DIM), & ! scaled
-              st%eigenval(j, ik+is)/units_out%energy%factor
+              st%d%kpoints(1:sb%dim, ik+is),                   & ! unscaled
+              st%d%kpoints(1:sb%dim, ik+is)/factor(1:sb%dim), & ! scaled
+              st%eigenval(j, ik + is)/units_out%energy%factor
           end do
         end do
         do is = 0, ns-1

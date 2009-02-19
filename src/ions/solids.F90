@@ -119,7 +119,7 @@ contains
           if (jj == ii) then 
             pcopy(1:pd) = this%pos_chi(1:pd) - M_TWO*sb%lsize(1:pd)*(/icell1, icell2, icell3/)
             pcopy(1:pd) = matmul(sb%rlattice(1:pd, 1:pd), pcopy(1:pd))
-            pcopy(pd + 1:sb%dim) = this%pos(pd+1:sb%dim)
+            pcopy(pd + 1:MAX_DIM) = this%pos(pd+1:MAX_DIM)
             return
           end if
           jj = jj + 1
