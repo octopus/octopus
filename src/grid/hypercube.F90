@@ -58,10 +58,10 @@ contains
     forall (ii = 1:ndim) npoints(ii) = nr(2,ii) - nr(1,ii) + 1
     
     !number of points in each box
-    this%boxdim=1
+    this%boxdim = 1
 
     !first box is inner points
-    do jj=1, ndim
+    do jj = 1, ndim
       this%boxdim(1) = this%boxdim(1)*(npoints(jj)-2*enlarge)
     enddo
 
@@ -92,23 +92,18 @@ contains
     integer,           intent(in)  :: nr(1:2,1:ndim)
     integer,           intent(out) :: icoord
 
-    integer:: boxnumb
-    integer, allocatable:: border(:), npoints(:), lowerb(:), tempcoord(:)
-    integer:: ii, jj
+    integer :: boxnumb
+    integer :: border(1:MAX_DIM), npoints(1:MAX_DIM), lowerb(1:MAX_DIM), tempcoord(1:MAX_DIM)
+    integer :: ii, jj
 
-    ALLOCATE(border(1:ndim), ndim)
-    ALLOCATE(npoints(1:ndim), ndim)
-    ALLOCATE(lowerb(1:ndim), ndim)
-    ALLOCATE(tempcoord(1:ndim), ndim)
-
-    do ii=1, ndim
+    do ii = 1, ndim
       npoints(ii) = nr(2, ii) - nr(1, ii) + 1
       border(ii) = nr(1, ii) + 2*enlarge
       lowerb(ii) = nr(1, ii)
     enddo
 
     !move coordinates such that inner box is in the upper right corner
-    do ii= 1, ndim
+    do ii = 1, ndim
       tempcoord(ii) = coord(ii)
       tempcoord(ii) = tempcoord(ii) + enlarge - nr(1,ii)
       tempcoord(ii) = mod(tempcoord(ii), npoints(ii))
@@ -116,8 +111,8 @@ contains
     enddo
 
     !determine which box we are in
-    boxnumb=1
-    do ii=1, ndim
+    boxnumb = 1
+    do ii = 1, ndim
       if(tempcoord(ii) < border(ii)) then
         boxnumb = ii + 1
         exit 
@@ -141,7 +136,7 @@ contains
     else
       do jj = 1, boxnumb - 2
         npoints(jj) = npoints(jj) - 2*enlarge
-        lowerb(jj) = nr(1,jj) + 2*enlarge
+        lowerb(jj) = nr(1, jj) + 2*enlarge
       enddo
       npoints(boxnumb-1) = 2*enlarge
       do jj=ndim, 1, -1
@@ -153,13 +148,11 @@ contains
         message(1) = "Hypercube: Error, box point outside box"
         call write_fatal(1)
       else
-        do jj= 1, boxnumb - 1
+        do jj = 1, boxnumb - 1
           icoord = icoord + this%boxdim(jj)
         enddo
       endif
     endif
-
-    deallocate(border, npoints)
 
   end subroutine hypercube_x_to_i
 
@@ -170,13 +163,9 @@ contains
     integer,           intent(in)  :: icoord
     integer,           intent(out) :: coord(1:ndim)
 
-    integer:: boxnumb, tempcoord
-    integer, allocatable:: border(:), npoints(:), lowerb(:)
-    integer:: ii, jj
-
-    ALLOCATE(border(1:ndim), ndim)
-    ALLOCATE(npoints(1:ndim), ndim)
-    ALLOCATE(lowerb(1:ndim), ndim)
+    integer :: boxnumb, tempcoord
+    integer :: border(1:MAX_DIM), npoints(1:MAX_DIM), lowerb(1:MAX_DIM)
+    integer :: ii, jj
 
     boxnumb = 1
 
@@ -190,9 +179,9 @@ contains
     enddo
 
     do ii = 1, ndim
-      npoints(ii) = nr(2,ii) - nr(1,ii)+1
-      border(ii) = nr(1,ii) + 2*enlarge
-      lowerb(ii) = nr(1,ii)
+      npoints(ii) = nr(2, ii) - nr(1, ii)+1
+      border(ii) = nr(1, ii) + 2*enlarge
+      lowerb(ii) = nr(1, ii)
     enddo
 
     tempcoord=icoord
@@ -236,8 +225,6 @@ contains
       endif
       coord(ii) = coord(ii) + nr(1,ii)
     enddo
-
-    deallocate(border, npoints)
 
   end subroutine hypercube_i_to_x
 
