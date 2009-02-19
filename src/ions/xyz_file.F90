@@ -160,6 +160,7 @@ contains
 
     ! adjust units
     do i = 1, gf%n
+      gf%atom(i)%x(4:MAX_DIM) = M_ZERO
       gf%atom(i)%x = gf%atom(i)%x * units_inp%length%factor
     end do
 
