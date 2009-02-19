@@ -142,7 +142,7 @@ contains
     !% basis set should, in principle, include all pairs formed by all occupied states,
     !% and an infinite number of unoccupied states. In practice, one has to truncate this
     !% basis set, selecting a number of occupied and unoccupied states that will form the
-    !% pairs. These states are specified with this variable. If there are, say, 10 occupied
+    !% pairs. These states are specified with this variable. If there are, say, 15 occupied
     !% states, and one sets this variable to the value "10-18", this means that occupied
     !% states from 10 to 15, and unoccupied states from 16 to 18 will be considered.
     !%
