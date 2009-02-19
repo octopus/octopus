@@ -726,7 +726,7 @@ contains
       call write_momentum(iunit)
 
       ! Next is the angular momentum. Only applies to 2D and 3D.
-      if(NDIM.ne.1) call write_angular_momentum(iunit)
+      if(NDIM == 2 .or. NDIM == 3) call write_angular_momentum(iunit)
 
       if(mpi_grp_is_root(mpi_world)) then
         write(iunit, '(a)') 'Convergence:'
@@ -906,7 +906,7 @@ contains
             if(st%d%ispin.eq.UNPOLARIZED.or.st%d%ispin.eq.SPINORS) cspin = '--'
 
             write(message(1), '(i4,3x,a2,1x,3f12.6,3x,f12.6)')        &
-                j, trim(cspin), st%momentum(:, j, ik), o
+                j, trim(cspin), st%momentum(1:min(gr%sb%dim, 3), j, ik), o
             call write_info(1, iunit)
 
           end do
@@ -923,7 +923,7 @@ contains
       do ik = 1, st%d%nik
         do j = 1, st%nst
           write(message(1), '(2i4,3x, 3f12.6,3x,f12.6)') &
-            j, ik, st%momentum(:, j, ik), st%occ(j, ik)
+            j, ik, st%momentum(1:min(gr%sb%dim, 3), j, ik), st%occ(j, ik)
           call write_info(1, iunit2)
         end do
       end do

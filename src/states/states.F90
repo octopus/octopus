@@ -409,7 +409,7 @@ contains
     ! we now allocate some arrays
     ALLOCATE(st%occ     (st%nst, st%d%nik),      st%nst*st%d%nik)
     ALLOCATE(st%eigenval(st%nst, st%d%nik),      st%nst*st%d%nik)
-    ALLOCATE(st%momentum(3, st%nst, st%d%nik), 3*st%nst*st%d%nik)
+    ALLOCATE(st%momentum(gr%sb%dim, st%nst, st%d%nik), 3*st%nst*st%d%nik)
     st%eigenval = M_ZERO
     st%occ      = M_ZERO
     st%momentum = M_ZERO

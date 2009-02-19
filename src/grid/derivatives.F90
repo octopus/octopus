@@ -108,7 +108,7 @@ module derivatives_m
     type(nl_operator_t), pointer :: grad(:)
 
     type(nl_operator_t) :: laplt ! The transpose of the Laplacian.
-    integer             :: n_ghost(3)   ! ghost points to add in each dimension
+    integer             :: n_ghost(MAX_DIM)   ! ghost points to add in each dimension
 #if defined(HAVE_MPI)
     integer             :: comm_method 
 #endif
@@ -259,7 +259,8 @@ contains
     der%n_ghost(:) = 0
     do i = 1, der%dim
       if(der%boundaries(i) == DER_BC_ZERO_F .or. der%boundaries(i) == DER_BC_PERIOD) then
-        der%n_ghost(i) = maxval(abs(der%lapl%stencil%points(i,:)))
+        der%n_ghost(i) = &
+             maxval(abs(der%lapl%stencil%points(i,:)))
       end if
     end do
 
@@ -369,9 +370,18 @@ contains
 
     ! initialize nl operator
     do i = 1, der%dim
-      if(i == 1) dirchar = 'X'
-      if(i == 2) dirchar = 'Y'
-      if(i == 3) dirchar = 'Z'
+      select case(i)
+      case(1)
+        dirchar = 'X'
+      case(2)
+        dirchar = 'Y'
+      case(3)
+        dirchar = 'Z'
+      case(4)
+        dirchar = 'W'
+      case default
+        dirchar = ' '
+      end select
       call nl_operator_init(der%grad(i), "Gradient "//dirchar)
 
       ! create stencil

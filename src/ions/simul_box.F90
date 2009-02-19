@@ -483,6 +483,11 @@ contains
       ! Cannot use images in 1D or 3D
       if(sb%dim/=2.and.sb%box_shape == BOX_IMAGE) call input_error('BoxShape')
 
+      if(sb%dim > 3 .and. sb%box_shape /= HYPERCUBE) then
+        message(1) = "For more than 3 dimensions you can only use the hypercubic box."
+        call write_fatal(1)
+      end if
+
       sb%rsize = -M_ONE
       !%Variable Radius
       !%Type float

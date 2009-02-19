@@ -730,7 +730,7 @@ subroutine X(f_l2)(sb, m, der, f, l2f, ghost_update)
 
   call push_sub('f_inc.Xf_l2')
 
-  ASSERT(sb%dim.ne.1)
+  ASSERT(sb%dim == 2 .or. sb%dim == 3)
 
   l2f = R_TOTYPE(M_ZERO)
 
