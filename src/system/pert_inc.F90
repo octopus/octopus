@@ -121,7 +121,7 @@ contains
     if (this%use_nonlocalpps) then
       do iatom = 1, geo%natoms
         if(species_is_ps(geo%atom(iatom)%spec)) then
-          call X(projector_commute_r(hm%ep%proj(iatom), gr, hm%d%dim, this%dir, ik, f_in_copy, cpsi(:, :)))
+          call X(projector_commute_r)(hm%ep%proj(iatom), gr, hm%d%dim, this%dir, ik, f_in_copy, cpsi(:, :))
           f_out(1:NP) = f_out(1:NP) - M_zI * cpsi(1:NP, 1)
           ! using only the first spinor component
         end if
