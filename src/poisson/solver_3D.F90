@@ -42,7 +42,7 @@ subroutine poisson3D_init(gr, geo)
   !%Type integer
   !%Section Hamiltonian::Poisson
   !%Description
-  !% The tolerance for the poisson solution, used by the cg and
+  !% The tolerance for the Poisson solution, used by the cg and
   !% multigrid solvers. Default is <math>10^{-5}</math>.
   !%End
 
@@ -54,15 +54,15 @@ subroutine poisson3D_init(gr, geo)
   !% have to be calculated by means of performing a multipole expansion. Unfortunately,
   !% if the charge distribution is not contained in a simulation box of approximately
   !% spherical shape, the error can be quite large. Good cases are the spherical box,
-  !% the parallelpiped when all dimension are of similar magnitude, or the cylinder
+  !% the parallelpiped when all dimensions are of similar magnitude, or the cylinder
   !% in case the height is not too different to the diameter of the base. Bad cases
   !% are the rest, including the "minimum" box, when the geometry of the molecule is
   !% not compact enough.
   !%
-  !% In order to cure this problem, the Hartree problem may me solved in an auxiliary
+  !% In order to cure this problem, the Hartree problem may be solved in an auxiliary
   !% simulation box, which will contain the original one, but which will be a sphere.
   !% This implies some extra computational effort -- since the density and potential have
-  !% to be transeferred between boxes --, and extra memory consumption -- since a new
+  !% to be transferred between boxes -- and extra memory consumption -- since a new
   !% grid has to be stored, which may need quite a lot of memory if you use curvilinear
   !% coordinates.
   !%End
@@ -93,7 +93,7 @@ subroutine poisson3D_init(gr, geo)
      call poisson_cg_init(gr%mesh, maxl, threshold)
 
 
-  case(MULTIGRILLA)
+  case(MULTIGRID)
      call loct_parse_int(datasets_check('PoissonSolverMaxMultipole'), 4, maxl)
      call loct_parse_float(datasets_check('PoissonSolverThreshold'), CNST(1.0e-6), threshold)
      write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl

@@ -58,7 +58,7 @@ module poisson_m
     DIRECT_SUM_2D = -2, &
     CG            =  5, &
     CG_CORRECTED  =  6, &
-    MULTIGRILLA   =  7, &
+    MULTIGRID     =  7, &
     ISF           =  8
 
   integer :: poisson_solver = -99
@@ -216,15 +216,15 @@ contains
            poisson_solver /= gr%sb%periodic_dim .and. &
            poisson_solver < CG .and. &
            poisson_solver /= FFT_CORRECTED .and. poisson_solver /= FFT_CYL) then
-        write(message(1), '(a,i1,a)')'The System is periodic in ', gr%sb%periodic_dim ,' dimension(s),'
-        write(message(2), '(a,i1,a)')'but Poisson Solver is set for ',poisson_solver,' dimensions.'
+        write(message(1), '(a,i1,a)')'The system is periodic in ', gr%sb%periodic_dim ,' dimension(s),'
+        write(message(2), '(a,i1,a)')'but Poisson solver is set for ',poisson_solver,' dimensions.'
         message(3) =                 'You know what you are doing, right?'
         call write_warning(3)
       end if
 
       if(gr%mesh%use_curvlinear .and. (poisson_solver.ne.CG_CORRECTED)) then
         message(1) = 'If curvilinear coordinates are used, then the only working'
-        message(2) = 'Poisson solvers is cg_corrected'
+        message(2) = 'Poisson solver is cg_corrected'
         call write_fatal(2)
       end if
 
@@ -260,7 +260,7 @@ contains
       call poisson_cg_end()
       call poisson_corrections_end(corrector)
 
-    case(MULTIGRILLA)
+    case(MULTIGRID)
       call poisson_multigrid_end(mg)
     case(ISF)
       call poisson_isf_end()
@@ -386,7 +386,7 @@ contains
         deallocate(rho_corrected, vh_correction)
       end if
 
-    case(MULTIGRILLA)
+    case(MULTIGRID)
       call poisson_multigrid_solver(mg, gr, pot, rho)
 
     case(FFT_SPH,FFT_CYL,FFT_PLA,FFT_NOCUT)

@@ -78,7 +78,7 @@ contains
     type(states_dim_t),  intent(in)    :: d
     FLOAT,               intent(in)    :: nel ! the total number of electrons
 
-    call push_sub('v_ks.v_ks_init');
+    call push_sub('v_ks.v_ks_init')
 
     !%Variable TheoryLevel
     !%Type integer
@@ -197,7 +197,7 @@ contains
 
     if(.not.mpi_grp_is_root(mpi_world)) return
 
-    call push_sub('v_ks.v_ks_write_info');
+    call push_sub('v_ks.v_ks_write_info')
 
     call messages_print_stress(iunit, "Theory Level")
     call messages_print_var_option(iunit, "TheoryLevel", ks%theory_level)
@@ -330,6 +330,7 @@ contains
       FLOAT, allocatable :: rho(:, :)
       integer :: is
 
+      call push_sub('v_ks.v_ks_calc.v_a_xc')
       call profiling_in(C_PROFILING_XC)
 
       hm%ex = M_ZERO
@@ -354,7 +355,7 @@ contains
       deallocate(rho)
 
       if(ks%theory_level == KOHN_SHAM_DFT) then
-        ! The OEP family has to handle specially
+        ! The OEP family has to be handled specially
         if (st%wfs_type == M_REAL) then
           call dxc_oep_calc(ks%oep, ks%xc, (ks%sic_type==sic_pz),  &
             gr, hm, st, hm%ex, hm%ec, vxc=hm%vxc)
@@ -380,6 +381,7 @@ contains
       end select
 
       call profiling_out(C_PROFILING_XC)
+      call pop_sub()
     end subroutine v_a_xc
   end subroutine v_ks_calc
   ! ---------------------------------------------------------
@@ -395,6 +397,8 @@ contains
 
     FLOAT, allocatable :: rho(:)
     integer :: is
+
+    call push_sub('v_ks.v_ks_hartree')
 
     ALLOCATE(rho(NP), NP)
 
@@ -421,6 +425,7 @@ contains
     hm%ehartree = M_HALF*dmf_dotp(gr%mesh, rho, hm%vhartree)
 
     deallocate(rho)
+    call pop_sub()
   end subroutine v_ks_hartree
   ! ---------------------------------------------------------
 
@@ -428,7 +433,12 @@ contains
   ! ---------------------------------------------------------
   subroutine v_ks_freeze_hxc(ks)
     type(v_ks_t), intent(inout) :: ks
+
+    call push_sub('v_ks.v_ks_freeze_hxc')
+
     ks%frozen_hxc = .true.
+    
+    call pop_sub()
   end subroutine v_ks_freeze_hxc
   ! ---------------------------------------------------------
 

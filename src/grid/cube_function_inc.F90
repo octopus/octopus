@@ -20,7 +20,7 @@
 ! ---------------------------------------------------------
 ! The following routines handle creation/destruction of the cube
 subroutine X(cf_new)(n, cf)
-  integer, intent(in) :: n(MAX_DIM)
+  integer, intent(in) :: n(3)
   type(X(cf_t)), intent(out) :: cf
 
   call push_sub('cf_inc.Xcf_new')
@@ -123,13 +123,13 @@ subroutine X(mesh_to_cube) (m, mf, cf)
   R_TYPE,        intent(in)    :: mf(:)  ! mf(m%np_global)
   type(X(cf_t)), intent(inout) :: cf
 
-  integer :: i, ix, iy, iz, c(MAX_DIM)
+  integer :: i, ix, iy, iz, c(3)
 
   call push_sub('cf_inc.Xmesh_to_cube')
 
   ASSERT(associated(cf%RS))
 
-  c(:)  =  cf%n(:)/2 + 1
+  c(1:3)  =  cf%n(1:3)/2 + 1
 
   cf%RS =  M_ZERO
 
@@ -150,13 +150,13 @@ subroutine X(cube_to_mesh) (m, cf, mf)
   type(X(cf_t)), intent(in)  :: cf
   R_TYPE,        intent(out) :: mf(:)  ! mf(m%np_global)
 
-  integer :: i, ix, iy, iz, c(MAX_DIM)
+  integer :: i, ix, iy, iz, c(3)
 
   call push_sub('cf_inc.Xcube_to_mesh')
 
   ASSERT(associated(cf%RS))
 
-  c(:) =  cf%n(:)/2 + 1
+  c(1:3) =  cf%n(1:3)/2 + 1
 
   do i = 1, m%np_global
     ix = m%idx%Lxyz(i, 1) + c(1)

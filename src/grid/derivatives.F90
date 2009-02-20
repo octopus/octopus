@@ -345,7 +345,7 @@ contains
     type(derivatives_t), intent(in)  :: der
     FLOAT,             intent(out) :: lapl(:)  ! lapl(m%np)
 
-    call push_sub('derivatives_inc.derivatives_lapl_diag')
+    call push_sub('derivatives.derivatives_lapl_diag')
 
     ASSERT(ubound(lapl, DIM=1) >= der%m%np)
 
@@ -621,29 +621,39 @@ contains
     type(der_handle_t),  intent(out) :: this
     type(derivatives_t), intent(in)  :: der
 
+    call push_sub('derivatives.der_handle_init')
+
     nullify(this%df, this%zf)
     nullify(this%dlapl, this%zlapl)
 #ifdef HAVE_MPI
     this%parallel_in_domains = der%m%parallel_in_domains
     if(this%parallel_in_domains) call pv_handle_init(this%pv_h, der%m%vp, der%comm_method)
 #endif
+
+    call pop_sub()
   end subroutine der_handle_init
 
   subroutine der_handle_end(this)
     type(der_handle_t), intent(inout) :: this
+
+    call push_sub('derivatives.der_handle_end')
 
     nullify(this%df, this%zf)
     nullify(this%dlapl, this%zlapl)
 #ifdef HAVE_MPI
     if(this%parallel_in_domains) call pv_handle_end(this%pv_h)
 #endif
+
+    call pop_sub()
   end subroutine der_handle_end
 
 #ifdef HAVE_MPI    
   logical function derivatives_overlap(this) result(overlap)
     type(derivatives_t),    intent(in) :: this
 
+    call push_sub('derivatives.derivatives_overlap')
     overlap = this%comm_method /= BLOCKING  
+    call pop_sub()
   end function derivatives_overlap
 #endif
   

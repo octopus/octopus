@@ -489,7 +489,7 @@ contains
       call dmesh_to_cube(m, rho, fft_cf)
     end if
 
-    ! apply the couloumb term in fourier space
+    ! apply the Couloumb term in Fourier space
     call dfourier_space_op_apply(coulb, fft_cf)
 
     !now the cube has the potential

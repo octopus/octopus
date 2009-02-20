@@ -33,8 +33,8 @@ module cube_function_m
     dcf_t, zcf_t,               &
     dcf_new, zcf_new,           &
     dcf_new_from, zcf_new_from, &
-    dcf_alloc_rs, zcf_alloc_rs, &
-    dcf_free_rs, zcf_free_rs,   &
+    dcf_alloc_RS, zcf_alloc_RS, &
+    dcf_free_RS, zcf_free_RS,   &
     dcf_free, zcf_free,         &
     cf_surface_average,         &
     cf_phase_factor,            &
@@ -44,7 +44,7 @@ module cube_function_m
     zcube_to_mesh
 
   type dcf_t
-    integer :: n(MAX_DIM)   ! the linear dimensions of the cube
+    integer :: n(3)   ! the linear dimensions of the cube
 
     FLOAT, pointer :: RS(:,:,:)
     CMPLX, pointer :: FS(:,:,:)
@@ -53,7 +53,7 @@ module cube_function_m
   end type dcf_t
 
   type zcf_t
-    integer :: n(MAX_DIM)   ! the linear dimensions of the cube
+    integer :: n(3)   ! the linear dimensions of the cube
 
     CMPLX, pointer :: RS(:,:,:)
     CMPLX, pointer :: FS(:,:,:)
@@ -125,12 +125,12 @@ contains
   subroutine cf_phase_factor(sb, m, vec, cf_i, cf_o)
     type(simul_box_t), intent(in)    :: sb
     type(mesh_t),      intent(in)    :: m
-    FLOAT,             intent(in)    :: vec(MAX_DIM)
+    FLOAT,             intent(in)    :: vec(3)
     type(dcf_t),         intent(in)    :: cf_i
     type(dcf_t),         intent(inout) :: cf_o
 
-    CMPLX   :: k(MAX_DIM)
-    integer :: n(MAX_DIM), ix, iy, iz, ixx, iyy, izz
+    CMPLX   :: k(3)
+    integer :: n(3), ix, iy, iz, ixx, iyy, izz
 
     ASSERT(all(cf_i%n == cf_o%n))
     ASSERT(associated(cf_i%FS).and.associated(cf_o%FS))
