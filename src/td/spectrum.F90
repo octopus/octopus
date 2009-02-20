@@ -134,7 +134,6 @@ contains
     !%End
     call loct_parse_int  (datasets_check('SpecDampMode'), SPECTRUM_DAMP_POLYNOMIAL, s%damp)
     if(.not.varinfo_valid_option('SpecDampMode', s%damp)) call input_error('SpecDampMode')
-    call messages_print_var_option(stdout, 'SpecDampMode', s%damp)
 
     !%Variable SpecTransform
     !%Type integer
@@ -151,7 +150,6 @@ contains
     !%End
     call loct_parse_int  (datasets_check('SpecTransform'), SPECTRUM_TRANSFORM_SIN, s%transform)
     if(.not.varinfo_valid_option('SpecTransform', s%transform)) call input_error('SpecTransform')
-    call messages_print_var_option(stdout, 'SpecTransform', s%transform)
 
     !%Variable SpecStartTime
     !%Type integer
@@ -1031,7 +1029,7 @@ contains
     FLOAT, intent(out) :: omega_min, func_min
 
     integer :: nfreqs, ierr, i
-    FLOAT :: x, hsval, minhsval, dw, w
+    FLOAT :: x, hsval, minhsval, dw, w, hsa, hsb
 
     ! x should be an initial guess for the minimum. So we do a quick search
     ! that we refine later calling 1dminimize.
@@ -1042,11 +1040,24 @@ contains
     do i = 1, nfreqs
       w = a + dw*(i-1)
       call hsfunction(w, hsval)
+      if(i .eq. 1)      hsa = hsval
+      if(i .eq. nfreqs) hsb = hsval
       if(hsval < minhsval) then
         minhsval = hsval
         x = w
       end if
     end do
+
+    if( hsa == minhsval ) then
+      omega_min = a
+      func_min = hsval
+      return
+    end if
+    if( hsb == minhsval ) then
+      omega_min = b
+      func_min = hsval
+      return
+    end if
 
     ! Around x, we call some GSL sophisticated search algorithm to find the minimum.
     call loct_1dminimize(a, b, x, hsfunction, ierr)
