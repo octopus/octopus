@@ -41,12 +41,6 @@
 #define STORE _mm_storeu_pd
 #endif
 
-#ifdef 	__INTEL_COMPILER
-#define ALIGNED  __declspec(align(16))
-#else
-#define ALIGNED  __attribute__((aligned(16)))
-#endif
-
 #include <assert.h>
 
 void FC_FUNC_(doperate_ri_vec,DOPERATE_RI_VEC)(const int * opn, 
@@ -66,10 +60,10 @@ void FC_FUNC_(doperate_ri_vec,DOPERATE_RI_VEC)(const int * opn,
   const ffloat * ffi[MAX_OP_N];
 
 #ifdef SINGLE_PRECISION
-  __m128 vw[MAX_OP_N] ALIGNED;
+  __m128 vw[MAX_OP_N] __attribute__((aligned(16)));
   for(j = 0; j < n ; j++) vw[j] =_mm_set1_ps(w[j]);
 #else
-  __m128d vw[MAX_OP_N] ALIGNED;
+  __m128d vw[MAX_OP_N] __attribute__((aligned(16)));
   for(j = 0; j < n ; j++) vw[j] =_mm_set1_pd(w[j]);
 #endif
 
@@ -140,7 +134,7 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opn,
   int l, i, j;
   const int * restrict index;
   const __m64 * ffi[MAX_OP_N];
-  __m128 vw[MAX_OP_N] ALIGNED;
+  __m128 vw[MAX_OP_N] __attribute__((aligned(16)));
 
   for(j = 0; j < n ; j++) vw[j] =_mm_set1_ps(w[j]);
 
@@ -202,7 +196,7 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opn,
   const int * restrict index;
   const __m128d * ffi[MAX_OP_N];
 
-  __m128d vw[MAX_OP_N] ALIGNED;
+  __m128d vw[MAX_OP_N] __attribute__((aligned(16)));
 
   for(j = 0; j < n ; j++) vw[j] =_mm_set1_pd(w[j]);
 
