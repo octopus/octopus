@@ -339,16 +339,18 @@ contains
       ik2 = kpoint_index(st%d, ik)
 
       tmp = int2str(ik2)
-      write(*, '(3a, i1)') 'k-point ', trim(tmp), ', spin ', ispin 
+      write(message(1), '(3a, i1)') 'k-point ', trim(tmp), ', spin ', ispin 
+      call write_info(1)
 
       ist = 1
       do while (ist <= st%nst)
       ! test for degeneracies
-         write(*,'(a)') '===='
+         write(message(1),'(a)') '===='
          tmp = int2str(ist)
-         write(*,'(a, a, a, f12.8, a, a)') 'State #', trim(tmp), ', Energy = ', &
+         write(message(2),'(a, a, a, f12.8, a, a)') 'State #', trim(tmp), ', Energy = ', &
            st%eigenval(ist, ik)/units_out%energy%factor, ' ', units_out%energy%abbrev
-         
+         call write_info(2)
+
          ist2 = ist + 1
          do while (ist2 <= st%nst .and. &
            abs(st%eigenval(ist2, ik) - st%eigenval(ist, ik)) < kdotp_vars%degen_thres)
@@ -356,14 +358,16 @@ contains
            ! of being in a degenerate subspace?
            ! write(*,*) ist2, ist, sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik)
             tmp = int2str(ist2)
-            write(*,'(a, a, a, f12.8, a, a)') 'State #', trim(tmp), ', Energy = ', &
+            write(message(1),'(a, a, a, f12.8, a, a)') 'State #', trim(tmp), ', Energy = ', &
               st%eigenval(ist2, ik)/units_out%energy%factor, ' ', units_out%energy%abbrev
+            call write_info(1)
             ist2 = ist2 + 1
          enddo
 
          ist = ist2
       enddo
-      write(*,*)
+      write(message(1),'()')
+      call write_info(1)
 
       tmp = int2str(ik2)
       write(filename, '(3a, i1)') OUTPUT_DIR//'kpoint_', trim(tmp), '_', ispin
