@@ -539,7 +539,7 @@ subroutine X(vnlpsi_batch) (hm, mesh, psib, hpsib, ik)
   R_TYPE, pointer :: psi(:, :), hpsi(:, :)
 
   call profiling_in(C_PROFILING_VNLPSI)
-  call push_sub('hamiltonian_inc.Xvnlpsi')
+  call push_sub('hamiltonian_inc.Xvnlpsi_batch')
 
   do ii = 1, psib%nst
     psi  => psib%states(ii)%X(psi)
@@ -565,7 +565,7 @@ subroutine X(vlpsi_batch) (hm, m, psib, hpsib, ik)
   R_TYPE, pointer :: psi(:, :), hpsi(:, :)
 
   call profiling_in(C_PROFILING_VLPSI)
-  call push_sub('hamiltonian_inc.Xvlpsi')
+  call push_sub('hamiltonian_inc.Xvlpsi_batch')
 
   select case(hm%d%ispin)
   case(UNPOLARIZED, SPIN_POLARIZED)

@@ -125,6 +125,8 @@ subroutine X(mesh_to_cube) (m, mf, cf)
 
   integer :: i, ix, iy, iz, c(MAX_DIM)
 
+  call push_sub('cf_inc.Xmesh_to_cube')
+
   ASSERT(associated(cf%RS))
 
   c(:)  =  cf%n(:)/2 + 1
@@ -139,6 +141,7 @@ subroutine X(mesh_to_cube) (m, mf, cf)
     cf%RS(ix, iy, iz) = mf(i)
   end do
 
+  call pop_sub()
 end subroutine X(mesh_to_cube)
 
 ! ---------------------------------------------------------
@@ -148,6 +151,8 @@ subroutine X(cube_to_mesh) (m, cf, mf)
   R_TYPE,        intent(out) :: mf(:)  ! mf(m%np_global)
 
   integer :: i, ix, iy, iz, c(MAX_DIM)
+
+  call push_sub('cf_inc.Xcube_to_mesh')
 
   ASSERT(associated(cf%RS))
 
@@ -159,6 +164,8 @@ subroutine X(cube_to_mesh) (m, cf, mf)
     iz = m%idx%Lxyz(i, 3) + c(3)
     mf(i) = cf%RS(ix, iy, iz)
   end do
+
+  call pop_sub()
 
 end subroutine X(cube_to_mesh)
 
