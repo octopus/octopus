@@ -65,10 +65,10 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
   ! if there is no fine mesh, gr%fine%mesh => gr%mesh according to grid.F90
 
   if(present(lr)) then
-    ALLOCATE(grad_dl_psi(np, 1:NDIM, st%d%dim), np*NDIM*st%d%dim)
-    ALLOCATE(grad_dl_psi2(np, 1:NDIM, st%d%dim), np*NDIM*st%d%dim)
+    ALLOCATE(grad_dl_psi(np_part, 1:NDIM, st%d%dim), np_part*NDIM*st%d%dim)
+    ALLOCATE(grad_dl_psi2(np_part, 1:NDIM, st%d%dim), np_part*NDIM*st%d%dim)
   endif
-  ALLOCATE(grad_psi(np, 1:NDIM, st%d%dim), np*NDIM*st%d%dim)
+  ALLOCATE(grad_psi(np_part, 1:NDIM, st%d%dim), np_part*NDIM*st%d%dim)
   ALLOCATE(grad_rho(np, 1:NDIM), np*NDIM)
   grad_rho(1:np, 1:NDIM) = M_ZERO
   ALLOCATE(force(1:NDIM, 1:geo%natoms), NDIM*geo%natoms)
@@ -87,17 +87,16 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
       do idim = 1, st%d%dim
 
         if(gr%have_fine_mesh) then
-        ! even if there is no fine mesh, we need to make another copy
-        ! is multigrid_coarse2fine more expensive in this case than lalg_copy?
         ! conveniently, multigrid_coarse2fine sets the boundary conditions in the process
-        call X(multigrid_coarse2fine)(gr%fine, st%X(psi)(:, idim, ist, ik), psi(:, idim))
-        if (present(lr)) then
-          call X(multigrid_coarse2fine)(gr%fine, lr%X(dl_psi)(:, idim, ist, ik), dl_psi(:, idim))
-          call X(multigrid_coarse2fine)(gr%fine, lr2%X(dl_psi)(:, idim, ist, ik), dl_psi2(:, idim))
-        endif
+          call X(multigrid_coarse2fine)(gr%fine, st%X(psi)(:, idim, ist, ik), psi(:, idim))
+          if (present(lr)) then
+            call X(multigrid_coarse2fine)(gr%fine, lr%X(dl_psi)(:, idim, ist, ik), dl_psi(:, idim))
+            call X(multigrid_coarse2fine)(gr%fine, lr2%X(dl_psi)(:, idim, ist, ik), dl_psi2(:, idim))
+          endif
         else
           call lalg_copy(gr%mesh%np_part, st%X(psi)(:, idim, ist, ik), psi(:, idim))
           call X(set_bc)(gr%der, psi(:, idim))
+
           if (present(lr)) then
             call lalg_copy(gr%mesh%np_part, lr%X(dl_psi)(:, idim, ist, ik), dl_psi(:, idim))
             call X(set_bc)(gr%der, dl_psi(:, idim))
@@ -107,11 +106,20 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
         endif
 
         ! calculate the gradients of the wave-functions
+        ! and set boundary conditions in preparation for applying projectors
         call X(derivatives_grad)(gr%fine%der, psi(:, idim), grad_psi(:, :, idim), set_bc = .false.)
+        do idir = 1, NDIM
+          call X(set_bc)(gr%der, grad_psi(:, idir, idim))
+        enddo
 
         if (present(lr)) then
           call X(derivatives_grad)(gr%fine%der, dl_psi(:, idim), grad_dl_psi(:, :, idim), set_bc = .false.)
           call X(derivatives_grad)(gr%fine%der, dl_psi2(:, idim), grad_dl_psi2(:, :, idim), set_bc = .false.)
+
+          do idir = 1, NDIM
+            call X(set_bc)(gr%der, grad_dl_psi(:, idir, idim))
+            call X(set_bc)(gr%der, grad_dl_psi2(:, idir, idim))
+          enddo
         endif
 
         !accumulate to calculate the gradient of the density
