@@ -41,7 +41,7 @@ module preconditioners_m
   
   integer, public, parameter ::     &
     PRE_NONE      = 0,              &
-    PRE_SMOOTHING = 1,              &
+    PRE_FILTER    = 1,              &
     PRE_JACOBI    = 2,              &
     PRE_POISSON   = 3,              &
     PRE_MULTIGRID = 7
@@ -102,23 +102,23 @@ contains
     if(gr%mesh%use_curvlinear) then
       default = PRE_NONE
     else
-      default = PRE_SMOOTHING
+      default = PRE_FILTER
     end if
 
     if (loct_parse_isdef(datasets_check(trim(prefix_)//'Preconditioner')) /= 0 ) then 
-      call loct_parse_int(datasets_check(trim(prefix_)//'Preconditioner'), PRE_SMOOTHING, this%which)
+      call loct_parse_int(datasets_check(trim(prefix_)//'Preconditioner'), PRE_FILTER, this%which)
       if(.not.varinfo_valid_option('Preconditioner', this%which)) &
         call input_error('Preconditioner')
       call messages_print_var_option(stdout, 'Preconditioner', this%which, prefix_)
     else
-      call loct_parse_int(datasets_check('Preconditioner'), PRE_SMOOTHING, this%which)
+      call loct_parse_int(datasets_check('Preconditioner'), PRE_FILTER, this%which)
       if(.not.varinfo_valid_option('Preconditioner', this%which)) &
         call input_error('Preconditioner')
       call messages_print_var_option(stdout, 'Preconditioner', this%which)
     endif  
 
     select case(this%which)
-    case(PRE_SMOOTHING)
+    case(PRE_FILTER)
       ! the smoothing has a star stencil like the laplacian
       call nl_operator_init(this%op, "Preconditioner")
       call stencil_star_get_lapl(this%op%stencil, NDIM, 1)
@@ -161,7 +161,7 @@ contains
     type(preconditioner_t), intent(inout) :: this 
 
     select case(this%which)
-    case(PRE_SMOOTHING)
+    case(PRE_FILTER)
       call nl_operator_end(this%op)
 
     case(PRE_JACOBI, PRE_MULTIGRID)

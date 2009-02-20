@@ -29,6 +29,7 @@ subroutine X(preconditioner_apply)(pre, gr, hm, a, b, omega)
   integer :: idim
   FLOAT   :: omega_
   type(profile_t), save :: preconditioner_prof
+  R_TYPE, allocatable :: a_copy(:)
 
   call profiling_in(preconditioner_prof, "PRECONDITIONER")
 
@@ -41,10 +42,16 @@ subroutine X(preconditioner_apply)(pre, gr, hm, a, b, omega)
       call lalg_copy(NP, a(:,idim), b(:,idim))
     end do
 
-  case(PRE_SMOOTHING)
+  case(PRE_FILTER)
+    ALLOCATE(a_copy(NP_PART), NP_PART)
+
     do idim = 1, hm%d%dim
-      call X(derivatives_oper)(pre%op, gr%der, a(:, idim), b(:, idim))
+      call lalg_copy(NP_PART, a(:, idim), a_copy(:))
+      call X(set_bc)(gr%der, a_copy(:))
+      call X(derivatives_oper)(pre%op, gr%der, a_copy(:), b(:, idim), set_bc = .false.)
     end do
+
+    deallocate(a_copy)
 
   case(PRE_JACOBI)
     call apply_D_inverse(a, b)
