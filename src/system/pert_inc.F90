@@ -30,7 +30,6 @@ subroutine X(pert_apply) (this, gr, geo, hm, ik, f_in, f_out)
   R_TYPE,               intent(out)   :: f_out(:)
 
   R_TYPE, allocatable :: f_in_copy(:)
-   logical :: apply_kpoint
 
   call push_sub('pert_inc.Xpert_apply')
 
@@ -44,14 +43,6 @@ subroutine X(pert_apply) (this, gr, geo, hm, ik, f_in, f_out)
      call X(set_bc(gr%der, f_in_copy(:)))
   endif
   ! no derivatives in electric, so ghost points not needed
-
-  apply_kpoint = simul_box_is_periodic(gr%sb) .and. .not. kpoint_is_gamma(hm%d, ik) &
-    .and. this%pert_type /= PERTURBATION_ELECTRIC
-  ! electric does not need it since (e^-ikr)r(e^ikr) = r
-
-  if (apply_kpoint) then
-    f_in_copy(1:NP_PART) = hm%phase(1:NP_PART, ik) * f_in_copy(1:NP_PART)
-  endif
 
   select case(this%pert_type)
     case(PERTURBATION_ELECTRIC)
@@ -71,10 +62,6 @@ subroutine X(pert_apply) (this, gr, geo, hm, ik, f_in, f_out)
 
   end select
   
-  if (apply_kpoint) then
-    f_out(1:NP) = conjg(hm%phase(1:NP, ik)) * f_out(1:NP)
-  endif
-
   if (this%pert_type /= PERTURBATION_ELECTRIC) then
      deallocate(f_in_copy)
   endif
@@ -115,8 +102,8 @@ contains
     ! set_bc done already separately
     f_out(1:NP) = - M_zI * (grad(1:NP, this%dir))
     ! delta_H_k = (-i*grad + k) . delta_k
-    ! representation on psi is just -i*grad . delta_k
-    ! note that second-order term is left out
+    ! but constant perturbation k has no effect so it is ignored
+    ! term (delta_k)^2 is left out since it too is constant and is second-order anyway
 
     if (this%use_nonlocalpps) then
       do iatom = 1, geo%natoms
@@ -139,14 +126,21 @@ contains
     R_TYPE :: cross(1:MAX_DIM), vv(1:MAX_DIM)
     FLOAT :: xx(1:MAX_DIM)
     integer :: iatom, idir, ip
+    FLOAT, allocatable :: r_x_k(:, :)
 
     call push_sub('pert_inc.X(pert_apply).magnetic')
 
     ALLOCATE(lf(gr%mesh%np, gr%sb%dim), gr%mesh%np * gr%sb%dim)
+    ALLOCATE(r_x_k(gr%mesh%np, gr%sb%dim), gr%mesh%np * gr%sb%dim)
 
     ! Note that we leave out the term 1/P_c
     call X(f_angular_momentum) (gr%sb, gr%mesh, gr%der, f_in_copy, lf, set_bc = .false.)
-    f_out(1:NP) = M_HALF * lf(1:NP, this%dir)
+    ! e^-ikr L e^ikr u = e^-ikr (-ir) x grad(e^ikr u) = L u + r x k u
+
+    forall(ip = 1:NP) 
+      r_x_k(ip, 1:gr%sb%dim) = dcross_product(gr%mesh%x(ip, 1:gr%sb%dim), hm%d%kpoints(ik, 1:gr%sb%dim))
+      f_out(ip) = M_HALF * (lf(ip, this%dir) + r_x_k(ip, this%dir) * f_in_copy(ip))
+    end forall
 
     deallocate(lf)
 
