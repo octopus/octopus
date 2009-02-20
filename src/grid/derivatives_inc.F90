@@ -32,8 +32,8 @@ subroutine X(derivatives_laplt)(der, f, lapl)
 
   call push_sub('derivatives_inc.Xderivatives_laplt')
 
-  ASSERT(ubound(f,    DIM=1) == der%m%np_part)
-  ASSERT(ubound(lapl, DIM=1) >= der%m%np)
+  ASSERT(ubound(f,    DIM=1) == der%mesh%np_part)
+  ASSERT(ubound(lapl, DIM=1) >= der%mesh%np)
 
   call X(set_bc)(der, f)
 
@@ -55,8 +55,8 @@ subroutine X(derivatives_lapl_start)(der, handle, f, lapl, ghost_update, set_bc)
 
   call push_sub('derivatives_inc.Xderivatives_lapl_start')
 
-  ASSERT(ubound(f, DIM=1) >= der%m%np_part)
-  ASSERT(ubound(lapl, DIM=1) >= der%m%np)
+  ASSERT(ubound(f, DIM=1) >= der%mesh%np_part)
+  ASSERT(ubound(lapl, DIM=1) >= der%mesh%np)
 
   handle%X(f) => f
   handle%X(lapl) => lapl
@@ -69,8 +69,8 @@ subroutine X(derivatives_lapl_start)(der, handle, f, lapl, ghost_update, set_bc)
   if(set_bc_) call X(set_bc)(der, handle%X(f))
 
 #ifdef HAVE_MPI
-  if(derivatives_overlap(der) .and. der%m%parallel_in_domains .and. handle%ghost_update) then
-    call X(vec_ighost_update)(der%m%vp,  handle%X(f), handle%pv_h)
+  if(derivatives_overlap(der) .and. der%mesh%parallel_in_domains .and. handle%ghost_update) then
+    call X(vec_ighost_update)(der%mesh%vp,  handle%X(f), handle%pv_h)
   end if
 #endif
 
@@ -85,7 +85,7 @@ subroutine X(derivatives_lapl_finish)(der, handle)
   call push_sub('derivatives_inc.Xderivatives_lapl_finish')
 
 #ifdef HAVE_MPI
-  if(derivatives_overlap(der) .and. der%m%parallel_in_domains .and. handle%ghost_update) then
+  if(derivatives_overlap(der) .and. der%mesh%parallel_in_domains .and. handle%ghost_update) then
 
     call X(nl_operator_operate)(der%lapl,  handle%X(f), handle%X(lapl), ghost_update = .false., points = OP_INNER)
     call pv_handle_wait(handle%pv_h)
@@ -126,10 +126,10 @@ subroutine X(derivatives_lapl_batch_start)(der, handle, ff, lapl, ghost_update, 
   if(set_bc_) call X(set_bc_batch)(der, ff)
 
 #ifdef HAVE_MPI
-  if(derivatives_overlap(der) .and. der%m%parallel_in_domains .and. handle(1, 1)%ghost_update) then
+  if(derivatives_overlap(der) .and. der%mesh%parallel_in_domains .and. handle(1, 1)%ghost_update) then
     do ist = 1, ff%nst
       do idim = 1, ff%dim
-        call X(vec_ighost_update)(der%m%vp, ff%states(ist)%X(psi)(:, idim), handle(idim, ist)%pv_h)
+        call X(vec_ighost_update)(der%mesh%vp, ff%states(ist)%X(psi)(:, idim), handle(idim, ist)%pv_h)
       end do
     end do
   end if
@@ -152,7 +152,7 @@ subroutine X(derivatives_lapl_batch_finish)(der, handle, ff, lapl)
   call push_sub('derivatives_inc.Xderivatives_lapl_finish')
 
 #ifdef HAVE_MPI
-  if(derivatives_overlap(der) .and. der%m%parallel_in_domains .and. handle(1, 1)%ghost_update) then
+  if(derivatives_overlap(der) .and. der%mesh%parallel_in_domains .and. handle(1, 1)%ghost_update) then
 
     call X(nl_operator_operate_batch)(der%lapl, ff, lapl, ghost_update = .false., points = OP_INNER)
     do ist = 1, ff%nst
@@ -195,8 +195,8 @@ end subroutine X(derivatives_lapl)
 ! ---------------------------------------------------------
 subroutine X(derivatives_grad)(der, f, grad, ghost_update, set_bc)
   type(derivatives_t), intent(in)    :: der
-  R_TYPE,              intent(inout) :: f(:)        ! f(m%np_part)
-  R_TYPE,              intent(out)   :: grad(:, :)  ! grad(m%np, m%sb%dim)
+  R_TYPE,              intent(inout) :: f(:)        ! f(mesh%np_part)
+  R_TYPE,              intent(out)   :: grad(:, :)  ! grad(mesh%np, mesh%sb%dim)
   logical, optional,   intent(in)    :: ghost_update
   logical, optional,   intent(in)    :: set_bc
 
@@ -212,8 +212,11 @@ subroutine X(derivatives_grad)(der, f, grad, ghost_update, set_bc)
 
   call der_handle_init(handle, der)
 
-  ASSERT(ubound(grad, DIM=1) >= der%m%np)
-  ASSERT(ubound(grad, DIM=2) >= der%m%sb%dim)
+  write(*,*) 'before assert 1'
+  write(*,*) 'ubound(grad,DIM=1) = ', ubound(grad,DIM=1)
+  ASSERT(ubound(grad, DIM=1) >= der%mesh%np)
+  write(*,*) 'after assert 1'
+  ASSERT(ubound(grad, DIM=2) >= der%dim)
 
   set_bc_ = .true.
   if(present(set_bc)) set_bc_ = set_bc
@@ -223,24 +226,24 @@ subroutine X(derivatives_grad)(der, f, grad, ghost_update, set_bc)
   ghost_update_ = .true.
   if(present(ghost_update)) ghost_update_ = ghost_update
 
-  if(derivatives_overlap(der) .and. der%m%parallel_in_domains .and. ghost_update_) then
+  if(derivatives_overlap(der) .and. der%mesh%parallel_in_domains .and. ghost_update_) then
 
-    call X(vec_ighost_update)(der%m%vp, f, handle%pv_h)
+    call X(vec_ighost_update)(der%mesh%vp, f, handle%pv_h)
 
-    do idir = 1, der%m%sb%dim
+    do idir = 1, der%dim
       call X(nl_operator_operate)(der%grad(idir), f, grad(:, idir), ghost_update = .false., points = OP_INNER)
     end do
 
     call pv_handle_wait(handle%pv_h)
 
-    do idir = 1, der%m%sb%dim
+    do idir = 1, der%dim
       call X(nl_operator_operate)(der%grad(idir), f, grad(:, idir), ghost_update = .false., points = OP_OUTER)
     end do
 
   else
 #endif
     
-    do idir = 1, der%m%sb%dim
+    do idir = 1, der%dim
       call X(nl_operator_operate) (der%grad(idir), f, grad(:, idir), ghost_update = ghost_update)
     end do
     
@@ -267,7 +270,7 @@ subroutine X(derivatives_oper)(op, der, f, opf, ghost_update, set_bc)
 
   call push_sub('derivatives_inc.Xderivatives_oper')
   
-  ASSERT(ubound(opf, DIM=1) >= der%m%np)
+  ASSERT(ubound(opf, DIM=1) >= der%mesh%np)
 
   call der_handle_init(handle, der)
 
@@ -280,9 +283,9 @@ subroutine X(derivatives_oper)(op, der, f, opf, ghost_update, set_bc)
   if(present(ghost_update)) ghost_update_ = ghost_update
 
 #ifdef HAVE_MPI
-  if(derivatives_overlap(der) .and. der%m%parallel_in_domains .and. ghost_update_) then
+  if(derivatives_overlap(der) .and. der%mesh%parallel_in_domains .and. ghost_update_) then
 
-    call X(vec_ighost_update)(der%m%vp, f, handle%pv_h)
+    call X(vec_ighost_update)(der%mesh%vp, f, handle%pv_h)
 
     call X(nl_operator_operate)(op, f, opf, ghost_update = .false., points = OP_INNER)
 
@@ -317,17 +320,17 @@ subroutine X(derivatives_div)(der, f, div, ghost_update)
 
   call push_sub('derivatives_inc.Xderivatives_div')
 
-  ASSERT(ubound(f,   DIM=1) == der%m%np_part)
-  ASSERT(ubound(div, DIM=1) >= der%m%np)
+  ASSERT(ubound(f,   DIM=1) == der%mesh%np_part)
+  ASSERT(ubound(div, DIM=1) >= der%mesh%np)
 
-  do i = 1, der%m%sb%dim
+  do i = 1, der%dim
     call X(set_bc)(der, f(:, i))
   end do
 
-  ALLOCATE(tmp(der%m%np), der%m%np)
+  ALLOCATE(tmp(der%mesh%np), der%mesh%np)
 
   div(:) = R_TOTYPE(M_ZERO)
-  do i = 1, der%m%sb%dim
+  do i = 1, der%dim
     call X(nl_operator_operate) (der%grad(i), f(:,i), tmp, ghost_update=ghost_update)
     div(:) = div(:) + tmp(:)
   end do
@@ -341,8 +344,8 @@ end subroutine X(derivatives_div)
 ! ---------------------------------------------------------
 subroutine X(derivatives_curl)(der, f, curl, ghost_update)
   type(derivatives_t), intent(in)    :: der
-  R_TYPE,              intent(inout) :: f(:,:)    ! f(m%np_part, der%m%sb%dim) 
-  R_TYPE,              intent(out)   :: curl(:,:) ! curl(m%np, der%m%sb%dim) if dim = 2, curl(m%np, 1) if dim = 1.
+  R_TYPE,              intent(inout) :: f(:,:)    ! f(m%np_part, der%dim) 
+  R_TYPE,              intent(out)   :: curl(:,:) ! curl(m%np, der%dim) if dim = 2, curl(m%np, 1) if dim = 1.
   logical, optional,   intent(in)    :: ghost_update
 
   R_TYPE, allocatable :: tmp(:)
@@ -350,12 +353,12 @@ subroutine X(derivatives_curl)(der, f, curl, ghost_update)
 
   call push_sub('derivatives_inc.Xderivatives_div')
 
-  ASSERT(der%m%sb%dim == 3 .or. der%m%sb%dim == 2)
-  ASSERT(ubound(f,    DIM=1) == der%m%np_part)
-  ASSERT(ubound(curl, DIM=1) >= der%m%np)
-  select case(der%m%sb%dim)
+  ASSERT(der%dim == 3 .or. der%dim == 2)
+  ASSERT(ubound(f,    DIM=1) == der%mesh%np_part)
+  ASSERT(ubound(curl, DIM=1) >= der%mesh%np)
+  select case(der%dim)
     case(3)
-      ASSERT(ubound(curl, DIM=2) == der%m%sb%dim)
+      ASSERT(ubound(curl, DIM=2) == der%dim)
     case(2)
       ASSERT(ubound(curl, DIM=2) == 1)
     case(1)
@@ -363,16 +366,16 @@ subroutine X(derivatives_curl)(der, f, curl, ghost_update)
       call write_fatal(1)
   end select
 
-  do i = 1, der%m%sb%dim
+  do i = 1, der%dim
     call X(set_bc)(der, f(:, i))
   end do
   
-  ALLOCATE(tmp(der%m%np_part), der%m%np_part)
+  ALLOCATE(tmp(der%mesh%np_part), der%mesh%np_part)
 
   curl(:,:) = R_TOTYPE(M_ZERO)
-  np = der%m%np
+  np = der%mesh%np
 
-  select case(der%m%sb%dim)
+  select case(der%dim)
   case(3)
     call X(nl_operator_operate) (der%grad(3), f(:,1), tmp, ghost_update=ghost_update)
     curl(1:np,2) = curl(1:np,2) + tmp(1:np)
@@ -418,60 +421,60 @@ subroutine X(set_bc)(der, f)
   call push_sub('derivatives_inc.Xset_bc')
   call profiling_in(set_bc_prof, 'SET_BC')
   
-  ASSERT(ubound(f, DIM=1) >= der%m%np_part)
+  ASSERT(ubound(f, DIM=1) >= der%mesh%np_part)
 
-  p = der%m%vp%partno
+  p = der%mesh%vp%partno
    
   ! The boundary points are at different locations depending on the presence
   ! of ghost points due to domain parallelization.
-  if(der%m%parallel_in_domains) then
-    bndry_start = der%m%vp%np_local(p) + der%m%vp%np_ghost(p) + 1
-    bndry_end   = der%m%vp%np_local(p) + der%m%vp%np_ghost(p) + der%m%vp%np_bndry(p)
+  if(der%mesh%parallel_in_domains) then
+    bndry_start = der%mesh%vp%np_local(p) + der%mesh%vp%np_ghost(p) + 1
+    bndry_end   = der%mesh%vp%np_local(p) + der%mesh%vp%np_ghost(p) + der%mesh%vp%np_bndry(p)
   else
-    bndry_start = der%m%np+1
-    bndry_end   = der%m%np_part
+    bndry_start = der%mesh%np+1
+    bndry_end   = der%mesh%np_part
   end if
 
   if(der%zero_bc) then
     f(bndry_start:bndry_end) = R_TOTYPE(M_ZERO)
   end if
 
-  if(simul_box_multires(der%m%sb)) call multires()
+  if(simul_box_multires(der%mesh%sb)) call multires()
 
   if(der%periodic_bc) then
 
 #ifdef HAVE_MPI
-    if(der%m%parallel_in_domains) then
+    if(der%mesh%parallel_in_domains) then
       call profiling_in(set_bc_comm_prof, 'SET_BC_COMMUNICATION')
       ! get the points from other nodes
-      ALLOCATE(req(2*der%m%vp%npart), 2*der%m%vp%npart)
+      ALLOCATE(req(2*der%mesh%vp%npart), 2*der%mesh%vp%npart)
 
       nreq = 0
 
-      do ipart = 1, der%m%vp%npart
-        if(ipart == p .or. der%m%nsend(ipart) == 0) cycle
+      do ipart = 1, der%mesh%vp%npart
+        if(ipart == p .or. der%mesh%nsend(ipart) == 0) cycle
         nreq = nreq + 1
-        call MPI_Isend(f, 1, der%m%X(send_type)(ipart), ipart - 1, 3, der%m%vp%comm, req(nreq), mpi_err)
+        call MPI_Isend(f, 1, der%mesh%X(send_type)(ipart), ipart - 1, 3, der%mesh%vp%comm, req(nreq), mpi_err)
       end do
 
-      do ipart = 1, der%m%vp%npart
-        if(ipart == p .or. der%m%nrecv(ipart) == 0) cycle
+      do ipart = 1, der%mesh%vp%npart
+        if(ipart == p .or. der%mesh%nrecv(ipart) == 0) cycle
         nreq = nreq + 1
-        call MPI_Irecv(f, 1, der%m%X(recv_type)(ipart), ipart - 1, 3, der%m%vp%comm, req(nreq), mpi_err)
+        call MPI_Irecv(f, 1, der%mesh%X(recv_type)(ipart), ipart - 1, 3, der%mesh%vp%comm, req(nreq), mpi_err)
       end do
 
-      call profiling_count_transfers(sum(der%m%nrecv(1:der%m%vp%npart) + der%m%nrecv(1:der%m%vp%npart)), f(1))
+      call profiling_count_transfers(sum(der%mesh%nrecv(1:der%mesh%vp%npart) + der%mesh%nrecv(1:der%mesh%vp%npart)), f(1))
 
       call profiling_out(set_bc_comm_prof)
     end if
 #endif
 
-    do iper = 1, der%m%nper
-      f(der%m%per_points(iper)) = f(der%m%per_map(iper))
+    do iper = 1, der%mesh%nper
+      f(der%mesh%per_points(iper)) = f(der%mesh%per_map(iper))
     end do
 
 #ifdef HAVE_MPI
-    if(der%m%parallel_in_domains) then
+    if(der%mesh%parallel_in_domains) then
       call profiling_in(set_bc_comm_prof)
 
       ALLOCATE(statuses(MPI_STATUS_SIZE, nreq), MPI_STATUS_SIZE*nreq)
@@ -512,9 +515,9 @@ contains
     call interpolation_coefficients(nn, pos, M_ZERO, ww)
 
     do ip = bndry_start, bndry_end
-      ix = der%m%idx%Lxyz(ip, 1)
-      iy = der%m%idx%Lxyz(ip, 2)
-      iz = der%m%idx%Lxyz(ip, 3)
+      ix = der%mesh%idx%Lxyz(ip, 1)
+      iy = der%mesh%idx%Lxyz(ip, 2)
+      iz = der%mesh%idx%Lxyz(ip, 3)
       dx = abs(mod(ix, 2))
       dy = abs(mod(iy, 2))
       dz = abs(mod(iz, 2))
@@ -524,7 +527,7 @@ contains
         do ii = 1, nn
           do jj = 1, nn
             do kk = 1, nn
-              f(ip) = f(ip) + ww(ii)*ww(jj)*ww(kk)*f(der%m%idx%Lxyz_inv(ix + posi(ii)*dx, iy + posi(jj)*dy, iz + posi(kk)*dz))
+              f(ip) = f(ip) + ww(ii)*ww(jj)*ww(kk)*f(der%mesh%idx%Lxyz_inv(ix + posi(ii)*dx, iy + posi(jj)*dy, iz + posi(kk)*dz))
             end do
           end do
         end do
@@ -553,7 +556,7 @@ subroutine X(set_bc_batch)(der, fb)
 
   call push_sub('derivatives_inc.Xset_bc_batch')
 
-  if(simul_box_multires(der%m%sb)) then
+  if(simul_box_multires(der%mesh%sb)) then
 
     do ist = 1, fb%nst
       do idim = 1, fb%dim
@@ -565,16 +568,16 @@ subroutine X(set_bc_batch)(der, fb)
 
     call profiling_in(set_bc_prof, 'SET_BC')
 
-    pp = der%m%vp%partno
+    pp = der%mesh%vp%partno
 
     ! The boundary points are at different locations depending on the presence
     ! of ghost points due to domain parallelization.
-    if(der%m%parallel_in_domains) then
-      bndry_start = der%m%vp%np_local(pp) + der%m%vp%np_ghost(pp) + 1
-      bndry_end   = der%m%vp%np_local(pp) + der%m%vp%np_ghost(pp) + der%m%vp%np_bndry(pp)
+    if(der%mesh%parallel_in_domains) then
+      bndry_start = der%mesh%vp%np_local(pp) + der%mesh%vp%np_ghost(pp) + 1
+      bndry_end   = der%mesh%vp%np_local(pp) + der%mesh%vp%np_ghost(pp) + der%mesh%vp%np_bndry(pp)
     else
-      bndry_start = der%m%np+1
-      bndry_end   = der%m%np_part
+      bndry_start = der%mesh%np+1
+      bndry_end   = der%mesh%np_part
     end if
 
     if(der%zero_bc) then
@@ -586,49 +589,49 @@ subroutine X(set_bc_batch)(der, fb)
     if(der%periodic_bc) then
 
 #ifdef HAVE_MPI
-      if(der%m%parallel_in_domains) then
+      if(der%mesh%parallel_in_domains) then
         call profiling_in(set_bc_comm_prof, 'SET_BC_COMMUNICATION')
 
         ! get the points that are copies from other nodes
-        ALLOCATE(req(2*der%m%vp%npart*fb%dim*fb%nst), 2*der%m%vp%npart*fb%dim*fb%nst)
+        ALLOCATE(req(2*der%mesh%vp%npart*fb%dim*fb%nst), 2*der%mesh%vp%npart*fb%dim*fb%nst)
 
         nreq = 0
 
         do ist = 1, fb%nst
           do idim = 1, fb%dim
-            do ipart = 1, der%m%vp%npart
-              if(ipart == der%m%vp%partno .or. der%m%nrecv(ipart) == 0) cycle
+            do ipart = 1, der%mesh%vp%npart
+              if(ipart == der%mesh%vp%partno .or. der%mesh%nrecv(ipart) == 0) cycle
               nreq = nreq + 1
-              call MPI_Irecv(fb%states(ist)%X(psi)(:, idim), 1, der%m%X(recv_type)(ipart), ipart - 1, 3, &
-                   der%m%vp%comm, req(nreq), mpi_err)
+              call MPI_Irecv(fb%states(ist)%X(psi)(:, idim), 1, der%mesh%X(recv_type)(ipart), ipart - 1, 3, &
+                   der%mesh%vp%comm, req(nreq), mpi_err)
             end do
           end do
         end do
 
         do ist = 1, fb%nst
           do idim = 1, fb%dim
-            do ipart = 1, der%m%vp%npart
-              if(ipart == der%m%vp%partno .or. der%m%nsend(ipart) == 0) cycle
+            do ipart = 1, der%mesh%vp%npart
+              if(ipart == der%mesh%vp%partno .or. der%mesh%nsend(ipart) == 0) cycle
               nreq = nreq + 1
-              call MPI_Isend(fb%states(ist)%X(psi)(:, idim), 1, der%m%X(send_type)(ipart), ipart - 1, 3, &
-                   der%m%vp%comm, req(nreq), mpi_err)
+              call MPI_Isend(fb%states(ist)%X(psi)(:, idim), 1, der%mesh%X(send_type)(ipart), ipart - 1, 3, &
+                   der%mesh%vp%comm, req(nreq), mpi_err)
             end do
           end do
         end do
         
-        call profiling_count_transfers(sum(der%m%nsend(1:der%m%vp%npart) + der%m%nrecv(1:der%m%vp%npart))*fb%dim*fb%nst, &
+        call profiling_count_transfers(sum(der%mesh%nsend(1:der%mesh%vp%npart) + der%mesh%nrecv(1:der%mesh%vp%npart))*fb%dim*fb%nst, &
              R_TOTYPE(M_ONE))
 
         call profiling_out(set_bc_comm_prof)
       end if
 #endif
 
-      forall (ist = 1:fb%nst, idim = 1:fb%dim, ip = 1:der%m%nper)
-        fb%states(ist)%X(psi)(der%m%per_points(ip), idim) = fb%states(ist)%X(psi)(der%m%per_map(ip), idim)
+      forall (ist = 1:fb%nst, idim = 1:fb%dim, ip = 1:der%mesh%nper)
+        fb%states(ist)%X(psi)(der%mesh%per_points(ip), idim) = fb%states(ist)%X(psi)(der%mesh%per_map(ip), idim)
       end forall
 
 #ifdef HAVE_MPI
-      if(der%m%parallel_in_domains) then
+      if(der%mesh%parallel_in_domains) then
         call profiling_in(set_bc_comm_prof)
 
         ALLOCATE(statuses(MPI_STATUS_SIZE, nreq), MPI_STATUS_SIZE*nreq)

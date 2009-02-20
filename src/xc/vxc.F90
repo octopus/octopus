@@ -186,6 +186,8 @@ contains
     integer :: ii
     FLOAT   :: d(2), dtot, dpol
 
+    call push_sub('vxc.xc_get_vxc.lda_init')
+
     ! allocate some general arrays
     ALLOCATE(dens(NP_PART, spin_channels), NP_PART*spin_channels)
     ALLOCATE(ex_per_vol(NP), NP)
@@ -217,7 +219,8 @@ contains
         dens(ii, 2) = max(M_HALF*(dtot - dpol), M_ZERO)
       end select
     end do
-
+    
+    call pop_sub()
   end subroutine lda_init
 
 
@@ -234,6 +237,8 @@ contains
   subroutine lda_process()
     integer :: i, j
     FLOAT :: d(2), dpol, vpol
+
+    call push_sub('vxc.xc_get_vxc.lda_process')
 
     if(ispin == SPINORS) then
       ! rotate back (do not need the rotation matrix for this).
@@ -256,6 +261,7 @@ contains
       call lalg_axpy(NP, M_ONE, dedd(:, 1), vxc(:, 1))
     end if
 
+    call pop_sub()
   end subroutine lda_process
 
 
@@ -265,6 +271,9 @@ contains
   !   *) calculates the gradient of the density
   subroutine gga_init()
     integer :: ii
+
+    call push_sub('vxc.xc_get_vxc.gga_init')
+
     ! allocate variables
     ALLOCATE(gdens(NP, 3, spin_channels), NP*3*spin_channels)
     gdens = M_ZERO
@@ -286,6 +295,7 @@ contains
       end if
     end do
 
+    call pop_sub()
   end subroutine gga_init
 
 
@@ -302,6 +312,8 @@ contains
   subroutine gga_process()
     integer :: i, is
     FLOAT, allocatable :: gf(:,:)
+
+    call push_sub('vxc.xc_get_vxc.gga_process')
 
     ! subtract the divergence of the functional derivative of Exc with respect to
     ! the gradient of the density.
@@ -327,6 +339,7 @@ contains
       deallocate(gf)
     end if
 
+    call pop_sub()
   end subroutine gga_process
 
 

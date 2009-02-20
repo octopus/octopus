@@ -89,7 +89,7 @@ module derivatives_m
     DER_STARPLUS     = 4
 
   type derivatives_t
-    type(mesh_t), pointer :: m             ! pointer to the underlying mesh
+    type(mesh_t), pointer :: mesh          ! pointer to the underlying mesh
     integer               :: dim           ! dimensionality of the space (sb%dim)
     integer               :: order         ! order of the discretization (value depends on stencil)
     integer               :: stencil_type  ! type of discretization
@@ -343,11 +343,11 @@ contains
   ! Returns the diagonal elements of the laplacian needed for preconditioning
   subroutine derivatives_lapl_diag(der, lapl)
     type(derivatives_t), intent(in)  :: der
-    FLOAT,             intent(out) :: lapl(:)  ! lapl(m%np)
+    FLOAT,             intent(out) :: lapl(:)  ! lapl(mesh%np)
 
     call push_sub('derivatives.derivatives_lapl_diag')
 
-    ASSERT(ubound(lapl, DIM=1) >= der%m%np)
+    ASSERT(ubound(lapl, DIM=1) >= der%mesh%np)
 
     ! the laplacian is a real operator
     call dnl_operator_operate_diag (der%lapl, lapl)
@@ -401,9 +401,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine derivatives_build(der, m)
+  subroutine derivatives_build(der, mesh)
     type(derivatives_t),    intent(inout) :: der
-    type(mesh_t),   target, intent(in)    :: m
+    type(mesh_t),   target, intent(in)    :: mesh
 
     integer, allocatable :: polynomials(:,:)
     FLOAT,   allocatable :: rhs(:,:)
@@ -416,19 +416,19 @@ contains
 
     ASSERT(associated(der%op))
     ASSERT(der%stencil_type>=DER_STAR .and. der%stencil_type<=DER_STARPLUS)
-    ASSERT(.not.(der%stencil_type==DER_VARIATIONAL.and.m%use_curvlinear))
+    ASSERT(.not.(der%stencil_type==DER_VARIATIONAL .and. mesh%use_curvlinear))
 
-    der%m => m    ! make a pointer to the underlying mesh
+    der%mesh => mesh    ! make a pointer to the underlying mesh
 
     const_w_  = .true.
     cmplx_op_ = .false.
 
     ! need non-constant weights for curvlinear and scattering meshes
-    if(m%use_curvlinear) const_w_ = .false.
+    if(mesh%use_curvlinear) const_w_ = .false.
 
     ! build operators
     do i = 1, der%dim+1
-      call nl_operator_build(m, der%op(i), der%m%np, const_w = const_w_, cmplx_op = cmplx_op_)
+      call nl_operator_build(mesh, der%op(i), der%mesh%np, const_w = const_w_, cmplx_op = cmplx_op_)
     end do
 
     select case(der%stencil_type)
@@ -446,7 +446,7 @@ contains
           call get_rhs_lapl(rhs(:,1))
         end if
 
-        call make_discretization(der%dim, der%m, polynomials, rhs, 1, der%op(i:i))
+        call make_discretization(der%dim, der%mesh, polynomials, rhs, 1, der%op(i:i))
         deallocate(polynomials, rhs)
       end do
 
@@ -460,7 +460,7 @@ contains
       end do
       call get_rhs_lapl(rhs(:, der%dim+1))
 
-      call make_discretization(der%dim, der%m, polynomials, rhs, der%dim+1, der%op(:))
+      call make_discretization(der%dim, der%mesh, polynomials, rhs, der%dim+1, der%op(:))
 
       deallocate(polynomials, rhs)
 
@@ -470,36 +470,36 @@ contains
         ALLOCATE(rhs(der%op(i)%stencil%size, 1), der%op(i)%stencil%size*1)
         call stencil_starplus_pol_grad(der%dim, i, der%order, polynomials)
         call get_rhs_grad(i, rhs(:, 1))
-        call make_discretization(der%dim, der%m, polynomials, rhs, 1, der%op(i:i))
+        call make_discretization(der%dim, der%mesh, polynomials, rhs, 1, der%op(i:i))
         deallocate(polynomials, rhs)
       end do
       ALLOCATE(polynomials(der%dim, der%op(der%dim+1)%stencil%size), der%dim*der%op(der%dim+1)%stencil%size)
       ALLOCATE(rhs(der%op(i)%stencil%size, 1), der%op(i)%stencil%size*1)
       call stencil_starplus_pol_lapl(der%dim, der%order, polynomials)
       call get_rhs_lapl(rhs(:, 1))
-      call make_discretization(der%dim, der%m, polynomials, rhs, 1, der%op(der%dim+1:der%dim+1))
+      call make_discretization(der%dim, der%mesh, polynomials, rhs, 1, der%op(der%dim+1:der%dim+1))
       deallocate(polynomials, rhs)
 
     case(DER_VARIATIONAL)
       ! we have the explicit coefficients
-      call stencil_variational_coeff_lapl(der%dim, der%order, m%h, der%lapl, alpha = der%lapl_cutoff)
+      call stencil_variational_coeff_lapl(der%dim, der%order, mesh%h, der%lapl, alpha = der%lapl_cutoff)
 
     end select
 
     ! Here the Laplacian is forced to be self-adjoint, and the gradient to be skew-selfadjoint
-    if(m%use_curvlinear .and. (.not. simul_box_multires(der%m%sb))) then
+    if(mesh%use_curvlinear .and. (.not. simul_box_multires(der%mesh%sb))) then
       do i = 1, der%dim
         call nl_operator_init(auxop, "auxop")
         auxop%stencil = der%grad(i)%stencil
-        call nl_operator_build(m, auxop, der%m%np, const_w = const_w_, cmplx_op = cmplx_op_)
-        call nl_operator_skewadjoint(der%grad(i), auxop, der%m)
+        call nl_operator_build(mesh, auxop, der%mesh%np, const_w = const_w_, cmplx_op = cmplx_op_)
+        call nl_operator_skewadjoint(der%grad(i), auxop, der%mesh)
         call nl_operator_equal(der%grad(i), auxop)
         call nl_operator_end(auxop)
       end do
       call nl_operator_init(auxop, "auxop")
       auxop%stencil = der%lapl%stencil
-      call nl_operator_build(m, auxop, der%m%np, const_w = const_w_, cmplx_op = cmplx_op_)
-      call nl_operator_selfadjoint(der%lapl, auxop, der%m)
+      call nl_operator_build(mesh, auxop, der%mesh%np, const_w = const_w_, cmplx_op = cmplx_op_)
+      call nl_operator_selfadjoint(der%lapl, auxop, der%mesh)
       call nl_operator_equal(der%lapl, auxop)
       call nl_operator_end(auxop)
     end if
@@ -554,9 +554,9 @@ contains
   end subroutine derivatives_build
 
   ! ---------------------------------------------------------
-  subroutine make_discretization(dim, m, pol, rhs, n, op)
+  subroutine make_discretization(dim, mesh, pol, rhs, n, op)
     integer,                intent(in)    :: dim
-    type(mesh_t),           intent(in)    :: m
+    type(mesh_t),           intent(in)    :: mesh
     integer,                intent(in)    :: pol(:,:)
     integer,                intent(in)    :: n
     FLOAT,                  intent(inout) :: rhs(:,:)
@@ -586,7 +586,7 @@ contains
     do p = 1, p_max
       mat(1,:) = M_ONE
       do i = 1, op(1)%stencil%size
-        x(1:dim) = m%x(p + op(1)%ri(i, op(1)%rimap(p)), 1:dim) - m%x(p, 1:dim)
+        x(1:dim) = mesh%x(p + op(1)%ri(i, op(1)%rimap(p)), 1:dim) - mesh%x(p, 1:dim)
 
         ! calculate powers
         do j = 1, dim
@@ -626,8 +626,8 @@ contains
     nullify(this%df, this%zf)
     nullify(this%dlapl, this%zlapl)
 #ifdef HAVE_MPI
-    this%parallel_in_domains = der%m%parallel_in_domains
-    if(this%parallel_in_domains) call pv_handle_init(this%pv_h, der%m%vp, der%comm_method)
+    this%parallel_in_domains = der%mesh%parallel_in_domains
+    if(this%parallel_in_domains) call pv_handle_init(this%pv_h, der%mesh%vp, der%comm_method)
 #endif
 
     call pop_sub()
