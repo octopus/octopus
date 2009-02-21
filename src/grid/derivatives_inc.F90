@@ -212,10 +212,7 @@ subroutine X(derivatives_grad)(der, f, grad, ghost_update, set_bc)
 
   call der_handle_init(handle, der)
 
-  write(*,*) 'before assert 1'
-  write(*,*) 'ubound(grad,DIM=1) = ', ubound(grad,DIM=1)
   ASSERT(ubound(grad, DIM=1) >= der%mesh%np)
-  write(*,*) 'after assert 1'
   ASSERT(ubound(grad, DIM=2) >= der%dim)
 
   set_bc_ = .true.
