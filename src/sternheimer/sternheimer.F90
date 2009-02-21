@@ -56,32 +56,37 @@ module sternheimer_m
   implicit none
 
   private
-  public :: &
-       sternheimer_t,      &
-       sternheimer_init,   &
-       sternheimer_end,    &
-       dsternheimer_solve, & 
-       zsternheimer_solve, &
-       sternheimer_add_fxc, &
-       sternheimer_add_hartree, & 
-       dsternheimer_calc_hvar, &
-       zsternheimer_calc_hvar, &
+  public ::                       &
+       sternheimer_t,             &
+       sternheimer_init,          &
+       sternheimer_end,           &
+       dsternheimer_solve,        & 
+       zsternheimer_solve,        &
+       sternheimer_add_fxc,       &
+       sternheimer_add_hartree,   &
+       dsternheimer_calc_hvar,    &
+       zsternheimer_calc_hvar,    &
+       dsternheimer_seT_rhs,      &
+       zsternheimer_seT_rhs,      &
+       sternheimer_have_rhs,      &
+       sternheimer_unset_rhs,     &
        sternheimer_has_converged
   
   type sternheimer_t
      private
      type(linear_solver_t) :: solver
-     type(mix_t) :: mixer
-     type(scf_tol_t) :: scftol
-     logical :: add_fxc
-     logical :: add_hartree
-     logical :: ok
-     logical :: hmermitian 
-     logical :: occ_response
-     logical :: preorthogonalization
-     logical :: oep_kernel
-     FLOAT, pointer :: fxc(:,:,:)    ! linear change of the xc potential (fxc)
-     
+     type(mix_t)           :: mixer
+     type(scf_tol_t)       :: scftol
+     FLOAT, pointer        :: fxc(:,:,:)    ! linear change of the xc potential (fxc)
+     FLOAT, pointer        :: drhs(:, :, :, :)
+     CMPLX, pointer        :: zrhs(:, :, :, :)
+     logical               :: add_fxc
+     logical               :: add_hartree
+     logical               :: ok
+     logical               :: hmermitian 
+     logical               :: occ_response
+     logical               :: preorthogonalization
+     logical               :: oep_kernel
   end type sternheimer_t
   
   type(profile_t), save :: prof, prof_hvar
@@ -196,6 +201,8 @@ contains
 
     if(this%add_fxc) call sternheimer_build_fxc(this, sys%gr%mesh, sys%st, sys%ks) 
 
+    nullify(this%drhs)
+    nullify(this%zrhs)
   end subroutine sternheimer_init
 
 
@@ -263,6 +270,20 @@ contains
     r = this%ok
   end function sternheimer_has_converged
 
+  !-----------------------------------------------------------
+  logical pure function sternheimer_have_rhs(this) result(have)
+    type(sternheimer_t), intent(in) :: this
+    have = associated(this%drhs) .or. associated(this%zrhs)
+  end function sternheimer_have_rhs
+
+  !-----------------------------------------------------------
+  subroutine sternheimer_unset_rhs(this)
+    type(sternheimer_t), intent(inout) :: this
+    
+    nullify(this%drhs)
+    nullify(this%zrhs)
+  end subroutine sternheimer_unset_rhs
+  
 #include "complex.F90"
 #include "sternheimer_inc.F90"
 

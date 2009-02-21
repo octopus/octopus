@@ -53,7 +53,7 @@ subroutine X(sternheimer_solve)(                           &
   type(mesh_t), pointer :: m
   type(states_t), pointer :: st
 
-  integer :: total_iter, idim
+  integer :: total_iter, idim, ip
 
   character(len=100) :: dirname
 
@@ -126,9 +126,14 @@ subroutine X(sternheimer_solve)(                           &
       do ist = 1, st%nst
         do sigma = 1, nsigma
           !calculate the RHS of the Sternheimer eq
-          Y(1:m%np, 1, sigma) = R_TOTYPE(M_ZERO)
-          call X(pert_apply)(perturbation, sys%gr, sys%geo, hm, ik, st%X(psi)(1:m%np_part, 1, ist, ik), Y(1:m%np, 1, sigma))
-          Y(1:m%np, 1, sigma) = -Y(1:m%np, 1, sigma) - hvar(1:m%np, is, sigma) * st%X(psi)(1:m%np, 1, ist, ik)
+          if(sternheimer_have_rhs(this)) then
+            ASSERT(associated(this%X(rhs)))
+            forall(idim = 1:st%d%dim, ip = 1:m%np) y(ip, idim, sigma) = -(M_ONE + hvar(ip, is, sigma))*this%X(rhs)(ip, idim, ist, ik)
+          else
+            Y(1:m%np, 1, sigma) = R_TOTYPE(M_ZERO)
+            call X(pert_apply)(perturbation, sys%gr, sys%geo, hm, ik, st%X(psi)(:, 1, ist, ik), Y(:, 1, sigma))
+            Y(1:m%np, 1, sigma) = -Y(1:m%np, 1, sigma) - hvar(1:m%np, is, sigma)*st%X(psi)(1:m%np, 1, ist, ik)
+          end if
 
           if (this%occ_response) then
             ! project out only the component of the unperturbed wavefunction
@@ -338,6 +343,13 @@ subroutine X(sternheimer_calc_hvar)(this, sys, hm, lr, nsigma, hvar)
   call pop_sub()
 end subroutine X(sternheimer_calc_hvar)
 
+!-----------------------------------------------------------
+subroutine X(sternheimer_set_rhs)(this, rhs)
+  type(sternheimer_t), intent(inout) :: this
+  R_TYPE, target,      intent(in)    :: rhs(:, :, :, :)
+
+  this%X(rhs) => rhs
+end subroutine X(sternheimer_set_rhs)
 
 !! Local Variables:
 !! mode: f90

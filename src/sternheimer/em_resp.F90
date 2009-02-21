@@ -624,7 +624,7 @@ contains
 
     ! ---------------------------------------------------------
     subroutine out_Born_charges()
-      integer iatom, idir, idir2
+      integer iatom
       FLOAT :: phase(1:MAX_DIM, 1:MAX_DIM)
 
       call push_sub('em_resp.em_resp_output.out_Born_charges')
