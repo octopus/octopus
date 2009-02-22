@@ -43,8 +43,8 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
   R_TYPE, allocatable :: grad_dl_psi(:, :, :)
   R_TYPE, allocatable :: grad_dl_psi2(:, :, :)
   FLOAT,  allocatable :: vloc(:)
-  CMPLX,  allocatable :: grad_rho(:, :), force(:, :), zvloc(:), phase(:)
-  logical :: apply_kpoint
+  CMPLX,  allocatable :: grad_rho(:, :), force(:, :), zvloc(:)
+  CMPLX :: phase
 #ifdef HAVE_MPI
   integer, allocatable :: recv_count(:), recv_displ(:)
   CMPLX, allocatable  :: force_local(:, :), grad_rho_local(:, :)
@@ -64,9 +64,6 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
   np = gr%fine%mesh%np
   np_part = gr%fine%mesh%np_part
   ! if there is no fine mesh, gr%fine%mesh => gr%mesh according to grid.F90
-
-  apply_kpoint = simul_box_is_periodic(gr%sb) .and. .not. kpoint_is_gamma(st%d, ik)
-  if(apply_kpoint) ALLOCATE(phase(np_part), np_part)
 
   if(present(lr)) then
     ALLOCATE(grad_dl_psi(np_part, 1:NDIM, st%d%dim), np_part*NDIM*st%d%dim)
@@ -109,17 +106,17 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
           endif
         endif
 
-        if(apply_kpoint) then
-          forall(ip = 1:np_part) &
-            phase(ip) = exp(-M_zI * sum(st%d%kpoints(ik, 1:gr%sb%dim) * gr%mesh%x(ip, 1:gr%sb%dim)))
-          psi(1:np_part, idim) = phase(1:np_part) * psi(1:np_part, idim)
-
-          if(present(lr)) then
-            dl_psi(1:np_part, idim) = phase(1:np_part) * dl_psi(1:np_part, idim)
-            dl_psi2(1:np_part, idim) = phase(1:np_part) * dl_psi2(1:np_part, idim)
-          endif
+        if(simul_box_is_periodic(gr%sb) .and. .not. kpoint_is_gamma(st%d, ik)) then
+          do ip = 1, np_part
+            phase = exp(-M_zI*sum(st%d%kpoints(1:gr%sb%dim, ik)*gr%mesh%x(ip, 1:gr%sb%dim)))
+            psi(ip, idim) = phase*psi(ip, idim)
+            if(present(lr)) then
+              dl_psi(ip, idim) = phase*dl_psi(ip, idim)
+              dl_psi2(ip, idim) = phase*dl_psi2(ip, idim)
+            endif
+          end do
         endif
-        
+       
         ! calculate the gradients of the wave-functions
         ! and set boundary conditions in preparation for applying projectors
         call X(derivatives_grad)(gr%fine%der, psi(:, idim), grad_psi(:, :, idim), set_bc = .false.)
