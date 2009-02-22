@@ -41,7 +41,7 @@ module external_pot_m
   use simul_box_m
   use units_m
   use logrid_m
-  use poisson_cutoffs_m
+  use poisson_cutoff_m
   use ps_m
   use smear_m
   use species_m

@@ -37,7 +37,7 @@ module poisson_fft_m
   use messages_m
   use mpi_m
   use par_vec_m
-  use poisson_cutoffs_m
+  use poisson_cutoff_m
   use profiling_m
   use simul_box_m
   use splines_m
@@ -80,7 +80,7 @@ contains
     FLOAT :: DELTA_R = CNST(1.0e-12)
     FLOAT, allocatable :: fft_coulb_FS(:,:,:)
 
-    call push_sub('solver_fft.poisson_fft_build_3d')
+    call push_sub('poisson_fft.poisson_fft_build_3d')
     
     ! double the box to perform the fourier transforms
     if(poisson_solver.ne.FFT_CORRECTED) then
@@ -248,7 +248,7 @@ contains
     FLOAT, allocatable :: x(:), y(:)
     FLOAT, allocatable :: fft_coulb_FS(:,:,:)
 
-    call push_sub('solver_fft.poisson_fft_build_2d_0d')
+    call push_sub('poisson_fft.poisson_fft_build_2d_0d')
 
     ! double the box to perform the fourier transforms
     call mesh_double_box(gr%sb, gr%mesh, db)                 ! get dimensions of the double box
@@ -324,7 +324,7 @@ contains
     FLOAT :: temp(MAX_DIM), vec, r_c, gx, gy
     FLOAT, allocatable :: fft_coulb_FS(:,:,:)
 
-    call push_sub('solver_fft.poisson_fft_build_2d_1d')
+    call push_sub('poisson_fft.poisson_fft_build_2d_1d')
 
     ! double the box to perform the fourier transforms
     call mesh_double_box(gr%sb, gr%mesh, db)                 ! get dimensions of the double box
@@ -379,7 +379,7 @@ contains
     FLOAT :: temp(MAX_DIM), vec
     FLOAT, allocatable :: fft_coulb_FS(:,:,:)
 
-    call push_sub('solver_fft.poisson_fft_build_2d_2d')
+    call push_sub('poisson_fft.poisson_fft_build_2d_2d')
 
     db(:) = gr%mesh%idx%ll(:)
     ! allocate cube function where we will perform the ffts
@@ -420,7 +420,7 @@ contains
     FLOAT              :: g
     FLOAT, allocatable :: fft_coulb_fs(:, :, :)
 
-    call push_sub('solver_fft.poisson_fft_build_1d')
+    call push_sub('poisson_fft.poisson_fft_build_1d')
 
     box = gr%mesh%idx%ll
     call dcf_new(box, fft_cf)
@@ -447,7 +447,7 @@ contains
 
   !-----------------------------------------------------------------
   subroutine poisson_fft_end()
-    call push_sub('solver_fft.poisson_fft.end')
+    call push_sub('poisson_fft.poisson_fft.end')
 
     call dcf_free(fft_cf)
     call dfourier_space_op_end(coulb)

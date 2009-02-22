@@ -22,8 +22,8 @@
 noinst_LIBRARIES = libpoisson.a
 
 libpoisson_a_SOURCES = \
-	poisson_finite_cyl.c cutoffs.F90 solver_isf.F90 solver_fft.F90 \
-	corrections.F90 conj_grad.F90 solver_multigrid.F90 poisson.F90
+	poisson_finite_cyl.c poisson_cutoff.F90 poisson_isf.F90 poisson_fft.F90 \
+	poisson_corrections.F90 poisson_cg.F90 poisson_multigrid.F90 poisson.F90
 
 noinst_HEADERS = \
 	solver_1D.F90 solver_2D.F90 solver_3D.F90
@@ -34,10 +34,10 @@ depend:
 	makedepf90 $(libpoisson_a_SOURCES)
 
 poisson_finite_cyl.o : poisson_finite_cyl.c 
-cutoffs.o : cutoffs.F90 
-solver_isf.o : solver_isf.F90 
-solver_fft.o : solver_fft.F90 cutoffs.o 
-corrections.o : corrections.F90 
-conj_grad.o : conj_grad.F90 corrections.o 
-solver_multigrid.o : solver_multigrid.F90 corrections.o 
-poisson.o : poisson.F90 solver_3D.F90 solver_2D.F90 solver_1D.F90 solver_multigrid.o solver_fft.o solver_isf.o conj_grad.o corrections.o 
+poisson_cutoff.o : poisson_cutoff.F90 
+poisson_isf.o : poisson_isf.F90 
+poisson_fft.o : poisson_fft.F90 poisson_cutoff.o 
+poisson_corrections.o : poisson_corrections.F90 
+poisson_cg.o : poisson_cg.F90 poisson_corrections.o 
+poisson_multigrid.o : poisson_multigrid.F90 poisson_corrections.o 
+poisson.o : poisson.F90 solver_3D.F90 solver_2D.F90 solver_1D.F90 poisson_multigrid.o poisson_fft.o poisson_isf.o poisson_cg.o poisson_corrections.o 

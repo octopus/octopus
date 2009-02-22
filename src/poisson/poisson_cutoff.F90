@@ -19,10 +19,7 @@
 
 #include "global.h"
 
-! This module is intended to contain "only mathematical" functions
-! and procedures.
-
-module poisson_cutoffs_m
+module poisson_cutoff_m
   use global_m
   use loct_math_m
   use messages_m
@@ -130,6 +127,8 @@ contains
 
     integer :: nr = CNST(1000)
 
+    call push_sub('poisson_cutoff.poisson_cutoff_inf_cylinder')
+
     if ( x == M_ZERO ) then
       ! Simpson rule for the G_x = 0 contribution -log(r)
       dr = rmax/real(nr)
@@ -147,6 +146,7 @@ contains
         - x*rmax*loct_bessel_j0(p*rmax)*loct_bessel_k1(x*rmax)
     end if
 
+    call pop_sub()
   end function poisson_cutoff_inf_cylinder
 
 
@@ -154,13 +154,21 @@ contains
   FLOAT function poisson_cutoff_slab(p, z, r) result(cutoff)
     FLOAT, intent(in) ::  p, z, r
 
+    call push_sub('poisson_cutoff.poisson_cutoff_inf_cylinder')
+
     if ( p == M_ZERO ) then
       cutoff = M_ONE - cos(z*r) - z*r*sin(z*r)
     else
       cutoff = M_ONE + exp(-p*r)*(z*sin(z*r)/p-cos(z*r))
     end if
 
+    call pop_sub()
   end function poisson_cutoff_slab
   ! ---------------------------------------------------------
 
-end module poisson_cutoffs_m
+end module poisson_cutoff_m
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

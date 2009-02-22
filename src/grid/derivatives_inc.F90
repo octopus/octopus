@@ -402,7 +402,8 @@ end subroutine X(derivatives_curl)
 
 ! ---------------------------------------------------------
 ! Set all boundary points in f to zero to implement zero
-! boundary conditions for the derivatives.
+! boundary conditions for the derivatives, in finite system;
+! or set according to periodic boundary conditions.
 subroutine X(set_bc)(der, f)
   type(derivatives_t), intent(in)    :: der
   R_TYPE,              intent(inout) :: f(:)
@@ -539,7 +540,8 @@ end subroutine X(set_bc)
 
 ! ---------------------------------------------------------
 ! Set all boundary points in f to zero to implement zero
-! boundary conditions for the derivatives.
+! boundary conditions for the derivatives, in finite system;
+! or set according to periodic boundary conditions.
 subroutine X(set_bc_batch)(der, fb)
   type(derivatives_t), intent(in)    :: der
   type(batch_t),       intent(inout) :: fb
