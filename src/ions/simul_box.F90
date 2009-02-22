@@ -365,7 +365,7 @@ contains
       !% in Fourier space, an auxiliary cubic mesh is built. This mesh will be larger than
       !% the circumscribed cube to the usual mesh by a factor <tt>DoubleFFTParameter</tt>. See
       !% the section that refers to Poisson equation, and to the local potential for details
-      !% [The default value of two is typically good].
+      !% [the default value of two is typically good].
       !%End
       call loct_parse_float(datasets_check('DoubleFFTParameter'), M_TWO, sb%fft_alpha)
       if (sb%fft_alpha < M_ONE .or. sb%fft_alpha > M_THREE ) then
@@ -714,10 +714,11 @@ contains
       call push_sub('simul_box.read_box_offset')
       !%Variable BoxOffset
       !%Type float
+      !%Default 0.0
       !%Section Mesh::Simulation Box
       !%Description
-      !% The zero of the simulation box. It can be either a float, or a block containing
-      !% the (x,y,z) value of the zero.
+      !% Shifts the zero of the simulation box, relative to the atomic coordinates, by a specified vector.
+      !% It can be either a float, interpreted as (x,x,x), or a block containing the (x,y,z) value of the zero.
       !%End
       sb%box_offset = M_ZERO
       if(loct_parse_block(datasets_check('BoxOffset'), blk) == 0) then
@@ -916,7 +917,7 @@ contains
       if (simul_box_is_periodic(sb)) then
 
         !convert the position to the orthogonal space
-        xx(1:pd) = matmul(geo%atom(iatom)%x(1:pd), sb%klattice_unitary(1:pd, 1:pd))
+        xx(1:pd) = matmul(geo%atom(iatom)%x(1:pd) - sb%box_offset(1:pd), sb%klattice_unitary(1:pd, 1:pd))
 
         xx(1:pd) = xx(1:pd)/(M_TWO*sb%lsize(1:pd))
         xx(1:pd) = xx(1:pd) + 0.5
@@ -930,7 +931,7 @@ contains
         ASSERT(all(xx(1:pd) >= M_ZERO))
         xx(1:pd) = (xx(1:pd) - 0.5)*M_TWO*sb%lsize(1:pd) 
 
-        geo%atom(iatom)%x(1:pd) = matmul(sb%klattice_unitary(1:pd, 1:pd), xx(1:pd))
+        geo%atom(iatom)%x(1:pd) = matmul(sb%klattice_unitary(1:pd, 1:pd), xx(1:pd) + sb%box_offset(1:pd))
 
       end if
 
