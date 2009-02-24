@@ -208,31 +208,35 @@ module loct_parser_m
   ! ---------------------------------------------------------
   ! The public subroutine loct_parse_expression accepts two
   ! possible interfaces, one which assumes that the variables
-  ! in the expression are "x", "y", "z", "r" and "t", and another
+  ! in the expression are "x(:)", "r" and "t", and another
   ! one which permits to set one variable to whichever string.
   ! Examples of usage:
   !
-  ! call loct_parse_expression(f_re, f_im, x, y, z, r, t, &
+  ! call loct_parse_expression(f_re, f_im, ndim, x(:), r, t, &
   !   "0.5*0.01*r^2")
   !
   ! call loct_parse_expression(f_re, f_im, "t", t, "cos(0.01*t)")
   ! ---------------------------------------------------------
-  interface loct_parse_expression
-    subroutine oct_parse_expression(re, im, x, y, z, r, t, pot)
-      real(8),          intent(in)  :: x, y, z, r, t
+
+  interface
+    subroutine oct_parse_expression(re, im, ndim, x, r, t, pot)
+      real(8),          intent(in)  :: x, r, t
+      integer,          intent(in)  :: ndim
       real(8),          intent(out) :: re, im
       character(len=*), intent(in)  :: pot
     end subroutine oct_parse_expression
+  end interface
+
+  interface loct_parse_expression
+    module procedure oct_parse_expression_vec
+    module procedure oct_parse_expression_vec4
     subroutine oct_parse_expression1(re, im, c, x, string)
       real(8),          intent(out) :: re, im
       character(len=*), intent(in)  :: c
       real(8),          intent(in)  :: x
       character(len=*), intent(in)  :: string
     end subroutine oct_parse_expression1
-    module procedure oct_parse_expression_vec
-    module procedure oct_parse_expression4
     module procedure oct_parse_expression14
-    module procedure oct_parse_expression_vec4
   end interface
 
 contains
@@ -382,23 +386,23 @@ contains
   end subroutine oct_parse_block_complex4
 
   ! ---------------------------------------------------------
-  subroutine oct_parse_expression_vec(re, im, nn, x, r, t, pot)
+  subroutine oct_parse_expression_vec(re, im, ndim, x, r, t, pot)
     real(8), intent(out) :: re, im
-    integer, intent(in)  :: nn
+    integer, intent(in)  :: ndim
     real(8), intent(in)  :: x(:), r, t
     character(len=*), intent(in) :: pot
 
     real(8) :: xc(1:MAX_DIM)
 
     xc = M_ZERO
-    xc(1:nn) = x(1:nn)
-    call oct_parse_expression(re, im, xc(1), xc(2), xc(3), r, t, pot)
+    xc(1:ndim) = x(1:ndim)
+    call oct_parse_expression(re, im, ndim, xc(1), r, t, pot)
   end subroutine oct_parse_expression_vec
 
   ! ---------------------------------------------------------
-  subroutine oct_parse_expression_vec4(re, im, nn, x, r, t, pot)
+  subroutine oct_parse_expression_vec4(re, im, ndim, x, r, t, pot)
     real(4), intent(out) :: re, im
-    integer, intent(in)  :: nn
+    integer, intent(in)  :: ndim
     real(4), intent(in)  :: x(:), r, t
     character(len=*), intent(in) :: pot
 
@@ -406,24 +410,13 @@ contains
     real(8) :: re8, im8
 
     xc = M_ZERO
-    xc(1:nn) = x(1:nn)
-    call oct_parse_expression(re8, im8, xc(1), xc(2), xc(3), real(r, 8), real(t, 8), pot)
+    xc(1:ndim) = real(x(1:ndim), 8)
+    call oct_parse_expression(re8, im8, ndim, xc(1), real(r, 8), real(t, 8), pot)
     re = real(re8, 4)
     im = real(im8, 4)
   end subroutine oct_parse_expression_vec4
 
   ! ---------------------------------------------------------
-  subroutine oct_parse_expression4(re, im, x4, y4, z4, r4, t4, pot)
-    real(4), intent(in)  :: x4, y4, z4, r4, t4
-    real(4), intent(out) :: re, im
-    character(len=*), intent(in) :: pot
-    real(8) :: re8, im8
-    call oct_parse_expression(re8, im8, real(x4, 8), real(y4, 8), &
-         real(z4, 8), real(r4, 8), real(t4, 8), pot)
-    re = real(re8, 4)
-    im = real(im8, 4)
-  end subroutine oct_parse_expression4
-
   subroutine oct_parse_expression14(re, im, c, x, string)
     real(4), intent(out) :: re, im
     character(len=*), intent(in) :: c

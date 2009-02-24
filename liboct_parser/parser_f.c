@@ -279,7 +279,7 @@ void FC_FUNC_(oct_parse_block_string, OCT_PARSE_BLOCK_STRING)
 
 /* --------------------------------------------------------- */
 void FC_FUNC_(oct_parse_expression, OCT_PARSE_EXPRESSION)
-	(double *re, double *im, double *x, double *y, double *z, double *r, double *t, STR_F_TYPE pot STR_ARG1)
+     (double *re, double *im, const int * ndim, const double *x, const double *r,  const double *t, STR_F_TYPE pot STR_ARG1)
 {
   symrec *rec;
   parse_result c;
@@ -288,15 +288,15 @@ void FC_FUNC_(oct_parse_expression, OCT_PARSE_EXPRESSION)
   s_c  = TO_C_STR1(pot);
   
   rec = putsym("x", S_CMPLX);
-  GSL_SET_COMPLEX(&rec->value.c, *x, 0);
+  GSL_SET_COMPLEX(&rec->value.c, x[0], 0);
   rec->def = 1;
 
   rec = putsym("y", S_CMPLX);
-  GSL_SET_COMPLEX(&rec->value.c, *y, 0);
+  GSL_SET_COMPLEX(&rec->value.c, x[1], 0);
   rec->def = 1;
-
+  
   rec = putsym("z", S_CMPLX);
-  GSL_SET_COMPLEX(&rec->value.c, *z, 0);
+  GSL_SET_COMPLEX(&rec->value.c, x[2], 0);
   rec->def = 1;
 
   rec = putsym("r", S_CMPLX);
