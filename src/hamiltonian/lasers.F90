@@ -367,8 +367,7 @@ contains
           ALLOCATE(x(MAX_DIM), MAX_DIM)
           do j = 1, m%np
             call mesh_r(m, j, r, x = x)
-            call loct_parse_expression(pot_re, pot_im, x(1), x(2), x(3), &
-              r, M_ZERO, trim(scalar_pot_expression))
+            call loct_parse_expression(pot_re, pot_im, m%sb%dim, x, r, M_ZERO, trim(scalar_pot_expression))
             l(i)%v(j) = pot_re
           end do
           deallocate(x)

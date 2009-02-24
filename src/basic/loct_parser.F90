@@ -219,18 +219,20 @@ module loct_parser_m
   ! ---------------------------------------------------------
   interface loct_parse_expression
     subroutine oct_parse_expression(re, im, x, y, z, r, t, pot)
-      real(8), intent(in)  :: x, y, z, r, t
-      real(8), intent(out) :: re, im
-      character(len=*), intent(in) :: pot
+      real(8),          intent(in)  :: x, y, z, r, t
+      real(8),          intent(out) :: re, im
+      character(len=*), intent(in)  :: pot
     end subroutine oct_parse_expression
     subroutine oct_parse_expression1(re, im, c, x, string)
-      real(8), intent(out) :: re, im
-      character(len=*), intent(in) :: c
-      real(8), intent(in) :: x
-      character(len=*), intent(in) :: string
+      real(8),          intent(out) :: re, im
+      character(len=*), intent(in)  :: c
+      real(8),          intent(in)  :: x
+      character(len=*), intent(in)  :: string
     end subroutine oct_parse_expression1
+    module procedure oct_parse_expression_vec
     module procedure oct_parse_expression4
     module procedure oct_parse_expression14
+    module procedure oct_parse_expression_vec4
   end interface
 
 contains
@@ -379,6 +381,36 @@ contains
     res4 = cmplx(res8, kind=4)
   end subroutine oct_parse_block_complex4
 
+  ! ---------------------------------------------------------
+  subroutine oct_parse_expression_vec(re, im, nn, x, r, t, pot)
+    real(8), intent(out) :: re, im
+    integer, intent(in)  :: nn
+    real(8), intent(in)  :: x(:), r, t
+    character(len=*), intent(in) :: pot
+
+    real(8) :: xc(1:MAX_DIM)
+
+    xc = M_ZERO
+    xc(1:nn) = x(1:nn)
+    call oct_parse_expression(re, im, xc(1), xc(2), xc(3), r, t, pot)
+  end subroutine oct_parse_expression_vec
+
+  ! ---------------------------------------------------------
+  subroutine oct_parse_expression_vec4(re, im, nn, x, r, t, pot)
+    real(4), intent(out) :: re, im
+    integer, intent(in)  :: nn
+    real(4), intent(in)  :: x(:), r, t
+    character(len=*), intent(in) :: pot
+
+    real(8) :: xc(1:MAX_DIM)
+    real(8) :: re8, im8
+
+    xc = M_ZERO
+    xc(1:nn) = x(1:nn)
+    call oct_parse_expression(re8, im8, xc(1), xc(2), xc(3), real(r, 8), real(t, 8), pot)
+    re = real(re8, 4)
+    im = real(im8, 4)
+  end subroutine oct_parse_expression_vec4
 
   ! ---------------------------------------------------------
   subroutine oct_parse_expression4(re, im, x4, y4, z4, r4, t4, pot)

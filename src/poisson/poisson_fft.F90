@@ -97,7 +97,7 @@ contains
     call dcf_fft_init(fft_cf, gr%sb)
 
     ! dimensions may have been optimized
-    db = fft_cf%n
+    db(1:3) = fft_cf%n(1:3)
 
     if (poisson_solver <= FFT_PLA .and. poisson_solver .ne. FFT_CORRECTED) then
       call loct_parse_float(datasets_check('PoissonCutoffRadius'),&
@@ -259,7 +259,7 @@ contains
     ! initialize fft
     call dcf_fft_init(fft_cf, gr%sb)
     ! dimensions may have been optimized
-    db = fft_cf%n              
+    db(1:3) = fft_cf%n(1:3)
 
     call loct_parse_float(datasets_check('PoissonCutoffRadius'),&
       maxval(db(:)*gr%mesh%h(:)/M_TWO)/units_inp%length%factor , r_c)
@@ -334,7 +334,7 @@ contains
     ! initialize fft
     call dcf_fft_init(fft_cf, gr%sb)
     ! dimensions may have been optimized
-    db = fft_cf%n    
+    db(1:3) = fft_cf%n(1:3)
 
     r_c = M_TWO * gr%sb%lsize(2)
 
@@ -387,7 +387,7 @@ contains
     ! initialize fft
     call dcf_fft_init(fft_cf, gr%sb)
     ! dimensions may have been optimized
-    db = fft_cf%n              
+    db(1:3) = fft_cf%n(1:3)
 
     ! store the fourier transform of the Coulomb interaction
     ALLOCATE(fft_Coulb_FS(fft_cf%nx, fft_cf%n(2), fft_cf%n(3)), fft_cf%nx*fft_cf%n(2)*fft_cf%n(3))
@@ -425,7 +425,7 @@ contains
     box = gr%mesh%idx%ll
     call dcf_new(box, fft_cf)
     call dcf_fft_init(fft_cf, gr%sb)
-    box = fft_cf%n
+    box(1:3) = fft_cf%n(1:3)
 
     ALLOCATE(fft_coulb_fs(fft_cf%nx, fft_cf%n(2), fft_cf%n(3)), fft_cf%nx*fft_cf%n(2)*fft_cf%n(3))
 

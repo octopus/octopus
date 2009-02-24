@@ -157,7 +157,7 @@ contains
           call mesh_r(m, i, r, x = xx, a = atom%x)
           xx(1:sb%dim) = xx(1:sb%dim) + yy(1:sb%dim)
           r = sqrt(dot_product(xx(1:sb%dim), xx(1:sb%dim)))
-          call loct_parse_expression(rerho, imrho, xx(1), xx(2), xx(3), r, M_ZERO, trim(s%rho))
+          call loct_parse_expression(rerho, imrho, sb%dim, xx, r, M_ZERO, trim(s%rho))
           rho(i, 1) = rho(i, 1) + rerho
         end do
       end do
@@ -551,7 +551,7 @@ contains
           call mesh_r(gr%mesh, i, r, x = xx, a = pos)
           xx(1:gr%sb%dim) = xx(1:gr%sb%dim) + yy(1:gr%sb%dim)
           r = sqrt(dot_product(xx(1:gr%sb%dim), xx(1:gr%sb%dim)))
-          call loct_parse_expression(rerho, imrho, xx(1), xx(2), xx(3), r, M_ZERO, trim(s%rho))
+          call loct_parse_expression(rerho, imrho, gr%sb%dim, xx, r, M_ZERO, trim(s%rho))
           rho(i) = rho(i) - rerho
         end do
       end do
@@ -666,7 +666,7 @@ contains
           r = r/units_inp%length%factor
           
           call loct_parse_expression(                            &
-               pot_re, pot_im, xx(1), xx(2), xx(3), r, time_, s%user_def)
+               pot_re, pot_im, mesh%sb%dim, xx, r, time_, s%user_def)
           vl(ip) = pot_re * units_inp%energy%factor  ! convert from input units to a.u.
 
         end do

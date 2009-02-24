@@ -188,8 +188,7 @@ module opt_control_initst_m
                   r = sqrt(sum(x(:)**2))
                   
                   ! parse user defined expressions
-                  call loct_parse_expression(psi_re, psi_im,             &
-                    x(1), x(2), x(3), r, M_ZERO, initial_state%user_def_states(id, is, ik))
+                  call loct_parse_expression(psi_re, psi_im, gr%sb%dim, x, r, M_ZERO, initial_state%user_def_states(id, is, ik))
                   ! fill state
                   !write(6,*) psi_re, psi_im
                   initial_state%zpsi(ip, id, is, ik) = psi_re + M_zI*psi_im

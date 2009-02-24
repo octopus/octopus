@@ -344,6 +344,8 @@ contains
     FLOAT               :: t
     FLOAT, allocatable  :: pot_im(:)
     character(len=1024) :: tmp_c_string
+    
+    FLOAT :: zero(1)
 
     call push_sub('ob_lead.lead_td_pot')
 
@@ -357,8 +359,7 @@ contains
       td_pot(0, il) = M_ZERO
       do it = 1, n_steps+1
         t = it*tstep
-        call loct_parse_expression(td_pot(it, il), pot_im(it), &
-          M_ZERO, M_ZERO, M_ZERO, M_ZERO, t, tmp_c_string)
+        call loct_parse_expression(td_pot(it, il), pot_im(it), 1, zero, zero(1), t, tmp_c_string)
       end do
     end do
 

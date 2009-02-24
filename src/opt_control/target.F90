@@ -333,8 +333,7 @@ module opt_control_target_m
           do ip = 1, NP
             call mesh_r(gr%mesh, ip, r, x = x)
             ! parse user defined expression
-            call loct_parse_expression(psi_re, psi_im, &
-              x(1), x(2), x(3), r, M_ZERO, expression)
+            call loct_parse_expression(psi_re, psi_im, gr%sb%dim, x, r, M_ZERO, expression)
             target%rho(ip) = psi_re
           end do
           ! Normalize
@@ -366,8 +365,7 @@ module opt_control_target_m
         do ip = 1, NP
           call mesh_r(gr%mesh, ip, r, x = x)
           ! parse user defined expression
-          call loct_parse_expression(psi_re, psi_im, &
-            x(1), x(2), x(3), r, M_ZERO, expression)
+          call loct_parse_expression(psi_re, psi_im, gr%sb%dim, x, r, M_ZERO, expression)
           target%rho(ip) = psi_re
         end do
       else
@@ -626,7 +624,7 @@ module opt_control_target_m
 
     do i = 1, NP
       call mesh_r(gr%mesh, i, r, x = xx)
-      call loct_parse_expression(re, im, xx(1), xx(2), xx(3), r, t, target%td_local_target)
+      call loct_parse_expression(re, im, gr%sb%dim, xx, r, t, target%td_local_target)
       target%rho(i) = re
     end do
 
