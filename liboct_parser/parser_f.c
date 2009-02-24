@@ -299,6 +299,12 @@ void FC_FUNC_(oct_parse_expression, OCT_PARSE_EXPRESSION)
   GSL_SET_COMPLEX(&rec->value.c, x[2], 0);
   rec->def = 1;
 
+#if MAX_DIM > 3
+  rec = putsym("w", S_CMPLX);
+  GSL_SET_COMPLEX(&rec->value.c, x[3], 0);
+  rec->def = 1;
+#endif
+
   rec = putsym("r", S_CMPLX);
   GSL_SET_COMPLEX(&rec->value.c, *r, 0);
   rec->def = 1;
@@ -306,13 +312,16 @@ void FC_FUNC_(oct_parse_expression, OCT_PARSE_EXPRESSION)
   rec = putsym("t", S_CMPLX);
   GSL_SET_COMPLEX(&rec->value.c, *t, 0);
   rec->def = 1;
-  
+
   parse_exp(s_c, &c);
   
   /* clean up */
   rmsym("x");
   rmsym("y");
   rmsym("z");
+#if MAX_DIM > 3
+  rmsym("w");
+#endif
   rmsym("r");
   rmsym("t");
 
