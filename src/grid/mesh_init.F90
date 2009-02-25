@@ -37,6 +37,7 @@ module mesh_init_m
   use profiling_m
   use simul_box_m
   use stencil_m
+  use stencil_star_m
   use units_m
   use zoltan_m
 
@@ -887,9 +888,9 @@ end subroutine mesh_init_stage_3
 ! inner mesh and the enlargement. All other entries have to
 ! be zero. comm is used to get the number of partitions.
 ! ---------------------------------------------------------------
-subroutine mesh_partition(m, stencil, part)
+subroutine mesh_partition(m, lapl_stencil, part)
   type(mesh_t),            intent(in)  :: m
-  type(stencil_t), target, intent(in)  :: stencil
+  type(stencil_t), target, intent(in)  :: lapl_stencil
   integer,                 intent(out) :: part(:)
 
   integer              :: i, j           ! Counter.
@@ -897,8 +898,6 @@ subroutine mesh_partition(m, stencil, part)
   integer              :: jx, jy, jz     ! Coordinates of neighbours.
   integer              :: ne             ! Number of edges.
   integer              :: nv             ! Number of vertices.
-  integer, pointer     :: d(:, :)        ! Directions of neighbour points.
-  integer              :: nd
   integer              :: edgecut        ! Number of edges cut by partitioning.
   ! Number of vertices (nv) is equal to number of
   ! points np_global and maximum number of edges (ne) is 2*m%sb%dim*np_global
@@ -912,14 +911,17 @@ subroutine mesh_partition(m, stencil, part)
   integer, allocatable :: adjncy(:)      ! Adjacency lists.
   integer              :: options(5)     ! Options to METIS.
   integer              :: iunit          ! For debug output to files.
-  integer :: ii
+
+  type(stencil_t) :: stencil
+  integer :: ii, stencil_to_use
   integer :: default_method, method
   integer :: library
   integer, parameter :: METIS = 2, ZOLTAN = 3
+  integer, parameter :: STAR = 1, LAPLACIAN = 2
   integer, allocatable :: start(:), final(:), lsize(:)
-
+  
   type(profile_t), save :: prof
-
+  
   call profiling_in(prof, "MESH_PARTITION")
   call push_sub('mesh_init.mesh_partition')
 
@@ -942,12 +944,38 @@ subroutine mesh_partition(m, stencil, part)
   !%End
   call loct_parse_int(datasets_check('MeshPartitionPackage'), METIS, library)
 
+  !%Variable MeshPartitionStencil
+  !%Type integer
+  !%Default star
+  !%Section Execution::Parallelization
+  !%Description
+  !% To partition the mesh is it necessary to calculate the connection
+  !% graph connecting the points, this variable selects which stencil
+  !% is used to do this. The default is the order one star stencil,
+  !% alternatively the stencil used for the laplacian could be used.
+  !%Option stencil_star 1
+  !% A order one stencil_star.
+  !%Option laplacian 2
+  !% The stencil used for the laplacian is used to calculate the
+  !% partition, this in principle should give a better partition but
+  !% it is slower and requires more memory.
+  !%End
+  call loct_parse_int(datasets_check('MeshPartitionStencil'), STAR, stencil_to_use)
+
+  if (stencil_to_use == STAR) then
+    call stencil_star_get_lapl(stencil, m%sb%dim, order = 1)
+  else if (stencil_to_use == LAPLACIAN) then
+    call stencil_copy(lapl_stencil, stencil)
+  else
+    call input_error('MeshPartitionStencil')
+  end if
+
   if(p .lt. 8) then
     default_method = RCB
   else
     default_method = GRAPH
   end if
-  ! Documentation is in zoltan.F90
+  ! Documentation is in zoltan.F90`
   call loct_parse_int(datasets_check('MeshPartition'), default_method, method)
 
   ! Get number of partitions.
@@ -965,22 +993,6 @@ subroutine mesh_partition(m, stencil, part)
     final(1:p) = m%np_global
     lsize(1:p) = m%np_global
 
-    ALLOCATE(d(3, 6), 18)
-
-    nd = 2*m%sb%dim
-
-    ! Set directions of possible neighbours.
-    ! With this ordering of the directions it is possible
-    ! to iterate over d(:, i) with i=1, ..., 2*m%sb%dim,
-    ! i. e. this works for dim=1, ..., 3 without any special
-    ! cases.
-    d(:, 1) = (/ 1,  0,  0/)
-    d(:, 2) = (/-1,  0,  0/)
-    d(:, 3) = (/ 0,  1,  0/)
-    d(:, 4) = (/ 0, -1,  0/)
-    d(:, 5) = (/ 0,  0,  1/)
-    d(:, 6) = (/ 0,  0, -1/)
-
   case(ZOLTAN)
 
     ! If we use zoltan we divide the space in a basic way, to balance
@@ -991,9 +1003,6 @@ subroutine mesh_partition(m, stencil, part)
       part(start(ii):final(ii)) = ii
     end do
 
-    nd = stencil%size
-    d => stencil%points
-
   end select
 
   ! Shortcut (number of vertices).
@@ -1001,7 +1010,7 @@ subroutine mesh_partition(m, stencil, part)
   ALLOCATE(xadj(nv + 1), nv + 1)
 
   if(library == METIS .or. .not. zoltan_method_is_geometric(method)) then !calculate the graphs
-    ALLOCATE(adjncy(nd*nv), nd*nv)
+    ALLOCATE(adjncy(stencil%size*nv), stencil%size*nv)
 
     ! Create graph with each point being
     ! represenetd by a vertice and edges between
@@ -1016,12 +1025,12 @@ subroutine mesh_partition(m, stencil, part)
       ! Set entry in index table.
       xadj(i) = ne
       ! Check all possible neighbours.
-      do j = 1, nd 
+      do j = 1, stencil%size 
         ! Store coordinates of possible neighbors, they
         ! are needed several times in the check below.
-        jx = ix + d(1, j)
-        jy = iy + d(2, j)
-        jz = iz + d(3, j)
+        jx = ix + stencil%points(1, j)
+        jy = iy + stencil%points(2, j)
+        jz = iz + stencil%points(3, j)
         ! Only if the neighbour is in the surrounding box,
         ! Lxyz_tmp has an entry for this point, otherweise
         ! it is out of bounds.
@@ -1072,7 +1081,6 @@ subroutine mesh_partition(m, stencil, part)
 
   select case(library)
   case(METIS)
-    deallocate(d)
 
     options = (/1, 2, 1, 1, 0/) ! Use heavy edge matching in METIS.
 
