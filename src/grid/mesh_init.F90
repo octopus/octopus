@@ -437,9 +437,9 @@ contains
                   mesh%idx%Lxyz(il, 3) = iz
                   mesh%idx%Lxyz_inv(ix,iy,iz) = il
                   if(mesh%parallel_in_domains) then
-                    mesh%x_global(il, 1:3) = mesh%x_tmp(1:3, ix, iy, iz)
+                    mesh%x_global(il, 1:MAX_DIM) = mesh%x_tmp(1:MAX_DIM, ix, iy, iz)
                   else
-                    mesh%x(il, 1:3) = mesh%x_tmp(1:3, ix, iy, iz)
+                    mesh%x(il, 1:MAX_DIM) = mesh%x_tmp(1:MAX_DIM, ix, iy, iz)
                   end if
                 end if
                 
@@ -567,18 +567,17 @@ contains
     ! Do the inner points
     do i = 1, mesh%np
       j = mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno) + i - 1)
-      mesh%x(i, 1:MAX_DIM) = mesh%x_tmp(1:MAX_DIM, mesh%idx%Lxyz(j, 1), mesh%idx%Lxyz(j, 2), mesh%idx%Lxyz(j, 3))
+      mesh%x(i, 1:MAX_DIM) = mesh%x_global(j, 1:MAX_DIM)
     end do
     ! Do the ghost points
     do i = 1, mesh%vp%np_ghost(mesh%vp%partno)
       j = mesh%vp%ghost(mesh%vp%xghost(mesh%vp%partno) + i - 1)
-      mesh%x(i+mesh%np, 1:MAX_DIM) = mesh%x_tmp(1:MAX_DIM, mesh%idx%Lxyz(j, 1), mesh%idx%Lxyz(j, 2), mesh%idx%Lxyz(j, 3))
+      mesh%x(i+mesh%np, 1:MAX_DIM) = mesh%x_global(j, 1:MAX_DIM)
     end do
     ! Do the boundary points
     do i = 1, mesh%vp%np_bndry(mesh%vp%partno)
       j = mesh%vp%bndry(mesh%vp%xbndry(mesh%vp%partno) + i - 1)
-      mesh%x(i + mesh%np + mesh%vp%np_ghost(mesh%vp%partno), 1:MAX_DIM) = &
-           mesh%x_tmp(1:MAX_DIM, mesh%idx%Lxyz(j, 1), mesh%idx%Lxyz(j, 2), mesh%idx%Lxyz(j, 3))
+      mesh%x(i + mesh%np + mesh%vp%np_ghost(mesh%vp%partno), 1:MAX_DIM) = mesh%x_global(j, 1:MAX_DIM)
     end do
 #endif
   end subroutine do_partition
@@ -589,7 +588,7 @@ contains
   subroutine mesh_get_vol_pp(sb)
     type(simul_box_t), intent(in) :: sb
 
-    integer :: i, jj(1:MAX_DIM)
+    integer :: i, jj(1:MAX_DIM), ip
     FLOAT   :: chi(MAX_DIM)
 #if defined(HAVE_MPI)
     integer :: k
@@ -599,26 +598,30 @@ contains
 
     ALLOCATE(mesh%vol_pp(mesh%np_part), mesh%np_part)
 
-    mesh%vol_pp(:) = product(mesh%h(1:sb%dim))
+    forall(ip = 1:mesh%np_part) mesh%vol_pp(ip) = product(mesh%h(1:sb%dim))
+    jj(sb%dim + 1:MAX_DIM) = M_ZERO
 
     if(mesh%parallel_in_domains) then
 #if defined(HAVE_MPI)
       ! Do the inner points.
       do i = 1, mesh%np
-        k = mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno)+i-1)
-        chi(1:sb%dim) = mesh%idx%Lxyz(k, 1:sb%dim) * mesh%h(1:sb%dim)
+        k = mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno) + i - 1)
+        call index_to_coords(mesh%idx, sb%dim, k, jj)
+        chi(1:sb%dim) = jj(1:sb%dim)*mesh%h(1:sb%dim)
         mesh%vol_pp(i) = mesh%vol_pp(i)*curvlinear_det_Jac(sb, geo, cv, mesh%x(i, :), chi(1:sb%dim))
       end do
       ! Do the ghost points.
       do i = 1, mesh%vp%np_ghost(mesh%vp%partno)
-        k = mesh%vp%ghost(mesh%vp%xghost(mesh%vp%partno)+i-1)
-        chi(1:sb%dim) = mesh%idx%Lxyz(k, 1:sb%dim) * mesh%h(1:sb%dim)
-        mesh%vol_pp(i+mesh%np) = mesh%vol_pp(i+mesh%np)*curvlinear_det_Jac(sb, geo, cv, mesh%x(i+mesh%np, :), chi(1:sb%dim))
+        k = mesh%vp%ghost(mesh%vp%xghost(mesh%vp%partno) + i - 1)
+        call index_to_coords(mesh%idx, sb%dim, k, jj)
+        chi(1:sb%dim) = jj(1:sb%dim)*mesh%h(1:sb%dim)
+        mesh%vol_pp(i + mesh%np) = mesh%vol_pp(i + mesh%np)*curvlinear_det_Jac(sb, geo, cv, mesh%x(i + mesh%np, :), chi(1:sb%dim))
       end do
       ! Do the boundary points.
       do i = 1, mesh%vp%np_bndry(mesh%vp%partno)
-        k = mesh%vp%bndry(mesh%vp%xbndry(mesh%vp%partno)+i-1)
-        chi(1:sb%dim) = mesh%idx%Lxyz(k, 1:sb%dim) * mesh%h(1:sb%dim)
+        k = mesh%vp%bndry(mesh%vp%xbndry(mesh%vp%partno) + i - 1)
+        call index_to_coords(mesh%idx, sb%dim, k, jj)
+        chi(1:sb%dim) = jj(1:sb%dim)*mesh%h(1:sb%dim)
         mesh%vol_pp(i+mesh%np+mesh%vp%np_ghost(mesh%vp%partno)) = &
           mesh%vol_pp(i+mesh%np+mesh%vp%np_ghost(mesh%vp%partno)) &
           *curvlinear_det_Jac(sb, geo, cv, mesh%x(i+mesh%np+mesh%vp%np_ghost(mesh%vp%partno), :), chi(1:sb%dim))
@@ -626,12 +629,7 @@ contains
 #endif
     else ! serial mode
       do i = 1, mesh%np_part
-        if(mesh%idx%sb%box_shape /= HYPERCUBE) then
-          jj(1:sb%dim) = mesh%idx%Lxyz(i, 1:sb%dim)
-        else
-          call index_to_coords(mesh%idx, sb%dim, i, jj)
-        end if
-        jj(sb%dim + 1:MAX_DIM) = 0
+        call index_to_coords(mesh%idx, sb%dim, i, jj)
         chi(1:sb%dim) = jj(1:sb%dim)*mesh%h(1:sb%dim)
 
         mesh%vol_pp(i) = mesh%vol_pp(i)*curvlinear_det_Jac(sb, geo, cv, mesh%x(i, 1:sb%dim), chi(1:sb%dim))

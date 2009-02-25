@@ -56,7 +56,7 @@ curvlinear.o : curvlinear.F90  curv_modine.o curv_gygi.o curv_briggs.o
 index.o : index.F90 hypercube.o
 par_vec.o : par_vec.F90 par_vec_inc.F90 index.o stencil.o
 mesh.o : mesh.F90 par_vec.o index.o curvlinear.o
-mesh_init.o : mesh_init.F90 mesh.o par_vec.o zoltan.o
+mesh_init.o : mesh_init.F90 mesh.o par_vec.o zoltan.o stencil_star.o stencil.o
 scalar_mesh.o : scalar_mesh.F90
 nl_operator.o : nl_operator.F90 nl_operator_inc.F90 par_vec.o mesh.o index.o batch.o stencil.o
 submesh.o : submesh.F90 submesh_inc.F90  mesh.o 
