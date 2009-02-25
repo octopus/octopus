@@ -206,11 +206,17 @@ contains
     select case(functl%family)
     case(XC_FAMILY_LDA)
 
+      if(functl%id==XC_LDA_C_1D_CSC.and.ndim.ne.1) then
+        message(1) = 'Functional CSC only allowed in 1D'
+        call write_fatal(1)
+      end if
+
       if(functl%id==XC_LDA_C_2D_AMGB.and.ndim.ne.2) then
         message(1) = 'Functional AMGB only allowed in 2D'
         call write_fatal(1)
       end if
 
+      ! we initialize the functionals
       if(functl%id.ne.XC_LDA_C_XALPHA) then
         call XC_F90(lda_init)(functl%conf, functl%info, functl%id, spin_channels)
       else
@@ -218,6 +224,16 @@ contains
         call XC_F90(lda_init)(functl%conf, functl%info, XC_LDA_C_XALPHA, &
           spin_channels, ndim, alpha)
       end if
+
+      ! special parameters that have to be configured
+      select case(functl%id)
+      case(XC_LDA_C_1D_CSC)
+        call loct_parse_float(datasets_check('lda_c_1d_csc_bb'), M_ONE, alpha)
+        call XC_F90(lda_c_1d_csc_set_params)(functl%conf, alpha)
+
+      case(XC_LDA_C_2D_PRM08)
+        call XC_F90(lda_c_2d_prm08_set_params)(functl%conf, nel)
+      end select
 
     case(XC_FAMILY_GGA)
       call XC_F90(gga_init)(functl%conf, functl%info, functl%id, spin_channels)
@@ -234,10 +250,6 @@ contains
       functl%type = XC_F90(info_kind)(functl%info)
     else
       functl%type = -1
-    end if
-
-    if(functl%id == XC_LDA_C_2D_PRM08) then
-      call XC_F90(lda_c_2d_prm08_set_par)(functl%conf, nel)
     end if
 
     call pop_sub()
