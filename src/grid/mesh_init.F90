@@ -489,6 +489,7 @@ contains
 #if defined(HAVE_METIS) && defined(HAVE_MPI)
     integer :: i, j, ipart, jpart, ip, ix, iy, iz
     integer, allocatable :: part(:), nnb(:)
+    integer :: idir
 
     mesh%mpi_grp = mpi_grp
 
@@ -562,22 +563,22 @@ contains
     ! x consists of three parts: the local points, the
     ! ghost points, and the boundary points; in this order
     ! (just as for any other vector, which is distributed).
-    ALLOCATE(mesh%x(mesh%np_part, 3), mesh%np_part*3)
+    ALLOCATE(mesh%x(mesh%np_part, MAX_DIM), mesh%np_part*MAX_DIM)
     ! Do the inner points
     do i = 1, mesh%np
-      j  = mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno)+i-1)
-      mesh%x(i, :) = mesh%x_tmp(:, mesh%idx%Lxyz(j, 1), mesh%idx%Lxyz(j, 2), mesh%idx%Lxyz(j, 3))
+      j = mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno) + i - 1)
+      mesh%x(i, 1:MAX_DIM) = mesh%x_tmp(1:MAX_DIM, mesh%idx%Lxyz(j, 1), mesh%idx%Lxyz(j, 2), mesh%idx%Lxyz(j, 3))
     end do
     ! Do the ghost points
     do i = 1, mesh%vp%np_ghost(mesh%vp%partno)
-      j = mesh%vp%ghost(mesh%vp%xghost(mesh%vp%partno)+i-1)
-      mesh%x(i+mesh%np, :) = mesh%x_tmp(:, mesh%idx%Lxyz(j, 1), mesh%idx%Lxyz(j, 2), mesh%idx%Lxyz(j, 3))
+      j = mesh%vp%ghost(mesh%vp%xghost(mesh%vp%partno) + i - 1)
+      mesh%x(i+mesh%np, 1:MAX_DIM) = mesh%x_tmp(1:MAX_DIM, mesh%idx%Lxyz(j, 1), mesh%idx%Lxyz(j, 2), mesh%idx%Lxyz(j, 3))
     end do
     ! Do the boundary points
     do i = 1, mesh%vp%np_bndry(mesh%vp%partno)
-      j = mesh%vp%bndry(mesh%vp%xbndry(mesh%vp%partno)+i-1)
-      mesh%x(i + mesh%np + mesh%vp%np_ghost(mesh%vp%partno), :) = &
-        mesh%x_tmp(:, mesh%idx%Lxyz(j, 1), mesh%idx%Lxyz(j, 2), mesh%idx%Lxyz(j, 3))
+      j = mesh%vp%bndry(mesh%vp%xbndry(mesh%vp%partno) + i - 1)
+      mesh%x(i + mesh%np + mesh%vp%np_ghost(mesh%vp%partno), 1:MAX_DIM) = &
+           mesh%x_tmp(1:MAX_DIM, mesh%idx%Lxyz(j, 1), mesh%idx%Lxyz(j, 2), mesh%idx%Lxyz(j, 3))
     end do
 #endif
   end subroutine do_partition
@@ -893,9 +894,8 @@ subroutine mesh_partition(m, lapl_stencil, part)
   type(stencil_t), target, intent(in)  :: lapl_stencil
   integer,                 intent(out) :: part(:)
 
-  integer              :: i, j           ! Counter.
-  integer              :: ix, iy, iz     ! Counters to iterate over grid.
-  integer              :: jx, jy, jz     ! Coordinates of neighbours.
+  integer              :: i, j, inb
+  integer              :: ix(1:MAX_DIM), jx(1:MAX_DIM)
   integer              :: ne             ! Number of edges.
   integer              :: nv             ! Number of vertices.
   integer              :: edgecut        ! Number of edges cut by partitioning.
@@ -1019,31 +1019,25 @@ subroutine mesh_partition(m, lapl_stencil, part)
     ! Iterate over number of vertices.
     do i = 1, nv
       ! Get coordinates of point i (vertex i).
-      ix      = m%idx%Lxyz(i, 1)
-      iy      = m%idx%Lxyz(i, 2)
-      iz      = m%idx%Lxyz(i, 3)
+      call index_to_coords(m%idx, m%sb%dim, i, ix)
       ! Set entry in index table.
       xadj(i) = ne
       ! Check all possible neighbours.
       do j = 1, stencil%size 
         ! Store coordinates of possible neighbors, they
         ! are needed several times in the check below.
-        jx = ix + stencil%points(1, j)
-        jy = iy + stencil%points(2, j)
-        jz = iz + stencil%points(3, j)
+        jx(1:MAX_DIM) = ix(1:MAX_DIM) + stencil%points(1:MAX_DIM, j)
+
         ! Only if the neighbour is in the surrounding box,
         ! Lxyz_tmp has an entry for this point, otherweise
         ! it is out of bounds.
-        if(&
-             jx >= m%idx%nr(1, 1) .and. jx <= m%idx%nr(2, 1) .and.  &
-             jy >= m%idx%nr(1, 2) .and. jy <= m%idx%nr(2, 2) .and.  &
-             jz >= m%idx%nr(1, 3) .and. jz <= m%idx%nr(2, 3)        &
-             ) then
+        if(all(jx(1:MAX_DIM) >= m%idx%nr(1, 1:MAX_DIM)) .and. all(jx(1:MAX_DIM) <= m%idx%nr(2, 1:MAX_DIM))) then
           ! Only points inside the mesh or its enlargement
           ! are included in the graph.
-          if(m%idx%Lxyz_tmp(jx, jy, jz) /= 0 .and. m%idx%Lxyz_inv(jx, jy, jz) <= nv) then
+          inb = index_from_coords(m%idx, m%sb%dim, jx)
+          if(inb /= 0 .and. inb <= nv) then
             ! Store a new edge and increment edge counter.
-            adjncy(ne) = m%idx%Lxyz_inv(jx, jy, jz)
+            adjncy(ne) = inb
             ne         = ne + 1
           end if
         end if
@@ -1141,7 +1135,7 @@ subroutine mesh_partition_boundaries(m, stencil, part)
   integer,         intent(inout) :: part(:)
 
   integer              :: i, j           ! Counter.
-  integer              :: jx, jy, jz     ! Coordinates of neighbours.
+  integer              :: ix(1:MAX_DIM), jx(1:MAX_DIM)
   integer              :: p              ! Number of partitions.
   integer              :: iunit          ! For debug output to files.
   character(len=3)     :: filenum
@@ -1159,11 +1153,10 @@ subroutine mesh_partition_boundaries(m, stencil, part)
   !count the boundary points that each point needs
   votes = 0
   do i = 1, m%np_global
+    call index_to_coords(m%idx, m%sb%dim, i, ix)
     do j = 1, stencil%size
-      jx = m%idx%Lxyz(i, 1) + stencil%points(1, j)
-      jy = m%idx%Lxyz(i, 2) + stencil%points(2, j)
-      jz = m%idx%Lxyz(i, 3) + stencil%points(3, j)
-      ip = m%idx%Lxyz_inv(jx, jy, jz)
+      jx(1:MAX_DIM) = ix(1:MAX_DIM) + stencil%points(1:MAX_DIM, j)
+      ip = index_from_coords(m%idx, m%sb%dim, jx)
       if(ip > m%np_global) votes(part(i), ip) = votes(part(i), ip) + 1
     end do
   end do
