@@ -247,8 +247,8 @@ FLOAT function X(mf_nrm2_1)(mesh, f, reduce) result(nrm2)
 end function X(mf_nrm2_1)
 
 ! ---------------------------------------------------------
-FLOAT function X(mf_nrm2_2)(m, dim, f, reduce) result(nrm2)
-  type(mesh_t),      intent(in) :: m
+FLOAT function X(mf_nrm2_2)(mesh, dim, f, reduce) result(nrm2)
+  type(mesh_t),      intent(in) :: mesh
   integer,           intent(in) :: dim
   R_TYPE,            intent(in) :: f(:,:)
   logical, optional, intent(in) :: reduce
@@ -261,9 +261,9 @@ FLOAT function X(mf_nrm2_2)(m, dim, f, reduce) result(nrm2)
 
   do idim = 1, dim
     if(present(reduce)) then
-      nrm2 = hypot(nrm2, X(mf_nrm2)(m, f(:, idim), reduce))
+      nrm2 = hypot(nrm2, X(mf_nrm2)(mesh, f(:, idim), reduce))
     else
-      nrm2 = hypot(nrm2, X(mf_nrm2)(m, f(:, idim)))
+      nrm2 = hypot(nrm2, X(mf_nrm2)(mesh, f(:, idim)))
     end if
   end do
 
@@ -273,20 +273,20 @@ end function X(mf_nrm2_2)
 
 ! ---------------------------------------------------------
 ! This function calculates the x_i moment of the function f
-function X(mf_moment) (m, f, i, n) result(r)
-  type(mesh_t), intent(in) :: m
-  R_TYPE,       intent(in) :: f(1:m%np)  ! f(m%np)
-  integer,      intent(in) :: i, n
+R_TYPE function X(mf_moment) (mesh, ff, idir, order) result(rr)
+  type(mesh_t), intent(in) :: mesh
+  R_TYPE,       intent(in) :: ff(:)
+  integer,      intent(in) :: idir
+  integer,      intent(in) :: order
 
-  R_TYPE                   :: r
-  R_TYPE, allocatable      :: fxn(:)
+  R_TYPE, allocatable :: fxn(:)
 
   call push_sub('mf_inc.Xmf_moment')
 
-  ALLOCATE(fxn(1:m%np), m%np)
+  ALLOCATE(fxn(1:mesh%np), mesh%np)
 
-  fxn(1:m%np) = f(1:m%np)*m%x(1:m%np, i)**n
-  r = X(mf_integrate)(m, fxn)
+  fxn(1:mesh%np) = ff(1:mesh%np)*mesh%x(1:mesh%np, idir)**order
+  rr = X(mf_integrate)(mesh, fxn)
 
   deallocate(fxn)
 
@@ -298,10 +298,10 @@ end function X(mf_moment)
 ! ---------------------------------------------------------
 ! This subroutine generates a Gaussian wave-function at a
 ! random position in space
-subroutine X(mf_random)(m, f, seed)
-  type(mesh_t), intent(in)  :: m
-  R_TYPE,       intent(out) :: f(1:m%np)
-  integer, optional, intent(in) :: seed
+subroutine X(mf_random)(mesh, f, seed)
+  type(mesh_t),      intent(in)  :: mesh
+  R_TYPE,            intent(out) :: f(:)
+  integer, optional, intent(in)  :: seed
 
   integer, save :: iseed = 123
   integer :: i
@@ -314,14 +314,14 @@ subroutine X(mf_random)(m, f, seed)
   end if
 
   a = M_ZERO
-  do i = 1, m%sb%dim
+  do i = 1, mesh%sb%dim
     call quickrnd(iseed, rnd)
     a(i) = M_TWO*(2*rnd - 1)
   end do
 
   !$omp parallel do private(r)
-  do i = 1, m%np
-    r = sum((m%x(i, 1:MAX_DIM) - a(1:MAX_DIM))**2)
+  do i = 1, mesh%np
+    r = sum((mesh%x(i, 1:MAX_DIM) - a(1:MAX_DIM))**2)
     if ( r < CNST(100.0) ) then 
       f(i) = exp(-M_HALF*r)
     else
@@ -330,8 +330,8 @@ subroutine X(mf_random)(m, f, seed)
   end do
   !$omp end parallel do
 
-  r = X(mf_nrm2)(m, f)
-  call lalg_scal(m%np, M_ONE/r, f)
+  r = X(mf_nrm2)(mesh, f)
+  call lalg_scal(mesh%np, M_ONE/r, f)
 
   call pop_sub()
 
@@ -713,7 +713,7 @@ end function X(mf_line_integral_vector)
 ! puts a spline that represents a radial function into a mesh
 subroutine X(mf_put_radial_spline)(m, spl, center, f, add)
   type(mesh_t),        intent(in)    :: m
-  type(spline_t), intent(in)    :: spl
+  type(spline_t),      intent(in)    :: spl
   FLOAT,               intent(in)    :: center(1:MAX_DIM)
   R_TYPE,              intent(inout) :: f(:)
   logical, optional,   intent(in)    :: add

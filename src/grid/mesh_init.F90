@@ -56,14 +56,14 @@ contains
 #define ENLARGEMENT_POINT 2
 #define INNER_POINT 1
 ! ---------------------------------------------------------
-subroutine mesh_init_stage_1(sb, mesh, geo, cv, enlarge)
-  type(simul_box_t), target, intent(in)    :: sb
+subroutine mesh_init_stage_1(mesh, sb, geo, cv, enlarge)
   type(mesh_t),              intent(inout) :: mesh
+  type(simul_box_t), target, intent(in)    :: sb
   type(geometry_t),          intent(in)    :: geo
   type(curvlinear_t),        intent(in)    :: cv
   integer,                   intent(in)    :: enlarge(MAX_DIM)
 
-  integer :: i, j
+  integer :: idir, jj
   FLOAT   :: x(MAX_DIM), chi(MAX_DIM)
   logical :: out
 
@@ -84,31 +84,33 @@ subroutine mesh_init_stage_1(sb, mesh, geo, cv, enlarge)
 
   ! adjust nr
   mesh%idx%nr = 0
-  do i = 1, sb%dim
-    chi = M_ZERO; j = 0
+  do idir = 1, sb%dim
+    chi = M_ZERO
+    ! the upper border
+    jj = 0
     out = .false.
     do while(.not.out)
-      j      = j + 1
-      chi(i) = real(j, REAL_PRECISION)*mesh%h(i)
+      jj = jj + 1
+      chi(idir) = real(jj, REAL_PRECISION)*mesh%h(idir)
       if ( mesh%use_curvlinear ) then
         call curvlinear_chi2x(sb, geo, cv, chi(1:sb%dim), x(1:sb%dim))
-        out = (x(i) > nearest(sb%lsize(i), M_ONE))
+        out = (x(idir) > nearest(sb%lsize(idir), M_ONE))
       else
-        out = (chi(i) > nearest(sb%lsize(i), M_ONE))
+        out = (chi(idir) > nearest(sb%lsize(idir), M_ONE))
       end if
     end do
-    mesh%idx%nr(2, i) = j - 1
+    mesh%idx%nr(2, idir) = jj - 1
   end do
 
   ! we have a symmetric mesh (for now)
   mesh%idx%nr(1,:) = -mesh%idx%nr(2,:)
-
+  
   ! we have to adjust a couple of things for the periodic directions
-  do i = 1, sb%periodic_dim
+  do idir = 1, sb%periodic_dim
     !the spacing has to be a divisor of the box size
-    mesh%h(i)     = sb%lsize(i)/real(mesh%idx%nr(2, i))
+    mesh%h(idir) = sb%lsize(idir)/real(mesh%idx%nr(2, idir))
     !the upper boundary does not have to be included (as it is a copy of the lower boundary)
-    mesh%idx%nr(2, i) = mesh%idx%nr(2, i) - 1
+    mesh%idx%nr(2, idir) = mesh%idx%nr(2, idir) - 1
   end do
 
   if(sb%open_boundaries) then
@@ -170,9 +172,9 @@ end subroutine mesh_init_stage_1
 
 
 ! ---------------------------------------------------------
-subroutine mesh_init_stage_2(sb, mesh, geo, cv, stencil)
-  type(simul_box_t),  intent(in)    :: sb
+subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
   type(mesh_t),       intent(inout) :: mesh
+  type(simul_box_t),  intent(in)    :: sb
   type(geometry_t),   intent(in)    :: geo
   type(curvlinear_t), intent(in)    :: cv
   type(stencil_t),    intent(in)    :: stencil
@@ -489,7 +491,6 @@ contains
 #if defined(HAVE_METIS) && defined(HAVE_MPI)
     integer :: i, j, ipart, jpart, ip, ix, iy, iz
     integer, allocatable :: part(:), nnb(:)
-    integer :: idir
 
     mesh%mpi_grp = mpi_grp
 
@@ -1127,14 +1128,14 @@ subroutine mesh_partition(m, lapl_stencil, part)
 
 end subroutine mesh_partition
 
-subroutine mesh_partition_boundaries(m, stencil, part)
-  type(mesh_t),    intent(in)    :: m
+subroutine mesh_partition_boundaries(mesh, stencil, part)
+  type(mesh_t),    intent(in)    :: mesh
   type(stencil_t), intent(in)    :: stencil
   integer,         intent(inout) :: part(:)
 
   integer              :: i, j           ! Counter.
   integer              :: ix(1:MAX_DIM), jx(1:MAX_DIM)
-  integer              :: p              ! Number of partitions.
+  integer              :: npart
   integer              :: iunit          ! For debug output to files.
   character(len=3)     :: filenum
   integer, allocatable :: votes(:, :)
@@ -1142,68 +1143,68 @@ subroutine mesh_partition_boundaries(m, stencil, part)
 
   call push_sub('mesh_init.mesh_partition_boundaries')
 
-  p = m%mpi_grp%size
+  npart = mesh%mpi_grp%size
 
-  ALLOCATE(votes(1:p, m%np_global + 1:m%np_part_global), p*(m%np_part_global - m%np_global))
+  ALLOCATE(votes(1:npart, mesh%np_global + 1:mesh%np_part_global), npart*(mesh%np_part_global - mesh%np_global))
 
   !now assign boundary points
 
   !count the boundary points that each point needs
   votes = 0
-  do i = 1, m%np_global
-    call index_to_coords(m%idx, m%sb%dim, i, ix)
+  do i = 1, mesh%np_global
+    call index_to_coords(mesh%idx, mesh%sb%dim, i, ix)
     do j = 1, stencil%size
       jx(1:MAX_DIM) = ix(1:MAX_DIM) + stencil%points(1:MAX_DIM, j)
-      ip = index_from_coords(m%idx, m%sb%dim, jx)
-      if(ip > m%np_global) votes(part(i), ip) = votes(part(i), ip) + 1
+      ip = index_from_coords(mesh%idx, mesh%sb%dim, jx)
+      if(ip > mesh%np_global) votes(part(i), ip) = votes(part(i), ip) + 1
     end do
   end do
 
   rr = 1
-  do i = m%np_global + 1, m%np_part_global
-    if(maxval(votes(1:p, i)) /= minval(votes(1:p, i))) then
+  do i = mesh%np_global + 1, mesh%np_part_global
+    if(maxval(votes(1:npart, i)) /= minval(votes(1:npart, i))) then
       ! we have a winner that takes the point
-      part(i:i) = maxloc(votes(1:p, i))
+      part(i:i) = maxloc(votes(1:npart, i))
     else
       ! points without a winner are assigned in a round robin fashion
       part(i) = rr
       rr = rr + 1
-      if(rr > p) rr = 1
+      if(rr > npart) rr = 1
     end if
   end do
 
   if(in_debug_mode.and.mpi_grp_is_root(mpi_world)) then
     ! Debug output. Write points of each partition in a different file.
-    do i = 1, p
+    do i = 1, npart
 
       write(filenum, '(i3.3)') i
 
       iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &
            action='write')
-      do j = 1, m%np_global
-        if(part(j).eq.i) write(iunit, '(i8,3f18.8)') j, m%x_global(j, :)
+      do j = 1, mesh%np_global
+        if(part(j).eq.i) write(iunit, '(i8,3f18.8)') j, mesh%x_global(j, :)
       end do
       call io_close(iunit)
 
       iunit = io_open('debug/mesh_partition/mesh_partition_all.'//filenum, &
            action='write')
-      do j = 1, m%np_part_global
-        if(part(j).eq.i) write(iunit, '(i8,3f18.8)') j, m%x_global(j, :)
+      do j = 1, mesh%np_part_global
+        if(part(j).eq.i) write(iunit, '(i8,3f18.8)') j, mesh%x_global(j, :)
       end do
       call io_close(iunit)
 
     end do
     ! Write points from enlargement to file with number p+1.
-    write(filenum, '(i3.3)') p+1
+    write(filenum, '(i3.3)') npart+1
     iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &
          action='write')
-    do i = m%np_global+1, m%np_part_global
-      write(iunit, '(i8,3f18.8)') i, m%x_global(i, :)
+    do i = mesh%np_global+1, mesh%np_part_global
+      write(iunit, '(i8,3f18.8)') i, mesh%x_global(i, :)
     end do
     call io_close(iunit)
   end if
 
-  call MPI_Barrier(m%mpi_grp%comm, mpi_err)
+  call MPI_Barrier(mesh%mpi_grp%comm, mpi_err)
 
   call pop_sub()
 

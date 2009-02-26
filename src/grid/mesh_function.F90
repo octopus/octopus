@@ -102,14 +102,16 @@ module mesh_function_m
   type(profile_t), save ::            &
        C_PROFILING_MF_INTEGRATE,      &
        C_PROFILING_MF_DOTP,           &
-       C_PROFILING_MF_NRM2,           &
-       C_PROFILING_MF_REDUCE
+#ifdef HAVE_MPI       
+       C_PROFILING_MF_REDUCE,         &
+#endif
+       C_PROFILING_MF_NRM2
 
 contains
 
-  subroutine mesh_init_mesh_aux(m)
-    type(mesh_t), target, intent(in) :: m
-    mesh_aux => m
+  subroutine mesh_init_mesh_aux(mesh)
+    type(mesh_t), target, intent(in) :: mesh
+    mesh_aux => mesh
   end subroutine mesh_init_mesh_aux
 
 #include "undef.F90"

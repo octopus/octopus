@@ -349,7 +349,7 @@ contains
 
     mesh_out%idx%enlarge = mesh_in%idx%enlarge
     
-    call mesh_init_stage_2(mesh_out%sb, mesh_out, geo, cv, stencil)
+    call mesh_init_stage_2(mesh_out, mesh_out%sb, geo, cv, stencil)
 
     call pop_sub()
   end subroutine multigrid_mesh_half
@@ -375,7 +375,7 @@ contains
     
     mesh_out%idx%enlarge = mesh_in%idx%enlarge
     
-    call mesh_init_stage_2(mesh_out%sb, mesh_out, geo, cv, stencil)
+    call mesh_init_stage_2(mesh_out, mesh_out%sb, geo, cv, stencil)
 
     call pop_sub()
   end subroutine multigrid_mesh_double

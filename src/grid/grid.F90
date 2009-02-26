@@ -100,7 +100,7 @@ contains
     call double_grid_init(gr%dgrid, gr%sb)
 
     ! now we generate create the mesh and the derivatives
-    call mesh_init_stage_1(gr%sb, gr%mesh, geo, gr%cv, &
+    call mesh_init_stage_1(gr%mesh, gr%sb, geo, gr%cv, &
          enlarge = max(gr%der%n_ghost, double_grid_enlarge(gr%dgrid)))
 
     ! the stencil used to generate the grid is a union of a cube (for
@@ -109,7 +109,7 @@ contains
     call stencil_union(gr%sb%dim, cube, gr%der%lapl%stencil, gr%stencil)
     call stencil_end(cube)
     
-    call mesh_init_stage_2(gr%sb, gr%mesh, geo, gr%cv, gr%stencil)
+    call mesh_init_stage_2(gr%mesh, gr%sb, geo, gr%cv, gr%stencil)
 
     call pop_sub()
 

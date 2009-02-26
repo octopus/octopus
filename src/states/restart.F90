@@ -799,11 +799,11 @@ contains
 
     ! ---------------------------------------------------------
     subroutine interpolation_init
-      call mesh_init_stage_1(old_sb, old_mesh, geo, old_cv, gr%der%n_ghost)
-      call mesh_init_stage_2(old_sb, old_mesh, geo, old_cv, gr%stencil)
+      call mesh_init_stage_1(old_mesh, old_sb, geo, old_cv, gr%der%n_ghost)
+      call mesh_init_stage_2(old_mesh, old_sb, geo, old_cv, gr%stencil)
       call mesh_init_stage_3(old_mesh, geo, old_cv)
 
-      if (st%wfs_type == M_REAL) then
+      if (states_are_real(st)) then
         ALLOCATE(dphi(old_mesh%np_global), old_mesh%np_global)
       else
         ALLOCATE(zphi(old_mesh%np_global), old_mesh%np_global)
@@ -814,7 +814,7 @@ contains
     ! ---------------------------------------------------------
     subroutine interpolation_end
       call mesh_end(old_mesh)
-      if (st%wfs_type == M_REAL) then
+      if (states_are_real(st)) then
         deallocate(dphi)
       else
         deallocate(zphi)
