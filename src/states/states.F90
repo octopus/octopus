@@ -745,9 +745,9 @@ contains
   ! ---------------------------------------------------------
   ! Allocates the KS wavefunctions defined within an states_t
   ! structure.
-  subroutine states_allocate_wfns(st, m, wfs_type)
+  subroutine states_allocate_wfns(st, mesh, wfs_type)
     type(states_t),    intent(inout) :: st
-    type(mesh_t),      intent(in)    :: m
+    type(mesh_t),      intent(in)    :: mesh
     integer, optional, intent(in)    :: wfs_type
 
     integer :: n, ik, ist, idim, alloc_size
@@ -777,34 +777,34 @@ contains
 
     if(force) st%wfs_type = M_CMPLX
 
-    n = m%np_part*st%d%dim*st%lnst*st%d%kpt%nlocal
+    n = mesh%np_part*st%d%dim*st%lnst*st%d%kpt%nlocal
     
     if (st%wfs_type == M_REAL) then
-      ALLOCATE(st%dpsi(m%np_part, st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end), n)
+      ALLOCATE(st%dpsi(mesh%np_part, st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end), n)
 
       do ik = st%d%kpt%start, st%d%kpt%end
         do ist = st%st_start, st%st_end
           do idim = 1, st%d%dim
-            st%dpsi(1:m%np_part, idim, ist, ik) = M_ZERO
+            st%dpsi(1:mesh%np_part, idim, ist, ik) = M_ZERO
           end do
         end do
       end do
 
     else
-      ALLOCATE(st%zpsi(m%np_part, st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end), n)
+      ALLOCATE(st%zpsi(mesh%np_part, st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end), n)
 
       do ik = st%d%kpt%start, st%d%kpt%end
         do ist = st%st_start, st%st_end
           do idim = 1, st%d%dim
-            st%zpsi(1:m%np_part, idim, ist, ik) = M_Z0
+            st%zpsi(1:mesh%np_part, idim, ist, ik) = M_Z0
            end do
         end do
       end do
     end if
 
     if(calc_mode_is(CM_TD).and.st%open_boundaries) then
-      alloc_size = m%lead_unit_cell(LEFT)%np*2*st%d%dim*st%nst*st%d%nik*2*NLEADS
-      ALLOCATE(st%ob_intf_psi(m%lead_unit_cell(LEFT)%np, 2, st%d%dim, st%nst, st%d%nik, NLEADS), alloc_size)
+      alloc_size = mesh%lead_unit_cell(LEFT)%np*2*st%d%dim*st%nst*st%d%nik*2*NLEADS
+      ALLOCATE(st%ob_intf_psi(mesh%lead_unit_cell(LEFT)%np, 2, st%d%dim, st%nst, st%d%nik, NLEADS), alloc_size)
 
       st%ob_intf_psi = M_z0
     end if
@@ -1104,9 +1104,9 @@ contains
 
   ! ---------------------------------------------------------
   ! generate a hydrogen s-wavefunction around a random point
-  subroutine states_generate_random(st, m, ist_start_, ist_end_)
+  subroutine states_generate_random(st, mesh, ist_start_, ist_end_)
     type(states_t),    intent(inout) :: st
-    type(mesh_t),      intent(in)    :: m
+    type(mesh_t),      intent(in)    :: mesh
     integer, optional, intent(in)    :: ist_start_, ist_end_
 
     integer :: ist, ik, id, ist_start, ist_end, j, seed
@@ -1130,10 +1130,10 @@ contains
 
       do ik = st%d%kpt%start, st%d%kpt%end
         do ist = ist_start, ist_end
-          if (st%wfs_type == M_REAL) then
-            call dmf_random(m, st%dpsi(:, 1, ist, ik), seed)
+          if (states_are_real(st)) then
+            call dmf_random(mesh, st%dpsi(:, 1, ist, ik), seed)
           else
-            call zmf_random(m, st%zpsi(:, 1, ist, ik), seed)
+            call zmf_random(mesh, st%zpsi(:, 1, ist, ik), seed)
           end if
           st%eigenval(ist, ik) = M_ZERO
         end do
@@ -1147,7 +1147,7 @@ contains
         
         do ik = st%d%kpt%start, st%d%kpt%end
           do ist = ist_start, ist_end
-            call zmf_random(m, st%zpsi(:, 1, ist, ik))
+            call zmf_random(mesh, st%zpsi(:, 1, ist, ik))
             ! In this case, the spinors are made of a spatial part times a vector [alpha beta]^T in 
             ! spin space (i.e., same spatial part for each spin component). So (alpha, beta)
             ! determines the spin values. The values of (alpha, beta) can be be obtained
@@ -1158,10 +1158,10 @@ contains
             ! of each spinor remain the same.
             do j = ist_start, ist - 1
               st%zpsi(:, 1, ist, ik) = st%zpsi(:, 1, ist, ik) - &
-                                       zmf_dotp(m, st%zpsi(:, 1, ist, ik), st%zpsi(:, 1, j, ik)) * &
+                                       zmf_dotp(mesh, st%zpsi(:, 1, ist, ik), st%zpsi(:, 1, j, ik)) * &
                                        st%zpsi(:, 1, j, ik)
             end do
-            st%zpsi(:, 1, ist, ik) = st%zpsi(:, 1, ist, ik) / zmf_nrm2(m, st%zpsi(:, 1, ist, ik))
+            st%zpsi(:, 1, ist, ik) = st%zpsi(:, 1, ist, ik) / zmf_nrm2(mesh, st%zpsi(:, 1, ist, ik))
             st%zpsi(:, 2, ist, ik) = st%zpsi(:, 1, ist, ik)
             alpha = cmplx(sqrt(M_HALF + st%spin(3, ist, ik)), M_ZERO, REAL_PRECISION)
             beta  = cmplx(sqrt(M_ONE - abs(alpha)**2), M_ZERO, REAL_PRECISION)
@@ -1177,7 +1177,7 @@ contains
         do ik = st%d%kpt%start, st%d%kpt%end
           do ist = ist_start, ist_end
             do id = 1, st%d%dim
-              call zmf_random(m, st%zpsi(:, id, ist, ik))
+              call zmf_random(mesh, st%zpsi(:, id, ist, ik))
             end do
             st%eigenval(ist, ik) = M_ZERO
           end do
@@ -1190,9 +1190,9 @@ contains
   end subroutine states_generate_random
 
   ! ---------------------------------------------------------
-  subroutine states_fermi(st, m)
+  subroutine states_fermi(st, mesh)
     type(states_t), intent(inout) :: st
-    type(mesh_t),   intent(in)    :: m
+    type(mesh_t),   intent(in)    :: mesh
 
     ! Local variables.
     integer            :: ist, ik
@@ -1229,7 +1229,7 @@ contains
             write(message(1),'(a)') 'Internal error in states_fermi'
             call write_fatal(1)
           else
-            st%spin(1:3, ist, ik) = state_spin(m, st%zpsi(:, :, ist, ik))
+            st%spin(1:3, ist, ik) = state_spin(mesh, st%zpsi(:, :, ist, ik))
           end if
         end do
 #if defined(HAVE_MPI)

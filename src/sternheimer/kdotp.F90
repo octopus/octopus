@@ -272,7 +272,7 @@ contains
 
       !%Variable KdotP_CalculateEffectiveMasses
       !%Type logical
-      !%Default false
+      !%Default true
       !%Section Linear Response::KdotP
       !%Description
       !% If true, uses kdotp perturbations of ground-state wavefunctions

@@ -321,7 +321,7 @@ subroutine X(mf_random)(mesh, f, seed)
 
   !$omp parallel do private(r)
   do i = 1, mesh%np
-    r = sum((mesh%x(i, 1:MAX_DIM) - a(1:MAX_DIM))**2)
+    r = sum((mesh%x(i, 1:mesh%sb%dim) - a(1:mesh%sb%dim))**2)
     if ( r < CNST(100.0) ) then 
       f(i) = exp(-M_HALF*r)
     else
@@ -455,7 +455,7 @@ subroutine X(mf_interpolate_points) (mesh_in, u, npoints, x, f)
   call push_sub('mf_inc.Xmf_interpolate')
 
 #ifdef SINGLE_PRECISION
-  ALLOCATE(rx(1:ubound(mesh_in%x, DIM=1), 1:MAX_DIM), ubound(mesh_in%x, DIM=1)*MAX_DIM)
+  ALLOCATE(rx(1:ubound(mesh_in%x, DIM=1), 1:mesh_in%sb%dim), ubound(mesh_in%x, DIM=1)*mesh_in%sb%dim)
   rx = mesh_in%x
   ALLOCATE(ru(1:ubound(u, DIM=1)), ubound(u, DIM=1))
   ru = u
@@ -523,7 +523,7 @@ subroutine X(mf_interpolate_on_plane)(mesh, plane, f, f_in_plane)
   call push_sub('mf_inc.Xmf_interpolate_on_plane')
 
 #ifdef SINGLE_PRECISION
-    ALLOCATE(rx(1:ubound(mesh%x, DIM=1), 1:MAX_DIM), ubound(mesh%x, DIM=1)*MAX_DIM)
+    ALLOCATE(rx(1:ubound(mesh%x, DIM=1), 1:mesh%sb%dim), ubound(mesh%x, DIM=1)*mesh%sb%dim)
     rx = mesh%x
 #else
     rx => mesh%x
@@ -575,7 +575,7 @@ subroutine X(mf_interpolate_on_line)(mesh, line, f, f_in_line)
   call push_sub('mf_inc.Xmf_interpolate_on_line')
 
 #ifdef SINGLE_PRECISION
-    ALLOCATE(rx(1:ubound(mesh%x, DIM=1), 1:MAX_DIM), ubound(mesh%x, DIM=1)*MAX_DIM)
+    ALLOCATE(rx(1:ubound(mesh%x, DIM=1), 1:mesh%sb%dim), ubound(mesh%x, DIM=1)*mesh%sb%dim)
     rx = mesh%x
 #else
     rx => mesh%x
@@ -711,8 +711,8 @@ end function X(mf_line_integral_vector)
 
 
 ! puts a spline that represents a radial function into a mesh
-subroutine X(mf_put_radial_spline)(m, spl, center, f, add)
-  type(mesh_t),        intent(in)    :: m
+subroutine X(mf_put_radial_spline)(mesh, spl, center, f, add)
+  type(mesh_t),        intent(in)    :: mesh
   type(spline_t),      intent(in)    :: spl
   FLOAT,               intent(in)    :: center(1:MAX_DIM)
   R_TYPE,              intent(inout) :: f(:)
@@ -729,15 +729,15 @@ subroutine X(mf_put_radial_spline)(m, spl, center, f, add)
   
   if( add_ ) then 
 
-    do ip = 1, m%np
-      r = sqrt(sum((m%x(ip, 1:MAX_DIM) - center(1:MAX_DIM))**2))
+    do ip = 1, mesh%np
+      r = sqrt(sum((mesh%x(ip, 1:mesh%sb%dim) - center(1:mesh%sb%dim))**2))
       f(ip) = f(ip) + spline_eval(spl, r)
     end do
 
   else
 
-     do ip = 1, m%np
-      r = sqrt(sum((m%x(ip, 1:MAX_DIM) - center(1:MAX_DIM))**2))
+     do ip = 1, mesh%np
+      r = sqrt(sum((mesh%x(ip, 1:mesh%sb%dim) - center(1:mesh%sb%dim))**2))
       f(ip) = spline_eval(spl, r)
     end do
 
@@ -881,49 +881,49 @@ end subroutine X(mf_dotp_batch)
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine X(mf_calculate_gamma)(m, psi, gamma)
-  type(mesh_t), intent(in) :: m
+subroutine X(mf_calculate_gamma)(mesh, psi, gamma)
+  type(mesh_t), intent(in) :: mesh
   R_TYPE, intent(in)       :: psi(:)
   CMPLX, intent(out)       :: gamma(:, :)
 
   integer :: jj, kk
   integer, allocatable :: npoints(:)
   R_TYPE, allocatable :: psi_global(:)
-  type(X(cf_t)) :: c
+  type(X(cf_t)) :: cube
 
   call push_sub('mesh_function_inc.mf_calculate_gamma')
 
   ! In case of running parallel in domains, we need to operate psi_global, which 
   ! contains the full wave function after "gathering" all the domains.
-  ALLOCATE(psi_global(m%np_part_global), m%np_part_global)
-  if(m%parallel_in_domains) then
+  ALLOCATE(psi_global(mesh%np_part_global), mesh%np_part_global)
+  if(mesh%parallel_in_domains) then
 #if defined(HAVE_MPI)
-    call X(vec_allgather)(m%vp, psi_global, psi)
+    call X(vec_allgather)(mesh%vp, psi_global, psi)
 #endif
   else
-    psi_global(1:m%np_part_global) = psi(1:m%np_part_global)
+    psi_global(1:mesh%np_part_global) = psi(1:mesh%np_part_global)
   end if
 
   ! put values in a nice cube
-  call X(cf_new) (m%idx%ll, c)
-  call X(cf_alloc_RS) (c)
-  call X(mesh_to_cube) (m, psi_global, c)
+  call X(cf_new) (mesh%idx%ll, cube)
+  call X(cf_alloc_RS) (cube)
+  call X(mesh_to_cube) (mesh, psi_global, cube)
 
   ! Allocatation of the arrays that store the limiting indexes for each direction,
   ! and the total number of points.
-  ALLOCATE(npoints(MAX_DIM), MAX_DIM)
-  npoints = m%idx%ll
+  ALLOCATE(npoints(mesh%sb%dim), mesh%sb%dim)
+  npoints = mesh%idx%ll
 
   gamma = R_TOTYPE(M_ZERO)
   ! Calculates
   ! densmatr(x, xprime) = 2 \int dx_2 Psi^\dagger (xprime, x_2) Psi(x, x_2)
   xloop: do jj = 1, npoints(1)
     xprimeloop: do kk = 1, npoints(1)
-      gamma(jj, kk) = CNST(2.0) * m%h(2) * sum(c%RS(jj, :, :)*R_CONJ(c%RS(kk, :, :)) )
+      gamma(jj, kk) = CNST(2.0) * mesh%h(2) * sum(cube%RS(jj, :, :)*R_CONJ(cube%RS(kk, :, :)) )
     end do xprimeloop
   end do xloop
 
-  call X(cf_free)(c)
+  call X(cf_free)(cube)
   deallocate(npoints, psi_global)
   call pop_sub()
 end subroutine X(mf_calculate_gamma)

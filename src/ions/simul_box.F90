@@ -719,6 +719,7 @@ contains
       !%Description
       !% Shifts the zero of the simulation box, relative to the atomic coordinates, by a specified vector.
       !% It can be either a float, interpreted as (x,x,x), or a block containing the (x,y,z) value of the zero.
+      !% WARNING: This variable does not seem to work correctly!
       !%End
       sb%box_offset = M_ZERO
       if(loct_parse_block(datasets_check('BoxOffset'), blk) == 0) then
