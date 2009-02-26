@@ -95,7 +95,7 @@ module fft_m
   type fft_t
     integer   :: slot                ! in which slot do we have this fft
 
-    integer   :: n(MAX_DIM)          ! size of the fft
+    integer   :: n(3)          ! size of the fft
     integer   :: is_real             ! is the fft real or complex
     type(c_ptr) :: planf ! the plan for forward transforms
     type(c_ptr) :: planb ! the plan for backward transforms
@@ -150,7 +150,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine fft_init(n, is_real, fft, optimize)
-    integer,           intent(inout) :: n(MAX_DIM)
+    integer,           intent(inout) :: n(3)
     integer,           intent(in)    :: is_real
     type(fft_t),       intent(out)   :: fft
     logical, optional, intent(in)    :: optimize
@@ -303,7 +303,7 @@ contains
   ! ---------------------------------------------------------
   subroutine fft_getdim_real(fft, d)
     type(fft_t), intent(in) :: fft
-    integer,    intent(out) :: d(MAX_DIM)
+    integer,    intent(out) :: d(3)
 
     d = fft%n
   end subroutine fft_getdim_real
@@ -312,7 +312,7 @@ contains
   ! ---------------------------------------------------------
   subroutine fft_getdim_complex(fft, d)
     type(fft_t), intent(in) :: fft
-    integer,    intent(out) :: d(MAX_DIM)
+    integer,    intent(out) :: d(3)
 
     d = fft%n
     if(fft%is_real == fft_real)  d(1) = d(1)/2 + 1

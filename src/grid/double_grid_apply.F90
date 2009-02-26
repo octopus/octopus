@@ -29,8 +29,8 @@ subroutine double_grid_apply (this, s, m, sm, x_atom, vl, l, lm, ic)
   integer, optional,      intent(in)    :: lm
   integer, optional,      intent(in)    :: ic
 
-  FLOAT :: r, x(1:3)
-  FLOAT :: vv, tmp(1:3)
+  FLOAT :: r, x(1:MAX_DIM)
+  FLOAT :: vv, tmp(1:MAX_DIM)
 
   integer :: is, is2, ip
   integer :: ii, jj, kk, ll, mm, nn
