@@ -280,7 +280,7 @@ contains
       !%End      
 
       call loct_parse_logical(datasets_check('KdotP_CalculateEffectiveMasses'), &
-        .false., calc_eff_mass)
+        .true., calc_eff_mass)
 
       call pop_sub()
 
