@@ -99,7 +99,7 @@ contains
     message(1) = 'Info:  Setting up Hamiltonian.'
     call write_info(1)
 
-    call states_calc_dens(sys%st, sys%gr%mesh%np, sys%st%rho)
+    call states_calc_dens(sys%st, sys%gr%mesh%np)
     call v_ks_calc(sys%gr, sys%ks, hm, sys%st, calc_eigenval=.true.) ! get potentials
     call total_energy(hm, sys%gr, sys%st, -1)             ! total energy
 

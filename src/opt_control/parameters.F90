@@ -47,7 +47,7 @@ module opt_control_parameters_m
   private
   public :: oct_control_parameters_t,     &
             parameters_mod_init,          &
-            parameters_close,             &
+            parameters_mod_close,         &
             parameters_init,              &
             parameters_representation,    &
             parameters_set,               &
@@ -138,7 +138,7 @@ contains
 
   ! ---------------------------------------------------------
   ! Initializes the module, should be the first subroutine to be called (the last one
-  ! should be parameters_close, when the module is no longer to be used.
+  ! should be parameters_mod_close, when the module is no longer to be used.
   !
   ! It fills the module variable "par_common", whose type is par_common_t, with 
   ! information obtained from the inp file.
@@ -1400,9 +1400,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_close()
+  subroutine parameters_mod_close()
     ! Here par_commons data should be deallocated.
-  end subroutine parameters_close
+  end subroutine parameters_mod_close
   ! ---------------------------------------------------------
 
 #include "parameters_trans.F90"

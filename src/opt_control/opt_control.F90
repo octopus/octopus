@@ -158,7 +158,6 @@ contains
     type(hamiltonian_t), target, intent(inout) :: hm
 
     type(td_t), target             :: td
-    type(states_t)                 :: psi
     type(oct_control_parameters_t) :: par, par_new, par_prev
     logical                        :: stop_loop
     FLOAT                          :: j1
@@ -190,13 +189,18 @@ contains
     call parameters_prepare_initial(par)
     call parameters_to_h(par, hm%ep)
     call messages_print_stress(stdout, "TD ext. fields after processing")
-    call laser_write_info(hm%ep%no_lasers, hm%ep%lasers, td%dt, td%max_iter, stdout)
+    call laser_write_info(hm%ep%lasers, stdout)
     call messages_print_stress(stdout)
     call parameters_write('opt-control/initial_laser', par)
 
 
     ! Startup of the iterator data type (takes care of counting iterations, stopping, etc).
     call oct_iterator_init(iterator, par)
+
+
+    ! Initialization of the propagation_m module.
+    call propagation_mod_init(td%max_iter, oct%eta, oct%delta, oct%number_checkpoints, &
+      (oct%algorithm == oct_algorithm_zbr98))
 
 
     ! If mixing is required, the mixing machinery has to be initialized -- inside the parameters module.
@@ -220,10 +224,6 @@ contains
     ! Informative output.
     call h_sys_output_states(initial_st, sys%gr, 'opt-control/initial', sys%outp)
     call target_output(target, sys%gr, 'opt-control/target', sys%outp)
-
-
-    ! psi is the "working state".
-    call states_copy(psi, initial_st)
 
 
     ! mode switcher; here is where the real run is made.
@@ -273,10 +273,9 @@ contains
     if(oct%use_mixing) call parameters_mixing_end()
     call filter_end(filter)
     call td_end(td)
-    call states_end(psi)
     call states_end(initial_st)
     call target_end(target)
-    call parameters_close()
+    call parameters_mod_close()
    
     call pop_sub()
 
@@ -311,10 +310,12 @@ contains
 
     ! ---------------------------------------------------------
     subroutine scheme_mt03
+      type(states_t) :: psi
       call push_sub('opt_control.scheme_mt03')
 
-      call oct_prop_init(prop_chi, "chi", td%max_iter, oct%number_checkpoints)
-      call oct_prop_init(prop_psi, "psi", td%max_iter, oct%number_checkpoints)
+      call states_copy(psi, initial_st)
+      call oct_prop_init(prop_chi, "chi")
+      call oct_prop_init(prop_psi, "psi")
 
       call parameters_copy(par_new, par)
       ctr_loop: do
@@ -331,6 +332,7 @@ contains
         end if
       end do ctr_loop
 
+      call states_end(psi)
       call oct_prop_end(prop_chi)
       call oct_prop_end(prop_psi)
       call parameters_end(par_new)
@@ -342,10 +344,12 @@ contains
 
     ! ---------------------------------------------------------
     subroutine scheme_wg05
+      type(states_t) :: psi
       call push_sub('opt_control.scheme_wg05')
 
-      call oct_prop_init(prop_chi, "chi", td%max_iter, oct%number_checkpoints)
-      call oct_prop_init(prop_psi, "psi", td%max_iter, oct%number_checkpoints)
+      call states_copy(psi, initial_st)
+      call oct_prop_init(prop_chi, "chi")
+      call oct_prop_init(prop_psi, "psi")
 
       if (oct%mode_fixed_fluence) then
         call parameters_set_alpha(par, sqrt( parameters_fluence(par) / parameters_targetfluence(par)))
@@ -364,6 +368,7 @@ contains
         end if
       end do ctr_loop
 
+      call states_end(psi)
       call oct_prop_end(prop_chi)
       call oct_prop_end(prop_psi)
       call parameters_end(par_new)
@@ -374,10 +379,12 @@ contains
 
     ! ---------------------------------------------------------
     subroutine scheme_zbr98
+      type(states_t) :: psi
       call push_sub('opt_control.scheme_zbr98')
 
-      call oct_prop_init(prop_chi, "chi", td%max_iter, oct%number_checkpoints)
-      call oct_prop_init(prop_psi, "psi", td%max_iter, oct%number_checkpoints)
+      call states_copy(psi, initial_st)
+      call oct_prop_init(prop_chi, "chi")
+      call oct_prop_init(prop_psi, "psi")
 
       call parameters_copy(par_prev, par)
       call propagate_forward(sys, hm, td, par, target, psi, prop_psi)
@@ -400,6 +407,7 @@ contains
         end if
       end do ctr_loop
 
+      call states_end(psi)
       call oct_prop_end(prop_chi)
       call oct_prop_end(prop_psi)
       call parameters_end(par_new)
@@ -545,11 +553,11 @@ contains
     end if
 
     call target_get_state(target, chi)
-    call bwd_step(oct, sys, td, hm, target, par, par_chi, chi, prop_chi, prop_psi)
+    call bwd_step(sys, td, hm, target, par, par_chi, chi, prop_chi, prop_psi)
 
     call states_end(psi)
     call states_copy(psi, initial_st)
-    call fwd_step(oct, sys, td, hm, target, par, par_chi, psi, prop_chi, prop_psi)
+    call fwd_step(sys, td, hm, target, par, par_chi, psi, prop_chi, prop_psi)
 
     call states_end(chi)
     call parameters_end(par_chi)
@@ -586,7 +594,7 @@ contains
 
     call states_copy(chi, psi)
     call calc_chi(target, sys%gr, psi, chi)
-    call bwd_step(oct, sys, td, hm, target, par, parp, chi, prop_chi, prop_psi)
+    call bwd_step(sys, td, hm, target, par, parp, chi, prop_chi, prop_psi)
 
     call parameters_filter(parp, filter)
 
@@ -627,8 +635,8 @@ contains
     type(oct_control_parameters_t) :: par_chi
     type(oct_prop_t)               :: prop_chi, prop_psi;
 
-    call oct_prop_init(prop_chi, "chi", td%max_iter, oct%number_checkpoints)
-    call oct_prop_init(prop_psi, "psi", td%max_iter, oct%number_checkpoints)
+    call oct_prop_init(prop_chi, "chi")
+    call oct_prop_init(prop_psi, "psi")
 
     call parameters_to_realtime(par)
 
@@ -647,7 +655,7 @@ contains
 
     ! Backward propagation, while at the same time finding the output field, 
     ! which is placed at par_chi
-    call bwd_step_2(oct, sys, td, hm, target, par, par_chi, chi, prop_chi, prop_psi)
+    call bwd_step_2(sys, td, hm, target, par, par_chi, chi, prop_chi, prop_psi)
 
     call parameters_set_rep(par_chi)
 
@@ -701,11 +709,11 @@ contains
     
     call states_copy(chi, psi)
     call calc_chi(target, sys%gr, psi, chi)
-    call bwd_step(oct, sys, td, hm, target, par, par_chi, chi, prop_chi, prop_psi)
+    call bwd_step(sys, td, hm, target, par, par_chi, chi, prop_chi, prop_psi)
 
     call states_end(psi)
     call states_copy(psi, initial_st)
-    call fwd_step(oct, sys, td, hm, target, par, par_chi, psi, prop_chi, prop_psi)
+    call fwd_step(sys, td, hm, target, par, par_chi, psi, prop_chi, prop_psi)
 
     j1 = j1_functional(target, sys%gr, psi)
 

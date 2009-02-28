@@ -1080,25 +1080,40 @@ contains
     call pop_sub()
   end subroutine states_dens_reduce
 
+
+  ! ---------------------------------------------------------
+  ! Computes the density from the orbitals in st. If rho is
+  ! present, the density is placed there; if it is not present,
+  ! the density is placed in st%rho.
+  ! ---------------------------------------------------------
   subroutine states_calc_dens(st, np, rho)
     type(states_t), intent(in)  :: st
     integer,        intent(in)  :: np
-    FLOAT,          intent(out) :: rho(:,:)
+    FLOAT, optional, target, intent(out) :: rho(:,:)
 
     integer :: ik, ist
 
+    FLOAT, pointer :: dens(:, :)
+
     call push_sub('states.states_calc_dens')
 
-    rho(1:np, 1:st%d%nspin) = M_ZERO
+    if(present(rho)) then
+      dens => rho
+    else
+      dens => st%rho
+    end if
+
+    dens(1:np, 1:st%d%nspin) = M_ZERO
 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
-        call states_dens_accumulate(st, np, rho, ist, ik)
+        call states_dens_accumulate(st, np, dens, ist, ik)
       end do
     end do
 
-    call states_dens_reduce(st, np, rho)
+    call states_dens_reduce(st, np, dens)
 
+    nullify(dens)
     call pop_sub()
   end subroutine states_calc_dens
 

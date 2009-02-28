@@ -473,7 +473,7 @@ contains
       ALLOCATE(vaux(NP, st%d%nspin), NP*st%d%nspin)
 
       ! First, compare the new potential to the extrapolated one.
-      call states_calc_dens(st, NP, st%rho)
+      call states_calc_dens(st, NP)
       call v_ks_calc(gr, ks, hm, st)
       ALLOCATE(dtmp(NP), NP)
       d_max = M_ZERO
@@ -505,7 +505,7 @@ contains
           case(PROP_VISSCHER);                call td_visscher
           end select
 
-          call states_calc_dens(st, NP, st%rho)
+          call states_calc_dens(st, NP)
           call v_ks_calc(gr, ks, hm, st)
           ALLOCATE(dtmp(NP), NP)
           d_max = M_ZERO
@@ -540,7 +540,7 @@ contains
           call zexp_kinetic(gr, hm, st%zpsi(:, :, ist, ik), tr%cf, -M_HALF*M_zI*dt)
         end do
       end do
-      call states_calc_dens(st, NP, st%rho)
+      call states_calc_dens(st, NP)
       call v_ks_calc(gr, ks, hm, st)
       do ik = 1, st%d%nik
         do ist = 1, st%nst
@@ -828,7 +828,7 @@ contains
           end do
         end do
 
-        call states_calc_dens(st, NP, st%rho)
+        call states_calc_dens(st, NP)
         call v_ks_calc(gr, ks, hm, st)
 
         vhxc_t2 = hm%vhxc

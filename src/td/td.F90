@@ -241,7 +241,7 @@ contains
       call zvmask(gr, hm, st)
 
       ! update density
-      call states_calc_dens(st, NP, st%rho)
+      call states_calc_dens(st, NP)
 
       generate = .false.
 
@@ -537,20 +537,20 @@ contains
         write(message(1),'(a,i4,a,i4,a)') 'Info: The lowest', freeze_orbitals, &
           ' orbitals have been frozen.', st%nst, ' will be propagated.'
         call write_info(1)
-        call states_calc_dens(st, NP, st%rho)
+        call states_calc_dens(st, NP)
         call v_ks_calc(gr, sys%ks, hm, st, calc_eigenval=.true.)
       elseif(freeze_orbitals < 0) then
         ! This means SAE approximation. We calculate the Hxc first, then freezer all
         ! orbitals minus one.
         write(message(1),'(a)') 'Info: The single-active-electron approximation will be used.'
         call write_info(1)
-        call states_calc_dens(st, NP, st%rho)
+        call states_calc_dens(st, NP)
         call v_ks_calc(gr, sys%ks, hm, st, calc_eigenval=.true.)
         call states_freeze_orbitals(st, gr, sys%mc, n = st%nst-1)
         call v_ks_freeze_hxc(sys%ks)
       else
         ! Normal run.
-        call states_calc_dens(st, NP, st%rho)
+        call states_calc_dens(st, NP)
         call v_ks_calc(gr, sys%ks, hm, st, calc_eigenval=.true.)
       end if
 

@@ -128,7 +128,7 @@ module gcm_m
     ! Calculate the total energies for each of the Slater determinants
     do i = 1, ndeterminants
       ! The total density may be needed.
-      call states_calc_dens(phi(i), NP, phi(i)%rho)
+      call states_calc_dens(phi(i), NP)
 
       ! First, the one-body part of the total energy:
       etot(i) = delectronic_kinetic_energy(hm, gr, phi(i)) + &

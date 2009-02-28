@@ -434,22 +434,25 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine laser_write_info(no_l, l, dt, max_iter, iunit)
-    integer,       intent(in) :: no_l
-    type(laser_t), intent(in) :: l(no_l)
-    FLOAT,         intent(in) :: dt
-    integer,       intent(in) :: max_iter
+  subroutine laser_write_info(l, iunit)
+    type(laser_t), intent(in) :: l(:)
     integer,       intent(in) :: iunit
 
-    FLOAT :: t, fluence, max_intensity, intensity
+    FLOAT :: t, fluence, max_intensity, intensity, dt
     CMPLX :: amp, val
-    integer :: i, j, k
+    integer :: i, j, k, no_l, max_iter
 
     if(.not.mpi_grp_is_root(mpi_world)) return
 
     call push_sub('lasers.laser_write_info')
 
+    no_l = size(l)
+    
     do i = 1, no_l
+
+      dt = tdf_dt(l(i)%f)
+      max_iter = tdf_niter(l(i)%f)
+
       write(iunit,'(i2,a)') i,':'
       select case(l(i)%field)
       case(E_FIELD_ELECTRIC);   write(iunit, '(a)') '   Electric Field.'
@@ -463,7 +466,8 @@ contains
           '(', real(l(i)%pol(2)), ',', aimag(l(i)%pol(2)), '), ', &
           '(', real(l(i)%pol(3)), ',', aimag(l(i)%pol(3)), ')'
       end if
-      write(iunit,'(3x,a,f14.8,3a)') 'Carrier frequency = ', l(i)%omega / units_out%energy%factor, &
+      write(iunit,'(3x,a,f14.8,3a)') 'Carrier frequency = ', &
+        l(i)%omega / units_out%energy%factor, &
         ' [', trim(units_out%energy%abbrev), ']'
       write(iunit,'(3x,a)')       'Envelope: ' 
       call tdf_write(l(i)%f, iunit)
@@ -494,9 +498,11 @@ contains
         end do
         fluence = fluence * dt
         write(iunit,'(a,es12.6,3a)') '   Peak intensity = ', max_intensity, ' [a.u]'
-        write(iunit,'(a,es12.6,3a)') '                  = ', max_intensity * 6.4364086e+15, ' [W/cm^2]'
+        write(iunit,'(a,es12.6,3a)') '                  = ', &
+          max_intensity * 6.4364086e+15, ' [W/cm^2]'
         write(iunit,'(a,es12.6,a)')  '   Int. intensity = ', fluence, ' [a.u]'
-        write(iunit,'(a,es12.6,a)')  '   Fluence        = ', (fluence / CNST(5.4525289841210) ), ' [a.u]'
+        write(iunit,'(a,es12.6,a)')  '   Fluence        = ', &
+          (fluence / CNST(5.4525289841210) ), ' [a.u]'
       end if
 
     end do

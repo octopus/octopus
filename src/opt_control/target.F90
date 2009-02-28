@@ -93,9 +93,12 @@ module opt_control_target_m
     FLOAT   :: dt
   end type target_t
 
+
   contains
 
 
+  ! ----------------------------------------------------------------------
+  ! This just copies the states_t variable present in target, into st.
   ! ----------------------------------------------------------------------
   subroutine target_get_state(target, st)
     type(target_t), intent(in)    :: target
@@ -105,6 +108,8 @@ module opt_control_target_m
   ! ----------------------------------------------------------------------
 
 
+  ! ----------------------------------------------------------------------
+  ! The target is initialized, mainly by reading from the inp file.
   ! ----------------------------------------------------------------------
   subroutine target_init(gr, geo, stin, td, w0, target)
     type(grid_t),     intent(in)    :: gr
@@ -134,20 +139,30 @@ module opt_control_target_m
     !% The possible arguments are:
     !%
     !%Option oct_tg_groundstate 1 
-    !% Targetoperator is a projection operator on the ground state
+    !% The target operator is a projection operator on the ground state, i.e. the
+    !% objective is to populate the ground state as much as possible.
     !%Option oct_tg_excited 2
-    !% The target operator
+    !% The target operator is an "excited state". This means that the target operator
+    !% is a linear combination of Slater determinants, formed each one by swapping,
+    !% from the ground state Slater determinant, one occupied state by one excited
+    !% state (i.e. "single excitations"). The description of which excitations are
+    !% used, and with which weight, should be given in a file called
+    !% "oct-excited-state-target". This is still in very preliminary, experimental
+    !% phase. See the documentation of subroutine "excited_states_init" in the source
+    !% code in order to use this feature.
     !%Option oct_tg_gstransformation 3
-    !% Targetoperator is a projection operator on a transformation of the ground state 
-    !% orbitals defined by the block OCTTargetTransformStates
+    !% The target operator is a projection operator on a transformation of the ground state 
+    !% orbitals defined by the block "OCTTargetTransformStates".
     !%Option oct_tg_userdefined 4
-    !% Targetoperator is a projection operator on a user defined state
+    !% WARNING: not implemented; reserved for use in future releases.
     !%Option oct_tg_density 5
-    !% Targetoperator is a given density.
+    !% The target operator is a given density, i.e. the final state should have a density
+    !% as close as possible as the one given in the input file, either from the variable
+    !% "OCTTargetDensityFromState", or from "OCTTargetDensity".
     !%Option oct_tg_local 6
-    !% Target operator is a local operator.
+    !% The target operator is a local operator.
     !%Option oct_tg_td_local 7
-    !% Target operator is a time-dependent local operator
+    !% The target operator is a time-dependent local operator.
     !%Option oct_tg_exclude_state 8
     !% Target operator is the projection onto the complement of a given state, given by the
     !% block OCTTargetTransformStates. This means that the target operator is the unity
@@ -156,7 +171,8 @@ module opt_control_target_m
     !% The target is the optimization of the HHG yield.
     !%End
     call loct_parse_int(datasets_check('OCTTargetOperator'), oct_tg_gstransformation, target%type)
-    if(.not.varinfo_valid_option('OCTTargetOperator', target%type)) call input_error('OCTTargetOperator')
+    if(.not.varinfo_valid_option('OCTTargetOperator', target%type)) &
+      call input_error('OCTTargetOperator')
 
     call states_copy(target%st, stin)
     call states_allocate_wfns(target%st, gr%mesh, M_CMPLX)
@@ -274,7 +290,7 @@ module opt_control_target_m
       !%Type string
       !%Section Calculation Modes::Optimal Control
       !%Description
-      !% If OCTTargetOperator = oct_tg_local, then one must supply the target density
+      !% If OCTTargetOperator = oct_tg_density, then one must supply the target density
       !% that should be searched for. This one can do by supplying a string through
       !% the variable OCTLocalTarget.
       !%End
@@ -285,7 +301,7 @@ module opt_control_target_m
       !%Default no
       !%Section Calculation Modes::Optimal Control
       !%Description
-      !% If OCTTargetOperator = oct_tg_local, and OCTLocalTarget = "OCTTargetDensityFromState",
+      !% If OCTTargetOperator = oct_tg_density, and OCTLocalTarget = "OCTTargetDensityFromState",
       !% you must specify one OCTTargetDensityState block, in order to specify which linear
       !% combination of the states present in "restart/gs" is used to
       !% create the target density.
@@ -315,7 +331,7 @@ module opt_control_target_m
             end do
             call rotate_states(gr%mesh, target%st, tmp_st, rotation_matrix)
             deallocate(rotation_matrix)
-            call states_calc_dens(target%st, NP_PART, target%st%rho)
+            call states_calc_dens(target%st, NP_PART)
             do ip = 1, NP
               target%rho(ip) = sum(target%st%rho(ip, 1:target%st%d%spin_channels))
             end do
@@ -644,8 +660,8 @@ module opt_control_target_m
     type(grid_t),   intent(inout)   :: gr
     type(states_t), intent(inout)   :: psi
 
-    integer :: i, p, j, k, maxiter
-    FLOAT :: t, omega, a, maxhh, w
+    integer :: i, p, j, maxiter
+    FLOAT :: omega, a, maxhh, w
     FLOAT, allocatable :: local_function(:)
     CMPLX, allocatable :: ddipole(:)
     CMPLX, allocatable :: opsi(:, :)
@@ -932,7 +948,7 @@ module opt_control_target_m
 
 
   ! ----------------------------------------------------------------------
-  integer function target_type(target)
+  integer pure function target_type(target)
     type(target_t), intent(in) :: target
     target_type = target%type
   end function target_type
