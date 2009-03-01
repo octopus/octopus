@@ -55,7 +55,7 @@ module hamiltonian_m
   use varinfo_m
   use lasers_m
   use poisson_m
-
+  
   implicit none
 
   private
@@ -358,7 +358,7 @@ contains
       ALLOCATE(hm%ab_pot(NP), NP)
       hm%ab_pot = M_ZERO
       do i = 1, NP
-        call mesh_inborder(gr%mesh, i, n, d, hm%ab_width)
+        call mesh_inborder(gr%mesh, geo, i, n, d, hm%ab_width)
         if(n>0) then
           do j = 1, n
             hm%ab_pot(i) = hm%ab_pot(i) + hm%ab_height * sin(d(j)*M_PI/(M_TWO*hm%ab_width))**2

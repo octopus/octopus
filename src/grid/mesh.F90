@@ -249,25 +249,28 @@ contains
   !
   ! So, if n>0, the point is in the border.
   ! ----------------------------------------------------------------------
-  subroutine mesh_inborder(m, i, n, d, width)
+  subroutine mesh_inborder(m, geo, i, n, d, width)
     type(mesh_t), intent(in)  :: m
+    type(geometry_t),  intent(in) :: geo
     integer,      intent(in)  :: i
     FLOAT,        intent(in)  :: width
     integer,      intent(out) :: n
     FLOAT,        intent(out) :: d(MAX_DIM)
     
-    integer :: j
-    FLOAT   :: x(MAX_DIM), r, dd
+    integer :: j, l
+    logical :: is_on_border
+    FLOAT   :: x(MAX_DIM), r, dd, radius
     
-    call mesh_r(m, i, r, x=x)
     n = 0
     select case(m%sb%box_shape)
     case(SPHERE)
+      call mesh_r(m, i, r, x=x)
       dd = r - (m%sb%rsize - width)
       if(dd.gt.M_ZERO) then
         n = 1; d(1) = dd
       end if
     case(CYLINDER)
+      call mesh_r(m, i, r, x=x)
       dd = sqrt(x(2)**2 + x(3)**2) - (m%sb%rsize - width)
       if(dd.gt.M_ZERO) then
         n = 1; d(1) = dd
@@ -278,10 +281,35 @@ contains
           n = n + 1; d(n) = dd
         end if
       end if
-    case(MINIMUM,BOX_USDEF)
-      message(1) = "Absorbing boundaries are not yet implemented for the 'minimum' box"
+    case(BOX_USDEF)
+      message(1) = "Absorbing boundaries are not implemented for a user defined box"
       call write_fatal(1)
+    case(MINIMUM)
+      radius = m%sb%rsize
+      do j = 1, geo%natoms
+        call mesh_r(m, i, r, a=geo%atom(j)%x, x=x)
+        if(m%sb%rsize < M_ZERO) radius = geo%atom(j)%spec%def_rsize
+        dd = r - (radius - width)
+	! check if the point is on the spherical shell of the j-th atom
+	if ((dd < M_ZERO) .or. (r > radius)) cycle
+	  ! make sure that the point is not inside some other atomic sphere
+	  is_on_border = .true.
+	  do l = 1, geo%natoms
+	    if (l == j) cycle
+	    call mesh_r(m, i, r, a=geo%atom(l)%x)
+            if(m%sb%rsize < M_ZERO) radius = geo%atom(l)%spec%def_rsize
+	    if (r < radius - width) then 
+	      is_on_border = .false.
+	      cycle
+	    end if
+	  end do
+	  if (is_on_border) then
+	    n = 1
+	    d(1) = dd
+	  end if
+      end do
     case(PARALLELEPIPED)
+      call mesh_r(m, i, r, x=x)
       do j = m%sb%periodic_dim+1, m%sb%dim
         dd = abs(x(j)) - (m%sb%lsize(j) - width)
         if(dd.gt.M_ZERO) then
