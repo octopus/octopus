@@ -35,7 +35,9 @@ libgrid_a_SOURCES = \
 	ob_interface.F90 \
 	zoltan_low.c     \
 	zoltan.F90       \
-	hypercube.F90
+	hypercube.F90    \
+	cubic_mesh.F90   \
+	cubic_mesh_low.c
 
 noinst_HEADERS = \
 	par_vec_inc.F90 derivatives_inc.F90 cube_function_inc.F90 fourier_space_inc.F90 \
@@ -80,3 +82,5 @@ zoltan.o : zoltan.F90
 batch.o : batch.F90 batch_inc.F90
 stencil.o : stencil.F90
 hypercube.o : hypercube.F90
+cubic_mesh.o : cubic_mesh.F90 mesh.o
+cubic_mesh_low.o : cubic_mesh_low.c
