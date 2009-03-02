@@ -162,10 +162,6 @@ AC_COMPILE_IFELSE( AC_LANG_PROGRAM( [
 #include <emmintrin.h>
 ], [
 __m128d a __attribute__((aligned(16)));
-__m128d b;
-
-b = _mm_add_pd(a, b);
-
  ]), 
  [AC_DEFINE(HAVE_M128D, 1, [compiler supports the m128d type]) [acx_m128d=yes]], [acx_m128d=no])
 AC_MSG_RESULT($acx_m128d)

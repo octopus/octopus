@@ -63,7 +63,6 @@ AC_CHECK_TYPES([uint32_t, uint64_t])
 AC_CHECK_SIZEOF(unsigned int)
 AC_CHECK_SIZEOF(unsigned long)
 AC_CHECK_SIZEOF(unsigned long long)
-ACX_M128D
 
 # Checks for library functions.
 AC_FUNC_GETPGRP
@@ -78,7 +77,15 @@ posix_memalign perror strcasestr sbrk])
 
 AC_CHECK_LIB([numa], [numa_available])
 
-ACX_MALLOC_ALIGNMENT
+# We allow explicit disabling of SSE2
+ac_enable_sse2=yes
+AC_ARG_ENABLE(sse2, AS_HELP_STRING([--disable-sse2], [Disable the use of SSE2 instructions]), 
+	[ac_enable_sse2=${enableval}])
+
+if test x"${ac_enable_sse2}" = x"yes"; then
+  ACX_MALLOC_ALIGNMENT
+  ACX_M128D
+fi
 
 dnl ============================================================================
 dnl This part of the configuration file tries to sort out what needs to be built.
