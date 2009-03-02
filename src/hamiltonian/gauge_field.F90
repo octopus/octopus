@@ -223,7 +223,8 @@ contains
     
     this%wp2 = M_FOUR*M_PI*n_el/sb%rcell_volume
 
-    write (message(1), '(a,f12.6)') "Info: Electron gas plasmon frequency", sqrt(this%wp2)
+    write (message(1), '(a,f12.6,a)') "Info: Electron gas plasmon frequency", &
+         sqrt(this%wp2)*units_inp%energy%factor, " ["//trim(units_inp%energy%abbrev)//"]"
     call write_info(1)
 
   end subroutine gauge_field_init_vec_pot
