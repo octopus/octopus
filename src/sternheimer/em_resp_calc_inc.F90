@@ -291,9 +291,6 @@ subroutine X(lr_calc_susceptibility)(sys, hm, lr, nsigma, perturbation, chi_para
 
   call push_sub('em_resp_calc_inc.Xlr_calc_susceptibility')
 
-  message(1) = "Info: Calculating magnetic susceptibility"
-  call write_info(1)
-
   chi_para = M_ZERO
   chi_dia  = M_ZERO
 

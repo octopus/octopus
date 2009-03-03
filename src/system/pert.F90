@@ -176,7 +176,7 @@ contains
       !%Option gipaw 1
       !% GIPAW correction: Pickard and Mauri, PRL 91 196401 (2003).
       !%Option icl 2
-      !% ICL correction: Ismail-Beigi, Chang, and Louie, PRL 87, 097402 (2001).
+      !% ICL correction: Ismail-Beigi, Chang, and Louie, PRL 87, 087402 (2001).
       !%End
       
       call loct_parse_int(datasets_check('MagneticGaugeCorrection'), GAUGE_GIPAW, this%gauge)
