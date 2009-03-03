@@ -189,6 +189,8 @@ double FC_FUNC_(c_poisson_cutoff_fin_2d, C_POISSON_CUTOFF_FIN_2D)
   F.function = &bessel_J0;
   gsl_integration_qag(&F, *x, *y, epsilon_abs, epsilon_rel, 
   			wrk_size, 3, ws, &result, &error);
+  gsl_integration_workspace_free(ws);
+
   return result;
 }
 
