@@ -18,13 +18,14 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-subroutine X(h_sys_output_lr) (st, gr, lr, dir, tag, isigma, outp)
+subroutine X(h_sys_output_lr) (st, gr, lr, dir, tag, isigma, outp, geo)
   type(states_t),       intent(inout) :: st
   type(grid_t),         intent(inout) :: gr
   type(lr_t),           intent(inout) :: lr
   character(len=*),     intent(in)    :: dir
   integer,              intent(in)    :: tag, isigma
   type(h_sys_output_t), intent(in)    :: outp
+  type(geometry_t),     intent(in)    :: geo
 
   integer :: ik, ist, idim, ierr, is, i
   character(len=80) :: fname
@@ -33,7 +34,7 @@ subroutine X(h_sys_output_lr) (st, gr, lr, dir, tag, isigma, outp)
   R_TYPE, allocatable :: tmp(:)
   
 
-  call push_sub('lr_response_out.lr_output')
+  call push_sub('output_linear_response.Xh_sys_output_lr')
 
   u = M_ONE/units_out%length%factor**NDIM
 
@@ -42,7 +43,7 @@ subroutine X(h_sys_output_lr) (st, gr, lr, dir, tag, isigma, outp)
     if(iand(outp%what, output_density).ne.0) then
       do is = 1, st%d%nspin
         write(fname, '(a,i1,a,i1)') 'lr_density-', is, '-', tag
-        call X(output_function)(outp%how, dir, fname, gr%mesh, gr%sb, lr%X(dl_rho)(:, is), u, ierr)
+        call X(output_function)(outp%how, dir, fname, gr%mesh, gr%sb, lr%X(dl_rho)(:, is), u, ierr, geo = geo)
       end do
     end if
 
@@ -52,7 +53,7 @@ subroutine X(h_sys_output_lr) (st, gr, lr, dir, tag, isigma, outp)
         do i=1,NDIM
           tmp(1:NP)=gr%mesh%x(1:NP,i)*lr%X(dl_rho)(:, is)
           write(fname, '(a,i1,a,i1,a,i1)') 'alpha_density-', is, '-', tag, '-', i
-          call X(output_function)(outp%how, dir, fname, gr%mesh, gr%sb, tmp, u, ierr)
+          call X(output_function)(outp%how, dir, fname, gr%mesh, gr%sb, tmp, u, ierr, geo = geo)
         end do
       end do
       deallocate(tmp)
@@ -62,7 +63,7 @@ subroutine X(h_sys_output_lr) (st, gr, lr, dir, tag, isigma, outp)
       do is = 1, st%d%nspin
         do idim = 1, NDIM
           write(fname, '(a,i1,a,i1,a,a)') 'lr_current-', is, '-', tag, '-',  index2axis(idim)
-          call zoutput_function(outp%how, dir, fname, gr%mesh, gr%sb, lr%dl_j(:, idim, is), u, ierr)
+          call zoutput_function(outp%how, dir, fname, gr%mesh, gr%sb, lr%dl_j(:, idim, is), u, ierr, geo = geo)
         end do
       end do
     end if
@@ -82,7 +83,7 @@ subroutine X(h_sys_output_lr) (st, gr, lr, dir, tag, isigma, outp)
             write(fname, '(a,i3.3,a,i3.3,a,i1,a,i1,a,i1)') &
               'lr_wf-', ik, '-', ist, '-', idim, '-', tag, '-', isigma
             call X(output_function) (outp%how, dir, fname, gr%mesh, gr%sb, &
-              lr%X(dl_psi) (1:, idim, ist, ik), sqrt(u), ierr)
+              lr%X(dl_psi) (1:, idim, ist, ik), sqrt(u), ierr, geo = geo)
           end do
         end do
       end if
@@ -99,7 +100,7 @@ subroutine X(h_sys_output_lr) (st, gr, lr, dir, tag, isigma, outp)
               'sqm_lr_wf-', ik, '-', ist, '-', idim, '-', isigma
 
             dtmp = abs(lr%X(dl_psi) (:, idim, ist, ik))**2
-            call doutput_function (outp%how, dir, fname, gr%mesh, gr%sb, dtmp, u, ierr)
+            call doutput_function (outp%how, dir, fname, gr%mesh, gr%sb, dtmp, u, ierr, geo = geo)
           end do
         end do
       end if
@@ -120,12 +121,12 @@ contains
 
     do is = 1, st%d%nspin
       write(fname, '(a,a,i1,a,i1)') trim(filename1), '-', is, '-', tag 
-      call X(output_function)(outp%how, dir, trim(fname), gr%mesh, gr%sb, lr%X(dl_de)(1:NP,is), u, ierr)
+      call X(output_function)(outp%how, dir, trim(fname), gr%mesh, gr%sb, lr%X(dl_de)(1:NP,is), u, ierr, geo = geo)
     end do
 
     do is = 1, st%d%nspin
       write(fname, '(a,a,i1,a,i1)') trim(filename2), '-', is, '-', tag 
-      call X(output_function)(outp%how, dir, trim(fname), gr%mesh, gr%sb, lr%X(dl_elf)(1:NP,is), u, ierr)
+      call X(output_function)(outp%how, dir, trim(fname), gr%mesh, gr%sb, lr%X(dl_elf)(1:NP,is), u, ierr, geo = geo)
     end do
 
   end subroutine lr_elf

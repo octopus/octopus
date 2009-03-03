@@ -262,7 +262,7 @@ contains
           do is = 1, st%d%nspin
             write(fname, '(a,a,i1,a,i1)') 'fd_density', '-', is, '-', i
             call doutput_function(sys%outp%how, "linear", trim(fname),&
-                gr%mesh, gr%sb, lr_rho(:, is), M_ONE, ierr)
+                gr%mesh, gr%sb, lr_rho(:, is), M_ONE, ierr, geo = sys%geo)
           end do
 
         end if
@@ -286,10 +286,10 @@ contains
           do is = 1, st%d%nspin
             write(fname, '(a,a,i1,a,i1)') 'fd_elf', '-', is, '-', i
             call doutput_function(sys%outp%how, "linear", trim(fname),&
-                gr%mesh, gr%sb, lr_elf(:, is), M_ONE, ierr)
+                gr%mesh, gr%sb, lr_elf(:, is), M_ONE, ierr, geo = sys%geo)
             write(fname, '(a,a,i1,a,i1)') 'fd_D', '-', is, '-', i
             call doutput_function(sys%outp%how, "linear", trim(fname),&
-                gr%mesh, gr%sb, lr_elfd(:, is), M_ONE, ierr)
+                gr%mesh, gr%sb, lr_elfd(:, is), M_ONE, ierr, geo = sys%geo)
           end do
         end if
 

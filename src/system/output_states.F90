@@ -18,9 +18,10 @@
 !! $Id: states.F90 2515 2006-10-24 17:13:30Z acastro $
 
   ! ---------------------------------------------------------
-  subroutine h_sys_output_states(st, gr, dir, outp)
+  subroutine h_sys_output_states(st, gr, geo, dir, outp)
     type(states_t),         intent(inout) :: st
     type(grid_t),           intent(inout) :: gr
+    type(geometry_t),       intent(in)    :: geo
     character(len=*),       intent(in)    :: dir
     type(h_sys_output_t),   intent(in)    :: outp
 
@@ -29,7 +30,7 @@
     FLOAT :: u
     FLOAT, allocatable :: dtmp(:), elf(:,:)
 
-    call push_sub('h_sys_output.h_sys_output_states')
+    call push_sub('output_states.h_sys_output_states')
 
     u = M_ONE/units_out%length%factor**NDIM
 
@@ -37,7 +38,7 @@
       do is = 1, st%d%nspin
         write(fname, '(a,i1)') 'density-', is
         call doutput_function(outp%how, dir, fname, gr%mesh, gr%sb, &
-          st%rho(:, is), u, ierr, is_tmp = .false.)
+          st%rho(:, is), u, ierr, is_tmp = .false., geo = geo)
       end do
     end if
 
@@ -48,7 +49,7 @@
           dtmp(1:NP)=st%rho(1:NP,is)*gr%mesh%x(1:NP,idim)
           write(fname, '(a,i1,a,i1)') 'dipole_density-', is, '-',idim
           call doutput_function(outp%how, dir, fname, gr%mesh, gr%sb, &
-            dtmp(:), u, ierr, is_tmp = .false.)
+            dtmp(:), u, ierr, is_tmp = .false., geo = geo)
         end do
       end do
       deallocate(dtmp)
@@ -61,7 +62,7 @@
         do id = 1, NDIM
           write(fname, '(a,i1,a,a)') 'current-', is, '-', index2axis(id)
           call doutput_function(outp%how, dir, fname, gr%mesh, gr%sb, &
-            st%j(:, id, is), u, ierr, is_tmp = .false.)
+            st%j(:, id, is), u, ierr, is_tmp = .false., geo = geo)
         end do
       end do
     end if
@@ -74,10 +75,10 @@
               write(fname, '(a,i3.3,a,i4.4,a,i1)') 'wf-', ik, '-', ist, '-', idim
               if (st%wfs_type == M_REAL) then
                 call doutput_function(outp%how, dir, fname, gr%mesh, gr%sb, &
-                     st%dpsi(1:, idim, ist, ik), sqrt(u), ierr, is_tmp = .false.)
+                     st%dpsi(1:, idim, ist, ik), sqrt(u), ierr, is_tmp = .false., geo = geo)
               else
                 call zoutput_function(outp%how, dir, fname, gr%mesh, gr%sb, &
-                     st%zpsi(1:, idim, ist, ik), sqrt(u), ierr, is_tmp = .false.)
+                     st%zpsi(1:, idim, ist, ik), sqrt(u), ierr, is_tmp = .false., geo = geo)
               end if
             end do
           end do
@@ -98,7 +99,7 @@
                 dtmp = abs(st%zpsi(:, idim, ist, ik))**2
               end if
               call doutput_function (outp%how, dir, fname, gr%mesh, gr%sb, &
-                dtmp, u, ierr, is_tmp = .false.)
+                dtmp, u, ierr, is_tmp = .false., geo = geo)
             end do
           end do
         end if
@@ -113,12 +114,12 @@
         case(UNPOLARIZED)
           write(fname, '(a)') 'tau'
           call doutput_function(outp%how, dir, trim(fname), gr%mesh, gr%sb, &
-            elf(:,1), M_ONE, ierr, is_tmp = .false.)
+            elf(:,1), M_ONE, ierr, is_tmp = .false., geo = geo)
         case(SPIN_POLARIZED, SPINORS)
           do is = 1, 2
             write(fname, '(a,a,i1)') 'tau', '-', is
             call doutput_function(outp%how, dir, trim(fname), gr%mesh, gr%sb, &
-              elf(:, is), M_ONE, ierr, is_tmp = .false.)
+              elf(:, is), M_ONE, ierr, is_tmp = .false., geo = geo)
           end do
       end select
       deallocate(elf)
@@ -134,7 +135,7 @@
             write(fname,'(i4)') id
             write(fname,'(a)') trim(dir)//'/matrix_elements.'//trim(adjustl(fname))
             iunit = io_open(file = fname, action = 'write')
-            call h_sys_write_multipole_matrix(st, gr, l, m, ik, iunit)
+            call h_sys_write_multipole_matrix(st, gr, l, m, ik, iunit, geo = geo)
             call io_close(iunit)
             id = id + 1
           end do
@@ -165,17 +166,18 @@
   ! It prints the (l,m) multipole moment, for
   ! the Kohn-Sham states in the irreducible subspace ik.
   ! ---------------------------------------------------------
-  subroutine h_sys_write_multipole_matrix(st, gr, l, m, ik, iunit)
+  subroutine h_sys_write_multipole_matrix(st, gr, l, m, ik, iunit, geo)
     type(states_t), intent(in) :: st
     type(grid_t), intent(in) :: gr
     integer, intent(in) :: l, m, ik, iunit
+    type(geometry_t), intent(in)    :: geo
 
     integer :: ii, jj, i
     FLOAT, allocatable :: multipole(:, :)
     CMPLX :: multip_element
     FLOAT :: r, x(MAX_DIM), ylm
 
-    call push_sub('h_sys_output.h_sys_write_multipole_matrix')
+    call push_sub('output_states.h_sys_write_multipole_matrix')
 
     write(iunit, fmt = '(a)') '# Multipole matrix elements file: <Phi_i | r**l * Y_{lm}(theta,phi) | Phi_j>' 
     write(iunit, fmt = '(a,i2,a,i2)') '# l =', l, '; m =', m
@@ -221,17 +223,18 @@
 
 
   ! ---------------------------------------------------------
-  subroutine h_sys_output_current_flow(gr, st, dir, outp)
+  subroutine h_sys_output_current_flow(gr, st, dir, outp, geo)
     type(grid_t),         intent(inout) :: gr
     type(states_t),       intent(inout) :: st
     character(len=*),     intent(in)    :: dir
     type(h_sys_output_t), intent(in)    :: outp
+    type(geometry_t),     intent(in)    :: geo
 
     integer :: iunit, i, k, rankmin
     FLOAT   :: flow, dmin
     FLOAT, allocatable :: j(:, :)
 
-    call push_sub('h_sys_output.h_sys_output_current_flows')
+    call push_sub('output_states.h_sys_output_current_flows')
 
     if(iand(outp%what, output_j_flow) == 0) then
       call pop_sub(); return

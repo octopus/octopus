@@ -298,7 +298,7 @@ end subroutine X(input_function_global)
 
 
 ! ---------------------------------------------------------
-subroutine X(output_function) (how, dir, fname, mesh, sb, f, u, ierr, is_tmp)
+subroutine X(output_function) (how, dir, fname, mesh, sb, f, u, ierr, is_tmp, geo)
   integer,           intent(in)  :: how
   character(len=*),  intent(in)  :: dir, fname
   type(mesh_t),      intent(in)  :: mesh
@@ -307,6 +307,7 @@ subroutine X(output_function) (how, dir, fname, mesh, sb, f, u, ierr, is_tmp)
   FLOAT,             intent(in)  :: u
   integer,           intent(out) :: ierr
   logical, optional, intent(in)  :: is_tmp
+  type(geometry_t), optional, intent(in) :: geo
 
   logical :: is_tmp_ = .false.
 
@@ -325,7 +326,11 @@ subroutine X(output_function) (how, dir, fname, mesh, sb, f, u, ierr, is_tmp)
     call X(vec_gather)(mesh%vp, f_global, f)
 
     if(mesh%vp%rank.eq.mesh%vp%root) then
-      call X(output_function_global)(how, dir, fname, mesh, sb, f_global, u, ierr, is_tmp_)
+      if (present(geo)) then
+        call X(output_function_global)(how, dir, fname, mesh, sb, f_global, u, ierr, is_tmp = is_tmp_, geo = geo)
+      else
+        call X(output_function_global)(how, dir, fname, mesh, sb, f_global, u, ierr, is_tmp = is_tmp_)
+      endif
     end if
 
     ! I have to broadcast the error code
@@ -338,7 +343,7 @@ subroutine X(output_function) (how, dir, fname, mesh, sb, f, u, ierr, is_tmp)
     ASSERT(.false.)
 #endif
   else
-    call X(output_function_global)(how, dir, fname, mesh, sb, f, u, ierr, is_tmp_)
+    call X(output_function_global)(how, dir, fname, mesh, sb, f, u, ierr, is_tmp = is_tmp_, geo = geo)
   end if
 
   call pop_sub()
@@ -346,7 +351,7 @@ end subroutine X(output_function)
 
 
 ! ---------------------------------------------------------
-subroutine X(output_function_global) (how, dir, fname, mesh, sb, f, u, ierr, is_tmp)
+subroutine X(output_function_global) (how, dir, fname, mesh, sb, f, u, ierr, is_tmp, geo)
   integer,              intent(in)  :: how
   character(len=*),     intent(in)  :: dir, fname
   type(mesh_t),         intent(in)  :: mesh
@@ -355,6 +360,7 @@ subroutine X(output_function_global) (how, dir, fname, mesh, sb, f, u, ierr, is_
   FLOAT,                intent(in)  :: u
   integer,              intent(out) :: ierr
   logical,              intent(in)  :: is_tmp
+  type(geometry_t), optional, intent(in) :: geo
 
   character(len=512) :: filename
   character(len=20)  :: mformat, mformat2, mfmtheader
@@ -660,7 +666,7 @@ contains
 ! for format specification see:
 ! http://www.xcrysden.org/doc/XSF.html#__toc__11
   subroutine out_xcrysden()
-    integer :: ix, iy, iz, idir
+    integer :: ix, iy, iz, idir, iatom, ix2, iy2, iz2
     FLOAT   :: offset(MAX_DIM)
     character(len=40) :: nitems
     type(X(cf_t)) :: cube
@@ -676,7 +682,9 @@ contains
     do i = sb%periodic_dim+1, 3
       offset(i)=-(cube%n(i) - 1)/2 * mesh%h(i) / units_out%length%factor
     end do
-    offset(1:3) = M_ZERO
+
+    ! the corner of the cell is always (0,0,0) to XCrySDen
+    ! so the offset is applied to the atomic coordinates
 
     iunit = io_open(trim(dir)//'/'//trim(fname)//".xsf", action='write', is_tmp=is_tmp)
 
@@ -684,28 +692,56 @@ contains
     write(iunit, '(a)') 'PRIMVEC'
 
     do idir = 1, sb%dim
-      write(iunit, '(3f12.6)') 2 * sb%lsize(idir) / units_out%length%factor * sb%rlattice(:, idir)
+      write(iunit, '(3f12.6)') 2 * sb%lsize(idir) / units_out%length%factor * sb%rlattice(1:3, idir)
     enddo
 
     write(iunit, '(a)') 'PRIMCOORD'
 
-    write(iunit, '(a)') '1 1'
-    write(iunit, '(a)') 'H 0.0 0.0 0.0' ! this is a single dummy atom
-
+    ! BoxOffset should be considered here
+    if (present(geo)) then
+      write(iunit, '(i10, a)') geo%natoms, ' 1'
+      do iatom = 1, geo%natoms
+        write(iunit, '(a10, 3f12.6)') trim(geo%atom(iatom)%label), (geo%atom(iatom)%x(1:3) - offset(1:3))
+      enddo
+    else ! geometry not available
+      write(iunit, '(a)') '1 1'
+      write(iunit, '(a)') 'H 0.0 0.0 0.0' ! this is a single dummy atom
+    endif
+      
     write(iunit, '(a)') 'BEGIN_BLOCK_DATAGRID3D'
     write(iunit, '(a)') 'comment'
     write(iunit, '(a)') 'DATAGRID_3D_comment'
-    write(iunit, '(3i7)') cube%n(:)
-    write(iunit, '(3f12.6)') offset(:)
+    write(iunit, '(3i7)') (cube%n(:) + 1)
+    ! XCrySDen uses "general" not "periodic" grids (see page above) which is why 1 is added here
+    write(iunit, '(a)') '0.0 0.0 0.0'
 
     do idir = 1, sb%dim
-      write(iunit, '(3f12.6)') 2 * sb%lsize(idir) / units_out%length%factor * sb%rlattice(:, idir)
+      write(iunit, '(3f12.6)') 2 * sb%lsize(idir) / units_out%length%factor * sb%rlattice(1:3, idir)
     enddo
 
-    do iz = 1, cube%n(1)
-      do iy = 1, cube%n(2)
-        do ix = 1, cube%n(3)
-          write(iunit,'(2f25.15)') REAL(u*cube%RS(ix, iy, iz))
+    do iz = 1, cube%n(3) + 1
+      do iy = 1, cube%n(2) + 1
+        do ix = 1, cube%n(1) + 1
+          ! this is about "general" grids also
+          if (ix == cube%n(1) + 1) then
+            ix2 = 1
+          else
+            ix2 = ix
+          endif
+
+          if (iy == cube%n(2) + 1) then
+            iy2 = 1
+          else
+            iy2 = iy
+          endif
+
+          if (iz == cube%n(3) + 1) then
+            iz2 = 1
+          else
+            iz2 = iz
+          endif
+
+          write(iunit,'(2f25.15)') REAL(u*cube%RS(ix2, iy2, iz2))
         end do
       end do
     end do

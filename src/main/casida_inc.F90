@@ -114,7 +114,7 @@ subroutine X(get_transition_densities) (cas, sys, trandens)
       write(intstr,'(i1)') len(trim(adjustl(intstr)))
       write(filename,'(a,i'//trim(intstr)//')') 'n0',ia
       call X(output_function)(sys%outp%how, "linear", trim(filename), &
-                              sys%gr%mesh, sys%gr%sb, n0I, M_ONE, ierr)
+                              sys%gr%mesh, sys%gr%sb, n0I, M_ONE, ierr, geo = sys%geo)
     end if
   end do
 

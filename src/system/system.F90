@@ -127,7 +127,7 @@ contains
         
         do i=1, sys%NDIM
           write(fname, '(a,i1)') 'r-', i
-          call doutput_function(sys%outp%how, 'exec/', fname, sys%gr%mesh, sys%gr%sb, sys%gr%mesh%x(:,i), u, ierr)
+          call doutput_function(sys%outp%how, 'exec/', fname, sys%gr%mesh, sys%gr%sb, sys%gr%mesh%x(:,i), u, ierr, geo = sys%geo)
         end do
         
       end if
