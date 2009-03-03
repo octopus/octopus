@@ -24,6 +24,7 @@ module sparskit_m
   use global_m
   use loct_parser_m
   use messages_m
+  use profiling_m
 
   implicit none
 

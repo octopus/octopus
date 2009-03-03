@@ -686,7 +686,7 @@ contains
     ! ---------------------------------------------------------
     ! Propagator with approximate enforced time-reversal symmetry
     subroutine td_app_reversal
-      integer :: ik, ist, sts, ste
+      integer :: ik, sts, ste
       type(batch_t) :: zpsib
 
       call push_sub('td_rti.td_app_reversal')
@@ -788,7 +788,7 @@ contains
 
       ! define pointer and variables for usage in td_zop, td_zopt routines
       grid_p    => gr
-      h_p       => h
+      hm_p      => hm
       tr_p      => tr
       dt_op = dt
       t_op  = t
@@ -810,7 +810,7 @@ contains
         do ik = 1, st%d%nik
           do ist = st%st_start, st%st_end
             call exponential_apply(tr%te, gr, hm, zpsi_rhs_pred(:, :, ist, ik), ist, ik, dt/M_TWO, t-dt)
-            if(hamiltonian_inh_term(h)) then
+            if(hamiltonian_inh_term(hm)) then
               zpsi_rhs_pred(:, :, ist, ik) = zpsi_rhs_pred(:, :, ist, ik) + dt * hm%inh_st%zpsi(:, :, ist, ik)
             end if
           end do
@@ -841,7 +841,7 @@ contains
       do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
           call exponential_apply(tr%te, gr, hm, zpsi_rhs_corr(:, :, ist, ik), ist, ik, dt/M_TWO, t-dt)
-          if(hamiltonian_inh_term(h)) then
+          if(hamiltonian_inh_term(hm)) then
             zpsi_rhs_corr(:, :, ist, ik) = zpsi_rhs_corr(:, :, ist, ik) + dt * hm%inh_st%zpsi(:, :, ist, ik)
           end if
         end do
@@ -1073,13 +1073,14 @@ contains
 
     call push_sub('td_rti.td_zop')
 #ifdef HAVE_SPARSKIT    
-    zpsi_tmp(1:grid_p%m%np, idim_op, ist_op, ik_op) = xre(1:grid_p%m%np) + M_zI*xim(1:grid_p%m%np)
+    zpsi_tmp(1:grid_p%mesh%np, idim_op, ist_op, ik_op) = &
+      xre(1:grid_p%mesh%np) + M_zI*xim(1:grid_p%mesh%np)
 
     ! propagate backwards
-    call exponential_apply(tr_p%te, grid_p, h_p, zpsi_tmp(:, :, ist_op, ik_op), ist_op, ik_op, -dt_op/M_TWO, t_op)
+    call exponential_apply(tr_p%te, grid_p, hm_p, zpsi_tmp(:, :, ist_op, ik_op), ist_op, ik_op, -dt_op/M_TWO, t_op)
 
-    yre(1:grid_p%m%np) =  real(zpsi_tmp(1:grid_p%m%np, idim_op, ist_op, ik_op))
-    yim(1:grid_p%m%np) = aimag(zpsi_tmp(1:grid_p%m%np, idim_op, ist_op, ik_op))
+    yre(1:grid_p%mesh%np) =  real(zpsi_tmp(1:grid_p%mesh%np, idim_op, ist_op, ik_op))
+    yim(1:grid_p%mesh%np) = aimag(zpsi_tmp(1:grid_p%mesh%np, idim_op, ist_op, ik_op))
 #endif    
     call pop_sub()
   end subroutine td_zop
@@ -1096,13 +1097,14 @@ contains
     ! To act with the transpose of H on the wfn we apply H to the conjugate of psi
     ! and conjugate the resulting hpsi (note that H is not a purely real operator
     ! for scattering wavefunctions anymore).
-    zpsi_tmp(1:grid_p%m%np, idim_op, ist_op, ik_op) = xre(1:grid_p%m%np) - M_zI*xim(1:grid_p%m%np)
+    zpsi_tmp(1:grid_p%mesh%np, idim_op, ist_op, ik_op) = &
+      xre(1:grid_p%mesh%np) - M_zI*xim(1:grid_p%mesh%np)
     
     ! propagate backwards
-    call exponential_apply(tr_p%te, grid_p, h_p, zpsi_tmp(:, :, ist_op, ik_op), ist_op, ik_op, -dt_op/M_TWO, t_op)
+    call exponential_apply(tr_p%te, grid_p, hm_p, zpsi_tmp(:, :, ist_op, ik_op), ist_op, ik_op, -dt_op/M_TWO, t_op)
 
-    yre(1:grid_p%m%np) =    real(zpsi_tmp(1:grid_p%m%np, idim_op, ist_op, ik_op))
-    yim(1:grid_p%m%np) = - aimag(zpsi_tmp(1:grid_p%m%np, idim_op, ist_op, ik_op))
+    yre(1:grid_p%mesh%np) =    real(zpsi_tmp(1:grid_p%mesh%np, idim_op, ist_op, ik_op))
+    yim(1:grid_p%mesh%np) = - aimag(zpsi_tmp(1:grid_p%mesh%np, idim_op, ist_op, ik_op))
 #endif        
     call pop_sub()
   end subroutine td_zopt
