@@ -222,8 +222,8 @@ contains
 
 
     ! Informative output.
-    call h_sys_output_states(initial_st, sys%gr, 'opt-control/initial', sys%outp)
-    call target_output(target, sys%gr, 'opt-control/target', sys%outp)
+    call h_sys_output_states(initial_st, sys%gr, sys%geo, 'opt-control/initial', sys%outp)
+    call target_output(target, sys%gr, 'opt-control/target', sys%geo, sys%outp)
 
 
     ! mode switcher; here is where the real run is made.

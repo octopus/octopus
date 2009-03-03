@@ -190,7 +190,7 @@ contains
     if(l) call write_matrix_elements(sys, hm)
 
     ! output wave-functions
-    call h_sys_output_states(sys%st, sys%gr, STATIC_DIR, sys%outp)
+    call h_sys_output_states(sys%st, sys%gr, sys%geo, STATIC_DIR, sys%outp)
 
     call end_()
 

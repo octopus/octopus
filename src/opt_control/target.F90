@@ -502,10 +502,11 @@ module opt_control_target_m
 
 
   ! ----------------------------------------------------------------------
-  subroutine target_output(target, gr, dir, outp)
+  subroutine target_output(target, gr, dir, geo, outp)
     type(target_t), intent(inout) :: target
     type(grid_t), intent(inout)   :: gr
     character(len=*), intent(in)  :: dir
+    type(geometry_t),       intent(in)  :: geo
     type(h_sys_output_t),   intent(in)  :: outp
 
     integer :: ierr
@@ -525,10 +526,10 @@ module opt_control_target_m
       call doutput_function(outp%how, trim(dir), 'density_target', gr%mesh, gr%sb, &
         target%rho, M_ONE, ierr)
     case(oct_tg_excited)
-      call h_sys_output_states(target%est%st, gr, trim(dir)//'/st', outp)
+      call h_sys_output_states(target%est%st, gr, geo, trim(dir)//'/st', outp)
       call excited_states_output(target%est, trim(dir))
     case default
-      call h_sys_output_states(target%st, gr, trim(dir), outp)
+      call h_sys_output_states(target%st, gr, geo, trim(dir), outp)
     end select
 
     call pop_sub()
