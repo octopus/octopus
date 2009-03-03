@@ -76,7 +76,7 @@ module simul_box_m
 
   type simul_box_t
     integer  :: box_shape   ! 1->sphere, 2->cylinder, 3->sphere around each atom,
-                            ! 4->parallelpiped (orthonormal, up to now).
+                            ! 4->parallelepiped (orthonormal, up to now).
 
     FLOAT :: h(MAX_DIM)     ! the (canonical) spacing between the points
     FLOAT :: box_offset(MAX_DIM)  ! shifts of the origin in the respective direction

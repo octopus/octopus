@@ -121,7 +121,9 @@ contains
     !% of a give spin channel, where "x" stands for the spin channel.
     !%Option density 2
     !% Prints out the density. The output file is called "density-i", where "i" stands for 
-    !% the spin channel.
+    !% the spin channel. In a linear-response run mode, instead the linear-response density
+    !% is printed, in a file "linear/freq_XXX/lr_density-i-j" where j is the perturbation
+    !% direction. 
     !%Option wfs 4
     !% Prints out wave-functions. Which wavefunctions are to be printed is specified
     !% by the variable <tt>OutputWfsNumber</tt> -- see below. The output file is called
@@ -163,7 +165,7 @@ contains
     !% set with the variable OutputMatrixElementsL).
     !%Option pol_density 4096
     !% Prints out the density of dipole moment. For pol and pol_lr modules, 
-    !% prints the density of polarizability.
+    !% prints the density of polarizability, in the linear directory.
     !%Option mesh_r 8192
     !% Prints out the values of the coordinates over the grid. Files
     !% will be in the 'exec/' directory.

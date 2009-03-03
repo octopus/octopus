@@ -62,7 +62,7 @@ module io_function_m
     output_netcdf     =   128,    &
     output_plain      =   256,    &
     output_mesh_index =   512,    &
-    output_gnuplot    =  1024,    &
+    output_xcrysden   =  1024,    &
     output_matlab     =  2048,    &
     output_meshgrid   =  4096,    &
     boundary_points   =  8192,    &
@@ -120,8 +120,8 @@ contains
     !% A plane slice at <math>y=0</math> is printed. The string ".z=0" is appended to
     !% previous file names.
     !%Option dx 64
-    !% For printing all the three dimensional information, the open source program
-    !% visualization tool OpenDX (http://www.opendx.org/) is used. The string
+    !% For printing three-dimensional information, the open-source program
+    !% visualization tool OpenDX (http://www.opendx.org/) can be used. The string
     !% ".dx" is appended to previous file names.
     !%Option netcdf 128
     !% Outputs in NetCDF (http://www.unidata.ucar.edu/packages/netcdf/) format. This file
@@ -135,8 +135,10 @@ contains
     !% useful for small meshes and debugging purposes.
     !% The output can also be used to display the mesh directly. A gnuplot script for mesh vizualization
     !% can be found under <tt>PREFIX/share/octopus/util/display_mesh_index.gp</tt>
-    !%Option gnuplot 1024
-    !% Obsolete.
+    !%Option xcrysden 1024
+    !% A format for printing three-dimensional information, which can be visualized by
+    !% the open-source program XCrySDen (http://www.xcrysden.org/). The string
+    !% ".xsf" is appended to previous file names.
     !%Option matlab 2048
     !% In combination with plane_x, plane_y and plane_z this option produces output files 
     !% which are suitable for 2D Matlab functions like mesh(), surf() or waterfall(). To load 
@@ -194,6 +196,7 @@ contains
     if(index(where, "PlaneY").ne.0)    how = ior(how, output_plane_y)
     if(index(where, "PlaneZ").ne.0)    how = ior(how, output_plane_z)
     if(index(where, "DX").ne.0)        how = ior(how, output_dx)
+    if(index(where, "XCrySDen").ne.0)  how = ior(how, output_xcrysden)
     if(index(where, "Plain").ne.0)     how = ior(how, output_plain)
     if(index(where, "Binary").ne.0)    how = ior(how, output_binary)
     if(index(where, "MeshIndex").ne.0) how = ior(how, output_mesh_index)

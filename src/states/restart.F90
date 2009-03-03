@@ -1010,10 +1010,10 @@ contains
         write(filename, '(a,i3.3,a,i4.4,a,i1.1)') 'phi-', k_index, '-', jst, '-', idim
         select case(calc_dim)
         case(1)
-          call zoutput_function(output_gnuplot+output_axis_x, 'debug/open_boundaries', filename, &
+          call zoutput_function(output_axis_x, 'debug/open_boundaries', filename, &
             m_center, sb, st%zphi(:, idim, jst, k_index), M_ONE, err, is_tmp=.false.)
         case(2, 3)
-          call zoutput_function(output_gnuplot+output_plane_z, 'debug/open_boundaries', filename, &
+          call zoutput_function(output_plane_z, 'debug/open_boundaries', filename, &
             m_center, sb, st%zphi(:, idim, jst, k_index), M_ONE, err, is_tmp=.false.)
         end select
       end if

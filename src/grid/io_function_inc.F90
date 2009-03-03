@@ -72,7 +72,7 @@ subroutine X(input_function)(filename, mesh, f, ierr, is_tmp)
   R_TYPE, allocatable :: f_global(:)
 #endif
 
-  call push_sub('out_inc.Xinput_function')
+  call push_sub('io_function_inc.Xinput_function')
 
   if(present(is_tmp)) is_tmp_ = is_tmp
 
@@ -129,7 +129,7 @@ subroutine X(input_function_global)(filename, mesh, f, ierr, is_tmp)
 #endif
 
   call profiling_in(read_prof, "DISK_READ")
-  call push_sub('out_inc.Xinput_function_global')
+  call push_sub('io_function_inc.Xinput_function_global')
 
   ierr = 0
 
@@ -314,7 +314,7 @@ subroutine X(output_function) (how, dir, fname, mesh, sb, f, u, ierr, is_tmp)
   R_TYPE, allocatable :: f_global(:)
 #endif
 
-  call push_sub('out_inc.Xoutput_function')
+  call push_sub('io_function_inc.Xoutput_function')
 
   if(present(is_tmp)) is_tmp_ = is_tmp
 
@@ -356,14 +356,13 @@ subroutine X(output_function_global) (how, dir, fname, mesh, sb, f, u, ierr, is_
   integer,              intent(out) :: ierr
   logical,              intent(in)  :: is_tmp
 
-
   character(len=512) :: filename
   character(len=20)  :: mformat, mformat2, mfmtheader
   integer            :: iunit, i, j, np_max
   FLOAT              :: x0
 
   call profiling_in(write_prof, "DISK_WRITE")
-  call push_sub('out_inc.Xoutput_function_global')
+  call push_sub('io_function_inc.Xoutput_function_global')
 
   call io_mkdir(dir)
 
@@ -392,6 +391,7 @@ subroutine X(output_function_global) (how, dir, fname, mesh, sb, f, u, ierr, is_
   if(iand(how, output_plane_z)   .ne.0) call out_plane(3, 1, 2) ! z=0; x; y;
   if(iand(how, output_mesh_index).ne.0) call out_mesh_index()
   if(iand(how, output_dx)        .ne.0) call out_dx()
+  if(iand(how, output_xcrysden)  .ne.0) call out_xcrysden()
 
   if(iand(how, output_matlab).ne.0) then
 #if defined(R_TCOMPLEX)
@@ -654,6 +654,69 @@ contains
     call X(cf_free) (cube)
 
   end subroutine out_dx
+
+
+  ! ---------------------------------------------------------
+! for format specification see:
+! http://www.xcrysden.org/doc/XSF.html#__toc__11
+  subroutine out_xcrysden()
+    integer :: ix, iy, iz, idir
+    FLOAT   :: offset(MAX_DIM)
+    character(len=40) :: nitems
+    type(X(cf_t)) :: cube
+
+    ! put values in a nice cube
+    call X(cf_new) (mesh%idx%ll, cube)
+    call X(cf_alloc_RS) (cube)
+    call X(mesh_to_cube) (mesh, f, cube)
+
+    ! the offset is different in periodic directions
+    offset = -matmul(sb%rlattice, sb%lsize) / units_out%length%factor
+
+    do i = sb%periodic_dim+1, 3
+      offset(i)=-(cube%n(i) - 1)/2 * mesh%h(i) / units_out%length%factor
+    end do
+    offset(1:3) = M_ZERO
+
+    iunit = io_open(trim(dir)//'/'//trim(fname)//".xsf", action='write', is_tmp=is_tmp)
+
+    write(iunit, '(a)') 'CRYSTAL'
+    write(iunit, '(a)') 'PRIMVEC'
+
+    do idir = 1, sb%dim
+      write(iunit, '(3f12.6)') 2 * sb%lsize(idir) / units_out%length%factor * sb%rlattice(:, idir)
+    enddo
+
+    write(iunit, '(a)') 'PRIMCOORD'
+
+    write(iunit, '(a)') '1 1'
+    write(iunit, '(a)') 'H 0.0 0.0 0.0' ! this is a single dummy atom
+
+    write(iunit, '(a)') 'BEGIN_BLOCK_DATAGRID3D'
+    write(iunit, '(a)') 'comment'
+    write(iunit, '(a)') 'DATAGRID_3D_comment'
+    write(iunit, '(3i7)') cube%n(:)
+    write(iunit, '(3f12.6)') offset(:)
+
+    do idir = 1, sb%dim
+      write(iunit, '(3f12.6)') 2 * sb%lsize(idir) / units_out%length%factor * sb%rlattice(:, idir)
+    enddo
+
+    do iz = 1, cube%n(1)
+      do iy = 1, cube%n(2)
+        do ix = 1, cube%n(3)
+          write(iunit,'(2f25.15)') REAL(u*cube%RS(ix, iy, iz))
+        end do
+      end do
+    end do
+
+    write(iunit, '(a)') 'END_DATAGRID3D'
+    write(iunit, '(a)') 'END_BLOCK_DATAGRID3D'
+
+    call io_close(iunit)
+    call X(cf_free) (cube)
+
+  end subroutine out_xcrysden
 
 
 #if defined(HAVE_NETCDF)
