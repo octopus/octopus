@@ -293,7 +293,7 @@ contains
     if(gr%sb%open_boundaries) then
       do il = 1, NLEADS
         call states_look(trim(gr%sb%lead_restart_dir(il))//'/gs', mpi_world, &
-          ob_k(il), ob_d(il), ob_st(il), ierr)
+          ob_k(il), ob_d(il), ob_st(il), ierr, .true.)
         if(ierr.ne.0) then
           message(1) = 'Could not read the number of states of the periodic calculation'
           message(2) = 'from '//trim(gr%sb%lead_restart_dir(il))//'/gs.'
@@ -472,28 +472,28 @@ contains
         call iopar_read(mpi_world, occs, line, err)
 
         read(line, '(a)') char
-        if(char.eq.'%') then
-          exit
-        end if
+        if(char.eq.'%') exit
         call iopar_backspace(mpi_world, occs)
 
         ! Extract eigenvalue.
         call iopar_read(mpi_world, occs, line, err)
         read(line, *) occ, char, eigenval, char, flt, char, flt, char, flt, char, &
           flt, chars, ik, char, ist
-        if(st%d%ispin.eq.SPIN_POLARIZED) then
-          if(is_spin_up(ik)) then
-            st%ob_eigenval(jst, SPIN_UP) = eigenval
-            st%ob_occ(jst, SPIN_UP)      = occ
+        if(occ.gt.CNST(1e-5)) then
+          if(st%d%ispin.eq.SPIN_POLARIZED) then
+            if(is_spin_up(ik)) then
+              st%ob_eigenval(jst, SPIN_UP) = eigenval
+              st%ob_occ(jst, SPIN_UP)      = occ
+            else
+              st%ob_eigenval(jst, SPIN_DOWN) = eigenval
+              st%ob_occ(jst, SPIN_DOWN)      = occ
+            end if
           else
-            st%ob_eigenval(jst, SPIN_DOWN) = eigenval
-            st%ob_occ(jst, SPIN_DOWN)      = occ
+            st%ob_eigenval(jst, 1) = eigenval
+            st%ob_occ(jst, 1)      = occ
           end if
-        else
-          st%ob_eigenval(jst, 1) = eigenval
-          st%ob_occ(jst, 1)      = occ
+          jst = jst + 1
         end if
-        jst = jst + 1
       end do
 
       call io_close(occs)
@@ -513,7 +513,7 @@ contains
 
     ! FIXME: spin-polarized free states ignored.
     if(gr%sb%open_boundaries) then
-      ALLOCATE(st%zphi(NP_PART, st%d%dim, st%ob_ncs, st%d%nik), NP*st%d%dim*st%ob_ncs*st%d%nik)
+      ALLOCATE(st%zphi(NP_PART, st%d%dim, st%ob_ncs, st%d%nik), NP_PART*st%d%dim*st%ob_ncs*st%d%nik)
       ALLOCATE(st%ob_rho(gr%mesh%lead_unit_cell(LEFT)%np, st%d%nspin, NLEADS), gr%mesh%lead_unit_cell(LEFT)%np*st%d%nspin*NLEADS)
       st%zphi = M_z0
     else
@@ -2382,19 +2382,23 @@ contains
   ! Reads the state stored in directory "dir", and finds out
   ! the kpoints, dim, and nst contained in it.
   ! ---------------------------------------------------------
-  subroutine states_look(dir, mpi_grp, kpoints, dim, nst, ierr)
+  subroutine states_look(dir, mpi_grp, kpoints, dim, nst, ierr, only_occupied)
     character(len=*), intent(in)    :: dir
     type(mpi_grp_t),  intent(in)    :: mpi_grp
     integer,          intent(out)   :: kpoints, dim, nst, ierr
+    logical, intent(in), optional   :: only_occupied
 
     character(len=256) :: line
     character(len=12)  :: filename
     character(len=1)   :: char
-    integer :: iunit, iunit2, err, i, ist, idim, ik
+    integer :: iunit, iunit2, err, i, ist, idim, ik, counter_kpoints
     FLOAT :: occ, eigenval
+    logical :: only_occupied_
 
     call push_sub('states.states_look')
 
+    only_occupied_ = .false.
+    if(present(only_occupied)) only_occupied_ = only_occupied
     ierr = 0
     iunit  = io_open(trim(dir)//'/wfns', action='read', status='old', die=.false., is_tmp=.true., grp=mpi_grp)
     if(iunit < 0) then
@@ -2417,6 +2421,8 @@ contains
     kpoints = 1
     dim = 1
     nst = 1
+    counter_kpoints = 0
+
     do
       call iopar_read(mpi_grp, iunit, line, i)
       read(line, '(a)') char
@@ -2427,7 +2433,9 @@ contains
       if(ist>nst)      nst     = ist
       call iopar_read(mpi_grp, iunit2, line, err)
       read(line, *) occ, char, eigenval
+      if(occ.gt.CNST(1e-5)) counter_kpoints = counter_kpoints + 1
     end do
+    if(only_occupied_) kpoints = counter_kpoints
 
     call io_close(iunit, grp = mpi_grp)
     call io_close(iunit2, grp = mpi_grp)

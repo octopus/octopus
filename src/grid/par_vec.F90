@@ -686,12 +686,12 @@ contains
     integer :: n
     logical :: found
 
-    n = iihash_lookup(vp%global(r), i, found)
-    if(found) then
-      vec_global2local = n
-    else
-      vec_global2local = 0
+    vec_global2local = 0
+    if(associated(vp%global)) then
+      n = iihash_lookup(vp%global(r), i, found)
+      if(found) vec_global2local = n
     end if
+
   end function vec_global2local
 
 #include "undef.F90"

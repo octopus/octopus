@@ -913,6 +913,9 @@ contains
   ! When doing an open boundary calculation Octopus needs the
   ! unscattered states in order to solve the Lippmann-Schwinger
   ! equation to obtain extended eigenstates.
+  ! Since we only need the occupied states we just read them.
+  ! Attention:  The states formerly stored in the k index (ik)
+  !             are now indexed via the state index (ist)
   subroutine read_free_states(st, gr)
     type(states_t),       intent(inout) :: st
     type(grid_t), target, intent(in)    :: gr
@@ -961,9 +964,8 @@ contains
       ! they are written correctly, i. e. of same length.
       call iopar_read(gr%mesh%mpi_grp, wfns, line, err)
       read(line, '(a)') char
-      if(char.eq.'%') then
-        exit
-      end if
+      if(char.eq.'%') exit
+
       call iopar_backspace(gr%mesh%mpi_grp, wfns)
 
       call iopar_read(gr%mesh%mpi_grp, wfns, line, err)
@@ -973,60 +975,72 @@ contains
       read(line, *) occ, char, eval, char, k_x, char, k_y, char, k_z, char, w_k, char, &
         chars, char, k_ik, char, k_ist, char, k_idim
 
-      st%ob_d%kpoints(:, k_ik) = (/k_x, k_y, k_z/)
-      st%ob_d%kweights(k_ik)   = w_k
+      if(occ.gt.CNST(1e-5)) then
+        st%ob_d%kpoints(:, jst) = (/k_x, k_y, k_z/)
+        st%ob_d%kweights(jst)   = w_k
+      end if
+      !st%ob_d%kpoints(:, k_ik) = (/k_x, k_y, k_z/)
+      !st%ob_d%kweights(k_ik)   = w_k
 
       call zrestart_read_function(trim(sb%lead_restart_dir(LEFT))//'/gs', fname, m_lead, tmp(:, k_idim), err)
 
-      if(st%d%ispin.eq.SPIN_POLARIZED) then
-        if(is_spin_up(ik)) then
-          k_index = SPIN_UP
+      ! FIXME
+      if(occ.gt.CNST(1e-5)) then
+        if(st%d%ispin.eq.SPIN_POLARIZED) then
+          if(is_spin_up(jst)) then
+          !if(is_spin_up(ik)) then
+            k_index = SPIN_UP
+          else
+            k_index = SPIN_DOWN
+          end if
         else
-          k_index = SPIN_DOWN
+          k_index = 1
         end if
-      else
-        k_index = 1
+        call lead_dens_accum()
       end if
-      call lead_dens_accum()
 
 
       ! This loop replicates the lead wavefunction into the central region.
       ! It only works in this compact form because the transport-direction (x) is
       ! the index running slowest.          
-      do k = 1, gr%sb%n_ucells
-        st%zphi((k-1)*m_lead%np+1:k*m_lead%np, idim, jst, k_index) = tmp(1:m_lead%np, k_idim)
-      end do
+      if(occ.gt.CNST(1e-5)) then
+        do k = 1, gr%sb%n_ucells
+          st%zphi((k-1)*m_lead%np+1:k*m_lead%np, idim, jst, k_index) = tmp(1:m_lead%np, k_idim)
+        end do
 
-      ! Apply phase.
-      do ip = 1, NP
-        phase = exp(-M_zI*sum(gr%mesh%x(ip, 1:MAX_DIM)*st%ob_d%kpoints(1:MAX_DIM, ik)))
-        st%zphi(ip, idim, jst, k_index) = phase*st%zphi(ip, idim, jst, k_index)
-      end do
+        ! Apply phase.
+        do ip = 1, NP
+          phase = exp(-M_zI*sum(gr%mesh%x(ip, 1:MAX_DIM)*st%ob_d%kpoints(1:MAX_DIM, jst)))
+          !phase = exp(-M_zI*sum(gr%mesh%x(ip, 1:MAX_DIM)*st%ob_d%kpoints(1:MAX_DIM, ik)))
+          st%zphi(ip, idim, jst, k_index) = phase*st%zphi(ip, idim, jst, k_index)
+        end do
 
-      ! For debugging: write phi in gnuplot format to files.
-      ! Only the z=0 plane is written, so mainly useful for 1D and 2D
-      ! debugging.
-      if(in_debug_mode) then
-        write(filename, '(a,i3.3,a,i4.4,a,i1.1)') 'phi-', k_index, '-', jst, '-', idim
-        select case(calc_dim)
-        case(1)
-          call zoutput_function(output_axis_x, 'debug/open_boundaries', filename, &
-            m_center, sb, st%zphi(:, idim, jst, k_index), M_ONE, err, is_tmp=.false.)
-        case(2, 3)
-          call zoutput_function(output_plane_z, 'debug/open_boundaries', filename, &
-            m_center, sb, st%zphi(:, idim, jst, k_index), M_ONE, err, is_tmp=.false.)
-        end select
+        ! For debugging: write phi in gnuplot format to files.
+        ! Only the z=0 plane is written, so mainly useful for 1D and 2D
+        ! debugging.
+        if(in_debug_mode) then
+          write(filename, '(a,i3.3,a,i4.4,a,i1.1)') 'phi-', k_index, '-', jst, '-', idim
+          select case(calc_dim)
+          case(1)
+            call zoutput_function(output_axis_x, 'debug/open_boundaries', filename, &
+              m_center, sb, st%zphi(:, idim, jst, k_index), M_ONE, err, is_tmp=.false.)
+          case(2, 3)
+            call zoutput_function(output_plane_z, 'debug/open_boundaries', filename, &
+              m_center, sb, st%zphi(:, idim, jst, k_index), M_ONE, err, is_tmp=.false.)
+          end select
+        end if
+
+        jst = jst + 1
+
       end if
-
-      jst = jst + 1
     end do ! Loop over all free states.
-    
     call io_close(wfns); call io_close(occs)
     deallocate(tmp)
 
     message(1) = "Info: Sucessfully initialized free states from '"// &
       trim(sb%lead_restart_dir(LEFT))//"/gs'"
-    call write_info(1)
+    write(message(2),'(a,i3,a)') 'Info:', jst-1, ' occupied states read by program.'
+    call write_info(2)
 
     call pop_sub()
 
@@ -1036,7 +1050,7 @@ contains
       integer :: il
       CMPLX   :: c
 
-      call push_sub('restart.calc_lead_dens')
+      call push_sub('restart.lead_dens_accum')
 
       do il = 1, NLEADS
         select case(st%d%ispin)

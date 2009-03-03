@@ -375,7 +375,8 @@ contains
   ! ---------------------------------------------------------
   subroutine create_x_Lxyz()
     integer :: il, ix, iy, iz
-    integer :: ixb, iyb, izb, bsize, bsizez, td_method
+    integer :: ixb, iyb, izb, bsize, bsizez
+    type(block_t) :: blk
 
     ALLOCATE(mesh%idx%Lxyz(mesh%np_part_global, MAX_DIM), mesh%np_part_global*MAX_DIM)
 
@@ -403,22 +404,16 @@ contains
     !%End
     call loct_parse_int(datasets_check('MeshBlockSizeZ'), 100, bsizez)
 
-    ! If TDEvolutionMethod = crank_nicholson_src_mem then 
-    ! MeshBlockSizeXY and MeshBlockSizeZ cannot be larger than 1.
-    ! Check this, set to 1 and write a warning if necessary.
-    call loct_parse_int(datasets_check('TDEvolutionMethod'), 0, td_method)
-    ! should use PROP_CRANK_NICHOLSON_SRC_MEM instead of 7,
-    ! but due to cyclic dependency using td_rti_m this is not possible.
-    ! Maybe there is another way ...
-    if (td_method.eq.7) then
+    ! When using open boundaries we need to have a mesh block-size of 1
+    if (loct_parse_block(datasets_check('OpenBoundaries'), blk).eq.0) then
       if (bsize.gt.1 .or. bsizez.gt.1) then
         message(1) = 'When chosen the Transport-Mode the block-ordering'
         message(2) = 'of the mesh points cannot be chosen freely.'
-        message(3) = 'Both variables (MeshBlockSizeXY, MeshBlockSizeZ)'
-        message(4) = 'are resetted to 1.'
-        call write_warning(4)
-        bsize  = 1
-        bsizez = 1
+        message(3) = 'Both variables, MeshBlockSizeXY and MeshBlockSizeZ'
+        message(4) = 'have to be initialized with the value 1.'
+        message(5) = 'Also restarting from datasets needs these to be'
+        message(6) = 'calculated with the same block-size of 1.'
+        call write_fatal(6)
       end if
     end if
 
