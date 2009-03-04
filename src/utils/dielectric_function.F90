@@ -102,6 +102,8 @@ program dielectric_function
   ! Find out the iteration numbers corresponding to the time limits.
   call spectrum_fix_time_limits(time_steps, dt, s%start_time, s%end_time, istart, iend, ntiter)
 
+  istart = max(1, istart)
+
   ALLOCATE(dumpa(istart:iend), ntiter)
 
   do ii = istart, iend
@@ -125,8 +127,7 @@ program dielectric_function
   end do
 
   energy_steps = s%max_energy / s%energy_step
-  ALLOCATE(dielectric(1:MAX_DIM, 0:energy_steps), MAX_DIM*(energy_steps + 1))
-  
+  ALLOCATE(dielectric(1:MAX_DIM, 0:energy_steps), MAX_DIM*(energy_steps + 1))  
   do kk = 0, energy_steps
     ww = kk*s%energy_step
 
@@ -140,8 +141,19 @@ program dielectric_function
     
   end do
 
+  out_file = io_open('td.general/inverse_dielectric_function', action='write')
+  do kk = 0, energy_steps
+    ww = kk*s%energy_step
+    write(out_file, '(7e15.6)') ww,                                         &
+         real(dielectric(1, kk), REAL_PRECISION), aimag(dielectric(1, kk)), &
+         real(dielectric(2, kk), REAL_PRECISION), aimag(dielectric(2, kk)), &
+         real(dielectric(3, kk), REAL_PRECISION), aimag(dielectric(3, kk))
+  end do
+  call io_close(out_file)
+
   out_file = io_open('td.general/dielectric_function', action='write')
   do kk = 0, energy_steps
+    dielectric(1:3, kk) = M_ONE/dielectric(1:3, kk)
     ww = kk*s%energy_step
     write(out_file, '(7e15.6)') ww,                                         &
          real(dielectric(1, kk), REAL_PRECISION), aimag(dielectric(1, kk)), &
