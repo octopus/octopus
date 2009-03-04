@@ -73,8 +73,37 @@ module cubic_mesh_m
       FLOAT,              intent(out) :: ff
     end subroutine cubic_mesh_to_mesh
 
+    pure subroutine cubic_mesh_dimensions(this, nx, ny, nz)
+      use cubic_mesh_type_m
+      type(cubic_mesh_t), intent(in)  :: this
+      integer,            intent(out) :: nx
+      integer,            intent(out) :: ny
+      integer,            intent(out) :: nz
+    end subroutine cubic_mesh_dimensions
   end interface
 
+  interface cubic_mesh_set_point
+
+    subroutine dcubic_mesh_set_point(this, ix, iy, iz, vv)
+      use cubic_mesh_type_m
+      type(cubic_mesh_t), intent(inout)  :: this
+      integer,            intent(in)     :: ix
+      integer,            intent(in)     :: iy
+      integer,            intent(in)     :: iz
+      FLOAT,              intent(in)     :: vv
+    end subroutine dcubic_mesh_set_point
+
+    subroutine zcubic_mesh_set_point(this, ix, iy, iz, vv)
+      use cubic_mesh_type_m
+      type(cubic_mesh_t), intent(inout)  :: this
+      integer,            intent(in)     :: ix
+      integer,            intent(in)     :: iy
+      integer,            intent(in)     :: iz
+      CMPLX,              intent(in)     :: vv
+    end subroutine zcubic_mesh_set_point
+
+  end interface
+    
 contains
 
   subroutine cubic_mesh_init(this, mesh, padding)
