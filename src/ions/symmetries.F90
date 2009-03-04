@@ -33,9 +33,11 @@ module symmetries_m
   
   public ::                   &
        symmetries_init,       &
-       symmetries_end
+       symmetries_end,        &
+       symmetries_t
 
   type symmetries_t
+    private
     real(8), pointer :: rotation(:, :, :)
     real(8), pointer :: translation(:, :)
     integer          :: nops
