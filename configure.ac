@@ -296,11 +296,12 @@ fi
 dnl now I run configure for the internal libraries
 AC_CONFIG_SUBDIRS([libstring_f])
 
+AC_CONFIG_SUBDIRS([external_libs/spglibs])
+
 AC_CONFIG_SUBDIRS([libxc])
 AX_F90_MODULE_FLAG
 F90_MODULE_FLAG=$ax_f90_modflag
 AC_SUBST([F90_MODULE_FLAG])
-
 
 # This is certainly wrong, but I don't know
 # how to do it right
@@ -312,10 +313,11 @@ AC_CONFIG_FILES([Makefile
   external_libs/Makefile
   external_libs/metis-4.0/Makefile
   external_libs/qshep/Makefile
+  external_libs/spglib/Makefile
+  external_libs/spglib/src/Makefile
   external_libs/poisson_isf/Makefile
   external_libs/libnbc/Makefile
   external_libs/newuoa/Makefile
-  external_libs/spglib/Makefile
   external_libs/zoltan/Makefile
   liboct_parser/Makefile
   src/Makefile

@@ -43,6 +43,7 @@ AM_FCFLAGS = \
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/include   \
 	-I$(top_builddir)/src/include \
+        -I$(top_srcdir)/external_libs/spglib/src \
 	-I$(top_srcdir)/libstring_f
 
 AM_CCASFLAGS = \
@@ -79,7 +80,8 @@ core_LIBS = \
 
 external_LIBS = \
 	$(top_builddir)/external_libs/qshep/libqshep.a     \
-	$(top_builddir)/external_libs/poisson_isf/libpoisson_isf.a
+	$(top_builddir)/external_libs/poisson_isf/libpoisson_isf.a \
+	$(top_builddir)/external_libs/spglib/src/libspglib.a
 
 if COMPILE_METIS
   external_LIBS += $(top_builddir)/external_libs/metis-4.0/libmetis.a
