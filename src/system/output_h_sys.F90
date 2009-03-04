@@ -206,7 +206,7 @@ contains
     end if
 
     if(iand(outp%what, output_density_matrix).ne.0) then
-      write(message(1),'(a)') 'Info: The density matrix will be calculsted, traced'
+      write(message(1),'(a)') 'Info: The density matrix will be calculated, traced'
       write(message(2),'(a)') 'over the second dimension, diagonalized, and output.'
       write(message(3),'(a)') 'Limited to 2D systems for the moment.'
       call write_info(3)

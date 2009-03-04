@@ -156,6 +156,8 @@ module hamiltonian_m
 
     ! Mass of the particle (in most cases, mass = 1, electron mass)
     FLOAT :: mass
+    ! anisotropic scaling factor for the mass: different along x,y,z etc...
+    FLOAT :: mass_scaling(MAX_DIM)
 
     ! For the Hartree Fock Hamiltonian, the Fock operator depends on the states.
     type(states_t) :: st
@@ -208,6 +210,9 @@ contains
     integer, pointer            :: wfs_type
     FLOAT                       :: d(MAX_DIM)
     type(states_dim_t), pointer :: states_dim
+
+    integer :: ncols
+    type(block_t) :: blk
 
     call push_sub('hamiltonian.hamiltonian_init')
 
@@ -391,6 +396,37 @@ contains
     !% esoteric purposes.
     !%End
     call loct_parse_float(datasets_check('ParticleMass'), M_ONE, hm%mass)
+
+    !%Variable MassScaling
+    !%Type block
+    !%Section Hamiltonian
+    !%Description
+    !% scaling factor for anisotropic masses (different masses along each
+    !% geometric direction
+    !%
+    !% <tt>%MassScaling
+    !% <br>&nbsp;&nbsp;1.0 | 1800.0 | 1800.0
+    !% <br>%</tt>
+    !%
+    !% would fix the mass of the particles to be 1800 along the y and z
+    !% directions. This can be useful, e.g., to simulate 3 particles in 1D,
+    !% viz in this case an electron and 2 protons.
+    !%
+    !%End
+    hm%mass_scaling = M_ONE
+    if(loct_parse_block(datasets_check('MassScaling'), blk)==0) then
+        ncols = loct_parse_block_cols(blk, 0)
+        if(ncols > MAX_DIM) then
+          call input_error("MassScaling")
+        end if
+        i=1 ! just deal with 1 line - should be generalized
+        do j = 1, ncols
+          call loct_parse_block_float(blk, i-1, j-1, hm%mass_scaling(j))
+        end do
+        call loct_parse_block_end(blk)
+    end if
+    write (message(1),'(a,4E15.5)') 'hm%mass_scaling = ', hm%mass_scaling
+    call write_info(1)
 
     call states_null(hm%st)
 

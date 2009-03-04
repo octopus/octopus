@@ -114,6 +114,9 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, t, kinetic_only)
     ! finish the calculation of the laplacian
     call profiling_in(C_PROFILING_KINETIC)
     do idim = 1, hm%d%dim
+! MJV: this is where the MASS enters the kinetic energy. Should be made into
+!   a MAX_DIM dimensional vector for 1 mass per direction...
+!  but you can not because there is no longer any directional info here...
       call lalg_axpy(NP, -M_HALF/hm%mass, lapl(:, idim, ii), hpsi(:, idim))
       call der_handle_end(handles(idim, ii))
     end do
@@ -747,6 +750,7 @@ subroutine X(hamiltonian_diagonal) (hm, gr, diag, ik)
 
   call derivatives_lapl_diag(gr%der, ldiag)
 
+! MJV: this is where the MASS enters the kinetic energy.
   do idim = 1, hm%d%dim
     diag(1:NP, idim) = -M_HALF/hm%mass*ldiag(1:NP)
   end do
