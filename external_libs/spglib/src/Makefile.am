@@ -1,5 +1,5 @@
-lib_LTLIBRARIES = libsymspg.la 
-libsymspg_la_SOURCES = \
+noinst_LIBRARIES = libsymspg.a 
+libsymspg_a_SOURCES = \
 bravais_art.c \
 bravais.c \
 cell.c \
