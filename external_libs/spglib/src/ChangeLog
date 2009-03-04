@@ -1,0 +1,80 @@
+2009-02-25  Atsushi Togo  <togo.atsushi@gmail.com>
+
+	* bravais_art.c:
+
+	Hexagonal to Orthorhombic symmetry lowering case is implemented.
+
+	* python module:
+
+	Python module is implemented. To use them, numpy is
+	required. Interface for ASE is implemented.
+
+2008-08-22  Atsushi Togo  <togo.atsushi@gmail.com>
+
+	* bravais_art.c:
+
+	This file is used for the cases that the lattice has higher
+	symmetry than the symmetry given by atomic positions. This does
+	not affect to the symmetry operations that is firstly obtained by
+	assuming the bravais lattice having high symmetry. Thus this file
+	works only for changing its bravais lattice. The information about
+	bravais lattice is used for only determing space group. Even if
+	the code in this file fails, or let's say, space group
+	determination fails), we can not say the symmetry operations are
+	wrong.
+
+2008-07-11  Atsushi Togo  <togo.atsushi@gmail.com>
+
+	* Most of the code
+
+	The procedure for searching a Bravais lattice from a primitive
+	cell is rewritten. The algorithm is also totally changed.
+
+	* test directory
+
+	For the test of space group search, 'test' directory is
+	created. Many POSCAR's are prepared in this directory. For running
+	tests, a small ruby code is written and put into this directory.
+
+2008-05-28  Atsushi Togo  <togo.atsushi@gmail.com>
+
+	* spacegroup_data.c (get_spacegroup_data_special_case):
+
+	Bug fix for space group determinations for special cases (Pcc2,
+	Pbam, Pccn).
+
+2008-05-25  Atsushi Togo  <togo.atsushi@gmail.com>
+
+	* *.c, *.h :
+	
+	Many codes are re-built. Many functions are changed to
+	"static". The first three characters of public functions are
+	re-named using those file names.
+
+	* bravais.c :
+
+	Monoclinic is possibly improved. Monoclinic is difficult. It may
+	contain further bugs...
+
+2008-05-01  Atsushi Togo  <togo.atsushi@gmail.com>
+
+	* spacegroup.c (get_proper_rotation_class_6axis):
+
+	exit(1) is inserted.
+
+	* bravais.c/h:
+
+	"lattice_symmetry" is removed from the "Bravais" structure.
+
+	* spglib.h: 
+
+	Misspelled function prototypes of spg_get_symmetry and
+	spg_check_symmetry are corrected.
+
+2008-04-23  Atsushi Togo  <togo.atsushi@gmail.com>
+
+	* Many patches by Xavier Andrade
+
+	For fixing many warning in many codes and gcc-4.3 related problem
+	in bravais.c.
+
