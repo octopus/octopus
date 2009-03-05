@@ -206,7 +206,7 @@ contains
       write(iunit, '(a)') '# index  kx ky kz  eigenvalue  degeneracy matrix'
 
       do is = 1, st%nst*st%d%nik
-        write(iunit, '(i6,4e24.16,32767i3)') is, st%d%kpoints(:, eindex(2, sindex(is))), &
+        write(iunit, '(i6,4e24.16,32767i3)') is, st%d%kpoints(1:3, eindex(2, sindex(is))), &
           eigenval_sorted(is), (degeneracy_matrix(is, js), js = 1, st%nst*st%d%nik)
       end do
 
