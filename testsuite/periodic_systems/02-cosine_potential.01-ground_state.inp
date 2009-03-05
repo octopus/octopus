@@ -44,8 +44,11 @@ BoxShape = parallelepiped
  0.0 | 0.0 | 0.0
 %
 
-%KPointsMonkhorstPack
- 10 | 1 | 1 | 0
+%KPoints
+0.1 | 0.000000
+0.2 | 0.031416
+0.2 | 0.062832
+0.2 | 0.094248
+0.2 | 0.125664
+0.1 | 0.157080
 %
-
-KPointsCenterOfInversion = yes
