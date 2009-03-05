@@ -919,7 +919,7 @@ subroutine X(mf_calculate_gamma)(mesh, psi, gamma)
 
   ! Allocatation of the arrays that store the limiting indexes for each direction,
   ! and the total number of points.
-  ALLOCATE(npoints(mesh%sb%dim), mesh%sb%dim)
+  ALLOCATE(npoints(MAX_DIM), MAX_DIM)
   npoints = mesh%idx%ll
 
   gamma = R_TOTYPE(M_ZERO)

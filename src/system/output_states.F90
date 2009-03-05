@@ -19,6 +19,9 @@
 
   ! ---------------------------------------------------------
   subroutine h_sys_output_states(st, gr, geo, dir, outp)
+
+    use embedded_particles_m
+
     type(states_t),         intent(inout) :: st
     type(grid_t),           intent(inout) :: gr
     type(geometry_t),       intent(in)    :: geo
@@ -29,6 +32,7 @@
     character(len=80) :: fname
     FLOAT :: u
     FLOAT, allocatable :: dtmp(:), elf(:,:)
+    type(embedded_particle_t) :: embeddedparticles
 
     call push_sub('output_states.h_sys_output_states')
 
@@ -152,7 +156,11 @@
     end if
 
     if(iand(outp%what, output_density_matrix).ne.0) then
-      call states_write_density_matrix(trim(dir), gr, st)
+      call embedded_particles_init (embeddedparticles,gr)
+      
+      call density_matrix_write(trim(dir), gr, st, embeddedparticles)
+
+      call embedded_particles_destroy (embeddedparticles)
     end if
 
     call pop_sub()

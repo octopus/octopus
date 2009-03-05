@@ -21,6 +21,7 @@
 
 module h_sys_output_m
   use datasets_m
+  use density_matrix_m
   use derivatives_m
   use basins_m
   use elf_m
