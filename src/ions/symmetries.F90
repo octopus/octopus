@@ -20,8 +20,10 @@
 #include "global.h"
 
 module symmetries_m
+  use datasets_m
   use global_m
   use geometry_m
+  use loct_parser_m
   use messages_m
   use profiling_m
   use simul_box_m
@@ -43,6 +45,7 @@ module symmetries_m
     integer, pointer :: rotation(:, :, :)
     real(8), pointer :: translation(:, :)
     integer          :: nops
+    FLOAT            :: breakdir(1:MAX_DIM)
   end type symmetries_t
 
   real(8), parameter :: symprec = CNST(1e-5)
@@ -89,7 +92,8 @@ contains
     real(8) :: lattice(1:3, 1:3)
     real(8), allocatable :: position(:, :)
     integer, allocatable :: typs(:)
-    
+    type(block_t) :: blk
+
     forall(idir = 1:sb%dim, jdir = 1:sb%dim) lattice(jdir, idir) = sb%rlattice(idir, jdir)*M_TWO*sb%lsize(idir)
     ALLOCATE(position(1:3, geo%natoms), 3*geo%natoms)
     ALLOCATE(typs(geo%natoms), geo%natoms)
@@ -109,6 +113,31 @@ contains
 
     this%nops = spglib_get_symmetry(this%rotation(1, 1, 1), this%translation(1, 1), &
          max_size, lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
+
+    ! this is a hack to get things working, this variable should be
+    ! eliminated and the direction calculated automatically from the
+    ! perturbations.
+
+    !%Variable SymmetryBreakDir
+    !%Type block
+    !%Section Mesh::Simulation Box
+    !%Description
+    !% This variable specifies a direction in which the symmetry of
+    !% the system will be broken. This is useful to generate k point
+    !% grids when an external perturbation is applied.
+    !%End
+
+    this%breakdir(1:MAX_DIM) = M_ZERO
+
+    if(loct_parse_block(datasets_check('SymmetryBreakDir'), blk) == 0) then
+      
+      do idir = 1, sb%dim
+        call loct_parse_block_float(blk, 0, idir - 1, this%breakdir(idir))
+      end do
+      
+      call loct_parse_block_end(blk)
+      
+    end if
 
   end subroutine symmetries_init
   
@@ -131,10 +160,18 @@ contains
     FLOAT,               intent(in)  :: aa(1:MAX_DIM)
     FLOAT,               intent(out) :: bb(1:MAX_DIM)
 
-    ASSERT(iop <= this%nops)
+    FLOAT :: cc(1:MAX_DIM)
+
+    ASSERT(0 < iop .and. iop <= this%nops)
 
     bb(1:MAX_DIM) = aa(1:MAX_DIM)
-    bb(1:3) = matmul(aa(1:3), dble(this%rotation(1:3, 1:3, iop)))
+    
+    ! if the operation leaves the vector invariant
+    cc(1:3) = matmul(this%breakdir(1:3), dble(this%rotation(1:3, 1:3, iop)))
+    if(all(abs(cc(1:3) - this%breakdir(1:3)) < symprec)) then
+      ! we can use it
+      bb(1:3) = matmul(aa(1:3), dble(this%rotation(1:3, 1:3, iop)))
+    end if
 
   end subroutine symmetries_apply
 
