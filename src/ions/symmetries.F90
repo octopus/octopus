@@ -34,11 +34,13 @@ module symmetries_m
   public ::                   &
        symmetries_init,       &
        symmetries_end,        &
+       symmetries_number,     &
+       symmetries_apply,      &
        symmetries_t
 
   type symmetries_t
     private
-    real(8), pointer :: rotation(:, :, :)
+    integer, pointer :: rotation(:, :, :)
     real(8), pointer :: translation(:, :)
     integer          :: nops
   end type symmetries_t
@@ -55,7 +57,7 @@ module symmetries_m
     end function spglib_get_max_multiplicity
 
     integer function spglib_get_symmetry(rotation, translation, max_size, lattice, position, types, num_atom, symprec)
-      real(8), intent(out) :: rotation
+      integer, intent(out) :: rotation
       real(8), intent(out) :: translation
       integer, intent(in)  :: max_size
       real(8), intent(in)  :: lattice
@@ -64,6 +66,15 @@ module symmetries_m
       integer, intent(in)  :: num_atom
       real(8), intent(in)  :: symprec
     end function spglib_get_symmetry
+
+    subroutine spglib_show_symmetry(lattice, position, types, num_atom, symprec)
+      real(8), intent(in) :: lattice
+      real(8), intent(in) :: position
+      integer, intent(in) :: types
+      integer, intent(in) :: num_atom
+      real(8), intent(in) :: symprec
+    end subroutine spglib_show_symmetry
+
   end interface
   
 contains
@@ -79,22 +90,26 @@ contains
     real(8), allocatable :: position(:, :)
     integer, allocatable :: typs(:)
     
-    forall(idir = 1:sb%dim, jdir = 1:sb%dim) lattice(jdir, idir) = sb%rlattice(idir, jdir)*sb%lsize(idir)
+    forall(idir = 1:sb%dim, jdir = 1:sb%dim) lattice(jdir, idir) = sb%rlattice(idir, jdir)*M_TWO*sb%lsize(idir)
     ALLOCATE(position(1:3, geo%natoms), 3*geo%natoms)
     ALLOCATE(typs(geo%natoms), geo%natoms)
     
     forall(iatom = 1:geo%natoms)
-      position(1:3, iatom) = geo%atom(iatom)%x(1:3)
+      !this has to be fixed for non-orthogonal cells
+      position(1:3, iatom) = geo%atom(iatom)%x(1:3)/(M_TWO*sb%lsize(1:3)) + M_HALF
       typs(iatom) = anint(geo%atom(iatom)%spec%z)
     end forall
-      
+
+    call spglib_show_symmetry(lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
+
     max_size = spglib_get_max_multiplicity(lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
-    
+
     ALLOCATE(this%rotation(1:3, 1:3, max_size), 9*max_size)
     ALLOCATE(this%translation(1:3, max_size), 3*max_size)
-    
+
     this%nops = spglib_get_symmetry(this%rotation(1, 1, 1), this%translation(1, 1), &
          max_size, lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
+
   end subroutine symmetries_init
   
   subroutine symmetries_end(this)
@@ -110,6 +125,19 @@ contains
     number = this%nops
   end function symmetries_number
   
+  subroutine symmetries_apply(this, iop, aa, bb)
+    type(symmetries_t),  intent(in)  :: this
+    integer,             intent(in)  :: iop
+    FLOAT,               intent(in)  :: aa(1:MAX_DIM)
+    FLOAT,               intent(out) :: bb(1:MAX_DIM)
+
+    ASSERT(iop <= this%nops)
+
+    bb(1:MAX_DIM) = aa(1:MAX_DIM)
+    bb(1:3) = matmul(aa(1:3), dble(this%rotation(1:3, 1:3, iop)))
+
+  end subroutine symmetries_apply
+
 end module symmetries_m
 
 !! Local Variables:

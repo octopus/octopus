@@ -33,7 +33,10 @@ int FC_FUNC_(spglib_get_symmetry, SPGLIB_GET_SYMMETRY)
      (int rotation[][3][3], double translation[][3], const int * max_size, const double lattice[3][3],
       const double position[][3], const int types[], const int * num_atom, const double * symprec){
 
-  return spg_get_symmetry(rotation, translation, *max_size, lattice,
-			  position, types, *num_atom, *symprec);
+  return spg_get_symmetry(rotation, translation, *max_size, lattice, position, types, *num_atom, *symprec);
 }
 
+void FC_FUNC_(spglib_show_symmetry, SPGLIB_SHOW_SYMMETRY)(const double lattice[3][3], const double position[][3],
+							  const int types[], const int * num_atom, const double * symprec){
+  spg_show_symmetry(lattice, position, types, *num_atom, *symprec);
+}

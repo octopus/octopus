@@ -224,10 +224,10 @@ subroutine states_choose_kpoints(d, sb, geo)
 
   ALLOCATE(kp(3, nkmax), 3*nkmax)
   ALLOCATE(kw(nkmax), nkmax)
-  
+
   ! choose k-points according to Monkhorst-Pack scheme
-  call crystal_init(sb%rlattice(1:3, 1:3), geo%nspecies, natom, geo%natoms, coorat, d%nik_axis, &
-       kshifts, nk, nkmax, kp, kw, use_symmetries, use_time_reversal)
+  call crystal_init(geo, sb, d%nik_axis, kshifts, use_symmetries, use_time_reversal, nkmax, kp, kw)
+  nk = nkmax
 
   ! double d%nik and copy points for spin-polarized calc
   select case(d%ispin)

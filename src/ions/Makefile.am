@@ -47,8 +47,8 @@ xyz_adjust.o : xyz_adjust.F90 geometry.o
 solids.o: solids.F90 simul_box.o
 simul_box.o : simul_box.F90 geometry.o
 vibrations.o : vibrations.F90 simul_box.o geometry.o
-crystal.o : crystal.F90 
+crystal.o : crystal.F90 geometry.o simul_box.o symmetries.o
 ion_dynamics.o : ion_dynamics.F90 simul_box.o geometry.o xyz_file.o
 ion_interaction.o : ion_interaction.F90 solids.o simul_box.o geometry.o
-spglib.o : spglib.F90
+symmetries.o : symmetries.F90 simul_box.o
 spglib_f.o : spglib_f.c
