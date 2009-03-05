@@ -375,14 +375,13 @@ contains
     end if absorbing_boundaries
 
     ! Cutoff applied to the kinetic term.
-    ! it is used *both* in the calculation of the derivatives and in the split operator method
+    ! it is used *both* in the calculation of the split operator method
     call loct_parse_float(datasets_check('KineticCutoff'), -M_ONE, hm%cutoff)
     if(hm%cutoff > M_ZERO) then
-      hm%cutoff = hm%cutoff * units_inp%energy%factor
+      hm%cutoff = hm%cutoff*units_inp%energy%factor
       write(message(1),'(a,f7.2,a)') 'Info: The kinetic operator will have a cutoff of',&
         hm%cutoff/units_out%energy%factor, units_out%energy%abbrev
-      write(message(2),'(a)')        '      (only if DerivativesSpace = 1 is set)'
-      call write_info(2)
+      call write_info(1)
     end if
 
     !%Variable ParticleMass
@@ -425,8 +424,6 @@ contains
         end do
         call loct_parse_block_end(blk)
     end if
-    write (message(1),'(a,4E15.5)') 'hm%mass_scaling = ', hm%mass_scaling
-    call write_info(1)
 
     call states_null(hm%st)
 
@@ -441,12 +438,8 @@ contains
     if(gr%sb%open_boundaries) then
       if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
         message(1) = 'Open boundary calculations for interacting electrons are'
-        message(2) = 'not yet possible. Please include'
-        message(3) = ''
-        message(4) = '  NonInteractingElectrons = yes'
-        message(5) = ''
-        message(6) = 'in your input file.'
-        call write_fatal(6)
+        message(2) = 'not yet possible.'
+        call write_fatal(2)
       end if
       call init_lead_h
     end if

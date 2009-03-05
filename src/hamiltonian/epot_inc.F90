@@ -36,9 +36,9 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
 
   integer :: iatom, ist, ik, idim, idir, np, np_part, ip
 
-  R_TYPE, pointer     :: psi(:, :)
-  R_TYPE, pointer     :: dl_psi(:, :)
-  R_TYPE, pointer     :: dl_psi2(:, :)
+  R_TYPE, allocatable :: psi(:, :)
+  R_TYPE, allocatable :: dl_psi(:, :)
+  R_TYPE, allocatable :: dl_psi2(:, :)
   R_TYPE, allocatable :: grad_psi(:, :, :)
   R_TYPE, allocatable :: grad_dl_psi(:, :, :)
   R_TYPE, allocatable :: grad_dl_psi2(:, :, :)
@@ -170,13 +170,11 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
 
     end do
   end do
-
-  if(gr%have_fine_mesh) then
-    deallocate(psi)
-    if(present(lr)) then
-      deallocate(dl_psi)
-      deallocate(dl_psi2)
-    endif
+  
+  deallocate(psi)
+  if(present(lr)) then
+    deallocate(dl_psi)
+    deallocate(dl_psi2)
   endif
 
   deallocate(grad_psi)
