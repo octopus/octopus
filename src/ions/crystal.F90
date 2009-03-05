@@ -81,6 +81,8 @@ contains
     integer :: ik
     type(symmetries_t) :: symm
 
+    call push_sub('crystal.crystal_init')
+
     call crystal_monkhorstpack_generate(sb, nk_axis, shift, nkpoints, kpoints)
     
     if(use_symmetries) then
@@ -121,7 +123,7 @@ contains
     FLOAT :: tran(MAX_DIM), tran_inv(MAX_DIM)
     integer, allocatable :: kmap(:)
 
-    call push_sub('crystal.crystal_monkpack_reduce')
+    call push_sub('crystal.crystal_monkhortstpack_reduce')
 
     ! reduce to irreducible zone
 
