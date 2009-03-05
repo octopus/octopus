@@ -22,11 +22,12 @@ module crystal_m
   
 contains
 
-  subroutine crystal_monkhorstpack_generate(naxis, shift, nkpoints, kpoints)
-    integer, intent(in)  :: naxis(1:MAX_DIM)
-    FLOAT,   intent(in)  :: shift(1:MAX_DIM)
-    integer, intent(out) :: nkpoints
-    FLOAT,   intent(out) :: kpoints(:, :)
+  subroutine crystal_monkhorstpack_generate(sb, naxis, shift, nkpoints, kpoints)
+    type(simul_box_t), intent(in)  :: sb
+    integer,           intent(in)  :: naxis(1:MAX_DIM)
+    FLOAT,             intent(in)  :: shift(1:MAX_DIM)
+    integer,           intent(out) :: nkpoints
+    FLOAT,             intent(out) :: kpoints(:, :)
 
     ! Implements the Monkhorst-Pack scheme.
 
@@ -34,34 +35,29 @@ contains
     ! (PRB13, 5188, (1976)) when sx=sy=sz=0.5. If sx=sy=0,
     ! the special hexagonal scheme is used (PRB16, 1748, (1977))
 
-    FLOAT :: dx, dy, dz
-    integer ii, jj, kk
+    FLOAT :: dx(1:MAX_DIM)
+    integer :: ii, jj, kk, idir, ix(1:MAX_DIM)
 
     call push_sub('crystal.crystal_monkhorstpack_generate')
 
     ! nx, ny, and nz are the number of points in the three
     ! directions dermined by the lattice wave vectors. sx, sy, and
     ! sz shift the grid of integration points from the origin.
-    !
-
-    !this is a hack to restore previous behaviour and get things
-    !"working", we should rewrite all this code.
 
     !generate k-points using the MP scheme
     
-    dx = M_ONE/real(2*naxis(1), REAL_PRECISION)
-    dy = M_ONE/real(2*naxis(2), REAL_PRECISION)
-    dz = M_ONE/real(2*naxis(3), REAL_PRECISION)
+    dx(1:MAX_DIM) = M_ONE/real(2*naxis(1:MAX_DIM), REAL_PRECISION)
 
     kpoints = M_ZERO
     nkpoints = 0
     do ii = 1, naxis(1)
       do jj = 1, naxis(2)
         do kk = 1, naxis(3)
+          ix = (/ii, jj, kk/)
           nkpoints = nkpoints + 1
-          kpoints(1, nkpoints) = (real(2*ii - naxis(1) - 1, REAL_PRECISION) + shift(1))*dx
-          kpoints(2, nkpoints) = (real(2*jj - naxis(2) - 1, REAL_PRECISION) + shift(2))*dy
-          kpoints(3, nkpoints) = (real(2*kk - naxis(3) - 1, REAL_PRECISION) + shift(3))*dz
+          forall(idir = 1:sb%periodic_dim)
+            kpoints(idir, nkpoints) = (real(2*ix(idir) - naxis(idir) - 1, REAL_PRECISION) + shift(idir))*dx(idir)
+          end forall
         end do
       end do
     end do
@@ -84,7 +80,7 @@ contains
     integer :: ik
     type(symmetries_t) :: symm
 
-    call crystal_monkhorstpack_generate(nk_axis, shift, nkpoints, kpoints)
+    call crystal_monkhorstpack_generate(sb, nk_axis, shift, nkpoints, kpoints)
     
     if(use_symmetries) then
       call symmetries_init(symm, geo, sb)
