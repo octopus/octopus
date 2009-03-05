@@ -50,10 +50,11 @@ contains
 
     kpoints = M_ZERO
     nkpoints = 0
+    ix=1
     do ii = 1, naxis(1)
       do jj = 1, naxis(2)
         do kk = 1, naxis(3)
-          ix = (/ii, jj, kk/)
+          ix(1:3) = (/ii, jj, kk/)
           nkpoints = nkpoints + 1
           forall(idir = 1:sb%periodic_dim)
             kpoints(idir, nkpoints) = (real(2*ix(idir) - naxis(idir) - 1, REAL_PRECISION) + shift(idir))*dx(idir)
