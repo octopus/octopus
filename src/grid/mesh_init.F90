@@ -146,7 +146,7 @@ contains
     type(mesh_t), pointer :: m
     integer :: nr(1:2, 1:MAX_DIM)
 
-    call push_sub('mesh_init.mesh_read_lead')
+    call push_sub('mesh_init.mesh_init_stage1_mesh_read_lead')
 
     ALLOCATE(mesh%lead_unit_cell(NLEADS), NLEADS)
 
@@ -378,6 +378,8 @@ contains
     integer :: ixb, iyb, izb, bsize, bsizez
     type(block_t) :: blk
 
+    call push_sub('mesh_init.mesh_init_stage_3.create_x_Lxyz')
+
     ALLOCATE(mesh%idx%Lxyz(mesh%np_part_global, MAX_DIM), mesh%np_part_global*MAX_DIM)
 
     !%Type integer
@@ -477,7 +479,8 @@ contains
         end do
       end do
     end do
-
+    
+    call pop_sub()
   end subroutine create_x_Lxyz
 
 
@@ -486,6 +489,8 @@ contains
 #if defined(HAVE_METIS) && defined(HAVE_MPI)
     integer :: i, j, ipart, jpart, ip, ix, iy, iz
     integer, allocatable :: part(:), nnb(:)
+
+    call push_sub('mesh_init.mesh_init_stage_3.do_partition')
 
     mesh%mpi_grp = mpi_grp
 
@@ -576,6 +581,8 @@ contains
       mesh%x(i + mesh%np + mesh%vp%np_ghost(mesh%vp%partno), 1:MAX_DIM) = mesh%x_global(j, 1:MAX_DIM)
     end do
 #endif
+
+    call pop_sub()
   end subroutine do_partition
 
 
@@ -590,7 +597,7 @@ contains
     integer :: k
 #endif
 
-    call push_sub('mesh_init.mesh_get_vol_pp')
+    call push_sub('mesh_init.mesh_init_stage_3.mesh_get_vol_pp')
 
     ALLOCATE(mesh%vol_pp(mesh%np_part), mesh%np_part)
 
@@ -649,6 +656,8 @@ contains
     integer, allocatable :: send_buffer(:)
     integer :: bsize, status(MPI_STATUS_SIZE)
 #endif
+
+    call push_sub('mesh_init.mesh_init_stage_3.pbc_init')
 
     nullify(mesh%per_points)
     nullify(mesh%per_map)
@@ -863,7 +872,7 @@ contains
 
     end if
 
-
+    call pop_sub()
   end subroutine mesh_pbc_init
 
 end subroutine mesh_init_stage_3
