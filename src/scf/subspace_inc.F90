@@ -32,7 +32,7 @@ subroutine X(subspace_diag)(gr, st, hm, ik, diff)
   type(profile_t),     save    :: diagon_prof
   type(batch_t) :: psib, hpsib
 
-  call push_sub('eigen_inc.Xeigen_diagon_subspace')
+  call push_sub('subspace_inc.Xsubspace_diag')
   call profiling_in(diagon_prof, "SUBSPACE_DIAG")
 
 #ifdef HAVE_MPI

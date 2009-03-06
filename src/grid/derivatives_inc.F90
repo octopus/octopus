@@ -495,6 +495,8 @@ contains
     FLOAT, allocatable :: pos(:), ww(:)
     integer, allocatable :: posi(:)
     
+    call push_sub('derivatives_inc.Xset_bc.multires')
+
     order = 3
     
     nn = 2*order
@@ -534,6 +536,7 @@ contains
       
     end do
 
+    call pop_sub()
   end subroutine multires
 
 end subroutine X(set_bc)
@@ -670,7 +673,7 @@ subroutine X(f_angular_momentum)(sb, mesh, der, f, lf, ghost_update, set_bc)
   R_TYPE :: factor
   integer :: ip
 
-  call push_sub('f_inc.Xf_angular_momentum')
+  call push_sub('derivatives_inc.Xf_angular_momentum')
 
   ASSERT(sb%dim.ne.1)
 
@@ -730,7 +733,7 @@ subroutine X(f_l2)(sb, m, der, f, l2f, ghost_update)
   R_TYPE, allocatable :: gf(:, :), ggf(:, :, :)
   integer :: j
 
-  call push_sub('f_inc.Xf_l2')
+  call push_sub('derivatives_inc.Xf_l2')
 
   ASSERT(sb%dim == 2 .or. sb%dim == 3)
 
