@@ -163,7 +163,7 @@ contains
 
       integer :: iunit, il
 
-      call push_sub('simul_box.read_open_boundaries')
+      call push_sub('simul_box.simul_box_init.read_open_boundaries')
 
       !%Variable OpenBoundaries
       !%Type block
@@ -354,7 +354,7 @@ contains
     !--------------------------------------------------------------
     subroutine read_misc()
 
-      call push_sub('simul_box.read_misc')
+      call push_sub('simul_box.simul_box_init.read_misc')
 
       !%Variable DoubleFFTParameter
       !%Type float
@@ -427,7 +427,7 @@ contains
       character(len=200) :: filename
 #endif      
 
-      call push_sub('simul_box.read_box')
+      call push_sub('simul_box.simul_box_init.read_box')
       ! Read box shape.
       ! need to find out calc_mode already here since some of the variables here (e.g.
       ! periodic dimensions) can be different for the subsystems
@@ -638,7 +638,7 @@ contains
       integer :: sx, sy
 #endif
 
-      call push_sub('simul_box.read_spacing')
+      call push_sub('simul_box.simul_box_init.read_spacing')
 
       ! initialize to -1
       sb%h = -M_ONE
@@ -711,7 +711,7 @@ contains
       integer :: i
       type(block_t) :: blk
 
-      call push_sub('simul_box.read_box_offset')
+      call push_sub('simul_box.simul_box_init.read_box_offset')
       !%Variable BoxOffset
       !%Type float
       !%Default 0.0
@@ -742,11 +742,15 @@ contains
       FLOAT, intent(in) :: var, def
       character(len=*), intent(in) :: text
 
+      call push_sub('simul_box.simul_box_init.check_def')
+
       if(var > def) then
         write(message(1), '(3a)') "The value for '", text, "' does not match the recommended value"
         write(message(2), '(f8.3,a,f8.3)') var, ' > ', def
         call write_warning(2)
       end if
+
+      call pop_sub()
     end subroutine check_def
 
 
@@ -756,7 +760,7 @@ contains
       FLOAT :: norm
       integer :: idim, jdim
 
-      call push_sub('simul_box.build_lattice')
+      call push_sub('simul_box.simul_box_init.build_lattice')
 
       !%Variable LatticeVectors
       !%Type block
@@ -911,6 +915,8 @@ contains
     integer :: iatom, pd, idir
     FLOAT :: xx(1:MAX_DIM)
 
+    call push_sub('simul_box.simul_box_atoms_in_box')
+
     pd = sb%periodic_dim
 
     do iatom = 1, geo%natoms
@@ -947,6 +953,8 @@ contains
       end if
 
     end do
+
+    call pop_sub()
   end subroutine simul_box_atoms_in_box
 
 
@@ -958,6 +966,7 @@ contains
 
     FLOAT :: tmp(1:MAX_DIM)
 
+    call push_sub('simul_box.reciprocal_lattice')
     
     kv = M_ZERO
 
@@ -972,6 +981,8 @@ contains
     kv(1:3, 1) = dcross_product(rv(:, 2), rv(:, 3))/volume
     kv(1:3, 2) = dcross_product(rv(:, 3), rv(:, 1))/volume
     kv(1:3, 3) = dcross_product(rv(:, 1), rv(:, 2))/volume    
+
+    call pop_sub()
   end subroutine reciprocal_lattice
 
 
@@ -1096,6 +1107,8 @@ contains
     integer :: red, green, blue, ix, iy
 #endif
 
+    call push_sub('simul_box.simul_box_in_box')
+
     factor = M_ONE
     if(present(inner_box)) then
       if(inner_box) factor = sb%inner_size
@@ -1151,12 +1164,16 @@ contains
       in_box = in_box .and. (re .ne. M_ZERO)
     end select
 
+    call pop_sub()
+
   contains
 
     !--------------------------------------------------------------
     logical function in_minimum()
       integer :: i
       FLOAT :: radius
+
+      call push_sub('simul_box.simul_box_in_box.in_minimum')
 
       in_minimum = .false.
       do i = 1, geo%natoms
@@ -1172,6 +1189,7 @@ contains
         end if
       end do
 
+      call pop_sub()
     end function in_minimum
   end function simul_box_in_box
 
@@ -1181,6 +1199,7 @@ contains
     type(simul_box_t), intent(in) :: sb
 
     simul_box_is_periodic = sb%periodic_dim > 0
+
   end function simul_box_is_periodic
 
 
@@ -1190,6 +1209,8 @@ contains
     integer,           intent(in) :: iunit
 
     integer :: i
+
+    call push_sub('simul_box.simul_box_dump')
 
     write(iunit, '(a)')             dump_tag
     write(iunit, '(a20,i4)')        'box_shape=          ', sb%box_shape
@@ -1221,6 +1242,8 @@ contains
       write(iunit, '(a20,a32)')     'lead_restart_dir(L)=', sb%lead_restart_dir(LEFT)
       write(iunit, '(a20,a32)')     'lead_restart_dir(R)=', sb%lead_restart_dir(RIGHT)
     end if
+
+    call pop_sub()
   end subroutine simul_box_dump
 
 
@@ -1309,6 +1332,8 @@ contains
     integer            :: idim, jdim, il
     FLOAT              :: norm
 
+    call push_sub('simul_box.simul_box_init_from_file')
+
     ! Find (and throw away) the dump tag.
     do
       read(iunit, '(a)') line
@@ -1363,6 +1388,8 @@ contains
         call read_lead_unit_cell(sb, il)
       end do
     end if
+
+    call pop_sub()
   end subroutine simul_box_init_from_file
 
 
@@ -1371,6 +1398,8 @@ contains
     type(simul_box_t), intent(in) :: sb1, sb2
 
     integer :: il
+
+    call push_sub('simul_box.simul_box_is_eq')
 
     res = .false.
     if(sb1%box_shape .ne. sb2%box_shape)             return
@@ -1407,6 +1436,8 @@ contains
       end if
     endif
     res = .true.
+
+    call pop_sub()
   end function simul_box_is_eq
 
 
@@ -1416,6 +1447,8 @@ contains
     type(simul_box_t), intent(in)  :: sbin
 
     integer :: il
+
+    call push_sub('simul_box.simul_box_copy')
 
     sbout%box_shape               = sbin%box_shape
     sbout%h                       = sbin%h
@@ -1442,6 +1475,8 @@ contains
         call simul_box_copy(sbout%lead_unit_cell(il), sbin%lead_unit_cell(il))
       end do
     end if
+
+    call pop_sub()
   end subroutine simul_box_copy
 
   logical pure function simul_box_multires(this) result(mr)
