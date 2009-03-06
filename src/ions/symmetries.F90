@@ -104,7 +104,9 @@ contains
       typs(iatom) = anint(geo%atom(iatom)%spec%z)
     end forall
 
-    call spglib_show_symmetry(lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
+    ! This outputs information about the symmetries, I will disable it
+    ! for the moment as it causes some problems.
+    !    call spglib_show_symmetry(lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
 
     max_size = spglib_get_max_multiplicity(lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
 
