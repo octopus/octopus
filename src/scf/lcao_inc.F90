@@ -176,7 +176,7 @@ subroutine X(lcao_wf) (this, st, gr, geo, hm, start)
     st%X(psi)(1:NP, 1:st%d%dim, lcao_start:st%st_end, ik) = R_TOTYPE(M_ZERO)
   end do
   
-  ! Change of base
+  ! Change of basis
   do n2 = 1, this%norbs
     do ispin = 1, st%d%spin_channels
       
@@ -203,6 +203,8 @@ contains
   subroutine init_orbitals()
     integer :: iorb, ispin, ist, ik, size
     R_TYPE, allocatable :: ao(:, :)
+
+    call push_sub('lcao_inc.Xlcao_wf.init_orbitals')
 
     ! We calculate the atomic orbitals first. To save memory we put
     ! all the orbitals we can in the part of st%Xpsi that we are going
@@ -260,6 +262,8 @@ contains
       deallocate(ao)
     end if
 
+    call pop_sub()
+
   end subroutine init_orbitals
 
   subroutine get_ao(iorb, ispin, ao, use_psi)
@@ -269,6 +273,8 @@ contains
     logical, intent(in)    :: use_psi
 
     integer :: idim
+
+    call push_sub('lcao_inc.Xlcao_wf.get_ao')
 
     if(ck(iorb, ispin) == 0) then
       ao(1:NP, 1:st%d%dim) = buff(1:NP, 1:st%d%dim, iorb, ispin)
@@ -281,6 +287,8 @@ contains
         call X(lcao_atomic_orbital)(this, iorb, gr%mesh, hm, geo, gr%sb, ao, ispin)
       end if
     end if
+
+    call pop_sub()
 
   end subroutine get_ao
 
