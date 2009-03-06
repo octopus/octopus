@@ -30,14 +30,14 @@ subroutine X(calculate_eigenvalues)(hm, gr, st, t)
   R_TYPE :: e
   integer :: ik, ist
 
-  call push_sub('energy.Xenergy_eigenvalues')
+  call push_sub('energy_inc.Xcalculate_eigenvalues')
   ALLOCATE(Hpsi(NP, st%d%dim), NP*st%d%dim)
 
   if(gr%sb%open_boundaries.and.calc_mode_is(CM_GS)) then
     ! For open boundaries we know the eigenvalues.
     st%eigenval = st%ob_eigenval
   else
-    ! FIXMEL: for TD open boundaries this is wrong. But the GS case like above
+    ! FIXME: for TD open boundaries this is wrong. But the GS case like above
     ! is also wrong.
     ! The correct way to calculate the eigenvalue here is:
     !      / Psi_L | H_LL H_LC 0    | Psi_L \
@@ -71,7 +71,7 @@ FLOAT function X(electronic_kinetic_energy)(hm, gr, st) result(t0)
   R_TYPE, allocatable :: tpsi(:, :)
   FLOAT, allocatable  :: t(:, :)
 
-  call push_sub('energy.electronic_kinetic_energy')
+  call push_sub('energy_inc.Xelectronic_kinetic_energy')
 
   ALLOCATE(tpsi(NP_PART, st%d%dim), NP_PART*st%d%dim)
   ALLOCATE(t(st%st_start:st%st_end, st%d%nik), st%nst*st%d%nik)
@@ -101,7 +101,7 @@ FLOAT function X(electronic_external_energy)(hm, gr, st) result(v)
   R_TYPE, allocatable :: vpsi(:, :)
   FLOAT, allocatable :: t(:, :)
 
-  call push_sub('energy.electronic_external_energy')
+  call push_sub('energy_inc.Xelectronic_external_energy')
 
   ALLOCATE(vpsi(NP_PART, st%d%dim), NP_PART*st%d%dim)
   ALLOCATE(t(st%st_start:st%st_end, st%d%nik), st%nst*st%d%nik)
