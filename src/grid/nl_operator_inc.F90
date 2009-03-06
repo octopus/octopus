@@ -19,7 +19,7 @@
 
 ! The next two routines are wrappers around the operator sum.
 ! The reason for those wrappers is that, by help of the parameter
-! list, compilers can generate more efficient code because of they then
+! list, compilers can generate more efficient code because then
 ! know the arrays not to be shaped.
 !
 ! ---------------------------------------------------------
@@ -380,7 +380,7 @@ subroutine X(nl_operator_operate_diag)(op, fo)
   type(nl_operator_t), intent(in)    :: op
   R_TYPE,              intent(out)   :: fo(:)
 
-  call push_sub('nl_operator.Xnl_operator_operate_diag')
+  call push_sub('nl_operator_inc.Xnl_operator_operate_diag')
   
   if(op%cmplx_op) then
 #ifdef R_TCOMPLEX

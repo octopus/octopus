@@ -598,7 +598,7 @@ contains
 
 #if defined(HAVE_MPI)
   ! ---------------------------------------------------------
-  ! Collects a distributed non local operator op into opg
+  ! Collects a distributed non-local operator op into opg
   ! on the root node. nl_operator_end has to be called
   ! on opg when no longer needed.
   subroutine nl_operator_gather(op, opg)
