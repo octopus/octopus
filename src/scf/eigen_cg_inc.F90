@@ -41,7 +41,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
   R_TYPE   :: sb(3), rb(3)
 #endif
 
-  call push_sub('eigen_cg.eigensolver_cg2')
+  call push_sub('eigen_cg_inc.Xeigensolver_cg2')
 
   verbose_ = .false.; if(present(verbose)) verbose_ = verbose
   if(verbose_) then
@@ -276,7 +276,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff, 
   R_TYPE :: dot
   logical, allocatable :: orthogonal(:)
 
-  call push_sub('eigen_cg.eigensolver_cg2_new')
+  call push_sub('eigen_cg_inc.Xeigensolver_cg2_new')
 
   verbose_ = .false.; if(present(verbose)) verbose_ = verbose
 
