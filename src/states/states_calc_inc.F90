@@ -34,7 +34,7 @@ subroutine X(states_gram_schmidt_full)(st, nst, m, dim, psi, start)
   FLOAT   :: nrm2
 
   call profiling_in(prof, "GRAM_SCHMIDT_FULL")
-  call push_sub('states_inc.Xstates_gram_schmidt_full')
+  call push_sub('states_calc_inc.Xstates_gram_schmidt_full')
 
   start_ = 1
   if(present(start)) start_ = start
@@ -270,7 +270,7 @@ subroutine X(states_normalize_orbital)(m, dim, psi)
   FLOAT   :: norm
   integer :: idim, ip
 
-  call push_sub('states_inc.Xstates_normalize_orbital')
+  call push_sub('states_calc_inc.Xstates_normalize_orbital')
 
   norm = X(mf_nrm2) (m, dim, psi)
   norm = sqrt(norm)
@@ -291,7 +291,7 @@ FLOAT function X(states_residue)(m, dim, hf, e, f) result(r)
   type(profile_t), save :: prof
   integer :: ip, idim
 
-  call push_sub('states_inc.Xstates_residue')
+  call push_sub('states_calc_inc.Xstates_residue')
 
   call profiling_in(prof, "RESIDUE")
 
@@ -331,7 +331,7 @@ subroutine X(states_calc_momentum)(gr, st)
   FLOAT               :: lmomentum(st%lnst), gmomentum(st%nst)
 #endif
 
-  call push_sub('states_inc.Xstates_calc_momentum')
+  call push_sub('states_calc_inc.Xstates_calc_momentum')
 
   ALLOCATE(grad(NP, st%d%dim, NDIM), NP*st%d%dim*NDIM)
 
@@ -399,7 +399,7 @@ subroutine X(states_angular_momentum)(gr, phi, l, l2)
   integer :: idim, dim
   R_TYPE, allocatable :: lpsi(:, :)
 
-  call push_sub('states_inc.Xstates_angular_momemtum')
+  call push_sub('states_calc_inc.Xstates_angular_momemtum')
 
   ASSERT(NDIM .ne.1)
 
@@ -454,7 +454,7 @@ subroutine X(states_matrix)(m, st1, st2, a)
   integer :: request
 #endif
 
-  call push_sub('states_inc.Xstates_matrix')
+  call push_sub('states_calc_inc.Xstates_matrix')
 
   n1 = st1%nst
   n2 = st2%nst
