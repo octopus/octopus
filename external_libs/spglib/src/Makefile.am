@@ -17,6 +17,7 @@ noinst_HEADERS = \
 bravais_art.h \
 bravais.h \
 cell.h \
+debug.h \
 mathfunc.h \
 pointgroup.h \
 primitive.h \
