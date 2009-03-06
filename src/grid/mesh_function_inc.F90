@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch, M. Verstraete
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -889,17 +889,25 @@ end subroutine X(mf_dotp_batch)
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine X(mf_calculate_gamma)(mesh, psi, gamma)
+subroutine X(mf_calculate_gamma)(ikeeppart, ndim1part, hypercube_1part, &
+     npt_1part, nr_1part, enlarge_1part,   mesh, psi, gamma)
+  integer, intent(in)      :: ikeeppart, npt_1part, ndim1part
+  integer, intent(in)      :: nr_1part(ndim1part)
+  integer, intent(in)      :: enlarge_1part
   type(mesh_t), intent(in) :: mesh
+  type(hypercube_t),intent(in) :: hypercube_1part
   R_TYPE, intent(in)       :: psi(:)
   CMPLX, intent(out)       :: gamma(:, :)
 
-  integer :: jj, kk
-  integer, allocatable :: npoints(:)
+  integer :: jj, kk, imesh, imeshp, icoord, icoordp, jdim
+  integer, allocatable :: ix(:), ix_1part(:), ixp(:)
+  FLOAT :: volume_element
   R_TYPE, allocatable :: psi_global(:)
   type(X(cf_t)) :: cube
 
   call push_sub('mesh_function_inc.Xmf_calculate_gamma')
+
+  write (*,*) ' enlarge_1part, npt_1part ', enlarge_1part, npt_1part
 
   ! In case of running parallel in domains, we need to operate psi_global, which 
   ! contains the full wave function after "gathering" all the domains.
@@ -912,27 +920,79 @@ subroutine X(mf_calculate_gamma)(mesh, psi, gamma)
     psi_global(1:mesh%np_part_global) = psi(1:mesh%np_part_global)
   end if
 
-  ! put values in a nice cube
-  call X(cf_new) (mesh%idx%ll, cube)
-  call X(cf_alloc_RS) (cube)
-  call X(mesh_to_cube) (mesh, psi_global, cube)
+!  ! put values in a nice cube
+!  call X(cf_new) (mesh%idx%ll, cube)
+!  call X(cf_alloc_RS) (cube)
+!  call X(mesh_to_cube) (mesh, psi_global, cube)
 
   ! Allocatation of the arrays that store the limiting indexes for each direction,
   ! and the total number of points.
-  ALLOCATE(npoints(MAX_DIM), MAX_DIM)
-  npoints = mesh%idx%ll
+!  ALLOCATE(npoints(MAX_DIM), MAX_DIM)
+!  npoints = mesh%idx%ll
+
+  ALLOCATE(ix(MAX_DIM), MAX_DIM)
+  ALLOCATE(ixp(MAX_DIM), MAX_DIM)
+
+
+  volume_element=1.0d0
+  do jdim=1,MAX_DIM
+    if (mesh%h(jdim) > 1.e-10) volume_element=volume_element*mesh%h(jdim)
+  end do
+  do jdim=(ikeeppart-1)*ndim1part+1,ikeeppart*ndim1part
+    if (mesh%h(jdim) > 1.e-10) volume_element=volume_element/mesh%h(jdim)
+  end do
+!  write (*,*) 'volume_element, mesh%h ', volume_element, mesh%h
 
   gamma = R_TOTYPE(M_ZERO)
+
   ! Calculates
   ! densmatr(x, xprime) = 2 \int dx_2 Psi^\dagger (xprime, x_2) Psi(x, x_2)
-  xloop: do jj = 1, npoints(1)
-    xprimeloop: do kk = 1, npoints(1)
-      gamma(jj, kk) = CNST(2.0) * mesh%h(2) * sum(cube%RS(jj, :, :)*R_CONJ(cube%RS(kk, :, :)) )
-    end do xprimeloop
+!  xloop: do jj = 1, npoints(1)
+!    xprimeloop: do kk = 1, npoints(1)
+!      gamma(jj, kk) = CNST(2.0) * mesh%h(2) * sum(cube%RS(jj, :, :)*R_CONJ(cube%RS(kk, :, :)) )
+!    end do xprimeloop
+!  end do xloop
+!  call X(cf_free)(cube)
+
+  ALLOCATE(ix_1part(ndim1part), ndim1part)
+  xloop: do imesh=1,mesh%np_global
+! find coordinates of present point in full MAX_DIM space
+     call index_to_coords(mesh%idx, mesh%sb%dim, imesh, ix)
+
+!     write (*,*) 'ix = ', ix
+
+! find index of present coordinates for particle ikeeppart
+     ix_1part=ix((ikeeppart-1)*ndim1part+1:ikeeppart*ndim1part)
+     call hypercube_x_to_i(hypercube_1part, ndim1part, nr_1part, enlarge_1part, &
+              ix_1part, icoord)
+
+! run over all possible position indices of particle prime
+     ixp=ix
+     xprimeloop: do icoordp=1,npt_1part
+! find equivalent position of particle prime
+        call hypercube_i_to_x(hypercube_1part, ndim1part, nr_1part, enlarge_1part, icoordp, ix_1part)
+
+! change coordinates of particle ikeeppart only 
+        ixp((ikeeppart-1)*ndim1part+1:ikeeppart*ndim1part) = ix_1part
+!        write (*,*) 'ixp = ', ixp
+
+! find new index for general point prime
+        imeshp = index_from_coords(mesh%idx, mesh%sb%dim, ixp)
+!        write (*,*) 'imesh imeshp = ', imesh, imeshp
+!        write (*,*) 'icoord icoordp = ', icoord, icoordp
+!        write (*,*) 'psi_global(imesh),psi_global(imeshp) ', &
+!                     psi_global(imesh),psi_global(imeshp)
+        
+! accumulate into density matrix
+        gamma(icoord, icoordp)=gamma(icoord, icoordp)+&
+            CNST(2.0) * volume_element * psi_global(imesh) * R_CONJ(psi_global (imeshp))
+     end do xprimeloop
   end do xloop
 
-  call X(cf_free)(cube)
-  deallocate(npoints, psi_global)
+  deallocate(psi_global)
+!  deallocate(npoints)
+  deallocate(ix,ixp,ix_1part)
+
   call pop_sub()
 end subroutine X(mf_calculate_gamma)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
