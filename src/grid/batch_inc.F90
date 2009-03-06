@@ -26,11 +26,15 @@ subroutine X(batch_init_contiguous)(this, dim, st_start, st_end, psi)
 
   integer :: ist
 
+  call push_sub('batch_inc.Xbatch_init_contiguous')
+
   call batch_init_empty(this, dim, st_end - st_start + 1)
 
   do ist = st_start, st_end
     call X(batch_add_state)(this, ist, psi(:, :, ist))
   end do
+
+  call pop_sub()
 
 end subroutine X(batch_init_contiguous)
 
@@ -39,12 +43,16 @@ subroutine X(batch_add_state)(this, ist, psi)
   integer,        intent(in)    :: ist
   R_TYPE, target, intent(in)    :: psi(:, :)
 
+  call push_sub('batch_inc.Xbatch_add_state')
+
   ASSERT(this%current <= this%nst)
 
   this%states(this%current)%ist = ist
   this%states(this%current)%X(psi) => psi
 
   this%current = this%current  + 1
+
+  call pop_sub()
 
 end subroutine X(batch_add_state)
 
