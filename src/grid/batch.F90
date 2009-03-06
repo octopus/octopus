@@ -86,12 +86,16 @@ contains
     integer,       intent(in)    :: dim
     integer,       intent(in)    :: nst
     
+    call push_sub('batch.batch_init_empty')
+
     this%nst = nst
     this%dim = dim
     this%current = 1
 
     ALLOCATE(this%states(1:nst), nst)
     call state_nullify(this%states(1:nst))
+
+    call pop_sub()
 
   end subroutine batch_init_empty
 
@@ -107,6 +111,8 @@ contains
 
     integer :: ii
 
+    call push_sub('batch.batch_copy')
+
     call batch_init_empty(bout, bin%dim, bin%nst)
     bout%current = bin%current
 
@@ -115,6 +121,8 @@ contains
       if(associated(bin%states(ii)%dpsi)) bout%states(ii)%dpsi => bin%states(ii)%dpsi
       if(associated(bin%states(ii)%zpsi)) bout%states(ii)%zpsi => bin%states(ii)%zpsi
     end do
+
+    call pop_sub()
 
   end subroutine batch_copy
 
