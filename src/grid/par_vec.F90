@@ -25,13 +25,13 @@ module par_vec_m
   !
   ! - Points that are stored only on one node are
   !   called local points.
-  ! - Local points, that are stored redundantly on
+  ! - Local points that are stored redundantly on
   !   another node because of the partitioning are
   !   called ghost points.
   ! - Points from the enlargement are only stored
   !   once on the corresponding node and are called
   !   boundary points.
-  ! - np ist the total number of inner points.
+  ! - np is the total number of inner points.
   !
   ! A globally defined vector v has two parts:
   ! - v(1:np) are the inner points
@@ -97,7 +97,7 @@ module par_vec_m
   public :: pv_t
 
   type pv_t
-    ! The content of these members is node dependent.
+    ! The content of these members is node-dependent.
     integer          :: rank                 ! Our rank in the communicator.
     integer          :: partno               ! Partition number of the
                                              ! current node

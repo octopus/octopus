@@ -36,7 +36,7 @@ subroutine X(vec_scatter)(vp, v, v_local)
   integer, allocatable :: displs(:) ! Displacements for scatter.
   R_TYPE,  allocatable :: v_tmp(:)  ! Send buffer.
 
-  call push_sub('par_vec.Xvec_scatter')
+  call push_sub('par_vec_inc.Xvec_scatter')
 
   ! Skip the MPI call if domain parallelization is not used.
   if(vp%npart.lt.2) then
@@ -91,7 +91,7 @@ subroutine X(vec_scatter_bndry)(vp, v, v_local)
   integer, allocatable :: displs(:) ! Displacements for scatter.
   R_TYPE,  allocatable :: v_tmp(:)  ! Send buffer.
 
-  call push_sub('par_vec.Xvec_scatter_bndry')
+  call push_sub('par_vec_inc.Xvec_scatter_bndry')
 
   ALLOCATE(displs(vp%npart), vp%npart)
   displs = vp%xbndry-1
@@ -132,7 +132,7 @@ subroutine X(vec_scatter_all)(vp, v, v_local)
   R_TYPE,     intent(in)  :: v(:)
   R_TYPE,     intent(out) :: v_local(:)
 
-  call push_sub('par_vec.Xvec_scatter_all')
+  call push_sub('par_vec_inc.Xvec_scatter_all')
 
   call X(vec_scatter)(vp, v, v_local)
   call X(vec_scatter_bndry)(vp, v, v_local)
@@ -155,7 +155,7 @@ subroutine X(vec_gather)(vp, v, v_local)
   integer, allocatable :: displs(:) ! Displacements for scatter.
   R_TYPE,  allocatable :: v_tmp(:)  ! Receive buffer.
 
-  call push_sub('par_vec.Xvec_gather')
+  call push_sub('par_vec_inc.Xvec_gather')
 
   ! Skip the MPI call if domain parallelization is not used.
   if(vp%npart.lt.2) then
@@ -206,7 +206,7 @@ subroutine X(vec_allgather)(vp, v, v_local)
   integer, allocatable :: displs(:) ! Displacements for scatter.
   R_TYPE,  allocatable :: v_tmp(:)  ! Receive buffer.
 
-  call push_sub('par_vec.Xvec_allgather')
+  call push_sub('par_vec_inc.Xvec_allgather')
 
   ! Unfortunately, vp%xlocal ist not quite the required
   ! displacement vector.
@@ -248,7 +248,7 @@ subroutine X(vec_ghost_update)(vp, v_local)
 
   call profiling_in(C_PROFILING_GHOST_UPDATE, "GHOST_UPDATE")
 
-  call push_sub('par_vec.Xvec_ghost_update')
+  call push_sub('par_vec_inc.Xvec_ghost_update')
 
   call X(vec_ghost_update_prepare)(vp, v_local, ghost_send)
 
@@ -292,7 +292,7 @@ subroutine X(vec_ighost_update)(vp, v_local, handle)
 
   call profiling_in(C_PROFILING_GHOST_UPDATE, "GHOST_UPDATE")
 
-  call push_sub('par_vec.Xvec_ighost_update')
+  call push_sub('par_vec_inc.Xvec_ighost_update')
 
   select case(handle%comm_method)
 #ifdef HAVE_LIBNBC
@@ -346,7 +346,7 @@ subroutine X(vec_ghost_update_prepare) (vp, v_local, ghost_send)
   integer :: i, j, k, r ! Counters.
   integer :: total      ! Total number of ghost points to send away.
 
-  call push_sub('par_vec.Xvec_ghost_update_prepare')
+  call push_sub('par_vec_inc.Xvec_ghost_update_prepare')
 
   
   ! Calculate number of ghost points current node
