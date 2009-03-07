@@ -38,7 +38,7 @@ module species_m
   implicit none
 
   private
-  public ::                   &
+  public ::                    &
     species_init,              &
     species_end,               &
     species_t,                 &
@@ -73,7 +73,7 @@ module species_m
                                   ! minus the core charge in the case of the pseudopotentials
     FLOAT   :: weight             ! mass, in atomic mass units (!= atomic units of mass)
 
-    logical :: has_density        ! true if the species has an electric density 
+    logical :: has_density        ! true if the species has an electronic density 
     
     ! for the user-defined potential
     character(len=1024) :: user_def
@@ -603,6 +603,8 @@ contains
     FLOAT :: r, uVr0, duvr0, ylm, gylm(MAX_DIM)
     FLOAT, parameter :: ylmconst = CNST(0.488602511902920) !  = sqr(3/(4*pi))
 
+    call push_sub('species.species_real_nl_projector')
+
     r = sqrt(sum(x(1:MAX_DIM)**2))
 
     uVr0  = spline_eval(s%ps%kb(l, i), r)
@@ -627,6 +629,8 @@ contains
       end if
     end if
 
+    call pop_sub()
+
   end subroutine species_real_nl_projector
 
   ! ---------------------------------------------------------
@@ -641,12 +645,16 @@ contains
     FLOAT :: r, uVr0
     CMPLX :: ylm
 
+    call push_sub('species.species_nl_projector')
+
     r = sqrt(sum(x(1:MAX_DIM)**2))
 
     uVr0 = spline_eval(s%ps%kb(l, i), r)
 
     call ylmr(x(1), x(2), x(3), l, lm, ylm)
     uv = uvr0*ylm
+
+    call pop_sub()
 
   end subroutine species_nl_projector
 
@@ -656,6 +664,8 @@ contains
     FLOAT, intent(in) :: x(MAX_DIM)
     FLOAT :: r
 
+    call push_sub('species.species_get_nlcc')
+
     ! only for 3D pseudopotentials, please
     if(species_is_ps(s)) then
       r = sqrt(sum(x(:)**2))
@@ -663,6 +673,8 @@ contains
     else
       l = M_ZERO
     end if
+
+    call pop_sub()
 
   end function species_get_nlcc
 
@@ -675,6 +687,8 @@ contains
     integer :: i, l, m
     FLOAT, parameter :: threshold = CNST(0.01)
 
+    call push_sub('species.species_get_iwf_radius')
+
     i = s%iwf_i(j, is)
     l = s%iwf_l(j, is)
     m = s%iwf_m(j, is)
@@ -684,6 +698,8 @@ contains
     else
       radius = sqrt(-M_TWO*log(threshold)/s%omega)
     end if
+
+    call pop_sub()
 
   end function species_get_iwf_radius
 
@@ -799,6 +815,8 @@ contains
   logical function species_is_ps(s)
     type(species_t), intent(in) :: s
     
+    call push_sub('species.species_is_ps')
+
     species_is_ps = &
          ( s%type == SPEC_PS_PSF) .or. &
          ( s%type == SPEC_PS_HGH) .or. &
@@ -806,16 +824,21 @@ contains
          ( s%type == SPEC_PS_FHI) .or. &
          ( s%type == SPEC_PS_UPF)
     
+    call pop_sub()
   end function species_is_ps
 
   logical function species_is_local(s)
     type(species_t), intent(in) :: s
+
+    call push_sub('species.species_is_local')
 
     species_is_local = .true.
       
     if( species_is_ps(s) ) then 
       if ( s%ps%l_max /= 0 ) species_is_local = .false. 
     end if
+
+    call pop_sub()
 
   end function species_is_local
 

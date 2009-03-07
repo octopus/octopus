@@ -43,6 +43,8 @@ subroutine double_grid_apply (this, s, m, sm, x_atom, vl, l, lm, ic)
   integer(kind=omp_lock_kind) :: lock
 #endif
 
+  call push_sub('double_grid_apply.double_grid_apply_(non_)local')
+
   if (.not. this%use_double_grid) then 
     
     !$omp parallel do private(r, x)
@@ -165,6 +167,8 @@ subroutine double_grid_apply (this, s, m, sm, x_atom, vl, l, lm, ic)
     call profiling_out(profiler)
 
   end if
+
+  call pop_sub()
 
 end subroutine double_grid_apply
 

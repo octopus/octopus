@@ -59,7 +59,7 @@ module projector_m
        zproject_sphere,           &
        dpsia_project_psib,        &
        zpsia_project_psib,        &
-       dprojector_commute_r,       &
+       dprojector_commute_r,      &
        zprojector_commute_r
 
   integer, public, parameter ::  &

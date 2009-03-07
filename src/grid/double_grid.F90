@@ -84,7 +84,7 @@ contains
     !%Default no
     !%Section Mesh
     !%Description
-    !% Enables or disables the use of a double grid technique to
+    !% Enables or disables the use of a double-grid technique to
     !% increase the precision of the application of the
     !% pseudopotentials.
     !%End
@@ -99,9 +99,9 @@ contains
     !%Default 9
     !%Section Mesh
     !%Description
-    !% Order of the interpolation used for the Double Grid. Must be
-    !% and odd number. Low order interpolation schemes are not
-    !% recommended. The default is to use 9th order interpolation.
+    !% Order of the interpolation used for the double grid. Must be
+    !% an odd number. Low-order interpolation schemes are not
+    !% recommended. The default is to use 9th-order interpolation.
     !%End
     call loct_parse_int(datasets_check('DoubleGridOrder'), 9, this%order)
     
