@@ -973,6 +973,10 @@ subroutine mesh_partition(m, lapl_stencil, part)
     call input_error('MeshPartitionStencil')
   end if
 
+  ! Get number of partitions.
+  p = m%mpi_grp%size
+  ipart = m%mpi_grp%rank + 1
+
   if(p .lt. 8) then
     default_method = RCB
   else
@@ -980,10 +984,6 @@ subroutine mesh_partition(m, lapl_stencil, part)
   end if
   ! Documentation is in zoltan.F90`
   call loct_parse_int(datasets_check('MeshPartition'), default_method, method)
-
-  ! Get number of partitions.
-  p = m%mpi_grp%size
-  ipart = m%mpi_grp%rank + 1
 
   ALLOCATE(start(1:p), p)
   ALLOCATE(final(1:p), p)
