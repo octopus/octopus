@@ -5,10 +5,29 @@
 #include <gsl/gsl_sf_expint.h>
 #include <gsl/gsl_errno.h>
 #include <assert.h>
-
 #include <config.h>
 
 #define M_EULER_MASCHERONI 0.5772156649015328606065120
+
+/*
+This file contains the definition of functions used by Fortran module
+poisson_cutoff_m. There are four functions to be defined:
+
+c_poisson_cutoff_3d_1d_finite: For the cutoff of 3D/0D cases, in which however
+                               we want the region of the cutfof to be a cylinder.
+c_poisson_cutoff_2d_0d:
+
+c_poisson_cutoff_2d_1d:
+
+*/
+
+
+
+/************************************************************************/
+/************************************************************************/
+/* C_POISSON_CUTOFF_3D_1D_FINITE */
+/************************************************************************/
+/************************************************************************/
 
 struct parameters
 { 
@@ -161,21 +180,29 @@ double poisson_finite_cylinder(double kx, double kr, double x0,double r0) {
 }
 
 /* --------------------- Interface to Fortran ---------------------- */
-double FC_FUNC_(c_poisson_cutoff_fin_cylinder, C_POISSON_CUTOFF_FIN_CYLINDER)
+double FC_FUNC_(c_poisson_cutoff_3d_1d_finite, C_POISSON_CUTOFF_3D_1D_FINITE)
   (double *gx, double *gperp, double *xsize, double *rsize)
 {
   return poisson_finite_cylinder(*gx, *gperp, *xsize, *rsize);
 }
 
 
+
+
+
+/************************************************************************/
+/************************************************************************/
+/* C_POISSON_CUTOFF_2D_0D */
+/************************************************************************/
+/************************************************************************/
 static double bessel_J0(double w, void *p)
 {
   return gsl_sf_bessel_J0(w);
 }
 
-
 /* --------------------- Interface to Fortran ---------------------- */
-double FC_FUNC_(c_poisson_cutoff_fin_2d, C_POISSON_CUTOFF_FIN_2D)
+//double FC_FUNC_(c_poisson_cutoff_fin_2d, C_POISSON_CUTOFF_FIN_2D)
+double FC_FUNC_(c_poisson_cutoff_2d_0d, C_POISSON_CUTOFF_2D_0D)
   (double *x, double *y)
 {
   double result, error;
@@ -195,13 +222,40 @@ double FC_FUNC_(c_poisson_cutoff_fin_2d, C_POISSON_CUTOFF_FIN_2D)
 }
 
 
+
+
+
+/************************************************************************/
+/************************************************************************/
+/* INTCOSLOG */
+/************************************************************************/
+/************************************************************************/
+/* Int_0^mu dy cos(a*y) log(abs(b*y)) = 
+   (1/a) * (log(|b*mu|)*sin(a*mu) - Si(a*mu) )    */
+double FC_FUNC(intcoslog, INTCOSLOG)(double *mu, double *a, double *b)
+{
+  if(fabs(*a)>0.0){
+    return (1.0/(*a)) * (log((*b)*(*mu))*sin((*a)*(*mu)) - gsl_sf_Si((*a)*(*mu)) );
+  }else{
+    return (*mu)*(log((*mu)*(*b)) - 1.0);
+  }
+}
+
+
+
+
+
+/************************************************************************/
+/************************************************************************/
+/* C_POISSON_CUTOFF_2D_1D */
+/************************************************************************/
+/************************************************************************/
 struct parameters_2d_1d
 { 
   double gx;
   double gy;
   double rc; 
 }; 
-
 
 static double cutoff_2d_1d(double w, void *p)
 {
@@ -221,20 +275,6 @@ static double cutoff_2d_1d(double w, void *p)
   }
   return 4.0*cos(w*gy)*k0;
 }
-
-
-
-/* Int_0^mu dy cos(a*y) log(abs(b*y)) = 
-   (1/a) * (log(|b*mu|)*sin(a*mu) - Si(a*mu) )    */
-double FC_FUNC(intcoslog, INTCOSLOG)(double *mu, double *a, double *b)
-{
-  if(fabs(*a)>0.0){
-    return (1.0/(*a)) * (log((*b)*(*mu))*sin((*a)*(*mu)) - gsl_sf_Si((*a)*(*mu)) );
-  }else{
-    return (*mu)*(log((*mu)*(*b)) - 1.0);
-  }
-}
-
 
 
 /* --------------------- Interface to Fortran ---------------------- */
@@ -275,4 +315,68 @@ double FC_FUNC_(c_poisson_cutoff_2d_1d, C_POISSON_CUTOFF_2D_1D)
 
   gsl_integration_workspace_free (ws);
   return res;
+}
+
+
+
+
+/************************************************************************/
+/************************************************************************/
+/* C_POISSON_CUTOFF_1D_0D */
+/************************************************************************/
+/************************************************************************/
+
+struct parameters_1d_0d
+{
+  double g;
+  double a;
+};
+
+static double cutoff_1d_0d(double w, void *p)
+{
+  struct parameters_1d_0d *params = (struct parameters_1d_0d *)p;
+  double g = (params->g);
+  double a = (params->a);
+  //return 2.0*cos(g*w)/sqrt(w*w+a*a);
+  return 2.0*(cos(w)/sqrt(w*w+a*a*g*g));
+}
+
+
+
+/* --------------------- Interface to Fortran ---------------------- */
+double FC_FUNC_(c_poisson_cutoff_1d_0d, C_POISSON_CUTOFF_1D_0D)
+     (double *g, double *a, double *rc)
+{
+  double result, error;
+  struct parameters_1d_0d params;
+  const size_t wrk_size = 5000;
+  const double epsilon_abs = 1e-3;
+  const double epsilon_rel = 1e-3;
+  int status;
+
+  if((*g) <= 0.0){return 2.0*asinh((*rc)/(*a));};
+  if((*g)*(*rc) > 100.0*M_PI){return 2.0*gsl_sf_bessel_K0((*a)*(*g));};
+
+  gsl_set_error_handler_off();
+
+  gsl_integration_workspace * ws = gsl_integration_workspace_alloc (wrk_size);
+  gsl_function F;
+
+  params.g = *g;
+  params.a = *a;
+
+  F.function = &cutoff_1d_0d;
+  F.params = &params;
+
+  status = gsl_integration_qag(&F, 0.0, (*rc)*(*g), epsilon_abs, epsilon_rel, 
+    wrk_size, 3, ws, &result, &error);
+
+  gsl_integration_workspace_free (ws);
+
+  if(status){
+    return 0.0;
+  }else{
+    return result;
+  }
+
 }

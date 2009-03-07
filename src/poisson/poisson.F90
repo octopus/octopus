@@ -134,14 +134,19 @@ contains
       call push_sub('poisson.init_1D')
 
       if(gr%sb%periodic_dim.eq.0) then
-        default_solver = DIRECT_SUM_1D
-      else
         default_solver = FFT_SPH
+      else
+        default_solver = FFT_NOCUT
       end if
       call loct_parse_int(datasets_check('PoissonSolver'), default_solver, poisson_solver)
-      if(poisson_solver.ne.FFT_SPH.and.poisson_solver.ne.DIRECT_SUM_1D) then
-        call input_error('PoissonSolver')
-      end if
+
+      select case(gr%sb%periodic_dim)
+      case(0)
+        if( (poisson_solver.ne.FFT_SPH)       .and. &
+            (poisson_solver.ne.DIRECT_SUM_1D)) call input_error('PoissonSolver')
+      case(1)
+        if( (poisson_solver.ne.FFT_NOCUT) ) call input_error('PoissonSolver')
+      end select
 
       if(gr%mesh%use_curvlinear.and.poisson_solver.ne.DIRECT_SUM_1D) then
         message(1) = 'If curvilinear coordinates are used in 1D, then the only working'

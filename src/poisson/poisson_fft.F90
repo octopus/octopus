@@ -47,11 +47,15 @@ module poisson_fft_m
 
   private
   public ::                  &
-    poisson_fft_build_1d,    &
+    poisson_fft_build_1d_0d, &
+    poisson_fft_build_1d_1d, &
     poisson_fft_build_2d_0d, &
     poisson_fft_build_2d_1d, &
     poisson_fft_build_2d_2d, &
-    poisson_fft_build_3d,    &
+    poisson_fft_build_3d_0d, &
+    poisson_fft_build_3d_1d, &
+    poisson_fft_build_3d_2d, &
+    poisson_fft_build_3d_3d, &
     poisson_fft_end,         &
     poisson_fft
 
@@ -68,27 +72,80 @@ module poisson_fft_m
 contains
 
   !-----------------------------------------------------------------
-  subroutine poisson_fft_build_3d(gr, poisson_solver)
+  subroutine poisson_fft_build_3d_3d(gr)
     type(grid_t), intent(inout) :: gr
-    integer,      intent(in)    :: poisson_solver
+    integer :: ix, iy, iz, ixx(MAX_DIM), db(MAX_DIM), idim
+    FLOAT :: temp(MAX_DIM), modg2
+    FLOAT :: gg(MAX_DIM)
+    FLOAT, allocatable :: fft_coulb_FS(:,:,:)
 
-    type(spline_t)     :: cylinder_cutoff_f
-    FLOAT, allocatable :: x(:), y(:)
-    integer :: ix, iy, iz, ixx(MAX_DIM), db(MAX_DIM), k, ngp, idim
-    FLOAT :: temp(MAX_DIM), modg2, xmax
-    FLOAT :: gpar, gperp, gx, gy, gz, r_c, gg(MAX_DIM)
+    call push_sub('poisson_fft.poisson_fft_build_3d_3d')
+    
+    ! double the box (or not) to perform the fourier transforms
+    call mesh_double_box(gr%sb, gr%mesh, db)                 ! get dimensions of the double box
+    ! allocate cube function where we will perform the ffts
+    call dcf_new(db, fft_cf)
+    ! initialize the fft
+    call dcf_fft_init(fft_cf, gr%sb)
+    ! dimensions may have been optimized
+    db(1:3) = fft_cf%n(1:3)
+
+    ! store the fourier transform of the Coulomb interaction
+    ALLOCATE(fft_Coulb_FS(fft_cf%nx, fft_cf%n(2), fft_cf%n(3)), fft_cf%nx*fft_cf%n(2)*fft_cf%n(3))
+    fft_Coulb_FS = M_ZERO
+    temp(:) = M_TWO*M_PI/(db(:)*gr%mesh%h(:))
+
+    do ix = 1, fft_cf%nx
+      ixx(1) = pad_feq(ix, db(1), .true.)
+      do iy = 1, db(2)
+        ixx(2) = pad_feq(iy, db(2), .true.)
+        do iz = 1, db(3)
+          ixx(3) = pad_feq(iz, db(3), .true.)
+
+          gg(:) = temp(:)*ixx(:)
+          gg(:) = matmul(gg, gr%mesh%sb%klattice_unitary)
+          do idim = 1, gr%mesh%sb%dim
+            gg(idim) = gg(idim) / lalg_nrm2(MAX_DIM, gr%mesh%sb%klattice_unitary(:, idim))
+          end do
+
+          modg2 = sum(gg(:)**2)
+
+          if(modg2 /= M_ZERO) then
+            fft_Coulb_FS(ix, iy, iz) = M_ONE/modg2
+          else
+            fft_Coulb_FS(ix, iy, iz) = M_ZERO
+          end if
+        end do
+      end do
+
+    end do
+
+    forall(iz=1:fft_cf%n(3), iy=1:fft_cf%n(2), ix=1:fft_cf%nx)
+      fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
+    end forall
+
+    call dfourier_space_op_init(coulb, fft_cf, fft_Coulb_FS)
+
+    deallocate(fft_Coulb_FS)
+    call pop_sub()
+  end subroutine poisson_fft_build_3d_3d
+  !-----------------------------------------------------------------
+
+
+  !-----------------------------------------------------------------
+  subroutine poisson_fft_build_3d_2d(gr)
+    type(grid_t), intent(inout) :: gr
+
+    integer :: ix, iy, iz, ixx(MAX_DIM), db(MAX_DIM), idim
+    FLOAT :: temp(MAX_DIM), modg2
+    FLOAT :: gpar, gx, gz, r_c, gg(MAX_DIM)
     FLOAT :: DELTA_R = CNST(1.0e-12)
     FLOAT, allocatable :: fft_coulb_FS(:,:,:)
 
-    call push_sub('poisson_fft.poisson_fft_build_3d')
+    call push_sub('poisson_fft.poisson_fft_build_3d_2d')
     
     ! double the box to perform the fourier transforms
-    if(poisson_solver.ne.FFT_CORRECTED) then
-      call mesh_double_box(gr%sb, gr%mesh, db)                 ! get dimensions of the double box
-      if (poisson_solver == FFT_SPH) db(:) = maxval(db)
-    else
-      db(:) = gr%mesh%idx%ll(:)
-    end if
+    call mesh_double_box(gr%sb, gr%mesh, db)                 ! get dimensions of the double box
 
     ! allocate cube function where we will perform the ffts
     call dcf_new(db, fft_cf)
@@ -99,7 +156,225 @@ contains
     ! dimensions may have been optimized
     db(1:3) = fft_cf%n(1:3)
 
-    if (poisson_solver <= FFT_PLA .and. poisson_solver .ne. FFT_CORRECTED) then
+    call loct_parse_float(datasets_check('PoissonCutoffRadius'),&
+      maxval(db(:)*gr%mesh%h(:)/M_TWO)/units_inp%length%factor , r_c)
+    r_c = r_c*units_inp%length%factor
+    write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &
+      trim(units_out%length%abbrev), '] = ',       &
+      r_c/units_out%length%factor
+    call write_info(1)
+    if ( r_c > maxval(db(:)*gr%mesh%h(:)/M_TWO) + DELTA_R) then
+      message(1) = 'Poisson cutoff radius is larger than cell size.'
+      message(2) = 'You can see electrons in next cell(s).'
+      call write_warning(2)
+    end if
+
+    ! store the fourier transform of the Coulomb interaction
+    ALLOCATE(fft_Coulb_FS(fft_cf%nx, fft_cf%n(2), fft_cf%n(3)), fft_cf%nx*fft_cf%n(2)*fft_cf%n(3))
+    fft_Coulb_FS = M_ZERO
+
+    temp(:) = M_TWO*M_PI/(db(:)*gr%mesh%h(:))
+
+    do ix = 1, fft_cf%nx
+      ixx(1) = pad_feq(ix, db(1), .true.)
+      gx = temp(1)*ixx(1)
+      do iy = 1, db(2)
+        ixx(2) = pad_feq(iy, db(2), .true.)
+        do iz = 1, db(3)
+          ixx(3) = pad_feq(iz, db(3), .true.)
+
+          gg(:) = temp(:)*ixx(:)
+
+          gg(:) = matmul(gg, gr%mesh%sb%klattice_unitary)
+          do idim = 1, gr%mesh%sb%dim
+            gg(idim) = gg(idim) / lalg_nrm2(MAX_DIM, gr%mesh%sb%klattice_unitary(:, idim))
+          end do
+
+          modg2 = sum(gg(:)**2)
+
+          if(modg2 /= M_ZERO) then
+            gz = abs(gg(3))
+            gpar = hypot(gg(1), gg(2))
+            fft_Coulb_FS(ix, iy, iz) = poisson_cutoff_3D_2D(gpar,gz,r_c)/modg2
+          else
+            fft_Coulb_FS(ix, iy, iz) = -M_HALF*r_c**2
+          end if
+        end do
+      end do
+
+    end do
+
+    forall(iz=1:fft_cf%n(3), iy=1:fft_cf%n(2), ix=1:fft_cf%nx)
+      fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
+    end forall
+
+    call dfourier_space_op_init(coulb, fft_cf, fft_Coulb_FS)
+
+    deallocate(fft_Coulb_FS)
+    call pop_sub()
+  end subroutine poisson_fft_build_3d_2d
+  !-----------------------------------------------------------------
+
+
+  !-----------------------------------------------------------------
+  subroutine poisson_fft_build_3d_1d(gr)
+    type(grid_t), intent(inout) :: gr
+
+    type(spline_t)     :: cylinder_cutoff_f
+    FLOAT, allocatable :: x(:), y(:)
+    integer :: ix, iy, iz, ixx(MAX_DIM), db(MAX_DIM), k, ngp, idim
+    FLOAT :: temp(MAX_DIM), modg2, xmax
+    FLOAT :: gperp, gx, gy, gz, r_c, gg(MAX_DIM)
+    FLOAT :: DELTA_R = CNST(1.0e-12)
+    FLOAT, allocatable :: fft_coulb_FS(:,:,:)
+
+    call push_sub('poisson_fft.poisson_fft_build_3d_1d')
+    
+    call mesh_double_box(gr%sb, gr%mesh, db)
+
+    ! allocate cube function where we will perform the ffts
+    call dcf_new(db, fft_cf)
+
+    ! initialize the fft
+    call dcf_fft_init(fft_cf, gr%sb)
+
+    ! dimensions may have been optimized
+    db(1:3) = fft_cf%n(1:3)
+
+    call loct_parse_float(datasets_check('PoissonCutoffRadius'),&
+      maxval(db(:)*gr%mesh%h(:)/M_TWO)/units_inp%length%factor , r_c)
+    r_c = r_c*units_inp%length%factor
+    write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &
+      trim(units_out%length%abbrev), '] = ',       &
+      r_c/units_out%length%factor
+    call write_info(1)
+    if ( r_c > maxval(db(:)*gr%mesh%h(:)/M_TWO) + DELTA_R) then
+      message(1) = 'Poisson cutoff radius is larger than cell size.'
+      message(2) = 'You can see electrons in next cell(s).'
+      call write_warning(2)
+    end if
+
+    ! store the fourier transform of the Coulomb interaction
+    ALLOCATE(fft_Coulb_FS(fft_cf%nx, fft_cf%n(2), fft_cf%n(3)), fft_cf%nx*fft_cf%n(2)*fft_cf%n(3))
+    fft_Coulb_FS = M_ZERO
+
+    temp(:) = M_TWO*M_PI/(db(:)*gr%mesh%h(:))
+
+    if( gr%sb%periodic_dim == 0 ) then
+      ngp = 8*db(2)
+      ALLOCATE(x(ngp), ngp)
+      ALLOCATE(y(ngp), ngp)
+    end if
+
+
+    do ix = 1, fft_cf%nx
+      ixx(1) = pad_feq(ix, db(1), .true.)
+      gx = temp(1)*ixx(1)
+
+      if( gr%sb%periodic_dim == 0 ) then
+        call spline_init(cylinder_cutoff_f)
+        xmax = sqrt((temp(2)*db(2)/2)**2 + (temp(3)*db(3)/2)**2)
+        do k = 1, ngp
+          x(k) = (k-1)*(xmax/(ngp-1))
+          y(k) = poisson_cutoff_3D_1D_finite(gx, x(k), M_TWO*gr%mesh%sb%xsize, M_TWO*gr%mesh%sb%rsize)
+        end do
+        call spline_fit(ngp, x, y, cylinder_cutoff_f)
+      end if
+
+      do iy = 1, db(2)
+        ixx(2) = pad_feq(iy, db(2), .true.)
+        do iz = 1, db(3)
+          ixx(3) = pad_feq(iz, db(3), .true.)
+
+          gg(:) = temp(:)*ixx(:)
+
+          gg(:) = matmul(gg, gr%mesh%sb%klattice_unitary)
+          do idim = 1, gr%mesh%sb%dim
+            gg(idim) = gg(idim) / lalg_nrm2(MAX_DIM, gr%mesh%sb%klattice_unitary(:, idim))
+          end do
+
+          modg2 = sum(gg(:)**2)
+
+          if(modg2 /= M_ZERO) then
+            gperp = hypot(gg(2), gg(3))
+            if (gr%sb%periodic_dim==1) then
+              fft_Coulb_FS(ix, iy, iz) = poisson_cutoff_3D_1D(abs(gx), gperp, r_c)/modg2
+            else if (gr%sb%periodic_dim==0) then
+              gy = gg(2)
+              gz = gg(3)
+              if ((gz >= M_ZERO) .and. (gy >= M_ZERO)) then
+                fft_Coulb_FS(ix, iy, iz) = spline_eval(cylinder_cutoff_f, gperp)
+              end if
+              if ((gz >= M_ZERO) .and. (gy < M_ZERO)) then
+                fft_Coulb_FS(ix, iy, iz) = fft_Coulb_FS(ix, -ixx(2) + 1, iz)
+              end if
+              if ((gz < M_ZERO) .and. (gy >= M_ZERO)) then
+                fft_Coulb_FS(ix, iy, iz) = fft_Coulb_FS(ix, iy, -ixx(3) + 1)
+              end if
+              if ((gz < M_ZERO) .and. (gy < M_ZERO) ) then
+                fft_Coulb_FS(ix, iy, iz) = fft_Coulb_FS(ix, -ixx(2) + 1, -ixx(3) + 1)
+              end if
+            end if
+
+          else
+            if (gr%sb%periodic_dim == 1) then
+              fft_Coulb_FS(ix, iy, iz) = -(M_HALF*log(r_c) - M_FOURTH)*r_c**2
+            else if (gr%sb%periodic_dim == 0) then
+              fft_Coulb_FS(ix, iy, iz) = poisson_cutoff_3D_1D_finite(M_ZERO, M_ZERO, &
+                M_TWO*gr%mesh%sb%xsize, M_TWO*gr%mesh%sb%rsize)
+            end if
+
+          end if
+        end do
+      end do
+
+      if( gr%sb%periodic_dim == 0 ) call spline_end(cylinder_cutoff_f)
+    end do
+
+    forall(iz=1:fft_cf%n(3), iy=1:fft_cf%n(2), ix=1:fft_cf%nx)
+      fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
+    end forall
+
+    call dfourier_space_op_init(coulb, fft_cf, fft_Coulb_FS)
+
+    deallocate(fft_Coulb_FS)
+    if( gr%sb%periodic_dim == 0 ) deallocate(x, y)
+    call pop_sub()
+  end subroutine poisson_fft_build_3d_1d
+  !-----------------------------------------------------------------
+
+
+  !-----------------------------------------------------------------
+  subroutine poisson_fft_build_3d_0d(gr, poisson_solver)
+    type(grid_t), intent(inout) :: gr
+    integer,      intent(in)    :: poisson_solver
+
+    integer :: ix, iy, iz, ixx(MAX_DIM), db(MAX_DIM), idim
+    FLOAT :: temp(MAX_DIM), modg2
+    FLOAT :: gx, r_c, gg(MAX_DIM)
+    FLOAT :: DELTA_R = CNST(1.0e-12)
+    FLOAT, allocatable :: fft_coulb_FS(:,:,:)
+
+    call push_sub('poisson_fft.poisson_fft_build_3d_0d')
+    
+    select case(poisson_solver)
+    case(FFT_SPH)
+      call mesh_double_box(gr%sb, gr%mesh, db)
+      db(:) = maxval(db)
+    case(FFT_CORRECTED)
+      db(:) = gr%mesh%idx%ll(:)
+    end select
+
+    ! allocate cube function where we will perform the ffts
+    call dcf_new(db, fft_cf)
+
+    ! initialize the fft
+    call dcf_fft_init(fft_cf, gr%sb)
+
+    ! dimensions may have been optimized
+    db(1:3) = fft_cf%n(1:3)
+
+    if (poisson_solver .ne. FFT_CORRECTED) then
       call loct_parse_float(datasets_check('PoissonCutoffRadius'),&
         maxval(db(:)*gr%mesh%h(:)/M_TWO)/units_inp%length%factor , r_c)
       r_c = r_c*units_inp%length%factor
@@ -120,120 +395,51 @@ contains
 
     temp(:) = M_TWO*M_PI/(db(:)*gr%mesh%h(:))
 
-    if( (poisson_solver .eq. FFT_CYL)  .and. (gr%sb%periodic_dim == 0) ) then
-      ngp = 8*db(2)
-      ALLOCATE(x(ngp), ngp)
-      ALLOCATE(y(ngp), ngp)
-    end if
-
 
     do ix = 1, fft_cf%nx
       ixx(1) = pad_feq(ix, db(1), .true.)
       gx = temp(1)*ixx(1)
-
-      if( (poisson_solver .eq. FFT_CYL)  .and. (gr%sb%periodic_dim == 0) ) then
-        call spline_init(cylinder_cutoff_f)
-        xmax = sqrt((temp(2)*db(2)/2)**2 + (temp(3)*db(3)/2)**2)
-        do k = 1, ngp
-          x(k) = (k-1)*(xmax/(ngp-1))
-          y(k) = poisson_cutoff_fin_cylinder(gx, x(k), M_TWO*gr%mesh%sb%xsize, M_TWO*gr%mesh%sb%rsize)
-        end do
-        call spline_fit(ngp, x, y, cylinder_cutoff_f)
-      end if
-
       do iy = 1, db(2)
         ixx(2) = pad_feq(iy, db(2), .true.)
         do iz = 1, db(3)
           ixx(3) = pad_feq(iz, db(3), .true.)
 
           gg(:) = temp(:)*ixx(:)
-
           gg(:) = matmul(gg, gr%mesh%sb%klattice_unitary)
           do idim = 1, gr%mesh%sb%dim
             gg(idim) = gg(idim) / lalg_nrm2(MAX_DIM, gr%mesh%sb%klattice_unitary(:, idim))
           end do
-
           modg2 = sum(gg(:)**2)
 
           if(modg2 /= M_ZERO) then
             select case(poisson_solver)
             case(FFT_SPH)
-              fft_Coulb_FS(ix, iy, iz) = poisson_cutoff_sphere(sqrt(modg2),r_c)/modg2
-
-            case(FFT_CYL)
-              gperp = hypot(gg(2), gg(3))
-              if (gr%sb%periodic_dim==1) then
-                fft_Coulb_FS(ix, iy, iz) = poisson_cutoff_inf_cylinder(abs(gx), gperp, r_c)/modg2
-
-              else if (gr%sb%periodic_dim==0) then
-                gy = gg(2)
-                gz = gg(3)
-                if ((gz >= M_ZERO) .and. (gy >= M_ZERO)) then
-                  fft_Coulb_FS(ix, iy, iz) = spline_eval(cylinder_cutoff_f, gperp)
-                end if
-                if ((gz >= M_ZERO) .and. (gy < M_ZERO)) then
-                  fft_Coulb_FS(ix, iy, iz) = fft_Coulb_FS(ix, -ixx(2) + 1, iz)
-                end if
-                if ((gz < M_ZERO) .and. (gy >= M_ZERO)) then
-                  fft_Coulb_FS(ix, iy, iz) = fft_Coulb_FS(ix, iy, -ixx(3) + 1)
-                end if
-                if ((gz < M_ZERO) .and. (gy < M_ZERO) ) then
-                  fft_Coulb_FS(ix, iy, iz) = fft_Coulb_FS(ix, -ixx(2) + 1, -ixx(3) + 1)
-                end if
-              end if
-
-            case(FFT_PLA)
-              gz = abs(gg(3))
-              gpar = hypot(gg(1), gg(2))
-              fft_Coulb_FS(ix, iy, iz) = poisson_cutoff_slab(gpar,gz,r_c)/modg2
-
-            case(FFT_NOCUT, FFT_CORRECTED)
+              fft_Coulb_FS(ix, iy, iz) = poisson_cutoff_3D_0D(sqrt(modg2),r_c)/modg2
+            case(FFT_CORRECTED)
               fft_Coulb_FS(ix, iy, iz) = M_ONE/modg2
             end select
-
           else
             select case(poisson_solver)
             case(FFT_SPH)
               fft_Coulb_FS(ix, iy, iz) = r_c**2/M_TWO
-
-            case (FFT_CYL)
-              if (gr%sb%periodic_dim == 1) then
-                fft_Coulb_FS(ix, iy, iz) = -(M_HALF*log(r_c) - M_FOURTH)*r_c**2
-              else if (gr%sb%periodic_dim == 0) then
-                fft_Coulb_FS(ix, iy, iz) = poisson_cutoff_fin_cylinder(M_ZERO, M_ZERO, &
-                  M_TWO*gr%mesh%sb%xsize, M_TWO*gr%mesh%sb%rsize)
-              end if
-
-            case(FFT_PLA)
-              fft_Coulb_FS(ix, iy, iz) = -M_HALF*r_c**2
-
-            case (FFT_NOCUT, FFT_CORRECTED)
+            case (FFT_CORRECTED)
               fft_Coulb_FS(ix, iy, iz) = M_ZERO
-
             end select
           end if
         end do
       end do
 
-      if( (poisson_solver .eq. FFT_CYL) .and. (gr%sb%periodic_dim == 0) ) then
-        call spline_end(cylinder_cutoff_f)
-      end if
     end do
 
-    do k=1, fft_cf%n(3)
-      fft_Coulb_FS(1:fft_cf%nx, 1:fft_cf%n(2), k) = M_FOUR*M_PI*fft_Coulb_FS(1:fft_cf%nx, 1:fft_cf%n(2), k)
-    end do
+    forall(iz=1:fft_cf%n(3), iy=1:fft_cf%n(2), ix=1:fft_cf%nx)
+      fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
+    end forall
 
     call dfourier_space_op_init(coulb, fft_cf, fft_Coulb_FS)
 
     deallocate(fft_Coulb_FS)
-
-    if( (poisson_solver .eq. FFT_CYL) .and. (gr%sb%periodic_dim == 0) ) then
-      deallocate(x, y)
-    end if
-    
     call pop_sub()
-  end subroutine poisson_fft_build_3d
+  end subroutine poisson_fft_build_3d_0d
   !-----------------------------------------------------------------
 
 
@@ -289,7 +495,7 @@ contains
     y(1) = M_ZERO
     do i = 2, npoints
       x(i) = (i-1) * maxf / (npoints-1)
-      y(i) = y(i-1) + poisson_cutoff_fin_2D(x(i-1), x(i))
+      y(i) = y(i-1) + poisson_cutoff_2D_0D(x(i-1), x(i))
     end do
     call spline_fit(npoints, x, y, besselintf)
 
@@ -412,7 +618,7 @@ contains
 
 
   !-----------------------------------------------------------------
-  subroutine poisson_fft_build_1d(gr, poisson_soft_coulomb_param)
+  subroutine poisson_fft_build_1d_1d(gr, poisson_soft_coulomb_param)
     type(grid_t), intent(in) :: gr
     FLOAT,        intent(in) :: poisson_soft_coulomb_param
 
@@ -420,7 +626,7 @@ contains
     FLOAT              :: g
     FLOAT, allocatable :: fft_coulb_fs(:, :, :)
 
-    call push_sub('poisson_fft.poisson_fft_build_1d')
+    call push_sub('poisson_fft.poisson_fft_build_1d_1d')
 
     box = gr%mesh%idx%ll
     call dcf_new(box, fft_cf)
@@ -428,20 +634,55 @@ contains
     box(1:3) = fft_cf%n(1:3)
 
     ALLOCATE(fft_coulb_fs(fft_cf%nx, fft_cf%n(2), fft_cf%n(3)), fft_cf%nx*fft_cf%n(2)*fft_cf%n(3))
-
     fft_coulb_fs = M_ZERO
 
     ! Fourier transform of Soft Coulomb interaction.
     do ix = 1, fft_cf%nx
       g = ix*M_PI/gr%sb%lsize(1) ! note that g is always positive with this definition
-      fft_coulb_fs(ix, 1, 1) = sqrt(M_TWO/M_PI) * loct_bessel_k0(poisson_soft_coulomb_param*g)
+      fft_coulb_fs(ix, 1, 1) = M_TWO * loct_bessel_k0(poisson_soft_coulomb_param*g)
     end do
 
     call dfourier_space_op_init(coulb, fft_cf, fft_coulb_fs)
     deallocate(fft_coulb_fs)
     
     call pop_sub()
-  end subroutine poisson_fft_build_1d
+  end subroutine poisson_fft_build_1d_1d
+  !-----------------------------------------------------------------
+
+
+  !-----------------------------------------------------------------
+  subroutine poisson_fft_build_1d_0d(gr, poisson_soft_coulomb_param)
+    type(grid_t), intent(in) :: gr
+    FLOAT,        intent(in) :: poisson_soft_coulomb_param
+    integer            :: box(MAX_DIM), ixx(MAX_DIM), ix
+    FLOAT              :: temp(MAX_DIM), g, r_c
+    FLOAT, allocatable :: fft_coulb_fs(:, :, :)
+    call push_sub('poisson_fft.poisson_fft_build_1d_1d')
+
+    call mesh_double_box(gr%sb, gr%mesh, box)
+
+    call dcf_new(box, fft_cf)
+    call dcf_fft_init(fft_cf, gr%sb)
+    box(1:3) = fft_cf%n(1:3)
+
+    r_c = box(1)*gr%mesh%h(1)/M_TWO
+
+    ALLOCATE(fft_coulb_fs(fft_cf%nx, fft_cf%n(2), fft_cf%n(3)), fft_cf%nx*fft_cf%n(2)*fft_cf%n(3))
+    fft_coulb_fs = M_ZERO
+    temp(:) = M_TWO*M_PI/(box(:)*gr%mesh%h(:))
+
+    ! Fourier transform of Soft Coulomb interaction.
+    do ix = 1, fft_cf%nx
+      ixx(1) = pad_feq(ix, box(1), .true.)
+      g = temp(1)*ixx(1)
+      fft_coulb_fs(ix, 1, 1) = poisson_cutoff_1D_0D(g, poisson_soft_coulomb_param, r_c)
+    end do
+
+    call dfourier_space_op_init(coulb, fft_cf, fft_coulb_fs)
+    deallocate(fft_coulb_fs)
+    
+    call pop_sub()
+  end subroutine poisson_fft_build_1d_0d
   !-----------------------------------------------------------------
 
 

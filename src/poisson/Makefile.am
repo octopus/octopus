@@ -22,7 +22,7 @@
 noinst_LIBRARIES = libpoisson.a
 
 libpoisson_a_SOURCES = \
-	poisson_finite_cyl.c poisson_cutoff.F90 poisson_isf.F90 poisson_fft.F90 \
+	poisson_cutoffs.c poisson_cutoff.F90 poisson_isf.F90 poisson_fft.F90 \
 	poisson_corrections.F90 poisson_cg.F90 poisson_multigrid.F90 poisson.F90
 
 noinst_HEADERS = \
@@ -33,7 +33,7 @@ include $(srcdir)/../common-rules.make
 depend:
 	makedepf90 $(libpoisson_a_SOURCES)
 
-poisson_finite_cyl.o : poisson_finite_cyl.c 
+poisson_cutoffs.o : poisson_cutoffs.c
 poisson_cutoff.o : poisson_cutoff.F90 
 poisson_isf.o : poisson_isf.F90 
 poisson_fft.o : poisson_fft.F90 poisson_cutoff.o 

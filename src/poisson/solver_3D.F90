@@ -105,20 +105,29 @@ subroutine poisson3D_init(gr, geo)
      
   case(ISF)
     call poisson_isf_init(gr%mesh)
+
+  case(FFT_SPH)
+    call poisson_fft_build_3d_0d(gr, poisson_solver)
+
+  case(FFT_CYL)
+    call poisson_fft_build_3d_1d(gr)
+
+  case(FFT_PLA)
+    call poisson_fft_build_3d_2d(gr)
+
+  case(FFT_NOCUT)
+    call poisson_fft_build_3d_3d(gr)
+
+  case(FFT_CORRECTED)
+    call poisson_fft_build_3d_0d(gr, poisson_solver)
+    call loct_parse_int(datasets_check('PoissonSolverMaxMultipole'), 2, maxl)
+    write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
+    call write_info(1)
+    call poisson_corrections_init(corrector, maxl, gr%mesh)
      
   end select
 
-  if (poisson_solver <= FFT_CORRECTED) call poisson_fft_build_3d(gr, poisson_solver)
-
-  if (poisson_solver == FFT_CORRECTED) then
-     call loct_parse_int(datasets_check('PoissonSolverMaxMultipole'), 2, maxl)
-     write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
-     call write_info(1)
-     call poisson_corrections_init(corrector, maxl, gr%mesh)
-  end if
-
   call pop_sub()
-
 end subroutine poisson3D_init
 
 

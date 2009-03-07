@@ -28,35 +28,43 @@ module poisson_cutoff_m
 
   private
   public ::                       &
-    poisson_cutoff_sphere,        &
-    poisson_cutoff_inf_cylinder,  &
-    poisson_cutoff_fin_cylinder,  &
-    poisson_cutoff_slab,          &
-    poisson_cutoff_fin_2D,        &
+    poisson_cutoff_3D_0D,         &
+    poisson_cutoff_3D_1D,         &
+    poisson_cutoff_3D_1D_finite,  &
+    poisson_cutoff_3D_2D,         &
+    poisson_cutoff_2D_0D,         &
     poisson_cutoff_2D_1D,         &
+    poisson_cutoff_1D_0D,         &
     poisson_cutoff_intcoslog
 
 
-  interface poisson_cutoff_fin_cylinder
-    real(8) function c_poisson_cutoff_fin_cylinder(gx, gperp, xsize, rsize)
+  interface poisson_cutoff_3D_1D_finite
+    real(8) function c_poisson_cutoff_3d_1d_finite(gx, gperp, xsize, rsize)
       real(8), intent(in) :: gx, gperp, rsize, xsize
-    end function c_poisson_cutoff_fin_cylinder
-    module procedure poisson_cutoff_fin_cylinder4
-  end interface
+    end function c_poisson_cutoff_3d_1d_finite
+    module procedure poisson_cutoff_3d_1d_finite4
+  end interface poisson_cutoff_3D_1D_finite
 
-  interface poisson_cutoff_fin_2D
-    real(8) function c_poisson_cutoff_fin_2d(x, y)
+  interface poisson_cutoff_2D_0D
+    real(8) function c_poisson_cutoff_2d_0d(x, y)
       real(8), intent(in) :: x, y
-    end function c_poisson_cutoff_fin_2d
-    module procedure poisson_cutoff_fin_2d4
-  end interface
+    end function c_poisson_cutoff_2d_0d
+    module procedure poisson_cutoff_2d_0d4
+  end interface poisson_cutoff_2D_0D
 
-  interface poisson_cutoff_2d_1d
+  interface poisson_cutoff_2D_1D
     real(8) function c_poisson_cutoff_2d_1d(gy, gx, r_c)
       real(8), intent(in) :: gy, gx, r_c
     end function c_poisson_cutoff_2d_1d
     module procedure poisson_cutoff_2d_1d4
-  end interface poisson_cutoff_2d_1d
+  end interface poisson_cutoff_2D_1D
+
+  interface poisson_cutoff_1D_0D
+    real(8) function c_poisson_cutoff_1d_0d(g, a, r_c)
+      real(8), intent(in) :: g, a, r_c
+    end function c_poisson_cutoff_1d_0d
+    module procedure poisson_cutoff_1d_0d4
+  end interface poisson_cutoff_1D_0D
 
   interface poisson_cutoff_intcoslog
     real(8) function intcoslog(mu, gx, gy)
@@ -78,12 +86,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  real(4) function poisson_cutoff_fin_2d4(x, y)
+  real(4) function poisson_cutoff_2d_0d4(x, y)
     real(4), intent(in) :: x, y
     real(8) :: res8
-    res8 = c_poisson_cutoff_fin_2d(real(x, 8), real(y, 8))
-    poisson_cutoff_fin_2d4 = real(res8, 4)
-  end function poisson_cutoff_fin_2d4
+    res8 = c_poisson_cutoff_2d_0d(real(x, 8), real(y, 8))
+    poisson_cutoff_2d_0d4 = real(res8, 4)
+  end function poisson_cutoff_2d_0d4
   ! ---------------------------------------------------------
 
 
@@ -98,28 +106,35 @@ contains
 
 
   ! ---------------------------------------------------------
-  real(4) function poisson_cutoff_fin_cylinder4(gx, gperp, xsize, rsize)
+  real(4) function poisson_cutoff_1d_0d4(g, a, r_c)
+    real(4), intent(in) :: g, a, r_c
+    real(8) :: res8
+    res8 = c_poisson_cutoff_1d_0d(real(g, 8), real(a, 8), real(r_c, 8))
+    poisson_cutoff_1d_0d4 = real(res8, 4)
+  end function poisson_cutoff_1d_0d4
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  real(4) function poisson_cutoff_3d_1d_finite4(gx, gperp, xsize, rsize)
     real(4), intent(in) :: gx, gperp, rsize, xsize
     real(8) :: res8
-    
-    res8 = c_poisson_cutoff_fin_cylinder(real(gx, 8), real(gperp, 8), real(xsize, 8), real(rsize, 8))
-    poisson_cutoff_fin_cylinder4 = real(res8, 4)
-  end function poisson_cutoff_fin_cylinder4
+    res8 = c_poisson_cutoff_3d_1d_finite(real(gx, 8), real(gperp, 8), real(xsize, 8), real(rsize, 8))
+    poisson_cutoff_3d_1d_finite4 = real(res8, 4)
+  end function poisson_cutoff_3d_1d_finite4
   ! ---------------------------------------------------------
   
 
   ! ---------------------------------------------------------
-  FLOAT function poisson_cutoff_sphere(x, r) result(cutoff)
+  FLOAT function poisson_cutoff_3D_0D(x, r) result(cutoff)
     FLOAT, intent(in) ::  x, r
-
     cutoff = M_ONE - cos(x*r)
-
-  end function poisson_cutoff_sphere
+  end function poisson_cutoff_3D_0D
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  FLOAT function poisson_cutoff_inf_cylinder(x, p, rmax) result(cutoff)
+  FLOAT function poisson_cutoff_3D_1D(x, p, rmax) result(cutoff)
     FLOAT, intent(in) ::  x, p, rmax
 
     integer :: j
@@ -147,11 +162,11 @@ contains
     end if
 
     call pop_sub()
-  end function poisson_cutoff_inf_cylinder
+  end function poisson_cutoff_3D_1D
 
 
   ! ---------------------------------------------------------
-  FLOAT function poisson_cutoff_slab(p, z, r) result(cutoff)
+  FLOAT function poisson_cutoff_3D_2D(p, z, r) result(cutoff)
     FLOAT, intent(in) ::  p, z, r
 
     call push_sub('poisson_cutoff.poisson_cutoff_inf_cylinder')
@@ -163,7 +178,7 @@ contains
     end if
 
     call pop_sub()
-  end function poisson_cutoff_slab
+  end function poisson_cutoff_3D_2D
   ! ---------------------------------------------------------
 
 end module poisson_cutoff_m
