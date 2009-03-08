@@ -129,8 +129,9 @@ module opt_control_parameters_m
     FLOAT, pointer :: utransf(:, :)  => NULL()
     FLOAT, pointer :: utransfi(:, :) => NULL()
   end type oct_control_parameters_t
-
-  type(oct_parameters_common_t), save :: par_common
+  
+  ! the next variable has to be a pointer to avoid a bug in the IBM compiler
+  type(oct_parameters_common_t), pointer :: par_common
   type(mix_t) :: parameters_mix
 
 contains
@@ -158,6 +159,8 @@ contains
     type(block_t)            :: blk
 
     call push_sub('parameters.parameters_read')
+
+    if(.not. associated(par_common)) ALLOCATE(par_common, 1) 
 
     call messages_print_stress(stdout, "OCT: Info about control functions")
 
@@ -1401,6 +1404,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine parameters_mod_close()
+    if(associated(par_common)) deallocate(par_common)
     ! Here par_commons data should be deallocated.
   end subroutine parameters_mod_close
   ! ---------------------------------------------------------
