@@ -121,9 +121,9 @@ contains
   end subroutine projector_null
 
   !---------------------------------------------------------
-  subroutine projector_init(p, m, sb, atm, dim, reltype)
+  subroutine projector_init(p, mesh, sb, atm, dim, reltype)
     type(projector_t), intent(inout) :: p
-    type(mesh_t),      intent(in)    :: m
+    type(mesh_t),      intent(in)    :: mesh
     type(simul_box_t), intent(in)    :: sb
     type(atom_t),      intent(in)    :: atm
     integer,           intent(in)    :: dim
@@ -143,7 +143,7 @@ contains
 
     p%lloc = atm%spec%ps%l_loc
 
-    call submesh_init_sphere(p%sphere, sb, m, atm%x, atm%spec%ps%rc_max + m%h(1))
+    call submesh_init_sphere(p%sphere, sb, mesh, atm%x, atm%spec%ps%rc_max + mesh%h(1))
 
     select case (atm%spec%ps%kbc)
     case (1)

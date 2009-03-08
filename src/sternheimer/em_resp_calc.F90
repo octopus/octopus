@@ -75,7 +75,7 @@ contains
 
     CMPLX, allocatable :: gpsi(:,:), gdl_psi(:,:), gdl_psi_m(:,:)
 
-    call push_sub('em_resp.lr_calc_current')
+    call push_sub('em_resp_calc.lr_calc_current')
 
     if(.not. associated(lr%dl_j)) ALLOCATE(lr%dl_j(gr%mesh%np, MAX_DIM, st%d%nspin), gr%mesh%np*MAX_DIM*st%d%nspin)
 
@@ -196,8 +196,12 @@ end subroutine zcalc_polarizability_periodic
   character(len=12) function freq2str(w) result(str)
     FLOAT, intent(in) :: w
 
+    call push_sub('em_resp_calc.freq2str')
+
     write(str, '(f11.4)') w
     str = trim(adjustl(str))
+
+    call pop_sub()
 
   end function freq2str
 

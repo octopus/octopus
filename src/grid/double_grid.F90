@@ -76,6 +76,8 @@ contains
     type(double_grid_t), intent(out) :: this
     type(simul_box_t),   intent(in)  :: sb
 
+    call push_sub('double_grid.double_grid_init')
+
     this%spacing_divisor = 3
     this%nn = (this%spacing_divisor - 1)/2
    
@@ -115,11 +117,15 @@ contains
 
     call calc_coefficients
 
+    call pop_sub()
+
     contains
 
       subroutine calc_coefficients
         FLOAT, allocatable :: points(:)
         integer :: ii
+
+        call push_sub('double_grid.double_grid_init.calc_coefficients')
 
         ALLOCATE(points(this%interpolation_min:this%interpolation_max), this%npoints)
         
@@ -130,6 +136,7 @@ contains
         call interpolation_coefficients(this%npoints, points, M_ZERO, this%co)
 
         deallocate(points)
+        call pop_sub()
         
       end subroutine calc_coefficients
 
@@ -138,7 +145,9 @@ contains
   subroutine double_grid_end(this)
     type(double_grid_t), intent(inout) :: this
  
+    call push_sub('double_grid.double_grid_end')
     deallocate(this%co)
+    call pop_sub()
 
   end subroutine double_grid_end
   
@@ -146,30 +155,39 @@ contains
     type(double_grid_t), intent(in) :: this
     type(mesh_t),        intent(in) :: mesh
 
+    call push_sub('double_grid.double_grid_get_hmax')
+
     hmax = maxval(mesh%h(1:MAX_DIM))
       
-    if(this%use_double_grid)  hmax = hmax / this%spacing_divisor
-    
+    if(this%use_double_grid)  hmax = hmax / this%spacing_divisor    
+
+    call pop_sub()
   end function double_grid_get_hmax
 
   FLOAT function double_grid_get_rmax(this, s, m) result(rmax)
     type(double_grid_t),     intent(in) :: this
-    type(species_t),          intent(in) :: s
+    type(species_t),         intent(in) :: s
     type(mesh_t),            intent(in) :: m
     
+    call push_sub('double_grid.double_grid_get_rmax')
+
     rmax = spline_cutoff_radius(s%ps%vl, s%ps%projectors_sphere_threshold)
     if(this%use_double_grid) then 
       rmax = rmax + this%interpolation_max * maxval(m%h(1:3))
     end if
 
+    call pop_sub()
   end function double_grid_get_rmax
 
   integer function double_grid_enlarge(this)
     type(double_grid_t),     intent(in) :: this
     
+    call push_sub('double_grid.double_grid_enlarge')
+
     double_grid_enlarge = 0 
     if(this%use_double_grid) double_grid_enlarge = this%interpolation_max * this%nn
 
+    call pop_sub()
   end function double_grid_enlarge
 
 #define profiler double_grid_local_prof

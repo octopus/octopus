@@ -595,13 +595,13 @@ contains
   ! This routine returns the non-local projector and its 
   ! derivative build using real spherical harmonics
   subroutine species_real_nl_projector(s, x, l, lm, i, uV, duV)
-    type(species_t),    intent(in)  :: s
+    type(species_t),   intent(in)  :: s
     FLOAT,             intent(in)  :: x(1:MAX_DIM)
     integer,           intent(in)  :: l, lm, i
     FLOAT,             intent(out) :: uV, duV(1:MAX_DIM)
 
     FLOAT :: r, uVr0, duvr0, ylm, gylm(MAX_DIM)
-    FLOAT, parameter :: ylmconst = CNST(0.488602511902920) !  = sqr(3/(4*pi))
+    FLOAT, parameter :: ylmconst = CNST(0.488602511902920) !  = sqrt(3/(4*pi))
 
     call push_sub('species.species_real_nl_projector')
 
