@@ -135,10 +135,9 @@ subroutine states_choose_kpoints(d, sb, geo)
   !%
   !%End
 
-! default when nothing specified: gamma point only
+  ! default when nothing specified: gamma point only
   if(loct_parse_block(datasets_check('KPointsMonkhorstPack'), blk) .ne. 0) then
-!    message(1) = 'The system is periodic and neither the KPoints nor KPointsMonkhorstPack blocks has been given.'
-!    call write_fatal(1)
+
     if (d%ispin == 2) then
       message(1) = 'Not implemented yet.'
       call write_fatal(1)
@@ -150,9 +149,7 @@ subroutine states_choose_kpoints(d, sb, geo)
     ALLOCATE(d%kweights(d%nik), d%nik)
 
     d%kweights(1) = M_ONE
-    do idim = 1, sb%periodic_dim
-      d%kpoints(idim, 1) = M_ZERO
-    end do
+    d%kpoints(1:MAX_DIM, 1) = M_ZERO
 
     call print_kpoints_debug
     call pop_sub()
@@ -166,8 +163,7 @@ subroutine states_choose_kpoints(d, sb, geo)
   end do
   if (any(d%nik_axis < 1)) then
     message(1) = 'Input: KPointsMonkhorstPack is not valid'
-    message(2) = '(KPointsMP >= 1)'
-    call write_fatal(2)
+    call write_fatal(1)
   end if
   nkmax = PRODUCT(d%nik_axis)
 

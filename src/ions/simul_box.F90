@@ -1107,8 +1107,6 @@ contains
     integer :: red, green, blue, ix, iy
 #endif
 
-    call push_sub('simul_box.simul_box_in_box')
-
     factor = M_ONE
     if(present(inner_box)) then
       if(inner_box) factor = sb%inner_size
@@ -1164,16 +1162,12 @@ contains
       in_box = in_box .and. (re .ne. M_ZERO)
     end select
 
-    call pop_sub()
-
   contains
 
     !--------------------------------------------------------------
     logical function in_minimum()
       integer :: i
       FLOAT :: radius
-
-      call push_sub('simul_box.simul_box_in_box.in_minimum')
 
       in_minimum = .false.
       do i = 1, geo%natoms
@@ -1189,7 +1183,6 @@ contains
         end if
       end do
 
-      call pop_sub()
     end function in_minimum
   end function simul_box_in_box
 
