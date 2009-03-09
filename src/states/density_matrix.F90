@@ -318,6 +318,17 @@ contains
         end do
         call io_close(iunit)
 
+        write(filename,'(a,i3.3,a,i2.2)') trim(dirname)//'/density_', ikeeppart,'_', mm
+        iunit = io_open(filename,action='write')
+        do jj = 1, npt_1part
+          call hypercube_i_to_x(hypercube_1part, ndim1part, nr_1part, 0, jj, ix_1part)
+          do idir=1,ndim1part
+            write(iunit,'(es11.3)', ADVANCE='no') ix_1part(idir)*h_1part(idir)-origin(idir)
+          end do
+          write(iunit,'(es11.3,es11.3)') real(densmatr(jj,jj)), aimag(densmatr(jj,jj))
+        end do
+        call io_close(iunit)
+
         write(filename,'(a,i3.3,a,i2.2)') trim(dirname)//'/potential_', ikeeppart,'_', mm
         iunit = io_open(filename,action='write')
         do ll=1, npt_1part
