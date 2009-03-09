@@ -102,7 +102,7 @@ contains
     !%Section States
     !%Description
     !% choice of which particle density matrices will be calculated and output, in the
-    !%  embedded particles scheme
+    !%  embedded particles scheme (the corresponding density is also output)
     !%
     !% <tt>%DensityMatricestoCalc
     !% <br>&nbsp;&nbsp; proton   | 1 | 10
@@ -244,10 +244,10 @@ contains
         ! Only node zero writes.
         if(.not. mpi_grp_is_root(mpi_world)) cycle
 
-        do ll = 1, npt_1part
-          density(ll)= real(densmatr(ll,ll))
-          sqrdensity(ll)=sqrt(density(ll))
-        end do
+!        do ll = 1, npt_1part
+!          density(ll)= real(densmatr(ll,ll))
+!          sqrdensity(ll)=sqrt(density(ll))
+!        end do
           
 !        do ll = 1, npt_1part
 !          do jj = 1, npt_1part
@@ -329,16 +329,16 @@ contains
         end do
         call io_close(iunit)
 
-        write(filename,'(a,i3.3,a,i2.2)') trim(dirname)//'/potential_', ikeeppart,'_', mm
-        iunit = io_open(filename,action='write')
-        do ll=1, npt_1part
-          call hypercube_i_to_x(hypercube_1part, ndim1part, nr_1part, 0, ll, ix_1part)
-          do idir=1,ndim1part
-            write(iunit,'(es11.3)', ADVANCE='no') ix_1part(idir)*h_1part(idir)-origin(idir)
-          end do
-          write(iunit,'(es11.3,es11.3,es11.3)') potential(ll), hartreep(ll), potential(ll)-hartreep(ll)
-        end do
-        call io_close(iunit)
+!        write(filename,'(a,i3.3,a,i2.2)') trim(dirname)//'/potential_', ikeeppart,'_', mm
+!        iunit = io_open(filename,action='write')
+!        do ll=1, npt_1part
+!          call hypercube_i_to_x(hypercube_1part, ndim1part, nr_1part, 0, ll, ix_1part)
+!          do idir=1,ndim1part
+!            write(iunit,'(es11.3)', ADVANCE='no') ix_1part(idir)*h_1part(idir)-origin(idir)
+!          end do
+!          write(iunit,'(es11.3,es11.3,es11.3)') potential(ll), hartreep(ll), potential(ll)-hartreep(ll)
+!        end do
+!        call io_close(iunit)
 
         !Diagonalize 2 particle wave function as well
           
