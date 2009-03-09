@@ -37,8 +37,8 @@ match ; Cross sect. (avg) w=0.1    ; LINE(linear/freq_0.1000/cross_section, -1, 
 match ; Cross sect. (ani) w=0.1    ; LINE(linear/freq_0.1000/cross_section, -1, 45) ; 0.13986866E-01
 
 Precision : 0.02
-match ; Hyperpolarizability w=0.0  ; GREP(linear/freq_0.0000/beta, 'beta // y', 10) ; -0.23377144E+02
-match ; Hyperpolarizability w=0.1  ; GREP(linear/freq_0.1000/beta, 'beta // y', 10) ;  0.86739306E+02
+match ; Hyperpolarizability w=0.0  ; GREP(linear/freq_0.0000/beta, 'beta // y', 10) ; -0.23297098E+02
+match ; Hyperpolarizability w=0.1  ; GREP(linear/freq_0.1000/beta, 'beta // y', 10) ;  0.86807666E+02
 
 Input: 02-h2o_pol_lr.04_h2o_susc.inp
 Precision : 0.001
