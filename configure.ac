@@ -294,7 +294,7 @@ if test x"$enable_mpi" != x"no"; then
 fi
 
 dnl now I run configure for the internal libraries
-AC_CONFIG_SUBDIRS([libstring_f])
+# AC_CONFIG_SUBDIRS([libstring_f])
 
 AC_CONFIG_SUBDIRS([external_libs/spglibs])
 

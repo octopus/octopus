@@ -28,6 +28,7 @@ liboct_parser_a_SOURCES = symbols.c parse.c parse_exp.c parser_f.c gsl_userdef.c
 noinst_HEADERS = grammar.c symbols.h gsl_userdef.h
 include_HEADERS = liboct_parser.h
 
-AM_CPPFLAGS = -I$(top_srcdir)/libstring_f
+#AM_CPPFLAGS = -I$(top_srcdir)/libstring_f
+AM_CPPFLAGS = -I$(top_srcdir)/liboct_parser
 
 CLEANFILES = *~ *.bak
