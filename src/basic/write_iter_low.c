@@ -93,7 +93,7 @@ void FC_FUNC_(write_iter_init, WRITE_ITER_INIT)
 {
 	write_iter *w;
 	w = (write_iter *)malloc(sizeof(write_iter));
-	w->filename = TO_C_STR1(fname);
+	TO_C_STR1(fname, w->filename);
 	w->buf = NULL;
 	w->pos = w->size = 0;
 	w->iter = *i;
@@ -232,11 +232,11 @@ void FC_FUNC_(write_iter_int_n, WRITE_ITER_INT_N)
 void FC_FUNC_(write_iter_string, WRITE_ITER_STRING)
 		 (void **v, STR_F_TYPE s STR_ARG1)
 {
-	char *c;
+  char *c;
 
-	c = TO_C_STR1(s);
-	write_iter_string_work((write_iter *)*v, c);
-	free(c);
+  TO_C_STR1(s, c);
+  write_iter_string_work((write_iter *)*v, c);
+  free(c);
 }
 
 void FC_FUNC_(write_iter_header_start, WRITE_ITER_HEADER_START)
@@ -251,10 +251,10 @@ void FC_FUNC_(write_iter_header_start, WRITE_ITER_HEADER_START)
 void FC_FUNC_(write_iter_header, WRITE_ITER_HEADER)
 		 (void **v, STR_F_TYPE s STR_ARG1)
 {
-	char *c;
-	c = TO_C_STR1(s);
-	write_iter_header_work((write_iter *)*v, c);
-	free(c);
+  char *c;
+  TO_C_STR1(s, c);
+  write_iter_header_work((write_iter *)*v, c);
+  free(c);
 }
 
 void FC_FUNC_(write_iter_nl, WRITE_ITER_NL)

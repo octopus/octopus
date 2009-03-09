@@ -37,7 +37,11 @@ void FC_FUNC_(set_number_clarg, SET_NUMBER_CLP)(int *nargc)
 }
 
 void FC_FUNC_(set_clarg, SET_CLARG)(int *i, STR_F_TYPE arg STR_ARG1)
-{ argv[*i] = TO_C_STR1(arg);}
+{
+  char *c;
+  TO_C_STR1(arg, c)
+  argv[*i] = c;
+}
 
 
 /* FUNCTIONS TO BE USED BY THE PROGRAM oct-oscillator-strength */

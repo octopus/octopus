@@ -44,7 +44,7 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/include   \
 	-I$(top_builddir)/src/include \
         -I$(top_srcdir)/external_libs/spglib/src \
-	-I$(top_srcdir)/libstring_f
+	-I$(top_srcdir)/libxc/src
 
 AM_CCASFLAGS = \
 	-I$(top_builddir)/
@@ -75,7 +75,6 @@ core_LIBS = \
 	@LIBS_LAPACK@ @LIBS_BLAS@                     \
 	$(top_builddir)/liboct_parser/liboct_parser.a \
 	$(top_builddir)/libxc/src/libxc.a             \
-	-L$(top_builddir)/libstring_f -lstring_f      \
 	@GSL_LIBS@ @GD_LIBS@ @FCEXTRALIBS@
 
 external_LIBS = \

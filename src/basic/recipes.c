@@ -44,7 +44,7 @@ void FC_FUNC_(oct_printrecipe, OCT_PRINTRECIPE)
   if(lang == NULL) lang = "en";
 
   /* convert directory from Fortran to C string */
-  tmp = TO_C_STR1(_dir);
+  TO_C_STR1(_dir, tmp);
   strcpy(dir, tmp);
   free(tmp);
 

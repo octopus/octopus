@@ -200,7 +200,7 @@ void FC_FUNC_(write_binary,WRITE_BINARY)
 
   *ierr = 0;
 
-  filename = TO_C_STR1(fname);
+  TO_C_STR1(fname, filename);
   fd = open (filename, O_WRONLY | O_CREAT | O_TRUNC, 
 	     S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH );
   if( fd < 0 ) {
@@ -247,7 +247,7 @@ void FC_FUNC_(read_binary,READ_BINARY)
   int correct_endianness;
   byte * read_f;
 
-  filename = TO_C_STR1(fname);
+  TO_C_STR1(fname, filename);
   fd = open(filename, O_RDONLY);
   if(fd < 0){
     *ierr = 2;

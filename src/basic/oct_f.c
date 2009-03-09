@@ -62,7 +62,7 @@ void FC_FUNC_(oct_mkdir, OCT_MKDIR)
   struct stat buf;
   char *name_c;
 
-  name_c = TO_C_STR1(name);
+  TO_C_STR1(name, name_c);
   if(!*name_c) return;
 
   if(stat(name_c, &buf) == 0){
@@ -79,9 +79,9 @@ void FC_FUNC_(oct_stat, OCT_STAT)
   char *name_c;
   struct stat statbuf;
 
-  name_c = TO_C_STR1(name);
-	/* for the moment we are only interested in the return value
-		 could be extended if required. */
+  TO_C_STR1(name, name_c);
+  /* for the moment we are only interested in the return value
+     could be extended if required. */
   *ierr = stat(name_c, &statbuf);
 }
 
@@ -90,7 +90,7 @@ void FC_FUNC_(oct_rm, OCT_RM)
 {
   char *name_c;
 
-  name_c = TO_C_STR1(name);
+  TO_C_STR1(name, name_c);
   unlink(name_c);
   free(name_c);
 }
@@ -108,14 +108,15 @@ void FC_FUNC_(oct_getenv, OCT_GETENV)
 {
   char *name_c, *var_c;
 
-  name_c = TO_C_STR1(var);
+  TO_C_STR1(var, name_c);
   var_c = getenv(name_c);
   free(name_c);
 
-  if(var_c != NULL)
+  if(var_c != NULL){
     TO_F_STR2(var_c, value);
-  else
+  }else{
     TO_F_STR2("", value);
+  }
 }
 
 /* this function gets a string of the form '1-12, 34' and fills
@@ -126,7 +127,7 @@ void FC_FUNC_(oct_wfs_list, OCT_WFS_LIST)
   int i, i1, i2;
   char c[20], *c1, *str_c, *s;
 
-  str_c = TO_C_STR1(str);
+  TO_C_STR1(str, str_c);
   s = str_c;
   
   /* clear list */
@@ -247,7 +248,7 @@ int FC_FUNC_(number_of_lines, NUMBER_OF_LINES)
   int c, i;
   char *name_c;
 
-  name_c = TO_C_STR1(name);
+  TO_C_STR1(name, name_c);
   pf = fopen(name_c, "r");
   free(name_c);
   
@@ -318,9 +319,8 @@ void FC_FUNC_(oct_search_file_lr, OCT_SEARCH_FILE_LR)
   double read_value, min;
   int found_something, read_tag;
 
-  name_c = TO_C_STR1(dirname);
+  TO_C_STR1(dirname, name_c);
   dir = opendir(name_c);
-
 
   if(dir == NULL){
     *ierr = 2;

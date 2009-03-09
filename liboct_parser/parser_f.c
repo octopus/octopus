@@ -50,7 +50,7 @@ int FC_FUNC_(oct_parse_init, OCT_PARSE_INIT)
   int r;
   char *s_c;
   
-  s_c  = TO_C_STR1(s);
+  TO_C_STR1(s, s_c);
   r = parse_init(s_c, dont_write); 
   free(s_c);
   
@@ -62,7 +62,9 @@ int FC_FUNC_(oct_parse_init, OCT_PARSE_INIT)
 void FC_FUNC_(oct_parse_putsym_int, OCT_PARSE_PUTSYM_INT)
 	(STR_F_TYPE s, int *i  STR_ARG1)
 {
-  char *s_c = TO_C_STR1(s);
+  char *s_c;
+
+  TO_C_STR1(s, s_c);
   parse_putsym_int(s_c, *i);
   free(s_c);
 }
@@ -72,7 +74,9 @@ void FC_FUNC_(oct_parse_putsym_int, OCT_PARSE_PUTSYM_INT)
 void FC_FUNC_(oct_parse_putsym_double, OCT_PARSE_PUTSYM_DOUBLE)
 	(STR_F_TYPE s, double *d STR_ARG1)
 {
-  char *s_c = TO_C_STR1(s);
+  char *s_c;
+
+  TO_C_STR1(s, s_c);
   parse_putsym_double(s_c, *d);
   free(s_c);
 }
@@ -82,7 +86,9 @@ void FC_FUNC_(oct_parse_putsym_double, OCT_PARSE_PUTSYM_DOUBLE)
 void FC_FUNC_(oct_parse_putsym_complex, OCT_PARSE_PUTSYM_COMPLEX)
 	(STR_F_TYPE s, gsl_complex *c STR_ARG1)
 {
-  char *s_c = TO_C_STR1(s);
+  char *s_c;
+
+  TO_C_STR1(s, s_c);
   parse_putsym_complex(s_c, *c);
   free(s_c);
 }
@@ -95,7 +101,7 @@ int FC_FUNC_(oct_parse_input, OCT_PARSE_INPUT)
   int r;
   char *s_c;
   
-  s_c  = TO_C_STR1(s);
+  TO_C_STR1(s, s_c);
   r = parse_input(s_c); 
   free(s_c);
   
@@ -120,7 +126,7 @@ int FC_FUNC_(oct_parse_isdef, OCT_PARSE_ISDEF)
   int r;
   char *name_c;
   
-  name_c = TO_C_STR1(name);
+  TO_C_STR1(name, name_c);
   r = parse_isdef(name_c); 
   free(name_c);
   
@@ -133,7 +139,8 @@ void FC_FUNC_(oct_parse_int, OCT_PARSE_INT)
 	(STR_F_TYPE name, int *def, int *res STR_ARG1)
 { 
   char *name_c;
-  name_c = TO_C_STR1(name);
+
+  TO_C_STR1(name, name_c);
   *res = parse_int(name_c, *def);
   free(name_c);
 }
@@ -144,7 +151,8 @@ void FC_FUNC_(oct_parse_double, OCT_PARSE_DOUBLE)
 	(STR_F_TYPE name, double *def, double *res STR_ARG1)
 {
   char *name_c;
-  name_c = TO_C_STR1(name);
+
+  TO_C_STR1(name, name_c);
   *res = parse_double(name_c, *def);
   free(name_c);
 }
@@ -155,7 +163,8 @@ void FC_FUNC_(oct_parse_complex, OCT_PARSE_COMPLEX)
 	(STR_F_TYPE name, gsl_complex *def, gsl_complex *res STR_ARG1)
 {
   char *name_c;
-  name_c = TO_C_STR1(name);
+
+  TO_C_STR1(name, name_c);
   *res = parse_complex(name_c, *def);
   free(name_c);
 }
@@ -167,12 +176,11 @@ void FC_FUNC_(oct_parse_string, OCT_PARSE_STRING)
 {
   char *c, *name_c, *def_c;
   
-  name_c = TO_C_STR1(name);      /* convert string to c strings */
-  def_c  = TO_C_STR2(def);
+  TO_C_STR1(name, name_c);
+  TO_C_STR2(def, def_c);
   c = parse_string(name_c, def_c); 
   TO_F_STR3(c, res);             /* convert string to fortran */
-  free(name_c); free(def_c);     /* this has to be *after* the to_f_str
-																		or we will have memory problems */
+  free(name_c); free(def_c);     /* this has to be *after* the to_f_str or we will have memory problems */
 }
 
 
@@ -189,21 +197,21 @@ static char *block_name = NULL;
 int FC_FUNC_(oct_parse_block, OCT_PARSE_BLOCK)
 	(STR_F_TYPE name, sym_block **blk STR_ARG1)
 {
-	int r;
+  int r;
 
   if(block_name != NULL){
-		free(block_name);
-		block_name = NULL;
+    free(block_name);
+    block_name = NULL;
   }
 
-  block_name = TO_C_STR1(name);
+  TO_C_STR1(name, block_name);
   r = parse_block(block_name, blk);
 
-	if(r != 0){
-		free(block_name);
-		block_name = NULL;
-	}
-	return r;
+  if(r != 0){
+    free(block_name);
+    block_name = NULL;
+  }
+  return r;
 }
 
 
@@ -215,7 +223,7 @@ void FC_FUNC_(oct_parse_block_end, OCT_PARSE_BLOCK_END)
 
   parse_block_end(blk);
   free(block_name);
-	block_name = NULL;
+  block_name = NULL;
 }
 
 
@@ -285,7 +293,7 @@ void FC_FUNC_(oct_parse_expression, OCT_PARSE_EXPRESSION)
   parse_result c;
   char *s_c;
 
-  s_c  = TO_C_STR1(pot);
+  TO_C_STR1(pot, s_c);
   
   rec = putsym("x", S_CMPLX);
   GSL_SET_COMPLEX(&rec->value.c, x[0], 0);
@@ -340,8 +348,8 @@ void FC_FUNC_(oct_parse_expression1, OCT_PARSE_EXPRESSION1)
   parse_result c;
   char *s_c, *var_c;
 
-  var_c = TO_C_STR1(variable);
-  s_c  = TO_C_STR2(string);
+  TO_C_STR1(variable, var_c);
+  TO_C_STR2(string, s_c);
 
   rec = putsym(var_c, S_CMPLX);
   GSL_SET_COMPLEX(&rec->value.c, *val, 0);

@@ -26,7 +26,7 @@ if ENABLE_PERL
 endif
 
 SUBDIRS =        \
-	external_libs libstring_f liboct_parser libxc \
+	external_libs liboct_parser libxc \
 	src share doc testsuite $(PERL_DIR)
 
 EXTRA_DIST =     \

@@ -113,7 +113,7 @@ void FC_FUNC_(varinfo_init, VARINFO_INIT)
   var_type *lvar = NULL;
   opt_type *lopt;
 
-  fname_c = TO_C_STR1(fname);
+  TO_C_STR1(fname, fname_c);
 
   in = fopen(fname_c, "r");
   if(!in) goto out;
@@ -228,7 +228,7 @@ void FC_FUNC_(varinfo_getvar, VARINFO_GETVAR)
   char *name_c;
   var_type *lvar;
 
-  name_c = TO_C_STR1(name);
+  TO_C_STR1(name, name_c);
   for(lvar=vars; (lvar!=NULL) && (strcasecmp(name_c, lvar->name)!=0); lvar=lvar->next);
   free(name_c);
 
@@ -292,7 +292,25 @@ found.
  --------------------------------------------------------- */
 
 #ifndef HAVE_STRCASESTR
-char *strcasestr( char * haystack, char * needle );
+char *strcasestr (char *haystack, char *needle)
+{
+  char *p, *startn = 0, *np = 0;
+  
+  for (p = haystack; *p; p++) {
+    if (np) {
+      if (toupper(*p) == toupper(*np)) {
+	if (!*++np)
+	  return startn;
+      } else
+	np = 0;
+    } else if (toupper(*p) == toupper(*needle)) {
+      np = needle + 1;
+      startn = p;
+    }
+  }
+  
+  return 0;
+}
 #endif
 
 void FC_FUNC_(varinfo_search_var, VARINFO_SEARCH_VAR)
@@ -304,36 +322,9 @@ void FC_FUNC_(varinfo_search_var, VARINFO_SEARCH_VAR)
   if ( *var == NULL ) lvar = vars;
   else lvar = (*var) -> next;
   
-  name_c = TO_C_STR1(name);
+  TO_C_STR1(name, name_c);
   for(; (lvar!=NULL) && (strcasestr(lvar->name, name_c)==0); lvar=lvar->next);
   free(name_c);
 
   *var = lvar;
 }
-
-#ifndef HAVE_STRCASESTR
-char *strcasestr( char * haystack, char * needle )
-{
-  char *s1;
-  char *s2;
-  char *ptr;
-  
-  s1 = strdup(haystack);
-  s2 = strdup(needle);
-  
-  for ( ptr = s1; *ptr != '\0'; ptr++ ) *ptr = tolower( *ptr );
-  
-  for ( ptr = s2; *ptr != '\0'; ptr++ ) *ptr = tolower( *ptr );
-  
-  ptr = strstr( s1, s2 );
-  
-  if ( ptr == (char *)NULL )
-    return (char *)NULL;
-  else
-    return haystack + (ptr - s1);
-  
-  free(s1);
-  free(s2);
-  
-}
-#endif

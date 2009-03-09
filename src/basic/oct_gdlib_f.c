@@ -38,7 +38,7 @@ gdImagePtr FC_FUNC_(oct_gdimage_create_from, OCT_GDIMAGE_CREATE_FROM)
   FILE *in;
   gdImagePtr im;
 
-  name_c = TO_C_STR1(name);
+  TO_C_STR1(name, name_c);
 
   if((in = fopen(name_c, "rb")) == NULL) 
     return NULL; /* could not open file */
