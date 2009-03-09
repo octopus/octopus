@@ -161,6 +161,7 @@ contains
     ALLOCATE(npoints(ndims), ndims)
     do j = 1, ndims
       npoints(j) = gr%mesh%idx%ll(j)
+      write (*,*) 'npoints, nr = ', npoints(j), gr%mesh%idx%nr(:,j)
     end do
 
     ndim1part=embeddedparticles%ndim_embedded
@@ -219,6 +220,7 @@ contains
         irealdir=(ikeeppart-1)*ndim1part + idir
         origin(idir)=(npoints(irealdir)/2+1)*gr%mesh%h(irealdir)
       end do
+!      origin=0.0d0
 
 !   loop over states to get density matrices for excited states too
       states_loop: do mm = 1, st%nst
@@ -276,7 +278,7 @@ contains
         evectors = evectors/sqrt(vol_elem_1part)
         evalues  = evalues*vol_elem_1part
 
-        write(filename,'(a,i2.2)') trim(dirname)//'/occnumb_',mm
+        write(filename,'(a,i3.3,a,i2.2)') trim(dirname)//'/occnumb_',ikeeppart,'_',mm
         iunit = io_open(trim(filename), action='write')
 
         do jj = npt_1part, 1, -1
@@ -286,7 +288,7 @@ contains
         call io_close(iunit)
 
         do jj = npt_1part-10, npt_1part
-          write(filename,'(a,i2.2,a,i4.4)') trim(dirname)//'/natorb_', mm, '_', npt_1part-jj+1
+          write(filename,'(a,i3.3,a,i2.2,a,i4.4)') trim(dirname)//'/natorb_', ikeeppart,'_', mm, '_', npt_1part-jj+1
           iunit = io_open(filename, action='write')
           do ll = 1, npt_1part
             call hypercube_i_to_x(hypercube_1part, ndim1part, nr_1part, 0, ll, ix_1part)
@@ -298,7 +300,7 @@ contains
         call io_close(iunit)
         end do
 
-        write(filename,'(a,i2.2)') trim(dirname)//'/densmatr_', mm
+        write(filename,'(a,i3.3,a,i2.2)') trim(dirname)//'/densmatr_', ikeeppart,'_', mm
         iunit = io_open(filename,action='write')
         do jj = 1, npt_1part
           call hypercube_i_to_x(hypercube_1part, ndim1part, nr_1part, 0, jj, ix_1part)
@@ -312,10 +314,11 @@ contains
             end do
             write(iunit,'(es11.3,es11.3)') real(densmatr(jj,ll)), aimag(densmatr(jj,ll))
           end do
+          write(iunit,*)
         end do
         call io_close(iunit)
 
-        write(filename,'(a,i2.2)') trim(dirname)//'/potential_', mm
+        write(filename,'(a,i3.3,a,i2.2)') trim(dirname)//'/potential_', ikeeppart,'_', mm
         iunit = io_open(filename,action='write')
         do ll=1, npt_1part
           call hypercube_i_to_x(hypercube_1part, ndim1part, nr_1part, 0, ll, ix_1part)
