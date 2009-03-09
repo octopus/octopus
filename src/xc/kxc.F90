@@ -19,16 +19,15 @@
 
 
 ! ---------------------------------------------------------
-! this is for the third derivative of Exc, for the moment is a copy
-! of the function above
-subroutine xc_get_kxc(xcs, m, rho, ispin, kxc)
+! this is for the third derivative of Exc
+subroutine xc_get_kxc(xcs, mesh, rho, ispin, kxc)
   type(xc_t), target, intent(in)    :: xcs
-  type(mesh_t),       intent(in)    :: m
+  type(mesh_t),       intent(in)    :: mesh
   FLOAT, intent(in)                 :: rho(:, :)
   integer, intent(in)               :: ispin
   FLOAT,              intent(inout) :: kxc(:,:,:,:)
 
-  FLOAT, allocatable :: dens(:,:), dedd(:,:,:,:), l_dens(:), l_dedd(:,:,:)
+  FLOAT, allocatable :: dens(:,:), dedd(:,:), l_dens(:), l_dedd(:)
 
   integer :: i, ixc, spin_channels
 
@@ -41,17 +40,22 @@ subroutine xc_get_kxc(xcs, m, rho, ispin, kxc)
   end if
 
   ! is there anything to do? (only LDA by now)
-  if(iand(xcs%kernel_family, XC_FAMILY_LDA) == 0) return
+  if(iand(xcs%kernel_family, NOT(XC_FAMILY_LDA)).ne.XC_FAMILY_NONE) then
+    message(1) = "Only LDA Functionals are authorized for now in xc_get_kxc"
+    call write_fatal(1)
+  end if
+
+  if(xcs%kernel_family == XC_FAMILY_NONE) return ! nothing to do
 
   ! really start
-  call push_sub('xc_kxc.xc_get_vxc')
+  call push_sub('xc_kxc.xc_get_kxc')
 
   ! This is a bit ugly (why functl(1) and not functl(2)?, but for the moment it works.
   spin_channels = functl(1)%spin_channels
 
   call  lda_init()
 
-  space_loop: do i = 1, m%np
+  space_loop: do i = 1, mesh%np
 
     ! make a local copy with the correct memory order
     l_dens (:)   = dens (i, :)
@@ -61,14 +65,14 @@ subroutine xc_get_kxc(xcs, m, rho, ispin, kxc)
 
       select case(functl(ixc)%family)
       case(XC_FAMILY_LDA)
-        call XC_F90(lda_kxc)(functl(ixc)%conf, l_dens(1), l_dedd(1,1,1))
+        call XC_F90(lda_kxc)(functl(ixc)%conf, l_dens(1), l_dedd(1))
 
       case default
         cycle
       end select
 
       ! store results
-      dedd(i,:,:,:) = dedd(i,:,:,:) + l_dedd(:,:,:)
+      dedd(i,:) = dedd(i,:) + l_dedd(:)
 
     end do functl_loop
   end do space_loop
@@ -92,14 +96,14 @@ contains
     FLOAT   :: d(spin_channels)
 
     ! allocate some general arrays
-    ALLOCATE(  dens(m%np, spin_channels),                               m%np*spin_channels)
-    ALLOCATE(  dedd(m%np, spin_channels, spin_channels, spin_channels), m%np*spin_channels**3)
-    ALLOCATE(l_dens(spin_channels),                                          spin_channels)
-    ALLOCATE(l_dedd(spin_channels, spin_channels, spin_channels),            spin_channels**3)
+    ALLOCATE(  dens(mesh%np, spin_channels),               mesh%np*spin_channels)
+    ALLOCATE(  dedd(mesh%np, spin_channels*spin_channels), mesh%np*spin_channels**2)
+    ALLOCATE(l_dens(spin_channels),                                spin_channels)
+    ALLOCATE(l_dedd(spin_channels*spin_channels),                  spin_channels**2)
     dedd = M_ZERO
 
     ! get the density
-    do i = 1, m%np
+    do i = 1, mesh%np
       d(:) = rho(i, :)
 
       select case(ispin)
@@ -125,10 +129,22 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! calculates the LDA part of vxc, taking into account non-collinear spin
+  ! calculates the LDA part of vxc
   subroutine lda_process()
+    integer :: i
 
-    kxc = kxc + dedd
+    forall(i = 1:mesh%np) kxc(i,1,1,1) = kxc(i,1,1,1) + dedd(i,1)
+    if(ispin == SPIN_POLARIZED) then
+      forall(i = 1:mesh%np)
+        kxc(i,1,1,2) = kxc(i,1,1,2) + dedd(i,2)
+        kxc(i,1,2,1) = kxc(i,1,2,1) + dedd(i,2)
+        kxc(i,1,2,2) = kxc(i,1,2,2) + dedd(i,3)
+        kxc(i,2,1,1) = kxc(i,2,1,1) + dedd(i,2)
+        kxc(i,2,1,2) = kxc(i,2,1,2) + dedd(i,3)
+        kxc(i,2,2,1) = kxc(i,2,2,1) + dedd(i,3)
+        kxc(i,2,2,2) = kxc(i,2,2,2) + dedd(i,4)
+      end forall
+    end if
   end subroutine lda_process
 
 end subroutine xc_get_kxc

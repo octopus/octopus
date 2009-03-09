@@ -31,6 +31,14 @@ subroutine xc_get_fxc(xcs, m, rho, ispin, fxc)
 
   type(xc_functl_t), pointer :: functl(:)
 
+  ! is there anything to do? (only LDA by now)
+  if(iand(xcs%kernel_family, NOT(XC_FAMILY_LDA)).ne.XC_FAMILY_NONE) then
+    message(1) = "Only LDA Functionals are authorized for now in xc_get_fxc"
+    call write_fatal(1)
+  end if
+
+  if(xcs%kernel_family == XC_FAMILY_NONE) return ! nothing to do
+
   call push_sub('xc_fxc.xc_get_fxc')
 
   if(ispin == UNPOLARIZED) then
@@ -39,53 +47,38 @@ subroutine xc_get_fxc(xcs, m, rho, ispin, fxc)
     functl => xcs%kernel(:, 2)
   end if
 
-  ! is there anything to do? (only LDA by now)
-  if( iand(xcs%kernel_family, XC_FAMILY_LDA) /= 0 ) then 
     
-    ! This is a bit ugly (why functl(1) and not functl(2)?, but for the moment it works.
-    spin_channels = functl(1)%spin_channels
+  ! This is a bit ugly (why functl(1) and not functl(2)?, but for the moment it works.
+  spin_channels = functl(1)%spin_channels
     
-    call  lda_init()
+  call  lda_init()
     
-    space_loop: do i = 1, m%np
+  space_loop: do i = 1, m%np
       
-      ! make a local copy with the correct memory order
-      l_dens (:)   = dens (i, :)
+    ! make a local copy with the correct memory order
+    l_dens (:)   = dens (i, :)
       
-      ! Calculate fxc
-      functl_loop: do ixc = 1, 2
+    ! Calculate fxc
+    functl_loop: do ixc = 1, 2
         
-        select case(functl(ixc)%family)
-        case(XC_FAMILY_LDA)
-          call XC_F90(lda_fxc)(functl(ixc)%conf, l_dens(1), l_dedd(1))
-          
-        case(XC_FAMILY_GGA)
-          message(1) = 'GGAs are currently disabled.'
-          call write_fatal(1)
-
-        case(XC_FAMILY_HYB_GGA)
-          message(1) = 'Hyb-GGAs are currently disabled.'
-          call write_fatal(1)
-
-        case(XC_FAMILY_MGGA)
-          message(1) = 'Meta-GGAs are currently disabled.'
-          call write_fatal(1)
-
-        case default
-          cycle
-        end select
+      select case(functl(ixc)%family)
+      case(XC_FAMILY_LDA)
+        call XC_F90(lda_fxc)(functl(ixc)%conf, l_dens(1), l_dedd(1))
         
-        ! store results
-        dedd(i,:) = dedd(i,:) + l_dedd(:)
+      case default
+        cycle
+      end select
+      
+      ! store results
+      dedd(i,:) = dedd(i,:) + l_dedd(:)
         
-      end do functl_loop
-    end do space_loop
+    end do functl_loop
+  end do space_loop
+  
+  call  lda_process()
     
-    call  lda_process()
-    
-    ! clean up allocated memory
-    call  lda_end()
-  end if
+  ! clean up allocated memory
+  call  lda_end()
   
   call pop_sub()
 

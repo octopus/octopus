@@ -235,7 +235,7 @@ contains
   ! ---------------------------------------------------------
   ! calculates the LDA part of vxc, taking into account non-collinear spin
   subroutine lda_process()
-    integer :: i, j
+    integer :: i
     FLOAT :: d(2), dpol, vpol
 
     call push_sub('vxc.xc_get_vxc.lda_process')
