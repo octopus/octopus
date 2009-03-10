@@ -138,8 +138,12 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, t, kinetic_only)
           if(any(laser_requires_gradient(hm%ep%lasers(1:hm%ep%no_lasers)))) call X(get_grad)(hm, gr, epsi, grad)
           call X(vlasers)(hm%ep%lasers, hm%ep%no_lasers, gr, hm%d, epsi, hpsi, grad, ik, t, hm%ep%gyromagnetic_ratio, hm%ep%a_static)
         end if
-
-        if (gauge_field_is_applied(hm%ep%gfield)) call X(vgauge)(gr, hm, epsi, hpsi, grad)
+#ifdef R_TCOMPLEX
+        if (gauge_field_is_applied(hm%ep%gfield)) then
+          call X(get_grad)(hm, gr, psi, grad)
+          call gauge_field_apply(hm%ep%gfield, gr, hm%d%dim, epsi, grad, hpsi)
+        end if
+#endif
       end if
       
       if(hm%theory_level == HARTREE .or. hm%theory_level == HARTREE_FOCK) &
@@ -617,37 +621,6 @@ subroutine X(vexternal) (hm, gr, psi, hpsi, ik)
   call pop_sub()
   call profiling_out(C_PROFILING_VLPSI)
 end subroutine X(vexternal)
-
-! ---------------------------------------------------------
-subroutine X(vgauge) (gr, hm, psi, hpsi, grad)
-  type(grid_t),        intent(inout) :: gr
-  type(hamiltonian_t), intent(in)    :: hm
-  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, hm%d%dim)
-  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, hm%d%dim)
-  R_TYPE,              pointer       :: grad(:, :, :)
-
-  integer :: ip, idim, a2
-  FLOAT :: vecpot(1:MAX_DIM)
-
-  call push_sub('hamiltonian_inc.Xvgauge')
-
-  ASSERT(gauge_field_is_applied(hm%ep%gfield))
-
-  call X(get_grad)(hm, gr, psi, grad)
-
-  vecpot = gauge_field_get_vec_pot(hm%ep%gfield)/P_c
-  a2 = sum(vecpot(1:MAX_DIM)**2)
-  
-  do idim = 1, hm%d%dim
-    do ip = 1, NP
-      hpsi(ip, idim) = hpsi(ip, idim) + &
-           M_HALF*a2*psi(ip, idim) + M_zI*dot_product(vecpot(1:MAX_DIM), grad(ip, 1:MAX_DIM, idim))
-    end do
-  end do
-
-  call pop_sub()
-end subroutine X(vgauge)
-
 
 ! ---------------------------------------------------------
 subroutine X(vborders) (gr, hm, psi, hpsi)

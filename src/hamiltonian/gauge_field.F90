@@ -65,6 +65,7 @@ module gauge_field_m
     gauge_field_propagate_vel,            &
     gauge_field_get_force,                &
     gauge_field_get_energy,               &
+    gauge_field_apply,                    &
     gauge_field_end
 
   type gauge_field_t
@@ -307,6 +308,32 @@ contains
 
   end function gauge_field_get_energy
 
+  ! ---------------------------------------------------------
+  subroutine gauge_field_apply(this, gr, dim, psi, grad, hpsi)
+    type(gauge_field_t), intent(in)    :: this
+    type(grid_t),        intent(inout) :: gr
+    integer,             intent(in)    :: dim
+    CMPLX,               intent(in)    :: psi(:,:)  ! psi(NP_PART, hm%d%dim)
+    CMPLX,               intent(in)    :: grad(:, :, :)
+    CMPLX,               intent(inout) :: hpsi(:,:)
+    
+    integer :: ip, idim, a2
+    FLOAT :: vecpot(1:MAX_DIM)
+    
+    call push_sub('hamiltonian_inc.Xvgauge')
+    
+    ASSERT(gauge_field_is_applied(this))
+    
+    vecpot = gauge_field_get_vec_pot(this)/P_c
+    a2 = sum(vecpot(1:MAX_DIM)**2)
+    
+    forall(idim = 1:dim, ip = 1:NP)
+      hpsi(ip, idim) = hpsi(ip, idim) + M_HALF*a2*psi(ip, idim) + M_zI*dot_product(vecpot(1:MAX_DIM), grad(ip, 1:MAX_DIM, idim))
+    end forall
+    
+    call pop_sub()
+  end subroutine gauge_field_apply
+  
 end module gauge_field_m
 
 
