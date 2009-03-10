@@ -151,7 +151,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
 
       ! iterate over the projectors
       do iatom = 1, geo%natoms
-        if(ep%proj(iatom)%type == 0) cycle
+        if(projector_is_null(ep%proj(iatom))) cycle
         do idir = 1, NDIM
 
           if(present(lr)) then

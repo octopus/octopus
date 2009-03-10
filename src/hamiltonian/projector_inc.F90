@@ -257,6 +257,7 @@ R_TYPE function X(psia_project_psib)(pj, dim, psia, psib, ik) result(apb)
 
     size = pj%reduce_size*2*(pj%lmax + 1)*(2*pj%lmax + 1)
     ALLOCATE(uvpsi(1:pj%reduce_size, 1:2, 0:pj%lmax, -pj%lmax:pj%lmax), size)
+    uvpsi = R_TOTYPE(M_ZERO)
 
     ASSERT(associated(pj%kb_p))
 
@@ -267,10 +268,11 @@ R_TYPE function X(psia_project_psib)(pj, dim, psia, psib, ik) result(apb)
         call X(kb_project_bra)(mesh, pj%sphere, pj%kb_p(ll, mm), dim, plpsi, uvpsi(:, 2, ll, mm))
       end do
     end do
-    
+
 #if defined(HAVE_MPI)
     if(mesh%parallel_in_domains) then
       ALLOCATE(uvpsi_tmp(1:pj%reduce_size, 1:2, 0:pj%lmax, -pj%lmax:pj%lmax), size)
+      uvpsi_tmp = R_TOTYPE(M_ZERO)
       call MPI_Allreduce(uvpsi, uvpsi_tmp, size, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
       uvpsi = uvpsi_tmp
       deallocate(uvpsi_tmp)
@@ -288,7 +290,7 @@ R_TYPE function X(psia_project_psib)(pj, dim, psia, psib, ik) result(apb)
       end do
     end do
 
-  else
+   else
 
     call X(project_sphere)(mesh, pj, dim, lpsi, plpsi)
 

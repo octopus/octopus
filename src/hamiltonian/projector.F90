@@ -49,6 +49,7 @@ module projector_m
   public ::                       &
        projector_t,               &
        projector_null,            &
+       projector_is_null,         &
        projector_init,            &
        projector_init_phases,     &
        projector_build,           &
@@ -83,6 +84,7 @@ module projector_m
   ! Kleinman-Bylander projector (includes spin-orbit)
 
   type projector_t
+    private
     integer :: type = M_NONE
     integer :: reduce_size
     integer :: lmax
@@ -119,6 +121,16 @@ contains
     call pop_sub()
 
   end subroutine projector_null
+  !---------------------------------------------------------
+
+
+  !---------------------------------------------------------
+  logical pure function projector_is_null(p)
+    type(projector_t), intent(in) :: p
+    projector_is_null = (p%type == M_NONE)
+  end function projector_is_null
+  !---------------------------------------------------------
+
 
   !---------------------------------------------------------
   subroutine projector_init(p, mesh, sb, atm, dim, reltype)
