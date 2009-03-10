@@ -33,6 +33,8 @@ dist_share_DATA =                                \
 	04-silicon.01-gs.inp                     \
 	05-lithium.test                          \
 	05-lithium.01-gs.inp                     \
-	05-lithium.02-td.inp
+	05-lithium.02-td.inp                     \
+	05-lithium.03-td-restart.inp
+
 
 CLEANFILES = *~ *.bak

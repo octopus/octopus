@@ -726,10 +726,10 @@ contains
 
       record_length = 28 + 3*3*20
       call io_assign(iunit)
-      open(unit = iunit, file = io_workpath('td.general/A_gauge'), &
+      open(unit = iunit, file = io_workpath('td.general/gauge_field'), &
         action='read', status='old', recl = record_length)
       if(iunit < 0) then
-        message(1) = "Could not open file '"//trim(io_workpath('td.general/A_gauge'))//"'."
+        message(1) = "Could not open file '"//trim(io_workpath('td.general/gauge_field'))//"'."
         message(2) = "Starting simulation from initial values."
         call write_warning(2)
         return

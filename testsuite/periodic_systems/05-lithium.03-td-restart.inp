@@ -1,7 +1,5 @@
 CalculationMode = td
 
-FromScratch=yes
-
 PeriodicDimensions = 3
 
 a = 6.6329387
@@ -30,4 +28,4 @@ KPointsUseSymmetries = no
 
 TDEvolutionMethod = aetrs
 TDTimeStep = 0.02
-TDMaximumIter = 20
+TDMaximumIter = 30
