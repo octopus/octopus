@@ -21,15 +21,18 @@
 
 sharedir = $(pkgdatadir)/testsuite/periodic_systems
 
-dist_share_DATA = \
-	01-free_electrons.01-ground_state.inp \
-	01-free_electrons.test \
-	02-cosine_potential.01-ground_state.inp \
-	02-cosine_potential.test \
-	03-sodium_chain.01-ground_state.inp \
+dist_share_DATA =                                \
+	01-free_electrons.01-ground_state.inp    \
+	01-free_electrons.test                   \
+	02-cosine_potential.01-ground_state.inp  \
+	02-cosine_potential.test                 \
+	03-sodium_chain.01-ground_state.inp      \
 	03-sodium_chain.02-ground_state_disp.inp \
 	03-sodium_chain.test                     \
 	04-silicon.test                          \
-	04-silicon.01-gs.inp
+	04-silicon.01-gs.inp                     \
+	05-lithium.test                          \
+	05-lithium.01-gs.inp                     \
+	05-lithium.02-td.inp
 
 CLEANFILES = *~ *.bak
