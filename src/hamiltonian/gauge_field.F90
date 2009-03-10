@@ -52,6 +52,7 @@ module gauge_field_m
   private
 
   public ::                               &
+    gauge_force_t,                        &   
     gauge_field_t,                        &
     gauge_field_init,                     &
     gauge_field_init_vec_pot,             &
@@ -68,13 +69,18 @@ module gauge_field_m
     gauge_field_apply,                    &
     gauge_field_end
 
+  type gauge_force_t
+    private
+    FLOAT   :: vecpot(1:MAX_DIM)   
+  end type gauge_force_t
+
   type gauge_field_t
     private
     FLOAT   :: vecpot(1:MAX_DIM)   
     FLOAT   :: vecpot_vel(1:MAX_DIM)
-    FLOAT   :: vecpot_acc(1:MAX_DIM)      
+    FLOAT   :: vecpot_acc(1:MAX_DIM)    
     FLOAT   :: wp2
-    logical :: with_gauge_field    
+    logical :: with_gauge_field
   end type gauge_field_t
 
 contains
@@ -118,7 +124,7 @@ contains
       call loct_parse_block_end(blk)
       
     end if
-    
+
     call pop_sub()
   end subroutine gauge_field_init
 
@@ -187,22 +193,22 @@ contains
 
   subroutine gauge_field_propagate(this, force, dt)
     type(gauge_field_t),  intent(inout) :: this
-    FLOAT,                intent(in)    :: force(1:MAX_DIM)
+    type(gauge_force_t),  intent(in)    :: force
     FLOAT,                intent(in)    :: dt
 
-    this%vecpot_acc = force
+    this%vecpot_acc(1:MAX_DIM) = force%vecpot(1:MAX_DIM)
 
-    this%vecpot = this%vecpot + dt*this%vecpot_vel + M_HALF*dt**2*force
+    this%vecpot = this%vecpot + dt*this%vecpot_vel + M_HALF*dt**2*force%vecpot
   end subroutine gauge_field_propagate
 
   ! ---------------------------------------------------------
 
   subroutine gauge_field_propagate_vel(this, force, dt)
     type(gauge_field_t),  intent(inout) :: this
-    FLOAT,                intent(in)    :: force(1:MAX_DIM)
+    type(gauge_force_t),  intent(in)    :: force
     FLOAT,                intent(in)    :: dt
 
-    this%vecpot_vel = this%vecpot_vel + M_HALF*dt*(this%vecpot_acc + force)
+    this%vecpot_vel = this%vecpot_vel + M_HALF*dt*(this%vecpot_acc + force%vecpot)
   end subroutine gauge_field_propagate_vel
 
   ! ---------------------------------------------------------
@@ -232,17 +238,17 @@ contains
 
   ! ---------------------------------------------------------
 
-  function gauge_field_get_force(this, gr, geo, pj, phases, st) result(force)
+  subroutine gauge_field_get_force(this, gr, geo, pj, phases, st, force)
     type(gauge_field_t),  intent(inout) :: this
     type(grid_t),         intent(inout) :: gr
     type(geometry_t),     intent(in)    :: geo
     type(projector_t),    intent(in)    :: pj(:)
     CMPLX,                intent(in)    :: phases(:, :)
     type(states_t),       intent(inout) :: st
+    type(gauge_force_t),  intent(out)   :: force
 
     integer :: ik, ist, idir, idim, iatom
     CMPLX, allocatable :: gpsi(:, :, :), cpsi(:, :), epsi(:, :)
-    FLOAT :: force(1:MAX_DIM)
 #ifdef HAVE_MPI
     FLOAT :: force_tmp(1:MAX_DIM)
 #endif
@@ -251,7 +257,7 @@ contains
     ALLOCATE(gpsi(gr%mesh%np, 1:NDIM, st%d%dim), gr%mesh%np*NDIM*st%d%dim)
     ALLOCATE(cpsi(gr%mesh%np, st%d%dim), gr%mesh%np*st%d%dim)
 
-    force(1:MAX_DIM) = M_ZERO
+    force%vecpot(1:MAX_DIM) = M_ZERO
     
     do ik = 1, st%d%nik
       do ist = st%st_start, st%st_end
@@ -278,7 +284,7 @@ contains
         end do
         
         do idir = 1, gr%sb%dim
-          force(idir) = force(idir) + M_FOUR*M_PI*P_c/gr%sb%rcell_volume*st%d%kweights(ik)*st%occ(ist, ik)*&
+          force%vecpot(idir) = force%vecpot(idir) + M_FOUR*M_PI*P_c/gr%sb%rcell_volume*st%d%kweights(ik)*st%occ(ist, ik)*&
                aimag(zmf_dotp(gr%mesh, st%d%dim, epsi, gpsi(:, idir, :)))
         end do
         
@@ -287,16 +293,16 @@ contains
     
 #ifdef HAVE_MPI
     if(st%parallel_in_states) then
-      call MPI_Allreduce(force, force_tmp, MAX_DIM, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
-      force_tmp = force
+      call MPI_Allreduce(force%vecpot, force_tmp, MAX_DIM, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+      force%vecpot = force_tmp
     end if
 #endif
 
-    force(1:MAX_DIM) = force(1:MAX_DIM) - this%wp2*this%vecpot(1:MAX_DIM)
+    force%vecpot(1:MAX_DIM) = force%vecpot(1:MAX_DIM) - this%wp2*this%vecpot(1:MAX_DIM)
 
     deallocate(gpsi, cpsi)
 
-  end function gauge_field_get_force
+  end subroutine gauge_field_get_force
 
   ! ---------------------------------------------------------
 

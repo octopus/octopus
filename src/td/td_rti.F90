@@ -419,7 +419,7 @@ contains
     FLOAT,                           intent(in)    :: t, dt
     integer,                         intent(in)    :: max_iter
     integer,                         intent(in)    :: nt
-    FLOAT,                optional,  intent(inout) :: gauge_force(1:MAX_DIM)
+    type(gauge_force_t),  optional,  intent(inout) :: gauge_force
     type(ion_dynamics_t), optional,  intent(inout) :: ions
     type(geometry_t),     optional,  intent(inout) :: geo
     FLOAT,                optional,  intent(in)    :: ionic_dt

@@ -115,7 +115,7 @@ contains
     integer                   :: i, ii, ik, ierr, iatom, ist
     real(8)                   :: etime
     logical                   :: generate
-    FLOAT                     :: gauge_force(1:MAX_DIM)
+    type(gauge_force_t)       :: gauge_force
     CMPLX, allocatable        :: gspsi(:, :, :, :)
 
     type(profile_t), save :: prof
@@ -175,7 +175,7 @@ contains
         call gauge_field_init_vec_pot(hm%ep%gfield, gr%mesh, gr%sb, st, td%dt)
       end if
 
-      gauge_force = gauge_field_get_force(hm%ep%gfield, gr, geo, hm%ep%proj, hm%phase, st)
+      call gauge_field_get_force(hm%ep%gfield, gr, geo, hm%ep%proj, hm%phase, st, gauge_force)
 
       do iatom = 1, geo%natoms
          call projector_init_phases(hm%ep%proj(iatom), gr%sb, st%d%nik, st%d%kpoints, &
@@ -283,7 +283,7 @@ contains
 
       if(gauge_field_is_applied(hm%ep%gfield)) then
 
-        gauge_force = gauge_field_get_force(hm%ep%gfield, gr, geo, hm%ep%proj, hm%phase, st)
+        call gauge_field_get_force(hm%ep%gfield, gr, geo, hm%ep%proj, hm%phase, st, gauge_force)
 
         call gauge_field_propagate_vel(hm%ep%gfield, gauge_force, td%dt)
 
