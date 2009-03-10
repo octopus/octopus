@@ -22,7 +22,7 @@
 module density_matrix_m
 
   use datasets_m
-  use embedded_particles_m
+  use modelmb_particles_m
   use global_m
   use grid_m
   use hypercube_m
@@ -66,11 +66,11 @@ module density_matrix_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine density_matrix_write(dir, gr, st, embeddedparticles)
+  subroutine density_matrix_write(dir, gr, st, modelmbparticles)
     character(len=*), intent(in) :: dir
     type(grid_t),     intent(in) :: gr
     type(states_t),   intent(in) :: st
-    type(embedded_particle_t),   intent(in) :: embeddedparticles
+    type(modelmb_particle_t),   intent(in) :: modelmbparticles
 
     integer :: mm, jj, ll, j, err_code, iunit, ndims, ndim1part
     integer :: ipart,ndensmat_to_calculate,ncols
@@ -102,7 +102,7 @@ contains
     !%Section States
     !%Description
     !% choice of which particle density matrices will be calculated and output, in the
-    !%  embedded particles scheme (the corresponding density is also output)
+    !%  modelmb particles scheme (the corresponding density is also output)
     !%
     !% <tt>%DensityMatricestoCalc
     !% <br>&nbsp;&nbsp; proton   | 1 | 10
@@ -110,9 +110,9 @@ contains
     !% <br>%</tt>
     !%
     !% would ask octopus to calculate the density matrix corresponding to the 1st
-    !% particle (whose coordinates correspond to dimensions 1 to ndim_embedded),
+    !% particle (whose coordinates correspond to dimensions 1 to ndim_modelmb),
     !% which is an proton, then that corresponding to the 2nd particle
-    !% (electron with dimensions ndim_embedded+1 to 2*ndim_embedded), printing
+    !% (electron with dimensions ndim_modelmb+1 to 2*ndim_modelmb), printing
     !% 10 natural orbitals for the first and 15 for the second.
     !%
     !%End
@@ -128,7 +128,7 @@ contains
     end if
     ndensmat_to_calculate=loct_parse_block_n(blk)
     if (ndensmat_to_calculate < 0 .or. &
-        ndensmat_to_calculate > embeddedparticles%nparticle_embedded) then
+        ndensmat_to_calculate > modelmbparticles%nparticle_modelmb) then
       call input_error("DensityMatricestoCalc")
     end if
 
@@ -164,7 +164,7 @@ contains
       write (*,*) 'npoints, nr = ', npoints(j), gr%mesh%idx%nr(:,j)
     end do
 
-    ndim1part=embeddedparticles%ndim_embedded
+    ndim1part=modelmbparticles%ndim_modelmb
 
     ALLOCATE(origin(ndim1part), ndim1part)
     ALLOCATE(ix_1part(ndim1part), ndim1part)
@@ -178,7 +178,7 @@ contains
     densmat_loop: do idensmat=1,ndensmat_to_calculate
       ikeeppart=particle_kept_densmat(idensmat)
 
-!   get full size of arrays for 1 particle only in ndim_embedded dimensions
+!   get full size of arrays for 1 particle only in ndim_modelmb dimensions
       npt_1part=1
       do idir=1,ndim1part
         npt_1part=npt_1part*npoints((ikeeppart-1)*ndim1part+idir)

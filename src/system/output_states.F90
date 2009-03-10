@@ -20,7 +20,7 @@
   ! ---------------------------------------------------------
   subroutine h_sys_output_states(st, gr, geo, dir, outp)
 
-    use embedded_particles_m
+    use modelmb_particles_m
 
     type(states_t),         intent(inout) :: st
     type(grid_t),           intent(inout) :: gr
@@ -32,7 +32,7 @@
     character(len=80) :: fname
     FLOAT :: u
     FLOAT, allocatable :: dtmp(:), elf(:,:)
-    type(embedded_particle_t) :: embeddedparticles
+    type(modelmb_particle_t) :: modelmbparticles
 
     call push_sub('output_states.h_sys_output_states')
 
@@ -156,11 +156,11 @@
     end if
 
     if(iand(outp%what, output_density_matrix).ne.0) then
-      call embedded_particles_init (embeddedparticles,gr)
+      call modelmb_particles_init (modelmbparticles,gr)
       
-      call density_matrix_write(trim(dir), gr, st, embeddedparticles)
+      call density_matrix_write(trim(dir), gr, st, modelmbparticles)
 
-      call embedded_particles_destroy (embeddedparticles)
+      call modelmb_particles_destroy (modelmbparticles)
     end if
 
     call pop_sub()
