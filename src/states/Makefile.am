@@ -26,7 +26,7 @@ libstates_a_SOURCES = \
 	states_dim.F90  \
 	states_calc.F90 \
 	excited_states.F90 mix.F90 linear_response.F90 restart.F90 \
-	density_matrix.F90 modelmb_particles.F90
+	density_matrix.F90 modelmb_particles.F90 ksinversion.F90
 
 noinst_HEADERS = \
 	excited_states_inc.F90 mix_inc.F90 states_kpoints.F90 \
@@ -38,6 +38,7 @@ include $(srcdir)/../common-rules.make
 depend:
 	@makedepf90 $(libstates_a_SOURCES)
 
+ksinversion.o : ksinversion.F90 modelmb_particles.o
 density_matrix.o : density_matrix.F90 modelmb_particles.o
 states.o : states.F90 states_dim.o
 states_dim.o : states_dim.F90 states_kpoints.F90

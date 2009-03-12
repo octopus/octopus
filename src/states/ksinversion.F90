@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-module density_matrix_m
+module ksinversion_m
 
   use datasets_m
   use modelmb_particles_m
@@ -38,30 +38,11 @@ module density_matrix_m
   use profiling_m
   use states_m
 
-!  use derivatives_m
-!  use calc_mode_m
-!  use crystal_m
-!  use datasets_m
-!  use distributed_m
-!  use blas_m
-!  use geometry_m
-!  use hardware_m
-!  use loct_parser_m
-!  use math_m
-!  use mesh_m
-!  use multicomm_m
-!  use simul_box_m
-!  use smear_m
-!  use states_dim_m
-!  use units_m
-!  use varinfo_m
-!  use lalg_adv_m
-
   implicit none
 
   private
 
-  public :: density_matrix_write
+  public :: kspotential_inversion_write
 
 contains
 
@@ -94,7 +75,7 @@ contains
     character(80), allocatable :: labels_kspot(:)
     integer, allocatable :: particle_kept_dens(:)
     
-    call push_sub('states.density_matrix_write')
+    call push_sub('states.kspotential_inversion_write')
 
     !%Variable KSPotentialtoCalc
     !%Type block
@@ -171,7 +152,7 @@ contains
 ! for the moment force keeping the 1st particle coordinate(s)
 !  this will be made into a loop over desired density matrices
     kspot_loop: do ikspot = 1, nkspot_to_calculate
-      ikeeppart = particle_kept_dens(idensmat)
+      ikeeppart = particle_kept_dens(ikspot)
 
 !   get full size of arrays for 1 particle only in ndim_modelmb dimensions
       npt_1part=1
@@ -216,15 +197,15 @@ contains
 
 !   calculate the 1 particle density matrix for this Many Body state, and for the chosen
 !   particle being the free coordinate
-        if(states_are_real(st)) then
-          call dmf_calculate_gamma(ikeeppart, ndim1part,&
-                hypercube_1part, npt_1part, nr_1part, enlarge_1part(1),&
-                gr%mesh, st%dpsi(:, 1, mm, 1), densmatr)
-        else
-          call zmf_calculate_gamma(ikeeppart, ndim1part,&
-                hypercube_1part, npt_1part, nr_1part, enlarge_1part(1),&
-                gr%mesh, st%zpsi(:, 1, mm, 1), densmatr)
-        end if
+!        if(states_are_real(st)) then
+!          call dmf_calculate_gamma(ikeeppart, ndim1part,&
+!                hypercube_1part, npt_1part, nr_1part, enlarge_1part(1),&
+!                gr%mesh, st%dpsi(:, 1, mm, 1), densmatr)
+!        else
+!          call zmf_calculate_gamma(ikeeppart, ndim1part,&
+!                hypercube_1part, npt_1part, nr_1part, enlarge_1part(1),&
+!                gr%mesh, st%zpsi(:, 1, mm, 1), densmatr)
+!        end if
 
         ! Only node zero writes.
         if(.not. mpi_grp_is_root(mpi_world)) cycle
@@ -236,16 +217,16 @@ contains
 !          hartreep(ll) = 0.5*hartreep(ll)*gr%mesh%h(1)
 !        end do
 
-        write(filename,'(a,i3.3,a,i2.2)') trim(dirname)//'/density_', ikeeppart,'_', mm
-        iunit = io_open(filename,action='write')
-        do jj = 1, npt_1part
-          call hypercube_i_to_x(hypercube_1part, ndim1part, nr_1part, 0, jj, ix_1part)
-          do idir=1,ndim1part
-            write(iunit,'(es11.3)', ADVANCE='no') ix_1part(idir)*h_1part(idir)-origin(idir)
-          end do
-          write(iunit,'(es11.3,es11.3)') real(densmatr(jj,jj)), aimag(densmatr(jj,jj))
-        end do
-        call io_close(iunit)
+!        write(filename,'(a,i3.3,a,i2.2)') trim(dirname)//'/density_', ikeeppart,'_', mm
+!        iunit = io_open(filename,action='write')
+!        do jj = 1, npt_1part
+!          call hypercube_i_to_x(hypercube_1part, ndim1part, nr_1part, 0, jj, ix_1part)
+!          do idir=1,ndim1part
+!            write(iunit,'(es11.3)', ADVANCE='no') ix_1part(idir)*h_1part(idir)-origin(idir)
+!          end do
+!          write(iunit,'(es11.3,es11.3)') real(densmatr(jj,jj)), aimag(densmatr(jj,jj))
+!        end do
+!        call io_close(iunit)
 
 !        write(filename,'(a,i3.3,a,i2.2)') trim(dirname)//'/potential_', ikeeppart,'_', mm
 !        iunit = io_open(filename,action='write')
@@ -295,8 +276,6 @@ contains
         !    enddo
         !   enddo
 
-      end do states_loop
-
       deallocate(potential)
       deallocate(density)
       deallocate(hartreep)
@@ -311,14 +290,11 @@ contains
     deallocate(enlarge_1part)
 
     deallocate (npoints)
-    deallocate (labels_densmat)
-    deallocate (particle_kept_densmat)
-    deallocate (nnatorb_prt_densmat)
     call pop_sub()
-  end subroutine density_matrix_write
+  end subroutine kspotential_inversion_write
   ! ---------------------------------------------------------
 
-end module density_matrix_m
+end module ksinversion_m
 
 
 !! Local Variables:
