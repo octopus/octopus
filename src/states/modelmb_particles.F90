@@ -62,6 +62,7 @@ type modelMB_particle_t
    character(80), pointer :: labels_particles_modelMB(:)
 
    integer, pointer :: particletype_modelMB(:)
+   integer, pointer :: nparticles_per_type(:)
 
    FLOAT, pointer :: mass_particle_modelMB(:)
 
@@ -175,6 +176,7 @@ subroutine modelMB_particles_init (modelMBparticles,gr)
   allocate (modelMBparticles%particletype_modelMB(modelMBparticles%nparticle_modelMB))
   allocate (modelMBparticles%mass_particle_modelMB(modelMBparticles%nparticle_modelMB))
   allocate (modelMBparticles%charge_particle_modelMB(modelMBparticles%nparticle_modelMB))
+  allocate (modelMBparticles%nparticles_per_type(modelMBparticles%ntype_of_particle_modelMB))
 
 ! default all particles are electrons
   modelMBparticles%labels_particles_modelMB='electron'
@@ -207,7 +209,12 @@ subroutine modelMB_particles_init (modelMBparticles,gr)
       end do
       call loct_parse_block_end(blk)
   end if
-
+    
+modelMBparticles%nparticles_per_type = 0
+do ipart = 1, modelmbparticles%nparticle_modelmb
+  modelMBparticles%nparticles_per_type(modelMBparticles%particletype_modelMB(ipart)) = & 
+    & modelMBparticles%nparticles_per_type(modelMBparticles%particletype_modelMB(ipart)) + 1
+enddo
 
   !%Variable DensitiestoCalc
   !%Type block

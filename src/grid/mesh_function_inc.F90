@@ -889,11 +889,12 @@ end subroutine X(mf_dotp_batch)
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine X(mf_calculate_gamma)(ikeeppart, ndim1part, hypercube_1part, &
+subroutine X(mf_calculate_gamma)(ikeeppart, nparticles_densmat, ndim1part, hypercube_1part, &
      npt_1part, nr_1part, enlarge_1part,   mesh, psi, gamma)
   integer, intent(in)      :: ikeeppart, npt_1part, ndim1part
   integer, intent(in)      :: nr_1part(ndim1part)
   integer, intent(in)      :: enlarge_1part
+  integer, intent(in)      :: nparticles_densmat
   type(mesh_t), intent(in) :: mesh
   type(hypercube_t),intent(in) :: hypercube_1part
   R_TYPE, intent(in)       :: psi(:)
@@ -985,7 +986,7 @@ subroutine X(mf_calculate_gamma)(ikeeppart, ndim1part, hypercube_1part, &
         
 ! accumulate into density matrix
         gamma(icoord, icoordp)=gamma(icoord, icoordp)+&
-            CNST(2.0) * volume_element * psi_global(imesh) * R_CONJ(psi_global (imeshp))
+            nparticles_densmat * volume_element * psi_global(imesh) * R_CONJ(psi_global (imeshp))
      end do xprimeloop
   end do xloop
 
