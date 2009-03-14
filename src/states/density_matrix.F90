@@ -38,25 +38,6 @@ module density_matrix_m
   use profiling_m
   use states_m
 
-!  use derivatives_m
-!  use calc_mode_m
-!  use crystal_m
-!  use datasets_m
-!  use distributed_m
-!  use blas_m
-!  use geometry_m
-!  use hardware_m
-!  use loct_parser_m
-!  use math_m
-!  use mesh_m
-!  use multicomm_m
-!  use simul_box_m
-!  use smear_m
-!  use states_dim_m
-!  use units_m
-!  use varinfo_m
-!  use lalg_adv_m
-
   implicit none
 
   private
@@ -161,7 +142,6 @@ contains
     ALLOCATE(npoints(ndims), ndims)
     do j = 1, ndims
       npoints(j) = gr%mesh%idx%ll(j)
-      write (*,*) 'npoints, nr = ', npoints(j), gr%mesh%idx%nr(:,j)
     end do
 
     ndim1part=modelmbparticles%ndim_modelmb
@@ -189,7 +169,6 @@ contains
       ALLOCATE(evalues(npt_1part), npt_1part)
       ALLOCATE(density(npt_1part), npt_1part)
 
-      write (*,*) 'shape(densmatr) ', shape(densmatr)
       write (*,*) ' st%nst = ', st%nst
 
 !   volume element for the chosen particle
@@ -219,12 +198,12 @@ contains
 !   loop over states to get density matrices for excited states too
       states_loop: do mm = 1, st%nst
         
-	densmatr  = M_z0
+        densmatr  = M_z0
 
 !   calculate the 1 particle density matrix for this Many Body state, and for the chosen
 !   particle being the free coordinate
         if(states_are_real(st)) then
-	  call dmf_calculate_gamma(ikeeppart, nparticles_densmat, ndim1part,&
+          call dmf_calculate_gamma(ikeeppart, nparticles_densmat, ndim1part,&
                 hypercube_1part, npt_1part, nr_1part, enlarge_1part(1),&
                 gr%mesh, st%dpsi(:, 1, mm, 1), densmatr)
         else
@@ -246,7 +225,7 @@ contains
         evectors = evectors/sqrt(vol_elem_1part)
         evalues  = evalues*vol_elem_1part
 
-        write(filename,'(a,i3.3,a,i2.2)') trim(dirname)//'/occnumb_',ikeeppart,'_',mm
+        write(filename,'(a,i3.3,a,i2.2)') trim(dirname)//'/occnumb_ip',ikeeppart,'_iMB',mm
         iunit = io_open(trim(filename), action='write')
 
         do jj = npt_1part, 1, -1
@@ -256,7 +235,7 @@ contains
         call io_close(iunit)
 
         do jj = npt_1part-10, npt_1part
-          write(filename,'(a,i3.3,a,i2.2,a,i4.4)') trim(dirname)//'/natorb_', ikeeppart,'_', mm, '_', npt_1part-jj+1
+          write(filename,'(a,i3.3,a,i2.2,a,i4.4)') trim(dirname)//'/natorb_ip', ikeeppart,'_iMB', mm, '_', npt_1part-jj+1
           iunit = io_open(filename, action='write')
           do ll = 1, npt_1part
             call hypercube_i_to_x(hypercube_1part, ndim1part, nr_1part, 0, ll, ix_1part)
@@ -268,7 +247,7 @@ contains
         call io_close(iunit)
         end do
 
-        write(filename,'(a,i3.3,a,i2.2)') trim(dirname)//'/densmatr_', ikeeppart,'_', mm
+        write(filename,'(a,i3.3,a,i2.2)') trim(dirname)//'/densmatr_ip', ikeeppart,'_iMB', mm
         iunit = io_open(filename,action='write')
         do jj = 1, npt_1part
           call hypercube_i_to_x(hypercube_1part, ndim1part, nr_1part, 0, jj, ix_1part)
@@ -286,7 +265,7 @@ contains
         end do
         call io_close(iunit)
 
-        write(filename,'(a,i3.3,a,i2.2)') trim(dirname)//'/density_', ikeeppart,'_', mm
+        write(filename,'(a,i3.3,a,i2.2)') trim(dirname)//'/density_ip', ikeeppart,'_iMB', mm
         iunit = io_open(filename,action='write')
         do jj = 1, npt_1part
           call hypercube_i_to_x(hypercube_1part, ndim1part, nr_1part, 0, jj, ix_1part)
