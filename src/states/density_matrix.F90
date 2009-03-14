@@ -86,7 +86,6 @@ contains
     FLOAT, allocatable :: origin(:), h_1part(:)
     CMPLX, allocatable :: densmatr(:, :), evectors(:, :), wavef(:,:)
     FLOAT, allocatable :: evalues(:), density(:)
-    FLOAT, allocatable :: hartreep(:), potential(:)
 
     type(hypercube_t) :: hypercube_1part
 
@@ -188,9 +187,7 @@ contains
       ALLOCATE(densmatr(npt_1part, npt_1part), npt_1part*npt_1part )
       ALLOCATE(evectors(npt_1part, npt_1part), npt_1part*npt_1part )
       ALLOCATE(evalues(npt_1part), npt_1part)
-      ALLOCATE(potential(npt_1part), npt_1part)
       ALLOCATE(density(npt_1part), npt_1part)
-      ALLOCATE(hartreep(npt_1part), npt_1part)
 
       write (*,*) 'shape(densmatr) ', shape(densmatr)
       write (*,*) ' st%nst = ', st%nst
@@ -221,15 +218,13 @@ contains
 
 !   loop over states to get density matrices for excited states too
       states_loop: do mm = 1, st%nst
-        densmatr  = M_z0
-!        graddens  = M_ZERO
-        potential = M_ZERO
-        hartreep  = M_ZERO
+        
+	densmatr  = M_z0
 
 !   calculate the 1 particle density matrix for this Many Body state, and for the chosen
 !   particle being the free coordinate
         if(states_are_real(st)) then
-          call dmf_calculate_gamma(ikeeppart, nparticles_densmat, ndim1part,&
+	  call dmf_calculate_gamma(ikeeppart, nparticles_densmat, ndim1part,&
                 hypercube_1part, npt_1part, nr_1part, enlarge_1part(1),&
                 gr%mesh, st%dpsi(:, 1, mm, 1), densmatr)
         else
@@ -298,7 +293,7 @@ contains
           do idir=1,ndim1part
             write(iunit,'(es11.3)', ADVANCE='no') ix_1part(idir)*h_1part(idir)-origin(idir)
           end do
-          write(iunit,'(es11.3,es11.3)') real(densmatr(jj,jj)), aimag(densmatr(jj,jj))
+          write(iunit,'(es11.3)') real(densmatr(jj,jj))
         end do
         call io_close(iunit)
 
@@ -307,9 +302,7 @@ contains
 
       deallocate(evectors)
       deallocate(evalues)
-      deallocate(potential)
       deallocate(density)
-      deallocate(hartreep)
       deallocate(densmatr)
       
     end do densmat_loop ! loop over densmats to output

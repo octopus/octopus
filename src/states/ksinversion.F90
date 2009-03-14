@@ -56,17 +56,16 @@ contains
     integer :: mm, jj, ll, j, err_code, iunit, ndims, ndim1part
     integer :: ipart,nkspot_to_calculate,ncols
     integer :: ikeeppart,npt_1part, idir, irealdir
-    integer :: ikspot
+    integer :: ikspot, nparticles_dens
     integer, allocatable :: npoints(:)
     integer, allocatable :: nr_1part(:,:)
-    integer, allocatable :: ix_1part(:), ix_1part_p(:)
+    integer, allocatable :: ix_1part(:)
     integer, allocatable :: enlarge_1part(:)
     logical :: bof
     character(len=200) :: dirname, filename
     FLOAT :: vol_elem_1part
     FLOAT, allocatable :: origin(:), h_1part(:)
-    CMPLX, allocatable :: densmatr(:, :), evectors(:, :), wavef(:,:)
-    FLOAT, allocatable :: evalues(:), sqrdensity(:), density(:), graddens(:)
+    FLOAT, allocatable :: density(:)
     FLOAT, allocatable :: hartreep(:), potential(:)
 
     type(hypercube_t) :: hypercube_1part
@@ -144,7 +143,6 @@ contains
 
     ALLOCATE(origin(ndim1part), ndim1part)
     ALLOCATE(ix_1part(ndim1part), ndim1part)
-    ALLOCATE(ix_1part_p(ndim1part), ndim1part)
     ALLOCATE(nr_1part(2,ndim1part), 2*ndim1part)
     ALLOCATE(h_1part(ndim1part), ndim1part)
     ALLOCATE(enlarge_1part(ndim1part), ndim1part)
@@ -153,6 +151,7 @@ contains
 !  this will be made into a loop over desired density matrices
     kspot_loop: do ikspot = 1, nkspot_to_calculate
       ikeeppart = particle_kept_dens(ikspot)
+      nparticles_dens = modelMBparticles%nparticles_per_type(modelMBparticles%particletype_modelMB(ikspot))
 
 !   get full size of arrays for 1 particle only in ndim_modelmb dimensions
       npt_1part=1
@@ -197,36 +196,29 @@ contains
 
 !   calculate the 1 particle density matrix for this Many Body state, and for the chosen
 !   particle being the free coordinate
-!        if(states_are_real(st)) then
-!          call dmf_calculate_gamma(ikeeppart, ndim1part,&
-!                hypercube_1part, npt_1part, nr_1part, enlarge_1part(1),&
-!                gr%mesh, st%dpsi(:, 1, mm, 1), densmatr)
-!        else
-!          call zmf_calculate_gamma(ikeeppart, ndim1part,&
-!                hypercube_1part, npt_1part, nr_1part, enlarge_1part(1),&
-!                gr%mesh, st%zpsi(:, 1, mm, 1), densmatr)
-!        end if
+        if(states_are_real(st)) then
+          call dmf_calculate_rho(ikeeppart, nparticles_dens, ndim1part,&
+                hypercube_1part, npt_1part, nr_1part, enlarge_1part(1),&
+                gr%mesh, st%dpsi(:, 1, mm, 1), density)
+        else
+          call zmf_calculate_rho(ikeeppart, nparticles_dens, ndim1part,&
+                hypercube_1part, npt_1part, nr_1part, enlarge_1part(1),&
+                gr%mesh, st%zpsi(:, 1, mm, 1), density)
+        end if
 
         ! Only node zero writes.
         if(.not. mpi_grp_is_root(mpi_world)) cycle
 
-!        do ll = 1, npt_1part
-!          do jj = 1, npt_1part
-!            hartreep(ll) = hartreep(ll)+density(jj)/(sqrt(((ll-jj)*gr%mesh%h(1))**2+1))
-!          end do
-!          hartreep(ll) = 0.5*hartreep(ll)*gr%mesh%h(1)
-!        end do
-
-!        write(filename,'(a,i3.3,a,i2.2)') trim(dirname)//'/density_', ikeeppart,'_', mm
-!        iunit = io_open(filename,action='write')
-!        do jj = 1, npt_1part
-!          call hypercube_i_to_x(hypercube_1part, ndim1part, nr_1part, 0, jj, ix_1part)
-!          do idir=1,ndim1part
-!            write(iunit,'(es11.3)', ADVANCE='no') ix_1part(idir)*h_1part(idir)-origin(idir)
-!          end do
-!          write(iunit,'(es11.3,es11.3)') real(densmatr(jj,jj)), aimag(densmatr(jj,jj))
-!        end do
-!        call io_close(iunit)
+        write(filename,'(a,i3.3,a,i2.2)') trim(dirname)//'/density_', ikeeppart,'_', mm
+        iunit = io_open(filename,action='write')
+        do jj = 1, npt_1part
+          call hypercube_i_to_x(hypercube_1part, ndim1part, nr_1part, 0, jj, ix_1part)
+          do idir=1,ndim1part
+            write(iunit,'(es11.3)', ADVANCE='no') ix_1part(idir)*h_1part(idir)-origin(idir)
+          end do
+          write(iunit,'(es11.3)') density(jj)
+        end do
+        call io_close(iunit)
 
 !        write(filename,'(a,i3.3,a,i2.2)') trim(dirname)//'/potential_', ikeeppart,'_', mm
 !        iunit = io_open(filename,action='write')
@@ -239,53 +231,16 @@ contains
 !        end do
 !        call io_close(iunit)
 
-        !Diagonalize 2 particle wave function as well
-          
-        !  call lalg_eigensolve(npointsx,wavef,evectors,evalues,bof,err_code)
-           
-        !  evectors=evectors/sqrt(gr%mesh%h(1))
-        !  evalues=evalues*gr%mesh%h(1)
-          
-        !  write(filename,'(a,i6.6,a,i2.2)') 'Tdstep_',i,'/wavefeva_',mm
-        !  iunit=io_open(filename,action='write')
-        
-        !  do jj=npointsx, 1, -1
-        !   write(iunit,'(i4.4,es11.3)') npointsx-jj+1, evalues(jj)
-        !  enddo
-              
-        !  call io_close(iunit)
-              
-        !  do jj=1, npointsx
-        !   write(filename,'(a,i6.6,a,i2.2,a,i4.4)') 'Tdstep_',i,'/wavefeve_', mm, '_', npointsx-jj+1
-        !   iunit=io_open(filename,action='write')
-        
-        !   do ll=1, npointsx
-        !    write(iunit,'(es11.3,es11.3,es11.3)') ll*gr%mesh%h(1)-origin, real(evectors(ll,jj)), & 
-        !                                    & aimag(evectors(ll,jj))
-               
-        !   enddo
-        !   call io_close(iunit)
-        !  enddo
-           
-        !   write(filename,'(a,i6.6,a,i2.2)') 'Tdstep_',i,'/wavef_',mm
-        !   iunit=io_open(filename,action='write')
-           
-        !   do jj=1, npointsx
-        !    do ll=1, npointsx
-        !write(iunit,'(i6.4,i6.4,es11.3, es11.3)') jj,ll,real(wavef(jj,ll)),aimag(wavef(jj,ll)) 
-        !    enddo
-        !   enddo
+       
 
       deallocate(potential)
       deallocate(density)
       deallocate(hartreep)
-      deallocate(densmatr)
       
-    end do kspot_loop ! loop over densmats to output
+    end do kspot_loop ! loop over kspots to output
 
     deallocate(origin)
     deallocate(ix_1part)
-    deallocate(ix_1part_p)
     deallocate(nr_1part)
     deallocate(enlarge_1part)
 
