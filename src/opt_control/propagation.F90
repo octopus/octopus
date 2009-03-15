@@ -37,7 +37,7 @@ module opt_control_propagation_m
   use hamiltonian_m
   use geometry_m
   use system_m
-  use timedep_m
+  use td_m
   use restart_m
   use td_rti_m
   use td_write_m

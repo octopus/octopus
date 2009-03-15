@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-module timedep_m
+module td_m
   use cpmd_m
   use energy_m
   use global_m
@@ -127,7 +127,7 @@ contains
     geo => sys%geo
     st  => sys%st
 
-    call td_init(sys, hm, td)
+    call td_init(td, sys, hm)
 
     call states_distribute_nodes(st, sys%mc)
 
@@ -822,7 +822,7 @@ contains
 
 #include "td_init.F90"
 
-end module timedep_m
+end module td_m
 
 !! Local Variables:
 !! mode: f90

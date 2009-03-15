@@ -42,7 +42,7 @@ module opt_control_target_m
   use mesh_function_m
   use profiling_m
   use restart_m
-  use timedep_m
+  use td_m
   use spectrum_m
   use math_m
 

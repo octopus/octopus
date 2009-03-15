@@ -18,10 +18,10 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-subroutine td_init(sys, hm, td)
+subroutine td_init(td, sys, hm)
+  type(td_t),            intent(inout) :: td
   type(system_t),        intent(inout) :: sys
   type(hamiltonian_t),   intent(inout) :: hm
-  type(td_t),            intent(inout) :: td
 
   integer :: dummy
 

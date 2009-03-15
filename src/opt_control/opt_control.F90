@@ -47,9 +47,9 @@ module opt_control_m
   use states_calc_m
   use string_m
   use system_m
+  use td_m
   use td_rti_m
   use td_write_m
-  use timedep_m
   use units_m
   use v_ks_m
   use external_pot_m
@@ -169,7 +169,7 @@ contains
 
 
     ! Initialize the time propagator.
-    call td_init(sys, hm, td)
+    call td_init(td, sys, hm)
     if(hm%theory_level .ne. INDEPENDENT_PARTICLES ) then
       call td_rti_set_scf_prop(td%tr)
     end if
