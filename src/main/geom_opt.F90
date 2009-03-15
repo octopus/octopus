@@ -154,7 +154,7 @@ contains
 
     end if
 
-    call scf_init(sys%gr, sys%geo, g_opt%scfv, sys%st, hm)
+    call scf_init(g_opt%scfv, sys%gr, sys%geo, sys%st, hm)
 
     !Initial point
     ALLOCATE(x(3*g_opt%geo%natoms), 3*g_opt%geo%natoms)

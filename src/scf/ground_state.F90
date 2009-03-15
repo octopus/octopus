@@ -188,7 +188,7 @@ contains
     end if
     call write_info(1)
 
-    call scf_init(sys%gr, sys%geo, scfv, sys%st, hm)
+    call scf_init(scfv, sys%gr, sys%geo, sys%st, hm)
     call scf_run(scfv, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp)
     call scf_end(scfv)
 

@@ -129,7 +129,7 @@ contains
 
     call output_init_()
 
-    call scf_init(gr, sys%geo, scfv, st, hm)
+    call scf_init(scfv, gr, sys%geo, st, hm)
     do i = i_start, NDIM
       do k = 1, 2
         write(message(1), '(a)')

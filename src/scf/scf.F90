@@ -92,10 +92,10 @@ module scf_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine scf_init(gr, geo, scf, st, hm)
+  subroutine scf_init(scf, gr, geo, st, hm)
+    type(scf_t),         intent(inout) :: scf
     type(grid_t),        intent(inout) :: gr
     type(geometry_t),    intent(in)    :: geo
-    type(scf_t),         intent(inout) :: scf
     type(states_t),      intent(in)    :: st
     type(hamiltonian_t), intent(inout) :: hm
 

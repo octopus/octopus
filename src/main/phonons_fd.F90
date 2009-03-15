@@ -134,7 +134,7 @@ contains
 
     m   => gr%mesh
 
-    call scf_init(gr, geo, scf, st, hm)
+    call scf_init(scf, gr, geo, st, hm)
     ALLOCATE(forces0(geo%natoms, 3), geo%natoms*3)
     ALLOCATE(forces (geo%natoms, 3), geo%natoms*3)
     forces = M_ZERO
