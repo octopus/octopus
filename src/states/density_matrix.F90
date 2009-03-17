@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2009 N. Helbig and M. Verstraete
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -74,6 +74,7 @@ contains
     character(80), allocatable :: labels_densmat(:)
     integer, allocatable :: particle_kept_densmat(:)
     integer, allocatable :: nnatorb_prt_densmat(:)
+    FLOAT, allocatable :: dipole_moment(:)
 
     call push_sub('states.density_matrix_write')
 
@@ -152,6 +153,7 @@ contains
     ALLOCATE(nr_1part(2,ndim1part), 2*ndim1part)
     ALLOCATE(h_1part(ndim1part), ndim1part)
     ALLOCATE(enlarge_1part(ndim1part), ndim1part)
+    ALLOCATE(dipole_moment(ndim1part), ndim1part)
 
 ! loop over desired density matrices
     densmat_loop: do idensmat=1,ndensmat_to_calculate
@@ -192,8 +194,9 @@ contains
       !  only important for printout, so it is ok
       do idir=1,ndim1part
         irealdir=(ikeeppart-1)*ndim1part + idir
-        origin(idir)=(npoints(irealdir)/2+1)*gr%mesh%h(irealdir)
+        origin(idir)=(npoints(irealdir)/2)*gr%mesh%h(irealdir)
       end do
+      write (*,*) 'origin = ', origin
 
 !   loop over states to get density matrices for excited states too
       states_loop: do mm = 1, st%nst
@@ -213,18 +216,34 @@ contains
         end if
 
         ! Only node zero writes.
+        ! mjv 14/3/2009: is this still at the right place in the file? None of
+        ! this works in parallel yet...
         if(.not. mpi_grp_is_root(mpi_world)) cycle
 
         !Diagonalize the density matrix
         bof=.true.
         call lalg_eigensolve(npt_1part, densmatr, evectors, evalues, bof, err_code)
       
-        !Write everything into files
         !NOTE: The highest eigenvalues are the last ones not the first!!!
         !      Writing is therefore in reverse order
         evectors = evectors/sqrt(vol_elem_1part)
         evalues  = evalues*vol_elem_1part
 
+        ! calculate dipole moment from density for this particle
+        dipole_moment(:)=0.0d0
+        do jj = 1,npt_1part
+          call hypercube_i_to_x(hypercube_1part, ndim1part, nr_1part, 0, jj, ix_1part)
+          write (*,*) jj, ix_1part(:)*h_1part(:)+origin(:)
+          dipole_moment=dipole_moment+(ix_1part(:)*h_1part(:)+origin(:))*real(densmatr(jj,jj))*&
+                        modelMBparticles%charge_particle_modelMB(ikeeppart)
+        end do
+        write (message(1),'(a,I6,a)') 'For particle ', ikeeppart, ' the dipole moment is:'
+        write (message(2),'(3E20.10)') dipole_moment
+        call write_info(2)
+        
+
+
+        !Write everything into files
         write(filename,'(a,i3.3,a,i2.2)') trim(dirname)//'/occnumb_ip',ikeeppart,'_iMB',mm
         iunit = io_open(trim(filename), action='write')
 
@@ -240,7 +259,7 @@ contains
           do ll = 1, npt_1part
             call hypercube_i_to_x(hypercube_1part, ndim1part, nr_1part, 0, ll, ix_1part)
             do idir=1,ndim1part
-              write(iunit,'(es11.3)', ADVANCE='no') ix_1part(idir)*h_1part(idir)-origin(idir)
+              write(iunit,'(es11.3)', ADVANCE='no') ix_1part(idir)*h_1part(idir)+origin(idir)
             end do
             write(iunit,'(es11.3,es11.3)') real(evectors(ll,jj)), aimag(evectors(ll,jj))
           end do
@@ -254,10 +273,10 @@ contains
           do ll = 1, npt_1part
             call hypercube_i_to_x(hypercube_1part, ndim1part, nr_1part, 0, ll, ix_1part_p)
             do idir=1,ndim1part
-              write(iunit,'(es11.3)', ADVANCE='no') ix_1part(idir)*h_1part(idir)-origin(idir)
+              write(iunit,'(es11.3)', ADVANCE='no') ix_1part(idir)*h_1part(idir)+origin(idir)
             end do
             do idir=1,ndim1part
-              write(iunit,'(es11.3)', ADVANCE='no') ix_1part_p(idir)*h_1part(idir)-origin(idir)
+              write(iunit,'(es11.3)', ADVANCE='no') ix_1part_p(idir)*h_1part(idir)+origin(idir)
             end do
             write(iunit,'(es11.3,es11.3)') real(densmatr(jj,ll)), aimag(densmatr(jj,ll))
           end do
@@ -270,7 +289,7 @@ contains
         do jj = 1, npt_1part
           call hypercube_i_to_x(hypercube_1part, ndim1part, nr_1part, 0, jj, ix_1part)
           do idir=1,ndim1part
-            write(iunit,'(es11.3)', ADVANCE='no') ix_1part(idir)*h_1part(idir)-origin(idir)
+            write(iunit,'(es11.3)', ADVANCE='no') ix_1part(idir)*h_1part(idir)+origin(idir)
           end do
           write(iunit,'(es11.3)') real(densmatr(jj,jj))
         end do

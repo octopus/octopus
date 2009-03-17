@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2009 N. Helbig and M. Verstraete
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -142,7 +142,8 @@ subroutine modelMB_particles_init (modelMBparticles,gr)
   call loct_parse_int(datasets_check('NTypeParticleModelMB'), 1, modelMBparticles%ntype_of_particle_modelMB)
   call messages_print_var_option(stdout, "NTypeParticleModelMB", modelMBparticles%ntype_of_particle_modelMB)
   if (modelMBparticles%ntype_of_particle_modelMB > modelMBparticles%nparticle_modelMB) then
-     message(1) = ' Number of types of modelMB particles should be <= Number of modelMB particles'
+     write (message(1), '(a,2I6)') ' Number of types of modelMB particles should be <= Number of modelMB particles ', &
+             modelMBparticles%ntype_of_particle_modelMB, modelMBparticles%nparticle_modelMB
      call write_fatal(1)
   end if
 
