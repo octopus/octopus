@@ -42,9 +42,9 @@ subroutine X(vlaser_operator_quadratic) (laser, gr, std, psi, hpsi)
   case(E_FIELD_ELECTRIC) ! do nothing
   case(E_FIELD_MAGNETIC)
     if(.not. allocated(a)) then 
-      ALLOCATE(a(NP_PART, NDIM), NP_PART*NDIM)
+      ALLOCATE(a(NP_PART, gr%mesh%sb%dim), NP_PART*gr%mesh%sb%dim)
       a = M_ZERO
-      ALLOCATE(a_prime(NP_PART, NDIM), NP_PART*NDIM)
+      ALLOCATE(a_prime(NP_PART, gr%mesh%sb%dim), NP_PART*gr%mesh%sb%dim)
       a_prime = M_ZERO
     end if
     call laser_vector_potential(laser, a_prime)
@@ -60,13 +60,13 @@ subroutine X(vlaser_operator_quadratic) (laser, gr, std, psi, hpsi)
 
   if(magnetic_field) then
     do k = 1, NP
-      hpsi(k, :) = hpsi(k, :) + M_HALF*dot_product(a(k, 1:NDIM), a(k, 1:NDIM))*psi(k, :) / P_c**2
+      hpsi(k, :) = hpsi(k, :) + M_HALF*dot_product(a(k, 1:gr%mesh%sb%dim), a(k, 1:gr%mesh%sb%dim))*psi(k, :) / P_c**2
     end do
     deallocate(a, a_prime)
   end if
   if(vector_potential) then
     do k = 1, NP
-      hpsi(k, :) = hpsi(k, :) + M_HALF*dot_product(a_field(1:NDIM), a_field(1:NDIM))*psi(k, :) / P_c**2
+      hpsi(k, :) = hpsi(k, :) + M_HALF*dot_product(a_field(1:gr%mesh%sb%dim), a_field(1:gr%mesh%sb%dim))*psi(k, :) / P_c**2
     end do
   end if
 
@@ -123,9 +123,9 @@ subroutine X(vlaser_operator_linear) (laser, gr, std, psi, hpsi, ik, gyromagneti
     deallocate(pot)
   case(E_FIELD_MAGNETIC)
     if(.not. allocated(a)) then 
-      ALLOCATE(a(NP_PART, NDIM), NP_PART*NDIM)
+      ALLOCATE(a(NP_PART, gr%mesh%sb%dim), NP_PART*gr%mesh%sb%dim)
       a = M_ZERO
-      ALLOCATE(a_prime(NP_PART, NDIM), NP_PART*NDIM)
+      ALLOCATE(a_prime(NP_PART, gr%mesh%sb%dim), NP_PART*gr%mesh%sb%dim)
       a_prime = M_ZERO
     end if
     call laser_vector_potential(laser, a_prime)
@@ -148,7 +148,7 @@ subroutine X(vlaser_operator_linear) (laser, gr, std, psi, hpsi, ik, gyromagneti
 
   if(magnetic_field) then
 
-    ALLOCATE(grad(NP_PART, NDIM, std%dim), NP_PART*std%dim*NDIM)
+    ALLOCATE(grad(NP_PART, gr%mesh%sb%dim, std%dim), NP_PART*std%dim*gr%mesh%sb%dim)
  
     do idim = 1, std%dim
       call X(derivatives_grad)(gr%der, psi(:, idim), grad(:, :, idim))
@@ -160,19 +160,19 @@ subroutine X(vlaser_operator_linear) (laser, gr, std, psi, hpsi, ik, gyromagneti
     ! by P_c, and therefore here we only divide by P_c, and not P_c**2.
     if(associated(a_static)) then
       do k = 1, NP
-        hpsi(k, :) = hpsi(k, :) + dot_product(a(k, 1:NDIM), a_static(k, 1:NDIM))*psi(k, :) / P_c
+        hpsi(k, :) = hpsi(k, :) + dot_product(a(k, 1:gr%mesh%sb%dim), a_static(k, 1:gr%mesh%sb%dim))*psi(k, :) / P_c
       end do
     end if
 
     select case(std%ispin)
     case(UNPOLARIZED, SPIN_POLARIZED)
       do k = 1, NP
-        hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(a(k, 1:NDIM), grad(k, 1:NDIM, 1)) / P_c
+        hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(a(k, 1:gr%mesh%sb%dim), grad(k, 1:gr%mesh%sb%dim, 1)) / P_c
       end do
     case (SPINORS)
       do k = 1, NP
         do idim = 1, std%dim
-          hpsi(k, idim) = hpsi(k, idim) - M_zI*dot_product(a(k, 1:NDIM), grad(k, 1:NDIM, idim)) / P_c
+          hpsi(k, idim) = hpsi(k, idim) - M_zI*dot_product(a(k, 1:gr%mesh%sb%dim), grad(k, 1:gr%mesh%sb%dim, idim)) / P_c
         end do
       end do
     end select
@@ -203,7 +203,7 @@ subroutine X(vlaser_operator_linear) (laser, gr, std, psi, hpsi, ik, gyromagneti
   end if
 
   if(vector_potential) then
-    ALLOCATE(grad(NP_PART, NDIM, std%dim), NP_PART*std%dim*NDIM)
+    ALLOCATE(grad(NP_PART, gr%mesh%sb%dim, std%dim), NP_PART*std%dim*gr%mesh%sb%dim)
 
     do idim = 1, std%dim
       call X(derivatives_grad)(gr%der, psi(:, idim), grad(:, :, idim))
@@ -212,12 +212,12 @@ subroutine X(vlaser_operator_linear) (laser, gr, std, psi, hpsi, ik, gyromagneti
     select case(std%ispin)
     case(UNPOLARIZED, SPIN_POLARIZED)
       do k = 1, NP
-        hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(a_field(1:NDIM), grad(k, 1:NDIM, 1)) / P_c
+        hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(a_field(1:gr%mesh%sb%dim), grad(k, 1:gr%mesh%sb%dim, 1)) / P_c
       end do
     case (SPINORS)
       do k = 1, NP
         do idim = 1, std%dim
-          hpsi(k, idim) = hpsi(k, idim) - M_zI*dot_product(a_field(1:NDIM), grad(k, 1:NDIM, idim)) / P_c
+          hpsi(k, idim) = hpsi(k, idim) - M_zI*dot_product(a_field(1:gr%mesh%sb%dim), grad(k, 1:gr%mesh%sb%dim, idim)) / P_c
         end do
       end do
     end select
@@ -277,9 +277,9 @@ subroutine X(vlasers) (lasers, nlasers, gr, std, psi, hpsi, grad, ik, t, gyromag
 
     case(E_FIELD_MAGNETIC)
       if(.not. allocated(a)) then 
-        ALLOCATE(a(NP_PART, NDIM), NP_PART*NDIM)
+        ALLOCATE(a(NP_PART, gr%mesh%sb%dim), NP_PART*gr%mesh%sb%dim)
         a = M_ZERO
-        ALLOCATE(a_prime(NP_PART, NDIM), NP_PART*NDIM)
+        ALLOCATE(a_prime(NP_PART, gr%mesh%sb%dim), NP_PART*gr%mesh%sb%dim)
         a_prime = M_ZERO
       end if
 
@@ -311,7 +311,7 @@ subroutine X(vlasers) (lasers, nlasers, gr, std, psi, hpsi, grad, ik, t, gyromag
 
   if(magnetic_field) then
     do k = 1, NP
-      hpsi(k, :) = hpsi(k, :) + M_HALF*dot_product(a(k, 1:NDIM), a(k, 1:NDIM))*psi(k, :) / P_c**2
+      hpsi(k, :) = hpsi(k, :) + M_HALF*dot_product(a(k, 1:gr%mesh%sb%dim), a(k, 1:gr%mesh%sb%dim))*psi(k, :) / P_c**2
     end do
 
     ! If there is a static magnetic field, its associated vector potential is coupled with
@@ -320,19 +320,19 @@ subroutine X(vlasers) (lasers, nlasers, gr, std, psi, hpsi, grad, ik, t, gyromag
     ! by P_c, and therefore here we only divide by P_c, and not P_c**2.
     if(associated(a_static)) then
       do k = 1, NP
-        hpsi(k, :) = hpsi(k, :) + dot_product(a(k, 1:NDIM), a_static(k, 1:NDIM))*psi(k, :) / P_c
+        hpsi(k, :) = hpsi(k, :) + dot_product(a(k, 1:gr%mesh%sb%dim), a_static(k, 1:gr%mesh%sb%dim))*psi(k, :) / P_c
       end do
     end if
 
     select case(std%ispin)
     case(UNPOLARIZED, SPIN_POLARIZED)
       do k = 1, NP
-        hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(a(k, 1:NDIM), grad(k, 1:NDIM, 1)) / P_c
+        hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(a(k, 1:gr%mesh%sb%dim), grad(k, 1:gr%mesh%sb%dim, 1)) / P_c
       end do
     case (SPINORS)
       do k = 1, NP
         do idim = 1, std%dim
-          hpsi(k, idim) = hpsi(k, idim) - M_zI*dot_product(a(k, 1:NDIM), grad(k, 1:NDIM, idim)) / P_c
+          hpsi(k, idim) = hpsi(k, idim) - M_zI*dot_product(a(k, 1:gr%mesh%sb%dim), grad(k, 1:gr%mesh%sb%dim, idim)) / P_c
         end do
       end do
     end select
@@ -363,18 +363,18 @@ subroutine X(vlasers) (lasers, nlasers, gr, std, psi, hpsi, grad, ik, t, gyromag
 
   if(vector_potential) then
     do k = 1, NP
-      hpsi(k, :) = hpsi(k, :) + M_HALF*dot_product(a_field(1:NDIM), a_field(1:NDIM))*psi(k, :) / P_c**2
+      hpsi(k, :) = hpsi(k, :) + M_HALF*dot_product(a_field(1:gr%mesh%sb%dim), a_field(1:gr%mesh%sb%dim))*psi(k, :) / P_c**2
     end do
 
     select case(std%ispin)
     case(UNPOLARIZED, SPIN_POLARIZED)
       do k = 1, NP
-        hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(a_field(1:NDIM), grad(k, 1:NDIM, 1)) / P_c
+        hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(a_field(1:gr%mesh%sb%dim), grad(k, 1:gr%mesh%sb%dim, 1)) / P_c
       end do
     case (SPINORS)
       do k = 1, NP
         do idim = 1, std%dim
-          hpsi(k, idim) = hpsi(k, idim) - M_zI*dot_product(a_field(1:NDIM), grad(k, 1:NDIM, idim)) / P_c
+          hpsi(k, idim) = hpsi(k, idim) - M_zI*dot_product(a_field(1:gr%mesh%sb%dim), grad(k, 1:gr%mesh%sb%dim, idim)) / P_c
         end do
       end do
     end select

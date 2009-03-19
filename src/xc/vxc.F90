@@ -73,10 +73,10 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc, vtau)
     ! make a local copy with the correct memory order
     l_dens(1:spin_channels) = dens(jj, 1:spin_channels)
     if(gga.or.mgga) then
-      l_sigma(1) = sum(gdens(jj, 1:NDIM, 1)*gdens(jj, 1:NDIM, 1))
+      l_sigma(1) = sum(gdens(jj, 1:gr%mesh%sb%dim, 1)*gdens(jj, 1:gr%mesh%sb%dim, 1))
       if(ispin /= UNPOLARIZED) then
-        l_sigma(2) = sum(gdens(jj, 1:NDIM, 1)*gdens(jj, 1:NDIM, 2))
-        l_sigma(3) = sum(gdens(jj, 1:NDIM, 2)*gdens(jj, 1:NDIM, 2))
+        l_sigma(2) = sum(gdens(jj, 1:gr%mesh%sb%dim, 1)*gdens(jj, 1:gr%mesh%sb%dim, 2))
+        l_sigma(3) = sum(gdens(jj, 1:gr%mesh%sb%dim, 2)*gdens(jj, 1:gr%mesh%sb%dim, 2))
       end if
     end if
     if(mgga) l_tau(1:spin_channels) = tau(jj, 1:spin_channels)

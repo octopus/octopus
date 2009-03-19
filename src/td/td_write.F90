@@ -734,7 +734,7 @@ contains
     end do
     call geometry_dipole(geo, nuclear_dipole)
     do is = 1, st%d%nspin
-      multipole(2:NDIM+1, is) = nuclear_dipole(1:NDIM) - multipole(2:NDIM+1, is)
+      multipole(2:gr%mesh%sb%dim+1, is) = nuclear_dipole(1:gr%mesh%sb%dim) - multipole(2:gr%mesh%sb%dim+1, is)
     end do
 
     if(mpi_grp_is_root(mpi_world)) then
@@ -777,19 +777,19 @@ contains
       call write_iter_header_start(out_coords)
 
       do i = 1, geo%natoms
-        do j = 1, NDIM
+        do j = 1, gr%mesh%sb%dim
           write(aux, '(a2,i3,a1,i3,a1)') 'x(', i, ',', j, ')'
           call write_iter_header(out_coords, aux)
         end do
       end do
       do i = 1, geo%natoms
-        do j = 1, NDIM
+        do j = 1, gr%mesh%sb%dim
           write(aux, '(a2,i3,a1,i3,a1)') 'v(', i, ',',j,')'
           call write_iter_header(out_coords, aux)
         end do
       end do
       do i = 1, geo%natoms
-        do j = 1, NDIM
+        do j = 1, gr%mesh%sb%dim
           write(aux, '(a2,i3,a1,i3,a1)') 'f(', i, ',',j,')'
           call write_iter_header(out_coords, aux)
         end do
@@ -811,13 +811,13 @@ contains
     call write_iter_start(out_coords)
 
     do i = 1, geo%natoms
-      call write_iter_double(out_coords, geo%atom(i)%x(1:NDIM)/units_out%length%factor,   NDIM)
+      call write_iter_double(out_coords, geo%atom(i)%x(1:gr%mesh%sb%dim)/units_out%length%factor,   gr%mesh%sb%dim)
     end do
     do i = 1, geo%natoms
-      call write_iter_double(out_coords, geo%atom(i)%v(1:NDIM)/units_out%velocity%factor, NDIM)
+      call write_iter_double(out_coords, geo%atom(i)%v(1:gr%mesh%sb%dim)/units_out%velocity%factor, gr%mesh%sb%dim)
     end do
     do i = 1, geo%natoms
-      call write_iter_double(out_coords, geo%atom(i)%f(1:NDIM)/units_out%force%factor,    NDIM)
+      call write_iter_double(out_coords, geo%atom(i)%f(1:gr%mesh%sb%dim)/units_out%force%factor,    gr%mesh%sb%dim)
     end do
     call write_iter_nl(out_coords)
 
@@ -960,7 +960,7 @@ contains
 
       ! first line -> column names
       call write_iter_header_start(out_acc)
-      do i = 1, NDIM
+      do i = 1, gr%mesh%sb%dim
         write(aux, '(a4,i1,a1)') 'Acc(', i, ')'
         call write_iter_header(out_acc, aux)
       end do
@@ -969,7 +969,7 @@ contains
       ! second line: units
       call write_iter_string(out_acc, '#[Iter n.]')
       call write_iter_header(out_acc, '[' // trim(units_out%time%abbrev) // ']')
-      do i = 1, NDIM
+      do i = 1, gr%mesh%sb%dim
         call write_iter_header(out_acc, '[' // trim(units_out%acceleration%abbrev) // ']')
       end do
       call write_iter_nl(out_acc)
@@ -979,7 +979,7 @@ contains
     call td_calc_tacc(gr, geo, st, hm, acc, dt*i)
 
     call write_iter_start(out_acc)
-    call write_iter_double(out_acc, acc/units_out%acceleration%factor, NDIM)
+    call write_iter_double(out_acc, acc/units_out%acceleration%factor, gr%mesh%sb%dim)
     call write_iter_nl(out_acc)
 
   end subroutine td_write_acc
@@ -1015,17 +1015,17 @@ contains
       do i = 1, hm%ep%no_lasers
         select case(laser_kind(hm%ep%lasers(i)))
         case(E_FIELD_ELECTRIC)
-          do j = 1, NDIM
+          do j = 1, gr%mesh%sb%dim
             write(aux, '(a,i1,a)') 'E(', j, ')'
             call write_iter_header(out_laser, aux)
           end do
         case(E_FIELD_MAGNETIC)
-          do j = 1, NDIM
+          do j = 1, gr%mesh%sb%dim
             write(aux, '(a,i1,a)') 'B(', j, ')'
             call write_iter_header(out_laser, aux)
           end do
         case(E_FIELD_VECTOR_POTENTIAL)
-          do j = 1, NDIM
+          do j = 1, gr%mesh%sb%dim
             write(aux, '(a,i1,a)') 'A(', j, ')'
             call write_iter_header(out_laser, aux)
           end do
@@ -1043,12 +1043,12 @@ contains
         select case(laser_kind(hm%ep%lasers(i)))
         case(E_FIELD_ELECTRIC, E_FIELD_MAGNETIC)
           aux = '[' // trim(units_out%energy%abbrev) // ' / ' // trim(units_inp%length%abbrev) // ']'
-          do j = 1, NDIM
+          do j = 1, gr%mesh%sb%dim
             call write_iter_header(out_laser, aux)
           end do
         case(E_FIELD_VECTOR_POTENTIAL)
           aux = '[' // trim(units_out%energy%abbrev) // ']'
-          do j = 1, NDIM
+          do j = 1, gr%mesh%sb%dim
             call write_iter_header(out_laser, aux)
           end do
         end select
@@ -1069,7 +1069,7 @@ contains
       case(E_FIELD_VECTOR_POTENTIAL)
         field = field / units_inp%energy%factor
       end select
-      call write_iter_double(out_laser, field, NDIM)
+      call write_iter_double(out_laser, field, gr%mesh%sb%dim)
     end do
 
     call write_iter_nl(out_laser)
@@ -1151,15 +1151,15 @@ contains
       ! first line: column names
       call write_iter_header_start(out_gauge)
 
-      do j = 1, NDIM
+      do j = 1, gr%mesh%sb%dim
         write(aux, '(a2,i3,a1)') 'A(', j, ')'
         call write_iter_header(out_gauge, aux)
       end do
-      do j = 1, NDIM
+      do j = 1, gr%mesh%sb%dim
         write(aux, '(a6,i3,a1)') 'dA/dt(', j, ')'
         call write_iter_header(out_gauge, aux)
       end do
-      do j = 1, NDIM
+      do j = 1, gr%mesh%sb%dim
         write(aux, '(a2,i3,a1)') 'd^2A/dt^2(', j, ')'
         call write_iter_header(out_gauge, aux)
       end do
@@ -1180,9 +1180,9 @@ contains
     call write_iter_start(out_gauge)
 
     ! TODO: put the appropriate units here 
-    call write_iter_double(out_gauge, gauge_field_get_vec_pot(hm%ep%gfield), NDIM)
-    call write_iter_double(out_gauge, gauge_field_get_vec_pot_vel(hm%ep%gfield), NDIM)
-    call write_iter_double(out_gauge, gauge_field_get_vec_pot_acc(hm%ep%gfield), NDIM)
+    call write_iter_double(out_gauge, gauge_field_get_vec_pot(hm%ep%gfield), gr%mesh%sb%dim)
+    call write_iter_double(out_gauge, gauge_field_get_vec_pot_vel(hm%ep%gfield), gr%mesh%sb%dim)
+    call write_iter_double(out_gauge, gauge_field_get_vec_pot_acc(hm%ep%gfield), gr%mesh%sb%dim)
     call write_iter_nl(out_gauge)
     call pop_sub()
     

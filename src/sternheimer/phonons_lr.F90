@@ -83,7 +83,7 @@ contains
     gr  => sys%gr
 
     natoms = geo%natoms
-    ndim = NDIM
+    ndim = gr%mesh%sb%dim
 
     !CONSTRUCT
 
@@ -197,10 +197,10 @@ contains
       integer :: katom
 
       do iatom = 1, natoms
-        do idir = 1, NDIM
+        do idir = 1, gr%mesh%sb%dim
 
           do jatom = 1, natoms
-            do jdir = 1, NDIM         
+            do jdir = 1, gr%mesh%sb%dim         
 
               xi(1:MAX_DIM) = geo%atom(iatom)%x(1:MAX_DIM)
 
@@ -212,7 +212,7 @@ contains
                   if ( katom == iatom ) cycle
 
                   xk(1:MAX_DIM) = geo%atom(katom)%x(1:MAX_DIM)
-                  r2 = sum((xi(1:NDIM) - xk(1:NDIM))**2)
+                  r2 = sum((xi(1:gr%mesh%sb%dim) - xk(1:gr%mesh%sb%dim))**2)
 
                   ac = ac + geo%atom(iatom)%spec%Z_val * geo%atom(katom)%spec%Z_val &
                        /(r2**CNST(1.5)) *(&
@@ -226,7 +226,7 @@ contains
 
                 xj(1:MAX_DIM) = geo%atom(jatom)%x(1:MAX_DIM)
 
-                r2 = sum((xi(1:NDIM) - xj(1:NDIM))**2)
+                r2 = sum((xi(1:gr%mesh%sb%dim) - xj(1:gr%mesh%sb%dim))**2)
                 ac = geo%atom(iatom)%spec%Z_val * geo%atom(jatom)%spec%Z_val &
                      /(r2**CNST(1.5))*(&
                      ddelta(idir, jdir) - (M_THREE*(xi(idir)-xj(idir))*(xi(jdir)-xj(jdir)))/r2)

@@ -23,7 +23,6 @@
 #define NP_PART gr%mesh%np_part
 
 #define MAX_SPIN 4
-#define NDIM    gr%sb%dim
 
 #if defined(F90_ACCEPTS_LINE_NUMBERS)
 #  define CARDINAL \newline\cardinal __LINE__ __FILE__

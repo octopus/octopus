@@ -621,7 +621,8 @@ subroutine X(set_bc_batch)(der, fb)
           end do
         end do
         
-        call profiling_count_transfers(sum(der%mesh%nsend(1:der%mesh%vp%npart) + der%mesh%nrecv(1:der%mesh%vp%npart))*fb%dim*fb%nst, &
+        call profiling_count_transfers(&
+        sum(der%mesh%nsend(1:der%mesh%vp%npart) + der%mesh%nrecv(1:der%mesh%vp%npart))*fb%dim*fb%nst, &
              R_TOTYPE(M_ONE))
 
         call profiling_out(set_bc_comm_prof)

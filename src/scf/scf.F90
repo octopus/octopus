@@ -218,7 +218,7 @@ contains
 
     ! Handle mixing now...
     dim = 1
-    if (hm%d%cdft) dim = 1 + NDIM
+    if (hm%d%cdft) dim = 1 + gr%mesh%sb%dim
     call mix_init(scf%smix, gr%mesh%np, dim, st%d%nspin)
     call mesh_init_mesh_aux(gr%mesh)
 
@@ -318,7 +318,7 @@ contains
     nspin = st%d%nspin
 
     dim = 1
-    if (hm%d%cdft) dim = 1 + NDIM
+    if (hm%d%cdft) dim = 1 + gr%mesh%sb%dim
 
     ALLOCATE(rhoout(NP, dim, nspin), NP*dim*nspin)
     ALLOCATE(rhoin (NP, dim, nspin), NP*dim*nspin)
@@ -326,7 +326,7 @@ contains
     rhoin(1:NP, 1, 1:nspin) = st%rho(1:NP, 1:nspin)
     rhoout = M_ZERO
     if (st%d%cdft) then
-      rhoin(1:NP, 2:dim, 1:nspin) = st%j(1:NP, 1:NDIM, 1:nspin)
+      rhoin(1:NP, 2:dim, 1:nspin) = st%j(1:NP, 1:gr%mesh%sb%dim, 1:nspin)
     end if
 
     if (scf%what2mix == MIXPOT) then
@@ -336,7 +336,7 @@ contains
 
       vin(1:NP, 1, 1:nspin) = hm%vhxc(1:NP, 1:nspin)
       vout = M_ZERO
-      if (st%d%cdft) vin(1:NP, 2:dim, 1:nspin) = hm%axc(1:NP, 1:NDIM, 1:nspin)
+      if (st%d%cdft) vin(1:NP, 2:dim, 1:nspin) = hm%axc(1:NP, 1:gr%mesh%sb%dim, 1:nspin)
     else
       ALLOCATE(rhonew(NP, dim, nspin), NP*dim*nspin)
     end if
@@ -344,12 +344,12 @@ contains
 
     ! allocate and compute forces only if they are used as convergence criteria
     if (scf%conv_abs_force > M_ZERO) then
-      ALLOCATE(forcein(geo%natoms, NDIM), geo%natoms*NDIM)
-      ALLOCATE(forceout(geo%natoms, NDIM), geo%natoms*NDIM)
-      ALLOCATE(forcediff(NDIM), NDIM)
+      ALLOCATE(forcein(geo%natoms, gr%mesh%sb%dim), geo%natoms*gr%mesh%sb%dim)
+      ALLOCATE(forceout(geo%natoms, gr%mesh%sb%dim), geo%natoms*gr%mesh%sb%dim)
+      ALLOCATE(forcediff(gr%mesh%sb%dim), gr%mesh%sb%dim)
       call epot_forces(gr, geo, hm%ep, st)
       do iatom = 1, geo%natoms
-        forcein(iatom,1:NDIM) = geo%atom(iatom)%f(1:NDIM)
+        forcein(iatom,1:gr%mesh%sb%dim) = geo%atom(iatom)%f(1:gr%mesh%sb%dim)
       end do
     endif
 
@@ -385,12 +385,12 @@ contains
       rhoout(1:NP, 1, 1:nspin) = st%rho(1:NP, 1:nspin)
       if (hm%d%cdft) then
         call calc_physical_current(gr, st, st%j)
-        rhoout(1:NP, 2:dim, 1:nspin) = st%j(1:NP, 1:NDIM, 1:nspin)
+        rhoout(1:NP, 2:dim, 1:nspin) = st%j(1:NP, 1:gr%mesh%sb%dim, 1:nspin)
       end if
       if (scf%what2mix == MIXPOT) then
         call v_ks_calc(gr, ks, hm, st)
         vout(1:NP, 1, 1:nspin) = hm%vhxc(1:NP, 1:nspin)
-        if (hm%d%cdft) vout(1:NP, 2:dim, 1:nspin) = hm%axc(1:NP, 1:NDIM, 1:nspin)
+        if (hm%d%cdft) vout(1:NP, 2:dim, 1:nspin) = hm%axc(1:NP, 1:gr%mesh%sb%dim, 1:nspin)
       end if
       evsum_out = states_eigenvalues_sum(st)
 
@@ -413,8 +413,8 @@ contains
         call epot_forces(gr, geo, hm%ep, st)
         scf%abs_force = M_ZERO
         do iatom = 1, geo%natoms
-          forceout(iatom,1:NDIM) = geo%atom(iatom)%f(1:NDIM)
-          forcediff(1:NDIM) = abs( forceout(iatom,1:NDIM) - forcein(iatom,1:NDIM) )
+          forceout(iatom,1:gr%mesh%sb%dim) = geo%atom(iatom)%f(1:gr%mesh%sb%dim)
+          forcediff(1:gr%mesh%sb%dim) = abs( forceout(iatom,1:gr%mesh%sb%dim) - forcein(iatom,1:gr%mesh%sb%dim) )
           forcetmp = maxval( forcediff )
           if ( forcetmp > scf%abs_force ) then
             scf%abs_force = forcetmp
@@ -445,14 +445,14 @@ contains
         ! mix input and output densities and compute new potential
         call dmixing(scf%smix, iter, rhoin, rhoout, rhonew, dmf_dotp_aux)
         st%rho(1:NP,1:nspin) = rhonew(1:NP, 1, 1:nspin)
-        if (hm%d%cdft) st%j(1:NP,1:NDIM,1:nspin) = rhonew(1:NP, 2:dim, 1:nspin)
+        if (hm%d%cdft) st%j(1:NP,1:gr%mesh%sb%dim,1:nspin) = rhonew(1:NP, 2:dim, 1:nspin)
         call v_ks_calc(gr, ks, hm, st)
       case (MIXPOT)
         ! mix input and output potentials
         call dmixing(scf%smix, iter, vin, vout, vnew, dmf_dotp_aux)
         hm%vhxc(1:NP, 1:nspin) = vnew(1:NP, 1, 1:nspin)
         call hamiltonian_update_potential(hm, gr%mesh)
-        if (hm%d%cdft) hm%axc(1:NP, 1:NDIM, 1:nspin) = vnew(1:NP, 2:dim, 1:nspin)
+        if (hm%d%cdft) hm%axc(1:NP, 1:gr%mesh%sb%dim, 1:nspin) = vnew(1:NP, 2:dim, 1:nspin)
       end select
 
       ! Are we asked to stop? (Whenever Fortran is ready for signals, this should go away)
@@ -487,14 +487,14 @@ contains
 
       ! save information for the next iteration
       rhoin(1:NP, 1, 1:nspin) = st%rho(1:NP, 1:nspin)
-      if (hm%d%cdft) rhoin(1:NP, 2:dim, 1:nspin) = st%j(1:NP, 1:NDIM, 1:nspin)
+      if (hm%d%cdft) rhoin(1:NP, 2:dim, 1:nspin) = st%j(1:NP, 1:gr%mesh%sb%dim, 1:nspin)
       if (scf%what2mix == MIXPOT) then
         vin(1:NP, 1, 1:nspin) = hm%vhxc(1:NP, 1:nspin)
-        if (hm%d%cdft) vin(1:NP, 2:dim, 1:nspin) = hm%axc(1:NP, 1:NDIM, 1:nspin)
+        if (hm%d%cdft) vin(1:NP, 2:dim, 1:nspin) = hm%axc(1:NP, 1:gr%mesh%sb%dim, 1:nspin)
       end if
       evsum_in = evsum_out
       if (scf%conv_abs_force > M_ZERO) then
-        forcein(1:geo%natoms, 1:NDIM) = forceout(1:geo%natoms, 1:NDIM)
+        forcein(1:geo%natoms, 1:gr%mesh%sb%dim) = forceout(1:geo%natoms, 1:gr%mesh%sb%dim)
       end if
 
       if(forced_finish) then
@@ -646,7 +646,7 @@ contains
         call grid_write_info(gr, iunit)
 
         if(simul_box_is_periodic(gr%sb)) then
-          call kpoints_write_info(st%d, NDIM, iunit)
+          call kpoints_write_info(st%d, gr%mesh%sb%dim, iunit)
           write(iunit,'(1x)')
         end if
 
@@ -707,7 +707,7 @@ contains
       end do
 
       if(mpi_grp_is_root(mpi_world)) then
-        call io_output_dipole(iunit, n_dip, NDIM)
+        call io_output_dipole(iunit, n_dip, gr%mesh%sb%dim)
         
         if (simul_box_is_periodic(gr%sb)) then
            write(iunit, '(a)') "Defined only up to quantum of polarization (e * lattice vector)."
@@ -726,7 +726,7 @@ contains
       call write_momentum(iunit)
 
       ! Next is the angular momentum. Only applies to 2D and 3D.
-      if(NDIM == 2 .or. NDIM == 3) call write_angular_momentum(iunit)
+      if(gr%mesh%sb%dim == 2 .or. gr%mesh%sb%dim == 3) call write_angular_momentum(iunit)
 
       if(mpi_grp_is_root(mpi_world)) then
         write(iunit, '(a)') 'Convergence:'
@@ -745,7 +745,7 @@ contains
         write(iunit,'(a,10x,14x,a,14x,a,14x,a)') ' Ion','x','y','z'
         do iatom = 1, geo%natoms
           write(iunit,'(i4,a10,10f15.6)') iatom, trim(geo%atom(iatom)%spec%label), &
-            geo%atom(iatom)%f(1:NDIM) / units_out%force%factor
+            geo%atom(iatom)%f(1:gr%mesh%sb%dim) / units_out%force%factor
         end do
 
         call io_close(iunit)

@@ -141,7 +141,7 @@ contains
     forces0 = M_ZERO
 
     do i = 1, geo%natoms
-      do alpha = 1, NDIM
+      do alpha = 1, gr%mesh%sb%dim
         write(message(1), '(a,i3,a,i2)') 'Info: Moving atom ', i, ' in the direction ', alpha
         call write_info(1)
 
@@ -173,7 +173,7 @@ contains
         geo%atom(i)%x(alpha) = geo%atom(i)%x(alpha) + vib%disp
 
         do j = 1, geo%natoms
-          do beta = 1, NDIM
+          do beta = 1, gr%mesh%sb%dim
             vib%dyn_matrix(vibrations_get_index(vib, i, alpha), vibrations_get_index(vib, j, beta)) = &
               (forces0(j, beta) - forces(j, beta)) / (M_TWO*vib%disp )
           end do

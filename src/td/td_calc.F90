@@ -60,7 +60,7 @@ subroutine td_calc_tacc(gr, geo, st, hm, acc, t)
   ! WARNING: this ignores the possibility of non-electric td external fields.
   do j = 1, hm%ep%no_lasers
     call laser_field(gr%sb, hm%ep%lasers(j), field, t)
-    acc(1:NDIM) = acc(1:NDIM) - st%qtot*field(1:NDIM)
+    acc(1:gr%mesh%sb%dim) = acc(1:gr%mesh%sb%dim) - st%qtot*field(1:gr%mesh%sb%dim)
   end do
 
   if(.not. hm%ep%non_local) then
@@ -82,12 +82,12 @@ subroutine td_calc_tacc(gr, geo, st, hm, acc, t)
       ALLOCATE(vnl_xzpsi(NP, st%d%dim),    NP*st%d%dim)
       xzpsi = M_z0
       do k = 1, NP
-        do j = 1, NDIM
+        do j = 1, gr%mesh%sb%dim
           xzpsi(k, 1:st%d%dim, j) = gr%mesh%x(k, j)*st%zpsi(k, 1:st%d%dim, ist, ik)
         end do
       end do
 
-      do j = 1, NDIM
+      do j = 1, gr%mesh%sb%dim
         vnl_xzpsi = M_z0
         call zvnlpsi(hm, gr%mesh, xzpsi(:,:, j), vnl_xzpsi(:,:), ik)
 
@@ -98,12 +98,12 @@ subroutine td_calc_tacc(gr, geo, st, hm, acc, t)
 
       xzpsi = M_z0
       do k = 1, NP
-        do j = 1, NDIM
+        do j = 1, gr%mesh%sb%dim
           xzpsi(k, 1:st%d%dim, j) = gr%mesh%x(k, j)*hzpsi(k, 1:st%d%dim)
         end do
       end do
 
-      do j = 1, NDIM
+      do j = 1, gr%mesh%sb%dim
         vnl_xzpsi = M_z0
         call zvnlpsi(hm, gr%mesh, xzpsi(:,:, j), vnl_xzpsi(:,:), ik)
         do idim = 1, st%d%dim
@@ -119,7 +119,7 @@ subroutine td_calc_tacc(gr, geo, st, hm, acc, t)
 
 #if defined(HAVE_MPI)
   if(st%parallel_in_states) then
-    call MPI_Allreduce(x(1), y(1), NDIM, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+    call MPI_Allreduce(x(1), y(1), gr%mesh%sb%dim, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
     x = y
   end if
 #endif

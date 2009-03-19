@@ -58,7 +58,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
   ASSERT(present(lr) .eqv. present(Born_sum))
   ! need all to calculate Born charges
   if(present(lr_dir)) then
-    ASSERT(lr_dir > 0 .and. lr_dir <= NDIM)
+    ASSERT(lr_dir > 0 .and. lr_dir <= gr%mesh%sb%dim)
   end if
 
   np = gr%fine%mesh%np
@@ -66,13 +66,13 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
   ! if there is no fine mesh, gr%fine%mesh => gr%mesh according to grid.F90
 
   if(present(lr)) then
-    ALLOCATE(grad_dl_psi(np_part, 1:NDIM, st%d%dim), np_part*NDIM*st%d%dim)
-    ALLOCATE(grad_dl_psi2(np_part, 1:NDIM, st%d%dim), np_part*NDIM*st%d%dim)
+    ALLOCATE(grad_dl_psi(np_part, 1:gr%mesh%sb%dim, st%d%dim), np_part*gr%mesh%sb%dim*st%d%dim)
+    ALLOCATE(grad_dl_psi2(np_part, 1:gr%mesh%sb%dim, st%d%dim), np_part*gr%mesh%sb%dim*st%d%dim)
   endif
-  ALLOCATE(grad_psi(np_part, 1:NDIM, st%d%dim), np_part*NDIM*st%d%dim)
-  ALLOCATE(grad_rho(np, 1:NDIM), np*NDIM)
-  grad_rho(1:np, 1:NDIM) = M_ZERO
-  ALLOCATE(force(1:NDIM, 1:geo%natoms), NDIM*geo%natoms)
+  ALLOCATE(grad_psi(np_part, 1:gr%mesh%sb%dim, st%d%dim), np_part*gr%mesh%sb%dim*st%d%dim)
+  ALLOCATE(grad_rho(np, 1:gr%mesh%sb%dim), np*gr%mesh%sb%dim)
+  grad_rho(1:np, 1:gr%mesh%sb%dim) = M_ZERO
+  ALLOCATE(force(1:gr%mesh%sb%dim, 1:geo%natoms), gr%mesh%sb%dim*geo%natoms)
   force = M_ZERO
 
   ! even if there is no fine mesh, we need to make another copy
@@ -120,7 +120,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
         ! calculate the gradients of the wave-functions
         ! and set boundary conditions in preparation for applying projectors
         call X(derivatives_grad)(gr%fine%der, psi(:, idim), grad_psi(:, :, idim), set_bc = .false.)
-        do idir = 1, NDIM
+        do idir = 1, gr%mesh%sb%dim
           call X(set_bc)(gr%der, grad_psi(:, idir, idim))
         enddo
 
@@ -128,7 +128,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
           call X(derivatives_grad)(gr%fine%der, dl_psi(:, idim), grad_dl_psi(:, :, idim), set_bc = .false.)
           call X(derivatives_grad)(gr%fine%der, dl_psi2(:, idim), grad_dl_psi2(:, :, idim), set_bc = .false.)
 
-          do idir = 1, NDIM
+          do idir = 1, gr%mesh%sb%dim
             call X(set_bc)(gr%der, grad_dl_psi(:, idir, idim))
             call X(set_bc)(gr%der, grad_dl_psi2(:, idir, idim))
           enddo
@@ -136,23 +136,23 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
 
         !accumulate to calculate the gradient of the density
         if (present(lr)) then
-          forall (idir = 1:NDIM, ip = 1:np) &
+          forall (idir = 1:gr%mesh%sb%dim, ip = 1:np) &
             grad_rho(ip, idir) = grad_rho(ip, idir) + st%d%kweights(ik) * st%occ(ist, ik) * &
             (R_CONJ(grad_psi(ip, idir, idim)) * dl_psi(ip, idim) + R_CONJ(psi(ip, idim)) * grad_dl_psi(ip, idir, idim) &
             + R_CONJ(dl_psi2(ip, idim)) * grad_psi(ip, idir, idim) + R_CONJ(grad_dl_psi2(ip, idir, idim)) * psi(ip, idim))
         else
-          forall (idir = 1:NDIM, ip = 1:np) grad_rho(ip, idir) = grad_rho(ip, idir) + &
+          forall (idir = 1:gr%mesh%sb%dim, ip = 1:np) grad_rho(ip, idir) = grad_rho(ip, idir) + &
             st%d%kweights(ik) * st%occ(ist, ik) * M_TWO * R_CONJ(psi(ip, idim)) * grad_psi(ip, idir, idim)
         endif
       end do
 
-      call profiling_count_operations(np*st%d%dim*NDIM*(2 + R_MUL))
+      call profiling_count_operations(np*st%d%dim*gr%mesh%sb%dim*(2 + R_MUL))
       ! probably this is not accurate anymore
 
       ! iterate over the projectors
       do iatom = 1, geo%natoms
         if(projector_is_null(ep%proj(iatom))) cycle
-        do idir = 1, NDIM
+        do idir = 1, gr%mesh%sb%dim
 
           if(present(lr)) then
             force(idir, iatom) = force(idir, iatom) - st%d%kweights(ik) * st%occ(ist, ik) * &
@@ -189,15 +189,15 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
     call profiling_in(prof, "FORCES_MPI")
 
     !reduce the force
-    ALLOCATE(force_local(1:NDIM, 1:geo%natoms), NDIM*geo%natoms)
+    ALLOCATE(force_local(1:gr%mesh%sb%dim, 1:geo%natoms), gr%mesh%sb%dim*geo%natoms)
     force_local = force
-    call MPI_Allreduce(force_local, force, NDIM*geo%natoms, MPI_CMPLX, MPI_SUM, st%mpi_grp%comm, mpi_err)
+    call MPI_Allreduce(force_local, force, gr%mesh%sb%dim*geo%natoms, MPI_CMPLX, MPI_SUM, st%mpi_grp%comm, mpi_err)
     deallocate(force_local)
 
     !reduce the gradient of the density
-    ALLOCATE(grad_rho_local(np, NDIM), np*NDIM)
-    call lalg_copy(np, NDIM, grad_rho, grad_rho_local)
-    call MPI_Allreduce(grad_rho_local, grad_rho, np*NDIM, MPI_CMPLX, MPI_SUM, st%mpi_grp%comm, mpi_err)
+    ALLOCATE(grad_rho_local(np, gr%mesh%sb%dim), np*gr%mesh%sb%dim)
+    call lalg_copy(np, gr%mesh%sb%dim, grad_rho, grad_rho_local)
+    call MPI_Allreduce(grad_rho_local, grad_rho, np*gr%mesh%sb%dim, MPI_CMPLX, MPI_SUM, st%mpi_grp%comm, mpi_err)
     deallocate(grad_rho_local)
 
     call profiling_out(prof)
@@ -209,15 +209,15 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
     call profiling_in(prof, "FORCES_MPI")
     
     !reduce the force
-    ALLOCATE(force_local(1:NDIM, 1:geo%natoms), NDIM*geo%natoms)
+    ALLOCATE(force_local(1:gr%mesh%sb%dim, 1:geo%natoms), gr%mesh%sb%dim*geo%natoms)
     force_local = force
-    call MPI_Allreduce(force_local, force, NDIM*geo%natoms, MPI_CMPLX, MPI_SUM, st%d%kpt%mpi_grp%comm, mpi_err)
+    call MPI_Allreduce(force_local, force, gr%mesh%sb%dim*geo%natoms, MPI_CMPLX, MPI_SUM, st%d%kpt%mpi_grp%comm, mpi_err)
     deallocate(force_local)
     
     !reduce the gradient of the density
-    ALLOCATE(grad_rho_local(np, NDIM), np*NDIM)
-    call lalg_copy(np, NDIM, grad_rho, grad_rho_local)
-    call MPI_Allreduce(grad_rho_local, grad_rho, np*NDIM, MPI_CMPLX, MPI_SUM, st%d%kpt%mpi_grp%comm, mpi_err)
+    ALLOCATE(grad_rho_local(np, gr%mesh%sb%dim), np*gr%mesh%sb%dim)
+    call lalg_copy(np, gr%mesh%sb%dim, grad_rho, grad_rho_local)
+    call MPI_Allreduce(grad_rho_local, grad_rho, np*gr%mesh%sb%dim, MPI_CMPLX, MPI_SUM, st%d%kpt%mpi_grp%comm, mpi_err)
     deallocate(grad_rho_local)
 
     call profiling_out(prof)
@@ -228,9 +228,9 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
   
   do iatom = 1, geo%natoms
     if(present(lr)) then
-      geo%atom(iatom)%Born_charge(lr_dir, 1:NDIM) = force(1:NDIM, iatom)
+      geo%atom(iatom)%Born_charge(lr_dir, 1:gr%mesh%sb%dim) = force(1:gr%mesh%sb%dim, iatom)
     else
-      geo%atom(iatom)%f(1:NDIM) = geo%atom(iatom)%f(1:NDIM) + real(force(1:NDIM, iatom))
+      geo%atom(iatom)%f(1:gr%mesh%sb%dim) = geo%atom(iatom)%f(1:gr%mesh%sb%dim) + real(force(1:gr%mesh%sb%dim, iatom))
     endif
   end do
 
@@ -247,7 +247,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
     
     forall(ip = 1:np) zvloc(ip) = vloc(ip)
 
-    do idir = 1, NDIM
+    do idir = 1, gr%mesh%sb%dim
       force(idir, iatom) = -zmf_dotp(gr%fine%mesh, zvloc, grad_rho(:, idir))
     end do
 
@@ -266,15 +266,15 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
 
     ALLOCATE(recv_count(geo%atoms%mpi_grp%size), geo%atoms%mpi_grp%size)
     ALLOCATE(recv_displ(geo%atoms%mpi_grp%size), geo%atoms%mpi_grp%size)
-    ALLOCATE(force_local(1:NDIM, 1:geo%atoms%nlocal), NDIM*geo%atoms%nlocal)
+    ALLOCATE(force_local(1:gr%mesh%sb%dim, 1:geo%atoms%nlocal), gr%mesh%sb%dim*geo%atoms%nlocal)
 
-    recv_count(1:geo%atoms%mpi_grp%size) = NDIM*geo%atoms%num(0:geo%atoms%mpi_grp%size - 1)
-    recv_displ(1:geo%atoms%mpi_grp%size) = NDIM*(geo%atoms%range(1, 0:geo%atoms%mpi_grp%size - 1) - 1)
+    recv_count(1:geo%atoms%mpi_grp%size) = gr%mesh%sb%dim*geo%atoms%num(0:geo%atoms%mpi_grp%size - 1)
+    recv_displ(1:geo%atoms%mpi_grp%size) = gr%mesh%sb%dim*(geo%atoms%range(1, 0:geo%atoms%mpi_grp%size - 1) - 1)
 
-    force_local(1:NDIM, 1:geo%atoms%nlocal) = force(1:NDIM, geo%atoms%start:geo%atoms%end)
+    force_local(1:gr%mesh%sb%dim, 1:geo%atoms%nlocal) = force(1:gr%mesh%sb%dim, geo%atoms%start:geo%atoms%end)
 
     call MPI_Allgatherv(&
-         force_local, NDIM*geo%atoms%nlocal, MPI_CMPLX, &
+         force_local, gr%mesh%sb%dim*geo%atoms%nlocal, MPI_CMPLX, &
          force, recv_count(1), recv_displ, MPI_CMPLX, &
          geo%atoms%mpi_grp%comm, mpi_err)
 
@@ -286,11 +286,11 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
 #endif
 
   if(present(lr)) then
-    Born_sum(1:NDIM) = M_ZERO 
+    Born_sum(1:gr%mesh%sb%dim) = M_ZERO 
 
     do iatom = 1, geo%natoms
       geo%atom(iatom)%Born_charge(lr_dir, lr_dir) = geo%atom(iatom)%Born_charge(lr_dir, lr_dir) + geo%atom(iatom)%spec%Z_val
-      do idir = 1, NDIM
+      do idir = 1, gr%mesh%sb%dim
         geo%atom(iatom)%Born_charge(lr_dir, idir) = geo%atom(iatom)%Born_charge(lr_dir, idir) + force(idir, iatom)
         Born_sum(idir) = Born_sum(idir) + geo%atom(iatom)%Born_charge(lr_dir, idir)
       enddo
@@ -298,13 +298,15 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
 
     ! enforce acoustic sum rule: sum(iatom) Z*(iatom,idir,idir2) = 0
     do iatom = 1, geo%natoms
-      do idir = 1, NDIM
+      do idir = 1, gr%mesh%sb%dim
         geo%atom(iatom)%Born_charge(lr_dir, idir) = geo%atom(iatom)%Born_charge(lr_dir, idir) - Born_sum(idir) / geo%natoms
       enddo
     enddo
 
   else
-    forall (iatom = 1:geo%natoms, idir = 1:NDIM) geo%atom(iatom)%f(idir) = geo%atom(iatom)%f(idir) + real(force(idir, iatom))
+    forall (iatom = 1:geo%natoms, idir = 1:gr%mesh%sb%dim) 
+      geo%atom(iatom)%f(idir) = geo%atom(iatom)%f(idir) + real(force(idir, iatom))
+    end forall
   endif
 
   deallocate(force)

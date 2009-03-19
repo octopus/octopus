@@ -43,13 +43,13 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
 
   ASSERT(.false.)
 
-  ALLOCATE(   gpsi(NP, NDIM), NP*NDIM)
-  ALLOCATE(gdl_psi(NP, NDIM), NP*NDIM)
+  ALLOCATE(   gpsi(NP, gr%mesh%sb%dim), NP*gr%mesh%sb%dim)
+  ALLOCATE(gdl_psi(NP, gr%mesh%sb%dim), NP*gr%mesh%sb%dim)
 
-  if(present(lr_m)) ALLOCATE(gdl_psi_m(NP, NDIM), NP*NDIM)
+  if(present(lr_m)) ALLOCATE(gdl_psi_m(NP, gr%mesh%sb%dim), NP*gr%mesh%sb%dim)
 
-  ALLOCATE(   grho(NP, NDIM), NP*NDIM)
-  ALLOCATE(gdl_rho(NP, NDIM), NP*NDIM)
+  ALLOCATE(   grho(NP, gr%mesh%sb%dim), NP*gr%mesh%sb%dim)
+  ALLOCATE(gdl_rho(NP, gr%mesh%sb%dim), NP*gr%mesh%sb%dim)
 
   ALLOCATE(   rho(NP_PART), NP)
   ALLOCATE(dl_rho(NP_PART), NP)
@@ -104,7 +104,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
           rho(1:NP) = rho(1:NP) + ik_weight*abs(st%X(psi)(1:NP, idim, ist, is))**2
 
           !the gradient of the density
-          do i = 1, NDIM
+          do i = 1, gr%mesh%sb%dim
             grho(1:NP, i) = grho(1:NP, i) + &
                  ik_weight*M_TWO*R_REAL(R_CONJ(st%X(psi)(1:NP, idim, ist, is))*gpsi(1:NP, i))
           end do
@@ -119,7 +119,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
                  R_CONJ(st%X(psi)(1:NP, idim, ist, is)) * lr%X(dl_psi)(1:NP, idim, ist, is)+ & 
                  st%X(psi)(1:NP, idim, ist, is) * R_CONJ(lr_m%X(dl_psi)(1:NP, idim, ist, is)) )
 
-            do i=1, NDIM
+            do i=1, gr%mesh%sb%dim
 
               gdl_rho(1:NP,i) = gdl_rho(1:NP,i) + ik_weight * ( &
                    R_CONJ(st%X(psi)(1:NP, idim, ist, is)) * gdl_psi(1:NP,i) +      &
@@ -134,7 +134,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
             dl_rho(1:NP) = dl_rho(1:NP) + ik_weight*M_TWO* &
                  R_REAL(R_CONJ(st%X(psi)(1:NP, idim, ist, is))*lr%X(dl_psi)(1:NP, idim, ist, is))
 
-            do i=1,NDIM
+            do i=1,gr%mesh%sb%dim
               gdl_rho(1:NP,i) = gdl_rho(1:NP,i) + ik_weight * M_TWO * ( &
                    R_CONJ(st%X(psi)(1:NP, idim, ist, is)) * gdl_psi(1:NP, i) + &
                    gpsi(1:NP, i)*R_CONJ(lr%X(dl_psi)(1:NP, idim, ist, is))  )
@@ -164,17 +164,18 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
 
             do i = 1, NP
               lr%X(dl_de)(i, is) = lr%X(dl_de)(i, is) + &
-                   dl_rho(i)*ik_weight*sum(R_ABS(gpsi(i, 1:NDIM))**2) + &
+                   dl_rho(i)*ik_weight*sum(R_ABS(gpsi(i, 1:gr%mesh%sb%dim))**2) + &
                    rho(i)*ik_weight*&
-                   sum(R_CONJ(gpsi(i,1:NDIM))*gdl_psi(i, 1:NDIM) + gpsi(i,1:NDIM)*R_CONJ(gdl_psi_m(i, 1:NDIM)))
+                   sum(R_CONJ(gpsi(i,1:gr%mesh%sb%dim))*gdl_psi(i, 1:gr%mesh%sb%dim) + &
+                   gpsi(i,1:gr%mesh%sb%dim)*R_CONJ(gdl_psi_m(i, 1:gr%mesh%sb%dim)))
             end do
 
           else 
 
             do i = 1, NP
               lr%X(dl_de)(i, is) = lr%X(dl_de)(i, is) + &
-                   dl_rho(i)*ik_weight*sum(R_ABS(gpsi(i, 1:NDIM))**2) + &
-                   rho(i)*ik_weight*M_TWO*(sum(R_CONJ(gpsi(i, 1:NDIM))*gdl_psi(i, 1:NDIM)))
+                   dl_rho(i)*ik_weight*sum(R_ABS(gpsi(i, 1:gr%mesh%sb%dim))**2) + &
+                   rho(i)*ik_weight*M_TWO*(sum(R_CONJ(gpsi(i, 1:gr%mesh%sb%dim))*gdl_psi(i, 1:gr%mesh%sb%dim)))
             end do
 
           end if
@@ -186,7 +187,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
     !the density term
     do i = 1, NP
       if(abs(st%rho(i, is)) >= dmin) then
-        lr%X(dl_de)(i, is) = lr%X(dl_de)(i, is) - M_HALF*sum(grho(i, 1:NDIM)*gdl_rho(i, 1:NDIM))
+        lr%X(dl_de)(i, is) = lr%X(dl_de)(i, is) - M_HALF*sum(grho(i, 1:gr%mesh%sb%dim)*gdl_rho(i, 1:gr%mesh%sb%dim))
       end if
     end do
 
@@ -194,7 +195,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
     if(st%wfs_type == M_CMPLX) then       
       do i = 1, NP
         if(abs(st%rho(i, is)) >= dmin) then
-          lr%X(dl_de)(i, is) = lr%X(dl_de)(i, is) + M_TWO*sum(st%j(i, 1:NDIM, is)*lr%dl_j(i, 1:NDIM, is))
+          lr%X(dl_de)(i, is) = lr%X(dl_de)(i, is) + M_TWO*sum(st%j(i, 1:gr%mesh%sb%dim, is)*lr%dl_j(i, 1:gr%mesh%sb%dim, is))
         end if
       end do
     end if
@@ -250,7 +251,7 @@ subroutine X(calc_polarizability_finite)(sys, hm, lr, nsigma, perturbation, zpol
 
   call push_sub('em_resp_calc_inc.Xcalc_polarizability_finite')
 
-  ndir_ = sys%NDIM
+  ndir_ = sys%gr%mesh%sb%dim
   if(present(ndir)) ndir_ = ndir
 
   ! alpha_ij(w) = - sum(m occ) [<psi_m(0)|r_i|psi_mj(1)(w)> + <psi_mj(1)(-w)|r_i|psi_m(0)>]

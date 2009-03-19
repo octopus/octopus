@@ -90,7 +90,7 @@ contains
     call system_h_setup (sys, hm)
 
     ! Allocate the dipole...
-    ALLOCATE(dipole(NDIM, NDIM, 2), NDIM*NDIM*2)
+    ALLOCATE(dipole(gr%mesh%sb%dim, gr%mesh%sb%dim, 2), gr%mesh%sb%dim*gr%mesh%sb%dim*2)
     dipole = M_ZERO
 
     if(.not.fromScratch) then
@@ -100,7 +100,7 @@ contains
         rewind(iunit)
         i_start = 1
         do i = 1, 3
-          read(iunit, fmt=*, iostat = ios) ((dipole(i, j, k), j = 1, NDIM), k = 1, 2)
+          read(iunit, fmt=*, iostat = ios) ((dipole(i, j, k), j = 1, gr%mesh%sb%dim), k = 1, 2)
           if(ios.ne.0) exit
           i_start = i_start + 1
         end do
@@ -117,7 +117,7 @@ contains
       end if
       i_start = 1
     end if
-    if(i_start > NDIM) out_pol = .true.
+    if(i_start > gr%mesh%sb%dim) out_pol = .true.
 
     ! Save local pseudopotential
     ALLOCATE(Vpsl_save(NP), NP)
@@ -130,7 +130,7 @@ contains
     call output_init_()
 
     call scf_init(scfv, gr, sys%geo, st, hm)
-    do i = i_start, NDIM
+    do i = i_start, gr%mesh%sb%dim
       do k = 1, 2
         write(message(1), '(a)')
         write(message(2), '(a,i1,a,i1)')'Info: Calculating dipole moment for field ', i, ', #',k
@@ -147,7 +147,7 @@ contains
         end do
 
         ! calculate dipole
-        do j = 1, NDIM
+        do j = 1, gr%mesh%sb%dim
           dipole(i, j, k) = dmf_moment(gr%mesh, trrho, j, 1)
         end do
 
@@ -158,11 +158,11 @@ contains
       ! Writes down the dipole to the file
       if(mpi_grp_is_root(mpi_world)) then 
         iunit = io_open(trim(tmpdir)//'restart.pol', action='write', status='old', position='append')
-        write(iunit, fmt='(6e20.12)') ((dipole(i, j, k), j = 1, NDIM), k = 1, 2)
+        write(iunit, fmt='(6e20.12)') ((dipole(i, j, k), j = 1, gr%mesh%sb%dim), k = 1, 2)
         call io_close(iunit)
       end if
 
-      out_pol = (i == NDIM)
+      out_pol = (i == gr%mesh%sb%dim)
 
     end do
     
@@ -179,7 +179,7 @@ contains
     end do
 
         ! calculate dipole
-    do j = 1, NDIM
+    do j = 1, gr%mesh%sb%dim
        center_dipole(j) = dmf_moment(gr%mesh, trrho, j, 1)
     end do
 
@@ -309,21 +309,22 @@ contains
         iunit = io_open('linear/polarizability_fd', action='write')
         write(iunit, '(2a)', advance='no') '# Polarizability tensor [', &
           trim(units_out%length%abbrev)
-        if(NDIM.ne.1) write(iunit, '(a,i1)', advance='no') '^', NDIM
+        if(gr%mesh%sb%dim.ne.1) write(iunit, '(a,i1)', advance='no') '^', gr%mesh%sb%dim
         write(iunit, '(a)') ']'
 
-        alpha(1:NDIM,1:NDIM) = (dipole(1:NDIM, 1:NDIM, 1) - dipole(1:NDIM, 1:NDIM, 2))/(M_TWO*e_field)
+        alpha(1:gr%mesh%sb%dim,1:gr%mesh%sb%dim) = (dipole(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim, 1) - &
+             dipole(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim, 2))/(M_TWO*e_field)
 
         beta = M_ZERO
 
-        do idir = 1, NDIM
-          beta(1:NDIM, idir, idir) = -(dipole(idir, 1:NDIM, 1) + dipole(idir, 1:NDIM, 2) - &
-            M_TWO*center_dipole(1:NDIM))/e_field**2
-          beta(idir, 1:NDIM, idir) = beta(1:NDIM, idir, idir) 
-          beta(idir, idir, 1:NDIM) = beta(1:NDIM, idir, idir)
+        do idir = 1, gr%mesh%sb%dim
+          beta(1:gr%mesh%sb%dim, idir, idir) = -(dipole(idir, 1:gr%mesh%sb%dim, 1) + dipole(idir, 1:gr%mesh%sb%dim, 2) - &
+            M_TWO*center_dipole(1:gr%mesh%sb%dim))/e_field**2
+          beta(idir, 1:gr%mesh%sb%dim, idir) = beta(1:gr%mesh%sb%dim, idir, idir) 
+          beta(idir, idir, 1:gr%mesh%sb%dim) = beta(1:gr%mesh%sb%dim, idir, idir)
         end do
 
-        call io_output_tensor(iunit, alpha, NDIM, units_out%length%factor**NDIM)
+        call io_output_tensor(iunit, alpha, gr%mesh%sb%dim, units_out%length%factor**gr%mesh%sb%dim)
         call io_close(iunit)
         
         call out_hyperpolarizability(gr%sb, beta, converged = .true., dirname = "linear/")

@@ -333,17 +333,17 @@ subroutine X(states_calc_momentum)(gr, st)
 
   call push_sub('states_calc_inc.Xstates_calc_momentum')
 
-  ALLOCATE(grad(NP, st%d%dim, NDIM), NP*st%d%dim*NDIM)
+  ALLOCATE(grad(NP, st%d%dim, gr%mesh%sb%dim), NP*st%d%dim*gr%mesh%sb%dim)
 
   do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
 
       do idim = 1, st%d%dim
         ! compute gradient of st%X(psi)
-        call X(derivatives_grad)(gr%der, st%X(psi)(:, idim, ist, ik), grad(:, idim, 1:NDIM))
+        call X(derivatives_grad)(gr%der, st%X(psi)(:, idim, ist, ik), grad(:, idim, 1:gr%mesh%sb%dim))
       end do
 
-      do i = 1, NDIM
+      do i = 1, gr%mesh%sb%dim
         ! since the expectation value of the momentum operator is real
         ! for square integrable wfns this integral should be purely imaginary 
         ! for complex wfns but real for real wfns (see case distinction below)
@@ -369,7 +369,7 @@ subroutine X(states_calc_momentum)(gr, st)
     ! Exchange momenta in the state parallel case.
 #if defined(HAVE_MPI)
     if(st%parallel_in_states) then
-      do i = 1, NDIM
+      do i = 1, gr%mesh%sb%dim
         lmomentum(1:st%lnst) = st%momentum(i, st%st_start:st%st_end, ik)
         call lmpi_gen_allgatherv(st%lnst, lmomentum, tmp, gmomentum, st%mpi_grp)
         st%momentum(i, 1:st%nst, ik) = gmomentum(1:st%nst)
@@ -401,9 +401,9 @@ subroutine X(states_angular_momentum)(gr, phi, l, l2)
 
   call push_sub('states_calc_inc.Xstates_angular_momemtum')
 
-  ASSERT(NDIM .ne.1)
+  ASSERT(gr%mesh%sb%dim .ne.1)
 
-  select case(NDIM)
+  select case(gr%mesh%sb%dim)
   case(3)
     ALLOCATE(lpsi(NP_PART, 3), NP_PART*3)
   case(2)
@@ -420,7 +420,7 @@ subroutine X(states_angular_momentum)(gr, phi, l, l2)
     l = M_ZERO
 #else
     call X(f_angular_momentum)(gr%sb, gr%mesh, gr%der, phi(:, idim), lpsi)
-    select case(NDIM)
+    select case(gr%mesh%sb%dim)
     case(3)
       l(1) = l(1) + X(mf_dotp)(gr%mesh, phi(:, idim), lpsi(:, 1))
       l(2) = l(2) + X(mf_dotp)(gr%mesh, phi(:, idim), lpsi(:, 2))

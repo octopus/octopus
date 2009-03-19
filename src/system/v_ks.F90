@@ -125,13 +125,13 @@ contains
       end if
     case(HARTREE_FOCK)
       ! initilize xc modules
-      call xc_init(ks%xc, NDIM, nel, d%spin_channels, d%cdft, hartree_fock=.true.)
+      call xc_init(ks%xc, gr%mesh%sb%dim, nel, d%spin_channels, d%cdft, hartree_fock=.true.)
       ks%xc_family = ks%xc%family
       ks%sic_type = sic_none
 
     case(KOHN_SHAM_DFT)
       ! initilize xc modules
-      call xc_init(ks%xc, NDIM, nel, d%spin_channels, d%cdft, hartree_fock=.false.)
+      call xc_init(ks%xc, gr%mesh%sb%dim, nel, d%spin_channels, d%cdft, hartree_fock=.false.)
       ks%xc_family = ks%xc%family
 
       ! check for SIC

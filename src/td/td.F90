@@ -560,7 +560,7 @@ contains
         call MPI_Bcast(x, 1, MPI_FLOAT, 0, st%mpi_grp%comm, mpi_err)
       end if
 #endif
-      call hamiltonian_span(hm, minval(gr%mesh%h(1:NDIM)), x)
+      call hamiltonian_span(hm, minval(gr%mesh%h(1:gr%mesh%sb%dim)), x)
       call total_energy(hm, gr, st, -1)
 
     end subroutine init_wfs
@@ -610,7 +610,7 @@ contains
           end do
         else
           do i = 1, NP
-            kick_function(i) = sum(gr%mesh%x(i, 1:NDIM)*k%pol(1:NDIM, k%pol_dir))
+            kick_function(i) = sum(gr%mesh%x(i, 1:gr%mesh%sb%dim)*k%pol(1:gr%mesh%sb%dim, k%pol_dir))
           end do
         end if
         
@@ -665,8 +665,8 @@ contains
         ! where M and Z are the ionic mass and charge, respectively.
         if(ion_dynamics_ions_move(td%ions)  .and. k%delta_strength .ne. M_ZERO) then
           do i = 1, geo%natoms
-            geo%atom(i)%v(1:NDIM) = geo%atom(i)%v(1:NDIM) - &
-              k%delta_strength_mode*k%pol(1:NDIM, k%pol_dir)*geo%atom(i)%spec%z_val / geo%atom(i)%spec%weight
+            geo%atom(i)%v(1:gr%mesh%sb%dim) = geo%atom(i)%v(1:gr%mesh%sb%dim) - &
+              k%delta_strength_mode*k%pol(1:gr%mesh%sb%dim, k%pol_dir)*geo%atom(i)%spec%z_val / geo%atom(i)%spec%weight
           end do
         end if
 
@@ -700,15 +700,15 @@ contains
       read(iunit, '(28x)', advance='no') ! skip the time index.
 
       do i = 1, geo%natoms
-        read(iunit, '(3es20.12)', advance='no') geo%atom(i)%x(1:NDIM)
+        read(iunit, '(3es20.12)', advance='no') geo%atom(i)%x(1:gr%mesh%sb%dim)
         geo%atom(i)%x(:) = geo%atom(i)%x(:) * units_out%length%factor
       end do
       do i = 1, geo%natoms
-        read(iunit, '(3es20.12)', advance='no') geo%atom(i)%v(1:NDIM)
+        read(iunit, '(3es20.12)', advance='no') geo%atom(i)%v(1:gr%mesh%sb%dim)
         geo%atom(i)%v(:) = geo%atom(i)%v(:) * units_out%velocity%factor
       end do
       do i = 1, geo%natoms
-        read(iunit, '(3es20.12)', advance='no') geo%atom(i)%f(1:NDIM)
+        read(iunit, '(3es20.12)', advance='no') geo%atom(i)%f(1:gr%mesh%sb%dim)
         geo%atom(i)%f(:) = geo%atom(i)%f(:) * units_out%force%factor
       end do
 
@@ -742,9 +742,9 @@ contains
       read(iunit, '(28x)', advance='no') ! skip the time index.
 
       ! TODO: units are missing
-      read(iunit, '(3es20.12)', advance='no') vecpot(1:NDIM)
-      read(iunit, '(3es20.12)', advance='no') vecpot_vel(1:NDIM)
-      read(iunit, '(3es20.12)', advance='no') dummy(1:NDIM) ! skip the accel field.
+      read(iunit, '(3es20.12)', advance='no') vecpot(1:gr%mesh%sb%dim)
+      read(iunit, '(3es20.12)', advance='no') vecpot_vel(1:gr%mesh%sb%dim)
+      read(iunit, '(3es20.12)', advance='no') dummy(1:gr%mesh%sb%dim) ! skip the accel field.
 
       call gauge_field_set_vec_pot(hm%ep%gfield, vecpot)
       call gauge_field_set_vec_pot_vel(hm%ep%gfield, vecpot_vel)

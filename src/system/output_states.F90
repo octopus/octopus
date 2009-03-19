@@ -36,7 +36,7 @@
 
     call push_sub('output_states.h_sys_output_states')
 
-    u = M_ONE/units_out%length%factor**NDIM
+    u = M_ONE/units_out%length%factor**gr%mesh%sb%dim
 
     if(iand(outp%what, output_density).ne.0) then
       do is = 1, st%d%nspin
@@ -48,7 +48,7 @@
 
     if(iand(outp%what, output_pol_density).ne.0) then
       ALLOCATE(dtmp(NP), NP)
-      do idim=1, NDIM
+      do idim=1, gr%mesh%sb%dim
         do is = 1, st%d%nspin
           dtmp(1:NP)=st%rho(1:NP,is)*gr%mesh%x(1:NP,idim)
           write(fname, '(a,i1,a,i1)') 'dipole_density-', is, '-',idim
@@ -63,7 +63,7 @@
       ! calculate current first
       call states_calc_tau_jp_gn(gr, st, jp=st%j)
       do is = 1, st%d%nspin
-        do id = 1, NDIM
+        do id = 1, gr%mesh%sb%dim
           write(fname, '(a,i1,a,a)') 'current-', is, '-', index2axis(id)
           call doutput_function(outp%how, dir, fname, gr%mesh, gr%sb, &
             st%j(:, id, is), u, ierr, is_tmp = .false., geo = geo)
@@ -250,7 +250,7 @@
 
     iunit = io_open(trim(dir)//'/'//'current-flow', action='write')
 
-    select case(NDIM)
+    select case(gr%mesh%sb%dim)
     case(3)
       write(iunit,'(a)')       '# Plane:'
       write(iunit,'(a,3f9.5)') '# u = ', outp%plane%u(1), outp%plane%u(2), outp%plane%u(3)
@@ -277,13 +277,13 @@
       call states_calc_tau_jp_gn(gr, st, jp=st%j)
 
       ALLOCATE(j(NP, MAX_DIM), NP*MAX_DIM)
-      do k = 1, NDIM
+      do k = 1, gr%mesh%sb%dim
         do i = 1, NP
           j(i, k) = sum(st%j(i, k, :))
         end do
       end do
 
-      select case(NDIM)
+      select case(gr%mesh%sb%dim)
       case(3); flow = mf_surface_integral (gr%mesh, j, outp%plane)
       case(2); flow = mf_line_integral (gr%mesh, j, outp%line)
       case(1); flow = j(mesh_nearest_point(gr%mesh, outp%line%origin(1), dmin, rankmin), 1)

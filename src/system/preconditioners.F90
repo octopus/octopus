@@ -121,7 +121,7 @@ contains
     case(PRE_FILTER)
       ! the smoothing has a star stencil like the laplacian
       call nl_operator_init(this%op, "Preconditioner")
-      call stencil_star_get_lapl(this%op%stencil, NDIM, 1)
+      call stencil_star_get_lapl(this%op%stencil, gr%mesh%sb%dim, 1)
       call nl_operator_build(gr%mesh, this%op, NP, const_w = .not. gr%mesh%use_curvlinear)
       
       ns = this%op%stencil%size
@@ -138,7 +138,7 @@ contains
 
         do is = 1, ns
           if(is /= this%op%stencil%center) then
-            this%op%w_re(is, ip) = M_HALF*(M_ONE - alpha)/NDIM
+            this%op%w_re(is, ip) = M_HALF*(M_ONE - alpha)/gr%mesh%sb%dim
           else
             this%op%w_re(is, ip) = alpha
           end if

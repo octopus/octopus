@@ -66,7 +66,7 @@ module kdotp_m
     FLOAT, pointer :: eff_mass_inv(:, :, :, :)  ! inverse effective mass tensor
                                                 ! (ik, ist, idir1, idir2)
 
-    type(lr_t), pointer :: lr(:,:) ! linear response for (NDIM,1)
+    type(lr_t), pointer :: lr(:,:) ! linear response for (gr%mesh%sb%dim,1)
                                    ! second index is dummy; should only be 1
                                    ! for compatibility with em_resp routines
 
@@ -99,21 +99,21 @@ contains
 
     gr => sys%gr
 !    ndim = sys%gr%sb%dim
-    size = sys%st%d%nik * sys%st%nst * NDIM * NDIM
+    size = sys%st%d%nik * sys%st%nst * gr%mesh%sb%dim * gr%mesh%sb%dim
 
-    ALLOCATE(kdotp_vars%eff_mass_inv(sys%st%d%nik, sys%st%nst, NDIM, NDIM), size)
+    ALLOCATE(kdotp_vars%eff_mass_inv(sys%st%d%nik, sys%st%nst, gr%mesh%sb%dim, gr%mesh%sb%dim), size)
     kdotp_vars%eff_mass_inv(:,:,:,:)=0  
 
     call pert_init(kdotp_vars%perturbation, PERTURBATION_KDOTP, sys%gr, sys%geo)
 
-    ALLOCATE(kdotp_vars%lr(1:NDIM, 1), NDIM)
+    ALLOCATE(kdotp_vars%lr(1:gr%mesh%sb%dim, 1), gr%mesh%sb%dim)
 
     call parse_input()
 
     call restart_look_and_read(sys%st, sys%gr, sys%geo, is_complex = .true.)
     ! even if wfs are real, the response must be allowed to be complex
 
-    kdotp_vars%lr(1:NDIM, 1:1)%nst = sys%st%nst
+    kdotp_vars%lr(1:gr%mesh%sb%dim, 1:1)%nst = sys%st%nst
 
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian for linear response'
@@ -124,7 +124,7 @@ contains
          set_ham_var = 0, set_occ_response = (kdotp_vars%occ_solution_method == 0))
     ! ham_var_set = 0 results in HamiltonianVariation = V_ext_only
 
-    do idir = 1, NDIM
+    do idir = 1, gr%mesh%sb%dim
       call lr_init(kdotp_vars%lr(idir, 1))
       call lr_allocate(kdotp_vars%lr(idir, 1), sys%st, sys%gr%mesh)
 
@@ -176,7 +176,7 @@ contains
     kdotp_vars%ok = .true.
 
     ! solve the Sternheimer equation
-    do idir = 1, NDIM
+    do idir = 1, gr%mesh%sb%dim
       write(message(1), '(a,i3)') 'Info: Calculating response for direction ', idir
       call write_info(1)
       call pert_setup_dir(kdotp_vars%perturbation, idir)
@@ -197,7 +197,7 @@ contains
     endif
 
     ! clean up some things
-    do idir = 1, NDIM
+    do idir = 1, gr%mesh%sb%dim
       call lr_dealloc(kdotp_vars%lr(idir, 1))
     end do
 
@@ -384,7 +384,7 @@ contains
         tmp = int2str(ist)
         write(iunit,'(a, a, a, f12.8, a, a)') 'State #', trim(tmp), ', Energy = ', &
           st%eigenval(ist, ik)/units_out%energy%factor, ' ', units_out%energy%abbrev
-        call io_output_tensor(iunit, kdotp_vars%eff_mass_inv(ik, ist, :, :), NDIM, M_ONE)
+        call io_output_tensor(iunit, kdotp_vars%eff_mass_inv(ik, ist, :, :), gr%mesh%sb%dim, M_ONE)
       enddo
       
       write(iunit,'(a)')
@@ -395,7 +395,7 @@ contains
         write(iunit,'(a, a, a, f12.8, a, a)') 'State #', trim(tmp), ', Energy = ', &
           st%eigenval(ist, ik)/units_out%energy%factor, ' ', units_out%energy%abbrev
         determinant = lalg_inverter(gr%sb%dim, kdotp_vars%eff_mass_inv(ik, ist, :, :), .true.)
-        call io_output_tensor(iunit, kdotp_vars%eff_mass_inv(ik, ist, :, :), NDIM, M_ONE)
+        call io_output_tensor(iunit, kdotp_vars%eff_mass_inv(ik, ist, :, :), gr%mesh%sb%dim, M_ONE)
       enddo
 
     enddo

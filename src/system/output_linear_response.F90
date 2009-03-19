@@ -36,7 +36,7 @@ subroutine X(h_sys_output_lr) (st, gr, lr, dir, tag, isigma, outp, geo)
 
   call push_sub('output_linear_response.Xh_sys_output_lr')
 
-  u = M_ONE/units_out%length%factor**NDIM
+  u = M_ONE/units_out%length%factor**gr%mesh%sb%dim
 
   if(isigma == 1) then ! the density, current, etc. are only defined for the + frequency
 
@@ -50,7 +50,7 @@ subroutine X(h_sys_output_lr) (st, gr, lr, dir, tag, isigma, outp, geo)
     if(iand(outp%what, output_pol_density).ne.0) then
       ALLOCATE(tmp(1:NP),NP)
       do is = 1, st%d%nspin
-        do i=1,NDIM
+        do i=1,gr%mesh%sb%dim
           tmp(1:NP)=gr%mesh%x(1:NP,i)*lr%X(dl_rho)(:, is)
           write(fname, '(a,i1,a,i1,a,i1)') 'alpha_density-', is, '-', tag, '-', i
           call X(output_function)(outp%how, dir, fname, gr%mesh, gr%sb, tmp, u, ierr, geo = geo)
@@ -61,14 +61,14 @@ subroutine X(h_sys_output_lr) (st, gr, lr, dir, tag, isigma, outp, geo)
 
     if( (iand(outp%what, output_current).ne.0) .and. (st%wfs_type == M_CMPLX) )then
       do is = 1, st%d%nspin
-        do idim = 1, NDIM
+        do idim = 1, gr%mesh%sb%dim
           write(fname, '(a,i1,a,i1,a,a)') 'lr_current-', is, '-', tag, '-',  index2axis(idim)
           call zoutput_function(outp%how, dir, fname, gr%mesh, gr%sb, lr%dl_j(:, idim, is), u, ierr, geo = geo)
         end do
       end do
     end if
 
-    if(NDIM==3) then
+    if(gr%mesh%sb%dim==3) then
       if(iand(outp%what, output_elf).ne.0) call lr_elf('lr_D','lr_elf')
     end if
 

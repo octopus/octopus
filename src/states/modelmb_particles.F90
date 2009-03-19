@@ -157,7 +157,7 @@ subroutine modelMB_particles_init (modelMBparticles,gr)
   !%Type block
   !%Section States
   !%Description
-  !% Characterization of different modelMB particles in NDIM dimensional space
+  !% Characterization of different modelMB particles in gr%mesh%sb%dim dimensional space
   !%
   !% <tt>%DescribeParticlesModelMB
   !% <br>&nbsp;&nbsp; proton   | 1 | 1800. | 1.

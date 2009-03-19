@@ -91,8 +91,8 @@ contains
     kappa = M_ZERO
     call states_calc_dens(st, NP, rho)
 
-    ALLOCATE(grho(NP, NDIM, st%d%nspin), NP*NDIM*st%d%nspin)
-    ALLOCATE(  jj(NP, NDIM, st%d%nspin), NP*NDIM*st%d%nspin)
+    ALLOCATE(grho(NP, gr%mesh%sb%dim, st%d%nspin), NP*gr%mesh%sb%dim*st%d%nspin)
+    ALLOCATE(  jj(NP, gr%mesh%sb%dim, st%d%nspin), NP*gr%mesh%sb%dim*st%d%nspin)
 
     call states_calc_tau_jp_gn(gr, st, kappa, jj, grho)
 
@@ -110,8 +110,8 @@ contains
     do_is: do is = 1, st%d%nspin
       do i = 1, NP
         kappa(i, is) = kappa(i, is)*rho(i, is)        &    ! + tau * rho
-          - M_FOURTH*sum(grho(i, 1:NDIM, is)**2)      &    ! - | nabla rho |^2 / 4
-          - sum(jj(i, 1:NDIM, is)**2)                      ! - j^2
+          - M_FOURTH*sum(grho(i, 1:gr%mesh%sb%dim, is)**2)      &    ! - | nabla rho |^2 / 4
+          - sum(jj(i, 1:gr%mesh%sb%dim, is)**2)                      ! - j^2
       end do
 
       deallocate(grho, jj)   ! these are no longer needed
@@ -211,14 +211,14 @@ contains
 
     do_is: do is = 1, st%d%nspin
       ALLOCATE(    r(NP),       NP)
-      ALLOCATE(gradr(NP, NDIM), NP*NDIM)
-      ALLOCATE(    j(NP, NDIM), NP*NDIM)
+      ALLOCATE(gradr(NP, gr%mesh%sb%dim), NP*gr%mesh%sb%dim)
+      ALLOCATE(    j(NP, gr%mesh%sb%dim), NP*gr%mesh%sb%dim)
       r = M_ZERO; gradr = M_ZERO; j  = M_ZERO
 
       elf(1:NP,is) = M_ZERO
 
       ALLOCATE(psi_fs(NP_PART),  NP_PART)
-      ALLOCATE(gpsi  (NP, NDIM), NP*NDIM)
+      ALLOCATE(gpsi  (NP, gr%mesh%sb%dim), NP*gr%mesh%sb%dim)
       do ik = is, st%d%nik, st%d%nspin
         do ist = 1, st%nst
           do idim = 1, st%d%dim
@@ -226,19 +226,19 @@ contains
             if (st%wfs_type == M_REAL) then
               call dmf2mf_RS2FS(gr%mesh, st%dpsi(:, idim, ist, ik), psi_fs(:), dcf_tmp)
               call zderivatives_grad(gr%der, psi_fs(:), gpsi)
-              do i = 1, NDIM
+              do i = 1, gr%mesh%sb%dim
                 gpsi(:,i) = gpsi(:,i) * gr%mesh%h(i)**2 * real(dcf_tmp%n(i), REAL_PRECISION) / (M_TWO*M_PI)
               end do
             else
               call zmf2mf_RS2FS(gr%mesh, st%zpsi(:, idim, ist, ik), psi_fs(:), zcf_tmp)
               call zderivatives_grad(gr%der, psi_fs(:), gpsi)
-              do i = 1, NDIM
+              do i = 1, gr%mesh%sb%dim
                 gpsi(:,i) = gpsi(:,i) * gr%mesh%h(i)**2 * real(zcf_tmp%n(i), REAL_PRECISION) / (M_TWO*M_PI)
               end do
             end if
 
             r(:) = r(:) + st%d%kweights(ik)*st%occ(ist, ik) * abs(psi_fs(:))**2
-            do i = 1, NDIM
+            do i = 1, gr%mesh%sb%dim
               gradr(:,i) = gradr(:,i) + st%d%kweights(ik)*st%occ(ist, ik) *  &
                    M_TWO * real(conjg(psi_fs(:))*gpsi(:,i))
               j (:,i) =  j(:,i) + st%d%kweights(ik)*st%occ(ist, ik) *  &
@@ -248,7 +248,7 @@ contains
             do i = 1, NP
               if(r(i) >= dmin) then
                 elf(i,is) = elf(i,is) + st%d%kweights(ik)*st%occ(ist, ik)/s * &
-                     sum(abs(gpsi(i, 1:NDIM))**2)
+                     sum(abs(gpsi(i, 1:gr%mesh%sb%dim))**2)
               end if
             end do
           end do
@@ -258,7 +258,7 @@ contains
 
       do i = 1, NP
         if(r(i) >= dmin) then
-          elf(i,is) = elf(i,is) - (M_FOURTH*sum(gradr(i, 1:NDIM)**2) + sum(j(i, 1:NDIM)**2))/(s*r(i))
+          elf(i,is) = elf(i,is) - (M_FOURTH*sum(gradr(i, 1:gr%mesh%sb%dim)**2) + sum(j(i, 1:gr%mesh%sb%dim)**2))/(s*r(i))
         end if
       end do
     

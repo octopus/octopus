@@ -86,7 +86,7 @@ contains
     call push_sub('poisson.poisson_init')
 
     call messages_print_stress(stdout, "Hartree")
-    select case(NDIM)
+    select case(gr%mesh%sb%dim)
     case(1); call init_1D()
     case(2); call init_2D()
     case(3); call init_3D()
@@ -184,7 +184,7 @@ contains
       ! In 2D, periodic in two dimensions means no cut-off at all.
       if(poisson_solver .eq. 2) poisson_solver = 3
 
-      if(gr%mesh%use_curvlinear .and. (poisson_solver .ne. -NDIM) ) then
+      if(gr%mesh%use_curvlinear .and. (poisson_solver .ne. -gr%mesh%sb%dim) ) then
         message(1) = 'If curvilinear coordinates are used in 2D, then the only working'
         message(2) = 'Poisson solver is -2 ("direct summation in two dimensions")'
         call write_fatal(2)

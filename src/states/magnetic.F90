@@ -137,7 +137,7 @@ contains
   subroutine calc_physical_current(gr, st, j)
     type(grid_t),     intent(inout) :: gr
     type(states_t),   intent(inout) :: st
-    FLOAT,            intent(out)   :: j(:,:,:)   ! j(NP, NDIM, st%d%nspin)
+    FLOAT,            intent(out)   :: j(:,:,:)   ! j(NP, gr%mesh%sb%dim, st%d%nspin)
 
     call push_sub('magnetic.calc_physical_current')
 
@@ -158,8 +158,8 @@ contains
   subroutine magnetic_induced(gr, st, a_ind, b_ind)
     type(grid_t), intent(inout) :: gr
     type(states_t), intent(inout) :: st
-    FLOAT, intent(out) :: a_ind(:, :) ! a(NP_PART, NDIM)
-    FLOAT, intent(out) :: b_ind(:, :) ! b(NP_PART, NDIM) if NDIM=3, b(NP_PART, 1) if NDIM=2
+    FLOAT, intent(out) :: a_ind(:, :) ! a(NP_PART, gr%mesh%sb%dim)
+    FLOAT, intent(out) :: b_ind(:, :) ! b(NP_PART, gr%mesh%sb%dim) if gr%mesh%sb%dim=3, b(NP_PART, 1) if gr%mesh%sb%dim=2
 
     integer :: i
     FLOAT, allocatable :: j(:, :, :)
@@ -174,11 +174,11 @@ contains
       call pop_sub(); return
     end if
 
-    ALLOCATE(j(NP_PART, NDIM, st%d%nspin), NP_PART*NDIM*st%d%nspin)
+    ALLOCATE(j(NP_PART, gr%mesh%sb%dim, st%d%nspin), NP_PART*gr%mesh%sb%dim*st%d%nspin)
     call states_calc_tau_jp_gn(gr, st, jp=j)
 
     a_ind = M_ZERO
-    do i = 1, NDIM
+    do i = 1, gr%mesh%sb%dim
       call dpoisson_solve(gr, a_ind(:, i), j(:, i, 1))
     end do
     ! This minus sign is introduced here because the current that has been used

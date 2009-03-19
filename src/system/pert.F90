@@ -186,8 +186,8 @@ contains
     end if
 
     if(this%pert_type == PERTURBATION_IONIC) then
-      ALLOCATE(this%ionic%mix1(geo%natoms, NDIM), geo%natoms*NDIM)
-      ALLOCATE(this%ionic%mix2(geo%natoms, NDIM), geo%natoms*NDIM)
+      ALLOCATE(this%ionic%mix1(geo%natoms, gr%mesh%sb%dim), geo%natoms*gr%mesh%sb%dim)
+      ALLOCATE(this%ionic%mix2(geo%natoms, gr%mesh%sb%dim), geo%natoms*gr%mesh%sb%dim)
     end if
 
     if(this%pert_type == PERTURBATION_KDOTP) then

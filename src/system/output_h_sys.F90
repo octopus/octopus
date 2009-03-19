@@ -360,7 +360,7 @@ contains
     call h_sys_output_current_flow(gr, st, dir, outp, geo)
 
     if(iand(outp%what, output_geometry).ne.0) then
-      call atom_write_xyz(dir, "geometry", geo, NDIM)
+      call atom_write_xyz(dir, "geometry", geo, gr%mesh%sb%dim)
       if(simul_box_is_periodic(gr%sb)) &
         call periodic_write_crystal(gr%sb, geo, dir)
     end if
@@ -387,7 +387,7 @@ contains
 
     ! First the ELF in real space
     if(iand(outp%what, output_elf).ne.0 .or. iand(outp%what, output_elf_basins).ne.0) then
-      ASSERT(NDIM.ne.1)
+      ASSERT(gr%mesh%sb%dim.ne.1)
 
       call elf_calc(st, gr, f_loc)
       

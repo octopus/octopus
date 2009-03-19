@@ -203,8 +203,8 @@ contains
     !%End
     nullify(ep%E_field, ep%v_static)
     if(loct_parse_block(datasets_check('StaticElectricField'), blk)==0) then
-      ALLOCATE(ep%E_field(NDIM), NDIM)
-      do i = 1, NDIM
+      ALLOCATE(ep%E_field(gr%mesh%sb%dim), gr%mesh%sb%dim)
+      do i = 1, gr%mesh%sb%dim
         call loct_parse_block_float(blk, 0, i-1, ep%E_field(i))
       end do
       call loct_parse_block_end(blk)
@@ -251,11 +251,11 @@ contains
       call loct_parse_block_end(blk)
 
       ! Compute the vector potential
-      ALLOCATE(ep%A_static(NP, NDIM), NP*NDIM)
-      ALLOCATE(x(NDIM), NDIM)
+      ALLOCATE(ep%A_static(NP, gr%mesh%sb%dim), NP*gr%mesh%sb%dim)
+      ALLOCATE(x(gr%mesh%sb%dim), gr%mesh%sb%dim)
       do i = 1, NP
-        x(1:NDIM) = gr%mesh%x(i, 1:NDIM)
-        select case (NDIM)
+        x(1:gr%mesh%sb%dim) = gr%mesh%x(i, 1:gr%mesh%sb%dim)
+        select case (gr%mesh%sb%dim)
         case (2)
           ep%A_static(i, :) = (/x(2), -x(1)/)*ep%B_field(3)
         case (3)
@@ -569,7 +569,7 @@ contains
       else
         
         !Local potential
-        call species_get_local(geo%atom(iatom)%spec, mesh, geo%atom(iatom)%x(1:NDIM), vl, time)
+        call species_get_local(geo%atom(iatom)%spec, mesh, geo%atom(iatom)%x(1:gr%mesh%sb%dim), vl, time)
         
       end if
       
@@ -596,7 +596,7 @@ contains
     !Non-local core corrections
     if(present(rho_core) .and. geo%atom(iatom)%spec%nlcc .and. species_is_ps(geo%atom(iatom)%spec)) then
       do i = 1, mesh%np
-        x(1:NDIM) = mesh%x(i, 1:NDIM) - geo%atom(iatom)%x(1:NDIM)
+        x(1:gr%mesh%sb%dim) = mesh%x(i, 1:gr%mesh%sb%dim) - geo%atom(iatom)%x(1:gr%mesh%sb%dim)
         rho_core(i) = rho_core(i) + species_get_nlcc(geo%atom(iatom)%spec, x)
       end do
     end if
@@ -681,7 +681,7 @@ contains
         case(E_FIELD_ELECTRIC)
           call laser_field(gr%sb, ep%lasers(j), x, t)
           do i = 1, geo%natoms
-            geo%atom(i)%f(1:NDIM) = geo%atom(i)%f(1:NDIM) + geo%atom(i)%spec%z_val*x(1:NDIM)
+            geo%atom(i)%f(1:gr%mesh%sb%dim) = geo%atom(i)%f(1:gr%mesh%sb%dim) + geo%atom(i)%spec%z_val*x(1:gr%mesh%sb%dim)
           end do
 
         case(E_FIELD_MAGNETIC, E_FIELD_VECTOR_POTENTIAL, E_FIELD_SCALAR_POTENTIAL)
@@ -694,7 +694,7 @@ contains
 
     if(associated(ep%E_field)) then
       do i = 1, geo%natoms
-        geo%atom(i)%f(1:NDIM) = geo%atom(i)%f(1:NDIM) + geo%atom(i)%spec%Z_val * ep%E_field(1:NDIM)
+        geo%atom(i)%f(1:gr%mesh%sb%dim) = geo%atom(i)%f(1:gr%mesh%sb%dim) + geo%atom(i)%spec%Z_val * ep%E_field(1:gr%mesh%sb%dim)
       end do
     end if
     

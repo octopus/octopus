@@ -250,7 +250,7 @@ contains
     end do
 
     if (hm%d%cdft) then
-      ALLOCATE(hm%axc(NP, NDIM, hm%d%nspin), NP*NDIM*hm%d%nspin)
+      ALLOCATE(hm%axc(NP, gr%mesh%sb%dim, hm%d%nspin), NP*gr%mesh%sb%dim*hm%d%nspin)
       hm%axc = M_ZERO
     else
       nullify(hm%axc)
@@ -287,7 +287,7 @@ contains
     !% of the output files are "Bind").
     !%End
     if(hm%self_induced_magnetic) then
-      select case(NDIM)
+      select case(gr%mesh%sb%dim)
       case(3)
         ALLOCATE(hm%a_ind(NP_PART, MAX_DIM), NP_PART*MAX_DIM)
         ALLOCATE(hm%b_ind(NP_PART, MAX_DIM), NP_PART*MAX_DIM)

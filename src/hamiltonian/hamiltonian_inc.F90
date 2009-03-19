@@ -440,7 +440,7 @@ subroutine X(magnetic_terms) (gr, hm, psi, hpsi, grad, ik)
   if(hm%d%cdft) then
 
     ALLOCATE(div(NP), NP)
-    ALLOCATE(tmp(NP_PART, NDIM), NP_PART*NDIM)
+    ALLOCATE(tmp(NP_PART, gr%mesh%sb%dim), NP_PART*gr%mesh%sb%dim)
     select case (hm%d%ispin)
     case(UNPOLARIZED)
       tmp(1:NP, :) = hm%axc(1:NP, :, 1)
@@ -461,14 +461,16 @@ subroutine X(magnetic_terms) (gr, hm, psi, hpsi, grad, ik)
     select case (hm%d%ispin)
     case(UNPOLARIZED)
       do k = 1, NP
-        hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(hm%axc(k, 1:NDIM, 1), grad(k, 1:NDIM, 1))
+        hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(hm%axc(k, 1:gr%mesh%sb%dim, 1), grad(k, 1:gr%mesh%sb%dim, 1))
       end do
     case(SPIN_POLARIZED)
       do k = 1, NP
         if(modulo(ik+1, 2) == 0) then ! we have a spin down
-          hpsi(k, 1) = hpsi(k, 1) -  M_zI*dot_product(hm%axc(k, 1:NDIM, 1), grad(k, 1:NDIM, 1))
+          hpsi(k, 1) = hpsi(k, 1) - &
+               M_zI*dot_product(hm%axc(k, 1:gr%mesh%sb%dim, 1), grad(k, 1:gr%mesh%sb%dim, 1))
         else
-          hpsi(k, 1) = hpsi(k, 1) -  M_zI*dot_product(hm%axc(k, 1:NDIM, 2), grad(k, 1:NDIM, 1))
+          hpsi(k, 1) = hpsi(k, 1) - &
+               M_zI*dot_product(hm%axc(k, 1:gr%mesh%sb%dim, 2), grad(k, 1:gr%mesh%sb%dim, 1))
         end if
       end do
     case(SPINORS)
@@ -480,13 +482,15 @@ subroutine X(magnetic_terms) (gr, hm, psi, hpsi, grad, ik)
   ! If we have an external magnetic field
   if (associated(hm%ep%A_static)) then
     do k = 1, NP
-      hpsi(k, :) = hpsi(k, :) + M_HALF*dot_product(hm%ep%A_static(k, 1:NDIM), hm%ep%A_static(k, 1:NDIM))*psi(k, :)
+      hpsi(k, :) = hpsi(k, :) + &
+           M_HALF*dot_product(hm%ep%A_static(k, 1:gr%mesh%sb%dim), hm%ep%A_static(k, 1:gr%mesh%sb%dim))*psi(k, :)
       select case(hm%d%ispin)
       case(UNPOLARIZED, SPIN_POLARIZED)
-        hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(hm%ep%A_static(k, 1:NDIM), grad(k, 1:NDIM, 1))
+        hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(hm%ep%A_static(k, 1:gr%mesh%sb%dim), grad(k, 1:gr%mesh%sb%dim, 1))
       case (SPINORS)
         do idim = 1, hm%d%dim
-          hpsi(k, idim) = hpsi(k, idim) - M_zI*dot_product(hm%ep%A_static(k, 1:NDIM), grad(k, 1:NDIM, idim))
+          hpsi(k, idim) = hpsi(k, idim) - &
+               M_zI*dot_product(hm%ep%A_static(k, 1:gr%mesh%sb%dim), grad(k, 1:gr%mesh%sb%dim, idim))
         end do
       end select
     end do

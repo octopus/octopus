@@ -75,7 +75,7 @@ module em_resp_m
     FLOAT :: eta                     ! small imaginary part to add to the frequency
     FLOAT :: freq_factor(MAX_DIM)    !
     FLOAT,      pointer :: omega(:)  ! the frequencies to consider
-    type(lr_t), pointer :: lr(:,:,:) ! linear response for (NDIM, nsigma, nfactor)
+    type(lr_t), pointer :: lr(:,:,:) ! linear response for (gr%mesh%sb%dim, nsigma, nfactor)
 
     logical :: calc_hyperpol
     CMPLX   :: alpha(MAX_DIM, MAX_DIM, 3)        ! the linear polarizability
@@ -124,7 +124,7 @@ contains
       message(1) = "Reading kdotp wavefunctions since system is periodic."
       call write_info(1)
 
-      do idir = 1, NDIM
+      do idir = 1, gr%mesh%sb%dim
         call lr_init(kdotp_lr(idir, 1))
         call lr_allocate(kdotp_lr(idir, 1), sys%st, sys%gr%mesh)
 
@@ -155,8 +155,8 @@ contains
        ! only considering positive values
     endif
     
-    ALLOCATE(em_vars%lr(1:NDIM, 1:em_vars%nsigma, 1:em_vars%nfactor), NDIM*em_vars%nsigma*em_vars%nfactor)
-    em_vars%lr(1:NDIM, 1:em_vars%nsigma, 1:em_vars%nfactor)%nst = sys%st%nst
+    ALLOCATE(em_vars%lr(1:gr%mesh%sb%dim, 1:em_vars%nsigma, 1:em_vars%nfactor), gr%mesh%sb%dim*em_vars%nsigma*em_vars%nfactor)
+    em_vars%lr(1:gr%mesh%sb%dim, 1:em_vars%nsigma, 1:em_vars%nfactor)%nst = sys%st%nst
 
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian for linear response'
@@ -637,19 +637,19 @@ contains
          write(iunit,'(i5,a10)') iatom, trim(geo%atom(iatom)%spec%label)
 
          write(iunit,'(a)') 'Magnitude:'
-         call io_output_tensor(iunit, TOFLOAT(abs(geo%atom(iatom)%Born_charge(:,:))), NDIM, M_ONE)
+         call io_output_tensor(iunit, TOFLOAT(abs(geo%atom(iatom)%Born_charge(:,:))), gr%mesh%sb%dim, M_ONE)
 
          write(iunit,'(a)') 'Phase:'
          phase = atan2(aimag(geo%atom(iatom)%Born_charge(:,:)),real(geo%atom(iatom)%Born_charge(:,:)))
-         call io_output_tensor(iunit, phase, NDIM, M_ONE)
+         call io_output_tensor(iunit, phase, gr%mesh%sb%dim, M_ONE)
       enddo
 
       write(iunit,'(a)')
       write(iunit,'(a)') '# Sum of Born effective charges before correction to satisfy acoustic sum rule.' 
       write(iunit,'(a)') 'Real:'
-      call io_output_tensor(iunit, real(em_vars%Born_sum(:, :)), NDIM, M_ONE)
+      call io_output_tensor(iunit, real(em_vars%Born_sum(:, :)), gr%mesh%sb%dim, M_ONE)
       write(iunit,'(a)') 'Imaginary:'
-      call io_output_tensor(iunit, aimag(em_vars%Born_sum(:, :)), NDIM, M_ONE)
+      call io_output_tensor(iunit, aimag(em_vars%Born_sum(:, :)), gr%mesh%sb%dim, M_ONE)
 
       call io_close(iunit)
       call pop_sub()
@@ -666,31 +666,32 @@ contains
       if (.not.em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
 
       write(iunit, '(2a)') '# Paramagnetic contribution to the susceptibility tensor [ppm a.u.]'
-      call io_output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :, ifactor)), NDIM, CNST(1e-6))
+      call io_output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :, ifactor)), gr%mesh%sb%dim, CNST(1e-6))
       write(iunit, '(1x)')
 
       write(iunit, '(2a)') '# Diamagnetic contribution to the susceptibility tensor [ppm a.u.]'
-      call io_output_tensor(iunit, TOFLOAT(em_vars%chi_dia(:, :, ifactor)), NDIM, CNST(1e-6))
+      call io_output_tensor(iunit, TOFLOAT(em_vars%chi_dia(:, :, ifactor)), gr%mesh%sb%dim, CNST(1e-6))
       write(iunit, '(1x)')
 
       write(iunit, '(2a)') '# Total susceptibility tensor [ppm a.u.]'
       call io_output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :, ifactor) + em_vars%chi_dia(:,:, ifactor)), &
-        NDIM, CNST(1e-6))
+        gr%mesh%sb%dim, CNST(1e-6))
       write(iunit, '(1x)')
 
       write(iunit, '(a)') hyphens
       to_ppmcgs = M_ONE/CNST(8.9238878e-2)*CNST(1e-6)
 
       write(iunit, '(2a)') '# Paramagnetic contribution to the susceptibility tensor [ppm cgs / mol]'
-      call io_output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :, ifactor)), NDIM, to_ppmcgs)
+      call io_output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :, ifactor)), gr%mesh%sb%dim, to_ppmcgs)
       write(iunit, '(1x)')
 
       write(iunit, '(2a)') '# Diamagnetic contribution to the susceptibility tensor [ppm cgs / mol]'
-      call io_output_tensor(iunit, TOFLOAT(em_vars%chi_dia(:, :, ifactor)), NDIM, to_ppmcgs)
+      call io_output_tensor(iunit, TOFLOAT(em_vars%chi_dia(:, :, ifactor)), gr%mesh%sb%dim, to_ppmcgs)
       write(iunit, '(1x)')
 
       write(iunit, '(2a)') '# Total susceptibility tensor [ppm cgs / mol]'
-      call io_output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :, ifactor) + em_vars%chi_dia(:,:, ifactor)), NDIM, to_ppmcgs)
+      call io_output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :, ifactor) + em_vars%chi_dia(:,:, ifactor)), &
+           gr%mesh%sb%dim, to_ppmcgs)
       write(iunit, '(1x)')
 
       call io_close(iunit)      
@@ -706,7 +707,7 @@ contains
       call push_sub('em_resp.em_resp_output.out_projections')
 
       do ik = 1, st%d%nik
-        do dir = 1, NDIM
+        do dir = 1, gr%mesh%sb%dim
 
           write(fname, '(2a,i1,a,i1)') trim(dirname), '/projection-', ik, '-', dir
           iunit = io_open(trim(fname), action='write')
@@ -766,10 +767,10 @@ contains
 
       call push_sub('em_resp.em_resp_output.out_wavefunctions')
 
-      do dir = 1, NDIM
+      do dir = 1, gr%mesh%sb%dim
         if(states_are_complex(st)) then 
 
-          if(NDIM==3) then
+          if(gr%mesh%sb%dim==3) then
             if(iand(outp%what, output_elf).ne.0) &
               call zlr_calc_elf(st, gr, em_vars%lr(dir, 1, ifactor), em_vars%lr(dir, 2, ifactor))
           end if
@@ -778,7 +779,7 @@ contains
           end do
         else
 
-          if(NDIM==3) then
+          if(gr%mesh%sb%dim==3) then
             if(iand(outp%what, output_elf) .ne. 0) &
               call dlr_calc_elf(st, gr, em_vars%lr(dir, 1, ifactor), em_vars%lr(dir, 2, ifactor))
           end if
@@ -868,10 +869,10 @@ contains
 
     write(iunit, '(2a)', advance='no') '# Polarizability tensor [', &
       trim(units_out%length%abbrev)
-    if(NDIM.ne.1) write(iunit, '(a,i1)', advance='no') '^', NDIM
+    if(gr%mesh%sb%dim.ne.1) write(iunit, '(a,i1)', advance='no') '^', gr%mesh%sb%dim
     write(iunit, '(a)') ']'
 
-    call io_output_tensor(iunit, TOFLOAT(alpha(1:MAX_DIM, 1:MAX_DIM)), NDIM, units_out%length%factor**NDIM)
+    call io_output_tensor(iunit, TOFLOAT(alpha(1:MAX_DIM, 1:MAX_DIM)), gr%mesh%sb%dim, units_out%length%factor**gr%mesh%sb%dim)
 
     call io_close(iunit)
 

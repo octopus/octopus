@@ -68,7 +68,7 @@ contains
     end if
 
     temp = M_ZERO
-    temp(1:NDIM) = (M_TWO*M_Pi)/(cf%n(1:NDIM)*gr%mesh%h(1:NDIM))
+    temp(1:gr%mesh%sb%dim) = (M_TWO*M_Pi)/(cf%n(1:gr%mesh%sb%dim)*gr%mesh%h(1:gr%mesh%sb%dim))
 
     call zcf_alloc_RS(cf)
     call zcf_alloc_FS(cf)
@@ -84,7 +84,7 @@ contains
           do ix = 1, cf%n(1)
             k(1) = pad_feq(ix, cf%n(1), .true.)
 
-            g2 = min(cutoff, sum((temp(1:NDIM)*k(1:NDIM))**2))
+            g2 = min(cutoff, sum((temp(1:gr%mesh%sb%dim)*k(1:gr%mesh%sb%dim))**2))
             cf%FS(ix, iy, iz) = exp(factor*g2/M_TWO)*cf%FS(ix, iy, iz)
           end do
         end do
@@ -107,7 +107,7 @@ contains
   subroutine zexp_vlpsi(gr, hm, psi, ik, t, factor)
     type(grid_t),        intent(in)    :: gr
     type(hamiltonian_t), intent(in)    :: hm
-    CMPLX,               intent(inout) :: psi(:,:) ! (NP_PART, NDIM)
+    CMPLX,               intent(inout) :: psi(:,:) ! (NP_PART, gr%mesh%sb%dim)
     integer,             intent(in)    :: ik
     FLOAT,               intent(in)    :: t
     CMPLX,               intent(in)    :: factor

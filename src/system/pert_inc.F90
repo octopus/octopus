@@ -156,18 +156,18 @@ contains
 
       do iatom = 1, geo%natoms
 
-        do idir = 1, NDIM
+        do idir = 1, gr%mesh%sb%dim
           if(this%dir == idir) cycle ! this direction is not used in the cross product
           call X(projector_commute_r)(hm%ep%proj(iatom), gr, hm%d%dim, idir, ik, f_in_copy, vrnl(:, :, idir))
         end do
 
-        xx(1:NDIM) = geo%atom(iatom)%x(1:NDIM)
+        xx(1:gr%mesh%sb%dim) = geo%atom(iatom)%x(1:gr%mesh%sb%dim)
 
         do ip = 1, NP
 
-          if(this%gauge == GAUGE_ICL) xx(1:NDIM) = gr%mesh%x(ip, 1:NDIM)
+          if(this%gauge == GAUGE_ICL) xx(1:gr%mesh%sb%dim) = gr%mesh%x(ip, 1:gr%mesh%sb%dim)
          
-          vv(1:NDIM) = vrnl(ip, 1, 1:NDIM)
+          vv(1:gr%mesh%sb%dim) = vrnl(ip, 1, 1:gr%mesh%sb%dim)
 
           cross(1) = xx(2) * vv(3) - xx(3) * vv(2)
           cross(2) = xx(3) * vv(1) - xx(1) * vv(3)
@@ -199,7 +199,7 @@ contains
     f_out(1:NP) = M_ZERO
     
     do iatom = 1, geo%natoms
-      do idir = 1, NDIM
+      do idir = 1, gr%mesh%sb%dim
 
         if (this%ionic%pure_dir .and. iatom /= this%atom1 .and. idir /= this%dir) cycle
 
@@ -312,9 +312,9 @@ contains
       bdir(this%dir,  1)   = M_ONE
       bdir(this%dir2, 2)   = M_ONE
 
-      ALLOCATE(f_in2(NP_PART, NDIM), NP_PART * NDIM)
+      ALLOCATE(f_in2(NP_PART, gr%mesh%sb%dim), NP_PART * gr%mesh%sb%dim)
       ALLOCATE(vrnl(NP_PART, hm%d%dim), NP_PART * hm%d%dim)
-      ALLOCATE(dnl(NP, NDIM), NP * NDIM)
+      ALLOCATE(dnl(NP, gr%mesh%sb%dim), NP * gr%mesh%sb%dim)
       ALLOCATE(xf(NP), NP)
 
       f_in2(NP:NP_PART,:) = R_TOTYPE(M_ZERO)
@@ -333,7 +333,7 @@ contains
         end do
 
         ! let us now get sum_beta Dnl f_in2
-        dnl(1:NP, 1:NDIM) = R_TOTYPE(M_ZERO)
+        dnl(1:NP, 1:gr%mesh%sb%dim) = R_TOTYPE(M_ZERO)
         do idir = 1, gr%sb%dim
           do idir2 = 1, gr%sb%dim
             !calculate dnl |f_in2> = -[x,vnl] |f_in2>
@@ -386,8 +386,8 @@ contains
     f_out(1:NP) = M_ZERO
     
     do iatom = 1, geo%natoms
-      do idir = 1, NDIM
-        do jdir = 1, NDIM
+      do idir = 1, gr%mesh%sb%dim
+        do jdir = 1, gr%mesh%sb%dim
           
           if (this%ionic%pure_dir &
                .and. iatom /= this%atom1 .and. idir /= this%dir &

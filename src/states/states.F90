@@ -843,7 +843,7 @@ contains
 
     ! allocate arrays for charge and current densities
     ALLOCATE(st%rho(NP_PART, st%d%nspin), NP_PART*st%d%nspin)
-    ALLOCATE(st%j(NP_PART, NDIM, st%d%nspin), NP_PART*NDIM*st%d%nspin)
+    ALLOCATE(st%j(NP_PART, gr%mesh%sb%dim, st%d%nspin), NP_PART*gr%mesh%sb%dim*st%d%nspin)
     st%rho  = M_ZERO
     st%j    = M_ZERO
     st%nlcc = geo%nlcc
@@ -2035,8 +2035,8 @@ contains
     type(grid_t),    intent(inout) :: gr
     type(states_t),  intent(inout) :: st
     FLOAT, optional, intent(out)   ::  tau(:,:)    ! (NP, st%d%nspin)
-    FLOAT, optional, intent(out)   ::   jp(:,:,:)  ! (NP, NDIM, st%d%nspin)
-    FLOAT, optional, intent(out)   :: grho(:,:,:)  ! (NP, NDIM, st%d%nspin)
+    FLOAT, optional, intent(out)   ::   jp(:,:,:)  ! (NP, gr%mesh%sb%dim, st%d%nspin)
+    FLOAT, optional, intent(out)   :: grho(:,:,:)  ! (NP, gr%mesh%sb%dim, st%d%nspin)
 
     CMPLX, allocatable :: wf_psi(:,:), gwf_psi(:,:,:)
     CMPLX   :: c_tmp
@@ -2049,7 +2049,7 @@ contains
 #endif
 
     ALLOCATE(wf_psi(NP_PART, st%d%dim),  NP_PART*st%d%dim)
-    ALLOCATE(gwf_psi(NP, NDIM, st%d%dim), NP*NDIM*st%d%dim)   
+    ALLOCATE(gwf_psi(NP, gr%mesh%sb%dim, st%d%dim), NP*gr%mesh%sb%dim*st%d%dim)   
 
     sp = 1
     if(st%d%ispin == SPIN_POLARIZED) sp = 2
@@ -2079,7 +2079,7 @@ contains
           end do
 
           ww = st%d%kweights(ik)*st%occ(ist, ik)
-          do i_dim = 1, NDIM
+          do i_dim = 1, gr%mesh%sb%dim
             if(present(grho)) &
               grho(1:NP, i_dim, is) = grho(1:NP, i_dim, is) + &
                 ww*M_TWO*real(conjg(wf_psi(1:NP, 1))*gwf_psi(1:NP, i_dim, 1))
@@ -2147,7 +2147,7 @@ contains
           tau(1:NP, is) = tmp_reduce(1:NP)       
         end if
 
-        do i_dim = 1, NDIM
+        do i_dim = 1, gr%mesh%sb%dim
           if(present(jp)) then
             call MPI_Allreduce(jp(1, i_dim, is), tmp_reduce(1), NP, MPI_FLOAT, MPI_SUM, &
                  st%mpi_grp%comm, mpi_err)

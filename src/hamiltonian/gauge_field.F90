@@ -254,7 +254,7 @@ contains
 #endif
 
     ALLOCATE(epsi(gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
-    ALLOCATE(gpsi(gr%mesh%np, 1:NDIM, st%d%dim), gr%mesh%np*NDIM*st%d%dim)
+    ALLOCATE(gpsi(gr%mesh%np, 1:gr%mesh%sb%dim, st%d%dim), gr%mesh%np*gr%mesh%sb%dim*st%d%dim)
     ALLOCATE(cpsi(gr%mesh%np, st%d%dim), gr%mesh%np*st%d%dim)
 
     force%vecpot(1:MAX_DIM) = M_ZERO

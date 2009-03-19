@@ -47,24 +47,24 @@ subroutine xc_get_vxc_and_axc(gr, xcs, st, rho, j, ispin, vxc, axc, ex, ec, exc_
   spin_channels = xcs%j_functl%spin_channels
 
   !allocate memory
-  ALLOCATE(v   (NP, NDIM, spin_channels), NP*NDIM*spin_channels)
-  ALLOCATE(f   (NP_PART, NDIM, spin_channels), NP_PART*NDIM*spin_channels)
+  ALLOCATE(v   (NP, gr%mesh%sb%dim, spin_channels), NP*gr%mesh%sb%dim*spin_channels)
+  ALLOCATE(f   (NP_PART, gr%mesh%sb%dim, spin_channels), NP_PART*gr%mesh%sb%dim*spin_channels)
   ALLOCATE(dedd(NP, spin_channels),       NP*spin_channels)
-  ALLOCATE(dedv(NP_PART, NDIM, spin_channels), NP_PART*NDIM*spin_channels)
+  ALLOCATE(dedv(NP_PART, gr%mesh%sb%dim, spin_channels), NP_PART*gr%mesh%sb%dim*spin_channels)
   dedd = M_ZERO; dedv = M_ZERO
 
   !Compute j/rho and the vorticity
   do is = 1, spin_channels
-    do id = 1, NDIM
+    do id = 1, gr%mesh%sb%dim
       f(1:NP, id, is) = j(1:NP, id, is)/rho(1:NP, is)
     end do
     call dderivatives_curl(gr%der, f(:,:,is), v(:,:,is))
   end do
 
   ALLOCATE(l_dens(spin_channels),       spin_channels)
-  ALLOCATE(l_v   (NDIM, spin_channels), NDIM*spin_channels)
+  ALLOCATE(l_v   (gr%mesh%sb%dim, spin_channels), gr%mesh%sb%dim*spin_channels)
   ALLOCATE(l_dedd(spin_channels),       spin_channels)
-  ALLOCATE(l_dedv(NDIM, spin_channels), NDIM*spin_channels)
+  ALLOCATE(l_dedv(gr%mesh%sb%dim, spin_channels), gr%mesh%sb%dim*spin_channels)
   l_dedd = M_ZERO; l_dedv = M_ZERO
   space_loop: do i = 1, NP
     ! make a local copy with the correct memory order
@@ -89,11 +89,11 @@ subroutine xc_get_vxc_and_axc(gr, xcs, st, rho, j, ispin, vxc, axc, ex, ec, exc_
 
   ! add contributions to vxc and axc
   vxc = vxc + dedd
-  ALLOCATE(tmp(NP, NDIM), NP*NDIM)
+  ALLOCATE(tmp(NP, gr%mesh%sb%dim), NP*gr%mesh%sb%dim)
   do is = 1, spin_channels
     call dderivatives_curl(gr%der, dedv(:, :, is), tmp)
 
-    do id = 1, NDIM
+    do id = 1, gr%mesh%sb%dim
       axc(1:NP, id, is) = axc(1:NP, id, is) - tmp(1:NP, id)/rho(1:NP, is)
       vxc(1:NP, is) = vxc(1:NP, is) - axc(1:NP, id, is)*f(1:NP, id, is)
     end do

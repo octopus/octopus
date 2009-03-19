@@ -80,7 +80,7 @@ contains
     if(.not. associated(lr%dl_j)) ALLOCATE(lr%dl_j(gr%mesh%np, MAX_DIM, st%d%nspin), gr%mesh%np*MAX_DIM*st%d%nspin)
 
     np = NP
-    ndim = NDIM
+    ndim = gr%mesh%sb%dim
 
     ALLOCATE(   gpsi(1:np, 1:ndim), np*ndim)
     ALLOCATE(gdl_psi(1:np, 1:ndim), np*ndim)
@@ -99,7 +99,7 @@ contains
 
             call zderivatives_grad(gr%der, lr_m%zdl_psi(:, idim, ist, ispin), gdl_psi_m)
 
-            do k = 1, NDIM 
+            do k = 1, gr%mesh%sb%dim 
 
               lr%dl_j(1:np,k,ispin) = lr%dl_j(1:np, k, ispin) + (           &
                 + conjg(st%zpsi(1:np, idim, ist, ispin)) *      gdl_psi(1:np,k)   &
@@ -111,7 +111,7 @@ contains
 
           else 
 
-            do k = 1, NDIM 
+            do k = 1, gr%mesh%sb%dim 
 
               lr%dl_j(1:np,k,ispin) = lr%dl_j(1:np, k, ispin) + (           &
                 + conjg(st%zpsi(1:np, idim, ist, ispin)) *       gdl_psi(1:np,k)   &
@@ -153,7 +153,7 @@ subroutine zcalc_polarizability_periodic(sys, em_lr, kdotp_lr, nsigma, zpol, ndi
 
   call push_sub('em_resp_calc.zcalc_polarizability_periodic')
 
-  ndir_ = sys%NDIM
+  ndir_ = sys%gr%mesh%sb%dim
   if(present(ndir)) ndir_ = ndir
 
   ! alpha_ij(w) = -e sum(m occ, k) [(<u_mk(0)|-id/dk_i)|u_mkj(1)(w)> + <u_mkj(1)(-w)|(-id/dk_i|u_mk(0)>)]
