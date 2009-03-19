@@ -310,7 +310,7 @@ contains
 #ifdef HAVE_SPARSKIT
       ALLOCATE(tdsk, 1)
       call zsparskit_solver_init(NP, tdsk)
-      ALLOCATE(zpsi_tmp(1:NP_PART, 1:st%d%dim, 1:st%nst, 1:st%d%nik), NP_PART*st%d%dim*st%nst*st%d%nik)
+      ALLOCATE(zpsi_tmp(1:gr%mesh%np_part, 1:st%d%dim, 1:st%nst, 1:st%d%nik), gr%mesh%np_part*st%d%dim*st%nst*st%d%nik)
 #else
       message(1) = 'Octopus was not compiled with support for the sparskit library. This'
       message(2) = 'library is required if the Crank-Nicholson propagator is selected.'
@@ -447,7 +447,7 @@ contains
     if(hm%theory_level .ne. INDEPENDENT_PARTICLES) then
       if( (t < 3*dt)  .or.  (tr%scf_propagation) ) then
         self_consistent = .true.
-        ALLOCATE(zpsi1(NP_PART, st%d%dim, st%st_start:st%st_end, st%d%nik), NP_PART*st%d%dim*st%lnst*st%d%nik)
+        ALLOCATE(zpsi1(gr%mesh%np_part, st%d%dim, st%st_start:st%st_end, st%d%nik), gr%mesh%np_part*st%d%dim*st%lnst*st%d%nik)
         zpsi1 = st%zpsi
       end if
     end if
@@ -611,7 +611,7 @@ contains
         ALLOCATE(vhxc_t2(NP, st%d%nspin), NP*st%d%nspin)
         call lalg_copy(NP, st%d%nspin, hm%vhxc, vhxc_t1)
 
-        ALLOCATE(zpsi1(NP_PART, st%d%dim), NP_PART*st%d%dim)
+        ALLOCATE(zpsi1(gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
 
         st%rho(1:NP, 1:st%d%nspin) = M_ZERO
 
@@ -781,8 +781,8 @@ contains
 
       call push_sub('td_rti.td_crank_nicholson')
 
-      isize = NP_PART*st%lnst*st%d%nik*st%d%dim
-      ALLOCATE(zpsi_rhs_corr(NP_PART, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik), isize)
+      isize = gr%mesh%np_part*st%lnst*st%d%nik*st%d%dim
+      ALLOCATE(zpsi_rhs_corr(gr%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik), isize)
 
       zpsi_rhs_corr = st%zpsi ! store zpsi for corrector step
 
@@ -799,7 +799,7 @@ contains
       tr%te%exp_order  = 1
 
       if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
-        ALLOCATE(zpsi_rhs_pred(NP_PART, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik), isize)
+        ALLOCATE(zpsi_rhs_pred(gr%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik), isize)
         zpsi_rhs_pred = st%zpsi ! store zpsi for predictor step
         
         ALLOCATE(vhxc_t1(NP, st%d%nspin), NP*st%d%nspin)

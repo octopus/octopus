@@ -217,7 +217,7 @@ contains
 
       elf(1:NP,is) = M_ZERO
 
-      ALLOCATE(psi_fs(NP_PART),  NP_PART)
+      ALLOCATE(psi_fs(gr%mesh%np_part),  gr%mesh%np_part)
       ALLOCATE(gpsi  (NP, gr%mesh%sb%dim), NP*gr%mesh%sb%dim)
       do ik = is, st%d%nik, st%d%nspin
         do ist = 1, st%nst

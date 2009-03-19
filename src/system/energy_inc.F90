@@ -73,7 +73,7 @@ FLOAT function X(electronic_kinetic_energy)(hm, gr, st) result(t0)
 
   call push_sub('energy_inc.Xelectronic_kinetic_energy')
 
-  ALLOCATE(tpsi(NP_PART, st%d%dim), NP_PART*st%d%dim)
+  ALLOCATE(tpsi(gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
   ALLOCATE(t(st%st_start:st%st_end, st%d%nik), st%nst*st%d%nik)
   t = M_ZERO
 
@@ -103,7 +103,7 @@ FLOAT function X(electronic_external_energy)(hm, gr, st) result(v)
 
   call push_sub('energy_inc.Xelectronic_external_energy')
 
-  ALLOCATE(vpsi(NP_PART, st%d%dim), NP_PART*st%d%dim)
+  ALLOCATE(vpsi(gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
   ALLOCATE(t(st%st_start:st%st_end, st%d%nik), st%nst*st%d%nik)
   t = M_ZERO
 

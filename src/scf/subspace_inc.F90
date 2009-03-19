@@ -147,7 +147,7 @@ subroutine X(subspace_diag_par_states)(gr, st, hm, ik, diff)
 
   ALLOCATE(h_subspace(st%nst, st%nst), st%nst*st%nst)
   ALLOCATE(vec(st%nst, st%nst), st%nst*st%nst)
-  ALLOCATE(f(NP_PART, st%d%dim, st%st_start:st%st_end), NP_PART*st%d%dim*st%lnst)
+  ALLOCATE(f(gr%mesh%np_part, st%d%dim, st%st_start:st%st_end), gr%mesh%np_part*st%d%dim*st%lnst)
 
   ! Calculate the matrix representation of the Hamiltonian in the subspace <psi|H|psi>.
   do i = st%st_start, st%st_end

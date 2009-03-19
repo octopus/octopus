@@ -211,7 +211,7 @@ module opt_control_initst_m
       call write_info(2)
     end select
 
-    call states_calc_dens(initial_state, NP_PART)
+    call states_calc_dens(initial_state, gr%mesh%np_part)
     
     call pop_sub()
   end subroutine initial_state_init

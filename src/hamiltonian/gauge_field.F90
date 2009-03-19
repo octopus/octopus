@@ -267,7 +267,7 @@ contains
           call zset_bc(gr%der, st%zpsi(:, idim, ist, ik))
 
           if(simul_box_is_periodic(gr%sb)) then
-            epsi(1:NP_PART, idim) = phases(1:NP_PART, ik)*st%zpsi(1:NP_PART, idim, ist, ik)
+            epsi(1:gr%mesh%np_part, idim) = phases(1:gr%mesh%np_part, ik)*st%zpsi(1:gr%mesh%np_part, idim, ist, ik)
           end if
 
           call zderivatives_grad(gr%der, epsi(:, idim), gpsi(:, :, idim), set_bc = .false.)
@@ -319,7 +319,7 @@ contains
     type(gauge_field_t), intent(in)    :: this
     type(grid_t),        intent(inout) :: gr
     integer,             intent(in)    :: dim
-    CMPLX,               intent(in)    :: psi(:,:)  ! psi(NP_PART, hm%d%dim)
+    CMPLX,               intent(in)    :: psi(:,:)  ! psi(gr%mesh%np_part, hm%d%dim)
     CMPLX,               intent(in)    :: grad(:, :, :)
     CMPLX,               intent(inout) :: hpsi(:,:)
     

@@ -48,9 +48,9 @@ subroutine xc_get_vxc_and_axc(gr, xcs, st, rho, j, ispin, vxc, axc, ex, ec, exc_
 
   !allocate memory
   ALLOCATE(v   (NP, gr%mesh%sb%dim, spin_channels), NP*gr%mesh%sb%dim*spin_channels)
-  ALLOCATE(f   (NP_PART, gr%mesh%sb%dim, spin_channels), NP_PART*gr%mesh%sb%dim*spin_channels)
+  ALLOCATE(f   (gr%mesh%np_part, gr%mesh%sb%dim, spin_channels), gr%mesh%np_part*gr%mesh%sb%dim*spin_channels)
   ALLOCATE(dedd(NP, spin_channels),       NP*spin_channels)
-  ALLOCATE(dedv(NP_PART, gr%mesh%sb%dim, spin_channels), NP_PART*gr%mesh%sb%dim*spin_channels)
+  ALLOCATE(dedv(gr%mesh%np_part, gr%mesh%sb%dim, spin_channels), gr%mesh%np_part*gr%mesh%sb%dim*spin_channels)
   dedd = M_ZERO; dedv = M_ZERO
 
   !Compute j/rho and the vorticity

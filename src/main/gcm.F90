@@ -170,7 +170,7 @@ module gcm_m
     call messages_print_stress(stdout)
 
 
-    ALLOCATE(hpsi(NP_PART, phi(1)%d%dim), NP_PART*phi(1)%d%dim)
+    ALLOCATE(hpsi(gr%mesh%np_part, phi(1)%d%dim), gr%mesh%np_part*phi(1)%d%dim)
 
 
     ! Calculate the cross terms

@@ -47,7 +47,7 @@ contains
   subroutine zexp_kinetic (gr, hm, psi, cf, factor)
     type(grid_t),        intent(in)    :: gr
     type(hamiltonian_t), intent(in)    :: hm
-    CMPLX,               intent(inout) :: psi(:,:) ! (NP_PART, dim)
+    CMPLX,               intent(inout) :: psi(:,:) ! (gr%mesh%np_part, dim)
     type(zcf_t),         intent(inout) :: cf
     CMPLX,               intent(in)    :: factor
 
@@ -107,7 +107,7 @@ contains
   subroutine zexp_vlpsi(gr, hm, psi, ik, t, factor)
     type(grid_t),        intent(in)    :: gr
     type(hamiltonian_t), intent(in)    :: hm
-    CMPLX,               intent(inout) :: psi(:,:) ! (NP_PART, gr%mesh%sb%dim)
+    CMPLX,               intent(inout) :: psi(:,:) ! (gr%mesh%np_part, gr%mesh%sb%dim)
     integer,             intent(in)    :: ik
     FLOAT,               intent(in)    :: t
     CMPLX,               intent(in)    :: factor

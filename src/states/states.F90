@@ -98,8 +98,8 @@ module states_m
     integer :: wfs_type             ! real (M_REAL) or complex (M_CMPLX) wavefunctions
     ! pointers to the wavefunctions 
     logical :: only_userdef_istates ! only use user-defined states as initial states in propagation
-    FLOAT, pointer :: dpsi(:,:,:,:) ! dpsi(sys%NP_PART, st%d%dim, st%nst, st%d%nik)
-    CMPLX, pointer :: zpsi(:,:,:,:) ! zpsi(sys%NP_PART, st%d%dim, st%nst, st%d%nik)
+    FLOAT, pointer :: dpsi(:,:,:,:) ! dpsi(sys%gr%mesh%np_part, st%d%dim, st%nst, st%d%nik)
+    CMPLX, pointer :: zpsi(:,:,:,:) ! zpsi(sys%gr%mesh%np_part, st%d%dim, st%nst, st%d%nik)
 
     logical            :: open_boundaries
     CMPLX, pointer     :: zphi(:, :, :, :)  ! Free states for open-boundary calculations.
@@ -512,7 +512,7 @@ contains
 
     ! FIXME: spin-polarized free states ignored.
     if(gr%sb%open_boundaries) then
-      ALLOCATE(st%zphi(NP_PART, st%d%dim, st%ob_ncs, st%d%nik), NP_PART*st%d%dim*st%ob_ncs*st%d%nik)
+      ALLOCATE(st%zphi(gr%mesh%np_part, st%d%dim, st%ob_ncs, st%d%nik), gr%mesh%np_part*st%d%dim*st%ob_ncs*st%d%nik)
       ALLOCATE(st%ob_rho(gr%mesh%lead_unit_cell(LEFT)%np, st%d%nspin, NLEADS), gr%mesh%lead_unit_cell(LEFT)%np*st%d%nspin*NLEADS)
       st%zphi = M_z0
     else
@@ -842,8 +842,8 @@ contains
     call push_sub('states.states_densities_init')
 
     ! allocate arrays for charge and current densities
-    ALLOCATE(st%rho(NP_PART, st%d%nspin), NP_PART*st%d%nspin)
-    ALLOCATE(st%j(NP_PART, gr%mesh%sb%dim, st%d%nspin), NP_PART*gr%mesh%sb%dim*st%d%nspin)
+    ALLOCATE(st%rho(gr%mesh%np_part, st%d%nspin), gr%mesh%np_part*st%d%nspin)
+    ALLOCATE(st%j(gr%mesh%np_part, gr%mesh%sb%dim, st%d%nspin), gr%mesh%np_part*gr%mesh%sb%dim*st%d%nspin)
     st%rho  = M_ZERO
     st%j    = M_ZERO
     st%nlcc = geo%nlcc
@@ -2048,7 +2048,7 @@ contains
     integer :: mpi_err
 #endif
 
-    ALLOCATE(wf_psi(NP_PART, st%d%dim),  NP_PART*st%d%dim)
+    ALLOCATE(wf_psi(gr%mesh%np_part, st%d%dim),  gr%mesh%np_part*st%d%dim)
     ALLOCATE(gwf_psi(NP, gr%mesh%sb%dim, st%d%dim), NP*gr%mesh%sb%dim*st%d%dim)   
 
     sp = 1

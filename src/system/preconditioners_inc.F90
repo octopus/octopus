@@ -43,10 +43,10 @@ subroutine X(preconditioner_apply)(pre, gr, hm, a, b, omega)
     end do
 
   case(PRE_FILTER)
-    ALLOCATE(a_copy(NP_PART), NP_PART)
+    ALLOCATE(a_copy(gr%mesh%np_part), gr%mesh%np_part)
 
     do idim = 1, hm%d%dim
-      call lalg_copy(NP_PART, a(:, idim), a_copy(:))
+      call lalg_copy(gr%mesh%np_part, a(:, idim), a_copy(:))
       call X(set_bc)(gr%der, a_copy(:))
       call X(derivatives_oper)(pre%op, gr%der, a_copy(:), b(:, idim), set_bc = .false.)
     end do

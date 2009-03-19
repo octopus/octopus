@@ -75,7 +75,7 @@ contains
     
     call push_sub('ob_lippmann_schwinger.lippmann_schwinger')
 
-    ALLOCATE(rhs(NP_PART, st%d%dim), NP_PART*st%d%dim)
+    ALLOCATE(rhs(gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
     ALLOCATE(green(gr%intf(LEFT)%np, gr%intf(LEFT)%np, st%d%dim, NLEADS), gr%intf(LEFT)%np**2*st%d%dim**NLEADS)
 
     eigens%converged = 0
@@ -94,7 +94,7 @@ contains
         ! Solve Schroedinger equation for this energy.
         energy = st%ob_eigenval(ist, ik)
 
-        ASSERT(ubound(st%zphi, dim = 1) >= NP_PART)
+        ASSERT(ubound(st%zphi, dim = 1) >= gr%mesh%np_part)
 
         ! Calculate right hand side e-T-V0-sum(a)[H_ca*g_a*H_ac].
         rhs(:, :) = M_z0
@@ -135,7 +135,7 @@ contains
         tol  = eigens%final_tol
 
         conv = .false.
-        call zqmr_sym(NP_PART*st%d%dim, st%zpsi(:, 1, ist, ik), rhs(:, 1), lhs, dotu, nrm2, precond, &
+        call zqmr_sym(gr%mesh%np_part*st%d%dim, st%zpsi(:, 1, ist, ik), rhs(:, 1), lhs, dotu, nrm2, precond, &
           iter, residue=res, threshold=tol, converged=conv)
 
         eigens%matvec = eigens%matvec + iter + 1 + 2

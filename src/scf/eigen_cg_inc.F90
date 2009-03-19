@@ -56,14 +56,14 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
   maxter = niter
   niter = 0
 
-  ALLOCATE(h_psi(NP_PART, st%d%dim), NP_PART*st%d%dim)
-  ALLOCATE(   cg(NP_PART, st%d%dim), NP_PART*st%d%dim)
-  ALLOCATE(    g(NP_PART, st%d%dim), NP_PART*st%d%dim)
+  ALLOCATE(h_psi(gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
+  ALLOCATE(   cg(gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
+  ALLOCATE(    g(gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
   ALLOCATE(   g0(NP, st%d%dim), NP*st%d%dim)
   ALLOCATE( ppsi(NP, st%d%dim), NP*st%d%dim)
 
   do idim = 1, st%d%dim
-    cg(1:NP_PART, idim) = R_TOTYPE(M_ZERO)
+    cg(1:gr%mesh%np_part, idim) = R_TOTYPE(M_ZERO)
   end do
 
   ! Set the diff to zero, since it is intent(out)
@@ -295,13 +295,13 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff, 
   maxter = niter
   niter = 0
 
-  ALLOCATE( phi(NP     , dim), NP_PART*dim)
-  ALLOCATE( psi(NP_PART, dim), NP_PART*dim)
-  ALLOCATE(hpsi(NP     , dim), NP_PART*dim)
-  ALLOCATE(  cg(NP     , dim), NP_PART*dim)
-  ALLOCATE(hcgp(NP     , dim), NP_PART*dim)
-  ALLOCATE(  sd(NP     , dim), NP_PART*dim)
-  ALLOCATE( cgp(NP_PART, dim), NP_PART*dim)
+  ALLOCATE( phi(NP     , dim), gr%mesh%np_part*dim)
+  ALLOCATE( psi(gr%mesh%np_part, dim), gr%mesh%np_part*dim)
+  ALLOCATE(hpsi(NP     , dim), gr%mesh%np_part*dim)
+  ALLOCATE(  cg(NP     , dim), gr%mesh%np_part*dim)
+  ALLOCATE(hcgp(NP     , dim), gr%mesh%np_part*dim)
+  ALLOCATE(  sd(NP     , dim), gr%mesh%np_part*dim)
+  ALLOCATE( cgp(gr%mesh%np_part, dim), gr%mesh%np_part*dim)
   ALLOCATE(orthogonal(nst), nst)
 
   psi(1:NP, 1:dim) = M_ZERO

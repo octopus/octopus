@@ -405,9 +405,9 @@ subroutine X(states_angular_momentum)(gr, phi, l, l2)
 
   select case(gr%mesh%sb%dim)
   case(3)
-    ALLOCATE(lpsi(NP_PART, 3), NP_PART*3)
+    ALLOCATE(lpsi(gr%mesh%np_part, 3), gr%mesh%np_part*3)
   case(2)
-    ALLOCATE(lpsi(NP_PART, 1), NP_PART*1)
+    ALLOCATE(lpsi(gr%mesh%np_part, 1), gr%mesh%np_part*1)
   end select
 
   dim = size(phi, 2)

@@ -114,7 +114,7 @@ subroutine X(lcao_wf) (this, st, gr, geo, hm, start)
 
   ! Allocation of variables
 
-  ALLOCATE(lcaopsi(1:NP_PART, 1:st%d%dim, 1:st%d%spin_channels), NP*st%d%dim*st%d%spin_channels)
+  ALLOCATE(lcaopsi(1:gr%mesh%np_part, 1:st%d%dim, 1:st%d%spin_channels), NP*st%d%dim*st%d%spin_channels)
   ALLOCATE(lcaopsi2(1:NP, 1:st%d%dim), NP*st%d%dim)
   ALLOCATE(hpsi(NP, st%d%dim, kstart:kend), NP*st%d%dim*st%d%kpt%nlocal)
   ALLOCATE(hamilt(this%norbs, this%norbs, kstart:kend), this%norbs**2*st%d%kpt%nlocal)

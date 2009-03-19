@@ -331,7 +331,7 @@ module opt_control_target_m
             end do
             call rotate_states(gr%mesh, target%st, tmp_st, rotation_matrix)
             deallocate(rotation_matrix)
-            call states_calc_dens(target%st, NP_PART)
+            call states_calc_dens(target%st, gr%mesh%np_part)
             do ip = 1, NP
               target%rho(ip) = sum(target%st%rho(ip, 1:target%st%d%spin_channels))
             end do
@@ -564,7 +564,7 @@ module opt_control_target_m
       select case(psi%d%ispin)
       case(UNPOLARIZED)
         ASSERT(psi%d%nik.eq.1)
-        ALLOCATE(opsi(NP_PART, 1), NP_PART)
+        ALLOCATE(opsi(gr%mesh%np_part, 1), gr%mesh%np_part)
         opsi = M_z0
         do p  = psi%st_start, psi%st_end
           do j = 1, NP
@@ -684,7 +684,7 @@ module opt_control_target_m
       select case(psi%d%ispin)
       case(UNPOLARIZED)
         ASSERT(psi%d%nik.eq.1)
-        ALLOCATE(opsi(NP_PART, 1), NP_PART)
+        ALLOCATE(opsi(gr%mesh%np_part, 1), gr%mesh%np_part)
         opsi = M_z0
         j1 = M_ZERO
         do p  = psi%st_start, psi%st_end
@@ -782,7 +782,7 @@ module opt_control_target_m
           end do
         else
           do p  = psi_in%st_start, psi_in%st_end
-            do j = 1, NP_PART
+            do j = 1, gr%mesh%np_part
               if(psi_in%rho(j, 1) > CNST(1.0e-8)) then
                 chi_out%zpsi(j, 1, p, 1) = sqrt(target%rho(j)/psi_in%rho(j, 1)) * &
                   psi_in%zpsi(j, 1, p, 1)
@@ -833,7 +833,7 @@ module opt_control_target_m
       ALLOCATE(dI(n_pairs), n_pairs)
       ALLOCATE(mat(target%est%st%nst, nst, psi_in%d%nik), target%est%st%nst*nst*psi_in%d%nik)
       ALLOCATE(mm(nst, nst, kpoints, n_pairs), nst*nst*kpoints*n_pairs)
-      ALLOCATE(mk(NP_PART, psi_in%d%dim), NP_PART * psi_in%d%dim)
+      ALLOCATE(mk(gr%mesh%np_part, psi_in%d%dim), gr%mesh%np_part * psi_in%d%dim)
       ALLOCATE(lambda(n_pairs, n_pairs), n_pairs*n_pairs)
 
       call zstates_matrix(gr%mesh, target%est%st, psi_in, mat)
@@ -878,7 +878,7 @@ module opt_control_target_m
                   if(j .eq. target%est%pair(ib)%i) jj = target%est%pair(ia)%a
                   mk(:, :) = mk(:, :) + conjg(mm(k, j, ik, ib)) * target%est%st%zpsi(:, :, jj, ik)
                 end do
-                call lalg_axpy(NP_PART, psi_in%d%dim, M_z1, lambda(ib, ia)*mk(:, :), chi_out%zpsi(:, :, k, ik))
+                call lalg_axpy(gr%mesh%np_part, psi_in%d%dim, M_z1, lambda(ib, ia)*mk(:, :), chi_out%zpsi(:, :, k, ik))
               end do
             end do
           end do
@@ -902,7 +902,7 @@ module opt_control_target_m
                 mk(:, :) = mk(:, :) + conjg(mm(k, j, 1, ib)) * target%est%st%zpsi(:, :, jj, 1)
               end do
 
-              call lalg_axpy(NP_PART, 2, M_z1, lambda(ib, ia)*mk(:, :), chi_out%zpsi(:, :, k, 1))
+              call lalg_axpy(gr%mesh%np_part, 2, M_z1, lambda(ib, ia)*mk(:, :), chi_out%zpsi(:, :, k, 1))
             end do
           end do
         end do

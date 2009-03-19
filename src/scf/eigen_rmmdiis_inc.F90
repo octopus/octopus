@@ -54,8 +54,8 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
   call push_sub('eigen_rmmdiis_inc.eigensolver_rmmdiss')
 
-  ALLOCATE(residuals(1:NP_PART, 1:st%d%dim, blocksize), NP*st%d%dim*blocksize)
-  ALLOCATE(preres(1:NP_PART, 1:st%d%dim, blocksize), NP_PART*st%d%dim*blocksize)
+  ALLOCATE(residuals(1:gr%mesh%np_part, 1:st%d%dim, blocksize), NP*st%d%dim*blocksize)
+  ALLOCATE(preres(1:gr%mesh%np_part, 1:st%d%dim, blocksize), gr%mesh%np_part*st%d%dim*blocksize)
   ALLOCATE(resres(1:NP, 1:st%d%dim, blocksize), NP*st%d%dim*blocksize)
   ALLOCATE(lambda(1:2, 1:blocksize), 2*blocksize) 
 

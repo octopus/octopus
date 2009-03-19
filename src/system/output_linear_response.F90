@@ -91,7 +91,7 @@ subroutine X(h_sys_output_lr) (st, gr, lr, dir, tag, isigma, outp, geo)
   end if
 
   if(iand(outp%what, output_wfs_sqmod).ne.0) then
-    ALLOCATE(dtmp(NP_PART), NP_PART)
+    ALLOCATE(dtmp(gr%mesh%np_part), gr%mesh%np_part)
     do ist = 1, st%nst
       if(loct_isinstringlist(ist, outp%wfs_list)) then
         do ik = 1, st%d%nik

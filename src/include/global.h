@@ -20,7 +20,6 @@
 #include "config_F90.h"
 
 #define NP      gr%mesh%np
-#define NP_PART gr%mesh%np_part
 
 #define MAX_SPIN 4
 

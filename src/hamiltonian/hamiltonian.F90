@@ -289,11 +289,11 @@ contains
     if(hm%self_induced_magnetic) then
       select case(gr%mesh%sb%dim)
       case(3)
-        ALLOCATE(hm%a_ind(NP_PART, MAX_DIM), NP_PART*MAX_DIM)
-        ALLOCATE(hm%b_ind(NP_PART, MAX_DIM), NP_PART*MAX_DIM)
+        ALLOCATE(hm%a_ind(gr%mesh%np_part, MAX_DIM), gr%mesh%np_part*MAX_DIM)
+        ALLOCATE(hm%b_ind(gr%mesh%np_part, MAX_DIM), gr%mesh%np_part*MAX_DIM)
       case(2)
-        ALLOCATE(hm%a_ind(NP_PART, 2), NP_PART*2)
-        ALLOCATE(hm%b_ind(NP_PART, 1), NP_PART)
+        ALLOCATE(hm%a_ind(gr%mesh%np_part, 2), gr%mesh%np_part*2)
+        ALLOCATE(hm%b_ind(gr%mesh%np_part, 1), gr%mesh%np_part)
       end select
     else
       nullify(hm%a_ind, hm%b_ind)
@@ -458,9 +458,9 @@ contains
     subroutine init_phase
       integer :: ip, ik
 
-      ALLOCATE(hm%phase(1:NP_PART, 1:hm%d%nik), NP_PART*hm%d%nik)
+      ALLOCATE(hm%phase(1:gr%mesh%np_part, 1:hm%d%nik), gr%mesh%np_part*hm%d%nik)
 
-      forall (ik = 1:hm%d%nik, ip = 1:NP_PART)
+      forall (ik = 1:hm%d%nik, ip = 1:gr%mesh%np_part)
         hm%phase(ip, ik) = exp(-M_zI*sum(gr%mesh%x(ip, 1:gr%mesh%sb%dim)* hm%d%kpoints(1:gr%mesh%sb%dim, ik)))
       end forall
       

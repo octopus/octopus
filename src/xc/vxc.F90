@@ -189,7 +189,7 @@ contains
     call push_sub('vxc.xc_get_vxc.lda_init')
 
     ! allocate some general arrays
-    ALLOCATE(dens(NP_PART, spin_channels), NP_PART*spin_channels)
+    ALLOCATE(dens(gr%mesh%np_part, spin_channels), gr%mesh%np_part*spin_channels)
     ALLOCATE(ex_per_vol(NP), NP)
     ALLOCATE(ec_per_vol(NP), NP)
 
@@ -198,7 +198,7 @@ contains
     ec_per_vol = M_ZERO
 
     if(present(vxc)) then
-      ALLOCATE(dedd(NP_PART, spin_channels), NP_PART*spin_channels)
+      ALLOCATE(dedd(gr%mesh%np_part, spin_channels), gr%mesh%np_part*spin_channels)
       dedd       = M_ZERO
     end if
 
@@ -279,7 +279,7 @@ contains
     gdens = M_ZERO
 
     if(present(vxc)) then
-      ALLOCATE(dedgd(NP_PART, 3, spin_channels), NP_PART*3*spin_channels)
+      ALLOCATE(dedgd(gr%mesh%np_part, 3, spin_channels), gr%mesh%np_part*3*spin_channels)
       dedgd = M_ZERO
     end if
 

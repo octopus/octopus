@@ -121,10 +121,10 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
   type(hamiltonian_t),    intent(inout) :: hm
   integer,                intent(in)    :: st_start
   integer,                intent(in)    :: st_end
-  R_TYPE, target,         intent(inout) :: psi(NP_PART, st%d%dim, st_start:st_end)
+  R_TYPE, target,         intent(inout) :: psi(gr%mesh%np_part, st%d%dim, st_start:st_end)
   integer,                intent(in)    :: constr_start
   integer,                intent(in)    :: constr_end
-  R_TYPE,                 intent(in)    :: constr(NP_PART, st%d%dim, constr_start:constr_end)
+  R_TYPE,                 intent(in)    :: constr(gr%mesh%np_part, st%d%dim, constr_start:constr_end)
   integer,                intent(in)    :: ik
   type(preconditioner_t), intent(in)    :: pre
   FLOAT,                  intent(in)    :: tol
@@ -174,7 +174,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
   explicit_gram = .false.
 
   ! Abbreviations.
-  np = NP_PART*st%d%dim
+  np = gr%mesh%np_part*st%d%dim
 
   if(st%parallel_in_states) then
 #if defined(HAVE_MPI)
@@ -213,12 +213,12 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     end do
   end if
 
-  ALLOCATE(tmp(NP_PART, st%d%dim, st_start:st_end), NP_PART*st%d%dim*lnst)
-  ALLOCATE(res(NP_PART, st%d%dim, st_start:st_end), NP_PART*st%d%dim*lnst)
-  ALLOCATE(h_res(NP_PART, st%d%dim, st_start:st_end), NP_PART*st%d%dim*lnst)
-  ALLOCATE(dir(NP_PART, st%d%dim, st_start:st_end), NP_PART*st%d%dim*lnst)
-  ALLOCATE(h_dir(NP_PART, st%d%dim, st_start:st_end), NP_PART*st%d%dim*lnst)
-  ALLOCATE(h_psi(NP_PART, st%d%dim, st_start:st_end), NP_PART*st%d%dim*lnst)
+  ALLOCATE(tmp(gr%mesh%np_part, st%d%dim, st_start:st_end), gr%mesh%np_part*st%d%dim*lnst)
+  ALLOCATE(res(gr%mesh%np_part, st%d%dim, st_start:st_end), gr%mesh%np_part*st%d%dim*lnst)
+  ALLOCATE(h_res(gr%mesh%np_part, st%d%dim, st_start:st_end), gr%mesh%np_part*st%d%dim*lnst)
+  ALLOCATE(dir(gr%mesh%np_part, st%d%dim, st_start:st_end), gr%mesh%np_part*st%d%dim*lnst)
+  ALLOCATE(h_dir(gr%mesh%np_part, st%d%dim, st_start:st_end), gr%mesh%np_part*st%d%dim*lnst)
+  ALLOCATE(h_psi(gr%mesh%np_part, st%d%dim, st_start:st_end), gr%mesh%np_part*st%d%dim*lnst)
   ALLOCATE(gram_block(nst, nst), nst**2)
   ALLOCATE(eval(nst), nst)
 
@@ -565,7 +565,7 @@ contains
 
     call push_sub('eigen_lobpcg_inc.Xlobpcg_res')
 
-    np = NP_PART*st%d%dim
+    np = gr%mesh%np_part*st%d%dim
     do ist = st_start, st_end
       i = iihash_lookup(all_ev_inv, ist, found)
       ASSERT(found)
@@ -628,7 +628,7 @@ contains
   subroutine X(lobpcg_orth)(v_start, v_end, vs, chol_failure)
     integer,        intent(in)    :: v_start
     integer,        intent(in)    :: v_end
-    R_TYPE,         intent(inout) :: vs(NP_PART, st%d%dim, v_start:v_end)
+    R_TYPE,         intent(inout) :: vs(gr%mesh%np_part, st%d%dim, v_start:v_end)
     logical,        intent(out)   :: chol_failure
 
     integer             :: i
@@ -654,7 +654,7 @@ contains
     end do
     call X(block_matr_mul)(vs, vv, tmp, xpsi=UC, xres=UC)
     do i = 1, lnuc
-      call lalg_copy(NP_PART*st%d%dim, tmp(:, 1, luc(i)), vs(:, 1, luc(i)))
+      call lalg_copy(gr%mesh%np_part*st%d%dim, tmp(:, 1, luc(i)), vs(:, 1, luc(i)))
     end do
     deallocate(vv)
 
@@ -666,7 +666,7 @@ contains
   subroutine X(lobpcg_apply_constraints)(vs_start, vs_end, vs, nidx, idx)
     integer, intent(in)    :: vs_start
     integer, intent(in)    :: vs_end
-    R_TYPE,  intent(inout) :: vs(NP_PART, st%d%dim, vs_start:vs_end)
+    R_TYPE,  intent(inout) :: vs(gr%mesh%np_part, st%d%dim, vs_start:vs_end)
     integer, intent(in)    :: nidx
     integer, intent(in)    :: idx(:)
     
@@ -695,8 +695,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine X(blockt_mul)(psi1, psi2, res, xpsi1, xpsi2, symm)
-    R_TYPE,            intent(in)  :: psi1(NP_PART, st%d%dim, st_start:st_end)
-    R_TYPE,            intent(in)  :: psi2(NP_PART, st%d%dim, st_start:st_end)
+    R_TYPE,            intent(in)  :: psi1(gr%mesh%np_part, st%d%dim, st_start:st_end)
+    R_TYPE,            intent(in)  :: psi2(gr%mesh%np_part, st%d%dim, st_start:st_end)
     R_TYPE,            intent(out) :: res(:, :)
     integer,           intent(in)  :: xpsi1(:)
     integer,           intent(in)  :: xpsi2(:)
@@ -714,10 +714,10 @@ contains
   ! ---------------------------------------------------------
   subroutine X(block_matr_mul_add)(alpha, psi, matr, beta, res, xpsi, xres)
     R_TYPE,  intent(in)    :: alpha
-    R_TYPE,  intent(in)    :: psi(NP_PART, st%d%dim, st_start:st_end)
+    R_TYPE,  intent(in)    :: psi(gr%mesh%np_part, st%d%dim, st_start:st_end)
     R_TYPE,  intent(in)    :: matr(:, :)
     R_TYPE,  intent(in)    :: beta
-    R_TYPE,  intent(inout) :: res(NP_PART, st%d%dim, st_start:st_end)
+    R_TYPE,  intent(inout) :: res(gr%mesh%np_part, st%d%dim, st_start:st_end)
     integer, intent(in)    :: xpsi(:)
     integer, intent(in)    :: xres(:)
 
@@ -732,9 +732,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine X(block_matr_mul)(psi, matr, res, xpsi, xres)
-    R_TYPE,  intent(in)  :: psi(NP_PART, st%d%dim, st_start:st_end)
+    R_TYPE,  intent(in)  :: psi(gr%mesh%np_part, st%d%dim, st_start:st_end)
     R_TYPE,  intent(in)  :: matr(:, :)
-    R_TYPE,  intent(out) :: res(NP_PART, st%d%dim, st_start:st_end)
+    R_TYPE,  intent(out) :: res(gr%mesh%np_part, st%d%dim, st_start:st_end)
     integer, intent(in)  :: xpsi(:)
     integer, intent(in)  :: xres(:)
 

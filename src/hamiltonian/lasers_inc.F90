@@ -22,8 +22,8 @@ subroutine X(vlaser_operator_quadratic) (laser, gr, std, psi, hpsi)
   type(laser_t),       intent(in)    :: laser
   type(grid_t),        intent(inout) :: gr
   type(states_dim_t),  intent(in)    :: std
-  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, h%d%dim)
-  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, h%d%dim)
+  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(gr%mesh%np_part, h%d%dim)
+  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(gr%mesh%np_part, h%d%dim)
 
   integer :: k
   logical :: vector_potential, magnetic_field
@@ -42,9 +42,9 @@ subroutine X(vlaser_operator_quadratic) (laser, gr, std, psi, hpsi)
   case(E_FIELD_ELECTRIC) ! do nothing
   case(E_FIELD_MAGNETIC)
     if(.not. allocated(a)) then 
-      ALLOCATE(a(NP_PART, gr%mesh%sb%dim), NP_PART*gr%mesh%sb%dim)
+      ALLOCATE(a(gr%mesh%np_part, gr%mesh%sb%dim), gr%mesh%np_part*gr%mesh%sb%dim)
       a = M_ZERO
-      ALLOCATE(a_prime(NP_PART, gr%mesh%sb%dim), NP_PART*gr%mesh%sb%dim)
+      ALLOCATE(a_prime(gr%mesh%np_part, gr%mesh%sb%dim), gr%mesh%np_part*gr%mesh%sb%dim)
       a_prime = M_ZERO
     end if
     call laser_vector_potential(laser, a_prime)
@@ -80,8 +80,8 @@ subroutine X(vlaser_operator_linear) (laser, gr, std, psi, hpsi, ik, gyromagneti
   type(laser_t),       intent(in)    :: laser
   type(grid_t),        intent(inout) :: gr
   type(states_dim_t),  intent(in)    :: std
-  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, std%dim)
-  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, std%dim)
+  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(gr%mesh%np_part, std%dim)
+  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(gr%mesh%np_part, std%dim)
   integer,             intent(in)    :: ik
   FLOAT,               intent(in)    :: gyromagnetic_ratio
   FLOAT,               pointer       :: a_static(:,:)
@@ -123,9 +123,9 @@ subroutine X(vlaser_operator_linear) (laser, gr, std, psi, hpsi, ik, gyromagneti
     deallocate(pot)
   case(E_FIELD_MAGNETIC)
     if(.not. allocated(a)) then 
-      ALLOCATE(a(NP_PART, gr%mesh%sb%dim), NP_PART*gr%mesh%sb%dim)
+      ALLOCATE(a(gr%mesh%np_part, gr%mesh%sb%dim), gr%mesh%np_part*gr%mesh%sb%dim)
       a = M_ZERO
-      ALLOCATE(a_prime(NP_PART, gr%mesh%sb%dim), NP_PART*gr%mesh%sb%dim)
+      ALLOCATE(a_prime(gr%mesh%np_part, gr%mesh%sb%dim), gr%mesh%np_part*gr%mesh%sb%dim)
       a_prime = M_ZERO
     end if
     call laser_vector_potential(laser, a_prime)
@@ -148,7 +148,7 @@ subroutine X(vlaser_operator_linear) (laser, gr, std, psi, hpsi, ik, gyromagneti
 
   if(magnetic_field) then
 
-    ALLOCATE(grad(NP_PART, gr%mesh%sb%dim, std%dim), NP_PART*std%dim*gr%mesh%sb%dim)
+    ALLOCATE(grad(gr%mesh%np_part, gr%mesh%sb%dim, std%dim), gr%mesh%np_part*std%dim*gr%mesh%sb%dim)
  
     do idim = 1, std%dim
       call X(derivatives_grad)(gr%der, psi(:, idim), grad(:, :, idim))
@@ -203,7 +203,7 @@ subroutine X(vlaser_operator_linear) (laser, gr, std, psi, hpsi, ik, gyromagneti
   end if
 
   if(vector_potential) then
-    ALLOCATE(grad(NP_PART, gr%mesh%sb%dim, std%dim), NP_PART*std%dim*gr%mesh%sb%dim)
+    ALLOCATE(grad(gr%mesh%np_part, gr%mesh%sb%dim, std%dim), gr%mesh%np_part*std%dim*gr%mesh%sb%dim)
 
     do idim = 1, std%dim
       call X(derivatives_grad)(gr%der, psi(:, idim), grad(:, :, idim))
@@ -234,8 +234,8 @@ subroutine X(vlasers) (lasers, nlasers, gr, std, psi, hpsi, grad, ik, t, gyromag
   integer,             intent(in)    :: nlasers
   type(grid_t),        intent(inout) :: gr
   type(states_dim_t),  intent(in)    :: std
-  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, std%dim)
-  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, std%dim)
+  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(gr%mesh%np_part, std%dim)
+  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(gr%mesh%np_part, std%dim)
   R_TYPE,              intent(in)    :: grad(: , :, :)
   integer,             intent(in)    :: ik
   FLOAT,    optional,  intent(in)    :: t
@@ -277,9 +277,9 @@ subroutine X(vlasers) (lasers, nlasers, gr, std, psi, hpsi, grad, ik, t, gyromag
 
     case(E_FIELD_MAGNETIC)
       if(.not. allocated(a)) then 
-        ALLOCATE(a(NP_PART, gr%mesh%sb%dim), NP_PART*gr%mesh%sb%dim)
+        ALLOCATE(a(gr%mesh%np_part, gr%mesh%sb%dim), gr%mesh%np_part*gr%mesh%sb%dim)
         a = M_ZERO
-        ALLOCATE(a_prime(NP_PART, gr%mesh%sb%dim), NP_PART*gr%mesh%sb%dim)
+        ALLOCATE(a_prime(gr%mesh%np_part, gr%mesh%sb%dim), gr%mesh%np_part*gr%mesh%sb%dim)
         a_prime = M_ZERO
       end if
 

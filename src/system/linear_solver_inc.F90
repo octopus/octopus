@@ -116,7 +116,7 @@ subroutine X(ls_solver_cg) (ls, hm, gr, st, ist, ik, x, y, omega)
   call push_sub('linear_solver_inc.Xls_solver_cg')
 
   ALLOCATE( r(NP, st%d%dim),      NP      * st%d%dim)
-  ALLOCATE( p(NP_PART, st%d%dim), NP_PART * st%d%dim)
+  ALLOCATE( p(gr%mesh%np_part, st%d%dim), gr%mesh%np_part * st%d%dim)
   ALLOCATE(Hp(NP, st%d%dim),      NP      * st%d%dim)
 
   ! Initial residue
@@ -125,7 +125,7 @@ subroutine X(ls_solver_cg) (ls, hm, gr, st, ist, ik, x, y, omega)
   
   ! Initial search direction
   p(1:NP, 1:st%d%dim) = r(1:NP, 1:st%d%dim)
-  p((NP+1):NP_PART,1:st%d%dim) = M_ZERO
+  p((NP+1):gr%mesh%np_part,1:st%d%dim) = M_ZERO
   
   conv_last = .false.
   gamma     = M_ONE
@@ -187,15 +187,15 @@ subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, omega, occ_resp
   call push_sub('linear_solver_inc.Xls_solver_bicgstab')
 
   ALLOCATE( r(NP, st%d%dim),      NP     *st%d%dim)
-  ALLOCATE( p(NP_PART, st%d%dim), NP_PART*st%d%dim)
+  ALLOCATE( p(gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
   ALLOCATE(rs(NP, st%d%dim),      NP     *st%d%dim)
-  ALLOCATE( s(NP_PART, st%d%dim), NP_PART*st%d%dim)
+  ALLOCATE( s(gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
   ALLOCATE(Hp(NP, st%d%dim),      NP     *st%d%dim)
   ALLOCATE(Hs(NP, st%d%dim),      NP     *st%d%dim)
 
   ! this will store the preconditioned functions
-  ALLOCATE(phat(NP_PART, st%d%dim), NP_PART * st%d%dim)
-  ALLOCATE(shat(NP_PART, st%d%dim), NP_PART * st%d%dim)
+  ALLOCATE(phat(gr%mesh%np_part, st%d%dim), gr%mesh%np_part * st%d%dim)
+  ALLOCATE(shat(gr%mesh%np_part, st%d%dim), gr%mesh%np_part * st%d%dim)
 
   ! Initial residue
   call X(ls_solver_operator) (hm, gr, st, ist, ik, omega, x, Hp)

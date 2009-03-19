@@ -66,8 +66,8 @@ module states_block_m
 !     integer        :: st_start
 !     integer        :: st_end
 !     integer        :: nst
-!     FLOAT, pointer :: dpsi(:, :, :) ! dpsi(NP_PART, DIM, st_start:st_end)
-!     CMPLX, pointer :: zpsi(:, :, :) ! zpsi(NP_PART, DIM, st_start:st_end)
+!     FLOAT, pointer :: dpsi(:, :, :) ! dpsi(gr%mesh%np_part, DIM, st_start:st_end)
+!     CMPLX, pointer :: zpsi(:, :, :) ! zpsi(gr%mesh%np_part, DIM, st_start:st_end)
 !   end type states_block_t
 
   interface states_blockt_mul

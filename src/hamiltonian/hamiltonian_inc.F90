@@ -64,7 +64,7 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, t, kinetic_only)
   apply_kpoint = simul_box_is_periodic(gr%sb) .and. .not. kpoint_is_gamma(hm%d, ik)
 
   if(apply_kpoint) then
-    ALLOCATE(psi_copy(1:NP_PART, 1:hm%d%dim, 1:nst), NP_PART*hm%d%dim*nst)
+    ALLOCATE(psi_copy(1:gr%mesh%np_part, 1:hm%d%dim, 1:nst), gr%mesh%np_part*hm%d%dim*nst)
     call batch_init(epsib, hm%d%dim, psib%states(1)%ist, psib%states(nst)%ist, psi_copy)
   else
     call batch_copy(psib, epsib)
@@ -78,7 +78,7 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, t, kinetic_only)
     if(apply_kpoint) then ! we copy psi to epsi applying the exp(i k.r) phase
       call profiling_in(phase_prof, "PBC_PHASE_APPLY")
       
-      forall (idim = 1:hm%d%dim, ip = 1:NP_PART)
+      forall (idim = 1:hm%d%dim, ip = 1:gr%mesh%np_part)
         psi_copy(ip, idim, ii) = hm%phase(ip, ik)*psi(ip, idim)
       end forall
       
@@ -220,7 +220,7 @@ subroutine X(hamiltonian_apply) (hm, gr, psi, hpsi, ist, ik, t, kinetic_only)
   type(grid_t),        intent(inout) :: gr
   integer,             intent(in)    :: ist       ! the index of the state
   integer,             intent(in)    :: ik        ! the index of the k-point
-  R_TYPE, target,      intent(inout) :: psi(:,:)  ! psi(NP_PART, hm%d%dim)
+  R_TYPE, target,      intent(inout) :: psi(:,:)  ! psi(gr%mesh%np_part, hm%d%dim)
   R_TYPE,              intent(out)   :: hpsi(:,:) ! hpsi(NP, hm%d%dim)
   FLOAT, optional,     intent(in)    :: t
   logical, optional,   intent(in)    :: kinetic_only
@@ -251,7 +251,7 @@ end subroutine X(hamiltonian_apply)
 subroutine X(exchange_operator) (hm, gr, psi, hpsi, ist, ik)
   type(hamiltonian_t), intent(in)    :: hm
   type(grid_t),        intent(inout) :: gr
-  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, hm%d%dim)
+  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(gr%mesh%np_part, hm%d%dim)
   R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP, hm%d%dim)
   integer,             intent(in)    :: ist       ! the index of the state
   integer,             intent(in)    :: ik        ! the index of the k-point
@@ -312,7 +312,7 @@ end subroutine X(exchange_operator)
 subroutine X(oct_exchange_operator) (hm, gr, psi, hpsi, ik)
   type(hamiltonian_t), intent(in)    :: hm
   type(grid_t),        intent(inout) :: gr
-  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, hm%d%dim)
+  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(gr%mesh%np_part, hm%d%dim)
   R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP, hm%d%dim)
   integer,             intent(in)    :: ik
   R_TYPE, allocatable :: rho(:), pot(:)
@@ -365,7 +365,7 @@ subroutine X(magnus) (hm, gr, psi, hpsi, ik, vmagnus)
   type(hamiltonian_t), intent(in)    :: hm
   type(grid_t),        intent(inout) :: gr
   integer,             intent(in)    :: ik
-  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, hm%d%dim)
+  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(gr%mesh%np_part, hm%d%dim)
   R_TYPE,              intent(out)   :: hpsi(:,:) ! hpsi(NP, hm%d%dim)
   FLOAT,               intent(in)    :: vmagnus(NP, hm%d%nspin, 2)
 
@@ -376,7 +376,7 @@ subroutine X(magnus) (hm, gr, psi, hpsi, ik, vmagnus)
 
   call push_sub('hamiltonian_inc.Xmagnus')
 
-  ALLOCATE( auxpsi(NP_PART, hm%d%dim), NP_PART*hm%d%dim)
+  ALLOCATE( auxpsi(gr%mesh%np_part, hm%d%dim), gr%mesh%np_part*hm%d%dim)
   ALLOCATE(aux2psi(NP,      hm%d%dim), NP*hm%d%dim)
 
   ispin = states_dim_get_spin_index(hm%d, ik)
@@ -418,7 +418,7 @@ end subroutine X(magnus)
 subroutine X(magnetic_terms) (gr, hm, psi, hpsi, grad, ik)
   type(grid_t),        intent(inout) :: gr
   type(hamiltonian_t), intent(in)    :: hm
-  R_TYPE,              intent(inout) :: psi(:, :)  ! psi(NP_PART, hm%d%dim)
+  R_TYPE,              intent(inout) :: psi(:, :)  ! psi(gr%mesh%np_part, hm%d%dim)
   R_TYPE,              intent(inout) :: hpsi(:, :) ! hpsi(NP, hm%d%dim)
   R_TYPE,              pointer       :: grad(:, :, :)
   integer,             intent(in)    :: ik
@@ -440,7 +440,7 @@ subroutine X(magnetic_terms) (gr, hm, psi, hpsi, grad, ik)
   if(hm%d%cdft) then
 
     ALLOCATE(div(NP), NP)
-    ALLOCATE(tmp(NP_PART, gr%mesh%sb%dim), NP_PART*gr%mesh%sb%dim)
+    ALLOCATE(tmp(gr%mesh%np_part, gr%mesh%sb%dim), gr%mesh%np_part*gr%mesh%sb%dim)
     select case (hm%d%ispin)
     case(UNPOLARIZED)
       tmp(1:NP, :) = hm%axc(1:NP, :, 1)
@@ -524,8 +524,8 @@ end subroutine X(magnetic_terms)
 subroutine X(vnlpsi) (hm, mesh, psi, hpsi, ik)
   type(hamiltonian_t), intent(in)    :: hm
   type(mesh_t),        intent(inout) :: mesh
-  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, hm%d%dim)
-  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, hm%d%dim)
+  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(gr%mesh%np_part, hm%d%dim)
+  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(gr%mesh%np_part, hm%d%dim)
   integer,             intent(in)    :: ik
 
   call profiling_in(C_PROFILING_VNLPSI)
@@ -607,8 +607,8 @@ end subroutine X(vlpsi_batch)
 subroutine X(vexternal) (hm, gr, psi, hpsi, ik)
   type(hamiltonian_t), intent(in)    :: hm
   type(grid_t),        intent(inout) :: gr
-  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, hm%d%dim)
-  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, hm%d%dim)
+  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(gr%mesh%np_part, hm%d%dim)
+  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(gr%mesh%np_part, hm%d%dim)
   integer,             intent(in)    :: ik
 
   integer :: idim
@@ -630,8 +630,8 @@ end subroutine X(vexternal)
 subroutine X(vborders) (gr, hm, psi, hpsi)
   type(grid_t),        intent(inout) :: gr
   type(hamiltonian_t), intent(in)    :: hm
-  R_TYPE,              intent(in)    :: psi(:,:)  ! psi(NP_PART, hm%d%dim)
-  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, hm%d%dim)
+  R_TYPE,              intent(in)    :: psi(:,:)  ! psi(gr%mesh%np_part, hm%d%dim)
+  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(gr%mesh%np_part, hm%d%dim)
 
   integer :: idim
 
@@ -651,8 +651,8 @@ end subroutine X(vborders)
 subroutine X(h_mgga_terms) (hm, gr, psi, hpsi, ik, grad)
   type(hamiltonian_t), intent(in)    :: hm
   type(grid_t),        intent(inout) :: gr
-  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(NP_PART, hm%d%dim)
-  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(NP_PART, hm%d%dim)
+  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(gr%mesh%np_part, hm%d%dim)
+  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(gr%mesh%np_part, hm%d%dim)
   integer,             intent(in)    :: ik
   R_TYPE,              pointer       :: grad(:, :, :)
 
@@ -664,7 +664,7 @@ subroutine X(h_mgga_terms) (hm, gr, psi, hpsi, ik, grad)
   call X(get_grad)(hm, gr, psi, grad)
   ispin = states_dim_get_spin_index(hm%d, ik)
 
-  ALLOCATE(cgrad(1:NP_PART, 1:MAX_DIM), NP_PART*MAX_DIM)
+  ALLOCATE(cgrad(1:gr%mesh%np_part, 1:MAX_DIM), gr%mesh%np_part*MAX_DIM)
   ALLOCATE(diverg(1:NP), NP)
 
   do idim = 1, hm%d%dim

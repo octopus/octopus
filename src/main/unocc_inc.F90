@@ -45,8 +45,8 @@ subroutine X(one_body) (gr, geo, st, hm)
     end do
   end do
 
-  ALLOCATE(gpsi(1:NP_PART, 1:MAX_DIM), NP_PART * MAX_DIM)
-  ALLOCATE(cpsi(1:NP_PART, 1), NP_PART)
+  ALLOCATE(gpsi(1:gr%mesh%np_part, 1:MAX_DIM), gr%mesh%np_part * MAX_DIM)
+  ALLOCATE(cpsi(1:gr%mesh%np_part, 1), gr%mesh%np_part)
 
   
   call io_assign(iunit)

@@ -76,11 +76,11 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
   me         = ned + winsiz - 1
 
   ! Allocate memory
-  ! Careful: aux has to range from 1 to NP_PART because it is input to
-  ! hpsi. In parallel the space NP+1:NP_PART is needed for ghost points
+  ! Careful: aux has to range from 1 to gr%mesh%np_part because it is input to
+  ! hpsi. In parallel the space NP+1:gr%mesh%np_part is needed for ghost points
   ! in the non local operator.
   ALLOCATE(eigenvec(NP, dim, me),      NP*dim*me)
-  ALLOCATE(aux(NP_PART, dim),          NP_PART*dim)
+  ALLOCATE(aux(gr%mesh%np_part, dim),          gr%mesh%np_part*dim)
   ALLOCATE(tmp(krylov),                krylov)
   ALLOCATE(v(NP, dim, krylov),    NP*dim*krylov)
   ALLOCATE(h(krylov, krylov),          krylov*krylov)

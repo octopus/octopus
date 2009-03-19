@@ -51,8 +51,8 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
   ALLOCATE(   grho(NP, gr%mesh%sb%dim), NP*gr%mesh%sb%dim)
   ALLOCATE(gdl_rho(NP, gr%mesh%sb%dim), NP*gr%mesh%sb%dim)
 
-  ALLOCATE(   rho(NP_PART), NP)
-  ALLOCATE(dl_rho(NP_PART), NP)
+  ALLOCATE(   rho(gr%mesh%np_part), NP)
+  ALLOCATE(dl_rho(gr%mesh%np_part), NP)
 
   ALLOCATE(   elf(NP, st%d%nspin), NP*st%d%nspin)
   ALLOCATE(    de(NP, st%d%nspin), NP*st%d%nspin)

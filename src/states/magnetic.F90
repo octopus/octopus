@@ -158,8 +158,8 @@ contains
   subroutine magnetic_induced(gr, st, a_ind, b_ind)
     type(grid_t), intent(inout) :: gr
     type(states_t), intent(inout) :: st
-    FLOAT, intent(out) :: a_ind(:, :) ! a(NP_PART, gr%mesh%sb%dim)
-    FLOAT, intent(out) :: b_ind(:, :) ! b(NP_PART, gr%mesh%sb%dim) if gr%mesh%sb%dim=3, b(NP_PART, 1) if gr%mesh%sb%dim=2
+    FLOAT, intent(out) :: a_ind(:, :) ! a(gr%mesh%np_part, gr%mesh%sb%dim)
+    FLOAT, intent(out) :: b_ind(:, :) ! b(gr%mesh%np_part, gr%mesh%sb%dim) if gr%mesh%sb%dim=3, b(gr%mesh%np_part, 1) if gr%mesh%sb%dim=2
 
     integer :: i
     FLOAT, allocatable :: j(:, :, :)
@@ -174,7 +174,7 @@ contains
       call pop_sub(); return
     end if
 
-    ALLOCATE(j(NP_PART, gr%mesh%sb%dim, st%d%nspin), NP_PART*gr%mesh%sb%dim*st%d%nspin)
+    ALLOCATE(j(gr%mesh%np_part, gr%mesh%sb%dim, st%d%nspin), gr%mesh%np_part*gr%mesh%sb%dim*st%d%nspin)
     call states_calc_tau_jp_gn(gr, st, jp=j)
 
     a_ind = M_ZERO

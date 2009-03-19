@@ -480,7 +480,7 @@ contains
     FLOAT   :: p_tf, dens
     integer :: is, ii
 
-    ALLOCATE( rho(NP_PART, st%d%nspin), NP_PART*st%d%nspin)
+    ALLOCATE( rho(gr%mesh%np_part, st%d%nspin), gr%mesh%np_part*st%d%nspin)
     ALLOCATE(lrho(NP), NP)
     ALLOCATE( tau(NP, st%d%nspin), NP*st%d%nspin)
 

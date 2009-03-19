@@ -299,7 +299,7 @@ contains
 
       call push_sub('exponential.taylor_series')
 
-      ALLOCATE(zpsi1 (NP_PART, hm%d%dim), NP_PART*hm%d%dim)
+      ALLOCATE(zpsi1 (gr%mesh%np_part, hm%d%dim), gr%mesh%np_part*hm%d%dim)
       ALLOCATE(hzpsi1(NP,      hm%d%dim), NP     *hm%d%dim)
 
       zfact = M_z1
@@ -361,7 +361,7 @@ contains
 
       call push_sub('exponential.cheby')
 
-      ALLOCATE(zpsi1(NP_PART, hm%d%dim, 0:2), NP_PART*hm%d%dim*3)
+      ALLOCATE(zpsi1(gr%mesh%np_part, hm%d%dim, 0:2), gr%mesh%np_part*hm%d%dim*3)
       zpsi1 = M_z0
       do j = te%exp_order-1, 0, -1
         do idim = 1, hm%d%dim
@@ -420,7 +420,7 @@ contains
       ! This is the Lanczos loop...
       do n = 1, te%exp_order
 
-        !copy v(:, :, n) to an array of size 1:NP_PART
+        !copy v(:, :, n) to an array of size 1:gr%mesh%np_part
         do idim = 1, hm%d%dim
           call lalg_copy(NP, v(:, idim, n), zpsi(:, idim))
         end do
@@ -558,7 +558,7 @@ contains
 
       call push_sub('exponential.taylor_series')
 
-      ALLOCATE(psi1 (NP_PART, hm%d%dim, psib%nst), NP_PART*hm%d%dim*psib%nst)
+      ALLOCATE(psi1 (gr%mesh%np_part, hm%d%dim, psib%nst), gr%mesh%np_part*hm%d%dim*psib%nst)
       ALLOCATE(hpsi1(NP, hm%d%dim, psib%nst), NP*hm%d%dim*psib%nst)
 
       st_start = psib%states(1)%ist

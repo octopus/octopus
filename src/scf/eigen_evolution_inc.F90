@@ -41,11 +41,11 @@ subroutine X(eigensolver_evolution) (gr, st, hm, tol, niter, converged, ik, diff
 
   call exponential_init(te, gr)
 
-  ALLOCATE(hpsi(NP_PART, st%d%dim), NP_PART*st%d%dim)
+  ALLOCATE(hpsi(gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
   ALLOCATE(m(st%nst, st%nst), st%nst*st%nst)
   ALLOCATE(c(st%nst, st%nst), st%nst*st%nst)
   ALLOCATE(eig(st%nst), st%nst)
-  ALLOCATE(phi(NP_PART, st%d%dim, st%nst), NP_PART*st%d%dim*st%nst)
+  ALLOCATE(phi(gr%mesh%np_part, st%d%dim, st%nst), gr%mesh%np_part*st%d%dim*st%nst)
 
 
   ! Warning: it seems that the algorithm is improved if some extra states are added -- states
@@ -109,7 +109,7 @@ contains
     CMPLX,          pointer       :: zpsi(:, :)
 
 #if defined(R_TREAL)
-    ALLOCATE(zpsi(NP_PART, st%d%dim), NP_PART*st%d%dim)
+    ALLOCATE(zpsi(gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
     zpsi = psi
 #else
     zpsi => psi
