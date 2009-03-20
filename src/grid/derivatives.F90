@@ -238,7 +238,7 @@ contains
     call obsolete_variable('OverlapDerivatives', 'ParallelizationOfDerivatives')
 #endif
 
-    !%Variable TransformStates
+    !%Variable MoldelMBMasses
     !%Type block
     !%Default no
     !%Section Hamiltonian::Models
