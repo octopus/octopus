@@ -40,7 +40,7 @@ ExtraStates = 1
 1 | 0 | 0
 %
 
-XCFunctional = lda_x + lda_c_2d_amgb
+XCFunctional = lda_x_2d + lda_c_2d_amgb
 
 EigenSolverMaxIter = 50
 

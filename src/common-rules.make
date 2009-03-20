@@ -44,7 +44,6 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/include   \
 	-I$(top_builddir)/src/include \
         -I$(top_srcdir)/external_libs/spglib/src \
-	-I$(top_srcdir)/libxc/src \
 	-I$(top_srcdir)/liboct_parser
 
 AM_CCASFLAGS = \

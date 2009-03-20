@@ -146,8 +146,12 @@ contains
     ! initialize
     select case(functl%family)
     case(XC_FAMILY_LDA)
-      call XC_F90(lda_init)(functl%conf, functl%info, XC_LDA_X, &
-         spin_channels, ndim, XC_NON_RELATIVISTIC)
+      if(functl%id == XC_LDA_X) then
+        call XC_F90(lda_init)(functl%conf, functl%info, XC_LDA_X, &
+          spin_channels, ndim, XC_NON_RELATIVISTIC)
+      else
+        call XC_F90(lda_init)(functl%conf, functl%info, functl%id, spin_channels)
+      end if
 
     case(XC_FAMILY_GGA)
       call XC_F90(gga_init)(functl%conf, functl%info, functl%id, spin_channels)

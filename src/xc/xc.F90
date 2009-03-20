@@ -224,8 +224,8 @@ contains
         default = XC_LDA_X
         
         select case(calc_dim)
-        case(3); default = default + XC_LDA_C_PZ_MOD*1000
-        case(2); default = default + XC_LDA_C_2D_AMGB*1000
+        case(3); default = XC_LDA_X    + XC_LDA_C_PZ_MOD *1000
+        case(2); default = XC_LDA_X_2D + XC_LDA_C_2D_AMGB*1000
         end select
       end if
 
@@ -241,6 +241,8 @@ contains
       !% The value by default is lda_x + lda_c_pz_mod.
       !%
       !%Option lda_x                      1
+      !% LDA: Slater exchange
+      !%Option lda_x_2d                   19
       !% LDA: Slater exchange
       !%Option lda_c_wigner               2000
       !% LDA: Wigner parametrization

@@ -203,8 +203,13 @@ ACX_FC_COMMAND_LINE_ARGUMENTS
 dnl check whether the Fortran compiler supports Fortran 2003's c_ptr type
 ACX_FC_F2003_C_PTR
 
-dnl Check if the Fortran 90 uses malloc(3).
+dnl check if the Fortran 90 uses malloc(3).
 ACX_FC_USES_MALLOC
+
+dnl check flag to include module path
+AX_F90_MODULE_FLAG
+F90_MODULE_FLAG=$ax_f90_modflag
+AC_SUBST([F90_MODULE_FLAG])
 
 if test "${USE_OMP}"; then
   AC_DEFINE(USE_OMP, 1, [enable OpenMP support])
@@ -294,14 +299,9 @@ if test x"$enable_mpi" != x"no"; then
 fi
 
 dnl now I run configure for the internal libraries
-# AC_CONFIG_SUBDIRS([libstring_f])
-
 AC_CONFIG_SUBDIRS([external_libs/spglibs])
 
 AC_CONFIG_SUBDIRS([libxc])
-AX_F90_MODULE_FLAG
-F90_MODULE_FLAG=$ax_f90_modflag
-AC_SUBST([F90_MODULE_FLAG])
 
 # This is certainly wrong, but I don't know
 # how to do it right
