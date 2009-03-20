@@ -94,13 +94,15 @@ module derivatives_m
     integer               :: order         ! order of the discretization (value depends on stencil)
     integer               :: stencil_type  ! type of discretization
 
+    FLOAT                 :: masses(MAX_DIM)     ! we can have different weights (masses) per space direction
+
     integer               :: boundaries(MAX_DIM) ! boundary conditions
     logical               :: zero_bc
     logical               :: periodic_bc
 
     ! If the so-called variational discretization is used, this controls a
-    FLOAT :: lapl_cutoff   ! possible filter on the Laplacian.
-
+    ! possible filter on the Laplacian.
+    FLOAT :: lapl_cutoff   
 
     type(nl_operator_t), pointer :: op(:)  ! op(1:conf%dim) => gradient
     ! op(conf%dim+1) => laplacian
@@ -141,6 +143,7 @@ contains
     logical,             intent(in)  :: use_curvilinear
 
     integer :: i
+    type(block_t) :: blk
 
     call push_sub('derivatives.derivatives_init')
 
@@ -234,6 +237,33 @@ contains
 
     call obsolete_variable('OverlapDerivatives', 'ParallelizationOfDerivatives')
 #endif
+
+    !%Variable TransformStates
+    !%Type block
+    !%Default no
+    !%Section Hamiltonian::Models
+    !%Description
+    !% When using model Hamiltonians, we may want to have a different mass
+    !% in each spatial direction. This variable allows on to set them. Use, however,
+    !% with extreme care, as some parts of the code may output nonsense when this 
+    !% variable is used.
+    der%masses(:) = M_ONE
+    if(loct_parse_block(datasets_check('MoldelMBMasses'), blk) == 0) then
+      do i = 1, max(loct_parse_block_cols(blk, 0), der%dim)
+        call loct_parse_block_float(blk, 0, i-1, der%masses(i))
+      end do
+
+      if(any(der%masses(1:der%dim).ne.der%masses(1))) then
+        message(1) = "You are using and electronic mass that is different in the different "
+        message(2) = "spatial directions. I hope you know what you are doing..."
+        call write_warning(2)
+      end if
+
+      if(any(der%masses(1:der%dim).ne.M_ONE).and. der%stencil_type==DER_VARIATIONAL) then
+        message(1) = "Variational stencil is not allowed when using 'MoldelMBMasses'"
+        call write_fatal(1)
+      end if
+    end if
 
     ! construct lapl and grad structures
     ALLOCATE(der%op(der%dim + 1), der%dim + 1)
@@ -446,7 +476,7 @@ contains
           call get_rhs_lapl(rhs(:,1))
         end if
 
-        call make_discretization(der%dim, der%mesh, polynomials, rhs, 1, der%op(i:i))
+        call make_discretization(der%dim, der%mesh, der%masses, polynomials, rhs, 1, der%op(i:i))
         deallocate(polynomials, rhs)
       end do
 
@@ -460,7 +490,7 @@ contains
       end do
       call get_rhs_lapl(rhs(:, der%dim+1))
 
-      call make_discretization(der%dim, der%mesh, polynomials, rhs, der%dim+1, der%op(:))
+      call make_discretization(der%dim, der%mesh, der%masses, polynomials, rhs, der%dim+1, der%op(:))
 
       deallocate(polynomials, rhs)
 
@@ -470,14 +500,14 @@ contains
         ALLOCATE(rhs(der%op(i)%stencil%size, 1), der%op(i)%stencil%size*1)
         call stencil_starplus_pol_grad(der%dim, i, der%order, polynomials)
         call get_rhs_grad(i, rhs(:, 1))
-        call make_discretization(der%dim, der%mesh, polynomials, rhs, 1, der%op(i:i))
+        call make_discretization(der%dim, der%mesh, der%masses, polynomials, rhs, 1, der%op(i:i))
         deallocate(polynomials, rhs)
       end do
       ALLOCATE(polynomials(der%dim, der%op(der%dim+1)%stencil%size), der%dim*der%op(der%dim+1)%stencil%size)
       ALLOCATE(rhs(der%op(i)%stencil%size, 1), der%op(i)%stencil%size*1)
       call stencil_starplus_pol_lapl(der%dim, der%order, polynomials)
       call get_rhs_lapl(rhs(:, 1))
-      call make_discretization(der%dim, der%mesh, polynomials, rhs, 1, der%op(der%dim+1:der%dim+1))
+      call make_discretization(der%dim, der%mesh, der%masses, polynomials, rhs, 1, der%op(der%dim+1:der%dim+1))
       deallocate(polynomials, rhs)
 
     case(DER_VARIATIONAL)
@@ -554,9 +584,10 @@ contains
   end subroutine derivatives_build
 
   ! ---------------------------------------------------------
-  subroutine make_discretization(dim, mesh, pol, rhs, n, op)
+  subroutine make_discretization(dim, mesh, masses, pol, rhs, n, op)
     integer,                intent(in)    :: dim
     type(mesh_t),           intent(in)    :: mesh
+    FLOAT,                  intent(in)    :: masses(:)
     integer,                intent(in)    :: pol(:,:)
     integer,                intent(in)    :: n
     FLOAT,                  intent(inout) :: rhs(:,:)
@@ -586,13 +617,16 @@ contains
     do p = 1, p_max
       mat(1,:) = M_ONE
       do i = 1, op(1)%stencil%size
-        x(1:dim) = mesh%x(p + op(1)%ri(i, op(1)%rimap(p)), 1:dim) - mesh%x(p, 1:dim)
+        forall(j = 1:dim)
+          x(j) = mesh%x(p + op(1)%ri(i, op(1)%rimap(p)), j) - mesh%x(p, j)
+          x(j) = x(j)*sqrt(masses(j))
+        end forall
 
         ! calculate powers
         do j = 1, dim
-          powers(j,1) = x(j)
+          powers(j, 1) = x(j)
           do k = 2, pow_max
-            powers(j,k) = x(j)*powers(j,k-1)
+            powers(j, k) = x(j)*powers(j, k-1)
           end do
         end do
 
