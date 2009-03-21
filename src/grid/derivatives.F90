@@ -238,17 +238,18 @@ contains
     call obsolete_variable('OverlapDerivatives', 'ParallelizationOfDerivatives')
 #endif
 
-    !%Variable MoldelMBMasses
+    !%Variable ModelMBMasses
     !%Type block
     !%Default no
     !%Section Hamiltonian::Models
     !%Description
     !% When using model Hamiltonians, we may want to have a different mass
-    !% in each spatial direction. This variable allows on to set them. Use, however,
+    !% in each spatial direction. This variable allows one to set them. Use, however,
     !% with extreme care, as some parts of the code may output nonsense when this 
     !% variable is used.
+    !%End
     der%masses(:) = M_ONE
-    if(loct_parse_block(datasets_check('MoldelMBMasses'), blk) == 0) then
+    if(loct_parse_block(datasets_check('ModelMBMasses'), blk) == 0) then
       do i = 1, max(loct_parse_block_cols(blk, 0), der%dim)
         call loct_parse_block_float(blk, 0, i-1, der%masses(i))
       end do
