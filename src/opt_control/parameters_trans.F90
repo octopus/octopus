@@ -33,7 +33,7 @@
     ALLOCATE(x(size(xx)), size(xx))
     x = xx
 
-    ASSERT(par%current_representation .ne. ctr_real_space)
+    ASSERT(par%current_representation .ne. ctr_real_time)
 
     do j =  1, n
       ep(j) = tdf(par%f(1), j)
@@ -78,7 +78,7 @@
 
     call push_sub('parameters.parameters_x_to_par')
 
-    ASSERT(par%current_representation .ne. ctr_real_space)
+    ASSERT(par%current_representation .ne. ctr_real_time)
 
     n = par%dim
     ALLOCATE(e(n), n)
@@ -126,7 +126,7 @@
     type(tdf_t) :: fn, fm
     FLOAT, allocatable :: eigenvec(:, :), eigenval(:)
 
-    if(par_common%representation .eq. ctr_real_space) return
+    if(par_common%representation .eq. ctr_real_time) return
 
     call push_sub('parameters.parameters_trans_matrix')
 

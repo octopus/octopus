@@ -37,6 +37,7 @@ module opt_control_global_m
   implicit none
 
   type oct_t
+    integer :: ctr_function_rep
     logical :: mode_fixed_fluence
     integer :: algorithm
     FLOAT   :: eta, delta
@@ -47,6 +48,10 @@ module opt_control_global_m
     integer :: number_checkpoints
     logical :: random_initial_guess
   end type oct_t
+
+  integer, parameter :: &
+    oct_ctr_function_real_time       = 1,       &
+    oct_ctr_function_parametrized    = 2
 
   ! These are the possible QOCT schemes or algorithms; the component "algorithm"
   ! of the oct_t datatype can get any of these values.
@@ -74,44 +79,61 @@ module opt_control_global_m
 
     call messages_print_stress(stdout, "OCT run mode")
 
+
+    !%Variable OCTControlRepresentation
+    !%Type integer
+    !%Section Calculation Modes::Optimal Control
+    !%Default control_function_real_time
+    !%Description
+    !% Optimal Control Theory can be performed with octopus in two different modes:
+    !% either considering the control function to be described in full in real time,
+    !% or either be represented by a set of parameters (which may, or may not be,
+    !% the coefficients of its expansion in a given basis). The particular choice
+    !% for these parameters is specified by variable "OCTParameterRepresentation"
+    !% (this variable will be ignored if the control function is to be represented
+    !% in real space).
+    !%Option control_function_real_time 1
+    !% The control functions are represented directly in real time.
+    !%Option control_function_parametrized 2
+    !% The control functions are specified by a set of parameters.
+    !%End
+    call loct_parse_int(datasets_check('OCTControlRepresentation'), &
+      oct_ctr_function_real_time, oct%ctr_function_rep)
+    if(.not.varinfo_valid_option('OCTControlRepresentation', oct%ctr_function_rep)) &
+      call input_error('OCTControlRepresentation')
+    call messages_print_var_option(stdout, &
+      'OCTControlRepresentation', oct%ctr_function_rep)
+
+
     !%Variable OCTScheme
     !%Type integer
     !%Section Calculation Modes::Optimal Control
     !%Default oct_algorithm_zbr98
     !%Description
-    !% In order to find the optimal laser field for a given task, e.g., the excitation from an
-    !% initial state to a predefined final state at the final time, optimal control theory can 
-    !% be applied to quantum mechanics. The mathematical derivation leads a set of equations 
-    !% which require the propagation of the wavefunction and a lagrange multiplier (sometimes
-    !% comparable to a wavefunction). Several schemes have been sought to solve these control 
-    !% equations which boils down to forward and backward propagations. However, the order in
-    !% which these equations are solved makes a huge difference. Some schemes can be proven 
-    !% to increase the value of the target functional (merit function) in each step. (In 
-    !% practice this can be violated if the accuracy of the numerical time propagation is
-    !% small. Most likely in 3D.)
+    !% Optimal Control Theory can be performed with octopus with a variety of different
+    !% algorithms. Not all of them can be used with any choice of target or control function
+    !% representation. For example, some algorithms cannot be used if 
+    !% "OCTControlRepresentation = control_function_real_time" ("oct_algorithm_direct" and 
+    !% "oct_algorithm_newuoa"), and others cannot be used if "OCTControlRepresentation = control_function_parametrized"
+    !% (all others, except "oct_algorithm_straight_iteration").
     !%Option oct_algorithm_zbr98 1 
     !% Backward-Forward-Backward scheme described in JCP 108, 1953 (1998).
-    !% Only possible if targetoperator is a projection operator
-    !% Provides the fastest and most stable convergence.
-    !% Monotonic convergence.
+    !% Only possible if targetoperator is a projection operator.
+    !% Provides fast, stable and monotonic convergence.
     !%Option oct_algorithm_zr98  2
     !% Forward-Backward-Forward scheme described in JCP 109,385 (1998).
-    !% Works for projection and local target operators
-    !% Convergence is stable but slower than ZBR98. 
-    !% Note that local operators show an extremely slow convergence.
-    !% Monotonic convergence.
+    !% Works for projection and more general target operators, also. The convergence is stable but slower than ZBR98. 
+    !% Note that local operators show an extremely slow convergence. It ensures monotonic convergence.
     !%Option oct_algorithm_wg05  3
     !% Forward-Backward scheme described in J. Opt. B. 7 300 (2005).
-    !% Works for all kind target operators and 
-    !% can be used with all kind of filters and allows a fixed fluence.
+    !% Works for all kind target operators and can be used with all kind of filters and allows a fixed fluence.
     !% The price is a rather instable convergence. 
     !% If the restrictions set by the filter and fluence are reasonable, a good overlap can be 
     !% expected with 20 iterations.
     !% No monotonic convergence.
     !%Option oct_algorithm_mt03 4
     !% Basically an improved and generalized scheme. 
-    !% Comparable to ZBR98/ZR98. See [Y. Maday and G. Turinici, J. Chem. Phys. 118, 
-    !% 8191 (2003)].
+    !% Comparable to ZBR98/ZR98. See [Y. Maday and G. Turinici, J. Chem. Phys. 118, 8191 (2003)].
     !%Option oct_algorithm_krotov 5
     !% The procedure reported in [D. Tannor, V. Kazakov and V.
     !% Orlov, in "Time Dependent Quantum Molecular Dynamics", edited by J. Broeckhove
@@ -134,6 +156,14 @@ module opt_control_global_m
     !%End
     call loct_parse_int(datasets_check('OCTScheme'), oct_algorithm_zr98, oct%algorithm)
     if(.not.varinfo_valid_option('OCTScheme', oct%algorithm)) call input_error('OCTScheme')
+    ! We must check that the algorithm is consistent with OCTControlRepresentation, i.e.
+    ! some algorithms only make sense if the control functions are handled directly in real
+    ! time, some others make only sense if the control functions are parameterized.
+    if(oct%ctr_function_rep .eq. oct_ctr_function_real_time) then
+      if(oct%algorithm > oct_algorithm_str_iter) call input_error('OCTScheme')
+    else
+      if(oct%algorithm < oct_algorithm_str_iter) call input_error('OCTScheme')
+    end if
     call messages_print_var_option(stdout, "OCTScheme", oct%algorithm)
     select case(oct%algorithm)
     case(oct_algorithm_mt03)
@@ -166,7 +196,8 @@ module opt_control_global_m
     !%Section Calculation Modes::Optimal Control
     !%Default true
     !%Description 
-    !% Run a normal propagation after the optimization using the optimized field.
+    !% In order to make sure that the optimized field indeed does its job, the code may run a normal 
+    !% propagation after the optimization using the optimized field.
     !%End
     call loct_parse_logical(datasets_check('OCTDoubleCheck'), .true., oct%oct_double_check)
     call messages_print_var_value(stdout, "OCTDoubleCheck", oct%oct_double_check)
@@ -183,6 +214,10 @@ module opt_control_global_m
     !%
     !% Using "TypeOfMixing = broyden", "Mixing = 0.1" and "MixNumberSteps = 3" seems
     !% to work in many cases, but your mileage may vary.
+    !%
+    !% Note that mixing does not make sense (and is therefore not done, this variable
+    !% being ignored), for some OCT algorithms (in particular, if "OCTMixing" is
+    !% "oct_algorithm_direct" or "oct_algorithm_newuoa").
     !%End
     call loct_parse_logical(datasets_check('OCTMixing'), .false., oct%use_mixing)
     call messages_print_var_value(stdout, "OCTMixing", oct%use_mixing)
@@ -242,7 +277,8 @@ module opt_control_global_m
     !% Note, however, that this is only valid for the "direct" optimization schemes; moreover
     !% you still need to provide a "TDExternalFields" block.
     !%End
-    call loct_parse_logical(datasets_check('OCTRandomInitialGuess'), .false., oct%random_initial_guess)
+    call loct_parse_logical(datasets_check('OCTRandomInitialGuess'), &
+      .false., oct%random_initial_guess)
     call messages_print_var_value(stdout, "OCTRandomInitialGuess", oct%random_initial_guess)
 
     call messages_print_stress(stdout)

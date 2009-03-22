@@ -180,7 +180,8 @@ contains
 
 
     ! Read info about, and prepare, the control functions (a.k.a. parameters).
-    call parameters_mod_init(hm%ep, td%dt, td%max_iter, oct%mode_fixed_fluence)
+    call parameters_mod_init(hm%ep, td%dt, td%max_iter, oct%mode_fixed_fluence, &
+                             (oct%ctr_function_rep == oct_ctr_function_parametrized) )
     call parameters_init(par, td%dt, td%max_iter)
     call parameters_set(par, hm%ep)
       ! This prints the initial control parameters, exactly as described in the inp file,

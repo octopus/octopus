@@ -179,29 +179,6 @@
       end if
     end if
 
-    if(parameters_representation() .ne. ctr_real_space) then
-      if( (oct%algorithm .ne. oct_algorithm_str_iter)  .and.  &
-          (oct%algorithm .ne. oct_algorithm_direct)    .and.  &
-          (oct%algorithm .ne. oct_algorithm_newuoa) ) then
-        write(message(1), '(a)') 'If the control parameters are to be represented with a basis set'
-        write(message(2), '(a)') '(i.e. "OCTParameterRepresentation = control_parameters_fourier_space"),'
-        write(message(3), '(a)') 'the only acceptable algorithms are:'
-        write(message(4), '(a)') ' (1) "OCTScheme = oct_algorithm_straight_iteration".'
-        write(message(5), '(a)') ' (2) "OCTScheme = oct_algorithm_direct".'
-        write(message(6), '(a)') ' (3) "OCTScheme = oct_algorithm_newuoa".'
-        call write_fatal(6)
-      endif
-    end if
-
-    if(oct%algorithm .eq. oct_algorithm_direct) then
-      if(parameters_representation() .eq. ctr_real_space) then
-        write(message(1), '(a)') 'If you want to use "OCTScheme = oct_algorithm_direct", then you'
-        write(message(2), '(a)') 'must represent the control parameters with a basis set (i.e.'
-        write(message(3), '(a)') '"OCTParameterRepresentation = control_parameters_fourier_space"'
-        call write_fatal(3)
-      end if
-    end if
-      
     call pop_sub()      
   end subroutine check_faulty_runmodes
 

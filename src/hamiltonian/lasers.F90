@@ -159,6 +159,12 @@ contains
 
 
   ! ---------------------------------------------------------
+  ! The td functions that describe the laser field are transformed to a 
+  ! "numerical" representation (i.e. time grid, values at this time grid).
+  ! The possible phase and carrier frequency are evaluated and put together with
+  ! the envelope, so that the envelope describes the full function (zero phase,
+  ! zero carrier frequency.
+  ! ---------------------------------------------------------
   subroutine laser_to_numerical_all(l, dt, max_iter, omegamax)
     type(laser_t), intent(inout)  :: l
     FLOAT,         intent(in)     :: dt
@@ -187,12 +193,14 @@ contains
 
 
   ! ---------------------------------------------------------
+  ! The td functions that describe the laser field are transformed to a 
+  ! "numerical" representation (i.e. time grid, values at this time grid).
+  ! ---------------------------------------------------------
   subroutine laser_to_numerical(l, dt, max_iter, omegamax)
     type(laser_t), intent(inout)  :: l
     FLOAT,         intent(in)     :: dt
     integer,       intent(in)     :: max_iter
     FLOAT,         intent(in)     :: omegamax
-
     call push_sub('lasers.lasers_to_numerical')
 
     call tdf_to_numerical(l%f, max_iter, dt, omegamax)

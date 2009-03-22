@@ -83,7 +83,7 @@ module opt_control_parameters_m
 
 
   integer, public, parameter ::                    &
-    ctr_real_space           = TDF_NUMERICAL,      &
+    ctr_real_time            = TDF_NUMERICAL,      &
     ctr_sine_fourier_series  = TDF_SINE_SERIES,    &
     ctr_fourier_series       = TDF_FOURIER_SERIES, &
     ctr_zero_fourier_series  = TDF_ZERO_FOURIER
@@ -147,11 +147,12 @@ contains
   ! Output argument "mode_fixed_fluence" is also given a value, depending on whether
   ! the user requires a fixed-fluence run (.true.) or not (.false.).
   ! ---------------------------------------------------------
-  subroutine parameters_mod_init(ep, dt, max_iter, mode_fixed_fluence)
+  subroutine parameters_mod_init(ep, dt, max_iter, mode_fixed_fluence, parametrized_controls)
     type(epot_t), intent(inout)                   :: ep
     FLOAT, intent(in)                             :: dt
     integer, intent(in)                           :: max_iter
     logical, intent(out)                          :: mode_fixed_fluence
+    logical, intent(in)                           :: parametrized_controls
 
     character(len=1024)      :: expression
     integer :: i, j, no_lines, steps, iunit
@@ -167,13 +168,12 @@ contains
     !%Variable OCTParameterRepresentation
     !%Type integer
     !%Section Calculation Modes::Optimal Control
-    !%Default control_parameter_real_space
+    !%Default control_parameter_fourier_series
     !%Description
-    !% The control functions can be represented in real space (default), or expanded
-    !% in a finite basis set.
-    !%Option control_real_space 10007
-    !% The control function is discretized in real time. The dimension of the problem is
-    !% therefore the number of time steps, which can be very large.
+    !% If "OCTControlRepresentation = control_function_parametrized", one must 
+    !% specify the kind of parameters that determine the control function.
+    !% If "OCTControlRepresentation = control_function_real_time", then this variable
+    !% is ignored, and the control function is handled directly in real time.
     !%Option control_sine_fourier_series 10009
     !% The control function is expanded in a sine Fourier series (which implies that it
     !% it starts and ends at zero).
@@ -184,26 +184,29 @@ contains
     !% The control function is expanded as a Fourier series, but assuming that the zero
     !% frequency component is zero.
     !%End
-    call loct_parse_int(datasets_check('OCTParameterRepresentation'), &
-      ctr_real_space, par_common%representation)
-    if(.not.varinfo_valid_option('OCTParameterRepresentation', par_common%representation)) &
-      call input_error('OCTParameterRepresentation')
-    select case(par_common%representation)
-    case(ctr_real_space)
+    if (parametrized_controls) then
+      call loct_parse_int(datasets_check('OCTParameterRepresentation'), &
+        ctr_fourier_series, par_common%representation)
+      if(.not.varinfo_valid_option('OCTParameterRepresentation', par_common%representation)) &
+        call input_error('OCTParameterRepresentation')
+      select case(par_common%representation)
+      case(ctr_sine_fourier_series)
+        write(message(1), '(a)') 'Info: The OCT control functions will be represented as a sine '
+        write(message(2), '(a)') '      Fourier series.'
+        call write_info(2)
+      case(ctr_fourier_series)
+        write(message(1), '(a)') 'Info: The OCT control functions will be represented as a Fourier series.'
+        call write_info(1)
+      case(ctr_zero_fourier_series)
+        write(message(1), '(a)') 'Info: The OCT control functions will be represented as a Fourier series,'
+        write(message(2), '(a)') '      in which the zero-frequency component is assumed to be zero.'
+        call write_info(1)
+      end select
+    else
+      par_common%representation = ctr_real_time
       write(message(1), '(a)') 'Info: The OCT control functions will be represented in real time.'
       call write_info(1)
-    case(ctr_sine_fourier_series)
-      write(message(1), '(a)') 'Info: The OCT control functions will be represented as a sine '
-      write(message(2), '(a)') '      Fourier series.'
-      call write_info(2)
-    case(ctr_fourier_series)
-      write(message(1), '(a)') 'Info: The OCT control functions will be represented as a Fourier series.'
-      call write_info(1)
-    case(ctr_zero_fourier_series)
-      write(message(1), '(a)') 'Info: The OCT control functions will be represented as a Fourier series,'
-      write(message(2), '(a)') '      in which the zero-frequency component is assumed to be zero.'
-      call write_info(1)
-    end select
+    end if
 
     !%Variable OCTParameterOmegaMax
     !%Type float
@@ -214,7 +217,7 @@ contains
     !% the truncation is given by a cut-off frequency which is determined by this variable.
     !%End
     call loct_parse_float(datasets_check('OCTParameterOmegaMax'), -M_ONE, par_common%omegamax)
-    if(par_common%representation .ne. ctr_real_space) then
+    if(par_common%representation .ne. ctr_real_time) then
       write(message(1), '(a)')         'Info: The representation of the OCT control parameters will be restricted'
       write(message(2), '(a,f10.5,a)') '      with an energy cut-off of ', &
         par_common%omegamax / units_out%energy%factor, ' ['//trim(units_out%energy%abbrev) // ']'
@@ -249,51 +252,50 @@ contains
     !% fluence. However, you can force the program to use that initial laser as the initial
     !% guess, no matter the fluence, by setting "OCTFixInitialFluence = no".
     !%End
-    call loct_parse_logical(datasets_check('OCTFixInitialFluence'), .true., par_common%fix_initial_fluence)
+    call loct_parse_logical(datasets_check('OCTFixInitialFluence'), .true., &
+      par_common%fix_initial_fluence)
 
     !%Variable OCTControlFunctionType
     !%Type integer
     !%Section Calculation Modes::Optimal Control
     !%Default 1
     !%Description
-    !% The control function may fully determine the time-dependent form of the external field, or 
-    !% only the envelope function of this external field, or its phase. Or, we may have two different
-    !% control functions, one of them providing the phase and the other one, the envelope.
+    !% The control function may fully determine the time-dependent form of the 
+    !% external field, or only the envelope function of this external field, or its phase. 
+    !% Or, we may have two different control functions, one of them providing the phase 
+    !% and the other one, the envelope.
     !%
-    !% Note that in the "usual" QOCT runs, only the first option is allowed. The other options work
-    !% only for the "direct" optimization schemes.
+    !% Note that, if "OCTControlRepresentation = control_function_real_time", then the control
+    !% function must *always* determine the full external field.
     !%Option parameter_mode_epsilon   1
-    !% In this case, the control function determines the full control function. That is, if we are
-    !% considering the electric field of a laser, the time-dependent electric field.
+    !% In this case, the control function determines the full control function. That is, 
+    !% if we are considering the electric field of a laser, the time-dependent electric field.
     !%Option parameter_mode_f         2
-    !% The optimization process attempts to find the best possible envelope. The full control field
-    !% is this envelope times a cosine function with a "carrier" frequency. This carrier frequencey
-    !% is given by the carrier frequency of the "TDExternalFields" in the inp file.
+    !% The optimization process attempts to find the best possible envelope. The full 
+    !% control field is this envelope times a cosine function with a "carrier" frequency. 
+    !% This carrier frequencey is given by the carrier frequency of the "TDExternalFields" 
+    !% in the inp file.
     !%Option parameter_mode_phi       3
     !% The optimization process attempts to find the best possible time-dependent phase. That is,
-    !% the external field would be given by a function in the form e(t) = f(t)*cos(w0*t+phi(t)), where
-    !% f(t) is an "envelope", w0 a carrier frequency, and phi(t) the td phase that we wish to
-    !% optimize.
+    !% the external field would be given by a function in the form e(t) = f(t)*cos(w0*t+phi(t)), 
+    !% where f(t) is an "envelope", w0 a carrier frequency, and phi(t) the td phase that we 
+    !% wish to optimize.
     !%Option parameter_mode_f_and_phi 4
-    !% A combination of parameter_mode_f and parameter_mode_phi: we have two control functions, one
-    !% for the envelope and another one for the phase.
+    !% A combination of parameter_mode_f and parameter_mode_phi: we have two control functions, 
+    !% one for the envelope and another one for the phase.
     !%End
     call loct_parse_int(datasets_check('OCTControlFunctionType'), parameter_mode_epsilon, par_common%mode)
-    if(.not.varinfo_valid_option('OCTControlFunctionType', par_common%mode)) call input_error('OCTControlFunctionType')
-    select case(par_common%mode)
-    case(parameter_mode_f, parameter_mode_phi, parameter_mode_f_and_phi)
-      if(par_common%representation .eq. ctr_real_space) then
-        write(message(1),'(a)') 'If "OCTControlFunctionType = parameter_mode_f", '
-        write(message(2),'(a)') '   "OCTControlFunctionType = parameter_mode_phi", '
-        write(message(3),'(a)') 'or "OCTControlFunctionType = parameter_mode_f_and_phi", then'
-        write(message(4),'(a)') 'the control parameter representation cannot be real time, i.e. you must have'
-        write(message(5),'(a)') '"OCTParameterRepresentation = control_sine_fourier_series". or'
-        write(message(6),'(a)') '"OCTParameterRepresentation = control_fourier_series".'
-        call write_fatal(5)
-      end if
-    end select
+    if(.not.varinfo_valid_option('OCTControlFunctionType', par_common%mode)) &
+      call input_error('OCTControlFunctionType')
+    if ( (.not.parametrized_controls)  .and.  (par_common%mode .ne. parameter_mode_epsilon) ) &
+      call input_error('OCTControlFunctionType')
     call messages_print_var_option(stdout, 'OCTControlFunctionType', par_common%mode)
 
+
+    ! The laser field is defined by "td functions", as implemented in module "tdf_m". At this point, they
+    ! can be in "non-numerical" representation (i.e. described with a set of parameters, e.g. frequency, width, etc).
+    ! We need them to be in numerical form (i.e. time grid, values at the time grid). Here we do the transformation.
+    ! It cannot be done before calling parameters_mod_init because we need to pass the omegamax value.
     do i = 1, ep%no_lasers
       select case(par_common%mode)
       case(parameter_mode_epsilon)
@@ -307,23 +309,28 @@ contains
     ! to calculate the fluence.
     if(par_common%mode .eq. parameter_mode_phi) then
       call laser_get_f(ep%lasers(1), par_common%f)
-    end if
+    end if 
 
     ! Fix the carrier frequency
     call obsolete_variable('OCTCarrierFrequency')
     par_common%w0 = laser_carrier_frequency(ep%lasers(1))
 
-    ! Fix the number of parameters
-    select case(par_common%mode)
-      case(parameter_mode_epsilon)
-        par_common%no_parameters = ep%no_lasers
-      case(parameter_mode_f)
-        par_common%no_parameters = 1
-      case(parameter_mode_phi)
-        par_common%no_parameters = 1
-      case(parameter_mode_f_and_phi)
-        par_common%no_parameters = 2
-    end select
+    ! Fix the number of control functions: if we have "traditional" QOCT (i.e. the control functions
+    ! are represented directly in real time, then the number of control functions can be larger than
+    ! one; it will be the number of lasers found in the input file. Otherwise, if the control function(s)
+    ! are parametrized ("OCTControlRepresentation = control_function_parametrized"), we only have one
+    ! control function. If there is more than one laser field in the input file, the program stops.
+    if(parametrized_controls) then
+      if(ep%no_lasers > 1) then
+        write(message(1), '(a)') 'If "OCTControlRepresentation = control_function_parametrized", you can'
+        write(message(2), '(a)') 'have only one external field in the input file.'
+        call write_fatal(2)
+      end if
+      par_common%no_parameters = 1
+    else
+      par_common%no_parameters = ep%no_lasers
+    end if
+
 
     mode_fixed_fluence = .false.
     if (par_common%targetfluence .ne. M_ZERO) mode_fixed_fluence = .true.
@@ -544,7 +551,7 @@ contains
     call push_sub('parameters.parameters_set_rep')
 
     if(par%current_representation .ne. par%representation) then
-      if(par%representation .eq. ctr_real_space) then
+      if(par%representation .eq. ctr_real_time) then
         call parameters_to_realtime(par)
       else
         call parameters_to_basis(par)
@@ -563,7 +570,7 @@ contains
     integer :: j
     call push_sub('parameters.parameters_to_basis')
 
-    if(par%current_representation.eq.ctr_real_space) then
+    if(par%current_representation.eq.ctr_real_time) then
       select case(par%representation)
       case(ctr_sine_fourier_series)
         do j = 1, par%no_parameters
@@ -592,7 +599,7 @@ contains
     call push_sub('parameters.parameters_to_realtime')
 
     select case(par%current_representation)
-    case(ctr_real_space)
+    case(ctr_real_time)
       call pop_sub(); return
     case(ctr_sine_fourier_series)
       do j = 1, par%no_parameters
@@ -608,7 +615,7 @@ contains
       end do
     end select
 
-    par%current_representation = ctr_real_space
+    par%current_representation = ctr_real_time
     call pop_sub()
   end subroutine parameters_to_realtime
   ! ---------------------------------------------------------
@@ -717,7 +724,7 @@ contains
     cp%w0              = par_common%w0
     cp%omegamax        = par_common%omegamax
     cp%no_parameters   = par_common%no_parameters
-    cp%current_representation = ctr_real_space
+    cp%current_representation = ctr_real_time
     cp%targetfluence = par_common%targetfluence
     call loct_pointer_copy(cp%alpha, par_common%alpha)
 
@@ -727,7 +734,7 @@ contains
     end do
 
     select case(cp%representation)
-    case(ctr_real_space)
+    case(ctr_real_time)
       cp%dim = ntiter + 1
     case(ctr_sine_fourier_series)
       cp%dim = tdf_sine_nfreqs(cp%f(1))
@@ -779,7 +786,7 @@ contains
     call push_sub('parameters.parameters_apply_envelope')
 
     ! Do not apply the envelope if the parameters are represented as a sine Fourier series.
-    if(cp%representation .eq. ctr_real_space) then
+    if(cp%representation .eq. ctr_real_time) then
       do j = 1, cp%no_parameters
         do i = 1, tdf_niter(cp%f(j)) + 1
           call tdf_set_numerical(cp%f(j), i, tdf(cp%f(j), i) / tdf(par_common%td_penalty(j), i) )
@@ -1240,7 +1247,7 @@ contains
      integer :: j
      call push_sub('parameters.parameters_randomize')
 
-     ASSERT(par%representation .ne. ctr_real_space)
+     ASSERT(par%representation .ne. ctr_real_time)
 
      call parameters_set_rep(par)
 
