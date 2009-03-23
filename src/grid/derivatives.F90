@@ -264,6 +264,8 @@ contains
         message(1) = "Variational stencil is not allowed when using 'MoldelMBMasses'"
         call write_fatal(1)
       end if
+
+      call loct_parse_block_end(blk)
     end if
 
     ! construct lapl and grad structures
