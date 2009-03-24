@@ -42,7 +42,7 @@
       do is = 1, st%d%nspin
         write(fname, '(a,i1)') 'density-', is
         call doutput_function(outp%how, dir, fname, gr%mesh, gr%sb, &
-          st%rho(:, is), u, ierr, is_tmp = .false., geo = geo)
+          st%rho(:, is), u, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
       end do
     end if
 
@@ -53,7 +53,7 @@
           dtmp(1:NP)=st%rho(1:NP,is)*gr%mesh%x(1:NP,idim)
           write(fname, '(a,i1,a,i1)') 'dipole_density-', is, '-',idim
           call doutput_function(outp%how, dir, fname, gr%mesh, gr%sb, &
-            dtmp(:), u, ierr, is_tmp = .false., geo = geo)
+            dtmp(:), u, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
         end do
       end do
       deallocate(dtmp)
@@ -66,7 +66,7 @@
         do id = 1, gr%mesh%sb%dim
           write(fname, '(a,i1,a,a)') 'current-', is, '-', index2axis(id)
           call doutput_function(outp%how, dir, fname, gr%mesh, gr%sb, &
-            st%j(:, id, is), u, ierr, is_tmp = .false., geo = geo)
+            st%j(:, id, is), u, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
         end do
       end do
     end if
@@ -74,7 +74,7 @@
     if(iand(outp%what, output_wfs).ne.0) then
       do ist = st%st_start, st%st_end
         if(loct_isinstringlist(ist, outp%wfs_list)) then
-          do ik = 1, st%d%nik
+          do ik = st%d%kpt%start, st%d%kpt%end
             do idim = 1, st%d%dim
               write(fname, '(a,i3.3,a,i4.4,a,i1)') 'wf-', ik, '-', ist, '-', idim
               if (st%wfs_type == M_REAL) then
@@ -94,7 +94,7 @@
       ALLOCATE(dtmp(gr%mesh%np_part), gr%mesh%np_part)
       do ist = st%st_start, st%st_end
         if(loct_isinstringlist(ist, outp%wfs_list)) then
-          do ik = 1, st%d%nik
+          do ik = st%d%kpt%start, st%d%kpt%end
             do idim = 1, st%d%dim
               write(fname, '(a,i3.3,a,i4.4,a,i1)') 'sqm-wf-', ik, '-', ist, '-', idim
               if (st%wfs_type == M_REAL) then
@@ -123,7 +123,7 @@
           do is = 1, 2
             write(fname, '(a,a,i1)') 'tau', '-', is
             call doutput_function(outp%how, dir, trim(fname), gr%mesh, gr%sb, &
-              elf(:, is), M_ONE, ierr, is_tmp = .false., geo = geo)
+              elf(:, is), M_ONE, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
           end do
       end select
       deallocate(elf)
