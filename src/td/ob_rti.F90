@@ -251,7 +251,7 @@ contains
     end do
 
     ! Get right-hand side.
-    do ik = 1, st%d%nik
+    do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
         ! 1. Apply effective Hamiltonian.
         if(ob%mem_type.eq.SAVE_CPU_TIME) then
@@ -483,7 +483,7 @@ contains
     
     call push_sub('ob_rti.save_intf_wf')
 
-    do ik = 1, st%d%nik
+    do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
         call get_intf_wf(intf, st%zpsi(:, 1, ist, ik), st_intf(:, ist, ik))
       end do

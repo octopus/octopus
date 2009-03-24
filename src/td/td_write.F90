@@ -591,9 +591,9 @@ contains
 
     call push_sub('td_write.td_write_angular')
 
-    ALLOCATE(ang (st%st_start:st%st_end, st%d%nik, 3), st%lnst*st%d%nik*3)
-    ALLOCATE(ang2(st%st_start:st%st_end, st%d%nik), st%lnst*st%d%nik)
-    do ik = 1, st%d%nik
+    ALLOCATE(ang (st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end, 3), st%lnst*st%d%kpt%nlocal*3)
+    ALLOCATE(ang2(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end), st%lnst*st%d%kpt%nlocal)
+    do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
         call zstates_angular_momentum(gr, st%zpsi(:, :, ist, ik), ang(ist, ik, :), ang2(ist, ik))
       end do
