@@ -62,7 +62,7 @@
 subroutine X(input_function)(filename, mesh, f, ierr, is_tmp)
   character(len=*),  intent(in)  :: filename
   type(mesh_t),      intent(in)  :: mesh
-  R_TYPE,            intent(out) :: f(:)
+  R_TYPE,            intent(out) :: f(1:mesh%np)
   integer,           intent(out) :: ierr
   logical, optional, intent(in)  :: is_tmp
 
@@ -298,7 +298,7 @@ end subroutine X(input_function_global)
 
 
 ! ---------------------------------------------------------
-subroutine X(output_function) (how, dir, fname, mesh, sb, f, u, ierr, is_tmp, geo)
+subroutine X(output_function) (how, dir, fname, mesh, sb, f, u, ierr, is_tmp, geo, grp)
   integer,           intent(in)  :: how
   character(len=*),  intent(in)  :: dir, fname
   type(mesh_t),      intent(in)  :: mesh
@@ -308,6 +308,7 @@ subroutine X(output_function) (how, dir, fname, mesh, sb, f, u, ierr, is_tmp, ge
   integer,           intent(out) :: ierr
   logical, optional, intent(in)  :: is_tmp
   type(geometry_t), optional, intent(in) :: geo
+  type(mpi_grp_t),  optional, intent(in) :: grp
 
   logical :: is_tmp_ = .false.
 
@@ -319,8 +320,8 @@ subroutine X(output_function) (how, dir, fname, mesh, sb, f, u, ierr, is_tmp, ge
 
   if(present(is_tmp)) is_tmp_ = is_tmp
 
-  if(mesh%parallel_in_domains) then
 #if defined(HAVE_MPI)
+  if(mesh%parallel_in_domains) then
     ALLOCATE(f_global(mesh%np_global), mesh%np_global)
 
     call X(vec_gather)(mesh%vp, f_global, f)
@@ -330,7 +331,7 @@ subroutine X(output_function) (how, dir, fname, mesh, sb, f, u, ierr, is_tmp, ge
         call X(output_function_global)(how, dir, fname, mesh, sb, f_global, u, ierr, is_tmp = is_tmp_, geo = geo)
       else
         call X(output_function_global)(how, dir, fname, mesh, sb, f_global, u, ierr, is_tmp = is_tmp_)
-      endif
+      end if
     end if
 
     ! I have to broadcast the error code
@@ -339,12 +340,40 @@ subroutine X(output_function) (how, dir, fname, mesh, sb, f, u, ierr, is_tmp, ge
     if(in_debug_mode) call write_debug_newlines(2)
 
     deallocate(f_global)
-#else
-    ASSERT(.false.)
-#endif
   else
-    call X(output_function_global)(how, dir, fname, mesh, sb, f, u, ierr, is_tmp = is_tmp_, geo = geo)
+    if(present(grp)) then ! only root writes output
+      if(grp%rank.eq.0) then
+        if (present(geo)) then
+          call X(output_function_global)(how, dir, fname, mesh, sb, f, u, ierr, is_tmp = is_tmp_, geo = geo)
+        else
+          call X(output_function_global)(how, dir, fname, mesh, sb, f, u, ierr, is_tmp = is_tmp_)
+        end if
+      end if
+      ! I have to broadcast the error code
+      if(grp%size > 1) then
+        call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, grp%comm, mpi_err)
+      end if
+
+      if(in_debug_mode) call write_debug_newlines(2)
+    else ! all nodes write output
+      if (present(geo)) then
+        call X(output_function_global)(how, dir, fname, mesh, sb, f, u, ierr, is_tmp = is_tmp_, geo = geo)
+      else
+        call X(output_function_global)(how, dir, fname, mesh, sb, f, u, ierr, is_tmp = is_tmp_)
+      end if !present(geo)
+    end if !present(grp)
+  end if !mesh%parallel_in_domains
+#else
+  ! serial mode
+  if(mesh%parallel_in_domains) then
+    ASSERT(.false.)
   end if
+   if (present(geo)) then
+     call X(output_function_global)(how, dir, fname, mesh, sb, f, u, ierr, is_tmp = is_tmp_, geo = geo)
+   else
+     call X(output_function_global)(how, dir, fname, mesh, sb, f, u, ierr, is_tmp = is_tmp_)
+   endif
+#endif
 
   call pop_sub()
 end subroutine X(output_function)
