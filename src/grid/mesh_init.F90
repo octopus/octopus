@@ -153,6 +153,7 @@ contains
     do il = 1, NLEADS
       m => mesh%lead_unit_cell(il)
       m%sb => mesh%sb
+      m%parallel_in_domains = mesh%parallel_in_domains
       iunit = io_open(trim(sb%lead_restart_dir(il))//'/gs/mesh', action='read', is_tmp=.true.)
       call mesh_init_from_file(m, iunit)
       call io_close(iunit)
@@ -753,17 +754,19 @@ contains
 
             ip_inner = vec_global2local(mesh%vp, ip_inner_global, ipart)
             
-            if(ip_inner /= 0 .and. ip_inner <= mesh%vp%np_local(ipart)) then
-              ! count the points to receive from each node
-              mesh%nrecv(ipart) = mesh%nrecv(ipart) + 1
-              ! and store the number of the point
-              recv_points(mesh%nrecv(ipart), ipart) = ip
-              ! and where it is in the other partition
-              recv_rem_points(mesh%nrecv(ipart), ipart) = ip_inner
+            if(ip_inner /= 0) then
+              if(ip_inner <= mesh%vp%np_local(ipart)) then
+                ! count the points to receive from each node
+                mesh%nrecv(ipart) = mesh%nrecv(ipart) + 1
+                ! and store the number of the point
+                recv_points(mesh%nrecv(ipart), ipart) = ip
+                ! and where it is in the other partition
+                recv_rem_points(mesh%nrecv(ipart), ipart) = ip_inner
 
-              ASSERT(mesh%mpi_grp%rank /= ipart - 1) ! if we are here, the point must be in another node
-
-              exit
+                ASSERT(mesh%mpi_grp%rank /= ipart - 1) ! if we are here, the point must be in another node
+              
+                exit
+              end if
             end if
             
           end do
