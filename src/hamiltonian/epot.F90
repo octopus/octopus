@@ -463,7 +463,7 @@ contains
 
     ! Local.
     ep%vpsl = M_ZERO
-    st%rho_core = M_ZERO
+    if(st%nlcc) st%rho_core = M_ZERO
     do ia = geo%atoms%start, geo%atoms%end
       if(st%nlcc) then
         call epot_local_potential(ep, gr, gr%mesh, geo, ia, ep%vpsl, time_, st%rho_core)
