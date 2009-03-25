@@ -706,7 +706,7 @@ contains
 
       call push_sub('em_resp.em_resp_output.out_projections')
 
-      do ik = 1, st%d%nik
+      do ik = st%d%kpt%start, st%d%kpt%end
         do dir = 1, gr%mesh%sb%dim
 
           write(fname, '(2a,i1,a,i1)') trim(dirname), '/projection-', ik, '-', dir

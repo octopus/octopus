@@ -422,7 +422,7 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
             u(1:3) = ijk(perm(1:3))
             w(1:3) = perm(1:3)
 
-            do ik = 1, st%d%nik
+            do ik = st%d%kpt%start, st%d%kpt%end
               do ist = 1, st%nst
                 do idim = 1, st%d%dim
 

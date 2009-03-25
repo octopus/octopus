@@ -560,7 +560,7 @@ subroutine X(pert_expectation_density) (this, gr, geo, hm, st, psia, psib, densi
 
   density(1:NP) = R_TOTYPE(M_ZERO)
 
-  do ik = 1, st%d%nik
+  do ik = st%d%kpt%start, st%d%kpt%end
     do ist  = st%st_start, st%st_end
       do idim = 1, st%d%dim
 
