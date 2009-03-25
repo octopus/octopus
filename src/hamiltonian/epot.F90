@@ -732,7 +732,7 @@ contains
 
 ! TODO: add in sum over k-points in orthogonal directions here
 
-    do ik = 1, st%d%nik ! determinants for different spins multiply since matrix is block-diagonal
+    do ik = st%d%kpt%start, st%d%kpt%end ! determinants for different spins multiply since matrix is block-diagonal
       do ist = 1, st%nst
         do ist2 = 1, st%nst
           do idim = 1, st%d%dim ! spinor components
