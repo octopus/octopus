@@ -696,7 +696,7 @@ subroutine X(vmask) (gr, hm, st)
   call push_sub('hamiltonian_inc.Xvmask')
 
   if(hm%ab == MASK_ABSORBING) then
-    do ik = 1, st%d%nik
+    do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
         do idim = 1, st%d%dim
            st%X(psi)(1:NP, idim, ist, ik) = st%X(psi)(1:NP, idim, ist, ik)*(M_ONE - hm%ab_pot(1:NP))

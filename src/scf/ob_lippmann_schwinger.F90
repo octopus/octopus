@@ -89,7 +89,7 @@ contains
     st_p     => st
     energy_p => energy
 
-    do ik = 1, st%d%nik
+    do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
         ! Solve Schroedinger equation for this energy.
         energy = st%ob_eigenval(ist, ik)
