@@ -442,13 +442,15 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine laser_write_info(l, iunit)
+  subroutine laser_write_info(l, iunit, dt, max_iter)
     type(laser_t), intent(in) :: l(:)
     integer,       intent(in) :: iunit
+    FLOAT, optional, intent(in) :: dt 
+    integer, optional, intent(in) :: max_iter 
 
-    FLOAT :: t, fluence, max_intensity, intensity, dt
+    FLOAT :: t, fluence, max_intensity, intensity, dt_
     CMPLX :: amp, val
-    integer :: i, j, k, no_l, max_iter
+    integer :: i, j, k, no_l, max_iter_
 
     if(.not.mpi_grp_is_root(mpi_world)) return
 
@@ -458,8 +460,16 @@ contains
     
     do i = 1, no_l
 
-      dt = tdf_dt(l(i)%f)
-      max_iter = tdf_niter(l(i)%f)
+      if(present(dt)) then
+        dt_ = dt
+      else
+        dt_ = tdf_dt(l(i)%f)
+      end if
+      if(present(max_iter)) then
+        max_iter_ = max_iter
+      else
+        max_iter_ = tdf_niter(l(i)%f)
+      end if
 
       write(iunit,'(i2,a)') i,':'
       select case(l(i)%field)
@@ -493,8 +503,8 @@ contains
         fluence = M_ZERO
 
         max_intensity = M_ZERO
-        do j = 1, max_iter
-          t = j * dt
+        do j = 1, max_iter_
+          t = j * dt_
           val = tdf(l(i)%f, t)
           amp = val*exp(M_zI*(l(i)%omega*t + tdf(l(i)%phi, t)))
           intensity = M_ZERO
@@ -504,7 +514,7 @@ contains
           fluence = fluence + intensity
           if(intensity > max_intensity) max_intensity = intensity
         end do
-        fluence = fluence * dt
+        fluence = fluence * dt_
         write(iunit,'(a,es12.6,3a)') '   Peak intensity = ', max_intensity, ' [a.u]'
         write(iunit,'(a,es12.6,3a)') '                  = ', &
           max_intensity * 6.4364086e+15, ' [W/cm^2]'
