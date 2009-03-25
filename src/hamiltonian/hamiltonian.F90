@@ -636,7 +636,7 @@ contains
         call messages_print_stress(stdout, 'Lead Green functions')
         message(1) = ' st#  Spin  Lead     Energy'
         call write_info(1)
-        do ik = 1, st%d%nik
+        do ik = st%d%kpt%start, st%d%kpt%end
           do ist = 1, st%ob_ncs
             energy = st%ob_eigenval(ist, ik)
             do il = 1, NLEADS

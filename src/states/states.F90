@@ -2291,7 +2291,7 @@ contains
     end if
 
     st%frozen_rho = M_ZERO
-    do ik = 1, st%d%nik
+    do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
         if(ist > n) cycle
         call states_dens_accumulate(st, gr%mesh%np, st%frozen_rho, ist, ik)
@@ -2310,7 +2310,7 @@ contains
 #if defined(HAVE_MPI) 
 
     if(staux%parallel_in_states) then
-      do ik = 1, st%d%nik
+      do ik = st%d%kpt%start, st%d%kpt%end
         do ist = staux%st_start, staux%st_end
           if(ist <= n) cycle
           if(.not.state_is_local(st, ist-n)) then
@@ -2326,7 +2326,7 @@ contains
         end do
       end do
    else
-     do ik = 1, st%d%nik
+     do ik = st%d%kpt%start, st%d%kpt%end
        do ist = staux%st_start, staux%st_end
          if(ist <= n) cycle
          st%zpsi(:, :, ist-n, ik) = staux%zpsi(:, :, ist, ik)
@@ -2336,7 +2336,7 @@ contains
 
 #else
 
-    do ik = 1, st%d%nik
+    do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
         st%zpsi(:, :, ist, ik) = staux%zpsi(:, :, n + ist, ik)
       end do
@@ -2349,7 +2349,7 @@ contains
     ALLOCATE(st%eigenval(st%nst, st%d%nik),      st%nst*st%d%nik)
     ALLOCATE(st%momentum(3, st%nst, st%d%nik), 3*st%nst*st%d%nik)
 
-    do ik = 1, st%d%nik
+    do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
         st%occ(ist, ik) = staux%occ(n+ist, ik)
         st%eigenval(ist, ik) = staux%eigenval(n+ist, ik)
