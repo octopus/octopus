@@ -86,7 +86,7 @@ subroutine PES_mask_doit(v, m, st, dt, mask)
   ! we now add the contribution from this timestep
   ALLOCATE(wf1(m%idx%ll(1), m%idx%ll(2), m%idx%ll(3)), m%idx%ll(1)*m%idx%ll(2)*m%idx%ll(3))
   ALLOCATE(wf2(m%idx%ll(1), m%idx%ll(2), m%idx%ll(3)), m%idx%ll(1)*m%idx%ll(2)*m%idx%ll(3))
-  do ik = 1, st%d%nik
+  do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
       do idim = 1, st%d%dim
 
@@ -151,7 +151,7 @@ subroutine PES_mask_output(v, m, st, file)
           vec = sum((temp(:) * ixx(:))**2) / M_TWO
           ii = nint(vec / step) + 1
           if(ii <= n) then
-            do ik = 1, st%d%nik
+            do ik = st%d%kpt%start, st%d%kpt%end
               do p = st%st_start, st%st_end
                 spis(ii, p, ik) = spis(ii, p, ik) + st%occ(p, ik) * &
                   sum(abs(v%k(ix, iy, iz, :, p, ik))**2)
@@ -165,7 +165,7 @@ subroutine PES_mask_output(v, m, st, file)
             vec = atan2(real(ixx(2), REAL_PRECISION), real(ixx(1), REAL_PRECISION))
             ii  = nint(abs(vec)*(ar_n-1)/M_PI) + 1
             if(ii <= ar_n) then ! should always be true
-              do ik = 1, st%d%nik
+              do ik = st%d%kpt%start, st%d%kpt%end
                 do p = st%st_start, st%st_end
                   arpis(ii, p, ik) = arpis(ii, p, ik) + &
                     st%occ(p, ik)*sum(abs(v%k(ix, iy, iz, :, p, ik))**2)
@@ -181,7 +181,7 @@ subroutine PES_mask_output(v, m, st, file)
   end do
 
   ! first output power spectra
-  do ik = 1, st%d%nik
+  do ik = st%d%kpt%start, st%d%kpt%end
     do p = st%st_start, st%st_end
       write(fn, '(a,a,i1.1,a,i2.2)') trim(file), '_power.', ik, '.',p
       iunit = io_open(fn, action='write')
@@ -206,7 +206,7 @@ subroutine PES_mask_output(v, m, st, file)
   call io_close(iunit)
 
   ! now output ar spectra
-  do ik = 1, st%d%nik
+  do ik = st%d%kpt%start, st%d%kpt%end
     do p = st%st_start, st%st_end
       write(fn, '(a,a,i1.1,a,i2.2)') trim(file), '_ar.', ik, '.', p
       iunit = io_open(fn, action='write')
@@ -247,7 +247,7 @@ subroutine PES_mask_output(v, m, st, file)
           vec = atan2(real(ixx(2), REAL_PRECISION), real(ixx(1), REAL_PRECISION))
           ii  = nint(abs(vec)*(ar_n-1)/M_PI) + 1
           if(ii <= ar_n) then ! should always be true
-            do ik = 1, st%d%nik
+            do ik = st%d%kpt%start, st%d%kpt%end
               do p = st%st_start, st%st_end
                 arpis(ii, p, ik) = arpis(ii, p, ik) + st%occ(p, ik)*v%r(ix, iy, iz, p, ik)
                 ar_npoints(ii) = ar_npoints(ii) + 1
@@ -261,7 +261,7 @@ subroutine PES_mask_output(v, m, st, file)
   end do
 
   ! now output real ar spectra
-  do ik = 1, st%d%nik
+  do ik = st%d%kpt%start, st%d%kpt%end
     do p = st%st_start, st%st_end
       write(fn, '(a,a,i1.1,a,i2.2)') trim(file), '_ar_r.', ik, '.', p
       iunit = io_open(fn, action='write')

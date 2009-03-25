@@ -90,7 +90,7 @@ subroutine PES_rc_doit(v, st, ii)
   integer :: ix, ik, p, idim
 
   do ix = 1, v%npoints
-    do ik = 1, st%d%nik
+    do ik = st%d%kpt%start, st%d%kpt%end
       do p = st%st_start, st%st_end
         do idim = 1, st%d%dim
           v%wf(ix, idim, p, ik, ii) = st%occ(p, ik)*st%zpsi(v%points(ix), idim, p, ik)
@@ -117,7 +117,7 @@ subroutine PES_rc_output(v, st, iter, save_iter, dt)
       write(iunit, '(a7,f17.6,3a)') &
         '# dt = ', dt/units_inp%time%factor, ' [', trim(units_inp%time%abbrev), ']'
       write(iunit, '(a3,14x)', advance='no') '# t'
-      do ik = 1, st%d%nik
+      do ik = st%d%kpt%start, st%d%kpt%end
         do p = st%st_start, st%st_end
           do idim = 1, st%d%dim
             write(iunit, '(3x,a8,i3,a7,i3,a8,i3,3x)', advance='no') &

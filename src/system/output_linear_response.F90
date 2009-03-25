@@ -78,7 +78,7 @@ subroutine X(h_sys_output_lr) (st, gr, lr, dir, tag, isigma, outp, geo)
   if(iand(outp%what, output_wfs).ne.0) then
     do ist = st%st_start, st%st_end
       if(loct_isinstringlist(ist, outp%wfs_list)) then
-        do ik = 1, st%d%nik
+        do ik = st%d%kpt%start, st%d%kpt%end
           do idim = 1, st%d%dim
             write(fname, '(a,i3.3,a,i3.3,a,i1,a,i1,a,i1)') &
               'lr_wf-', ik, '-', ist, '-', idim, '-', tag, '-', isigma
@@ -94,7 +94,7 @@ subroutine X(h_sys_output_lr) (st, gr, lr, dir, tag, isigma, outp, geo)
     ALLOCATE(dtmp(gr%mesh%np_part), gr%mesh%np_part)
     do ist = 1, st%nst
       if(loct_isinstringlist(ist, outp%wfs_list)) then
-        do ik = 1, st%d%nik
+         do ik = st%d%kpt%start, st%d%kpt%end
           do idim = 1, st%d%dim
             write(fname, '(a,i3.3,a,i3.3,a,i1,a,i1,a,i1)') &
               'sqm_lr_wf-', ik, '-', ist, '-', idim, '-', isigma
