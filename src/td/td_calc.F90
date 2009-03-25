@@ -73,7 +73,7 @@ subroutine td_calc_tacc(gr, geo, st, hm, acc, t)
   ALLOCATE(hzpsi (NP, st%d%dim), NP*st%d%dim)
   ALLOCATE(hhzpsi(3, NP),        3*NP)
 
-  do ik = 1, st%d%nik
+  do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
 
       call zhamiltonian_apply(hm, gr, st%zpsi(:, :, ist, ik), hzpsi(:,:), ist, ik, t)
