@@ -30,7 +30,7 @@ R_TYPE function X(states_mpdotp_x)(m, excited_state, st, mat) result(dotp)
   type(states_t),         intent(in) :: st
   R_TYPE,       optional, intent(in) :: mat(:, :, :)
 
-  integer :: ik, j
+  integer :: j
   R_TYPE, allocatable :: mat_local(:, :, :)
 
   call push_sub('states_inc.Xstates_mpdotp_x')
@@ -42,9 +42,7 @@ R_TYPE function X(states_mpdotp_x)(m, excited_state, st, mat) result(dotp)
   ALLOCATE(mat_local(excited_state%st%nst, st%nst, st%d%nik), st%nst*excited_state%st%nst*st%d%nik)
 
   if(present(mat)) then
-    do ik = 1, st%d%nik
       mat_local = mat
-    end do
   else 
     call X(states_matrix)(m, excited_state%st, st, mat_local)
   end if

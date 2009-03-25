@@ -259,7 +259,7 @@ contains
 
     force%vecpot(1:MAX_DIM) = M_ZERO
     
-    do ik = 1, st%d%nik
+    do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
 
         do idim = 1, st%d%dim
