@@ -276,8 +276,8 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
   end if
 
   ! Get initial Ritz-values and -vectors.
-  call batch_init(psib, st%d%dim, st_start, st_end, st%X(psi)(:, :, :, ik))
-  call batch_init(hpsib, st%d%dim, st_start, st_end, h_psi)
+  call batch_init(psib, st%d%dim, st_start, st_end, st%X(psi)(:, :, st_start:, ik))
+  call batch_init(hpsib, st%d%dim, st_start, st_end, h_psi(:, :, st_start:))
 
   call X(hamiltonian_apply_batch)(hm, gr, psib, hpsib, ik)
   
