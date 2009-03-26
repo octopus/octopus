@@ -124,7 +124,7 @@ contains
     !% (only available if DevelVersion = yes),
     !% see: A. Knyazev. Toward the Optimal Preconditioned Eigensolver: Locally
     !% Optimal Block Preconditioned Conjugate Gradient Method. SIAM
-    !% Journal on Scientific Computing, 23(2):517­541, 2001.
+    !% Journal on Scientific Computing, 23(2):517??541, 2001.
     !%Option rmmdiis 10
     !% Residual minimization scheme, direct inversion in the iterative
     !% subspace, combine it with the multigrid preconditioner. This is
@@ -271,6 +271,8 @@ contains
     FLOAT :: tol
 #ifdef HAVE_MPI
     logical :: conv_reduced
+    integer :: outcount
+    FLOAT, allocatable :: ldiff(:), leigenval(:)
 #endif
     type(profile_t), save :: prof
 
@@ -382,9 +384,26 @@ contains
     if(present(conv)) conv = all(eigens%converged(st%d%kpt%start:st%d%kpt%end) == st%nst)
 
 #ifdef HAVE_MPI
-    if(st%d%kpt%parallel .and. present(conv)) then
-      call MPI_Allreduce(conv, 1, MPI_LOGICAL, MPI_LAND, st%d%kpt%mpi_grp%comm, mpi_err)
-      conv = conv_reduced
+    if(st%d%kpt%parallel) then
+      if(present(conv)) then
+        call MPI_Allreduce(conv, conv_reduced, 1, MPI_LOGICAL, MPI_LAND, st%d%kpt%mpi_grp%comm, mpi_err)
+        conv = conv_reduced
+      end if
+
+      ! every node needs to know all eigenvalues (and diff)
+      ALLOCATE(ldiff(st%d%kpt%nlocal), st%d%kpt%nlocal)
+      ALLOCATE(leigenval(st%d%kpt%nlocal), st%d%kpt%nlocal)
+      do ist = st%st_start, st%st_end
+        ldiff(1:st%d%kpt%nlocal) = eigens%diff(ist, st%d%kpt%start:st%d%kpt%end)
+        leigenval(1:st%d%kpt%nlocal) = st%eigenval(ist, st%d%kpt%start:st%d%kpt%end)
+        call lmpi_gen_allgatherv(st%d%kpt%nlocal, ldiff, outcount, &
+                                 eigens%diff(ist, :), st%d%kpt%mpi_grp)
+        ASSERT(outcount.eq.st%d%nik)
+        call lmpi_gen_allgatherv(st%d%kpt%nlocal, leigenval, outcount, &
+                                 st%eigenval(ist, :), st%d%kpt%mpi_grp)
+        ASSERT(outcount.eq.st%d%nik)
+      end do
+      deallocate(ldiff, leigenval)
     end if
 #endif
 

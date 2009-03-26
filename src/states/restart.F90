@@ -297,12 +297,15 @@ contains
                  st%d%kweights(ik), ' | ', i, ' | ', ik, ' | ', ist, ' | ', idim
           end if
 
-          if(st%st_start <= ist .and. st%st_end >= ist) then
+          if(st%st_start <= ist .and. ist <= st%st_end) then
             if( .not. present(lr) ) then 
-              if (st%wfs_type == M_REAL) then
-                call drestart_write_function(dir, filename, gr, st%dpsi(:, idim, ist, ik), err, size(st%dpsi,1))
-              else
-                call zrestart_write_function(dir, filename, gr, st%zpsi(:, idim, ist, ik), err, size(st%zpsi,1))
+              if(st%d%kpt%start <= ik .and. ik <= st%d%kpt%end) then
+                if (st%wfs_type == M_REAL) then
+                  call drestart_write_function(dir, filename, gr, st%dpsi(:, idim, ist, ik), err, size(st%dpsi,1))
+                else
+                  call zrestart_write_function(dir, filename, gr, st%zpsi(:, idim, ist, ik), err, size(st%zpsi,1))
+                end if
+                if(err == 0) ierr = ierr + 1
               end if
             else
               if (st%wfs_type == M_REAL) then
@@ -310,8 +313,8 @@ contains
               else
                 call zrestart_write_function(dir, filename, gr, lr%zdl_psi(:, idim, ist, ik), err, size(st%zpsi,1))
               end if
+              if(err == 0) ierr = ierr + 1
             end if
-            if(err == 0) ierr = ierr + 1
           end if
 #if defined(HAVE_MPI)
           call MPI_Barrier(MPI_COMM_WORLD, mpi_err) ! now we all wait
@@ -321,7 +324,8 @@ contains
       end do
     end do
 
-    if(ierr == st%d%nik*(st%st_end - st%st_start + 1)*st%d%dim) ierr = 0 ! Alles OK
+    ! do NOT use st%lnst here as it is not (st%st_end - st%st_start + 1)
+    if(ierr == st%d%kpt%nlocal*(st%st_end - st%st_start + 1)*st%d%dim) ierr = 0 ! All OK
 
     if(mpi_grp_is_root(mpi_world)) then
       write(iunit,'(a)') '%'
@@ -706,7 +710,8 @@ contains
       call iopar_read(gr%mesh%mpi_grp, iunit2, line, err)
       read(line, *) st%occ(ist, ik), char, st%eigenval(ist, ik)
 
-      if(ist >= st%st_start .and. ist <= st%st_end) then
+      if(ist >= st%st_start .and. ist <= st%st_end .and. &
+         st%d%kpt%start <= ik .and. st%d%kpt%end >= ik) then
         if(.not.mesh_change) then
           if( .not. present(lr) ) then 
             if (st%wfs_type == M_REAL) then
