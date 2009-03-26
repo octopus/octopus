@@ -52,7 +52,7 @@ module v_ks_m
 
 
   integer, parameter, public :: &
-    sic_none   = 1,     &  ! no self interaction correction
+    sic_none   = 1,     &  ! no self-interaction correction
     sic_pz     = 2,     &  ! SIC a la Perdew Zunger (OEP way)
     sic_amaldi = 3         ! Amaldi correction term
 
@@ -62,7 +62,7 @@ module v_ks_m
     logical :: frozen_hxc ! For RPA and SAE calculations.
 
     integer           :: xc_family  ! the xc stuff
-    integer           :: sic_type   ! what kind of Self Interaction Correction to apply
+    integer           :: sic_type   ! what kind of Self-Interaction Correction to apply
     type(xc_t)        :: xc
     type(xc_OEP_t)    :: oep
   end type v_ks_t
@@ -142,11 +142,11 @@ contains
         !%Default sic_none
         !%Section Hamiltonian::XC
         !%Description
-        !% This variable controls which Self Interaction Correction to use. Note that
+        !% This variable controls which Self-Interaction Correction to use. Note that
         !% this correction will be applied to the functional chosen by 'XFunctional' and
         !% 'CFunctional'
         !%Option sic_none 1
-        !% No Self Interaction Correction
+        !% No Self-Interaction Correction
         !%Option sic_pz 2
         !% SIC a Perdew Zunger, hadled by the OEP technique
         !%Option sic_amaldi 3
@@ -257,7 +257,7 @@ contains
 
     hm%epot     = M_ZERO
 
-    ! check if we should introduce the amaldi SIC correction
+    ! check if we should introduce the Amaldi SIC correction
     amaldi_factor = M_ONE
     if(ks%sic_type == sic_amaldi) amaldi_factor = (st%qtot-1)/st%qtot
 

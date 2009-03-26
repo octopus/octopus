@@ -357,12 +357,12 @@ contains
       st%d%spin_channels = 2
     end select
 
-    ! FIXME: For now, open boundary calculations are only possible for
-    ! continuum states, i. e. for those states treated by the Lippmann-
+    ! FIXME: For now, open-boundary calculations are only possible for
+    ! continuum states, i.e. for those states treated by the Lippmann-
     ! Schwinger approach during SCF.
     if(gr%sb%open_boundaries) then
       if(st%nst.ne.st%ob_ncs) then
-        message(1) = 'Open boundary calculations for possibly bound states'
+        message(1) = 'Open-boundary calculations for possibly bound states'
         message(2) = 'are not possible yet. You have to match your number'
         message(3) = 'of states to the number of free states of your previous'
         message(4) = 'periodic run.'
@@ -379,15 +379,20 @@ contains
       st%wfs_type = M_CMPLX
 
       if(st%d%ispin == SPINORS) then
-        message(1) = "Sorry, Current DFT not working yet for spinors"
+        message(1) = "Sorry, current DFT not working yet for spinors"
         call write_fatal(1)
       end if
-      message(1) = "Info: Using Current DFT"
+      message(1) = "Info: Using current DFT"
       call write_info(1)
     end if
 
     ! Periodic systems require complex wave-functions
-    if(simul_box_is_periodic(gr%sb)) st%wfs_type = M_CMPLX
+    ! but not if it is gamma-point only
+    if(simul_box_is_periodic(gr%sb)) then
+      if(.not. (st%d%nik == 1 .and. kpoint_is_gamma(st%d, 1))) then
+        st%wfs_type = M_CMPLX
+      endif
+    endif
 
     ! Calculations with open boundaries require complex wavefunctions.
     if(gr%sb%open_boundaries) then

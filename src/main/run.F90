@@ -145,16 +145,16 @@ contains
     !% Sternheimer linear response or by using finite
     !% differences. You can use this variable to select how you want
     !% them to be calculated, it applies to em_resp and vib_modes
-    !% calculation modes. By default the Sternheimer linear response
+    !% calculation modes. By default, the Sternheimer linear-response
     !% technique is used.
     !%Option sternheimer 1
     !% The linear response is obtained by solving a self-consistent
     !% Sternheimer equation for the variation of the orbitals. This
     !% is the recomended method.
     !%Option finite_differences 2
-    !% Properties are calculated as a finite differences derivative of
-    !% the energy obtained by several ground state calculations. This
-    !% method is slow and limited only to static response, is kept
+    !% Properties are calculated as a finite-differences derivative of
+    !% the energy obtained by several ground-state calculations. This
+    !% method, slow and limited only to static response, is kept
     !% mainly because is simple and for useful for testing purposes.
     !%End
     
