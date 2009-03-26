@@ -369,8 +369,7 @@ contains
           message(1) = 'Error: io_open.'
           call write_fatal(1)
         end if
-        call pop_sub()
-        return
+        call pop_sub(); return
       end if
 
       is_tmp_ = .false.

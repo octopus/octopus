@@ -499,8 +499,7 @@ contains
     if(iunit.lt.0) then
       message(1) = 'Could not write profiling results.'
       call write_warning(1)
-      call pop_sub()
-      return
+      call pop_sub(); return
     end if
 
     write(iunit, '(2a)')                                                                   &
