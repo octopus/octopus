@@ -716,7 +716,7 @@ contains
       message(1) = 'Cannot write memory coefficents to file.'
       call write_warning(1)
       call io_close(iunit)
-      return
+      call pop_sub(); return
     end if
 
     ! Write numerical parameters.
@@ -783,7 +783,7 @@ contains
       status='old', die=.false., is_tmp=.true., form='unformatted')
     if(iunit.lt.0) then
       call io_close(iunit)
-      return
+      call pop_sub(); return
     end if
 
     ! Now read the data.

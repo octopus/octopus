@@ -432,8 +432,7 @@ subroutine X(magnetic_terms) (gr, hm, psi, hpsi, grad, ik)
   if(hm%d%cdft .or. associated(hm%ep%A_static)) then
     call X(get_grad)(hm, gr, psi, grad)
   else
-    call pop_sub()
-    return
+    call pop_sub(); return
   endif
 
   ! If we are using CDFT:

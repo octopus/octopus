@@ -41,7 +41,7 @@ subroutine X(vec_scatter)(vp, v, v_local)
   ! Skip the MPI call if domain parallelization is not used.
   if(vp%npart.lt.2) then
     v_local(1:vp%np) = v(1:vp%np)
-    return
+    call pop_sub(); return
   end if
 
   ! Unfortunately, vp%xlocal ist not quite the required
@@ -160,7 +160,7 @@ subroutine X(vec_gather)(vp, v, v_local)
   ! Skip the MPI call if domain parallelization is not used.
   if(vp%npart.lt.2) then
     v(1:vp%np) = v_local(1:vp%np)
-    return
+    call pop_sub(); return
   end if
 
   ! Unfortunately, vp%xlocal ist not quite the required

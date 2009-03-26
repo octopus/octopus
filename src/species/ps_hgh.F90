@@ -560,8 +560,7 @@ contains
           real(psp%g%a, 8), real(psp%g%b, 8), rmax, nprin, nnode, dr, ierr)
         if(ierr.ne.0) then
           deallocate(s, hato, g, y, rho, prev)
-          call pop_sub()
-          return
+          call pop_sub(); return
         endif
         psp%eigen(n) = e
 

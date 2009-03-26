@@ -104,8 +104,7 @@ contains
       this%state = 0
       write(message(1),'(a)') 'Cannot do LCAO initial calculation because there are not enough atomic orbitals.'
       call write_warning(1)
-      call pop_sub()
-      return
+      call pop_sub(); return
     end if
 
     ! generate tables to know which indexes each atomic orbital has

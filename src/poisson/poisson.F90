@@ -435,8 +435,7 @@ contains
     if(calc_dim.eq.1) then
       write(message(1),'(a)') 'The Hartree integrator test is not implemented for the one dimensional case.'
       call write_warning(1)
-      call pop_sub()
-      return
+      call pop_sub(); return
     endif
 
     n_gaussians = 4

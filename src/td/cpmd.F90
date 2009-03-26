@@ -207,7 +207,9 @@ contains
           else
             call zrestart_read_function(trim(tmpdir)//'td/cpmd', filename, gr%mesh, this%zpsi2(:, idim, ist, ik), ierr)
           end if
-          if(ierr /= 0) return
+          if(ierr /= 0) then
+            call pop_sub(); return
+          end if
         end do
       end do
     end do

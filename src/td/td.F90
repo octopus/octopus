@@ -690,7 +690,7 @@ contains
         message(1) = "Could not open file '"//trim(io_workpath('td.general/coordinates'))//"'."
         message(2) = "Starting simulation from initial geometry."
         call write_warning(2)
-        return
+        call pop_sub(); return
       end if
 
       call io_skip_header(iunit)
@@ -732,7 +732,7 @@ contains
         message(1) = "Could not open file '"//trim(io_workpath('td.general/gauge_field'))//"'."
         message(2) = "Starting simulation from initial values."
         call write_warning(2)
-        return
+        call pop_sub(); return
       end if
 
       call io_skip_header(iunit)

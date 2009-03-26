@@ -70,8 +70,7 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, ik)
 
   ! Check whether we have or not "real" projectors. If we do not, return.
   if(nreduce == 0) then
-    call pop_sub()
-    return
+    call pop_sub(); return
   end if
 
   ALLOCATE(reduce_buffer(1:nreduce), nreduce)

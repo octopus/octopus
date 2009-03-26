@@ -91,8 +91,7 @@ subroutine X(derivatives_lapl_finish)(der, handle)
     call pv_handle_wait(handle%pv_h)
     call X(nl_operator_operate) (der%lapl, handle%X(f), handle%X(lapl), ghost_update = .false., points = OP_OUTER)
     
-    call pop_sub()
-    return
+    call pop_sub(); return
   end if
 #endif
 
@@ -162,8 +161,7 @@ subroutine X(derivatives_lapl_batch_finish)(der, handle, ff, lapl)
     end do
     call X(nl_operator_operate_batch)(der%lapl, ff, lapl, ghost_update = .false., points = OP_OUTER)
     
-    call pop_sub()
-    return
+    call pop_sub(); return
   end if
 #endif
 

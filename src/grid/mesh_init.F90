@@ -203,8 +203,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
     nullify(mesh%x_tmp)
 
     call profiling_out(mesh_init_prof)
-    call pop_sub()
-    return
+    call pop_sub(); return
   end if
 
   nr = mesh%idx%nr

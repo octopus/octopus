@@ -619,8 +619,7 @@ contains
 
       iunit = io_open(trim(tmpdir)//'casida', action='read', status='old', die=.false., is_tmp=.true.)
       if( iunit <= 0) then
-        call pop_sub()
-        return
+        call pop_sub(); return
       end if
 
       do
@@ -685,7 +684,9 @@ contains
 
     ! output eigenvectors in casida approach
 
-    if(cas%type.ne.CASIDA_CASIDA) return
+    if(cas%type.ne.CASIDA_CASIDA) then
+      call pop_sub(); return
+    end if
 
     call io_mkdir('linear/excitations')
     do ia = 1, cas%n_pairs

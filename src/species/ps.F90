@@ -545,9 +545,9 @@ contains
   subroutine ps_end(ps)
     type(ps_t), intent(inout) :: ps
 
-    call push_sub('ps.ps_end')
-
     if(.not. associated(ps%kb)) return
+
+    call push_sub('ps.ps_end')
 
     if(ps%is_separated) then
       call spline_end(ps%vlr)

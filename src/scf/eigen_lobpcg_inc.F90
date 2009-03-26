@@ -105,7 +105,7 @@
 !
 ! A. Knyazev. Toward the Optimal Preconditioned Eigensolver: Locally
 ! Optimal Block Preconditioned Conjugate Gradient Method. SIAM
-! Journal on Scientific Computing, 23(2):517­541, 2001.
+! Journal on Scientific Computing, 23(2):517??541, 2001.
 !
 ! A. V. Knyazev, I. Lashuk, M. E. Argentati, and E. Ovchin-
 ! nikov. Block Locally Optimal Preconditioned Eigenvalue Xolvers
@@ -643,7 +643,7 @@ contains
     call lalg_cholesky(nuc, vv, bof=chol_failure)
     call profiling_out(C_PROFILING_LOBPCG_CHOL)
     if(chol_failure) then ! Failure in Cholesky decomposition.
-      return
+      call pop_sub(); return
     end if
     call profiling_in(C_PROFILING_LOBPCG_INV)
     call lalg_invert_upper_triangular(nuc, vv)

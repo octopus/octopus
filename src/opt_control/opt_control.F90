@@ -587,8 +587,7 @@ contains
       call states_copy(psi, initial_st)
       call propagate_forward(sys, hm, td, par, target, psi, prop_psi)
       j1 = j1_functional(target, sys%gr, psi)
-      call pop_sub()
-      return
+      call pop_sub(); return
     end if
 
     call parameters_copy(parp, par)
@@ -695,8 +694,7 @@ contains
       call states_copy(psi, initial_st)
       call propagate_forward(sys, hm, td, par, target, psi, prop_psi)
       j1 = j1_functional(target, sys%gr, psi)
-      call pop_sub()
-      return
+      call pop_sub(); return
     end if
 
     call parameters_copy(par_chi, par)

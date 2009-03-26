@@ -149,8 +149,7 @@ contains
 
     if(p%lmax == 0) then
       p%type = M_NONE
-      call pop_sub()
-      return
+      call pop_sub(); return
     end if
 
     p%lloc = atm%spec%ps%l_loc

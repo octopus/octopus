@@ -766,9 +766,9 @@ contains
     integer :: i, j
     character(len=50) :: aux
 
-    call push_sub('td_write.td_write_coordinates')
-
     if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
+
+    call push_sub('td_write.td_write_coordinates')
 
     if(iter == 0) then
       call td_write_print_header_init(out_coords)
@@ -831,9 +831,9 @@ contains
     type(geometry_t),  intent(in) :: geo
     integer,           intent(in) :: iter
 
-    call push_sub('td_write.td_write_temperature')
-
     if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
+
+    call push_sub('td_write.td_write_temperature')
 
     if(iter == 0) then
       call td_write_print_header_init(out_temperature)
@@ -1141,10 +1141,10 @@ contains
     character(len=50) :: aux
 
     
-    call push_sub('td_write.td_write_out_gauge')
-    
     if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
 
+    call push_sub('td_write.td_write_out_gauge')
+    
     if(iter == 0) then
       call td_write_print_header_init(out_gauge)
 
