@@ -68,7 +68,7 @@
       psi_start = ib
       psi_end   = ib+bs-1
 
-      if(psi_end.gt.st%st_end) then
+      if(psi_end > st%st_end) then
         psi_end = st%st_end
       end if
       constr_start = st%st_start
@@ -134,11 +134,11 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
   integer,                intent(in)    :: ib
   logical, optional,      intent(in)    :: verbose
 
-  integer :: np    ! Number of points per state.
+  integer :: nps   ! Number of points per state.
   integer :: nst   ! Number of eigenstates (i. e. the blocksize).
   integer :: lnst  ! Number of local eigenstates.
 
-  integer :: ist, i, j, k, blks, maxiter, nconstr, lnconstr
+  integer :: ist, i, j, iter, blks, maxiter, nconstr, lnconstr
 
   integer, target      :: nuc                 ! Index set of unconverged eigenpairs.
   integer, pointer     :: uc(:), lnuc, luc(:) ! Index set of local unconverged eigenpairs.
@@ -174,7 +174,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
   explicit_gram = .false.
 
   ! Abbreviations.
-  np = gr%mesh%np_part*st%d%dim
+  nps = gr%mesh%np_part*st%d%dim
 
   if(st%parallel_in_states) then
 #if defined(HAVE_MPI)
@@ -201,7 +201,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
 #if defined(HAVE_MPI)
     ALLOCATE(lall_constr(lnconstr), lnconstr)
     do i = 1, lnconstr
-      lall_constr(i) = i+constr_start-1
+      lall_constr(i) = i + constr_start-1
     end do
 
     call lmpi_gen_allgatherv(lnconstr, lall_constr, nconstr, all_constr, st%mpi_grp)
@@ -245,7 +245,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
   else
     nuc = nst
     do ist = 1, nuc
-      uc(ist) = ist+st_start-1
+      uc(ist) = ist + st_start-1
     end do
   end if
 
@@ -262,7 +262,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
   end do
 
   ! Apply the constraints to the initial vectors.
-  if(nconstr.gt.0) then
+  if(nconstr > 0) then
     call X(lobpcg_apply_constraints)(st_start, st_end, psi, nuc, uc)
   end if
 
@@ -295,20 +295,20 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     call write_warning(1)
   end if
   call X(block_matr_mul)(psi, ritz_vec, tmp, xpsi=all_ev, xres=all_ev)
-  call lalg_copy(np*lnst, tmp(:, 1, st_start), psi(:, 1, st_start))
+  call lalg_copy(nps*lnst, tmp(:, 1, st_start), psi(:, 1, st_start))
   call X(block_matr_mul)(h_psi, ritz_vec, tmp, xpsi=all_ev, xres=all_ev)
-  call lalg_copy(np*lnst, tmp(:, 1, st_start), h_psi(:, 1, st_start))
+  call lalg_copy(nps*lnst, tmp(:, 1, st_start), h_psi(:, 1, st_start))
   deallocate(ritz_vec)
 
   ! This is the big iteration loop.
-  iter: do k = 1, maxiter-1 ! One iteration was used up to get initial Ritz-vectors.
+  iteration: do iter = 1, maxiter-1 ! One iteration was used up to get initial Ritz-vectors.
     ! Calculate residuals: res(ist, ik) <- H psi(ist, ik) - eval(ist, ik) psi(ist, ik).
     call X(lobpcg_res)()
 
     ! Check for convergence. If converged, quit the eigenpair iteration loop.
     call X(lobpcg_unconv_ev)
     if(nuc.eq.0) then
-      exit iter
+      exit iteration
     end if
 
     ALLOCATE(nuc_tmp(nuc, nuc), nuc**2)
@@ -316,7 +316,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     ! blks says if we have one or two additional blocks in the subspace
     ! (i. e. only residuals or residuals (1st iteration) and conjugate
     ! directions (subsequent iterations).
-    if(k.gt.1) then
+    if(iter > 1) then
       blks = 2
     else
       blks = 1
@@ -326,7 +326,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     ALLOCATE(gram_i(nst+blks*nuc, nst+blks*nuc), (nst+blks*nuc)**2)
     ritz_psi => ritz_vec(1:nst, 1:nst)
     ritz_res => ritz_vec(nst+1:nst+nuc, 1:nst)
-    if(k.gt.1) then
+    if(iter > 1) then
       ritz_dir => ritz_vec(nst+nuc+1:nst+2*nuc, 1:nst)
     end if
 
@@ -334,11 +334,11 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     do i = 1, lnuc
       ist = luc(i)
       call X(preconditioner_apply)(pre, gr, hm, res(:, :, ist), tmp(:, :, ist))
-      call lalg_copy(np, tmp(:, 1, ist), res(:, 1, ist))
+      call lalg_copy(nps, tmp(:, 1, ist), res(:, 1, ist))
     end do
 
     ! Apply the constraints to the residuals.
-    if(nconstr.gt.0) then
+    if(nconstr > 0) then
       call X(lobpcg_apply_constraints)(st_start, st_end, res, nuc, uc)
     end if
 
@@ -349,9 +349,9 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     if(no_bof.and.verbose_) then
       message(1) = 'Bad problem: orthonormalization of residuals failed.'
       message(2) = 'Quitting eigensolver iteration.'
-      write(message(3), '(a,i6)') 'in iteration #', k
+      write(message(3), '(a,i6)') 'in iteration #', iter
       call write_warning(3)
-      exit iter
+      exit iteration
     end if
 
     ! Apply Hamiltonian to residuals.
@@ -375,7 +375,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     ! Orthonormalize conjugate directions in all but the first iteratation.
     ! Since h_dir also has to be modified (to avoid a full calculation of
     ! H dir with the new dir), we cannot use lobpcg_orth at this point.
-    if(k.gt.1) then
+    if(iter > 1) then
       call X(blockt_mul)(dir, dir, nuc_tmp, xpsi1=UC, xpsi2=UC, symm=.true.)
       call profiling_in(C_PROFILING_LOBPCG_CHOL)
       no_bof = .false.
@@ -383,7 +383,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
       call profiling_out(C_PROFILING_LOBPCG_CHOL)
       if(no_bof.and.verbose_) then
         message(1) = 'Problem: orthonormalization of conjugate directions failed'
-        write(message(2), '(a,i6)') 'in iteration #', k
+        write(message(2), '(a,i6)') 'in iteration #', iter
         call write_warning(2)
         ! Set directions to zero.
         ! FIXME: they should not be included in the subspace at all in this case.
@@ -396,15 +396,15 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
         call profiling_out(C_PROFILING_LOBPCG_INV)
         ! Fill lower triangle of nuc_tmp with zeros.
         do i = 2, nuc
-          nuc_tmp(i, 1:i-1) = R_TOTYPE(M_ZERO)
+          nuc_tmp(i, 1:i - 1) = R_TOTYPE(M_ZERO)
         end do
         call X(block_matr_mul)(dir, nuc_tmp, tmp, xpsi=UC, xres=UC)
         do i = 1, lnuc
-          call lalg_copy(np, tmp(:, 1, luc(i)), dir(:, 1, luc(i)))
+          call lalg_copy(nps, tmp(:, 1, luc(i)), dir(:, 1, luc(i)))
         end do
         call X(block_matr_mul)(h_dir, nuc_tmp, tmp, xpsi=UC, xres=UC)
         do i = 1, lnuc
-          call lalg_copy(np, tmp(:, 1, luc(i)), h_dir(:, 1, luc(i)))
+          call lalg_copy(nps, tmp(:, 1, luc(i)), h_dir(:, 1, luc(i)))
         end do
       end if
     end if
@@ -427,7 +427,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     ! (2, 2)-block: res^+ (H res).
     call X(blockt_mul)(res, h_res, gram_h(nst+1:nst+nuc, nst+1:nst+nuc), xpsi1=UC, xpsi2=UC, symm=.true.)
 
-    if(k.gt.1) then
+    if(iter > 1) then
       ! (1, 3)-block: (H |psi>)^+ dir.
       call X(blockt_mul)(h_psi, dir, gram_h(1:nst, nst+nuc+1:nst+2*nuc), xpsi1=all_ev, xpsi2=UC)
 
@@ -455,7 +455,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     ! (1, 2)-block: <psi| res.
     call X(blockt_mul)(psi(:, :, :), res, gram_i(1:nst, nst+1:nst+nuc), xpsi1=all_ev, xpsi2=UC)
 
-    if(k.gt.1) then
+    if(iter > 1) then
       ! (1, 3)-block: <psi| dir.
       call X(blockt_mul)(psi(:, :, :), dir, gram_i(1:nst, nst+nuc+1:nst+2*nuc), xpsi1=all_ev, xpsi2=UC)
 
@@ -469,19 +469,19 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     call profiling_out(C_PROFILING_LOBPCG_ESOLVE)
     if(no_bof.and.verbose_) then
       message(1) = 'Problem: Rayleigh-Ritz procedure failed'
-      write(message(2), '(a,i6)') 'in iteration #', k
+      write(message(2), '(a,i6)') 'in iteration #', iter
       call write_warning(2)
-      exit iter
+      exit iteration
     end if
 
     ! Calculate new conjugate directions:
     ! dir <- dir ritz_dir + res ritz_res
     ! h_dir <- (H res) ritz_res + (H dir) ritz_dir
-    if(k.gt.1) then
+    if(iter > 1) then
       call X(block_matr_mul)(dir, ritz_dir, tmp, xpsi=UC, xres=all_ev)
-      call lalg_copy(np*lnst, tmp(:, 1, st_start), dir(:, 1, st_start))
+      call lalg_copy(nps*lnst, tmp(:, 1, st_start), dir(:, 1, st_start))
       call X(block_matr_mul)(h_dir, ritz_dir, tmp, xpsi=UC, xres=all_ev)
-      call lalg_copy(np*lnst, tmp(:, 1, st_start), h_dir(:, 1, st_start))
+      call lalg_copy(nps*lnst, tmp(:, 1, st_start), h_dir(:, 1, st_start))
       beta = R_TOTYPE(M_ONE)
     else
       beta = R_TOTYPE(M_ZERO)
@@ -493,13 +493,13 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     ! |psi> <- |psi> ritz_psi + dir
     ! h_psi <- (H |psi>) ritz_psi + H dir
     call X(block_matr_mul)(psi(:, :, :), ritz_psi, tmp, xpsi=all_ev, xres=all_ev)
-    call lalg_copy(np*lnst, tmp(:, 1, st_start), psi(:, 1, st_start))
+    call lalg_copy(nps*lnst, tmp(:, 1, st_start), psi(:, 1, st_start))
     do ist = st_start, st_end ! Leave this loop, otherwise xlf90 crashes.
-      call lalg_axpy(np, R_TOTYPE(M_ONE), dir(:, 1, ist), psi(:, 1, ist))
+      call lalg_axpy(nps, M_ONE, dir(:, 1, ist), psi(:, 1, ist))
     end do
     call X(block_matr_mul)(h_psi, ritz_psi, tmp, xpsi=all_ev, xres=all_ev)
-    call lalg_copy(np*lnst, tmp(:, 1, st_start), h_psi(:, 1, st_start))
-    call lalg_axpy(np*lnst, R_TOTYPE(M_ONE), h_dir(:, 1, st_start), h_psi(:, 1, st_start))
+    call lalg_copy(nps*lnst, tmp(:, 1, st_start), h_psi(:, 1, st_start))
+    call lalg_axpy(nps*lnst, M_ONE, h_dir(:, 1, st_start), h_psi(:, 1, st_start))
 
     ! Gram matrices have to be reallocated later (because nuc changes).
     deallocate(nuc_tmp, ritz_vec, gram_h, gram_i)
@@ -508,18 +508,18 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     do i = 1, nst
       st%eigenval(all_ev(i), ik) = eval(i)
     end do
-  end do iter
+  end do iteration
 
   ! Check, which eigenvectors converged.
   ! Calculate latest residuals first if necessary.
-  if(k.ge.maxiter) then
+  if(iter >= maxiter) then
     call X(lobpcg_res)()
   end if
   call X(lobpcg_unconv_ev)()
 
-  converged = nst-nuc
+  converged = nst - nuc
 
-  call X(lobpcg_info)(k)
+  call X(lobpcg_info)(iter)
 
 #if defined(HAVE_MPI)
   ! Exchange number of matrix-vector operations.
@@ -561,16 +561,16 @@ contains
   ! ---------------------------------------------------------
   ! Calculate residuals: res(ist, ik) <- H psi(ist, ik) - eval(ist, ik) psi(ist, ik).
   subroutine X(lobpcg_res)()
-    integer :: ist, np
+    integer :: ist, nps
 
     call push_sub('eigen_lobpcg_inc.Xlobpcg_res')
 
-    np = gr%mesh%np_part*st%d%dim
+    nps = gr%mesh%np_part*st%d%dim
     do ist = st_start, st_end
       i = iihash_lookup(all_ev_inv, ist, found)
       ASSERT(found)
-      call lalg_copy(np, h_psi(:, 1, ist), res(:, 1, ist))
-      call lalg_axpy(np, -eval(i), psi(:, 1, ist), res(:, 1, ist))
+      call lalg_copy(nps, h_psi(:, 1, ist), res(:, 1, ist))
+      call lalg_axpy(nps, -eval(i), psi(:, 1, ist), res(:, 1, ist))
     end do
 
     call pop_sub()
@@ -590,7 +590,7 @@ contains
     do i = 1, lnuc
       ist = luc(i)
       diff(ist) = X(mf_nrm2)(gr%mesh, st%d%dim, res(:, :, ist))
-      if(diff(ist).ge.tol) then
+      if(diff(ist) >= tol) then
         new_uc(j) = ist
         new_nuc   = new_nuc+1
         j         = j+1
