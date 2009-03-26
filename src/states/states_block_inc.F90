@@ -496,18 +496,21 @@ subroutine X(states_compactify)(dim, m, in_start, idx, in, out)
   R_TYPE,       intent(out) :: out(:, :, :)
 
   integer :: ist, idim, n
+  type(profile_t), save :: prof
 
+  call profiling_in(prof, "STATES_COMPACTIFY")
   call push_sub('states_block_inc.Xstates_compactify')
 
   n = ubound(idx, 1)
 
   do ist = 1, n
     do idim = 1, dim
-      call lalg_copy(m%np, in(:, idim, idx(ist)-in_start+1), out(:, idim, ist))
+      call lalg_copy(m%np, in(:, idim, idx(ist) - in_start + 1), out(:, idim, ist))
     end do
   end do
   
   call pop_sub()
+  call profiling_out(prof)
 end subroutine X(states_compactify)
 
 
@@ -524,18 +527,21 @@ subroutine X(states_uncompactify)(dim, m, out_start, idx, in, out)
   R_TYPE,       intent(out) :: out(:, :, :)
 
   integer :: ist, idim, n
+  type(profile_t), save :: prof
 
+  call profiling_in(prof, "STATES_UNCOMPACTIFY")
   call push_sub('states_block_inc.Xstates_uncompactify')
 
   n = ubound(idx, 1)
 
   do ist = 1, n
     do idim = 1, dim
-      call lalg_copy(m%np, in(:, idim, ist), out(:, idim, idx(ist)-out_start+1))
+      call lalg_copy(m%np, in(:, idim, ist), out(:, idim, idx(ist) - out_start + 1))
     end do
   end do
   
   call pop_sub()
+  call profiling_out(prof)
 end subroutine X(states_uncompactify)
 
 
