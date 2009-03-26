@@ -19,8 +19,6 @@
 
 #include "config_F90.h"
 
-#define NP      gr%mesh%np
-
 #define MAX_SPIN 4
 
 #if defined(F90_ACCEPTS_LINE_NUMBERS)

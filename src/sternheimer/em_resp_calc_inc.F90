@@ -43,22 +43,22 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
 
   ASSERT(.false.)
 
-  ALLOCATE(   gpsi(NP, gr%mesh%sb%dim), NP*gr%mesh%sb%dim)
-  ALLOCATE(gdl_psi(NP, gr%mesh%sb%dim), NP*gr%mesh%sb%dim)
+  ALLOCATE(   gpsi(gr%mesh%np, gr%mesh%sb%dim), gr%mesh%np*gr%mesh%sb%dim)
+  ALLOCATE(gdl_psi(gr%mesh%np, gr%mesh%sb%dim), gr%mesh%np*gr%mesh%sb%dim)
 
-  if(present(lr_m)) ALLOCATE(gdl_psi_m(NP, gr%mesh%sb%dim), NP*gr%mesh%sb%dim)
+  if(present(lr_m)) ALLOCATE(gdl_psi_m(gr%mesh%np, gr%mesh%sb%dim), gr%mesh%np*gr%mesh%sb%dim)
 
-  ALLOCATE(   grho(NP, gr%mesh%sb%dim), NP*gr%mesh%sb%dim)
-  ALLOCATE(gdl_rho(NP, gr%mesh%sb%dim), NP*gr%mesh%sb%dim)
+  ALLOCATE(   grho(gr%mesh%np, gr%mesh%sb%dim), gr%mesh%np*gr%mesh%sb%dim)
+  ALLOCATE(gdl_rho(gr%mesh%np, gr%mesh%sb%dim), gr%mesh%np*gr%mesh%sb%dim)
 
-  ALLOCATE(   rho(gr%mesh%np_part), NP)
-  ALLOCATE(dl_rho(gr%mesh%np_part), NP)
+  ALLOCATE(   rho(gr%mesh%np_part), gr%mesh%np)
+  ALLOCATE(dl_rho(gr%mesh%np_part), gr%mesh%np)
 
-  ALLOCATE(   elf(NP, st%d%nspin), NP*st%d%nspin)
-  ALLOCATE(    de(NP, st%d%nspin), NP*st%d%nspin)
+  ALLOCATE(   elf(gr%mesh%np, st%d%nspin), gr%mesh%np*st%d%nspin)
+  ALLOCATE(    de(gr%mesh%np, st%d%nspin), gr%mesh%np*st%d%nspin)
 
-  if( .not. associated(lr%X(dl_de)) ) ALLOCATE(lr%X(dl_de)(NP, st%d%nspin), NP*st%d%nspin) 
-  if( .not. associated(lr%X(dl_elf))) ALLOCATE(lr%X(dl_elf)(NP, st%d%nspin), NP*st%d%nspin)
+  if( .not. associated(lr%X(dl_de)) ) ALLOCATE(lr%X(dl_de)(gr%mesh%np, st%d%nspin), gr%mesh%np*st%d%nspin) 
+  if( .not. associated(lr%X(dl_elf))) ALLOCATE(lr%X(dl_elf)(gr%mesh%np, st%d%nspin), gr%mesh%np*st%d%nspin)
 
   !calculate the gs elf
   call elf_calc(st, gr, elf, de)
@@ -101,12 +101,12 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
           call X(derivatives_grad)(gr%der, lr%X(dl_psi)(:, idim, ist, is), gdl_psi)
 
           ! sum over states to obtain the spin-density
-          rho(1:NP) = rho(1:NP) + ik_weight*abs(st%X(psi)(1:NP, idim, ist, is))**2
+          rho(1:gr%mesh%np) = rho(1:gr%mesh%np) + ik_weight*abs(st%X(psi)(1:gr%mesh%np, idim, ist, is))**2
 
           !the gradient of the density
           do i = 1, gr%mesh%sb%dim
-            grho(1:NP, i) = grho(1:NP, i) + &
-                 ik_weight*M_TWO*R_REAL(R_CONJ(st%X(psi)(1:NP, idim, ist, is))*gpsi(1:NP, i))
+            grho(1:gr%mesh%np, i) = grho(1:gr%mesh%np, i) + &
+                 ik_weight*M_TWO*R_REAL(R_CONJ(st%X(psi)(1:gr%mesh%np, idim, ist, is))*gpsi(1:gr%mesh%np, i))
           end do
 
           !the variation of the density and its gradient
@@ -115,29 +115,29 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
 
             call X(derivatives_grad)(gr%der, lr_m%X(dl_psi)(:, idim, ist, is), gdl_psi_m)
 
-            dl_rho(1:NP) = dl_rho(1:NP) + ik_weight * ( &
-                 R_CONJ(st%X(psi)(1:NP, idim, ist, is)) * lr%X(dl_psi)(1:NP, idim, ist, is)+ & 
-                 st%X(psi)(1:NP, idim, ist, is) * R_CONJ(lr_m%X(dl_psi)(1:NP, idim, ist, is)) )
+            dl_rho(1:gr%mesh%np) = dl_rho(1:gr%mesh%np) + ik_weight * ( &
+                 R_CONJ(st%X(psi)(1:gr%mesh%np, idim, ist, is)) * lr%X(dl_psi)(1:gr%mesh%np, idim, ist, is)+ & 
+                 st%X(psi)(1:gr%mesh%np, idim, ist, is) * R_CONJ(lr_m%X(dl_psi)(1:gr%mesh%np, idim, ist, is)) )
 
             do i=1, gr%mesh%sb%dim
 
-              gdl_rho(1:NP,i) = gdl_rho(1:NP,i) + ik_weight * ( &
-                   R_CONJ(st%X(psi)(1:NP, idim, ist, is)) * gdl_psi(1:NP,i) +      &
-                   R_CONJ(gpsi(1:NP,i))* lr%X(dl_psi)(1:NP, idim, ist, is)  +      &
-                   st%X(psi)(1:NP, idim, ist, is) * R_CONJ(gdl_psi_m(1:NP,i)) +      &
-                   gpsi(1:NP,i) * R_CONJ(lr_m%X(dl_psi)(1:NP, idim, ist, is))  )
+              gdl_rho(1:gr%mesh%np,i) = gdl_rho(1:gr%mesh%np,i) + ik_weight * ( &
+                   R_CONJ(st%X(psi)(1:gr%mesh%np, idim, ist, is)) * gdl_psi(1:gr%mesh%np,i) +      &
+                   R_CONJ(gpsi(1:gr%mesh%np,i))* lr%X(dl_psi)(1:gr%mesh%np, idim, ist, is)  +      &
+                   st%X(psi)(1:gr%mesh%np, idim, ist, is) * R_CONJ(gdl_psi_m(1:gr%mesh%np,i)) +      &
+                   gpsi(1:gr%mesh%np,i) * R_CONJ(lr_m%X(dl_psi)(1:gr%mesh%np, idim, ist, is))  )
 
             end do
 
           else
             
-            dl_rho(1:NP) = dl_rho(1:NP) + ik_weight*M_TWO* &
-                 R_REAL(R_CONJ(st%X(psi)(1:NP, idim, ist, is))*lr%X(dl_psi)(1:NP, idim, ist, is))
+            dl_rho(1:gr%mesh%np) = dl_rho(1:gr%mesh%np) + ik_weight*M_TWO* &
+                 R_REAL(R_CONJ(st%X(psi)(1:gr%mesh%np, idim, ist, is))*lr%X(dl_psi)(1:gr%mesh%np, idim, ist, is))
 
             do i=1,gr%mesh%sb%dim
-              gdl_rho(1:NP,i) = gdl_rho(1:NP,i) + ik_weight * M_TWO * ( &
-                   R_CONJ(st%X(psi)(1:NP, idim, ist, is)) * gdl_psi(1:NP, i) + &
-                   gpsi(1:NP, i)*R_CONJ(lr%X(dl_psi)(1:NP, idim, ist, is))  )
+              gdl_rho(1:gr%mesh%np,i) = gdl_rho(1:gr%mesh%np,i) + ik_weight * M_TWO * ( &
+                   R_CONJ(st%X(psi)(1:gr%mesh%np, idim, ist, is)) * gdl_psi(1:gr%mesh%np, i) + &
+                   gpsi(1:gr%mesh%np, i)*R_CONJ(lr%X(dl_psi)(1:gr%mesh%np, idim, ist, is))  )
             end do
 
           end if
@@ -162,7 +162,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
 
             call X(derivatives_grad)(gr%der, lr_m%X(dl_psi)(:, idim, ist, is), gdl_psi_m)
 
-            do i = 1, NP
+            do i = 1, gr%mesh%np
               lr%X(dl_de)(i, is) = lr%X(dl_de)(i, is) + &
                    dl_rho(i)*ik_weight*sum(R_ABS(gpsi(i, 1:gr%mesh%sb%dim))**2) + &
                    rho(i)*ik_weight*&
@@ -172,7 +172,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
 
           else 
 
-            do i = 1, NP
+            do i = 1, gr%mesh%np
               lr%X(dl_de)(i, is) = lr%X(dl_de)(i, is) + &
                    dl_rho(i)*ik_weight*sum(R_ABS(gpsi(i, 1:gr%mesh%sb%dim))**2) + &
                    rho(i)*ik_weight*M_TWO*(sum(R_CONJ(gpsi(i, 1:gr%mesh%sb%dim))*gdl_psi(i, 1:gr%mesh%sb%dim)))
@@ -185,7 +185,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
     end do
 
     !the density term
-    do i = 1, NP
+    do i = 1, gr%mesh%np
       if(abs(st%rho(i, is)) >= dmin) then
         lr%X(dl_de)(i, is) = lr%X(dl_de)(i, is) - M_HALF*sum(grho(i, 1:gr%mesh%sb%dim)*gdl_rho(i, 1:gr%mesh%sb%dim))
       end if
@@ -193,7 +193,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
 
     !the current term
     if(st%wfs_type == M_CMPLX) then       
-      do i = 1, NP
+      do i = 1, gr%mesh%np
         if(abs(st%rho(i, is)) >= dmin) then
           lr%X(dl_de)(i, is) = lr%X(dl_de)(i, is) + M_TWO*sum(st%j(i, 1:gr%mesh%sb%dim, is)*lr%dl_j(i, 1:gr%mesh%sb%dim, is))
         end if
@@ -202,7 +202,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
 
     !now the normalization 
     f = M_THREE/M_FIVE*(M_SIX*M_PI**2)**M_TWOTHIRD
-    do i = 1, NP
+    do i = 1, gr%mesh%np
 
       if(abs(st%rho(i, is)) >= dmin) then
         d0    = f*rho(i)**(M_EIGHT/M_THREE)

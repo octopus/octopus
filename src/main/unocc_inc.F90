@@ -100,14 +100,14 @@ subroutine X(two_body) (gr, st)
   call io_assign(iunit)
   iunit = io_open('matrix_elements/2-body', action='write')
 
-  ALLOCATE(n(1:NP), NP)
-  ALLOCATE(v(1:NP), NP)
+  ALLOCATE(n(1:gr%mesh%np), gr%mesh%np)
+  ALLOCATE(v(1:gr%mesh%np), gr%mesh%np)
 
   do i = 1, st%nst
     do j = 1, st%nst
       if(j > i) cycle
 
-      n(1:NP) = R_CONJ(st%X(psi) (1:NP, 1, i, 1)) * st%X(psi) (1:NP, 1, j, 1)
+      n(1:gr%mesh%np) = R_CONJ(st%X(psi) (1:gr%mesh%np, 1, i, 1)) * st%X(psi) (1:gr%mesh%np, 1, j, 1)
       call X(poisson_solve) (gr, v, n, all_nodes=.false.)
 
       do k = 1, st%nst
@@ -116,8 +116,8 @@ subroutine X(two_body) (gr, st)
           if(l > k) cycle
           if(l > j) cycle
 
-          me = X(mf_integrate) (gr%mesh, v(1:NP) * &
-                st%X(psi) (1:NP, 1, k, 1) *R_CONJ(st%X(psi) (1:NP, 1, l, 1)))
+          me = X(mf_integrate) (gr%mesh, v(1:gr%mesh%np) * &
+                st%X(psi) (1:gr%mesh%np, 1, k, 1) *R_CONJ(st%X(psi) (1:gr%mesh%np, 1, l, 1)))
 
           write(iunit, *) i, j, k, l, me
         end do

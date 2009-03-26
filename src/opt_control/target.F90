@@ -311,7 +311,7 @@ module opt_control_target_m
       !%End
 
       if(loct_parse_isdef('OCTTargetDensity').ne.0) then
-        ALLOCATE(target%rho(NP), NP)
+        ALLOCATE(target%rho(gr%mesh%np), gr%mesh%np)
         target%rho = M_ZERO
         call loct_parse_string('OCTTargetDensity', "0", expression)
 
@@ -332,7 +332,7 @@ module opt_control_target_m
             call rotate_states(gr%mesh, target%st, tmp_st, rotation_matrix)
             deallocate(rotation_matrix)
             call states_calc_dens(target%st, gr%mesh%np_part)
-            do ip = 1, NP
+            do ip = 1, gr%mesh%np
               target%rho(ip) = sum(target%st%rho(ip, 1:target%st%d%spin_channels))
             end do
             call states_end(tmp_st)
@@ -346,7 +346,7 @@ module opt_control_target_m
         else
 
           call conv_to_C_string(expression)
-          do ip = 1, NP
+          do ip = 1, gr%mesh%np
             call mesh_r(gr%mesh, ip, r, x = x)
             ! parse user defined expression
             call loct_parse_expression(psi_re, psi_im, gr%sb%dim, x, r, M_ZERO, expression)
@@ -374,11 +374,11 @@ module opt_control_target_m
       !%End
 
       if(loct_parse_isdef('OCTTargetLocal').ne.0) then
-        ALLOCATE(target%rho(NP), NP)
+        ALLOCATE(target%rho(gr%mesh%np), gr%mesh%np)
         target%rho = M_ZERO
         call loct_parse_string('OCTTargetLocal', "0", expression)
         call conv_to_C_string(expression)
-        do ip = 1, NP
+        do ip = 1, gr%mesh%np
           call mesh_r(gr%mesh, ip, r, x = x)
           ! parse user defined expression
           call loct_parse_expression(psi_re, psi_im, gr%sb%dim, x, r, M_ZERO, expression)
@@ -394,7 +394,7 @@ module opt_control_target_m
       if(loct_parse_block(datasets_check('OCTTdTarget'),blk)==0) then
         call loct_parse_block_string(blk, 0, 0, target%td_local_target)
         call conv_to_C_string(target%td_local_target)
-        ALLOCATE(target%rho(NP), NP)
+        ALLOCATE(target%rho(gr%mesh%np), gr%mesh%np)
       else
         message(1) = 'If OCTTargetMode = oct_targetmode_td, you must suppy a OCTTDTarget block'
         call write_fatal(1)
@@ -567,7 +567,7 @@ module opt_control_target_m
         ALLOCATE(opsi(gr%mesh%np_part, 1), gr%mesh%np_part)
         opsi = M_z0
         do p  = psi%st_start, psi%st_end
-          do j = 1, NP
+          do j = 1, gr%mesh%np
             opsi(j, 1) = target%rho(j) * psi%zpsi(j, 1, p, 1)
           end do
           target%td_fitness(i) = target%td_fitness(i) + zmf_dotp(gr%mesh, psi%d%dim, psi%zpsi(:, :, p, 1), opsi(:, :))
@@ -616,7 +616,7 @@ module opt_control_target_m
       do ik = 1, inh%d%nik
         do ist = inh%st_start, inh%st_end
           do idim = 1, inh%d%dim
-            do i = 1, NP
+            do i = 1, gr%mesh%np
               inh%zpsi(i, idim, ist, ik) = -M_zI * target%rho(i) * psi%zpsi(i, idim, ist, ik)
             end do
           end do
@@ -639,7 +639,7 @@ module opt_control_target_m
     FLOAT :: xx(MAX_DIM), r, re, im
     call push_sub('target.target_build_tdlocal')
 
-    do i = 1, NP
+    do i = 1, gr%mesh%np
       call mesh_r(gr%mesh, i, r, x = xx)
       call loct_parse_expression(re, im, gr%sb%dim, xx, r, t, target%td_local_target)
       target%rho(i) = re
@@ -672,8 +672,8 @@ module opt_control_target_m
     select case(target%type)
     case(oct_tg_density)
 
-      ALLOCATE(local_function(NP), NP)
-      do i = 1, NP
+      ALLOCATE(local_function(gr%mesh%np), gr%mesh%np)
+      do i = 1, gr%mesh%np
         local_function(i) = - ( sqrt(psi%rho(i, 1)) - sqrt(target%rho(i)) )**2
       end do
       j1 = dmf_integrate(gr%mesh, local_function)
@@ -688,7 +688,7 @@ module opt_control_target_m
         opsi = M_z0
         j1 = M_ZERO
         do p  = psi%st_start, psi%st_end
-          do j = 1, NP
+          do j = 1, gr%mesh%np
             opsi(j, 1) = target%rho(j) * psi%zpsi(j, 1, p, 1)
           end do
           j1 = j1 + zmf_dotp(gr%mesh, psi%d%dim, psi%zpsi(:, :, p, 1), opsi(:, :))
@@ -775,7 +775,7 @@ module opt_control_target_m
         ASSERT(psi_in%d%nik.eq.1)
 
         if(no_electrons .eq. 1) then
-          do j = 1, NP
+          do j = 1, gr%mesh%np
             chi_out%zpsi(j, 1, 1, 1) = sqrt(target%rho(j)) * &
               exp( M_z1 * atan2(aimag(psi_in%zpsi(j, 1, 1, 1)), &
                                 real(psi_in%zpsi(j, 1, 1, 1)  )) )
@@ -803,7 +803,7 @@ module opt_control_target_m
       case(UNPOLARIZED)
         ASSERT(psi_in%d%nik.eq.1)
         do p  = psi_in%st_start, psi_in%st_end
-          do j = 1, NP
+          do j = 1, gr%mesh%np
             chi_out%zpsi(j, 1, p, 1) = target%rho(j) * psi_in%zpsi(j, 1, p, 1)
           end do
         end do
@@ -816,7 +816,7 @@ module opt_control_target_m
       do ik = 1, chi_out%d%nik
         do p = chi_out%st_start, chi_out%st_end
           do dim = 1, chi_out%d%dim
-            do j = 1, NP
+            do j = 1, gr%mesh%np
               chi_out%zpsi(j, dim, p, ik) = M_z0
             end do
           end do

@@ -241,7 +241,7 @@ contains
       call zvmask(gr, hm, st)
 
       ! update density
-      call states_calc_dens(st, NP)
+      call states_calc_dens(st, gr%mesh%np)
 
       generate = .false.
 
@@ -416,9 +416,9 @@ contains
         do i = 1, 2
           do is = 1, st%d%nspin
             write(filename,'(a,i2.2,i3.3)') trim(tmpdir)//'td/vprev_', i, is
-            call dinput_function(trim(filename)//'.obf', gr%mesh, td%tr%v_old(1:NP, is, i), ierr)
+            call dinput_function(trim(filename)//'.obf', gr%mesh, td%tr%v_old(1:gr%mesh%np, is, i), ierr)
             ! If we do not succeed, try netcdf
-            if(ierr > 0) call dinput_function(trim(filename)//'.ncdf', gr%mesh, td%tr%v_old(1:NP, is, i), ierr)
+            if(ierr > 0) call dinput_function(trim(filename)//'.ncdf', gr%mesh, td%tr%v_old(1:gr%mesh%np, is, i), ierr)
             if(ierr > 0) then
               write(message(1), '(3a)') 'Unsuccessful read of "', trim(filename), '"'
               call write_fatal(1)
@@ -537,20 +537,20 @@ contains
         write(message(1),'(a,i4,a,i4,a)') 'Info: The lowest', freeze_orbitals, &
           ' orbitals have been frozen.', st%nst, ' will be propagated.'
         call write_info(1)
-        call states_calc_dens(st, NP)
+        call states_calc_dens(st, gr%mesh%np)
         call v_ks_calc(gr, sys%ks, hm, st, calc_eigenval=.true.)
       elseif(freeze_orbitals < 0) then
         ! This means SAE approximation. We calculate the Hxc first, then freezer all
         ! orbitals minus one.
         write(message(1),'(a)') 'Info: The single-active-electron approximation will be used.'
         call write_info(1)
-        call states_calc_dens(st, NP)
+        call states_calc_dens(st, gr%mesh%np)
         call v_ks_calc(gr, sys%ks, hm, st, calc_eigenval=.true.)
         call states_freeze_orbitals(st, gr, sys%mc, n = st%nst-1)
         call v_ks_freeze_hxc(sys%ks)
       else
         ! Normal run.
-        call states_calc_dens(st, NP)
+        call states_calc_dens(st, gr%mesh%np)
         call v_ks_calc(gr, sys%ks, hm, st, calc_eigenval=.true.)
       end if
 
@@ -598,18 +598,18 @@ contains
       ! psi(delta t) = psi(t) exp(i k x)
       delta_strength: if(k%delta_strength .ne. M_ZERO) then
 
-        ALLOCATE(kick_function(NP), NP)
+        ALLOCATE(kick_function(gr%mesh%np), gr%mesh%np)
         if(k%n_multipoles > 0) then
           kick_function = M_ZERO
           do j = 1, k%n_multipoles
-            do i = 1, NP
+            do i = 1, gr%mesh%np
               call mesh_r(gr%mesh, i, r, x = x)
               call loct_ylm(1, x(1), x(2), x(3), k%l(j), k%m(j), ylm)
               kick_function(i) = kick_function(i) + k%weight(j) * (r**k%l(j)) * ylm 
             end do
           end do
         else
-          do i = 1, NP
+          do i = 1, gr%mesh%np
             kick_function(i) = sum(gr%mesh%x(i, 1:gr%mesh%sb%dim)*k%pol(1:gr%mesh%sb%dim, k%pol_dir))
           end do
         end if
@@ -624,7 +624,7 @@ contains
           message(2) = "Info: Delta kick mode: Density + Spin modes"
         end select
         call write_info(2)
-        do i = 1, NP
+        do i = 1, gr%mesh%np
           kick = M_zI * k%delta_strength * kick_function(i)
 
           select case (k%delta_strength_mode)
@@ -775,7 +775,7 @@ contains
           do is = 1, st%d%nspin
             write(filename,'(a6,i2.2,i3.3)') 'vprev_', i, is
             call doutput_function(restart_format, trim(tmpdir)//"td", &
-              filename, gr%mesh, gr%sb, td%tr%v_old(1:NP, is, i), M_ONE, ierr, is_tmp = .true., &
+              filename, gr%mesh, gr%sb, td%tr%v_old(1:gr%mesh%np, is, i), M_ONE, ierr, is_tmp = .true., &
               grp = st%mpi_grp)
             if(ierr.ne.0) then
               write(message(1), '(3a)') 'Unsuccessful write of "', trim(filename), '"'

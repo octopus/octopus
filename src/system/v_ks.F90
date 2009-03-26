@@ -283,14 +283,14 @@ contains
 
       ! Build Hartree + xc potential
 
-      hm%vhxc(1:NP, 1) = hm%vxc(1:NP, 1) + hm%vhartree(1:NP)
+      hm%vhxc(1:gr%mesh%np, 1) = hm%vxc(1:gr%mesh%np, 1) + hm%vhartree(1:gr%mesh%np)
 
       if(hm%d%ispin > UNPOLARIZED) then
-        hm%vhxc(1:NP, 2) = hm%vxc(1:NP, 2) + hm%vhartree(1:NP)
+        hm%vhxc(1:gr%mesh%np, 2) = hm%vxc(1:gr%mesh%np, 2) + hm%vhartree(1:gr%mesh%np)
       end if
 
       if(hm%d%ispin == SPINORS) then
-        hm%vhxc(1:NP, 3:4) = hm%vxc(1:NP, 3:4)
+        hm%vhxc(1:gr%mesh%np, 3:4) = hm%vxc(1:gr%mesh%np, 3:4)
       end if
 
     end if
@@ -338,11 +338,11 @@ contains
       hm%exc_j = M_ZERO
 
       ! get density taking into account non-linear core corrections, and the Amaldi SIC correction
-      ALLOCATE(rho(NP, st%d%nspin), NP*st%d%nspin)
+      ALLOCATE(rho(gr%mesh%np, st%d%nspin), gr%mesh%np*st%d%nspin)
       call states_total_density(st, gr%mesh, rho)
 
       ! Amaldi correction
-      if(ks%sic_type == sic_amaldi) rho(1:NP,:) = amaldi_factor*rho(1:NP,:)
+      if(ks%sic_type == sic_amaldi) rho(1:gr%mesh%np,:) = amaldi_factor*rho(1:gr%mesh%np,:)
 
       ! Get the *local* xc term
       if(hm%d%cdft) then
@@ -400,18 +400,18 @@ contains
 
     call push_sub('v_ks.v_ks_hartree')
 
-    ALLOCATE(rho(NP), NP)
+    ALLOCATE(rho(gr%mesh%np), gr%mesh%np)
 
     ! calculate the total density
-    rho(1:NP) = st%rho(1:NP, 1)
+    rho(1:gr%mesh%np) = st%rho(1:gr%mesh%np, 1)
     do is = 2, hm%d%spin_channels
-      rho(1:NP) = rho(1:NP) + st%rho(1:NP, is)
+      rho(1:gr%mesh%np) = rho(1:gr%mesh%np) + st%rho(1:gr%mesh%np, is)
     end do
 
     ! Add, if it exists, the frozen density from the inner orbitals.
     if(associated(st%frozen_rho)) then
       do is = 1, hm%d%spin_channels
-        rho(1:NP) = rho(1:NP) + st%frozen_rho(1:NP, is)
+        rho(1:gr%mesh%np) = rho(1:gr%mesh%np) + st%frozen_rho(1:gr%mesh%np, is)
       end do
     end if
 

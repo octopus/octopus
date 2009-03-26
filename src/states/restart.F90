@@ -407,7 +407,7 @@ contains
     call iopar_read(gr%mesh%mpi_grp, io_occs, line, err); call iopar_read(gr%mesh%mpi_grp, io_occs, line, err)
 
     lead_np = gr%mesh%lead_unit_cell(LEFT)%np
-    ALLOCATE(tmp(NP+2*lead_np), NP+2*lead_np)
+    ALLOCATE(tmp(gr%mesh%np+2*lead_np), gr%mesh%np+2*lead_np)
     
     do
       call iopar_read(gr%mesh%mpi_grp, io_wfns, line, i)
@@ -429,10 +429,10 @@ contains
         ! running slowest).
         ! Outer block.
         st%ob_intf_psi(1:lead_np, OUTER, idim, ist, ik, LEFT)  = tmp(1:lead_np)
-        st%ob_intf_psi(1:lead_np, OUTER, idim, ist, ik, RIGHT) = tmp(NP+lead_np+1:NP+2*lead_np)
+        st%ob_intf_psi(1:lead_np, OUTER, idim, ist, ik, RIGHT) = tmp(gr%mesh%np+lead_np+1:gr%mesh%np+2*lead_np)
         ! Inner block.
         st%ob_intf_psi(1:lead_np, INNER, idim, ist, ik, LEFT)  = tmp(lead_np+1:2*lead_np)
-        st%ob_intf_psi(1:lead_np, INNER, idim, ist, ik, RIGHT) = tmp(NP+1:NP+lead_np)
+        st%ob_intf_psi(1:lead_np, INNER, idim, ist, ik, RIGHT) = tmp(gr%mesh%np+1:gr%mesh%np+lead_np)
       end if
       if(err.le.0) then
         ierr = ierr + 1
@@ -545,7 +545,7 @@ contains
     call iopar_read(gr%mesh%mpi_grp, io_occs, line, err); call iopar_read(gr%mesh%mpi_grp, io_occs, line, err)
 
     lead_np = gr%mesh%lead_unit_cell(LEFT)%np
-    ALLOCATE(tmp(NP+2*lead_np), NP+2*lead_np)
+    ALLOCATE(tmp(gr%mesh%np+2*lead_np), gr%mesh%np+2*lead_np)
     
     do
       call iopar_read(gr%mesh%mpi_grp, io_wfns, line, i)
@@ -566,7 +566,7 @@ contains
         call zrestart_read_function(dir, filename, gs_mesh, tmp, err)
         ! Here we use the fact that transport is in x-direction (x is the index
         ! running slowest).
-        st%zpsi(1:NP, idim, ist, ik) = tmp(lead_np+1:NP+lead_np)
+        st%zpsi(1:gr%mesh%np, idim, ist, ik) = tmp(lead_np+1:gr%mesh%np+lead_np)
       end if
       if(err.le.0) then
         filled(idim, ist, ik) = .true.
@@ -1017,7 +1017,7 @@ contains
       end do
 
       ! Apply phase.
-      do ip = 1, NP
+      do ip = 1, gr%mesh%np
         phase = exp(-M_zI*sum(gr%mesh%x(ip, 1:MAX_DIM)*st%ob_d%kpoints(1:MAX_DIM, jst)))
         !phase = exp(-M_zI*sum(gr%mesh%x(ip, 1:MAX_DIM)*st%ob_d%kpoints(1:MAX_DIM, ik)))
         st%zphi(ip, idim, jst, k_index) = phase*st%zphi(ip, idim, jst, k_index)

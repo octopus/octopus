@@ -102,7 +102,7 @@ contains
 
         ! Apply lead potential.
         do idim = 1, st%d%dim
-          do ip = 1, NP
+          do ip = 1, gr%mesh%np
             ip_lead = mod(ip-1, gr%intf(LEFT)%np) + 1
             rhs(ip, idim) = rhs(ip, idim) + hm%lead_vks(ip_lead, idim, LEFT)*st%zphi(ip, idim, ist, ik)
           end do
@@ -110,8 +110,8 @@ contains
 
         ! Add energy.
         do idim = 1, st%d%dim
-          call lalg_scal(NP, -M_z1, rhs(:, idim))
-          call lalg_axpy(NP, energy, st%zphi(:, idim, ist, ik), rhs(:, idim))
+          call lalg_scal(gr%mesh%np, -M_z1, rhs(:, idim))
+          call lalg_axpy(gr%mesh%np, energy, st%zphi(:, idim, ist, ik), rhs(:, idim))
         end do
 
         ! Apply term with lead Green functions.

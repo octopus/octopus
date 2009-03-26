@@ -84,7 +84,7 @@ contains
     E_Hartree = hm%ehartree
 
     ! Get exchange-correlation energies
-    ALLOCATE(rho(sys%NP, sys%st%d%nspin), sys%NP*sys%st%d%nspin)
+    ALLOCATE(rho(sys%gr%mesh%np, sys%st%d%nspin), sys%gr%mesh%np*sys%st%d%nspin)
     call states_total_density(sys%st, sys%gr%mesh, rho)
     call xc_get_vxc(sys%gr, sys%ks%xc, sys%st, rho, sys%st%d%ispin, E_x, E_c, &
       M_ZERO, sys%st%qtot)

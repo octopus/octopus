@@ -79,13 +79,13 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
   ! Careful: aux has to range from 1 to gr%mesh%np_part because it is input to
   ! hpsi. In parallel the space NP+1:gr%mesh%np_part is needed for ghost points
   ! in the non local operator.
-  ALLOCATE(eigenvec(NP, dim, me),      NP*dim*me)
+  ALLOCATE(eigenvec(gr%mesh%np, dim, me),      gr%mesh%np*dim*me)
   ALLOCATE(aux(gr%mesh%np_part, dim),          gr%mesh%np_part*dim)
   ALLOCATE(tmp(krylov),                krylov)
-  ALLOCATE(v(NP, dim, krylov),    NP*dim*krylov)
+  ALLOCATE(v(gr%mesh%np, dim, krylov),    gr%mesh%np*dim*krylov)
   ALLOCATE(h(krylov, krylov),          krylov*krylov)
   ALLOCATE(eigenval(me),               me)
-  ALLOCATE(av(NP, dim, krylov),   NP*dim*krylov)
+  ALLOCATE(av(gr%mesh%np, dim, krylov),   gr%mesh%np*dim*krylov)
   ALLOCATE(hevec(krylov, krylov),      krylov*krylov)
   ALLOCATE(res(me),                    me)
 
@@ -104,7 +104,7 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
   ! First of all, copy the initial estimates.
   do i = 1, st%nst
     do idim = 1, dim
-      call lalg_copy(NP, st%X(psi)(:, idim, i, ik), eigenvec(:, idim, i))
+      call lalg_copy(gr%mesh%np, st%X(psi)(:, idim, i, ik), eigenvec(:, idim, i))
     end do
     eigenval(i) = st%eigenval(i, ik)
   end do
@@ -133,7 +133,7 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
     !copy next set of Ritz vector/initial guesses to V
     do i = 1, winsiz
       do idim = 1, dim
-        call lalg_copy(NP, eigenvec(:, idim, nec+i), v(:, idim, i))
+        call lalg_copy(gr%mesh%np, eigenvec(:, idim, nec+i), v(:, idim, i))
       end do
     end do
 
@@ -151,13 +151,13 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
         do ii = 1, nec
           av(ii, 1, d1 + 1) = X(mf_dotp)(gr%mesh, dim, eigenvec(:,:,ii), v(:,:,i))
           do idim = 1, dim
-            call lalg_axpy(NP, -av(ii, 1, d1 + 1), eigenvec(:, idim, ii), v(:, idim, i))
+            call lalg_axpy(gr%mesh%np, -av(ii, 1, d1 + 1), eigenvec(:, idim, ii), v(:, idim, i))
           end do
         end do
         do ii = 1, i - 1
           av(ii, 1, d1 + 1) = X(mf_dotp)(gr%mesh, dim, v(:, :, ii), v(:, :, i))
           do idim = 1, dim
-            call lalg_axpy(NP, -av(ii, 1, d1 + 1), v(:, idim, ii), v(:, idim, i))
+            call lalg_axpy(gr%mesh%np, -av(ii, 1, d1 + 1), v(:, idim, ii), v(:, idim, i))
           end do
         end do
         x = X(mf_nrm2)(gr%mesh, dim, v(:, :, i))
@@ -165,7 +165,7 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
           call X(mf_random)(gr%mesh, v(:, 1, i))
         else
           do idim = 1, dim
-            call lalg_scal(NP, R_TOTYPE(M_ONE/x), v(:, idim, i))
+            call lalg_scal(gr%mesh%np, R_TOTYPE(M_ONE/x), v(:, idim, i))
           end do
           i = i + 1
         end if
@@ -174,7 +174,7 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
       ! matrix-vector multiplication
       do i = 1, blk
         do idim = 1, dim
-          call lalg_copy(NP, v(:, idim, d1 + i), aux(:, idim))
+          call lalg_copy(gr%mesh%np, v(:, idim, d1 + i), aux(:, idim))
         end do
         av(:, :, d1 + i) = R_TOTYPE(M_ZERO)
         call X(hamiltonian_apply)(hm, gr, aux, av(:, :, d1 + i), d1+i, ik)
@@ -197,9 +197,9 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
 
       if ( d2+1.le.krylov .and. matvec.lt.maxmatvecs) then
         ! In this case, compute only the lowest Ritz eigenpair.
-        call lalg_gemv(NP, dim, d2, R_TOTYPE(M_ONE), v(:, :, 1:d2), hevec(1:d2, 1), &
+        call lalg_gemv(gr%mesh%np, dim, d2, R_TOTYPE(M_ONE), v(:, :, 1:d2), hevec(1:d2, 1), &
              R_TOTYPE(M_ZERO), eigenvec(:, :, nec + 1))
-        call lalg_gemv(NP, dim, d2, R_TOTYPE(M_ONE), av(:, :, 1:d2), hevec(1:d2, 1), &
+        call lalg_gemv(gr%mesh%np, dim, d2, R_TOTYPE(M_ONE), av(:, :, 1:d2), hevec(1:d2, 1), &
              R_TOTYPE(M_ZERO), av(:, :, d2 + 1))
         call residual(dim, av(:, :, d2+1), eigenvec(:, :, nec+1), tmp(1), av(:, :, d2+1), res(nec+1))
 
@@ -207,11 +207,11 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
         ! Ritz vectors and the residual norms.
         if(res(nec+1)<tol) then
           do i = 2, winsiz
-            call lalg_gemv(NP, dim, d2, R_TOTYPE(M_ONE), v(:, :, 1:d2), hevec(1:d2, i), &
+            call lalg_gemv(gr%mesh%np, dim, d2, R_TOTYPE(M_ONE), v(:, :, 1:d2), hevec(1:d2, i), &
                  R_TOTYPE(M_ZERO), eigenvec(:, :, nec+i))
           end do
           do i = 2, winsiz
-            call lalg_gemv(NP, dim, d2, R_TOTYPE(M_ONE), av(:, :, 1:d2), hevec(1:d2, i), &
+            call lalg_gemv(gr%mesh%np, dim, d2, R_TOTYPE(M_ONE), av(:, :, 1:d2), hevec(1:d2, i), &
                  R_TOTYPE(M_ZERO), v  (:, :, i))
           end do
           do i = 2, winsiz
@@ -221,17 +221,17 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
         d1 = d2
       else
         do i = 1, winsiz
-          call lalg_gemv(NP, dim, d2, R_TOTYPE(M_ONE), v(:, :, 1:d2), hevec(1:d2, i), &
+          call lalg_gemv(gr%mesh%np, dim, d2, R_TOTYPE(M_ONE), v(:, :, 1:d2), hevec(1:d2, i), &
                R_TOTYPE(M_ZERO), eigenvec(:, :, nec+i))
         end do
         do i = 1, winsiz
-          call lalg_gemv(NP, dim, d2, R_TOTYPE(M_ONE), av(:, :, 1:d2), hevec(1:d2, i), &
+          call lalg_gemv(gr%mesh%np, dim, d2, R_TOTYPE(M_ONE), av(:, :, 1:d2), hevec(1:d2, i), &
                R_TOTYPE(M_ZERO), v(:, :, i))
         end do
         do i = 1, winsiz
           do idim = 1, dim
-            call lalg_copy(NP, v(:, idim, i), av(:, idim, i))
-            call lalg_copy(NP, eigenvec(:, idim, nec + i), v(:, idim, i))
+            call lalg_copy(gr%mesh%np, v(:, idim, i), av(:, idim, i))
+            call lalg_copy(gr%mesh%np, eigenvec(:, idim, nec + i), v(:, idim, i))
           end do
           call residual(dim, av(:, :, i), v(:, :, i), tmp(i), av(:, :, winsiz+i), res(nec+i))
         end do
@@ -260,7 +260,7 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
           x = eigenval(j-1); eigenval(j-1) = eigenval(j); eigenval(j) = x
           x = res(j-1); res(j-1) = res(j); res(j) = x
           do idim = 1, dim
-            call lalg_swap(NP, eigenvec(:, idim, j), eigenvec(:, idim, j-1))
+            call lalg_swap(gr%mesh%np, eigenvec(:, idim, j), eigenvec(:, idim, j-1))
           end do
         end do
       end do ordering
@@ -277,7 +277,7 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
 
       ! Preconditioning
       do idim = 1, dim
-        call lalg_copy(NP, av(:, idim, d1 + 1), aux(:, idim))
+        call lalg_copy(gr%mesh%np, av(:, idim, d1 + 1), aux(:, idim))
       end do
       call X(preconditioner_apply)(pre, gr, hm, aux(:,:), v(:,:, d1+1))
 
@@ -286,7 +286,7 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
 
   do i = 1, st%nst
     do idim = 1, dim
-      call lalg_copy(NP, eigenvec(:, idim, i), st%X(psi)(:, idim, i, ik))
+      call lalg_copy(gr%mesh%np, eigenvec(:, idim, i), st%X(psi)(:, idim, i, ik))
     end do
     st%eigenval(i, ik) = eigenval(i)
     diff(i) = res(i)

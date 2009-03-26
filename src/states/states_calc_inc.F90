@@ -333,7 +333,7 @@ subroutine X(states_calc_momentum)(gr, st)
 
   call push_sub('states_calc_inc.Xstates_calc_momentum')
 
-  ALLOCATE(grad(NP, st%d%dim, gr%mesh%sb%dim), NP*st%d%dim*gr%mesh%sb%dim)
+  ALLOCATE(grad(gr%mesh%np, st%d%dim, gr%mesh%sb%dim), gr%mesh%np*st%d%dim*gr%mesh%sb%dim)
 
   do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
@@ -348,7 +348,7 @@ subroutine X(states_calc_momentum)(gr, st)
         ! for square integrable wfns this integral should be purely imaginary 
         ! for complex wfns but real for real wfns (see case distinction below)
         expect_val_p = X(mf_dotp)(gr%mesh, st%d%dim, &
-          st%X(psi)(1:NP, 1:st%d%dim, ist, ik), grad(1:NP, 1:st%d%dim, i))
+          st%X(psi)(1:gr%mesh%np, 1:st%d%dim, ist, ik), grad(1:gr%mesh%np, 1:st%d%dim, i))
 
         ! In the case of real wave functions we do not include the 
         ! -i prefactor of p = -i \nabla

@@ -161,9 +161,9 @@ contains
     end do
 
     ! Local part of the pseudopotentials
-    ALLOCATE(ep%vpsl(NP), NP)
+    ALLOCATE(ep%vpsl(gr%mesh%np), gr%mesh%np)
 
-    ep%vpsl(1:NP) = M_ZERO
+    ep%vpsl(1:gr%mesh%np) = M_ZERO
 
     ep%classical_pot = 0
     if(geo%ncatoms > 0) then
@@ -181,7 +181,7 @@ contains
         message(1) = 'Info: generating classical external potential'
         call write_info(1)
 
-        ALLOCATE(ep%Vclassical(NP), NP)
+        ALLOCATE(ep%Vclassical(gr%mesh%np), gr%mesh%np)
         call epot_generate_classical(ep, gr%mesh, geo)
       end if
     end if
@@ -212,8 +212,8 @@ contains
       ep%E_field(:) = ep%E_field(:) * units_inp%energy%factor/units_inp%length%factor
 
       ! Compute the scalar potential
-      ALLOCATE(ep%v_static(NP), NP)
-      do i = 1, NP
+      ALLOCATE(ep%v_static(gr%mesh%np), gr%mesh%np)
+      do i = 1, gr%mesh%np
         ep%v_static(i) = sum(gr%mesh%x(i,:)*ep%E_field(:))
       end do
     end if
@@ -251,9 +251,9 @@ contains
       call loct_parse_block_end(blk)
 
       ! Compute the vector potential
-      ALLOCATE(ep%A_static(NP, gr%mesh%sb%dim), NP*gr%mesh%sb%dim)
+      ALLOCATE(ep%A_static(gr%mesh%np, gr%mesh%sb%dim), gr%mesh%np*gr%mesh%sb%dim)
       ALLOCATE(x(gr%mesh%sb%dim), gr%mesh%sb%dim)
-      do i = 1, NP
+      do i = 1, gr%mesh%np
         x(1:gr%mesh%sb%dim) = gr%mesh%x(i, 1:gr%mesh%sb%dim)
         select case (gr%mesh%sb%dim)
         case (2)
@@ -475,12 +475,12 @@ contains
 #ifdef HAVE_MPI
     call profiling_in(epot_reduce, "EPOT_REDUCE")
     if(geo%atoms%parallel) then
-      ALLOCATE(vpsltmp(1:NP), NP)
-      call MPI_Allreduce(ep%vpsl, vpsltmp, NP, MPI_FLOAT, MPI_SUM, geo%atoms%mpi_grp%comm, mpi_err)
-      call lalg_copy(NP, vpsltmp, ep%vpsl)
+      ALLOCATE(vpsltmp(1:gr%mesh%np), gr%mesh%np)
+      call MPI_Allreduce(ep%vpsl, vpsltmp, gr%mesh%np, MPI_FLOAT, MPI_SUM, geo%atoms%mpi_grp%comm, mpi_err)
+      call lalg_copy(gr%mesh%np, vpsltmp, ep%vpsl)
       if(associated(st%rho_core)) then
-        call MPI_Allreduce(st%rho_core, vpsltmp, NP, MPI_FLOAT, MPI_SUM, geo%atoms%mpi_grp%comm, mpi_err)
-        call lalg_copy(NP, vpsltmp, st%rho_core)
+        call MPI_Allreduce(st%rho_core, vpsltmp, gr%mesh%np, MPI_FLOAT, MPI_SUM, geo%atoms%mpi_grp%comm, mpi_err)
+        call lalg_copy(gr%mesh%np, vpsltmp, st%rho_core)
       end if
       deallocate(vpsltmp)
     end if

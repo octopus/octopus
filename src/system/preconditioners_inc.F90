@@ -39,7 +39,7 @@ subroutine X(preconditioner_apply)(pre, gr, hm, a, b, omega)
   select case(pre%which)
   case(PRE_NONE)
     do idim = 1, hm%d%dim
-      call lalg_copy(NP, a(:,idim), b(:,idim))
+      call lalg_copy(gr%mesh%np, a(:,idim), b(:,idim))
     end do
 
   case(PRE_FILTER)
@@ -59,7 +59,7 @@ subroutine X(preconditioner_apply)(pre, gr, hm, a, b, omega)
   case(PRE_POISSON)
     do idim = 1, hm%d%dim
       call X(poisson_solve) (gr, b(:, idim), a(:, idim), all_nodes=.false.)
-      call lalg_scal(NP, R_TOTYPE(M_ONE/(M_TWO*M_PI)), b(:,idim))
+      call lalg_scal(gr%mesh%np, R_TOTYPE(M_ONE/(M_TWO*M_PI)), b(:,idim))
     end do
 
   case(PRE_MULTIGRID)
@@ -81,12 +81,12 @@ contains
 
     FLOAT, allocatable :: diag(:)
 
-    ALLOCATE(diag(NP), NP)
+    ALLOCATE(diag(gr%mesh%np), gr%mesh%np)
 
     do idim = 1, hm%d%dim
-      diag(:) = pre%diag_lapl(1:NP) + hm%ep%vpsl(1:NP) + hm%vhxc(1:NP, idim)
+      diag(:) = pre%diag_lapl(1:gr%mesh%np) + hm%ep%vpsl(1:gr%mesh%np) + hm%vhxc(1:gr%mesh%np, idim)
 
-      b(1:NP,idim) = a(1:NP,idim)/(diag(1:NP) + omega_)
+      b(1:gr%mesh%np,idim) = a(1:gr%mesh%np,idim)/(diag(1:gr%mesh%np) + omega_)
     end do
 
     deallocate(diag)

@@ -59,8 +59,8 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
   ALLOCATE(h_psi(gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
   ALLOCATE(   cg(gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
   ALLOCATE(    g(gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
-  ALLOCATE(   g0(NP, st%d%dim), NP*st%d%dim)
-  ALLOCATE( ppsi(NP, st%d%dim), NP*st%d%dim)
+  ALLOCATE(   g0(gr%mesh%np, st%d%dim), gr%mesh%np*st%d%dim)
+  ALLOCATE( ppsi(gr%mesh%np, st%d%dim), gr%mesh%np*st%d%dim)
 
   do idim = 1, st%d%dim
     cg(1:gr%mesh%np_part, idim) = R_TOTYPE(M_ZERO)
@@ -113,7 +113,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
       es(1) = es(1)/es(2)
 
       do idim = 1, st%d%dim
-        call lalg_axpy(NP, R_TOPREC(-es(1)), ppsi(:, idim), g(:, idim))
+        call lalg_axpy(gr%mesh%np, R_TOPREC(-es(1)), ppsi(:, idim), g(:, idim))
       end do
 
       ! Orthogonalize to lowest eigenvalues (already calculated)
@@ -152,7 +152,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
         gg0 = gg
 
         do idim = 1, st%d%dim
-          call lalg_copy(NP, g(:,idim), cg(:, idim))
+          call lalg_copy(gr%mesh%np, g(:,idim), cg(:, idim))
         end do
       else
         !gamma = gg/gg0        ! (Fletcher-Reeves)
@@ -161,11 +161,11 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
         
         norma = gamma*cg0*sin(theta)
         
-        forall (idim = 1:st%d%dim, ip = 1:NP)
+        forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
           cg(ip, idim) = gamma*cg(ip, idim) + g(ip, idim) - norma*st%X(psi)(ip, idim, p, ik)
         end forall
         
-        call profiling_count_operations(st%d%dim*NP*(2*R_ADD + 2*R_MUL))
+        call profiling_count_operations(st%d%dim*gr%mesh%np*(2*R_ADD + 2*R_MUL))
 
       end if
 
@@ -204,12 +204,12 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
       a0 = cos(theta)
       b0 = sin(theta)/cg0
 
-      forall (idim = 1:st%d%dim, ip = 1:NP)
+      forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
         st%X(psi)(ip, idim, p, ik) = a0*st%X(psi)(ip, idim, p, ik) + b0*cg(ip, idim)
         h_psi(ip, idim) = a0*h_psi(ip, idim) + b0*ppsi(ip, idim)
       end forall
 
-      call profiling_count_operations(st%d%dim*NP*(2*R_ADD + 4*R_MUL))
+      call profiling_count_operations(st%d%dim*gr%mesh%np*(2*R_ADD + 4*R_MUL))
 
       res = X(states_residue)(gr%mesh, st%d%dim, h_psi, st%eigenval(p, ik), st%X(psi)(:, :, p, ik))
 
@@ -295,17 +295,17 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff, 
   maxter = niter
   niter = 0
 
-  ALLOCATE( phi(NP     , dim), gr%mesh%np_part*dim)
+  ALLOCATE( phi(gr%mesh%np     , dim), gr%mesh%np_part*dim)
   ALLOCATE( psi(gr%mesh%np_part, dim), gr%mesh%np_part*dim)
-  ALLOCATE(hpsi(NP     , dim), gr%mesh%np_part*dim)
-  ALLOCATE(  cg(NP     , dim), gr%mesh%np_part*dim)
-  ALLOCATE(hcgp(NP     , dim), gr%mesh%np_part*dim)
-  ALLOCATE(  sd(NP     , dim), gr%mesh%np_part*dim)
+  ALLOCATE(hpsi(gr%mesh%np     , dim), gr%mesh%np_part*dim)
+  ALLOCATE(  cg(gr%mesh%np     , dim), gr%mesh%np_part*dim)
+  ALLOCATE(hcgp(gr%mesh%np     , dim), gr%mesh%np_part*dim)
+  ALLOCATE(  sd(gr%mesh%np     , dim), gr%mesh%np_part*dim)
   ALLOCATE( cgp(gr%mesh%np_part, dim), gr%mesh%np_part*dim)
   ALLOCATE(orthogonal(nst), nst)
 
-  psi(1:NP, 1:dim) = M_ZERO
-  cgp(1:NP, 1:dim) = M_ZERO
+  psi(1:gr%mesh%np, 1:dim) = M_ZERO
+  cgp(1:gr%mesh%np, 1:dim) = M_ZERO
 
   ! Set the diff to zero, since it is intent(out)
   if(present(diff)) diff(1:st%nst) = M_ZERO
@@ -317,7 +317,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff, 
     call X(states_gram_schmidt_full)(st, ist, gr%mesh, dim, st%X(psi)(:, :, :, ik), start=ist)
 
     do idim = 1, st%d%dim
-      call lalg_copy(NP, st%X(psi)(:, idim, ist, ik), psi(:, idim))
+      call lalg_copy(gr%mesh%np, st%X(psi)(:, idim, ist, ik), psi(:, idim))
     end do
 
     ! Calculate starting gradient: |hpsi> = H|psi>
@@ -341,7 +341,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff, 
 
       ! Get H|psi> (through the linear formula)
       do idim = 1, st%d%dim
-        do ip = 1, NP
+        do ip = 1, gr%mesh%np
           phi(ip, idim) = ctheta*phi(ip, idim) + stheta*hcgp(ip, idim)
         end do
       end do
@@ -359,7 +359,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff, 
 
       ! Get steepest descent vector
       do idim = 1, st%d%dim
-        do ip = 1, NP
+        do ip = 1, gr%mesh%np
           sd(ip, idim) = lambda*psi(ip, idim) - phi(ip, idim)
         end do
       end do
@@ -373,7 +373,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff, 
       mu    = dot
 
       do idim = 1, st%d%dim
-        do ip = 1, NP
+        do ip = 1, gr%mesh%np
           cg(ip, idim) = sd(ip, idim) + gamma*cg(ip, idim)
         end do
       end do
@@ -381,7 +381,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff, 
       dump = X(mf_dotp)(gr%mesh, dim, psi, cg)
 
       do idim = 1, st%d%dim
-        do ip = 1, NP
+        do ip = 1, gr%mesh%np
           cgp(ip, idim) = cg(ip, idim) - dump*psi(ip, idim)
         end do
       end do
@@ -389,7 +389,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff, 
       dump = X(mf_nrm2)(gr%mesh, dim, cgp)
 
       do idim = 1, st%d%dim
-        call lalg_scal(NP, M_ONE/dump, cgp(:, idim))
+        call lalg_scal(gr%mesh%np, M_ONE/dump, cgp(:, idim))
       end do
 
       call X(hamiltonian_apply)(hm, gr, cgp, hcgp, ist, ik)
@@ -416,7 +416,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff, 
       end if
 
       do idim = 1, st%d%dim
-        do ip = 1, NP
+        do ip = 1, gr%mesh%np
           psi(ip, idim) = ctheta*psi(ip, idim) + stheta*cgp(ip, idim)
         end do
       end do
@@ -424,7 +424,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff, 
     end do band
 
     do idim = 1, st%d%dim
-      call lalg_copy(NP, psi(:, idim), st%X(psi)(:, idim, ist, ik))
+      call lalg_copy(gr%mesh%np, psi(:, idim), st%X(psi)(:, idim, ist, ik))
     end do
 
     st%eigenval(ist, ik) = lambda

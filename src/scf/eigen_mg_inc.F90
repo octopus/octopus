@@ -62,7 +62,7 @@ subroutine X(eigensolver_mg) (gr, st, hm, tol, niter, converged, ik, diff)
 
     ! normalize
     do ist = 1, st%nst      
-      call lalg_scal(NP, CNST(1.0)/sqrt(cc(ist, ist)), st%X(psi)(:, 1, ist, ik))
+      call lalg_scal(gr%mesh%np, CNST(1.0)/sqrt(cc(ist, ist)), st%X(psi)(:, 1, ist, ik))
     end do
 
   end do
@@ -94,7 +94,7 @@ subroutine X(coordinate_relaxation)(gr, mesh, hm, nst, steps, ik, psi, aa, cc)
 
   ALLOCATE(sigma(1:nst), nst)
   ALLOCATE(beta(1:nst), nst)
-  ALLOCATE(hdiag(1:mesh%np, 1:hm%d%dim), NP*hm%d%dim)
+  ALLOCATE(hdiag(1:mesh%np, 1:hm%d%dim), gr%mesh%np*hm%d%dim)
 
   call X(hamiltonian_diagonal) (hm, gr, hdiag, ik)
 

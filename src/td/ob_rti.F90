@@ -204,7 +204,7 @@ contains
     integer, target    :: ist, ik, intf_np
     CMPLX              :: factor, alpha, fac, f0
     CMPLX, allocatable :: tmp(:, :), tmp_wf(:), tmp_mem(:, :)
-    CMPLX, allocatable :: ext_wf(:, :, :, :) ! (NP+2*np, ndim, nst, nik)
+    CMPLX, allocatable :: ext_wf(:, :, :, :) ! (gr%mesh%np+2*np, ndim, nst, nik)
     character(len=100) :: filename
     FLOAT              :: dres
     
@@ -213,7 +213,7 @@ contains
     intf_np = gr%intf(LEFT)%np ! Assuming symmetric leads.
 
     order = gr%der%order
-    ALLOCATE(tmp(NP, st%d%ispin), NP*st%d%ispin)
+    ALLOCATE(tmp(gr%mesh%np, st%d%ispin), gr%mesh%np*st%d%ispin)
     ALLOCATE(tmp_wf(intf_np), intf_np)
     if(ob%mem_type.eq.save_cpu_time) then
       ALLOCATE(tmp_mem(intf_np, intf_np), intf_np**2)
@@ -306,31 +306,31 @@ contains
 
         ! 4. Solve linear system (1 + i \delta H_{eff}) st%zpsi = tmp.
         cg_iter      = cg_max_iter
-        tmp(1:NP, 1) = st%zpsi(1:NP, 1, ist, ik)
-        ! tmp(1:NP, 1) = M_z0
+        tmp(1:gr%mesh%np, 1) = st%zpsi(1:gr%mesh%np, 1, ist, ik)
+        ! tmp(1:gr%mesh%np, 1) = M_z0
         ! Use QMR-solver since it is faster and more stable than BiCG.
         select case(ob%mem_type)
         case(SAVE_CPU_TIME)
           ! Use for non-magnetic case.
           ! Either the stable symmetric QMR solver
-          call zqmr_sym(NP, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_backward, precond_prop, &
+          call zqmr_sym(gr%mesh%np, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_backward, precond_prop, &
             cg_iter, residue=dres, threshold=cg_tol, showprogress=.false.)
           ! or the slightly faster but less stable CG solver.
-          ! call zconjugate_gradients(NP, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_backward, &
+          ! call zconjugate_gradients(gr%mesh%np, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_backward, &
           !   zdot_productu, cg_iter, threshold=cg_tol)
 
           ! Use for magnetic fields a general solver like BiCG (working)
-          ! call zconjugate_gradients(NP, st%zpsi(:, 1, ist, ik), tmp(:, 1), &
+          ! call zconjugate_gradients(gr%mesh%np, st%zpsi(:, 1, ist, ik), tmp(:, 1), &
           !   h_eff_backward, h_eff_backward_dagger, zmf_dotp_aux, cg_iter, threshold=cg_tol)
           ! or the general QMR solver (not working yet)
-          ! call zqmr(NP, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_backward, h_eff_backward_t, &
+          ! call zqmr(gr%mesh%np, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_backward, h_eff_backward_t, &
           !   precond_prop, precond_prop, cg_iter, residue=dres, threshold=cg_tol, showprogress=.true.)
         case(SAVE_RAM_USAGE)
-          call zqmr_sym(NP, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_backward_sp, precond_prop, &
+          call zqmr_sym(gr%mesh%np, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_backward_sp, precond_prop, &
             cg_iter, residue=dres, threshold=cg_tol, showprogress=.false.)
-          ! call zqmr(NP, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_backward_sp, h_eff_backward_sp_t, &
+          ! call zqmr(gr%mesh%np, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_backward_sp, h_eff_backward_sp_t, &
           !   precond_prop, precond_prop, cg_iter, residue=dres, threshold=cg_tol, showprogress=.false.)
-          ! call zconjugate_gradients(NP, st%zpsi(:, 1, ist, ik), tmp(1:NP, 1), &
+          ! call zconjugate_gradients(gr%mesh%np, st%zpsi(:, 1, ist, ik), tmp(1:gr%mesh%np, 1), &
           !   h_eff_backward_sp, h_eff_backwardt_sp, zmf_dotp_aux, cg_iter, threshold=cg_tol)
         end select
         ! Write warning if BiCG did not converge.

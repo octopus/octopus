@@ -68,7 +68,7 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc, vtau)
   if(gga.or.mgga) call  gga_init()
   if(       mgga) call mgga_init()
 
-  space_loop: do jj = 1, NP
+  space_loop: do jj = 1, gr%mesh%np
 
     ! make a local copy with the correct memory order
     l_dens(1:spin_channels) = dens(jj, 1:spin_channels)
@@ -190,8 +190,8 @@ contains
 
     ! allocate some general arrays
     ALLOCATE(dens(gr%mesh%np_part, spin_channels), gr%mesh%np_part*spin_channels)
-    ALLOCATE(ex_per_vol(NP), NP)
-    ALLOCATE(ec_per_vol(NP), NP)
+    ALLOCATE(ex_per_vol(gr%mesh%np), gr%mesh%np)
+    ALLOCATE(ec_per_vol(gr%mesh%np), gr%mesh%np)
 
     dens       = M_ZERO
     ex_per_vol = M_ZERO
@@ -202,7 +202,7 @@ contains
       dedd       = M_ZERO
     end if
 
-    do ii = 1, NP
+    do ii = 1, gr%mesh%np
       d(1:spin_channels) = rho(ii, 1:spin_channels)
 
       select case(ispin)
@@ -242,7 +242,7 @@ contains
 
     if(ispin == SPINORS) then
       ! rotate back (do not need the rotation matrix for this).
-      do i = 1, NP
+      do i = 1, gr%mesh%np
         d(1:spin_channels) = rho(i, 1:spin_channels)
 
         dpol = sqrt((d(1) - d(2))**2 + &
@@ -255,10 +255,10 @@ contains
         vxc(i, 4) = vxc(i, 4) + (dedd(i, 1) - dedd(i, 2))*rho(i, 4)/(dpol + tiny)
       end do
     elseif(ispin == SPIN_POLARIZED) then
-      call lalg_axpy(NP, M_ONE, dedd(:, 1), vxc(:, 1))
-      call lalg_axpy(NP, M_ONE, dedd(:, 2), vxc(:, 2))
+      call lalg_axpy(gr%mesh%np, M_ONE, dedd(:, 1), vxc(:, 1))
+      call lalg_axpy(gr%mesh%np, M_ONE, dedd(:, 2), vxc(:, 2))
     else
-      call lalg_axpy(NP, M_ONE, dedd(:, 1), vxc(:, 1))
+      call lalg_axpy(gr%mesh%np, M_ONE, dedd(:, 1), vxc(:, 1))
     end if
 
     call pop_sub()
@@ -275,7 +275,7 @@ contains
     call push_sub('vxc.xc_get_vxc.gga_init')
 
     ! allocate variables
-    ALLOCATE(gdens(NP, 3, spin_channels), NP*3*spin_channels)
+    ALLOCATE(gdens(gr%mesh%np, 3, spin_channels), gr%mesh%np*3*spin_channels)
     gdens = M_ZERO
 
     if(present(vxc)) then
@@ -317,21 +317,21 @@ contains
 
     ! subtract the divergence of the functional derivative of Exc with respect to
     ! the gradient of the density.
-    ALLOCATE(gf(NP, 1), NP*1)
+    ALLOCATE(gf(gr%mesh%np, 1), gr%mesh%np*1)
     do is = 1, spin_channels
       call dderivatives_div(gr%der, dedgd(:, :, is), gf(:, 1))
-      call lalg_axpy(NP, -M_ONE, gf(:,1), dedd(:, is))
+      call lalg_axpy(gr%mesh%np, -M_ONE, gf(:,1), dedd(:, is))
     end do
     deallocate(gf)
 
     ! If LB94, we can calculate an approximation to the energy from
     ! Levy-Perdew relation PRA 32, 2010 (1985)
     if(functl(1)%id == XC_GGA_XC_LB) then
-      ALLOCATE(gf(NP, 3), NP*3)
+      ALLOCATE(gf(gr%mesh%np, 3), gr%mesh%np*3)
 
       do is = 1, spin_channels
         call dderivatives_grad(gr%der, dedd(:, is), gf(:,:))
-        do i = 1, NP
+        do i = 1, gr%mesh%np
           ex_per_vol(i) = ex_per_vol(i) - dens(i, is) * sum(gr%mesh%x(i,:)*gf(i,:))
         end do
       end do
@@ -348,7 +348,7 @@ contains
   !   *) allocate the kinetic energy density, dedtau, and local variants
   !   *) calculates tau either from a GEA or from the orbitals
   subroutine mgga_init()
-    ALLOCATE(tau(NP, spin_channels), NP*spin_channels)
+    ALLOCATE(tau(gr%mesh%np, spin_channels), gr%mesh%np*spin_channels)
 
     ! calculate tau
     call states_calc_tau_jp_gn(gr, st, tau=tau)

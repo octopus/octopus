@@ -48,10 +48,10 @@ subroutine X(h_sys_output_lr) (st, gr, lr, dir, tag, isigma, outp, geo)
     end if
 
     if(iand(outp%what, output_pol_density).ne.0) then
-      ALLOCATE(tmp(1:NP),NP)
+      ALLOCATE(tmp(1:gr%mesh%np),gr%mesh%np)
       do is = 1, st%d%nspin
         do i=1,gr%mesh%sb%dim
-          tmp(1:NP)=gr%mesh%x(1:NP,i)*lr%X(dl_rho)(:, is)
+          tmp(1:gr%mesh%np)=gr%mesh%x(1:gr%mesh%np,i)*lr%X(dl_rho)(:, is)
           write(fname, '(a,i1,a,i1,a,i1)') 'alpha_density-', is, '-', tag, '-', i
           call X(output_function)(outp%how, dir, fname, gr%mesh, gr%sb, tmp, u, ierr, geo = geo)
         end do
@@ -121,12 +121,12 @@ contains
 
     do is = 1, st%d%nspin
       write(fname, '(a,a,i1,a,i1)') trim(filename1), '-', is, '-', tag 
-      call X(output_function)(outp%how, dir, trim(fname), gr%mesh, gr%sb, lr%X(dl_de)(1:NP,is), u, ierr, geo = geo)
+      call X(output_function)(outp%how, dir, trim(fname), gr%mesh, gr%sb, lr%X(dl_de)(1:gr%mesh%np,is), u, ierr, geo = geo)
     end do
 
     do is = 1, st%d%nspin
       write(fname, '(a,a,i1,a,i1)') trim(filename2), '-', is, '-', tag 
-      call X(output_function)(outp%how, dir, trim(fname), gr%mesh, gr%sb, lr%X(dl_elf)(1:NP,is), u, ierr, geo = geo)
+      call X(output_function)(outp%how, dir, trim(fname), gr%mesh, gr%sb, lr%X(dl_elf)(1:gr%mesh%np,is), u, ierr, geo = geo)
     end do
 
   end subroutine lr_elf

@@ -37,7 +37,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
   type(hamiltonian_t), intent(inout) :: hm
   type(states_t),      intent(inout) :: st
   FLOAT,               intent(inout) :: ex, ec
-  FLOAT, optional,     intent(inout) :: vxc(:,:) !vxc(NP, st%d%nspin)
+  FLOAT, optional,     intent(inout) :: vxc(:,:) !vxc(gr%mesh%np, st%d%nspin)
 
   FLOAT :: e
   integer :: is, ist, ixc
@@ -51,7 +51,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
   ! initialize oep structure
   ALLOCATE(oep%eigen_type (st%nst), st%nst)
   ALLOCATE(oep%eigen_index(st%nst), st%nst)
-  ALLOCATE(oep%X(lxc)(NP, st%st_start:st%st_end), NP*st%lnst)
+  ALLOCATE(oep%X(lxc)(gr%mesh%np, st%st_start:st%st_end), gr%mesh%np*st%lnst)
   ALLOCATE(oep%uxc_bar    (st%nst), st%nst)
 
   ! this part handles the (pure) orbital functionals
@@ -80,7 +80,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
 
     ! calculate uxc_bar for the occupied states
     do ist = st%st_start, st%st_end
-      oep%uxc_bar(ist) = X(mf_dotp)(gr%mesh, st%X(psi)(1:NP, 1, ist, is) , oep%X(lxc)(1:NP, ist))
+      oep%uxc_bar(ist) = X(mf_dotp)(gr%mesh, st%X(psi)(1:gr%mesh%np, 1, ist, is) , oep%X(lxc)(1:gr%mesh%np, ist))
     end do
 
 #if defined(HAVE_MPI)
@@ -106,7 +106,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
         call X(xc_oep_solve)(gr, hm, st, is, vxc(:,is), oep)
       end if
 
-      vxc(1:NP, is) = vxc(1:NP, is) + oep%vxc(1:NP)
+      vxc(1:gr%mesh%np, is) = vxc(1:gr%mesh%np, is) + oep%vxc(1:gr%mesh%np)
     end if
   end do spin
 
@@ -123,7 +123,7 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
   type(hamiltonian_t), intent(inout) :: hm
   type(states_t),      intent(in)    :: st
   integer,             intent(in)    :: is
-  FLOAT,               intent(inout) :: vxc(:) ! vxc(NP)
+  FLOAT,               intent(inout) :: vxc(:) ! vxc(gr%mesh%np)
   type(xc_oep_t),      intent(inout) :: oep
 
   integer :: iter, ist
@@ -134,11 +134,11 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
   call profiling_in(C_PROFILING_XC_OEP_FULL)
   call push_sub('xc_OEP_inc.xc_oep_solve')
 
-  ALLOCATE(b(NP, 1),    NP*1)
-  ALLOCATE(s(NP),       NP)
-  ALLOCATE(vxc_old(NP), NP)
+  ALLOCATE(b(gr%mesh%np, 1),    gr%mesh%np*1)
+  ALLOCATE(s(gr%mesh%np),       gr%mesh%np)
+  ALLOCATE(vxc_old(gr%mesh%np), gr%mesh%np)
 
-  vxc_old(1:NP) = vxc(1:NP)
+  vxc_old(1:gr%mesh%np) = vxc(1:gr%mesh%np)
 
   if(.not. lr_is_allocated(oep%lr)) call lr_allocate(oep%lr, st, gr%mesh) 
 
@@ -147,16 +147,16 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
   end do
 
   ! fix xc potential (needed for Hpsi)
-  vxc(1:NP) = vxc_old(1:NP) + oep%vxc(1:NP)
+  vxc(1:gr%mesh%np) = vxc_old(1:gr%mesh%np) + oep%vxc(1:gr%mesh%np)
 
   do iter = 1, oep%scftol%max_iter
     ! iteration over all states
     s = M_ZERO
     do ist = 1, st%nst
       ! evaluate right-hand side
-      vxc_bar    = dmf_dotp(gr%mesh, (R_ABS(st%X(psi)(1:NP, 1, ist, is)))**2, oep%vxc(1:NP))
-      b(1:NP, 1) =  -(oep%vxc(1:NP) - (vxc_bar - oep%uxc_bar(ist)))*R_CONJ(st%X(psi)(1:NP, 1, ist, is)) &
-        + oep%X(lxc)(1:NP, ist)
+      vxc_bar    = dmf_dotp(gr%mesh, (R_ABS(st%X(psi)(1:gr%mesh%np, 1, ist, is)))**2, oep%vxc(1:gr%mesh%np))
+      b(1:gr%mesh%np, 1) =  -(oep%vxc(1:gr%mesh%np) - (vxc_bar - oep%uxc_bar(ist)))*R_CONJ(st%X(psi)(1:gr%mesh%np, 1, ist, is)) &
+        + oep%X(lxc)(1:gr%mesh%np, ist)
 
       call X(lr_orth_vector) (gr%mesh, st, b, ist, is)
 
@@ -167,15 +167,15 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
       call X(lr_orth_vector) (gr%mesh, st, oep%lr%X(dl_psi)(:,:, ist, is), ist, is)
 
       ! calculate this funny function s
-      s(1:NP) = s(1:NP) + M_TWO*R_REAL(oep%lr%X(dl_psi)(1:NP, 1, ist, is)*st%X(psi)(1:NP, 1, ist, is))
+      s(1:gr%mesh%np) = s(1:gr%mesh%np) + M_TWO*R_REAL(oep%lr%X(dl_psi)(1:gr%mesh%np, 1, ist, is)*st%X(psi)(1:gr%mesh%np, 1, ist, is))
     end do
 
-    oep%vxc(1:NP) = oep%vxc(1:NP) + oep%mixing*s(1:NP)
+    oep%vxc(1:gr%mesh%np) = oep%vxc(1:gr%mesh%np) + oep%mixing*s(1:gr%mesh%np)
 
     do ist = 1, st%nst
       if(oep%eigen_type(ist) == 2) then
-        vxc_bar = dmf_dotp(gr%mesh, (R_ABS(st%X(psi)(1:NP, 1, ist, is)))**2, oep%vxc(1:NP))
-        oep%vxc(1:NP) = oep%vxc(1:NP) - (vxc_bar - oep%uxc_bar(ist))
+        vxc_bar = dmf_dotp(gr%mesh, (R_ABS(st%X(psi)(1:gr%mesh%np, 1, ist, is)))**2, oep%vxc(1:gr%mesh%np))
+        oep%vxc(1:gr%mesh%np) = oep%vxc(1:gr%mesh%np) - (vxc_bar - oep%uxc_bar(ist))
       end if
     end do
 
@@ -187,7 +187,7 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
   message(2) = ''
   call write_info(2)
 
-  vxc(1:NP) = vxc_old(1:NP)
+  vxc(1:gr%mesh%np) = vxc_old(1:gr%mesh%np)
   deallocate(b, s, vxc_old)
 
   call pop_sub()

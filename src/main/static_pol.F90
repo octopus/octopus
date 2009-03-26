@@ -120,11 +120,11 @@ contains
     if(i_start > gr%mesh%sb%dim) out_pol = .true.
 
     ! Save local pseudopotential
-    ALLOCATE(Vpsl_save(NP), NP)
+    ALLOCATE(Vpsl_save(gr%mesh%np), gr%mesh%np)
     Vpsl_save = hm%ep%Vpsl
 
     ! Allocate the trrho to the contain the trace of the density.
-    ALLOCATE(trrho(NP), NP)
+    ALLOCATE(trrho(gr%mesh%np), gr%mesh%np)
     trrho = M_ZERO
 
     call output_init_()
@@ -136,14 +136,14 @@ contains
         write(message(2), '(a,i1,a,i1)')'Info: Calculating dipole moment for field ', i, ', #',k
         call write_info(2)
 
-        hm%ep%vpsl(1:NP) = vpsl_save(1:NP) + (-1)**k*gr%mesh%x(1:NP, i)*e_field
+        hm%ep%vpsl(1:gr%mesh%np) = vpsl_save(1:gr%mesh%np) + (-1)**k*gr%mesh%x(1:gr%mesh%np, i)*e_field
         call hamiltonian_update_potential(hm, gr%mesh)
 
         call scf_run(scfv, sys%gr, sys%geo, st, sys%ks, hm, sys%outp, gs_run=.false., verbosity = VERB_COMPACT)
 
         trrho = M_ZERO
         do is = 1, st%d%spin_channels
-          trrho(1:NP) = trrho(1:NP) + st%rho(1:NP, is)
+          trrho(1:gr%mesh%np) = trrho(1:gr%mesh%np) + st%rho(1:gr%mesh%np, is)
         end do
 
         ! calculate dipole
@@ -168,14 +168,14 @@ contains
     
     ! now calculate the dipole without field
 
-    hm%ep%vpsl(1:NP) = vpsl_save(1:NP)
+    hm%ep%vpsl(1:gr%mesh%np) = vpsl_save(1:gr%mesh%np)
     call hamiltonian_update_potential(hm, gr%mesh)
 
     call scf_run(scfv, sys%gr, sys%geo, st, sys%ks, hm, sys%outp, gs_run=.false., verbosity = VERB_COMPACT)
     
     trrho = M_ZERO
     do is = 1, st%d%spin_channels
-      trrho(1:NP) = trrho(1:NP) + st%rho(1:NP, is)
+      trrho(1:gr%mesh%np) = trrho(1:gr%mesh%np) + st%rho(1:gr%mesh%np, is)
     end do
 
         ! calculate dipole
@@ -233,14 +233,14 @@ contains
 
       !allocate memory for what we want to output
       if(iand(sys%outp%what, output_density).ne.0) then 
-        ALLOCATE(lr_rho(1:NP, 1:st%d%nspin), NP*st%d%nspin)
+        ALLOCATE(lr_rho(1:gr%mesh%np, 1:st%d%nspin), gr%mesh%np*st%d%nspin)
       end if
       
       if(iand(sys%outp%what, output_elf).ne.0) then 
-        ALLOCATE(    elf(1:NP, 1:st%d%nspin), NP*st%d%nspin)
-        ALLOCATE( lr_elf(1:NP, 1:st%d%nspin), NP*st%d%nspin)
-        ALLOCATE(   elfd(1:NP, 1:st%d%nspin), NP*st%d%nspin)
-        ALLOCATE(lr_elfd(1:NP, 1:st%d%nspin), NP*st%d%nspin)
+        ALLOCATE(    elf(1:gr%mesh%np, 1:st%d%nspin), gr%mesh%np*st%d%nspin)
+        ALLOCATE( lr_elf(1:gr%mesh%np, 1:st%d%nspin), gr%mesh%np*st%d%nspin)
+        ALLOCATE(   elfd(1:gr%mesh%np, 1:st%d%nspin), gr%mesh%np*st%d%nspin)
+        ALLOCATE(lr_elfd(1:gr%mesh%np, 1:st%d%nspin), gr%mesh%np*st%d%nspin)
       end if
       
     end subroutine output_init_
@@ -253,10 +253,10 @@ contains
       if(iand(sys%outp%what, output_density).ne.0) then 
          
         if(k == 1) then 
-          lr_rho(1:NP, 1:st%d%nspin) = st%rho(1:NP, 1:st%d%nspin)
+          lr_rho(1:gr%mesh%np, 1:st%d%nspin) = st%rho(1:gr%mesh%np, 1:st%d%nspin)
         else
-          lr_rho(1:NP, 1:st%d%nspin) = &
-               (st%rho(1:NP, 1:st%d%nspin) - lr_rho(1:NP, 1:st%d%nspin)) / (M_TWO*e_field)
+          lr_rho(1:gr%mesh%np, 1:st%d%nspin) = &
+               (st%rho(1:gr%mesh%np, 1:st%d%nspin) - lr_rho(1:gr%mesh%np, 1:st%d%nspin)) / (M_TWO*e_field)
 
           !write
           do is = 1, st%d%nspin
@@ -277,10 +277,10 @@ contains
           call elf_calc(st, gr, lr_elf, lr_elfd)
           
           !numerical derivative
-           lr_elf(1:NP, 1:st%d%nspin) = &
-                ( lr_elf(1:NP, 1:st%d%nspin) -  elf(1:NP, 1:st%d%nspin)) / (M_TWO*e_field)
-          lr_elfd(1:NP, 1:st%d%nspin) = &
-               (lr_elfd(1:NP, 1:st%d%nspin) - elfd(1:NP, 1:st%d%nspin)) / (M_TWO*e_field)
+           lr_elf(1:gr%mesh%np, 1:st%d%nspin) = &
+                ( lr_elf(1:gr%mesh%np, 1:st%d%nspin) -  elf(1:gr%mesh%np, 1:st%d%nspin)) / (M_TWO*e_field)
+          lr_elfd(1:gr%mesh%np, 1:st%d%nspin) = &
+               (lr_elfd(1:gr%mesh%np, 1:st%d%nspin) - elfd(1:gr%mesh%np, 1:st%d%nspin)) / (M_TWO*e_field)
 
           !write
           do is = 1, st%d%nspin

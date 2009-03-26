@@ -309,7 +309,7 @@ contains
     case(PROP_CRANK_NICHOLSON)
 #ifdef HAVE_SPARSKIT
       ALLOCATE(tdsk, 1)
-      call zsparskit_solver_init(NP, tdsk)
+      call zsparskit_solver_init(gr%mesh%np, tdsk)
       ALLOCATE(zpsi_tmp(1:gr%mesh%np_part, 1:st%d%dim, 1:st%nst, 1:st%d%nik), gr%mesh%np_part*st%d%dim*st%nst*st%d%nik)
 #else
       message(1) = 'Octopus was not compiled with support for the sparskit library. This'
@@ -318,7 +318,7 @@ contains
       call write_fatal(3)
 #endif
     case(PROP_MAGNUS)
-      ALLOCATE(tr%vmagnus(NP, st%d%nspin, 2), NP*st%d%nspin*2)
+      ALLOCATE(tr%vmagnus(gr%mesh%np, st%d%nspin, 2), gr%mesh%np*st%d%nspin*2)
     case(PROP_CRANK_NICHOLSON_SRC_MEM)
       call ob_rti_init(st, gr, hm, tr%ob, dt, max_iter)
     case(PROP_VISSCHER)
@@ -338,7 +338,7 @@ contains
     end if
 
     ! Allocate memory to store the old KS potentials
-    ALLOCATE(tr%v_old(NP, st%d%nspin, 0:3), NP*st%d%nspin*(3+1))
+    ALLOCATE(tr%v_old(gr%mesh%np, st%d%nspin, 0:3), gr%mesh%np*st%d%nspin*(3+1))
     tr%v_old(:, :, :) = M_ZERO
     call exponential_init(tr%te, gr) ! initialize propagator
 
@@ -452,9 +452,9 @@ contains
       end if
     end if
 
-    call lalg_copy(NP, st%d%nspin, tr%v_old(:, :, 2), tr%v_old(:, :, 3))
-    call lalg_copy(NP, st%d%nspin, tr%v_old(:, :, 1), tr%v_old(:, :, 2))
-    call lalg_copy(NP, st%d%nspin, hm%vhxc(:, :),      tr%v_old(:, :, 1))
+    call lalg_copy(gr%mesh%np, st%d%nspin, tr%v_old(:, :, 2), tr%v_old(:, :, 3))
+    call lalg_copy(gr%mesh%np, st%d%nspin, tr%v_old(:, :, 1), tr%v_old(:, :, 2))
+    call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc(:, :),      tr%v_old(:, :, 1))
     call interpolate( (/t-dt, t-2*dt, t-3*dt/), tr%v_old(:, :, 1:3), t, tr%v_old(:, :, 0))
 
     select case(tr%method)
@@ -470,15 +470,15 @@ contains
     end select
 
     if(self_consistent) then
-      ALLOCATE(vaux(NP, st%d%nspin), NP*st%d%nspin)
+      ALLOCATE(vaux(gr%mesh%np, st%d%nspin), gr%mesh%np*st%d%nspin)
 
       ! First, compare the new potential to the extrapolated one.
-      call states_calc_dens(st, NP)
+      call states_calc_dens(st, gr%mesh%np)
       call v_ks_calc(gr, ks, hm, st)
-      ALLOCATE(dtmp(NP), NP)
+      ALLOCATE(dtmp(gr%mesh%np), gr%mesh%np)
       d_max = M_ZERO
       do is = 1, st%d%nspin
-        dtmp(1:NP) = hm%vhxc(1:NP, is) - tr%v_old(1:NP, is, 0)
+        dtmp(1:gr%mesh%np) = hm%vhxc(1:gr%mesh%np, is) - tr%v_old(1:gr%mesh%np, is, 0)
         d = dmf_nrm2(gr%mesh, dtmp)
         if(d > d_max) d_max = d
       end do
@@ -505,12 +505,12 @@ contains
           case(PROP_VISSCHER);                call td_visscher
           end select
 
-          call states_calc_dens(st, NP)
+          call states_calc_dens(st, gr%mesh%np)
           call v_ks_calc(gr, ks, hm, st)
-          ALLOCATE(dtmp(NP), NP)
+          ALLOCATE(dtmp(gr%mesh%np), gr%mesh%np)
           d_max = M_ZERO
           do is = 1, st%d%nspin
-            dtmp(1:NP) = hm%vhxc(1:NP, is) - vaux(1:NP, is)
+            dtmp(1:gr%mesh%np) = hm%vhxc(1:gr%mesh%np, is) - vaux(1:gr%mesh%np, is)
             d = dmf_nrm2(gr%mesh, dtmp)
             if(d > d_max) d_max = d
           end do
@@ -540,7 +540,7 @@ contains
           call zexp_kinetic(gr, hm, st%zpsi(:, :, ist, ik), tr%cf, -M_HALF*M_zI*dt)
         end do
       end do
-      call states_calc_dens(st, NP)
+      call states_calc_dens(st, gr%mesh%np)
       call v_ks_calc(gr, ks, hm, st)
       do ik = 1, st%d%nik
         do ist = 1, st%nst
@@ -607,31 +607,31 @@ contains
 
       if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
 
-        ALLOCATE(vhxc_t1(NP, st%d%nspin), NP*st%d%nspin)
-        ALLOCATE(vhxc_t2(NP, st%d%nspin), NP*st%d%nspin)
-        call lalg_copy(NP, st%d%nspin, hm%vhxc, vhxc_t1)
+        ALLOCATE(vhxc_t1(gr%mesh%np, st%d%nspin), gr%mesh%np*st%d%nspin)
+        ALLOCATE(vhxc_t2(gr%mesh%np, st%d%nspin), gr%mesh%np*st%d%nspin)
+        call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t1)
 
         ALLOCATE(zpsi1(gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
 
-        st%rho(1:NP, 1:st%d%nspin) = M_ZERO
+        st%rho(1:gr%mesh%np, 1:st%d%nspin) = M_ZERO
 
         do ik = 1, st%d%nik
           do ist = st%st_start, st%st_end
             
             !save the state
             do idim = 1, st%d%dim
-              call lalg_copy(NP, st%zpsi(:, idim, ist, ik), zpsi1(:, idim))
+              call lalg_copy(gr%mesh%np, st%zpsi(:, idim, ist, ik), zpsi1(:, idim))
             end do
             
             !propagate the state dt with H(t-dt)
             call exponential_apply(tr%te, gr, hm, st%zpsi(:,:, ist, ik), ist, ik, dt, t-dt)
             
             !calculate the contribution to the density
-            call states_dens_accumulate(st, NP, st%rho, ist, ik)
+            call states_dens_accumulate(st, gr%mesh%np, st%rho, ist, ik)
             
             !restore the saved state
             do idim = 1, st%d%dim
-              call lalg_copy(NP, zpsi1(:, idim), st%zpsi(:, idim, ist, ik))
+              call lalg_copy(gr%mesh%np, zpsi1(:, idim), st%zpsi(:, idim, ist, ik))
             end do
           end do
           
@@ -640,12 +640,12 @@ contains
         deallocate(zpsi1)
         
         ! finish the calculation of the density
-        call states_dens_reduce(st, NP, st%rho)
+        call states_dens_reduce(st, gr%mesh%np, st%rho)
 
         call v_ks_calc(gr, ks, hm, st)
 
-        call lalg_copy(NP, st%d%nspin, hm%vhxc, vhxc_t2)
-        call lalg_copy(NP, st%d%nspin, vhxc_t1, hm%vhxc)
+        call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t2)
+        call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t1, hm%vhxc)
         call hamiltonian_update_potential(hm, gr%mesh)
       end if
 
@@ -667,7 +667,7 @@ contains
       if(gauge_field_is_applied(hm%ep%gfield)) call gauge_field_propagate(hm%ep%gfield, gauge_force, dt)
 
       if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
-        call lalg_copy(NP, st%d%nspin, vhxc_t2, hm%vhxc)
+        call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t2, hm%vhxc)
         call hamiltonian_update_potential(hm, gr%mesh)
       end if
 
@@ -702,7 +702,7 @@ contains
       end do
 
       ! interpolate the hamiltonian to time t
-      call lalg_copy(NP, st%d%nspin, tr%v_old(:, :, 0), hm%vhxc)
+      call lalg_copy(gr%mesh%np, st%d%nspin, tr%v_old(:, :, 0), hm%vhxc)
       call hamiltonian_update_potential(hm, gr%mesh)
 
       ! move the ions to time t
@@ -802,8 +802,8 @@ contains
         ALLOCATE(zpsi_rhs_pred(gr%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik), isize)
         zpsi_rhs_pred = st%zpsi ! store zpsi for predictor step
         
-        ALLOCATE(vhxc_t1(NP, st%d%nspin), NP*st%d%nspin)
-        ALLOCATE(vhxc_t2(NP, st%d%nspin), NP*st%d%nspin)
+        ALLOCATE(vhxc_t1(gr%mesh%np, st%d%nspin), gr%mesh%np*st%d%nspin)
+        ALLOCATE(vhxc_t2(gr%mesh%np, st%d%nspin), gr%mesh%np*st%d%nspin)
         vhxc_t1 = hm%vhxc
 
         ! get rhs of CN linear system (rhs1 = (1-i\delta t/2 H_n)\psi^n)
@@ -823,12 +823,12 @@ contains
             do ist = st%st_start, st%st_end
               idim_op = idim; ist_op = ist; ik_op = ik
               call zsparskit_solver_run(tdsk, td_zop, td_zopt, &
-                st%zpsi(1:NP, idim, ist, ik), zpsi_rhs_pred(1:NP, idim, ist, ik))
+                st%zpsi(1:gr%mesh%np, idim, ist, ik), zpsi_rhs_pred(1:gr%mesh%np, idim, ist, ik))
             end do
           end do
         end do
 
-        call states_calc_dens(st, NP)
+        call states_calc_dens(st, gr%mesh%np)
         call v_ks_calc(gr, ks, hm, st)
 
         vhxc_t2 = hm%vhxc
@@ -854,7 +854,7 @@ contains
           do ist = st%st_start, st%st_end
             idim_op = idim; ist_op = ist; ik_op = ik
             call zsparskit_solver_run(tdsk, td_zop, td_zopt, &
-              st%zpsi(1:NP, idim, ist, ik), zpsi_rhs_corr(1:NP, idim, ist, ik))
+              st%zpsi(1:gr%mesh%np, idim, ist, ik), zpsi_rhs_corr(1:gr%mesh%np, idim, ist, ik))
           end do
         end do
       end do
@@ -876,7 +876,7 @@ contains
 
       call push_sub('td_rti.td_magnus')
 
-      ALLOCATE(vaux(NP, st%d%nspin, 2), NP*st%d%nspin*2)
+      ALLOCATE(vaux(gr%mesh%np, st%d%nspin, 2), gr%mesh%np*st%d%nspin*2)
 
       time(1) = (M_HALF-sqrt(M_THREE)/M_SIX)*dt
       time(2) = (M_HALF+sqrt(M_THREE)/M_SIX)*dt
@@ -895,7 +895,7 @@ contains
         do i = 1, hm%ep%no_lasers
           select case(laser_kind(hm%ep%lasers(i)))
           case(E_FIELD_ELECTRIC)
-            ALLOCATE(pot(NP), NP)
+            ALLOCATE(pot(gr%mesh%np), gr%mesh%np)
             call laser_potential(gr%sb, hm%ep%lasers(i), gr%mesh, pot, t-dt+time(j))
             do is = 1, st%d%nspin
               vaux(:, is, j) = vaux(:, is, j) + pot(:)
@@ -1031,7 +1031,7 @@ contains
       end do
 
       ! propagate the hamiltonian to time t
-      call lalg_copy(NP, st%d%nspin, tr%v_old(:, :, 0), hm%vhxc)
+      call lalg_copy(gr%mesh%np, st%d%nspin, tr%v_old(:, :, 0), hm%vhxc)
       call hamiltonian_update_potential(hm, gr%mesh)
 
       if(present(ions)) then

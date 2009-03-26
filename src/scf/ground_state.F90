@@ -97,7 +97,7 @@ contains
       ! Use free states as initial wavefunctions.
       if(sys%gr%sb%open_boundaries) then
         ASSERT(sys%st%ob_ncs.eq.sys%st%nst)
-        sys%st%zpsi(1:sys%NP, :, :, :) = sys%st%zphi(1:sys%NP, :, :, :)
+        sys%st%zpsi(1:sys%gr%mesh%np, :, :, :) = sys%st%zphi(1:sys%gr%mesh%np, :, :, :)
       else
         ! Randomly generate the initial wave-functions.
         call states_generate_random(sys%st, sys%gr%mesh)

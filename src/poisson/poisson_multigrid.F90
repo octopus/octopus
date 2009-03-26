@@ -211,9 +211,9 @@ contains
     call gridhier_init(err, gr%mgrid, add_points_for_boundaries=.true.)
 
     call correct_rho(this%corrector, gr%mesh, rho, tau%level(0)%p, vh_correction)
-    call lalg_scal(NP, -M_FOUR*M_PI, tau%level(0)%p)
+    call lalg_scal(gr%mesh%np, -M_FOUR*M_PI, tau%level(0)%p)
 
-    forall (ip = 1:NP) phi%level(0)%p(ip) = pot(ip) - vh_correction(ip)
+    forall (ip = 1:gr%mesh%np) phi%level(0)%p(ip) = pot(ip) - vh_correction(ip)
 
     cl = gr%mgrid%n_levels
 
@@ -256,7 +256,7 @@ contains
       call write_warning(2)
     end if
 
-    forall (ip = 1:NP) pot(ip) = phi%level(0)%p(ip) + vh_correction(ip)
+    forall (ip = 1:gr%mesh%np) pot(ip) = phi%level(0)%p(ip) + vh_correction(ip)
 
     deallocate(vh_correction)
 

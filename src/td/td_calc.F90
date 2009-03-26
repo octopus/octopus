@@ -70,18 +70,18 @@ subroutine td_calc_tacc(gr, geo, st, hm, acc, t)
 
   ! And now, i<[H,[V_nl,x]]>
   x = M_ZERO
-  ALLOCATE(hzpsi (NP, st%d%dim), NP*st%d%dim)
-  ALLOCATE(hhzpsi(3, NP),        3*NP)
+  ALLOCATE(hzpsi (gr%mesh%np, st%d%dim), gr%mesh%np*st%d%dim)
+  ALLOCATE(hhzpsi(3, gr%mesh%np),        3*gr%mesh%np)
 
   do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
 
       call zhamiltonian_apply(hm, gr, st%zpsi(:, :, ist, ik), hzpsi(:,:), ist, ik, t)
 
-      ALLOCATE(xzpsi    (NP, st%d%dim, 3), NP*st%d%dim*3)
-      ALLOCATE(vnl_xzpsi(NP, st%d%dim),    NP*st%d%dim)
+      ALLOCATE(xzpsi    (gr%mesh%np, st%d%dim, 3), gr%mesh%np*st%d%dim*3)
+      ALLOCATE(vnl_xzpsi(gr%mesh%np, st%d%dim),    gr%mesh%np*st%d%dim)
       xzpsi = M_z0
-      do k = 1, NP
+      do k = 1, gr%mesh%np
         do j = 1, gr%mesh%sb%dim
           xzpsi(k, 1:st%d%dim, j) = gr%mesh%x(k, j)*st%zpsi(k, 1:st%d%dim, ist, ik)
         end do
@@ -92,12 +92,12 @@ subroutine td_calc_tacc(gr, geo, st, hm, acc, t)
         call zvnlpsi(hm, gr%mesh, xzpsi(:,:, j), vnl_xzpsi(:,:), ik)
 
         do idim = 1, st%d%dim
-          x(j) = x(j) - 2*st%occ(ist, ik)*zmf_dotp(gr%mesh, hzpsi(1:NP, idim), vnl_xzpsi(:, idim) )
+          x(j) = x(j) - 2*st%occ(ist, ik)*zmf_dotp(gr%mesh, hzpsi(1:gr%mesh%np, idim), vnl_xzpsi(:, idim) )
         end do
       end do
 
       xzpsi = M_z0
-      do k = 1, NP
+      do k = 1, gr%mesh%np
         do j = 1, gr%mesh%sb%dim
           xzpsi(k, 1:st%d%dim, j) = gr%mesh%x(k, j)*hzpsi(k, 1:st%d%dim)
         end do
@@ -108,7 +108,7 @@ subroutine td_calc_tacc(gr, geo, st, hm, acc, t)
         call zvnlpsi(hm, gr%mesh, xzpsi(:,:, j), vnl_xzpsi(:,:), ik)
         do idim = 1, st%d%dim
           x(j) = x(j) + 2*st%occ(ist, ik)* &
-            zmf_dotp(gr%mesh, st%zpsi(1:NP, idim, ist, ik), vnl_xzpsi(:, idim) )
+            zmf_dotp(gr%mesh, st%zpsi(1:gr%mesh%np, idim, ist, ik), vnl_xzpsi(:, idim) )
         end do
       end do
       deallocate(xzpsi, vnl_xzpsi)

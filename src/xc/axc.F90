@@ -47,16 +47,16 @@ subroutine xc_get_vxc_and_axc(gr, xcs, st, rho, j, ispin, vxc, axc, ex, ec, exc_
   spin_channels = xcs%j_functl%spin_channels
 
   !allocate memory
-  ALLOCATE(v   (NP, gr%mesh%sb%dim, spin_channels), NP*gr%mesh%sb%dim*spin_channels)
+  ALLOCATE(v   (gr%mesh%np, gr%mesh%sb%dim, spin_channels), gr%mesh%np*gr%mesh%sb%dim*spin_channels)
   ALLOCATE(f   (gr%mesh%np_part, gr%mesh%sb%dim, spin_channels), gr%mesh%np_part*gr%mesh%sb%dim*spin_channels)
-  ALLOCATE(dedd(NP, spin_channels),       NP*spin_channels)
+  ALLOCATE(dedd(gr%mesh%np, spin_channels),       gr%mesh%np*spin_channels)
   ALLOCATE(dedv(gr%mesh%np_part, gr%mesh%sb%dim, spin_channels), gr%mesh%np_part*gr%mesh%sb%dim*spin_channels)
   dedd = M_ZERO; dedv = M_ZERO
 
   !Compute j/rho and the vorticity
   do is = 1, spin_channels
     do id = 1, gr%mesh%sb%dim
-      f(1:NP, id, is) = j(1:NP, id, is)/rho(1:NP, is)
+      f(1:gr%mesh%np, id, is) = j(1:gr%mesh%np, id, is)/rho(1:gr%mesh%np, is)
     end do
     call dderivatives_curl(gr%der, f(:,:,is), v(:,:,is))
   end do
@@ -66,7 +66,7 @@ subroutine xc_get_vxc_and_axc(gr, xcs, st, rho, j, ispin, vxc, axc, ex, ec, exc_
   ALLOCATE(l_dedd(spin_channels),       spin_channels)
   ALLOCATE(l_dedv(gr%mesh%sb%dim, spin_channels), gr%mesh%sb%dim*spin_channels)
   l_dedd = M_ZERO; l_dedv = M_ZERO
-  space_loop: do i = 1, NP
+  space_loop: do i = 1, gr%mesh%np
     ! make a local copy with the correct memory order
     l_dens (:) = rho(i, :)
     l_v(:,:)   = v(i, :,:)
@@ -89,13 +89,13 @@ subroutine xc_get_vxc_and_axc(gr, xcs, st, rho, j, ispin, vxc, axc, ex, ec, exc_
 
   ! add contributions to vxc and axc
   vxc = vxc + dedd
-  ALLOCATE(tmp(NP, gr%mesh%sb%dim), NP*gr%mesh%sb%dim)
+  ALLOCATE(tmp(gr%mesh%np, gr%mesh%sb%dim), gr%mesh%np*gr%mesh%sb%dim)
   do is = 1, spin_channels
     call dderivatives_curl(gr%der, dedv(:, :, is), tmp)
 
     do id = 1, gr%mesh%sb%dim
-      axc(1:NP, id, is) = axc(1:NP, id, is) - tmp(1:NP, id)/rho(1:NP, is)
-      vxc(1:NP, is) = vxc(1:NP, is) - axc(1:NP, id, is)*f(1:NP, id, is)
+      axc(1:gr%mesh%np, id, is) = axc(1:gr%mesh%np, id, is) - tmp(1:gr%mesh%np, id)/rho(1:gr%mesh%np, is)
+      vxc(1:gr%mesh%np, is) = vxc(1:gr%mesh%np, is) - axc(1:gr%mesh%np, id, is)*f(1:gr%mesh%np, id, is)
     end do
   end do
   deallocate(tmp)

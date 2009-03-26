@@ -2039,9 +2039,9 @@ contains
   subroutine states_calc_tau_jp_gn(gr, st, tau, jp, grho)
     type(grid_t),    intent(inout) :: gr
     type(states_t),  intent(inout) :: st
-    FLOAT, optional, intent(out)   ::  tau(:,:)    ! (NP, st%d%nspin)
-    FLOAT, optional, intent(out)   ::   jp(:,:,:)  ! (NP, gr%mesh%sb%dim, st%d%nspin)
-    FLOAT, optional, intent(out)   :: grho(:,:,:)  ! (NP, gr%mesh%sb%dim, st%d%nspin)
+    FLOAT, optional, intent(out)   ::  tau(:,:)    ! (gr%mesh%np, st%d%nspin)
+    FLOAT, optional, intent(out)   ::   jp(:,:,:)  ! (gr%mesh%np, gr%mesh%sb%dim, st%d%nspin)
+    FLOAT, optional, intent(out)   :: grho(:,:,:)  ! (gr%mesh%np, gr%mesh%sb%dim, st%d%nspin)
 
     CMPLX, allocatable :: wf_psi(:,:), gwf_psi(:,:,:)
     CMPLX   :: c_tmp
@@ -2054,7 +2054,7 @@ contains
 #endif
 
     ALLOCATE(wf_psi(gr%mesh%np_part, st%d%dim),  gr%mesh%np_part*st%d%dim)
-    ALLOCATE(gwf_psi(NP, gr%mesh%sb%dim, st%d%dim), NP*gr%mesh%sb%dim*st%d%dim)   
+    ALLOCATE(gwf_psi(gr%mesh%np, gr%mesh%sb%dim, st%d%dim), gr%mesh%np*gr%mesh%sb%dim*st%d%dim)   
 
     sp = 1
     if(st%d%ispin == SPIN_POLARIZED) sp = 2
@@ -2086,35 +2086,35 @@ contains
           ww = st%d%kweights(ik)*st%occ(ist, ik)
           do i_dim = 1, gr%mesh%sb%dim
             if(present(grho)) &
-              grho(1:NP, i_dim, is) = grho(1:NP, i_dim, is) + &
-                ww*M_TWO*real(conjg(wf_psi(1:NP, 1))*gwf_psi(1:NP, i_dim, 1))
+              grho(1:gr%mesh%np, i_dim, is) = grho(1:gr%mesh%np, i_dim, is) + &
+                ww*M_TWO*real(conjg(wf_psi(1:gr%mesh%np, 1))*gwf_psi(1:gr%mesh%np, i_dim, 1))
             if(present(  jp)) &
-              jp  (1:NP, i_dim, is) = jp  (1:NP, i_dim, is) + &
-                ww*aimag(conjg(wf_psi(1:NP, 1))*gwf_psi(1:NP, i_dim, 1))
+              jp  (1:gr%mesh%np, i_dim, is) = jp  (1:gr%mesh%np, i_dim, is) + &
+                ww*aimag(conjg(wf_psi(1:gr%mesh%np, 1))*gwf_psi(1:gr%mesh%np, i_dim, 1))
             if(present( tau)) then
-              tau (1:NP, is)        = tau (1:NP, is)        + &
-                ww*abs(gwf_psi(1:NP, i_dim, 1))**2
+              tau (1:gr%mesh%np, is)        = tau (1:gr%mesh%np, is)        + &
+                ww*abs(gwf_psi(1:gr%mesh%np, i_dim, 1))**2
             end if
 
             if(st%d%ispin == SPINORS) then
               if(present(grho)) then
-                grho(1:NP, i_dim, 2) = grho(1:NP, i_dim, 2) + &
-                  ww*M_TWO*real(conjg(wf_psi(1:NP, 2))*gwf_psi(1:NP, i_dim, 2))
-                grho(1:NP, i_dim, 3) = grho(1:NP, i_dim, 3) + ww* &
-                  real (gwf_psi(1:NP, i_dim, 1)*conjg(wf_psi(1:NP, 2)) + &
-                    wf_psi(1:NP, 1)*conjg(gwf_psi(1:NP, i_dim, 2)))
-                grho(1:NP, i_dim, 4) = grho(1:NP, i_dim, 4) + ww* &
-                  aimag(gwf_psi(1:NP, i_dim, 1)*conjg(wf_psi(1:NP, 2)) + &
-                    wf_psi(1:NP, 1)*conjg(gwf_psi(1:NP, i_dim, 2)))
+                grho(1:gr%mesh%np, i_dim, 2) = grho(1:gr%mesh%np, i_dim, 2) + &
+                  ww*M_TWO*real(conjg(wf_psi(1:gr%mesh%np, 2))*gwf_psi(1:gr%mesh%np, i_dim, 2))
+                grho(1:gr%mesh%np, i_dim, 3) = grho(1:gr%mesh%np, i_dim, 3) + ww* &
+                  real (gwf_psi(1:gr%mesh%np, i_dim, 1)*conjg(wf_psi(1:gr%mesh%np, 2)) + &
+                    wf_psi(1:gr%mesh%np, 1)*conjg(gwf_psi(1:gr%mesh%np, i_dim, 2)))
+                grho(1:gr%mesh%np, i_dim, 4) = grho(1:gr%mesh%np, i_dim, 4) + ww* &
+                  aimag(gwf_psi(1:gr%mesh%np, i_dim, 1)*conjg(wf_psi(1:gr%mesh%np, 2)) + &
+                    wf_psi(1:gr%mesh%np, 1)*conjg(gwf_psi(1:gr%mesh%np, i_dim, 2)))
               end if
             
               ! the expression for the paramagnetic current with spinors is
               !     j = ( jp(1)             jp(3) + i jp(4) ) 
               !         (-jp(3) + i jp(4)   jp(2)           )
               if(present(  jp)) then
-                jp  (1:NP, i_dim, 2) = jp  (1:NP, i_dim, 2) + &
-                  ww*aimag(conjg(wf_psi(1:NP, 2))*gwf_psi(1:NP, i_dim, 2))
-                do ii = 1, NP
+                jp  (1:gr%mesh%np, i_dim, 2) = jp  (1:gr%mesh%np, i_dim, 2) + &
+                  ww*aimag(conjg(wf_psi(1:gr%mesh%np, 2))*gwf_psi(1:gr%mesh%np, i_dim, 2))
+                do ii = 1, gr%mesh%np
                   c_tmp = conjg(wf_psi(ii, 1))*gwf_psi(ii, i_dim, 2) - wf_psi(ii, 2)*conjg(gwf_psi(ii, i_dim, 1))
                   jp(ii, i_dim, 3) = jp(ii, i_dim, 3) + ww* real(c_tmp)
                   jp(ii, i_dim, 4) = jp(ii, i_dim, 4) + ww*aimag(c_tmp)
@@ -2125,8 +2125,8 @@ contains
               !     t = ( tau(1)              tau(3) + i tau(4) ) 
               !         ( tau(3) - i tau(4)   tau(2)            )
               if(present( tau)) then
-                tau (1:NP, 2) = tau (1:NP, 2) + ww*abs(gwf_psi(1:NP, i_dim, 2))**2
-                do ii = 1, NP
+                tau (1:gr%mesh%np, 2) = tau (1:gr%mesh%np, 2) + ww*abs(gwf_psi(1:gr%mesh%np, i_dim, 2))**2
+                do ii = 1, gr%mesh%np
                   c_tmp = conjg(gwf_psi(ii, i_dim, 1))*gwf_psi(ii, i_dim, 2)
                   tau(ii, 3) = tau(ii, 3) + ww* real(c_tmp)
                   tau(ii, 4) = tau(ii, 4) + ww*aimag(c_tmp)
@@ -2144,25 +2144,25 @@ contains
 
 #if defined(HAVE_MPI)
     if(st%parallel_in_states) then
-      ALLOCATE(tmp_reduce(1:NP), NP)
+      ALLOCATE(tmp_reduce(1:gr%mesh%np), gr%mesh%np)
 
       do is = 1, st%d%nspin
         if(present(tau)) then
-          call MPI_Allreduce(tau(1, is), tmp_reduce(1), NP, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
-          tau(1:NP, is) = tmp_reduce(1:NP)       
+          call MPI_Allreduce(tau(1, is), tmp_reduce(1), gr%mesh%np, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+          tau(1:gr%mesh%np, is) = tmp_reduce(1:gr%mesh%np)       
         end if
 
         do i_dim = 1, gr%mesh%sb%dim
           if(present(jp)) then
-            call MPI_Allreduce(jp(1, i_dim, is), tmp_reduce(1), NP, MPI_FLOAT, MPI_SUM, &
+            call MPI_Allreduce(jp(1, i_dim, is), tmp_reduce(1), gr%mesh%np, MPI_FLOAT, MPI_SUM, &
                  st%mpi_grp%comm, mpi_err)
-            jp(1:NP, i_dim, is) = tmp_reduce(1:NP)
+            jp(1:gr%mesh%np, i_dim, is) = tmp_reduce(1:gr%mesh%np)
           end if
 
           if(present(grho)) then
-            call MPI_Allreduce(grho(1, i_dim, is), tmp_reduce(1), NP, MPI_FLOAT, MPI_SUM, &
+            call MPI_Allreduce(grho(1, i_dim, is), tmp_reduce(1), gr%mesh%np, MPI_FLOAT, MPI_SUM, &
                  st%mpi_grp%comm, mpi_err)
-            grho(1:NP, i_dim, is) = tmp_reduce(1:NP)
+            grho(1:gr%mesh%np, i_dim, is) = tmp_reduce(1:gr%mesh%np)
           end if
         end do
 

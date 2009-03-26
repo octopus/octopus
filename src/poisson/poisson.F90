@@ -302,16 +302,16 @@ contains
     ALLOCATE(aux2(gr%mesh%np), gr%mesh%np)
 
     ! first the real part
-    aux1(1:NP) = real(rho(1:NP))
-    aux2(1:NP) = real(pot(1:NP))
+    aux1(1:gr%mesh%np) = real(rho(1:gr%mesh%np))
+    aux2(1:gr%mesh%np) = real(pot(1:gr%mesh%np))
     call dpoisson_solve(gr, aux2, aux1, all_nodes=all_nodes_value)
-    pot(1:NP)  = aux2(1:NP)
+    pot(1:gr%mesh%np)  = aux2(1:gr%mesh%np)
 
     ! now the imaginary part
-    aux1(1:NP) = aimag(rho(1:NP))
-    aux2(1:NP) = aimag(pot(1:NP))
+    aux1(1:gr%mesh%np) = aimag(rho(1:gr%mesh%np))
+    aux2(1:gr%mesh%np) = aimag(pot(1:gr%mesh%np))
     call dpoisson_solve(gr, aux2, aux1, all_nodes=all_nodes_value)
-    pot(1:NP) = pot(1:NP) + M_zI*aux2(1:NP)
+    pot(1:gr%mesh%np) = pot(1:gr%mesh%np) + M_zI*aux2(1:gr%mesh%np)
 
     deallocate(aux1, aux2)
 
@@ -366,7 +366,7 @@ contains
         potp = M_ZERO; rhop = M_ZERO; rho_corrected = M_ZERO; vh_correction = M_ZERO
         call correct_rho(corrector, gr%mesh, rho, rho_corrected, vh_correction)
 
-        pot(1:NP) = pot(1:NP) - vh_correction(1:NP)
+        pot(1:gr%mesh%np) = pot(1:gr%mesh%np) - vh_correction(1:gr%mesh%np)
 
         call dmf_interpolate(gr%mesh, hartree_integrator%grid%mesh, full_interpolation = .false., u = rho_corrected, f = rhop)
         call dmf_interpolate(gr%mesh, hartree_integrator%grid%mesh, full_interpolation = .false., u = pot, f = potp)
@@ -374,7 +374,7 @@ contains
         call poisson_cg2(hartree_integrator%grid%mesh, hartree_integrator%grid%der, potp, rhop)
 
         call dmf_interpolate(hartree_integrator%grid%mesh, gr%mesh, full_interpolation = .false., u = potp, f = pot)
-        pot(1:NP) = pot(1:NP) + vh_correction(1:NP)
+        pot(1:gr%mesh%np) = pot(1:gr%mesh%np) + vh_correction(1:gr%mesh%np)
 
         deallocate(rho_corrected, vh_correction)
         deallocate(potp, rhop)
@@ -384,9 +384,9 @@ contains
 
         call correct_rho(corrector, gr%mesh, rho, rho_corrected, vh_correction)
 
-        pot(1:NP) = pot(1:NP) - vh_correction(1:NP)
+        pot(1:gr%mesh%np) = pot(1:gr%mesh%np) - vh_correction(1:gr%mesh%np)
         call poisson_cg2(gr%mesh, gr%der, pot, rho_corrected)
-        pot(1:NP) = pot(1:NP) + vh_correction(1:NP)
+        pot(1:gr%mesh%np) = pot(1:gr%mesh%np) + vh_correction(1:gr%mesh%np)
 
         deallocate(rho_corrected, vh_correction)
       end if
@@ -404,7 +404,7 @@ contains
       call correct_rho(corrector, gr%mesh, rho, rho_corrected, vh_correction)
       call poisson_fft(gr%mesh, pot, rho_corrected, average_to_zero = .true.)
 
-      pot(1:NP) = pot(1:NP) + vh_correction(1:NP)
+      pot(1:gr%mesh%np) = pot(1:gr%mesh%np) + vh_correction(1:gr%mesh%np)
       deallocate(rho_corrected, vh_correction)
 
     case(ISF)
@@ -441,10 +441,10 @@ contains
 
     n_gaussians = 4
 
-    ALLOCATE(     rho(NP), NP)
-    ALLOCATE(    rhop(NP), NP)
-    ALLOCATE(      vh(NP), NP)
-    ALLOCATE(vh_exact(NP), NP)
+    ALLOCATE(     rho(gr%mesh%np), gr%mesh%np)
+    ALLOCATE(    rhop(gr%mesh%np), gr%mesh%np)
+    ALLOCATE(      vh(gr%mesh%np), gr%mesh%np)
+    ALLOCATE(vh_exact(gr%mesh%np), gr%mesh%np)
     ALLOCATE(x(gr%mesh%sb%dim, n_gaussians), gr%mesh%sb%dim*n_gaussians)
 
     rho = M_ZERO; vh = M_ZERO; vh_exact = M_ZERO
@@ -466,7 +466,7 @@ contains
           x(k, n) = range * rnd 
         end do
         r = sqrt(sum(x(:, n)*x(:,n)))
-        do i = 1, NP
+        do i = 1, gr%mesh%np
           call mesh_r(gr%mesh, i, r, a = x(:, n))
           rhop(i) = beta*exp(-(r/alpha)**2)
         end do
@@ -481,7 +481,7 @@ contains
     ! This builds analytically its potential
     vh_exact = M_ZERO
     do n = 1, n_gaussians
-      do i = 1, NP
+      do i = 1, gr%mesh%np
         call mesh_r(gr%mesh, i, r, a = x(:, n))
         select case(calc_dim)
         case(3)

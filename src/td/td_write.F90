@@ -1332,14 +1332,14 @@ contains
 
       call geometry_dipole(geo, n_dip)
 
-      ALLOCATE(xpsi(NP, st%d%dim), NP*st%d%dim)
+      ALLOCATE(xpsi(gr%mesh%np, st%d%dim), gr%mesh%np*st%d%dim)
       
       do ik = 1, st%d%nik
         do ist = max(gs_st%st_start, st%st_start), st%st_end
           do uist = gs_st%st_start, gs_st%st_end
             
             do idim = 1, st%d%dim
-              xpsi(1:NP, idim) = gr%mesh%x(1:NP, dir) * gs_st%zpsi(1:NP, idim, uist, ik)
+              xpsi(1:gr%mesh%np, idim) = gr%mesh%x(1:gr%mesh%np, dir) * gs_st%zpsi(1:gr%mesh%np, idim, uist, ik)
             end do
 
             projections(ist, uist, ik) = n_dip(dir) - &

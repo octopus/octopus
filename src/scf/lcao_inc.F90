@@ -114,9 +114,9 @@ subroutine X(lcao_wf) (this, st, gr, geo, hm, start)
 
   ! Allocation of variables
 
-  ALLOCATE(lcaopsi(1:gr%mesh%np_part, 1:st%d%dim, 1:st%d%spin_channels), NP*st%d%dim*st%d%spin_channels)
-  ALLOCATE(lcaopsi2(1:NP, 1:st%d%dim), NP*st%d%dim)
-  ALLOCATE(hpsi(NP, st%d%dim, kstart:kend), NP*st%d%dim*st%d%kpt%nlocal)
+  ALLOCATE(lcaopsi(1:gr%mesh%np_part, 1:st%d%dim, 1:st%d%spin_channels), gr%mesh%np*st%d%dim*st%d%spin_channels)
+  ALLOCATE(lcaopsi2(1:gr%mesh%np, 1:st%d%dim), gr%mesh%np*st%d%dim)
+  ALLOCATE(hpsi(gr%mesh%np, st%d%dim, kstart:kend), gr%mesh%np*st%d%dim*st%d%kpt%nlocal)
   ALLOCATE(hamilt(this%norbs, this%norbs, kstart:kend), this%norbs**2*st%d%kpt%nlocal)
   ALLOCATE(overlap(this%norbs, this%norbs, st%d%spin_channels), this%norbs**2*st%d%spin_channels)
 
@@ -173,7 +173,7 @@ subroutine X(lcao_wf) (this, st, gr, geo, hm, start)
 
     st%eigenval(lcao_start:nst, ik) = ev(lcao_start:nst)
 
-    st%X(psi)(1:NP, 1:st%d%dim, lcao_start:st%st_end, ik) = R_TOTYPE(M_ZERO)
+    st%X(psi)(1:gr%mesh%np, 1:st%d%dim, lcao_start:st%st_end, ik) = R_TOTYPE(M_ZERO)
   end do
   
   ! Change of basis
@@ -186,7 +186,7 @@ subroutine X(lcao_wf) (this, st, gr, geo, hm, start)
         if(ispin /= states_dim_get_spin_index(st%d, ik)) cycle
         do idim = 1, st%d%dim
           do n1 = lcao_start, st%st_end
-            call lalg_axpy(NP, hamilt(n2, n1, ik), lcaopsi2(:, idim), st%X(psi)(:, idim, n1, ik))
+            call lalg_axpy(gr%mesh%np, hamilt(n2, n1, ik), lcaopsi2(:, idim), st%X(psi)(:, idim, n1, ik))
           end do
         end do
       end do
@@ -249,13 +249,13 @@ contains
       write(message(1), '(a, i5, a)') "Info: Extra storage for ", size, " orbitals will be allocated."
       call write_info(1)
 
-      ALLOCATE(buff(1:NP, 1:st%d%dim, iorb:this%norbs, 1:st%d%spin_channels), NP*st%d%dim*size)
-      ALLOCATE(ao(1:NP, st%d%dim), NP*st%d%dim)
+      ALLOCATE(buff(1:gr%mesh%np, 1:st%d%dim, iorb:this%norbs, 1:st%d%spin_channels), gr%mesh%np*st%d%dim*size)
+      ALLOCATE(ao(1:gr%mesh%np, st%d%dim), gr%mesh%np*st%d%dim)
       
       do iorb = iorb, this%norbs
         do ispin = 1, st%d%spin_channels
           call X(lcao_atomic_orbital)(this, iorb, gr%mesh, hm, geo, gr%sb, ao, ispin)
-          buff(1:NP, 1:st%d%dim, iorb, ispin) = ao(1:NP, 1:st%d%dim)
+          buff(1:gr%mesh%np, 1:st%d%dim, iorb, ispin) = ao(1:gr%mesh%np, 1:st%d%dim)
         end do
       end do
       
@@ -277,11 +277,11 @@ contains
     call push_sub('lcao_inc.Xlcao_wf.get_ao')
 
     if(ck(iorb, ispin) == 0) then
-      ao(1:NP, 1:st%d%dim) = buff(1:NP, 1:st%d%dim, iorb, ispin)
+      ao(1:gr%mesh%np, 1:st%d%dim) = buff(1:gr%mesh%np, 1:st%d%dim, iorb, ispin)
     else
       if(use_psi) then
         do idim = 1, st%d%dim
-          call lalg_copy(NP, st%X(psi)(:, idim, cst(iorb, ispin), ck(iorb, ispin)), ao(:, idim))
+          call lalg_copy(gr%mesh%np, st%X(psi)(:, idim, cst(iorb, ispin), ck(iorb, ispin)), ao(:, idim))
         end do
       else
         call X(lcao_atomic_orbital)(this, iorb, gr%mesh, hm, geo, gr%sb, ao, ispin)

@@ -122,7 +122,7 @@ contains
       ! the smoothing has a star stencil like the laplacian
       call nl_operator_init(this%op, "Preconditioner")
       call stencil_star_get_lapl(this%op%stencil, gr%mesh%sb%dim, 1)
-      call nl_operator_build(gr%mesh, this%op, NP, const_w = .not. gr%mesh%use_curvlinear)
+      call nl_operator_build(gr%mesh, this%op, gr%mesh%np, const_w = .not. gr%mesh%use_curvlinear)
       
       ns = this%op%stencil%size
 
@@ -148,9 +148,9 @@ contains
       end do
       
     case(PRE_JACOBI, PRE_MULTIGRID)
-      ALLOCATE(this%diag_lapl(NP), NP)
+      ALLOCATE(this%diag_lapl(gr%mesh%np), gr%mesh%np)
       call derivatives_lapl_diag(gr%der, this%diag_lapl)
-      call lalg_scal(NP, -M_HALF, this%diag_lapl(:))
+      call lalg_scal(gr%mesh%np, -M_HALF, this%diag_lapl(:))
     end select
 
   end subroutine preconditioner_init

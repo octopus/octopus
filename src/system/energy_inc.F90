@@ -31,7 +31,7 @@ subroutine X(calculate_eigenvalues)(hm, gr, st, t)
   integer :: ik, ist
 
   call push_sub('energy_inc.Xcalculate_eigenvalues')
-  ALLOCATE(Hpsi(NP, st%d%dim), NP*st%d%dim)
+  ALLOCATE(Hpsi(gr%mesh%np, st%d%dim), gr%mesh%np*st%d%dim)
 
   if(gr%sb%open_boundaries.and.calc_mode_is(CM_GS)) then
     ! For open boundaries we know the eigenvalues.

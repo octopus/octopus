@@ -141,7 +141,7 @@ contains
       call xc_oep_SpinFactor(oep, d%nspin)
 
       ! This variable will keep vxc across iterations
-      ALLOCATE(oep%vxc(NP), NP)
+      ALLOCATE(oep%vxc(gr%mesh%np), gr%mesh%np)
 
       ! when performing full OEP, we need to solve a linear equation
       if(oep%level == XC_OEP_FULL) then 

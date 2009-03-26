@@ -320,25 +320,25 @@ contains
     dim = 1
     if (hm%d%cdft) dim = 1 + gr%mesh%sb%dim
 
-    ALLOCATE(rhoout(NP, dim, nspin), NP*dim*nspin)
-    ALLOCATE(rhoin (NP, dim, nspin), NP*dim*nspin)
+    ALLOCATE(rhoout(gr%mesh%np, dim, nspin), gr%mesh%np*dim*nspin)
+    ALLOCATE(rhoin (gr%mesh%np, dim, nspin), gr%mesh%np*dim*nspin)
 
-    rhoin(1:NP, 1, 1:nspin) = st%rho(1:NP, 1:nspin)
+    rhoin(1:gr%mesh%np, 1, 1:nspin) = st%rho(1:gr%mesh%np, 1:nspin)
     rhoout = M_ZERO
     if (st%d%cdft) then
-      rhoin(1:NP, 2:dim, 1:nspin) = st%j(1:NP, 1:gr%mesh%sb%dim, 1:nspin)
+      rhoin(1:gr%mesh%np, 2:dim, 1:nspin) = st%j(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:nspin)
     end if
 
     if (scf%what2mix == MIXPOT) then
-      ALLOCATE(vout(NP, dim, nspin), NP*dim*nspin)
-      ALLOCATE( vin(NP, dim, nspin), NP*dim*nspin)
-      ALLOCATE(vnew(NP, dim, nspin), NP*dim*nspin)
+      ALLOCATE(vout(gr%mesh%np, dim, nspin), gr%mesh%np*dim*nspin)
+      ALLOCATE( vin(gr%mesh%np, dim, nspin), gr%mesh%np*dim*nspin)
+      ALLOCATE(vnew(gr%mesh%np, dim, nspin), gr%mesh%np*dim*nspin)
 
-      vin(1:NP, 1, 1:nspin) = hm%vhxc(1:NP, 1:nspin)
+      vin(1:gr%mesh%np, 1, 1:nspin) = hm%vhxc(1:gr%mesh%np, 1:nspin)
       vout = M_ZERO
-      if (st%d%cdft) vin(1:NP, 2:dim, 1:nspin) = hm%axc(1:NP, 1:gr%mesh%sb%dim, 1:nspin)
+      if (st%d%cdft) vin(1:gr%mesh%np, 2:dim, 1:nspin) = hm%axc(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:nspin)
     else
-      ALLOCATE(rhonew(NP, dim, nspin), NP*dim*nspin)
+      ALLOCATE(rhonew(gr%mesh%np, dim, nspin), gr%mesh%np*dim*nspin)
     end if
     evsum_in = states_eigenvalues_sum(st)
 
@@ -381,16 +381,16 @@ contains
       call states_fermi(st, gr%mesh)
 
       ! compute output density, potential (if needed) and eigenvalues sum
-      call states_calc_dens(st, NP)
-      rhoout(1:NP, 1, 1:nspin) = st%rho(1:NP, 1:nspin)
+      call states_calc_dens(st, gr%mesh%np)
+      rhoout(1:gr%mesh%np, 1, 1:nspin) = st%rho(1:gr%mesh%np, 1:nspin)
       if (hm%d%cdft) then
         call calc_physical_current(gr, st, st%j)
-        rhoout(1:NP, 2:dim, 1:nspin) = st%j(1:NP, 1:gr%mesh%sb%dim, 1:nspin)
+        rhoout(1:gr%mesh%np, 2:dim, 1:nspin) = st%j(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:nspin)
       end if
       if (scf%what2mix == MIXPOT) then
         call v_ks_calc(gr, ks, hm, st)
-        vout(1:NP, 1, 1:nspin) = hm%vhxc(1:NP, 1:nspin)
-        if (hm%d%cdft) vout(1:NP, 2:dim, 1:nspin) = hm%axc(1:NP, 1:gr%mesh%sb%dim, 1:nspin)
+        vout(1:gr%mesh%np, 1, 1:nspin) = hm%vhxc(1:gr%mesh%np, 1:nspin)
+        if (hm%d%cdft) vout(1:gr%mesh%np, 2:dim, 1:nspin) = hm%axc(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:nspin)
       end if
       evsum_out = states_eigenvalues_sum(st)
 
@@ -399,10 +399,10 @@ contains
 
       ! compute convergence criteria
       scf%abs_dens = M_ZERO
-      ALLOCATE(tmp(NP), NP)
+      ALLOCATE(tmp(gr%mesh%np), gr%mesh%np)
       do is = 1, nspin
         do idim = 1, dim
-          tmp = abs(rhoin(1:NP, idim, is) - rhoout(1:NP, idim, is))
+          tmp = abs(rhoin(1:gr%mesh%np, idim, is) - rhoout(1:gr%mesh%np, idim, is))
           scf%abs_dens = scf%abs_dens + dmf_integrate(gr%mesh, tmp)
         end do
       end do
@@ -444,15 +444,15 @@ contains
       case (MIXDENS)
         ! mix input and output densities and compute new potential
         call dmixing(scf%smix, iter, rhoin, rhoout, rhonew, dmf_dotp_aux)
-        st%rho(1:NP,1:nspin) = rhonew(1:NP, 1, 1:nspin)
-        if (hm%d%cdft) st%j(1:NP,1:gr%mesh%sb%dim,1:nspin) = rhonew(1:NP, 2:dim, 1:nspin)
+        st%rho(1:gr%mesh%np,1:nspin) = rhonew(1:gr%mesh%np, 1, 1:nspin)
+        if (hm%d%cdft) st%j(1:gr%mesh%np,1:gr%mesh%sb%dim,1:nspin) = rhonew(1:gr%mesh%np, 2:dim, 1:nspin)
         call v_ks_calc(gr, ks, hm, st)
       case (MIXPOT)
         ! mix input and output potentials
         call dmixing(scf%smix, iter, vin, vout, vnew, dmf_dotp_aux)
-        hm%vhxc(1:NP, 1:nspin) = vnew(1:NP, 1, 1:nspin)
+        hm%vhxc(1:gr%mesh%np, 1:nspin) = vnew(1:gr%mesh%np, 1, 1:nspin)
         call hamiltonian_update_potential(hm, gr%mesh)
-        if (hm%d%cdft) hm%axc(1:NP, 1:gr%mesh%sb%dim, 1:nspin) = vnew(1:NP, 2:dim, 1:nspin)
+        if (hm%d%cdft) hm%axc(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:nspin) = vnew(1:gr%mesh%np, 2:dim, 1:nspin)
       end select
 
       ! Are we asked to stop? (Whenever Fortran is ready for signals, this should go away)
@@ -486,11 +486,11 @@ contains
       end if
 
       ! save information for the next iteration
-      rhoin(1:NP, 1, 1:nspin) = st%rho(1:NP, 1:nspin)
-      if (hm%d%cdft) rhoin(1:NP, 2:dim, 1:nspin) = st%j(1:NP, 1:gr%mesh%sb%dim, 1:nspin)
+      rhoin(1:gr%mesh%np, 1, 1:nspin) = st%rho(1:gr%mesh%np, 1:nspin)
+      if (hm%d%cdft) rhoin(1:gr%mesh%np, 2:dim, 1:nspin) = st%j(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:nspin)
       if (scf%what2mix == MIXPOT) then
-        vin(1:NP, 1, 1:nspin) = hm%vhxc(1:NP, 1:nspin)
-        if (hm%d%cdft) vin(1:NP, 2:dim, 1:nspin) = hm%axc(1:NP, 1:gr%mesh%sb%dim, 1:nspin)
+        vin(1:gr%mesh%np, 1, 1:nspin) = hm%vhxc(1:gr%mesh%np, 1:nspin)
+        if (hm%d%cdft) vin(1:gr%mesh%np, 2:dim, 1:nspin) = hm%axc(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:nspin)
       end if
       evsum_in = evsum_out
       if (scf%conv_abs_force > M_ZERO) then

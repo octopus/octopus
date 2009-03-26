@@ -54,9 +54,9 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
   call push_sub('eigen_rmmdiis_inc.eigensolver_rmmdiss')
 
-  ALLOCATE(residuals(1:gr%mesh%np_part, 1:st%d%dim, blocksize), NP*st%d%dim*blocksize)
+  ALLOCATE(residuals(1:gr%mesh%np_part, 1:st%d%dim, blocksize), gr%mesh%np*st%d%dim*blocksize)
   ALLOCATE(preres(1:gr%mesh%np_part, 1:st%d%dim, blocksize), gr%mesh%np_part*st%d%dim*blocksize)
-  ALLOCATE(resres(1:NP, 1:st%d%dim, blocksize), NP*st%d%dim*blocksize)
+  ALLOCATE(resres(1:gr%mesh%np, 1:st%d%dim, blocksize), gr%mesh%np*st%d%dim*blocksize)
   ALLOCATE(lambda(1:2, 1:blocksize), 2*blocksize) 
 
   ALLOCATE(conv(st%st_start:st%st_end), st%lnst)
@@ -106,7 +106,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
         st%eigenval(ist, ik) = X(mf_dotp)(gr%mesh, st%d%dim, st%X(psi)(:,:, ist, ik) , residuals(:, :, ib))
         
         do idim = 1, st%d%dim
-          call lalg_axpy(NP, -st%eigenval(ist, ik), st%X(psi)(:, idim, ist, ik), residuals(:, idim, ib))
+          call lalg_axpy(gr%mesh%np, -st%eigenval(ist, ik), st%X(psi)(:, idim, ist, ik), residuals(:, idim, ib))
         end do
 
         error = X(mf_nrm2)(gr%mesh, st%d%dim, residuals(:, :, ib))
@@ -150,7 +150,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
         if(conv(ist)) cycle
 
         do idim = 1, st%d%dim
-          call lalg_axpy(NP, -st%eigenval(ist, ik), preres(:, idim, ib), resres(:, idim, ib))
+          call lalg_axpy(gr%mesh%np, -st%eigenval(ist, ik), preres(:, idim, ib), resres(:, idim, ib))
         end do
 
         ! the size of the correction
@@ -176,14 +176,14 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
         lambda(1, ib) = -lambda(1, ib)/lambda(2, ib)
 
         do idim = 1, st%d%dim
-          call lalg_axpy(NP, M_HALF*lambda(1, ib), resres(:, idim, ib), residuals(:, idim, ib))
+          call lalg_axpy(gr%mesh%np, M_HALF*lambda(1, ib), resres(:, idim, ib), residuals(:, idim, ib))
         end do
 
         call X(preconditioner_apply)(pre, gr, hm, residuals(:, :, ib), preres(:, :, ib))
 
         !now correct psi
         do idim = 1, st%d%dim
-          call lalg_axpy(NP, M_TWO*lambda(1, ib), preres(:, idim, ib), st%X(psi)(:, idim, ist, ik))
+          call lalg_axpy(gr%mesh%np, M_TWO*lambda(1, ib), preres(:, idim, ib), st%X(psi)(:, idim, ist, ik))
         end do
 
         niter = niter + 1

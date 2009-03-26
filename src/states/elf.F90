@@ -66,7 +66,7 @@ contains
   subroutine elf_calc(st, gr, elf, de)
     type(states_t),   intent(inout) :: st
     type(grid_t),     intent(inout) :: gr
-    FLOAT,            intent(inout) :: elf(:,:) ! elf(NP, 1) if st%d%ispin = 1, elf(NP, 3) otherwise.
+    FLOAT,            intent(inout) :: elf(:,:) ! elf(gr%mesh%np, 1) if st%d%ispin = 1, elf(gr%mesh%np, 3) otherwise.
                                                 ! On output, it should contain the global ELF if st%d%ispin = 1,
                                                 ! otherwise elf(:, 3) contains the global elf, and 
                                                 ! elf(:, 1) and elf(:, 2) the spin resolved ELF.
@@ -85,14 +85,14 @@ contains
     ! If we want it, the argument elf should have three components.c
     nelfs = size(elf, 2)
 
-    ALLOCATE(rho(NP, st%d%nspin), NP)
-    ALLOCATE(kappa(NP, st%d%nspin), NP)
+    ALLOCATE(rho(gr%mesh%np, st%d%nspin), gr%mesh%np)
+    ALLOCATE(kappa(gr%mesh%np, st%d%nspin), gr%mesh%np)
     rho = M_ZERO
     kappa = M_ZERO
-    call states_calc_dens(st, NP, rho)
+    call states_calc_dens(st, gr%mesh%np, rho)
 
-    ALLOCATE(grho(NP, gr%mesh%sb%dim, st%d%nspin), NP*gr%mesh%sb%dim*st%d%nspin)
-    ALLOCATE(  jj(NP, gr%mesh%sb%dim, st%d%nspin), NP*gr%mesh%sb%dim*st%d%nspin)
+    ALLOCATE(grho(gr%mesh%np, gr%mesh%sb%dim, st%d%nspin), gr%mesh%np*gr%mesh%sb%dim*st%d%nspin)
+    ALLOCATE(  jj(gr%mesh%np, gr%mesh%sb%dim, st%d%nspin), gr%mesh%np*gr%mesh%sb%dim*st%d%nspin)
 
     call states_calc_tau_jp_gn(gr, st, kappa, jj, grho)
 
@@ -108,7 +108,7 @@ contains
 
     ! kapp will contain rho * D
     do_is: do is = 1, st%d%nspin
-      do i = 1, NP
+      do i = 1, gr%mesh%np
         kappa(i, is) = kappa(i, is)*rho(i, is)        &    ! + tau * rho
           - M_FOURTH*sum(grho(i, 1:gr%mesh%sb%dim, is)**2)      &    ! - | nabla rho |^2 / 4
           - sum(jj(i, 1:gr%mesh%sb%dim, is)**2)                      ! - j^2
@@ -117,7 +117,7 @@ contains
       deallocate(grho, jj)   ! these are no longer needed
     
       ! pass this information to the caller if requested
-      if(present(de)) de(1:NP,is) = kappa(1:NP,is)
+      if(present(de)) de(1:gr%mesh%np,is) = kappa(1:gr%mesh%np,is)
 
     end do do_is
 
@@ -128,7 +128,7 @@ contains
 
     select case(st%d%ispin)
     case(UNPOLARIZED)
-      do i = 1, NP
+      do i = 1, gr%mesh%np
         if(rho(i, 1) >= dmin) then
           select case(gr%sb%dim)
             case(3); D0 = f * rho(i, 1)**(M_EIGHT/M_THREE)
@@ -142,7 +142,7 @@ contains
 
     case(SPIN_POLARIZED, SPINORS)
       if(nelfs .eq. 3) then
-        do i = 1, NP
+        do i = 1, gr%mesh%np
           dens = rho(i, 1) + rho(i, 2)
           if( dens >= dmin ) then
             select case(gr%sb%dim)
@@ -155,7 +155,7 @@ contains
           endif
         end do
       end if
-      do i = 1, NP
+      do i = 1, gr%mesh%np
         do is = 1, st%d%spin_channels
           if(rho(i, is) >= dmin) then
             select case(gr%sb%dim)
@@ -210,15 +210,15 @@ contains
     end if
 
     do_is: do is = 1, st%d%nspin
-      ALLOCATE(    r(NP),       NP)
-      ALLOCATE(gradr(NP, gr%mesh%sb%dim), NP*gr%mesh%sb%dim)
-      ALLOCATE(    j(NP, gr%mesh%sb%dim), NP*gr%mesh%sb%dim)
+      ALLOCATE(    r(gr%mesh%np),       gr%mesh%np)
+      ALLOCATE(gradr(gr%mesh%np, gr%mesh%sb%dim), gr%mesh%np*gr%mesh%sb%dim)
+      ALLOCATE(    j(gr%mesh%np, gr%mesh%sb%dim), gr%mesh%np*gr%mesh%sb%dim)
       r = M_ZERO; gradr = M_ZERO; j  = M_ZERO
 
-      elf(1:NP,is) = M_ZERO
+      elf(1:gr%mesh%np,is) = M_ZERO
 
       ALLOCATE(psi_fs(gr%mesh%np_part),  gr%mesh%np_part)
-      ALLOCATE(gpsi  (NP, gr%mesh%sb%dim), NP*gr%mesh%sb%dim)
+      ALLOCATE(gpsi  (gr%mesh%np, gr%mesh%sb%dim), gr%mesh%np*gr%mesh%sb%dim)
       do ik = is, st%d%nik, st%d%nspin
         do ist = 1, st%nst
           do idim = 1, st%d%dim
@@ -245,7 +245,7 @@ contains
                    aimag(conjg(psi_fs(:))*gpsi(:,i))
             end do
 
-            do i = 1, NP
+            do i = 1, gr%mesh%np
               if(r(i) >= dmin) then
                 elf(i,is) = elf(i,is) + st%d%kweights(ik)*st%occ(ist, ik)/s * &
                      sum(abs(gpsi(i, 1:gr%mesh%sb%dim))**2)
@@ -256,17 +256,17 @@ contains
       end do
       deallocate(psi_fs, gpsi)
 
-      do i = 1, NP
+      do i = 1, gr%mesh%np
         if(r(i) >= dmin) then
           elf(i,is) = elf(i,is) - (M_FOURTH*sum(gradr(i, 1:gr%mesh%sb%dim)**2) + sum(j(i, 1:gr%mesh%sb%dim)**2))/(s*r(i))
         end if
       end do
     
-      if(present(de)) de(1:NP,is)=elf(1:NP,is)
+      if(present(de)) de(1:gr%mesh%np,is)=elf(1:gr%mesh%np,is)
 
       ! normalization
       f = M_THREE/M_FIVE*(M_SIX*M_PI**2)**M_TWOTHIRD
-      do i = 1, NP
+      do i = 1, gr%mesh%np
         if(abs(r(i)) >= dmin) then
           d    = f*(r(i)/s)**(M_FIVE/M_THREE)
           elf(i,is) = M_ONE/(M_ONE + (elf(i,is)/d)**2)

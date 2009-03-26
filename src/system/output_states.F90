@@ -47,10 +47,10 @@
     end if
 
     if(iand(outp%what, output_pol_density).ne.0) then
-      ALLOCATE(dtmp(NP), NP)
+      ALLOCATE(dtmp(gr%mesh%np), gr%mesh%np)
       do idim=1, gr%mesh%sb%dim
         do is = 1, st%d%nspin
-          dtmp(1:NP)=st%rho(1:NP,is)*gr%mesh%x(1:NP,idim)
+          dtmp(1:gr%mesh%np)=st%rho(1:gr%mesh%np,is)*gr%mesh%x(1:gr%mesh%np,idim)
           write(fname, '(a,i1,a,i1)') 'dipole_density-', is, '-',idim
           call doutput_function(outp%how, dir, fname, gr%mesh, gr%sb, &
             dtmp(:), u, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
@@ -199,7 +199,7 @@
     ALLOCATE(multipole(gr%mesh%np_part, st%d%dim), gr%mesh%np_part)
     multipole = M_ZERO
     do ii = 1, st%d%dim
-      do i = 1, NP
+      do i = 1, gr%mesh%np
         call mesh_r(gr%mesh, i, r, x = x)
         call loct_ylm(1, x(1), x(2), x(3), l, m, ylm)
         multipole(i, ii) = r**l * ylm
@@ -276,9 +276,9 @@
     if(st%wfs_type == M_CMPLX) then
       call states_calc_tau_jp_gn(gr, st, jp=st%j)
 
-      ALLOCATE(j(NP, MAX_DIM), NP*MAX_DIM)
+      ALLOCATE(j(gr%mesh%np, MAX_DIM), gr%mesh%np*MAX_DIM)
       do k = 1, gr%mesh%sb%dim
-        do i = 1, NP
+        do i = 1, gr%mesh%np
           j(i, k) = sum(st%j(i, k, :))
         end do
       end do

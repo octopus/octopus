@@ -120,12 +120,12 @@ contains
     ! WARNING: spinors not yet supported.
     select case(hm%d%ispin)
     case(UNPOLARIZED)
-      psi(1:NP, 1) = exp(factor*(hm%ep%vpsl(1:NP)+hm%vhxc(1:NP, 1)))*psi(1:NP, 1)
+      psi(1:gr%mesh%np, 1) = exp(factor*(hm%ep%vpsl(1:gr%mesh%np)+hm%vhxc(1:gr%mesh%np, 1)))*psi(1:gr%mesh%np, 1)
     case(SPIN_POLARIZED)
       if(modulo(ik+1, 2) == 0) then ! we have a spin down
-        psi(1:NP, 1) = exp(factor*(hm%ep%vpsl(1:NP)+hm%vhxc(1:NP, 1)))*psi(1:NP, 1)
+        psi(1:gr%mesh%np, 1) = exp(factor*(hm%ep%vpsl(1:gr%mesh%np)+hm%vhxc(1:gr%mesh%np, 1)))*psi(1:gr%mesh%np, 1)
       else
-        psi(1:NP, 1) = exp(factor*(hm%ep%vpsl(1:NP)+hm%vhxc(1:NP, 2)))*psi(1:NP, 1)
+        psi(1:gr%mesh%np, 1) = exp(factor*(hm%ep%vpsl(1:gr%mesh%np)+hm%vhxc(1:gr%mesh%np, 2)))*psi(1:gr%mesh%np, 1)
       end if
     case(SPINORS)
       message(1) = 'Internal error in exp_vlpsi'
@@ -135,9 +135,9 @@ contains
     do i = 1, hm%ep%no_lasers
       select case(laser_kind(hm%ep%lasers(i)))
       case(E_FIELD_ELECTRIC)
-        ALLOCATE(pot(NP), NP)
+        ALLOCATE(pot(gr%mesh%np), gr%mesh%np)
         call laser_potential(gr%sb, hm%ep%lasers(i), gr%mesh, pot, t)
-        psi(1:NP, ik) = exp( factor * pot(1:NP) ) * psi(1:NP, ik) 
+        psi(1:gr%mesh%np, ik) = exp( factor * pot(1:gr%mesh%np) ) * psi(1:gr%mesh%np, ik) 
         deallocate(pot)
       case(E_FIELD_MAGNETIC, E_FIELD_VECTOR_POTENTIAL)
         write(message(1),'(a)') 'The split-operator scheme cannot be used with magnetic fields, or'

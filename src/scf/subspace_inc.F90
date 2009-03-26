@@ -47,7 +47,7 @@ subroutine X(subspace_diag)(gr, st, hm, ik, diff)
 
     ALLOCATE(h_subspace(st%nst, st%nst), st%nst*st%nst)
     ALLOCATE(vec(st%nst, st%nst), st%nst*st%nst)
-    ALLOCATE(f(NP, st%d%dim, st%d%block_size), NP*st%d%dim*st%d%block_size)
+    ALLOCATE(f(gr%mesh%np, st%d%dim, st%d%block_size), gr%mesh%np*st%d%dim*st%d%block_size)
 
     ! Calculate the matrix representation of the Hamiltonian in the subspace <psi|H|psi>.
     do ist = st%st_start, st%st_end, st%d%block_size
@@ -160,7 +160,7 @@ subroutine X(subspace_diag_par_states)(gr, st, hm, ik, diff)
   call lalg_eigensolve(st%nst, h_subspace, vec, st%eigenval(:, ik))
 
   ! The new states are the given by the eigenvectors of the matrix.
-  f(1:NP, 1:st%d%dim, st%st_start:st%st_end) = st%X(psi)(1:NP, 1:st%d%dim, st%st_start:st%st_end, ik)
+  f(1:gr%mesh%np, 1:st%d%dim, st%st_start:st%st_end) = st%X(psi)(1:gr%mesh%np, 1:st%d%dim, st%st_start:st%st_end, ik)
 
   call states_block_matr_mul(gr%mesh, st, st%st_start, st%st_end, st%st_start, st%st_end, &
        f, vec, st%X(psi)(:, :, :, ik))
@@ -168,7 +168,7 @@ subroutine X(subspace_diag_par_states)(gr, st, hm, ik, diff)
   ! Renormalize.
   do i = st%st_start, st%st_end
     nrm2 = X(mf_nrm2)(gr%mesh, st%d%dim, st%X(psi)(:, :, i, ik))
-    st%X(psi)(1:NP, 1:st%d%dim, i, ik) = st%X(psi)(1:NP, 1:st%d%dim, i, ik)/nrm2
+    st%X(psi)(1:gr%mesh%np, 1:st%d%dim, i, ik) = st%X(psi)(1:gr%mesh%np, 1:st%d%dim, i, ik)/nrm2
   end do
 
   ! Recalculate the residues if requested by the diff argument.

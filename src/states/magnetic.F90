@@ -137,7 +137,7 @@ contains
   subroutine calc_physical_current(gr, st, j)
     type(grid_t),     intent(inout) :: gr
     type(states_t),   intent(inout) :: st
-    FLOAT,            intent(out)   :: j(:,:,:)   ! j(NP, gr%mesh%sb%dim, st%d%nspin)
+    FLOAT,            intent(out)   :: j(:,:,:)   ! j(gr%mesh%np, gr%mesh%sb%dim, st%d%nspin)
 
     call push_sub('magnetic.calc_physical_current')
 

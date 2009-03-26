@@ -383,7 +383,7 @@ contains
     imax = st%d%nspin
     if(st%d%ispin == SPIN_POLARIZED) imax = 3
 
-    ALLOCATE(f_loc(1:NP, imax), NP*imax)
+    ALLOCATE(f_loc(1:gr%mesh%np, imax), gr%mesh%np*imax)
 
     ! First the ELF in real space
     if(iand(outp%what, output_elf).ne.0 .or. iand(outp%what, output_elf_basins).ne.0) then
@@ -481,11 +481,11 @@ contains
     integer :: is, ii
 
     ALLOCATE( rho(gr%mesh%np_part, st%d%nspin), gr%mesh%np_part*st%d%nspin)
-    ALLOCATE(lrho(NP), NP)
-    ALLOCATE( tau(NP, st%d%nspin), NP*st%d%nspin)
+    ALLOCATE(lrho(gr%mesh%np), gr%mesh%np)
+    ALLOCATE( tau(gr%mesh%np, st%d%nspin), gr%mesh%np*st%d%nspin)
 
     rho = M_ZERO
-    call states_calc_dens(st, NP, rho)
+    call states_calc_dens(st, gr%mesh%np, rho)
     call states_calc_tau_jp_gn(gr, st, tau=tau)
 
     pressure = M_ZERO
@@ -497,7 +497,7 @@ contains
         tau(:, is)/M_THREE - lrho(:)/M_FOUR
     end do
 
-    do ii = 1, NP
+    do ii = 1, gr%mesh%np
       dens = sum(rho(ii,1:st%d%spin_channels))
 
       p_tf = M_TWO/M_FIVE*(M_THREE*M_PI**2)**(M_TWO/M_THREE)* &

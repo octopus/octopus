@@ -229,7 +229,7 @@ contains
     FLOAT,               intent(in)    :: deltat, t
     integer, optional,   intent(out)   :: order ! For the methods that rely on Hamiltonian-vector
                                                 ! multiplication, the number of these.
-    FLOAT,   optional,   intent(in)    :: vmagnus(NP, hm%d%nspin, 2)
+    FLOAT,   optional,   intent(in)    :: vmagnus(gr%mesh%np, hm%d%nspin, 2)
     logical, optional,   intent(in)    :: imag_time
 
     CMPLX   :: timestep
@@ -300,7 +300,7 @@ contains
       call push_sub('exponential.taylor_series')
 
       ALLOCATE(zpsi1 (gr%mesh%np_part, hm%d%dim), gr%mesh%np_part*hm%d%dim)
-      ALLOCATE(hzpsi1(NP,      hm%d%dim), NP     *hm%d%dim)
+      ALLOCATE(hzpsi1(gr%mesh%np,      hm%d%dim), gr%mesh%np     *hm%d%dim)
 
       zfact = M_z1
       zfact_is_real = .true.
@@ -317,17 +317,17 @@ contains
 
         if(zfact_is_real) then
           do idim = 1, hm%d%dim
-            call lalg_axpy(NP, real(zfact), hzpsi1(:, idim), zpsi(:, idim))
+            call lalg_axpy(gr%mesh%np, real(zfact), hzpsi1(:, idim), zpsi(:, idim))
           end do
         else
           do idim = 1, hm%d%dim
-            call lalg_axpy(NP, zfact, hzpsi1(:, idim), zpsi(:, idim))
+            call lalg_axpy(gr%mesh%np, zfact, hzpsi1(:, idim), zpsi(:, idim))
           end do
         end if
 
         if(i .ne. te%exp_order) then
           do idim = 1, hm%d%dim
-            call lalg_copy(NP, hzpsi1(:, idim), zpsi1(:, idim))
+            call lalg_copy(gr%mesh%np, hzpsi1(:, idim), zpsi1(:, idim))
           end do
         end if
 
@@ -365,24 +365,24 @@ contains
       zpsi1 = M_z0
       do j = te%exp_order-1, 0, -1
         do idim = 1, hm%d%dim
-          call lalg_copy(NP, zpsi1(:, idim, 1), zpsi1(:, idim, 2))
-          call lalg_copy(NP, zpsi1(:, idim, 0), zpsi1(:, idim, 1))
+          call lalg_copy(gr%mesh%np, zpsi1(:, idim, 1), zpsi1(:, idim, 2))
+          call lalg_copy(gr%mesh%np, zpsi1(:, idim, 0), zpsi1(:, idim, 1))
         end do
 
         call operate(zpsi1(:, :, 1), zpsi1(:, :, 0))
         zfact = 2*(-M_zI)**j*loct_bessel(j, hm%spectral_half_span*deltat)
 
         do idim = 1, hm%d%dim
-          call lalg_axpy(NP, -hm%spectral_middle_point, zpsi1(:, idim, 1), zpsi1(:, idim, 0))
-          call lalg_scal(NP, M_TWO/hm%spectral_half_span, zpsi1(:, idim, 0))
-          call lalg_axpy(NP, zfact, zpsi(:, idim), zpsi1(:, idim, 0))
-          call lalg_axpy(NP, -M_ONE, zpsi1(:, idim, 2),  zpsi1(:, idim, 0))
+          call lalg_axpy(gr%mesh%np, -hm%spectral_middle_point, zpsi1(:, idim, 1), zpsi1(:, idim, 0))
+          call lalg_scal(gr%mesh%np, M_TWO/hm%spectral_half_span, zpsi1(:, idim, 0))
+          call lalg_axpy(gr%mesh%np, zfact, zpsi(:, idim), zpsi1(:, idim, 0))
+          call lalg_axpy(gr%mesh%np, -M_ONE, zpsi1(:, idim, 2),  zpsi1(:, idim, 0))
         end do
       end do
 
       zpsi(:, :) = M_HALF*(zpsi1(:, :, 0) - zpsi1(:, :, 2))
       do idim = 1, hm%d%dim
-        call lalg_scal(NP, exp(-M_zI*hm%spectral_middle_point*deltat), zpsi(:, idim))
+        call lalg_scal(gr%mesh%np, exp(-M_zI*hm%spectral_middle_point*deltat), zpsi(:, idim))
       end do
       deallocate(zpsi1)
 
@@ -402,8 +402,8 @@ contains
 
       tol    = te%lanczos_tol
 
-      ALLOCATE(v(NP, hm%d%dim, te%exp_order+1), NP*hm%d%dim*(te%exp_order+1))
-      ALLOCATE(tmp(NP, hm%d%dim), NP*hm%d%dim)
+      ALLOCATE(v(gr%mesh%np, hm%d%dim, te%exp_order+1), gr%mesh%np*hm%d%dim*(te%exp_order+1))
+      ALLOCATE(tmp(gr%mesh%np, hm%d%dim), gr%mesh%np*hm%d%dim)
       ALLOCATE(hamilt(te%exp_order+1, te%exp_order+1), (te%exp_order+1)*(te%exp_order+1))
       ALLOCATE(expo(te%exp_order+1, te%exp_order+1), (te%exp_order+1)*(te%exp_order+1))
 
@@ -415,14 +415,14 @@ contains
 
       ! Normalize input vector, and put it into v(:, :, 1)
       beta = zmf_nrm2(gr%mesh, hm%d%dim, zpsi)
-      v(1:NP, 1:hm%d%dim, 1) = zpsi(1:NP, 1:hm%d%dim)/beta
+      v(1:gr%mesh%np, 1:hm%d%dim, 1) = zpsi(1:gr%mesh%np, 1:hm%d%dim)/beta
 
       ! This is the Lanczos loop...
       do n = 1, te%exp_order
 
         !copy v(:, :, n) to an array of size 1:gr%mesh%np_part
         do idim = 1, hm%d%dim
-          call lalg_copy(NP, v(:, idim, n), zpsi(:, idim))
+          call lalg_copy(gr%mesh%np, v(:, idim, n), zpsi(:, idim))
         end do
 
         !to apply the hamiltonian
@@ -456,10 +456,10 @@ contains
       call zlalg_exp(korder + 1, pp, hamilt, expo, hermitian = .false.)
 
       ! zpsi = nrm * V * expo(1:korder, 1) = nrm * V * expo * V^(T) * zpsi
-      call lalg_gemv(NP, hm%d%dim, korder + 1, M_z1*beta, v, expo(1:korder + 1, 1), M_z0, tmp)
+      call lalg_gemv(gr%mesh%np, hm%d%dim, korder + 1, M_z1*beta, v, expo(1:korder + 1, 1), M_z0, tmp)
 
       do idim = 1, hm%d%dim
-        call lalg_copy(NP, tmp(:, idim), zpsi(:, idim))
+        call lalg_copy(gr%mesh%np, tmp(:, idim), zpsi(:, idim))
       end do
 
       if(present(order)) order = korder
@@ -559,7 +559,7 @@ contains
       call push_sub('exponential.taylor_series')
 
       ALLOCATE(psi1 (gr%mesh%np_part, hm%d%dim, psib%nst), gr%mesh%np_part*hm%d%dim*psib%nst)
-      ALLOCATE(hpsi1(NP, hm%d%dim, psib%nst), NP*hm%d%dim*psib%nst)
+      ALLOCATE(hpsi1(gr%mesh%np, hm%d%dim, psib%nst), gr%mesh%np*hm%d%dim*psib%nst)
 
       st_start = psib%states(1)%ist
       st_end = psib%states(psib%nst)%ist
@@ -584,17 +584,17 @@ contains
         do ii = 1, psib%nst
           if(zfact_is_real) then
             do idim = 1, hm%d%dim
-              call lalg_axpy(NP, real(zfact), hpsi1(:, idim, ii), psib%states(ii)%zpsi(:, idim))
+              call lalg_axpy(gr%mesh%np, real(zfact), hpsi1(:, idim, ii), psib%states(ii)%zpsi(:, idim))
             end do
           else
             do idim = 1, hm%d%dim
-              call lalg_axpy(NP, zfact, hpsi1(:, idim, ii), psib%states(ii)%zpsi(:, idim))
+              call lalg_axpy(gr%mesh%np, zfact, hpsi1(:, idim, ii), psib%states(ii)%zpsi(:, idim))
             end do
           end if
 
           if(iter /= te%exp_order) then
             do idim = 1, hm%d%dim
-              call lalg_copy(NP, hpsi1(:, idim, ii), psi1(:, idim, ii))
+              call lalg_copy(gr%mesh%np, hpsi1(:, idim, ii), psi1(:, idim, ii))
             end do
           end if
         end do

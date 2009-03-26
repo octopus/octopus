@@ -278,7 +278,7 @@ contains
           do iatom = 1, geo%natoms
             if(species_is_ps(geo%atom(iatom)%spec)) then
               call zprojector_commute_r(pj(iatom), gr, st%d%dim, idir, ik, epsi(:, 1), cpsi(:, :))
-              gpsi(1:NP, idir, 1:st%d%dim) = gpsi(1:NP, idir, 1:st%d%dim) + cpsi(1:NP, 1:st%d%dim)
+              gpsi(1:gr%mesh%np, idir, 1:st%d%dim) = gpsi(1:gr%mesh%np, idir, 1:st%d%dim) + cpsi(1:gr%mesh%np, 1:st%d%dim)
             end if
           end do
         end do
@@ -333,7 +333,7 @@ contains
     vecpot = gauge_field_get_vec_pot(this)/P_c
     a2 = sum(vecpot(1:MAX_DIM)**2)
     
-    forall(idim = 1:dim, ip = 1:NP)
+    forall(idim = 1:dim, ip = 1:gr%mesh%np)
       hpsi(ip, idim) = hpsi(ip, idim) + M_HALF*a2*psi(ip, idim) + M_zI*dot_product(vecpot(1:MAX_DIM), grad(ip, 1:MAX_DIM, idim))
     end forall
     

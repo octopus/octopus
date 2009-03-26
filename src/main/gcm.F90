@@ -120,22 +120,22 @@ module gcm_m
     call messages_print_stress(stdout)
 
 
-    ALLOCATE(rho(NP), NP)
-    ALLOCATE(vh(NP), NP)
+    ALLOCATE(rho(gr%mesh%np), gr%mesh%np)
+    ALLOCATE(vh(gr%mesh%np), gr%mesh%np)
     rho = M_ZERO
     vh  = M_ZERO
 
     ! Calculate the total energies for each of the Slater determinants
     do i = 1, ndeterminants
       ! The total density may be needed.
-      call states_calc_dens(phi(i), NP)
+      call states_calc_dens(phi(i), gr%mesh%np)
 
       ! First, the one-body part of the total energy:
       etot(i) = delectronic_kinetic_energy(hm, gr, phi(i)) + &
                 delectronic_external_energy(hm, gr, phi(i))
 
       ! Coulomb contribution.
-      do j = 1, NP
+      do j = 1, gr%mesh%np
         rho(j) = phi(i)%rho(j, 1)
       end do
       call dpoisson_solve(gr, vh, rho)
@@ -146,7 +146,7 @@ module gcm_m
         ex = M_ZERO
         do j = 1, phi(i)%nst
           do k = 1, phi(i)%nst
-            do n = 1, NP
+            do n = 1, gr%mesh%np
               rho(n) = phi(i)%dpsi(n, 1, j, 1)*phi(i)%dpsi(n, 1, k, 1)
             end do
             call dpoisson_solve(gr, vh, rho)
@@ -261,12 +261,12 @@ module gcm_m
 
     case(1)
 
-      ALLOCATE(rho(NP), NP)
-      ALLOCATE(vh(NP), NP)
+      ALLOCATE(rho(gr%mesh%np), gr%mesh%np)
+      ALLOCATE(vh(gr%mesh%np), gr%mesh%np)
 
       rho = M_ZERO
       vh = M_ZERO
-      do k = 1, NP
+      do k = 1, gr%mesh%np
         rho(k) = st1%dpsi(k, 1, 1, 1) * st2%dpsi(k, 1, 1, 1)
       end do
       call dpoisson_solve(gr, vh, rho)
@@ -279,19 +279,19 @@ module gcm_m
       call write_fatal(1)
 
       ALLOCATE(mat(nst, nst, nst, nst), nst**4)
-      ALLOCATE(rho(NP), NP)
-      ALLOCATE(vh(NP), NP)
+      ALLOCATE(rho(gr%mesh%np), gr%mesh%np)
+      ALLOCATE(vh(gr%mesh%np), gr%mesh%np)
 
       ! Build the matrix <k1 k2 | 1/|r1-r2| | l1 l2>
       do k1 = 1, nst
         do l1 = 1, nst
-          do i = 1, NP
+          do i = 1, gr%mesh%np
             rho(i) = st1%dpsi(i, 1, k1, 1)*st2%dpsi(i, 1, l1, 1)
           end do
           call dpoisson_solve(gr, vh, rho)
           do k2 = 1, nst
             do l2 = 1, nst
-              do i = 1, NP
+              do i = 1, gr%mesh%np
                 rho(i) = st1%dpsi(i, 1, k2, 1)*st2%dpsi(i, 1, l2, 1)
               end do
               mat(k1, l1, k2, l2) = dmf_integrate(gr%mesh, vh(:)*rho(:))

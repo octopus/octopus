@@ -28,8 +28,8 @@ subroutine X(solve_HXeY) (this, hm, gr, st, ist, ik, x, y, omega, occ_response)
   type(states_t),        target, intent(in)    :: st
   integer,                       intent(in)    :: ist
   integer,                       intent(in)    :: ik
-  R_TYPE,                        intent(inout) :: x(:,:)   ! x(NP, d%dim)
-  R_TYPE,                        intent(in)    :: y(:,:)   ! y(NP, d%dim)
+  R_TYPE,                        intent(inout) :: x(:,:)   ! x(gr%mesh%np, d%dim)
+  R_TYPE,                        intent(in)    :: y(:,:)   ! y(gr%mesh%np, d%dim)
   R_TYPE,                        intent(in)    :: omega
   logical, optional,             intent(in)    :: occ_response
 
@@ -63,7 +63,7 @@ subroutine X(solve_HXeY) (this, hm, gr, st, ist, ik, x, y, omega, occ_response)
 
     this%iter = this%max_iter
     
-    call X(qmr_sym)(NP, x(:, 1), y(:, 1), X(ls_solver_operator_na), X(ls_dotu_qmr), X(ls_nrm2_qmr), X(ls_preconditioner), &
+    call X(qmr_sym)(gr%mesh%np, x(:, 1), y(:, 1), X(ls_solver_operator_na), X(ls_dotu_qmr), X(ls_nrm2_qmr), X(ls_preconditioner), &
          this%iter, residue = this%abs_psi, threshold = this%tol, showprogress = .false.)
 
   case(LS_SOS)
@@ -104,8 +104,8 @@ subroutine X(ls_solver_cg) (ls, hm, gr, st, ist, ik, x, y, omega)
   type(states_t),        intent(in)    :: st
   integer,               intent(in)    :: ist
   integer,               intent(in)    :: ik
-  R_TYPE,                intent(inout) :: x(:,:)   ! x(NP, st%d%dim)
-  R_TYPE,                intent(in)    :: y(:,:)   ! y(NP, st%d%dim)
+  R_TYPE,                intent(inout) :: x(:,:)   ! x(gr%mesh%np, st%d%dim)
+  R_TYPE,                intent(in)    :: y(:,:)   ! y(gr%mesh%np, st%d%dim)
   R_TYPE,                intent(in)    :: omega
 
   R_TYPE, allocatable :: r(:,:), p(:,:), Hp(:,:)
@@ -115,17 +115,17 @@ subroutine X(ls_solver_cg) (ls, hm, gr, st, ist, ik, x, y, omega)
 
   call push_sub('linear_solver_inc.Xls_solver_cg')
 
-  ALLOCATE( r(NP, st%d%dim),      NP      * st%d%dim)
+  ALLOCATE( r(gr%mesh%np, st%d%dim),      gr%mesh%np      * st%d%dim)
   ALLOCATE( p(gr%mesh%np_part, st%d%dim), gr%mesh%np_part * st%d%dim)
-  ALLOCATE(Hp(NP, st%d%dim),      NP      * st%d%dim)
+  ALLOCATE(Hp(gr%mesh%np, st%d%dim),      gr%mesh%np      * st%d%dim)
 
   ! Initial residue
   call X(ls_solver_operator)(hm, gr, st, ist, ik, omega, x, Hp)
-  r(1:NP, 1:st%d%dim) = y(1:NP, 1:st%d%dim) - Hp(1:NP, 1:st%d%dim)
+  r(1:gr%mesh%np, 1:st%d%dim) = y(1:gr%mesh%np, 1:st%d%dim) - Hp(1:gr%mesh%np, 1:st%d%dim)
   
   ! Initial search direction
-  p(1:NP, 1:st%d%dim) = r(1:NP, 1:st%d%dim)
-  p((NP+1):gr%mesh%np_part,1:st%d%dim) = M_ZERO
+  p(1:gr%mesh%np, 1:st%d%dim) = r(1:gr%mesh%np, 1:st%d%dim)
+  p((gr%mesh%np+1):gr%mesh%np_part,1:st%d%dim) = M_ZERO
   
   conv_last = .false.
   gamma     = M_ONE
@@ -142,15 +142,15 @@ subroutine X(ls_solver_cg) (ls, hm, gr, st, ist, ik, x, y, omega)
 
     do idim = 1, st%d%dim
       !r = r - alpha*Hp
-      call lalg_axpy(NP, -alpha, Hp(:, idim), r(:, idim))
+      call lalg_axpy(gr%mesh%np, -alpha, Hp(:, idim), r(:, idim))
       !x = x + alpha*p
-      call lalg_axpy(NP,  alpha,  p(:, idim), x(:, idim))
+      call lalg_axpy(gr%mesh%np,  alpha,  p(:, idim), x(:, idim))
     end do
 
 
     beta = X(mf_dotp)(gr%mesh, st%d%dim, r, r)/gamma
 
-    p(1:NP, 1:st%d%dim) = r(1:NP, 1:st%d%dim) + beta*p(1:NP, 1:st%d%dim)
+    p(1:gr%mesh%np, 1:st%d%dim) = r(1:gr%mesh%np, 1:st%d%dim) + beta*p(1:gr%mesh%np, 1:st%d%dim)
 
   end do
     
@@ -172,8 +172,8 @@ subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, omega, occ_resp
   type(states_t),      intent(in)    :: st
   integer,             intent(in)    :: ist
   integer,             intent(in)    :: ik
-  R_TYPE,              intent(inout) :: x(:,:)   ! x(NP, st%d%dim)
-  R_TYPE,              intent(in)    :: y(:,:)   ! y(NP, st%d%dim)
+  R_TYPE,              intent(inout) :: x(:,:)   ! x(gr%mesh%np, st%d%dim)
+  R_TYPE,              intent(in)    :: y(:,:)   ! y(gr%mesh%np, st%d%dim)
   R_TYPE,              intent(in)    :: omega
   logical,             intent(in)    :: occ_response
 
@@ -186,12 +186,12 @@ subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, omega, occ_resp
   
   call push_sub('linear_solver_inc.Xls_solver_bicgstab')
 
-  ALLOCATE( r(NP, st%d%dim),      NP     *st%d%dim)
+  ALLOCATE( r(gr%mesh%np, st%d%dim),      gr%mesh%np     *st%d%dim)
   ALLOCATE( p(gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
-  ALLOCATE(rs(NP, st%d%dim),      NP     *st%d%dim)
+  ALLOCATE(rs(gr%mesh%np, st%d%dim),      gr%mesh%np     *st%d%dim)
   ALLOCATE( s(gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
-  ALLOCATE(Hp(NP, st%d%dim),      NP     *st%d%dim)
-  ALLOCATE(Hs(NP, st%d%dim),      NP     *st%d%dim)
+  ALLOCATE(Hp(gr%mesh%np, st%d%dim),      gr%mesh%np     *st%d%dim)
+  ALLOCATE(Hs(gr%mesh%np, st%d%dim),      gr%mesh%np     *st%d%dim)
 
   ! this will store the preconditioned functions
   ALLOCATE(phat(gr%mesh%np_part, st%d%dim), gr%mesh%np_part * st%d%dim)
@@ -200,7 +200,7 @@ subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, omega, occ_resp
   ! Initial residue
   call X(ls_solver_operator) (hm, gr, st, ist, ik, omega, x, Hp)
 
-  forall(idim = 1:st%d%dim, ip = 1:NP) r(ip, idim) = y(ip, idim) - Hp(ip, idim)
+  forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) r(ip, idim) = y(ip, idim) - Hp(ip, idim)
 
   !re-orthogonalize r, this helps considerably with convergence
   if (occ_response) then
@@ -214,7 +214,7 @@ subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, omega, occ_resp
   endif
           
   do idim = 1, st%d%dim
-    call lalg_copy(NP, r(:, idim), rs(:, idim))
+    call lalg_copy(gr%mesh%np, r(:, idim), rs(:, idim))
   end do
 
   gamma = X(mf_nrm2)(gr%mesh, st%d%dim, r)
@@ -228,11 +228,11 @@ subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, omega, occ_resp
 
     if( iter == 1 ) then
       do idim = 1, st%d%dim
-        call lalg_copy(NP, r(:, idim), p(:, idim))
+        call lalg_copy(gr%mesh%np, r(:, idim), p(:, idim))
       end do
     else
       beta = rho_1/rho_2*alpha/w
-      forall(idim = 1:st%d%dim, ip = 1:NP) p(ip, idim) = r(ip, idim) + beta*(p(ip, idim) - w*Hp(ip, idim))
+      forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) p(ip, idim) = r(ip, idim) + beta*(p(ip, idim) - w*Hp(ip, idim))
     end if
 
     ! preconditioning 
@@ -241,13 +241,13 @@ subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, omega, occ_resp
     
     alpha = rho_1/X(mf_dotp)(gr%mesh, st%d%dim, rs, Hp)
 
-    forall(idim = 1:st%d%dim, ip = 1:NP) s(ip, idim) = r(ip, idim) - alpha*Hp(ip, idim)
+    forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) s(ip, idim) = r(ip, idim) - alpha*Hp(ip, idim)
 
     gamma = X(mf_nrm2) (gr%mesh, st%d%dim, s)
 
     if( gamma < ls%tol ) then
       do idim = 1, st%d%dim 
-        call lalg_axpy(NP, alpha, phat(:, idim), x(:, idim))
+        call lalg_axpy(gr%mesh%np, alpha, phat(:, idim), x(:, idim))
       end do
       exit
     end if
@@ -257,7 +257,7 @@ subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, omega, occ_resp
 
     w = X(mf_dotp)(gr%mesh, st%d%dim, Hs, s)/X(mf_dotp) (gr%mesh, st%d%dim, Hs, Hs)
 
-    forall(idim = 1:st%d%dim, ip = 1:NP)
+    forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np)
       x(ip, idim) = x(ip, idim) + alpha*phat(ip, idim) + w*shat(ip, idim)
       r(ip, idim) = s(ip, idim) - w*Hs(ip, idim)
     end forall
@@ -294,8 +294,8 @@ subroutine X(ls_solver_multigrid) (ls, hm, gr, st, ist, ik, x, y, omega)
   type(states_t),        intent(in)    :: st
   integer,               intent(in)    :: ist
   integer,               intent(in)    :: ik
-  R_TYPE,                intent(inout) :: x(:,:)   ! x(NP, st%d%dim)
-  R_TYPE,                intent(in)    :: y(:,:)   ! y(NP, st%d%dim)
+  R_TYPE,                intent(inout) :: x(:,:)   ! x(gr%mesh%np, st%d%dim)
+  R_TYPE,                intent(in)    :: y(:,:)   ! y(gr%mesh%np, st%d%dim)
   R_TYPE,                intent(in)    :: omega
 
   R_TYPE, allocatable :: diag(:,:), hx(:,:), res(:,:)
@@ -303,12 +303,12 @@ subroutine X(ls_solver_multigrid) (ls, hm, gr, st, ist, ik, x, y, omega)
 
   call push_sub('linear_solver_inc.Xls_solver_multigrid')
 
-  ALLOCATE(diag(NP, st%d%dim), NP * st%d%dim)
-  ALLOCATE(hx(NP, st%d%dim), NP * st%d%dim)
-  ALLOCATE(res(NP, st%d%dim), NP * st%d%dim)
+  ALLOCATE(diag(gr%mesh%np, st%d%dim), gr%mesh%np * st%d%dim)
+  ALLOCATE(hx(gr%mesh%np, st%d%dim), gr%mesh%np * st%d%dim)
+  ALLOCATE(res(gr%mesh%np, st%d%dim), gr%mesh%np * st%d%dim)
 
   call X(hamiltonian_diagonal)(hm, gr, diag, ik)
-  diag(1:NP, 1:st%d%dim) = diag(1:NP, 1:st%d%dim) + omega
+  diag(1:gr%mesh%np, 1:st%d%dim) = diag(1:gr%mesh%np, 1:st%d%dim) + omega
 
   do iter = 1, ls%max_iter
 
@@ -318,7 +318,7 @@ subroutine X(ls_solver_multigrid) (ls, hm, gr, st, ist, ik, x, y, omega)
 
     !calculate the residue
     call X(ls_solver_operator)(hm, gr, st, ist, ik, omega, x, hx)
-    res(1:NP, 1:st%d%dim) = hx(1:NP, 1:st%d%dim) - y(1:NP, 1:st%d%dim)
+    res(1:gr%mesh%np, 1:st%d%dim) = hx(1:gr%mesh%np, 1:st%d%dim) - y(1:gr%mesh%np, 1:st%d%dim)
     ls%abs_psi = X(mf_nrm2)(gr%mesh, st%d%dim, res)
 
     if(ls%abs_psi < ls%tol) exit
@@ -370,8 +370,8 @@ subroutine X(ls_solver_operator) (hm, gr, st, ist, ik, omega, x, hx)
   type(states_t),        intent(in)    :: st
   integer,               intent(in)    :: ist
   integer,               intent(in)    :: ik
-  R_TYPE,                intent(inout) :: x(:,:)   !  x(NP, st%d%dim)
-  R_TYPE,                intent(out)   :: Hx(:,:)  ! Hx(NP, st%d%dim)
+  R_TYPE,                intent(inout) :: x(:,:)   !  x(gr%mesh%np, st%d%dim)
+  R_TYPE,                intent(out)   :: Hx(:,:)  ! Hx(gr%mesh%np, st%d%dim)
   R_TYPE,                intent(in)    :: omega
 
   integer :: idim, jst
@@ -383,7 +383,7 @@ subroutine X(ls_solver_operator) (hm, gr, st, ist, ik, omega, x, hx)
 
   !Hx = Hx + omega*x
   do idim = 1, st%d%dim
-    call lalg_axpy(NP, omega, x(:, idim), Hx(:, idim))
+    call lalg_axpy(gr%mesh%np, omega, x(:, idim), Hx(:, idim))
   end do
 
   if(st%smear%fixed_occ .or. st%smear%method == SMEAR_SEMICONDUCTOR) then
@@ -401,7 +401,7 @@ subroutine X(ls_solver_operator) (hm, gr, st, ist, ik, omega, x, hx)
       
     proj = X(mf_dotp) (gr%mesh, st%d%dim, st%X(psi)(:, :, jst, ik), x)
     do idim = 1, st%d%dim
-      call lalg_axpy(NP, R_TOTYPE(alpha_j * proj), st%X(psi)(:, idim, jst, ik), Hx(:, idim))
+      call lalg_axpy(gr%mesh%np, R_TOTYPE(alpha_j * proj), st%X(psi)(:, idim, jst, ik), Hx(:, idim))
     end do
 
   end do
@@ -413,8 +413,8 @@ end subroutine X(ls_solver_operator)
 
 ! ---------------------------------------------------------
 subroutine X(ls_solver_operator_na) (x, hx)
-  R_TYPE,                intent(in)    :: x(:)   !  x(NP, st%d%dim)
-  R_TYPE,                intent(out)   :: Hx(:)  ! Hx(NP, st%d%dim)
+  R_TYPE,                intent(in)    :: x(:)   !  x(gr%mesh%np, st%d%dim)
+  R_TYPE,                intent(out)   :: Hx(:)  ! Hx(gr%mesh%np, st%d%dim)
 
   R_TYPE, allocatable :: tmpx(:, :)
   R_TYPE, allocatable :: tmpy(:, :)
@@ -433,8 +433,8 @@ end subroutine X(ls_solver_operator_na)
 
 ! ---------------------------------------------------------
 subroutine X(ls_preconditioner) (x, hx)
-  R_TYPE,                intent(in)    :: x(:)   !  x(NP, st%d%dim)
-  R_TYPE,                intent(out)   :: hx(:)  ! Hx(NP, st%d%dim)
+  R_TYPE,                intent(in)    :: x(:)   !  x(gr%mesh%np, st%d%dim)
+  R_TYPE,                intent(out)   :: hx(:)  ! Hx(gr%mesh%np, st%d%dim)
 
   R_TYPE, allocatable :: tmpx(:, :)
   R_TYPE, allocatable :: tmpy(:, :)
@@ -461,8 +461,8 @@ subroutine X(ls_solver_sos) (ls, hm, gr, st, ist, ik, x, y, omega)
   type(states_t),                 intent(in)    :: st
   integer,                        intent(in)    :: ist
   integer,                        intent(in)    :: ik
-  R_TYPE,                         intent(inout) :: x(:,:)   ! x(NP, st%d%dim)
-  R_TYPE,                         intent(in)    :: y(:,:)   ! y(NP, st%d%dim)
+  R_TYPE,                         intent(inout) :: x(:,:)   ! x(gr%mesh%np, st%d%dim)
+  R_TYPE,                         intent(in)    :: y(:,:)   ! y(gr%mesh%np, st%d%dim)
   R_TYPE,                         intent(in)    :: omega
 
   integer :: jst, idim
@@ -472,7 +472,7 @@ subroutine X(ls_solver_sos) (ls, hm, gr, st, ist, ik, x, y, omega)
 
   call push_sub('linear_solver_inc.Xls_solver_sos')
 
-  x(1:NP, 1:st%d%dim) = M_ZERO
+  x(1:gr%mesh%np, 1:st%d%dim) = M_ZERO
   
   dsmear = max(CNST(1e-14), st%smear%dsmear)
   do jst = 1, st%nst
@@ -482,16 +482,16 @@ subroutine X(ls_solver_sos) (ls, hm, gr, st, ist, ik, x, y, omega)
     aa = aa/(st%eigenval(jst, ik) - st%eigenval(ist, ik) + alpha_j + omega)
 
     do idim = 1, st%d%dim
-      call lalg_axpy(NP, aa, st%X(psi)(:, idim, jst, ik), x(:, idim))
+      call lalg_axpy(gr%mesh%np, aa, st%X(psi)(:, idim, jst, ik), x(:, idim))
     end do
   end do
 
   ! calculate the residual
-  ALLOCATE(rr(1:NP, 1:st%d%dim), NP*st%d%dim)
+  ALLOCATE(rr(1:gr%mesh%np, 1:st%d%dim), gr%mesh%np*st%d%dim)
   call X(ls_solver_operator)(hm, gr, st, ist, ik, omega, x, rr)
 
   do idim = 1, st%d%dim
-    call lalg_axpy(NP, -M_ONE, y(:, idim), rr(:, idim))
+    call lalg_axpy(gr%mesh%np, -M_ONE, y(:, idim), rr(:, idim))
   end do
   
   ls%abs_psi = X(mf_nrm2)(gr%mesh, st%d%dim, rr)

@@ -232,25 +232,25 @@ contains
     ! allocate potentials and density of the cores
     ! In the case of spinors, vxc_11 = hm%vxc(:, 1), vxc_22 = hm%vxc(:, 2), Re(vxc_12) = hm%vxc(:. 3);
     ! Im(vxc_12) = hm%vxc(:, 4)
-    ALLOCATE(hm%vhartree(NP),        NP)
-    ALLOCATE(hm%vxc(NP, hm%d%nspin), NP*hm%d%nspin)
-    ALLOCATE(hm%vhxc(NP, hm%d%nspin), NP*hm%d%nspin)
+    ALLOCATE(hm%vhartree(gr%mesh%np),        gr%mesh%np)
+    ALLOCATE(hm%vxc(gr%mesh%np, hm%d%nspin), gr%mesh%np*hm%d%nspin)
+    ALLOCATE(hm%vhxc(gr%mesh%np, hm%d%nspin), gr%mesh%np*hm%d%nspin)
     if(iand(hm%xc_family, XC_FAMILY_MGGA).ne.0) then
-      ALLOCATE(hm%vtau(NP, hm%d%nspin), NP*hm%d%nspin)
+      ALLOCATE(hm%vtau(gr%mesh%np, hm%d%nspin), gr%mesh%np*hm%d%nspin)
     else
       nullify(hm%vtau)
     end if
 
-    hm%vhartree(1:NP) = M_ZERO
+    hm%vhartree(1:gr%mesh%np) = M_ZERO
 
     do ispin = 1, hm%d%nspin
-      hm%vhxc(1:NP, ispin) = M_ZERO
-      hm%vxc(1:NP, ispin) = M_ZERO
-      if(iand(hm%xc_family, XC_FAMILY_MGGA).ne.0) hm%vtau(1:NP, ispin) = M_ZERO
+      hm%vhxc(1:gr%mesh%np, ispin) = M_ZERO
+      hm%vxc(1:gr%mesh%np, ispin) = M_ZERO
+      if(iand(hm%xc_family, XC_FAMILY_MGGA).ne.0) hm%vtau(1:gr%mesh%np, ispin) = M_ZERO
     end do
 
     if (hm%d%cdft) then
-      ALLOCATE(hm%axc(NP, gr%mesh%sb%dim, hm%d%nspin), NP*gr%mesh%sb%dim*hm%d%nspin)
+      ALLOCATE(hm%axc(gr%mesh%np, gr%mesh%sb%dim, hm%d%nspin), gr%mesh%np*gr%mesh%sb%dim*hm%d%nspin)
       hm%axc = M_ZERO
     else
       nullify(hm%axc)
@@ -360,9 +360,9 @@ contains
       end if
 
       ! generate boundary potential...
-      ALLOCATE(hm%ab_pot(NP), NP)
+      ALLOCATE(hm%ab_pot(gr%mesh%np), gr%mesh%np)
       hm%ab_pot = M_ZERO
-      do i = 1, NP
+      do i = 1, gr%mesh%np
         call mesh_inborder(gr%mesh, geo, i, n, d, hm%ab_width)
         if(n>0) then
           do j = 1, n
@@ -703,7 +703,7 @@ contains
 
     call gridhier_init(hm%coarse_v, gr%mgrid, add_points_for_boundaries=.false.)
 
-    hm%coarse_v%level(0)%p(1:NP) = hm%ep%vpsl(1:NP) + hm%vhxc(1:NP, 1)
+    hm%coarse_v%level(0)%p(1:gr%mesh%np) = hm%ep%vpsl(1:gr%mesh%np) + hm%vhxc(1:gr%mesh%np, 1)
 
     do level = 1, gr%mgrid%n_levels
       call dmultigrid_fine2coarse(gr%mgrid, level, hm%coarse_v%level(level - 1)%p, hm%coarse_v%level(level)%p, INJECTION)
