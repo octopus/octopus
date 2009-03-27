@@ -23,6 +23,7 @@
 ! blocks of states and general dense matrices.
 
 module states_block_m
+  use batch_m
   use global_m
   use lalg_basic_m
   use math_m

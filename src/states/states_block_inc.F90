@@ -38,10 +38,11 @@ subroutine X(states_blockt_mul)(mesh, st, psi1_start, psi1_end, psi2_start, psi2
                                             ! res(i, j)*.
 
   logical              :: symm_
-  integer              :: i, j
+  integer              :: i, j, ii
   integer              :: psi1_col, psi2_col
   integer, pointer     :: xpsi1_(:), xpsi2_(:)
   R_TYPE, allocatable  :: psi1_block(:, :, :), psi2_block(:, :, :), res_local(:, :)
+  type(batch_t)        :: psi1b, psi2b
 #if defined(HAVE_MPI)
   integer              :: size, rank, round, res_col_offset, res_row_offset
   integer              :: dst, src, k, l, recvcnt, sendcnt, left, right, max_count
@@ -174,54 +175,26 @@ subroutine X(states_blockt_mul)(mesh, st, psi1_start, psi1_end, psi2_start, psi2
     call write_fatal(1)
 #endif
   else ! No states parallelization.
-    if(.not.mesh%use_curvlinear) then
-      ASSERT(psi1_col.ne.0.and.psi2_col.ne.0)
-      ALLOCATE(res_local(psi1_col, psi2_col), psi1_col*psi2_col)
-      ALLOCATE(psi1_block(mesh%np, st%d%dim, psi1_col), mesh%np*st%d%dim*psi1_col)
-      ALLOCATE(psi2_block(mesh%np, st%d%dim, psi2_col), mesh%np*st%d%dim*psi2_col)
-      
-      call X(states_compactify)(st%d%dim, mesh, psi1_start, xpsi1_(1:psi1_col), psi1, psi1_block)
-      call X(states_compactify)(st%d%dim, mesh, psi2_start, xpsi2_(1:psi2_col), psi2, psi2_block)
-      call lalg_gemmt(psi1_col, psi2_col, mesh%np*st%d%dim, R_TOTYPE(mesh%vol_pp(1)), &
-        psi1_block(:, :, 1), psi2_block(:, :, 1), R_TOTYPE(M_ZERO), res_local)
-      ! We have to use the intermediate res_local and cannot put res directly into
-      ! lalg_gemmt because otherwise our BLAS interface screws up everything because
-      ! it puts 1s in all free indices! Cost me several headaches to figure this out.
-      ! Perhaps, one day we should write a more comfortable interface to BLAS, or at
-      ! least one that is clearer!
-      res = res_local
-      deallocate(psi1_block, psi2_block, res_local)
-    else ! Curvilinear coordinates.
-      if(symm_) then
-        do i = 1, psi1_col
-          res(i, i) = X(mf_dotp)(mesh, st%d%dim, psi1(:, :, xpsi1_(i)), psi2(:, :, xpsi2_(i)), reduce=.false.)
-          do j = i+1, psi2_col
-            res(i, j) = X(mf_dotp)(mesh, st%d%dim, psi1(:, :, xpsi1_(i)), psi2(:, :, xpsi2_(j)), reduce=.false.)
-            res(j, i) = R_CONJ(res(i, j))
-          end do
-        end do
-      else
-        do i = 1, psi1_col
-          do j = 1, psi2_col
-            res(i, j) = X(mf_dotp)(mesh, st%d%dim, psi1(:, :, xpsi1_(i)), psi2(:, :, xpsi2_(j)), reduce=.false.)
-          end do
-        end do
-      end if
-    end if
-    ! This has to be done because no reduction is done in Xmf_dotp above.
-    ! Rationale: this way, all the reduce operations are done at once (hopefully)
-    ! saving latency overhead.
-    if(mesh%parallel_in_domains) then
-#if defined(HAVE_MPI)
-      ALLOCATE(res_tmp(psi1_col, psi2_col), psi1_col*psi2_col)
-      call MPI_Allreduce(res, res_tmp, psi1_col*psi2_col, R_MPITYPE, MPI_SUM, mesh%mpi_grp%comm, mpi_err)
-      res = res_tmp
-      deallocate(res_tmp)
-#else
-      message(1) = "Running parallel in domain without MPI. This is a bug!"
-      call write_fatal(1)
-#endif
-    end if
+
+    call batch_init(psi1b, st%d%dim, psi1_col)
+    call batch_init(psi2b, st%d%dim, psi2_col)
+
+    do ii = 1, psi1_col
+      call batch_add_state(psi1b, ii, psi1(:, :, xpsi1_(ii)))
+    end do
+
+    do ii = 1, psi2_col
+      call batch_add_state(psi2b, ii, psi2(:, :, xpsi2_(ii)))
+    end do
+
+    ASSERT(batch_is_ok(psi1b))
+    ASSERT(batch_is_ok(psi2b))
+
+    call X(mf_dotp_batch)(mesh, psi1b, psi2b, res, symm = symm_)
+    
+    call batch_end(psi1b)
+    call batch_end(psi2b)
+
   end if
   deallocate(xpsi1_, xpsi2_)
 

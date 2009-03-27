@@ -806,11 +806,12 @@ subroutine X(mf_multipoles) (mesh, ff, lmax, multipole)
   call pop_sub()
 end subroutine X(mf_multipoles)
 
-subroutine X(mf_dotp_batch)(mesh, aa, bb, dot)
-  type(mesh_t),   intent(in)    :: mesh
-  type(batch_t),  intent(in)    :: aa
-  type(batch_t),  intent(in)    :: bb
-  R_TYPE,         intent(inout) :: dot(:, :)
+subroutine X(mf_dotp_batch)(mesh, aa, bb, dot, symm)
+  type(mesh_t),      intent(in)    :: mesh
+  type(batch_t),     intent(in)    :: aa
+  type(batch_t),     intent(in)    :: bb
+  R_TYPE,            intent(inout) :: dot(:, :)
+  logical, optional, intent(in)    :: symm         !for the moment it is ignored
 
   integer :: ist, jst, idim, sp, block_size, ep, ip
   R_TYPE :: ss
