@@ -74,7 +74,7 @@ subroutine X(states_gram_schmidt_full)(st, nst, m, dim, psi, start)
   
   if(.not. st%parallel_in_states) then
 
-    call X(states_linear_combination)(st, m, qq, psi)
+    call X(states_linear_combination)(m, st%nst, st%d%dim, qq, psi)
 
   else
 
@@ -529,9 +529,10 @@ end subroutine X(states_matrix)
 ! The performance of this function could be improved using blocks and
 ! blas, but for the moment this is not necessary.
 !
-subroutine X(states_linear_combination)(st, mesh, transf, psi)
-  type(states_t),      intent(in)    :: st
+subroutine X(states_linear_combination)(mesh, nst, dim, transf, psi)
   type(mesh_t),        intent(in)    :: mesh
+  integer,             intent(in)    :: nst
+  integer,             intent(in)    :: dim
   R_TYPE,              intent(in)    :: transf(:, :)
   R_TYPE,              intent(inout) :: psi(:, :, :)
   
@@ -548,20 +549,20 @@ subroutine X(states_linear_combination)(st, mesh, transf, psi)
 
   block_size = hardware%X(block_size)
 
-  ALLOCATE(psinew(block_size, 1:st%nst), block_size*st%nst)
+  ALLOCATE(psinew(block_size, 1:nst), block_size*nst)
   
   do sp = 1, mesh%np, block_size
     size = min(block_size, mesh%np - sp + 1)
 
-    do idim = 1, st%d%dim
+    do idim = 1, dim
       
       call blas_gemm('N', 'N', &
-           size, st%nst, st%nst, &
-           R_TOTYPE(M_ONE), psi(sp, idim, st%st_start), mesh%np_part*st%d%dim, &
-           transf(1, 1), st%nst, &
+           size, nst, nst, &
+           R_TOTYPE(M_ONE), psi(sp, idim, 1), mesh%np_part*dim, &
+           transf(1, 1), nst, &
            R_TOTYPE(M_ZERO), psinew(1, 1), block_size)
       
-      do ist = 1, st%nst
+      do ist = 1, nst
         call blas_copy(size, psinew(1, ist), 1, psi(sp, idim, ist), 1)
       end do
      
@@ -569,7 +570,7 @@ subroutine X(states_linear_combination)(st, mesh, transf, psi)
 
   end do
 
-  call profiling_count_operations((R_ADD + R_MUL)*dble(mesh%np)*st%d%dim*st%nst**2)
+  call profiling_count_operations((R_ADD + R_MUL)*dble(mesh%np)*dim*nst**2)
 
   call profiling_out(prof)
 

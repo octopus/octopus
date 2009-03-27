@@ -559,18 +559,20 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Calculate residuals: res(ist, ik) <- H psi(ist, ik) - eval(ist, ik) psi(ist, ik).
+  ! Calculate residuals
   subroutine X(lobpcg_res)()
-    integer :: ist, nps
+    integer :: ist, iev
+    integer :: idim, ip
 
     call push_sub('eigen_lobpcg_inc.Xlobpcg_res')
 
-    nps = gr%mesh%np_part*st%d%dim
     do ist = st_start, st_end
-      i = iihash_lookup(all_ev_inv, ist, found)
+      iev = iihash_lookup(all_ev_inv, ist, found)
       ASSERT(found)
-      call lalg_copy(nps, h_psi(:, 1, ist), res(:, 1, ist))
-      call lalg_axpy(nps, -eval(i), psi(:, 1, ist), res(:, 1, ist))
+     
+      forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) 
+        res(ip, idim, ist) = h_psi(ip, idim, ist) - eval(iev)*psi(ip, idim, ist)
+      end forall
     end do
 
     call pop_sub()
