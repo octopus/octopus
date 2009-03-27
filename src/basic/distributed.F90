@@ -70,6 +70,7 @@ contains
     this%nglobal         = total
     this%parallel        = .false.
     nullify(this%node, this%range, this%num)
+    call mpi_grp_init(this%mpi_grp, -1)
 
     call pop_sub()
   end subroutine distributed_nullify

@@ -224,9 +224,10 @@ module tdf_m
     !%Option tdf_from_expr 10008
     !% Explained above.
     !%End
+    ierr = -3
     if(loct_parse_block(datasets_check('TDFunctions'), blk) .ne. 0) then
       ierr = -1
-      return
+      call pop_sub(); return
     end if
 
     nrows = loct_parse_block_n(blk)
@@ -260,7 +261,7 @@ module tdf_m
           case default
             ierr = -2
             call loct_parse_block_end(blk)
-            return
+            call pop_sub(); return
         end select
 
         a0   = a0 * units_inp%energy%factor / units_inp%length%factor

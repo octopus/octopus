@@ -1332,7 +1332,9 @@ contains
       call write_info(1, iunit)
     end if
 
-    if(.not.mpi_grp_is_root(mpi_world)) return
+    if(.not.mpi_grp_is_root(mpi_world)) then
+      call pop_sub(); return
+    end if
 
     do ik = 1, st%d%nik, ns
       if(st%d%nik > ns) then
@@ -1423,9 +1425,9 @@ contains
     logical :: grace_mode, gnuplot_mode
     character(len=80) :: filename    
 
-    call push_sub('states.states_write_bands')
-
     if(.not.mpi_grp_is_root(mpi_world)) return
+
+    call push_sub('states.states_write_bands')
 
     !%Variable OutputBandsGnuplotMode
     !%Type logical

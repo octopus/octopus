@@ -651,7 +651,7 @@ contains
 
         sb%h(1) = M_TWO*sb%lsize(1)/real(sx, REAL_PRECISION)
         sb%h(2) = M_TWO*sb%lsize(2)/real(sy, REAL_PRECISION)
-        return
+        call pop_sub(); return
       end if
 #endif
 
@@ -1395,42 +1395,42 @@ contains
     call push_sub('simul_box.simul_box_is_eq')
 
     res = .false.
-    if(sb1%box_shape .ne. sb2%box_shape)             return
-    if(sb1%dim .ne. sb2%dim)                         return
-    if(sb1%periodic_dim .ne. sb2%periodic_dim)       return
+    if(sb1%box_shape .ne. sb2%box_shape)             go to 1
+    if(sb1%dim .ne. sb2%dim)                         go to 1
+    if(sb1%periodic_dim .ne. sb2%periodic_dim)       go to 1
 
     select case(sb1%box_shape)
     case(SPHERE, MINIMUM)
-      if(.not.(sb1%rsize .app. sb2%rsize))           return
-      if(.not.(sb1%lsize .app. sb2%lsize))           return
+      if(.not.(sb1%rsize .app. sb2%rsize))           go to 1
+      if(.not.(sb1%lsize .app. sb2%lsize))           go to 1
     case(CYLINDER)
-      if(.not.(sb1%rsize .app. sb2%rsize))           return
-      if(.not.(sb1%xsize .app. sb2%xsize))           return
-      if(.not.(sb1%lsize .app. sb2%lsize))           return
+      if(.not.(sb1%rsize .app. sb2%rsize))           go to 1
+      if(.not.(sb1%xsize .app. sb2%xsize))           go to 1
+      if(.not.(sb1%lsize .app. sb2%lsize))           go to 1
     case(PARALLELEPIPED)
-      if(.not.(sb1%lsize .app. sb2%lsize))           return
+      if(.not.(sb1%lsize .app. sb2%lsize))           go to 1
     case(BOX_USDEF)
-      if(.not.(sb1%lsize .app. sb2%lsize))           return
-      if(trim(sb1%user_def) .ne. trim(sb2%user_def)) return
+      if(.not.(sb1%lsize .app. sb2%lsize))           go to 1
+      if(trim(sb1%user_def) .ne. trim(sb2%user_def)) go to 1
     end select
 
-    if(.not.(sb1%fft_alpha .app. sb2%fft_alpha))     return
-    if(.not.(sb1%h .app. sb2%h))                     return
-    if(.not.(sb1%box_offset .app. sb2%box_offset))   return
-    if(sb1%open_boundaries.neqv.sb2%open_boundaries)   return
+    if(.not.(sb1%fft_alpha .app. sb2%fft_alpha))     go to 1
+    if(.not.(sb1%h .app. sb2%h))                     go to 1
+    if(.not.(sb1%box_offset .app. sb2%box_offset))   go to 1
+    if(sb1%open_boundaries.neqv.sb2%open_boundaries)   go to 1
 
     if (sb1%open_boundaries) then
-      if(any(sb1%add_unit_cells.ne.sb2%add_unit_cells))     return
-      if(any(sb1%lead_restart_dir.ne.sb2%lead_restart_dir)) return
+      if(any(sb1%add_unit_cells.ne.sb2%add_unit_cells))     go to 1
+      if(any(sb1%lead_restart_dir.ne.sb2%lead_restart_dir)) go to 1
       if(associated(sb1%lead_unit_cell).and.associated(sb2%lead_unit_cell)) then
         do il = 1, NLEADS
-          if(.not.simul_box_is_eq(sb1%lead_unit_cell(il), sb2%lead_unit_cell(il))) return
+          if(.not.simul_box_is_eq(sb1%lead_unit_cell(il), sb2%lead_unit_cell(il))) go to 1
         end do
       end if
     endif
     res = .true.
 
-    call pop_sub()
+1   call pop_sub()
   end function simul_box_is_eq
 
 
