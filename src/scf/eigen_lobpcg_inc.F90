@@ -62,6 +62,10 @@
 
     iblock = 0
 
+    if(mpi_grp_is_root(mpi_world).and..not.verbose) then
+      call loct_progress_bar(st%nst*(ik - 1), st%nst*st%d%nik)
+    end if
+
     ! Iterate over all blocks.
     do ib = st%st_start, st%st_end, bs
       iblock    = iblock+1
@@ -81,7 +85,11 @@
            ik, pre, tol, n_matvec, conv, diff, iblock, verbose_)
 
       niter         = niter + n_matvec
-      converged = converged + conv
+      converged = converged + conv  
+
+      if(mpi_grp_is_root(mpi_world).and..not.verbose) then
+        call loct_progress_bar(st%nst*(ik - 1) + psi_end, st%nst*st%d%nik)
+      end if
     end do
 
 #if defined(HAVE_MPI)
@@ -674,7 +682,9 @@ contains
     
     R_TYPE              :: det
     R_TYPE, allocatable :: tmp1(:, :), tmp2(:, :), tmp3(:, :)
+    type(profile_t), save :: prof
 
+    call profiling_in(prof, "LOBPCG_CONSTRAINTS")
     call push_sub('eigen_lobpcg_inc.Xlobpcg_apply_constraints')
 
     ALLOCATE(tmp1(nconstr, nconstr), nconstr**2)
@@ -692,6 +702,8 @@ contains
 
     deallocate(tmp1, tmp2, tmp3)
     call pop_sub()
+    call profiling_out(prof)
+
   end subroutine X(lobpcg_apply_constraints)
 
 

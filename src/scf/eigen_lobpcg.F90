@@ -28,6 +28,7 @@ module eigen_lobpcg_m
   use io_m
   use lalg_basic_m
   use lalg_adv_m
+  use loct_m
   use math_m
   use mesh_m
   use mesh_function_m
