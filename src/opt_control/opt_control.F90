@@ -353,7 +353,7 @@ contains
       call oct_prop_init(prop_psi, "psi")
 
       if (oct%mode_fixed_fluence) then
-        call parameters_set_alpha(par, sqrt( parameters_fluence(par) / parameters_targetfluence(par)))
+        call parameters_set_alpha(par, sqrt( parameters_fluence(par) / parameters_targetfluence()))
       end if
 
       call parameters_copy(par_new, par)      
@@ -600,7 +600,7 @@ contains
 
     ! recalc field
     if (oct%mode_fixed_fluence) then
-      new_penalty = parameters_alpha(par, 1) * sqrt( parameters_fluence(parp) / parameters_targetfluence(par) )
+      new_penalty = parameters_alpha(par, 1) * sqrt( parameters_fluence(parp) / parameters_targetfluence() )
       call parameters_set_alpha(parp, new_penalty)
       call parameters_set_fluence(parp)
     end if

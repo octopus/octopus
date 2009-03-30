@@ -40,7 +40,7 @@
     end do
     e = matmul(par%utransf, ep)
 
-    if(par%representation .eq. ctr_zero_fourier_series) then
+    if(par_common%representation .eq. ctr_zero_fourier_series) then
       ALLOCATE(a(n-1), n-1)
       ALLOCATE(y(n-1), n-1)
       a = M_ZERO
@@ -52,15 +52,7 @@
      else
       call cartesian2hyperspherical(e, x(1:n-1))
     end if
-
-    if(par_common%mode .eq. parameter_mode_f_and_phi) then
-      do j =  1, n
-        ep(j) = tdf(par%f(2), j)
-      end do
-      e = ep
-      call cartesian2hyperspherical(e, x(n:2*n-2))
-    end if
-
+    
     xx = x
     deallocate(e, ep, x) 
     call pop_sub()
@@ -86,7 +78,7 @@
     ALLOCATE(x(size(xx)), size(xx))
     x = xx
 
-    if(par%representation .eq. ctr_zero_fourier_series) then
+    if(par_common%representation .eq. ctr_zero_fourier_series) then
       call hyperspherical2cartesian(x, ep(2:n))
       ALLOCATE(a(n-1), n-1)
       ALLOCATE(y(n-1), n-1)
@@ -94,21 +86,15 @@
       a(1:n/2-1) = M_ONE
       call hypersphere_cut_back(ep(2:n), a, e(2:n))
       e(1) = -sum(e(2:n/2))
-      e = sqrt(par%targetfluence) * e
+      e = sqrt(par_common%targetfluence) * e
       ep = matmul(par%utransfi, e)
       call tdf_set_numerical(par%f(1), ep)
       deallocate(a, y)
     else
       call hyperspherical2cartesian(x(1:n-1), e)
-      e = sqrt(par%targetfluence) * e
+      e = sqrt(par_common%targetfluence) * e
       ep = matmul(par%utransfi, e)
       call tdf_set_numerical(par%f(1), ep)
-    end if
-
-    if(par_common%mode .eq. parameter_mode_f_and_phi) then
-      call hyperspherical2cartesian(x(n:2*n-2), e)
-      ep = sqrt(par%intphi) * e
-      call tdf_set_numerical(par%f(2), ep)
     end if
 
     deallocate(e, ep, x)
@@ -137,8 +123,7 @@
     forall(mm = 1:par%dim) par%utransf(mm, mm) = M_ONE
     forall(mm = 1:par%dim) par%utransfi(mm, mm) = M_ONE
 
-    if( (par_common%mode .eq. parameter_mode_f) .or. &
-        (par_common%mode .eq. parameter_mode_f_and_phi) ) then
+    if( par_common%mode .eq. parameter_mode_f ) then
       ! If the object to optimize is the envelope of the
       ! the laser pulse. Being e(t) the laser pulse, it is assumed that it
       ! has the form:
@@ -161,7 +146,8 @@
       par%utransfi = M_ZERO
 
       do mm = 1, par%dim
-        call tdf_init_numerical(fm, tdf_niter(par%f(1)), tdf_dt(par%f(1)), par%omegamax, rep = par_common%representation)
+        call tdf_init_numerical(fm, tdf_niter(par%f(1)), tdf_dt(par%f(1)), &
+          par_common%omegamax, rep = par_common%representation)
         call tdf_set_numerical(fm, mm, M_ONE)
         select case(par_common%representation)
           case(ctr_sine_fourier_series); call tdf_sineseries_to_numerical(fm)
@@ -174,7 +160,8 @@
         end do
 
         do nn = mm, par%dim
-          call tdf_init_numerical(fn, tdf_niter(par%f(1)), tdf_dt(par%f(1)), par%omegamax, rep = par_common%representation)
+          call tdf_init_numerical(fn, tdf_niter(par%f(1)), tdf_dt(par%f(1)), &
+            par_common%omegamax, rep = par_common%representation)
           call tdf_set_numerical(fn, nn, M_ONE)
           select case(par_common%representation)
             case(ctr_sine_fourier_series); call tdf_sineseries_to_numerical(fn)

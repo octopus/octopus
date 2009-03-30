@@ -92,8 +92,7 @@ module opt_control_parameters_m
   integer, parameter :: parameter_mode_none      = 0, &
                         parameter_mode_epsilon   = 1, &
                         parameter_mode_f         = 2, &
-                        parameter_mode_phi       = 3, &
-                        parameter_mode_f_and_phi = 4
+                        parameter_mode_phi       = 3
 
   type oct_parameters_common_t
     private
@@ -116,14 +115,11 @@ module opt_control_parameters_m
     private
     integer :: no_parameters = 0
     integer :: dim           = 0
-    FLOAT   :: targetfluence = M_ZERO
     FLOAT   :: intphi        = M_ZERO
     type(tdf_t), pointer :: f(:) => NULL()
     FLOAT, pointer :: alpha(:)   => NULL()
 
-    integer :: representation         = 0
     integer :: current_representation = 0
-    FLOAT   :: omegamax               = M_ZERO
 
     FLOAT   :: w0       = M_ZERO
     FLOAT, pointer :: utransf(:, :)  => NULL()
@@ -280,9 +276,6 @@ contains
     !% the external field would be given by a function in the form e(t) = f(t)*cos(w0*t+phi(t)), 
     !% where f(t) is an "envelope", w0 a carrier frequency, and phi(t) the td phase that we 
     !% wish to optimize.
-    !%Option parameter_mode_f_and_phi 4
-    !% A combination of parameter_mode_f and parameter_mode_phi: we have two control functions, 
-    !% one for the envelope and another one for the phase.
     !%End
     call loct_parse_int(datasets_check('OCTControlFunctionType'), parameter_mode_epsilon, par_common%mode)
     if(.not.varinfo_valid_option('OCTControlFunctionType', par_common%mode)) &
@@ -481,9 +474,9 @@ contains
     ! Move to the sine-Fourier space if required.
     call parameters_set_rep(par)
 
-    if( (par%representation .eq. ctr_sine_fourier_series) .or. &
-        (par%representation .eq. ctr_fourier_series)      .or. &
-        (par%representation .eq. ctr_zero_fourier_series) ) then
+    if( (par_common%representation .eq. ctr_sine_fourier_series) .or. &
+        (par_common%representation .eq. ctr_fourier_series)      .or. &
+        (par_common%representation .eq. ctr_zero_fourier_series) ) then
       if(par%dim <= 1) then 
         write(message(1), '(a)')    'Error: The dimension of the basis set used to represent the control'
         write(message(2), '(a)')    '       functions must be larger than one. The input options that you'
@@ -495,14 +488,15 @@ contains
       call write_info(2)
     end if
 
-    if(par%targetfluence .ne. M_ZERO) then
-      if(par%targetfluence < M_ZERO) then
-        par%targetfluence = parameters_fluence(par) 
+    if(par_common%targetfluence .ne. M_ZERO) then
+      if(par_common%targetfluence < M_ZERO) then
+        par_common%targetfluence = parameters_fluence(par) 
         write(message(1), '(a)')         'Info: The QOCT run will attempt to find a solution with the same'
-        write(message(2), '(a,f10.5,a)') '      fluence as the input external fields: F = ', par%targetfluence, ' a.u.'
+        write(message(2), '(a,f10.5,a)') '      fluence as the input external fields: F = ', &
+          par_common%targetfluence, ' a.u.'
       else
         write(message(1), '(a)')         'Info: The QOCT run will attempt to find a solution with a predefined'
-        write(message(2), '(a,f10.5,a)') '      fluence: F = ', par%targetfluence, ' a.u.'
+        write(message(2), '(a,f10.5,a)') '      fluence: F = ', par_common%targetfluence, ' a.u.'
       end if
       call write_info(2)
       if(par_common%fix_initial_fluence) call parameters_set_fluence(par)
@@ -519,15 +513,6 @@ contains
         par%intphi = CNST(0.1)*(M_PI/M_TWO)**2*dt*ntiter
       else
         par%intphi = tdf_dot_product(par%f(1), par%f(1))
-      end if
-    case(parameter_mode_f_and_phi)
-      par%intphi = tdf_dot_product(par%f(2), par%f(2))
-      if(par%intphi <= M_ZERO) then
-        dt = tdf_dt(par%f(1))
-        ntiter = tdf_niter(par%f(1))
-        par%intphi = (CNST(0.1)*M_PI)**2*dt*ntiter
-      else
-        par%intphi = tdf_dot_product(par%f(2), par%f(2))
       end if
     end select
 
@@ -550,13 +535,13 @@ contains
     type(oct_control_parameters_t), intent(inout) :: par
     call push_sub('parameters.parameters_set_rep')
 
-    if(par%current_representation .ne. par%representation) then
-      if(par%representation .eq. ctr_real_time) then
+    if(par%current_representation .ne. par_common%representation) then
+      if(par_common%representation .eq. ctr_real_time) then
         call parameters_to_realtime(par)
       else
         call parameters_to_basis(par)
       end if
-      par%current_representation = par%representation
+      par%current_representation = par_common%representation
     end if
 
     call pop_sub()
@@ -571,7 +556,7 @@ contains
     call push_sub('parameters.parameters_to_basis')
 
     if(par%current_representation.eq.ctr_real_time) then
-      select case(par%representation)
+      select case(par_common%representation)
       case(ctr_sine_fourier_series)
         do j = 1, par%no_parameters
           call tdf_numerical_to_sineseries(par%f(j))
@@ -676,13 +661,6 @@ contains
     FLOAT, allocatable :: e_in(:, :, :), e_out(:, :, :), e_new(:, :, :)
     call push_sub('parameters.parameters_mixing')
 
-    ! First, some sanity checks:
-    ASSERT(par_in%representation .eq. par_out%representation)
-    ASSERT(par_in%representation .eq. par_new%representation)
-    ASSERT(par_in%representation .eq. par_in%current_representation)
-    ASSERT(par_out%representation .eq. par_out%current_representation)
-    ASSERT(par_new%representation .eq. par_new%current_representation)
-
     dim = par_in%dim
     ALLOCATE(e_in (dim, par_in%no_parameters, 1), dim*par_in%no_parameters)
     ALLOCATE(e_out(dim, par_in%no_parameters, 1), dim*par_in%no_parameters)
@@ -720,12 +698,9 @@ contains
 
     call push_sub('parameters.parameters_init')
 
-    cp%representation  = par_common%representation
     cp%w0              = par_common%w0
-    cp%omegamax        = par_common%omegamax
     cp%no_parameters   = par_common%no_parameters
     cp%current_representation = ctr_real_time
-    cp%targetfluence = par_common%targetfluence
     call loct_pointer_copy(cp%alpha, par_common%alpha)
 
     ALLOCATE(cp%f(cp%no_parameters), cp%no_parameters)
@@ -733,7 +708,7 @@ contains
       call tdf_init_numerical(cp%f(j), ntiter, dt, par_common%omegamax)
     end do
 
-    select case(cp%representation)
+    select case(par_common%representation)
     case(ctr_real_time)
       cp%dim = ntiter + 1
     case(ctr_sine_fourier_series)
@@ -766,11 +741,6 @@ contains
     case(parameter_mode_phi)
       call tdf_end(cp%f(1))
       call laser_get_phi(ep%lasers(1), cp%f(1))
-    case(parameter_mode_f_and_phi)
-      call tdf_end(cp%f(1))
-      call laser_get_f(ep%lasers(1), cp%f(1))
-      call tdf_end(cp%f(2))
-      call laser_get_phi(ep%lasers(1), cp%f(2))
     end select
 
     call pop_sub()
@@ -786,7 +756,7 @@ contains
     call push_sub('parameters.parameters_apply_envelope')
 
     ! Do not apply the envelope if the parameters are represented as a sine Fourier series.
-    if(cp%representation .eq. ctr_real_time) then
+    if(par_common%representation .eq. ctr_real_time) then
       do j = 1, cp%no_parameters
         do i = 1, tdf_niter(cp%f(j)) + 1
           call tdf_set_numerical(cp%f(j), i, tdf(cp%f(j), i) / tdf(par_common%td_penalty(j), i) )
@@ -818,9 +788,6 @@ contains
       end do
     case(parameter_mode_phi)
       call laser_set_phi(ep%lasers(1), par%f(1))
-    case(parameter_mode_f_and_phi)
-      call laser_set_f(ep%lasers(1), par%f(1))
-      call laser_set_phi(ep%lasers(1), par%f(2))
     end select
 
     call parameters_end(par)
@@ -952,20 +919,6 @@ contains
       end do
       call io_close(iunit)
 
-    case(parameter_mode_f_and_phi)
-
-      ! In this case, there is only one parameter (for the moment)
-      iunit = io_open(trim(filename)//'/cp', action='write')
-      write(iunit,'(4a20)') '#       t [a.u]      ', '        e(t)         ', &
-                            '         f(t)        ', '       phi(t)        '
-      do i = 1, tdf_niter(par%f(j)) + 1
-        t = (i-1)*tdf_dt(par%f(j))
-        write(iunit, '(4es20.8e3)') t, tdf(par%f(1), t) * &
-          cos(par%w0*t + tdf(par%f(2), t) ), tdf(par%f(1), t), tdf(par%f(2), t)
-        func(i, 1) = tdf(par%f(1), t) * cos(par%w0*t + tdf(par%f(2), t) )
-      end do
-      call io_close(iunit)
-
     end select
 
 
@@ -1005,15 +958,15 @@ contains
         end do
       end do
 
-    case(parameter_mode_f, parameter_mode_phi, parameter_mode_f_and_phi)
+    case(parameter_mode_f, parameter_mode_phi)
       iunit = io_open(trim(filename)//'/cpw', action='write')
       write(iunit,'(3a20)') '#       w [a.u]      ', '      Re[e(w)]       ', &
                             '      Im[e(w)]       '
       
       nfreqs = 1000
-      wa = cp%w0 - M_THREE * cp%omegamax
-      wb = cp%w0 + M_THREE * cp%omegamax
-      wmax = CNST(6.0)*cp%omegamax
+      wa = cp%w0 - M_THREE * par_common%omegamax
+      wb = cp%w0 + M_THREE * par_common%omegamax
+      wmax = CNST(6.0)*par_common%omegamax
       dw = wmax/(nfreqs-1)
       dt = tdf_dt(par%f(1))
 
@@ -1081,17 +1034,6 @@ contains
       end do
       parameters_fluence = tdf_dot_product(f, f)
       call tdf_end(f)
-    case(parameter_mode_f_and_phi)
-      call tdf_init(f)
-      call tdf_copy(f, par_%f(1))
-      do i = 1, tdf_niter(f) + 1
-        t = (i-1)*tdf_dt(f)
-        fi = tdf(par_%f(1), i)
-        phi = real(tdf(par_%f(2), i))
-        call tdf_set_numerical(f, i, fi*cos(par%w0*t+phi))
-      end do
-      parameters_fluence = tdf_dot_product(f, f)
-      call tdf_end(f)
     end select
 
     call parameters_end(par_)
@@ -1113,7 +1055,7 @@ contains
 
     call push_sub('parameters.parameters_j2')
 
-    ASSERT(par%current_representation .eq. par%representation)
+    ASSERT(par%current_representation .eq. par_common%representation)
 
     call parameters_copy(par_, par)
     call parameters_to_realtime(par_)
@@ -1161,21 +1103,9 @@ contains
       end do
       integral = tdf_dot_product(f, f)
       call tdf_end(f)
-    case(parameter_mode_f_and_phi)
-      call tdf_init(f)
-      call tdf_copy(f, par_%f(1))
-      do i = 1, tdf_niter(f) + 1
-        t = (i-1)*tdf_dt(f)
-        fi = tdf(par_%f(1), i)
-        phi = real(tdf(par_%f(2), i))
-        tdp = sqrt(real(tdf(par_common%td_penalty(1), i)))
-        call tdf_set_numerical(f, i, tdp*fi*cos(par_%w0*t+phi))
-      end do
-      integral = tdf_dot_product(f, f)
-      call tdf_end(f)
     end select
 
-    j2 = - par_%alpha(1) * (integral - par_%targetfluence)
+    j2 = - par_%alpha(1) * (integral - par_common%targetfluence)
 
     call parameters_end(par_)
     call pop_sub()
@@ -1193,7 +1123,7 @@ contains
 
     old_fluence = parameters_fluence(par) 
     do j = 1, par%no_parameters
-      call tdf_scalar_multiply( sqrt(par%targetfluence/old_fluence) , par%f(j) )
+      call tdf_scalar_multiply( sqrt(par_common%targetfluence/old_fluence) , par%f(j) )
     end do
 
     call pop_sub()
@@ -1217,14 +1147,10 @@ contains
     integer :: j
     call push_sub('parameters.parameters_copy')
 
-    cp_out%targetfluence = cp_in%targetfluence
     cp_out%no_parameters = cp_in%no_parameters
     cp_out%dim = cp_in%dim
-    cp_out%targetfluence = cp_in%targetfluence
     cp_out%intphi = cp_in%intphi
-    cp_out%representation = cp_in%representation
     cp_out%current_representation = cp_in%current_representation
-    cp_out%omegamax = cp_in%omegamax
     cp_out%w0 = cp_in%w0
     call loct_pointer_copy(cp_out%alpha, cp_in%alpha)
     ALLOCATE(cp_out%f(cp_out%no_parameters), cp_out%no_parameters)
@@ -1247,7 +1173,7 @@ contains
      integer :: j
      call push_sub('parameters.parameters_randomize')
 
-     ASSERT(par%representation .ne. ctr_real_time)
+     ASSERT(par_common%representation .ne. ctr_real_time)
 
      call parameters_set_rep(par)
 
@@ -1258,9 +1184,6 @@ contains
        end do
      case(parameter_mode_phi)
        call tdf_set_random(par%f(1))
-     case(parameter_mode_f_and_phi)
-       call tdf_set_random(par%f(1))
-       call tdf_set_random(par%f(2), par%intphi)
      end select
 
      call pop_sub()
@@ -1320,9 +1243,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  FLOAT pure function parameters_targetfluence(par)
-    type(oct_control_parameters_t), intent(in) :: par
-    parameters_targetfluence = par%targetfluence
+  FLOAT pure function parameters_targetfluence()
+    parameters_targetfluence = par_common%targetfluence
   end function parameters_targetfluence
   ! ---------------------------------------------------------
 
@@ -1351,11 +1273,6 @@ contains
     case(parameter_mode_epsilon, parameter_mode_f, parameter_mode_phi)
       lower_bounds(1:dog-1) = M_ZERO
       lower_bounds(dog)     = -M_PI
-    case(parameter_mode_f_and_phi)
-      lower_bounds(1:(dog/2)-1)   = M_ZERO
-      lower_bounds(dog/2)         = -M_PI
-      lower_bounds(dog/2+1:dog-1) = M_ZERO
-      lower_bounds(dog)           = -M_PI
     end select
 
     call pop_sub()
@@ -1369,7 +1286,7 @@ contains
     integer :: i
 
     parameters_dog = 0
-    if(par%representation .eq. ctr_zero_fourier_series) then
+    if(par_common%representation .eq. ctr_zero_fourier_series) then
       i = 2
     else
       i = 1
@@ -1379,8 +1296,6 @@ contains
       parameters_dog = par%dim-i
     case(parameter_mode_phi)
       parameters_dog = par%dim-i
-    case(parameter_mode_f_and_phi)
-      parameters_dog = (par%dim-i)*2
     end select
 
   end function parameters_dog
