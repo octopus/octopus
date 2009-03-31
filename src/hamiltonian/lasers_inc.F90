@@ -229,20 +229,20 @@ end subroutine X(vlaser_operator_linear)
 
 
 ! ---------------------------------------------------------
-subroutine X(vlasers) (lasers, nlasers, gr, std, psi, hpsi, grad, ik, t, gyromagnetic_ratio, a_static)
+subroutine X(vlasers) (lasers, nlasers, gr, std, psi, hpsi, grad, ik, gyromagnetic_ratio, a_static, t)
   type(laser_t),       intent(in)    :: lasers(:)
   integer,             intent(in)    :: nlasers
   type(grid_t),        intent(inout) :: gr
   type(states_dim_t),  intent(in)    :: std
   R_TYPE,              intent(inout) :: psi(:,:)  ! psi(gr%mesh%np_part, std%dim)
   R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(gr%mesh%np_part, std%dim)
-  R_TYPE,              intent(in)    :: grad(: , :, :)
+  R_TYPE,     pointer, intent(in)    :: grad(: , :, :)
   integer,             intent(in)    :: ik
-  FLOAT,    optional,  intent(in)    :: t
   FLOAT,               intent(in)    :: gyromagnetic_ratio
   FLOAT,               pointer       :: a_static(:,:)
+  FLOAT,    optional,  intent(in)    :: t
 
-  integer :: i, k, idim
+  integer :: k, idim
   logical :: electric_field, vector_potential, magnetic_field
   R_TYPE, allocatable :: lhpsi(:, :)
   type(profile_t), save :: ext_fields_profile
@@ -260,56 +260,77 @@ subroutine X(vlasers) (lasers, nlasers, gr, std, psi, hpsi, grad, ik, t, gyromag
   vector_potential = .false.
   magnetic_field = .false.
 
-  do i = 1, nlasers
+  call get_fields()
+  
+  if(electric_field)   call apply_electric_field()
+  if(magnetic_field)   call apply_magnetic_field()
+  if(vector_potential) call apply_vector_potential()
 
-    select case(laser_kind(lasers(i)))
-    case(E_FIELD_SCALAR_POTENTIAL, E_FIELD_ELECTRIC)
-      if(.not. allocated(v)) then 
-        ALLOCATE(v(gr%mesh%np), gr%mesh%np)
-        v = M_ZERO
-      end if
-      ALLOCATE(pot(gr%mesh%np), gr%mesh%np)
-      pot = M_ZERO
-      call laser_potential(gr%sb, lasers(i), gr%mesh, pot, t)
-      v = v + pot
-      electric_field = .true.
-      deallocate(pot)
+  call profiling_out(ext_fields_profile)
+  call pop_sub()
 
-    case(E_FIELD_MAGNETIC)
-      if(.not. allocated(a)) then 
-        ALLOCATE(a(gr%mesh%np_part, gr%mesh%sb%dim), gr%mesh%np_part*gr%mesh%sb%dim)
-        a = M_ZERO
-        ALLOCATE(a_prime(gr%mesh%np_part, gr%mesh%sb%dim), gr%mesh%np_part*gr%mesh%sb%dim)
-        a_prime = M_ZERO
-      end if
+contains
 
-      call laser_vector_potential(lasers(i), a_prime, t)
-      a = a + a_prime
-      if(present(t)) then
-        call laser_field(gr%sb, lasers(i), b_prime, t)
-      else 
-        call laser_field(gr%sb, lasers(i), b_prime)
-      end if
-      b = b + b_prime
-      magnetic_field = .true.
+  ! ---------------------------------------------------------
+  subroutine get_fields()
+    integer :: i
 
-    case(E_FIELD_VECTOR_POTENTIAL)
-      call laser_field(gr%sb, lasers(i), a_field_prime, t)
-      a_field = a_field + a_field_prime
-      vector_potential = .true.
+    do i = 1, nlasers
 
-    end select
+      select case(laser_kind(lasers(i)))
+      case(E_FIELD_SCALAR_POTENTIAL, E_FIELD_ELECTRIC)
+        if(.not. allocated(v)) then 
+          ALLOCATE(v(gr%mesh%np), gr%mesh%np)
+          v = M_ZERO
+        end if
+        ALLOCATE(pot(gr%mesh%np), gr%mesh%np)
+        pot = M_ZERO
+        call laser_potential(gr%sb, lasers(i), gr%mesh, pot, t)
+        v = v + pot
+        electric_field = .true.
+        deallocate(pot)
+        
+      case(E_FIELD_MAGNETIC)
+        if(.not. allocated(a)) then 
+          ALLOCATE(a(gr%mesh%np_part, gr%mesh%sb%dim), gr%mesh%np_part*gr%mesh%sb%dim)
+          a = M_ZERO
+          ALLOCATE(a_prime(gr%mesh%np_part, gr%mesh%sb%dim), gr%mesh%np_part*gr%mesh%sb%dim)
+          a_prime = M_ZERO
+        end if
 
-  end do
+        call laser_vector_potential(lasers(i), a_prime, t)
+        a = a + a_prime
+        if(present(t)) then
+          call laser_field(gr%sb, lasers(i), b_prime, t)
+        else 
+          call laser_field(gr%sb, lasers(i), b_prime)
+        end if
+        b = b + b_prime
+        magnetic_field = .true.
+        
+      case(E_FIELD_VECTOR_POTENTIAL)
+        call laser_field(gr%sb, lasers(i), a_field_prime, t)
+        a_field = a_field + a_field_prime
+        vector_potential = .true.
+        
+      end select
 
-  if(electric_field) then
+    end do
+
+  end subroutine get_fields
+
+
+  ! ---------------------------------------------------------
+  subroutine apply_electric_field()
     do k = 1, std%dim
       hpsi(1:gr%mesh%np, k)= hpsi(1:gr%mesh%np, k) + v(1:gr%mesh%np) * psi(1:gr%mesh%np, k)
     end do
     deallocate(v)
-  end if
+  end subroutine apply_electric_field
 
-  if(magnetic_field) then
+
+  ! ---------------------------------------------------------
+  subroutine apply_magnetic_field()
     do k = 1, gr%mesh%np
       hpsi(k, :) = hpsi(k, :) + M_HALF*dot_product(a(k, 1:gr%mesh%sb%dim), a(k, 1:gr%mesh%sb%dim))*psi(k, :) / P_c**2
     end do
@@ -323,7 +344,7 @@ subroutine X(vlasers) (lasers, nlasers, gr, std, psi, hpsi, grad, ik, t, gyromag
         hpsi(k, :) = hpsi(k, :) + dot_product(a(k, 1:gr%mesh%sb%dim), a_static(k, 1:gr%mesh%sb%dim))*psi(k, :) / P_c
       end do
     end if
-
+    
     select case(std%ispin)
     case(UNPOLARIZED, SPIN_POLARIZED)
       do k = 1, gr%mesh%np
@@ -351,17 +372,20 @@ subroutine X(vlasers) (lasers, nlasers, gr, std, psi, hpsi, grad, ik, t, gyromag
     case (SPINORS)
       ALLOCATE(lhpsi(gr%mesh%np, std%dim), gr%mesh%np*std%dim)
       lhpsi(1:gr%mesh%np, 1) = M_HALF/P_C*( b(3)*psi(1:gr%mesh%np, 1) &
-           + (b(1) - M_zI*b(2))*psi(1:gr%mesh%np, 2))
+        + (b(1) - M_zI*b(2))*psi(1:gr%mesh%np, 2))
       lhpsi(1:gr%mesh%np, 2) = M_HALF/P_C*(-b(3)*psi(1:gr%mesh%np, 2) &
-           + (b(1) + M_zI*b(2))*psi(1:gr%mesh%np, 1))
+        + (b(1) + M_zI*b(2))*psi(1:gr%mesh%np, 1))
       hpsi(1:gr%mesh%np, :) = hpsi(1:gr%mesh%np, :) + (gyromagnetic_ratio * M_HALF) * lhpsi(1:gr%mesh%np, :)
       deallocate(lhpsi)
     end select
 
     deallocate(a, a_prime)
-  end if
 
-  if(vector_potential) then
+  end subroutine apply_magnetic_field
+
+
+  ! ---------------------------------------------------------
+  subroutine apply_vector_potential()
     do k = 1, gr%mesh%np
       hpsi(k, :) = hpsi(k, :) + M_HALF*dot_product(a_field(1:gr%mesh%sb%dim), a_field(1:gr%mesh%sb%dim))*psi(k, :) / P_c**2
     end do
@@ -378,10 +402,9 @@ subroutine X(vlasers) (lasers, nlasers, gr, std, psi, hpsi, grad, ik, t, gyromag
         end do
       end do
     end select
-  end if
 
-  call profiling_out(ext_fields_profile)
-  call pop_sub()
+  end subroutine apply_vector_potential
+
 end subroutine X(vlasers)
 
 !! Local Variables:

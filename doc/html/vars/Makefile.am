@@ -44,21 +44,18 @@ CLEANFILES = $(dist_doc_DATA)
 alpha.js: RUN_SCRIPT
 sections.js: RUN_SCRIPT
 vars_index.html: RUN_SCRIPT
-Generalities.html: RUN_SCRIPT
-Geometry_Optimization.html: RUN_SCRIPT
-Generator_Coordinates.html: RUN_SCRIPT
+Execution.html: RUN_SCRIPT
+Calculation_Modes.html: RUN_SCRIPT
 Hamiltonian.html: RUN_SCRIPT
 Linear_Response.html: RUN_SCRIPT
 Math.html: RUN_SCRIPT
 Mesh.html: RUN_SCRIPT
-Optimal_Control.html: RUN_SCRIPT
 Output.html: RUN_SCRIPT
 SCF.html: RUN_SCRIPT
 States.html: RUN_SCRIPT
 System.html: RUN_SCRIPT
 Time_Dependent.html: RUN_SCRIPT
 Open_Boundaries.html: RUN_SCRIPT
-Unoccupied_States.html: RUN_SCRIPT
 Utilities.html: RUN_SCRIPT
 
 RUN_SCRIPT:

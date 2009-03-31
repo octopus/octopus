@@ -227,6 +227,8 @@ contains
     select case(eigens%es_type)
     case(RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS)
       call preconditioner_init(eigens%pre, gr)
+    case default
+      call preconditioner_null(eigens%pre)
     end select
 
     nullify(eigens%diff)

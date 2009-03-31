@@ -114,9 +114,6 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, t, kinetic_only)
     ! finish the calculation of the laplacian
     call profiling_in(C_PROFILING_KINETIC)
     do idim = 1, hm%d%dim
-! MJV: this is where the MASS enters the kinetic energy. Should be made into
-!   a MAX_DIM dimensional vector for 1 mass per direction...
-!  but you can not because there is no longer any directional info here...
       call lalg_axpy(gr%mesh%np, -M_HALF/hm%mass, lapl(:, idim, ii), hpsi(:, idim))
       call der_handle_end(handles(idim, ii))
     end do
@@ -135,8 +132,11 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, t, kinetic_only)
       if (present(t)) then
         ! lasers
         if(hm%ep%no_lasers > 0) then
-          if(any(laser_requires_gradient(hm%ep%lasers(1:hm%ep%no_lasers)))) call X(get_grad)(hm, gr, epsi, grad)
-          call X(vlasers)(hm%ep%lasers, hm%ep%no_lasers, gr, hm%d, epsi, hpsi, grad, ik, t, hm%ep%gyromagnetic_ratio, hm%ep%a_static)
+          if(any(laser_requires_gradient(hm%ep%lasers(1:hm%ep%no_lasers)))) then
+            call X(get_grad)(hm, gr, epsi, grad)
+          end if
+          call X(vlasers)(hm%ep%lasers, hm%ep%no_lasers, gr, hm%d, epsi, hpsi, grad, &
+            ik, hm%ep%gyromagnetic_ratio, hm%ep%a_static, t)
         end if
 #ifdef R_TCOMPLEX
         if (gauge_field_is_applied(hm%ep%gfield)) then

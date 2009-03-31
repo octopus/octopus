@@ -883,14 +883,8 @@ contains
     stout%st_end     = stin%st_end
     call loct_pointer_copy(stout%dpsi, stin%dpsi)
     call loct_pointer_copy(stout%zpsi, stin%zpsi)
-    if(associated(stin%user_def_states)) then
-      j = size(stin%user_def_states, 1)
-      k = size(stin%user_def_states, 2)
-      l = size(stin%user_def_states, 3)
-      i = j*k*l
-      ALLOCATE(stout%user_def_states(j, k, l), i)
-      stout%user_def_states = stin%user_def_states
-    end if
+    call loct_pointer_copy(stout%user_def_states, stin%user_def_states)
+
     call loct_pointer_copy(stout%rho, stin%rho)
     call loct_pointer_copy(stout%j, stin%j)
     stout%nlcc = stin%nlcc
@@ -921,53 +915,39 @@ contains
     type(states_t), intent(inout) :: st
 
     call push_sub('states.states_end')
+    
+    call loct_pointer_nullify(st%dpsi)
+    call loct_pointer_nullify(st%zpsi)
+    call loct_pointer_nullify(st%user_def_states)
 
-    if(associated(st%rho)) then
-      deallocate(st%rho); nullify(st%rho)
+    call loct_pointer_nullify(st%rho)
+    call loct_pointer_nullify(st%j)
+    call loct_pointer_nullify(st%rho_core)
+    call loct_pointer_nullify(st%frozen_rho)
+    call loct_pointer_nullify(st%eigenval)
+
+    call loct_pointer_nullify(st%occ)
+    call loct_pointer_nullify(st%spin)
+    call loct_pointer_nullify(st%momentum)
+
+    call loct_pointer_nullify(st%node)
+    call loct_pointer_nullify(st%st_range)
+    call loct_pointer_nullify(st%st_num)
+
+    if(st%parallel_in_states) then
+      call loct_pointer_nullify(st%ap%schedule)
     end if
 
-    if(associated(st%occ)) then
-      deallocate(st%occ); nullify(st%occ)
+    if(associated(st%zphi)) then
+      deallocate(st%zphi); nullify(st%zphi)
     end if
 
-    if(associated(st%eigenval)) then
-      deallocate(st%eigenval); nullify(st%eigenval)
-    end if
 
-    if(associated(st%momentum)) then
-      deallocate(st%momentum); nullify(st%momentum)
-    end if
 
-    if(associated(st%node)) then
-      deallocate(st%node); nullify(st%node)
-    end if
 
-    if(associated(st%j)) then
-      deallocate(st%j)
-      nullify(st%j)
-    end if
 
-    if(associated(st%rho_core)) then
-      deallocate(st%rho_core)
-      nullify(st%rho_core)
-    end if
 
-    if(associated(st%frozen_rho)) then
-      deallocate(st%frozen_rho)
-      nullify(st%frozen_rho)
-    end if
 
-    if(st%d%ispin==SPINORS .and. associated(st%spin)) then
-      deallocate(st%spin); nullify(st%spin)
-    end if
-
-    if(associated(st%dpsi)) then
-      deallocate(st%dpsi); nullify(st%dpsi)
-    end if
-
-    if(associated(st%zpsi)) then
-      deallocate(st%zpsi); nullify(st%zpsi)
-    end if
 
     call states_dim_end(st%d)
     if(st%open_boundaries) then
@@ -976,20 +956,6 @@ contains
 
     if(associated(st%user_def_states)) then
       deallocate(st%user_def_states); nullify(st%user_def_states)
-    end if
-
-    if(st%parallel_in_states) then
-      deallocate(st%st_range)
-      nullify(st%st_range)
-      deallocate(st%st_num)
-      nullify(st%st_num)
-      deallocate(st%ap%schedule)
-      nullify(st%ap%schedule)
-    end if
-
-    if(associated(st%zphi)) then
-      deallocate(st%zphi)
-      nullify(st%zphi)
     end if
 
     call pop_sub()

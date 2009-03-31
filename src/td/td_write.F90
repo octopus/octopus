@@ -32,6 +32,7 @@ module td_write_m
   use io_m
   use ion_dynamics_m
   use lasers_m
+  use loct_m
   use loct_parser_m
   use magnetic_m
   use mesh_function_m
@@ -214,8 +215,15 @@ contains
 
     if( (w%out(OUT_PROJ)%write)  .or.  (w%out(OUT_POPULATIONS)%write) ) then
       call states_copy(w%gs_st, st)
-      ! WARNING: should be first deallocate, then nullify?
-      nullify(w%gs_st%zpsi, w%gs_st%node, w%gs_st%occ, w%gs_st%eigenval)
+
+      ! clean up all the stuff we have to reallocate
+      call loct_pointer_nullify(w%gs_st%zpsi)
+      call loct_pointer_nullify(w%gs_st%occ)
+      call loct_pointer_nullify(w%gs_st%eigenval)
+      call loct_pointer_nullify(w%gs_st%momentum)
+      call loct_pointer_nullify(w%gs_st%node)
+      if(w%gs_st%d%ispin == SPINORS) call loct_pointer_nullify(w%gs_st%spin)
+
       call states_look (trim(restart_dir)//'gs', gr%mesh%mpi_grp, i, j, w%gs_st%nst, ierr)
 
       if(w%out(OUT_POPULATIONS)%write) then ! do only this when not calculating populations

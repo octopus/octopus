@@ -42,7 +42,8 @@ module loct_m
     loct_printRecipe,        &
     loct_strerror,           &
     get_memory_usage,        &
-    loct_pointer_copy
+    loct_pointer_copy,       &
+    loct_pointer_nullify
 
 #if defined(HAVE_GDLIB)
   public ::                    &
@@ -73,8 +74,38 @@ module loct_m
     module procedure iloct_pointer_copy_2
     module procedure iloct_pointer_copy_3
     module procedure iloct_pointer_copy_4
+    module procedure aloct_pointer_copy_1
+    module procedure aloct_pointer_copy_2
+    module procedure aloct_pointer_copy_3
+    module procedure aloct_pointer_copy_4
   end interface loct_pointer_copy
 
+  interface loct_pointer_nullify
+    module procedure sloct_pointer_nullify_1
+    module procedure sloct_pointer_nullify_2
+    module procedure sloct_pointer_nullify_3
+    module procedure sloct_pointer_nullify_4
+    module procedure dloct_pointer_nullify_1
+    module procedure dloct_pointer_nullify_2
+    module procedure dloct_pointer_nullify_3
+    module procedure dloct_pointer_nullify_4
+    module procedure cloct_pointer_nullify_1
+    module procedure cloct_pointer_nullify_2
+    module procedure cloct_pointer_nullify_3
+    module procedure cloct_pointer_nullify_4
+    module procedure zloct_pointer_nullify_1
+    module procedure zloct_pointer_nullify_2
+    module procedure zloct_pointer_nullify_3
+    module procedure zloct_pointer_nullify_4
+    module procedure iloct_pointer_nullify_1
+    module procedure iloct_pointer_nullify_2
+    module procedure iloct_pointer_nullify_3
+    module procedure iloct_pointer_nullify_4
+    module procedure aloct_pointer_nullify_1
+    module procedure aloct_pointer_nullify_2
+    module procedure aloct_pointer_nullify_3
+    module procedure aloct_pointer_nullify_4
+  end interface loct_pointer_nullify
 
   ! ---------------------------------------------------------
   ! System information (time, memory, sysname)
@@ -262,6 +293,12 @@ contains
 
 #  define TYPE  integer
 #  define SUBNAME(x) i ## x
+#  include "loct_inc.F90"
+#  undef SUBNAME
+#  undef TYPE
+
+#  define TYPE  character(len=*)
+#  define SUBNAME(x) a ## x
 #  include "loct_inc.F90"
 #  undef SUBNAME
 #  undef TYPE

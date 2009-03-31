@@ -38,8 +38,8 @@ include $(srcdir)/../common-rules.make
 depend:
 	@makedepf90 $(libstates_a_SOURCES)
 
-ksinversion.o : ksinversion.F90 modelmb_particles.o
-density_matrix.o : density_matrix.F90 modelmb_particles.o
+ksinversion.o : ksinversion.F90 modelmb_particles.o states.o
+density_matrix.o : density_matrix.F90 modelmb_particles.o states.o
 states.o : states.F90 states_dim.o
 states_dim.o : states_dim.F90 states_kpoints.F90
 states_calc.o : states_calc.F90 states_calc_inc.F90 states.o states_block.o

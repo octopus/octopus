@@ -49,6 +49,7 @@ module preconditioners_m
   public ::                         &
     preconditioner_t,               &
     preconditioner_init,            &
+    preconditioner_null,            &
     preconditioner_end,             &
     preconditioner_is_multigrid,    &
     dpreconditioner_apply,          &
@@ -157,6 +158,13 @@ contains
 
   
   ! ---------------------------------------------------------
+  subroutine preconditioner_null(this)
+    type(preconditioner_t), intent(inout) :: this
+
+    this%which = PRE_NONE
+  end subroutine preconditioner_null
+
+  ! ---------------------------------------------------------
   subroutine preconditioner_end(this)
     type(preconditioner_t), intent(inout) :: this 
 
@@ -168,6 +176,7 @@ contains
       deallocate(this%diag_lapl)
     end select
 
+    call preconditioner_null(this)
   end subroutine preconditioner_end
 
   logical pure function preconditioner_is_multigrid(this) result(req)
