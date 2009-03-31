@@ -236,7 +236,7 @@ subroutine X(vlasers) (lasers, nlasers, gr, std, psi, hpsi, grad, ik, gyromagnet
   type(states_dim_t),  intent(in)    :: std
   R_TYPE,              intent(inout) :: psi(:,:)  ! psi(gr%mesh%np_part, std%dim)
   R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(gr%mesh%np_part, std%dim)
-  R_TYPE,     pointer, intent(in)    :: grad(: , :, :)
+  R_TYPE,              pointer       :: grad(: , :, :)
   integer,             intent(in)    :: ik
   FLOAT,               intent(in)    :: gyromagnetic_ratio
   FLOAT,               pointer       :: a_static(:,:)

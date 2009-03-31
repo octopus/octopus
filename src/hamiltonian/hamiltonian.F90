@@ -725,48 +725,27 @@ contains
       call em_field_end(hm%total(ispin))
     end do
 
-    deallocate(hm%total)
+    DEALLOC(hm%total)
 
     if(hm%multigrid_initialized) then
       call gridhier_end(hm%coarse_v, gr%mgrid)
     end if
 
-    if(associated(hm%phase)) deallocate(hm%phase)
-
-    if(associated(hm%vhartree)) then
-      deallocate(hm%vhartree)
-      nullify(hm%vhartree)
-    end if
-    if(associated(hm%vhxc)) then
-      deallocate(hm%vhxc)
-      nullify(hm%vhxc)
-    end if
-    if(associated(hm%vxc)) then
-      deallocate(hm%vxc)
-      nullify(hm%vxc)
-    end if
-    if(associated(hm%axc)) then
-      deallocate(hm%axc)
-      nullify(hm%axc)
-    end if
-    if(associated(hm%a_ind)) then
-      deallocate(hm%a_ind)
-      nullify(hm%a_ind)
-    end if
-    if(associated(hm%b_ind)) then
-      deallocate(hm%b_ind)
-      nullify(hm%b_ind)
-    end if
+    DEALLOC(hm%phase)
+    DEALLOC(hm%vhartree)
+    DEALLOC(hm%vhxc)
+    DEALLOC(hm%vxc)
+    DEALLOC(hm%axc)
+    DEALLOC(hm%a_ind)
+    DEALLOC(hm%b_ind)
 
     if(iand(hm%xc_family, XC_FAMILY_MGGA).ne.0) then
-      deallocate(hm%vtau); nullify(hm%vtau)
+      DEALLOC(hm%vtau)
     end if
 
     call epot_end(hm%ep, gr, geo)
 
-    if(associated(hm%ab_pot)) then
-      deallocate(hm%ab_pot); nullify(hm%ab_pot)
-    end if
+    DEALLOC(hm%ab_pot)
 
     DEALLOC(hm%lead_h_diag)
     DEALLOC(hm%lead_h_offdiag)
@@ -776,6 +755,8 @@ contains
 
     call states_dim_end(hm%d)
     call scissor_end(hm%scissor)
+    call states_end(hm%st)
+
     call pop_sub()
   end subroutine hamiltonian_end
 

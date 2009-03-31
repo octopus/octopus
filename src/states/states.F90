@@ -916,47 +916,36 @@ contains
 
     call push_sub('states.states_end')
     
-    call loct_pointer_nullify(st%dpsi)
-    call loct_pointer_nullify(st%zpsi)
-    call loct_pointer_nullify(st%user_def_states)
+    DEALLOC(st%dpsi)
+    DEALLOC(st%zpsi)
+    DEALLOC(st%user_def_states)
 
-    call loct_pointer_nullify(st%rho)
-    call loct_pointer_nullify(st%j)
-    call loct_pointer_nullify(st%rho_core)
-    call loct_pointer_nullify(st%frozen_rho)
-    call loct_pointer_nullify(st%eigenval)
+    DEALLOC(st%rho)
+    DEALLOC(st%j)
+    DEALLOC(st%rho_core)
+    DEALLOC(st%frozen_rho)
+    DEALLOC(st%eigenval)
 
-    call loct_pointer_nullify(st%occ)
-    call loct_pointer_nullify(st%spin)
-    call loct_pointer_nullify(st%momentum)
+    DEALLOC(st%occ)
+    DEALLOC(st%spin)
+    DEALLOC(st%momentum)
 
-    call loct_pointer_nullify(st%node)
-    call loct_pointer_nullify(st%st_range)
-    call loct_pointer_nullify(st%st_num)
+    DEALLOC(st%node)
+    DEALLOC(st%st_range)
+    DEALLOC(st%st_num)
 
     if(st%parallel_in_states) then
-      call loct_pointer_nullify(st%ap%schedule)
+      DEALLOC(st%ap%schedule)
     end if
 
-    if(associated(st%zphi)) then
-      deallocate(st%zphi); nullify(st%zphi)
-    end if
-
-
-
-
-
-
-
+    DEALLOC(st%zphi)
 
     call states_dim_end(st%d)
     if(st%open_boundaries) then
       call states_dim_end(st%ob_d)
     end if
 
-    if(associated(st%user_def_states)) then
-      deallocate(st%user_def_states); nullify(st%user_def_states)
-    end if
+    DEALLOC(st%user_def_states)
 
     call pop_sub()
   end subroutine states_end
