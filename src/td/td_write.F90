@@ -1161,15 +1161,15 @@ contains
       call write_iter_header_start(out_gauge)
 
       do j = 1, gr%mesh%sb%dim
-        write(aux, '(a2,i3,a1)') 'A(', j, ')'
+        write(aux, '(a2,i1,a1)') 'A(', j, ')'
         call write_iter_header(out_gauge, aux)
       end do
       do j = 1, gr%mesh%sb%dim
-        write(aux, '(a6,i3,a1)') 'dA/dt(', j, ')'
+        write(aux, '(a6,i1,a1)') 'dA/dt(', j, ')'
         call write_iter_header(out_gauge, aux)
       end do
       do j = 1, gr%mesh%sb%dim
-        write(aux, '(a2,i3,a1)') 'd^2A/dt^2(', j, ')'
+        write(aux, '(a10,i1,a1)') 'd^2A/dt^2(', j, ')'
         call write_iter_header(out_gauge, aux)
       end do
       call write_iter_nl(out_gauge)

@@ -719,15 +719,14 @@ contains
     ! ---------------------------------------------------------
     subroutine td_read_gauge_field()
       
-      integer :: i, iunit, record_length
+      integer :: i, iunit
       FLOAT :: vecpot(1:MAX_DIM), vecpot_vel(1:MAX_DIM), dummy(1:MAX_DIM)
 
       call push_sub('td.td_read_gauge_field')
 
-      record_length = 28 + 3*3*20
       call io_assign(iunit)
       open(unit = iunit, file = io_workpath('td.general/gauge_field'), &
-        action='read', status='old', recl = record_length)
+        action='read', status='old')
       if(iunit < 0) then
         message(1) = "Could not open file '"//trim(io_workpath('td.general/gauge_field'))//"'."
         message(2) = "Starting simulation from initial values."
