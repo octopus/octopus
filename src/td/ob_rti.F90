@@ -81,7 +81,7 @@ contains
     FLOAT,               intent(in)  :: dt
     integer,             intent(in)  :: max_iter
     
-    integer            :: order, it, allocsize
+    integer            :: order, it, allocsize, np
     CMPLX              :: um(NLEADS)
     FLOAT, allocatable :: td_pot(:, :)
 
@@ -178,7 +178,8 @@ contains
     ! Allocate memory for the interface wave functions of previous
     ! timesteps.
     allocsize = gr%intf(LEFT)%np*st%lnst*st%d%kpt%nlocal*(max_iter+1)*NLEADS
-    ALLOCATE(ob%st_intface(gr%intf(LEFT)%np, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end, NLEADS, 0:max_iter), allocsize)
+    np = gr%intf(LEFT)%np
+    ALLOCATE(ob%st_intface(np, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end, NLEADS, 0:max_iter), allocsize)
     ob%st_intface = M_z0
 
     call pop_sub()
