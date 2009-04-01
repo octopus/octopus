@@ -177,8 +177,8 @@ contains
 
     ! Allocate memory for the interface wave functions of previous
     ! timesteps.
-    allocsize = gr%intf(LEFT)%np*st%lnst*st%d%nik*(max_iter+1)*NLEADS
-    ALLOCATE(ob%st_intface(gr%intf(LEFT)%np, st%st_start:st%st_end, st%d%nik, NLEADS, 0:max_iter), allocsize)
+    allocsize = gr%intf(LEFT)%np*st%lnst*st%d%kpt%nlocal*(max_iter+1)*NLEADS
+    ALLOCATE(ob%st_intface(gr%intf(LEFT)%np, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end, NLEADS, 0:max_iter), allocsize)
     ob%st_intface = M_z0
 
     call pop_sub()
@@ -477,9 +477,9 @@ contains
   subroutine save_intf_wf(intf, st, st_intf)
     type(interface_t), intent(in)    :: intf
     type(states_t),    intent(in)    :: st
-    CMPLX,             intent(inout) :: st_intf(1:intf%np, st%st_start:st%st_end, 1:st%d%nik)
+    CMPLX,             intent(inout) :: st_intf(1:intf%np, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end)
 
-    integer :: ik, ist, il
+    integer :: ik, ist
     
     call push_sub('ob_rti.save_intf_wf')
 

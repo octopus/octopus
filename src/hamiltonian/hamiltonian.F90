@@ -485,9 +485,9 @@ contains
       np = gr%intf(LEFT)%np
 
       ! Read potential of the leads. We try vks-x (for DFT without
-      ! psuedo-potentials) and v0 (for non-interacting electrons) in
+      ! pseudo-potentials) and v0 (for non-interacting electrons) in
       ! that order (Octopus binary and NetCDF format). If none of the
-      ! two can be found, a warning is emittedg and zero potential
+      ! two can be found, a warning is emitted and zero potential
       ! assumed.
       ALLOCATE(hm%lead_vks(np, hm%d%nspin, NLEADS), np*hm%d%nspin*NLEADS)
       ALLOCATE(hm%lead_vhartree(np, NLEADS), np*NLEADS)
@@ -629,15 +629,19 @@ contains
 
       ! Calculate Green function of the leads.
       ! FIXME: For spinors, this calculation is almost certainly wrong.
-      alloc_size = np**2*hm%d%nspin*st%ob_ncs*st%d%nik*NLEADS
-      ALLOCATE(hm%lead_green(np, np, hm%d%nspin, st%ob_ncs, st%d%nik, NLEADS), alloc_size)
+      ASSERT(st%ob_ncs == st%nst)
+      alloc_size = np**2*hm%d%nspin*st%lnst*st%d%kpt%nlocal*NLEADS
+      ALLOCATE(hm%lead_green(np, np, hm%d%nspin, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end, NLEADS), alloc_size)
+!      alloc_size = np**2*hm%d%nspin*st%ob_ncs*st%d%nik*NLEADS
+!      ALLOCATE(hm%lead_green(np, np, hm%d%nspin, st%ob_ncs, st%d%nik, NLEADS), alloc_size)
 
       if(calc_mode_is(CM_GS)) then
         call messages_print_stress(stdout, 'Lead Green functions')
         message(1) = ' st#  Spin  Lead     Energy'
         call write_info(1)
         do ik = st%d%kpt%start, st%d%kpt%end
-          do ist = 1, st%ob_ncs
+!          do ist = 1, st%ob_ncs
+          do ist = st%st_start, st%st_end
             energy = st%ob_eigenval(ist, ik)
             do il = 1, NLEADS
               do ispin = 1, hm%d%nspin
@@ -650,7 +654,7 @@ contains
                   else
                     spin = 'dn'
                   end if
-                  ! This is nonsene, but at least all indices are present.
+                  ! This is nonsense, but at least all indices are present.
                 case(SPINORS)
                   if(ispin.eq.1) then
                     spin = 'up'
@@ -670,8 +674,8 @@ contains
                     trim(LEAD_NAME(il)), '-', ist, '-', ik, '-', ispin, '.real'
                   write(fname_imag, '(3a,i4.4,a,i3.3,a,i1.1,a)') 'debug/open_boundaries/green-', &
                     trim(LEAD_NAME(il)), '-', ist, '-', ik, '-', ispin, '.imag'
-                  green_real = io_open(fname_real, action='write', grp=gr%mesh%mpi_grp, is_tmp=.false.)
-                  green_imag = io_open(fname_imag, action='write', grp=gr%mesh%mpi_grp, is_tmp=.false.)
+                  green_real = io_open(fname_real, action='write', grp=st%mpi_grp, is_tmp=.false.)
+                  green_imag = io_open(fname_imag, action='write', grp=st%mpi_grp, is_tmp=.false.)
 
                   write(fmt, '(a,i6,a)') '(', gr%intf(il)%np, 'e14.4)'
                   do irow = 1, gr%intf(il)%np

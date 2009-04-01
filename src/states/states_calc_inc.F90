@@ -543,10 +543,6 @@ subroutine X(states_linear_combination)(mesh, nst, dim, transf, psi)
 
   call profiling_in(prof, "STATES_ROTATE")
 
-#ifdef HAVE_MPI
-  ASSERT(.not. st%parallel_in_states)
-#endif
-
   block_size = hardware%X(block_size)
 
   ALLOCATE(psinew(block_size, 1:nst), block_size*nst)

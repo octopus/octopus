@@ -242,11 +242,24 @@
     FLOAT   :: flow, dmin
     FLOAT, allocatable :: j(:, :)
 
-    call push_sub('output_states.h_sys_output_current_flows')
+    call push_sub('output_states.h_sys_output_current_flow')
 
     if(iand(outp%what, output_j_flow) == 0) then
       call pop_sub(); return
     end if
+
+#if defined(HAVE_MPI)
+    if(gr%mesh%parallel_in_domains) then
+      if(gr%mesh%mpi_grp%rank.ne.0) then
+        call pop_sub(); return
+      end if
+    end if
+    if(st%parallel_in_states) then
+      if(st%mpi_grp%rank.ne.0) then
+        call pop_sub(); return
+      end if
+    end if
+#endif
 
     iunit = io_open(trim(dir)//'/'//'current-flow', action='write')
 

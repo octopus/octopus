@@ -61,10 +61,12 @@ contains
     type(states_t),   intent(in)    :: st
     integer,          intent(in)    :: np
 
+    integer :: size
     call push_sub('ob_src.ob_src_init')
 
     ! FIXME: spinor index is ignored here.
-    ALLOCATE(ob%src_prev(np, 1, st%st_start:st%st_end, st%d%nik, NLEADS), st%lnst*np*NLEADS)
+    size = np*st%lnst*st%d%kpt%nlocal*NLEADS
+    ALLOCATE(ob%src_prev(np, 1, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end, NLEADS), size)
 
     ob%src_prev = M_z0
 

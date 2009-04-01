@@ -401,7 +401,7 @@ contains
           do is = 1, 2
             write(fname, '(a,a,i1)') 'elf_rs', '-', is
             call doutput_function(outp%how, dir, trim(fname), gr%mesh, gr%sb, &
-              f_loc(:, is), M_ONE, ierr, is_tmp = .false., geo = geo)
+              f_loc(:, is), M_ONE, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
           end do
         end if
       end if
@@ -416,7 +416,7 @@ contains
       do is = 1, st%d%nspin
         write(fname, '(a,a,i1)') 'elf_fs', '-', is
         call doutput_function(outp%how, dir, trim(fname), gr%mesh, gr%sb, &
-          f_loc(:,is), M_ONE, ierr, is_tmp = .false., geo = geo)
+          f_loc(:,is), M_ONE, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
       end do
     end if
 
@@ -426,7 +426,7 @@ contains
         call dderivatives_lapl(gr%der, st%rho(:,is), f_loc(:,is))
         write(fname, '(a,a,i1)') 'bader', '-', is
         call doutput_function(outp%how, dir, trim(fname), gr%mesh, gr%sb, &
-          f_loc(:,is), M_ONE, ierr, is_tmp = .false., geo = geo)
+          f_loc(:,is), M_ONE, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
 
         write(fname, '(a,a,i1)') 'bader_basins', '-', is
         call out_basins(f_loc(:,1), fname)
@@ -437,7 +437,7 @@ contains
     if(iand(outp%what, output_el_pressure).ne.0) then
       call h_sys_calc_electronic_pressure(st, hm, gr, f_loc(:,1))
       call doutput_function(outp%how, dir, "el_pressure", gr%mesh, gr%sb, &
-        f_loc(:,1), M_ONE, ierr, is_tmp = .false., geo = geo)
+        f_loc(:,1), M_ONE, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
     end if
 
     deallocate(f_loc)

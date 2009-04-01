@@ -112,7 +112,7 @@ contains
     type(states_t),   pointer :: st
     type(geometry_t), pointer :: geo
     logical                   :: stopping
-    integer                   :: i, ii, ik, ierr, iatom, ist
+    integer                   :: i, ii, ik, ierr, iatom, ist, mpi_err
     real(8)                   :: etime
     logical                   :: generate
     type(gauge_force_t)       :: gauge_force
@@ -127,9 +127,9 @@ contains
     geo => sys%geo
     st  => sys%st
 
-    call td_init(td, sys, hm)
-
     call states_distribute_nodes(st, sys%mc)
+
+    call td_init(td, sys, hm)
 
     ! Alocate wave-functions during time-propagation
     if(td%dynamics == EHRENFEST) then
@@ -322,6 +322,13 @@ contains
 
     call td_write_end(write_handler)
     call end_()
+
+#ifdef HAVE_MPI
+    ! wait for all processors to finish
+    if(st%parallel_in_states) then
+      call MPI_Barrier(st%mpi_grp%comm, mpi_err)
+    end if
+#endif
 
   contains
 
