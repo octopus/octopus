@@ -37,14 +37,17 @@ libgrid_a_SOURCES = \
 	zoltan.F90       \
 	hypercube.F90    \
 	cubic_mesh.F90   \
-	cubic_mesh_low.c
+	cubic_mesh_low.c \
+	cubic_mesh_fft.c
 
 noinst_HEADERS = \
 	par_vec_inc.F90 derivatives_inc.F90 cube_function_inc.F90 fourier_space_inc.F90 \
 	mesh_function_inc.F90 double_grid_apply.F90 \
 	submesh_inc.F90 io_function_inc.F90 nl_operator_inc.F90 \
 	batch_inc.F90       \
-	multigrid_inc.F90 gridhier_inc.F90
+	multigrid_inc.F90   \
+	gridhier_inc.F90    \
+	cubic_mesh.h
 
 include $(srcdir)/../common-rules.make
 
@@ -83,4 +86,5 @@ batch.o : batch.F90 batch_inc.F90
 stencil.o : stencil.F90
 hypercube.o : hypercube.F90
 cubic_mesh.o : cubic_mesh.F90 mesh.o
-cubic_mesh_low.o : cubic_mesh_low.c
+cubic_mesh_low.o : cubic_mesh_low.c cubic_mesh.h
+cubic_mesh_fft.o : cubic_mesh_fft.c cubic_mesh.h

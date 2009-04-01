@@ -80,6 +80,13 @@ module cubic_mesh_m
       integer,            intent(out) :: ny
       integer,            intent(out) :: nz
     end subroutine cubic_mesh_dimensions
+
+    subroutine cubic_mesh_init_fourier(this, parent)
+      use cubic_mesh_type_m
+      type(cubic_mesh_t), intent(out) :: this
+      type(cubic_mesh_t), intent(in)  :: parent
+    end subroutine cubic_mesh_init_fourier
+
   end interface
 
   interface cubic_mesh_set_point
