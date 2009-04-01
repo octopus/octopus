@@ -19,21 +19,21 @@
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_par_to_x(par, xx)
+  subroutine parameters_basis_to_theta(par)
     type(oct_control_parameters_t), intent(inout) :: par
-    REAL_DOUBLE,                    intent(inout) :: xx(:)
-    integer :: j, n
+    integer :: j, n, dof
     FLOAT, allocatable :: ep(:), e(:), y(:), a(:), x(:)
 
-    call push_sub('parameters.parameters_par_to_x')
-
-    n = par%dim
-    ALLOCATE(e(n), n)
-    ALLOCATE(ep(n), n)
-    ALLOCATE(x(size(xx)), size(xx))
-    x = xx
+    call push_sub('parameters_trans.parameters_basis_to_theta')
 
     ASSERT(par%current_representation .ne. ctr_real_time)
+
+    n = par%dim
+    dof = par%dof
+
+    ALLOCATE(e(n), n)
+    ALLOCATE(ep(n), n)
+    ALLOCATE(x(dof), dof)
 
     do j =  1, n
       ep(j) = tdf(par%f(1), j)
@@ -53,30 +53,48 @@
       call cartesian2hyperspherical(e, x(1:n-1))
     end if
     
-    xx = x
+    par%theta = x
     deallocate(e, ep, x) 
     call pop_sub()
-  end subroutine parameters_par_to_x
+  end subroutine parameters_basis_to_theta
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_x_to_par(par, xx)
+  subroutine parameters_get_theta(par, theta)
+    type(oct_control_parameters_t), intent(in) :: par
+    REAL_DOUBLE, intent(inout) :: theta(:)
+    theta = par%theta
+  end subroutine parameters_get_theta
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine parameters_set_theta(par, theta)
     type(oct_control_parameters_t), intent(inout) :: par
-    REAL_DOUBLE,                          intent(in)    :: xx(:)
+    REAL_DOUBLE, intent(in) :: theta(:)
+    par%theta = theta
+  end subroutine parameters_set_theta
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine parameters_theta_to_basis(par)
+    type(oct_control_parameters_t), intent(inout) :: par
 
     FLOAT, allocatable :: y(:), a(:), e(:), ep(:), x(:)
-    integer :: n
+    integer :: n, dof
 
-    call push_sub('parameters.parameters_x_to_par')
+    call push_sub('parameters_trans.parameters_theta_to_basis')
 
     ASSERT(par%current_representation .ne. ctr_real_time)
 
     n = par%dim
+    dof = par%dof
     ALLOCATE(e(n), n)
     ALLOCATE(ep(n), n)
-    ALLOCATE(x(size(xx)), size(xx))
-    x = xx
+    ALLOCATE(x(dof), dof)
+    x = par%theta
 
     if(par_common%representation .eq. ctr_zero_fourier_series) then
       call hyperspherical2cartesian(x, ep(2:n))
@@ -99,7 +117,7 @@
 
     deallocate(e, ep, x)
     call pop_sub()
-  end subroutine parameters_x_to_par
+  end subroutine parameters_theta_to_basis
   ! ---------------------------------------------------------
 
 

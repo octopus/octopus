@@ -69,13 +69,15 @@ module opt_control_parameters_m
             parameters_prepare_initial,   &
             parameters_fluence,           &
             parameters_j2,                &
-            parameters_par_to_x,          &
-            parameters_x_to_par,          &
+            parameters_basis_to_theta,    &
+            parameters_theta_to_basis,    &
+            parameters_get_theta,         &
+            parameters_set_theta,         &
             parameters_randomize,         &
             parameters_update,            &
             parameters_number,            &
             parameters_bounds,            &
-            parameters_dog,               &
+            parameters_dof,               &
             parameters_w0,                &
             parameters_alpha,             &
             parameters_targetfluence,     &
@@ -106,8 +108,10 @@ module opt_control_parameters_m
     FLOAT,       pointer :: alpha(:)      => NULL()
     type(tdf_t), pointer :: td_penalty(:) => NULL()
 
+
     type(tdf_t)    :: f ! This is the envelope of the laser field, only used in the phase-only
                         ! optimization (necessary to store it in order to calculate fluences)
+
   end type oct_parameters_common_t
 
 
@@ -115,6 +119,7 @@ module opt_control_parameters_m
     private
     integer :: no_parameters = 0
     integer :: dim           = 0
+    integer :: dof           = 0
     FLOAT   :: intphi        = M_ZERO
     type(tdf_t), pointer :: f(:) => NULL()
     FLOAT, pointer :: alpha(:)   => NULL()
@@ -124,6 +129,8 @@ module opt_control_parameters_m
     FLOAT   :: w0       = M_ZERO
     FLOAT, pointer :: utransf(:, :)  => NULL()
     FLOAT, pointer :: utransfi(:, :) => NULL()
+
+    REAL_DOUBLE, pointer :: theta(:) => NULL()
   end type oct_control_parameters_t
   
   ! the next variable has to be a pointer to avoid a bug in the IBM compiler
@@ -177,8 +184,9 @@ contains
     !% The control function is expanded as a full Fourier series (although it must, of 
     !% course, be a real function).
     !%Option control_zero_fourier_series 10011
-    !% The control function is expanded as a Fourier series, but assuming that the zero
-    !% frequency component is zero.
+    !% The control function is expanded as a Fourier series, but assuming (1) that the zero
+    !% frequency component is zero, and (2) the control function, integrated in time, adds
+    !% up to zero (this essentially means that the sum of all the cosine coefficients is zero).
     !%End
     if (parametrized_controls) then
       call loct_parse_int(datasets_check('OCTParameterRepresentation'), &
@@ -454,6 +462,125 @@ contains
 
 
   ! ---------------------------------------------------------
+  ! Before using an oct_control_parameters_t variable, it needs
+  ! to be initialized, either by call ing parameters_init, or
+  ! by copying anther initialized variable through
+  ! parameters_copy.
+  ! ---------------------------------------------------------
+  subroutine parameters_init(cp, dt, ntiter)
+    type(oct_control_parameters_t), intent(inout) :: cp
+    FLOAT, intent(in) :: dt
+    integer, intent(in) :: ntiter
+
+    integer :: j
+
+    call push_sub('parameters.parameters_init')
+
+    cp%w0              = par_common%w0
+    cp%no_parameters   = par_common%no_parameters
+    cp%current_representation = ctr_real_time
+    call loct_pointer_copy(cp%alpha, par_common%alpha)
+
+    ALLOCATE(cp%f(cp%no_parameters), cp%no_parameters)
+    do j = 1, cp%no_parameters
+      call tdf_init_numerical(cp%f(j), ntiter, dt, par_common%omegamax)
+    end do
+
+    ! If the control function is represented directly in real time, the "dimension" (cp%dim) is
+    ! the number of values that represent the function in the discretized time axis.
+    !
+    ! If the control function is parametrized, up to now (in the future this might change), all 
+    ! parametrizations are based on a previous basis set expansion (sine-Fourier series, or "normal"
+    ! Fourier series with or without the zero term). The parameters are not directly the coefficients
+    ! of the control function in this basis set expansion, but are constructed from them (e.g. 
+    ! by performing a coordinate transformation to hyperspherical coordinates). The "dimension" (cp%dim)
+    ! is the dimension of this basis set.
+    select case(par_common%representation)
+    case(ctr_real_time)
+      cp%dim = ntiter + 1
+    case(ctr_sine_fourier_series)
+      ! cp%dim is directly the number of frequencies in the sine-Fourier expansion
+      cp%dim = tdf_sine_nfreqs(cp%f(1))
+    case(ctr_fourier_series)
+      ! If nf is the number of frequencies, we will have nf-1 non-zero "sines", nf-1 non-zero "cosines",
+      ! and the zero frequency component. Total, 2*(nf-1)+1
+      cp%dim = 2*(tdf_nfreqs(cp%f(1))-1)+1
+    case(ctr_zero_fourier_series)
+      ! If nf is the number of frequencies, we will have nf-1 non-zero "sines", nf-1 non-zero "cosines",
+      ! but no zero frequency component. Total, 2*(nf-1)
+      cp%dim = 2*(tdf_nfreqs(cp%f(1))-1)
+    end select
+
+
+    ! The "degrees of freedom" cp%dof is the number of parameters that define the control function.
+    ! (if it is represented directly in real time, this would be meaningless, but we put the number of 
+    ! control functions, times the "dimension", which in this case is the number of time discretization points).
+    ! This is not equal to the dimension of the basis set employed (cp%dim), because we may add further
+    ! constrains, and do a coordinate transformation to account for them.
+    select case(par_common%representation)
+    case(ctr_real_time)
+      cp%dof = cp%no_parameters * cp%dim
+    case(ctr_sine_fourier_series, ctr_fourier_series)
+      ! The number of degrees of freedom is one less than the number of basis coefficients, since we
+      ! add the constrain of fixed fluence.
+      cp%dof = cp%dim - 1
+    case(ctr_zero_fourier_series)
+      ! The number of degrees of freedom is one less than the number of basis coefficients, since we
+      ! add (1) the constrain of fixed fluence, and (2) the constrain of zero-integral.
+      cp%dof = cp%dim - 2
+    end select
+
+
+    if(cp%dof <= 0) then
+      write(message(1),'(a)') 'Error: The number of degrees of freedom used to describe the control function'
+      write(message(2),'(a)') '       is zero or less. This should not happen. Please review your input file.'
+      call write_fatal(2)
+    else
+      if(par_common%representation .ne. ctr_real_time) then
+        write(message(1), '(a)')      'Info: The expansion of the control parameters in a Fourier series'
+        write(message(2), '(a,i6,a)') '      expansion implies the use of ', cp%dim, ' basis set functions.'
+        write(message(3), '(a,i6,a)') '      The number of degrees of freedom is ', cp%dof,'.'
+        call write_info(3)
+
+        ALLOCATE(cp%theta(cp%dof), cp%dof)
+        cp%theta = M_ZERO
+      end if
+    end if
+
+    call pop_sub()
+  end subroutine parameters_init
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  ! The external fields defined in epot_t "ep" are transferred to
+  ! the control functions described in "cp". This shhould have been
+  ! initialized previously.
+  ! ---------------------------------------------------------
+  subroutine parameters_set(cp, ep)
+    type(oct_control_parameters_t), intent(inout) :: cp
+    type(epot_t), intent(in) :: ep
+    integer :: j
+
+    call push_sub('parameters.parameters_set')
+
+    select case(par_common%mode)
+    case(parameter_mode_epsilon, parameter_mode_f)
+      do j = 1, cp%no_parameters
+        call tdf_end(cp%f(j))
+        call laser_get_f(ep%lasers(j), cp%f(j))
+      end do
+    case(parameter_mode_phi)
+      call tdf_end(cp%f(1))
+      call laser_get_phi(ep%lasers(1), cp%f(1))
+    end select
+
+    call pop_sub()
+  end subroutine parameters_set
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
   integer pure function parameters_representation()
     parameters_representation = par_common%representation
   end function parameters_representation
@@ -473,20 +600,6 @@ contains
 
     ! Move to the sine-Fourier space if required.
     call parameters_set_rep(par)
-
-    if( (par_common%representation .eq. ctr_sine_fourier_series) .or. &
-        (par_common%representation .eq. ctr_fourier_series)      .or. &
-        (par_common%representation .eq. ctr_zero_fourier_series) ) then
-      if(par%dim <= 1) then 
-        write(message(1), '(a)')    'Error: The dimension of the basis set used to represent the control'
-        write(message(2), '(a)')    '       functions must be larger than one. The input options that you'
-        write(message(3), '(a)')    '       supply do not meet this criterion.'
-        call write_fatal(3)
-      end if
-      write(message(1), '(a)')      'Info: The expansion of the control parameters in a Fourier series'
-      write(message(2), '(a,i6,a)') '      expansion implies the use of ', par%dim, ' basis set functions.'
-      call write_info(2)
-    end if
 
     if(par_common%targetfluence .ne. M_ZERO) then
       if(par_common%targetfluence < M_ZERO) then
@@ -684,71 +797,6 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Before using an oct_control_parameters_t variable, it needs
-  ! to be initialized, either by call ing parameters_init, or
-  ! by copying anther initialized variable through
-  ! parameters_copy.
-  ! ---------------------------------------------------------
-  subroutine parameters_init(cp, dt, ntiter)
-    type(oct_control_parameters_t), intent(inout) :: cp
-    FLOAT, intent(in) :: dt
-    integer, intent(in) :: ntiter
-
-    integer :: j
-
-    call push_sub('parameters.parameters_init')
-
-    cp%w0              = par_common%w0
-    cp%no_parameters   = par_common%no_parameters
-    cp%current_representation = ctr_real_time
-    call loct_pointer_copy(cp%alpha, par_common%alpha)
-
-    ALLOCATE(cp%f(cp%no_parameters), cp%no_parameters)
-    do j = 1, cp%no_parameters
-      call tdf_init_numerical(cp%f(j), ntiter, dt, par_common%omegamax)
-    end do
-
-    select case(par_common%representation)
-    case(ctr_real_time)
-      cp%dim = ntiter + 1
-    case(ctr_sine_fourier_series)
-      cp%dim = tdf_sine_nfreqs(cp%f(1))
-    case(ctr_fourier_series)
-      cp%dim = 2*(tdf_nfreqs(cp%f(1))-1)+1
-    case(ctr_zero_fourier_series)
-      cp%dim = 2*(tdf_nfreqs(cp%f(1))-1)
-    end select
-      
-    call pop_sub()
-  end subroutine parameters_init
-  ! ---------------------------------------------------------
-
-
-  ! ---------------------------------------------------------
-  subroutine parameters_set(cp, ep)
-    type(oct_control_parameters_t), intent(inout) :: cp
-    type(epot_t), intent(in) :: ep
-    integer :: j
-
-    call push_sub('parameters.parameters_set')
-
-    select case(par_common%mode)
-    case(parameter_mode_epsilon, parameter_mode_f)
-      do j = 1, cp%no_parameters
-        call tdf_end(cp%f(j))
-        call laser_get_f(ep%lasers(j), cp%f(j))
-      end do
-    case(parameter_mode_phi)
-      call tdf_end(cp%f(1))
-      call laser_get_phi(ep%lasers(1), cp%f(1))
-    end select
-
-    call pop_sub()
-  end subroutine parameters_set
-  ! ---------------------------------------------------------
-
-
-  ! ---------------------------------------------------------
   subroutine parameters_apply_envelope(cp)
     type(oct_control_parameters_t), intent(inout) :: cp
     integer :: j, i
@@ -833,6 +881,10 @@ contains
     if(associated(cp%utransfi)) then
       deallocate(cp%utransfi)
       nullify(cp%utransfi)
+    end if
+    if(associated(cp%theta)) then
+      deallocate(cp%theta)
+      nullify(cp%theta)
     end if
 
     call pop_sub()
@@ -1149,6 +1201,7 @@ contains
 
     cp_out%no_parameters = cp_in%no_parameters
     cp_out%dim = cp_in%dim
+    cp_out%dof = cp_in%dof
     cp_out%intphi = cp_in%intphi
     cp_out%current_representation = cp_in%current_representation
     cp_out%w0 = cp_in%w0
@@ -1160,6 +1213,7 @@ contains
     end do
     call loct_pointer_copy(cp_out%utransf, cp_in%utransf)
     call loct_pointer_copy(cp_out%utransfi, cp_in%utransfi)
+    call loct_pointer_copy(cp_out%theta, cp_in%theta)
 
     call pop_sub()
   end subroutine parameters_copy
@@ -1267,7 +1321,7 @@ contains
     call push_sub('parameters.parameters_bounds')
 
     upper_bounds = M_PI
-    dog = parameters_dog(par)
+    dog = parameters_dof(par)
 
     select case(par_common%mode)
     case(parameter_mode_epsilon, parameter_mode_f, parameter_mode_phi)
@@ -1281,24 +1335,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  integer pure function parameters_dog(par)
+  integer pure function parameters_dof(par)
     type(oct_control_parameters_t), intent(in) :: par
-    integer :: i
-
-    parameters_dog = 0
-    if(par_common%representation .eq. ctr_zero_fourier_series) then
-      i = 2
-    else
-      i = 1
-    end if
-    select case(par_common%mode)
-    case(parameter_mode_epsilon, parameter_mode_f)
-      parameters_dog = par%dim-i
-    case(parameter_mode_phi)
-      parameters_dog = par%dim-i
-    end select
-
-  end function parameters_dog
+    parameters_dof = par%dof
+  end function parameters_dof
   ! ---------------------------------------------------------
 
 

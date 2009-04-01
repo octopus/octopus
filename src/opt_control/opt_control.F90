@@ -1,9 +1,7 @@
 !! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
 !!
-!! This program is free software; you can redistribute it and/or
-!! modify
-!! it under the terms of the GNU General Public License as published
-!! by
+!! This program is free software; you can redistribute it and/or modify
+!! it under the terms of the GNU General Public License as published by
 !! the Free Software Foundation; either version 2, or (at your option)
 !! any later version.
 !!
@@ -97,7 +95,8 @@ contains
     type(states_t) :: psi
     type(oct_control_parameters_t) :: par_new
 
-    call parameters_x_to_par(par_, x)
+    call parameters_set_theta(par_, x)
+    call parameters_theta_to_basis(par_)
 
     if(oct%delta == M_ZERO) then
       ! We only need the value of the target functional.
@@ -123,21 +122,22 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine direct_opt_write_info(geom_iter, n, val, maxdx, x)
-    integer, intent(in) :: geom_iter, n
+  subroutine direct_opt_write_info(iter, n, val, maxdx, x)
+    integer, intent(in) :: iter, n
     REAL_DOUBLE, intent(in) :: val, maxdx
     REAL_DOUBLE, intent(in) :: x(n)
 
     FLOAT :: fluence, j1, j2, j
 
-    call parameters_x_to_par(par_, x)
+    call parameters_set_theta(par_, x)
+    call parameters_theta_to_basis(par_)
 
     j = - val
     fluence = parameters_fluence(par_)
     j2 = parameters_j2(par_)
     j1 = j - j2
 
-    write(message(1), '(a,i5)') 'Direct optimization iteration #', geom_iter
+    write(message(1), '(a,i5)') 'Direct optimization iteration #', iter
     call messages_print_stress(stdout, trim(message(1)))
 
     write(message(1), '(6x,a,f12.5)')    " => J1       = ", j1
@@ -431,7 +431,8 @@ contains
 
       call parameters_set_rep(par)
 
-      dim = parameters_dog(par)
+      dim = parameters_dof(par)
+
       ALLOCATE(x(dim), dim)
 
       call states_copy(psi, initial_st)
@@ -450,7 +451,9 @@ contains
       hm_       => hm
       td_       => td
 
-      call parameters_par_to_x(par, x)
+      call parameters_basis_to_theta(par)
+      call parameters_get_theta(par, x)
+
       step = oct%direct_step * M_PI
       maxiter = oct_iterator_maxiter(iterator)
 
@@ -487,7 +490,7 @@ contains
 
       call parameters_set_rep(par)
 
-      dim = parameters_dog(par)
+      dim = parameters_dof(par)
       ALLOCATE(x(dim), dim)
       ALLOCATE(xl(dim), dim)
       ALLOCATE(xu(dim), dim)
@@ -509,7 +512,8 @@ contains
       hm_        => hm
       td_       => td
 
-      call parameters_par_to_x(par, x)
+      call parameters_basis_to_theta(par)
+      call parameters_get_theta(par, x)
 
       iprint = 2
       npt = 2*dim + 1
