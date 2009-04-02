@@ -291,6 +291,12 @@ contains
             end if ! .not. fromscratch
             
             call pert_setup_dir(em_vars%perturbation, idir)
+
+            if(use_kdotp) then
+              kdotp_lr(idir, 1)%zdl_psi = M_ZI*kdotp_lr(idir, 1)%zdl_psi
+              call zsternheimer_set_rhs(sh, kdotp_lr(idir, 1)%zdl_psi)
+            end if
+
             if (states_are_complex(sys%st)) then 
               call zsternheimer_solve(sh, sys, hm, em_vars%lr(idir, :, ifactor), em_vars%nsigma, &
                 em_vars%freq_factor(ifactor)*em_vars%omega(iomega) + M_zI * em_vars%eta, &
@@ -305,6 +311,11 @@ contains
                 em_wfs_tag(idir, ifactor), have_restart_rho=(ierr==0))
             end if
             
+            if(use_kdotp) then
+              kdotp_lr(idir, 1)%zdl_psi = -M_ZI*kdotp_lr(idir, 1)%zdl_psi
+              call sternheimer_unset_rhs(sh)
+            end if
+
             em_vars%ok(ifactor) = em_vars%ok(ifactor) .and. sternheimer_has_converged(sh)
             
           end if

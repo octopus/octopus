@@ -128,12 +128,12 @@ subroutine X(sternheimer_solve)(                           &
           !calculate the RHS of the Sternheimer eq
           if(sternheimer_have_rhs(this)) then
             ASSERT(associated(this%X(rhs)))
-            forall(idim = 1:st%d%dim, ip = 1:m%np) y(ip, idim, sigma) = -(M_ONE + hvar(ip, is, sigma))*this%X(rhs)(ip, idim, ist, ik)
+            forall(idim = 1:st%d%dim, ip = 1:m%np) y(ip, idim, sigma) = this%X(rhs)(ip, idim, ist, ik)
           else
             Y(1:m%np, 1, sigma) = R_TOTYPE(M_ZERO)
             call X(pert_apply)(perturbation, sys%gr, sys%geo, hm, ik, st%X(psi)(:, 1, ist, ik), Y(:, 1, sigma))
-            Y(1:m%np, 1, sigma) = -Y(1:m%np, 1, sigma) - hvar(1:m%np, is, sigma)*st%X(psi)(1:m%np, 1, ist, ik)
           end if
+          Y(1:m%np, 1, sigma) = -Y(1:m%np, 1, sigma) - hvar(1:m%np, is, sigma)*st%X(psi)(1:m%np, 1, ist, ik)
 
           if (this%occ_response) then
             ! project out only the component of the unperturbed wavefunction
