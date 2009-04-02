@@ -42,6 +42,7 @@ module states_m
   use mpi_m
   use mpi_lib_m
   use multicomm_m
+  use ob_green_m
   use profiling_m
   use simul_box_m
   use smear_m
@@ -84,7 +85,8 @@ module states_m
     states_distribute_nodes,          &
     states_wfns_memory,               &
     states_freeze_orbitals,           &
-    states_total_density
+    states_total_density,             &
+    states_init_green
 
   public ::                           &
     states_are_complex,               &
@@ -111,6 +113,7 @@ module states_m
     integer            :: ob_ncs            ! No. of continuum states of open system.
                                             ! ob_ncs = ob_nst*st%ob_d%nik / st%d%nik
     FLOAT, pointer     :: ob_occ(:, :)
+    CMPLX, pointer     :: ob_green(:, :, :, :, :, :) ! (np, np, nspin, ncs, nik, nleads) Green function of the leads.
 
     ! used for the user-defined wavefunctions (they are stored as formula strings)
     character(len=1024), pointer :: user_def_states(:,:,:) ! (st%d%dim, st%nst, st%d%nik)
@@ -943,6 +946,9 @@ contains
     call states_dim_end(st%d)
     if(st%open_boundaries) then
       call states_dim_end(st%ob_d)
+      DEALLOC(st%ob_eigenval)
+      DEALLOC(st%ob_occ)
+      DEALLOC(st%ob_green)
     end if
 
     DEALLOC(st%user_def_states)
@@ -2369,6 +2375,99 @@ contains
     memory = memory + dble(REAL_PRECISION*mesh%np_part_global*st%d%dim*st%nst*st%d%kpt%nglobal)
 
   end function states_wfns_memory
+
+
+  ! ---------------------------------------------------------
+  ! initialize the surface green functions of the leads
+  subroutine states_init_green(st, gr, nspin, d_ispin, diag, offdiag)
+    type(states_t),      intent(inout) :: st
+    type(grid_t),        intent(in)    :: gr
+    integer,             intent(in)    :: nspin
+    integer,             intent(in)    :: d_ispin
+    CMPLX, pointer,      intent(in)    :: diag(:, :, :, :)      ! Diagonal block of the lead Hamiltonian.
+    CMPLX, pointer,      intent(in)    :: offdiag(:, :, :)      ! Offdiagonal block of the lead Hamiltonian.
+
+    character(len=1)      :: ln(NLEADS)
+    character(len=2)      :: spin
+    character(len=256)    :: fname, fmt, fname_real, fname_imag
+    FLOAT                 :: energy
+    integer  :: np, ik, ist, il, ispin, alloc_size, s1, s2, k1, k2, ierr
+    integer  :: green_real, green_imag, irow
+
+    call push_sub('states.states_init_green')
+
+    np = gr%intf(LEFT)%np
+    if(calc_mode_is(CM_GS)) then
+      ln(LEFT)  = 'L'; ln(RIGHT) = 'R'
+    ! Calculate Green function of the leads.
+    ! FIXME: For spinors, this calculation is almost certainly wrong.
+    ASSERT(st%ob_ncs == st%nst)
+    alloc_size = np**2*nspin*st%lnst*st%d%kpt%nlocal*NLEADS
+    s1 = st%st_start; s2 = st%st_end
+    k1 = st%d%kpt%start; k2 = st%d%kpt%end
+    ALLOCATE(st%ob_green(np, np, nspin, s1:s2, k1:k2, NLEADS), alloc_size)
+    call messages_print_stress(stdout, 'Lead Green functions')
+    message(1) = ' st#  Spin  Lead     Energy'
+    call write_info(1)
+#ifdef HAVE_MPI 
+    ! wait for all processors to finish 
+    if(st%parallel_in_states) then 
+    call MPI_Barrier(st%mpi_grp%comm, mpi_err) 
+    end if 
+#endif
+    do ik = k1, k2
+      do ist = s1, s2
+        energy = st%ob_eigenval(ist, ik)
+        do il = 1, NLEADS
+          do ispin = 1, nspin
+            select case(d_ispin)
+            case(UNPOLARIZED)
+              spin = '--'
+            case(SPIN_POLARIZED)
+              if(is_spin_up(ik)) then
+                spin = 'up'
+              else
+                spin = 'dn'
+              end if
+              ! This is nonsense, but at least all indices are present.
+            case(SPINORS)
+              if(ispin.eq.1) then
+                spin = 'up'
+              else
+                spin = 'dn'
+              end if
+            end select
+            write(message(1), '(i4,3x,a2,5x,a1,1x,f12.6)') ist, spin, ln(il), energy
+            call write_info(1)
+            call lead_green(energy, diag(:, :, ispin, il), offdiag(:, :, il), &
+                np, st%ob_green(:, :, ispin, ist, ik, il), gr%sb%h(TRANS_DIR))
+
+            ! Write the entire Green function to a file.
+            if(in_debug_mode) then
+              call io_mkdir('debug/open_boundaries')
+              write(fname_real, '(3a,i4.4,a,i3.3,a,i1.1,a)') 'debug/open_boundaries/green-', &
+                trim(LEAD_NAME(il)), '-', ist, '-', ik, '-', ispin, '.real'
+              write(fname_imag, '(3a,i4.4,a,i3.3,a,i1.1,a)') 'debug/open_boundaries/green-', &
+                trim(LEAD_NAME(il)), '-', ist, '-', ik, '-', ispin, '.imag'
+              green_real = io_open(fname_real, action='write', grp=st%mpi_grp, is_tmp=.false.)
+              green_imag = io_open(fname_imag, action='write', grp=st%mpi_grp, is_tmp=.false.)
+
+              write(fmt, '(a,i6,a)') '(', np, 'e14.4)'
+              do irow = 1, np
+                write(green_real, fmt) real(st%ob_green(irow, :, ispin, ist, ik, il))
+                write(green_imag, fmt) aimag(st%ob_green(irow, :, ispin, ist, ik, il))
+              end do
+              call io_close(green_real); call io_close(green_imag)
+            end if
+          end do
+        end do
+      end do
+    end do
+    call messages_print_stress(stdout)
+    end if
+
+    call pop_sub()
+  end subroutine states_init_green
 
 end module states_m
 

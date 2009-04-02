@@ -145,7 +145,6 @@ module hamiltonian_m
     CMPLX, pointer :: lead_h_offdiag(:, :, :)      ! Offdiagonal block of the lead Hamiltonian.
     FLOAT, pointer :: lead_vks(:, :, :)            ! (np, nspin, nleads) Kohn-Sham potential of the leads.
     FLOAT, pointer :: lead_vhartree(:, :)          ! (np, nleads) Hartree potential of the leads.
-    CMPLX, pointer :: lead_green(:, :, :, :, :, :) ! (np, np, nspin, ncs, nik, nleads) Green function of the leads.
     
     ! Spectral range
     FLOAT :: spectral_middle_point
@@ -471,8 +470,8 @@ contains
     ! Calculate the blocks of the lead Hamiltonian and read the potential
     ! of the lead unit cell.
     subroutine init_lead_h
-      integer               :: np, il, ierr, alloc_size, ik, ist, pot, ix, iy
-      integer               :: green_real, green_imag, irow, diag, offdiag
+      integer               :: np, il, ierr, pot, ix, iy
+      integer               :: irow, diag, offdiag
       character             :: channel
       character(len=1)      :: ln(NLEADS)
       character(len=2)      :: spin
@@ -627,69 +626,6 @@ contains
         end if
       end do
 
-      ! Calculate Green function of the leads.
-      ! FIXME: For spinors, this calculation is almost certainly wrong.
-      ASSERT(st%ob_ncs == st%nst)
-      alloc_size = np**2*hm%d%nspin*st%lnst*st%d%kpt%nlocal*NLEADS
-      ALLOCATE(hm%lead_green(np, np, hm%d%nspin, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end, NLEADS), alloc_size)
-!      alloc_size = np**2*hm%d%nspin*st%ob_ncs*st%d%nik*NLEADS
-!      ALLOCATE(hm%lead_green(np, np, hm%d%nspin, st%ob_ncs, st%d%nik, NLEADS), alloc_size)
-
-      if(calc_mode_is(CM_GS)) then
-        call messages_print_stress(stdout, 'Lead Green functions')
-        message(1) = ' st#  Spin  Lead     Energy'
-        call write_info(1)
-        do ik = st%d%kpt%start, st%d%kpt%end
-!          do ist = 1, st%ob_ncs
-          do ist = st%st_start, st%st_end
-            energy = st%ob_eigenval(ist, ik)
-            do il = 1, NLEADS
-              do ispin = 1, hm%d%nspin
-                select case(hm%d%ispin)
-                case(UNPOLARIZED)
-                  spin = '--'
-                case(SPIN_POLARIZED)
-                  if(is_spin_up(ik)) then
-                    spin = 'up'
-                  else
-                    spin = 'dn'
-                  end if
-                  ! This is nonsense, but at least all indices are present.
-                case(SPINORS)
-                  if(ispin.eq.1) then
-                    spin = 'up'
-                  else
-                    spin = 'dn'
-                  end if
-                end select
-                write(message(1), '(i4,3x,a2,5x,a1,1x,f12.6)') ist, spin, ln(il), energy
-                call write_info(1)
-                call lead_green(energy, hm%lead_h_diag(:, :, ispin, il), hm%lead_h_offdiag(:, :, il), &
-                  np, hm%lead_green(:, :, ispin, ist, ik, il), gr%sb%h(TRANS_DIR))
-
-                ! Write the entire Green function to a file.
-                if(in_debug_mode) then
-                  call io_mkdir('debug/open_boundaries')
-                  write(fname_real, '(3a,i4.4,a,i3.3,a,i1.1,a)') 'debug/open_boundaries/green-', &
-                    trim(LEAD_NAME(il)), '-', ist, '-', ik, '-', ispin, '.real'
-                  write(fname_imag, '(3a,i4.4,a,i3.3,a,i1.1,a)') 'debug/open_boundaries/green-', &
-                    trim(LEAD_NAME(il)), '-', ist, '-', ik, '-', ispin, '.imag'
-                  green_real = io_open(fname_real, action='write', grp=st%mpi_grp, is_tmp=.false.)
-                  green_imag = io_open(fname_imag, action='write', grp=st%mpi_grp, is_tmp=.false.)
-
-                  write(fmt, '(a,i6,a)') '(', gr%intf(il)%np, 'e14.4)'
-                  do irow = 1, gr%intf(il)%np
-                    write(green_real, fmt) real(hm%lead_green(irow, :, ispin, ist, ik, il))
-                    write(green_imag, fmt) aimag(hm%lead_green(irow, :, ispin, ist, ik, il))
-                  end do
-                  call io_close(green_real); call io_close(green_imag)
-                end if
-              end do
-            end do
-          end do
-        end do
-        call messages_print_stress(stdout)
-      end if
     end subroutine init_lead_h
   end subroutine hamiltonian_init
 
@@ -755,7 +691,6 @@ contains
     DEALLOC(hm%lead_h_offdiag)
     DEALLOC(hm%lead_vks)
     DEALLOC(hm%lead_vhartree)
-    DEALLOC(hm%lead_green)
 
     call states_dim_end(hm%d)
     call scissor_end(hm%scissor)

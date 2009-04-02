@@ -118,7 +118,7 @@ contains
         do il = 1, NLEADS
           do idim = 1, st%d%dim
             np_intf = gr%intf(il)%np
-            call lalg_copy(np_intf**2, hm%lead_green(:, 1, idim, ist, ik, il), green(:, 1, idim, il))
+            call lalg_copy(np_intf**2, st%ob_green(:, 1, idim, ist, ik, il), green(:, 1, idim, il))
             call apply_coupling(green(:, :, idim, il), hm%lead_h_offdiag(:, :, il), &
               green(:, :, idim, il), np_intf, il)
           end do
