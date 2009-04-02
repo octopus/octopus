@@ -2384,8 +2384,8 @@ contains
     type(grid_t),        intent(in)    :: gr
     integer,             intent(in)    :: nspin
     integer,             intent(in)    :: d_ispin
-    CMPLX, pointer,      intent(in)    :: diag(:, :, :, :)      ! Diagonal block of the lead Hamiltonian.
-    CMPLX, pointer,      intent(in)    :: offdiag(:, :, :)      ! Offdiagonal block of the lead Hamiltonian.
+    CMPLX,               intent(in)    :: diag(:, :, :, :)      ! Diagonal block of the lead Hamiltonian.
+    CMPLX,               intent(in)    :: offdiag(:, :, :)      ! Offdiagonal block of the lead Hamiltonian.
 
     character(len=1)      :: ln(NLEADS)
     character(len=2)      :: spin
