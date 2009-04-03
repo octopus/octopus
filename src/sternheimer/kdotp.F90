@@ -353,7 +353,7 @@ contains
 
          ist2 = ist + 1
          do while (ist2 <= st%nst .and. &
-           abs(st%eigenval(ist2, ik) - st%eigenval(ist, ik)) < kdotp_vars%degen_thres)
+           abs(st%eigenval(min(ist2, st%nst), ik) - st%eigenval(ist, ik)) < kdotp_vars%degen_thres)
            ! eigenvalues are supposed to be in ascending order; if they are not, it is a sign
            ! of being in a degenerate subspace?
            ! write(*,*) ist2, ist, sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik)
