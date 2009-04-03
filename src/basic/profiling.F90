@@ -1,4 +1,4 @@
-!! Copyright (C) 2005-2006 Heiko Appel, Florian Lorenzen
+!! Copyright (C) 2005-2009 Heiko Appel, Florian Lorenzen, Xavier Andrade
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -121,6 +121,7 @@ module profiling_m
   real(8)                  :: start_time
   integer                  :: mem_iunit
   integer(8)               :: last_mem
+  logical                  :: prof_space
 
   !For the moment we will have the profiler objects here, but they
   !should be moved to their respective modules.
@@ -159,13 +160,14 @@ contains
   ! ---------------------------------------------------------
   ! Create profiling subdirectory.
   subroutine profiling_init()
-
+    
     character(len=4) :: filenum
     character(len=4) :: dirnum
+    integer          :: pmode
 
     !%Variable ProfilingMode
     !%Default no
-    !%Type logical
+    !%Type integer
     !%Section Execution::Optimization
     !%Description
     !% Use this variable to run octopus in profiling mode. In this mode
@@ -176,29 +178,44 @@ contains
     !% This is mainly for development purposes. Note, however, that
     !% octopus should be compiled with --disable-debug to do proper
     !% profiling.
+    !%Option no 0
+    !% No profiling information is generated.
+    !%Option time 1
+    !% Profile the time spent in defined profiling regions.
+    !%Option space 3
+    !% Additionally to time, memory usage is reported.
     !%End
-    call loct_parse_logical('ProfilingMode', .false., in_profiling_mode)
+
+    call loct_parse_int('ProfilingMode', 0, pmode)
+
+    in_profiling_mode = (pmode > 0)
 
     if(.not.in_profiling_mode) return
 
     call push_sub('profiling.profiling_init')
 
+    prof_space = (pmode == 3)
+
     ! initialize memory profiling
 
-    mem_prof_count = 0
-    start_time = loct_clock()
 
-    filenum = '0000'
-    dirnum  = 'ser '
+    if(prof_space) then
+
+      mem_prof_count = 0
+      start_time = loct_clock()
+      
+      filenum = '0000'
+      dirnum  = 'ser '
 #if defined(HAVE_MPI)
-    if(mpi_world%size > 1) then
-      write(filenum, '(i4.4)') mpi_world%rank
-      write(dirnum, '(i4.4)') mpi_world%size
-    end if
+      if(mpi_world%size > 1) then
+        write(filenum, '(i4.4)') mpi_world%rank
+        write(dirnum, '(i4.4)') mpi_world%size
+      end if
 #endif
-
-    call io_mkdir('profiling.'//trim(dirnum))
-    mem_iunit = io_open('profiling.'//trim(dirnum)//'/space.'//trim(filenum), action='write')
+      
+      call io_mkdir('profiling.'//trim(dirnum))
+      mem_iunit = io_open('profiling.'//trim(dirnum)//'/space.'//trim(filenum), action='write')
+    end if
 
     ! initialize time profiling
 
@@ -248,7 +265,8 @@ contains
     do ii = 1, last_profile
       call profile_end(profile_list(ii)%p)
     end do
-    call io_close(mem_iunit)
+
+    if(prof_space) call io_close(mem_iunit)
 
   end subroutine profiling_end
 
@@ -550,13 +568,16 @@ contains
 
     integer(8) :: mem
 
-    mem = get_memory_usage()
-    if(mem /= last_mem) then 
-      write(mem_iunit, '(i16, f16.6, i32, a, i16)') mem_prof_count, loct_clock() - start_time, mem, " "//file, line
-      mem_prof_count = mem_prof_count + 1
-      last_mem = mem
-    end if
+    if(prof_space) then
+      
+      mem = get_memory_usage()
+      if(mem /= last_mem) then 
+        write(mem_iunit, '(i16, f16.6, i32, a, i16)') mem_prof_count, loct_clock() - start_time, mem, " "//file, line
+        mem_prof_count = mem_prof_count + 1
+        last_mem = mem
+      end if
 
+    end if
 #endif
 
   end subroutine profiling_memory
