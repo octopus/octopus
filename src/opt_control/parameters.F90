@@ -547,6 +547,9 @@ contains
       end if
     end if
 
+    ! Construct the transformation matrix, if needed.
+    call parameters_trans_matrix(cp)
+
     call pop_sub()
   end subroutine parameters_init
   ! ---------------------------------------------------------
@@ -598,9 +601,6 @@ contains
 
     call parameters_apply_envelope(par)
 
-    ! Move to the sine-Fourier space if required.
-    call parameters_set_rep(par)
-
     if(par_common%targetfluence .ne. M_ZERO) then
       if(par_common%targetfluence < M_ZERO) then
         par_common%targetfluence = parameters_fluence(par) 
@@ -629,7 +629,8 @@ contains
       end if
     end select
 
-    call parameters_trans_matrix(par)
+    ! Move to the "native" representation, if necessary.
+    call parameters_set_rep(par)
 
     call pop_sub()
   end subroutine parameters_prepare_initial
@@ -654,7 +655,7 @@ contains
       else
         call parameters_to_basis(par)
       end if
-      par%current_representation = par_common%representation
+!!$      par%current_representation = par_common%representation
     end if
 
     call pop_sub()
@@ -674,14 +675,20 @@ contains
         do j = 1, par%no_parameters
           call tdf_numerical_to_sineseries(par%f(j))
         end do
+        par%current_representation = ctr_sine_fourier_series
+        call parameters_basis_to_theta(par)
       case(ctr_fourier_series)
         do j = 1, par%no_parameters
           call tdf_numerical_to_fourier(par%f(j))
         end do
+        par%current_representation = ctr_fourier_series
+        call parameters_basis_to_theta(par)
       case(ctr_zero_fourier_series)
         do j = 1, par%no_parameters
           call tdf_numerical_to_zerofourier(par%f(j))
         end do
+        par%current_representation = ctr_zero_fourier_series
+        call parameters_basis_to_theta(par)
       end select
     end if
 
@@ -700,14 +707,17 @@ contains
     case(ctr_real_time)
       call pop_sub(); return
     case(ctr_sine_fourier_series)
+      call parameters_theta_to_basis(par)
       do j = 1, par%no_parameters
         call tdf_sineseries_to_numerical(par%f(j))
       end do
     case(ctr_fourier_series)
+      call parameters_theta_to_basis(par)
       do j = 1, par%no_parameters
         call tdf_fourier_to_numerical(par%f(j))
       end do
     case(ctr_zero_fourier_series)
+      call parameters_theta_to_basis(par)
       do j = 1, par%no_parameters
         call tdf_zerofourier_to_numerical(par%f(j))
       end do
