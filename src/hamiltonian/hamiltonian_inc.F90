@@ -27,7 +27,7 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, t, kinetic_only)
   FLOAT, optional,     intent(in)    :: t
   logical, optional,   intent(in)    :: kinetic_only
   
-  integer :: nst
+  integer :: nst, bs, sp
   R_TYPE, pointer     :: epsi(:,:)
   R_TYPE, allocatable :: lapl(:, :, :)
   R_TYPE, pointer     :: grad(:, :, :)
@@ -72,19 +72,22 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, t, kinetic_only)
 
   call X(set_bc_batch)(gr%der, psib)
 
-  do ii = 1, nst
-    call set_pointers()
 
-    if(apply_kpoint) then ! we copy psi to epsi applying the exp(i k.r) phase
-      call profiling_in(phase_prof, "PBC_PHASE_APPLY")
-      
-      forall (idim = 1:hm%d%dim, ip = 1:gr%mesh%np_part)
-        psi_copy(ip, idim, ii) = hm%phase(ip, ik)*psi(ip, idim)
-      end forall
-      
-      call profiling_out(phase_prof)
-    end if
+  bs = hardware%X(block_size)
 
+  do sp = 1, gr%mesh%np_part, bs
+    do ii = 1, nst
+      call set_pointers()
+      
+      if(apply_kpoint) then ! we copy psi to epsi applying the exp(i k.r) phase
+        call profiling_in(phase_prof, "PBC_PHASE_APPLY")
+      
+        forall (idim = 1:hm%d%dim, ip = sp:min(sp + bs - 1, gr%mesh%np_part)) psi_copy(ip, idim, ii) = hm%phase(ip, ik)*psi(ip, idim)
+        
+        call profiling_out(phase_prof)
+      end if
+      
+    end do
   end do
 
   ! start the calculation of the laplacian
@@ -163,20 +166,24 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, t, kinetic_only)
       if(hm%scissor%apply) call X(scissor_apply)(hm%scissor, gr%mesh, ik, epsi, hpsi)
 
     end if
-    
-    if(apply_kpoint) then
-      ! now we need to remove the exp(-i k.r) factor
-      call profiling_in(phase_prof)
-
-      forall (idim = 1:hm%d%dim, ip = 1:gr%mesh%np)
-        hpsi(ip, idim) = conjg(hm%phase(ip, ik))*hpsi(ip, idim)
-      end forall
-  
-      call profiling_out(phase_prof)
-    end if
-
   end do
 
+  if(apply_kpoint) then
+    ! now we need to remove the exp(-i k.r) factor
+    do sp = 1, gr%mesh%np, bs
+      do ii = 1, nst
+        call set_pointers()
+        
+        call profiling_in(phase_prof)
+        
+        forall (idim = 1:hm%d%dim, ip = sp:min(sp + bs - 1, gr%mesh%np)) hpsi(ip, idim) = conjg(hm%phase(ip, ik))*hpsi(ip, idim)
+
+        call profiling_out(phase_prof)
+        
+      end do
+    end do
+  end if
+  
   call batch_end(epsib)
   call batch_end(laplb)
 
