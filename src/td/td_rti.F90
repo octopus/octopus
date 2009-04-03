@@ -310,7 +310,8 @@ contains
 #ifdef HAVE_SPARSKIT
       ALLOCATE(tdsk, 1)
       call zsparskit_solver_init(gr%mesh%np, tdsk)
-      ALLOCATE(zpsi_tmp(1:gr%mesh%np_part, 1:st%d%dim, 1:st%nst, 1:st%d%nik), gr%mesh%np_part*st%d%dim*st%nst*st%d%nik)
+      ALLOCATE(zpsi_tmp(1:gr%mesh%np_part, 1:st%d%dim, 1:st%nst, st%d%kpt%start:st%d%kpt%end), 
+      gr%mesh%np_part*st%d%dim*st%nst*st%d%kpt%nlocal)
 #else
       message(1) = 'Octopus was not compiled with support for the sparskit library. This'
       message(2) = 'library is required if the Crank-Nicholson propagator is selected.'
@@ -447,7 +448,8 @@ contains
     if(hm%theory_level .ne. INDEPENDENT_PARTICLES) then
       if( (t < 3*dt)  .or.  (tr%scf_propagation) ) then
         self_consistent = .true.
-        ALLOCATE(zpsi1(gr%mesh%np_part, st%d%dim, st%st_start:st%st_end, st%d%nik), gr%mesh%np_part*st%d%dim*st%lnst*st%d%nik)
+        ALLOCATE(zpsi1(gr%mesh%np_part, st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end), 
+        gr%mesh%np_part*st%d%dim*st%lnst*st%d%kpt%nlocal)
         zpsi1 = st%zpsi
       end if
     end if
@@ -535,21 +537,21 @@ contains
       integer :: ik, ist
       call push_sub('td_rti.td_split_operator')
 
-      do ik = 1, st%d%nik
+      do ik = st%d%kpt%start, st%d%kpt%end
         do ist = 1, st%nst
           call zexp_kinetic(gr, hm, st%zpsi(:, :, ist, ik), tr%cf, -M_HALF*M_zI*dt)
         end do
       end do
       call states_calc_dens(st, gr%mesh%np)
       call v_ks_calc(gr, ks, hm, st)
-      do ik = 1, st%d%nik
+      do ik = st%d%kpt%start, st%d%kpt%end
         do ist = 1, st%nst
           if (hm%ep%non_local) call zexp_vnlpsi (gr%mesh, hm, st%zpsi(:, :, ist, ik), -M_zI*dt, .true.)
           call zexp_vlpsi (gr, hm, st%zpsi(:, :, ist, ik), ik, t-dt*M_HALF, -M_zI*dt)
           if (hm%ep%non_local) call zexp_vnlpsi (gr%mesh, hm, st%zpsi(:, :, ist, ik), -M_zI*dt, .false.)
         end do
       end do
-      do ik = 1, st%d%nik
+      do ik = st%d%kpt%start, st%d%kpt%end
         do ist = 1, st%nst
           call zexp_kinetic(gr, hm, st%zpsi(:, :, ist, ik), tr%cf, -M_HALF*M_zI*dt)
         end do
@@ -579,7 +581,7 @@ contains
       do k = 1, 5
         call interpolate( (/t, t-dt, t-2*dt/), tr%v_old(:, :, 0:2), time(k), hm%vhxc(:, :))
         call hamiltonian_update_potential(hm, gr%mesh)
-        do ik = 1, st%d%nik
+        do ik = st%d%kpt%start, st%d%kpt%end
           do ist = 1, st%nst
             call zexp_vlpsi (gr, hm, st%zpsi(:, :, ist, ik), ik, time(k), -M_zI*dtime(k)/M_TWO)
             if (hm%ep%non_local) call zexp_vnlpsi (gr%mesh, hm, &
@@ -615,7 +617,7 @@ contains
 
         st%rho(1:gr%mesh%np, 1:st%d%nspin) = M_ZERO
 
-        do ik = 1, st%d%nik
+        do ik = st%d%kpt%start, st%d%kpt%end
           do ist = st%st_start, st%st_end
             
             !save the state
@@ -650,7 +652,7 @@ contains
       end if
 
       ! propagate dt/2 with H(t-dt)
-      do ik = 1, st%d%nik
+      do ik = st%d%kpt%start, st%d%kpt%end
         do ist = st%st_start, st%st_end
           call exponential_apply(tr%te, gr, hm, st%zpsi(:,:, ist, ik), ist, ik, dt/M_TWO, t-dt)
         end do
@@ -671,7 +673,7 @@ contains
         call hamiltonian_update_potential(hm, gr%mesh)
       end if
 
-      do ik = 1, st%d%nik
+      do ik = st%d%kpt%start, st%d%kpt%end
         do ist = st%st_start, st%st_end
           call exponential_apply(tr%te, gr, hm, st%zpsi(:,:, ist, ik), ist, ik, dt/M_TWO, t)
         end do
@@ -692,7 +694,7 @@ contains
       call push_sub('td_rti.td_app_reversal')
 
       ! propagate half of the time step with H(t-dt)
-      do ik = 1, st%d%nik
+      do ik = st%d%kpt%start, st%d%kpt%end
         do sts = st%st_start, st%st_end, st%d%block_size
           ste = min(st%st_end, sts + st%d%block_size - 1)
           call batch_init(zpsib, st%d%dim, sts, ste, st%zpsi(:, :, sts:, ik))
@@ -714,7 +716,7 @@ contains
       if(gauge_field_is_applied(hm%ep%gfield)) call gauge_field_propagate(hm%ep%gfield, gauge_force, dt)
 
       ! propagate the other half with H(t)
-      do ik = 1, st%d%nik
+      do ik = st%d%kpt%start, st%d%kpt%end
         do sts = st%st_start, st%st_end, st%d%block_size
           ste = min(st%st_end, sts + st%d%block_size - 1)
           call batch_init(zpsib, hm%d%dim, sts, ste, st%zpsi(:, :, sts:, ik))
@@ -754,7 +756,7 @@ contains
         call gauge_field_propagate(hm%ep%gfield, gauge_force, M_HALF*dt)
       end if
 
-      do ik = 1, st%d%nik
+      do ik = st%d%kpt%start, st%d%kpt%end
         do ist = st%st_start, st%st_end
           call exponential_apply(tr%te, gr, hm, st%zpsi(:,:, ist, ik), ist, ik, dt, t - dt/M_TWO)
         end do
@@ -781,8 +783,8 @@ contains
 
       call push_sub('td_rti.td_crank_nicholson')
 
-      isize = gr%mesh%np_part*st%lnst*st%d%nik*st%d%dim
-      ALLOCATE(zpsi_rhs_corr(gr%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik), isize)
+      isize = gr%mesh%np_part*st%lnst*st%d%kpt%nlocal*st%d%dim
+      ALLOCATE(zpsi_rhs_corr(gr%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end), isize)
 
       zpsi_rhs_corr = st%zpsi ! store zpsi for corrector step
 
@@ -799,7 +801,7 @@ contains
       tr%te%exp_order  = 1
 
       if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
-        ALLOCATE(zpsi_rhs_pred(gr%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik), isize)
+        ALLOCATE(zpsi_rhs_pred(gr%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end), isize)
         zpsi_rhs_pred = st%zpsi ! store zpsi for predictor step
         
         ALLOCATE(vhxc_t1(gr%mesh%np, st%d%nspin), gr%mesh%np*st%d%nspin)
@@ -807,7 +809,7 @@ contains
         vhxc_t1 = hm%vhxc
 
         ! get rhs of CN linear system (rhs1 = (1-i\delta t/2 H_n)\psi^n)
-        do ik = 1, st%d%nik
+        do ik = st%d%kpt%start, st%d%kpt%end
           do ist = st%st_start, st%st_end
             call exponential_apply(tr%te, gr, hm, zpsi_rhs_pred(:, :, ist, ik), ist, ik, dt/M_TWO, t-dt)
             if(hamiltonian_inh_term(hm)) then
@@ -819,7 +821,7 @@ contains
         ! predictor step: 
         ! solve (1+i\delta t/2 H_n)\psi^{predictor}_{n+1} = (1-i\delta t/2 H_n)\psi^n
         do idim = 1, st%d%dim
-          do ik = 1, st%d%nik
+          do ik = st%d%kpt%start, st%d%kpt%end
             do ist = st%st_start, st%st_end
               idim_op = idim; ist_op = ist; ik_op = ik
               call zsparskit_solver_run(tdsk, td_zop, td_zopt, &
@@ -838,7 +840,7 @@ contains
       end if
 
       ! get rhs of CN linear system (rhs2 = (1-i\delta t H_{n+1/2})\psi^n)
-      do ik = 1, st%d%nik
+      do ik = st%d%kpt%start, st%d%kpt%end
         do ist = st%st_start, st%st_end
           call exponential_apply(tr%te, gr, hm, zpsi_rhs_corr(:, :, ist, ik), ist, ik, dt/M_TWO, t-dt)
           if(hamiltonian_inh_term(hm)) then
@@ -850,7 +852,7 @@ contains
       ! corrector step: 
       ! solve (1+i\delta t/2 H_{n+1/2})\psi_{n+1} = (1-i\delta t/2 H_{n+1/2})\psi^n
       do idim = 1, st%d%dim
-        do ik = 1, st%d%nik
+        do ik = st%d%kpt%start, st%d%kpt%end
           do ist = st%st_start, st%st_end
             idim_op = idim; ist_op = ist; ik_op = ik
             call zsparskit_solver_run(tdsk, td_zop, td_zopt, &
@@ -870,7 +872,7 @@ contains
     ! ---------------------------------------------------------
     ! Magnus propagator
     subroutine td_magnus
-      integer :: j, is, ist, k, i
+      integer :: j, is, ist, ik, i
       FLOAT :: time(2)
       FLOAT, allocatable :: vaux(:, :, :), pot(:)
 
@@ -912,9 +914,9 @@ contains
       tr%vmagnus(:, :, 2)  = M_HALF*(vaux(:, :, 1) + vaux(:, :, 2))
       tr%vmagnus(:, :, 1) = (sqrt(M_THREE)/CNST(12.0))*dt*(vaux(:, :, 2) - vaux(:, :, 1))
 
-      do k = 1, st%d%nik
+     do ik = st%d%kpt%start, st%d%kpt%end
         do ist = st%st_start, st%st_end
-          call exponential_apply(tr%te, gr, hm, st%zpsi(:,:, ist, k), ist, k, dt, M_ZERO, &
+          call exponential_apply(tr%te, gr, hm, st%zpsi(:,:, ist, ik), ist, ik, dt, M_ZERO, &
             vmagnus = tr%vmagnus)
         end do
       end do
@@ -965,7 +967,7 @@ contains
         if(gauge_field_is_applied(hm%ep%gfield)) call gauge_field_propagate(hm%ep%gfield, gauge_force, CNST(0.25)*dt)
         
         ALLOCATE(zpsi(1:gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
-        do ik = 1, st%d%nik
+        do ik = st%d%kpt%start, st%d%kpt%end
           do ist = st%st_start, st%st_end
             do idim = 1, st%d%dim
               call lalg_copy(gr%mesh%np, st%zpsi(:, idim, ist, ik), zpsi(:, idim))
@@ -1011,7 +1013,7 @@ contains
       end if
 
       ! propagate the real part
-      do ik = 1, st%d%nik
+      do ik = st%d%kpt%start, st%d%kpt%end
         do ist = st%st_start, st%st_end
           
           do idim = 1, st%d%dim
@@ -1042,7 +1044,7 @@ contains
       if(gauge_field_is_applied(hm%ep%gfield)) call gauge_field_propagate(hm%ep%gfield, gauge_force, M_HALF*dt)
 
       ! propagate the imaginary part
-      do ik = 1, st%d%nik
+      do ik = st%d%kpt%start, st%d%kpt%end
         do ist = st%st_start, st%st_end
 
           forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) dpsi(ip, idim) = real(st%zpsi(ip, idim, ist, ik))
