@@ -82,7 +82,9 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, t, kinetic_only)
       if(apply_kpoint) then ! we copy psi to epsi applying the exp(i k.r) phase
         call profiling_in(phase_prof, "PBC_PHASE_APPLY")
       
-        forall (idim = 1:hm%d%dim, ip = sp:min(sp + bs - 1, gr%mesh%np_part)) psi_copy(ip, idim, ii) = hm%phase(ip, ik)*psi(ip, idim)
+        forall (idim = 1:hm%d%dim, ip = sp:min(sp + bs - 1, gr%mesh%np_part)) 
+          psi_copy(ip, idim, ii) = hm%phase(ip, ik)*psi(ip, idim)
+        end forall
         
         call profiling_out(phase_prof)
       end if
@@ -176,7 +178,9 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, t, kinetic_only)
         
         call profiling_in(phase_prof)
         
-        forall (idim = 1:hm%d%dim, ip = sp:min(sp + bs - 1, gr%mesh%np)) hpsi(ip, idim) = conjg(hm%phase(ip, ik))*hpsi(ip, idim)
+        forall (idim = 1:hm%d%dim, ip = sp:min(sp + bs - 1, gr%mesh%np))
+          hpsi(ip, idim) = conjg(hm%phase(ip, ik))*hpsi(ip, idim)
+        end forall
 
         call profiling_out(phase_prof)
         
