@@ -84,11 +84,11 @@ module opt_control_parameters_m
             parameters_filter
 
 
-  integer, public, parameter ::                    &
-    ctr_real_time            = TDF_NUMERICAL,      &
-    ctr_sine_fourier_series  = TDF_SINE_SERIES,    &
-    ctr_fourier_series       = TDF_FOURIER_SERIES, &
-    ctr_zero_fourier_series  = TDF_ZERO_FOURIER
+  integer, public, parameter ::   &
+    ctr_real_time            = 1, &
+    ctr_sine_fourier_series  = 2, &
+    ctr_fourier_series       = 3, &
+    ctr_zero_fourier_series  = 4
 
 
   integer, parameter :: parameter_mode_none      = 0, &
@@ -177,13 +177,13 @@ contains
     !% specify the kind of parameters that determine the control function.
     !% If "OCTControlRepresentation = control_function_real_time", then this variable
     !% is ignored, and the control function is handled directly in real time.
-    !%Option control_sine_fourier_series 10009
+    !%Option control_sine_fourier_series 2
     !% The control function is expanded in a sine Fourier series (which implies that it
     !% it starts and ends at zero).
-    !%Option control_fourier_series 10010
+    !%Option control_fourier_series 3
     !% The control function is expanded as a full Fourier series (although it must, of 
     !% course, be a real function).
-    !%Option control_zero_fourier_series 10011
+    !%Option control_zero_fourier_series 4
     !% The control function is expanded as a Fourier series, but assuming (1) that the zero
     !% frequency component is zero, and (2) the control function, integrated in time, adds
     !% up to zero (this essentially means that the sum of all the cosine coefficients is zero).
@@ -655,7 +655,6 @@ contains
       else
         call parameters_to_basis(par)
       end if
-!!$      par%current_representation = par_common%representation
     end if
 
     call pop_sub()
@@ -1376,8 +1375,15 @@ contains
 
   ! ---------------------------------------------------------
   subroutine parameters_mod_close()
+    integer :: j
+
+    deallocate(par_common%alpha); nullify(par_common%alpha)
+    do j = 1, par_common%no_parameters
+      call tdf_end(par_common%td_penalty(j))
+    end do
+    deallocate(par_common%td_penalty); nullify(par_common%td_penalty)
     if(associated(par_common)) deallocate(par_common)
-    ! Here par_commons data should be deallocated.
+
   end subroutine parameters_mod_close
   ! ---------------------------------------------------------
 
