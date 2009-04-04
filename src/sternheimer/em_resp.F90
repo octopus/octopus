@@ -1027,6 +1027,7 @@ contains
       enddo
 
       HRS_B = M_ZERO
+      HRS_C = M_ZERO
       do i = 1, sb%dim
         do j = 1, sb%dim
           if (i .ne. j) then
