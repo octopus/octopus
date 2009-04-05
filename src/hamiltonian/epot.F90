@@ -717,9 +717,9 @@ contains
     type(grid_t),   intent(in) :: gr
     integer,        intent(in) :: dir
 
-    integer ik, ist, ist2, idim
-    CMPLX, allocatable :: matrix(:, :)
-    CMPLX det
+    integer ik, ist, ist2, idim, ip
+    CMPLX, allocatable :: matrix(:, :), tmp(:)
+    CMPLX :: det, phase
 
     call push_sub('epot.epot_dipole_periodic')
 
@@ -729,28 +729,43 @@ contains
     endif
 
     ALLOCATE(matrix(st%nst, st%nst), st%nst * st%nst)
+    ALLOCATE(tmp(1:gr%mesh%np), gr%mesh%np)
 
-! TODO: add in sum over k-points in orthogonal directions here
+    ! TODO: add in sum over k-points in orthogonal directions here
+
+    phase = exp(-M_zI*(M_PI/gr%sb%lsize(dir)))
 
     do ik = st%d%kpt%start, st%d%kpt%end ! determinants for different spins multiply since matrix is block-diagonal
       do ist = 1, st%nst
         do ist2 = 1, st%nst
-          do idim = 1, st%d%dim ! spinor components
-            if (ist .le. ist2) then
-              matrix(ist, ist2) = zmf_dotp(gr%mesh, st%zpsi(1:gr%mesh%np, idim, ist, ik), &
-                                  exp(- M_zI * (M_Pi / gr%sb%lsize(dir)) * gr%mesh%x(1:gr%mesh%np, dir)) * &
-                                  st%zpsi(1:gr%mesh%np, idim, ist2, ik))
+
+          if (ist .le. ist2) then
+            matrix(ist, ist2) = M_Z0
+            do idim = 1, st%d%dim ! spinor components
+
+              if(states_are_complex(st)) then
+                forall(ip = 1:gr%mesh%np)
+                  tmp(ip) = conjg(st%zpsi(ip, idim, ist, ik))*&
+                       exp(-M_zI*(M_PI/gr%sb%lsize(dir))*gr%mesh%x(ip, dir))*st%zpsi(ip, idim, ist2, ik)
+                end forall
+              else
+                forall(ip = 1:gr%mesh%np)
+                  tmp(ip) = st%dpsi(ip, idim, ist, ik)**2*exp(-M_zI*(M_PI/gr%sb%lsize(dir))*gr%mesh%x(ip, dir))
+                end forall
+              end if
+
+              matrix(ist, ist2) = matrix(ist, ist2) + zmf_integrate(gr%mesh, tmp)
+
               ! factor of two removed from exp since actual lattice vector is 2 * lsize
-              ! zmf_dotp conjugates the left argument
-            else
-              ! enforce Hermiticity of matrix
-              matrix(ist, ist2) = conjg(matrix(ist2, ist))
-            endif
-          enddo ! idim
+            end do
+          else
+            ! enforce Hermiticity of matrix
+            matrix(ist, ist2) = conjg(matrix(ist2, ist))
+          end if
         enddo !ist2
       enddo !ist
     enddo !ik
-
+      
     det = lalg_determinant(st%nst, matrix(1:st%nst, 1:st%nst), invert = .false.)
     dipole = -(2 * gr%sb%lsize(dir) / (2 * M_Pi)) * aimag(log(det)) * st%smear%el_per_state
 
