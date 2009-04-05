@@ -750,7 +750,7 @@ contains
                 end forall
               else
                 forall(ip = 1:gr%mesh%np)
-                  tmp(ip) = st%dpsi(ip, idim, ist, ik))*&
+                  tmp(ip) = st%dpsi(ip, idim, ist, ik)*&
                        exp(-M_zI*(M_PI/gr%sb%lsize(dir))*gr%mesh%x(ip, dir))*st%dpsi(ip, idim, ist2, ik)
                 end forall
               end if
