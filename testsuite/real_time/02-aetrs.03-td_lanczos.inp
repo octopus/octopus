@@ -34,3 +34,5 @@ TDExponentialMethod = lanczos
 TDExpOrder = 10
 
 FromScratch = yes
+
+FilterPotentials = filter_ts

@@ -13,18 +13,18 @@ Enabled    : Yes
 # ground state
 Processors : 1
 Input      : 07-visscher.01-gs.inp
-match ; Initial energy ; GREP(static/info, 'Total       =', 20) ; -11.00353072
+match ; Initial energy ; GREP(static/info, 'Total       =', 20) ; -10.60764719
 
 Processors : 4
 Input      : 07-visscher.02-td.inp
-match ; Energy [step  1] ; LINE(td.general/energy, -41, 30) ; -1.098162577741e+01
-match ; Energy [step 10] ; LINE(td.general/energy, -31, 30) ; -1.098155135224e+01
-match ; Energy [step 20] ; LINE(td.general/energy, -21, 30) ; -1.098147635943e+01
-match ; Energy [step 30] ; LINE(td.general/energy, -11, 30) ; -1.098140063765e+01
-match ; Energy [step 40] ; LINE(td.general/energy,  -1, 30) ; -1.098132419337e+01
+match ; Energy [step  1] ; LINE(td.general/energy, -41, 30) ; -1.058576638440e+01
+match ; Energy [step 10] ; LINE(td.general/energy, -31, 30) ; -1.058574738550e+01
+match ; Energy [step 20] ; LINE(td.general/energy, -21, 30) ; -1.058562934420e+01
+match ; Energy [step 30] ; LINE(td.general/energy, -11, 30) ; -1.058548673436e+01
+match ; Energy [step 40] ; LINE(td.general/energy,  -1, 30) ; -1.058540305369e+01
 
-match ; Forces [step  1] ; LINE(td.general/coordinates, -41, 270) ; 1.700891538586e-01
-match ; Forces [step 10] ; LINE(td.general/coordinates, -31, 270) ; 1.675208428715e-01
-match ; Forces [step 20] ; LINE(td.general/coordinates, -21, 270) ; 1.672066391044e-01
-match ; Forces [step 30] ; LINE(td.general/coordinates, -11, 270) ; 1.672352458128e-01
-match ; Forces [step 40] ; LINE(td.general/coordinates,  -1, 270) ; 1.674039849005e-01
+match ; Forces [step  1] ; LINE(td.general/coordinates, -41, 270) ; 8.597895810248e-02
+match ; Forces [step 10] ; LINE(td.general/coordinates, -31, 270) ; 8.370911801678e-02
+match ; Forces [step 20] ; LINE(td.general/coordinates, -21, 270) ; 8.281473978320e-02
+match ; Forces [step 30] ; LINE(td.general/coordinates, -11, 270) ; 8.246302761421e-02
+match ; Forces [step 40] ; LINE(td.general/coordinates,  -1, 270) ; 8.255115492880e-02

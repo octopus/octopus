@@ -12,3 +12,6 @@ bond_length = 2.4
 Spacing = 0.6
 
 Radius = 6
+
+FilterPotentials = filter_ts
+

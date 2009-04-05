@@ -29,3 +29,5 @@ ParallelizationStrategy = par_domains + par_states
 %
 
 TDEvolutionMethod = visscher
+
+FilterPotentials = filter_ts

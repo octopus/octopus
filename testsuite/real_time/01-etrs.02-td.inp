@@ -27,3 +27,5 @@ ParallelizationStrategy = par_domains + par_states
 %ParallelizationGroupRanks
  2 | 2
 %
+
+FilterPotentials = filter_ts

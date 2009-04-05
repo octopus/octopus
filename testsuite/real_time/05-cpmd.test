@@ -13,34 +13,35 @@ Enabled    : Yes
 # ground state
 Processors : 1
 Input      : 05-cpmd.01-gs.inp
-match ; Initial energy ; GREP(static/info, 'Total       =', 20) ; -11.03280171
+match ; Initial energy ; GREP(static/info, 'Total       =', 20) ; -10.60616403
 
 Processors : 4
 Input      : 05-cpmd.02-verlet.inp
-match ; Energy [step  1] ; LINE(td.general/energy, -21, 30) ; -1.101090673721e+01
-match ; Energy [step  5] ; LINE(td.general/energy, -16, 30) ; -1.101106932280e+01
-match ; Energy [step 10] ; LINE(td.general/energy, -11, 30) ; -1.101123285876e+01
-match ; Energy [step 15] ; LINE(td.general/energy,  -6, 30) ; -1.101139866145e+01
-match ; Energy [step 20] ; LINE(td.general/energy,  -1, 30) ; -1.101156958094e+01
+match ; Energy [step  1] ; LINE(td.general/energy, -21, 30) ; -1.058426876241e+01
+match ; Energy [step  5] ; LINE(td.general/energy, -16, 30) ; -1.058426017289e+01
+match ; Energy [step 10] ; LINE(td.general/energy, -11, 30) ; -1.058424832055e+01
+match ; Energy [step 15] ; LINE(td.general/energy,  -6, 30) ; -1.058424832055e+01
+match ; Energy [step 20] ; LINE(td.general/energy,  -1, 30) ; -1.058423825344e+01
 
-match ; Forces [step  1] ; LINE(td.general/coordinates, -21, 270) ; 5.481047150950e-02
-match ; Forces [step  5] ; LINE(td.general/coordinates, -16, 270) ; 5.189070427566e-02
-match ; Forces [step 10] ; LINE(td.general/coordinates, -11, 270) ; 5.363497453378e-02
-match ; Forces [step 15] ; LINE(td.general/coordinates,  -6, 270) ; 5.219762437556e-02
-match ; Forces [step 20] ; LINE(td.general/coordinates,  -1, 270) ; 5.055230061902e-02
+match ; Forces [step  1] ; LINE(td.general/coordinates, -21, 270) ; -1.326834967293e-01
+match ; Forces [step  5] ; LINE(td.general/coordinates, -16, 270) ; -1.366498354040e-01
+match ; Forces [step 10] ; LINE(td.general/coordinates, -11, 270) ; -1.357621712454e-01
+match ; Forces [step 15] ; LINE(td.general/coordinates,  -6, 270) ; -1.378878597553e-01
+match ; Forces [step 20] ; LINE(td.general/coordinates,  -1, 270) ; -1.409192120424e-01
 
 
 Processors : 4
 Input      : 05-cpmd.03-vel_verlet.inp
-match ; Energy [step  1] ; LINE(td.general/energy, -21, 30) ; -1.101090673721e+01
-match ; Energy [step  5] ; LINE(td.general/energy, -16, 30) ; -1.101106932280e+01
-match ; Energy [step 10] ; LINE(td.general/energy, -11, 30) ; -1.101123285876e+01
-match ; Energy [step 15] ; LINE(td.general/energy,  -6, 30) ; -1.101139866145e+01
-match ; Energy [step 20] ; LINE(td.general/energy,  -1, 30) ; -1.101156958094e+01
+match ; Energy [step  1] ; LINE(td.general/energy, -21, 30) ; -1.058427604716e+01
+match ; Energy [step  5] ; LINE(td.general/energy, -16, 30) ; -1.058426876272e+01
+match ; Energy [step 10] ; LINE(td.general/energy, -11, 30) ; -1.058426017405e+01
+match ; Energy [step 15] ; LINE(td.general/energy,  -6, 30) ; -1.058424832088e+01
+match ; Energy [step 20] ; LINE(td.general/energy,  -1, 30) ; -1.058423825365e+01
 
-match ; Forces [step  1] ; LINE(td.general/coordinates, -21, 270) ; 5.481047150950e-02
-match ; Forces [step  5] ; LINE(td.general/coordinates, -16, 270) ; 5.189070427566e-02
-match ; Forces [step 10] ; LINE(td.general/coordinates, -11, 270) ; 5.363497453378e-02
-match ; Forces [step 15] ; LINE(td.general/coordinates,  -6, 270) ; 5.219762437556e-02
-match ; Forces [step 20] ; LINE(td.general/coordinates,  -1, 270) ; 5.055230061902e-02
+match ; Forces [step  1] ; LINE(td.general/coordinates, -21, 270) ; -1.326834967293e-01
+match ; Forces [step  5] ; LINE(td.general/coordinates, -16, 270) ; -1.366505264037e-01
+match ; Forces [step 10] ; LINE(td.general/coordinates, -11, 270) ; -1.357619252783e-01
+match ; Forces [step 15] ; LINE(td.general/coordinates,  -6, 270) ; -1.378875970111e-01
+match ; Forces [step 20] ; LINE(td.general/coordinates,  -1, 270) ; -1.409193337241e-01
+
 
