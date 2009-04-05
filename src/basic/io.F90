@@ -383,8 +383,7 @@ contains
         open(unit=iunit, file=trim(file_), status=trim(status_), form=trim(form_), &
           action=trim(action), position=trim(position_), iostat=iostat)
       endif
-
-      print*, "iostat", iostat
+      
       if(iostat.ne.0) then
         call io_free(iunit)
         iunit = -1
