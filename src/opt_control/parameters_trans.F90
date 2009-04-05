@@ -28,33 +28,38 @@
 
     ASSERT(par%current_representation .ne. ctr_real_time)
 
-    n = par%dim
-    dof = par%dof
+    select case(par%current_representation)
+    case(ctr_sine_fourier_series_h, ctr_fourier_series_h, ctr_zero_fourier_series_h)
+      n = par%dim
+      dof = par%dof
+      ALLOCATE(e(n), n)
+      ALLOCATE(ep(n), n)
+      ALLOCATE(x(dof), dof)
 
-    ALLOCATE(e(n), n)
-    ALLOCATE(ep(n), n)
-    ALLOCATE(x(dof), dof)
+      forall(j = 1: n) ep(j) = tdf(par%f(1), j)
+      e = matmul(par%utransf, ep)
 
-    do j =  1, n
-      ep(j) = tdf(par%f(1), j)
-    end do
-    e = matmul(par%utransf, ep)
+      if(par_common%representation .eq. ctr_zero_fourier_series_h) then
+        ALLOCATE(a(n-1), n-1)
+        ALLOCATE(y(n-1), n-1)
+        a = M_ZERO
+        a(1:n/2-1) = M_ONE
 
-    if(par_common%representation .eq. ctr_zero_fourier_series) then
-      ALLOCATE(a(n-1), n-1)
-      ALLOCATE(y(n-1), n-1)
-      a = M_ZERO
-      a(1:n/2-1) = M_ONE
+        call hypersphere_cut(ep(2:n), a, y)
+        call cartesian2hyperspherical(y, x(1:n-2))
+        deallocate(a, y)
+       else
+        call cartesian2hyperspherical(e, x(1:n-1))
+      end if
 
-      call hypersphere_cut(ep(2:n), a, y)
-      call cartesian2hyperspherical(y, x(1:n-2))
-      deallocate(a, y)
-     else
-      call cartesian2hyperspherical(e, x(1:n-1))
-    end if
-    
-    par%theta = x
-    deallocate(e, ep, x) 
+      par%theta = x
+      deallocate(e, ep, x) 
+
+    case(ctr_fourier_series)
+      forall(j = 1: par%dim) par%theta(j) = tdf(par%f(1), j)
+      
+    end select
+
     call pop_sub()
   end subroutine parameters_basis_to_theta
   ! ---------------------------------------------------------
@@ -89,33 +94,44 @@
 
     ASSERT(par%current_representation .ne. ctr_real_time)
 
-    n = par%dim
-    dof = par%dof
-    ALLOCATE(e(n), n)
-    ALLOCATE(ep(n), n)
-    ALLOCATE(x(dof), dof)
-    x = par%theta
 
-    if(par_common%representation .eq. ctr_zero_fourier_series) then
-      call hyperspherical2cartesian(x, ep(2:n))
-      ALLOCATE(a(n-1), n-1)
-      ALLOCATE(y(n-1), n-1)
-      a = M_ZERO
-      a(1:n/2-1) = M_ONE
-      call hypersphere_cut_back(ep(2:n), a, e(2:n))
-      e(1) = -sum(e(2:n/2))
-      e = sqrt(par_common%targetfluence) * e
-      ep = matmul(par%utransfi, e)
-      call tdf_set_numerical(par%f(1), ep)
-      deallocate(a, y)
-    else
-      call hyperspherical2cartesian(x(1:n-1), e)
-      e = sqrt(par_common%targetfluence) * e
-      ep = matmul(par%utransfi, e)
-      call tdf_set_numerical(par%f(1), ep)
-    end if
+    select case(par%current_representation)
+    case(ctr_sine_fourier_series_h, ctr_fourier_series_h, ctr_zero_fourier_series_h)
 
-    deallocate(e, ep, x)
+      n = par%dim
+      dof = par%dof
+      ALLOCATE(e(n), n)
+      ALLOCATE(ep(n), n)
+      ALLOCATE(x(dof), dof)
+      x = par%theta
+
+      if(par_common%representation .eq. ctr_zero_fourier_series_h) then
+        call hyperspherical2cartesian(x, ep(2:n))
+        ALLOCATE(a(n-1), n-1)
+        ALLOCATE(y(n-1), n-1)
+        a = M_ZERO
+        a(1:n/2-1) = M_ONE
+        call hypersphere_cut_back(ep(2:n), a, e(2:n))
+        e(1) = -sum(e(2:n/2))
+        e = sqrt(par_common%targetfluence) * e
+        ep = matmul(par%utransfi, e)
+        call tdf_set_numerical(par%f(1), ep)
+        deallocate(a, y)
+      else
+        call hyperspherical2cartesian(x(1:n-1), e)
+        e = sqrt(par_common%targetfluence) * e
+        ep = matmul(par%utransfi, e)
+        call tdf_set_numerical(par%f(1), ep)
+      end if
+
+      deallocate(e, ep, x)
+
+    case(ctr_fourier_series)
+
+      call tdf_set_numerical(par%f(1), par%theta)
+
+    end select
+
     call pop_sub()
   end subroutine parameters_theta_to_basis
   ! ---------------------------------------------------------
@@ -165,21 +181,21 @@
 
       do mm = 1, par%dim
         select case(par_common%representation)
-        case(ctr_sine_fourier_series)
+        case(ctr_sine_fourier_series_h)
           call tdf_init_numerical(fm, tdf_niter(par%f(1)), tdf_dt(par%f(1)), &
             par_common%omegamax, rep = TDF_SINE_SERIES)
-        case(ctr_fourier_series)
+        case(ctr_fourier_series_h)
           call tdf_init_numerical(fm, tdf_niter(par%f(1)), tdf_dt(par%f(1)), &
             par_common%omegamax, rep = TDF_FOURIER_SERIES)
-        case(ctr_zero_fourier_series)
+        case(ctr_zero_fourier_series_h)
           call tdf_init_numerical(fm, tdf_niter(par%f(1)), tdf_dt(par%f(1)), &
             par_common%omegamax, rep = TDF_ZERO_FOURIER)
         end select
         call tdf_set_numerical(fm, mm, M_ONE)
         select case(par_common%representation)
-          case(ctr_sine_fourier_series); call tdf_sineseries_to_numerical(fm)
-          case(ctr_fourier_series);      call tdf_fourier_to_numerical(fm)
-          case(ctr_zero_fourier_series); call tdf_zerofourier_to_numerical(fm)
+          case(ctr_sine_fourier_series_h); call tdf_sineseries_to_numerical(fm)
+          case(ctr_fourier_series_h);      call tdf_fourier_to_numerical(fm)
+          case(ctr_zero_fourier_series_h); call tdf_zerofourier_to_numerical(fm)
         end select
         do i = 1, tdf_niter(fm) + 1
           t = (i-1)*tdf_dt(fm)
@@ -188,21 +204,21 @@
 
         do nn = mm, par%dim
           select case(par_common%representation)
-          case(ctr_sine_fourier_series)
+          case(ctr_sine_fourier_series_h)
             call tdf_init_numerical(fn, tdf_niter(par%f(1)), tdf_dt(par%f(1)), &
               par_common%omegamax, rep = TDF_SINE_SERIES)
-          case(ctr_fourier_series)
+          case(ctr_fourier_series_h)
             call tdf_init_numerical(fn, tdf_niter(par%f(1)), tdf_dt(par%f(1)), &
               par_common%omegamax, rep = TDF_FOURIER_SERIES)
-          case(ctr_zero_fourier_series)
+          case(ctr_zero_fourier_series_h)
             call tdf_init_numerical(fn, tdf_niter(par%f(1)), tdf_dt(par%f(1)), &
               par_common%omegamax, rep = TDF_ZERO_FOURIER)
           end select
           call tdf_set_numerical(fn, nn, M_ONE)
           select case(par_common%representation)
-            case(ctr_sine_fourier_series); call tdf_sineseries_to_numerical(fn)
-            case(ctr_fourier_series);      call tdf_fourier_to_numerical(fn)
-            case(ctr_zero_fourier_series); call tdf_zerofourier_to_numerical(fn)
+            case(ctr_sine_fourier_series_h); call tdf_sineseries_to_numerical(fn)
+            case(ctr_fourier_series_h);      call tdf_fourier_to_numerical(fn)
+            case(ctr_zero_fourier_series_h); call tdf_zerofourier_to_numerical(fn)
           end select
           do i = 1, tdf_niter(fn) + 1
             t = (i-1)*tdf_dt(fn)

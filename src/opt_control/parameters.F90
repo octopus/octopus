@@ -85,10 +85,11 @@ module opt_control_parameters_m
 
 
   integer, public, parameter ::   &
-    ctr_real_time            = 1, &
-    ctr_sine_fourier_series  = 2, &
-    ctr_fourier_series       = 3, &
-    ctr_zero_fourier_series  = 4
+    ctr_real_time              = 1, &
+    ctr_sine_fourier_series_h  = 2, &
+    ctr_fourier_series_h       = 3, &
+    ctr_zero_fourier_series_h  = 4, &
+    ctr_fourier_series         = 5
 
 
   integer, parameter :: parameter_mode_none      = 0, &
@@ -171,39 +172,55 @@ contains
     !%Variable OCTParameterRepresentation
     !%Type integer
     !%Section Calculation Modes::Optimal Control
-    !%Default control_parameter_fourier_series
+    !%Default control_fourier_series_h
     !%Description
     !% If "OCTControlRepresentation = control_function_parametrized", one must 
     !% specify the kind of parameters that determine the control function.
     !% If "OCTControlRepresentation = control_function_real_time", then this variable
     !% is ignored, and the control function is handled directly in real time.
-    !%Option control_sine_fourier_series 2
+    !%Option control_sine_fourier_series_h 2
     !% The control function is expanded in a sine Fourier series (which implies that it
-    !% it starts and ends at zero).
-    !%Option control_fourier_series 3
+    !% it starts and ends at zero). Then, the total fluence is fixed, and a transformation
+    !% to hyperspherical coordinates is done; the parameters to optimize are the hyperspherical
+    !% angles.
+    !%Option control_fourier_series_h 3
     !% The control function is expanded as a full Fourier series (although it must, of 
-    !% course, be a real function).
-    !%Option control_zero_fourier_series 4
+    !% course, be a real function). Then, the total fluence is fixed, and a transformation
+    !% to hyperspherical coordinates is done; the parameters to optimize are the hyperspherical
+    !% angles.
+    !%Option control_zero_fourier_series_h 4
     !% The control function is expanded as a Fourier series, but assuming (1) that the zero
     !% frequency component is zero, and (2) the control function, integrated in time, adds
     !% up to zero (this essentially means that the sum of all the cosine coefficients is zero).
+    !% Then, the total fluence is fixed, and a transformation to hyperspherical coordinates is 
+    !% done; the parameters to optimize are the hyperspherical angles.
+    !%Option control_fourier_series 5
+    !% The control function is expanded as a full Fourier series (although it must, of 
+    !% course, be a real function). The control parameters are the coefficients of this
+    !% basis set expansion.
     !%End
     if (parametrized_controls) then
       call loct_parse_int(datasets_check('OCTParameterRepresentation'), &
-        ctr_fourier_series, par_common%representation)
+        ctr_fourier_series_h, par_common%representation)
       if(.not.varinfo_valid_option('OCTParameterRepresentation', par_common%representation)) &
         call input_error('OCTParameterRepresentation')
       select case(par_common%representation)
-      case(ctr_sine_fourier_series)
+      case(ctr_sine_fourier_series_h)
         write(message(1), '(a)') 'Info: The OCT control functions will be represented as a sine '
-        write(message(2), '(a)') '      Fourier series.'
+        write(message(2), '(a)') '      Fourier series, and then a transformation to hyperspherical'
+        write(message(3), '(a)') '      coordinates will be made.'
+        call write_info(3)
+      case(ctr_fourier_series_h)
+        write(message(1), '(a)') 'Info: The OCT control functions will be represented as a Fourier series,'
+        write(message(2), '(a)') '      and then a transformation to hyperspherical coordinates will be made.'
         call write_info(2)
-      case(ctr_fourier_series)
-        write(message(1), '(a)') 'Info: The OCT control functions will be represented as a Fourier series.'
-        call write_info(1)
-      case(ctr_zero_fourier_series)
+      case(ctr_zero_fourier_series_h)
         write(message(1), '(a)') 'Info: The OCT control functions will be represented as a Fourier series,'
         write(message(2), '(a)') '      in which the zero-frequency component is assumed to be zero.'
+        write(message(3), '(a)') '      Then, a transformation to hyperspherical coordinates will be made.'
+        call write_info(3)
+      case(ctr_fourier_series)
+        write(message(1), '(a)') 'Info: The OCT control functions will be represented as a Fourier series.'
         call write_info(1)
       end select
     else
@@ -334,7 +351,25 @@ contains
 
 
     mode_fixed_fluence = .false.
-    if (par_common%targetfluence .ne. M_ZERO) mode_fixed_fluence = .true.
+    select case(par_common%representation)
+    case(ctr_sine_fourier_series_h, ctr_fourier_series_h, ctr_zero_fourier_series_h)
+      if(par_common%targetfluence .eq. M_ZERO) then
+        write(message(1), '(a)') 'Error: If you set "OCTParameterRepresentation" to either "control_sine_fourier_series_h",'
+        write(message(2), '(a)') '       "control_fourier_series_h", or "control_zero_fourier_series_h", then the run'
+        write(message(3), '(a)') '       must be done in fixed fluence mode.'
+        call write_fatal(3)
+      end if
+      mode_fixed_fluence = .true.
+    case(ctr_fourier_series)
+      if(par_common%targetfluence .ne. M_ZERO) then
+        write(message(1), '(a)') 'Error: If you set "OCTParameterRepresentation" to "control_fourier_series",'
+        write(message(2), '(a)') '       then you cannot run in fixed fluence mode.'
+        call write_fatal(2)
+      end if
+      mode_fixed_fluence = .false.
+    case default
+      if (par_common%targetfluence .ne. M_ZERO) mode_fixed_fluence = .true.
+    end select
 
 
     !%Variable OCTPenalty
@@ -498,17 +533,21 @@ contains
     select case(par_common%representation)
     case(ctr_real_time)
       cp%dim = ntiter + 1
-    case(ctr_sine_fourier_series)
+    case(ctr_sine_fourier_series_h)
       ! cp%dim is directly the number of frequencies in the sine-Fourier expansion
       cp%dim = tdf_sine_nfreqs(cp%f(1))
+    case(ctr_fourier_series_h)
+      ! If nf is the number of frequencies, we will have nf-1 non-zero "sines", nf-1 non-zero "cosines",
+      ! and the zero frequency component. Total, 2*(nf-1)+1
+      cp%dim = 2*(tdf_nfreqs(cp%f(1))-1)+1
+    case(ctr_zero_fourier_series_h)
+      ! If nf is the number of frequencies, we will have nf-1 non-zero "sines", nf-1 non-zero "cosines",
+      ! but no zero frequency component. Total, 2*(nf-1)
+      cp%dim = 2*(tdf_nfreqs(cp%f(1))-1)
     case(ctr_fourier_series)
       ! If nf is the number of frequencies, we will have nf-1 non-zero "sines", nf-1 non-zero "cosines",
       ! and the zero frequency component. Total, 2*(nf-1)+1
       cp%dim = 2*(tdf_nfreqs(cp%f(1))-1)+1
-    case(ctr_zero_fourier_series)
-      ! If nf is the number of frequencies, we will have nf-1 non-zero "sines", nf-1 non-zero "cosines",
-      ! but no zero frequency component. Total, 2*(nf-1)
-      cp%dim = 2*(tdf_nfreqs(cp%f(1))-1)
     end select
 
 
@@ -520,14 +559,18 @@ contains
     select case(par_common%representation)
     case(ctr_real_time)
       cp%dof = cp%no_parameters * cp%dim
-    case(ctr_sine_fourier_series, ctr_fourier_series)
+    case(ctr_sine_fourier_series_h, ctr_fourier_series_h)
       ! The number of degrees of freedom is one less than the number of basis coefficients, since we
       ! add the constrain of fixed fluence.
       cp%dof = cp%dim - 1
-    case(ctr_zero_fourier_series)
+    case(ctr_zero_fourier_series_h)
       ! The number of degrees of freedom is one less than the number of basis coefficients, since we
       ! add (1) the constrain of fixed fluence, and (2) the constrain of zero-integral.
       cp%dof = cp%dim - 2
+    case(ctr_fourier_series)
+      ! In this case, we have no constrains: the dof is equal to the dimesion of the basis set, since
+      ! the parameters are directly the coefficients of the basis set expansion.
+      cp%dof = cp%dim
     end select
 
 
@@ -670,23 +713,29 @@ contains
 
     if(par%current_representation.eq.ctr_real_time) then
       select case(par_common%representation)
-      case(ctr_sine_fourier_series)
+      case(ctr_sine_fourier_series_h)
         do j = 1, par%no_parameters
           call tdf_numerical_to_sineseries(par%f(j))
         end do
-        par%current_representation = ctr_sine_fourier_series
+        par%current_representation = ctr_sine_fourier_series_h
+        call parameters_basis_to_theta(par)
+      case(ctr_fourier_series_h)
+        do j = 1, par%no_parameters
+          call tdf_numerical_to_fourier(par%f(j))
+        end do
+        par%current_representation = ctr_fourier_series_h
+        call parameters_basis_to_theta(par)
+      case(ctr_zero_fourier_series_h)
+        do j = 1, par%no_parameters
+          call tdf_numerical_to_zerofourier(par%f(j))
+        end do
+        par%current_representation = ctr_zero_fourier_series_h
         call parameters_basis_to_theta(par)
       case(ctr_fourier_series)
         do j = 1, par%no_parameters
           call tdf_numerical_to_fourier(par%f(j))
         end do
         par%current_representation = ctr_fourier_series
-        call parameters_basis_to_theta(par)
-      case(ctr_zero_fourier_series)
-        do j = 1, par%no_parameters
-          call tdf_numerical_to_zerofourier(par%f(j))
-        end do
-        par%current_representation = ctr_zero_fourier_series
         call parameters_basis_to_theta(par)
       end select
     end if
@@ -705,20 +754,25 @@ contains
     select case(par%current_representation)
     case(ctr_real_time)
       call pop_sub(); return
-    case(ctr_sine_fourier_series)
+    case(ctr_sine_fourier_series_h)
       call parameters_theta_to_basis(par)
       do j = 1, par%no_parameters
         call tdf_sineseries_to_numerical(par%f(j))
+      end do
+    case(ctr_fourier_series_h)
+      call parameters_theta_to_basis(par)
+      do j = 1, par%no_parameters
+        call tdf_fourier_to_numerical(par%f(j))
+      end do
+    case(ctr_zero_fourier_series_h)
+      call parameters_theta_to_basis(par)
+      do j = 1, par%no_parameters
+        call tdf_zerofourier_to_numerical(par%f(j))
       end do
     case(ctr_fourier_series)
       call parameters_theta_to_basis(par)
       do j = 1, par%no_parameters
         call tdf_fourier_to_numerical(par%f(j))
-      end do
-    case(ctr_zero_fourier_series)
-      call parameters_theta_to_basis(par)
-      do j = 1, par%no_parameters
-        call tdf_zerofourier_to_numerical(par%f(j))
       end do
     end select
 
@@ -1018,6 +1072,7 @@ contains
           write(iunit,'(3es20.8e3)') w, real(ft), aimag(ft)
         end do
       end do
+      call io_close(iunit)
 
     case(parameter_mode_f, parameter_mode_phi)
       iunit = io_open(trim(filename)//'/cpw', action='write')
@@ -1140,7 +1195,7 @@ contains
       do j = 1, par_%no_parameters
         call tdf_init(f)
         call tdf_copy(f, par_%f(j))
-        if(par_%current_representation .eq. ctr_sine_fourier_series) then
+        if(par_%current_representation .eq. ctr_sine_fourier_series_h) then
           call tdf_sineseries_to_numerical(f)
         end if
         do i = 1, tdf_niter(f) + 1

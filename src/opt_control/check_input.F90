@@ -79,24 +79,6 @@
       call write_fatal(1)
     end if
 
-    if((oct%mode_fixed_fluence)) then
-      if( (oct%algorithm.ne.oct_algorithm_wg05)     .and. &
-          (oct%algorithm.ne.oct_algorithm_str_iter) .and. &
-          (oct%algorithm.ne.oct_algorithm_direct)   .and. &
-          (oct%algorithm.ne.oct_algorithm_newuoa) ) then
-        write(message(1),'(a)') "Cannot optimize to a given fluence with the chosen algorithm."
-        write(message(2),'(a)') "Switching to scheme WG05."         
-        call write_info(2)
-        oct%algorithm = oct_algorithm_wg05
-      end if
-    else
-      if( oct%algorithm.eq.oct_algorithm_direct) then
-        write(message(1),'(a)') 'The direct QOCT optimization can be only done in fixed-fluence '
-        write(message(2),'(a)') 'mode (i.e. use "OCTFixFluenceTo" input variable).'
-        call write_fatal(2)
-      end if
-    end if
-
     if(oct%algorithm .eq. oct_algorithm_zbr98) then
       if( (target_type(target) .ne. oct_tg_groundstate) .and. &
           (target_type(target) .ne. oct_tg_gstransformation) ) then

@@ -878,7 +878,7 @@ module tdf_m
 
 
   !------------------------------------------------------------
-  FLOAT function tdfi(f, i) result(y)
+  FLOAT pure function tdfi(f, i) result(y)
     type(tdf_t), intent(in) :: f
     integer, intent(in)     :: i
 
