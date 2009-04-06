@@ -90,26 +90,25 @@ contains
     CMPLX,   intent(in)    :: f0
     CMPLX,   intent(in)    :: factor
     CMPLX,   intent(in)    :: lambda
-    CMPLX,   intent(inout) :: src(:)        ! Old wave function in, the new one out.
+    CMPLX,   intent(inout) :: src(np)        ! Old wave function in, the new one out.
     
     CMPLX   :: tmp, alpha
-    integer :: k
 
     call push_sub('ob_src.calc_source_wf')
 
     if(m.eq.0) then
-      src(:) = psi0(:, OUTER)
+      src(1:np) = psi0(1:np, OUTER)
       if (il.eq.LEFT) then
         call ztrmv('U', 'N', 'N', np, offdiag, np, src, 1)
       else
         call ztrmv('L', 'N', 'N', np, offdiag, np, src, 1)
       end if
       tmp = -M_zI*dt*u(0)*f0
-      call zsymv('U', np, tmp*M_zI*M_HALF*dt, mem, np, psi0(:, INNER), 1, tmp,  src, 1)
+      call zsymv('U', np, tmp*M_zI*M_HALF*dt, mem, np, psi0(1:np, INNER), 1, tmp,  src, 1)
     else
       tmp   = factor*u(m)*u(m-1)
       alpha = M_HALF*dt**2*f0*lambda/u(m)
-      call zsymv('U', np, alpha, mem, np, psi0(:, INNER), 1, tmp, src, 1)
+      call zsymv('U', np, alpha, mem, np, psi0(1:np, INNER), 1, tmp, src, 1)
     end if
 
     call pop_sub()

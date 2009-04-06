@@ -93,7 +93,7 @@ contains
     integer :: ii
     type(block_t) :: blk
 
-    call push_sub('epot.epot_init')
+    call push_sub('gauge_field.gauge_field_init')
 
     this%with_gauge_field = .false.
     this%vecpot = M_ZERO
@@ -326,7 +326,7 @@ contains
     integer :: ip, idim, a2
     FLOAT :: vecpot(1:MAX_DIM)
     
-    call push_sub('hamiltonian_inc.Xvgauge')
+    call push_sub('gauge_field.gauge_field_apply')
     
     ASSERT(gauge_field_is_applied(this))
     

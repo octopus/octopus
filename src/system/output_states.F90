@@ -256,7 +256,12 @@
     end if
     if(st%parallel_in_states) then
       if(st%mpi_grp%rank.ne.0) then
-        call pop_sub(); return
+        go to 1
+      end if
+    end if
+    if(st%d%kpt%parallel) then
+      if(st%d%kpt%mpi_grp%rank.ne.0) then
+        go to 1
       end if
     end if
 #endif
@@ -286,7 +291,7 @@
 
     end select
 
-    if(st%wfs_type == M_CMPLX) then
+1   if(st%wfs_type == M_CMPLX) then
       call states_calc_tau_jp_gn(gr, st, jp=st%j)
 
       ALLOCATE(j(gr%mesh%np, MAX_DIM), gr%mesh%np*MAX_DIM)

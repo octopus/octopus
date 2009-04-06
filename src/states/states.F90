@@ -321,7 +321,7 @@ contains
       end if
       ! If the system is spin-polarized one half of the free states
       ! goes to the spin-up k-index, the other half to the spin-down
-      ! k-index, we therfore divide by st%d%nik.
+      ! k-index, we therefore divide by st%d%nik.
       st%ob_ncs = st%ob_d%nik*st%ob_nst / st%d%nik
       ALLOCATE(st%ob_d%kpoints(MAX_DIM, st%ob_d%nik), MAX_DIM*st%ob_d%nik)
       ALLOCATE(st%ob_d%kweights(st%ob_d%nik), st%ob_d%nik)
@@ -516,12 +516,15 @@ contains
     type(states_t), intent(inout) :: st
     type(grid_t),   intent(in)    :: gr
 
+    integer :: alloc_size
     call push_sub('states.states_allocate_free_states')
 
     ! FIXME: spin-polarized free states ignored.
     if(gr%sb%open_boundaries) then
-      ALLOCATE(st%zphi(gr%mesh%np_part, st%d%dim, st%ob_ncs, st%d%nik), gr%mesh%np_part*st%d%dim*st%ob_ncs*st%d%nik)
-      ALLOCATE(st%ob_rho(gr%mesh%lead_unit_cell(LEFT)%np, st%d%nspin, NLEADS), gr%mesh%lead_unit_cell(LEFT)%np*st%d%nspin*NLEADS)
+      alloc_size = gr%mesh%np_part*st%d%dim*st%ob_ncs*st%d%nik
+      ALLOCATE(st%zphi(gr%mesh%np_part, st%d%dim, st%ob_ncs, st%d%nik), alloc_size)
+      alloc_size = gr%mesh%lead_unit_cell(LEFT)%np*st%d%nspin*NLEADS
+      ALLOCATE(st%ob_rho(gr%mesh%lead_unit_cell(LEFT)%np, st%d%nspin, NLEADS), alloc_size)
       st%zphi = M_z0
     else
       nullify(st%zphi)
@@ -757,7 +760,7 @@ contains
     type(mesh_t),      intent(in)    :: mesh
     integer, optional, intent(in)    :: wfs_type
 
-    integer :: n, ik, ist, idim, alloc_size
+    integer :: np, ik, ist, idim, alloc_size, st1, st2, k1, k2
     logical :: force
 
     call push_sub('states.states_allocate_wfns')
@@ -784,13 +787,15 @@ contains
 
     if(force) st%wfs_type = M_CMPLX
 
-    n = mesh%np_part*st%d%dim*st%lnst*st%d%kpt%nlocal
-    
-    if (st%wfs_type == M_REAL) then
-      ALLOCATE(st%dpsi(mesh%np_part, st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end), n)
+    alloc_size = mesh%np_part*st%d%dim*st%lnst*st%d%kpt%nlocal
+    st1 = st%st_start; st2 = st%st_end
+    k1 = st%d%kpt%start; k2 = st%d%kpt%end
 
-      do ik = st%d%kpt%start, st%d%kpt%end
-        do ist = st%st_start, st%st_end
+    if (st%wfs_type == M_REAL) then
+      ALLOCATE(st%dpsi(mesh%np_part, st%d%dim, st1:st2, k1:k2), alloc_size)
+
+      do ik = k1, k2
+        do ist = st1, st2
           do idim = 1, st%d%dim
             st%dpsi(1:mesh%np_part, idim, ist, ik) = M_ZERO
           end do
@@ -798,10 +803,10 @@ contains
       end do
 
     else
-      ALLOCATE(st%zpsi(mesh%np_part, st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end), n)
+      ALLOCATE(st%zpsi(mesh%np_part, st%d%dim, st1:st2, k1:k2), alloc_size)
 
-      do ik = st%d%kpt%start, st%d%kpt%end
-        do ist = st%st_start, st%st_end
+      do ik = k1, k2
+        do ist = st1, st2
           do idim = 1, st%d%dim
             st%zpsi(1:mesh%np_part, idim, ist, ik) = M_Z0
            end do
@@ -810,8 +815,9 @@ contains
     end if
 
     if(calc_mode_is(CM_TD).and.st%open_boundaries) then
-      alloc_size = mesh%lead_unit_cell(LEFT)%np*2*st%d%dim*st%nst*st%d%nik*2*NLEADS
-      ALLOCATE(st%ob_intf_psi(mesh%lead_unit_cell(LEFT)%np, 2, st%d%dim, st%nst, st%d%nik, NLEADS), alloc_size)
+      np = mesh%lead_unit_cell(LEFT)%np
+      alloc_size = np*2*st%d%dim*st%lnst*st%d%kpt%nlocal*NLEADS
+      ALLOCATE(st%ob_intf_psi(np, 2, st%d%dim, st1:st2, k1:k2, NLEADS), alloc_size)
 
       st%ob_intf_psi = M_z0
     end if
@@ -2047,6 +2053,7 @@ contains
           end do
 
           ww = st%d%kweights(ik)*st%occ(ist, ik)
+
           do i_dim = 1, gr%mesh%sb%dim
             if(present(grho)) &
               grho(1:gr%mesh%np, i_dim, is) = grho(1:gr%mesh%np, i_dim, is) + &

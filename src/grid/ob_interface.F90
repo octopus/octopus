@@ -53,7 +53,8 @@ module ob_interface_m
   ! sorted in increasing order.)
   type interface_t
     integer          :: extent
-    integer          :: np
+    integer          :: np      ! number of interface points
+    integer          :: np_uc   ! number of points in the unit cell
     integer, pointer :: index(:)       ! (np)
     integer          :: index_range(2)
     logical          :: offdiag_invertible
@@ -76,6 +77,8 @@ contains
     call push_sub('ob_interface.interface_init')
 
     intf%extent = maxval((/stencil_extent(der_discr, TRANS_DIR), lead_unit_cell_extent(sb, il)/))
+    ! FIXME: not sure if it holds for lead-potentials with dependence in transport direction
+    intf%extent = intf%extent - 1
     if(intf%extent.eq.stencil_extent(der_discr, TRANS_DIR)) then
       intf%offdiag_invertible = .true.
     else
@@ -83,6 +86,7 @@ contains
     end if
 
     intf%np = intf%extent*m%idx%ll(2)*m%idx%ll(3)
+    intf%np_uc = (intf%extent + 1)*m%idx%ll(2)*m%idx%ll(3)
 
     ALLOCATE(intf%index(intf%np), intf%np)
 
@@ -178,7 +182,7 @@ contains
 
     call push_sub('ob_interface.get_intf_wf')
 
-    intf_wf(:) = zpsi(intf%index_range(1):intf%index_range(2))
+    intf_wf(1:intf%np) = zpsi(intf%index_range(1):intf%index_range(2))
 
     call pop_sub()
   end subroutine get_intf_wf

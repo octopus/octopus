@@ -358,8 +358,8 @@ contains
     type(grid_t),     intent(in)    :: gr
     integer,          intent(out)   :: ierr
 
-    integer              :: io_wfns, io_occs, io_mesh, lead_np, i, err
-    integer              :: ik, ist, idim
+    integer              :: io_wfns, io_occs, io_mesh, np, lead_np, i, err
+    integer              :: ik, ist, idim, tnp
     character            :: char
     character(len=256)   :: line, filename
     CMPLX, allocatable   :: tmp(:)
@@ -411,6 +411,7 @@ contains
     call iopar_read(st%mpi_grp, io_occs, line, err); call iopar_read(st%mpi_grp, io_occs, line, err)
 
     lead_np = gr%mesh%lead_unit_cell(LEFT)%np
+    np = gr%intf(LEFT)%np
     ALLOCATE(tmp(gr%mesh%np+2*lead_np), gr%mesh%np+2*lead_np)
     
     do
@@ -432,11 +433,12 @@ contains
         ! Here we use the fact that transport is in x-direction (x is the index
         ! running slowest).
         ! Outer block.
-        st%ob_intf_psi(1:lead_np, OUTER, idim, ist, ik, LEFT)  = tmp(1:lead_np)
-        st%ob_intf_psi(1:lead_np, OUTER, idim, ist, ik, RIGHT) = tmp(gr%mesh%np+lead_np+1:gr%mesh%np+2*lead_np)
+        tnp = gr%mesh%np+2*lead_np
+        st%ob_intf_psi(1:np, OUTER, idim, ist, ik, LEFT)  = tmp(lead_np-np+1:lead_np)
+        st%ob_intf_psi(1:np, OUTER, idim, ist, ik, RIGHT) = tmp(tnp-lead_np+1:tnp-lead_np+np)
         ! Inner block.
-        st%ob_intf_psi(1:lead_np, INNER, idim, ist, ik, LEFT)  = tmp(lead_np+1:2*lead_np)
-        st%ob_intf_psi(1:lead_np, INNER, idim, ist, ik, RIGHT) = tmp(gr%mesh%np+1:gr%mesh%np+lead_np)
+        st%ob_intf_psi(1:np, INNER, idim, ist, ik, LEFT)  = tmp(lead_np+1:lead_np+np)
+        st%ob_intf_psi(1:np, INNER, idim, ist, ik, RIGHT) = tmp(tnp-lead_np-np+1:tnp-lead_np)
         if(err.le.0) then
           ierr = ierr + 1
         end if
@@ -925,15 +927,14 @@ contains
     type(grid_t), target, intent(in)    :: gr
     
     integer                    :: k, ik, ist, idim, jst, err, wfns, occs
-    integer                    :: k_ik, k_ist, k_idim, k_index 
-    integer                    :: ip, lead_nr(2, MAX_DIM)
+    integer                    :: np, ip, lead_nr(2, MAX_DIM)
     character(len=256)         :: line, fname, filename, restart_dir, chars
     character                  :: char
     FLOAT                      :: occ, eval, k_x, k_y, k_z, w_k
     type(simul_box_t), pointer :: sb
     type(mesh_t), pointer      :: m_lead, m_center
     CMPLX                      :: phase
-    CMPLX, allocatable         :: tmp(:, :)
+    CMPLX, allocatable         :: tmp(:)
 
     call push_sub('restart.states_read_free_states')
 
@@ -943,7 +944,8 @@ contains
     lead_nr(1, :) = m_lead%idx%nr(1, :)+m_lead%idx%enlarge
     lead_nr(1, :) = m_lead%idx%nr(2, :)-m_lead%idx%enlarge
 
-    ALLOCATE(tmp(m_lead%np, st%d%dim), m_lead%np*st%d%dim)
+    np = m_lead%np
+    ALLOCATE(tmp(np), np)
     restart_dir = trim(sb%lead_restart_dir(LEFT))//'/gs'
 
     wfns = io_open(trim(restart_dir)//'/wfns', action='read', is_tmp=.true., grp=st%mpi_grp)
@@ -980,32 +982,25 @@ contains
 
       call iopar_read(st%mpi_grp, occs, line, err)
       read(line, *) occ, char, eval, char, k_x, char, k_y, char, k_z, char, w_k, char, &
-        chars, char, k_ik, char, k_ist, char, k_idim
+        chars, char, ik, char, ist, char, idim
 
       if(occ.gt.CNST(1e-5)) then
-        jst = jst + 1
+        ! count the occupied states (with idim==1)
+        if(idim.eq.1) jst = jst + 1
+        ! if not in the corresponding node cycle
         if(jst < st%st_start .or. jst > st%st_end) cycle
-      else
+      else ! we do not consider empty states
         cycle
       end if
 
       st%ob_d%kpoints(:, jst) = (/k_x, k_y, k_z/)
-      st%ob_d%kweights(jst)   = w_k
-      !st%ob_d%kpoints(:, k_ik) = (/k_x, k_y, k_z/)
-      !st%ob_d%kweights(k_ik)   = w_k
-      call zrestart_read_function(trim(sb%lead_restart_dir(LEFT))//'/gs', fname, m_lead, tmp(:, k_idim), err)
+      st%ob_d%kweights(jst) = w_k
 
-      ! FIXME
-      if(st%d%ispin.eq.SPIN_POLARIZED) then
-        if(is_spin_up(jst)) then
-        !if(is_spin_up(ik)) then
-          k_index = SPIN_UP
-        else
-          k_index = SPIN_DOWN
-        end if
-      else
-        k_index = 1
-      end if
+     !st%occ(jst, 1) = occ*w_k
+!st%d%kpoints(:, jst) = (/k_x, k_y, k_z/)
+!st%d%kweights(ik)   = w_k
+      call zrestart_read_function(trim(sb%lead_restart_dir(LEFT))//'/gs', fname, m_lead, tmp, err)
+
       call lead_dens_accum()
 
 
@@ -1013,28 +1008,28 @@ contains
       ! It only works in this compact form because the transport-direction (x) is
       ! the index running slowest.          
       do k = 1, gr%sb%n_ucells
-        st%zphi((k-1)*m_lead%np+1:k*m_lead%np, idim, jst, k_index) = tmp(1:m_lead%np, k_idim)
+        st%zphi((k-1)*np+1:k*np, idim, jst, 1) = tmp(1:np)
       end do
 
       ! Apply phase.
       do ip = 1, gr%mesh%np
         phase = exp(-M_zI*sum(gr%mesh%x(ip, 1:MAX_DIM)*st%ob_d%kpoints(1:MAX_DIM, jst)))
         !phase = exp(-M_zI*sum(gr%mesh%x(ip, 1:MAX_DIM)*st%ob_d%kpoints(1:MAX_DIM, ik)))
-        st%zphi(ip, idim, jst, k_index) = phase*st%zphi(ip, idim, jst, k_index)
+        st%zphi(ip, idim, jst, 1) = phase*st%zphi(ip, idim, jst, 1)
       end do
 
       ! For debugging: write phi in gnuplot format to files.
       ! Only the z=0 plane is written, so mainly useful for 1D and 2D
       ! debugging.
       if(in_debug_mode) then
-        write(filename, '(a,i3.3,a,i4.4,a,i1.1)') 'phi-', k_index, '-', jst, '-', idim
+        write(filename, '(a,i3.3,a,i4.4,a,i1.1)') 'phi-', ik, '-', jst, '-', idim
         select case(calc_dim)
         case(1)
           call zoutput_function(output_axis_x, 'debug/open_boundaries', filename, &
-            m_center, sb, st%zphi(:, idim, jst, k_index), M_ONE, err, is_tmp=.false.)
+            m_center, sb, st%zphi(:, idim, jst, 1), M_ONE, err, is_tmp=.false.)
         case(2, 3)
           call zoutput_function(output_plane_z, 'debug/open_boundaries', filename, &
-            m_center, sb, st%zphi(:, idim, jst, k_index), M_ONE, err, is_tmp=.false.)
+            m_center, sb, st%zphi(:, idim, jst, 1), M_ONE, err, is_tmp=.false.)
         end select
       end if
 
@@ -1059,24 +1054,21 @@ contains
       call push_sub('restart.lead_dens_accum')
 
       do il = 1, NLEADS
+        do ip = 1, np
+          st%ob_rho(ip, idim, il) = st%ob_rho(ip, idim, il) + w_k*occ* &
+            (real(tmp(ip), REAL_PRECISION)**2 + aimag(tmp(ip))**2)
+        end do
         select case(st%d%ispin)
-        case(SPIN_POLARIZED, UNPOLARIZED)
-          do ip = 1, m_lead%np
-            st%ob_rho(ip, k_index, il) = st%ob_rho(ip, k_index, il) + w_k*occ* &
-              (real(tmp(ip, k_idim), REAL_PRECISION)**2 + aimag(tmp(ip, k_idim))**2)
-          end do
         case(SPINORS)
-          do ip = 1, m_lead%np
-            st%ob_rho(ip, k_idim, il) = st%ob_rho(ip, k_idim, il) + w_k*occ* &
-              (real(tmp(ip, k_idim), REAL_PRECISION)**2 + aimag(tmp(ip, k_idim))**2)
-          end do
-          if(k_idim.eq.2) then
-            do ip = 1, m_lead%np
-              c = w_k*occ*tmp(ip, 1)*conjg(tmp(ip, 2))
-              st%ob_rho(ip, 3, il) = st%ob_rho(ip, 3, il) + real(c, REAL_PRECISION)
-              st%ob_rho(ip, 4, il) = st%ob_rho(ip, 4, il) + aimag(c)
-            end do
-          end if
+          message(1) = "restart.lead_dens_accum() does not work with spinors yet!"
+          call write_fatal(1)
+!          if(k_idim.eq.2) then
+!            do ip = 1, np
+!              c = w_k*occ*tmp(ip, 1)*conjg(tmp(ip, 2))
+!              st%ob_rho(ip, 3, il) = st%ob_rho(ip, 3, il) + real(c, REAL_PRECISION)
+!              st%ob_rho(ip, 4, il) = st%ob_rho(ip, 4, il) + aimag(c)
+!            end do
+!          end if
         end select
       end do
 

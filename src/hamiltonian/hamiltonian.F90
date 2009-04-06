@@ -470,7 +470,7 @@ contains
     ! Calculate the blocks of the lead Hamiltonian and read the potential
     ! of the lead unit cell.
     subroutine init_lead_h
-      integer               :: np, il, ierr, pot, ix, iy
+      integer               :: np, np_uc, il, ierr, pot, ix, iy
       integer               :: irow, diag, offdiag
       character             :: channel
       character(len=1)      :: ln(NLEADS)
@@ -482,14 +482,15 @@ contains
       ln(LEFT)  = 'L'; ln(RIGHT) = 'R'
 
       np = gr%intf(LEFT)%np
+      np_uc = gr%intf(LEFT)%np_uc
 
       ! Read potential of the leads. We try vks-x (for DFT without
       ! pseudo-potentials) and v0 (for non-interacting electrons) in
       ! that order (Octopus binary and NetCDF format). If none of the
       ! two can be found, a warning is emitted and zero potential
       ! assumed.
-      ALLOCATE(hm%lead_vks(np, hm%d%nspin, NLEADS), np*hm%d%nspin*NLEADS)
-      ALLOCATE(hm%lead_vhartree(np, NLEADS), np*NLEADS)
+      ALLOCATE(hm%lead_vks(np_uc, hm%d%nspin, NLEADS), np_uc*hm%d%nspin*NLEADS)
+      ALLOCATE(hm%lead_vhartree(np_uc, NLEADS), np_uc*NLEADS)
 
       do il = 1, NLEADS
         do ispin = 1, hm%d%nspin

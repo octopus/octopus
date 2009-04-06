@@ -201,8 +201,8 @@ contains
     FLOAT, target,               intent(in)    :: t
     integer,                     intent(in)    :: timestep
 
-    integer            :: il, it, m, cg_iter, j, order, ierr, inp
-    integer, target    :: ist, ik, intf_np
+    integer            :: il, it, m, cg_iter, j, order, ierr
+    integer, target    :: ist, ik, inp
     CMPLX              :: factor, alpha, fac, f0
     CMPLX, allocatable :: tmp(:, :), tmp_wf(:), tmp_mem(:, :)
     CMPLX, allocatable :: ext_wf(:, :, :, :) ! (gr%mesh%np+2*np, ndim, nst, nik)
@@ -211,15 +211,15 @@ contains
     
     call push_sub('ob_rti.cn_src_mem_dt')
 
-    intf_np = gr%intf(LEFT)%np ! Assuming symmetric leads.
+    inp = gr%intf(LEFT)%np ! Assuming symmetric leads.
 
     order = gr%der%order
     ALLOCATE(tmp(gr%mesh%np, st%d%ispin), gr%mesh%np*st%d%ispin)
-    ALLOCATE(tmp_wf(intf_np), intf_np)
+    ALLOCATE(tmp_wf(inp), inp)
     if(ob%mem_type.eq.save_cpu_time) then
-      ALLOCATE(tmp_mem(intf_np, intf_np), intf_np**2)
+      ALLOCATE(tmp_mem(inp, inp), inp**2)
     else
-      ALLOCATE(tmp_mem(intf_np*order, 1), intf_np*order)
+      ALLOCATE(tmp_mem(inp*order, 1), inp*order)
     end if
 
     ! Set pointers to communicate with with backward propagator passed
@@ -240,15 +240,14 @@ contains
     ! For the dot product passed to BiCG routine.
     call mesh_init_mesh_aux(gr%mesh)
 
-    m   = timestep-1
-    inp = intf_np
+    m = timestep-1
 
     ! Save interface part of wavefunctions for subsequent iterations
     ! before we overwrite them with the values for the new timestep.
     ! (Copying before the propagation gets the saving right for the
     ! initial state also.)
     do il = 1, NLEADS
-      call save_intf_wf(gr%intf(il), st, ob%st_intface(:, :, :, il, timestep-1))
+      call save_intf_wf(gr%intf(il), st, ob%st_intface(1:inp, :, :, il, m))
     end do
 
     ! Get right-hand side.
@@ -282,7 +281,7 @@ contains
                 ob%mem_s(:, :, :, il), ob%sp2full_map, ob%src_mem_u(:, il), f0, fac,   &
                 lambda(m, 0, max_iter, ob%src_mem_u(:, il)), ob%src_prev(:, 1, ist, ik, il))
             end if
-            call apply_src(gr%intf(il), ob%src_prev(:, 1, ist, ik, il), st%zpsi(:, :, ist, ik))
+            call apply_src(gr%intf(il), ob%src_prev(1:inp, 1, ist, ik, il), st%zpsi(:, :, ist, ik))
           end if
           ! 3. Add memory term.
           if(iand(ob%additional_terms, MEM_TERM_FLAG).ne.0) then
@@ -646,7 +645,7 @@ contains
 
     ! Do not use use BLAS here.
     zpsi(intf%index_range(1):intf%index_range(2), 1) = &
-      zpsi(intf%index_range(1):intf%index_range(2), 1) + src_wf(:)
+      zpsi(intf%index_range(1):intf%index_range(2), 1) + src_wf(1:intf%np)
 
     call pop_sub()
   end subroutine apply_src
@@ -771,9 +770,11 @@ contains
     write(message(3), '(a,i10)') 'Maximum BiCG iterations:         ', cg_max_iter
     write(message(4), '(a,es10.1)') 'BiCG residual tolerance:         ', cg_tol
     write(message(5), '(a,a20)') 'Included additional terms:       ', trim(terms)
-    write(message(6), '(a,2a10)') 'TD lead potential (L/R):         ', &
-      trim(gr%sb%lead_td_pot_formula(LEFT)), trim(gr%sb%lead_td_pot_formula(RIGHT))
-    call write_info(6, stdout)
+    write(message(6), '(a,a10)') 'TD left lead potential:          ', &
+      trim(gr%sb%lead_td_pot_formula(LEFT))
+    write(message(7), '(a,a10)') 'TD right lead potential:         ', &
+      trim(gr%sb%lead_td_pot_formula(RIGHT))
+    call write_info(7, stdout)
 
     call messages_print_stress(stdout)
 
