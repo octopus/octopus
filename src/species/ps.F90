@@ -209,7 +209,7 @@ contains
 
       ps%z        = z
       ps%kbc      = 3
-      ps%l_loc    = 0
+      ps%l_loc    = -1
       ps%l_max    = psp%l_max
 
       call hgh_process(psp)
@@ -414,10 +414,8 @@ contains
       gamma = CNST(2.0)
 
 
-      ASSERT(ps%l_loc >= 0)
-
       rmax = spline_cutoff_radius(ps%vl, ps%projectors_sphere_threshold)
-      call spline_filter_mask(ps%vl, ps%l_loc, rmax, gmax, alpha, gamma)
+      call spline_filter_mask(ps%vl, max(0, ps%l_loc), rmax, gmax, alpha, gamma)
       do l = 0, ps%l_max
         if(l == ps%l_loc) cycle
         do k = 1, ps%kbc
