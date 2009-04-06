@@ -17,16 +17,8 @@
 !!
 !! $Id$
 
-! ---------------------------------------------------------
-!
-! This is an implementation of the RMM-DIIS method, it was taken from
-! the GPAW code (revision: 2086 file:
-! gpaw/eigensolvers/rmm_diis2.py). I believe this is actually a two
-! step DIIS. In our case we restart it several times to achieve
-! convergency, perhaps it would be interesting to implement the full
-! process.
-!
-! ---------------------------------------------------------
+! See http://prola.aps.org/abstract/PRB/v54/i16/p11169_1
+
 subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, diff, blocksize)
   type(grid_t),        intent(inout) :: gr
   type(states_t),      intent(inout) :: st
@@ -39,175 +31,166 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   FLOAT,               intent(out)   :: diff(1:st%nst)
   integer,             intent(in)    :: blocksize
 
-  integer :: ist, idim, ib
-  integer :: times, ntimes, iblock, psi_start, psi_end, num_in_block
-  R_TYPE, allocatable :: residuals(:, :, :), preres(:, :, :), resres(:, :, :)
-  R_TYPE, allocatable :: lambda(:, :)
-  logical, allocatable :: conv(:)
-#ifdef HAVE_MPI
-  R_TYPE, allocatable :: lambda_tmp(:, :)
-  FLOAT, allocatable :: ldiff(:)
-  integer :: outcount
-#endif  
-  FLOAT :: error
-  type(batch_t) :: psib, hpsib
+  R_TYPE, allocatable :: res(:, :, :)
+  R_TYPE, allocatable :: psi(:, :, :)
 
-  call push_sub('eigen_rmmdiis_inc.eigensolver_rmmdiss')
+  R_TYPE, allocatable :: aa(:, :), mm(:, :), evec(:, :)
+  FLOAT,  allocatable :: eval(:)
 
-  ALLOCATE(residuals(1:gr%mesh%np_part, 1:st%d%dim, blocksize), gr%mesh%np*st%d%dim*blocksize)
-  ALLOCATE(preres(1:gr%mesh%np_part, 1:st%d%dim, blocksize), gr%mesh%np_part*st%d%dim*blocksize)
-  ALLOCATE(resres(1:gr%mesh%np, 1:st%d%dim, blocksize), gr%mesh%np*st%d%dim*blocksize)
-  ALLOCATE(lambda(1:2, 1:blocksize), 2*blocksize) 
+  FLOAT :: lambda
+  integer :: ist, idim, ip, size, ii, jj, iter
+  R_TYPE :: ca, cb, cc, fr, rr, fhr, rhr
+  logical :: fail
 
-  ALLOCATE(conv(st%st_start:st%st_end), st%lnst)
-  conv = .false.
+  call push_sub('eigen_rmmdiis_inc.eigensolver_rmmdiis')
 
-  ntimes = niter
-  niter = 0
+  ALLOCATE(psi(gr%mesh%np_part, st%d%dim, niter), gr%mesh%np_part*st%d%dim*niter)
+  ALLOCATE(res(gr%mesh%np_part, st%d%dim, niter), gr%mesh%np_part*st%d%dim*niter)
 
-  converged = 0
+!  ALLOCATE(hpsi(gr%mesh%np, st%d%dim), gr%mesh%np*st%d%dim)
+!  ALLOCATE(hres(gr%mesh%np, st%d%dim), gr%mesh%np*st%d%dim)
+!  ALLOCATE(resres(gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
 
-  iblock = 0
-  do psi_start = st%st_start, st%st_end, blocksize
-    iblock  = iblock + 1
-    psi_end = min(psi_start + blocksize - 1, st%st_end)
+  do ist = st%st_start, st%st_end
+!    print*, "EV ", ist, st%eigenval(ist, ik), diff(ist)
+  end do
 
-    num_in_block = psi_end - psi_start + 1
+  do ist = st%st_start, st%st_end
 
-    do times = 1, ntimes
+    do idim = 1, st%d%dim
+      call lalg_copy(gr%mesh%np, st%X(psi)(:, idim, ist, ik), psi(:, idim, 1))
+    end do
+
+    do iter = 1, niter - 1
+
+!      print*, ist, iter
+
+      call X(hamiltonian_apply)(hm, gr, psi(:, :, iter), res(:, :, iter), ist, ik)
       
-      ! apply the hamiltonian over the initial vector
-
-      call batch_init(psib, hm%d%dim, num_in_block)
-      call batch_init(hpsib, hm%d%dim, num_in_block)
-
-      ib = 0
-      do ist = psi_start, psi_end
-        ib = ib + 1
-        if(conv(ist)) cycle
-        call batch_add_state(psib, ist, st%X(psi)(:, :, ist, ik))
-        call batch_add_state(hpsib, ist, residuals(:, :, ib))
+      if(iter == 1) st%eigenval(ist, ik) = X(mf_dotp)(gr%mesh, st%d%dim, psi(:, :, 1), res(:, :, 1))
+      
+      do idim = 1, st%d%dim
+        call lalg_axpy(gr%mesh%np, -st%eigenval(ist, ik), psi(:, idim, iter), res(:, idim, iter))
       end do
 
-      call X(hamiltonian_apply_batch)(hm, gr, psib, hpsib, ik)
 
-      niter = niter + num_in_block
-      
-      call batch_end(psib)
-      call batch_end(hpsib)
-      
-      ! calculate the residual
+      if(X(mf_nrm2)(gr%mesh, st%d%dim, res(:, :, iter)) < tol) exit
 
-      ib = 0
-      do ist = psi_start, psi_end
-        ib = ib + 1
-        if(conv(ist)) cycle
+      if(iter == 1) then
+        ! get lambda
+        call X(hamiltonian_apply)(hm, gr, res(:, :, 1), res(:, :, 2), ist, ik)
 
-        st%eigenval(ist, ik) = X(mf_dotp)(gr%mesh, st%d%dim, st%X(psi)(:,:, ist, ik) , residuals(:, :, ib))
+        rr = X(mf_dotp)(gr%mesh, st%d%dim, res(:, :, 1), res(:, :, 1))
+        fr = X(mf_dotp)(gr%mesh, st%d%dim, psi(:, :, 1), res(:, :, 1))
+        rhr = X(mf_dotp)(gr%mesh, st%d%dim, res(:, :, 1), res(:, :, 2))
+        fhr = X(mf_dotp)(gr%mesh, st%d%dim, psi(:, :, 1), res(:, :, 2))
+
+        ca = rr*fhr - rhr*fr
+        cb = rhr - st%eigenval(ist, ik)*rr
+        cc = fr - fhr
         
-        do idim = 1, st%d%dim
-          call lalg_axpy(gr%mesh%np, -st%eigenval(ist, ik), st%X(psi)(:, idim, ist, ik), residuals(:, idim, ib))
-        end do
-
-        error = X(mf_nrm2)(gr%mesh, st%d%dim, residuals(:, :, ib))
-
-        if(error < tol) then
-          num_in_block = num_in_block - 1
-          conv(ist) = .true.
-          converged = converged + 1
-          diff(ist) = error
-          cycle
-        end if
-
-        call  X(preconditioner_apply)(pre, gr, hm, residuals(:, :, ib), preres(:, :, ib))
-      end do
-
-      if(num_in_block == 0) exit
-
-      ! apply the hamiltonian to the residuals
-      call batch_init(psib, hm%d%dim, num_in_block)
-      call batch_init(hpsib, hm%d%dim, num_in_block)
-
-      ib = 0
-      do ist = psi_start, psi_end
-        ib = ib + 1
-        if(conv(ist)) cycle
-        call batch_add_state(psib, ist, preres(:, :, ib))
-        call batch_add_state(hpsib, ist, resres(:, :, ib))
-      end do
-
-      call X(hamiltonian_apply_batch)(hm, gr, psib, hpsib, ik)
-
-      niter = niter + num_in_block
-      
-      call batch_end(psib)
-      call batch_end(hpsib)
-
-      ! calculate the correction
-      ib = 0
-      do ist = psi_start, psi_end
-        ib = ib + 1
-        if(conv(ist)) cycle
-
-        do idim = 1, st%d%dim
-          call lalg_axpy(gr%mesh%np, -st%eigenval(ist, ik), preres(:, idim, ib), resres(:, idim, ib))
-        end do
-
-        ! the size of the correction
-        lambda(1, ib) = X(mf_dotp)(gr%mesh, st%d%dim, residuals(:, :, ib), resres(:, :, ib), reduce = .false.)
-        lambda(2, ib) = X(mf_dotp)(gr%mesh, st%d%dim, resres(:, :, ib), resres(:, :, ib), reduce = .false.)
-      end do
-
-#ifdef HAVE_MPI
-      if(gr%mesh%parallel_in_domains) then
-        !reduce the two values together
-        ALLOCATE(lambda_tmp(1:2, 1:blocksize), 2*blocksize) 
-        call MPI_Allreduce(lambda, lambda_tmp, 2*blocksize, R_MPITYPE, MPI_SUM, gr%mesh%vp%comm, mpi_err)
-        lambda(1:2, 1:blocksize) = lambda_tmp(1:2, 1:blocksize)
-        deallocate(lambda_tmp)
+        lambda = 2*cc/(cb + sqrt(cb**2 - CNST(4.0)*ca*cc))
+!        print*, "COEFF", ca, cb, cc, cb**2 - CNST(4.0)*ca*cc
+!        print*, "LAMBDA", lambda, 2*cc/(cb - sqrt(cb**2 - CNST(4.0)*ca*cc))
+!        lambda = sign(max(min(1.0, abs(lambda)), 0.1), lambda)
+!        print*, "LAMBDA2", lambda
       end if
-#endif 
 
-      ib = 0
-      do ist = psi_start, psi_end
-        ib = ib + 1
-        if(conv(ist)) cycle
-        
-        lambda(1, ib) = -lambda(1, ib)/lambda(2, ib)
+      ! predict by jacobi
+      forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np)
+        psi(ip, idim, iter + 1) = psi(ip, idim, iter) + lambda*res(ip, idim, iter)
+      end forall
 
-        do idim = 1, st%d%dim
-          call lalg_axpy(gr%mesh%np, M_HALF*lambda(1, ib), resres(:, idim, ib), residuals(:, idim, ib))
-        end do
-
-        call X(preconditioner_apply)(pre, gr, hm, residuals(:, :, ib), preres(:, :, ib))
-
-        !now correct psi
-        do idim = 1, st%d%dim
-          call lalg_axpy(gr%mesh%np, M_TWO*lambda(1, ib), preres(:, idim, ib), st%X(psi)(:, idim, ist, ik))
-        end do
-
-        niter = niter + 1
-
+      ! calculate the residual
+      call X(hamiltonian_apply)(hm, gr, psi(:, :, iter + 1), res(:, :, iter + 1), ist, ik)
+      
+      do idim = 1, st%d%dim
+        call lalg_axpy(gr%mesh%np, -st%eigenval(ist, ik), psi(:, idim, iter + 1), res(:, idim, iter + 1))
       end do
+
+      diff(ist) = X(mf_nrm2)(gr%mesh, st%d%dim, res(:, :, iter + 1))
+
+!      print*, "RES 0", diff(ist)
+
+      ! perform the diis correction
+      size = iter + 1
+      ALLOCATE(aa(size, size), size**2)
+      ALLOCATE(mm(size, size), size**2)
+      ALLOCATE(evec(size, 1), size)
+      ALLOCATE(eval(size), size)
+
+      do ii = 1, size
+        do jj = 1, size
+          aa(ii, jj) = X(mf_dotp)(gr%mesh, st%d%dim, res(:, :, ii), res(:, :, jj))
+          mm(ii, jj) = X(mf_dotp)(gr%mesh, st%d%dim, psi(:, :, ii), psi(:, :, jj))
+        end do
+      end do
+
+      fail = .false.
+      call lalg_lowest_geneigensolve(1, size, aa, mm, eval, evec, bof = fail)
+      
+      if(fail) then
+        deallocate(aa, mm, eval, evec)
+        exit
+      end if
+
+      !correct the new vector
+
+      do idim = 1, st%d%dim
+        call lalg_scal(gr%mesh%np, evec(size, 1), psi(:, idim, size))
+        call lalg_scal(gr%mesh%np, evec(size, 1), res(:, idim, size))
+      end do
+
+      do ii = 1, size - 1
+        do idim = 1, st%d%dim
+          call lalg_axpy(gr%mesh%np, evec(ii, 1), psi(:, idim, ii), psi(:, idim, size))
+          call lalg_axpy(gr%mesh%np, evec(ii, 1), res(:, idim, ii), res(:, idim, size))
+        end do
+      end do
+
+      diff(ist) = X(mf_nrm2)(gr%mesh, st%d%dim, res(:, :, iter + 1))
+
+!      print*, "ALPHA", evec(:, 1)
+!      print*, "RES 1", diff(ist)
+
+!      call X(hamiltonian_apply)(hm, gr, psi(:, :, iter + 1), res(:, :, iter + 1), ist, ik)
+!      
+!      do idim = 1, st%d%dim
+!        call lalg_axpy(gr%mesh%np, -st%eigenval(ist, ik), psi(:, idim, iter + 1), res(:, idim, iter + 1))
+!      end do
+
+!      diff(ist) = X(mf_nrm2)(gr%mesh, st%d%dim, res(:, :, iter + 1))
+!
+!      print*, "RES 2", diff(ist)
+
+      deallocate(aa, mm, eval, evec)
 
     end do
 
-    if(mpi_grp_is_root(mpi_world)) then
-      call loct_progress_bar(st%nst*(ik-1) +  psi_end - 1, st%nst*st%d%nik)
-    end if
-  end do
+!    print*, "ITER",  niter, iter
+    do idim = 1, st%d%dim
+      call lalg_copy(gr%mesh%np, psi(:, idim, iter), st%X(psi)(:, idim, ist, ik))
+    end do
 
-#if defined(HAVE_MPI)
-  if(st%parallel_in_states) then
-    ALLOCATE(ldiff(st%lnst), st%lnst)
-    ldiff(1:st%lnst) = diff(st%st_start:st%st_end)
-    call lmpi_gen_allgatherv(st%lnst, ldiff, outcount, diff, st%mpi_grp)
-    deallocate(ldiff)
-  end if
-#endif
+  end do
 
   call X(states_gram_schmidt_full)(st, st%nst, gr%mesh, st%d%dim, st%X(psi)(:, :, :, ik))
 
+  do ist = st%st_start, st%st_end
+    call X(hamiltonian_apply)(hm, gr, st%X(psi)(:, :, ist, ik), res(:, :, 1), ist, ik)
+    
+    st%eigenval(ist, ik) = X(mf_dotp)(gr%mesh, st%d%dim, st%X(psi)(:, :, ist, ik), res(:, :, 1))
+     
+    do idim = 1, st%d%dim
+      call lalg_axpy(gr%mesh%np, -st%eigenval(ist, ik), st%X(psi)(:, idim, ist, ik), res(:, idim, 1))
+    end do
+
+    diff(ist) = X(mf_nrm2)(gr%mesh, st%d%dim, res(:, :, 1))
+
+!    print*, "EV ", st%eigenval(ist, ik), diff(ist)
+  end do
+
+!  stop
   call pop_sub()
 
 end subroutine X(eigensolver_rmmdiis)
