@@ -40,20 +40,12 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   FLOAT :: lambda
   integer :: ist, idim, ip, size, ii, jj, iter
   R_TYPE :: ca, cb, cc, fr, rr, fhr, rhr
-  logical :: fail
+  logical :: fail, did_something
 
   call push_sub('eigen_rmmdiis_inc.eigensolver_rmmdiis')
 
   ALLOCATE(psi(gr%mesh%np_part, st%d%dim, niter), gr%mesh%np_part*st%d%dim*niter)
   ALLOCATE(res(gr%mesh%np_part, st%d%dim, niter), gr%mesh%np_part*st%d%dim*niter)
-
-!  ALLOCATE(hpsi(gr%mesh%np, st%d%dim), gr%mesh%np*st%d%dim)
-!  ALLOCATE(hres(gr%mesh%np, st%d%dim), gr%mesh%np*st%d%dim)
-!  ALLOCATE(resres(gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
-
-  do ist = st%st_start, st%st_end
-!    print*, "EV ", ist, st%eigenval(ist, ik), diff(ist)
-  end do
 
   do ist = st%st_start, st%st_end
 
@@ -73,8 +65,12 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
         call lalg_axpy(gr%mesh%np, -st%eigenval(ist, ik), psi(:, idim, iter), res(:, idim, iter))
       end do
 
-
-      if(X(mf_nrm2)(gr%mesh, st%d%dim, res(:, :, iter)) < tol) exit
+      if(X(mf_nrm2)(gr%mesh, st%d%dim, res(:, :, iter)) < tol) then 
+        did_something = .false.
+        exit
+      else
+        did_something = .true.
+      end if
 
       if(iter == 1) then
         ! get lambda
@@ -167,10 +163,12 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
     end do
 
-!    print*, "ITER",  niter, iter
-    do idim = 1, st%d%dim
-      call lalg_copy(gr%mesh%np, psi(:, idim, iter), st%X(psi)(:, idim, ist, ik))
-    end do
+    if(did_something) then
+      ! end with a trial move
+      forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
+        st%X(psi)(ip, idim, ist, ik) = psi(ip, idim, iter) + lambda*res(ip, idim, iter)
+      end forall
+    end if
 
   end do
 

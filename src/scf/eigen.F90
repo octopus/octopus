@@ -172,7 +172,7 @@ contains
       if(eigens%imag_time <= M_ZERO) call input_error('EigensolverImaginaryTime')
     case(RS_LOBPCG)
     case(RS_RMMDIIS)
-      default_iter = 1
+      default_iter = 3
     case default
       call input_error('Eigensolver')
     end select
