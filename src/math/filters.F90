@@ -119,6 +119,8 @@ contains
 
     call push_sub('filters.spline_filter_mask')
 
+    ASSERT(rmax > M_EPSILON)
+
     rcut = gamma*rmax
 
     ! we define the mask function as f(r/rcut)
