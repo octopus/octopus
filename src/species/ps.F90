@@ -400,7 +400,7 @@ contains
     type(ps_t), intent(inout) :: ps
     integer,    intent(in)    :: filter
     FLOAT,      intent(in)    :: gmax
-    integer :: l, k, is
+    integer :: l, k
 
     FLOAT :: alpha, beta_fs, rmax, rcut, gamma, beta_rs
 
@@ -422,14 +422,7 @@ contains
           call spline_filter_mask(ps%kb(l, k), l, ps%rc_max, gmax, alpha, gamma)
         end do
       end do
-
-      do is = 1, ps%ispin
-        do l = 1, ps%conf%p
-          rmax = spline_cutoff_radius(ps%ur(l, is), ps%projectors_sphere_threshold)
-          if(rmax > M_EPSILON) call spline_filter_mask(ps%ur(l, is), ps%conf%l(l), rmax, gmax, alpha, gamma)
-        end do
-      end do
-    
+      
       if(trim(ps%icore).ne.'nc') then
         rmax = spline_cutoff_radius(ps%core, ps%projectors_sphere_threshold)
         call spline_filter_mask(ps%core, 0, rmax, gmax, alpha, gamma)

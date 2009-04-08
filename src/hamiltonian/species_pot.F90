@@ -728,11 +728,11 @@ contains
 
       do ip = 1, mesh%np
         x(1:MAX_DIM) = mesh%x(ip, 1:MAX_DIM) - pos(1:MAX_DIM)
-        phi(ip) = sqrt(sum(x(1:MAX_DIM)**2))
+        phi(ip) = sum(x(1:MAX_DIM)**2)
         xf(ip, 1:MAX_DIM) = x(1:MAX_DIM)
       end do
 
-      call spline_eval_vec(s%ps%ur(i, is), mesh%np, phi)
+      call spline_eval_vec(s%ps%ur_sq(i, is), mesh%np, phi)
       call loct_ylm(mesh%np, xf(1, 1), xf(1, 2), xf(1, 3), l, m, ylm(1))
 
       do ip = 1, mesh%np
