@@ -548,6 +548,9 @@ contains
       ! If nf is the number of frequencies, we will have nf-1 non-zero "sines", nf-1 non-zero "cosines",
       ! and the zero frequency component. Total, 2*(nf-1)+1
       cp%dim = 2*(tdf_nfreqs(cp%f(1))-1)+1
+    case default
+      message(1) = "Internal error: invalid representation."
+      call write_fatal(1)
     end select
 
 
