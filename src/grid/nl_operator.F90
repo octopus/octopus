@@ -44,7 +44,7 @@ module nl_operator_m
     nl_operator_t,              &
     nl_operator_index_t,        &
     nl_operator_init,           &
-    nl_operator_equal,          &
+    nl_operator_copy,          &
     nl_operator_build,          &
     nl_operator_transpose,      &
     dnl_operator_operate,       &
@@ -139,6 +139,8 @@ contains
     call push_sub('nl_operator.nl_operator_init')
 
     nullify(op%m, op%i, op%w_re, op%w_im, op%ri, op%rimap, op%rimap_inv)
+    nullify(op%inner%imin, op%inner%imax, op%inner%ri)
+    nullify(op%outer%imin, op%outer%imax, op%outer%ri)
 
     op%label = label
 
@@ -147,16 +149,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine nl_operator_equal(opo, opi)
+  subroutine nl_operator_copy(opo, opi)
     type(nl_operator_t), intent(out) :: opo
     type(nl_operator_t), intent(in)  :: opi
 
-    call push_sub('nl_operator.nl_operator_equal')
+    call push_sub('nl_operator.nl_operator_copy')
 
     call nl_operator_init(opo, opi%label)
-
-    opo%dfunction = opi%dfunction
-    opo%zfunction = opi%zfunction
 
     opo%np       =  opi%np
     opo%m        => opi%m
@@ -165,37 +164,38 @@ contains
 
     call stencil_copy(opi%stencil, opo%stencil)
 
-    if(opi%const_w) then
-      ALLOCATE(opo%w_re(opi%stencil%size, 1), opi%stencil%size*1)
-      if (opi%cmplx_op) then
-        ALLOCATE(opo%w_im(opi%stencil%size, 1), opi%stencil%size*1)
-      end if
-    else
-      ALLOCATE(opo%w_re(opi%stencil%size, opi%np), opi%stencil%size*opi%np)
-      if (opi%cmplx_op) then
-        ALLOCATE(opo%w_im(opi%stencil%size, opi%np), opi%stencil%size*opi%np)
-      end if
-    end if
-
-    ALLOCATE(opo%ri(1:opo%stencil%size, 1:opo%nri), opo%stencil%size*opo%nri)
-    ALLOCATE(opo%rimap(1:opo%np), opo%np)
-    ALLOCATE(opo%rimap_inv(1:opo%nri+1), opo%nri+1)
-
     opo%const_w = opi%const_w
-    opo%w_re    = opi%w_re
-    if (opi%cmplx_op) opo%w_im  = opi%w_im
+
+    call loct_pointer_copy(opo%w_re, opi%w_re)
+    if (opi%cmplx_op) call loct_pointer_copy(opo%w_im, opi%w_im)
+
+    opo%dfunction = opi%dfunction
+    opo%zfunction = opi%zfunction
 
     ASSERT(associated(opi%ri))
 
-    opo%ri(1:opi%stencil%size, 1:opi%nri) = opi%ri(1:opi%stencil%size, 1:opi%nri)
-    opo%rimap(1:opo%np)        = opi%rimap(1:opo%np)
-    opo%rimap_inv(1:opo%nri + 1) = opi%rimap_inv(1:opo%nri + 1)
+    call loct_pointer_copy(opo%ri, opi%ri)
+    call loct_pointer_copy(opo%rimap, opi%rimap)
+    call loct_pointer_copy(opo%rimap_inv, opi%rimap_inv)
     
     opo%dfunction = opi%dfunction
     opo%zfunction = opi%zfunction
 
+    if(opi%m%parallel_in_domains) then
+      opo%inner%nri = opi%inner%nri
+      call loct_pointer_copy(opo%inner%imin, opi%inner%imin)
+      call loct_pointer_copy(opo%inner%imax, opi%inner%imax)
+      call loct_pointer_copy(opo%inner%ri,   opi%inner%ri)      
+
+      opo%outer%nri = opi%outer%nri
+      call loct_pointer_copy(opo%outer%imin, opi%outer%imin)
+      call loct_pointer_copy(opo%outer%imax, opi%outer%imax)
+      call loct_pointer_copy(opo%outer%ri,   opi%outer%ri)
+    end if
+
     call pop_sub()
-  end subroutine nl_operator_equal
+  end subroutine nl_operator_copy
+
 
   ! ---------------------------------------------------------
   subroutine nl_operator_build(m, op, np, const_w, cmplx_op)
@@ -328,9 +328,6 @@ contains
 
     deallocate(st1, st2)
 
-    nullify(op%inner%imin, op%inner%imax, op%inner%ri)
-    nullify(op%outer%imin, op%outer%imax, op%inner%ri)
-
 #ifdef HAVE_MPI
     if(op%m%parallel_in_domains) then
       !now build the arrays required to apply the nl_operator by parts
@@ -412,7 +409,7 @@ contains
 
     call push_sub('nl_operator.nl_operator_transpose')
 
-    call nl_operator_equal(opt, op)
+    call nl_operator_copy(opt, op)
 
     opt%label = trim(op%label)//' transposed'
     opt%w_re = M_ZERO
@@ -459,7 +456,7 @@ contains
 
     call push_sub('nl_operator.nl_operator_skewadjoint')
 
-    call nl_operator_equal(opt, op)
+    call nl_operator_copy(opt, op)
 
 #if defined(HAVE_MPI)
     if(m%parallel_in_domains) then
@@ -467,7 +464,7 @@ contains
       ALLOCATE(opgt, 1)
       call nl_operator_allgather(op, opg)
       call nl_operator_init(opgt, op%label)
-      call nl_operator_equal(opgt, opg)
+      call nl_operator_copy(opgt, opg)
       ALLOCATE(vol_pp(m%np_global), m%np_global)
       call dvec_allgather(m%vp, vol_pp, m%vol_pp)
     else
@@ -534,7 +531,7 @@ contains
 
     call push_sub('nl_operator.nl_operator_selfadjoint')
 
-    call nl_operator_equal(opt, op)
+    call nl_operator_copy(opt, op)
 
     if(m%parallel_in_domains) then
 #if defined(HAVE_MPI)
@@ -559,6 +556,7 @@ contains
     do i = 1, m%np_global
       do j = 1, op%stencil%size
         index = nl_operator_get_index(opg, j, i)
+
         if(index <= m%np_global) then
           do l = 1, op%stencil%size
             k = nl_operator_get_index(opg, l, index)
@@ -574,6 +572,7 @@ contains
             end if
           end do
         end if
+
       end do
     end do
 
@@ -718,7 +717,7 @@ contains
   ! Copies all part of op to opg that are independent of
   ! the partitions,i. e. everything except op%i and - in the
   ! non constant case - op%w_re op%w_im.
-  ! This can be considered as nl_operator_equal and
+  ! This can be considered as nl_operator_copy and
   ! reallocating w_re, w_im and i.
   subroutine nl_operator_common_copy(op, opg)
     type(nl_operator_t), intent(in)  :: op
@@ -922,7 +921,7 @@ contains
 
     ASSERT(associated(op_ref%i))
 
-    call nl_operator_equal(op, op_ref)
+    call nl_operator_copy(op, op_ref)
     do i = 1, op%np
       do j = 1, op%stencil%size
         index = nl_operator_get_index(op, j, i)
@@ -1024,47 +1023,30 @@ contains
 
     call push_sub('nl_operator.nl_operator_end')
 
-    if(associated(op%inner%imin)) then
-      deallocate(op%inner%imin)
-      deallocate(op%inner%imax)
-      deallocate(op%inner%ri)
-      deallocate(op%outer%imin)
-      deallocate(op%outer%imax)
-      deallocate(op%outer%ri)
+    if(op%m%parallel_in_domains) then
+      DEALLOC(op%inner%imin)
+      DEALLOC(op%inner%imax)
+      DEALLOC(op%inner%ri)
+      DEALLOC(op%outer%imin)
+      DEALLOC(op%outer%imax)
+      DEALLOC(op%outer%ri)
     end if
 
-    if(associated(op%i)) then
-      deallocate(op%i)
-      nullify(op%i)
-    end if
-    if(associated(op%w_re)) then
-      deallocate(op%w_re)
-      nullify(op%w_re)
-    end if
-    if (op%cmplx_op) then
-      if(associated(op%w_im)) then
-        deallocate(op%w_im)
-        nullify(op%w_im)
-      end if
-    end if
-    if(associated(op%ri)) then
-      deallocate(op%ri)
-      nullify(op%ri)
-    end if
-    if(associated(op%rimap)) then
-      deallocate(op%rimap)
-      nullify(op%rimap)
-    end if
-    if(associated(op%rimap_inv)) then
-      deallocate(op%rimap_inv)
-      nullify(op%rimap_inv)
-    end if
+    DEALLOC(op%i)
+    DEALLOC(op%w_re)
+    DEALLOC(op%w_im)
+
+    DEALLOC(op%ri)
+    DEALLOC(op%rimap)
+    DEALLOC(op%rimap_inv)
 
     call stencil_end(op%stencil)
 
     call pop_sub()
   end subroutine nl_operator_end
 
+
+  ! ---------------------------------------------------------
   integer pure function nl_operator_get_index(op, is, ip) result(res)
     type(nl_operator_t), intent(in)   :: op
     integer,             intent(in)   :: is

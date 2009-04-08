@@ -523,17 +523,17 @@ contains
     if(mesh%use_curvlinear .and. (.not. simul_box_multires(der%mesh%sb))) then
       do i = 1, der%dim
         call nl_operator_init(auxop, "auxop")
-        auxop%stencil = der%grad(i)%stencil
-        call nl_operator_build(mesh, auxop, der%mesh%np, const_w = const_w_, cmplx_op = cmplx_op_)
         call nl_operator_skewadjoint(der%grad(i), auxop, der%mesh)
-        call nl_operator_equal(der%grad(i), auxop)
+
+        call nl_operator_end(der%grad(i))
+        call nl_operator_copy(der%grad(i), auxop)
         call nl_operator_end(auxop)
       end do
       call nl_operator_init(auxop, "auxop")
-      auxop%stencil = der%lapl%stencil
-      call nl_operator_build(mesh, auxop, der%mesh%np, const_w = const_w_, cmplx_op = cmplx_op_)
       call nl_operator_selfadjoint(der%lapl, auxop, der%mesh)
-      call nl_operator_equal(der%lapl, auxop)
+
+      call nl_operator_end(der%lapl)
+      call nl_operator_copy(der%lapl, auxop)
       call nl_operator_end(auxop)
     end if
 

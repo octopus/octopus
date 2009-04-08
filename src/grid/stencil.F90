@@ -67,12 +67,14 @@ contains
 
   end subroutine stencil_copy
 
+
   !-------------------------------------------------------  
   subroutine stencil_end(this)
     type(stencil_t), intent(inout) :: this
 
-    deallocate(this%points)   
+    DEALLOC(this%points)   
   end subroutine stencil_end
+
   
   !-------------------------------------------------------
   subroutine stencil_union(dim, st1, st2, stu)
@@ -118,6 +120,8 @@ contains
 
   end subroutine stencil_union
 
+
+  !-------------------------------------------------------  
   subroutine stencil_init_center(this)
     type(stencil_t), intent(inout) :: this
 
