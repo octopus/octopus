@@ -187,7 +187,7 @@ contains
     ! output thisonon frequencies and eigenvectors
     iunit = io_open('vibrations/normal_frequencies'//trim(suffix), action='write')
     do i = 1, this%num_modes
-      write(iunit, *) i, sqrt(abs(this%freq(i))) * hartree_to_cm_inv ! output cm^-1
+      write(iunit, '(i6,f14.5)') i, sqrt(abs(this%freq(i)))*hartree_to_cm_inv ! output cm^-1
     end do
     call io_close(iunit)
 
