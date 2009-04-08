@@ -284,8 +284,15 @@ contains
     call push_sub('casida.casida_type_end')
 
     ASSERT(associated(cas%pair))
-    deallocate(cas%pair, cas%mat, cas%tm, cas%s, cas%f, cas%w)
-    nullify   (cas%pair, cas%mat, cas%tm, cas%s, cas%f, cas%w)
+    DEALLOC(cas%pair)
+    DEALLOC(cas%mat)
+    DEALLOC(cas%tm)
+    DEALLOC(cas%s)
+    DEALLOC(cas%f)
+    DEALLOC(cas%w)
+
+    DEALLOC(cas%n_occ)
+    DEALLOC(cas%n_unocc)
 
     call pop_sub()
   end subroutine casida_type_end
@@ -352,8 +359,9 @@ contains
 
     ! clean up
     if (cas%type /= CASIDA_EPS_DIFF) then
-      deallocate(fxc, rho, pot, saved_K)
+      deallocate(fxc, rho, pot)
     end if
+    deallocate(saved_K)
 
     call pop_sub()
   contains
@@ -539,7 +547,7 @@ contains
               cas%tm(ia, k) = dtransition_matrix_element(cas, ia, dx)
             end do
           end do
-          deallocate(deltav, dx)
+          deallocate(dx)
         else
           ALLOCATE(zx(cas%n_pairs), cas%n_pairs)
           do k = 1, m%sb%dim
@@ -551,8 +559,9 @@ contains
               cas%tm(ia, k) = ztransition_matrix_element(cas, ia, zx)
             end do
           end do
-          deallocate(deltav, zx)
+          deallocate(zx)
         end if
+        deallocate(deltav)
 
 
         ! And the oscillatory strengths.
