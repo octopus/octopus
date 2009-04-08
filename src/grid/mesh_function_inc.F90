@@ -988,11 +988,10 @@ subroutine X(mf_calculate_rho)(ikeeppart, nparticles_dens, ndim1part, hypercube_
   R_TYPE, intent(in)       :: psi(:)
   FLOAT, intent(out)       :: rho(:)
 
-  integer :: jj, kk, imesh, imeshp, icoord, icoordp, jdim
+  integer :: imesh, icoord, jdim
   integer, allocatable :: ix(:), ix_1part(:), ixp(:)
   FLOAT :: volume_element
   R_TYPE, allocatable :: psi_global(:)
-  type(X(cf_t)) :: cube
 
   call push_sub('mesh_function_inc.Xmf_calculate_gamma')
 

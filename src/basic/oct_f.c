@@ -408,7 +408,7 @@ void * FC_FUNC_(get_memory_usage, GET_MEMORY_USAGE)()
   
   pid = getpid();
   sprintf(s, "%s%d%s", "/proc/", pid, "/statm");
-  if((f = fopen(s, "r")) == NULL) return -1;
+  if((f = fopen(s, "r")) == (FILE *)NULL) return -1;
   fscanf(f, "%lu", &mem);
   fclose(f);
   

@@ -161,7 +161,7 @@ contains
         ADD_UNIT_CELLS   = 4, &
         TD_POT_FORMULA   = 5
 
-      integer :: iunit, il
+      integer :: il
 
       call push_sub('simul_box.simul_box_init.read_open_boundaries')
 

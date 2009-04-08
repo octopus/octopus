@@ -119,7 +119,7 @@ contains
     FLOAT, allocatable :: reduced(:, :)
     
     FLOAT :: dw
-    integer ik, iop, ik2, idir
+    integer ik, iop, ik2
     FLOAT :: tran(MAX_DIM), tran_inv(MAX_DIM)
     integer, allocatable :: kmap(:)
 

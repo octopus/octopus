@@ -338,7 +338,7 @@ contains
       end subroutine func
     end interface
 
-    integer :: n, iter
+    integer :: iter
     FLOAT   :: err
     FLOAT, allocatable :: f(:), jf(:, :), delta(:, :), rhs(:, :)
 

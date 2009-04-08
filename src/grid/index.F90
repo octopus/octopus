@@ -56,7 +56,7 @@ contains
     integer,            intent(in)    :: dim
     integer,            intent(in)    :: ix(:)
 
-    integer :: ix2(MAX_DIM), idir, sizes(MAX_DIM)
+    integer :: ix2(MAX_DIM), idir
 
     forall (idir = 1:dim) ix2(idir) = ix(idir)
     forall (idir = dim + 1:MAX_DIM) ix2(idir) = 0
