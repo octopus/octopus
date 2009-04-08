@@ -78,7 +78,7 @@ contains
     call push_sub('vdw.vdw_run')
 
     call input()
-    call init()
+    call init_()
     call sternheimer_init(sh, sys, hm, "Pol", hermitian=.false.)
 
     if(gauss_start == 1 .and. mpi_grp_is_root(mpi_world)) then
@@ -125,9 +125,8 @@ contains
       call io_close(iunit)
     end if
 
-    deallocate(gaus_leg_points)
-    deallocate(gaus_leg_weights)
     call sternheimer_end(sh)
+    call end_();
 
     call pop_sub()
   contains
@@ -158,7 +157,7 @@ contains
 
 
     ! --------------------------------------------------------------------
-    subroutine init()
+    subroutine init_()
       integer :: ierr, iunit, ii
       logical :: file_exists
       character(len=80) :: dirname
@@ -229,7 +228,19 @@ contains
 
       call io_mkdir(trim(tmpdir)//VDW_RESTART_DIR)
       call io_mkdir('linear/')
-    end subroutine init
+    end subroutine init_
+
+    ! --------------------------------------------------------------------
+    subroutine end_()
+      integer :: dir
+
+      deallocate(gaus_leg_points)
+      deallocate(gaus_leg_weights)
+
+      do dir = 1, ndir
+        call lr_dealloc(lr(dir, 1))
+      end do
+    end subroutine end_
 
 
     ! --------------------------------------------------------------------

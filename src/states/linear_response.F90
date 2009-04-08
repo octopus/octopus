@@ -136,36 +136,24 @@ contains
 
     call push_sub('linear_response.lr_dealloc')
 
-    if(associated(lr%ddl_rho)) then
-      deallocate(lr%ddl_rho)
-      nullify   (lr%ddl_rho)
-    end if
+    DEALLOC(lr%ddl_psi)
+    DEALLOC(lr%zdl_psi)
 
-    if(associated(lr%zdl_rho)) then
-      deallocate(lr%zdl_rho)
-      nullify   (lr%zdl_rho)
-    end if
+    DEALLOC(lr%ddl_rho)
+    DEALLOC(lr%zdl_rho)
 
-    if(associated(lr%ddl_psi)) then
-      deallocate(lr%ddl_psi)
-      nullify   (lr%ddl_psi)
-    end if
-
-    if(associated(lr%zdl_psi)) then
-      deallocate(lr%zdl_psi)
-      nullify   (lr%zdl_psi)
-    end if
-
-    if(associated(lr%dl_j)) deallocate(lr%dl_j)
-    if(associated(lr%ddl_de)) deallocate(lr%ddl_de)
-    if(associated(lr%ddl_elf)) deallocate(lr%ddl_elf)
-    if(associated(lr%zdl_de)) deallocate(lr%zdl_de)
-    if(associated(lr%zdl_elf)) deallocate(lr%zdl_elf)
+    DEALLOC(lr%dl_j)
+    DEALLOC(lr%ddl_de)
+    DEALLOC(lr%ddl_elf)
+    DEALLOC(lr%zdl_de)
+    DEALLOC(lr%zdl_elf)
 
     call pop_sub()
 
   end subroutine lr_dealloc
 
+
+  ! ---------------------------------------------------------
   subroutine lr_copy(st, m, src, dest)
     type(states_t), intent(in) :: st
     type(mesh_t),   intent(in) :: m
