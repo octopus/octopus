@@ -25,6 +25,7 @@ module io_function_m
   use geometry_m
   use global_m
   use io_m
+  use index_m
   use loct_parser_m
   use mesh_m
   use messages_m

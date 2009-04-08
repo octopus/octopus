@@ -482,13 +482,18 @@ contains
   ! ---------------------------------------------------------
   subroutine out_axis(d1, d2, d3)
     integer, intent(in) :: d1, d2, d3
+    
+    integer :: ixvect(MAX_DIM)
 
     filename = trim(dir)//'/'//trim(fname)//"."//index2axis(d2)//"=0,"//index2axis(d3)//"=0"
     iunit = io_open(filename, action='write', is_tmp=is_tmp)
 
     write(iunit, mfmtheader, iostat=ierr) '#', index2axis(d1), 'Re', 'Im'
     do i = 1, np_max
-      if(mesh%idx%Lxyz(i, d2)==0.and.mesh%idx%Lxyz(i, d3)==0) then     
+      call index_to_coords(mesh%idx, mesh%sb%dim, i, ixvect)
+! FIXME: x_global is probably not initialized correctly for hypercube case
+!   should be eliminated anyway - large array and should be a function
+      if(ixvect(d2)==0.and.ixvect(d3)==0) then     
         write(iunit, mformat, iostat=ierr) mesh%x_global(i, d1), R_REAL(f(i))/u, R_AIMAG(f(i))/u
       end if
     end do
@@ -503,6 +508,7 @@ contains
     integer, intent(in) :: d1, d2, d3
 
     integer :: ix, iy, iz, i
+    integer :: ixvect(MAX_DIM)
 
     filename = trim(dir)//'/'//trim(fname)//"."//index2axis(d1)//"=0"
     iunit = io_open(filename, action='write', is_tmp=is_tmp)
@@ -511,21 +517,36 @@ contains
     write(iunit, mformat)
 
     do ix = mesh%idx%nr(1, d1), mesh%idx%nr(2, d1)
-      select case(d1)
-      case(1); i = mesh%idx%Lxyz_inv(ix, 1, 1)
-      case(2); i = mesh%idx%Lxyz_inv(1, ix, 1)
-      case(3); i = mesh%idx%Lxyz_inv(1, 1, ix)
-      end select
-      if(mesh%idx%Lxyz(i, d1) == 0) exit
+! NOTE: MJV: how could this return anything but ix=0?
+!      select case(d1)
+!      case(1); i = mesh%idx%Lxyz_inv(ix, 1, 1)
+!      case(2); i = mesh%idx%Lxyz_inv(1, ix, 1)
+!      case(3); i = mesh%idx%Lxyz_inv(1, 1, ix)
+!      end select
+!      if(mesh%idx%Lxyz(i, d1) == 0) exit
+      ixvect=1
+      ixvect(d1) = ix
+      i = index_from_coords(mesh%idx, mesh%sb%dim, ixvect)
+      call index_to_coords(mesh%idx, mesh%sb%dim, i, ixvect)
+      if(ixvect(d1) == 0) exit
     end do
     do iy = mesh%idx%nr(1, d2), mesh%idx%nr(2, d2)
       write(iunit, *)
       do iz= mesh%idx%nr(1, d3), mesh%idx%nr(2, d3)
+!        select case(d1)
+!        case(1); i = mesh%idx%Lxyz_inv(ix, iy, iz)
+!        case(2); i = mesh%idx%Lxyz_inv(iy, ix, iz)
+!        case(3); i = mesh%idx%Lxyz_inv(iy, iz, ix)
+!        end select
+        ixvect=1
         select case(d1)
-        case(1); i = mesh%idx%Lxyz_inv(ix, iy, iz)
-        case(2); i = mesh%idx%Lxyz_inv(iy, ix, iz)
-        case(3); i = mesh%idx%Lxyz_inv(iy, iz, ix)
+          case(1); ixvect(1:3) = (/ix, iy, iz/)
+          case(2); ixvect(1:3) = (/iy, ix, iz/)
+          case(3); ixvect(1:3) = (/iy, iz, ix/)
         end select
+        i = index_from_coords(mesh%idx, mesh%sb%dim, ixvect)
+! FIXME: x_global is probably not initialized correctly for hypercube case
+!   should be eliminated anyway - large array and should be a function
         if(i<=mesh%np_global .and. i> 0) then
           write(iunit, mformat, iostat=ierr)  &
             mesh%x_global(i, d2), mesh%x_global(i, d3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
