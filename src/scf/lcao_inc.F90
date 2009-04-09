@@ -102,7 +102,9 @@ subroutine X(lcao_wf) (this, st, gr, geo, hm, start)
 
   integer, allocatable :: cst(:, :), ck(:, :)
   R_SINGLE, allocatable :: buff(:, :, :, :)
-
+#ifdef HAVE_MPI
+  FLOAT, allocatable :: tmp(:, :)
+#endif
   call push_sub('lcao_inc.Xlcao_wf')
   
   nst = st%nst
@@ -176,6 +178,17 @@ subroutine X(lcao_wf) (this, st, gr, geo, hm, start)
     st%X(psi)(1:gr%mesh%np, 1:st%d%dim, lcao_start:st%st_end, ik) = R_TOTYPE(M_ZERO)
   end do
   
+#ifdef HAVE_MPI
+  if(st%d%kpt%parallel) then
+    ASSERT(.not. st%parallel_in_states)
+    ALLOCATE(tmp(1:st%nst, kstart:kend), st%nst*(kend - kstart + 1))
+    tmp(1:st%nst, kstart:kend) = st%eigenval(1:st%nst, kstart:kend)
+    call MPI_Allgatherv(tmp(:, kstart:), st%nst*(kend - kstart + 1), MPI_FLOAT, &
+         st%eigenval, st%d%kpt%num(:)*st%nst, (st%d%kpt%range(1, :) - 1)*st%nst, MPI_FLOAT, st%d%kpt%mpi_grp%comm, mpi_err)
+    deallocate(tmp)
+  end if
+#endif
+
   ! Change of basis
   do n2 = 1, this%norbs
     do ispin = 1, st%d%spin_channels
