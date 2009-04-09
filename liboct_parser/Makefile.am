@@ -26,6 +26,6 @@ liboct_parser_a_SOURCES = symbols.c parse.c parse_exp.c parser_f.c gsl_userdef.c
 ## EXTRA_liboct_parser_a_SOURCES = grammar.y
 
 noinst_HEADERS = grammar.c symbols.h gsl_userdef.h
-include_HEADERS = liboct_parser.h
+include_HEADERS = liboct_parser.h libstring_f.h
 
 CLEANFILES = *~ *.bak
