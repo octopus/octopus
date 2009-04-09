@@ -183,7 +183,7 @@ contains
       call hypercube_init(hypercube_1part, ndim1part, nr_1part, enlarge_1part(1))
 
       ! not always the real origin if the box is shifted, no?
-      !  which happens to be Matthieu's case...
+      !  which happens to be Matthieu`s case...
       !  only important for printout, so it is ok
       do idir=1,ndim1part
         irealdir=(ikeeppart-1)*ndim1part + idir
