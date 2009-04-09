@@ -389,7 +389,7 @@ contains
         end do
 
         if(diff < M_EPSILON*CNST(1e2)) exit self_consistent
-        if(iter>1) rho = 0.5*rho + 0.5*prev
+        if(iter>1) rho = M_HALF*rho + M_HALF*prev
 
         !write(message(1),'(a,i4,a,e10.2)') '      Iter =', iter, '; Diff =', diff
         !call write_info(1)

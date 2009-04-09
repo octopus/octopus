@@ -44,7 +44,7 @@ program phonon_spectrum
   type(geometry_t) :: geo 
   
   FLOAT :: ww, av, irtotal
-  FLOAT, parameter :: dw = 1.0/hartree_to_cm_inv
+  FLOAT, parameter :: dw = M_ONE/hartree_to_cm_inv
   integer :: ifreq, idir
   integer, parameter :: max_freq = 10000
   

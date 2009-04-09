@@ -1188,7 +1188,7 @@ contains
         do i = 1, tdf_niter(f) + 1
           t = (i-1)*tdf_dt(f)
           fi = tdf(par_%f(j), i)
-          tdp = sqrt(real(tdf(par_common%td_penalty(j), i)))
+          tdp = sqrt(real(tdf(par_common%td_penalty(j), i),kind=REAL_PRECISION))
           call tdf_set_numerical(f, i, fi*tdp)
         end do
         integral = integral + tdf_dot_product(f, f)
@@ -1216,8 +1216,8 @@ contains
       do i = 1, tdf_niter(f) + 1
         t = (i-1)*tdf_dt(f)
         fi = tdf(par_common%f, i)
-        phi = real(tdf(par_%f(1), i))
-        tdp = sqrt(real(tdf(par_common%td_penalty(1), i)))
+        phi = real(tdf(par_%f(1), i),kind=REAL_PRECISION)
+        tdp = sqrt(real(tdf(par_common%td_penalty(1), i),kind=REAL_PRECISION))
         call tdf_set_numerical(f, i, fi*cos(par_%w0*t+phi))
       end do
       integral = tdf_dot_product(f, f)

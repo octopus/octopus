@@ -259,7 +259,7 @@ contains
 ! DVMIN is added to differential of volume to avoid division by zero          !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  FLOAT, parameter :: DVMIN = 1.0E-12
+  FLOAT, parameter :: DVMIN = CNST(1.0E-12)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Local variables and arrays                                                  !

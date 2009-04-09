@@ -53,7 +53,7 @@ contains
     FLOAT :: r, dd, zi, zj
     integer :: iatom, jatom
 
-    FLOAT, parameter :: alpha = 1.1313708
+    FLOAT, parameter :: alpha = CNST(1.1313708)
 
     type(profile_t), save :: ion_ion_prof
 
@@ -116,7 +116,7 @@ contains
     FLOAT   :: gg(1:MAX_DIM), gg2
     FLOAT   :: factor, charge
     CMPLX   :: sumatoms
-    FLOAT, parameter :: alpha = 1.1313708
+    FLOAT, parameter :: alpha = CNST(1.1313708)
 
     ! see
     ! http://www.tddft.org/programs/octopus/wiki/index.php/Developers:Ion-Ion_interaction

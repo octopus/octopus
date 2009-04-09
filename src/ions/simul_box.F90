@@ -927,7 +927,7 @@ contains
         xx(1:pd) = matmul(geo%atom(iatom)%x(1:pd) - sb%box_offset(1:pd), sb%klattice_unitary(1:pd, 1:pd))
 
         xx(1:pd) = xx(1:pd)/(M_TWO*sb%lsize(1:pd))
-        xx(1:pd) = xx(1:pd) + 0.5
+        xx(1:pd) = xx(1:pd) + M_HALF
         do idir = 1, pd
           if(xx(idir) >= M_ZERO) then
             xx(idir) = xx(idir) - aint(xx(idir))
@@ -936,7 +936,7 @@ contains
           end if
         end do
         ASSERT(all(xx(1:pd) >= M_ZERO))
-        xx(1:pd) = (xx(1:pd) - 0.5)*M_TWO*sb%lsize(1:pd) 
+        xx(1:pd) = (xx(1:pd) - M_HALF)*M_TWO*sb%lsize(1:pd) 
 
         geo%atom(iatom)%x(1:pd) = matmul(sb%klattice_unitary(1:pd, 1:pd), xx(1:pd) + sb%box_offset(1:pd))
 
