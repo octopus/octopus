@@ -71,11 +71,12 @@ module calc_mode_m
       par_mask = 0
 
       par_mask = ibset(par_mask, P_STRATEGY_DOMAINS - 1) ! all modes are parallel in domains
-      par_mask = ibset(par_mask, P_STRATEGY_KPOINTS - 1)
 
       select case(calc_mode_id)
-      case(CM_TD, CM_GS)
+      case(CM_TD)
         par_mask = ibset(par_mask, P_STRATEGY_STATES - 1)
+      case(CM_GS)
+        par_mask = ibset(par_mask, P_STRATEGY_KPOINTS - 1)
       case(CM_CASIDA)
         par_mask = ibset(par_mask, P_STRATEGY_OTHER - 1)
       end select
