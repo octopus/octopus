@@ -328,7 +328,7 @@ subroutine X(states_calc_momentum)(gr, st)
   R_TYPE, allocatable :: grad(:,:,:)  
 #if defined(HAVE_MPI)
   integer             :: tmp
-  FLOAT               :: lmomentum(st%lnst), gmomentum(st%nst)
+  FLOAT, allocatable  :: lmomentum(:), gmomentum(:)
 #endif
 
   call push_sub('states_calc_inc.Xstates_calc_momentum')
@@ -369,11 +369,17 @@ subroutine X(states_calc_momentum)(gr, st)
     ! Exchange momenta in the state parallel case.
 #if defined(HAVE_MPI)
     if(st%parallel_in_states) then
+      ALLOCATE(lmomentum(1:st%lnst), st%lnst)
+      ALLOCATE(gmomentum(1:st%nst), st%nst)
+
       do i = 1, gr%mesh%sb%dim
         lmomentum(1:st%lnst) = st%momentum(i, st%st_start:st%st_end, ik)
         call lmpi_gen_allgatherv(st%lnst, lmomentum, tmp, gmomentum, st%mpi_grp)
         st%momentum(i, 1:st%nst, ik) = gmomentum(1:st%nst)
       end do
+
+      deallocate(lmomentum)
+      deallocate(gmomentum)
     end if
 #endif
   end do
