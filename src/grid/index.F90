@@ -73,13 +73,17 @@ contains
   ! Given a _global_ point index, this function returns the set of
   ! integer coordinates of the point.
   !
-  subroutine index_to_coords(idx, dim, ip, ix)
+  pure subroutine index_to_coords(idx, dim, ip, ix)
     type(index_t),      intent(in)    :: idx
     integer,            intent(in)    :: dim
     integer,            intent(in)    :: ip
     integer,            intent(out)   :: ix(:)
 
     integer :: idir 
+
+    ! We set all ix to zero first (otherwise the non-existent dimesions would be 
+    ! undefined on exit).
+    ix = 0
     if(idx%sb%box_shape /= HYPERCUBE) then
       forall (idir = 1:dim) ix(idir) = idx%Lxyz(ip, idir)
     else

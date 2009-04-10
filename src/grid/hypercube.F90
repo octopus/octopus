@@ -156,7 +156,7 @@ contains
 
   end subroutine hypercube_x_to_i
 
-  subroutine hypercube_i_to_x(this, ndim, nr, enlarge, icoord, coord)
+  pure subroutine hypercube_i_to_x(this, ndim, nr, enlarge, icoord, coord)
     type(hypercube_t), intent(in)  :: this
     integer,           intent(in)  :: ndim, enlarge
     integer,           intent(in)  :: nr(1:2,1:ndim)
