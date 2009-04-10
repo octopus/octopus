@@ -51,7 +51,8 @@ module messages_m
     messages_print_var_info,  &
     messages_print_var_option,&
     messages_print_var_value, &
-    obsolete_variable
+    obsolete_variable,        &
+    messages_devel_version
 
   character(len=256), dimension(20), public :: message    ! to be output by fatal, warning
   character(len=68),      parameter, public :: hyphens = &
@@ -733,6 +734,21 @@ contains
     
   end subroutine obsolete_variable
 
+  subroutine messages_devel_version(name)
+    character(len=*),           intent(in) :: name
+    
+    if(.not. conf%devel_version) then
+      write(message(1), '(a)') 'Error: '//trim(name)//' is under development.'
+      write(message(2), '(a)') 'To use it (at your own risk) set variable DevelVersion to yes.'
+      call write_fatal(2)
+    else
+      write(message(1), '(a)') trim(name)//' is under development.'
+      write(message(2), '(a)') 'It might not work or produce wrong results.'
+      call write_warning(2)
+    end if
+
+  end subroutine messages_devel_version
+  
 end module messages_m
 
 !! Local Variables:

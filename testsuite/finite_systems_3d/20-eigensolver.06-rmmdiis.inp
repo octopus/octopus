@@ -20,8 +20,13 @@ Spacing = 0.25
 
 EigenSolver = rmmdiis
 
-ParallelizationStrategy = par_domains + par_states
+DevelVersion = yes
 
-%ParallelizationGroupRanks
- 2 | 2
-%
+# This is commented since parallelization over states is currently
+# disabled.
+#
+#ParallelizationStrategy = par_domains + par_states
+#
+#%ParallelizationGroupRanks
+# 2 | 2
+#%

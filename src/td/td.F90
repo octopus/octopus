@@ -127,6 +127,8 @@ contains
     geo => sys%geo
     st  => sys%st
 
+    if(simul_box_is_periodic(gr%mesh%sb)) call messages_devel_version('Time propagation for periodic systems')
+
     call states_distribute_nodes(st, sys%mc)
 
     call td_init(td, sys, hm)

@@ -31,3 +31,5 @@ KPointsUseSymmetries = no
 TDEvolutionMethod = aetrs
 TDTimeStep = 0.02
 TDMaximumIter = 20
+
+DevelVersion = yes

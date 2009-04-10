@@ -173,6 +173,7 @@ contains
     case(RS_LOBPCG)
     case(RS_RMMDIIS)
       default_iter = 3
+      call messages_devel_version("RMMDIIS eigensolver")
     case default
       call input_error('Eigensolver')
     end select
