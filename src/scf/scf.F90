@@ -765,7 +765,8 @@ contains
       FLOAT, allocatable :: ang(:, :, :), ang2(:, :)
 #if defined(HAVE_MPI)
       integer            :: tmp
-      FLOAT              :: lang(1:st%lnst)
+      FLOAT, allocatable :: lang(:, :)
+      integer            :: kstart, kend, kn
 #endif
 
       call push_sub('scf.write_angular_momentum')
@@ -809,13 +810,36 @@ contains
 
         ! Exchange ang and ang2.
 #if defined(HAVE_MPI)
-        if(st%parallel_in_states) then
+        if(st%d%kpt%parallel) then
+          kstart = st%d%kpt%start
+          kend = st%d%kpt%end
+          kn = st%d%kpt%nlocal
+
+          ASSERT(.not. st%parallel_in_states)
+
+          ALLOCATE(lang(1:st%lnst, 1:kn), st%lnst*kn)
           do j = 1, 3
-            lang = ang(st%st_start:st%st_end, ik, j)
-            call lmpi_gen_allgatherv(st%lnst, lang, tmp, ang(:, ik, j), st%mpi_grp)
+            lang(1:st%lnst, 1:kn) = ang(st%st_start:st%st_end, kstart:kend, j)
+            call MPI_Allgatherv(lang, st%nst*kn, MPI_FLOAT, &
+                 ang(:, :, j), st%d%kpt%num(:)*st%nst, (st%d%kpt%range(1, :) - 1)*st%nst, MPI_FLOAT, &
+                 st%d%kpt%mpi_grp%comm, mpi_err)
           end do
-          lang = ang2(st%st_start:st%st_end, ik)
-          call lmpi_gen_allgatherv(st%lnst, lang, tmp, ang2(:, ik), st%mpi_grp)
+          lang(1:st%lnst, 1:kn) = ang2(st%st_start:st%st_end, kstart:kend)
+            call MPI_Allgatherv(lang, st%nst*kn, MPI_FLOAT, &
+                 ang2(:, :), st%d%kpt%num(:)*st%nst, (st%d%kpt%range(1, :) - 1)*st%nst, MPI_FLOAT, &
+                 st%d%kpt%mpi_grp%comm, mpi_err)
+          deallocate(lang)
+        end if
+
+        if(st%parallel_in_states) then
+          ALLOCATE(lang(1:st%lnst, 1), st%lnst)
+          do j = 1, 3
+            lang(1:st%lnst, 1) = ang(st%st_start:st%st_end, ik, j)
+            call lmpi_gen_allgatherv(st%lnst, lang(:, 1), tmp, ang(:, ik, j), st%mpi_grp)
+          end do
+          lang(1:st%lnst, 1) = ang2(st%st_start:st%st_end, ik)
+          call lmpi_gen_allgatherv(st%lnst, lang(:, 1), tmp, ang2(:, ik), st%mpi_grp)
+          deallocate(lang)
         end if
 #endif
         write(message(1), '(a4,1x,a5,4a12,4x,a12,1x)')       &
