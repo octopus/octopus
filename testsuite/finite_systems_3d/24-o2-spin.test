@@ -1,0 +1,25 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: 23-go-na2.test $
+
+Test       : O2 - Spin
+Programs   : octopus_mpi; octopus
+TestGroups : short-run
+Enabled    : Yes
+
+Input      : 24-o2-spin.01-gs.inp
+match ; Total energy   ; GREP(static/info, 'Total       =', 20) ; -31.40980858
+match ; Eigenvalue 1 up; GREP(static/info, ' 1   up', 13) ;       -1.240901
+match ; Eigenvalue 1 dn; GREP(static/info, ' 1   dn', 13) ;       -1.194074
+match ; Eigenvalue 2 up; GREP(static/info, ' 2   up', 13) ;       -0.790372
+match ; Eigenvalue 2 dn; GREP(static/info, ' 2   dn', 13) ;       -0.727767
+match ; Eigenvalue 3 up; GREP(static/info, ' 3   up', 13) ;       -0.520789
+match ; Eigenvalue 3 dn; GREP(static/info, ' 3   dn', 13) ;       -0.486577
+match ; Eigenvalue 4 up; GREP(static/info, ' 4   up', 13) ;       -0.491824
+match ; Eigenvalue 4 dn; GREP(static/info, ' 4   dn', 13) ;       -0.426660
+match ; Eigenvalue 5 up; GREP(static/info, ' 5   up', 13) ;       -0.491824
+match ; Eigenvalue 5 dn; GREP(static/info, ' 5   dn', 13) ;       -0.426660
+match ; Eigenvalue 6 up; GREP(static/info, ' 6   up', 13) ;       -0.231622
+match ; Eigenvalue 6 dn; GREP(static/info, ' 6   dn', 13) ;       -0.152778
+match ; Eigenvalue 7 up; GREP(static/info, ' 7   up', 13) ;       -0.231622
+match ; Eigenvalue 7 dn; GREP(static/info, ' 7   dn', 13) ;       -0.152778
+match ; Force          ; GREP(static/info, 'Forces on the ions', 20, 2) ; 0.094124
