@@ -329,6 +329,8 @@ subroutine X(states_calc_momentum)(gr, st)
 #if defined(HAVE_MPI)
   integer             :: tmp
   FLOAT, allocatable  :: lmomentum(:), gmomentum(:)
+  FLOAT, allocatable  :: lmom(:, :, :)
+  integer             :: kstart, kend, kn, ndim
 #endif
 
   call push_sub('states_calc_inc.Xstates_calc_momentum')
@@ -366,8 +368,27 @@ subroutine X(states_calc_momentum)(gr, st)
       end do
     end do
 
-    ! Exchange momenta in the state parallel case.
+    ! Exchange momenta in the parallel case.
 #if defined(HAVE_MPI)
+    if(st%d%kpt%parallel) then
+      kstart = st%d%kpt%start
+      kend = st%d%kpt%end
+      kn = st%d%kpt%nlocal
+      ndim = ubound(st%momentum, dim = 1)
+
+      ASSERT(.not. st%parallel_in_states)
+      
+      ALLOCATE(lmom(1:ndim, 1:st%nst, 1:kn), ndim*st%nst*kn)
+
+      lmom(1:ndim, 1:st%nst, 1:kn) = st%momentum(1:ndim, 1:st%nst, kstart:kend)
+
+      call MPI_Allgatherv(lmom, ndim*st%nst*kn, MPI_FLOAT, &
+           st%momentum, st%d%kpt%num(:)*st%nst*ndim, (st%d%kpt%range(1, :) - 1)*st%nst*ndim, MPI_FLOAT, &
+           st%d%kpt%mpi_grp%comm, mpi_err)
+
+      deallocate(lmom)
+    end if
+
     if(st%parallel_in_states) then
       ALLOCATE(lmomentum(1:st%lnst), st%lnst)
       ALLOCATE(gmomentum(1:st%nst), st%nst)
