@@ -44,6 +44,7 @@ module sternheimer_m
   use restart_m
   use simul_box_m
   use scf_tol_m
+  use smear_m
   use states_m
   use states_dim_m
   use states_calc_m
@@ -105,6 +106,7 @@ contains
     logical, optional,   intent(in)    :: set_occ_response
 
     integer :: ham_var
+    logical :: default
 
     if(simul_box_is_periodic(sys%gr%mesh%sb)) call messages_devel_version("Sternheimer equation for periodic systems")
 
@@ -116,10 +118,11 @@ contains
     !% Whether initial linear-response wavefunctions should be orthogonalized 
     !% or not against the occupied states, at the start of each SCF cycle.
     !%End 
+    default = sys%st%smear%method == SMEAR_SEMICONDUCTOR
     if (loct_parse_isdef(datasets_check(trim(prefix)//'Preorthogonalization')) /= 0) then 
-      call loct_parse_logical(datasets_check(trim(prefix)//'Preorthogonalization'), .true., this%preorthogonalization) 
+      call loct_parse_logical(datasets_check(trim(prefix)//'Preorthogonalization'), default, this%preorthogonalization) 
     else 
-      call loct_parse_logical(datasets_check('Preorthogonalization'), .true., this%preorthogonalization) 
+      call loct_parse_logical(datasets_check('Preorthogonalization'), default, this%preorthogonalization) 
     end if
 
     !%Variable HamiltonianVariation
