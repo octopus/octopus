@@ -52,4 +52,6 @@ EigenSolverMaxIter = 25
 
 PoissonSolver = fft_corrected
 
+DevelVersion = yes
+
 DoubleGrid=yes
