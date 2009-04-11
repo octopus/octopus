@@ -34,6 +34,7 @@ module preconditioners_m
   use poisson_m
   use profiling_m
   use stencil_star_m
+  use simul_box_m
   use varinfo_m
 
   implicit none
@@ -100,7 +101,7 @@ contains
     prefix_ = ""
     if(present(prefix)) prefix_ = prefix
 
-    if(gr%mesh%use_curvlinear) then
+    if(gr%mesh%use_curvlinear .or. simul_box_is_periodic(gr%mesh%sb)) then
       default = PRE_NONE
     else
       default = PRE_FILTER
