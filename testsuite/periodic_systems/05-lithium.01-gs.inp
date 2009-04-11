@@ -22,4 +22,7 @@ BoxShape = parallelepiped
 %KPointsMonkhorstPack
  4 | 4 | 4
 %
+
 KPointsUseSymmetries = no
+
+ParallelizationStrategy = par_kpoints
