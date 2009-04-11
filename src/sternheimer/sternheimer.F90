@@ -42,6 +42,7 @@ module sternheimer_m
   use profiling_m
   use pert_m
   use restart_m
+  use simul_box_m
   use scf_tol_m
   use states_m
   use states_dim_m
@@ -104,6 +105,8 @@ contains
     logical, optional,   intent(in)    :: set_occ_response
 
     integer :: ham_var
+
+    if(simul_box_is_periodic(sys%gr%mesh%sb)) call messages_devel_version("Sternheimer equation for periodic systems")
 
     !%Variable Preorthogonalization
     !%Type logical 
