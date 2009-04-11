@@ -121,6 +121,8 @@ contains
     if(.not.varinfo_valid_option('MoveIons', this%method)) call input_error('MoveIons')
     call messages_print_var_option(stdout, 'MoveIons', this%method)
 
+    if(this%method == NOSE_HOOVER) call messages_devel_version('Nose-Hoover thermostat')
+
     nullify(this%oldforce)
     
     if(ion_dynamics_ions_move(this)) then 
