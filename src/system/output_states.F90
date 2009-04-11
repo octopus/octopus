@@ -248,50 +248,35 @@
       call pop_sub(); return
     end if
 
-#if defined(HAVE_MPI)
-    if(gr%mesh%parallel_in_domains) then
-      if(gr%mesh%mpi_grp%rank.ne.0) then
-        call pop_sub(); return
-      end if
+    if(mpi_grp_is_root(mpi_world)) then
+
+      iunit = io_open(trim(dir)//'/'//'current-flow', action='write')
+
+      select case(gr%mesh%sb%dim)
+      case(3)
+        write(iunit,'(a)')       '# Plane:'
+        write(iunit,'(a,3f9.5)') '# u = ', outp%plane%u(1), outp%plane%u(2), outp%plane%u(3)
+        write(iunit,'(a,3f9.5)') '# v = ', outp%plane%v(1), outp%plane%v(2), outp%plane%v(3)
+        write(iunit,'(a,3f9.5)') '# n = ', outp%plane%n(1), outp%plane%n(2), outp%plane%n(3)
+        write(iunit,'(a, f9.5)') '# spacing = ', outp%plane%spacing
+        write(iunit,'(a,2i4)')   '# nu, mu = ', outp%plane%nu, outp%plane%mu
+        write(iunit,'(a,2i4)')   '# nv, mv = ', outp%plane%nv, outp%plane%mv
+
+      case(2)
+        write(iunit,'(a)')       '# Line:'
+        write(iunit,'(a,2f9.5)') '# u = ', outp%line%u(1), outp%line%u(2)
+        write(iunit,'(a,2f9.5)') '# n = ', outp%line%n(1), outp%line%n(2)
+        write(iunit,'(a, f9.5)') '# spacing = ', outp%line%spacing
+        write(iunit,'(a,2i4)')   '# nu, mu = ', outp%line%nu, outp%line%mu
+
+      case(1)
+        write(iunit,'(a)')       '# Point:'
+        write(iunit,'(a, f9.5)') '# origin = ', outp%line%origin(1)
+
+      end select
     end if
-    if(st%parallel_in_states) then
-      if(st%mpi_grp%rank.ne.0) then
-        go to 1
-      end if
-    end if
-    if(st%d%kpt%parallel) then
-      if(st%d%kpt%mpi_grp%rank.ne.0) then
-        go to 1
-      end if
-    end if
-#endif
 
-    iunit = io_open(trim(dir)//'/'//'current-flow', action='write')
-
-    select case(gr%mesh%sb%dim)
-    case(3)
-      write(iunit,'(a)')       '# Plane:'
-      write(iunit,'(a,3f9.5)') '# u = ', outp%plane%u(1), outp%plane%u(2), outp%plane%u(3)
-      write(iunit,'(a,3f9.5)') '# v = ', outp%plane%v(1), outp%plane%v(2), outp%plane%v(3)
-      write(iunit,'(a,3f9.5)') '# n = ', outp%plane%n(1), outp%plane%n(2), outp%plane%n(3)
-      write(iunit,'(a, f9.5)') '# spacing = ', outp%plane%spacing
-      write(iunit,'(a,2i4)')   '# nu, mu = ', outp%plane%nu, outp%plane%mu
-      write(iunit,'(a,2i4)')   '# nv, mv = ', outp%plane%nv, outp%plane%mv
-
-    case(2)
-      write(iunit,'(a)')       '# Line:'
-      write(iunit,'(a,2f9.5)') '# u = ', outp%line%u(1), outp%line%u(2)
-      write(iunit,'(a,2f9.5)') '# n = ', outp%line%n(1), outp%line%n(2)
-      write(iunit,'(a, f9.5)') '# spacing = ', outp%line%spacing
-      write(iunit,'(a,2i4)')   '# nu, mu = ', outp%line%nu, outp%line%mu
-
-    case(1)
-      write(iunit,'(a)')       '# Point:'
-      write(iunit,'(a, f9.5)') '# origin = ', outp%line%origin(1)
-
-    end select
-
-1   if(st%wfs_type == M_CMPLX) then
+    if(st%wfs_type == M_CMPLX) then
       call states_calc_tau_jp_gn(gr, st, jp=st%j)
 
       ALLOCATE(j(gr%mesh%np, MAX_DIM), gr%mesh%np*MAX_DIM)
@@ -312,7 +297,7 @@
       flow = M_ZERO
     end if
 
-    write(iunit,'(a,e20.12)') '# Flow = ', flow
+    if(mpi_grp_is_root(mpi_world)) write(iunit,'(a,e20.12)') '# Flow = ', flow
 
     call io_close(iunit)
     call pop_sub()

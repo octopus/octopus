@@ -527,10 +527,10 @@ subroutine X(mf_interpolate_on_plane)(mesh, plane, f, f_in_plane)
   call push_sub('mesh_function_inc.Xmf_interpolate_on_plane')
 
 #ifdef SINGLE_PRECISION
-    ALLOCATE(rx(1:ubound(mesh%x, DIM=1), 1:mesh%sb%dim), ubound(mesh%x, DIM=1)*mesh%sb%dim)
-    rx = mesh%x
+    ALLOCATE(rx(1:ubound(mesh%x_global, DIM=1), 1:mesh%sb%dim), ubound(mesh%x_global, DIM=1)*mesh%sb%dim)
+    rx = mesh%x_global
 #else
-    rx => mesh%x
+    rx => mesh%x_global
 #endif
 
   ALLOCATE(f_global(mesh%np_global), mesh%np_global)
@@ -579,10 +579,10 @@ subroutine X(mf_interpolate_on_line)(mesh, line, f, f_in_line)
   call push_sub('mesh_function_inc.Xmf_interpolate_on_line')
 
 #ifdef SINGLE_PRECISION
-    ALLOCATE(rx(1:ubound(mesh%x, DIM=1), 1:mesh%sb%dim), ubound(mesh%x, DIM=1)*mesh%sb%dim)
-    rx = mesh%x
+    ALLOCATE(rx(1:ubound(mesh%x_global, DIM=1), 1:mesh%sb%dim), ubound(mesh%x_global, DIM=1)*mesh%sb%dim)
+    rx = mesh%x_global
 #else
-    rx => mesh%x
+    rx => mesh%x_global
 #endif
 
   ALLOCATE(f_global(mesh%np_global), mesh%np_global)
