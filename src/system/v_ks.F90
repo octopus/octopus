@@ -119,10 +119,7 @@ contains
     select case(ks%theory_level)
     case(INDEPENDENT_PARTICLES)
     case(HARTREE)
-      if (.not.conf%devel_version) then
-        message(1) = "Hartree calculation only allowed in the development version"
-        call write_fatal(1)
-      end if
+      call messages_devel_version("Hartree theory level")
     case(HARTREE_FOCK)
       ! initilize xc modules
       call xc_init(ks%xc, gr%mesh%sb%dim, nel, d%spin_channels, d%cdft, hartree_fock=.true.)

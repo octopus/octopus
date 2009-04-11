@@ -124,10 +124,7 @@ contains
 
     if(oep%level.ne.XC_OEP_NONE) then
       if(oep%level == XC_OEP_FULL) then
-        if(.not. conf%devel_version) then
-          message(1) = "FULL OEP is not implemented yet."
-          call write_fatal(1)
-        end if
+        call messages_devel_version("Full OEP")
         call loct_parse_float(datasets_check('OEP_mixing'), M_ONE, oep%mixing)
       end if
 

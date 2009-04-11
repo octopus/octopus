@@ -57,13 +57,6 @@ subroutine double_grid_apply (this, s, m, sm, x_atom, vl, l, lm, ic)
     
   else
 
-#ifdef HAVE_MPI    
-    if (m%parallel_in_domains .and. .not. conf%devel_version) then
-      message(1) = "Double grid is not implemented for parallelization in domains (yet)."
-      call write_fatal(1)
-    end if
-#endif
-
     call profiling_in(profiler, profiler_label)
 
     ASSERT(.not. simul_box_is_periodic(m%sb))

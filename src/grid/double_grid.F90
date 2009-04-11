@@ -96,6 +96,8 @@ contains
       this%use_double_grid = .false.
     end if
 
+    if(this%use_double_grid) call messages_devel_version('Double grid')
+
     !%Variable DoubleGridOrder
     !%Type integer 
     !%Default 9

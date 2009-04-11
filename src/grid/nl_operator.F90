@@ -215,9 +215,8 @@ contains
     call push_sub('nl_operator.nl_operator_build')
 
 #ifdef HAVE_MPI
-    if(m%parallel_in_domains .and. .not. const_w .and. .not. conf%devel_version) then
-      message(1) = "Domain parallelization cannot be used with curvilinear coordinates."
-      call write_fatal(1)
+    if(m%parallel_in_domains .and. .not. const_w) then
+      call messages_devel_version('Domain parallelization with curvilinear coordinates')
     end if
 #endif
 
