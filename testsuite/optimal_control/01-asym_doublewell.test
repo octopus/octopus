@@ -2,10 +2,6 @@
 # $Id$
 
 Test       : Asymmetric Double Well
-Author     : Jan
-Date       : 19.05.06
-Arch       : Linux 
-Release    : 3.1.0pre1
 Programs   : octopus; octopus_single
 TestGroups : short-run, oct
 Enabled    : Yes

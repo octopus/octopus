@@ -2,10 +2,6 @@
 # $Id$
 
 Test       : Eigensolver
-Author     : Florian
-Date       : 29.10.07
-Arch       : Linux n41 2.6.16.27-smp-1 #1 SMP Fri Jul 28 17:23:21 CEST 2006 x86_64 GNU/Linux
-Release    : 3.1.0pre1
 Programs   : octopus; octopus_mpi
 TestGroups : short-run
 Enabled    : Yes

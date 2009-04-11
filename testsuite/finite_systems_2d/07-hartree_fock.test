@@ -2,10 +2,6 @@
 # $Id: oct-run_regression_test.pl 2423 2006-09-24 21:25:52Z acastro $
 
 Test       : Hartree-Fock
-Author     : Alberto
-Date       : 26.10.07
-Arch       : Linux g38 2.6.21-desktop-2 #1 SMP PREEMPT Tue May 8 11:54:36 CEST 2007 i686 GNU/Linux
-Release    : 3.1.0pre1
 Programs   : octopus; octopus_single; octopus_mpi
 TestGroups : short-run
 Enabled    : Yes

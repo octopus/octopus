@@ -2,10 +2,6 @@
 # $Id$
 
 Test       : 1D Box
-Author     : Jan Werschnik
-Date       : 12.06.06
-Arch       : Linux 
-Release    : 3.1.0pre1
 Programs   : octopus
 TestGroups : long-run, oct
 Enabled    : Yes

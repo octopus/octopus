@@ -2,10 +2,6 @@
 # $Id: oct-run_regression_test.pl 2423 2006-09-24 21:25:52Z acastro $
 
 Test       : Open boundaries 2D
-Author     : Florian Lorenzen
-Date       : 08.02.2008
-Arch       : Linux g22 2.6.22.6-desktop-2 #1 SMP PREEMPT Sun Sep 16 19:50:33 CEST 2007 i686 GNU/Linux
-Release    : 2.2.0pre1
 Programs   : octopus
 TestGroups : long-run
 Enabled    : No

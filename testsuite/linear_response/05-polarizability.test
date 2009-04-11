@@ -2,10 +2,6 @@
 # $Id: 04-vib_modes.test 4255 2008-06-10 12:56:21Z marques $
 
 Test       : Sodium static polarizability
-Author     : Miguel Marques
-Date       : 11.05.2008
-Arch       : Linux lpmcnpc156 2.6.24.7-92.fc8 #1 SMP Wed May 7 16:26:02 EDT 2008 x86_64 x86_64 x86_64 GNU/Linux
-Release    : 3.1.0pre1
 Programs   : octopus
 TestGroups : long-run
 Enabled    : Yes

@@ -1,10 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id: 01-carbon_atom.test 4011 2008-04-02 09:30:10Z marques $
+
 Test       : Extended eigenstates for open systems
-Author     : Florian
-Date       : 02.07.08
-Arch       : Linux louis 2.6.25-2-amd64 #1 SMP Tue May 27 12:45:24 UTC 2008 x86_64 GNU/Linux
-Release    : 3.1.0pre1
 Programs   : octopus
 TestGroups : short-run
 Enabled    : No

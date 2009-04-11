@@ -2,10 +2,6 @@
 # $Id: 22-time_propagation.test 3344 2007-10-13 13:38:03Z acastro $
 
 Test       : Time propagation
-Author     : Xavier
-Date       : 31.10.06
-Arch       : Linux lascar 2.6.21-2-amd64 #1 SMP Wed Jul 11 05:38:29 UTC 2007 x86_64 GNU/Linux
-Release    : 3.1.0pre1
 Programs   : octopus_mpi; octopus
 TestGroups : long-run
 Enabled    : Yes

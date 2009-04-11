@@ -2,10 +2,6 @@
 # $Id: oct-run_regression_test.pl 2423 2006-09-24 21:25:52Z acastro $
 
 Test       : 04-biot_savart.test
-Author     : Alberto
-Date       : 25.03.07
-Arch       : Linux appartment 2.6.18-4-686 #1 SMP Wed Feb 21 16:06:54 UTC 2007 i686 GNU/Linux
-Release    : 3.1.0pre1
 Programs   : octopus; octopus_mpi
 TestGroups : long-run
 Enabled    : Yes

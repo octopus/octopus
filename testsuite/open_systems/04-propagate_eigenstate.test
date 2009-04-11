@@ -1,10 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id: 01-carbon_atom.test 4011 2008-04-02 09:30:10Z marques $
+
 Test       : Propagate eigenstate of 1D square well
-Author     : Florian
-Date       : 29.09.08
-Arch       : Linux g22 2.6.26.2-desktop-1 #1 SMP PREEMPT Wed Aug 13 14:18:49 CEST 2008 i686 GNU/Linux
-Release    : 3.1.0pre1
 Programs   : octopus
 TestGroups : long-run
 Enabled    : No

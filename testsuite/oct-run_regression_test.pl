@@ -76,10 +76,6 @@ sub create_template {
 # $cvs_id
 
 Test       : $opt_c
-Author     : $author
-Date       : $date
-Arch       : $arch
-Release    : 3.1.0pre1
 Programs   : octopus
 TestGroups : short-run
 Enabled    : Yes

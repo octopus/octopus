@@ -1,11 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id
 
-Test       : 06-tdmagnetic.test
-Author     : Alberto
-Date       : 24.05.07
-Arch       : Linux g38 2.6.14-desktop-10 #1 SMP PREEMPT Sat Jul 15 18:57:27 CEST 2006 i686 GNU/Linux
-Release    : 2.2.0
+Test       : Time dependent magnetic field
 Programs   : octopus; octopus_mpi
 TestGroups : long-run
 Enabled    : Yes

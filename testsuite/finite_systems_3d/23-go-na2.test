@@ -2,10 +2,6 @@
 # $Id: 23-go-na2.test $
 
 Test       : Geometry optimization
-Author     : Xavier
-Date       : 11.23.07
-Arch       : Linux lascar 2.6.21-2-amd64 #1 SMP Wed Jul 11 05:38:29 UTC 2007 x86_64 GNU/Linux
-Release    : 3.1.0pre1
 Programs   : octopus_mpi; octopus; octopus_single
 TestGroups : short-run
 Enabled    : Yes

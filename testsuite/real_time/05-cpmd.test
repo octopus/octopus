@@ -2,8 +2,6 @@
 # $Id: 05-cpmd.test 3344 2007-10-13 13:38:03Z acastro $
 
 Test       : Car-Parrinello Molecular Dynamics
-Author     : Xavier
-Release    : 3.1.0pre1
 Programs   : octopus_mpi; octopus
 TestGroups : short-run
 Enabled    : Yes
