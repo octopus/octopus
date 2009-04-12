@@ -716,6 +716,8 @@ contains
            if (st%d%nik * st%smear%el_per_state .ne. 2) then
               write(iunit, '(a)') &
                    "WARNING: Single-point Berry's phase method for dipole should not be used when there is more than one k-point."
+              write(iunit, '(a)') &
+                   "Instead, finite differences on k-points (not yet implemented) are needed."
            endif
         endif
         

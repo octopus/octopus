@@ -85,6 +85,7 @@ module em_resp_m
 
     logical :: ok(1:3)                           ! whether calculation is converged
     logical :: force_no_kdotp                    ! whether to use kdotp run for periodic system
+    logical :: calc_Born                         ! whether to calculate Born effective charges
     CMPLX :: Born_sum(MAX_DIM, MAX_DIM)          ! sum over atoms of Born charge tensors
   end type em_resp_t
 
@@ -341,30 +342,32 @@ contains
           end if
         end do
 
-        ! calculate Born effective charges
-         message(1) = "Info: Calculating (frequency-dependent) Born effective charges."
-         call write_info(1)
-
-        do ifactor = 1, em_vars%nfactor
-          do idir = 1, sys%gr%sb%dim
-            ! time = M_ZERO
-            if(states_are_complex(sys%st)) then
-              if(em_vars%nsigma == 2) then
-                call zcalc_forces_from_potential(sys%gr, sys%geo, hm%ep, sys%st, M_ZERO, &
-                  lr = em_vars%lr(idir, 1, ifactor), lr2 = em_vars%lr(idir, 2, ifactor), &
-                  lr_dir = idir, Born_sum = em_vars%Born_sum(idir, :))
+        if(em_vars%calc_Born) then
+          ! calculate Born effective charges
+          message(1) = "Info: Calculating (frequency-dependent) Born effective charges."
+          call write_info(1)
+  
+          do ifactor = 1, em_vars%nfactor
+            do idir = 1, sys%gr%sb%dim
+              ! time = M_ZERO
+              if(states_are_complex(sys%st)) then
+                if(em_vars%nsigma == 2) then
+                  call zcalc_forces_from_potential(sys%gr, sys%geo, hm%ep, sys%st, M_ZERO, &
+                    lr = em_vars%lr(idir, 1, ifactor), lr2 = em_vars%lr(idir, 2, ifactor), &
+                    lr_dir = idir, Born_sum = em_vars%Born_sum(idir, :))
+                else
+                  call zcalc_forces_from_potential(sys%gr, sys%geo, hm%ep, sys%st, M_ZERO, &
+                    lr = em_vars%lr(idir, 1, ifactor), lr2 = em_vars%lr(idir, 1, ifactor), &
+                    lr_dir = idir, Born_sum = em_vars%Born_sum(idir, :))
+                endif
               else
-                call zcalc_forces_from_potential(sys%gr, sys%geo, hm%ep, sys%st, M_ZERO, &
+                call dcalc_forces_from_potential(sys%gr, sys%geo, hm%ep, sys%st, M_ZERO, &
                   lr = em_vars%lr(idir, 1, ifactor), lr2 = em_vars%lr(idir, 1, ifactor), &
                   lr_dir = idir, Born_sum = em_vars%Born_sum(idir, :))
               endif
-            else
-              call dcalc_forces_from_potential(sys%gr, sys%geo, hm%ep, sys%st, M_ZERO, &
-                lr = em_vars%lr(idir, 1, ifactor), lr2 = em_vars%lr(idir, 1, ifactor), &
-                lr_dir = idir, Born_sum = em_vars%Born_sum(idir, :))
-            endif
+            enddo
           enddo
-        enddo
+        endif
 
         ! calculate hyperpolarizability
         if(em_vars%calc_hyperpol) then
@@ -546,6 +549,18 @@ contains
 
       call loct_parse_logical(datasets_check('EMForceNoKdotP'), .false., em_vars%force_no_kdotp)
 
+      !%Variable EMCalcBornCharges
+      !%Type logical
+      !%Default false
+      !%Section Linear Response::Polarizabilities
+      !%Description
+      !% Calculate linear-response Born effective charges from electric perturbation.
+      !% Currently only available in development version.
+      !%End
+
+      call loct_parse_logical(datasets_check('EMCalcBornCharges'), .false., em_vars%calc_Born)
+      if (em_vars%calc_Born) call messages_devel_version("Calculation of Born effective charges")
+
       call pop_sub()
 
     end subroutine parse_input
@@ -611,7 +626,8 @@ contains
 
       if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
         call out_polarizability()
-        call out_Born_charges()
+
+        if(em_vars%calc_Born) call out_Born_charges()
 
         if(em_vars%calc_hyperpol .and. ifactor == 1) &
           call out_hyperpolarizability(gr%sb, em_vars%beta, em_vars%ok(ifactor), dirname)
@@ -678,7 +694,8 @@ contains
       if(gr%mesh%sb%dim.ne.1) write(iunit, '(a,i1)', advance='no') '^', gr%mesh%sb%dim
       write(iunit, '(a)') ']'
   
-      call io_output_tensor(iunit, TOFLOAT(em_vars%alpha(1:MAX_DIM, 1:MAX_DIM, ifactor)), gr%mesh%sb%dim, units_out%length%factor**gr%mesh%sb%dim)
+      call io_output_tensor(iunit, TOFLOAT(em_vars%alpha(1:MAX_DIM, 1:MAX_DIM, ifactor)), &
+        gr%mesh%sb%dim, units_out%length%factor**gr%mesh%sb%dim)
   
       call io_close(iunit)
   

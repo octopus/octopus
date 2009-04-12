@@ -97,6 +97,8 @@ contains
 
     call push_sub('kdotp.kdotp_lr_run')
 
+    call messages_devel_version("k.p perturbation and calculation of effective masses")
+
     gr => sys%gr
 !    ndim = sys%gr%sb%dim
     size = sys%st%d%nik * sys%st%nst * gr%mesh%sb%dim * gr%mesh%sb%dim

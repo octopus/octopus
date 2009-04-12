@@ -117,6 +117,7 @@ program octopus
   !% Calculation of the electromagnetic response: electric
   !% polarizabilities and hyperpolarizabilities and magnetic
   !% susceptibilities.
+  !% For periodic system, currently available only in development version.
   !%Option casida 09
   !% Excitations via Casida linear-response TDDFT
   !%Option td_transport 10
@@ -133,7 +134,8 @@ program octopus
   !% This is effectively a first-order perturbative calculation of the total energy, 
   !% the perturbation being the difference between the two xc used.
   !%Option kdotp 15
-  !% Calculation of effective masses by k.p perturbation theory
+  !% Calculation of effective masses by k.p perturbation theory.
+  !% Currently available only in development version.
   !%Option gcm 16
   !% Generator-Coordinates calculation (experimental).
   !%Option memory 17
