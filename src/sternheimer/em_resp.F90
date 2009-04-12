@@ -957,10 +957,10 @@ contains
 
     character, parameter :: axis(1:3) = (/ 'x', 'y', 'z' /)
     CMPLX :: bpar(1:MAX_DIM), bper(1:MAX_DIM), bk(1:MAX_DIM)
-    FLOAT :: HRS_VV, HRS_HV, HRS_A, HRS_B, HRS_C, HRS_D, HRS_E
+    CMPLX :: HRS_VV, HRS_HV
     integer :: i, j, k, iunit
 
-    call push_sub('em_resp_out_hyperpolarizability')
+    call push_sub('em_resp.out_hyperpolarizability')
 
     ! Output first hyperpolarizability (beta)
     iunit = io_open(trim(dirname)//'/beta', action='write')
@@ -1016,53 +1016,113 @@ contains
         write(iunit, '(a, 2e20.8)') 'beta  k '//axis(i), real(bk(i)), aimag(bk(i))
       end do
 
-      ! calculate hyper-Rayleigh scattering hyperpolarizabilities
-      ! SJ Cyvin, JE Rauch, and JC Decius, J Chem Phys 43, 4083 (1965)
-      HRS_VV = M_ZERO
-      HRS_HV = M_ZERO
-
-      HRS_A = M_ZERO
-      do i = 1, sb%dim
-        HRS_A = HRS_A + beta(i, i, i)**2
-      enddo
-
-      HRS_B = M_ZERO
-      HRS_C = M_ZERO
-      do i = 1, sb%dim
-        do j = 1, sb%dim
-          if (i .ne. j) then
-            HRS_B = HRS_B + beta(i, i, i) * beta(i, j, j)
-            HRS_C = HRS_C + beta(i, i, j)**2
-          endif
-        enddo
-      enddo
-
-      HRS_D = beta(1, 1, 2) * beta(2, 3, 3) &
-            + beta(2, 2, 3) * beta(3, 1, 1) &
-            + beta(3, 3, 1) * beta(1, 2, 2)
-
-      HRS_E = beta(1, 2, 3)**2
-
-      HRS_VV = (M_ONE      / M_SEVEN)    * HRS_A &
-             + (M_SIX      / CNST(35.0)) * HRS_B &
-             + (M_NINE     / CNST(35.0)) * HRS_C &
-             + (M_SIX      / CNST(35.0)) * HRS_D &
-             + (CNST(12.0) / CNST(35.0)) * HRS_E
-
-      HRS_HV = (M_ONE      / CNST(35.0))  * HRS_A &
-             - (M_TWO      / CNST(105.0)) * HRS_B &
-             + (CNST(11.0) / CNST(105.0)) * HRS_C &
-             - (M_TWO      / CNST(105.0)) * HRS_D &
-             + (M_EIGHT    / CNST(35.0))  * HRS_E
+      call calc_beta_HRS(sb, beta, HRS_VV, HRS_HV)
 
       write(iunit, '()')
-      write(iunit, '(a)') 'beta hyper-Rayleigh scattering:'
-      write(iunit, '(a, e20.8)') 'VV polarization ', sqrt(HRS_VV)
-      write(iunit, '(a, e20.8)') 'HV polarization ', sqrt(HRS_HV)
+      write(iunit, '(a)') 'beta for liquid- or gas-phase hyper-Rayleigh scattering:'
+      write(iunit, '(a, 2e20.8)') 'VV polarization ', real(sqrt(HRS_VV)), aimag(sqrt(HRS_VV))
+      write(iunit, '(a, 2e20.8)') 'HV polarization ', real(sqrt(HRS_HV)), aimag(sqrt(HRS_HV))
     endif
 
     call io_close(iunit)
     call pop_sub()
+
+    contains
+
+      ! ---------------------------------------------------------
+      ! calculate hyper-Rayleigh scattering hyperpolarizabilities
+      ! SJ Cyvin, JE Rauch, and JC Decius, J Chem Phys 43, 4083 (1965)
+      ! generalized to avoid assumption of Kleinman symmetry (permutation of indices)
+      subroutine calc_beta_HRS(sb, beta, HRS_VV, HRS_HV)
+        type(simul_box_t), intent(in)  :: sb
+        CMPLX,             intent(in)  :: beta(:, :, :)
+        CMPLX,             intent(out) :: HRS_VV, HRS_HV
+
+        CMPLX :: HRS_A, HRS_B, HRS_C, HRS_D, HRS_E
+        CMPLX :: HRS_B1, HRS_B2, HRS_C1, HRS_C2, HRS_C3, HRS_D1, HRS_D2, HRS_D3, HRS_E1, HRS_E2
+        integer :: i, j, k
+        
+        call push_sub('em_resp.out_hyperpolarizability.calc_beta_HRS')
+        
+        ! first calculate VV (vertical-vertical) polarization, FFF in Decius et al.
+        HRS_A = M_ZERO
+        do i = 1, sb%dim
+          HRS_A = HRS_A + beta(i,i,i)**2
+        enddo
+
+        HRS_B = M_ZERO
+        HRS_C = M_ZERO
+        do i = 1, sb%dim
+          do j = 1, sb%dim
+            if (i .ne. j) then
+              HRS_B = HRS_B + beta(i,i,i) * (beta(i,j,j) + beta(j,i,j) + beta(j,j,i))
+              HRS_C = HRS_C + (beta(i,i,j) + beta(i,j,i) + beta(j,i,i))**2
+            endif
+          enddo
+        enddo
+
+        HRS_D = (beta(1,1,2) + beta(1,2,1) + beta(2,1,1)) * (beta(2,3,3) + beta(3,2,3) + beta(3,3,2)) &
+              + (beta(2,2,3) + beta(2,3,2) + beta(3,2,2)) * (beta(3,1,1) + beta(1,3,1) + beta(1,1,3)) &
+              + (beta(3,3,1) + beta(3,1,3) + beta(1,3,3)) * (beta(1,2,2) + beta(2,1,2) + beta(2,2,1))
+    
+        HRS_E = (beta(1,2,3) + beta(1,3,2) + beta(2,1,3) + beta(2,3,1) + beta(3,1,2) + beta(3,2,1))**2
+    
+        HRS_VV = (M_ONE / M_SEVEN)     * HRS_A &
+               + (M_TWO / CNST(35.0))  * HRS_B &
+               + (M_ONE / CNST(35.0))  * HRS_C &
+               + (M_TWO / CNST(105.0)) * HRS_D &
+               + (M_ONE / CNST(105.0)) * HRS_E
+
+        ! now calculate HV (horizontal-vertical) polarization, FGG in Decius et al.
+        HRS_B1 = M_ZERO
+        HRS_B2 = M_ZERO
+        HRS_C1 = M_ZERO
+        HRS_C2 = M_ZERO
+        HRS_C3 = M_ZERO
+        do i = 1, sb%dim
+          do j = 1, sb%dim
+            if (i .ne. j) then
+              HRS_B1 = HRS_B1 + beta(i,i,i) * beta(i,j,j)
+              HRS_B2 = HRS_B2 + beta(i,i,i) * (beta(j,i,j) + beta(j,j,i))
+              HRS_C1 = HRS_C1 + (beta(i,i,j) + beta(i,j,i))**2
+              HRS_C2 = HRS_C2 + beta(j,i,i) * (beta(i,i,j) + beta(i,j,i))
+              HRS_C3 = HRS_C3 + beta(j,i,i)**2
+            endif
+          enddo
+        enddo
+  
+        HRS_D1 = (beta(1,1,2) + beta(1,2,1) + beta(2,1,1)) * (beta(3,2,3) + beta(3,3,2)) &
+               + (beta(2,2,3) + beta(2,3,2) + beta(3,2,2)) * (beta(1,3,1) + beta(1,1,3)) &
+               + (beta(3,3,1) + beta(3,1,3) + beta(1,3,3)) * (beta(2,1,2) + beta(2,2,1))
+        HRS_D2 = (beta(1,1,2) + beta(1,2,1)) * beta(2,3,3) &
+               + (beta(2,2,3) + beta(2,3,2)) * beta(3,1,1) &
+               + (beta(3,3,1) + beta(3,1,3)) * beta(1,2,2)
+        HRS_D3 = beta(2,1,1) * beta(2,3,3) &
+               + beta(3,2,2) * beta(3,1,1) &
+               + beta(1,3,3) * beta(1,2,2)
+  
+        HRS_E1 = (beta(1,2,3) + beta(1,3,2))**2 &
+               + (beta(2,1,3) + beta(2,3,1))**2 &
+               + (beta(3,1,2) + beta(3,2,1))**2
+  
+        HRS_E2 = (beta(1,2,3) + beta(1,3,2)) * (beta(2,1,3) + beta(2,3,1)) &
+               + (beta(2,1,3) + beta(2,3,1)) * (beta(3,1,2) + beta(3,2,1)) &
+               + (beta(3,1,2) + beta(3,2,1)) * (beta(1,2,3) + beta(1,3,2))
+  
+        HRS_HV = (M_ONE   / CNST(35.0))  * HRS_A &
+               + (M_FOUR  / CNST(105.0)) * HRS_B1 &
+               - (M_ONE   / CNST(35.0))  * HRS_B2 &
+               + (M_TWO   / CNST(105.0)) * HRS_C1 &
+               - (M_ONE   / CNST(35.0))  * HRS_C2 &
+               + (M_THREE / CNST(35.0))  * HRS_C3 &
+               - (M_ONE   / CNST(105.0)) * HRS_D1 &
+               - (M_ONE   / CNST(105.0)) * HRS_D2 &
+               + (M_TWO   / CNST(35.0))  * HRS_D3 &
+               + (M_ONE   / CNST(35.0))  * HRS_E1 &
+               - (M_ONE   / CNST(105.0)) * HRS_E2
+  
+        call pop_sub()
+    end subroutine calc_beta_HRS
 
   end subroutine out_hyperpolarizability
 
