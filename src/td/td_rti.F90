@@ -779,12 +779,13 @@ contains
 #ifdef HAVE_SPARSKIT
       FLOAT, allocatable :: vhxc_t1(:,:), vhxc_t2(:,:)
       CMPLX, allocatable :: zpsi_rhs_pred(:,:,:,:), zpsi_rhs_corr(:,:,:,:)
-      integer :: ik, ist, idim, isize
+      integer :: ik, ist, idim, isize, np_part
 
       call push_sub('td_rti.td_crank_nicholson')
 
       isize = gr%mesh%np_part*st%lnst*st%d%kpt%nlocal*st%d%dim
-      ALLOCATE(zpsi_rhs_corr(gr%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end), isize)
+      np_part = gr%mesh%np_part
+      ALLOCATE(zpsi_rhs_corr(np_part, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end), isize)
 
       zpsi_rhs_corr = st%zpsi ! store zpsi for corrector step
 
@@ -801,7 +802,8 @@ contains
       tr%te%exp_order  = 1
 
       if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
-        ALLOCATE(zpsi_rhs_pred(gr%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end), isize)
+        np_part = gr%mesh%np_part
+        ALLOCATE(zpsi_rhs_pred(np_part, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end), isize)
         zpsi_rhs_pred = st%zpsi ! store zpsi for predictor step
         
         ALLOCATE(vhxc_t1(gr%mesh%np, st%d%nspin), gr%mesh%np*st%d%nspin)

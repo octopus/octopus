@@ -267,7 +267,8 @@ module opt_control_propagation_m
     gr => sys%gr
     call td_rti_copy(tr_chi, td%tr)
 
-    aux_fwd_propagation = (target_mode(target) == oct_targetmode_td .or. (hm%theory_level.ne.INDEPENDENT_PARTICLES))
+    aux_fwd_propagation = ( target_mode(target) == oct_targetmode_td .or. &
+                           (hm%theory_level.ne.INDEPENDENT_PARTICLES) )
     if(aux_fwd_propagation) then
       call states_copy(psi2, psi)
       call parameters_copy(par_prev, par)
@@ -275,7 +276,6 @@ module opt_control_propagation_m
 
     
     ! setup forward propagation
-    call states_densities_init(psi, gr, sys%geo)
     call states_calc_dens(psi, gr%mesh%np_part)
     call v_ks_calc(gr, sys%ks, hm, psi)
     call td_rti_run_zero_iter(hm, td%tr)

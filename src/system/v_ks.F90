@@ -118,6 +118,7 @@ contains
 
     select case(ks%theory_level)
     case(INDEPENDENT_PARTICLES)
+      ks%sic_type = sic_none
     case(HARTREE)
       call messages_devel_version("Hartree theory level")
     case(HARTREE_FOCK)
