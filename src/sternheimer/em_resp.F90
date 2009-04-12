@@ -60,7 +60,6 @@ module em_resp_m
 
   public :: &
        em_resp_run,            &
-       out_polarizability,     &
        out_hyperpolarizability
 
   type em_resp_t
@@ -517,8 +516,9 @@ contains
         !%Type block
         !%Section Linear Response::Polarizabilities
         !%Description
-        !% This blocks describes the multiples of the frequency used for
-        !% the dynamic hyperpolarizability.
+        !% This block describes the multiples of the frequency used for
+        !% the dynamic hyperpolarizability. The results are written to the
+        !% file "beta" in the directory for the first multiple.
         !%End
 
         if (loct_parse_block(datasets_check('EMHyperpol'), blk) == 0) then 
@@ -609,29 +609,104 @@ contains
       write(dirname, '(a, a)') OUTPUT_DIR//'freq_', trim(str_tmp)
       call io_mkdir(trim(dirname))
 
-! TODO: make out_polarizability and out_susceptibility subroutines of this subroutine again
       if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
-        call out_polarizability(st, gr, em_vars%alpha(1:MAX_DIM, 1:MAX_DIM, ifactor), &
-          em_vars%freq_factor(ifactor) * em_vars%omega(iomega), em_vars%ok(ifactor), dirname)
+        call out_polarizability()
         call out_Born_charges()
-        if(em_vars%calc_hyperpol) call out_hyperpolarizability(gr%sb, em_vars%beta, em_vars%ok(ifactor), dirname)
+
+        if(em_vars%calc_hyperpol .and. ifactor == 1) &
+          call out_hyperpolarizability(gr%sb, em_vars%beta, em_vars%ok(ifactor), dirname)
       else if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
         call out_susceptibility()
       end if
 
       call out_projections()
-
-      str_tmp = freq2str(em_vars%omega(iomega)/units_out%energy%factor)
-      write(dirname, '(a, a)') OUTPUT_DIR//'freq_', trim(str_tmp)
-      call io_mkdir(dirname)
       call out_wavefunctions()
+      call out_circular_dichroism()
 
-      call out_circular_dichroism
     end do
 
     call pop_sub()
 
   contains
+
+    ! ---------------------------------------------------------
+    ! Note: this should be in spectrum.F90
+    subroutine cross_section_header(out_file)
+      integer, intent(in) :: out_file
+
+      character(len=80) :: header_string
+      integer :: i, k
+
+      call push_sub('em_resp.out_polarizability.cross_section_header')
+
+      !this header is the same as spectrum.F90
+      write(out_file, '(a1, a20)', advance = 'no') '#', str_center("Energy", 20)
+      write(out_file, '(a20)', advance = 'no') str_center("(1/3)*Tr[sigma]", 20)
+      write(out_file, '(a20)', advance = 'no') str_center("Anisotropy[sigma]", 20)
+
+      do i = 1, 3
+        do k = 1, 3
+          write(header_string,'(a6,i1,a1,i1,a1)') 'sigma(',i,',',k,')'
+          write(out_file, '(a20)', advance = 'no') str_center(trim(header_string), 20)
+        end do
+      end do
+
+      write(out_file, *)
+      write(out_file, '(a1,a20)', advance = 'no') '#', str_center('['//trim(units_out%energy%abbrev) // ']', 20)
+      do i = 1, 11
+        write(out_file, '(a20)', advance = 'no')  str_center('['//trim(units_out%length%abbrev) //'^2]', 20)
+      end do
+      write(out_file,*)
+
+      call pop_sub()
+    end subroutine cross_section_header
+
+
+    ! ---------------------------------------------------------
+    subroutine out_polarizability()
+      FLOAT :: cross(MAX_DIM, MAX_DIM), crossp(MAX_DIM, MAX_DIM)
+      FLOAT :: average, anisotropy
+      
+      call push_sub('em_resp.out_polarizability')
+  
+      iunit = io_open(trim(dirname)//'/alpha', action='write')
+  
+      if (.not.em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
+  
+      write(iunit, '(2a)', advance='no') '# Polarizability tensor [', &
+        trim(units_out%length%abbrev)
+      if(gr%mesh%sb%dim.ne.1) write(iunit, '(a,i1)', advance='no') '^', gr%mesh%sb%dim
+      write(iunit, '(a)') ']'
+  
+      call io_output_tensor(iunit, TOFLOAT(em_vars%alpha(1:MAX_DIM, 1:MAX_DIM, ifactor)), gr%mesh%sb%dim, units_out%length%factor**gr%mesh%sb%dim)
+  
+      call io_close(iunit)
+  
+      ! CROSS SECTION (THE IMAGINARY PART OF POLARIZABILITY)
+      if(states_are_complex(st)) then 
+        cross(1:MAX_DIM, 1:MAX_DIM) = aimag(em_vars%alpha(1:MAX_DIM, 1:MAX_DIM, ifactor)) * &
+          em_vars%freq_factor(ifactor)*em_vars%omega(iomega) / units_out%energy%factor * M_FOUR * M_PI / P_c 
+          
+        iunit = io_open(trim(dirname)//'/cross_section', action='write')
+        if (.not. em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
+  
+        average = M_THIRD * (cross(1, 1) + cross(2, 2) + cross(3, 3))
+        crossp(:, :) = matmul(cross(:, :), cross(:, :))
+        anisotropy = &
+          M_THIRD*(M_THREE*(crossp(1, 1) + crossp(2, 2) + crossp(3, 3)) - (cross(1, 1) + cross(2, 2) + cross(3, 3))**2)
+            
+        call cross_section_header(iunit)
+        write(iunit,'(3e20.8)', advance = 'no') &
+          em_vars%freq_factor(ifactor)*em_vars%omega(iomega) / units_out%energy%factor, average, sqrt(max(anisotropy, M_ZERO))
+        write(iunit,'(9e20.8)', advance = 'no') cross(1:3, 1:3)
+        write(iunit,'(a)', advance = 'yes')
+  
+        call io_close(iunit)
+      end if
+      
+      call pop_sub()
+    end subroutine out_polarizability
+
 
     ! ---------------------------------------------------------
     subroutine out_Born_charges()
@@ -857,95 +932,6 @@ contains
     end subroutine out_circular_dichroism
     
   end subroutine em_resp_output
-
-
-  ! ---------------------------------------------------------
-  subroutine out_polarizability(st, gr, alpha, omega, converged, dirname)
-    type(states_t),    intent(in) :: st
-    type(grid_t),      intent(in) :: gr
-    CMPLX,             intent(in) :: alpha(:, :)
-    FLOAT,             intent(in) :: omega
-    logical,           intent(in) :: converged
-    character(len=*),  intent(in) :: dirname
-
-    FLOAT :: cross(MAX_DIM, MAX_DIM), crossp(MAX_DIM, MAX_DIM)
-    FLOAT :: average, anisotropy
-    integer iunit
-    
-    call push_sub('em_resp.out_polarizability')
-
-    iunit = io_open(trim(dirname)//'/alpha', action='write')
-
-    if (.not.converged) write(iunit, '(a)') "# WARNING: not converged"
-
-    write(iunit, '(2a)', advance='no') '# Polarizability tensor [', &
-      trim(units_out%length%abbrev)
-    if(gr%mesh%sb%dim.ne.1) write(iunit, '(a,i1)', advance='no') '^', gr%mesh%sb%dim
-    write(iunit, '(a)') ']'
-
-    call io_output_tensor(iunit, TOFLOAT(alpha(1:MAX_DIM, 1:MAX_DIM)), gr%mesh%sb%dim, units_out%length%factor**gr%mesh%sb%dim)
-
-    call io_close(iunit)
-
-    ! CROSS SECTION (THE IMAGINARY PART OF POLARIZABILITY)
-    if(states_are_complex(st)) then 
-      cross(1:MAX_DIM, 1:MAX_DIM) = aimag(alpha(1:MAX_DIM, 1:MAX_DIM)) * &
-        omega / units_out%energy%factor * M_FOUR * M_PI / P_c 
-        
-      iunit = io_open(trim(dirname)//'/cross_section', action='write')
-      if (.not. converged) write(iunit, '(a)') "# WARNING: not converged"
-
-      average = M_THIRD * (cross(1, 1) + cross(2, 2) + cross(3, 3))
-      crossp(:, :) = matmul(cross(:, :), cross(:, :))
-      anisotropy = &
-        M_THIRD*(M_THREE*(crossp(1, 1) + crossp(2, 2) + crossp(3, 3)) - (cross(1, 1) + cross(2, 2) + cross(3, 3))**2)
-          
-      call cross_section_header(iunit)
-      write(iunit,'(3e20.8)', advance = 'no') &
-        omega / units_out%energy%factor, average, sqrt(max(anisotropy, M_ZERO))
-      write(iunit,'(9e20.8)', advance = 'no') cross(1:3, 1:3)
-      write(iunit,'(a)', advance = 'yes')
-
-      call io_close(iunit)
-    end if
-    
-    call pop_sub()
-
-  contains
-
-    ! ---------------------------------------------------------
-    ! Note: this should be in spectrum.F90
-    subroutine cross_section_header(out_file)
-      integer, intent(in) :: out_file
-
-      character(len=80) :: header_string
-      integer :: i, k
-
-      call push_sub('em_resp.out_polarizability.cross_section_header')
-
-      !this header is the same as spectrum.F90
-      write(out_file, '(a1, a20)', advance = 'no') '#', str_center("Energy", 20)
-      write(out_file, '(a20)', advance = 'no') str_center("(1/3)*Tr[sigma]", 20)
-      write(out_file, '(a20)', advance = 'no') str_center("Anisotropy[sigma]", 20)
-
-      do i = 1, 3
-        do k = 1, 3
-          write(header_string,'(a6,i1,a1,i1,a1)') 'sigma(',i,',',k,')'
-          write(out_file, '(a20)', advance = 'no') str_center(trim(header_string), 20)
-        end do
-      end do
-
-      write(out_file, *)
-      write(out_file, '(a1,a20)', advance = 'no') '#', str_center('['//trim(units_out%energy%abbrev) // ']', 20)
-      do i = 1, 11
-        write(out_file, '(a20)', advance = 'no')  str_center('['//trim(units_out%length%abbrev) //'^2]', 20)
-      end do
-      write(out_file,*)
-
-      call pop_sub()
-    end subroutine cross_section_header
-
-  end subroutine out_polarizability
 
 
   ! ---------------------------------------------------------
