@@ -184,7 +184,8 @@ subroutine X(lcao_wf) (this, st, gr, geo, hm, start)
     ALLOCATE(tmp(1:st%nst, kstart:kend), st%nst*(kend - kstart + 1))
     tmp(1:st%nst, kstart:kend) = st%eigenval(1:st%nst, kstart:kend)
     call MPI_Allgatherv(tmp(:, kstart:), st%nst*(kend - kstart + 1), MPI_FLOAT, &
-         st%eigenval, st%d%kpt%num(:)*st%nst, (st%d%kpt%range(1, :) - 1)*st%nst, MPI_FLOAT, st%d%kpt%mpi_grp%comm, mpi_err)
+         st%eigenval, st%d%kpt%num(:)*st%nst, (st%d%kpt%range(1, :) - 1)*st%nst, MPI_FLOAT, &
+         st%d%kpt%mpi_grp%comm, mpi_err)
     deallocate(tmp)
   end if
 #endif
