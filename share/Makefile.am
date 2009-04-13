@@ -23,6 +23,7 @@ SUBDIRS = PP recipes util samples
 
 sharedir = $(pkgdatadir)
 dist_share_DATA = logo variables varinfo filter_mask.data
+DISTCLEANFILES = logo filter_mask.data
 
 CLEANFILES = variables varinfo varinfo_orig
 EXTRA_DIST = variables.local
