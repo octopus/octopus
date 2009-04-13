@@ -270,11 +270,11 @@ contains
     logical,    optional, intent(in)    :: verbose
 
     logical :: verbose_
-    integer :: maxiter, ik, ns, ist
+    integer :: maxiter, ik, ns
     FLOAT :: tol
 #ifdef HAVE_MPI
     logical :: conv_reduced
-    integer :: outcount
+    integer :: outcount, ist
     FLOAT, allocatable :: ldiff(:), leigenval(:)
 #endif
     type(profile_t), save :: prof

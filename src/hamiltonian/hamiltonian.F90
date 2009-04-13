@@ -474,9 +474,7 @@ contains
       integer               :: irow, diag, offdiag
       character             :: channel
       character(len=1)      :: ln(NLEADS)
-      character(len=2)      :: spin
-      character(len=256)    :: fname, fmt, fname_real, fname_imag
-      FLOAT                 :: energy
+      character(len=256)    :: fname, fmt
       type(mesh_t), pointer :: m
 
       ln(LEFT)  = 'L'; ln(RIGHT) = 'R'

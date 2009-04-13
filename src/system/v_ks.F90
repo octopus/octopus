@@ -326,7 +326,6 @@ contains
     ! ---------------------------------------------------------
     subroutine v_a_xc()
       FLOAT, allocatable :: rho(:, :)
-      integer :: is
 
       call push_sub('v_ks.v_ks_calc.v_a_xc')
       call profiling_in(C_PROFILING_XC)

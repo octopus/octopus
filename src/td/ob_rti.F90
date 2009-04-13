@@ -714,7 +714,6 @@ contains
     CMPLX, intent(in)  :: x(:)
     CMPLX, intent(out) :: y(:)
 
-    CMPLX, allocatable :: diag(:, :)
     integer            :: np
 
     call push_sub('ob_rti.preconditioner')

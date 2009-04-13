@@ -1107,6 +1107,8 @@ contains
     integer :: red, green, blue, ix, iy
 #endif
 
+    in_box = .true.
+
     factor = M_ONE
     if(present(inner_box)) then
       if(inner_box) factor = sb%inner_size

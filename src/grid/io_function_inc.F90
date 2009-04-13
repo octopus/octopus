@@ -718,7 +718,6 @@ contains
   subroutine out_xcrysden()
     integer :: ix, iy, iz, idir, iatom, ix2, iy2, iz2
     FLOAT   :: offset(MAX_DIM)
-    character(len=40) :: nitems
     type(X(cf_t)) :: cube
 
     ! put values in a nice cube

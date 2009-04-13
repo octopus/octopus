@@ -85,7 +85,7 @@ contains
     logical,             intent(inout) :: fromScratch
 
     type(casida_t) :: cas
-    integer :: i, ierr, nk, n_filled, n_partially_filled, n_half_filled
+    integer :: i, nk, n_filled, n_partially_filled, n_half_filled
     character(len=80) :: trandens
 
     call push_sub('casida.casida_run')
@@ -311,7 +311,7 @@ contains
     type(mesh_t),   pointer :: m
 
     FLOAT, allocatable :: rho(:, :), fxc(:,:,:), pot(:)
-    integer :: is, j_old, b_old, mu_old
+    integer :: j_old, b_old, mu_old
 
     call push_sub('casida.casida_work')
 

@@ -1049,7 +1049,6 @@ contains
 
     subroutine lead_dens_accum()
       integer :: il
-      CMPLX   :: c
 
       call push_sub('restart.lead_dens_accum')
 

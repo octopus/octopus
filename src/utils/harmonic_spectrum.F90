@@ -32,7 +32,6 @@ program harmonic_spectrum
 
   implicit none
 
-  character(len=100) :: txt
   integer :: mode, ierr
   FLOAT :: w0
   type(spec_t) :: s

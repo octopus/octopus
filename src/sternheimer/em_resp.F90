@@ -1043,7 +1043,7 @@ contains
 
         CMPLX :: HRS_A, HRS_B, HRS_C, HRS_D, HRS_E
         CMPLX :: HRS_B1, HRS_B2, HRS_C1, HRS_C2, HRS_C3, HRS_D1, HRS_D2, HRS_D3, HRS_E1, HRS_E2
-        integer :: i, j, k
+        integer :: i, j
         
         call push_sub('em_resp.out_hyperpolarizability.calc_beta_HRS')
         

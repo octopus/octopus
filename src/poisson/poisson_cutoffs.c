@@ -201,7 +201,6 @@ static double bessel_J0(double w, void *p)
 }
 
 /* --------------------- Interface to Fortran ---------------------- */
-//double FC_FUNC_(c_poisson_cutoff_fin_2d, C_POISSON_CUTOFF_FIN_2D)
 double FC_FUNC_(c_poisson_cutoff_2d_0d, C_POISSON_CUTOFF_2D_0D)
   (double *x, double *y)
 {
@@ -337,7 +336,6 @@ static double cutoff_1d_0d(double w, void *p)
   struct parameters_1d_0d *params = (struct parameters_1d_0d *)p;
   double g = (params->g);
   double a = (params->a);
-  //return 2.0*cos(g*w)/sqrt(w*w+a*a);
   return 2.0*(cos(w)/sqrt(w*w+a*a*g*g));
 }
 

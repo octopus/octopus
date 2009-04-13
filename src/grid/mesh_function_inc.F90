@@ -903,11 +903,10 @@ subroutine X(mf_calculate_gamma)(ikeeppart, nparticles_densmat, ndim1part, hyper
   R_TYPE, intent(in)       :: psi(:)
   CMPLX, intent(out)       :: gamma(:, :)
 
-  integer :: jj, kk, imesh, imeshp, icoord, icoordp, jdim
+  integer :: imesh, imeshp, icoord, icoordp, jdim
   integer, allocatable :: ix(:), ix_1part(:), ixp(:)
   FLOAT :: volume_element
   R_TYPE, allocatable :: psi_global(:)
-  type(X(cf_t)) :: cube
 
   call push_sub('mesh_function_inc.Xmf_calculate_gamma')
 

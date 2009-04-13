@@ -53,7 +53,7 @@ contains
     type(states_t),   intent(in) :: st
     type(modelmb_particle_t),   intent(in) :: modelmbparticles
 
-    integer :: mm, jj, ll, j, err_code, iunit, ndims, ndim1part
+    integer :: mm, jj, j, iunit, ndims, ndim1part
     integer :: ipart,nkspot_to_calculate,ncols
     integer :: ikeeppart,npt_1part, idir, irealdir
     integer :: ikspot, nparticles_dens
@@ -61,7 +61,6 @@ contains
     integer, allocatable :: nr_1part(:,:)
     integer, allocatable :: ix_1part(:)
     integer, allocatable :: enlarge_1part(:)
-    logical :: bof
     character(len=200) :: dirname, filename
     FLOAT :: vol_elem_1part
     FLOAT, allocatable :: origin(:), h_1part(:)

@@ -874,7 +874,7 @@ contains
     type(states_t), intent(inout) :: stout
     type(states_t), intent(in)    :: stin
 
-    integer :: i, j, k, l
+!    integer :: i, j, k, l
 
     call push_sub('states.states_copy')
 
@@ -2396,9 +2396,9 @@ contains
 
     character(len=1)      :: ln(NLEADS)
     character(len=2)      :: spin
-    character(len=256)    :: fname, fmt, fname_real, fname_imag
+    character(len=256)    :: fmt, fname_real, fname_imag
     FLOAT                 :: energy
-    integer  :: np, ik, ist, il, ispin, alloc_size, s1, s2, k1, k2, ierr
+    integer  :: np, ik, ist, il, ispin, alloc_size, s1, s2, k1, k2
     integer  :: green_real, green_imag, irow
 
     call push_sub('states.states_init_green')

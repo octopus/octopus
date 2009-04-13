@@ -218,8 +218,6 @@ contains
 
     subroutine parse_input()
 
-      type(block_t) blk
-
       call push_sub('kdotp.kdotp_lr_run.parse_input')
 
       !%Variable KdotP_OccupiedSolutionMethod

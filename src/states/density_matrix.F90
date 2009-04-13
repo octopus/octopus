@@ -65,7 +65,7 @@ contains
     character(len=200) :: dirname, filename
     FLOAT :: vol_elem_1part
     FLOAT, allocatable :: origin(:), h_1part(:)
-    CMPLX, allocatable :: densmatr(:, :), evectors(:, :), wavef(:,:)
+    CMPLX, allocatable :: densmatr(:, :), evectors(:, :)
     FLOAT, allocatable :: evalues(:), density(:)
 
     type(hypercube_t) :: hypercube_1part

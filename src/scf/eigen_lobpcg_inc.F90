@@ -43,8 +43,9 @@
 
     logical            :: verbose_
     integer            :: ib, ik, psi_start, psi_end, constr_start, constr_end, bs
-    integer            :: n_matvec, conv, maxiter, outcount, iblock
+    integer            :: n_matvec, conv, maxiter, iblock
 #ifdef HAVE_MPI
+    integer            :: outcount
     FLOAT, allocatable :: ldiff(:)
 #endif
 
@@ -146,11 +147,16 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
   integer :: nst   ! Number of eigenstates (i. e. the blocksize).
   integer :: lnst  ! Number of local eigenstates.
 
-  integer :: ist, i, j, iter, blks, maxiter, nconstr, lnconstr
+  integer :: ist, i, j, iter, blks, maxiter, nconstr
 
   integer, target      :: nuc                 ! Index set of unconverged eigenpairs.
   integer, pointer     :: uc(:), lnuc, luc(:) ! Index set of local unconverged eigenpairs.
-  integer, allocatable :: all_ev(:), all_constr(:), lall_constr(:)
+  integer, allocatable :: all_ev(:), all_constr(:)
+
+#ifdef HAVE_MPI
+  integer :: lnconstr
+  integer, allocatable :: lall_constr(:)
+#endif
 
   integer           :: hash_table_size
   logical           :: verbose_, no_bof, found
