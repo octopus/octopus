@@ -127,7 +127,8 @@ program octopus
   !%Option vib_modes 12
   !% Calculation of the vibrational modes.
   !%Option raman 13
-  !% Calculation of Raman response properties
+  !% Calculation of Raman response properties.
+  !% Currently available only in development version.
   !%Option one_shot 14
   !% Use the self-consistent wave-functions in the restart directory to
   !% evaluate the total energy using a different xc functional.

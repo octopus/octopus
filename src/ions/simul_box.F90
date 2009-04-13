@@ -190,6 +190,8 @@ contains
       !%
       !% All entries except <tt>lead_dataset</tt> are optional.
       !%
+      !% Currently available only in development version.
+      !%
       !%Option lead_dataset 1
       !% Gives the name of the dataset used for the periodic calculation of the
       !% leads ground state. It is used, e. g., to read in the coordinates of the
@@ -222,6 +224,9 @@ contains
       !% analytic expression.
       !%End
       if(loct_parse_block(datasets_check('OpenBoundaries'), blk).eq.0) then
+        
+        call messages_devel_version("Open boundaries")
+
         ! Open boundaries are only possible for rectangular simulation boxes.
         if(sb%box_shape.ne.PARALLELEPIPED) then
           message(1) = 'Open boundaries are only possible with a parallelepiped'

@@ -70,6 +70,8 @@ contains
     !CONSTRUCT
     call push_sub('raman.raman_run')
 
+    call messages_devel_version("Raman response")
+
     call restart_look_and_read(sys%st, sys%gr, sys%geo)
 
     ! read electric perturbation
