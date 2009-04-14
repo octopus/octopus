@@ -53,6 +53,10 @@
 #  define DEALLOCATE(x) deallocate(x, stat=global_alloc_err); \
      if(in_profiling_mode)  call profiling_memory_deallocate(__FILE__, __LINE__); \
      if(global_alloc_err.ne.0) call alloc_error(-1, __FILE__, __LINE__)
+
+#define SAFE_DEALLOCATE_P(x) if(associated(x)) then; DEALLOCATE(x); nullify(x); end if
+#define SAFE_DEALLOCATE_A(x) if(allocated(x)) then; DEALLOCATE(x); end if
+
 #else
 #  define ALLOCATE(x, size) \
      allocate(x, stat=global_alloc_err)                 \newline \
@@ -81,10 +85,12 @@
   __LINE__)                                             \newline \
      end if                                             \
      CARDINAL
+
+#define SAFE_DEALLOCATE_P(x) if(associated(x)) then \newline DEALLOCATE(x) \newline nullify(x) \newline end if
+#define SAFE_DEALLOCATE_A(x) if(allocated(x)) then \newline DEALLOCATE(x) \newline end if
+
 #endif
 
-#define SAFE_DEALLOCATE_P(x) if(associated(x)) then; DEALLOCATE(x); nullify(x); end if
-#define SAFE_DEALLOCATE_A(x) if(allocated(x)) then; DEALLOCATE(x); end if
 
 #define REAL_DOUBLE real(8)
 #define REAL_SINGLE real(4)
