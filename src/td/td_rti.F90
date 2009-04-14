@@ -44,6 +44,7 @@ module td_rti_m
   use states_m
   use varinfo_m
   use v_ks_m
+  use solvers_m
 
   implicit none
 
@@ -57,6 +58,8 @@ module td_rti_m
     td_rti_dt,                &
     td_zop,                   &
     td_zopt,                  &
+    td_rti_qmr_op,            &
+    td_rti_qmr_prec,          &
     td_rti_set_scf_prop,      &
     td_rti_ions_are_propagated
 
@@ -67,9 +70,10 @@ module td_rti_m
     PROP_APP_REVERSAL            = 3, &
     PROP_EXPONENTIAL_MIDPOINT    = 4, &
     PROP_CRANK_NICHOLSON         = 5, &
-    PROP_MAGNUS                  = 6, &
-    PROP_CRANK_NICHOLSON_SRC_MEM = 7, &
-    PROP_VISSCHER                = 8
+    PROP_CRANK_NICHOLSON_SPARSKIT= 6, &
+    PROP_MAGNUS                  = 7, &
+    PROP_CRANK_NICHOLSON_SRC_MEM = 8, &
+    PROP_VISSCHER                = 9
 
   FLOAT, parameter :: scf_threshold = CNST(1.0e-3)
 
@@ -89,13 +93,13 @@ module td_rti_m
 
 #ifdef HAVE_SPARSKIT
   type(sparskit_solver_t), pointer, private :: tdsk
+#endif
   type(grid_t),            pointer, private :: grid_p
   type(hamiltonian_t),     pointer, private :: hm_p
   type(td_rti_t),          pointer, private :: tr_p
   CMPLX, allocatable,      private :: zpsi_tmp(:,:,:,:)
-  integer,                 private :: ik_op, ist_op, idim_op
+  integer,                 private :: ik_op, ist_op, idim_op, dim_op
   FLOAT,                   private :: t_op, dt_op
-#endif
 
 contains
 
@@ -127,6 +131,7 @@ contains
 
     call pop_sub()
   end subroutine td_rti_copy
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
@@ -256,7 +261,13 @@ contains
     !% <MATH>
     !%  (1 + i\delta t/2 H_{n+1/2}) \psi_{n+1} = (1 - i\delta t/2 H_{n+1/2}) \psi_{n}  
     !% </MATH>
-    !%Option magnus 6
+    !%Option crank_nicholson_sparskit 6
+    !% Classical Crank-Nicholson propagator. Requires the sparskit library.
+    !%
+    !% <MATH>
+    !%  (1 + i\delta t/2 H_{n+1/2}) \psi_{n+1} = (1 - i\delta t/2 H_{n+1/2}) \psi_{n}  
+    !% </MATH>
+    !%Option magnus 7
     !% Magnus Expansion (M4).
     !% This is the most sophisticated approach. It is a fourth order scheme (feature
     !% that shares with the ST scheme; the other schemes are in principle second order).
@@ -264,10 +275,10 @@ contains
     !% dealing with problem with very high-frequency time dependence.
     !% It is still in a experimental state; we are not yet sure of when it is
     !% advantageous.
-    !%Option crank_nicholson_src_mem 7
+    !%Option crank_nicholson_src_mem 8
     !% Crank-Nicholson propagator with source and memory term for transport
     !% calculations.
-    !%Option visscher 8
+    !%Option visscher 9
     !% (experimental) Visscher integration scheme. Computational Physics 5 596 (1991).
     !%End
 
@@ -307,6 +318,7 @@ contains
     case(PROP_APP_REVERSAL)
     case(PROP_EXPONENTIAL_MIDPOINT)
     case(PROP_CRANK_NICHOLSON)
+    case(PROP_CRANK_NICHOLSON_SPARSKIT)
 #ifdef HAVE_SPARSKIT
       ALLOCATE(tdsk, 1)
       call zsparskit_solver_init(gr%mesh%np, tdsk)
@@ -314,7 +326,7 @@ contains
       gr%mesh%np_part*st%d%dim*st%nst*st%d%kpt%nlocal)
 #else
       message(1) = 'Octopus was not compiled with support for the sparskit library. This'
-      message(2) = 'library is required if the Crank-Nicholson propagator is selected.'
+      message(2) = 'library is required if the "crank_nicholson_sparskit" propagator is selected.'
       message(3) = 'Try to use a different propagation scheme or recompile with sparskit support.'
       call write_fatal(3)
 #endif
@@ -357,6 +369,7 @@ contains
 
     call pop_sub()
   end subroutine td_rti_init
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
@@ -364,6 +377,7 @@ contains
     type(td_rti_t), intent(inout) :: tr
     tr%scf_propagation = .true.
   end subroutine td_rti_set_scf_prop
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
@@ -381,7 +395,7 @@ contains
     case(PROP_MAGNUS)
       ASSERT(associated(tr%vmagnus))
       deallocate(tr%vmagnus); nullify(tr%vmagnus)
-    case(PROP_CRANK_NICHOLSON)
+    case(PROP_CRANK_NICHOLSON_SPARSKIT)
 #ifdef HAVE_SPARSKIT
       call zsparskit_solver_end()
       deallocate(zpsi_tmp)
@@ -394,6 +408,7 @@ contains
     
     call exponential_end(tr%te)       ! clean propagator method
   end subroutine td_rti_end
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
@@ -464,8 +479,9 @@ contains
     case(PROP_SUZUKI_TROTTER);          call td_suzuki_trotter
     case(PROP_REVERSAL);                call td_reversal
     case(PROP_APP_REVERSAL);            call td_app_reversal
-    case(PROP_EXPONENTIAL_MIDPOINT);    call exponentialonential_midpoint
+    case(PROP_EXPONENTIAL_MIDPOINT);    call exponential_midpoint
     case(PROP_CRANK_NICHOLSON);         call td_crank_nicholson
+    case(PROP_CRANK_NICHOLSON_SPARSKIT);call td_crank_nicholson_sparskit
     case(PROP_MAGNUS);                  call td_magnus
     case(PROP_CRANK_NICHOLSON_SRC_MEM); call td_crank_nicholson_src_mem
     case(PROP_VISSCHER);                call td_visscher
@@ -500,8 +516,9 @@ contains
           case(PROP_SUZUKI_TROTTER);          call td_suzuki_trotter
           case(PROP_REVERSAL);                call td_reversal
           case(PROP_APP_REVERSAL);            call td_app_reversal
-          case(PROP_EXPONENTIAL_MIDPOINT);    call exponentialonential_midpoint
+          case(PROP_EXPONENTIAL_MIDPOINT);    call exponential_midpoint
           case(PROP_CRANK_NICHOLSON);         call td_crank_nicholson
+          case(PROP_CRANK_NICHOLSON_SPARSKIT);call td_crank_nicholson_sparskit
           case(PROP_MAGNUS);                  call td_magnus
           case(PROP_CRANK_NICHOLSON_SRC_MEM); call td_crank_nicholson_src_mem
           case(PROP_VISSCHER);                call td_visscher
@@ -731,12 +748,12 @@ contains
 
     ! ---------------------------------------------------------
     ! Exponential midpoint
-    subroutine exponentialonential_midpoint
+    subroutine exponential_midpoint
       integer :: ist, ik
       type(ion_state_t) :: ions_state
       FLOAT :: vecpot(1:MAX_DIM), vecpot_vel(1:MAX_DIM)
 
-      call push_sub('td_rti.exponentialonential_midpoint')
+      call push_sub('td_rti.exponential_midpoint')
 
       if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
         call interpolate( (/t, t-dt, t-2*dt/), tr%v_old(:, :, 0:2), t-dt/M_TWO, hm%vhxc(:, :))
@@ -770,18 +787,18 @@ contains
       end if
 
       call pop_sub()
-    end subroutine exponentialonential_midpoint
+    end subroutine exponential_midpoint
 
 
     ! ---------------------------------------------------------
-    ! Crank-Nicholson propagator
-    subroutine td_crank_nicholson
+    ! Crank-Nicholson propagator, linear solver from sparskit.
+    subroutine td_crank_nicholson_sparskit
 #ifdef HAVE_SPARSKIT
       FLOAT, allocatable :: vhxc_t1(:,:), vhxc_t2(:,:)
       CMPLX, allocatable :: zpsi_rhs_pred(:,:,:,:), zpsi_rhs_corr(:,:,:,:)
       integer :: ik, ist, idim, isize, np_part
 
-      call push_sub('td_rti.td_crank_nicholson')
+      call push_sub('td_rti.td_crank_nicholson_sparskit')
 
       isize = gr%mesh%np_part*st%lnst*st%d%kpt%nlocal*st%d%dim
       np_part = gr%mesh%np_part
@@ -868,7 +885,83 @@ contains
 
       call pop_sub()
 #endif
+    end subroutine td_crank_nicholson_sparskit
+    ! ---------------------------------------------------------
+
+
+    ! ---------------------------------------------------------
+    ! Crank-Nicholson propagator, QMR linear solver.
+    subroutine td_crank_nicholson
+      CMPLX, allocatable :: zpsi_rhs(:,:), zpsi(:), rhs(:)
+      integer :: ik, ist, idim, isize, np_part, np, iter
+      FLOAT :: dres
+      FLOAT :: cgtol = CNST(1.0e-8)
+      logical :: converged
+
+      call push_sub('td_rti.td_crank_nicholson')
+
+      np_part = gr%mesh%np_part
+      np = gr%mesh%np
+      isize = np_part*st%lnst*st%d%kpt%nlocal*st%d%dim
+
+      ! define pointer and variables for usage in td_zop, td_zopt routines
+      grid_p    => gr
+      hm_p      => hm
+      tr_p      => tr
+      dt_op = dt
+      t_op  = t
+      dim_op = st%d%dim
+
+      ! we (ab)use exponential_apply to compute (1-i\delta t/2 H_n)\psi^n
+      ! exponential order needs to be only 1
+      tr%te%exp_method = TAYLOR
+      tr%te%exp_order  = 1
+
+      ALLOCATE(zpsi_rhs(np_part, st%d%dim), np_part*st%d%dim)
+      ALLOCATE(zpsi(np*st%d%dim), np*st%d%dim)
+      ALLOCATE(rhs(np*st%d%dim), np*st%d%dim)
+        
+      call interpolate( (/t, t-dt, t-2*dt/), tr%v_old(:, :, 0:2), t-dt/M_TWO, hm%vhxc(:, :))
+      call hamiltonian_update_potential(hm, gr%mesh)
+
+      ! solve (1+i\delta t/2 H_n)\psi^{predictor}_{n+1} = (1-i\delta t/2 H_n)\psi^n
+      do ik = st%d%kpt%start, st%d%kpt%end
+        do ist = st%st_start, st%st_end
+
+          zpsi_rhs(:, :) = st%zpsi(:, :, ist, ik)
+          call exponential_apply(tr%te, gr, hm, zpsi_rhs, ist, ik, dt/M_TWO, t-dt)
+          if(hamiltonian_inh_term(hm)) &
+            zpsi_rhs(:, :) = zpsi_rhs(:, :) + dt * hm%inh_st%zpsi(:, :, ist, ik)
+
+          forall(idim = 1:st%d%dim)
+            zpsi((idim-1)*np+1:idim*np) = st%zpsi(1:np, idim, ist, ik)
+            rhs((idim-1)*np+1:idim*np) = zpsi_rhs(1:np, idim)
+          end forall
+
+          ist_op = ist; ik_op = ik; iter = 2000
+          call zqmr_sym(np*st%d%dim, zpsi, rhs, &
+            td_rti_qmr_op, td_rti_qmr_prec, iter, dres, cgtol, &
+            showprogress = .false., converged = converged)
+
+          forall(idim = 1:st%d%dim)
+            st%zpsi(1:np, idim, ist, ik) = &
+              zpsi((idim-1)*np_part+1:(idim-1)*np_part+np)
+          end forall
+
+          if(.not.converged) then
+            write(message(1),'(a)')        'The linear solver used for the Crank-Nicholson'
+            write(message(2),'(a,es14.4)') 'propagator did not converge: Residual = ', dres
+            call write_warning(2)
+          end if
+
+        end do
+      end do
+
+      deallocate(zpsi_rhs, zpsi, rhs)
+      call pop_sub()
     end subroutine td_crank_nicholson
+    ! ---------------------------------------------------------
+
 
 
     ! ---------------------------------------------------------
@@ -1067,6 +1160,37 @@ contains
     end subroutine td_visscher
 
   end subroutine td_rti_dt
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  ! operators for Crank-Nicholson scheme
+  subroutine td_rti_qmr_op(x, y)
+    CMPLX, intent(in)  :: x(:)
+    CMPLX, intent(out) :: y(:)
+    integer :: idim
+    CMPLX, allocatable :: zpsi(:, :)
+
+    ALLOCATE(zpsi(grid_p%mesh%np_part, dim_op), grid_p%mesh%np_part*dim_op)
+    zpsi = M_z0
+    forall(idim = 1:dim_op) &
+      zpsi(1:grid_p%mesh%np, idim) = x((idim-1)*grid_p%mesh%np+1:idim*grid_p%mesh%np)
+    call exponential_apply(tr_p%te, grid_p, hm_p, zpsi, ist_op, ik_op, -dt_op/M_TWO, t_op)
+    forall(idim = 1:dim_op) &
+      y((idim-1)*grid_p%mesh%np+1:idim*grid_p%mesh%np) = zpsi(1:grid_p%mesh%np, idim)
+    deallocate(zpsi)
+
+  end subroutine td_rti_qmr_op
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine td_rti_qmr_prec(x, y)
+    CMPLX, intent(in)  :: x(:)
+    CMPLX, intent(out) :: y(:)
+    y = x
+  end subroutine td_rti_qmr_prec
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
@@ -1088,6 +1212,7 @@ contains
 #endif    
     call pop_sub()
   end subroutine td_zop
+  ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
@@ -1112,7 +1237,10 @@ contains
 #endif        
     call pop_sub()
   end subroutine td_zopt
+  ! ---------------------------------------------------------
 
+
+  ! ---------------------------------------------------------
   logical pure function td_rti_ions_are_propagated(tr) result(propagated)
     type(td_rti_t), intent(in) :: tr
 
@@ -1124,6 +1252,7 @@ contains
     end select
 
   end function td_rti_ions_are_propagated
+  ! ---------------------------------------------------------
 
 end module td_rti_m
 

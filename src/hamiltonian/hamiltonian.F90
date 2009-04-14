@@ -163,7 +163,7 @@ module hamiltonian_m
 
     ! There may be an "inhomogeneous", "source", or "forcing" term (useful for the OCT formalism)
     logical :: inh_term
-    type(states_t), pointer :: inh_st
+    type(states_t) :: inh_st
 
     ! There may also be a exchange-like term, similar to the one necessary for time-dependent
     ! Hartree Fock, also useful only for the OCT equations
@@ -426,7 +426,7 @@ contains
 
     call states_null(hm%st)
 
-    call hamiltonian_remove_inh(hm)
+    hm%inh_term = .false.
     call hamiltonian_remove_oct_exchange(hm)
 
     hm%adjoint = .false.
@@ -721,7 +721,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  logical function hamiltonian_inh_term(hm) result(inh)
+  pure logical function hamiltonian_inh_term(hm) result(inh)
     type(hamiltonian_t), intent(in) :: hm
     inh = hm%inh_term
   end function hamiltonian_inh_term
@@ -731,7 +731,8 @@ contains
   subroutine hamiltonian_set_inh(hm, st)
     type(hamiltonian_t), intent(inout) :: hm
     type(states_t), target, intent(in) :: st
-    hm%inh_st => st
+    if(hm%inh_term) call states_end(hm%inh_st)
+    call states_copy(hm%inh_st, st)
     hm%inh_term = .true.
   end subroutine hamiltonian_set_inh
 
@@ -739,8 +740,10 @@ contains
   ! ---------------------------------------------------------
   subroutine hamiltonian_remove_inh(hm)
     type(hamiltonian_t), intent(inout) :: hm
-    nullify(hm%inh_st)
-    hm%inh_term = .false.
+    if(hm%inh_term) then
+      call states_end(hm%inh_st)
+      hm%inh_term = .false.
+    end if
   end subroutine hamiltonian_remove_inh
 
 

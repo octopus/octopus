@@ -474,8 +474,10 @@ module opt_control_propagation_m
     call push_sub('propagation.update_hamiltonian_chi')
 
     if(target_mode(target) == oct_targetmode_td) then
+      call states_copy(inh, st)
       call target_inh(st, gr, target, td%dt*iter, inh)
       call hamiltonian_set_inh(hm, inh)
+      call states_end(inh)
     end if
 
     if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then

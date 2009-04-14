@@ -399,6 +399,7 @@ module opt_control_target_m
         message(1) = 'If OCTTargetMode = oct_targetmode_td, you must suppy a OCTTDTarget block'
         call write_fatal(1)
       end if
+      target%dt     = td%dt
       ALLOCATE(target%td_fitness(0:td%max_iter), td%max_iter+1)
 
 
@@ -570,7 +571,8 @@ module opt_control_target_m
           do j = 1, gr%mesh%np
             opsi(j, 1) = target%rho(j) * psi%zpsi(j, 1, p, 1)
           end do
-          target%td_fitness(i) = target%td_fitness(i) + zmf_dotp(gr%mesh, psi%d%dim, psi%zpsi(:, :, p, 1), opsi(:, :))
+          target%td_fitness(i) = &
+            target%td_fitness(i) + zmf_dotp(gr%mesh, psi%d%dim, psi%zpsi(:, :, p, 1), opsi(:, :))
         end do
         deallocate(opsi)
       case(SPIN_POLARIZED); stop 'Error'
@@ -617,7 +619,7 @@ module opt_control_target_m
         do ist = inh%st_start, inh%st_end
           do idim = 1, inh%d%dim
             do i = 1, gr%mesh%np
-              inh%zpsi(i, idim, ist, ik) = -M_zI * target%rho(i) * psi%zpsi(i, idim, ist, ik)
+              inh%zpsi(i, idim, ist, ik) = M_zI * target%rho(i) * psi%zpsi(i, idim, ist, ik)
             end do
           end do
         end do
@@ -669,6 +671,7 @@ module opt_control_target_m
 
     call push_sub('target.j1_functional')
 
+    j1 = M_ZERO
     select case(target%type)
     case(oct_tg_density)
 
@@ -699,7 +702,7 @@ module opt_control_target_m
       end select
 
     case(oct_tg_td_local)
-      j1 = sum(target%td_fitness) 
+      j1 = sum(target%td_fitness) * target%dt
 
     case(oct_tg_excited)
       j1 = abs(zstates_mpdotp(gr%mesh, target%est, psi))**2
@@ -813,15 +816,10 @@ module opt_control_target_m
 
     case(oct_tg_td_local)
       !We assume that there is no time-independent operator.
-      do ik = 1, chi_out%d%nik
-        do p = chi_out%st_start, chi_out%st_end
-          do dim = 1, chi_out%d%dim
-            do j = 1, gr%mesh%np
-              chi_out%zpsi(j, dim, p, ik) = M_z0
-            end do
-          end do
-        end do
-      end do
+      forall(ik = 1:chi_out%d%nik, p = chi_out%st_start:chi_out%st_end, &
+             dim = 1:chi_out%d%dim, j = 1:gr%mesh%np)
+        chi_out%zpsi(j, dim, p, ik) = M_z0
+      end forall
 
     case(oct_tg_excited) 
 
