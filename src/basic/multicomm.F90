@@ -303,9 +303,9 @@ contains
       mc%nthreads = 1
 #if defined(USE_OMP)
       !$omp parallel
-      if(omp_get_thread_num() == 1) then
-         mc%nthreads = omp_get_num_threads()
-      end if
+      !$omp master
+      mc%nthreads = omp_get_num_threads()
+      !$omp end master
       !$omp end parallel
       if(mc%nthreads > MAX_OMP_THREADS) then
         message(1) = "Number of threads requested is larger than MAX_OMP_THREADS"
