@@ -61,7 +61,9 @@ subroutine X(lmpi_gen_allgatherv)(incount, in, outcount, out, mpi_grp)
   call MPI_Allgatherv(in, incount, R_MPITYPE, out, recvcnts, rdispls, R_MPITYPE, mpi_grp%comm, mpi_err)
   call mpi_debug_out(mpi_grp%comm, C_MPI_ALLGATHERV)
 
-  SAFE_DEALLOCATE_P(rdispls, recvbuf, recvcnts)
+  SAFE_DEALLOCATE_A(rdispls)
+  SAFE_DEALLOCATE_A(recvbuf)
+  SAFE_DEALLOCATE_A(recvcnts)
 
   call pop_sub()
 end subroutine X(lmpi_gen_allgatherv)
