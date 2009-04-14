@@ -66,7 +66,12 @@ module opt_control_m
   implicit none
 
   private
-  public :: opt_control_run
+  public :: opt_control_run,              &
+            opt_control_cg_calc,          &
+            opt_control_cg_write_info,    &
+            opt_control_direct_calc,      &
+            opt_control_direct_write_info
+
 
   ! Module variables
   type(filter_t), save       :: filter
@@ -86,73 +91,6 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine direct_opt_calc(n, x, f)
-    integer, intent(in)  :: n
-    REAL_DOUBLE, intent(in)  :: x(n)
-    REAL_DOUBLE, intent(out) :: f
-
-    FLOAT :: j1, delta
-    type(states_t) :: psi
-    type(oct_control_parameters_t) :: par_new
-
-    call parameters_set_theta(par_, x)
-    call parameters_theta_to_basis(par_)
-
-    if(oct%delta == M_ZERO) then
-      ! We only need the value of the target functional.
-      call states_copy(psi, initial_st)
-      call propagate_forward(sys_, hm_, td_, par_, target, psi)
-      f = - j1_functional(target, sys_%gr, psi) - parameters_j2(par_)
-      if(oct%dump_intermediate) call iterator_write(iterator, par_)
-      call iteration_manager_direct(real(-f, REAL_PRECISION), par_, iterator)
-      call states_end(psi)
-    else
-      call parameters_copy(par_new, par_)
-      call f_striter(sys_, hm_, td_, par_new, j1)
-      delta = parameters_diff(par_, par_new)
-      f = - oct%eta * j1 + oct%delta * delta
-      if(oct%dump_intermediate) call iterator_write(iterator, par_)
-      call iteration_manager_direct(real(-f, REAL_PRECISION), par_, iterator, delta)
-      call parameters_end(par_new)
-    end if
-
-
-  end subroutine direct_opt_calc
-  ! ---------------------------------------------------------
-
-
-  ! ---------------------------------------------------------
-  subroutine direct_opt_write_info(iter, n, val, maxdx, x)
-    integer, intent(in) :: iter, n
-    REAL_DOUBLE, intent(in) :: val, maxdx
-    REAL_DOUBLE, intent(in) :: x(n)
-
-    FLOAT :: fluence, j1, j2, j
-
-    call parameters_set_theta(par_, x)
-    call parameters_theta_to_basis(par_)
-
-    j = - val
-    fluence = parameters_fluence(par_)
-    j2 = parameters_j2(par_)
-    j1 = j - j2
-
-    write(message(1), '(a,i5)') 'Direct optimization iteration #', iter
-    call messages_print_stress(stdout, trim(message(1)))
-
-    write(message(1), '(6x,a,f12.5)')    " => J1       = ", j1
-    write(message(2), '(6x,a,f12.5)')    " => J        = ", j
-    write(message(3), '(6x,a,f12.5)')    " => J2       = ", j2
-    write(message(4), '(6x,a,f12.5)')    " => Fluence  = ", fluence
-    write(message(5), '(6x,a,f12.5)')    " => Delta    = ", maxdx
-    call write_info(5)
-    call messages_print_stress(stdout)
-
-  end subroutine direct_opt_write_info
-  ! ---------------------------------------------------------
-
-
-  ! ---------------------------------------------------------
   subroutine opt_control_run(sys, hm)
     type(system_t), target,      intent(inout) :: sys
     type(hamiltonian_t), target, intent(inout) :: hm
@@ -164,8 +102,6 @@ contains
     type(oct_prop_t)               :: prop_chi, prop_psi;
 
     call push_sub('opt_control.opt_control_run')
-
-    call messages_devel_version('Optimal control theory')
 
     call io_mkdir('opt-control')
 
@@ -203,7 +139,7 @@ contains
 
     ! Initialization of the propagation_m module.
     call propagation_mod_init(td%max_iter, oct%eta, oct%delta, oct%number_checkpoints, &
-      (oct%algorithm == oct_algorithm_zbr98))
+      (oct%algorithm == oct_algorithm_zbr98), (oct%algorithm == oct_algorithm_cg) )
 
 
     ! If mixing is required, the mixing machinery has to be initialized -- inside the parameters module.
@@ -255,6 +191,10 @@ contains
         message(1) = "Info: Starting OCT iterations using scheme: STRAIGHT ITERATION"
         call write_info(1)
         call scheme_straight_iteration
+      case(oct_algorithm_cg)
+        message(1) = "Info: Starting OCT iterations using scheme: CONJUGATE GRADIENTS"
+        call write_info(1)
+        call scheme_cg
       case(oct_algorithm_direct)
         message(1) = "Info: Starting OCT iterations using scheme: DIRECT OPTIMIZATION (NELDER-MEAD)"
         call write_info(1)
@@ -287,7 +227,7 @@ contains
 
     ! ---------------------------------------------------------
     subroutine scheme_straight_iteration
-      call push_sub('opt_control.scheme_mt03')
+      call push_sub('opt_control.scheme_straight_iteration')
 
       call parameters_set_rep(par)
       call parameters_copy(par_new, par)
@@ -378,6 +318,7 @@ contains
       call parameters_end(par_prev)
       call pop_sub()
     end subroutine scheme_wg05
+    ! ---------------------------------------------------------
 
 
     ! ---------------------------------------------------------
@@ -417,6 +358,48 @@ contains
       call parameters_end(par_prev)
       call pop_sub()
     end subroutine scheme_zbr98
+    ! ---------------------------------------------------------
+
+
+    ! ---------------------------------------------------------
+    subroutine scheme_cg
+      integer :: dof, ierr, maxiter
+      REAL_DOUBLE :: step, minvalue
+      REAL_DOUBLE, allocatable :: x(:)
+      FLOAT :: f
+      type(states_t) :: psi
+      call push_sub('opt_control.scheme_cg')
+
+      call parameters_set_rep(par)
+
+      call states_copy(psi, initial_st)
+      call propagate_forward(sys, hm, td, par, target, psi)
+      f = - j1_functional(target, sys%gr, psi) - parameters_j2(par)
+      if(oct%dump_intermediate) call iterator_write(iterator, par)
+      call iteration_manager_direct(-f, par, iterator)
+      call states_end(psi)
+
+      ! Set the module pointers, so that the direct_opt_calc and direct_opt_write_info routines
+      ! can use them.
+      call parameters_copy(par_, par)
+      sys_      => sys
+      hm_       => hm
+      td_       => td
+
+      dof = parameters_dof(par)
+      ALLOCATE(x(dof), dof)
+      call parameters_get_theta(par, x)
+
+      step = oct%direct_step * M_PI
+      maxiter = oct_iterator_maxiter(iterator)
+
+      ierr = loct_minimize(MINMETHOD_BFGS2, dof, x(1), step, &
+           real(oct_iterator_tolerance(iterator), 8), real(oct_iterator_tolerance(iterator), 8), &
+           maxiter, opt_control_cg_calc, opt_control_cg_write_info, minvalue)
+
+      deallocate(x)
+      call pop_sub()
+    end subroutine scheme_cg
     ! ---------------------------------------------------------
 
 
@@ -461,7 +444,7 @@ contains
 
       ierr = loct_minimize_direct(MINMETHOD_NMSIMPLEX, dim, x(1), step,&
                real(oct_iterator_tolerance(iterator), 8), maxiter, &
-               direct_opt_calc, direct_opt_write_info, minvalue)
+               opt_control_direct_calc, opt_control_direct_write_info, minvalue)
 
       if(ierr.ne.0) then
         if(ierr <= 1024) then
@@ -488,7 +471,7 @@ contains
       REAL_DOUBLE, allocatable :: x(:), w(:), xl(:), xu(:)
       FLOAT :: f
       type(states_t) :: psi
-      call push_sub('opt_control.scheme_direct')
+      call push_sub('opt_control.scheme_newuoa')
 
       call parameters_set_rep(par)
 
@@ -525,7 +508,7 @@ contains
       sizeofw = (npt + 13)*(npt + dim) + 3 * dim*(dim + 3)/2 
       ALLOCATE(w(sizeofw), sizeofw)
       w = M_ZERO
-      call newuoa(dim, npt, x, rhobeg, rhoend, iprint, maxfun, w, direct_opt_calc)
+      call newuoa(dim, npt, x, rhobeg, rhoend, iprint, maxfun, w, opt_control_direct_calc)
 
       deallocate(x, xl, xu, w)
       call pop_sub()
@@ -727,6 +710,163 @@ contains
     call pop_sub()
   end subroutine f_iter
   ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  ! The following routines are to be called by C routines, which in turn
+  ! are called by the main procedure of this module, opt_control_run, which
+  ! is below.
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine opt_control_cg_calc(n, x, f, getgrad, df)
+    integer,           intent(in)  :: n
+    real(8),           intent(in)  :: x(n)
+    real(8),           intent(out) :: f
+    integer,           intent(in)  :: getgrad
+    real(8), optional, intent(out) :: df(n)
+
+    integer :: j
+    type(oct_control_parameters_t) :: par_new
+    FLOAT :: j1
+    FLOAT, allocatable :: theta(:)
+    type(states_t) :: psi
+
+    call push_sub("opt_control.opt_control_cg_calc")
+
+    if(getgrad .eq. 1) then
+      call parameters_set_theta(par_, x)
+      call parameters_theta_to_basis(par_)
+      call parameters_copy(par_new, par_)
+      call f_striter(sys_, hm_, td_, par_new, j1)
+      f = - j1 - parameters_j2(par_)
+      if(oct%dump_intermediate) call iterator_write(iterator, par_)
+      call iteration_manager_direct(real(-f, REAL_PRECISION), par_, iterator)
+      ALLOCATE(theta(n), n)
+      call parameters_set_rep(par_new)
+      call parameters_get_theta(par_new, theta)
+      forall(j = 1:n) df(j) =  M_TWO * parameters_alpha(par_, 1) * x(j) - M_TWO * theta(j)
+      deallocate(theta)
+      call parameters_end(par_new)
+    else
+      call parameters_set_theta(par_, x)
+      call parameters_theta_to_basis(par_)
+      call states_copy(psi, initial_st)
+      call propagate_forward(sys_, hm_, td_, par_, target, psi)
+      f = - j1_functional(target, sys_%gr, psi) - parameters_j2(par_)
+      call states_end(psi)
+      if(oct%dump_intermediate) call iterator_write(iterator, par_)
+      call iteration_manager_direct(real(-f, REAL_PRECISION), par_, iterator)
+    end if
+
+    call pop_sub()
+  end subroutine opt_control_cg_calc
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine opt_control_cg_write_info(iter, n, val, maxdx, maxdf, x)
+    integer,      intent(in) :: iter, n
+    REAL_DOUBLE,  intent(in) :: val, maxdx, maxdf
+    REAL_DOUBLE,  intent(in) :: x(n)
+
+    FLOAT :: fluence, j1, j2, j
+
+    call push_sub("opt_control.opt_control_cg_write_info")
+
+    j = - val
+    fluence = parameters_fluence(par_)
+    j2 = parameters_j2(par_)
+    j1 = j - j2
+
+    write(message(1), '(a,i5)') 'CG optimization iteration #', iter
+    call messages_print_stress(stdout, trim(message(1)))
+
+    write(message(1), '(6x,a,f12.5)')    " => J1       = ", j1
+    write(message(2), '(6x,a,f12.5)')    " => J        = ", j
+    write(message(3), '(6x,a,f12.5)')    " => J2       = ", j2
+    write(message(4), '(6x,a,f12.5)')    " => Fluence  = ", fluence
+    write(message(5), '(6x,a,f12.5)')    " => Delta    = ", maxdx
+    call write_info(5)
+    call messages_print_stress(stdout)
+
+    call pop_sub()
+  end subroutine opt_control_cg_write_info
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine opt_control_direct_calc(n, x, f)
+    integer, intent(in)  :: n
+    REAL_DOUBLE, intent(in)  :: x(n)
+    REAL_DOUBLE, intent(out) :: f
+
+    FLOAT :: j1, delta
+    type(states_t) :: psi
+    type(oct_control_parameters_t) :: par_new
+
+    call push_sub("opt_control.opt_control_direct_calc")
+
+    call parameters_set_theta(par_, x)
+    call parameters_theta_to_basis(par_)
+
+    if(oct%delta == M_ZERO) then
+      ! We only need the value of the target functional.
+      call states_copy(psi, initial_st)
+      call propagate_forward(sys_, hm_, td_, par_, target, psi)
+      f = - j1_functional(target, sys_%gr, psi) - parameters_j2(par_)
+      if(oct%dump_intermediate) call iterator_write(iterator, par_)
+      call iteration_manager_direct(real(-f, REAL_PRECISION), par_, iterator)
+      call states_end(psi)
+    else
+      call parameters_copy(par_new, par_)
+      call f_striter(sys_, hm_, td_, par_new, j1)
+      delta = parameters_diff(par_, par_new)
+      f = - oct%eta * j1 + oct%delta * delta
+      if(oct%dump_intermediate) call iterator_write(iterator, par_)
+      call iteration_manager_direct(real(-f, REAL_PRECISION), par_, iterator, delta)
+      call parameters_end(par_new)
+    end if
+
+    call pop_sub()
+  end subroutine opt_control_direct_calc
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine opt_control_direct_write_info(iter, n, val, maxdx, x)
+    integer, intent(in) :: iter, n
+    REAL_DOUBLE, intent(in) :: val, maxdx
+    REAL_DOUBLE, intent(in) :: x(n)
+
+    FLOAT :: fluence, j1, j2, j
+
+    call push_sub("opt_control.opt_control_direct_write_info")
+
+    call parameters_set_theta(par_, x)
+    call parameters_theta_to_basis(par_)
+
+    j = - val
+    fluence = parameters_fluence(par_)
+    j2 = parameters_j2(par_)
+    j1 = j - j2
+
+    write(message(1), '(a,i5)') 'Direct optimization iteration #', iter
+    call messages_print_stress(stdout, trim(message(1)))
+
+    write(message(1), '(6x,a,f12.5)')    " => J1       = ", j1
+    write(message(2), '(6x,a,f12.5)')    " => J        = ", j
+    write(message(3), '(6x,a,f12.5)')    " => J2       = ", j2
+    write(message(4), '(6x,a,f12.5)')    " => Fluence  = ", fluence
+    write(message(5), '(6x,a,f12.5)')    " => Delta    = ", maxdx
+    call write_info(5)
+    call messages_print_stress(stdout)
+
+    call pop_sub()
+  end subroutine opt_control_direct_write_info
+  ! ---------------------------------------------------------
+
 
 
 #include "check_input.F90"

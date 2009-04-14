@@ -1106,6 +1106,15 @@ contains
       call io_close(iunit)
     end select
 
+    ! Now, in case of a parametrized control function, the parameters.
+    if(par_common%representation .ne. ctr_real_time) then
+      iunit = io_open(trim(filename)//'/theta', action='write')
+      do j = 1, par%dof
+        write(iunit,'(i5,es20.8e3)') j, par%theta(j)
+      end do
+      call io_close(iunit)
+    end if
+
     call parameters_end(par)
     call pop_sub()
   end subroutine parameters_write
@@ -1313,26 +1322,29 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine parameters_update(cp, cpp, dir, iter, delta, eta, d1, dl, dq)
+  ! Update the control function(s) given in "cp", according to the formulae:
+  !
+  ! cp = (1-mu)*cpp + mu * d / (td_penalty - 2*dq)
+  ! ---------------------------------------------------------
+  subroutine parameters_update(cp, cpp, dir, iter, mu, d, dq)
     type(oct_control_parameters_t), intent(inout) :: cp
     type(oct_control_parameters_t), intent(in)    :: cpp
     character(len=1),               intent(in)    :: dir
     integer,                        intent(in)    :: iter
-    FLOAT,                          intent(in)    :: delta, eta
-    CMPLX,                          intent(in)    :: d1
-    CMPLX,                          intent(in)    :: dl(:), dq(:)
+    FLOAT,                          intent(in)    :: mu
+    FLOAT,                          intent(in)    :: d(:)
+    CMPLX,                          intent(in)    :: dq(:)
 
     FLOAT :: value
     integer :: j
-
+    
     call push_sub('parameters.parameters_update')
 
     select case(dir)
       case('f')
         do j = 1, cp%no_parameters
-          value = (M_ONE / parameters_alpha(cp, j)) * aimag(d1*dl(j)) / &
-           ( tdf(par_common%td_penalty(j), iter) - M_TWO*aimag(dq(j)) )
-          value = (M_ONE - delta)*tdf(cpp%f(j), iter) + delta * value
+          value = d(j) / ( tdf(par_common%td_penalty(j), iter) - M_TWO*aimag(dq(j)) )
+          value = (M_ONE - mu)*tdf(cpp%f(j), iter) + mu * value
           call tdf_set_numerical(cp%f(j), iter, value)
           if(iter+1 <= tdf_niter(cp%f(j)) + 1)  call tdf_set_numerical(cp%f(j), iter+1, value)
           if(iter+2 <= tdf_niter(cp%f(j)) + 1)  call tdf_set_numerical(cp%f(j), iter+2, value)
@@ -1340,9 +1352,8 @@ contains
 
       case('b')
         do j = 1, cp%no_parameters
-          value = (M_ONE / parameters_alpha(cp, j)) * aimag(d1*dl(j)) / &
-           ( tdf(par_common%td_penalty(j), iter+1) - M_TWO*aimag(dq(j)) ) 
-          value = (M_ONE - eta)*tdf(cpp%f(j), iter+1) + eta * value
+          value = d(j) / ( tdf(par_common%td_penalty(j), iter) - M_TWO*aimag(dq(j)) )
+          value = (M_ONE - mu)*tdf(cpp%f(j), iter+1) + mu * value
           call tdf_set_numerical(cp%f(j), iter+1, value)
           if(iter > 0) call tdf_set_numerical(cp%f(j), iter, value)
           if(iter-1 > 0) call tdf_set_numerical(cp%f(j), iter-1, value)

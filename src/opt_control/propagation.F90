@@ -79,7 +79,7 @@ module opt_control_propagation_m
   FLOAT   :: eta_
   FLOAT   :: delta_
   logical :: zbr98_
-  
+  logical :: gradients_
 
   contains
 
@@ -91,17 +91,20 @@ module opt_control_propagation_m
   ! run.
   ! There is no need for any propagation_mod_close.
   ! ---------------------------------------------------------
-  subroutine propagation_mod_init(niter, eta, delta, number_checkpoints, zbr98)
+  subroutine propagation_mod_init(niter, eta, delta, number_checkpoints, zbr98, gradients)
     integer, intent(in) :: niter
     FLOAT,   intent(in) :: eta
     FLOAT,   intent(in) :: delta
     integer, intent(in) :: number_checkpoints
     logical, intent(in) :: zbr98
+    logical, intent(in) :: gradients
+    ASSERT(.not. (zbr98 .and. gradients) )
     niter_              = niter
     eta_                = eta
     delta_              = delta
     number_checkpoints_ = number_checkpoints
     zbr98_              = zbr98
+    gradients_          = gradients
   end subroutine propagation_mod_init
   ! ---------------------------------------------------------
 
@@ -559,7 +562,7 @@ module opt_control_propagation_m
         do p = 1, psi%nst
           oppsi%zpsi(:, :, p, ik) = M_z0
           call zvlaser_operator_linear(hm%ep%lasers(j), gr, hm%d, psi%zpsi(:, :, p, ik), &
-                                       oppsi%zpsi(:, :, p, ik), ik, hm%ep%gyromagnetic_ratio, hm%ep%a_static)
+            oppsi%zpsi(:, :, p, ik), ik, hm%ep%gyromagnetic_ratio, hm%ep%a_static)
           dl(j) = dl(j) + psi%occ(p, ik) * zmf_dotp(gr%mesh, psi%d%dim, chi%zpsi(:, :, p, ik), &
             oppsi%zpsi(:, :, p, ik))
         end do
@@ -573,8 +576,10 @@ module opt_control_propagation_m
         do ik = 1, psi%d%nik
           do p = 1, psi%nst
             oppsi%zpsi(:, :, p, ik) = M_z0
-            call zvlaser_operator_quadratic(hm%ep%lasers(j), gr, hm%d, psi%zpsi(:, :, p, ik), oppsi%zpsi(:, :, p, ik))
-            dq(j) = dq(j) + psi%occ(p, ik)*zmf_dotp(gr%mesh, psi%d%dim, chi%zpsi(:, :, p, ik), oppsi%zpsi(:, :, p, ik))
+            call zvlaser_operator_quadratic(hm%ep%lasers(j), gr, hm%d, &
+              psi%zpsi(:, :, p, ik), oppsi%zpsi(:, :, p, ik))
+            dq(j) = dq(j) + psi%occ(p, ik)*zmf_dotp(gr%mesh, psi%d%dim, &
+              chi%zpsi(:, :, p, ik), oppsi%zpsi(:, :, p, ik))
           end do
         end do
         call states_end(oppsi)
@@ -615,7 +620,8 @@ module opt_control_propagation_m
 
     CMPLX :: d1
     CMPLX, allocatable  :: dl(:), dq(:)
-    integer :: no_parameters
+    FLOAT, allocatable :: d(:)
+    integer :: j, no_parameters
 
     call push_sub('propagation.update_field')
 
@@ -623,13 +629,26 @@ module opt_control_propagation_m
     
     ALLOCATE(dl(no_parameters), no_parameters)
     ALLOCATE(dq(no_parameters), no_parameters)
+    ALLOCATE(d(no_parameters), no_parameters)
 
     call calculate_g(gr, hm, psi, chi, dl, dq)
     d1 = M_z1
-    if(zbr98_) d1 = zstates_mpdotp(gr%mesh, psi, chi)
-    call parameters_update(cp, cpp, dir, iter, delta_, eta_, d1, dl, dq)
+    if(zbr98_) then
+      d1 = zstates_mpdotp(gr%mesh, psi, chi)
+      forall(j = 1:no_parameters) d(j) = aimag(d1*dl(j)) / parameters_alpha(cp, j) 
+    elseif(gradients_) then
+      forall(j = 1:no_parameters) d(j) = aimag(dl(j))
+    else
+      forall(j = 1:no_parameters) d(j) = aimag(dl(j)) / parameters_alpha(cp, j) 
+    end if
 
-    deallocate(dl, dq)
+    if(dir == 'f') then
+      call parameters_update(cp, cpp, dir, iter, delta_, d, dq)
+    else
+      call parameters_update(cp, cpp, dir, iter, eta_, d, dq)
+    end if
+
+    deallocate(d, dl, dq)
     call pop_sub()
   end subroutine update_field
   ! ---------------------------------------------------------

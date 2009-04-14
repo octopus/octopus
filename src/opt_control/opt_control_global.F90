@@ -62,8 +62,9 @@ module opt_control_global_m
     oct_algorithm_mt03               = 4,       &
     oct_algorithm_krotov             = 5,       &
     oct_algorithm_str_iter           = 6,       &
-    oct_algorithm_direct             = 7,       &
-    oct_algorithm_newuoa             = 8
+    oct_algorithm_cg                 = 7,       &
+    oct_algorithm_direct             = 8,       &
+    oct_algorithm_newuoa             = 9
 
   contains
 
@@ -143,13 +144,15 @@ module opt_control_global_m
     !% iteration, both with the same control field. An output field is calculated with the
     !% resulting wave functions. Note that this scheme typically does not converge, unless
     !% some mixing ("OCTMixing = yes") is used.
-    !%Option oct_algorithm_direct 7
+    !%Option oct_algorithm_cg 7
+    !% Conjugate-gradients, as implemented in the GNU GSL library.
+    !%Option oct_algorithm_direct 8
     !% This is a "direct" optimization scheme. This means that we do not make use of the
     !% "usual" QOCT equations (backward-forward propagations, etc), but we use some gradient-free
     !% maximization algorithm for the function that we want to optimize. In this case, the
     !% maximization algorithm is the Nelder-Mead algorithm as implemeted in the GSL. The function
     !% values are obtained by successive forward propagations.
-    !%Option oct_algorithm_newuoa 8
+    !%Option oct_algorithm_newuoa 9
     !% This is exactly the same as oct_algorithm_direct, except in this case the maximization
     !% algorithm is the so-called NEWUOA algorithm [M. J. D. Powell, IMA J. Numer. Analysis
     !% 28, 649-664 (2008)].
@@ -173,6 +176,8 @@ module opt_control_global_m
     case(oct_algorithm_krotov)
       oct%delta = M_ONE; oct%eta = M_ZERO
     case(oct_algorithm_str_iter)
+      oct%delta = M_ZERO; oct%eta = M_ONE
+    case(oct_algorithm_cg)
       oct%delta = M_ZERO; oct%eta = M_ONE
     case(oct_algorithm_direct)
       call loct_parse_float(datasets_check('OCTEta'), M_ONE, oct%eta)
