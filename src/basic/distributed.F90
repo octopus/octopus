@@ -186,9 +186,9 @@ contains
     
     call push_sub('distributed.distributed_end')
 
-    if(associated(this%node))  deallocate(this%node)
-    if(associated(this%range)) deallocate(this%range)
-    if(associated(this%num))   deallocate(this%num)
+    SAFE_DEALLOCATE_P(this%node)
+    SAFE_DEALLOCATE_P(this%range)
+    SAFE_DEALLOCATE_P(this%num)
 
     nullify(this%node, this%range, this%num)
 

@@ -788,8 +788,8 @@ contains
     call ob_mem_end(ob)
     call ob_src_end(ob)
 
-    DEALLOC(ob%src_mem_u)
-    DEALLOC(ob%st_intface)
+    DEALLOCATE(ob%src_mem_u)
+    DEALLOCATE(ob%st_intface)
 
     call pop_sub()
   end subroutine ob_rti_end

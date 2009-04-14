@@ -284,15 +284,15 @@ contains
     call push_sub('casida.casida_type_end')
 
     ASSERT(associated(cas%pair))
-    DEALLOC(cas%pair)
-    DEALLOC(cas%mat)
-    DEALLOC(cas%tm)
-    DEALLOC(cas%s)
-    DEALLOC(cas%f)
-    DEALLOC(cas%w)
+    SAFE_DEALLOCATE_P(cas%pair)
+    SAFE_DEALLOCATE_P(cas%mat)
+    SAFE_DEALLOCATE_P(cas%tm)
+    SAFE_DEALLOCATE_P(cas%s)
+    SAFE_DEALLOCATE_P(cas%f)
+    SAFE_DEALLOCATE_P(cas%w)
 
-    DEALLOC(cas%n_occ)
-    DEALLOC(cas%n_unocc)
+    SAFE_DEALLOCATE_P(cas%n_occ)
+    SAFE_DEALLOCATE_P(cas%n_unocc)
 
     call pop_sub()
   end subroutine casida_type_end

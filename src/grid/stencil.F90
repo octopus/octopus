@@ -72,7 +72,7 @@ contains
   subroutine stencil_end(this)
     type(stencil_t), intent(inout) :: this
 
-    DEALLOC(this%points)   
+    SAFE_DEALLOCATE_P(this%points)   
   end subroutine stencil_end
 
   

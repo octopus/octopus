@@ -391,7 +391,7 @@ contains
         n = n/mc%group_sizes(k)
       end do
 
-      deallocate(n_group_max)
+      SAFE_DEALLOCATE_A(n_group_max)
 
     end subroutine assign_nodes
 
@@ -594,8 +594,9 @@ contains
       call MPI_Comm_free(mc%dom_st_comm, mpi_err)
 #endif
       ! Deallocate the rest of the arrays.
-      deallocate(mc%group_sizes, mc%group_comm, mc%who_am_i)
-      nullify(mc%group_sizes, mc%group_comm, mc%who_am_i)
+      SAFE_DEALLOCATE_P(mc%group_sizes)
+      SAFE_DEALLOCATE_P(mc%group_comm)
+      SAFE_DEALLOCATE_P(mc%who_am_i)
     end if
 
     call pop_sub()
@@ -797,9 +798,9 @@ contains
     subroutine topology_end(this)
       type(topology_t), intent(inout) :: this
 
-      deallocate(this%groups)
-      deallocate(this%distance)
-      deallocate(this%gsize)
+      SAFE_DEALLOCATE_P(this%groups)
+      SAFE_DEALLOCATE_P(this%distance)
+      SAFE_DEALLOCATE_P(this%gsize)
       
     end subroutine topology_end
 

@@ -31,6 +31,7 @@ module mesh_m
   use messages_m
   use multicomm_m
   use mpi_m
+  use loct_m
   use loct_parser_m
   use par_vec_m
   use profiling_m
@@ -610,14 +611,14 @@ contains
       if(m%idx%sb%box_shape == HYPERCUBE) call hypercube_end(m%idx%hypercube)
     end if
 
-    DEALLOC(m%resolution)
-    DEALLOC(m%idx%lxyz)
-    DEALLOC(m%idx%lxyz_inv)
-    DEALLOC(m%x)
-    DEALLOC(m%vol_pp)
+    SAFE_DEALLOCATE_P(m%resolution)
+    SAFE_DEALLOCATE_P(m%idx%lxyz)
+    SAFE_DEALLOCATE_P(m%idx%lxyz_inv)
+    SAFE_DEALLOCATE_P(m%x)
+    SAFE_DEALLOCATE_P(m%vol_pp)
 
     if(m%parallel_in_domains) then
-      DEALLOC(m%x_global)
+      SAFE_DEALLOCATE_P(m%x_global)
 #if defined(HAVE_MPI)
       call vec_end(m%vp)
       if(simul_box_is_periodic(m%sb)) then
@@ -640,14 +641,14 @@ contains
 #endif
     end if
 
-    DEALLOC(m%per_points)
-    DEALLOC(m%per_map)
+    SAFE_DEALLOCATE_P(m%per_points)
+    SAFE_DEALLOCATE_P(m%per_map)
 
     if(associated(m%lead_unit_cell)) then
       do il = 1, NLEADS
         call mesh_end(m%lead_unit_cell(il), .true.)
       end do
-      nullify(m%lead_unit_cell)
+      SAFE_DEALLOCATE_P(m%lead_unit_cell)
     end if
     
     call pop_sub()

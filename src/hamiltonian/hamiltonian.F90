@@ -664,32 +664,32 @@ contains
       call em_field_end(hm%total(ispin))
     end do
 
-    DEALLOC(hm%total)
+    SAFE_DEALLOCATE_P(hm%total)
 
     if(hm%multigrid_initialized) then
       call gridhier_end(hm%coarse_v, gr%mgrid)
     end if
 
-    DEALLOC(hm%phase)
-    DEALLOC(hm%vhartree)
-    DEALLOC(hm%vhxc)
-    DEALLOC(hm%vxc)
-    DEALLOC(hm%axc)
-    DEALLOC(hm%a_ind)
-    DEALLOC(hm%b_ind)
+    SAFE_DEALLOCATE_P(hm%phase)
+    SAFE_DEALLOCATE_P(hm%vhartree)
+    SAFE_DEALLOCATE_P(hm%vhxc)
+    SAFE_DEALLOCATE_P(hm%vxc)
+    SAFE_DEALLOCATE_P(hm%axc)
+    SAFE_DEALLOCATE_P(hm%a_ind)
+    SAFE_DEALLOCATE_P(hm%b_ind)
 
     if(iand(hm%xc_family, XC_FAMILY_MGGA).ne.0) then
-      DEALLOC(hm%vtau)
+      SAFE_DEALLOCATE_P(hm%vtau)
     end if
 
     call epot_end(hm%ep, gr, geo)
 
-    DEALLOC(hm%ab_pot)
+    SAFE_DEALLOCATE_P(hm%ab_pot)
 
-    DEALLOC(hm%lead_h_diag)
-    DEALLOC(hm%lead_h_offdiag)
-    DEALLOC(hm%lead_vks)
-    DEALLOC(hm%lead_vhartree)
+    SAFE_DEALLOCATE_P(hm%lead_h_diag)
+    SAFE_DEALLOCATE_P(hm%lead_h_offdiag)
+    SAFE_DEALLOCATE_P(hm%lead_vks)
+    SAFE_DEALLOCATE_P(hm%lead_vhartree)
 
     call states_dim_end(hm%d)
     call scissor_end(hm%scissor)

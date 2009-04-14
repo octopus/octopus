@@ -136,17 +136,17 @@ contains
 
     call push_sub('linear_response.lr_dealloc')
 
-    DEALLOC(lr%ddl_psi)
-    DEALLOC(lr%zdl_psi)
+    SAFE_DEALLOCATE_P(lr%ddl_psi)
+    SAFE_DEALLOCATE_P(lr%zdl_psi)
 
-    DEALLOC(lr%ddl_rho)
-    DEALLOC(lr%zdl_rho)
+    SAFE_DEALLOCATE_P(lr%ddl_rho)
+    SAFE_DEALLOCATE_P(lr%zdl_rho)
 
-    DEALLOC(lr%dl_j)
-    DEALLOC(lr%ddl_de)
-    DEALLOC(lr%ddl_elf)
-    DEALLOC(lr%zdl_de)
-    DEALLOC(lr%zdl_elf)
+    SAFE_DEALLOCATE_P(lr%dl_j)
+    SAFE_DEALLOCATE_P(lr%ddl_de)
+    SAFE_DEALLOCATE_P(lr%ddl_elf)
+    SAFE_DEALLOCATE_P(lr%zdl_de)
+    SAFE_DEALLOCATE_P(lr%zdl_elf)
 
     call pop_sub()
 

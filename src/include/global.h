@@ -47,13 +47,17 @@
 
 #if defined(LONG_LINES)
 #  define ALLOCATE(x, size) allocate(x, stat=global_alloc_err); \
-     if(in_profiling_mode)  call profiling_memory(__FILE__, __LINE__); \
+     if(in_profiling_mode)  call profiling_memory_allocate(__FILE__, __LINE__); \
      if(global_alloc_err.ne.0) call alloc_error((size), __FILE__, __LINE__)
+
+#  define DEALLOCATE(x) deallocate(x, stat=global_alloc_err); \
+     if(in_profiling_mode)  call profiling_memory_deallocate(__FILE__, __LINE__); \
+     if(global_alloc_err.ne.0) call alloc_error(-1, __FILE__, __LINE__)
 #else
 #  define ALLOCATE(x, size) \
      allocate(x, stat=global_alloc_err)                 \newline \
      if(in_profiling_mode) then                         \newline \
-       call profiling_memory(&                          \newline \
+       call profiling_memory_allocate(&                 \newline \
   __FILE__, &                                           \newline \
   __LINE__)                                             \newline \
      end if                                             \newline \
@@ -63,9 +67,24 @@
   __LINE__)                                             \newline \
      end if                                             \
      CARDINAL
+
+#  define DEALLOCATE(x) \
+     deallocate(x, stat=global_alloc_err)               \newline \
+     if(in_profiling_mode) then                         \newline \
+       call profiling_memory_deallocate(&               \newline \
+  __FILE__, &                                           \newline \
+  __LINE__)                                             \newline \
+     end if                                             \newline \
+     if(global_alloc_err.ne.0) then                     \newline \
+       call alloc_error(-1, &                           \newline \
+  __FILE__, &                                           \newline \
+  __LINE__)                                             \newline \
+     end if                                             \
+     CARDINAL
 #endif
 
-#define DEALLOC(x) if(associated(x)) then; deallocate(x); nullify(x); end if
+#define SAFE_DEALLOCATE_P(x) if(associated(x)) then; DEALLOCATE(x); nullify(x); end if
+#define SAFE_DEALLOCATE_A(x) if(allocated(x)) then; DEALLOCATE(x); end if
 
 #define REAL_DOUBLE real(8)
 #define REAL_SINGLE real(4)

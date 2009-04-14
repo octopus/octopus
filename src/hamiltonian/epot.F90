@@ -381,7 +381,7 @@ contains
 
     call push_sub('epot.epot_end')
 
-    DEALLOC(ep%local_potential)
+    SAFE_DEALLOCATE_P(ep%local_potential)
 
     deallocate(ep%fii)
 

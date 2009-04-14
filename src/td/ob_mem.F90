@@ -989,10 +989,10 @@ contains
 
     call push_sub('ob_mem.ob_mem_end')
 
-    DEALLOC(ob%mem_coeff)
-    DEALLOC(ob%mem_sp_coeff)
-    DEALLOC(ob%sp2full_map)
-    DEALLOC(ob%mem_s)
+    DEALLOCATE(ob%mem_coeff)
+    DEALLOCATE(ob%mem_sp_coeff)
+    DEALLOCATE(ob%sp2full_map)
+    DEALLOCATE(ob%mem_s)
 
     call pop_sub()
   end subroutine ob_mem_end

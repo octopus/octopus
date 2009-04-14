@@ -1023,21 +1023,21 @@ contains
     call push_sub('nl_operator.nl_operator_end')
 
     if(op%m%parallel_in_domains) then
-      DEALLOC(op%inner%imin)
-      DEALLOC(op%inner%imax)
-      DEALLOC(op%inner%ri)
-      DEALLOC(op%outer%imin)
-      DEALLOC(op%outer%imax)
-      DEALLOC(op%outer%ri)
+      SAFE_DEALLOCATE_P(op%inner%imin)
+      SAFE_DEALLOCATE_P(op%inner%imax)
+      SAFE_DEALLOCATE_P(op%inner%ri)
+      SAFE_DEALLOCATE_P(op%outer%imin)
+      SAFE_DEALLOCATE_P(op%outer%imax)
+      SAFE_DEALLOCATE_P(op%outer%ri)
     end if
 
-    DEALLOC(op%i)
-    DEALLOC(op%w_re)
-    DEALLOC(op%w_im)
+    SAFE_DEALLOCATE_P(op%i)
+    SAFE_DEALLOCATE_P(op%w_re)
+    SAFE_DEALLOCATE_P(op%w_im)
 
-    DEALLOC(op%ri)
-    DEALLOC(op%rimap)
-    DEALLOC(op%rimap_inv)
+    SAFE_DEALLOCATE_P(op%ri)
+    SAFE_DEALLOCATE_P(op%rimap)
+    SAFE_DEALLOCATE_P(op%rimap_inv)
 
     call stencil_end(op%stencil)
 

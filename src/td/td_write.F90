@@ -32,6 +32,7 @@ module td_write_m
   use io_m
   use ion_dynamics_m
   use lasers_m
+  use loct_m
   use loct_parser_m
   use magnetic_m
   use mesh_function_m
@@ -216,13 +217,13 @@ contains
       call states_copy(w%gs_st, st)
 
       ! clean up all the stuff we have to reallocate
-      DEALLOC(w%gs_st%zpsi)
-      DEALLOC(w%gs_st%occ)
-      DEALLOC(w%gs_st%eigenval)
-      DEALLOC(w%gs_st%momentum)
-      DEALLOC(w%gs_st%node)
+      SAFE_DEALLOCATE_P(w%gs_st%zpsi)
+      SAFE_DEALLOCATE_P(w%gs_st%occ)
+      SAFE_DEALLOCATE_P(w%gs_st%eigenval)
+      SAFE_DEALLOCATE_P(w%gs_st%momentum)
+      SAFE_DEALLOCATE_P(w%gs_st%node)
       if(w%gs_st%d%ispin == SPINORS) then
-        DEALLOC(w%gs_st%spin)
+        SAFE_DEALLOCATE_P(w%gs_st%spin)
       end if
 
       call states_look (trim(restart_dir)//'gs', gr%mesh%mpi_grp, i, j, w%gs_st%nst, ierr)

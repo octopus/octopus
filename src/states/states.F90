@@ -543,8 +543,8 @@ contains
     call push_sub('states.states_deallocate_free_states')
 
     if(gr%sb%open_boundaries) then
-      DEALLOC(st%zphi)
-      DEALLOC(st%ob_rho)
+      SAFE_DEALLOCATE_P(st%zphi)
+      SAFE_DEALLOCATE_P(st%ob_rho)
     end if
 
     call pop_sub()
@@ -925,39 +925,39 @@ contains
 
     call push_sub('states.states_end')
     
-    DEALLOC(st%dpsi)
-    DEALLOC(st%zpsi)
-    DEALLOC(st%user_def_states)
+    SAFE_DEALLOCATE_P(st%dpsi)
+    SAFE_DEALLOCATE_P(st%zpsi)
+    SAFE_DEALLOCATE_P(st%user_def_states)
 
-    DEALLOC(st%rho)
-    DEALLOC(st%j)
-    DEALLOC(st%rho_core)
-    DEALLOC(st%frozen_rho)
-    DEALLOC(st%eigenval)
+    SAFE_DEALLOCATE_P(st%rho)
+    SAFE_DEALLOCATE_P(st%j)
+    SAFE_DEALLOCATE_P(st%rho_core)
+    SAFE_DEALLOCATE_P(st%frozen_rho)
+    SAFE_DEALLOCATE_P(st%eigenval)
 
-    DEALLOC(st%occ)
-    DEALLOC(st%spin)
-    DEALLOC(st%momentum)
+    SAFE_DEALLOCATE_P(st%occ)
+    SAFE_DEALLOCATE_P(st%spin)
+    SAFE_DEALLOCATE_P(st%momentum)
 
-    DEALLOC(st%node)
-    DEALLOC(st%st_range)
-    DEALLOC(st%st_num)
+    SAFE_DEALLOCATE_P(st%node)
+    SAFE_DEALLOCATE_P(st%st_range)
+    SAFE_DEALLOCATE_P(st%st_num)
 
     if(st%parallel_in_states) then
-      DEALLOC(st%ap%schedule)
+      SAFE_DEALLOCATE_P(st%ap%schedule)
     end if
 
-    DEALLOC(st%zphi)
+    SAFE_DEALLOCATE_P(st%zphi)
 
     call states_dim_end(st%d)
     if(st%open_boundaries) then
       call states_dim_end(st%ob_d)
-      DEALLOC(st%ob_eigenval)
-      DEALLOC(st%ob_occ)
-      DEALLOC(st%ob_green)
+      SAFE_DEALLOCATE_P(st%ob_eigenval)
+      SAFE_DEALLOCATE_P(st%ob_occ)
+      SAFE_DEALLOCATE_P(st%ob_green)
     end if
 
-    DEALLOC(st%user_def_states)
+    SAFE_DEALLOCATE_P(st%user_def_states)
 
     call pop_sub()
   end subroutine states_end

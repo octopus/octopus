@@ -40,7 +40,8 @@ module profiling_m
     profiling_out,                      &
     profiling_count_operations,         &
     profiling_count_transfers,          &
-    profiling_memory,                   &
+    profiling_memory_allocate,          &
+    profiling_memory_deallocate,        &
     profiling_output
 
 
@@ -197,10 +198,7 @@ contains
     prof_space = (pmode == 3)
 
     ! initialize memory profiling
-
-
     if(prof_space) then
-
       mem_prof_count = 0
       start_time = loct_clock()
       
@@ -218,7 +216,6 @@ contains
     end if
 
     ! initialize time profiling
-
     last_profile = 0
     last_mem = 0
 
@@ -266,7 +263,14 @@ contains
       call profile_end(profile_list(ii)%p)
     end do
 
-    if(prof_space) call io_close(mem_iunit)
+    if(prof_space) then
+      call io_close(mem_iunit)
+
+      if(mem_prof_count.ne.0) then
+        write(message(1), '(a,i10,a)') "Not all memory was deallocated (", mem_prof_count, " times)";
+        call write_warning(1)
+      end if
+    end if
 
   end subroutine profiling_end
 
@@ -559,28 +563,48 @@ contains
     call pop_sub()
   end subroutine profiling_output
 
-  subroutine profiling_memory(file, line)
+
+  !-----------------------------------------------------
+  subroutine profiling_memory_allocate(file, line)
     character(len=*), intent(in) :: file
     integer,          intent(in) :: line
-
-    ! this code is not thread safe, so we disable it for OpenMP
-#ifndef USE_OMP
 
     integer(8) :: mem
 
     if(prof_space) then
-      
       mem = get_memory_usage()
       if(mem /= last_mem) then 
-        write(mem_iunit, '(i16, f16.6, i32, a, i16)') mem_prof_count, loct_clock() - start_time, mem, " "//file, line
+        write(mem_iunit, '(a2, i16, f16.6, i32, a, i16)') 'A ', &
+          mem_prof_count, loct_clock() - start_time, mem, " "//file, line
         mem_prof_count = mem_prof_count + 1
         last_mem = mem
       end if
 
     end if
-#endif
 
-  end subroutine profiling_memory
+  end subroutine profiling_memory_allocate
+
+
+  !-----------------------------------------------------
+  subroutine profiling_memory_deallocate(file, line)
+    character(len=*), intent(in) :: file
+    integer,          intent(in) :: line
+
+    integer(8) :: mem
+
+    if(prof_space) then
+      mem = get_memory_usage()
+      if(mem /= last_mem) then 
+        write(mem_iunit, '(a2, i16, f16.6, i32, a, i16)') 'D ', &
+          mem_prof_count, loct_clock() - start_time, mem, " "//file, line
+        mem_prof_count = mem_prof_count - 1
+        last_mem = mem
+      end if
+    end if
+
+  end subroutine profiling_memory_deallocate
+
+  
 
 end module profiling_m
 

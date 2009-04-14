@@ -32,6 +32,7 @@ module mesh_init_m
   use messages_m
   use multicomm_m
   use mpi_m
+  use loct_m
   use loct_parser_m
   use par_vec_m
   use profiling_m
@@ -362,8 +363,8 @@ subroutine mesh_init_stage_3(mesh, geo, cv, stencil, mpi_grp, parent)
   call mesh_get_vol_pp(mesh%sb)
 
   ! these large arrays were allocated in mesh_init_1, and are no longer needed
-  DEALLOC(mesh%idx%Lxyz_tmp)
-  DEALLOC(mesh%x_tmp)
+  SAFE_DEALLOCATE_P(mesh%idx%Lxyz_tmp)
+  SAFE_DEALLOCATE_P(mesh%x_tmp)
 
   call mesh_pbc_init()
 
