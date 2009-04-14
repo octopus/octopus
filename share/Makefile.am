@@ -21,11 +21,14 @@
 
 SUBDIRS = PP recipes util samples
 
-sharedir = $(pkgdatadir)
-dist_share_DATA = logo variables varinfo filter_mask.data
+dta1dir = $(pkgdatadir)
+dist_dta1_DATA = logo filter_mask.data
+
+dta2dir = $(pkgdatadir)
+dist_dta2_DATA = variables varinfo
 
 CLEANFILES = variables varinfo varinfo_orig
-EXTRA_DIST = variables.local logo filter_mask.data
+EXTRA_DIST = variables.local
 
 varinfo: RUN_SCRIPT
 
@@ -35,7 +38,7 @@ RUN_SCRIPT:
 	$(top_srcdir)/build/mk_varinfo.pl -s $(top_srcdir) -b $(top_builddir)
 
 check:
-	@for f in $(dist_share_DATA); do \
+	@for f in $(dist_dta_DATA); do \
 	  if [ ! -e $$f -o $$f -ot $(srcdir)/$$f ]; then \
 	    cp $(srcdir)/$$f $$f; \
 	  fi \
