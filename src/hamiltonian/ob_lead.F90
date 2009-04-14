@@ -250,7 +250,9 @@ contains
 
     call push_sub('ob_lead.lead_td_pot')
 
-    ALLOCATE(pot_im(0:n_steps+1), n_steps+2)
+    zero(1) = M_ZERO
+
+    ALLOCATE(pot_im(0:n_steps + 1), n_steps + 2)
 
     ! Calculate td potential.
     do il = 1, NLEADS
@@ -258,7 +260,7 @@ contains
       call conv_to_c_string(tmp_c_string)
 
       td_pot(0, il) = M_ZERO
-      do it = 1, n_steps+1
+      do it = 1, n_steps + 1
         t = it*tstep
         call loct_parse_expression(td_pot(it, il), pot_im(it), 1, zero, zero(1), t, tmp_c_string)
       end do
