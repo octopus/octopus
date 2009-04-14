@@ -9,6 +9,8 @@ DebugLevel = 0
 
 CalculationMode = unocc
 
+DevelVersion = yes
+
 NumberUnoccStates = 1
 
 Dimensions = 1

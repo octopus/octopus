@@ -777,6 +777,9 @@ contains
       if(st%d%nspin == 2) ns = 2
 
       if(mpi_grp_is_root(mpi_world)) then
+        write(iunit,'(a)') 'Warning: When non-local pseudopotentials are used '
+        write(iunit,'(a)') '         the numbers below may be meaningless.    '
+        write(iunit,'(a)') '                                                  '
         write(iunit,'(a)') 'Angular Momentum of the KS states [dimensionless]:'
         if (st%d%nik > ns) then
           message(1) = 'Kpoints [' // trim(units_out%length%abbrev) // '^-1]'

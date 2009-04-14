@@ -2,6 +2,7 @@
 # $Id$
 
 CalculationMode = opt_control
+DevelVersion = yes
 
 RestartDir = "excited_states_restart"
 

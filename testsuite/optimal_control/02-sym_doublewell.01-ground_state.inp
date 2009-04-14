@@ -5,6 +5,10 @@
 #  V(x) = 1/64*(x)^4-1/4*(x)^2+1/256*(x)^3
 # are calculated. 
 
+CalculationMode = gs
+
+DevelVersion = yes
+
 DebugLevel = 0
 
 Dimensions = 1

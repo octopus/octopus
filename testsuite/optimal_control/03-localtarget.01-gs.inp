@@ -9,6 +9,8 @@ DebugLevel = 0
 
 CalculationMode = gs
 
+DevelVersion = yes
+
 Dimensions = 1
 fromScratch = yes
 

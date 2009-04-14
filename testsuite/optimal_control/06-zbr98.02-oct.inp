@@ -1,7 +1,8 @@
 CalculationMode = opt_control
+DevelVersion = yes
+
 FromScratch = yes
 Dimensions = 1
-
 
 # The Morse potential is given by:
 # V(r) = D{exp[-beta*(r-r0)]-1}**2 - D

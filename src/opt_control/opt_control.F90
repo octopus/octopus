@@ -165,6 +165,8 @@ contains
 
     call push_sub('opt_control.opt_control_run')
 
+    call messages_devel_version('Optimal control theory')
+
     call io_mkdir('opt-control')
 
 

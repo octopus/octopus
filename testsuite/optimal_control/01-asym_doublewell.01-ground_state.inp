@@ -13,6 +13,8 @@ gs              | unocc
 1               | 2
 %
 
+DevelVersion = yes
+
 excited_states_RestartDir = "ground_state_restart"
 
 Dimensions = 1
