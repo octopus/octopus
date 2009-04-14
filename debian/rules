@@ -47,8 +47,8 @@ build-stamp:  config.status
 	./configure \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info \
-	--with-blas="/usr/lib/atlas/libblas.a -latlas -lg2c" \
-	--disable-gdlib --with-fft=fftw2
+	--with-blas="/usr/lib/atlas/libblas.a -latlas" \
+	--disable-gdlib
 
   # Add here commands to compile the package.
 	$(MAKE)
