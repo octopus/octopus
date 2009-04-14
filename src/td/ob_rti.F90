@@ -64,9 +64,9 @@ module ob_rti_m
   ! Pointers for the h_eff_backward(t) operator for the iterative linear solver.
   type(hamiltonian_t), pointer :: hm_p
   type(grid_t), pointer        :: gr_p
-  CMPLX, pointer               :: mem_p(:, :, :), sp_mem_p(:, :), mem_s_p(:, :, :, :), green_l_p(:, :, :)
+  CMPLX, pointer               :: mem_p(:, :, :), sp_mem_p(:, :), mem_s_p(:, :, :, :)
   type(interface_t), pointer   :: intf_p(:)
-  FLOAT, pointer               :: dt_p, t_p, energy_p
+  FLOAT, pointer               :: dt_p, t_p
   integer, pointer             :: ist_p, ik_p, mem_type_p, mapping_p(:)
   
 contains
@@ -201,12 +201,10 @@ contains
     FLOAT, target,               intent(in)    :: t
     integer,                     intent(in)    :: timestep
 
-    integer            :: il, it, m, cg_iter, j, order, ierr
-    integer, target    :: ist, ik, inp
-    CMPLX              :: factor, alpha, fac, f0
+    integer            :: il, it, m, cg_iter, order, inp
+    integer, target    :: ist, ik
+    CMPLX              :: factor, fac, f0
     CMPLX, allocatable :: tmp(:, :), tmp_wf(:), tmp_mem(:, :)
-    CMPLX, allocatable :: ext_wf(:, :, :, :) ! (gr%mesh%np+2*np, ndim, nst, nik)
-    character(len=100) :: filename
     FLOAT              :: dres
     
     call push_sub('ob_rti.cn_src_mem_dt')
@@ -714,10 +712,10 @@ contains
     CMPLX, intent(in)  :: x(:)
     CMPLX, intent(out) :: y(:)
 
-    integer            :: np
+!    integer            :: np
 
     call push_sub('ob_rti.preconditioner')
-    np = gr_p%mesh%np
+!    np = gr_p%mesh%np
 
     y(:) = x(:) ! no preconditioner
 !     AL LOCATE(diag(np, 1), np)

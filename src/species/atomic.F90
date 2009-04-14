@@ -647,7 +647,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
   REAL_DOUBLE :: a, b, e, z, rmax, dr
   integer :: i,n,l,nprin,nnode,ncor,n1,n2,niter,nt
-  integer :: ierr
+  integer, intent(out) :: ierr
 
 
   REAL_DOUBLE, dimension(n) :: h, s, g, y

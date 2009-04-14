@@ -248,7 +248,7 @@ contains
     
 
     character(len=3) :: functl
-    integer :: iter, ir, is, l, nnode, nprin, ierr !, irel
+    integer :: iter, ir, is, l, nnode, nprin, ierr
     FLOAT :: vtot, diff, a2b4
     FLOAT, allocatable :: ve(:, :), rho(:, :), prev(:, :)
 
