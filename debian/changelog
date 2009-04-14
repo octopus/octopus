@@ -1,3 +1,10 @@
+octopus (3.1.0) unstable; urgency=low
+
+  * Updated to version 3.1.0.
+  * Updated build scripts.
+
+ -- Xavier Andrade <xavier@tddft.org>  Tue, 14 Apr 2009 16:23:04 +0200
+
 octopus (3.0.0) unstable; urgency=low
 
   * Imported debian/rules from 2.1.x
