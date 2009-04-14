@@ -30,12 +30,13 @@ SUBDIRS =        \
 	src share doc testsuite $(PERL_DIR)
 
 EXTRA_DIST =     \
+	ChangeLog PACKAGING \
 	TODO build/mk_varinfo.pl build/var2html.pl build/octopus.spec.in build/svn_release_number.sh \
 	debian/changelog debian/control debian/copyright debian/dirs     \
 	debian/info debian/README.Debian debian/rules
 
 DISTCLEANFILES = \
-	config.log config.status build/octopus.spec
+	ChangeLog config.log config.status build/octopus.spec
 
 DEB_DIR = deb-work
 
@@ -63,3 +64,12 @@ deb: dist
 	rm -rf $(DEB_DIR)/$(PACKAGE)-$(VERSION)
 	scp $(DEB_DIR)/octopus*.deb \
 		marques@nautilus.fis.uc.pt:/server/www/tddft.org/programs/octopus/download/
+
+.PHONY: ChangeLog
+
+ChangeLog:
+	(svn2cl -i -r {20090101}:BASE -o .changelog.tmp \$(top_srcdir) && \
+	mv .changelog.tmp ChangeLog) || (rm -f .changelog.tmp; touch ChangeLog; \
+	echo 'svn2cl command not found: installing possibly empty changelog.' >&2)
+
+dist-hook: ChangeLog

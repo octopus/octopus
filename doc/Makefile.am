@@ -33,7 +33,15 @@ EXTRA_DIST = \
 	img/gaussian.eps    \
 	img/octosex.eps     \
 	img/octosex.jpg     \
-	img/ramp.eps
+	img/ramp.eps        \
+	ChangeLog.2001.gz   \
+	ChangeLog.2002.gz   \
+	ChangeLog.2003.gz   \
+	ChangeLog.2004.gz   \
+	ChangeLog.2005.gz   \
+	ChangeLog.2006.gz   \
+	ChangeLog.2007.gz   \
+	ChangeLog.2008.gz
 
 CLEANFILES = *~ *.bak variables.texi $(man_MANS)
 

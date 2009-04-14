@@ -1,0 +1,31 @@
+How to build:
+  Standard ./configure; make; make install
+
+Dependencies:
+  perl
+  FFTW >= 3
+  BLAS
+  LAPACK
+  GSL >= 1.9
+  Zoltan (internal)
+  Spglib (internal)
+  Metis (internal/optional)
+  Newuoa (internal/optional)
+  Qshep (internal/optional)
+  Libnbc (internal/optional)
+  GD (optional)
+  MPI (optional)
+  NetCDF (optional)
+  Sparskit (optional)
+  
+Website:
+  http://www.tddft.org/programs/octopus/
+
+New releases:
+  2009/04/16 Version 3.1
+
+Bugs & Patches:
+  http://www.tddft.org/trac/octopus/report
+
+SVN server:
+  svn co http://www.tddft.org/svn/octopus/trunk
