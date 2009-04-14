@@ -38,7 +38,7 @@ RUN_SCRIPT:
 	$(top_srcdir)/build/mk_varinfo.pl -s $(top_srcdir) -b $(top_builddir)
 
 check:
-	@for f in $(dist_dta_DATA); do \
+	@for f in $(dist_dta1_DATA) $(dist_dta2_DATA); do \
 	  if [ ! -e $$f -o $$f -ot $(srcdir)/$$f ]; then \
 	    cp $(srcdir)/$$f $$f; \
 	  fi \
