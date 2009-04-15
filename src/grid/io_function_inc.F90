@@ -288,7 +288,7 @@ contains
        call ncdf_error('nf90_get_var', status, file, ierr)
     end if
 #endif
-    SAFE_DEALLOCATE_P(x)
+    SAFE_DEALLOCATE_A(x)
 
     status = nf90_close(ncid)
   end subroutine read_netcdf
@@ -943,7 +943,7 @@ contains
       call ncdf_error('nf90_put_var', status, filename, ierr)
     end if
 #endif
-    SAFE_DEALLOCATE_P(x)
+    SAFE_DEALLOCATE_A(x)
 
     ! close
     status = nf90_close(ncid)
