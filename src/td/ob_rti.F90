@@ -728,7 +728,7 @@ contains
 !     diag(:, 1) = M_z1 + M_HALF*dt_p*M_zI*diag(:,1) 
 !     y(1:np)    = x(1:np)/diag(1:np, 1)
 
-!     SAFE_DEALLOCATE_P(diag)
+!     SAFE _DEALLOCATE_P(diag)
 
     call pop_sub()
   end subroutine precond_prop
