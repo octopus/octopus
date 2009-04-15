@@ -117,7 +117,7 @@ subroutine modelMB_particles_init (modelMBparticles,gr)
   !% Full Ndim = NDimModelMB*NParticleModelMB
   !%
   !%End
-  call loct_parse_int(datasets_check('NDimModelMB'), -1, modelMBparticles%ndim_modelMB)
+  call loct_parse_int(datasets_check('NDimModelMB'), gr%sb%dim, modelMBparticles%ndim_modelMB)
   call messages_print_var_option(stdout, "NDimModelMB", modelMBparticles%ndim_modelMB)
 
   !%Variable NParticleModelMB
@@ -129,7 +129,7 @@ subroutine modelMB_particles_init (modelMBparticles,gr)
   !% Full Ndim = NDimModelMB*NParticleModelMB
   !%
   !%End
-  call loct_parse_int(datasets_check('NParticleModelMB'), 0, modelMBparticles%nparticle_modelMB)
+  call loct_parse_int(datasets_check('NParticleModelMB'), 1, modelMBparticles%nparticle_modelMB)
   call messages_print_var_option(stdout, "NParticleModelMB", modelMBparticles%nparticle_modelMB)
 
   !%Variable NTypeParticleModelMB
