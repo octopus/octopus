@@ -45,23 +45,31 @@
 #  define ASSERT(expr)
 #endif
 
+#if defined(NDEBUG)
+#  define ALLOCATE(x, size) allocate(x)
+#  define DEALLOCATE(x) deallocate(x)
+#  define SAFE_DEALLOCATE_P(x) if(associated(x)) then; DEALLOCATE(x); nullify(x); end if
+#  define SAFE_DEALLOCATE_A(x) if(allocated(x)) then; DEALLOCATE(x); end if
+#else
+
 #if defined(LONG_LINES)
 #  define ALLOCATE(x, size) allocate(x, stat=global_alloc_err); \
-     if(in_profiling_mode)  call profiling_memory_allocate(__FILE__, __LINE__); \
+     if(in_profiling_mode)  call profiling_memory_allocate(#x, __FILE__, __LINE__); \
      if(global_alloc_err.ne.0) call alloc_error((size), __FILE__, __LINE__)
 
 #  define DEALLOCATE(x) deallocate(x, stat=global_alloc_err); \
-     if(in_profiling_mode)  call profiling_memory_deallocate(__FILE__, __LINE__); \
+     if(in_profiling_mode)  call profiling_memory_deallocate(#x, __FILE__, __LINE__); \
      if(global_alloc_err.ne.0) call alloc_error(-1, __FILE__, __LINE__)
 
-#define SAFE_DEALLOCATE_P(x) if(associated(x)) then; DEALLOCATE(x); nullify(x); end if
-#define SAFE_DEALLOCATE_A(x) if(allocated(x)) then; DEALLOCATE(x); end if
+#  define SAFE_DEALLOCATE_P(x) if(associated(x)) then; DEALLOCATE(x); nullify(x); end if
+#  define SAFE_DEALLOCATE_A(x) if(allocated(x)) then; DEALLOCATE(x); end if
 
 #else
 #  define ALLOCATE(x, size) \
      allocate(x, stat=global_alloc_err)                 \newline \
      if(in_profiling_mode) then                         \newline \
        call profiling_memory_allocate(&                 \newline \
+  #x,       &                                           \newline \
   __FILE__, &                                           \newline \
   __LINE__)                                             \newline \
      end if                                             \newline \
@@ -76,6 +84,7 @@
      deallocate(x, stat=global_alloc_err)               \newline \
      if(in_profiling_mode) then                         \newline \
        call profiling_memory_deallocate(&               \newline \
+  #x,       &                                           \newline \
   __FILE__, &                                           \newline \
   __LINE__)                                             \newline \
      end if                                             \newline \
@@ -86,9 +95,10 @@
      end if                                             \
      CARDINAL
 
-#define SAFE_DEALLOCATE_P(x) if(associated(x)) then \newline DEALLOCATE(x) \newline nullify(x) \newline end if
-#define SAFE_DEALLOCATE_A(x) if(allocated(x)) then \newline DEALLOCATE(x) \newline end if
+#  define SAFE_DEALLOCATE_P(x) if(associated(x)) then \newline DEALLOCATE(x) \newline nullify(x) \newline end if
+#  define SAFE_DEALLOCATE_A(x) if(allocated(x)) then \newline DEALLOCATE(x) \newline end if
 
+#endif
 #endif
 
 

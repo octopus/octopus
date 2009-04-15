@@ -26,6 +26,7 @@ module profiling_m
   use loct_parser_m
   use messages_m
   use mpi_m
+  use string_m
 
   implicit none
   private
@@ -565,28 +566,39 @@ contains
 
 
   !-----------------------------------------------------
-  subroutine profiling_memory_allocate(file, line)
+  subroutine profiling_memory_allocate(var, file, line)
+    character(len=*), intent(in) :: var
     character(len=*), intent(in) :: file
     integer,          intent(in) :: line
 
+    integer    :: ii
     integer(8) :: mem
+    character(len=256) :: str, str2
 
-    if(prof_space) then
-      mem = get_memory_usage()
-      if(mem /= last_mem) then 
-        write(mem_iunit, '(a2, i16, f16.6, i32, a, i16)') 'A ', &
-          mem_prof_count, loct_clock() - start_time, mem, " "//file, line
-        mem_prof_count = mem_prof_count + 1
-        last_mem = mem
-      end if
+    if(.not.prof_space) return
 
+    str2=""
+    do ii = 1, len(var)
+      if(var(ii:ii) == '(') exit
+      str2(ii:ii) = var(ii:ii)
+    end do
+    write(str, '(4a,i5,a)') trim(str2), "(", trim(file), ":", line, ")"
+    call compact(str)
+    
+    mem = get_memory_usage()
+    if(mem /= last_mem) then 
+      write(mem_iunit, '(a2,i16,f16.6,i32,1x,a)') 'A ', &
+            mem_prof_count, loct_clock() - start_time, mem, str
+      mem_prof_count = mem_prof_count + 1
+      last_mem = mem
     end if
 
   end subroutine profiling_memory_allocate
 
 
   !-----------------------------------------------------
-  subroutine profiling_memory_deallocate(file, line)
+  subroutine profiling_memory_deallocate(var, file, line)
+    character(len=*), intent(in) :: var
     character(len=*), intent(in) :: file
     integer,          intent(in) :: line
 
@@ -596,7 +608,7 @@ contains
       mem = get_memory_usage()
       if(mem /= last_mem) then 
         write(mem_iunit, '(a2, i16, f16.6, i32, a, i16)') 'D ', &
-          mem_prof_count, loct_clock() - start_time, mem, " "//file, line
+          mem_prof_count, loct_clock() - start_time, mem, " "//var//" "//file, line
         mem_prof_count = mem_prof_count - 1
         last_mem = mem
       end if

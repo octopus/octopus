@@ -77,13 +77,15 @@ contains
 
     integer :: i, j
 
+    j = 1
     do i = 1, len(str)
-      if(str(i:i) == ' ') then
-        do j = i, len(str)-1
-          str(j:j) = str(j+1:j+1)
-        end do
-        str(len(str):len(str)) = ' '
+      if(str(i:i).ne.' ') then
+        str(j:j) = str(i:i)
+        j = j + 1
       end if
+    end do
+    do i = j, len(str)
+      str(i:i) = ' '
     end do
 
   end subroutine compact
