@@ -228,9 +228,9 @@ contains
         sumq = sumq - xx * this%el_per_state
       end do
 
-      deallocate(eigenval_list)
-      deallocate(k_list)
-      deallocate(reorder)
+      SAFE_DEALLOCATE_A(eigenval_list)
+      SAFE_DEALLOCATE_A(k_list)
+      SAFE_DEALLOCATE_A(reorder)
 
     else ! bisection
       dsmear = max(CNST(1e-14), this%dsmear)

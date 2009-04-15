@@ -300,7 +300,8 @@ contains
 
     force%vecpot(1:MAX_DIM) = force%vecpot(1:MAX_DIM) - this%wp2*this%vecpot(1:MAX_DIM)
 
-    deallocate(gpsi, cpsi)
+    SAFE_DEALLOCATE_A(gpsi)
+    SAFE_DEALLOCATE_A(cpsi)
 
   end subroutine gauge_field_get_force
 

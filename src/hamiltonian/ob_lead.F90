@@ -266,7 +266,7 @@ contains
       end do
     end do
 
-    deallocate(pot_im)
+    SAFE_DEALLOCATE_A(pot_im)
     call pop_sub()
   end subroutine lead_td_pot
 

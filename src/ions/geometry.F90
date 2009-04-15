@@ -401,11 +401,11 @@ contains
     call distributed_end(geo%atoms)
 
     if(associated(geo%atom)) then ! sanity check
-      deallocate(geo%atom); nullify(geo%atom)
+      SAFE_DEALLOCATE_P(geo%atom); nullify(geo%atom)
     end if
 
     if(geo%ncatoms > 0 .and. associated(geo%catom)) then
-      deallocate(geo%catom); nullify(geo%catom)
+      SAFE_DEALLOCATE_P(geo%catom); nullify(geo%catom)
     end if
 
     call species_end(geo%nspecies, geo%species)

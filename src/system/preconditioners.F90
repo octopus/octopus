@@ -174,7 +174,7 @@ contains
       call nl_operator_end(this%op)
 
     case(PRE_JACOBI, PRE_MULTIGRID)
-      deallocate(this%diag_lapl)
+      SAFE_DEALLOCATE_P(this%diag_lapl)
     end select
 
     call preconditioner_null(this)

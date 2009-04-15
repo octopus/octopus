@@ -127,11 +127,11 @@ contains
     call distributed_end(d%kpt)
 
     if(associated(d%kpoints)) then
-      deallocate(d%kpoints); nullify(d%kpoints)
+      SAFE_DEALLOCATE_P(d%kpoints); nullify(d%kpoints)
     end if
 
     if(associated(d%kweights)) then
-      deallocate(d%kweights); nullify(d%kweights)
+      SAFE_DEALLOCATE_P(d%kweights); nullify(d%kweights)
     end if
   end subroutine states_dim_end
 

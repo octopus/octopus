@@ -233,7 +233,7 @@ contains
     ! Calculate KB-projectors
     call ps_in_grid_kb_projectors(ps_psf%ps_grid)
 
-    deallocate(ps_psf%eigen)
+    SAFE_DEALLOCATE_P(ps_psf%eigen)
     call pop_sub()
   end subroutine ps_psf_process
 
@@ -401,7 +401,11 @@ contains
 
     ! Exit this...
     message(1) = '      Done.'; call write_info(1)
-    deallocate(s, ve, hato, gg, y)
+    SAFE_DEALLOCATE_A(s)
+    SAFE_DEALLOCATE_A(ve)
+    SAFE_DEALLOCATE_A(hato)
+    SAFE_DEALLOCATE_A(gg)
+    SAFE_DEALLOCATE_A(y)
 
     call pop_sub()
   end subroutine solve_schroedinger
@@ -486,7 +490,12 @@ contains
       end if
     end do
 
-    deallocate(hato, gg, y, elocal, s, ve)
+    SAFE_DEALLOCATE_A(hato)
+    SAFE_DEALLOCATE_A(gg)
+    SAFE_DEALLOCATE_A(y)
+    SAFE_DEALLOCATE_A(elocal)
+    SAFE_DEALLOCATE_A(s)
+    SAFE_DEALLOCATE_A(ve)
 
     call pop_sub()
   end subroutine ghost_analysis

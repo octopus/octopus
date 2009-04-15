@@ -138,7 +138,7 @@ contains
         ALLOCATE(pot(gr%mesh%np), gr%mesh%np)
         call laser_potential(gr%sb, hm%ep%lasers(i), gr%mesh, pot, t)
         psi(1:gr%mesh%np, ik) = exp( factor * pot(1:gr%mesh%np) ) * psi(1:gr%mesh%np, ik) 
-        deallocate(pot)
+        SAFE_DEALLOCATE_A(pot)
       case(E_FIELD_MAGNETIC, E_FIELD_VECTOR_POTENTIAL)
         write(message(1),'(a)') 'The split-operator scheme cannot be used with magnetic fields, or'
         write(message(2),'(a)') 'with an electric field described in the velocity gauge.'
@@ -209,12 +209,13 @@ contains
 !!$          end do
 !!$       end do
 !!$
-!!$       deallocate(lpsi, lhpsi)
+!!$       SAFE_DEALLOCATE_A(lpsi)
+!!$       SAFE_DEALLOCATE_A(lhpsi)
 !!$    end do
 !!$
 !!$    end do dimension_loop
 !!$
-!    deallocate(initzpsi)
+!    SAFE_DEALLOCATE_P(initzpsi)
 
     call pop_sub()
   end subroutine zexp_vnlpsi

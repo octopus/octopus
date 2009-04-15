@@ -83,7 +83,8 @@ subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
   ec = ec + ec_
   ex = ex + ex_
 
-  deallocate(rho, Vxc)
+  SAFE_DEALLOCATE_A(rho)
+  SAFE_DEALLOCATE_A(Vxc)
   call pop_sub()
   call profiling_out(C_PROFILING_XC_SIC)
 end subroutine X(oep_sic)

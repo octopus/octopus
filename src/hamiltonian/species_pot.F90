@@ -458,7 +458,7 @@ contains
     write(message(1),'(a,f13.6)')'Info: Renormalized total charge = ', r
     call write_info(1)
 
-    deallocate(atom_rho)
+    SAFE_DEALLOCATE_A(atom_rho)
     call pop_sub()
   end subroutine guess_density
 
@@ -537,7 +537,8 @@ contains
       rho = - s%z * rho_p
 
       nullify(m_p)
-      deallocate(grho_p, rho_p)
+      SAFE_DEALLOCATE_A(grho_p)
+      SAFE_DEALLOCATE_A(rho_p)
 
     case(SPEC_CHARGE_DENSITY)
 
@@ -594,7 +595,7 @@ contains
       jacobian(dim+1, j) = dmf_integrate(m_p, xrho)
     end do
 
-    deallocate(xrho)
+    SAFE_DEALLOCATE_A(xrho)
   end subroutine func
 
 

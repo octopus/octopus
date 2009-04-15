@@ -100,9 +100,9 @@ contains
     call ps_in_grid_end (ps_cpi%ps_grid)
     call ps_cpi_file_end(ps_cpi%cpi_file)
 
-    deallocate(ps_cpi%cpi_file)
-    deallocate(ps_cpi%ps_grid)
-    deallocate(ps_cpi%conf)
+    SAFE_DEALLOCATE_P(ps_cpi%cpi_file)
+    SAFE_DEALLOCATE_P(ps_cpi%ps_grid)
+    SAFE_DEALLOCATE_P(ps_cpi%conf)
 
   end subroutine ps_cpi_end
 

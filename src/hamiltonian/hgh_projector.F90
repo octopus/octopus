@@ -118,8 +118,8 @@ contains
 
     call push_sub('hgh_projector.hgh_projector_end')
 
-    if (associated(hgh_p%p))      deallocate(hgh_p%p)
-    if (associated(hgh_p%lp))   deallocate(hgh_p%lp)
+    SAFE_DEALLOCATE_P(hgh_p%p)
+    SAFE_DEALLOCATE_P(hgh_p%lp)
 
     call pop_sub()
   end subroutine hgh_projector_end

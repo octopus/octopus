@@ -213,8 +213,8 @@ contains
     type(pert_t), intent(inout) :: this
 
     if(this%pert_type == PERTURBATION_IONIC) then
-      deallocate(this%ionic%mix1)
-      deallocate(this%ionic%mix2)
+      SAFE_DEALLOCATE_P(this%ionic%mix1)
+      SAFE_DEALLOCATE_P(this%ionic%mix2)
     end if
   end subroutine pert_end
 

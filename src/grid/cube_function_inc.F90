@@ -79,7 +79,7 @@ subroutine X(cf_free_RS)(cf)
   call push_sub('cf_inc.Xcf_free_RS')
 
   ASSERT(associated(cf%RS))
-  deallocate(cf%RS)
+  SAFE_DEALLOCATE_P(cf%RS)
   nullify(cf%RS)
 
   call pop_sub()
@@ -92,18 +92,18 @@ subroutine X(cf_free)(cf)
   call push_sub('cf_inc.Xcf_free')
 
   if(associated(cf%RS)) then
-    deallocate(cf%RS)
+    SAFE_DEALLOCATE_P(cf%RS)
     nullify(cf%RS)
   end if
 
   if(associated(cf%FS)) then
-    deallocate(cf%FS)
+    SAFE_DEALLOCATE_P(cf%FS)
     nullify(cf%FS)
   end if
 
   if(associated(cf%fft)) then
     call fft_end(cf%fft)
-    deallocate(cf%fft)
+    SAFE_DEALLOCATE_P(cf%fft)
     nullify(cf%fft)
   end if
 

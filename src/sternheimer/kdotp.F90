@@ -148,7 +148,7 @@ contains
           enddo
         enddo
 
-        deallocate(orth_mask)
+        SAFE_DEALLOCATE_A(orth_mask)
       endif
       ! this is the exact solution in the limit of no dispersion, i.e. non-interacting unit cells
       ! |u_i(1)> = -i r_i |u(0)>
@@ -206,9 +206,9 @@ contains
     call sternheimer_end(sh)
     call pert_end(kdotp_vars%perturbation)
 
-    deallocate(kdotp_vars%lr)
+    SAFE_DEALLOCATE_P(kdotp_vars%lr)
     call states_deallocate_wfns(sys%st)
-    deallocate(kdotp_vars%eff_mass_inv)
+    SAFE_DEALLOCATE_P(kdotp_vars%eff_mass_inv)
 
     call pop_sub()
 

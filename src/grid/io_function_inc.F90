@@ -82,7 +82,8 @@ subroutine X(input_function)(filename, mesh, f, ierr, is_tmp)
     ! f_global for the whole function.
     ALLOCATE(f_global(1), 1)
     if(mpi_grp_is_root(mesh%mpi_grp)) then
-      deallocate(f_global); ALLOCATE(f_global(mesh%np_global), mesh%np_global)
+      SAFE_DEALLOCATE_A(f_global)
+      ALLOCATE(f_global(mesh%np_global), mesh%np_global)
       call X(input_function_global)(filename, mesh, f_global, ierr, is_tmp_)
     end if
     if(in_debug_mode) call write_debug_newlines(2)
@@ -98,7 +99,7 @@ subroutine X(input_function)(filename, mesh, f, ierr, is_tmp)
       call X(vec_scatter)(mesh%vp, f_global, f)
     end if
 
-    deallocate(f_global)
+    SAFE_DEALLOCATE_A(f_global)
 #else
     ! internal error
     ASSERT(.false.) 
@@ -287,7 +288,7 @@ contains
        call ncdf_error('nf90_get_var', status, file, ierr)
     end if
 #endif
-    deallocate(x)
+    SAFE_DEALLOCATE_P(x)
 
     status = nf90_close(ncid)
   end subroutine read_netcdf
@@ -339,7 +340,7 @@ subroutine X(output_function) (how, dir, fname, mesh, sb, f, u, ierr, is_tmp, ge
 
     if(in_debug_mode) call write_debug_newlines(2)
 
-    deallocate(f_global)
+    SAFE_DEALLOCATE_A(f_global)
   else
     if(present(grp)) then ! only root writes output
       if(grp%rank.eq.0) then
@@ -628,7 +629,7 @@ contains
 
     end do
 
-    deallocate(out_vec)
+    SAFE_DEALLOCATE_A(out_vec)
     call io_close(iunit)
 
   end subroutine out_matlab
@@ -942,7 +943,7 @@ contains
       call ncdf_error('nf90_put_var', status, filename, ierr)
     end if
 #endif
-    deallocate(x)
+    SAFE_DEALLOCATE_P(x)
 
     ! close
     status = nf90_close(ncid)

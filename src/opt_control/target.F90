@@ -197,13 +197,18 @@ module opt_control_target_m
       call states_look (trim(restart_dir)//'gs', gr%mesh%mpi_grp, ip, ip, target%st%nst, ierr)
       target%st%st_start = 1
       target%st%st_end   = target%st%nst
-      deallocate(target%st%occ, target%st%eigenval, target%st%momentum, target%st%node)
+
+      SAFE_DEALLOCATE_P(target%st%occ)
+      SAFE_DEALLOCATE_P(target%st%eigenval)
+      SAFE_DEALLOCATE_P(target%st%momentum)
+      SAFE_DEALLOCATE_P(target%st%node)
+
       ALLOCATE(target%st%occ(target%st%nst, target%st%d%nik), target%st%nst*target%st%d%nik)
       ALLOCATE(target%st%eigenval(target%st%nst, target%st%d%nik), target%st%nst*target%st%d%nik)
       ALLOCATE(target%st%momentum(3,target%st%nst, target%st%d%nik), 3*target%st%nst*target%st%d%nik)
       ALLOCATE(target%st%node(target%st%nst), target%st%nst)
       if(target%st%d%ispin == SPINORS) then
-        deallocate(target%st%spin)
+        SAFE_DEALLOCATE_P(target%st%spin)
         ALLOCATE(target%st%spin(3, target%st%nst, target%st%d%nik), target%st%nst*target%st%d%nik*3)
       end if
       call states_allocate_wfns(target%st, gr%mesh, M_CMPLX)
@@ -252,7 +257,7 @@ module opt_control_target_m
       if(loct_parse_isdef(datasets_check('OCTTargetTransformStates')).ne.0) then
         if(loct_parse_block(datasets_check('OCTTargetTransformStates'), blk) == 0) then
           call states_copy(tmp_st, target%st)
-          deallocate(tmp_st%zpsi)
+          SAFE_DEALLOCATE_P(tmp_st%zpsi)
           call restart_look_and_read(tmp_st, gr, geo)
           ALLOCATE(rotation_matrix(target%st%nst, tmp_st%nst), target%st%nst*tmp_st%nst)
           rotation_matrix = M_z0
@@ -262,7 +267,7 @@ module opt_control_target_m
             end do
           end do
           call rotate_states(gr%mesh, target%st, tmp_st, rotation_matrix)
-          deallocate(rotation_matrix)
+          SAFE_DEALLOCATE_A(rotation_matrix)
           call states_end(tmp_st)
           call loct_parse_block_end(blk)
         else
@@ -320,7 +325,7 @@ module opt_control_target_m
 
           if(loct_parse_block(datasets_check('OCTTargetDensityFromState'), blk) == 0) then
             tmp_st = target%st
-            deallocate(tmp_st%zpsi)
+            SAFE_DEALLOCATE_P(tmp_st%zpsi)
             call restart_look_and_read(tmp_st, gr, geo)
             ALLOCATE(rotation_matrix(target%st%nst, tmp_st%nst), target%st%nst*tmp_st%nst)
             rotation_matrix = M_z0
@@ -330,7 +335,7 @@ module opt_control_target_m
               end do
             end do
             call rotate_states(gr%mesh, target%st, tmp_st, rotation_matrix)
-            deallocate(rotation_matrix)
+            SAFE_DEALLOCATE_A(rotation_matrix)
             call states_calc_dens(target%st, gr%mesh%np_part)
             do ip = 1, gr%mesh%np
               target%rho(ip) = sum(target%st%rho(ip, 1:target%st%d%spin_channels))
@@ -485,16 +490,16 @@ module opt_control_target_m
     if(target%type .eq. oct_tg_local .or. &
        target%type .eq. oct_tg_density .or. &
        target%type .eq. oct_tg_td_local) then
-      deallocate(target%rho)
+      SAFE_DEALLOCATE_P(target%rho)
       nullify(target%rho)
     end if
     if(target%type .eq. oct_tg_hhg) then
-      deallocate(target%hhg_k); nullify(target%hhg_k)
-      deallocate(target%hhg_alpha); nullify(target%hhg_alpha)
-      deallocate(target%hhg_a); nullify(target%hhg_a)
+      SAFE_DEALLOCATE_P(target%hhg_k); nullify(target%hhg_k)
+      SAFE_DEALLOCATE_P(target%hhg_alpha); nullify(target%hhg_alpha)
+      SAFE_DEALLOCATE_P(target%hhg_a); nullify(target%hhg_a)
     end if
     if(target_mode(target).eq.oct_targetmode_td) then
-      deallocate(target%td_fitness); nullify(target%td_fitness)
+      SAFE_DEALLOCATE_P(target%td_fitness); nullify(target%td_fitness)
     end if
 
     call pop_sub()
@@ -574,7 +579,7 @@ module opt_control_target_m
           target%td_fitness(i) = &
             target%td_fitness(i) + zmf_dotp(gr%mesh, psi%d%dim, psi%zpsi(:, :, p, 1), opsi(:, :))
         end do
-        deallocate(opsi)
+        SAFE_DEALLOCATE_A(opsi)
       case(SPIN_POLARIZED); stop 'Error'
       case(SPINORS);        stop 'Error'
       end select
@@ -586,7 +591,7 @@ module opt_control_target_m
         call dmf_multipoles(gr%mesh, psi%rho(:, is), 1, multipole(:, is))
       end do
       target%td_fitness(i) = sum(multipole(2, 1:psi%d%spin_channels))
-      deallocate(multipole)
+      SAFE_DEALLOCATE_A(multipole)
 
     case default
       stop 'Error at calc_tdfitness'
@@ -680,7 +685,7 @@ module opt_control_target_m
         local_function(i) = - ( sqrt(psi%rho(i, 1)) - sqrt(target%rho(i)) )**2
       end do
       j1 = dmf_integrate(gr%mesh, local_function)
-      deallocate(local_function)
+      SAFE_DEALLOCATE_A(local_function)
 
     case(oct_tg_local)
 
@@ -696,7 +701,7 @@ module opt_control_target_m
           end do
           j1 = j1 + zmf_dotp(gr%mesh, psi%d%dim, psi%zpsi(:, :, p, 1), opsi(:, :))
         end do
-        deallocate(opsi)
+        SAFE_DEALLOCATE_A(opsi)
       case(SPIN_POLARIZED); stop 'Error'
       case(SPINORS);        stop 'Error'
       end select
@@ -739,7 +744,7 @@ module opt_control_target_m
       end do
       call spectrum_hsfunction_end()
 
-      deallocate(ddipole)
+      SAFE_DEALLOCATE_A(ddipole)
 
     case default
       j1 = abs(zstates_mpdotp(gr%mesh, psi, target%st))**2
@@ -907,7 +912,12 @@ module opt_control_target_m
 
       end select
 
-      deallocate(cI, dI, mat, mm, mk, lambda)
+      SAFE_DEALLOCATE_A(cI)
+      SAFE_DEALLOCATE_A(dI)
+      SAFE_DEALLOCATE_A(mat)
+      SAFE_DEALLOCATE_A(mm)
+      SAFE_DEALLOCATE_A(mk)
+      SAFE_DEALLOCATE_A(lambda)
 
     case(oct_tg_exclude_state)
 

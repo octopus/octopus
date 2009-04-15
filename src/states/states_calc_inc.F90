@@ -88,7 +88,7 @@ subroutine X(states_gram_schmidt_full)(st, nst, m, dim, psi, start)
 
     call states_block_matr_mul(m, st, st%st_start, st%st_end, st%st_start, st%st_end, psi_tmp, qq, psi)
 
-    deallocate(psi_tmp)
+    SAFE_DEALLOCATE_A(psi_tmp)
 
   end if
 
@@ -195,7 +195,7 @@ subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi,  &
     call MPI_Allreduce(ss, ss_tmp, nst, R_MPITYPE, MPI_SUM, m%vp%comm, mpi_err)
     call profiling_out(reduce_prof)
     ss = ss_tmp
-    deallocate(ss_tmp)
+    SAFE_DEALLOCATE_A(ss_tmp)
   end if
 #endif
 
@@ -255,7 +255,7 @@ subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi,  &
     norm = nrm2
   end if
 
-  deallocate(ss)
+  SAFE_DEALLOCATE_A(ss)
 
   call pop_sub()
   call profiling_out(prof)
@@ -302,7 +302,7 @@ FLOAT function X(states_residue)(m, dim, hf, e, f) result(r)
   call profiling_count_operations(dim*m%np*(R_ADD + R_MUL))
 
   r = X(mf_nrm2)(m, dim, res)
-  deallocate(res)
+  SAFE_DEALLOCATE_A(res)
 
   call profiling_out(prof)
 
@@ -386,7 +386,7 @@ subroutine X(states_calc_momentum)(gr, st)
            st%momentum, st%d%kpt%num(:)*st%nst*ndim, (st%d%kpt%range(1, :) - 1)*st%nst*ndim, MPI_FLOAT, &
            st%d%kpt%mpi_grp%comm, mpi_err)
 
-      deallocate(lmom)
+      SAFE_DEALLOCATE_A(lmom)
     end if
 
     if(st%parallel_in_states) then
@@ -399,13 +399,13 @@ subroutine X(states_calc_momentum)(gr, st)
         st%momentum(i, 1:st%nst, ik) = gmomentum(1:st%nst)
       end do
 
-      deallocate(lmomentum)
-      deallocate(gmomentum)
+      SAFE_DEALLOCATE_A(lmomentum)
+      SAFE_DEALLOCATE_A(gmomentum)
     end if
 #endif
   end do
 
-  deallocate(grad)
+  SAFE_DEALLOCATE_A(grad)
 
   call pop_sub()
 end subroutine X(states_calc_momentum)
@@ -462,7 +462,7 @@ subroutine X(states_angular_momentum)(gr, phi, l, l2)
     end if
   end do
 
-  deallocate(lpsi)
+  SAFE_DEALLOCATE_A(lpsi)
   call pop_sub()
 end subroutine X(states_angular_momentum)
 
@@ -518,7 +518,7 @@ subroutine X(states_matrix)(m, st1, st2, a)
         a(i, j, ik) = X(mf_dotp)(m, dim, st1%X(psi)(:, :, i, ik), phi2(:, :))
       end do
     end do
-    deallocate(phi2)
+    SAFE_DEALLOCATE_A(phi2)
 
     ! Each process holds some lines of the matrix. So it is broadcasted (All processes
     ! should get the whole matrix)

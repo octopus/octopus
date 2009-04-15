@@ -55,7 +55,7 @@
             dtmp(:), u, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
         end do
       end do
-      deallocate(dtmp)
+      SAFE_DEALLOCATE_A(dtmp)
     end if
 
     if( (iand(outp%what, output_current).ne.0) .and. (st%wfs_type == M_CMPLX) ) then
@@ -107,7 +107,7 @@
           end do
         end if
       end do
-      deallocate(dtmp)
+      SAFE_DEALLOCATE_A(dtmp)
     end if
 
     if(iand(outp%what, output_ked).ne.0) then
@@ -125,7 +125,7 @@
               elf(:, is), M_ONE, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
           end do
       end select
-      deallocate(elf)
+      SAFE_DEALLOCATE_A(elf)
     end if
 
     if(iand(outp%what, output_ksdipole).ne.0) then
@@ -222,7 +222,7 @@
       end do
     end do
 
-    deallocate(multipole)
+    SAFE_DEALLOCATE_A(multipole)
     call pop_sub()
   end subroutine h_sys_write_multipole_matrix
 
@@ -289,7 +289,7 @@
       case(1); flow = j(mesh_nearest_point(gr%mesh, outp%line%origin(1), dmin, rankmin), 1)
       end select
 
-      deallocate(j)
+      SAFE_DEALLOCATE_A(j)
     else
       flow = M_ZERO
     end if

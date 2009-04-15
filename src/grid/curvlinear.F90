@@ -208,7 +208,9 @@ contains
       jdet = M_ONE*lalg_determinant(sb%dim, Jac, invert = .false.)
     end select
 
-    if(cv%method.ne.CURV_METHOD_UNIFORM) deallocate(Jac)
+    if(cv%method.ne.CURV_METHOD_UNIFORM) then
+      SAFE_DEALLOCATE_A(Jac)
+    end if
 
   end function curvlinear_det_Jac
 

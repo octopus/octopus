@@ -384,21 +384,21 @@ contains
   subroutine td_rti_end(tr)
     type(td_rti_t), intent(inout) :: tr
 
-    if(associated(tr%prev_psi)) deallocate(tr%prev_psi)
+    SAFE_DEALLOCATE_P(tr%prev_psi)
 
     ! sanity check
     ASSERT(associated(tr%v_old)) 
-    deallocate(tr%v_old)         ! clean ols KS potentials
+    SAFE_DEALLOCATE_P(tr%v_old)         ! clean ols KS potentials
     nullify(tr%v_old)
 
     select case(tr%method)
     case(PROP_MAGNUS)
       ASSERT(associated(tr%vmagnus))
-      deallocate(tr%vmagnus); nullify(tr%vmagnus)
+      SAFE_DEALLOCATE_P(tr%vmagnus); nullify(tr%vmagnus)
     case(PROP_CRANK_NICHOLSON_SPARSKIT)
 #ifdef HAVE_SPARSKIT
       call zsparskit_solver_end()
-      deallocate(zpsi_tmp)
+      SAFE_DEALLOCATE_P(zpsi_tmp)
 #endif
     case(PROP_SUZUKI_TROTTER, PROP_SPLIT_OPERATOR)
       call zcf_free(tr%cf)
@@ -500,7 +500,7 @@ contains
         d = dmf_nrm2(gr%mesh, dtmp)
         if(d > d_max) d_max = d
       end do
-      deallocate(dtmp)
+      SAFE_DEALLOCATE_A(dtmp)
 
       if(d_max > scf_threshold) then
 
@@ -533,14 +533,15 @@ contains
             d = dmf_nrm2(gr%mesh, dtmp)
             if(d > d_max) d_max = d
           end do
-          deallocate(dtmp)
+          SAFE_DEALLOCATE_A(dtmp)
 
           if(d_max < scf_threshold) exit
         end do
 
       end if
 
-      deallocate(zpsi1, vaux)
+      SAFE_DEALLOCATE_A(zpsi1)
+      SAFE_DEALLOCATE_A(vaux)
     end if
 
     call pop_sub()
@@ -656,7 +657,7 @@ contains
           
         end do
 
-        deallocate(zpsi1)
+        SAFE_DEALLOCATE_A(zpsi1)
         
         ! finish the calculation of the density
         call states_dens_reduce(st, gr%mesh%np, st%rho)
@@ -696,7 +697,10 @@ contains
         end do
       end do
 
-      if(hm%theory_level.ne.INDEPENDENT_PARTICLES) deallocate(vhxc_t1, vhxc_t2)
+      if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
+        SAFE_DEALLOCATE_A(vhxc_t1)
+        SAFE_DEALLOCATE_A(vhxc_t2)
+      end if
 
       call pop_sub()
     end subroutine td_reversal
@@ -880,8 +884,8 @@ contains
         end do
       end do
       
-      if(hm%theory_level.ne.INDEPENDENT_PARTICLES) deallocate(vhxc_t1, vhxc_t2, zpsi_rhs_pred)
-      deallocate(zpsi_rhs_corr)
+      if(hm%theory_level.ne.INDEPENDENT_PARTICLES) SAFE_DEALLOCATE_P(vhxc_t1, vhxc_t2, zpsi_rhs_pred)
+      SAFE_DEALLOCATE_P(zpsi_rhs_corr)
 
       call pop_sub()
 #endif
@@ -957,7 +961,9 @@ contains
         end do
       end do
 
-      deallocate(zpsi_rhs, zpsi, rhs)
+      SAFE_DEALLOCATE_A(zpsi_rhs)
+      SAFE_DEALLOCATE_A(zpsi)
+      SAFE_DEALLOCATE_A(rhs)
       call pop_sub()
     end subroutine td_crank_nicholson
     ! ---------------------------------------------------------
@@ -997,7 +1003,7 @@ contains
             do is = 1, st%d%nspin
               vaux(:, is, j) = vaux(:, is, j) + pot(:)
             end do
-            deallocate(pot)
+            SAFE_DEALLOCATE_A(pot)
           case(E_FIELD_MAGNETIC, E_FIELD_VECTOR_POTENTIAL)
             write(message(1),'(a)') 'The Magnus propagator cannot be used with magnetic fields, or'
             write(message(2),'(a)') 'with an electric field described in the velocity gauge.'
@@ -1016,7 +1022,7 @@ contains
         end do
       end do
 
-      deallocate(vaux)
+      SAFE_DEALLOCATE_A(vaux)
       call pop_sub()
     end subroutine td_magnus
 
@@ -1071,7 +1077,7 @@ contains
             forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) tr%prev_psi(ip, idim, ist, ik) = aimag(zpsi(ip, idim))
           end do
         end do
-        deallocate(zpsi)
+        SAFE_DEALLOCATE_A(zpsi)
         tr%first = .false.
         
         !finish to propagate the hamiltonian to t - dt/2
@@ -1178,7 +1184,7 @@ contains
     call exponential_apply(tr_p%te, grid_p, hm_p, zpsi, ist_op, ik_op, -dt_op/M_TWO, t_op)
     forall(idim = 1:dim_op) &
       y((idim-1)*grid_p%mesh%np+1:idim*grid_p%mesh%np) = zpsi(1:grid_p%mesh%np, idim)
-    deallocate(zpsi)
+    SAFE_DEALLOCATE_A(zpsi)
 
   end subroutine td_rti_qmr_op
   ! ---------------------------------------------------------

@@ -53,7 +53,7 @@ R_TYPE function X(states_mpdotp_x)(m, excited_state, st, mat) result(dotp)
     call X(states_matrix_swap)(mat_local, excited_state%pair(j))
   end do
 
-  deallocate(mat_local)
+  SAFE_DEALLOCATE_A(mat_local)
   call pop_sub()
 end function X(states_mpdotp_x)
 
@@ -86,7 +86,7 @@ subroutine X(states_matrix_swap)(mat, pair)
   mat(i, :, ik) = mat(a, :, ik)
   mat(a, :, ik) = row(:)
 
-  deallocate(row)
+  SAFE_DEALLOCATE_A(row)
 end subroutine X(states_matrix_swap)
 
 
@@ -240,17 +240,22 @@ R_TYPE function X(states_mpmatrixelement_g)(m, st1, st2, opst2) result(st1opst2)
 
         st1opst2 = st1opst2 * z ** st1%d%kweights(ik)
 
-        deallocate(b, c)
+        SAFE_DEALLOCATE_A(b)
+        SAFE_DEALLOCATE_A(c)
       end if
 
     end do
   end select  
 
 
-  deallocate(overlap_mat, op_mat)
-  deallocate(filled1, filled2)
-  deallocate(partially_filled1, partially_filled2)
-  deallocate(half_filled1, half_filled2)
+  SAFE_DEALLOCATE_A(overlap_mat)
+  SAFE_DEALLOCATE_A(op_mat)
+  SAFE_DEALLOCATE_A(filled1)
+  SAFE_DEALLOCATE_A(filled2)
+  SAFE_DEALLOCATE_A(partially_filled1)
+  SAFE_DEALLOCATE_A(partially_filled2)
+  SAFE_DEALLOCATE_A(half_filled1)
+  SAFE_DEALLOCATE_A(half_filled2)
   call pop_sub()
 end function X(states_mpmatrixelement_g)
 
@@ -357,16 +362,19 @@ R_TYPE function X(states_mpdotp_g)(m, st1, st2, mat) result(dotp)
         end do
 
         dotp = dotp * lalg_determinant(i1, b, invert = .false.) ** st1%d%kweights(ik)
-        deallocate(b)
+        SAFE_DEALLOCATE_A(b)
       end if
 
     end do
   end select
 
-  deallocate(a)
-  deallocate(filled1, filled2)
-  deallocate(partially_filled1, partially_filled2)
-  deallocate(half_filled1, half_filled2)
+  SAFE_DEALLOCATE_A(a)
+  SAFE_DEALLOCATE_A(filled1)
+  SAFE_DEALLOCATE_A(filled2)
+  SAFE_DEALLOCATE_A(partially_filled1)
+  SAFE_DEALLOCATE_A(partially_filled2)
+  SAFE_DEALLOCATE_A(half_filled1)
+  SAFE_DEALLOCATE_A(half_filled2)
   call pop_sub()
 end function X(states_mpdotp_g)
 

@@ -198,7 +198,7 @@ module gcm_m
         gamma = kij + uh + hm%ep%eii
         hmatrix(i, j) = gamma
 
-        deallocate(overlap_matrix)
+        SAFE_DEALLOCATE_A(overlap_matrix)
       end do 
     end do
 
@@ -239,7 +239,14 @@ module gcm_m
     do i = 1, ndeterminants
       call states_end(phi(i))
     end do
-    deallocate(phi, etot, hpsi, rho, vh, smatrix, hmatrix, slatdetnames)
+    SAFE_DEALLOCATE_A(phi)
+    SAFE_DEALLOCATE_A(etot)
+    SAFE_DEALLOCATE_A(hpsi)
+    SAFE_DEALLOCATE_A(rho)
+    SAFE_DEALLOCATE_A(vh)
+    SAFE_DEALLOCATE_A(smatrix)
+    SAFE_DEALLOCATE_A(hmatrix)
+    SAFE_DEALLOCATE_A(slatdetnames)
     call pop_sub()
   end subroutine gcm_run
   ! ---------------------------------------------------------
@@ -274,7 +281,8 @@ module gcm_m
       call dpoisson_solve(gr, vh, rho)
       st1opst2 =  dmf_integrate(gr%mesh, vh(:) * rho(:))
 
-      deallocate(rho, vh)
+      SAFE_DEALLOCATE_A(rho)
+      SAFE_DEALLOCATE_A(vh)
 
     case default
       write(message(1),'(a)') 'GCM mode does not handle yet systems with more than one orbital.'
@@ -303,7 +311,9 @@ module gcm_m
         end do
       end do
 
-      deallocate(mat, rho, vh)
+      SAFE_DEALLOCATE_A(mat)
+      SAFE_DEALLOCATE_A(rho)
+      SAFE_DEALLOCATE_A(vh)
     end select
 
     call pop_sub()

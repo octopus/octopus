@@ -397,7 +397,7 @@ contains
            real(oct_iterator_tolerance(iterator), 8), real(oct_iterator_tolerance(iterator), 8), &
            maxiter, opt_control_cg_calc, opt_control_cg_write_info, minvalue)
 
-      deallocate(x)
+      SAFE_DEALLOCATE_A(x)
       call pop_sub()
     end subroutine scheme_cg
     ! ---------------------------------------------------------
@@ -457,7 +457,7 @@ contains
         end if
       end if
 
-      deallocate(x)
+      SAFE_DEALLOCATE_A(x)
       call pop_sub()
     end subroutine scheme_direct
     ! ---------------------------------------------------------
@@ -510,7 +510,7 @@ contains
       w = M_ZERO
       call newuoa(dim, npt, x, rhobeg, rhoend, iprint, maxfun, w, opt_control_direct_calc)
 
-      deallocate(x, xl, xu, w)
+      SAFE_DEALLOCATE_P(x, xl, xu, w)
       call pop_sub()
 #endif
     end subroutine scheme_newuoa
@@ -747,7 +747,7 @@ contains
       call parameters_set_rep(par_new)
       call parameters_get_theta(par_new, theta)
       forall(j = 1:n) df(j) =  M_TWO * parameters_alpha(par_, 1) * x(j) - M_TWO * theta(j)
-      deallocate(theta)
+      SAFE_DEALLOCATE_A(theta)
       call parameters_end(par_new)
     else
       call parameters_set_theta(par_, x)

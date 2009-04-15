@@ -175,7 +175,8 @@ subroutine dgeneigensolve(n, a, b, e, bof, err_code)
   ALLOCATE(work(lwork), lwork)
   bp = b
   call DLAPACK(sygv) (1, 'V', 'U', n, a(1, 1), n, bp(1, 1), n, e(1), work(1), lwork, info)
-  deallocate(bp, work)
+  SAFE_DEALLOCATE_A(bp)
+  SAFE_DEALLOCATE_A(work)
 
   if(info.ne.0) then
     if(bof_) then
@@ -237,7 +238,9 @@ subroutine zgeneigensolve(n, a, b, e, bof, err_code)
   ALLOCATE(rwork(max(1, 3*n-2)), max(1, 3*n-2))
   bp = b
   call ZLAPACK(hegv) (1, 'V', 'U', n, a(1, 1), n, bp(1, 1), n, e(1), work(1), lwork, rwork(1), info)
-  deallocate(bp, work, rwork)
+  SAFE_DEALLOCATE_A(bp)
+  SAFE_DEALLOCATE_A(work)
+  SAFE_DEALLOCATE_A(rwork)
 
   if(info.ne.0) then
     if(bof_) then
@@ -300,8 +303,10 @@ subroutine zeigensolve_nonh(n, a, e, err_code, side)
   call ZLAPACK(geev) ('N', 'V', n, a(1, 1), n, e(1), vl(1, 1), 1, vr(1, 1), n, work(1), lwork, rwork(1), info)
     
   lwork = int(real(work(1)))
-  deallocate(work, vl, vr, rwork)
-  
+  SAFE_DEALLOCATE_A(work)
+  SAFE_DEALLOCATE_A(vl)
+  SAFE_DEALLOCATE_A(vr)
+  SAFE_DEALLOCATE_A(rwork)
 
   ALLOCATE(work(lwork), lwork)
   ALLOCATE(rwork(max(1, 2*n)), max(1, 2*n))
@@ -316,7 +321,10 @@ subroutine zeigensolve_nonh(n, a, e, err_code, side)
       call ZLAPACK(geev) ('N', 'V', n, a(1, 1), n, e(1), vl(1, 1), 1, vr(1,1), n, work(1), lwork, rwork(1), info)
       a(:, :) = vr(:, :)
   end if
-  deallocate(work, rwork, vr, vl)
+  SAFE_DEALLOCATE_A(work)
+  SAFE_DEALLOCATE_A(rwork)
+  SAFE_DEALLOCATE_A(vr)
+  SAFE_DEALLOCATE_A(vl)
 
   if(info.ne.0) then
     write(message(1),'(a,i5)') 'In zgeneigensolve_nonh, LAPACK Xgeev returned error message ', info
@@ -369,7 +377,10 @@ subroutine deigensolve_nonh(n, a, e, err_code, side)
   call DLAPACK(geev) ('N', 'V', n, a(1, 1), n, e(1), vl(1, 1), 1, vr(1, 1), n, work(1), lwork, rwork(1), info)
     
   lwork = int(real(work(1)))
-  deallocate(work, vl, vr, rwork)
+  SAFE_DEALLOCATE_A(work)
+  SAFE_DEALLOCATE_A(vl)
+  SAFE_DEALLOCATE_A(vr)
+  SAFE_DEALLOCATE_A(rwork)
   
 
   ALLOCATE(work(lwork), lwork)
@@ -385,7 +396,10 @@ subroutine deigensolve_nonh(n, a, e, err_code, side)
       call DLAPACK(geev) ('N', 'V', n, a(1, 1), n, e(1), vl(1, 1), 1, vr(1,1), n, work(1), lwork, rwork(1), info)
       a(:, :) = vr(:, :)
   end if
-  deallocate(work, rwork, vr, vl)
+  SAFE_DEALLOCATE_A(work)
+  SAFE_DEALLOCATE_A(rwork)
+  SAFE_DEALLOCATE_A(vr)
+  SAFE_DEALLOCATE_A(vl)
 
   if(info.ne.0) then
     write(message(1),'(a,i5)') 'In zgeneigensolve_nonh, LAPACK Xgeev returned error message ', info
@@ -438,14 +452,14 @@ subroutine dlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
   call DLAPACK(sygvx)(1, 'V', 'I', 'U', n, a(1, 1), n, b(1, 1), n, M_ZERO, M_ZERO, &
     1, k, abstol, m, e(1), v(1, 1), n, work(1), -1, iwork(1), ifail(1), info)
   lwork = int(work(1))
-  deallocate(work)
+  SAFE_DEALLOCATE_A(work)
 
   ALLOCATE(work(lwork), lwork)
 
   call DLAPACK(sygvx)(1, 'V', 'I', 'U', n, a(1, 1), n, b(1, 1), n, M_ZERO, M_ZERO, &
     1, k, abstol, m, e(1), v(1, 1), n, work(1), lwork, iwork(1), ifail(1), info)
 
-  deallocate(work)
+  SAFE_DEALLOCATE_A(work)
 
   if(info.ne.0) then
     if(bof_) then
@@ -511,15 +525,14 @@ subroutine zlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
   call ZLAPACK(hegvx)(1, 'V', 'I', 'U', n, a(1, 1), n, b(1, 1), n, M_ZERO, M_ZERO, &
     1, k, abstol, m, e(1), v(1, 1), n, work(1), -1, rwork(1), iwork(1), ifail(1), info)
   lwork = int(real(work(1)))
-  deallocate(work)
-
+  SAFE_DEALLOCATE_A(work)
 
   ALLOCATE(work(lwork), lwork)
 
   call ZLAPACK(hegvx)(1, 'V', 'I', 'U', n, a(1, 1), n, b(1, 1), n, M_ZERO, M_ZERO, &
     1, k, abstol, m, e(1), v(1, 1), n, work(1), lwork, rwork(1), iwork(1), ifail(1), info)
 
-  deallocate(work)
+  SAFE_DEALLOCATE_A(work)
 
   if(info.ne.0) then
     if(bof_) then
@@ -574,7 +587,7 @@ subroutine deigensolve(n, a, b, e, bof, err_code)
   ALLOCATE(work(lwork), lwork)
   b = a
   call DLAPACK(syev) ('V', 'U', n, b(1,1), n, e(1), work(1), lwork, info)
-  deallocate(work)
+  SAFE_DEALLOCATE_A(work)
 
   if(info.ne.0) then
     if(bof_) then
@@ -632,7 +645,8 @@ subroutine zeigensolve(n, a, b, e, bof, err_code)
   ALLOCATE(rwork(max(1, 3*n-2)), max(1, 3*n-2))
   b = a
   call ZLAPACK(heev) ('V','U', n, b(1,1), n, e(1), work(1), lwork, rwork(1), info)
-  deallocate(work, rwork)
+  SAFE_DEALLOCATE_A(work)
+  SAFE_DEALLOCATE_A(rwork)
 
   if(info.ne.0) then
     if(bof_) then
@@ -687,14 +701,14 @@ subroutine dlowest_eigensolve(k, n, a, e, v)
   call DLAPACK(syevx)('V', 'I', 'U', n, a(1, 1), n, M_ZERO, M_ZERO, &
     1, k, abstol, m, e(1), v(1, 1), n, work(1), -1, iwork(1), ifail(1), info)
   lwork = int(work(1))
-  deallocate(work)
+  SAFE_DEALLOCATE_A(work)
 
   ALLOCATE(work(lwork), lwork)
 
   call DLAPACK(syevx)('V', 'I', 'U', n, a(1, 1), n, M_ZERO, M_ZERO, &
     1, k, abstol, m, e(1), v(1, 1), n, work(1), lwork, iwork(1), ifail(1), info)
 
-  deallocate(work)
+  SAFE_DEALLOCATE_A(work)
 
   if(info.ne.0) then
     write(message(1),'(a,i5)') &
@@ -738,14 +752,14 @@ subroutine zlowest_eigensolve(k, n, a, e, v)
   call ZLAPACK(heevx)('V', 'I', 'U', n, a(1, 1), n, M_ZERO, M_ZERO, &
     1, k, abstol, m, e(1), v(1, 1), n, work(1), -1, iwork(1), ifail(1), info)
   lwork = int(work(1))
-  deallocate(work)
+  SAFE_DEALLOCATE_A(work)
 
   ALLOCATE(work(lwork), lwork)
 
   call ZLAPACK(heevx)('V', 'I', 'U', n, a(1, 1), n, M_ZERO, M_ZERO, &
     1, k, abstol, m, e(1), v(1, 1), n, work(1), lwork, iwork(1), ifail(1), info)
 
-  deallocate(work)
+  SAFE_DEALLOCATE_A(work)
 
   if(info.ne.0) then
     write(message(1),'(a,i5)') &
@@ -811,7 +825,8 @@ FLOAT function ddeterminant(n, a, invert) result(d)
     end if
   end if
 
-  deallocate(work, ipiv)
+  SAFE_DEALLOCATE_A(work)
+  SAFE_DEALLOCATE_A(ipiv)
 end function ddeterminant
 
 
@@ -871,7 +886,8 @@ CMPLX function zdeterminant(n, a, invert) result(d)
     end if
   end if
 
-  deallocate(work, ipiv)
+  SAFE_DEALLOCATE_A(work)
+  SAFE_DEALLOCATE_A(ipiv)
 end function zdeterminant
 
 ! ---------------------------------------------------------
@@ -920,7 +936,8 @@ subroutine dsym_inverter(uplo, n, a)
     call write_fatal(1)
   end if
 
-  deallocate(work, ipiv)
+  SAFE_DEALLOCATE_A(work)
+  SAFE_DEALLOCATE_A(ipiv)
 end subroutine dsym_inverter
 
 ! ---------------------------------------------------------
@@ -968,7 +985,8 @@ subroutine zsym_inverter(uplo, n, a)
     call write_fatal(1)
   end if
 
-  deallocate(work, ipiv)
+  SAFE_DEALLOCATE_A(work)
+  SAFE_DEALLOCATE_A(ipiv)
 end subroutine zsym_inverter
 
 ! ---------------------------------------------------------
@@ -1022,7 +1040,14 @@ subroutine dlinsyssolve(n, nhrs, a, b, x)
     end if
   end if
 
-  deallocate(ipiv, iwork, ferr, berr, work, r, c, af)
+  SAFE_DEALLOCATE_A(ipiv)
+  SAFE_DEALLOCATE_A(iwork)
+  SAFE_DEALLOCATE_A(ferr)
+  SAFE_DEALLOCATE_A(berr)
+  SAFE_DEALLOCATE_A(work)
+  SAFE_DEALLOCATE_A(r)
+  SAFE_DEALLOCATE_A(c)
+  SAFE_DEALLOCATE_A(af)
 
 end subroutine dlinsyssolve
 
@@ -1076,14 +1101,14 @@ subroutine zlinsyssolve(n, nhrs, a, b, x)
     call write_fatal(1)
   end if
 
-  deallocate(ipiv)
-  deallocate(rwork)
-  deallocate(ferr)
-  deallocate(berr)
-  deallocate(work)
-  deallocate(r)
-  deallocate(c)
-  deallocate(af)
+  SAFE_DEALLOCATE_A(ipiv)
+  SAFE_DEALLOCATE_A(rwork)
+  SAFE_DEALLOCATE_A(ferr)
+  SAFE_DEALLOCATE_A(berr)
+  SAFE_DEALLOCATE_A(work)
+  SAFE_DEALLOCATE_A(r)
+  SAFE_DEALLOCATE_A(c)
+  SAFE_DEALLOCATE_A(af)
 end subroutine zlinsyssolve
 
 
@@ -1130,7 +1155,8 @@ subroutine zsingular_value_decomp(n, a, u, vt, sg_values)
     call write_fatal(1)
   end if
 
-  deallocate(rwork, work)
+  SAFE_DEALLOCATE_A(rwork)
+  SAFE_DEALLOCATE_A(work)
 
 end subroutine zsingular_value_decomp
 
@@ -1175,7 +1201,9 @@ subroutine zsvd_inverse(n, a, threshold)
     end do
   end do
 
-  deallocate(sg_values, vt, u)
+  SAFE_DEALLOCATE_A(sg_values)
+  SAFE_DEALLOCATE_A(vt)
+  SAFE_DEALLOCATE_A(u)
 end subroutine zsvd_inverse
 
 

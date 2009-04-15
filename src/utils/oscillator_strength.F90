@@ -358,7 +358,9 @@ subroutine read_resonances_file(order, ffile, search_interval, final_time, nfreq
     end do
   end do
  
-  deallocate(wij, c0i, omega)
+  SAFE_DEALLOCATE_A(wij)
+  SAFE_DEALLOCATE_A(c0i)
+  SAFE_DEALLOCATE_A(omega)
   call io_close(iunit)
 end subroutine read_resonances_file
 ! ---------------------------------------------------------
@@ -488,7 +490,9 @@ subroutine analyze_signal(order, omega, search_interval, final_time, nresonances
       call write_polarizability(nfrequencies, nresonances, dw, w, c0I2, damping)
   end select
 
-  deallocate(ot, w, c0I2)
+  SAFE_DEALLOCATE_A(ot)
+  SAFE_DEALLOCATE_A(w)
+  SAFE_DEALLOCATE_A(c0I2)
 end subroutine analyze_signal
 ! ---------------------------------------------------------
 
@@ -600,7 +604,8 @@ subroutine find_resonance(omega, leftbound, rightbound, nfrequencies)
     call write_fatal(4)
   end if
 
-  deallocate(warray, tarray)
+  SAFE_DEALLOCATE_A(warray)
+  SAFE_DEALLOCATE_A(tarray)
 end subroutine find_resonance
 ! ---------------------------------------------------------
 
@@ -938,7 +943,14 @@ subroutine generate_signal(order, observable)
   do j = 1, nfiles
     call io_close(iunit(j))
   end do
-  deallocate(iunit, q, mu, qq, c, ot, multipole, dipole)
+  SAFE_DEALLOCATE_A(iunit)
+  SAFE_DEALLOCATE_A(q)
+  SAFE_DEALLOCATE_A(mu)
+  SAFE_DEALLOCATE_A(qq)
+  SAFE_DEALLOCATE_A(c)
+  SAFE_DEALLOCATE_A(ot)
+  SAFE_DEALLOCATE_A(multipole)
+  SAFE_DEALLOCATE_A(dipole)
 end subroutine generate_signal
 ! ---------------------------------------------------------
 
@@ -1260,7 +1272,8 @@ subroutine print_omega_file(omega, search_interval, final_time, nfrequencies)
                             tarray(i)
   end do
 
-  deallocate(warray, tarray)
+  SAFE_DEALLOCATE_A(warray)
+  SAFE_DEALLOCATE_A(tarray)
 end subroutine print_omega_file
 ! ---------------------------------------------------------
 

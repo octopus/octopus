@@ -103,9 +103,9 @@ subroutine X(submesh_comm_finish)(this, sm, mesh, count, val)
     val(1:count) = val(1:count) + this%X(allval)(1:count, ipart)
   end do
   
-  deallocate(statuses)
-  deallocate(this%X(allval))
-  deallocate(this%requests)
+  SAFE_DEALLOCATE_A(statuses)
+  SAFE_DEALLOCATE_P(this%X(allval))
+  SAFE_DEALLOCATE_P(this%requests)
 
 end subroutine X(submesh_comm_finish)
 #endif

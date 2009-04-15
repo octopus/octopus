@@ -145,7 +145,7 @@ contains
     ALLOCATE(tmem(np, np), np**2)
     call make_full_matrix(np, order, dim, sp_mem, mem_s, tmem, mapping)
     call calc_source_wf(maxiter, m, np, il, offdiag, tmem, dt, psi0, u, f0, factor, lambda, src)
-    deallocate(tmem)
+    SAFE_DEALLOCATE_A(tmem)
 
     call pop_sub()
   end subroutine calc_source_wf_sp

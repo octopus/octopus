@@ -419,7 +419,7 @@ end subroutine X(sparskit_solver_run)
 subroutine X(sparskit_solver_end)()
   call push_sub('sparskit_inc.Xsparskit_solver_end')
 
-  deallocate(sk_b, sk_y, sk_work)
+  SAFE_DEALLOCATE_P(sk_b, sk_y, sk_work)
 
   call pop_sub
 end subroutine X(sparskit_solver_end)

@@ -206,7 +206,7 @@ contains
 
 #ifdef SINGLE_PRECISION
       rho_cf%RS = rhop
-      deallocate(rhop)
+      SAFE_DEALLOCATE_P(rhop)
 #endif
 
 #if defined(HAVE_MPI)
@@ -222,7 +222,8 @@ contains
 #if defined(HAVE_MPI)
       call dcube_to_mesh(m, rho_cf, pot_global)
       call dvec_scatter(m%vp, pot_global, pot)
-      deallocate(rho_global, pot_global)
+      SAFE_DEALLOCATE_A(rho_global)
+      SAFE_DEALLOCATE_A(pot_global)
 #endif
     else
       call dcube_to_mesh(m, rho_cf, pot)
@@ -243,10 +244,10 @@ contains
 
 #if defined(HAVE_MPI)
     do i_cnf = 1, n_cnf
-      deallocate(cnf(i_cnf)%kernel)
+      SAFE_DEALLOCATE_P(cnf(i_cnf)%kernel)
     end do
 #else
-    deallocate(cnf(serial)%kernel)
+    SAFE_DEALLOCATE_P(cnf(serial)%kernel)
 #endif
 
     call dcf_free(rho_cf)

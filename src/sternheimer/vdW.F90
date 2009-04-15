@@ -234,8 +234,8 @@ contains
     subroutine end_()
       integer :: dir
 
-      deallocate(gaus_leg_points)
-      deallocate(gaus_leg_weights)
+      SAFE_DEALLOCATE_A(gaus_leg_points)
+      SAFE_DEALLOCATE_A(gaus_leg_weights)
 
       do dir = 1, ndir
         call lr_dealloc(lr(dir, 1))

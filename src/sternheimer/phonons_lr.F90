@@ -169,14 +169,10 @@ contains
 
     !DESTRUCT
 
-    deallocate(infrared)
-
+    SAFE_DEALLOCATE_A(infrared)
     call lr_dealloc(lr(1))
-
     call vibrations_end(vib)
-
     call sternheimer_end(sh)
-
     call states_deallocate_wfns(st)
 
     call pop_sub()

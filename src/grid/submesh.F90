@@ -231,7 +231,7 @@ contains
          end do
       end do
 
-      deallocate(center_copies)
+      SAFE_DEALLOCATE_A(center_copies)
       
       call periodic_copy_end(pp)
 
@@ -259,14 +259,14 @@ contains
     call push_sub('submesh.submesh_end')
 
 #ifdef HAVE_MPI
-    if(associated(this%psize)) deallocate(this%psize)
+    SAFE_DEALLOCATE_P(this%psize)
 #endif
 
     if( this%ns /= -1 ) then
       nullify(this%mesh)
       this%ns = -1
-      deallocate(this%jxyz)
-      deallocate(this%x)
+      SAFE_DEALLOCATE_P(this%jxyz)
+      SAFE_DEALLOCATE_P(this%x)
     end if
 
     call pop_sub()

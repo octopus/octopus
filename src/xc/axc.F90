@@ -85,7 +85,10 @@ subroutine xc_get_vxc_and_axc(gr, xcs, st, rho, j, ispin, vxc, axc, ex, ec, exc_
     dedv(i,:,:) = dedv(i,:,:) + l_dedv
 
   end do space_loop
-  deallocate(l_dens, l_v, l_dedd, l_dedv)
+  SAFE_DEALLOCATE_A(l_dens)
+  SAFE_DEALLOCATE_A(l_v)
+  SAFE_DEALLOCATE_A(l_dedd)
+  SAFE_DEALLOCATE_A(l_dedv)
 
   ! add contributions to vxc and axc
   vxc = vxc + dedd
@@ -98,10 +101,13 @@ subroutine xc_get_vxc_and_axc(gr, xcs, st, rho, j, ispin, vxc, axc, ex, ec, exc_
       vxc(1:gr%mesh%np, is) = vxc(1:gr%mesh%np, is) - axc(1:gr%mesh%np, id, is)*f(1:gr%mesh%np, id, is)
     end do
   end do
-  deallocate(tmp)
+  SAFE_DEALLOCATE_A(tmp)
 
   !deallocate memory
-  deallocate(f, v, dedd, dedv)
+  SAFE_DEALLOCATE_A(f)
+  SAFE_DEALLOCATE_A(v)
+  SAFE_DEALLOCATE_A(dedd)
+  SAFE_DEALLOCATE_A(dedv)
 
   call pop_sub()
 end subroutine xc_get_vxc_and_axc

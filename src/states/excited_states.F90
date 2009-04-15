@@ -356,7 +356,13 @@ contains
 
     call io_close(iunit)
 
-    deallocate(n_filled, n_partially_filled, n_half_filled, n_empty, filled, partially_filled, half_filled)
+    SAFE_DEALLOCATE_A(n_filled)
+    SAFE_DEALLOCATE_A(n_partially_filled)
+    SAFE_DEALLOCATE_A(n_half_filled)
+    SAFE_DEALLOCATE_A(n_empty)
+    SAFE_DEALLOCATE_A(filled)
+    SAFE_DEALLOCATE_A(partially_filled)
+    SAFE_DEALLOCATE_A(half_filled)
     call pop_sub()
   end subroutine excited_states_init
 
@@ -371,8 +377,8 @@ contains
     call push_sub('excited_states.excited_states_kill')
 
     nullify(excited_state%st)
-    deallocate(excited_state%pair,   stat = ierr); nullify(excited_state%pair)
-    deallocate(excited_state%weight, stat = ierr); nullify(excited_state%weight)
+    SAFE_DEALLOCATE_P(excited_state%pair)
+    SAFE_DEALLOCATE_P(excited_state%weight)
 
     call pop_sub()
   end subroutine excited_states_kill

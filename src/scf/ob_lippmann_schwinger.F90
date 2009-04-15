@@ -262,7 +262,8 @@ contains
       end do
     end do
 
-    deallocate(tmp_x, tmp_y)
+    SAFE_DEALLOCATE_A(tmp_x)
+    SAFE_DEALLOCATE_A(tmp_y)
     call pop_sub()
 
   contains

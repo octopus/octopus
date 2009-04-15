@@ -332,7 +332,8 @@ contains
         end if
 
       end do
-      deallocate(zpsi1, hzpsi1)
+      SAFE_DEALLOCATE_A(zpsi1)
+      SAFE_DEALLOCATE_A(hzpsi1)
 
       if(present(order)) order = te%exp_order
       call pop_sub()
@@ -384,7 +385,7 @@ contains
       do idim = 1, hm%d%dim
         call lalg_scal(gr%mesh%np, exp(-M_zI*hm%spectral_middle_point*deltat), zpsi(:, idim))
       end do
-      deallocate(zpsi1)
+      SAFE_DEALLOCATE_A(zpsi1)
 
       if(present(order)) order = te%exp_order
       call pop_sub()
@@ -464,7 +465,10 @@ contains
 
       if(present(order)) order = korder
 
-      deallocate(v, hamilt, expo, tmp)
+      SAFE_DEALLOCATE_A(v)
+      SAFE_DEALLOCATE_A(hamilt)
+      SAFE_DEALLOCATE_A(expo)
+      SAFE_DEALLOCATE_A(tmp)
 
       call pop_sub()
     end subroutine lanczos
@@ -601,7 +605,8 @@ contains
 
       end do
 
-      deallocate(psi1, hpsi1)
+      SAFE_DEALLOCATE_A(psi1)
+      SAFE_DEALLOCATE_A(hpsi1)
 
       call pop_sub()
     end subroutine taylor_series_batch

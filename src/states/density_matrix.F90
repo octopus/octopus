@@ -294,23 +294,24 @@ contains
 
       end do states_loop
 
-      deallocate(evectors)
-      deallocate(evalues)
-      deallocate(density)
-      deallocate(densmatr)
+      SAFE_DEALLOCATE_A(evectors)
+      SAFE_DEALLOCATE_A(evalues)
+      SAFE_DEALLOCATE_A(density)
+      SAFE_DEALLOCATE_A(densmatr)
       
     end do densmat_loop ! loop over densmats to output
 
-    deallocate(origin)
-    deallocate(ix_1part)
-    deallocate(ix_1part_p)
-    deallocate(nr_1part)
-    deallocate(enlarge_1part)
+    SAFE_DEALLOCATE_A(origin)
+    SAFE_DEALLOCATE_A(ix_1part)
+    SAFE_DEALLOCATE_A(ix_1part_p)
+    SAFE_DEALLOCATE_A(nr_1part)
+    SAFE_DEALLOCATE_A(enlarge_1part)
 
-    deallocate (npoints)
-    deallocate (labels_densmat)
-    deallocate (particle_kept_densmat)
-    deallocate (nnatorb_prt_densmat)
+    SAFE_DEALLOCATE_A(npoints)
+    SAFE_DEALLOCATE_A(labels_densmat)
+    SAFE_DEALLOCATE_A(particle_kept_densmat)
+    SAFE_DEALLOCATE_A(nnatorb_prt_densmat)
+
     call pop_sub()
   end subroutine density_matrix_write
   ! ---------------------------------------------------------

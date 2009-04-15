@@ -112,15 +112,22 @@ contains
 
     call push_sub('ps_in_grid.ps_in_grid_end')
 
-    deallocate(ps%vps, ps%chcore, ps%vlocal)
-    nullify   (ps%vps, ps%chcore, ps%vlocal)
+    SAFE_DEALLOCATE_P(ps%vps)
+    SAFE_DEALLOCATE_P(ps%chcore)
+    SAFE_DEALLOCATE_P(ps%vlocal)
 
-    deallocate(ps%rphi, ps%KB, ps%dkbcos, ps%dknorm, ps%kb_radius)
-    nullify   (ps%rphi, ps%KB, ps%dkbcos, ps%dknorm, ps%kb_radius)
+    SAFE_DEALLOCATE_P(ps%rphi)
+    SAFE_DEALLOCATE_P(ps%KB)
+    SAFE_DEALLOCATE_P(ps%dkbcos)
+    SAFE_DEALLOCATE_P(ps%dknorm)
+    SAFE_DEALLOCATE_P(ps%kb_radius)
 
     if(ps%so_no_l_channels > 0) then
-      deallocate(ps%so_vps, ps%so_KB, ps%so_dkbcos, ps%so_dknorm, ps%so_kb_radius)
-      nullify   (ps%so_vps, ps%so_KB, ps%so_dkbcos, ps%so_dknorm, ps%so_kb_radius)
+      SAFE_DEALLOCATE_P(ps%so_vps)
+      SAFE_DEALLOCATE_P(ps%so_KB)
+      SAFE_DEALLOCATE_P(ps%so_dkbcos)
+      SAFE_DEALLOCATE_P(ps%so_dknorm)
+      SAFE_DEALLOCATE_P(ps%so_kb_radius)
     end if
 
     call logrid_end(ps%g)
@@ -170,7 +177,7 @@ contains
       call vhrtre(rho, ps%vlocal, ps%g%rofi, ps%g%drdi, ps%g%s, ps%g%nrval, ps%g%a)
       ps%vlocal(1) = ps%vlocal(2)
 
-      deallocate(rho)
+      SAFE_DEALLOCATE_A(rho)
     end if
 
     call pop_sub()

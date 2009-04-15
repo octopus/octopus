@@ -634,9 +634,12 @@ contains
           end if
         end do
 
-        deallocate(m%dsend_type, m%zsend_type)
-        deallocate(m%drecv_type, m%zrecv_type)
-        deallocate(m%nsend, m%nrecv)
+        SAFE_DEALLOCATE_P(m%dsend_type)
+        SAFE_DEALLOCATE_P(m%zsend_type)
+        SAFE_DEALLOCATE_P(m%drecv_type)
+        SAFE_DEALLOCATE_P(m%zrecv_type)
+        SAFE_DEALLOCATE_P(m%nsend)
+        SAFE_DEALLOCATE_P(m%nrecv)
       end if
 #endif
     end if

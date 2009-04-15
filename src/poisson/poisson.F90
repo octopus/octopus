@@ -273,7 +273,9 @@ contains
     end select
     poisson_solver = -99
 
-    if(hartree_integrator%increase_box) deallocate(hartree_integrator%grid)
+    if(hartree_integrator%increase_box) then
+      SAFE_DEALLOCATE_P(hartree_integrator%grid)
+    end if
 
     call pop_sub()
   end subroutine poisson_end
@@ -313,7 +315,8 @@ contains
     call dpoisson_solve(gr, aux2, aux1, all_nodes=all_nodes_value)
     pot(1:gr%mesh%np) = pot(1:gr%mesh%np) + M_zI*aux2(1:gr%mesh%np)
 
-    deallocate(aux1, aux2)
+    SAFE_DEALLOCATE_A(aux1)
+    SAFE_DEALLOCATE_A(aux2)
 
     call pop_sub()
   end subroutine zpoisson_solve
@@ -376,8 +379,10 @@ contains
         call dmf_interpolate(hartree_integrator%grid%mesh, gr%mesh, full_interpolation = .false., u = potp, f = pot)
         pot(1:gr%mesh%np) = pot(1:gr%mesh%np) + vh_correction(1:gr%mesh%np)
 
-        deallocate(rho_corrected, vh_correction)
-        deallocate(potp, rhop)
+        SAFE_DEALLOCATE_A(rho_corrected)
+        SAFE_DEALLOCATE_A(vh_correction)
+        SAFE_DEALLOCATE_A(potp)
+        SAFE_DEALLOCATE_A(rhop)
       else
         ALLOCATE(rho_corrected(gr%mesh%np), gr%mesh%np)
         ALLOCATE(vh_correction(gr%mesh%np), gr%mesh%np)
@@ -388,7 +393,8 @@ contains
         call poisson_cg2(gr%mesh, gr%der, pot, rho_corrected)
         pot(1:gr%mesh%np) = pot(1:gr%mesh%np) + vh_correction(1:gr%mesh%np)
 
-        deallocate(rho_corrected, vh_correction)
+        SAFE_DEALLOCATE_A(rho_corrected)
+        SAFE_DEALLOCATE_A(vh_correction)
       end if
 
     case(MULTIGRID)
@@ -405,7 +411,8 @@ contains
       call poisson_fft(gr%mesh, pot, rho_corrected, average_to_zero = .true.)
 
       pot(1:gr%mesh%np) = pot(1:gr%mesh%np) + vh_correction(1:gr%mesh%np)
-      deallocate(rho_corrected, vh_correction)
+      SAFE_DEALLOCATE_A(rho_corrected)
+      SAFE_DEALLOCATE_A(vh_correction)
 
     case(ISF)
       call poisson_isf_solve(gr%mesh, pot, rho, all_nodes_value)
@@ -519,7 +526,11 @@ contains
     call doutput_function (io_function_fill_how('AxisY'), ".", "poisson_test_exact", gr%mesh, gr%sb, vh_exact, M_ONE, ierr)
     call doutput_function (io_function_fill_how('AxisY'), ".", "poisson_test_numerical", gr%mesh, gr%sb, vh, M_ONE, ierr)
 
-    deallocate(rho, rhop, vh, vh_exact, x)
+    SAFE_DEALLOCATE_A(rho)
+    SAFE_DEALLOCATE_A(rhop)
+    SAFE_DEALLOCATE_A(vh)
+    SAFE_DEALLOCATE_A(vh_exact)
+    SAFE_DEALLOCATE_A(x)
     call pop_sub()
   end subroutine poisson_test
 

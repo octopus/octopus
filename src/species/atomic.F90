@@ -177,7 +177,9 @@ contains
                 nspin, rho, ex, ec, dx, dc, xc)
     v = ve + xc
 
-    deallocate(ve, xc, rho)
+    SAFE_DEALLOCATE_A(ve)
+    SAFE_DEALLOCATE_A(xc)
+    SAFE_DEALLOCATE_A(rho)
 
     call pop_sub()
   end subroutine atomhxc

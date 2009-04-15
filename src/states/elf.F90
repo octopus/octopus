@@ -114,7 +114,8 @@ contains
           - sum(jj(i, 1:gr%mesh%sb%dim, is)**2)                      ! - j^2
       end do
 
-      deallocate(grho, jj)   ! these are no longer needed
+      SAFE_DEALLOCATE_A(grho)
+      SAFE_DEALLOCATE_A(jj)   ! these are no longer needed
     
       ! pass this information to the caller if requested
       if(present(de)) de(1:gr%mesh%np,is) = kappa(1:gr%mesh%np,is)
@@ -170,7 +171,8 @@ contains
       end do
     end select
 
-    deallocate(rho, kappa)
+    SAFE_DEALLOCATE_A(rho)
+    SAFE_DEALLOCATE_A(kappa)
 
     call pop_sub()
   end subroutine elf_calc
@@ -254,7 +256,8 @@ contains
           end do
         end do
       end do
-      deallocate(psi_fs, gpsi)
+      SAFE_DEALLOCATE_A(psi_fs)
+      SAFE_DEALLOCATE_A(gpsi)
 
       do i = 1, gr%mesh%np
         if(r(i) >= dmin) then
@@ -275,7 +278,9 @@ contains
         end if
       end do
 
-      deallocate(r, gradr, j)
+      SAFE_DEALLOCATE_A(r)
+      SAFE_DEALLOCATE_A(gradr)
+      SAFE_DEALLOCATE_A(j)
 
     end do do_is
 

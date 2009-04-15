@@ -406,7 +406,7 @@ contains
           scf%abs_dens = scf%abs_dens + dmf_integrate(gr%mesh, tmp)
         end do
       end do
-      deallocate(tmp)
+      SAFE_DEALLOCATE_A(tmp)
 
       ! compute forces only if they are used as convergence criteria
       if (scf%conv_abs_force > M_ZERO) then
@@ -511,11 +511,14 @@ contains
 
     if (scf%what2mix == MIXPOT) then
       call v_ks_calc(gr, ks, hm, st)
-      deallocate(vout, vin, vnew)
+      SAFE_DEALLOCATE_A(vout)
+      SAFE_DEALLOCATE_A(vin)
+      SAFE_DEALLOCATE_A(vnew)
     else
-      deallocate(rhonew)
+      SAFE_DEALLOCATE_A(rhonew)
     end if
-    deallocate(rhoout, rhoin)
+    SAFE_DEALLOCATE_A(rhoout)
+    SAFE_DEALLOCATE_A(rhoin)
 
     if(.not.finish) then
       message(1) = 'SCF *not* converged!'
@@ -833,7 +836,7 @@ contains
             call MPI_Allgatherv(lang, st%nst*kn, MPI_FLOAT, &
                  ang2(:, :), st%d%kpt%num(:)*st%nst, (st%d%kpt%range(1, :) - 1)*st%nst, MPI_FLOAT, &
                  st%d%kpt%mpi_grp%comm, mpi_err)
-          deallocate(lang)
+          SAFE_DEALLOCATE_A(lang)
         end if
 
         if(st%parallel_in_states) then
@@ -844,7 +847,7 @@ contains
           end do
           lang(1:st%lnst, 1) = ang2(st%st_start:st%st_end, ik)
           call lmpi_gen_allgatherv(st%lnst, lang(:, 1), tmp, ang2(:, ik), st%mpi_grp)
-          deallocate(lang)
+          SAFE_DEALLOCATE_A(lang)
         end if
 #endif
         write(message(1), '(a4,1x,a5,4a12,4x,a12,1x)')       &
@@ -882,7 +885,8 @@ contains
       write(message(2),'(10x,4f12.6)') angular(1:3), lsquare
       call write_info(2, iunit)
 
-      deallocate(ang, ang2)
+      SAFE_DEALLOCATE_A(ang)
+      SAFE_DEALLOCATE_A(ang2)
 
       call pop_sub()
     end subroutine write_angular_momentum
@@ -1004,7 +1008,7 @@ contains
 
       end if
       
-      deallocate(lmm)
+      SAFE_DEALLOCATE_A(lmm)
 
       call pop_sub()
     end subroutine write_magnetic_moments

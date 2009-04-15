@@ -576,7 +576,7 @@ contains
         end select
       end do
       call write_iter_nl(out_magnets)
-      deallocate(lmm)
+      SAFE_DEALLOCATE_A(lmm)
     end if
 
     call pop_sub()
@@ -658,7 +658,8 @@ contains
 
     end if
 
-    deallocate(ang, ang2)
+    SAFE_DEALLOCATE_A(ang)
+    SAFE_DEALLOCATE_A(ang2)
     call pop_sub()
   end subroutine td_write_angular
 
@@ -761,7 +762,8 @@ contains
       call write_iter_nl(out_multip)
     end if
 
-    deallocate(nuclear_dipole, multipole)
+    SAFE_DEALLOCATE_A(nuclear_dipole)
+    SAFE_DEALLOCATE_A(multipole)
     call pop_sub()
   end subroutine td_write_multipole
 
@@ -941,9 +943,9 @@ contains
     end if
 
     if(n_excited_states > 0) then
-      deallocate(excited_state_p)
+      SAFE_DEALLOCATE_A(excited_state_p)
     end if
-    deallocate(dotprodmatrix)
+    SAFE_DEALLOCATE_A(dotprodmatrix)
     call pop_sub()
   end subroutine td_write_populations
 
@@ -1282,7 +1284,7 @@ contains
           
         end if
       end do
-      deallocate(projections)
+      SAFE_DEALLOCATE_A(projections)
 
       if(mpi_grp_is_root(mpi_world)) then
         call td_write_print_header_end(out_proj)
@@ -1307,7 +1309,7 @@ contains
       call write_iter_nl(out_proj)
     end if
 
-    deallocate(projections)
+    SAFE_DEALLOCATE_A(projections)
     call pop_sub()
 
   contains
@@ -1359,7 +1361,7 @@ contains
         end do
       end do
       
-      deallocate(xpsi)
+      SAFE_DEALLOCATE_A(xpsi)
 
       call distribute_projections()
 

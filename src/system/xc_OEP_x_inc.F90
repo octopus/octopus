@@ -221,11 +221,14 @@ subroutine X(oep_x) (gr, st, is, oep, ex, exx_coef)
     ex = r
   end if
 
-  deallocate(recv_buffer)
+  SAFE_DEALLOCATE_P(recv_buffer)
 #endif
 
-  deallocate(recv_stack, send_stack)
-  deallocate(F_ij, rho_ij, send_buffer)
+  SAFE_DEALLOCATE_A(recv_stack)
+  SAFE_DEALLOCATE_A(send_stack)
+  SAFE_DEALLOCATE_A(F_ij)
+  SAFE_DEALLOCATE_A(rho_ij)
+  SAFE_DEALLOCATE_P(send_buffer)
 
   call profiling_out(C_PROFILING_XC_EXX)
   call pop_sub()

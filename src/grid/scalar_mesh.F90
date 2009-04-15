@@ -288,7 +288,8 @@ contains
       !   sm%mesh(i)    = M_HALF*(sm%max-sm%min) * gl(i) + M_HALF*(sm%max+sm%min)
       !   sm%weights(i) = gw(i)*M_HALF*(sm%max-sm%min)
       !end do
-      deallocate(gl, gw)
+      SAFE_DEALLOCATE_A(gl)
+      SAFE_DEALLOCATE_A(gw)
 
       message(1) = 'scalar_mesh: Gauss-Legendre scalar mesh not fully implemented'
       call write_fatal(1)
@@ -347,7 +348,8 @@ contains
 
     call push_sub('scalar_mesh.scalar_mesh_end')
 
-    deallocate(sm%mesh, sm%weights)
+    SAFE_DEALLOCATE_P(sm%mesh)
+    SAFE_DEALLOCATE_P(sm%weights)
 
     call pop_sub()
   end subroutine scalar_mesh_end

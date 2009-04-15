@@ -427,7 +427,8 @@ contains
 
     call spline_fit(npoints, x, y, splout)
 
-    deallocate(x, y)
+    SAFE_DEALLOCATE_A(x)
+    SAFE_DEALLOCATE_A(y)
   end subroutine spline_copy
 
   subroutine spline_fit8(nrc, rofi, ffit, spl)
@@ -452,7 +453,8 @@ contains
     rofi8 = real(rofi, kind=8)
     ffit8 = real(ffit, kind=8)
     call spline_fit8(nrc, rofi8, ffit8, spl)
-    deallocate(rofi8, ffit8)
+    SAFE_DEALLOCATE_A(rofi8)
+    SAFE_DEALLOCATE_A(ffit8)
   end subroutine spline_fit4
 
   real(8) pure function spline_eval8(spl, x)
@@ -508,7 +510,9 @@ contains
     y2 = y2 + y
     call oct_spline_fit(npoints, x(1), y2(1), splsum%spl, splsum%acc)
 
-    deallocate(x, y, y2)
+    SAFE_DEALLOCATE_A(x)
+    SAFE_DEALLOCATE_A(y)
+    SAFE_DEALLOCATE_A(y2)
   end subroutine spline_sum
 
   subroutine spline_times(a, spl)
@@ -529,10 +533,11 @@ contains
     end do
     call oct_spline_fit(npoints, x(1), y(1), spl%spl, spl%acc)
 
-    deallocate(x, y)
+    SAFE_DEALLOCATE_A(x)
+    SAFE_DEALLOCATE_A(y)
   end subroutine spline_times
 
-  real(8) pure function spline_integral_full(spl) result(res)
+  real(8) function spline_integral_full(spl) result(res)
     type(spline_t), intent(in) :: spl
     integer :: npoints
     real(8), allocatable :: x(:)
@@ -541,7 +546,7 @@ contains
     allocate(x(npoints))
     call oct_spline_x(spl%spl, x(1))
     res = oct_spline_eval_integ(spl%spl, x(1), x(npoints), spl%acc)
-    deallocate(x)
+    SAFE_DEALLOCATE_A(x)
 
   end function spline_integral_full
 
@@ -632,7 +637,11 @@ contains
     call spline_init(splw)
     call oct_spline_fit(np, xw(1), yw(1), splw%spl, splw%acc)
 
-    deallocate(x, y, y2, xw, yw)
+    SAFE_DEALLOCATE_A(x)
+    SAFE_DEALLOCATE_A(y)
+    SAFE_DEALLOCATE_A(y2)
+    SAFE_DEALLOCATE_A(xw)
+    SAFE_DEALLOCATE_A(yw)
   end subroutine spline_3dft
 
   subroutine spline_besselft(spl, splw, l, gmax)
@@ -687,7 +696,11 @@ contains
     call spline_init(splw)
     call oct_spline_fit(np, xw(1), yw(1), splw%spl, splw%acc)
 
-    deallocate(x, y, y2, xw, yw)
+    SAFE_DEALLOCATE_A(x)
+    SAFE_DEALLOCATE_A(y)
+    SAFE_DEALLOCATE_A(y2)
+    SAFE_DEALLOCATE_A(xw)
+    SAFE_DEALLOCATE_A(yw)
   end subroutine spline_besselft
 
   subroutine spline_cut(spl, cutoff, beta)
@@ -709,7 +722,8 @@ contains
     end do
     call oct_spline_fit(npoints, x(1), y(1), spl%spl, spl%acc)
 
-    deallocate(x, y)
+    SAFE_DEALLOCATE_A(x)
+    SAFE_DEALLOCATE_A(y)
   end subroutine spline_cut
 
   subroutine spline_div(spla, splb)
@@ -736,7 +750,8 @@ contains
     
     call oct_spline_fit(npoints, x(1), y(1), spla%spl, spla%acc)
 
-    deallocate(x, y)
+    SAFE_DEALLOCATE_A(x)
+    SAFE_DEALLOCATE_A(y)
   end subroutine spline_div
 
 
@@ -767,7 +782,8 @@ contains
     
     call oct_spline_fit(npoints, x(1), y(1), spla%spl, spla%acc)
 
-    deallocate(x, y)
+    SAFE_DEALLOCATE_A(x)
+    SAFE_DEALLOCATE_A(y)
   end subroutine spline_mult
 
 
@@ -840,7 +856,8 @@ contains
     do i = 1, np
       write(iunit, '(2f16.8)') x(i), y(i)
     end do
-    deallocate(x, y)
+    SAFE_DEALLOCATE_A(x)
+    SAFE_DEALLOCATE_A(y)
   end subroutine spline_print_0
 
   subroutine spline_print_1(spl, iunit)
@@ -862,7 +879,8 @@ contains
     do i = 1, np
       write(iunit, '('//trim(fm)//'f16.8)') x(i), (spline_eval(spl(j), x(i)), j = 1, size(spl))
     end do
-    deallocate(x, y)
+    SAFE_DEALLOCATE_A(x)
+    SAFE_DEALLOCATE_A(y)
 
   end subroutine spline_print_1
 
@@ -886,7 +904,8 @@ contains
       write(iunit, '('//trim(fm)//'f16.8)') x(i), &
         ((spline_eval(spl(j, k), x(i)), j = 1, n1), k = 1, n2)
     end do
-    deallocate(x, y)
+    SAFE_DEALLOCATE_A(x)
+    SAFE_DEALLOCATE_A(y)
   end subroutine spline_print_2
 
   FLOAT pure function spline_cutoff_radius(spl, threshold) result(r)

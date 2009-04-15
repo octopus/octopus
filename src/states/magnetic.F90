@@ -90,7 +90,7 @@ contains
     mm(2) = dmf_integrate(m, md(:, 2))
     mm(3) = dmf_integrate(m, md(:, 3))
 
-    deallocate(md)
+    SAFE_DEALLOCATE_A(md)
 
     call pop_sub()
   end subroutine magnetic_moment
@@ -127,7 +127,8 @@ contains
       lmm(2, ia) = dmf_integrate(m, aux(:, 2))
       lmm(3, ia) = dmf_integrate(m, aux(:, 3))
     end do
-    deallocate(md, aux)
+    SAFE_DEALLOCATE_A(md)
+    SAFE_DEALLOCATE_A(aux)
 
     call pop_sub()
   end subroutine magnetic_local_moments
@@ -188,7 +189,7 @@ contains
 
     call dderivatives_curl(gr%der, a_ind, b_ind)
 
-    deallocate(j)
+    SAFE_DEALLOCATE_A(j)
     call pop_sub()
   end subroutine magnetic_induced
 

@@ -205,7 +205,9 @@ subroutine X(ode_step)(os, func, startval, solutionp, solutionvec)
 
   solutionp = yn
 
-  deallocate(kv, yn, y0)
+  SAFE_DEALLOCATE_A(kv)
+  SAFE_DEALLOCATE_A(yn)
+  SAFE_DEALLOCATE_A(y0)
 
   call pop_sub()
 end subroutine X(ode_step)
@@ -218,7 +220,10 @@ subroutine X(ode_solver_end)(os)
   call push_sub('ode_solver_inc.Xode_solver_end')
 
   ! cleanup
-  deallocate(os%a, os%b, os%c, os%e)
+  SAFE_DEALLOCATE_P(os%a)
+  SAFE_DEALLOCATE_P(os%b)
+  SAFE_DEALLOCATE_P(os%c)
+  SAFE_DEALLOCATE_P(os%e)
 
   call pop_sub()
 end subroutine X(ode_solver_end)

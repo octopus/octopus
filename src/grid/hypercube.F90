@@ -82,7 +82,7 @@ contains
   subroutine hypercube_end(this)
     type(hypercube_t), intent(inout) :: this
 
-    deallocate(this%boxdim)
+    SAFE_DEALLOCATE_P(this%boxdim)
   end subroutine hypercube_end
 
   subroutine hypercube_x_to_i(this, ndim, nr, enlarge, coord, icoord)

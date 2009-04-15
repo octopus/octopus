@@ -171,16 +171,16 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
     end do
   end do
   
-  deallocate(psi)
+  SAFE_DEALLOCATE_A(psi)
   if(present(lr)) then
-    deallocate(dl_psi)
-    deallocate(dl_psi2)
+    SAFE_DEALLOCATE_A(dl_psi)
+    SAFE_DEALLOCATE_A(dl_psi2)
   endif
 
-  deallocate(grad_psi)
+  SAFE_DEALLOCATE_A(grad_psi)
   if(present(lr)) then
-    deallocate(grad_dl_psi)
-    deallocate(grad_dl_psi2)
+    SAFE_DEALLOCATE_A(grad_dl_psi)
+    SAFE_DEALLOCATE_A(grad_dl_psi2)
   endif
 
 #if defined(HAVE_MPI)
@@ -192,13 +192,13 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
     ALLOCATE(force_local(1:gr%mesh%sb%dim, 1:geo%natoms), gr%mesh%sb%dim*geo%natoms)
     force_local = force
     call MPI_Allreduce(force_local, force, gr%mesh%sb%dim*geo%natoms, MPI_CMPLX, MPI_SUM, st%mpi_grp%comm, mpi_err)
-    deallocate(force_local)
+    SAFE_DEALLOCATE_A(force_local)
 
     !reduce the gradient of the density
     ALLOCATE(grad_rho_local(np, gr%mesh%sb%dim), np*gr%mesh%sb%dim)
     call lalg_copy(np, gr%mesh%sb%dim, grad_rho, grad_rho_local)
     call MPI_Allreduce(grad_rho_local, grad_rho, np*gr%mesh%sb%dim, MPI_CMPLX, MPI_SUM, st%mpi_grp%comm, mpi_err)
-    deallocate(grad_rho_local)
+    SAFE_DEALLOCATE_A(grad_rho_local)
 
     call profiling_out(prof)
 
@@ -212,13 +212,13 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
     ALLOCATE(force_local(1:gr%mesh%sb%dim, 1:geo%natoms), gr%mesh%sb%dim*geo%natoms)
     force_local = force
     call MPI_Allreduce(force_local, force, gr%mesh%sb%dim*geo%natoms, MPI_CMPLX, MPI_SUM, st%d%kpt%mpi_grp%comm, mpi_err)
-    deallocate(force_local)
+    SAFE_DEALLOCATE_A(force_local)
     
     !reduce the gradient of the density
     ALLOCATE(grad_rho_local(np, gr%mesh%sb%dim), np*gr%mesh%sb%dim)
     call lalg_copy(np, gr%mesh%sb%dim, grad_rho, grad_rho_local)
     call MPI_Allreduce(grad_rho_local, grad_rho, np*gr%mesh%sb%dim, MPI_CMPLX, MPI_SUM, st%d%kpt%mpi_grp%comm, mpi_err)
-    deallocate(grad_rho_local)
+    SAFE_DEALLOCATE_A(grad_rho_local)
 
     call profiling_out(prof)
 
@@ -253,7 +253,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
 
   end do
 
-  deallocate(vloc)
+  SAFE_DEALLOCATE_A(vloc)
 
 #ifdef HAVE_MPI
   if(geo%atoms%parallel) then
@@ -278,7 +278,9 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
          force, recv_count(1), recv_displ, MPI_CMPLX, &
          geo%atoms%mpi_grp%comm, mpi_err)
 
-    deallocate(recv_count, recv_displ, force_local)
+    SAFE_DEALLOCATE_A(recv_count)
+    SAFE_DEALLOCATE_A(recv_displ)
+    SAFE_DEALLOCATE_A(force_local)
 
     call profiling_out(prof)
 
@@ -309,7 +311,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
     end forall
   endif
 
-  deallocate(force)
+  SAFE_DEALLOCATE_A(force)
   call pop_sub()
   
 end subroutine X(calc_forces_from_potential)

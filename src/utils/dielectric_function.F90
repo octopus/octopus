@@ -162,7 +162,9 @@ program dielectric_function
   end do
   call io_close(out_file)
 
-  deallocate(dielectric, vecpot, dumpa)
+  SAFE_DEALLOCATE_A(dielectric)
+  SAFE_DEALLOCATE_A(vecpot)
+  SAFE_DEALLOCATE_A(dumpa)
 
   call io_end()
   call datasets_end()

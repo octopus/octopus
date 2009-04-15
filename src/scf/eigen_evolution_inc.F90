@@ -98,7 +98,11 @@ subroutine X(eigensolver_evolution) (gr, st, hm, tol, niter, converged, ik, diff
 
   niter = matvec
   call exponential_end(te)
-  deallocate(hpsi, m, c, eig, phi)
+  SAFE_DEALLOCATE_A(hpsi)
+  SAFE_DEALLOCATE_A(m)
+  SAFE_DEALLOCATE_A(c)
+  SAFE_DEALLOCATE_A(eig)
+  SAFE_DEALLOCATE_A(phi)
   call pop_sub()
 contains
 
@@ -117,7 +121,7 @@ contains
     call exponential_apply(te, gr, hm, zpsi, ist, ik, -tau, M_ZERO, order = j, imag_time = .true.)
 #if defined(R_TREAL)
     psi = zpsi
-    deallocate(zpsi)
+    SAFE_DEALLOCATE_P(zpsi)
 #else
     nullify(zpsi)
 #endif

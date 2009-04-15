@@ -856,7 +856,9 @@ contains
       call tdf_set_numerical(par_new%f(i), e_new(:, i, 1))
     end do
 
-    deallocate(e_in, e_out, e_new)
+    SAFE_DEALLOCATE_A(e_in)
+    SAFE_DEALLOCATE_A(e_out)
+    SAFE_DEALLOCATE_A(e_new)
     call pop_sub()
   end subroutine parameters_mixing
   ! ---------------------------------------------------------
@@ -936,20 +938,20 @@ contains
     do j = 1, cp%no_parameters
       call tdf_end(cp%f(j))
     end do
-    deallocate(cp%f)
+    SAFE_DEALLOCATE_P(cp%f)
     nullify(cp%f)
-    deallocate(cp%alpha)
+    SAFE_DEALLOCATE_P(cp%alpha)
     nullify(cp%alpha)
     if(associated(cp%utransf)) then
-      deallocate(cp%utransf)
+      SAFE_DEALLOCATE_P(cp%utransf)
       nullify(cp%utransf)
     end if
     if(associated(cp%utransfi)) then
-      deallocate(cp%utransfi)
+      SAFE_DEALLOCATE_P(cp%utransfi)
       nullify(cp%utransfi)
     end if
     if(associated(cp%theta)) then
-      deallocate(cp%theta)
+      SAFE_DEALLOCATE_P(cp%theta)
       nullify(cp%theta)
     end if
 
@@ -1446,12 +1448,12 @@ contains
   subroutine parameters_mod_close()
     integer :: j
 
-    deallocate(par_common%alpha); nullify(par_common%alpha)
+    SAFE_DEALLOCATE_P(par_common%alpha); nullify(par_common%alpha)
     do j = 1, par_common%no_parameters
       call tdf_end(par_common%td_penalty(j))
     end do
-    deallocate(par_common%td_penalty); nullify(par_common%td_penalty)
-    if(associated(par_common)) deallocate(par_common)
+    SAFE_DEALLOCATE_P(par_common%td_penalty); nullify(par_common%td_penalty)
+    SAFE_DEALLOCATE_P(par_common)
 
   end subroutine parameters_mod_close
   ! ---------------------------------------------------------

@@ -546,7 +546,7 @@ contains
       c1 = c2
     end do
 
-    deallocate(x)
+    SAFE_DEALLOCATE_A(x)
 
   end subroutine weights
 
@@ -966,7 +966,9 @@ contains
     alpha = transpose(eigenvectors)
     y = matmul(alpha, x(1:n-1))
 
-    deallocate(alpha, eigenvectors, eigenvalues)
+    SAFE_DEALLOCATE_A(alpha)
+    SAFE_DEALLOCATE_A(eigenvectors)
+    SAFE_DEALLOCATE_A(eigenvalues)
     call pop_sub()
   end subroutine hypersphere_cut
   ! ---------------------------------------------------------
@@ -1002,7 +1004,9 @@ contains
     det = lalg_inverter(n-1, alpha)
     x(1:n-1) = matmul(alpha, y)
 
-    deallocate(alpha, eigenvectors, eigenvalues)
+    SAFE_DEALLOCATE_A(alpha)
+    SAFE_DEALLOCATE_A(eigenvectors)
+    SAFE_DEALLOCATE_A(eigenvalues)
     call pop_sub()
   end subroutine hypersphere_cut_back
   ! ---------------------------------------------------------

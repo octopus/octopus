@@ -193,8 +193,14 @@ contains
     if(gr%have_fine_mesh) then
       call derivatives_end(gr%fine%der)
       call mesh_end(gr%fine%mesh)
-      deallocate(gr%fine%mesh, gr%fine%der)
-      deallocate(gr%fine%to_coarse, gr%fine%to_fine1, gr%fine%to_fine2, gr%fine%to_fine4, gr%fine%to_fine8, gr%fine%fine_i)
+      SAFE_DEALLOCATE_P(gr%fine%mesh)
+      SAFE_DEALLOCATE_P(gr%fine%der)
+      SAFE_DEALLOCATE_P(gr%fine%to_coarse)
+      SAFE_DEALLOCATE_P(gr%fine%to_fine1)
+      SAFE_DEALLOCATE_P(gr%fine%to_fine2)
+      SAFE_DEALLOCATE_P(gr%fine%to_fine4)
+      SAFE_DEALLOCATE_P(gr%fine%to_fine8)
+      SAFE_DEALLOCATE_P(gr%fine%fine_i)
     end if
 
     call double_grid_end(gr%dgrid)
@@ -204,12 +210,11 @@ contains
 
     if(associated(gr%mgrid)) then
       call multigrid_end(gr%mgrid)
-      deallocate(gr%mgrid); nullify(gr%mgrid)
+      SAFE_DEALLOCATE_P(gr%mgrid)
     end if
 
     if(gr%sb%open_boundaries) then
-      deallocate(gr%intf)
-      nullify(gr%intf)
+      SAFE_DEALLOCATE_P(gr%intf)
     end if
 
     call stencil_end(gr%stencil)

@@ -51,7 +51,7 @@ subroutine X(preconditioner_apply)(pre, gr, hm, a, b, omega)
       call X(derivatives_oper)(pre%op, gr%der, a_copy(:), b(:, idim), set_bc = .false.)
     end do
 
-    deallocate(a_copy)
+    SAFE_DEALLOCATE_A(a_copy)
 
   case(PRE_JACOBI)
     call apply_D_inverse(a, b)
@@ -89,7 +89,7 @@ contains
       b(1:gr%mesh%np,idim) = a(1:gr%mesh%np,idim)/(diag(1:gr%mesh%np) + omega_)
     end do
 
-    deallocate(diag)
+    SAFE_DEALLOCATE_A(diag)
   end subroutine apply_D_inverse
 
   subroutine multigrid

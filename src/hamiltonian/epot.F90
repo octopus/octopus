@@ -263,7 +263,7 @@ contains
             x(3)*ep%B_field(1) - x(1)*ep%B_field(3), x(1)*ep%B_field(2) - x(2)*ep%B_field(1)/)
         end select
       end do
-      deallocate(x)
+      SAFE_DEALLOCATE_A(x)
       ep%A_static = -M_HALF/P_c*ep%A_static
 
     end if
@@ -383,14 +383,14 @@ contains
 
     SAFE_DEALLOCATE_P(ep%local_potential)
 
-    deallocate(ep%fii)
+    SAFE_DEALLOCATE_P(ep%fii)
 
     do i = 1, geo%nspecies
       call species_pot_end(geo%species(i))
     end do
 
     if(associated(ep%vpsl)) then
-      deallocate(ep%vpsl)
+      SAFE_DEALLOCATE_P(ep%vpsl)
       nullify(ep%vpsl)
     end if
 
@@ -398,7 +398,7 @@ contains
       ep%classical_pot = 0
       ! sanity check
       ASSERT(associated(ep%Vclassical)) 
-      deallocate(ep%Vclassical)         ! and clean up
+      SAFE_DEALLOCATE_P(ep%Vclassical)         ! and clean up
       nullify(ep%Vclassical)
     end if
 
@@ -406,10 +406,10 @@ contains
     call laser_end(ep%no_lasers, ep%lasers)
 
     ! the macroscopic fields
-    if(associated(ep%E_field))  deallocate(ep%E_field)
-    if(associated(ep%v_static)) deallocate(ep%v_static)
-    if(associated(ep%B_field))  deallocate(ep%B_field)
-    if(associated(ep%A_static)) deallocate(ep%A_static)
+    SAFE_DEALLOCATE_P(ep%E_field)
+    SAFE_DEALLOCATE_P(ep%v_static)
+    SAFE_DEALLOCATE_P(ep%B_field)
+    SAFE_DEALLOCATE_P(ep%A_static)
 
     do iproj = 1, geo%natoms
       if(.not. species_is_ps(geo%atom(iproj)%spec)) cycle
@@ -417,14 +417,14 @@ contains
     end do
 
     ASSERT(associated(ep%proj))
-    deallocate(ep%proj)
+    SAFE_DEALLOCATE_P(ep%proj)
 
     if(gr%have_fine_mesh) then
       do iproj = 1, geo%natoms
         if(.not. species_is_ps(geo%atom(iproj)%spec)) cycle
         call projector_end(ep%proj_fine(iproj))
       end do
-      deallocate(ep%proj_fine)
+      SAFE_DEALLOCATE_P(ep%proj_fine)
     end if
 
     call pop_sub()
@@ -482,7 +482,7 @@ contains
         call MPI_Allreduce(st%rho_core, vpsltmp, gr%mesh%np, MPI_FLOAT, MPI_SUM, geo%atoms%mpi_grp%comm, mpi_err)
         call lalg_copy(gr%mesh%np, vpsltmp, st%rho_core)
       end if
-      deallocate(vpsltmp)
+      SAFE_DEALLOCATE_A(vpsltmp)
     end if
     call profiling_out(epot_reduce)
 #endif
@@ -565,8 +565,7 @@ contains
         ! and our best guess for the potential is zero
         call dpoisson_solve(gr, vl, rho)
         
-        deallocate(rho)
-        
+        SAFE_DEALLOCATE_A(rho)
       else
         
         !Local potential
@@ -590,8 +589,7 @@ contains
         
       end if
       
-      deallocate(vl)
-
+      SAFE_DEALLOCATE_A(vl)
     end if
 
     !Non-local core corrections
@@ -770,7 +768,7 @@ contains
     det = lalg_determinant(st%nst, matrix(1:st%nst, 1:st%nst), invert = .false.)
     dipole = -(2 * gr%sb%lsize(dir) / (2 * M_Pi)) * aimag(log(det)) * st%smear%el_per_state
 
-    deallocate(matrix)
+    SAFE_DEALLOCATE_A(matrix)
     call pop_sub()
   end function epot_dipole_periodic
 

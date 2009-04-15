@@ -288,7 +288,7 @@ contains
       call nl_operator_end(der%op(i))
     end do
 
-    deallocate(der%op)
+    SAFE_DEALLOCATE_P(der%op)
     nullify   (der%op, der%lapl, der%grad)
 
     call pop_sub()
@@ -453,7 +453,8 @@ contains
         end if
 
         call make_discretization(der%dim, der%mesh, der%masses, polynomials, rhs, 1, der%op(i:i))
-        deallocate(polynomials, rhs)
+        SAFE_DEALLOCATE_A(polynomials)
+        SAFE_DEALLOCATE_A(rhs)
       end do
 
     case(DER_CUBE) ! laplacian and gradient have similar stencils
@@ -468,7 +469,8 @@ contains
 
       call make_discretization(der%dim, der%mesh, der%masses, polynomials, rhs, der%dim+1, der%op(:))
 
-      deallocate(polynomials, rhs)
+      SAFE_DEALLOCATE_A(polynomials)
+      SAFE_DEALLOCATE_A(rhs)
 
     case(DER_STARPLUS)
       do i = 1, der%dim
@@ -477,14 +479,16 @@ contains
         call stencil_starplus_pol_grad(der%dim, i, der%order, polynomials)
         call get_rhs_grad(i, rhs(:, 1))
         call make_discretization(der%dim, der%mesh, der%masses, polynomials, rhs, 1, der%op(i:i))
-        deallocate(polynomials, rhs)
+        SAFE_DEALLOCATE_A(polynomials)
+        SAFE_DEALLOCATE_A(rhs)
       end do
       ALLOCATE(polynomials(der%dim, der%op(der%dim+1)%stencil%size), der%dim*der%op(der%dim+1)%stencil%size)
       ALLOCATE(rhs(der%op(i)%stencil%size, 1), der%op(i)%stencil%size*1)
       call stencil_starplus_pol_lapl(der%dim, der%order, polynomials)
       call get_rhs_lapl(rhs(:, 1))
       call make_discretization(der%dim, der%mesh, der%masses, polynomials, rhs, 1, der%op(der%dim+1:der%dim+1))
-      deallocate(polynomials, rhs)
+      SAFE_DEALLOCATE_A(polynomials)
+      SAFE_DEALLOCATE_A(rhs)
 
     case(DER_VARIATIONAL)
       ! we have the explicit coefficients
@@ -622,7 +626,9 @@ contains
 
     end do
 
-    deallocate(mat, sol, powers)
+    SAFE_DEALLOCATE_A(mat)
+    SAFE_DEALLOCATE_A(sol)
+    SAFE_DEALLOCATE_A(powers)
 
     call pop_sub()
   end subroutine make_discretization

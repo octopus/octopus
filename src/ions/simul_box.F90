@@ -843,14 +843,14 @@ contains
       ! Set the number of atoms and classical atoms to the number
       ! of atoms coming from left and right lead and central part.
       if(geo%natoms.gt.0) then
-        deallocate(geo%atom)
+        SAFE_DEALLOCATE_P(geo%atom)
       end if
       geo%natoms = central_geo%natoms +                 &
         sb%add_unit_cells(LEFT)*lead_geo(LEFT)%natoms + &
         sb%add_unit_cells(RIGHT)*lead_geo(RIGHT)%natoms
       ALLOCATE(geo%atom(geo%natoms), geo%natoms)
       if(geo%ncatoms.gt.0) then
-        deallocate(geo%catom)
+        SAFE_DEALLOCATE_P(geo%catom)
       end if
       geo%ncatoms = central_geo%ncatoms +                &
         sb%add_unit_cells(LEFT)*lead_geo(LEFT)%ncatoms + &
@@ -894,7 +894,7 @@ contains
       end do
       ! Initialize the species of the "extended" central system.
       if(geo%nspecies.gt.0) then
-        deallocate(geo%species)
+        SAFE_DEALLOCATE_P(geo%species)
       end if
       call geometry_init_species(geo, print_info=.false.)
 
@@ -1003,7 +1003,7 @@ contains
       do il = 1, NLEADS
         call simul_box_end(sb%lead_unit_cell(il))
       end do
-      deallocate(sb%lead_unit_cell)
+      SAFE_DEALLOCATE_P(sb%lead_unit_cell)
       nullify(sb%lead_unit_cell)
     end if
 

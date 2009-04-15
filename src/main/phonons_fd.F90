@@ -181,7 +181,8 @@ contains
 
       end do
     end do
-    deallocate(forces0, forces)
+    SAFE_DEALLOCATE_A(forces0)
+    SAFE_DEALLOCATE_A(forces)
     call scf_end(scf)
 
     call vibrations_normalize_dyn_matrix(vib, geo)

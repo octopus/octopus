@@ -219,18 +219,20 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
 
   end do
 
-  deallocate(gpsi)
-  deallocate(gdl_psi)
-  if(present(lr_m)) deallocate(gdl_psi_m)
+  SAFE_DEALLOCATE_A(gpsi)
+  SAFE_DEALLOCATE_A(gdl_psi)
+  if(present(lr_m)) then
+    SAFE_DEALLOCATE_A(gdl_psi_m)
+  end if
 
-  deallocate(rho)
-  deallocate(dl_rho)
+  SAFE_DEALLOCATE_A(rho)
+  SAFE_DEALLOCATE_A(dl_rho)
 
-  deallocate(grho)
-  deallocate(gdl_rho)
+  SAFE_DEALLOCATE_A(grho)
+  SAFE_DEALLOCATE_A(gdl_rho)
 
-  deallocate(elf)
-  deallocate(de)
+  SAFE_DEALLOCATE_A(elf)
+  SAFE_DEALLOCATE_A(de)
 
   call pop_sub()
 
@@ -388,7 +390,7 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
   call states_total_density(st, mesh, rho)
 
   call xc_get_kxc(sys%ks%xc, mesh, rho, st%d%ispin, kxc)
-  deallocate(rho)
+  SAFE_DEALLOCATE_A(rho)
 
   ALLOCATE(tmp(1:np), np)
   ALLOCATE(hvar(1:np, 1:st%d%nspin, 1:2, 1:st%d%dim, 1:ndim, 1:3), np*st%d%nspin*2*st%d%dim*ndim*3)
@@ -496,9 +498,9 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
     end do !jj
   end do !ii
 
-  deallocate(hpol_density)
-  deallocate(tmp)
-  deallocate(hvar)
+  SAFE_DEALLOCATE_A(hpol_density)
+  SAFE_DEALLOCATE_A(tmp)
+  SAFE_DEALLOCATE_A(hvar)
 
   call pop_sub()
 

@@ -493,7 +493,7 @@ contains
         if(loct_parse_isdef(datasets_check('TransformStates')).ne.0) then
           if(loct_parse_block(datasets_check('TransformStates'), blk) == 0) then
             call states_copy(stin, st)
-            deallocate(stin%zpsi)
+            SAFE_DEALLOCATE_P(stin%zpsi)
             call restart_look_and_read(stin, gr, sys%geo)
             ALLOCATE(rotation_matrix(st%nst, stin%nst), st%nst*stin%nst)
             rotation_matrix = M_z0
@@ -503,7 +503,7 @@ contains
               end do
             end do
             call rotate_states(gr%mesh, st, stin, rotation_matrix)
-            deallocate(rotation_matrix)
+            SAFE_DEALLOCATE_A(rotation_matrix)
             call states_end(stin)
           else
             message(1) = '"TransformStates" has to be specified as block.'
@@ -679,7 +679,7 @@ contains
           end do
         end if
 
-        deallocate(kick_function)
+        SAFE_DEALLOCATE_A(kick_function)
       end if delta_strength
 
       call pop_sub()

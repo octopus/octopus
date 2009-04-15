@@ -96,8 +96,10 @@ contains
   subroutine ps_fhi_end(ps_fhi)
     type(ps_fhi_t), intent(inout) :: ps_fhi
 
-    deallocate(ps_fhi%fhi_file, ps_fhi%cpi_file, ps_fhi%ps_grid, ps_fhi%conf)
-    nullify   (ps_fhi%fhi_file, ps_fhi%cpi_file, ps_fhi%ps_grid, ps_fhi%conf)
+    SAFE_DEALLOCATE_P(ps_fhi%fhi_file)
+    SAFE_DEALLOCATE_P(ps_fhi%cpi_file)
+    SAFE_DEALLOCATE_P(ps_fhi%ps_grid)
+    SAFE_DEALLOCATE_P(ps_fhi%conf)
   end subroutine ps_fhi_end
 
 

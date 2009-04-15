@@ -82,9 +82,9 @@ contains
   subroutine vibrations_end(this)
     type(vibrations_t),     intent(inout) :: this
 
-    deallocate(this%dyn_matrix)
-    deallocate(this%freq)
-    deallocate(this%normal_mode)
+    SAFE_DEALLOCATE_P(this%dyn_matrix)
+    SAFE_DEALLOCATE_P(this%freq)
+    SAFE_DEALLOCATE_P(this%normal_mode)
 
   end subroutine vibrations_end
 

@@ -157,7 +157,9 @@ subroutine X(ls_solver_cg) (ls, hm, gr, st, ist, ik, x, y, omega)
   ls%iter = iter
   ls%abs_psi = sqrt(abs(gamma))
 
-  deallocate(r, p, Hp)
+  SAFE_DEALLOCATE_A(r)
+  SAFE_DEALLOCATE_A(p)
+  SAFE_DEALLOCATE_A(Hp)
 
   call pop_sub()
 end subroutine X(ls_solver_cg)
@@ -279,8 +281,14 @@ subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, omega, occ_resp
   ls%iter = iter
   ls%abs_psi = gamma
 
-  deallocate(r, p, Hp, s, rs, Hs)
-  deallocate(phat, shat)
+  SAFE_DEALLOCATE_A(r)
+  SAFE_DEALLOCATE_A(p)
+  SAFE_DEALLOCATE_A(Hp)
+  SAFE_DEALLOCATE_A(s)
+  SAFE_DEALLOCATE_A(rs)
+  SAFE_DEALLOCATE_A(Hs)
+  SAFE_DEALLOCATE_P(phat)
+  SAFE_DEALLOCATE_P(shat)
 
   call pop_sub()
 end subroutine X(ls_solver_bicgstab)
@@ -426,7 +434,8 @@ subroutine X(ls_solver_operator_na) (x, hx)
   call X(ls_solver_operator)(args%hm, args%gr, args%st, args%ist, args%ik, args%X(omega), tmpx, tmpy)
   call lalg_copy(args%gr%mesh%np, tmpy(:, 1), hx)
 
-  deallocate(tmpx, tmpy)
+  SAFE_DEALLOCATE_A(tmpx)
+  SAFE_DEALLOCATE_A(tmpy)
 
 end subroutine X(ls_solver_operator_na)
 
@@ -448,7 +457,8 @@ subroutine X(ls_preconditioner) (x, hx)
   call X(preconditioner_apply)(args%ls%pre, args%gr, args%hm, tmpx, tmpy, args%X(omega))
   call lalg_copy(args%gr%mesh%np, tmpy(:, 1), hx)
 
-  deallocate(tmpx, tmpy)
+  SAFE_DEALLOCATE_A(tmpx)
+  SAFE_DEALLOCATE_A(tmpy)
   call pop_sub()
 
 end subroutine X(ls_preconditioner)
@@ -497,7 +507,7 @@ subroutine X(ls_solver_sos) (ls, hm, gr, st, ist, ik, x, y, omega)
   ls%abs_psi = X(mf_nrm2)(gr%mesh, st%d%dim, rr)
   ls%iter = 1
 
-  deallocate(rr)
+  SAFE_DEALLOCATE_A(rr)
   call pop_sub()
 
 end subroutine X(ls_solver_sos)

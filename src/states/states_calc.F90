@@ -224,8 +224,10 @@ contains
       call io_close(iunit)
     end if
 
-    deallocate(eigenval_sorted, sindex, eindex)
-    deallocate(degeneracy_matrix)
+    SAFE_DEALLOCATE_A(eigenval_sorted)
+    SAFE_DEALLOCATE_A(sindex)
+    SAFE_DEALLOCATE_A(eindex)
+    SAFE_DEALLOCATE_A(degeneracy_matrix)
 
     call pop_sub()
   end subroutine states_degeneracy_matrix

@@ -189,8 +189,11 @@ contains
   subroutine ps_psf_file_end(psf)
     type(ps_psf_file_t), intent(inout) :: psf
 
-    deallocate(psf%rofi, psf%vps, psf%chcore, psf%rho_val, psf%vso)
-    nullify   (psf%rofi, psf%vps, psf%chcore, psf%rho_val, psf%vso)
+    SAFE_DEALLOCATE_P(psf%rofi)
+    SAFE_DEALLOCATE_P(psf%vps)
+    SAFE_DEALLOCATE_P(psf%chcore)
+    SAFE_DEALLOCATE_P(psf%rho_val)
+    SAFE_DEALLOCATE_P(psf%vso)
   end subroutine ps_psf_file_end
 
 

@@ -66,13 +66,13 @@ contains
     type(basins_t), intent(inout) :: this
 
     ASSERT(associated(this%map))
-    deallocate(this%map); nullify(this%map)
+    SAFE_DEALLOCATE_P(this%map); nullify(this%map)
 
     if(associated(this%position)) then
-      deallocate(this%position); nullify(this%position)
-      deallocate(this%value);    nullify(this%value)
-      deallocate(this%volume);   nullify(this%volume)
-      deallocate(this%population);   nullify(this%population)
+      SAFE_DEALLOCATE_P(this%position); nullify(this%position)
+      SAFE_DEALLOCATE_P(this%value);    nullify(this%value)
+      SAFE_DEALLOCATE_P(this%volume);   nullify(this%volume)
+      SAFE_DEALLOCATE_P(this%population);   nullify(this%population)
     end if
 
   end subroutine basins_end

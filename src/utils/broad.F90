@@ -110,7 +110,7 @@ contains
     end do
     call io_close(iunit)
 
-    deallocate(s)
+    SAFE_DEALLOCATE_A(s)
   end subroutine calc_broad
 
 end program broad

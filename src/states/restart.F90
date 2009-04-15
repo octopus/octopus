@@ -190,7 +190,8 @@ contains
 
     st%nst    = nst
     st%st_end = nst
-    deallocate(st%eigenval, st%occ)
+    SAFE_DEALLOCATE_P(st%eigenval)
+    SAFE_DEALLOCATE_P(st%occ)
 
     if (present(is_complex)) then
       if ( is_complex ) then 
@@ -473,7 +474,7 @@ contains
     call io_close(io_wfns, st%mpi_grp)
     call io_close(io_occs, st%mpi_grp)
 
-    deallocate(tmp)
+    SAFE_DEALLOCATE_A(tmp)
 
     call pop_sub()
   end subroutine restart_read_ob_intf
@@ -602,7 +603,7 @@ contains
     call io_close(io_wfns, st%mpi_grp)
     call io_close(io_occs, st%mpi_grp)
 
-    deallocate(tmp)
+    SAFE_DEALLOCATE_A(tmp)
 
     call pop_sub()
   end subroutine restart_read_ob_central
@@ -793,7 +794,7 @@ contains
       endif
     end if
 
-    deallocate(filled)
+    SAFE_DEALLOCATE_A(filled)
     call io_close(iunit, grp = gr%mesh%mpi_grp)
     call io_close(iunit2, grp = gr%mesh%mpi_grp)
 
@@ -821,9 +822,9 @@ contains
     subroutine interpolation_end
       call mesh_end(old_mesh)
       if (states_are_real(st)) then
-        deallocate(dphi)
+        SAFE_DEALLOCATE_A(dphi)
       else
-        deallocate(zphi)
+        SAFE_DEALLOCATE_A(zphi)
       end if
     end subroutine interpolation_end
 
@@ -1036,7 +1037,7 @@ contains
 
     end do ! Loop over all free states.
     call io_close(wfns); call io_close(occs)
-    deallocate(tmp)
+    SAFE_DEALLOCATE_A(tmp)
 
     message(1) = "Info: Sucessfully initialized free states from '"// &
       trim(sb%lead_restart_dir(LEFT))//"/gs'"

@@ -136,8 +136,8 @@ contains
 
     call push_sub('cpmd.cpmd_end')
 
-    if(associated(this%dpsi2)) deallocate(this%dpsi2)
-    if(associated(this%zpsi2)) deallocate(this%zpsi2)
+    SAFE_DEALLOCATE_P(this%dpsi2)
+    SAFE_DEALLOCATE_P(this%zpsi2)
 
     call pop_sub()
 

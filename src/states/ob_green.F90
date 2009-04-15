@@ -136,7 +136,14 @@ contains
       det   = -det
     end if
 
-    deallocate(e, es, a, b, inv, tmp1, tmp2, tmp3)
+    SAFE_DEALLOCATE_A(e)
+    SAFE_DEALLOCATE_A(es)
+    SAFE_DEALLOCATE_A(a)
+    SAFE_DEALLOCATE_A(b)
+    SAFE_DEALLOCATE_A(inv)
+    SAFE_DEALLOCATE_A(tmp1)
+    SAFE_DEALLOCATE_A(tmp2)
+    SAFE_DEALLOCATE_A(tmp3)
     call pop_sub()
   end subroutine lead_green
 

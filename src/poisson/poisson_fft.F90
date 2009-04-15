@@ -126,7 +126,7 @@ contains
 
     call dfourier_space_op_init(coulb, fft_cf, fft_Coulb_FS)
 
-    deallocate(fft_Coulb_FS)
+    SAFE_DEALLOCATE_A(fft_Coulb_FS)
     call pop_sub()
   end subroutine poisson_fft_build_3d_3d
   !-----------------------------------------------------------------
@@ -210,7 +210,7 @@ contains
 
     call dfourier_space_op_init(coulb, fft_cf, fft_Coulb_FS)
 
-    deallocate(fft_Coulb_FS)
+    SAFE_DEALLOCATE_A(fft_Coulb_FS)
     call pop_sub()
   end subroutine poisson_fft_build_3d_2d
   !-----------------------------------------------------------------
@@ -337,8 +337,9 @@ contains
 
     call dfourier_space_op_init(coulb, fft_cf, fft_Coulb_FS)
 
-    deallocate(fft_Coulb_FS)
-    if( gr%sb%periodic_dim == 0 ) deallocate(x, y)
+    SAFE_DEALLOCATE_A(fft_Coulb_FS)
+    SAFE_DEALLOCATE_A(x)
+    SAFE_DEALLOCATE_A(y)
     call pop_sub()
   end subroutine poisson_fft_build_3d_1d
   !-----------------------------------------------------------------
@@ -437,7 +438,7 @@ contains
 
     call dfourier_space_op_init(coulb, fft_cf, fft_Coulb_FS)
 
-    deallocate(fft_Coulb_FS)
+    SAFE_DEALLOCATE_A(fft_Coulb_FS)
     call pop_sub()
   end subroutine poisson_fft_build_3d_0d
   !-----------------------------------------------------------------
@@ -514,8 +515,9 @@ contains
 
     call dfourier_space_op_init(coulb, fft_cf, fft_Coulb_FS)
 
-    deallocate(fft_Coulb_FS)
-    deallocate(x, y)
+    SAFE_DEALLOCATE_A(fft_Coulb_FS)
+    SAFE_DEALLOCATE_A(x)
+    SAFE_DEALLOCATE_A(y)
     call spline_end(besselintf)
     call pop_sub()
   end subroutine poisson_fft_build_2d_0d
@@ -570,7 +572,7 @@ contains
 
     call dfourier_space_op_init(coulb, fft_cf, fft_Coulb_FS)
 
-    deallocate(fft_Coulb_FS)
+    SAFE_DEALLOCATE_A(fft_Coulb_FS)
 
     call pop_sub()
   end subroutine poisson_fft_build_2d_1d
@@ -611,7 +613,7 @@ contains
 
     call dfourier_space_op_init(coulb, fft_cf, fft_Coulb_FS)
 
-    deallocate(fft_Coulb_FS)
+    SAFE_DEALLOCATE_A(fft_Coulb_FS)
     call pop_sub()
   end subroutine poisson_fft_build_2d_2d
   !-----------------------------------------------------------------
@@ -643,7 +645,7 @@ contains
     end do
 
     call dfourier_space_op_init(coulb, fft_cf, fft_coulb_fs)
-    deallocate(fft_coulb_fs)
+    SAFE_DEALLOCATE_A(fft_coulb_fs)
     
     call pop_sub()
   end subroutine poisson_fft_build_1d_1d
@@ -679,7 +681,7 @@ contains
     end do
 
     call dfourier_space_op_init(coulb, fft_cf, fft_coulb_fs)
-    deallocate(fft_coulb_fs)
+    SAFE_DEALLOCATE_A(fft_coulb_fs)
     
     call pop_sub()
   end subroutine poisson_fft_build_1d_0d
@@ -759,7 +761,8 @@ contains
     call dcf_free_RS(fft_cf)           ! memory is no longer needed
 
     if(m%parallel_in_domains) then
-      deallocate(rho_global, pot_global)
+      SAFE_DEALLOCATE_A(rho_global)
+      SAFE_DEALLOCATE_A(pot_global)
     end if
 
     call pop_sub()

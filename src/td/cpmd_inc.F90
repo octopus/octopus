@@ -128,13 +128,15 @@ subroutine X(cpmd_propagate)(this, gr, hm, st, iter, dt)
 
       call profiling_out(cpmd_orth)
       
-      deallocate(oldpsi)
+      SAFE_DEALLOCATE_P(oldpsi)
       
     end select
 
   end do
   
-  deallocate(hpsi, psi, xx)
+  SAFE_DEALLOCATE_A(hpsi)
+  SAFE_DEALLOCATE_A(psi)
+  SAFE_DEALLOCATE_A(xx)
 
   call profiling_out(cpmd_prop)
 
@@ -171,7 +173,10 @@ contains
       if (res < CNST(1e-5)) exit
     end do
 
-    deallocate(aa, bb, ii, xxi)
+    SAFE_DEALLOCATE_A(aa)
+    SAFE_DEALLOCATE_A(bb)
+    SAFE_DEALLOCATE_A(ii)
+    SAFE_DEALLOCATE_A(xxi)
 
   end subroutine calc_xx
 
@@ -233,7 +238,8 @@ subroutine X(cpmd_propagate_vel)(this, gr, hm, st, dt)
 
   end do
 
-  deallocate(hpsi, yy)
+  SAFE_DEALLOCATE_A(hpsi)
+  SAFE_DEALLOCATE_A(yy)
 
   call profiling_out(cpmd_prop)
 
@@ -249,7 +255,7 @@ contains
 
     yy = -M_HALF*(cc + transpose(cc))
 
-    deallocate(cc)
+    SAFE_DEALLOCATE_A(cc)
 
   end subroutine calc_yy
 

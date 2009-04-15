@@ -408,7 +408,8 @@ contains
     call sternheimer_end(sh)
     call pert_end(em_vars%perturbation)
 
-    deallocate(em_vars%omega, em_vars%lr)
+    SAFE_DEALLOCATE_P(em_vars%omega)
+    SAFE_DEALLOCATE_P(em_vars%lr)
     call states_deallocate_wfns(sys%st)
 
     call pop_sub()

@@ -75,8 +75,9 @@ subroutine PES_rc_end(v)
   type(PES_rc_t), intent(inout) :: v
 
   if(associated(v%filenames)) then
-    deallocate(v%filenames, v%points, v%wf)
-    nullify   (v%filenames, v%points, v%wf)
+    SAFE_DEALLOCATE_P(v%filenames)
+    SAFE_DEALLOCATE_P(v%points)
+    SAFE_DEALLOCATE_P(v%wf)
   end if
 end subroutine PES_rc_end
 

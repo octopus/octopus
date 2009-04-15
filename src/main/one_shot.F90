@@ -88,7 +88,7 @@ contains
     call states_total_density(sys%st, sys%gr%mesh, rho)
     call xc_get_vxc(sys%gr, sys%ks%xc, sys%st, rho, sys%st%d%ispin, E_x, E_c, &
       M_ZERO, sys%st%qtot)
-    deallocate(rho)
+    SAFE_DEALLOCATE_A(rho)
 
     ! The OEP family has to handle specially
     if (sys%st%wfs_type == M_REAL) then

@@ -128,9 +128,11 @@ contains
       end do
     end do
 
-    deallocate(gpsi)
-    deallocate(gdl_psi)
-    if(present(lr_m)) deallocate(gdl_psi_m)
+    SAFE_DEALLOCATE_A(gpsi)
+    SAFE_DEALLOCATE_A(gdl_psi)
+    if(present(lr_m)) then
+      SAFE_DEALLOCATE_A(gdl_psi_m)
+    end if
 
     call pop_sub()
 

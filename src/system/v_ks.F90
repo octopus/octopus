@@ -349,7 +349,7 @@ contains
         call xc_get_vxc(gr, ks%xc, st, rho, st%d%ispin, hm%ex, hm%ec, &
              -minval(st%eigenval(st%nst, :)), st%qtot, vxc=hm%vxc, vtau=hm%vtau)
       end if
-      deallocate(rho)
+      SAFE_DEALLOCATE_A(rho)
 
       if(ks%theory_level == KOHN_SHAM_DFT) then
         ! The OEP family has to be handled specially
@@ -421,7 +421,7 @@ contains
     ! Get the Hartree energy
     hm%ehartree = M_HALF*dmf_dotp(gr%mesh, rho, hm%vhartree)
 
-    deallocate(rho)
+    SAFE_DEALLOCATE_A(rho)
     call pop_sub()
   end subroutine v_ks_hartree
   ! ---------------------------------------------------------

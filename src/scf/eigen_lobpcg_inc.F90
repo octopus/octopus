@@ -98,7 +98,7 @@
       ALLOCATE(ldiff(st%lnst), st%lnst)
       ldiff(1:st%lnst) = diff(st%st_start:st%st_end)
       call lmpi_gen_allgatherv(st%lnst, ldiff, outcount, diff, st%mpi_grp)
-      deallocate(ldiff)
+      SAFE_DEALLOCATE_A(ldiff)
     end if
 #endif
 
@@ -219,7 +219,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     end do
 
     call lmpi_gen_allgatherv(lnconstr, lall_constr, nconstr, all_constr, st%mpi_grp)
-    deallocate(lall_constr)
+    SAFE_DEALLOCATE_A(lall_constr)
 #endif
   else
     do i = 1, nconstr
@@ -312,7 +312,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
   call lalg_copy(nps*lnst, tmp(:, 1, st_start), psi(:, 1, st_start))
   call X(block_matr_mul)(h_psi, ritz_vec, tmp, xpsi=all_ev, xres=all_ev)
   call lalg_copy(nps*lnst, tmp(:, 1, st_start), h_psi(:, 1, st_start))
-  deallocate(ritz_vec)
+  SAFE_DEALLOCATE_A(ritz_vec)
 
   ! This is the big iteration loop.
   iteration: do iter = 1, maxiter-1 ! One iteration was used up to get initial Ritz-vectors.
@@ -516,7 +516,10 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     call lalg_axpy(nps*lnst, M_ONE, h_dir(:, 1, st_start), h_psi(:, 1, st_start))
 
     ! Gram matrices have to be reallocated later (because nuc changes).
-    deallocate(nuc_tmp, ritz_vec, gram_h, gram_i)
+    SAFE_DEALLOCATE_A(nuc_tmp)
+    SAFE_DEALLOCATE_A(ritz_vec)
+    SAFE_DEALLOCATE_A(gram_h)
+    SAFE_DEALLOCATE_A(gram_i)
 
     ! Copy new eigenvalues.
     do i = 1, nst
@@ -543,11 +546,22 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
   end if
 #endif
 
-  deallocate(all_constr, all_ev, uc, tmp, res, h_res, dir, h_dir, h_psi, gram_block, eval)
+  SAFE_DEALLOCATE_A(all_constr)
+  SAFE_DEALLOCATE_A(all_ev)
+  SAFE_DEALLOCATE_P(uc)
+  SAFE_DEALLOCATE_A(tmp)
+  SAFE_DEALLOCATE_A(res)
+  SAFE_DEALLOCATE_A(h_res)
+  SAFE_DEALLOCATE_A(dir)
+  SAFE_DEALLOCATE_A(h_dir)
+  SAFE_DEALLOCATE_A(h_psi)
+  SAFE_DEALLOCATE_A(gram_block)
+  SAFE_DEALLOCATE_A(eval)
   call iihash_end(all_ev_inv)
 
   if(st%parallel_in_states) then
-    deallocate(luc, lnuc)
+    SAFE_DEALLOCATE_P(luc)
+    SAFE_DEALLOCATE_P(lnuc)
   end if
 
   call pop_sub()
@@ -672,7 +686,7 @@ contains
     do i = 1, lnuc
       call lalg_copy(gr%mesh%np_part*st%d%dim, tmp(:, 1, luc(i)), vs(:, 1, luc(i)))
     end do
-    deallocate(vv)
+    SAFE_DEALLOCATE_A(vv)
 
     call pop_sub()
   end subroutine X(lobpcg_orth)
@@ -706,7 +720,9 @@ contains
     call states_block_matr_mul_add(gr%mesh, st, -R_TOTYPE(M_ONE), constr_start, constr_end, vs_start, vs_end, &
       constr, tmp3, R_TOTYPE(M_ONE), vs, xpsi=all_constr, xres=idx(1:nidx))
 
-    deallocate(tmp1, tmp2, tmp3)
+    SAFE_DEALLOCATE_A(tmp1)
+    SAFE_DEALLOCATE_A(tmp2)
+    SAFE_DEALLOCATE_A(tmp3)
     call pop_sub()
     call profiling_out(prof)
 

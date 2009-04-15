@@ -190,7 +190,7 @@ contains
     end do
     call atom_write_xyz(".", "min", g_opt%geo, sys%gr%mesh%sb%dim)
 
-    deallocate(x)
+    SAFE_DEALLOCATE_A(x)
     call scf_end(g_opt%scfv)
     call end_()
 

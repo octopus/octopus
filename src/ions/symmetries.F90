@@ -146,8 +146,8 @@ contains
   subroutine symmetries_end(this)
     type(symmetries_t),  intent(inout) :: this
     
-    deallocate(this%rotation)
-    deallocate(this%translation)
+    SAFE_DEALLOCATE_P(this%rotation)
+    SAFE_DEALLOCATE_P(this%translation)
   end subroutine symmetries_end
   
   integer pure function symmetries_number(this) result(number)

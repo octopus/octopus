@@ -204,9 +204,9 @@ contains
 
     call push_sub('lcao.lcao_end')
 
-    if(associated(this%atom)) deallocate(this%atom)
-    if(associated(this%level)) deallocate(this%level)
-    if(associated(this%ddim)) deallocate(this%ddim)
+    SAFE_DEALLOCATE_P(this%atom)
+    SAFE_DEALLOCATE_P(this%level)
+    SAFE_DEALLOCATE_P(this%ddim)
 
     this%state = 0
     call pop_sub()

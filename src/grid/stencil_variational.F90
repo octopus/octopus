@@ -126,7 +126,7 @@ contains
       end do
     end do
 
-    deallocate(fp)
+    SAFE_DEALLOCATE_A(fp)
 
     call pop_sub()
   end subroutine stencil_variational_coeff_lapl

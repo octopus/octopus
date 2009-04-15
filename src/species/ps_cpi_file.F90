@@ -142,12 +142,14 @@ contains
   subroutine ps_cpi_file_end(psf)
     type(ps_cpi_file_t), intent(inout) :: psf
 
-    deallocate(psf%rofi, psf%vps, psf%rphi)
-    nullify   (psf%rofi, psf%vps, psf%rphi)
+    SAFE_DEALLOCATE_P(psf%rofi)
+    SAFE_DEALLOCATE_P(psf%vps)
+    SAFE_DEALLOCATE_P(psf%rphi)
 
     if(psf%core_corrections) then
-      deallocate(psf%chcore, psf%d1chcore, psf%d2chcore)
-      nullify   (psf%chcore, psf%d1chcore, psf%d2chcore)
+      SAFE_DEALLOCATE_P(psf%chcore)
+      SAFE_DEALLOCATE_P(psf%d1chcore)
+      SAFE_DEALLOCATE_P(psf%d2chcore)
     end if
 
   end subroutine ps_cpi_file_end

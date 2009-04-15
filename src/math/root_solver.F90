@@ -287,7 +287,9 @@ contains
     call zode_solver_create(os)
     call zode_solver_run(os, func_ws, base_roots, roots)
 
-    deallocate(gbase_coeff, gcoeff, base_roots)
+    SAFE_DEALLOCATE_A(gbase_coeff)
+    SAFE_DEALLOCATE_A(gcoeff)
+    SAFE_DEALLOCATE_A(base_roots)
 
     call pop_sub()
 
@@ -319,7 +321,8 @@ contains
 
     res = numerator/denominator
 
-    deallocate(numerator, denominator)
+    SAFE_DEALLOCATE_A(numerator)
+    SAFE_DEALLOCATE_A(denominator)
 
   end subroutine func_ws
 
@@ -368,7 +371,10 @@ contains
       err = sum(f(1:rs%dim)**2)
     end do
 
-    deallocate(f, jf, delta, rhs)
+    SAFE_DEALLOCATE_A(f)
+    SAFE_DEALLOCATE_A(jf)
+    SAFE_DEALLOCATE_A(delta)
+    SAFE_DEALLOCATE_A(rhs)
     call pop_sub()
   end subroutine droot_newton
 

@@ -86,7 +86,7 @@ contains
     type(xyz_file_info), intent(inout) :: gf
 
     if(associated(gf%atom)) then
-      deallocate(gf%atom)
+      SAFE_DEALLOCATE_P(gf%atom)
     end if
     call xyz_file_init(gf)
   end subroutine xyz_file_end

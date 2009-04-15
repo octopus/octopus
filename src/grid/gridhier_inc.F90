@@ -53,9 +53,9 @@ subroutine X(gridhier_end)(this, mgrid)
   cl = mgrid%n_levels
   
   do l = 0, cl
-    deallocate(this%level(l)%p)
+    SAFE_DEALLOCATE_P(this%level(l)%p)
   end do
-  deallocate(this%level)
+  SAFE_DEALLOCATE_P(this%level)
   
   call pop_sub()
 end subroutine X(gridhier_end)

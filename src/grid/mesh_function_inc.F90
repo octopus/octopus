@@ -219,7 +219,7 @@ FLOAT function X(mf_nrm2_1)(mesh, f, reduce) result(nrm2)
     ALLOCATE(l(mesh%np), mesh%np)
     l(1:mesh%np) = f(1:mesh%np)*sqrt(mesh%vol_pp(1:mesh%np))
     nrm2_tmp = lalg_nrm2(mesh%np, l)
-    deallocate(l)
+    SAFE_DEALLOCATE_A(l)
   else
     nrm2_tmp = lalg_nrm2(mesh%np, f)*sqrt(mesh%vol_pp(1))
   end if
@@ -292,8 +292,7 @@ R_TYPE function X(mf_moment) (mesh, ff, idir, order) result(rr)
   fxn(1:mesh%np) = ff(1:mesh%np)*mesh%x(1:mesh%np, idir)**order
   rr = X(mf_integrate)(mesh, fxn)
 
-  deallocate(fxn)
-
+  SAFE_DEALLOCATE_A(fxn)
   call pop_sub()
 
 end function X(mf_moment)
@@ -426,7 +425,7 @@ subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, u, f)
     end do
 
     if(mesh_in%parallel_in_domains) then
-      deallocate(f_global)
+      SAFE_DEALLOCATE_A(f_global)
     end if
 
   end if
@@ -500,8 +499,8 @@ subroutine X(mf_interpolate_points) (mesh_in, u, npoints, x, f)
 #endif
   end select
 #ifdef SINGLE_PRECISION
-  deallocate(rx)
-  deallocate(ru)
+  SAFE_DEALLOCATE_P(rx)
+  SAFE_DEALLOCATE_P(ru)
 #endif
 
   call pop_sub()
@@ -553,9 +552,9 @@ subroutine X(mf_interpolate_on_plane)(mesh, plane, f, f_in_plane)
 
   call kill_qshep(interp)
 #ifdef SINGLE_PRECISION
-    deallocate(rx)
+    SAFE_DEALLOCATE_A(rx)
 #endif
-  deallocate(f_global)
+  SAFE_DEALLOCATE_A(f_global)
   call pop_sub()
 end subroutine X(mf_interpolate_on_plane)
 
@@ -600,9 +599,9 @@ subroutine X(mf_interpolate_on_line)(mesh, line, f, f_in_line)
   end do
   call kill_qshep(interp)
 
-  deallocate(f_global)
+  SAFE_DEALLOCATE_A(f_global)
 #ifdef SINGLE_PRECISION
-    deallocate(rx)
+    SAFE_DEALLOCATE_A(rx)
 #endif
   call pop_sub()
 end subroutine X(mf_interpolate_on_line)
@@ -631,7 +630,7 @@ R_TYPE function X(mf_surface_integral_scalar) (mesh, f, plane) result(d)
 
   d = sum(f_in_plane(:, :)*plane%spacing**2)
 
-  deallocate(f_in_plane)
+  SAFE_DEALLOCATE_A(f_in_plane)
   call pop_sub()
 end function X(mf_surface_integral_scalar)
 
@@ -656,7 +655,7 @@ R_TYPE function X(mf_surface_integral_vector) (mesh, f, plane) result(d)
 
   d =  X(mf_surface_integral_scalar)(mesh, fn, plane)
 
-  deallocate(fn)
+  SAFE_DEALLOCATE_A(fn)
   call pop_sub()
 end function X(mf_surface_integral_vector)
 
@@ -684,7 +683,7 @@ R_TYPE function X(mf_line_integral_scalar) (mesh, f, line) result(d)
 
   d = sum(f_in_line(:)*line%spacing)
 
-  deallocate(f_in_line)
+  SAFE_DEALLOCATE_A(f_in_line)
   call pop_sub()
 end function X(mf_line_integral_scalar)
 
@@ -709,7 +708,7 @@ R_TYPE function X(mf_line_integral_vector) (mesh, f, line) result(d)
 
   d =  X(mf_line_integral_scalar)(mesh, fn, line)
 
-  deallocate(fn)
+  SAFE_DEALLOCATE_A(fn)
   call pop_sub()
 end function X(mf_line_integral_vector)
 
@@ -802,7 +801,7 @@ subroutine X(mf_multipoles) (mesh, ff, lmax, multipole)
     end do
   end if
 
-  deallocate(ff2)
+  SAFE_DEALLOCATE_A(ff2)
   call pop_sub()
 end subroutine X(mf_multipoles)
 
@@ -874,13 +873,13 @@ subroutine X(mf_dotp_batch)(mesh, aa, bb, dot, symm)
     ALLOCATE(ddtmp(1:aa%nst, 1:bb%nst), aa%nst*bb%nst)
     forall(ist = 1:aa%nst, jst = 1:bb%nst) ddtmp(ist, jst) = dd(ist, jst)
     call MPI_Allreduce(ddtmp, dd, aa%nst*bb%nst, R_MPITYPE, MPI_SUM, mesh%mpi_grp%comm, mpi_err)
-    deallocate(ddtmp)
+    SAFE_DEALLOCATE_A(ddtmp)
   end if
 #endif
 
   forall(ist = 1:aa%nst, jst = 1:bb%nst) dot(aa%states(ist)%ist, bb%states(jst)%ist) = dd(ist, jst)
 
-  deallocate(dd)
+  SAFE_DEALLOCATE_A(dd)
 
   call profiling_out(prof)
   call pop_sub()
@@ -965,8 +964,10 @@ subroutine X(mf_calculate_gamma)(ikeeppart, nparticles_densmat, ndim1part, hyper
      end do xprimeloop
   end do xloop
 
-  deallocate(psi_global)
-  deallocate(ix,ixp,ix_1part)
+  SAFE_DEALLOCATE_A(psi_global)
+  SAFE_DEALLOCATE_A(ix)
+  SAFE_DEALLOCATE_A(ixp)
+  SAFE_DEALLOCATE_A(ix_1part)
 
   call pop_sub()
 end subroutine X(mf_calculate_gamma)
@@ -1035,8 +1036,10 @@ subroutine X(mf_calculate_rho)(ikeeppart, nparticles_dens, ndim1part, hypercube_
             nparticles_dens*volume_element*psi_global(imesh)*R_CONJ(psi_global(imesh))
   end do xloop
 
-  deallocate(psi_global)
-  deallocate(ix,ixp,ix_1part)
+  SAFE_DEALLOCATE_A(psi_global)
+  SAFE_DEALLOCATE_A(ix)
+  SAFE_DEALLOCATE_A(ixp)
+  SAFE_DEALLOCATE_A(ix_1part)
 
   call pop_sub()
 end subroutine X(mf_calculate_rho)

@@ -476,7 +476,9 @@ contains
         call MPI_Type_commit(vp%dsend_type(ipart), ierr)
         call MPI_Type_commit(vp%zsend_type(ipart), ierr)
 
-        deallocate(blocklengths, displacements, offsets)
+        SAFE_DEALLOCATE_A(blocklengths)
+        SAFE_DEALLOCATE_A(displacements)
+        SAFE_DEALLOCATE_A(offsets)
         
       end do
 
@@ -516,9 +518,9 @@ contains
 
     call push_sub('par_vec.vec_end')
 
-    deallocate(vp%rdispls)
-    deallocate(vp%sdispls)
-    deallocate(vp%rcounts)
+    SAFE_DEALLOCATE_P(vp%rdispls)
+    SAFE_DEALLOCATE_P(vp%sdispls)
+    SAFE_DEALLOCATE_P(vp%rcounts)
 
     if(associated(vp%isend_type)) then
 
@@ -528,67 +530,67 @@ contains
         call MPI_Type_free(vp%dsend_type(ipart), mpi_err)
         call MPI_Type_free(vp%zsend_type(ipart), mpi_err)
       end do
-      deallocate(vp%isend_type)
-      deallocate(vp%dsend_type)
-      deallocate(vp%zsend_type)
+      SAFE_DEALLOCATE_P(vp%isend_type)
+      SAFE_DEALLOCATE_P(vp%dsend_type)
+      SAFE_DEALLOCATE_P(vp%zsend_type)
       nullify(vp%isend_type)
       nullify(vp%dsend_type)
       nullify(vp%zsend_type)
     end if
 
     if(associated(vp%part)) then
-      deallocate(vp%part)
+      SAFE_DEALLOCATE_P(vp%part)
       nullify(vp%part)
     end if
     if(associated(vp%np_local)) then
-      deallocate(vp%np_local)
+      SAFE_DEALLOCATE_P(vp%np_local)
       nullify(vp%np_local)
     end if
     if(associated(vp%xlocal)) then
-      deallocate(vp%xlocal)
+      SAFE_DEALLOCATE_P(vp%xlocal)
       nullify(vp%xlocal)
     end if
     if(associated(vp%local)) then
-      deallocate(vp%local)
+      SAFE_DEALLOCATE_P(vp%local)
       nullify(vp%local)
     end if
     if(associated(vp%np_bndry)) then
-      deallocate(vp%np_bndry)
+      SAFE_DEALLOCATE_P(vp%np_bndry)
       nullify(vp%np_bndry)
     end if
     if(associated(vp%xbndry)) then
-      deallocate(vp%xbndry)
+      SAFE_DEALLOCATE_P(vp%xbndry)
       nullify(vp%xbndry)
     end if
     if(associated(vp%bndry)) then
-      deallocate(vp%bndry)
+      SAFE_DEALLOCATE_P(vp%bndry)
       nullify(vp%bndry)
     end if
     if(associated(vp%np_ghost)) then
-      deallocate(vp%np_ghost)
+      SAFE_DEALLOCATE_P(vp%np_ghost)
       nullify(vp%np_ghost)
     end if
     if(associated(vp%np_ghost_neigh)) then
-      deallocate(vp%np_ghost_neigh)
+      SAFE_DEALLOCATE_P(vp%np_ghost_neigh)
       nullify(vp%np_ghost_neigh)
     end if
     if(associated(vp%xghost)) then
-      deallocate(vp%xghost)
+      SAFE_DEALLOCATE_P(vp%xghost)
       nullify(vp%xghost)
     end if
     if(associated(vp%xghost_neigh)) then
-      deallocate(vp%xghost_neigh)
+      SAFE_DEALLOCATE_P(vp%xghost_neigh)
       nullify(vp%xghost_neigh)
     end if
     if(associated(vp%ghost)) then
-      deallocate(vp%ghost)
+      SAFE_DEALLOCATE_P(vp%ghost)
       nullify(vp%ghost)
     end if
     if(associated(vp%global)) then
       do r = 1, vp%npart
         call iihash_end(vp%global(r))
       end do
-      deallocate(vp%global)
+      SAFE_DEALLOCATE_P(vp%global)
       nullify(vp%global)
     end if
 
@@ -624,7 +626,8 @@ contains
       call NBCF_Freehandle(this%nbc_h)
 #endif
     case(NON_BLOCKING)
-      deallocate(this%requests, this%status)
+      SAFE_DEALLOCATE_P(this%requests)
+      SAFE_DEALLOCATE_P(this%status)
     end select
 
   end subroutine pv_handle_end
@@ -659,15 +662,15 @@ contains
     end select
 
     if(associated(this%ighost_send)) then
-      deallocate(this%ighost_send)
+      SAFE_DEALLOCATE_P(this%ighost_send)
       nullify(this%ighost_send)
     end if
     if(associated(this%dghost_send)) then
-      deallocate(this%dghost_send)
+      SAFE_DEALLOCATE_P(this%dghost_send)
       nullify(this%dghost_send)
     end if
     if(associated(this%zghost_send)) then
-      deallocate(this%zghost_send)
+      SAFE_DEALLOCATE_P(this%zghost_send)
       nullify(this%zghost_send)
     end if
     call profiling_out(prof)

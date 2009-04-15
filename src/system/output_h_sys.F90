@@ -441,7 +441,7 @@ contains
         f_loc(:,1), M_ONE, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
     end if
 
-    deallocate(f_loc)
+    SAFE_DEALLOCATE_A(f_loc)
 
   contains
     ! ---------------------------------------------------------

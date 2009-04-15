@@ -74,7 +74,7 @@ subroutine poisson2D_solve(m, pot, rho)
       end if
     end do
 
-    deallocate(pvec)
+    SAFE_DEALLOCATE_A(pvec)
 
   else ! serial mode
 #endif

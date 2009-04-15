@@ -131,7 +131,7 @@ subroutine X(mixing_broyden)(smix, vin, vout, vnew, iter, dotp)
   call X(broyden_extrapolation)(smix%alpha, d1, d2, d3, vin, vnew, iter_used, f, &
        smix%X(df), smix%X(dv), dotp)
   
-  deallocate(f)
+  SAFE_DEALLOCATE_A(f)
   
   call pop_sub()
 end subroutine X(mixing_broyden)
@@ -211,7 +211,9 @@ subroutine X(broyden_extrapolation)(alpha, d1, d2, d3, vin, vnew, iter_used, f, 
         dv(1:d1, 1:d2, 1:d3, i))
   end do
   
-  deallocate(beta, work, w)
+  SAFE_DEALLOCATE_A(beta)
+  SAFE_DEALLOCATE_A(work)
+  SAFE_DEALLOCATE_A(w)
   
   call pop_sub()
 end subroutine X(broyden_extrapolation)
@@ -282,7 +284,7 @@ subroutine X(mixing_grpulay)(smix, vin, vout, vnew, iter, dotp)
 
   end select
   
-  deallocate(f)
+  SAFE_DEALLOCATE_A(f)
   
   call pop_sub()
 end subroutine X(mixing_grpulay)
@@ -350,7 +352,7 @@ subroutine X(pulay_extrapolation)(d1, d2, d3, vin, vout, vnew, iter_used, f, df,
     vnew(:, :, :) = vnew(:, :, :) + alpha * dv(:, :, :, i)
   end do
   
-  deallocate(a)
+  SAFE_DEALLOCATE_A(a)
   
   call pop_sub()
 end subroutine X(pulay_extrapolation)

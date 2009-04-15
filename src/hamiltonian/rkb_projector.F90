@@ -133,8 +133,8 @@ contains
   subroutine rkb_projector_end(rkb_p)
     type(rkb_projector_t), intent(inout) :: rkb_p
 
-    if (associated(rkb_p%bra)) deallocate(rkb_p%bra)
-    if (associated(rkb_p%ket)) deallocate(rkb_p%ket)
+    SAFE_DEALLOCATE_P(rkb_p%bra)
+    SAFE_DEALLOCATE_P(rkb_p%ket)
 
   end subroutine rkb_projector_end
 
@@ -198,7 +198,7 @@ contains
       end do
     end do
 
-    deallocate(bra)
+    SAFE_DEALLOCATE_A(bra)
 
     call pop_sub()
   end subroutine rkb_project_bra

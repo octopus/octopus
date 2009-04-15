@@ -226,7 +226,10 @@ contains
         end do
       end do
 
-      deallocate(x_p, my_csi, start_csi)
+      SAFE_DEALLOCATE_A(x_p)
+      SAFE_DEALLOCATE_A(my_csi)
+      SAFE_DEALLOCATE_A(start_csi)
+
       nullify(sb_p); nullify(geo_p); nullify(cv_p)
 
     end subroutine optimize
@@ -238,8 +241,9 @@ contains
   subroutine curv_modine_end(cv)
     type(curv_modine_t), intent(inout) :: cv
 
-    deallocate(cv%Jlocal, cv%Jrange)
-    deallocate(cv%chi_atoms)
+    SAFE_DEALLOCATE_P(cv%Jlocal)
+    SAFE_DEALLOCATE_P(cv%Jrange)
+    SAFE_DEALLOCATE_P(cv%chi_atoms)
 
   end subroutine curv_modine_end
 
@@ -383,7 +387,7 @@ contains
 
     call droot_solver_run(rs, getf, chi, conv, startval = x)
 
-    deallocate(x_p)
+    SAFE_DEALLOCATE_A(x_p)
     nullify(sb_p); nullify(geo_p); nullify(cv_p)
 
     if(.not.conv) then

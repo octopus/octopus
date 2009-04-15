@@ -52,7 +52,8 @@ subroutine X(vec_scatter)(vp, v, v_local)
   ALLOCATE(v_tmp(1), 1)
   if(vp%rank.eq.vp%root) then
   ! Fill send buffer.
-    deallocate(v_tmp); ALLOCATE(v_tmp(vp%np), vp%np)
+    SAFE_DEALLOCATE_A(v_tmp)
+    ALLOCATE(v_tmp(vp%np), vp%np)
 
     ! Rearrange copy of v. All points of node r are in
     ! v_tmp(xlocal(r):xlocal(r)+np_local(r)-1).
@@ -70,8 +71,8 @@ subroutine X(vec_scatter)(vp, v, v_local)
                     vp%root, vp%comm, mpi_err)
   call mpi_debug_out(vp%comm, C_MPI_SCATTERV)
 
-  deallocate(v_tmp)
-  deallocate(displs)
+  SAFE_DEALLOCATE_A(v_tmp)
+  SAFE_DEALLOCATE_A(displs)
 
   call pop_sub()
 
@@ -99,7 +100,8 @@ subroutine X(vec_scatter_bndry)(vp, v, v_local)
   ! Fill send buffer.
   ALLOCATE(v_tmp(1), 1)
   if(vp%rank.eq.vp%root) then
-    deallocate(v_tmp); ALLOCATE(v_tmp(vp%np_enl), vp%np_enl)
+    SAFE_DEALLOCATE_A(v_tmp)
+    ALLOCATE(v_tmp(vp%np_enl), vp%np_enl)
 
     ! Rearrange copy of v. All points of node r are in
     ! v_tmp(xlocal(r):xlocal(r)+np_local(r)-1).
@@ -117,8 +119,8 @@ subroutine X(vec_scatter_bndry)(vp, v, v_local)
                     vp%np_bndry(vp%partno), R_MPITYPE, vp%root, vp%comm, mpi_err)
   call mpi_debug_out(vp%comm, C_MPI_SCATTERV)
 
-  deallocate(v_tmp)
-  deallocate(displs)
+  SAFE_DEALLOCATE_A(v_tmp)
+  SAFE_DEALLOCATE_A(displs)
 
   call pop_sub()
 
@@ -184,9 +186,8 @@ subroutine X(vec_gather)(vp, v, v_local)
 
   end if
 
-  deallocate(v_tmp)
-
-  deallocate(displs)
+  SAFE_DEALLOCATE_A(v_tmp)
+  SAFE_DEALLOCATE_A(displs)
 
   call pop_sub()
 
@@ -226,8 +227,8 @@ subroutine X(vec_allgather)(vp, v, v_local)
     v(vp%local(i)) = v_tmp(i)
   end do
 
-  deallocate(v_tmp)
-  deallocate(displs)
+  SAFE_DEALLOCATE_A(v_tmp)
+  SAFE_DEALLOCATE_A(displs)
 
   call pop_sub()
 
@@ -375,7 +376,7 @@ end subroutine X(vec_ghost_update_prepare)
 subroutine X(vec_ghost_update_finish)(ghost_send)
   R_TYPE,  pointer :: ghost_send(:)
 
-  deallocate(ghost_send)
+  SAFE_DEALLOCATE_P(ghost_send)
 
 end subroutine X(vec_ghost_update_finish)
 

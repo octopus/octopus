@@ -225,10 +225,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! deallocates variables allocated in lda_init
+  ! SAFE_DEALLOCATE_Ps variables allocated in lda_init
   subroutine lda_end()
-    deallocate(dens, ex_per_vol, ec_per_vol)
-    if(present(vxc)) deallocate(dedd)
+    SAFE_DEALLOCATE_A(dens)
+    SAFE_DEALLOCATE_A(ex_per_vol)
+    SAFE_DEALLOCATE_A(ec_per_vol)
+    if(present(vxc)) then
+      SAFE_DEALLOCATE_A(dedd)
+    end if
   end subroutine lda_end
 
 
@@ -302,8 +306,10 @@ contains
   ! ---------------------------------------------------------
   ! cleans up memory allocated in gga_init
   subroutine gga_end()
-    deallocate(gdens)
-    if(present(vxc)) deallocate(dedgd)
+    SAFE_DEALLOCATE_A(gdens)
+    if(present(vxc)) then
+      SAFE_DEALLOCATE_A(dedgd)
+    end if
   end subroutine gga_end
 
 
@@ -322,7 +328,7 @@ contains
       call dderivatives_div(gr%der, dedgd(:, :, is), gf(:, 1))
       call lalg_axpy(gr%mesh%np, -M_ONE, gf(:,1), dedd(:, is))
     end do
-    deallocate(gf)
+    SAFE_DEALLOCATE_A(gf)
 
     ! If LB94, we can calculate an approximation to the energy from
     ! Levy-Perdew relation PRA 32, 2010 (1985)
@@ -336,7 +342,7 @@ contains
         end do
       end do
 
-      deallocate(gf)
+      SAFE_DEALLOCATE_A(gf)
     end if
 
     call pop_sub()
@@ -359,7 +365,7 @@ contains
   ! ---------------------------------------------------------
   ! clean up memory allocates in mgga_init
   subroutine mgga_end()
-    deallocate(tau)
+    SAFE_DEALLOCATE_A(tau)
   end subroutine mgga_end
 
 

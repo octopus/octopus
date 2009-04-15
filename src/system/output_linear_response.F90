@@ -56,7 +56,7 @@ subroutine X(h_sys_output_lr) (st, gr, lr, dir, tag, isigma, outp, geo)
           call X(output_function)(outp%how, dir, fname, gr%mesh, gr%sb, tmp, u, ierr, geo = geo)
         end do
       end do
-      deallocate(tmp)
+      SAFE_DEALLOCATE_A(tmp)
     end if
 
     if( (iand(outp%what, output_current).ne.0) .and. (st%wfs_type == M_CMPLX) )then
@@ -105,7 +105,7 @@ subroutine X(h_sys_output_lr) (st, gr, lr, dir, tag, isigma, outp, geo)
         end do
       end if
     end do
-    deallocate(dtmp)
+    SAFE_DEALLOCATE_A(dtmp)
   end if
 
   call pop_sub()

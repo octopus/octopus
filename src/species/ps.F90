@@ -352,7 +352,10 @@ contains
     call spline_init(ps%dvion)
     call spline_der(ps%vion, ps%dvion)
 
-    deallocate(vsr, vlr, nlr, vion)
+    SAFE_DEALLOCATE_A(vsr)
+    SAFE_DEALLOCATE_A(vlr)
+    SAFE_DEALLOCATE_A(nlr)
+    SAFE_DEALLOCATE_A(vion)
     
     ps%is_separated = .true.
 
@@ -502,7 +505,7 @@ contains
     call spline_3dft(ps%vl, fw(1, 1), gmax = gmax)
     call spline_print(fw(1, 1), iunit)
     call spline_end(fw(1, 1))
-    deallocate(fw)
+    SAFE_DEALLOCATE_A(fw)
     call io_close(iunit)
 
     ! Kleinman-Bylander projectors
@@ -524,7 +527,7 @@ contains
     end do
     call spline_print(fw, iunit)
     call spline_end(fw)
-    deallocate(fw)
+    SAFE_DEALLOCATE_A(fw)
     call io_close(iunit)
 
     ! Pseudo-wavefunctions
@@ -568,7 +571,12 @@ contains
 
     call logrid_end(ps%g)
 
-    deallocate(ps%kb, ps%dkb, ps%ur, ps%ur_sq, ps%h, ps%k)
+    SAFE_DEALLOCATE_P(ps%kb)
+    SAFE_DEALLOCATE_P(ps%dkb)
+    SAFE_DEALLOCATE_P(ps%ur)
+    SAFE_DEALLOCATE_P(ps%ur_sq)
+    SAFE_DEALLOCATE_P(ps%h)
+    SAFE_DEALLOCATE_P(ps%k)
 
     call pop_sub()
   end subroutine ps_end
@@ -732,7 +740,7 @@ contains
         call spline_fit(g%nrval, g%rofi, hato, ps%core)
       end if
 
-      deallocate(hato)
+      SAFE_DEALLOCATE_A(hato)
     end subroutine get_splines
   end subroutine ps_grid_load
 
@@ -836,7 +844,7 @@ contains
       end do
     end do
 
-    deallocate(hato)
+    SAFE_DEALLOCATE_A(hato)
 
     call pop_sub()
   end subroutine ps_upf_load

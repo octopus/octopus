@@ -126,7 +126,10 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
       call lalg_lowest_geneigensolve(1, size, aa, mm, eval, evec, bof = fail)
       
       if(fail) then
-        deallocate(aa, mm, eval, evec)
+        SAFE_DEALLOCATE_A(aa)
+        SAFE_DEALLOCATE_A(mm)
+        SAFE_DEALLOCATE_A(eval)
+        SAFE_DEALLOCATE_A(evec)
         exit
       end if
 
@@ -159,7 +162,10 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 !
 !      print*, "RES 2", diff(ist)
 
-      deallocate(aa, mm, eval, evec)
+      SAFE_DEALLOCATE_A(aa)
+      SAFE_DEALLOCATE_A(mm)
+      SAFE_DEALLOCATE_A(eval)
+      SAFE_DEALLOCATE_A(evec)
 
     end do
 

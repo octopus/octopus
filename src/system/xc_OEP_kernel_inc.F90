@@ -49,7 +49,9 @@ subroutine X(xc_oep_kernel_calc)(sys, hm, lr, nsigma, fxcn)
     end do
   end do
   
-  deallocate(r, s, t)
+  SAFE_DEALLOCATE_A(r)
+  SAFE_DEALLOCATE_A(s)
+  SAFE_DEALLOCATE_A(t)
 
 end subroutine X(xc_oep_kernel_calc)
 

@@ -111,7 +111,9 @@ subroutine X(subspace_diag)(gr, st, hm, ik, diff)
 
     end if
     
-    deallocate(f, h_subspace, vec)
+    SAFE_DEALLOCATE_A(f)
+    SAFE_DEALLOCATE_A(h_subspace)
+    SAFE_DEALLOCATE_A(vec)
 
 #ifdef HAVE_MPI
   end if
@@ -187,7 +189,9 @@ subroutine X(subspace_diag_par_states)(gr, st, hm, ik, diff)
 #endif
   end if
   
-  deallocate(f, h_subspace, vec)
+  SAFE_DEALLOCATE_A(f)
+  SAFE_DEALLOCATE_A(h_subspace)
+  SAFE_DEALLOCATE_A(vec)
   
   call pop_sub()
   

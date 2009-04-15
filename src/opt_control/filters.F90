@@ -228,8 +228,8 @@ contains
          call tdf_set_numerical(filter%f(i), j, -sqrt(M_TWO)*aimag(ff(j-nfreqs+1)))
       end do
 
-      deallocate(ff)
-      deallocate(grid)
+      SAFE_DEALLOCATE_A(ff)
+      SAFE_DEALLOCATE_A(grid)
 
     end do
     
@@ -263,7 +263,7 @@ contains
       do i = 1, max_iter/2+1
         write(iunit, '(3es30.16e4)') wgrid(i), tdf(filter%f(kk), i)
       end do
-      deallocate(wgrid)
+      SAFE_DEALLOCATE_A(wgrid)
       call io_close(iunit)
     end do
 
@@ -286,10 +286,10 @@ contains
     do i = 1, filter%no_filters
       call tdf_end(filter%f(i))
     end do
-    deallocate(filter%f)
+    SAFE_DEALLOCATE_P(filter%f)
     filter%no_filters = 0
-    deallocate(filter%expression)
-    deallocate(filter%domain)
+    SAFE_DEALLOCATE_P(filter%expression)
+    SAFE_DEALLOCATE_P(filter%domain)
 
     call pop_sub()
   end subroutine filter_end

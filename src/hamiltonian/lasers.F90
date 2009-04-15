@@ -378,7 +378,7 @@ contains
             call loct_parse_expression(pot_re, pot_im, m%sb%dim, x, r, M_ZERO, trim(scalar_pot_expression))
             l(i)%v(j) = pot_re
           end do
-          deallocate(x)
+          SAFE_DEALLOCATE_A(x)
 
         case(E_FIELD_MAGNETIC)
           ! WARNING: note that for the moment we are ignoring the possibility of a complex
@@ -398,7 +398,7 @@ contains
             end select
           enddo
           l(i)%a = -M_HALF * l(i)%a 
-          deallocate(x)
+          SAFE_DEALLOCATE_A(x)
 
         end select
 
@@ -428,12 +428,12 @@ contains
         call tdf_end(l(i)%phi)
         select case(l(i)%field)
         case(E_FIELD_SCALAR_POTENTIAL)
-          deallocate(l(i)%v); nullify(l(i)%v)
+          SAFE_DEALLOCATE_P(l(i)%v); nullify(l(i)%v)
         case(E_FIELD_MAGNETIC)
-          deallocate(l(i)%a); nullify(l(i)%a)
+          SAFE_DEALLOCATE_P(l(i)%a); nullify(l(i)%a)
         end select
       end do
-      deallocate(l); nullify(l)
+      SAFE_DEALLOCATE_P(l); nullify(l)
     end if
 
     call pop_sub()
@@ -641,7 +641,7 @@ contains
       
       forall(ip = 1:mesh%np) em_field%potential(ip) = em_field%potential(ip) + pot(ip, 1)
 
-      deallocate(pot)
+      SAFE_DEALLOCATE_A(pot)
       
     case(E_FIELD_MAGNETIC)
       if(.not. associated(em_field%vector_potential)) then 

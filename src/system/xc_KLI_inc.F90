@@ -66,12 +66,13 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
   if(st%parallel_in_states) then
     call MPI_Allreduce(oep%vxc(1),   d(1), m%np, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
     oep%vxc(1:m%np)   = d(1:m%np)
-    deallocate(d)
+    SAFE_DEALLOCATE_A(d)
   end if
 #endif
 
   if(oep%level == XC_OEP_SLATER) then
-    deallocate(rho_sigma, sqphi)
+    SAFE_DEALLOCATE_A(rho_sigma)
+    SAFE_DEALLOCATE_A(sqphi)
     call pop_sub()
     call profiling_out(C_PROFILING_XC_KLI)
     return
@@ -148,12 +149,17 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
         oep%socc * occ * x(i,1) * sqphi(1:m%np, 1, kssi ) / rho_sigma(1:m%np)
     end do
 
-    deallocate(d, x, Ma, y)
+    SAFE_DEALLOCATE_A(d)
+    SAFE_DEALLOCATE_A(x)
+    SAFE_DEALLOCATE_A(Ma)
+    SAFE_DEALLOCATE_A(y)
 
   end if linear_equation
   ! The previous stuff is only needed if n>0.
 
-  deallocate(v_bar_S, rho_sigma, sqphi)
+  SAFE_DEALLOCATE_A(v_bar_S)
+  SAFE_DEALLOCATE_A(rho_sigma)
+  SAFE_DEALLOCATE_A(sqphi)
   call pop_sub()
   call profiling_out(C_PROFILING_XC_KLI)
 end subroutine X(xc_KLI_solve)

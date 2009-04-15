@@ -294,7 +294,7 @@ contains
           call hgh_projector_end(p%hgh_p(ll, mm))
         end do
       end do
-      deallocate(p%hgh_p)
+      SAFE_DEALLOCATE_P(p%hgh_p)
 
     case(M_KB)
       do ll = 0, p%lmax
@@ -303,7 +303,7 @@ contains
           call kb_projector_end(p%kb_p(ll, mm))
         end do
       end do
-      deallocate(p%kb_p)
+      SAFE_DEALLOCATE_P(p%kb_p)
 
     case(M_RKB)
       do ll = 1, p%lmax
@@ -312,17 +312,17 @@ contains
           call rkb_projector_end(p%rkb_p(ll, mm))
         end do
       end do
-      deallocate(p%rkb_p)
+      SAFE_DEALLOCATE_P(p%rkb_p)
       if(p%lloc /= 0) then
         call kb_projector_end(p%kb_p(1, 1))
-        deallocate(p%kb_p)
+        SAFE_DEALLOCATE_P(p%kb_p)
       end if
 
     end select
     
     p%type = M_NONE
 
-    if(associated(p%phase)) deallocate(p%phase)
+    SAFE_DEALLOCATE_P(p%phase)
 
     call pop_sub()
   end subroutine projector_end

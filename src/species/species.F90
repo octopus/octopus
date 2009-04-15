@@ -576,16 +576,16 @@ contains
       if (species_is_ps(s(i))) then 
         if(associated(s(i)%ps)) then 
           call ps_end(s(i)%ps)
-        deallocate(s(i)%ps)
+        SAFE_DEALLOCATE_P(s(i)%ps)
         end if
       end if
-      deallocate(s(i)%iwf_l)
-      deallocate(s(i)%iwf_m)
-      deallocate(s(i)%iwf_i)
+      SAFE_DEALLOCATE_P(s(i)%iwf_l)
+      SAFE_DEALLOCATE_P(s(i)%iwf_m)
+      SAFE_DEALLOCATE_P(s(i)%iwf_i)
     end do
 
     if(associated(s)) then ! sanity check
-      deallocate(s); nullify(s)
+      SAFE_DEALLOCATE_P(s); nullify(s)
     end if
 
     call pop_sub()

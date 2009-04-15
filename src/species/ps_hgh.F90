@@ -141,13 +141,16 @@ contains
   ! ---------------------------------------------------------
   subroutine hgh_end(psp)
     type(hgh_t), intent(inout) :: psp
+
     call push_sub('hgh.hgh_end')
+
     if(psp%l_max >= 0) then
-      deallocate(psp%kbr)
-      deallocate(psp%kb)
+      SAFE_DEALLOCATE_P(psp%kbr)
+      SAFE_DEALLOCATE_P(psp%kb)
     end if
-    deallocate(psp%vlocal, psp%rphi, psp%eigen)
-    nullify(psp%kb, psp%kbr)
+    SAFE_DEALLOCATE_P(psp%vlocal)
+    SAFE_DEALLOCATE_P(psp%rphi)
+    SAFE_DEALLOCATE_P(psp%eigen)
     call logrid_end(psp%g)
 
     call pop_sub()
@@ -167,14 +170,14 @@ contains
     ! Fixes the local potential
     ptr => vlocalr(psp%g%rofi, psp)
     psp%vlocal(1:psp%g%nrval) = ptr(1:psp%g%nrval)
-    deallocate(ptr)
+    SAFE_DEALLOCATE_P(ptr)
 
     ! And the projectors
     do l = 0, psp%l_max
       do i = 1, 3
         ptr => projectorr(psp%g%rofi, psp, i, l)
         psp%kb(1:psp%g%nrval, l, i) = ptr(1:psp%g%nrval)
-        deallocate(ptr)
+        SAFE_DEALLOCATE_P(ptr)
       end do
     end do
 
@@ -559,7 +562,12 @@ contains
         call egofv(hato, s, psp%g%nrval, e, g, y, l, z, &
           real(psp%g%a, 8), real(psp%g%b, 8), rmax, nprin, nnode, dr, ierr)
         if(ierr.ne.0) then
-          deallocate(s, hato, g, y, rho, prev)
+          SAFE_DEALLOCATE_A(s)
+          SAFE_DEALLOCATE_A(hato)
+          SAFE_DEALLOCATE_A(g)
+          SAFE_DEALLOCATE_A(y)
+          SAFE_DEALLOCATE_A(rho)
+          SAFE_DEALLOCATE_A(prev)
           call pop_sub(); return
         endif
         psp%eigen(n) = e
@@ -596,7 +604,12 @@ contains
     psp%eigen = psp%eigen / M_TWO
 
     ! Deallocations.
-    deallocate(s, hato, g, y, rho, prev)
+    SAFE_DEALLOCATE_A(s)
+    SAFE_DEALLOCATE_A(hato)
+    SAFE_DEALLOCATE_A(g)
+    SAFE_DEALLOCATE_A(y)
+    SAFE_DEALLOCATE_A(rho)
+    SAFE_DEALLOCATE_A(prev)
 
     call pop_sub()
   end subroutine solve_schroedinger

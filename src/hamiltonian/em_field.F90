@@ -70,9 +70,9 @@ contains
   subroutine em_field_end(this)
     type(em_field_t), intent(inout) :: this
 
-    if(associated(this%potential))                deallocate(this%potential)
-    if(associated(this%vector_potential))         deallocate(this%vector_potential)
-    if(associated(this%uniform_magnetic_field))   deallocate(this%uniform_magnetic_field)
+    SAFE_DEALLOCATE_P(this%potential)
+    SAFE_DEALLOCATE_P(this%vector_potential)
+    SAFE_DEALLOCATE_P(this%uniform_magnetic_field)
 
   end subroutine em_field_end
 

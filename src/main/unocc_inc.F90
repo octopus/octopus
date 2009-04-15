@@ -82,7 +82,7 @@ subroutine X(one_body) (gr, geo, st, hm)
      end do
    end do
    
-  deallocate(gpsi)
+  SAFE_DEALLOCATE_A(gpsi)
 
   call io_close(iunit)
 end subroutine X(one_body)

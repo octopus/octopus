@@ -47,13 +47,16 @@
 
         call hypersphere_cut(ep(2:n), a, y)
         call cartesian2hyperspherical(y, x(1:n-2))
-        deallocate(a, y)
+        SAFE_DEALLOCATE_A(a)
+        SAFE_DEALLOCATE_A(y)
        else
         call cartesian2hyperspherical(e, x(1:n-1))
       end if
 
       par%theta = x
-      deallocate(e, ep, x) 
+      SAFE_DEALLOCATE_A(e)
+      SAFE_DEALLOCATE_A(ep)
+      SAFE_DEALLOCATE_A(x)
 
     case(ctr_fourier_series)
       forall(j = 1: par%dim) par%theta(j) = tdf(par%f(1), j)
@@ -116,7 +119,8 @@
         e = sqrt(par_common%targetfluence) * e
         ep = matmul(par%utransfi, e)
         call tdf_set_numerical(par%f(1), ep)
-        deallocate(a, y)
+        SAFE_DEALLOCATE_A(a)
+        SAFE_DEALLOCATE_A(y)
       else
         call hyperspherical2cartesian(x(1:n-1), e)
         e = sqrt(par_common%targetfluence) * e
@@ -124,7 +128,9 @@
         call tdf_set_numerical(par%f(1), ep)
       end if
 
-      deallocate(e, ep, x)
+      SAFE_DEALLOCATE_A(e)
+      SAFE_DEALLOCATE_A(ep)
+      SAFE_DEALLOCATE_A(x)
 
     case(ctr_fourier_series)
 

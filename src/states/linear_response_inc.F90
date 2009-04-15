@@ -79,8 +79,8 @@ subroutine X(lr_orth_vector) (m, st, v, ist, ik)
   call X(states_gram_schmidt)(m, st%nst, st%d%dim, st%X(psi)(:, :, :, ik), v(:, :), &
     Theta_Fi=Theta_Fi(ist), beta_ij=beta_ij)
 
-  deallocate(beta_ij)
-  deallocate(Theta_Fi)
+  SAFE_DEALLOCATE_A(beta_ij)
+  SAFE_DEALLOCATE_A(Theta_Fi)
 
   call pop_sub()
 

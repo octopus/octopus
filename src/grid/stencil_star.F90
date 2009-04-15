@@ -153,7 +153,7 @@ contains
       end do
     end do
 
-    deallocate(cc)
+    SAFE_DEALLOCATE_A(cc)
 
     call pop_sub()
   end subroutine stencil_star_coeff_lapl
@@ -246,7 +246,7 @@ contains
       grad%w_re(k,:) = cc(2*j, morder, 1) / h
     end do
 
-    deallocate(cc)
+    SAFE_DEALLOCATE_A(cc)
 
     call pop_sub()
   end subroutine stencil_star_coeff_grad

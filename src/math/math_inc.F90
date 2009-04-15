@@ -44,7 +44,7 @@ subroutine X(interpolate_2)(xa, ya, x, y)
 
   end do
 
-  deallocate(c)
+  SAFE_DEALLOCATE_A(c)
 end subroutine X(interpolate_2)
 
 
@@ -68,7 +68,7 @@ subroutine X(interpolate_1)(xa, ya, x, y)
     call lalg_axpy(n1, c(i), ya(:, i), y(:)) 
   end do
 
-  deallocate(c)
+  SAFE_DEALLOCATE_A(c)
 end subroutine X(interpolate_1)
 
 
@@ -91,7 +91,7 @@ subroutine X(interpolate_0)(xa, ya, x, y)
     y = y + c(i)*ya(i)
   end do
 
-  deallocate(c)
+  SAFE_DEALLOCATE_A(c)
 end subroutine X(interpolate_0)
 
 ! ---------------------------------------------------------
@@ -133,6 +133,7 @@ subroutine X(shellsort1)(a, x)
     if (inc <= 1) exit
   end do
 
+  SAFE_DEALLOCATE_A(b)
 end subroutine X(shellsort1)
 
 
@@ -176,6 +177,7 @@ subroutine X(shellsort2)(a, x)
     if (inc <= 1) exit
   end do
 
+  SAFE_DEALLOCATE_A(b)
 end subroutine X(shellsort2)
 
 
@@ -304,7 +306,10 @@ subroutine X(parker_traub)(nsize, vdm_base, vdm_inverse)
     end do
   end do
   
-  deallocate(q, pp, ap, an)
+  SAFE_DEALLOCATE_A(q)
+  SAFE_DEALLOCATE_A(pp)
+  SAFE_DEALLOCATE_A(ap)
+  SAFE_DEALLOCATE_A(an)
   
   call pop_sub()
 end subroutine X(parker_traub)
@@ -342,7 +347,8 @@ subroutine X(matrix_newton_raphson)(nsteps, nsize, a, b)
 
   end do
 
-  deallocate(ab, bab)
+  SAFE_DEALLOCATE_A(ab)
+  SAFE_DEALLOCATE_A(bab)
 
   call pop_sub()
 end subroutine X(matrix_newton_raphson)
@@ -374,7 +380,7 @@ FLOAT function X(matrix_inv_residual)(nsize, a, b) result(residual)
   ! account for the size of the matrices
   residual = residual / nsize**2
 
-  deallocate(ab)
+  SAFE_DEALLOCATE_A(ab)
 
 end function X(matrix_inv_residual)
 
@@ -436,7 +442,7 @@ subroutine X(matrix_symmetric_average)(matrix, np)
     matrix = tmp
   end if
 
-  deallocate(tmp)
+  SAFE_DEALLOCATE_A(tmp)
   call pop_sub()
 end subroutine X(matrix_symmetric_average)
 

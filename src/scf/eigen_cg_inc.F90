@@ -248,7 +248,11 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
   end do eigenfunction_loop
 
   ! Deallocation of variables
-  deallocate(h_psi, g, g0, cg, ppsi)
+  SAFE_DEALLOCATE_A(h_psi)
+  SAFE_DEALLOCATE_A(g)
+  SAFE_DEALLOCATE_A(g0)
+  SAFE_DEALLOCATE_A(cg)
+  SAFE_DEALLOCATE_A(ppsi)
 
   if(verbose_) call messages_print_stress(stdout)
 
@@ -446,7 +450,14 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff, 
 
   converged = conv
 
-  deallocate(phi, psi, hpsi, cg, hcgp, sd, cgp, orthogonal)
+  SAFE_DEALLOCATE_A(phi)
+  SAFE_DEALLOCATE_A(psi)
+  SAFE_DEALLOCATE_A(hpsi)
+  SAFE_DEALLOCATE_A(cg)
+  SAFE_DEALLOCATE_A(hcgp)
+  SAFE_DEALLOCATE_A(sd)
+  SAFE_DEALLOCATE_A(cgp)
+  SAFE_DEALLOCATE_A(orthogonal)
   if(verbose_) call messages_print_stress(stdout)
 
   call pop_sub()

@@ -271,13 +271,13 @@ subroutine X(sternheimer_solve)(                           &
 
   call mix_end(this%mixer)
 
-  deallocate(tmp)
-  deallocate(Y)
-  deallocate(hvar)
-  deallocate(dl_rhoin)
-  deallocate(dl_rhonew)
-  deallocate(dl_rhotmp)
-  deallocate(orth_mask)
+  SAFE_DEALLOCATE_A(tmp)
+  SAFE_DEALLOCATE_A(Y)
+  SAFE_DEALLOCATE_A(hvar)
+  SAFE_DEALLOCATE_A(dl_rhoin)
+  SAFE_DEALLOCATE_A(dl_rhonew)
+  SAFE_DEALLOCATE_A(dl_rhotmp)
+  SAFE_DEALLOCATE_A(orth_mask)
 
   call profiling_out(prof)
   call pop_sub()
@@ -301,7 +301,6 @@ subroutine X(sternheimer_calc_hvar)(this, sys, hm, lr, nsigma, hvar)
   np = sys%gr%mesh%np
 
   if (this%add_hartree) then 
-
     ALLOCATE(tmp(1:np), np)
     ALLOCATE(hartree(1:np), np)
     do i = 1, np
@@ -310,8 +309,7 @@ subroutine X(sternheimer_calc_hvar)(this, sys, hm, lr, nsigma, hvar)
     hartree(1:np) = R_TOTYPE(M_ZERO)
     call X(poisson_solve)(sys%gr, hartree, tmp, all_nodes = .false.)
 
-    deallocate(tmp)
-
+    SAFE_DEALLOCATE_A(tmp)
   end if
 
   do ik = 1, sys%st%d%nspin
@@ -337,7 +335,9 @@ subroutine X(sternheimer_calc_hvar)(this, sys, hm, lr, nsigma, hvar)
   
   if (nsigma == 2) hvar(1:np, 1:sys%st%d%nspin, 2) = R_CONJ(hvar(1:np, 1:sys%st%d%nspin, 1))
 
-  if (this%add_hartree) deallocate(hartree)
+  if (this%add_hartree) then
+    SAFE_DEALLOCATE_A(hartree)
+  end if
 
   call profiling_out(prof_hvar)
   call pop_sub()

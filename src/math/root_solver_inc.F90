@@ -201,7 +201,9 @@ subroutine X(root_laguerre)(rs, root, startval, coeff)
   rs%usediter = k
   root = z
 
-  deallocate(b, c, d)
+  SAFE_DEALLOCATE_A(b)
+  SAFE_DEALLOCATE_A(c)
+  SAFE_DEALLOCATE_A(d)
 
   call pop_sub()
 end subroutine X(root_laguerre)

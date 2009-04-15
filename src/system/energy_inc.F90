@@ -57,7 +57,7 @@ subroutine X(calculate_eigenvalues)(hm, gr, st, t)
     end do
   end if
 
-  deallocate(Hpsi)
+  SAFE_DEALLOCATE_A(Hpsi)
   call pop_sub()
 end subroutine X(calculate_eigenvalues)
 
@@ -87,7 +87,8 @@ FLOAT function X(electronic_kinetic_energy)(hm, gr, st) result(t0)
   
   t0 = states_eigenvalues_sum(st, t)
 
-  deallocate(tpsi, t)
+  SAFE_DEALLOCATE_A(tpsi)
+  SAFE_DEALLOCATE_A(t)
   call pop_sub()
 end function X(electronic_kinetic_energy)
 
@@ -117,7 +118,8 @@ FLOAT function X(electronic_external_energy)(hm, gr, st) result(v)
 
   v = states_eigenvalues_sum(st, t)
 
-  deallocate(vpsi, t)
+  SAFE_DEALLOCATE_A(vpsi)
+  SAFE_DEALLOCATE_A(t)
   call pop_sub()
 end function X(electronic_external_energy)
 

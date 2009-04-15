@@ -330,7 +330,7 @@ subroutine X(derivatives_div)(der, f, div, ghost_update)
     div(:) = div(:) + tmp(:)
   end do
 
-  deallocate(tmp)
+  SAFE_DEALLOCATE_A(tmp)
 
   call pop_sub()
 end subroutine X(derivatives_div)
@@ -393,7 +393,7 @@ subroutine X(derivatives_curl)(der, f, curl, ghost_update)
     curl(1:np,1) = curl(1:np,1) + tmp(1:np)
   end select
 
-  deallocate(tmp)
+  SAFE_DEALLOCATE_A(tmp)
   call pop_sub()
 end subroutine X(derivatives_curl)
 
@@ -475,7 +475,8 @@ subroutine X(set_bc)(der, f)
 
       ALLOCATE(statuses(MPI_STATUS_SIZE, nreq), MPI_STATUS_SIZE*nreq)
       call MPI_Waitall(nreq, req, statuses, mpi_err)
-      deallocate(statuses, req)
+      SAFE_DEALLOCATE_A(statuses)
+      SAFE_DEALLOCATE_A(req)
 
       call profiling_out(set_bc_comm_prof)
     end if
@@ -637,7 +638,8 @@ subroutine X(set_bc_batch)(der, fb)
 
         ALLOCATE(statuses(MPI_STATUS_SIZE, nreq), MPI_STATUS_SIZE*nreq)
         call MPI_Waitall(nreq, req, statuses, mpi_err)
-        deallocate(statuses, req)
+        SAFE_DEALLOCATE_A(statuses)
+        SAFE_DEALLOCATE_A(req)
 
         call profiling_out(set_bc_comm_prof)
       end if
@@ -713,7 +715,7 @@ subroutine X(f_angular_momentum)(sb, mesh, der, f, lf, ghost_update, set_bc)
 
   end select
 
-  deallocate(gf)
+  SAFE_DEALLOCATE_A(gf)
   call pop_sub()
 end subroutine X(f_angular_momentum)
 
@@ -784,7 +786,8 @@ subroutine X(f_l2)(sb, m, der, f, l2f, ghost_update)
   l2f = - l2f
 #endif
 
-  deallocate(gf, ggf)
+  SAFE_DEALLOCATE_A(gf)
+  SAFE_DEALLOCATE_A(ggf)
   call pop_sub()
 end subroutine X(f_l2)
 

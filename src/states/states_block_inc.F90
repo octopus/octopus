@@ -147,7 +147,7 @@ subroutine X(states_blockt_mul)(mesh, st, psi1_start, psi1_end, psi2_start, psi2
           call profiling_in(C_PROFILING_BLOCKT_CP)
           res(res_row_offset+1:res_row_offset+xpsi1_count(rank), res_col_offset+1:res_col_offset+sendcnt) = res_local
           call profiling_out(C_PROFILING_BLOCKT_CP)
-          deallocate(res_local)
+          SAFE_DEALLOCATE_A(res_local)
         end if
       else ! Curvilinear coordinates.
         do i = 1, xpsi1_count(rank)
@@ -159,7 +159,8 @@ subroutine X(states_blockt_mul)(mesh, st, psi1_start, psi1_end, psi2_start, psi2
       end if
     end do
 
-    deallocate(sendbuf, recvbuf)
+    SAFE_DEALLOCATE_P(sendbuf)
+    SAFE_DEALLOCATE_P(recvbuf)
     ! Add up all the individual blocks.
     ALLOCATE(res_tmp(psi1_col, psi2_col), psi1_col*psi2_col)
     call profiling_in(C_PROFILING_BLOCKT_AR)
@@ -168,8 +169,11 @@ subroutine X(states_blockt_mul)(mesh, st, psi1_start, psi1_end, psi2_start, psi2
     call profiling_in(C_PROFILING_BLOCKT_CP)
     res = res_tmp
     call profiling_out(C_PROFILING_BLOCKT_CP)
-    deallocate(res_tmp)
-    deallocate(xpsi1_count, xpsi2_count, xpsi1_node, xpsi2_node)
+    SAFE_DEALLOCATE_A(res_tmp)
+    SAFE_DEALLOCATE_P(xpsi1_count)
+    SAFE_DEALLOCATE_P(xpsi2_count)
+    SAFE_DEALLOCATE_P(xpsi1_node)
+    SAFE_DEALLOCATE_P(xpsi2_node)
 #else
     message(1) = 'Running gs parallel in states without MPI. This is a bug!'
     call write_fatal(1)
@@ -196,7 +200,8 @@ subroutine X(states_blockt_mul)(mesh, st, psi1_start, psi1_end, psi2_start, psi2
     call batch_end(psi2b)
 
   end if
-  deallocate(xpsi1_, xpsi2_)
+  SAFE_DEALLOCATE_P(xpsi1_)
+  SAFE_DEALLOCATE_P(xpsi2_)
 
   call pop_sub()
   call profiling_out(C_PROFILING_BLOCKT)
@@ -235,7 +240,10 @@ subroutine X(states_gather)(mesh, st, in, out)
     out(:, 1, 1), recvcnts, rdispls, R_MPITYPE, st%mpi_grp%comm, mpi_err)
   call mpi_debug_out(st%mpi_grp%comm, C_MPI_ALLTOALLV)
 
-  deallocate(sendcnts, sdispls, recvcnts, rdispls)
+  SAFE_DEALLOCATE_A(sendcnts)
+  SAFE_DEALLOCATE_A(sdispls)
+  SAFE_DEALLOCATE_A(recvcnts)
+  SAFE_DEALLOCATE_A(rdispls)
 
   call pop_sub()
 end subroutine X(states_gather)
@@ -410,7 +418,7 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi_start, psi_end, res
           sendbuf(:, :, 1), matr_block, R_TOTYPE(M_ONE), res_block(:, :, 1))
         call profiling_out(C_PROFILING_BLOCK_MATR_MM)
       end if
-      deallocate(matr_block)
+      SAFE_DEALLOCATE_A(matr_block)
     end do
 
     ! Copy result.
@@ -418,9 +426,13 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi_start, psi_end, res
     call X(states_uncompactify)(st%d%dim, mesh, res_start, xres_node(1:xres_count(rank), rank), res_block, res)
     call profiling_out(C_PROFILING_BLOCK_MATR_CP)
 
-    deallocate(res_block)
-    deallocate(sendbuf, recvbuf)
-    deallocate(xpsi_count, xres_count, xpsi_node, xres_node)
+    SAFE_DEALLOCATE_A(res_block)
+    SAFE_DEALLOCATE_P(sendbuf)
+    SAFE_DEALLOCATE_P(recvbuf)
+    SAFE_DEALLOCATE_P(xpsi_count)
+    SAFE_DEALLOCATE_P(xres_count)
+    SAFE_DEALLOCATE_P(xpsi_node)
+    SAFE_DEALLOCATE_P(xres_node)
 #else
     message(1) = 'Running gs parallel in states without MPI. This is a bug!'
     call write_fatal(1)
@@ -442,16 +454,18 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi_start, psi_end, res
     matr_block = matr
     call lalg_gemm(mesh%np*st%d%dim, matr_col, psi_col, alpha, &
       psi_block(:, :, 1), matr_block, beta, res_block(:, :, 1))
-    deallocate(matr_block)
+    SAFE_DEALLOCATE_A(matr_block)
 
     ! Copy result.
     call profiling_in(C_PROFILING_BLOCK_MATR_CP)
     call X(states_uncompactify)(st%d%dim, mesh, res_start, xres_(1:res_col), res_block, res)
     call profiling_out(C_PROFILING_BLOCK_MATR_CP)
-    deallocate(res_block, psi_block)
+    SAFE_DEALLOCATE_A(res_block)
+    SAFE_DEALLOCATE_A(psi_block)
   end if
 
-  deallocate(xpsi_, xres_)
+  SAFE_DEALLOCATE_P(xpsi_)
+  SAFE_DEALLOCATE_P(xres_)
 
   call pop_sub()
   call profiling_out(C_PROFILING_BLOCK_MATR)

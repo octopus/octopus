@@ -219,7 +219,9 @@ contains
     call linear_solver_end(this%solver)
     call scf_tol_end(this%scftol)
 
-    if (this%add_fxc) deallocate(this%fxc)
+    if (this%add_fxc) then
+      SAFE_DEALLOCATE_P(this%fxc)
+    end if
 
   end subroutine sternheimer_end
 
@@ -244,7 +246,7 @@ contains
       ALLOCATE(rho(mesh%np, st%d%nspin), mesh%np*st%d%nspin)
       call states_total_density(st, mesh, rho)
       call xc_get_fxc(ks%xc, mesh, rho, st%d%ispin, this%fxc)
-      deallocate(rho)
+      SAFE_DEALLOCATE_A(rho)
     else
       this%oep_kernel = .true.
 

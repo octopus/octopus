@@ -253,8 +253,8 @@ contains
       call preconditioner_end(eigens%pre)
     end select
 
-    deallocate(eigens%converged)
-    deallocate(eigens%diff)
+    SAFE_DEALLOCATE_P(eigens%converged)
+    SAFE_DEALLOCATE_P(eigens%diff)
     nullify(eigens%diff)
   end subroutine eigensolver_end
 
@@ -406,7 +406,8 @@ contains
                                  st%eigenval(ist, :), st%d%kpt%mpi_grp)
         ASSERT(outcount.eq.st%d%nik)
       end do
-      deallocate(ldiff, leigenval)
+      SAFE_DEALLOCATE_A(ldiff)
+      SAFE_DEALLOCATE_A(leigenval)
     end if
 #endif
 

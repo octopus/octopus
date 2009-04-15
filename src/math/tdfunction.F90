@@ -492,7 +492,8 @@ module tdf_m
     nullify(f%val)
     nullify(f%valww)
     nullify(f%coeffs)
-    deallocate(t, am)
+    SAFE_DEALLOCATE_A(t)
+    SAFE_DEALLOCATE_A(am)
     call pop_sub()
   end subroutine tdf_init_fromfile
   !------------------------------------------------------------
@@ -547,17 +548,17 @@ module tdf_m
         case(TDF_SINE_SERIES)
           ALLOCATE(f%coeffs(f%sine_nfreqs), f%sine_nfreqs)
           f%coeffs = M_ZERO
-          deallocate(f%val); nullify(f%val)
+          SAFE_DEALLOCATE_P(f%val); nullify(f%val)
           f%mode = TDF_SINE_SERIES
         case(TDF_FOURIER_SERIES)
           ALLOCATE(f%valww(2*(f%nfreqs-1)+1), 2*(f%nfreqs-1)+1)
           f%valww = M_ZERO
-          deallocate(f%val); nullify(f%val)
+          SAFE_DEALLOCATE_P(f%val); nullify(f%val)
           f%mode = TDF_FOURIER_SERIES
         case(TDF_ZERO_FOURIER)
           ALLOCATE(f%valww(2*(f%nfreqs-1)+1), 2*(f%nfreqs-1)+1)
           f%valww = M_ZERO
-          deallocate(f%val); nullify(f%val)
+          SAFE_DEALLOCATE_P(f%val); nullify(f%val)
           f%mode = TDF_ZERO_FOURIER
       end select
     end if
@@ -617,8 +618,8 @@ module tdf_m
       f%valww(j) = - (sqrt(M_TWO)) * aimag(tmp(j-f%nfreqs+1))
     end do
 
-    deallocate(tmp)
-    deallocate(f%val); nullify(f%val)
+    SAFE_DEALLOCATE_A(tmp)
+    SAFE_DEALLOCATE_P(f%val)
     call pop_sub()
   end subroutine tdf_numerical_to_fourier
   !------------------------------------------------------------
@@ -646,7 +647,7 @@ module tdf_m
     f%mode = TDF_NUMERICAL
 
     deallocatE(tmp)
-    deallocate(f%valww); nullify(f%valww)
+    SAFE_DEALLOCATE_P(f%valww); nullify(f%valww)
     call pop_sub()
   end subroutine tdf_fourier_to_numerical
   !------------------------------------------------------------
@@ -777,7 +778,7 @@ module tdf_m
 #endif
 
     call tdf_set_numerical(f, e)
-    deallocate(e)
+    SAFE_DEALLOCATE_A(e)
     call pop_sub()
   end subroutine tdf_set_random
   !------------------------------------------------------------ 
@@ -808,7 +809,7 @@ module tdf_m
     call tdf_init_numerical(f, niter, dt, omegamax)
     call tdf_set_numerical(f, val)
 
-    deallocate(val)
+    SAFE_DEALLOCATE_A(val)
     call pop_sub()
   end subroutine tdf_to_numerical
   !------------------------------------------------------------
@@ -835,7 +836,7 @@ module tdf_m
       f%coeffs(j) = sqrt(M_TWO/bigt) * f%coeffs(j) * f%dt
     end do
 
-    deallocate(f%val); nullify(f%val)
+    SAFE_DEALLOCATE_P(f%val); nullify(f%val)
     f%mode = TDF_SINE_SERIES
 
     call fft_end(f%fft_handler)
@@ -867,7 +868,7 @@ module tdf_m
       f%val(k) = f%val(k) * sqrt(M_TWO/bigt)
     end do
 
-    deallocate(f%coeffs); nullify(f%coeffs)
+    SAFE_DEALLOCATE_P(f%coeffs); nullify(f%coeffs)
     f%mode = TDF_NUMERICAL
 
     n(1:3) = (/ f%niter, 1, 1 /)
@@ -977,13 +978,13 @@ module tdf_m
     case(TDF_FROM_FILE)
       call spline_end(f%amplitude)
     case(TDF_NUMERICAL)
-      deallocate(f%val); nullify(f%val)
+      SAFE_DEALLOCATE_P(f%val); nullify(f%val)
       call fft_end(f%fft_handler)
     case(TDF_FOURIER_SERIES)
-      deallocate(f%valww); nullify(f%valww)
+      SAFE_DEALLOCATE_P(f%valww); nullify(f%valww)
       call fft_end(f%fft_handler)
     case(TDF_SINE_SERIES)
-      deallocate(f%coeffs); nullify(f%coeffs)
+      SAFE_DEALLOCATE_P(f%coeffs); nullify(f%coeffs)
     end select
     f%mode = TDF_EMPTY
 

@@ -130,7 +130,8 @@ program phonon_spectrum
       
       call io_close(iunit)
       
-      deallocate(vaf, ftvaf)
+      SAFE_DEALLOCATE_A(vaf)
+      SAFE_DEALLOCATE_A(ftvaf)
 
       call geometry_end(geo)
 
@@ -159,7 +160,7 @@ program phonon_spectrum
 
   end select
   
-  deallocate(time)
+  SAFE_DEALLOCATE_A(time)
 
   call io_end()
   call datasets_end()
@@ -226,7 +227,7 @@ contains
       trim(io_workpath('td.general/coordinates'))//"'"
     call write_info(1)
     
-    deallocate(vini)
+    SAFE_DEALLOCATE_A(vini)
 
   end subroutine read_vaf
 

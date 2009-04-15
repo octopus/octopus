@@ -295,7 +295,15 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
   converged = nec
   niter = niter + matvec
 
-  deallocate(eigenval, eigenvec, res,  v, av, tmp, h, hevec, aux)
+  SAFE_DEALLOCATE_A(eigenval)
+  SAFE_DEALLOCATE_A(eigenvec)
+  SAFE_DEALLOCATE_A(res)
+  SAFE_DEALLOCATE_A(v)
+  SAFE_DEALLOCATE_A(av)
+  SAFE_DEALLOCATE_A(tmp)
+  SAFE_DEALLOCATE_A(h)
+  SAFE_DEALLOCATE_A(hevec)
+  SAFE_DEALLOCATE_A(aux)
   call pop_sub()
 
 contains

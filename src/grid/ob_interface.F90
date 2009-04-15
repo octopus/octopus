@@ -226,7 +226,8 @@ contains
     call lalg_gemv(intf%np, intf%np, alpha, op, intf_wf, M_z1, op_intf_wf)
     call put_intf_wf(intf, op_intf_wf, wf)
 
-    deallocate(intf_wf, op_intf_wf)
+    SAFE_DEALLOCATE_A(intf_wf)
+    SAFE_DEALLOCATE_A(op_intf_wf)
 
     call pop_sub()
   end subroutine interface_apply_op
@@ -255,7 +256,8 @@ contains
     call lalg_symv(intf%np, alpha, op, intf_wf, beta, op_intf_wf)
     call put_intf_wf(intf, op_intf_wf, res)
 
-    deallocate(intf_wf, op_intf_wf)
+    SAFE_DEALLOCATE_A(intf_wf)
+    SAFE_DEALLOCATE_A(op_intf_wf)
 
     call pop_sub()
   end subroutine interface_apply_sym_op
@@ -286,7 +288,7 @@ contains
     call push_sub('ob_interface.intface_end')
 
     if(associated(intf%index)) then
-      deallocate(intf%index)
+      SAFE_DEALLOCATE_P(intf%index)
       nullify(intf%index)
     end if
 

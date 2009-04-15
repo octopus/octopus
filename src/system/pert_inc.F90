@@ -76,7 +76,7 @@ subroutine X(pert_apply) (this, gr, geo, hm, ik, f_in, f_out)
   endif
 
   if (this%pert_type /= PERTURBATION_ELECTRIC) then
-     deallocate(f_in_copy)
+     SAFE_DEALLOCATE_A(f_in_copy)
   endif
 
   call profiling_out(prof)
@@ -128,7 +128,8 @@ contains
       end do
     endif
  
-    deallocate(grad, cpsi)
+    SAFE_DEALLOCATE_A(grad)
+    SAFE_DEALLOCATE_A(cpsi)
     call pop_sub()
     
   end subroutine kdotp
@@ -148,7 +149,7 @@ contains
     call X(f_angular_momentum) (gr%sb, gr%mesh, gr%der, f_in_copy, lf, set_bc = .false.)
     f_out(1:gr%mesh%np) = M_HALF * lf(1:gr%mesh%np, this%dir)
 
-    deallocate(lf)
+    SAFE_DEALLOCATE_A(lf)
 
     if(this%gauge == GAUGE_GIPAW .or. this%gauge == GAUGE_ICL) then
       ALLOCATE(vrnl(gr%mesh%np, hm%d%dim, gr%sb%dim), gr%mesh%np * hm%d%dim * gr%sb%dim)
@@ -181,7 +182,7 @@ contains
         end do
       end do
 
-      deallocate(vrnl)
+      SAFE_DEALLOCATE_A(vrnl)
     end if
 
     call pop_sub()
@@ -210,7 +211,7 @@ contains
       end do
     end do
       
-    deallocate(tmp)
+    SAFE_DEALLOCATE_A(tmp)
     call pop_sub()
 
   end subroutine ionic
@@ -257,7 +258,10 @@ subroutine X(ionic_perturbation)(this, gr, geo, hm, ik, f_in, f_out, iatom, idir
   call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, 1, grad, fout, ik)
   forall(ip = 1:gr%mesh%np) f_out(ip) = -f_out(ip) + fout(ip, 1)
 
-  deallocate(grad, fin, fout, vloc)
+  SAFE_DEALLOCATE_A(grad)
+  SAFE_DEALLOCATE_A(fin)
+  SAFE_DEALLOCATE_A(fout)
+  SAFE_DEALLOCATE_A(vloc)
   call pop_sub()
 
 end subroutine X(ionic_perturbation)
@@ -367,7 +371,10 @@ contains
 
       end do atoms
 
-      deallocate(f_in2, vrnl, dnl, xf)
+      SAFE_DEALLOCATE_A(f_in2)
+      SAFE_DEALLOCATE_A(vrnl)
+      SAFE_DEALLOCATE_A(dnl)
+      SAFE_DEALLOCATE_A(xf)
     end if apply_gauge
 
     call pop_sub()
@@ -401,7 +408,7 @@ contains
       end do
     end do
 
-    deallocate(tmp)
+    SAFE_DEALLOCATE_A(tmp)
     call pop_sub()
 
   end subroutine ionic
@@ -579,7 +586,7 @@ subroutine X(pert_expectation_density) (this, gr, geo, hm, st, psia, psib, densi
     end do
   end do
 
-  deallocate(pertpsib)
+  SAFE_DEALLOCATE_A(pertpsib)
   call pop_sub()
 
 end subroutine X(pert_expectation_density)
@@ -622,7 +629,7 @@ R_TYPE function X(pert_expectation_value) (this, gr, geo, hm, st, psia, psib, pe
     end if
 #endif
 
-  deallocate(density)
+  SAFE_DEALLOCATE_A(density)
   call pop_sub()
 
 end function X(pert_expectation_value)

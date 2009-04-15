@@ -137,7 +137,7 @@ contains
 
         call interpolation_coefficients(this%npoints, points, M_ZERO, this%co)
 
-        deallocate(points)
+        SAFE_DEALLOCATE_A(points)
         call pop_sub()
         
       end subroutine calc_coefficients
@@ -148,7 +148,7 @@ contains
     type(double_grid_t), intent(inout) :: this
  
     call push_sub('double_grid.double_grid_end')
-    deallocate(this%co)
+    SAFE_DEALLOCATE_P(this%co)
     call pop_sub()
 
   end subroutine double_grid_end

@@ -163,7 +163,7 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, t, kinetic_only)
       
       if(present(t)) call X(vborders) (gr, hm, epsi, hpsi)
 
-      if(associated(grad)) deallocate(grad)
+      SAFE_DEALLOCATE_P(grad)
    
       if(hm%scissor%apply) call X(scissor_apply)(hm%scissor, gr%mesh, ik, epsi, hpsi)
 
@@ -314,7 +314,8 @@ subroutine X(exchange_operator) (hm, gr, psi, hpsi, ist, ik)
 
   end select
 
-  deallocate(rho, pot)
+  SAFE_DEALLOCATE_A(rho)
+  SAFE_DEALLOCATE_A(pot)
   call pop_sub()
 end subroutine X(exchange_operator)
 
@@ -366,7 +367,8 @@ subroutine X(oct_exchange_operator) (hm, gr, psi, hpsi, ik)
 
   end select
 
-  deallocate(rho, pot)
+  SAFE_DEALLOCATE_A(rho)
+  SAFE_DEALLOCATE_A(pot)
   call pop_sub()
 end subroutine X(oct_exchange_operator)
 
@@ -419,7 +421,8 @@ subroutine X(magnus) (hm, gr, psi, hpsi, ik, vmagnus)
 
   call X(vborders) (gr, hm, psi, hpsi)
 
-  deallocate(auxpsi, aux2psi)
+  SAFE_DEALLOCATE_A(auxpsi)
+  SAFE_DEALLOCATE_A(aux2psi)
   call pop_sub()
 end subroutine X(magnus)
 
@@ -466,7 +469,8 @@ subroutine X(magnetic_terms) (gr, hm, psi, hpsi, grad, ik)
     end select
     call dderivatives_div(gr%der, tmp, div)
     hpsi(1:gr%mesh%np, 1) = hpsi(1:gr%mesh%np, 1) - M_HALF*M_zI*div*psi(1:gr%mesh%np, 1)
-    deallocate(div, tmp)
+    SAFE_DEALLOCATE_A(div)
+    SAFE_DEALLOCATE_A(tmp)
 
     select case (hm%d%ispin)
     case(UNPOLARIZED)
@@ -523,7 +527,7 @@ subroutine X(magnetic_terms) (gr, hm, psi, hpsi, grad, ik)
                                  + (hm%ep%B_field(1) + M_zI*hm%ep%B_field(2))*psi(1:gr%mesh%np, 1))
     end select
     hpsi(1:gr%mesh%np, :) = hpsi(1:gr%mesh%np, :) + (hm%ep%gyromagnetic_ratio * M_HALF) * lhpsi(1:gr%mesh%np, :)
-    deallocate(lhpsi)
+    SAFE_DEALLOCATE_A(lhpsi)
   end if
 
   call pop_sub()
@@ -689,7 +693,8 @@ subroutine X(h_mgga_terms) (hm, gr, psi, hpsi, ik, grad)
     hpsi(1:gr%mesh%np, idim) = hpsi(1:gr%mesh%np, idim) - diverg(1:gr%mesh%np)
   end do
 
-  deallocate(cgrad, diverg)
+  SAFE_DEALLOCATE_A(cgrad)
+  SAFE_DEALLOCATE_A(diverg)
 
   call pop_sub()
 end subroutine X(h_mgga_terms)

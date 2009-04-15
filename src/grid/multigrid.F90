@@ -389,27 +389,29 @@ contains
 
     call push_sub('multigrid.multigrid_end')
 
-    deallocate(mgrid%sp)
-    deallocate(mgrid%ep)
-    deallocate(mgrid%ep_part)
+    SAFE_DEALLOCATE_P(mgrid%sp)
+    SAFE_DEALLOCATE_P(mgrid%ep)
+    SAFE_DEALLOCATE_P(mgrid%ep_part)
 
-    deallocate(mgrid%level(0)%fine_i)
+    SAFE_DEALLOCATE_P(mgrid%level(0)%fine_i)
 
     do i = 1, mgrid%n_levels
       level => mgrid%level(i)
 
       call derivatives_end(level%der)
       call mesh_end(level%mesh)
-      deallocate(level%mesh, level%der)
-      nullify   (level%mesh, level%der)
+      SAFE_DEALLOCATE_P(level%mesh)
+      SAFE_DEALLOCATE_P(level%der)
 
-      deallocate(level%to_coarse, level%to_fine1, level%to_fine2, &
-        level%to_fine4, level%to_fine8, level%fine_i)
-      nullify   (level%to_coarse, level%to_fine1, level%to_fine2, &
-        level%to_fine4, level%to_fine8, level%fine_i)
+      SAFE_DEALLOCATE_P(level%to_coarse)
+      SAFE_DEALLOCATE_P(level%to_fine1)
+      SAFE_DEALLOCATE_P(level%to_fine2)
+      SAFE_DEALLOCATE_P(level%to_fine4)
+      SAFE_DEALLOCATE_P(level%to_fine8)
+      SAFE_DEALLOCATE_P(level%fine_i)
     end do
 
-    deallocate(mgrid%level)
+    SAFE_DEALLOCATE_P(mgrid%level)
 
     call pop_sub()
   end subroutine multigrid_end

@@ -325,7 +325,8 @@ contains
     end do
     op%rimap_inv(op%nri + 1) = op%np
 
-    deallocate(st1, st2)
+    SAFE_DEALLOCATE_A(st1)
+    SAFE_DEALLOCATE_A(st2)
 
 #ifdef HAVE_MPI
     if(op%m%parallel_in_domains) then
@@ -500,7 +501,7 @@ contains
 
 #if defined(HAVE_MPI)
     if(m%parallel_in_domains) then
-      deallocate(vol_pp)
+      SAFE_DEALLOCATE_P(vol_pp)
       do i = 1, m%vp%np_local(m%vp%partno)
         opt%w_re(:, i) = opgt%w_re(:, m%vp%local(m%vp%xlocal(m%vp%partno)+i-1))
         if(opt%cmplx_op) then
@@ -509,7 +510,8 @@ contains
       end do
       call nl_operator_end(opg)
       call nl_operator_end(opgt)
-      deallocate(opg, opgt)
+      SAFE_DEALLOCATE_P(opg)
+      SAFE_DEALLOCATE_P(opgt)
     end if
 #endif
 
@@ -577,7 +579,7 @@ contains
 
 #if defined(HAVE_MPI)
     if(m%parallel_in_domains) then
-      deallocate(vol_pp)
+      SAFE_DEALLOCATE_P(vol_pp)
       do i = 1, m%vp%np_local(m%vp%partno)
         opt%w_re(:, i) = opgt%w_re(:, m%vp%local(m%vp%xlocal(m%vp%partno)+i-1))
         if(opt%cmplx_op) then
@@ -586,7 +588,8 @@ contains
       end do
       call nl_operator_end(opg)
       call nl_operator_end(opgt)
-      deallocate(opg, opgt)
+      SAFE_DEALLOCATE_P(opg)
+      SAFE_DEALLOCATE_P(opgt)
     end if
 #endif
 
@@ -846,7 +849,7 @@ contains
       
       if(op%m%parallel_in_domains) then 
         call nl_operator_end(opg)
-        deallocate(opg)
+        SAFE_DEALLOCATE_P(opg)
       end if
     end if
     if(in_debug_mode) call write_debug_newlines(2)
@@ -897,7 +900,7 @@ contains
       
       if(op%m%parallel_in_domains) then 
         call nl_operator_end(opg)
-        deallocate(opg)
+        SAFE_DEALLOCATE_P(opg)
       end if
     end if
     if(in_debug_mode) call write_debug_newlines(2)
@@ -973,7 +976,7 @@ contains
       end do
       call io_close(unit)
 
-      deallocate(a)
+      SAFE_DEALLOCATE_A(a)
     end if
 
     call pop_sub()
@@ -1008,7 +1011,7 @@ contains
         write(unit, fmt = '(f9.4)') a(op%m%np_global, i)
       end do
 
-      deallocate(a)
+      SAFE_DEALLOCATE_A(a)
     end if
 
     call pop_sub()

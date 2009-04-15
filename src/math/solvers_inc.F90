@@ -134,7 +134,10 @@ subroutine X(sym_conjugate_gradients)(np, x, b, op, dotp, iter, residue, thresho
   end do
   if(present(residue)) residue = gamma
 
-  deallocate(r, ax, p, ap)
+  SAFE_DEALLOCATE_A(r)
+  SAFE_DEALLOCATE_A(ax)
+  SAFE_DEALLOCATE_A(p)
+  SAFE_DEALLOCATE_A(ap)
 
   call pop_sub()
 end subroutine X(sym_conjugate_gradients)
@@ -217,7 +220,13 @@ subroutine X(bi_conjugate_gradients)(np, x, b, op, opt, dotp, iter, residue, thr
   end do
   if(present(residue)) residue = err
 
-  deallocate(r, rr, ax, p, pp, ap, atp)
+  SAFE_DEALLOCATE_A(r)
+  SAFE_DEALLOCATE_A(rr)
+  SAFE_DEALLOCATE_A(ax)
+  SAFE_DEALLOCATE_A(p)
+  SAFE_DEALLOCATE_A(pp)
+  SAFE_DEALLOCATE_A(ap)
+  SAFE_DEALLOCATE_A(atp)
 
   call pop_sub()
 end subroutine X(bi_conjugate_gradients)
@@ -528,7 +537,13 @@ end subroutine X(bi_conjugate_gradients)
 
     if(present(residue)) residue = res
 
-    deallocate(r, v, z, q, p, deltax, deltar)
+    SAFE_DEALLOCATE_A(r)
+    SAFE_DEALLOCATE_A(v)
+    SAFE_DEALLOCATE_A(z)
+    SAFE_DEALLOCATE_A(q)
+    SAFE_DEALLOCATE_A(p)
+    SAFE_DEALLOCATE_A(deltax)
+    SAFE_DEALLOCATE_A(deltar)
 
     call pop_sub()
   end subroutine X(qmr_sym_gen_dotp)
@@ -749,7 +764,14 @@ end subroutine X(bi_conjugate_gradients)
 
     if(present(residue)) residue = res
 
-    deallocate(r, v, w, z, q, p, deltax, tmp)
+    SAFE_DEALLOCATE_A(r)
+    SAFE_DEALLOCATE_A(v)
+    SAFE_DEALLOCATE_A(w)
+    SAFE_DEALLOCATE_A(z)
+    SAFE_DEALLOCATE_A(q)
+    SAFE_DEALLOCATE_A(p)
+    SAFE_DEALLOCATE_A(deltax)
+    SAFE_DEALLOCATE_A(tmp)
 
     call pop_sub()
   end subroutine X(qmr_gen_dotp)

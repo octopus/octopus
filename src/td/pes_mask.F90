@@ -49,8 +49,8 @@ subroutine PES_mask_end(v)
 
   if(associated(v%k)) then
     call fft_end(v%fft)
-    deallocate(v%k, v%r)
-    nullify   (v%k, v%r)
+    SAFE_DEALLOCATE_P(v%k)
+    SAFE_DEALLOCATE_P(v%r)
   end if
 
 end subroutine PES_mask_end
@@ -110,7 +110,8 @@ subroutine PES_mask_doit(v, m, st, dt, mask)
     end do
   end do
 
-  deallocate(wf1, wf2)
+  SAFE_DEALLOCATE_A(wf1)
+  SAFE_DEALLOCATE_A(wf2)
 
 end subroutine PES_mask_doit
 
@@ -286,8 +287,10 @@ subroutine PES_mask_output(v, m, st, file)
   end do
   call io_close(iunit)
 
-  deallocate(spis, arpis)
-  deallocate(npoints, ar_npoints)
+  SAFE_DEALLOCATE_A(spis)
+  SAFE_DEALLOCATE_A(arpis)
+  SAFE_DEALLOCATE_A(npoints)
+  SAFE_DEALLOCATE_A(ar_npoints)
 
 end subroutine PES_mask_output
 

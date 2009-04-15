@@ -277,7 +277,7 @@ contains
   subroutine ion_dynamics_end(this)
     type(ion_dynamics_t), intent(inout) :: this
 
-    if(associated(this%oldforce)) deallocate(this%oldforce)
+    SAFE_DEALLOCATE_P(this%oldforce)
 
   end subroutine ion_dynamics_end
 
@@ -434,7 +434,8 @@ contains
       geo%atom(iatom)%v(1:MAX_DIM) = state%vel(1:MAX_DIM, iatom)
     end do
 
-    deallocate(state%pos, state%vel)
+    SAFE_DEALLOCATE_P(state%pos)
+    SAFE_DEALLOCATE_P(state%vel)
     
   end subroutine ion_dynamics_restore_state
 

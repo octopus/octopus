@@ -110,10 +110,10 @@ contains
   subroutine logrid_end(g)
     type(logrid_t), intent(inout) :: g
 
-    if (associated(g%rofi)) deallocate(g%rofi)
-    if (associated(g%r2ofi)) deallocate(g%r2ofi)
-    if (associated(g%drdi)) deallocate(g%drdi)
-    if (associated(g%s)) deallocate(g%s)
+    SAFE_DEALLOCATE_P(g%rofi)
+    SAFE_DEALLOCATE_P(g%r2ofi)
+    SAFE_DEALLOCATE_P(g%drdi)
+    SAFE_DEALLOCATE_P(g%s)
 
   end subroutine logrid_end
 

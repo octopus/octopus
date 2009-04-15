@@ -36,7 +36,7 @@ subroutine X(cf_free_FS)(cf)
 
   call push_sub('cf_inc.Xcf_free_FS')
   ASSERT(associated(cf%FS))
-  deallocate(cf%FS)
+  SAFE_DEALLOCATE_P(cf%FS)
   nullify(cf%FS)
 
   call pop_sub()
@@ -113,7 +113,7 @@ end subroutine X(fourier_space_op_init)
 subroutine X(fourier_space_op_end)(this)
   type(fourier_space_op_t), intent(inout) :: this
 
-  deallocate(this%X(op))
+  SAFE_DEALLOCATE_P(this%X(op))
 
 end subroutine X(fourier_space_op_end)
 

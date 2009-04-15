@@ -42,7 +42,7 @@ function X(ks_matrix_elements) (cas, st, m, dv) result(x)
     x(ia) = X(mf_integrate)(m, f)
   end do
 
-  deallocate(f)
+  SAFE_DEALLOCATE_A(f)
 end function X(ks_matrix_elements)
 
 ! ---------------------------------------------------------
@@ -88,7 +88,7 @@ subroutine X(transition_density) (cas, st, m, ia, n0I)
     n0I(i) = X(transition_matrix_element) (cas, ia, x)
   end do
 
-  deallocate(x)
+  SAFE_DEALLOCATE_A(x)
   call pop_sub()
 end subroutine X(transition_density)
 
@@ -118,7 +118,7 @@ subroutine X(get_transition_densities) (cas, sys, trandens)
     end if
   end do
 
-  deallocate(n0I)
+  SAFE_DEALLOCATE_A(n0I)
   call pop_sub()
 end subroutine X(get_transition_densities)
 

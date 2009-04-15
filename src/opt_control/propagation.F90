@@ -650,7 +650,9 @@ module opt_control_propagation_m
       call parameters_update(cp, cpp, dir, iter, eta_, d, dq)
     end if
 
-    deallocate(d, dl, dq)
+    SAFE_DEALLOCATE_A(d)
+    SAFE_DEALLOCATE_A(dl)
+    SAFE_DEALLOCATE_A(dq)
     call pop_sub()
   end subroutine update_field
   ! ---------------------------------------------------------
@@ -683,7 +685,7 @@ module opt_control_propagation_m
   subroutine oct_prop_end(prop)
     type(oct_prop_t), intent(inout) :: prop
 
-    deallocate(prop%iter)
+    SAFE_DEALLOCATE_P(prop%iter)
     ! This routine should maybe delete the files?
 
   end subroutine oct_prop_end

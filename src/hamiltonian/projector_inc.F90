@@ -131,7 +131,7 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, ik)
       end do ! mm
     end do ! ll
 
-    deallocate(lpsi)
+    SAFE_DEALLOCATE_A(lpsi)
 
   end do
 
@@ -200,11 +200,12 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, ik)
       end if
     end do
     
-    deallocate(lpsi)
+    SAFE_DEALLOCATE_A(lpsi)
 
   end do
 
-  deallocate(reduce_buffer, ireduce)
+  SAFE_DEALLOCATE_A(reduce_buffer)
+  SAFE_DEALLOCATE_A(ireduce)
 
   call pop_sub()
 end subroutine X(project_psi)
@@ -274,7 +275,7 @@ R_TYPE function X(psia_project_psib)(pj, dim, psia, psib, ik) result(apb)
       uvpsi_tmp = R_TOTYPE(M_ZERO)
       call MPI_Allreduce(uvpsi, uvpsi_tmp, size, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
       uvpsi = uvpsi_tmp
-      deallocate(uvpsi_tmp)
+      SAFE_DEALLOCATE_A(uvpsi_tmp)
     end if
 #endif
 
@@ -305,7 +306,8 @@ R_TYPE function X(psia_project_psib)(pj, dim, psia, psib, ik) result(apb)
 
   end if
 
-  deallocate(lpsi, plpsi)
+  SAFE_DEALLOCATE_A(lpsi)
+  SAFE_DEALLOCATE_A(plpsi)
 
   call pop_sub()
 end function X(psia_project_psib)
@@ -411,7 +413,9 @@ subroutine X(projector_commute_r)(pj, gr, dim, idir, ik, psi, cpsi)
       end do
     end if
 
-    deallocate(lpsi, xplpsi, pxlpsi)
+    SAFE_DEALLOCATE_A(lpsi)
+    SAFE_DEALLOCATE_A(xplpsi)
+    SAFE_DEALLOCATE_A(pxlpsi)
   end if
 
   call pop_sub()

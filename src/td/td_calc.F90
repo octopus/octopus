@@ -111,11 +111,13 @@ subroutine td_calc_tacc(gr, geo, st, hm, acc, t)
             zmf_dotp(gr%mesh, st%zpsi(1:gr%mesh%np, idim, ist, ik), vnl_xzpsi(:, idim) )
         end do
       end do
-      deallocate(xzpsi, vnl_xzpsi)
+      SAFE_DEALLOCATE_A(xzpsi)
+      SAFE_DEALLOCATE_A(vnl_xzpsi)
 
     end do
   end do
-  deallocate(hzpsi, hhzpsi)
+  SAFE_DEALLOCATE_A(hzpsi)
+  SAFE_DEALLOCATE_A(hhzpsi)
 
 #if defined(HAVE_MPI)
   if(st%parallel_in_states) then

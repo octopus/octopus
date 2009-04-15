@@ -87,7 +87,8 @@ contains
     call dderivatives_lapl(der, wk, lwk, .true.)
 
     zk(1:m%np) = -M_FOUR*M_PI*rho(1:m%np) - lwk(1:m%np)
-    deallocate(wk, lwk) ! they are no longer needed
+    SAFE_DEALLOCATE_A(wk)
+    SAFE_DEALLOCATE_A(lwk) ! they are no longer needed
 
     der_pointer  => der
     mesh_pointer => m
@@ -104,7 +105,8 @@ contains
     nullify(der_pointer, mesh_pointer)
     pot(1:m%np) = pot(1:m%np) + pk(1:m%np)
 
-    deallocate(zk, pk)
+    SAFE_DEALLOCATE_A(zk)
+    SAFE_DEALLOCATE_A(pk)
     call pop_sub()
   end subroutine poisson_cg1
 
@@ -148,7 +150,8 @@ contains
     pot(1:m%np) = x(1:m%np)
 
     nullify(der_pointer, mesh_pointer)
-    deallocate(rhs, x)
+    SAFE_DEALLOCATE_A(rhs)
+    SAFE_DEALLOCATE_A(x)
     call pop_sub()
   end subroutine poisson_cg2
 

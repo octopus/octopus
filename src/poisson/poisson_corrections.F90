@@ -75,8 +75,8 @@ contains
   subroutine poisson_corrections_end(this)
     type(poisson_corr_t), intent(inout) :: this
 
-    if(associated(this%phi)) deallocate(this%phi)
-    if(associated(this%aux)) deallocate(this%aux)
+    SAFE_DEALLOCATE_P(this%phi)
+    SAFE_DEALLOCATE_P(this%aux)
   end subroutine poisson_corrections_end
 
 
@@ -126,7 +126,8 @@ contains
       end do
     end do
 
-    deallocate(mult, betal)
+    SAFE_DEALLOCATE_A(mult)
+    SAFE_DEALLOCATE_A(betal)
     call pop_sub()
   end subroutine correct_rho
 
@@ -292,7 +293,7 @@ contains
       end do
     end do
 
-    deallocate(mult)
+    SAFE_DEALLOCATE_A(mult)
   end subroutine boundary_conditions
 
 

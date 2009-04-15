@@ -122,9 +122,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! deallocates variables allocated in lda_init
+  ! SAFE_DEALLOCATE_Ps variables allocated in lda_init
   subroutine lda_end()
-    deallocate(dens, dedd, l_dens, l_dedd)
+    SAFE_DEALLOCATE_A(dens)
+    SAFE_DEALLOCATE_A(dedd)
+    SAFE_DEALLOCATE_A(l_dens)
+    SAFE_DEALLOCATE_A(l_dedd)
   end subroutine lda_end
 
 

@@ -236,7 +236,8 @@ contains
         call DFFTW(plan_dft_r2c_1d) (fft_array(j)%planf, n(1), rin, cout, fftw_measure+fftw_unaligned)
         call DFFTW(plan_dft_c2r_1d) (fft_array(j)%planb, n(1), cout, rin, fftw_measure+fftw_unaligned)
       end select
-      deallocate(rin, cout)
+      SAFE_DEALLOCATE_A(rin)
+      SAFE_DEALLOCATE_A(cout)
     else
       ALLOCATE( cin(n(1), n(2), n(3)), n(1)*n(2)*n(3))
       ALLOCATE(cout(n(1), n(2), n(3)), n(1)*n(2)*n(3))
@@ -251,7 +252,8 @@ contains
         call DFFTW(plan_dft_1d) (fft_array(j)%planf, n(1), cin, cout, fftw_forward,  fftw_measure)
         call DFFTW(plan_dft_1d) (fft_array(j)%planb, n(1), cin, cout, fftw_backward, fftw_measure)
       end select
-      deallocate(cin, cout)
+      SAFE_DEALLOCATE_A(cin)
+      SAFE_DEALLOCATE_A(cout)
     end if
     fft = fft_array(j)
 

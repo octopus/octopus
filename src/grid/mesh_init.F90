@@ -513,7 +513,7 @@ contains
     call mesh_partition_boundaries(mesh, stencil, part)
 
     call vec_init(mesh%mpi_grp%comm, 0, part, mesh%np_global, mesh%np_part_global, mesh%idx, stencil, mesh%sb%dim, mesh%vp)
-    deallocate(part)
+    SAFE_DEALLOCATE_A(part)
 
     ALLOCATE(nnb(1:mesh%vp%npart), mesh%vp%npart)
     nnb = 0
@@ -552,7 +552,7 @@ contains
            '        Boundary points :', mesh%vp%np_bndry(ipart)
       call write_info(3)
     end do
-    deallocate(nnb)
+    SAFE_DEALLOCATE_A(nnb)
 
     message(1) = ''
     call write_info(1)
@@ -816,7 +816,7 @@ contains
         end do
 
         ! we no longer need this
-        deallocate(recv_rem_points)
+        SAFE_DEALLOCATE_A(recv_rem_points)
 
         ! Now we have all the indexes required locally, so we can
         ! build the mpi datatypes

@@ -19,7 +19,7 @@
       ALLOCATE(v0(1:m%np, 1:hm%d%dim), m%np*hm%d%dim)
       v0(1:m%np, 1) = hm%ep%vpsl(1:m%np)
       call doutput_function(outp%how, dir, "v0", m, sb, v0(:, 1), u, err, geo = geo)
-      deallocate(v0)
+      SAFE_DEALLOCATE_A(v0)
 
       if(hm%ep%classical_pot > 0) then
         call doutput_function(outp%how, dir, "vc", m, sb, hm%ep%Vclassical, u, err, geo = geo)

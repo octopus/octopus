@@ -118,7 +118,7 @@ module opt_control_initst_m
       if(loct_parse_isdef(datasets_check('OCTInitialTransformStates')).ne.0) then
         if(loct_parse_block(datasets_check('OCTInitialTransformStates'), blk) == 0) then
           tmp_st = initial_state
-          deallocate(tmp_st%zpsi)
+          SAFE_DEALLOCATE_P(tmp_st%zpsi)
           call restart_look_and_read(tmp_st, gr, geo)
           ALLOCATE(rotation_matrix(initial_state%nst, tmp_st%nst), initial_state%nst*tmp_st%nst)
           rotation_matrix = M_z0
@@ -128,7 +128,7 @@ module opt_control_initst_m
             end do
           end do
           call rotate_states(gr%mesh, initial_state, tmp_st, rotation_matrix)
-          deallocate(rotation_matrix)
+          SAFE_DEALLOCATE_A(rotation_matrix)
           call states_end(tmp_st)
         else
           message(1) = '"OCTInitialTransformStates" has to be specified as block.'

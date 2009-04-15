@@ -156,13 +156,13 @@ contains
 
     if(associated(s%st)) then
       call states_end(s%st)
-      deallocate(s%st); nullify(s%st)
+      SAFE_DEALLOCATE_P(s%st); nullify(s%st)
     end if
 
     call geometry_end(s%geo)
     call simul_box_end(s%gr%sb)
     call grid_end(s%gr)
-    deallocate(s%gr);  nullify(s%gr)
+    SAFE_DEALLOCATE_P(s%gr);  nullify(s%gr)
 
     call pop_sub()
   end subroutine system_end

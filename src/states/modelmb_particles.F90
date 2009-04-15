@@ -29,6 +29,7 @@ module modelMB_particles_m
   use loct_m
   use loct_parser_m
   use messages_m
+  use profiling_m
 
   implicit none
 
@@ -285,13 +286,13 @@ subroutine modelMB_particles_destroy (modelMBparticles)
 
   call push_sub('states.modelMB_particles_destroy')
 
-  if (associated(modelMBparticles%labels_particles_modelMB)) deallocate(modelMBparticles%labels_particles_modelMB)
-  if (associated(modelMBparticles%particletype_modelMB)) deallocate(modelMBparticles%particletype_modelMB)
-  if (associated(modelMBparticles%mass_particle_modelMB)) deallocate(modelMBparticles%mass_particle_modelMB)
-  if (associated(modelMBparticles%charge_particle_modelMB)) deallocate(modelMBparticles%charge_particle_modelMB)
+  SAFE_DEALLOCATE_P(modelMBparticles%labels_particles_modelMB)
+  SAFE_DEALLOCATE_P(modelMBparticles%particletype_modelMB)
+  SAFE_DEALLOCATE_P(modelMBparticles%mass_particle_modelMB)
+  SAFE_DEALLOCATE_P(modelMBparticles%charge_particle_modelMB)
 
-  if (associated(modelMBparticles%labels_densities)) deallocate(modelMBparticles%labels_densities)
-  if (associated(modelMBparticles%particle_kept_densities)) deallocate(modelMBparticles%particle_kept_densities)
+  SAFE_DEALLOCATE_P(modelMBparticles%labels_densities)
+  SAFE_DEALLOCATE_P(modelMBparticles%particle_kept_densities)
 
   call pop_sub()
 

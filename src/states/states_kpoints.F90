@@ -247,8 +247,10 @@ subroutine states_choose_kpoints(d, sb, geo)
     d%kweights(2::2) = kw(1:nk)
   end select
 
-  deallocate(natom, coorat)
-  deallocate(kp, kw)
+  SAFE_DEALLOCATE_A(natom)
+  SAFE_DEALLOCATE_A(coorat)
+  SAFE_DEALLOCATE_A(kp)
+  SAFE_DEALLOCATE_A(kw)
   
   call print_kpoints_debug
   call pop_sub()
@@ -409,7 +411,7 @@ logical function in_wigner_seitz_cell(k_point, klattice) result(in_cell)
 
   end do
   
-  deallocate(bragg_normal)
+  SAFE_DEALLOCATE_A(bragg_normal)
 
   call pop_sub()
 end function in_wigner_seitz_cell

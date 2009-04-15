@@ -258,7 +258,7 @@ contains
 
     forall (ip = 1:gr%mesh%np) pot(ip) = phi%level(0)%p(ip) + vh_correction(ip)
 
-    deallocate(vh_correction)
+    SAFE_DEALLOCATE_A(vh_correction)
 
     call gridhier_end(phi, gr%mgrid)
     call gridhier_end(tau, gr%mgrid)
@@ -411,8 +411,8 @@ contains
         pot(1:m%np) = pot(1:m%np) - this%relax_factor/ldiag(1:m%np)*(lpot(1:m%np) - rho(1:m%np)) 
       end do
 
-      deallocate(ldiag)
-      deallocate(lpot)
+      SAFE_DEALLOCATE_A(ldiag)
+      SAFE_DEALLOCATE_A(lpot)
       
     end select
 

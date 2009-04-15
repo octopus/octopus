@@ -142,7 +142,7 @@ contains
     call parameters_write('opt-control/laser.bestJ1', iterator%best_par)
 
     call parameters_end(iterator%best_par)
-    deallocate(iterator%best_par)
+    SAFE_DEALLOCATE_P(iterator%best_par)
     nullify(iterator%best_par)
     call io_close(iterator%convergence_iunit)
 

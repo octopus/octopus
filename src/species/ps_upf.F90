@@ -160,15 +160,22 @@ contains
 
     call push_sub('ps_upf.ps_upf_end')
 
-    deallocate(ps_upf%kb_radius)
+    SAFE_DEALLOCATE_P(ps_upf%kb_radius)
 
-    deallocate(ps_upf%n, ps_upf%l, ps_upf%occ)
-    if (associated(ps_upf%core_density)) deallocate(ps_upf%core_density)
-    deallocate(ps_upf%r, ps_upf%drdi)
-    deallocate(ps_upf%v_local, ps_upf%proj_l, ps_upf%proj_np, ps_upf%proj, ps_upf%e)
-    deallocate(ps_upf%wfs)
-    deallocate(ps_upf%rho)
-    if (associated(ps_upf%proj_j)) deallocate(ps_upf%proj_j)
+    SAFE_DEALLOCATE_P(ps_upf%n)
+    SAFE_DEALLOCATE_P(ps_upf%l)
+    SAFE_DEALLOCATE_P(ps_upf%occ)
+    SAFE_DEALLOCATE_P(ps_upf%core_density)
+    SAFE_DEALLOCATE_P(ps_upf%r)
+    SAFE_DEALLOCATE_P(ps_upf%drdi)
+    SAFE_DEALLOCATE_P(ps_upf%v_local)
+    SAFE_DEALLOCATE_P(ps_upf%proj_l)
+    SAFE_DEALLOCATE_P(ps_upf%proj_np)
+    SAFE_DEALLOCATE_P(ps_upf%proj)
+    SAFE_DEALLOCATE_P(ps_upf%e)
+    SAFE_DEALLOCATE_P(ps_upf%wfs)
+    SAFE_DEALLOCATE_P(ps_upf%rho)
+    SAFE_DEALLOCATE_P(ps_upf%proj_j)
 
     call pop_sub()
   end subroutine ps_upf_end

@@ -118,7 +118,7 @@ contains
 
     call push_sub('kb_projector.kb_projector_end')
 
-    if (associated(kb_p%p))  deallocate(kb_p%p)
+    SAFE_DEALLOCATE_P(kb_p%p)
 
     call pop_sub()
   end subroutine kb_projector_end

@@ -165,7 +165,7 @@ subroutine X(lcao_wf) (this, st, gr, geo, hm, start)
 
   if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
 
-  deallocate(hpsi)
+  SAFE_DEALLOCATE_A(hpsi)
 
   ALLOCATE(ev(this%norbs), this%norbs)
 
@@ -186,7 +186,7 @@ subroutine X(lcao_wf) (this, st, gr, geo, hm, start)
     call MPI_Allgatherv(tmp(:, kstart:), st%nst*(kend - kstart + 1), MPI_FLOAT, &
          st%eigenval, st%d%kpt%num(:)*st%nst, (st%d%kpt%range(1, :) - 1)*st%nst, MPI_FLOAT, &
          st%d%kpt%mpi_grp%comm, mpi_err)
-    deallocate(tmp)
+    SAFE_DEALLOCATE_A(tmp)
   end if
 #endif
 
@@ -208,7 +208,8 @@ subroutine X(lcao_wf) (this, st, gr, geo, hm, start)
     end do
   end do
 
-  deallocate(ev, hamilt)
+  SAFE_DEALLOCATE_A(ev)
+  SAFE_DEALLOCATE_A(hamilt)
   
   call pop_sub()
 
@@ -273,7 +274,7 @@ contains
         end do
       end do
       
-      deallocate(ao)
+      SAFE_DEALLOCATE_A(ao)
     end if
 
     call pop_sub()

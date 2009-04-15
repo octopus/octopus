@@ -198,15 +198,15 @@ contains
 
     ! Arrays got allocated for all mixing schemes, except linear mixing
     if (smix%type_of_mixing .ne. MIX_LINEAR) then
-      if (associated(smix%ddf))      deallocate(smix%ddf)
-      if (associated(smix%ddv))      deallocate(smix%ddv)
-      if (associated(smix%dvin_old)) deallocate(smix%dvin_old)
-      if (associated(smix%df_old))   deallocate(smix%df_old)
+      SAFE_DEALLOCATE_P(smix%ddf)
+      SAFE_DEALLOCATE_P(smix%ddv)
+      SAFE_DEALLOCATE_P(smix%dvin_old)
+      SAFE_DEALLOCATE_P(smix%df_old)
 
-      if (associated(smix%zdf))      deallocate(smix%zdf)
-      if (associated(smix%zdv))      deallocate(smix%zdv)
-      if (associated(smix%zvin_old)) deallocate(smix%zvin_old)
-      if (associated(smix%zf_old))   deallocate(smix%zf_old)
+      SAFE_DEALLOCATE_P(smix%zdf)
+      SAFE_DEALLOCATE_P(smix%zdv)
+      SAFE_DEALLOCATE_P(smix%zvin_old)
+      SAFE_DEALLOCATE_P(smix%zf_old)
     end if
 
     call pop_sub()

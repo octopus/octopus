@@ -110,7 +110,10 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
     end if
   end do spin
 
-  deallocate(oep%eigen_type, oep%eigen_index, oep%X(lxc), oep%uxc_bar)
+  SAFE_DEALLOCATE_P(oep%eigen_type)
+  SAFE_DEALLOCATE_P(oep%eigen_index)
+  SAFE_DEALLOCATE_P(oep%X(lxc))
+  SAFE_DEALLOCATE_P(oep%uxc_bar)
 
   call pop_sub()
   call profiling_out(C_PROFILING_XC_OEP)
@@ -188,7 +191,9 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
   call write_info(2)
 
   vxc(1:gr%mesh%np) = vxc_old(1:gr%mesh%np)
-  deallocate(b, s, vxc_old)
+  SAFE_DEALLOCATE_A(b)
+  SAFE_DEALLOCATE_A(s)
+  SAFE_DEALLOCATE_A(vxc_old)
 
   call pop_sub()
   call profiling_out(C_PROFILING_XC_OEP_FULL)

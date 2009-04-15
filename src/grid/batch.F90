@@ -78,7 +78,7 @@ contains
   subroutine batch_end(this)
     type(batch_t), intent(inout) :: this
 
-    deallocate(this%states)
+    SAFE_DEALLOCATE_P(this%states)
   end subroutine batch_end
 
   subroutine batch_init_empty(this, dim, nst)

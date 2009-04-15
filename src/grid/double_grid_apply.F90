@@ -150,7 +150,7 @@ subroutine double_grid_apply (this, s, m, sm, x_atom, vl, l, lm, ic)
     call omp_unset_lock(lock)
 #endif
 
-    deallocate(vs)
+    SAFE_DEALLOCATE_A(vs)
 
 #ifdef USE_OMP
     !$omp end parallel

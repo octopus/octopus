@@ -186,7 +186,9 @@ contains
     call scf_end(scfv)
     call output_end_()
 
-    deallocate(Vpsl_save, trrho, dipole)
+    SAFE_DEALLOCATE_A(Vpsl_save)
+    SAFE_DEALLOCATE_A(trrho)
+    SAFE_DEALLOCATE_A(dipole)
     call end_()
 
   contains
@@ -332,14 +334,14 @@ contains
       end if
 
       if(iand(sys%outp%what, output_density).ne.0) then 
-        deallocate(lr_rho)
+        SAFE_DEALLOCATE_A(lr_rho)
       end if
       
       if(iand(sys%outp%what, output_elf).ne.0) then 
-        deallocate(lr_elf)
-        deallocate(elf)
-        deallocate(lr_elfd)
-        deallocate(elfd)
+        SAFE_DEALLOCATE_A(lr_elf)
+        SAFE_DEALLOCATE_A(elf)
+        SAFE_DEALLOCATE_A(lr_elfd)
+        SAFE_DEALLOCATE_A(elfd)
       end if
     end subroutine output_end_
 

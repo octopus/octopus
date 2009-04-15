@@ -62,7 +62,8 @@ subroutine X(vlaser_operator_quadratic) (laser, gr, std, psi, hpsi)
     do k = 1, gr%mesh%np
       hpsi(k, :) = hpsi(k, :) + M_HALF*dot_product(a(k, 1:gr%mesh%sb%dim), a(k, 1:gr%mesh%sb%dim))*psi(k, :) / P_c**2
     end do
-    deallocate(a, a_prime)
+    SAFE_DEALLOCATE_A(a)
+    SAFE_DEALLOCATE_A(a_prime)
   end if
   if(vector_potential) then
     do k = 1, gr%mesh%np
@@ -120,7 +121,7 @@ subroutine X(vlaser_operator_linear) (laser, gr, std, psi, hpsi, ik, gyromagneti
     call laser_potential(gr%sb, laser, gr%mesh, pot)
     v = v + pot
     electric_field = .true.
-    deallocate(pot)
+    SAFE_DEALLOCATE_A(pot)
   case(E_FIELD_MAGNETIC)
     if(.not. allocated(a)) then 
       ALLOCATE(a(gr%mesh%np_part, gr%mesh%sb%dim), gr%mesh%np_part*gr%mesh%sb%dim)
@@ -143,7 +144,7 @@ subroutine X(vlaser_operator_linear) (laser, gr, std, psi, hpsi, ik, gyromagneti
     do k = 1, std%dim
       hpsi(1:gr%mesh%np, k)= hpsi(1:gr%mesh%np, k) + v(1:gr%mesh%np) * psi(1:gr%mesh%np, k)
     end do
-    deallocate(v)
+    SAFE_DEALLOCATE_A(v)
   end if
 
   if(magnetic_field) then
@@ -187,7 +188,7 @@ subroutine X(vlaser_operator_linear) (laser, gr, std, psi, hpsi, ik, gyromagneti
         lhpsi(1:gr%mesh%np, 1) = + M_HALF/P_C*sqrt(dot_product(b, b))*psi(1:gr%mesh%np, 1)
       end if
       hpsi(1:gr%mesh%np, :) = hpsi(1:gr%mesh%np, :) + (gyromagnetic_ratio * M_HALF) * lhpsi(1:gr%mesh%np, :)
-      deallocate(lhpsi)
+      SAFE_DEALLOCATE_A(lhpsi)
     case (SPINORS)
       ALLOCATE(lhpsi(gr%mesh%np, std%dim), gr%mesh%np*std%dim)
       lhpsi(1:gr%mesh%np, 1) = M_HALF/P_C*( b(3)*psi(1:gr%mesh%np, 1) &
@@ -195,11 +196,12 @@ subroutine X(vlaser_operator_linear) (laser, gr, std, psi, hpsi, ik, gyromagneti
       lhpsi(1:gr%mesh%np, 2) = M_HALF/P_C*(-b(3)*psi(1:gr%mesh%np, 2) &
            + (b(1) + M_zI*b(2))*psi(1:gr%mesh%np, 1))
       hpsi(1:gr%mesh%np, :) = hpsi(1:gr%mesh%np, :) + (gyromagnetic_ratio * M_HALF) * lhpsi(1:gr%mesh%np, :)
-      deallocate(lhpsi)
+      SAFE_DEALLOCATE_A(lhpsi)
     end select
 
-    deallocate(grad)
-    deallocate(a, a_prime)
+    SAFE_DEALLOCATE_A(grad)
+    SAFE_DEALLOCATE_A(a)
+    SAFE_DEALLOCATE_A(a_prime)
   end if
 
   if(vector_potential) then
@@ -221,7 +223,7 @@ subroutine X(vlaser_operator_linear) (laser, gr, std, psi, hpsi, ik, gyromagneti
         end do
       end do
     end select
-    deallocate(grad)
+    SAFE_DEALLOCATE_A(grad)
   end if
 
   call pop_sub()
@@ -288,7 +290,7 @@ contains
         call laser_potential(gr%sb, lasers(i), gr%mesh, pot, t)
         v = v + pot
         electric_field = .true.
-        deallocate(pot)
+        SAFE_DEALLOCATE_A(pot)
         
       case(E_FIELD_MAGNETIC)
         if(.not. allocated(a)) then 
@@ -325,7 +327,7 @@ contains
     do k = 1, std%dim
       hpsi(1:gr%mesh%np, k)= hpsi(1:gr%mesh%np, k) + v(1:gr%mesh%np) * psi(1:gr%mesh%np, k)
     end do
-    deallocate(v)
+    SAFE_DEALLOCATE_A(v)
   end subroutine apply_electric_field
 
 
@@ -368,7 +370,7 @@ contains
         lhpsi(1:gr%mesh%np, 1) = + M_HALF/P_C*sqrt(dot_product(b, b))*psi(1:gr%mesh%np, 1)
       end if
       hpsi(1:gr%mesh%np, :) = hpsi(1:gr%mesh%np, :) + (gyromagnetic_ratio * M_HALF) * lhpsi(1:gr%mesh%np, :)
-      deallocate(lhpsi)
+      SAFE_DEALLOCATE_A(lhpsi)
     case (SPINORS)
       ALLOCATE(lhpsi(gr%mesh%np, std%dim), gr%mesh%np*std%dim)
       lhpsi(1:gr%mesh%np, 1) = M_HALF/P_C*( b(3)*psi(1:gr%mesh%np, 1) &
@@ -376,10 +378,11 @@ contains
       lhpsi(1:gr%mesh%np, 2) = M_HALF/P_C*(-b(3)*psi(1:gr%mesh%np, 2) &
         + (b(1) + M_zI*b(2))*psi(1:gr%mesh%np, 1))
       hpsi(1:gr%mesh%np, :) = hpsi(1:gr%mesh%np, :) + (gyromagnetic_ratio * M_HALF) * lhpsi(1:gr%mesh%np, :)
-      deallocate(lhpsi)
+      SAFE_DEALLOCATE_A(lhpsi)
     end select
 
-    deallocate(a, a_prime)
+    SAFE_DEALLOCATE_A(a)
+    SAFE_DEALLOCATE_A(a_prime)
 
   end subroutine apply_magnetic_field
 

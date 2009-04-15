@@ -99,7 +99,7 @@ subroutine X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi)
     end do
   end do
 
-  deallocate(bra)
+  SAFE_DEALLOCATE_A(bra)
 
 end subroutine X(hgh_project_bra)
 
@@ -144,7 +144,7 @@ subroutine X(hgh_project_ket)(mesh, sm, hgh_p, dim, reltype, uvpsi, ppsi)
     ppsi(1:n_s, 1) = ppsi(1:n_s, 1) + M_zI*M_HALF*( lp_psi(1:n_s, 3, 1) + lp_psi(1:n_s, 1, 2) - M_zI*lp_psi(1:n_s, 2, 2))
     ppsi(1:n_s, 2) = ppsi(1:n_s, 2) + M_zI*M_HALF*(-lp_psi(1:n_s, 3, 2) + lp_psi(1:n_s, 1, 1) + M_zI*lp_psi(1:n_s, 2, 1))
     
-    deallocate(lp_psi)
+    SAFE_DEALLOCATE_A(lp_psi)
    
   end if
   

@@ -223,7 +223,9 @@ contains
       st%nst    = st%nst + nus
       st%st_end = st%nst
 
-      deallocate(st%eigenval, st%momentum, st%occ)
+      SAFE_DEALLOCATE_P(st%eigenval)
+      SAFE_DEALLOCATE_P(st%momentum)
+      SAFE_DEALLOCATE_P(st%occ)
       call states_allocate_wfns(st, m)
       ALLOCATE(st%eigenval(st%nst, st%d%nik), st%nst*st%d%nik)
       ALLOCATE(st%momentum(3, st%nst, st%d%nik), st%nst*st%d%nik)

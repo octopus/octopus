@@ -733,7 +733,13 @@ contains
       write(out_file, '(1x)')
     end do
 
-    deallocate(sigma, sigmap, sigmau, sigmav, sigmaw, p, ip)
+    SAFE_DEALLOCATE_A(sigma)
+    SAFE_DEALLOCATE_A(sigmap)
+    SAFE_DEALLOCATE_A(sigmau)
+    SAFE_DEALLOCATE_A(sigmav)
+    SAFE_DEALLOCATE_A(sigmaw)
+    SAFE_DEALLOCATE_A(p)
+    SAFE_DEALLOCATE_A(ip)
     call pop_sub()
   end subroutine spectrum_cross_section_tensor
 
@@ -891,7 +897,8 @@ contains
       write(out_file, '(1x)')
     end do
 
-    deallocate(dipole, sigma)
+    SAFE_DEALLOCATE_A(dipole)
+    SAFE_DEALLOCATE_A(sigma)
     call pop_sub()
   end subroutine spectrum_cross_section
 
@@ -968,7 +975,8 @@ contains
 
     end do
 
-    deallocate(angular, dumpa)
+    SAFE_DEALLOCATE_A(angular)
+    SAFE_DEALLOCATE_A(dumpa)
 
     ! print some info
     write(message(1), '(a,i8)')    'Number of time steps = ', ntiter
@@ -1018,7 +1026,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine spectrum_hsfunction_end
-    if(allocated(func_)) deallocate(func_)
+    SAFE_DEALLOCATE_A(func_)
   end subroutine spectrum_hsfunction_end
   ! ---------------------------------------------------------
 
@@ -1139,7 +1147,7 @@ contains
       end select
       dipole(i) = dipole(i) * units_out%length%factor 
     end do
-    deallocate(d)
+    SAFE_DEALLOCATE_A(d)
     dipole(0) = dipole(1)
     call io_close(iunit)
 
@@ -1157,7 +1165,8 @@ contains
     call spectrum_hs(out_file, s, pol, w0)
     call spectrum_hsfunction_end()
 
-    deallocate(dipole, ddipole)
+    SAFE_DEALLOCATE_A(dipole)
+    SAFE_DEALLOCATE_A(ddipole)
   end subroutine spectrum_hs_from_mult
   ! ---------------------------------------------------------
 
@@ -1207,7 +1216,7 @@ contains
     call spectrum_hs(out_file, s, pol, w0)
     call spectrum_hsfunction_end()
 
-    deallocate(acc)
+    SAFE_DEALLOCATE_A(acc)
   end subroutine spectrum_hs_from_acc
   ! ---------------------------------------------------------
 
@@ -1270,7 +1279,7 @@ contains
         end do
         call io_close(iunit)
       end if
-      deallocate(sp)
+      SAFE_DEALLOCATE_A(sp)
 
     end if
 

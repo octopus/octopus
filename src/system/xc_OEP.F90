@@ -162,7 +162,7 @@ contains
     call push_sub('xc_OEP.xc_oep_end')
 
     if(oep%level.ne.XC_OEP_NONE) then
-      deallocate(oep%vxc); nullify(oep%vxc)
+      SAFE_DEALLOCATE_P(oep%vxc); nullify(oep%vxc)
 
       if(oep%level == XC_OEP_FULL) then 
         call lr_dealloc(oep%lr)
@@ -262,7 +262,8 @@ contains
     end do
     oep%eigen_n = oep%eigen_n - 1
 
-    deallocate(eigenval, occ)
+    SAFE_DEALLOCATE_A(eigenval)
+    SAFE_DEALLOCATE_A(occ)
   end subroutine xc_oep_AnalyzeEigen
 
 

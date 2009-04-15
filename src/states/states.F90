@@ -837,14 +837,13 @@ contains
     call push_sub('states.states_deallocate_wfns')
 
     if (st%wfs_type == M_REAL) then
-      deallocate(st%dpsi); nullify(st%dpsi)
+      SAFE_DEALLOCATE_P(st%dpsi)
     else
-      deallocate(st%zpsi); nullify(st%zpsi)
+      SAFE_DEALLOCATE_P(st%zpsi)
     end if
 
     if(st%open_boundaries.and.calc_mode_is(CM_TD)) then
-      deallocate(st%ob_intf_psi)
-      nullify(st%ob_intf_psi)
+      SAFE_DEALLOCATE_P(st%ob_intf_psi)
     end if
 
     call pop_sub()
@@ -1033,7 +1032,7 @@ contains
         call MPI_Allreduce(rho(1, ispin), reduce_rho(1), np, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
         call lalg_copy(np, reduce_rho, rho(:, ispin))
       end do
-      deallocate(reduce_rho)
+      SAFE_DEALLOCATE_A(reduce_rho)
       call profiling_out(reduce_prof)
     end if
 
@@ -1045,7 +1044,7 @@ contains
         call MPI_Allreduce(rho(1, ispin), reduce_rho(1), np, MPI_FLOAT, MPI_SUM, st%d%kpt%mpi_grp%comm, mpi_err)
         call lalg_copy(np, reduce_rho, rho(:, ispin))
       end do
-      deallocate(reduce_rho)
+      SAFE_DEALLOCATE_A(reduce_rho)
       call profiling_out(reduce_prof)
     end if
 #endif
@@ -1227,7 +1226,7 @@ contains
           do j = 1, 3
             call lmpi_gen_allgatherv(st%lnst, lspin(j, :), tmp, st%spin(j, :, ik), st%mpi_grp)
           end do
-          deallocate(lspin)
+          SAFE_DEALLOCATE_A(lspin)
         end if
 #endif
       end do
@@ -1486,7 +1485,7 @@ contains
       end do        
     end if
 
-    deallocate(iunit)
+    SAFE_DEALLOCATE_A(iunit)
 
     call pop_sub()
   end subroutine states_write_bands
@@ -1663,10 +1662,14 @@ contains
       call io_close(iunit)
     end if
 
-    deallocate(ff);
-    if(use_qvector) deallocate(cff);
-    deallocate(osc);
-    if (use_qvector) deallocate(qvector)
+    SAFE_DEALLOCATE_A(ff);
+    if(use_qvector) then
+      SAFE_DEALLOCATE_A(cff);
+    end if
+    SAFE_DEALLOCATE_A(osc);
+    if (use_qvector) then
+      SAFE_DEALLOCATE_A(qvector)
+    end if
   
     call pop_sub()
  
@@ -1816,7 +1819,8 @@ contains
 
     call io_close(iunit(0))
 
-    deallocate(iunit, dos)
+    SAFE_DEALLOCATE_A(iunit)
+    SAFE_DEALLOCATE_A(dos)
 
     call pop_sub()
   end subroutine states_write_dos
@@ -2112,7 +2116,8 @@ contains
       end do
     end do
 
-    deallocate(wf_psi, gwf_psi)
+    SAFE_DEALLOCATE_A(wf_psi)
+    SAFE_DEALLOCATE_A(gwf_psi)
 
 #if defined(HAVE_MPI)
     if(st%parallel_in_states) then
@@ -2139,7 +2144,7 @@ contains
         end do
 
       end do
-      deallocate(tmp_reduce)
+      SAFE_DEALLOCATE_A(tmp_reduce)
     end if
 #endif            
   end subroutine states_calc_tau_jp_gn
@@ -2321,7 +2326,9 @@ contains
 
 #endif
 
-    deallocate(st%occ, st%eigenval, st%momentum)
+    SAFE_DEALLOCATE_P(st%occ)
+    SAFE_DEALLOCATE_P(st%eigenval)
+    SAFE_DEALLOCATE_P(st%momentum)
     ALLOCATE(st%occ     (st%nst, st%d%nik),      st%nst*st%d%nik)
     ALLOCATE(st%eigenval(st%nst, st%d%nik),      st%nst*st%d%nik)
     ALLOCATE(st%momentum(3, st%nst, st%d%nik), 3*st%nst*st%d%nik)

@@ -359,9 +359,11 @@ contains
 
     ! clean up
     if (cas%type /= CASIDA_EPS_DIFF) then
-      deallocate(fxc, rho, pot)
+      SAFE_DEALLOCATE_A(fxc)
+      SAFE_DEALLOCATE_A(rho)
+      SAFE_DEALLOCATE_A(pot)
     end if
-    deallocate(saved_K)
+    SAFE_DEALLOCATE_A(saved_K)
 
     call pop_sub()
   contains
@@ -415,7 +417,8 @@ contains
         cas%tm(:, k) = M_TWO*x(:)**2*cas%w(:)
 
       end do
-      deallocate(x, deltav)
+      SAFE_DEALLOCATE_A(x)
+      SAFE_DEALLOCATE_A(deltav)
 
       do ia = 1, cas%n_pairs
         cas%f(ia) = (M_TWO/m%sb%dim)*sum((abs(cas%tm(ia, :)))**2)
@@ -474,7 +477,7 @@ contains
         call MPI_Allreduce(cas%mat(1,1), mpi_mat(1,1), cas%n_pairs**2, &
           MPI_FLOAT, MPI_SUM, cas%mpi_grp%comm, mpi_err)
         cas%mat = mpi_mat
-        deallocate(mpi_mat)
+        SAFE_DEALLOCATE_A(mpi_mat)
       end if
 #endif
       !if(mpi_grp_is_root(cas%mpi_grp)) print *, "mat =", cas%mat
@@ -547,7 +550,7 @@ contains
               cas%tm(ia, k) = dtransition_matrix_element(cas, ia, dx)
             end do
           end do
-          deallocate(dx)
+          SAFE_DEALLOCATE_A(dx)
         else
           ALLOCATE(zx(cas%n_pairs), cas%n_pairs)
           do k = 1, m%sb%dim
@@ -559,9 +562,9 @@ contains
               cas%tm(ia, k) = ztransition_matrix_element(cas, ia, zx)
             end do
           end do
-          deallocate(zx)
+          SAFE_DEALLOCATE_A(zx)
         end if
-        deallocate(deltav)
+        SAFE_DEALLOCATE_A(deltav)
 
 
         ! And the oscillatory strengths.
@@ -615,7 +618,8 @@ contains
 
       j_old = j; b_old = b; mu_old = mu
 
-      deallocate(rho_i, rho_j)
+      SAFE_DEALLOCATE_A(rho_i)
+      SAFE_DEALLOCATE_A(rho_j)
     end function K_term
 
     ! ---------------------------------------------------------
@@ -723,7 +727,8 @@ contains
       call io_close(iunit)
     end do
 
-    deallocate(w, ind)
+    SAFE_DEALLOCATE_A(w)
+    SAFE_DEALLOCATE_A(ind)
     call pop_sub()
   end subroutine casida_write
 

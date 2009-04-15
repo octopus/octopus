@@ -232,18 +232,18 @@ contains
 
        
 
-      deallocate(potential)
-      deallocate(density)
-      deallocate(hartreep)
+      SAFE_DEALLOCATE_A(potential)
+      SAFE_DEALLOCATE_A(density)
+      SAFE_DEALLOCATE_A(hartreep)
       
     end do kspot_loop ! loop over kspots to output
 
-    deallocate(origin)
-    deallocate(ix_1part)
-    deallocate(nr_1part)
-    deallocate(enlarge_1part)
+    SAFE_DEALLOCATE_A(origin)
+    SAFE_DEALLOCATE_A(ix_1part)
+    SAFE_DEALLOCATE_A(nr_1part)
+    SAFE_DEALLOCATE_A(enlarge_1part)
 
-    deallocate (npoints)
+    SAFE_DEALLOCATE_A(npoints)
     call pop_sub()
   end subroutine kspotential_inversion_write
   ! ---------------------------------------------------------

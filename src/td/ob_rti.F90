@@ -166,7 +166,7 @@ contains
       um(1:NLEADS)               = M_HALF*(td_pot(it+1, 1:NLEADS) + td_pot(it, 1:NLEADS))
       ob%src_mem_u(it, 1:NLEADS) = (M_z1 - M_zI*dt/M_FOUR*um(1:NLEADS)) / (M_z1 + M_zI*dt/M_FOUR*um(1:NLEADS))
     end do
-    deallocate(td_pot)
+    SAFE_DEALLOCATE_A(td_pot)
 
     call ob_rti_write_info(ob, st, gr, max_iter, order)
 
@@ -345,7 +345,9 @@ contains
       call save_intf_wf(gr%intf(il), st, ob%st_intface(:, :, :, il, timestep))
     end do
 
-    deallocate(tmp, tmp_wf, tmp_mem)
+    SAFE_DEALLOCATE_A(tmp)
+    SAFE_DEALLOCATE_A(tmp_wf)
+    SAFE_DEALLOCATE_A(tmp_mem)
     call pop_sub()
 
   contains
@@ -380,7 +382,7 @@ contains
     call apply_h_eff(hm_p, gr_p, mem_p, intf_p, M_ONE, dt_p, t_p, ist_p, ik_p, tmp)
     call lalg_copy(gr_p%mesh%np, tmp(:, 1), y)
 
-    deallocate(tmp)
+    SAFE_DEALLOCATE_A(tmp)
     call pop_sub()
   end subroutine h_eff_backward
 
@@ -401,7 +403,7 @@ contains
     call apply_h_eff(hm_p, gr_p, mem_p, intf_p, M_ONE, dt_p, t_p, ist_p, ik_p, tmp, .true.)
     call lalg_copy(gr_p%mesh%np, tmp(:, 1), y)
 
-    deallocate(tmp)
+    SAFE_DEALLOCATE_A(tmp)
     call pop_sub()
   end subroutine h_eff_backward_t
 
@@ -422,7 +424,7 @@ contains
     call apply_h_eff_dagger(hm_p, gr_p, mem_p, intf_p, dt_p, t_p, ist_p, ik_p, tmp)
     call lalg_copy(gr_p%mesh%np, tmp(:, 1), y)
 
-    deallocate(tmp)
+    SAFE_DEALLOCATE_A(tmp)
     call pop_sub()
   end subroutine h_eff_backward_dagger
 
@@ -443,7 +445,7 @@ contains
     call apply_h_eff_sp(hm_p, gr_p, sp_mem_p, intf_p, M_ONE, dt_p, t_p, ist_p, ik_p, tmp, mem_s_p, mapping_p)
     call lalg_copy(gr_p%mesh%np, tmp(:, 1), y)
 
-    deallocate(tmp)
+    SAFE_DEALLOCATE_A(tmp)
     call pop_sub()
   end subroutine h_eff_backward_sp
 
@@ -464,7 +466,7 @@ contains
     call apply_h_eff_sp(hm_p, gr_p, sp_mem_p, intf_p, M_ONE, dt_p, t_p, ist_p, ik_p, tmp, mem_s_p, mapping_p, .true.)
     call lalg_copy(gr_p%mesh%np, tmp(:, 1), y)
 
-    deallocate(tmp)
+    SAFE_DEALLOCATE_A(tmp)
     call pop_sub()
   end subroutine h_eff_backward_sp_t
 
@@ -536,7 +538,7 @@ contains
       call apply_mem(mem(:, :, il), intf(il), intf_wf(:, il), zpsi, TOCMPLX(sign*dt**2/M_FOUR, M_ZERO))
     end do
 
-    deallocate(intf_wf)
+    SAFE_DEALLOCATE_A(intf_wf)
 
     call pop_sub()
   end subroutine apply_h_eff
@@ -574,7 +576,7 @@ contains
       call apply_mem(conjg(mem(:, :, il)), intf(il), intf_wf(:, il), zpsi, TOCMPLX(dt**2/M_FOUR, M_ZERO))
     end do
 
-    deallocate(intf_wf)
+    SAFE_DEALLOCATE_A(intf_wf)
 
     call pop_sub()
   end subroutine apply_h_eff_dagger
@@ -626,7 +628,7 @@ contains
         TOCMPLX(sign*dt**2/M_FOUR, M_ZERO), mem_s(:, :, :, il), gr%der%order, gr%sb%dim, mapping)
     end do
 
-    deallocate(intf_wf)
+    SAFE_DEALLOCATE_A(intf_wf)
 
     call pop_sub()
   end subroutine apply_h_eff_sp
@@ -675,7 +677,8 @@ contains
     zpsi(intf%index_range(1):intf%index_range(2), 1) = &
       zpsi(intf%index_range(1):intf%index_range(2), 1) + mem_intf_wf(:)
 
-    deallocate(mem_intf_wf, tmem)
+    SAFE_DEALLOCATE_A(mem_intf_wf)
+    SAFE_DEALLOCATE_A(tmem)
     call pop_sub()
   end subroutine apply_mem
 
@@ -701,7 +704,7 @@ contains
     ALLOCATE(tmem(intf%np, intf%np), intf%np**2)
     call make_full_matrix(intf%np, order, dim, sp_mem, mem_s, tmem, mapping)
     call apply_mem(tmem, intf, intf_wf, zpsi, factor)
-    deallocate(tmem)
+    SAFE_DEALLOCATE_A(tmem)
 
     call pop_sub()
   end subroutine apply_sp_mem
@@ -725,7 +728,7 @@ contains
 !     diag(:, 1) = M_z1 + M_HALF*dt_p*M_zI*diag(:,1) 
 !     y(1:np)    = x(1:np)/diag(1:np, 1)
 
-!     deallocate(diag)
+!     SAFE_DEALLOCATE_P(diag)
 
     call pop_sub()
   end subroutine precond_prop

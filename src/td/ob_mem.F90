@@ -285,7 +285,7 @@ contains
         norm = lalg_inverter(np, mem_s(:, :, 2), invert=.true.)
         call make_sparse_matrix(np, order, 2, q0, mem_s, sp_coeff0, mapping)
       end select
-      deallocate(q0)
+      SAFE_DEALLOCATE_A(q0)
     end if
 
     call pop_sub()
@@ -425,8 +425,12 @@ contains
       end do
     end if
 
-    deallocate(tmp, tmp2, inv_offdiag)
-    deallocate(prefactor_plus, prefactor_minus, fr)
+    SAFE_DEALLOCATE_A(tmp)
+    SAFE_DEALLOCATE_A(tmp2)
+    SAFE_DEALLOCATE_A(inv_offdiag)
+    SAFE_DEALLOCATE_A(prefactor_plus)
+    SAFE_DEALLOCATE_A(prefactor_minus)
+    SAFE_DEALLOCATE_A(fr)
 
     call pop_sub()
   end subroutine calculate_coeffs
@@ -553,8 +557,12 @@ contains
     message(1) = ''
     call write_info(1)
 
-    deallocate(coeff_p, p_prev, tmp, tmp2)
-    deallocate(prefactor_plus, prefactor_minus)
+    SAFE_DEALLOCATE_A(coeff_p)
+    SAFE_DEALLOCATE_A(p_prev)
+    SAFE_DEALLOCATE_A(tmp)
+    SAFE_DEALLOCATE_A(tmp2)
+    SAFE_DEALLOCATE_A(prefactor_plus)
+    SAFE_DEALLOCATE_A(prefactor_minus)
 
     call pop_sub()
   end subroutine calculate_coeffs_ni
@@ -678,9 +686,13 @@ contains
     message(1) = ''
     call write_info(1)
 
-    deallocate(tmp1, tmp2, tmp3, inv_offdiag)
-    deallocate(prefactor_plus, prefactor_minus)
-    deallocate(sp_tmp)
+    SAFE_DEALLOCATE_A(tmp1)
+    SAFE_DEALLOCATE_A(tmp2)
+    SAFE_DEALLOCATE_A(tmp3)
+    SAFE_DEALLOCATE_A(inv_offdiag)
+    SAFE_DEALLOCATE_A(prefactor_plus)
+    SAFE_DEALLOCATE_A(prefactor_minus)
+    SAFE_DEALLOCATE_A(sp_tmp)
 
     call pop_sub()
   end subroutine calculate_sp_coeffs
@@ -901,7 +913,8 @@ contains
       call write_fatal(2)
     end select
 
-    deallocate(tmp, tmp2)
+    SAFE_DEALLOCATE_A(tmp)
+    SAFE_DEALLOCATE_A(tmp2)
 
     call pop_sub()
   end subroutine make_sparse_matrix
@@ -977,7 +990,7 @@ contains
     call lalg_gemm(np,np,np,M_z1,s(:,:,1),tmp,M_z0,m)
     call matrix_symmetric_average(m, np)
 
-    deallocate(tmp)
+    SAFE_DEALLOCATE_A(tmp)
     call pop_sub()
   end subroutine make_full_matrix
 
