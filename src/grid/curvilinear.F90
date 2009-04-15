@@ -109,7 +109,7 @@ contains
 
     select case(cv%method)
     case(CURV_METHOD_GYGI)
-      call curv_gygi_init(cv%gygi)
+      call curv_gygi_init(cv%gygi, sb, geo)
     case(CURV_METHOD_BRIGGS)
       call curv_briggs_init(sb, cv%briggs)
     case(CURV_METHOD_MODINE)
@@ -126,6 +126,7 @@ contains
 
     select case(cv%method)
     case(CURV_METHOD_GYGI)
+      call curv_gygi_end(cv%gygi)
     case(CURV_METHOD_BRIGGS)
     case(CURV_METHOD_MODINE)
       call curv_modine_end(cv%modine)
@@ -146,7 +147,7 @@ contains
     case(CURV_METHOD_UNIFORM)
       x(1:sb%dim) = matmul(sb%rlattice(1:sb%dim,1:sb%dim), chi(1:sb%dim))
     case(CURV_METHOD_GYGI)
-      call curv_gygi_chi2x(sb, geo, cv%gygi, chi, x)
+      call curv_gygi_chi2x(sb, cv%gygi, chi, x)
     case(CURV_METHOD_BRIGGS)
       call curv_briggs_chi2x(sb, cv%briggs, chi, x)
     case(CURV_METHOD_MODINE)
@@ -168,7 +169,7 @@ contains
     case(CURV_METHOD_UNIFORM)
       chi = matmul(x, sb%klattice_unitary)
     case(CURV_METHOD_GYGI)
-      call curv_gygi_x2chi(sb, geo, cv%gygi, x, chi)
+      call curv_gygi_x2chi(sb, cv%gygi, x, chi)
     case(CURV_METHOD_BRIGGS, CURV_METHOD_MODINE)
       message(1) = "Internal error in curvilinear_x2chi"
       call write_fatal(1)
@@ -195,7 +196,7 @@ contains
     case(CURV_METHOD_UNIFORM)
       jdet = sb%volume_element
     case(CURV_METHOD_GYGI)
-      call curv_gygi_jacobian(sb, geo, cv%gygi, x, dummy, Jac)
+      call curv_gygi_jacobian(sb, cv%gygi, x, dummy, Jac)
       jdet = M_ONE/lalg_determinant(sb%dim, Jac, invert = .false.)
     case(CURV_METHOD_BRIGGS)
       call curv_briggs_jacobian_inv(sb, cv%briggs, chi, Jac)

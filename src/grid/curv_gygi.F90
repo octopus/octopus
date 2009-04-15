@@ -28,6 +28,7 @@ module curv_gygi_m
   use global_m
   use loct_parser_m
   use messages_m
+  use profiling_m
   use root_solver_m
   use simul_box_m
   use units_m
@@ -38,6 +39,7 @@ module curv_gygi_m
   public ::            &
     curv_gygi_t,       &
     curv_gygi_init,    &
+    curv_gygi_end,     &
     curv_gygi_chi2x,   &
     curv_gygi_x2chi,   &
     curv_gygi_jacobian
@@ -46,10 +48,11 @@ module curv_gygi_m
     FLOAT :: A             ! local reduction in grid spacing is 1/(1+A)
     FLOAT :: alpha         ! range of enhacement of the resolution
     FLOAT :: beta          ! distance over which Euclidian coordinates are recovered
+    FLOAT, pointer :: pos(:, :)
+    integer :: npos
   end type curv_gygi_t
 
   type(simul_box_t), pointer  :: sb_p
-  type(geometry_t),  pointer  :: geo_p
   type(curv_gygi_t), pointer  :: cv_p
   integer :: i_p
   FLOAT :: chi_p(MAX_DIM)
@@ -57,8 +60,12 @@ module curv_gygi_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine curv_gygi_init(cv)
+  subroutine curv_gygi_init(cv, sb, geo)
     type(curv_gygi_t), intent(out) :: cv
+    type(simul_box_t), intent(in)  :: sb
+    type(geometry_t),  intent(in)  :: geo
+
+    integer :: ipos, idir
 
     !%Variable CurvGygiA
     !%Type float
@@ -102,23 +109,32 @@ contains
     cv%alpha = cv%alpha*units_inp%length%factor
     cv%beta  = cv%beta *units_inp%length%factor
 
+    cv%npos = geo%natoms
+    ALLOCATE(cv%pos(1:cv%npos, 1:sb%dim), cv%npos*sb%dim)
+    forall(ipos = 1:cv%npos, idir = 1:sb%dim) cv%pos(ipos, idir) = geo%atom(ipos)%x(idir) 
+    
   end subroutine curv_gygi_init
 
+  ! ---------------------------------------------------------
+  subroutine curv_gygi_end(cv)
+    type(curv_gygi_t), intent(inout) :: cv
+
+    SAFE_DEALLOCATE_P(cv%pos)
+  end subroutine curv_gygi_end
 
   ! ---------------------------------------------------------
   subroutine getf(y, f, jf)
     FLOAT, intent(in)    :: y(:)
     FLOAT, intent(out)   :: f(:), jf(:, :)
 
-    call curv_gygi_jacobian(sb_p, geo_p, cv_p, y, f, jf, i_p)
+    call curv_gygi_jacobian(sb_p, cv_p, y, f, jf, i_p)
     f(1:sb_p%dim) = f(1:sb_p%dim) - chi_p(1:sb_p%dim)
   end subroutine getf 
 
 
   ! ---------------------------------------------------------
-  subroutine curv_gygi_chi2x(sb, geo, cv, chi, x)
+  subroutine curv_gygi_chi2x(sb, cv, chi, x)
     type(simul_box_t), target, intent(in)  :: sb
-    type(geometry_t),  target, intent(in)  :: geo
     type(curv_gygi_t), target, intent(in)  :: cv
     FLOAT,                     intent(in)  :: chi(:)  ! chi(sb%dim)
     FLOAT,                     intent(out) :: x(:)    ! x(sb%dim)
@@ -132,22 +148,21 @@ contains
       solver_type = ROOT_NEWTON, maxiter = 500, abs_tolerance = CNST(1.0e-10))
 
     sb_p            => sb
-    geo_p           => geo
     cv_p            => cv
-    i_p             =  geo%natoms
+    i_p             =  cv%npos
     chi_p(1:sb%dim) =  chi(1:sb%dim)
 
     call droot_solver_run(rs, getf, x, conv, startval = chi)
 
     if(.not.conv) then
-      do i = 1, geo%natoms
+      do i = 1, cv%npos
         conv = .false.
         i_p = i
         call droot_solver_run(rs, getf, x, conv, startval = x(1:sb%dim))
       end do
     end if
 
-    nullify(sb_p); nullify(geo_p); nullify(cv_p)
+    nullify(sb_p); nullify(cv_p)
 
     if(.not.conv) then
       message(1) = "During the construction of the adaptive grid, the Newton-Raphson"
@@ -162,9 +177,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine curv_gygi_x2chi(sb, geo, cv, x, chi)
+  subroutine curv_gygi_x2chi(sb, cv, x, chi)
     type(simul_box_t), intent(in)  :: sb
-    type(geometry_t),  intent(in)  :: geo
     type(curv_gygi_t), intent(in)  :: cv
     FLOAT,             intent(in)  :: x(:)    ! x(sb%dim)
     FLOAT,             intent(out) :: chi(:)  ! chi(sb%dim)
@@ -173,13 +187,13 @@ contains
     FLOAT   :: r, ar, th, ex
 
     chi(1:sb%dim) = x(1:sb%dim)
-    do ia = 1, geo%natoms
-      r = max(sqrt(sum((x(1:sb%dim) - geo%atom(ia)%x(1:sb%dim))**2)), CNST(1e-6))
+    do ia = 1, cv%npos
+      r = max(sqrt(sum((x(1:sb%dim) - cv%pos(ia, 1:sb%dim))**2)), CNST(1e-6))
       ar = cv%A*cv%alpha/r
       th = tanh(r/cv%alpha)
       ex = exp(-(r/cv%beta)**2)
       do i = 1, sb%dim
-        chi(i) = chi(i) + (x(i) - geo%atom(ia)%x(i)) * cv%a * ar * th * ex
+        chi(i) = chi(i) + (x(i) - cv%pos(ia, i)) * cv%a * ar * th * ex
       end do
     end do
 
@@ -187,9 +201,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine curv_gygi_jacobian(sb, geo, cv, x, chi, J, natoms)
+  subroutine curv_gygi_jacobian(sb, cv, x, chi, J, natoms)
     type(simul_box_t), intent(in)  :: sb
-    type(geometry_t),  intent(in)  :: geo
     type(curv_gygi_t), intent(in)  :: cv
     FLOAT,             intent(in)  :: x(:)    ! x(sb%dim)
     FLOAT,             intent(out) :: chi(:)  ! chi(sb%dim)
@@ -206,10 +219,11 @@ contains
       chi(ix)   = x(ix)
     end do
 
-    natoms_ = geo%natoms
+    natoms_ = cv%npos
     if(present(natoms)) natoms_ = natoms
+
     do i = 1, natoms_
-      r = max(sqrt(sum((x(1:sb%dim) - geo%atom(i)%x(1:sb%dim))**2)), CNST(1e-6))
+      r = max(sqrt(sum((x(1:sb%dim) - cv%pos(i, 1:sb%dim))**2)), CNST(1e-6))
 
       ar = cv%A*cv%alpha/r
       th = tanh(r/cv%alpha)
@@ -219,11 +233,11 @@ contains
       df_alpha = ar*(-th*ex/r + ex/(cv%alpha*cosh(r/cv%alpha)**2) - th*M_TWO*r*ex/cv%beta**2)
 
       do ix = 1, sb%dim
-        chi(ix) = chi(ix) + f_alpha*(x(ix)-geo%atom(i)%x(ix))
+        chi(ix) = chi(ix) + f_alpha*(x(ix)-cv%pos(i, ix))
 
         J(ix, ix) = J(ix, ix) + f_alpha
         do iy = 1, sb%dim
-          J(ix, iy) = J(ix, iy) + (x(ix)-geo%atom(i)%x(ix))*(x(iy)-geo%atom(i)%x(iy))/r * df_alpha
+          J(ix, iy) = J(ix, iy) + (x(ix)-cv%pos(i, ix))*(x(iy)-cv%pos(i, iy))/r*df_alpha
         end do
       end do
     end do
