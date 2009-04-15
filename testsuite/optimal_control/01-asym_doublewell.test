@@ -14,13 +14,13 @@ Enabled    : Yes
 # are calculated. 
 # A similar potential is used in Rev Mod (Haenggi, Griffoni)
 Input: 01-asym_doublewell.01-ground_state.inp
-match ; Total energy ; GREP(ground_state_static/info, 'Total       =', 20) ; -0.62061580
-match ; 2th state    ; GREP(excited_states_static/eigenvalues, '2   --', 12) ; -0.4638 
+match ; Total energy ; GREP(ground_state_static/info, 'Total       =', 20) ; -0.62061608
+match ; 2th state    ; GREP(excited_states_static/eigenvalues, '2   --', 12) ; -0.463839
 
 # Then, run the optimization for one iteration and compare the convergence.
 Input: 01-asym_doublewell.02-oct_run.inp
-match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ;  0.51441670
+match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ;  0.21725699
 
 # Now we run the same system, but with a time-dependent penalty
 Input: 01-asym_doublewell.03-oct_run.inp
-match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ;  0.40182148
+match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ;  0.21554961

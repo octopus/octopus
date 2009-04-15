@@ -21,7 +21,8 @@ Dimensions = 1
 fromScratch = yes
 
 BoxShape = sphere
-Spacing = 0.12
+#Spacing = 0.12
+Spacing = 0.24
 Radius =  8.0
 
 TheoryLevel = independent_particles

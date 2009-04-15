@@ -13,7 +13,7 @@ DevelVersion = yes
 # Grid
 # ------------------
 BoxShape = sphere
-Spacing = 0.1
+Spacing = 0.3
 Radius =  8.0
 
 
@@ -50,7 +50,7 @@ TDTimeStep = dt
 # --------------
 
 OCTPenalty = 0.2
-OCTMaxIter = 2
+OCTMaxIter = 1
 
 OCTInitialState = oct_is_groundstate
 OCTTargetOperator = oct_tg_density
@@ -75,10 +75,3 @@ electric_field | 1 | 0 | 0 | freq | "envelope_function"
 "envelope_function" | tdf_cw | ampl
 %
 
-
-#----------------------------
-# Output
-#-----------------------------
-
-Output = density
-OutputHow = axis_x

@@ -15,8 +15,8 @@ RestartDir = "excited_states_restart"
 # Grid
 # ------------------
 BoxShape = sphere
-Spacing = 0.1
-Radius =  8.0
+Spacing = 0.3
+Radius =  10.0
 
 
 # ------------------
@@ -37,9 +37,9 @@ TheoryLevel = independent_particles
 # TD RUN Parameters
 # ------------------
 
-stime  = 100.0
+stime  = 50.0
 dt = 0.01
-TDEvolutionMethod = aetrs
+TDEvolutionMethod = exp_mid
 TDExponentialMethod = taylor
 TDExponentialOrder = 4
 TDLanczosTol = 5.0e-5
@@ -51,8 +51,8 @@ TDTimeStep = dt
 # OCT parameters
 # --------------
 
-OCTPenalty =1.0
-OCTEps   = 0.000001
+OCTPenalty = 1.0
+OCTEps = 0.000001
 OCTMaxIter = 1
 
 OCTInitialState = oct_is_groundstate
@@ -69,8 +69,7 @@ OCTDoubleCheck = no
 # Laser field = Initial guess
 #-----------------------------
 
-
-ampl = 0.06
+ampl = 0.01
 freq = 0.157
 
 %TDExternalFields
@@ -81,10 +80,3 @@ freq = 0.157
 "envelope_function" | tdf_cw | ampl
 %
 
-#----------------------------
-# Output
-#-----------------------------
-
-Output = potential + density + wfs
-OutputHow = axis_x
-TDOutput = laser + td_occup 

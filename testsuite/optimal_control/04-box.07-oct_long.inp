@@ -11,10 +11,13 @@ RestartDir = "excited_states_restart"
 # ------------------
 
 stime  = 300.0
-dt = 0.01
-TDEvolutionMethod = aetrs
-TDExponentialMethod = taylor
-TDExponentialOrder = 4
+dt = 0.05
+#TDEvolutionMethod = aetrs
+TDEvolutionMethod = exp_mid
+#TDExponentialMethod = taylor
+#TDExponentialOrder = 4
+TDExponentialMethod = lanczos
+TDExponentialOrder = 20
 TDLanczosTol = 5.0e-5
 TDMaximumIter = stime/dt
 TDTimeStep = dt

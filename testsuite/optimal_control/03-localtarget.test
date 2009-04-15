@@ -15,15 +15,17 @@ Enabled    : Yes
 # A similar potential is used in Rev Mod (Haenggi, Griffoni)
 
 Input: 03-localtarget.01-gs.inp
-match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -0.62061580
+match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -0.62061608
 
-# Then, run the optimization for two iterations and check the convergence.
-# Note that this run only converges to an almost perfect overlap with
+# Then, run the optimization for only one iteration and check the convergence.
+# Note that this run only converges to a good overlap with
 # the target density after a lot of iterations (e.g., if we run over
-# 100 iterations we reach J1 = -0.01156, with J1=0 implying perfect
+# 50 iterations we reach J1 = -0.09919, with J1=0 implying perfect
 # overlap and J1 = -2 to overlap at all.
+# To get a better overlap, increase the quality of the mesh (reduce the grid
+# spacing) and/or increase the time interval.
 Input: 03-localtarget.02-oct.inp
-match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 2  ', 40) ; -0.39835990
+match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; -0.45457408
 
 # Now we check that the many-particle version of the QOCT optimization of
 # local targets also works.
@@ -31,7 +33,6 @@ match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 2  ', 40) ; -0.39835
 Input: 03-localtarget.03-gs-mp.inp
 match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -2.16891047
 
-# Now once again we run for a couple of iterations and check the convergence.
-# In this case, after 25 iterations we reach J1 approx -1.81
+# Now once again we run for only one iteration and check the convergence.
 Input: 03-localtarget.04-oct-mp.inp
-match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 2  ', 40) ; -4.09830798 
+match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; -4.18590671
