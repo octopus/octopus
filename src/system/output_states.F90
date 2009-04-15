@@ -155,7 +155,7 @@
     end if
 
     if(iand(outp%what, output_density_matrix).ne.0) then
-      call density_matrix_write(trim(dir), gr, st, st%modelmbparticles)
+      call density_matrix_write(trim(dir), gr, st)
 
       call modelmb_particles_destroy (st%modelmbparticles)
     end if

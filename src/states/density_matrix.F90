@@ -47,11 +47,10 @@ module density_matrix_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine density_matrix_write(dir, gr, st, modelmbparticles)
+  subroutine density_matrix_write(dir, gr, st)
     character(len=*), intent(in) :: dir
     type(grid_t),     intent(in) :: gr
     type(states_t),   intent(in) :: st
-    type(modelmb_particle_t),   intent(in) :: modelmbparticles
 
     integer :: mm, jj, ll, j, err_code, iunit, ndims, ndim1part
     integer :: ipart,ndensmat_to_calculate,ncols
@@ -109,7 +108,7 @@ contains
     end if
     ndensmat_to_calculate=loct_parse_block_n(blk)
     if (ndensmat_to_calculate < 0 .or. &
-        ndensmat_to_calculate > modelmbparticles%nparticle_modelmb) then
+        ndensmat_to_calculate > st%modelMBparticles%nparticle_modelmb) then
       call input_error("DensityMatricestoCalc")
     end if
 
@@ -145,7 +144,7 @@ contains
       npoints(j) = gr%mesh%idx%ll(j)
     end do
 
-    ndim1part=modelmbparticles%ndim_modelmb
+    ndim1part=st%modelMBparticles%ndim_modelmb
 
     ALLOCATE(origin(ndim1part), ndim1part)
     ALLOCATE(ix_1part(ndim1part), ndim1part)
@@ -158,7 +157,7 @@ contains
 ! loop over desired density matrices
     densmat_loop: do idensmat=1,ndensmat_to_calculate
       ikeeppart=particle_kept_densmat(idensmat)
-      nparticles_densmat = modelMBparticles%nparticles_per_type(modelMBparticles%particletype_modelMB(idensmat))
+      nparticles_densmat = st%modelMBparticles%nparticles_per_type(st%modelMBparticles%particletype_modelMB(idensmat))
 
 !   get full size of arrays for 1 particle only in ndim_modelmb dimensions
       npt_1part=1
@@ -232,7 +231,7 @@ contains
         do jj = 1,npt_1part
           call hypercube_i_to_x(hypercube_1part, ndim1part, nr_1part, enlarge_1part(1), jj, ix_1part)
           dipole_moment=dipole_moment+(ix_1part(:)*h_1part(:)+origin(:))*real(densmatr(jj,jj))*&
-                        modelMBparticles%charge_particle_modelMB(ikeeppart)
+                        st%modelMBparticles%charge_particle_modelMB(ikeeppart)
         end do
         write (message(1),'(a,I6,a)') 'For particle ', ikeeppart, ' the dipole moment is (in a.u. = e bohr):'
         write (message(2),'(3E20.10)') dipole_moment
