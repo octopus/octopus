@@ -209,8 +209,8 @@ contains
 !!$          end do
 !!$       end do
 !!$
-!!$       SAFE_DEALLOCATE_A(lpsi)
-!!$       SAFE_DEALLOCATE_A(lhpsi)
+!!$       SAFE_DEAL LOCATE_A(lpsi)
+!!$       SAFE_DEAL LOCATE_A(lhpsi)
 !!$    end do
 !!$
 !!$    end do dimension_loop
