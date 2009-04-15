@@ -125,6 +125,7 @@ module profiling_m
   integer                  :: mem_iunit
   integer(8)               :: last_mem
   logical                  :: profiling_space
+  logical                  :: profiling_space_full
 
   !For the moment we will have the profiler objects here, but they
   !should be moved to their respective modules.
@@ -185,7 +186,9 @@ contains
     !% No profiling information is generated.
     !%Option time 1
     !% Profile the time spent in defined profiling regions.
-    !%Option space 3
+    !%Option space 2
+    !% Additionally to time, memory usage is reported.
+    !%Option space_full 3
     !% Additionally to time, memory usage is reported.
     !%End
 
@@ -197,7 +200,8 @@ contains
 
     call push_sub('profiling.profiling_init')
 
-    profiling_space = (pmode == 3)
+    profiling_space      = (pmode >=2)
+    profiling_space_full = (pmode >=3)
 
     ! initialize memory profiling
     if(profiling_space) then
@@ -268,7 +272,7 @@ contains
     if(profiling_space) then
       call io_close(mem_iunit)
 
-      if(mem_prof_count.ne.0) then
+      if(mem_prof_count.ne.0 .and. profiling_space_full) then
         write(message(1), '(a,i10,a)') "Not all memory was deallocated (", mem_prof_count, " times)";
         call write_warning(1)
       end if
@@ -598,7 +602,7 @@ contains
     integer(8) :: mem
     
     mem = get_memory_usage()
-    if(mem /= last_mem) then 
+    if(mem /= last_mem .or. profiling_space_full) then 
       call profiling_memory_log('A ', var, file, line, mem)
       last_mem = mem
     end if
@@ -617,7 +621,7 @@ contains
     integer(8) :: mem
     
     mem = get_memory_usage()
-    if(mem /= last_mem) then 
+    if(mem /= last_mem .or. profiling_space_full) then 
       call profiling_memory_log('D ', var, file, line, mem)
       last_mem = mem
     end if
