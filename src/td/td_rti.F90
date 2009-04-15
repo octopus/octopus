@@ -398,7 +398,7 @@ contains
     case(PROP_CRANK_NICHOLSON_SPARSKIT)
 #ifdef HAVE_SPARSKIT
       call zsparskit_solver_end()
-      SAFE_DEALLOCATE_P(zpsi_tmp)
+      SAFE_DEALLOCATE_A(zpsi_tmp)
 #endif
     case(PROP_SUZUKI_TROTTER, PROP_SPLIT_OPERATOR)
       call zcf_free(tr%cf)
@@ -884,8 +884,12 @@ contains
         end do
       end do
       
-      if(hm%theory_level.ne.INDEPENDENT_PARTICLES) SAFE_DEALLOCATE_P(vhxc_t1, vhxc_t2, zpsi_rhs_pred)
-      SAFE_DEALLOCATE_P(zpsi_rhs_corr)
+      if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
+        SAFE_DEALLOCATE_A(vhxc_t1)
+        SAFE_DEALLOCATE_A(vhxc_t2)
+        SAFE_DEALLOCATE_A(zpsi_rhs_pred)
+      end if
+      SAFE_DEALLOCATE_A(zpsi_rhs_corr)
 
       call pop_sub()
 #endif

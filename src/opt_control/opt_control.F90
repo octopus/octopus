@@ -510,7 +510,10 @@ contains
       w = M_ZERO
       call newuoa(dim, npt, x, rhobeg, rhoend, iprint, maxfun, w, opt_control_direct_calc)
 
-      SAFE_DEALLOCATE_P(x, xl, xu, w)
+      SAFE_DEALLOCATE_A(x)
+      SAFE_DEALLOCATE_A(xl)
+      SAFE_DEALLOCATE_A(xu)
+      SAFE_DEALLOCATE_A(w)
       call pop_sub()
 #endif
     end subroutine scheme_newuoa
