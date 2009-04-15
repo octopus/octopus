@@ -39,6 +39,7 @@ module states_m
   use messages_m
   use mesh_function_m
   use mesh_m
+  use modelmb_particles_m
   use mpi_m
   use mpi_lib_m
   use multicomm_m
@@ -95,6 +96,7 @@ module states_m
 
   type states_t
     type(states_dim_t) :: d
+    type(modelmb_particle_t) :: modelmbparticles
     integer :: nst                  ! Number of states in each irreducible subspace
 
     integer :: wfs_type             ! real (M_REAL) or complex (M_CMPLX) wavefunctions

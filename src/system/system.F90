@@ -28,6 +28,7 @@ module system_m
   use hamiltonian_m
   use mesh_m
   use messages_m
+  use modelmb_particles_m
   use mpi_m
   use multicomm_m
   use h_sys_output_m
@@ -76,6 +77,9 @@ contains
     call simul_box_init(sys%gr%sb, sys%geo)
     call states_init(sys%st, sys%gr, sys%geo)
     call grid_init_stage_1(sys%gr, sys%geo)
+! if independent particles in N dimensions are being used, need to initialize them
+!  after masses are set to 1 in grid_init_stage_1 -> derivatives_init 
+    call modelmb_particles_init (sys%st%modelmbparticles,sys%gr)
 
     call parallel_init()
 

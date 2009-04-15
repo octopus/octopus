@@ -42,7 +42,7 @@ depend:
 ob_green.o: ob_green.F90
 ksinversion.o : ksinversion.F90 modelmb_particles.o states.o
 density_matrix.o : density_matrix.F90 modelmb_particles.o states.o
-states.o : states.F90 states_dim.o ob_green.o 
+states.o : states.F90 states_dim.o ob_green.o modelmb_particles.o
 states_dim.o : states_dim.F90 states_kpoints.F90
 states_calc.o : states_calc.F90 states_calc_inc.F90 states.o states_block.o
 magnetic.o : magnetic.F90 states.o 

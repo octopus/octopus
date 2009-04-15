@@ -95,10 +95,10 @@ subroutine modelMB_particles_init (modelMBparticles,gr)
 
 !args
   type(modelMB_particle_t),intent(inout) :: modelMBparticles
-  type(grid_t), intent(in) :: gr
+  type(grid_t), intent(inout) :: gr
 
 !local vars
-  integer :: ipart,ncols,nline
+  integer :: ipart,ncols,nline,dimcounter
   type(block_t) :: blk
 
 ! source code
@@ -209,13 +209,20 @@ subroutine modelMB_particles_init (modelMBparticles,gr)
         call write_info(4)
       end do
       call loct_parse_block_end(blk)
+
+      ! copy masses to gr%der%masses:
+      dimcounter=0
+      do ipart=1,modelMBparticles%nparticle_modelMB
+        gr%der%masses(dimcounter+1:dimcounter+modelMBparticles%ndim_modelMB) = modelMBparticles%mass_particle_modelMB(ipart)
+        dimcounter=dimcounter+modelMBparticles%ndim_modelMB
+      end do
   end if
     
-modelMBparticles%nparticles_per_type = 0
-do ipart = 1, modelmbparticles%nparticle_modelmb
-  modelMBparticles%nparticles_per_type(modelMBparticles%particletype_modelMB(ipart)) = & 
-    & modelMBparticles%nparticles_per_type(modelMBparticles%particletype_modelMB(ipart)) + 1
-enddo
+  modelMBparticles%nparticles_per_type = 0
+  do ipart = 1, modelmbparticles%nparticle_modelmb
+    modelMBparticles%nparticles_per_type(modelMBparticles%particletype_modelMB(ipart)) = & 
+      & modelMBparticles%nparticles_per_type(modelMBparticles%particletype_modelMB(ipart)) + 1
+  enddo
 
   !%Variable DensitiestoCalc
   !%Type block

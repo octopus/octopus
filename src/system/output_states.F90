@@ -32,7 +32,6 @@
     character(len=80) :: fname
     FLOAT :: u
     FLOAT, allocatable :: dtmp(:), elf(:,:)
-    type(modelmb_particle_t) :: modelmbparticles
 
     call push_sub('output_states.h_sys_output_states')
 
@@ -156,11 +155,9 @@
     end if
 
     if(iand(outp%what, output_density_matrix).ne.0) then
-      call modelmb_particles_init (modelmbparticles,gr)
-      
-      call density_matrix_write(trim(dir), gr, st, modelmbparticles)
+      call density_matrix_write(trim(dir), gr, st, st%modelmbparticles)
 
-      call modelmb_particles_destroy (modelmbparticles)
+      call modelmb_particles_destroy (st%modelmbparticles)
     end if
 
     call pop_sub()

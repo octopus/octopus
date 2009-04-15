@@ -238,35 +238,8 @@ contains
     call obsolete_variable('OverlapDerivatives', 'ParallelizationOfDerivatives')
 #endif
 
-    !%Variable ModelMBMasses
-    !%Type block
-    !%Default no
-    !%Section Hamiltonian::Models
-    !%Description
-    !% When using model Hamiltonians, we may want to have a different mass
-    !% in each spatial direction. This variable allows one to set them. Use, however,
-    !% with extreme care, as some parts of the code may output nonsense when this 
-    !% variable is used.
-    !%End
-    der%masses(:) = M_ONE
-    if(loct_parse_block(datasets_check('ModelMBMasses'), blk) == 0) then
-      do i = 1, max(loct_parse_block_cols(blk, 0), der%dim)
-        call loct_parse_block_float(blk, 0, i-1, der%masses(i))
-      end do
-
-      if(any(der%masses(1:der%dim).ne.der%masses(1))) then
-        message(1) = "You are using and electronic mass that is different in the different "
-        message(2) = "spatial directions. I hope you know what you are doing..."
-        call write_warning(2)
-      end if
-
-      if(any(der%masses(1:der%dim).ne.M_ONE).and. der%stencil_type==DER_VARIATIONAL) then
-        message(1) = "Variational stencil is not allowed when using 'MoldelMBMasses'"
-        call write_fatal(1)
-      end if
-
-      call loct_parse_block_end(blk)
-    end if
+    ! if needed, der%masses should be initialized in modelMB_particles_init
+    der%masses = M_ONE
 
     ! construct lapl and grad structures
     ALLOCATE(der%op(der%dim + 1), der%dim + 1)
