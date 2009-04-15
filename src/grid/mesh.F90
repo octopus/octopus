@@ -21,7 +21,7 @@
 
 module mesh_m
   use datasets_m
-  use curvlinear_m
+  use curvilinear_m
   use geometry_m
   use global_m
   use hypercube_m
@@ -73,7 +73,7 @@ module mesh_m
   type mesh_t
     type(simul_box_t), pointer :: sb
     type(index_t)              :: idx
-    logical :: use_curvlinear
+    logical :: use_curvilinear
     
     FLOAT :: h(MAX_DIM)         ! the (constant) spacing between the points
     

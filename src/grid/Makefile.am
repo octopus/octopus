@@ -22,7 +22,7 @@
 noinst_LIBRARIES = libgrid.a
 
 libgrid_a_SOURCES = \
-	curv_gygi.F90 curv_briggs.F90 curv_modine.F90 curvlinear.F90 \
+	curv_gygi.F90 curv_briggs.F90 curv_modine.F90 curvilinear.F90 \
 	index.F90 \
 	par_vec.F90 mesh.F90 scalar_mesh.F90 nl_operator.F90 \
 	submesh.F90 stencil_star.F90 stencil_variational.F90 stencil_cube.F90 \
@@ -57,10 +57,10 @@ depend:
 curv_gygi.o : curv_gygi.F90  
 curv_briggs.o : curv_briggs.F90  
 curv_modine.o : curv_modine.F90  
-curvlinear.o : curvlinear.F90  curv_modine.o curv_gygi.o curv_briggs.o 
+curvilinear.o : curvilinear.F90  curv_modine.o curv_gygi.o curv_briggs.o 
 index.o : index.F90 hypercube.o
 par_vec.o : par_vec.F90 par_vec_inc.F90 index.o stencil.o
-mesh.o : mesh.F90 par_vec.o index.o curvlinear.o
+mesh.o : mesh.F90 par_vec.o index.o curvilinear.o
 mesh_init.o : mesh_init.F90 mesh.o par_vec.o zoltan.o stencil_star.o stencil.o
 scalar_mesh.o : scalar_mesh.F90
 nl_operator.o : nl_operator.F90 nl_operator_inc.F90 par_vec.o mesh.o index.o batch.o stencil.o
@@ -75,9 +75,9 @@ fourier_space.o : fourier_space.F90 fourier_space_inc.F90 cube_function.o mesh.o
 mesh_function.o : mesh_function.F90 mesh_function_inc.F90 par_vec.o mesh.o cube_function.o
 basins.o : basins.F90 par_vec.o index.o mesh.o 
 io_function.o : io_function.F90 io_function_inc.F90 par_vec.o mesh.o  cube_function.o 
-multigrid.o : multigrid.F90 multigrid_inc.F90 mesh.o curvlinear.o derivatives.o mesh_init.o
-double_grid.o : double_grid.F90 double_grid_apply.F90 submesh.o mesh_function.o mesh.o curvlinear.o 
-grid.o : grid.F90  multigrid.o mesh.o double_grid.o curvlinear.o ob_interface.o mesh_init.o
+multigrid.o : multigrid.F90 multigrid_inc.F90 mesh.o curvilinear.o derivatives.o mesh_init.o
+double_grid.o : double_grid.F90 double_grid_apply.F90 submesh.o mesh_function.o mesh.o curvilinear.o 
+grid.o : grid.F90  multigrid.o mesh.o double_grid.o curvilinear.o ob_interface.o mesh_init.o
 gridhier.o : gridhier.F90 gridhier_inc.F90 multigrid.o
 ob_interface.o : ob_interface.F90 derivatives.o mesh.o
 zoltan_low.o : zoltan_low.c

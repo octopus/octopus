@@ -91,7 +91,7 @@ subroutine X(states_blockt_mul)(mesh, st, psi1_start, psi1_end, psi2_start, psi2
     res = R_TOTYPE(M_ZERO)
 
     ! Compact psi1 in order to use BLAS gemm on it.
-    if(.not.mesh%use_curvlinear) then
+    if(.not.mesh%use_curvilinear) then
       ALLOCATE(psi1_block(mesh%np, st%d%dim, xpsi1_count(rank)), mesh%np*st%d%dim*xpsi1_count(rank))
       call profiling_in(C_PROFILING_BLOCKT_CP)
       call X(states_compactify)(st%d%dim, mesh, psi1_start, xpsi1_node(1:xpsi1_count(rank), rank), psi1, psi1_block)
@@ -135,7 +135,7 @@ subroutine X(states_blockt_mul)(mesh, st, psi1_start, psi1_end, psi2_start, psi2
       ! Do the matrix multiplication.
       res_row_offset = sum(xpsi1_count(0:rank-1))
       res_col_offset = sum(xpsi2_count(0:k-1))
-      if(.not.mesh%use_curvlinear) then
+      if(.not.mesh%use_curvilinear) then
         if(xpsi1_count(rank).gt.0.and.sendcnt.gt.0) then
           ALLOCATE(res_local(xpsi1_count(rank), sendcnt), xpsi1_count(rank)*sendcnt)
 

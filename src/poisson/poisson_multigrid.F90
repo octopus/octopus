@@ -143,7 +143,7 @@ contains
     !%Option gauss_jacobi2 3
     !% Alternative implementation of Gauss-Jacobi.
     !%End
-    if ( m%use_curvlinear ) then
+    if ( m%use_curvilinear ) then
       call loct_parse_int(datasets_check('PoissonSolverMGRelaxationMethod'), GAUSS_JACOBI, this%relaxation_method)
     else
       call loct_parse_int(datasets_check('PoissonSolverMGRelaxationMethod'), GAUSS_SEIDEL, this%relaxation_method)

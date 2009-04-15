@@ -20,7 +20,7 @@
 #include "global.h"
 
 module multigrid_m
-  use curvlinear_m
+  use curvilinear_m
   use derivatives_m
   use datasets_m
   use geometry_m
@@ -84,7 +84,7 @@ contains
   subroutine multigrid_init(mgrid, geo, cv, mesh, der, stencil)
     type(multigrid_t),             intent(out) :: mgrid
     type(geometry_t),              intent(in)  :: geo
-    type(curvlinear_t),            intent(in)  :: cv
+    type(curvilinear_t),            intent(in)  :: cv
     type(mesh_t),          target, intent(in)  :: mesh
     type(derivatives_t),   target, intent(in)  :: der
     type(stencil_t),               intent(in)  :: stencil
@@ -330,7 +330,7 @@ contains
   !---------------------------------------------------------------------------------*/
   subroutine multigrid_mesh_half(geo, cv, mesh_in, mesh_out, stencil)
     type(geometry_t),   intent(in)    :: geo
-    type(curvlinear_t), intent(in)    :: cv
+    type(curvilinear_t), intent(in)    :: cv
     type(mesh_t),       intent(in)    :: mesh_in
     type(mesh_t),       intent(inout) :: mesh_out
     type(stencil_t),    intent(in)    :: stencil
@@ -341,7 +341,7 @@ contains
 
     mesh_out%sb             => mesh_in%sb
     mesh_out%idx%sb         => mesh_in%idx%sb
-    mesh_out%use_curvlinear =  mesh_in%use_curvlinear
+    mesh_out%use_curvilinear =  mesh_in%use_curvilinear
 
     mesh_out%h(:)    = 2*mesh_in%h(:)
     mesh_out%idx%nr(:,:) = mesh_in%idx%nr(:,:)/2
@@ -356,7 +356,7 @@ contains
 
   subroutine multigrid_mesh_double(geo, cv, mesh_in, mesh_out, stencil)    
     type(geometry_t),   intent(in)    :: geo
-    type(curvlinear_t), intent(in)    :: cv
+    type(curvilinear_t), intent(in)    :: cv
     type(mesh_t),       intent(in)    :: mesh_in
     type(mesh_t),       intent(inout) :: mesh_out
     type(stencil_t),    intent(in)    :: stencil
@@ -367,7 +367,7 @@ contains
 
     mesh_out%sb             => mesh_in%sb
     mesh_out%idx%sb         => mesh_in%idx%sb
-    mesh_out%use_curvlinear =  mesh_in%use_curvlinear
+    mesh_out%use_curvilinear =  mesh_in%use_curvilinear
     
     mesh_out%h(:)    = M_HALF*mesh_in%h(:)
     mesh_out%idx%nr(:,:) = mesh_in%idx%nr(:,:)*2

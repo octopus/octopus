@@ -33,7 +33,7 @@ R_TYPE function X(mf_integrate) (mesh, f) result(d)
   call push_sub('mesh_function_inc.Xmf_integrate')
 
   d = M_ZERO
-  if (mesh%use_curvlinear) then
+  if (mesh%use_curvilinear) then
     do ip = 1, mesh%np
       d = d + f(ip)*mesh%vol_pp(ip)
     end do
@@ -105,7 +105,7 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu) result(dotp)
   end if
 #endif
 
-  if(mesh%use_curvlinear) then
+  if(mesh%use_curvilinear) then
     dotp_tmp = M_ZERO
     ! preprocessor conditionals necessary since lalg_dotu only exists for complex input
 #ifdef R_TCOMPLEX
@@ -215,7 +215,7 @@ FLOAT function X(mf_nrm2_1)(mesh, f, reduce) result(nrm2)
   call profiling_in(C_PROFILING_MF_NRM2, "MF_NRM2")
   call push_sub('mesh_function_inc.Xmf_nrm2_1')
 
-  if(mesh%use_curvlinear) then
+  if(mesh%use_curvilinear) then
     ALLOCATE(l(mesh%np), mesh%np)
     l(1:mesh%np) = f(1:mesh%np)*sqrt(mesh%vol_pp(1:mesh%np))
     nrm2_tmp = lalg_nrm2(mesh%np, l)
@@ -367,7 +367,7 @@ subroutine X(mf_partial_integrate)(mesh, j, f, u)
   call push_sub('mesh_function_inc.Xmf_partial_integrate')
 
   ASSERT(.not.(mesh%parallel_in_domains))
-  ASSERT(.not.(mesh%use_curvlinear))
+  ASSERT(.not.(mesh%use_curvilinear))
 
   k = mesh%idx%ll(j) + 2*mesh%idx%enlarge(j)
 
@@ -835,7 +835,7 @@ subroutine X(mf_dotp_batch)(mesh, aa, bb, dot, symm)
     do sp = 1, mesh%np, block_size
       ep = min(mesh%np, sp + block_size - 1)
 
-      if(mesh%use_curvlinear) then
+      if(mesh%use_curvilinear) then
 
         do ist = 1, aa%nst
           do jst = 1, bb%nst
@@ -862,7 +862,7 @@ subroutine X(mf_dotp_batch)(mesh, aa, bb, dot, symm)
     end do
   end do
 
-  if(mesh%use_curvlinear) then
+  if(mesh%use_curvilinear) then
     call profiling_count_operations(dble(mesh%np)*aa%nst*bb%nst*(R_ADD + 2*R_MUL))
   else
     call profiling_count_operations(dble(mesh%np)*aa%nst*bb%nst*(R_ADD + R_MUL))

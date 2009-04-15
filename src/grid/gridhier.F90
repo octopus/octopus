@@ -20,7 +20,7 @@
 #include "global.h"
 
 module gridhier_m
-  use curvlinear_m
+  use curvilinear_m
   use datasets_m
   use geometry_m
   use global_m

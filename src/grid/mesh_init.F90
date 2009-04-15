@@ -21,7 +21,7 @@
 
 module mesh_init_m
   use datasets_m
-  use curvlinear_m
+  use curvilinear_m
   use geometry_m
   use global_m
   use hypercube_m
@@ -61,7 +61,7 @@ subroutine mesh_init_stage_1(mesh, sb, geo, cv, enlarge)
   type(mesh_t),              intent(inout) :: mesh
   type(simul_box_t), target, intent(in)    :: sb
   type(geometry_t),          intent(in)    :: geo
-  type(curvlinear_t),        intent(in)    :: cv
+  type(curvilinear_t),        intent(in)    :: cv
   integer,                   intent(in)    :: enlarge(MAX_DIM)
 
   integer :: idir, jj
@@ -74,10 +74,10 @@ subroutine mesh_init_stage_1(mesh, sb, geo, cv, enlarge)
   mesh%sb => sb     ! keep an internal pointer
   mesh%idx%sb => sb
   mesh%h  =  sb%h ! this number can change in the following
-  mesh%use_curvlinear = cv%method.ne.CURV_METHOD_UNIFORM
+  mesh%use_curvilinear = cv%method.ne.CURV_METHOD_UNIFORM
 
   ! multiresolution requires the curvilinear coordinates machinery
-  mesh%use_curvlinear = mesh%use_curvlinear .or. simul_box_multires(sb)
+  mesh%use_curvilinear = mesh%use_curvilinear .or. simul_box_multires(sb)
 
   mesh%idx%enlarge = enlarge
 
@@ -93,8 +93,8 @@ subroutine mesh_init_stage_1(mesh, sb, geo, cv, enlarge)
     do while(.not.out)
       jj = jj + 1
       chi(idir) = real(jj, REAL_PRECISION)*mesh%h(idir)
-      if ( mesh%use_curvlinear ) then
-        call curvlinear_chi2x(sb, geo, cv, chi(1:sb%dim), x(1:sb%dim))
+      if ( mesh%use_curvilinear ) then
+        call curvilinear_chi2x(sb, geo, cv, chi(1:sb%dim), x(1:sb%dim))
         out = (x(idir) > nearest(sb%lsize(idir), M_ONE))
       else
         out = (chi(idir) > nearest(sb%lsize(idir), M_ONE))
@@ -178,7 +178,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
   type(mesh_t),       intent(inout) :: mesh
   type(simul_box_t),  intent(in)    :: sb
   type(geometry_t),   intent(in)    :: geo
-  type(curvlinear_t), intent(in)    :: cv
+  type(curvilinear_t), intent(in)    :: cv
   type(stencil_t),    intent(in)    :: stencil
 
   integer :: i, j, k, il, ik, ix, iy, iz, is
@@ -235,7 +235,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
       do iz = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
         chi(3) = real(iz, REAL_PRECISION) * mesh%h(3) + sb%box_offset(3)
 
-        call curvlinear_chi2x(sb, geo, cv, chi(:), mesh%x_tmp(:, ix, iy, iz))
+        call curvilinear_chi2x(sb, geo, cv, chi(:), mesh%x_tmp(:, ix, iy, iz))
 
         inside = simul_box_in_box(sb, geo, mesh%x_tmp(:, ix, iy, iz), inner_box = .true.)
         if(simul_box_multires(sb)) then
@@ -304,7 +304,7 @@ end subroutine mesh_init_stage_2
 subroutine mesh_init_stage_3(mesh, geo, cv, stencil, mpi_grp, parent)
   type(mesh_t),              intent(inout) :: mesh
   type(geometry_t),          intent(in)    :: geo
-  type(curvlinear_t),        intent(in)    :: cv
+  type(curvilinear_t),        intent(in)    :: cv
   type(stencil_t), optional, intent(in)    :: stencil
   type(mpi_grp_t), optional, intent(in)    :: mpi_grp
   type(mesh_t), optional,    intent(in)    :: parent
@@ -339,7 +339,7 @@ subroutine mesh_init_stage_3(mesh, geo, cv, stencil, mpi_grp, parent)
       call index_to_coords(mesh%idx, mesh%sb%dim, ip, ix)
       chi(1:mesh%sb%dim) = ix(1:mesh%sb%dim)*mesh%h(1:mesh%sb%dim)
       chi(mesh%sb%dim + 1:MAX_DIM) = M_ZERO
-      call curvlinear_chi2x(mesh%sb, geo, cv, chi, mesh%x_global(ip, :))
+      call curvilinear_chi2x(mesh%sb, geo, cv, chi, mesh%x_global(ip, :))
     end do
   end if
   
@@ -612,14 +612,14 @@ contains
         k = mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno) + i - 1)
         call index_to_coords(mesh%idx, sb%dim, k, jj)
         chi(1:sb%dim) = jj(1:sb%dim)*mesh%h(1:sb%dim)
-        mesh%vol_pp(i) = mesh%vol_pp(i)*curvlinear_det_Jac(sb, geo, cv, mesh%x(i, :), chi(1:sb%dim))
+        mesh%vol_pp(i) = mesh%vol_pp(i)*curvilinear_det_Jac(sb, geo, cv, mesh%x(i, :), chi(1:sb%dim))
       end do
       ! Do the ghost points.
       do i = 1, mesh%vp%np_ghost(mesh%vp%partno)
         k = mesh%vp%ghost(mesh%vp%xghost(mesh%vp%partno) + i - 1)
         call index_to_coords(mesh%idx, sb%dim, k, jj)
         chi(1:sb%dim) = jj(1:sb%dim)*mesh%h(1:sb%dim)
-        mesh%vol_pp(i + mesh%np) = mesh%vol_pp(i + mesh%np)*curvlinear_det_Jac(sb, geo, cv, mesh%x(i + mesh%np, :), chi(1:sb%dim))
+        mesh%vol_pp(i + mesh%np) = mesh%vol_pp(i + mesh%np)*curvilinear_det_Jac(sb, geo, cv, mesh%x(i + mesh%np, :), chi(1:sb%dim))
       end do
       ! Do the boundary points.
       do i = 1, mesh%vp%np_bndry(mesh%vp%partno)
@@ -628,7 +628,7 @@ contains
         chi(1:sb%dim) = jj(1:sb%dim)*mesh%h(1:sb%dim)
         mesh%vol_pp(i+mesh%np+mesh%vp%np_ghost(mesh%vp%partno)) = &
           mesh%vol_pp(i+mesh%np+mesh%vp%np_ghost(mesh%vp%partno)) &
-          *curvlinear_det_Jac(sb, geo, cv, mesh%x(i+mesh%np+mesh%vp%np_ghost(mesh%vp%partno), :), chi(1:sb%dim))
+          *curvilinear_det_Jac(sb, geo, cv, mesh%x(i+mesh%np+mesh%vp%np_ghost(mesh%vp%partno), :), chi(1:sb%dim))
       end do
 #endif
     else ! serial mode
@@ -636,7 +636,7 @@ contains
         call index_to_coords(mesh%idx, sb%dim, i, jj)
         chi(1:sb%dim) = jj(1:sb%dim)*mesh%h(1:sb%dim)
 
-        mesh%vol_pp(i) = mesh%vol_pp(i)*curvlinear_det_Jac(sb, geo, cv, mesh%x(i, 1:sb%dim), chi(1:sb%dim))
+        mesh%vol_pp(i) = mesh%vol_pp(i)*curvilinear_det_Jac(sb, geo, cv, mesh%x(i, 1:sb%dim), chi(1:sb%dim))
         if(simul_box_multires(mesh%sb)) mesh%vol_pp(i) = mesh%resolution(jj(1), jj(2), jj(3))**sb%dim
       end do
     end if

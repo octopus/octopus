@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-module curvlinear_m
+module curvilinear_m
   use curv_briggs_m
   use curv_gygi_m
   use curv_modine_m
@@ -39,16 +39,16 @@ module curvlinear_m
 
   private
   public ::                     &
-    curvlinear_t,               &
-    curvlinear_init,            &
-    curvlinear_end,             &
-    curvlinear_chi2x,           &
-    curvlinear_x2chi,           &
-    curvlinear_det_Jac,         &
-    curvlinear_write_info,      &
-    curvlinear_dump,            &
-    curvlinear_init_from_file,  &
-    curvlinear_is_eq
+    curvilinear_t,               &
+    curvilinear_init,            &
+    curvilinear_end,             &
+    curvilinear_chi2x,           &
+    curvilinear_x2chi,           &
+    curvilinear_det_Jac,         &
+    curvilinear_write_info,      &
+    curvilinear_dump,            &
+    curvilinear_init_from_file,  &
+    curvilinear_is_eq
 
   integer, parameter, public :: &
     CURV_METHOD_UNIFORM = 1,    &
@@ -56,24 +56,24 @@ module curvlinear_m
     CURV_METHOD_BRIGGS  = 3,    &
     CURV_METHOD_MODINE  = 4
 
-  type curvlinear_t
+  type curvilinear_t
     integer :: method
     type(curv_gygi_t)   :: gygi
     type(curv_briggs_t) :: briggs
     type(curv_modine_t) :: modine
-  end type curvlinear_t
+  end type curvilinear_t
 
-  character(len=23), parameter :: dump_tag = '*** curvlinear_dump ***'
+  character(len=23), parameter :: dump_tag = '*** curvilinear_dump ***'
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine curvlinear_init(sb, geo, cv)
+  subroutine curvilinear_init(sb, geo, cv)
     type(simul_box_t),  intent(in)  :: sb
     type(geometry_t),   intent(in)  :: geo
-    type(curvlinear_t), intent(out) :: cv
+    type(curvilinear_t), intent(out) :: cv
 
-    call push_sub('curvlinear.curvlinear_init')
+    call push_sub('curvilinear.curvilinear_init')
 
     !%Variable CurvMethod
     !%Type integer
@@ -117,12 +117,12 @@ contains
     end select
 
     call pop_sub()
-  end subroutine curvlinear_init
+  end subroutine curvilinear_init
 
 
   ! ---------------------------------------------------------
-  subroutine curvlinear_end(cv)
-    type(curvlinear_t), intent(inout) :: cv
+  subroutine curvilinear_end(cv)
+    type(curvilinear_t), intent(inout) :: cv
 
     select case(cv%method)
     case(CURV_METHOD_GYGI)
@@ -131,14 +131,14 @@ contains
       call curv_modine_end(cv%modine)
     end select
 
-  end subroutine curvlinear_end
+  end subroutine curvilinear_end
   
 
   ! ---------------------------------------------------------
-  subroutine curvlinear_chi2x(sb, geo, cv, chi, x)
+  subroutine curvilinear_chi2x(sb, geo, cv, chi, x)
     type(simul_box_t),  intent(in)  :: sb
     type(geometry_t),   intent(in)  :: geo
-    type(curvlinear_t), intent(in)  :: cv
+    type(curvilinear_t), intent(in)  :: cv
     FLOAT,              intent(in)  :: chi(MAX_DIM)  ! chi(conf%dim)
     FLOAT,              intent(out) :: x(MAX_DIM)    ! x(conf%dim)
 
@@ -153,14 +153,14 @@ contains
       call curv_modine_chi2x(sb, geo, cv%modine, chi, x)
     end select
 
-  end subroutine curvlinear_chi2x
+  end subroutine curvilinear_chi2x
 
 
   ! ---------------------------------------------------------
-  subroutine curvlinear_x2chi(sb, geo, cv, x, chi)
+  subroutine curvilinear_x2chi(sb, geo, cv, x, chi)
     type(simul_box_t),  intent(in)  :: sb
     type(geometry_t),   intent(in)  :: geo
-    type(curvlinear_t), intent(in)  :: cv
+    type(curvilinear_t), intent(in)  :: cv
     FLOAT,              intent(in)  :: x(MAX_DIM)    ! x(conf%dim)
     FLOAT,              intent(out) :: chi(MAX_DIM)  ! chi(conf%dim)
 
@@ -170,18 +170,18 @@ contains
     case(CURV_METHOD_GYGI)
       call curv_gygi_x2chi(sb, geo, cv%gygi, x, chi)
     case(CURV_METHOD_BRIGGS, CURV_METHOD_MODINE)
-      message(1) = "Internal error in curvlinear_x2chi"
+      message(1) = "Internal error in curvilinear_x2chi"
       call write_fatal(1)
     end select
 
-  end subroutine curvlinear_x2chi
+  end subroutine curvilinear_x2chi
 
 
   ! ---------------------------------------------------------
-  FLOAT function curvlinear_det_Jac(sb, geo, cv, x, chi) result(jdet)
+  FLOAT function curvilinear_det_Jac(sb, geo, cv, x, chi) result(jdet)
     type(simul_box_t),  intent(in)  :: sb
     type(geometry_t),   intent(in)  :: geo
-    type(curvlinear_t), intent(in)  :: cv
+    type(curvilinear_t), intent(in)  :: cv
     FLOAT,              intent(in)  :: x(:)    !   x(sb%dim)
     FLOAT,              intent(in)  :: chi(:)  ! chi(sb%dim)
 
@@ -212,14 +212,14 @@ contains
       SAFE_DEALLOCATE_A(Jac)
     end if
 
-  end function curvlinear_det_Jac
+  end function curvilinear_det_Jac
 
   ! ---------------------------------------------------------
-  subroutine curvlinear_write_info(cv, unit)
-    type(curvlinear_t), intent(in) :: cv
+  subroutine curvilinear_write_info(cv, unit)
+    type(curvilinear_t), intent(in) :: cv
     integer,            intent(in) :: unit
 
-    call push_sub('curvlinear.curvlinear_write_info')
+    call push_sub('curvilinear.curvilinear_write_info')
 
     select case(cv%method)
     case(CURV_METHOD_GYGI)
@@ -245,11 +245,11 @@ contains
     end select
 
     call pop_sub()
-  end subroutine curvlinear_write_info
+  end subroutine curvilinear_write_info
 
   ! ---------------------------------------------------------
-  subroutine curvlinear_dump(cv, iunit)
-    type(curvlinear_t), intent(in) :: cv
+  subroutine curvilinear_dump(cv, iunit)
+    type(curvilinear_t), intent(in) :: cv
     integer,            intent(in) :: iunit
 
     write(iunit, '(a)')             dump_tag
@@ -270,12 +270,12 @@ contains
       write(iunit, '(a20,e22.14)')  'jrange=              ', cv%modine%jrange
     end select
 
-  end subroutine curvlinear_dump
+  end subroutine curvilinear_dump
 
 
   ! ---------------------------------------------------------
-  subroutine curvlinear_init_from_file(cv, iunit)
-    type(curvlinear_t), intent(out) :: cv
+  subroutine curvilinear_init_from_file(cv, iunit)
+    type(curvilinear_t), intent(out) :: cv
     integer,            intent(in)  :: iunit
 
     character(len=100) :: line
@@ -303,12 +303,12 @@ contains
       read(iunit, *) str, cv%modine%jrange
     end select
 
-  end subroutine curvlinear_init_from_file
+  end subroutine curvilinear_init_from_file
 
 
   ! ---------------------------------------------------------
-  logical function curvlinear_is_eq(cv1, cv2) result(res)
-    type(curvlinear_t), intent(in) :: cv1, cv2
+  logical function curvilinear_is_eq(cv1, cv2) result(res)
+    type(curvilinear_t), intent(in) :: cv1, cv2
 
     res = .false.
     if(cv1%method .ne. cv2%method)                           return
@@ -329,9 +329,9 @@ contains
     end select
     res = .true.
 
-  end function curvlinear_is_eq
+  end function curvilinear_is_eq
 
-end module curvlinear_m
+end module curvilinear_m
 
 !! Local Variables:
 !! mode: f90

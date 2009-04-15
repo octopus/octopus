@@ -148,7 +148,7 @@ contains
         if( (poisson_solver.ne.FFT_NOCUT) ) call input_error('PoissonSolver')
       end select
 
-      if(gr%mesh%use_curvlinear.and.poisson_solver.ne.DIRECT_SUM_1D) then
+      if(gr%mesh%use_curvilinear.and.poisson_solver.ne.DIRECT_SUM_1D) then
         message(1) = 'If curvilinear coordinates are used in 1D, then the only working'
         message(2) = 'Poisson solver is -1 ("direct summation in one dimension").'
         call write_fatal(2)
@@ -184,7 +184,7 @@ contains
       ! In 2D, periodic in two dimensions means no cut-off at all.
       if(poisson_solver .eq. 2) poisson_solver = 3
 
-      if(gr%mesh%use_curvlinear .and. (poisson_solver .ne. -gr%mesh%sb%dim) ) then
+      if(gr%mesh%use_curvilinear .and. (poisson_solver .ne. -gr%mesh%sb%dim) ) then
         message(1) = 'If curvilinear coordinates are used in 2D, then the only working'
         message(2) = 'Poisson solver is -2 ("direct summation in two dimensions")'
         call write_fatal(2)
@@ -209,7 +209,7 @@ contains
       default_solver = FFT_SPH
 #endif
 
-      if (gr%mesh%use_curvlinear) default_solver = CG_CORRECTED
+      if (gr%mesh%use_curvilinear) default_solver = CG_CORRECTED
       if (gr%sb%periodic_dim > 0) default_solver = gr%sb%periodic_dim
       
       call loct_parse_int(datasets_check('PoissonSolver'), default_solver, poisson_solver)
@@ -227,7 +227,7 @@ contains
         call write_warning(3)
       end if
 
-      if(gr%mesh%use_curvlinear .and. (poisson_solver.ne.CG_CORRECTED)) then
+      if(gr%mesh%use_curvilinear .and. (poisson_solver.ne.CG_CORRECTED)) then
         message(1) = 'If curvilinear coordinates are used, then the only working'
         message(2) = 'Poisson solver is cg_corrected'
         call write_fatal(2)

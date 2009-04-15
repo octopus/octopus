@@ -146,7 +146,7 @@ subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi,  &
 
   ss = M_ZERO
 
-  if(.not. m%use_curvlinear) then
+  if(.not. m%use_curvilinear) then
 
     do idim = 1, dim
       do sp = 1, m%np, block_size

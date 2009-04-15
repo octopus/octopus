@@ -77,7 +77,7 @@ subroutine X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi)
 
   bra = M_ZERO
 
-  if(mesh%use_curvlinear) then
+  if(mesh%use_curvilinear) then
     do jj = 1, 3
       if(reltype == 1) then
         do kk = 1, 3

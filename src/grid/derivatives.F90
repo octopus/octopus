@@ -422,15 +422,15 @@ contains
 
     ASSERT(associated(der%op))
     ASSERT(der%stencil_type>=DER_STAR .and. der%stencil_type<=DER_STARPLUS)
-    ASSERT(.not.(der%stencil_type==DER_VARIATIONAL .and. mesh%use_curvlinear))
+    ASSERT(.not.(der%stencil_type==DER_VARIATIONAL .and. mesh%use_curvilinear))
 
     der%mesh => mesh    ! make a pointer to the underlying mesh
 
     const_w_  = .true.
     cmplx_op_ = .false.
 
-    ! need non-constant weights for curvlinear and scattering meshes
-    if(mesh%use_curvlinear) const_w_ = .false.
+    ! need non-constant weights for curvilinear and scattering meshes
+    if(mesh%use_curvilinear) const_w_ = .false.
 
     ! build operators
     do i = 1, der%dim+1
@@ -497,7 +497,7 @@ contains
     end select
 
     ! Here the Laplacian is forced to be self-adjoint, and the gradient to be skew-selfadjoint
-    if(mesh%use_curvlinear .and. (.not. simul_box_multires(der%mesh%sb))) then
+    if(mesh%use_curvilinear .and. (.not. simul_box_multires(der%mesh%sb))) then
       do i = 1, der%dim
         call nl_operator_init(auxop, "auxop")
         call nl_operator_skewadjoint(der%grad(i), auxop, der%mesh)

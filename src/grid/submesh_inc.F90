@@ -26,7 +26,7 @@ R_TYPE function X(sm_integrate)(m, sm, f) result(res)
   R_TYPE :: tmp
 #endif
 
-  if (m%use_curvlinear) then
+  if (m%use_curvilinear) then
     res = sum(f(1:sm%ns)*m%vol_pp(sm%jxyz(1:sm%ns)) )
   else
     res = sum(f(1:sm%ns))*m%vol_pp(1)

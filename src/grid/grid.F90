@@ -20,7 +20,7 @@
 #include "global.h"
 
 module grid_m
-  use curvlinear_m
+  use curvilinear_m
   use datasets_m
   use derivatives_m
   use double_grid_m
@@ -57,7 +57,7 @@ module grid_m
     type(interface_t), pointer  :: intf(:)
     type(multigrid_level_t)     :: fine
     type(derivatives_t)         :: der
-    type(curvlinear_t)          :: cv
+    type(curvilinear_t)          :: cv
     type(multigrid_t), pointer  :: mgrid
     type(double_grid_t)         :: dgrid
     logical                     :: have_fine_mesh
@@ -91,8 +91,8 @@ contains
       gr%have_fine_mesh = .false.
     end if
 
-    ! initialize curvlinear coordinates
-    call curvlinear_init(gr%sb, geo, gr%cv)
+    ! initialize curvilinear coordinates
+    call curvilinear_init(gr%sb, geo, gr%cv)
 
     ! initilize derivatives
     call derivatives_init(gr%der, gr%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
@@ -243,8 +243,8 @@ contains
         call interface_write_info(gr%intf(il), il, iunit)
       end do
     end if
-    if (gr%mesh%use_curvlinear) then
-      call curvlinear_write_info(gr%cv, iunit)
+    if (gr%mesh%use_curvilinear) then
+      call curvilinear_write_info(gr%cv, iunit)
     end if
     call messages_print_stress(iunit)
   end subroutine grid_write_info

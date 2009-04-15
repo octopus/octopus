@@ -70,7 +70,7 @@ subroutine X(kb_project_bra)(mesh, sm, kb_p, dim, psi, uvpsi)
 
   uvpsi(1:kb_p%n_c, 1:dim) = M_ZERO
 
-  if(mesh%use_curvlinear) then
+  if(mesh%use_curvilinear) then
 
     do idim = 1, dim
       do ic = 1, kb_p%n_c

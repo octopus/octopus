@@ -184,7 +184,7 @@ contains
 
     ALLOCATE(bra(1:n_s, 2), n_s*2)
 
-    if(mesh%use_curvlinear) then
+    if(mesh%use_curvilinear) then
       bra(1:n_s, 1) = rkb_p%bra(1:n_s, 1)*mesh%vol_pp(sm%jxyz(1:n_s))
       bra(1:n_s, 2) = rkb_p%bra(1:n_s, 2)*mesh%vol_pp(sm%jxyz(1:n_s))
     else

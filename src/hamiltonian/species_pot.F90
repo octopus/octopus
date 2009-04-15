@@ -20,7 +20,7 @@
 #include "global.h"
 
 module species_pot_m
-  use curvlinear_m
+  use curvilinear_m
   use datasets_m
   use double_grid_m
   use geometry_m
@@ -506,7 +506,7 @@ contains
       pos_p = pos
 
       ! Initial guess.
-      call curvlinear_x2chi(gr%mesh%sb, geo, gr%cv, pos, chi0)
+      call curvilinear_x2chi(gr%mesh%sb, geo, gr%cv, pos, chi0)
       delta   = gr%mesh%h(1)
       alpha   = sqrt(M_TWO)*s%sigma*delta
       alpha_p = alpha  ! global copy of alpha

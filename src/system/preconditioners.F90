@@ -101,7 +101,7 @@ contains
     prefix_ = ""
     if(present(prefix)) prefix_ = prefix
 
-    if(gr%mesh%use_curvlinear .or. simul_box_is_periodic(gr%mesh%sb)) then
+    if(gr%mesh%use_curvilinear .or. simul_box_is_periodic(gr%mesh%sb)) then
       default = PRE_NONE
     else
       default = PRE_FILTER
@@ -124,7 +124,7 @@ contains
       ! the smoothing has a star stencil like the laplacian
       call nl_operator_init(this%op, "Preconditioner")
       call stencil_star_get_lapl(this%op%stencil, gr%mesh%sb%dim, 1)
-      call nl_operator_build(gr%mesh, this%op, gr%mesh%np, const_w = .not. gr%mesh%use_curvlinear)
+      call nl_operator_build(gr%mesh, this%op, gr%mesh%np, const_w = .not. gr%mesh%use_curvilinear)
       
       ns = this%op%stencil%size
 

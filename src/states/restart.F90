@@ -20,7 +20,7 @@
 #include "global.h"
 
 module restart_m
-  use curvlinear_m
+  use curvilinear_m
   use datasets_m
   use geometry_m
   use global_m
@@ -271,7 +271,7 @@ contains
       write(iunit_mesh,'(a)') '# This file contains the necessary information to generate the'
       write(iunit_mesh,'(a)') '# mesh with which the functions in this directory were calculated,'
       write(iunit_mesh,'(a)') '# except for the geometry of the system.'
-      call curvlinear_dump(gr%cv, iunit_mesh)
+      call curvilinear_dump(gr%cv, iunit_mesh)
       call simul_box_dump(gr%sb, iunit_mesh)
       call mesh_dump(gr%mesh, iunit_mesh)
       call io_close(iunit_mesh)
@@ -634,7 +634,7 @@ contains
     FLOAT, allocatable   :: dphi(:)
     CMPLX, allocatable   :: zphi(:)
     type(mesh_t)         :: old_mesh
-    type(curvlinear_t)   :: old_cv
+    type(curvilinear_t)   :: old_cv
     type(simul_box_t)    :: old_sb
     logical              :: mesh_change, full_interpolation, gs_allocated, lr_allocated
 
@@ -844,11 +844,11 @@ contains
       if(iunit_mesh < 0) return
 
       read(iunit_mesh, *); read(iunit_mesh, *); read(iunit_mesh, *)
-      call curvlinear_init_from_file(old_cv, iunit_mesh)
+      call curvilinear_init_from_file(old_cv, iunit_mesh)
       call simul_box_init_from_file(old_sb, iunit_mesh)
       call io_close(iunit_mesh, grp = gr%mesh%mpi_grp)
 
-      if( .not. curvlinear_is_eq(old_cv, gr%cv) ) then
+      if( .not. curvilinear_is_eq(old_cv, gr%cv) ) then
         mesh_change = .true.
         return
       end if
