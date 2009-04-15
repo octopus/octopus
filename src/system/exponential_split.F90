@@ -215,7 +215,7 @@ contains
 !!$
 !!$    end do dimension_loop
 !!$
-!    SAFE_DEALLOCATE_P(initzpsi)
+!    SAFE_DEAL LOCATE_P(initzpsi)
 
     call pop_sub()
   end subroutine zexp_vnlpsi
