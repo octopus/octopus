@@ -26,6 +26,7 @@ module scalar_mesh_m
   use loct_parser_m
   use math_m
   use messages_m
+  use profiling_m
 
   implicit none
 

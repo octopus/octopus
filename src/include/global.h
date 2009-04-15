@@ -54,11 +54,11 @@
 
 #if defined(LONG_LINES)
 #  define ALLOCATE(x, size) allocate(x, stat=global_alloc_err); \
-     if(in_profiling_mode)  call profiling_memory_allocate(#x, __FILE__, __LINE__); \
+     if(profiling_space) call profiling_memory_allocate(#x, __FILE__, __LINE__); \
      if(global_alloc_err.ne.0) call alloc_error((size), __FILE__, __LINE__)
 
 #  define DEALLOCATE(x) deallocate(x, stat=global_alloc_err); \
-     if(in_profiling_mode)  call profiling_memory_deallocate(#x, __FILE__, __LINE__); \
+     if(profiling_space) call profiling_memory_deallocate(#x, __FILE__, __LINE__); \
      if(global_alloc_err.ne.0) call alloc_error(-1, __FILE__, __LINE__)
 
 #  define SAFE_DEALLOCATE_P(x) if(associated(x)) then; DEALLOCATE(x); nullify(x); end if
@@ -67,7 +67,7 @@
 #else
 #  define ALLOCATE(x, size) \
      allocate(x, stat=global_alloc_err)                 \newline \
-     if(in_profiling_mode) then                         \newline \
+     if(profiling_space) then                           \newline \
        call profiling_memory_allocate(&                 \newline \
   #x,       &                                           \newline \
   __FILE__, &                                           \newline \
@@ -82,7 +82,7 @@
 
 #  define DEALLOCATE(x) \
      deallocate(x, stat=global_alloc_err)               \newline \
-     if(in_profiling_mode) then                         \newline \
+     if(profiling_space) then                           \newline \
        call profiling_memory_deallocate(&               \newline \
   #x,       &                                           \newline \
   __FILE__, &                                           \newline \
