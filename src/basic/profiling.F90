@@ -219,7 +219,7 @@ contains
 
     ! initialize time profiling
     last_profile = 0
-    last_mem = 0
+    last_mem = get_memory_usage()
 
     nullify(current%p)
 
@@ -565,15 +565,14 @@ contains
     call pop_sub()
   end subroutine profiling_output
 
-
-  !-----------------------------------------------------
-  subroutine profiling_memory_allocate(var, file, line)
+  subroutine profiling_memory_log(type, var, file, line, mem)
+    character(len=*), intent(in) :: type
     character(len=*), intent(in) :: var
     character(len=*), intent(in) :: file
     integer,          intent(in) :: line
+    integer(8),       intent(in) :: mem
 
-    integer    :: ii
-    integer(8) :: mem
+    integer            :: ii
     character(len=256) :: str, str2
 
     str2=""
@@ -581,17 +580,31 @@ contains
       if(var(ii:ii) == '(') exit
       str2(ii:ii) = var(ii:ii)
     end do
-    write(str, '(4a,i5,a)') trim(str2), "(", trim(file), ":", line, ")"
-    call compact(str)
+
+    !    write(str, '(4a,i5,a)') trim(str2), "(", trim(file), ":", line, ")"
+    !    call compact(str)
+
+    write(mem_iunit, '(f16.6,a,2i16,4a,i5,a)') loct_clock() - start_time, ' '//trim(type), mem, mem - last_mem, &
+         '  '//trim(str2), "(", trim(file), ":", line, ")"
+
+  end subroutine profiling_memory_log
+
+  !-----------------------------------------------------
+  subroutine profiling_memory_allocate(var, file, line)
+    character(len=*), intent(in) :: var
+    character(len=*), intent(in) :: file
+    integer,          intent(in) :: line
+
+    integer(8) :: mem
     
     mem = get_memory_usage()
     if(mem /= last_mem) then 
-      write(mem_iunit, '(a2,i16,f16.6,i32,1x,a)') 'A ', &
-           mem_prof_count, loct_clock() - start_time, mem, str
-      mem_prof_count = mem_prof_count + 1
+      call profiling_memory_log('A ', var, file, line, mem)
       last_mem = mem
     end if
-    
+
+     mem_prof_count = mem_prof_count + 1
+
   end subroutine profiling_memory_allocate
 
 
@@ -605,12 +618,12 @@ contains
     
     mem = get_memory_usage()
     if(mem /= last_mem) then 
-      write(mem_iunit, '(a2, i16, f16.6, i32, a, i16)') 'D ', &
-           mem_prof_count, loct_clock() - start_time, mem, " "//var//" "//file, line
-      mem_prof_count = mem_prof_count - 1
+      call profiling_memory_log('D ', var, file, line, mem)
       last_mem = mem
     end if
-    
+
+     mem_prof_count = mem_prof_count - 1
+
   end subroutine profiling_memory_deallocate
  
 
