@@ -506,7 +506,7 @@ contains
       pos_p = pos
 
       ! Initial guess.
-      call curvilinear_x2chi(gr%mesh%sb, geo, gr%cv, pos, chi0)
+      call curvilinear_x2chi(gr%mesh%sb, gr%cv, pos, chi0)
       delta   = gr%mesh%h(1)
       alpha   = sqrt(M_TWO)*s%sigma*delta
       alpha_p = alpha  ! global copy of alpha

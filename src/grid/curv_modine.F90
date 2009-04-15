@@ -53,18 +53,18 @@ module curv_modine_m
     FLOAT :: xbar          ! size of central flat region (in units of L)
     FLOAT :: Jbar          ! increase in density of points is 1/J
 
-    type(geometry_t), pointer :: geo        ! shortcut to geometry information
     FLOAT,            pointer :: Jlocal(:)  ! local (around the atoms) refinement
     FLOAT,            pointer :: Jrange(:)  ! local refinement range
 
     FLOAT, pointer :: chi_atoms(:,:)
     FLOAT, pointer :: csi(:,:)
+
+    integer :: natoms
   end type curv_modine_t
 
   integer, parameter :: qq = 3
 
   type(simul_box_t),   pointer :: sb_p
-  type(geometry_t),    pointer :: geo_p
   type(curv_modine_t), pointer :: cv_p
   FLOAT,           allocatable :: x_p(:)
 
@@ -80,7 +80,7 @@ contains
 
     ! first we fill in cv%csi with the values we have
     index1 = 1
-    do i1 = 1, geo_p%natoms
+    do i1 = 1, cv_p%natoms
       do j1 = 1, sb_p%dim
         cv_p%csi(j1, i1) = csi(index1)
         index1 = index1 + 1
@@ -89,11 +89,11 @@ contains
 
     ! get f and jf
     jf(:,:) = M_ZERO
-    do i1 = 1, geo_p%natoms
-      call curv_modine_chi2chi2(sb_p, geo_p, cv_p, cv_p%chi_atoms(:,i1), chi2)
+    do i1 = 1, cv_p%natoms
+      call curv_modine_chi2chi2(sb_p, cv_p, cv_p%chi_atoms(:,i1), chi2)
       x(:) = chi2(:)
 
-      do i2 = 1, geo_p%natoms
+      do i2 = 1, cv_p%natoms
         rr = sqrt(sum((chi2(:) - cv_p%csi(:,i2))**2))
         dd = exp(-rr**2/(M_TWO*cv_p%Jrange(i2)**2))
 
@@ -104,7 +104,7 @@ contains
         index1 = (i1-1)*sb_p%dim + j1
         f(index1) = x(j1) - x_p(index1)
 
-        do i2 = 1, geo_p%natoms
+        do i2 = 1, cv_p%natoms
           rr  = sqrt(sum((chi2 - cv_p%csi(:,i2))**2))
           dd  = exp(-rr**2/(M_TWO*cv_p%Jrange(i2)**2))
           dd2 = -M_TWO/(M_TWO*cv_p%Jrange(i2)**2)*dd
@@ -159,6 +159,8 @@ contains
     call find_atom_points()
     call optimize()
 
+    cv%natoms = geo%natoms
+
   contains
     subroutine find_atom_points()
       integer :: i, jj
@@ -173,7 +175,7 @@ contains
       ALLOCATE(cv%chi_atoms(sb%dim, geo%natoms), sb%dim*geo%natoms)
       do jj = 1, 10  ! WARNING: make something better
         do i = 1, geo%natoms
-          call curv_modine_x2chi(sb, geo, cv, geo%atom(i)%x, cv%chi_atoms(:,i))
+          call curv_modine_x2chi(sb, cv, geo%atom(i)%x, cv%chi_atoms(:,i))
         end do
         cv%csi(:,:) = cv%chi_atoms(:,:)
       end do
@@ -195,7 +197,6 @@ contains
         solver_type = ROOT_NEWTON, maxiter = 500, abs_tolerance = CNST(1.0e-10))
 
       sb_p  => sb
-      geo_p => geo
       cv_p  => cv
 
       ALLOCATE(x_p(sb%dim*geo%natoms), sb%dim*geo%natoms)
@@ -230,7 +231,7 @@ contains
       SAFE_DEALLOCATE_A(my_csi)
       SAFE_DEALLOCATE_A(start_csi)
 
-      nullify(sb_p); nullify(geo_p); nullify(cv_p)
+      nullify(sb_p); nullify(cv_p)
 
     end subroutine optimize
 
@@ -249,9 +250,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine curv_modine_chi2chi2(sb, geo, cv, chi_, chi2, Jac)
+  subroutine curv_modine_chi2chi2(sb, cv, chi_, chi2, Jac)
     type(simul_box_t),   intent(in)  :: sb
-    type(geometry_t),    intent(in)  :: geo
     type(curv_modine_t), intent(in)  :: cv
     FLOAT,               intent(in)  :: chi_(:)  ! chi_(sb%dim)
     FLOAT,               intent(out) :: chi2(:)  ! chi2(sb%dim)
@@ -289,9 +289,8 @@ contains
   end subroutine curv_modine_chi2chi2
 
   ! ---------------------------------------------------------
-  subroutine curv_modine_chi2x(sb, geo, cv, chi_, x)
+  subroutine curv_modine_chi2x(sb, cv, chi_, x)
     type(simul_box_t),   intent(in)  :: sb
-    type(geometry_t),    intent(in)  :: geo
     type(curv_modine_t), intent(in)  :: cv
     FLOAT,               intent(in)  :: chi_(:)  ! chi_(sb%dim)
     FLOAT,               intent(out) :: x(:)     !   x (sb%dim)
@@ -299,10 +298,10 @@ contains
     FLOAT :: chi2(MAX_DIM), rr, dd
     integer :: i
 
-    call curv_modine_chi2chi2(sb, geo, cv, chi_, chi2)
+    call curv_modine_chi2chi2(sb, cv, chi_, chi2)
 
     x(:) = chi2(:)
-    do i = 1, geo%natoms
+    do i = 1, cv%natoms
       rr = max(sqrt(sum((chi2(:) - cv%csi(:,i))**2)), CNST(1e-6))
       dd = exp(-rr**2/(M_TWO*cv%Jrange(i)**2))
 
@@ -313,9 +312,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine curv_modine_jacobian_inv(sb, geo, cv, chi_, x, J)
+  subroutine curv_modine_jacobian_inv(sb, cv, chi_, x, J)
     type(simul_box_t),   intent(in)  :: sb
-    type(geometry_t),    intent(in)  :: geo
     type(curv_modine_t), intent(in)  :: cv
     FLOAT,               intent(in)  :: chi_(:)  ! chi(sb%dim)
     FLOAT,               intent(out) :: x(:)     ! x(sb%dim)
@@ -324,7 +322,7 @@ contains
     FLOAT :: chi2(MAX_DIM), rr, dd, J2(MAX_DIM)
     integer :: i, ix, iy
 
-    call curv_modine_chi2chi2(sb, geo, cv, chi_, chi2, J2)
+    call curv_modine_chi2chi2(sb, cv, chi_, chi2, J2)
 
     ! initialize both x and the jacobian
     x(:)   = chi2(:)
@@ -333,7 +331,7 @@ contains
       J(ix, ix) = M_ONE
     end do
 
-    do i = 1, geo%natoms
+    do i = 1, cv%natoms
       rr = max(sqrt(sum(chi2(:) - cv%csi(:,i))**2), CNST(1e-6))
       dd = exp(-rr**2/(M_TWO*cv%Jrange(i)**2))
 
@@ -360,15 +358,14 @@ contains
     FLOAT, intent(in)  :: y(:)
     FLOAT, intent(out) :: f(:), jf(:, :)
 
-    call curv_modine_jacobian_inv(sb_p, geo_p, cv_p, y, f, jf)
+    call curv_modine_jacobian_inv(sb_p, cv_p, y, f, jf)
     f(:) = f(:) - x_p(:)
   end subroutine getf 
 
 
   ! ---------------------------------------------------------
-  subroutine curv_modine_x2chi(sb, geo, cv, x, chi)
+  subroutine curv_modine_x2chi(sb, cv, x, chi)
     type(simul_box_t),   target, intent(in)  :: sb
-    type(geometry_t),    target, intent(in)  :: geo
     type(curv_modine_t), target, intent(in)  :: cv
     FLOAT,                       intent(in)  :: x(:)    ! x(sb%dim)
     FLOAT,                       intent(out) :: chi(:)  ! chi(sb%dim)
@@ -380,7 +377,6 @@ contains
       solver_type = ROOT_NEWTON, maxiter = 500, abs_tolerance = CNST(1.0e-10))
 
     sb_p  => sb
-    geo_p => geo
     cv_p  => cv
     ALLOCATE(x_p(sb%dim), sb%dim)
     x_p(:) = x(:)
@@ -388,7 +384,7 @@ contains
     call droot_solver_run(rs, getf, chi, conv, startval = x)
 
     SAFE_DEALLOCATE_A(x_p)
-    nullify(sb_p); nullify(geo_p); nullify(cv_p)
+    nullify(sb_p); nullify(cv_p)
 
     if(.not.conv) then
       message(1) = "During the construction of the adaptive grid, the Newton-Raphson"

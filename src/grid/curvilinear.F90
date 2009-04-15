@@ -136,9 +136,8 @@ contains
   
 
   ! ---------------------------------------------------------
-  subroutine curvilinear_chi2x(sb, geo, cv, chi, x)
+  subroutine curvilinear_chi2x(sb, cv, chi, x)
     type(simul_box_t),  intent(in)  :: sb
-    type(geometry_t),   intent(in)  :: geo
     type(curvilinear_t), intent(in)  :: cv
     FLOAT,              intent(in)  :: chi(MAX_DIM)  ! chi(conf%dim)
     FLOAT,              intent(out) :: x(MAX_DIM)    ! x(conf%dim)
@@ -151,19 +150,18 @@ contains
     case(CURV_METHOD_BRIGGS)
       call curv_briggs_chi2x(sb, cv%briggs, chi, x)
     case(CURV_METHOD_MODINE)
-      call curv_modine_chi2x(sb, geo, cv%modine, chi, x)
+      call curv_modine_chi2x(sb, cv%modine, chi, x)
     end select
 
   end subroutine curvilinear_chi2x
 
 
   ! ---------------------------------------------------------
-  subroutine curvilinear_x2chi(sb, geo, cv, x, chi)
-    type(simul_box_t),  intent(in)  :: sb
-    type(geometry_t),   intent(in)  :: geo
+  subroutine curvilinear_x2chi(sb, cv, x, chi)
+    type(simul_box_t),   intent(in)  :: sb
     type(curvilinear_t), intent(in)  :: cv
-    FLOAT,              intent(in)  :: x(MAX_DIM)    ! x(conf%dim)
-    FLOAT,              intent(out) :: chi(MAX_DIM)  ! chi(conf%dim)
+    FLOAT,               intent(in)  :: x(MAX_DIM)    ! x(conf%dim)
+    FLOAT,               intent(out) :: chi(MAX_DIM)  ! chi(conf%dim)
 
     select case(cv%method)
     case(CURV_METHOD_UNIFORM)
@@ -179,12 +177,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  FLOAT function curvilinear_det_Jac(sb, geo, cv, x, chi) result(jdet)
-    type(simul_box_t),  intent(in)  :: sb
-    type(geometry_t),   intent(in)  :: geo
+  FLOAT function curvilinear_det_Jac(sb, cv, x, chi) result(jdet)
+    type(simul_box_t),   intent(in)  :: sb
     type(curvilinear_t), intent(in)  :: cv
-    FLOAT,              intent(in)  :: x(:)    !   x(sb%dim)
-    FLOAT,              intent(in)  :: chi(:)  ! chi(sb%dim)
+    FLOAT,               intent(in)  :: x(:)    !   x(sb%dim)
+    FLOAT,               intent(in)  :: chi(:)  ! chi(sb%dim)
 
     FLOAT :: dummy(MAX_DIM)
     FLOAT, allocatable :: Jac(:,:)
@@ -205,7 +202,7 @@ contains
         jdet = jdet * Jac(i,i) ! Jacobian is diagonal in this method
       end do
     case(CURV_METHOD_MODINE)
-      call curv_modine_jacobian_inv(sb, geo, cv%modine, chi, dummy, Jac)
+      call curv_modine_jacobian_inv(sb, cv%modine, chi, dummy, Jac)
       jdet = M_ONE*lalg_determinant(sb%dim, Jac, invert = .false.)
     end select
 
