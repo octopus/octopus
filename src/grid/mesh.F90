@@ -715,8 +715,14 @@ contains
     type(mesh_t),       intent(in) :: mesh
     integer,            intent(in) :: ip
     FLOAT                          :: xx(1:MAX_DIM)
-    
-    xx(1:MAX_DIM) = mesh%x_global(ip, 1:MAX_DIM)
+
+    FLOAT :: chi(1:MAX_DIM)
+    integer :: ix(1:MAX_DIM)
+
+    call index_to_coords(mesh%idx, mesh%sb%dim, ip, ix)
+    chi(1:mesh%sb%dim) = ix(1:mesh%sb%dim)*mesh%h(1:mesh%sb%dim)
+    chi(mesh%sb%dim + 1:MAX_DIM) = M_ZERO
+    call curvilinear_chi2x(mesh%sb, mesh%cv, chi, xx)
 
   end function mesh_x_global
 
