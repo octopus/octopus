@@ -626,7 +626,7 @@ contains
 
       call push_sub('ps.get_splines_hgh')
 
-      ALLOCATE(   hato(psp%g%nrval), psp%g%nrval)
+      ALLOCATE(hato(psp%g%nrval), psp%g%nrval)
 
       ! Interpolate the KB-projection functions
       do l = 0, psp%l_max
@@ -653,6 +653,8 @@ contains
         end do
       end do
       
+      SAFE_DEALLOCATE_A(hato)
+
       call pop_sub()
     end subroutine get_splines
   end subroutine hgh_load

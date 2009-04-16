@@ -561,15 +561,7 @@ contains
         dr = -CNST(1.0e5); rmax = psp%g%rofi(psp%g%nrval)
         call egofv(hato, s, psp%g%nrval, e, g, y, l, z, &
           real(psp%g%a, 8), real(psp%g%b, 8), rmax, nprin, nnode, dr, ierr)
-        if(ierr.ne.0) then
-          SAFE_DEALLOCATE_A(s)
-          SAFE_DEALLOCATE_A(hato)
-          SAFE_DEALLOCATE_A(g)
-          SAFE_DEALLOCATE_A(y)
-          SAFE_DEALLOCATE_A(rho)
-          SAFE_DEALLOCATE_A(prev)
-          call pop_sub(); return
-        endif
+        if(ierr.ne.0) goto 999
         psp%eigen(n) = e
 
         psp%rphi(2:psp%g%nrval, n) = g(2:psp%g%nrval) * sqrt(psp%g%drdi(2:psp%g%nrval))
@@ -604,12 +596,15 @@ contains
     psp%eigen = psp%eigen / M_TWO
 
     ! Deallocations.
+    999 continue
+
     SAFE_DEALLOCATE_A(s)
     SAFE_DEALLOCATE_A(hato)
     SAFE_DEALLOCATE_A(g)
     SAFE_DEALLOCATE_A(y)
-    SAFE_DEALLOCATE_A(rho)
     SAFE_DEALLOCATE_A(prev)
+    SAFE_DEALLOCATE_A(rho)
+    SAFE_DEALLOCATE_A(ve)
 
     call pop_sub()
   end subroutine solve_schroedinger
