@@ -627,7 +627,7 @@ contains
         chi(1:sb%dim) = jj(1:sb%dim)*mesh%h(1:sb%dim)
         mesh%vol_pp(i+mesh%np+mesh%vp%np_ghost(mesh%vp%partno)) = &
           mesh%vol_pp(i+mesh%np+mesh%vp%np_ghost(mesh%vp%partno)) &
-          *curvilinear_det_Jac(sb, cv, mesh%x(i+mesh%np+mesh%vp%np_ghost(mesh%vp%partno), :), chi(1:sb%dim))
+          *curvilinear_det_Jac(sb, mesh%cv, mesh%x(i+mesh%np+mesh%vp%np_ghost(mesh%vp%partno), :), chi(1:sb%dim))
       end do
 #endif
     else ! serial mode
