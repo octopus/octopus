@@ -517,20 +517,18 @@ subroutine X(mf_interpolate_on_plane)(mesh, plane, f, f_in_plane)
   R_TYPE,             intent(in)  :: f(:)
   R_TYPE,             intent(out) :: f_in_plane(plane%nu:plane%mu, plane%nv:plane%mv)
 
-  integer :: i, j
+  integer :: i, j, ip
   R_DOUBLE, allocatable :: f_global(:)
   real(8) :: p(MAX_DIM)
   type(qshep_t) :: interp
-  real(8), pointer :: rx(:, :)
+  real(8), allocatable :: xglobal(:, :)
 
   call push_sub('mesh_function_inc.Xmf_interpolate_on_plane')
 
-#ifdef SINGLE_PRECISION
-    ALLOCATE(rx(1:ubound(mesh%x_global, DIM=1), 1:mesh%sb%dim), ubound(mesh%x_global, DIM=1)*mesh%sb%dim)
-    rx = mesh%x_global
-#else
-    rx => mesh%x_global
-#endif
+  ALLOCATE(xglobal(1:mesh%np_part_global, 1:MAX_DIM), mesh%np_part_global*MAX_DIM)
+  do ip = 1, mesh%np_part_global
+    xglobal(ip, 1:MAX_DIM) = mesh_x_global(mesh, ip)
+  end do
 
   ALLOCATE(f_global(mesh%np_global), mesh%np_global)
 #if defined HAVE_MPI
@@ -539,7 +537,7 @@ subroutine X(mf_interpolate_on_plane)(mesh, plane, f, f_in_plane)
   f_global(1:mesh%np_global) = f(1:mesh%np_global)
 #endif
 
-  call init_qshep(interp, mesh%np_global, f_global, rx(:, 1), rx(:, 2), rx(:, 3) )
+  call init_qshep(interp, mesh%np_global, f_global, xglobal(:, 1), xglobal(:, 2), xglobal(:, 3) )
 
   do i = plane%nu, plane%mu
     do j = plane%nv, plane%mv
@@ -551,9 +549,8 @@ subroutine X(mf_interpolate_on_plane)(mesh, plane, f, f_in_plane)
   end do
 
   call kill_qshep(interp)
-#ifdef SINGLE_PRECISION
-    SAFE_DEALLOCATE_A(rx)
-#endif
+
+  SAFE_DEALLOCATE_A(xglobal)
   SAFE_DEALLOCATE_A(f_global)
   call pop_sub()
 end subroutine X(mf_interpolate_on_plane)
@@ -569,21 +566,19 @@ subroutine X(mf_interpolate_on_line)(mesh, line, f, f_in_line)
   R_TYPE,             intent(in)  :: f(:)
   R_TYPE,             intent(out) :: f_in_line(line%nu:line%mu)
 
-  integer :: i
+  integer :: i, ip
   R_DOUBLE, allocatable :: f_global(:)
   real(8) :: p(MAX_DIM)
   type(qshep_t) :: interp
-  real(8), pointer :: rx(:, :)
+  real(8), allocatable :: xglobal(:, :)
 
   call push_sub('mesh_function_inc.Xmf_interpolate_on_line')
 
-#ifdef SINGLE_PRECISION
-    ALLOCATE(rx(1:ubound(mesh%x_global, DIM=1), 1:mesh%sb%dim), ubound(mesh%x_global, DIM=1)*mesh%sb%dim)
-    rx = mesh%x_global
-#else
-    rx => mesh%x_global
-#endif
-
+  ALLOCATE(xglobal(1:mesh%np_part_global, 1:MAX_DIM), mesh%np_part_global*MAX_DIM)
+  do ip = 1, mesh%np_part_global
+     xglobal(ip, 1:MAX_DIM) = mesh_x_global(mesh, ip)
+  end do
+  
   ALLOCATE(f_global(mesh%np_global), mesh%np_global)
 #if defined HAVE_MPI
   call X(vec_gather)(mesh%vp, f_global, f)
@@ -591,7 +586,7 @@ subroutine X(mf_interpolate_on_line)(mesh, line, f, f_in_line)
   f_global(1:mesh%np_global) = f(1:mesh%np_global)
 #endif
 
-  call init_qshep(interp, mesh%np_global, f_global, rx(:, 1), rx(:, 2))
+  call init_qshep(interp, mesh%np_global, f_global, xglobal(:, 1), xglobal(:, 2))
   do i = line%nu, line%mu
     p(1) = line%origin(1) + i*line%spacing * line%u(1)
     p(2) = line%origin(2) + i*line%spacing * line%u(2)
@@ -600,9 +595,8 @@ subroutine X(mf_interpolate_on_line)(mesh, line, f, f_in_line)
   call kill_qshep(interp)
 
   SAFE_DEALLOCATE_A(f_global)
-#ifdef SINGLE_PRECISION
-    SAFE_DEALLOCATE_A(rx)
-#endif
+  SAFE_DEALLOCATE_A(xglobal)
+
   call pop_sub()
 end subroutine X(mf_interpolate_on_line)
 
