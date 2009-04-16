@@ -57,12 +57,11 @@ contains
 #define ENLARGEMENT_POINT 2
 #define INNER_POINT 1
 ! ---------------------------------------------------------
-subroutine mesh_init_stage_1(mesh, sb, geo, cv, enlarge)
-  type(mesh_t),              intent(inout) :: mesh
-  type(simul_box_t), target, intent(in)    :: sb
-  type(geometry_t),          intent(in)    :: geo
-  type(curvilinear_t),        intent(in)    :: cv
-  integer,                   intent(in)    :: enlarge(MAX_DIM)
+subroutine mesh_init_stage_1(mesh, sb, cv, enlarge)
+  type(mesh_t),                intent(inout) :: mesh
+  type(simul_box_t),   target, intent(in)    :: sb
+  type(curvilinear_t), target, intent(in)    :: cv
+  integer,                     intent(in)    :: enlarge(MAX_DIM)
 
   integer :: idir, jj
   FLOAT   :: x(MAX_DIM), chi(MAX_DIM)
@@ -75,6 +74,7 @@ subroutine mesh_init_stage_1(mesh, sb, geo, cv, enlarge)
   mesh%idx%sb => sb
   mesh%h  =  sb%h ! this number can change in the following
   mesh%use_curvilinear = cv%method.ne.CURV_METHOD_UNIFORM
+  mesh%cv => cv
 
   ! multiresolution requires the curvilinear coordinates machinery
   mesh%use_curvilinear = mesh%use_curvilinear .or. simul_box_multires(sb)
@@ -154,6 +154,7 @@ contains
     do il = 1, NLEADS
       m => mesh%lead_unit_cell(il)
       m%sb => mesh%sb
+      m%cv => mesh%cv
       m%parallel_in_domains = mesh%parallel_in_domains
       iunit = io_open(trim(sb%lead_restart_dir(il))//'/gs/mesh', action='read', is_tmp=.true.)
       call mesh_init_from_file(m, iunit)
@@ -301,10 +302,8 @@ end subroutine mesh_init_stage_2
 ! mpi_grp is the communicator group that will be used for
 ! this mesh.
 ! ---------------------------------------------------------
-subroutine mesh_init_stage_3(mesh, geo, cv, stencil, mpi_grp, parent)
+subroutine mesh_init_stage_3(mesh, stencil, mpi_grp, parent)
   type(mesh_t),              intent(inout) :: mesh
-  type(geometry_t),          intent(in)    :: geo
-  type(curvilinear_t),        intent(in)    :: cv
   type(stencil_t), optional, intent(in)    :: stencil
   type(mpi_grp_t), optional, intent(in)    :: mpi_grp
   type(mesh_t), optional,    intent(in)    :: parent
@@ -339,7 +338,7 @@ subroutine mesh_init_stage_3(mesh, geo, cv, stencil, mpi_grp, parent)
       call index_to_coords(mesh%idx, mesh%sb%dim, ip, ix)
       chi(1:mesh%sb%dim) = ix(1:mesh%sb%dim)*mesh%h(1:mesh%sb%dim)
       chi(mesh%sb%dim + 1:MAX_DIM) = M_ZERO
-      call curvilinear_chi2x(mesh%sb, cv, chi, mesh%x_global(ip, :))
+      call curvilinear_chi2x(mesh%sb, mesh%cv, chi, mesh%x_global(ip, :))
     end do
   end if
   
@@ -612,14 +611,14 @@ contains
         k = mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno) + i - 1)
         call index_to_coords(mesh%idx, sb%dim, k, jj)
         chi(1:sb%dim) = jj(1:sb%dim)*mesh%h(1:sb%dim)
-        mesh%vol_pp(i) = mesh%vol_pp(i)*curvilinear_det_Jac(sb, cv, mesh%x(i, :), chi(1:sb%dim))
+        mesh%vol_pp(i) = mesh%vol_pp(i)*curvilinear_det_Jac(sb, mesh%cv, mesh%x(i, :), chi(1:sb%dim))
       end do
       ! Do the ghost points.
       do i = 1, mesh%vp%np_ghost(mesh%vp%partno)
         k = mesh%vp%ghost(mesh%vp%xghost(mesh%vp%partno) + i - 1)
         call index_to_coords(mesh%idx, sb%dim, k, jj)
         chi(1:sb%dim) = jj(1:sb%dim)*mesh%h(1:sb%dim)
-        mesh%vol_pp(i + mesh%np) = mesh%vol_pp(i + mesh%np)*curvilinear_det_Jac(sb, cv, mesh%x(i + mesh%np, :), chi(1:sb%dim))
+        mesh%vol_pp(i + mesh%np) = mesh%vol_pp(i + mesh%np)*curvilinear_det_Jac(sb, mesh%cv, mesh%x(i + mesh%np, :), chi(1:sb%dim))
       end do
       ! Do the boundary points.
       do i = 1, mesh%vp%np_bndry(mesh%vp%partno)
@@ -636,7 +635,7 @@ contains
         call index_to_coords(mesh%idx, sb%dim, i, jj)
         chi(1:sb%dim) = jj(1:sb%dim)*mesh%h(1:sb%dim)
 
-        mesh%vol_pp(i) = mesh%vol_pp(i)*curvilinear_det_Jac(sb, cv, mesh%x(i, 1:sb%dim), chi(1:sb%dim))
+        mesh%vol_pp(i) = mesh%vol_pp(i)*curvilinear_det_Jac(sb, mesh%cv, mesh%x(i, 1:sb%dim), chi(1:sb%dim))
         if(simul_box_multires(mesh%sb)) mesh%vol_pp(i) = mesh%resolution(jj(1), jj(2), jj(3))**sb%dim
       end do
     end if

@@ -100,7 +100,7 @@ contains
     call double_grid_init(gr%dgrid, gr%sb)
 
     ! now we generate create the mesh and the derivatives
-    call mesh_init_stage_1(gr%mesh, gr%sb, geo, gr%cv, &
+    call mesh_init_stage_1(gr%mesh, gr%sb, gr%cv, &
          enlarge = max(gr%der%n_ghost, double_grid_enlarge(gr%dgrid)))
 
     ! the stencil used to generate the grid is a union of a cube (for
@@ -129,9 +129,9 @@ contains
 
     if(multicomm_strategy_is_parallel(mc, P_STRATEGY_DOMAINS)) then
       call mpi_grp_init(grp, mc%group_comm(P_STRATEGY_DOMAINS))
-      call mesh_init_stage_3(gr%mesh, geo, gr%cv, gr%stencil, grp)
+      call mesh_init_stage_3(gr%mesh, gr%stencil, grp)
     else
-      call mesh_init_stage_3(gr%mesh, geo, gr%cv)
+      call mesh_init_stage_3(gr%mesh)
     end if
 
     if(gr%sb%open_boundaries) then
@@ -158,9 +158,9 @@ contains
       call derivatives_init(gr%fine%der, gr%mesh%sb, gr%cv%method .ne. CURV_METHOD_UNIFORM)
       
       if(gr%mesh%parallel_in_domains) then
-        call mesh_init_stage_3(gr%fine%mesh, geo, gr%cv, gr%stencil, gr%mesh%mpi_grp)
+        call mesh_init_stage_3(gr%fine%mesh, gr%stencil, gr%mesh%mpi_grp)
       else
-        call mesh_init_stage_3(gr%fine%mesh, geo, gr%cv)
+        call mesh_init_stage_3(gr%fine%mesh)
       end if
       
       call multigrid_get_transfer_tables(gr%fine, gr%fine%mesh, gr%mesh)
@@ -301,9 +301,9 @@ contains
     call grid_init_stage_1(grout, geo)
 
     if(grin%mesh%parallel_in_domains) then
-      call mesh_init_stage_3(grout%mesh, geo, grout%cv, grout%stencil, grin%mesh%mpi_grp)
+      call mesh_init_stage_3(grout%mesh, grout%stencil, grin%mesh%mpi_grp)
     else
-      call mesh_init_stage_3(grout%mesh, geo, grout%cv)
+      call mesh_init_stage_3(grout%mesh)
     end if
 
     call derivatives_build(grout%der, grout%mesh)

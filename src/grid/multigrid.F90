@@ -143,9 +143,9 @@ contains
       call derivatives_init(mgrid%level(i)%der, mesh%sb, cv%method.ne.CURV_METHOD_UNIFORM)
 
       if(mesh%parallel_in_domains) then
-        call mesh_init_stage_3(mgrid%level(i)%mesh, geo, cv, stencil, mesh%mpi_grp, parent = mgrid%level(i - 1)%mesh)
+        call mesh_init_stage_3(mgrid%level(i)%mesh, stencil, mesh%mpi_grp, parent = mgrid%level(i - 1)%mesh)
       else
-        call mesh_init_stage_3(mgrid%level(i)%mesh, geo, cv)
+        call mesh_init_stage_3(mgrid%level(i)%mesh)
       end if
 
       call multigrid_get_transfer_tables(mgrid%level(i), mgrid%level(i-1)%mesh, mgrid%level(i)%mesh)
@@ -342,6 +342,7 @@ contains
     mesh_out%sb             => mesh_in%sb
     mesh_out%idx%sb         => mesh_in%idx%sb
     mesh_out%use_curvilinear =  mesh_in%use_curvilinear
+    mesh_out%cv             => mesh_in%cv
 
     mesh_out%h(:)    = 2*mesh_in%h(:)
     mesh_out%idx%nr(:,:) = mesh_in%idx%nr(:,:)/2
@@ -368,7 +369,8 @@ contains
     mesh_out%sb             => mesh_in%sb
     mesh_out%idx%sb         => mesh_in%idx%sb
     mesh_out%use_curvilinear =  mesh_in%use_curvilinear
-    
+    mesh_out%cv             => mesh_in%cv
+
     mesh_out%h(:)    = M_HALF*mesh_in%h(:)
     mesh_out%idx%nr(:,:) = mesh_in%idx%nr(:,:)*2
     mesh_out%idx%ll(:)    = mesh_out%idx%nr(2, :) - mesh_out%idx%nr(1, :) + 1
