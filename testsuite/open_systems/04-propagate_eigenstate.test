@@ -4,11 +4,11 @@
 Test       : Propagate eigenstate of 1D square well
 Programs   : octopus
 TestGroups : long-run
-Enabled    : No
+Enabled    : Yes
 
 # Calculate eigenstate of 1d attractive square potential barrier.
 Input: 04-propagate_eigenstate.01-square_well_1d.inp
-match ; Total energy [step   0]; LINE(well_td.general/energy,   6, 30) ; 3.356871244251e+00
-match ; Total energy [step 100]; LINE(well_td.general/energy, 106, 30) ; 3.363092840411e+00
-match ; Total energy [step 200]; LINE(well_td.general/energy, 206, 30) ; 3.366310046887e+00
-match ; Total energy [step 300]; LINE(well_td.general/energy, 306, 30) ; 3.368646898289e+00
+match ; Total energy [step   0]; LINE(well_td.general/energy,   6, 30) ; 7.315255880019e+01
+match ; Total energy [step 100]; LINE(well_td.general/energy, 106, 30) ; 7.315252889713e+01
+match ; Total energy [step 200]; LINE(well_td.general/energy, 206, 30) ; 7.315252029222e+01
+match ; Total energy [step 300]; LINE(well_td.general/energy, 306, 30) ; 7.315257762484e+01

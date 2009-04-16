@@ -5,6 +5,11 @@
 # Calculate extended eigenstate of an attractive square
 # potential barrier in 1D.
 
+lead_ParallelizationStrategy = par_kpoints
+well_ParallelizationStrategy = par_states
+MeshBlockSizeXY = 1
+MeshBlockSizeZ = 1
+DevelVersion = yes
 
 %CalculationMode
  gs      | gs
@@ -14,8 +19,9 @@
 
 FromScratch = yes
 TheoryLevel = independent_particles
-
+Eigensolver = lobpcg
 BoxShape = parallelepiped
+DerivativesOrder = 1
 Dimensions = 1
 Spacing = 0.1
 Lx = 20
@@ -60,8 +66,8 @@ lead_PeriodicDimensions = 1
  20 | 0 | 0
 %
 
-PoissonSolver = fft
+#PoissonSolver = fft
 well_EigenSolverMaxiter = 5000
 
 Output = wfs + wfs_sqmod + potential
-OutputHow = axis_x + gnuplot + binary
+OutputHow = axis_x + binary

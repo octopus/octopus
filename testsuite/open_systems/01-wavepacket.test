@@ -4,7 +4,7 @@
 Test       : Open boundaries 1D
 Programs   : octopus
 TestGroups : short-run
-Enabled    : No
+Enabled    : Yes
 
 # We check the transparent boundary conditions for different
 # discretization orders in 1D by looking at the total charge in the

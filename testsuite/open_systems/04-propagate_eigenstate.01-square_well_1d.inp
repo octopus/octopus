@@ -5,6 +5,11 @@
 # Calculate extended eigenstate of an attractive square
 # potential barrier in 1D and propagate it.
 
+lead_ParallelizationStrategy = par_kpoints
+well_ParallelizationStrategy = par_states
+MeshBlockSizeXY = 1
+MeshBlockSizeZ = 1
+DevelVersion = yes
 
 %CalculationMode
  gs      | gs      | td
@@ -14,7 +19,8 @@
 
 FromScratch = yes
 TheoryLevel = independent_particles
-
+Eigensolver = lobpcg
+#DerivativesOrder = 1
 BoxShape = parallelepiped
 Dimensions = 1
 Spacing = 0.1
@@ -38,7 +44,7 @@ lead_PeriodicDimensions = 1
 %
 
 %lead_Lsize
- 40*Spacing | 0 | 0
+ 4*Spacing | 0 | 0
 %
 
 %lead_KPoints
@@ -68,3 +74,4 @@ well_OpenBoundariesBiCGMaxIter = 1000
 %
 
 well_EigenSolverMaxiter = 5000
+

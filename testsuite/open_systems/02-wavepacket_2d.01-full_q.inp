@@ -9,6 +9,12 @@
 
 DebugLevel = 0
 
+lead_ParallelizationStrategy = par_kpoints
+flat_ParallelizationStrategy = par_states
+MeshBlockSizeXY = 1
+MeshBlockSizeZ = 1
+DevelVersion = yes
+
 i = {0, 1}
 
 %CalculationMode
@@ -20,10 +26,10 @@ i = {0, 1}
 FromScratch = yes
 
 TheoryLevel = independent_particles
-
+Eigensolver = lobpcg
 Dimensions = 2
 BoxShape = parallelepiped
-DerivativesOrder = 4
+DerivativesOrder = 1
 Spacing = 0.25
 PoissonSolver = direct2d
 

@@ -4,13 +4,13 @@
 Test       : Open boundaries 2D
 Programs   : octopus
 TestGroups : long-run
-Enabled    : No
+Enabled    : Yes
 
 # We check the transparent boundary conditions in 2D for third order
 # discretization with the full and compacted Q matrices.
 
 Input: 02-wavepacket_2d.01-full_q.inp
 match ; Density [step  0] ; LINE(flat_td.general/multipoles, 16, 30) ; 3.544907657591e+00
-match ; Density [step 25] ; LINE(flat_td.general/multipoles, 41, 30) ; 2.365258916575e+00
-match ; Density [step 50] ; LINE(flat_td.general/multipoles, 66, 30) ; 5.841903605470e-01
-match ; Density [step 75] ; LINE(flat_td.general/multipoles, 91, 30) ; 2.473145868364e-01
+match ; Density [step 25] ; LINE(flat_td.general/multipoles, 41, 30) ; 2.535985685481e+00
+match ; Density [step 50] ; LINE(flat_td.general/multipoles, 66, 30) ; 6.016249743787e-01
+match ; Density [step 75] ; LINE(flat_td.general/multipoles, 91, 30) ; 2.498435540367e-01

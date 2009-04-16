@@ -5,6 +5,12 @@
 # Calculate eigenstates of 2D ring potential attached to upside-down Gaussian
 # shaped lead channels.
 
+lead_ParallelizationStrategy = par_kpoints
+ring_lead_ParallelizationStrategy = par_states
+MeshBlockSizeXY = 1
+MeshBlockSizeZ = 1
+DevelVersion = yes
+
 %CalculationMode
  gs      | gs
  "lead_" | "ring_lead_"
@@ -13,7 +19,7 @@
 
 FromScratch = yes
 TheoryLevel = independent_particles
-
+Eigensolver = lobpcg
 BoxShape = parallelepiped
 DerivativesOrder = 1
 Dimensions = 2
@@ -67,7 +73,6 @@ lead_Lx = Spacing
  "rchan" |  D | 0 | 0
 %
 
-PoissonSolver = fft
 ring_lead_EigenSolverMaxIter = 5000
 
 Output = potential
