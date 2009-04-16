@@ -185,6 +185,8 @@ contains
         end do
       end do
 
+      SAFE_DEALLOCATE_A(jxyz_inv)
+
     ! This is the case for a periodic system
     else
 

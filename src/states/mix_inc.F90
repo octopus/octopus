@@ -158,16 +158,16 @@ subroutine X(broyden_extrapolation)(alpha, d1, d2, d3, vin, vnew, iter_used, f, 
 
   call push_sub('mix_inc.Xbroyden_extrapolation')
   
-  ALLOCATE(beta(iter_used, iter_used), iter_used**2)
-  ALLOCATE(work(iter_used), iter_used)
-  ALLOCATE(w(iter_used), iter_used)
-
   if (iter_used == 0) then
     ! linear mixing...
     vnew(1:d1, 1:d2, 1:d3) = vin(1:d1, 1:d2, 1:d3) + alpha*f(1:d1, 1:d2, 1:d3)
     call pop_sub(); return
   end if
   
+  ALLOCATE(beta(iter_used, iter_used), iter_used**2)
+  ALLOCATE(work(iter_used), iter_used)
+  ALLOCATE(w(iter_used), iter_used)
+
   w  = M_FIVE
   
   ! compute matrix beta
@@ -196,7 +196,6 @@ subroutine X(broyden_extrapolation)(alpha, d1, d2, d3, vin, vnew, iter_used, f, 
       end do
     end do
   end do
-  
   
   ! linear mixing term
   vnew(1:d1, 1:d2, 1:d3) = vin(1:d1, 1:d2, 1:d3) + alpha*f(1:d1, 1:d2, 1:d3)

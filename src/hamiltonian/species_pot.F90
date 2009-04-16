@@ -740,6 +740,8 @@ contains
         phi(ip) = phi(ip)*ylm(ip)
       end do
 
+      SAFE_DEALLOCATE_A(xf)
+      SAFE_DEALLOCATE_A(ylm)
     else
 
       do ip = 1, mesh%np

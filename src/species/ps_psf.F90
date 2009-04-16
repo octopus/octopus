@@ -402,10 +402,12 @@ contains
     ! Exit this...
     message(1) = '      Done.'; call write_info(1)
     SAFE_DEALLOCATE_A(s)
-    SAFE_DEALLOCATE_A(ve)
     SAFE_DEALLOCATE_A(hato)
     SAFE_DEALLOCATE_A(gg)
     SAFE_DEALLOCATE_A(y)
+    SAFE_DEALLOCATE_A(ve)
+    SAFE_DEALLOCATE_A(rho)
+    SAFE_DEALLOCATE_A(prev)
 
     call pop_sub()
   end subroutine solve_schroedinger

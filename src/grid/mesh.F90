@@ -589,8 +589,8 @@ contains
 
 
   ! --------------------------------------------------------------
-  recursive subroutine mesh_end(m, is_lead)
-    type(mesh_t), intent(inout)   :: m
+  recursive subroutine mesh_end(mesh, is_lead)
+    type(mesh_t), intent(inout)   :: mesh
     logical, intent(in), optional :: is_lead
 
     integer :: il
@@ -609,50 +609,50 @@ contains
     end if
 
     if (.not.is_lead_) then
-      if(m%idx%sb%box_shape == HYPERCUBE) call hypercube_end(m%idx%hypercube)
+      if(mesh%idx%sb%box_shape == HYPERCUBE) call hypercube_end(mesh%idx%hypercube)
     end if
 
-    SAFE_DEALLOCATE_P(m%resolution)
-    SAFE_DEALLOCATE_P(m%idx%lxyz)
-    SAFE_DEALLOCATE_P(m%idx%lxyz_inv)
-    SAFE_DEALLOCATE_P(m%x)
-    SAFE_DEALLOCATE_P(m%vol_pp)
+    SAFE_DEALLOCATE_P(mesh%resolution)
+    SAFE_DEALLOCATE_P(mesh%idx%Lxyz)
+    SAFE_DEALLOCATE_P(mesh%idx%Lxyz_inv)
+    SAFE_DEALLOCATE_P(mesh%x)
+    SAFE_DEALLOCATE_P(mesh%vol_pp)
 
-    if(m%parallel_in_domains) then
-      SAFE_DEALLOCATE_P(m%x_global)
+    if(mesh%parallel_in_domains) then
+      SAFE_DEALLOCATE_P(mesh%x_global)
 #if defined(HAVE_MPI)
-      call vec_end(m%vp)
-      if(simul_box_is_periodic(m%sb)) then
+      call vec_end(mesh%vp)
+      if(simul_box_is_periodic(mesh%sb)) then
 
-        do ipart = 1, m%vp%npart
-          if(m%nsend(ipart) /= 0) then 
-            call MPI_Type_free(m%dsend_type(ipart), mpi_err)
-            call MPI_Type_free(m%zsend_type(ipart), mpi_err)
+        do ipart = 1, mesh%vp%npart
+          if(mesh%nsend(ipart) /= 0) then 
+            call MPI_Type_free(mesh%dsend_type(ipart), mpi_err)
+            call MPI_Type_free(mesh%zsend_type(ipart), mpi_err)
           end if
-          if(m%nrecv(ipart) /= 0) then 
-            call MPI_Type_free(m%drecv_type(ipart), mpi_err)
-            call MPI_Type_free(m%zrecv_type(ipart), mpi_err)
+          if(mesh%nrecv(ipart) /= 0) then 
+            call MPI_Type_free(mesh%drecv_type(ipart), mpi_err)
+            call MPI_Type_free(mesh%zrecv_type(ipart), mpi_err)
           end if
         end do
 
-        SAFE_DEALLOCATE_P(m%dsend_type)
-        SAFE_DEALLOCATE_P(m%zsend_type)
-        SAFE_DEALLOCATE_P(m%drecv_type)
-        SAFE_DEALLOCATE_P(m%zrecv_type)
-        SAFE_DEALLOCATE_P(m%nsend)
-        SAFE_DEALLOCATE_P(m%nrecv)
+        SAFE_DEALLOCATE_P(mesh%dsend_type)
+        SAFE_DEALLOCATE_P(mesh%zsend_type)
+        SAFE_DEALLOCATE_P(mesh%drecv_type)
+        SAFE_DEALLOCATE_P(mesh%zrecv_type)
+        SAFE_DEALLOCATE_P(mesh%nsend)
+        SAFE_DEALLOCATE_P(mesh%nrecv)
       end if
 #endif
     end if
 
-    SAFE_DEALLOCATE_P(m%per_points)
-    SAFE_DEALLOCATE_P(m%per_map)
+    SAFE_DEALLOCATE_P(mesh%per_points)
+    SAFE_DEALLOCATE_P(mesh%per_map)
 
-    if(associated(m%lead_unit_cell)) then
+    if(associated(mesh%lead_unit_cell)) then
       do il = 1, NLEADS
-        call mesh_end(m%lead_unit_cell(il), .true.)
+        call mesh_end(mesh%lead_unit_cell(il), .true.)
       end do
-      SAFE_DEALLOCATE_P(m%lead_unit_cell)
+      SAFE_DEALLOCATE_P(mesh%lead_unit_cell)
     end if
     
     call pop_sub()

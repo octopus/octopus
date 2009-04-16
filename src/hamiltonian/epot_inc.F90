@@ -254,6 +254,8 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
   end do
 
   SAFE_DEALLOCATE_A(vloc)
+  SAFE_DEALLOCATE_A(zvloc)
+  SAFE_DEALLOCATE_A(grad_rho)
 
 #ifdef HAVE_MPI
   if(geo%atoms%parallel) then

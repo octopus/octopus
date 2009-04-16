@@ -187,7 +187,9 @@ contains
     FLOAT, allocatable :: Jac(:,:)
     integer :: i
 
-    if(cv%method.ne.CURV_METHOD_UNIFORM) ALLOCATE(Jac(sb%dim, sb%dim), sb%dim**2)
+    if(cv%method.ne.CURV_METHOD_UNIFORM) then
+      ALLOCATE(Jac(sb%dim, sb%dim), sb%dim**2)
+    end if
 
     select case(cv%method)
     case(CURV_METHOD_UNIFORM)

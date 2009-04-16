@@ -119,24 +119,24 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine logrid_copy(gi, go)
+  subroutine logrid_copy(gi, g)
     type(logrid_t), intent(in)  :: gi
-    type(logrid_t), intent(out) :: go
+    type(logrid_t), intent(out) :: g
 
-    go%flavor = gi%flavor
-    go%a      = gi%a
-    go%b      = gi%b
-    go%nrval  = gi%nrval
+    g%flavor = gi%flavor
+    g%a      = gi%a
+    g%b      = gi%b
+    g%nrval  = gi%nrval
 
-    ALLOCATE(go%rofi(go%nrval), go%nrval)
-    ALLOCATE(go%r2ofi(go%nrval), go%nrval)
-    ALLOCATE(go%drdi(go%nrval), go%nrval)
-    ALLOCATE(go%s(go%nrval), go%nrval)
+    ALLOCATE(g%rofi (g%nrval), g%nrval)
+    ALLOCATE(g%r2ofi(g%nrval), g%nrval)
+    ALLOCATE(g%drdi (g%nrval), g%nrval)
+    ALLOCATE(g%s    (g%nrval), g%nrval)
 
-    go%rofi(:) = gi%rofi(:)
-    go%r2ofi(:) = gi%r2ofi(:)
-    go%drdi(:) = gi%drdi(:)
-    go%s(:)    = gi%s(:)
+    g%rofi(:)  = gi%rofi(:)
+    g%r2ofi(:) = gi%r2ofi(:)
+    g%drdi(:)  = gi%drdi(:)
+    g%s(:)     = gi%s(:)
 
   end subroutine logrid_copy
 

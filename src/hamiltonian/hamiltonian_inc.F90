@@ -170,6 +170,8 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, t, kinetic_only)
     end if
   end do
 
+  SAFE_DEALLOCATE_A(handles)
+
   if(apply_kpoint) then
     ! now we need to remove the exp(-i k.r) factor
     do sp = 1, gr%mesh%np, bs
@@ -190,6 +192,8 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, t, kinetic_only)
   
   call batch_end(epsib)
   call batch_end(laplb)
+
+  SAFE_DEALLOCATE_A(lapl)
 
   call pop_sub()
   call profiling_out(prof)

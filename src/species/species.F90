@@ -567,7 +567,6 @@ contains
     integer,        intent(in) :: ns
     type(species_t), pointer    :: s(:)
 
-
     integer :: i
 
     call push_sub('species.species_end')
@@ -576,17 +575,13 @@ contains
       if (species_is_ps(s(i))) then 
         if(associated(s(i)%ps)) then 
           call ps_end(s(i)%ps)
-        SAFE_DEALLOCATE_P(s(i)%ps)
+          SAFE_DEALLOCATE_P(s(i)%ps)
         end if
       end if
       SAFE_DEALLOCATE_P(s(i)%iwf_l)
       SAFE_DEALLOCATE_P(s(i)%iwf_m)
       SAFE_DEALLOCATE_P(s(i)%iwf_i)
     end do
-
-    if(associated(s)) then ! sanity check
-      SAFE_DEALLOCATE_P(s); nullify(s)
-    end if
 
     call pop_sub()
   end subroutine species_end

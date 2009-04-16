@@ -80,6 +80,8 @@ subroutine X(lcao_atomic_orbital) (this, iorb, m, hm, geo, sb, psi, spin_channel
 
   end if
 
+  SAFE_DEALLOCATE_A(ao)
+
   call pop_sub()
   call profiling_out(prof)
 
@@ -210,7 +212,15 @@ subroutine X(lcao_wf) (this, st, gr, geo, hm, start)
 
   SAFE_DEALLOCATE_A(ev)
   SAFE_DEALLOCATE_A(hamilt)
+  SAFE_DEALLOCATE_A(overlap)
   
+  SAFE_DEALLOCATE_A(buff)
+  SAFE_DEALLOCATE_A(cst)
+  SAFE_DEALLOCATE_A(ck)
+
+  SAFE_DEALLOCATE_A(lcaopsi)
+  SAFE_DEALLOCATE_A(lcaopsi2)
+
   call pop_sub()
 
 contains 

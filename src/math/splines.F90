@@ -240,7 +240,7 @@ module splines_m
   end type spline_t
 
   interface assignment (=)
-    module procedure spline_copy
+    module procedure spline_copy_equal
   end interface
 
   ! Both the filling of the fuction, and the retrieval of the values
@@ -410,6 +410,13 @@ contains
     end do
   end subroutine spline_end_2
 
+  subroutine spline_copy_equal(splout, splin)
+    type(spline_t), intent(inout) :: splout
+    type(spline_t), intent(in)    :: splin
+
+    stop "spline_copy_equal"
+  end subroutine spline_copy_equal
+
   subroutine spline_copy(splout, splin)
     type(spline_t), intent(inout) :: splout
     type(spline_t), intent(in)    :: splin
@@ -450,9 +457,12 @@ contains
 
     ALLOCATE(rofi8(nrc), nrc)
     ALLOCATE(ffit8(nrc), nrc)
+
     rofi8 = real(rofi, kind=8)
     ffit8 = real(ffit, kind=8)
+
     call spline_fit8(nrc, rofi8, ffit8, spl)
+
     SAFE_DEALLOCATE_A(rofi8)
     SAFE_DEALLOCATE_A(ffit8)
   end subroutine spline_fit4
@@ -525,6 +535,7 @@ contains
     npoints = oct_spline_npoints(spl%spl)
     ALLOCATE(x(npoints), npoints)
     ALLOCATE(y(npoints), npoints)
+
     call oct_spline_x(spl%spl, x(1))
     call oct_spline_y(spl%spl, y(1))
     call oct_spline_end(spl%spl, spl%acc)
@@ -543,7 +554,7 @@ contains
     real(8), allocatable :: x(:)
 
     npoints = oct_spline_npoints(spl%spl)
-    allocate(x(npoints))
+    ALLOCATE(x(npoints), npoints)
     call oct_spline_x(spl%spl, x(1))
     res = oct_spline_eval_integ(spl%spl, x(1), x(npoints), spl%acc)
     SAFE_DEALLOCATE_A(x)
@@ -567,6 +578,7 @@ contains
     npoints = oct_spline_npoints(spl1%spl)
     ALLOCATE(x(npoints), npoints)
     ALLOCATE(y(npoints), npoints)
+
     call oct_spline_x(spl1%spl, x(1))
     call oct_spline_y(spl1%spl, y(1))
     do i = 1, npoints
@@ -575,6 +587,9 @@ contains
     call spline_init(aux)
     call spline_fit(npoints, x, y, aux)
     res = oct_spline_eval_integ(aux%spl, x(1), x(npoints), aux%acc)
+
+    SAFE_DEALLOCATE_A(x)
+    SAFE_DEALLOCATE_A(y)
 
   end function spline_dotp
 
@@ -593,6 +608,7 @@ contains
     ALLOCATE( x(npoints), npoints)
     ALLOCATE( y(npoints), npoints)
     ALLOCATE(y2(npoints), npoints)
+
     call oct_spline_x(spl%spl, x(1))
     call oct_spline_y(spl%spl, y(1))
 
@@ -660,6 +676,7 @@ contains
     ALLOCATE( x(npoints), npoints)
     ALLOCATE( y(npoints), npoints)
     ALLOCATE(y2(npoints), npoints)
+
     call oct_spline_x(spl%spl, x(1))
     call oct_spline_y(spl%spl, y(1))
 
@@ -713,6 +730,7 @@ contains
     npoints = oct_spline_npoints(spl%spl)
     ALLOCATE(x(npoints), npoints)
     ALLOCATE(y(npoints), npoints)
+
     call oct_spline_x(spl%spl, x(1))
     call oct_spline_y(spl%spl, y(1))
     call oct_spline_end(spl%spl, spl%acc)
@@ -738,6 +756,7 @@ contains
 
     ALLOCATE(x(npoints), npoints)
     ALLOCATE(y(npoints), npoints)
+
     call oct_spline_x(spla%spl, x(1))
     call oct_spline_y(spla%spl, y(1))
     call oct_spline_end(spla%spl, spla%acc)
@@ -767,6 +786,7 @@ contains
 
     ALLOCATE(x(npoints), npoints)
     ALLOCATE(y(npoints), npoints)
+
     call oct_spline_x(spla%spl, x(1))
     call oct_spline_y(spla%spl, y(1))
     call oct_spline_end(spla%spl, spla%acc)
@@ -812,6 +832,9 @@ contains
     end do
     call oct_spline_fit(npoints, x(1), y(1), dspl%spl, dspl%acc)
 
+    SAFE_DEALLOCATE_A(x)
+    SAFE_DEALLOCATE_A(y)
+
   end subroutine spline_der
 
   subroutine spline_der2(spl, dspl)
@@ -839,6 +862,8 @@ contains
     end do
     call oct_spline_fit(npoints, x(1), y(1), dspl%spl, dspl%acc)
 
+    SAFE_DEALLOCATE_A(x)
+    SAFE_DEALLOCATE_A(y)
   end subroutine spline_der2
 
   subroutine spline_print_0(spl, iunit)
@@ -851,11 +876,13 @@ contains
     np = oct_spline_npoints(spl%spl)
     ALLOCATE(x(np), np)
     ALLOCATE(y(np), np)
+
     call oct_spline_x(spl%spl, x(1))
     call oct_spline_y(spl%spl, y(1))
     do i = 1, np
       write(iunit, '(2f16.8)') x(i), y(i)
     end do
+
     SAFE_DEALLOCATE_A(x)
     SAFE_DEALLOCATE_A(y)
   end subroutine spline_print_0
@@ -874,11 +901,13 @@ contains
     np = oct_spline_npoints(spl(1)%spl)
     ALLOCATE(x(np), np)
     ALLOCATE(y(np), np)
+
     call oct_spline_x(spl(1)%spl, x(1))
     call oct_spline_y(spl(1)%spl, y(1))
     do i = 1, np
       write(iunit, '('//trim(fm)//'f16.8)') x(i), (spline_eval(spl(j), x(i)), j = 1, size(spl))
     end do
+
     SAFE_DEALLOCATE_A(x)
     SAFE_DEALLOCATE_A(y)
 
@@ -896,14 +925,17 @@ contains
     if(n1*n2<=0) return
     write(fm,'(i4)') n1*n2 + 1; fm = adjustl(fm)
     np = oct_spline_npoints(spl(1, 1)%spl)
+
     ALLOCATE(x(np), np)
     ALLOCATE(y(np), np)
+
     call oct_spline_x(spl(1, 1)%spl, x(1))
     call oct_spline_y(spl(1, 1)%spl, y(1))
     do i = 1, np
       write(iunit, '('//trim(fm)//'f16.8)') x(i), &
         ((spline_eval(spl(j, k), x(i)), j = 1, n1), k = 1, n2)
     end do
+
     SAFE_DEALLOCATE_A(x)
     SAFE_DEALLOCATE_A(y)
   end subroutine spline_print_2

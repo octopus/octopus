@@ -576,20 +576,32 @@ contains
     integer,          intent(in) :: line
     integer(8),       intent(in) :: mem
 
-    integer            :: ii
+    integer            :: ii, jj, nn
     character(len=256) :: str, str2
 
-    str2=""
-    do ii = 1, len(var)
-      if(var(ii:ii) == '(') exit
-      str2(ii:ii) = var(ii:ii)
-    end do
+    jj = len(var)
+    if(var(jj:jj) == ')') then
+      nn = 1
+      do ii = len(var)-1, 1, -1
+        jj = ii - 1
+        if(var(ii:ii) == ')') nn = nn + 1
+        if(var(ii:ii) == '(') nn = nn - 1
+        if(nn == 0) exit
+      end do
+      if(jj == 0) then
+        message(1) = "Internal Error in profiling_memory_log"
+        call write_fatal(1)
+      end if
+    end if
 
-    !    write(str, '(4a,i5,a)') trim(str2), "(", trim(file), ":", line, ")"
-    !    call compact(str)
+    str2 = var(1:jj)
 
-    write(mem_iunit, '(f16.6,a,2i16,4a,i5,a)') loct_clock() - start_time, ' '//trim(type), mem, mem - last_mem, &
-         '  '//trim(str2), "(", trim(file), ":", line, ")"
+    write(str, '(4a,i5,a)') trim(str2), "(", trim(file), ":", line, ")"
+    call compact(str)
+
+    write(mem_iunit, '(f16.6,a,2i16,4a,i5,a)') loct_clock() - start_time, &
+         ' '//trim(type), mem, mem - last_mem, &
+         ' '//trim(str)
 
   end subroutine profiling_memory_log
 

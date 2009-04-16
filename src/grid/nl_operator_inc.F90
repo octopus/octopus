@@ -102,8 +102,12 @@ subroutine X(nl_operator_tune)(op, best)
     
   end do
 
+  SAFE_DEALLOCATE_A(in)
+  SAFE_DEALLOCATE_A(out)
+
 #ifdef HAVE_MPI
-      call MPI_Allreduce(flops, global_flops, OP_MAX-OP_MIN+1, MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
+      call MPI_Allreduce(flops, global_flops, OP_MAX-OP_MIN+1, &
+           MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
       flops = global_flops
 #endif
 

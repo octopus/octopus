@@ -92,6 +92,9 @@ subroutine X(states_gram_schmidt_full)(st, nst, m, dim, psi, start)
 
   end if
 
+  SAFE_DEALLOCATE_A(ss)
+  SAFE_DEALLOCATE_A(qq)
+
   call pop_sub()
   call profiling_out(prof)
 end subroutine X(states_gram_schmidt_full)
@@ -592,6 +595,8 @@ subroutine X(states_linear_combination)(mesh, nst, dim, transf, psi)
     end do
 
   end do
+
+  SAFE_DEALLOCATE_A(psinew)
 
   call profiling_count_operations((R_ADD + R_MUL)*dble(mesh%np)*dim*nst**2)
 

@@ -327,6 +327,8 @@ contains
     call pop_sub()
   end subroutine geometry_init_species
 
+
+  ! ---------------------------------------------------------
   subroutine geometry_partition(geo, mc)
     type(geometry_t),            intent(inout) :: geo
     type(multicomm_t),           intent(in)    :: mc
@@ -334,6 +336,7 @@ contains
     call distributed_init(geo%atoms, geo%natoms, mc, P_STRATEGY_STATES, "atoms")
 
   end subroutine geometry_partition
+
 
   ! ---------------------------------------------------------
   subroutine loadPDB(iunit, geo)
@@ -400,15 +403,14 @@ contains
 
     call distributed_end(geo%atoms)
 
-    if(associated(geo%atom)) then ! sanity check
-      SAFE_DEALLOCATE_P(geo%atom); nullify(geo%atom)
-    end if
+    SAFE_DEALLOCATE_P(geo%atom)
 
-    if(geo%ncatoms > 0 .and. associated(geo%catom)) then
-      SAFE_DEALLOCATE_P(geo%catom); nullify(geo%catom)
+    if(geo%ncatoms > 0) then
+      SAFE_DEALLOCATE_P(geo%catom)
     end if
 
     call species_end(geo%nspecies, geo%species)
+    SAFE_DEALLOCATE_P(geo%species)
 
     call pop_sub()
   end subroutine geometry_end

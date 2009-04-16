@@ -290,6 +290,8 @@ R_TYPE function X(psia_project_psib)(pj, dim, psia, psib, ik) result(apb)
       end do
     end do
 
+    SAFE_DEALLOCATE_A(uvpsi)
+
    else
 
     call X(project_sphere)(mesh, pj, dim, lpsi, plpsi)
