@@ -230,18 +230,13 @@ module splines_m
     spline_der2,     &
     spline_div,      & 
     spline_mult,     & 
-    spline_cutoff_radius, &
-    assignment(=)
+    spline_cutoff_radius
 
   ! the basic spline datatype
   type spline_t
     real(8)     :: x_limit(2)
     type(c_ptr) :: spl, acc
   end type spline_t
-
-  interface assignment (=)
-    module procedure spline_copy_equal
-  end interface
 
   ! Both the filling of the fuction, and the retrieval of the values
   ! may be done using single or double precision values.
@@ -359,12 +354,15 @@ module splines_m
 
 contains
 
+  !------------------------------------------------------------
   subroutine spline_init_0(spl)
     type(spline_t), intent(out) :: spl
     call set_null(spl%spl)
     call set_null(spl%acc)
   end subroutine spline_init_0
 
+
+  !------------------------------------------------------------
   subroutine spline_init_1(spl)
     type(spline_t), intent(out) :: spl(:)
     integer :: i
@@ -373,6 +371,8 @@ contains
     end do
   end subroutine spline_init_1
 
+
+  !------------------------------------------------------------
   subroutine spline_init_2(spl)
     type(spline_t), intent(out) :: spl(:, :)
     integer :: i, j
@@ -383,6 +383,8 @@ contains
     end do
   end subroutine spline_init_2
 
+
+  !------------------------------------------------------------
   subroutine spline_end_0(spl)
     type(spline_t), intent(inout) :: spl
     if(c_associated(spl%spl) .and. c_associated(spl%acc)) then
@@ -392,6 +394,8 @@ contains
     call set_null(spl%acc)
   end subroutine spline_end_0
 
+
+  !------------------------------------------------------------
   subroutine spline_end_1(spl)
     type(spline_t), intent(inout) :: spl(:)
     integer :: i
@@ -400,6 +404,8 @@ contains
     end do
   end subroutine spline_end_1
 
+
+  !------------------------------------------------------------
   subroutine spline_end_2(spl)
     type(spline_t), intent(inout) :: spl(:, :)
     integer :: i, j
@@ -410,13 +416,8 @@ contains
     end do
   end subroutine spline_end_2
 
-  subroutine spline_copy_equal(splout, splin)
-    type(spline_t), intent(inout) :: splout
-    type(spline_t), intent(in)    :: splin
 
-    stop "spline_copy_equal"
-  end subroutine spline_copy_equal
-
+  !------------------------------------------------------------
   subroutine spline_copy(splout, splin)
     type(spline_t), intent(inout) :: splout
     type(spline_t), intent(in)    :: splin
@@ -438,6 +439,8 @@ contains
     SAFE_DEALLOCATE_A(y)
   end subroutine spline_copy
 
+
+  !------------------------------------------------------------
   subroutine spline_fit8(nrc, rofi, ffit, spl)
     integer, intent(in) :: nrc
     real(8), intent(in) :: ffit(nrc), rofi(nrc)
@@ -448,6 +451,8 @@ contains
     call oct_spline_fit(nrc, rofi(1), ffit(1), spl%spl, spl%acc)
   end subroutine spline_fit8
 
+
+  !------------------------------------------------------------
   subroutine spline_fit4(nrc, rofi, ffit, spl)
     integer, intent(in) :: nrc
     real(4), intent(in) :: rofi(nrc), ffit(nrc)
@@ -467,6 +472,8 @@ contains
     SAFE_DEALLOCATE_A(ffit8)
   end subroutine spline_fit4
 
+
+  !------------------------------------------------------------
   real(8) pure function spline_eval8(spl, x)
     type(spline_t), intent(in) :: spl
     real(8), intent(in) :: x
@@ -474,6 +481,8 @@ contains
     spline_eval8 = oct_spline_eval(x, spl%spl, spl%acc)
   end function spline_eval8
 
+
+  !------------------------------------------------------------
   real(4) pure function spline_eval4(spl, x)
     type(spline_t), intent(in) :: spl
     real(4), intent(in) :: x
@@ -481,6 +490,8 @@ contains
     spline_eval4 = real(oct_spline_eval(real(x, kind=8), spl%spl, spl%acc), kind=4)
   end function spline_eval4
 
+
+  !------------------------------------------------------------
   pure subroutine spline_eval8_array(spl, nn, xf)
     type(spline_t), intent(in)    :: spl
     integer,             intent(in)    :: nn
@@ -489,6 +500,8 @@ contains
     call oct_spline_eval_array(nn, xf(1), spl%spl, spl%acc)
   end subroutine spline_eval8_array
 
+
+  !------------------------------------------------------------
   pure subroutine spline_eval4_array(spl, nn, xf)
     type(spline_t), intent(in)    :: spl
     integer,             intent(in)    :: nn
@@ -497,6 +510,8 @@ contains
     call oct_spline_eval_array4(nn, xf(1), spl%spl, spl%acc)
   end subroutine spline_eval4_array
 
+
+  !------------------------------------------------------------
   subroutine spline_sum(spl1, spl2, splsum)
     type(spline_t), intent(in)  :: spl1, spl2
     type(spline_t), intent(out) :: splsum
@@ -525,6 +540,8 @@ contains
     SAFE_DEALLOCATE_A(y2)
   end subroutine spline_sum
 
+
+  !------------------------------------------------------------
   subroutine spline_times(a, spl)
     FLOAT,               intent(in)     :: a
     type(spline_t), intent(inout)  :: spl
@@ -548,6 +565,8 @@ contains
     SAFE_DEALLOCATE_A(y)
   end subroutine spline_times
 
+
+  !------------------------------------------------------------
   real(8) function spline_integral_full(spl) result(res)
     type(spline_t), intent(in) :: spl
     integer :: npoints
@@ -561,6 +580,8 @@ contains
 
   end function spline_integral_full
 
+
+  !------------------------------------------------------------
   real(8) pure function spline_integral_limits(spl, a, b) result(res)
     type(spline_t), intent(in) :: spl
     real(8), intent(in) :: a, b
@@ -568,6 +589,8 @@ contains
     res = oct_spline_eval_integ(spl%spl, a, b, spl%acc)
   end function spline_integral_limits
 
+
+  !------------------------------------------------------------
   real(8) function spline_dotp(spl1, spl2) result (res)
     type(spline_t), intent(in) :: spl1, spl2
 
@@ -593,6 +616,8 @@ contains
 
   end function spline_dotp
 
+
+  !------------------------------------------------------------
   subroutine spline_3dft(spl, splw, gmax)
     type(spline_t), intent(in)    :: spl
     type(spline_t), intent(inout) :: splw
@@ -660,6 +685,8 @@ contains
     SAFE_DEALLOCATE_A(yw)
   end subroutine spline_3dft
 
+
+  !------------------------------------------------------------
   subroutine spline_besselft(spl, splw, l, gmax)
     type(spline_t), intent(in)    :: spl
     type(spline_t), intent(inout) :: splw
@@ -720,6 +747,8 @@ contains
     SAFE_DEALLOCATE_A(yw)
   end subroutine spline_besselft
 
+
+  !------------------------------------------------------------
   subroutine spline_cut(spl, cutoff, beta)
     type(spline_t), intent(inout) :: spl
     FLOAT,          intent(in) :: cutoff, beta
@@ -744,6 +773,8 @@ contains
     SAFE_DEALLOCATE_A(y)
   end subroutine spline_cut
 
+
+  !------------------------------------------------------------
   subroutine spline_div(spla, splb)
     type(spline_t),   intent(inout) :: spla
     type(spline_t),   intent(in)    :: splb
@@ -774,7 +805,8 @@ contains
   end subroutine spline_div
 
 
-   subroutine spline_mult(spla, splb)
+  !------------------------------------------------------------
+  subroutine spline_mult(spla, splb)
     type(spline_t),  intent(inout) :: spla
     type(spline_t),  intent(in)    :: splb
 
@@ -807,6 +839,7 @@ contains
   end subroutine spline_mult
 
 
+  !------------------------------------------------------------
   subroutine spline_der(spl, dspl)
     type(spline_t), intent(in)    :: spl
     type(spline_t), intent(inout) :: dspl
@@ -837,6 +870,8 @@ contains
 
   end subroutine spline_der
 
+
+  !------------------------------------------------------------
   subroutine spline_der2(spl, dspl)
     type(spline_t), intent(in)    :: spl
     type(spline_t), intent(inout) :: dspl
@@ -866,6 +901,8 @@ contains
     SAFE_DEALLOCATE_A(y)
   end subroutine spline_der2
 
+
+  !------------------------------------------------------------
   subroutine spline_print_0(spl, iunit)
     type(spline_t), intent(in) :: spl
     integer, intent(in) :: iunit
@@ -887,6 +924,8 @@ contains
     SAFE_DEALLOCATE_A(y)
   end subroutine spline_print_0
 
+
+  !------------------------------------------------------------
   subroutine spline_print_1(spl, iunit)
     type(spline_t), intent(in) :: spl(:)
     integer, intent(in) :: iunit
@@ -913,6 +952,8 @@ contains
 
   end subroutine spline_print_1
 
+
+  !------------------------------------------------------------
   subroutine spline_print_2(spl, iunit)
     type(spline_t), intent(in) :: spl(:, :)
     integer, intent(in) :: iunit
@@ -940,14 +981,18 @@ contains
     SAFE_DEALLOCATE_A(y)
   end subroutine spline_print_2
 
+ 
+  !------------------------------------------------------------
   FLOAT pure function spline_cutoff_radius(spl, threshold) result(r)
     type(spline_t), intent(in) :: spl
     FLOAT,               intent(in) :: threshold
 
-    integer :: ii
+    integer :: ii, jj
     FLOAT, parameter :: dx = CNST(0.01)
     
-    do ii = 2000, 1, -1
+    jj = int(spl%x_limit(2)/dx) + 1
+
+    do ii = jj, 1, -1
       r = dx*(ii-1)
       if(abs(spline_eval(spl, r)) > threshold) exit
     end do

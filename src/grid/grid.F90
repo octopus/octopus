@@ -271,7 +271,7 @@ contains
 
     call push_sub('grid.grid_create_largergrid')
 
-    grout%sb = grin%sb
+    call simul_box_copy(grout%sb, grin%sb)
 
     ! Modification of the simulation box.
     select case(grout%sb%box_shape)

@@ -91,8 +91,7 @@ module states_m
 
   public ::                           &
     states_are_complex,               &
-    states_are_real,                  &
-    assignment(=)
+    states_are_real
 
   type states_t
     type(states_dim_t) :: d
@@ -159,10 +158,6 @@ module states_m
                                                       ! st_num(r) = st_num(2, r)-st_num(1, r).
     type(multicomm_all_pairs_t) :: ap                 ! All-pairs schedule.
   end type states_t
-
-  interface assignment (=)
-    module procedure states_copy
-  end interface
 
 contains
 
@@ -849,6 +844,7 @@ contains
     call pop_sub()
   end subroutine states_deallocate_wfns
 
+
   ! ---------------------------------------------------------
   subroutine states_densities_init(st, gr, geo)
     type(states_t),    intent(inout) :: st
@@ -870,12 +866,11 @@ contains
     call pop_sub()
   end subroutine states_densities_init
 
+
   ! ---------------------------------------------------------
   subroutine states_copy(stout, stin)
     type(states_t), intent(inout) :: stout
     type(states_t), intent(in)    :: stin
-
-!    integer :: i, j, k, l
 
     call push_sub('states.states_copy')
 

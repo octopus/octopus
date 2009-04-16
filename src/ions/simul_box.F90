@@ -52,7 +52,7 @@ module simul_box_m
     simul_box_atoms_in_box,     &
     lead_unit_cell_extent,      &
     simul_box_multires,         &
-    assignment(=)
+    simul_box_copy
 
   integer, parameter, public :: &
     SPHERE         = 1,         &
@@ -113,10 +113,6 @@ module simul_box_m
     ! it makes things a bit easier.
     character(len=1000)        :: lead_td_pot_formula(NLEADS) ! Td-potential of lead.
   end type simul_box_t
-
-  interface assignment(=)
-    module procedure simul_box_copy
-  end interface
 
   character(len=22), parameter :: dump_tag = '*** simul_box_dump ***'
 

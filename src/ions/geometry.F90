@@ -56,8 +56,7 @@ module geometry_m
     atom_write_xyz,        &
     loadPDB,               &
     geometry_val_charge,   &
-    geometry_grid_defaults,&
-    assignment(=)
+    geometry_grid_defaults
 
   type atom_t
     character(len=15) :: label
@@ -95,14 +94,6 @@ module geometry_m
 
     type(distributed_t) :: atoms
   end type geometry_t
-
-  interface assignment(=)
-    module procedure geometry_copy
-  end interface
-
-  interface assignment(=)
-    module procedure atom_copy
-  end interface
 
 contains
 
@@ -584,6 +575,7 @@ contains
   subroutine atom_copy(aout, ain)
     type(atom_t), intent(out) :: aout
     type(atom_t), intent(in)  :: ain
+
     aout%label = ain%label
     aout%spec  => ain%spec
     aout%x     = ain%x
