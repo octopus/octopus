@@ -98,12 +98,6 @@ module mesh_m
     type(pv_t)      :: vp                  ! describes parallel vectors defined on the mesh.
     
     FLOAT, pointer :: x(:,:)            ! The (local) points,
-    FLOAT, pointer :: x_global(:,:)     ! The global points, needed for i/o on
-    ! the root node and for the poisson solver
-    ! on all nodes.
-    ! There is a redundancy in these two
-    ! entries.
-    ! In serial: x_global => x.
     integer, pointer :: resolution(:, :, :)
     FLOAT, pointer :: vol_pp(:)         ! Element of volume for integrations
     ! for local points.
@@ -468,7 +462,7 @@ contains
     read(iunit, '(a20,1i10)') str, mesh%np_global
     read(iunit, '(a20,1i10)') str, mesh%np_part_global
     nullify(mesh%idx%lxyz, mesh%idx%lxyz_inv, mesh%x_tmp, mesh%idx%lxyz_tmp, mesh%boundary_indices, mesh%x, &
-      mesh%x_global, mesh%vol_pp, mesh%per_points, mesh%per_map, mesh%lead_unit_cell, mesh%resolution)
+      mesh%vol_pp, mesh%per_points, mesh%per_map, mesh%lead_unit_cell, mesh%resolution)
     mesh%parallel_in_domains = .false.
 
     call pop_sub()
@@ -620,7 +614,6 @@ contains
     SAFE_DEALLOCATE_P(mesh%vol_pp)
 
     if(mesh%parallel_in_domains) then
-      SAFE_DEALLOCATE_P(mesh%x_global)
 #if defined(HAVE_MPI)
       call vec_end(mesh%vp)
       if(simul_box_is_periodic(mesh%sb)) then
@@ -697,8 +690,6 @@ contains
     end if
     ! Lxyz
     memory = memory + dble(SIZEOF_UNSIGNED_INT*mesh%np_part_global*MAX_DIM)
-    ! x_global
-    memory = memory + dble(REAL_PRECISION*mesh%np_part_global*MAX_DIM)
 
   end function mesh_global_memory
 
