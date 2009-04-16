@@ -319,28 +319,12 @@ subroutine mesh_init_stage_3(mesh, stencil, mpi_grp, parent)
   if(present(mpi_grp)) mesh%parallel_in_domains = .true.
 
 
-  if(mesh%parallel_in_domains) then
-    ! Node 0 has to store all entries from x (in x_global)
-    ! as well as the local set in x (see below).
-    ALLOCATE(mesh%x_global(mesh%np_part_global, MAX_DIM), mesh%np_part_global*MAX_DIM)
+  if(.not. mesh%parallel_in_domains) then
     ! When running parallel, x is computed later.
-  else
     ALLOCATE(mesh%x(mesh%np_part_global, MAX_DIM), mesh%np_part_global*MAX_DIM)
-    ! in the serial case x_global is the same as x
-    mesh%x_global => mesh%x
   end if
-
-  if(mesh%idx%sb%box_shape /= HYPERCUBE) then
-    call create_x_Lxyz()
-  else
-    ! generate x_global directly
-    do ip = 1, mesh%np_part_global
-      call index_to_coords(mesh%idx, mesh%sb%dim, ip, ix)
-      chi(1:mesh%sb%dim) = ix(1:mesh%sb%dim)*mesh%h(1:mesh%sb%dim)
-      chi(mesh%sb%dim + 1:MAX_DIM) = M_ZERO
-      call curvilinear_chi2x(mesh%sb, mesh%cv, chi, mesh%x_global(ip, :))
-    end do
-  end if
+  
+  if(mesh%idx%sb%box_shape /= HYPERCUBE) call create_x_Lxyz()
   
   if(mesh%parallel_in_domains) then
     ASSERT(present(stencil))
@@ -435,11 +419,7 @@ contains
                   mesh%idx%Lxyz(il, 2) = iy
                   mesh%idx%Lxyz(il, 3) = iz
                   mesh%idx%Lxyz_inv(ix,iy,iz) = il
-                  if(mesh%parallel_in_domains) then
-                    mesh%x_global(il, 1:MAX_DIM) = mesh%x_tmp(1:MAX_DIM, ix, iy, iz)
-                  else
-                    mesh%x(il, 1:MAX_DIM) = mesh%x_tmp(1:MAX_DIM, ix, iy, iz)
-                  end if
+                  if(.not. mesh%parallel_in_domains) mesh%x(il, 1:MAX_DIM) = mesh%x_tmp(1:MAX_DIM, ix, iy, iz)
                 end if
                 
               end do
@@ -465,13 +445,9 @@ contains
                   mesh%idx%Lxyz(il, 2) = iy
                   mesh%idx%Lxyz(il, 3) = iz
                   mesh%idx%Lxyz_inv(ix,iy,iz) = il
-                  if(mesh%parallel_in_domains) then
-                    mesh%x_global(il, :) = mesh%x_tmp(:, ix, iy, iz)
-                  else
-                    mesh%x(il,:) = mesh%x_tmp(:,ix,iy,iz)
-                  end if
+                  if(.not. mesh%parallel_in_domains) mesh%x(il,:) = mesh%x_tmp(:,ix,iy,iz)
                 end if
-                
+
               end do
             end do
           end do
@@ -568,17 +544,17 @@ contains
     ! Do the inner points
     do i = 1, mesh%np
       j = mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno) + i - 1)
-      mesh%x(i, 1:MAX_DIM) = mesh%x_global(j, 1:MAX_DIM)
+      mesh%x(i, 1:MAX_DIM) = mesh_x_global(mesh, j)
     end do
     ! Do the ghost points
     do i = 1, mesh%vp%np_ghost(mesh%vp%partno)
       j = mesh%vp%ghost(mesh%vp%xghost(mesh%vp%partno) + i - 1)
-      mesh%x(i+mesh%np, 1:MAX_DIM) = mesh%x_global(j, 1:MAX_DIM)
+      mesh%x(i+mesh%np, 1:MAX_DIM) = mesh_x_global(mesh, j)
     end do
     ! Do the boundary points
     do i = 1, mesh%vp%np_bndry(mesh%vp%partno)
       j = mesh%vp%bndry(mesh%vp%xbndry(mesh%vp%partno) + i - 1)
-      mesh%x(i + mesh%np + mesh%vp%np_ghost(mesh%vp%partno), 1:MAX_DIM) = mesh%x_global(j, 1:MAX_DIM)
+      mesh%x(i + mesh%np + mesh%vp%np_ghost(mesh%vp%partno), 1:MAX_DIM) = mesh_x_global(mesh, j)
     end do
 #endif
 
@@ -918,15 +894,17 @@ subroutine mesh_partition(m, lapl_stencil, part)
   integer              :: iunit          ! For debug output to files.
 
   type(stencil_t) :: stencil
-  integer :: ii, stencil_to_use
+  integer :: ii, stencil_to_use, ip
   integer :: default_method, method
   integer :: library
   integer, parameter :: METIS = 2, ZOLTAN = 3
   integer, parameter :: STAR = 1, LAPLACIAN = 2
   integer, allocatable :: start(:), final(:), lsize(:)
-  
+  FLOAT, allocatable :: xglobal(:, :)
+
   type(profile_t), save :: prof
-  
+
+ 
   call profiling_in(prof, "MESH_PARTITION")
   call push_sub('mesh_init.mesh_partition')
 
@@ -1110,9 +1088,17 @@ subroutine mesh_partition(m, lapl_stencil, part)
 
     call zoltan_method_info(method)
 
+    ALLOCATE(xglobal(1:m%np_part_global, 1:MAX_DIM), m%np_part_global*MAX_DIM)
+
+    do ip = 1, m%np_part_global
+      xglobal(ip, 1:MAX_DIM) = mesh_x_global(m, ip)
+    end do
+
     !assign all points to one node
     call zoltan_partition(method, m%sb%dim, m%np_global, m%np_part_global, &
-         m%x_global(1, 1),  start(ipart), xadj(1), adjncy(1), ipart, part(1), m%mpi_grp%comm)
+         xglobal(1, 1),  start(ipart), xadj(1), adjncy(1), ipart, part(1), m%mpi_grp%comm)
+
+    SAFE_DEALLOCATE_A(xglobal)
 
     ! we use xadj as a buffer
     xadj(1:lsize(ipart)) = part(start(ipart):final(ipart))
@@ -1188,14 +1174,14 @@ subroutine mesh_partition_boundaries(mesh, stencil, part)
       iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &
            action='write')
       do j = 1, mesh%np_global
-        if(part(j).eq.i) write(iunit, '(i8,3f18.8)') j, mesh%x_global(j, :)
+        if(part(j).eq.i) write(iunit, '(i8,3f18.8)') j, mesh_x_global(mesh, j)
       end do
       call io_close(iunit)
 
       iunit = io_open('debug/mesh_partition/mesh_partition_all.'//filenum, &
            action='write')
       do j = 1, mesh%np_part_global
-        if(part(j).eq.i) write(iunit, '(i8,3f18.8)') j, mesh%x_global(j, :)
+        if(part(j).eq.i) write(iunit, '(i8,3f18.8)') j, mesh_x_global(mesh, j)
       end do
       call io_close(iunit)
 
@@ -1205,7 +1191,7 @@ subroutine mesh_partition_boundaries(mesh, stencil, part)
     iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &
          action='write')
     do i = mesh%np_global+1, mesh%np_part_global
-      write(iunit, '(i8,3f18.8)') i, mesh%x_global(i, :)
+      write(iunit, '(i8,3f18.8)') i, mesh_x_global(mesh, i)
     end do
     call io_close(iunit)
   end if

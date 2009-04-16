@@ -716,13 +716,22 @@ contains
     integer,            intent(in) :: ip
     FLOAT                          :: xx(1:MAX_DIM)
 
+#ifdef HAVE_MPI
     FLOAT :: chi(1:MAX_DIM)
     integer :: ix(1:MAX_DIM)
-
-    call index_to_coords(mesh%idx, mesh%sb%dim, ip, ix)
-    chi(1:mesh%sb%dim) = ix(1:mesh%sb%dim)*mesh%h(1:mesh%sb%dim)
-    chi(mesh%sb%dim + 1:MAX_DIM) = M_ZERO
-    call curvilinear_chi2x(mesh%sb, mesh%cv, chi, xx)
+      
+    if(mesh%parallel_in_domains) then
+      call index_to_coords(mesh%idx, mesh%sb%dim, ip, ix)
+      chi(1:mesh%sb%dim) = ix(1:mesh%sb%dim)*mesh%h(1:mesh%sb%dim)
+      chi(mesh%sb%dim + 1:MAX_DIM) = M_ZERO
+      call curvilinear_chi2x(mesh%sb, mesh%cv, chi, xx)
+      xx(mesh%sb%dim + 1:MAX_DIM) = M_ZERO
+    else
+#endif
+      xx(1:MAX_DIM) = mesh%x(ip, 1:MAX_DIM)
+#ifdef HAVE_MPI
+    end if
+#endif
 
   end function mesh_x_global
 
