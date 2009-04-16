@@ -50,9 +50,9 @@ module distributed_m
     integer :: nlocal
     integer :: nglobal
     logical :: parallel
-    integer, pointer :: node(:)
-    integer, pointer :: range(:, :)
-    integer, pointer :: num(:)
+    integer, pointer :: node(:) => NULL()
+    integer, pointer :: range(:, :) => NULL()
+    integer, pointer :: num(:) => NULL()
     type(mpi_grp_t)  :: mpi_grp
   end type distributed_t
   

@@ -128,7 +128,7 @@
   type multicomm_all_pairs_t
     type(mpi_grp_t)  :: grp            ! Schedule for this group.
     integer          :: rounds         ! This many comm. rounds.
-    integer, pointer :: schedule(:, :) ! This is the schedule.
+    integer, pointer :: schedule(:, :) => NULL() ! This is the schedule.
   end type multicomm_all_pairs_t
 
 contains

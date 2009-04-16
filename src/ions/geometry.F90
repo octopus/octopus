@@ -45,6 +45,7 @@ module geometry_m
     atom_classical_t,      &
     geometry_t,            &
     geometry_init,         &
+    geometry_copy,         &
     geometry_init_xyz,     &
     geometry_init_species, &
     geometry_partition,    &

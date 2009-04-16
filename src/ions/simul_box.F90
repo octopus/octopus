@@ -834,7 +834,7 @@ contains
       end do
 
       ! Merge the geometries of the lead and of the central region.
-      central_geo = geo
+      call geometry_copy(central_geo, geo)
 
       ! Set the number of atoms and classical atoms to the number
       ! of atoms coming from left and right lead and central part.

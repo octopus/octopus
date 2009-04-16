@@ -100,18 +100,18 @@ module hamiltonian_m
     ! in order to be able to operate on the states.
     type(states_dim_t) :: d
 
-    FLOAT, pointer :: vhartree(:) ! hartree potential
-    FLOAT, pointer :: vxc(:,:)    ! xc potential
-    FLOAT, pointer :: vhxc(:,:)   ! xc potential + hartree potential
-    FLOAT, pointer :: axc(:,:,:)  ! xc vector-potential divided by c
-    FLOAT, pointer :: vtau(:,:)   ! Derivative of e_xc w.r.t. tau
+    FLOAT, pointer :: vhartree(:) => NULL() ! hartree potential
+    FLOAT, pointer :: vxc(:,:) => NULL()    ! xc potential
+    FLOAT, pointer :: vhxc(:,:) => NULL()   ! xc potential + hartree potential
+    FLOAT, pointer :: axc(:,:,:) => NULL()  ! xc vector-potential divided by c
+    FLOAT, pointer :: vtau(:,:) => NULL()   ! Derivative of e_xc w.r.t. tau
 
     FLOAT :: exx_coef ! how much of exx to mix
 
     ! The self-induced potential vector and magnetic field
     logical :: self_induced_magnetic
-    FLOAT, pointer :: a_ind(:, :)
-    FLOAT, pointer :: b_ind(:, :)
+    FLOAT, pointer :: a_ind(:, :) => NULL()
+    FLOAT, pointer :: b_ind(:, :) => NULL()
 
     ! Energies
     FLOAT :: etot,    &  ! Total energy E = Eii + Sum[Eigenvalues] - U + Ex + Ec - Int[n v_xc]
@@ -138,13 +138,14 @@ module hamiltonian_m
     integer  :: ab                ! do we have absorbing boundaries?
     FLOAT :: ab_width             ! width of the absorbing boundary
     FLOAT :: ab_height            ! height of the absorbing boundary
-    FLOAT, pointer :: ab_pot(:)   ! where we store the ab potential
+    FLOAT, pointer :: ab_pot(:) => NULL()   ! where we store the ab potential
 
     ! Open boundaries.
-    CMPLX, pointer :: lead_h_diag(:, :, :, :)      ! Diagonal block of the lead Hamiltonian.
-    CMPLX, pointer :: lead_h_offdiag(:, :, :)      ! Offdiagonal block of the lead Hamiltonian.
-    FLOAT, pointer :: lead_vks(:, :, :)            ! (np, nspin, nleads) Kohn-Sham potential of the leads.
-    FLOAT, pointer :: lead_vhartree(:, :)          ! (np, nleads) Hartree potential of the leads.
+    CMPLX, pointer :: lead_h_diag(:, :, :, :) => NULL()     ! Diagonal block of the lead Hamiltonian.
+    CMPLX, pointer :: lead_h_offdiag(:, :, :) => NULL()     ! Offdiagonal block of the lead Hamiltonian.
+    FLOAT, pointer :: lead_vks(:, :, :) => NULL() 
+             ! (np, nspin, nleads) Kohn-Sham potential of the leads.
+    FLOAT, pointer :: lead_vhartree(:, :) => NULL()         ! (np, nleads) Hartree potential of the leads.
     
     ! Spectral range
     FLOAT :: spectral_middle_point
@@ -170,12 +171,12 @@ module hamiltonian_m
     logical :: oct_exchange
     type(states_t), pointer :: oct_st
 
-    CMPLX, pointer :: phase(:, :)
+    CMPLX, pointer :: phase(:, :) => NULL()
 
     logical :: multigrid_initialized
     type(dgridhier_t) :: coarse_v
 
-    type(em_field_t), pointer :: total(:) ! one electromagnetic field per spin channel
+    type(em_field_t), pointer :: total(:) => NULL() ! one electromagnetic field per spin channel
     type(scissor_t) :: scissor
   end type hamiltonian_t
 
@@ -424,8 +425,6 @@ contains
         call loct_parse_block_end(blk)
     end if
 
-    call states_null(hm%st)
-
     hm%inh_term = .false.
     call hamiltonian_remove_oct_exchange(hm)
 
@@ -473,9 +472,11 @@ contains
       integer               :: np, np_uc, il, ierr, pot, ix, iy
       integer               :: irow, diag, offdiag
       character             :: channel
-      character(len=1)      :: ln(NLEADS)
+      character(len=1), allocatable      :: ln(:)
       character(len=256)    :: fname, fmt
       type(mesh_t), pointer :: m
+
+      ALLOCATE(ln(NLEADS), NLEADS)
 
       ln(LEFT)  = 'L'; ln(RIGHT) = 'R'
 
@@ -625,6 +626,8 @@ contains
         end if
       end do
 
+      nullify(m)
+      deallocate(ln)
     end subroutine init_lead_h
   end subroutine hamiltonian_init
 
