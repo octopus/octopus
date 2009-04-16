@@ -60,6 +60,7 @@ module mesh_m
     mesh_periodic_point,       &
     mesh_global_memory,        &
     mesh_local_memory,         &
+    mesh_x_global,             &
     translate_point
 
   ! Describes mesh distribution to nodes.
@@ -709,6 +710,15 @@ contains
     ! x
     memory = memory + dble(REAL_PRECISION*mesh%np_part*MAX_DIM)
   end function mesh_local_memory
+
+  function mesh_x_global(mesh, ip) result(xx)
+    type(mesh_t),       intent(in) :: mesh
+    integer,            intent(in) :: ip
+    FLOAT                          :: xx(1:MAX_DIM)
+    
+    xx(1:MAX_DIM) = mesh%x_global(ip, 1:MAX_DIM)
+
+  end function mesh_x_global
 
 end module mesh_m
 

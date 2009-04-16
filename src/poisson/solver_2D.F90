@@ -46,7 +46,7 @@ subroutine poisson2D_solve(m, pot, rho)
   integer  :: i, j
   FLOAT    :: x(2), y(2)
 #ifdef HAVE_MPI
-  FLOAT    :: tmp
+  FLOAT    :: tmp, xg(1:MAX_DIM)
   FLOAT, allocatable :: pvec(:)
 #endif
 
@@ -59,7 +59,8 @@ subroutine poisson2D_solve(m, pot, rho)
 
     pot = M_ZERO
     do i = 1, m%np_global
-      x(:) = m%x_global(i,1:2)
+      xg = mesh_x_global(m, i)
+      x(1:2) = xg(1:2)
       do j = 1, m%np
         if(vec_global2local(m%vp, i, m%vp%partno) == j) then
           pvec(j) = M_TWO*sqrt(M_PI)*rho(j)/m%h(1)

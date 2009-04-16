@@ -47,7 +47,7 @@ subroutine poisson1D_solve(m, pot, rho)
   integer  :: i, j
   FLOAT    :: x, y
 #ifdef HAVE_MPI
-  FLOAT    :: tmp
+  FLOAT    :: tmp, xg(1:MAX_DIM)
   FLOAT, allocatable :: pvec(:)
 #endif
 
@@ -61,7 +61,8 @@ subroutine poisson1D_solve(m, pot, rho)
 
     pot = M_ZERO
     do i = 1, m%np_global
-      x = m%x_global(i, 1)
+      xg = mesh_x_global(m, i)
+      x = xg(1)
       do j = 1, m%np
         y = m%x(j, 1)
         pvec(j) = rho(j)/sqrt(poisson_soft_coulomb_param**2 + (x-y)**2)
@@ -79,7 +80,7 @@ subroutine poisson1D_solve(m, pot, rho)
     pot = M_ZERO
     do i = 1, m%np
       x = m%x(i, 1)
-      do j=1, m%np
+      do j = 1, m%np
         y = m%x(j, 1)
         pot(i) = pot(i) + rho(j)/sqrt(poisson_soft_coulomb_param**2 + (x-y)**2) * m%vol_pp(j)
       end do

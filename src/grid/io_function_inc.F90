@@ -485,6 +485,7 @@ contains
     integer, intent(in) :: d1, d2, d3
     
     integer :: ixvect(MAX_DIM)
+    FLOAT   :: xx(1:MAX_DIM)
 
     filename = trim(dir)//'/'//trim(fname)//"."//index2axis(d2)//"=0,"//index2axis(d3)//"=0"
     iunit = io_open(filename, action='write', is_tmp=is_tmp)
@@ -492,10 +493,10 @@ contains
     write(iunit, mfmtheader, iostat=ierr) '#', index2axis(d1), 'Re', 'Im'
     do i = 1, np_max
       call index_to_coords(mesh%idx, mesh%sb%dim, i, ixvect)
-! FIXME: x_global is probably not initialized correctly for hypercube case
-!   should be eliminated anyway - large array and should be a function
-      if(ixvect(d2)==0.and.ixvect(d3)==0) then     
-        write(iunit, mformat, iostat=ierr) mesh%x_global(i, d1), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+
+      if(ixvect(d2)==0.and.ixvect(d3)==0) then
+        xx = mesh_x_global(mesh, i)
+        write(iunit, mformat, iostat=ierr) xx(d1), R_REAL(f(i))/u, R_AIMAG(f(i))/u
       end if
     end do
 
@@ -510,6 +511,7 @@ contains
 
     integer :: ix, iy, iz, i
     integer :: ixvect(MAX_DIM)
+    FLOAT   :: xx(1:MAX_DIM)
 
     filename = trim(dir)//'/'//trim(fname)//"."//index2axis(d1)//"=0"
     iunit = io_open(filename, action='write', is_tmp=is_tmp)
@@ -546,11 +548,11 @@ contains
           case(3); ixvect(1:3) = (/iy, iz, ix/)
         end select
         i = index_from_coords(mesh%idx, mesh%sb%dim, ixvect)
-! FIXME: x_global is probably not initialized correctly for hypercube case
-!   should be eliminated anyway - large array and should be a function
+
         if(i<=mesh%np_global .and. i> 0) then
+          xx = mesh_x_global(mesh, i)
           write(iunit, mformat, iostat=ierr)  &
-            mesh%x_global(i, d2), mesh%x_global(i, d3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+            xx(d2), xx(d3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
         end if
       end do
     end do
@@ -637,20 +639,22 @@ contains
 
   ! ---------------------------------------------------------
   subroutine out_mesh_index()
+    FLOAT :: xx(1:MAX_DIM)
 
     iunit = io_open(trim(dir)//'/'//trim(fname)//".mesh_index", action='write', is_tmp=is_tmp)
 
     write(iunit, mfmtheader, iostat=ierr) '#', 'Index', 'x', 'y', 'z', 'Re', 'Im'
-    x0 = mesh%x_global(1,1)
+    xx = mesh_x_global(mesh, 1)
+    x0 = xx(1)
     if(ierr == 0) write(iunit, mformat, iostat=ierr)
 
-    do i= 1, np_max
-       if (ierr == 0.and.x0 /= mesh%x_global(i, 1)) then
+    do i = 1, np_max
+      xx = mesh_x_global(mesh, i)
+       if (ierr == 0 .and. x0 /= xx(1)) then
           write(iunit, mformat, iostat=ierr)      ! write extra lines for gnuplot grid mode
-          x0 = mesh%x_global(i, 1)
+          x0 = xx(1)
        end if
-       if(ierr==0) write(iunit, mformat2, iostat=ierr) i, mesh%x_global(i,1),  &
-            mesh%x_global(i,2), mesh%x_global(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+       if(ierr==0) write(iunit, mformat2, iostat=ierr) i, xx(1), xx(2), xx(3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
     end do
 
     if(ierr == 0) write(iunit, mformat, iostat=ierr)

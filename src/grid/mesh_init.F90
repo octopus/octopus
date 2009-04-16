@@ -323,8 +323,8 @@ subroutine mesh_init_stage_3(mesh, stencil, mpi_grp, parent)
     ! Node 0 has to store all entries from x (in x_global)
     ! as well as the local set in x (see below).
     ALLOCATE(mesh%x_global(mesh%np_part_global, MAX_DIM), mesh%np_part_global*MAX_DIM)
-  else
     ! When running parallel, x is computed later.
+  else
     ALLOCATE(mesh%x(mesh%np_part_global, MAX_DIM), mesh%np_part_global*MAX_DIM)
     ! in the serial case x_global is the same as x
     mesh%x_global => mesh%x
