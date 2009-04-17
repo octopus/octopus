@@ -374,8 +374,13 @@ contains
         case(RS_MG)
           call zeigensolver_mg(gr, st, hm, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_RMMDIIS)
-          call zeigensolver_rmmdiis(gr, st, hm, eigens%pre, tol, maxiter, &
-               eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size)
+          if(iter == 1) then
+            call deigensolver_rmmdiis_start(gr, st, hm, eigens%pre, tol, maxiter, &
+                 eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size)
+          else
+            call zeigensolver_rmmdiis(gr, st, hm, eigens%pre, tol, maxiter, &
+                 eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size)
+          end if
         end select
 
         call zsubspace_diag(gr, st, hm, ik, eigens%diff(:, ik))

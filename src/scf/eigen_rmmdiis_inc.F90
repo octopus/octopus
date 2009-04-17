@@ -223,6 +223,8 @@ subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, niter, converged,
   R_TYPE, allocatable :: kres(:, :)
   R_TYPE, allocatable :: hres(:, :)
 
+  FLOAT :: nrm2
+
   call push_sub('eigen_rmmdiis.Xeigensolver_rmmdiis_start')
 
   ALLOCATE(res(gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
@@ -241,7 +243,7 @@ subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, niter, converged,
         call X(hamiltonian_apply)(hm, gr, psi, res, ist, ik)
         
         st%eigenval(ist, ik) = X(mf_dotp)(gr%mesh, st%d%dim, psi, res)
-        
+
         do idim = 1, st%d%dim
           call lalg_axpy(gr%mesh%np, -st%eigenval(ist, ik), psi(:, idim), res(:, idim))
         end do
@@ -264,12 +266,18 @@ subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, niter, converged,
         do idim = 1, st%d%dim
           call lalg_axpy(gr%mesh%np, lambda, kres(:, idim), psi(:, idim))
         end do
-        
+
+        ! normalize (todo: we can avoid this step by simply generalizing the formula for lambda)
+        nrm2 = X(mf_nrm2)(gr%mesh, st%d%dim, psi)
+        do idim = 1, st%d%dim
+          call lalg_scal(gr%mesh%np, M_ONE/nrm2, psi(:, idim))
+        end do
+
       end do
 
-      call X(states_gram_schmidt_full)(st, st%nst, gr%mesh, st%d%dim, st%X(psi)(:, :, :, ik))
-
     end do
+
+    call X(states_gram_schmidt_full)(st, st%nst, gr%mesh, st%d%dim, st%X(psi)(:, :, :, ik))
   end do
   
   SAFE_DEALLOCATE_A(res)
