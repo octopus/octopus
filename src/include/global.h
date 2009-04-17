@@ -19,9 +19,9 @@
 
 #include "config_F90.h"
 
-#ifndef HAVE_FC_SIZEOF
+!#ifndef HAVE_FC_SIZEOF
 #define sizeof(x) 8.0_8
-#endif
+!#endif
 
 #define MAX_SPIN 4
 
