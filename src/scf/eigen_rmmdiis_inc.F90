@@ -199,6 +199,83 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
 end subroutine X(eigensolver_rmmdiis)
 
+
+
+subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, niter, converged, ik, diff, blocksize)
+  type(grid_t),        intent(inout) :: gr
+  type(states_t),      intent(inout) :: st
+  type(hamiltonian_t), intent(inout) :: hm
+  type(preconditioner_t), intent(in) :: pre
+  FLOAT,               intent(in)    :: tol
+  integer,             intent(inout) :: niter
+  integer,             intent(inout) :: converged
+  integer,             intent(in)    :: ik
+  FLOAT,               intent(out)   :: diff(1:st%nst)
+  integer,             intent(in)    :: blocksize
+
+  integer, parameter :: sweeps = 5
+  integer, parameter :: sd_steps = 2
+
+  integer :: isweep, isd, ist, idim
+  R_TYPE  :: lambda
+  R_TYPE  :: ca, cb, cc, fr, rr, fhr, rhr
+
+  R_TYPE, pointer :: psi(:, :)
+  R_TYPE, allocatable :: res(:, :)
+  R_TYPE, allocatable :: hres(:, :)
+
+  call push_sub('eigen_rmmdiis.Xeigensolver_rmmdiis_start')
+
+  ALLOCATE(res(gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
+  ALLOCATE(hres(gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
+
+  do isweep = 1, sweeps
+
+    if(isweep > 1) call X(subspace_diag)(gr, st, hm, ik)
+
+    do ist = st%st_start, st%st_end
+      do isd = 1, sd_steps
+        
+        psi => st%X(psi)(:, :, ist, ik)
+
+        call X(hamiltonian_apply)(hm, gr, psi, res, ist, ik)
+        
+        st%eigenval(ist, ik) = X(mf_dotp)(gr%mesh, st%d%dim, psi, res)
+        
+        print*, ist, st%eigenval(ist, ik)
+
+        do idim = 1, st%d%dim
+          call lalg_axpy(gr%mesh%np, -st%eigenval(ist, ik), psi(:, idim), res(:, idim))
+        end do
+        
+        call X(hamiltonian_apply)(hm, gr, res, hres, ist, ik)
+
+        rr = X(mf_dotp)(gr%mesh, st%d%dim, res, res)
+        fr = X(mf_dotp)(gr%mesh, st%d%dim, psi, res)
+        rhr = X(mf_dotp)(gr%mesh, st%d%dim, res, hres)
+        fhr = X(mf_dotp)(gr%mesh, st%d%dim, psi, hres)
+
+        ca = rr*fhr - rhr*fr
+        cb = rhr - st%eigenval(ist, ik)*rr
+        cc = fr - fhr
+
+        lambda = 2*cc/(cb + sqrt(cb**2 - CNST(4.0)*ca*cc))
+
+        do idim = 1, st%d%dim
+          call lalg_axpy(gr%mesh%np, lambda, res(:, idim), psi(:, idim))
+        end do
+        
+      end do
+
+      call X(states_gram_schmidt_full)(st, st%nst, gr%mesh, st%d%dim, st%X(psi)(:, :, :, ik))
+
+    end do
+  end do
+  
+  call pop_sub()
+
+end subroutine X(eigensolver_rmmdiis_start)
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8
