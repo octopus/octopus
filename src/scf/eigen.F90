@@ -352,7 +352,7 @@ contains
           end if
         end select
 
-        call dsubspace_diag(gr, st, hm, ik, eigens%diff(:, ik))
+        if(eigens%es_type /= RS_RMMDIIS) call dsubspace_diag(gr, st, hm, ik, eigens%diff(:, ik))
 
       else
 
@@ -383,7 +383,7 @@ contains
           end if
         end select
 
-        call zsubspace_diag(gr, st, hm, ik, eigens%diff(:, ik))
+        if(eigens%es_type /= RS_RMMDIIS) call zsubspace_diag(gr, st, hm, ik, eigens%diff(:, ik))
 
       end if
 

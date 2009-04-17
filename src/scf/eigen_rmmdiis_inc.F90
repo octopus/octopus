@@ -38,7 +38,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   FLOAT,  allocatable :: eval(:)
 
   FLOAT :: lambda
-  integer :: ist, idim, ip, ii, jj, iter
+  integer :: ist, idim, ip, ii, jj, iter, nops
   R_TYPE :: ca, cb, cc, fr, rr, fhr, rhr
   logical :: fail, did_something
 
@@ -47,6 +47,8 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   ALLOCATE(psi(gr%mesh%np_part, st%d%dim, niter), gr%mesh%np_part*st%d%dim*niter)
   ALLOCATE(res(gr%mesh%np_part, st%d%dim, niter), gr%mesh%np_part*st%d%dim*niter)
 
+  nops = 0
+
   do ist = st%st_start, st%st_end
 
     do idim = 1, st%d%dim
@@ -54,7 +56,8 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     end do
     
     call X(hamiltonian_apply)(hm, gr, psi(:, :, 1), res(:, :, 1), ist, ik)
-    
+    nops = nops + 1
+
     st%eigenval(ist, ik) = X(mf_dotp)(gr%mesh, st%d%dim, psi(:, :, 1), res(:, :, 1))
     
     do idim = 1, st%d%dim
@@ -63,9 +66,10 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     
     if(X(mf_nrm2)(gr%mesh, st%d%dim, res(:, :, 1)) < tol) cycle
     
-    ! get lambda
+    ! get lambda 
     call X(hamiltonian_apply)(hm, gr, res(:, :, 1), res(:, :, 2), ist, ik)
-    
+    nops = nops + 1
+
     rr = X(mf_dotp)(gr%mesh, st%d%dim, res(:, :, 1), res(:, :, 1))
     fr = X(mf_dotp)(gr%mesh, st%d%dim, psi(:, :, 1), res(:, :, 1))
     rhr = X(mf_dotp)(gr%mesh, st%d%dim, res(:, :, 1), res(:, :, 2))
@@ -81,15 +85,17 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     ! lambda = sign(max(min(1.0, abs(lambda)), 0.1), lambda)
     
     do iter = 2, niter
-      
+      call X(preconditioner_apply)(pre, gr, hm, res(:, :, iter - 1), psi(:, :, iter))
+
       ! predict by jacobi
       forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-        psi(ip, idim, iter) = psi(ip, idim, iter - 1) + lambda*res(ip, idim, iter - 1)
+        psi(ip, idim, iter) = lambda*psi(ip, idim, iter) + psi(ip, idim, iter - 1)
       end forall
 
       ! calculate the residual
       call X(hamiltonian_apply)(hm, gr, psi(:, :, iter), res(:, :, iter), ist, ik)
-      
+      nops = nops + 1
+
       do idim = 1, st%d%dim
         call lalg_axpy(gr%mesh%np, -st%eigenval(ist, ik), psi(:, idim, iter), res(:, idim, iter))
       end do
@@ -144,12 +150,18 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
       st%X(psi)(ip, idim, ist, ik) = psi(ip, idim, iter - 1) + lambda*res(ip, idim, iter - 1)
     end forall
 
+    if(mpi_grp_is_root(mpi_world)) then
+      call loct_progress_bar(st%nst*(ik - 1) +  ist, st%nst*st%d%nik)
+    end if
+
   end do
 
   call X(states_gram_schmidt_full)(st, st%nst, gr%mesh, st%d%dim, st%X(psi)(:, :, :, ik))
 
+  ! recalculate the eigenvalues and residuals
   do ist = st%st_start, st%st_end
     call X(hamiltonian_apply)(hm, gr, st%X(psi)(:, :, ist, ik), res(:, :, 1), ist, ik)
+    nops = nops + 1
     
     st%eigenval(ist, ik) = X(mf_dotp)(gr%mesh, st%d%dim, st%X(psi)(:, :, ist, ik), res(:, :, 1))
      
@@ -158,8 +170,9 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     end do
 
     diff(ist) = X(mf_nrm2)(gr%mesh, st%d%dim, res(:, :, 1))
-
   end do
+
+  niter = nops
 
   call pop_sub()
 
