@@ -49,6 +49,8 @@ dist_share_DATA = \
 	08-spin_orbit_coupling_full.test \
 	09-spinors.01-ground_state.inp \
 	09-spinors.test \
+	10-fullerene.test                       \  
+	10-fullerene.01-gs.inp                  \
 	11-sic.01-gs.inp \
 	11-sic.test \
 	12-forces.01-N2_gs.inp \

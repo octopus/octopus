@@ -1,0 +1,23 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id$
+
+Test       : Fullerene
+Programs   : octopus; octopus_mpi
+TestGroups : long-run
+Enabled    : Yes
+
+Input: 10-fullerene.01-gs.inp
+match ; Eigenvalue  10 ; GREP(static/info, ' 10   --', 13) ;  -0.600974 
+match ; Eigenvalue  20 ; GREP(static/info, ' 20   --', 13) ;  -0.522288
+match ; Eigenvalue  30 ; GREP(static/info, ' 30   --', 13) ;  -0.449431
+match ; Eigenvalue  40 ; GREP(static/info, ' 40   --', 13) ;  -0.375817
+match ; Eigenvalue  50 ; GREP(static/info, ' 50   --', 13) ;  -0.295173
+match ; Eigenvalue  60 ; GREP(static/info, ' 60   --', 13) ;  -0.261441
+match ; Eigenvalue  70 ; GREP(static/info, ' 70   --', 13) ;  -0.218915
+match ; Eigenvalue  80 ; GREP(static/info, ' 80   --', 13) ;  -0.196823
+match ; Eigenvalue  90 ; GREP(static/info, ' 90   --', 13) ;  -0.147694
+match ; Eigenvalue 100 ; GREP(static/info, '100   --', 13) ;  -0.124490
+match ; Eigenvalue 110 ; GREP(static/info, '110   --', 13) ;  -0.054077
+match ; Eigenvalue 120 ; GREP(static/info, '120   --', 13) ;  -0.009967
+match ; Eigenvalue 130 ; GREP(static/info, '130   --', 13) ;   0.118919
+match ; Eigenvalue 140 ; GREP(static/info, '140   --', 13) ;   0.181107
