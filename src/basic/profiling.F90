@@ -569,12 +569,13 @@ contains
     call pop_sub()
   end subroutine profiling_output
 
-  subroutine profiling_memory_log(type, var, file, line, mem)
+  subroutine profiling_memory_log(type, var, file, line, mem, size)
     character(len=*), intent(in) :: type
     character(len=*), intent(in) :: var
     character(len=*), intent(in) :: file
     integer,          intent(in) :: line
     integer(8),       intent(in) :: mem
+    integer,          intent(in) :: size
 
     integer            :: ii, jj, nn
     character(len=256) :: str, str2
@@ -599,23 +600,24 @@ contains
     write(str, '(4a,i5,a)') trim(str2), "(", trim(file), ":", line, ")"
     call compact(str)
 
-    write(mem_iunit, '(f16.6,a,2i16,4a,i5,a)') loct_clock() - start_time, &
-         ' '//trim(type), mem, mem - last_mem, &
+    write(mem_iunit, '(f16.6,a,3i16,4a,i5,a)') loct_clock() - start_time, &
+         ' '//trim(type), mem, mem - last_mem, size, &
          ' '//trim(str)
 
   end subroutine profiling_memory_log
 
   !-----------------------------------------------------
-  subroutine profiling_memory_allocate(var, file, line)
+  subroutine profiling_memory_allocate(var, file, line, size)
     character(len=*), intent(in) :: var
     character(len=*), intent(in) :: file
     integer,          intent(in) :: line
+    integer,          intent(in) :: size
 
     integer(8) :: mem
     
     mem = get_memory_usage()
     if(mem /= last_mem .or. profiling_space_full) then 
-      call profiling_memory_log('A ', var, file, line, mem)
+      call profiling_memory_log('A ', var, file, line, mem, size)
       last_mem = mem
     end if
 
@@ -634,7 +636,7 @@ contains
     
     mem = get_memory_usage()
     if(mem /= last_mem .or. profiling_space_full) then 
-      call profiling_memory_log('D ', var, file, line, mem)
+      call profiling_memory_log('D ', var, file, line, mem, 0)
       last_mem = mem
     end if
 
