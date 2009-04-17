@@ -38,7 +38,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   FLOAT,  allocatable :: eval(:)
 
   FLOAT :: lambda
-  integer :: ist, idim, ip, size, ii, jj, iter
+  integer :: ist, idim, ip, ii, jj, iter
   R_TYPE :: ca, cb, cc, fr, rr, fhr, rhr
   logical :: fail, did_something
 
@@ -52,78 +52,65 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     do idim = 1, st%d%dim
       call lalg_copy(gr%mesh%np, st%X(psi)(:, idim, ist, ik), psi(:, idim, 1))
     end do
-
-    do iter = 1, niter - 1
-
-!      print*, ist, iter
-
-      call X(hamiltonian_apply)(hm, gr, psi(:, :, iter), res(:, :, iter), ist, ik)
+    
+    call X(hamiltonian_apply)(hm, gr, psi(:, :, 1), res(:, :, 1), ist, ik)
+    
+    st%eigenval(ist, ik) = X(mf_dotp)(gr%mesh, st%d%dim, psi(:, :, 1), res(:, :, 1))
+    
+    do idim = 1, st%d%dim
+      call lalg_axpy(gr%mesh%np, -st%eigenval(ist, ik), psi(:, idim, 1), res(:, idim, 1))
+    end do
+    
+    if(X(mf_nrm2)(gr%mesh, st%d%dim, res(:, :, 1)) < tol) cycle
+    
+    ! get lambda
+    call X(hamiltonian_apply)(hm, gr, res(:, :, 1), res(:, :, 2), ist, ik)
+    
+    rr = X(mf_dotp)(gr%mesh, st%d%dim, res(:, :, 1), res(:, :, 1))
+    fr = X(mf_dotp)(gr%mesh, st%d%dim, psi(:, :, 1), res(:, :, 1))
+    rhr = X(mf_dotp)(gr%mesh, st%d%dim, res(:, :, 1), res(:, :, 2))
+    fhr = X(mf_dotp)(gr%mesh, st%d%dim, psi(:, :, 1), res(:, :, 2))
+    
+    ca = rr*fhr - rhr*fr
+    cb = rhr - st%eigenval(ist, ik)*rr
+    cc = fr - fhr
+    
+    lambda = 2*cc/(cb + sqrt(cb**2 - CNST(4.0)*ca*cc))
+    ! the article recommends to restrict the value of lambda, but for
+    ! us it makes things worst.
+    ! lambda = sign(max(min(1.0, abs(lambda)), 0.1), lambda)
+    
+    do iter = 2, niter
       
-      if(iter == 1) st%eigenval(ist, ik) = X(mf_dotp)(gr%mesh, st%d%dim, psi(:, :, 1), res(:, :, 1))
+      ! predict by jacobi
+      forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np)
+        psi(ip, idim, iter) = psi(ip, idim, iter - 1) + lambda*res(ip, idim, iter - 1)
+      end forall
+
+      ! calculate the residual
+      call X(hamiltonian_apply)(hm, gr, psi(:, :, iter), res(:, :, iter), ist, ik)
       
       do idim = 1, st%d%dim
         call lalg_axpy(gr%mesh%np, -st%eigenval(ist, ik), psi(:, idim, iter), res(:, idim, iter))
       end do
 
-      if(X(mf_nrm2)(gr%mesh, st%d%dim, res(:, :, iter)) < tol) then 
-        did_something = .false.
-        exit
-      else
-        did_something = .true.
-      end if
-
-      if(iter == 1) then
-        ! get lambda
-        call X(hamiltonian_apply)(hm, gr, res(:, :, 1), res(:, :, 2), ist, ik)
-
-        rr = X(mf_dotp)(gr%mesh, st%d%dim, res(:, :, 1), res(:, :, 1))
-        fr = X(mf_dotp)(gr%mesh, st%d%dim, psi(:, :, 1), res(:, :, 1))
-        rhr = X(mf_dotp)(gr%mesh, st%d%dim, res(:, :, 1), res(:, :, 2))
-        fhr = X(mf_dotp)(gr%mesh, st%d%dim, psi(:, :, 1), res(:, :, 2))
-
-        ca = rr*fhr - rhr*fr
-        cb = rhr - st%eigenval(ist, ik)*rr
-        cc = fr - fhr
-        
-        lambda = 2*cc/(cb + sqrt(cb**2 - CNST(4.0)*ca*cc))
-!        print*, "COEFF", ca, cb, cc, cb**2 - CNST(4.0)*ca*cc
-!        print*, "LAMBDA", lambda, 2*cc/(cb - sqrt(cb**2 - CNST(4.0)*ca*cc))
-!        lambda = sign(max(min(1.0, abs(lambda)), 0.1), lambda)
-!        print*, "LAMBDA2", lambda
-      end if
-
-      ! predict by jacobi
-      forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-        psi(ip, idim, iter + 1) = psi(ip, idim, iter) + lambda*res(ip, idim, iter)
-      end forall
-
-      ! calculate the residual
-      call X(hamiltonian_apply)(hm, gr, psi(:, :, iter + 1), res(:, :, iter + 1), ist, ik)
-      
-      do idim = 1, st%d%dim
-        call lalg_axpy(gr%mesh%np, -st%eigenval(ist, ik), psi(:, idim, iter + 1), res(:, idim, iter + 1))
-      end do
-
-      diff(ist) = X(mf_nrm2)(gr%mesh, st%d%dim, res(:, :, iter + 1))
-
-!      print*, "RES 0", diff(ist)
+      diff(ist) = X(mf_nrm2)(gr%mesh, st%d%dim, res(:, :, iter))
 
       ! perform the diis correction
-      size = iter + 1
-      ALLOCATE(aa(size, size), size**2)
-      ALLOCATE(mm(size, size), size**2)
-      ALLOCATE(evec(size, 1), size)
-      ALLOCATE(eval(size), size)
+      ALLOCATE(aa(iter, iter), iter**2)
+      ALLOCATE(mm(iter, iter), iter**2)
+      ALLOCATE(evec(iter, 1), iter)
+      ALLOCATE(eval(iter), iter)
 
-      do ii = 1, size
-        do jj = 1, size
+      do ii = 1, iter
+        do jj = 1, iter
           aa(ii, jj) = X(mf_dotp)(gr%mesh, st%d%dim, res(:, :, ii), res(:, :, jj))
           mm(ii, jj) = X(mf_dotp)(gr%mesh, st%d%dim, psi(:, :, ii), psi(:, :, jj))
         end do
       end do
 
       fail = .false.
-      call lalg_lowest_geneigensolve(1, size, aa, mm, eval, evec, bof = fail)
+      call lalg_lowest_geneigensolve(1, iter, aa, mm, eval, evec, bof = fail)
       
       if(fail) then
         SAFE_DEALLOCATE_A(aa)
@@ -132,35 +119,26 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
         SAFE_DEALLOCATE_A(evec)
         exit
       end if
-
+      
       !correct the new vector
-
       do idim = 1, st%d%dim
-        call lalg_scal(gr%mesh%np, evec(size, 1), psi(:, idim, size))
-        call lalg_scal(gr%mesh%np, evec(size, 1), res(:, idim, size))
+        call lalg_scal(gr%mesh%np, evec(iter, 1), psi(:, idim, iter))
+        call lalg_scal(gr%mesh%np, evec(iter, 1), res(:, idim, iter))
       end do
-
-      do ii = 1, size - 1
+      
+      do ii = 1, iter - 1
         do idim = 1, st%d%dim
-          call lalg_axpy(gr%mesh%np, evec(ii, 1), psi(:, idim, ii), psi(:, idim, size))
-          call lalg_axpy(gr%mesh%np, evec(ii, 1), res(:, idim, ii), res(:, idim, size))
+          call lalg_axpy(gr%mesh%np, evec(ii, 1), psi(:, idim, ii), psi(:, idim, iter))
+          call lalg_axpy(gr%mesh%np, evec(ii, 1), res(:, idim, ii), res(:, idim, iter))
         end do
       end do
-
-      diff(ist) = X(mf_nrm2)(gr%mesh, st%d%dim, res(:, :, iter + 1))
-
-!      print*, "ALPHA", evec(:, 1)
-!      print*, "RES 1", diff(ist)
-
-!      call X(hamiltonian_apply)(hm, gr, psi(:, :, iter + 1), res(:, :, iter + 1), ist, ik)
-!      
-!      do idim = 1, st%d%dim
-!        call lalg_axpy(gr%mesh%np, -st%eigenval(ist, ik), psi(:, idim, iter + 1), res(:, idim, iter + 1))
-!      end do
-
-!      diff(ist) = X(mf_nrm2)(gr%mesh, st%d%dim, res(:, :, iter + 1))
-!
-!      print*, "RES 2", diff(ist)
+      
+      ! recalculate the residual (this should be avoided)
+      call X(hamiltonian_apply)(hm, gr, psi(:, :, iter - 1 + 1), res(:, :, iter - 1 + 1), ist, ik)
+      !      
+      do idim = 1, st%d%dim
+        call lalg_axpy(gr%mesh%np, -st%eigenval(ist, ik), psi(:, idim, iter - 1 + 1), res(:, idim, iter - 1 + 1))
+      end do
 
       SAFE_DEALLOCATE_A(aa)
       SAFE_DEALLOCATE_A(mm)
@@ -169,12 +147,10 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
     end do
 
-    if(did_something) then
-      ! end with a trial move
-      forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-        st%X(psi)(ip, idim, ist, ik) = psi(ip, idim, iter) + lambda*res(ip, idim, iter)
-      end forall
-    end if
+    ! end with a trial move
+    forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
+      st%X(psi)(ip, idim, ist, ik) = psi(ip, idim, iter - 1) + lambda*res(ip, idim, iter - 1)
+    end forall
 
   end do
 
