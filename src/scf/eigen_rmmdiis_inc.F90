@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2009 X. Andrade
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -111,16 +111,19 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
       fail = .false.
       call lalg_lowest_geneigensolve(1, iter, aa, mm, eval, evec, bof = fail)
-      
+
+      SAFE_DEALLOCATE_A(aa)
+      SAFE_DEALLOCATE_A(mm)
+      SAFE_DEALLOCATE_A(eval)      
+        
       if(fail) then
-        SAFE_DEALLOCATE_A(aa)
-        SAFE_DEALLOCATE_A(mm)
-        SAFE_DEALLOCATE_A(eval)
         SAFE_DEALLOCATE_A(evec)
         exit
       end if
       
-      !correct the new vector
+      ! generate the new vector and the new residual (the residual
+      ! might be recalculated instead but that seems to be a bit
+      ! slower).
       do idim = 1, st%d%dim
         call lalg_scal(gr%mesh%np, evec(iter, 1), psi(:, idim, iter))
         call lalg_scal(gr%mesh%np, evec(iter, 1), res(:, idim, iter))
@@ -132,19 +135,8 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
           call lalg_axpy(gr%mesh%np, evec(ii, 1), res(:, idim, ii), res(:, idim, iter))
         end do
       end do
-      
-      ! recalculate the residual (this should be avoided)
-      call X(hamiltonian_apply)(hm, gr, psi(:, :, iter - 1 + 1), res(:, :, iter - 1 + 1), ist, ik)
-      !      
-      do idim = 1, st%d%dim
-        call lalg_axpy(gr%mesh%np, -st%eigenval(ist, ik), psi(:, idim, iter - 1 + 1), res(:, idim, iter - 1 + 1))
-      end do
 
-      SAFE_DEALLOCATE_A(aa)
-      SAFE_DEALLOCATE_A(mm)
-      SAFE_DEALLOCATE_A(eval)
       SAFE_DEALLOCATE_A(evec)
-
     end do
 
     ! end with a trial move
@@ -167,10 +159,8 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
     diff(ist) = X(mf_nrm2)(gr%mesh, st%d%dim, res(:, :, 1))
 
-!    print*, "EV ", st%eigenval(ist, ik), diff(ist)
   end do
 
-!  stop
   call pop_sub()
 
 end subroutine X(eigensolver_rmmdiis)
