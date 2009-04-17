@@ -19,6 +19,10 @@
 
 #include "config_F90.h"
 
+#ifndef HAVE_FC_SIZEOF
+#define sizeof(x) 8.0_8
+#endif
+
 #define MAX_SPIN 4
 
 #if defined(F90_ACCEPTS_LINE_NUMBERS)
@@ -54,7 +58,7 @@
 
 #if defined(LONG_LINES)
 #  define ALLOCATE(x, size) allocate(x, stat=global_alloc_err); \
-     if(profiling_space) call profiling_memory_allocate(#x, __FILE__, __LINE__, size); \
+     if(profiling_space .and. size > 0) call profiling_memory_allocate(#x, __FILE__, __LINE__, (size)*dble(sizeof(x))); \
      if(global_alloc_err.ne.0) call alloc_error((size), __FILE__, __LINE__)
 
 #  define DEALLOCATE(x) deallocate(x, stat=global_alloc_err); \
@@ -67,12 +71,14 @@
 #else
 #  define ALLOCATE(x, size) \
      allocate(x, stat=global_alloc_err)                 \newline \
-     if(profiling_space) then                           \newline \
+       if(profiling_space .and. &                       \newline \
+       size > 0) then                                   \newline \
        call profiling_memory_allocate(&                 \newline \
   #x,       &                                           \newline \
   __FILE__, &                                           \newline \
   __LINE__, &                                           \newline \
-  size)                                                 \newline \
+     (size)*&                                             \newline \
+     dble(sizeof(x)))                                   \newline \
      end if                                             \newline \
      if(global_alloc_err.ne.0) then                     \newline \
        call alloc_error((size),  &                      \newline \

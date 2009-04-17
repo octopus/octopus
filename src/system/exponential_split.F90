@@ -170,7 +170,7 @@ contains
     message(1) = 'Error: zexp_vnlpsi is currently broken.'
     call write_fatal(1)
 
-!    ALLOCATE(initzpsi(m%np, 1:hm%d%dim), m%np*hm%d%dim)
+!    ALLO CATE(initzpsi(m%np, 1:hm%d%dim), m%np*hm%d%dim)
 !   just to avoid compiler warnings due to unused variables
 !    factor   = factor_
 !    order    = order_

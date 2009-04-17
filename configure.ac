@@ -189,6 +189,9 @@ LIBS="${FCEXTRALIBS} $FCLIBS"
 dnl Sometimes Fortran may use the flush function, sometimes not.
 ACX_FORTRAN_CHECK_FUNC(flush)
 
+dnl Some compiler define the sizeof intrinsic
+ACX_FC_SIZEOF
+
 ACX_FORTRAN_LOC
 
 dnl check whether we have or not a compiler that allows for very long lines...
