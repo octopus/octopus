@@ -379,7 +379,12 @@ contains
     FLOAT, allocatable :: f_loc(:,:)
     character(len=256) :: fname
     integer :: is, ierr, imax
+    type(mpi_grp_t) :: mpi_grp
     
+    mpi_grp = gr%mesh%mpi_grp
+    if(st%parallel_in_states) mpi_grp = st%mpi_grp
+    if(st%d%kpt%parallel) mpi_grp = st%d%kpt%mpi_grp
+
     ! if SPIN_POLARIZED, the ELF contains one extra channel: the total ELF
     imax = st%d%nspin
     if(st%d%ispin == SPIN_POLARIZED) imax = 3
@@ -402,7 +407,7 @@ contains
           do is = 1, 2
             write(fname, '(a,a,i1)') 'elf_rs', '-', is
             call doutput_function(outp%how, dir, trim(fname), gr%mesh, gr%sb, &
-              f_loc(:, is), M_ONE, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
+              f_loc(:, is), M_ONE, ierr, is_tmp = .false., geo = geo, grp = mpi_grp)
           end do
         end if
       end if
@@ -417,7 +422,7 @@ contains
       do is = 1, st%d%nspin
         write(fname, '(a,a,i1)') 'elf_fs', '-', is
         call doutput_function(outp%how, dir, trim(fname), gr%mesh, gr%sb, &
-          f_loc(:,is), M_ONE, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
+          f_loc(:,is), M_ONE, ierr, is_tmp = .false., geo = geo, grp = mpi_grp)
       end do
     end if
 
@@ -427,7 +432,7 @@ contains
         call dderivatives_lapl(gr%der, st%rho(:,is), f_loc(:,is))
         write(fname, '(a,a,i1)') 'bader', '-', is
         call doutput_function(outp%how, dir, trim(fname), gr%mesh, gr%sb, &
-          f_loc(:,is), M_ONE, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
+          f_loc(:,is), M_ONE, ierr, is_tmp = .false., geo = geo, grp = mpi_grp)
 
         write(fname, '(a,a,i1)') 'bader_basins', '-', is
         call out_basins(f_loc(:,1), fname)
@@ -438,7 +443,7 @@ contains
     if(iand(outp%what, output_el_pressure).ne.0) then
       call h_sys_calc_electronic_pressure(st, hm, gr, f_loc(:,1))
       call doutput_function(outp%how, dir, "el_pressure", gr%mesh, gr%sb, &
-        f_loc(:,1), M_ONE, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
+        f_loc(:,1), M_ONE, ierr, is_tmp = .false., geo = geo, grp = mpi_grp)
     end if
 
     SAFE_DEALLOCATE_A(f_loc)
