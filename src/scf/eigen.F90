@@ -127,10 +127,13 @@ contains
     !% Journal on Scientific Computing, 23(2):517??541, 2001.
     !%Option rmmdiis 10
     !% Residual minimization scheme, direct inversion in the iterative
-    !% subspace, combine it with the multigrid preconditioner. This is
-    !% copy of GPAW eigensolver (bugs are ours). There are some
-    !% convergency problems with this eigensolver, but if it works it
-    !% is very fast.
+    !% subspace eigensolver, based on the implementation of Kresse and
+    !% Furthmüller [Phys. Rev. B 54, 11169 (1996)]. This eigensolver
+    !% requires almost no orthogonalization so it can be considerably
+    !% faster than the other options for large systems, however it
+    !% might suffer stability problems. To improve its performance a
+    !% large number of ExtraStates are required (around 10-20% of the
+    !% number of occupied states).
     !%Option multigrid 7
     !% Multigrid eigensolver (experimental).
     !%End
