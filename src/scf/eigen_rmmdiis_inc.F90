@@ -65,14 +65,16 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     end do
     
     if(X(mf_nrm2)(gr%mesh, st%d%dim, res(:, :, 1)) < tol) cycle
+
+    call X(preconditioner_apply)(pre, gr, hm, res(:, :, 1), psi(:, :, 2))
     
     ! get lambda 
-    call X(hamiltonian_apply)(hm, gr, res(:, :, 1), res(:, :, 2), ist, ik)
+    call X(hamiltonian_apply)(hm, gr, psi(:, :, 2), res(:, :, 2), ist, ik)
     nops = nops + 1
 
-    rr = X(mf_dotp)(gr%mesh, st%d%dim, res(:, :, 1), res(:, :, 1))
-    fr = X(mf_dotp)(gr%mesh, st%d%dim, psi(:, :, 1), res(:, :, 1))
-    rhr = X(mf_dotp)(gr%mesh, st%d%dim, res(:, :, 1), res(:, :, 2))
+    rr = X(mf_dotp)(gr%mesh, st%d%dim, psi(:, :, 2), psi(:, :, 2))
+    fr = X(mf_dotp)(gr%mesh, st%d%dim, psi(:, :, 1), psi(:, :, 2))
+    rhr = X(mf_dotp)(gr%mesh, st%d%dim, psi(:, :, 2), res(:, :, 2))
     fhr = X(mf_dotp)(gr%mesh, st%d%dim, psi(:, :, 1), res(:, :, 2))
     
     ca = rr*fhr - rhr*fr
@@ -80,12 +82,14 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     cc = st%eigenval(ist, ik)*fr - fhr
     
     lambda = 2*cc/(cb + sqrt(cb**2 - CNST(4.0)*ca*cc))
-    ! the article recommends to restrict the value of lambda, but for
-    ! us it makes things worst.
-    ! lambda = sign(max(min(1.0, abs(lambda)), 0.1), lambda)
-    
+
+    ! restrict the value of lambda to be between 0.1 and 1.0
+    if(abs(lambda) > CNST(1.0)) lambda = lambda/abs(lambda)
+    if(abs(lambda) < CNST(0.1)) lambda = CNST(0.1)*lambda/abs(lambda)
+
     do iter = 2, niter
-      call X(preconditioner_apply)(pre, gr, hm, res(:, :, iter - 1), psi(:, :, iter))
+      ! for iter == 2 the preconditioning was done already
+      if(iter > 2) call X(preconditioner_apply)(pre, gr, hm, res(:, :, iter - 1), psi(:, :, iter))
 
       ! predict by jacobi
       forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np)
@@ -146,8 +150,11 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     end do
 
     ! end with a trial move
+    call X(preconditioner_apply)(pre, gr, hm, res(:, :, iter - 1), st%X(psi)(: , :, ist, ik))
+
+    ! end with a trial move
     forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-      st%X(psi)(ip, idim, ist, ik) = psi(ip, idim, iter - 1) + lambda*res(ip, idim, iter - 1)
+      st%X(psi)(ip, idim, ist, ik) = psi(ip, idim, iter - 1) + lambda*st%X(psi)(ip, idim, ist, ik)
     end forall
 
     if(mpi_grp_is_root(mpi_world)) then
