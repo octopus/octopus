@@ -40,7 +40,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   FLOAT :: lambda
   integer :: ist, idim, ip, ii, jj, iter, nops
   R_TYPE :: ca, cb, cc, fr, rr, fhr, rhr
-  logical :: fail, did_something
+  logical :: fail
 
   call push_sub('eigen_rmmdiis_inc.eigensolver_rmmdiis')
 
@@ -206,9 +206,10 @@ subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, niter, converged,
 
   call push_sub('eigen_rmmdiis.Xeigensolver_rmmdiis_start')
 
-  ALLOCATE(res(gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
+  ALLOCATE(res(gr%mesh%np_part, st%d%dim),  gr%mesh%np_part*st%d%dim)
   ALLOCATE(hres(gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
   ALLOCATE(kres(gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
+  niter = 0
 
   do isweep = 1, sweeps
 
@@ -220,7 +221,7 @@ subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, niter, converged,
         psi => st%X(psi)(:, :, ist, ik)
 
         call X(hamiltonian_apply)(hm, gr, psi, res, ist, ik)
-        
+
         st%eigenval(ist, ik) = X(mf_dotp)(gr%mesh, st%d%dim, psi, res)
 
         do idim = 1, st%d%dim
@@ -230,6 +231,7 @@ subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, niter, converged,
         call X(preconditioner_apply)(pre, gr, hm, res, kres)
 
         call X(hamiltonian_apply)(hm, gr, kres, hres, ist, ik)
+        niter = niter + 2
 
         rr  = X(mf_dotp)(gr%mesh, st%d%dim, kres, kres)
         fr  = X(mf_dotp)(gr%mesh, st%d%dim, psi,  kres)
@@ -246,7 +248,6 @@ subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, niter, converged,
           call lalg_axpy(gr%mesh%np, lambda, kres(:, idim), psi(:, idim))
         end do
 
-        ! normalize (todo: we can avoid this step by simply generalizing the formula for lambda)
         nrm2 = X(mf_nrm2)(gr%mesh, st%d%dim, psi)
         do idim = 1, st%d%dim
           call lalg_scal(gr%mesh%np, M_ONE/nrm2, psi(:, idim))
