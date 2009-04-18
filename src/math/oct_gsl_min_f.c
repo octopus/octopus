@@ -186,6 +186,8 @@ int FC_FUNC_(oct_minimize, OCT_MINIMIZE)
     }
   while (status == GSL_CONTINUE && iter <= *maxiter);
 
+  if(status == GSL_CONTINUE) status = 1025;
+
   gsl_multimin_fdfminimizer_free (s);
   gsl_vector_free (x); gsl_vector_free(absgrad); gsl_vector_free(absdr);
 

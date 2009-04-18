@@ -44,7 +44,8 @@ module opt_control_iter_m
             oct_iterator_bestpar,     &
             oct_iterator_current,     &
             oct_iterator_maxiter,     &
-            oct_iterator_tolerance
+            oct_iterator_tolerance,   &
+            iteration_manager_main
 
 
   type oct_iterator_t
@@ -52,6 +53,7 @@ module opt_control_iter_m
     FLOAT              :: eps
     integer            :: ctr_iter_max
     integer            :: ctr_iter
+    integer            :: ctr_iter_main
     FLOAT              :: bestJ1
     FLOAT              :: bestJ1_fluence
     FLOAT              :: bestJ1_J
@@ -110,6 +112,7 @@ contains
     if(iterator%ctr_iter_max < 0) iterator%ctr_iter_max = huge(iterator%ctr_iter_max)
 
     iterator%ctr_iter = 0
+    iterator%ctr_iter_main = 0
     iterator%bestJ1        = -CNST(1.0e20)
     iterator%bestJ1_fluence  = M_ZERO
     iterator%bestJ1_J        = M_ZERO
@@ -119,14 +122,13 @@ contains
     call parameters_copy(iterator%best_par, par)
 
     iterator%convergence_iunit = io_open('opt-control/convergence', action='write')
+
+    write(iterator%convergence_iunit, '(91("#"))') 
     write(iterator%convergence_iunit, '(5(a))') '# iteration', '  J[Psi,chi,epsilon]', &
                                                 '            J_1[Psi]', &
                                                 '        J_2[epsilon]', &
                                                 '               Delta'
-
-    write(iterator%convergence_iunit, '(a)') &
-     '###########################################################################################'
-
+    write(iterator%convergence_iunit, '(91("#"))') 
 
     call pop_sub()
   end subroutine oct_iterator_init
@@ -143,7 +145,7 @@ contains
 
     call parameters_end(iterator%best_par)
     SAFE_DEALLOCATE_P(iterator%best_par)
-    nullify(iterator%best_par)
+    write(iterator%convergence_iunit, '(91("#"))') 
     call io_close(iterator%convergence_iunit)
 
     call pop_sub()
@@ -281,6 +283,19 @@ contains
 
 
   ! ---------------------------------------------------------
+  subroutine iteration_manager_main(iterator, j, j1, j2, delta)
+    type(oct_iterator_t), intent(inout) :: iterator
+    FLOAT, intent(in) :: j, j1, j2, delta
+    iterator%ctr_iter_main = iterator%ctr_iter_main + 1
+    write(iterator%convergence_iunit, '("### MAIN ITERATION")') 
+    write(iterator%convergence_iunit, '(a2,i9,4f20.8)')                &
+      '##', iterator%ctr_iter_main, j, j1, j2, delta
+    write(iterator%convergence_iunit, '("###")') 
+  end subroutine iteration_manager_main
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
   subroutine iterator_write(iterator, par)
     type(oct_iterator_t),           intent(in) :: iterator
     type(oct_control_parameters_t), intent(in) :: par
@@ -306,7 +321,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  integer function oct_iterator_current(iterator)
+  integer pure function oct_iterator_current(iterator)
     type(oct_iterator_t), intent(in)     :: iterator
     oct_iterator_current = iterator%ctr_iter
   end function oct_iterator_current
@@ -314,7 +329,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  integer function oct_iterator_maxiter(iterator)
+  integer pure function oct_iterator_maxiter(iterator)
     type(oct_iterator_t), intent(in)     :: iterator
     oct_iterator_maxiter = iterator%ctr_iter_max
   end function oct_iterator_maxiter
@@ -322,7 +337,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  FLOAT function oct_iterator_tolerance(iterator)
+  FLOAT pure function oct_iterator_tolerance(iterator)
     type(oct_iterator_t), intent(in)     :: iterator
     oct_iterator_tolerance = iterator%eps
   end function oct_iterator_tolerance

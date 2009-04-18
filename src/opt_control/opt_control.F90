@@ -81,7 +81,7 @@ module opt_control_m
   type(states_t), save       :: initial_st
   
 
-  ! For the algorithm_direct scheme:
+  ! For the direct, newuoa, and cg schemes:
   type(oct_control_parameters_t), save :: par_
   type(system_t), pointer :: sys_
   type(hamiltonian_t), pointer :: hm_
@@ -396,6 +396,17 @@ contains
       ierr = loct_minimize(MINMETHOD_BFGS2, dof, x(1), step, &
            real(oct_iterator_tolerance(iterator), 8), real(oct_iterator_tolerance(iterator), 8), &
            maxiter, opt_control_cg_calc, opt_control_cg_write_info, minvalue)
+
+      if(ierr.ne.0) then
+        if(ierr <= 1024) then
+          message(1) = "Error occurred during the GSL minimization procedure:"
+          call loct_strerror(ierr, message(2))
+          call write_fatal(2)
+        else
+          message(1) = "The CG optimization did not meet the convergence criterion."
+          call write_info(1)
+        end if
+      end if
 
       SAFE_DEALLOCATE_A(x)
       call pop_sub()
@@ -732,11 +743,12 @@ contains
 
     integer :: j
     type(oct_control_parameters_t) :: par_new
-    FLOAT :: j1
-    FLOAT, allocatable :: theta(:)
+    FLOAT :: j1, fdf, dx, fmdf
+    FLOAT, allocatable :: theta(:), xdx(:), dfn(:)
     type(states_t) :: psi
 
     call push_sub("opt_control.opt_control_cg_calc")
+
 
     if(getgrad .eq. 1) then
       call parameters_set_theta(par_, x)
@@ -750,6 +762,42 @@ contains
       call parameters_set_rep(par_new)
       call parameters_get_theta(par_new, theta)
       forall(j = 1:n) df(j) =  M_TWO * parameters_alpha(par_, 1) * x(j) - M_TWO * theta(j)
+
+      ! Check if the gradient has been computed properly... This should be done only
+      ! for debugging purposes.
+      if(abs(oct%check_gradient) > M_ZERO) then
+        dx = CNST(0.001)
+        ALLOCATE(xdx(n), n)
+        ALLOCATE(dfn(n), n)
+        do j = 1, n
+          xdx = x
+          xdx(j) = xdx(j) + dx
+          call parameters_set_theta(par_, xdx)
+          call parameters_theta_to_basis(par_)
+          call states_copy(psi, initial_st)
+          call propagate_forward(sys_, hm_, td_, par_, target, psi)
+          fdf = - j1_functional(target, sys_%gr, psi) - parameters_j2(par_)
+
+          xdx(j) = xdx(j) - CNST(2.0)*dx
+          call parameters_set_theta(par_, xdx)
+          call parameters_theta_to_basis(par_)
+          call states_copy(psi, initial_st)
+          call propagate_forward(sys_, hm_, td_, par_, target, psi)
+          fmdf = - j1_functional(target, sys_%gr, psi) - parameters_j2(par_)
+
+          dfn(j) = (fdf - fmdf)/(CNST(2.0)*dx)
+        end do
+
+        write(*, '(80("#"))')
+        write(*, *) 'GRADIENT (FORWARD-BACKWARD) |    GRADIENT (NUMERICAL)     |       DIFF'
+        do j = 1, n
+          write(*, '(4x,es18.8,7x,"|",4x,es18.8,7x,"|",es18.8)'), df(j), dfn(j), df(j)-dfn(j)
+        end do
+
+        SAFE_DEALLOCATE_A(xdx)
+      end if
+
+
       SAFE_DEALLOCATE_A(theta)
       call parameters_end(par_new)
     else
@@ -793,6 +841,8 @@ contains
     write(message(5), '(6x,a,f12.5)')    " => Delta    = ", maxdx
     call write_info(5)
     call messages_print_stress(stdout)
+
+    call iteration_manager_main(iterator, j, j1, j2, maxdx)
 
     call pop_sub()
   end subroutine opt_control_cg_write_info
@@ -865,6 +915,8 @@ contains
     write(message(5), '(6x,a,f12.5)')    " => Delta    = ", maxdx
     call write_info(5)
     call messages_print_stress(stdout)
+
+    call iteration_manager_main(iterator, j, j1, j2, maxdx)
 
     call pop_sub()
   end subroutine opt_control_direct_write_info

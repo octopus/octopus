@@ -44,6 +44,7 @@ module opt_control_global_m
     FLOAT   :: direct_step
     logical :: use_mixing
     logical :: oct_double_check
+    FLOAT   :: check_gradient
     logical :: dump_intermediate
     integer :: number_checkpoints
     logical :: random_initial_guess
@@ -115,7 +116,8 @@ module opt_control_global_m
     !% algorithms. Not all of them can be used with any choice of target or control function
     !% representation. For example, some algorithms cannot be used if 
     !% "OCTControlRepresentation = control_function_real_time" ("oct_algorithm_direct" and 
-    !% "oct_algorithm_newuoa"), and others cannot be used if "OCTControlRepresentation = control_function_parametrized"
+    !% "oct_algorithm_newuoa"), and others cannot be used if 
+    !% "OCTControlRepresentation = control_function_parametrized"
     !% (all others, except "oct_algorithm_straight_iteration").
     !%Option oct_algorithm_zbr98 1 
     !% Backward-Forward-Backward scheme described in JCP 108, 1953 (1998).
@@ -123,11 +125,14 @@ module opt_control_global_m
     !% Provides fast, stable and monotonic convergence.
     !%Option oct_algorithm_zr98  2
     !% Forward-Backward-Forward scheme described in JCP 109,385 (1998).
-    !% Works for projection and more general target operators, also. The convergence is stable but slower than ZBR98. 
-    !% Note that local operators show an extremely slow convergence. It ensures monotonic convergence.
+    !% Works for projection and more general target operators, also. The convergence is 
+    !% stable but slower than ZBR98. 
+    !% Note that local operators show an extremely slow convergence. It ensures monotonic 
+    !% convergence.
     !%Option oct_algorithm_wg05  3
     !% Forward-Backward scheme described in J. Opt. B. 7 300 (2005).
-    !% Works for all kind target operators and can be used with all kind of filters and allows a fixed fluence.
+    !% Works for all kind target operators and can be used with all kind of filters and 
+    !% allows a fixed fluence.
     !% The price is a rather instable convergence. 
     !% If the restrictions set by the filter and fluence are reasonable, a good overlap can be 
     !% expected with 20 iterations.
@@ -201,11 +206,30 @@ module opt_control_global_m
     !%Section Calculation Modes::Optimal Control
     !%Default true
     !%Description 
-    !% In order to make sure that the optimized field indeed does its job, the code may run a normal 
-    !% propagation after the optimization using the optimized field.
+    !% In order to make sure that the optimized field indeed does its job, the code 
+    !% may run a normal propagation after the optimization using the optimized field.
     !%End
     call loct_parse_logical(datasets_check('OCTDoubleCheck'), .true., oct%oct_double_check)
     call messages_print_var_value(stdout, "OCTDoubleCheck", oct%oct_double_check)
+
+
+    !%Variable OCTCheckGradient
+    !%Type float
+    !%Section Calculation Modes::Optimal Control
+    !%Default 0.0
+    !%Description 
+    !% When doing QOCT with the conjugate gradient optimization scheme, the gradient is
+    !% computed thanks to a forward-backwards propagation. For debugging purposes, this
+    !% gradient can be compared with the value obtained "numerically" (i.e. by doing
+    !% successive forward propagations with control fields separated by small finite
+    !% differences).
+    !%
+    !% In order to activate this feature, set "OCTCheckGradient" to some non-zero value,
+    !% which will be the finite difference used to numerically compute the gradient.
+    !%End
+    call loct_parse_float(datasets_check('OCTCheckGradient'), CNST(0.0), oct%check_gradient)
+    call messages_print_var_value(stdout, "OCTCheckGradient", oct%check_gradient)
+
 
     !%Variable OCTMixing
     !%Type logical
