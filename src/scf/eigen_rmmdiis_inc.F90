@@ -77,7 +77,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     
     ca = rr*fhr - rhr*fr
     cb = rhr - st%eigenval(ist, ik)*rr
-    cc = fr - fhr
+    cc = st%eigenval(ist, ik)*fr - fhr
     
     lambda = 2*cc/(cb + sqrt(cb**2 - CNST(4.0)*ca*cc))
     ! the article recommends to restrict the value of lambda, but for
@@ -200,14 +200,12 @@ subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, niter, converged,
   R_TYPE, pointer     :: psi(:, :)
   R_TYPE, allocatable :: res(:, :)
   R_TYPE, allocatable :: kres(:, :)
-  R_TYPE, allocatable :: hres(:, :)
 
-  FLOAT :: nrm2
+  FLOAT :: fhf, ff
 
   call push_sub('eigen_rmmdiis.Xeigensolver_rmmdiis_start')
 
   ALLOCATE(res(gr%mesh%np_part, st%d%dim),  gr%mesh%np_part*st%d%dim)
-  ALLOCATE(hres(gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
   ALLOCATE(kres(gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
   niter = 0
 
@@ -222,7 +220,10 @@ subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, niter, converged,
 
         call X(hamiltonian_apply)(hm, gr, psi, res, ist, ik)
 
-        st%eigenval(ist, ik) = X(mf_dotp)(gr%mesh, st%d%dim, psi, res)
+        fhf = X(mf_dotp)(gr%mesh, st%d%dim, psi, res)
+        ff = X(mf_dotp)(gr%mesh, st%d%dim, psi, psi)
+
+        st%eigenval(ist, ik) = fhf/ff
 
         do idim = 1, st%d%dim
           call lalg_axpy(gr%mesh%np, -st%eigenval(ist, ik), psi(:, idim), res(:, idim))
@@ -230,27 +231,22 @@ subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, niter, converged,
         
         call X(preconditioner_apply)(pre, gr, hm, res, kres)
 
-        call X(hamiltonian_apply)(hm, gr, kres, hres, ist, ik)
+        call X(hamiltonian_apply)(hm, gr, kres, res, ist, ik)
         niter = niter + 2
 
         rr  = X(mf_dotp)(gr%mesh, st%d%dim, kres, kres)
         fr  = X(mf_dotp)(gr%mesh, st%d%dim, psi,  kres)
-        rhr = X(mf_dotp)(gr%mesh, st%d%dim, kres, hres)
-        fhr = X(mf_dotp)(gr%mesh, st%d%dim, psi,  hres)
+        rhr = X(mf_dotp)(gr%mesh, st%d%dim, kres, res)
+        fhr = X(mf_dotp)(gr%mesh, st%d%dim, psi,  res)
 
         ca = rr*fhr - rhr*fr
-        cb = rhr - st%eigenval(ist, ik)*rr
-        cc = fr - fhr
+        cb = ff*rhr - fhf*rr
+        cc = fhf*fr - ff*fhr
 
         lambda = 2*cc/(cb + sqrt(cb**2 - CNST(4.0)*ca*cc))
 
         do idim = 1, st%d%dim
           call lalg_axpy(gr%mesh%np, lambda, kres(:, idim), psi(:, idim))
-        end do
-
-        nrm2 = X(mf_nrm2)(gr%mesh, st%d%dim, psi)
-        do idim = 1, st%d%dim
-          call lalg_scal(gr%mesh%np, M_ONE/nrm2, psi(:, idim))
         end do
 
       end do
@@ -261,7 +257,6 @@ subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, niter, converged,
   end do
   
   SAFE_DEALLOCATE_A(res)
-  SAFE_DEALLOCATE_A(hres)
   SAFE_DEALLOCATE_A(kres)
 
 
