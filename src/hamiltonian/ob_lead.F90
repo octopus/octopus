@@ -220,7 +220,7 @@ contains
 
     call push_sub('ob_lead.apply_coupling')
 
-    call lalg_copy(np**2, matrix(:, 1), res(:, 1))
+    res(1:np, 1:np) = matrix(1:np, 1:np)
     if(il.eq.LEFT) then
       call lalg_trmm(np, np, 'U', 'N', 'L', M_z1, offdiag, res)
       call lalg_trmm(np, np, 'U', 'T', 'R', M_z1, offdiag, res)
@@ -237,7 +237,7 @@ contains
   ! Calculates the time-dependent lead potential from formula string.
   subroutine lead_td_pot(td_pot, formula, n_steps, tstep)
     integer,          intent(in)  :: n_steps
-    FLOAT,            intent(out) :: td_pot(0:n_steps+1, NLEADS)
+    FLOAT,            intent(out) :: td_pot(0:n_steps+1, 1:NLEADS)
     character(len=*), intent(in)  :: formula(:)
     FLOAT,            intent(in)  :: tstep
 

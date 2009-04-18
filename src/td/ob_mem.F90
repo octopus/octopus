@@ -69,7 +69,7 @@ contains
   ! calculate them.
   subroutine ob_mem_init(intface, hm, ob, delta, max_iter, op, &
     spacing, order, mpi_grp)
-    type(interface_t),   intent(in)    :: intface(NLEADS)
+    type(interface_t),   intent(in)    :: intface(1:NLEADS)
     type(hamiltonian_t), intent(in)    :: hm
     type(ob_terms_t),    intent(inout) :: ob
     FLOAT,               intent(in)    :: delta
@@ -501,7 +501,7 @@ contains
       ! accumulated in tmp2.
       tmp2 = M_z0
       do k = 1, i-1
-        call lalg_copy(np**2, coeffs(1, :, k), tmp(:, 1))
+        tmp(1:np, 1:np) = coeffs(1:np, 1:np, k)
         call lalg_axpy(np**2, M_z2, coeffs(:, 1, k-1), tmp(:, 1))
         if(k.gt.1) then
           call lalg_axpy(np**2, M_z1, coeffs(:, 1, k-2), tmp(:, 1))
@@ -511,7 +511,7 @@ contains
 
       ! The convergence loop.
       do j = 1, mem_iter
-        call lalg_copy(np**2, coeff_p(:, 1, i), p_prev(:, 1))
+        p_prev(1:np, 1:np) = coeff_p(1:np, 1:np, i)
 
         ! k = m.
         call apply_coupling(p_prev, offdiag, coeff_p(:, :, i), np, il)
@@ -523,7 +523,7 @@ contains
         end if
 
         call lalg_symm(np, np, 'L', M_z1, coeff_p(:, :, i), coeff_p(:, :, 0), M_z0, tmp)
-        call lalg_copy(np**2, tmp(:, 1), coeff_p(:, 1, i))
+        coeff_p(1:np, 1:np, i) = tmp(1:np, 1:np)
 
         ! k = 0.
         call lalg_symm(np, np, 'L', M_z1, coeffs(:, :, 0), p_prev, M_z1, coeff_p(:, :, i))
@@ -533,7 +533,7 @@ contains
         call lalg_scal(np**2, TOCMPLX(-delta**2, 0), coeff_p(:, 1, i))
         call lalg_symm(np, np, 'L', M_z1, prefactor_minus, coeff_p(:, :, i-1), M_z1, coeff_p(:, :, i))
         call lalg_symm(np, np, 'L', M_z1, prefactor_plus, coeff_p(:, :, i), M_z0, tmp)
-        call lalg_copy(np**2, tmp(:, 1), coeff_p(:, 1, i))
+        coeff_p(1:np, 1:np, i) = tmp(1:np, 1:np)
 
         norm = infinity_norm(coeff_p(:, :, i))
         if(abs(norm-old_norm).lt.mem_tolerance) then

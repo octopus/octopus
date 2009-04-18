@@ -118,7 +118,7 @@ contains
         do il = 1, NLEADS
           do idim = 1, st%d%dim
             np_intf = gr%intf(il)%np
-            call lalg_copy(np_intf**2, st%ob_green(:, 1, idim, ist, ik, il), green(:, 1, idim, il))
+            green(1:np_intf, 1:np_intf, idim, il) = st%ob_green(1:np_intf, 1:np_intf, idim, ist, ik, il)
             call apply_coupling(green(:, :, idim, il), hm%lead_h_offdiag(:, :, il), &
               green(:, :, idim, il), np_intf, il)
           end do
@@ -244,13 +244,13 @@ contains
     ALLOCATE(tmp_y(np_part, dim), np_part*dim)
 
     do idim = 1, dim
-      call lalg_copy(np, x(l(idim):u(idim)), tmp_x(:, idim))
+      tmp_x(1:np, idim) = x(l(idim):u(idim))
     end do
     call zhamiltonian_apply(hm_p, gr_p, tmp_x, tmp_y, ist_p, ik_p)
 
     ! y <- e x - tmp_y
     do idim = 1, dim
-      call lalg_copy(np, tmp_y(:, idim), y(l(idim):u(idim)))
+      y(l(idim):u(idim)) = tmp_y(1:np, idim)
       call lalg_scal(np, -M_z1, y(l(idim):u(idim)))
       call lalg_axpy(np, energy_p, x(l(idim):u(idim)), y(l(idim):u(idim)))
     end do

@@ -76,12 +76,12 @@ contains
     threshold = CNST(1e-12) ! FIXME: read from input.
 
     ! Fill with start values.
-    call lalg_copy(np**2, diag(:, 1), e(:, 1))
-    call lalg_copy(np**2, offdiag(:, 1), a(:, 1))
+    e(1:np, 1:np) = diag(1:np, 1:np)
+    a(1:np, 1:np) = offdiag(1:np, 1:np)
     do i = 1, np
       b(i, :) = offdiag(:, i)
     end do
-    call lalg_copy(np**2, diag(:, 1), es(:, 1))
+    es(1:np, 1:np) = diag(1:np, 1:np)
     old_norm = M_ZERO
 
     do i = 1, 1000 ! FIXME: read from input. 2^1000 efective layers
@@ -112,9 +112,9 @@ contains
 
       call lalg_gemm(np, np, np, M_z1, b, inv, M_Z0, tmp1)
       call lalg_gemm(np, np, np, M_z1, tmp1, a, M_z1, e)
-      call lalg_copy(np**2, a(:, 1), tmp3(:, 1))
+      tmp3(1:np, 1:np) = a(1:np, 1:np)
       call lalg_gemm(np, np, np, M_z1, tmp2, tmp3, M_z0, a)
-      call lalg_copy(np**2, b(:, 1), tmp3(:, 1))
+      tmp3(1:np, 1:np) = b(1:np, 1:np)
       call lalg_gemm(np, np, np, M_z1, tmp1, tmp3, m_z0, b)
     end do
 

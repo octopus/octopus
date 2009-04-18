@@ -198,8 +198,7 @@ contains
 
     call push_sub('ob_interface.put_intf_wf')
 
-    call lalg_copy(intf%np, &
-      intf_wf, zpsi(intf%index_range(1):intf%index_range(2)))
+    zpsi(intf%index_range(1):intf%index_range(2)) = intf_wf(1:intf%np)
 
     call pop_sub()
   end subroutine put_intf_wf
@@ -222,7 +221,7 @@ contains
     ALLOCATE(op_intf_wf(intf%np), intf%np)
 
     call get_intf_wf(intf, wf, intf_wf)
-    call lalg_copy(intf%np, intf_wf, op_intf_wf)
+    op_intf_wf(1:intf%np) = intf_wf(1:intf%np)
     call lalg_gemv(intf%np, intf%np, alpha, op, intf_wf, M_z1, op_intf_wf)
     call put_intf_wf(intf, op_intf_wf, wf)
 
@@ -287,10 +286,7 @@ contains
 
     call push_sub('ob_interface.intface_end')
 
-    if(associated(intf%index)) then
-      SAFE_DEALLOCATE_P(intf%index)
-      nullify(intf%index)
-    end if
+    SAFE_DEALLOCATE_P(intf%index)
 
     call pop_sub()
   end subroutine interface_end
