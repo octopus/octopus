@@ -123,12 +123,12 @@ contains
 
     iterator%convergence_iunit = io_open('opt-control/convergence', action='write')
 
-    write(iterator%convergence_iunit, '(91("#"))') 
+    write(iterator%convergence_iunit, '(91(''#''))') 
     write(iterator%convergence_iunit, '(5(a))') '# iteration', '  J[Psi,chi,epsilon]', &
                                                 '            J_1[Psi]', &
                                                 '        J_2[epsilon]', &
                                                 '               Delta'
-    write(iterator%convergence_iunit, '(91("#"))') 
+    write(iterator%convergence_iunit, '(91(''#''))') 
 
     call pop_sub()
   end subroutine oct_iterator_init
