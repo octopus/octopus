@@ -620,15 +620,10 @@ module opt_control_target_m
     select case(target%type)
     case(oct_tg_td_local)
       call tdtarget_build_tdlocal(target, gr, t)
-      do ik = 1, inh%d%nik
-        do ist = inh%st_start, inh%st_end
-          do idim = 1, inh%d%dim
-            do i = 1, gr%mesh%np
-              inh%zpsi(i, idim, ist, ik) = M_zI * target%rho(i) * psi%zpsi(i, idim, ist, ik)
-            end do
-          end do
-        end do
-      end do
+      forall(ik = 1:inh%d%nik, ist = inh%st_start:inh%st_end, &
+        idim = 1:inh%d%dim, i = 1:gr%mesh%np)
+        inh%zpsi(i, idim, ist, ik) = - target%rho(i) * psi%zpsi(i, idim, ist, ik)
+      end forall
       
     end select
 
@@ -785,7 +780,7 @@ module opt_control_target_m
         if(no_electrons .eq. 1) then
           do j = 1, gr%mesh%np
             chi_out%zpsi(j, 1, 1, 1) = sqrt(target%rho(j)) * &
-              exp( M_z1 * atan2(aimag(psi_in%zpsi(j, 1, 1, 1)), &
+              exp( M_zI * atan2(aimag(psi_in%zpsi(j, 1, 1, 1)), &
                                 real(psi_in%zpsi(j, 1, 1, 1)  )) )
           end do
         else

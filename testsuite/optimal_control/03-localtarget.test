@@ -20,12 +20,12 @@ match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -0.62061608
 # Then, run the optimization for only one iteration and check the convergence.
 # Note that this run only converges to a good overlap with
 # the target density after a lot of iterations (e.g., if we run over
-# 50 iterations we reach J1 = -0.09919, with J1=0 implying perfect
+# 50 iterations we reach J1 = -0.02195, with J1=0 implying perfect
 # overlap and J1 = -2 to overlap at all.
 # To get a better overlap, increase the quality of the mesh (reduce the grid
 # spacing) and/or increase the time interval.
 Input: 03-localtarget.02-oct.inp
-match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; -0.45457408
+match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; -0.49521566
 
 # Now we check that the many-particle version of the QOCT optimization of
 # local targets also works.
