@@ -194,6 +194,25 @@ contains
 
 end subroutine X(preconditioner_apply)
 
+subroutine X(preconditioner_apply_batch)(pre, gr, hm, aa, bb, omega)
+  type(preconditioner_t), intent(in)    :: pre
+  type(grid_t),           intent(inout) :: gr
+  type(hamiltonian_t),    intent(inout) :: hm
+  type(batch_t),          intent(inout) :: aa
+  type(batch_t),          intent(out)   :: bb
+  R_TYPE,       optional, intent(in)    :: omega
+
+  integer :: ii
+
+  do ii = 1, aa%nst
+    if(present(omega)) then
+      call X(preconditioner_apply)(pre, gr, hm, aa%states(ii)%X(psi), bb%states(ii)%X(psi), omega)
+    else
+      call X(preconditioner_apply)(pre, gr, hm, aa%states(ii)%X(psi), bb%states(ii)%X(psi))
+    end if
+  end do
+
+end subroutine X(preconditioner_apply_batch)
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

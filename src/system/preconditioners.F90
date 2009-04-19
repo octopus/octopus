@@ -20,6 +20,7 @@
 #include "global.h"
 
 module preconditioners_m
+  use batch_m
   use datasets_m
   use derivatives_m
   use global_m
@@ -54,7 +55,10 @@ module preconditioners_m
     preconditioner_end,             &
     preconditioner_is_multigrid,    &
     dpreconditioner_apply,          &
-    zpreconditioner_apply
+    zpreconditioner_apply,          &
+    dpreconditioner_apply_batch,    &
+    zpreconditioner_apply_batch
+
 
   type preconditioner_t
     integer :: which
