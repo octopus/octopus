@@ -43,6 +43,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   logical :: fail
   type(profile_t), save :: prof
   type(batch_t), allocatable :: psib(:), resb(:)
+  type(batch_t) :: psibit, resbit
   integer, allocatable :: done(:)
 
   call push_sub('eigen_rmmdiis_inc.eigensolver_rmmdiis')
@@ -164,20 +165,21 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
             call lalg_axpy(gr%mesh%np, -st%eigenval(ist, ik), psi(:, idim, iter, ib), res(:, idim, iter, ib))
           end do
 
-          diff(ist) = X(mf_nrm2)(gr%mesh, st%d%dim, res(:, :, iter, ib))
-
           ! perform the diis correction
           ALLOCATE(aa(iter, iter), iter**2)
           ALLOCATE(mm(iter, iter), iter**2)
           ALLOCATE(evec(iter, 1), iter)
           ALLOCATE(eval(iter), iter)
 
-          do ii = 1, iter
-            do jj = 1, iter
-              aa(ii, jj) = X(mf_dotp)(gr%mesh, st%d%dim, res(:, :, ii, ib), res(:, :, jj, ib))
-              mm(ii, jj) = X(mf_dotp)(gr%mesh, st%d%dim, psi(:, :, ii, ib), psi(:, :, jj, ib))
-            end do
-          end do
+          !  aa(i, j) = <res_i|res_j>
+          call batch_init(resbit, st%d%dim, 1, iter, res(:, :, :, ib))
+          call X(mf_dotp_batch)(gr%mesh, resbit, resbit, aa, symm = .true.)
+          call batch_end(resbit)
+
+          !  mm(i, j) = <psi_i|psi_j>
+          call batch_init(psibit, st%d%dim, 1, iter, psi(:, :, :, ib))
+          call X(mf_dotp_batch)(gr%mesh, psibit, psibit, mm, symm = .true.)
+          call batch_end(psibit)
 
           fail = .false.
           call lalg_lowest_geneigensolve(1, iter, aa, mm, eval, evec, bof = fail)
@@ -205,7 +207,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
               call lalg_axpy(gr%mesh%np, evec(ii, 1), res(:, idim, ii, ib), res(:, idim, iter, ib))
             end do
           end do
-          
+
           SAFE_DEALLOCATE_A(evec)
         end do
       end do
