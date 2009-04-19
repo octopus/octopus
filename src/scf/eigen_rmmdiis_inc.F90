@@ -41,6 +41,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   integer :: ist, idim, ip, ii, jj, iter, nops
   R_TYPE :: ca, cb, cc, fr, rr, fhr, rhr
   logical :: fail
+  type(profile_t), save :: prof
 
   call push_sub('eigen_rmmdiis_inc.eigensolver_rmmdiis')
 
@@ -48,6 +49,8 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   ALLOCATE(res(gr%mesh%np_part, st%d%dim, niter), gr%mesh%np_part*st%d%dim*niter)
 
   nops = 0
+
+  call profiling_in(prof, "RMMDIIS")
 
   do ist = st%st_start, st%st_end
 
@@ -162,6 +165,8 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     end if
 
   end do
+
+  call profiling_out(prof)
 
   call X(states_gram_schmidt_full)(st, st%nst, gr%mesh, st%d%dim, st%X(psi)(:, :, :, ik))
 

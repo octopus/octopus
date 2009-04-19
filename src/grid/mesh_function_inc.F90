@@ -806,55 +806,72 @@ subroutine X(mf_dotp_batch)(mesh, aa, bb, dot, symm)
   R_TYPE,            intent(inout) :: dot(:, :)
   logical, optional, intent(in)    :: symm         !for the moment it is ignored
 
-  integer :: ist, jst, idim, sp, block_size, ep, ip
+  integer :: ist, jst, idim, sp, block_size, ep, ip, lda, ldb
   R_TYPE :: ss
   R_TYPE, allocatable :: dd(:, :)
 #ifdef HAVE_MPI
   R_TYPE, allocatable :: ddtmp(:, :)
 #endif
   type(profile_t), save :: prof
+  logical :: use_blas
 
   call push_sub('mesh_function_inc.Xmf_dotp_batch')
   call profiling_in(prof, "DOTP_BATCH")
-  
+
   ASSERT(aa%dim == bb%dim)
 
   ALLOCATE(dd(1:aa%nst, 1:bb%nst), aa%nst*bb%nst)
 
-  dd = R_TOTYPE(M_ZERO)
-  
-  block_size = hardware%X(block_size)
+  use_blas = associated(aa%X(psicont)) .and. associated(bb%X(psicont)) .and. (.not. mesh%use_curvilinear) .and. (aa%dim == 1)
 
-  do idim = 1, aa%dim
-    do sp = 1, mesh%np, block_size
-      ep = min(mesh%np, sp + block_size - 1)
+  if(use_blas) then
 
-      if(mesh%use_curvilinear) then
+    lda = size(aa%X(psicont), dim = 1)
+    ldb = size(bb%X(psicont), dim = 1)
+    call blas_gemm('c', 'n', aa%nst, bb%nst, mesh%np, &
+         R_TOTYPE(mesh%vol_pp(1)), &
+         aa%X(psicont)(1, 1, 1), lda, &
+         bb%X(psicont)(1, 1, 1), ldb, &
+         R_TOTYPE(M_ZERO), dd(1, 1), aa%nst)
 
-        do ist = 1, aa%nst
-          do jst = 1, bb%nst
-            
-            ss = M_ZERO
-            do ip = sp, ep
-              ss = ss + mesh%vol_pp(ip)*R_CONJ(aa%states(ist)%X(psi)(ip, idim))*bb%states(jst)%X(psi)(ip, idim)
+  else
+
+    dd = R_TOTYPE(M_ZERO)
+
+    block_size = hardware%X(block_size)
+
+    do idim = 1, aa%dim
+      do sp = 1, mesh%np, block_size
+        ep = min(mesh%np, sp + block_size - 1)
+
+        if(mesh%use_curvilinear) then
+
+          do ist = 1, aa%nst
+            do jst = 1, bb%nst
+
+              ss = M_ZERO
+              do ip = sp, ep
+                ss = ss + mesh%vol_pp(ip)*R_CONJ(aa%states(ist)%X(psi)(ip, idim))*bb%states(jst)%X(psi)(ip, idim)
+              end do
+              dd(ist, jst) = dd(ist, jst) + ss
+
             end do
-            dd(ist, jst) = dd(ist, jst) + ss
-            
           end do
-        end do
 
-      else
+        else
 
-        do ist = 1, aa%nst
-          do jst = 1, bb%nst
-            dd(ist, jst) = dd(ist, jst) + &
-                 mesh%vol_pp(1)*blas_dot(ep - sp + 1, aa%states(ist)%X(psi)(sp, idim), 1, bb%states(jst)%X(psi)(sp, idim), 1)
+          do ist = 1, aa%nst
+            do jst = 1, bb%nst
+              dd(ist, jst) = dd(ist, jst) + &
+                   mesh%vol_pp(1)*blas_dot(ep - sp + 1, aa%states(ist)%X(psi)(sp, idim), 1, bb%states(jst)%X(psi)(sp, idim), 1)
+            end do
           end do
-        end do
 
-      end if
+        end if
+      end do
     end do
-  end do
+
+  end if
 
   if(mesh%use_curvilinear) then
     call profiling_count_operations(dble(mesh%np)*aa%nst*bb%nst*(R_ADD + 2*R_MUL))
@@ -877,7 +894,6 @@ subroutine X(mf_dotp_batch)(mesh, aa, bb, dot, symm)
 
   call profiling_out(prof)
   call pop_sub()
-
 end subroutine X(mf_dotp_batch)
 
 !------------------------------------------------------------

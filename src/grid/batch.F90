@@ -52,6 +52,8 @@ module batch_m
     integer                :: nst
     integer                :: current
     integer                :: dim
+    FLOAT, pointer :: dpsicont(:, :, :)
+    CMPLX, pointer :: zpsicont(:, :, :)
   end type batch_t
 
   interface batch_init
@@ -78,6 +80,8 @@ contains
   subroutine batch_end(this)
     type(batch_t), intent(inout) :: this
 
+    nullify(this%dpsicont)
+    nullify(this%zpsicont)
     SAFE_DEALLOCATE_P(this%states)
   end subroutine batch_end
 
@@ -91,7 +95,8 @@ contains
     this%nst = nst
     this%dim = dim
     this%current = 1
-
+    nullify(this%dpsicont, this%zpsicont)
+    
     ALLOCATE(this%states(1:nst), nst)
     call state_nullify(this%states(1:nst))
 
