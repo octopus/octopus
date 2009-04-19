@@ -520,7 +520,7 @@ contains
           max_intensity * 6.4364086e+15, ' [W/cm^2]'
         write(iunit,'(a,es12.6,a)')  '   Int. intensity = ', fluence, ' [a.u]'
         write(iunit,'(a,es12.6,a)')  '   Fluence        = ', &
-          (fluence / CNST(5.4525289841210) ), ' [a.u]'
+          fluence / CNST(5.4525289841210) , ' [a.u]'
       end if
 
     end do

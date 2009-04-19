@@ -140,8 +140,13 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, t, kinetic_only)
           if(any(laser_requires_gradient(hm%ep%lasers(1:hm%ep%no_lasers)))) then
             call X(get_grad)(hm, gr, epsi, grad)
           end if
-          call X(vlasers)(hm%ep%lasers, hm%ep%no_lasers, gr, hm%d, epsi, hpsi, grad, &
-            ik, hm%ep%gyromagnetic_ratio, hm%ep%a_static, t)
+          if(associated(hm%ep%a_static)) then
+            call X(vlasers)(hm%ep%lasers, hm%ep%no_lasers, gr, hm%d, epsi, hpsi, grad, &
+              ik, hm%ep%gyromagnetic_ratio, hm%ep%a_static, t)
+          else
+            call X(vlasers)(hm%ep%lasers, hm%ep%no_lasers, gr, hm%d, epsi, hpsi, grad, &
+              ik, hm%ep%gyromagnetic_ratio, t = t)
+          end if
         end if
 #ifdef R_TCOMPLEX
         if (gauge_field_is_applied(hm%ep%gfield)) then

@@ -241,7 +241,7 @@ subroutine X(vlasers) (lasers, nlasers, gr, std, psi, hpsi, grad, ik, gyromagnet
   R_TYPE,              pointer       :: grad(: , :, :)
   integer,             intent(in)    :: ik
   FLOAT,               intent(in)    :: gyromagnetic_ratio
-  FLOAT,               pointer       :: a_static(:,:)
+  FLOAT,    optional,  intent(in)    :: a_static(:,:)
   FLOAT,    optional,  intent(in)    :: t
 
   integer :: k, idim
@@ -334,16 +334,18 @@ contains
   ! ---------------------------------------------------------
   subroutine apply_magnetic_field()
     do k = 1, gr%mesh%np
-      hpsi(k, :) = hpsi(k, :) + M_HALF*dot_product(a(k, 1:gr%mesh%sb%dim), a(k, 1:gr%mesh%sb%dim))*psi(k, :) / P_c**2
+      hpsi(k, :) = hpsi(k, :) + M_HALF*dot_product(a(k, 1:gr%mesh%sb%dim), &
+        a(k, 1:gr%mesh%sb%dim))*psi(k, :) / P_c**2
     end do
 
     ! If there is a static magnetic field, its associated vector potential is coupled with
     ! the time-dependent one defined as a "laser" (ideally one should just add them all and
     ! do the calculation only once...). Note that h%ep%a_static already has been divided
     ! by P_c, and therefore here we only divide by P_c, and not P_c**2.
-    if(associated(a_static)) then
+    if(present(a_static)) then
       do k = 1, gr%mesh%np
-        hpsi(k, :) = hpsi(k, :) + dot_product(a(k, 1:gr%mesh%sb%dim), a_static(k, 1:gr%mesh%sb%dim))*psi(k, :) / P_c
+        hpsi(k, :) = hpsi(k, :) + dot_product(a(k, 1:gr%mesh%sb%dim), &
+          a_static(k, 1:gr%mesh%sb%dim))*psi(k, :) / P_c
       end do
     end if
     
