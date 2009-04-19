@@ -38,18 +38,19 @@ subroutine X(states_blockt_mul)(mesh, st, psi1_start, psi1_end, psi2_start, psi2
                                             ! res(i, j)*.
 
   logical              :: symm_
-  integer              :: i, j, ii
+  integer              :: ii
   integer              :: psi1_col, psi2_col
   integer, pointer     :: xpsi1_(:), xpsi2_(:)
-  R_TYPE, allocatable  :: psi1_block(:, :, :), psi2_block(:, :, :), res_local(:, :)
   type(batch_t)        :: psi1b, psi2b
 #if defined(HAVE_MPI)
+  integer              :: i, j
   integer              :: size, rank, round, res_col_offset, res_row_offset
   integer              :: dst, src, k, l, recvcnt, sendcnt, left, right, max_count
   integer              :: stats(MPI_STATUS_SIZE, 2), reqs(2)
   integer, pointer     :: xpsi1_count(:), xpsi2_count(:), xpsi1_node(:, :), xpsi2_node(:, :)
   R_TYPE, pointer      :: sendbuf(:, :, :), recvbuf(:, :, :), tmp_ptr(:, :, :)
   R_TYPE, allocatable  :: res_tmp(:, :)
+  R_TYPE, allocatable  :: psi1_block(:, :, :), psi2_block(:, :, :), res_local(:, :)
 #endif
 
   call profiling_in(C_PROFILING_BLOCKT)
@@ -72,9 +73,6 @@ subroutine X(states_blockt_mul)(mesh, st, psi1_start, psi1_end, psi2_start, psi2
     call make_idx_set(st%nst, xpsi2_, psi2_col)
   end if
 
-  ! There is a little code duplication between the serial and parallel case
-  ! but the code is easier to understand having it separated (instead a lot of
-  ! conditionals and pointers),
   if(st%parallel_in_states) then
 #if defined(HAVE_MPI)
     ! Shortcuts.
@@ -180,16 +178,23 @@ subroutine X(states_blockt_mul)(mesh, st, psi1_start, psi1_end, psi2_start, psi2
 #endif
   else ! No states parallelization.
 
-    call batch_init(psi1b, st%d%dim, psi1_col)
-    call batch_init(psi2b, st%d%dim, psi2_col)
+    if(present(xpsi1)) then
+      call batch_init(psi1b, st%d%dim, psi1_col)
+      do ii = 1, psi1_col
+        call batch_add_state(psi1b, ii, psi1(:, :, xpsi1(ii)))
+      end do
+    else
+      call batch_init(psi1b, st%d%dim, 1, psi1_col, psi1(:, :, :))
+    end if
 
-    do ii = 1, psi1_col
-      call batch_add_state(psi1b, ii, psi1(:, :, xpsi1_(ii)))
-    end do
-
-    do ii = 1, psi2_col
-      call batch_add_state(psi2b, ii, psi2(:, :, xpsi2_(ii)))
-    end do
+    if(present(xpsi2)) then
+      call batch_init(psi2b, st%d%dim, psi2_col)
+      do ii = 1, psi2_col
+        call batch_add_state(psi2b, ii, psi2(:, :, xpsi2(ii)))
+      end do
+    else
+      call batch_init(psi2b, st%d%dim, 1, psi2_col, psi2(:, :, :))
+    end if
 
     ASSERT(batch_is_ok(psi1b))
     ASSERT(batch_is_ok(psi2b))
