@@ -28,6 +28,8 @@ subroutine X(batch_init_contiguous)(this, dim, st_start, st_end, psi)
 
   call push_sub('batch_inc.Xbatch_init_contiguous')
 
+  ASSERT(st_end >= st_start)
+
   call batch_init_empty(this, dim, st_end - st_start + 1)
 
   this%X(psicont) => psi(:, :, st_start:)
