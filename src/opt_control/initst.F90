@@ -117,7 +117,7 @@ module opt_control_initst_m
       !%End
       if(loct_parse_isdef(datasets_check('OCTInitialTransformStates')).ne.0) then
         if(loct_parse_block(datasets_check('OCTInitialTransformStates'), blk) == 0) then
-          tmp_st = initial_state
+          call states_copy(tmp_st, initial_state)
           SAFE_DEALLOCATE_P(tmp_st%zpsi)
           call restart_look_and_read(tmp_st, gr, geo)
           ALLOCATE(rotation_matrix(initial_state%nst, tmp_st%nst), initial_state%nst*tmp_st%nst)
