@@ -264,6 +264,10 @@ subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, niter, converged,
       end do
 
     end do
+    
+    if(mpi_grp_is_root(mpi_world)) then
+      call loct_progress_bar(st%nst*(ik - 1) +  (ist*(isweep -1))/sweeps, st%nst*st%d%nik)
+    end if
 
     call X(states_gram_schmidt_full)(st, st%nst, gr%mesh, st%d%dim, st%X(psi)(:, :, :, ik))
   end do

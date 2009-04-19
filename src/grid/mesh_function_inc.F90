@@ -812,7 +812,7 @@ subroutine X(mf_dotp_batch)(mesh, aa, bb, dot, symm)
 #ifdef HAVE_MPI
   R_TYPE, allocatable :: ddtmp(:, :)
 #endif
-  type(profile_t), save :: prof
+  type(profile_t), save :: prof, profgemm, profcomm
   logical :: use_blas
 
   call push_sub('mesh_function_inc.Xmf_dotp_batch')
@@ -825,6 +825,7 @@ subroutine X(mf_dotp_batch)(mesh, aa, bb, dot, symm)
   use_blas = associated(aa%X(psicont)) .and. associated(bb%X(psicont)) .and. (.not. mesh%use_curvilinear) .and. (aa%dim == 1)
 
   if(use_blas) then
+    call profiling_in(profgemm, "DOTP_BATCH_GEMM")
 
     lda = size(aa%X(psicont), dim = 1)
     ldb = size(bb%X(psicont), dim = 1)
@@ -879,12 +880,16 @@ subroutine X(mf_dotp_batch)(mesh, aa, bb, dot, symm)
     call profiling_count_operations(dble(mesh%np)*aa%nst*bb%nst*(R_ADD + R_MUL))
   end if
 
+  if(use_blas) call profiling_out(profgemm)
+
 #ifdef HAVE_MPI
   if(mesh%parallel_in_domains) then
+    call profiling_in(profcomm, "DOTP_BATCH_REDUCE")
     ALLOCATE(ddtmp(1:aa%nst, 1:bb%nst), aa%nst*bb%nst)
     forall(ist = 1:aa%nst, jst = 1:bb%nst) ddtmp(ist, jst) = dd(ist, jst)
     call MPI_Allreduce(ddtmp, dd, aa%nst*bb%nst, R_MPITYPE, MPI_SUM, mesh%mpi_grp%comm, mpi_err)
     SAFE_DEALLOCATE_A(ddtmp)
+    call profiling_out(profcomm)
   end if
 #endif
 
