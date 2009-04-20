@@ -324,8 +324,6 @@ contains
       st%d%kpoints(1:MAX_DIM, 1) = M_ZERO
       ALLOCATE(st%ob_d%kpoints(MAX_DIM, st%ob_d%nik), MAX_DIM*st%ob_d%nik)
       ALLOCATE(st%ob_d%kweights(st%ob_d%nik), st%ob_d%nik)
-!      ALLOCATE(st%ob_eigenval(st%ob_ncs, st%d%nik), st%ob_ncs*st%d%nik)
-!      ALLOCATE(st%ob_occ(st%ob_ncs, st%d%nik), st%ob_ncs*st%d%nik)
       ALLOCATE(st%ob_eigenval(st%ob_nst, st%ob_d%nik), st%ob_nst*st%ob_d%nik)
       ALLOCATE(st%ob_occ(st%ob_nst, st%ob_d%nik), st%ob_nst*st%ob_d%nik)
       call read_ob_eigenval_and_occ()
@@ -365,20 +363,16 @@ contains
     ! continuum states, i.e. for those states treated by the Lippmann-
     ! Schwinger approach during SCF.
     if(gr%sb%open_boundaries) then
-!      if(st%nst.ne.st%ob_ncs) then
       if(st%nst.ne.st%ob_nst .or. st%d%nik.ne.st%ob_d%nik) then
         message(1) = 'Open-boundary calculations for possibly bound states'
         message(2) = 'are not possible yet. You have to match your number'
         message(3) = 'of states to the number of free states of your previous'
         message(4) = 'periodic run.'
-!        write(message(5), '(a,i5,a)') 'Your finite system contributes ', st%nst-st%ob_ncs, ' states,'
-!        write(message(6), '(a,i5,a)') 'while your periodic calculation had ', st%ob_ncs, ' states.'
         write(message(5), '(a,i5,a)') 'Your finite system contributes ', st%nst-st%ob_nst, ' states,'
         write(message(6), '(a,i5,a)') 'while your periodic calculation had ', st%ob_nst, ' states.'
         write(message(7), '(a,i5,a)') 'Your finite system contributes ', st%d%nik-st%ob_d%nik, ' k-points,'
         write(message(8), '(a,i5,a)') 'while your periodic calculation had ', st%ob_d%nik, ' k-points.'
         call write_fatal(8)
-!        call write_fatal(6)
       end if
     end if
 
@@ -528,8 +522,6 @@ contains
 
     ! FIXME: spin-polarized free states ignored.
     if(gr%sb%open_boundaries) then
-!      alloc_size = gr%mesh%np_part*st%d%dim*st%ob_ncs*st%d%nik
-!      ALLOCATE(st%zphi(gr%mesh%np_part, st%d%dim, st%ob_ncs, st%d%nik), alloc_size)
       alloc_size = gr%mesh%np_part*st%ob_d%dim*st%ob_nst*st%ob_d%nik
       ALLOCATE(st%zphi(gr%mesh%np_part, st%ob_d%dim, st%ob_nst, st%ob_d%nik), alloc_size)
       alloc_size = gr%mesh%lead_unit_cell(LEFT)%np*st%d%nspin*NLEADS
@@ -626,7 +618,6 @@ contains
     if(st%open_boundaries) then
       st%fixed_occ = .true.
       st%occ  = st%ob_occ
-!      st%qtot = sum(st%occ)
       st%qtot = M_ZERO
       do i = 1, st%nst
         st%qtot = st%qtot + sum(st%occ(i, 1:st%d%nik) * st%d%kweights(1:st%d%nik))
@@ -2055,7 +2046,6 @@ contains
     if(present(grho)) grho(:,:,:) = M_ZERO
 
     do is = 1, sp
-!      do ik_tmp = 1, st%d%nik, sp
       do ik_tmp = st%d%kpt%start, st%d%kpt%end, sp
         ik = ik_tmp + is - 1
 
@@ -2449,7 +2439,6 @@ contains
       ln(LEFT)  = 'L'; ln(RIGHT) = 'R'
       ! Calculate Green function of the leads.
       ! FIXME: For spinors, this calculation is almost certainly wrong.
-      !AS SERT(st%ob_ncs == st%nst)
       ASSERT(st%ob_nst == st%nst)
       ASSERT(st%ob_d%nik == st%d%nik)
       alloc_size = np**2*nspin*st%lnst*st%d%kpt%nlocal*NLEADS
@@ -2461,9 +2450,6 @@ contains
       call write_info(1)
 #ifdef HAVE_MPI 
       ! wait for all processors to finish 
-!      if(st%parallel_in_states) then 
-!        call MPI_Barrier(st%mpi_grp%comm, mpi_err) 
-!      end if 
       if(st%d%kpt%parallel) then 
         call MPI_Barrier(st%d%kpt%mpi_grp%comm, mpi_err) 
       end if 
