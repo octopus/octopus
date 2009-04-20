@@ -62,7 +62,7 @@
 subroutine X(input_function)(filename, mesh, f, ierr, is_tmp)
   character(len=*),  intent(in)  :: filename
   type(mesh_t),      intent(in)  :: mesh
-  R_TYPE,            intent(out) :: f(1:mesh%np)
+  R_TYPE,            intent(inout) :: f(1:mesh%np)
   integer,           intent(out) :: ierr
   logical, optional, intent(in)  :: is_tmp
 
@@ -117,7 +117,7 @@ end subroutine X(input_function)
 subroutine X(input_function_global)(filename, mesh, f, ierr, is_tmp)
   character(len=*),  intent(in)  :: filename
   type(mesh_t),      intent(in)  :: mesh
-  R_TYPE,            intent(out) :: f(:)
+  R_TYPE,            intent(inout) :: f(:)
   integer,           intent(out) :: ierr
   logical,           intent(in)  :: is_tmp
 

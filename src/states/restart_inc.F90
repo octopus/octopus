@@ -41,16 +41,16 @@ subroutine X(restart_read_function)(dir, filename, m, f, ierr)
   character(len=*), intent(in)  :: dir
   character(len=*), intent(in)  :: filename
   type(mesh_t),     intent(in)  :: m
-  R_TYPE,           intent(out) :: f(1:m%np)
+  R_TYPE,           intent(inout) :: f(1:m%np)
   integer,          intent(out) :: ierr
 
   call push_sub('restart_inc.Xrestart_read_function')
 
   ! try Binary
-  call X(input_function) (trim(dir)//'/'//trim(filename)//'.obf', m, f(:), ierr, is_tmp=.true.)
+  call X(input_function) (trim(dir)//'/'//trim(filename)//'.obf', m, f(1:m%np), ierr, is_tmp=.true.)
 
   ! if we do not succeed try NetCDF
-  if(ierr>0) call X(input_function) (trim(dir)//'/'//trim(filename)//'.ncdf', m, f(:), ierr, is_tmp=.true.)
+  if(ierr>0) call X(input_function) (trim(dir)//'/'//trim(filename)//'.ncdf', m, f(1:m%np), ierr, is_tmp=.true.)
 
   call pop_sub()
 end subroutine X(restart_read_function)
