@@ -210,8 +210,7 @@ contains
     if(iand(outp%what, output_density_matrix).ne.0) then
       write(message(1),'(a)') 'Info: The density matrix will be calculated, traced'
       write(message(2),'(a)') 'over the second dimension, diagonalized, and output.'
-      write(message(3),'(a)') 'Limited to 2D systems for the moment.'
-      call write_info(3)
+      call write_info(2)
       ! NOTES:
       !   could be made into block to be able to specify which dimensions to trace
       !   in principle all combinations are interesting, but this means we need to

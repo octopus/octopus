@@ -36,7 +36,8 @@ module modelMB_particles_m
   private
 
   public :: modelMB_particles_init,&
-            modelMB_particles_destroy,&
+            modelMB_particles_end,&
+            modelMB_particles_copy,&
             modelMB_particle_t
 
 !==============================================================
@@ -173,12 +174,12 @@ subroutine modelMB_particles_init (modelMBparticles,gr)
   !% actual charge into account.
   !%
   !%End
-! allocate stuff
-  allocate (modelMBparticles%labels_particles_modelMB(modelMBparticles%nparticle_modelMB))
-  allocate (modelMBparticles%particletype_modelMB(modelMBparticles%nparticle_modelMB))
-  allocate (modelMBparticles%mass_particle_modelMB(modelMBparticles%nparticle_modelMB))
-  allocate (modelMBparticles%charge_particle_modelMB(modelMBparticles%nparticle_modelMB))
-  allocate (modelMBparticles%nparticles_per_type(modelMBparticles%ntype_of_particle_modelMB))
+! ALLOCATE stuff
+  ALLOCATE (modelMBparticles%labels_particles_modelMB(modelMBparticles%nparticle_modelMB), modelMBparticles%nparticle_modelMB)
+  ALLOCATE (modelMBparticles%particletype_modelMB(modelMBparticles%nparticle_modelMB), modelMBparticles%nparticle_modelMB)
+  ALLOCATE (modelMBparticles%mass_particle_modelMB(modelMBparticles%nparticle_modelMB), modelMBparticles%nparticle_modelMB)
+  ALLOCATE (modelMBparticles%charge_particle_modelMB(modelMBparticles%nparticle_modelMB), modelMBparticles%nparticle_modelMB)
+  ALLOCATE (modelMBparticles%nparticles_per_type(modelMBparticles%ntype_of_particle_modelMB), modelMBparticles%ntype_of_particle_modelMB)
 
 ! default all particles are electrons
   modelMBparticles%labels_particles_modelMB='electron'
@@ -255,10 +256,12 @@ subroutine modelMB_particles_init (modelMBparticles,gr)
           modelMBparticles%ndensities_to_calculate > modelMBparticles%nparticle_modelMB) then
         call input_error("DensitiestoCalc")
       end if
+  end if
 
-      allocate (modelMBparticles%labels_densities(modelMBparticles%ndensities_to_calculate))
-      allocate (modelMBparticles%particle_kept_densities(modelMBparticles%ndensities_to_calculate))
+  ALLOCATE (modelMBparticles%labels_densities(modelMBparticles%ndensities_to_calculate), modelMBparticles%ndensities_to_calculate)
+  ALLOCATE (modelMBparticles%particle_kept_densities(modelMBparticles%ndensities_to_calculate), modelMBparticles%ndensities_to_calculate)
 
+  if(modelMBparticles%ndensities_to_calculate > 0) then
       do ipart=1,modelMBparticles%ndensities_to_calculate
         call loct_parse_block_string(blk, ipart-1, 0, modelMBparticles%labels_densities(ipart))
         call loct_parse_block_int(blk, ipart-1, 1, modelMBparticles%particle_kept_densities(ipart))
@@ -275,7 +278,7 @@ subroutine modelMB_particles_init (modelMBparticles,gr)
 end subroutine modelMB_particles_init
 
 
-subroutine modelMB_particles_destroy (modelMBparticles)
+subroutine modelMB_particles_end (modelMBparticles)
 
   implicit none
 
@@ -284,7 +287,7 @@ subroutine modelMB_particles_destroy (modelMBparticles)
 
 ! source
 
-  call push_sub('states.modelMB_particles_destroy')
+  call push_sub('states.modelMB_particles_end')
 
   SAFE_DEALLOCATE_P(modelMBparticles%labels_particles_modelMB)
   SAFE_DEALLOCATE_P(modelMBparticles%particletype_modelMB)
@@ -296,6 +299,43 @@ subroutine modelMB_particles_destroy (modelMBparticles)
 
   call pop_sub()
 
-end subroutine modelMB_particles_destroy
+end subroutine modelMB_particles_end
+
+subroutine modelMB_particles_copy(modelmb_out, modelmb_in)
+
+  implicit none
+
+!args
+  type(modelMB_particle_t),intent(in) :: modelmb_in
+  type(modelMB_particle_t),intent(out) :: modelmb_out
+
+
+  call push_sub('states.modelMB_particles_copy')
+
+  modelmb_out%ndim_modelMB=modelmb_in%ndim_modelMB
+  modelmb_out%ntype_of_particle_modelMB=modelmb_in%ntype_of_particle_modelMB
+  modelmb_out%nparticle_modelMB=modelmb_in%nparticle_modelMB
+  modelmb_out%ndensities_to_calculate=modelmb_in%ndensities_to_calculate
+
+  ALLOCATE (modelmb_out%labels_particles_modelMB(modelmb_out%nparticle_modelMB), modelmb_out%nparticle_modelMB)
+  modelmb_out%labels_particles_modelMB=modelmb_in%labels_particles_modelMB
+  ALLOCATE (modelmb_out%particletype_modelMB(modelmb_out%nparticle_modelMB), modelmb_out%nparticle_modelMB)
+  modelmb_out%particletype_modelMB=modelmb_in%particletype_modelMB
+  ALLOCATE (modelmb_out%mass_particle_modelMB(modelmb_out%nparticle_modelMB), modelmb_out%nparticle_modelMB)
+  modelmb_out%mass_particle_modelMB=modelmb_in%mass_particle_modelMB
+  ALLOCATE (modelmb_out%charge_particle_modelMB(modelmb_out%nparticle_modelMB), modelmb_out%nparticle_modelMB)
+  modelmb_out%charge_particle_modelMB=modelmb_in%charge_particle_modelMB
+  ALLOCATE (modelmb_out%nparticles_per_type(modelmb_out%ntype_of_particle_modelMB), modelmb_out%ntype_of_particle_modelMB)
+  modelmb_out%nparticles_per_type=modelmb_in%nparticles_per_type
+
+
+  ALLOCATE (modelmb_out%labels_densities(modelmb_out%ndensities_to_calculate), modelmb_out%ndensities_to_calculate)
+  modelmb_out%nparticles_per_type=modelmb_in%nparticles_per_type
+  ALLOCATE (modelmb_out%particle_kept_densities(modelmb_out%ndensities_to_calculate), modelmb_out%ndensities_to_calculate)
+  modelmb_out%nparticles_per_type=modelmb_in%nparticles_per_type
+
+  call pop_sub()
+
+end subroutine modelMB_particles_copy
 
 end module modelMB_particles_m

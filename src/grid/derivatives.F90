@@ -619,6 +619,8 @@ contains
         end do
       end do
 
+write (*,*) 'calling lalg_linsyssolve from derivatives'
+write (*,*) mat
       call lalg_linsyssolve(op(1)%stencil%size, n, mat, rhs, sol)
       do i = 1, n
         op(i)%w_re(:, p) = sol(:, n)

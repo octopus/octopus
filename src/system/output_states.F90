@@ -20,8 +20,6 @@
   ! ---------------------------------------------------------
   subroutine h_sys_output_states(st, gr, geo, dir, outp)
 
-    use modelmb_particles_m
-
     type(states_t),         intent(inout) :: st
     type(grid_t),           intent(inout) :: gr
     type(geometry_t),       intent(in)    :: geo
@@ -156,8 +154,6 @@
 
     if(iand(outp%what, output_density_matrix).ne.0) then
       call density_matrix_write(trim(dir), gr, st)
-
-      call modelmb_particles_destroy (st%modelmbparticles)
     end if
 
     call pop_sub()
