@@ -337,6 +337,8 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   SAFE_DEALLOCATE_A(psib)
   SAFE_DEALLOCATE_A(resb)
   SAFE_DEALLOCATE_A(done)
+  SAFE_DEALLOCATE_A(last)
+  SAFE_DEALLOCATE_A(failed)
   SAFE_DEALLOCATE_A(fr)
 
   call pop_sub()
