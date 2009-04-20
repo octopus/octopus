@@ -963,7 +963,7 @@ contains
 
     SAFE_DEALLOCATE_P(st%user_def_states)
 
-    call modelMB_particles_end(st%modelmbparticles)
+!    call modelMB_particles_end(st%modelmbparticles)
 
     call pop_sub()
   end subroutine states_end
