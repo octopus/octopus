@@ -573,7 +573,7 @@ module opt_control_propagation_m
 
       ! The quadratic part should only be computed if necessary.
       if(laser_kind(hm%ep%lasers(j)).eq.E_FIELD_MAGNETIC ) then
-        oppsi = psi
+        call states_copy(oppsi, psi)
         dq(j) = M_z0
         do ik = 1, psi%d%nik
           do p = 1, psi%nst
