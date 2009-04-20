@@ -365,12 +365,14 @@ contains
     character(len=256)   :: line, filename
     CMPLX, allocatable   :: tmp(:)
     type(mesh_t)         :: gs_mesh
+    type(mpi_grp_t)      :: mpi_grp
 
     call push_sub('restart.restart_read_ob_intf')
 
     write(message(1), '(a,i5)') 'Info: Reading ground state interface wave functions'
     call write_info(1)
 
+    mpi_grp = mpi_world
     ! Sanity check.
     ASSERT(associated(st%ob_intf_psi))
 
@@ -380,7 +382,7 @@ contains
     io_mesh = io_open(trim(dir)//'/mesh', action='read', status='old', die=.false., is_tmp=.true.)
     if(io_mesh.lt.0) then
       ierr = -1
-      call io_close(io_mesh, grp=st%mpi_grp)
+      call io_close(io_mesh, grp=mpi_grp)
       call pop_sub()
       return
     end if
@@ -388,14 +390,14 @@ contains
     gs_mesh%sb => gr%mesh%sb
     call mesh_init_from_file(gs_mesh, io_mesh)
 
-    io_wfns  = io_open(trim(dir)//'/wfns', action='read', status='old', die=.false., is_tmp=.true., grp=st%mpi_grp)
+    io_wfns  = io_open(trim(dir)//'/wfns', action='read', status='old', die=.false., is_tmp=.true., grp=mpi_grp)
     if(io_wfns.lt.0) then
       ierr = -1
     end if
 
-    io_occs = io_open(trim(dir)//'/occs', action='read', status='old', die=.false., is_tmp = .true., grp = st%mpi_grp)
+    io_occs = io_open(trim(dir)//'/occs', action='read', status='old', die=.false., is_tmp=.true., grp=mpi_grp)
     if(io_occs.lt.0) then
-      if(io_wfns.gt.0) call io_close(io_wfns, grp=st%mpi_grp)
+      if(io_wfns.gt.0) call io_close(io_wfns, grp=mpi_grp)
       ierr = -1
     end if
 
@@ -408,27 +410,28 @@ contains
     end if
 
     ! Skip two lines.
-    call iopar_read(st%mpi_grp, io_wfns, line, err); call iopar_read(st%mpi_grp, io_wfns, line, err)
-    call iopar_read(st%mpi_grp, io_occs, line, err); call iopar_read(st%mpi_grp, io_occs, line, err)
+    call iopar_read(mpi_grp, io_wfns, line, err); call iopar_read(mpi_grp, io_wfns, line, err)
+    call iopar_read(mpi_grp, io_occs, line, err); call iopar_read(mpi_grp, io_occs, line, err)
 
     lead_np = gr%mesh%lead_unit_cell(LEFT)%np
     np = gr%intf(LEFT)%np
     ALLOCATE(tmp(gr%mesh%np+2*lead_np), gr%mesh%np+2*lead_np)
     
     do
-      call iopar_read(st%mpi_grp, io_wfns, line, i)
+      call iopar_read(mpi_grp, io_wfns, line, i)
       read(line, '(a)') char
       if(i.ne.0.or.char.eq.'%') exit
 
-      call iopar_backspace(st%mpi_grp, io_wfns)
+      call iopar_backspace(mpi_grp, io_wfns)
 
-      call iopar_read(st%mpi_grp, io_wfns, line, err)
+      call iopar_read(mpi_grp, io_wfns, line, err)
       read(line, *) ik, char, ist, char, idim, char, filename
 
-      call iopar_read(st%mpi_grp, io_occs, line, err)
+      call iopar_read(mpi_grp, io_occs, line, err)
       read(line, *) st%occ(ist, ik), char, st%eigenval(ist, ik)
 
-      if(ist.ge.st%st_start .and. ist.le.st%st_end) then
+      if(ist.ge.st%st_start .and. ist.le.st%st_end .and. &
+         ik.ge.st%d%kpt%start .and. ik.le.st%d%kpt%end) then
         ! Open boundaries imply complex wavefunctions.
         call zrestart_read_function(dir, filename, gs_mesh, tmp, err)
         ! Here we use the fact that transport is in x-direction (x is the index
@@ -451,6 +454,10 @@ contains
       call MPI_Allreduce(ierr, err, 1, MPI_INTEGER, MPI_SUM, st%mpi_grp%comm, mpi_err)
       ierr = err
     end if
+    if(st%d%kpt%parallel) then
+      call MPI_Allreduce(ierr, err, 1, MPI_INTEGER, MPI_SUM, st%d%kpt%mpi_grp%comm, mpi_err)
+      ierr = err
+    end if
 #endif
 
     if(ierr.eq.0) then
@@ -471,8 +478,8 @@ contains
       end if
     end if
 
-    call io_close(io_wfns, st%mpi_grp)
-    call io_close(io_occs, st%mpi_grp)
+    call io_close(io_wfns, mpi_grp)
+    call io_close(io_occs, mpi_grp)
 
     SAFE_DEALLOCATE_A(tmp)
 
@@ -500,11 +507,15 @@ contains
     character(len=256)   :: line, filename
     CMPLX, allocatable   :: tmp(:)
     type(mesh_t)         :: gs_mesh
+    type(mpi_grp_t)      :: mpi_grp
+    FLOAT                :: k_x, k_y, k_z
 
     call push_sub('restart.restart_read_ob_central')
 
     write(message(1), '(a,i5)') 'Info: Loading restart information'
     call write_info(1)
+
+    mpi_grp = mpi_world
 
     ! Sanity check.
     psi_allocated = (associated(st%dpsi) .and. st%wfs_type.eq.M_REAL) .or. &
@@ -517,21 +528,21 @@ contains
     io_mesh = io_open(trim(dir)//'/mesh', action='read', status='old', die=.false., is_tmp=.true.)
     if(io_mesh.lt.0) then
       ierr = -1
-      call io_close(io_mesh, grp=st%mpi_grp)
+      call io_close(io_mesh, grp=mpi_grp)
       call pop_sub()
       return
     end if
     gs_mesh%sb => gr%mesh%sb
     call mesh_init_from_file(gs_mesh, io_mesh)
 
-    io_wfns  = io_open(trim(dir)//'/wfns', action='read', status='old', die=.false., is_tmp=.true., grp=st%mpi_grp)
+    io_wfns  = io_open(trim(dir)//'/wfns', action='read', status='old', die=.false., is_tmp=.true., grp=mpi_grp)
     if(io_wfns.lt.0) then
       ierr = -1
     end if
 
-    io_occs = io_open(trim(dir)//'/occs', action='read', status='old', die=.false., is_tmp = .true., grp = st%mpi_grp)
+    io_occs = io_open(trim(dir)//'/occs', action='read', status='old', die=.false., is_tmp = .true., grp = mpi_grp)
     if(io_occs.lt.0) then
-      if(io_wfns.gt.0) call io_close(io_wfns, grp=st%mpi_grp)
+      if(io_wfns.gt.0) call io_close(io_wfns, grp=mpi_grp)
       ierr = -1
     end if
 
@@ -544,27 +555,30 @@ contains
     end if
 
     ! Skip two lines.
-    call iopar_read(st%mpi_grp, io_wfns, line, err); call iopar_read(st%mpi_grp, io_wfns, line, err)
-    call iopar_read(st%mpi_grp, io_occs, line, err); call iopar_read(st%mpi_grp, io_occs, line, err)
+    call iopar_read(mpi_grp, io_wfns, line, err); call iopar_read(mpi_grp, io_wfns, line, err)
+    call iopar_read(mpi_grp, io_occs, line, err); call iopar_read(mpi_grp, io_occs, line, err)
 
     lead_np = gr%mesh%lead_unit_cell(LEFT)%np
     ALLOCATE(tmp(gr%mesh%np+2*lead_np), gr%mesh%np+2*lead_np)
     
     do
-      call iopar_read(st%mpi_grp, io_wfns, line, i)
+      call iopar_read(mpi_grp, io_wfns, line, i)
       if(i.ne.0) exit
       read(line, '(a)') char
       if(char.eq.'%') exit
 
-      call iopar_backspace(st%mpi_grp, io_wfns)
+      call iopar_backspace(mpi_grp, io_wfns)
 
-      call iopar_read(st%mpi_grp, io_wfns, line, err)
+      call iopar_read(mpi_grp, io_wfns, line, err)
       read(line, *) ik, char, ist, char, idim, char, filename
 
-      call iopar_read(st%mpi_grp, io_occs, line, err)
-      read(line, *) st%occ(ist, ik), char, st%eigenval(ist, ik)
+      call iopar_read(mpi_grp, io_occs, line, err)
+      read(line, *) st%occ(ist, ik), char, st%eigenval(ist, ik), char, &
+                    k_x, char, k_y, char, k_z, char, st%d%kweights(ik)
+      st%d%kpoints(:, ik) = (/k_x, k_y, k_z/)
 
-      if(ist.ge.st%st_start .and. ist.le.st%st_end) then
+      if(ist.ge.st%st_start .and. ist.le.st%st_end .and. &
+         ik.ge.st%d%kpt%start .and. ik.le.st%d%kpt%end) then
         ! Open boundaries imply complex wavefunctions.
         call zrestart_read_function(dir, filename, gs_mesh, tmp, err)
         ! Here we use the fact that transport is in x-direction (x is the index
@@ -579,6 +593,10 @@ contains
 #if defined(HAVE_MPI)
     if(st%parallel_in_states) then
       call MPI_Allreduce(ierr, err, 1, MPI_INTEGER, MPI_SUM, st%mpi_grp%comm, mpi_err)
+      ierr = err
+    end if
+    if(st%d%kpt%parallel) then
+      call MPI_Allreduce(ierr, err, 1, MPI_INTEGER, MPI_SUM, st%d%kpt%mpi_grp%comm, mpi_err)
       ierr = err
     end if
 #endif
@@ -600,8 +618,8 @@ contains
       end if
     end if
 
-    call io_close(io_wfns, st%mpi_grp)
-    call io_close(io_occs, st%mpi_grp)
+    call io_close(io_wfns, mpi_grp)
+    call io_close(io_occs, mpi_grp)
 
     SAFE_DEALLOCATE_A(tmp)
 
@@ -760,6 +778,10 @@ contains
 #if defined(HAVE_MPI)
     if(st%parallel_in_states) then
       call MPI_Allreduce(ierr, err, 1, MPI_INTEGER, MPI_SUM, st%mpi_grp%comm, mpi_err)
+      ierr = err
+    end if
+    if(st%d%kpt%parallel) then
+      call MPI_Allreduce(ierr, err, 1, MPI_INTEGER, MPI_SUM, st%d%kpt%mpi_grp%comm, mpi_err)
       ierr = err
     end if
 #endif
@@ -921,21 +943,20 @@ contains
   ! unscattered states in order to solve the Lippmann-Schwinger
   ! equation to obtain extended eigenstates.
   ! Since we only need the occupied states we just read them.
-  ! Attention:  The states formerly stored in the k index (ik)
-  !             are now indexed via the state index (ist)
   subroutine read_free_states(st, gr)
     type(states_t),       intent(inout) :: st
     type(grid_t), target, intent(in)    :: gr
     
-    integer                    :: k, ik, ist, idim, jst, err, wfns, occs
+    integer                    :: k, ik, ist, idim, jk, err, wfns, occs
     integer                    :: np, ip, lead_nr(2, MAX_DIM)
     character(len=256)         :: line, fname, filename, restart_dir, chars
     character                  :: char
-    FLOAT                      :: occ, eval, k_x, k_y, k_z, w_k
+    FLOAT                      :: occ, eval, k_x, k_y, k_z, w_k, w_sum
     type(simul_box_t), pointer :: sb
     type(mesh_t), pointer      :: m_lead, m_center
     CMPLX                      :: phase
-    CMPLX, allocatable         :: tmp(:)
+    CMPLX, allocatable         :: tmp(:, :)
+    type(mpi_grp_t)            :: mpi_grp
 
     call push_sub('restart.states_read_free_states')
 
@@ -945,62 +966,65 @@ contains
     lead_nr(1, :) = m_lead%idx%nr(1, :)+m_lead%idx%enlarge
     lead_nr(1, :) = m_lead%idx%nr(2, :)-m_lead%idx%enlarge
 
+    mpi_grp = mpi_world
+
     np = m_lead%np
-    ALLOCATE(tmp(np), np)
+    ALLOCATE(tmp(np, st%d%dim), np*st%d%dim)
     restart_dir = trim(sb%lead_restart_dir(LEFT))//'/gs'
 
-    wfns = io_open(trim(restart_dir)//'/wfns', action='read', is_tmp=.true., grp=st%mpi_grp)
+    wfns = io_open(trim(restart_dir)//'/wfns', action='read', is_tmp=.true., grp=mpi_grp)
     if(wfns.lt.0) then
       message(1) = 'Could not read '//trim(restart_dir)//'/wfns.'
       call write_fatal(1)
     end if
-    occs = io_open(trim(restart_dir)//'/occs', action='read', is_tmp=.true., grp=st%mpi_grp)
+    occs = io_open(trim(restart_dir)//'/occs', action='read', is_tmp=.true., grp=mpi_grp)
     if(occs.lt.0) then
       message(1) = 'Could not read '//trim(restart_dir)//'/occs.'
       call write_fatal(1)
     end if
 
     ! Skip two lines.
-    call iopar_read(st%mpi_grp, wfns, line, err); call iopar_read(st%mpi_grp, wfns, line, err)
-    call iopar_read(st%mpi_grp, occs, line, err); call iopar_read(st%mpi_grp, occs, line, err)
+    call iopar_read(mpi_grp, wfns, line, err); call iopar_read(mpi_grp, wfns, line, err)
+    call iopar_read(mpi_grp, occs, line, err); call iopar_read(mpi_grp, occs, line, err)
 
-    jst = 0
+    jk  = 0 ! reset counter for k-points
+    st%d%kpoints(:, :) = M_ZERO
+    st%d%kweights(:) = M_ZERO
+
     st%ob_rho = M_ZERO
     call mpi_grp_copy(m_lead%mpi_grp, gr%mesh%mpi_grp)
     do
       ! Check for end of file. Check only one of the two files assuming
       ! they are written correctly, i. e. of same length.
-      call iopar_read(st%mpi_grp, wfns, line, err)
+      call iopar_read(mpi_grp, wfns, line, err)
       read(line, '(a)') char
       if(char.eq.'%') then
         exit
       end if
 
-      call iopar_backspace(st%mpi_grp, wfns)
+      call iopar_backspace(mpi_grp, wfns)
 
-      call iopar_read(st%mpi_grp, wfns, line, err)
+      call iopar_read(mpi_grp, wfns, line, err)
       read(line, *) ik, char, ist, char, idim, char, fname
 
-      call iopar_read(st%mpi_grp, occs, line, err)
+      call iopar_read(mpi_grp, occs, line, err)
       read(line, *) occ, char, eval, char, k_x, char, k_y, char, k_z, char, w_k, char, &
         chars, char, ik, char, ist, char, idim
-
+      ! FIXME for more than 1 state
       if(occ.gt.CNST(1e-5)) then
-        ! count the occupied states (with idim==1)
-        if(idim.eq.1) jst = jst + 1
+        ! count the occupied k-points (with idim==1)
+        if(idim.eq.1) jk = jk + 1
+
+        st%d%kpoints(:, jk) = (/k_x, k_y, k_z/)
+        st%d%kweights(jk) = w_k
+        st%occ(ist, jk) = occ
         ! if not in the corresponding node cycle
-        if(jst < st%st_start .or. jst > st%st_end) cycle
+        if(jk < st%d%kpt%start .or. jk > st%d%kpt%end) cycle
       else ! we do not consider empty states
         cycle
       end if
 
-      st%ob_d%kpoints(:, jst) = (/k_x, k_y, k_z/)
-      st%ob_d%kweights(jst) = w_k
-
-     !st%occ(jst, 1) = occ*w_k
-!st%d%kpoints(:, jst) = (/k_x, k_y, k_z/)
-!st%d%kweights(ik)   = w_k
-      call zrestart_read_function(trim(sb%lead_restart_dir(LEFT))//'/gs', fname, m_lead, tmp, err)
+      call zrestart_read_function(trim(sb%lead_restart_dir(LEFT))//'/gs', fname, m_lead, tmp(:, idim), err)
 
       call lead_dens_accum()
 
@@ -1009,39 +1033,46 @@ contains
       ! It only works in this compact form because the transport-direction (x) is
       ! the index running slowest.          
       do k = 1, gr%sb%n_ucells
-        st%zphi((k-1)*np+1:k*np, idim, jst, 1) = tmp(1:np)
+        st%zphi((k-1)*np+1:k*np, idim, 1, jk) = tmp(1:np, idim)
       end do
 
       ! Apply phase.
       do ip = 1, gr%mesh%np
-        phase = exp(-M_zI*sum(gr%mesh%x(ip, 1:MAX_DIM)*st%ob_d%kpoints(1:MAX_DIM, jst)))
-        !phase = exp(-M_zI*sum(gr%mesh%x(ip, 1:MAX_DIM)*st%ob_d%kpoints(1:MAX_DIM, ik)))
-        st%zphi(ip, idim, jst, 1) = phase*st%zphi(ip, idim, jst, 1)
+        phase = exp(-M_zI*sum(gr%mesh%x(ip, 1:MAX_DIM)*st%d%kpoints(1:MAX_DIM, jk)))
+        st%zphi(ip, idim, 1, jk) = phase*st%zphi(ip, idim, 1, jk)
       end do
 
       ! For debugging: write phi in gnuplot format to files.
       ! Only the z=0 plane is written, so mainly useful for 1D and 2D
       ! debugging.
       if(in_debug_mode) then
-        write(filename, '(a,i3.3,a,i4.4,a,i1.1)') 'phi-', ik, '-', jst, '-', idim
+        write(filename, '(a,i3.3,a,i4.4,a,i1.1)') 'phi-', jk, '-', ist, '-', idim
         select case(calc_dim)
         case(1)
           call zoutput_function(output_axis_x, 'debug/open_boundaries', filename, &
-            m_center, sb, st%zphi(:, idim, jst, 1), M_ONE, err, is_tmp=.false.)
+            m_center, sb, st%zphi(:, idim, ist, jk), M_ONE, err, is_tmp=.false.)
         case(2, 3)
           call zoutput_function(output_plane_z, 'debug/open_boundaries', filename, &
-            m_center, sb, st%zphi(:, idim, jst, 1), M_ONE, err, is_tmp=.false.)
+            m_center, sb, st%zphi(:, idim, ist, jk), M_ONE, err, is_tmp=.false.)
         end select
       end if
 
-
     end do ! Loop over all free states.
+
+    ! renormalize weigths
+    w_sum = sum(st%d%kweights(:))
+    st%d%kweights(:) = st%d%kweights(:)/w_sum
+    st%qtot = M_ZERO
+    do ist = 1, st%nst
+      st%qtot = st%qtot + sum(st%occ(ist, 1:st%d%nik) * st%d%kweights(1:st%d%nik))
+    end do
+
     call io_close(wfns); call io_close(occs)
     SAFE_DEALLOCATE_A(tmp)
 
     message(1) = "Info: Sucessfully initialized free states from '"// &
       trim(sb%lead_restart_dir(LEFT))//"/gs'"
-    write(message(2),'(a,i3,a)') 'Info:', jst, ' occupied states read by program.'
+    write(message(2),'(a,i3,a)') 'Info:', jk, ' occupied states read by program.'
     call write_info(2)
 
     call pop_sub()
@@ -1052,11 +1083,11 @@ contains
       integer :: il
 
       call push_sub('restart.lead_dens_accum')
-
+      !FIXME no spinors yet
       do il = 1, NLEADS
         do ip = 1, np
           st%ob_rho(ip, idim, il) = st%ob_rho(ip, idim, il) + w_k*occ* &
-            (real(tmp(ip), REAL_PRECISION)**2 + aimag(tmp(ip))**2)
+            (real(tmp(ip, idim), REAL_PRECISION)**2 + aimag(tmp(ip, idim))**2)
         end do
         select case(st%d%ispin)
         case(SPINORS)
@@ -1095,7 +1126,7 @@ contains
       normalize_yes       = 1, &
       normalize_no        = 0
 
-    call push_sub('restart.restart_read_user_def_states')
+    call push_sub('restart.restart_read_user_def_orbitals')
 
     !%Variable UserDefinedStates
     !%Type block
@@ -1174,7 +1205,8 @@ contains
 
               ! does the block entry match and is this node responsible?
               if(.not.(id.eq.idim .and. is.eq.inst .and. ik.eq.inik    &
-                .and. st%st_start.le.is .and. st%st_end.ge.is) ) cycle
+                .and. st%st_start.le.is .and. st%st_end.ge.is          &
+                .and. st%d%kpt%start.le.ik .and. st%d%kpt%end.ge.ik) ) cycle
 
               select case(state_from)
 

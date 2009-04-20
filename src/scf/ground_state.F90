@@ -98,7 +98,8 @@ contains
       ! equation.
       ! Use free states as initial wavefunctions.
       if(sys%gr%sb%open_boundaries) then
-        ASSERT(sys%st%ob_ncs.eq.sys%st%nst)
+        ASSERT(sys%st%ob_nst.eq.sys%st%nst)
+        ASSERT(sys%st%ob_d%nik.eq.sys%st%d%nik)
         sys%st%zpsi(1:sys%gr%mesh%np, :, :, :) = sys%st%zphi(1:sys%gr%mesh%np, :, :, :)
       else
         ! Randomly generate the initial wave-functions.

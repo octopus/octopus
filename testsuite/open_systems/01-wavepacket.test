@@ -2,7 +2,7 @@
 # $Id: oct-run_regression_test.pl 2423 2006-09-24 21:25:52Z acastro $
 
 Test       : Open boundaries 1D
-Programs   : octopus
+Programs   : octopus; octopus_mpi
 TestGroups : short-run
 Enabled    : Yes
 
@@ -13,11 +13,11 @@ Enabled    : Yes
 Input: 01-wavepacket.01-deriv_order_1.inp
 match ; Density [step   0] ; LINE(flat_td.general/multipoles,  16, 30) ; 3.981621426799e+00
 match ; Density [step 100] ; LINE(flat_td.general/multipoles, 116, 30) ; 3.956585208823e+00
-match ; Density [step 200] ; LINE(flat_td.general/multipoles, 216, 30) ; 2.463948468361e+00
-match ; Density [step 300] ; LINE(flat_td.general/multipoles, 316, 30) ; 9.781748931173e-01
+match ; Density [step 200] ; LINE(flat_td.general/multipoles, 216, 30) ; 2.463948468287e+00
+match ; Density [step 300] ; LINE(flat_td.general/multipoles, 316, 30) ; 9.781748917889e-01
 
 Input: 01-wavepacket.02-deriv_order_4.inp
 match ; Density [step   0] ; LINE(flat_td.general/multipoles,  16, 30) ; 3.981621426799e+00
-match ; Density [step 100] ; LINE(flat_td.general/multipoles, 116, 30) ; 3.955793145265e+00
-match ; Density [step 200] ; LINE(flat_td.general/multipoles, 216, 30) ; 2.456516729473e+00
-match ; Density [step 300] ; LINE(flat_td.general/multipoles, 316, 30) ; 9.759575843497e-01
+match ; Density [step 100] ; LINE(flat_td.general/multipoles, 116, 30) ; 3.955793145235e+00
+match ; Density [step 200] ; LINE(flat_td.general/multipoles, 216, 30) ; 2.456516723961e+00
+match ; Density [step 300] ; LINE(flat_td.general/multipoles, 316, 30) ; 9.759575728441e-01

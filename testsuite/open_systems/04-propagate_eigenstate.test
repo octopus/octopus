@@ -2,13 +2,22 @@
 # $Id: 01-carbon_atom.test 4011 2008-04-02 09:30:10Z marques $
 
 Test       : Propagate eigenstate of 1D square well
-Programs   : octopus
+Programs   : octopus; octopus_mpi
 TestGroups : long-run
 Enabled    : Yes
 
 # Calculate eigenstate of 1d attractive square potential barrier.
 Input: 04-propagate_eigenstate.01-square_well_1d.inp
-match ; Total energy [step   0]; LINE(well_td.general/energy,   6, 30) ; 7.315255880019e+01
-match ; Total energy [step 100]; LINE(well_td.general/energy, 106, 30) ; 7.315252889713e+01
-match ; Total energy [step 200]; LINE(well_td.general/energy, 206, 30) ; 7.315252029222e+01
-match ; Total energy [step 300]; LINE(well_td.general/energy, 306, 30) ; 7.315257762484e+01
+match ; Total energy [step   0]; LINE(well_td.general/energy,   6, 30) ; 3.662518098364e+02
+match ; Total energy [step 100]; LINE(well_td.general/energy, 106, 30) ; 3.662518367282e+02
+match ; Total energy [step 200]; LINE(well_td.general/energy, 206, 30) ; 3.662518365923e+02
+match ; Total energy [step 300]; LINE(well_td.general/energy, 306, 30) ; 3.662518366107e+02
+
+# Calculate eigenstates of 2D ring potential attached to upside-down Gaussian
+# shaped lead channels and propagate with a bias switched on.
+Input: 04-propagate_eigenstate.02-ring_leads_2d.inp
+match ; Total energy [step   0]; LINE(ring_lead_td.general/energy,   6, 30) ; 4.087119902781e+02
+match ; Total energy [step  25]; LINE(ring_lead_td.general/energy,  31, 30) ; 4.110623668840e+02
+match ; Total energy [step  50]; LINE(ring_lead_td.general/energy,  56, 30) ; 4.136619769076e+02
+match ; Total energy [step  75]; LINE(ring_lead_td.general/energy,  81, 30) ; 4.176634846141e+02
+match ; Total energy [step 100]; LINE(ring_lead_td.general/energy, 106, 30) ; 4.225006127957e+02

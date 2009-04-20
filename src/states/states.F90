@@ -173,7 +173,7 @@ contains
 
     FLOAT :: excess_charge
     integer :: nempty, ierr, il
-    integer :: ob_k(NLEADS), ob_st(NLEADS), ob_d(NLEADS)
+    integer, allocatable :: ob_k(:), ob_st(:), ob_d(:)
 
     call push_sub('states.states_init')
 
@@ -278,6 +278,9 @@ contains
     ! determined by the previous periodic calculation.
     st%open_boundaries = gr%sb%open_boundaries
     if(gr%sb%open_boundaries) then
+      ALLOCATE(ob_k(NLEADS), NLEADS)
+      ALLOCATE(ob_st(NLEADS), NLEADS)
+      ALLOCATE(ob_d(NLEADS), NLEADS)
       do il = 1, NLEADS
         call states_look(trim(gr%sb%lead_restart_dir(il))//'/gs', mpi_world, &
           ob_k(il), ob_d(il), ob_st(il), ierr, .true.)
@@ -296,6 +299,10 @@ contains
       st%ob_d%dim = ob_d(LEFT)
       st%ob_nst   = ob_st(LEFT)
       st%ob_d%nik = ob_k(LEFT)
+      st%d%nik = st%ob_d%nik
+      SAFE_DEALLOCATE_A(ob_d)
+      SAFE_DEALLOCATE_A(ob_st)
+      SAFE_DEALLOCATE_A(ob_k)
       call distributed_nullify(st%ob_d%kpt, 0)
       if((st%d%ispin.eq.UNPOLARIZED.and.st%ob_d%dim.ne.1) .or.   &
         (st%d%ispin.eq.SPIN_POLARIZED.and.st%ob_d%dim.ne.1) .or. &
@@ -308,10 +315,19 @@ contains
       ! goes to the spin-up k-index, the other half to the spin-down
       ! k-index, we therefore divide by st%d%nik.
       st%ob_ncs = st%ob_d%nik*st%ob_nst / st%d%nik
+      st%ob_ncs = 1
+      DEALLOCATE(st%d%kpoints)
+      DEALLOCATE(st%d%kweights)
+      ALLOCATE(st%d%kpoints(MAX_DIM, st%d%nik), MAX_DIM*st%d%nik)
+      ALLOCATE(st%d%kweights(st%d%nik), st%d%nik)
+      st%d%kweights(1) = M_ONE
+      st%d%kpoints(1:MAX_DIM, 1) = M_ZERO
       ALLOCATE(st%ob_d%kpoints(MAX_DIM, st%ob_d%nik), MAX_DIM*st%ob_d%nik)
       ALLOCATE(st%ob_d%kweights(st%ob_d%nik), st%ob_d%nik)
-      ALLOCATE(st%ob_eigenval(st%ob_ncs, st%d%nik), st%ob_ncs*st%d%nik)
-      ALLOCATE(st%ob_occ(st%ob_ncs, st%d%nik), st%ob_ncs*st%d%nik)
+!      ALLOCATE(st%ob_eigenval(st%ob_ncs, st%d%nik), st%ob_ncs*st%d%nik)
+!      ALLOCATE(st%ob_occ(st%ob_ncs, st%d%nik), st%ob_ncs*st%d%nik)
+      ALLOCATE(st%ob_eigenval(st%ob_nst, st%ob_d%nik), st%ob_nst*st%ob_d%nik)
+      ALLOCATE(st%ob_occ(st%ob_nst, st%ob_d%nik), st%ob_nst*st%ob_d%nik)
       call read_ob_eigenval_and_occ()
     else
       st%ob_nst   = 0
@@ -349,14 +365,20 @@ contains
     ! continuum states, i.e. for those states treated by the Lippmann-
     ! Schwinger approach during SCF.
     if(gr%sb%open_boundaries) then
-      if(st%nst.ne.st%ob_ncs) then
+!      if(st%nst.ne.st%ob_ncs) then
+      if(st%nst.ne.st%ob_nst .or. st%d%nik.ne.st%ob_d%nik) then
         message(1) = 'Open-boundary calculations for possibly bound states'
         message(2) = 'are not possible yet. You have to match your number'
         message(3) = 'of states to the number of free states of your previous'
         message(4) = 'periodic run.'
-        write(message(5), '(a,i5,a)') 'Your finite system contributes ', st%nst-st%ob_ncs, ' states,'
-        write(message(6), '(a,i5,a)') 'while your periodic calculation had ', st%ob_ncs, ' states.'
-        call write_fatal(6)
+!        write(message(5), '(a,i5,a)') 'Your finite system contributes ', st%nst-st%ob_ncs, ' states,'
+!        write(message(6), '(a,i5,a)') 'while your periodic calculation had ', st%ob_ncs, ' states.'
+        write(message(5), '(a,i5,a)') 'Your finite system contributes ', st%nst-st%ob_nst, ' states,'
+        write(message(6), '(a,i5,a)') 'while your periodic calculation had ', st%ob_nst, ' states.'
+        write(message(7), '(a,i5,a)') 'Your finite system contributes ', st%d%nik-st%ob_d%nik, ' k-points,'
+        write(message(8), '(a,i5,a)') 'while your periodic calculation had ', st%ob_d%nik, ' k-points.'
+        call write_fatal(8)
+!        call write_fatal(6)
       end if
     end if
 
@@ -439,7 +461,7 @@ contains
   contains
 
     subroutine read_ob_eigenval_and_occ()
-      integer            :: occs, jst, ist, ik, err
+      integer            :: occs, jk, ist, ik, err
       FLOAT              :: flt, eigenval, occ
       character          :: char
       character(len=256) :: restart_dir, line, chars
@@ -458,7 +480,7 @@ contains
       call iopar_read(mpi_world, occs, line, err)
       call iopar_read(mpi_world, occs, line, err)
 
-      jst = 1
+      jk = 1
       do
         ! Check for end of file.
         call iopar_read(mpi_world, occs, line, err)
@@ -474,17 +496,17 @@ contains
         if(occ.gt.CNST(1e-5)) then
           if(st%d%ispin.eq.SPIN_POLARIZED) then
             if(is_spin_up(ik)) then
-              st%ob_eigenval(jst, SPIN_UP) = eigenval
-              st%ob_occ(jst, SPIN_UP)      = occ
+!              st%ob_eigenval(jst, SPIN_UP) = eigenval
+!              st%ob_occ(jst, SPIN_UP)      = occ
             else
-              st%ob_eigenval(jst, SPIN_DOWN) = eigenval
-              st%ob_occ(jst, SPIN_DOWN)      = occ
+!              st%ob_eigenval(jst, SPIN_DOWN) = eigenval
+!              st%ob_occ(jst, SPIN_DOWN)      = occ
             end if
           else
-            st%ob_eigenval(jst, 1) = eigenval
-            st%ob_occ(jst, 1)      = occ
+            st%ob_eigenval(1, jk) = eigenval
+            st%ob_occ(1, jk)      = occ
           end if
-          jst = jst + 1
+          jk = jk + 1
         end if
       end do
 
@@ -506,8 +528,10 @@ contains
 
     ! FIXME: spin-polarized free states ignored.
     if(gr%sb%open_boundaries) then
-      alloc_size = gr%mesh%np_part*st%d%dim*st%ob_ncs*st%d%nik
-      ALLOCATE(st%zphi(gr%mesh%np_part, st%d%dim, st%ob_ncs, st%d%nik), alloc_size)
+!      alloc_size = gr%mesh%np_part*st%d%dim*st%ob_ncs*st%d%nik
+!      ALLOCATE(st%zphi(gr%mesh%np_part, st%d%dim, st%ob_ncs, st%d%nik), alloc_size)
+      alloc_size = gr%mesh%np_part*st%ob_d%dim*st%ob_nst*st%ob_d%nik
+      ALLOCATE(st%zphi(gr%mesh%np_part, st%ob_d%dim, st%ob_nst, st%ob_d%nik), alloc_size)
       alloc_size = gr%mesh%lead_unit_cell(LEFT)%np*st%d%nspin*NLEADS
       ALLOCATE(st%ob_rho(gr%mesh%lead_unit_cell(LEFT)%np, st%d%nspin, NLEADS), alloc_size)
       st%zphi = M_z0
@@ -602,7 +626,12 @@ contains
     if(st%open_boundaries) then
       st%fixed_occ = .true.
       st%occ  = st%ob_occ
-      st%qtot = sum(st%occ)
+!      st%qtot = sum(st%occ)
+      st%qtot = M_ZERO
+      do i = 1, st%nst
+        st%qtot = st%qtot + sum(st%occ(i, 1:st%d%nik) * st%d%kweights(1:st%d%nik))
+      end do
+
     else
       occ_fix: if(loct_parse_block(datasets_check('Occupations'), blk)==0) then
         ! read in occupations
@@ -1175,7 +1204,7 @@ contains
     FLOAT, allocatable :: lspin(:, :) ! To exchange spin.
 #endif
 
-    call push_sub('states.fermi')
+    call push_sub('states.states_fermi')
 
     call smear_find_fermi_energy(st%smear, st%eigenval, st%occ, st%qtot, &
       st%d%nik, st%nst, st%d%kweights)
@@ -2026,7 +2055,8 @@ contains
     if(present(grho)) grho(:,:,:) = M_ZERO
 
     do is = 1, sp
-      do ik_tmp = 1, st%d%nik, sp
+!      do ik_tmp = 1, st%d%nik, sp
+      do ik_tmp = st%d%kpt%start, st%d%kpt%end, sp
         ik = ik_tmp + is - 1
 
         do ist = st%st_start, st%st_end
@@ -2106,31 +2136,47 @@ contains
 
 #if defined(HAVE_MPI)
     if(st%parallel_in_states) then
+      call reduce_all(st%mpi_grp)
+    end if
+    if(st%d%kpt%parallel) then
+      call reduce_all(st%d%kpt%mpi_grp)
+    end if
+
+  contains 
+
+    subroutine reduce_all(grp)
+      type(mpi_grp_t), intent(in)  :: grp
+
+      call push_sub('states.reduce_all')
+
       ALLOCATE(tmp_reduce(1:gr%mesh%np), gr%mesh%np)
 
       do is = 1, st%d%nspin
         if(present(tau)) then
-          call MPI_Allreduce(tau(1, is), tmp_reduce(1), gr%mesh%np, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+          call MPI_Allreduce(tau(1, is), tmp_reduce(1), gr%mesh%np, MPI_FLOAT, MPI_SUM, grp%comm, mpi_err)
           tau(1:gr%mesh%np, is) = tmp_reduce(1:gr%mesh%np)       
         end if
 
         do i_dim = 1, gr%mesh%sb%dim
           if(present(jp)) then
             call MPI_Allreduce(jp(1, i_dim, is), tmp_reduce(1), gr%mesh%np, MPI_FLOAT, MPI_SUM, &
-                 st%mpi_grp%comm, mpi_err)
+                 grp%comm, mpi_err)
             jp(1:gr%mesh%np, i_dim, is) = tmp_reduce(1:gr%mesh%np)
           end if
 
           if(present(grho)) then
             call MPI_Allreduce(grho(1, i_dim, is), tmp_reduce(1), gr%mesh%np, MPI_FLOAT, MPI_SUM, &
-                 st%mpi_grp%comm, mpi_err)
+                 grp%comm, mpi_err)
             grho(1:gr%mesh%np, i_dim, is) = tmp_reduce(1:gr%mesh%np)
           end if
         end do
 
       end do
       SAFE_DEALLOCATE_A(tmp_reduce)
-    end if
+
+      call pop_sub()
+    end subroutine reduce_all
+
 #endif            
   end subroutine states_calc_tau_jp_gn
 
@@ -2388,7 +2434,7 @@ contains
     CMPLX,               intent(in)    :: diag(:, :, :, :)      ! Diagonal block of the lead Hamiltonian.
     CMPLX,               intent(in)    :: offdiag(:, :, :)      ! Offdiagonal block of the lead Hamiltonian.
 
-    character(len=1)      :: ln(NLEADS)
+    character(len=1), allocatable  :: ln(:)
     character(len=2)      :: spin
     character(len=256)    :: fmt, fname_real, fname_imag
     FLOAT                 :: energy
@@ -2397,74 +2443,81 @@ contains
 
     call push_sub('states.states_init_green')
 
-    np = gr%intf(LEFT)%np
     if(calc_mode_is(CM_GS)) then
+      ALLOCATE(ln(NLEADS), NLEADS)
+      np = gr%intf(LEFT)%np
       ln(LEFT)  = 'L'; ln(RIGHT) = 'R'
-    ! Calculate Green function of the leads.
-    ! FIXME: For spinors, this calculation is almost certainly wrong.
-    ASSERT(st%ob_ncs == st%nst)
-    alloc_size = np**2*nspin*st%lnst*st%d%kpt%nlocal*NLEADS
-    s1 = st%st_start; s2 = st%st_end
-    k1 = st%d%kpt%start; k2 = st%d%kpt%end
-    ALLOCATE(st%ob_green(np, np, nspin, s1:s2, k1:k2, NLEADS), alloc_size)
-    call messages_print_stress(stdout, 'Lead Green functions')
-    message(1) = ' st#  Spin  Lead     Energy'
-    call write_info(1)
+      ! Calculate Green function of the leads.
+      ! FIXME: For spinors, this calculation is almost certainly wrong.
+      !AS SERT(st%ob_ncs == st%nst)
+      ASSERT(st%ob_nst == st%nst)
+      ASSERT(st%ob_d%nik == st%d%nik)
+      alloc_size = np**2*nspin*st%lnst*st%d%kpt%nlocal*NLEADS
+      s1 = st%st_start; s2 = st%st_end
+      k1 = st%d%kpt%start; k2 = st%d%kpt%end
+      ALLOCATE(st%ob_green(np, np, nspin, s1:s2, k1:k2, NLEADS), alloc_size)
+      call messages_print_stress(stdout, 'Lead Green functions')
+      message(1) = ' st#  Spin  Lead     Energy'
+      call write_info(1)
 #ifdef HAVE_MPI 
-    ! wait for all processors to finish 
-    if(st%parallel_in_states) then 
-    call MPI_Barrier(st%mpi_grp%comm, mpi_err) 
-    end if 
+      ! wait for all processors to finish 
+!      if(st%parallel_in_states) then 
+!        call MPI_Barrier(st%mpi_grp%comm, mpi_err) 
+!      end if 
+      if(st%d%kpt%parallel) then 
+        call MPI_Barrier(st%d%kpt%mpi_grp%comm, mpi_err) 
+      end if 
 #endif
-    do ik = k1, k2
-      do ist = s1, s2
-        energy = st%ob_eigenval(ist, ik)
-        do il = 1, NLEADS
-          do ispin = 1, nspin
-            select case(d_ispin)
-            case(UNPOLARIZED)
-              spin = '--'
-            case(SPIN_POLARIZED)
-              if(is_spin_up(ik)) then
-                spin = 'up'
-              else
-                spin = 'dn'
-              end if
-              ! This is nonsense, but at least all indices are present.
-            case(SPINORS)
-              if(ispin.eq.1) then
-                spin = 'up'
-              else
-                spin = 'dn'
-              end if
-            end select
-            write(message(1), '(i4,3x,a2,5x,a1,1x,f12.6)') ist, spin, ln(il), energy
-            call write_info(1)
-            call lead_green(energy, diag(:, :, ispin, il), offdiag(:, :, il), &
-                np, st%ob_green(:, :, ispin, ist, ik, il), gr%sb%h(TRANS_DIR))
+      do ik = k1, k2
+        do ist = s1, s2
+          energy = st%ob_eigenval(ist, ik)
+          do il = 1, NLEADS
+            do ispin = 1, nspin
+              select case(d_ispin)
+              case(UNPOLARIZED)
+                spin = '--'
+              case(SPIN_POLARIZED)
+                if(is_spin_up(ik)) then
+                  spin = 'up'
+                else
+                  spin = 'dn'
+                end if
+                ! This is nonsense, but at least all indices are present.
+              case(SPINORS)
+                if(ispin.eq.1) then
+                  spin = 'up'
+                else
+                  spin = 'dn'
+                end if
+              end select
+              write(message(1), '(i4,3x,a2,5x,a1,1x,f12.6)') ist, spin, ln(il), energy
+              call write_info(1)
+              call lead_green(energy, diag(:, :, ispin, il), offdiag(:, :, il), &
+                  np, st%ob_green(:, :, ispin, ist, ik, il), gr%sb%h(TRANS_DIR))
 
-            ! Write the entire Green function to a file.
-            if(in_debug_mode) then
-              call io_mkdir('debug/open_boundaries')
-              write(fname_real, '(3a,i4.4,a,i3.3,a,i1.1,a)') 'debug/open_boundaries/green-', &
-                trim(LEAD_NAME(il)), '-', ist, '-', ik, '-', ispin, '.real'
-              write(fname_imag, '(3a,i4.4,a,i3.3,a,i1.1,a)') 'debug/open_boundaries/green-', &
-                trim(LEAD_NAME(il)), '-', ist, '-', ik, '-', ispin, '.imag'
-              green_real = io_open(fname_real, action='write', grp=st%mpi_grp, is_tmp=.false.)
-              green_imag = io_open(fname_imag, action='write', grp=st%mpi_grp, is_tmp=.false.)
+              ! Write the entire Green function to a file.
+              if(in_debug_mode) then
+                call io_mkdir('debug/open_boundaries')
+                write(fname_real, '(3a,i4.4,a,i3.3,a,i1.1,a)') 'debug/open_boundaries/green-', &
+                  trim(LEAD_NAME(il)), '-', ist, '-', ik, '-', ispin, '.real'
+                write(fname_imag, '(3a,i4.4,a,i3.3,a,i1.1,a)') 'debug/open_boundaries/green-', &
+                  trim(LEAD_NAME(il)), '-', ist, '-', ik, '-', ispin, '.imag'
+                green_real = io_open(fname_real, action='write', grp=st%d%kpt%mpi_grp, is_tmp=.false.)
+                green_imag = io_open(fname_imag, action='write', grp=st%d%kpt%mpi_grp, is_tmp=.false.)
 
-              write(fmt, '(a,i6,a)') '(', np, 'e14.4)'
-              do irow = 1, np
-                write(green_real, fmt) real(st%ob_green(irow, :, ispin, ist, ik, il))
-                write(green_imag, fmt) aimag(st%ob_green(irow, :, ispin, ist, ik, il))
-              end do
-              call io_close(green_real); call io_close(green_imag)
-            end if
+                write(fmt, '(a,i6,a)') '(', np, 'e14.4)'
+                do irow = 1, np
+                  write(green_real, fmt) real(st%ob_green(irow, :, ispin, ist, ik, il))
+                  write(green_imag, fmt) aimag(st%ob_green(irow, :, ispin, ist, ik, il))
+                end do
+                call io_close(green_real); call io_close(green_imag)
+              end if
+            end do
           end do
         end do
       end do
-    end do
-    call messages_print_stress(stdout)
+      call messages_print_stress(stdout)
+      deallocate(ln)
     end if
 
     call pop_sub()

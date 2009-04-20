@@ -82,7 +82,7 @@ contains
     integer,             intent(in)  :: max_iter
     
     integer            :: order, it, allocsize, np
-    CMPLX              :: um(NLEADS)
+    CMPLX, allocatable :: um(:)
     FLOAT, allocatable :: td_pot(:, :)
 
     call push_sub('ob_rti.ob_rti_init')
@@ -159,6 +159,7 @@ contains
     call lead_td_pot(td_pot, gr%sb%lead_td_pot_formula, max_iter, dt)
     ! Allocate memory for the src_mem_u (needed for source and memory term.
     ALLOCATE(ob%src_mem_u(0:max_iter, NLEADS), (max_iter+1)*NLEADS)
+    ALLOCATE(um(NLEADS), NLEADS)
     !            /      dt        \   / /       dt        \
     ! u(m, il) = |1 - i -- U(m,il)|  /  | 1 + i -- U(m,il) |
     !            \      4         / /   \       4         /
@@ -166,13 +167,14 @@ contains
       um(1:NLEADS)               = M_HALF*(td_pot(it+1, 1:NLEADS) + td_pot(it, 1:NLEADS))
       ob%src_mem_u(it, 1:NLEADS) = (M_z1 - M_zI*dt/M_FOUR*um(1:NLEADS)) / (M_z1 + M_zI*dt/M_FOUR*um(1:NLEADS))
     end do
+    SAFE_DEALLOCATE_A(um)
     SAFE_DEALLOCATE_A(td_pot)
 
     call ob_rti_write_info(ob, st, gr, max_iter, order)
 
     ! Initialize source and memory terms.
     call ob_mem_init(gr%intf, hm, ob, dt/M_TWO, max_iter, gr%der%lapl, &
-      gr%sb%h(TRANS_DIR), order, st%mpi_grp)
+      gr%sb%h(TRANS_DIR), order, st%d%kpt%mpi_grp)
     call ob_src_init(ob, st, gr%intf(LEFT)%np)
 
     ! Allocate memory for the interface wave functions of previous
@@ -499,7 +501,7 @@ contains
     type(hamiltonian_t), intent(inout) :: hm
     type(grid_t),        intent(inout) :: gr
     CMPLX, target,       intent(in)    :: mem(:, :, :)
-    type(interface_t),   intent(in)    :: intf(NLEADS)
+    type(interface_t),   intent(in)    :: intf(1:NLEADS)
     FLOAT,               intent(in)    :: sign, dt, t
     integer,             intent(in)    :: ist
     integer,             intent(in)    :: ik

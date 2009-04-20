@@ -5,8 +5,7 @@
 # Calculate extended eigenstate of an attractive square
 # potential barrier in 1D.
 
-lead_ParallelizationStrategy = par_kpoints
-well_ParallelizationStrategy = par_states
+ParallelizationStrategy = par_kpoints
 MeshBlockSizeXY = 1
 MeshBlockSizeZ = 1
 DevelVersion = yes
@@ -19,7 +18,6 @@ DevelVersion = yes
 
 FromScratch = yes
 TheoryLevel = independent_particles
-Eigensolver = lobpcg
 BoxShape = parallelepiped
 DerivativesOrder = 1
 Dimensions = 1
@@ -39,8 +37,8 @@ add_ucells = 10
  lead_restart_dir | "lead_restart"
  lead_static_dir  | "lead_static"
  add_unit_cells   | add_ucells
+ td_pot_formula   | "0.0"   | "0.0"
 %
-well_ExcessCharge = 2*add_ucells + 3
 
 lead_PeriodicDimensions = 1
 %lead_Coordinates
@@ -51,12 +49,10 @@ lead_PeriodicDimensions = 1
  50*Spacing | 0 | 0
 %
 
-%lead_KPoints
- 1 | 0.1 | 0 | 0
- 1 | 0.2 | 0 | 0
- 1 | 0.3 | 0 | 0
- 1 | 0.4 | 0 | 0
+%KPointsMonkhorstPack 
+  4 | 1 | 1
 %
+KPointsUseSymmetries = false
 
 %well_Coordinates
  "well" | 0 | 0 | 0

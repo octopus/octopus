@@ -3,17 +3,20 @@
 # $Id$
 #
 # Calculate eigenstates of 2D ring potential attached to upside-down Gaussian
-# shaped lead channels.
+# shaped lead channels, propagate with bias switched on.
+DevelVersion = yes
+DebugLevel = 0
 
 ParallelizationStrategy = par_kpoints
+Eigensolver = lobpcg
+
 MeshBlockSizeXY = 1
 MeshBlockSizeZ = 1
-DevelVersion = yes
 
 %CalculationMode
- gs      | gs
- "lead_" | "ring_lead_"
- 1       | 2
+ gs      | gs           | td
+ "lead_" | "ring_lead_" | "ring_lead_"
+ 1       | 2            | 3
 %
 
 FromScratch = yes
@@ -25,9 +28,14 @@ Spacing = 0.1
 Lx = 5
 Ly = 3
 
+lead_Lx = Spacing
+%lead_Lsize
+ lead_Lx | Ly | 0
+%
+
 D = 0.9 # Radius of the ring.
 W = 0.2 # Width of the channel.
-V = 10  # Depth of the potential.
+V = 10.0  # Depth of the potential.
 
 %Species
  "channel" | 1.0 | user_defined | 1.0 | "V*step(x+lead_Lx+0.5*Spacing)*(1-step(x-0.5*Spacing))*(-exp(-y^2/W))"
@@ -36,12 +44,13 @@ V = 10  # Depth of the potential.
  "ring"    | 1.0 | user_defined | 1.0 | "-V*exp(-(sqrt(x^2+y^2)-D)^2/W)"
 %
 
-add_ucells = 4
+add_ucells = 0
 %ring_lead_OpenBoundaries
  lead_dataset     | "lead_"
  lead_restart_dir | "lead_restart"
+ lead_static_dir  | "lead_static"
  add_unit_cells   | add_ucells
- td_pot_formula   | "0.0"   | "0.0"
+ td_pot_formula   | "0.3"   | "-0.3"
 %
 
 lead_PeriodicDimensions = 1
@@ -49,13 +58,8 @@ lead_PeriodicDimensions = 1
  "channel" | 0 | 0 | 0
 %
 
-lead_Lx = Spacing
-%lead_Lsize
- lead_Lx | Ly | 0
-%
-
 %KPointsMonkhorstPack 
-  8 | 1 | 1
+  4 | 1 | 1
 %
 KPointsUseSymmetries = false
 
@@ -69,7 +73,24 @@ KPointsUseSymmetries = false
  "rchan" |  D | 0 | 0
 %
 
-ring_lead_EigenSolverMaxIter = 5000
+ring_lead_EigenSolverMaxIter = 10000
+OpenBoundariesBiCGMaxIter = 10000
 
-Output = potential
-OutputHow = binary
+# TD settings.
+
+TDTimeStep = 0.02
+TDMaximumIter = 100
+TDEvolutionMethod = crank_nicholson_src_mem
+
+# does not work for k-point parallelization yet
+%ring_lead_CurrentThroughPlane
+   0.0 | 0.0 # origin
+   0.0 | -1.0 # u
+   Spacing # spacing
+   -Ly/Spacing | Ly/Spacing # nu | mu
+%
+
+lead_Output = potential + density + wfs_sqmod + wfs
+ring_lead_Output = density
+OutputHow = binary + plane_z
+#OutputEvery = 10

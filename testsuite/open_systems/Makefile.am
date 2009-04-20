@@ -31,6 +31,7 @@ dist_share_DATA = \
 	03-extended_eigenstate.02-ring_leads_2d.inp \
 	03-extended_eigenstate.test \
 	04-propagate_eigenstate.01-square_well_1d.inp \
+	04-propagate_eigenstate.02-ring_leads_2d.inp \
 	04-propagate_eigenstate.test
 
 CLEANFILES = *~ *.bak

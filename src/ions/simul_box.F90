@@ -816,13 +816,15 @@ contains
     type(simul_box_t), intent(in)    :: sb
     type(geometry_t),  intent(inout) :: geo
 
-    type(geometry_t)  :: lead_geo(NLEADS), central_geo
+    type(geometry_t)  :: central_geo
+    type(geometry_t), allocatable  :: lead_geo(:)
     character(len=32) :: label_bak
     integer           :: il, j, n, iatom, icatom, dir
 
     call push_sub('simul_box.simul_box_add_lead_atoms')
 
     if(sb%open_boundaries) then
+      ALLOCATE(lead_geo(NLEADS), NLEADS)
       do il = 1, NLEADS
         ! We temporarily change the current label to read the
         ! coordinates of another dataset, namely the lead dataset.
@@ -898,6 +900,7 @@ contains
         call geometry_end(lead_geo(il))
       end do
       call geometry_end(central_geo)
+      deallocate(lead_geo)
 
     end if
     call pop_sub()
