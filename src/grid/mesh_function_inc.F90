@@ -799,12 +799,13 @@ subroutine X(mf_multipoles) (mesh, ff, lmax, multipole)
   call pop_sub()
 end subroutine X(mf_multipoles)
 
-subroutine X(mf_dotp_batch)(mesh, aa, bb, dot, symm)
+subroutine X(mf_dotp_batch)(mesh, aa, bb, dot, symm, reduce)
   type(mesh_t),      intent(in)    :: mesh
   type(batch_t),     intent(in)    :: aa
   type(batch_t),     intent(in)    :: bb
   R_TYPE,            intent(inout) :: dot(:, :)
   logical, optional, intent(in)    :: symm         !for the moment it is ignored
+  logical, optional, intent(in)    :: reduce
 
   integer :: ist, jst, idim, sp, block_size, ep, ip, lda, ldb
   R_TYPE :: ss
@@ -813,10 +814,15 @@ subroutine X(mf_dotp_batch)(mesh, aa, bb, dot, symm)
   R_TYPE, allocatable :: ddtmp(:, :)
 #endif
   type(profile_t), save :: prof, profgemm, profcomm
-  logical :: use_blas
+  logical :: use_blas, reduce_
 
   call push_sub('mesh_function_inc.Xmf_dotp_batch')
   call profiling_in(prof, "DOTP_BATCH")
+
+#ifdef HAVE_MPI
+  reduce_ = .true.
+  if(present(reduce)) reduce_ = reduce
+#endif
 
   ASSERT(aa%dim == bb%dim)
 
@@ -883,7 +889,7 @@ subroutine X(mf_dotp_batch)(mesh, aa, bb, dot, symm)
   if(use_blas) call profiling_out(profgemm)
 
 #ifdef HAVE_MPI
-  if(mesh%parallel_in_domains) then
+  if(mesh%parallel_in_domains .and. reduce_) then
     call profiling_in(profcomm, "DOTP_BATCH_REDUCE")
     ALLOCATE(ddtmp(1:aa%nst, 1:bb%nst), aa%nst*bb%nst)
     forall(ist = 1:aa%nst, jst = 1:bb%nst) ddtmp(ist, jst) = dd(ist, jst)
