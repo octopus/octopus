@@ -569,18 +569,10 @@ subroutine X(vnlpsi_batch) (hm, mesh, psib, hpsib, ik)
   type(batch_t),       intent(inout) :: hpsib
   integer,             intent(in)    :: ik
 
-  integer :: ii
-  R_TYPE, pointer :: psi(:, :), hpsi(:, :)
-
   call profiling_in(C_PROFILING_VNLPSI)
   call push_sub('hamiltonian_inc.Xvnlpsi_batch')
 
-  do ii = 1, psib%nst
-    psi  => psib%states(ii)%X(psi)
-    hpsi => hpsib%states(ii)%X(psi)
-
-    call X(project_psi)(mesh, hm%ep%proj, hm%ep%natoms, hm%d%dim, psi, hpsi, ik)
-  end do
+  call X(project_psi_batch)(mesh, hm%ep%proj, hm%ep%natoms, hm%d%dim, psib, hpsib, ik)
 
   call pop_sub()
   call profiling_out(C_PROFILING_VNLPSI)

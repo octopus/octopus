@@ -210,6 +210,194 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, ik)
   call pop_sub()
 end subroutine X(project_psi)
 
+!-------------------------------------------------------------------------------------------
+
+subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
+  type(mesh_t),      intent(in)    :: mesh
+  type(projector_t), intent(in)    :: pj(:)
+  integer,           intent(in)    :: npj
+  integer,           intent(in)    :: dim
+  type(batch_t),     intent(in)    :: psib
+  type(batch_t),     intent(inout) :: ppsib
+  integer,           intent(in)    :: ik
+
+  integer :: ipj, nreduce, ii, ns, idim, ll, mm, is, ist
+  R_TYPE, allocatable :: reduce_buffer(:, :), lpsi(:, :)
+  integer, allocatable :: ireduce(:, :, :)
+  R_TYPE, pointer :: psi(:, :), ppsi(:, :)
+#if defined(HAVE_MPI)
+  R_TYPE, allocatable   :: reduce_buffer_dest(:, :)
+  type(profile_t), save :: reduce_prof
+  type(submesh_comm_t), allocatable :: smc(:, :, :)
+#endif
+
+  call push_sub('projector_inc.project_psi')
+
+  ! To optimize the application of the non-local operator in parallel,
+  ! the projectors are applied in steps. First the <p|psi> is
+  ! calculated for all projectors and the result is stored on an array
+  ! (reduce_buffer). Then the array is reduced (as it is contiguous
+  ! only one reduction is required). Finally |ppsi> += |p><p|psi> is
+  ! calculated.
+
+  ! generate the reduce buffer and related structures
+
+  ALLOCATE(ireduce(1:npj, 0:MAX_L, -MAX_L:MAX_L), npj*(MAX_L + 1)*(2*MAX_L + 1))
+#if defined(HAVE_MPI)
+  ALLOCATE(smc(1:npj, 0:MAX_L, -MAX_L:MAX_L), npj*(MAX_L + 1)*(2*MAX_L + 1))
+#endif
+
+  nreduce = 0
+
+  ! count the number of elements in the reduce buffer
+  do ipj = 1, npj
+    if(pj(ipj)%type == M_NONE) cycle
+    do ll = 0, pj(ipj)%lmax
+      if (ll == pj(ipj)%lloc) cycle
+      do mm = -ll, ll
+        ireduce(ipj, ll, mm) = 1 + nreduce
+        nreduce = nreduce + pj(ipj)%reduce_size
+      end do
+    end do
+  end do
+
+  ! Check whether we have or not "real" projectors. If we do not, return.
+  if(nreduce == 0) then
+    call pop_sub(); return
+  end if
+
+    ALLOCATE(reduce_buffer(nreduce, psib%nst), nreduce*psib%nst)
+#if defined(HAVE_MPI)
+    if(mesh%parallel_in_domains) then
+      ALLOCATE(reduce_buffer_dest(nreduce, psib%nst), nreduce*psib%nst)
+    end if
+#endif
+
+  do ist = 1, psib%nst
+    psi  => psib%states(ist)%X(psi)
+    ppsi => ppsib%states(ist)%X(psi)
+
+    ! calculate <p|psi>
+    do ipj = 1, npj
+      if(pj(ipj)%type == M_NONE) cycle
+
+      ns = pj(ipj)%sphere%ns
+
+      ALLOCATE(lpsi(ns, dim),  ns*dim)
+
+      !copy psi to the small spherical grid
+
+      do idim = 1, dim
+        if(associated(pj(ipj)%phase)) then
+          forall (is = 1:ns) lpsi(is, idim) = psi(pj(ipj)%sphere%jxyz(is), idim)*pj(ipj)%phase(is, ik)
+          call profiling_count_operations(ns*R_MUL)
+        else
+          forall (is = 1:ns) lpsi(is, idim) = psi(pj(ipj)%sphere%jxyz(is), idim)
+        end if
+      end do
+
+      !apply the projectors for each angular momentum component
+
+      do ll = 0, pj(ipj)%lmax
+        if (ll == pj(ipj)%lloc) cycle
+        do mm = -ll, ll
+
+          ii = ireduce(ipj, ll, mm)
+
+          select case(pj(ipj)%type)
+          case(M_KB)
+            call X(kb_project_bra)(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(ll, mm), dim, lpsi, reduce_buffer(ii:, ist))
+          case(M_RKB)
+#ifdef R_TCOMPLEX
+            if(ll /= 0) then
+              call rkb_project_bra(mesh, pj(ipj)%sphere, pj(ipj)%rkb_p(ll, mm), lpsi, reduce_buffer(ii:, ist))
+            else
+              call zkb_project_bra(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(1, 1), dim, lpsi, reduce_buffer(ii:, ist))
+            end if
+#endif
+          case(M_HGH)
+            call X(hgh_project_bra)(mesh, pj(ipj)%sphere, pj(ipj)%hgh_p(ll, mm), dim, pj(ipj)%reltype, lpsi, reduce_buffer(ii:, ist))
+          end select
+
+        end do ! mm
+      end do ! ll
+
+      SAFE_DEALLOCATE_A(lpsi)
+
+    end do
+  end do
+
+  ! reduce <p|psi>
+#if defined(HAVE_MPI)
+  if(mesh%parallel_in_domains) then
+    call profiling_in(reduce_prof, "VNLPSI_REDUCE_BATCH")
+    call MPI_Allreduce(reduce_buffer, reduce_buffer_dest, nreduce*psib%nst, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
+    reduce_buffer = reduce_buffer_dest
+    call profiling_out(reduce_prof)
+  end if
+#endif
+  
+  do ist = 1, psib%nst
+    psi  => psib%states(ist)%X(psi)
+    ppsi => ppsib%states(ist)%X(psi)
+
+    ! calculate |ppsi> += |p><p|psi>
+    do ipj = 1, npj
+      if(pj(ipj)%type == M_NONE) cycle
+
+      ns = pj(ipj)%sphere%ns
+      ALLOCATE(lpsi(ns, dim),  ns*dim)
+
+      lpsi = M_ZERO
+
+      do ll = 0, pj(ipj)%lmax
+        if (ll == pj(ipj)%lloc) cycle
+        do mm = -ll, ll
+
+          ii = ireduce(ipj, ll, mm)
+
+          select case(pj(ipj)%type)
+          case(M_KB)
+            call X(kb_project_ket)(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(ll, mm), dim, reduce_buffer(ii:, ist), lpsi)
+          case(M_RKB)
+#ifdef R_TCOMPLEX
+            if(ll /= 0) then
+              call rkb_project_ket(pj(ipj)%rkb_p(ll, mm), reduce_buffer(ii:, ist), lpsi)
+            else
+              call zkb_project_ket(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(1, 1), dim, reduce_buffer(ii:, ist), lpsi)
+            end if
+#endif
+          case(M_HGH)
+            call X(hgh_project_ket)(mesh, pj(ipj)%sphere, pj(ipj)%hgh_p(ll, mm), dim, pj(ipj)%reltype, reduce_buffer(ii:, ist), lpsi)
+          end select
+
+        end do ! mm
+      end do ! ll
+
+      !put the result back in the complete grid
+
+      do idim = 1, dim
+        if(associated(pj(ipj)%phase)) then
+          forall (is = 1:ns) ppsi(pj(ipj)%sphere%jxyz(is), idim) = &
+               ppsi(pj(ipj)%sphere%jxyz(is), idim) + lpsi(is, idim)*conjg(pj(ipj)%phase(is, ik))
+          call profiling_count_operations(ns*(R_ADD + R_MUL))
+        else
+          forall (is = 1:ns) ppsi(pj(ipj)%sphere%jxyz(is), idim) = ppsi(pj(ipj)%sphere%jxyz(is), idim) + lpsi(is, idim)
+          call profiling_count_operations(ns*R_ADD)
+        end if
+      end do
+
+      SAFE_DEALLOCATE_A(lpsi)
+
+    end do
+  end do
+
+  SAFE_DEALLOCATE_A(reduce_buffer)
+  SAFE_DEALLOCATE_A(ireduce)
+
+  call pop_sub()
+end subroutine X(project_psi_batch)
+
 !------------------------------------------------------------------------------
 ! X(psia_project_psib) calculates <psia|projector|psib>
 R_TYPE function X(psia_project_psib)(pj, dim, psia, psib, ik) result(apb)

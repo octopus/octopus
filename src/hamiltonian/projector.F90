@@ -20,6 +20,7 @@
 #include "global.h"
 
 module projector_m
+  use batch_m
   use double_grid_m
   use global_m
   use grid_m
@@ -56,6 +57,8 @@ module projector_m
        projector_end,             &
        dproject_psi,              &
        zproject_psi,              &
+       dproject_psi_batch,        &
+       zproject_psi_batch,        &
        dproject_sphere,           &
        zproject_sphere,           &
        dpsia_project_psib,        &
