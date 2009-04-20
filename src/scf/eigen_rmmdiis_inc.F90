@@ -44,7 +44,8 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   type(profile_t), save :: prof
   type(batch_t), allocatable :: psib(:), resb(:)
   type(batch_t) :: psibit, resbit
-  integer, allocatable :: done(:)
+  integer, allocatable :: done(:), last(:)
+  logical, allocatable :: failed(:)
 #ifdef HAVE_MPI
   R_TYPE, allocatable :: fbuff(:)
   R_TYPE, allocatable :: buff(:, :)
@@ -59,6 +60,8 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   ALLOCATE(psib(niter), niter)
   ALLOCATE(resb(niter), niter)
   ALLOCATE(done(blocksize), blocksize)
+  ALLOCATE(last(blocksize), blocksize)
+  ALLOCATE(failed(blocksize), blocksize)
   ALLOCATE(fr(4, blocksize), 4*blocksize)
 
   nops = 0
@@ -94,13 +97,13 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     end do
 
 #ifdef HAVE_MPI
-      ! perform all the reductions at once
-      if(gr%mesh%parallel_in_domains) then
-        ALLOCATE(fbuff(bsize), bsize)
-        fbuff(1:bsize) = st%eigenval(jst:maxst, ik)
-        call MPI_Allreduce(fbuff, st%eigenval(jst:maxst, ik), bsize, MPI_FLOAT, MPI_SUM, gr%mesh%mpi_grp%comm, mpi_err)
-        SAFE_DEALLOCATE_A(fbuff)
-      end if
+    ! perform all the reductions at once
+    if(gr%mesh%parallel_in_domains) then
+      ALLOCATE(fbuff(bsize), bsize)
+      fbuff(1:bsize) = st%eigenval(jst:maxst, ik)
+      call MPI_Allreduce(fbuff, st%eigenval(jst:maxst, ik), bsize, MPI_FLOAT, MPI_SUM, gr%mesh%mpi_grp%comm, mpi_err)
+      SAFE_DEALLOCATE_A(fbuff)
+    end if
 #endif
 
     do ist = jst, maxst
@@ -179,7 +182,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
         do ist = jst, maxst
           ib = ist - jst + 1
-          
+
           if(done(ib) /= 0) cycle
 
           ! predict by jacobi
@@ -191,7 +194,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
         ! calculate the residual
         call X(hamiltonian_apply_batch)(hm, gr, psib(iter), resb(iter), ik)
         nops = nops + bsize - sum(done)
-        
+
         ALLOCATE(mm(iter, iter, 2, bsize), iter**2*2*bsize)
         ALLOCATE(evec(iter, 1), iter)
         ALLOCATE(eval(iter), iter)
@@ -199,7 +202,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
         do ist = jst, maxst
           ib = ist - jst + 1
 
-          if(done(ib) /= 0) cycle
+          if(done(ib) /= 0 .and. .not. failed(ib)) cycle
 
           do idim = 1, st%d%dim
             call lalg_axpy(gr%mesh%np, -st%eigenval(ist, ik), psi(:, idim, iter, ib), res(:, idim, iter, ib))
@@ -220,21 +223,26 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
         end do
 
 #ifdef HAVE_MPI
-      ! perform all the reductions at once
-      if(gr%mesh%parallel_in_domains) then
-        ALLOCATE(mmc(iter, iter, 2, bsize), iter**2*2*bsize)
-        mmc(1:iter, 1:iter, 1:2, 1:bsize) = mm(1:iter, 1:iter, 1:2, 1:bsize)
-        call MPI_Allreduce(mmc, mm, iter**2*2*bsize, R_MPITYPE, MPI_SUM, gr%mesh%mpi_grp%comm, mpi_err)
-        SAFE_DEALLOCATE_A(mmc)
-      end if
+        ! perform all the reductions at once
+        if(gr%mesh%parallel_in_domains) then
+          ALLOCATE(mmc(iter, iter, 2, bsize), iter**2*2*bsize)
+          mmc(1:iter, 1:iter, 1:2, 1:bsize) = mm(1:iter, 1:iter, 1:2, 1:bsize)
+          call MPI_Allreduce(mmc, mm, iter**2*2*bsize, R_MPITYPE, MPI_SUM, gr%mesh%mpi_grp%comm, mpi_err)
+          SAFE_DEALLOCATE_A(mmc)
+        end if
 #endif
 
         do ist = jst, maxst
           ib = ist - jst + 1
 
-          if(done(ib) /= 0) cycle
+          if(done(ib) /= 0 .and. .not. failed(ib)) cycle
 
-          call lalg_lowest_geneigensolve(1, iter, mm(:, :, 1, ib), mm(:, :, 2, ib), eval, evec)
+          failed(ib) = .false.
+          call lalg_lowest_geneigensolve(1, iter, mm(:, :, 1, ib), mm(:, :, 2, ib), eval, evec, bof = failed(ib))
+          if(failed(ib)) then
+            last(ib) = iter - 1
+            cycle
+          end if
 
           ! generate the new vector and the new residual (the residual
           ! might be recalculated instead but that seems to be a bit
@@ -266,22 +274,28 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
       do ist = jst, maxst
         ib = ist - jst + 1
-        
+
         if(done(ib) /= 0) cycle
 
-        ! end with a trial move
-        call X(preconditioner_apply)(pre, gr, hm, res(:, :, iter - 1, ib), st%X(psi)(: , :, ist, ik))
+        if(.not. failed(ib)) then
+          ! end with a trial move
+          call X(preconditioner_apply)(pre, gr, hm, res(:, :, iter - 1, ib), st%X(psi)(: , :, ist, ik))
 
-        forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-          st%X(psi)(ip, idim, ist, ik) = psi(ip, idim, iter - 1, ib) + lambda(ib)*st%X(psi)(ip, idim, ist, ik)
-        end forall
+          forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
+            st%X(psi)(ip, idim, ist, ik) = psi(ip, idim, iter - 1, ib) + lambda(ib)*st%X(psi)(ip, idim, ist, ik)
+          end forall
+        else
+          do idim = 1, st%d%dim
+            call lalg_copy(gr%mesh%np, psi(:, idim, last(ib), ib), st%X(psi)(: , idim, ist, ik))
+          end do
+        end if
 
         if(mpi_grp_is_root(mpi_world)) then
           call loct_progress_bar(st%nst*(ik - 1) +  ist, st%nst*st%d%nik)
         end if
 
       end do
-      
+
     end if
   end do
 
