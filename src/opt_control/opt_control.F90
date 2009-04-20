@@ -791,7 +791,7 @@ contains
         write(*, '(80(''#''))')
         write(*, *) 'GRADIENT (FORWARD-BACKWARD) |    GRADIENT (NUMERICAL)     |       DIFF'
         do j = 1, n
-          write(*, '(4x,es18.8,7x,''|'',4x,es18.8,7x,''|'',es18.8)'), df(j), dfn(j), df(j)-dfn(j)
+          write(*, '(4x,es18.8,7x,a,4x,es18.8,7x,a,es18.8)') df(j), '|', dfn(j), '|', df(j)-dfn(j)
         end do
 
         SAFE_DEALLOCATE_A(xdx)
