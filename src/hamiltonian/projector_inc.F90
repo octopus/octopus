@@ -223,11 +223,10 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
   integer :: ipj, nreduce, ii, ns, idim, ll, mm, is, ist
   R_TYPE, allocatable :: reduce_buffer(:, :), lpsi(:, :, :)
   integer, allocatable :: ireduce(:, :, :)
-  R_TYPE, pointer :: psi(:, :), ppsi(:, :)
   type(profile_t), save :: prof_scatter, prof_gather
 #if defined(HAVE_MPI)
+  type(profile_t), save :: reduce_prof
   R_TYPE, allocatable   :: reduce_buffer_dest(:, :)
-  type(submesh_comm_t), allocatable :: smc(:, :, :)
 #endif
 
   call push_sub('projector_inc.project_psi')
@@ -242,9 +241,6 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
   ! generate the reduce buffer and related structures
 
   ALLOCATE(ireduce(1:npj, 0:MAX_L, -MAX_L:MAX_L), npj*(MAX_L + 1)*(2*MAX_L + 1))
-#if defined(HAVE_MPI)
-  ALLOCATE(smc(1:npj, 0:MAX_L, -MAX_L:MAX_L), npj*(MAX_L + 1)*(2*MAX_L + 1))
-#endif
 
   nreduce = 0
 
