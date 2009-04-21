@@ -324,7 +324,13 @@ subroutine mesh_init_stage_3(mesh, stencil, mpi_grp, parent)
     ALLOCATE(mesh%x(mesh%np_part_global, MAX_DIM), mesh%np_part_global*MAX_DIM)
   end if
   
-  if(mesh%idx%sb%box_shape /= HYPERCUBE) call create_x_Lxyz()
+  if(mesh%idx%sb%box_shape /= HYPERCUBE) then
+    call create_x_Lxyz()
+  else if(.not. mesh%parallel_in_domains) then
+    do ip = 1, mesh%np_part_global
+      mesh%x(ip, 1:MAX_DIM) = mesh_x_global(mesh, ip, force=.true.)
+    end do
+  end if
   
   if(mesh%parallel_in_domains) then
     ASSERT(present(stencil))

@@ -450,6 +450,8 @@ contains
 
     call distributed_nullify(st%d%kpt, st%d%nik)
 
+    call modelMB_particles_init (st%modelMBparticles,gr)
+
     call pop_sub()
 
   contains
@@ -963,7 +965,7 @@ contains
 
     SAFE_DEALLOCATE_P(st%user_def_states)
 
-!    call modelMB_particles_end(st%modelmbparticles)
+    call modelMB_particles_end(st%modelmbparticles)
 
     call pop_sub()
   end subroutine states_end
@@ -1649,9 +1651,9 @@ contains
         if(mpi_grp_is_root(mpi_world)) then
 
           select case(use_qvector)
-            case(.true.);  write(message(1), '(1x,6(es15.8,x))') transition_energy/units_out%energy%factor, osc(:), osc_strength, &
+            case(.true.);  write(message(1), '(1x,6(es15.8,1x))') transition_energy/units_out%energy%factor, osc(:), osc_strength, &
                                                                & dsf*units_out%energy%factor
-            case(.false.); write(message(1), '(1x,5(es15.8,x))') transition_energy/units_out%energy%factor, osc(:), osc_strength
+            case(.false.); write(message(1), '(1x,5(es15.8,1x))') transition_energy/units_out%energy%factor, osc(:), osc_strength
           end select
 
           call write_info(1,iunit)

@@ -702,27 +702,28 @@ contains
     memory = memory + dble(REAL_PRECISION*mesh%np_part*MAX_DIM)
   end function mesh_local_memory
 
-  function mesh_x_global(mesh, ip) result(xx)
+  function mesh_x_global(mesh, ip, force) result(xx)
     type(mesh_t),       intent(in) :: mesh
     integer,            intent(in) :: ip
+    logical, optional,  intent(in) :: force
     FLOAT                          :: xx(1:MAX_DIM)
 
-#ifdef HAVE_MPI
     FLOAT :: chi(1:MAX_DIM)
     integer :: ix(1:MAX_DIM)
+    logical :: force_
+
+    force_=.false.
+    if (present(force)) force_=force
       
-    if(mesh%parallel_in_domains) then
+    if(mesh%parallel_in_domains .or. force_) then
       call index_to_coords(mesh%idx, mesh%sb%dim, ip, ix)
       chi(1:mesh%sb%dim) = ix(1:mesh%sb%dim)*mesh%h(1:mesh%sb%dim)
       chi(mesh%sb%dim + 1:MAX_DIM) = M_ZERO
       call curvilinear_chi2x(mesh%sb, mesh%cv, chi, xx)
       xx(mesh%sb%dim + 1:MAX_DIM) = M_ZERO
     else
-#endif
       xx(1:MAX_DIM) = mesh%x(ip, 1:MAX_DIM)
-#ifdef HAVE_MPI
     end if
-#endif
 
   end function mesh_x_global
 

@@ -38,6 +38,7 @@ module modelMB_particles_m
   public :: modelMB_particles_init,&
             modelMB_particles_end,&
             modelMB_particles_copy,&
+            modelmb_derivative_masses,&
             modelMB_particle_t
 
 !==============================================================
@@ -97,7 +98,7 @@ subroutine modelMB_particles_init (modelMBparticles,gr)
 
 !args
   type(modelMB_particle_t),intent(inout) :: modelMBparticles
-  type(grid_t), intent(inout) :: gr
+  type(grid_t), intent(in) :: gr
 
 !local vars
   integer :: ipart,ncols,nline,dimcounter
@@ -212,12 +213,6 @@ subroutine modelMB_particles_init (modelMBparticles,gr)
       end do
       call loct_parse_block_end(blk)
 
-      ! copy masses to gr%der%masses:
-      dimcounter=0
-      do ipart=1,modelMBparticles%nparticle_modelMB
-        gr%der%masses(dimcounter+1:dimcounter+modelMBparticles%ndim_modelMB) = modelMBparticles%mass_particle_modelMB(ipart)
-        dimcounter=dimcounter+modelMBparticles%ndim_modelMB
-      end do
   end if
     
   modelMBparticles%nparticles_per_type = 0
@@ -256,12 +251,8 @@ subroutine modelMB_particles_init (modelMBparticles,gr)
           modelMBparticles%ndensities_to_calculate > modelMBparticles%nparticle_modelMB) then
         call input_error("DensitiestoCalc")
       end if
-  end if
-
-  ALLOCATE (modelMBparticles%labels_densities(modelMBparticles%ndensities_to_calculate), modelMBparticles%ndensities_to_calculate)
-  ALLOCATE (modelMBparticles%particle_kept_densities(modelMBparticles%ndensities_to_calculate), modelMBparticles%ndensities_to_calculate)
-
-  if(modelMBparticles%ndensities_to_calculate > 0) then
+      ALLOCATE (modelMBparticles%labels_densities(modelMBparticles%ndensities_to_calculate), modelMBparticles%ndensities_to_calculate)
+      ALLOCATE (modelMBparticles%particle_kept_densities(modelMBparticles%ndensities_to_calculate), modelMBparticles%ndensities_to_calculate)
       do ipart=1,modelMBparticles%ndensities_to_calculate
         call loct_parse_block_string(blk, ipart-1, 0, modelMBparticles%labels_densities(ipart))
         call loct_parse_block_int(blk, ipart-1, 1, modelMBparticles%particle_kept_densities(ipart))
@@ -271,6 +262,9 @@ subroutine modelMB_particles_init (modelMBparticles,gr)
         call write_info(2)
       end do
       call loct_parse_block_end(blk)
+  else 
+    ALLOCATE (modelmbparticles%labels_densities(0), 0)
+    ALLOCATE (modelmbparticles%particle_kept_densities(0), 0)
   end if
 
   call pop_sub()
@@ -293,6 +287,7 @@ subroutine modelMB_particles_end (modelMBparticles)
   SAFE_DEALLOCATE_P(modelMBparticles%particletype_modelMB)
   SAFE_DEALLOCATE_P(modelMBparticles%mass_particle_modelMB)
   SAFE_DEALLOCATE_P(modelMBparticles%charge_particle_modelMB)
+  SAFE_DEALLOCATE_P(modelMBparticles%nparticles_per_type)
 
   SAFE_DEALLOCATE_P(modelMBparticles%labels_densities)
   SAFE_DEALLOCATE_P(modelMBparticles%particle_kept_densities)
@@ -337,5 +332,30 @@ subroutine modelMB_particles_copy(modelmb_out, modelmb_in)
   call pop_sub()
 
 end subroutine modelMB_particles_copy
+
+!==============================================================
+!  Copy masses for particles to the derivative object
+!==============================================================
+subroutine modelmb_derivative_masses (modelMBparticles,masses)
+
+  implicit none
+
+!args
+  type(modelMB_particle_t),intent(in) :: modelMBparticles
+  FLOAT, intent(inout) :: masses(MAX_DIM)
+
+!local
+  integer :: dimcounter,ipart
+
+  ! copy masses to gr%der%masses
+  dimcounter=0
+  do ipart=1,modelMBparticles%nparticle_modelMB
+    if (abs(modelMBparticles%mass_particle_modelMB(ipart)-1.0d0) > 1.e-10) then
+      masses(dimcounter+1:dimcounter+modelMBparticles%ndim_modelMB) = modelMBparticles%mass_particle_modelMB(ipart)
+    end if
+    dimcounter=dimcounter+modelMBparticles%ndim_modelMB
+  end do
+
+end subroutine modelmb_derivative_masses
 
 end module modelMB_particles_m
