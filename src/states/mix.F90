@@ -70,23 +70,28 @@ module mix_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine mix_init(smix, d1, d2, d3, def_, func_type)
+  subroutine mix_init(smix, d1, d2, d3, def_, func_type, prefix_)
     type(mix_t),       intent(out) :: smix
     integer,           intent(in)  :: d1, d2, d3
     integer, optional, intent(in)  :: def_
     integer, optional, intent(in)  :: func_type
+    character(len=*), optional, intent(in) :: prefix_
 
     integer :: def, func_type_
+    character(len=32) :: prefix
 
     call push_sub('mix.mix_init')
 
     def = MIX_BROYDEN
     if(present(def_)) def = def_
     if(present(func_type)) then 
-      func_type_=func_type
+      func_type_ = func_type
     else 
-      func_type_=M_REAL
+      func_type_ = M_REAL
     end if
+    prefix = ""
+    if(present(prefix_)) prefix = prefix_
+
 
     !%Variable TypeOfMixing
     !%Type integer
@@ -105,7 +110,7 @@ contains
     !% Broyden scheme [C. G Broyden, Math. Comp. 19, 577 (1965); 
     !% D. D. Johnson, Phys. Rev. B 38, 12807 (1988)].
     !%End
-    call loct_parse_int(datasets_check('TypeOfMixing'), def, smix%type_of_mixing)
+    call loct_parse_int(datasets_check(trim(prefix)//'TypeOfMixing'), def, smix%type_of_mixing)
     if(.not.varinfo_valid_option('TypeOfMixing', smix%type_of_mixing)) call input_error('TypeOfMixing')
     call messages_print_var_option(stdout, "TypeOfMixing", smix%type_of_mixing)
 
@@ -117,7 +122,7 @@ contains
     !% Both the linear and the Broyden scheme depend on a "mixing parameter", set by this variable.  Must be 0 < Mixing <= 1.
     !%End
     if (smix%type_of_mixing == MIX_LINEAR .or. smix%type_of_mixing == MIX_BROYDEN) then
-      call loct_parse_float(datasets_check('Mixing'), CNST(0.3), smix%alpha)
+      call loct_parse_float(datasets_check(trim(prefix)//'Mixing'), CNST(0.3), smix%alpha)
       if(smix%alpha <= M_ZERO .or. smix%alpha > M_ONE) call input_error('Mixing')
     end if
 
@@ -131,7 +136,7 @@ contains
     !% This number is set by this variable. Must be at least 1.
     !%End
     if (smix%type_of_mixing == MIX_GRPULAY .or. smix%type_of_mixing == MIX_BROYDEN) then
-      call loct_parse_int(datasets_check('MixNumberSteps'), 3, smix%ns)
+      call loct_parse_int(datasets_check(trim(prefix)//'MixNumberSteps'), 3, smix%ns)
       if(smix%ns <= 1) call input_error('MixNumberSteps')
     end if
 

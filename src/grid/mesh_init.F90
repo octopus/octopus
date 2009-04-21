@@ -225,7 +225,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
   mesh%idx%Lxyz_inv(:,:,:) = 0
   mesh%idx%Lxyz_tmp(:,:,:) = 0
   mesh%x_tmp(:,:,:,:)  = M_ZERO
-
+  
   ! We label the points inside the mesh + enlargement
   do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
     chi(1) = real(ix, REAL_PRECISION) * mesh%h(1) + sb%box_offset(1)

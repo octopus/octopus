@@ -24,9 +24,9 @@ include $(srcdir)/../common-rules.make
 bin_PROGRAMS = octopus oct-test
 
 octopus_SOURCES = \
+	invert_ks.F90 memory.F90 \
 	one_shot.F90 unocc.F90 static_pol.F90 geom_opt.F90 phonons_fd.F90 \
-	casida.F90 pulpo.F90 gcm.F90 run.F90 main.F90 \
-	memory.F90
+	casida.F90 pulpo.F90 gcm.F90 run.F90 main.F90
 
 octopus_LDADD = $(all_LIBS)
 

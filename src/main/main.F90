@@ -141,6 +141,8 @@ program octopus
   !% Generator-Coordinates calculation (experimental).
   !%Option memory 17
   !% It tells you the approximate amount of memory octopus will need to run.
+  !%Option invert_ks 18
+  !% Run mode used to invert the Kohn-Sham equations
   !%Option recipe 99
   !% Prints out a tasty recipe
   !%End

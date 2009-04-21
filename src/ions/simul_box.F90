@@ -1232,6 +1232,7 @@ contains
     write(iunit, '(a20,e22.14)')    'fft_alpha=          ', sb%fft_alpha
     write(iunit, '(a20,9e22.14)')   'h=                  ', sb%h(1:MAX_DIM)
     write(iunit, '(a20,9e22.14)')   'box_offset=         ', sb%box_offset(1:MAX_DIM)
+    write(iunit, '(a20,e22.14)')    'inner_size=         ', sb%inner_size
     do i = 1, MAX_DIM
       write(iunit, '(a9,i1,a11,9e22.14)')   'rlattice(', i, ')=         ', sb%rlattice(1:MAX_DIM, i)
     end do
@@ -1359,6 +1360,7 @@ contains
     read(iunit, *) str, sb%fft_alpha
     read(iunit, *) str, sb%h(1:MAX_DIM)
     read(iunit, *) str, sb%box_offset(1:MAX_DIM)
+    read(iunit, *) str, sb%inner_size
     do idim=1, MAX_DIM
       read(iunit, *) str, sb%rlattice(1:MAX_DIM, idim)
     end do

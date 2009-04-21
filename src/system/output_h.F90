@@ -35,10 +35,10 @@
           write(fname, '(a,i1)') 'vks-', is
           if (hm%ep%classical_pot > 0) then
             call doutput_function(outp%how, dir, fname, m, sb, &
-              hm%ep%vpsl + hm%ep%Vclassical + hm%vhartree + hm%vxc(:, is), u, err, geo = geo)
+              hm%ep%vpsl + hm%ep%Vclassical + hm%vhxc(:, is), u, err, geo = geo)
           else
             call doutput_function(outp%how, dir, fname, m, sb, &
-              hm%ep%vpsl + hm%vhartree + hm%vxc(:, is), u, err, geo = geo)
+              hm%ep%vpsl + hm%vhxc(:, is), u, err, geo = geo)
           end if
         end do
       end if

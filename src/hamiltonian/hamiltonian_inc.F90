@@ -605,8 +605,10 @@ subroutine X(vlpsi_batch) (hm, m, psib, hpsib, ik)
       hpsi => hpsib%states(ii)%X(psi)
 
       do ip = 1, m%np
-        hpsi(ip, 1) = (hm%vhxc(ip, 1) + hm%ep%vpsl(ip))*psi(ip, 1) + (hm%vhxc(ip, 3) + M_zI*hm%vhxc(ip, 4))*psi(ip, 2)
-        hpsi(ip, 2) = (hm%vhxc(ip, 2) + hm%ep%vpsl(ip))*psi(ip, 2) + (hm%vhxc(ip, 3) - M_zI*hm%vhxc(ip, 4))*psi(ip, 1)
+        hpsi(ip, 1) = (hm%vhxc(ip, 1) + hm%ep%vpsl(ip))*psi(ip, 1) + &
+             (hm%vhxc(ip, 3) + M_zI*hm%vhxc(ip, 4))*psi(ip, 2)
+        hpsi(ip, 2) = (hm%vhxc(ip, 2) + hm%ep%vpsl(ip))*psi(ip, 2) + &
+             (hm%vhxc(ip, 3) - M_zI*hm%vhxc(ip, 4))*psi(ip, 1)
       end do
 
     end do

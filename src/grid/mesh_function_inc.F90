@@ -397,7 +397,8 @@ subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, u, f)
   call push_sub('mesh_function_inc.Xmf_interpolate')
 
   if(full_interpolation) then
-    call X(mf_interpolate_points) (mesh_in, u, mesh_out%np, mesh_out%x, f)
+    call X(mf_interpolate_points) (mesh_in%sb%dim, mesh_in%np_global, mesh_in%x, u, &
+         mesh_out%np, mesh_out%x, f)
   else
     
     if(mesh_in%parallel_in_domains) then
@@ -439,18 +440,18 @@ end subroutine X(mf_interpolate)
 ! in the interpolated values of the function over the npoints defined
 ! by x
 
-subroutine X(mf_interpolate_points) (mesh_in, u, npoints, x, f)
-  type(mesh_t),         intent(in)  :: mesh_in
-  R_TYPE, target,       intent(in)  :: u(:)    ! u(mesh_in%np_global)
-  integer,              intent(in)  :: npoints
-  FLOAT,                intent(in)  :: x(:, :)
-  R_TYPE,               intent(out) :: f(:)    ! f(mesh%np)
+subroutine X(mf_interpolate_points) (ndim, npoints_in, x_in, f_in, npoints_out, x_out, f_out)
+  integer,              intent(in)  :: ndim, npoints_in, npoints_out
+  R_TYPE, target,       intent(in)  :: f_in(:)    ! f_in(npoints_in)
+  FLOAT,  target,       intent(in)  :: x_in(:, :)
+  FLOAT,                intent(in)  :: x_out(:,:)
+  R_TYPE,               intent(out) :: f_out(:)   ! f_out(npoints_out)
 
   real(8) :: p(MAX_DIM)
-  R_DOUBLE, pointer :: ru(:)
+  R_DOUBLE, pointer :: rf_in(:)
+  real(8),  pointer :: rx_in(:, :)
   integer :: i
   type(qshep_t) :: interp
-  real(8), pointer :: rx(:, :)
 #ifndef R_TCOMPLEX
   type(spline_t) :: interp1d
 #endif
@@ -458,46 +459,46 @@ subroutine X(mf_interpolate_points) (mesh_in, u, npoints, x, f)
   call push_sub('mesh_function_inc.Xmf_interpolate_points')
 
 #ifdef SINGLE_PRECISION
-  ALLOCATE(rx(1:ubound(mesh_in%x, DIM=1), 1:mesh_in%sb%dim), ubound(mesh_in%x, DIM=1)*mesh_in%sb%dim)
-  rx = mesh_in%x
-  ALLOCATE(ru(1:ubound(u, DIM=1)), ubound(u, DIM=1))
-  ru = u
+  ALLOCATE(rx_in(1:npoints_in, 1:ndim), npoints_in*ndim)
+  rx_in = x_in
+  ALLOCATE(rf_in(1:npoints_in), npoints_in)
+  rf_in = f_in
 #else
-  rx => mesh_in%x
-  ru => u
+  rx_in => x_in
+  rf_in => f_in
 #endif
 
-  select case(mesh_in%sb%dim)
+  select case(ndim)
   case(2)
-    call init_qshep(interp, mesh_in%np_global, ru, rx(:, 1), rx(:, 2))
-    do i = 1, npoints
-      p(1) = x(i, 1)
-      p(2) = x(i, 2)
-      f(i) = qshep_interpolate(interp, ru, p(1:2))
+    call init_qshep(interp, npoints_in, rf_in, rx_in(:, 1), rx_in(:, 2))
+    do i = 1, npoints_out
+      p(1:2)   = x_out(i, 1:2)
+      f_out(i) = qshep_interpolate(interp, rf_in, p(1:2))
     end do
     call kill_qshep(interp)
+
   case(3)
-    call init_qshep(interp, mesh_in%np_global, ru, rx(:, 1), rx(:, 2), rx(:, 3))
-    do i = 1, npoints
-      p(1) = x(i, 1)
-      p(2) = x(i, 2)
-      p(3) = x(i, 3)
-      f(i) = qshep_interpolate(interp, ru, p)
+    call init_qshep(interp, npoints_in, rf_in, rx_in(:, 1), rx_in(:, 2), rx_in(:, 3))
+    do i = 1, npoints_out
+      p(1:3)   = x_out(i, 1:3)
+      f_out(i) = qshep_interpolate(interp, rf_in, p(1:3))
     end do
     call kill_qshep(interp)
+
   case(1)
 #ifdef R_TCOMPLEX
     message(1) = 'Believe it or not, cannot do 1D complex interpolation, only 2D or 3D.'
     call write_fatal(1)
 #else
     call spline_init(interp1d)
-    call spline_fit(mesh_in%np_global, R_REAL(rx(:, 1)), ru, interp1d)
-    do i = 1, npoints
-      f(i) = spline_eval(interp1d, x(i, 1))
+    call spline_fit(npoints_in, R_REAL(rx_in(:, 1)), rf_in, interp1d)
+    do i = 1, npoints_out
+      f_out(i) = spline_eval(interp1d, x_out(i, 1))
     end do
     call spline_end(interp1d)
 #endif
   end select
+
 #ifdef SINGLE_PRECISION
   SAFE_DEALLOCATE_P(rx)
   SAFE_DEALLOCATE_P(ru)

@@ -30,6 +30,7 @@ module run_m
   use global_m
   use ground_state_m
   use hamiltonian_m
+  use invert_ks_m
   use loct_parser_m
   use messages_m
   use mpi_debug_m
@@ -125,6 +126,8 @@ contains
       call memory_run(sys, hm)
     case(CM_GCM)
       call gcm_run(sys, hm)
+    case(CM_INVERTKDS)
+      call invert_ks_run(sys, hm)
     case(CM_PULPO_A_FEIRA)
       call pulpo_print()
     end select
