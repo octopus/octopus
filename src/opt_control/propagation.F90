@@ -424,12 +424,17 @@ module opt_control_propagation_m
     gr => sys%gr
 
     call td_rti_copy(tr_chi, td%tr)
+    ! The propagation of chi should not be self-consistent, because the Kohn-Sham
+    ! potential used is the one created by psi. Note however, that it is likely that
+    ! the fist two iterations are done self-consistently nevertheless.
+    call td_rti_remove_scf_prop(tr_chi)
 
     call states_copy(psi, chi)
     call oct_prop_read_state(prop_psi, psi, gr, sys%geo, td%max_iter)
 
     call states_calc_dens(psi, gr%mesh%np_part)
     call v_ks_calc(gr, sys%ks, hm, psi)
+    call hamiltonian_update_potential(hm, gr%mesh)
     call td_rti_run_zero_iter(hm, td%tr)
     call td_rti_run_zero_iter(hm, tr_chi)
 
@@ -448,6 +453,7 @@ module opt_control_propagation_m
 
     call states_calc_dens(psi, gr%mesh%np_part)
     call v_ks_calc(gr, sys%ks, hm, psi)
+    call hamiltonian_update_potential(hm, gr%mesh)
 
     call td_rti_end(tr_chi)
 
@@ -481,7 +487,7 @@ module opt_control_propagation_m
     end if
 
     if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
-      call hamiltonian_set_oct_exchange(hm)
+      call hamiltonian_set_oct_exchange(hm, st)
     end if
 
     call hamiltonian_adjoint(hm)
@@ -494,6 +500,7 @@ module opt_control_propagation_m
     if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
       call states_calc_dens(st, gr%mesh%np_part)
       call v_ks_calc(gr, ks, hm, st)
+      call hamiltonian_update_potential(hm, gr%mesh)
     end if
 
     call pop_sub()
@@ -535,6 +542,7 @@ module opt_control_propagation_m
     if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
       call states_calc_dens(st, gr%mesh%np_part)
       call v_ks_calc(gr, ks, hm, st)
+      call hamiltonian_update_potential(hm, gr%mesh)
     end if
 
     call pop_sub()

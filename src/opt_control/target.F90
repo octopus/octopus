@@ -525,7 +525,7 @@ module opt_control_target_m
       call doutput_function(outp%how, trim(dir), 'local_target', gr%mesh, gr%sb, &
         target%rho, M_ONE, ierr, geo = geo)
     case(oct_tg_td_local)
-      call tdtarget_build_tdlocal(target, gr, M_ZERO)
+      call target_build_tdlocal(target, gr, M_ZERO)
       call doutput_function(outp%how, trim(dir), 'td_local_target', gr%mesh, gr%sb, &
         target%rho, M_ONE, ierr, geo = geo)
     case(oct_tg_density)
@@ -619,7 +619,7 @@ module opt_control_target_m
 
     select case(target%type)
     case(oct_tg_td_local)
-      call tdtarget_build_tdlocal(target, gr, t)
+      call target_build_tdlocal(target, gr, t)
       forall(ik = 1:inh%d%nik, ist = inh%st_start:inh%st_end, &
         idim = 1:inh%d%dim, i = 1:gr%mesh%np)
         inh%zpsi(i, idim, ist, ik) = - target%rho(i) * psi%zpsi(i, idim, ist, ik)
@@ -633,7 +633,7 @@ module opt_control_target_m
 
 
   !----------------------------------------------------------
-  subroutine tdtarget_build_tdlocal(target, gr, t)
+  subroutine target_build_tdlocal(target, gr, t)
     type(target_t), intent(inout) :: target
     type(grid_t),      intent(in) :: gr
     FLOAT, intent(in)             :: t
@@ -648,7 +648,7 @@ module opt_control_target_m
     end do
 
     call pop_sub()
-  end subroutine tdtarget_build_tdlocal
+  end subroutine target_build_tdlocal
   !----------------------------------------------------------
 
 
@@ -663,7 +663,7 @@ module opt_control_target_m
     type(grid_t),   intent(inout)   :: gr
     type(states_t), intent(inout)   :: psi
 
-    integer :: i, p, j, maxiter
+    integer :: i, p, j, maxiter, ik
     FLOAT :: omega, a, maxhh, w
     FLOAT, allocatable :: local_function(:)
     CMPLX, allocatable :: ddipole(:)
@@ -742,7 +742,13 @@ module opt_control_target_m
       SAFE_DEALLOCATE_A(ddipole)
 
     case default
-      j1 = abs(zstates_mpdotp(gr%mesh, psi, target%st))**2
+      do ik = 1, psi%d%nik
+        do p = psi%st_start, psi%st_end
+          j1 = j1 + psi%occ(p, ik) * &
+            abs(zmf_dotp(gr%mesh, psi%d%dim, psi%zpsi(:, :, p, ik), &
+              target%st%zpsi(:, :, p, ik)))**2
+        end do
+      end do
 
     end select
 
@@ -924,9 +930,10 @@ module opt_control_target_m
 
     case default
 
-      olap = zstates_mpdotp(gr%mesh, target%st, psi_in)
+      !olap = zstates_mpdotp(gr%mesh, target%st, psi_in)
       do ik = 1, psi_in%d%nik
         do p  = psi_in%st_start, psi_in%st_end
+          olap = zmf_dotp(gr%mesh, target%st%zpsi(:, 1, p, ik), psi_in%zpsi(:, 1, p, ik))
           chi_out%zpsi(:, :, p, ik) = olap*target%st%zpsi(:, :, p, ik)
         end do
       end do

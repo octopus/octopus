@@ -336,7 +336,7 @@ subroutine X(oct_exchange_operator) (hm, gr, psi, hpsi, ik)
   R_TYPE,              intent(inout) :: psi(:,:)  ! psi(gr%mesh%np_part, hm%d%dim)
   R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(gr%mesh%np, hm%d%dim)
   integer,             intent(in)    :: ik
-  R_TYPE, allocatable :: rho(:), pot(:)
+  FLOAT, allocatable :: rho(:), pot(:)
   integer :: j, k
 
   call push_sub('hamiltonian_inc.Xexchange_operator')
@@ -349,13 +349,14 @@ subroutine X(oct_exchange_operator) (hm, gr, psi, hpsi, ik)
     do j = 1, hm%oct_st%nst
       pot = M_ZERO
       do k = 1, gr%mesh%np
-        rho(k) = R_CONJ(hm%oct_st%X(psi)(k, 1, j, ik)) * psi(k, 1)
+        rho(k) = R_AIMAG(R_CONJ(hm%oct_st%X(psi)(k, 1, j, ik)) * psi(k, 1))
       end do
-      call X(poisson_solve)(gr, pot, rho)
+      call dpoisson_solve(gr, pot, rho)
       do k = 1, gr%mesh%np
-        hpsi(k, 1) = hpsi(k, 1) +  M_TWO * M_z1 * (hm%oct_st%occ(j, ik)/M_TWO) * &
-                     hm%oct_st%X(psi)(k, 1, j, ik) * R_AIMAG(pot(k))
+        hpsi(k, 1) = hpsi(k, 1) +  M_TWO * M_zI * &!(hm%oct_st%occ(j, ik)/M_TWO) * &
+                     hm%oct_st%X(psi)(k, 1, j, ik) * pot(k)
       end do
+
     end do 
 
   case(SPIN_POLARIZED)
@@ -363,16 +364,17 @@ subroutine X(oct_exchange_operator) (hm, gr, psi, hpsi, ik)
       if(hm%oct_st%occ(j, ik) <= M_ZERO) cycle
       pot = M_ZERO
       do k = 1, gr%mesh%np
-        rho(k) = R_CONJ(hm%oct_st%X(psi)(k, 1, j, ik)) * psi(k, 1)
+        rho(k) = R_AIMAG(R_CONJ(hm%oct_st%X(psi)(k, 1, j, ik)) * psi(k, 1))
       end do
-      call X(poisson_solve)(gr, pot, rho)
+      call dpoisson_solve(gr, pot, rho)
       do k = 1, gr%mesh%np
-        hpsi(k, 1) = hpsi(k, 1) +  M_TWO * M_z1 * hm%oct_st%occ(j, ik) * &
-          hm%oct_st%X(psi)(k, 1, j, ik)*R_AIMAG(pot(k))
+        hpsi(k, 1) = hpsi(k, 1) +  M_TWO * M_zI * hm%oct_st%occ(j, ik) * &
+          hm%oct_st%X(psi)(k, 1, j, ik) * pot(k)
       end do
     end do 
 
   case(SPINORS)
+    stop 'CODE MISSING.'
 
   end select
 

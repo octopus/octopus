@@ -61,6 +61,7 @@ module td_rti_m
     td_rti_qmr_op,            &
     td_rti_qmr_prec,          &
     td_rti_set_scf_prop,      &
+    td_rti_remove_scf_prop,   &
     td_rti_ions_are_propagated
 
   integer, public, parameter ::       &
@@ -377,6 +378,14 @@ contains
     type(td_rti_t), intent(inout) :: tr
     tr%scf_propagation = .true.
   end subroutine td_rti_set_scf_prop
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine td_rti_remove_scf_prop(tr)
+    type(td_rti_t), intent(inout) :: tr
+    tr%scf_propagation = .false.
+  end subroutine td_rti_remove_scf_prop
   ! ---------------------------------------------------------
 
 

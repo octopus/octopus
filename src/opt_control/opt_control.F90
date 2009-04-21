@@ -793,6 +793,7 @@ contains
         do j = 1, n
           write(*, '(4x,es18.8,7x,a,4x,es18.8,7x,a,es18.8)') df(j), '|', dfn(j), '|', df(j)-dfn(j)
         end do
+        write(*, '(80(''#''))')
 
         SAFE_DEALLOCATE_A(xdx)
       end if

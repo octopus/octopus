@@ -755,13 +755,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_set_oct_exchange(hm)
+  subroutine hamiltonian_set_oct_exchange(hm, st)
     type(hamiltonian_t), intent(inout) :: hm
+    type(states_t), target :: st
     ! In this release, no non-local part for the QOCT Hamiltonian.
     nullify(hm%oct_st)
-    hm%oct_exchange = .false.
-    !hm%oct_st => st
-    !hm%oct_exchange = .true.
+    hm%oct_st => st
+    hm%oct_exchange = .true.
   end subroutine hamiltonian_set_oct_exchange
 
 
