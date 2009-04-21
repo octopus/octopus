@@ -1037,6 +1037,7 @@ contains
       ! calculate hyper-Rayleigh scattering hyperpolarizabilities
       ! SJ Cyvin, JE Rauch, and JC Decius, J Chem Phys 43, 4083 (1965)
       ! generalized to avoid assumption of Kleinman symmetry (permutation of indices)
+      ! as in R Bersohn, Y-H Pao, and HL Frisch, J Chem Phys 45, 3184 (1966)
       subroutine calc_beta_HRS(sb, beta, HRS_VV, HRS_HV)
         type(simul_box_t), intent(in)  :: sb
         CMPLX,             intent(in)  :: beta(:, :, :)
