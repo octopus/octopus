@@ -38,7 +38,7 @@ module modelMB_particles_m
   public :: modelMB_particles_init,&
             modelMB_particles_end,&
             modelMB_particles_copy,&
-            modelmb_derivative_masses,&
+            modelmb_copy_masses,&
             modelMB_particle_t
 
 !==============================================================
@@ -336,7 +336,7 @@ end subroutine modelMB_particles_copy
 !==============================================================
 !  Copy masses for particles to the derivative object
 !==============================================================
-subroutine modelmb_derivative_masses (modelMBparticles,masses)
+subroutine modelmb_copy_masses (modelMBparticles,masses)
 
   implicit none
 
@@ -347,6 +347,8 @@ subroutine modelmb_derivative_masses (modelMBparticles,masses)
 !local
   integer :: dimcounter,ipart
 
+  call push_sub('states.modelmb_copy_masses')
+
   ! copy masses to gr%der%masses
   dimcounter=0
   do ipart=1,modelMBparticles%nparticle_modelMB
@@ -356,6 +358,8 @@ subroutine modelmb_derivative_masses (modelMBparticles,masses)
     dimcounter=dimcounter+modelMBparticles%ndim_modelMB
   end do
 
-end subroutine modelmb_derivative_masses
+  call pop_sub()
+
+end subroutine modelmb_copy_masses
 
 end module modelMB_particles_m
