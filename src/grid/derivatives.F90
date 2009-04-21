@@ -61,6 +61,8 @@ module derivatives_m
     zderivatives_grad,                  &
     dderivatives_oper,                  &
     zderivatives_oper,                  &
+    dderivatives_oper_batch,            &
+    zderivatives_oper_batch,            &
     dderivatives_div,                   &
     zderivatives_div,                   &
     dderivatives_curl,                  &
@@ -143,7 +145,6 @@ contains
     logical,             intent(in)  :: use_curvilinear
 
     integer :: i
-    type(block_t) :: blk
 
     call push_sub('derivatives.derivatives_init')
 

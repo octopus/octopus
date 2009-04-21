@@ -302,6 +302,77 @@ subroutine X(derivatives_oper)(op, der, f, opf, ghost_update, set_bc)
   call pop_sub()
 end subroutine X(derivatives_oper)
 
+! ---------------------------------------------------------
+subroutine X(derivatives_oper_batch)(op, der, ff, opff, ghost_update, set_bc)
+  type(nl_operator_t),   intent(in)    :: op
+  type(derivatives_t),   intent(in)    :: der
+  type(batch_t),         intent(inout) :: ff
+  type(batch_t),         intent(inout) :: opff
+  logical, optional,     intent(in)    :: ghost_update
+  logical, optional,     intent(in)    :: set_bc
+
+  logical :: set_bc_
+  logical :: ghost_update_
+#ifdef HAVE_MPI
+  type(der_handle_t), allocatable :: handle(:, :)
+  integer :: ist, idim
+#endif
+
+  call push_sub('derivatives_inc.Xderivatives_oper')
+
+  set_bc_ = .true.
+  if(present(set_bc)) set_bc_ = set_bc
+
+  if(set_bc_) call X(set_bc_batch)(der, ff)
+
+  ghost_update_ = .true.
+  if(present(ghost_update)) ghost_update_ = ghost_update
+
+#ifdef HAVE_MPI
+  if(derivatives_overlap(der) .and. der%mesh%parallel_in_domains .and. ghost_update_) then
+    ALLOCATE(handle(ff%nst, ff%dim), ff%nst*ff%dim)
+    
+    do ist = 1, ff%nst
+      do idim = 1, ff%dim
+        call der_handle_init(handle(ist, idim), der)
+      end do
+    end do
+    
+    do ist = 1, ff%nst
+      do idim = 1, ff%dim
+        call X(vec_ighost_update)(der%mesh%vp, ff%states(ist)%X(psi)(:, idim), handle(ist, idim)%pv_h)
+      end do
+    end do
+    
+    call X(nl_operator_operate_batch)(op, ff, opff, ghost_update = .false., points = OP_INNER)
+
+    do ist = 1, ff%nst
+      do idim = 1, ff%dim
+        call pv_handle_wait(handle(ist, idim)%pv_h)
+      end do
+    end do
+
+    do ist = 1, ff%nst
+      do idim = 1, ff%dim
+        call der_handle_end(handle(ist, idim))
+      end do
+    end do
+    
+    call X(nl_operator_operate_batch)(op, ff, opff, ghost_update = .false., points = OP_OUTER)
+
+  else
+#endif
+
+    call X(nl_operator_operate_batch) (op, ff, opff, ghost_update = ghost_update_)
+
+#ifdef HAVE_MPI
+  end if
+
+  SAFE_DEALLOCATE_A(handle)
+#endif
+
+  call pop_sub()
+end subroutine X(derivatives_oper_batch)
 
 ! ---------------------------------------------------------
 subroutine X(derivatives_div)(der, f, div, ghost_update)

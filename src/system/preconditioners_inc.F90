@@ -204,13 +204,18 @@ subroutine X(preconditioner_apply_batch)(pre, gr, hm, aa, bb, omega)
 
   integer :: ii
 
-  do ii = 1, aa%nst
-    if(present(omega)) then
-      call X(preconditioner_apply)(pre, gr, hm, aa%states(ii)%X(psi), bb%states(ii)%X(psi), omega)
-    else
-      call X(preconditioner_apply)(pre, gr, hm, aa%states(ii)%X(psi), bb%states(ii)%X(psi))
-    end if
-  end do
+  select case(pre%which)
+  case(PRE_FILTER)
+    call X(derivatives_oper_batch)(pre%op, gr%der, aa, bb)
+  case default
+    do ii = 1, aa%nst
+      if(present(omega)) then
+        call X(preconditioner_apply)(pre, gr, hm, aa%states(ii)%X(psi), bb%states(ii)%X(psi), omega)
+      else
+        call X(preconditioner_apply)(pre, gr, hm, aa%states(ii)%X(psi), bb%states(ii)%X(psi))
+      end if
+    end do
+  end select
 
 end subroutine X(preconditioner_apply_batch)
 !! Local Variables:
