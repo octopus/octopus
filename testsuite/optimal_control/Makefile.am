@@ -32,8 +32,9 @@ dist_share_DATA = \
         02-sym_doublewell.test                 \
 	03-localtarget.01-gs.inp               \
 	03-localtarget.02-oct.inp              \
-	03-localtarget.03-gs-mp.inp            \
-	03-localtarget.04-oct-mp.inp           \
+	03-localtarget.03-tdoct.inp            \
+	03-localtarget.04-gs-mp.inp            \
+	03-localtarget.05-oct-mp.inp           \
         03-localtarget.test                    \
 	04-box.01-ground_state.inp             \
 	04-box.02-oct_long.inp                 \

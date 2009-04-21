@@ -1,0 +1,84 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: 03-asym_doublewell.02-oct_run.inp 3162 2007-09-03 11:38:24Z acastro $
+
+DebugLevel = 0
+Dimensions = 1
+fromScratch = yes
+
+CalculationMode = opt_control
+
+DevelVersion = yes
+
+# ------------------
+# Grid
+# ------------------
+BoxShape = sphere
+Spacing = 0.3
+Radius =  8.0
+
+
+# ------------------
+# System
+# ------------------
+%Species
+"ADW1D" | 1 | user_defined | 1 | "1/64*(x)^4-1/4*(x)^2+1/256*(x)^3"
+%
+
+%Coordinates
+"ADW1D" | 0 | 0 | 0
+%
+
+TheoryLevel = independent_particles
+
+
+# ------------------
+# TD RUN Parameters
+# ------------------
+
+stime  = 25.0
+dt = 0.01
+TDEvolutionMethod = crank_nicholson
+TDMaximumIter = stime/dt
+TDTimeStep = dt
+
+
+# --------------
+# OCT parameters
+# --------------
+
+OCTControlRepresentation = control_function_parametrized
+OCTParameterRepresentation = control_fourier_series
+
+OCTPenalty = 1.0
+OCTMaxIter = 1
+
+OCTInitialState = oct_is_groundstate
+OCTTargetOperator = oct_tg_td_local
+
+# This could also be a function of time.
+%OCTTDTarget
+"exp(-(x-1)^2)"
+%
+
+OCTScheme = oct_algorithm_cg
+OCTParameterOmegaMax = 0.40
+
+OCTDirectStep = 0.1
+
+# The accuracy of the gradient can be checked uncommenting this
+#OCTCheckGradient = 1.0e-5
+
+OCTDoubleCheck = no
+
+#----------------------------
+# Laser field = Initial guess
+#-----------------------------
+
+%TDExternalFields
+electric_field | 1 | 0 | 0 | 0.0 | "envelope_function"
+%
+
+%TDFunctions
+"envelope_function" | tdf_from_expr | "0.1*sqrt(2/stime)*sin((2*pi/stime)*t)"
+%
+
