@@ -54,3 +54,7 @@ match ; J1 5th evaluation  ; GREP(opt-control/convergence, ' 5  ', 40) ; 0.35421
 # the envelope of the laser field only.
 Input: 04-box.07-oct_long.inp
 match ; J1 7th evaluation  ; GREP(opt-control/convergence, ' 7  ', 40) ; 0.59890485
+
+# Now the CONGUGATE GRADIENTS scheme.
+Input: 04-box.08-oct_long.inp
+match ; J 1st iteration  ; GREP(opt-control/convergence, '##        1', 20) ; 0.67375046

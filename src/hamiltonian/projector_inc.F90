@@ -107,7 +107,8 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, ik)
 
         select case(pj(ipj)%type)
         case(M_KB)
-          call X(kb_project_bra)(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(ll, mm), dim, lpsi, reduce_buffer(ii:))
+          call X(kb_project_bra)(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(ll, mm), dim, &
+            lpsi, reduce_buffer(ii:))
         case(M_RKB)
 #ifdef R_TCOMPLEX
           if(ll /= 0) then
@@ -351,17 +352,20 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
         do ist = 1, psib%nst
           select case(pj(ipj)%type)
           case(M_KB)
-            call X(kb_project_ket)(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(ll, mm), dim, reduce_buffer(ii:, ist), lpsi(:, :, ist))
+            call X(kb_project_ket)(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(ll, mm), dim, &
+              reduce_buffer(ii:, ist), lpsi(:, :, ist))
           case(M_RKB)
 #ifdef R_TCOMPLEX
             if(ll /= 0) then
               call rkb_project_ket(pj(ipj)%rkb_p(ll, mm), reduce_buffer(ii:, ist), lpsi(:, :, ist))
             else
-              call zkb_project_ket(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(1, 1), dim, reduce_buffer(ii:, ist), lpsi(:, :, ist))
+              call zkb_project_ket(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(1, 1), dim, &
+                reduce_buffer(ii:, ist), lpsi(:, :, ist))
             end if
 #endif
           case(M_HGH)
-            call X(hgh_project_ket)(mesh, pj(ipj)%sphere, pj(ipj)%hgh_p(ll, mm), dim, pj(ipj)%reltype, reduce_buffer(ii:, ist), lpsi(:, :, ist))
+            call X(hgh_project_ket)(mesh, pj(ipj)%sphere, pj(ipj)%hgh_p(ll, mm), dim, &
+              pj(ipj)%reltype, reduce_buffer(ii:, ist), lpsi(:, :, ist))
           end select
 
         end do ! ist
@@ -376,12 +380,14 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
       if(associated(pj(ipj)%phase)) then
         forall (is = 1:ns, ist = 1:psib%nst) 
           ppsib%states(ist)%X(psi)(pj(ipj)%sphere%jxyz(is), idim) = &
-               ppsib%states(ist)%X(psi)(pj(ipj)%sphere%jxyz(is), idim) + lpsi(is, idim, ist)*conjg(pj(ipj)%phase(is, ik))
+            ppsib%states(ist)%X(psi)(pj(ipj)%sphere%jxyz(is), idim) + &
+            lpsi(is, idim, ist)*conjg(pj(ipj)%phase(is, ik))
         end forall
         call profiling_count_operations(ns*psib%nst*(R_ADD + R_MUL))
       else
         forall (is = 1:ns, ist = 1:psib%nst) 
-          ppsib%states(ist)%X(psi)(pj(ipj)%sphere%jxyz(is), idim) = ppsib%states(ist)%X(psi)(pj(ipj)%sphere%jxyz(is), idim) + lpsi(is, idim, ist)
+          ppsib%states(ist)%X(psi)(pj(ipj)%sphere%jxyz(is), idim) = &
+            ppsib%states(ist)%X(psi)(pj(ipj)%sphere%jxyz(is), idim) + lpsi(is, idim, ist)
         end forall
         call profiling_count_operations(ns*psib%nst*R_ADD)
       end if

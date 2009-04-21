@@ -1,0 +1,88 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: 04-box.03-oct_long.inp 3604 2007-11-25 22:23:24Z acastro $
+
+CalculationMode = opt_control
+DevelVersion = yes
+
+RestartDir = "excited_states_restart"
+
+# ------------------
+# TD RUN Parameters
+# ------------------
+
+stime  = 100.0
+dt = 0.05
+TDEvolutionMethod = exp_mid
+TDExponentialMethod = lanczos
+TDExponentialOrder = 20
+TDLanczosTol = 5.0e-5
+TDMaximumIter = stime/dt
+TDTimeStep = dt
+
+
+# --------------
+# OCT parameters
+# --------------
+
+OCTControlRepresentation = control_function_parametrized
+
+OCTPenalty = 1.0
+OCTEps   = 1.0e-4
+OCTMaxIter = 1
+
+OCTInitialState = oct_is_groundstate
+OCTTargetOperator = oct_tg_gstransformation
+%OCTTargetTransformStates
+0 | 1
+%
+
+#OCTCheckGradient = 0.0001
+OCTDirectStep = 0.1
+OCTScheme = oct_algorithm_cg
+OCTParameterRepresentation = control_fourier_series
+OCTParameterOmegaMax = 0.20
+
+OCTDoubleCheck = no
+OCTMixing = no
+
+
+
+#----------------------------
+# Laser field = Initial guess
+#-----------------------------
+
+freq = 0.0
+%TDExternalFields
+  electric_field | 1 | 0 | 0 | freq | "envelope_function" 
+%
+
+%TDFunctions
+"envelope_function" | tdf_from_expr | "0.50*sqrt(2/stime)*sin((2*pi/stime)*2*t)"
+%
+
+Dimensions = 1
+fromScratch = yes
+
+
+
+
+BoxShape = sphere
+Spacing = 0.4
+Radius =  15.0
+
+TheoryLevel = independent_particles
+
+%Species
+"Box1D" | 1 | user_defined | 1 | "-5*step(x+5)*step(5-x)"
+%
+
+%Coordinates
+"Box1D" | 0 | 0 | 0
+%
+
+EigenSolverInitTolerance = 1.0e-6
+EigenSolverFinalTolerance = 1.0e-6
+EigenSolverMaxIter = 1000
+
+NumberUnoccStates = 4
+
