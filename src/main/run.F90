@@ -61,8 +61,8 @@ module run_m
     run,                         &
     run_end
 
-  type(system_t), save      :: sys
-  type(hamiltonian_t), save :: hm
+  type(system_t)      :: sys
+  type(hamiltonian_t) :: hm
 
   integer, parameter :: LR = 1, FD = 2
 

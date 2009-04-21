@@ -81,8 +81,8 @@ module states_dim_m
     integer :: nspin                ! dimension of rho (1, 2 or 4)
     integer :: spin_channels        ! 1 or 2, whether spin is or not considered.
     logical :: cdft                 ! Are we using Current-DFT or not?
-    FLOAT, pointer :: kpoints(:,:) => NULL() ! obviously the kpoints
-    FLOAT, pointer :: kweights(:) => NULL()  ! weights for the kpoint integrations
+    FLOAT, pointer :: kpoints(:,:)  ! obviously the kpoints
+    FLOAT, pointer :: kweights(:)   ! weights for the kpoint integrations
     type(distributed_t) :: kpt
     integer :: block_size
   end type states_dim_t

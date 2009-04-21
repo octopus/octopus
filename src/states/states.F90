@@ -63,6 +63,7 @@ module states_m
     states_densities_init,            &
     states_allocate_wfns,             &
     states_deallocate_wfns,           &
+    states_null,                      &
     states_end,                       &
     states_copy,                      &
     states_generate_random,           &
@@ -100,44 +101,42 @@ module states_m
     integer :: wfs_type             ! real (M_REAL) or complex (M_CMPLX) wavefunctions
     ! pointers to the wavefunctions 
     logical :: only_userdef_istates ! only use user-defined states as initial states in propagation
-    FLOAT, pointer :: dpsi(:,:,:,:) => NULL() ! dpsi(sys%gr%mesh%np_part, st%d%dim, st%nst, st%d%nik)
-    CMPLX, pointer :: zpsi(:,:,:,:) => NULL() ! zpsi(sys%gr%mesh%np_part, st%d%dim, st%nst, st%d%nik)
+    FLOAT, pointer :: dpsi(:,:,:,:) ! dpsi(sys%gr%mesh%np_part, st%d%dim, st%nst, st%d%nik)
+    CMPLX, pointer :: zpsi(:,:,:,:) ! zpsi(sys%gr%mesh%np_part, st%d%dim, st%nst, st%d%nik)
 
     logical            :: open_boundaries
-    CMPLX, pointer     :: zphi(:, :, :, :) => NULL() ! Free states for open-boundary calculations.
-    CMPLX, pointer     :: ob_intf_psi(:, :, :, :, :, :) => NULL() 
-                                            ! (np, 2, st%d%dim, st%nst, st%d%nik, nleads)
-    FLOAT, pointer     :: ob_rho(:, :, :) => NULL()   ! Density of the lead unit cells.
-    FLOAT, pointer     :: ob_eigenval(:, :) => NULL() ! Eigenvalues of free states.
+    CMPLX, pointer     :: zphi(:, :, :, :)  ! Free states for open-boundary calculations.
+    CMPLX, pointer     :: ob_intf_psi(:, :, :, :, :, :) ! (np, 2, st%d%dim, st%nst, st%d%nik, nleads)
+    FLOAT, pointer     :: ob_rho(:, :, :)   ! Density of the lead unit cells.
+    FLOAT, pointer     :: ob_eigenval(:, :) ! Eigenvalues of free states.
     type(states_dim_t) :: ob_d              ! Dims. of the unscattered systems.
     integer            :: ob_nst            ! nst of the unscattered systems.
     integer            :: ob_ncs            ! No. of continuum states of open system.
                                             ! ob_ncs = ob_nst*st%ob_d%nik / st%d%nik
-    FLOAT, pointer     :: ob_occ(:, :) => NULL()
-    CMPLX, pointer     :: ob_green(:, :, :, :, :, :) => NULL() 
-                      ! (np, np, nspin, ncs, nik, nleads) Green function of the leads.
+    FLOAT, pointer     :: ob_occ(:, :)
+    CMPLX, pointer     :: ob_green(:, :, :, :, :, :) ! (np, np, nspin, ncs, nik, nleads) Green function of the leads.
 
     ! used for the user-defined wavefunctions (they are stored as formula strings)
-    character(len=1024), pointer :: user_def_states(:,:,:) => NULL() ! (st%d%dim, st%nst, st%d%nik)
+    character(len=1024), pointer :: user_def_states(:,:,:) ! (st%d%dim, st%nst, st%d%nik)
 
     ! the densities and currents (after all we are doing DFT :)
-    FLOAT, pointer :: rho(:,:) => NULL()     ! rho(gr%mesh%np_part, st%d%nspin)
-    FLOAT, pointer :: j(:,:,:) => NULL()     !   j(gr%mesh%np_part, gr%sb%dim, st%d%nspin)
+    FLOAT, pointer :: rho(:,:)      ! rho(gr%mesh%np_part, st%d%nspin)
+    FLOAT, pointer :: j(:,:,:)      !   j(gr%mesh%np_part, gr%sb%dim, st%d%nspin)
 
     logical        :: nlcc          ! do we have non-linear core corrections
-    FLOAT, pointer :: rho_core(:) => NULL()  ! core charge for nl core corrections
+    FLOAT, pointer :: rho_core(:)   ! core charge for nl core corrections
 
     ! It may be required to "freeze" the deepest orbitals during the evolution; the density
     ! of these orbitals is kept in frozen_rho. It is different from rho_core.
-    FLOAT, pointer :: frozen_rho(:, :) => NULL()
+    FLOAT, pointer :: frozen_rho(:, :)
 
-    FLOAT, pointer :: eigenval(:,:) => NULL() ! obviously the eigenvalues
+    FLOAT, pointer :: eigenval(:,:) ! obviously the eigenvalues
     logical        :: fixed_occ     ! should the occupation numbers be fixed?
-    FLOAT, pointer :: occ(:,:) => NULL()      ! the occupation numbers
+    FLOAT, pointer :: occ(:,:)      ! the occupation numbers
     logical        :: fixed_spins   ! In spinors mode, the spin direction is set
                                     ! for the initial (random) orbitals.
-    FLOAT, pointer :: spin(:, :, :) => NULL()
-    FLOAT, pointer :: momentum(:, :, :) => NULL()
+    FLOAT, pointer :: spin(:, :, :)
+    FLOAT, pointer :: momentum(:, :, :)
 
     FLOAT          :: qtot          ! (-) The total charge in the system (used in Fermi)
     FLOAT          :: val_charge    ! valence charge
@@ -150,20 +149,34 @@ module states_m
     type(mpi_grp_t)             :: dom_st             ! The MPI group related to the domain-states "plane".
     integer                     :: lnst               ! Number of states on local node.
     integer                     :: st_start, st_end   ! Range of states processed by local node.
-    integer, pointer            :: node(:) => NULL()
-                                                      ! To which node belongs each state.
-    integer, pointer            :: st_range(:, :) => NULL()
-                                                      ! Node r manages states st_range(1, r) to
+    integer, pointer            :: node(:)            ! To which node belongs each state.
+    integer, pointer            :: st_range(:, :)     ! Node r manages states st_range(1, r) to
                                                       ! st_range(2, r) for r = 0, ..., mpi_grp%size-1,
                                                       ! i. e. st_start = st_range(1, r) and
                                                       ! st_end = st_range(2, r) on node r.
-    integer, pointer            :: st_num(:) => NULL()
-                                                      ! Number of states on node r, i. e.
+    integer, pointer            :: st_num(:)          ! Number of states on node r, i. e.
                                                       ! st_num(r) = st_num(2, r)-st_num(1, r).
     type(multicomm_all_pairs_t) :: ap                 ! All-pairs schedule.
   end type states_t
 
 contains
+
+  ! ---------------------------------------------------------
+  subroutine states_null(st)
+    type(states_t), intent(inout) :: st
+    call push_sub('states.states_null')
+
+    nullify(st%dpsi, st%zpsi, st%zphi, st%rho, st%j, st%rho_core, st%frozen_rho, st%eigenval)
+    nullify(st%occ, st%spin, st%momentum, st%node, st%user_def_states)
+    nullify(st%d%kpoints, st%d%kweights)
+    nullify(st%st_range, st%st_num)
+
+    ! By default, calculations use real wave-functions
+    st%wfs_type = M_REAL
+
+    call pop_sub()
+  end subroutine states_null
+
 
   ! ---------------------------------------------------------
   subroutine states_init(st, gr, geo)
@@ -177,8 +190,7 @@ contains
 
     call push_sub('states.states_init')
 
-    ! By default, calculations use real wave-functions
-    st%wfs_type = M_REAL
+    call states_null(st)
 
     !%Variable SpinComponents
     !%Type integer
@@ -883,6 +895,8 @@ contains
     type(states_t), intent(in)    :: stin
 
     call push_sub('states.states_copy')
+
+    call states_null(stout)
 
     stout%wfs_type   = stin%wfs_type
     call states_dim_copy(stout%d, stin%d)

@@ -78,23 +78,23 @@ module external_pot_m
   type epot_t
     ! Classical charges:
     integer        :: classical_pot ! how to include the classical charges
-    FLOAT, pointer :: Vclassical(:) => NULL() ! We use it to store the potential of the classical charges
+    FLOAT, pointer :: Vclassical(:) ! We use it to store the potential of the classical charges
 
     ! Ions
-    FLOAT,             pointer :: vpsl(:) => NULL() ! the local part of the pseudopotentials
-                                                    ! plus the potential from static electric fields
-    type(projector_t), pointer :: proj(:) => NULL() ! non-local projectors
-    type(projector_t), pointer :: proj_fine(:) => NULL() ! non-local projectors in the fine grid
+    FLOAT,             pointer :: vpsl(:)       ! the local part of the pseudopotentials
+                                                ! plus the potential from static electric fields
+    type(projector_t), pointer :: proj(:)       ! non-local projectors
+    type(projector_t), pointer :: proj_fine(:)  ! non-local projectors in the fine grid
     logical                    :: non_local
     integer                    :: natoms
 
     ! External e-m fields
-    integer                :: no_lasers               ! number of laser pulses used
-    type(laser_t), pointer :: lasers(:) => NULL()     ! lasers stuff
-    FLOAT,         pointer :: E_field(:) => NULL()    ! static electric field
-    FLOAT, pointer         :: v_static(:) => NULL()   ! static scalar potential
-    FLOAT, pointer         :: B_field(:) => NULL()    ! static magnetic field
-    FLOAT, pointer         :: A_static(:,:) => NULL() ! static vector potential
+    integer                :: no_lasers            ! number of laser pulses used
+    type(laser_t), pointer :: lasers(:)            ! lasers stuff
+    FLOAT,         pointer :: E_field(:)           ! static electric field
+    FLOAT, pointer         :: v_static(:)          ! static scalar potential
+    FLOAT, pointer         :: B_field(:)           ! static magnetic field
+    FLOAT, pointer         :: A_static(:,:)        ! static vector potential
     type(gauge_field_t)    :: gfield               ! the time-dependent gauge field
     integer                :: reltype              ! type of relativistic correction to use
 
@@ -107,9 +107,9 @@ module external_pot_m
     
     ! the ion-ion energy and force
     FLOAT          :: eii
-    FLOAT, pointer :: fii(:, :) => NULL()
+    FLOAT, pointer :: fii(:, :)
     
-    real(4), pointer :: local_potential(:,:) => NULL()
+    real(4), pointer :: local_potential(:,:)
     logical        :: local_potential_precalculated
   end type epot_t
 
