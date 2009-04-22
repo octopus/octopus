@@ -801,7 +801,7 @@ contains
     sf    = M_ZERO
 
     ! Gets the damping function (here because otherwise it is awfully slow in "pol" mode...)_m
-    SAFE_ALLOCATE(dumpa(is:ie)))
+    SAFE_ALLOCATE(dumpa(is:ie))
     do j = is, ie
       jj = j - is
       select case(s%damp)
