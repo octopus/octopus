@@ -107,10 +107,10 @@ subroutine X(sym_conjugate_gradients)(np, x, b, op, dotp, iter, residue, thresho
     threshold_ = CNST(1.0e-6)
   end if
 
-  ALLOCATE( r(np), np)
-  ALLOCATE(ax(np), np)
-  ALLOCATE( p(np), np)
-  ALLOCATE(ap(np), np)
+  SAFE_ALLOCATE( r(1:np))
+  SAFE_ALLOCATE(ax(1:np))
+  SAFE_ALLOCATE( p(1:np))
+  SAFE_ALLOCATE(ap(1:np))
 
   ! Initial residue.
   call op(x, ax)
@@ -180,13 +180,13 @@ subroutine X(bi_conjugate_gradients)(np, x, b, op, opt, dotp, iter, residue, thr
     threshold_ = CNST(1.0e-6)
   end if
 
-  ALLOCATE(  r(np), np)
-  ALLOCATE( rr(np), np)
-  ALLOCATE( ax(np), np)
-  ALLOCATE(  p(np), np)
-  ALLOCATE( pp(np), np)
-  ALLOCATE( ap(np), np)
-  ALLOCATE(atp(np), np)
+  SAFE_ALLOCATE(  r(1:np))
+  SAFE_ALLOCATE( rr(1:np))
+  SAFE_ALLOCATE( ax(1:np))
+  SAFE_ALLOCATE(  p(1:np))
+  SAFE_ALLOCATE( pp(1:np))
+  SAFE_ALLOCATE( ap(1:np))
+  SAFE_ALLOCATE(atp(1:np))
 
   ! Initial residue.
   call op(x, ax)
@@ -380,13 +380,13 @@ end subroutine X(bi_conjugate_gradients)
       showprogress_ = .false.
     end if
 
-    ALLOCATE(r(np), np)
-    ALLOCATE(v(np), np)
-    ALLOCATE(z(np), np)
-    ALLOCATE(q(np), np)
-    ALLOCATE(p(np), np)
-    ALLOCATE(deltax(np), np)
-    ALLOCATE(deltar(np), np)
+    SAFE_ALLOCATE(r(1:np))
+    SAFE_ALLOCATE(v(1:np))
+    SAFE_ALLOCATE(z(1:np))
+    SAFE_ALLOCATE(q(1:np))
+    SAFE_ALLOCATE(p(1:np))
+    SAFE_ALLOCATE(deltax(1:np))
+    SAFE_ALLOCATE(deltar(1:np))
 
     ! use v as temp var
     call op(x, v)
@@ -622,14 +622,14 @@ end subroutine X(bi_conjugate_gradients)
       showprogress_ = .false.
     end if
 
-    ALLOCATE(r(np), np)
-    ALLOCATE(v(np), np)
-    ALLOCATE(w(np), np)
-    ALLOCATE(z(np), np)
-    ALLOCATE(q(np), np)
-    ALLOCATE(p(np), np)
-    ALLOCATE(tmp(np), np)
-    ALLOCATE(deltax(np), np)
+    SAFE_ALLOCATE(r(1:np))
+    SAFE_ALLOCATE(v(1:np))
+    SAFE_ALLOCATE(w(1:np))
+    SAFE_ALLOCATE(z(1:np))
+    SAFE_ALLOCATE(q(1:np))
+    SAFE_ALLOCATE(p(1:np))
+    SAFE_ALLOCATE(tmp(1:np))
+    SAFE_ALLOCATE(deltax(1:np))
 
     ! r = b-Ax
     call lalg_copy(np, b, r)

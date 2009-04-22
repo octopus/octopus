@@ -231,9 +231,9 @@ contains
     order  = rs%poly_order
     gorder = order
 
-    ALLOCATE(gbase_coeff(order+1), order+1)
-    ALLOCATE(gcoeff     (order+1), order+1)
-    ALLOCATE(base_roots (order),   order)
+    SAFE_ALLOCATE(gbase_coeff(1:order+1))
+    SAFE_ALLOCATE(gcoeff     (1:order+1))
+    SAFE_ALLOCATE(base_roots (1:order))
 
     ! normalize polynomial
     do j = 1, order+1
@@ -306,8 +306,8 @@ contains
     CMPLX, allocatable   :: numerator(:), denominator(:)
     integer :: j
 
-    ALLOCATE(  numerator(size), size)
-    ALLOCATE(denominator(size), size)
+    SAFE_ALLOCATE(  numerator(1:size))
+    SAFE_ALLOCATE(denominator(1:size))
     numerator   = M_ZERO
     denominator = M_ZERO
 
@@ -347,10 +347,10 @@ contains
 
     call push_sub('root_solver_inc.Xroot_newton')
 
-    ALLOCATE(    f(rs%dim),         rs%dim)
-    ALLOCATE(   jf(rs%dim, rs%dim), rs%dim**2)
-    ALLOCATE(delta(rs%dim, 1),      rs%dim)
-    ALLOCATE(  rhs(rs%dim, 1),      rs%dim)
+    SAFE_ALLOCATE(    f(1:rs%dim))
+    SAFE_ALLOCATE(   jf(1:rs%dim, 1:rs%dim))
+    SAFE_ALLOCATE(delta(1:rs%dim, 1))
+    SAFE_ALLOCATE(  rhs(1:rs%dim, 1))
 
     root = startval
     call func(root, f, jf)

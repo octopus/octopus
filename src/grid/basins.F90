@@ -55,7 +55,7 @@ contains
     type(basins_t), intent(out) :: this
     type(mesh_t),   intent(in)  :: mesh
     
-    ALLOCATE(this%map(mesh%np), mesh%np)
+    SAFE_ALLOCATE(this%map(1:mesh%np))
     this%map(1:mesh%np) = -1
 
   end subroutine basins_init

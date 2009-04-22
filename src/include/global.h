@@ -19,95 +19,78 @@
 
 #include "config_F90.h"
 
-!#ifndef HAVE_FC_SIZEOF
-#define sizeof(x) 8.0_8
-!#endif
-
 #define MAX_SPIN 4
 
-#if defined(F90_ACCEPTS_LINE_NUMBERS)
-#  define CARDINAL \newline\cardinal __LINE__ __FILE__
+#if defined(LONG_LINES)
+#  define _newline_
+#  define _anl_
 #else
-#  define CARDINAL \newline
+#  define _anl_ & _newline_
+#endif
+
+#if defined(LONG_LINES)
+#  define CARDINAL
+#else
+#  if defined(F90_ACCEPTS_LINE_NUMBERS)
+#    define CARDINAL _newline_\cardinal __LINE__ __FILE__
+#  else
+#    define CARDINAL _newline_
+#  endif
 #endif
 
 #define __STRING(x)     #x
 
 #if !defined(NDEBUG)
-#  if defined(LONG_LINES)
-#    define ASSERT(expr) if(.not.(expr)) \
-       call assert_die(__STRING(expr), __FILE__, __LINE__)
-#  else
-#    define ASSERT(expr) \
-       if(.not.(expr)) then                    \newline \
-         call assert_die (__STRING(expr), &    \newline \
-                          __FILE__, __LINE__)  \newline \
-       end if                                  \
-       CARDINAL
-#  endif
+#  define ASSERT(expr)  \
+  if(.not.(expr)) _anl_ \
+     call assert_die(__STRING(expr), _anl_ __FILE__, _anl_  __LINE__)
+  CARDINAL
 #else
 #  define ASSERT(expr)
 #endif
 
+#ifdef HAVE_FC_SIZEOF
+#  define SIZEOF(x) sizeof(x)
+#else
+#  define SIZEOF(x) 1
+#endif
+
 #if defined(NDEBUG)
-#  define ALLOCATE(x, size) allocate(x)
-#  define DEALLOCATE(x) deallocate(x)
-#  define SAFE_DEALLOCATE_P(x) if(associated(x)) then; DEALLOCATE(x); nullify(x); end if
-#  define SAFE_DEALLOCATE_A(x) if(allocated(x)) then; DEALLOCATE(x); end if
+#  define SAFE_ALLOCATE_A(x) allocate(x)
+#  define SAFE_ALLOCATE_P(x) allocate(x)
+#  define SAFE_DEALLOCATE_P(x) if(associated(x)) then; deallocate(x); nullify(x); end if
+#  define SAFE_DEALLOCATE_A(x) if(allocated(x)) then; deallocate(x); end if
 #else
+#  define SAFE_ALLOCATE(x)			\
+  global_sizeof = SIZEOF(x); _newline_ \
+  allocate(x, stat=global_alloc_err); _newline_ \
+  if(profiling_space) _anl_ \
+    call profiling_memory_allocate(#x, _anl_ __FILE__, _anl_ __LINE__, _anl_ global_sizeof); _newline_ \
+  if(global_alloc_err.ne.0) _anl_ \
+    call alloc_error(global_sizeof, _anl_ __FILE__, _anl_ __LINE__); \
+  CARDINAL
 
-#if defined(LONG_LINES)
-#  define ALLOCATE(x, size) allocate(x, stat=global_alloc_err); \
-     if(profiling_space .and. size > 0) call profiling_memory_allocate(#x, __FILE__, __LINE__, (size)*dble(sizeof(x))); \
-     if(global_alloc_err.ne.0) call alloc_error((size), __FILE__, __LINE__)
+#  define MY_DEALLOCATE(x) \
+  deallocate(x, stat=global_alloc_err); _newline_ \
+  if(profiling_space) _anl_ \
+    call profiling_memory_deallocate(#x, _anl_ __FILE__, _anl_ __LINE__); _newline_ \
+  if(global_alloc_err.ne.0) _anl_ \
+    call alloc_error(-1, _anl_ __FILE__, _anl_ __LINE__); \
+  CARDINAL
 
-#  define DEALLOCATE(x) deallocate(x, stat=global_alloc_err); \
-     if(profiling_space) call profiling_memory_deallocate(#x, __FILE__, __LINE__); \
-     if(global_alloc_err.ne.0) call alloc_error(-1, __FILE__, __LINE__)
-
-#  define SAFE_DEALLOCATE_P(x) if(associated(x)) then; DEALLOCATE(x); nullify(x); end if
-#  define SAFE_DEALLOCATE_A(x) if(allocated(x)) then; DEALLOCATE(x); end if
-
-#else
-#  define ALLOCATE(x, size) \
-     allocate(x, stat=global_alloc_err)                 \newline \
-       if(profiling_space .and. &                       \newline \
-       size > 0) then                                   \newline \
-       call profiling_memory_allocate(&                 \newline \
-  #x,       &                                           \newline \
-  __FILE__, &                                           \newline \
-  __LINE__, &                                           \newline \
-     (size)*&                                             \newline \
-     dble(sizeof(x)))                                   \newline \
-     end if                                             \newline \
-     if(global_alloc_err.ne.0) then                     \newline \
-       call alloc_error((size),  &                      \newline \
-  __FILE__, &                                           \newline \
-  __LINE__)                                             \newline \
-     end if                                             \
-     CARDINAL
-
-#  define DEALLOCATE(x) \
-     deallocate(x, stat=global_alloc_err)               \newline \
-     if(profiling_space) then                           \newline \
-       call profiling_memory_deallocate(&               \newline \
-  #x,       &                                           \newline \
-  __FILE__, &                                           \newline \
-  __LINE__)                                             \newline \
-     end if                                             \newline \
-     if(global_alloc_err.ne.0) then                     \newline \
-       call alloc_error(-1, &                           \newline \
-  __FILE__, &                                           \newline \
-  __LINE__)                                             \newline \
-     end if                                             \
-     CARDINAL
-
-#  define SAFE_DEALLOCATE_P(x) if(associated(x)) then \newline DEALLOCATE(x) \newline nullify(x) \newline end if
-#  define SAFE_DEALLOCATE_A(x) if(allocated(x)) then \newline DEALLOCATE(x) \newline end if
+#  define SAFE_DEALLOCATE_P(x) \
+  if(associated(x)) then; _newline_ \
+    MY_DEALLOCATE(x);     _newline_ \
+    nullify(x);           _newline_ \
+  end if
+#  define SAFE_DEALLOCATE_A(x) \
+  if(allocated(x)) then;  _newline_ \
+    MY_DEALLOCATE(x);     _newline_ \
+  end if
 
 #endif
-#endif
 
+#define ALLOCATE(a,b) allocate(a)
 
 #define REAL_DOUBLE real(8)
 #define REAL_SINGLE real(4)

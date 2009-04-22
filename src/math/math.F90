@@ -486,7 +486,7 @@ contains
     FLOAT :: c1, c2, c3, c4, c5, xi
     FLOAT, allocatable :: x(:)
 
-    ALLOCATE(x(0:M), M+1)
+    SAFE_ALLOCATE(x(0:M))
 
     if (present(side)) then
       side_ = side
@@ -736,11 +736,11 @@ contains
 
     if(present(in)) then
       length = ubound(in, 1)
-      ALLOCATE(out(length), length)
+      SAFE_ALLOCATE(out(1:length))
       out = in
     else
       length = n
-      ALLOCATE(out(length), length)
+      SAFE_ALLOCATE(out(1:length))
       do i = 1, length
         out(i) = i
       end do
@@ -951,9 +951,9 @@ contains
 
     n = size(x) + 1
 
-    ALLOCATE(alpha(n-1, n-1), (n-1)*(n-1))
-    ALLOCATE(eigenvectors(n-1, n-1), (n-1)*(n-1))
-    ALLOCATE(eigenvalues(n-1), n-1)
+    SAFE_ALLOCATE(alpha(1:n-1, 1:n-1))
+    SAFE_ALLOCATE(eigenvectors(1:n-1, 1:n-1))
+    SAFE_ALLOCATE(eigenvalues(1:n-1))
 
     forall(j=1:n-1)
       forall(k=1:n-1) alpha(j, k) = a(j)*a(k)
@@ -988,9 +988,9 @@ contains
 
     n = size(x) + 1
 
-    ALLOCATE(alpha(n-1, n-1), (n-1)*(n-1))
-    ALLOCATE(eigenvectors(n-1, n-1), (n-1)*(n-1))
-    ALLOCATE(eigenvalues(n-1), n-1)
+    SAFE_ALLOCATE(alpha(1:n-1, 1:n-1))
+    SAFE_ALLOCATE(eigenvectors(1:n-1, 1:n-1))
+    SAFE_ALLOCATE(eigenvalues(1:n-1))
 
     forall(j=1:n-1)
       forall(k=1:n-1) alpha(j, k) = a(j)*a(k)

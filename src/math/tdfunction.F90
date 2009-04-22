@@ -476,8 +476,8 @@ module tdf_m
     call io_skip_header(iunit)
 
     ! allocate and read info
-    ALLOCATE( t(lines), lines)
-    ALLOCATE(am(lines), lines)
+    SAFE_ALLOCATE( t(1:lines))
+    SAFE_ALLOCATE(am(1:lines))
     do j = 1, lines
       read(iunit, *) t(j), am(j)
     end do
@@ -515,7 +515,7 @@ module tdf_m
 
     f%mode = TDF_NUMERICAL
     f%niter = niter
-    ALLOCATE(f%val(niter+1), niter+1)
+    SAFE_ALLOCATE(f%val(1:niter+1))
     if(present(initval)) then
       f%val = initval
     else
@@ -546,17 +546,17 @@ module tdf_m
     if(present(rep)) then
       select case(rep)
         case(TDF_SINE_SERIES)
-          ALLOCATE(f%coeffs(f%sine_nfreqs), f%sine_nfreqs)
+          SAFE_ALLOCATE(f%coeffs(1:f%sine_nfreqs))
           f%coeffs = M_ZERO
           SAFE_DEALLOCATE_P(f%val); nullify(f%val)
           f%mode = TDF_SINE_SERIES
         case(TDF_FOURIER_SERIES)
-          ALLOCATE(f%valww(2*(f%nfreqs-1)+1), 2*(f%nfreqs-1)+1)
+          SAFE_ALLOCATE(f%valww(1:2*(f%nfreqs-1)+1))
           f%valww = M_ZERO
           SAFE_DEALLOCATE_P(f%val); nullify(f%val)
           f%mode = TDF_FOURIER_SERIES
         case(TDF_ZERO_FOURIER)
-          ALLOCATE(f%valww(2*(f%nfreqs-1)+1), 2*(f%nfreqs-1)+1)
+          SAFE_ALLOCATE(f%valww(1:2*(f%nfreqs-1)+1))
           f%valww = M_ZERO
           SAFE_DEALLOCATE_P(f%val); nullify(f%val)
           f%mode = TDF_ZERO_FOURIER
@@ -605,11 +605,11 @@ module tdf_m
     CMPLX, allocatable :: tmp(:)
     call push_sub('tdfunction.tdf_numerical_to_fourier')
 
-    ALLOCATE(tmp(f%niter/2+1), f%niter/2+1)
+    SAFE_ALLOCATE(tmp(1:f%niter/2+1))
     call dfft_forward1(f%fft_handler, f%val(1:f%niter), tmp)
     tmp = tmp * f%dt * sqrt(M_ONE/(f%final_time-f%init_time))
     f%mode = TDF_FOURIER_SERIES
-    ALLOCATE(f%valww(2*(f%nfreqs-1)+1), 2*(f%nfreqs-1)+1)
+    SAFE_ALLOCATE(f%valww(1:2*(f%nfreqs-1)+1))
     f%valww(1) = tmp(1)
     do j = 2, f%nfreqs
       f%valww(j) = (sqrt(M_TWO)) * real(tmp(j))
@@ -633,14 +633,14 @@ module tdf_m
 
     call push_sub('tdfunction.tdf_fourier_to_numerical')
 
-    ALLOCATE(tmp(f%niter/2+1), f%niter/2+1)
+    SAFE_ALLOCATE(tmp(1:f%niter/2+1))
     tmp = M_z0
     tmp(1) = f%valww(1)
     do j = 2, f%nfreqs
       tmp(j) = cmplx( (sqrt(M_TWO)/M_TWO)*f%valww(j) , &
                          -(sqrt(M_TWO)/M_TWO)*f%valww(j+f%nfreqs-1) , REAL_PRECISION)
     end do
-    ALLOCATE(f%val(f%niter+1), f%niter+1)
+    SAFE_ALLOCATE(f%val(1:f%niter+1))
     call dfft_backward1(f%fft_handler, tmp, f%val(1:f%niter))
     f%val(f%niter+1) = f%val(1)
     f%val = f%val * f%niter * sqrt(M_ONE/(f%final_time-f%init_time))
@@ -747,7 +747,7 @@ module tdf_m
     case default
       stop 'Error'
     end select
-    ALLOCATE(e(n), n)
+    SAFE_ALLOCATE(e(1:n))
 
     if( mpi_grp_is_root(mpi_world)) then
       if(present(fdotf)) then
@@ -798,7 +798,7 @@ module tdf_m
     if(f%mode .eq. TDF_NUMERICAL) return
     call push_sub('tdfunction.tdf_to_numerical')
 
-    ALLOCATE(val(niter+1), niter+1)
+    SAFE_ALLOCATE(val(1:niter+1))
 
     do j = 1, niter + 1
       t = (j-1)*dt
@@ -825,7 +825,7 @@ module tdf_m
     ASSERT(f%mode .eq. TDF_NUMERICAL)
 
     bigt = f%final_time - f%init_time
-    ALLOCATE(f%coeffs(f%sine_nfreqs), f%sine_nfreqs)
+    SAFE_ALLOCATE(f%coeffs(1:f%sine_nfreqs))
     do j = 1, f%sine_nfreqs
       omega = (M_PI/bigt) * j
       f%coeffs(j) = M_ZERO
@@ -854,7 +854,7 @@ module tdf_m
 
     ASSERT(f%mode .eq. TDF_SINE_SERIES)
 
-    ALLOCATE(f%val(f%niter+1), f%niter+1)
+    SAFE_ALLOCATE(f%val(1:f%niter+1))
 
     bigt = f%final_time - f%init_time
 
@@ -1022,22 +1022,22 @@ module tdf_m
       fout%amplitude = fin%amplitude
     end if
     if(fin%mode .eq. TDF_NUMERICAL) then
-      ALLOCATE(fout%val(fout%niter+1), fout%niter+1)
+      SAFE_ALLOCATE(fout%val(1:fout%niter+1))
       fout%val  = fin%val
       call fft_copy(fin%fft_handler, fout%fft_handler)
     end if
     if(fin%mode .eq. TDF_FOURIER_SERIES) then
-      ALLOCATE(fout%valww(2*fout%nfreqs-1), 2*fout%nfreqs-1)
+      SAFE_ALLOCATE(fout%valww(2*fout%nfreqs-1))
       fout%valww  = fin%valww
       call fft_copy(fin%fft_handler, fout%fft_handler)
     end if
     if(fin%mode .eq. TDF_ZERO_FOURIER) then
-      ALLOCATE(fout%valww(2*fout%nfreqs-1), 2*fout%nfreqs-1)
+      SAFE_ALLOCATE(fout%valww(2*fout%nfreqs-1))
       fout%valww  = fin%valww
       call fft_copy(fin%fft_handler, fout%fft_handler)
     end if
     if(fin%mode .eq. TDF_SINE_SERIES) then
-      ALLOCATE(fout%coeffs(fout%sine_nfreqs), fout%sine_nfreqs)
+      SAFE_ALLOCATE(fout%coeffs(fout%sine_nfreqs))
       fout%coeffs = fin%coeffs
     end if
     fout%mode   = fin%mode
@@ -1230,3 +1230,8 @@ module tdf_m
   !------------------------------------------------------------
 
 end module tdf_m
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

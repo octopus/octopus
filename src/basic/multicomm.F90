@@ -143,7 +143,7 @@ contains
     apout%rounds = apin%rounds
     if(associated(apin%schedule)) then
       i = size(apin%schedule, 1)*size(apin%schedule, 2)
-      ALLOCATE(apout%schedule(size(apin%schedule, 1), size(apin%schedule, 2)), i)
+      SAFE_ALLOCATE(apout%schedule(1:size(apin%schedule, 1), 1:size(apin%schedule, 2)))
       apout%schedule = apin%schedule
     end if    
 
@@ -177,7 +177,7 @@ contains
     end if
 
     if(mc%par_strategy.ne.P_STRATEGY_SERIAL) then
-      ALLOCATE(mc%group_sizes(mc%n_index), mc%n_index)
+      SAFE_ALLOCATE(mc%group_sizes(1:mc%n_index))
       mc%group_sizes(:) = 1
 
       !%Variable ParallelizationUseTopology
@@ -352,7 +352,7 @@ contains
         return
       end if
 
-      ALLOCATE(n_group_max(1:mc%n_index), mc%n_index)
+      SAFE_ALLOCATE(n_group_max(1:mc%n_index))
 
       n = mc%n_node
 
@@ -505,8 +505,8 @@ contains
 
       call push_sub('multicomm.group_comm_create')
 
-      ALLOCATE(mc%group_comm(mc%n_index), mc%n_index)
-      ALLOCATE(mc%who_am_i(mc%n_index), mc%n_index)
+      SAFE_ALLOCATE(mc%group_comm(1:mc%n_index))
+      SAFE_ALLOCATE(mc%who_am_i(1:mc%n_index))
 
 #if defined(HAVE_MPI)
         if(.not. mc%use_topology) then
@@ -641,7 +641,7 @@ contains
     ap%rounds = rounds
 
     ! Calculate schedule.
-    ALLOCATE(ap%schedule(0:grp_size-1, rounds), grp_size*rounds)
+    SAFE_ALLOCATE(1:ap%schedule(0:grp_size-1, 1:rounds))
     do ir = 1, rounds
       do in = 0, grp_size-1
         ap%schedule(in, ir) = get_partner(in+1, ir)-1
@@ -715,7 +715,7 @@ contains
       !get the system name
       call loct_sysname(my_name)
 
-      ALLOCATE(this%distance(1:wsize, 1:wsize), wsize**2)
+      SAFE_ALLOCATE(this%distance(1:wsize, 1:wsize))
 
       do ir = 1, wsize
 
@@ -745,8 +745,8 @@ contains
       
       !classify processors in groups
 
-      ALLOCATE(this%groups(1:wsize, 1:wsize), wsize**2)
-      ALLOCATE(this%gsize(1:wsize), wsize)
+      SAFE_ALLOCATE(this%groups(1:wsize, 1:wsize))
+      SAFE_ALLOCATE(this%gsize(1:wsize))
 
       ! put the first node in the first group
       this%ng = 1

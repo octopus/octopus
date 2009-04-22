@@ -94,7 +94,7 @@ contains
     if(.not. multicomm_strategy_is_parallel(mc, strategy)) then
 #endif      
       
-      ALLOCATE(this%node(1:total), 1)
+      SAFE_ALLOCATE(this%node(1:total))
       ! Defaults.
       this%node(1:total)   = 0
       this%start           = 1
@@ -115,9 +115,9 @@ contains
       size = mc%group_sizes(strategy)
       rank = mc%who_am_i(strategy)
 
-      ALLOCATE(this%range(2, 0:size - 1), 2*size)
-      ALLOCATE(this%num(0:size - 1), size)
-      ALLOCATE(this%node(1:this%nglobal), this%nglobal)
+      SAFE_ALLOCATE(this%range(1:2, 0:size - 1))
+      SAFE_ALLOCATE(this%num(0:size - 1))
+      SAFE_ALLOCATE(this%node(1:this%nglobal))
 
       call multicomm_divide_range(this%nglobal, size, this%range(1, :), this%range(2, :), this%num)
 
@@ -164,17 +164,17 @@ contains
     nullify(out%node, out%range, out%num)
 
     if(associated(in%node)) then
-      ALLOCATE(out%node(1:in%nglobal), in%nglobal)
+      SAFE_ALLOCATE(out%node(1:in%nglobal))
       out%node(1:in%nglobal) = in%node(1:in%nglobal)
     end if
 
     if(associated(in%range)) then
-      ALLOCATE(out%range(1:2, 0:size - 1), 2*size)
+      SAFE_ALLOCATE(out%range(1:2, 0:size - 1))
       out%range(1:2, 0:size - 1) = in%range(1:2, 0:size - 1)
     end if
 
     if(associated(in%num)) then
-      ALLOCATE(out%num(0:size - 1), size)
+      SAFE_ALLOCATE(out%num(0:size - 1))
       out%num(0:size - 1) = in%num(0:size - 1)
     end if
 

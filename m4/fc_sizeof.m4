@@ -27,15 +27,26 @@ AC_DEFUN([ACX_FC_SIZEOF],
 AC_MSG_CHECKING([for Fortran sizeof intrinsic])
 
 AC_LINK_IFELSE(
-    AC_LANG_PROGRAM( [], [
+    AC_LANG_PROGRAM( [], [[
     implicit none
-    integer(8) :: a
-    a = sizeof(a)
-    ]),
+    integer s
+    integer array(10)
+    character(len=10) C
+    type dtype
+      integer :: array(10)
+      integer, pointer :: p(:)
+    end type
+    type (dtype) dobj
+    s = sizeof(array)
+    s = sizeof(array(3))
+    s = sizeof(c(2:5))
+    s = sizeof(c)
+    s = sizeof(dobj)
+    s = sizeof(dobj%array)
+    ]]),
     [AC_MSG_RESULT(yes)
      AC_DEFINE(HAVE_FC_SIZEOF, 1,
                [Fortran compiler supports the sizeof intrinsic])],
-    [AC_MSG_RESULT(no)])
-
-]
-)
+    [AC_MSG_RESULT(no)]
+  )
+])

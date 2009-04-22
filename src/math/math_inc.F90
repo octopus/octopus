@@ -30,7 +30,7 @@ subroutine X(interpolate_2)(xa, ya, x, y)
   n1 = size(ya, 1)
   n2 = size(ya, 2)
 
-  ALLOCATE(c(n), n)
+  SAFE_ALLOCATE(c(1:n))
 
   call interpolation_coefficients(n, xa, x, c)
 
@@ -59,7 +59,7 @@ subroutine X(interpolate_1)(xa, ya, x, y)
 
   n = size(xa)
   n1 = size(ya, 1)
-  ALLOCATE(c(n), n)
+  SAFE_ALLOCATE(c(1:n))
 
   call interpolation_coefficients(n, xa, x, c)
 
@@ -82,7 +82,7 @@ subroutine X(interpolate_0)(xa, ya, x, y)
   FLOAT, allocatable :: c(:)
 
   n = size(xa)
-  ALLOCATE(c(n), n)
+  SAFE_ALLOCATE(c(1:n))
 
   call interpolation_coefficients(n, xa, x, c)
 
@@ -105,7 +105,7 @@ subroutine X(shellsort1)(a, x)
 
   n = size(a)
   m = size(x, 1)
-  ALLOCATE(b(m), m)
+  SAFE_ALLOCATE(b(1:m))
 
   inc = 1
   do
@@ -149,7 +149,7 @@ subroutine X(shellsort2)(a, x)
   n = size(a)
   p = size(x, 1)
   q = size(x, 2)
-  ALLOCATE(b(p, q), p*q)
+  SAFE_ALLOCATE(b(1:p, 1:q))
 
   inc = 1
   do
@@ -260,10 +260,10 @@ subroutine X(parker_traub)(nsize, vdm_base, vdm_inverse)
   
   call push_sub('math_inc.Xparker_traub')
 
-  ALLOCATE(an(0:nsize), nsize+1)
-  ALLOCATE(ap(0:nsize), nsize+1)
-  ALLOCATE(pp(1:nsize), nsize  )
-  ALLOCATE( q(0:nsize, 1:nsize), nsize*(nsize+1))
+  SAFE_ALLOCATE(an(0:nsize))
+  SAFE_ALLOCATE(ap(0:nsize))
+  SAFE_ALLOCATE(pp(1:nsize))
+  SAFE_ALLOCATE( q(0:nsize, 1:nsize))
   
   ! compute coefficients a_j
   ap(0) = - vdm_base(1)
@@ -332,8 +332,8 @@ subroutine X(matrix_newton_raphson)(nsteps, nsize, a, b)
   
   call push_sub('math_inc.Xmatrix_newton_raphson')
 
-  ALLOCATE( ab(1:nsize, 1:nsize), nsize*nsize)
-  ALLOCATE(bab(1:nsize, 1:nsize), nsize*nsize)
+  SAFE_ALLOCATE( ab(1:nsize, 1:nsize))
+  SAFE_ALLOCATE(bab(1:nsize, 1:nsize))
 
   do is = 1, nsteps
 
@@ -363,7 +363,7 @@ FLOAT function X(matrix_inv_residual)(nsize, a, b) result(residual)
   integer :: i, j
   R_TYPE, allocatable :: ab(:,:)
 
-  ALLOCATE(ab(1:nsize, 1:nsize), nsize*nsize)
+  SAFE_ALLOCATE(ab(1:nsize, 1:nsize))
 
   ab = R_TOTYPE(M_ZERO)
   ab = matmul(a, b)
@@ -433,7 +433,7 @@ subroutine X(matrix_symmetric_average)(matrix, np)
 
   call push_sub('math_inc.symmetric_average')
 
-  ALLOCATE(tmp(np, np), np**2)
+  SAFE_ALLOCATE(tmp(1:np, 1:np))
 
   if(np.gt.1) then
     do j = 1, np

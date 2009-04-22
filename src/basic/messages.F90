@@ -86,6 +86,7 @@ module messages_m
 
 
   integer, public :: global_alloc_err
+  integer, public :: global_sizeof
 contains
 
   ! ---------------------------------------------------------

@@ -127,7 +127,7 @@ SUFFIXES = _oct.f90 .F90 .o .S .s
 		mv -f $*_oct.f91 $*_oct.f90; \
 	fi
 	@if [ "@LONG_LINES@" = "no" ]; then \
-		perl -pi -e 's/\\newline/\n/g; s/\\cardinal/#/g' $*_oct.f90; \
+		perl -pi -e 's/_newline_/\n/g; s/_cardinal_/#/g' $*_oct.f90; \
 	fi
 	@if [ "@F90_ACCEPTS_LINE_NUMBERS@" = "no" ]; then \
 		grep -v "^#" $*_oct.f90 > $*_oct.f91; \

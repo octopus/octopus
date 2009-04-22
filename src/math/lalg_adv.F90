@@ -134,11 +134,11 @@ contains
     
     integer :: ii
 
-    ALLOCATE(evectors(nn, nn), nn**2)
+    SAFE_ALLOCATE(evectors(1:nn, 1:nn))
 
     if(hermitian) then
 
-      ALLOCATE(evalues(nn), nn)
+      SAFE_ALLOCATE(evalues(1:nn))
 
       call lalg_eigensolve(nn, aa(1:nn, 1:nn), evectors, evalues)
 
@@ -152,7 +152,7 @@ contains
 
     else
 
-      ALLOCATE(zevalues(nn), nn)
+      SAFE_ALLOCATE(zevalues(1:nn))
 
       evectors(1:nn, 1:nn) = aa(1:nn, 1:nn)
 
