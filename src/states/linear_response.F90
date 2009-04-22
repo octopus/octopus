@@ -104,24 +104,18 @@ contains
 
     call push_sub('linear_response.lr_allocate')
 
-    size = m%np_part * st%d%dim * st%nst * st%d%nik
-
-    if (states_are_complex(st)) then 
-
-      ALLOCATE(lr%zdl_psi(m%np_part, st%d%dim, st%nst, st%d%nik), size)
-      ALLOCATE(lr%zdl_rho(m%np, st%d%nspin), m%np*st%d%nspin)
+    if (states_are_complex(st)) then
+      SAFE_ALLOCATE(lr%zdl_psi(1:m%np_part, 1:st%d%dim, 1:st%nst, 1:st%d%nik))
+      SAFE_ALLOCATE(lr%zdl_rho(1:m%np, 1:st%d%nspin))
       
       lr%zdl_psi = M_ZERO
       lr%zdl_rho = M_ZERO
-      
     else
-
-      ALLOCATE(lr%ddl_psi(m%np_part, st%d%dim, st%nst, st%d%nik), size)
-      ALLOCATE(lr%ddl_rho(m%np, st%d%nspin), m%np*st%d%nspin)
+      SAFE_ALLOCATE(lr%ddl_psi(1:m%np_part, 1:st%d%dim, 1:st%nst, 1:st%d%nik))
+      SAFE_ALLOCATE(lr%ddl_rho(1:m%np, 1:st%d%nspin))
 
       lr%ddl_psi = M_ZERO
       lr%ddl_rho = M_ZERO
-
     end if
 
     lr%is_allocated = .true.

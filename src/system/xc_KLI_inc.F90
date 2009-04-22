@@ -34,8 +34,8 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
 
   ! some intermediate quantities
   ! vxc contains the Slater part!
-  ALLOCATE(rho_sigma(m%np), m%np)
-  ALLOCATE(sqphi(m%np, st%d%dim, st%nst), m%np*st%d%dim*st%nst)
+  SAFE_ALLOCATE(rho_sigma(1:m%np))
+  SAFE_ALLOCATE(sqphi(1:m%np, 1:st%d%dim, 1:st%nst))
 
   do i = st%st_start, st%st_end
     sqphi(1:m%np, 1:st%d%dim, i) = R_REAL(st%X(psi)(1:m%np, 1:st%d%dim, i, is))**2 + &
@@ -49,7 +49,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
 
 #if defined(HAVE_MPI)
   if(st%parallel_in_states) then
-    ALLOCATE(d(m%np), m%np)
+    SAFE_ALLOCATE(d(1:m%np))
     call MPI_Allreduce(rho_sigma(1), d(1), m%np, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
     rho_sigma(1:m%np) = d(1:m%np)
   end if
@@ -80,7 +80,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
 
   n = oep%eigen_n
 
-  ALLOCATE(v_bar_S(st%nst), st%nst)
+  SAFE_ALLOCATE(v_bar_S(1:st%nst))
   do i = st%st_start, st%st_end
     if(st%occ(i, is) .gt. small) then
       v_bar_S(i) = dmf_dotp(m, sqphi(:, 1, i) , oep%vxc)
@@ -102,10 +102,10 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
 
   ! If there is more than one state, so solve linear equation.
   linear_equation: if(n > 0) then
-    ALLOCATE(d(m%np), m%np)
-    ALLOCATE(x(n, 1), n*1)
-    ALLOCATE(Ma(n, n), n*n)
-    ALLOCATE(y(n, 1), n*1)
+    SAFE_ALLOCATE( d(1:m%np))
+    SAFE_ALLOCATE( x(1:n, 1:1))
+    SAFE_ALLOCATE(Ma(1:n, 1:n))
+    SAFE_ALLOCATE( y(1:n, 1:1))
     x = M_ZERO; y = M_ZERO; Ma = M_ZERO; d = M_ZERO
     proc = st%mpi_grp%rank
 

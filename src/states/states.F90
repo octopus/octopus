@@ -290,9 +290,9 @@ contains
     ! determined by the previous periodic calculation.
     st%open_boundaries = gr%sb%open_boundaries
     if(gr%sb%open_boundaries) then
-      ALLOCATE(ob_k(NLEADS), NLEADS)
-      ALLOCATE(ob_st(NLEADS), NLEADS)
-      ALLOCATE(ob_d(NLEADS), NLEADS)
+      SAFE_ALLOCATE( ob_k(1:NLEADS))
+      SAFE_ALLOCATE(ob_st(1:NLEADS))
+      SAFE_ALLOCATE( ob_d(1:NLEADS))
       do il = 1, NLEADS
         call states_look(trim(gr%sb%lead_restart_dir(il))//'/gs', mpi_world, &
           ob_k(il), ob_d(il), ob_st(il), ierr, .true.)
@@ -330,14 +330,14 @@ contains
       st%ob_ncs = 1
       DEALLOCATE(st%d%kpoints)
       DEALLOCATE(st%d%kweights)
-      ALLOCATE(st%d%kpoints(MAX_DIM, st%d%nik), MAX_DIM*st%d%nik)
-      ALLOCATE(st%d%kweights(st%d%nik), st%d%nik)
+      SAFE_ALLOCATE( st%d%kpoints(1:MAX_DIM, 1:st%d%nik))
+      SAFE_ALLOCATE(st%d%kweights(1:st%d%nik))
       st%d%kweights(1) = M_ONE
       st%d%kpoints(1:MAX_DIM, 1) = M_ZERO
-      ALLOCATE(st%ob_d%kpoints(MAX_DIM, st%ob_d%nik), MAX_DIM*st%ob_d%nik)
-      ALLOCATE(st%ob_d%kweights(st%ob_d%nik), st%ob_d%nik)
-      ALLOCATE(st%ob_eigenval(st%ob_nst, st%ob_d%nik), st%ob_nst*st%ob_d%nik)
-      ALLOCATE(st%ob_occ(st%ob_nst, st%ob_d%nik), st%ob_nst*st%ob_d%nik)
+      SAFE_ALLOCATE(st%ob_d%kpoints(1:MAX_DIM, 1:st%ob_d%nik))
+      SAFE_ALLOCATE(st%ob_d%kweights(1:st%ob_d%nik))
+      SAFE_ALLOCATE(st%ob_eigenval(1:st%ob_nst, 1:st%ob_d%nik))
+      SAFE_ALLOCATE(st%ob_occ(1:st%ob_nst, 1:st%ob_d%nik))
       call read_ob_eigenval_and_occ()
     else
       st%ob_nst   = 0
@@ -427,16 +427,16 @@ contains
     call loct_parse_logical(datasets_check('OnlyUserDefinedInitialStates'), .false., st%only_userdef_istates)
 
     ! we now allocate some arrays
-    ALLOCATE(st%occ     (st%nst, st%d%nik),      st%nst*st%d%nik)
-    ALLOCATE(st%eigenval(st%nst, st%d%nik),      st%nst*st%d%nik)
-    ALLOCATE(st%momentum(gr%sb%dim, st%nst, st%d%nik), 3*st%nst*st%d%nik)
+    SAFE_ALLOCATE(st%occ     (1:st%nst, 1:st%d%nik))
+    SAFE_ALLOCATE(st%eigenval(1:st%nst, 1:st%d%nik))
+    SAFE_ALLOCATE(st%momentum(1:gr%sb%dim, 1:st%nst, 1:st%d%nik))
     st%eigenval = M_ZERO
     st%occ      = M_ZERO
     st%momentum = M_ZERO
     ! allocate space for formula strings that define user defined states
-    ALLOCATE(st%user_def_states(st%d%dim, st%nst, st%d%nik), st%d%dim*st%nst*st%d%nik)
+    SAFE_ALLOCATE(st%user_def_states(1:st%d%dim, 1:st%nst, 1:st%d%nik))
     if(st%d%ispin == SPINORS) then
-      ALLOCATE(st%spin(3, st%nst, st%d%nik), st%nst*st%d%nik*3)
+      SAFE_ALLOCATE(st%spin(1:3, 1:st%nst, 1:st%d%nik))
     else
       nullify(st%spin)
     end if
@@ -452,7 +452,7 @@ contains
     st%st_start = 1
     st%st_end = st%nst
     st%lnst = st%nst
-    ALLOCATE(st%node(st%nst), st%nst)
+    SAFE_ALLOCATE(st%node(1:st%nst))
     st%node(1:st%nst) = 0
 
     call mpi_grp_init(st%mpi_grp, -1)
@@ -531,15 +531,12 @@ contains
     type(states_t), intent(inout) :: st
     type(grid_t),   intent(in)    :: gr
 
-    integer :: alloc_size
     call push_sub('states.states_allocate_free_states')
 
     ! FIXME: spin-polarized free states ignored.
     if(gr%sb%open_boundaries) then
-      alloc_size = gr%mesh%np_part*st%ob_d%dim*st%ob_nst*st%ob_d%nik
-      ALLOCATE(st%zphi(gr%mesh%np_part, st%ob_d%dim, st%ob_nst, st%ob_d%nik), alloc_size)
-      alloc_size = gr%mesh%lead_unit_cell(LEFT)%np*st%d%nspin*NLEADS
-      ALLOCATE(st%ob_rho(gr%mesh%lead_unit_cell(LEFT)%np, st%d%nspin, NLEADS), alloc_size)
+      SAFE_ALLOCATE(st%zphi(1:gr%mesh%np_part, 1:st%ob_d%dim, 1:st%ob_nst, 1:st%ob_d%nik))
+      SAFE_ALLOCATE(st%ob_rho(1:gr%mesh%lead_unit_cell(LEFT)%np, 1:st%d%nspin, 1:NLEADS))
       st%zphi = M_z0
     else
       nullify(st%zphi)
@@ -779,7 +776,7 @@ contains
     type(mesh_t),      intent(in)    :: mesh
     integer, optional, intent(in)    :: wfs_type
 
-    integer :: np, ik, ist, idim, alloc_size, st1, st2, k1, k2
+    integer :: np, ik, ist, idim, st1, st2, k1, k2
     logical :: force
 
     call push_sub('states.states_allocate_wfns')
@@ -806,12 +803,11 @@ contains
 
     if(force) st%wfs_type = M_CMPLX
 
-    alloc_size = mesh%np_part*st%d%dim*st%lnst*st%d%kpt%nlocal
     st1 = st%st_start; st2 = st%st_end
     k1 = st%d%kpt%start; k2 = st%d%kpt%end
 
     if (st%wfs_type == M_REAL) then
-      ALLOCATE(st%dpsi(mesh%np_part, st%d%dim, st1:st2, k1:k2), alloc_size)
+      SAFE_ALLOCATE(st%dpsi(1:mesh%np_part, 1:st%d%dim, st1:st2, k1:k2))
 
       do ik = k1, k2
         do ist = st1, st2
@@ -822,7 +818,7 @@ contains
       end do
 
     else
-      ALLOCATE(st%zpsi(mesh%np_part, st%d%dim, st1:st2, k1:k2), alloc_size)
+      SAFE_ALLOCATE(st%zpsi(1:mesh%np_part, 1:st%d%dim, st1:st2, k1:k2))
 
       do ik = k1, k2
         do ist = st1, st2
@@ -835,8 +831,7 @@ contains
 
     if(calc_mode_is(CM_TD).and.st%open_boundaries) then
       np = mesh%lead_unit_cell(LEFT)%np
-      alloc_size = np*2*st%d%dim*st%lnst*st%d%kpt%nlocal*NLEADS
-      ALLOCATE(st%ob_intf_psi(np, 2, st%d%dim, st1:st2, k1:k2, NLEADS), alloc_size)
+      SAFE_ALLOCATE(st%ob_intf_psi(1:np, 1:2, 1:st%d%dim, st1:st2, k1:k2, 1:NLEADS))
 
       st%ob_intf_psi = M_z0
     end if
@@ -875,13 +870,13 @@ contains
     call push_sub('states.states_densities_init')
 
     ! allocate arrays for charge and current densities
-    ALLOCATE(st%rho(gr%mesh%np_part, st%d%nspin), gr%mesh%np_part*st%d%nspin)
-    ALLOCATE(st%j(gr%mesh%np_part, gr%mesh%sb%dim, st%d%nspin), gr%mesh%np_part*gr%mesh%sb%dim*st%d%nspin)
+    SAFE_ALLOCATE(st%rho(1:gr%mesh%np_part, 1:st%d%nspin))
+    SAFE_ALLOCATE(  st%j(1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:st%d%nspin))
     st%rho  = M_ZERO
     st%j    = M_ZERO
     st%nlcc = geo%nlcc
     if(st%nlcc) then
-      ALLOCATE(st%rho_core(gr%mesh%np), gr%mesh%np)
+      SAFE_ALLOCATE(st%rho_core(1:gr%mesh%np))
       st%rho_core(:) = M_ZERO
     end if
 
@@ -1048,7 +1043,7 @@ contains
     ! reduce over states
     if(st%parallel_in_states) then
       call profiling_in(reduce_prof, "DENSITY_REDUCE")
-      ALLOCATE(reduce_rho(1:np), np)
+      SAFE_ALLOCATE(reduce_rho(1:np))
       do ispin = 1, st%d%nspin
         call MPI_Allreduce(rho(1, ispin), reduce_rho(1), np, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
         call lalg_copy(np, reduce_rho, rho(:, ispin))
@@ -1060,7 +1055,7 @@ contains
     ! reduce over kpoints
     if(st%d%kpt%parallel) then
       call profiling_in(reduce_prof, "DENSITY_REDUCE")
-      ALLOCATE(reduce_rho(1:np), np)
+      SAFE_ALLOCATE(reduce_rho(1:np))
       do ispin = 1, st%d%nspin
         call MPI_Allreduce(rho(1, ispin), reduce_rho(1), np, MPI_FLOAT, MPI_SUM, st%d%kpt%mpi_grp%comm, mpi_err)
         call lalg_copy(np, reduce_rho, rho(:, ispin))
@@ -1242,7 +1237,7 @@ contains
         end do
 #if defined(HAVE_MPI)
         if(st%parallel_in_states) then
-          ALLOCATE(lspin(3, st%lnst), 3*st%lnst)
+          SAFE_ALLOCATE(lspin(1:3, 1:st%lnst))
           lspin = st%spin(1:3, st%st_start:st%st_end, ik)
           do j = 1, 3
             call lmpi_gen_allgatherv(st%lnst, lspin(j, :), tmp, st%spin(j, :, ik), st%mpi_grp)
@@ -1440,7 +1435,7 @@ contains
     ns = 1
     if(st%d%nspin == 2) ns = 2
 
-    ALLOCATE(iunit(0:ns-1), ns)
+    SAFE_ALLOCATE(iunit(0:ns-1))
 
     ! define the scaling factor to output k_i/G_i, instead of k_i
     do i = 1, MAX_DIM
@@ -1585,7 +1580,7 @@ contains
       else ! correct size
 
         use_qvector = .true.
-        ALLOCATE(qvector(gr%mesh%sb%dim),gr%mesh%sb%dim)
+        SAFE_ALLOCATE(qvector(1:gr%mesh%sb%dim))
 
         do icoord = 1,gr%mesh%sb%dim    !for x,y,z
           call loct_parse_block_float(blk, 0, icoord-1, qvector(icoord))
@@ -1598,9 +1593,11 @@ contains
 
     ! calculate the matrix elements
 
-    ALLOCATE(ff(gr%mesh%np), gr%mesh%np)
-    if(use_qvector) ALLOCATE(cff(gr%mesh%np), gr%mesh%np)
-    ALLOCATE(osc(gr%mesh%sb%dim), gr%mesh%sb%dim)
+    SAFE_ALLOCATE(ff(1:gr%mesh%np))
+    if(use_qvector) then
+      SAFE_ALLOCATE(cff(1:gr%mesh%np))
+    end if
+    SAFE_ALLOCATE(osc(1:gr%mesh%sb%dim))
 
     ! root writes output to file
 
@@ -1762,8 +1759,8 @@ contains
     if(st%d%nspin == 2) ns = 2
 
     ! space for state dependent DOS
-    ALLOCATE(dos(epoints, st%nst, 0:ns-1), epoints*st%nst*ns)
-    ALLOCATE(iunit(0:ns-1), ns)    
+    SAFE_ALLOCATE(dos(1:epoints, 1:st%nst, 0:ns-1))
+    SAFE_ALLOCATE(iunit(0:ns-1))    
 
     ! compute band/spin resolved density of states
     do ist = 1, st%nst
@@ -1968,8 +1965,8 @@ contains
        call write_fatal(2)
      end if
 
-     ALLOCATE(st%st_range(2, 0:st%mpi_grp%size-1), 2*st%mpi_grp%size)
-     ALLOCATE(st%st_num(0:st%mpi_grp%size-1), st%mpi_grp%size)
+     SAFE_ALLOCATE(st%st_range(1:2, 0:st%mpi_grp%size-1))
+     SAFE_ALLOCATE(st%st_num(0:st%mpi_grp%size-1))
 
      call multicomm_divide_range(st%nst, st%mpi_grp%size, st%st_range(1, :), st%st_range(2, :), st%st_num)
 
@@ -2049,8 +2046,8 @@ contains
     integer :: mpi_err
 #endif
 
-    ALLOCATE(wf_psi(gr%mesh%np_part, st%d%dim),  gr%mesh%np_part*st%d%dim)
-    ALLOCATE(gwf_psi(gr%mesh%np, gr%mesh%sb%dim, st%d%dim), gr%mesh%np*gr%mesh%sb%dim*st%d%dim)   
+    SAFE_ALLOCATE( wf_psi(1:gr%mesh%np_part, 1:st%d%dim))
+    SAFE_ALLOCATE(gwf_psi(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:st%d%dim))   
 
     sp = 1
     if(st%d%ispin == SPIN_POLARIZED) sp = 2
@@ -2155,7 +2152,7 @@ contains
 
       call push_sub('states.reduce_all')
 
-      ALLOCATE(tmp_reduce(1:gr%mesh%np), gr%mesh%np)
+      SAFE_ALLOCATE(tmp_reduce(1:gr%mesh%np))
 
       do is = 1, st%d%nspin
         if(present(tau)) then
@@ -2305,7 +2302,7 @@ contains
     end if
 
     if(.not.associated(st%frozen_rho)) then
-      ALLOCATE(st%frozen_rho(gr%mesh%np, st%d%dim), gr%mesh%np * st%d%dim)
+      SAFE_ALLOCATE(st%frozen_rho(1:gr%mesh%np, 1:st%d%dim))
       st%frozen_rho = M_ZERO
     end if
 
@@ -2366,9 +2363,9 @@ contains
     SAFE_DEALLOCATE_P(st%occ)
     SAFE_DEALLOCATE_P(st%eigenval)
     SAFE_DEALLOCATE_P(st%momentum)
-    ALLOCATE(st%occ     (st%nst, st%d%nik),      st%nst*st%d%nik)
-    ALLOCATE(st%eigenval(st%nst, st%d%nik),      st%nst*st%d%nik)
-    ALLOCATE(st%momentum(3, st%nst, st%d%nik), 3*st%nst*st%d%nik)
+    SAFE_ALLOCATE(st%occ     (1:st%nst, 1:st%d%nik))
+    SAFE_ALLOCATE(st%eigenval(1:st%nst, 1:st%d%nik))
+    SAFE_ALLOCATE(st%momentum(1:3, 1:st%nst, 1:st%d%nik))
 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
@@ -2444,23 +2441,22 @@ contains
     character(len=2)      :: spin
     character(len=256)    :: fmt, fname_real, fname_imag
     FLOAT                 :: energy
-    integer  :: np, ik, ist, il, ispin, alloc_size, s1, s2, k1, k2
+    integer  :: np, ik, ist, il, ispin, s1, s2, k1, k2
     integer  :: green_real, green_imag, irow
 
     call push_sub('states.states_init_green')
 
     if(calc_mode_is(CM_GS)) then
-      ALLOCATE(ln(NLEADS), NLEADS)
+      SAFE_ALLOCATE(ln(1:NLEADS))
       np = gr%intf(LEFT)%np
       ln(LEFT)  = 'L'; ln(RIGHT) = 'R'
       ! Calculate Green function of the leads.
       ! FIXME: For spinors, this calculation is almost certainly wrong.
       ASSERT(st%ob_nst == st%nst)
       ASSERT(st%ob_d%nik == st%d%nik)
-      alloc_size = np**2*nspin*st%lnst*st%d%kpt%nlocal*NLEADS
       s1 = st%st_start; s2 = st%st_end
       k1 = st%d%kpt%start; k2 = st%d%kpt%end
-      ALLOCATE(st%ob_green(np, np, nspin, s1:s2, k1:k2, NLEADS), alloc_size)
+      SAFE_ALLOCATE(st%ob_green(1:np, 1:np, 1:nspin, s1:s2, k1:k2, 1:NLEADS))
       call messages_print_stress(stdout, 'Lead Green functions')
       message(1) = ' st#  Spin  Lead     Energy'
       call write_info(1)

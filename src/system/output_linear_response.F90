@@ -48,7 +48,7 @@ subroutine X(h_sys_output_lr) (st, gr, lr, dir, tag, isigma, outp, geo)
     end if
 
     if(iand(outp%what, output_pol_density).ne.0) then
-      ALLOCATE(tmp(1:gr%mesh%np),gr%mesh%np)
+      SAFE_ALLOCATE(tmp(1:gr%mesh%np))
       do is = 1, st%d%nspin
         do i=1,gr%mesh%sb%dim
           tmp(1:gr%mesh%np)=gr%mesh%x(1:gr%mesh%np,i)*lr%X(dl_rho)(:, is)
@@ -91,7 +91,7 @@ subroutine X(h_sys_output_lr) (st, gr, lr, dir, tag, isigma, outp, geo)
   end if
 
   if(iand(outp%what, output_wfs_sqmod).ne.0) then
-    ALLOCATE(dtmp(gr%mesh%np_part), gr%mesh%np_part)
+    SAFE_ALLOCATE(dtmp(gr%mesh%np_part))
     do ist = 1, st%nst
       if(loct_isinstringlist(ist, outp%wfs_list)) then
          do ik = st%d%kpt%start, st%d%kpt%end

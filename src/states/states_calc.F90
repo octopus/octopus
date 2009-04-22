@@ -135,7 +135,7 @@ contains
   subroutine states_degeneracy_matrix(st)
     type(states_t), intent(in) :: st
 
-    integer :: is, js, inst, inik, dsize, iunit
+    integer :: is, js, inst, inik, iunit
     integer, allocatable :: eindex(:,:), sindex(:)
     integer, allocatable :: degeneracy_matrix(:, :)
     FLOAT,   allocatable :: eigenval_sorted(:)
@@ -143,11 +143,10 @@ contains
 
     call push_sub('states_calc.states_degeneracy_matrix')
 
-    ALLOCATE(eigenval_sorted(st%nst*st%d%nik),   st%nst*st%d%nik)
-    ALLOCATE(         sindex(st%nst*st%d%nik),   st%nst*st%d%nik)
-    ALLOCATE(      eindex(2, st%nst*st%d%nik), 2*st%nst*st%d%nik)
-    dsize = st%nst*st%d%nik * st%nst*st%d%nik
-    ALLOCATE(degeneracy_matrix(st%nst*st%d%nik, st%nst*st%d%nik), dsize)
+    SAFE_ALLOCATE(eigenval_sorted(1:st%nst*st%d%nik))
+    SAFE_ALLOCATE(         sindex(1:st%nst*st%d%nik))
+    SAFE_ALLOCATE(      eindex(1:2, 1:st%nst*st%d%nik))
+    SAFE_ALLOCATE(degeneracy_matrix(1:st%nst*st%d%nik, 1:st%nst*st%d%nik))
 
     ! convert double index "inst, inik" to single index "is"
     ! and keep mapping array

@@ -216,7 +216,7 @@ FLOAT function X(mf_nrm2_1)(mesh, f, reduce) result(nrm2)
   call push_sub('mesh_function_inc.Xmf_nrm2_1')
 
   if(mesh%use_curvilinear) then
-    ALLOCATE(l(mesh%np), mesh%np)
+    SAFE_ALLOCATE(l(1:mesh%np))
     l(1:mesh%np) = f(1:mesh%np)*sqrt(mesh%vol_pp(1:mesh%np))
     nrm2_tmp = lalg_nrm2(mesh%np, l)
     SAFE_DEALLOCATE_A(l)
@@ -287,7 +287,7 @@ R_TYPE function X(mf_moment) (mesh, ff, idir, order) result(rr)
 
   call push_sub('mesh_function_inc.Xmf_moment')
 
-  ALLOCATE(fxn(1:mesh%np), mesh%np)
+  SAFE_ALLOCATE(fxn(1:mesh%np))
 
   fxn(1:mesh%np) = ff(1:mesh%np)*mesh%x(1:mesh%np, idir)**order
   rr = X(mf_integrate)(mesh, fxn)
@@ -402,7 +402,7 @@ subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, u, f)
   else
     
     if(mesh_in%parallel_in_domains) then
-      ALLOCATE(f_global(mesh_in%np_global), mesh_in%np_global)
+      SAFE_ALLOCATE(f_global(1:mesh_in%np_global))
 #if defined(HAVE_MPI)
       call X(vec_allgather)(mesh_in%vp, f_global, u)
 #endif
@@ -459,9 +459,9 @@ subroutine X(mf_interpolate_points) (ndim, npoints_in, x_in, f_in, npoints_out, 
   call push_sub('mesh_function_inc.Xmf_interpolate_points')
 
 #ifdef SINGLE_PRECISION
-  ALLOCATE(rx_in(1:npoints_in, 1:ndim), npoints_in*ndim)
+  SAFE_ALLOCATE(rx_in(1:npoints_in, 1:ndim))
   rx_in = x_in
-  ALLOCATE(rf_in(1:npoints_in), npoints_in)
+  SAFE_ALLOCATE(rf_in(1:npoints_in))
   rf_in = f_in
 #else
   rx_in => x_in
@@ -526,12 +526,12 @@ subroutine X(mf_interpolate_on_plane)(mesh, plane, f, f_in_plane)
 
   call push_sub('mesh_function_inc.Xmf_interpolate_on_plane')
 
-  ALLOCATE(xglobal(1:mesh%np_part_global, 1:MAX_DIM), mesh%np_part_global*MAX_DIM)
+  SAFE_ALLOCATE(xglobal(1:mesh%np_part_global, 1:MAX_DIM))
   do ip = 1, mesh%np_part_global
     xglobal(ip, 1:MAX_DIM) = mesh_x_global(mesh, ip)
   end do
 
-  ALLOCATE(f_global(mesh%np_global), mesh%np_global)
+  SAFE_ALLOCATE(f_global(1:mesh%np_global))
 #if defined HAVE_MPI
   call X(vec_gather)(mesh%vp, f_global, f)
 #else
@@ -575,12 +575,12 @@ subroutine X(mf_interpolate_on_line)(mesh, line, f, f_in_line)
 
   call push_sub('mesh_function_inc.Xmf_interpolate_on_line')
 
-  ALLOCATE(xglobal(1:mesh%np_part_global, 1:MAX_DIM), mesh%np_part_global*MAX_DIM)
+  SAFE_ALLOCATE(xglobal(1:mesh%np_part_global, 1:MAX_DIM))
   do ip = 1, mesh%np_part_global
      xglobal(ip, 1:MAX_DIM) = mesh_x_global(mesh, ip)
   end do
   
-  ALLOCATE(f_global(mesh%np_global), mesh%np_global)
+  SAFE_ALLOCATE(f_global(1:mesh%np_global))
 #if defined HAVE_MPI
   call X(vec_gather)(mesh%vp, f_global, f)
 #else
@@ -619,7 +619,7 @@ R_TYPE function X(mf_surface_integral_scalar) (mesh, f, plane) result(d)
     call write_fatal(1)
   end if
 
-  ALLOCATE(f_in_plane(plane%nu:plane%mu, plane%nv:plane%mv), (plane%mu-plane%nu+1)*(plane%mv-plane%nv+1))
+  SAFE_ALLOCATE(f_in_plane(plane%nu:plane%mu, plane%nv:plane%mv))
 
   call X(mf_interpolate_on_plane)(mesh, plane, f, f_in_plane)
 
@@ -643,7 +643,7 @@ R_TYPE function X(mf_surface_integral_vector) (mesh, f, plane) result(d)
 
   call push_sub('mesh_function_inc.Xmf_surface_integral_vector')
 
-  ALLOCATE(fn(mesh%np), mesh%np)
+  SAFE_ALLOCATE(fn(1:mesh%np))
   do i = 1, mesh%np
     fn(i) = sum(f(i, :)*plane%n(:))
   end do
@@ -672,7 +672,7 @@ R_TYPE function X(mf_line_integral_scalar) (mesh, f, line) result(d)
     call write_fatal(1)
   end if
 
-  ALLOCATE(f_in_line(line%nu:line%mu), line%mu-line%nu+1)
+  SAFE_ALLOCATE(f_in_line(line%nu:line%mu))
 
   call X(mf_interpolate_on_line)(mesh, line, f, f_in_line)
 
@@ -696,7 +696,7 @@ R_TYPE function X(mf_line_integral_vector) (mesh, f, line) result(d)
 
   call push_sub('mesh_function_inc.Xmf_line_integral_vector')
 
-  ALLOCATE(fn(mesh%np), mesh%np)
+  SAFE_ALLOCATE(fn(1:mesh%np))
   do i = 1, mesh%np
     fn(i) = sum(f(i, :)*line%n(:))
   end do
@@ -769,7 +769,7 @@ subroutine X(mf_multipoles) (mesh, ff, lmax, multipole)
 
   call push_sub('mesh_function_inc.Xmf_multipoles')
 
-  ALLOCATE(ff2(mesh%np), mesh%np)
+  SAFE_ALLOCATE(ff2(1:mesh%np))
 
   ff2(1:mesh%np) = ff(1:mesh%np)
   multipole(1) = X(mf_integrate)(mesh, ff2)
@@ -827,7 +827,7 @@ subroutine X(mf_dotp_batch)(mesh, aa, bb, dot, symm, reduce)
 
   ASSERT(aa%dim == bb%dim)
 
-  ALLOCATE(dd(1:aa%nst, 1:bb%nst), aa%nst*bb%nst)
+  SAFE_ALLOCATE(dd(1:aa%nst, 1:bb%nst))
 
   use_blas = associated(aa%X(psicont)) .and. associated(bb%X(psicont)) .and. (.not. mesh%use_curvilinear) .and. (aa%dim == 1)
 
@@ -892,7 +892,7 @@ subroutine X(mf_dotp_batch)(mesh, aa, bb, dot, symm, reduce)
 #ifdef HAVE_MPI
   if(mesh%parallel_in_domains .and. reduce_) then
     call profiling_in(profcomm, "DOTP_BATCH_REDUCE")
-    ALLOCATE(ddtmp(1:aa%nst, 1:bb%nst), aa%nst*bb%nst)
+    SAFE_ALLOCATE(ddtmp(1:aa%nst, 1:bb%nst))
     forall(ist = 1:aa%nst, jst = 1:bb%nst) ddtmp(ist, jst) = dd(ist, jst)
     call MPI_Allreduce(ddtmp, dd, aa%nst*bb%nst, R_MPITYPE, MPI_SUM, mesh%mpi_grp%comm, mpi_err)
     SAFE_DEALLOCATE_A(ddtmp)
@@ -935,7 +935,7 @@ subroutine X(mf_calculate_gamma)(ikeeppart, nparticles_densmat, ndim1part, hyper
 
   ! In case of running parallel in domains, we need to operate psi_global, which 
   ! contains the full wave function after "gathering" all the domains.
-  ALLOCATE(psi_global(mesh%np_part_global), mesh%np_part_global)
+  SAFE_ALLOCATE(psi_global(1:mesh%np_part_global))
   if(mesh%parallel_in_domains) then
 #if defined(HAVE_MPI)
     call X(vec_allgather)(mesh%vp, psi_global, psi)
@@ -944,8 +944,8 @@ subroutine X(mf_calculate_gamma)(ikeeppart, nparticles_densmat, ndim1part, hyper
     psi_global(1:mesh%np_part_global) = psi(1:mesh%np_part_global)
   end if
 
-  ALLOCATE(ix(MAX_DIM), MAX_DIM)
-  ALLOCATE(ixp(MAX_DIM), MAX_DIM)
+  SAFE_ALLOCATE(ix(1:MAX_DIM))
+  SAFE_ALLOCATE(ixp(1:MAX_DIM))
 
   volume_element = 1.0d0
   do jdim = 1, MAX_DIM
@@ -957,7 +957,7 @@ subroutine X(mf_calculate_gamma)(ikeeppart, nparticles_densmat, ndim1part, hyper
 
   gamma = R_TOTYPE(M_ZERO)
 
-  ALLOCATE(ix_1part(ndim1part), ndim1part)
+  SAFE_ALLOCATE(ix_1part(1:ndim1part))
   xloop: do imesh = 1, mesh%np_global
 ! find coordinates of present point in full MAX_DIM space
      call index_to_coords(mesh%idx, mesh%sb%dim, imesh, ix)
@@ -1021,7 +1021,7 @@ subroutine X(mf_calculate_rho)(ikeeppart, nparticles_dens, ndim1part, hypercube_
 
   ! In case of running parallel in domains, we need to operate psi_global, which 
   ! contains the full wave function after "gathering" all the domains.
-  ALLOCATE(psi_global(mesh%np_part_global), mesh%np_part_global)
+  SAFE_ALLOCATE(psi_global(1:mesh%np_part_global))
   if(mesh%parallel_in_domains) then
 #if defined(HAVE_MPI)
     call X(vec_allgather)(mesh%vp, psi_global, psi)
@@ -1030,8 +1030,8 @@ subroutine X(mf_calculate_rho)(ikeeppart, nparticles_dens, ndim1part, hypercube_
     psi_global(1:mesh%np_part_global) = psi(1:mesh%np_part_global)
   end if
 
-  ALLOCATE(ix(MAX_DIM), MAX_DIM)
-  ALLOCATE(ixp(MAX_DIM), MAX_DIM)
+  SAFE_ALLOCATE(ix(1:MAX_DIM))
+  SAFE_ALLOCATE(ixp(1:MAX_DIM))
 
   volume_element = 1.0d0
   do jdim = 1, MAX_DIM
@@ -1043,7 +1043,7 @@ subroutine X(mf_calculate_rho)(ikeeppart, nparticles_dens, ndim1part, hypercube_
 
   rho = R_TOTYPE(M_ZERO)
 
-  ALLOCATE(ix_1part(ndim1part), ndim1part)
+  SAFE_ALLOCATE(ix_1part(1:ndim1part))
   xloop: do imesh = 1, mesh%np_global
 ! find coordinates of present point in full MAX_DIM space
      call index_to_coords(mesh%idx, mesh%sb%dim, imesh, ix)

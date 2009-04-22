@@ -279,7 +279,7 @@ contains
     rho = M_ZERO
     select case (gmd_opt)
     case (INITRHO_PARAMAGNETIC)
-      ALLOCATE(atom_rho(m%np, 1), m%np*1)
+      SAFE_ALLOCATE(atom_rho(1:m%np, 1:1))
       do ia = 1, geo%natoms
         call atom_density(m, sb, geo%atom(ia), 1, atom_rho(1:m%np, 1:1))
         rho(1:m%np, 1:1) = rho(1:m%np, 1:1) + atom_rho(1:m%np, 1:1)
@@ -290,7 +290,7 @@ contains
       end if
 
     case (INITRHO_FERROMAGNETIC)
-      ALLOCATE(atom_rho(m%np, 2), m%np*2)
+      SAFE_ALLOCATE(atom_rho(1:m%np, 1:2))
       atom_rho = M_ZERO
       rho = M_ZERO
       do ia = 1, geo%natoms
@@ -299,7 +299,7 @@ contains
       end do
 
     case (INITRHO_RANDOM) ! Random oriented spins
-      ALLOCATE(atom_rho(m%np, 2), m%np*2)
+      SAFE_ALLOCATE(atom_rho(1:m%np, 1:2))
       do ia = 1, geo%natoms
         call atom_density(m, sb, geo%atom(ia), 2, atom_rho)
 
@@ -354,7 +354,7 @@ contains
         call write_fatal(1)
       end if
 
-      ALLOCATE(atom_rho(m%np, 2), m%np*2)
+      SAFE_ALLOCATE(atom_rho(1:m%np, 1:2))
       do ia = 1, geo%natoms
         !Read from AtomsMagnetDirection block 
         if (nspin == 2) then
@@ -499,8 +499,8 @@ contains
       ! --------------------------------------------------------------
       dim = gr%mesh%sb%dim
 
-      ALLOCATE(rho_p(gr%mesh%np), gr%mesh%np)
-      ALLOCATE(grho_p(gr%mesh%np, dim+1), 4*gr%mesh%np)
+      SAFE_ALLOCATE(rho_p(1:gr%mesh%np))
+      SAFE_ALLOCATE(grho_p(1:gr%mesh%np, 1:dim+1))
 
       m_p   => gr%mesh
       pos_p = pos
@@ -574,7 +574,7 @@ contains
     dim = m_p%sb%dim
 
     call getrho(xin)
-    ALLOCATE(xrho(m_p%np), m_p%np)
+    SAFE_ALLOCATE(xrho(1:m_p%np))
 
     ! First, we calculate the function f.
     do i = 1, dim
@@ -724,8 +724,8 @@ contains
 
     if(species_is_ps(s)) then
 
-      ALLOCATE(xf(1:mesh%np, 1:MAX_DIM), mesh%np*MAX_DIM)
-      ALLOCATE(ylm(1:mesh%np), mesh%np)
+      SAFE_ALLOCATE(xf(1:mesh%np, 1:MAX_DIM))
+      SAFE_ALLOCATE(ylm(1:mesh%np))
 
       do ip = 1, mesh%np
         x(1:MAX_DIM) = mesh%x(ip, 1:MAX_DIM) - pos(1:MAX_DIM)

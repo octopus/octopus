@@ -141,8 +141,8 @@ contains
       call write_fatal(1)
     end if
 
-    ALLOCATE(cv%Jlocal(geo%natoms), geo%natoms)
-    ALLOCATE(cv%Jrange(geo%natoms), geo%natoms)
+    SAFE_ALLOCATE(cv%Jlocal(1:geo%natoms))
+    SAFE_ALLOCATE(cv%Jrange(1:geo%natoms))
 
     ! WARNING: the reading has to be done for each atom kind
     call loct_parse_float(datasets_check('CurvModineJlocal'), CNST(0.25), cv%Jlocal(1))
@@ -166,13 +166,13 @@ contains
       integer :: i, jj
 
       ! Initialize csi
-      ALLOCATE(cv%csi(sb%dim, geo%natoms), sb%dim*geo%natoms)
+      SAFE_ALLOCATE(cv%csi(1:sb%dim, 1:geo%natoms))
       do i = 1, geo%natoms
         cv%csi(1:sb%dim,i) = geo%atom(i)%x(1:sb%dim)
       end do
 
       ! get first estimate for chi_atoms
-      ALLOCATE(cv%chi_atoms(sb%dim, geo%natoms), sb%dim*geo%natoms)
+      SAFE_ALLOCATE(cv%chi_atoms(1:sb%dim, 1:geo%natoms))
       do jj = 1, 10  ! WARNING: make something better
         do i = 1, geo%natoms
           call curv_modine_x2chi(sb, cv, geo%atom(i)%x, cv%chi_atoms(:,i))
@@ -199,9 +199,9 @@ contains
       sb_p  => sb
       cv_p  => cv
 
-      ALLOCATE(x_p(sb%dim*geo%natoms), sb%dim*geo%natoms)
-      ALLOCATE(my_csi(sb%dim*geo%natoms), sb%dim*geo%natoms)
-      ALLOCATE(start_csi(sb%dim*geo%natoms), sb%dim*geo%natoms)
+      SAFE_ALLOCATE(x_p(1:sb%dim*geo%natoms))
+      SAFE_ALLOCATE(my_csi(1:sb%dim*geo%natoms))
+      SAFE_ALLOCATE(start_csi(1:sb%dim*geo%natoms))
 
       do i = 1, geo%natoms
         do j = 1, sb%dim
@@ -378,7 +378,7 @@ contains
 
     sb_p  => sb
     cv_p  => cv
-    ALLOCATE(x_p(sb%dim), sb%dim)
+    SAFE_ALLOCATE(x_p(1:sb%dim))
     x_p(:) = x(:)
 
     call droot_solver_run(rs, getf, chi, conv, startval = x)

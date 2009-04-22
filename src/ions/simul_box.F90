@@ -332,7 +332,7 @@ contains
         
         sb%open_boundaries = .true.
         ! Read and check the simulation boxes of the lead unit cells.
-        ALLOCATE(sb%lead_unit_cell(NLEADS), NLEADS)
+        SAFE_ALLOCATE(sb%lead_unit_cell(1:NLEADS))
         do il = 1, NLEADS
           call read_lead_unit_cell(sb, il)
         end do
@@ -824,7 +824,7 @@ contains
     call push_sub('simul_box.simul_box_add_lead_atoms')
 
     if(sb%open_boundaries) then
-      ALLOCATE(lead_geo(NLEADS), NLEADS)
+      SAFE_ALLOCATE(lead_geo(1:NLEADS))
       do il = 1, NLEADS
         ! We temporarily change the current label to read the
         ! coordinates of another dataset, namely the lead dataset.
@@ -846,14 +846,14 @@ contains
       geo%natoms = central_geo%natoms +                 &
         sb%add_unit_cells(LEFT)*lead_geo(LEFT)%natoms + &
         sb%add_unit_cells(RIGHT)*lead_geo(RIGHT)%natoms
-      ALLOCATE(geo%atom(geo%natoms), geo%natoms)
+      SAFE_ALLOCATE(geo%atom(1:geo%natoms))
       if(geo%ncatoms.gt.0) then
         SAFE_DEALLOCATE_P(geo%catom)
       end if
       geo%ncatoms = central_geo%ncatoms +                &
         sb%add_unit_cells(LEFT)*lead_geo(LEFT)%ncatoms + &
         sb%add_unit_cells(RIGHT)*lead_geo(RIGHT)%ncatoms
-      ALLOCATE(geo%catom(geo%ncatoms), geo%ncatoms)
+      SAFE_ALLOCATE(geo%catom(1:geo%ncatoms))
 
       geo%only_user_def = central_geo%only_user_def.and.all(lead_geo(:)%only_user_def)
       geo%nlpp          = central_geo%nlpp.or.any(lead_geo(:)%nlpp)
@@ -1384,7 +1384,7 @@ contains
       read(iunit, *) str, sb%add_unit_cells(LEFT), sb%add_unit_cells(RIGHT)
       read(iunit, *) str, sb%lead_restart_dir(LEFT)
       read(iunit, *) str, sb%lead_restart_dir(RIGHT)
-      ALLOCATE(sb%lead_unit_cell(NLEADS), NLEADS)
+      SAFE_ALLOCATE(sb%lead_unit_cell(1:NLEADS))
       do il = 1, NLEADS
         call read_lead_unit_cell(sb, il)
       end do
@@ -1471,7 +1471,7 @@ contains
     sbout%lead_restart_dir        = sbin%lead_restart_dir
     sbout%inner_size              = sbin%inner_size
     if(associated(sbin%lead_unit_cell)) then
-      ALLOCATE(sbout%lead_unit_cell(NLEADS), NLEADS)
+      SAFE_ALLOCATE(sbout%lead_unit_cell(1:NLEADS))
       do il = 1, NLEADS
         call simul_box_copy(sbout%lead_unit_cell(il), sbin%lead_unit_cell(il))
       end do

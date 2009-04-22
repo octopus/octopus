@@ -196,11 +196,10 @@ contains
         call write_fatal(1)
       end if
 
-      ALLOCATE(this%position(this%number), this%number)
-      ALLOCATE(this%value(this%number),    this%number)
-      ALLOCATE(this%volume(this%number),   this%number)
-
-      ALLOCATE(this%population(this%number),   this%number)
+      SAFE_ALLOCATE(this%position  (1:this%number))
+      SAFE_ALLOCATE(this%value     (1:this%number))
+      SAFE_ALLOCATE(this%volume    (1:this%number))
+      SAFE_ALLOCATE(this%population(1:this%number))
 
       this%position(:) = -1
       this%value(:)    = M_ZERO

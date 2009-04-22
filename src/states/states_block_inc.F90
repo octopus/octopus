@@ -90,7 +90,7 @@ subroutine X(states_blockt_mul)(mesh, st, psi1_start, psi1_end, psi2_start, psi2
 
     ! Compact psi1 in order to use BLAS gemm on it.
     if(.not.mesh%use_curvilinear) then
-      ALLOCATE(psi1_block(mesh%np, st%d%dim, xpsi1_count(rank)), mesh%np*st%d%dim*xpsi1_count(rank))
+      SAFE_ALLOCATE(psi1_block(1:mesh%np, 1:st%d%dim, 1:xpsi1_count(rank)))
       call profiling_in(C_PROFILING_BLOCKT_CP)
       call X(states_compactify)(st%d%dim, mesh, psi1_start, xpsi1_node(1:xpsi1_count(rank), rank), psi1, psi1_block)
       call profiling_out(C_PROFILING_BLOCKT_CP)
@@ -99,8 +99,8 @@ subroutine X(states_blockt_mul)(mesh, st, psi1_start, psi1_end, psi2_start, psi2
     ! Allocate send and receive buffers. For some blocks, they are oversized but
     ! buffer reusing saves some overhead in the MPI library.
     max_count = maxval(xpsi2_count)
-    ALLOCATE(sendbuf(mesh%np, st%d%dim, max_count), mesh%np*st%d%dim*max_count)
-    ALLOCATE(recvbuf(mesh%np, st%d%dim, max_count), mesh%np*st%d%dim*max_count)
+    SAFE_ALLOCATE(sendbuf(1:mesh%np, 1:st%d%dim, 1:max_count))
+    SAFE_ALLOCATE(recvbuf(1:mesh%np, 1:st%d%dim, 1:max_count))
 
     ! Compact the local block to send away.
     sendcnt = xpsi2_count(rank)
@@ -135,7 +135,7 @@ subroutine X(states_blockt_mul)(mesh, st, psi1_start, psi1_end, psi2_start, psi2
       res_col_offset = sum(xpsi2_count(0:k-1))
       if(.not.mesh%use_curvilinear) then
         if(xpsi1_count(rank).gt.0.and.sendcnt.gt.0) then
-          ALLOCATE(res_local(xpsi1_count(rank), sendcnt), xpsi1_count(rank)*sendcnt)
+          SAFE_ALLOCATE(res_local(1:xpsi1_count(rank), 1:sendcnt))
 
           call profiling_in(C_PROFILING_BLOCKT_MM)
           call lalg_gemmt(xpsi1_count(rank), sendcnt, mesh%np*st%d%dim, R_TOTYPE(mesh%vol_pp(1)), &
@@ -160,7 +160,7 @@ subroutine X(states_blockt_mul)(mesh, st, psi1_start, psi1_end, psi2_start, psi2
     SAFE_DEALLOCATE_P(sendbuf)
     SAFE_DEALLOCATE_P(recvbuf)
     ! Add up all the individual blocks.
-    ALLOCATE(res_tmp(psi1_col, psi2_col), psi1_col*psi2_col)
+    SAFE_ALLOCATE(res_tmp(1:psi1_col, 1:psi2_col))
     call profiling_in(C_PROFILING_BLOCKT_AR)
     call MPI_Allreduce(res, res_tmp, psi1_col*psi2_col, R_MPITYPE, MPI_SUM, st%dom_st%comm, mpi_err)
     call profiling_out(C_PROFILING_BLOCKT_AR)
@@ -227,10 +227,10 @@ subroutine X(states_gather)(mesh, st, in, out)
 
   call push_sub('states_inc.Xstates_gather')
 
-  ALLOCATE(sendcnts(st%mpi_grp%size), st%mpi_grp%size)
-  ALLOCATE(sdispls(st%mpi_grp%size), st%mpi_grp%size)
-  ALLOCATE(recvcnts(st%mpi_grp%size), st%mpi_grp%size)
-  ALLOCATE(rdispls(st%mpi_grp%size), st%mpi_grp%size)
+  SAFE_ALLOCATE(sendcnts(1:st%mpi_grp%size))
+  SAFE_ALLOCATE( sdispls(1:st%mpi_grp%size))
+  SAFE_ALLOCATE(recvcnts(1:st%mpi_grp%size))
+  SAFE_ALLOCATE( rdispls(1:st%mpi_grp%size))
 
   sendcnts   = mesh%np_part*st%d%dim*st%st_num(st%mpi_grp%rank)
   sdispls    = 0
@@ -366,7 +366,7 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi_start, psi_end, res
     else
       res = R_TOTYPE(M_ZERO)
     end if
-    ALLOCATE(res_block(mesh%np, st%d%dim, xres_count(rank)), mesh%np*st%d%dim*xres_count(rank))
+    SAFE_ALLOCATE(res_block(1:mesh%np, 1:st%d%dim, 1:xres_count(rank)))
     call profiling_in(C_PROFILING_BLOCK_MATR_CP)
     call X(states_compactify)(st%d%dim, mesh, res_start, xres_node(1:xres_count(rank), rank), res, res_block)
     call profiling_out(C_PROFILING_BLOCK_MATR_CP)
@@ -374,8 +374,8 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi_start, psi_end, res
     ! Allocate send and receive buffers. For some blocks, they are oversized but
     ! buffer reusing saves some overhead in the MPI library.
     max_count = maxval(xpsi_count)
-    ALLOCATE(sendbuf(mesh%np, st%d%dim, max_count), mesh%np*st%d%dim*max_count)
-    ALLOCATE(recvbuf(mesh%np, st%d%dim, max_count), mesh%np*st%d%dim*max_count)
+    SAFE_ALLOCATE(sendbuf(1:mesh%np, 1:st%d%dim, 1:max_count))
+    SAFE_ALLOCATE(recvbuf(1:mesh%np, 1:st%d%dim, 1:max_count))
 
     ! Compact the local block to send away.
     sendcnt = xpsi_count(rank)
@@ -413,7 +413,7 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi_start, psi_end, res
       ! Do the matrix multiplication.
       matr_row_offset = sum(xpsi_count(0:k-1))
       matr_col_offset = sum(xres_count(0:rank-1))
-      ALLOCATE(matr_block(xpsi_count(k), xres_count(rank)), xpsi_count(k)*xres_count(rank))
+      SAFE_ALLOCATE(matr_block(1:xpsi_count(k), 1:xres_count(rank)))
       if(sendcnt.gt.0.and.xres_count(rank).gt.0) then
         call profiling_in(C_PROFILING_BLOCK_MATR_CP)
         matr_block = matr(matr_row_offset+1:matr_row_offset+xpsi_count(k), matr_col_offset+1:matr_col_offset+xres_count(rank))
@@ -444,18 +444,18 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi_start, psi_end, res
 #endif
   else ! No states parallelization.
     ! Compact everything to pass it to BLAS.
-    ALLOCATE(res_block(mesh%np, st%d%dim, res_col), mesh%np*st%d%dim*res_col)
+    SAFE_ALLOCATE(res_block(1:mesh%np, 1:st%d%dim, 1:res_col))
     call profiling_in(C_PROFILING_BLOCK_MATR_CP)
     call X(states_compactify)(st%d%dim, mesh, res_start, xres_(1:res_col), res, res_block)
     call profiling_out(C_PROFILING_BLOCK_MATR_CP)
 
-    ALLOCATE(psi_block(mesh%np, st%d%dim, psi_col), mesh%np*st%d%dim*psi_col)
+    SAFE_ALLOCATE(psi_block(1:mesh%np, 1:st%d%dim, 1:psi_col))
     call profiling_in(C_PROFILING_BLOCK_MATR_CP)
     call X(states_compactify)(st%d%dim, mesh, psi_start, xpsi_(1:psi_col), psi, psi_block)
     call profiling_out(C_PROFILING_BLOCK_MATR_CP)
 
     ! matr_block is needed because matr may be an assumed shape array.
-    ALLOCATE(matr_block(psi_col, matr_col), psi_col*matr_col)
+    SAFE_ALLOCATE(matr_block(1:psi_col, 1:matr_col))
     matr_block = matr
     call lalg_gemm(mesh%np*st%d%dim, matr_col, psi_col, alpha, &
       psi_block(:, :, 1), matr_block, beta, res_block(:, :, 1))

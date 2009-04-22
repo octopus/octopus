@@ -76,10 +76,10 @@ contains
 
     call push_sub('poisson_cg.poisson_cg1')
 
-    ALLOCATE( wk(m%np_part), m%np_part)
-    ALLOCATE(lwk(m%np_part), m%np_part)
-    ALLOCATE( zk(m%np_part), m%np_part)
-    ALLOCATE( pk(m%np_part), m%np_part)
+    SAFE_ALLOCATE( wk(1:m%np_part))
+    SAFE_ALLOCATE(lwk(1:m%np_part))
+    SAFE_ALLOCATE( zk(1:m%np_part))
+    SAFE_ALLOCATE( pk(1:m%np_part))
 
     ! build initial guess for the potential
     wk(1:m%np) = pot(1:m%np)
@@ -129,8 +129,8 @@ contains
     der_pointer  => der
     mesh_pointer => m
 
-    ALLOCATE(rhs(m%np_part), m%np_part)
-    ALLOCATE(x(m%np_part), m%np_part)
+    SAFE_ALLOCATE(rhs(1:m%np_part))
+    SAFE_ALLOCATE(  x(1:m%np_part))
 
     rhs(1:m%np)         = - M_FOUR*M_PI*rho(1:m%np)
     rhs(m%np:m%np_part) = M_ZERO

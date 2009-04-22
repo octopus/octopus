@@ -50,7 +50,7 @@ contains
 
     this%size = size
 
-    ALLOCATE(this%points(1:MAX_DIM, size), MAX_DIM*size)
+    SAFE_ALLOCATE(this%points(1:MAX_DIM, 1:size))
 
     this%points = 0
 

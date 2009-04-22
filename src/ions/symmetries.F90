@@ -95,8 +95,8 @@ contains
     type(block_t) :: blk
 
     forall(idir = 1:sb%dim, jdir = 1:sb%dim) lattice(jdir, idir) = sb%rlattice(idir, jdir)*M_TWO*sb%lsize(idir)
-    ALLOCATE(position(1:3, geo%natoms), 3*geo%natoms)
-    ALLOCATE(typs(geo%natoms), geo%natoms)
+    SAFE_ALLOCATE(position(1:3, 1:geo%natoms))
+    SAFE_ALLOCATE(typs(1:geo%natoms))
     
     forall(iatom = 1:geo%natoms)
       !this has to be fixed for non-orthogonal cells
@@ -110,8 +110,8 @@ contains
 
     max_size = spglib_get_max_multiplicity(lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
 
-    ALLOCATE(this%rotation(1:3, 1:3, max_size), 9*max_size)
-    ALLOCATE(this%translation(1:3, max_size), 3*max_size)
+    SAFE_ALLOCATE(this%rotation(1:3, 1:3, 1:max_size))
+    SAFE_ALLOCATE(this%translation(1:3, 1:max_size))
 
     this%nops = spglib_get_symmetry(this%rotation(1, 1, 1), this%translation(1, 1), &
          max_size, lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)

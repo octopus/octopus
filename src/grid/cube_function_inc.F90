@@ -49,7 +49,7 @@ subroutine X(cf_new_from)(cf, cf_i)
   cf%n = cf_i%n
 
   if(associated(cf_i%fft)) then
-    ALLOCATE(cf%fft, 1)
+    SAFE_ALLOCATE(cf%fft)
     call fft_copy(cf_i%fft, cf%fft)
     cf%nx = cf_i%nx
   else
@@ -66,7 +66,7 @@ subroutine X(cf_alloc_RS)(cf)
   call push_sub('cf_inc.Xcf_alloc_RS')
 
   ASSERT(.not.associated(cf%RS))
-  ALLOCATE(cf%RS(cf%n(1), cf%n(2), cf%n(3)), cf%n(1)*cf%n(2)*cf%n(3))
+  SAFE_ALLOCATE(cf%RS(1:cf%n(1), 1:cf%n(2), 1:cf%n(3)))
 
   call pop_sub()
 end subroutine X(cf_alloc_RS)

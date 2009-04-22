@@ -103,7 +103,7 @@ contains
     n2 = cnf(serial)%nfft2/2 + 1
     n3 = cnf(serial)%nfft3/2 + 1
 
-    ALLOCATE(cnf(serial)%kernel(n1, n2, n3), n1*n2*n3)
+    SAFE_ALLOCATE(cnf(serial)%kernel(1:n1, 1:n2, 1:n3))
 
     call build_kernel(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3),   &
       cnf(serial)%nfft1, cnf(serial)%nfft2, cnf(serial)%nfft3, &
@@ -130,7 +130,7 @@ contains
       n(2) = cnf(i_cnf)%nfft2
       n(3) = cnf(i_cnf)%nfft3
 
-      ALLOCATE(cnf(i_cnf)%kernel(n(1), n(2), n(3)/cnf(i_cnf)%mpi_grp%size), n(1)*n(2)*n(3) / cnf(i_cnf)%mpi_grp%size)
+      SAFE_ALLOCATE(cnf(i_cnf)%kernel(1:n(1), 1:n(2), 1:n(3)/cnf(i_cnf)%mpi_grp%size))
 
     call par_build_kernel(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3), n1, n2, n3,     &
       cnf(i_cnf)%nfft1, cnf(i_cnf)%nfft2, cnf(i_cnf)%nfft3,                      &
@@ -163,8 +163,8 @@ contains
 
     if(m%parallel_in_domains) then
 #if defined(HAVE_MPI)
-      ALLOCATE(rho_global(m%np_global), m%np_global)
-      ALLOCATE(pot_global(m%np_global), m%np_global)
+      SAFE_ALLOCATE(rho_global(1:m%np_global))
+      SAFE_ALLOCATE(pot_global(1:m%np_global))
 
       ! At this point, dvec_allgather is required because the ISF solver
       ! uses another data distribution algorithm than for the mesh functions
@@ -194,7 +194,7 @@ contains
     if(i_cnf == serial) then
 
 #ifdef SINGLE_PRECISION
-      ALLOCATE(rhop(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3)), product(rho_cf%n(1:3)))
+      SAFE_ALLOCATE(rhop(1:rho_cf%n(1), 1:rho_cf%n(2), 1:rho_cf%n(3)))
       rhop = rho_cf%RS
 #else
       rhop => rho_cf%RS

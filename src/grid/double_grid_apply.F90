@@ -61,7 +61,7 @@ subroutine double_grid_apply (this, s, m, sm, x_atom, vl, l, lm, ic)
 
     ASSERT(.not. simul_box_is_periodic(m%sb))
 
-    ALLOCATE(jxyz_inv(1:sm%np_part), sm%np_part)
+    SAFE_ALLOCATE(jxyz_inv(1:sm%np_part))
     call submesh_get_inv(sm, jxyz_inv)
 
 #ifdef USE_OMP
@@ -71,7 +71,7 @@ subroutine double_grid_apply (this, s, m, sm, x_atom, vl, l, lm, ic)
 #endif
 
     !$omp critical
-    ALLOCATE(vs(0:sm%ns_part), (sm%ns_part+1))
+    SAFE_ALLOCATE(vs(0:sm%ns_part))
     !$omp end critical
 
     vs = M_ZERO

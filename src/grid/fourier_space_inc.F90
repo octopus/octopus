@@ -24,7 +24,7 @@ subroutine X(cf_alloc_FS)(cf)
   ASSERT(.not.associated(cf%FS))
   ASSERT(associated(cf%fft))
 
-  ALLOCATE(cf%FS(cf%nx, cf%n(2), cf%n(3)), cf%nx*cf%n(2)*cf%n(3))
+  SAFE_ALLOCATE(cf%FS(1:cf%nx, 1:cf%n(2), 1:cf%n(3)))
 
   call pop_sub()
 end subroutine X(cf_alloc_FS)
@@ -54,7 +54,7 @@ subroutine X(cf_fft_init)(cf, sb)
   ASSERT(.not.associated(cf%RS))
   ASSERT(.not.associated(cf%FS))
 
-  ALLOCATE(cf%fft, 1)
+  SAFE_ALLOCATE(cf%fft)
 #ifdef R_TREAL
   call fft_init(cf%n, fft_real, cf%fft, optimize = .not.simul_box_is_periodic(sb))
   cf%nx = cf%n(1)/2 + 1
@@ -80,6 +80,7 @@ subroutine X(cf_RS2FS)(cf)
 
 end subroutine X(cf_RS2FS)
 
+
 ! ---------------------------------------------------------
 subroutine X(cf_FS2RS)(cf)
   type(X(cf_t)), intent(inout)  :: cf
@@ -91,6 +92,8 @@ subroutine X(cf_FS2RS)(cf)
 
 end subroutine X(cf_FS2RS)
 
+
+! ---------------------------------------------------------
 subroutine X(fourier_space_op_init)(this, cube, op)
   type(fourier_space_op_t), intent(out) :: this
   type(X(cf_t)),            intent(in)  :: cube
@@ -98,7 +101,7 @@ subroutine X(fourier_space_op_init)(this, cube, op)
 
   integer :: ii, jj, kk
 
-  ALLOCATE(this%X(op)(cube%nx, cube%n(2), cube%n(3)), cube%nx*cube%n(2)*cube%n(3))
+  SAFE_ALLOCATE(this%X(op)(1:cube%nx, 1:cube%n(2), 1:cube%n(3)))
 
   do kk = 1, cube%n(3)
     do jj = 1, cube%n(2)
@@ -110,6 +113,8 @@ subroutine X(fourier_space_op_init)(this, cube, op)
 
 end subroutine X(fourier_space_op_init)
 
+
+! ---------------------------------------------------------
 subroutine X(fourier_space_op_end)(this)
   type(fourier_space_op_t), intent(inout) :: this
 
@@ -117,6 +122,8 @@ subroutine X(fourier_space_op_end)(this)
 
 end subroutine X(fourier_space_op_end)
 
+
+! ---------------------------------------------------------
 subroutine X(fourier_space_op_apply)(this, cube)
   type(fourier_space_op_t), intent(in)     :: this
   type(X(cf_t)),            intent(inout)  :: cube
@@ -166,6 +173,7 @@ subroutine X(mesh_to_fourier) (m, mf, cf)
     cf%FS(ix, iy, iz) = mf(i)
   end do
 end subroutine X(mesh_to_fourier)
+
 
 ! ---------------------------------------------------------
 subroutine X(fourier_to_mesh) (m, cf, mf)

@@ -43,7 +43,7 @@ subroutine X(preconditioner_apply)(pre, gr, hm, a, b, omega)
     end do
 
   case(PRE_FILTER)
-    ALLOCATE(a_copy(gr%mesh%np_part), gr%mesh%np_part)
+    SAFE_ALLOCATE(a_copy(1:gr%mesh%np_part))
 
     do idim = 1, hm%d%dim
       call lalg_copy(gr%mesh%np_part, a(:, idim), a_copy(:))
@@ -81,7 +81,7 @@ contains
 
     FLOAT, allocatable :: diag(:)
 
-    ALLOCATE(diag(gr%mesh%np), gr%mesh%np)
+    SAFE_ALLOCATE(diag(1:gr%mesh%np))
 
     do idim = 1, hm%d%dim
       diag(:) = pre%diag_lapl(1:gr%mesh%np) + hm%ep%vpsl(1:gr%mesh%np) + hm%vhxc(1:gr%mesh%np, idim)
@@ -107,17 +107,17 @@ contains
     mesh1 => gr%mgrid%level(1)%mesh
     mesh2 => gr%mgrid%level(2)%mesh
 
-    ALLOCATE(d0(1:mesh0%np_part), mesh0%np_part)
-    ALLOCATE(q0(1:mesh0%np), mesh0%np)
+    SAFE_ALLOCATE(d0(1:mesh0%np_part))
+    SAFE_ALLOCATE(q0(1:mesh0%np))
 
-    ALLOCATE(r1(1:mesh1%np), mesh1%np)
-    ALLOCATE(d1(1:mesh1%np_part), mesh1%np_part)
-    ALLOCATE(q1(1:mesh1%np_part), mesh1%np_part)
-    ALLOCATE(t1(1:mesh1%np_part), mesh1%np_part)
+    SAFE_ALLOCATE(r1(1:mesh1%np))
+    SAFE_ALLOCATE(d1(1:mesh1%np_part))
+    SAFE_ALLOCATE(q1(1:mesh1%np_part))
+    SAFE_ALLOCATE(t1(1:mesh1%np_part))
 
-    ALLOCATE(r2(1:mesh2%np), mesh2%np)
-    ALLOCATE(d2(1:mesh2%np_part), mesh2%np_part)
-    ALLOCATE(q2(1:mesh2%np), mesh2%np)
+    SAFE_ALLOCATE(r2(1:mesh2%np))
+    SAFE_ALLOCATE(d2(1:mesh2%np_part))
+    SAFE_ALLOCATE(q2(1:mesh2%np))
 
     step = CNST(0.66666666)/pre%diag_lapl(1)
 

@@ -14,9 +14,9 @@ subroutine X(xc_oep_kernel_calc)(sys, hm, lr, nsigma, fxcn)
   
   np = sys%gr%mesh%np
 
-  ALLOCATE(r(1:np), np)
-  ALLOCATE(s(1:np), np)
-  ALLOCATE(t(1:np), np)
+  SAFE_ALLOCATE(r(1:np))
+  SAFE_ALLOCATE(s(1:np))
+  SAFE_ALLOCATE(t(1:np))
 
   do ip = 1, np
     if ( abs(sys%st%rho(ip, 1)) > tol) then 

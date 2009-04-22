@@ -115,9 +115,9 @@ subroutine X(ls_solver_cg) (ls, hm, gr, st, ist, ik, x, y, omega)
 
   call push_sub('linear_solver_inc.Xls_solver_cg')
 
-  ALLOCATE( r(gr%mesh%np, st%d%dim),      gr%mesh%np      * st%d%dim)
-  ALLOCATE( p(gr%mesh%np_part, st%d%dim), gr%mesh%np_part * st%d%dim)
-  ALLOCATE(Hp(gr%mesh%np, st%d%dim),      gr%mesh%np      * st%d%dim)
+  SAFE_ALLOCATE( r(1:gr%mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE( p(1:gr%mesh%np_part, 1:st%d%dim))
+  SAFE_ALLOCATE(Hp(1:gr%mesh%np, 1:st%d%dim))
 
   ! Initial residue
   call X(ls_solver_operator)(hm, gr, st, ist, ik, omega, x, Hp)
@@ -188,16 +188,16 @@ subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, omega, occ_resp
   
   call push_sub('linear_solver_inc.Xls_solver_bicgstab')
 
-  ALLOCATE( r(gr%mesh%np, st%d%dim),      gr%mesh%np     *st%d%dim)
-  ALLOCATE( p(gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
-  ALLOCATE(rs(gr%mesh%np, st%d%dim),      gr%mesh%np     *st%d%dim)
-  ALLOCATE( s(gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
-  ALLOCATE(Hp(gr%mesh%np, st%d%dim),      gr%mesh%np     *st%d%dim)
-  ALLOCATE(Hs(gr%mesh%np, st%d%dim),      gr%mesh%np     *st%d%dim)
+  SAFE_ALLOCATE( r(1:gr%mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE( p(1:gr%mesh%np_part, 1:st%d%dim))
+  SAFE_ALLOCATE(rs(1:gr%mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE( s(1:gr%mesh%np_part, 1:st%d%dim))
+  SAFE_ALLOCATE(Hp(1:gr%mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE(Hs(1:gr%mesh%np, 1:st%d%dim))
 
   ! this will store the preconditioned functions
-  ALLOCATE(phat(gr%mesh%np_part, st%d%dim), gr%mesh%np_part * st%d%dim)
-  ALLOCATE(shat(gr%mesh%np_part, st%d%dim), gr%mesh%np_part * st%d%dim)
+  SAFE_ALLOCATE(phat(1:gr%mesh%np_part, 1:st%d%dim))
+  SAFE_ALLOCATE(shat(1:gr%mesh%np_part, 1:st%d%dim))
 
   ! Initial residue
   call X(ls_solver_operator) (hm, gr, st, ist, ik, omega, x, Hp)
@@ -311,9 +311,9 @@ subroutine X(ls_solver_multigrid) (ls, hm, gr, st, ist, ik, x, y, omega)
 
   call push_sub('linear_solver_inc.Xls_solver_multigrid')
 
-  ALLOCATE(diag(gr%mesh%np, st%d%dim), gr%mesh%np * st%d%dim)
-  ALLOCATE(hx(gr%mesh%np, st%d%dim), gr%mesh%np * st%d%dim)
-  ALLOCATE(res(gr%mesh%np, st%d%dim), gr%mesh%np * st%d%dim)
+  SAFE_ALLOCATE(diag(1:gr%mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE(  hx(1:gr%mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE( res(1:gr%mesh%np, 1:st%d%dim))
 
   call X(hamiltonian_diagonal)(hm, gr, diag, ik)
   diag(1:gr%mesh%np, 1:st%d%dim) = diag(1:gr%mesh%np, 1:st%d%dim) + omega
@@ -427,8 +427,8 @@ subroutine X(ls_solver_operator_na) (x, hx)
   R_TYPE, allocatable :: tmpx(:, :)
   R_TYPE, allocatable :: tmpy(:, :)
 
-  ALLOCATE(tmpx(args%gr%mesh%np_part, 1), args%gr%mesh%np_part)
-  ALLOCATE(tmpy(args%gr%mesh%np, 1), args%gr%mesh%np)
+  SAFE_ALLOCATE(tmpx(1:args%gr%mesh%np_part, 1:1))
+  SAFE_ALLOCATE(tmpy(1:args%gr%mesh%np, 1:1))
 
   call lalg_copy(args%gr%mesh%np, x, tmpx(:, 1))
   call X(ls_solver_operator)(args%hm, args%gr, args%st, args%ist, args%ik, args%X(omega), tmpx, tmpy)
@@ -450,8 +450,8 @@ subroutine X(ls_preconditioner) (x, hx)
 
   call push_sub('linear_solver_inc.Xls_preconditioner')
 
-  ALLOCATE(tmpx(args%gr%mesh%np_part, 1), args%gr%mesh%np_part)
-  ALLOCATE(tmpy(args%gr%mesh%np_part, 1), args%gr%mesh%np_part)
+  SAFE_ALLOCATE(tmpx(1:args%gr%mesh%np_part, 1:1))
+  SAFE_ALLOCATE(tmpy(1:args%gr%mesh%np_part, 1:1))
 
   call lalg_copy(args%gr%mesh%np, x, tmpx(:, 1))
   call X(preconditioner_apply)(args%ls%pre, args%gr, args%hm, tmpx, tmpy, args%X(omega))
@@ -497,7 +497,7 @@ subroutine X(ls_solver_sos) (ls, hm, gr, st, ist, ik, x, y, omega)
   end do
 
   ! calculate the residual
-  ALLOCATE(rr(1:gr%mesh%np, 1:st%d%dim), gr%mesh%np*st%d%dim)
+  SAFE_ALLOCATE(rr(1:gr%mesh%np, 1:st%d%dim))
   call X(ls_solver_operator)(hm, gr, st, ist, ik, omega, x, rr)
 
   do idim = 1, st%d%dim

@@ -97,10 +97,10 @@ contains
     if(ispin == SPIN_POLARIZED) is = 3
 
     ! allocate some general arrays
-    ALLOCATE(  dens(m%np, spin_channels), m%np*spin_channels)
-    ALLOCATE(  dedd(m%np, is), m%np*is)
-    ALLOCATE(l_dens(spin_channels), spin_channels)
-    ALLOCATE(l_dedd(is), is)
+    SAFE_ALLOCATE(  dens(1:m%np, 1:spin_channels))
+    SAFE_ALLOCATE(  dedd(1:m%np, 1:is))
+    SAFE_ALLOCATE(l_dens(1:spin_channels))
+    SAFE_ALLOCATE(l_dedd(1:is))
     dedd = M_ZERO
 
     ! get the density

@@ -160,8 +160,8 @@ contains
       end if
     end if
 
-    ALLOCATE(sm%mesh   (sm%np), sm%np)
-    ALLOCATE(sm%weights(sm%np), sm%np)
+    SAFE_ALLOCATE(sm%mesh   (1:sm%np))
+    SAFE_ALLOCATE(sm%weights(1:sm%np))
 
     ! if we have less that 11 points we change the requested mesh type
     ! to a linear mesh and issue a warning
@@ -279,8 +279,8 @@ contains
       message(1) = 'Info: scalar_mesh: Using Gauss-Legendre scalar mesh for '//trim(sm%label)
       call write_info(1)
 
-      ALLOCATE(gl(sm%np), sm%np)
-      ALLOCATE(gw(sm%np), sm%np)
+      SAFE_ALLOCATE(gl(1:sm%np))
+      SAFE_ALLOCATE(gw(1:sm%np))
 
       ! TODO: need to compute roots of Legendre Polynomials and weights for integration
       ! a call of the corresponding routine in math.F90 should be placed here

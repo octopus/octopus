@@ -66,20 +66,20 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
   ! if there is no fine mesh, gr%fine%mesh => gr%mesh according to grid.F90
 
   if(present(lr)) then
-    ALLOCATE(grad_dl_psi(np_part, 1:gr%mesh%sb%dim, st%d%dim), np_part*gr%mesh%sb%dim*st%d%dim)
-    ALLOCATE(grad_dl_psi2(np_part, 1:gr%mesh%sb%dim, st%d%dim), np_part*gr%mesh%sb%dim*st%d%dim)
+    SAFE_ALLOCATE( grad_dl_psi(1:np_part, 1:gr%mesh%sb%dim, 1:st%d%dim))
+    SAFE_ALLOCATE(grad_dl_psi2(1:np_part, 1:gr%mesh%sb%dim, 1:st%d%dim))
   endif
-  ALLOCATE(grad_psi(np_part, 1:gr%mesh%sb%dim, st%d%dim), np_part*gr%mesh%sb%dim*st%d%dim)
-  ALLOCATE(grad_rho(np, 1:gr%mesh%sb%dim), np*gr%mesh%sb%dim)
+  SAFE_ALLOCATE(grad_psi(1:np_part, 1:gr%mesh%sb%dim, 1:st%d%dim))
+  SAFE_ALLOCATE(grad_rho(1:np, 1:gr%mesh%sb%dim))
   grad_rho(1:np, 1:gr%mesh%sb%dim) = M_ZERO
-  ALLOCATE(force(1:gr%mesh%sb%dim, 1:geo%natoms), gr%mesh%sb%dim*geo%natoms)
+  SAFE_ALLOCATE(force(1:gr%mesh%sb%dim, 1:geo%natoms))
   force = M_ZERO
 
   ! even if there is no fine mesh, we need to make another copy
-  ALLOCATE(psi(np_part, st%d%dim), np_part*st%d%dim)
+  SAFE_ALLOCATE(psi(1:np_part, 1:st%d%dim))
   if(present(lr)) then
-    ALLOCATE(dl_psi(np_part, st%d%dim), np_part*st%d%dim)
-    ALLOCATE(dl_psi2(np_part, st%d%dim), np_part*st%d%dim)
+    SAFE_ALLOCATE(dl_psi(1:np_part, 1:st%d%dim))
+    SAFE_ALLOCATE(dl_psi2(1:np_part, 1:st%d%dim))
   endif
 
   !THE NON-LOCAL PART (parallel in states and k-points)
@@ -189,13 +189,13 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
     call profiling_in(prof, "FORCES_MPI")
 
     !reduce the force
-    ALLOCATE(force_local(1:gr%mesh%sb%dim, 1:geo%natoms), gr%mesh%sb%dim*geo%natoms)
+    SAFE_ALLOCATE(force_local(1:gr%mesh%sb%dim, 1:geo%natoms))
     force_local = force
     call MPI_Allreduce(force_local, force, gr%mesh%sb%dim*geo%natoms, MPI_CMPLX, MPI_SUM, st%mpi_grp%comm, mpi_err)
     SAFE_DEALLOCATE_A(force_local)
 
     !reduce the gradient of the density
-    ALLOCATE(grad_rho_local(np, gr%mesh%sb%dim), np*gr%mesh%sb%dim)
+    SAFE_ALLOCATE(grad_rho_local(1:np, 1:gr%mesh%sb%dim))
     call lalg_copy(np, gr%mesh%sb%dim, grad_rho, grad_rho_local)
     call MPI_Allreduce(grad_rho_local, grad_rho, np*gr%mesh%sb%dim, MPI_CMPLX, MPI_SUM, st%mpi_grp%comm, mpi_err)
     SAFE_DEALLOCATE_A(grad_rho_local)
@@ -209,13 +209,13 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
     call profiling_in(prof, "FORCES_MPI")
     
     !reduce the force
-    ALLOCATE(force_local(1:gr%mesh%sb%dim, 1:geo%natoms), gr%mesh%sb%dim*geo%natoms)
+    SAFE_ALLOCATE(force_local(1:gr%mesh%sb%dim, 1:geo%natoms))
     force_local = force
     call MPI_Allreduce(force_local, force, gr%mesh%sb%dim*geo%natoms, MPI_CMPLX, MPI_SUM, st%d%kpt%mpi_grp%comm, mpi_err)
     SAFE_DEALLOCATE_A(force_local)
     
     !reduce the gradient of the density
-    ALLOCATE(grad_rho_local(np, gr%mesh%sb%dim), np*gr%mesh%sb%dim)
+    SAFE_ALLOCATE(grad_rho_local(1:np, 1:gr%mesh%sb%dim))
     call lalg_copy(np, gr%mesh%sb%dim, grad_rho, grad_rho_local)
     call MPI_Allreduce(grad_rho_local, grad_rho, np*gr%mesh%sb%dim, MPI_CMPLX, MPI_SUM, st%d%kpt%mpi_grp%comm, mpi_err)
     SAFE_DEALLOCATE_A(grad_rho_local)
@@ -236,8 +236,8 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
 
   ! THE LOCAL PART (parallel in atoms)
 
-  ALLOCATE(vloc(1:np), np)
-  ALLOCATE(zvloc(1:np), np)
+  SAFE_ALLOCATE(vloc(1:np))
+  SAFE_ALLOCATE(zvloc(1:np))
   
   do iatom = geo%atoms%start, geo%atoms%end
     
@@ -266,9 +266,9 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
     ! collected by all nodes, MPI_Allgatherv does precisely this (if
     ! we get the arguments right).
 
-    ALLOCATE(recv_count(geo%atoms%mpi_grp%size), geo%atoms%mpi_grp%size)
-    ALLOCATE(recv_displ(geo%atoms%mpi_grp%size), geo%atoms%mpi_grp%size)
-    ALLOCATE(force_local(1:gr%mesh%sb%dim, 1:geo%atoms%nlocal), gr%mesh%sb%dim*geo%atoms%nlocal)
+    SAFE_ALLOCATE(recv_count(1:geo%atoms%mpi_grp%size))
+    SAFE_ALLOCATE(recv_displ(1:geo%atoms%mpi_grp%size))
+    SAFE_ALLOCATE(force_local(1:gr%mesh%sb%dim, 1:geo%atoms%nlocal))
 
     recv_count(1:geo%atoms%mpi_grp%size) = gr%mesh%sb%dim*geo%atoms%num(0:geo%atoms%mpi_grp%size - 1)
     recv_displ(1:geo%atoms%mpi_grp%size) = gr%mesh%sb%dim*(geo%atoms%range(1, 0:geo%atoms%mpi_grp%size - 1) - 1)

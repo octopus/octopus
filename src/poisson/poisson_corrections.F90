@@ -95,12 +95,12 @@ contains
 
     call push_sub('poisson_corrections.correct_rho')
 
-    ALLOCATE(mult((this%maxl+1)**2), (this%maxl+1)**2)
+    SAFE_ALLOCATE(mult(1:(this%maxl+1)**2))
     call get_multipoles(this, m, rho, this%maxl, mult)
 
     alpha = alpha_*m%h(1)
 
-    ALLOCATE(betal((this%maxl+1)**2), (this%maxl+1)**2)
+    SAFE_ALLOCATE(betal(1:(this%maxl+1)**2))
     add_lm = 1
     do l = 0, this%maxl
       do mm = -l, l
@@ -170,7 +170,7 @@ contains
 
     call push_sub('poisson_corrections.build_phi')
 
-    ALLOCATE(this%phi((this%maxl+1)**2, m%np), (this%maxl+1)**2*m%np)
+    SAFE_ALLOCATE(this%phi(1:(this%maxl+1)**2, 1:m%np))
 
     alpha = alpha_*m%h(1)
     do i = 1, m%np
@@ -214,7 +214,7 @@ contains
     integer :: i, l, add_lm, mm
 
     call push_sub('poisson_corrections.build_aux')
-    ALLOCATE(this%aux((this%maxl+1)**2, m%np), (this%maxl+1)**2*m%np)
+    SAFE_ALLOCATE(this%aux(1:(this%maxl+1)**2, 1:m%np))
 
     do i = 1, m%np
       call mesh_r(m, i, r, x = x)
@@ -272,7 +272,7 @@ contains
     FLOAT   :: x(MAX_DIM), r, s1, sa, gylm(1:MAX_DIM)
     FLOAT, allocatable :: mult(:)
 
-    ALLOCATE(mult((this%maxl+1)**2), (this%maxl+1)**2)
+    SAFE_ALLOCATE(mult(1:(this%maxl+1)**2))
 
     call get_multipoles(this, m, rho, this%maxl, mult)
 

@@ -300,8 +300,8 @@ contains
       all_nodes_value = .true.
     end if
 
-    ALLOCATE(aux1(gr%mesh%np), gr%mesh%np)
-    ALLOCATE(aux2(gr%mesh%np), gr%mesh%np)
+    SAFE_ALLOCATE(aux1(1:gr%mesh%np))
+    SAFE_ALLOCATE(aux2(1:gr%mesh%np))
 
     ! first the real part
     aux1(1:gr%mesh%np) = real(rho(1:gr%mesh%np))
@@ -361,10 +361,10 @@ contains
 
     case(CG_CORRECTED)
       if(hartree_integrator%increase_box) then
-        ALLOCATE(potp(hartree_integrator%grid%mesh%np), hartree_integrator%grid%mesh%np)
-        ALLOCATE(rhop(hartree_integrator%grid%mesh%np), hartree_integrator%grid%mesh%np)
-        ALLOCATE(rho_corrected(gr%mesh%np), gr%mesh%np)
-        ALLOCATE(vh_correction(gr%mesh%np), gr%mesh%np)
+        SAFE_ALLOCATE(potp(1:hartree_integrator%grid%mesh%np))
+        SAFE_ALLOCATE(rhop(1:hartree_integrator%grid%mesh%np))
+        SAFE_ALLOCATE(rho_corrected(1:gr%mesh%np))
+        SAFE_ALLOCATE(vh_correction(1:gr%mesh%np))
 
         potp = M_ZERO; rhop = M_ZERO; rho_corrected = M_ZERO; vh_correction = M_ZERO
         call correct_rho(corrector, gr%mesh, rho, rho_corrected, vh_correction)
@@ -384,8 +384,8 @@ contains
         SAFE_DEALLOCATE_A(potp)
         SAFE_DEALLOCATE_A(rhop)
       else
-        ALLOCATE(rho_corrected(gr%mesh%np), gr%mesh%np)
-        ALLOCATE(vh_correction(gr%mesh%np), gr%mesh%np)
+        SAFE_ALLOCATE(rho_corrected(1:gr%mesh%np))
+        SAFE_ALLOCATE(vh_correction(1:gr%mesh%np))
 
         call correct_rho(corrector, gr%mesh, rho, rho_corrected, vh_correction)
 
@@ -404,8 +404,8 @@ contains
       call poisson_fft(gr%mesh, pot, rho)
 
     case(FFT_CORRECTED)
-      ALLOCATE(rho_corrected(gr%mesh%np), gr%mesh%np)
-      ALLOCATE(vh_correction(gr%mesh%np), gr%mesh%np)
+      SAFE_ALLOCATE(rho_corrected(1:gr%mesh%np))
+      SAFE_ALLOCATE(vh_correction(1:gr%mesh%np))
 
       call correct_rho(corrector, gr%mesh, rho, rho_corrected, vh_correction)
       call poisson_fft(gr%mesh, pot, rho_corrected, average_to_zero = .true.)
@@ -447,11 +447,11 @@ contains
 
     n_gaussians = 4
 
-    ALLOCATE(     rho(gr%mesh%np), gr%mesh%np)
-    ALLOCATE(    rhop(gr%mesh%np), gr%mesh%np)
-    ALLOCATE(      vh(gr%mesh%np), gr%mesh%np)
-    ALLOCATE(vh_exact(gr%mesh%np), gr%mesh%np)
-    ALLOCATE(x(gr%mesh%sb%dim, n_gaussians), gr%mesh%sb%dim*n_gaussians)
+    SAFE_ALLOCATE(     rho(1:gr%mesh%np))
+    SAFE_ALLOCATE(    rhop(1:gr%mesh%np))
+    SAFE_ALLOCATE(      vh(1:gr%mesh%np))
+    SAFE_ALLOCATE(vh_exact(1:gr%mesh%np))
+    SAFE_ALLOCATE(x(1:gr%mesh%sb%dim, 1:n_gaussians))
 
     rho = M_ZERO; vh = M_ZERO; vh_exact = M_ZERO
 

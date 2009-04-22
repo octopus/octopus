@@ -58,13 +58,13 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, t, kinetic_only)
 
   nst = psib%nst
   
-  ALLOCATE(lapl(1:gr%mesh%np, 1:hm%d%dim, 1:nst), gr%mesh%np*hm%d%dim*nst)
+  SAFE_ALLOCATE(lapl(1:gr%mesh%np, 1:hm%d%dim, 1:nst))
   call batch_init(laplb, hm%d%dim, psib%states(1)%ist, psib%states(nst)%ist, lapl)
 
   apply_kpoint = simul_box_is_periodic(gr%sb) .and. .not. kpoint_is_gamma(hm%d, ik)
 
   if(apply_kpoint) then
-    ALLOCATE(psi_copy(1:gr%mesh%np_part, 1:hm%d%dim, 1:nst), gr%mesh%np_part*hm%d%dim*nst)
+    SAFE_ALLOCATE(psi_copy(1:gr%mesh%np_part, 1:hm%d%dim, 1:nst))
     call batch_init(epsib, hm%d%dim, psib%states(1)%ist, psib%states(nst)%ist, psi_copy)
   else
     call batch_copy(psib, epsib)
@@ -93,7 +93,7 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, t, kinetic_only)
   end do
 
   ! start the calculation of the laplacian
-  ALLOCATE(handles(hm%d%dim, nst), hm%d%dim*nst)
+  SAFE_ALLOCATE(handles(1:hm%d%dim, 1:nst))
 
   do ii = 1, nst
     do idim = 1, hm%d%dim
@@ -225,7 +225,7 @@ subroutine X(get_grad)(hm, gr, psi, grad)
   integer :: idim
 
   if( .not. associated(grad)) then
-    ALLOCATE(grad(1:gr%mesh%np, 1:MAX_DIM, 1:hm%d%dim), gr%mesh%np*MAX_DIM*hm%d%dim)
+    SAFE_ALLOCATE(grad(1:gr%mesh%np, 1:MAX_DIM, 1:hm%d%dim))
     do idim = 1, hm%d%dim 
       ! boundary points were already set by the Laplacian
       call X(derivatives_grad)(gr%der, psi(:, idim), grad(:, :, idim), ghost_update = .false., set_bc = .false.)
@@ -280,8 +280,8 @@ subroutine X(exchange_operator) (hm, gr, psi, hpsi, ist, ik)
 
   call push_sub('hamiltonian_inc.Xexchange_operator')
 
-  ALLOCATE(rho(gr%mesh%np), gr%mesh%np)
-  ALLOCATE(pot(gr%mesh%np), gr%mesh%np)
+  SAFE_ALLOCATE(rho(1:gr%mesh%np))
+  SAFE_ALLOCATE(pot(1:gr%mesh%np))
 
   ! WARNING: this can be very condensed
   select case(hm%d%ispin)
@@ -341,8 +341,8 @@ subroutine X(oct_exchange_operator) (hm, gr, psi, hpsi, ik)
 
   call push_sub('hamiltonian_inc.Xexchange_operator')
 
-  ALLOCATE(rho(gr%mesh%np), gr%mesh%np)
-  ALLOCATE(pot(gr%mesh%np), gr%mesh%np)
+  SAFE_ALLOCATE(rho(1:gr%mesh%np))
+  SAFE_ALLOCATE(pot(1:gr%mesh%np))
 
   select case(hm%d%ispin)
   case(UNPOLARIZED)
@@ -400,8 +400,8 @@ subroutine X(magnus) (hm, gr, psi, hpsi, ik, vmagnus)
 
   call push_sub('hamiltonian_inc.Xmagnus')
 
-  ALLOCATE( auxpsi(gr%mesh%np_part, hm%d%dim), gr%mesh%np_part*hm%d%dim)
-  ALLOCATE(aux2psi(gr%mesh%np,      hm%d%dim), gr%mesh%np*hm%d%dim)
+  SAFE_ALLOCATE( auxpsi(1:gr%mesh%np_part, 1:hm%d%dim))
+  SAFE_ALLOCATE(aux2psi(1:gr%mesh%np,      1:hm%d%dim))
 
   ispin = states_dim_get_spin_index(hm%d, ik)
 
@@ -463,8 +463,8 @@ subroutine X(magnetic_terms) (gr, hm, psi, hpsi, grad, ik)
   ! If we are using CDFT:
   if(hm%d%cdft) then
 
-    ALLOCATE(div(gr%mesh%np), gr%mesh%np)
-    ALLOCATE(tmp(gr%mesh%np_part, gr%mesh%sb%dim), gr%mesh%np_part*gr%mesh%sb%dim)
+    SAFE_ALLOCATE(div(1:gr%mesh%np))
+    SAFE_ALLOCATE(tmp(1:gr%mesh%np_part, 1:gr%mesh%sb%dim))
     select case (hm%d%ispin)
     case(UNPOLARIZED)
       tmp(1:gr%mesh%np, :) = hm%axc(1:gr%mesh%np, :, 1)
@@ -523,7 +523,7 @@ subroutine X(magnetic_terms) (gr, hm, psi, hpsi, grad, ik)
 
   ! Zeeman term
   if (associated(hm%ep%B_field) .and. hm%d%ispin /= UNPOLARIZED) then
-    ALLOCATE(lhpsi(gr%mesh%np, hm%d%dim), gr%mesh%np*hm%d%dim)
+    SAFE_ALLOCATE(lhpsi(1:gr%mesh%np, 1:hm%d%dim))
     select case (hm%d%ispin)
     case (SPIN_POLARIZED)
       if(modulo(ik+1, 2) == 0) then ! we have a spin down
@@ -683,8 +683,8 @@ subroutine X(h_mgga_terms) (hm, gr, psi, hpsi, ik, grad)
   call X(get_grad)(hm, gr, psi, grad)
   ispin = states_dim_get_spin_index(hm%d, ik)
 
-  ALLOCATE(cgrad(1:gr%mesh%np_part, 1:MAX_DIM), gr%mesh%np_part*MAX_DIM)
-  ALLOCATE(diverg(1:gr%mesh%np), gr%mesh%np)
+  SAFE_ALLOCATE(cgrad(1:gr%mesh%np_part, 1:MAX_DIM))
+  SAFE_ALLOCATE(diverg(1:gr%mesh%np))
 
   do idim = 1, hm%d%dim
     do ispace = 1, gr%sb%dim
@@ -741,7 +741,7 @@ subroutine X(hamiltonian_diagonal) (hm, gr, diag, ik)
 
   call push_sub('hamiltonian_inc.Xhpsi_diag')
   
-  ALLOCATE(ldiag(gr%mesh%np), gr%mesh%np)
+  SAFE_ALLOCATE(ldiag(1:gr%mesh%np))
 
   diag = M_ZERO
 

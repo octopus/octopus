@@ -27,14 +27,14 @@ subroutine X(gridhier_init)(this, mgrid, add_points_for_boundaries)
   
   cl = mgrid%n_levels
   
-  ALLOCATE(this%level(0:cl), cl+1)
+  SAFE_ALLOCATE(this%level(0:cl))
   
   do l = 0, cl
     if(add_points_for_boundaries) then
-      ALLOCATE(this%level(l)%p(1:mgrid%level(l)%mesh%np_part), mgrid%level(l)%mesh%np_part)
+      SAFE_ALLOCATE(this%level(l)%p(1:mgrid%level(l)%mesh%np_part))
       this%level(l)%p(1:mgrid%level(l)%mesh%np_part) = M_ZERO
     else
-      ALLOCATE(this%level(l)%p(1:mgrid%level(l)%mesh%np), mgrid%level(l)%mesh%np)
+      SAFE_ALLOCATE(this%level(l)%p(1:mgrid%level(l)%mesh%np))
       this%level(l)%p(1:mgrid%level(l)%mesh%np) = M_ZERO
     end if
   end do

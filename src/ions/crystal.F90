@@ -130,8 +130,8 @@ contains
     ! kmap is used to mark reducible k points and also to
     ! map reducible to irreducible k points
 
-    ALLOCATE(kmap(nkpoints), nkpoints)
-    ALLOCATE(reduced(1:MAX_DIM, 1:nkpoints), MAX_DIM*nkpoints)
+    SAFE_ALLOCATE(kmap(1:nkpoints))
+    SAFE_ALLOCATE(reduced(1:MAX_DIM, 1:nkpoints))
 
     forall(ik = 1:nkpoints) kmap(ik) = ik
     

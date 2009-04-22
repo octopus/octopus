@@ -335,7 +335,7 @@ contains
       hm%exc_j = M_ZERO
 
       ! get density taking into account non-linear core corrections, and the Amaldi SIC correction
-      ALLOCATE(rho(gr%mesh%np, st%d%nspin), gr%mesh%np*st%d%nspin)
+      SAFE_ALLOCATE(rho(1:gr%mesh%np, 1:st%d%nspin))
       call states_total_density(st, gr%mesh, rho)
 
       ! Amaldi correction
@@ -397,7 +397,7 @@ contains
 
     call push_sub('v_ks.v_ks_hartree')
 
-    ALLOCATE(rho(gr%mesh%np), gr%mesh%np)
+    SAFE_ALLOCATE(rho(1:gr%mesh%np))
 
     ! calculate the total density
     rho(1:gr%mesh%np) = st%rho(1:gr%mesh%np, 1)

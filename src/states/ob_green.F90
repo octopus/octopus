@@ -64,14 +64,14 @@ contains
 
     call push_sub('ob_lead.lead_green')
 
-    ALLOCATE(e(np, np), np**2)
-    ALLOCATE(es(np, np), np**2)
-    ALLOCATE(a(np, np), np**2)
-    ALLOCATE(b(np, np), np**2)
-    ALLOCATE(inv(np, np), np**2)
-    ALLOCATE(tmp1(np, np), np**2)
-    ALLOCATE(tmp2(np, np), np**2)
-    ALLOCATE(tmp3(np, np), np**2)
+    SAFE_ALLOCATE(   e(1:np, 1:np))
+    SAFE_ALLOCATE(  es(1:np, 1:np))
+    SAFE_ALLOCATE(   a(1:np, 1:np))
+    SAFE_ALLOCATE(   b(1:np, 1:np))
+    SAFE_ALLOCATE( inv(1:np, 1:np))
+    SAFE_ALLOCATE(tmp1(1:np, 1:np))
+    SAFE_ALLOCATE(tmp2(1:np, 1:np))
+    SAFE_ALLOCATE(tmp3(1:np, 1:np))
 
     threshold = CNST(1e-12) ! FIXME: read from input.
 

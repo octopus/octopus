@@ -188,7 +188,7 @@ contains
     integer :: i
 
     if(cv%method.ne.CURV_METHOD_UNIFORM) then
-      ALLOCATE(Jac(sb%dim, sb%dim), sb%dim**2)
+      SAFE_ALLOCATE(Jac(1:sb%dim, 1:sb%dim))
     end if
 
     select case(cv%method)

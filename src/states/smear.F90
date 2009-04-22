@@ -200,9 +200,9 @@ contains
     else if(this%method == SMEAR_SEMICONDUCTOR) then
       sumq = qtot
       ! first we sort the eigenvalues
-      ALLOCATE(eigenval_list(nst * nik), nst * nik)
-      ALLOCATE(k_list(nst * nik), nst * nik)
-      ALLOCATE(reorder(nst * nik), nst * nik)
+      SAFE_ALLOCATE(eigenval_list(1:nst*nik))
+      SAFE_ALLOCATE(       k_list(1:nst*nik))
+      SAFE_ALLOCATE(      reorder(1:nst*nik))
 
       iter = 1
       do ist = 1, nst

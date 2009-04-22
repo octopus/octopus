@@ -154,7 +154,7 @@ contains
       end do
       
     case(PRE_JACOBI, PRE_MULTIGRID)
-      ALLOCATE(this%diag_lapl(gr%mesh%np), gr%mesh%np)
+      SAFE_ALLOCATE(this%diag_lapl(1:gr%mesh%np))
       call derivatives_lapl_diag(gr%der, this%diag_lapl)
       call lalg_scal(gr%mesh%np, -M_HALF, this%diag_lapl(:))
     end select

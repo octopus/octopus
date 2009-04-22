@@ -49,8 +49,8 @@ subroutine states_choose_kpoints(d, sb, geo)
       call write_fatal(1)
     end select
 
-    ALLOCATE(d%kpoints (MAX_DIM, d%nik), MAX_DIM*d%nik)
-    ALLOCATE(d%kweights   (d%nik),   d%nik)
+    SAFE_ALLOCATE(d%kpoints (1:MAX_DIM, 1:d%nik))
+    SAFE_ALLOCATE(d%kweights(1:d%nik))
     d%kpoints  = M_ZERO
     d%kweights = M_ONE
 
@@ -92,8 +92,8 @@ subroutine states_choose_kpoints(d, sb, geo)
     write(message(1), '(a,i4,a)') 'Input: ', d%nik, ' k-points will be read from the input file'
     call write_info(1)
 
-    ALLOCATE(d%kpoints(MAX_DIM, d%nik), MAX_DIM*d%nik)
-    ALLOCATE(d%kweights(d%nik), d%nik)
+    SAFE_ALLOCATE( d%kpoints(1:MAX_DIM, 1:d%nik))
+    SAFE_ALLOCATE(d%kweights(1:d%nik))
 
     d%kpoints = M_ZERO
 
@@ -145,8 +145,8 @@ subroutine states_choose_kpoints(d, sb, geo)
 
     d%nik = 1
 
-    ALLOCATE(d%kpoints(MAX_DIM, d%nik), MAX_DIM*d%nik)
-    ALLOCATE(d%kweights(d%nik), d%nik)
+    SAFE_ALLOCATE( d%kpoints(1:MAX_DIM, 1:d%nik))
+    SAFE_ALLOCATE(d%kweights(1:d%nik))
 
     d%kweights(1) = M_ONE
     d%kpoints(1:MAX_DIM, 1) = M_ZERO
@@ -203,8 +203,8 @@ subroutine states_choose_kpoints(d, sb, geo)
   call loct_parse_logical(datasets_check('KPointsUseTimeReversal'), .true., use_time_reversal)
   
 
-  ALLOCATE(natom(geo%nspecies), geo%nspecies)
-  ALLOCATE(coorat(geo%nspecies, geo%natoms, 3), geo%nspecies*geo%natoms*3)
+  SAFE_ALLOCATE(natom(1:geo%nspecies))
+  SAFE_ALLOCATE(coorat(1:geo%nspecies, 1:geo%natoms, 1:3))
 
   natom  = 0
   coorat = M_ZERO
@@ -218,8 +218,8 @@ subroutine states_choose_kpoints(d, sb, geo)
     coorat(:,:,i) = coorat(:,:,i) / sb%rlattice(i, i) + M_HALF
   end do
 
-  ALLOCATE(kp(3, nkmax), 3*nkmax)
-  ALLOCATE(kw(nkmax), nkmax)
+  SAFE_ALLOCATE(kp(1:3, 1:nkmax))
+  SAFE_ALLOCATE(kw(1:nkmax))
 
   ! choose k-points according to Monkhorst-Pack scheme
   call crystal_init(geo, sb, d%nik_axis, kshifts, use_symmetries, use_time_reversal, nkmax, kp, kw)
@@ -229,16 +229,16 @@ subroutine states_choose_kpoints(d, sb, geo)
   select case(d%ispin)
   case(UNPOLARIZED, SPINORS)
     d%nik = nk
-    ALLOCATE(d%kpoints(3, d%nik), 3*d%nik)
-    ALLOCATE(d%kweights  (d%nik),   d%nik)
+    SAFE_ALLOCATE( d%kpoints(1:3, 1:d%nik))
+    SAFE_ALLOCATE(d%kweights(1:d%nik))
     do i = 1, 3
       d%kpoints(i, 1:d%nik) = kp(i, 1:d%nik)*sb%klattice(i,i)
     end do
     d%kweights(1:d%nik) = kw(1:d%nik)
   case(SPIN_POLARIZED)
     d%nik = 2 * nk
-    ALLOCATE(d%kpoints(3, d%nik), 3*d%nik)
-    ALLOCATE(d%kweights  (d%nik),   d%nik)
+    SAFE_ALLOCATE( d%kpoints(1:3, 1:d%nik))
+    SAFE_ALLOCATE(d%kweights(1:d%nik))
     do i = 1,3
       d%kpoints(i,::2)  = kp(i, 1:nk)*sb%klattice(i,i)
       d%kpoints(i,2::2) = kp(i, 1:nk)*sb%klattice(i,i)
@@ -352,7 +352,7 @@ logical function in_wigner_seitz_cell(k_point, klattice) result(in_cell)
   select case(ws_cell_type)
   case(CUBE)
 
-    ALLOCATE(bragg_normal(3, 6), 3*6)
+    SAFE_ALLOCATE(bragg_normal(1:3, 1:6))
 
     bragg_normal(1:3, 1) = (/  2,   0,   0/) 
     bragg_normal(1:3, 2) = (/ -2,   0,   0/) 
@@ -363,7 +363,7 @@ logical function in_wigner_seitz_cell(k_point, klattice) result(in_cell)
 
   case(OCTAHEDRON)
 
-    ALLOCATE(bragg_normal(3, 8), 3*8)
+    SAFE_ALLOCATE(bragg_normal(1:3, 1:8))
 
     bragg_normal(1:3, 1) = (/ -1,  -1,  -1 /) 
     bragg_normal(1:3, 2) = (/ -1,   1,  -1 /) 
@@ -376,7 +376,7 @@ logical function in_wigner_seitz_cell(k_point, klattice) result(in_cell)
     
   case(DODECAHEDRON)
 
-    ALLOCATE(bragg_normal(3, 12), 3*12)
+    SAFE_ALLOCATE(bragg_normal(1:3, 1:12))
 
     bragg_normal(1:3,  1) = (/  0,  -1,  -1 /) 
     bragg_normal(1:3,  2) = (/  0,  -1,   1 /) 

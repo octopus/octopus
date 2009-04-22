@@ -143,13 +143,12 @@ contains
   subroutine mesh_read_lead()
     integer :: il, iunit
 
-    integer               :: alloc_size
     type(mesh_t), pointer :: m
     integer :: nr(1:2, 1:MAX_DIM)
 
     call push_sub('mesh_init.mesh_init_stage1_mesh_read_lead')
 
-    ALLOCATE(mesh%lead_unit_cell(NLEADS), NLEADS)
+    SAFE_ALLOCATE(mesh%lead_unit_cell(1:NLEADS))
 
     do il = 1, NLEADS
       m => mesh%lead_unit_cell(il)
@@ -161,9 +160,8 @@ contains
       call io_close(iunit)
       ! Read the lxyz maps.
       nr = m%idx%nr
-      alloc_size = (nr(2, 1) - nr(1, 1) + 1)*(nr(2, 2) - nr(1, 2) + 1)*(nr(2, 3) - nr(1, 3) + 1)
-      ALLOCATE(m%idx%Lxyz(m%np_part, 3), m%np_global*3)
-      ALLOCATE(m%idx%Lxyz_inv(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)), alloc_size)
+      SAFE_ALLOCATE(m%idx%Lxyz(1:m%np_part, 1:3))
+      SAFE_ALLOCATE(m%idx%Lxyz_inv(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)))
       iunit = io_open(trim(sb%lead_restart_dir(il))//'/gs/Lxyz', action='read', is_tmp=.true.)
       call mesh_lxyz_init_from_file(m, iunit)
       call io_close(iunit)
@@ -211,13 +209,12 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
   nr = mesh%idx%nr
 
   ! allocate the xyz arrays
-  i = (nr(2, 1) - nr(1, 1) + 1)*(nr(2, 2) - nr(1, 2) + 1)*(nr(2, 3) - nr(1, 3) + 1)
-  ALLOCATE(mesh%idx%Lxyz_inv(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)), i)
-  ALLOCATE(mesh%idx%Lxyz_tmp(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)), i)
-  ALLOCATE(mesh%x_tmp(MAX_DIM, nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)), MAX_DIM*i)
+  SAFE_ALLOCATE(mesh%idx%Lxyz_inv(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)))
+  SAFE_ALLOCATE(mesh%idx%Lxyz_tmp(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)))
+  SAFE_ALLOCATE(mesh%x_tmp(MAX_DIM, nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)))
 
   if(simul_box_multires(sb)) then 
-    ALLOCATE(mesh%resolution(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)), i)
+    SAFE_ALLOCATE(mesh%resolution(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)))
   else
     nullify(mesh%resolution)
   end if
@@ -321,7 +318,7 @@ subroutine mesh_init_stage_3(mesh, stencil, mpi_grp, parent)
 
   if(.not. mesh%parallel_in_domains) then
     ! When running parallel, x is computed later.
-    ALLOCATE(mesh%x(mesh%np_part_global, MAX_DIM), mesh%np_part_global*MAX_DIM)
+    SAFE_ALLOCATE(mesh%x(1:mesh%np_part_global, 1:MAX_DIM))
   end if
   
   if(mesh%idx%sb%box_shape /= HYPERCUBE) then
@@ -370,7 +367,7 @@ contains
 
     call push_sub('mesh_init.mesh_init_stage_3.create_x_Lxyz')
 
-    ALLOCATE(mesh%idx%Lxyz(mesh%np_part_global, MAX_DIM), mesh%np_part_global*MAX_DIM)
+    SAFE_ALLOCATE(mesh%idx%Lxyz(1:mesh%np_part_global, 1:MAX_DIM))
 
     !%Type integer
     !%Default 20
@@ -476,7 +473,7 @@ contains
 
     mesh%mpi_grp = mpi_grp
 
-    ALLOCATE(part(mesh%np_part_global), mesh%np_part_global)
+    SAFE_ALLOCATE(part(1:mesh%np_part_global))
 
     if(.not. present(parent)) then
       call mesh_partition(mesh, stencil, part)
@@ -496,7 +493,7 @@ contains
     call vec_init(mesh%mpi_grp%comm, 0, part, mesh%np_global, mesh%np_part_global, mesh%idx, stencil, mesh%sb%dim, mesh%vp)
     SAFE_DEALLOCATE_A(part)
 
-    ALLOCATE(nnb(1:mesh%vp%npart), mesh%vp%npart)
+    SAFE_ALLOCATE(nnb(1:mesh%vp%npart))
     nnb = 0
     do jpart = 1, mesh%vp%npart
       do ipart = 1, mesh%vp%npart
@@ -546,7 +543,7 @@ contains
     ! x consists of three parts: the local points, the
     ! ghost points, and the boundary points; in this order
     ! (just as for any other vector, which is distributed).
-    ALLOCATE(mesh%x(mesh%np_part, MAX_DIM), mesh%np_part*MAX_DIM)
+    SAFE_ALLOCATE(mesh%x(1:mesh%np_part, 1:MAX_DIM))
     ! Do the inner points
     do i = 1, mesh%np
       j = mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno) + i - 1)
@@ -581,7 +578,7 @@ contains
 
     call push_sub('mesh_init.mesh_init_stage_3.mesh_get_vol_pp')
 
-    ALLOCATE(mesh%vol_pp(mesh%np_part), mesh%np_part)
+    SAFE_ALLOCATE(mesh%vol_pp(1:mesh%np_part))
 
     forall(ip = 1:mesh%np_part) mesh%vol_pp(ip) = product(mesh%h(1:sb%dim))
     jj(sb%dim + 1:MAX_DIM) = M_ZERO
@@ -690,14 +687,14 @@ contains
         end if
       end do
 
-      ALLOCATE(mesh%per_points(1:mesh%nper), mesh%nper)
-      ALLOCATE(mesh%per_map(1:mesh%nper), mesh%nper)
+      SAFE_ALLOCATE(mesh%per_points(1:mesh%nper))
+      SAFE_ALLOCATE(mesh%per_map(1:mesh%nper))
 
 #ifdef HAVE_MPI
       if(mesh%parallel_in_domains) then
-        ALLOCATE(recv_points(1:nper_recv, 1:mesh%vp%npart), nper_recv*mesh%vp%npart)
-        ALLOCATE(recv_rem_points(1:nper_recv, 1:mesh%vp%npart), nper_recv*mesh%vp%npart)
-        ALLOCATE(mesh%nrecv(1:mesh%vp%npart), mesh%vp%npart)
+        SAFE_ALLOCATE(recv_points(1:nper_recv, 1:mesh%vp%npart))
+        SAFE_ALLOCATE(recv_rem_points(1:nper_recv, 1:mesh%vp%npart))
+        SAFE_ALLOCATE(mesh%nrecv(1:mesh%vp%npart))
         mesh%nrecv = 0
       end if
 #endif
@@ -760,7 +757,7 @@ contains
 
         ! first we allocate the buffer to be able to use MPI_Bsend
         bsize = mesh%vp%npart - 1 + nper_recv + MPI_BSEND_OVERHEAD*2*(mesh%vp%npart - 1)
-        ALLOCATE(send_buffer(1:bsize), bsize)
+        SAFE_ALLOCATE(send_buffer(1:bsize))
         call MPI_Buffer_attach(send_buffer, bsize*4, mpi_err)
 
         ! Now we communicate to each node the points they will have to
@@ -774,7 +771,7 @@ contains
         end do
 
         ! And we receive it
-        ALLOCATE(mesh%nsend(1:mesh%vp%npart), mesh%vp%npart)
+        ALLOCATE(mesh%nsend(1:mesh%vp%npart))
         mesh%nsend = 0
         do ipart = 1, mesh%vp%npart
           if(ipart == mesh%vp%partno) cycle
@@ -787,7 +784,7 @@ contains
           call MPI_Bsend(recv_rem_points(:, ipart), mesh%nrecv(ipart), MPI_INTEGER, ipart - 1, 1, mesh%vp%comm, mpi_err)
         end do
 
-        ALLOCATE(send_points(1:maxval(mesh%nsend), 1:mesh%vp%npart), maxval(mesh%nsend)*mesh%vp%npart)
+        ALLOCATE(send_points(1:maxval(mesh%nsend), 1:mesh%vp%npart))
 
         ! And we receive them
         do ipart = 1, mesh%vp%npart
@@ -802,15 +799,15 @@ contains
         ! Now we have all the indexes required locally, so we can
         ! build the mpi datatypes
 
-        ALLOCATE(mesh%dsend_type(1:mesh%vp%npart), mesh%vp%npart)
-        ALLOCATE(mesh%zsend_type(1:mesh%vp%npart), mesh%vp%npart)
-        ALLOCATE(mesh%drecv_type(1:mesh%vp%npart), mesh%vp%npart)
-        ALLOCATE(mesh%zrecv_type(1:mesh%vp%npart), mesh%vp%npart)
+        SAFE_ALLOCATE(mesh%dsend_type(1:mesh%vp%npart))
+        SAFE_ALLOCATE(mesh%zsend_type(1:mesh%vp%npart))
+        SAFE_ALLOCATE(mesh%drecv_type(1:mesh%vp%npart))
+        SAFE_ALLOCATE(mesh%zrecv_type(1:mesh%vp%npart))
 
         maxmax = max(maxval(mesh%nsend), maxval(mesh%nrecv))
 
-        ALLOCATE(blocklengths(1:maxmax), maxmax)
-        ALLOCATE(offsets(1:maxmax), maxmax)
+        SAFE_ALLOCATE(blocklengths(1:maxmax))
+        SAFE_ALLOCATE(offsets(1:maxmax))
 
         do ipart = 1, mesh%vp%npart
           if(ipart == mesh%vp%partno) cycle
@@ -971,9 +968,9 @@ subroutine mesh_partition(m, lapl_stencil, part)
   ! Documentation is in zoltan.F90`
   call loct_parse_int(datasets_check('MeshPartition'), default_method, method)
 
-  ALLOCATE(start(1:p), p)
-  ALLOCATE(final(1:p), p)
-  ALLOCATE(lsize(1:p), p)
+  SAFE_ALLOCATE(start(1:p))
+  SAFE_ALLOCATE(final(1:p))
+  SAFE_ALLOCATE(lsize(1:p))
 
   select case(library)
   case(METIS)
@@ -996,10 +993,10 @@ subroutine mesh_partition(m, lapl_stencil, part)
 
   ! Shortcut (number of vertices).
   nv = lsize(ipart)
-  ALLOCATE(xadj(nv + 1), nv + 1)
+  SAFE_ALLOCATE(xadj(1:nv + 1))
 
   if(library == METIS .or. .not. zoltan_method_is_geometric(method)) then !calculate the graphs
-    ALLOCATE(adjncy(stencil%size*nv), stencil%size*nv)
+    SAFE_ALLOCATE(adjncy(1:stencil%size*nv))
 
     ! Create graph with each point being
     ! represenetd by a vertice and edges between
@@ -1094,7 +1091,7 @@ subroutine mesh_partition(m, lapl_stencil, part)
 
     call zoltan_method_info(method)
 
-    ALLOCATE(xglobal(1:m%np_part_global, 1:MAX_DIM), m%np_part_global*MAX_DIM)
+    SAFE_ALLOCATE(xglobal(1:m%np_part_global, 1:MAX_DIM))
 
     do ip = 1, m%np_part_global
       xglobal(ip, 1:MAX_DIM) = mesh_x_global(m, ip)
@@ -1143,7 +1140,7 @@ subroutine mesh_partition_boundaries(mesh, stencil, part)
 
   npart = mesh%mpi_grp%size
 
-  ALLOCATE(votes(1:npart, mesh%np_global + 1:mesh%np_part_global), npart*(mesh%np_part_global - mesh%np_global))
+  SAFE_ALLOCATE(votes(1:npart, mesh%np_global + 1:mesh%np_part_global))
 
   !now assign boundary points
 

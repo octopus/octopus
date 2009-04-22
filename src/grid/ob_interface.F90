@@ -88,7 +88,7 @@ contains
     intf%np = intf%extent*m%idx%ll(2)*m%idx%ll(3)
     intf%np_uc = (intf%extent + 1)*m%idx%ll(2)*m%idx%ll(3)
 
-    ALLOCATE(intf%index(intf%np), intf%np)
+    SAFE_ALLOCATE(intf%index(1:intf%np))
 
     ! Extract submeshes for the interface regions.
     ! 
@@ -217,8 +217,8 @@ contains
 
     call push_sub('ob_interface.interface_apply_op')
 
-    ALLOCATE(intf_wf(intf%np), intf%np)
-    ALLOCATE(op_intf_wf(intf%np), intf%np)
+    SAFE_ALLOCATE(intf_wf(1:intf%np))
+    SAFE_ALLOCATE(op_intf_wf(1:intf%np))
 
     call get_intf_wf(intf, wf, intf_wf)
     op_intf_wf(1:intf%np) = intf_wf(1:intf%np)
@@ -247,8 +247,8 @@ contains
 
     call push_sub('ob_interface.interface_apply_sym_op')
 
-    ALLOCATE(intf_wf(intf%np), intf%np)
-    ALLOCATE(op_intf_wf(intf%np), intf%np)
+    SAFE_ALLOCATE(intf_wf(1:intf%np))
+    SAFE_ALLOCATE(op_intf_wf(1:intf%np))
 
     call get_intf_wf(intf, wf, intf_wf)
     call get_intf_wf(intf, res, op_intf_wf)

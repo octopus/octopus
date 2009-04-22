@@ -232,16 +232,16 @@ contains
 
     ! allocate weights op%w
     if(op%const_w) then
-      ALLOCATE(op%w_re(op%stencil%size, 1), op%stencil%size*1)
+      SAFE_ALLOCATE(op%w_re(1:op%stencil%size, 1:1))
       if (op%cmplx_op) then
-        ALLOCATE(op%w_im(op%stencil%size, 1), op%stencil%size*1)
+        SAFE_ALLOCATE(op%w_im(1:op%stencil%size, 1:1))
       end if
       message(1) = 'Info: nl_operator_build: working with constant weights.'
       if(in_debug_mode) call write_info(1)
     else
-      ALLOCATE(op%w_re(op%stencil%size, op%np), op%stencil%size*op%np)
+      SAFE_ALLOCATE(op%w_re(1:op%stencil%size, 1:op%np))
       if (op%cmplx_op) then
-        ALLOCATE(op%w_im(op%stencil%size, op%np), op%stencil%size*op%np)
+        SAFE_ALLOCATE(op%w_im(1:op%stencil%size, 1:op%np))
       end if
       message(1) = 'Info: nl_operator_build: working with non-constant weights.'
       if(in_debug_mode) call write_info(1)
@@ -252,8 +252,8 @@ contains
     if (op%cmplx_op) op%w_im = M_ZERO
 
     ! Build lookup table
-    ALLOCATE(st1(1:op%stencil%size), op%stencil%size)
-    ALLOCATE(st2(1:op%stencil%size), op%stencil%size)
+    SAFE_ALLOCATE(st1(1:op%stencil%size))
+    SAFE_ALLOCATE(st2(1:op%stencil%size))
 
     op%nri = 0
 
@@ -310,9 +310,9 @@ contains
 
       !after counting, allocate
       if (time == 1 ) then 
-        ALLOCATE(op%ri(1:op%stencil%size, op%nri), op%stencil%size*op%nri)
-        ALLOCATE(op%rimap(1:op%np), op%np)
-        ALLOCATE(op%rimap_inv(1:op%nri + 1), op%nri + 1)
+        SAFE_ALLOCATE(op%ri(1:op%stencil%size, 1:op%nri))
+        SAFE_ALLOCATE(op%rimap(1:op%np))
+        SAFE_ALLOCATE(op%rimap_inv(1:op%nri + 1))
         current = 0
       end if
 
@@ -350,13 +350,13 @@ contains
       
       ASSERT(op%inner%nri + op%outer%nri == op%nri)
       
-      ALLOCATE(op%inner%imin(1:op%inner%nri + 1), op%inner%nri + 1)
-      ALLOCATE(op%inner%imax(1:op%inner%nri), op%inner%nri)
-      ALLOCATE(op%inner%ri(1:op%stencil%size, 1:op%inner%nri), op%inner%nri)
+      SAFE_ALLOCATE(op%inner%imin(1:op%inner%nri + 1))
+      SAFE_ALLOCATE(op%inner%imax(1:op%inner%nri))
+      SAFE_ALLOCATE(op%inner%ri(1:op%stencil%size, 1:op%inner%nri))
 
-      ALLOCATE(op%outer%imin(1:op%outer%nri + 1), op%outer%nri + 1)
-      ALLOCATE(op%outer%imax(1:op%outer%nri), op%outer%nri)
-      ALLOCATE(op%outer%ri(1:op%stencil%size, 1:op%outer%nri), op%outer%nri)
+      SAFE_ALLOCATE(op%outer%imin(1:op%outer%nri + 1))
+      SAFE_ALLOCATE(op%outer%imax(1:op%outer%nri))
+      SAFE_ALLOCATE(op%outer%ri(1:op%stencil%size, 1:op%outer%nri))
 
       !now populate the arrays
       iinner = 0
@@ -460,12 +460,12 @@ contains
 
 #if defined(HAVE_MPI)
     if(m%parallel_in_domains) then
-      ALLOCATE(opg, 1)
-      ALLOCATE(opgt, 1)
+      SAFE_ALLOCATE(opg)
+      SAFE_ALLOCATE(opgt)
       call nl_operator_allgather(op, opg)
       call nl_operator_init(opgt, op%label)
       call nl_operator_copy(opgt, opg)
-      ALLOCATE(vol_pp(m%np_global), m%np_global)
+      SAFE_ALLOCATE(vol_pp(1:m%np_global))
       call dvec_allgather(m%vp, vol_pp, m%vol_pp)
     else
 #endif
@@ -536,12 +536,12 @@ contains
 
     if(m%parallel_in_domains) then
 #if defined(HAVE_MPI)
-      ALLOCATE(opg, 1)
-      ALLOCATE(opgt, 1)
+      SAFE_ALLOCATE(opg)
+      SAFE_ALLOCATE(opgt)
       call nl_operator_allgather(op, opg)
       call nl_operator_init(opgt, op%label)
       opgt = opg
-      ALLOCATE(vol_pp(m%np_global), m%np_global)
+      SAFE_ALLOCATE(vol_pp(1:m%np_global))
       call dvec_allgather(m%vp, vol_pp, m%vol_pp)
 #else
       ASSERT(.false.)
@@ -731,16 +731,16 @@ contains
 
     call stencil_copy(op%stencil, opg%stencil)
 
-    ALLOCATE(opg%i(op%stencil%size, op%m%np_global), op%stencil%size*op%m%np_global)
+    SAFE_ALLOCATE(opg%i(1:op%stencil%size, 1:op%m%np_global))
     if(op%const_w) then
-      ALLOCATE(opg%w_re(op%stencil%size, 1), op%stencil%size*1)
+      SAFE_ALLOCATE(opg%w_re(1:op%stencil%size, 1:1))
       if(op%cmplx_op) then
-        ALLOCATE(opg%w_im(op%stencil%size, 1), op%stencil%size*1)
+        SAFE_ALLOCATE(opg%w_im(1:op%stencil%size, 1:1))
       end if
     else
-      ALLOCATE(opg%w_re(op%stencil%size, op%m%np_global), op%stencil%size*op%m%np_global)
+      SAFE_ALLOCATE(opg%w_re(1:op%stencil%size, 1:op%m%np_global))
       if(op%cmplx_op) then
-        ALLOCATE(opg%w_im(op%stencil%size, op%m%np_global), op%stencil%size*op%m%np_global)
+        SAFE_ALLOCATE(opg%w_im(1:op%stencil%size, 1:op%m%np_global))
       end if
     end if
     opg%m        => op%m
@@ -825,7 +825,7 @@ contains
 
     if(op%m%parallel_in_domains) then
 #if defined(HAVE_MPI)
-      ALLOCATE(opg, 1)
+      SAFE_ALLOCATE(opg)
       call nl_operator_gather(op, opg)
 #else
       ASSERT(.false.)
@@ -876,7 +876,7 @@ contains
 
     if(op%m%parallel_in_domains) then
 #if defined(HAVE_MPI)
-      ALLOCATE(opg, 1)
+      SAFE_ALLOCATE(opg)
       call nl_operator_gather(op, opg)
 #else
       ASSERT(.false.)
@@ -956,7 +956,7 @@ contains
 
 
     if(mpi_grp_is_root(op%m%mpi_grp)) then
-      ALLOCATE(a(op%m%np_global, op%m%np_global), op%m%np_global*op%m%np_global)
+      SAFE_ALLOCATE(a(1:op%m%np_global, 1:op%m%np_global))
       a = M_ZERO
     end if
 
@@ -997,7 +997,7 @@ contains
 
 
     if(mpi_grp_is_root(op%m%mpi_grp)) then
-      ALLOCATE(a(op%m%np_global, op%m%np_global), op%m%np_global*op%m%np_global)
+      SAFE_ALLOCATE(a(1:op%m%np_global, 1:op%m%np_global))
       a = M_ZERO
     end if
 

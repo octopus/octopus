@@ -83,7 +83,7 @@ contains
 
     call push_sub('states.states_magnetic_moment')
 
-    ALLOCATE(md(m%np, MAX_DIM), m%np*MAX_DIM)
+    SAFE_ALLOCATE(md(1:m%np, 1:MAX_DIM))
     call magnetic_density(m, st, rho, md)
 
     mm(1) = dmf_integrate(m, md(:, 1))
@@ -111,8 +111,8 @@ contains
 
     call push_sub('magnetic.magnetic_local_moments')
 
-    ALLOCATE(md (m%np, MAX_DIM), m%np*MAX_DIM)
-    ALLOCATE(aux(m%np, MAX_DIM), m%np*MAX_DIM)
+    SAFE_ALLOCATE(md (1:m%np, 1:MAX_DIM))
+    SAFE_ALLOCATE(aux(1:m%np, 1:MAX_DIM))
 
     call magnetic_density(m, st, rho, md)
     lmm = M_ZERO
@@ -175,7 +175,7 @@ contains
       call pop_sub(); return
     end if
 
-    ALLOCATE(j(gr%mesh%np_part, gr%mesh%sb%dim, st%d%nspin), gr%mesh%np_part*gr%mesh%sb%dim*st%d%nspin)
+    SAFE_ALLOCATE(j(1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:st%d%nspin))
     call states_calc_tau_jp_gn(gr, st, jp=j)
 
     a_ind = M_ZERO

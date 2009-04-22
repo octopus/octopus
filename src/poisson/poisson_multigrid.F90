@@ -203,7 +203,7 @@ contains
     call push_sub('poisson_multigrid.poisson_multigrid_solver');
 
     ! correction for treating boundaries
-    ALLOCATE(vh_correction(gr%mesh%np), gr%mesh%np)
+    SAFE_ALLOCATE(vh_correction(1:gr%mesh%np))
 
     call gridhier_init(phi, gr%mgrid, add_points_for_boundaries=.true.)
     call gridhier_init(phi_ini, gr%mgrid, add_points_for_boundaries=.false.)
@@ -401,8 +401,8 @@ contains
 
     case(GAUSS_JACOBI)
 
-      ALLOCATE(lpot(1:m%np), m%np_part)
-      ALLOCATE(ldiag(1:m%np), m%np)
+      SAFE_ALLOCATE( lpot(1:m%np))
+      SAFE_ALLOCATE(ldiag(1:m%np))
 
       call derivatives_lapl_diag(der, ldiag)
 

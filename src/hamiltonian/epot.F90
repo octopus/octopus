@@ -161,7 +161,7 @@ contains
     end do
 
     ! Local part of the pseudopotentials
-    ALLOCATE(ep%vpsl(gr%mesh%np), gr%mesh%np)
+    SAFE_ALLOCATE(ep%vpsl(1:gr%mesh%np))
 
     ep%vpsl(1:gr%mesh%np) = M_ZERO
 
@@ -181,7 +181,7 @@ contains
         message(1) = 'Info: generating classical external potential'
         call write_info(1)
 
-        ALLOCATE(ep%Vclassical(gr%mesh%np), gr%mesh%np)
+        SAFE_ALLOCATE(ep%Vclassical(1:gr%mesh%np))
         call epot_generate_classical(ep, gr%mesh, geo)
       end if
     end if
@@ -203,7 +203,7 @@ contains
     !%End
     nullify(ep%E_field, ep%v_static)
     if(loct_parse_block(datasets_check('StaticElectricField'), blk)==0) then
-      ALLOCATE(ep%E_field(gr%mesh%sb%dim), gr%mesh%sb%dim)
+      SAFE_ALLOCATE(ep%E_field(1:gr%mesh%sb%dim))
       do i = 1, gr%mesh%sb%dim
         call loct_parse_block_float(blk, 0, i-1, ep%E_field(i))
       end do
@@ -212,7 +212,7 @@ contains
       ep%E_field(:) = ep%E_field(:) * units_inp%energy%factor/units_inp%length%factor
 
       ! Compute the scalar potential
-      ALLOCATE(ep%v_static(gr%mesh%np), gr%mesh%np)
+      SAFE_ALLOCATE(ep%v_static(1:gr%mesh%np))
       do i = 1, gr%mesh%np
         ep%v_static(i) = sum(gr%mesh%x(i,:)*ep%E_field(:))
       end do
@@ -238,7 +238,7 @@ contains
     nullify(ep%B_field, ep%A_static)
     if(loct_parse_block(datasets_check('StaticMagneticField'), blk)==0) then
 
-      ALLOCATE(ep%B_field(3), 3)
+      SAFE_ALLOCATE(ep%B_field(1:3))
       do i = 1, 3
         call loct_parse_block_float(blk, 0, i-1, ep%B_field(i))
       end do
@@ -251,8 +251,8 @@ contains
       call loct_parse_block_end(blk)
 
       ! Compute the vector potential
-      ALLOCATE(ep%A_static(gr%mesh%np, gr%mesh%sb%dim), gr%mesh%np*gr%mesh%sb%dim)
-      ALLOCATE(x(gr%mesh%sb%dim), gr%mesh%sb%dim)
+      SAFE_ALLOCATE(ep%A_static(1:gr%mesh%np, 1:gr%mesh%sb%dim))
+      SAFE_ALLOCATE(x(1:gr%mesh%sb%dim))
       do i = 1, gr%mesh%np
         x(1:gr%mesh%sb%dim) = gr%mesh%x(i, 1:gr%mesh%sb%dim)
         select case (gr%mesh%sb%dim)
@@ -331,13 +331,13 @@ contains
       ep%so_strength = M_ONE
     end if
 
-    ALLOCATE(ep%proj(geo%natoms), geo%natoms)
+    SAFE_ALLOCATE(ep%proj(1:geo%natoms))
     do i = 1, geo%natoms
       call projector_null(ep%proj(i))
     end do
 
     if(gr%have_fine_mesh) then
-      ALLOCATE(ep%proj_fine(geo%natoms), geo%natoms)
+      SAFE_ALLOCATE(ep%proj_fine(1:geo%natoms))
       do i = 1, geo%natoms
         call projector_null(ep%proj_fine(i))
       end do
@@ -348,7 +348,7 @@ contains
     ep%natoms = geo%natoms
     ep%non_local = .false.
 
-    ALLOCATE(ep%fii(1:MAX_DIM, 1:geo%natoms), MAX_DIM*geo%natoms)
+    SAFE_ALLOCATE(ep%fii(1:MAX_DIM, 1:geo%natoms))
 
     call gauge_field_init(ep%gfield, gr%sb)
 
@@ -475,7 +475,7 @@ contains
 #ifdef HAVE_MPI
     call profiling_in(epot_reduce, "EPOT_REDUCE")
     if(geo%atoms%parallel) then
-      ALLOCATE(vpsltmp(1:gr%mesh%np), gr%mesh%np)
+      SAFE_ALLOCATE(vpsltmp(1:gr%mesh%np))
       call MPI_Allreduce(ep%vpsl, vpsltmp, gr%mesh%np, MPI_FLOAT, MPI_SUM, geo%atoms%mpi_grp%comm, mpi_err)
       call lalg_copy(gr%mesh%np, vpsltmp, ep%vpsl)
       if(associated(st%rho_core)) then
@@ -547,7 +547,7 @@ contains
 
     else
       
-      ALLOCATE(vl(1:mesh%np_part), mesh%np_part)
+      SAFE_ALLOCATE(vl(1:mesh%np_part))
       
       !Local potential, we can get it by solving the Poisson equation
       !(for all-electron species or pseudopotentials in periodic
@@ -555,7 +555,7 @@ contains
       
       if(geo%atom(iatom)%spec%has_density .or. (species_is_ps(geo%atom(iatom)%spec) .and. simul_box_is_periodic(gr%sb))) then
         
-        ALLOCATE(rho(1:mesh%np), mesh%np)
+        SAFE_ALLOCATE(rho(1:mesh%np))
         
         !this has to be optimized so the Poisson solution is made once
         !for all species, perhaps even include it in the Hartree term
@@ -726,8 +726,8 @@ contains
       call write_warning(1)
     endif
 
-    ALLOCATE(matrix(st%nst, st%nst), st%nst * st%nst)
-    ALLOCATE(tmp(1:gr%mesh%np), gr%mesh%np)
+    SAFE_ALLOCATE(matrix(1:st%nst, 1:st%nst))
+    SAFE_ALLOCATE(tmp(1:gr%mesh%np))
 
     ! TODO: add in sum over k-points in orthogonal directions here
 
@@ -783,12 +783,12 @@ contains
     FLOAT, allocatable :: tmp(:)
 
     if(.not. associated(ep%local_potential)) then
-      ALLOCATE(ep%local_potential(1:mesh%np, 1:geo%natoms), mesh%np*geo%natoms)
+      SAFE_ALLOCATE(ep%local_potential(1:mesh%np, 1:geo%natoms))
     end if
 
     ep%local_potential_precalculated = .false.
 
-    ALLOCATE(tmp(1:mesh%np), mesh%np)
+    SAFE_ALLOCATE(tmp(1:mesh%np))
 
     do iatom = 1, geo%natoms
       tmp(1:mesh%np) = M_ZERO

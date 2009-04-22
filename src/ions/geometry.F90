@@ -189,7 +189,7 @@ contains
     ! copy information from xyz to geo
     geo%natoms = xyz%n
     nullify(geo%atom)
-    ALLOCATE(geo%atom(geo%natoms), geo%natoms)
+    SAFE_ALLOCATE(geo%atom(1:geo%natoms))
     do i = 1, geo%natoms
       geo%atom(i)%label = xyz%atom(i)%label
       geo%atom(i)%x     = xyz%atom(i)%x
@@ -217,7 +217,7 @@ contains
       write(message(1), '(a,i8)') 'Info: Number of classical atoms = ', geo%ncatoms
       call write_info(1)
 
-      ALLOCATE(geo%catom(geo%ncatoms), geo%ncatoms)
+      SAFE_ALLOCATE(geo%catom(1:geo%ncatoms))
       do i = 1, geo%ncatoms
         geo%catom(i)%label  = xyz%atom(i)%label
         geo%catom(i)%x      = xyz%atom(i)%x
@@ -266,7 +266,7 @@ contains
     end do atoms1
 
     ! Allocate the species structure.
-    ALLOCATE(geo%species(geo%nspecies), geo%nspecies)
+    SAFE_ALLOCATE(geo%species(1:geo%nspecies))
 
     ! Now, read the data.
     k = 0
@@ -359,8 +359,8 @@ contains
     end do
 990 continue
 
-    ALLOCATE(geo%atom(geo%natoms), geo%natoms)
-    ALLOCATE(geo%catom(geo%ncatoms), geo%ncatoms)
+    SAFE_ALLOCATE(geo%atom(1:geo%natoms))
+    SAFE_ALLOCATE(geo%catom(1:geo%ncatoms))
 
     ! read in the data
     rewind(iunit)
@@ -594,17 +594,17 @@ contains
     call push_sub('geometry.geometry_copy')
 
     geo_out%natoms = geo_in%natoms
-    ALLOCATE(geo_out%atom(geo_out%natoms), geo_out%natoms)
+    SAFE_ALLOCATE(geo_out%atom(1:geo_out%natoms))
     geo_out%atom = geo_in%atom
 
     geo_out%ncatoms = geo_in%ncatoms
-    ALLOCATE(geo_out%catom(geo_out%ncatoms), geo_out%ncatoms)
+    SAFE_ALLOCATE(geo_out%catom(1:geo_out%ncatoms))
     if(geo_in%ncatoms.gt.0) then
       geo_out%catom(1:geo_out%ncatoms) = geo_in%catom(1:geo_in%ncatoms)
     end if
 
     geo_out%nspecies = geo_in%nspecies
-    ALLOCATE(geo_out%species(geo_out%nspecies), geo_out%nspecies)
+    SAFE_ALLOCATE(geo_out%species(1:geo_out%nspecies))
     geo_out%species = geo_in%species
 
     geo_out%only_user_def     = geo_in%only_user_def

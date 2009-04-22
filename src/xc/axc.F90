@@ -47,10 +47,10 @@ subroutine xc_get_vxc_and_axc(gr, xcs, st, rho, j, ispin, vxc, axc, ex, ec, exc_
   spin_channels = xcs%j_functl%spin_channels
 
   !allocate memory
-  ALLOCATE(v   (gr%mesh%np, gr%mesh%sb%dim, spin_channels), gr%mesh%np*gr%mesh%sb%dim*spin_channels)
-  ALLOCATE(f   (gr%mesh%np_part, gr%mesh%sb%dim, spin_channels), gr%mesh%np_part*gr%mesh%sb%dim*spin_channels)
-  ALLOCATE(dedd(gr%mesh%np, spin_channels),       gr%mesh%np*spin_channels)
-  ALLOCATE(dedv(gr%mesh%np_part, gr%mesh%sb%dim, spin_channels), gr%mesh%np_part*gr%mesh%sb%dim*spin_channels)
+  SAFE_ALLOCATE(v   (1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:spin_channels))
+  SAFE_ALLOCATE(f   (1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:spin_channels))
+  SAFE_ALLOCATE(dedd(1:gr%mesh%np, 1:spin_channels))
+  SAFE_ALLOCATE(dedv(1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:spin_channels))
   dedd = M_ZERO; dedv = M_ZERO
 
   !Compute j/rho and the vorticity
@@ -61,10 +61,10 @@ subroutine xc_get_vxc_and_axc(gr, xcs, st, rho, j, ispin, vxc, axc, ex, ec, exc_
     call dderivatives_curl(gr%der, f(:,:,is), v(:,:,is))
   end do
 
-  ALLOCATE(l_dens(spin_channels),       spin_channels)
-  ALLOCATE(l_v   (gr%mesh%sb%dim, spin_channels), gr%mesh%sb%dim*spin_channels)
-  ALLOCATE(l_dedd(spin_channels),       spin_channels)
-  ALLOCATE(l_dedv(gr%mesh%sb%dim, spin_channels), gr%mesh%sb%dim*spin_channels)
+  SAFE_ALLOCATE(l_dens(1:spin_channels))
+  SAFE_ALLOCATE(l_v   (1:gr%mesh%sb%dim, 1:spin_channels))
+  SAFE_ALLOCATE(l_dedd(1:spin_channels))
+  SAFE_ALLOCATE(l_dedv(1:gr%mesh%sb%dim, 1:spin_channels))
   l_dedd = M_ZERO; l_dedv = M_ZERO
   space_loop: do i = 1, gr%mesh%np
     ! make a local copy with the correct memory order
@@ -92,7 +92,7 @@ subroutine xc_get_vxc_and_axc(gr, xcs, st, rho, j, ispin, vxc, axc, ex, ec, exc_
 
   ! add contributions to vxc and axc
   vxc = vxc + dedd
-  ALLOCATE(tmp(gr%mesh%np, gr%mesh%sb%dim), gr%mesh%np*gr%mesh%sb%dim)
+  SAFE_ALLOCATE(tmp(1:gr%mesh%np, 1:gr%mesh%sb%dim))
   do is = 1, spin_channels
     call dderivatives_curl(gr%der, dedv(:, :, is), tmp)
 

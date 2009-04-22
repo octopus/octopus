@@ -61,9 +61,9 @@ subroutine X(nl_operator_tune)(op, best)
   dvolume = (op%m%np_part + op%m%np) * R_OPS * R_SIZE + (op%nri + 1)*op%stencil%size*M_FOUR
 
   !measure performance of each function
-  ALLOCATE(in(1:op%m%np_part), op%m%np_part)
+  SAFE_ALLOCATE(in(1:op%m%np_part))
   in(1:op%m%np_part) = M_ZERO
-  ALLOCATE(out(1:op%m%np), op%m%np)
+  SAFE_ALLOCATE(out(1:op%m%np))
   
   flops = M_ZERO
 

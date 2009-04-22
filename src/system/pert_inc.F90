@@ -39,7 +39,7 @@ subroutine X(pert_apply) (this, gr, geo, hm, ik, f_in, f_out)
   ASSERT(this%dir .ne. -1)
 
   if (this%pert_type /= PERTURBATION_ELECTRIC) then
-     ALLOCATE(f_in_copy(1:gr%mesh%np_part), gr%mesh%np_part)
+     SAFE_ALLOCATE(f_in_copy(1:gr%mesh%np_part))
      call lalg_copy(gr%mesh%np_part, f_in, f_in_copy)
      call X(set_bc(gr%der, f_in_copy(:)))
   endif
@@ -108,8 +108,8 @@ contains
 
     call push_sub('pert_inc.X(pert_apply).kdotp')
 
-    ALLOCATE(cpsi(1:gr%mesh%np_part, hm%d%dim), gr%mesh%np_part * hm%d%dim)
-    ALLOCATE(grad(gr%mesh%np, gr%sb%dim), gr%mesh%np * gr%sb%dim)
+    SAFE_ALLOCATE(cpsi(1:gr%mesh%np_part, 1:hm%d%dim))
+    SAFE_ALLOCATE(grad(1:gr%mesh%np, 1:gr%sb%dim))
 
     call X(derivatives_grad) (gr%der, f_in_copy, grad, set_bc = .false.)
     ! set_bc done already separately
@@ -143,7 +143,7 @@ contains
 
     call push_sub('pert_inc.X(pert_apply).magnetic')
 
-    ALLOCATE(lf(gr%mesh%np, gr%sb%dim), gr%mesh%np * gr%sb%dim)
+    SAFE_ALLOCATE(lf(1:gr%mesh%np, 1:gr%sb%dim))
 
     ! Note that we leave out the term 1/P_c
     call X(f_angular_momentum) (gr%sb, gr%mesh, gr%der, f_in_copy, lf, set_bc = .false.)
@@ -152,7 +152,7 @@ contains
     SAFE_DEALLOCATE_A(lf)
 
     if(this%gauge == GAUGE_GIPAW .or. this%gauge == GAUGE_ICL) then
-      ALLOCATE(vrnl(gr%mesh%np, hm%d%dim, gr%sb%dim), gr%mesh%np * hm%d%dim * gr%sb%dim)
+      SAFE_ALLOCATE(vrnl(1:gr%mesh%np, 1:hm%d%dim, 1:gr%sb%dim))
       vrnl(1:gr%mesh%np, 1:hm%d%dim, this%dir) = M_ZERO
 
       do iatom = 1, geo%natoms
@@ -195,7 +195,7 @@ contains
     R_TYPE, allocatable  :: tmp(:)
 
     call push_sub('pert_inc.Xpert_apply.ionic')
-    ALLOCATE(tmp(1:gr%mesh%np), gr%mesh%np*1)
+    SAFE_ALLOCATE(tmp(1:gr%mesh%np))
     
     f_out(1:gr%mesh%np) = M_ZERO
     
@@ -238,21 +238,21 @@ subroutine X(ionic_perturbation)(this, gr, geo, hm, ik, f_in, f_out, iatom, idir
 
   call push_sub('pert_inc.Xionic_perturbation')
 
-  ALLOCATE(vloc(1:gr%mesh%np), gr%mesh%np)
+  SAFE_ALLOCATE(vloc(1:gr%mesh%np))
   vloc(1:gr%mesh%np) = M_ZERO
   call epot_local_potential(hm%ep, gr, gr%mesh, geo, iatom, vloc, CNST(0.0))
 
-  ALLOCATE(fin(1:gr%mesh%np_part, 1), gr%mesh%np_part)
+  SAFE_ALLOCATE(fin(1:gr%mesh%np_part, 1:1))
   call lalg_copy(gr%mesh%np_part, f_in, fin(:, 1))
 
   !d^T v |f>
-  ALLOCATE(fout(1:gr%mesh%np_part, 1), gr%mesh%np_part)
+  SAFE_ALLOCATE(fout(1:gr%mesh%np_part, 1:1))
   forall(ip = 1:gr%mesh%np) fout(ip, 1) = vloc(ip)*fin(ip, 1)
   call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, 1, fin, fout, ik)
   call X(derivatives_oper)(gr%der%grad(idir), gr%der, fout(:,1), f_out)
 
   !v d |f>
-  ALLOCATE(grad(1:gr%mesh%np, 1), gr%mesh%np)
+  SAFE_ALLOCATE(grad(1:gr%mesh%np, 1:1))
   call X(derivatives_oper)(gr%der%grad(idir), gr%der, fin(:,1), grad(:,1))
   forall(ip = 1:gr%mesh%np) fout(ip, 1) = vloc(ip)*grad(ip, 1)
   call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, 1, grad, fout, ik)
@@ -316,10 +316,10 @@ contains
       bdir(this%dir,  1)   = M_ONE
       bdir(this%dir2, 2)   = M_ONE
 
-      ALLOCATE(f_in2(gr%mesh%np_part, gr%mesh%sb%dim), gr%mesh%np_part * gr%mesh%sb%dim)
-      ALLOCATE(vrnl(gr%mesh%np_part, hm%d%dim), gr%mesh%np_part * hm%d%dim)
-      ALLOCATE(dnl(gr%mesh%np, gr%mesh%sb%dim), gr%mesh%np * gr%mesh%sb%dim)
-      ALLOCATE(xf(gr%mesh%np), gr%mesh%np)
+      SAFE_ALLOCATE(f_in2(1:gr%mesh%np_part, 1:gr%mesh%sb%dim))
+      SAFE_ALLOCATE( vrnl(1:gr%mesh%np_part, 1:hm%d%dim))
+      SAFE_ALLOCATE(  dnl(1:gr%mesh%np, 1:gr%mesh%sb%dim))
+      SAFE_ALLOCATE(   xf(1:gr%mesh%np))
 
       f_in2(gr%mesh%np:gr%mesh%np_part,:) = R_TOTYPE(M_ZERO)
       atoms: do iatom = 1, geo%natoms
@@ -388,7 +388,7 @@ contains
     
     call push_sub('pert_inc.Xpert_apply_order2.ionic')
 
-    ALLOCATE(tmp(1:gr%mesh%np), gr%mesh%np*1)
+    SAFE_ALLOCATE(tmp(1:gr%mesh%np))
     
     f_out(1:gr%mesh%np) = M_ZERO
     
@@ -435,10 +435,10 @@ subroutine X(ionic_perturbation_order_2) (this, gr, geo, hm, ik, f_in, f_out, ia
 
   call push_sub('pert_inc.Xionic_perturbation_order2')
 
-  ALLOCATE(fin(1:gr%mesh%np_part, 1), gr%mesh%np_part)
-  ALLOCATE(tmp1(1:gr%mesh%np_part, 1), gr%mesh%np_part)
-  ALLOCATE(tmp2(1:gr%mesh%np_part, 1), gr%mesh%np_part)
-  ALLOCATE(vloc(1:gr%mesh%np), gr%mesh%np)
+  SAFE_ALLOCATE( fin(1:gr%mesh%np_part, 1:1))
+  SAFE_ALLOCATE(tmp1(1:gr%mesh%np_part, 1:1))
+  SAFE_ALLOCATE(tmp2(1:gr%mesh%np_part, 1:1))
+  SAFE_ALLOCATE(vloc(1:gr%mesh%np))
 
   forall(ip = 1:gr%mesh%np) vloc(ip) = M_ZERO
   call epot_local_potential(hm%ep, gr, gr%mesh, geo, iatom, vloc, CNST(0.0))
@@ -495,10 +495,10 @@ subroutine X(ionic_pert_matrix_elements_2)(this, gr, geo, hm, ik, st, psi, vib, 
   R_TYPE, allocatable :: gpsi(:, :, :), g2psi(:, :, :, :), tmp1(:, :)
   R_TYPE :: dot
 
-  ALLOCATE(vloc(1:gr%mesh%np), gr%mesh%np)
-  ALLOCATE(gpsi(1:gr%mesh%np_part, 1:st%d%dim, 1:gr%sb%dim), gr%mesh%np_part*st%d%dim*gr%sb%dim)
-  ALLOCATE(g2psi(1:gr%mesh%np_part, 1:st%d%dim, 1:gr%sb%dim, 1:gr%sb%dim), gr%mesh%np_part*st%d%dim*gr%sb%dim**2)
-  ALLOCATE(tmp1(1:gr%mesh%np, 1:st%d%dim), gr%mesh%np*st%d%dim)
+  SAFE_ALLOCATE( vloc(1:gr%mesh%np))
+  SAFE_ALLOCATE( gpsi(1:gr%mesh%np_part, 1:st%d%dim, 1:gr%sb%dim))
+  SAFE_ALLOCATE(g2psi(1:gr%mesh%np_part, 1:st%d%dim, 1:gr%sb%dim, 1:gr%sb%dim))
+  SAFE_ALLOCATE( tmp1(1:gr%mesh%np, 1:st%d%dim))
 
   do ist = 1, st%nst
     do idim = 1, st%d%dim
@@ -559,7 +559,7 @@ subroutine X(pert_expectation_density) (this, gr, geo, hm, st, psia, psib, densi
 
   call push_sub('pert_inc.Xpert_expectation_density')
 
-  ALLOCATE(pertpsib(1:gr%mesh%np), gr%mesh%np)
+  SAFE_ALLOCATE(pertpsib(1:gr%mesh%np))
 
   order = 1
   if(present(pert_order)) order = pert_order
@@ -615,7 +615,7 @@ R_TYPE function X(pert_expectation_value) (this, gr, geo, hm, st, psia, psib, pe
 
   ASSERT(order == 1 .or. order == 2)
 
-  ALLOCATE(density(1:gr%mesh%np), gr%mesh%np)
+  SAFE_ALLOCATE(density(1:gr%mesh%np))
 
   call X(pert_expectation_density)(this, gr, geo, hm, st, psia, psib, density, pert_order = order)
 

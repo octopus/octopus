@@ -206,7 +206,7 @@ contains
     ndim = sb%dim
 
     if(.not. associated(this%phase)) then
-      ALLOCATE(this%phase(1:ns, 1:nkpoints), ns*nkpoints)
+      SAFE_ALLOCATE(this%phase(1:ns, 1:nkpoints))
     end if
 
     do ik = 1, nkpoints
@@ -239,7 +239,7 @@ contains
     select case (p%type)
 
     case (M_HGH)
-      ALLOCATE(p%hgh_p(0:p%lmax, -p%lmax:p%lmax), (p%lmax + 1) * (2 * p%lmax + 1))
+      SAFE_ALLOCATE(p%hgh_p(0:p%lmax, -p%lmax:p%lmax))
       do ll = 0, p%lmax
         if(ll == p%lloc) cycle
         do mm = -ll, ll
@@ -249,7 +249,7 @@ contains
       end do
 
     case (M_KB)
-      ALLOCATE(p%kb_p(0:p%lmax, -p%lmax:p%lmax), (p%lmax + 1)*(2*p%lmax + 1))
+      SAFE_ALLOCATE(p%kb_p(0:p%lmax, -p%lmax:p%lmax))
       do ll = 0, p%lmax
         if(ll == p%lloc) cycle
         do mm = -ll, ll
@@ -259,7 +259,7 @@ contains
       end do
 
     case (M_RKB)
-      ALLOCATE(p%rkb_p(1:p%lmax, -p%lmax:p%lmax), p%lmax*(2*p%lmax + 1))
+      SAFE_ALLOCATE(p%rkb_p(1:p%lmax, -p%lmax:p%lmax))
       do ll = 1, p%lmax
         if(ll == p%lloc) cycle
         do mm = -ll, ll
@@ -269,7 +269,7 @@ contains
       end do
       ! for rkb, l = 0 is a normal kb
       if(p%lloc /= 0) then
-        ALLOCATE(p%kb_p(1, 1), 1)
+        SAFE_ALLOCATE(p%kb_p(1:1, 1:1))
         call kb_projector_null(p%kb_p(1, 1))
         call kb_projector_init(p%kb_p(1, 1), p%sphere, gr, a, 0, 0)
       end if

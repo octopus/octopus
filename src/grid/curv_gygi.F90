@@ -110,7 +110,7 @@ contains
     cv%beta  = cv%beta *units_inp%length%factor
 
     cv%npos = geo%natoms
-    ALLOCATE(cv%pos(1:cv%npos, 1:sb%dim), cv%npos*sb%dim)
+    SAFE_ALLOCATE(cv%pos(1:cv%npos, 1:sb%dim))
     forall(ipos = 1:cv%npos, idir = 1:sb%dim) cv%pos(ipos, idir) = geo%atom(ipos)%x(idir) 
     
   end subroutine curv_gygi_init

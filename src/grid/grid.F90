@@ -135,7 +135,7 @@ contains
     end if
 
     if(gr%sb%open_boundaries) then
-      ALLOCATE(gr%intf(NLEADS), NLEADS)
+      SAFE_ALLOCATE(gr%intf(1:NLEADS))
       do il = 1, NLEADS
         call interface_init(gr%mesh, gr%sb, gr%der, gr%intf(il), il)
       end do
@@ -150,8 +150,8 @@ contains
     
     if(gr%have_fine_mesh) then
       
-      ALLOCATE(gr%fine%mesh, 1)
-      ALLOCATE(gr%fine%der, 1)
+      SAFE_ALLOCATE(gr%fine%mesh)
+      SAFE_ALLOCATE(gr%fine%der)
       
       call multigrid_mesh_double(geo, gr%cv, gr%mesh, gr%fine%mesh, gr%stencil)
       
@@ -255,7 +255,7 @@ contains
     type(grid_t), intent(inout) :: gr
     type(geometry_t), intent(in) :: geo
 
-    ALLOCATE(gr%mgrid, 1)
+    SAFE_ALLOCATE(gr%mgrid)
     call multigrid_init(gr%mgrid, geo, gr%cv, gr%mesh, gr%der, gr%stencil)
 
   end subroutine grid_create_multigrid

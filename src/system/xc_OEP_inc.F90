@@ -49,10 +49,10 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
   call push_sub('xc_OEP_inc.xc_oep_calc')
 
   ! initialize oep structure
-  ALLOCATE(oep%eigen_type (st%nst), st%nst)
-  ALLOCATE(oep%eigen_index(st%nst), st%nst)
-  ALLOCATE(oep%X(lxc)(gr%mesh%np, st%st_start:st%st_end), gr%mesh%np*st%lnst)
-  ALLOCATE(oep%uxc_bar    (st%nst), st%nst)
+  SAFE_ALLOCATE(oep%eigen_type (1:st%nst))
+  SAFE_ALLOCATE(oep%eigen_index(1:st%nst))
+  SAFE_ALLOCATE(oep%X(lxc)(1:gr%mesh%np, st%st_start:st%st_end))
+  SAFE_ALLOCATE(oep%uxc_bar    (1:st%nst))
 
   ! this part handles the (pure) orbital functionals
   spin: do is = 1, min(st%d%nspin, 2)
@@ -137,9 +137,9 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
   call profiling_in(C_PROFILING_XC_OEP_FULL)
   call push_sub('xc_OEP_inc.xc_oep_solve')
 
-  ALLOCATE(b(gr%mesh%np, 1),    gr%mesh%np*1)
-  ALLOCATE(s(gr%mesh%np),       gr%mesh%np)
-  ALLOCATE(vxc_old(gr%mesh%np), gr%mesh%np)
+  SAFE_ALLOCATE(      b(1:gr%mesh%np, 1:1))
+  SAFE_ALLOCATE(      s(1:gr%mesh%np))
+  SAFE_ALLOCATE(vxc_old(1:gr%mesh%np))
 
   vxc_old(1:gr%mesh%np) = vxc(1:gr%mesh%np)
 

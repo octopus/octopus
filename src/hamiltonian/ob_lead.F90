@@ -252,7 +252,7 @@ contains
 
     zero(1) = M_ZERO
 
-    ALLOCATE(pot_im(0:n_steps + 1), n_steps + 2)
+    SAFE_ALLOCATE(pot_im(0:n_steps + 1))
 
     ! Calculate td potential.
     do il = 1, NLEADS

@@ -44,7 +44,7 @@
     end if
 
     if(iand(outp%what, output_pol_density).ne.0) then
-      ALLOCATE(dtmp(gr%mesh%np), gr%mesh%np)
+      SAFE_ALLOCATE(dtmp(1:gr%mesh%np))
       do idim=1, gr%mesh%sb%dim
         do is = 1, st%d%nspin
           dtmp(1:gr%mesh%np)=st%rho(1:gr%mesh%np,is)*gr%mesh%x(1:gr%mesh%np,idim)
@@ -88,7 +88,7 @@
     end if
 
     if(iand(outp%what, output_wfs_sqmod).ne.0) then
-      ALLOCATE(dtmp(gr%mesh%np_part), gr%mesh%np_part)
+      SAFE_ALLOCATE(dtmp(1:gr%mesh%np_part))
       do ist = st%st_start, st%st_end
         if(loct_isinstringlist(ist, outp%wfs_list)) then
           do ik = st%d%kpt%start, st%d%kpt%end
@@ -109,7 +109,7 @@
     end if
 
     if(iand(outp%what, output_ked).ne.0) then
-      ALLOCATE(elf(gr%mesh%np, st%d%nspin),gr%mesh%np*st%d%nspin)
+      SAFE_ALLOCATE(elf(1:gr%mesh%np, 1:st%d%nspin))
       call states_calc_tau_jp_gn(gr, st, tau=elf)
       select case(st%d%ispin)
         case(UNPOLARIZED)
@@ -189,7 +189,7 @@
       write(iunit, fmt = '(a)')    '# Units = ['//trim(units_out%length%abbrev)//']'
     end if
 
-    ALLOCATE(multipole(gr%mesh%np_part, st%d%dim), gr%mesh%np_part)
+    SAFE_ALLOCATE(multipole(1:gr%mesh%np_part, 1:st%d%dim))
     multipole = M_ZERO
     do ii = 1, st%d%dim
       do i = 1, gr%mesh%np
@@ -272,7 +272,7 @@
     if(st%wfs_type == M_CMPLX) then
       call states_calc_tau_jp_gn(gr, st, jp=st%j)
 
-      ALLOCATE(j(gr%mesh%np, MAX_DIM), gr%mesh%np*MAX_DIM)
+      SAFE_ALLOCATE(j(1:gr%mesh%np, 1:MAX_DIM))
       do k = 1, gr%mesh%sb%dim
         do i = 1, gr%mesh%np
           j(i, k) = sum(st%j(i, k, :))

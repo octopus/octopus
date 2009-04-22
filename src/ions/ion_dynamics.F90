@@ -126,9 +126,7 @@ contains
     nullify(this%oldforce)
     
     if(ion_dynamics_ions_move(this)) then 
-
-      ALLOCATE(this%oldforce(1:MAX_DIM, 1:geo%natoms), MAX_DIM*geo%natoms)
-
+      SAFE_ALLOCATE(this%oldforce(1:MAX_DIM, 1:geo%natoms))
     end if
 
     !now initialize velocities
@@ -264,7 +262,7 @@ contains
       this%nh1%vel = M_ZERO
       this%nh2%vel = M_ZERO
 
-      ALLOCATE(this%old_x(1:MAX_DIM, 1:geo%natoms), MAX_DIM*geo%natoms)
+      SAFE_ALLOCATE(this%old_x(1:MAX_DIM, 1:geo%natoms))
 
       do iatom = 1, geo%natoms
         this%old_x(1:MAX_DIM, iatom) = geo%atom(iatom)%x(1:MAX_DIM)
@@ -410,8 +408,8 @@ contains
 
     if(.not. ion_dynamics_ions_move(this) .or. this%method /= VELOCITY_VERLET) return
 
-    ALLOCATE(state%pos(1:MAX_DIM, 1:geo%natoms), MAX_DIM*geo%natoms)
-    ALLOCATE(state%vel(1:MAX_DIM, 1:geo%natoms), MAX_DIM*geo%natoms)
+    SAFE_ALLOCATE(state%pos(1:MAX_DIM, 1:geo%natoms))
+    SAFE_ALLOCATE(state%vel(1:MAX_DIM, 1:geo%natoms))
 
     do iatom = 1, geo%natoms
       state%pos(1:MAX_DIM, iatom) = geo%atom(iatom)%x(1:MAX_DIM)

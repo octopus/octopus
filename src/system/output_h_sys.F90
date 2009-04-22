@@ -388,7 +388,7 @@ contains
     imax = st%d%nspin
     if(st%d%ispin == SPIN_POLARIZED) imax = 3
 
-    ALLOCATE(f_loc(1:gr%mesh%np, imax), gr%mesh%np*imax)
+    SAFE_ALLOCATE(f_loc(1:gr%mesh%np, 1:imax))
 
     ! First the ELF in real space
     if(iand(outp%what, output_elf).ne.0 .or. iand(outp%what, output_elf_basins).ne.0) then
@@ -485,9 +485,9 @@ contains
     FLOAT   :: p_tf, dens
     integer :: is, ii
 
-    ALLOCATE( rho(gr%mesh%np_part, st%d%nspin), gr%mesh%np_part*st%d%nspin)
-    ALLOCATE(lrho(gr%mesh%np), gr%mesh%np)
-    ALLOCATE( tau(gr%mesh%np, st%d%nspin), gr%mesh%np*st%d%nspin)
+    SAFE_ALLOCATE( rho(1:gr%mesh%np_part, 1:st%d%nspin))
+    SAFE_ALLOCATE(lrho(1:gr%mesh%np))
+    SAFE_ALLOCATE( tau(1:gr%mesh%np, 1:st%d%nspin))
 
     rho = M_ZERO
     call states_calc_dens(st, gr%mesh%np, rho)

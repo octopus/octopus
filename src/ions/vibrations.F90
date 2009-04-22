@@ -66,9 +66,9 @@ contains
     this%ndim = sb%dim
     this%natoms = geo%natoms
     this%num_modes = geo%natoms*sb%dim
-    ALLOCATE(this%dyn_matrix(this%num_modes, this%num_modes), this%num_modes**2)
-    ALLOCATE(this%normal_mode(this%num_modes, this%num_modes), this%num_modes**2)
-    ALLOCATE(this%freq(this%num_modes), this%num_modes)
+    SAFE_ALLOCATE(this%dyn_matrix(1:this%num_modes, 1:this%num_modes))
+    SAFE_ALLOCATE(this%normal_mode(1:this%num_modes, 1:this%num_modes))
+    SAFE_ALLOCATE(this%freq(1:this%num_modes))
 
     this%total_mass = M_ZERO
     do iatom = 1, geo%natoms

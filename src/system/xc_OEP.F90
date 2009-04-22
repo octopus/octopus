@@ -138,7 +138,7 @@ contains
       call xc_oep_SpinFactor(oep, d%nspin)
 
       ! This variable will keep vxc across iterations
-      ALLOCATE(oep%vxc(gr%mesh%np), gr%mesh%np)
+      SAFE_ALLOCATE(oep%vxc(1:gr%mesh%np))
 
       ! when performing full OEP, we need to solve a linear equation
       if(oep%level == XC_OEP_FULL) then 
@@ -217,8 +217,8 @@ contains
     FLOAT :: max_eigen
     FLOAT, allocatable :: eigenval(:), occ(:)
 
-    ALLOCATE(eigenval(st%nst), st%nst)
-    ALLOCATE     (occ(st%nst), st%nst)
+    SAFE_ALLOCATE(eigenval(1:st%nst))
+    SAFE_ALLOCATE     (occ(1:st%nst))
     eigenval = M_ZERO; occ = M_ZERO
 
     do i = st%st_start, st%st_end

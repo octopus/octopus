@@ -253,9 +253,9 @@ contains
     FLOAT :: force_tmp(1:MAX_DIM)
 #endif
 
-    ALLOCATE(epsi(gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
-    ALLOCATE(gpsi(gr%mesh%np, 1:gr%mesh%sb%dim, st%d%dim), gr%mesh%np*gr%mesh%sb%dim*st%d%dim)
-    ALLOCATE(cpsi(gr%mesh%np, st%d%dim), gr%mesh%np*st%d%dim)
+    SAFE_ALLOCATE(epsi(1:gr%mesh%np_part, 1:st%d%dim))
+    SAFE_ALLOCATE(gpsi(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:st%d%dim))
+    SAFE_ALLOCATE(cpsi(1:gr%mesh%np, 1:st%d%dim))
 
     force%vecpot(1:MAX_DIM) = M_ZERO
     

@@ -84,8 +84,8 @@ contains
     rkb_p%n_s = sm%ns
 
     !Allocate memory
-    ALLOCATE(rkb_p%bra(rkb_p%n_s, 2),        rkb_p%n_s*2)
-    ALLOCATE(rkb_p%ket(rkb_p%n_s, 2, 2, 2),  rkb_p%n_s*2*2*2)
+    SAFE_ALLOCATE(rkb_p%bra(1:rkb_p%n_s, 1:2))
+    SAFE_ALLOCATE(rkb_p%ket(1:rkb_p%n_s, 1:2, 1:2, 1:2))
 
     !Build projectors
     do is = 1, rkb_p%n_s
@@ -182,7 +182,7 @@ contains
 
     n_s = rkb_p%n_s
 
-    ALLOCATE(bra(1:n_s, 2), n_s*2)
+    SAFE_ALLOCATE(bra(1:n_s, 1:2))
 
     if(mesh%use_curvilinear) then
       bra(1:n_s, 1) = rkb_p%bra(1:n_s, 1)*mesh%vol_pp(sm%jxyz(1:n_s))

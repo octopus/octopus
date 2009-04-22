@@ -112,9 +112,9 @@ contains
       call input_error("DensityMatricestoCalc")
     end if
 
-    ALLOCATE (labels_densmat(ndensmat_to_calculate),ndensmat_to_calculate)
-    ALLOCATE (particle_kept_densmat(ndensmat_to_calculate),ndensmat_to_calculate)
-    ALLOCATE (nnatorb_prt_densmat(ndensmat_to_calculate),ndensmat_to_calculate)
+    SAFE_ALLOCATE(labels_densmat(1:ndensmat_to_calculate))
+    SAFE_ALLOCATE(particle_kept_densmat(1:ndensmat_to_calculate))
+    SAFE_ALLOCATE(nnatorb_prt_densmat(1:ndensmat_to_calculate))
    
     do ipart=1,ndensmat_to_calculate
       call loct_parse_block_string(blk, ipart-1, 0, labels_densmat(ipart))
@@ -127,7 +127,7 @@ contains
       call write_info(3)
     end do
     call loct_parse_block_end(blk)
-! END reading in of input var block DensityMatricestoCalc
+    ! END reading in of input var block DensityMatricestoCalc
 
 
     ! This is the root directory where everything will be written.
@@ -139,20 +139,20 @@ contains
     ndims = gr%sb%dim
 
     ! Allocatation of the arrays that store the limiting indexes for each direction
-    ALLOCATE(npoints(ndims), ndims)
+    SAFE_ALLOCATE(npoints(1:ndims))
     do j = 1, ndims
       npoints(j) = gr%mesh%idx%ll(j)
     end do
 
     ndim1part=st%modelMBparticles%ndim_modelmb
 
-    ALLOCATE(origin(ndim1part), ndim1part)
-    ALLOCATE(ix_1part(ndim1part), ndim1part)
-    ALLOCATE(ix_1part_p(ndim1part), ndim1part)
-    ALLOCATE(nr_1part(2,ndim1part), 2*ndim1part)
-    ALLOCATE(h_1part(ndim1part), ndim1part)
-    ALLOCATE(enlarge_1part(ndim1part), ndim1part)
-    ALLOCATE(dipole_moment(ndim1part), ndim1part)
+    SAFE_ALLOCATE(    origin(1:ndim1part))
+    SAFE_ALLOCATE(  ix_1part(1:ndim1part))
+    SAFE_ALLOCATE(ix_1part_p(1:ndim1part))
+    SAFE_ALLOCATE(  nr_1part(1:2, 1:ndim1part))
+    SAFE_ALLOCATE(   h_1part(1:ndim1part))
+    SAFE_ALLOCATE(enlarge_1part(1:ndim1part))
+    SAFE_ALLOCATE(dipole_moment(1:ndim1part))
 
 ! loop over desired density matrices
     densmat_loop: do idensmat=1,ndensmat_to_calculate
@@ -165,10 +165,10 @@ contains
         npt_1part=npt_1part*npoints((ikeeppart-1)*ndim1part+idir)
       end do
 
-      ALLOCATE(densmatr(npt_1part, npt_1part), npt_1part*npt_1part )
-      ALLOCATE(evectors(npt_1part, npt_1part), npt_1part*npt_1part )
-      ALLOCATE(evalues(npt_1part), npt_1part)
-      ALLOCATE(density(npt_1part), npt_1part)
+      SAFE_ALLOCATE(densmatr(1:npt_1part, 1:npt_1part))
+      SAFE_ALLOCATE(evectors(1:npt_1part, 1:npt_1part))
+      SAFE_ALLOCATE(evalues(1:npt_1part))
+      SAFE_ALLOCATE(density(1:npt_1part))
 
 !   volume element for the chosen particle
       vol_elem_1part=1.0d0

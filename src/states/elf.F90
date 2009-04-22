@@ -85,14 +85,14 @@ contains
     ! If we want it, the argument elf should have three components.c
     nelfs = size(elf, 2)
 
-    ALLOCATE(rho(gr%mesh%np, st%d%nspin), gr%mesh%np)
-    ALLOCATE(kappa(gr%mesh%np, st%d%nspin), gr%mesh%np)
+    SAFE_ALLOCATE(  rho(1:gr%mesh%np, 1:st%d%nspin))
+    SAFE_ALLOCATE(kappa(1:gr%mesh%np, 1:st%d%nspin))
     rho = M_ZERO
     kappa = M_ZERO
     call states_calc_dens(st, gr%mesh%np, rho)
 
-    ALLOCATE(grho(gr%mesh%np, gr%mesh%sb%dim, st%d%nspin), gr%mesh%np*gr%mesh%sb%dim*st%d%nspin)
-    ALLOCATE(  jj(gr%mesh%np, gr%mesh%sb%dim, st%d%nspin), gr%mesh%np*gr%mesh%sb%dim*st%d%nspin)
+    SAFE_ALLOCATE(grho(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:st%d%nspin))
+    SAFE_ALLOCATE(  jj(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:st%d%nspin))
 
     call states_calc_tau_jp_gn(gr, st, kappa, jj, grho)
 
@@ -212,15 +212,15 @@ contains
     end if
 
     do_is: do is = 1, st%d%nspin
-      ALLOCATE(    r(gr%mesh%np),       gr%mesh%np)
-      ALLOCATE(gradr(gr%mesh%np, gr%mesh%sb%dim), gr%mesh%np*gr%mesh%sb%dim)
-      ALLOCATE(    j(gr%mesh%np, gr%mesh%sb%dim), gr%mesh%np*gr%mesh%sb%dim)
+      SAFE_ALLOCATE(    r(1:gr%mesh%np))
+      SAFE_ALLOCATE(gradr(1:gr%mesh%np, 1:gr%mesh%sb%dim))
+      SAFE_ALLOCATE(    j(1:gr%mesh%np, 1:gr%mesh%sb%dim))
       r = M_ZERO; gradr = M_ZERO; j  = M_ZERO
 
       elf(1:gr%mesh%np,is) = M_ZERO
 
-      ALLOCATE(psi_fs(gr%mesh%np_part),  gr%mesh%np_part)
-      ALLOCATE(gpsi  (gr%mesh%np, gr%mesh%sb%dim), gr%mesh%np*gr%mesh%sb%dim)
+      SAFE_ALLOCATE(psi_fs(1:gr%mesh%np_part))
+      SAFE_ALLOCATE(gpsi  (1:gr%mesh%np, gr%mesh%sb%dim))
       do ik = is, st%d%nik, st%d%nspin
         do ist = 1, st%nst
           do idim = 1, st%d%dim

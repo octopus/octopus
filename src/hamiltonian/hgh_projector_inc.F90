@@ -73,7 +73,7 @@ subroutine X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi)
   n_s = hgh_p%n_s
   uvpsi = M_ZERO
 
-  ALLOCATE(bra(1:n_s, 1:4, 1:3), n_s*4*3)
+  SAFE_ALLOCATE(bra(1:n_s, 1:4, 1:3))
 
   bra = M_ZERO
 
@@ -128,7 +128,7 @@ subroutine X(hgh_project_ket)(mesh, sm, hgh_p, dim, reltype, uvpsi, ppsi)
   
   if (reltype == 1) then
 
-    ALLOCATE(lp_psi(n_s, 3, dim), n_s*3*dim)
+    SAFE_ALLOCATE(lp_psi(1:n_s, 1:3, 1:dim))
     lp_psi = M_Z0
 
     do idim = 1, dim

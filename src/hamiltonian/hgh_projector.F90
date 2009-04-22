@@ -91,8 +91,8 @@ contains
     call push_sub('hgh_projector.hgh_projector_init')
 
     hgh_p%n_s = sm%ns
-    ALLOCATE(hgh_p%p (hgh_p%n_s, 3),    hgh_p%n_s*3)
-    ALLOCATE(hgh_p%lp(hgh_p%n_s, 3, 3), hgh_p%n_s*3*3)
+    SAFE_ALLOCATE(hgh_p%p (1:hgh_p%n_s, 1:3))
+    SAFE_ALLOCATE(hgh_p%lp(1:hgh_p%n_s, 1:3, 1:3))
 
     do is = 1, hgh_p%n_s
       x(1:MAX_DIM) = sm%x(is, 1:MAX_DIM)

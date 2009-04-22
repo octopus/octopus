@@ -189,16 +189,16 @@ contains
     call push_sub('vxc.xc_get_vxc.lda_init')
 
     ! allocate some general arrays
-    ALLOCATE(dens(gr%mesh%np_part, spin_channels), gr%mesh%np_part*spin_channels)
-    ALLOCATE(ex_per_vol(gr%mesh%np), gr%mesh%np)
-    ALLOCATE(ec_per_vol(gr%mesh%np), gr%mesh%np)
+    SAFE_ALLOCATE(dens(1:gr%mesh%np_part, 1:spin_channels))
+    SAFE_ALLOCATE(ex_per_vol(1:gr%mesh%np))
+    SAFE_ALLOCATE(ec_per_vol(1:gr%mesh%np))
 
     dens       = M_ZERO
     ex_per_vol = M_ZERO
     ec_per_vol = M_ZERO
 
     if(present(vxc)) then
-      ALLOCATE(dedd(gr%mesh%np_part, spin_channels), gr%mesh%np_part*spin_channels)
+      SAFE_ALLOCATE(dedd(1:gr%mesh%np_part, 1:spin_channels))
       dedd       = M_ZERO
     end if
 
@@ -225,7 +225,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! SAFE_DEALLOCATE_Ps variables allocated in lda_init
+  ! deallocate variables allocated in lda_init
   subroutine lda_end()
     SAFE_DEALLOCATE_A(dens)
     SAFE_DEALLOCATE_A(ex_per_vol)
@@ -279,11 +279,11 @@ contains
     call push_sub('vxc.xc_get_vxc.gga_init')
 
     ! allocate variables
-    ALLOCATE(gdens(gr%mesh%np, 3, spin_channels), gr%mesh%np*3*spin_channels)
+    SAFE_ALLOCATE(gdens(1:gr%mesh%np, 1:3, 1:spin_channels))
     gdens = M_ZERO
 
     if(present(vxc)) then
-      ALLOCATE(dedgd(gr%mesh%np_part, 3, spin_channels), gr%mesh%np_part*3*spin_channels)
+      SAFE_ALLOCATE(dedgd(1:gr%mesh%np_part, 1:3, 1:spin_channels))
       dedgd = M_ZERO
     end if
 
@@ -323,7 +323,7 @@ contains
 
     ! subtract the divergence of the functional derivative of Exc with respect to
     ! the gradient of the density.
-    ALLOCATE(gf(gr%mesh%np, 1), gr%mesh%np*1)
+    SAFE_ALLOCATE(gf(1:gr%mesh%np, 1:1))
     do is = 1, spin_channels
       call dderivatives_div(gr%der, dedgd(:, :, is), gf(:, 1))
       call lalg_axpy(gr%mesh%np, -M_ONE, gf(:,1), dedd(:, is))
@@ -333,7 +333,7 @@ contains
     ! If LB94, we can calculate an approximation to the energy from
     ! Levy-Perdew relation PRA 32, 2010 (1985)
     if(functl(1)%id == XC_GGA_XC_LB) then
-      ALLOCATE(gf(gr%mesh%np, 3), gr%mesh%np*3)
+      SAFE_ALLOCATE(gf(1:gr%mesh%np, 1:3))
 
       do is = 1, spin_channels
         call dderivatives_grad(gr%der, dedd(:, is), gf(:,:))
@@ -354,7 +354,7 @@ contains
   !   *) allocate the kinetic energy density, dedtau, and local variants
   !   *) calculates tau either from a GEA or from the orbitals
   subroutine mgga_init()
-    ALLOCATE(tau(gr%mesh%np, spin_channels), gr%mesh%np*spin_channels)
+    SAFE_ALLOCATE(tau(1:gr%mesh%np, 1:spin_channels))
 
     ! calculate tau
     call states_calc_tau_jp_gn(gr, st, tau=tau)

@@ -80,10 +80,10 @@ subroutine X(input_function)(filename, mesh, f, ierr, is_tmp)
 #if defined(HAVE_MPI)
     ! Only root reads. Therefore, only root needs a buffer
     ! f_global for the whole function.
-    ALLOCATE(f_global(1), 1)
+    SAFE_ALLOCATE(f_global(1:1))
     if(mpi_grp_is_root(mesh%mpi_grp)) then
       SAFE_DEALLOCATE_A(f_global)
-      ALLOCATE(f_global(mesh%np_global), mesh%np_global)
+      SAFE_ALLOCATE(f_global(1:mesh%np_global))
       call X(input_function_global)(filename, mesh, f_global, ierr, is_tmp_)
     end if
     if(in_debug_mode) call write_debug_newlines(2)
@@ -253,7 +253,7 @@ contains
        end select
     end if
 
-    ALLOCATE(x(cube%n(3), cube%n(2), cube%n(1)), cube%n(1)*cube%n(2)*cube%n(3))
+    SAFE_ALLOCATE(x(1:cube%n(3), 1:cube%n(2), 1:cube%n(1)))
 #if defined(R_TCOMPLEX)
     if(status == NF90_NOERR) then
        select case(mesh%sb%dim)
@@ -323,7 +323,7 @@ subroutine X(output_function) (how, dir, fname, mesh, sb, f, u, ierr, is_tmp, ge
 
 #if defined(HAVE_MPI)
   if(mesh%parallel_in_domains) then
-    ALLOCATE(f_global(mesh%np_global), mesh%np_global)
+    SAFE_ALLOCATE(f_global(1:mesh%np_global))
 
     call X(vec_gather)(mesh%vp, f_global, f)
 
@@ -597,7 +597,7 @@ contains
     iunit = io_open(filename, action='write', is_tmp=is_tmp, recl=record_length)
 
 
-    ALLOCATE(out_vec(min_d3:max_d3), max_d3-min_d3 + 1)
+    SAFE_ALLOCATE(out_vec(min_d3:max_d3))
     
     do ix = min_d2, max_d2
 
@@ -928,7 +928,7 @@ contains
       call ncdf_error('nf90_put_var', status, filename, ierr)
     end if
 
-    ALLOCATE(x(cube%n(3), cube%n(2), cube%n(1)), cube%n(1)*cube%n(2)*cube%n(3))
+    SAFE_ALLOCATE(x(1:cube%n(3), 1:cube%n(2), 1:cube%n(1)))
 #if defined(R_TCOMPLEX)
     if(status == NF90_NOERR) then
       call transpose3(real(cube%RS, REAL_PRECISION), x)

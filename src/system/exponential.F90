@@ -299,8 +299,8 @@ contains
 
       call push_sub('exponential.taylor_series')
 
-      ALLOCATE(zpsi1 (gr%mesh%np_part, hm%d%dim), gr%mesh%np_part*hm%d%dim)
-      ALLOCATE(hzpsi1(gr%mesh%np,      hm%d%dim), gr%mesh%np     *hm%d%dim)
+      SAFE_ALLOCATE(zpsi1 (1:gr%mesh%np_part, 1:hm%d%dim))
+      SAFE_ALLOCATE(hzpsi1(1:gr%mesh%np,      1:hm%d%dim))
 
       zfact = M_z1
       zfact_is_real = .true.
@@ -362,7 +362,7 @@ contains
 
       call push_sub('exponential.cheby')
 
-      ALLOCATE(zpsi1(gr%mesh%np_part, hm%d%dim, 0:2), gr%mesh%np_part*hm%d%dim*3)
+      SAFE_ALLOCATE(zpsi1(1:gr%mesh%np_part, 1:hm%d%dim, 0:2))
       zpsi1 = M_z0
       do j = te%exp_order-1, 0, -1
         do idim = 1, hm%d%dim
@@ -403,10 +403,10 @@ contains
 
       tol    = te%lanczos_tol
 
-      ALLOCATE(v(gr%mesh%np, hm%d%dim, te%exp_order+1), gr%mesh%np*hm%d%dim*(te%exp_order+1))
-      ALLOCATE(tmp(gr%mesh%np, hm%d%dim), gr%mesh%np*hm%d%dim)
-      ALLOCATE(hamilt(te%exp_order+1, te%exp_order+1), (te%exp_order+1)*(te%exp_order+1))
-      ALLOCATE(expo(te%exp_order+1, te%exp_order+1), (te%exp_order+1)*(te%exp_order+1))
+      SAFE_ALLOCATE(     v(1:gr%mesh%np, 1:hm%d%dim, 1:te%exp_order+1))
+      SAFE_ALLOCATE(   tmp(1:gr%mesh%np, 1:hm%d%dim))
+      SAFE_ALLOCATE(hamilt(1:te%exp_order+1, 1:te%exp_order+1))
+      SAFE_ALLOCATE(  expo(1:te%exp_order+1, 1:te%exp_order+1))
 
       hamilt = M_z0
       expo = M_z0
@@ -562,8 +562,8 @@ contains
 
       call push_sub('exponential.taylor_series')
 
-      ALLOCATE(psi1 (gr%mesh%np_part, hm%d%dim, psib%nst), gr%mesh%np_part*hm%d%dim*psib%nst)
-      ALLOCATE(hpsi1(gr%mesh%np, hm%d%dim, psib%nst), gr%mesh%np*hm%d%dim*psib%nst)
+      SAFE_ALLOCATE(psi1 (1:gr%mesh%np_part, 1:hm%d%dim, 1:psib%nst))
+      SAFE_ALLOCATE(hpsi1(1:gr%mesh%np, 1:hm%d%dim, 1:psib%nst))
 
       st_start = psib%states(1)%ist
       st_end = psib%states(psib%nst)%ist

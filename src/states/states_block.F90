@@ -111,7 +111,7 @@ contains
     call push_sub('states.states_block_local_idx')
 
     size = st%mpi_grp%size
-    ALLOCATE(cnt(0:size-1), size)
+    SAFE_ALLOCATE(cnt(0:size-1))
 
     ! Count the how many vectors each node has.
     cnt = 0
@@ -119,7 +119,7 @@ contains
       cnt(st%node(global_idx(i))) = cnt(st%node(global_idx(i))) + 1
     end do
     ! Allocate space, it is a bit more than really required but makes the code simpler.
-    ALLOCATE(idx(maxval(cnt), 0:size-1), maxval(cnt)*size)
+    SAFE_ALLOCATE(idx(1:maxval(cnt), 0:size-1))
 
     ! Now set up the index sets.
     cnt = 0

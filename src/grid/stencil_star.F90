@@ -136,7 +136,7 @@ contains
     ASSERT(order >= 1)
 
     morder = 2*order
-    ALLOCATE(cc(0:morder, 0:morder, 0:2), (morder+1)*(morder+1)*(2+1))
+    SAFE_ALLOCATE(cc(0:morder, 0:morder, 0:2))
     call weights(2, morder, cc)
     lapl%w_re(1,:) = cc(0, morder, 2)*sum(1/h(1:dim)**2)
 
@@ -230,7 +230,7 @@ contains
     ASSERT(order >= 1)
 
     morder = 2*order
-    ALLOCATE(cc(0:morder, 0:morder, 0:1), (morder+1)*(morder+1)*(1+1))
+    SAFE_ALLOCATE(cc(0:morder, 0:morder, 0:1))
     call weights(1, morder, cc)
 
     k = 1

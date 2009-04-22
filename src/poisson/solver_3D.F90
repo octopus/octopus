@@ -86,7 +86,7 @@ subroutine poisson3D_init(gr, geo)
      if(hartree_integrator%increase_box) then
        write(message(1),'(a)') "Info: Poisson' equation will be solved in a larger grid."
        call write_info(1)
-       ALLOCATE(hartree_integrator%grid, 1)
+       SAFE_ALLOCATE(hartree_integrator%grid)
        call grid_create_largergrid(gr, geo, hartree_integrator%grid)
      end if
      call poisson_corrections_init(corrector, maxl, gr%mesh)

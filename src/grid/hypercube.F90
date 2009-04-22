@@ -52,8 +52,8 @@ contains
     integer, allocatable :: npoints(:)
     integer :: ii, jj
 
-    ALLOCATE(this%boxdim(1:ndim + 1), ndim + 1)
-    ALLOCATE(npoints(1:ndim), ndim)
+    SAFE_ALLOCATE(this%boxdim(1:ndim + 1))
+    SAFE_ALLOCATE(npoints(1:ndim))
 
     forall (ii = 1:ndim) npoints(ii) = nr(2,ii) - nr(1,ii) + 1
     
@@ -241,3 +241,9 @@ contains
   end function hypercube_number_total_points
   
 end module hypercube_m
+
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

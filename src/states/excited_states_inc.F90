@@ -39,7 +39,7 @@ R_TYPE function X(states_mpdotp_x)(m, excited_state, st, mat) result(dotp)
 
   ASSERT(excited_state%st%d%nik.eq.st%d%nik)
 
-  ALLOCATE(mat_local(excited_state%st%nst, st%nst, st%d%nik), st%nst*excited_state%st%nst*st%d%nik)
+  SAFE_ALLOCATE(mat_local(1:excited_state%st%nst, 1:st%nst, 1:st%d%nik))
 
   if(present(mat)) then
       mat_local = mat
@@ -79,7 +79,7 @@ subroutine X(states_matrix_swap)(mat, pair)
   a  = pair%a
   ik = pair%sigma
 
-  ALLOCATE(row(size(mat, 2)), size(mat, 2))
+  SAFE_ALLOCATE(row(1:size(mat, 2)))
 
   ! swap row
   row(:) = mat(i, :, ik)
@@ -126,15 +126,15 @@ R_TYPE function X(states_mpmatrixelement_g)(m, st1, st2, opst2) result(st1opst2)
   ! Can only consider the number of states of the state that comes with fewer states.
   nst = min(st1%nst, st2%nst)
 
-  ALLOCATE(overlap_mat(st1%nst, st2%nst, st1%d%nik), st1%nst*st2%nst*st1%d%nik)
-  ALLOCATE(op_mat(st1%nst, st2%nst, st1%d%nik), st1%nst*st2%nst*st1%d%nik)
+  SAFE_ALLOCATE(overlap_mat(1:st1%nst, 1:st2%nst, 1:st1%d%nik))
+  SAFE_ALLOCATE(op_mat(1:st1%nst, 1:st2%nst, 1:st1%d%nik))
 
-  ALLOCATE(filled1(nst), nst)
-  ALLOCATE(filled2(nst), nst)
-  ALLOCATE(partially_filled1(nst), nst)
-  ALLOCATE(partially_filled2(nst), nst)
-  ALLOCATE(half_filled1(nst), nst)
-  ALLOCATE(half_filled2(nst), nst)
+  SAFE_ALLOCATE(          filled1(1:nst))
+  SAFE_ALLOCATE(          filled2(1:nst))
+  SAFE_ALLOCATE(partially_filled1(1:nst))
+  SAFE_ALLOCATE(partially_filled2(1:nst))
+  SAFE_ALLOCATE(     half_filled1(1:nst))
+  SAFE_ALLOCATE(     half_filled2(1:nst))
 
   select case(ispin)
   case(UNPOLARIZED)
@@ -155,8 +155,8 @@ R_TYPE function X(states_mpmatrixelement_g)(m, st1, st2, opst2) result(st1opst2)
         call write_fatal(1)
       end if
 
-      ALLOCATE(b(i1+k1, i1+k1), (i1+k1)*(i1+k1))
-      ALLOCATE(c(i1+k1, i1+k1), (i1+k1)*(i1+k1))
+      SAFE_ALLOCATE(b(1:i1+k1, 1:i1+k1))
+      SAFE_ALLOCATE(c(1:i1+k1, 1:i1+k1))
       do i = 1, i1
         do j = 1, i1
           b(i, j) = op_mat(filled1(i), filled2(j), ik)
@@ -217,8 +217,8 @@ R_TYPE function X(states_mpmatrixelement_g)(m, st1, st2, opst2) result(st1opst2)
       end if
 
       if(i1 > 0) then
-        ALLOCATE(b(i1, i1), i1*i1)
-        ALLOCATE(c(i1, i1), i1*i1)
+        SAFE_ALLOCATE(b(1:i1, 1:i1))
+        SAFE_ALLOCATE(c(1:i1, 1:i1))
         do i = 1, i1
           do j = 1, i1
             b(i, j) = op_mat(filled1(i), filled2(j), ik)
@@ -282,15 +282,15 @@ R_TYPE function X(states_mpdotp_g)(m, st1, st2, mat) result(dotp)
   ! Can only consider the number of states of the state that comes with fewer states.
   nst = min(st1%nst, st2%nst)
 
-  ALLOCATE(a(st1%nst, st2%nst, st1%d%nik), st1%nst*st2%nst*st1%d%nik)
+  SAFE_ALLOCATE(a(1:st1%nst, 1:st2%nst, 1:st1%d%nik))
   dotp = M_ONE
 
-  ALLOCATE(filled1(nst), nst)
-  ALLOCATE(filled2(nst), nst)
-  ALLOCATE(partially_filled1(nst), nst)
-  ALLOCATE(partially_filled2(nst), nst)
-  ALLOCATE(half_filled1(nst), nst)
-  ALLOCATE(half_filled2(nst), nst)
+  SAFE_ALLOCATE(          filled1(1:nst))
+  SAFE_ALLOCATE(          filled2(1:nst))
+  SAFE_ALLOCATE(partially_filled1(1:nst))
+  SAFE_ALLOCATE(partially_filled2(1:nst))
+  SAFE_ALLOCATE(     half_filled1(1:nst))
+  SAFE_ALLOCATE(     half_filled2(1:nst))
 
   if(present(mat)) then
     a(1:st1%nst, 1:st2%nst, 1:st1%d%nik) = mat(1:st1%nst, 1:st2%nst, 1:st1%d%nik)
@@ -314,7 +314,7 @@ R_TYPE function X(states_mpdotp_g)(m, st1, st2, mat) result(dotp)
         call write_fatal(1)
       end if
 
-      ALLOCATE(b(i1+k1, i1+k1), (i1+k1)*(i1+k1))
+      SAFE_ALLOCATE(b(1:i1+k1, 1:i1+k1))
       do i = 1, i1
         do j = 1, i1
           b(i, j) = a(filled1(i), filled2(j), ik)
@@ -354,7 +354,7 @@ R_TYPE function X(states_mpdotp_g)(m, st1, st2, mat) result(dotp)
       end if
 
       if(i1 > 0) then
-        ALLOCATE(b(i1, i1), i1*i1)
+        SAFE_ALLOCATE(b(1:i1, 1:i1))
         do i = 1, i1
           do j = 1, i1
             b(i, j) = a(filled1(i), filled2(j), ik)

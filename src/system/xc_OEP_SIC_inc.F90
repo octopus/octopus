@@ -34,8 +34,8 @@ subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
   call profiling_in(C_PROFILING_XC_SIC)
   call push_sub('xc_OEP_SIC.oep_sic')
 
-  ALLOCATE(rho(gr%mesh%np, 2), gr%mesh%np*2)
-  ALLOCATE(Vxc(gr%mesh%np, 2), gr%mesh%np*2)
+  SAFE_ALLOCATE(rho(1:gr%mesh%np, 1:2))
+  SAFE_ALLOCATE(Vxc(1:gr%mesh%np, 1:2))
   rho(1:gr%mesh%np, 2) = M_ZERO
 
   ! loop over states

@@ -39,8 +39,8 @@ subroutine X(states_gram_schmidt_full)(st, nst, m, dim, psi, start)
   start_ = 1
   if(present(start)) start_ = start
 
-  ALLOCATE(ss(st%nst, st%nst), st%nst*st%nst)
-  ALLOCATE(qq(st%nst, st%nst), st%nst*st%nst)
+  SAFE_ALLOCATE(ss(1:st%nst, 1:st%nst))
+  SAFE_ALLOCATE(qq(1:st%nst, 1:st%nst))
 
   ! calculate the matrix of dot products
   call states_blockt_mul(m, st, st%st_start, st%st_end, st%st_start, st%st_end, psi, psi, ss, symm = .true.)
@@ -78,7 +78,7 @@ subroutine X(states_gram_schmidt_full)(st, nst, m, dim, psi, start)
 
   else
 
-    ALLOCATE(psi_tmp(m%np_part, dim, st%st_start:st%st_end), m%np_part*dim*st%lnst)
+    SAFE_ALLOCATE(psi_tmp(1:m%np_part, 1:dim, st%st_start:st%st_end))
     
     do ist = st%st_start, st%st_end
       do idim = 1, dim
@@ -145,7 +145,7 @@ subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi,  &
 
   block_size = hardware%X(block_size)
 
-  ALLOCATE(ss(1:nst), nst)
+  SAFE_ALLOCATE(ss(1:nst))
 
   ss = M_ZERO
 
@@ -193,7 +193,7 @@ subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi,  &
 
 #ifdef HAVE_MPI
   if(m%parallel_in_domains) then
-    ALLOCATE(ss_tmp(1:nst), nst)
+    SAFE_ALLOCATE(ss_tmp(1:nst))
     call profiling_in(reduce_prof, "GRAM_SCHMIDT_REDUCE")
     call MPI_Allreduce(ss, ss_tmp, nst, R_MPITYPE, MPI_SUM, m%vp%comm, mpi_err)
     call profiling_out(reduce_prof)
@@ -298,7 +298,7 @@ FLOAT function X(states_residue)(m, dim, hf, e, f) result(r)
 
   call profiling_in(prof, "RESIDUE")
 
-  ALLOCATE(res(m%np_part, dim), m%np_part*dim)
+  SAFE_ALLOCATE(res(1:m%np_part, 1:dim))
 
   forall (idim = 1:dim, ip = 1:m%np) res(ip, idim) = hf(ip, idim) - e*f(ip, idim)
 
@@ -338,7 +338,7 @@ subroutine X(states_calc_momentum)(gr, st)
 
   call push_sub('states_calc_inc.Xstates_calc_momentum')
 
-  ALLOCATE(grad(gr%mesh%np, st%d%dim, gr%mesh%sb%dim), gr%mesh%np*st%d%dim*gr%mesh%sb%dim)
+  SAFE_ALLOCATE(grad(1:gr%mesh%np, 1:st%d%dim, 1:gr%mesh%sb%dim))
 
   do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
@@ -381,7 +381,7 @@ subroutine X(states_calc_momentum)(gr, st)
 
       ASSERT(.not. st%parallel_in_states)
       
-      ALLOCATE(lmom(1:ndim, 1:st%nst, 1:kn), ndim*st%nst*kn)
+      SAFE_ALLOCATE(lmom(1:ndim, 1:st%nst, 1:kn))
 
       lmom(1:ndim, 1:st%nst, 1:kn) = st%momentum(1:ndim, 1:st%nst, kstart:kend)
 
@@ -393,8 +393,8 @@ subroutine X(states_calc_momentum)(gr, st)
     end if
 
     if(st%parallel_in_states) then
-      ALLOCATE(lmomentum(1:st%lnst), st%lnst)
-      ALLOCATE(gmomentum(1:st%nst), st%nst)
+      SAFE_ALLOCATE(lmomentum(1:st%lnst))
+      SAFE_ALLOCATE(gmomentum(1:st%nst))
 
       do i = 1, gr%mesh%sb%dim
         lmomentum(1:st%lnst) = st%momentum(i, st%st_start:st%st_end, ik)
@@ -435,9 +435,9 @@ subroutine X(states_angular_momentum)(gr, phi, l, l2)
 
   select case(gr%mesh%sb%dim)
   case(3)
-    ALLOCATE(lpsi(gr%mesh%np_part, 3), gr%mesh%np_part*3)
+    SAFE_ALLOCATE(lpsi(1:gr%mesh%np_part, 1:3))
   case(2)
-    ALLOCATE(lpsi(gr%mesh%np_part, 1), gr%mesh%np_part*1)
+    SAFE_ALLOCATE(lpsi(1:gr%mesh%np_part, 1:1))
   end select
 
   dim = size(phi, 2)
@@ -508,7 +508,7 @@ subroutine X(states_matrix)(m, st1, st2, a)
     end do
 
     ! Processes are received, and then the matrix elements are calculated.
-    ALLOCATE(phi2(m%np, st1%d%dim), m%np*st1%d%dim)
+    SAFE_ALLOCATE(phi2(1:m%np, 1:st1%d%dim))
     do j = 1, n2
       l = st1%node(j)
       if(l.ne.st1%mpi_grp%rank) then
@@ -575,7 +575,7 @@ subroutine X(states_linear_combination)(mesh, nst, dim, transf, psi)
 
   block_size = hardware%X(block_size)
 
-  ALLOCATE(psinew(block_size, 1:nst), block_size*nst)
+  SAFE_ALLOCATE(psinew(1:block_size, 1:nst))
   
   do sp = 1, mesh%np, block_size
     size = min(block_size, mesh%np - sp + 1)

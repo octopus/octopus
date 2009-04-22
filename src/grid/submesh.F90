@@ -116,7 +116,7 @@ contains
     ! mainly for performance reasons.
     if(.not. simul_box_is_periodic(sb)) then 
 
-      ALLOCATE(jxyz_inv(0:this%np_part), this%np_part+1)
+      SAFE_ALLOCATE(jxyz_inv(0:this%np_part))
       jxyz_inv(0:this%np_part) = 0
       
       nmin = 0
@@ -159,8 +159,8 @@ contains
       this%ns = is
       this%ns_part = is + isb
       
-      ALLOCATE(this%jxyz(this%ns_part), this%ns_part)
-      ALLOCATE(this%x(this%ns_part, 0:MAX_DIM), this%ns_part * (MAX_DIM + 1))
+      SAFE_ALLOCATE(this%jxyz(1:this%ns_part))
+      SAFE_ALLOCATE(this%x(1:this%ns_part, 0:MAX_DIM))
       
       ! Generate the table and the positions
       do iz = nmin(3), nmax(3)
@@ -198,7 +198,7 @@ contains
 
       call periodic_copy_init(pp, sb, center(1:MAX_DIM), rc)
       
-      ALLOCATE(center_copies(1:MAX_DIM, periodic_copy_num(pp)), MAX_DIM*periodic_copy_num(pp))
+      SAFE_ALLOCATE(center_copies(1:MAX_DIM, 1:periodic_copy_num(pp)))
 
       do icell = 1, periodic_copy_num(pp)
         center_copies(1:MAX_DIM, icell) = periodic_copy_position(pp, sb, icell)
@@ -216,8 +216,8 @@ contains
       
       this%ns_part = is
 
-      ALLOCATE(this%jxyz(this%ns_part), this%ns_part)
-      ALLOCATE(this%x(this%ns_part, 0:MAX_DIM), this%ns_part * (MAX_DIM + 1))
+      SAFE_ALLOCATE(this%jxyz(1:this%ns_part))
+      SAFE_ALLOCATE(this%x(1:this%ns_part, 0:MAX_DIM))
             
       !iterate again to fill the tables
       is = 0
@@ -243,7 +243,7 @@ contains
 
 #ifdef HAVE_MPI
     if(m%parallel_in_domains) then
-      ALLOCATE(this%psize(1:m%vp%npart), m%vp%npart)
+      SAFE_ALLOCATE(this%psize(1:m%vp%npart))
       call MPI_Allgather(this%ns, 1, MPI_INTEGER, this%psize, 1, MPI_INTEGER, m%mpi_grp%comm, mpi_err)
     else
       nullify(this%psize)
@@ -289,8 +289,8 @@ contains
     sm_out%ns_part = sm_in%ns_part
     sm_out%np_part  = sm_in%np_part
     
-    ALLOCATE(sm_out%jxyz(1:sm_out%ns_part), sm_out%ns_part)
-    ALLOCATE(sm_out%x(1:sm_out%ns_part, 0:MAX_DIM), sm_out%ns_part*(MAX_DIM + 1))
+    SAFE_ALLOCATE(sm_out%jxyz(1:sm_out%ns_part))
+    SAFE_ALLOCATE(sm_out%x(1:sm_out%ns_part, 0:MAX_DIM))
 
     sm_out%jxyz(1:sm_out%ns_part) = sm_in%jxyz(1:sm_in%ns_part)
     sm_out%x(1:sm_out%ns_part, 0:MAX_DIM) = sm_in%x(1:sm_in%ns_part, 0:MAX_DIM)

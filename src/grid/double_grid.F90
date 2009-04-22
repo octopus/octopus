@@ -115,7 +115,7 @@ contains
     this%interpolation_max =  this%order/2 + 1
     this%npoints = this%interpolation_max - this%interpolation_min + 1
     
-    ALLOCATE(this%co(this%interpolation_min:this%interpolation_max), this%npoints)
+    SAFE_ALLOCATE(this%co(this%interpolation_min:this%interpolation_max))
 
     call calc_coefficients
 
@@ -129,7 +129,7 @@ contains
 
         call push_sub('double_grid.double_grid_init.calc_coefficients')
 
-        ALLOCATE(points(this%interpolation_min:this%interpolation_max), this%npoints)
+        SAFE_ALLOCATE(points(this%interpolation_min:this%interpolation_max))
         
         do ii = this%interpolation_min,  this%interpolation_max
           points(ii) = M_THREE*ii - M_ONE

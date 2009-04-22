@@ -37,14 +37,14 @@ subroutine X(lr_orth_vector) (m, st, v, ist, ik)
 
   dsmear = max(CNST(1e-14), st%smear%dsmear)
 
-  ALLOCATE(theta_Fi(st%nst), st%nst)
+  SAFE_ALLOCATE(theta_Fi(1:st%nst))
   do jst = 1, st%nst
     ! epsilon has to be added or we have problem with semiconducting smearing
     xx = (st%smear%e_fermi - st%eigenval(jst, ik) + CNST(1e-14))/dsmear
     theta_Fi(jst) = smear_step_function(st%smear, xx)
   end do
 
-  ALLOCATE(beta_ij(st%nst), st%nst)
+  SAFE_ALLOCATE(beta_ij(1:st%nst))
 
   if(st%smear%fixed_occ .or. st%smear%method == SMEAR_SEMICONDUCTOR) then
     do jst = 1, st%nst

@@ -91,7 +91,7 @@
 
 #endif
 
-#define ALLOCATE(a,b) xxxxallocate(a)
+#define ALLOCATE(a,b) allocate(a)
 
 #define REAL_DOUBLE real(8)
 #define REAL_SINGLE real(4)

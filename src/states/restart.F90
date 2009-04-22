@@ -204,11 +204,11 @@ contains
       call states_allocate_wfns(st, gr%mesh)
     endif
 
-    ALLOCATE(st%eigenval(st%nst, st%d%nik), st%nst*st%d%nik)
-    ALLOCATE(st%occ(st%nst, st%d%nik), st%nst*st%d%nik)
+    SAFE_ALLOCATE(st%eigenval(1:st%nst, 1:st%d%nik))
+    SAFE_ALLOCATE(     st%occ(1:st%nst, 1:st%d%nik))
 
     if(st%d%ispin == SPINORS) then
-      ALLOCATE(st%spin(3, st%nst, st%d%nik), st%nst*st%d%nik*3)
+      SAFE_ALLOCATE(st%spin(1:3, 1:st%nst, 1:st%d%nik))
       st%spin = M_ZERO
     end if
     st%eigenval = huge(REAL_PRECISION)
@@ -415,7 +415,7 @@ contains
 
     lead_np = gr%mesh%lead_unit_cell(LEFT)%np
     np = gr%intf(LEFT)%np
-    ALLOCATE(tmp(gr%mesh%np+2*lead_np), gr%mesh%np+2*lead_np)
+    SAFE_ALLOCATE(tmp(1:gr%mesh%np+2*lead_np))
     
     do
       call iopar_read(mpi_grp, io_wfns, line, i)
@@ -559,7 +559,7 @@ contains
     call iopar_read(mpi_grp, io_occs, line, err); call iopar_read(mpi_grp, io_occs, line, err)
 
     lead_np = gr%mesh%lead_unit_cell(LEFT)%np
-    ALLOCATE(tmp(gr%mesh%np+2*lead_np), gr%mesh%np+2*lead_np)
+    SAFE_ALLOCATE(tmp(1:gr%mesh%np+2*lead_np))
     
     do
       call iopar_read(mpi_grp, io_wfns, line, i)
@@ -702,7 +702,7 @@ contains
     call read_previous_mesh()
 
     ! now we really start
-    ALLOCATE(filled(st%d%dim, st%st_start:st%st_end, st%d%nik), st%d%dim*st%lnst*st%d%nik)
+    SAFE_ALLOCATE(filled(1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik))
     filled = .false.
 
     ! Skip two lines.
@@ -837,9 +837,9 @@ contains
       print *, "4"
 
       if (states_are_real(st)) then
-        ALLOCATE(dphi(old_mesh%np_global), old_mesh%np_global)
+        SAFE_ALLOCATE(dphi(1:old_mesh%np_global))
       else
-        ALLOCATE(zphi(old_mesh%np_global), old_mesh%np_global)
+        SAFE_ALLOCATE(zphi(1:old_mesh%np_global))
       end if
     end subroutine interpolation_init
 
@@ -973,7 +973,7 @@ contains
     mpi_grp = mpi_world
 
     np = m_lead%np
-    ALLOCATE(tmp(np, st%d%dim), np*st%d%dim)
+    SAFE_ALLOCATE(tmp(1:np, 1:st%d%dim))
     restart_dir = trim(sb%lead_restart_dir(LEFT))//'/gs'
 
     wfns = io_open(trim(restart_dir)//'/wfns', action='read', is_tmp=.true., grp=mpi_grp)

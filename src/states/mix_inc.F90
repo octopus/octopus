@@ -90,7 +90,7 @@ subroutine X(mixing_broyden)(smix, vin, vout, vnew, iter, dotp)
   d2 = smix%d2
   d3 = smix%d3
   
-  ALLOCATE(f(d1, d2, d3), d1*d2*d3)
+  SAFE_ALLOCATE(f(1:d1, 1:d2, 1:d3))
   
   f(1:d1, 1:d2, 1:d3) = vout(1:d1, 1:d2, 1:d3) - vin(1:d1, 1:d2, 1:d3)
   if(iter > 1) then
@@ -164,9 +164,9 @@ subroutine X(broyden_extrapolation)(alpha, d1, d2, d3, vin, vnew, iter_used, f, 
     call pop_sub(); return
   end if
   
-  ALLOCATE(beta(iter_used, iter_used), iter_used**2)
-  ALLOCATE(work(iter_used), iter_used)
-  ALLOCATE(w(iter_used), iter_used)
+  SAFE_ALLOCATE(beta(1:iter_used, 1:iter_used))
+  SAFE_ALLOCATE(work(1:iter_used))
+  SAFE_ALLOCATE(   w(1:iter_used))
 
   w  = M_FIVE
   
@@ -243,7 +243,7 @@ subroutine X(mixing_grpulay)(smix, vin, vout, vnew, iter, dotp)
   d2 = smix%d2
   d3 = smix%d3
   
-  ALLOCATE(f(d1, d2, d3), d1*d2*d3)
+  SAFE_ALLOCATE(f(1:d1, 1:d2, 1:d3))
   f(1:d1, 1:d2, 1:d3) = vout(1:d1, 1:d2, 1:d3) - vin(1:d1, 1:d2, 1:d3)
   
   ! we only extrapolate a new vector every two iterations
@@ -308,7 +308,7 @@ subroutine X(pulay_extrapolation)(d1, d2, d3, vin, vout, vnew, iter_used, f, df,
   
   call push_sub('mix_inc.Xpulay_extrapolation')
   
-  ALLOCATE(a(iter_used, iter_used), iter_used**2)
+  SAFE_ALLOCATE(a(1:iter_used, 1:iter_used))
   
   ! set matrix A
   a = M_ZERO

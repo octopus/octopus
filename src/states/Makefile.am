@@ -26,7 +26,7 @@ libstates_a_SOURCES = \
 	states_dim.F90  \
 	states_calc.F90 \
 	excited_states.F90 mix.F90 linear_response.F90 restart.F90 \
-	density_matrix.F90 modelmb_particles.F90 ksinversion.F90   \
+	density_matrix.F90 modelmb_particles.F90 \
        ob_green.F90
 
 noinst_HEADERS = \

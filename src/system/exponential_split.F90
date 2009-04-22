@@ -135,7 +135,7 @@ contains
     do i = 1, hm%ep%no_lasers
       select case(laser_kind(hm%ep%lasers(i)))
       case(E_FIELD_ELECTRIC)
-        ALLOCATE(pot(gr%mesh%np), gr%mesh%np)
+        SAFE_ALLOCATE(pot(1:gr%mesh%np))
         call laser_potential(gr%sb, hm%ep%lasers(i), gr%mesh, pot, t)
         psi(1:gr%mesh%np, ik) = exp( factor * pot(1:gr%mesh%np) ) * psi(1:gr%mesh%np, ik) 
         SAFE_DEALLOCATE_A(pot)

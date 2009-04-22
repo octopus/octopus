@@ -97,7 +97,7 @@ contains
     this%current = 1
     nullify(this%dpsicont, this%zpsicont)
     
-    ALLOCATE(this%states(1:nst), nst)
+    SAFE_ALLOCATE(this%states(1:nst))
     call state_nullify(this%states(1:nst))
 
     call pop_sub()

@@ -31,7 +31,7 @@ subroutine X(calculate_eigenvalues)(hm, gr, st, t)
   integer :: ik, ist
 
   call push_sub('energy_inc.Xcalculate_eigenvalues')
-  ALLOCATE(Hpsi(gr%mesh%np, st%d%dim), gr%mesh%np*st%d%dim)
+  SAFE_ALLOCATE(Hpsi(1:gr%mesh%np, 1:st%d%dim))
 
   if(gr%sb%open_boundaries.and.calc_mode_is(CM_GS)) then
     ! For open boundaries we know the eigenvalues.
@@ -73,8 +73,8 @@ FLOAT function X(electronic_kinetic_energy)(hm, gr, st) result(t0)
 
   call push_sub('energy_inc.Xelectronic_kinetic_energy')
 
-  ALLOCATE(tpsi(gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
-  ALLOCATE(t(st%st_start:st%st_end, st%d%nik), st%nst*st%d%nik)
+  SAFE_ALLOCATE(tpsi(1:gr%mesh%np_part, 1:st%d%dim))
+  SAFE_ALLOCATE(t(st%st_start:st%st_end, 1:st%d%nik))
   t = M_ZERO
 
   do ik = st%d%kpt%start, st%d%kpt%end
@@ -104,8 +104,8 @@ FLOAT function X(electronic_external_energy)(hm, gr, st) result(v)
 
   call push_sub('energy_inc.Xelectronic_external_energy')
 
-  ALLOCATE(vpsi(gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
-  ALLOCATE(t(st%st_start:st%st_end, st%d%nik), st%nst*st%d%nik)
+  SAFE_ALLOCATE(vpsi(1:gr%mesh%np_part, 1:st%d%dim))
+  SAFE_ALLOCATE(t(st%st_start:st%st_end, 1:st%d%nik))
   t = M_ZERO
 
   do ik = st%d%kpt%start, st%d%kpt%end

@@ -16,7 +16,7 @@
 
     u = units_out%energy%factor
     if(iand(outp%what, output_potential).ne.0) then
-      ALLOCATE(v0(1:m%np, 1:hm%d%dim), m%np*hm%d%dim)
+      SAFE_ALLOCATE(v0(1:m%np, 1:hm%d%dim))
       v0(1:m%np, 1) = hm%ep%vpsl(1:m%np)
       call doutput_function(outp%how, dir, "v0", m, sb, v0(:, 1), u, err, geo = geo)
       SAFE_DEALLOCATE_A(v0)

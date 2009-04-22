@@ -104,16 +104,8 @@ contains
     dout%spin_channels  = din%spin_channels
     dout%cdft           = din%cdft
     dout%block_size     = din%block_size
-    if(associated(din%kpoints)) then
-      i = size(din%kpoints, 1)*size(din%kpoints, 2)
-      ALLOCATE(dout%kpoints(size(din%kpoints, 1), size(din%kpoints, 2)), i)
-      dout%kpoints = din%kpoints
-    end if
-    if(associated(din%kweights)) then
-      i = size(din%kweights, 1)
-      ALLOCATE(dout%kweights(size(din%kweights, 1)), i)
-      dout%kweights = din%kweights
-    end if
+    call loct_pointer_copy(dout%kpoints, din%kpoints)
+    call loct_pointer_copy(dout%kweights, din%kweights)
 
     call distributed_copy(din%kpt, dout%kpt)
 

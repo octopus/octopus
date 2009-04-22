@@ -158,32 +158,32 @@ contains
     select case (smix%type_of_mixing)
     case (MIX_GRPULAY)
       if(func_type_ == M_REAL ) then 
-        ALLOCATE(smix%ddf(d1, d2, d3, smix%ns + 1), d1*d2*d3*(smix%ns + 1))
-        ALLOCATE(smix%dvin_old(d1, d2, d3),         d1*d2*d3)
-        ALLOCATE(smix%ddv(d1, d2, d3, smix%ns + 1), d1*d2*d3*(smix%ns + 1))
-        ALLOCATE(smix%df_old(d1, d2, d3),           d1*d2*d3)
+        SAFE_ALLOCATE(     smix%ddf(1:d1, 1:d2, d1:3, 1:smix%ns + 1))
+        SAFE_ALLOCATE(smix%dvin_old(1:d1, 1:d2, 1:d3))
+        SAFE_ALLOCATE(     smix%ddv(1:d1, 1:d2, 1:d3, 1:smix%ns + 1))
+        SAFE_ALLOCATE(  smix%df_old(1:d1, 1:d2, 1:d3))
 
         smix%ddf = M_ZERO; smix%ddv = M_ZERO; smix%dvin_old = M_ZERO; smix%df_old = M_ZERO
       else
-        ALLOCATE(smix%zdf(d1, d2, d3, smix%ns + 1), d1*d2*d3*(smix%ns + 1))
-        ALLOCATE(smix%zvin_old(d1, d2, d3),         d1*d2*d3)
-        ALLOCATE(smix%zdv(d1, d2, d3, smix%ns + 1), d1*d2*d3*(smix%ns + 1))
-        ALLOCATE(smix%zf_old(d1, d2, d3),           d1*d2*d3)
+        SAFE_ALLOCATE(     smix%zdf(1:d1, 1:d2, 1:d3, 1:smix%ns + 1))
+        SAFE_ALLOCATE(smix%zvin_old(1:d1, 1:d2, 1:d3))
+        SAFE_ALLOCATE(     smix%zdv(1:d1, 1:d2, 1:d3, 1:smix%ns + 1))
+        SAFE_ALLOCATE(  smix%zf_old(1:d1, 1:d2, 1:d3))
         smix%zdf = M_z0; smix%zdv = M_z0; smix%zvin_old = M_z0; smix%zf_old = M_z0
       end if
 
     case (MIX_BROYDEN)
       if(func_type_ == M_REAL ) then 
-        ALLOCATE(smix%ddf(d1, d2, d3, smix%ns), d1*d2*d3*smix%ns)
-        ALLOCATE(smix%dvin_old(d1, d2, d3),     d1*d2*d3)
-        ALLOCATE(smix%ddv(d1, d2, d3, smix%ns), d1*d2*d3*smix%ns)
-        ALLOCATE(smix%df_old(d1, d2, d3),       d1*d2*d3)
+        SAFE_ALLOCATE(     smix%ddf(1:d1, 1:d2, 1:d3, 1:smix%ns))
+        SAFE_ALLOCATE(smix%dvin_old(1:d1, 1:d2, 1:d3))
+        SAFE_ALLOCATE(     smix%ddv(1:d1, 1:d2, 1:d3, 1:smix%ns))
+        SAFE_ALLOCATE(  smix%df_old(1:d1, 1:d2, 1:d3))
         smix%ddf = M_ZERO; smix%ddv = M_ZERO; smix%dvin_old = M_ZERO; smix%df_old = M_ZERO
       else
-        ALLOCATE(smix%zdf(d1, d2, d3, smix%ns), d1*d2*d3*smix%ns)
-        ALLOCATE(smix%zvin_old(d1, d2, d3),     d1*d2*d3)
-        ALLOCATE(smix%zdv(d1, d2, d3, smix%ns), d1*d2*d3*smix%ns)
-        ALLOCATE(smix%zf_old(d1, d2, d3),       d1*d2*d3)
+        SAFE_ALLOCATE(     smix%zdf(1:d1, 1:d2, 1:d3, 1:smix%ns))
+        SAFE_ALLOCATE(smix%zvin_old(1:d1, 1:d2, 1:d3))
+        SAFE_ALLOCATE(     smix%zdv(1:d1, 1:d2, 1:d3, 1:smix%ns))
+        SAFE_ALLOCATE(  smix%zf_old(1:d1, 1:d2, 1:d3))
         smix%zdf = M_z0; smix%zdv = M_z0; smix%zvin_old = M_z0; smix%zf_old = M_z0
       end if
 

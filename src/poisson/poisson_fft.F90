@@ -91,7 +91,7 @@ contains
     db(1:3) = fft_cf%n(1:3)
 
     ! store the fourier transform of the Coulomb interaction
-    ALLOCATE(fft_Coulb_FS(fft_cf%nx, fft_cf%n(2), fft_cf%n(3)), fft_cf%nx*fft_cf%n(2)*fft_cf%n(3))
+    SAFE_ALLOCATE(fft_Coulb_FS(1:fft_cf%nx, 1:fft_cf%n(2), 1:fft_cf%n(3)))
     fft_Coulb_FS = M_ZERO
     temp(:) = M_TWO*M_PI/(db(:)*gr%mesh%h(:))
 
@@ -170,7 +170,7 @@ contains
     end if
 
     ! store the fourier transform of the Coulomb interaction
-    ALLOCATE(fft_Coulb_FS(fft_cf%nx, fft_cf%n(2), fft_cf%n(3)), fft_cf%nx*fft_cf%n(2)*fft_cf%n(3))
+    SAFE_ALLOCATE(fft_Coulb_FS(1:fft_cf%nx, 1:fft_cf%n(2), 1:fft_cf%n(3)))
     fft_Coulb_FS = M_ZERO
 
     temp(:) = M_TWO*M_PI/(db(:)*gr%mesh%h(:))
@@ -255,15 +255,15 @@ contains
     end if
 
     ! store the fourier transform of the Coulomb interaction
-    ALLOCATE(fft_Coulb_FS(fft_cf%nx, fft_cf%n(2), fft_cf%n(3)), fft_cf%nx*fft_cf%n(2)*fft_cf%n(3))
+    SAFE_ALLOCATE(fft_Coulb_FS(1:fft_cf%nx, 1:fft_cf%n(2), 1:fft_cf%n(3)))
     fft_Coulb_FS = M_ZERO
 
     temp(:) = M_TWO*M_PI/(db(:)*gr%mesh%h(:))
 
     if( gr%sb%periodic_dim == 0 ) then
       ngp = 8*db(2)
-      ALLOCATE(x(ngp), ngp)
-      ALLOCATE(y(ngp), ngp)
+      SAFE_ALLOCATE(x(1:ngp))
+      SAFE_ALLOCATE(y(1:ngp))
     end if
 
 
@@ -391,7 +391,7 @@ contains
     end if
 
     ! store the fourier transform of the Coulomb interaction
-    ALLOCATE(fft_Coulb_FS(fft_cf%nx, fft_cf%n(2), fft_cf%n(3)), fft_cf%nx*fft_cf%n(2)*fft_cf%n(3))
+    SAFE_ALLOCATE(fft_Coulb_FS(1:fft_cf%nx, 1:fft_cf%n(2), 1:fft_cf%n(3)))
     fft_Coulb_FS = M_ZERO
 
     temp(:) = M_TWO*M_PI/(db(:)*gr%mesh%h(:))
@@ -483,15 +483,15 @@ contains
     call spline_init(besselintf)
 
     ! store the fourier transform of the Coulomb interaction
-    ALLOCATE(fft_Coulb_FS(fft_cf%nx, fft_cf%n(2), fft_cf%n(3)), fft_cf%nx*fft_cf%n(2)*fft_cf%n(3))
+    SAFE_ALLOCATE(fft_Coulb_FS(1:fft_cf%nx, 1:fft_cf%n(2), 1:fft_cf%n(3)))
     fft_Coulb_FS = M_ZERO
     temp(:) = M_TWO*M_PI/(db(:)*gr%mesh%h(:))
 
     maxf = r_c * sqrt((temp(1)*db(1)/2)**2 + (temp(2)*db(2)/2)**2)
     dk = CNST(0.25) ! This seems to be reasonable.
     npoints = nint(maxf/dk)
-    ALLOCATE(x(npoints), npoints)
-    ALLOCATE(y(npoints), npoints)
+    SAFE_ALLOCATE(x(1:npoints))
+    SAFE_ALLOCATE(y(1:npoints))
     x(1) = M_ZERO
     y(1) = M_ZERO
     do i = 2, npoints
@@ -547,7 +547,7 @@ contains
     r_c = M_TWO * gr%sb%lsize(2)
 
     ! store the fourier transform of the Coulomb interaction
-    ALLOCATE(fft_Coulb_FS(fft_cf%nx, fft_cf%n(2), fft_cf%n(3)), fft_cf%nx*fft_cf%n(2)*fft_cf%n(3))
+    SAFE_ALLOCATE(fft_Coulb_FS(1:fft_cf%nx, 1:fft_cf%n(2), 1:fft_cf%n(3)))
     fft_Coulb_FS = M_ZERO
     temp(:) = M_TWO*M_PI/(db(:)*gr%mesh%h(:))
 
@@ -598,7 +598,7 @@ contains
     db(1:3) = fft_cf%n(1:3)
 
     ! store the fourier transform of the Coulomb interaction
-    ALLOCATE(fft_Coulb_FS(fft_cf%nx, fft_cf%n(2), fft_cf%n(3)), fft_cf%nx*fft_cf%n(2)*fft_cf%n(3))
+    SAFE_ALLOCATE(fft_Coulb_FS(1:fft_cf%nx, 1:fft_cf%n(2), 1:fft_cf%n(3)))
     fft_Coulb_FS = M_ZERO
     temp(:) = M_TWO*M_PI/(db(:)*gr%mesh%h(:))
 
@@ -635,7 +635,7 @@ contains
     call dcf_fft_init(fft_cf, gr%sb)
     box(1:3) = fft_cf%n(1:3)
 
-    ALLOCATE(fft_coulb_fs(fft_cf%nx, fft_cf%n(2), fft_cf%n(3)), fft_cf%nx*fft_cf%n(2)*fft_cf%n(3))
+    SAFE_ALLOCATE(fft_coulb_fs(1:fft_cf%nx, 1:fft_cf%n(2), 1:fft_cf%n(3)))
     fft_coulb_fs = M_ZERO
 
     ! Fourier transform of Soft Coulomb interaction.
@@ -669,7 +669,7 @@ contains
 
     r_c = box(1)*gr%mesh%h(1)/M_TWO
 
-    ALLOCATE(fft_coulb_fs(fft_cf%nx, fft_cf%n(2), fft_cf%n(3)), fft_cf%nx*fft_cf%n(2)*fft_cf%n(3))
+    SAFE_ALLOCATE(fft_coulb_fs(1:fft_cf%nx, 1:fft_cf%n(2), 1:fft_cf%n(3)))
     fft_coulb_fs = M_ZERO
     temp(:) = M_TWO*M_PI/(box(:)*gr%mesh%h(:))
 
@@ -716,8 +716,8 @@ contains
     average=M_ZERO !this avoids a non-initialized warning
     
     if(m%parallel_in_domains) then
-      ALLOCATE(rho_global(m%np_global), m%np_global)
-      ALLOCATE(pot_global(m%np_global), m%np_global)
+      SAFE_ALLOCATE(rho_global(1:m%np_global))
+      SAFE_ALLOCATE(pot_global(1:m%np_global))
     end if
 
     call dcf_alloc_RS(fft_cf)          ! allocate the cube in real space

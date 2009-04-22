@@ -243,7 +243,7 @@ contains
     der%masses = M_ONE
 
     ! construct lapl and grad structures
-    ALLOCATE(der%op(der%dim + 1), der%dim + 1)
+    SAFE_ALLOCATE(der%op(1:der%dim + 1))
     der%grad => der%op
     der%lapl => der%op(der%dim + 1)
 
@@ -442,8 +442,8 @@ contains
 
     case(DER_STAR) ! laplacian and gradient have different stencils
       do i = 1, der%dim + 1
-        ALLOCATE(polynomials(der%dim, der%op(i)%stencil%size), der%dim*der%op(i)%stencil%size)
-        ALLOCATE(rhs(der%op(i)%stencil%size, 1), der%op(i)%stencil%size*1)
+        SAFE_ALLOCATE(polynomials(1:der%dim, 1:der%op(i)%stencil%size))
+        SAFE_ALLOCATE(rhs(1:der%op(i)%stencil%size, 1:1))
 
         if(i <= der%dim) then  ! gradient
           call stencil_star_polynomials_grad(i, der%order, polynomials)
@@ -459,8 +459,8 @@ contains
       end do
 
     case(DER_CUBE) ! laplacian and gradient have similar stencils
-      ALLOCATE(polynomials(der%dim, der%op(1)%stencil%size), der%dim*der%op(1)%stencil%size)
-      ALLOCATE(rhs(der%op(1)%stencil%size, der%dim + 1), der%op(1)%stencil%size*(der%dim+1))
+      SAFE_ALLOCATE(polynomials(1:der%dim, 1:der%op(1)%stencil%size))
+      SAFE_ALLOCATE(rhs(1:der%op(1)%stencil%size, 1:der%dim + 1))
       call stencil_cube_polynomials_lapl(der%dim, der%order, polynomials)
 
       do i = 1, der%dim
@@ -475,16 +475,16 @@ contains
 
     case(DER_STARPLUS)
       do i = 1, der%dim
-        ALLOCATE(polynomials(der%dim, der%op(i)%stencil%size), der%dim*der%op(i)%stencil%size)
-        ALLOCATE(rhs(der%op(i)%stencil%size, 1), der%op(i)%stencil%size*1)
+        SAFE_ALLOCATE(polynomials(1:der%dim, 1:der%op(i)%stencil%size))
+        SAFE_ALLOCATE(rhs(1:der%op(i)%stencil%size, 1:1))
         call stencil_starplus_pol_grad(der%dim, i, der%order, polynomials)
         call get_rhs_grad(i, rhs(:, 1))
         call make_discretization(der%dim, der%mesh, der%masses, polynomials, rhs, 1, der%op(i:i))
         SAFE_DEALLOCATE_A(polynomials)
         SAFE_DEALLOCATE_A(rhs)
       end do
-      ALLOCATE(polynomials(der%dim, der%op(der%dim+1)%stencil%size), der%dim*der%op(der%dim+1)%stencil%size)
-      ALLOCATE(rhs(der%op(i)%stencil%size, 1), der%op(i)%stencil%size*1)
+      SAFE_ALLOCATE(polynomials(1:der%dim, 1:der%op(der%dim+1)%stencil%size))
+      SAFE_ALLOCATE(rhs(1:der%op(i)%stencil%size, 1:1))
       call stencil_starplus_pol_lapl(der%dim, der%order, polynomials)
       call get_rhs_lapl(rhs(:, 1))
       call make_discretization(der%dim, der%mesh, der%masses, polynomials, rhs, 1, der%op(der%dim+1:der%dim+1))
@@ -580,15 +580,15 @@ contains
 
     call push_sub('derivatives.make_discretization')
 
-    ALLOCATE(mat(op(1)%stencil%size, op(1)%stencil%size), op(1)%stencil%size*op(1)%stencil%size)
-    ALLOCATE(sol(op(1)%stencil%size, n), op(1)%stencil%size*n)
+    SAFE_ALLOCATE(mat(1:op(1)%stencil%size, 1:op(1)%stencil%size))
+    SAFE_ALLOCATE(sol(1:op(1)%stencil%size, 1:n))
 
     message(1) = 'Info: Generating weights for finite-difference discretization.'
     call write_info(1)
 
     ! use to generate power lookup table
     pow_max = maxval(pol)
-    ALLOCATE(powers(dim, 0:pow_max), dim*(pow_max+1))
+    SAFE_ALLOCATE(powers(1:dim, 0:pow_max))
     powers(:,:) = M_ZERO
     powers(:,0) = M_ONE
 

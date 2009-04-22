@@ -57,14 +57,14 @@ subroutine X(oep_x) (gr, st, is, oep, ex, exx_coef)
   call profiling_in(C_PROFILING_XC_EXX)
   call push_sub('xc_OEP_x.oep_x')
 
-  ALLOCATE(F_ij(gr%mesh%np), gr%mesh%np)
-  ALLOCATE(rho_ij(gr%mesh%np), gr%mesh%np)
-  ALLOCATE(send_buffer(gr%mesh%np), gr%mesh%np)
-  ALLOCATE(recv_stack(st%nst+1), st%nst+1)
-  ALLOCATE(send_stack(st%nst+1), st%nst+1)
+  SAFE_ALLOCATE(F_ij(1:gr%mesh%np))
+  SAFE_ALLOCATE(rho_ij(1:gr%mesh%np))
+  SAFE_ALLOCATE(send_buffer(1:gr%mesh%np))
+  SAFE_ALLOCATE(recv_stack(1:st%nst+1))
+  SAFE_ALLOCATE(send_stack(1:st%nst+1))
 
 #if defined(HAVE_MPI)
-  ALLOCATE(recv_buffer(gr%mesh%np), gr%mesh%np)
+  SAFE_ALLOCATE(recv_buffer(1:gr%mesh%np))
 #endif
 
   ! This is the maximum number of blocks for each processor

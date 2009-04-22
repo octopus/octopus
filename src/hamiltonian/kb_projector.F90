@@ -93,7 +93,7 @@ contains
     end if
     kb_p%n_c = n_c
 
-    ALLOCATE(kb_p%p (kb_p%n_s, 2),    kb_p%n_s*2)
+    SAFE_ALLOCATE(kb_p%p (1:kb_p%n_s, 1:2))
     kb_p%p = M_ZERO
     kb_p%e = M_ZERO
     

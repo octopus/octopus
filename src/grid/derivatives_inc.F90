@@ -330,7 +330,7 @@ subroutine X(derivatives_oper_batch)(op, der, ff, opff, ghost_update, set_bc)
 
 #ifdef HAVE_MPI
   if(derivatives_overlap(der) .and. der%mesh%parallel_in_domains .and. ghost_update_) then
-    ALLOCATE(handle(ff%nst, ff%dim), ff%nst*ff%dim)
+    SAFE_ALLOCATE(handle(1:ff%nst, 1:ff%dim))
     
     do ist = 1, ff%nst
       do idim = 1, ff%dim
@@ -393,7 +393,7 @@ subroutine X(derivatives_div)(der, f, div, ghost_update)
     call X(set_bc)(der, f(:, i))
   end do
 
-  ALLOCATE(tmp(der%mesh%np), der%mesh%np)
+  SAFE_ALLOCATE(tmp(1:der%mesh%np))
 
   div(:) = R_TOTYPE(M_ZERO)
   do i = 1, der%dim
@@ -436,7 +436,7 @@ subroutine X(derivatives_curl)(der, f, curl, ghost_update)
     call X(set_bc)(der, f(:, i))
   end do
   
-  ALLOCATE(tmp(der%mesh%np_part), der%mesh%np_part)
+  SAFE_ALLOCATE(tmp(1:der%mesh%np_part))
 
   curl(:,:) = R_TOTYPE(M_ZERO)
   np = der%mesh%np
@@ -514,7 +514,7 @@ subroutine X(set_bc)(der, f)
     if(der%mesh%parallel_in_domains) then
       call profiling_in(set_bc_comm_prof, 'SET_BC_COMMUNICATION')
       ! get the points from other nodes
-      ALLOCATE(req(2*der%mesh%vp%npart), 2*der%mesh%vp%npart)
+      SAFE_ALLOCATE(req(1:2*der%mesh%vp%npart))
 
       nreq = 0
 
@@ -544,7 +544,7 @@ subroutine X(set_bc)(der, f)
     if(der%mesh%parallel_in_domains) then
       call profiling_in(set_bc_comm_prof)
 
-      ALLOCATE(statuses(MPI_STATUS_SIZE, nreq), MPI_STATUS_SIZE*nreq)
+      SAFE_ALLOCATE(statuses(1:MPI_STATUS_SIZE, 1:nreq))
       call MPI_Waitall(nreq, req, statuses, mpi_err)
       SAFE_DEALLOCATE_A(statuses)
       SAFE_DEALLOCATE_A(req)
@@ -571,9 +571,9 @@ contains
     
     nn = 2*order
 
-    ALLOCATE(ww(1:nn), nn)
-    ALLOCATE(pos(1:nn), nn)
-    ALLOCATE(posi(1:nn), nn)
+    SAFE_ALLOCATE(ww(1:nn))
+    SAFE_ALLOCATE(pos(1:nn))
+    SAFE_ALLOCATE(posi(1:nn))
 
     do ii = 1, order
       posi(ii) = 1 + 2*(ii - 1)
@@ -665,7 +665,7 @@ subroutine X(set_bc_batch)(der, fb)
         call profiling_in(set_bc_comm_prof, 'SET_BC_COMMUNICATION')
 
         ! get the points that are copies from other nodes
-        ALLOCATE(req(2*der%mesh%vp%npart*fb%dim*fb%nst), 2*der%mesh%vp%npart*fb%dim*fb%nst)
+        SAFE_ALLOCATE(req(1:2*der%mesh%vp%npart*fb%dim*fb%nst))
 
         nreq = 0
 
@@ -707,7 +707,7 @@ subroutine X(set_bc_batch)(der, fb)
       if(der%mesh%parallel_in_domains) then
         call profiling_in(set_bc_comm_prof)
 
-        ALLOCATE(statuses(MPI_STATUS_SIZE, nreq), MPI_STATUS_SIZE*nreq)
+        SAFE_ALLOCATE(statuses(1:MPI_STATUS_SIZE, 1:nreq))
         call MPI_Waitall(nreq, req, statuses, mpi_err)
         SAFE_DEALLOCATE_A(statuses)
         SAFE_DEALLOCATE_A(req)
@@ -749,7 +749,7 @@ subroutine X(f_angular_momentum)(sb, mesh, der, f, lf, ghost_update, set_bc)
 
   ASSERT(sb%dim.ne.1)
 
-  ALLOCATE(gf(mesh%np, sb%dim), mesh%np*sb%dim)
+  SAFE_ALLOCATE(gf(1:mesh%np, 1:sb%dim))
 
   if (present(ghost_update) .and. present(set_bc)) &
     call X(derivatives_grad)(der, f, gf, ghost_update, set_bc)
@@ -813,8 +813,8 @@ subroutine X(f_l2)(sb, m, der, f, l2f, ghost_update)
 
   select case(sb%dim)
   case(3)
-    ALLOCATE(gf(m%np_part, 3), m%np_part*3)
-    ALLOCATE(ggf(m%np_part, 3, 3), m%np_part*3*3)
+    SAFE_ALLOCATE( gf(1:m%np_part, 1:3))
+    SAFE_ALLOCATE(ggf(1:m%np_part, 1:3, 1:3))
 
     if (present(ghost_update)) then
        call X(f_angular_momentum)(sb, m, der, f, gf, ghost_update)
@@ -836,8 +836,8 @@ subroutine X(f_l2)(sb, m, der, f, l2f, ghost_update)
     end do
 
   case(2)
-    ALLOCATE(gf(m%np_part, 1), m%np_part)
-    ALLOCATE(ggf(m%np_part, 1, 1), m%np_part)
+    SAFE_ALLOCATE( gf(1:m%np_part, 1:1))
+    SAFE_ALLOCATE(ggf(1:m%np_part, 1:1, 1:1))
 
     if (present(ghost_update)) then
       call X(f_angular_momentum)(sb, m, der, f, gf, ghost_update)

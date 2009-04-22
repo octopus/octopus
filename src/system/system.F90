@@ -68,8 +68,8 @@ contains
 
     call push_sub('systm.system_init')
 
-    ALLOCATE(sys%gr, 1)
-    ALLOCATE(sys%st, 1)
+    SAFE_ALLOCATE(sys%gr)
+    SAFE_ALLOCATE(sys%st)
     
     call obsolete_variable('SystemName')
 

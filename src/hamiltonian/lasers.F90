@@ -325,7 +325,7 @@ contains
     no_l = 0
     if(loct_parse_block(datasets_check('TDExternalFields'), blk) == 0) then
       no_l = loct_parse_block_n(blk)
-      ALLOCATE(l(no_l), no_l)
+      SAFE_ALLOCATE(l(1:no_l))
 
       do i = 1, no_l
 
@@ -370,9 +370,9 @@ contains
 
         select case(l(i)%field)
         case(E_FIELD_SCALAR_POTENTIAL)
-          ALLOCATE(l(i)%v(m%np_part), m%np_part)
+          SAFE_ALLOCATE(l(i)%v(1:m%np_part))
           l(i)%v = M_ZERO
-          ALLOCATE(x(MAX_DIM), MAX_DIM)
+          SAFE_ALLOCATE(x(1:MAX_DIM))
           do j = 1, m%np
             call mesh_r(m, j, r, x = x)
             call loct_parse_expression(pot_re, pot_im, m%sb%dim, x, r, M_ZERO, trim(scalar_pot_expression))
@@ -383,9 +383,9 @@ contains
         case(E_FIELD_MAGNETIC)
           ! WARNING: note that for the moment we are ignoring the possibility of a complex
           ! polarizability vector for the td magnetic field case.
-          ALLOCATE(l(i)%a(m%np_part, m%sb%dim), m%np_part*m%sb%dim)
+          SAFE_ALLOCATE(l(i)%a(1:m%np_part, 1:m%sb%dim))
           l(i)%a = M_ZERO
-          ALLOCATE(x(m%sb%dim), m%sb%dim)
+          SAFE_ALLOCATE(x(1:m%sb%dim))
           do j = 1, m%np
             x(1:m%sb%dim) = m%x(j, 1:m%sb%dim)
             select case(m%sb%dim)
@@ -631,11 +631,11 @@ contains
 
     case(E_FIELD_SCALAR_POTENTIAL, E_FIELD_ELECTRIC)
       if(.not. associated(em_field%potential)) then 
-        ALLOCATE(em_field%potential(mesh%np), mesh%np)
+        SAFE_ALLOCATE(em_field%potential(1:mesh%np))
         em_field%potential = M_ZERO
       end if
       
-      ALLOCATE(pot(mesh%np, 1), mesh%np)
+      SAFE_ALLOCATE(pot(1:mesh%np, 1:1))
       
       call laser_potential(mesh%sb, laser, mesh, pot(:, 1), time)
       
@@ -645,11 +645,11 @@ contains
       
     case(E_FIELD_MAGNETIC)
       if(.not. associated(em_field%vector_potential)) then 
-        ALLOCATE(em_field%vector_potential(mesh%np, mesh%sb%dim), mesh%np*mesh%sb%dim)
+        SAFE_ALLOCATE(em_field%vector_potential(1:mesh%np, 1:mesh%sb%dim))
         em_field%vector_potential = M_ZERO
       end if
 
-      ALLOCATE(pot(mesh%np, mesh%sb%dim), mesh%np*mesh%sb%dim)
+      SAFE_ALLOCATE(pot(1:mesh%np, 1:mesh%sb%dim))
 
       call laser_vector_potential(laser, pot, time)
       call laser_field(mesh%sb, laser, mag, time)
@@ -661,7 +661,7 @@ contains
 
     case(E_FIELD_VECTOR_POTENTIAL)
       if(.not. associated(em_field%vector_potential)) then 
-        ALLOCATE(em_field%vector_potential(mesh%np, MAX_DIM), MAX_DIM)
+        SAFE_ALLOCATE(em_field%vector_potential(1:mesh%np, 1:MAX_DIM))
         em_field%vector_potential(mesh%np, 1:MAX_DIM) = M_ZERO
       end if
       

@@ -49,9 +49,9 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, ik)
 
   ! generate the reduce buffer and related structures
 
-  ALLOCATE(ireduce(1:npj, 0:MAX_L, -MAX_L:MAX_L), npj*(MAX_L + 1)*(2*MAX_L + 1))
+  SAFE_ALLOCATE(ireduce(1:npj, 0:MAX_L, -MAX_L:MAX_L))
 #if defined(HAVE_MPI)
-  ALLOCATE(smc(1:npj, 0:MAX_L, -MAX_L:MAX_L), npj*(MAX_L + 1)*(2*MAX_L + 1))
+  SAFE_ALLOCATE(smc(1:npj, 0:MAX_L, -MAX_L:MAX_L))
 #endif
 
   nreduce = 0
@@ -73,9 +73,11 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, ik)
     call pop_sub(); return
   end if
 
-  ALLOCATE(reduce_buffer(1:nreduce), nreduce)
+  SAFE_ALLOCATE(reduce_buffer(1:nreduce))
 #if defined(HAVE_MPI)
-  if(.not. async_comm .and. mesh%parallel_in_domains) ALLOCATE(reduce_buffer_dest(1:nreduce), nreduce)
+  if(.not. async_comm .and. mesh%parallel_in_domains) then
+    SAFE_ALLOCATE(reduce_buffer_dest(1:nreduce))
+  end if
 #endif
 
   ! calculate <p|psi>
@@ -84,7 +86,7 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, ik)
 
     ns = pj(ipj)%sphere%ns
 
-    ALLOCATE(lpsi(ns, dim),  ns*dim)
+    SAFE_ALLOCATE(lpsi(1:ns, 1:dim))
 
     !copy psi to the small spherical grid
 
@@ -151,7 +153,7 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, ik)
     if(pj(ipj)%type == M_NONE) cycle
     
     ns = pj(ipj)%sphere%ns
-    ALLOCATE(lpsi(ns, dim),  ns*dim)
+    SAFE_ALLOCATE(lpsi(1:ns, 1:dim))
 
     lpsi = M_ZERO
 
@@ -241,7 +243,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
 
   ! generate the reduce buffer and related structures
 
-  ALLOCATE(ireduce(1:npj, 0:MAX_L, -MAX_L:MAX_L), npj*(MAX_L + 1)*(2*MAX_L + 1))
+  SAFE_ALLOCATE(ireduce(1:npj, 0:MAX_L, -MAX_L:MAX_L))
 
   nreduce = 0
 
@@ -262,10 +264,10 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
     call pop_sub(); return
   end if
 
-  ALLOCATE(reduce_buffer(nreduce, psib%nst), nreduce*psib%nst)
+  SAFE_ALLOCATE(reduce_buffer(1:nreduce, 1:psib%nst))
 #if defined(HAVE_MPI)
   if(mesh%parallel_in_domains) then
-    ALLOCATE(reduce_buffer_dest(nreduce, psib%nst), nreduce*psib%nst)
+    SAFE_ALLOCATE(reduce_buffer_dest(1:nreduce, 1:psib%nst))
   end if
 #endif
 
@@ -275,7 +277,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
 
     ns = pj(ipj)%sphere%ns
 
-    ALLOCATE(lpsi(ns, dim, psib%nst),  ns*dim*psib%nst)
+    SAFE_ALLOCATE(lpsi(1:ns, 1:dim, 1:psib%nst))
 
     call profiling_in(prof_gather, "PROJECTOR_GATHER")
 
@@ -340,7 +342,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
     if(pj(ipj)%type == M_NONE) cycle
 
     ns = pj(ipj)%sphere%ns
-    ALLOCATE(lpsi(ns, dim, psib%nst),  ns*dim*psib%nst)
+    SAFE_ALLOCATE(lpsi(1:ns, 1:dim, 1:psib%nst))
 
     lpsi = M_ZERO
 
@@ -413,10 +415,11 @@ R_TYPE function X(psia_project_psib)(pj, dim, psia, psib, ik) result(apb)
   R_TYPE,            intent(inout) :: psib(:, :)  ! psib(1:mesh%np, dim)
   integer,           intent(in)    :: ik
 
-  integer ::  ns, idim, ll, mm, nc, size, is
+  integer ::  ns, idim, ll, mm, nc, is
   R_TYPE, allocatable :: lpsi(:, :), plpsi(:,:)
   R_TYPE, allocatable :: uvpsi(:, :, :, :)
 #if defined(HAVE_MPI)
+  integer :: size
   R_TYPE, allocatable :: uvpsi_tmp(:, :, :, :)
 #endif
   type(mesh_t), pointer :: mesh
@@ -428,8 +431,8 @@ R_TYPE function X(psia_project_psib)(pj, dim, psia, psib, ik) result(apb)
   ASSERT(associated(pj%sphere%mesh))
   mesh => pj%sphere%mesh
 
-  ALLOCATE(lpsi(ns, dim),  ns*dim)
-  ALLOCATE(plpsi(ns, dim), ns*dim)
+  SAFE_ALLOCATE(lpsi(1:ns, 1:dim))
+  SAFE_ALLOCATE(plpsi(1:ns, 1:dim))
 
   do idim = 1, dim
     if(simul_box_is_periodic(mesh%sb)) then
@@ -449,8 +452,7 @@ R_TYPE function X(psia_project_psib)(pj, dim, psia, psib, ik) result(apb)
       end if
     end do
 
-    size = pj%reduce_size*2*(pj%lmax + 1)*(2*pj%lmax + 1)
-    ALLOCATE(uvpsi(1:pj%reduce_size, 1:2, 0:pj%lmax, -pj%lmax:pj%lmax), size)
+    SAFE_ALLOCATE(uvpsi(1:pj%reduce_size, 1:2, 0:pj%lmax, -pj%lmax:pj%lmax))
     uvpsi = R_TOTYPE(M_ZERO)
 
     ASSERT(associated(pj%kb_p))
@@ -465,8 +467,9 @@ R_TYPE function X(psia_project_psib)(pj, dim, psia, psib, ik) result(apb)
 
 #if defined(HAVE_MPI)
     if(mesh%parallel_in_domains) then
-      ALLOCATE(uvpsi_tmp(1:pj%reduce_size, 1:2, 0:pj%lmax, -pj%lmax:pj%lmax), size)
+      SAFE_ALLOCATE(uvpsi_tmp(1:pj%reduce_size, 1:2, 0:pj%lmax, -pj%lmax:pj%lmax))
       uvpsi_tmp = R_TOTYPE(M_ZERO)
+      size = pj%reduce_size*2*(pj%lmax + 1)*(2*pj%lmax + 1)
       call MPI_Allreduce(uvpsi, uvpsi_tmp, size, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
       uvpsi = uvpsi_tmp
       SAFE_DEALLOCATE_A(uvpsi_tmp)
@@ -571,9 +574,9 @@ subroutine X(projector_commute_r)(pj, gr, dim, idir, ik, psi, cpsi)
     jxyz => pj%sphere%jxyz
     smx => pj%sphere%x
 
-    ALLOCATE(lpsi(ns, dim), ns * dim)
-    ALLOCATE(xplpsi(ns, dim), ns * dim)
-    ALLOCATE(pxlpsi(ns, dim), ns * dim)
+    SAFE_ALLOCATE(  lpsi(1:ns, 1:dim))
+    SAFE_ALLOCATE(xplpsi(1:ns, 1:dim))
+    SAFE_ALLOCATE(pxlpsi(1:ns, 1:dim))
 
     if(simul_box_is_periodic(gr%mesh%sb)) then
       do idim = 1, dim

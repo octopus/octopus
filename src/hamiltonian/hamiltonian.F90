@@ -231,11 +231,11 @@ contains
     ! allocate potentials and density of the cores
     ! In the case of spinors, vxc_11 = hm%vxc(:, 1), vxc_22 = hm%vxc(:, 2), Re(vxc_12) = hm%vxc(:. 3);
     ! Im(vxc_12) = hm%vxc(:, 4)
-    ALLOCATE(hm%vhartree(gr%mesh%np),        gr%mesh%np)
-    ALLOCATE(hm%vxc(gr%mesh%np, hm%d%nspin), gr%mesh%np*hm%d%nspin)
-    ALLOCATE(hm%vhxc(gr%mesh%np, hm%d%nspin), gr%mesh%np*hm%d%nspin)
+    SAFE_ALLOCATE(hm%vhartree(1:gr%mesh%np))
+    SAFE_ALLOCATE(hm%vxc(1:gr%mesh%np, 1:hm%d%nspin))
+    SAFE_ALLOCATE(hm%vhxc(1:gr%mesh%np, 1:hm%d%nspin))
     if(iand(hm%xc_family, XC_FAMILY_MGGA).ne.0) then
-      ALLOCATE(hm%vtau(gr%mesh%np, hm%d%nspin), gr%mesh%np*hm%d%nspin)
+      SAFE_ALLOCATE(hm%vtau(1:gr%mesh%np, 1:hm%d%nspin))
     else
       nullify(hm%vtau)
     end if
@@ -249,7 +249,7 @@ contains
     end do
 
     if (hm%d%cdft) then
-      ALLOCATE(hm%axc(gr%mesh%np, gr%mesh%sb%dim, hm%d%nspin), gr%mesh%np*gr%mesh%sb%dim*hm%d%nspin)
+      SAFE_ALLOCATE(hm%axc(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:hm%d%nspin))
       hm%axc = M_ZERO
     else
       nullify(hm%axc)
@@ -288,11 +288,11 @@ contains
     if(hm%self_induced_magnetic) then
       select case(gr%mesh%sb%dim)
       case(3)
-        ALLOCATE(hm%a_ind(gr%mesh%np_part, MAX_DIM), gr%mesh%np_part*MAX_DIM)
-        ALLOCATE(hm%b_ind(gr%mesh%np_part, MAX_DIM), gr%mesh%np_part*MAX_DIM)
+        SAFE_ALLOCATE(hm%a_ind(1:gr%mesh%np_part, 1:MAX_DIM))
+        SAFE_ALLOCATE(hm%b_ind(1:gr%mesh%np_part, 1:MAX_DIM))
       case(2)
-        ALLOCATE(hm%a_ind(gr%mesh%np_part, 2), gr%mesh%np_part*2)
-        ALLOCATE(hm%b_ind(gr%mesh%np_part, 1), gr%mesh%np_part)
+        SAFE_ALLOCATE(hm%a_ind(1:gr%mesh%np_part, 1:2))
+        SAFE_ALLOCATE(hm%b_ind(1:gr%mesh%np_part, 1:1))
       end select
     else
       nullify(hm%a_ind, hm%b_ind)
@@ -359,7 +359,7 @@ contains
       end if
 
       ! generate boundary potential...
-      ALLOCATE(hm%ab_pot(gr%mesh%np), gr%mesh%np)
+      SAFE_ALLOCATE(hm%ab_pot(1:gr%mesh%np))
       hm%ab_pot = M_ZERO
       do i = 1, gr%mesh%np
         call mesh_inborder(gr%mesh, geo, i, n, d, hm%ab_width)
@@ -445,7 +445,7 @@ contains
 
     hm%multigrid_initialized = .false.
 
-    ALLOCATE(hm%total(1:hm%d%nspin), hm%d%nspin)
+    SAFE_ALLOCATE(hm%total(1:hm%d%nspin))
 
     call scissor_nullify(hm%scissor)
 
@@ -457,7 +457,7 @@ contains
     subroutine init_phase
       integer :: ip, ik
 
-      ALLOCATE(hm%phase(1:gr%mesh%np_part, 1:hm%d%nik), gr%mesh%np_part*hm%d%nik)
+      SAFE_ALLOCATE(hm%phase(1:gr%mesh%np_part, 1:hm%d%nik))
 
       forall (ik = 1:hm%d%nik, ip = 1:gr%mesh%np_part)
         hm%phase(ip, ik) = exp(-M_zI*sum(gr%mesh%x(ip, 1:gr%mesh%sb%dim)* hm%d%kpoints(1:gr%mesh%sb%dim, ik)))
@@ -487,8 +487,8 @@ contains
       ! that order (Octopus binary and NetCDF format). If none of the
       ! two can be found, a warning is emitted and zero potential
       ! assumed.
-      ALLOCATE(hm%lead_vks(np_uc, hm%d%nspin, NLEADS), np_uc*hm%d%nspin*NLEADS)
-      ALLOCATE(hm%lead_vhartree(np_uc, NLEADS), np_uc*NLEADS)
+      SAFE_ALLOCATE(hm%lead_vks(1:np_uc, 1:hm%d%nspin, 1:NLEADS))
+      SAFE_ALLOCATE(hm%lead_vhartree(1:np_uc, 1:NLEADS))
 
       do il = 1, NLEADS
         do ispin = 1, hm%d%nspin
@@ -592,8 +592,8 @@ contains
       end do
 
       ! Calculate the diagonal and offdiagonal blocks of the lead Hamiltonian.
-      ALLOCATE(hm%lead_h_diag(np, np, st%d%dim, NLEADS), np**2*st%d%dim*NLEADS)
-      ALLOCATE(hm%lead_h_offdiag(np, np, NLEADS), np**2*NLEADS)
+      SAFE_ALLOCATE(hm%lead_h_diag(1:np, 1:np, 1:st%d%dim, 1:NLEADS))
+      SAFE_ALLOCATE(hm%lead_h_offdiag(1:np, 1:np, 1:NLEADS))
       do il = 1, NLEADS
         do ispin = 1, hm%d%nspin
           call lead_diag(gr%der%lapl, hm%lead_vks(:, ispin, il), &
@@ -805,7 +805,7 @@ contains
     do ispin = 1, this%d%nspin
       
       if(.not. associated(this%total(ispin)%potential)) then
-        ALLOCATE(this%total(ispin)%potential(1:mesh%np), mesh%np)
+        SAFE_ALLOCATE(this%total(ispin)%potential(1:mesh%np))
       end if
 
       forall (ip = 1:mesh%np) this%total(ispin)%potential(ip) = this%vhxc(ip, ispin) + this%ep%vpsl(ip)

@@ -123,20 +123,20 @@ contains
 
     mgrid%n_levels = n_levels
 
-    ALLOCATE(mgrid%level(0:n_levels), n_levels+1)
+    SAFE_ALLOCATE(mgrid%level(0:n_levels))
 
     mgrid%level(0)%mesh   => mesh
     mgrid%level(0)%der => der
 
     mgrid%level(0)%n_fine = mesh%np
-    ALLOCATE(mgrid%level(0)%fine_i(mesh%np), mesh%np)
+    SAFE_ALLOCATE(mgrid%level(0)%fine_i(1:mesh%np))
 
     write(message(1), '(a,i3)') "Multigrid levels:", n_levels+1
     call write_info(1)
 
     do i = 1, mgrid%n_levels
-      ALLOCATE(mgrid%level(i)%mesh, 1)
-      ALLOCATE(mgrid%level(i)%der, 1)
+      SAFE_ALLOCATE(mgrid%level(i)%mesh)
+      SAFE_ALLOCATE(mgrid%level(i)%der)
       
       call multigrid_mesh_half(geo, cv, mgrid%level(i-1)%mesh, mgrid%level(i)%mesh, stencil)
 
@@ -156,9 +156,9 @@ contains
 
     end do
     
-    ALLOCATE(mgrid%sp(0:mgrid%n_levels), mgrid%n_levels)
-    ALLOCATE(mgrid%ep(0:mgrid%n_levels), mgrid%n_levels)
-    ALLOCATE(mgrid%ep_part(0:mgrid%n_levels), mgrid%n_levels)
+    SAFE_ALLOCATE(mgrid%sp(0:mgrid%n_levels))
+    SAFE_ALLOCATE(mgrid%ep(0:mgrid%n_levels))
+    SAFE_ALLOCATE(mgrid%ep_part(0:mgrid%n_levels))
 
     mgrid%tp = 0
     do i = 0, mgrid%n_levels    
@@ -186,7 +186,7 @@ contains
     call push_sub('multigrid.multigrid_get_transfer_tables')
 
     tt%n_coarse = coarse%np
-    ALLOCATE(tt%to_coarse(tt%n_coarse), tt%n_coarse)
+    SAFE_ALLOCATE(tt%to_coarse(1:tt%n_coarse))
 
     ! GENERATE THE TABLE TO MAP FROM THE FINE TO THE COARSE GRID
     do i = 1, tt%n_coarse
@@ -206,7 +206,7 @@ contains
 
     ! count
     tt%n_fine = fine%np
-    ALLOCATE(tt%fine_i(tt%n_fine), tt%n_fine)
+    SAFE_ALLOCATE(tt%fine_i(1:tt%n_fine))
 
     tt%n_fine1 = 0
     tt%n_fine2 = 0
@@ -240,10 +240,10 @@ contains
     
     ASSERT(tt%n_fine1 + tt%n_fine2 + tt%n_fine4 + tt%n_fine8 == tt%n_fine)
 
-    ALLOCATE(tt%to_fine1(1, tt%n_fine1), 1*tt%n_fine1)
-    ALLOCATE(tt%to_fine2(2, tt%n_fine2), 2*tt%n_fine2)
-    ALLOCATE(tt%to_fine4(4, tt%n_fine4), 4*tt%n_fine4)
-    ALLOCATE(tt%to_fine8(8, tt%n_fine8), 8*tt%n_fine8)
+    SAFE_ALLOCATE(tt%to_fine1(1:1, 1:tt%n_fine1))
+    SAFE_ALLOCATE(tt%to_fine2(1:2, 1:tt%n_fine2))
+    SAFE_ALLOCATE(tt%to_fine4(1:4, 1:tt%n_fine4))
+    SAFE_ALLOCATE(tt%to_fine8(1:8, 1:tt%n_fine8))
 
     ! and now build the tables
     i1 = 0;  i2 = 0;  i4 = 0;  i8 = 0

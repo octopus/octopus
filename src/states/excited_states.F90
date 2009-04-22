@@ -201,13 +201,13 @@ contains
       call write_fatal(1)
     end if
 
-    ALLOCATE(n_filled(nspin), nspin)
-    ALLOCATE(n_empty(nspin), nspin)
-    ALLOCATE(n_partially_filled(nspin), nspin)
-    ALLOCATE(n_half_filled(nspin), nspin)
-    ALLOCATE(filled(nst, nspin), nst*nspin)
-    ALLOCATE(partially_filled(nst, nspin), nst*nspin)
-    ALLOCATE(half_filled(nst, nspin), nst*nspin)
+    SAFE_ALLOCATE(          n_filled(1:nspin))
+    SAFE_ALLOCATE(           n_empty(1:nspin))
+    SAFE_ALLOCATE(n_partially_filled(1:nspin))
+    SAFE_ALLOCATE(     n_half_filled(1:nspin))
+    SAFE_ALLOCATE(          filled(1:nst, 1:nspin))
+    SAFE_ALLOCATE(partially_filled(1:nst, 1:nspin))
+    SAFE_ALLOCATE(     half_filled(1:nst, 1:nspin))
 
     select case(ispin)
     case(UNPOLARIZED)
@@ -284,8 +284,8 @@ contains
 
 
     excited_state%n_pairs = j
-    ALLOCATE(excited_state%pair(j), j)
-    ALLOCATE(excited_state%weight(j), j)
+    SAFE_ALLOCATE(excited_state%pair(1:j))
+    SAFE_ALLOCATE(excited_state%weight(1:j))
 
     rewind(iunit)
     call io_skip_header(iunit)
