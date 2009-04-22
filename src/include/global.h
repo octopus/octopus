@@ -44,7 +44,7 @@
 #if !defined(NDEBUG)
 #  define ASSERT(expr)  \
   if(.not.(expr)) _anl_ \
-     call assert_die(__STRING(expr), _anl_ __FILE__, _anl_  __LINE__)
+     call assert_die(__STRING(expr), _anl_ __FILE__, _anl_  __LINE__) \
   CARDINAL
 #else
 #  define ASSERT(expr)
@@ -91,7 +91,7 @@
 
 #endif
 
-#define ALLOCATE(a,b) allocate(a)
+#define ALLOCATE(a,b) xxxxallocate(a)
 
 #define REAL_DOUBLE real(8)
 #define REAL_SINGLE real(4)
