@@ -312,22 +312,14 @@ subroutine modelMB_particles_copy(modelmb_out, modelmb_in)
   modelmb_out%nparticle_modelMB=modelmb_in%nparticle_modelMB
   modelmb_out%ndensities_to_calculate=modelmb_in%ndensities_to_calculate
 
-  SAFE_ALLOCATE(modelmb_out%labels_particles_modelMB(1:modelmb_out%nparticle_modelMB))
-  modelmb_out%labels_particles_modelMB=modelmb_in%labels_particles_modelMB
-  SAFE_ALLOCATE (modelmb_out%particletype_modelMB(1:modelmb_out%nparticle_modelMB))
-  modelmb_out%particletype_modelMB=modelmb_in%particletype_modelMB
-  SAFE_ALLOCATE (modelmb_out%mass_particle_modelMB(1:modelmb_out%nparticle_modelMB))
-  modelmb_out%mass_particle_modelMB=modelmb_in%mass_particle_modelMB
-  SAFE_ALLOCATE (modelmb_out%charge_particle_modelMB(1:modelmb_out%nparticle_modelMB))
-  modelmb_out%charge_particle_modelMB=modelmb_in%charge_particle_modelMB
-  SAFE_ALLOCATE (modelmb_out%nparticles_per_type(1:modelmb_out%ntype_of_particle_modelMB))
-  modelmb_out%nparticles_per_type=modelmb_in%nparticles_per_type
+  call loct_pointer_copy(modelmb_out%labels_particles_modelMB,modelmb_in%labels_particles_modelMB)
+  call loct_pointer_copy(modelmb_out%particletype_modelMB,modelmb_in%particletype_modelMB)
+  call loct_pointer_copy(modelmb_out%mass_particle_modelMB,modelmb_in%mass_particle_modelMB)
+  call loct_pointer_copy(modelmb_out%charge_particle_modelMB,modelmb_in%charge_particle_modelMB)
+  call loct_pointer_copy(modelmb_out%nparticles_per_type,modelmb_in%nparticles_per_type)
 
-
-  SAFE_ALLOCATE (modelmb_out%labels_densities(1:modelmb_out%ndensities_to_calculate))
-  modelmb_out%nparticles_per_type=modelmb_in%nparticles_per_type
-  SAFE_ALLOCATE (modelmb_out%particle_kept_densities(1:modelmb_out%ndensities_to_calculate))
-  modelmb_out%nparticles_per_type=modelmb_in%nparticles_per_type
+  call loct_pointer_copy(modelmb_out%labels_densities,modelmb_in%labels_densities)
+  call loct_pointer_copy(modelmb_out%particle_kept_densities,modelmb_in%particle_kept_densities)
 
   call pop_sub()
 

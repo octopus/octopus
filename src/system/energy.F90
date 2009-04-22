@@ -133,9 +133,9 @@ contains
       write(message(6), '(6x,a, f18.8)')'Correlation = ', hm%ec       / units_out%energy%factor
       write(message(7), '(6x,a, f18.8)')'-TS         = ', hm%entropy  / units_out%energy%factor
       call write_info(7, iunit)
-      if(full_) then
-        write(message(1), '(6x,a, f18.8)')'Kinetic     = ', hm%t0 / units_out%energy%factor
-        write(message(2), '(6x,a, f18.8)')'External    = ', hm%eext / units_out%energy%factor
+      if(full_) then  ! maybe it is full_ that is the problem
+        write(message(1), '(6x,a, f18.8)')'Kinetic     = ', hm%t0 / units_out%energy%factor  ! t0 is uninitialized according to valgrind
+        write(message(2), '(6x,a, f18.8)')'External    = ', hm%eext / units_out%energy%factor ! eext too
         call write_info(2, iunit)
       end if
     end if
