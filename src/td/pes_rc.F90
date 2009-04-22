@@ -48,8 +48,8 @@ subroutine PES_rc_init(v, m, st, save_iter)
   v%npoints = loct_parse_block_n(blk)
 
   ! setup filenames and read points
-  ALLOCATE(v%filenames(v%npoints), v%npoints)
-  ALLOCATE(v%points   (v%npoints), v%npoints)
+  SAFE_ALLOCATE(v%filenames(1:v%npoints))
+  SAFE_ALLOCATE(v%points   (1:v%npoints))
   do i = 1, v%npoints
     write(v%filenames(i), '(a,i2.2,a)') 'PES_rc.', i, '.out'
 
@@ -65,8 +65,7 @@ subroutine PES_rc_init(v, m, st, save_iter)
 
   call loct_parse_block_end(blk)
 
-  i = v%npoints*st%d%dim*st%lnst*st%d%nik*save_iter
-  ALLOCATE(v%wf(v%npoints, st%d%dim, st%st_start:st%st_end, st%d%nik, save_iter), i)
+  SAFE_ALLOCATE(v%wf(1:v%npoints, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik, 1:save_iter))
 end subroutine PES_rc_init
 
 

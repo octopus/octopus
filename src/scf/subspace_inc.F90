@@ -45,9 +45,9 @@ subroutine X(subspace_diag)(gr, st, hm, ik, diff)
   else
 #endif
 
-    ALLOCATE(h_subspace(st%nst, st%nst), st%nst*st%nst)
-    ALLOCATE(vec(st%nst, st%nst), st%nst*st%nst)
-    ALLOCATE(f(gr%mesh%np, st%d%dim, st%d%block_size), gr%mesh%np*st%d%dim*st%d%block_size)
+    SAFE_ALLOCATE(h_subspace(1:st%nst, 1:st%nst))
+    SAFE_ALLOCATE(       vec(1:st%nst, 1:st%nst))
+    SAFE_ALLOCATE(f(1:gr%mesh%np, 1:st%d%dim, 1:st%d%block_size))
 
     ! Calculate the matrix representation of the Hamiltonian in the subspace <psi|H|psi>.
     do ist = st%st_start, st%st_end, st%d%block_size
@@ -147,9 +147,9 @@ subroutine X(subspace_diag_par_states)(gr, st, hm, ik, diff)
 
   call push_sub('subspace_inc.Xsubspace_diag_par_states')
 
-  ALLOCATE(h_subspace(st%nst, st%nst), st%nst*st%nst)
-  ALLOCATE(vec(st%nst, st%nst), st%nst*st%nst)
-  ALLOCATE(f(gr%mesh%np_part, st%d%dim, st%st_start:st%st_end), gr%mesh%np_part*st%d%dim*st%lnst)
+  SAFE_ALLOCATE(h_subspace(1:st%nst, 1:st%nst))
+  SAFE_ALLOCATE(       vec(1:st%nst, 1:st%nst))
+  SAFE_ALLOCATE(f(1:gr%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end))
 
   ! Calculate the matrix representation of the Hamiltonian in the subspace <psi|H|psi>.
   do i = st%st_start, st%st_end

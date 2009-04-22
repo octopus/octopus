@@ -147,7 +147,7 @@ contains
                                                    ! that must be propagated (currently ions
                                                    ! or a gauge field).
 
-    integer :: default_propagator, size
+    integer :: default_propagator
 
     call push_sub('td_rti.td_rti_init')
 
@@ -321,10 +321,9 @@ contains
     case(PROP_CRANK_NICHOLSON)
     case(PROP_CRANK_NICHOLSON_SPARSKIT)
 #ifdef HAVE_SPARSKIT
-      ALLOCATE(tdsk, 1)
+      SAFE_ALLOCATE(tdsk)
       call zsparskit_solver_init(gr%mesh%np, tdsk)
-      ALLOCATE(zpsi_tmp(1:gr%mesh%np_part, 1:st%d%dim, 1:st%nst, st%d%kpt%start:st%d%kpt%end), 
-      gr%mesh%np_part*st%d%dim*st%nst*st%d%kpt%nlocal)
+      SAFE_ALLOCATE(zpsi_tmp(1:gr%mesh%np_part, 1:st%d%dim, 1:st%nst, st%d%kpt%start:st%d%kpt%end))
 #else
       message(1) = 'Octopus was not compiled with support for the sparskit library. This'
       message(2) = 'library is required if the "crank_nicholson_sparskit" propagator is selected.'
@@ -332,7 +331,7 @@ contains
       call write_fatal(3)
 #endif
     case(PROP_MAGNUS)
-      ALLOCATE(tr%vmagnus(gr%mesh%np, st%d%nspin, 2), gr%mesh%np*st%d%nspin*2)
+      SAFE_ALLOCATE(tr%vmagnus(1:gr%mesh%np, 1:st%d%nspin, 1:2))
     case(PROP_CRANK_NICHOLSON_SRC_MEM)
       call ob_rti_init(st, gr, hm, tr%ob, dt, max_iter)
     case(PROP_VISSCHER)
@@ -352,7 +351,7 @@ contains
     end if
 
     ! Allocate memory to store the old KS potentials
-    ALLOCATE(tr%v_old(gr%mesh%np, st%d%nspin, 0:3), gr%mesh%np*st%d%nspin*(3+1))
+    SAFE_ALLOCATE(tr%v_old(1:gr%mesh%np, 1:st%d%nspin, 0:3))
     tr%v_old(:, :, :) = M_ZERO
     call exponential_init(tr%te, gr) ! initialize propagator
 
@@ -361,8 +360,7 @@ contains
     tr%scf_propagation = .false.
 
     if(tr%method == PROP_VISSCHER) then
-      size = gr%mesh%np*st%d%dim*st%lnst*st%d%kpt%nlocal
-      ALLOCATE(tr%prev_psi(1:gr%mesh%np, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end), size)
+      SAFE_ALLOCATE(tr%prev_psi(1:gr%mesh%np, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
       tr%first = .true.
     else
       nullify(tr%prev_psi)
@@ -472,8 +470,7 @@ contains
     if(hm%theory_level .ne. INDEPENDENT_PARTICLES) then
       if( (t < 3*dt)  .or.  (tr%scf_propagation) ) then
         self_consistent = .true.
-        ALLOCATE(zpsi1(gr%mesh%np_part, st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end), 
-        gr%mesh%np_part*st%d%dim*st%lnst*st%d%kpt%nlocal)
+        SAFE_ALLOCATE(zpsi1(1:gr%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
         zpsi1 = st%zpsi
       end if
     end if
@@ -497,12 +494,12 @@ contains
     end select
 
     if(self_consistent) then
-      ALLOCATE(vaux(gr%mesh%np, st%d%nspin), gr%mesh%np*st%d%nspin)
+      SAFE_ALLOCATE(vaux(1:gr%mesh%np, 1:st%d%nspin))
 
       ! First, compare the new potential to the extrapolated one.
       call states_calc_dens(st, gr%mesh%np)
       call v_ks_calc(gr, ks, hm, st)
-      ALLOCATE(dtmp(gr%mesh%np), gr%mesh%np)
+      SAFE_ALLOCATE(dtmp(1:gr%mesh%np))
       d_max = M_ZERO
       do is = 1, st%d%nspin
         dtmp(1:gr%mesh%np) = hm%vhxc(1:gr%mesh%np, is) - tr%v_old(1:gr%mesh%np, is, 0)
@@ -535,7 +532,7 @@ contains
 
           call states_calc_dens(st, gr%mesh%np)
           call v_ks_calc(gr, ks, hm, st)
-          ALLOCATE(dtmp(gr%mesh%np), gr%mesh%np)
+          SAFE_ALLOCATE(dtmp(1:gr%mesh%np))
           d_max = M_ZERO
           do is = 1, st%d%nspin
             dtmp(1:gr%mesh%np) = hm%vhxc(1:gr%mesh%np, is) - vaux(1:gr%mesh%np, is)
@@ -636,11 +633,11 @@ contains
 
       if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
 
-        ALLOCATE(vhxc_t1(gr%mesh%np, st%d%nspin), gr%mesh%np*st%d%nspin)
-        ALLOCATE(vhxc_t2(gr%mesh%np, st%d%nspin), gr%mesh%np*st%d%nspin)
+        SAFE_ALLOCATE(vhxc_t1(1:gr%mesh%np, 1:st%d%nspin))
+        SAFE_ALLOCATE(vhxc_t2(1:gr%mesh%np, 1:st%d%nspin))
         call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t1)
 
-        ALLOCATE(zpsi1(gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
+        SAFE_ALLOCATE(zpsi1(1:gr%mesh%np_part, 1:st%d%dim))
 
         st%rho(1:gr%mesh%np, 1:st%d%nspin) = M_ZERO
 
@@ -809,14 +806,12 @@ contains
 #ifdef HAVE_SPARSKIT
       FLOAT, allocatable :: vhxc_t1(:,:), vhxc_t2(:,:)
       CMPLX, allocatable :: zpsi_rhs_pred(:,:,:,:), zpsi_rhs_corr(:,:,:,:)
-      integer :: ik, ist, idim, isize, np_part
+      integer :: ik, ist, idim, np_part
 
       call push_sub('td_rti.td_crank_nicholson_sparskit')
 
-      isize = gr%mesh%np_part*st%lnst*st%d%kpt%nlocal*st%d%dim
       np_part = gr%mesh%np_part
-      ALLOCATE(zpsi_rhs_corr(np_part, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end), isize)
-
+      SAFE_ALLOCATE(zpsi_rhs_corr(1:np_part, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
       zpsi_rhs_corr = st%zpsi ! store zpsi for corrector step
 
       ! define pointer and variables for usage in td_zop, td_zopt routines
@@ -833,11 +828,11 @@ contains
 
       if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
         np_part = gr%mesh%np_part
-        ALLOCATE(zpsi_rhs_pred(np_part, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end), isize)
+        SAFE_ALLOCATE(zpsi_rhs_pred(1:np_part, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
         zpsi_rhs_pred = st%zpsi ! store zpsi for predictor step
         
-        ALLOCATE(vhxc_t1(gr%mesh%np, st%d%nspin), gr%mesh%np*st%d%nspin)
-        ALLOCATE(vhxc_t2(gr%mesh%np, st%d%nspin), gr%mesh%np*st%d%nspin)
+        SAFE_ALLOCATE(vhxc_t1(1:gr%mesh%np, 1:st%d%nspin))
+        SAFE_ALLOCATE(vhxc_t2(1:gr%mesh%np, 1:st%d%nspin))
         vhxc_t1 = hm%vhxc
 
         ! get rhs of CN linear system (rhs1 = (1-i\delta t/2 H_n)\psi^n)
@@ -934,9 +929,9 @@ contains
       tr%te%exp_method = TAYLOR
       tr%te%exp_order  = 1
 
-      ALLOCATE(zpsi_rhs(np_part, st%d%dim), np_part*st%d%dim)
-      ALLOCATE(zpsi(np*st%d%dim), np*st%d%dim)
-      ALLOCATE(rhs(np*st%d%dim), np*st%d%dim)
+      SAFE_ALLOCATE(zpsi_rhs(1:np_part, 1:st%d%dim))
+      SAFE_ALLOCATE(zpsi(1:np*st%d%dim))
+      SAFE_ALLOCATE(rhs(1:np*st%d%dim))
         
       call interpolate( (/t, t-dt, t-2*dt/), tr%v_old(:, :, 0:2), t-dt/M_TWO, hm%vhxc(:, :))
       call hamiltonian_update_potential(hm, gr%mesh)
@@ -992,7 +987,7 @@ contains
 
       call push_sub('td_rti.td_magnus')
 
-      ALLOCATE(vaux(gr%mesh%np, st%d%nspin, 2), gr%mesh%np*st%d%nspin*2)
+      SAFE_ALLOCATE(vaux(1:gr%mesh%np, 1:st%d%nspin, 1:2))
 
       time(1) = (M_HALF-sqrt(M_THREE)/M_SIX)*dt
       time(2) = (M_HALF+sqrt(M_THREE)/M_SIX)*dt
@@ -1011,7 +1006,7 @@ contains
         do i = 1, hm%ep%no_lasers
           select case(laser_kind(hm%ep%lasers(i)))
           case(E_FIELD_ELECTRIC)
-            ALLOCATE(pot(gr%mesh%np), gr%mesh%np)
+            SAFE_ALLOCATE(pot(1:gr%mesh%np))
             call laser_potential(gr%sb, hm%ep%lasers(i), gr%mesh, pot, t-dt+time(j))
             do is = 1, st%d%nspin
               vaux(:, is, j) = vaux(:, is, j) + pot(:)
@@ -1059,8 +1054,8 @@ contains
 
       call push_sub('td_rti.td_app_reversal')
       
-      ALLOCATE(dpsi(1:gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
-      ALLOCATE(hpsi(1:gr%mesh%np, st%d%dim), gr%mesh%np)
+      SAFE_ALLOCATE(dpsi(1:gr%mesh%np_part, 1:st%d%dim))
+      SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim))
 
       ! we have to initialize the imaginary part of \psi at dt/2, so we
       ! use the exponential midpoint rule.
@@ -1080,7 +1075,7 @@ contains
         
         if(gauge_field_is_applied(hm%ep%gfield)) call gauge_field_propagate(hm%ep%gfield, gauge_force, CNST(0.25)*dt)
         
-        ALLOCATE(zpsi(1:gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
+        SAFE_ALLOCATE(zpsi(1:gr%mesh%np_part, 1:st%d%dim))
         do ik = st%d%kpt%start, st%d%kpt%end
           do ist = st%st_start, st%st_end
             do idim = 1, st%d%dim
@@ -1190,7 +1185,7 @@ contains
     integer :: idim
     CMPLX, allocatable :: zpsi(:, :)
 
-    ALLOCATE(zpsi(grid_p%mesh%np_part, dim_op), grid_p%mesh%np_part*dim_op)
+    SAFE_ALLOCATE(zpsi(1:grid_p%mesh%np_part, 1:dim_op))
     zpsi = M_z0
     forall(idim = 1:dim_op) &
       zpsi(1:grid_p%mesh%np, idim) = x((idim-1)*grid_p%mesh%np+1:idim*grid_p%mesh%np)

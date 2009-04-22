@@ -61,12 +61,10 @@ contains
     type(states_t),   intent(in)    :: st
     integer,          intent(in)    :: np
 
-    integer :: size
     call push_sub('ob_src.ob_src_init')
 
     ! FIXME: spinor index is ignored here.
-    size = np*st%lnst*st%d%kpt%nlocal*NLEADS
-    ALLOCATE(ob%src_prev(np, 1, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end, NLEADS), size)
+    SAFE_ALLOCATE(ob%src_prev(1:np, 1, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end, 1:NLEADS))
 
     ob%src_prev = M_z0
 
@@ -142,7 +140,7 @@ contains
 
     call push_sub('ob_src.calc_source_wf_sp')
 
-    ALLOCATE(tmem(np, np), np**2)
+    SAFE_ALLOCATE(tmem(1:np, 1:np))
     call make_full_matrix(np, order, dim, sp_mem, mem_s, tmem, mapping)
     call calc_source_wf(maxiter, m, np, il, offdiag, tmem, dt, psi0, u, f0, factor, lambda, src)
     SAFE_DEALLOCATE_A(tmem)

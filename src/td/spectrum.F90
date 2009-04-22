@@ -297,9 +297,9 @@ contains
     read(iunit, '(a)') line
     if(index(line,'multipole').ne.0) then
       read(line, '("# N multipoles ",i3)') k%n_multipoles
-      ALLOCATE(k%l(k%n_multipoles), k%n_multipoles)
-      ALLOCATE(k%m(k%n_multipoles), k%n_multipoles)
-      ALLOCATE(k%weight(k%n_multipoles), k%n_multipoles)
+      SAFE_ALLOCATE(     k%l(1:k%n_multipoles))
+      SAFE_ALLOCATE(     k%m(1:k%n_multipoles))
+      SAFE_ALLOCATE(k%weight(1:k%n_multipoles))
       do i = 1, k%n_multipoles
         read(iunit, '("# multipole    ",2i3,f18.12)') k%l(i), k%m(i), k%weight(i)
       end do
@@ -407,9 +407,9 @@ contains
     if(loct_parse_block(datasets_check('TDKickFunction'), blk)==0) then
       n_rows = loct_parse_block_n(blk)
       k%n_multipoles = n_rows
-      ALLOCATE(k%l(n_rows), n_rows)
-      ALLOCATE(k%m(n_rows), n_rows)
-      ALLOCATE(k%weight(n_rows), n_rows)
+      SAFE_ALLOCATE(     k%l(1:n_rows))
+      SAFE_ALLOCATE(     k%m(1:n_rows))
+      SAFE_ALLOCATE(k%weight(1:n_rows))
       do i = 1, n_rows
         call loct_parse_block_int(blk, i-1, 0, k%l(i))
         call loct_parse_block_int(blk, i-1, 1, k%m(i))
@@ -558,13 +558,13 @@ contains
     call spectrum_cross_section_info(in_file(1), nspin, kick, energy_steps, dw)
     call io_skip_header(in_file(1))
 
-    ALLOCATE(sigma (3, 3, 0:energy_steps, nspin), 3*3*(energy_steps+1)*nspin)
-    ALLOCATE(sigmap(3, 3, 0:energy_steps, nspin), 3*3*(energy_steps+1)*nspin)
-    ALLOCATE(sigmau(3,    0:energy_steps, nspin),   3*(energy_steps+1)*nspin)
-    ALLOCATE(sigmav(3,    0:energy_steps, nspin),   3*(energy_steps+1)*nspin)
-    ALLOCATE(sigmaw(3,    0:energy_steps, nspin),   3*(energy_steps+1)*nspin)
-    ALLOCATE(     p(3, 3),                          3*3)
-    ALLOCATE(    ip(3, 3),                          3*3)
+    SAFE_ALLOCATE(sigma (1:3, 1:3, 0:energy_steps, 1:nspin))
+    SAFE_ALLOCATE(sigmap(1:3, 1:3, 0:energy_steps, 1:nspin))
+    SAFE_ALLOCATE(sigmau(1:3,      0:energy_steps, 1:nspin))
+    SAFE_ALLOCATE(sigmav(1:3,      0:energy_steps, 1:nspin))
+    SAFE_ALLOCATE(sigmaw(1:3,      0:energy_steps, 1:nspin))
+    SAFE_ALLOCATE(     p(1:3, 1:3))
+    SAFE_ALLOCATE(    ip(1:3, 1:3))
 
     select case(equiv_axes)
 
@@ -774,7 +774,7 @@ contains
 
     ! Read the dipole.
     call io_skip_header(in_file)
-    ALLOCATE(dipole(3, 0:time_steps, nspin), 3*(time_steps+1)*nspin)
+    SAFE_ALLOCATE(dipole(1:3, 0:time_steps, 1:nspin))
     do i = 0, time_steps
       select case(nspin)
       case(1)
@@ -795,13 +795,13 @@ contains
 
     ! Get the number of energy steps.
     no_e = s%max_energy / s%energy_step
-    ALLOCATE(sigma(3, 0:no_e, nspin), 3*(no_e+1)*nspin)
-    ALLOCATE(   sf(   0:no_e, nspin),   (no_e+1)*nspin)
+    SAFE_ALLOCATE(sigma(1:3, 0:no_e, 1:nspin))
+    SAFE_ALLOCATE(   sf(     0:no_e, nspin))
     sigma = M_ZERO
     sf    = M_ZERO
 
     ! Gets the damping function (here because otherwise it is awfully slow in "pol" mode...)_m
-    ALLOCATE(dumpa(is:ie), (ie-is+1))
+    SAFE_ALLOCATE(dumpa(is:ie)))
     do j = is, ie
       jj = j - is
       select case(s%damp)
@@ -924,7 +924,7 @@ contains
     call spectrum_fix_time_limits(time_steps, dt, s%start_time, s%end_time, is, ie, ntiter)
 
     ! load dipole from file
-    ALLOCATE(angular(0:time_steps, 3), (time_steps+1)*3)
+    SAFE_ALLOCATE(angular(0:time_steps, 1:3))
     call io_skip_header(in_file)
     do i = 0, time_steps
       read(in_file, *) j, dump, angular(i, 1:3)
@@ -936,13 +936,13 @@ contains
     end do
 
     no_e = s%max_energy / s%energy_step
-    ALLOCATE(sp(0:no_e), no_e+1)
+    SAFE_ALLOCATE(sp(0:no_e))
     sp = M_z0
     sum1 = M_z0
     sum2 = M_z0
 
     ! Gets the damping function (here because otherwise it is awfully slow in "pol" mode...)
-    ALLOCATE(dumpa(is:ie), ie-is+1)
+    SAFE_ALLOCATE(dumpa(is:ie))
     do j = is, ie
       jj = j - is
       select case(s%damp)
@@ -1018,7 +1018,7 @@ contains
     is_ = is
     ie_ = ie
     time_step_ = dt
-    ALLOCATE(func_(0:niter), niter+1)
+    SAFE_ALLOCATE(func_(0:niter))
     func_ = acc
   end subroutine spectrum_hsfunction_init
   ! ---------------------------------------------------------
@@ -1127,9 +1127,9 @@ contains
     call io_skip_header(iunit)
 
     ! load dipole from file
-    ALLOCATE(dipole(0:time_steps), time_steps+1)
-    ALLOCATE(ddipole(0:time_steps), time_steps+1)
-    ALLOCATE(d(3, nspin), 3*nspin)
+    SAFE_ALLOCATE(dipole(0:time_steps))
+    SAFE_ALLOCATE(ddipole(0:time_steps))
+    SAFE_ALLOCATE(d(1:3, 1:nspin))
 
     do i = 1, time_steps
       read(iunit, *) j, dump, dump, d
@@ -1186,7 +1186,7 @@ contains
     call spectrum_fix_time_limits(time_steps, dt, s%start_time, s%end_time, is, ie, ntiter)
 
     ! load dipole from file
-    ALLOCATE(acc(0:time_steps), time_steps+1)
+    SAFE_ALLOCATE(acc(0:time_steps))
     acc = M_ZERO
     call io_skip_header(iunit)
     do i = 1, time_steps
@@ -1257,7 +1257,7 @@ contains
     else
 
       no_e = s%max_energy / s%energy_step
-      ALLOCATE(sp(0:no_e), no_e+1)
+      SAFE_ALLOCATE(sp(0:no_e))
       sp = M_ZERO
 
       do i = 0, no_e

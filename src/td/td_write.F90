@@ -248,12 +248,12 @@ contains
       w%gs_st%st_end   = w%gs_st%nst
 
       ! allocate memory
-      ALLOCATE(w%gs_st%occ(w%gs_st%nst, w%gs_st%d%nik), w%gs_st%nst*w%gs_st%d%nik)
-      ALLOCATE(w%gs_st%eigenval(w%gs_st%nst, w%gs_st%d%nik), w%gs_st%nst*w%gs_st%d%nik)
-      ALLOCATE(w%gs_st%momentum(3, w%gs_st%nst, w%gs_st%d%nik), 3*w%gs_st%nst*w%gs_st%d%nik)
-      ALLOCATE(w%gs_st%node(w%gs_st%nst), w%gs_st%nst)
+      SAFE_ALLOCATE(w%gs_st%occ(1:w%gs_st%nst, 1:w%gs_st%d%nik))
+      SAFE_ALLOCATE(w%gs_st%eigenval(1:w%gs_st%nst, 1:w%gs_st%d%nik))
+      SAFE_ALLOCATE(w%gs_st%momentum(1:3, 1:w%gs_st%nst, 1:w%gs_st%d%nik))
+      SAFE_ALLOCATE(w%gs_st%node(1:w%gs_st%nst))
       if(w%gs_st%d%ispin == SPINORS) then
-        ALLOCATE(w%gs_st%spin(3, w%gs_st%nst, w%gs_st%d%nik), w%gs_st%nst*w%gs_st%d%nik*3)
+        SAFE_ALLOCATE(w%gs_st%spin(1:3, 1:w%gs_st%nst, 1:w%gs_st%d%nik))
       end if
       call states_allocate_wfns(w%gs_st, gr%mesh, M_CMPLX)
       w%gs_st%node(:)  = 0
@@ -284,7 +284,7 @@ contains
       !%End
       if(loct_parse_block('TDExcitedStatesToProject', blk) == 0) then
         w%n_excited_states = loct_parse_block_n(blk)
-        ALLOCATE(w%excited_st(w%n_excited_states), w%n_excited_states)
+        SAFE_ALLOCATE(w%excited_st(1:w%n_excited_states))
         do i = 1, w%n_excited_states
           call loct_parse_block_string(blk, i-1, 0, filename)
           call excited_states_init(w%excited_st(i), w%gs_st, trim(filename)) 
@@ -541,7 +541,7 @@ contains
     call push_sub('td_write.td_write_local_magnetic_moments')
 
     !get the atoms magnetization. This has to be calculated by all nodes
-    ALLOCATE(lmm(3, geo%natoms), 3*geo%natoms)
+    SAFE_ALLOCATE(lmm(1:3, 1:geo%natoms))
     call magnetic_local_moments(gr%mesh, st, geo, st%rho, lmm_r, lmm)
 
     if(mpi_grp_is_root(mpi_world)) then ! only first node outputs
@@ -601,8 +601,8 @@ contains
 
     call push_sub('td_write.td_write_angular')
 
-    ALLOCATE(ang (st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end, 3), st%lnst*st%d%kpt%nlocal*3)
-    ALLOCATE(ang2(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end), st%lnst*st%d%kpt%nlocal)
+    SAFE_ALLOCATE(ang (st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end, 1:3))
+    SAFE_ALLOCATE(ang2(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
         call zstates_angular_momentum(gr, st%zpsi(:, :, ist, ik), ang(ist, ik, :), ang2(ist, ik))
@@ -735,8 +735,8 @@ contains
       call td_write_print_header_end(out_multip)
     end if
 
-    ALLOCATE(nuclear_dipole(1:MAX_DIM), MAX_DIM)
-    ALLOCATE(multipole((lmax + 1)**2, st%d%nspin), (lmax + 1)**2*st%d%nspin)
+    SAFE_ALLOCATE(nuclear_dipole(1:MAX_DIM))
+    SAFE_ALLOCATE(multipole(1:(lmax + 1)**2, 1:st%d%nspin))
     nuclear_dipole(:) = M_ZERO
     multipole   (:,:) = M_ZERO
 
@@ -894,14 +894,14 @@ contains
 
     call push_sub('td_write.td_write_populations')
 
-    ALLOCATE(dotprodmatrix(gs_st%nst, st%nst, st%d%nik), gs_st%nst*st%nst*st%d%nik)
+    SAFE_ALLOCATE(dotprodmatrix(1:gs_st%nst, 1:st%nst, 1:st%d%nik))
     call zstates_matrix(m, gs_st, st, dotprodmatrix)
 
     ! all processors calculate the projection
     gsp = zstates_mpdotp(m, gs_st, st, dotprodmatrix)
 
     if(n_excited_states > 0) then
-      ALLOCATE(excited_state_p(n_excited_states), n_excited_states)
+      SAFE_ALLOCATE(excited_state_p(1:n_excited_states))
       do j = 1, n_excited_states
         excited_state_p(j) = zstates_mpdotp(m, excited_st(j), st, dotprodmatrix)
       end do
@@ -1263,7 +1263,7 @@ contains
 
       end if
 
-      ALLOCATE(projections(gs_st%st_start:st%nst, gs_st%st_start:gs_st%st_end, st%d%nik), st%nst*gs_st%nst*st%d%nik)
+      SAFE_ALLOCATE(projections(gs_st%st_start:st%nst, gs_st%st_start:gs_st%st_end, 1:st%d%nik))
       do idir = 1, 3
         projections(:,:,:) = M_Z0
         call dipole_matrix_elements(idir)
@@ -1292,7 +1292,7 @@ contains
 
     end if
 
-    ALLOCATE(projections(gs_st%st_start:st%nst, gs_st%st_start:gs_st%st_end, st%d%nik), st%nst*gs_st%nst*st%d%nik)
+    SAFE_ALLOCATE(projections(gs_st%st_start:st%nst, gs_st%st_start:gs_st%st_end, 1:st%d%nik))
     projections(:,:,:) = M_Z0
     call calc_projections()
 
@@ -1344,7 +1344,7 @@ contains
 
       call geometry_dipole(geo, n_dip)
 
-      ALLOCATE(xpsi(gr%mesh%np, st%d%dim), gr%mesh%np*st%d%dim)
+      SAFE_ALLOCATE(xpsi(1:gr%mesh%np, 1:st%d%dim))
       
       do ik = 1, st%d%nik
         do ist = max(gs_st%st_start, st%st_start), st%st_end

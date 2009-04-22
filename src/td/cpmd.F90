@@ -85,8 +85,6 @@ contains
     type(grid_t),        intent(inout) :: gr
     type(states_t),      intent(inout) :: st
     
-    integer :: size
-
     call push_sub('cpmd.cpmd_init')
 
     !%Variable CPElectronicMass
@@ -119,12 +117,10 @@ contains
     
     nullify(this%dpsi2, this%zpsi2)
 
-    size = gr%mesh%np_part * st%d%dim * st%lnst * st%d%nik
-
     if(states_are_real(st)) then
-      ALLOCATE(this%dpsi2(gr%mesh%np_part, st%d%dim, st%st_start:st%st_end, st%d%nik), size)
+      SAFE_ALLOCATE(this%dpsi2(1:gr%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik))
     else
-      ALLOCATE(this%zpsi2(gr%mesh%np_part, st%d%dim, st%st_start:st%st_end, st%d%nik), size)
+      SAFE_ALLOCATE(this%zpsi2(1:gr%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik))
     end if
 
     call pop_sub()

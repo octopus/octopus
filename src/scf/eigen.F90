@@ -236,9 +236,9 @@ contains
     end select
 
     nullify(eigens%diff)
-    ALLOCATE(eigens%diff(st%nst, st%d%nik), st%nst*st%d%nik)
+    SAFE_ALLOCATE(eigens%diff(1:st%nst, 1:st%d%nik))
 
-    ALLOCATE(eigens%converged(st%d%nik), st%d%nik)
+    SAFE_ALLOCATE(eigens%converged(1:st%d%nik))
     eigens%converged(1:st%d%nik) = 0
     eigens%matvec    = 0
 
@@ -407,8 +407,8 @@ contains
       end if
 
       ! every node needs to know all eigenvalues (and diff)
-      ALLOCATE(ldiff(st%d%kpt%nlocal), st%d%kpt%nlocal)
-      ALLOCATE(leigenval(st%d%kpt%nlocal), st%d%kpt%nlocal)
+      SAFE_ALLOCATE(ldiff(1:st%d%kpt%nlocal))
+      SAFE_ALLOCATE(leigenval(1:st%d%kpt%nlocal))
       do ist = st%st_start, st%st_end
         ldiff(1:st%d%kpt%nlocal) = eigens%diff(ist, st%d%kpt%start:st%d%kpt%end)
         leigenval(1:st%d%kpt%nlocal) = st%eigenval(ist, st%d%kpt%start:st%d%kpt%end)

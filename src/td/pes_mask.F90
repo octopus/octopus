@@ -24,8 +24,6 @@ subroutine PES_mask_init(v, m, sb, st)
   type(simul_box_t), intent(in)    :: sb
   type(states_t),    intent(in)    :: st
 
-  integer :: i
-
   message(1) = 'Info: Calculating PES using mask technique'
   call write_info(1)
 
@@ -33,9 +31,8 @@ subroutine PES_mask_init(v, m, sb, st)
   call fft_init(m%idx%ll, fft_complex, v%fft, optimize = .not.simul_box_is_periodic(sb))
 
   ! setup arrays to be used
-  i = m%idx%ll(1)*m%idx%ll(2)*m%idx%ll(3)*st%lnst*st%d%nik
-  ALLOCATE(v%k(m%idx%ll(1), m%idx%ll(2), m%idx%ll(3), st%d%dim, st%st_start:st%st_end, st%d%nik), i*st%d%dim)
-  ALLOCATE(v%r(m%idx%ll(1), m%idx%ll(2), m%idx%ll(3),           st%st_start:st%st_end, st%d%nik), i)
+  SAFE_ALLOCATE(v%k(1:m%idx%ll(1), 1:m%idx%ll(2), 1:m%idx%ll(3), 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik))
+  SAFE_ALLOCATE(v%r(1:m%idx%ll(1), 1:m%idx%ll(2), 1:m%idx%ll(3),             st%st_start:st%st_end, 1:st%d%nik))
 
   v%k = M_z0
   v%r = M_ZERO
@@ -84,8 +81,8 @@ subroutine PES_mask_doit(v, m, st, dt, mask)
   end do
 
   ! we now add the contribution from this timestep
-  ALLOCATE(wf1(m%idx%ll(1), m%idx%ll(2), m%idx%ll(3)), m%idx%ll(1)*m%idx%ll(2)*m%idx%ll(3))
-  ALLOCATE(wf2(m%idx%ll(1), m%idx%ll(2), m%idx%ll(3)), m%idx%ll(1)*m%idx%ll(2)*m%idx%ll(3))
+  SAFE_ALLOCATE(wf1(1:m%idx%ll(1), 1:m%idx%ll(2), 1:m%idx%ll(3)))
+  SAFE_ALLOCATE(wf2(1:m%idx%ll(1), 1:m%idx%ll(2), 1:m%idx%ll(3)))
   do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
       do idim = 1, st%d%dim
@@ -132,10 +129,10 @@ subroutine PES_mask_output(v, m, st, file)
   integer,  parameter :: n = 600, ar_n = 90
   FLOAT, parameter :: step = CNST(0.005)
 
-  ALLOCATE( spis(n,    st%st_start:st%st_end, st%d%nik),    n*st%lnst*st%d%nik)
-  ALLOCATE(arpis(ar_n, st%st_start:st%st_end, st%d%nik), ar_n*st%lnst*st%d%nik)
-  ALLOCATE(npoints(n),       n)
-  ALLOCATE(ar_npoints(ar_n), ar_n)
+  SAFE_ALLOCATE( spis(1:n,    st%st_start:st%st_end, 1:st%d%nik))
+  SAFE_ALLOCATE(arpis(1:ar_n, st%st_start:st%st_end, 1:st%d%nik))
+  SAFE_ALLOCATE(npoints(1:n))
+  SAFE_ALLOCATE(ar_npoints(1:ar_n))
   spis = M_ZERO; arpis = M_ZERO
   npoints = 0;  ar_npoints = 0
 

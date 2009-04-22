@@ -147,7 +147,7 @@ contains
     call init_wfs()
 
     if(td%scissor > M_EPSILON) then
-      ALLOCATE(gspsi(1:gr%mesh%np, 1:st%d%dim, 1:st%nst, 1:st%d%nik), 1)
+      SAFE_ALLOCATE(gspsi(1:gr%mesh%np, 1:st%d%dim, 1:st%nst, 1:st%d%nik))
       gspsi(1:gr%mesh%np, 1:st%d%dim, 1:st%nst, 1:st%d%nik) = st%zpsi(1:gr%mesh%np, 1:st%d%dim, 1:st%nst, 1:st%d%nik)
       call scissor_init(hm%scissor, st, td%scissor, gspsi)
     end if
@@ -495,7 +495,7 @@ contains
             call states_copy(stin, st)
             SAFE_DEALLOCATE_P(stin%zpsi)
             call restart_look_and_read(stin, gr, sys%geo)
-            ALLOCATE(rotation_matrix(st%nst, stin%nst), st%nst*stin%nst)
+            SAFE_ALLOCATE(rotation_matrix(1:st%nst, 1:stin%nst))
             rotation_matrix = M_z0
             do ist = 1, st%nst
               do jst = 1, loct_parse_block_cols(blk, ist-1)
@@ -607,7 +607,7 @@ contains
       ! psi(delta t) = psi(t) exp(i k x)
       delta_strength: if(k%delta_strength .ne. M_ZERO) then
 
-        ALLOCATE(kick_function(gr%mesh%np), gr%mesh%np)
+        SAFE_ALLOCATE(kick_function(1:gr%mesh%np))
         if(k%n_multipoles > 0) then
           kick_function = M_ZERO
           do j = 1, k%n_multipoles

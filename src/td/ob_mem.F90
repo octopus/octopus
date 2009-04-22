@@ -88,16 +88,16 @@ contains
     ! Allocate arrays depending on the type of coefficients requested.
     select case(ob%mem_type)
     case(SAVE_CPU_TIME)
-      ALLOCATE(ob%mem_coeff(np, np, 0:max_iter, NLEADS), np**2*(max_iter+1)*NLEADS)
+      SAFE_ALLOCATE(ob%mem_coeff(1:np, 1:np, 0:max_iter, 1:NLEADS))
       allocate(ob%mem_sp_coeff(0, 0, NLEADS), ob%mem_s(0, 0, 2, NLEADS), ob%sp2full_map(0))
       ob%mem_coeff = M_z0
     case(SAVE_RAM_USAGE) ! FIXME: only 2D.
       ASSERT(calc_dim.eq.2)
       allocate(ob%mem_coeff(0, 0, 0, NLEADS))
       ! sp_coeff has the size ny*nz*do**2, (np=ny*nz*do).
-      ALLOCATE(ob%mem_sp_coeff(np*order, 0:max_iter, NLEADS), order*np*(max_iter+1)*NLEADS)
-      ALLOCATE(ob%mem_s(np, np, 2, NLEADS), np**2*2*NLEADS)
-      ALLOCATE(ob%sp2full_map(np*order), order*np)
+      SAFE_ALLOCATE(ob%mem_sp_coeff(1:np*order, 0:max_iter, 1:NLEADS))
+      SAFE_ALLOCATE(ob%mem_s(1:np, 1:np, 1:2, 1:NLEADS))
+      SAFE_ALLOCATE(ob%sp2full_map(1:np*order))
       ! Fill sparse to full mapping matrix.
       do ii = 0, np-1
         do il = 1, order
@@ -244,7 +244,7 @@ contains
       !
       ! with start value 0:
       sp2 = spacing**2
-      ALLOCATE(q0(np, np), np**2)
+      SAFE_ALLOCATE(q0(1:np, 1:np))
 
       q0(:, :) = M_z0
       old_norm = M_ZERO
@@ -322,12 +322,12 @@ contains
     sp2 = spacing**2
     d2  = TOCMPLX(delta**2, M_ZERO)
 
-    ALLOCATE(tmp(np, np), np**2)
-    ALLOCATE(tmp2(np, np), np**2)
-    ALLOCATE(inv_offdiag(np, np), np**2)
-    ALLOCATE(prefactor_plus(np, np), np**2)
-    ALLOCATE(prefactor_minus(np, np), np**2)
-    ALLOCATE(fr(np, np), np**2)
+    SAFE_ALLOCATE(            tmp(1:np, 1:np))
+    SAFE_ALLOCATE(           tmp2(1:np, 1:np))
+    SAFE_ALLOCATE(    inv_offdiag(1:np, 1:np))
+    SAFE_ALLOCATE( prefactor_plus(1:np, 1:np))
+    SAFE_ALLOCATE(prefactor_minus(1:np, 1:np))
+    SAFE_ALLOCATE(             fr(1:np, 1:np))
 
     prefactor_plus(:, :)  = M_zI*delta*diag(:, :)
     prefactor_minus(:, :) = -M_zI*delta*diag(:, :)
@@ -463,12 +463,12 @@ contains
 
     np = intf%np
 
-    ALLOCATE(coeff_p(np, np, 0:iter), np**2*(iter+1))
-    ALLOCATE(p_prev(np, np), np**2)
-    ALLOCATE(tmp(np, np), np**2)
-    ALLOCATE(tmp2(np, np), np**2)
-    ALLOCATE(prefactor_plus(np, np), np**2)
-    ALLOCATE(prefactor_minus(np, np), np**2)
+    SAFE_ALLOCATE(        coeff_p(1:np, 1:np, 0:iter))
+    SAFE_ALLOCATE(         p_prev(1:np, 1:np))
+    SAFE_ALLOCATE(            tmp(1:np, 1:np))
+    SAFE_ALLOCATE(           tmp2(1:np, 1:np))
+    SAFE_ALLOCATE( prefactor_plus(1:np, 1:np))
+    SAFE_ALLOCATE(prefactor_minus(1:np, 1:np))
 
     coeff_p         = M_z0
     prefactor_plus  = M_zI*delta*diag(:, :)
@@ -603,13 +603,13 @@ contains
     np  = intf%np
     sp2 = spacing**2
 
-    ALLOCATE(tmp1(np, np), np**2)
-    ALLOCATE(tmp2(np, np), np**2)
-    ALLOCATE(tmp3(np, np), np**2)
-    ALLOCATE(inv_offdiag(np, np), np**2)
-    ALLOCATE(prefactor_plus(np, np), np**2)
-    ALLOCATE(prefactor_minus(np, np), np**2)
-    ALLOCATE(sp_tmp(length), length)
+    SAFE_ALLOCATE(           tmp1(1:np, 1:np))
+    SAFE_ALLOCATE(           tmp2(1:np, 1:np))
+    SAFE_ALLOCATE(           tmp3(1:np, 1:np))
+    SAFE_ALLOCATE(    inv_offdiag(1:np, 1:np))
+    SAFE_ALLOCATE( prefactor_plus(1:np, 1:np))
+    SAFE_ALLOCATE(prefactor_minus(1:np, 1:np))
+    SAFE_ALLOCATE(sp_tmp(1:length))
 
     prefactor_plus  = M_zI*delta*diag(:, :)
     prefactor_minus = -M_zI*delta*diag(:, :)
@@ -891,8 +891,8 @@ contains
 
     ASSERT(dim.eq.2)
 
-    ALLOCATE(tmp(np, np), np**2)
-    ALLOCATE(tmp2(np, np), np**2)
+    SAFE_ALLOCATE( tmp(1:np, 1:np))
+    SAFE_ALLOCATE(tmp2(1:np, 1:np))
 
     ! Now calculate [S^(-1)*sp*S] to get the sparse matrix.
     ! FIXME: s, inv_s and sp are symmetric.
@@ -969,7 +969,7 @@ contains
 
     call push_sub('td_transport.make_full_matrix')
 
-    ALLOCATE(tmp(np,np),np**2)
+    SAFE_ALLOCATE(tmp(1:np, 1:np))
 
     ! make a full matrix of the packed storage form
     ! the sparse matrix has a (symmetric) banded form

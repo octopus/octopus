@@ -227,7 +227,7 @@ contains
 
     if(scf%eigens%es_type == RS_MG .or. preconditioner_is_multigrid(scf%eigens%pre)) then
       if(.not. associated(gr%mgrid)) then
-        ALLOCATE(gr%mgrid, 1)
+        SAFE_ALLOCATE(gr%mgrid)
         call multigrid_init(gr%mgrid, geo, gr%cv,gr%mesh, gr%der, gr%stencil)
       end if
       call hamiltonian_mg_init(hm, gr)
@@ -320,8 +320,8 @@ contains
     dim = 1
     if (hm%d%cdft) dim = 1 + gr%mesh%sb%dim
 
-    ALLOCATE(rhoout(gr%mesh%np, dim, nspin), gr%mesh%np*dim*nspin)
-    ALLOCATE(rhoin (gr%mesh%np, dim, nspin), gr%mesh%np*dim*nspin)
+    SAFE_ALLOCATE(rhoout(1:gr%mesh%np, 1:dim, 1:nspin))
+    SAFE_ALLOCATE(rhoin (1:gr%mesh%np, 1:dim, 1:nspin))
 
     rhoin(1:gr%mesh%np, 1, 1:nspin) = st%rho(1:gr%mesh%np, 1:nspin)
     rhoout = M_ZERO
@@ -330,23 +330,23 @@ contains
     end if
 
     if (scf%what2mix == MIXPOT) then
-      ALLOCATE(vout(gr%mesh%np, dim, nspin), gr%mesh%np*dim*nspin)
-      ALLOCATE( vin(gr%mesh%np, dim, nspin), gr%mesh%np*dim*nspin)
-      ALLOCATE(vnew(gr%mesh%np, dim, nspin), gr%mesh%np*dim*nspin)
+      SAFE_ALLOCATE(vout(1:gr%mesh%np, 1:dim, 1:nspin))
+      SAFE_ALLOCATE( vin(1:gr%mesh%np, 1:dim, 1:nspin))
+      SAFE_ALLOCATE(vnew(1:gr%mesh%np, 1:dim, 1:nspin))
 
       vin(1:gr%mesh%np, 1, 1:nspin) = hm%vhxc(1:gr%mesh%np, 1:nspin)
       vout = M_ZERO
       if (st%d%cdft) vin(1:gr%mesh%np, 2:dim, 1:nspin) = hm%axc(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:nspin)
     else
-      ALLOCATE(rhonew(gr%mesh%np, dim, nspin), gr%mesh%np*dim*nspin)
+      SAFE_ALLOCATE(rhonew(1:gr%mesh%np, 1:dim, 1:nspin))
     end if
     evsum_in = states_eigenvalues_sum(st)
 
     ! allocate and compute forces only if they are used as convergence criteria
     if (scf%conv_abs_force > M_ZERO) then
-      ALLOCATE(forcein(geo%natoms, gr%mesh%sb%dim), geo%natoms*gr%mesh%sb%dim)
-      ALLOCATE(forceout(geo%natoms, gr%mesh%sb%dim), geo%natoms*gr%mesh%sb%dim)
-      ALLOCATE(forcediff(gr%mesh%sb%dim), gr%mesh%sb%dim)
+      SAFE_ALLOCATE(  forcein(1:geo%natoms, 1:gr%mesh%sb%dim))
+      SAFE_ALLOCATE( forceout(1:geo%natoms, 1:gr%mesh%sb%dim))
+      SAFE_ALLOCATE(forcediff(1:gr%mesh%sb%dim))
       call epot_forces(gr, geo, hm%ep, st)
       do iatom = 1, geo%natoms
         forcein(iatom,1:gr%mesh%sb%dim) = geo%atom(iatom)%f(1:gr%mesh%sb%dim)
@@ -399,7 +399,7 @@ contains
 
       ! compute convergence criteria
       scf%abs_dens = M_ZERO
-      ALLOCATE(tmp(gr%mesh%np), gr%mesh%np)
+      SAFE_ALLOCATE(tmp(1:gr%mesh%np))
       do is = 1, nspin
         do idim = 1, dim
           tmp = abs(rhoin(1:gr%mesh%np, idim, is) - rhoout(1:gr%mesh%np, idim, is))
@@ -790,8 +790,8 @@ contains
         end if
       end if
 
-      ALLOCATE(ang (1:st%nst, st%d%nik, MAX_DIM), st%nst*st%d%nik*MAX_DIM)
-      ALLOCATE(ang2(1:st%nst, st%d%nik), st%nst*st%d%nik)
+      SAFE_ALLOCATE(ang (1:st%nst, 1:st%d%nik, 1:MAX_DIM))
+      SAFE_ALLOCATE(ang2(1:st%nst, 1:st%d%nik))
       do ik = st%d%kpt%start, st%d%kpt%end
         do ist = st%st_start, st%st_end
           if (st%wfs_type == M_REAL) then
@@ -825,7 +825,7 @@ contains
 
           ASSERT(.not. st%parallel_in_states)
 
-          ALLOCATE(lang(1:st%lnst, 1:kn), st%lnst*kn)
+          SAFE_ALLOCATE(lang(1:st%lnst, 1:kn))
           do j = 1, 3
             lang(1:st%lnst, 1:kn) = ang(st%st_start:st%st_end, kstart:kend, j)
             call MPI_Allgatherv(lang, st%nst*kn, MPI_FLOAT, &
@@ -840,7 +840,7 @@ contains
         end if
 
         if(st%parallel_in_states) then
-          ALLOCATE(lang(1:st%lnst, 1), st%lnst)
+          SAFE_ALLOCATE(lang(1:st%lnst, 1:1))
           do j = 1, 3
             lang(1:st%lnst, 1) = ang(st%st_start:st%st_end, ik, j)
             call lmpi_gen_allgatherv(st%lnst, lang(:, 1), tmp, ang(:, ik, j), st%mpi_grp)
@@ -980,7 +980,7 @@ contains
       call push_sub('scf.write_magnetic_moments')
 
       call magnetic_moment(m, st, st%rho, mm)
-      ALLOCATE(lmm(MAX_DIM, geo%natoms), MAX_DIM*geo%natoms)
+      SAFE_ALLOCATE(lmm(1:MAX_DIM, 1:geo%natoms))
       call magnetic_local_moments(m, st, geo, st%rho, scf%lmm_r, lmm)
 
       if(mpi_grp_is_root(mpi_world)) then

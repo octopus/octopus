@@ -53,7 +53,7 @@ subroutine X(lcao_atomic_orbital) (this, iorb, m, hm, geo, sb, psi, spin_channel
   s => geo%atom(iatom)%spec
   ASSERT(jj <= s%niwfs)
 
-  ALLOCATE(ao(1:m%np), m%np)
+  SAFE_ALLOCATE(ao(1:m%np))
 
   if (.not. simul_box_is_periodic(sb)) then
 
@@ -118,11 +118,11 @@ subroutine X(lcao_wf) (this, st, gr, geo, hm, start)
 
   ! Allocation of variables
 
-  ALLOCATE(lcaopsi(1:gr%mesh%np_part, 1:st%d%dim, 1:st%d%spin_channels), gr%mesh%np*st%d%dim*st%d%spin_channels)
-  ALLOCATE(lcaopsi2(1:gr%mesh%np, 1:st%d%dim), gr%mesh%np*st%d%dim)
-  ALLOCATE(hpsi(gr%mesh%np, st%d%dim, kstart:kend), gr%mesh%np*st%d%dim*st%d%kpt%nlocal)
-  ALLOCATE(hamilt(this%norbs, this%norbs, kstart:kend), this%norbs**2*st%d%kpt%nlocal)
-  ALLOCATE(overlap(this%norbs, this%norbs, st%d%spin_channels), this%norbs**2*st%d%spin_channels)
+  SAFE_ALLOCATE(lcaopsi(1:gr%mesh%np_part, 1:st%d%dim, 1:st%d%spin_channels))
+  SAFE_ALLOCATE(lcaopsi2(1:gr%mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE(hpsi(gr%mesh%np, st%d%dim, kstart:kend))
+  SAFE_ALLOCATE(hamilt(this%norbs, this%norbs, kstart:kend))
+  SAFE_ALLOCATE(overlap(this%norbs, this%norbs, st%d%spin_channels))
 
   call init_orbitals()
 
@@ -169,7 +169,7 @@ subroutine X(lcao_wf) (this, st, gr, geo, hm, start)
 
   SAFE_DEALLOCATE_A(hpsi)
 
-  ALLOCATE(ev(this%norbs), this%norbs)
+  SAFE_ALLOCATE(ev(1:this%norbs))
 
   do ik =  kstart, kend
     ispin = states_dim_get_spin_index(st%d, ik)
@@ -183,7 +183,7 @@ subroutine X(lcao_wf) (this, st, gr, geo, hm, start)
 #ifdef HAVE_MPI
   if(st%d%kpt%parallel) then
     ASSERT(.not. st%parallel_in_states)
-    ALLOCATE(tmp(1:st%nst, kstart:kend), st%nst*(kend - kstart + 1))
+    SAFE_ALLOCATE(tmp(1:st%nst, kstart:kend))
     tmp(1:st%nst, kstart:kend) = st%eigenval(1:st%nst, kstart:kend)
     call MPI_Allgatherv(tmp(:, kstart:), st%nst*(kend - kstart + 1), MPI_FLOAT, &
          st%eigenval, st%d%kpt%num(:)*st%nst, (st%d%kpt%range(1, :) - 1)*st%nst, MPI_FLOAT, &
@@ -236,8 +236,8 @@ contains
     ! to overwrite and then the rest is stored in a single precision
     ! buffer.
 
-    ALLOCATE(cst(1:this%norbs, 1:st%d%spin_channels), this%norbs*st%d%spin_channels)
-    ALLOCATE(ck(1:this%norbs, 1:st%d%spin_channels), this%norbs*st%d%spin_channels)
+    SAFE_ALLOCATE(cst(1:this%norbs, 1:st%d%spin_channels))
+    SAFE_ALLOCATE( ck(1:this%norbs, 1:st%d%spin_channels))
 
     ck = 0
 
@@ -274,8 +274,8 @@ contains
       write(message(1), '(a, i5, a)') "Info: Extra storage for ", size, " orbitals will be allocated."
       call write_info(1)
 
-      ALLOCATE(buff(1:gr%mesh%np, 1:st%d%dim, iorb:this%norbs, 1:st%d%spin_channels), gr%mesh%np*st%d%dim*size)
-      ALLOCATE(ao(1:gr%mesh%np, st%d%dim), gr%mesh%np*st%d%dim)
+      SAFE_ALLOCATE(buff(1:gr%mesh%np, 1:st%d%dim, iorb:this%norbs, 1:st%d%spin_channels))
+      SAFE_ALLOCATE(  ao(1:gr%mesh%np, 1:st%d%dim))
       
       do iorb = iorb, this%norbs
         do ispin = 1, st%d%spin_channels

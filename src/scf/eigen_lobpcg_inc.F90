@@ -95,7 +95,7 @@
 
 #if defined(HAVE_MPI)
     if(st%parallel_in_states) then
-      ALLOCATE(ldiff(st%lnst), st%lnst)
+      SAFE_ALLOCATE(ldiff(1:st%lnst))
       ldiff(1:st%lnst) = diff(st%st_start:st%st_end)
       call lmpi_gen_allgatherv(st%lnst, ldiff, outcount, diff, st%mpi_grp)
       SAFE_DEALLOCATE_A(ldiff)
@@ -194,8 +194,8 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
 #if defined(HAVE_MPI)
     lnst     = st_end-st_start+1
     lnconstr = constr_end-constr_start+1
-    ALLOCATE(luc(lnst), lnst)
-    ALLOCATE(lnuc, 1)
+    SAFE_ALLOCATE(luc(1:lnst))
+    SAFE_ALLOCATE(lnuc)
     call MPI_Allreduce(lnst, nst, 1, MPI_INTEGER, MPI_SUM, st%mpi_grp%comm, mpi_err)
     call MPI_Allreduce(lnconstr, nconstr, 1, MPI_INTEGER, MPI_SUM, st%mpi_grp%comm, mpi_err)
 #endif
@@ -205,15 +205,15 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     lnuc    => nuc
     lnst    =  nst
   end if
-  ALLOCATE(uc(nst), nst)
+  SAFE_ALLOCATE(uc(1:nst))
   if(.not.st%parallel_in_states) then
     luc => uc
   end if
 
-  ALLOCATE(all_constr(nconstr), nconstr)
+  SAFE_ALLOCATE(all_constr(1:nconstr))
   if(st%parallel_in_states) then
 #if defined(HAVE_MPI)
-    ALLOCATE(lall_constr(lnconstr), lnconstr)
+    SAFE_ALLOCATE(lall_constr(1:lnconstr))
     do i = 1, lnconstr
       lall_constr(i) = i + constr_start-1
     end do
@@ -227,14 +227,14 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     end do
   end if
 
-  ALLOCATE(tmp(gr%mesh%np_part, st%d%dim, st_start:st_end), gr%mesh%np_part*st%d%dim*lnst)
-  ALLOCATE(res(gr%mesh%np_part, st%d%dim, st_start:st_end), gr%mesh%np_part*st%d%dim*lnst)
-  ALLOCATE(h_res(gr%mesh%np_part, st%d%dim, st_start:st_end), gr%mesh%np_part*st%d%dim*lnst)
-  ALLOCATE(dir(gr%mesh%np_part, st%d%dim, st_start:st_end), gr%mesh%np_part*st%d%dim*lnst)
-  ALLOCATE(h_dir(gr%mesh%np_part, st%d%dim, st_start:st_end), gr%mesh%np_part*st%d%dim*lnst)
-  ALLOCATE(h_psi(gr%mesh%np_part, st%d%dim, st_start:st_end), gr%mesh%np_part*st%d%dim*lnst)
-  ALLOCATE(gram_block(nst, nst), nst**2)
-  ALLOCATE(eval(nst), nst)
+  SAFE_ALLOCATE(  tmp(1:gr%mesh%np_part, 1:st%d%dim, st_start:st_end))
+  SAFE_ALLOCATE(  res(1:gr%mesh%np_part, 1:st%d%dim, st_start:st_end))
+  SAFE_ALLOCATE(h_res(1:gr%mesh%np_part, 1:st%d%dim, st_start:st_end))
+  SAFE_ALLOCATE(  dir(1:gr%mesh%np_part, 1:st%d%dim, st_start:st_end))
+  SAFE_ALLOCATE(h_dir(1:gr%mesh%np_part, 1:st%d%dim, st_start:st_end))
+  SAFE_ALLOCATE(h_psi(1:gr%mesh%np_part, 1:st%d%dim, st_start:st_end))
+  SAFE_ALLOCATE(gram_block(1:nst, 1:nst))
+  SAFE_ALLOCATE(eval(nst))
 
   ! Set them to zero, otherwise behaviour may be slightly nondeterministic.
   tmp   = R_TOTYPE(M_ZERO)
@@ -267,7 +267,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
   ! in the Rayleigh-Ritz into one big block.
   ! all_ev:     {1, ..., nst} -> {1, ..., st%nst} (blocksize to number of eigenvectors).
   ! all_ev_inv: {1, ..., st%nst} -> {1, ..., nst} (the reverese of all_ev).
-  ALLOCATE(all_ev(nst), nst)
+  SAFE_ALLOCATE(all_ev(1:nst))
   all_ev = uc
   hash_table_size = max(3, st%nst) ! Minimum size of hash table is 3.
   call iihash_init(all_ev_inv, hash_table_size)
@@ -301,7 +301,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
   niter = niter+lnst
   call X(blockt_mul)(psi(:, :, :), h_psi, gram_block, xpsi1=all_ev, xpsi2=all_ev, symm=.true.)
 
-  ALLOCATE(ritz_vec(nst, nst), nst**2)
+  SAFE_ALLOCATE(ritz_vec(1:nst, 1:nst))
   no_bof = .false.
   call lalg_eigensolve(nst, gram_block, ritz_vec, eval, bof=no_bof)
   if(no_bof.and.verbose_) then
@@ -325,7 +325,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
       exit iteration
     end if
 
-    ALLOCATE(nuc_tmp(nuc, nuc), nuc**2)
+    SAFE_ALLOCATE(nuc_tmp(1:nuc, 1:nuc))
     ! Allocate space for Gram matrices in this iterations.
     ! blks says if we have one or two additional blocks in the subspace
     ! (i. e. only residuals or residuals (1st iteration) and conjugate
@@ -335,9 +335,9 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     else
       blks = 1
     end if
-    ALLOCATE(ritz_vec(nst+blks*nuc, nst), nst**2+blks*nst*nuc)
-    ALLOCATE(gram_h(nst+blks*nuc, nst+blks*nuc), (nst+blks*nuc)**2)
-    ALLOCATE(gram_i(nst+blks*nuc, nst+blks*nuc), (nst+blks*nuc)**2)
+    SAFE_ALLOCATE(ritz_vec(1:nst+blks*nuc, 1:nst))
+    SAFE_ALLOCATE(  gram_h(1:nst+blks*nuc, 1:nst+blks*nuc))
+    SAFE_ALLOCATE(  gram_i(1:nst+blks*nuc, 1:nst+blks*nuc))
     ritz_psi => ritz_vec(1:nst, 1:nst)
     ritz_res => ritz_vec(nst+1:nst+nuc, 1:nst)
     if(iter > 1) then
@@ -667,7 +667,7 @@ contains
     call push_sub('eigen_lobpcg_inc.Xlobpcg_orth')
 
     chol_failure = .false.
-    ALLOCATE(vv(nuc, nuc), nuc**2)
+    SAFE_ALLOCATE(vv(1:nuc, 1:nuc))
     call states_blockt_mul(gr%mesh, st, v_start, v_end, v_start, v_end, vs, vs, vv, xpsi1=UC, xpsi2=UC, symm=.true.)
     call profiling_in(C_PROFILING_LOBPCG_CHOL)
     call lalg_cholesky(nuc, vv, bof=chol_failure)
@@ -707,9 +707,9 @@ contains
     call profiling_in(prof, "LOBPCG_CONSTRAINTS")
     call push_sub('eigen_lobpcg_inc.Xlobpcg_apply_constraints')
 
-    ALLOCATE(tmp1(nconstr, nconstr), nconstr**2)
-    ALLOCATE(tmp2(nconstr, nidx), nconstr*nidx)
-    ALLOCATE(tmp3(nconstr, nidx), nconstr*nidx)
+    SAFE_ALLOCATE(tmp1(1:nconstr, 1:nconstr))
+    SAFE_ALLOCATE(tmp2(1:nconstr, 1:nidx))
+    SAFE_ALLOCATE(tmp3(1:nconstr, 1:nidx))
 
     call states_blockt_mul(gr%mesh, st, constr_start, constr_end, constr_start, constr_end, &
       constr, constr, tmp1, xpsi1=all_constr, xpsi2=all_constr)

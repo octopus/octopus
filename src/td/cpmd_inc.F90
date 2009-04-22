@@ -42,9 +42,9 @@ subroutine X(cpmd_propagate)(this, gr, hm, st, iter, dt)
   np = gr%mesh%np
   ddim = st%d%dim
 
-  ALLOCATE(xx(1:st%nst, 1:st%nst), st%nst**2)
-  ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim), gr%mesh%np*st%d%dim)
-  ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim), gr%mesh%np*st%d%dim)
+  SAFE_ALLOCATE(xx(1:st%nst, 1:st%nst))
+  SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
 
   this%ecorr = M_ZERO
 
@@ -92,7 +92,7 @@ subroutine X(cpmd_propagate)(this, gr, hm, st, iter, dt)
 
     case(VEL_VERLET)
 
-      ALLOCATE(oldpsi(1:gr%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end), gr%mesh%np_part*st%d%dim*st%lnst)
+      SAFE_ALLOCATE(oldpsi(1:gr%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end))
 
       do ist1 = st%st_start, st%st_end
         
@@ -148,10 +148,10 @@ contains
     FLOAT,  allocatable :: ii(:, :)
     R_TYPE, allocatable :: aa(:, :), bb(:, :), xxi(:, :)
 
-    ALLOCATE(aa(1:st%nst, 1:st%nst), st%nst**2)
-    ALLOCATE(bb(1:st%nst, 1:st%nst), st%nst**2)
-    ALLOCATE(ii(1:st%nst, 1:st%nst), st%nst**2)
-    ALLOCATE(xxi(1:st%nst, 1:st%nst), st%nst**2)
+    SAFE_ALLOCATE( aa(1:st%nst, 1:st%nst))
+    SAFE_ALLOCATE( bb(1:st%nst, 1:st%nst))
+    SAFE_ALLOCATE( ii(1:st%nst, 1:st%nst))
+    SAFE_ALLOCATE(xxi(1:st%nst, 1:st%nst))
 
     do ist1 = 1, st%nst
       do ist2 = 1, st%nst
@@ -203,8 +203,8 @@ subroutine X(cpmd_propagate_vel)(this, gr, hm, st, dt)
   np = gr%mesh%np
   ddim = st%d%dim
 
-  ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim), gr%mesh%np*st%d%dim)
-  ALLOCATE(yy(1:st%nst, 1:st%nst), st%nst**2)
+  SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE(yy(1:st%nst, 1:st%nst))
 
   this%ecorr = M_ZERO
 
@@ -248,7 +248,7 @@ contains
   subroutine calc_yy
     R_TYPE, allocatable :: cc(:, :)
 
-    ALLOCATE(cc(1:st%nst, 1:st%nst), st%nst**2)
+    SAFE_ALLOCATE(cc(1:st%nst, 1:st%nst))
 
     call states_blockt_mul(gr%mesh, st, st%st_start, st%st_end, st%st_start, st%st_end, &
       this%X(psi2)(:, :, :, ik), st%X(psi)(:, :, :, ik), cc, symm=.false.)

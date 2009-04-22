@@ -79,15 +79,15 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
   ! Careful: aux has to range from 1 to gr%mesh%np_part because it is input to
   ! hpsi. In parallel the space NP+1:gr%mesh%np_part is needed for ghost points
   ! in the non local operator.
-  ALLOCATE(eigenvec(gr%mesh%np, dim, me),      gr%mesh%np*dim*me)
-  ALLOCATE(aux(gr%mesh%np_part, dim),          gr%mesh%np_part*dim)
-  ALLOCATE(tmp(krylov),                krylov)
-  ALLOCATE(v(gr%mesh%np, dim, krylov),    gr%mesh%np*dim*krylov)
-  ALLOCATE(h(krylov, krylov),          krylov*krylov)
-  ALLOCATE(eigenval(me),               me)
-  ALLOCATE(av(gr%mesh%np, dim, krylov),   gr%mesh%np*dim*krylov)
-  ALLOCATE(hevec(krylov, krylov),      krylov*krylov)
-  ALLOCATE(res(me),                    me)
+  SAFE_ALLOCATE(eigenvec(1:gr%mesh%np, 1:dim, 1:me))
+  SAFE_ALLOCATE(aux(1:gr%mesh%np_part, 1:dim))
+  SAFE_ALLOCATE(tmp(1:krylov))
+  SAFE_ALLOCATE(v(1:gr%mesh%np, 1:dim, 1:krylov))
+  SAFE_ALLOCATE(h(1:krylov, 1:krylov))
+  SAFE_ALLOCATE(eigenval(1:me))
+  SAFE_ALLOCATE(av(1:gr%mesh%np, 1:dim, 1:krylov))
+  SAFE_ALLOCATE(hevec(1:krylov, 1:krylov))
+  SAFE_ALLOCATE(res(1:me))
 
   eigenval = M_ZERO
   eigenvec = R_TOTYPE(M_ZERO)

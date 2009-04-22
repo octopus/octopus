@@ -54,15 +54,15 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
   call push_sub('eigen_rmmdiis_inc.eigensolver_rmmdiis')
 
-  ALLOCATE(psi(gr%mesh%np_part, st%d%dim, niter, blocksize), gr%mesh%np_part*st%d%dim*blocksize*niter)
-  ALLOCATE(res(gr%mesh%np_part, st%d%dim, niter, blocksize), gr%mesh%np_part*st%d%dim*blocksize*niter)
-  ALLOCATE(lambda(blocksize), blocksize)
-  ALLOCATE(psib(niter), niter)
-  ALLOCATE(resb(niter), niter)
-  ALLOCATE(done(blocksize), blocksize)
-  ALLOCATE(last(blocksize), blocksize)
-  ALLOCATE(failed(blocksize), blocksize)
-  ALLOCATE(fr(4, blocksize), 4*blocksize)
+  SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim, 1:niter, 1:blocksize))
+  SAFE_ALLOCATE(res(1:gr%mesh%np_part, 1:st%d%dim, 1:niter, 1:blocksize))
+  SAFE_ALLOCATE(lambda(1:blocksize))
+  SAFE_ALLOCATE(psib(1:niter))
+  SAFE_ALLOCATE(resb(1:niter))
+  SAFE_ALLOCATE(  done(1:blocksize))
+  SAFE_ALLOCATE(  last(1:blocksize))
+  SAFE_ALLOCATE(failed(1:blocksize))
+  SAFE_ALLOCATE(fr(1:4, 1:blocksize))
 
   nops = 0
 
@@ -99,7 +99,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 #ifdef HAVE_MPI
     ! perform all the reductions at once
     if(gr%mesh%parallel_in_domains) then
-      ALLOCATE(fbuff(bsize), bsize)
+      SAFE_ALLOCATE(fbuff(1:bsize))
       fbuff(1:bsize) = st%eigenval(jst:maxst, ik)
       call MPI_Allreduce(fbuff, st%eigenval(jst:maxst, ik), bsize, MPI_FLOAT, MPI_SUM, gr%mesh%mpi_grp%comm, mpi_err)
       SAFE_DEALLOCATE_A(fbuff)
@@ -152,7 +152,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 #ifdef HAVE_MPI
       ! perform all the reductions at once
       if(gr%mesh%parallel_in_domains) then
-        ALLOCATE(buff(4, blocksize), 4*blocksize)
+        SAFE_ALLOCATE(buff(1:4, 1:blocksize))
         buff(1:4, 1:blocksize) = fr(1:4, 1:blocksize)
         call MPI_Allreduce(buff, fr, 4*blocksize, R_MPITYPE, MPI_SUM, gr%mesh%mpi_grp%comm, mpi_err)
         SAFE_DEALLOCATE_A(buff)
@@ -195,9 +195,9 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
         call X(hamiltonian_apply_batch)(hm, gr, psib(iter), resb(iter), ik)
         nops = nops + bsize - sum(done)
 
-        ALLOCATE(mm(iter, iter, 2, bsize), iter**2*2*bsize)
-        ALLOCATE(evec(iter, 1), iter)
-        ALLOCATE(eval(iter), iter)
+        SAFE_ALLOCATE(  mm(1:iter, 1:iter, 1:2, 1:bsize))
+        SAFE_ALLOCATE(evec(1:iter, 1:1))
+        SAFE_ALLOCATE(eval(1:iter))
 
         do ist = jst, maxst
           ib = ist - jst + 1
@@ -225,7 +225,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 #ifdef HAVE_MPI
         ! perform all the reductions at once
         if(gr%mesh%parallel_in_domains) then
-          ALLOCATE(mmc(iter, iter, 2, bsize), iter**2*2*bsize)
+          SAFE_ALLOCATE(mmc(1:iter, 1:iter, 1:2, 1:bsize))
           mmc(1:iter, 1:iter, 1:2, 1:bsize) = mm(1:iter, 1:iter, 1:2, 1:bsize)
           call MPI_Allreduce(mmc, mm, iter**2*2*bsize, R_MPITYPE, MPI_SUM, gr%mesh%mpi_grp%comm, mpi_err)
           SAFE_DEALLOCATE_A(mmc)
@@ -372,8 +372,8 @@ subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, niter, converged,
 
   call push_sub('eigen_rmmdiis.Xeigensolver_rmmdiis_start')
 
-  ALLOCATE(res(gr%mesh%np_part, st%d%dim),  gr%mesh%np_part*st%d%dim)
-  ALLOCATE(kres(gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
+  SAFE_ALLOCATE( res(1:gr%mesh%np_part, 1:st%d%dim))
+  SAFE_ALLOCATE(kres(1:gr%mesh%np_part, 1:st%d%dim))
   niter = 0
 
   do isweep = 1, sweeps
@@ -429,7 +429,6 @@ subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, niter, converged,
   
   SAFE_DEALLOCATE_A(res)
   SAFE_DEALLOCATE_A(kres)
-
 
   call pop_sub()
 

@@ -118,9 +118,9 @@ contains
       end if
 
       filter%no_filters = no_f
-      ALLOCATE(filter%f(no_f), no_f)
-      ALLOCATE(filter%expression(no_f), no_f)
-      ALLOCATE(filter%domain(no_f), no_f)
+      SAFE_ALLOCATE(filter%f(1:no_f))
+      SAFE_ALLOCATE(filter%expression(1:no_f))
+      SAFE_ALLOCATE(filter%domain(1:no_f))
 
       do i=1, no_f
         no_c = loct_parse_block_cols(blk, i-1)       
@@ -199,8 +199,8 @@ contains
 
       nfreqs = tdf_nfreqs(filter%f(i))
 
-      ALLOCATE(ff(tdf_nfreqs(filter%f(i))), tdf_nfreqs(filter%f(i)))
-      ALLOCATE(grid(tdf_nfreqs(filter%f(i))), tdf_nfreqs(filter%f(i)))
+      SAFE_ALLOCATE(ff(1:tdf_nfreqs(filter%f(i))))
+      SAFE_ALLOCATE(grid(1:tdf_nfreqs(filter%f(i))))
       ff = M_z0
       grid = M_ZERO
 
@@ -258,7 +258,7 @@ contains
       max_iter = tdf_niter(filter%f(kk))
       dt = tdf_dt(filter%f(kk))
       iunit = io_open(filename, action='write')
-      ALLOCATE(wgrid(max_iter/2+1), max_iter/2+1)
+      SAFE_ALLOCATE(wgrid(1:max_iter/2+1))
       call tdf_fourier_grid(filter%f(kk), wgrid)
       do i = 1, max_iter/2+1
         write(iunit, '(3es30.16e4)') wgrid(i), tdf(filter%f(kk), i)

@@ -81,7 +81,7 @@ contains
     FLOAT,               intent(in)  :: dt
     integer,             intent(in)  :: max_iter
     
-    integer            :: order, it, allocsize, np
+    integer            :: order, it, np
     CMPLX, allocatable :: um(:)
     FLOAT, allocatable :: td_pot(:, :)
 
@@ -155,11 +155,11 @@ contains
     end if
 
     ! Calculate td-potential.
-    ALLOCATE(td_pot(0:max_iter+1, NLEADS), (max_iter+2)*NLEADS)
+    SAFE_ALLOCATE(td_pot(0:max_iter+1, 1:NLEADS))
     call lead_td_pot(td_pot, gr%sb%lead_td_pot_formula, max_iter, dt)
     ! Allocate memory for the src_mem_u (needed for source and memory term.
-    ALLOCATE(ob%src_mem_u(0:max_iter, NLEADS), (max_iter+1)*NLEADS)
-    ALLOCATE(um(NLEADS), NLEADS)
+    SAFE_ALLOCATE(ob%src_mem_u(0:max_iter, 1:NLEADS))
+    SAFE_ALLOCATE(um(1:NLEADS))
     !            /      dt        \   / /       dt        \
     ! u(m, il) = |1 - i -- U(m,il)|  /  | 1 + i -- U(m,il) |
     !            \      4         / /   \       4         /
@@ -179,9 +179,8 @@ contains
 
     ! Allocate memory for the interface wave functions of previous
     ! timesteps.
-    allocsize = gr%intf(LEFT)%np*st%lnst*st%d%kpt%nlocal*(max_iter+1)*NLEADS
     np = gr%intf(LEFT)%np
-    ALLOCATE(ob%st_intface(np, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end, NLEADS, 0:max_iter), allocsize)
+    SAFE_ALLOCATE(ob%st_intface(1:np, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end, 1:NLEADS, 0:max_iter))
     ob%st_intface = M_z0
 
     call pop_sub()
@@ -214,12 +213,12 @@ contains
     inp = gr%intf(LEFT)%np ! Assuming symmetric leads.
 
     order = gr%der%order
-    ALLOCATE(tmp(gr%mesh%np, st%d%ispin), gr%mesh%np*st%d%ispin)
-    ALLOCATE(tmp_wf(inp), inp)
+    SAFE_ALLOCATE(tmp(1:gr%mesh%np, 1:st%d%ispin))
+    SAFE_ALLOCATE(tmp_wf(1:inp))
     if(ob%mem_type.eq.save_cpu_time) then
-      ALLOCATE(tmp_mem(inp, inp), inp**2)
+      SAFE_ALLOCATE(tmp_mem(1:inp, 1:inp))
     else
-      ALLOCATE(tmp_mem(inp*order, 1), inp*order)
+      SAFE_ALLOCATE(tmp_mem(1:inp*order, 1:1))
     end if
 
     ! Set pointers to communicate with with backward propagator passed
@@ -378,7 +377,7 @@ contains
     CMPLX, allocatable :: tmp(:, :)
     call push_sub('ob_rti.h_eff_backward')
     
-    ALLOCATE(tmp(gr_p%mesh%np_part, 1),gr_p%mesh%np_part)
+    SAFE_ALLOCATE(tmp(1:gr_p%mesh%np_part, 1:1))
     ! Propagate backward.
     call lalg_copy(gr_p%mesh%np, x, tmp(:, 1))
     call apply_h_eff(hm_p, gr_p, mem_p, intf_p, M_ONE, dt_p, t_p, ist_p, ik_p, tmp)
@@ -399,7 +398,7 @@ contains
     CMPLX, allocatable :: tmp(:, :)
     call push_sub('ob_rti.h_eff_backward_t')
     
-    ALLOCATE(tmp(gr_p%mesh%np_part, 1),gr_p%mesh%np_part)
+    SAFE_ALLOCATE(tmp(1:gr_p%mesh%np_part, 1:1))
     ! Propagate backward.
     call lalg_copy(gr_p%mesh%np, x, tmp(:, 1))
     call apply_h_eff(hm_p, gr_p, mem_p, intf_p, M_ONE, dt_p, t_p, ist_p, ik_p, tmp, .true.)
@@ -420,7 +419,7 @@ contains
     CMPLX, allocatable :: tmp(:, :)
     call push_sub('ob_rti.h_eff_backward_dagger')
     
-    ALLOCATE(tmp(gr_p%mesh%np_part, 1),gr_p%mesh%np_part)
+    SAFE_ALLOCATE(tmp(1:gr_p%mesh%np_part, 1:1))
     ! Propagate backward.
     call lalg_copy(gr_p%mesh%np, x, tmp(:, 1))
     call apply_h_eff_dagger(hm_p, gr_p, mem_p, intf_p, dt_p, t_p, ist_p, ik_p, tmp)
@@ -441,7 +440,7 @@ contains
     CMPLX, allocatable :: tmp(:, :)
     call push_sub('ob_rti.h_eff_backward_sp')
     
-    ALLOCATE(tmp(gr_p%mesh%np_part, 1),gr_p%mesh%np_part)
+    SAFE_ALLOCATE(tmp(1:gr_p%mesh%np_part, 1:1))
     ! Propagate backward.
     call lalg_copy(gr_p%mesh%np, x, tmp(:, 1))
     call apply_h_eff_sp(hm_p, gr_p, sp_mem_p, intf_p, M_ONE, dt_p, t_p, ist_p, ik_p, tmp, mem_s_p, mapping_p)
@@ -462,7 +461,7 @@ contains
     CMPLX, allocatable :: tmp(:, :)
     call push_sub('ob_rti.h_eff_backward_sp_t')
     
-    ALLOCATE(tmp(gr_p%mesh%np_part, 1),gr_p%mesh%np_part)
+    SAFE_ALLOCATE(tmp(1:gr_p%mesh%np_part, 1:1))
     ! Propagate backward.
     call lalg_copy(gr_p%mesh%np, x, tmp(:, 1))
     call apply_h_eff_sp(hm_p, gr_p, sp_mem_p, intf_p, M_ONE, dt_p, t_p, ist_p, ik_p, tmp, mem_s_p, mapping_p, .true.)
@@ -513,7 +512,7 @@ contains
 
     call push_sub('ob_rti.apply_h_eff')
 
-    ALLOCATE(intf_wf(intf(LEFT)%np, NLEADS), intf(LEFT)%np*NLEADS)
+    SAFE_ALLOCATE(intf_wf(1:intf(LEFT)%np, 1:NLEADS))
 
     ASSERT(sign.eq.M_ONE.or.sign.eq.-M_ONE)
 
@@ -563,7 +562,7 @@ contains
 
     call push_sub('ob_rti.apply_h_eff_dagger')
 
-    ALLOCATE(intf_wf(intf(LEFT)%np, NLEADS), intf(LEFT)%np*NLEADS)
+    SAFE_ALLOCATE(intf_wf(1:intf(LEFT)%np, 1:NLEADS))
 
     call get_intf_wf(intf(LEFT), zpsi(:, 1), intf_wf(:, LEFT))
     call get_intf_wf(intf(RIGHT), zpsi(:, 1), intf_wf(:, RIGHT))
@@ -604,7 +603,7 @@ contains
 
     call push_sub('ob_rti.apply_h_eff_sp')
 
-    ALLOCATE(intf_wf(intf(LEFT)%np, NLEADS), intf(LEFT)%np*NLEADS)
+    SAFE_ALLOCATE(intf_wf(1:intf(LEFT)%np, 1:NLEADS))
 
     ASSERT(sign.eq.M_ONE.or.sign.eq.-M_ONE)
 
@@ -668,8 +667,8 @@ contains
 
     call push_sub('ob_rti.apply_mem')
 
-    ALLOCATE(mem_intf_wf(intf%np), intf%np)
-    ALLOCATE(tmem(intf%np, intf%np, 2), 2*intf%np**2)
+    SAFE_ALLOCATE(mem_intf_wf(1:intf%np))
+    SAFE_ALLOCATE(tmem(1:intf%np, 1:intf%np, 1:2))
 
     mem_intf_wf = M_z0
 
@@ -703,7 +702,7 @@ contains
 
     call push_sub('ob_rti.apply_sp_mem')
 
-    ALLOCATE(tmem(intf%np, intf%np), intf%np**2)
+    SAFE_ALLOCATE(tmem(1:intf%np, 1:intf%np))
     call make_full_matrix(intf%np, order, dim, sp_mem, mem_s, tmem, mapping)
     call apply_mem(tmem, intf, intf_wf, zpsi, factor)
     SAFE_DEALLOCATE_A(tmem)
@@ -793,8 +792,8 @@ contains
     call ob_mem_end(ob)
     call ob_src_end(ob)
 
-    DEALLOCATE(ob%src_mem_u)
-    DEALLOCATE(ob%st_intface)
+    SAFE_DEALLOCATE_P(ob%src_mem_u)
+    SAFE_DEALLOCATE_P(ob%st_intface)
 
     call pop_sub()
   end subroutine ob_rti_end

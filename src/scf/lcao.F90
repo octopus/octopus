@@ -110,9 +110,9 @@ contains
 
     ! generate tables to know which indexes each atomic orbital has
 
-    ALLOCATE(this%atom(1:this%maxorbs), this%maxorbs)
-    ALLOCATE(this%level(1:this%maxorbs), this%maxorbs)
-    ALLOCATE(this%ddim(1:this%maxorbs), this%maxorbs)
+    SAFE_ALLOCATE( this%atom(1:this%maxorbs))
+    SAFE_ALLOCATE(this%level(1:this%maxorbs))
+    SAFE_ALLOCATE( this%ddim(1:this%maxorbs))
 
     ! Each atom provides niwfs pseudo-orbitals (this number is given in
     ! geo%atom(ia)%spec%niwfs for atom number ia). This number is

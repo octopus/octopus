@@ -56,11 +56,11 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
   maxter = niter
   niter = 0
 
-  ALLOCATE(h_psi(gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
-  ALLOCATE(   cg(gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
-  ALLOCATE(    g(gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
-  ALLOCATE(   g0(gr%mesh%np, st%d%dim), gr%mesh%np*st%d%dim)
-  ALLOCATE( ppsi(gr%mesh%np, st%d%dim), gr%mesh%np*st%d%dim)
+  SAFE_ALLOCATE(h_psi(1:gr%mesh%np_part, 1:st%d%dim))
+  SAFE_ALLOCATE(   cg(1:gr%mesh%np_part, 1:st%d%dim))
+  SAFE_ALLOCATE(    g(1:gr%mesh%np_part, 1:st%d%dim))
+  SAFE_ALLOCATE(   g0(1:gr%mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE( ppsi(1:gr%mesh%np, 1:st%d%dim))
 
   do idim = 1, st%d%dim
     cg(1:gr%mesh%np_part, idim) = R_TOTYPE(M_ZERO)
@@ -299,14 +299,14 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff, 
   maxter = niter
   niter = 0
 
-  ALLOCATE( phi(gr%mesh%np     , dim), gr%mesh%np_part*dim)
-  ALLOCATE( psi(gr%mesh%np_part, dim), gr%mesh%np_part*dim)
-  ALLOCATE(hpsi(gr%mesh%np     , dim), gr%mesh%np_part*dim)
-  ALLOCATE(  cg(gr%mesh%np     , dim), gr%mesh%np_part*dim)
-  ALLOCATE(hcgp(gr%mesh%np     , dim), gr%mesh%np_part*dim)
-  ALLOCATE(  sd(gr%mesh%np     , dim), gr%mesh%np_part*dim)
-  ALLOCATE( cgp(gr%mesh%np_part, dim), gr%mesh%np_part*dim)
-  ALLOCATE(orthogonal(nst), nst)
+  SAFE_ALLOCATE( phi(1:gr%mesh%np     , 1:dim))
+  SAFE_ALLOCATE( psi(1:gr%mesh%np_part, 1:dim))
+  SAFE_ALLOCATE(hpsi(1:gr%mesh%np     , 1:dim))
+  SAFE_ALLOCATE(  cg(1:gr%mesh%np     , 1:dim))
+  SAFE_ALLOCATE(hcgp(1:gr%mesh%np     , 1:dim))
+  SAFE_ALLOCATE(  sd(1:gr%mesh%np     , 1:dim))
+  SAFE_ALLOCATE( cgp(1:gr%mesh%np_part, 1:dim))
+  SAFE_ALLOCATE(orthogonal(1:nst))
 
   psi(1:gr%mesh%np, 1:dim) = M_ZERO
   cgp(1:gr%mesh%np, 1:dim) = M_ZERO

@@ -75,8 +75,8 @@ contains
     
     call push_sub('ob_lippmann_schwinger.lippmann_schwinger')
 
-    ALLOCATE(rhs(gr%mesh%np_part, st%d%dim), gr%mesh%np_part*st%d%dim)
-    ALLOCATE(green(gr%intf(LEFT)%np, gr%intf(LEFT)%np, st%d%dim, NLEADS), gr%intf(LEFT)%np**2*st%d%dim**NLEADS)
+    SAFE_ALLOCATE(rhs(1:gr%mesh%np_part, 1:st%d%dim))
+    SAFE_ALLOCATE(green(1:gr%intf(LEFT)%np, 1:gr%intf(LEFT)%np, 1:st%d%dim, 1:NLEADS))
 
     eigens%converged = 0
     eigens%matvec    = 0
@@ -240,8 +240,8 @@ contains
     np_part = gr_p%mesh%np_part
     dim     = st_p%d%dim
 
-    ALLOCATE(tmp_x(np_part, dim), np_part*dim)
-    ALLOCATE(tmp_y(np_part, dim), np_part*dim)
+    SAFE_ALLOCATE(tmp_x(1:np_part, 1:dim))
+    SAFE_ALLOCATE(tmp_y(1:np_part, 1:dim))
 
     do idim = 1, dim
       tmp_x(1:np, idim) = x(l(idim):u(idim))

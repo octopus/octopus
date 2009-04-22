@@ -33,8 +33,8 @@ subroutine X(eigensolver_mg) (gr, st, hm, tol, niter, converged, ik, diff)
 
   call push_sub('eigen_cg.eigensolver_mg')
 
-  ALLOCATE(cc(1:st%nst, 1:st%nst), st%nst**2)
-  ALLOCATE(aa(1:st%nst), st%nst)
+  SAFE_ALLOCATE(cc(1:st%nst, 1:st%nst))
+  SAFE_ALLOCATE(aa(1:st%nst))
 
   cc = M_Z0
 
@@ -92,9 +92,9 @@ subroutine X(coordinate_relaxation)(gr, mesh, hm, nst, steps, ik, psi, aa, cc)
   
   R_TYPE, allocatable :: sigma(:), beta(:), hdiag(:, :)
 
-  ALLOCATE(sigma(1:nst), nst)
-  ALLOCATE(beta(1:nst), nst)
-  ALLOCATE(hdiag(1:mesh%np, 1:hm%d%dim), gr%mesh%np*hm%d%dim)
+  SAFE_ALLOCATE(sigma(1:nst))
+  SAFE_ALLOCATE(beta(1:nst))
+  SAFE_ALLOCATE(hdiag(1:mesh%np, 1:hm%d%dim))
 
   call X(hamiltonian_diagonal) (hm, gr, hdiag, ik)
 
