@@ -228,20 +228,20 @@ contains
 
       nullify(ps%g%drdi, ps%g%s)
       ps%g%nrval = ps_upf%np
-      ALLOCATE(ps%g%rofi(ps%g%nrval), ps%g%nrval)
-      ALLOCATE(ps%g%r2ofi(ps%g%nrval), ps%g%nrval)
+      SAFE_ALLOCATE(ps%g%rofi(1:ps%g%nrval))
+      SAFE_ALLOCATE(ps%g%r2ofi(1:ps%g%nrval))
       ps%g%rofi = ps_upf%r
       ps%g%r2ofi = ps%g%rofi**2
 
     end select
 
     ! We allocate all the stuff
-    ALLOCATE(ps%kb   (0:ps%l_max, ps%kbc),             (ps%l_max+1)*ps%kbc)
-    ALLOCATE(ps%dkb  (0:ps%l_max, ps%kbc),             (ps%l_max+1)*ps%kbc)
-    ALLOCATE(ps%ur   (ps%conf%p, ps%ispin),            ps%conf%p*ps%ispin)
-    ALLOCATE(ps%ur_sq(ps%conf%p, ps%ispin),            ps%conf%p*ps%ispin)
-    ALLOCATE(ps%h    (0:ps%l_max, 1:ps%kbc, 1:ps%kbc), (ps%l_max+1)*ps%kbc*ps%kbc)
-    ALLOCATE(ps%k    (0:ps%l_max, 1:ps%kbc, 1:ps%kbc), (ps%l_max+1)*ps%kbc*ps%kbc)
+    SAFE_ALLOCATE(ps%kb   (0:ps%l_max, 1:ps%kbc))
+    SAFE_ALLOCATE(ps%dkb  (0:ps%l_max, 1:ps%kbc))
+    SAFE_ALLOCATE(ps%ur   (1:ps%conf%p, 1:ps%ispin))
+    SAFE_ALLOCATE(ps%ur_sq(1:ps%conf%p, 1:ps%ispin))
+    SAFE_ALLOCATE(ps%h    (0:ps%l_max, 1:ps%kbc, 1:ps%kbc))
+    SAFE_ALLOCATE(ps%k    (0:ps%l_max, 1:ps%kbc, 1:ps%kbc))
     call spline_init(ps%kb)
     call spline_init(ps%dkb)
     call spline_init(ps%vl)
@@ -312,10 +312,10 @@ contains
     
     ASSERT(ps%g%nrval > 0)
 
-    ALLOCATE(vsr(ps%g%nrval), ps%g%nrval)
-    ALLOCATE(vlr(ps%g%nrval), ps%g%nrval)
-    ALLOCATE(nlr(ps%g%nrval), ps%g%nrval) 
-    ALLOCATE(vion(ps%g%nrval), ps%g%nrval)
+    SAFE_ALLOCATE( vsr(1:ps%g%nrval))
+    SAFE_ALLOCATE( vlr(1:ps%g%nrval))
+    SAFE_ALLOCATE( nlr(1:ps%g%nrval))
+    SAFE_ALLOCATE(vion(1:ps%g%nrval))
     
     vlr(1) = -ps%z_val*M_TWO/(sqrt(M_TWO*M_PI)*ps%sigma_erf)
 
@@ -500,7 +500,7 @@ contains
 
     ! Fourier transform of the local part
     iunit = io_open(trim(dir)//'/local_ft', action='write')
-    ALLOCATE(fw(1, 1), 1*1)
+    SAFE_ALLOCATE(fw(1, 1))
     call spline_init(fw(1, 1))
     call spline_3dft(ps%vl, fw(1, 1), gmax = gmax)
     call spline_print(fw(1, 1), iunit)
@@ -518,7 +518,7 @@ contains
     call io_close(iunit)
 
     iunit = io_open(trim(dir)//'/nonlocal_ft', action='write')
-    ALLOCATE(fw(0:ps%l_max, 1:ps%kbc), (ps%l_max+1)*ps%kbc)
+    SAFE_ALLOCATE(fw(0:ps%l_max, 1:ps%kbc))
     call spline_init(fw)
     do k = 0, ps%l_max
       do j = 1, ps%kbc
@@ -626,7 +626,7 @@ contains
 
       call push_sub('ps.get_splines_hgh')
 
-      ALLOCATE(hato(psp%g%nrval), psp%g%nrval)
+      SAFE_ALLOCATE(hato(1:psp%g%nrval))
 
       ! Interpolate the KB-projection functions
       do l = 0, psp%l_max
@@ -695,7 +695,7 @@ contains
       FLOAT, allocatable :: hato(:)
       integer :: is, l, ir, nrc
 
-      ALLOCATE(hato(g%nrval), g%nrval)
+      SAFE_ALLOCATE(hato(1:g%nrval))
 
       ! the wave-functions
       do is = 1, ps%ispin
@@ -775,7 +775,7 @@ contains
       end do
     end if
 
-    ALLOCATE(hato(ps%g%nrval), ps%g%nrval)
+    SAFE_ALLOCATE(hato(1:ps%g%nrval))
 
 
     !Non-linear core-corrections

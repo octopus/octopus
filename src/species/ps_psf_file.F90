@@ -93,11 +93,11 @@ contains
 
     ! Allocates the variables to psf%nr:  ! Reads the pseudo-valence charge density, in bohr^(-3)
     !   rho_val(1:nrval) : pseudo-valence charge distribution
-    ALLOCATE(psf%rofi   (psf%nr),                psf%nr)
-    ALLOCATE(psf%vps    (psf%nr, psf%npotd), psf%nr*psf%npotd)
-    ALLOCATE(psf%chcore (psf%nr),                psf%nr)
-    ALLOCATE(psf%rho_val(psf%nr),                psf%nr)
-    ALLOCATE(psf%vso    (psf%nr, psf%npotu), psf%nr*psf%npotu)
+    SAFE_ALLOCATE(psf%rofi   (1:psf%nr))
+    SAFE_ALLOCATE(psf%vps    (1:psf%nr, 1:psf%npotd))
+    SAFE_ALLOCATE(psf%chcore (1:psf%nr))
+    SAFE_ALLOCATE(psf%rho_val(1:psf%nr))
+    SAFE_ALLOCATE(psf%vso    (1:psf%nr, 1:psf%npotu))
 
     ! Reads the radial values, in bohrs
     !   rofi(1:nr) : radial values ( rofi(i) = b*( exp(a*(i-1)) - 1 ) ) [bohr]

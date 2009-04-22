@@ -134,9 +134,9 @@ contains
 
     call push_sub('atomic.atomhxc')
 
-    ALLOCATE( ve(g%nrval, nspin), g%nrval*nspin)
-    ALLOCATE( xc(g%nrval, nspin), g%nrval*nspin)
-    ALLOCATE(rho(g%nrval, nspin), g%nrval*nspin)
+    SAFE_ALLOCATE( ve(1:g%nrval, 1:nspin))
+    SAFE_ALLOCATE( xc(1:g%nrval, 1:nspin))
+    SAFE_ALLOCATE(rho(1:g%nrval, 1:nspin))
     ve = M_ZERO; xc = M_ZERO; rho = M_ZERO
 
     ! To calculate the Hartree term, we put all the density in one variable.

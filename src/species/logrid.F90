@@ -68,10 +68,10 @@ contains
     g%flavor = flavor
     g%a = a; g%b = b; g%nrval = nrval
 
-    ALLOCATE(g%rofi(nrval), nrval)
-    ALLOCATE(g%r2ofi(nrval), nrval)
-    ALLOCATE(g%drdi(nrval), nrval)
-    ALLOCATE(g%s(nrval),    nrval)
+    SAFE_ALLOCATE(g%rofi(1:nrval))
+    SAFE_ALLOCATE(g%r2ofi(1:nrval))
+    SAFE_ALLOCATE(g%drdi(1:nrval))
+    SAFE_ALLOCATE(g%s(1:nrval))
 
     select case(g%flavor)
     case(LOGRID_PSF)
@@ -128,10 +128,10 @@ contains
     g%b      = gi%b
     g%nrval  = gi%nrval
 
-    ALLOCATE(g%rofi (g%nrval), g%nrval)
-    ALLOCATE(g%r2ofi(g%nrval), g%nrval)
-    ALLOCATE(g%drdi (g%nrval), g%nrval)
-    ALLOCATE(g%s    (g%nrval), g%nrval)
+    SAFE_ALLOCATE(g%rofi (1:g%nrval))
+    SAFE_ALLOCATE(g%r2ofi(1:g%nrval))
+    SAFE_ALLOCATE(g%drdi (1:g%nrval))
+    SAFE_ALLOCATE(g%s    (1:g%nrval))
 
     g%rofi(:)  = gi%rofi(:)
     g%r2ofi(:) = gi%r2ofi(:)

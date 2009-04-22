@@ -85,22 +85,22 @@ contains
     ps%so_no_l_channels = so_no_l
 
     ! Allocate some stuff
-    ALLOCATE(ps%vps    (ps%g%nrval, no_l), ps%g%nrval*no_l)
-    ALLOCATE(ps%chcore (ps%g%nrval),       ps%g%nrval)
-    ALLOCATE(ps%vlocal (ps%g%nrval),       ps%g%nrval)
+    SAFE_ALLOCATE(ps%vps    (1:ps%g%nrval, 1:no_l))
+    SAFE_ALLOCATE(ps%chcore (1:ps%g%nrval))
+    SAFE_ALLOCATE(ps%vlocal (1:ps%g%nrval))
 
-    ALLOCATE(ps%rphi  (ps%g%nrval, no_l, 3), ps%g%nrval*no_l*3)
-    ALLOCATE(ps%KB    (ps%g%nrval, no_l),    ps%g%nrval*no_l)
-    ALLOCATE(ps%dkbcos(no_l),            no_l)
-    ALLOCATE(ps%dknorm(no_l),            no_l)
-    ALLOCATE(ps%kb_radius(no_l+1),       no_l + 1)
+    SAFE_ALLOCATE(ps%rphi  (1:ps%g%nrval, 1:no_l, 1:3))
+    SAFE_ALLOCATE(ps%KB    (1:ps%g%nrval, 1:no_l))
+    SAFE_ALLOCATE(ps%dkbcos(1:no_l))
+    SAFE_ALLOCATE(ps%dknorm(1:no_l))
+    SAFE_ALLOCATE(ps%kb_radius(1:no_l+1))
 
     if(so_no_l > 0) then
-      ALLOCATE(ps%so_vps(ps%g%nrval, so_no_l), ps%g%nrval*so_no_l)
-      ALLOCATE(ps%so_KB (ps%g%nrval, so_no_l), ps%g%nrval*so_no_l)
-      ALLOCATE(ps%so_dkbcos(so_no_l),    so_no_l)
-      ALLOCATE(ps%so_dknorm(so_no_l),    so_no_l)
-      ALLOCATE(ps%so_kb_radius(so_no_l), so_no_l)
+      SAFE_ALLOCATE(ps%so_vps(1:ps%g%nrval, 1:so_no_l))
+      SAFE_ALLOCATE(ps%so_KB (1:ps%g%nrval, 1:so_no_l))
+      SAFE_ALLOCATE(ps%so_dkbcos(1:so_no_l))
+      SAFE_ALLOCATE(ps%so_dknorm(1:so_no_l))
+      SAFE_ALLOCATE(ps%so_kb_radius(1:so_no_l))
     end if
 
     call pop_sub()
@@ -165,7 +165,7 @@ contains
 
       a = CNST(1.82) / rcore
       b = M_ONE
-      ALLOCATE(rho(ps%g%nrval), ps%g%nrval)
+      SAFE_ALLOCATE(rho(1:ps%g%nrval))
 
       do ir = 1, ps%g%nrval
         rho(ir) = exp( -( sinh(a*b*ps%g%rofi(ir)) / sinh(b) )**2 )

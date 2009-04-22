@@ -60,9 +60,9 @@ contains
     call push_sub('ps_cpi.ps_cpi_init')
 
     ! allocate data
-    ALLOCATE(ps_cpi%cpi_file, 1)
-    ALLOCATE(ps_cpi%ps_grid,  1)
-    ALLOCATE(ps_cpi%conf,     1)
+    SAFE_ALLOCATE(ps_cpi%cpi_file)
+    SAFE_ALLOCATE(ps_cpi%ps_grid)
+    SAFE_ALLOCATE(ps_cpi%conf)
 
     ! Find out where the hell the file is.
     filename2 = trim(filename) // '.cpi'

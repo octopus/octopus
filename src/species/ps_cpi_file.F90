@@ -75,9 +75,9 @@ contains
     ! add extra point for the zero
     psf%nr = psf%nr + 1
 
-    ALLOCATE(psf%rofi   (psf%nr),                    psf%nr)
-    ALLOCATE(psf%vps    (psf%nr, psf%no_l_channels), psf%nr*psf%no_l_channels)
-    ALLOCATE(psf%rphi   (psf%nr, psf%no_l_channels), psf%nr*psf%no_l_channels)
+    SAFE_ALLOCATE(psf%rofi   (1:psf%nr))
+    SAFE_ALLOCATE(psf%vps    (1:psf%nr, 1:psf%no_l_channels))
+    SAFE_ALLOCATE(psf%rphi   (1:psf%nr, 1:psf%no_l_channels))
 
     do l = 1, psf%no_l_channels
       if(l.ne.1) read(unit, *)
@@ -92,9 +92,9 @@ contains
     if(ios == 0) then
       psf%core_corrections = .true.
 
-      ALLOCATE(psf%chcore  (psf%nr), psf%nr)
-      ALLOCATE(psf%d1chcore(psf%nr), psf%nr)
-      ALLOCATE(psf%d2chcore(psf%nr), psf%nr)
+      SAFE_ALLOCATE(psf%chcore  (1:psf%nr))
+      SAFE_ALLOCATE(psf%d1chcore(1:psf%nr))
+      SAFE_ALLOCATE(psf%d2chcore(1:psf%nr))
 
       psf%  chcore(2) = b
       psf%d1chcore(2) = c

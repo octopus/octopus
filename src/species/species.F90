@@ -485,7 +485,7 @@ contains
     select case(s%type)
     case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
       ! allocate structure
-      ALLOCATE(s%ps, 1) 
+      SAFE_ALLOCATE(s%ps) 
       call ps_init(s%ps, s%label, s%type, s%Z, s%lmax, s%lloc, ispin)
       s%z_val = s%ps%z_val
       s%nlcc = (s%ps%icore /= 'nc  ' )
@@ -553,9 +553,9 @@ contains
       end if
     end select
 
-    ALLOCATE(s%iwf_l(s%niwfs, ispin), s%niwfs*ispin)
-    ALLOCATE(s%iwf_m(s%niwfs, ispin), s%niwfs*ispin)
-    ALLOCATE(s%iwf_i(s%niwfs, ispin), s%niwfs*ispin)
+    SAFE_ALLOCATE(s%iwf_l(1:s%niwfs, 1:ispin))
+    SAFE_ALLOCATE(s%iwf_m(1:s%niwfs, 1:ispin))
+    SAFE_ALLOCATE(s%iwf_i(1:s%niwfs, 1:ispin))
     call species_iwf_fix_qn(s, ispin)
 
     call pop_sub()

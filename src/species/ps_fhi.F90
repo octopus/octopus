@@ -60,10 +60,10 @@ contains
 
     call push_sub('ps_fhi.ps_fhi_init')
 
-    ALLOCATE(ps_fhi%fhi_file, 1)
-    ALLOCATE(ps_fhi%cpi_file, 1)
-    ALLOCATE(ps_fhi%ps_grid,  1)
-    ALLOCATE(ps_fhi%conf,     1)
+    SAFE_ALLOCATE(ps_fhi%fhi_file)
+    SAFE_ALLOCATE(ps_fhi%cpi_file)
+    SAFE_ALLOCATE(ps_fhi%ps_grid)
+    SAFE_ALLOCATE(ps_fhi%conf)
 
     ! Find out where the hell the file is.
     filename2 = trim(filename) // '.fhi'

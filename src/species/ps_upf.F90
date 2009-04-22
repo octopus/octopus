@@ -127,7 +127,7 @@ contains
     ps_upf%conf%occ(1:ps_upf%n_wfs,1) = ps_upf%occ(1:ps_upf%n_wfs)
 
     !Check if the local component is one of the angular momentum channels
-    ALLOCATE(found_l(0:ps_upf%l_max), ps_upf%l_max+1)
+    SAFE_ALLOCATE(found_l(0:ps_upf%l_max))
     found_l = .true.
     do l = 0, ps_upf%l_max
       if (any(ps_upf%proj_l == l)) then
@@ -212,9 +212,9 @@ contains
     read(unit,*) ps_upf%np, dummy
     read(unit,*) ps_upf%n_wfs, ps_upf%n_proj, dummy
     read(unit,*) dummy
-    ALLOCATE(ps_upf%n(ps_upf%n_wfs), ps_upf%n_wfs)
-    ALLOCATE(ps_upf%l(ps_upf%n_wfs), ps_upf%n_wfs)
-    ALLOCATE(ps_upf%occ(ps_upf%n_wfs), ps_upf%n_wfs)
+    SAFE_ALLOCATE(ps_upf%n(1:ps_upf%n_wfs))
+    SAFE_ALLOCATE(ps_upf%l(1:ps_upf%n_wfs))
+    SAFE_ALLOCATE(ps_upf%occ(1:ps_upf%n_wfs))
     do i = 1, ps_upf%n_wfs
       read(unit,*) nl, ps_upf%l(i), ps_upf%occ(i)
       read(nl(1:1), '(I1)') ps_upf%n(i) 
@@ -225,12 +225,12 @@ contains
     call init_tag(unit, "PP_MESH", .true.)
 
     call init_tag(unit, "PP_R", .false.)
-    ALLOCATE(ps_upf%r(ps_upf%np), ps_upf%np)
+    SAFE_ALLOCATE(ps_upf%r(1:ps_upf%np))
     read(unit,*) (ps_upf%r(ir), ir = 1, ps_upf%np)
     call check_end_tag(unit, "PP_R")
 
     call init_tag(unit, "PP_RAB", .false.)
-    ALLOCATE(ps_upf%drdi(ps_upf%np), ps_upf%np)
+    SAFE_ALLOCATE(ps_upf%drdi(1:ps_upf%np))
     read(unit,*) (ps_upf%drdi(ir), ir = 1, ps_upf%np)
     call check_end_tag(unit, "PP_RAB")
 
@@ -239,7 +239,7 @@ contains
     !Non-linear core-corrections
     if (ps_upf%nlcc) then
       call init_tag(unit, "PP_NLCC", .true.)
-      ALLOCATE(ps_upf%core_density(ps_upf%np), ps_upf%np)
+      SAFE_ALLOCATE(ps_upf%core_density(1:ps_upf%np))
       read(unit,*) (ps_upf%core_density(ir), ir = 1, ps_upf%np)
       call check_end_tag(unit, "PP_NLCC")
     else
@@ -248,16 +248,16 @@ contains
 
     !Local component
     call init_tag(unit, "PP_LOCAL", .true.)
-    ALLOCATE(ps_upf%v_local(ps_upf%np), ps_upf%np)
+    SAFE_ALLOCATE(ps_upf%v_local(1:ps_upf%np))
     read(unit,*) (ps_upf%v_local(ir), ir = 1, ps_upf%np)
     call check_end_tag(unit, "PP_LOCAL")
 
     !Non-local components
     call init_tag(unit, "PP_NONLOCAL", .true.)
 
-    ALLOCATE(ps_upf%proj(ps_upf%np, ps_upf%n_proj), ps_upf%np*ps_upf%n_proj)
-    ALLOCATE(ps_upf%proj_l(ps_upf%n_proj), ps_upf%n_proj)
-    ALLOCATE(ps_upf%proj_np(ps_upf%n_proj), ps_upf%n_proj)
+    SAFE_ALLOCATE(ps_upf%proj(1:ps_upf%np, 1:ps_upf%n_proj))
+    SAFE_ALLOCATE(ps_upf%proj_l(1:ps_upf%n_proj))
+    SAFE_ALLOCATE(ps_upf%proj_np(1:ps_upf%n_proj))
     ps_upf%proj = M_ZERO
     do i = 1, ps_upf%n_proj
       call init_tag(unit, "PP_BETA", .false.)
@@ -268,7 +268,7 @@ contains
     end do
     
     call init_tag(unit, "PP_DIJ", .false.)
-    ALLOCATE(ps_upf%e(ps_upf%n_proj), ps_upf%n_proj)
+    SAFE_ALLOCATE(ps_upf%e(1:ps_upf%n_proj))
     ps_upf%e = M_ZERO
     read(unit,*) n_dij, dummy
     do i = 1, n_dij
@@ -284,7 +284,7 @@ contains
 
     !Pseudo wave-functions
     call init_tag(unit, "PP_PSWFC", .true.)
-    ALLOCATE(ps_upf%wfs(ps_upf%np, ps_upf%n_wfs), ps_upf%np*ps_upf%n_wfs)
+    SAFE_ALLOCATE(ps_upf%wfs(1:ps_upf%np, 1:ps_upf%n_wfs))
     do i = 1, ps_upf%n_wfs
       read(unit,*) dummy
       read(unit,*) (ps_upf%wfs(ir, i), ir = 1, ps_upf%np)
@@ -293,7 +293,7 @@ contains
 
     !Valence charge
     call init_tag(unit, "PP_RHOATOM", .true.)
-    ALLOCATE(ps_upf%rho(ps_upf%np), ps_upf%np)
+    SAFE_ALLOCATE(ps_upf%rho(1:ps_upf%np))
     read(unit,*) (ps_upf%rho(ir), ir = 1, ps_upf%np)
     call check_end_tag(unit, "PP_RHOATOM")
 
@@ -304,7 +304,7 @@ contains
       do i = 1, ps_upf%n_wfs
         read(unit,*) dummy
       end do
-      ALLOCATE(ps_upf%proj_j(ps_upf%n_proj), ps_upf%n_proj)
+      SAFE_ALLOCATE(ps_upf%proj_j(1:ps_upf%n_proj))
       do i = 1, ps_upf%n_proj
         read(unit,*) dummy, ps_upf%proj_j(i)
       end do
@@ -425,7 +425,7 @@ contains
     ps_upf%local_radius = ps_upf%r(ir + 1)
 
     ! non-local part....
-    ALLOCATE(ps_upf%kb_radius(ps_upf%n_proj), ps_upf%n_proj)
+    SAFE_ALLOCATE(ps_upf%kb_radius(1:ps_upf%n_proj))
 
     do i = 1, ps_upf%n_proj
 

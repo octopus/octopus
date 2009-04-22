@@ -122,7 +122,7 @@ contains
       read(iunit, *) gf%n
       read(iunit, *) ! skip comment line
 
-      ALLOCATE(gf%atom(gf%n), gf%n)
+      SAFE_ALLOCATE(gf%atom(1:gf%n))
 
       do i = 1, gf%n
         read(iunit,*) gf%atom(i)%label, gf%atom(i)%x(:)
@@ -136,7 +136,7 @@ contains
       gf%file_type = XYZ_FILE_INP
       gf%flags = ior(gf%flags, XYZ_FLAGS_MOVE)
 
-      ALLOCATE(gf%atom(gf%n), gf%n)
+      SAFE_ALLOCATE(gf%atom(1:gf%n))
 
       do i = 1, gf%n
         j = loct_parse_block_cols(blk, i-1)
@@ -189,7 +189,7 @@ contains
     end do
 990 continue
 
-    ALLOCATE(gf%atom(gf%n), gf%n)
+    SAFE_ALLOCATE(gf%atom(1:gf%n))
 
     ! read in the data
     rewind(iunit)

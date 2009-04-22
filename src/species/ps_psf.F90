@@ -211,7 +211,7 @@ contains
     call push_sub('ps_psf.psf_process')
 
     ! get the pseudoatomic eigenfunctions
-    ALLOCATE(ps_psf%eigen(ps_psf%psf_file%npotd, 3), ps_psf%psf_file%npotd*3)
+    SAFE_ALLOCATE(ps_psf%eigen(1:ps_psf%psf_file%npotd, 1:3))
     call solve_schroedinger(ps_psf%psf_file, ps_psf%ps_grid%g, &
       ps_psf%conf, ps_psf%ispin, ps_psf%ps_grid%rphi, ps_psf%eigen)
 
@@ -264,13 +264,13 @@ contains
     call write_info(1)
 
     ! Allocation.
-    ALLOCATE(s   (g%nrval),            g%nrval)
-    ALLOCATE(hato(g%nrval),            g%nrval)
-    ALLOCATE(gg  (g%nrval),            g%nrval)
-    ALLOCATE(y   (g%nrval),            g%nrval)
-    ALLOCATE(ve  (g%nrval, ispin), g%nrval*ispin)
-    ALLOCATE(rho (g%nrval, ispin), g%nrval*ispin)
-    ALLOCATE(prev(g%nrval, ispin), g%nrval*ispin)
+    SAFE_ALLOCATE(s   (1:g%nrval))
+    SAFE_ALLOCATE(hato(1:g%nrval))
+    SAFE_ALLOCATE(gg  (1:g%nrval))
+    SAFE_ALLOCATE(y   (1:g%nrval))
+    SAFE_ALLOCATE(ve  (1:g%nrval, 1:ispin))
+    SAFE_ALLOCATE(rho (1:g%nrval, 1:ispin))
+    SAFE_ALLOCATE(prev(1:g%nrval, 1:ispin))
     s = M_ZERO; hato = M_ZERO; gg = M_ZERO; y = M_ZERO;
     ve = M_ZERO; rho = M_ZERO; prev = M_ZERO
 
@@ -431,12 +431,12 @@ contains
 
     call push_sub('ps_psf.ghost_analysis')
 
-    ALLOCATE(ve    (g%nrval), g%nrval)
-    ALLOCATE(s     (g%nrval), g%nrval)
-    ALLOCATE(hato  (g%nrval), g%nrval)
-    ALLOCATE(gg    (g%nrval), g%nrval)
-    ALLOCATE(y     (g%nrval), g%nrval)
-    ALLOCATE(elocal(2, lmax+1),  2*(lmax+1))
+    SAFE_ALLOCATE(ve    (1:g%nrval))
+    SAFE_ALLOCATE(s     (1:g%nrval))
+    SAFE_ALLOCATE(hato  (1:g%nrval))
+    SAFE_ALLOCATE(gg    (1:g%nrval))
+    SAFE_ALLOCATE(y     (1:g%nrval))
+    SAFE_ALLOCATE(elocal(1:2, 1:lmax+1))
 
     select case(psf_file%icorr)
     case('pb')
