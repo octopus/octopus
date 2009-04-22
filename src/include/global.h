@@ -25,7 +25,8 @@
 #  define _newline_
 #  define _anl_
 #else
-#  define _anl_ & _newline_
+#  define _newline_    \newline
+#  define _anl_      & \newline
 #endif
 
 #if defined(LONG_LINES)
@@ -90,7 +91,7 @@
 
 #endif
 
-#define ALLOCATE(a,b) allocate(a)
+#define ALLOCATE(a,b) xxxxallocate(a)
 
 #define REAL_DOUBLE real(8)
 #define REAL_SINGLE real(4)
