@@ -268,13 +268,13 @@ contains
     SAFE_ALLOCATE(tmp_y(1:np_part, 1:dim))
 
     do idim = 1, dim
-      tmp_x(1:np, idim) = x(l(idim):u(idim))
+      tmp_x(1:np_part, idim) = x(l(idim):u(idim))
     end do
     call zhamiltonian_apply(hm_p, gr_p, tmp_x, tmp_y, ist_p, ik_p)
 
     ! y <- e x - tmp_y
     do idim = 1, dim
-      y(l(idim):u(idim)) = tmp_y(1:np, idim)
+      y(l(idim):u(idim)) = tmp_y(1:np_part, idim)
       call lalg_scal(np, -M_z1, y(l(idim):u(idim)))
       call lalg_axpy(np, energy_p, x(l(idim):u(idim)), y(l(idim):u(idim)))
     end do
