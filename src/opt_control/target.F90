@@ -203,13 +203,13 @@ module opt_control_target_m
       SAFE_DEALLOCATE_P(target%st%momentum)
       SAFE_DEALLOCATE_P(target%st%node)
 
-      ALLOCATE(target%st%occ(target%st%nst, target%st%d%nik), target%st%nst*target%st%d%nik)
-      ALLOCATE(target%st%eigenval(target%st%nst, target%st%d%nik), target%st%nst*target%st%d%nik)
-      ALLOCATE(target%st%momentum(3,target%st%nst, target%st%d%nik), 3*target%st%nst*target%st%d%nik)
-      ALLOCATE(target%st%node(target%st%nst), target%st%nst)
+      SAFE_ALLOCATE(     target%st%occ(1:target%st%nst, 1:target%st%d%nik))
+      SAFE_ALLOCATE(target%st%eigenval(1:target%st%nst, 1:target%st%d%nik))
+      SAFE_ALLOCATE(target%st%momentum(1:3, 1:target%st%nst, 1:target%st%d%nik))
+      SAFE_ALLOCATE(    target%st%node(1:target%st%nst))
       if(target%st%d%ispin == SPINORS) then
         SAFE_DEALLOCATE_P(target%st%spin)
-        ALLOCATE(target%st%spin(3, target%st%nst, target%st%d%nik), target%st%nst*target%st%d%nik*3)
+        SAFE_ALLOCATE(target%st%spin(1:3, 1:target%st%nst, 1:target%st%d%nik))
       end if
       call states_allocate_wfns(target%st, gr%mesh, M_CMPLX)
       target%st%node(:)  = 0
@@ -259,7 +259,7 @@ module opt_control_target_m
           call states_copy(tmp_st, target%st)
           SAFE_DEALLOCATE_P(tmp_st%zpsi)
           call restart_look_and_read(tmp_st, gr, geo)
-          ALLOCATE(rotation_matrix(target%st%nst, tmp_st%nst), target%st%nst*tmp_st%nst)
+          SAFE_ALLOCATE(rotation_matrix(1:target%st%nst, 1:tmp_st%nst))
           rotation_matrix = M_z0
           do ist = 1, target%st%nst
             do jst = 1, loct_parse_block_cols(blk, ist-1)
@@ -316,7 +316,7 @@ module opt_control_target_m
       !%End
 
       if(loct_parse_isdef('OCTTargetDensity').ne.0) then
-        ALLOCATE(target%rho(gr%mesh%np), gr%mesh%np)
+        SAFE_ALLOCATE(target%rho(1:gr%mesh%np))
         target%rho = M_ZERO
         call loct_parse_string('OCTTargetDensity', "0", expression)
 
@@ -327,7 +327,7 @@ module opt_control_target_m
             tmp_st = target%st
             SAFE_DEALLOCATE_P(tmp_st%zpsi)
             call restart_look_and_read(tmp_st, gr, geo)
-            ALLOCATE(rotation_matrix(target%st%nst, tmp_st%nst), target%st%nst*tmp_st%nst)
+            SAFE_ALLOCATE(rotation_matrix(1:target%st%nst, 1:tmp_st%nst))
             rotation_matrix = M_z0
             do ist = 1, target%st%nst
               do jst = 1, loct_parse_block_cols(blk, ist-1)
@@ -379,7 +379,7 @@ module opt_control_target_m
       !%End
 
       if(loct_parse_isdef('OCTTargetLocal').ne.0) then
-        ALLOCATE(target%rho(gr%mesh%np), gr%mesh%np)
+        SAFE_ALLOCATE(target%rho(1:gr%mesh%np))
         target%rho = M_ZERO
         call loct_parse_string('OCTTargetLocal', "0", expression)
         call conv_to_C_string(expression)
@@ -399,13 +399,13 @@ module opt_control_target_m
       if(loct_parse_block(datasets_check('OCTTdTarget'),blk)==0) then
         call loct_parse_block_string(blk, 0, 0, target%td_local_target)
         call conv_to_C_string(target%td_local_target)
-        ALLOCATE(target%rho(gr%mesh%np), gr%mesh%np)
+        SAFE_ALLOCATE(target%rho(1:gr%mesh%np))
       else
         message(1) = 'If OCTTargetMode = oct_targetmode_td, you must suppy a OCTTDTarget block'
         call write_fatal(1)
       end if
       target%dt     = td%dt
-      ALLOCATE(target%td_fitness(0:td%max_iter), td%max_iter+1)
+      SAFE_ALLOCATE(target%td_fitness(0:td%max_iter))
       target%td_fitness = M_ZERO
 
 
@@ -447,9 +447,9 @@ module opt_control_target_m
       if(loct_parse_isdef(datasets_check('OCTOptimizeHarmonicSpectrum')).ne.0) then
         if(loct_parse_block(datasets_check('OCTOptimizeHarmonicSpectrum'), blk) == 0) then
           target%hhg_nks = loct_parse_block_cols(blk, 0)
-          ALLOCATE(target%hhg_k(target%hhg_nks), target%hhg_nks)
-          ALLOCATE(target%hhg_alpha(target%hhg_nks), target%hhg_nks)
-          ALLOCATE(target%hhg_a(target%hhg_nks), target%hhg_nks)
+          SAFE_ALLOCATE(    target%hhg_k(1:target%hhg_nks))
+          SAFE_ALLOCATE(target%hhg_alpha(1:target%hhg_nks))
+          SAFE_ALLOCATE(    target%hhg_a(1:target%hhg_nks))
           do j = 1, target%hhg_nks
             call loct_parse_block_int(blk, 0, j-1, target%hhg_k(j))
             call loct_parse_block_float(blk, 1, j-1, target%hhg_alpha(j))
@@ -468,7 +468,7 @@ module opt_control_target_m
 
       target%hhg_w0 = w0
       target%dt     = td%dt
-      ALLOCATE(target%td_fitness(0:td%max_iter), td%max_iter+1)
+      SAFE_ALLOCATE(target%td_fitness(0:td%max_iter))
       target%td_fitness = M_ZERO
 
     case default
@@ -571,7 +571,7 @@ module opt_control_target_m
       select case(psi%d%ispin)
       case(UNPOLARIZED)
         ASSERT(psi%d%nik.eq.1)
-        ALLOCATE(opsi(gr%mesh%np_part, 1), gr%mesh%np_part)
+        SAFE_ALLOCATE(opsi(1:gr%mesh%np_part, 1:1))
         opsi = M_z0
         do p  = psi%st_start, psi%st_end
           do j = 1, gr%mesh%np
@@ -587,7 +587,7 @@ module opt_control_target_m
 
     case(oct_tg_hhg)
 
-      ALLOCATE(multipole(4, psi%d%nspin), 4*psi%d%nspin)
+      SAFE_ALLOCATE(multipole(1:4, 1:psi%d%nspin))
       do is = 1, psi%d%nspin
         call dmf_multipoles(gr%mesh, psi%rho(:, is), 1, multipole(:, is))
       end do
@@ -676,7 +676,7 @@ module opt_control_target_m
     select case(target%type)
     case(oct_tg_density)
 
-      ALLOCATE(local_function(gr%mesh%np), gr%mesh%np)
+      SAFE_ALLOCATE(local_function(1:gr%mesh%np))
       do i = 1, gr%mesh%np
         local_function(i) = - ( sqrt(psi%rho(i, 1)) - sqrt(target%rho(i)) )**2
       end do
@@ -688,7 +688,7 @@ module opt_control_target_m
       select case(psi%d%ispin)
       case(UNPOLARIZED)
         ASSERT(psi%d%nik.eq.1)
-        ALLOCATE(opsi(gr%mesh%np_part, 1), gr%mesh%np_part)
+        SAFE_ALLOCATE(opsi(1:gr%mesh%np_part, 1:1))
         opsi = M_z0
         j1 = M_ZERO
         do p  = psi%st_start, psi%st_end
@@ -719,7 +719,7 @@ module opt_control_target_m
     case(oct_tg_hhg)
 
       maxiter = size(target%td_fitness) - 1
-      ALLOCATE(ddipole(0:maxiter), maxiter+1)
+      SAFE_ALLOCATE(ddipole(0:maxiter))
 
       ddipole(0) = M_ZERO
       do i = 1, maxiter - 1
@@ -834,12 +834,12 @@ module opt_control_target_m
       kpoints = psi_in%d%nik
       nst = psi_in%nst
 
-      ALLOCATE(cI(n_pairs), n_pairs)
-      ALLOCATE(dI(n_pairs), n_pairs)
-      ALLOCATE(mat(target%est%st%nst, nst, psi_in%d%nik), target%est%st%nst*nst*psi_in%d%nik)
-      ALLOCATE(mm(nst, nst, kpoints, n_pairs), nst*nst*kpoints*n_pairs)
-      ALLOCATE(mk(gr%mesh%np_part, psi_in%d%dim), gr%mesh%np_part * psi_in%d%dim)
-      ALLOCATE(lambda(n_pairs, n_pairs), n_pairs*n_pairs)
+      SAFE_ALLOCATE(cI(1:n_pairs))
+      SAFE_ALLOCATE(dI(1:n_pairs))
+      SAFE_ALLOCATE(mat(1:target%est%st%nst, 1:nst, 1:psi_in%d%nik))
+      SAFE_ALLOCATE(mm(1:nst, 1:nst, 1:kpoints, 1:n_pairs))
+      SAFE_ALLOCATE(mk(1:gr%mesh%np_part, 1:psi_in%d%dim))
+      SAFE_ALLOCATE(lambda(1:n_pairs, 1:n_pairs))
 
       call zstates_matrix(gr%mesh, target%est%st, psi_in, mat)
 

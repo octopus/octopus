@@ -102,8 +102,8 @@ contains
 
     nk = 1
     if (sys%st%d%ispin == SPIN_POLARIZED) nk = 2
-    ALLOCATE(cas%n_occ(nk), nk)
-    ALLOCATE(cas%n_unocc(nk), nk)
+    SAFE_ALLOCATE(  cas%n_occ(1:nk))
+    SAFE_ALLOCATE(cas%n_unocc(1:nk))
 
     cas%n_occ(:) = 0
     do i = 1, nk
@@ -242,12 +242,12 @@ contains
     end if
 
     ! allocate stuff
-    ALLOCATE(cas%pair(cas%n_pairs), cas%n_pairs)
-    ALLOCATE(cas%mat(cas%n_pairs, cas%n_pairs), cas%n_pairs*cas%n_pairs)
-    ALLOCATE(cas%tm(cas%n_pairs, dim), cas%n_pairs*dim)
-    ALLOCATE(cas%f(cas%n_pairs), cas%n_pairs)
-    ALLOCATE(cas%s(cas%n_pairs), cas%n_pairs)
-    ALLOCATE(cas%w(cas%n_pairs), cas%n_pairs)
+    SAFE_ALLOCATE(cas%pair(1:cas%n_pairs))
+    SAFE_ALLOCATE( cas%mat(1:cas%n_pairs, 1:cas%n_pairs))
+    SAFE_ALLOCATE(  cas%tm(1:cas%n_pairs, 1:dim))
+    SAFE_ALLOCATE(   cas%f(1:cas%n_pairs))
+    SAFE_ALLOCATE(   cas%s(1:cas%n_pairs))
+    SAFE_ALLOCATE(   cas%w(1:cas%n_pairs))
 
     ! create pairs
     j = 1
@@ -323,7 +323,7 @@ contains
     m  => sys%gr%mesh
 
     ! initialize stuff
-    ALLOCATE(saved_K(cas%n_pairs, cas%n_pairs), cas%n_pairs*cas%n_pairs)
+    SAFE_ALLOCATE(saved_K(1:cas%n_pairs, 1:cas%n_pairs))
     cas%mat = M_ZERO
     saved_K = .false.
     cas%tm  = M_ZERO
@@ -336,12 +336,12 @@ contains
 
     if (cas%type /= CASIDA_EPS_DIFF) then
       ! This is to be allocated here, and is used inside K_term.
-      ALLOCATE(pot(m%np), m%np)
+      SAFE_ALLOCATE(pot(1:m%np))
       j_old = -1; b_old = -1; mu_old = -1
       
       ! We calculate here the kernel, since it will be needed later.
-      ALLOCATE(rho(m%np, st%d%nspin), m%np*st%d%nspin)
-      ALLOCATE(fxc(m%np, st%d%nspin, st%d%nspin), m%np*st%d%nspin*st%d%nspin)
+      SAFE_ALLOCATE(rho(1:m%np, 1:st%d%nspin))
+      SAFE_ALLOCATE(fxc(1:m%np, 1:st%d%nspin, 1:st%d%nspin))
       fxc = M_ZERO
 
       call states_total_density(st, m, rho)
@@ -400,8 +400,8 @@ contains
       end do
 
 
-      ALLOCATE(x(cas%n_pairs), cas%n_pairs)
-      ALLOCATE(deltav(m%np), m%np)
+      SAFE_ALLOCATE(x(1:cas%n_pairs))
+      SAFE_ALLOCATE(deltav(1:m%np))
 
       do k = 1, m%sb%dim
 
@@ -473,7 +473,7 @@ contains
       ! sum all matrix elements
 #ifdef HAVE_MPI
       if(cas%parallel_in_eh_pairs) then
-        ALLOCATE(mpi_mat(cas%n_pairs, cas%n_pairs), cas%n_pairs*cas%n_pairs)
+        SAFE_ALLOCATE(mpi_mat(1:cas%n_pairs, 1:cas%n_pairs))
         call MPI_Allreduce(cas%mat(1,1), mpi_mat(1,1), cas%n_pairs**2, &
           MPI_FLOAT, MPI_SUM, cas%mpi_grp%comm, mpi_err)
         cas%mat = mpi_mat
@@ -511,7 +511,8 @@ contains
           cas%mat(ia, ia) = temp**2 + cas%mat(ia, ia)
         end do
         call io_close(iunit)
-        ALLOCATE(tmp(1:cas%n_pairs,1:cas%n_pairs),cas%n_pairs*cas%n_pairs)
+
+        SAFE_ALLOCATE(tmp(1:cas%n_pairs, 1:cas%n_pairs))
         tmp(1:cas%n_pairs,1:cas%n_pairs) = cas%mat(1:cas%n_pairs,1:cas%n_pairs)
         ! now we diagonalize the matrix
         call lalg_eigensolve(cas%n_pairs, tmp, cas%mat, cas%w)
@@ -538,9 +539,9 @@ contains
           end if
         end do
 
-        ALLOCATE(deltav(m%np), m%np)
+        SAFE_ALLOCATE(deltav(1:m%np))
         if (st%wfs_type == M_REAL) then
-          ALLOCATE(dx(cas%n_pairs), cas%n_pairs)
+          SAFE_ALLOCATE(dx(1:cas%n_pairs))
           do k = 1, m%sb%dim
             deltav(1:m%np) = m%x(1:m%np, k)
             ! let us get now the x vector.
@@ -552,7 +553,7 @@ contains
           end do
           SAFE_DEALLOCATE_A(dx)
         else
-          ALLOCATE(zx(cas%n_pairs), cas%n_pairs)
+          SAFE_ALLOCATE(zx(1:cas%n_pairs))
           do k = 1, m%sb%dim
             deltav(1:m%np) = m%x(1:m%np, k)
             ! let us get now the x vector.
@@ -595,8 +596,8 @@ contains
       i = p%i; a = p%a; sigma = p%sigma
       j = q%i; b = q%a; mu = q%sigma
 
-      ALLOCATE(rho_i(m%np), m%np)
-      ALLOCATE(rho_j(m%np), m%np)
+      SAFE_ALLOCATE(rho_i(1:m%np))
+      SAFE_ALLOCATE(rho_j(1:m%np))
 
       if (st%wfs_type == M_REAL) then
         rho_i(1:m%np) =  st%dpsi(1:m%np, 1, i, sigma) * st%dpsi(1:m%np, 1, a, sigma)
@@ -670,8 +671,8 @@ contains
 
     dim = size(cas%tm, 2)
 
-    ALLOCATE(w(cas%n_pairs), cas%n_pairs)
-    ALLOCATE(ind(cas%n_pairs), cas%n_pairs)
+    SAFE_ALLOCATE(  w(1:cas%n_pairs))
+    SAFE_ALLOCATE(ind(1:cas%n_pairs))
     w = cas%w
     call sort(w, ind)
 

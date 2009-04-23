@@ -86,28 +86,28 @@ module gcm_m
       call write_fatal(2)
     else
      ndeterminants = loct_parse_block_n(blk)
-     ALLOCATE(slatdetnames(ndeterminants), ndeterminants)
+     SAFE_ALLOCATE(slatdetnames(1:ndeterminants))
      do i = 0, ndeterminants - 1
        call loct_parse_block_string(blk, i, 0, slatdetnames(i+1))
      end do
      call loct_parse_block_end(blk)
     end if
 
-    ALLOCATE(phi(ndeterminants), ndeterminants)
-    ALLOCATE(etot(ndeterminants), ndeterminants)
-    ALLOCATE(smatrix(ndeterminants, ndeterminants), ndeterminants**2)
-    ALLOCATE(hmatrix(ndeterminants, ndeterminants), ndeterminants**2)
+    SAFE_ALLOCATE(    phi(1:ndeterminants))
+    SAFE_ALLOCATE(   etot(1:ndeterminants))
+    SAFE_ALLOCATE(smatrix(1:ndeterminants, 1:ndeterminants))
+    SAFE_ALLOCATE(hmatrix(1:ndeterminants, 1:ndeterminants))
     gr => sys%gr
 
     ! Copy the basic structure in sys%st to all of the members of phi.
     do i = 1, ndeterminants
       call states_copy(phi(i), sys%st)
       call states_allocate_wfns(phi(i), gr%mesh)
-      ALLOCATE(phi(i)%eigenval(phi(i)%nst, phi(i)%d%nik), phi(i)%nst*phi(i)%d%nik)
-      ALLOCATE(phi(i)%momentum(3, phi(i)%nst, phi(i)%d%nik), phi(i)%nst*phi(i)%d%nik)
-      ALLOCATE(phi(i)%occ(phi(i)%nst, phi(i)%d%nik), phi(i)%nst*phi(i)%d%nik)
+      SAFE_ALLOCATE(phi(i)%eigenval(1:phi(i)%nst, 1:phi(i)%d%nik))
+      SAFE_ALLOCATE(phi(i)%momentum(1:3, 1:phi(i)%nst, 1:phi(i)%d%nik))
+      SAFE_ALLOCATE(phi(i)%occ(1:phi(i)%nst, 1:phi(i)%d%nik))
       if(phi(i)%d%ispin == SPINORS) then
-        ALLOCATE(phi(i)%spin(3, phi(i)%nst, phi(i)%d%nik), phi(i)%nst*phi(i)%d%nik*2)
+        SAFE_ALLOCATE(phi(i)%spin(1:3, 1:phi(i)%nst, 1:phi(i)%d%nik))
         phi(i)%spin = M_ZERO
       end if
       phi(i)%eigenval = huge(REAL_PRECISION)
@@ -122,8 +122,8 @@ module gcm_m
     call messages_print_stress(stdout)
 
 
-    ALLOCATE(rho(gr%mesh%np), gr%mesh%np)
-    ALLOCATE(vh(gr%mesh%np), gr%mesh%np)
+    SAFE_ALLOCATE(rho(1:gr%mesh%np))
+    SAFE_ALLOCATE( vh(1:gr%mesh%np))
     rho = M_ZERO
     vh  = M_ZERO
 
@@ -171,15 +171,13 @@ module gcm_m
     end do
     call messages_print_stress(stdout)
 
-
-    ALLOCATE(hpsi(gr%mesh%np_part, phi(1)%d%dim), gr%mesh%np_part*phi(1)%d%dim)
-
+    SAFE_ALLOCATE(hpsi(1:gr%mesh%np_part, 1:phi(1)%d%dim))
 
     ! Calculate the cross terms
     do i = 1, ndeterminants
       do j = i + 1, ndeterminants
 
-        ALLOCATE(overlap_matrix(phi(i)%nst, phi(i)%nst, 1), phi(i)%nst*phi(i)%nst)
+        SAFE_ALLOCATE(overlap_matrix(1:phi(i)%nst, 1:phi(i)%nst, 1:1))
 
         call states_copy(opst, phi(j))
         do k = 1, phi(j)%nst
@@ -270,8 +268,8 @@ module gcm_m
 
     case(1)
 
-      ALLOCATE(rho(gr%mesh%np), gr%mesh%np)
-      ALLOCATE(vh(gr%mesh%np), gr%mesh%np)
+      SAFE_ALLOCATE(rho(1:gr%mesh%np))
+      SAFE_ALLOCATE( vh(1:gr%mesh%np))
 
       rho = M_ZERO
       vh = M_ZERO
@@ -288,9 +286,9 @@ module gcm_m
       write(message(1),'(a)') 'GCM mode does not handle yet systems with more than one orbital.'
       call write_fatal(1)
 
-      ALLOCATE(mat(nst, nst, nst, nst), nst**4)
-      ALLOCATE(rho(gr%mesh%np), gr%mesh%np)
-      ALLOCATE(vh(gr%mesh%np), gr%mesh%np)
+      SAFE_ALLOCATE(mat(1:nst, 1:nst, 1:nst, 1:nst))
+      SAFE_ALLOCATE(rho(1:gr%mesh%np))
+      SAFE_ALLOCATE( vh(1:gr%mesh%np))
 
       ! Build the matrix <k1 k2 | 1/|r1-r2| | l1 l2>
       do k1 = 1, nst

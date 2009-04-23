@@ -90,7 +90,7 @@ contains
     call system_h_setup (sys, hm)
 
     ! Allocate the dipole...
-    ALLOCATE(dipole(gr%mesh%sb%dim, gr%mesh%sb%dim, 2), gr%mesh%sb%dim*gr%mesh%sb%dim*2)
+    SAFE_ALLOCATE(dipole(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim, 1:2))
     dipole = M_ZERO
 
     if(.not.fromScratch) then
@@ -120,11 +120,11 @@ contains
     if(i_start > gr%mesh%sb%dim) out_pol = .true.
 
     ! Save local pseudopotential
-    ALLOCATE(Vpsl_save(gr%mesh%np), gr%mesh%np)
+    SAFE_ALLOCATE(Vpsl_save(1:gr%mesh%np))
     Vpsl_save = hm%ep%Vpsl
 
     ! Allocate the trrho to the contain the trace of the density.
-    ALLOCATE(trrho(gr%mesh%np), gr%mesh%np)
+    SAFE_ALLOCATE(trrho(1:gr%mesh%np))
     trrho = M_ZERO
 
     call output_init_()
@@ -235,14 +235,14 @@ contains
 
       !allocate memory for what we want to output
       if(iand(sys%outp%what, output_density).ne.0) then 
-        ALLOCATE(lr_rho(1:gr%mesh%np, 1:st%d%nspin), gr%mesh%np*st%d%nspin)
+        SAFE_ALLOCATE(lr_rho(1:gr%mesh%np, 1:st%d%nspin))
       end if
       
       if(iand(sys%outp%what, output_elf).ne.0) then 
-        ALLOCATE(    elf(1:gr%mesh%np, 1:st%d%nspin), gr%mesh%np*st%d%nspin)
-        ALLOCATE( lr_elf(1:gr%mesh%np, 1:st%d%nspin), gr%mesh%np*st%d%nspin)
-        ALLOCATE(   elfd(1:gr%mesh%np, 1:st%d%nspin), gr%mesh%np*st%d%nspin)
-        ALLOCATE(lr_elfd(1:gr%mesh%np, 1:st%d%nspin), gr%mesh%np*st%d%nspin)
+        SAFE_ALLOCATE(    elf(1:gr%mesh%np, 1:st%d%nspin))
+        SAFE_ALLOCATE( lr_elf(1:gr%mesh%np, 1:st%d%nspin))
+        SAFE_ALLOCATE(   elfd(1:gr%mesh%np, 1:st%d%nspin))
+        SAFE_ALLOCATE(lr_elfd(1:gr%mesh%np, 1:st%d%nspin))
       end if
       
     end subroutine output_init_

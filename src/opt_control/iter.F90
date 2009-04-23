@@ -118,7 +118,7 @@ contains
     iterator%bestJ1_J        = M_ZERO
     iterator%bestJ1_ctr_iter = 0
 
-    ALLOCATE(iterator%best_par, 1)
+    SAFE_ALLOCATE(iterator%best_par)
     call parameters_copy(iterator%best_par, par)
 
     iterator%convergence_iunit = io_open('opt-control/convergence', action='write')

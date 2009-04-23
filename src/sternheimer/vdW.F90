@@ -167,8 +167,8 @@ contains
       gaus_leg_n = gaus_leg_n + 1
 
       ! get gauss legendre points
-      ALLOCATE(gaus_leg_points(gaus_leg_n), gaus_leg_n)
-      ALLOCATE(gaus_leg_weights(gaus_leg_n), gaus_leg_n)
+      SAFE_ALLOCATE( gaus_leg_points(1:gaus_leg_n))
+      SAFE_ALLOCATE(gaus_leg_weights(1:gaus_leg_n))
 
       call gauss_legendre_points(gaus_leg_n-1, gaus_leg_points, gaus_leg_weights)
       c3  = M_ZERO

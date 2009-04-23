@@ -157,7 +157,7 @@ contains
     call scf_init(g_opt%scfv, sys%gr, sys%geo, sys%st, hm)
 
     !Initial point
-    ALLOCATE(x(3*g_opt%geo%natoms), 3*g_opt%geo%natoms)
+    SAFE_ALLOCATE(x(1:3*g_opt%geo%natoms))
     do i = 0, g_opt%geo%natoms - 1
       x(3*i + 1) = g_opt%geo%atom(i + 1)%x(1)
       x(3*i + 2) = g_opt%geo%atom(i + 1)%x(2)

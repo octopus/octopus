@@ -55,7 +55,7 @@ subroutine poisson2D_solve(m, pot, rho)
   call push_sub('poisson2D.poisson2D_solve')
 #ifdef HAVE_MPI
   if(m%parallel_in_domains) then
-    ALLOCATE(pvec(m%np), m%np)
+    SAFE_ALLOCATE(pvec(1:m%np))
 
     pot = M_ZERO
     do i = 1, m%np_global

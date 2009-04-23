@@ -641,7 +641,7 @@ contains
     ap%rounds = rounds
 
     ! Calculate schedule.
-    SAFE_ALLOCATE(1:ap%schedule(0:grp_size-1, 1:rounds))
+    SAFE_ALLOCATE(ap%schedule(0:grp_size-1, 1:rounds))
     do ir = 1, rounds
       do in = 0, grp_size-1
         ap%schedule(in, ir) = get_partner(in+1, ir)-1

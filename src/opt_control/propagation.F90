@@ -637,9 +637,9 @@ module opt_control_propagation_m
 
     no_parameters = parameters_number(cp)
     
-    ALLOCATE(dl(no_parameters), no_parameters)
-    ALLOCATE(dq(no_parameters), no_parameters)
-    ALLOCATE(d(no_parameters), no_parameters)
+    SAFE_ALLOCATE(dl(1:no_parameters))
+    SAFE_ALLOCATE(dq(1:no_parameters))
+    SAFE_ALLOCATE( d(1:no_parameters))
 
     call calculate_g(gr, hm, psi, chi, dl, dq)
     d1 = M_z1
@@ -678,7 +678,7 @@ module opt_control_propagation_m
     prop%niter = niter_
     prop%number_checkpoints = number_checkpoints_
 
-    ALLOCATE(prop%iter(prop%number_checkpoints+2), prop%number_checkpoints+2)
+    SAFE_ALLOCATE(prop%iter(1:prop%number_checkpoints+2))
     prop%iter(1) = 0
     do j = 1, prop%number_checkpoints
       prop%iter(j+1) = nint( real(niter_)/(prop%number_checkpoints+1) * j)
@@ -784,3 +784,9 @@ module opt_control_propagation_m
 
 
 end module opt_control_propagation_m
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:
+

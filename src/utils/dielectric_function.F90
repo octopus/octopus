@@ -84,7 +84,7 @@ program dielectric_function
     call write_fatal(1)
   end if
 
-  ALLOCATE(vecpot(1:MAX_DIM*3, time_steps), MAX_DIM*3*time_steps)
+  SAFE_ALLOCATE(vecpot(1:MAX_DIM*3, 1:time_steps))
 
   call io_skip_header(in_file)
   
@@ -104,7 +104,7 @@ program dielectric_function
 
   istart = max(1, istart)
 
-  ALLOCATE(dumpa(istart:iend), ntiter)
+  SAFE_ALLOCATE(dumpa(istart:iend))
 
   do ii = istart, iend
     jj = ii - istart
@@ -127,7 +127,7 @@ program dielectric_function
   end do
 
   energy_steps = s%max_energy / s%energy_step
-  ALLOCATE(dielectric(1:MAX_DIM, 0:energy_steps), MAX_DIM*(energy_steps + 1))  
+  SAFE_ALLOCATE(dielectric(1:MAX_DIM, 0:energy_steps))  
   do kk = 0, energy_steps
     ww = kk*s%energy_step
 

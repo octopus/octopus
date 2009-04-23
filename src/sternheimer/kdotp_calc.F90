@@ -140,9 +140,9 @@ subroutine zcalc_eff_mass_inv(sys, hm, lr, perturbation, eff_mass_inv, &
 
   m => sys%gr%mesh
 
-  ALLOCATE(pertpsi(sys%gr%sb%dim, m%np), sys%gr%sb%dim * m%np)
-  ALLOCATE(proj_dl_psi(m%np, 1), m%np * 1) ! second index should be sys%st%d%dim, i.e. spinors
-  ALLOCATE(orth_mask(sys%st%nst), sys%st%nst)
+  SAFE_ALLOCATE(pertpsi(1:sys%gr%sb%dim, 1:m%np))
+  SAFE_ALLOCATE(proj_dl_psi(1:m%np, 1)) ! second index should be sys%st%d%dim, i.e. spinors
+  SAFE_ALLOCATE(orth_mask(1:sys%st%nst))
 
   eff_mass_inv(:, :, :, :) = 0
 

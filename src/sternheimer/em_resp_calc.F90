@@ -77,14 +77,18 @@ contains
 
     call push_sub('em_resp_calc.lr_calc_current')
 
-    if(.not. associated(lr%dl_j)) ALLOCATE(lr%dl_j(gr%mesh%np, MAX_DIM, st%d%nspin), gr%mesh%np*MAX_DIM*st%d%nspin)
+    if(.not. associated(lr%dl_j)) then
+      SAFE_ALLOCATE(lr%dl_j(1:gr%mesh%np, 1:MAX_DIM, 1:st%d%nspin))
+    end if
 
     np = NP
     ndim = gr%mesh%sb%dim
 
-    ALLOCATE(   gpsi(1:np, 1:ndim), np*ndim)
-    ALLOCATE(gdl_psi(1:np, 1:ndim), np*ndim)
-    if(present(lr_m)) ALLOCATE(gdl_psi_m(1:np, 1:ndim), np*ndim)
+    SAFE_ALLOCATE(   gpsi(1:np, 1:ndim))
+    SAFE_ALLOCATE(gdl_psi(1:np, 1:ndim))
+    if(present(lr_m)) then
+      SAFE_ALLOCATE(gdl_psi_m(1:np, 1:ndim))
+    end if
 
     lr%dl_j = M_ZERO
 

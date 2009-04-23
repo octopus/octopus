@@ -43,22 +43,28 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
 
   ASSERT(.false.)
 
-  ALLOCATE(   gpsi(gr%mesh%np, gr%mesh%sb%dim), gr%mesh%np*gr%mesh%sb%dim)
-  ALLOCATE(gdl_psi(gr%mesh%np, gr%mesh%sb%dim), gr%mesh%np*gr%mesh%sb%dim)
+  SAFE_ALLOCATE(   gpsi(1:gr%mesh%np, 1:gr%mesh%sb%dim))
+  SAFE_ALLOCATE(gdl_psi(1:gr%mesh%np, 1:gr%mesh%sb%dim))
 
-  if(present(lr_m)) ALLOCATE(gdl_psi_m(gr%mesh%np, gr%mesh%sb%dim), gr%mesh%np*gr%mesh%sb%dim)
+  if(present(lr_m)) then
+    SAFE_ALLOCATE(gdl_psi_m(1:gr%mesh%np, 1:gr%mesh%sb%dim))
+  end if
 
-  ALLOCATE(   grho(gr%mesh%np, gr%mesh%sb%dim), gr%mesh%np*gr%mesh%sb%dim)
-  ALLOCATE(gdl_rho(gr%mesh%np, gr%mesh%sb%dim), gr%mesh%np*gr%mesh%sb%dim)
+  SAFE_ALLOCATE(   grho(1:gr%mesh%np, 1:gr%mesh%sb%dim))
+  SAFE_ALLOCATE(gdl_rho(1:gr%mesh%np, 1:gr%mesh%sb%dim))
 
-  ALLOCATE(   rho(gr%mesh%np_part), gr%mesh%np)
-  ALLOCATE(dl_rho(gr%mesh%np_part), gr%mesh%np)
+  SAFE_ALLOCATE(   rho(1:gr%mesh%np_part))
+  SAFE_ALLOCATE(dl_rho(1:gr%mesh%np_part))
 
-  ALLOCATE(   elf(gr%mesh%np, st%d%nspin), gr%mesh%np*st%d%nspin)
-  ALLOCATE(    de(gr%mesh%np, st%d%nspin), gr%mesh%np*st%d%nspin)
+  SAFE_ALLOCATE(   elf(1:gr%mesh%np, 1:st%d%nspin))
+  SAFE_ALLOCATE(    de(1:gr%mesh%np, 1:st%d%nspin))
 
-  if( .not. associated(lr%X(dl_de)) ) ALLOCATE(lr%X(dl_de)(gr%mesh%np, st%d%nspin), gr%mesh%np*st%d%nspin) 
-  if( .not. associated(lr%X(dl_elf))) ALLOCATE(lr%X(dl_elf)(gr%mesh%np, st%d%nspin), gr%mesh%np*st%d%nspin)
+  if( .not. associated(lr%X(dl_de)) ) then
+    SAFE_ALLOCATE(lr%X(dl_de)(1:gr%mesh%np, 1:st%d%nspin)) 
+  end if
+  if( .not. associated(lr%X(dl_elf))) then
+    SAFE_ALLOCATE(lr%X(dl_elf)(1:gr%mesh%np, 1:st%d%nspin))
+  end if
 
   !calculate the gs elf
   call elf_calc(st, gr, elf, de)
@@ -383,18 +389,18 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
   ! either both are absent for finite, or both present for periodic
 
   !calculate kxc, the derivative of fxc
-  ALLOCATE(kxc(1:np, 1:st%d%nspin, 1:st%d%nspin, 1:st%d%nspin), np*st%d%nspin**3)
+  SAFE_ALLOCATE(kxc(1:np, 1:st%d%nspin, 1:st%d%nspin, 1:st%d%nspin))
   kxc = M_ZERO
 
-  ALLOCATE(rho(np, st%d%nspin), np*st%d%nspin)
+  SAFE_ALLOCATE(rho(1:np, 1:st%d%nspin))
   call states_total_density(st, mesh, rho)
 
   call xc_get_kxc(sys%ks%xc, mesh, rho, st%d%ispin, kxc)
   SAFE_DEALLOCATE_A(rho)
 
-  ALLOCATE(tmp(1:np), np)
-  ALLOCATE(hvar(1:np, 1:st%d%nspin, 1:2, 1:st%d%dim, 1:ndim, 1:3), np*st%d%nspin*2*st%d%dim*ndim*3)
-  ALLOCATE(hpol_density(1:np), np)
+  SAFE_ALLOCATE(tmp(1:np))
+  SAFE_ALLOCATE(hvar(1:np, 1:st%d%nspin, 1:2, 1:st%d%dim, 1:ndim, 1:3))
+  SAFE_ALLOCATE(hpol_density(1:np))
 
   do ifreq = 1, 3
     do idir = 1, ndim

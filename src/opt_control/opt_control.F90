@@ -387,7 +387,7 @@ contains
       td_       => td
 
       dof = parameters_dof(par)
-      ALLOCATE(x(dof), dof)
+      SAFE_ALLOCATE(x(1:dof))
       call parameters_get_theta(par, x)
 
       step = oct%direct_step * M_PI
@@ -429,7 +429,7 @@ contains
 
       dim = parameters_dof(par)
 
-      ALLOCATE(x(dim), dim)
+      SAFE_ALLOCATE(x(1:dim))
 
       call states_copy(psi, initial_st)
       call propagate_forward(sys, hm, td, par, target, psi)
@@ -487,9 +487,9 @@ contains
       call parameters_set_rep(par)
 
       dim = parameters_dof(par)
-      ALLOCATE(x(dim), dim)
-      ALLOCATE(xl(dim), dim)
-      ALLOCATE(xu(dim), dim)
+      SAFE_ALLOCATE( x(1:dim))
+      SAFE_ALLOCATE(xl(1:dim))
+      SAFE_ALLOCATE(xu(1:dim))
       call parameters_bounds(par, xl, xu)
 
       call states_copy(psi, initial_st)
@@ -517,7 +517,7 @@ contains
       rhobeg = oct%direct_step * M_PI
       maxfun = oct_iterator_maxiter(iterator)
       sizeofw = (npt + 13)*(npt + dim) + 3 * dim*(dim + 3)/2 
-      ALLOCATE(w(sizeofw), sizeofw)
+      SAFE_ALLOCATE(w(1:sizeofw))
       w = M_ZERO
       call newuoa(dim, npt, x, rhobeg, rhoend, iprint, maxfun, w, opt_control_direct_calc)
 
@@ -758,7 +758,7 @@ contains
       f = - j1 - parameters_j2(par_)
       if(oct%dump_intermediate) call iterator_write(iterator, par_)
       call iteration_manager_direct(real(-f, REAL_PRECISION), par_, iterator)
-      ALLOCATE(theta(n), n)
+      SAFE_ALLOCATE(theta(1:n))
       call parameters_set_rep(par_new)
       call parameters_get_theta(par_new, theta)
       forall(j = 1:n) df(j) =  M_TWO * parameters_alpha(par_, 1) * x(j) - M_TWO * theta(j)
@@ -767,8 +767,8 @@ contains
       ! for debugging purposes.
       if(abs(oct%check_gradient) > M_ZERO) then
         dx = CNST(0.001)
-        ALLOCATE(xdx(n), n)
-        ALLOCATE(dfn(n), n)
+        SAFE_ALLOCATE(xdx(1:n))
+        SAFE_ALLOCATE(dfn(1:n))
         do j = 1, n
           xdx = x
           xdx(j) = xdx(j) + dx

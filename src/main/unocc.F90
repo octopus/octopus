@@ -227,11 +227,11 @@ contains
       SAFE_DEALLOCATE_P(st%momentum)
       SAFE_DEALLOCATE_P(st%occ)
       call states_allocate_wfns(st, m)
-      ALLOCATE(st%eigenval(st%nst, st%d%nik), st%nst*st%d%nik)
-      ALLOCATE(st%momentum(3, st%nst, st%d%nik), st%nst*st%d%nik)
-      ALLOCATE(st%occ(st%nst, st%d%nik), st%nst*st%d%nik)
+      SAFE_ALLOCATE(st%eigenval(1:st%nst, 1:st%d%nik))
+      SAFE_ALLOCATE(st%momentum(1:3, 1:st%nst, 1:st%d%nik))
+      SAFE_ALLOCATE(st%occ(1:st%nst, 1:st%d%nik))
       if(st%d%ispin == SPINORS) then
-        ALLOCATE(st%spin(3, st%nst, st%d%nik), st%nst*st%d%nik*2)
+        SAFE_ALLOCATE(st%spin(1:3, 1:st%nst, 1:st%d%nik))
         st%spin = M_ZERO
       end if
       st%eigenval = huge(REAL_PRECISION)

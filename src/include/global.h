@@ -63,20 +63,21 @@
 #else
 #  define SAFE_ALLOCATE(x)			\
   allocate(x, stat=global_alloc_err); _newline_ \
-  if(profiling_space .or. global_alloc_err.ne.0) _anl_ \
+  if(iand(prof_vars%mode, PROFILING_MEMORY).ne.0 .or. global_alloc_err.ne.0) _anl_ \
   global_sizeof = SIZEOF(x); _newline_	\
-  if(profiling_space) _anl_ \
+  if(iand(prof_vars%mode, PROFILING_MEMORY).ne.0) _anl_ \
     call profiling_memory_allocate(#x, _anl_ __FILE__, _anl_ __LINE__, _anl_ global_sizeof); _newline_ \
   if(global_alloc_err.ne.0) _anl_ \
     call alloc_error(global_sizeof, _anl_ __FILE__, _anl_ __LINE__); \
   CARDINAL
 
 #  define MY_DEALLOCATE(x) \
+  global_sizeof = SIZEOF(x); _newline_ \
   deallocate(x, stat=global_alloc_err); _newline_ \
-  if(profiling_space) _anl_ \
-    call profiling_memory_deallocate(#x, _anl_ __FILE__, _anl_ __LINE__); _newline_ \
+  if(iand(prof_vars%mode, PROFILING_MEMORY).ne.0) _anl_ \
+    call profiling_memory_deallocate(#x, _anl_ __FILE__, _anl_ __LINE__, _anl_ global_sizeof); _newline_ \
   if(global_alloc_err.ne.0) _anl_ \
-    call alloc_error(-1, _anl_ __FILE__, _anl_ __LINE__); \
+    call alloc_error(-global_sizeof, _anl_ __FILE__, _anl_ __LINE__); \
   CARDINAL
 
 #  define SAFE_DEALLOCATE_P(x) \
@@ -91,7 +92,7 @@
 
 #endif
 
-#define ALLOCATE(a,b) allocate(a)
+#define ALLOCATE(a,b) _DEPRECATED_PLEASE_USE_SAFE_ALLOCATE_
 
 #define REAL_DOUBLE real(8)
 #define REAL_SINGLE real(4)

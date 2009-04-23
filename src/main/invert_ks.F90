@@ -69,7 +69,7 @@ contains
     call states_calc_dens(sys%st, np)
 
     ! read target density
-    ALLOCATE(target_rho(np, nspin), np*nspin)
+    SAFE_ALLOCATE(target_rho(1:np, 1:nspin))
     call read_target_rho()
 
     call scf_init(scfv, sys%gr, sys%geo, sys%st, hm)
@@ -90,9 +90,9 @@ contains
     sys%ks%frozen_hxc = .true.
     hm%vhxc(1:np, 1) = M_ONE
 
-    ALLOCATE(rhoin (np, nspin, 1), np*nspin)
-    ALLOCATE(rhoout(np, nspin, 1), np*nspin)
-    ALLOCATE(rhonew(np, nspin, 1), np*nspin)
+    SAFE_ALLOCATE(rhoin (1:np, 1:nspin, 1:1))
+    SAFE_ALLOCATE(rhoout(1:np, 1:nspin, 1:1))
+    SAFE_ALLOCATE(rhonew(1:np, 1:nspin, 1:1))
 
     rhoin(1:np,1:nspin,1) = hm%vhxc(1:np,1:nspin)
 
@@ -149,8 +149,8 @@ contains
           end if
         end do
         if(pass == 1) then
-          ALLOCATE(xx(npoints, ndim),  npoints*ndim)
-          ALLOCATE(ff(ii, nspin), npoints*nspin)
+          SAFE_ALLOCATE(xx(1:npoints, 1:ndim))
+          SAFE_ALLOCATE(ff(1:npoints, 1:nspin))
         end if
       end do
 

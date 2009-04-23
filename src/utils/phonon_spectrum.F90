@@ -81,14 +81,14 @@ program phonon_spectrum
 
   if (end_time < M_ZERO) end_time = huge(REAL_PRECISION)
 
-  ALLOCATE(time(0:max_iter+1), max_iter-ini_iter + 2)
+  SAFE_ALLOCATE(time(0:max_iter+1))
   
   select case(mode)
     case(SPEC_VIBRATIONAL) 
 
       call geometry_init(geo)
 
-      ALLOCATE(vaf(0:max_iter),  max_iter+1)
+      SAFE_ALLOCATE(vaf(0:max_iter))
 
       call read_vaf(vaf)
 
@@ -101,7 +101,7 @@ program phonon_spectrum
       
       vaf(ini_iter:end_iter) = vaf(ini_iter:end_iter)/av
       
-      ALLOCATE(ftvaf(1:max_freq), max_freq)
+      SAFE_ALLOCATE(ftvaf(1:max_freq))
     
       call fourier(vaf, ftvaf)
 
@@ -137,11 +137,11 @@ program phonon_spectrum
 
     case(SPEC_INFRARED)
 
-      ALLOCATE(dipole(0:max_iter+1, 1:3),  3*(max_iter+2))
+      SAFE_ALLOCATE(dipole(0:max_iter+1, 1:3))
 
       call read_dipole(dipole)
 
-      ALLOCATE(ftdipole(1:max_freq, 1:3), 3*max_freq)
+      SAFE_ALLOCATE(ftdipole(1:max_freq, 1:3))
 
       do idir = 1, 3
         call fourier(dipole(:, idir), ftdipole(:, idir))
@@ -174,7 +174,7 @@ contains
 
     FLOAT, allocatable :: vini(:,:)
 
-    ALLOCATE(vini(1:3, geo%natoms), 3*geo%natoms)
+    SAFE_ALLOCATE(vini(1:3, 1:geo%natoms))
 
     ! Opens the coordinates files.
     iunit = io_open('td.general/coordinates', action='read')

@@ -242,29 +242,29 @@ subroutine modelMB_particles_init (modelMBparticles,gr)
   modelMBparticles%ndensities_to_calculate=0
 
   if(loct_parse_block(datasets_check('DensitiestoCalc'), blk)==0) then
-      ncols = loct_parse_block_cols(blk, 0)
-      if(ncols /= 2 ) then
-        call input_error("DensitiestoCalc")
-      end if
-      modelMBparticles%ndensities_to_calculate=loct_parse_block_n(blk)
-      if (modelMBparticles%ndensities_to_calculate < 0 .or. &
-          modelMBparticles%ndensities_to_calculate > modelMBparticles%nparticle_modelMB) then
-        call input_error("DensitiestoCalc")
-      end if
-      SAFE_ALLOCATE (modelMBparticles%labels_densities(1:modelMBparticles%ndensities_to_calculate))
-      SAFE_ALLOCATE (modelMBparticles%particle_kept_densities(1:modelMBparticles%ndensities_to_calculate))
-      do ipart=1,modelMBparticles%ndensities_to_calculate
-        call loct_parse_block_string(blk, ipart-1, 0, modelMBparticles%labels_densities(ipart))
-        call loct_parse_block_int(blk, ipart-1, 1, modelMBparticles%particle_kept_densities(ipart))
-
-        write (message(1),'(a,a)') 'labels_densities = ', modelMBparticles%labels_densities(ipart)
-        write (message(2),'(a,i6)') 'particle_kept_densities = ', modelMBparticles%particle_kept_densities(ipart)
-        call write_info(2)
-      end do
-      call loct_parse_block_end(blk)
-  else 
-    SAFE_ALLOCATE(modelmbparticles%labels_densities(0))
-    SAFE_ALLOCATE(modelmbparticles%particle_kept_densities(0))
+    ncols = loct_parse_block_cols(blk, 0)
+    if(ncols /= 2 ) then
+      call input_error("DensitiestoCalc")
+    end if
+    modelMBparticles%ndensities_to_calculate=loct_parse_block_n(blk)
+    if (modelMBparticles%ndensities_to_calculate < 0 .or. &
+         modelMBparticles%ndensities_to_calculate > modelMBparticles%nparticle_modelMB) then
+      call input_error("DensitiestoCalc")
+    end if
+    SAFE_ALLOCATE (modelMBparticles%labels_densities(1:modelMBparticles%ndensities_to_calculate))
+    SAFE_ALLOCATE (modelMBparticles%particle_kept_densities(1:modelMBparticles%ndensities_to_calculate))
+    do ipart=1,modelMBparticles%ndensities_to_calculate
+      call loct_parse_block_string(blk, ipart-1, 0, modelMBparticles%labels_densities(ipart))
+      call loct_parse_block_int(blk, ipart-1, 1, modelMBparticles%particle_kept_densities(ipart))
+      
+      write (message(1),'(a,a)') 'labels_densities = ', modelMBparticles%labels_densities(ipart)
+      write (message(2),'(a,i6)') 'particle_kept_densities = ', modelMBparticles%particle_kept_densities(ipart)
+      call write_info(2)
+    end do
+    call loct_parse_block_end(blk)
+  else
+    nullify(modelmbparticles%labels_densities)
+    nullify(modelmbparticles%particle_kept_densities)
   end if
 
   call pop_sub()

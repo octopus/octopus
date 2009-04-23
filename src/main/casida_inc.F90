@@ -29,7 +29,7 @@ function X(ks_matrix_elements) (cas, st, m, dv) result(x)
   R_TYPE, allocatable :: f(:)
   integer :: k, ia, i, a, sigma, idim
 
-  ALLOCATE(f(m%np), m%np)
+  SAFE_ALLOCATE(f(1:m%np))
   do ia = 1, cas%n_pairs
     i     = cas%pair(ia)%i
     a     = cas%pair(ia)%a
@@ -76,7 +76,7 @@ subroutine X(transition_density) (cas, st, m, ia, n0I)
 
   call push_sub('casida.transition_density')
 
-  ALLOCATE(x(cas%n_pairs), cas%n_pairs)
+  SAFE_ALLOCATE(x(1:cas%n_pairs))
 
   do i = 1, m%np
     do jb = 1, cas%n_pairs
@@ -104,7 +104,7 @@ subroutine X(get_transition_densities) (cas, sys, trandens)
   R_TYPE, allocatable :: n0I(:)
   call push_sub('casida.get_transition_densities')
 
-  ALLOCATE(n0I(sys%gr%mesh%np), sys%gr%mesh%np)
+  SAFE_ALLOCATE(n0I(1:sys%gr%mesh%np))
   n0I = M_ZERO
 
   do ia = 1, cas%n_pairs

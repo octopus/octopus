@@ -203,7 +203,7 @@ program cross_section
         case(3);    j = 1
         end select
 
-        ALLOCATE(filename(j), 150)
+        SAFE_ALLOCATE(filename(1:j))
         do i = 1, j
           write(filename(i),'(2a,i1)') trim(fname), '_vector.',i
           out_file(i) = io_open(trim(filename(i)), action='write')

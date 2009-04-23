@@ -127,9 +127,9 @@ module oscillator_strength_m
       integer :: j
 
       o%n_multipoles = i%n_multipoles
-      ALLOCATE(o%l(o%n_multipoles), o%n_multipoles)
-      ALLOCATE(o%m(o%n_multipoles), o%n_multipoles)
-      ALLOCATE(o%weight(o%n_multipoles), o%n_multipoles)
+      SAFE_ALLOCATE(     o%l(1:o%n_multipoles))
+      SAFE_ALLOCATE(     o%m(1:o%n_multipoles))
+      SAFE_ALLOCATE(o%weight(1:o%n_multipoles))
 
       do j = 1, o%n_multipoles
         o%l(j) = i%l(j)
@@ -290,9 +290,9 @@ subroutine read_resonances_file(order, ffile, search_interval, final_time, nfreq
 
   npairs = (nresonances*(nresonances-1))/2
 
-  ALLOCATE(omega(nresonances), nresonances)
-  ALLOCATE(c0i(nresonances), nresonances)
-  ALLOCATE(wij(npairs), npairs)
+  SAFE_ALLOCATE(omega(1:nresonances))
+  SAFE_ALLOCATE(  c0i(1:nresonances))
+  SAFE_ALLOCATE(wij(1:npairs))
 
   call io_skip_header(iunit)
   do i = 1, nresonances
@@ -454,8 +454,8 @@ subroutine analyze_signal(order, omega, search_interval, final_time, nresonances
 
   dw = (rightbound-leftbound) / (nfrequencies - 1)
 
-  ALLOCATE(w(nresonances), nresonances)
-  ALLOCATE(c0I2(nresonances), nresonances)
+  SAFE_ALLOCATE(   w(1:nresonances))
+  SAFE_ALLOCATE(c0I2(1:nresonances))
   w = M_ZERO
   c0I2 = M_ZERO
 
@@ -569,8 +569,8 @@ subroutine find_resonance(omega, leftbound, rightbound, nfrequencies)
   FLOAT :: dw, w, aw, min_aw, min_w, omega_orig
   FLOAT, allocatable :: warray(:), tarray(:)
 
-  ALLOCATE(warray(nfrequencies), nfrequencies)
-  ALLOCATE(tarray(nfrequencies), nfrequencies)
+  SAFE_ALLOCATE(warray(1:nfrequencies))
+  SAFE_ALLOCATE(tarray(1:nfrequencies))
 
   warray = M_ZERO; tarray = M_ZERO
   dw = (rightbound-leftbound) / (nfrequencies - 1)
@@ -781,10 +781,10 @@ subroutine generate_signal(order, observable)
     iunit(j) = io_open(trim(filename), action='read', status='old', die=.false.)
   end do
 
-  ALLOCATE(q(nfiles), nfiles)
-  ALLOCATE(mu(nfiles), nfiles)
-  ALLOCATE(qq(nfiles, nfiles), nfiles*nfiles)
-  ALLOCATE(c(nfiles), nfiles)
+  SAFE_ALLOCATE( q(1:nfiles))
+  SAFE_ALLOCATE(mu(1:nfiles))
+  SAFE_ALLOCATE(qq(1:nfiles, 1:nfiles))
+  SAFE_ALLOCATE( c(1:nfiles))
 
   c        = M_ZERO
   c(order) = M_ONE
@@ -795,9 +795,9 @@ subroutine generate_signal(order, observable)
   ! Sets the kick operator...
   if(kick%n_multipoles > 0) then
     kick_operator%n_multipoles = kick%n_multipoles
-    ALLOCATE(kick_operator%l(kick_operator%n_multipoles), kick_operator%n_multipoles)
-    ALLOCATE(kick_operator%m(kick_operator%n_multipoles), kick_operator%n_multipoles)
-    ALLOCATE(kick_operator%weight(kick_operator%n_multipoles), kick_operator%n_multipoles)
+    SAFE_ALLOCATE(     kick_operator%l(1:kick_operator%n_multipoles))
+    SAFE_ALLOCATE(     kick_operator%m(1:kick_operator%n_multipoles))
+    SAFE_ALLOCATE(kick_operator%weight(1:kick_operator%n_multipoles))
     do i = 1, kick_operator%n_multipoles
       kick_operator%l(i) = kick%l(i)
       kick_operator%m(i) = kick%m(i)
@@ -805,16 +805,16 @@ subroutine generate_signal(order, observable)
     end do
   else
     kick_operator%n_multipoles = 3
-    ALLOCATE(kick_operator%l(kick_operator%n_multipoles), kick_operator%n_multipoles)
-    ALLOCATE(kick_operator%m(kick_operator%n_multipoles), kick_operator%n_multipoles)
-    ALLOCATE(kick_operator%weight(kick_operator%n_multipoles), kick_operator%n_multipoles)
+    SAFE_ALLOCATE(     kick_operator%l(1:kick_operator%n_multipoles))
+    SAFE_ALLOCATE(     kick_operator%m(1:kick_operator%n_multipoles))
+    SAFE_ALLOCATE(kick_operator%weight(1:kick_operator%n_multipoles))
     kick_operator%l(1:3) = 1
     kick_operator%m(1) = -1
     kick_operator%m(2) =  0
     kick_operator%m(3) =  1
     ! WARNING: not sure if m = -1 => y, and m = 1 => x. What is the convention?
     kick_operator%weight(1) = -sqrt((M_FOUR*M_PI)/M_THREE) * kick%pol(2, kick%pol_dir)
-    kick_operator%weight(2) = sqrt((M_FOUR*M_PI)/M_THREE) * kick%pol(3, kick%pol_dir)
+    kick_operator%weight(2) =  sqrt((M_FOUR*M_PI)/M_THREE) * kick%pol(3, kick%pol_dir)
     kick_operator%weight(3) = -sqrt((M_FOUR*M_PI)/M_THREE) * kick%pol(1, kick%pol_dir)
   end if
 
@@ -828,9 +828,9 @@ subroutine generate_signal(order, observable)
       ! This means that the observable is the dipole operator; observable(2) determines
       ! if it is x, y or z.
       obs%n_multipoles = 1
-      ALLOCATE(obs%l(1), 1)
-      ALLOCATE(obs%m(1), 1)
-      ALLOCATE(obs%weight(1), 1)
+      SAFE_ALLOCATE(obs%l(1:1))
+      SAFE_ALLOCATE(obs%m(1:1))
+      SAFE_ALLOCATE(obs%weight(1:1))
       obs%l(1) = 1
       select case(observable(2))
         case(1)
@@ -846,9 +846,9 @@ subroutine generate_signal(order, observable)
     case default
       ! This means that the observation operator is (l,m) = (observable(1), observable(2))
       obs%n_multipoles = 1
-      ALLOCATE(obs%l(1), 1)
-      ALLOCATE(obs%m(1), 1)
-      ALLOCATE(obs%weight(1), 1)
+      SAFE_ALLOCATE(obs%l(1:1))
+      SAFE_ALLOCATE(obs%m(1:1))
+      SAFE_ALLOCATE(obs%weight(1:1))
       obs%weight(1) = M_ONE
       obs%l(1) = observable(1)
       obs%m(1) = observable(2)
@@ -875,19 +875,19 @@ subroutine generate_signal(order, observable)
   if(kick%n_multipoles > 0) then
     lmax = maxval(kick%l(1:obs%n_multipoles))
     max_add_lm = (lmax+1)**2-1
-    ALLOCATE(multipole(max_add_lm, 0:time_steps, nspin), 2*(time_steps+1)*nspin)
+    SAFE_ALLOCATE(multipole(1:max_add_lm, 0:time_steps, 1:nspin))
     ! The units have nothing to do with the perturbing kick??
     conversion_factor = units%length%factor ** kick%l(1)
   else
     max_add_lm = 3
-    ALLOCATE(multipole(3, 0:time_steps, nspin), 2*(time_steps+1)*nspin)
+    SAFE_ALLOCATE(multipole(1:3, 0:time_steps, 1:nspin))
     conversion_factor = units%length%factor
   end if
-  ALLOCATE(ot(0:time_steps), time_steps+1)
+  SAFE_ALLOCATE(ot(0:time_steps))
   multipole = M_ZERO
   ot = M_ZERO
 
-  ALLOCATE(dipole(3, nspin), 3*nspin)
+  SAFE_ALLOCATE(dipole(1:3, 1:nspin))
 
   do j = 1, nfiles
     call io_skip_header(iunit(j))
@@ -1155,7 +1155,7 @@ subroutine read_ot(nspin, order, nw_subtracted)
 
   call io_skip_header(iunit)
 
-  ALLOCATE(ot(0:time_steps), time_steps+1)
+  SAFE_ALLOCATE(ot(0:time_steps))
 
   do i = 0, time_steps-1
     read(iunit, *) dummy, ot(i)
@@ -1221,8 +1221,8 @@ subroutine print_omega_file(omega, search_interval, final_time, nfrequencies)
   leftbound = omega - search_interval
   rightbound = omega + search_interval
 
-  ALLOCATE(warray(nfrequencies), nfrequencies)
-  ALLOCATE(tarray(nfrequencies), nfrequencies)
+  SAFE_ALLOCATE(warray(1:nfrequencies))
+  SAFE_ALLOCATE(tarray(1:nfrequencies))
 
   call read_ot(nspin, order, nw_subtracted)
 

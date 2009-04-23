@@ -35,9 +35,9 @@ subroutine X(lmpi_gen_allgatherv)(incount, in, outcount, out, mpi_grp)
 
   call push_sub('mpi_lib_inc.Xlmpi_gen_allgatherv')
 
-  ALLOCATE(rdispls(mpi_grp%size), mpi_grp%size)
-  ALLOCATE(recvbuf(mpi_grp%size), mpi_grp%size)
-  ALLOCATE(recvcnts(mpi_grp%size), mpi_grp%size)
+  SAFE_ALLOCATE( rdispls(1:mpi_grp%size))
+  SAFE_ALLOCATE( recvbuf(1:mpi_grp%size))
+  SAFE_ALLOCATE(recvcnts(1:mpi_grp%size))
 
   ! Query how many elements each node has to contribute.
   call mpi_debug_in(mpi_grp%comm, C_MPI_ALLGATHER)

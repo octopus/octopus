@@ -192,7 +192,7 @@ contains
 
     if(this%solver%solver == LS_MULTIGRID .or. preconditioner_is_multigrid(this%solver%pre)) then
       if(.not. associated(sys%gr%mgrid)) then
-        ALLOCATE(sys%gr%mgrid, 1)
+        SAFE_ALLOCATE(sys%gr%mgrid)
         call multigrid_init(sys%gr%mgrid, sys%geo, sys%gr%cv, sys%gr%mesh, sys%gr%der, sys%gr%stencil)
       end if
       call hamiltonian_mg_init(hm, sys%gr)
@@ -237,13 +237,13 @@ contains
 
     call push_sub('sternheimer.sternheimer_build_fxc')
 
-    ALLOCATE(this%fxc(mesh%np, st%d%nspin, st%d%nspin), mesh%np*st%d%nspin*st%d%nspin)
+    SAFE_ALLOCATE(this%fxc(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin))
     this%fxc = M_ZERO
 
     if( iand(ks%xc%kernel_family, XC_FAMILY_OEP) == 0 ) then 
       this%oep_kernel = .false.
 
-      ALLOCATE(rho(mesh%np, st%d%nspin), mesh%np*st%d%nspin)
+      SAFE_ALLOCATE(rho(1:mesh%np, 1:st%d%nspin))
       call states_total_density(st, mesh, rho)
       call xc_get_fxc(ks%xc, mesh, rho, st%d%ispin, this%fxc)
       SAFE_DEALLOCATE_A(rho)

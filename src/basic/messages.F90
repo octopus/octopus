@@ -85,8 +85,8 @@ module messages_m
   end interface messages_print_var_value
 
 
-  integer, public :: global_alloc_err
-  integer, public :: global_sizeof
+  integer,    public :: global_alloc_err
+  integer(8), public :: global_sizeof
 contains
 
   ! ---------------------------------------------------------
@@ -347,7 +347,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine alloc_error(size, file, line)
-    integer,          intent(in) :: size
+    integer(8),       intent(in) :: size
     character(len=*), intent(in) :: file
     integer,          intent(in) :: line
 

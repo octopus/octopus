@@ -165,7 +165,9 @@ contains
 
     call push_sub('parameters.parameters_read')
 
-    if(.not. associated(par_common)) ALLOCATE(par_common, 1) 
+    if(.not. associated(par_common)) then
+      SAFE_ALLOCATE(par_common)
+    end if
 
     call messages_print_stress(stdout, "OCT: Info about control functions")
 
@@ -392,7 +394,7 @@ contains
     !%
     !% All penalty factors must be positive. 
     !%End
-    ALLOCATE(par_common%alpha(par_common%no_parameters), par_common%no_parameters)
+    SAFE_ALLOCATE(par_common%alpha(1:par_common%no_parameters))
     par_common%alpha = M_ZERO
     if(loct_parse_block('OCTPenalty', blk) == 0) then
       ! We have a block
@@ -434,7 +436,7 @@ contains
     !% <math> \frac{1}{\alpha(t)} = \frac{1}{2}( erf((100/T)*(t-T/20))+ erf(-(100/T)*(t-T+T/20)) </math>
     !%End
     steps = max_iter
-    ALLOCATE(par_common%td_penalty(par_common%no_parameters), par_common%no_parameters)
+    SAFE_ALLOCATE(par_common%td_penalty(1:par_common%no_parameters))
     do i = 1, par_common%no_parameters
       call tdf_init_numerical(par_common%td_penalty(i), steps, dt, -M_ONE, initval = M_ONE)
     end do
@@ -516,7 +518,7 @@ contains
     cp%current_representation = ctr_real_time
     call loct_pointer_copy(cp%alpha, par_common%alpha)
 
-    ALLOCATE(cp%f(cp%no_parameters), cp%no_parameters)
+    SAFE_ALLOCATE(cp%f(1:cp%no_parameters))
     do j = 1, cp%no_parameters
       call tdf_init_numerical(cp%f(j), ntiter, dt, par_common%omegamax)
     end do
@@ -588,7 +590,7 @@ contains
         write(message(3), '(a,i6,a)') '      The number of degrees of freedom is ', cp%dof,'.'
         call write_info(3)
 
-        ALLOCATE(cp%theta(cp%dof), cp%dof)
+        SAFE_ALLOCATE(cp%theta(1:cp%dof))
         cp%theta = M_ZERO
       end if
     end if
@@ -841,9 +843,9 @@ contains
     call push_sub('parameters.parameters_mixing')
 
     dim = par_in%dim
-    ALLOCATE(e_in (dim, par_in%no_parameters, 1), dim*par_in%no_parameters)
-    ALLOCATE(e_out(dim, par_in%no_parameters, 1), dim*par_in%no_parameters)
-    ALLOCATE(e_new(dim, par_in%no_parameters, 1), dim*par_in%no_parameters)
+    SAFE_ALLOCATE(e_in (1:dim, 1:par_in%no_parameters, 1:1))
+    SAFE_ALLOCATE(e_out(1:dim, 1:par_in%no_parameters, 1:1))
+    SAFE_ALLOCATE(e_new(1:dim, 1:par_in%no_parameters, 1:1))
     do i = 1, par_in%no_parameters
       do j = 1, dim
         e_in (j, i, 1) = tdf(par_in%f(i), j)
@@ -986,7 +988,7 @@ contains
     call io_close(iunit)
 
     niter = tdf_niter(par%f(1))
-    ALLOCATE(func(niter+1, cp%no_parameters), (niter+1)*cp%no_parameters)
+    SAFE_ALLOCATE(func(1:niter+1, 1:cp%no_parameters))
 
     select case(par_common%mode)
     case(parameter_mode_epsilon)
@@ -1284,7 +1286,7 @@ contains
     cp_out%current_representation = cp_in%current_representation
     cp_out%w0 = cp_in%w0
     call loct_pointer_copy(cp_out%alpha, cp_in%alpha)
-    ALLOCATE(cp_out%f(cp_out%no_parameters), cp_out%no_parameters)
+    SAFE_ALLOCATE(cp_out%f(1:cp_out%no_parameters))
     do j = 1, cp_in%no_parameters
       call tdf_init(cp_out%f(j))
       call tdf_copy(cp_out%f(j), cp_in%f(j))

@@ -32,16 +32,16 @@
     case(ctr_sine_fourier_series_h, ctr_fourier_series_h, ctr_zero_fourier_series_h)
       n = par%dim
       dof = par%dof
-      ALLOCATE(e(n), n)
-      ALLOCATE(ep(n), n)
-      ALLOCATE(x(dof), dof)
+      SAFE_ALLOCATE( e(1:n))
+      SAFE_ALLOCATE(ep(1:n))
+      SAFE_ALLOCATE(x(1:dof))
 
       forall(j = 1: n) ep(j) = tdf(par%f(1), j)
       e = matmul(par%utransf, ep)
 
       if(par_common%representation .eq. ctr_zero_fourier_series_h) then
-        ALLOCATE(a(n-1), n-1)
-        ALLOCATE(y(n-1), n-1)
+        SAFE_ALLOCATE(a(1:n-1))
+        SAFE_ALLOCATE(y(1:n-1))
         a = M_ZERO
         a(1:n/2-1) = M_ONE
 
@@ -103,15 +103,15 @@
 
       n = par%dim
       dof = par%dof
-      ALLOCATE(e(n), n)
-      ALLOCATE(ep(n), n)
-      ALLOCATE(x(dof), dof)
+      SAFE_ALLOCATE( e(1:n))
+      SAFE_ALLOCATE(ep(1:n))
+      SAFE_ALLOCATE(x(1:dof))
       x = par%theta
 
       if(par_common%representation .eq. ctr_zero_fourier_series_h) then
         call hyperspherical2cartesian(x, ep(2:n))
-        ALLOCATE(a(n-1), n-1)
-        ALLOCATE(y(n-1), n-1)
+        SAFE_ALLOCATE(a(1:n-1))
+        SAFE_ALLOCATE(y(1:n-1))
         a = M_ZERO
         a(1:n/2-1) = M_ONE
         call hypersphere_cut_back(ep(2:n), a, e(2:n))
@@ -156,8 +156,8 @@
 
     call push_sub('parameters.parameters_trans_matrix')
 
-    ALLOCATE(par%utransf (par%dim, par%dim), par%dim*par%dim)
-    ALLOCATE(par%utransfi(par%dim, par%dim), par%dim*par%dim)
+    SAFE_ALLOCATE(par%utransf (1:par%dim, 1:par%dim))
+    SAFE_ALLOCATE(par%utransfi(1:par%dim, 1:par%dim))
     par%utransf  = M_ZERO
     par%utransfi = M_ZERO
     forall(mm = 1:par%dim) par%utransf(mm, mm) = M_ONE
@@ -180,8 +180,8 @@
       ! The inverse matrix U^{-1} is placed in par%utransfi.
       !
       ! This scan probably be optimized in some way?
-      ALLOCATE(eigenvec(par%dim, par%dim), par%dim*par%dim)
-      ALLOCATE(eigenval(par%dim), par%dim)
+      SAFE_ALLOCATE(eigenvec(1:par%dim, 1:par%dim))
+      SAFE_ALLOCATE(eigenval(1:par%dim))
       par%utransf  = M_ZERO
       par%utransfi = M_ZERO
 
@@ -258,3 +258,9 @@
     call pop_sub()
   end subroutine parameters_trans_matrix
   ! ---------------------------------------------------------
+
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

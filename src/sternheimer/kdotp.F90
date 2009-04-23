@@ -91,7 +91,7 @@ contains
     type(sternheimer_t)     :: sh
     logical                 :: calc_eff_mass
 
-    integer              :: idir, ierr, size, is, ist, ik
+    integer              :: idir, ierr, is, ist, ik
     character(len=100)   :: dirname, str_tmp
     logical, allocatable :: orth_mask(:)
 
@@ -101,14 +101,13 @@ contains
 
     gr => sys%gr
 !    ndim = sys%gr%sb%dim
-    size = sys%st%d%nik * sys%st%nst * gr%mesh%sb%dim * gr%mesh%sb%dim
 
-    ALLOCATE(kdotp_vars%eff_mass_inv(sys%st%d%nik, sys%st%nst, gr%mesh%sb%dim, gr%mesh%sb%dim), size)
+    SAFE_ALLOCATE(kdotp_vars%eff_mass_inv(1:sys%st%d%nik, 1:sys%st%nst, 1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim))
     kdotp_vars%eff_mass_inv(:,:,:,:)=0  
 
     call pert_init(kdotp_vars%perturbation, PERTURBATION_KDOTP, sys%gr, sys%geo)
 
-    ALLOCATE(kdotp_vars%lr(1:gr%mesh%sb%dim, 1), gr%mesh%sb%dim)
+    SAFE_ALLOCATE(kdotp_vars%lr(1:gr%mesh%sb%dim, 1:1))
 
     call parse_input()
 
@@ -131,7 +130,7 @@ contains
       call lr_allocate(kdotp_vars%lr(idir, 1), sys%st, sys%gr%mesh)
 
       if(fromScratch .and. kdotp_vars%initialization .eq. 1) then
-        ALLOCATE(orth_mask(sys%st%nst), sys%st%nst)
+        SAFE_ALLOCATE(orth_mask(1:sys%st%nst))
 
         do is = 1, sys%st%d%dim
           do ist = 1, sys%st%nst

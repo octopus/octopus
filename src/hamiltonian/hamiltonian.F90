@@ -765,12 +765,15 @@ contains
     integer :: np, nspin
     ! In this release, no non-local part for the QOCT Hamiltonian.
     nullify(hm%oct_st)
+
     hm%oct_st => st
     hm%oct_exchange = .true.
     np = gr%mesh%np
     nspin = hm%oct_st%d%nspin
-    ALLOCATE(hm%oct_fxc(np, nspin, nspin), np*nspin*nspin)
+
+    SAFE_ALLOCATE(hm%oct_fxc(1:np, 1:nspin, 1:nspin))
     call xc_get_fxc(xc, gr%mesh, st%rho, st%d%ispin, hm%oct_fxc)
+
   end subroutine hamiltonian_set_oct_exchange
 
 

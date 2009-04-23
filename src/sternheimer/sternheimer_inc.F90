@@ -68,13 +68,13 @@ subroutine X(sternheimer_solve)(                           &
   call mix_init(this%mixer, sys%gr%mesh%np, sys%st%d%nspin, 1, func_type=sys%st%wfs_type)
   call mesh_init_mesh_aux(sys%gr%mesh)
   
-  ALLOCATE(tmp(m%np),m%np)
-  ALLOCATE(Y(m%np, 1, nsigma), m%np * 1 * nsigma)
-  ALLOCATE(hvar(m%np, st%d%nspin, nsigma), m%np * st%d%nspin * nsigma)
-  ALLOCATE(dl_rhoin(m%np, st%d%nspin, 1), 1 * m%np * st%d%nspin)
-  ALLOCATE(dl_rhonew(m%np, st%d%nspin, 1), 1 * m%np * st%d%nspin)
-  ALLOCATE(dl_rhotmp(m%np, st%d%nspin, 1), 1 * m%np * st%d%nspin)
-  ALLOCATE(orth_mask(st%nst), st%nst)
+  SAFE_ALLOCATE(      tmp(1:m%np))
+  SAFE_ALLOCATE(        Y(1:m%np, 1:1, 1:nsigma))
+  SAFE_ALLOCATE(     hvar(1:m%np, 1:st%d%nspin, 1:nsigma))
+  SAFE_ALLOCATE( dl_rhoin(1:m%np, 1:st%d%nspin, 1:1))
+  SAFE_ALLOCATE(dl_rhonew(1:m%np, 1:st%d%nspin, 1:1))
+  SAFE_ALLOCATE(dl_rhotmp(1:m%np, 1:st%d%nspin, 1:1))
+  SAFE_ALLOCATE(orth_mask(1:st%nst))
 
   conv = .false.
   conv_last = .false.
@@ -301,8 +301,8 @@ subroutine X(sternheimer_calc_hvar)(this, sys, hm, lr, nsigma, hvar)
   np = sys%gr%mesh%np
 
   if (this%add_hartree) then 
-    ALLOCATE(tmp(1:np), np)
-    ALLOCATE(hartree(1:np), np)
+    SAFE_ALLOCATE(    tmp(1:np))
+    SAFE_ALLOCATE(hartree(1:np))
     do i = 1, np
       tmp(i) = sum(lr(1)%X(dl_rho)(i, 1:sys%st%d%nspin))
     end do

@@ -243,21 +243,21 @@ contains
     vp%rank   = rank
     vp%partno = rank + 1
 
-    ALLOCATE(ghost_flag(p),            p)
-    ALLOCATE(ir(p),                    p)
-    ALLOCATE(irr(p, p),                p*p)
-    ALLOCATE(vp%part(np+np_enl),       np+np_enl)
-    ALLOCATE(vp%np_local(p),           p)
-    ALLOCATE(vp%xlocal(p),             p)
-    ALLOCATE(vp%local(np),             np)
-    ALLOCATE(vp%np_bndry(p),           p)
-    ALLOCATE(vp%xbndry(p),             p)
-    ALLOCATE(vp%bndry(np_enl),         np_enl)
-    ALLOCATE(vp%global(p),             p)
-    ALLOCATE(vp%np_ghost(p),           p)
-    ALLOCATE(vp%np_ghost_neigh(p, p),  p*p)
-    ALLOCATE(vp%xghost(p),             p)
-    ALLOCATE(vp%xghost_neigh(p, p),    p*p)
+    SAFE_ALLOCATE(ghost_flag(1:p))
+    SAFE_ALLOCATE(ir(1:p))
+    SAFE_ALLOCATE(irr(1:p, 1:p))
+    SAFE_ALLOCATE(vp%part(1:np+np_enl))
+    SAFE_ALLOCATE(vp%np_local(1:p))
+    SAFE_ALLOCATE(vp%xlocal(1:p))
+    SAFE_ALLOCATE(vp%local(1:np))
+    SAFE_ALLOCATE(vp%np_bndry(1:p))
+    SAFE_ALLOCATE(vp%xbndry(1:p))
+    SAFE_ALLOCATE(vp%bndry(1:np_enl))
+    SAFE_ALLOCATE(vp%global(1:p))
+    SAFE_ALLOCATE(vp%np_ghost(1:p))
+    SAFE_ALLOCATE(vp%np_ghost_neigh(1:p, 1:p))
+    SAFE_ALLOCATE(vp%xghost(1:p))
+    SAFE_ALLOCATE(vp%xghost_neigh(1:p, 1:p))
 
     ! Count number of points for each node.
     ! Local points.
@@ -367,7 +367,7 @@ contains
     end do
 
     ! Get space for ghost point vector.
-    ALLOCATE(vp%ghost(vp%total), vp%total)
+    SAFE_ALLOCATE(vp%ghost(1:vp%total))
 
     ! Fill ghost as described above.
     irr = 0
@@ -442,9 +442,9 @@ contains
       integer, allocatable :: blocklengths(:), displacements(:), offsets(:)
       integer :: ii, kk, ipart, total, ierr, nblocks
 
-      ALLOCATE(vp%isend_type(1:vp%npart), vp%npart)
-      ALLOCATE(vp%dsend_type(1:vp%npart), vp%npart)
-      ALLOCATE(vp%zsend_type(1:vp%npart), vp%npart)
+      SAFE_ALLOCATE(vp%isend_type(1:vp%npart))
+      SAFE_ALLOCATE(vp%dsend_type(1:vp%npart))
+      SAFE_ALLOCATE(vp%zsend_type(1:vp%npart))
 
       ! Iterate over all possible receivers.
       do ipart = 1, vp%npart
@@ -452,9 +452,9 @@ contains
 
         if(total == 0) cycle
 
-        ALLOCATE(blocklengths(total), total)
-        ALLOCATE(offsets(total), total)
-        ALLOCATE(displacements(total), total)
+        SAFE_ALLOCATE( blocklengths(1:total))
+        SAFE_ALLOCATE(      offsets(1:total))
+        SAFE_ALLOCATE(displacements(1:total))
         
         ! Collect all local points that have to be sent to neighbours.
         
@@ -491,9 +491,9 @@ contains
       ! each partition r wants to have from the current partiton
       ! vp%partno.
       
-      ALLOCATE(vp%sdispls(1:vp%npart), vp%npart)
-      ALLOCATE(vp%rdispls(1:vp%npart), vp%npart)
-      ALLOCATE(vp%rcounts(1:vp%npart), vp%npart)
+      SAFE_ALLOCATE(vp%sdispls(1:vp%npart))
+      SAFE_ALLOCATE(vp%rdispls(1:vp%npart))
+      SAFE_ALLOCATE(vp%rcounts(1:vp%npart))
 
       vp%sdispls(1) = 0
       do ipart = 2, vp%npart
@@ -523,7 +523,6 @@ contains
     SAFE_DEALLOCATE_P(vp%rcounts)
 
     if(associated(vp%isend_type)) then
-
       do ipart = 1, vp%npart
         if(vp%np_ghost_neigh(ipart, vp%partno) == 0) cycle
         call MPI_Type_free(vp%isend_type(ipart), mpi_err)
@@ -533,65 +532,26 @@ contains
       SAFE_DEALLOCATE_P(vp%isend_type)
       SAFE_DEALLOCATE_P(vp%dsend_type)
       SAFE_DEALLOCATE_P(vp%zsend_type)
-      nullify(vp%isend_type)
-      nullify(vp%dsend_type)
-      nullify(vp%zsend_type)
     end if
 
-    if(associated(vp%part)) then
-      SAFE_DEALLOCATE_P(vp%part)
-      nullify(vp%part)
-    end if
-    if(associated(vp%np_local)) then
-      SAFE_DEALLOCATE_P(vp%np_local)
-      nullify(vp%np_local)
-    end if
-    if(associated(vp%xlocal)) then
-      SAFE_DEALLOCATE_P(vp%xlocal)
-      nullify(vp%xlocal)
-    end if
-    if(associated(vp%local)) then
-      SAFE_DEALLOCATE_P(vp%local)
-      nullify(vp%local)
-    end if
-    if(associated(vp%np_bndry)) then
-      SAFE_DEALLOCATE_P(vp%np_bndry)
-      nullify(vp%np_bndry)
-    end if
-    if(associated(vp%xbndry)) then
-      SAFE_DEALLOCATE_P(vp%xbndry)
-      nullify(vp%xbndry)
-    end if
-    if(associated(vp%bndry)) then
-      SAFE_DEALLOCATE_P(vp%bndry)
-      nullify(vp%bndry)
-    end if
-    if(associated(vp%np_ghost)) then
-      SAFE_DEALLOCATE_P(vp%np_ghost)
-      nullify(vp%np_ghost)
-    end if
-    if(associated(vp%np_ghost_neigh)) then
-      SAFE_DEALLOCATE_P(vp%np_ghost_neigh)
-      nullify(vp%np_ghost_neigh)
-    end if
-    if(associated(vp%xghost)) then
-      SAFE_DEALLOCATE_P(vp%xghost)
-      nullify(vp%xghost)
-    end if
-    if(associated(vp%xghost_neigh)) then
-      SAFE_DEALLOCATE_P(vp%xghost_neigh)
-      nullify(vp%xghost_neigh)
-    end if
-    if(associated(vp%ghost)) then
-      SAFE_DEALLOCATE_P(vp%ghost)
-      nullify(vp%ghost)
-    end if
+    SAFE_DEALLOCATE_P(vp%part)
+    SAFE_DEALLOCATE_P(vp%np_local)
+    SAFE_DEALLOCATE_P(vp%xlocal)
+    SAFE_DEALLOCATE_P(vp%local)
+    SAFE_DEALLOCATE_P(vp%np_bndry)
+    SAFE_DEALLOCATE_P(vp%xbndry)
+    SAFE_DEALLOCATE_P(vp%bndry)
+    SAFE_DEALLOCATE_P(vp%np_ghost)
+    SAFE_DEALLOCATE_P(vp%np_ghost_neigh)
+    SAFE_DEALLOCATE_P(vp%xghost)
+    SAFE_DEALLOCATE_P(vp%xghost_neigh)
+    SAFE_DEALLOCATE_P(vp%ghost)
+
     if(associated(vp%global)) then
       do r = 1, vp%npart
         call iihash_end(vp%global(r))
       end do
       SAFE_DEALLOCATE_P(vp%global)
-      nullify(vp%global)
     end if
 
     call pop_sub()
@@ -611,8 +571,8 @@ contains
       call NBCF_Newhandle(this%nbc_h)
 #endif
     case(NON_BLOCKING)
-      ALLOCATE(this%requests(1:vp%npart*2), vp%npart*2)
-      ALLOCATE(this%status(MPI_STATUS_SIZE, 1:vp%npart*2), vp%npart*2)
+      SAFE_ALLOCATE(this%requests(1:vp%npart*2))
+      SAFE_ALLOCATE(this%status(1:MPI_STATUS_SIZE, 1:vp%npart*2))
     end select
     nullify(this%ighost_send, this%dghost_send, this%zghost_send)
   end subroutine pv_handle_init
@@ -661,18 +621,10 @@ contains
       call MPI_Waitall(this%nnb, this%requests, this%status, mpi_err)
     end select
 
-    if(associated(this%ighost_send)) then
-      SAFE_DEALLOCATE_P(this%ighost_send)
-      nullify(this%ighost_send)
-    end if
-    if(associated(this%dghost_send)) then
-      SAFE_DEALLOCATE_P(this%dghost_send)
-      nullify(this%dghost_send)
-    end if
-    if(associated(this%zghost_send)) then
-      SAFE_DEALLOCATE_P(this%zghost_send)
-      nullify(this%zghost_send)
-    end if
+    SAFE_DEALLOCATE_P(this%ighost_send)
+    SAFE_DEALLOCATE_P(this%dghost_send)
+    SAFE_DEALLOCATE_P(this%zghost_send)
+
     call profiling_out(prof)
   end subroutine pv_handle_wait
 

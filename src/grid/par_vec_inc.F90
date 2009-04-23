@@ -46,14 +46,14 @@ subroutine X(vec_scatter)(vp, v, v_local)
 
   ! Unfortunately, vp%xlocal ist not quite the required
   ! displacement vector.
-  ALLOCATE(displs(vp%npart), vp%npart)
+  SAFE_ALLOCATE(displs(1:vp%npart))
   displs = vp%xlocal-1
 
-  ALLOCATE(v_tmp(1), 1)
+  SAFE_ALLOCATE(v_tmp(1:1))
   if(vp%rank.eq.vp%root) then
   ! Fill send buffer.
     SAFE_DEALLOCATE_A(v_tmp)
-    ALLOCATE(v_tmp(vp%np), vp%np)
+    SAFE_ALLOCATE(v_tmp(1:vp%np))
 
     ! Rearrange copy of v. All points of node r are in
     ! v_tmp(xlocal(r):xlocal(r)+np_local(r)-1).
@@ -94,14 +94,14 @@ subroutine X(vec_scatter_bndry)(vp, v, v_local)
 
   call push_sub('par_vec_inc.Xvec_scatter_bndry')
 
-  ALLOCATE(displs(vp%npart), vp%npart)
+  SAFE_ALLOCATE(displs(1:vp%npart))
   displs = vp%xbndry-1
 
   ! Fill send buffer.
-  ALLOCATE(v_tmp(1), 1)
+  SAFE_ALLOCATE(v_tmp(1:1))
   if(vp%rank.eq.vp%root) then
     SAFE_DEALLOCATE_A(v_tmp)
-    ALLOCATE(v_tmp(vp%np_enl), vp%np_enl)
+    SAFE_ALLOCATE(v_tmp(1:vp%np_enl))
 
     ! Rearrange copy of v. All points of node r are in
     ! v_tmp(xlocal(r):xlocal(r)+np_local(r)-1).
@@ -167,10 +167,10 @@ subroutine X(vec_gather)(vp, v, v_local)
 
   ! Unfortunately, vp%xlocal ist not quite the required
   ! displacement vector.
-  ALLOCATE(displs(vp%npart), vp%npart)
+  SAFE_ALLOCATE(displs(1:vp%npart))
   displs = vp%xlocal-1
 
-  ALLOCATE(v_tmp(vp%np), vp%np)
+  SAFE_ALLOCATE(v_tmp(1:vp%np))
 
   call mpi_debug_in(vp%comm, C_MPI_GATHERV)
   call MPI_Gatherv(v_local, vp%np_local(vp%partno), R_MPITYPE, v_tmp, &
@@ -211,10 +211,10 @@ subroutine X(vec_allgather)(vp, v, v_local)
 
   ! Unfortunately, vp%xlocal ist not quite the required
   ! displacement vector.
-  ALLOCATE(displs(vp%npart), vp%npart)
+  SAFE_ALLOCATE(displs(1:vp%npart))
   displs = vp%xlocal-1
 
-  ALLOCATE(v_tmp(vp%np), vp%np)
+  SAFE_ALLOCATE(v_tmp(1:vp%np))
 
   call mpi_debug_in(vp%comm, C_MPI_ALLGATHERV)
   call MPI_Allgatherv(v_local, vp%np_local(vp%partno), R_MPITYPE, v_tmp, &
@@ -353,7 +353,7 @@ subroutine X(vec_ghost_update_prepare) (vp, v_local, ghost_send)
   ! Calculate number of ghost points current node
   ! has to send to neighbours and allocate send buffer.
   total = sum(vp%np_ghost_neigh(:, vp%partno))
-  ALLOCATE(ghost_send(total), total)
+  SAFE_ALLOCATE(ghost_send(1:total))
   
   ! Collect all local points that have to be sent to neighbours.
   j = 1

@@ -57,11 +57,11 @@ subroutine X(submesh_comm_reduce)(this, sm, mesh, count, val)
   tag = tagcounter
   tagcounter = tagcounter + 1
 
-  ALLOCATE(this%X(allval)(1:count, 1:mesh%vp%npart), count*mesh%vp%npart)
+  SAFE_ALLOCATE(this%X(allval)(1:count, 1:mesh%vp%npart))
 
   this%X(allval)(1:count, 1:mesh%vp%npart) = M_ZERO
 
-  ALLOCATE(this%requests(1:2*mesh%vp%npart), 2*mesh%vp%npart)
+  SAFE_ALLOCATE(this%requests(1:2*mesh%vp%npart))
 
   this%nreq = 0
 
@@ -94,7 +94,7 @@ subroutine X(submesh_comm_finish)(this, sm, mesh, count, val)
   integer, allocatable :: statuses(:, :)
   integer :: ipart
 
-  ALLOCATE(statuses(MPI_STATUS_SIZE, 1:this%nreq), this%nreq)
+  SAFE_ALLOCATE(statuses(1:MPI_STATUS_SIZE, 1:this%nreq))
 
   call MPI_Waitall(this%nreq, this%requests, statuses, mpi_err)
 

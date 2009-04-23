@@ -101,7 +101,7 @@ contains
 
     call epot_precalc_local_potential(hm%ep, sys%gr, sys%gr%mesh, sys%geo, time = M_ZERO)
 
-    ALLOCATE(infrared(natoms*ndim, ndim), natoms*ndim**2)
+    SAFE_ALLOCATE(infrared(1:natoms*ndim, 1:ndim))
 
     !CALCULATE
 

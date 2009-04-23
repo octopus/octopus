@@ -120,7 +120,7 @@ module opt_control_initst_m
           call states_copy(tmp_st, initial_state)
           SAFE_DEALLOCATE_P(tmp_st%zpsi)
           call restart_look_and_read(tmp_st, gr, geo)
-          ALLOCATE(rotation_matrix(initial_state%nst, tmp_st%nst), initial_state%nst*tmp_st%nst)
+          SAFE_ALLOCATE(rotation_matrix(1:initial_state%nst, 1:tmp_st%nst))
           rotation_matrix = M_z0
           do ist = 1, initial_state%nst
             do jst = 1, loct_parse_block_cols(blk, ist-1)

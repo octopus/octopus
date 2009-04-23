@@ -771,7 +771,7 @@ contains
         end do
 
         ! And we receive it
-        ALLOCATE(mesh%nsend(1:mesh%vp%npart))
+        SAFE_ALLOCATE(mesh%nsend(1:mesh%vp%npart))
         mesh%nsend = 0
         do ipart = 1, mesh%vp%npart
           if(ipart == mesh%vp%partno) cycle
@@ -784,7 +784,7 @@ contains
           call MPI_Bsend(recv_rem_points(:, ipart), mesh%nrecv(ipart), MPI_INTEGER, ipart - 1, 1, mesh%vp%comm, mpi_err)
         end do
 
-        ALLOCATE(send_points(1:maxval(mesh%nsend), 1:mesh%vp%npart))
+        SAFE_ALLOCATE(send_points(1:maxval(mesh%nsend), 1:mesh%vp%npart))
 
         ! And we receive them
         do ipart = 1, mesh%vp%npart

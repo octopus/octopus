@@ -155,7 +155,7 @@ contains
        ! only considering positive values
     endif
     
-    ALLOCATE(em_vars%lr(1:gr%mesh%sb%dim, 1:em_vars%nsigma, 1:em_vars%nfactor), gr%mesh%sb%dim*em_vars%nsigma*em_vars%nfactor)
+    SAFE_ALLOCATE(em_vars%lr(1:gr%mesh%sb%dim, 1:em_vars%nsigma, 1:em_vars%nfactor))
     em_vars%lr(1:gr%mesh%sb%dim, 1:em_vars%nsigma, 1:em_vars%nfactor)%nst = sys%st%nst
 
     ! setup Hamiltonian
@@ -467,7 +467,7 @@ contains
           em_vars%nomega = em_vars%nomega + number
         end do
 
-        ALLOCATE(em_vars%omega(1:em_vars%nomega), em_vars%nomega)
+        SAFE_ALLOCATE(em_vars%omega(1:em_vars%nomega))
 
         !read frequencies
         j = 1
@@ -494,7 +494,7 @@ contains
       else
         !there is no frequency block, we calculate response for w = 0.0
         em_vars%nomega = 1
-        ALLOCATE(em_vars%omega(1:em_vars%nomega), em_vars%nomega)
+        SAFE_ALLOCATE(em_vars%omega(1:em_vars%nomega))
         em_vars%omega(1) = M_ZERO
       end if
 

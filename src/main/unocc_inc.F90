@@ -45,8 +45,8 @@ subroutine X(one_body) (gr, geo, st, hm)
     end do
   end do
 
-  ALLOCATE(gpsi(1:gr%mesh%np_part, 1:MAX_DIM), gr%mesh%np_part * MAX_DIM)
-  ALLOCATE(cpsi(1:gr%mesh%np_part, 1), gr%mesh%np_part)
+  SAFE_ALLOCATE(gpsi(1:gr%mesh%np_part, 1:MAX_DIM))
+  SAFE_ALLOCATE(cpsi(1:gr%mesh%np_part, 1:1))
 
   
   call io_assign(iunit)
@@ -100,8 +100,8 @@ subroutine X(two_body) (gr, st)
   call io_assign(iunit)
   iunit = io_open('matrix_elements/2-body', action='write')
 
-  ALLOCATE(n(1:gr%mesh%np), gr%mesh%np)
-  ALLOCATE(v(1:gr%mesh%np), gr%mesh%np)
+  SAFE_ALLOCATE(n(1:gr%mesh%np))
+  SAFE_ALLOCATE(v(1:gr%mesh%np))
 
   do i = 1, st%nst
     do j = 1, st%nst

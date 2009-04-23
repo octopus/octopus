@@ -27,6 +27,7 @@ module profiling_m
   use messages_m
   use mpi_m
   use string_m
+  use varinfo_m
 
   implicit none
   private
@@ -43,8 +44,7 @@ module profiling_m
     profiling_count_transfers,          &
     profiling_memory_allocate,          &
     profiling_memory_deallocate,        &
-    profiling_output,                   &
-    profiling_space
+    profiling_output
 
 
   !/* To use the profiling module you simply have to define a
@@ -117,15 +117,34 @@ module profiling_m
     module procedure iprofiling_count_operations, dprofiling_count_operations
   end interface
 
-  type(profile_pointer_t)  :: current !the currently active profile
-  type(profile_pointer_t)  :: profile_list(MAX_PROFILES) !the list of all profilers
-  integer                  :: last_profile
-  integer                  :: mem_prof_count
-  real(8)                  :: start_time
-  integer                  :: mem_iunit
-  integer(8)               :: last_mem
-  logical                  :: profiling_space
-  logical                  :: profiling_space_full
+  integer, parameter, public  ::   &
+       PROFILING_TIME        = 1, &
+       PROFILING_MEMORY      = 2, &
+       PROFILING_MEMORY_FULL = 4
+
+#define MAX_MEMORY_VARS 25
+
+  type profile_vars_t
+    integer                  :: mode    ! 1=time, 2=memory, 4=memory_full
+
+    type(profile_pointer_t)  :: current !the currently active profile
+    type(profile_pointer_t)  :: profile_list(MAX_PROFILES) !the list of all profilers
+    integer                  :: last_profile
+
+    integer(8)               :: alloc_count
+    integer(8)               :: dealloc_count
+    integer(8)               :: total_memory
+    integer(8)               :: max_memory
+    character(len=256)       :: max_memory_location
+
+    integer(8)               :: large_vars_size(MAX_MEMORY_VARS)
+    character(len=256)       :: large_vars(MAX_MEMORY_VARS)
+
+    real(8)                  :: start_time
+    integer                  :: mem_iunit
+  end type profile_vars_t
+
+  type(profile_vars_t), public :: prof_vars
 
   !For the moment we will have the profiler objects here, but they
   !should be moved to their respective modules.
@@ -167,7 +186,7 @@ contains
     
     character(len=4) :: filenum
     character(len=4) :: dirnum
-    integer          :: pmode
+    integer :: ii
 
     !%Variable ProfilingMode
     !%Default no
@@ -184,50 +203,60 @@ contains
     !% profiling.
     !%Option no 0
     !% No profiling information is generated.
-    !%Option time 1
+    !%Option prof_time 1
     !% Profile the time spent in defined profiling regions.
-    !%Option space 2
+    !%Option prof_memory 2
     !% Additionally to time, memory usage is reported.
-    !%Option space_full 3
+    !%Option prof_memory_full 4
     !% Additionally to time, memory usage is reported.
     !%End
 
-    call loct_parse_int('ProfilingMode', 0, pmode)
+    call loct_parse_int('ProfilingMode', 0, prof_vars%mode)
+    if(.not.varinfo_valid_option('ProfilingMode', prof_vars%mode, is_flag=.true.)) then
+      call input_error('ProfilingMode')
+    end if
 
-    in_profiling_mode = (pmode > 0)
-
+    in_profiling_mode = (prof_vars%mode > 0)
     if(.not.in_profiling_mode) return
+
+    if(iand(prof_vars%mode, PROFILING_MEMORY_FULL).ne.0) then
+      prof_vars%mode = ior(prof_vars%mode, PROFILING_MEMORY)
+    end if
 
     call push_sub('profiling.profiling_init')
 
-    profiling_space      = (pmode >=2)
-    profiling_space_full = (pmode >=3)
-
     ! initialize memory profiling
-    if(profiling_space) then
-      mem_prof_count = 0
-      start_time = loct_clock()
+    if(iand(prof_vars%mode, PROFILING_MEMORY).ne.0) then
+      prof_vars%alloc_count   = 0
+      prof_vars%dealloc_count = 0
+      prof_vars%total_memory  = 0
+      prof_vars%max_memory    = 0
+      prof_vars%max_memory_location = ''
+      prof_vars%start_time = loct_clock()
       
+      prof_vars%large_vars_size(:) = 0
+      prof_vars%large_vars(:) = ''
+    end if
+
+    if(iand(prof_vars%mode, PROFILING_MEMORY_FULL).ne.0) then
       filenum = '0000'
       dirnum  = 'ser '
 #if defined(HAVE_MPI)
       if(mpi_world%size > 1) then
         write(filenum, '(i4.4)') mpi_world%rank
-        write(dirnum, '(i4.4)') mpi_world%size
+        write(dirnum,  '(i4.4)') mpi_world%size
       end if
 #endif
       
       call io_mkdir('profiling.'//trim(dirnum))
-      mem_iunit = io_open('profiling.'//trim(dirnum)//'/space.'//trim(filenum), action='write')
+      prof_vars%mem_iunit = io_open('profiling.'//trim(dirnum)//'/memory.'//trim(filenum), action='write')
     end if
 
     ! initialize time profiling
-    last_profile = 0
-    last_mem = get_memory_usage()
+    prof_vars%last_profile = 0
+    nullify(prof_vars%current%p)
 
-    nullify(current%p)
-
-    call init_profiles
+    call init_profiles()
 
     call pop_sub()
 
@@ -265,20 +294,40 @@ contains
     
     if(.not. in_profiling_mode) return
 
-    do ii = 1, last_profile
-      call profile_end(profile_list(ii)%p)
+    do ii = 1, prof_vars%last_profile
+      call profile_end(prof_vars%profile_list(ii)%p)
     end do
 
-    if(profiling_space) then
-      call io_close(mem_iunit)
+    if(iand(prof_vars%mode, PROFILING_MEMORY).ne.0) then
+      call messages_print_stress(stdout, "Memory profiling information")
+      write(message(1), '(a,i10)') 'Number of   allocations = ', prof_vars%alloc_count
+      write(message(2), '(a,i10)') 'Number of deallocations = ', prof_vars%dealloc_count
+      write(message(3), '(a,i18,a)') 'Maximum total memory allocated = ', prof_vars%max_memory, ' bytes'
+      write(message(4), '(2x,a,a)') 'at ', trim(prof_vars%max_memory_location)
+      call write_info(4)
 
-      if(mem_prof_count.ne.0 .and. profiling_space_full) then
-        write(message(1), '(a,i10,a)') "Not all memory was deallocated (", mem_prof_count, " times)";
+      message(1) = ''
+      message(2) = 'Largest variables allocated:'
+      call write_info(2)
+      do ii = 1, MAX_MEMORY_VARS
+        write(message(1),'(i2,i18,2a)') ii, prof_vars%large_vars_size(ii), 'b    ', trim(prof_vars%large_vars(ii))
+        call write_info(1)
+      end do
+
+      call messages_print_stress(stdout)
+
+      if(prof_vars%alloc_count.ne.prof_vars%dealloc_count) then
+        message(1) = "Not all memory was deallocated!";
         call write_warning(1)
       end if
     end if
 
+    if(iand(prof_vars%mode, PROFILING_MEMORY_FULL).ne.0) then
+      call io_close(prof_vars%mem_iunit)
+    end if
+
   end subroutine profiling_end
+
 
   ! ---------------------------------------------------------
   ! Initialize a profile object and add it to the list
@@ -298,26 +347,29 @@ contains
 
     if(.not. in_profiling_mode) return
 
-    last_profile = last_profile + 1
+    prof_vars%last_profile = prof_vars%last_profile + 1
 
-    ASSERT(last_profile .le. MAX_PROFILES)
+    ASSERT(prof_vars%last_profile .le. MAX_PROFILES)
 
-    profile_list(last_profile)%p => this
-    
+    prof_vars%profile_list(prof_vars%last_profile)%p => this
     this%initialized = .true.
     
   end subroutine profile_init
 
 
+  ! ---------------------------------------------------------
   subroutine profile_end(this)
     type(profile_t), intent(inout) :: this
     this%initialized = .false.
   end subroutine profile_end
 
+
+  ! ---------------------------------------------------------
   logical function profile_is_initialized(this)
     type(profile_t), intent(in)   :: this
     profile_is_initialized = this%initialized
   end function profile_is_initialized
+
 
   ! ---------------------------------------------------------
   ! Increment in counter and save entry time.
@@ -341,15 +393,15 @@ contains
 #else
     now = loct_clock()
 #endif
-    if(associated(current%p)) then
+    if(associated(prof_vars%current%p)) then
       !keep a pointer to the parent
-      this%parent => current%p
+      this%parent => prof_vars%current%p
     else 
       !we are orphans
       nullify(this%parent)
     end if
 
-    current%p => this
+    prof_vars%current%p => this
     this%entry_time = now
     
   end subroutine profiling_in
@@ -381,114 +433,145 @@ contains
       !remove the spent from the self time of our parent
       this%parent%self_time = this%parent%self_time - time_spent
       !and set parent as current
-      current%p => this%parent
+      prof_vars%current%p => this%parent
     else
-      nullify(current%p)
+      nullify(prof_vars%current%p)
     end if
 
   end subroutine profiling_out
 
+
+  ! ---------------------------------------------------------
   subroutine iprofiling_count_operations(ops)
     integer,         intent(in)    :: ops
 
     if(.not.in_profiling_mode) return
 
-    current%p%op_count = current%p%op_count + dble(ops)
+    prof_vars%current%p%op_count = prof_vars%current%p%op_count + dble(ops)
   end subroutine iprofiling_count_operations
 
+
+  ! ---------------------------------------------------------
   subroutine dprofiling_count_operations(ops)
     real(8),         intent(in)    :: ops
 
     if(.not.in_profiling_mode) return
 
-    current%p%op_count = current%p%op_count + ops
+    prof_vars%current%p%op_count = prof_vars%current%p%op_count + ops
   end subroutine dprofiling_count_operations
 
+
+  ! ---------------------------------------------------------
   subroutine profiling_count_tran_int(trf, type)
     integer,         intent(in)    :: trf
     integer,         intent(in)    :: type
 
     if(.not.in_profiling_mode) return
 
-    current%p%tr_count = current%p%tr_count + dble(4*trf)
+    prof_vars%current%p%tr_count = prof_vars%current%p%tr_count + dble(4*trf)
   end subroutine profiling_count_tran_int
 
+
+  ! ---------------------------------------------------------
   subroutine profiling_count_tran_real_4(trf, type)
     integer,         intent(in)    :: trf
     real(4),         intent(in)    :: type
     
     if(.not.in_profiling_mode) return
     
-    current%p%tr_count = current%p%tr_count + dble(4*trf)
+    prof_vars%current%p%tr_count = prof_vars%current%p%tr_count + dble(4*trf)
   end subroutine profiling_count_tran_real_4
 
+
+  ! ---------------------------------------------------------
   subroutine profiling_count_tran_real_8(trf, type)
     integer,         intent(in)    :: trf
     real(8),         intent(in)    :: type
     
     if(.not.in_profiling_mode) return
     
-    current%p%tr_count = current%p%tr_count + dble(8*trf)
+    prof_vars%current%p%tr_count = prof_vars%current%p%tr_count + dble(8*trf)
   end subroutine profiling_count_tran_real_8
 
+
+  ! ---------------------------------------------------------
   subroutine profiling_count_tran_complex_4(trf, type)
     integer,         intent(in)    :: trf
     complex(4),      intent(in)    :: type
 
     if(.not.in_profiling_mode) return
 
-    current%p%tr_count = current%p%tr_count + dble(8*trf)
+    prof_vars%current%p%tr_count = prof_vars%current%p%tr_count + dble(8*trf)
   end subroutine profiling_count_tran_complex_4
 
+
+  ! ---------------------------------------------------------
   subroutine profiling_count_tran_complex_8(trf, type)
     integer,         intent(in)    :: trf
     complex(8),      intent(in)    :: type
 
     if(.not.in_profiling_mode) return
 
-    current%p%tr_count = current%p%tr_count + dble(16*trf)
+    prof_vars%current%p%tr_count = prof_vars%current%p%tr_count + dble(16*trf)
   end subroutine profiling_count_tran_complex_8
 
+
+  ! ---------------------------------------------------------
   real(8) function profile_total_time(this)
     type(profile_t), intent(in) :: this
     profile_total_time = this%total_time
   end function profile_total_time
 
+
+  ! ---------------------------------------------------------
   real(8) function profile_self_time(this)
     type(profile_t), intent(in) :: this
     profile_self_time = this%self_time
   end function profile_self_time
 
+
+  ! ---------------------------------------------------------
   real(8) function profile_total_time_per_call(this)
     type(profile_t), intent(in) :: this
     profile_total_time_per_call = this%total_time / dble(this%count)
   end function profile_total_time_per_call
 
+
+  ! ---------------------------------------------------------
   real(8) function profile_self_time_per_call(this)
     type(profile_t), intent(in) :: this
     profile_self_time_per_call = this%self_time / dble(this%count)
   end function profile_self_time_per_call
 
+
+  ! ---------------------------------------------------------
   real(8) function profile_throughput(this)
     type(profile_t), intent(in) :: this
     profile_throughput = this%op_count / this%self_time / CNST(1.0e6)
   end function profile_throughput
 
+
+  ! ---------------------------------------------------------
   real(8) function profile_bandwidth(this)
     type(profile_t), intent(in) :: this
     profile_bandwidth = this%tr_count / (this%self_time*CNST(1024.0)**2)
   end function profile_bandwidth
 
+
+  ! ---------------------------------------------------------
   integer function profile_num_calls(this)
     type(profile_t), intent(in) :: this
     
     profile_num_calls = this%count
   end function profile_num_calls
 
+
+  ! ---------------------------------------------------------
   character(LABEL_LENGTH) function profile_label(this)
     type(profile_t), intent(in) :: this
     profile_label = this%label
   end function profile_label
+
 
   ! ---------------------------------------------------------
   ! Write profiling results of each node to profiling.NNN/profifling.nnn
@@ -545,8 +628,8 @@ contains
 
     total_time = profile_total_time(C_PROFILING_COMPLETE_DATASET)
 
-    do ii = 1, last_profile
-      prof => profile_list(ii)%p
+    do ii = 1, prof_vars%last_profile
+      prof =>  prof_vars%profile_list(ii)%p
 
       if(profile_num_calls(prof) == 0) cycle
 
@@ -569,17 +652,16 @@ contains
     call pop_sub()
   end subroutine profiling_output
 
-  subroutine profiling_memory_log(type, var, file, line, mem, size)
-    character(len=*), intent(in) :: type
-    character(len=*), intent(in) :: var
-    character(len=*), intent(in) :: file
-    integer,          intent(in) :: line
-    integer(8),       intent(in) :: mem
-    integer,          intent(in) :: size
+
+  ! ---------------------------------------------------------
+  subroutine profiling_make_position_str(var, file, line, str)
+    character(len=*), intent(in)  :: var
+    character(len=*), intent(in)  :: file
+    integer,          intent(in)  :: line
+    character(len=*), intent(out) :: str
 
     integer            :: ii, jj, nn
-    character(len=256) :: str, str2
-
+    
     jj = len(var)
     if(var(jj:jj) == ')') then
       nn = 1
@@ -595,52 +677,108 @@ contains
       end if
     end if
 
-    str2 = var(1:jj)
-
-    write(str, '(4a,i5,a)') trim(str2), "(", trim(file), ":", line, ")"
+    write(str, '(4a,i5,a)') var(1:jj), "(", trim(file), ":", line, ")"
     call compact(str)
 
-    write(mem_iunit, '(f16.6,a,3i16,a)') loct_clock() - start_time, &
-         ' '//trim(type), mem, mem - last_mem, size, &
-         ' '//trim(str)
+  end subroutine profiling_make_position_str
 
-  end subroutine profiling_memory_log
 
-  !-----------------------------------------------------
-  subroutine profiling_memory_allocate(var, file, line, size)
+  ! ---------------------------------------------------------
+  subroutine profiling_memory_log(type, var, file, line, size)
+    character(len=*), intent(in) :: type
     character(len=*), intent(in) :: var
     character(len=*), intent(in) :: file
     integer,          intent(in) :: line
-    integer,          intent(in) :: size
+    integer(8),       intent(in) :: size
 
+    character(len=256) :: str
     integer(8) :: mem
     
+    call profiling_make_position_str(var, file, line, str)
+
+    ! get number of pages
     mem = get_memory_usage()
-    if(mem /= last_mem .or. profiling_space_full) then 
-      call profiling_memory_log('A ', var, file, line, mem, size)
-      last_mem = mem
+
+    write(prof_vars%mem_iunit, '(f16.6,1x,a,3i16,1x,a)') loct_clock() - prof_vars%start_time, &
+         trim(type), size, prof_vars%total_memory, mem, trim(str)
+
+  end subroutine profiling_memory_log
+
+
+  !-----------------------------------------------------
+  subroutine profiling_memory_allocate(var, file, line, size_)
+    character(len=*), intent(in) :: var
+    character(len=*), intent(in) :: file
+    integer,          intent(in) :: line
+    integer(8),       intent(in) :: size_
+
+    integer :: ii, jj
+    integer(8) :: size
+    character(len=256) :: str
+
+    size = size_ ! make a copy that we can change
+
+    if(iand(prof_vars%mode, PROFILING_MEMORY_FULL).ne.0) then 
+      call profiling_memory_log('A ', var, file, line, size)
     end if
 
-     mem_prof_count = mem_prof_count + 1
+    prof_vars%alloc_count  = prof_vars%alloc_count + 1
+    prof_vars%total_memory = prof_vars%total_memory + size
+    if(prof_vars%total_memory > prof_vars%max_memory) then
+      prof_vars%max_memory = prof_vars%total_memory
+      call profiling_make_position_str(var, file, line, prof_vars%max_memory_location)
+    end if
 
+    call profiling_make_position_str(var, file, line, str)
+
+    ! check if variable is already in stack
+    do ii = 1, MAX_MEMORY_VARS
+      if(trim(str).eq.trim(prof_vars%large_vars(ii))) then
+        if(size > prof_vars%large_vars_size(ii)) then
+          ! delete variable by moving stack up
+          do jj = ii,  MAX_MEMORY_VARS - 1
+            prof_vars%large_vars(jj)      = prof_vars%large_vars(jj + 1)
+            prof_vars%large_vars_size(jj) = prof_vars%large_vars_size(jj + 1)
+          end do
+          prof_vars%large_vars(MAX_MEMORY_VARS) = ""
+          prof_vars%large_vars_size(MAX_MEMORY_VARS) = 0
+        else
+          ! do not consider this variable any longer
+          size = -1
+        end if
+        exit
+      end if
+    end do
+
+    do ii = 1, MAX_MEMORY_VARS
+      if(size > prof_vars%large_vars_size(ii)) then
+        ! move the stack one position down
+        do jj = MAX_MEMORY_VARS, ii + 1,  -1
+          prof_vars%large_vars(jj)      = prof_vars%large_vars(jj - 1)
+          prof_vars%large_vars_size(jj) = prof_vars%large_vars_size(jj - 1)
+        end do
+        prof_vars%large_vars_size(ii) = size
+        prof_vars%large_vars(ii) = trim(str)
+        exit
+      end if
+    end do
+    
   end subroutine profiling_memory_allocate
 
 
   !-----------------------------------------------------
-  subroutine profiling_memory_deallocate(var, file, line)
+  subroutine profiling_memory_deallocate(var, file, line, size)
     character(len=*), intent(in) :: var
     character(len=*), intent(in) :: file
     integer,          intent(in) :: line
+    integer(8),       intent(in) :: size
     
-    integer(8) :: mem
-    
-    mem = get_memory_usage()
-    if(mem /= last_mem .or. profiling_space_full) then 
-      call profiling_memory_log('D ', var, file, line, mem, 0)
-      last_mem = mem
-    end if
+    prof_vars%dealloc_count  = prof_vars%dealloc_count + 1
+    prof_vars%total_memory   = prof_vars%total_memory - size
 
-     mem_prof_count = mem_prof_count - 1
+    if(iand(prof_vars%mode, PROFILING_MEMORY_FULL).ne.0) then 
+      call profiling_memory_log('D ', var, file, line, -size)
+    end if
 
   end subroutine profiling_memory_deallocate
  
