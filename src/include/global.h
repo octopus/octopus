@@ -57,14 +57,14 @@
 #endif
 
 #if defined(NDEBUG)
-#  define SAFE_ALLOCATE_A(x) allocate(x)
-#  define SAFE_ALLOCATE_P(x) allocate(x)
+#  define SAFE_ALLOCATE(x) allocate(x)
 #  define SAFE_DEALLOCATE_P(x) if(associated(x)) then; deallocate(x); nullify(x); end if
 #  define SAFE_DEALLOCATE_A(x) if(allocated(x)) then; deallocate(x); end if
 #else
 #  define SAFE_ALLOCATE(x)			\
-  global_sizeof = SIZEOF(x); _newline_ \
   allocate(x, stat=global_alloc_err); _newline_ \
+  if(profiling_space .or. global_alloc_err.ne.0) _anl_ \
+  global_sizeof = SIZEOF(x); _newline_	\
   if(profiling_space) _anl_ \
     call profiling_memory_allocate(#x, _anl_ __FILE__, _anl_ __LINE__, _anl_ global_sizeof); _newline_ \
   if(global_alloc_err.ne.0) _anl_ \
