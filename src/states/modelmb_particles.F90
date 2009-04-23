@@ -35,7 +35,8 @@ module modelMB_particles_m
 
   private
 
-  public :: modelMB_particles_init,&
+  public :: modelMB_particles_null,&
+            modelMB_particles_init,&
             modelMB_particles_end,&
             modelMB_particles_copy,&
             modelmb_copy_masses,&
@@ -87,6 +88,18 @@ end type modelMB_particle_t
 
 
 contains
+
+
+subroutine modelMB_particles_null(this)
+  type(modelMB_particle_t), intent(inout) :: this
+  nullify(this%labels_particles_modelMB)
+  nullify(this%particletype_modelMB)
+  nullify(this%nparticles_per_type)
+  nullify(this%mass_particle_modelMB)
+  nullify(this%charge_particle_modelMB)
+  nullify(this%labels_densities)
+  nullify(this%particle_kept_densities)
+end subroutine modelMB_particles_null
 
 
 !==============================================================
