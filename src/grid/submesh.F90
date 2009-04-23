@@ -44,15 +44,6 @@ module submesh_m
        zsm_integrate,       &
        submesh_end
 
-#ifdef HAVE_MPI
-  public ::                   &
-       submesh_comm_t,        &
-       dsubmesh_comm_reduce,  &
-       zsubmesh_comm_reduce,  &
-       dsubmesh_comm_finish,  &
-       zsubmesh_comm_finish
-#endif
-
   type submesh_t
      integer               :: ns = -1        ! number of points inside the submesh
      integer               :: ns_part        ! number of points inside the submesh including ghost points
@@ -66,14 +57,6 @@ module submesh_m
 #endif
   end type submesh_t
   
-  type submesh_comm_t
-    private
-    integer          :: nreq
-    integer, pointer :: requests(:) => null()
-    FLOAT,   pointer :: dallval(:, :) => null()
-    CMPLX,   pointer :: zallval(:, :) => null()
-  end type submesh_comm_t
-
   integer :: tagcounter = 0
 
 contains

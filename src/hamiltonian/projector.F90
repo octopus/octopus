@@ -106,10 +106,6 @@ module projector_m
     CMPLX,                 pointer :: phase(:, :) => null()
   end type projector_t
 
-#ifdef HAVE_MPI
-  logical, public :: async_comm
-#endif
-
 contains
   ! ---------------------------------------------------------
   subroutine projector_null(p)

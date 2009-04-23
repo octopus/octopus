@@ -352,18 +352,6 @@ contains
 
     call gauge_field_init(ep%gfield, gr%sb)
 
-#ifdef HAVE_MPI
-    !%Variable ParallelizationProjectorAsync
-    !%Type logical
-    !%Default false
-    !%Section Execution::Parallelization
-    !%Description
-    !% If <tt>true</tt> a new (experimental) scheme to perform the
-    !% reductions in the pseudopotential application is used.
-    !%End
-    call loct_parse_logical(datasets_check('ParallelizationProjectorAsync'), .false., async_comm)
-#endif
-
     nullify(ep%local_potential)
     ep%local_potential_precalculated = .false.
 
