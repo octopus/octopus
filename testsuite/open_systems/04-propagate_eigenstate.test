@@ -17,7 +17,7 @@ match ; Total energy [step 300]; LINE(well_td.general/energy, 306, 30) ; 3.66251
 # shaped lead channels and propagate with a bias switched on.
 Input: 04-propagate_eigenstate.02-ring_leads_2d.inp
 match ; Total energy [step   0]; LINE(ring_lead_td.general/energy,   6, 30) ; 4.087119902781e+02
-match ; Total energy [step  25]; LINE(ring_lead_td.general/energy,  31, 30) ; 4.110623668840e+02
-match ; Total energy [step  50]; LINE(ring_lead_td.general/energy,  56, 30) ; 4.136619769076e+02
-match ; Total energy [step  75]; LINE(ring_lead_td.general/energy,  81, 30) ; 4.176634846141e+02
-match ; Total energy [step 100]; LINE(ring_lead_td.general/energy, 106, 30) ; 4.225006127957e+02
+match ; Total energy [step  25]; LINE(ring_lead_td.general/energy,  31, 30) ; 4.110623668841e+02
+match ; Total energy [step  50]; LINE(ring_lead_td.general/energy,  56, 30) ; 4.136619769080e+02
+match ; Total energy [step  75]; LINE(ring_lead_td.general/energy,  81, 30) ; 4.176634846153e+02
+match ; Total energy [step 100]; LINE(ring_lead_td.general/energy, 106, 30) ; 4.225006127978e+02
