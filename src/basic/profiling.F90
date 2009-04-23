@@ -293,7 +293,8 @@ contains
 
   subroutine profiling_end
     integer :: ii
-    
+    real(8), parameter :: megabyte = 1048576.0_8
+
     if(.not. in_profiling_mode) return
 
     do ii = 1, prof_vars%last_profile
@@ -304,7 +305,7 @@ contains
       call messages_print_stress(stdout, "Memory profiling information")
       write(message(1), '(a,i10)') 'Number of   allocations = ', prof_vars%alloc_count
       write(message(2), '(a,i10)') 'Number of deallocations = ', prof_vars%dealloc_count
-      write(message(3), '(a,i18,a)') 'Maximum total memory allocated = ', prof_vars%max_memory, ' bytes'
+      write(message(3), '(a,f18.3,a)') 'Maximum total memory allocated = ', prof_vars%max_memory/megabyte, ' Mbytes'
       write(message(4), '(2x,a,a)') 'at ', trim(prof_vars%max_memory_location)
       call write_info(4)
 
@@ -312,7 +313,7 @@ contains
       message(2) = 'Largest variables allocated:'
       call write_info(2)
       do ii = 1, MAX_MEMORY_VARS
-        write(message(1),'(i2,i18,2a)') ii, prof_vars%large_vars_size(ii), 'b    ', trim(prof_vars%large_vars(ii))
+        write(message(1),'(i2,f18.3,2a)') ii, prof_vars%large_vars_size(ii)/megabyte, ' Mbytes ', trim(prof_vars%large_vars(ii))
         call write_info(1)
       end do
 
