@@ -188,6 +188,8 @@ contains
   subroutine grid_end(gr)
     type(grid_t), intent(inout) :: gr
 
+    integer :: il
+
     call push_sub('grid.grid_end')
 
     if(gr%have_fine_mesh) then
@@ -214,6 +216,9 @@ contains
     end if
 
     if(gr%sb%open_boundaries) then
+      do il=1, NLEADS
+        call interface_end(gr%intf(il))
+      end do
       SAFE_DEALLOCATE_P(gr%intf)
     end if
 

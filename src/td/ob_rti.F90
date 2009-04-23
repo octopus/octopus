@@ -29,6 +29,7 @@ module ob_rti_m
   use grid_m
   use hamiltonian_m
   use lalg_basic_m
+  use lasers_m
   use loct_parser_m
   use math_m
   use mesh_function_m
@@ -207,10 +208,27 @@ contains
     CMPLX              :: factor, fac, f0
     CMPLX, allocatable :: tmp(:, :), tmp_wf(:), tmp_mem(:, :)
     FLOAT              :: dres
+    logical            :: heff_sym ! is the effective hamiltonian complex symmetric?
     
     call push_sub('ob_rti.cn_src_mem_dt')
 
     inp = gr%intf(LEFT)%np ! Assuming symmetric leads.
+
+    ! check the symmetry of the effective hamiltonian
+    ! if no magnetic field or vector potential is present then
+    ! the h-matrix is complex symmetric, otherwise general complex
+    heff_sym = .true.
+    if(associated(hm%ep%A_static)) heff_sym = .false.
+    do il=1, hm%ep%no_lasers
+      if(laser_kind(hm%ep%lasers(il)).eq.E_FIELD_MAGNETIC) heff_sym = .false.
+      if(laser_kind(hm%ep%lasers(il)).eq.E_FIELD_VECTOR_POTENTIAL) heff_sym = .false.
+    end do
+
+!if(heff_sym) then
+!  write(*,*) 'non magnetic'
+!else
+!  write(*,*) 'magnetic'
+!end if
 
     order = gr%der%order
     SAFE_ALLOCATE(tmp(1:gr%mesh%np, 1:st%d%ispin))
@@ -311,26 +329,33 @@ contains
         select case(ob%mem_type)
         case(SAVE_CPU_TIME)
           ! Use for non-magnetic case.
-          ! Either the stable symmetric QMR solver
-          call zqmr_sym(gr%mesh%np, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_backward, precond_prop, &
-            cg_iter, residue=dres, threshold=cg_tol, showprogress=.false.)
-          ! or the slightly faster but less stable CG solver.
-          ! call zconjugate_gradients(gr%mesh%np, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_backward, &
-          !   zdot_productu, cg_iter, threshold=cg_tol)
-
-          ! Use for magnetic fields a general solver like BiCG (working)
-          ! call zconjugate_gradients(gr%mesh%np, st%zpsi(:, 1, ist, ik), tmp(:, 1), &
-          !   h_eff_backward, h_eff_backward_dagger, zmf_dotp_aux, cg_iter, threshold=cg_tol)
-          ! or the general QMR solver (not working yet)
-          ! call zqmr(gr%mesh%np, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_backward, h_eff_backward_t, &
-          !   precond_prop, precond_prop, cg_iter, residue=dres, threshold=cg_tol, showprogress=.true.)
+          if(heff_sym) then ! non magnetic
+            ! Either the stable symmetric QMR solver
+            call zqmr_sym(gr%mesh%np, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_backward, precond_prop, &
+              cg_iter, residue=dres, threshold=cg_tol, showprogress=.false.)
+            ! or the slightly faster but less stable CG solver.
+            ! call zconjugate_gradients(gr%mesh%np, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_backward, &
+            !   zdot_productu, cg_iter, threshold=cg_tol)
+          else ! magnetic
+            ! Use for magnetic fields a general solver like BiCG (working)
+            call zconjugate_gradients(gr%mesh%np, st%zpsi(:, 1, ist, ik), tmp(:, 1), &
+              h_eff_backward, h_eff_backward_dagger, zmf_dotp_aux, cg_iter, threshold=cg_tol)
+            ! or the general QMR solver (not working yet)
+            ! call zqmr(gr%mesh%np, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_backward, h_eff_backward_t, &
+            !   precond_prop, precond_prop, cg_iter, residue=dres, threshold=cg_tol, showprogress=.true.)
+          end if
         case(SAVE_RAM_USAGE)
-          call zqmr_sym(gr%mesh%np, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_backward_sp, precond_prop, &
-            cg_iter, residue=dres, threshold=cg_tol, showprogress=.false.)
-          ! call zqmr(gr%mesh%np, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_backward_sp, h_eff_backward_sp_t, &
-          !   precond_prop, precond_prop, cg_iter, residue=dres, threshold=cg_tol, showprogress=.false.)
-          ! call zconjugate_gradients(gr%mesh%np, st%zpsi(:, 1, ist, ik), tmp(1:gr%mesh%np, 1), &
-          !   h_eff_backward_sp, h_eff_backwardt_sp, zmf_dotp_aux, cg_iter, threshold=cg_tol)
+          if(heff_sym) then ! non magnetic
+            call zqmr_sym(gr%mesh%np, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_backward_sp, precond_prop, &
+              cg_iter, residue=dres, threshold=cg_tol, showprogress=.false.)
+          else
+!            message(1) = 'Linear solver for propagating with magnetic fields does not work yet'
+!            call write_fatal(1)
+            ! call zqmr(gr%mesh%np, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_backward_sp, h_eff_backward_sp_t, &
+            !   precond_prop, precond_prop, cg_iter, residue=dres, threshold=cg_tol, showprogress=.false.)
+            call zconjugate_gradients(gr%mesh%np, st%zpsi(:, 1, ist, ik), tmp(1:gr%mesh%np, 1), &
+              h_eff_backward_sp, h_eff_backward_sp_dagger, zmf_dotp_aux, cg_iter, threshold=cg_tol)
+          end if
         end select
         ! Write warning if BiCG did not converge.
         ! if(cg_iter.gt.cg_max_iter) then
@@ -454,12 +479,12 @@ contains
   ! ---------------------------------------------------------
   ! Progagate backwards with: 1 + i \delta H_{eff} (transposed)
   ! Used by the iterative linear solver.
-  subroutine h_eff_backward_sp_t(x, y)
+  subroutine h_eff_backward_sp_dagger(x, y)
     CMPLX, intent(in)  :: x(:)
     CMPLX, intent(out) :: y(:)
 
     CMPLX, allocatable :: tmp(:, :)
-    call push_sub('ob_rti.h_eff_backward_sp_t')
+    call push_sub('ob_rti.h_eff_backward_sp_dagger')
     
     SAFE_ALLOCATE(tmp(1:gr_p%mesh%np_part, 1:1))
     ! Propagate backward.
@@ -469,7 +494,7 @@ contains
 
     SAFE_DEALLOCATE_A(tmp)
     call pop_sub()
-  end subroutine h_eff_backward_sp_t
+  end subroutine h_eff_backward_sp_dagger
 
 
   ! ---------------------------------------------------------

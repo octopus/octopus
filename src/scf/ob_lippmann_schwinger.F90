@@ -33,6 +33,9 @@ module ob_lippmann_schwinger_m
   use lalg_basic_m
   use math_m
   use messages_m
+  use mpi_m
+  use mpi_debug_m
+  use mpi_lib_m
   use ob_interface_m
   use ob_lead_m
   use profiling_m
@@ -72,6 +75,10 @@ contains
     CMPLX, allocatable         :: rhs(:, :)
     CMPLX, allocatable, target :: green(:, :, :, :)
     logical                    :: conv
+#ifdef HAVE_MPI
+    integer :: outcount
+    FLOAT, allocatable :: ldiff(:)
+#endif
     
     call push_sub('ob_lippmann_schwinger.lippmann_schwinger')
 
@@ -137,6 +144,8 @@ contains
         conv = .false.
         call zqmr_sym(gr%mesh%np_part*st%d%dim, st%zpsi(:, 1, ist, ik), rhs(:, 1), lhs, dotu, nrm2, precond, &
           iter, residue=res, threshold=tol, converged=conv)
+        ! call zqmr(gr%mesh%np_part*st%d%dim, st%zpsi(:, 1, ist, ik), rhs(:, 1), lhs, lhs_t, &
+        !   precond, precond, iter, residue=dres, threshold=tol, converged=conv, showprogress=.true.)
 
         eigens%matvec = eigens%matvec + iter + 1 + 2
         if(conv) then
@@ -145,6 +154,21 @@ contains
         eigens%diff(ist, ik) = res
       end do
     end do
+
+#ifdef HAVE_MPI
+    if(st%d%kpt%parallel) then
+
+      ! every node needs to know all diffs
+      SAFE_ALLOCATE(ldiff(1:st%d%kpt%nlocal))
+      do ist = st%st_start, st%st_end
+        ldiff(1:st%d%kpt%nlocal) = eigens%diff(ist, st%d%kpt%start:st%d%kpt%end)
+        call lmpi_gen_allgatherv(st%d%kpt%nlocal, ldiff, outcount, &
+                                 eigens%diff(ist, :), st%d%kpt%mpi_grp)
+        ASSERT(outcount.eq.st%d%nik)
+      end do
+      SAFE_DEALLOCATE_A(ldiff)
+    end if
+#endif
 
     call pop_sub()
   end subroutine lippmann_schwinger

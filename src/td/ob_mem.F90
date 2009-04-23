@@ -167,15 +167,12 @@ contains
         ! Calculate the subsequent coefficients by the recursive relation.
         select case(ob%mem_type)
         case(SAVE_CPU_TIME)
-          if(intface(il)%offdiag_invertible) then
-            call calculate_coeffs(il, saved_iter+1, max_iter, delta, intface(il), hm%lead_h_diag(:, :, 1, il), &
-              hm%lead_h_offdiag(:, :, il), ob%mem_coeff(:, :, :, il), spacing)
-          else
-            call calculate_coeffs_ni(il, saved_iter+1, max_iter, delta, intface(il), hm%lead_h_diag(:, :, 1, il), &
-              hm%lead_h_offdiag(:, :, il), ob%mem_coeff(:, :, :, il))
-          end if
+          call calculate_coeffs_ni(il, saved_iter+1, max_iter, delta, intface(il), hm%lead_h_diag(:, :, 1, il), &
+            hm%lead_h_offdiag(:, :, il), ob%mem_coeff(:, :, :, il))
         case(SAVE_RAM_USAGE) ! FIXME: only 2D.
           ASSERT(calc_dim.eq.2)
+          call apply_coupling(ob%mem_coeff(:, :, 0, il), hm%lead_h_offdiag(:, :, il),&
+              ob%mem_coeff(:, :, 0, il), np, il)
           call calculate_sp_coeffs(il, saved_iter+1, max_iter, delta, intface(il), hm%lead_h_diag(:, :, 1, il), &
             hm%lead_h_offdiag(:, :, il), ob%mem_sp_coeff(:, :, il), ob%mem_s(:, :, :, il), np*order,            &
             order, calc_dim, ob%sp2full_map, spacing)
@@ -198,6 +195,13 @@ contains
         call write_info(1)
       end if
 
+      if(ob%mem_type.eq.SAVE_CPU_TIME) then
+        do ii=0, max_iter
+          call apply_coupling(ob%mem_coeff(:, :, ii, il), hm%lead_h_offdiag(:, :, il),&
+              ob%mem_coeff(:, :, ii, il), np, il)
+        end do
+      end if
+
     end do
 
     call pop_sub()
@@ -206,7 +210,7 @@ contains
 
   ! ---------------------------------------------------------
   ! Solve for zeroth memory coefficient by truncating the continued
-  ! matrix fraction. Since the coefficient must be symmetric,
+  ! matrix fraction. Since the coefficient must be symmetric (non-magnetic),
   ! a symmetric inversion is used.
   subroutine approx_coeff0(intface, delta, il, diag, offdiag, coeff0, sp_coeff0, &
     mem_s, order, mem_type, mapping, spacing)
@@ -225,47 +229,48 @@ contains
 
     integer            :: i, j, np
     CMPLX, allocatable :: q0(:, :)
-    FLOAT              :: norm, old_norm, sp2
+    FLOAT              :: norm, old_norm, d2
     CMPLX              :: h
 
-    call push_sub('ob_mem.approx_coeff0')
+    call push_sub('ob_mem.approx_coeff0_new')
 
     np = intface%np
+    d2 = delta**2
 
     ! If we are in 1D and have only a number we can solve the equation explicitly.
     ! So check this first for faster calculation.
     if(np.eq.1) then
       h            = M_z1 + M_zI*delta*diag(1,1)
-      coeff0(1, 1) = (-h + sqrt(h**2 + (M_TWO*delta*offdiag(1,1))**2)) / (M_TWO*delta**2)
+      coeff0(1, 1) = (-h + sqrt(h**2 + d2*(M_TWO*offdiag(1,1))**2)) / (M_TWO*d2*offdiag(1,1)**2)
     else ! We have the general case of a matrix, so solve the equation by iteration.
       ! Truncating the continued fraction is the same as iterating the equation
       !
-      !     q0 = V^T * (1/(1 + i*delta*h + delta^2*q0)) * V
+      !     p0 = (1/(1 + i*delta*h + delta^2*q0))
+      !     q0 = V^T * p0 * V
       !
       ! with start value 0:
-      sp2 = spacing**2
       SAFE_ALLOCATE(q0(1:np, 1:np))
 
       q0(:, :) = M_z0
+
       old_norm = M_ZERO
       do i = 1, mem_iter
         ! Calculate 1 + i*delta*h + delta^2*coeff0_old
-        q0 = M_zI*delta*diag + delta**2*q0
+        coeff0(:, :) = M_zI*delta*diag(:, :) + d2*q0(:, :)
         do j = 1, np
-          q0(j, j) = 1 + q0(j, j)
+          coeff0(j, j) = M_ONE + coeff0(j, j)
         end do
 
         ! Invert.
-        call lalg_sym_inverter('U', np, q0)
-        call matrix_symmetrize(q0, np)
-
-        ! Apply coupling matrices.
-        call apply_coupling(q0, offdiag, q0, np, il)
-        call matrix_symmetric_average(q0, np)
-        norm = infinity_norm(q0)
-        if((abs(norm-old_norm)*sp2).lt.mem_tolerance) then
+        call lalg_sym_inverter('U', np, coeff0)
+        call matrix_symmetrize(coeff0, np)
+        norm = infinity_norm(coeff0)
+        if((abs(old_norm/norm-M_ONE)).lt.mem_tolerance) then
           exit
         end if
+        ! Apply coupling matrices.
+        call apply_coupling(coeff0, offdiag, q0, np, il)
+        call matrix_symmetric_average(q0, np)
         old_norm = norm
       end do
       if(i.gt.mem_iter) then
@@ -274,17 +279,14 @@ contains
         call write_warning(1)
       end if
 
-      select case(mem_type)
-      case(SAVE_CPU_TIME)
-        coeff0 = q0
-      case(SAVE_RAM_USAGE)
+      if(mem_type.eq.SAVE_RAM_USAGE) then
         ! Diagonalization procedure.
         mem_s(:, :, 1) = q0(:, :)
         call lalg_eigensolve_nonh(np, mem_s(:, :, 1), mem_s(:, 1, 2))
         mem_s(:, :, 2) = mem_s(:, :, 1)
         norm = lalg_inverter(np, mem_s(:, :, 2), invert=.true.)
         call make_sparse_matrix(np, order, 2, q0, mem_s, sp_coeff0, mapping)
-      end select
+      end if
       SAFE_DEALLOCATE_A(q0)
     end if
 
@@ -293,157 +295,16 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! coeffs(:, :, :, 0) given, calculate the subsequent ones by
-  ! the recursive relation. Since the 0th coefficiant is symmetric
-  ! all subsequent are also, therefore symmetric matrix multiplications
-  ! can be used.
-  subroutine calculate_coeffs(il, start_iter, iter, delta, intf, diag, offdiag, coeffs, spacing)
-    integer,           intent(in)    :: il
-    integer,           intent(in)    :: start_iter
-    integer,           intent(in)    :: iter
-    FLOAT,             intent(in)    :: delta
-    type(interface_t), intent(in)    :: intf
-    CMPLX,             intent(in)    :: diag(intf%np, intf%np)
-    CMPLX,             intent(in)    :: offdiag(intf%np, intf%np)
-    CMPLX,             intent(inout) :: coeffs(intf%np, intf%np, 0:iter)
-    FLOAT,             intent(in)    :: spacing
-
-    FLOAT              :: old_norm, norm, sp2
-    integer            :: i, j, k, np
-    CMPLX, allocatable :: tmp(:, :), tmp2(:, :), inv_offdiag(:, :)
-    CMPLX, allocatable :: prefactor_plus(:, :), prefactor_minus(:, :), fr(:, :)
-    CMPLX              :: tp, d2
-    character          :: uplo
-
-    call push_sub('ob_mem.calculate_coeffs')
-
-    ASSERT(intf%offdiag_invertible)
-    np  = intf%np
-    sp2 = spacing**2
-    d2  = TOCMPLX(delta**2, M_ZERO)
-
-    SAFE_ALLOCATE(            tmp(1:np, 1:np))
-    SAFE_ALLOCATE(           tmp2(1:np, 1:np))
-    SAFE_ALLOCATE(    inv_offdiag(1:np, 1:np))
-    SAFE_ALLOCATE( prefactor_plus(1:np, 1:np))
-    SAFE_ALLOCATE(prefactor_minus(1:np, 1:np))
-    SAFE_ALLOCATE(             fr(1:np, 1:np))
-
-    prefactor_plus(:, :)  = M_zI*delta*diag(:, :)
-    prefactor_minus(:, :) = -M_zI*delta*diag(:, :)
-
-    do i = 1, np
-      prefactor_plus(i, i)  = M_ONE + prefactor_plus(i, i)
-      prefactor_minus(i, i) = M_ONE + prefactor_minus(i, i)
-    end do
-
-    ! If we are in 1D and have only a number we can calculate the coefficients explicitly.
-    ! So check this first for faster calculation.
-    if(np.eq.1) then
-      tp = M_ONE/(prefactor_plus(1, 1) + M_TWO*d2*coeffs(1, 1, 0))
-      do i = start_iter, iter ! i = start_iter to m.
-        if(i.eq.1) then
-          coeffs(1, 1, 1) = coeffs(1,1,0)*(prefactor_minus(1, 1) - M_TWO*d2*coeffs(1, 1, 0))*tp
-        else ! i >= 2.
-          ! j = 1.
-          coeffs(1, 1, i) = (coeffs(1, 1, 1)+M_TWO*coeffs(1, 1, 0))*coeffs(1, 1, i-1) + &
-            coeffs(1, 1, 0)*coeffs(1, 1, i-2)
-          do j = 2, i-1
-            coeffs(1, 1, i) = coeffs(1, 1, i) + (coeffs(1, 1, j) + &
-              M_TWO*coeffs(1, 1, j-1)+coeffs(1, 1, j-2))*coeffs(1, 1, i-j)
-          end do
-          coeffs(1, 1, i) = coeffs(1, 1, 1)*coeffs(1, 1, i-1)/coeffs(1, 1, 0) - d2*tp*coeffs(1, 1, i)
-        end if
-        call loct_progress_bar(i+1, iter+1)
-      end do
-    else ! We have the general case of a matrix, so solve the equation by iteration.
-      inv_offdiag(:, :) = offdiag(:, :)
-      if(il.eq.LEFT) then
-        call lalg_invert_upper_triangular(np, inv_offdiag)
-      else
-        call lalg_invert_lower_triangular(np, inv_offdiag)
-      end if
-
-      prefactor_plus(:, :) = prefactor_plus(:, :) + d2*coeffs(:, :, 0)
-      call lalg_sym_inverter('U', np, prefactor_plus)
-      call matrix_symmetrize(prefactor_plus, np)
-      fr(:, :) = coeffs(:, :, 0)
-      if (il.eq.LEFT) then
-        uplo = 'U'
-      else
-        uplo = 'L'
-      end if
-      call lalg_trmm(np, np, uplo, 'N', 'L', M_z1, offdiag, prefactor_plus)
-      call lalg_trmm(np, np, uplo, 'N', 'R', M_z1, inv_offdiag, prefactor_minus)
-      call lalg_trmm(np, np, uplo, 'N', 'L', d2, inv_offdiag, fr)
-
-      do i = start_iter, iter ! i = start_iter to m.
-        tmp2(:, :) = M_z0
-        ! First calculate the part without q(m) and store it in tmp2.
-        ! k = 1 to k = m, but without q(m).
-        do k = 1, i
-          tmp(:, :) = M_TWO*coeffs(:, :, k-1)
-          if(k.ne.i) tmp(:, :) = tmp(:, :) + coeffs(:, :, k)
-          if(k.gt.1) tmp(:, :) = tmp(:, :) + coeffs(:, :, k-2)
-          if (il.eq.LEFT) then
-            call lalg_trmm(np, np,'U','N','R', M_z1, inv_offdiag, tmp)
-          else
-            call lalg_trmm(np, np, 'L', 'N', 'R', M_z1, inv_offdiag, tmp)
-          end if
-          call lalg_symm(np, np, 'R', M_z1, coeffs(:, :, i-k), tmp, M_z1, tmp2)
-        end do
-        call lalg_symm(np, np, 'R', M_z1, coeffs(:, :, i-1), prefactor_minus, -d2, tmp2)
-
-        ! Now solve the equation via iteration (for now).
-        ! Save some time, so set the first iteration explicitly.
-        coeffs(:, :, i) = M_z0
-        call lalg_gemm(np, np, np, M_z1, prefactor_plus, tmp2, M_z0, coeffs(:, :, i))
-        call matrix_symmetric_average(coeffs(:, :, i), np)
-        old_norm = infinity_norm(coeffs(:, :, i))
-
-        do j = 2, mem_iter ! maxiter to converge matrix equation for q(i).
-          tmp(:, :) = tmp2(:, :)
-          call lalg_symm(np, np, 'L', -M_z1, coeffs(:, :, i), fr, M_z1, tmp)
-          call lalg_gemm(np, np, np, M_z1, prefactor_plus, tmp, M_z0, coeffs(:, :, i))
-          ! Use for numerical stability.
-          call matrix_symmetric_average(coeffs(:, :, i), np)
-          norm = infinity_norm(coeffs(:, :, i))
-          if((abs(norm-old_norm)*sp2).lt.mem_tolerance) then
-            exit
-          end if
-          old_norm = norm
-        end do
-
-        ! Write a warning if a coefficient is not converged.
-        if(j.gt.mem_iter) then
-          write(message(1), '(a,i6,a)') 'Memory coefficent for time step ', i, &
-            ', '//trim(lead_name(il))//' lead, not converged.'
-          call write_warning(1)
-        end if
-
-        call loct_progress_bar(i+1, iter+1)
-      end do
-    end if
-
-    SAFE_DEALLOCATE_A(tmp)
-    SAFE_DEALLOCATE_A(tmp2)
-    SAFE_DEALLOCATE_A(inv_offdiag)
-    SAFE_DEALLOCATE_A(prefactor_plus)
-    SAFE_DEALLOCATE_A(prefactor_minus)
-    SAFE_DEALLOCATE_A(fr)
-
-    call pop_sub()
-  end subroutine calculate_coeffs
-
-
-  ! ---------------------------------------------------------
-  ! A bit faster, uses twice the memory.
-  ! But it is able to calculate the memory coefficients in the
-  ! case that the offdiagonal block is not invertible also.
-  ! coeffs(:, :, :, 0) given, calculate the subsequent ones by
-  ! the recursive relation. Since the 0th coefficiant is symmetric
-  ! all subsequent are also, therefore symmetric matrix multiplications
-  ! can be used.
+  ! New version of calculating he memory coefficients.
+  ! It now calculates and stores the p-coefficients.
+  ! This method is more general and can even continue if
+  ! the matrices are not invertable. It uses only the memory
+  ! which is needed by the q-matrices (defined by q=v^T.p.v).
+  ! These coefficients have to be calculated after this routine
+  ! is finished and the coefficients are stored on the disk.
+  ! This version cannot handle magnetic fields in the leads, 
+  ! as the assumption of symmetric matrices for multiplications
+  ! is not valid anymore.
   subroutine calculate_coeffs_ni(il, start_iter, iter, delta, intf, diag, offdiag, coeffs)
     integer,           intent(in)    :: il
     integer,           intent(in)    :: start_iter
@@ -455,88 +316,80 @@ contains
     CMPLX,             intent(inout) :: coeffs(intf%np, intf%np, 0:iter)
 
     integer            :: i,j, k, np
-    CMPLX, allocatable :: coeff_p(:, :, :), p_prev(:, :), tmp(:, :), tmp2(:, :)
-    CMPLX, allocatable :: prefactor_plus(:, :), prefactor_minus(:, :)
+    CMPLX, allocatable :: tmp(:, :), tmp2(:, :), m0(:, :), m_l(:, :), m_r(:, :)
     FLOAT              :: norm, old_norm
 
-    call push_sub('ob_mem.calculate_coeffs_ni')
+    call push_sub('ob_mem.calculate_coeffs_ni_new')
 
     np = intf%np
 
-    SAFE_ALLOCATE(        coeff_p(1:np, 1:np, 0:iter))
-    SAFE_ALLOCATE(         p_prev(1:np, 1:np))
-    SAFE_ALLOCATE(            tmp(1:np, 1:np))
-    SAFE_ALLOCATE(           tmp2(1:np, 1:np))
-    SAFE_ALLOCATE( prefactor_plus(1:np, 1:np))
-    SAFE_ALLOCATE(prefactor_minus(1:np, 1:np))
+    SAFE_ALLOCATE( tmp(1:np, 1:np))
+    SAFE_ALLOCATE(tmp2(1:np, 1:np))
+    SAFE_ALLOCATE(  m0(1:np, 1:np))
+    SAFE_ALLOCATE( m_l(1:np, 1:np))
+    SAFE_ALLOCATE( m_r(1:np, 1:np))
 
-    coeff_p         = M_z0
-    prefactor_plus  = M_zI*delta*diag(:, :)
-    prefactor_minus = -M_zI*delta*diag(:, :)
-
+    m0 = M_z0
+    tmp(:, :) = -M_zI*delta*diag(:, :)
     do i = 1, np
-      prefactor_plus(i, i)  = M_ONE + prefactor_plus(i, i)
-      prefactor_minus(i, i) = M_ONE + prefactor_minus(i, i)
+      tmp(i, i) = M_ONE + tmp(i, i)
     end do
 
-    ! Calculate p_\alpha = 1/(1 + i*delta*h_\alpha + delta^2*q_\alpha)
-    coeff_p(:, :, 0) = prefactor_plus + delta**2 * coeffs(:, :, 0)
-    call lalg_sym_inverter('U', np, coeff_p(:, :, 0))
-    call matrix_symmetrize(coeff_p(:, :, 0), np)
+    call lalg_symm(np, np, 'L', M_z1, coeffs(:, :, 0), tmp, M_z0, m0)
 
-    ! We only need the inverse if (1 + i*delta*h_\alpha) in the
-    ! following.
-    call lalg_sym_inverter('U', np, prefactor_plus)
-    call matrix_symmetrize(prefactor_plus, np)
-
-    ! FIXME: this routine is not able to restart because the coeff_p
-    ! matrices are required. They have to be written to a file also
-    ! to make restarts work.
-    ASSERT(start_iter.eq.1)
+    m_l(:, :) = delta*coeffs(:, :, 0)
+    m_r(:, :) = m_l(:, :)
+    if(il.eq.LEFT) then
+      call lalg_trmm(np, np, 'U', 'N', 'R', M_z1, offdiag, m_l)
+      call lalg_trmm(np, np, 'U', 'T', 'L', M_z1, offdiag, m_r)
+    else
+      call lalg_trmm(np, np, 'L', 'N', 'R', M_z1, offdiag, m_l)
+      call lalg_trmm(np, np, 'L', 'T', 'L', M_z1, offdiag, m_r)
+    end if
 
     do i = start_iter, iter
-      old_norm = M_ZERO
-
       ! The part of the sum independent of coeff_p(:, :, i),
       ! accumulated in tmp2.
       tmp2 = M_z0
-      do k = 1, i-1
-        tmp(1:np, 1:np) = coeffs(1:np, 1:np, k)
-        call lalg_axpy(np**2, M_z2, coeffs(:, 1, k-1), tmp(:, 1))
+      if(i.gt.1) then
+        tmp(:, :) = M_TWO*coeffs(:, :, i-1) + coeffs(:, :, i-2)
+      else
+        tmp(:, :) = M_TWO*coeffs(:, :, i-1)
+      end if
+      call lalg_symm(np, np, 'L', M_z1, tmp, m_r, M_z0, tmp2)
+      
+      do k = 1, i-1       
         if(k.gt.1) then
-          call lalg_axpy(np**2, M_z1, coeffs(:, 1, k-2), tmp(:, 1))
+          tmp(:, :) = coeffs(:, :, k) + M_TWO*coeffs(:, :, k-1) + coeffs(:, :, k-2)
+        else
+          tmp(:, :) = coeffs(:, :, k) + M_TWO*coeffs(:, :, k-1)
         end if
-        call lalg_symm(np, np, 'L', M_z1, tmp, coeff_p(:, :, i-k), M_z1, tmp2)
+        if(il.eq.LEFT) then
+          call lalg_trmm(np, np, 'U', 'T', 'R', M_z1, offdiag, tmp)
+        else
+          call lalg_trmm(np, np, 'L', 'T', 'R', M_z1, offdiag, tmp)
+        end if
+        call lalg_symm(np, np, 'R', TOCMPLX(delta, M_ZERO), coeffs(:, :, i-k), tmp, M_z1, tmp2)
       end do
 
+      call lalg_symm(np, np, 'R', M_z1, coeffs(:, :, i-1), m0, M_z0, tmp)
+      call lalg_gemm(np, np, np, -M_z1, m_l, tmp2, M_z1, tmp)
+      call matrix_symmetric_average(tmp, np)
+
+      
+      ! initialize coefficient
+      coeffs(:, :, i) = tmp(:, :)
+      old_norm = infinity_norm(coeffs(:, :, i))
       ! The convergence loop.
       do j = 1, mem_iter
-        p_prev(1:np, 1:np) = coeff_p(1:np, 1:np, i)
+        call lalg_symm(np, np, 'L', M_z1, coeffs(:, :, i), m_r, M_z0, tmp2)
+!        call lalg_gemm(np, np, np, M_z1, coeffs(:, :, i), m_r, M_z0, tmp2)
+        call lalg_gemm(np, np, np, M_z1, m_l, tmp2, M_z0, coeffs(:, :, i))
+        coeffs(:, :, i) = tmp(:, :) - coeffs(:, :, i)
+        call matrix_symmetric_average(coeffs(:, :, i), np)
 
-        ! k = m.
-        call apply_coupling(p_prev, offdiag, coeff_p(:, :, i), np, il)
-
-        call lalg_axpy(np**2, M_z2, coeffs(:, 1, i-1), coeff_p(:, 1, i))
-
-        if(i.gt.1) then
-          call lalg_axpy(np**2, M_z1, coeffs(:, 1, i-2), coeff_p(:, 1, i))
-        end if
-
-        call lalg_symm(np, np, 'L', M_z1, coeff_p(:, :, i), coeff_p(:, :, 0), M_z0, tmp)
-        coeff_p(1:np, 1:np, i) = tmp(1:np, 1:np)
-
-        ! k = 0.
-        call lalg_symm(np, np, 'L', M_z1, coeffs(:, :, 0), p_prev, M_z1, coeff_p(:, :, i))
-
-        ! Add the constant part from above, and multiply with prefactors.
-        call lalg_axpy(np**2, M_z1, tmp2(:, 1), coeff_p(:, 1, i))
-        call lalg_scal(np**2, TOCMPLX(-delta**2, 0), coeff_p(:, 1, i))
-        call lalg_symm(np, np, 'L', M_z1, prefactor_minus, coeff_p(:, :, i-1), M_z1, coeff_p(:, :, i))
-        call lalg_symm(np, np, 'L', M_z1, prefactor_plus, coeff_p(:, :, i), M_z0, tmp)
-        coeff_p(1:np, 1:np, i) = tmp(1:np, 1:np)
-
-        norm = infinity_norm(coeff_p(:, :, i))
-        if(abs(norm-old_norm).lt.mem_tolerance) then
+        norm = infinity_norm(coeffs(:, :, i))
+        if(abs(old_norm/norm-M_ONE).lt.mem_tolerance) then
           exit
         end if
         old_norm = norm
@@ -549,20 +402,17 @@ contains
         call write_warning(1)
       end if
 
-      call apply_coupling(coeff_p(:, :, i), offdiag, coeffs(:, :, i), np, il)
-
       call loct_progress_bar(i+1, iter+1)
     end do
 
     message(1) = ''
     call write_info(1)
 
-    SAFE_DEALLOCATE_A(coeff_p)
-    SAFE_DEALLOCATE_A(p_prev)
     SAFE_DEALLOCATE_A(tmp)
     SAFE_DEALLOCATE_A(tmp2)
-    SAFE_DEALLOCATE_A(prefactor_plus)
-    SAFE_DEALLOCATE_A(prefactor_minus)
+    SAFE_DEALLOCATE_A(m0)
+    SAFE_DEALLOCATE_A(m_l)
+    SAFE_DEALLOCATE_A(m_r)
 
     call pop_sub()
   end subroutine calculate_coeffs_ni
@@ -1002,10 +852,10 @@ contains
 
     call push_sub('ob_mem.ob_mem_end')
 
-    DEALLOCATE(ob%mem_coeff)
-    DEALLOCATE(ob%mem_sp_coeff)
-    DEALLOCATE(ob%sp2full_map)
-    DEALLOCATE(ob%mem_s)
+    SAFE_DEALLOCATE_P(ob%mem_coeff)
+    SAFE_DEALLOCATE_P(ob%mem_sp_coeff)
+    SAFE_DEALLOCATE_P(ob%sp2full_map)
+    SAFE_DEALLOCATE_P(ob%mem_s)
 
     call pop_sub()
   end subroutine ob_mem_end
