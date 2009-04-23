@@ -209,9 +209,9 @@ subroutine X(sparskit_solver_init)(n, sk)
   sk%fpar(2) = sk%abs_tolerance
 
   ! allocate and initialize work arrays
-  ALLOCATE(sk_b(sk%size), sk%size)
-  ALLOCATE(sk_y(sk%size), sk%size)
-  ALLOCATE(sk_work(1:workspace_size), workspace_size)
+  SAFE_ALLOCATE(sk_b(1:sk%size))
+  SAFE_ALLOCATE(sk_y(1:sk%size))
+  SAFE_ALLOCATE(sk_work(1:workspace_size))
   sk_work = M_ZERO
   sk_y    = M_ZERO
 
