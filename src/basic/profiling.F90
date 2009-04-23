@@ -34,6 +34,7 @@ module profiling_m
 
   public ::                             &
     profile_t,                          &
+    profile_vars_t,                     &
     profile_init,                       &
     profile_is_initialized,             &
     profiling_init,                     &
