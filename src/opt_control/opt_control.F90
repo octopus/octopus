@@ -788,12 +788,17 @@ contains
           dfn(j) = (fdf - fmdf)/(CNST(2.0)*dx)
         end do
 
-        write(*, '(80(''#''))')
-        write(*, *) 'GRADIENT (FORWARD-BACKWARD) |    GRADIENT (NUMERICAL)     |       DIFF'
+        write(message(1), '(80(''#''))')
+        write(message(2), *) &
+          'GRADIENT (FORWARD-BACKWARD) |    GRADIENT (NUMERICAL)     |   REL. DIFF'
+        call write_info(2)
         do j = 1, n
-          write(*, '(4x,es18.8,7x,a,4x,es18.8,7x,a,es18.8)') df(j), '|', dfn(j), '|', df(j)-dfn(j)
+          write(message(1), '(4x,es18.8,7x,a,4x,es18.8,7x,a,es18.8)') &
+            df(j), '|', dfn(j), '|', (df(j)-dfn(j))/sqrt(dot_product(dfn, dfn))
+          call write_info(1)
         end do
-        write(*, '(80(''#''))')
+        write(message(1), '(80(''#''))')
+        call write_info(1)
 
         SAFE_DEALLOCATE_A(xdx)
       end if

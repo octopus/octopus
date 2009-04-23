@@ -406,6 +406,7 @@ module opt_control_target_m
       end if
       target%dt     = td%dt
       ALLOCATE(target%td_fitness(0:td%max_iter), td%max_iter+1)
+      target%td_fitness = M_ZERO
 
 
     case(oct_tg_hhg)

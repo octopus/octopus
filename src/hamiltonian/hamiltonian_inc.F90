@@ -348,15 +348,14 @@ subroutine X(oct_exchange_operator) (hm, gr, psi, hpsi, ik)
   case(UNPOLARIZED)
     do j = 1, hm%oct_st%nst
       pot = M_ZERO
-      do k = 1, gr%mesh%np
-        rho(k) = R_AIMAG(R_CONJ(hm%oct_st%X(psi)(k, 1, j, ik)) * psi(k, 1))
-      end do
+      forall (k = 1:gr%mesh%np)
+        rho(k) = hm%oct_st%occ(j, 1) * R_AIMAG(R_CONJ(hm%oct_st%X(psi)(k, 1, j, ik)) * psi(k, 1))
+      end forall
       call dpoisson_solve(gr, pot, rho)
-      do k = 1, gr%mesh%np
-        hpsi(k, 1) = hpsi(k, 1) +  M_TWO * M_zI * &!(hm%oct_st%occ(j, ik)/M_TWO) * &
-                     hm%oct_st%X(psi)(k, 1, j, ik) * pot(k)
-      end do
-
+      forall(k = 1:gr%mesh%np)
+        hpsi(k, 1) = hpsi(k, 1) + M_TWO * M_zI * &
+          hm%oct_st%X(psi)(k, 1, j, ik) * (pot(k) + hm%oct_fxc(k, 1, 1) * rho(k))
+      end forall
     end do 
 
   case(SPIN_POLARIZED)

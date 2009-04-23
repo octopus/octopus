@@ -55,6 +55,7 @@ module hamiltonian_m
   use varinfo_m
   use lasers_m
   use poisson_m
+  use xc_m
   
   implicit none
 
@@ -169,6 +170,7 @@ module hamiltonian_m
     ! Hartree Fock, also useful only for the OCT equations
     logical :: oct_exchange
     type(states_t), pointer :: oct_st
+    FLOAT, pointer :: oct_fxc(:, :, :)
 
     CMPLX, pointer :: phase(:, :)
 
@@ -755,13 +757,20 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_set_oct_exchange(hm, st)
+  subroutine hamiltonian_set_oct_exchange(hm, st, gr, xc)
     type(hamiltonian_t), intent(inout) :: hm
     type(states_t), target :: st
+    type(grid_t), intent(in) :: gr
+    type(xc_t), intent(in) :: xc
+    integer :: np, nspin
     ! In this release, no non-local part for the QOCT Hamiltonian.
     nullify(hm%oct_st)
     hm%oct_st => st
     hm%oct_exchange = .true.
+    np = gr%mesh%np
+    nspin = hm%oct_st%d%nspin
+    ALLOCATE(hm%oct_fxc(np, nspin, nspin), np*nspin*nspin)
+    call xc_get_fxc(xc, gr%mesh, st%rho, st%d%ispin, hm%oct_fxc)
   end subroutine hamiltonian_set_oct_exchange
 
 
@@ -770,6 +779,7 @@ contains
     type(hamiltonian_t), intent(inout) :: hm
     nullify(hm%oct_st)
     hm%oct_exchange = .false.
+    SAFE_DEALLOCATE_P(hm%oct_fxc)
   end subroutine hamiltonian_remove_oct_exchange
 
 

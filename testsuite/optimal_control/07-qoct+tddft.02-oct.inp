@@ -1,0 +1,74 @@
+CalculationMode = opt_control
+FromScratch = yes
+Dimensions = 2
+
+omega = 0.25
+
+%Species
+"qd" | 1.0 | user_defined | 2 | "0.5*omega^2*r^2"
+%
+
+%Coordinates
+"qd" | 0 | 0 | 0 | no
+%
+
+BoxShape = sphere
+Radius = 15.0
+Spacing = 0.5
+
+DerivativesOrder = 4
+
+# ------------------
+# TD RUN Parameters
+# ------------------
+
+stime  = 2.0
+dt = 0.005
+TDEvolutionMethod = exp_mid
+TDExponentialMethod = taylor
+TDExponentialOrder = 12
+#TDExponentialMethod = lanczos
+#TDExponentialOrder = 20
+TDLanczosTol = 1.0e-4
+TDMaximumIter = stime/dt
+TDTimeStep = dt
+
+
+#----------------------------
+# Laser field = Initial guess
+#-----------------------------
+
+freq = 0.0
+%TDExternalFields
+electric_field | 1 | 0 | 0 | freq | "envelope_function" 
+%
+
+%TDFunctions
+"envelope_function" | tdf_from_expr | "0.5*sqrt(2/stime)*sin((2*pi/stime)*1*t)"
+%
+
+# --------------
+# OCT parameters
+# --------------
+
+OCTControlRepresentation = control_function_parametrized
+
+OCTPenalty = 1.0
+OCTEps = 1.0e-3
+OCTMaxIter = 1
+
+OCTInitialState = oct_is_groundstate
+OCTTargetOperator = oct_tg_gstransformation
+%OCTTargetTransformStates
+0 | 1 | 0
+%
+
+OCTDirectStep = 0.1
+OCTNumberCheckPoints = 10
+OCTScheme = oct_algorithm_cg
+#OCTCheckGradient = 0.0001
+OCTParameterOmegaMax = 8.0
+OCTParameterRepresentation = control_fourier_series
+
+OCTDoubleCheck = no
+

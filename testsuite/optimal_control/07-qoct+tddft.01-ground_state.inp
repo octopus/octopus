@@ -1,0 +1,30 @@
+CalculationMode = gs
+FromScratch = yes
+Dimensions = 2
+
+omega = 0.25
+
+%Species
+"qd" | 1.0 | user_defined | 2 | "0.5*omega^2*r^2"
+%
+
+ExtraStates = 2
+
+%Coordinates
+"qd" | 0 | 0 | 0 | no
+%
+
+BoxShape = sphere
+Radius = 15.0
+Spacing = 0.5
+
+DerivativesOrder = 4
+
+EigenSolver = cg
+EigenSolverInitTolerance = 1e-6
+EigenSolverFinalTolerance = 1e-6
+EigenSolverMaxIter = 250
+TypeOfMixing = broyden
+Mixing = 0.5
+
+
