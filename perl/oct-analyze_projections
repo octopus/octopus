@@ -1,4 +1,4 @@
-#!<PERL>
+#!/usr/bin/env perl
 
 # First find out where we are
 if(-d 'td.general'){

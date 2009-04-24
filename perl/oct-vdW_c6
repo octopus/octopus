@@ -1,4 +1,4 @@
-#!<PERL>
+#!/usr/bin/env perl
 
 # Physical constants; first we assume atomic units.
 my $P_BOHR    = 1.0;

@@ -1,0 +1,35 @@
+#!/usr/bin/env perl
+
+%alloc   = {};
+%dealloc = {};
+
+while($_=<>){
+    $_=~s/^\s*//;
+    my ($time,$type,$mem,$totmem,$pages,$pos) = split(/\s+/);
+
+    $varname = $pos;
+    $varname =~ s/^.*%//;
+    $varname =~ s/:[0-9]*//g;
+
+    if($type eq 'A'){
+	$alloc{$varname}++;
+    }elsif($type eq 'D'){
+	$dealloc{$varname}++;
+    }
+}
+
+print "\n Allocs not deallocated\n"; 
+foreach $key (keys %alloc) {
+    if($alloc{$key} != $dealloc{$key}){
+	print "Variable '$key' allocated ", $alloc{$key},
+	" times and deallocated ", $dealloc{$key}, " times\n";
+    }
+}
+
+print "\n Deallocs not allocated\n"; 
+foreach $key (keys %dealloc) {
+    if($alloc{$key} != $dealloc{$key}){
+	print "Variable '$key' allocated ", $alloc{$key},
+	" times and deallocated ", $dealloc{$key}, " times\n";
+    }
+}

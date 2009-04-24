@@ -19,17 +19,4 @@
 ##
 ## $Id: Makefile.am 2593 2006-11-20 10:58:15Z marques $
 
-bin_SCRIPTS = oct-analyze_projections oct-vdW_c6
-noinst_HEADERS = oct-analyze_projections.pl oct-vdW_c6.pl
-
-CLEANFILES = oct-analyze_projections oct-vdW_c6
-
-oct-analyze_projections: oct-analyze_projections.pl
-	@cat $^ | \
-	  sed "s#<PERL>#${PERL}#" | \
-	  sed "s#<BINDIR>#${bindir}#" > $@
-
-oct-vdW_c6: oct-vdW_c6.pl
-	@cat $^ | \
-	  sed "s#<PERL>#${PERL}#" | \
-	  sed "s#<BINDIR>#${bindir}#" > $@
+bin_SCRIPTS = oct-analyze_projections oct-vdW_c6 oct-check_deallocs
