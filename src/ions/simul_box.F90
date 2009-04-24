@@ -332,7 +332,8 @@ contains
         
         sb%open_boundaries = .true.
         ! Read and check the simulation boxes of the lead unit cells.
-        SAFE_ALLOCATE(sb%lead_unit_cell(1:NLEADS))
+        ! it has to be allocated directly to avoid problems with xlf 
+        allocate(sb%lead_unit_cell(1:NLEADS))
         do il = 1, NLEADS
           call read_lead_unit_cell(sb, il)
         end do
@@ -1002,7 +1003,8 @@ contains
       do il = 1, NLEADS
         call simul_box_end(sb%lead_unit_cell(il))
       end do
-      SAFE_DEALLOCATE_P(sb%lead_unit_cell)
+      ! deallocated directly to avoid problems with xlf
+      if(associated(sb%lead_unit_cell)) deallocate(sb%lead_unit_cell)
       nullify(sb%lead_unit_cell)
     end if
 
