@@ -104,6 +104,7 @@ contains
     dout%spin_channels  = din%spin_channels
     dout%cdft           = din%cdft
     dout%block_size     = din%block_size
+
     call loct_pointer_copy(dout%kpoints, din%kpoints)
     call loct_pointer_copy(dout%kweights, din%kweights)
 
@@ -118,13 +119,9 @@ contains
 
     call distributed_end(d%kpt)
 
-    if(associated(d%kpoints)) then
-      SAFE_DEALLOCATE_P(d%kpoints); nullify(d%kpoints)
-    end if
+    SAFE_DEALLOCATE_P(d%kpoints)
+    SAFE_DEALLOCATE_P(d%kweights)
 
-    if(associated(d%kweights)) then
-      SAFE_DEALLOCATE_P(d%kweights); nullify(d%kweights)
-    end if
   end subroutine states_dim_end
 
 

@@ -775,7 +775,7 @@ subroutine generate_signal(order, observable)
   end if
 
   ! Open the files.
-  allocate(iunit(nfiles))
+  SAFE_ALLOCATE(iunit(1:nfiles))
   do j = 1, nfiles
     write(filename,'(a11,i1)') 'multipoles.', j
     iunit(j) = io_open(trim(filename), action='read', status='old', die=.false.)

@@ -900,7 +900,7 @@ contains
         call geometry_end(lead_geo(il))
       end do
       call geometry_end(central_geo)
-      deallocate(lead_geo)
+      SAFE_DEALLOCATE_A(lead_geo)
 
     end if
     call pop_sub()

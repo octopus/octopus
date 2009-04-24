@@ -23,6 +23,9 @@
 ! values. It is used by the separate chainging hash table implementation.
 
 module ialist_m
+  use messages_m
+  use profiling_m
+
   implicit none
 
   private
@@ -69,7 +72,7 @@ contains
     if(l%length.gt.0) then
       old_head => l%head
       l%head => l%head%next
-      deallocate(old_head)
+      SAFE_DEALLOCATE_P(old_head)
       l%length = l%length - 1
     end if
   end subroutine ialist_drop
@@ -95,7 +98,7 @@ contains
           ptr => l%head
           do i = 1, l%length - 2
             if(ptr%next%key.eq.key) then
-              deallocate(ptr%next)
+              SAFE_DEALLOCATE_P(ptr%next)
               ptr%next => ptr%next%next
               l%length = l%length - 1
               exit
@@ -122,7 +125,7 @@ contains
 
     ! List is empty.
     if(l%length.eq.0) then
-      allocate(ptr)
+      SAFE_ALLOCATE(ptr)
       ptr%key  =  key
       ptr%val  =  val
       l%head   => ptr
@@ -141,7 +144,7 @@ contains
       end do
       ! If not found, prepend a new cons to the list.
       if(i.gt.l%length) then
-        allocate(ptr)
+        SAFE_ALLOCATE(ptr)
         ptr%key  =  key
         ptr%val  =  val
         ptr%next => l%head
@@ -201,3 +204,9 @@ contains
     nullify(l%head)
   end subroutine ialist_end
 end module ialist_m
+
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

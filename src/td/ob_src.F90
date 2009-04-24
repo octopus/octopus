@@ -156,7 +156,7 @@ contains
 
     call push_sub('ob_src.ob_src_end')
 
-    DEALLOCATE(ob%src_prev)
+    SAFE_DEALLOCATE_P(ob%src_prev)
 
     call pop_sub()
   end subroutine ob_src_end

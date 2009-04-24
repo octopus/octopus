@@ -646,8 +646,8 @@ module tdf_m
     f%val = f%val * f%niter * sqrt(M_ONE/(f%final_time-f%init_time))
     f%mode = TDF_NUMERICAL
 
-    deallocatE(tmp)
-    SAFE_DEALLOCATE_P(f%valww); nullify(f%valww)
+    SAFE_DEALLOCATE_A(tmp)
+    SAFE_DEALLOCATE_P(f%valww)
     call pop_sub()
   end subroutine tdf_fourier_to_numerical
   !------------------------------------------------------------

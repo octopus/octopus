@@ -31,6 +31,8 @@
 module iihash_m
   use ialist_m
   use global_m
+  use messages_m
+  use profiling_m
 
   implicit none
 
@@ -69,7 +71,7 @@ contains
     end if
 
     prime_size = get_next_prime(min_size)
-    allocate(h%keyval(0:prime_size-1))
+    SAFE_ALLOCATE(h%keyval(0:prime_size-1))
     do i = 0, prime_size-1
       call ialist_init(h%keyval(i))
     end do
@@ -87,7 +89,7 @@ contains
     do i = 0, h%size-1
       call ialist_end(h%keyval(i))
     end do
-    deallocate(h%keyval)
+    SAFE_DEALLOCATE_P(h%keyval)
     nullify(h%keyval)
   end subroutine iihash_end
 
@@ -150,7 +152,7 @@ contains
     searching = .true.
     size      = k+k/4
 
-    allocate(primes(size))
+    SAFE_ALLOCATE(primes(1:size))
 
     primes    = .true.
     primes(1) = .false.
@@ -174,15 +176,15 @@ contains
         searching = .false.
         get_next_prime = i
       else
-        allocate(primes1(size+size/4))
+        SAFE_ALLOCATE(primes1(1:size+size/4))
         primes1(1:size)             = primes
         primes1(size+1:size+size/4) = .true.
         size                        = size+size/4
-        deallocate(primes)
+        SAFE_DEALLOCATE_P(primes)
         primes => primes1
       end if
     end do
-    deallocate(primes)
+    SAFE_DEALLOCATE_P(primes)
 
   contains
 
@@ -202,3 +204,8 @@ contains
     end subroutine sieve
   end function get_next_prime
 end module iihash_m
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

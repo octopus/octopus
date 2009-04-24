@@ -25,6 +25,9 @@ module command_line_m
   use FC_COMMAND_LINE_MODULE
 #endif
 
+  use messages_m
+  use profiling_m
+
   implicit none
 
 #ifdef FC_COMMAND_LINE_INCLUDE
@@ -110,13 +113,13 @@ module command_line_m
     character(len=100), allocatable :: argstring(:)
 #ifdef FC_COMMAND_LINE_ARGUMENTS
     argc = command_argument_count()
-    allocate(argstring(0:argc))
+    SAFE_ALLOCATE(argstring(0:argc))
     call set_number_clarg(argc)
     do i = 0, argc
       call get_command_argument(i, argstring(i))
       call set_clarg(i, argstring(i))
     end do  
-    deallocate(argstring)
+    SAFE_DEALLOCATE_A(argstring)
     ierr = 0
 #else
     ierr = -1

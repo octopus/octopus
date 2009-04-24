@@ -330,8 +330,8 @@ contains
       ! k-index, we therefore divide by st%d%nik.
       st%ob_ncs = st%ob_d%nik*st%ob_nst / st%d%nik
       st%ob_ncs = 1
-      DEALLOCATE(st%d%kpoints)
-      DEALLOCATE(st%d%kweights)
+      SAFE_DEALLOCATE_P(st%d%kpoints)
+      SAFE_DEALLOCATE_P(st%d%kweights)
       SAFE_ALLOCATE( st%d%kpoints(1:MAX_DIM, 1:st%d%nik))
       SAFE_ALLOCATE(st%d%kweights(1:st%d%nik))
       st%d%kweights(1) = M_ONE
@@ -2517,7 +2517,7 @@ contains
         end do
       end do
       call messages_print_stress(stdout)
-      deallocate(ln)
+      SAFE_DEALLOCATE_A(ln)
     end if
 
     call pop_sub()
