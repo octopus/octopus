@@ -248,6 +248,8 @@ subroutine X(hamiltonian_apply) (hm, gr, psi, hpsi, ist, ik, t, kinetic_only)
   logical :: kinetic_only_
   type(batch_t) :: psib, hpsib
 
+  call push_sub('hamiltonian_inc.Xhamiltonian_apply')
+
   kinetic_only_ = .false.
   if(present(kinetic_only)) kinetic_only_ = kinetic_only
 
@@ -265,6 +267,7 @@ subroutine X(hamiltonian_apply) (hm, gr, psi, hpsi, ist, ik, t, kinetic_only)
   call batch_end(psib)
   call batch_end(hpsib)
 
+  call pop_sub()
 end subroutine X(hamiltonian_apply)
 
 ! ---------------------------------------------------------

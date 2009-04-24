@@ -23,7 +23,7 @@ subroutine X(preconditioner_apply)(pre, gr, hm, a, b, omega)
   type(grid_t),           intent(inout) :: gr
   type(hamiltonian_t),    intent(inout) :: hm
   R_TYPE,                 intent(inout) :: a(:,:)
-  R_TYPE,                 intent(out)   :: b(:,:)
+  R_TYPE,                 intent(inout) :: b(:,:)
   R_TYPE,       optional, intent(in)    :: omega
   
   integer :: idim
@@ -32,6 +32,7 @@ subroutine X(preconditioner_apply)(pre, gr, hm, a, b, omega)
   R_TYPE, allocatable :: a_copy(:)
 
   call profiling_in(preconditioner_prof, "PRECONDITIONER")
+  call push_sub('preconditioners_inc.preconditioner_apply')
 
   omega_ = M_ZERO
   if(present(omega)) omega_ = omega
@@ -71,8 +72,8 @@ subroutine X(preconditioner_apply)(pre, gr, hm, a, b, omega)
 
   end select
 
+  call pop_sub()
   call profiling_out(preconditioner_prof)
-
 contains
 
   subroutine apply_D_inverse(a, b)

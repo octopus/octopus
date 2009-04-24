@@ -61,6 +61,11 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
   SAFE_ALLOCATE(    g(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(   g0(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE( ppsi(1:gr%mesh%np, 1:st%d%dim))
+  h_psi = R_TOTYPE(M_ZERO)
+  cg    = R_TOTYPE(M_ZERO)
+  g     = R_TOTYPE(M_ZERO)
+  g0    = R_TOTYPE(M_ZERO)
+  ppsi  = R_TOTYPE(M_ZERO)
 
   do idim = 1, st%d%dim
     cg(1:gr%mesh%np_part, idim) = R_TOTYPE(M_ZERO)
