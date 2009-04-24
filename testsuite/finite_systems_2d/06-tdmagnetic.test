@@ -34,8 +34,8 @@ Input: 06-tdmagnetic.01-gs.inp
 Input: 06-tdmagnetic.02-unocc.inp
 
 Input: 06-tdmagnetic.03-td.inp
-match ; <x>(t) ; LINE(td.general/multipoles, -1, 50) ; 1.448209790220e+00
-match ; <y>(t) ; LINE(td.general/multipoles, -1, 70) ; -1.105550230171e-02
+match ; <x>(t) ; LINE(td.general/multipoles, -1, 50) ; 1.448208882702e+00
+match ; <y>(t) ; LINE(td.general/multipoles, -1, 70) ; -1.105531371295e-02
 
 
 # In order to do the "exact" calculation with perfectly symmetric

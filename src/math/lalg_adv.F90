@@ -137,21 +137,22 @@ contains
     SAFE_ALLOCATE(evectors(1:nn, 1:nn))
 
     if(hermitian) then
-
       SAFE_ALLOCATE(evalues(1:nn))
+      SAFE_ALLOCATE(zevalues(1:nn))
 
       call lalg_eigensolve(nn, aa(1:nn, 1:nn), evectors, evalues)
 
-      evalues(1:nn) = exp(pp*evalues(1:nn))
+      zevalues(1:nn) = exp(pp*evalues(1:nn))
 
       do ii = 1, nn
-        ex(1:nn, ii) = evalues(1:nn)*evectors(ii, 1:nn)
+        ex(1:nn, ii) = zevalues(1:nn)*conjg(evectors(ii, 1:nn))
       end do
 
-      ex(1:nn, 1:nn) = matmul(evectors, ex(1:nn, 1:nn))
+      ex(1:nn, 1:nn) = matmul(evectors(1:nn, 1:nn), ex(1:nn, 1:nn))
 
+      SAFE_DEALLOCATE_A(evalues)
+      SAFE_DEALLOCATE_A(zevalues)
     else
-
       SAFE_ALLOCATE(zevalues(1:nn))
 
       evectors(1:nn, 1:nn) = aa(1:nn, 1:nn)
@@ -170,6 +171,7 @@ contains
       
       ex(1:nn, 1:nn) = matmul(ex(1:nn, 1:nn), evectors(1:nn, 1:nn))
 
+      SAFE_DEALLOCATE_A(zevalues)
     end if
 
   end subroutine zlalg_exp

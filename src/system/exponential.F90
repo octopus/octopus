@@ -454,10 +454,8 @@ contains
         call write_warning(1)
       end if
 
-      call zlalg_exp(korder + 1, pp, hamilt, expo, hermitian = .false.)
-
       ! zpsi = nrm * V * expo(1:korder, 1) = nrm * V * expo * V^(T) * zpsi
-      call lalg_gemv(gr%mesh%np, hm%d%dim, korder + 1, M_z1*beta, v, expo(1:korder + 1, 1), M_z0, tmp)
+      call lalg_gemv(gr%mesh%np, hm%d%dim, korder, M_z1*beta, v, expo(1:korder, 1), M_z0, tmp)
 
       do idim = 1, hm%d%dim
         call lalg_copy(gr%mesh%np, tmp(:, idim), zpsi(:, idim))
