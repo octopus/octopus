@@ -77,7 +77,7 @@ contains
     logical                    :: conv
 #ifdef HAVE_MPI
     integer :: outcount
-    FLOAT, allocatable :: ldiff(:)
+    FLOAT, allocatable :: ldiff(:), leigenval(:)
 #endif
     
     call push_sub('ob_lippmann_schwinger.lippmann_schwinger')
@@ -100,6 +100,7 @@ contains
       do ist = st%st_start, st%st_end
         ! Solve Schroedinger equation for this energy.
         energy = st%ob_eigenval(ist, ik)
+        st%eigenval(ist, ik) = energy
 
         ASSERT(ubound(st%zphi, dim = 1) >= gr%mesh%np_part)
 
@@ -157,16 +158,21 @@ contains
 
 #ifdef HAVE_MPI
     if(st%d%kpt%parallel) then
-
-      ! every node needs to know all diffs
+      ! every node needs to know all eigenvalues (and diff)
       SAFE_ALLOCATE(ldiff(1:st%d%kpt%nlocal))
+      SAFE_ALLOCATE(leigenval(1:st%d%kpt%nlocal))
       do ist = st%st_start, st%st_end
         ldiff(1:st%d%kpt%nlocal) = eigens%diff(ist, st%d%kpt%start:st%d%kpt%end)
+        leigenval(1:st%d%kpt%nlocal) = st%eigenval(ist, st%d%kpt%start:st%d%kpt%end)
         call lmpi_gen_allgatherv(st%d%kpt%nlocal, ldiff, outcount, &
                                  eigens%diff(ist, :), st%d%kpt%mpi_grp)
         ASSERT(outcount.eq.st%d%nik)
+        call lmpi_gen_allgatherv(st%d%kpt%nlocal, leigenval, outcount, &
+                                 st%eigenval(ist, :), st%d%kpt%mpi_grp)
+        ASSERT(outcount.eq.st%d%nik)
       end do
       SAFE_DEALLOCATE_A(ldiff)
+      SAFE_DEALLOCATE_A(leigenval)
     end if
 #endif
 
@@ -256,11 +262,10 @@ contains
 
     CMPLX, allocatable :: tmp_x(:, :)
     CMPLX, allocatable :: tmp_y(:, :)
-    integer            :: np, np_part, idim, il, dim
+    integer            :: np_part, idim, il, dim
 
     call push_sub('ob_lippmann_schwinger.lhs')
 
-    np      = gr_p%mesh%np
     np_part = gr_p%mesh%np_part
     dim     = st_p%d%dim
 
@@ -275,8 +280,8 @@ contains
     ! y <- e x - tmp_y
     do idim = 1, dim
       y(l(idim):u(idim)) = tmp_y(1:np_part, idim)
-      call lalg_scal(np, -M_z1, y(l(idim):u(idim)))
-      call lalg_axpy(np, energy_p, x(l(idim):u(idim)), y(l(idim):u(idim)))
+      call lalg_scal(np_part, -M_z1, y(l(idim):u(idim)))
+      call lalg_axpy(np_part, energy_p, x(l(idim):u(idim)), y(l(idim):u(idim)))
     end do
 
     do il = 1, NLEADS

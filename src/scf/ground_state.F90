@@ -60,7 +60,7 @@ contains
     integer      :: lcao_start, lcao_start_default
     type(lcao_t) :: lcao
     type(scf_t)  :: scfv
-    integer      :: ierr
+    integer      :: ierr, s1, s2, k1, k2
 
     call push_sub('gs.ground_state_run')
 
@@ -100,7 +100,11 @@ contains
       if(sys%gr%sb%open_boundaries) then
         ASSERT(sys%st%ob_nst.eq.sys%st%nst)
         ASSERT(sys%st%ob_d%nik.eq.sys%st%d%nik)
-        sys%st%zpsi(1:sys%gr%mesh%np, :, :, :) = sys%st%zphi(1:sys%gr%mesh%np, :, :, :)
+        s1 = sys%st%st_start
+        s2 = sys%st%st_end
+        k1 = sys%st%d%kpt%start
+        k2 = sys%st%d%kpt%end
+        sys%st%zpsi(1:sys%gr%mesh%np, :, s1:s2, k1:k2) = sys%st%zphi(1:sys%gr%mesh%np, :, s1:s2, k1:k2)
       else
         ! Randomly generate the initial wave-functions.
         call states_generate_random(sys%st, sys%gr%mesh)
