@@ -772,6 +772,7 @@ contains
     nspin = hm%oct_st%d%nspin
 
     SAFE_ALLOCATE(hm%oct_fxc(1:np, 1:nspin, 1:nspin))
+    hm%oct_fxc = M_ZERO
     call xc_get_fxc(xc, gr%mesh, st%rho, st%d%ispin, hm%oct_fxc)
 
   end subroutine hamiltonian_set_oct_exchange
