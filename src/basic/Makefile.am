@@ -74,9 +74,9 @@ depend:
 
 mpi.o : mpi.F90 
 hardware.o : hardware.F90
-ialist.o : ialist.F90
+ialist.o : ialist.F90 messages.o profiling.o
 c_pointer.o : c_pointer.F90
-command_line.o : command_line.F90
+command_line.o : command_line.F90 messages.o profiling.o
 periodic_table.o : periodic_table.F90
 loct.o : loct.F90 loct_inc.F90 c_pointer.o
 string.o : string.F90 c_pointer.o
