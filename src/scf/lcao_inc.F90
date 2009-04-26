@@ -319,6 +319,115 @@ contains
 
 end subroutine X(lcao_wf)
 
+! ---------------------------------------------------------
+subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
+  type(lcao_t),        intent(inout) :: this
+  type(states_t),      intent(inout) :: st
+  type(grid_t),        intent(inout) :: gr
+  type(geometry_t),    intent(in)    :: geo
+  type(hamiltonian_t), intent(in)    :: hm
+  integer,             intent(in)    :: start
+
+  integer :: iatom, jatom, ik, ist, idim, ip
+  integer :: nbasis, ibasis, jbasis, iorb, jorb
+  integer :: terms, cterms
+  R_TYPE, allocatable :: hamiltonian(:, :), overlap(:, :)
+  R_TYPE, allocatable :: psii(:, :), psij(:,:), hpsi(:, :)
+  FLOAT, allocatable :: orbital(:), ev(:)
+
+  nbasis = 0
+  do iatom = 1, geo%natoms
+    nbasis = nbasis + geo%atom(iatom)%spec%niwfs
+  end do
+  
+  SAFE_ALLOCATE(hamiltonian(1:nbasis, 1:nbasis))
+  SAFE_ALLOCATE(overlap(1:nbasis, 1:nbasis))
+  SAFE_ALLOCATE(ev(1:nbasis))
+  
+  SAFE_ALLOCATE(psii(1:gr%mesh%np_part, 1:st%d%dim))
+  SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE(psij(1:gr%mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE(orbital(1:gr%mesh%np))
+
+  do ik = 1, st%d%nik
+  
+    hamiltonian = R_TOTYPE(M_ZERO)
+    overlap = R_TOTYPE(M_ZERO)
+
+    terms = 0
+    cterms = 0
+
+    ibasis = 0
+    do iatom = 1, geo%natoms
+      do iorb = 1, geo%atom(iatom)%spec%niwfs
+        ibasis = ibasis + 1
+
+        call species_get_orbital(geo%atom(iatom)%spec, gr%mesh, iorb, st%d%dim, 1, geo%atom(iatom)%x, orbital)
+        forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) psii(ip, idim) = orbital(ip)
+        
+        call X(hamiltonian_apply)(hm, gr, psii, hpsi, ibasis, ik)
+
+        jbasis = 0
+        do jatom = 1, geo%natoms
+          
+          do jorb = 1, geo%atom(jatom)%spec%niwfs
+            jbasis = jbasis + 1
+            
+            terms = terms + 1
+
+            call species_get_orbital(geo%atom(jatom)%spec, gr%mesh, jorb, st%d%dim, 1, geo%atom(jatom)%x, orbital)
+            forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) psij(ip, idim) = orbital(ip)
+            
+            hamiltonian(ibasis, jbasis) = X(mf_dotp)(gr%mesh, st%d%dim, hpsi, psij)
+
+            overlap(ibasis, jbasis) = X(mf_dotp)(gr%mesh, st%d%dim, psii, psij)
+            cterms = cterms + 1
+            
+          end do
+        end do
+        
+      end do
+    end do
+    
+    call lalg_geneigensolve(nbasis, hamiltonian, overlap, ev)
+
+    do ist = st%st_start, st%st_end
+      forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) st%X(psi)(ip, idim, ist, ik) = R_TOTYPE(M_ZERO)
+    end do
+    
+    ibasis = 0
+    do iatom = 1, geo%natoms
+      do iorb = 1, geo%atom(iatom)%spec%niwfs
+        ibasis = ibasis + 1
+
+        if(ibasis <= st%nst) st%eigenval(ibasis, ik) = ev(ibasis)
+
+        call species_get_orbital(geo%atom(iatom)%spec, gr%mesh, iorb, st%d%dim, 1, geo%atom(iatom)%x, orbital)
+        forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) psii(ip, idim) = orbital(ip)
+       
+        do ist = st%st_start, st%st_end
+
+          do idim = 1, st%d%dim
+            call lalg_axpy(gr%mesh%np, hamiltonian(ibasis, ist), psii(:, idim), st%X(psi)(:, idim, ist, ik))
+          end do
+
+        end do
+        
+      end do
+    end do
+
+  end do
+
+  SAFE_DEALLOCATE_A(psii)
+  SAFE_DEALLOCATE_A(psij)
+  SAFE_DEALLOCATE_A(hpsi)  
+  SAFE_DEALLOCATE_A(orbital)
+  SAFE_DEALLOCATE_A(hamiltonian)
+  SAFE_DEALLOCATE_A(overlap)
+  SAFE_DEALLOCATE_A(ev)
+
+end subroutine X(lcao_wf2)
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

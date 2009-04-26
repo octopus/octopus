@@ -72,6 +72,7 @@ module lcao_m
     integer, pointer  :: atom(:)
     integer, pointer  :: level(:)
     integer, pointer  :: ddim(:)
+    logical           :: alternative
   end type lcao_t
 
 contains
@@ -194,7 +195,22 @@ contains
     ASSERT(this%norbs <= this%maxorbs)
 
     this%state = 1
-       
+
+    !%Variable LCAOAlternative
+    !%Type logical
+    !%Default false
+    !%Section SCF
+    !%Description
+    !% If this variable is set, the LCAO procedure will use an
+    !% alternative (and experimental) implementation.
+    !%End
+    call loct_parse_logical(datasets_check('LCAOAlternative'), .false., this%alternative)
+
+    if(this%alternative) then
+      message(1) = "Info: Using LCAO alternative implementation."
+      call write_info(1)
+    end if
+
     call pop_sub()
   end subroutine lcao_init
 
@@ -233,12 +249,19 @@ contains
     start_ = 1
     if(present(start)) start_ = start
 
-    if (states_are_real(st)) then
-      call dlcao_wf(this, st, gr, geo, hm, start_)
+    if(this%alternative) then
+      if (states_are_real(st)) then
+        call dlcao_wf2(this, st, gr, geo, hm, start_)
+      else
+        call zlcao_wf2(this, st, gr, geo, hm, start_)
+      end if
     else
-      call zlcao_wf(this, st, gr, geo, hm, start_)
+      if (states_are_real(st)) then
+        call dlcao_wf(this, st, gr, geo, hm, start_)
+      else
+        call zlcao_wf(this, st, gr, geo, hm, start_)
+      end if
     end if
-
     call pop_sub()
     call profiling_out(prof)
   end subroutine lcao_wf
