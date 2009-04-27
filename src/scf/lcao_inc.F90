@@ -329,15 +329,18 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   integer,             intent(in)    :: start
 
   integer :: iatom, jatom, ik, ist, idim, ip
-  integer :: nbasis, ibasis, jbasis, iorb, jorb
+  integer :: nbasis, ibasis, jbasis, iorb, jorb, maxorb
   R_TYPE, allocatable :: hamiltonian(:, :), overlap(:, :)
   R_TYPE, allocatable :: psii(:, :), psij(:,:), hpsi(:, :)
   FLOAT, allocatable :: orbital(:), ev(:)
   FLOAT :: radius
-  type(submesh_t) :: sphere
+  type(submesh_t), allocatable :: sphere(:)
+  integer, allocatable :: basis_index(:, :)
 
+  maxorb = 0
   nbasis = 0
   do iatom = 1, geo%natoms
+    maxorb = max(maxorb, geo%atom(iatom)%spec%niwfs)
     nbasis = nbasis + geo%atom(iatom)%spec%niwfs
   end do
   
@@ -350,44 +353,52 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   SAFE_ALLOCATE(psij(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(orbital(1:gr%mesh%np))
 
+  SAFE_ALLOCATE(sphere(1:nbasis))
+  SAFE_ALLOCATE(basis_index(1:geo%natoms, 1:maxorb))
+
+  ibasis = 0
+  do iatom = 1, geo%natoms
+    do iorb = 1, geo%atom(iatom)%spec%niwfs
+      ibasis = ibasis + 1
+      radius = species_get_iwf_radius(geo%atom(iatom)%spec, iorb, is = 1)
+      call submesh_init_sphere(sphere(ibasis), gr%mesh%sb, gr%mesh, geo%atom(iatom)%x, radius)
+      basis_index(iatom, iorb) = ibasis
+    end do
+  end do
+    
   do ik = 1, st%d%nik
   
     hamiltonian = R_TOTYPE(M_ZERO)
     overlap = R_TOTYPE(M_ZERO)
 
-    ibasis = 0
     do iatom = 1, geo%natoms
       do iorb = 1, geo%atom(iatom)%spec%niwfs
-        ibasis = ibasis + 1
+        ibasis = basis_index(iatom, iorb)
 
         radius = species_get_iwf_radius(geo%atom(iatom)%spec, iorb, is = 1)
-        call submesh_init_sphere(sphere, gr%mesh%sb, gr%mesh, geo%atom(iatom)%x, radius)
-        call species_get_orbital_submesh(geo%atom(iatom)%spec, sphere, iorb, st%d%dim, 1, geo%atom(iatom)%x, orbital)
+        call species_get_orbital_submesh(geo%atom(iatom)%spec, sphere(ibasis), iorb, st%d%dim, 1, geo%atom(iatom)%x, orbital)
         do idim = 1,st%d%dim 
           forall(ip = 1:gr%mesh%np) psii(ip, idim) = M_ZERO
-          call submesh_add_to_mesh(sphere, orbital, psii(:, idim))
+          call submesh_add_to_mesh(sphere(ibasis), orbital, psii(:, idim))
         end do
-        call submesh_end(sphere)
 
         call X(hamiltonian_apply)(hm, gr, psii, hpsi, ibasis, ik)
 
-        jbasis = 0
-        do jatom = 1, geo%natoms
-          
+        do jatom = iatom, geo%natoms
           do jorb = 1, geo%atom(jatom)%spec%niwfs
-            jbasis = jbasis + 1
+            jbasis = basis_index(jatom, jorb)
             
-            radius = species_get_iwf_radius(geo%atom(jatom)%spec, jorb, is = 1)
-            call submesh_init_sphere(sphere, gr%mesh%sb, gr%mesh, geo%atom(jatom)%x, radius)
-            call species_get_orbital_submesh(geo%atom(jatom)%spec, sphere, jorb, st%d%dim, 1, geo%atom(jatom)%x, orbital)
+            call species_get_orbital_submesh(geo%atom(jatom)%spec, sphere(jbasis), jorb, st%d%dim, 1, geo%atom(jatom)%x, orbital)
             do idim = 1,st%d%dim 
               forall(ip = 1:gr%mesh%np) psij(ip, idim) = M_ZERO
-              call submesh_add_to_mesh(sphere, orbital, psij(:, idim))
+              call submesh_add_to_mesh(sphere(jbasis), orbital, psij(:, idim))
             end do
-            call submesh_end(sphere)
 
             hamiltonian(ibasis, jbasis) = X(mf_dotp)(gr%mesh, st%d%dim, hpsi, psij)
+            hamiltonian(jbasis, ibasis) = R_CONJ(hamiltonian(ibasis, jbasis))
+
             overlap(ibasis, jbasis) = X(mf_dotp)(gr%mesh, st%d%dim, psii, psij)
+            overlap(jbasis, ibasis) = R_CONJ(overlap(ibasis, jbasis))
 
           end do
         end do
@@ -408,22 +419,21 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
         if(ibasis <= st%nst) st%eigenval(ibasis, ik) = ev(ibasis)
 
-        radius = species_get_iwf_radius(geo%atom(iatom)%spec, iorb, is = 1)
-        call submesh_init_sphere(sphere, gr%mesh%sb, gr%mesh, geo%atom(iatom)%x, radius)
-        call species_get_orbital_submesh(geo%atom(iatom)%spec, sphere, iorb, st%d%dim, 1, geo%atom(iatom)%x, orbital)
-
+        call species_get_orbital_submesh(geo%atom(iatom)%spec, sphere(ibasis), iorb, st%d%dim, 1, geo%atom(iatom)%x, orbital)
 
         do ist = st%st_start, st%st_end
           do idim = 1, st%d%dim
-            call submesh_add_to_mesh(sphere, orbital, st%X(psi)(:, idim, ist, ik), factor = hamiltonian(ibasis, ist))
+            call submesh_add_to_mesh(sphere(ibasis), orbital, st%X(psi)(:, idim, ist, ik), factor = hamiltonian(ibasis, ist))
           end do
         end do
         
-        call submesh_end(sphere)
-
       end do
     end do
 
+  end do
+
+  do ibasis = 1, nbasis
+    call submesh_end(sphere(ibasis))
   end do
 
   SAFE_DEALLOCATE_A(psii)
@@ -433,6 +443,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   SAFE_DEALLOCATE_A(hamiltonian)
   SAFE_DEALLOCATE_A(overlap)
   SAFE_DEALLOCATE_A(ev)
+  SAFE_DEALLOCATE_A(basis_index)
 
 end subroutine X(lcao_wf2)
 
