@@ -324,7 +324,7 @@ module opt_control_target_m
         if(trim(expression).eq.'OCTTargetDensityFromState') then
 
           if(loct_parse_block(datasets_check('OCTTargetDensityFromState'), blk) == 0) then
-            tmp_st = target%st
+            call states_copy(tmp_st, target%st)
             SAFE_DEALLOCATE_P(tmp_st%zpsi)
             call restart_look_and_read(tmp_st, gr, geo)
             SAFE_ALLOCATE(rotation_matrix(1:target%st%nst, 1:tmp_st%nst))
