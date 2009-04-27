@@ -42,10 +42,10 @@ R_TYPE function X(sm_integrate)(m, sm, f) result(res)
 end function X(sm_integrate)
 
 subroutine X(dsubmesh_add_to_mesh)(this, sphi, phi, factor)
-  type(submesh_t),  intent(in)  :: this
-  FLOAT,            intent(in)  :: sphi(:)
-  R_TYPE,           intent(out) :: phi(:)
-  R_TYPE, optional, intent(in)  :: factor
+  type(submesh_t),  intent(in)    :: this
+  FLOAT,            intent(in)    :: sphi(:)
+  R_TYPE,           intent(inout) :: phi(:)
+  R_TYPE, optional, intent(in)    :: factor
 
   integer :: is
 
@@ -56,6 +56,33 @@ subroutine X(dsubmesh_add_to_mesh)(this, sphi, phi, factor)
   end if
 
 end subroutine X(dsubmesh_add_to_mesh)
+
+R_TYPE function X(dsubmesh_to_mesh_dotp)(this, dim, sphi, phi) result(dotp)
+  type(submesh_t),  intent(in)  :: this
+  integer,          intent(in)  :: dim
+  FLOAT,            intent(in)  :: sphi(:)
+  R_TYPE,           intent(in)  :: phi(:, :)
+
+  integer :: is, idim
+
+  dotp = R_TOTYPE(M_ZERO)
+
+  if(this%mesh%use_curvilinear) then
+    do idim = 1, dim
+      do is = 1, this%ns
+        dotp = dotp + this%mesh%vol_pp(this%jxyz(is))*phi(this%jxyz(is), idim)*sphi(is)
+      end do
+    end do
+  else
+    do idim = 1, dim
+      do is = 1, this%ns
+        dotp = dotp + phi(this%jxyz(is), idim)*sphi(is)
+      end do
+    end do
+    dotp = dotp*this%mesh%vol_pp(1)
+  end if
+
+end function X(dsubmesh_to_mesh_dotp)
 
 !! Local Variables:
 !! mode: f90

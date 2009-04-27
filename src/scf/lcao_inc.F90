@@ -331,7 +331,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   integer :: iatom, jatom, ik, ist, idim, ip
   integer :: nbasis, ibasis, jbasis, iorb, jorb, maxorb
   R_TYPE, allocatable :: hamiltonian(:, :), overlap(:, :)
-  R_TYPE, allocatable :: psii(:, :), psij(:,:), hpsi(:, :)
+  R_TYPE, allocatable :: psii(:, :), hpsi(:, :)
   FLOAT, allocatable :: ev(:)
   FLOAT, pointer :: orb(:, :)
   FLOAT :: radius
@@ -352,7 +352,6 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   
   SAFE_ALLOCATE(psii(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim))
-  SAFE_ALLOCATE(psij(1:gr%mesh%np, 1:st%d%dim))
 
   SAFE_ALLOCATE(sphere(1:nbasis))
   SAFE_ALLOCATE(basis_index(1:geo%natoms, 1:maxorb))
@@ -399,16 +398,11 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
           do jorb = 1, geo%atom(jatom)%spec%niwfs
             jbasis = basis_index(jatom, jorb)
             
-            do idim = 1,st%d%dim 
-              forall(ip = 1:gr%mesh%np) psij(ip, idim) = M_ZERO
-              call submesh_add_to_mesh(sphere(jbasis), orbitals%states(jbasis)%dpsi(:, 1), psij(:, idim))
-            end do
+            hamiltonian(jbasis, ibasis) = submesh_to_mesh_dotp(sphere(jbasis), st%d%dim, orbitals%states(jbasis)%dpsi(:, 1), hpsi)
+            hamiltonian(ibasis, jbasis) = R_CONJ(hamiltonian(jbasis, ibasis))
 
-            hamiltonian(ibasis, jbasis) = X(mf_dotp)(gr%mesh, st%d%dim, hpsi, psij)
-            hamiltonian(jbasis, ibasis) = R_CONJ(hamiltonian(ibasis, jbasis))
-
-            overlap(ibasis, jbasis) = X(mf_dotp)(gr%mesh, st%d%dim, psii, psij)
-            overlap(jbasis, ibasis) = R_CONJ(overlap(ibasis, jbasis))
+            overlap(jbasis, ibasis) = submesh_to_mesh_dotp(sphere(jbasis), st%d%dim, orbitals%states(jbasis)%dpsi(:, 1), psii)
+            overlap(ibasis, jbasis) = R_CONJ(overlap(jbasis, ibasis))
 
           end do
         end do
@@ -447,7 +441,6 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   call batch_end(orbitals)
 
   SAFE_DEALLOCATE_A(psii)
-  SAFE_DEALLOCATE_A(psij)
   SAFE_DEALLOCATE_A(hpsi)  
   SAFE_DEALLOCATE_A(hamiltonian)
   SAFE_DEALLOCATE_A(overlap)

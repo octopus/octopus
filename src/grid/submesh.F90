@@ -43,6 +43,7 @@ module submesh_m
        dsm_integrate,       &
        zsm_integrate,       &
        submesh_add_to_mesh, &
+       submesh_to_mesh_dotp,&
        submesh_end
 
   type submesh_t
@@ -62,6 +63,10 @@ module submesh_m
 
   interface submesh_add_to_mesh
     module procedure ddsubmesh_add_to_mesh, zdsubmesh_add_to_mesh
+  end interface
+
+  interface submesh_to_mesh_dotp
+    module procedure ddsubmesh_to_mesh_dotp, zdsubmesh_to_mesh_dotp
   end interface
 
 contains
