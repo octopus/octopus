@@ -681,7 +681,7 @@ contains
       offset(i)=-(cube%n(i) - 1)/2 * mesh%h(i) / units_out%length%factor
     end do
 
-! just for nice formatting of the output
+    ! just for nice formatting of the output
     write(nitems,*)cube%n(1)*cube%n(2)*cube%n(3)
     nitems=trim(adjustl(nitems))
 

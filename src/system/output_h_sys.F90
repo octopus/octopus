@@ -24,6 +24,7 @@ module h_sys_output_m
   use density_matrix_m
   use derivatives_m
   use basins_m
+  use cube_function_m
   use elf_m
   use geometry_m
   use global_m
@@ -35,6 +36,7 @@ module h_sys_output_m
   use loct_m
   use loct_math_m
   use loct_parser_m
+  use magnetic_m
   use mesh_function_m
   use messages_m
   use mpi_m
@@ -46,7 +48,9 @@ module h_sys_output_m
   use mesh_m
   use units_m
   use varinfo_m
-
+#if defined(HAVE_ETSF_IO)
+  use etsf_io
+#endif
   implicit none
 
   private
@@ -364,6 +368,12 @@ contains
       if(simul_box_is_periodic(gr%sb)) &
         call periodic_write_crystal(gr%sb, geo, dir)
     end if
+
+#if defined(HAVE_ETSF_IO)
+    if (outp%how == output_etsf) then
+      call h_sys_output_etsf(st, gr, geo, dir, outp)
+    end if
+#endif
     
   end subroutine h_sys_output_all
 
@@ -517,6 +527,8 @@ contains
 
   end subroutine h_sys_calc_electronic_pressure
 
+
+#include "output_etsf.F90"
 
 #include "output_states.F90"
 #include "output_h.F90"

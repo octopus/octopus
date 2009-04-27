@@ -102,7 +102,8 @@ if COMPILE_NEWUOA
 endif
 
 all_LIBS = $(core_LIBS) @LIBS_FFT@ @LIBS_SPARSKIT@ \
-  @LIBS_NETCDF@ $(external_LIBS) @LIBS_MPI@ @LIBS_LAPACK@ @LIBS_BLAS@
+  @LIBS_NETCDF@ @LIBS_ETSF_IO@ $(external_LIBS) \
+  @LIBS_MPI@ @LIBS_LAPACK@ @LIBS_BLAS@
 
 
 # ---------------------------------------------------------------

@@ -68,7 +68,8 @@ module io_function_m
     output_matlab     =  2048,    &
     output_meshgrid   =  4096,    &
     boundary_points   =  8192,    &
-    output_binary     = 16384
+    output_binary     = 16384,    &
+    output_etsf       = 32768
 
   ! doutput_kind => real variables; zoutput_kind => complex variables.
   integer, parameter, private ::  &
@@ -160,6 +161,9 @@ contains
     !% This option includes the output of the mesh enlargement. Default is without.
     !%Option binary 16384
     !% Plain binary, new format.
+    !%Option etsf 32768
+    !% ETSF file format (http://www.etsf.eu/resources/software/standardization_project).
+    !% Requires the ETSF_IO library. 
     !%End
     call loct_parse_int(datasets_check('OutputHow'), 0, how)
     if(.not.varinfo_valid_option('OutputHow', how, is_flag=.true.)) then
@@ -177,6 +181,9 @@ contains
       output_plane_x + output_plane_y + output_dx))
 #if !defined(HAVE_NETCDF)
     how = iand(how, not(output_netcdf))
+#endif
+#if !defined(HAVE_ETSF_IO)
+    how = iand(how, not(output_etsf))
 #endif
 
     call pop_sub()
@@ -203,7 +210,7 @@ contains
     if(index(where, "Binary").ne.0)    how = ior(how, output_binary)
     if(index(where, "MeshIndex").ne.0) how = ior(how, output_mesh_index)
 #if defined(HAVE_NETCDF)
-    if(index(where, "NETCDF").ne.0) how = ior(how, output_netcdf)
+    if(index(where, "NETCDF").ne.0)    how = ior(how, output_netcdf)
 #endif
 
   end function io_function_fill_how
