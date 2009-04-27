@@ -332,10 +332,12 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   integer :: nbasis, ibasis, jbasis, iorb, jorb, maxorb
   R_TYPE, allocatable :: hamiltonian(:, :), overlap(:, :)
   R_TYPE, allocatable :: psii(:, :), psij(:,:), hpsi(:, :)
-  FLOAT, allocatable :: orbital(:), ev(:)
+  FLOAT, allocatable :: ev(:)
+  FLOAT, pointer :: orb(:, :)
   FLOAT :: radius
   type(submesh_t), allocatable :: sphere(:)
   integer, allocatable :: basis_index(:, :)
+  type(batch_t) :: orbitals
 
   maxorb = 0
   nbasis = 0
@@ -351,21 +353,32 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   SAFE_ALLOCATE(psii(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(psij(1:gr%mesh%np, 1:st%d%dim))
-  SAFE_ALLOCATE(orbital(1:gr%mesh%np))
 
   SAFE_ALLOCATE(sphere(1:nbasis))
   SAFE_ALLOCATE(basis_index(1:geo%natoms, 1:maxorb))
+
+  call batch_init(orbitals, 1, nbasis)
 
   ibasis = 0
   do iatom = 1, geo%natoms
     do iorb = 1, geo%atom(iatom)%spec%niwfs
       ibasis = ibasis + 1
+      basis_index(iatom, iorb) = ibasis
+
+      ! initialize the radial grid
       radius = species_get_iwf_radius(geo%atom(iatom)%spec, iorb, is = 1)
       call submesh_init_sphere(sphere(ibasis), gr%mesh%sb, gr%mesh, geo%atom(iatom)%x, radius)
-      basis_index(iatom, iorb) = ibasis
+
+      ! allocate and calculate the orbitals
+      SAFE_ALLOCATE(orb(1:sphere(ibasis)%ns, 1:1))
+      call batch_add_state(orbitals, ibasis, orb)
+      call species_get_orbital_submesh(geo%atom(iatom)%spec, sphere(ibasis), iorb, st%d%dim, 1, &
+           geo%atom(iatom)%x, orbitals%states(ibasis)%dpsi(:, 1))
+
     end do
   end do
-    
+
+
   do ik = 1, st%d%nik
   
     hamiltonian = R_TOTYPE(M_ZERO)
@@ -375,11 +388,9 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
       do iorb = 1, geo%atom(iatom)%spec%niwfs
         ibasis = basis_index(iatom, iorb)
 
-        radius = species_get_iwf_radius(geo%atom(iatom)%spec, iorb, is = 1)
-        call species_get_orbital_submesh(geo%atom(iatom)%spec, sphere(ibasis), iorb, st%d%dim, 1, geo%atom(iatom)%x, orbital)
         do idim = 1,st%d%dim 
           forall(ip = 1:gr%mesh%np) psii(ip, idim) = M_ZERO
-          call submesh_add_to_mesh(sphere(ibasis), orbital, psii(:, idim))
+          call submesh_add_to_mesh(sphere(ibasis), orbitals%states(ibasis)%dpsi(:, 1), psii(:, idim))
         end do
 
         call X(hamiltonian_apply)(hm, gr, psii, hpsi, ibasis, ik)
@@ -388,10 +399,9 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
           do jorb = 1, geo%atom(jatom)%spec%niwfs
             jbasis = basis_index(jatom, jorb)
             
-            call species_get_orbital_submesh(geo%atom(jatom)%spec, sphere(jbasis), jorb, st%d%dim, 1, geo%atom(jatom)%x, orbital)
             do idim = 1,st%d%dim 
               forall(ip = 1:gr%mesh%np) psij(ip, idim) = M_ZERO
-              call submesh_add_to_mesh(sphere(jbasis), orbital, psij(:, idim))
+              call submesh_add_to_mesh(sphere(jbasis), orbitals%states(jbasis)%dpsi(:, 1), psij(:, idim))
             end do
 
             hamiltonian(ibasis, jbasis) = X(mf_dotp)(gr%mesh, st%d%dim, hpsi, psij)
@@ -419,11 +429,9 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
         if(ibasis <= st%nst) st%eigenval(ibasis, ik) = ev(ibasis)
 
-        call species_get_orbital_submesh(geo%atom(iatom)%spec, sphere(ibasis), iorb, st%d%dim, 1, geo%atom(iatom)%x, orbital)
-
         do ist = st%st_start, st%st_end
           do idim = 1, st%d%dim
-            call submesh_add_to_mesh(sphere(ibasis), orbital, st%X(psi)(:, idim, ist, ik), factor = hamiltonian(ibasis, ist))
+            call submesh_add_to_mesh(sphere(ibasis), orbitals%states(ibasis)%dpsi(:, 1), st%X(psi)(:, idim, ist, ik), factor = hamiltonian(ibasis, ist))
           end do
         end do
         
@@ -433,17 +441,19 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   end do
 
   do ibasis = 1, nbasis
+    SAFE_DEALLOCATE_P(orbitals%states(ibasis)%dpsi)
     call submesh_end(sphere(ibasis))
   end do
+  call batch_end(orbitals)
 
   SAFE_DEALLOCATE_A(psii)
   SAFE_DEALLOCATE_A(psij)
   SAFE_DEALLOCATE_A(hpsi)  
-  SAFE_DEALLOCATE_A(orbital)
   SAFE_DEALLOCATE_A(hamiltonian)
   SAFE_DEALLOCATE_A(overlap)
   SAFE_DEALLOCATE_A(ev)
   SAFE_DEALLOCATE_A(basis_index)
+  SAFE_DEALLOCATE_A(sphere)
 
 end subroutine X(lcao_wf2)
 
