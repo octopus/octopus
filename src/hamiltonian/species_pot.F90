@@ -775,6 +775,8 @@ contains
     FLOAT :: r2, x(1:MAX_DIM)
     FLOAT, allocatable :: xf(:, :), ylm(:)
 
+    if(submesh%ns == 0) return
+
     i = spec%iwf_i(j, is)
     l = spec%iwf_l(j, is)
     m = spec%iwf_m(j, is)
@@ -783,7 +785,6 @@ contains
 
       SAFE_ALLOCATE(xf(1:submesh%ns, 1:MAX_DIM))
       SAFE_ALLOCATE(ylm(1:submesh%ns))
-
       do ip = 1, submesh%ns
         x(1:MAX_DIM) = submesh%mesh%x(submesh%jxyz(ip), 1:MAX_DIM) - pos(1:MAX_DIM)
         phi(ip) = sum(x(1:MAX_DIM)**2)

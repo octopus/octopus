@@ -360,9 +360,15 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
       do iorb = 1, geo%atom(iatom)%spec%niwfs
         ibasis = ibasis + 1
 
-        call species_get_orbital(geo%atom(iatom)%spec, gr%mesh, iorb, st%d%dim, 1, geo%atom(iatom)%x, orbital)
-        forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) psii(ip, idim) = orbital(ip)
-        
+        radius = species_get_iwf_radius(geo%atom(iatom)%spec, iorb, is = 1)
+        call submesh_init_sphere(sphere, gr%mesh%sb, gr%mesh, geo%atom(iatom)%x, radius)
+        call species_get_orbital_submesh(geo%atom(iatom)%spec, sphere, iorb, st%d%dim, 1, geo%atom(iatom)%x, orbital)
+        do idim = 1,st%d%dim 
+          forall(ip = 1:gr%mesh%np) psii(ip, idim) = M_ZERO
+          call submesh_add_to_mesh(sphere, orbital, psii(:, idim))
+        end do
+        call submesh_end(sphere)
+
         call X(hamiltonian_apply)(hm, gr, psii, hpsi, ibasis, ik)
 
         jbasis = 0
@@ -372,7 +378,6 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
             jbasis = jbasis + 1
             
             radius = species_get_iwf_radius(geo%atom(jatom)%spec, jorb, is = 1)
-
             call submesh_init_sphere(sphere, gr%mesh%sb, gr%mesh, geo%atom(jatom)%x, radius)
             call species_get_orbital_submesh(geo%atom(jatom)%spec, sphere, jorb, st%d%dim, 1, geo%atom(jatom)%x, orbital)
             do idim = 1,st%d%dim 
@@ -403,17 +408,19 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
         if(ibasis <= st%nst) st%eigenval(ibasis, ik) = ev(ibasis)
 
-        call species_get_orbital(geo%atom(iatom)%spec, gr%mesh, iorb, st%d%dim, 1, geo%atom(iatom)%x, orbital)
-        forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) psii(ip, idim) = orbital(ip)
-       
+        radius = species_get_iwf_radius(geo%atom(iatom)%spec, iorb, is = 1)
+        call submesh_init_sphere(sphere, gr%mesh%sb, gr%mesh, geo%atom(iatom)%x, radius)
+        call species_get_orbital_submesh(geo%atom(iatom)%spec, sphere, iorb, st%d%dim, 1, geo%atom(iatom)%x, orbital)
+
+
         do ist = st%st_start, st%st_end
-
           do idim = 1, st%d%dim
-            call lalg_axpy(gr%mesh%np, hamiltonian(ibasis, ist), psii(:, idim), st%X(psi)(:, idim, ist, ik))
+            call submesh_add_to_mesh(sphere, orbital, st%X(psi)(:, idim, ist, ik), factor = hamiltonian(ibasis, ist))
           end do
-
         end do
         
+        call submesh_end(sphere)
+
       end do
     end do
 

@@ -41,14 +41,19 @@ R_TYPE function X(sm_integrate)(m, sm, f) result(res)
 
 end function X(sm_integrate)
 
-subroutine X(dsubmesh_add_to_mesh)(this, sphi, phi)
-  type(submesh_t), intent(in)  :: this
-  FLOAT,           intent(in)  :: sphi(:)
-  R_TYPE,          intent(out) :: phi(:)
+subroutine X(dsubmesh_add_to_mesh)(this, sphi, phi, factor)
+  type(submesh_t),  intent(in)  :: this
+  FLOAT,            intent(in)  :: sphi(:)
+  R_TYPE,           intent(out) :: phi(:)
+  R_TYPE, optional, intent(in)  :: factor
 
   integer :: is
 
-  forall(is = 1:this%ns) phi(this%jxyz(is)) = phi(this%jxyz(is)) + sphi(is)
+  if(present(factor)) then
+    forall(is = 1:this%ns) phi(this%jxyz(is)) = phi(this%jxyz(is)) + factor*sphi(is)
+  else
+    forall(is = 1:this%ns) phi(this%jxyz(is)) = phi(this%jxyz(is)) + sphi(is)
+  end if
 
 end subroutine X(dsubmesh_add_to_mesh)
 

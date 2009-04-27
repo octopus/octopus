@@ -680,7 +680,7 @@ contains
     integer,           intent(in) :: is
 
     integer :: i, l, m
-    FLOAT, parameter :: threshold = CNST(0.0001)
+    FLOAT, parameter :: threshold = CNST(0.001)
 
     call push_sub('species.species_get_iwf_radius')
 
