@@ -330,10 +330,11 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
   integer :: iatom, jatom, ik, ist, idim, ip
   integer :: nbasis, ibasis, jbasis, iorb, jorb
-  integer :: terms, cterms
   R_TYPE, allocatable :: hamiltonian(:, :), overlap(:, :)
   R_TYPE, allocatable :: psii(:, :), psij(:,:), hpsi(:, :)
   FLOAT, allocatable :: orbital(:), ev(:)
+  FLOAT :: radius
+  type(submesh_t) :: sphere
 
   nbasis = 0
   do iatom = 1, geo%natoms
@@ -354,9 +355,6 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
     hamiltonian = R_TOTYPE(M_ZERO)
     overlap = R_TOTYPE(M_ZERO)
 
-    terms = 0
-    cterms = 0
-
     ibasis = 0
     do iatom = 1, geo%natoms
       do iorb = 1, geo%atom(iatom)%spec%niwfs
@@ -373,16 +371,19 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
           do jorb = 1, geo%atom(jatom)%spec%niwfs
             jbasis = jbasis + 1
             
-            terms = terms + 1
+            radius = species_get_iwf_radius(geo%atom(jatom)%spec, jorb, is = 1)
 
-            call species_get_orbital(geo%atom(jatom)%spec, gr%mesh, jorb, st%d%dim, 1, geo%atom(jatom)%x, orbital)
-            forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) psij(ip, idim) = orbital(ip)
-            
+            call submesh_init_sphere(sphere, gr%mesh%sb, gr%mesh, geo%atom(jatom)%x, radius)
+            call species_get_orbital_submesh(geo%atom(jatom)%spec, sphere, jorb, st%d%dim, 1, geo%atom(jatom)%x, orbital)
+            do idim = 1,st%d%dim 
+              forall(ip = 1:gr%mesh%np) psij(ip, idim) = M_ZERO
+              call submesh_add_to_mesh(sphere, orbital, psij(:, idim))
+            end do
+            call submesh_end(sphere)
+
             hamiltonian(ibasis, jbasis) = X(mf_dotp)(gr%mesh, st%d%dim, hpsi, psij)
-
             overlap(ibasis, jbasis) = X(mf_dotp)(gr%mesh, st%d%dim, psii, psij)
-            cterms = cterms + 1
-            
+
           end do
         end do
         

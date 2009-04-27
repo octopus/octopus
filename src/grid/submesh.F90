@@ -42,6 +42,7 @@ module submesh_m
        submesh_get_inv,     &
        dsm_integrate,       &
        zsm_integrate,       &
+       submesh_add_to_mesh, &
        submesh_end
 
   type submesh_t
@@ -58,6 +59,10 @@ module submesh_m
   end type submesh_t
   
   integer :: tagcounter = 0
+
+  interface submesh_add_to_mesh
+    module procedure ddsubmesh_add_to_mesh, zdsubmesh_add_to_mesh
+  end interface
 
 contains
   

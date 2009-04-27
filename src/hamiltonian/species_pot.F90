@@ -49,12 +49,13 @@ module species_pot_m
   implicit none
 
   private
-  public ::                    &
-    guess_density,             &
-    species_pot_init,          &
-    species_pot_end,           &
-    species_get_density,       &
-    species_get_orbital,      &
+  public ::                      &
+    guess_density,               &
+    species_pot_init,            &
+    species_pot_end,             &
+    species_get_density,         &
+    species_get_orbital,         &
+    species_get_orbital_submesh, &
     species_get_local
 
   integer, parameter :: INITRHO_PARAMAGNETIC  = 1, &
@@ -705,8 +706,8 @@ contains
       
   end subroutine species_get_local
 
-  subroutine species_get_orbital(s, mesh, j, dim, is, pos, phi)
-    type(species_t),   intent(in)  :: s
+  subroutine species_get_orbital(spec, mesh, j, dim, is, pos, phi)
+    type(species_t),   intent(in)  :: spec
     type(mesh_t),      intent(in)  :: mesh
     integer,           intent(in)  :: j
     integer,           intent(in)  :: dim
@@ -718,11 +719,11 @@ contains
     FLOAT :: r2, x(1:MAX_DIM)
     FLOAT, allocatable :: xf(:, :), ylm(:)
 
-    i = s%iwf_i(j, is)
-    l = s%iwf_l(j, is)
-    m = s%iwf_m(j, is)
+    i = spec%iwf_i(j, is)
+    l = spec%iwf_l(j, is)
+    m = spec%iwf_m(j, is)
 
-    if(species_is_ps(s)) then
+    if(species_is_ps(spec)) then
 
       SAFE_ALLOCATE(xf(1:mesh%np, 1:MAX_DIM))
       SAFE_ALLOCATE(ylm(1:mesh%np))
@@ -733,7 +734,7 @@ contains
         xf(ip, 1:MAX_DIM) = x(1:MAX_DIM)
       end do
 
-      call spline_eval_vec(s%ps%ur_sq(i, is), mesh%np, phi)
+      call spline_eval_vec(spec%ps%ur_sq(i, is), mesh%np, phi)
       call loct_ylm(mesh%np, xf(1, 1), xf(1, 2), xf(1, 3), l, m, ylm(1))
 
       do ip = 1, mesh%np
@@ -749,18 +750,62 @@ contains
         r2 = sum(x(1:MAX_DIM)**2)
         select case(dim)
         case(1)
-          phi(ip) = exp(-s%omega*r2/M_TWO)*hermite(i - 1, x(1)*sqrt(s%omega))
+          phi(ip) = exp(-spec%omega*r2/M_TWO)*hermite(i - 1, x(1)*sqrt(spec%omega))
         case(2)
-          phi(ip) = exp(-s%omega*r2/M_TWO)*hermite(i - 1, x(1)*sqrt(s%omega))*hermite(l - 1, x(2)*sqrt(s%omega))
+          phi(ip) = exp(-spec%omega*r2/M_TWO)*hermite(i - 1, x(1)*sqrt(spec%omega))*hermite(l - 1, x(2)*sqrt(spec%omega))
         case(3)
-          phi(ip) = exp(-s%omega*r2/M_TWO)*&
-               hermite(i - 1, x(1)*sqrt(s%omega))*hermite(l - 1, x(2)*sqrt(s%omega))*hermite(m - 1, x(3)*sqrt(s%omega))
+          phi(ip) = exp(-spec%omega*r2/M_TWO)*&
+               hermite(i - 1, x(1)*sqrt(spec%omega))*hermite(l - 1, x(2)*sqrt(spec%omega))*hermite(m - 1, x(3)*sqrt(spec%omega))
         end select
       end do
     end if
 
   end subroutine species_get_orbital
-  
+
+  subroutine species_get_orbital_submesh(spec, submesh, j, dim, is, pos, phi)
+    type(species_t),   intent(in)  :: spec
+    type(submesh_t),   intent(in)  :: submesh
+    integer,           intent(in)  :: j
+    integer,           intent(in)  :: dim
+    integer,           intent(in)  :: is
+    FLOAT,             intent(in)  :: pos(:)
+    FLOAT,             intent(out) :: phi(:)
+
+    integer :: i, l, m, ip
+    FLOAT :: r2, x(1:MAX_DIM)
+    FLOAT, allocatable :: xf(:, :), ylm(:)
+
+    i = spec%iwf_i(j, is)
+    l = spec%iwf_l(j, is)
+    m = spec%iwf_m(j, is)
+
+    if(species_is_ps(spec)) then
+
+      SAFE_ALLOCATE(xf(1:submesh%ns, 1:MAX_DIM))
+      SAFE_ALLOCATE(ylm(1:submesh%ns))
+
+      do ip = 1, submesh%ns
+        x(1:MAX_DIM) = submesh%mesh%x(submesh%jxyz(ip), 1:MAX_DIM) - pos(1:MAX_DIM)
+        phi(ip) = sum(x(1:MAX_DIM)**2)
+        xf(ip, 1:MAX_DIM) = x(1:MAX_DIM)
+      end do
+
+      call spline_eval_vec(spec%ps%ur_sq(i, is), submesh%ns, phi)
+      call loct_ylm(submesh%ns, xf(1, 1), xf(1, 2), xf(1, 3), l, m, ylm(1))
+
+      do ip = 1, submesh%ns
+        phi(ip) = phi(ip)*ylm(ip)
+      end do
+
+      SAFE_DEALLOCATE_A(xf)
+      SAFE_DEALLOCATE_A(ylm)
+    else
+      message(1) = "Error: not implemented."
+      call write_fatal(1)
+    end if
+
+  end subroutine species_get_orbital_submesh
+
 end module species_pot_m
 
 !! Local Variables:
