@@ -334,10 +334,11 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   R_TYPE, allocatable :: psii(:, :), hpsi(:, :)
   FLOAT, allocatable :: ev(:)
   FLOAT, pointer :: orb(:, :)
-  FLOAT :: radius
+  FLOAT, allocatable :: radius(:)
   type(submesh_t), allocatable :: sphere(:)
   integer, allocatable :: basis_index(:, :)
   type(batch_t) :: orbitals
+  FLOAT :: dist2, lapdist
 
   maxorb = 0
   nbasis = 0
@@ -352,9 +353,12 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   
   SAFE_ALLOCATE(psii(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim))
-
+  SAFE_ALLOCATE(radius(1:nbasis))
   SAFE_ALLOCATE(sphere(1:nbasis))
   SAFE_ALLOCATE(basis_index(1:geo%natoms, 1:maxorb))
+
+  ! this is the extra distance that the laplacian adds to the localization radius
+  lapdist = maxval(abs(gr%mesh%idx%enlarge)*gr%mesh%h)
 
   call batch_init(orbitals, 1, nbasis)
 
@@ -365,8 +369,8 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
       basis_index(iatom, iorb) = ibasis
 
       ! initialize the radial grid
-      radius = species_get_iwf_radius(geo%atom(iatom)%spec, iorb, is = 1)
-      call submesh_init_sphere(sphere(ibasis), gr%mesh%sb, gr%mesh, geo%atom(iatom)%x, radius)
+      radius(ibasis) = species_get_iwf_radius(geo%atom(iatom)%spec, iorb, is = 1)
+      call submesh_init_sphere(sphere(ibasis), gr%mesh%sb, gr%mesh, geo%atom(iatom)%x, radius(ibasis))
 
       ! allocate and calculate the orbitals
       SAFE_ALLOCATE(orb(1:sphere(ibasis)%ns, 1:1))
@@ -398,9 +402,15 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
           do jorb = 1, geo%atom(jatom)%spec%niwfs
             jbasis = basis_index(jatom, jorb)
             
+            dist2 = sum((geo%atom(iatom)%x(1:MAX_DIM) - geo%atom(jatom)%x(1:MAX_DIM))**2)
+
+            if(dist2 > (radius(ibasis) + radius(jbasis) + lapdist)**2) cycle
+
             hamiltonian(jbasis, ibasis) = submesh_to_mesh_dotp(sphere(jbasis), st%d%dim, orbitals%states(jbasis)%dpsi(:, 1), hpsi)
             hamiltonian(ibasis, jbasis) = R_CONJ(hamiltonian(jbasis, ibasis))
 
+            if(dist2 > (radius(ibasis) + radius(jbasis))**2) cycle
+            
             overlap(jbasis, ibasis) = submesh_to_mesh_dotp(sphere(jbasis), st%d%dim, orbitals%states(jbasis)%dpsi(:, 1), psii)
             overlap(ibasis, jbasis) = R_CONJ(overlap(jbasis, ibasis))
 
@@ -425,7 +435,8 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
         do ist = st%st_start, st%st_end
           do idim = 1, st%d%dim
-            call submesh_add_to_mesh(sphere(ibasis), orbitals%states(ibasis)%dpsi(:, 1), st%X(psi)(:, idim, ist, ik), factor = hamiltonian(ibasis, ist))
+            call submesh_add_to_mesh(sphere(ibasis), orbitals%states(ibasis)%dpsi(:, 1), &
+                 st%X(psi)(:, idim, ist, ik), factor = hamiltonian(ibasis, ist))
           end do
         end do
         
@@ -447,6 +458,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   SAFE_DEALLOCATE_A(ev)
   SAFE_DEALLOCATE_A(basis_index)
   SAFE_DEALLOCATE_A(sphere)
+  SAFE_DEALLOCATE_A(radius)
 
 end subroutine X(lcao_wf2)
 
