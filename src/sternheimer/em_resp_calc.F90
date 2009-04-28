@@ -23,6 +23,7 @@ module em_resp_calc_m
   use datasets_m
   use derivatives_m
   use elf_m
+  use geometry_m
   use grid_m
   use global_m
   use hamiltonian_m

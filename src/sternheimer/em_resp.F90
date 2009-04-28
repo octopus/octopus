@@ -297,7 +297,7 @@ contains
               call zsternheimer_set_rhs(sh, kdotp_lr(idir, 1)%zdl_psi)
             end if
 
-            ! if the frequency is zero, we don't need to calculate both responses
+            ! if the frequency is zero, we do not need to calculate both responses
             if(abs(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)) <  M_EPSILON .and. em_vars%nsigma == 2) then
 
               if (states_are_complex(sys%st)) then
@@ -421,7 +421,7 @@ contains
 
       call em_resp_output(sys%st, sys%gr, hm, sys%geo, sys%outp, em_vars, iomega)
 
-    end do
+    end do ! iomega
 
     do idir = 1, ndim
       do sigma = 1, em_vars%nsigma

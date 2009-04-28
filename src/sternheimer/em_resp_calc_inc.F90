@@ -535,6 +535,59 @@ contains
 
 end subroutine X(lr_calc_beta)
 
+! ---------------------------------------------------------
+subroutine X(lr_calc_2np1) (sh, hm, st, geo, gr, lr1, lr2, lr3, pert1, pert2, pert3, val)
+  type(sternheimer_t),     intent(inout) :: sh
+  type(hamiltonian_t),     intent(inout) :: hm
+  type(states_t),          intent(in)    :: st
+  type(geometry_t),        intent(in)    :: geo
+  type(grid_t),            intent(inout) :: gr
+  type(lr_t),              intent(in)    :: lr1
+  type(lr_t),              intent(in)    :: lr2
+  type(lr_t),              intent(in)    :: lr3
+  type(pert_t),            intent(in)    :: pert1
+  type(pert_t),            intent(in)    :: pert2
+  type(pert_t),            intent(in)    :: pert3
+  R_TYPE,                  intent(out)   :: val
+
+  integer :: ik, ist, jst, idim
+  R_TYPE :: term
+  R_TYPE, allocatable :: tmp(:, :), me23(:, :)
+
+  SAFE_ALLOCATE(tmp(1:gr%mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE(me23(1:st%nst, 1:st%nst))
+
+  val = R_TOTYPE(M_ZERO)
+  idim = 1
+
+  do ik = st%d%kpt%start, st%d%kpt%end
+
+    !precalculate these matrix elements (it could be done in a better way)
+    do ist = 1, st%nst
+      do jst = 1, st%nst
+        me23(ist, jst) = X(mf_dotp)(gr%mesh, st%d%dim, lr2%X(dl_psi)(:, :, ist, ik), lr3%X(dl_psi)(:, :, jst, ik))
+      end do
+    end do
+
+    do ist = 1, st%nst
+      
+      call X(pert_apply)(pert2, gr, geo, hm, ik, lr3%X(dl_psi)(:, idim, ist, ik), tmp(:, idim))
+      term = X(mf_dotp)(gr%mesh, st%d%dim, lr1%X(dl_psi)(:, :, ist, ik), tmp)
+      
+      do jst = 1, st%nst
+        call X(pert_apply)(pert1, gr, geo, hm, ik, st%X(psi)(:, idim, jst, ik), tmp(:, idim))
+        term = term - X(mf_dotp)(gr%mesh, st%d%dim, st%X(psi)(:, :, jst, ik), tmp)*me23(jst, ist)
+      end do
+
+      val = val + st%d%kweights(ik)*st%smear%el_per_state*term
+      
+    end do
+  end do
+  
+  SAFE_DEALLOCATE_A(tmp)
+
+end subroutine X(lr_calc_2np1)
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8
