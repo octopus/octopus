@@ -184,9 +184,9 @@ contains
       !%Default 4
       !%Section Time Dependent::Propagation
       !%Description
-      !% For <tt>TDExponentialMethod</tt> equal <tt>standard</tt> or <tt>chebyshev</tt>, the order to which
-      !% the exponential is expanded. For the Lanczos approximation, it is the maximum
-      !% Lanczos-subspace dimension.
+      !% For <tt>TDExponentialMethod</tt> equal <tt>standard</tt> or <tt>chebyshev</tt>, 
+      !% the order to which the exponential is expanded. For the Lanczos approximation, 
+      !% it is the Lanczos-subspace dimension.
       !%End
       call loct_parse_int(datasets_check('TDExpOrder'), 4, te%exp_order)
       if (te%exp_order < 2) call input_error('TDExpOrder')
@@ -219,6 +219,22 @@ contains
   end subroutine exponential_copy
 
   ! ---------------------------------------------------------
+  ! This routine performs the operation:
+  !
+  ! exp{-i*deltat*hm(t)}|zpsi>  <-- |zpsi>
+  !
+  ! If imag_time is present and is set to true, it performa instead:
+  !
+  ! exp{ deltat*hm(t)}|zpsi>  <-- |zpsi>
+  !
+  ! If the hamiltonian contains an inhomogeneous term, the operation is:
+  !
+  ! exp{-i*deltat*hm(t)}|zpsi> + deltat*phi{-i*deltat*hm(t)}|zpsi>  <-- |zpsi>
+  !
+  ! where:
+  !
+  ! phi(x) = (e^x - 1)/x
+  ! ---------------------------------------------------------
   subroutine exponential_apply(te, gr, hm, zpsi, ist, ik, deltat, t, order, vmagnus, imag_time)
     type(exponential_t), intent(inout) :: te
     type(grid_t),        intent(inout) :: gr
@@ -227,8 +243,7 @@ contains
     integer,             intent(in)    :: ik
     CMPLX,               intent(inout) :: zpsi(:, :)
     FLOAT,               intent(in)    :: deltat, t
-    integer, optional,   intent(out)   :: order ! For the methods that rely on Hamiltonian-vector
-                                                ! multiplication, the number of these.
+    integer, optional,   intent(inout) :: order
     FLOAT,   optional,   intent(in)    :: vmagnus(gr%mesh%np, hm%d%nspin, 2)
     logical, optional,   intent(in)    :: imag_time
 
@@ -238,6 +253,13 @@ contains
 
     call push_sub('exponential.exponential_td')
     call profiling_in(exp_prof, "EXPONENTIAL")
+
+    ! The only method that is currently taking care of the presence of an inhomogeneous
+    ! term is the Lanczos expansion.
+    ! However, I disconnect this check, because this routine is sometimes called in an
+    ! auxiliary way, in order to compute (1-hm(t)*deltat)|zpsi>.
+    ! This should be cleaned up.
+    !_ASSERT(.not.(hamiltonian_inh_term(hm) .and. (te%exp_method .ne. LANCZOS_EXPANSION)))
 
     apply_magnus = .false.
     if(present(vmagnus)) apply_magnus = .true.
@@ -251,9 +273,12 @@ contains
           case(TAYLOR, LANCZOS_EXPANSION)
             timestep = M_zI * deltat
           case default
-            write(message(1), '(a)') 'Imaginary time evolution can only be performed with the Lanczos'
-            write(message(2), '(a)') 'exponentiation scheme ("TDExponentialMethod = lanczos") or with the'
-            write(message(3), '(a)') 'Taylor expansion ("TDExponentialMethod = taylor") method.'
+            write(message(1), '(a)') &
+              'Imaginary time evolution can only be performed with the Lanczos'
+            write(message(2), '(a)') &
+              'exponentiation scheme ("TDExponentialMethod = lanczos") or with the'
+            write(message(3), '(a)') &
+              'Taylor expansion ("TDExponentialMethod = taylor") method.'
             call write_fatal(3)
         end select
       end if
@@ -343,7 +368,8 @@ contains
 
     ! ---------------------------------------------------------
     subroutine cheby()
-      ! Calculates the exponential of the hamiltonian through a expansion in Chebyshev polynomials.
+      ! Calculates the exponential of the hamiltonian through a expansion in 
+      ! Chebyshev polynomials.
       ! For that purposes it uses the closed form of the coefficients[1] and Clenshaw-Gordons[2]
       ! recursive algorithm.
       ! [1] H. Tal-Ezer and R. Kosloff, J. Chem. Phys 81, 3967 (1984).
@@ -374,7 +400,8 @@ contains
         zfact = 2*(-M_zI)**j*loct_bessel(j, hm%spectral_half_span*deltat)
 
         do idim = 1, hm%d%dim
-          call lalg_axpy(gr%mesh%np, -hm%spectral_middle_point, zpsi1(:, idim, 1), zpsi1(:, idim, 0))
+          call lalg_axpy(gr%mesh%np, -hm%spectral_middle_point, zpsi1(:, idim, 1), &
+            zpsi1(:, idim, 0))
           call lalg_scal(gr%mesh%np, M_TWO/hm%spectral_half_span, zpsi1(:, idim, 0))
           call lalg_axpy(gr%mesh%np, zfact, zpsi(:, idim), zpsi1(:, idim, 0))
           call lalg_axpy(gr%mesh%np, -M_ONE, zpsi1(:, idim, 2),  zpsi1(:, idim, 0))
@@ -395,79 +422,140 @@ contains
     ! ---------------------------------------------------------
     subroutine lanczos
       integer ::  korder, n, l, idim
-      CMPLX, allocatable :: hamilt(:,:), v(:,:,:), expo(:,:), tmp(:, :)
+      CMPLX, allocatable :: hamilt(:,:), v(:,:,:), expo(:,:), tmp(:, :), psi(:, :)
       FLOAT :: beta, res, tol !, nrm
       CMPLX :: pp
 
       call push_sub('exponential.lanczos')
 
-      tol    = te%lanczos_tol
 
       SAFE_ALLOCATE(     v(1:gr%mesh%np, 1:hm%d%dim, 1:te%exp_order+1))
       SAFE_ALLOCATE(   tmp(1:gr%mesh%np, 1:hm%d%dim))
       SAFE_ALLOCATE(hamilt(1:te%exp_order+1, 1:te%exp_order+1))
       SAFE_ALLOCATE(  expo(1:te%exp_order+1, 1:te%exp_order+1))
+      SAFE_ALLOCATE(   psi(1:gr%mesh%np_part, 1:hm%d%dim))
 
-      hamilt = M_z0
-      expo = M_z0
-
+      tol    = te%lanczos_tol
       pp = deltat
       if(.not. present(imag_time)) pp = -M_zI*pp
 
-      ! Normalize input vector, and put it into v(:, :, 1)
       beta = zmf_nrm2(gr%mesh, hm%d%dim, zpsi)
-      v(1:gr%mesh%np, 1:hm%d%dim, 1) = zpsi(1:gr%mesh%np, 1:hm%d%dim)/beta
+      ! If we have a null vector, no need to compute the action of the exponential.
+      if(beta > CNST(1.0e-12)) then
 
-      ! This is the Lanczos loop...
-      do n = 1, te%exp_order
+        hamilt = M_z0
+        expo = M_z0
 
-        !copy v(:, :, n) to an array of size 1:gr%mesh%np_part
-        do idim = 1, hm%d%dim
-          call lalg_copy(gr%mesh%np, v(:, idim, n), zpsi(:, idim))
+        ! Normalize input vector, and put it into v(:, :, 1)
+        v(1:gr%mesh%np, 1:hm%d%dim, 1) = zpsi(1:gr%mesh%np, 1:hm%d%dim)/beta
+
+        ! This is the Lanczos loop...
+        do n = 1, te%exp_order
+
+          !copy v(:, :, n) to an array of size 1:gr%mesh%np_part
+          do idim = 1, hm%d%dim
+            call lalg_copy(gr%mesh%np, v(:, idim, n), zpsi(:, idim))
+          end do
+
+          !to apply the hamiltonian
+          call operate(zpsi, v(:, :, n + 1))
+        
+          korder = n
+
+          if(hamiltonian_hermitean(hm)) then
+            l = max(1, n - 1)
+          else
+            l = 1
+          end if
+
+          !orthogonalize against previous vectors
+          call zstates_gram_schmidt(gr%mesh, n - l + 1, hm%d%dim, v(:, :, l:n), v(:, :, n + 1), &
+            normalize = .true., overlap = hamilt(l:n, n), norm = hamilt(n + 1, n))
+  
+          call zlalg_exp(n, pp, hamilt, expo, hamiltonian_hermitean(hm))
+
+          res = abs(hamilt(n+1, n)*abs(expo(n, 1)))
+
+          if(abs(hamilt(n+1, n)) < CNST(1.0e4)*M_EPSILON) exit ! "Happy breakdown"
+          if(n > 2 .and. res < tol) exit
         end do
 
-        !to apply the hamiltonian
-        call operate(zpsi, v(:, :, n + 1))
-        
-        korder = n
-
-        if(hamiltonian_hermitean(hm)) then
-          l = max(1, n - 1)
-        else
-          l = 1
+        if(res > tol) then ! Here one should consider the possibility of the happy breakdown.
+          write(message(1),'(a,es8.2)') 'Lanczos exponential expansion did not converge: ', res
+          call write_warning(1)
         end if
 
-        !orthogonalize against previous vectors
-        call zstates_gram_schmidt(gr%mesh, n - l + 1, hm%d%dim, v(:, :, l:n), v(:, :, n + 1), &
-          normalize = .true., overlap = hamilt(l:n, n), norm = hamilt(n + 1, n))
+        ! zpsi = nrm * V * expo(1:korder, 1) = nrm * V * expo * V^(T) * zpsi
+        call lalg_gemv(gr%mesh%np, hm%d%dim, korder, M_z1*beta, v, expo(1:korder, 1), M_z0, tmp)
 
-        call zlalg_exp(n, pp, hamilt, expo, hamiltonian_hermitean(hm))
+        do idim = 1, hm%d%dim
+          call lalg_copy(gr%mesh%np, tmp(:, idim), zpsi(:, idim))
+        end do
 
-        res = abs(hamilt(n+1, n)*abs(expo(n, 1)))
-
-        if(abs(hamilt(n+1, n)) < CNST(1.0e4)*M_EPSILON) exit ! (very unlikely) happy breakdown!!! Yuppi!!!
-        if(n > 2 .and. res < tol) exit
-      end do
-
-      if(res > tol) then ! Here one should consider the possibility of the happy breakdown.
-        write(message(1),'(a,es8.2)') 'Lanczos exponential expansion did not converge: ', res
-        call write_warning(1)
       end if
 
-      ! zpsi = nrm * V * expo(1:korder, 1) = nrm * V * expo * V^(T) * zpsi
-      call lalg_gemv(gr%mesh%np, hm%d%dim, korder, M_z1*beta, v, expo(1:korder, 1), M_z0, tmp)
+      ! We have an inhomogeneous term.
+      if( hamiltonian_inh_term(hm) ) then
 
-      do idim = 1, hm%d%dim
-        call lalg_copy(gr%mesh%np, tmp(:, idim), zpsi(:, idim))
-      end do
+        hamilt = M_z0
+        expo = M_z0
 
-      if(present(order)) order = korder
+        beta = zmf_nrm2(gr%mesh, hm%d%dim, hm%inh_st%zpsi(:, :, ist, ik))
+        v(1:gr%mesh%np, 1:hm%d%dim, 1) = &
+          hm%inh_st%zpsi(1:gr%mesh%np_part, 1:hm%d%dim, ist, ik)/beta
 
+        psi = M_z0
+        ! This is the Lanczos loop...
+        do n = 1, te%exp_order
+          !copy v(:, :, n) to an array of size 1:gr%mesh%np_part
+          do idim = 1, hm%d%dim
+            call lalg_copy(gr%mesh%np, v(:, idim, n), psi(:, idim))
+          end do
+
+          !to apply the hamiltonian
+          call operate(psi, v(:, :, n + 1))
+
+          korder = n
+
+          if(hamiltonian_hermitean(hm)) then
+            l = max(1, n - 1)
+          else
+            l = 1
+          end if
+
+          !orthogonalize against previous vectors
+          call zstates_gram_schmidt(gr%mesh, n - l + 1, hm%d%dim, v(:, :, l:n), v(:, :, n + 1), &
+            normalize = .true., overlap = hamilt(l:n, n), norm = hamilt(n + 1, n))
+
+          call zlalg_phi(n, pp, hamilt, expo, hamiltonian_hermitean(hm))
+ 
+          res = abs(hamilt(n+1, n)*abs(expo(n, 1)))
+
+          if(abs(hamilt(n+1, n)) < CNST(1.0e4)*M_EPSILON) exit ! "Happy breakdown"
+          if(n > 2 .and. res < tol) exit
+        end do
+
+        if(res > tol) then ! Here one should consider the possibility of the happy breakdown.
+          write(message(1),'(a,es8.2)') 'Lanczos exponential expansion did not converge: ', res
+          call write_warning(1)
+        end if
+
+        call lalg_gemv(gr%mesh%np, hm%d%dim, korder, M_z1*beta, v, expo(1:korder, 1), M_z0, tmp)
+
+        do idim = 1, hm%d%dim
+          call lalg_copy(gr%mesh%np, tmp(:, idim), psi(:, idim))
+        end do
+
+        zpsi = zpsi + deltat * psi
+      end if
+
+
+      if(present(order)) order = te%exp_order
       SAFE_DEALLOCATE_A(v)
       SAFE_DEALLOCATE_A(hamilt)
       SAFE_DEALLOCATE_A(expo)
       SAFE_DEALLOCATE_A(tmp)
-
+      SAFE_DEALLOCATE_A(psi)
       call pop_sub()
     end subroutine lanczos
     ! ---------------------------------------------------------
@@ -586,7 +674,8 @@ contains
         do ii = 1, psib%nst
           if(zfact_is_real) then
             do idim = 1, hm%d%dim
-              call lalg_axpy(gr%mesh%np, real(zfact), hpsi1(:, idim, ii), psib%states(ii)%zpsi(:, idim))
+              call lalg_axpy(gr%mesh%np, real(zfact), hpsi1(:, idim, ii), &
+                psib%states(ii)%zpsi(:, idim))
             end do
           else
             do idim = 1, hm%d%dim

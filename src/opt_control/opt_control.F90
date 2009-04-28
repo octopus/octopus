@@ -46,6 +46,7 @@ module opt_control_m
   use string_m
   use system_m
   use td_m
+  use exponential_m
   use td_rti_m
   use td_write_m
   use units_m

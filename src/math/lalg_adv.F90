@@ -42,7 +42,8 @@ module lalg_adv_m
     lalg_invert_lower_triangular, &
     lalg_lowest_geneigensolve,    &
     lalg_lowest_eigensolve,       &
-    zlalg_exp
+    zlalg_exp,                    &
+    zlalg_phi
 
   interface lalg_cholesky
     module procedure dcholesky, zcholesky
@@ -120,7 +121,6 @@ contains
   ! does not affect performance.
   !
   !---------------------------------------------
-
   subroutine zlalg_exp(nn, pp, aa, ex, hermitian)
     integer,           intent(in)      :: nn
     CMPLX,             intent(in)      :: pp
@@ -175,6 +175,78 @@ contains
     end if
 
   end subroutine zlalg_exp
+
+
+  !-------------------------------------------------
+  !
+  ! This routine calculates phi(pp*A), where A is a matrix,
+  ! pp is any complex number, and phi is the function:
+  ! 
+  ! phi(x) = (e^x - 1)/x
+  !
+  ! For the hermitian case, for any function f:
+  !
+  !   A = V D V^T => f(A) = V f(D) V^T
+  !
+  ! and in general
+  !
+  !   A = V D V^-1 => f(A) = V f(D) V^-1
+  !
+  !---------------------------------------------
+  subroutine zlalg_phi(nn, pp, aa, ex, hermitian)
+    integer,           intent(in)      :: nn
+    CMPLX,             intent(in)      :: pp
+    CMPLX,             intent(in)      :: aa(:, :)
+    CMPLX,             intent(inout)   :: ex(:, :)
+    logical,           intent(in)      :: hermitian
+
+    CMPLX, allocatable :: evectors(:, :), zevalues(:)
+    FLOAT, allocatable :: evalues(:)
+    CMPLX :: deter
+    
+    integer :: ii
+
+    SAFE_ALLOCATE(evectors(1:nn, 1:nn))
+
+    if(hermitian) then
+      SAFE_ALLOCATE(evalues(1:nn))
+      SAFE_ALLOCATE(zevalues(1:nn))
+
+      call lalg_eigensolve(nn, aa(1:nn, 1:nn), evectors, evalues)
+
+      forall(ii = 1:nn) zevalues(ii) = (exp(pp*evalues(ii)) - M_z1) / (pp*evalues(ii))
+
+      do ii = 1, nn
+        ex(1:nn, ii) = zevalues(1:nn)*conjg(evectors(ii, 1:nn))
+      end do
+
+      ex(1:nn, 1:nn) = matmul(evectors(1:nn, 1:nn), ex(1:nn, 1:nn))
+
+      SAFE_DEALLOCATE_A(evalues)
+      SAFE_DEALLOCATE_A(zevalues)
+    else
+      SAFE_ALLOCATE(zevalues(1:nn))
+
+      evectors(1:nn, 1:nn) = aa(1:nn, 1:nn)
+
+      call lalg_eigensolve_nonh(nn, evectors, zevalues)
+      
+      forall(ii = 1:nn) zevalues(ii) = (exp(pp*zevalues(ii)) - M_z1) / (pp*zevalues(ii))
+
+      ex(1:nn, 1:nn) = evectors(1:nn, 1:nn)
+
+      deter = lalg_inverter(nn, evectors)
+      
+      do ii = 1, nn
+        evectors(1:nn, ii) = zevalues(1:nn)*evectors(1:nn, ii)
+      end do
+      
+      ex(1:nn, 1:nn) = matmul(ex(1:nn, 1:nn), evectors(1:nn, 1:nn))
+
+      SAFE_DEALLOCATE_A(zevalues)
+    end if
+
+  end subroutine zlalg_phi
 
 #ifdef HAVE_LAPACK
 #include "lalg_adv_lapack.F90"

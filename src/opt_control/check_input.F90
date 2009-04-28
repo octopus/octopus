@@ -109,11 +109,21 @@
     end if
 
     if(target_type(target) .eq. oct_tg_td_local) then
-      if(tr%method .ne. PROP_CRANK_NICHOLSON) then
+      select case(tr%method)
+      case(PROP_CRANK_NICHOLSON)
+      case(PROP_EXPONENTIAL_MIDPOINT)
+        if(tr%te%exp_method .ne. LANCZOS_EXPANSION) then
+          write(message(1), '(a)') 'If "OCTTargetMode = oct_tg_td_local", and you set'
+          write(message(2), '(a)') '"TDEvolutionMethod = exp_mid", then you must set'
+          write(message(3), '(a)') '"TDExponentialMethod = lanczos".'
+          call write_fatal(3)
+        end if
+      case default
         write(message(1), '(a)') 'If OCTTargetMode = oct_tg_td_local, then you must set'
-        write(message(2), '(a)') 'TDEvolutionMethod = crank_nicholson'
-        call write_fatal(2)
-      end if
+        write(message(2), '(a)') '"TDEvolutionMethod = crank_nicholson", or'
+        write(message(3), '(a)') '"TDEvolutionMethod = exp_mid".'
+        call write_fatal(3)
+      end select
     end if
 
     if(target_type(target) .eq. oct_tg_excited) then
