@@ -456,6 +456,8 @@ contains
     read(iunit, '(a20,7i8)')  str, mesh%idx%nr(1, 1:mesh%sb%dim)
     read(iunit, '(a20,7i8)')  str, mesh%idx%nr(2, 1:mesh%sb%dim)
     read(iunit, '(a20,7i8)')  str, mesh%idx%ll(1:mesh%sb%dim)
+    ! ll should not be read but computed:
+    mesh%idx%ll(:) = mesh%idx%nr(2, :) - mesh%idx%nr(1, :) + 1
     read(iunit, '(a20,7i8)')  str, mesh%idx%enlarge(1:mesh%sb%dim)
     read(iunit, '(a20,1i10)') str, mesh%np
     read(iunit, '(a20,1i10)') str, mesh%np_part
