@@ -233,7 +233,7 @@ contains
       write(message(1), '(a)') "Some of the atoms seem to sit too close to each other."
       write(message(2), '(a)') "Please review your input files and the output geometry."
       ! then write out the geometry, whether asked for or not in Output variable
-      ! this may seg-fault if gr%sb%dim < 3 = MAX_DIM
+      ! FIXME: this may seg-fault if gr%sb%dim < 3 = MAX_DIM
       call atom_write_xyz(STATIC_DIR, "geometry", geo, MAX_DIM)
       call write_fatal(2)
     end if

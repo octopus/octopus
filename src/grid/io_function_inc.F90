@@ -403,6 +403,7 @@ subroutine X(output_function_global) (how, dir, fname, mesh, sb, f, u, ierr, is_
   call io_mkdir(dir)
 
 ! Define the format; check if code is single precision or double precision
+!  FIXME: this may need to be expanded for MAX_DIM > 3
 #if defined(SINGLE_PRECISION)
     mformat    = '(4es15.6E3)'
     mformat2   = '(i6,5es15.6E3)'
@@ -509,8 +510,9 @@ contains
   subroutine out_plane(d1, d2, d3)
     integer, intent(in) :: d1, d2, d3
 
-    integer :: ix, iy, iz, i
+    integer :: ix, iy, iz, i, jdim
     integer :: ixvect(MAX_DIM)
+    integer :: ixvect_test(MAX_DIM)
     FLOAT   :: xx(1:MAX_DIM)
 
     filename = trim(dir)//'/'//trim(fname)//"."//index2axis(d1)//"=0"
@@ -519,34 +521,34 @@ contains
     write(iunit, mfmtheader, iostat=ierr) '#', index2axis(d2), index2axis(d3), 'Re', 'Im'
     write(iunit, mformat)
 
-    do ix = mesh%idx%nr(1, d1), mesh%idx%nr(2, d1)
-! NOTE: MJV: how could this return anything but ix=0?
-!      select case(d1)
-!      case(1); i = mesh%idx%Lxyz_inv(ix, 1, 1)
-!      case(2); i = mesh%idx%Lxyz_inv(1, ix, 1)
-!      case(3); i = mesh%idx%Lxyz_inv(1, 1, ix)
-!      end select
-!      if(mesh%idx%Lxyz(i, d1) == 0) exit
-      ixvect=1
-      ixvect(d1) = ix
-      i = index_from_coords(mesh%idx, mesh%sb%dim, ixvect)
-      call index_to_coords(mesh%idx, mesh%sb%dim, i, ixvect)
-      if(ixvect(d1) == 0) exit
-    end do
+! here we find the indices for coordinate 0 along all directions apart from d2
+! and d3, to get a plane. Do the same as for ix, but with all the other
+! dimensions.
+
+    ixvect=1
+    do jdim=1,mesh%sb%dim
+      if (jdim==d2 .or. jdim==d3) cycle
+
+      do ix = mesh%idx%nr(1, jdim), mesh%idx%nr(2, jdim)
+! NOTE: MJV: how could this return anything but ix=0? Answ: if there is a shift in origin
+        ixvect_test=1
+        ixvect_test(jdim) = ix
+        i = index_from_coords(mesh%idx, mesh%sb%dim, ixvect_test)
+        call index_to_coords(mesh%idx, mesh%sb%dim, i, ixvect_test)
+        if(ixvect_test(jdim) == 0) exit
+      end do
+      ixvect(jdim) = ix
+    end do ! loop over dimensions
+
+    ! have found ix such that coordinate d1 is 0 for this value of ix
+    ! ixvect is prepared for all dimensions apart from d2 and d3
+    
     do iy = mesh%idx%nr(1, d2), mesh%idx%nr(2, d2)
       write(iunit, *)
       do iz= mesh%idx%nr(1, d3), mesh%idx%nr(2, d3)
-!        select case(d1)
-!        case(1); i = mesh%idx%Lxyz_inv(ix, iy, iz)
-!        case(2); i = mesh%idx%Lxyz_inv(iy, ix, iz)
-!        case(3); i = mesh%idx%Lxyz_inv(iy, iz, ix)
-!        end select
-        ixvect=1
-        select case(d1)
-          case(1); ixvect(1:3) = (/ix, iy, iz/)
-          case(2); ixvect(1:3) = (/iy, ix, iz/)
-          case(3); ixvect(1:3) = (/iy, iz, ix/)
-        end select
+
+        ixvect(d2) = iy
+        ixvect(d3) = iz
         i = index_from_coords(mesh%idx, mesh%sb%dim, ixvect)
 
         if(i<=mesh%np_global .and. i> 0) then

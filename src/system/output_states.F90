@@ -154,6 +154,10 @@
 
     if(iand(outp%what, output_density_matrix).ne.0) then
       call density_matrix_write(trim(dir), gr, st)
+
+      ! FIXME: this needs to be output elsewhere, and needs its own flag
+      ! eventually
+      call modelmb_find_exchange_syms_all(trim(dir), gr, st, geo)
     end if
 
     call pop_sub()

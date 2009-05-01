@@ -931,8 +931,6 @@ subroutine X(mf_calculate_gamma)(ikeeppart, nparticles_densmat, ndim1part, hyper
 
   call push_sub('mesh_function_inc.Xmf_calculate_gamma')
 
-  write (*,*) ' enlarge_1part, npt_1part ', enlarge_1part, npt_1part
-
   ! In case of running parallel in domains, we need to operate psi_global, which 
   ! contains the full wave function after "gathering" all the domains.
   SAFE_ALLOCATE(psi_global(1:mesh%np_part_global))
@@ -966,7 +964,7 @@ subroutine X(mf_calculate_gamma)(ikeeppart, nparticles_densmat, ndim1part, hyper
      ix_1part = ix((ikeeppart - 1)*ndim1part + 1:ikeeppart*ndim1part)
      call hypercube_x_to_i(hypercube_1part, ndim1part, nr_1part, enlarge_1part, &
               ix_1part, icoord)
-	      
+      
 ! run over all possible position indices of particle prime
      ixp = ix
      xprimeloop: do icoordp = 1, npt_1part

@@ -97,7 +97,7 @@ contains
     character(len=*),    intent(in)    :: what
     type(xyz_file_info), intent(inout) :: gf
 
-    integer :: i, j, iunit
+    integer :: i, j, iunit, jdim
     type(block_t) :: blk
     character(len=80) :: str
 
@@ -124,6 +124,7 @@ contains
 
       SAFE_ALLOCATE(gf%atom(1:gf%n))
 
+      ! FIXME: this will only work if MAX_DIM = number of columns in file!
       do i = 1, gf%n
         read(iunit,*) gf%atom(i)%label, gf%atom(i)%x(:)
       end do
@@ -138,17 +139,20 @@ contains
 
       SAFE_ALLOCATE(gf%atom(1:gf%n))
 
+      ! FIXME : this needs to be generalized to MAX_DIM dimensions
       do i = 1, gf%n
         j = loct_parse_block_cols(blk, i-1)
-        if((j.ne.4).and.(j.ne.5)) then
+        !if((j.lt.gr%sb%dim+1).or.(j.gt.gr%sb%dim+2)) then
+        if((j.lt.4).or.(j.gt.5)) then
           write(message(1), '(3a,i2)') 'Error in block ', what, ' line #', i
           call write_fatal(1)
         end if
         call loct_parse_block_string (blk, i-1, 0, gf%atom(i)%label)
-        call loct_parse_block_float  (blk, i-1, 1, gf%atom(i)%x(1))
-        call loct_parse_block_float  (blk, i-1, 2, gf%atom(i)%x(2))
-        call loct_parse_block_float  (blk, i-1, 3, gf%atom(i)%x(3))
-        if(j == 5) then
+        do jdim=1,3 ! gr%sb%dim
+          call loct_parse_block_float  (blk, i-1, jdim, gf%atom(i)%x(jdim))
+        end do
+        if(j == 5) then ! == gr%sb%dim+2
+          !call loct_parse_block_logical(blk, i-1, gr%sb%dim+1, gf%atom(i)%move)
           call loct_parse_block_logical(blk, i-1, 4, gf%atom(i)%move)
         else
           gf%atom(i)%move = .true.

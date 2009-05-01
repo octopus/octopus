@@ -39,6 +39,7 @@ module h_sys_output_m
   use magnetic_m
   use mesh_function_m
   use messages_m
+  use modelmb_exchange_syms_m
   use mpi_m
   use profiling_m
   use simul_box_m

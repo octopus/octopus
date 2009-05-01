@@ -65,6 +65,7 @@ contains
     FLOAT :: vol_elem_1part
     FLOAT, allocatable :: origin(:), h_1part(:)
     CMPLX, allocatable :: densmatr(:, :), evectors(:, :)
+    CMPLX, allocatable :: densmatr_tmp(:, :)
     FLOAT, allocatable :: evalues(:), density(:)
 
     type(hypercube_t) :: hypercube_1part
@@ -133,6 +134,7 @@ contains
     ! This is the root directory where everything will be written.
     dirname = trim(dir)//'/density-matrix'
     call loct_mkdir(trim(dirname))
+write (*,*) 'made density-matrix directory'
 
     ! The algorithm should consider how many dimensions the wavefunction has (ndims),
     ! and how many (and which) dimensions should be integrated away.
@@ -195,13 +197,13 @@ contains
         origin(idir)=gr%sb%box_offset(irealdir)
       end do
 
-!   loop over states to get density matrices for excited states too
+      !   loop over states to get density matrices for excited states too
       states_loop: do mm = 1, st%nst
         
         densmatr  = M_z0
 
-!   calculate the 1 particle density matrix for this Many Body state, and for the chosen
-!   particle being the free coordinate
+        !   calculate the 1 particle density matrix for this Many Body state, and for the chosen
+        !   particle being the free coordinate
         if(states_are_real(st)) then
           call dmf_calculate_gamma(ikeeppart, nparticles_densmat, ndim1part,&
                 hypercube_1part, npt_1part, nr_1part, enlarge_1part(1),&
@@ -219,24 +221,15 @@ contains
 
         !Diagonalize the density matrix
         bof=.true.
-        call lalg_eigensolve(npt_1part, densmatr, evectors, evalues, bof, err_code)
+        SAFE_ALLOCATE(densmatr_tmp(1:npt_1part, 1:npt_1part))
+        densmatr_tmp=densmatr
+        call lalg_eigensolve(npt_1part, densmatr_tmp, evectors, evalues, bof, err_code)
+        SAFE_DEALLOCATE_A(densmatr_tmp)
       
         !NOTE: The highest eigenvalues are the last ones not the first!!!
         !      Writing is therefore in reverse order
         evectors = evectors/sqrt(vol_elem_1part)
         evalues  = evalues*vol_elem_1part
-
-        ! calculate dipole moment from density for this particle
-        dipole_moment(:)=0.0d0
-        do jj = 1,npt_1part
-          call hypercube_i_to_x(hypercube_1part, ndim1part, nr_1part, enlarge_1part(1), jj, ix_1part)
-          dipole_moment=dipole_moment+(ix_1part(:)*h_1part(:)+origin(:))*real(densmatr(jj,jj))*&
-                        st%modelMBparticles%charge_particle_modelMB(ikeeppart)
-        end do
-        write (message(1),'(a,I6,a)') 'For particle ', ikeeppart, ' the dipole moment is (in a.u. = e bohr):'
-        write (message(2),'(3E20.10)') dipole_moment
-        call write_info(2)
-        
 
 
         !Write everything into files
@@ -292,7 +285,20 @@ contains
         call io_close(iunit)
 
 
-      end do states_loop
+        ! calculate dipole moment from density for this particle
+        dipole_moment(:) = 0.0d0
+        do jj = 1,npt_1part
+          call hypercube_i_to_x(hypercube_1part, ndim1part, nr_1part, enlarge_1part(1), jj, ix_1part)
+          dipole_moment = dipole_moment+(ix_1part(:)*h_1part(:)+origin(:))*real(densmatr(jj,jj))*&
+                        st%modelMBparticles%charge_particle_modelMB(ikeeppart)
+        end do
+        ! note: for eventual multiple particles in 4D (8D total!) this would fail to give the last values of dipole_moment
+        write (message(1),'(a,I6,a,I6,a,I6)') 'For particle ', ikeeppart, ' of MB state ', mm
+        write (message(2),'(a,3E20.10)') 'The dipole moment is (in a.u. = e bohr):     ', dipole_moment(1:min(3,ndim1part))
+        write (message(3),'(a,E15.3)') '     with intrinsic numerical error usually <= ', 1.e-6*npt_1part
+        call write_info(3)
+
+      end do states_loop ! mm
 
       SAFE_DEALLOCATE_A(evectors)
       SAFE_DEALLOCATE_A(evalues)

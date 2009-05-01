@@ -50,7 +50,8 @@ type modelMB_particle_t
                                          !  particle lives in
 
    integer :: ntype_of_particle_modelMB ! number of different types of particles
-                                         !  modelMB in MAX_DIM dimensional space
+                                        !  modelMB in MAX_DIM dimensional space
+   integer :: max_particles_per_type    ! max number of different particle
 
    integer :: nparticle_modelMB         ! number of particles 
 
@@ -67,6 +68,9 @@ type modelMB_particle_t
 
    integer, pointer :: particletype_modelMB(:)
    integer, pointer :: nparticles_per_type(:)
+
+   integer, pointer :: exchange_symmetry(:,:,:) ! (max_particles_per_type**2, ntype_of_particle_modelMB)
+   character(80), pointer :: bosonfermion(:)
 
    FLOAT, pointer :: mass_particle_modelMB(:)
 
@@ -95,6 +99,8 @@ subroutine modelMB_particles_null(this)
   nullify(this%labels_particles_modelMB)
   nullify(this%particletype_modelMB)
   nullify(this%nparticles_per_type)
+  nullify(this%exchange_symmetry)
+  nullify(this%bosonfermion)
   nullify(this%mass_particle_modelMB)
   nullify(this%charge_particle_modelMB)
   nullify(this%labels_densities)
@@ -234,6 +240,12 @@ subroutine modelMB_particles_init (modelMBparticles,gr)
       & modelMBparticles%nparticles_per_type(modelMBparticles%particletype_modelMB(ipart)) + 1
   enddo
 
+  modelMBparticles%max_particles_per_type = maxval(modelMBparticles%nparticles_per_type)
+  SAFE_ALLOCATE (modelMBparticles%exchange_symmetry(1:modelMBparticles%max_particles_per_type, 1:modelMBparticles%max_particles_per_type, 1:modelMBparticles%ntype_of_particle_modelMB))
+  modelMBparticles%exchange_symmetry=0
+  SAFE_ALLOCATE (modelMBparticles%bosonfermion(1:modelMBparticles%ntype_of_particle_modelMB))
+  modelMBparticles%bosonfermion = 'uncalculated'
+
   !%Variable DensitiestoCalc
   !%Type block
   !%Section States
@@ -301,6 +313,8 @@ subroutine modelMB_particles_end (modelMBparticles)
   SAFE_DEALLOCATE_P(modelMBparticles%mass_particle_modelMB)
   SAFE_DEALLOCATE_P(modelMBparticles%charge_particle_modelMB)
   SAFE_DEALLOCATE_P(modelMBparticles%nparticles_per_type)
+  SAFE_DEALLOCATE_P(modelMBparticles%exchange_symmetry)
+  SAFE_DEALLOCATE_P(modelMBparticles%bosonfermion)
 
   SAFE_DEALLOCATE_P(modelMBparticles%labels_densities)
   SAFE_DEALLOCATE_P(modelMBparticles%particle_kept_densities)
@@ -322,6 +336,7 @@ subroutine modelMB_particles_copy(modelmb_out, modelmb_in)
 
   modelmb_out%ndim_modelMB=modelmb_in%ndim_modelMB
   modelmb_out%ntype_of_particle_modelMB=modelmb_in%ntype_of_particle_modelMB
+  modelmb_out%max_particles_per_type=modelmb_in%max_particles_per_type
   modelmb_out%nparticle_modelMB=modelmb_in%nparticle_modelMB
   modelmb_out%ndensities_to_calculate=modelmb_in%ndensities_to_calculate
 
@@ -330,6 +345,8 @@ subroutine modelMB_particles_copy(modelmb_out, modelmb_in)
   call loct_pointer_copy(modelmb_out%mass_particle_modelMB,modelmb_in%mass_particle_modelMB)
   call loct_pointer_copy(modelmb_out%charge_particle_modelMB,modelmb_in%charge_particle_modelMB)
   call loct_pointer_copy(modelmb_out%nparticles_per_type,modelmb_in%nparticles_per_type)
+  call loct_pointer_copy(modelmb_out%exchange_symmetry,modelmb_in%exchange_symmetry)
+  call loct_pointer_copy(modelmb_out%bosonfermion,modelmb_in%bosonfermion)
 
   call loct_pointer_copy(modelmb_out%labels_densities,modelmb_in%labels_densities)
   call loct_pointer_copy(modelmb_out%particle_kept_densities,modelmb_in%particle_kept_densities)
