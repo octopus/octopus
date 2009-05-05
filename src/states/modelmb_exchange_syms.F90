@@ -252,11 +252,13 @@ contains
 
       modelMBparticles%bosonfermion(itype) = 'unknown'
       if (sum(modelMBparticles%exchange_symmetry) ==  npptype*(npptype-1)) then
-        write (message(1),'(a,I6,a,I6,a)') 'For particles of type ', itype, ',  MB state ', mm, ' is totally symmetric (bosonic)'
+        write (message(1),'(a,I6,a,I6,a)') 'For particles of type ', itype, ',  MB state ', &
+               mm, ' is totally symmetric (bosonic)'
         call write_info(1)
         modelMBparticles%bosonfermion(itype) = 'boson'
       else if (sum(modelMBparticles%exchange_symmetry) == -npptype*(npptype-1)) then
-        write (message(1),'(a,I6,a,I6,a)') 'For particles of type ', itype, ',  MB state ', mm, ' is totally antisymmetric'
+        write (message(1),'(a,I6,a,I6,a)') 'For particles of type ', itype, ',  MB state ', &
+               mm, ' is totally antisymmetric'
         call write_info(1)
         modelMBparticles%bosonfermion(itype) = 'fermion'
       end if
@@ -309,7 +311,6 @@ contains
     ndimMB=modelMBparticles%ndim_modelMB
 
     normalizer = product(gr%mesh%h(1:gr%mesh%sb%dim)) !M_ONE/units_out%length%factor**gr%mesh%sb%dim
-write (*,*) 'normalizer =  ', normalizer
 
     ! for each particle type
     do itype = 1,modelMBparticles%ntype_of_particle_modelMB
@@ -347,7 +348,8 @@ write (*,*) 'normalizer =  ', normalizer
                 ! get image of ipart1 under permutation iperm1
                 ipart2 = perms_up%allpermutations(ipart1,iperm_up)
                 !ixp (ofst(ipart1)+1:ofst(ipart1)+ndimMB) = ix (ofst(ipart2)+1:ofst(ipart2)+ndimMB) ! part1 to 2
-                ixp (ofst(ipart1+nspindown)+1:ofst(ipart1+nspindown)+ndimMB) = ix (ofst(ipart2+nspindown)+1:ofst(ipart2+nspindown)+ndimMB) ! part1 to 2
+                ixp (ofst(ipart1+nspindown)+1:ofst(ipart1+nspindown)+ndimMB) = &
+                  ix (ofst(ipart2+nspindown)+1:ofst(ipart2+nspindown)+ndimMB) ! part1 to 2
               end do
               ! permutate the particles labeled spin down (the ones after the
               ! spin up ones)

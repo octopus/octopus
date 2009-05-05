@@ -232,7 +232,6 @@ contains
         evectors = evectors/sqrt(vol_elem_1part)
         evalues  = evalues*vol_elem_1part
 
-
         !Write everything into files
         write(filename,'(a,i3.3,a,i2.2)') trim(dirname)//'/occnumb_ip',ikeeppart,'_iMB',mm
         iunit = io_open(trim(filename), action='write')
@@ -243,7 +242,7 @@ contains
             
         call io_close(iunit)
 
-        do jj = max(1,npt_1part-10), npt_1part
+        do jj = npt_1part-nnatorb_prt_densmat(ikeeppart)+1, npt_1part
           write(filename,'(a,i3.3,a,i2.2,a,i4.4)') trim(dirname)//'/natorb_ip', ikeeppart,'_iMB', mm, '_', npt_1part-jj+1
           iunit = io_open(filename, action='write')
           do ll = 1, npt_1part
@@ -281,7 +280,7 @@ contains
           do idir=1,ndim1part
             write(iunit,'(es11.3)', ADVANCE='no') ix_1part(idir)*h_1part(idir)+origin(idir)
           end do
-          write(iunit,'(es11.3)') real(densmatr(jj,jj))
+          write(iunit,'(es18.10)') real(densmatr(jj,jj))
         end do
         call io_close(iunit)
 
@@ -305,6 +304,8 @@ contains
       SAFE_DEALLOCATE_A(evalues)
       SAFE_DEALLOCATE_A(density)
       SAFE_DEALLOCATE_A(densmatr)
+      
+      call hypercube_end(hypercube_1part)
       
     end do densmat_loop ! loop over densmats to output
 

@@ -120,7 +120,7 @@ subroutine modelMB_particles_init (modelMBparticles,gr)
   type(grid_t), intent(in) :: gr
 
 !local vars
-  integer :: ipart,ncols,nline,dimcounter
+  integer :: ipart,ncols,nline,dimcounter, itmp, jtmp
   type(block_t) :: blk
 
 ! source code
@@ -241,9 +241,11 @@ subroutine modelMB_particles_init (modelMBparticles,gr)
   enddo
 
   modelMBparticles%max_particles_per_type = maxval(modelMBparticles%nparticles_per_type)
-  SAFE_ALLOCATE (modelMBparticles%exchange_symmetry(1:modelMBparticles%max_particles_per_type, 1:modelMBparticles%max_particles_per_type, 1:modelMBparticles%ntype_of_particle_modelMB))
+  itmp = modelMBparticles%max_particles_per_type
+  jtmp = modelMBparticles%ntype_of_particle_modelMB
+  SAFE_ALLOCATE (modelMBparticles%exchange_symmetry(1:itmp, 1:itmp, 1:jtmp))
   modelMBparticles%exchange_symmetry=0
-  SAFE_ALLOCATE (modelMBparticles%bosonfermion(1:modelMBparticles%ntype_of_particle_modelMB))
+  SAFE_ALLOCATE (modelMBparticles%bosonfermion(1:jtmp))
   modelMBparticles%bosonfermion = 'uncalculated'
 
   !%Variable DensitiestoCalc
