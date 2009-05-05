@@ -130,11 +130,10 @@ contains
     call loct_parse_block_end(blk)
     ! END reading in of input var block DensityMatricestoCalc
 
-
     ! This is the root directory where everything will be written.
     dirname = trim(dir)//'/density-matrix'
     call loct_mkdir(trim(dirname))
-write (*,*) 'made density-matrix directory'
+
 
     ! The algorithm should consider how many dimensions the wavefunction has (ndims),
     ! and how many (and which) dimensions should be integrated away.
@@ -167,6 +166,8 @@ write (*,*) 'made density-matrix directory'
         npt_1part=npt_1part*npoints((ikeeppart-1)*ndim1part+idir)
       end do
 
+
+! encapsulate from here
       SAFE_ALLOCATE(densmatr(1:npt_1part, 1:npt_1part))
       SAFE_ALLOCATE(evectors(1:npt_1part, 1:npt_1part))
       SAFE_ALLOCATE(evalues(1:npt_1part))
@@ -242,7 +243,7 @@ write (*,*) 'made density-matrix directory'
             
         call io_close(iunit)
 
-        do jj = npt_1part-10, npt_1part
+        do jj = max(1,npt_1part-10), npt_1part
           write(filename,'(a,i3.3,a,i2.2,a,i4.4)') trim(dirname)//'/natorb_ip', ikeeppart,'_iMB', mm, '_', npt_1part-jj+1
           iunit = io_open(filename, action='write')
           do ll = 1, npt_1part
@@ -292,7 +293,7 @@ write (*,*) 'made density-matrix directory'
           dipole_moment = dipole_moment+(ix_1part(:)*h_1part(:)+origin(:))*real(densmatr(jj,jj))*&
                         st%modelMBparticles%charge_particle_modelMB(ikeeppart)
         end do
-        ! note: for eventual multiple particles in 4D (8D total!) this would fail to give the last values of dipole_moment
+        ! note: for eventual multiple particles in 4D (eg 8D total) this would fail to give the last values of dipole_moment
         write (message(1),'(a,I6,a,I6,a,I6)') 'For particle ', ikeeppart, ' of MB state ', mm
         write (message(2),'(a,3E20.10)') 'The dipole moment is (in a.u. = e bohr):     ', dipole_moment(1:min(3,ndim1part))
         write (message(3),'(a,E15.3)') '     with intrinsic numerical error usually <= ', 1.e-6*npt_1part
@@ -314,6 +315,9 @@ write (*,*) 'made density-matrix directory'
     SAFE_DEALLOCATE_A(enlarge_1part)
 
     SAFE_DEALLOCATE_A(npoints)
+
+
+! variables for densmat specification
     SAFE_DEALLOCATE_A(labels_densmat)
     SAFE_DEALLOCATE_A(particle_kept_densmat)
     SAFE_DEALLOCATE_A(nnatorb_prt_densmat)

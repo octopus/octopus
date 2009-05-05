@@ -33,10 +33,12 @@ module modelmb_exchange_syms_m
   use lalg_adv_m
   use loct_m
   use loct_parser_m
+  use math_m
   use mesh_function_m
   use messages_m
   use mpi_m
   use mpi_lib_m
+  use permutations_m
   use profiling_m
   use states_m
   use units_m
@@ -58,14 +60,31 @@ contains
     type(states_t),   intent(inout) :: st
 
     integer :: mm
+    CMPLX, allocatable :: wf(:)
 
     call push_sub('states.modelmb_find_exchange_syms_all')
 
+    SAFE_ALLOCATE(wf(1:gr%mesh%np_global))
+
     do mm=1,st%nst
-      call modelmb_find_exchange_syms(gr, mm, st)
-! FIXME: separate output from calculation of antisymmetrized states
-      call modelmb_sym_states(dir, gr, mm, st, geo)
+
+! NOTE!!!! do not make this into some preprocessed X() stuff until I am dead and
+! buried. Thanks - mjv
+      if(states_are_real(st)) then
+        wf = cmplx(st%dpsi(1:gr%mesh%np_global, 1, mm, 1),M_ZERO)
+      else
+        wf = st%zpsi(:, 1, mm, 1)
+      end if
+
+
+      call modelmb_find_exchange_syms(gr, mm, st%modelMBparticles, wf)
+
+! FIXME: separate output from calculation of antisymmetrized state
+      call modelmb_sym_state(dir, gr, mm, geo, st%modelMBparticles, wf)
+
     end do
+
+    SAFE_DEALLOCATE_A(wf)
 
     call pop_sub()
 
@@ -74,14 +93,21 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine modelmb_find_exchange_syms(gr, mm, st)
-    type(grid_t),     intent(in) :: gr
-    integer,          intent(in) :: mm
-    type(states_t),   intent(inout) :: st
+  !  this routine uses a stochastic method to see if a bunch 
+  !  of points give psi(1,2) = +- psi(2,1)
+  !  may be inadequate if the symmetry is approximate.
+  !  Other option is to force-antisymmetrize (see routine modelmb_sym_states)
+  ! ---------------------------------------------------------
+  subroutine modelmb_find_exchange_syms(gr, mm, modelMBparticles, wf)
+    type(grid_t),             intent(in)   :: gr
+    integer,                  intent(in)   :: mm
+    CMPLX,                    intent(in)   :: wf(1:gr%mesh%np_global)
+    type(modelMB_particle_t), intent(inout):: modelMBparticles
+
 
     ! local vars
     integer :: itype, ipart1, ipart2, npptype
-    integer :: ip, ipp, maxtries
+    integer :: ip, ipp, maxtries, enoughgood
     integer :: ntries, ngoodpoints, nratiocomplaints
     integer :: ofst1, ofst2, ndimMB
     integer :: wf_sign_change, save_sign_change
@@ -98,7 +124,7 @@ contains
     SAFE_ALLOCATE(ix(1:MAX_DIM))
     SAFE_ALLOCATE(ixp(1:MAX_DIM))
 
-    ndimMB=st%modelMBparticles%ndim_modelMB
+    ndimMB=modelMBparticles%ndim_modelMB
 
     ! this is the tolerance on the wavefunction in order to use it to determine
     ! sign changes. Should be checked, and might be a function of grid number,
@@ -107,18 +133,19 @@ contains
     wftol=1.d-5
 
     ! tolerance on wf(1,2)/wf(2,1) being close to +-1
-    tolonsign = 1.d-4
+    tolonsign = 1.d-5
 
     ! maximum number of times we try to extract the parity
-    maxtries = 100
+    maxtries = 300
+    enoughgood = 20
 
     ! initialize the container
-    st%modelMBparticles%exchange_symmetry=0
+    modelMBparticles%exchange_symmetry=0
 
     ! for each particle type
-    do itype=1,st%modelMBparticles%ntype_of_particle_modelMB
+    do itype=1,modelMBparticles%ntype_of_particle_modelMB
 
-      npptype=st%modelMBparticles%nparticles_per_type(itype)
+      npptype=modelMBparticles%nparticles_per_type(itype)
       nratiocomplaints = 0
 
       ! for each pair of particles of this type
@@ -129,79 +156,81 @@ contains
           ngoodpoints=0
           ntries=0
           save_sign_change=0
-          do while (ntries < maxtries .and. ngoodpoints < 10)
-            ntries = ntries+1
+          do while (ntries < maxtries .and. ngoodpoints < enoughgood)
             
+            ! count real trials of random points (avoids eventual infinite looping)
+            ntries = ntries+1
+
             ! find coordinates of random point
             call random_number(rand0to1)
-            ip = nint(gr%mesh%np_global*rand0to1)
+            ip = floor(gr%mesh%np_global*rand0to1)+1
  
             ! wavefunction value at this point ip
-            if(states_are_real(st)) then
-              wfval1 = cmplx(st%dpsi(ip, 1, mm, 1),M_ZERO)
-            else
-              wfval1 =       st%zpsi(ip, 1, mm, 1)
-            end if
+            wfval1 = wf(ip)
 
             ! see if point has enough weight to be used
-            if (abs(real(wfval1)) > wftol) then
+            if (abs(real(wfval1)) < wftol) cycle
 
-              ! get actual coordinates of MB point
-              call index_to_coords(gr%mesh%idx, gr%sb%dim, ip, ix)
- 
-              ! invert coordinates of ipart1 and ipart2
-              ixp = ix
-              ofst1=(ipart1-1)*ndimMB
-              ofst2=(ipart2-1)*ndimMB
-              ixp (ofst1+1:ofst1+ndimMB) = ix (ofst2+1:ofst2+ndimMB) ! part1 to 2
-              ixp (ofst2+1:ofst2+ndimMB) = ix (ofst1+1:ofst1+ndimMB) ! part2 to 1
- 
-              ! recover MB index for new point
-              ipp = index_from_coords(gr%mesh%idx, gr%sb%dim, ixp)
+            ! get actual coordinates of MB point
+            call index_to_coords(gr%mesh%idx, gr%sb%dim, ip, ix)
 
-              ! wavefunction value at exchanged coordinate point ipp
-              if(states_are_real(st)) then
-                wfval2 = cmplx(st%dpsi(ipp, 1, mm, 1),M_ZERO)
-              else
-                wfval2 =       st%zpsi(ipp, 1, mm, 1)
-              end if
- 
-              ! check sign change FIXME: check imaginary part too
-              !   normally, as these points are related, wfval2 should also be > wftol
-              ratio = real(wfval1) / real(wfval2)
-              
-              if (abs(ratio+1.0d0) < tolonsign) then
-                wf_sign_change = -1
-              else if (abs(ratio-1.0d0) < tolonsign) then
-                wf_sign_change =  1
-              else  ! ratio not clear enough to get parity
-                if (nratiocomplaints < 10) then
-                  write (message(1),'(a,E20.10,a)') 'point skipped for exchange parity: ratio of wf ',ratio, &
-                       ' is not clearly +-1'
-                  call write_info(1)
-                  nratiocomplaints = nratiocomplaints+1
-                end if
-                cycle
-              end if
- 
-              ! if opposite of previous value, complain
-              if (save_sign_change /= 0 .and. save_sign_change /= wf_sign_change) then
-                write (message(1),'(a)') ' WARNING: sign change is different between wf points examined'
-                call write_info(1)
-              end if
+            ! offsets in full dimensional space for the particles we care about
+            ofst1=(ipart1-1)*ndimMB
+            ofst2=(ipart2-1)*ndimMB
 
-              save_sign_change=wf_sign_change
-              ngoodpoints = ngoodpoints + 1
+            ! invert coordinates of ipart1 and ipart2
+            ixp = ix
+            ixp (ofst1+1:ofst1+ndimMB) = ix (ofst2+1:ofst2+ndimMB) ! part1 to 2
+            ixp (ofst2+1:ofst2+ndimMB) = ix (ofst1+1:ofst1+ndimMB) ! part2 to 1
+ 
+            ! if we are on a diagonal, cycle
+            if (all(ix-ixp == 0)) cycle
+ 
+            ! recover MB index for new point
+            ipp = index_from_coords(gr%mesh%idx, gr%sb%dim, ixp)
+
+            ! wavefunction value at exchanged coordinate point ipp
+            wfval2 = wf(ipp)
+ 
+            ! check sign change FIXME: check imaginary part too
+            !   normally, as these points are related, wfval2 should also be > wftol
+            ratio = real(wfval1) / real(wfval2)
+            
+            if (abs(ratio+1.0d0) < tolonsign) then
+              wf_sign_change = -1
+            else if (abs(ratio-1.0d0) < tolonsign) then
+              wf_sign_change =  1
+            else  ! ratio not clear enough to get parity
+              !if (nratiocomplaints < 20) then
+              !  write (message(1),'(a,E20.10,a)') 'point skipped for exchange parity: ratio of wf ',ratio, &
+              !       ' is not clearly +-1'
+              !  call write_info(1)
+              !end if
+              nratiocomplaints = nratiocomplaints+1
             end if
+ 
+            ! if opposite of previous value, complain
+            if (save_sign_change /= 0 .and. save_sign_change /= wf_sign_change) then
+              write (message(1),'(a)') ' WARNING: sign change is different between wf points examined'
+              call write_info(1)
+            end if
+
+            save_sign_change=wf_sign_change
+            ! ngoodpoints counts points for which we were able to compare wf values 
+            ngoodpoints = ngoodpoints + 1
           end do !  tries and goodpoints
          
-          if (ngoodpoints < 10) then
+          ! if we have found enough points with wf large enough to compare
+          !  and the number of points where the ratio was far from +-1 was not
+          !  too high
+          if (ngoodpoints == enoughgood .and. &
+              real(nratiocomplaints)/real(ngoodpoints) < 0.1) then
+            modelMBparticles%exchange_symmetry(ipart1,ipart2,itype)=save_sign_change
+            modelMBparticles%exchange_symmetry(ipart2,ipart1,itype)=save_sign_change
+          else 
             !write (message(1),'(a)') ' WARNING: unable to determine sign change for'
             !write (message(2),'(a,I6,a,I6,a,I6)') ' exchange of ', ipart1, ' and ', ipart2, ' of many-body state ', mm
             !call write_info(2)
-          else 
-            st%modelMBparticles%exchange_symmetry(ipart1,ipart2,itype)=save_sign_change
-            st%modelMBparticles%exchange_symmetry(ipart2,ipart1,itype)=save_sign_change
           end if 
  
         end do ! ipart2
@@ -209,27 +238,27 @@ contains
     end do ! itype
 
     ! do some crude output
-    do itype=1,st%modelMBparticles%ntype_of_particle_modelMB
+    do itype=1,modelMBparticles%ntype_of_particle_modelMB
       !write (message(1),'(a)')    ' lower triangle of exchange parity matrix'
       write (message(1),'(a,I6,a,I6)') '   for particles of type ', itype, '   in MB state ', mm
       call write_info(1)
 
       do ipart1=1,npptype
         do ipart2=1,ipart1
-          write (*,'(2x, I6)',ADVANCE='NO') st%modelMBparticles%exchange_symmetry(ipart2,ipart1,itype)
+          write (*,'(2x, I6)',ADVANCE='NO') modelMBparticles%exchange_symmetry(ipart2,ipart1,itype)
         end do ! ipart2
         write (*,*)
       end do ! ipart1
 
-      st%modelMBparticles%bosonfermion(itype) = 'unknown'
-      if (sum(st%modelMBparticles%exchange_symmetry) ==  npptype*(npptype-1)) then
+      modelMBparticles%bosonfermion(itype) = 'unknown'
+      if (sum(modelMBparticles%exchange_symmetry) ==  npptype*(npptype-1)) then
         write (message(1),'(a,I6,a,I6,a)') 'For particles of type ', itype, ',  MB state ', mm, ' is totally symmetric (bosonic)'
         call write_info(1)
-        st%modelMBparticles%bosonfermion(itype) = 'boson'
-      else if (sum(st%modelMBparticles%exchange_symmetry) == -npptype*(npptype-1)) then
+        modelMBparticles%bosonfermion(itype) = 'boson'
+      else if (sum(modelMBparticles%exchange_symmetry) == -npptype*(npptype-1)) then
         write (message(1),'(a,I6,a,I6,a)') 'For particles of type ', itype, ',  MB state ', mm, ' is totally antisymmetric'
         call write_info(1)
-        st%modelMBparticles%bosonfermion(itype) = 'fermion'
+        modelMBparticles%bosonfermion(itype) = 'fermion'
       end if
     end do ! itype
 
@@ -242,25 +271,28 @@ contains
 
 
   ! project out states with proper symmetry for cases which are of symmetry = unknown
-  subroutine modelmb_sym_states(dir, gr, mm, st, geo)
-    character(len=*), intent(in) :: dir
+  subroutine modelmb_sym_state(dir, gr, mm, geo, modelMBparticles, wf)
+    character(len=*), intent(in)    :: dir
     type(grid_t),     intent(in)    :: gr
     integer,          intent(in)    :: mm
-    type(states_t),   intent(inout) :: st
     type(geometry_t), intent(in)    :: geo
+    CMPLX,                    intent(in)   :: wf(1:gr%mesh%np_global)
+    type(modelMB_particle_t), intent(inout):: modelMBparticles
 
     ! local vars
     integer :: itype, ipart1, ipart2, npptype
-    integer :: ip, ipp, maxtries
+    integer :: ip, ipp
     integer :: iantisym, ierr
-    integer :: ofst1, ofst2, ndimMB
+    integer :: ndimMB
+    integer :: nspindown, nspinup, iperm_up, iperm_down
 
-    integer, allocatable :: ix(:), ixp(:)
+    type(permutations_t) :: perms_up, perms_down
+
+    integer, allocatable :: ix(:), ixp(:), ofst(:)
  
-    FLOAT :: normalizer
+    FLOAT :: normalizer, norm
 
-    CMPLX :: wfval1, wfval2
-    CMPLX, allocatable  :: antisymwf(:,:)
+    CMPLX, allocatable  :: antisymwf(:)
 
     character(len=80) :: fname, tmpstring
 
@@ -268,65 +300,95 @@ contains
 
     call push_sub('states.modelmb_sym_states')
 
+    call permutations_nullify(perms_up)
+    call permutations_nullify(perms_down)
+
     SAFE_ALLOCATE(ix(1:MAX_DIM))
     SAFE_ALLOCATE(ixp(1:MAX_DIM))
 
-    ndimMB=st%modelMBparticles%ndim_modelMB
+    ndimMB=modelMBparticles%ndim_modelMB
 
-    normalizer = M_ONE/units_out%length%factor**gr%mesh%sb%dim
+    normalizer = product(gr%mesh%h(1:gr%mesh%sb%dim)) !M_ONE/units_out%length%factor**gr%mesh%sb%dim
+write (*,*) 'normalizer =  ', normalizer
 
     ! for each particle type
-    do itype = 1,st%modelMBparticles%ntype_of_particle_modelMB
-      if (st%modelMBparticles%bosonfermion(itype) /= 'unknown') cycle
+    do itype = 1,modelMBparticles%ntype_of_particle_modelMB
+      !if (modelMBparticles%bosonfermion(itype) /= 'unknown') cycle
 
-      npptype=st%modelMBparticles%nparticles_per_type(itype)
-      SAFE_ALLOCATE(antisymwf(1:gr%mesh%np_global,npptype*(npptype-1)/2))
-
-      iantisym = 0
-      ! for each pair of particles of this type
+      npptype = modelMBparticles%nparticles_per_type(itype)
+      SAFE_ALLOCATE(antisymwf(1:gr%mesh%np_global))
+      SAFE_ALLOCATE(ofst(1:npptype))
       do ipart1 = 1, npptype
-        do ipart2 = 1, ipart1-1
-          iantisym = iantisym+1
+        ofst(ipart1) = (ipart1-1)*ndimMB
+      end do
+
+      ! note: use of spin nomenclature is just for visualization, no real spin
+      ! here
+      do nspindown = 0, floor(npptype/2.)
+        nspinup = npptype - nspindown
+
+        call permutations_init(nspinup,perms_up)
+        call permutations_init(nspindown,perms_down)
+
+        antisymwf=cmplx(0.0d0,0.0d0)
+
+        ! for each permutation of particles of this type
+        do iperm_up = 1, perms_up%npermutations
+          do iperm_down = 1, perms_down%npermutations
  
-          do ip = 1, gr%mesh%np_global
-            ! get present position
-            call index_to_coords(gr%mesh%idx, gr%sb%dim, ip, ix)
+            do ip = 1, gr%mesh%np_global
+              ! get present position
+              call index_to_coords(gr%mesh%idx, gr%sb%dim, ip, ix)
+     
+              ! invert coordinates of ipart1 and ipart2
+              ixp = ix
+              ! permutate the particles labeled spin up 
+              do ipart1 = 1, nspinup
+                ! get image of ipart1 under permutation iperm1
+                ipart2 = perms_up%allpermutations(ipart1,iperm_up)
+                !ixp (ofst(ipart1)+1:ofst(ipart1)+ndimMB) = ix (ofst(ipart2)+1:ofst(ipart2)+ndimMB) ! part1 to 2
+                ixp (ofst(ipart1+nspindown)+1:ofst(ipart1+nspindown)+ndimMB) = ix (ofst(ipart2+nspindown)+1:ofst(ipart2+nspindown)+ndimMB) ! part1 to 2
+              end do
+              ! permutate the particles labeled spin down (the ones after the
+              ! spin up ones)
+              do ipart1 = 1, nspindown
+                ! get image of ipart1 under permutation iperm1
+                ipart2 = perms_down%allpermutations(ipart1,iperm_down)
+                !ixp (ofst(ipart1+nspinup)+1:ofst(ipart1+nspinup)+ndimMB) = &
+                !           ix (ofst(ipart2+nspinup)+1:ofst(ipart2+nspinup)+ndimMB) ! part1 to 2
+                ixp (ofst(ipart1)+1:ofst(ipart1)+ndimMB) = &
+                           ix (ofst(ipart2)+1:ofst(ipart2)+ndimMB) ! part1 to 2
+              end do
+              
+              ! get position of exchanged point
+              ipp = index_from_coords(gr%mesh%idx, gr%sb%dim, ixp)
+     
+              antisymwf(ip)=antisymwf(ip) + perms_up%permsign(iperm_up)*perms_down%permsign(iperm_down)*wf(ipp)
+        
+            end do ! ip
+     
+          end do ! iperm_down
+        end do ! iperm_up
+   
+        ! normalize the bloody thing
+        antisymwf = antisymwf / (dble(perms_up%npermutations)*dble(perms_down%npermutations))
+   
+        norm = sum(conjg(antisymwf)*antisymwf) * normalizer
+        write (message(1), '(a,I7,a,I7,a,E20.10)') 'norm of state ', mm, ' with ', nspindown, ' spins down is ', norm
+        call write_info(1)
+ 
+        write(fname,'(a,i4.4,a,i4.4,a,i4.4,a,i4.4)') '/antisymwf.iMB',mm,'_typ',&
+          itype,'_asym',ipart1,'_',ipart2
+     
+        !call zoutput_function(output_xcrysden, dir, fname, gr%mesh, gr%sb, &
+        !         antisymwf(:,iantisym), sqrt(normalizer), ierr, is_tmp = .false., geo = geo)
+   
+        call permutations_end(perms_up)
+        call permutations_end(perms_down)
 
-            ! invert coordinates of ipart1 and ipart2
-            ixp = ix
-            ofst1=(ipart1-1)*ndimMB
-            ofst2=(ipart2-1)*ndimMB
-            ixp (ofst1+1:ofst1+ndimMB) = ix (ofst2+1:ofst2+ndimMB) ! part1 to 2
-            ixp (ofst2+1:ofst2+ndimMB) = ix (ofst1+1:ofst1+ndimMB) ! part2 to 1
-
-            ! get position of exchanged point
-            ipp = index_from_coords(gr%mesh%idx, gr%sb%dim, ixp)
-
-            if(states_are_real(st)) then
-              wfval1 = cmplx(st%dpsi(ip,  1, mm, 1),M_ZERO)
-              wfval2 = cmplx(st%dpsi(ipp, 1, mm, 1),M_ZERO)
-            else
-              wfval1 =       st%zpsi(ip,  1, mm, 1)
-              wfval2 =       st%zpsi(ipp, 1, mm, 1)
-            end if
-
-            antisymwf(ip,iantisym)=wfval1-wfval2
-      
-          end do ! ip
-
-          write(fname,'(a,i4.4,a,i4.4,a,i4.4,a,i4.4)') '/antisymwf.iMB',mm,'_typ',&
-             itype,'_asym',ipart1,'_',ipart2
-
-          call zoutput_function(output_xcrysden, dir, fname, gr%mesh, gr%sb, &
-                   antisymwf(:,iantisym), sqrt(normalizer), ierr, is_tmp = .false., geo = geo)
-
-        end do ! ipart2
-      end do ! ipart1
-
-      ! normalize the bloody thing
-      antisymwf=antisymwf*sqrt(0.5d0)
-
-      SAFE_DEALLOCATE_A(antisymwf)
+      end do ! nspindown
+   
+        SAFE_DEALLOCATE_A(antisymwf)
 
     end do ! itype
 
@@ -334,7 +396,7 @@ contains
     SAFE_DEALLOCATE_A(ixp)
 
     call pop_sub()
-  end subroutine modelmb_sym_states
+  end subroutine modelmb_sym_state
   ! ---------------------------------------------------------
 
 

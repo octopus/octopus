@@ -189,6 +189,7 @@ contains
     
     write(message(1),'(a)') 'Main mesh:'
     
+    ! FIXME: needs to be generalized for MAX_DIM >=4
     write(message(2),'(3a, a, f6.3, a, f6.3, a, f6.3, a, 1x, 3a, f8.5)')  &
       '  Spacing [', trim(units_out%length%abbrev), '] = ',              &
       '(', m%h(1)/units_out%length%factor, ',',                          &

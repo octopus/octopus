@@ -23,7 +23,7 @@ noinst_LIBRARIES = libmath.a
 
 libmath_a_SOURCES = \
 	blas.F90 dablas.c ylm.c oct_gsl_f.c oct_gsl_min_f.c loct_math.F90 lalg_basic.F90 \
-	lalg_adv.F90 gauss_legendre.F90 math.F90 ode_solver.F90 root_solver.F90 \
+	lalg_adv.F90 gauss_legendre.F90 math.F90 ode_solver.F90 permutations.F90 root_solver.F90 \
 	solvers.F90 \
 	splines.F90 sparskit.F90 fft.F90 tdfunction.F90 fft_cuda.c filters.F90
 
@@ -46,6 +46,7 @@ lalg_adv.o : lalg_adv.F90  lalg_adv_lapack.F90
 gauss_legendre.o : gauss_legendre.F90 
 math.o : math.F90 math_inc.F90 lalg_basic.o loct_math.o
 ode_solver.o : ode_solver.F90 ode_solver_inc.F90 
+permutations.o : permutations.F90 math.o
 root_solver.o : root_solver.F90 root_solver_inc.F90 ode_solver.o lalg_adv.o 
 splines.o : splines.F90 loct_math.o
 sparskit.o : sparskit.F90 
