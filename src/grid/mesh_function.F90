@@ -32,7 +32,7 @@ module mesh_function_m
   use math_m
   use mesh_m
   use messages_m
-  use modelmb_particles_m
+  use modelmb_1part_m
   use mpi_m
   use par_vec_m
   use profiling_m

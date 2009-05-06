@@ -36,9 +36,10 @@ libgrid_a_SOURCES = \
 	zoltan_low.c     \
 	zoltan.F90       \
 	hypercube.F90    \
+        modelmb_1part.F90 \
 	cubic_mesh.F90   \
 	cubic_mesh_low.c \
-	cubic_mesh_fft.c
+	cubic_mesh_fft.c 
 
 noinst_HEADERS = \
 	par_vec_inc.F90 derivatives_inc.F90 cube_function_inc.F90 fourier_space_inc.F90 \
@@ -62,6 +63,7 @@ index.o : index.F90 hypercube.o
 par_vec.o : par_vec.F90 par_vec_inc.F90 index.o stencil.o
 mesh.o : mesh.F90 par_vec.o index.o curvilinear.o
 mesh_init.o : mesh_init.F90 mesh.o par_vec.o zoltan.o stencil_star.o stencil.o
+modelmb_1part.o : modelmb_1part.F90 mesh.o hypercube.o
 scalar_mesh.o : scalar_mesh.F90
 nl_operator.o : nl_operator.F90 nl_operator_inc.F90 par_vec.o mesh.o index.o batch.o stencil.o
 submesh.o : submesh.F90 submesh_inc.F90  mesh.o 
@@ -72,7 +74,7 @@ stencil_starplus.o : stencil_starplus.F90 stencil.o
 derivatives.o : derivatives.F90 derivatives_inc.F90 stencil_variational.o stencil_starplus.o stencil_star.o stencil_cube.o  nl_operator.o mesh.o batch.o
 cube_function.o : cube_function.F90 cube_function_inc.F90  mesh.o 
 fourier_space.o : fourier_space.F90 fourier_space_inc.F90 cube_function.o mesh.o 
-mesh_function.o : mesh_function.F90 mesh_function_inc.F90 par_vec.o mesh.o cube_function.o
+mesh_function.o : mesh_function.F90 mesh_function_inc.F90 par_vec.o mesh.o cube_function.o modelmb_1part.o
 basins.o : basins.F90 par_vec.o index.o mesh.o 
 io_function.o : io_function.F90 io_function_inc.F90 par_vec.o mesh.o  cube_function.o 
 multigrid.o : multigrid.F90 multigrid_inc.F90 mesh.o curvilinear.o derivatives.o mesh_init.o

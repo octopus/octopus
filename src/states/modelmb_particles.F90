@@ -44,11 +44,6 @@ module modelMB_particles_m
             modelmb_copy_masses,&
             modelMB_particle_t
 
-  public :: modelmb_1part_init, &
-            modelmb_1part_nullify, &
-            modelmb_1part_end, &
-            modelmb_1part_t
-
 !==============================================================
 !  container type for input vars concerning modelMB particles
 !==============================================================
@@ -96,21 +91,6 @@ type modelMB_particle_t
    integer, pointer :: particle_kept_densities(:)
 
 end type modelMB_particle_t
-
-!
-!  container type for the position and dimensions for 1 particle (out of
-!  MAX_DIM/dims)
-!
-type modelmb_1part_t
-  integer :: ndim1part
-  integer :: npt_1part
-  FLOAT :: vol_elem_1part
-  FLOAT, pointer :: origin(:)
-  integer, pointer :: enlarge_1part(:)
-  integer, pointer :: nr_1part(:,:)
-  FLOAT, pointer :: h_1part(:)
-  type(hypercube_t) :: hypercube_1part
-end type modelmb_1part_t
 
 contains
 
@@ -406,82 +386,6 @@ subroutine modelmb_copy_masses (modelMBparticles,masses)
   call pop_sub()
 
 end subroutine modelmb_copy_masses
-
-
-subroutine modelmb_1part_init(this, mesh, ikeeppart, ndim1part, box_offset)
-  integer, intent(in) :: ikeeppart, ndim1part
-  FLOAT, intent(in) :: box_offset(MAX_DIM)
-  type(modelmb_1part_t), intent(out) :: this
-  type(mesh_t), intent(in) :: mesh
-
-  !local vars
-  integer :: idir, irealdir
-
-  call push_sub('states.modelmb_1part_init')
-  
-   this%ndim1part = ndim1part
-
-!   get full size of arrays for 1 particle only in ndim_modelmb dimensions
-   this%npt_1part = 1
-   do idir = 1, ndim1part
-     this%npt_1part = this%npt_1part*mesh%idx%ll((ikeeppart-1)*ndim1part+idir)
-   end do
-
-!   volume element for the chosen particle
-  SAFE_ALLOCATE(this%h_1part(1:ndim1part))
-  this%vol_elem_1part = 1.0d0
-  do idir = 1,ndim1part
-    irealdir = (ikeeppart-1)*ndim1part + idir
-    this%vol_elem_1part = this%vol_elem_1part*mesh%h(irealdir)
-    this%h_1part(idir) = mesh%h(irealdir)
-  end do
-
-!   store start and end positions for the relevant dimensions for this particle
-  SAFE_ALLOCATE(this%nr_1part(1:2, 1:ndim1part))
-  this%nr_1part(:,:) = mesh%idx%nr(:,(ikeeppart-1)*ndim1part+1:ikeeppart*ndim1part)
-
-!   initialize a hypercube for just this particle
-!   NB: hypercube_* presume that enlarge is the same for all dimensions!
-  SAFE_ALLOCATE(this%enlarge_1part(1:ndim1part))
-  this%enlarge_1part = mesh%idx%enlarge((ikeeppart-1)*ndim1part+1:ikeeppart*ndim1part)
-  call hypercube_init(this%hypercube_1part, ndim1part, this%nr_1part, this%enlarge_1part(1))
-
-  ! not always the real origin if the box is shifted, no?
-  !  which happens to be my case...
-  !  only important for printout, so it is ok
-  SAFE_ALLOCATE(this%origin(1:ndim1part))
-  do idir = 1,ndim1part
-    irealdir = (ikeeppart-1)*ndim1part + idir
-    !origin(idir) = (npoints(irealdir)/2)*gr%mesh%h(irealdir)
-    this%origin(idir) = box_offset(irealdir)
-  end do
-
-  call pop_sub()
-end subroutine modelmb_1part_init
-
-
-subroutine modelmb_1part_nullify(this)
-  type(modelmb_1part_t), intent(out) :: this
-  call push_sub('states.modelmb_1part_nullify')
-  nullify(this%origin)
-  nullify(this%enlarge_1part)
-  nullify(this%nr_1part)
-  nullify(this%h_1part)
-  call hypercube_nullify(this%hypercube_1part)
-  call pop_sub()
-end subroutine modelmb_1part_nullify
-
-
-subroutine modelmb_1part_end(this)
-  type(modelmb_1part_t), intent(inout) :: this
-  call push_sub('states.modelmb_1part_end')
-  SAFE_DEALLOCATE_P(this%origin)
-  SAFE_DEALLOCATE_P(this%enlarge_1part)
-  SAFE_DEALLOCATE_P(this%nr_1part)
-  SAFE_DEALLOCATE_P(this%h_1part)
-  call hypercube_end(this%hypercube_1part)
-  call pop_sub()
-end subroutine modelmb_1part_end
 
 
 end module modelMB_particles_m

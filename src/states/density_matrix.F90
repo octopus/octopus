@@ -33,6 +33,7 @@ module density_matrix_m
   use mesh_function_m
   use messages_m
   use modelmb_particles_m
+  use modelmb_1part_m
   use mpi_m
   use mpi_lib_m
   use profiling_m

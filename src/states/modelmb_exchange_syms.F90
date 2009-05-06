@@ -22,7 +22,6 @@
 module modelmb_exchange_syms_m
 
   use datasets_m
-  use modelmb_particles_m
   use geometry_m
   use global_m
   use grid_m
@@ -36,6 +35,8 @@ module modelmb_exchange_syms_m
   use math_m
   use mesh_function_m
   use messages_m
+  use modelmb_particles_m
+  use modelmb_1part_m
   use mpi_m
   use mpi_lib_m
   use permutations_m
