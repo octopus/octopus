@@ -175,7 +175,7 @@ contains
     ! By default, calculations use real wave-functions
     st%wfs_type = M_REAL
 
-    call modelMB_particles_null(st%modelmbparticles)
+    call modelMB_particles_nullify(st%modelmbparticles)
 
     call pop_sub()
   end subroutine states_null

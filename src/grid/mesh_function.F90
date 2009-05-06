@@ -22,21 +22,22 @@
 module mesh_function_m
   use batch_m
   use blas_m
+  use cube_function_m
   use global_m
   use hardware_m
   use hypercube_m
+  use index_m
   use lalg_basic_m
   use loct_math_m
-  use splines_m
   use math_m
   use mesh_m
-  use index_m
   use messages_m
+  use modelmb_particles_m
   use mpi_m
   use par_vec_m
   use profiling_m
   use qshepmod_m
-  use cube_function_m
+  use splines_m
 
   implicit none
 
@@ -70,7 +71,9 @@ module mesh_function_m
     zmf_multipoles,        &
     mesh_init_mesh_aux,    &
     dmf_calculate_gamma,   &
-    zmf_calculate_gamma
+    zmf_calculate_gamma,   &
+    dmf_calculate_rho,     &
+    zmf_calculate_rho
 
   interface mf_surface_integral
     module procedure dmf_surface_integral_scalar, dmf_surface_integral_vector, &

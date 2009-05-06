@@ -54,6 +54,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine modelmb_find_exchange_syms_all(dir, gr, st, geo)
+
+    implicit none
+
     character(len=*), intent(in) :: dir
     type(grid_t),     intent(in) :: gr
     type(geometry_t),       intent(in)    :: geo
@@ -64,14 +67,14 @@ contains
 
     call push_sub('states.modelmb_find_exchange_syms_all')
 
-    SAFE_ALLOCATE(wf(1:gr%mesh%np_global))
+    SAFE_ALLOCATE(wf(1:gr%mesh%np_part_global))
 
     do mm=1,st%nst
 
 ! NOTE!!!! do not make this into some preprocessed X() stuff until I am dead and
 ! buried. Thanks - mjv
       if(states_are_real(st)) then
-        wf = cmplx(st%dpsi(1:gr%mesh%np_global, 1, mm, 1),M_ZERO)
+        wf = cmplx(st%dpsi(1:gr%mesh%np_part_global, 1, mm, 1),M_ZERO)
       else
         wf = st%zpsi(:, 1, mm, 1)
       end if
@@ -99,9 +102,12 @@ contains
   !  Other option is to force-antisymmetrize (see routine modelmb_sym_states)
   ! ---------------------------------------------------------
   subroutine modelmb_find_exchange_syms(gr, mm, modelMBparticles, wf)
+
+    implicit none
+
     type(grid_t),             intent(in)   :: gr
     integer,                  intent(in)   :: mm
-    CMPLX,                    intent(in)   :: wf(1:gr%mesh%np_global)
+    CMPLX,                    intent(in)   :: wf(1:gr%mesh%np_part_global)
     type(modelMB_particle_t), intent(inout):: modelMBparticles
 
 
@@ -163,7 +169,7 @@ contains
 
             ! find coordinates of random point
             call random_number(rand0to1)
-            ip = floor(gr%mesh%np_global*rand0to1)+1
+            ip = floor(gr%mesh%np_part_global*rand0to1)+1
  
             ! wavefunction value at this point ip
             wfval1 = wf(ip)
@@ -274,29 +280,39 @@ contains
 
   ! project out states with proper symmetry for cases which are of symmetry = unknown
   subroutine modelmb_sym_state(dir, gr, mm, geo, modelMBparticles, wf)
+
+    implicit none
+
     character(len=*), intent(in)    :: dir
     type(grid_t),     intent(in)    :: gr
     integer,          intent(in)    :: mm
     type(geometry_t), intent(in)    :: geo
-    CMPLX,                    intent(in)   :: wf(1:gr%mesh%np_global)
+    CMPLX,                    intent(in)   :: wf(1:gr%mesh%np_part_global)
     type(modelMB_particle_t), intent(inout):: modelMBparticles
 
     ! local vars
     integer :: itype, ipart1, ipart2, npptype
     integer :: ip, ipp
-    integer :: iantisym, ierr
+    integer :: iantisym, ierr, ikeeppart
     integer :: ndimMB
     integer :: nspindown, nspinup, iperm_up, iperm_down
+    integer :: iunit, jj, idir
 
     type(permutations_t) :: perms_up, perms_down
+    type(modelmb_1part_t) :: mb_1part
 
     integer, allocatable :: ix(:), ixp(:), ofst(:)
  
     FLOAT :: normalizer, norm
 
+    FLOAT, allocatable  :: antisymrho(:)
+    FLOAT, allocatable  :: antisymrho_1part(:)
     CMPLX, allocatable  :: antisymwf(:)
+    CMPLX, allocatable  :: antisymwf_swap(:)
 
-    character(len=80) :: fname, tmpstring
+    character (len=80) :: tmpstring
+    character (len=80) :: filename
+
 
 ! source
 
@@ -305,6 +321,8 @@ contains
     call permutations_nullify(perms_up)
     call permutations_nullify(perms_down)
 
+    call modelmb_1part_nullify(mb_1part)
+
     SAFE_ALLOCATE(ix(1:MAX_DIM))
     SAFE_ALLOCATE(ixp(1:MAX_DIM))
 
@@ -312,19 +330,35 @@ contains
 
     normalizer = product(gr%mesh%h(1:gr%mesh%sb%dim)) !M_ONE/units_out%length%factor**gr%mesh%sb%dim
 
+    if (modelMBparticles%ntype_of_particle_modelMB > 1) then
+      write (message(1), '(a)') 'modelmb_sym_state: not coded for several particly types '
+      call write_fatal(1)
+    end if
+
+write (*,*) 'np_part_global, np_global = ', gr%mesh%np_part_global, gr%mesh%np_global
+
     ! for each particle type
     do itype = 1,modelMBparticles%ntype_of_particle_modelMB
       !if (modelMBparticles%bosonfermion(itype) /= 'unknown') cycle
 
+      ! FIXME: for multiple particle types this needs to be fixed.
+      ! Also, for inequivalent spin configurations this should vary, and we get
+      ! different 1 body densities, no?
+      ikeeppart = 1
+
+      call modelmb_1part_init(mb_1part, gr%mesh, ikeeppart, &
+             modelMBparticles%ndim_modelmb, gr%sb%box_offset)
+
       npptype = modelMBparticles%nparticles_per_type(itype)
-      SAFE_ALLOCATE(antisymwf(1:gr%mesh%np_global))
+      SAFE_ALLOCATE(antisymwf(1:gr%mesh%np_part_global))
+      SAFE_ALLOCATE(antisymrho(1:gr%mesh%np_part_global))
       SAFE_ALLOCATE(ofst(1:npptype))
       do ipart1 = 1, npptype
         ofst(ipart1) = (ipart1-1)*ndimMB
       end do
 
       ! note: use of spin nomenclature is just for visualization, no real spin
-      ! here
+      ! here. Spin down particles come first, then the (more numerous) spin up
       do nspindown = 0, floor(npptype/2.)
         nspinup = npptype - nspindown
 
@@ -332,12 +366,49 @@ contains
         call permutations_init(nspindown,perms_down)
 
         antisymwf=cmplx(0.0d0,0.0d0)
+        antisymwf(:) = wf(:)
+        
+        ! first symmetrize over pairs of particles associated in the present
+        ! Young diagram
+        SAFE_ALLOCATE(antisymwf_swap(1:gr%mesh%np_part_global))
+        do ipart1 = 1, nspindown
+          ipart2 = ipart1+nspindown
+
+          antisymwf_swap=antisymwf
+          do ip = 1, gr%mesh%np_part_global
+            ! get present position
+            call index_to_coords(gr%mesh%idx, gr%sb%dim, ip, ix)
+     
+            ! invert coordinates of ipart1 and ipart2
+            ixp = ix
+            ! permutate the particles ipart1 and its spin up partner
+            ixp (ofst(ipart1)+1:ofst(ipart1)+ndimMB) = &
+                ix (ofst(ipart2)+1:ofst(ipart2)+ndimMB)
+            ixp (ofst(ipart2)+1:ofst(ipart2)+ndimMB) = &
+                ix (ofst(ipart1)+1:ofst(ipart1)+ndimMB)
+            
+            ! get position of exchanged point
+            ipp = index_from_coords(gr%mesh%idx, gr%sb%dim, ixp)
+
+            antisymwf_swap(ip)=antisymwf_swap(ip) + antisymwf(ipp)
+        
+          end do ! ip
+          antisymwf = antisymwf_swap * 0.5d0
+        end do
+  
+        ! this could be removed for production
+        antisymrho = real(conjg(antisymwf)*antisymwf) * normalizer
+        norm = sum(antisymrho)
+        write (message(1), '(a,I7,a,I7,a,E20.10)') 'norm of pair-symmetrized state ', mm, ' with ', nspindown, ' spins down is ', norm
+        call write_info(1)
 
         ! for each permutation of particles of this type
+        !  antisymmetrize the up and down labeled spins, amongst themselves
+        antisymwf_swap = cmplx(0.0d0, 0.0d0)
         do iperm_up = 1, perms_up%npermutations
           do iperm_down = 1, perms_down%npermutations
  
-            do ip = 1, gr%mesh%np_global
+            do ip = 1, gr%mesh%np_part_global
               ! get present position
               call index_to_coords(gr%mesh%idx, gr%sb%dim, ip, ix)
      
@@ -365,7 +436,7 @@ contains
               ! get position of exchanged point
               ipp = index_from_coords(gr%mesh%idx, gr%sb%dim, ixp)
      
-              antisymwf(ip)=antisymwf(ip) + perms_up%permsign(iperm_up)*perms_down%permsign(iperm_down)*wf(ipp)
+              antisymwf_swap(ip)=antisymwf_swap(ip) + perms_up%permsign(iperm_up)*perms_down%permsign(iperm_down)*antisymwf(ipp)
         
             end do ! ip
      
@@ -373,24 +444,48 @@ contains
         end do ! iperm_up
    
         ! normalize the bloody thing
-        antisymwf = antisymwf / (dble(perms_up%npermutations)*dble(perms_down%npermutations))
-   
-        norm = sum(conjg(antisymwf)*antisymwf) * normalizer
+        antisymwf = antisymwf_swap / (dble(perms_up%npermutations)*dble(perms_down%npermutations)) * sqrt(normalizer)
+
+        SAFE_DEALLOCATE_A(antisymwf_swap)
+        
+        antisymrho = real(conjg(antisymwf)*antisymwf)
+        norm = sum(antisymrho)
+
         write (message(1), '(a,I7,a,I7,a,E20.10)') 'norm of state ', mm, ' with ', nspindown, ' spins down is ', norm
         call write_info(1)
  
-        write(fname,'(a,i4.4,a,i4.4,a,i4.4,a,i4.4)') '/antisymwf.iMB',mm,'_typ',&
-          itype,'_asym',ipart1,'_',ipart2
-     
         !call zoutput_function(output_xcrysden, dir, fname, gr%mesh, gr%sb, &
         !         antisymwf(:,iantisym), sqrt(normalizer), ierr, is_tmp = .false., geo = geo)
    
         call permutations_end(perms_up)
         call permutations_end(perms_down)
 
-      end do ! nspindown
+        SAFE_ALLOCATE(antisymrho_1part(1:mb_1part%npt_1part))
+
+        call zmf_calculate_rho(ikeeppart, mb_1part, npptype, gr%mesh, antisymwf, antisymrho_1part)
+       
+        ! FIXME: this will also depend on particle type and idimension
+        write(filename,'(a,i3.3,a,i2.2)') './asymden_ip', ikeeppart,'_iMB', mm
+        iunit = io_open(filename,action='write')
+        do jj = 1, mb_1part%npt_1part
+          call hypercube_i_to_x(mb_1part%hypercube_1part, mb_1part%ndim1part, mb_1part%nr_1part, mb_1part%enlarge_1part(1), jj, ix)
+          do idir=1,mb_1part%ndim1part
+            write(iunit,'(es11.3)', ADVANCE='no') ix(idir)*mb_1part%h_1part(idir)+mb_1part%origin(idir)
+          end do
+          write(iunit,'(es18.10)') antisymrho_1part(jj)
+        end do
+        call io_close(iunit)
+
+        
+
+        SAFE_DEALLOCATE_A(antisymrho_1part)
+
+      end do ! nspindown=0,1...
    
-        SAFE_DEALLOCATE_A(antisymwf)
+      SAFE_DEALLOCATE_A(antisymwf)
+      SAFE_DEALLOCATE_A(antisymrho)
+
+      call modelmb_1part_end(mb_1part)
 
     end do ! itype
 

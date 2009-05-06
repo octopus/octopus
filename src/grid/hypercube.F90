@@ -31,6 +31,7 @@ module hypercube_m
   public ::                           &
        hypercube_t,                   &
        hypercube_init,                &
+       hypercube_nullify,             &
        hypercube_end,                 &
        hypercube_i_to_x,              &
        hypercube_x_to_i,              &
@@ -78,6 +79,12 @@ contains
     enddo
 
   end subroutine hypercube_init
+
+  subroutine hypercube_nullify(this)
+    type(hypercube_t), intent(inout) :: this
+
+    nullify(this%boxdim)
+  end subroutine hypercube_nullify
 
   subroutine hypercube_end(this)
     type(hypercube_t), intent(inout) :: this

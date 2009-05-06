@@ -92,9 +92,9 @@ contains
       enddo
       do ii = 1, np
         gradrho(ii, jj) = (-sqrtrho(ii+2, jj) - sqrtrho(ii-2, jj) &
-	                & + 16d0*(sqrtrho(ii+1, jj) + sqrtrho(ii-1, jj)) &
+                        & + 16d0*(sqrtrho(ii+1, jj) + sqrtrho(ii-1, jj)) &
                         & - 30d0*sqrtrho(ii, jj))&
-			& /(12d0*sys%gr%mesh%h(1)**2)
+                        & /(12d0*sys%gr%mesh%h(1)**2)
         hm%vhxc(ii, jj) = gradrho(ii, jj)/(2d0*sqrtrho(ii, jj))
       enddo
     enddo
@@ -138,10 +138,10 @@ contains
     
       do jj = 1, nspin
         do ii = 1, np
-	  if (abs(sys%st%rho(ii,jj)-target_rho(ii,jj)) > diffdensity) then
-	    diffdensity = abs(sys%st%rho(ii,jj)-target_rho(ii,jj))
-	    idiffmax=ii  
-	  end if
+          if (abs(sys%st%rho(ii,jj)-target_rho(ii,jj)) > diffdensity) then
+            diffdensity = abs(sys%st%rho(ii,jj)-target_rho(ii,jj))
+            idiffmax=ii  
+          end if
         enddo
       enddo
     
