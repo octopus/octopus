@@ -31,6 +31,7 @@ module simul_box_m
   use loct_parser_m
   use math_m
   use messages_m
+  use mpi_m
   use profiling_m
   use string_m
   use units_m
@@ -1260,7 +1261,7 @@ contains
 
     call push_sub('simul_box.read_lead_unit_cell')
 
-    iunit = io_open(trim(sb%lead_restart_dir(il))//'/gs/mesh', action='read', is_tmp=.true.)
+    iunit = io_open(trim(sb%lead_restart_dir(il))//'/gs/mesh', action='read', is_tmp=.true., grp = mpi_world)
     call simul_box_init_from_file(sb%lead_unit_cell(il), iunit)
     call io_close(iunit)
     ! Check, if
@@ -1331,40 +1332,57 @@ contains
 
     character(len=20)  :: str
     character(len=100) :: line
-    integer            :: idim, jdim, il
+    integer            :: idim, jdim, il, ierr
     FLOAT              :: norm
 
     call push_sub('simul_box.simul_box_init_from_file')
 
     ! Find (and throw away) the dump tag.
     do
-      read(iunit, '(a)') line
+      call iopar_read(mpi_world, iunit, line, ierr)
       if(trim(line).eq.dump_tag) exit
     end do
 
-    read(iunit, *) str, sb%box_shape
-    read(iunit, *) str, sb%dim
-    read(iunit, *) str, sb%periodic_dim
+    call iopar_read(mpi_world, iunit, line, ierr)
+    read(line, *) str, sb%box_shape
+    call iopar_read(mpi_world, iunit, line, ierr)
+    read(line, *) str, sb%dim
+    call iopar_read(mpi_world, iunit, line, ierr)
+    read(line, *) str, sb%periodic_dim
+
     select case(sb%box_shape)
     case(SPHERE, MINIMUM)
-      read(iunit, *) str, sb%rsize
-      read(iunit, *) str, sb%lsize(1:MAX_DIM)
+      call iopar_read(mpi_world, iunit, line, ierr)
+      read(line, *) str, sb%rsize
+      call iopar_read(mpi_world, iunit, line, ierr)
+      read(line, *) str, sb%lsize(1:MAX_DIM)
     case(CYLINDER)
-      read(iunit, *) str, sb%rsize
-      read(iunit, *) str, sb%xsize
-      read(iunit, *) str, sb%lsize(1:MAX_DIM)
+      call iopar_read(mpi_world, iunit, line, ierr)
+      read(line, *) str, sb%rsize
+      call iopar_read(mpi_world, iunit, line, ierr)
+      read(line, *) str, sb%xsize
+      call iopar_read(mpi_world, iunit, line, ierr)
+      read(line, *) str, sb%lsize(1:MAX_DIM)
     case(PARALLELEPIPED)
-      read(iunit, *) str, sb%lsize(1:MAX_DIM)
+      call iopar_read(mpi_world, iunit, line, ierr)
+      read(line, *) str, sb%lsize(1:MAX_DIM)
     case(BOX_USDEF)
-      read(iunit, *) str, sb%lsize(1:MAX_DIM)
-      read(iunit, *) str, sb%user_def
+      call iopar_read(mpi_world, iunit, line, ierr)
+      read(line, *) str, sb%lsize(1:MAX_DIM)
+      call iopar_read(mpi_world, iunit, line, ierr)
+      read(line, *) str, sb%user_def
     end select
-    read(iunit, *) str, sb%fft_alpha
-    read(iunit, *) str, sb%h(1:MAX_DIM)
-    read(iunit, *) str, sb%box_offset(1:MAX_DIM)
-    read(iunit, *) str, sb%inner_size
+    call iopar_read(mpi_world, iunit, line, ierr)
+    read(line, *) str, sb%fft_alpha
+    call iopar_read(mpi_world, iunit, line, ierr)
+    read(line, *) str, sb%h(1:MAX_DIM)
+    call iopar_read(mpi_world, iunit, line, ierr)
+    read(line, *) str, sb%box_offset(1:MAX_DIM)
+    call iopar_read(mpi_world, iunit, line, ierr)
+    read(line, *) str, sb%inner_size
     do idim=1, MAX_DIM
-      read(iunit, *) str, sb%rlattice(1:MAX_DIM, idim)
+      call iopar_read(mpi_world, iunit, line, ierr)
+      read(line, *) str, sb%rlattice(1:MAX_DIM, idim)
     end do
 
     do idim = 1, sb%dim
@@ -1381,11 +1399,15 @@ contains
       sb%klattice(:, idim) = sb%klattice_unitary(:, idim)*M_TWO*M_PI/(M_TWO*sb%lsize(idim))
     end do
 
-    read(iunit, *) str, sb%open_boundaries
+    call iopar_read(mpi_world, iunit, line, ierr)
+    read(line, *) str, sb%open_boundaries
     if(sb%open_boundaries) then
-      read(iunit, *) str, sb%add_unit_cells(LEFT), sb%add_unit_cells(RIGHT)
-      read(iunit, *) str, sb%lead_restart_dir(LEFT)
-      read(iunit, *) str, sb%lead_restart_dir(RIGHT)
+      call iopar_read(mpi_world, iunit, line, ierr)
+      read(line, *) str, sb%add_unit_cells(LEFT), sb%add_unit_cells(RIGHT)
+      call iopar_read(mpi_world, iunit, line, ierr)
+      read(line, *) str, sb%lead_restart_dir(LEFT)
+      call iopar_read(mpi_world, iunit, line, ierr)
+      read(line, *) str, sb%lead_restart_dir(RIGHT)
       SAFE_ALLOCATE(sb%lead_unit_cell(1:NLEADS))
       do il = 1, NLEADS
         call read_lead_unit_cell(sb, il)
