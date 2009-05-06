@@ -400,7 +400,8 @@ write (*,*) 'np_part_global, np_global = ', gr%mesh%np_part_global, gr%mesh%np_g
         ! this could be removed for production
         antisymrho = real(conjg(antisymwf)*antisymwf) * normalizer
         norm = sum(antisymrho)
-        write (message(1), '(a,I7,a,I7,a,E20.10)') 'norm of pair-symmetrized state ', mm, ' with ', nspindown, ' spins down is ', norm
+        write (message(1), '(a,I7,a,I7,a,E20.10)') 'norm of pair-symmetrized state ',&
+                mm, ' with ', nspindown, ' spins down is ', norm
         call write_info(1)
 
         ! for each permutation of particles of this type
