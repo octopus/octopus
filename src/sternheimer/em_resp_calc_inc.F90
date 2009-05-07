@@ -585,6 +585,7 @@ subroutine X(lr_calc_2np1) (sh, hm, st, geo, gr, lr1, lr2, lr3, pert1, pert2, pe
   end do
   
   SAFE_DEALLOCATE_A(tmp)
+  SAFE_DEALLOCATE_A(me23)
 
 end subroutine X(lr_calc_2np1)
 

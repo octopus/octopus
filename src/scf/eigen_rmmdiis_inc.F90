@@ -269,7 +269,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
       do iter = 1, niter
         call batch_end(psib(iter))
-        call batch_end(psib(iter))
+        call batch_end(resb(iter))
       end do
 
       do ist = jst, maxst
