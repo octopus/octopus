@@ -25,7 +25,8 @@ libmath_a_SOURCES = \
 	blas.F90 dablas.c ylm.c oct_gsl_f.c oct_gsl_min_f.c loct_math.F90 lalg_basic.F90 \
 	lalg_adv.F90 gauss_legendre.F90 math.F90 ode_solver.F90 permutations.F90 root_solver.F90 \
 	solvers.F90 \
-	splines.F90 sparskit.F90 fft.F90 tdfunction.F90 fft_cuda.c filters.F90
+	splines.F90 sparskit.F90 fft.F90 tdfunction.F90 fft_cuda.c filters.F90 \
+	young.F90
 
 noinst_HEADERS = \
 	lalg_basic_blas.F90 lalg_adv_lapack.F90 math_inc.F90 \
@@ -56,3 +57,4 @@ ylm.o : ylm.c
 fft_cuda.o : fft_cuda.c
 filters.o: filters.F90 splines.o
 solvers.o : solvers.F90 solvers_inc.F90 lalg_adv.o
+young.o : young.F90 math.o

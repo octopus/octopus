@@ -43,6 +43,7 @@ module modelmb_exchange_syms_m
   use profiling_m
   use states_m
   use units_m
+  use young_m
 
   implicit none
 
@@ -293,7 +294,7 @@ contains
 
     ! local vars
     integer :: itype, ipart1, ipart2, npptype
-    integer :: ip, ipp
+    integer :: ip, ipp, iup, idown, iyoung
     integer :: iantisym, ierr, ikeeppart
     integer :: ndimMB
     integer :: nspindown, nspinup, iperm_up, iperm_down
@@ -301,10 +302,12 @@ contains
 
     type(permutations_t) :: perms_up, perms_down
     type(modelmb_1part_t) :: mb_1part
+    type(young_t) :: young
 
     integer, allocatable :: ix(:), ixp(:), ofst(:)
  
     FLOAT :: normalizer, norm
+    CMPLX :: scalprod
 
     FLOAT, allocatable  :: antisymrho(:)
     FLOAT, allocatable  :: antisymrho_1part(:)
@@ -321,6 +324,7 @@ contains
 
     call permutations_nullify(perms_up)
     call permutations_nullify(perms_down)
+    call young_nullify (young)
 
     call modelmb_1part_nullify(mb_1part)
 
@@ -335,8 +339,6 @@ contains
       write (message(1), '(a)') 'modelmb_sym_state: not coded for several particly types '
       call write_fatal(1)
     end if
-
-write (*,*) 'np_part_global, np_global = ', gr%mesh%np_part_global, gr%mesh%np_global
 
     ! for each particle type
     do itype = 1,modelMBparticles%ntype_of_particle_modelMB
@@ -358,6 +360,7 @@ write (*,*) 'np_part_global, np_global = ', gr%mesh%np_part_global, gr%mesh%np_g
         ofst(ipart1) = (ipart1-1)*ndimMB
       end do
 
+      SAFE_ALLOCATE(antisymwf_swap(1:gr%mesh%np_part_global))
       ! note: use of spin nomenclature is just for visualization, no real spin
       ! here. Spin down particles come first, then the (more numerous) spin up
       do nspindown = 0, floor(npptype/2.)
@@ -366,124 +369,147 @@ write (*,*) 'np_part_global, np_global = ', gr%mesh%np_part_global, gr%mesh%np_g
         call permutations_init(nspinup,perms_up)
         call permutations_init(nspindown,perms_down)
 
-        antisymwf=cmplx(0.0d0,0.0d0)
-        antisymwf(:) = wf(:)
-        
-        ! first symmetrize over pairs of particles associated in the present
-        ! Young diagram
-        SAFE_ALLOCATE(antisymwf_swap(1:gr%mesh%np_part_global))
-        do ipart1 = 1, nspindown
-          ipart2 = ipart1+nspindown
+        ! generate all Young diagrams, decorated, for this distribution of up
+        ! and downs
+        call young_init (young, nspinup, nspindown)
+        call young_write (young)
 
-          antisymwf_swap=antisymwf
-          do ip = 1, gr%mesh%np_part_global
-            ! get present position
-            call index_to_coords(gr%mesh%idx, gr%sb%dim, ip, ix)
-     
-            ! invert coordinates of ipart1 and ipart2
-            ixp = ix
-            ! permutate the particles ipart1 and its spin up partner
-            ixp (ofst(ipart1)+1:ofst(ipart1)+ndimMB) = &
-                ix (ofst(ipart2)+1:ofst(ipart2)+ndimMB)
-            ixp (ofst(ipart2)+1:ofst(ipart2)+ndimMB) = &
-                ix (ofst(ipart1)+1:ofst(ipart1)+ndimMB)
-            
-            ! get position of exchanged point
-            ipp = index_from_coords(gr%mesh%idx, gr%sb%dim, ixp)
-
-            antisymwf_swap(ip)=antisymwf_swap(ip) + antisymwf(ipp)
-        
-          end do ! ip
-          antisymwf = antisymwf_swap * 0.5d0
-        end do
+        ! loop over all Young diagrams for present distribution of spins up and down
+        do iyoung = 1, young%nyoung
+          antisymwf=cmplx(0.0d0,0.0d0)
+          antisymwf(:) = wf(:)
+          
+          ! first symmetrize over pairs of particles associated in the present
+          ! Young diagram
+          do idown = 1, young%ndown
+            ipart1 = young%young_down(idown,iyoung)
+            ipart2 = young%young_up  (idown,iyoung)
   
-        ! this could be removed for production
-        antisymrho = real(conjg(antisymwf)*antisymwf) * normalizer
-        norm = sum(antisymrho)
-        write (message(1), '(a,I7,a,I7,a,E20.10)') 'norm of pair-symmetrized state ',&
-                mm, ' with ', nspindown, ' spins down is ', norm
-        call write_info(1)
-
-        ! for each permutation of particles of this type
-        !  antisymmetrize the up and down labeled spins, amongst themselves
-        antisymwf_swap = cmplx(0.0d0, 0.0d0)
-        do iperm_up = 1, perms_up%npermutations
-          do iperm_down = 1, perms_down%npermutations
- 
+            antisymwf_swap=antisymwf
             do ip = 1, gr%mesh%np_part_global
               ! get present position
               call index_to_coords(gr%mesh%idx, gr%sb%dim, ip, ix)
-     
+       
               ! invert coordinates of ipart1 and ipart2
               ixp = ix
-              ! permutate the particles labeled spin up 
-              do ipart1 = 1, nspinup
-                ! get image of ipart1 under permutation iperm1
-                ipart2 = perms_up%allpermutations(ipart1,iperm_up)
-                !ixp (ofst(ipart1)+1:ofst(ipart1)+ndimMB) = ix (ofst(ipart2)+1:ofst(ipart2)+ndimMB) ! part1 to 2
-                ixp (ofst(ipart1+nspindown)+1:ofst(ipart1+nspindown)+ndimMB) = &
-                  ix (ofst(ipart2+nspindown)+1:ofst(ipart2+nspindown)+ndimMB) ! part1 to 2
-              end do
-              ! permutate the particles labeled spin down (the ones after the
-              ! spin up ones)
-              do ipart1 = 1, nspindown
-                ! get image of ipart1 under permutation iperm1
-                ipart2 = perms_down%allpermutations(ipart1,iperm_down)
-                !ixp (ofst(ipart1+nspinup)+1:ofst(ipart1+nspinup)+ndimMB) = &
-                !           ix (ofst(ipart2+nspinup)+1:ofst(ipart2+nspinup)+ndimMB) ! part1 to 2
-                ixp (ofst(ipart1)+1:ofst(ipart1)+ndimMB) = &
-                           ix (ofst(ipart2)+1:ofst(ipart2)+ndimMB) ! part1 to 2
-              end do
+              ! permutate the particles ipart1 and its spin up partner
+              ixp (ofst(ipart1)+1:ofst(ipart1)+ndimMB) = &
+                  ix (ofst(ipart2)+1:ofst(ipart2)+ndimMB)
+              ixp (ofst(ipart2)+1:ofst(ipart2)+ndimMB) = &
+                  ix (ofst(ipart1)+1:ofst(ipart1)+ndimMB)
               
               ! get position of exchanged point
               ipp = index_from_coords(gr%mesh%idx, gr%sb%dim, ixp)
-     
-              antisymwf_swap(ip)=antisymwf_swap(ip) + perms_up%permsign(iperm_up)*perms_down%permsign(iperm_down)*antisymwf(ipp)
-        
+  
+              antisymwf_swap(ip)=antisymwf_swap(ip) + antisymwf(ipp)
+          
             end do ! ip
-     
-          end do ! iperm_down
-        end do ! iperm_up
-   
-        ! normalize the bloody thing
-        antisymwf = antisymwf_swap / (dble(perms_up%npermutations)*dble(perms_down%npermutations)) * sqrt(normalizer)
-
-        SAFE_DEALLOCATE_A(antisymwf_swap)
-        
-        antisymrho = real(conjg(antisymwf)*antisymwf)
-        norm = sum(antisymrho)
-
-        write (message(1), '(a,I7,a,I7,a,E20.10)') 'norm of state ', mm, ' with ', nspindown, ' spins down is ', norm
-        call write_info(1)
+            antisymwf = antisymwf_swap * 0.5d0
+          end do
+    
+          ! the following could be removed for production
+          antisymrho = real(conjg(antisymwf)*antisymwf) * normalizer
+          norm = sum(antisymrho)
+          write (message(1), '(a,I7,a,I7,a,E20.10)') 'norm of pair-symmetrized-state ',&
+                  mm, ' with ', nspindown, ' spins down is ', norm
+          call write_info(1)
  
-        !call zoutput_function(output_xcrysden, dir, fname, gr%mesh, gr%sb, &
-        !         antisymwf(:,iantisym), sqrt(normalizer), ierr, is_tmp = .false., geo = geo)
+          ! for each permutation of particles of this type
+          !  antisymmetrize the up and down labeled spins, amongst themselves
+          antisymwf_swap = cmplx(0.0d0, 0.0d0)
+          do iperm_up = 1, perms_up%npermutations
+            do ip = 1, gr%mesh%np_part_global
+              ! get present position
+              call index_to_coords(gr%mesh%idx, gr%sb%dim, ip, ix)
+              ! initialize coordinates for all particles
+              ixp = ix
+              ! permute the particles labeled spin up 
+              do iup = 1, nspinup
+                ! get image of ipart1 under permutation iperm1
+                ipart1 = young%young_up(iup,iyoung)
+                ipart2 = young%young_up(perms_up%allpermutations(iup,iperm_up),iyoung)
+                ixp (ofst(ipart1)+1:ofst(ipart1)+ndimMB) = ix (ofst(ipart2)+1:ofst(ipart2)+ndimMB) ! part1 to 2
+              end do
+              ! get position of exchanged point
+              ipp = index_from_coords(gr%mesh%idx, gr%sb%dim, ixp)
+              antisymwf_swap(ip)=antisymwf_swap(ip) + perms_up%permsign(iperm_up)*antisymwf(ipp)
+            end do ! ip
+          end do ! iperm_up
+
+          antisymwf=antisymwf_swap / dble(perms_up%npermutations)
+
+          ! the following could be removed for production
+          antisymrho = real(conjg(antisymwf)*antisymwf) * normalizer
+          norm = sum(antisymrho)
+          write (message(1), '(a,I7,a,I7,a,E20.10)') 'norm of up-antisym+pairsym-state ',&
+                  mm, ' with ', nspindown, ' spins down is ', norm
+          call write_info(1)
+
+          antisymwf_swap=cmplx(0.0d0, 0.0d0)
+          do iperm_down = 1, perms_down%npermutations
+            do ip = 1, gr%mesh%np_part_global
+              ! get present position
+              call index_to_coords(gr%mesh%idx, gr%sb%dim, ip, ix)
+              ! initialize coordinates for all particles
+              ixp = ix
+              ! permute the particles labeled spin down
+              do idown = 1, nspindown
+                ! get image of ipart1 under permutation iperm1
+                ipart1 = young%young_down(idown,iyoung)
+                ipart2 = young%young_down(perms_down%allpermutations(idown,iperm_down),iyoung)
+                ixp (ofst(ipart1)+1:ofst(ipart1)+ndimMB) = ix (ofst(ipart2)+1:ofst(ipart2)+ndimMB) ! part1 to 2
+              end do
+              ! get position of exchanged point
+              ipp = index_from_coords(gr%mesh%idx, gr%sb%dim, ixp)
+              antisymwf_swap(ip)=antisymwf_swap(ip) + perms_down%permsign(iperm_down)*antisymwf(ipp)
+            end do ! ip
+          end do ! iperm_down
+
+          antisymwf=antisymwf_swap / dble(perms_down%npermutations)
+     
+          scalprod = sum(conjg(antisymwf)*wf)
+          write (message(1), '(a,I7,a,I7,a,2E20.10)') 'scalar product to wf of state ', mm, &
+                  ' having ', nspindown, ' spins down is ', scalprod
+          call write_info(1)
+
+          antisymrho = real(conjg(antisymwf)*antisymwf)
+          norm = sum(antisymrho) * normalizer
+
+          if (norm > 1.d-8) antisymwf=antisymwf_swap / sqrt(norm)
+  
+          write (message(1), '(a,I7,a,I7,a,E20.10)') 'norm of state ', mm, ' with ', nspindown, ' spins down is ', norm
+          call write_info(1)
+write (*,*) 'ndwn, npermup, npermdwn ', young%ndown, perms_up%npermutations, perms_down%npermutations
+   
+          !call zoutput_function(output_xcrysden, dir, fname, gr%mesh, gr%sb, &
+          !         antisymwf(:,iantisym), sqrt(normalizer), ierr, is_tmp = .false., geo = geo)
+
+          SAFE_ALLOCATE(antisymrho_1part(1:mb_1part%npt_1part))
+          call zmf_calculate_rho(ikeeppart, mb_1part, npptype, gr%mesh, antisymwf, antisymrho_1part)
+
+          ! FIXME: this will also depend on particle type and idimension
+          write(filename,'(a,i3.3,a,i3.3,a,i3.3,a,i3.3)') './asymden_iMB', mm,'_ipar', ikeeppart,'_ndn',nspindown,'_iY',iyoung
+          iunit = io_open(filename,action='write')
+            do jj = 1, mb_1part%npt_1part
+            call hypercube_i_to_x(mb_1part%hypercube_1part, mb_1part%ndim1part, mb_1part%nr_1part, mb_1part%enlarge_1part(1), jj, ix)
+            do idir=1,mb_1part%ndim1part
+              write(iunit,'(es11.3)', ADVANCE='no') ix(idir)*mb_1part%h_1part(idir)+mb_1part%origin(idir)
+            end do
+            write(iunit,'(es18.10)') antisymrho_1part(jj)
+          end do
+          call io_close(iunit)
+          SAFE_DEALLOCATE_A(antisymrho_1part)
+
+        end do ! iyoung loop
    
         call permutations_end(perms_up)
         call permutations_end(perms_down)
+        call young_end (young)
 
-        SAFE_ALLOCATE(antisymrho_1part(1:mb_1part%npt_1part))
-
-        call zmf_calculate_rho(ikeeppart, mb_1part, npptype, gr%mesh, antisymwf, antisymrho_1part)
-       
-        ! FIXME: this will also depend on particle type and idimension
-        write(filename,'(a,i3.3,a,i2.2)') './asymden_ip', ikeeppart,'_iMB', mm
-        iunit = io_open(filename,action='write')
-        do jj = 1, mb_1part%npt_1part
-          call hypercube_i_to_x(mb_1part%hypercube_1part, mb_1part%ndim1part, mb_1part%nr_1part, mb_1part%enlarge_1part(1), jj, ix)
-          do idir=1,mb_1part%ndim1part
-            write(iunit,'(es11.3)', ADVANCE='no') ix(idir)*mb_1part%h_1part(idir)+mb_1part%origin(idir)
-          end do
-          write(iunit,'(es18.10)') antisymrho_1part(jj)
-        end do
-        call io_close(iunit)
-
-        
-
-        SAFE_DEALLOCATE_A(antisymrho_1part)
 
       end do ! nspindown=0,1...
    
+      SAFE_DEALLOCATE_A(antisymwf_swap)
       SAFE_DEALLOCATE_A(antisymwf)
       SAFE_DEALLOCATE_A(antisymrho)
 
