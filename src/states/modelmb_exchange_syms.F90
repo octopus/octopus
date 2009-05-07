@@ -467,19 +467,20 @@ contains
 
           antisymwf=antisymwf_swap / dble(perms_down%npermutations)
      
+          antisymrho = real(conjg(antisymwf)*antisymwf)
+          norm = sum(antisymrho) * normalizer
+
+          if (norm < 1.d-8) cycle
+
+          antisymwf=antisymwf_swap / sqrt(norm)
+  
           scalprod = sum(conjg(antisymwf)*wf)
           write (message(1), '(a,I7,a,I7,a,2E20.10)') 'scalar product to wf of state ', mm, &
                   ' having ', nspindown, ' spins down is ', scalprod
           call write_info(1)
 
-          antisymrho = real(conjg(antisymwf)*antisymwf)
-          norm = sum(antisymrho) * normalizer
-
-          if (norm > 1.d-8) antisymwf=antisymwf_swap / sqrt(norm)
-  
           write (message(1), '(a,I7,a,I7,a,E20.10)') 'norm of state ', mm, ' with ', nspindown, ' spins down is ', norm
           call write_info(1)
-write (*,*) 'ndwn, npermup, npermdwn ', young%ndown, perms_up%npermutations, perms_down%npermutations
    
           !call zoutput_function(output_xcrysden, dir, fname, gr%mesh, gr%sb, &
           !         antisymwf(:,iantisym), sqrt(normalizer), ierr, is_tmp = .false., geo = geo)
