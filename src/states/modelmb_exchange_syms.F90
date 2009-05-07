@@ -492,7 +492,8 @@ contains
           write(filename,'(a,i3.3,a,i3.3,a,i3.3,a,i3.3)') './asymden_iMB', mm,'_ipar', ikeeppart,'_ndn',nspindown,'_iY',iyoung
           iunit = io_open(filename,action='write')
             do jj = 1, mb_1part%npt_1part
-            call hypercube_i_to_x(mb_1part%hypercube_1part, mb_1part%ndim1part, mb_1part%nr_1part, mb_1part%enlarge_1part(1), jj, ix)
+            call hypercube_i_to_x(mb_1part%hypercube_1part, mb_1part%ndim1part, &
+                 mb_1part%nr_1part, mb_1part%enlarge_1part(1), jj, ix)
             do idir=1,mb_1part%ndim1part
               write(iunit,'(es11.3)', ADVANCE='no') ix(idir)*mb_1part%h_1part(idir)+mb_1part%origin(idir)
             end do
