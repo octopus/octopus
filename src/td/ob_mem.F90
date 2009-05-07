@@ -643,8 +643,7 @@ contains
     ! Try to open file.
     iunit = io_open(trim(dir)//trim(lead_name(il)), action='read', &
       status='old', die=.false., is_tmp=.true., form='unformatted')
-    if(iunit.lt.0) then
-      call io_close(iunit)
+    if(iunit.lt.0) then ! no file found
       call pop_sub(); return
     end if
 
