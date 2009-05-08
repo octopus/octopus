@@ -146,7 +146,9 @@ contains
       enddo
     
       write(100,*) counter, diffdensity, idiffmax
+#ifdef HAVE_FLUSH
       call flush(100)
+#endif
       oldrho=sys%st%rho
     end do
     
