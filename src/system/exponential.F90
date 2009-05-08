@@ -33,6 +33,7 @@ module exponential_m
   use states_calc_m
   use exponential_split_m
   use varinfo_m
+  use states_m
 
   implicit none
 
@@ -43,7 +44,8 @@ module exponential_m
     exponential_copy,            &
     exponential_end,             &
     exponential_apply_batch,     &
-    exponential_apply
+    exponential_apply,           &
+    exponential_apply_all
 
   integer, public, parameter :: &
     SPLIT_OPERATOR     = 0,     &
@@ -497,56 +499,60 @@ contains
       ! We have an inhomogeneous term.
       if( hamiltonian_inh_term(hm) ) then
 
-        hamilt = M_z0
-        expo = M_z0
-
         beta = zmf_nrm2(gr%mesh, hm%d%dim, hm%inh_st%zpsi(:, :, ist, ik))
-        v(1:gr%mesh%np, 1:hm%d%dim, 1) = &
-          hm%inh_st%zpsi(1:gr%mesh%np_part, 1:hm%d%dim, ist, ik)/beta
+        if(beta > CNST(1.0e-12)) then
 
-        psi = M_z0
-        ! This is the Lanczos loop...
-        do n = 1, te%exp_order
-          !copy v(:, :, n) to an array of size 1:gr%mesh%np_part
-          do idim = 1, hm%d%dim
-            call lalg_copy(gr%mesh%np, v(:, idim, n), psi(:, idim))
+          hamilt = M_z0
+          expo = M_z0
+
+          v(1:gr%mesh%np, 1:hm%d%dim, 1) = &
+            hm%inh_st%zpsi(1:gr%mesh%np, 1:hm%d%dim, ist, ik)/beta
+
+          psi = M_z0
+          ! This is the Lanczos loop...
+          do n = 1, te%exp_order
+            !copy v(:, :, n) to an array of size 1:gr%mesh%np_part
+            do idim = 1, hm%d%dim
+              call lalg_copy(gr%mesh%np, v(:, idim, n), psi(:, idim))
+            end do
+
+            !to apply the hamiltonian
+            call operate(psi, v(:, :, n + 1))
+  
+            korder = n
+
+            if(hamiltonian_hermitean(hm)) then
+              l = max(1, n - 1)
+            else
+              l = 1
+            end if
+
+            !orthogonalize against previous vectors
+            call zstates_gram_schmidt(gr%mesh, n - l + 1, hm%d%dim, v(:, :, l:n), &
+              v(:, :, n + 1), normalize = .true., overlap = hamilt(l:n, n), &
+              norm = hamilt(n + 1, n))
+
+            call zlalg_phi(n, pp, hamilt, expo, hamiltonian_hermitean(hm))
+ 
+            res = abs(hamilt(n+1, n)*abs(expo(n, 1)))
+
+            if(abs(hamilt(n+1, n)) < CNST(1.0e4)*M_EPSILON) exit ! "Happy breakdown"
+            if(n > 2 .and. res < tol) exit
           end do
 
-          !to apply the hamiltonian
-          call operate(psi, v(:, :, n + 1))
-
-          korder = n
-
-          if(hamiltonian_hermitean(hm)) then
-            l = max(1, n - 1)
-          else
-            l = 1
+          if(res > tol) then ! Here one should consider the possibility of the happy breakdown.
+            write(message(1),'(a,es8.2)') 'Lanczos exponential expansion did not converge: ', res
+            call write_warning(1)
           end if
 
-          !orthogonalize against previous vectors
-          call zstates_gram_schmidt(gr%mesh, n - l + 1, hm%d%dim, v(:, :, l:n), v(:, :, n + 1), &
-            normalize = .true., overlap = hamilt(l:n, n), norm = hamilt(n + 1, n))
+          call lalg_gemv(gr%mesh%np, hm%d%dim, korder, M_z1*beta, v, expo(1:korder, 1), M_z0, tmp)
 
-          call zlalg_phi(n, pp, hamilt, expo, hamiltonian_hermitean(hm))
- 
-          res = abs(hamilt(n+1, n)*abs(expo(n, 1)))
+          do idim = 1, hm%d%dim
+            call lalg_copy(gr%mesh%np, tmp(:, idim), psi(:, idim))
+          end do
 
-          if(abs(hamilt(n+1, n)) < CNST(1.0e4)*M_EPSILON) exit ! "Happy breakdown"
-          if(n > 2 .and. res < tol) exit
-        end do
-
-        if(res > tol) then ! Here one should consider the possibility of the happy breakdown.
-          write(message(1),'(a,es8.2)') 'Lanczos exponential expansion did not converge: ', res
-          call write_warning(1)
+          zpsi = zpsi + deltat * psi
         end if
-
-        call lalg_gemv(gr%mesh%np, hm%d%dim, korder, M_z1*beta, v, expo(1:korder, 1), M_z0, tmp)
-
-        do idim = 1, hm%d%dim
-          call lalg_copy(gr%mesh%np, tmp(:, idim), psi(:, idim))
-        end do
-
-        zpsi = zpsi + deltat * psi
       end if
 
 
@@ -699,6 +705,114 @@ contains
     end subroutine taylor_series_batch
 
   end subroutine exponential_apply_batch
+
+
+  ! ---------------------------------------------------------
+  ! This routine performs the operation:
+  !
+  ! exp{-i*deltat*hm(t)}|zpsi>  <-- |zpsi>
+  !
+  ! If imag_time is present and is set to true, it performa instead:
+  !
+  ! exp{ deltat*hm(t)}|zpsi>  <-- |zpsi>
+  !
+  ! If the hamiltonian contains an inhomogeneous term, the operation is:
+  !
+  ! exp{-i*deltat*hm(t)}|zpsi> + deltat*phi{-i*deltat*hm(t)}|zpsi>  <-- |zpsi>
+  !
+  ! where:
+  !
+  ! phi(x) = (e^x - 1)/x
+  ! ---------------------------------------------------------
+  subroutine exponential_apply_all(te, gr, hm, psi, deltat, t, order, vmagnus, imag_time)
+    type(exponential_t), intent(inout) :: te
+    type(grid_t),        intent(inout) :: gr
+    type(hamiltonian_t), intent(inout) :: hm
+    type(states_t),      intent(inout) :: psi
+    FLOAT,               intent(in)    :: deltat, t
+    integer, optional,   intent(inout) :: order
+    FLOAT,   optional,   intent(in)    :: vmagnus(gr%mesh%np, hm%d%nspin, 2)
+    logical, optional,   intent(in)    :: imag_time
+
+    integer :: ik, ist
+    CMPLX   :: timestep
+    logical :: apply_magnus
+    CMPLX :: zfact
+    integer :: i, idim
+    logical :: zfact_is_real
+
+    type(states_t) :: psi1, hpsi1
+
+    call push_sub('exponential.exponential_apply_all')
+
+    ASSERT(te%exp_method .eq. TAYLOR)
+
+    apply_magnus = .false.
+    if(present(vmagnus)) apply_magnus = .true.
+
+    timestep = cmplx(deltat, M_ZERO)
+    if(present(imag_time)) then
+      if(imag_time) timestep = M_zI * deltat
+    end if
+
+    call states_copy(psi1, psi)
+    call states_copy(hpsi1, psi)
+
+    forall(ik = psi%d%kpt%start:psi%d%kpt%end, ist = psi%st_start:psi%st_end)
+      psi1%zpsi(:, :, ist, ik)  = M_z0
+      hpsi1%zpsi(:, :, ist, ik) = M_z0
+    end forall
+
+    zfact = M_z1
+    zfact_is_real = .true.
+
+    do i = 1, te%exp_order
+      zfact = zfact*(-M_zI*timestep)/i
+      zfact_is_real = .not. zfact_is_real
+      
+      if (i == 1) then
+        call zhamiltonian_apply_all (hm, gr, psi, hpsi1, t)
+      else
+        call zhamiltonian_apply_all(hm, gr, psi1, hpsi1, t)
+      end if
+
+      if(zfact_is_real) then
+        do ik = psi%d%kpt%start, psi%d%kpt%end
+          do ist = psi%st_start, psi%st_end
+            do idim = 1, hm%d%dim
+              call lalg_axpy(gr%mesh%np, real(zfact), hpsi1%zpsi(:, idim, ist, ik), psi%zpsi(:, idim, ist, ik))
+            end do
+          end do
+        end do
+      else
+        do ik = psi%d%kpt%start, psi%d%kpt%end
+          do ist = psi%st_start, psi%st_end
+            do idim = 1, hm%d%dim
+              call lalg_axpy(gr%mesh%np, zfact, hpsi1%zpsi(:, idim, ist, ik), psi%zpsi(:, idim, ist, ik))
+            end do
+          end do
+        end do
+      end if
+
+      if(i .ne. te%exp_order) then
+        do ik = psi%d%kpt%start, psi%d%kpt%end
+          do ist = psi%st_start, psi%st_end
+            do idim = 1, hm%d%dim
+              call lalg_copy(gr%mesh%np, hpsi1%zpsi(:, idim, ist, ik), psi1%zpsi(:, idim, ist, ik))
+            end do
+          end do
+        end do
+      end if
+
+    end do
+    ! End of Taylor expansion loop.
+
+    call states_end(psi1)
+    call states_end(hpsi1)
+
+    if(present(order)) order = te%exp_order * psi%d%nik * psi%nst ! This should be the correct number
+    call pop_sub()
+  end subroutine exponential_apply_all
 
 end module exponential_m
 

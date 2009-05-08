@@ -162,8 +162,6 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, t, kinetic_only)
       if(iand(hm%xc_family, XC_FAMILY_MGGA).ne.0) &
         call X(h_mgga_terms) (hm, gr, epsi, hpsi, ik, grad)
 
-      if(hamiltonian_oct_exchange(hm)) call X(oct_exchange_operator)(hm, gr, epsi, hpsi, ik)
-      
       call X(magnetic_terms) (gr, hm, epsi, hpsi, grad, ik)
       
       if(present(t)) call X(vborders) (gr, hm, epsi, hpsi)
@@ -269,6 +267,33 @@ subroutine X(hamiltonian_apply) (hm, gr, psi, hpsi, ist, ik, t, kinetic_only)
 
   call pop_sub()
 end subroutine X(hamiltonian_apply)
+! ---------------------------------------------------------
+
+
+! ---------------------------------------------------------
+subroutine X(hamiltonian_apply_all) (hm, gr, psi, hpsi, t)
+  type(hamiltonian_t), intent(in)    :: hm
+  type(grid_t),        intent(inout) :: gr
+  type(states_t), intent(inout) :: psi
+  type(states_t), intent(inout) :: hpsi
+  FLOAT, optional,     intent(in)    :: t
+
+  integer :: ist, ik
+
+  call push_sub('hamiltonian_inc.Xhamiltonian_apply_all')
+
+  do ik = psi%d%kpt%start, psi%d%kpt%end
+    do ist = psi%st_start, psi%st_end
+      call X(hamiltonian_apply)(hm, gr, psi%X(psi)(:, :, ist, ik), hpsi%X(psi)(:, :, ist, ik), ist, ik, t)
+    end do
+  end do
+
+  if(hamiltonian_oct_exchange(hm)) call X(oct_exchange_operator_all)(hm, gr, psi, hpsi)
+
+  call pop_sub()
+end subroutine X(hamiltonian_apply_all)
+! ---------------------------------------------------------
+
 
 ! ---------------------------------------------------------
 subroutine X(exchange_operator) (hm, gr, psi, hpsi, ist, ik)
@@ -330,6 +355,59 @@ subroutine X(exchange_operator) (hm, gr, psi, hpsi, ist, ik)
   SAFE_DEALLOCATE_A(pot)
   call pop_sub()
 end subroutine X(exchange_operator)
+! ---------------------------------------------------------
+
+
+! ---------------------------------------------------------
+subroutine X(oct_exchange_operator_all) (hm, gr, psi, hpsi)
+  type(hamiltonian_t), intent(in)    :: hm
+  type(grid_t),        intent(inout) :: gr
+  type(states_t),      intent(inout) :: psi
+  type(states_t),      intent(inout) :: hpsi
+
+  integer :: ik, ist
+  FLOAT, allocatable :: rho(:), pot(:)
+  integer :: j, k
+
+  call push_sub('hamiltonian_inc.Xexchange_operator_all')
+
+  SAFE_ALLOCATE(rho(1:gr%mesh%np))
+  SAFE_ALLOCATE(pot(1:gr%mesh%np))
+
+  do ik = psi%d%kpt%start, psi%d%kpt%end
+    do ist = psi%st_start, psi%st_end
+
+      select case(hm%d%ispin)
+      case(UNPOLARIZED)
+        do j = 1, hm%oct_st%nst
+          pot = M_ZERO
+          forall (k = 1:gr%mesh%np)
+            rho(k) = hm%oct_st%occ(j, 1) * R_AIMAG(R_CONJ(hm%oct_st%X(psi)(k, 1, j, ik)) * psi%X(psi)(k, 1, j, ik))
+          end forall
+          call dpoisson_solve(gr, pot, rho)
+          forall(k = 1:gr%mesh%np)
+            hpsi%X(psi)(k, 1, ist, ik) = hpsi%X(psi)(k, 1, ist, ik) + M_TWO * M_zI * &
+              hm%oct_st%X(psi)(k, 1, ist, ik) * (pot(k) + hm%oct_fxc(k, 1, 1) * rho(k))
+          end forall
+        end do 
+
+      case(SPIN_POLARIZED)
+        stop 'CODE MISSING.'
+
+      case(SPINORS)
+        stop 'CODE MISSING.'
+
+      end select
+
+    end do
+  end do
+
+
+  SAFE_DEALLOCATE_A(rho)
+  SAFE_DEALLOCATE_A(pot)
+  call pop_sub()
+end subroutine X(oct_exchange_operator_all)
+! ---------------------------------------------------------
 
 
 ! ---------------------------------------------------------

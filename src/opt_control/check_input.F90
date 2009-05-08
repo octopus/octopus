@@ -141,9 +141,9 @@
         write(message(3), '(a)') '"TheoryLevel = dft".'
         call write_fatal(3)
       end if
-      if( tr%method .ne. PROP_EXPONENTIAL_MIDPOINT ) then
-        write(message(1), '(a)') 'When doing QOCT with interacting electronsl, then you must set'
-        write(message(2), '(a)') 'TDEvolutionMethod = exp_mid'
+      if( tr%method .ne. PROP_QOCT_TDDFT_PROPAGATOR ) then
+        write(message(1), '(a)') 'When doing QOCT with interacting electrons, then you must set'
+        write(message(2), '(a)') 'TDEvolutionMethod = qoct_tddft_propagator'
         call write_fatal(2)
       end if
     end if
