@@ -342,6 +342,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
 #ifdef HAVE_MPI
   R_TYPE, allocatable :: tmp(:, :)
+  type(profile_t), save :: commprof, comm2prof
 #endif
 
   maxorb = 0
@@ -391,7 +392,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
     hamiltonian = R_TOTYPE(M_ZERO)
     overlap = R_TOTYPE(M_ZERO)
 
-    do iatom = 1, geo%natoms
+    do iatom = geo%atoms%start, geo%atoms%end
       do iorb = 1, geo%atom(iatom)%spec%niwfs
         ibasis = basis_index(iatom, iorb)
 
@@ -425,15 +426,43 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
         
       end do
     end do
-    
+
 #ifdef HAVE_MPI
+    if(geo%atoms%parallel) then
+      call profiling_in(commprof, "LCAO_BCAST")
+
+      !clearly this can be improved by using MPI_Allgatherv
+      do iatom = 1, geo%natoms
+        do iorb = 1, geo%atom(iatom)%spec%niwfs
+          ibasis = basis_index(iatom, iorb)
+
+          do jatom = iatom, geo%natoms
+            do jorb = 1, geo%atom(jatom)%spec%niwfs
+              jbasis = basis_index(jatom, jorb)
+
+              call MPI_Bcast(hamiltonian(jbasis, ibasis), 1, R_MPITYPE, geo%atoms%node(iatom), geo%atoms%mpi_grp%comm, mpi_err)
+              hamiltonian(ibasis, jbasis) = R_CONJ(hamiltonian(jbasis, ibasis))
+
+              call MPI_Bcast(overlap(jbasis, ibasis), 1, R_MPITYPE, geo%atoms%node(iatom), geo%atoms%mpi_grp%comm, mpi_err)
+              overlap(ibasis, jbasis) = R_CONJ(overlap(jbasis, ibasis))
+
+            end do
+          end do
+        end do
+      end do
+
+      call profiling_out(commprof)
+    end if
+
     if(gr%mesh%parallel_in_domains) then
+      call profiling_in(comm2prof, "LCAO_REDUCE")
       SAFE_ALLOCATE(tmp(1:nbasis, 1:nbasis))
       tmp = hamiltonian
       call MPI_Allreduce(tmp, hamiltonian, nbasis**2, R_MPITYPE, MPI_SUM, gr%mesh%mpi_grp%comm, mpi_err)
       tmp = overlap
       call MPI_Allreduce(tmp, overlap, nbasis**2, R_MPITYPE, MPI_SUM, gr%mesh%mpi_grp%comm, mpi_err)
       SAFE_DEALLOCATE_A(tmp)
+      call profiling_out(comm2prof)
     end if
 #endif
 
