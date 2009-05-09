@@ -57,13 +57,20 @@ subroutine X(dsubmesh_add_to_mesh)(this, sphi, phi, factor)
 
 end subroutine X(dsubmesh_add_to_mesh)
 
-R_TYPE function X(dsubmesh_to_mesh_dotp)(this, dim, sphi, phi) result(dotp)
-  type(submesh_t),  intent(in)  :: this
-  integer,          intent(in)  :: dim
-  FLOAT,            intent(in)  :: sphi(:)
-  R_TYPE,           intent(in)  :: phi(:, :)
+R_TYPE function X(dsubmesh_to_mesh_dotp)(this, dim, sphi, phi, reduce) result(dotp)
+  type(submesh_t),   intent(in) :: this
+  integer,           intent(in) :: dim
+  FLOAT,             intent(in) :: sphi(:)
+  R_TYPE,            intent(in) :: phi(:, :)
+  logical, optional, intent(in) :: reduce
 
   integer :: is, idim
+  logical :: reduce_
+
+  reduce_ = .false.
+  if(present(reduce)) reduce_ = reduce
+
+  ASSERT(.not. reduce_)
 
   dotp = R_TOTYPE(M_ZERO)
 

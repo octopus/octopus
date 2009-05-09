@@ -340,6 +340,10 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   type(batch_t) :: orbitals
   FLOAT :: dist2, lapdist
 
+#ifdef HAVE_MPI
+  R_TYPE, allocatable :: tmp(:, :)
+#endif
+
   maxorb = 0
   nbasis = 0
   do iatom = 1, geo%natoms
@@ -406,12 +410,14 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
             if(dist2 > (radius(ibasis) + radius(jbasis) + lapdist)**2) cycle
 
-            hamiltonian(jbasis, ibasis) = submesh_to_mesh_dotp(sphere(jbasis), st%d%dim, orbitals%states(jbasis)%dpsi(:, 1), hpsi)
+            hamiltonian(jbasis, ibasis) = &
+                 submesh_to_mesh_dotp(sphere(jbasis), st%d%dim, orbitals%states(jbasis)%dpsi(:, 1), hpsi, reduce = .false.)
             hamiltonian(ibasis, jbasis) = R_CONJ(hamiltonian(jbasis, ibasis))
 
             if(dist2 > (radius(ibasis) + radius(jbasis))**2) cycle
             
-            overlap(jbasis, ibasis) = submesh_to_mesh_dotp(sphere(jbasis), st%d%dim, orbitals%states(jbasis)%dpsi(:, 1), psii)
+            overlap(jbasis, ibasis) = &
+                 submesh_to_mesh_dotp(sphere(jbasis), st%d%dim, orbitals%states(jbasis)%dpsi(:, 1), psii, reduce = .false.)
             overlap(ibasis, jbasis) = R_CONJ(overlap(jbasis, ibasis))
 
           end do
@@ -420,6 +426,17 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
       end do
     end do
     
+#ifdef HAVE_MPI
+    if(gr%mesh%parallel_in_domains) then
+      SAFE_ALLOCATE(tmp(1:nbasis, 1:nbasis))
+      tmp = hamiltonian
+      call MPI_Allreduce(tmp, hamiltonian, nbasis**2, R_MPITYPE, MPI_SUM, gr%mesh%mpi_grp%comm, mpi_err)
+      tmp = overlap
+      call MPI_Allreduce(tmp, overlap, nbasis**2, R_MPITYPE, MPI_SUM, gr%mesh%mpi_grp%comm, mpi_err)
+      SAFE_DEALLOCATE_A(tmp)
+    end if
+#endif
+
     call lalg_geneigensolve(nbasis, hamiltonian, overlap, ev)
 
     do ist = st%st_start, st%st_end
