@@ -55,6 +55,13 @@ subroutine X(calculate_eigenvalues)(hm, gr, st, t)
         st%eigenval(ist, ik) = R_REAL(e)
       end do
     end do
+
+#ifdef HAVE_MPI
+    if(st%parallel_in_states .or. st%d%kpt%parallel) then
+      message(1) = "Fixme: eigenvalues are not allgathered."
+      call write_warning(1)
+    end if
+#endif
   end if
 
   SAFE_DEALLOCATE_A(Hpsi)
