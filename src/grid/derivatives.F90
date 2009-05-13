@@ -598,10 +598,13 @@ contains
     do p = 1, p_max
       mat(1,:) = M_ONE
       do i = 1, op(1)%stencil%size
-        forall(j = 1:dim)
-          x(j) = mesh%x(p + op(1)%ri(i, op(1)%rimap(p)), j) - mesh%x(p, j)
-          x(j) = x(j)*sqrt(masses(j))
-        end forall
+        if(mesh%use_curvilinear) then
+          forall(j = 1:dim) x(j) = mesh%x(p + op(1)%ri(i, op(1)%rimap(p)), j) - mesh%x(p, j)
+        else
+          forall(j = 1:dim) x(j) = real(op(1)%stencil%points(j, i), REAL_PRECISION)*mesh%h(j)
+        end if
+
+        forall(j = 1:dim) x(j) = x(j)*sqrt(masses(j))
 
         ! calculate powers
         do j = 1, dim
