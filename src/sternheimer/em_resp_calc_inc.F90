@@ -362,12 +362,13 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
   type(states_t), pointer :: st
   type(mesh_t),   pointer :: mesh
 
-  integer :: ifreq, isigma, idim, ispin, np, ndim, idir, ist, ik
+  integer :: ifreq, jfreq, isigma, idim, ispin, np, ndim, idir, ist, ik
   integer :: ii, jj, kk, iperm, op_sigma, idim2, ist2, ip
   integer :: perm(1:3), u(1:3), w(1:3), ijk(1:3)
 
   R_TYPE, allocatable :: hvar(:, :, :, :, :, :)
-  R_TYPE, allocatable :: tmp(:), ppsi(:, :), me(:, :, :, :, :)
+  R_TYPE, allocatable :: tmp(:), ppsi(:, :), me010(:, :, :, :, :)
+  type(matrix_t), allocatable :: me11(:, :, :, :, :, :)
   FLOAT,  allocatable :: rho(:,:), kxc(:, :, :, :)
   R_TYPE, allocatable :: hpol_density(:)
 
@@ -400,7 +401,8 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
   SAFE_ALLOCATE(ppsi(1:np, 1:st%d%dim))
   SAFE_ALLOCATE(hvar(1:np, 1:st%d%nspin, 1:2, 1:st%d%dim, 1:ndim, 1:3))
   SAFE_ALLOCATE(hpol_density(1:np))
-  SAFE_ALLOCATE(me(1:st%nst, 1:st%nst, 1:MAX_DIM, 1:3, st%d%kpt%start:st%d%kpt%end))
+  SAFE_ALLOCATE(me010(1:st%nst, 1:st%nst, 1:MAX_DIM, 1:3, st%d%kpt%start:st%d%kpt%end))
+  SAFE_ALLOCATE(me11(1:MAX_DIM, 1:MAX_DIM, 1:3, 1:3, 1:2, st%d%kpt%start:st%d%kpt%end))
 
   do ifreq = 1, 3
     do idir = 1, ndim
@@ -433,7 +435,7 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
               ppsi(ip, idim) = ppsi(ip, idim) + R_REAL(hvar(ip, ispin, isigma, idim, ii, ifreq))*st%X(psi)(ip, idim, ist, ik)
             end forall
             
-            me(ist2, ist, ii, ifreq, ik) = X(mf_dotp)(mesh, st%d%dim, st%X(psi)(:, :, ist2, ik), ppsi)
+            me010(ist2, ist, ii, ifreq, ik) = X(mf_dotp)(mesh, st%d%dim, st%X(psi)(:, :, ist2, ik), ppsi)
 
           end do
         end do
@@ -441,6 +443,27 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
     end do
   end do
 
+  do ik = st%d%kpt%start, st%d%kpt%end
+    do ii = 1, MAX_DIM
+      do jj = 1, MAX_DIM
+        do ifreq = 1, 3
+          do jfreq = 1, 3
+            do isigma = 1,2
+              op_sigma = 2 
+              if(isigma == 2) op_sigma = 1
+
+              SAFE_ALLOCATE(me11(ii, jj, ifreq, jfreq, isigma, ik)%X(matrix)(1:st%nst, 1:st%nst))
+              call states_blockt_mul(mesh, st, st%st_start, st%st_end, st%st_start, st%st_end, &
+                em_lr(ii, op_sigma, ifreq)%X(dl_psi)(:, :, :, ik), &
+                em_lr(jj, isigma, jfreq)%X(dl_psi)(:, :, :, ik), &
+                me11(ii, jj, ifreq, jfreq, isigma, ik)%X(matrix))
+
+            end do
+          end do
+        end do
+      end do
+    end do
+  end do
 
   do ii = 1, ndim
     do jj = 1, ndim
@@ -484,15 +507,10 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
                     * X(mf_dotp)(mesh, em_lr(u(1), op_sigma, w(1))%X(dl_psi)(1:np, idim, ist, ik), tmp(1:np))
                   
                   do ist2 = 1, st%nst
-                    do idim2 = 1, st%d%dim
-
-                      beta(ii, jj, kk) = beta(ii, jj, kk) + & 
-                        M_HALF * st%d%kweights(ik)*st%smear%el_per_state*me(ist2, ist, u(2), w(2), ik)*X(mf_dotp)(mesh, &
-                        em_lr(u(1), op_sigma, w(1))%X(dl_psi)(1:np, idim, ist, ik), &
-                        em_lr(u(3), isigma,   w(3))%X(dl_psi)(1:np, idim2, ist2, ik))
-
-                      end do !idim2
-                    end do ! ist2
+                    beta(ii, jj, kk) = beta(ii, jj, kk) + & 
+                      M_HALF * st%d%kweights(ik)*st%smear%el_per_state*me010(ist2, ist, u(2), w(2), ik)*&
+                      me11(u(1), u(3), w(1), w(3), isigma, ik)%X(matrix)(ist, ist2)
+                  end do ! ist2
 
                 end do !idim
               end do !ist
@@ -519,8 +537,25 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
     end do !jj
   end do !ii
 
+  do ik = st%d%kpt%start, st%d%kpt%end
+    do ii = 1, MAX_DIM
+      do jj = 1, MAX_DIM
+        do ifreq = 1, 3
+          do jfreq = 1, 3
+            do isigma = 1,2
+              SAFE_DEALLOCATE_P(me11(ii, jj, ifreq, jfreq, isigma, ik)%X(matrix))
+            end do
+          end do
+        end do
+      end do
+    end do
+  end do
+
   SAFE_DEALLOCATE_A(hpol_density)
   SAFE_DEALLOCATE_A(tmp)
+  SAFE_DEALLOCATE_A(hvar)
+  SAFE_DEALLOCATE_A(me010)
+  SAFE_DEALLOCATE_A(me11)
   SAFE_DEALLOCATE_A(hvar)
 
   call pop_sub()

@@ -37,6 +37,7 @@ module em_resp_calc_m
   use pert_m
   use profiling_m
   use states_m
+  use states_block_m
   use states_dim_m
   use sternheimer_m
   use system_m
@@ -62,6 +63,11 @@ module em_resp_calc_m
   ! periodic version of polarizability in kdotp
 
   type(profile_t), save :: beta_prof
+
+  type matrix_t
+    FLOAT, pointer :: dmatrix(:, :)
+    CMPLX, pointer :: zmatrix(:, :)
+  end type matrix_t
 
 contains
 
