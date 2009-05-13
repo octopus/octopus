@@ -366,10 +366,8 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
   integer :: ii, jj, kk, iperm, op_sigma, idim2, ist2, ip
   integer :: perm(1:3), u(1:3), w(1:3), ijk(1:3)
 
-  R_TYPE :: prod
-
   R_TYPE, allocatable :: hvar(:, :, :, :, :, :)
-  R_TYPE, allocatable :: tmp(:)
+  R_TYPE, allocatable :: tmp(:), ppsi(:, :), me(:, :, :, :, :)
   FLOAT,  allocatable :: rho(:,:), kxc(:, :, :, :)
   R_TYPE, allocatable :: hpol_density(:)
 
@@ -399,8 +397,10 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
   SAFE_DEALLOCATE_A(rho)
 
   SAFE_ALLOCATE(tmp(1:np))
+  SAFE_ALLOCATE(ppsi(1:np, 1:st%d%dim))
   SAFE_ALLOCATE(hvar(1:np, 1:st%d%nspin, 1:2, 1:st%d%dim, 1:ndim, 1:3))
   SAFE_ALLOCATE(hpol_density(1:np))
+  SAFE_ALLOCATE(me(1:st%nst, 1:st%nst, 1:MAX_DIM, 1:3, st%d%kpt%start:st%d%kpt%end))
 
   do ifreq = 1, 3
     do idir = 1, ndim
@@ -411,6 +411,36 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
   end do !ifreq
 
   beta(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM) = M_ZERO
+
+  do ik = st%d%kpt%start, st%d%kpt%end
+    ispin = states_dim_get_spin_index(sys%st%d, ik)
+    do ist = 1, st%nst
+      do ist2 = 1, st%nst
+        do ii = 1, MAX_DIM
+          do ifreq = 1, 3
+            
+            if (present(kdotp_lr)) then
+              forall (idim = 1:st%d%dim, ip = 1:np) ppsi(ip, idim) = - M_zI * kdotp_lr(ii)%X(dl_psi)(ip, idim, ist, ik)
+            else
+              do idim = 1, st%d%dim
+                call pert_setup_dir(dipole, ii)
+                call X(pert_apply)(dipole, sys%gr, sys%geo, hm, ik, st%X(psi)(:, idim, ist, ik), ppsi(:, idim))
+              end do
+            endif
+            
+            isigma = 1
+            forall (idim = 1:st%d%dim, ip = 1:np)
+              ppsi(ip, idim) = ppsi(ip, idim) + R_REAL(hvar(ip, ispin, isigma, idim, ii, ifreq))*st%X(psi)(ip, idim, ist, ik)
+            end forall
+            
+            me(ist2, ist, ii, ifreq, ik) = X(mf_dotp)(mesh, st%d%dim, st%X(psi)(:, :, ist2, ik), ppsi)
+
+          end do
+        end do
+      end do
+    end do
+  end do
+
 
   do ii = 1, ndim
     do jj = 1, ndim
@@ -455,24 +485,9 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
                   
                   do ist2 = 1, st%nst
                     do idim2 = 1, st%d%dim
-                      ! there is no coupling between states with different k or spin
-
-                      if (present(kdotp_lr)) then
-                        tmp(1:np) = - M_zI * kdotp_lr(u(2))%X(dl_psi)(1:np, idim, ist, ik) 
-                      else
-                        call pert_setup_dir(dipole, u(2))
-                        call X(pert_apply)(dipole, sys%gr, sys%geo, hm, ik, st%X(psi)(:, idim, ist, ik), tmp)
-                      endif
-
-                      do ip = 1, np
-                        tmp(ip) = tmp(ip) + &
-                          R_REAL(hvar(ip, ispin, isigma, idim2, u(2), w(2))) * st%X(psi)(ip, idim, ist, ik)
-                      enddo
-
-                      prod = X(mf_dotp)(mesh, st%X(psi)(:, idim2, ist2, ik), tmp)
 
                       beta(ii, jj, kk) = beta(ii, jj, kk) + & 
-                        M_HALF * st%d%kweights(ik) * st%smear%el_per_state * prod * X(mf_dotp)(mesh, &
+                        M_HALF * st%d%kweights(ik)*st%smear%el_per_state*me(ist2, ist, u(2), w(2), ik)*X(mf_dotp)(mesh, &
                         em_lr(u(1), op_sigma, w(1))%X(dl_psi)(1:np, idim, ist, ik), &
                         em_lr(u(3), isigma,   w(3))%X(dl_psi)(1:np, idim2, ist2, ik))
 
