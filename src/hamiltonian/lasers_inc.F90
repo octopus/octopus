@@ -85,7 +85,7 @@ subroutine X(vlaser_operator_linear) (laser, gr, std, psi, hpsi, ik, gyromagneti
   R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(gr%mesh%np_part, std%dim)
   integer,             intent(in)    :: ik
   FLOAT,               intent(in)    :: gyromagnetic_ratio
-  FLOAT,               pointer       :: a_static(:,:)
+  FLOAT, optional,     intent(in)    :: a_static(:,:)
 
   integer :: k, idim
   logical :: electric_field, vector_potential, magnetic_field
@@ -161,7 +161,7 @@ subroutine X(vlaser_operator_linear) (laser, gr, std, psi, hpsi, ik, gyromagneti
     ! the time-dependent one defined as a "laser" (ideally one should just add them all and
     ! do the calculation only once...). Note that h%ep%a_static already has been divided
     ! by P_c, and therefore here we only divide by P_c, and not P_c**2.
-    if(associated(a_static)) then
+    if(present(a_static)) then
       do k = 1, gr%mesh%np
         hpsi(k, :) = hpsi(k, :) + dot_product(a(k, 1:gr%mesh%sb%dim), a_static(k, 1:gr%mesh%sb%dim))*psi(k, :) / P_c
       end do
@@ -241,7 +241,7 @@ subroutine X(vlasers) (lasers, nlasers, gr, std, psi, hpsi, grad, ik, gyromagnet
   type(states_dim_t),  intent(in)    :: std
   R_TYPE,              intent(inout) :: psi(:,:)  ! psi(gr%mesh%np_part, std%dim)
   R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(gr%mesh%np_part, std%dim)
-  R_TYPE,              pointer       :: grad(: , :, :)
+  R_TYPE,              intent(inout) :: grad(: , :, :)
   integer,             intent(in)    :: ik
   FLOAT,               intent(in)    :: gyromagnetic_ratio
   FLOAT,    optional,  intent(in)    :: a_static(:,:)

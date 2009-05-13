@@ -157,8 +157,8 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
         local_rho(1:cube%n(1), 1:cube%n(2), 1:cube%n(3), i) = cube%RS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
       end do
     else
-      SAFE_ALLOCATE(md(1:gr%mesh%np, 1:3)))
-      SAFE_ALLOCATE(d(1:gr%mesh%np_part)))
+      SAFE_ALLOCATE(md(1:gr%mesh%np, 1:3))
+      SAFE_ALLOCATE(d(1:gr%mesh%np_part))
 
       d = st%rho(:, 1) + st%rho(:, 2)
       call magnetic_density(gr%mesh, st, st%rho, md)
