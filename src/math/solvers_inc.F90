@@ -356,9 +356,9 @@ end subroutine X(bi_conjugate_gradients)
     logical, optional, intent(in)    :: showprogress ! should there be a progress bar
     logical, optional, intent(out)   :: converged ! has the algorithm converged
 
-    R_TYPE, allocatable  :: r(:), v(:), z(:), q(:), p(:), deltax(:), deltar(:)
-    R_TYPE               :: eta, delta, epsilon, beta
-    FLOAT               :: rho, xsi, gamma, alpha, theta, threshold_, res, oldtheta, oldgamma, oldrho
+    R_TYPE, allocatable :: r(:), v(:), z(:), q(:), p(:), deltax(:), deltar(:)
+    R_TYPE              :: eta, delta, epsilon, beta, rtmp
+    FLOAT               :: rho, xsi, gamma, alpha, theta, threshold_, res, oldtheta, oldgamma, oldrho, tmp
     integer             :: max_iter, err, ip
     logical             :: showprogress_
     FLOAT               :: log_res, log_thr
@@ -426,8 +426,10 @@ end subroutine X(bi_conjugate_gradients)
           exit
         end if
         alpha = alpha*xsi/rho
-        call lalg_scal(np, M_ONE/rho, v)
-        call lalg_scal(np, M_ONE/xsi, z)
+        tmp = M_ONE/rho
+        forall (ip = 1:np) v(ip) = tmp*v(ip)
+        tmp = M_ONE/xsi
+        forall (ip = 1:np) z(ip) = tmp*z(ip)
 
         delta = dotu(v, z)
 
@@ -436,12 +438,13 @@ end subroutine X(bi_conjugate_gradients)
           exit
         end if
         if(iter == 1) then
-          call lalg_copy(np, z, q)
+          forall (ip = 1:np) q(ip) = z(ip)
         else
-          forall (ip = 1:np) q(ip) = -rho*delta/epsilon*q(ip) + z(ip)
+          rtmp = -rho*delta/epsilon
+          forall (ip = 1:np) q(ip) = rtmp*q(ip) + z(ip)
         end if
         call op(q, p)
-        call lalg_scal(np, alpha, p)
+        forall (ip = 1:np) p(ip) = alpha*p(ip)
 
         epsilon = dotu(q, p)
 
@@ -456,7 +459,8 @@ end subroutine X(bi_conjugate_gradients)
         rho = nrm2(v)
 
         call prec(v, z)
-        call lalg_scal(np, M_ONE/alpha, z)
+        tmp = M_ONE/alpha
+        forall (ip = 1:np) z(ip) = tmp*z(ip)
 
         xsi = nrm2(z)
 
@@ -470,10 +474,11 @@ end subroutine X(bi_conjugate_gradients)
         end if
         eta = -eta*oldrho*gamma**2/(beta*oldgamma**2)
 
+        rtmp = eta*alpha
         if(iter == 1) then
 
           forall (ip = 1:np) 
-            deltax(ip) = eta*alpha*q(ip)
+            deltax(ip) = rtmp*q(ip)
             x(ip) = x(ip) + deltax(ip)
           end forall
 
@@ -484,13 +489,14 @@ end subroutine X(bi_conjugate_gradients)
 
         else
 
+          tmp  = (oldtheta*gamma)**2
           forall (ip = 1:np) 
-            deltax(ip) = (oldtheta*gamma)**2*deltax(ip) + eta*alpha*q(ip)
+            deltax(ip) = tmp*deltax(ip) + rtmp*q(ip)
             x(ip) = x(ip) + deltax(ip)
           end forall
 
           forall (ip = 1:np) 
-            deltar(ip) = (oldtheta*gamma)**2*deltar(ip) + eta*p(ip)
+            deltar(ip) = tmp*deltar(ip) + eta*p(ip)
             r(ip) = r(ip) - deltar(ip)
           end forall
 

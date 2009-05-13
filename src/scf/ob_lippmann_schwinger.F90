@@ -118,26 +118,33 @@ contains
 
         ! Add energy.
         do idim = 1, st%d%dim
-          call lalg_scal(gr%mesh%np, -M_z1, rhs(:, idim))
-          call lalg_axpy(gr%mesh%np, energy, st%zphi(:, idim, ist, ik), rhs(:, idim))
+          rhs(1:gr%mesh%np, idim) = energy*st%zphi(1:gr%mesh%np, idim, ist, ik) - rhs(1:gr%mesh%np, idim)
         end do
 
         ! Apply term with lead Green functions.
         do il = 1, NLEADS
           do idim = 1, st%d%dim
             np_intf = gr%intf(il)%np
-            green(1:np_intf, 1:np_intf, idim, il) = st%ob_green(1:np_intf, 1:np_intf, idim, ist, ik, il)
-            call apply_coupling(green(:, :, idim, il), hm%lead_h_offdiag(:, :, il), &
-              green(:, :, idim, il), np_intf, il)
+            call apply_coupling(st%ob_green(1:np_intf, 1:np_intf, idim, ist, ik, il), &
+                            hm%lead_h_offdiag(:, :, il), green(:, :, idim, il), np_intf, il)
           end do
         end do
         do il = 1, NLEADS
           do idim = 1, st%d%dim
-            call interface_apply_sym_op(gr%intf(il), -M_z1, green(:, :, idim, il), &
-              st%zphi(:, idim, ist, ik), M_z1, rhs(:, idim))
+            if (associated(hm%ep%A_static)) then ! magnetic gs
+              call interface_apply_op(gr%intf(il), -M_z1, green(:, :, idim, il), &
+                st%zphi(:, idim, ist, ik), rhs(:, idim))
+            else
+              call interface_apply_sym_op(gr%intf(il), -M_z1, green(:, :, idim, il), &
+                st%zphi(:, idim, ist, ik), rhs(:, idim))
+            end if
           end do
         end do
 
+        if (associated(hm%ep%A_static)) then ! magnetic gs
+! FIXME: multiply rhs with (e-h-g)^T
+        else
+        end if
         ! Solve linear system lhs psi = rhs.
         iter = eigens%es_maxiter
         tol  = eigens%final_tol
@@ -279,15 +286,13 @@ contains
 
     ! y <- e x - tmp_y
     do idim = 1, dim
-      y(l(idim):u(idim)) = tmp_y(1:np_part, idim)
-      call lalg_scal(np_part, -M_z1, y(l(idim):u(idim)))
-      call lalg_axpy(np_part, energy_p, x(l(idim):u(idim)), y(l(idim):u(idim)))
+      y(l(idim):u(idim)) = energy_p*x(l(idim):u(idim)) - tmp_y(1:np_part, idim)
     end do
 
     do il = 1, NLEADS
       do idim = 1, dim
         call interface_apply_sym_op(gr_p%intf(il), &
-          -M_z1, green_p(:, :, idim, il), tmp_x(:, idim), M_z1, y(l(idim):u(idim)))
+          -M_z1, green_p(:, :, idim, il), tmp_x(:, idim), y(l(idim):u(idim)))
       end do
     end do
 
@@ -321,7 +326,7 @@ contains
 
     call push_sub('ob_lippmann_schwinger.precond')
 
-    y = x
+    y(:) = x(:)
 
     call pop_sub()
   end subroutine precond

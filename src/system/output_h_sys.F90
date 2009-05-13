@@ -274,7 +274,7 @@ contains
         !% <br>&nbsp;&nbsp; 0.0 | 0.0 | 1.0  # v
         !% <br>&nbsp;&nbsp; 0.2              # spacing
         !% <br>&nbsp;&nbsp; 0 | 50           # nu | mu
-        !% <br>&nbsp;&nbsp; -50 | 50         # nm | mv
+        !% <br>&nbsp;&nbsp; -50 | 50         # nv | mv
         !% <br>%</tt>
         !%
         !% Example (2D):

@@ -2493,8 +2493,9 @@ contains
               end select
               write(message(1), '(i4,3x,a2,5x,a1,1x,f12.6)') ist, spin, ln(il), energy
               call write_info(1)
+              ! TODO magnetic gs
               call lead_green(energy, diag(:, :, ispin, il), offdiag(:, :, il), &
-                  np, st%ob_green(:, :, ispin, ist, ik, il), gr%sb%h(TRANS_DIR))
+                  np, st%ob_green(:, :, ispin, ist, ik, il), .true.)
 
               ! Write the entire Green function to a file.
               if(in_debug_mode) then

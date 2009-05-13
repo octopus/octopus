@@ -37,6 +37,7 @@ module td_rti_m
   use math_m
   use mesh_function_m
   use messages_m
+  use ob_mem_m
   use ob_rti_m
   use ob_terms_m
   use profiling_m
@@ -1046,7 +1047,12 @@ contains
     subroutine td_crank_nicholson_src_mem()
       call push_sub('td_rti.td_crank_nicholson_src_mem')
       
-      call cn_src_mem_dt(tr%ob, st, ks, hm, gr, max_iter, dt, t, nt)
+      select case(tr%ob%mem_type)
+      case(SAVE_CPU_TIME)
+        call cn_src_mem_dt(tr%ob, st, ks, hm, gr, max_iter, dt, t, nt)
+      case(SAVE_RAM_USAGE)
+        call cn_src_mem_sp_dt(tr%ob, st, ks, hm, gr, max_iter, dt, t, nt)
+      end select
 
       call pop_sub()
     end subroutine td_crank_nicholson_src_mem

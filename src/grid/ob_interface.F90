@@ -207,11 +207,12 @@ contains
   ! ---------------------------------------------------------
   ! Apply an np x np operator op to the interface region of the wavefunction.
   ! np is the number of points in the interface: wf <- wf + alpha op wf
-  subroutine interface_apply_op(intf, alpha, op, wf)
+  subroutine interface_apply_op(intf, alpha, op, wf, res)
     type(interface_t), intent(in)    :: intf
     CMPLX,             intent(in)    :: alpha
     CMPLX,             intent(in)    :: op(:, :)
-    CMPLX,             intent(inout) :: wf(:)
+    CMPLX,             intent(in)    :: wf(:)
+    CMPLX,             intent(inout) :: res(:)
     
     CMPLX, allocatable :: intf_wf(:), op_intf_wf(:)
 
@@ -221,9 +222,9 @@ contains
     SAFE_ALLOCATE(op_intf_wf(1:intf%np))
 
     call get_intf_wf(intf, wf, intf_wf)
-    op_intf_wf(1:intf%np) = intf_wf(1:intf%np)
+    call get_intf_wf(intf, res, op_intf_wf)
     call lalg_gemv(intf%np, intf%np, alpha, op, intf_wf, M_z1, op_intf_wf)
-    call put_intf_wf(intf, op_intf_wf, wf)
+    call put_intf_wf(intf, op_intf_wf, res)
 
     SAFE_DEALLOCATE_A(intf_wf)
     SAFE_DEALLOCATE_A(op_intf_wf)
@@ -234,13 +235,12 @@ contains
 
   ! ---------------------------------------------------------
   ! Apply an np x np symmetric operator op to the interface region of the wavefunction.
-  ! np is the number of points in the interface: res <- beta res + alpha op wf
-  subroutine interface_apply_sym_op(intf, alpha, op, wf, beta, res)
+  ! np is the number of points in the interface: res <- res + alpha op wf
+  subroutine interface_apply_sym_op(intf, alpha, op, wf, res)
     type(interface_t), intent(in)    :: intf
     CMPLX,             intent(in)    :: alpha
     CMPLX,             intent(in)    :: op(:, :)
     CMPLX,             intent(in)    :: wf(:)
-    CMPLX,             intent(in)    :: beta
     CMPLX,             intent(inout) :: res(:)
     
     CMPLX, allocatable :: intf_wf(:), op_intf_wf(:)
@@ -252,7 +252,7 @@ contains
 
     call get_intf_wf(intf, wf, intf_wf)
     call get_intf_wf(intf, res, op_intf_wf)
-    call lalg_symv(intf%np, alpha, op, intf_wf, beta, op_intf_wf)
+    call lalg_symv(intf%np, alpha, op, intf_wf, M_z1, op_intf_wf)
     call put_intf_wf(intf, op_intf_wf, res)
 
     SAFE_DEALLOCATE_A(intf_wf)

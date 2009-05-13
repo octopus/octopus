@@ -49,16 +49,17 @@ contains
   ! Highly convergent schemes for the calculation of bulk and surface Green functions
   ! M. P. Lopez Sanco, J. M. Sancho, and J. Rubio (1984)
   ! J. Phys. F: Met. Phys. 15 (1985) 851-858
-  subroutine lead_green(energy, diag, offdiag, np, green, dx)
+  subroutine lead_green(energy, diag, offdiag, np, green, h_is_real)
     FLOAT,   intent(in)  :: energy        ! Energy to calculate Green function for.
     CMPLX,   intent(in)  :: diag(:, :)    ! Diagonal block of lead Hamiltonian.
     CMPLX,   intent(in)  :: offdiag(:, :) ! Off-diagonal block of lead Hamiltonian.
     integer, intent(in)  :: np            ! Number of interface points.
     CMPLX,   intent(out) :: green(:, :)   ! The calculated Green function.
-    FLOAT,   intent(in)  :: dx            ! Spacing in transport direction.
+    logical, intent(in)  :: h_is_real   ! Is the hamiltonian real? (no vector potential)
 
     CMPLX, allocatable :: e(:, :), es(:, :), a(:, :), b(:, :), inv(:, :)
     CMPLX, allocatable :: tmp1(:, :), tmp2(:, :), tmp3(:, :)
+    CMPLX              :: cmplx_energy
     integer            :: i, j
     FLOAT              :: det, old_norm, norm, threshold, res
 
@@ -78,38 +79,30 @@ contains
     ! Fill with start values.
     e(1:np, 1:np) = diag(1:np, 1:np)
     a(1:np, 1:np) = offdiag(1:np, 1:np)
-    do i = 1, np
-      b(i, :) = offdiag(:, i)
-    end do
+    forall (j = 1:np) b(j, :) = offdiag(:, j)
     es(1:np, 1:np) = diag(1:np, 1:np)
     old_norm = M_ZERO
+    cmplx_energy = energy + threshold*M_zI
 
     do i = 1, 1000 ! FIXME: read from input. 2^1000 efective layers
-      ! inv <- -e
-      inv = M_z0
-      call lalg_axpy(np**2, -M_z1, e(:, 1), inv(:, 1))
+      inv(1:np, 1:np) = - e(1:np, 1:np)
 
-      do j = 1, np
-        inv(j, j) = inv(j, j) + energy + threshold*M_zI
-      end do
+      forall (j = 1:np) inv(j, j) = inv(j, j) + cmplx_energy
       det = lalg_inverter(np, inv, invert=.true.)
 
       call lalg_gemm(np, np, np, M_z1, a, inv, M_z0, tmp2)
       call lalg_gemm(np, np, np, M_z1, tmp2, b, M_z0, tmp1)
 
-      call lalg_axpy(np**2, M_z1, tmp1(:, 1), es(:, 1)) ! es <- es + tmp1
+      es(1:np, 1:np) = es(1:np, 1:np) + tmp1(1:np, 1:np)
 
-      norm = infinity_norm(es)*dx**2
-      res  = abs(norm-old_norm)
+      norm = infinity_norm(es)
+      res  = abs(old_norm/norm-M_ONE)
 
-      if(res.lt.threshold) then
-        exit
-      end if
+      if(res.lt.threshold) exit
 
       old_norm = norm
 
-      call lalg_axpy(np**2, M_z1, tmp1(:, 1), e(:, 1)) ! e <- e + tmp1
-
+      e(1:np, 1:np) = e(1:np, 1:np) + tmp1(1:np, 1:np)
       call lalg_gemm(np, np, np, M_z1, b, inv, M_Z0, tmp1)
       call lalg_gemm(np, np, np, M_z1, tmp1, a, M_z1, e)
       tmp3(1:np, 1:np) = a(1:np, 1:np)
@@ -118,15 +111,15 @@ contains
       call lalg_gemm(np, np, np, M_z1, tmp1, tmp3, m_z0, b)
     end do
 
-    ! green <- -es
-    green = M_z0
-    call lalg_axpy(np**2, -M_z1, es(:, 1), green(:, 1))
+    green(1:np, 1:np) = - es(1:np, 1:np)
 
-    do j = 1, np
-      green(j, j) = green(j, j) + energy + threshold*M_zI
-    end do
+    forall (j = 1:np) green(j, j) = green(j, j) + cmplx_energy
     det = lalg_inverter(np, green, invert = .true.)
-    call matrix_symmetric_average(green, np)
+    if (h_is_real) then ! the green function is complex symmetric
+      call matrix_symmetric_average(green, np)
+    end if ! otherwise it is general complex
+
+    ! calculate DOS=-Tr(imag(green)) and check if negative
     det = aimag(green(1, 1))
     do i = 2, np
       det = det + aimag(green(i, i))

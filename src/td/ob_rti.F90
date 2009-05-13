@@ -49,10 +49,11 @@ module ob_rti_m
   implicit none
 
   private
-  public ::      &
-    ob_rti_init, &
-    ob_rti_end,  &
-    cn_src_mem_dt
+  public ::         &
+    ob_rti_init,    &
+    ob_rti_end,     &
+    cn_src_mem_dt,  &
+    cn_src_mem_sp_dt
 
   ! We use 1st order Taylor expansion of exp(-i dt/2 H)|psi>
   ! to calculate (1 - i dt H)|psi>.
@@ -61,6 +62,11 @@ module ob_rti_m
   ! Parameters to the BiCG in Crank-Nicholson.
   integer :: cg_max_iter
   FLOAT   :: cg_tol
+
+  ! is the effective Hamiltonian complex symmetric?
+  ! true if no magnetic fields or vector potentials are present
+  ! if true some simplifications and speedups are possible
+  logical :: heff_sym
 
   ! Pointers for the h_eff_backward(t) operator for the iterative linear solver.
   type(hamiltonian_t), pointer :: hm_p
@@ -82,7 +88,7 @@ contains
     FLOAT,               intent(in)  :: dt
     integer,             intent(in)  :: max_iter
     
-    integer            :: order, it, np
+    integer            :: order, it, np, il
     CMPLX, allocatable :: um(:)
     FLOAT, allocatable :: td_pot(:, :)
 
@@ -184,9 +190,31 @@ contains
     SAFE_ALLOCATE(ob%st_intface(1:np, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end, 1:NLEADS, 0:max_iter))
     ob%st_intface = M_z0
 
+    ! check the symmetry of the effective hamiltonian
+    ! if no magnetic field or vector potential is present then
+    ! the h-matrix is complex symmetric, otherwise general complex
+    heff_sym = .true.
+    if(associated(hm%ep%A_static)) heff_sym = .false.
+    do il=1, hm%ep%no_lasers
+      if(laser_kind(hm%ep%lasers(il)).eq.E_FIELD_MAGNETIC) heff_sym = .false.
+      if(laser_kind(hm%ep%lasers(il)).eq.E_FIELD_VECTOR_POTENTIAL) heff_sym = .false.
+    end do
+
     call pop_sub()
   end subroutine ob_rti_init
 
+
+  CMPLX function lambda(m, k, max_iter, sm_u) result(res)
+    integer, intent(in) :: m, k, max_iter
+    CMPLX,   intent(in) :: sm_u(0:max_iter)
+
+    integer :: j
+    res = M_z1
+
+    do j = k, m
+      res = res*sm_u(j)**2
+    end do
+  end function lambda
 
   ! ---------------------------------------------------------
   ! Crank-Nicholson timestep with source and memory.
@@ -208,36 +236,15 @@ contains
     CMPLX              :: factor, fac, f0
     CMPLX, allocatable :: tmp(:, :), tmp_wf(:), tmp_mem(:, :)
     FLOAT              :: dres
-    logical            :: heff_sym ! is the effective hamiltonian complex symmetric?
     
     call push_sub('ob_rti.cn_src_mem_dt')
 
     inp = gr%intf(LEFT)%np ! Assuming symmetric leads.
 
-    ! check the symmetry of the effective hamiltonian
-    ! if no magnetic field or vector potential is present then
-    ! the h-matrix is complex symmetric, otherwise general complex
-    heff_sym = .true.
-    if(associated(hm%ep%A_static)) heff_sym = .false.
-    do il=1, hm%ep%no_lasers
-      if(laser_kind(hm%ep%lasers(il)).eq.E_FIELD_MAGNETIC) heff_sym = .false.
-      if(laser_kind(hm%ep%lasers(il)).eq.E_FIELD_VECTOR_POTENTIAL) heff_sym = .false.
-    end do
-
-!if(heff_sym) then
-!  write(*,*) 'non magnetic'
-!else
-!  write(*,*) 'magnetic'
-!end if
-
     order = gr%der%order
     SAFE_ALLOCATE(tmp(1:gr%mesh%np, 1:st%d%ispin))
     SAFE_ALLOCATE(tmp_wf(1:inp))
-    if(ob%mem_type.eq.save_cpu_time) then
-      SAFE_ALLOCATE(tmp_mem(1:inp, 1:inp))
-    else
-      SAFE_ALLOCATE(tmp_mem(1:inp*order, 1:1))
-    end if
+    SAFE_ALLOCATE(tmp_mem(1:inp, 1:inp))
 
     ! Set pointers to communicate with with backward propagator passed
     ! to iterative linear solver.
@@ -267,37 +274,23 @@ contains
       call save_intf_wf(gr%intf(il), st, ob%st_intface(1:inp, :, :, il, m))
     end do
 
-    ! Get right-hand side.
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
-        ! 1. Apply effective Hamiltonian.
-        if(ob%mem_type.eq.SAVE_CPU_TIME) then
-          call apply_h_eff(hm, gr, ob%mem_coeff(:, :, 0, :), gr%intf, -M_ONE, dt, t, &
-            ist, ik, st%zpsi(:, :, ist, ik))
-        else
-          call apply_h_eff_sp(hm, gr, ob%mem_sp_coeff(:, 0, :), gr%intf, -M_ONE, dt, t, &
-            ist, ik, st%zpsi(:, :, ist, ik), ob%mem_s(:, :, :, :), ob%sp2full_map)
-        end if
+        ! Get right-hand side.
+        !   1. Apply effective Hamiltonian.
+        call apply_h_eff(hm, gr, ob%mem_coeff(:, :, 0, :), gr%intf, -M_ONE, dt, t, &
+          ist, ik, st%zpsi(:, :, ist, ik))
 
         do il = 1, NLEADS
           ! 2. Add source term
           if(iand(ob%additional_terms, SRC_TERM_FLAG).ne.0) then
             f0  = M_z1/(M_z1+M_zI*M_HALF*dt*st%ob_eigenval(ist, ik))
             fac = (M_z1-M_zI*M_HALF*dt*st%ob_eigenval(ist, ik))*f0
-            if(ob%mem_type.eq.SAVE_CPU_TIME) then
-              tmp_mem(:, :) = ob%mem_coeff(:, :, m, il)
-              if(m.gt.0) tmp_mem(:, :) = tmp_mem(:, :) + ob%mem_coeff(:, :, m-1, il)
-              call calc_source_wf(max_iter, m, inp, il, hm%lead_h_offdiag(:, :, il), tmp_mem, dt, &
-                st%ob_intf_psi(:, :, 1, ist, ik, il), ob%src_mem_u(:, il), f0, fac,              &
-                lambda(m, 0, max_iter, ob%src_mem_u(:, il)), ob%src_prev(:, 1, ist, ik, il))
-            else
-              tmp_mem(:, 1) = ob%mem_sp_coeff(:, m, il)
-              if(m.gt.0) tmp_mem(:, 1) = tmp_mem(:, 1) + ob%mem_sp_coeff(:, m-1, il)
-              call calc_source_wf_sp(max_iter, m, inp, il, hm%lead_h_offdiag(:, :, il),     &
-                tmp_mem(:, 1), dt, order, gr%sb%dim, st%ob_intf_psi(:, :, 1, ist, ik, il), &
-                ob%mem_s(:, :, :, il), ob%sp2full_map, ob%src_mem_u(:, il), f0, fac,   &
-                lambda(m, 0, max_iter, ob%src_mem_u(:, il)), ob%src_prev(:, 1, ist, ik, il))
-            end if
+            tmp_mem(:, :) = ob%mem_coeff(:, :, m, il)
+            if(m.gt.0) tmp_mem(:, :) = tmp_mem(:, :) + ob%mem_coeff(:, :, m-1, il)
+            call calc_source_wf(max_iter, m, inp, il, hm%lead_h_offdiag(:, :, il), tmp_mem, dt, &
+              st%ob_intf_psi(:, :, 1, ist, ik, il), ob%src_mem_u(:, il), f0, fac,              &
+              lambda(m, 0, max_iter, ob%src_mem_u(:, il)), ob%src_prev(:, 1, ist, ik, il))
             call apply_src(gr%intf(il), ob%src_prev(1:inp, 1, ist, ik, il), st%zpsi(:, :, ist, ik))
           end if
           ! 3. Add memory term.
@@ -306,63 +299,27 @@ contains
               factor = -dt**2/M_FOUR*lambda(m, it, max_iter, ob%src_mem_u(:, il)) / &
                 (ob%src_mem_u(m, il)*ob%src_mem_u(it, il))
               tmp_wf(:) = ob%st_intface(:, ist, ik, il, it+1) + ob%st_intface(:, ist, ik, il, it)
-              select case(ob%mem_type)
-              case(SAVE_CPU_TIME)
-                tmp_mem(:, :) = ob%mem_coeff(:, :, m-it, il)
-                if((m-it).gt.0) tmp_mem(:, :) = tmp_mem(:, :) + ob%mem_coeff(:, :, m-it-1, il)
-                call apply_mem(tmp_mem, gr%intf(il), tmp_wf, st%zpsi(:, :, ist, ik), factor)
-              case(SAVE_RAM_USAGE)
-                tmp_mem(:, 1) = ob%mem_sp_coeff(:, m-it, il)
-                if((m-it).gt.0) tmp_mem(:, 1) = tmp_mem(:, 1) + ob%mem_sp_coeff(:, m-it-1, il)
-                call apply_sp_mem(tmp_mem(:, 1), il, gr%intf(il), tmp_wf, st%zpsi(:, :, ist, ik), &
-                  factor, ob%mem_s(:, :, :, il), order, gr%sb%dim, ob%sp2full_map)
-              end select
+              tmp_mem(:, :) = ob%mem_coeff(:, :, m-it, il)
+              if((m-it).gt.0) tmp_mem(:, :) = tmp_mem(:, :) + ob%mem_coeff(:, :, m-it-1, il)
+              call apply_mem(tmp_mem, gr%intf(il), tmp_wf, st%zpsi(:, :, ist, ik), factor)
             end do
           end if
         end do
+        if (.not.heff_sym) then
+          ! 4. if H_eff is not complex symmetric do the following for solving the linear equation:
+          ! A.x = b --> (A^T).A.x = (A^T).b
+          ! In this case (A^T).A is complex symmetric and we can use the QMR_sym solver
+          call apply_h_eff(hm, gr, ob%mem_coeff(:, :, 0, :), gr%intf, M_ONE, dt, t, &
+            ist, ik, st%zpsi(:, :, ist, ik), .true.)
+        end if
 
-        ! 4. Solve linear system (1 + i \delta H_{eff}) st%zpsi = tmp.
+        ! Solve linear system (1 + i \delta H_{eff}) st%zpsi = tmp.
         cg_iter      = cg_max_iter
         tmp(1:gr%mesh%np, 1) = st%zpsi(1:gr%mesh%np, 1, ist, ik)
-        ! tmp(1:gr%mesh%np, 1) = M_z0
-        ! Use QMR-solver since it is faster and more stable than BiCG.
-        select case(ob%mem_type)
-        case(SAVE_CPU_TIME)
-          ! Use for non-magnetic case.
-          if(heff_sym) then ! non magnetic
-            ! Either the stable symmetric QMR solver
-            call zqmr_sym(gr%mesh%np, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_backward, precond_prop, &
-              cg_iter, residue=dres, threshold=cg_tol, showprogress=.false.)
-            ! or the slightly faster but less stable CG solver.
-            ! call zconjugate_gradients(gr%mesh%np, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_backward, &
-            !   zdot_productu, cg_iter, threshold=cg_tol)
-          else ! magnetic
-            ! Use for magnetic fields a general solver like BiCG (working)
-            call zconjugate_gradients(gr%mesh%np, st%zpsi(:, 1, ist, ik), tmp(:, 1), &
-              h_eff_backward, h_eff_backward_dagger, zmf_dotp_aux, cg_iter, threshold=cg_tol)
-            ! or the general QMR solver (not working yet)
-            ! call zqmr(gr%mesh%np, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_backward, h_eff_backward_t, &
-            !   precond_prop, precond_prop, cg_iter, residue=dres, threshold=cg_tol, showprogress=.true.)
-          end if
-        case(SAVE_RAM_USAGE)
-          if(heff_sym) then ! non magnetic
-            call zqmr_sym(gr%mesh%np, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_backward_sp, precond_prop, &
-              cg_iter, residue=dres, threshold=cg_tol, showprogress=.false.)
-          else
-!            message(1) = 'Linear solver for propagating with magnetic fields does not work yet'
-!            call write_fatal(1)
-            ! call zqmr(gr%mesh%np, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_backward_sp, h_eff_backward_sp_t, &
-            !   precond_prop, precond_prop, cg_iter, residue=dres, threshold=cg_tol, showprogress=.false.)
-            call zconjugate_gradients(gr%mesh%np, st%zpsi(:, 1, ist, ik), tmp(1:gr%mesh%np, 1), &
-              h_eff_backward_sp, h_eff_backward_sp_dagger, zmf_dotp_aux, cg_iter, threshold=cg_tol)
-          end if
-        end select
-        ! Write warning if BiCG did not converge.
-        ! if(cg_iter.gt.cg_max_iter) then
-        !   write(message(1), '(a,i5,a)') 'BiCG did not converge in ', cg_max_iter, ' iterations'
-        !   message(2) = 'when propagating with H_eff.'
-        !   call write_warning(2)
-        ! end if
+        ! Use the stable symmetric QMR solver
+        ! h_eff_backward must be a complex symmetric operator !
+        call zqmr_sym(gr%mesh%np, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_backward, precond_prop, &
+          cg_iter, residue=dres, threshold=cg_tol, showprogress=.false.)
       end do
     end do
 
@@ -375,21 +332,126 @@ contains
     SAFE_DEALLOCATE_A(tmp_wf)
     SAFE_DEALLOCATE_A(tmp_mem)
     call pop_sub()
-
-  contains
-
-    CMPLX function lambda(m, k, max_iter, sm_u) result(res)
-      integer, intent(in) :: m, k, max_iter
-      CMPLX,   intent(in) :: sm_u(0:max_iter)
-
-      integer :: j
-      res = M_z1
-
-      do j = k, m
-        res = res*sm_u(j)**2
-      end do
-    end function lambda
   end subroutine cn_src_mem_dt
+
+
+  ! ---------------------------------------------------------
+  ! Crank-Nicholson timestep with source and memory - sparse version.
+  ! Only non-interacting electrons for the moment, so no
+  ! predictor-corrector scheme.
+  subroutine cn_src_mem_sp_dt(ob, st, ks, hm, gr, max_iter, dt, t, timestep)
+    type(ob_terms_t), target,    intent(inout) :: ob
+    type(states_t),              intent(inout) :: st
+    type(v_ks_t),                intent(in)    :: ks
+    type(hamiltonian_t), target, intent(inout) :: hm
+    type(grid_t), target,        intent(inout) :: gr
+    integer,                     intent(in)    :: max_iter
+    FLOAT, target,               intent(in)    :: dt
+    FLOAT, target,               intent(in)    :: t
+    integer,                     intent(in)    :: timestep
+
+    integer            :: il, it, m, cg_iter, order, inp
+    integer, target    :: ist, ik
+    CMPLX              :: factor, fac, f0
+    CMPLX, allocatable :: tmp(:, :), tmp_wf(:), tmp_mem(:)
+    FLOAT              :: dres
+    
+    call push_sub('ob_rti.cn_src_mem_dt')
+
+    inp = gr%intf(LEFT)%np ! Assuming symmetric leads.
+
+    order = gr%der%order
+    SAFE_ALLOCATE(tmp(1:gr%mesh%np, 1:st%d%ispin))
+    SAFE_ALLOCATE(tmp_wf(1:inp))
+    SAFE_ALLOCATE(tmp_mem(1:inp*order))
+
+    ! Set pointers to communicate with with backward propagator passed
+    ! to iterative linear solver.
+    hm_p       => hm
+    gr_p       => gr
+    mem_p      => ob%mem_coeff(:, :, 0, :)
+    sp_mem_p   => ob%mem_sp_coeff(:, 0, :)
+    intf_p     => gr%intf
+    dt_p       => dt
+    t_p        => t
+    ist_p      => ist
+    ik_p       => ik
+    mem_s_p    => ob%mem_s(:, :, :, :)
+    mem_type_p => ob%mem_type
+    mapping_p  => ob%sp2full_map
+
+    ! For the dot product passed to BiCG routine.
+    call mesh_init_mesh_aux(gr%mesh)
+
+    m = timestep-1
+
+    ! Save interface part of wavefunctions for subsequent iterations
+    ! before we overwrite them with the values for the new timestep.
+    ! (Copying before the propagation gets the saving right for the
+    ! initial state also.)
+    do il = 1, NLEADS
+      call save_intf_wf(gr%intf(il), st, ob%st_intface(1:inp, :, :, il, m))
+    end do
+
+    do ik = st%d%kpt%start, st%d%kpt%end
+      do ist = st%st_start, st%st_end
+        ! Get right-hand side.
+        !   1. Apply effective Hamiltonian.
+        call apply_h_eff_sp(hm, gr, ob%mem_sp_coeff(:, 0, :), gr%intf, -M_ONE, dt, t, &
+          ist, ik, st%zpsi(:, :, ist, ik), ob%mem_s(:, :, :, :), ob%sp2full_map)
+
+        do il = 1, NLEADS
+          ! 2. Add source term
+          if(iand(ob%additional_terms, SRC_TERM_FLAG).ne.0) then
+            f0  = M_z1/(M_z1+M_zI*M_HALF*dt*st%ob_eigenval(ist, ik))
+            fac = (M_z1-M_zI*M_HALF*dt*st%ob_eigenval(ist, ik))*f0
+            tmp_mem(:) = ob%mem_sp_coeff(:, m, il)
+            if(m.gt.0) tmp_mem(:) = tmp_mem(:) + ob%mem_sp_coeff(:, m-1, il)
+            call calc_source_wf_sp(max_iter, m, inp, il, hm%lead_h_offdiag(:, :, il),     &
+              tmp_mem(:), dt, order, gr%sb%dim, st%ob_intf_psi(:, :, 1, ist, ik, il), &
+              ob%mem_s(:, :, :, il), ob%sp2full_map, ob%src_mem_u(:, il), f0, fac,   &
+              lambda(m, 0, max_iter, ob%src_mem_u(:, il)), ob%src_prev(:, 1, ist, ik, il))
+            call apply_src(gr%intf(il), ob%src_prev(1:inp, 1, ist, ik, il), st%zpsi(:, :, ist, ik))
+          end if
+          ! 3. Add memory term.
+          if(iand(ob%additional_terms, MEM_TERM_FLAG).ne.0) then
+            do it = 0, m-1
+              factor = -dt**2/M_FOUR*lambda(m, it, max_iter, ob%src_mem_u(:, il)) / &
+                (ob%src_mem_u(m, il)*ob%src_mem_u(it, il))
+              tmp_wf(:) = ob%st_intface(:, ist, ik, il, it+1) + ob%st_intface(:, ist, ik, il, it)
+              tmp_mem(:) = ob%mem_sp_coeff(:, m-it, il)
+              if((m-it).gt.0) tmp_mem(:) = tmp_mem(:) + ob%mem_sp_coeff(:, m-it-1, il)
+              call apply_sp_mem(tmp_mem(:), il, gr%intf(il), tmp_wf, st%zpsi(:, :, ist, ik), &
+                factor, ob%mem_s(:, :, :, il), order, gr%sb%dim, ob%sp2full_map)
+            end do
+          end if
+        end do
+        if (.not.heff_sym) then
+          ! 4. if H_eff is not complex symmetric do the following for solving the linear equation:
+          ! A.x = b --> (A^T).A.x = (A^T).b
+          ! In this case (A^T).A is complex symmetric and we can use the QMR_sym solver
+          call apply_h_eff_sp(hm, gr, ob%mem_sp_coeff(:, 0, :), gr%intf, M_ONE, dt, t, &
+            ist, ik, st%zpsi(:, :, ist, ik), ob%mem_s(:, :, :, :), ob%sp2full_map, .true.)
+        end if
+
+        ! Solve linear system (1 + i \delta H_{eff}) st%zpsi = tmp.
+        cg_iter      = cg_max_iter
+        tmp(1:gr%mesh%np, 1) = st%zpsi(1:gr%mesh%np, 1, ist, ik)
+        call zqmr_sym(gr%mesh%np, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_backward_sp, precond_prop, &
+          cg_iter, residue=dres, threshold=cg_tol, showprogress=.false.)
+      end do
+    end do
+
+    ! Save interface part of wavefunction for subsequent iterations.
+    do il = 1, NLEADS
+      call save_intf_wf(gr%intf(il), st, ob%st_intface(:, :, :, il, timestep))
+    end do
+
+    SAFE_DEALLOCATE_A(tmp)
+    SAFE_DEALLOCATE_A(tmp_wf)
+    SAFE_DEALLOCATE_A(tmp_mem)
+    call pop_sub()
+  end subroutine cn_src_mem_sp_dt
 
 
   ! ---------------------------------------------------------
@@ -404,55 +466,16 @@ contains
     
     SAFE_ALLOCATE(tmp(1:gr_p%mesh%np_part, 1:1))
     ! Propagate backward.
-    call lalg_copy(gr_p%mesh%np, x, tmp(:, 1))
+    tmp(1:gr_p%mesh%np, 1) = x(1:gr_p%mesh%np)
     call apply_h_eff(hm_p, gr_p, mem_p, intf_p, M_ONE, dt_p, t_p, ist_p, ik_p, tmp)
-    call lalg_copy(gr_p%mesh%np, tmp(:, 1), y)
+    if (.not.heff_sym) then ! make operator complex symmetric
+      call apply_h_eff(hm_p, gr_p, mem_p, intf_p, M_ONE, dt_p, t_p, ist_p, ik_p, tmp, .true.)
+    end if
+    y(1:gr_p%mesh%np) = tmp(1:gr_p%mesh%np, 1)
 
     SAFE_DEALLOCATE_A(tmp)
     call pop_sub()
   end subroutine h_eff_backward
-
-
-  ! ---------------------------------------------------------
-  ! Progagate backwards with: 1 + i \delta H_{eff} (transposed)
-  ! Used by the iterative linear solver.
-  subroutine h_eff_backward_t(x, y)
-    CMPLX, intent(in)  :: x(:)
-    CMPLX, intent(out) :: y(:)
-
-    CMPLX, allocatable :: tmp(:, :)
-    call push_sub('ob_rti.h_eff_backward_t')
-    
-    SAFE_ALLOCATE(tmp(1:gr_p%mesh%np_part, 1:1))
-    ! Propagate backward.
-    call lalg_copy(gr_p%mesh%np, x, tmp(:, 1))
-    call apply_h_eff(hm_p, gr_p, mem_p, intf_p, M_ONE, dt_p, t_p, ist_p, ik_p, tmp, .true.)
-    call lalg_copy(gr_p%mesh%np, tmp(:, 1), y)
-
-    SAFE_DEALLOCATE_A(tmp)
-    call pop_sub()
-  end subroutine h_eff_backward_t
-
-
-  ! ---------------------------------------------------------
-  ! Progagate backwards with: 1 + i \delta H_{eff} (daggered)
-  ! Used by the iterative linear solver.
-  subroutine h_eff_backward_dagger(x, y)
-    CMPLX, intent(in)  :: x(:)
-    CMPLX, intent(out) :: y(:)
-
-    CMPLX, allocatable :: tmp(:, :)
-    call push_sub('ob_rti.h_eff_backward_dagger')
-    
-    SAFE_ALLOCATE(tmp(1:gr_p%mesh%np_part, 1:1))
-    ! Propagate backward.
-    call lalg_copy(gr_p%mesh%np, x, tmp(:, 1))
-    call apply_h_eff_dagger(hm_p, gr_p, mem_p, intf_p, dt_p, t_p, ist_p, ik_p, tmp)
-    call lalg_copy(gr_p%mesh%np, tmp(:, 1), y)
-
-    SAFE_DEALLOCATE_A(tmp)
-    call pop_sub()
-  end subroutine h_eff_backward_dagger
 
 
   ! ---------------------------------------------------------
@@ -467,34 +490,16 @@ contains
     
     SAFE_ALLOCATE(tmp(1:gr_p%mesh%np_part, 1:1))
     ! Propagate backward.
-    call lalg_copy(gr_p%mesh%np, x, tmp(:, 1))
+    tmp(1:gr_p%mesh%np, 1) = x(1:gr_p%mesh%np)
     call apply_h_eff_sp(hm_p, gr_p, sp_mem_p, intf_p, M_ONE, dt_p, t_p, ist_p, ik_p, tmp, mem_s_p, mapping_p)
-    call lalg_copy(gr_p%mesh%np, tmp(:, 1), y)
+    if (.not.heff_sym) then ! make operator complex symmetric
+      call apply_h_eff_sp(hm_p, gr_p, sp_mem_p, intf_p, M_ONE, dt_p, t_p, ist_p, ik_p, tmp, mem_s_p, mapping_p, .true.)
+    end if
+    y(1:gr_p%mesh%np) = tmp(1:gr_p%mesh%np, 1)
 
     SAFE_DEALLOCATE_A(tmp)
     call pop_sub()
   end subroutine h_eff_backward_sp
-
-
-  ! ---------------------------------------------------------
-  ! Progagate backwards with: 1 + i \delta H_{eff} (transposed)
-  ! Used by the iterative linear solver.
-  subroutine h_eff_backward_sp_dagger(x, y)
-    CMPLX, intent(in)  :: x(:)
-    CMPLX, intent(out) :: y(:)
-
-    CMPLX, allocatable :: tmp(:, :)
-    call push_sub('ob_rti.h_eff_backward_sp_dagger')
-    
-    SAFE_ALLOCATE(tmp(1:gr_p%mesh%np_part, 1:1))
-    ! Propagate backward.
-    call lalg_copy(gr_p%mesh%np, x, tmp(:, 1))
-    call apply_h_eff_sp(hm_p, gr_p, sp_mem_p, intf_p, M_ONE, dt_p, t_p, ist_p, ik_p, tmp, mem_s_p, mapping_p, .true.)
-    call lalg_copy(gr_p%mesh%np, tmp(:, 1), y)
-
-    SAFE_DEALLOCATE_A(tmp)
-    call pop_sub()
-  end subroutine h_eff_backward_sp_dagger
 
 
   ! ---------------------------------------------------------
@@ -534,6 +539,7 @@ contains
 
     integer            :: il
     CMPLX, allocatable :: intf_wf(:, :)
+    logical            :: transposed_
 
     call push_sub('ob_rti.apply_h_eff')
 
@@ -541,71 +547,36 @@ contains
 
     ASSERT(sign.eq.M_ONE.or.sign.eq.-M_ONE)
 
+    transposed_ = .false.
+    if(present(transposed)) then
+      transposed_ = transposed
+    end if
+
+
     call get_intf_wf(intf(LEFT), zpsi(:, 1), intf_wf(:, LEFT))
     call get_intf_wf(intf(RIGHT), zpsi(:, 1), intf_wf(:, RIGHT))
 
     ! To act with the transposed of H on the wavefunction
     ! we apply H to the conjugate of psi and conjugate the
     ! resulting H psi 
-    if(present(transposed)) then
-      if(transposed) zpsi = conjg(zpsi)
-    end if
+    if(transposed_) zpsi = conjg(zpsi)
 
     ! Apply (1 - i\delta H_{CC}^{(m)}) to zpsi.
     ! td_exp_dt with Taylor expansion calculates exp(-i dt H), i. e. the
     ! minus is already built in.
     call exponential_apply(taylor_1st, gr, hm, zpsi, ist, ik, -sign*dt/M_TWO, t-dt)
-    if(present(transposed)) then
-      if(transposed) zpsi = conjg(zpsi)
-    end if
+    if(transposed_) zpsi = conjg(zpsi)
 
     ! Apply modification: sign \delta^2 Q zpsi
     do il = 1, NLEADS
-      call apply_mem(mem(:, :, il), intf(il), intf_wf(:, il), zpsi, TOCMPLX(sign*dt**2/M_FOUR, M_ZERO))
+      call apply_mem(mem(:, :, il), intf(il), intf_wf(:, il), zpsi, &
+                     TOCMPLX(sign*dt**2/M_FOUR, M_ZERO), transposed_)
     end do
 
     SAFE_DEALLOCATE_A(intf_wf)
 
     call pop_sub()
   end subroutine apply_h_eff
-
-
-  ! ---------------------------------------------------------
-  ! Propagate forward/backward with effective Hamiltonian.
-  subroutine apply_h_eff_dagger(hm, gr, mem, intf, dt, t, ist, ik, zpsi)
-    type(hamiltonian_t), intent(inout) :: hm
-    type(grid_t),        intent(inout) :: gr
-    CMPLX, target,       intent(in)    :: mem(:, :, :)
-    type(interface_t),   intent(in)    :: intf(NLEADS)
-    FLOAT,               intent(in)    :: dt, t
-    integer,             intent(in)    :: ist
-    integer,             intent(in)    :: ik
-    CMPLX,               intent(inout) :: zpsi(:, :)
-
-    integer            :: il
-    CMPLX, allocatable :: intf_wf(:, :)
-
-    call push_sub('ob_rti.apply_h_eff_dagger')
-
-    SAFE_ALLOCATE(intf_wf(1:intf(LEFT)%np, 1:NLEADS))
-
-    call get_intf_wf(intf(LEFT), zpsi(:, 1), intf_wf(:, LEFT))
-    call get_intf_wf(intf(RIGHT), zpsi(:, 1), intf_wf(:, RIGHT))
-
-    ! Apply (1 - i\delta H_{CC}^{(m)}) to zpsi.
-    ! td_exp_dt with Taylor expansion calculates exp(-i dt H), i. e. the
-    ! minus is already built in.
-    call exponential_apply(taylor_1st, gr, hm, zpsi, ist, ik, dt/M_TWO, t-dt)
-
-    ! Apply modification: sign \delta^2 Q zpsi
-    do il = 1, NLEADS
-      call apply_mem(conjg(mem(:, :, il)), intf(il), intf_wf(:, il), zpsi, TOCMPLX(dt**2/M_FOUR, M_ZERO))
-    end do
-
-    SAFE_DEALLOCATE_A(intf_wf)
-
-    call pop_sub()
-  end subroutine apply_h_eff_dagger
 
 
   ! ---------------------------------------------------------
@@ -625,6 +596,7 @@ contains
 
     integer            :: il
     CMPLX, allocatable :: intf_wf(:, :)
+    logical            :: transposed_
 
     call push_sub('ob_rti.apply_h_eff_sp')
 
@@ -632,21 +604,22 @@ contains
 
     ASSERT(sign.eq.M_ONE.or.sign.eq.-M_ONE)
 
+    transposed_ = .false.
+    if(present(transposed)) then
+      transposed_ = transposed
+    end if
+
     call get_intf_wf(intf(LEFT), zpsi(:, 1), intf_wf(:, LEFT))
     call get_intf_wf(intf(RIGHT), zpsi(:, 1), intf_wf(:, RIGHT))
 
-    if(present(transposed)) then 
-      if(transposed) zpsi = conjg(zpsi)
-    end if
+    if(transposed_) zpsi = conjg(zpsi)
 
     ! Apply (1 - i\delta H_{CC}^{(m)}) to zpsi.
     ! td_exp_dt with Taylor expansion calculates exp(-i dt H), i. e. the
     ! minus is already built in.
     call exponential_apply(taylor_1st, gr, hm, zpsi, ist, ik, -sign*dt/M_TWO, t-dt)
 
-    if(present(transposed)) then
-      if(transposed) zpsi = conjg(zpsi)
-    end if
+    if(transposed_) zpsi = conjg(zpsi)
 
     ! Apply modification: sign \delta^2 Q zpsi
     do il = 1, NLEADS
@@ -680,22 +653,25 @@ contains
   ! ---------------------------------------------------------
   ! Apply memory coefficient: zpsi <- zpsi + factor Q intf_wf
   ! Use symmetric matrix-vector multiply, because Q is symmetric
-  subroutine apply_mem(mem, intf, intf_wf, zpsi, factor)
+  subroutine apply_mem(mem, intf, intf_wf, zpsi, factor, transposed)
     CMPLX,             intent(in)    :: mem(:, :)
     type(interface_t), intent(in)    :: intf
     CMPLX,             intent(in)    :: intf_wf(:)
     CMPLX,             intent(inout) :: zpsi(:, :)
     CMPLX,             intent(in)    :: factor
+    logical, optional, intent(in)    :: transposed
 
     CMPLX, allocatable :: mem_intf_wf(:)
-    CMPLX, allocatable :: tmem(:, :, :)
 
     call push_sub('ob_rti.apply_mem')
 
     SAFE_ALLOCATE(mem_intf_wf(1:intf%np))
-    SAFE_ALLOCATE(tmem(1:intf%np, 1:intf%np, 1:2))
 
     mem_intf_wf = M_z0
+
+    if(present(transposed)) then
+      ! FIXME: transpose if mem is not symmetric
+    end if
 
     call zsymv('U', intf%np, factor, mem, intf%np, intf_wf, 1, M_z0, mem_intf_wf, 1)
 
@@ -704,14 +680,13 @@ contains
       zpsi(intf%index_range(1):intf%index_range(2), 1) + mem_intf_wf(:)
 
     SAFE_DEALLOCATE_A(mem_intf_wf)
-    SAFE_DEALLOCATE_A(tmem)
     call pop_sub()
   end subroutine apply_mem
 
   ! ---------------------------------------------------------
   ! Apply memory coefficient: zpsi <- zpsi + factor Q intf_wf
   ! Use symmetric matrix-vector multiply, because Q is symmetric
-  subroutine apply_sp_mem(sp_mem, il, intf, intf_wf, zpsi, factor, mem_s, order, dim, mapping)
+  subroutine apply_sp_mem(sp_mem, il, intf, intf_wf, zpsi, factor, mem_s, order, dim, mapping, transposed)
     CMPLX,             intent(in)    :: sp_mem(:)
     integer,           intent(in)    :: il
     type(interface_t), intent(in)    :: intf
@@ -722,6 +697,7 @@ contains
     integer,           intent(in)    :: order
     integer,           intent(in)    :: dim
     integer,           intent(in)    :: mapping(:)   ! the mapping
+    logical, optional, intent(in)    :: transposed
 
     CMPLX, allocatable :: tmem(:, :)
 
@@ -729,7 +705,7 @@ contains
 
     SAFE_ALLOCATE(tmem(1:intf%np, 1:intf%np))
     call make_full_matrix(intf%np, order, dim, sp_mem, mem_s, tmem, mapping)
-    call apply_mem(tmem, intf, intf_wf, zpsi, factor)
+    call apply_mem(tmem, intf, intf_wf, zpsi, factor, transposed)
     SAFE_DEALLOCATE_A(tmem)
 
     call pop_sub()
@@ -742,19 +718,21 @@ contains
     CMPLX, intent(out) :: y(:)
 
 !    integer            :: np
+!    CMPLX, allocatable :: diag(:, :)
 
     call push_sub('ob_rti.preconditioner')
 !    np = gr_p%mesh%np
 
     y(:) = x(:) ! no preconditioner
-!     AL LOCATE(diag(np, 1), np)
+!    SA FE_ALLOCATE(diag(1:np, 1:1))
 
-!     call zhamiltonian_diagonal(hm_p, gr_p, diag, 1)
+!    call zhamiltonian_diagonal(hm_p, gr_p, diag, 1)
 
-!     diag(:, 1) = M_z1 + M_HALF*dt_p*M_zI*diag(:,1) 
-!     y(1:np)    = x(1:np)/diag(1:np, 1)
+!    diag(:, 1) = M_z1 + M_HALF*dt_p*M_zI*diag(:,1) 
+!    if (.not.heff_sym) diag(:, 1) = diag(:, 1)**2
+!    y(1:np)    = x(1:np)/diag(1:np, 1)
 
-!     SAFE _DEALLOCATE_P(diag)
+!    SA FE_DEALLOCATE_A(diag)
 
     call pop_sub()
   end subroutine precond_prop
