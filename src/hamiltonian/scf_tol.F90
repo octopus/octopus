@@ -40,7 +40,6 @@ module scf_tol_m
        scf_tol_t, &
        scf_tol_init, & 
        scf_tol_end, & 
-       scf_tol_start, & 
        scf_tol_stop, & 
        scf_tol_step
        
@@ -58,11 +57,11 @@ module scf_tol_m
 contains
 
   !-----------------------------------------------------------------
-  subroutine scf_tol_init(this, prefix, def_maximumiter, set_scheme)
+  subroutine scf_tol_init(this, prefix, def_maximumiter, tol_scheme)
     type(scf_tol_t),    intent(out) :: this
     character(len=*),   intent(in)  :: prefix
     integer, optional,  intent(in)  :: def_maximumiter
-    integer, optional,  intent(in)  :: set_scheme
+    integer, optional,  intent(in)  :: tol_scheme
 
     integer :: def_maximumiter_
     character(len=256) :: str
@@ -117,8 +116,8 @@ contains
     !%Option tol_exp 3
     !% The tolerance decreases exponentially for the first LRTolIterWindow iterations
     !%End
-    if(present(set_scheme)) then
-      this%scheme = set_scheme
+    if(present(tol_scheme)) then
+      this%scheme = tol_scheme
     else
       str = 'LRTolScheme'
       if(loct_parse_isdef(datasets_check(trim(prefix)//trim(str))) /= 0) &
@@ -128,8 +127,34 @@ contains
     if(.not.varinfo_valid_option('LRTolScheme', this%scheme)) &
          call input_error('LRTolScheme')
 
+    !%Variable LRTolInitTol
+    !%Type float
+    !%Default 1e-2
+    !%Section Linear Response::Solver
+    !%Description
+    !% This is the tolerance to determine that the linear solver has converged,
+    !% for the first SCF iteration. Ignored if LRTolScheme = fixed.
+    !%End
+    str = 'LRTolInitTol'
+    if(loct_parse_isdef(datasets_check(trim(prefix)//trim(str))) /= 0) &
+         str = trim(prefix)//trim(str)
+    call loct_parse_float(datasets_check(str), CNST(1e-2), this%initial_tol)
+    this%current_tol = this%initial_tol
+
+    !%Variable LinearSolverTol
+    !%Type float
+    !%Default 1e-6
+    !%Section Linear Response::Solver
+    !%Description
+    !% This is the tolerance to determine that the linear solver has converged.
+    !%End
+    str = 'LRTolFinalTol'
+    if(loct_parse_isdef(datasets_check(trim(prefix)//trim(str))) /= 0) &
+         str = trim(prefix)//trim(str)
+    call loct_parse_float(datasets_check(str), CNST(1e-6), this%final_tol)
+
     if(this%scheme == SCF_TOL_ADAPTIVE) then 
-      !%Variable LRAdaptiveTolFactor
+      !%Variable LRTolAdaptiveFactor
       !%Type float
       !%Default 0.9
       !%Section Linear Response::SCF in LR calculations
@@ -141,7 +166,7 @@ contains
       str = 'LRAdaptiveTolFactor'
       if(loct_parse_isdef(datasets_check(trim(prefix)//trim(str))) /= 0) &
            str = trim(prefix)//trim(str)
-      call loct_parse_float(datasets_check(str), CNST(0.9), this%dynamic_tol_factor)
+      call loct_parse_float(datasets_check(str), CNST(0.1), this%dynamic_tol_factor)
     end if
 
     if(this%scheme==SCF_TOL_LINEAR.or.this%scheme==SCF_TOL_EXP) then
@@ -164,46 +189,30 @@ contains
     
 
   !-----------------------------------------------------------------
-  FLOAT function scf_tol_start(this, initial_tol, final_tol) result (r)
-    type(scf_tol_t), intent(out) :: this
-    FLOAT, intent(in) :: initial_tol
-    FLOAT, intent(in) :: final_tol
-
-    this%initial_tol = initial_tol
-    this%final_tol   = final_tol
-    
-    select case(this%scheme)
-    case(SCF_TOL_FIXED)
-      r = this%final_tol
-    case(SCF_TOL_ADAPTIVE)
-      this%current_tol = this%initial_tol
-      r =  this%initial_tol
-    case(SCF_TOL_LINEAR)
-      r =  this%initial_tol
-    case(SCF_TOL_EXP)
-      r =  this%initial_tol
-    end select
-    this%current_tol = r
-
-  end function scf_tol_start
-
-
-  !-----------------------------------------------------------------
   FLOAT function scf_tol_step(this, iter, scf_res) result(r)
-    type(scf_tol_t),     intent(inout) :: this
-    integer,        intent(in)    :: iter
-    FLOAT,          intent(in)    :: scf_res
+    type(scf_tol_t), intent(inout) :: this
+    integer,         intent(in)    :: iter
+    FLOAT,           intent(in)    :: scf_res
 
     FLOAT :: logi, logf
 
+    if(iter == 0) this%current_tol = M_HUGE
+
     select case(this%scheme)
     case(SCF_TOL_FIXED)
       r = this%final_tol
+
     case(SCF_TOL_ADAPTIVE)
-      r = this%dynamic_tol_factor * (this%final_tol/this%conv_abs_dens)*scf_res 
+      if(iter == 0) then
+        r = this%initial_tol
+      else
+        r = this%dynamic_tol_factor * (this%final_tol/this%conv_abs_dens)*scf_res
+      end if
+
     case(SCF_TOL_LINEAR)
       r = this%initial_tol + (this%final_tol - this%initial_tol) * &
            real(iter, REAL_PRECISION) / real(this%iter_window, REAL_PRECISION)
+
     case(SCF_TOL_EXP)
       logi = log(this%initial_tol)
       logf = log(this%final_tol)
@@ -218,6 +227,8 @@ contains
     r = min(r, this%current_tol)
 
     this%current_tol = r
+
+    write(27, *) iter, r, this%initial_tol, this%final_tol
   end function scf_tol_step
 
 

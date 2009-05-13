@@ -21,7 +21,7 @@
 ! ---------------------------------------------------------
 ! This subroutine calculates the solution of (H + omega) x = y
 ! ---------------------------------------------------------
-subroutine X(solve_HXeY) (this, hm, gr, st, ist, ik, x, y, omega, occ_response)
+subroutine X(solve_HXeY) (this, hm, gr, st, ist, ik, x, y, omega, tol, occ_response)
   type(linear_solver_t), target, intent(inout) :: this
   type(hamiltonian_t),   target, intent(inout) :: hm
   type(grid_t),          target, intent(inout) :: gr
@@ -31,6 +31,7 @@ subroutine X(solve_HXeY) (this, hm, gr, st, ist, ik, x, y, omega, occ_response)
   R_TYPE,                        intent(inout) :: x(:,:)   ! x(gr%mesh%np, d%dim)
   R_TYPE,                        intent(in)    :: y(:,:)   ! y(gr%mesh%np, d%dim)
   R_TYPE,                        intent(in)    :: omega
+  FLOAT,                         intent(in)    :: tol
   logical, optional,             intent(in)    :: occ_response
 
   logical :: occ_response_
@@ -44,13 +45,13 @@ subroutine X(solve_HXeY) (this, hm, gr, st, ist, ik, x, y, omega, occ_response)
   select case(this%solver)
 
   case(LS_CG)
-    call X(ls_solver_cg)       (this, hm, gr, st, ist, ik, x, y, omega)
+    call X(ls_solver_cg)       (this, hm, gr, st, ist, ik, x, y, omega, tol)
 
   case(LS_BICGSTAB)
-    call X(ls_solver_bicgstab) (this, hm, gr, st, ist, ik, x, y, omega, occ_response_)
+    call X(ls_solver_bicgstab) (this, hm, gr, st, ist, ik, x, y, omega, tol, occ_response_)
 
   case(LS_MULTIGRID)
-    call X(ls_solver_multigrid)(this, hm, gr, st, ist, ik, x, y, omega)
+    call X(ls_solver_multigrid)(this, hm, gr, st, ist, ik, x, y, omega, tol)
 
   case(LS_QMR)
     args%ls       => this
@@ -63,8 +64,9 @@ subroutine X(solve_HXeY) (this, hm, gr, st, ist, ik, x, y, omega, occ_response)
 
     this%iter = this%max_iter
     
-    call X(qmr_sym)(gr%mesh%np, x(:, 1), y(:, 1), X(ls_solver_operator_na), X(ls_dotu_qmr), X(ls_nrm2_qmr), X(ls_preconditioner), &
-         this%iter, residue = this%abs_psi, threshold = this%tol, showprogress = .false.)
+    call X(qmr_sym)(gr%mesh%np, x(:, 1), y(:, 1), &
+         X(ls_solver_operator_na), X(ls_dotu_qmr), X(ls_nrm2_qmr), X(ls_preconditioner), &
+         this%iter, residue = this%abs_psi, threshold = tol, showprogress = .false.)
 
   case(LS_SOS)
     call X(ls_solver_sos)(this, hm, gr, st, ist, ik, x, y, omega)
@@ -80,6 +82,8 @@ subroutine X(solve_HXeY) (this, hm, gr, st, ist, ik, x, y, omega, occ_response)
 
 end subroutine X(solve_HXeY)
 
+
+! ---------------------------------------------------------
 FLOAT function X(ls_nrm2_qmr)(x)
   R_TYPE, intent(in) :: x(:)
   
@@ -87,6 +91,8 @@ FLOAT function X(ls_nrm2_qmr)(x)
   
 end function X(ls_nrm2_qmr)
 
+
+! ---------------------------------------------------------
 R_TYPE function X(ls_dotu_qmr)(x,y)
   R_TYPE, intent(in) :: x(:)
   R_TYPE, intent(in) :: y(:)
@@ -97,7 +103,7 @@ end function X(ls_dotu_qmr)
 
 ! ---------------------------------------------------------
 !Conjugate gradients
-subroutine X(ls_solver_cg) (ls, hm, gr, st, ist, ik, x, y, omega)
+subroutine X(ls_solver_cg) (ls, hm, gr, st, ist, ik, x, y, omega, tol)
   type(linear_solver_t), intent(inout) :: ls
   type(hamiltonian_t),   intent(inout) :: hm
   type(grid_t),          intent(inout) :: gr
@@ -107,6 +113,7 @@ subroutine X(ls_solver_cg) (ls, hm, gr, st, ist, ik, x, y, omega)
   R_TYPE,                intent(inout) :: x(:,:)   ! x(gr%mesh%np, st%d%dim)
   R_TYPE,                intent(in)    :: y(:,:)   ! y(gr%mesh%np, st%d%dim)
   R_TYPE,                intent(in)    :: omega
+  FLOAT,                 intent(in)    :: tol
 
   R_TYPE, allocatable :: r(:,:), p(:,:), Hp(:,:)
   R_TYPE  :: alpha, beta, gamma
@@ -132,7 +139,7 @@ subroutine X(ls_solver_cg) (ls, hm, gr, st, ist, ik, x, y, omega)
   do iter = 1, ls%max_iter
     gamma = X(mf_dotp)(gr%mesh, st%d%dim, r, r)
 
-    conv = ( abs(gamma) < ls%tol**2)
+    conv = ( abs(gamma) < tol**2)
     if(conv.and.conv_last) exit
     conv_last = conv
     
@@ -167,17 +174,18 @@ end subroutine X(ls_solver_cg)
 ! ---------------------------------------------------------
 !BICONJUGATE GRADIENTS STABILIZED
 !see http://math.nist.gov/iml++/bicgstab.h.txt
-subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, omega, occ_response)
-  type(linear_solver_t),          intent(inout) :: ls
-  type(hamiltonian_t), intent(inout) :: hm
-  type(grid_t),        intent(inout) :: gr
-  type(states_t),      intent(in)    :: st
-  integer,             intent(in)    :: ist
-  integer,             intent(in)    :: ik
-  R_TYPE,              intent(inout) :: x(:,:)   ! x(gr%mesh%np, st%d%dim)
-  R_TYPE,              intent(in)    :: y(:,:)   ! y(gr%mesh%np, st%d%dim)
-  R_TYPE,              intent(in)    :: omega
-  logical,             intent(in)    :: occ_response
+subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, omega, tol, occ_response)
+  type(linear_solver_t), intent(inout) :: ls
+  type(hamiltonian_t),   intent(inout) :: hm
+  type(grid_t),          intent(inout) :: gr
+  type(states_t),        intent(in)    :: st
+  integer,               intent(in)    :: ist
+  integer,               intent(in)    :: ik
+  R_TYPE,                intent(inout) :: x(:,:)   ! x(gr%mesh%np, st%d%dim)
+  R_TYPE,                intent(in)    :: y(:,:)   ! y(gr%mesh%np, st%d%dim)
+  R_TYPE,                intent(in)    :: omega
+  FLOAT,                 intent(in)    :: tol
+  logical,               intent(in)    :: occ_response
 
   R_TYPE, allocatable :: r(:,:), Hp(:,:), rs(:,:), Hs(:,:), p(:,:), s(:,:)
   R_TYPE, pointer :: phat(:,:), shat(:,:)
@@ -247,7 +255,7 @@ subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, omega, occ_resp
 
     gamma = X(mf_nrm2) (gr%mesh, st%d%dim, s)
 
-    if( gamma < ls%tol ) then
+    if( gamma < tol ) then
       do idim = 1, st%d%dim 
         call lalg_axpy(gr%mesh%np, alpha, phat(:, idim), x(:, idim))
       end do
@@ -267,7 +275,7 @@ subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, omega, occ_resp
     rho_2 = rho_1
 
     gamma = X(mf_nrm2)(gr%mesh, st%d%dim, r)
-    conv = (gamma < ls%tol)
+    conv = (gamma < tol)
 
     if( conv .and. conv_last ) then 
       exit
@@ -295,7 +303,7 @@ end subroutine X(ls_solver_bicgstab)
 
 
 ! ---------------------------------------------------------
-subroutine X(ls_solver_multigrid) (ls, hm, gr, st, ist, ik, x, y, omega)
+subroutine X(ls_solver_multigrid) (ls, hm, gr, st, ist, ik, x, y, omega, tol)
   type(linear_solver_t), intent(inout) :: ls
   type(hamiltonian_t),   intent(inout) :: hm
   type(grid_t),          intent(inout) :: gr
@@ -305,6 +313,7 @@ subroutine X(ls_solver_multigrid) (ls, hm, gr, st, ist, ik, x, y, omega)
   R_TYPE,                intent(inout) :: x(:,:)   ! x(gr%mesh%np, st%d%dim)
   R_TYPE,                intent(in)    :: y(:,:)   ! y(gr%mesh%np, st%d%dim)
   R_TYPE,                intent(in)    :: omega
+  FLOAT,                 intent(in)    :: tol
 
   R_TYPE, allocatable :: diag(:,:), hx(:,:), res(:,:)
   integer :: iter
@@ -329,7 +338,7 @@ subroutine X(ls_solver_multigrid) (ls, hm, gr, st, ist, ik, x, y, omega)
     res(1:gr%mesh%np, 1:st%d%dim) = hx(1:gr%mesh%np, 1:st%d%dim) - y(1:gr%mesh%np, 1:st%d%dim)
     ls%abs_psi = X(mf_nrm2)(gr%mesh, st%d%dim, res)
 
-    if(ls%abs_psi < ls%tol) exit
+    if(ls%abs_psi < tol) exit
 
     if(in_debug_mode) then 
       write(message(1), *)  "Multigrid: iter ", iter,  ls%abs_psi, abs(X(mf_dotp)(gr%mesh, st%d%dim, st%X(psi)(:, :, ist, ik), x))

@@ -39,7 +39,7 @@ subroutine X(sternheimer_solve)(                           &
   character(len=*),       intent(in)    :: wfs_tag
   logical,      optional, intent(in)    :: have_restart_rho
 
-  FLOAT :: dpsimod
+  FLOAT :: dpsimod, tol
   integer :: iter, sigma, ik, ist, is, err
   R_TYPE, allocatable :: dl_rhoin(:, :, :), dl_rhonew(:, :, :), dl_rhotmp(:, :, :)
   R_TYPE, allocatable :: Y(:, :, :), hvar(:, :, :)
@@ -85,8 +85,6 @@ subroutine X(sternheimer_solve)(                           &
     call X(lr_build_dl_rho)(m, st, lr, nsigma)
   end if
   
-  this%solver%tol = scf_tol_start(this%scftol, this%solver%initial_tol, this%solver%final_tol)
-
   message(1)="--------------------------------------------"
   call write_info(1)
 
@@ -99,9 +97,10 @@ subroutine X(sternheimer_solve)(                           &
     enddo
   endif
    
-  !self-consistency iteration for response
-  iter_loop: do iter = 1, this%scftol%max_iter
+  tol = scf_tol_step(this%scf_tol, 0, M_ONE)
 
+  !self-consistency iteration for response
+  iter_loop: do iter = 1, this%scf_tol%max_iter
     if (this%add_fxc .or. this%add_hartree) then
        write(message(1), '(a, i3)') "LR SCF Iteration: ", iter
        call write_info(1)
@@ -154,8 +153,8 @@ subroutine X(sternheimer_solve)(                           &
 
           !solve the Sternheimer equation
           call X(solve_HXeY) (this%solver, hm, sys%gr, sys%st, ist, ik, &
-             lr(sigma)%X(dl_psi)(1:m%np_part, 1:st%d%dim, ist, ik), &
-             Y(1:m%np, 1:1, sigma), -sys%st%eigenval(ist, ik) + omega_sigma, this%occ_response)
+               lr(sigma)%X(dl_psi)(1:m%np_part, 1:st%d%dim, ist, ik), &
+             Y(1:m%np, 1:1, sigma), -sys%st%eigenval(ist, ik) + omega_sigma, tol, this%occ_response)
 
           if (this%preorthogonalization) then 
             !re-orthogonalize the resulting vector
@@ -177,7 +176,7 @@ subroutine X(sternheimer_solve)(                           &
             ik, (3 - 2 * sigma) * ist, dpsimod, this%solver%iter, this%solver%abs_psi 
           call write_info(1)
 
-          states_conv = states_conv .and. (this%solver%abs_psi < this%solver%tol)
+          states_conv = states_conv .and. (this%solver%abs_psi < tol)
           total_iter = total_iter + this%solver%iter
           
         end do !sigma
@@ -216,7 +215,7 @@ subroutine X(sternheimer_solve)(                           &
 
     ! all the rest is the mixing and checking for convergence
 
-    if(this%scftol%max_iter == iter) then 
+    if(this%scf_tol%max_iter == iter) then 
       message(1) = "Self-consistent iteration for response did not converge"
       this%ok = .false.
       call write_warning(1)
@@ -238,7 +237,7 @@ subroutine X(sternheimer_solve)(                           &
     message(2)="--------------------------------------------"
     call write_info(2)
       
-    if( abs_dens <= this%scftol%conv_abs_dens ) then 
+    if( abs_dens <= this%scf_tol%conv_abs_dens ) then 
       if(conv_last) then 
         conv = .true.
       else
@@ -255,19 +254,14 @@ subroutine X(sternheimer_solve)(                           &
            '      Total hamiltonian applications:', total_iter*linear_solver_ops_per_iter(this%solver)
       call write_info(2)
       exit
-
     else
-      
       lr(1)%X(dl_rho)(1:m%np, 1:st%d%nspin) = dl_rhonew(1:m%np, 1:st%d%nspin, 1)
       if(nsigma == 2) lr(2)%X(dl_rho)(1:m%np, 1:st%d%nspin) = R_CONJ(dl_rhonew(1:m%np, 1:st%d%nspin, 1))
 
-      this%solver%tol = scf_tol_step(this%scftol, iter, TOFLOAT(abs_dens))
-
+      tol = scf_tol_step(this%scf_tol, iter, TOFLOAT(abs_dens))
     end if
     
   end do iter_loop
-
-  call scf_tol_end(this%scftol)
 
   call mix_end(this%mixer)
 

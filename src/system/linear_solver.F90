@@ -34,6 +34,7 @@ module linear_solver_m
   use messages_m
   use profiling_m
   use preconditioners_m
+  use scf_tol_m
   use smear_m
   use solvers_m
   use states_m
@@ -50,23 +51,20 @@ module linear_solver_m
        LS_SOS       = 9
 
   public :: &
-       linear_solver_t, &
-       linear_solver_init, &
-       linear_solver_end, &
-       dsolve_HXeY, & 
-       zsolve_HXeY, &
+       linear_solver_t,       &
+       linear_solver_init,    &
+       linear_solver_end,     &
+       dsolve_HXeY,           & 
+       zsolve_HXeY,           &
        linear_solver_ops_per_iter
   
 
   type linear_solver_t
-     integer :: solver         
+     integer                :: solver         
      type(preconditioner_t) :: pre
-     FLOAT   :: abs_psi
-     FLOAT   :: initial_tol
-     FLOAT   :: final_tol
-     FLOAT   :: tol
-     integer :: iter
-     integer :: max_iter
+     FLOAT                  :: abs_psi
+     integer                :: iter
+     integer                :: max_iter
   end type linear_solver_t
 
   type(profile_t), save :: prof
@@ -87,11 +85,12 @@ module linear_solver_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine linear_solver_init(this, gr, prefix, def_solver)
+  subroutine linear_solver_init(this, gr, prefix, def_solver, tol_scheme)
     type(linear_solver_t),  intent(out)   :: this
     type(grid_t),           intent(inout) :: gr
     character(len=*),       intent(in)    :: prefix
     integer, optional,      intent(in)    :: def_solver
+    integer, optional,      intent(in)    :: tol_scheme
 
     integer :: fsolver
     integer :: defsolver_ 
@@ -153,42 +152,8 @@ contains
       call loct_parse_int  (datasets_check("LinearSolverMaxIter"), 1000, this%max_iter)
     end if
 
-    !%Variable LinearSolverInitTol
-    !%Type float
-    !%Default 1e-2
-    !%Section Linear Response::Solver
-    !%Description
-    !% This is the tolerance to determine that the linear solver has converged,
-    !% for the first SCF iteration. Ignored if LRTolScheme = fixed.
-    !%End
-    if (loct_parse_isdef(datasets_check(trim(prefix)//"LinearSolverInitTol")) /= 0) then 
-      call loct_parse_float(datasets_check(trim(prefix)//"LinearSolverInitTol"), &
-        CNST(1e-2), this%initial_tol)
-    else
-      call loct_parse_float(datasets_check("LinearSolverInitTol"), &
-        CNST(1e-2), this%initial_tol)
-    end if
-
-    !%Variable LinearSolverTol
-    !%Type float
-    !%Default 1e-6
-    !%Section Linear Response::Solver
-    !%Description
-    !% This is the tolerance to determine that the linear solver has converged.
-    !%End
-    if (loct_parse_isdef(datasets_check(trim(prefix)//"LinearSolverTol")) /= 0) then 
-      call loct_parse_float(datasets_check(trim(prefix)//"LinearSolverTol"), &
-        CNST(1e-6), this%final_tol)
-    else
-      call loct_parse_float(datasets_check("LinearSolverTol"), &
-        CNST(1e-6), this%final_tol)
-    end if
-
-    this%tol = this%final_tol
-    
     write(message(1),'(a)') 'Linear Solver'
     call messages_print_stress(stdout, trim(message(1)))
-    
     
     ! solver 
     select case(this%solver)
@@ -225,6 +190,8 @@ contains
 
   end subroutine linear_solver_end
 
+
+  ! ---------------------------------------------------------
   integer function linear_solver_ops_per_iter(this) result(n)
     type(linear_solver_t), intent(inout) :: this
     

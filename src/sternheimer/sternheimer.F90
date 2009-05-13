@@ -78,7 +78,7 @@ module sternheimer_m
      private
      type(linear_solver_t) :: solver
      type(mix_t)           :: mixer
-     type(scf_tol_t)       :: scftol
+     type(scf_tol_t)       :: scf_tol
      FLOAT, pointer        :: fxc(:,:,:)    ! linear change of the xc potential (fxc)
      FLOAT, pointer        :: drhs(:, :, :, :)
      CMPLX, pointer        :: zrhs(:, :, :, :)
@@ -200,10 +200,10 @@ contains
 
     ! will not converge for non-self-consistent calculation unless LRTolScheme = fixed
     if (ham_var == 0) then
-       call scf_tol_init(this%scftol, prefix, set_scheme = 0) ! fixed
+      call scf_tol_init(this%scf_tol, prefix, tol_scheme = 0) ! fixed
     else
-       call scf_tol_init(this%scftol, prefix) ! read from input
-    endif
+      call scf_tol_init(this%scf_tol, prefix)
+    end if
 
     if(this%add_fxc) call sternheimer_build_fxc(this, sys%gr%mesh, sys%st, sys%ks) 
 
@@ -217,7 +217,7 @@ contains
     type(sternheimer_t), intent(inout) :: this
 
     call linear_solver_end(this%solver)
-    call scf_tol_end(this%scftol)
+    call scf_tol_end(this%scf_tol)
 
     if (this%add_fxc) then
       SAFE_DEALLOCATE_P(this%fxc)
