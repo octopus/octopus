@@ -19,4 +19,4 @@
 ##
 ## $Id: Makefile.am 2593 2006-11-20 10:58:15Z marques $
 
-bin_SCRIPTS = oct-analyze_projections oct-vdW_c6 oct-check_deallocs
+dist_bin_SCRIPTS = oct-analyze_projections oct-vdW_c6 oct-check_deallocs
