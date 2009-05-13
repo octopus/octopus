@@ -284,6 +284,9 @@ contains
             st1(jj) = vec_global2local(m%vp, st1(jj), m%vp%partno)
           end if
 #endif
+          if(mesh_compact_boundaries(m)) then
+            st1(jj) = min(st1(jj), m%np + 1)
+          end if
           ASSERT(st1(jj) > 0)
         end do
 

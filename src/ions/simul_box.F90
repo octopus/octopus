@@ -46,6 +46,7 @@ module simul_box_m
     simul_box_end,              &
     simul_box_write_info,       &
     simul_box_is_periodic,      &
+    simul_box_has_zero_bc,      &
     simul_box_is_eq,            &
     simul_box_in_box,           &
     simul_box_dump,             &
@@ -1204,7 +1205,14 @@ contains
 
   end function simul_box_is_periodic
 
-
+  !--------------------------------------------------------------
+  logical pure function simul_box_has_zero_bc(sb)
+    type(simul_box_t), intent(in) :: sb
+    
+    simul_box_has_zero_bc = .not. simul_box_is_periodic(sb)
+    
+  end function simul_box_has_zero_bc
+  
   !--------------------------------------------------------------
   subroutine simul_box_dump(sb, iunit)
     type(simul_box_t), intent(in) :: sb

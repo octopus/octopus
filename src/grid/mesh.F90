@@ -61,6 +61,7 @@ module mesh_m
     mesh_global_memory,        &
     mesh_local_memory,         &
     mesh_x_global,             &
+    mesh_compact_boundaries,   &
     translate_point
 
   ! Describes mesh distribution to nodes.
@@ -729,6 +730,14 @@ contains
     end if
 
   end function mesh_x_global
+
+  logical pure function mesh_compact_boundaries(mesh) result(cb)
+    type(mesh_t),       intent(in) :: mesh
+    
+    cb = .not. mesh%use_curvilinear .and. &
+         .not. mesh%parallel_in_domains .and.  &
+         simul_box_has_zero_bc(mesh%sb)
+  end function mesh_compact_boundaries
 
 end module mesh_m
 
