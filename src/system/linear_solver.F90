@@ -186,8 +186,6 @@ contains
 
     this%tol = this%final_tol
     
-    !WRITE INFO
-    
     write(message(1),'(a)') 'Linear Solver'
     call messages_print_stress(stdout, trim(message(1)))
     

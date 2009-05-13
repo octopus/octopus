@@ -24,13 +24,17 @@ module scf_tol_m
   use global_m
   use loct_parser_m
   use messages_m
+  use varinfo_m
 
   implicit none
   
   private
 
-  integer, public, parameter :: SCF_FIXED = 0
-  integer, public, parameter :: SCF_ADAPTIVE = 1
+  integer, public, parameter :: &
+       SCF_TOL_FIXED    = 0, &
+       SCF_TOL_ADAPTIVE = 1, &
+       SCF_TOL_LINEAR   = 2, &
+       SCF_TOL_EXP      = 3
 
   public :: &
        scf_tol_t, &
@@ -48,10 +52,12 @@ module scf_tol_m
      FLOAT             :: current_tol
      FLOAT             :: initial_tol
      FLOAT             :: final_tol
+     integer           :: iter_window
   end type scf_tol_t
 
 contains
 
+  !-----------------------------------------------------------------
   subroutine scf_tol_init(this, prefix, def_maximumiter, set_scheme)
     type(scf_tol_t),    intent(out) :: this
     character(len=*),   intent(in)  :: prefix
@@ -59,6 +65,7 @@ contains
     integer, optional,  intent(in)  :: set_scheme
 
     integer :: def_maximumiter_
+    character(len=256) :: str
 
     call push_sub('scf_tol.scf_tol_init')
     
@@ -69,15 +76,13 @@ contains
     !%Description
     !% The maximum number of SCF iterations to calculate response.
     !%End
-
     def_maximumiter_ = 200
     if(present(def_maximumiter)) def_maximumiter_ = def_maximumiter
 
-    if (loct_parse_isdef(datasets_check(trim(prefix)//'LRMaximumIter')) /= 0) then 
-      call loct_parse_int(datasets_check(trim(prefix)//'LRMaximumIter'), def_maximumiter_, this%max_iter)
-    else
-      call loct_parse_int(datasets_check('LRMaximumIter'), def_maximumiter_, this%max_iter)
-    end if
+    str = 'LRMaximumIter'
+    if(loct_parse_isdef(datasets_check(trim(prefix)//trim(str))) /= 0) &
+         str = trim(prefix)//trim(str)
+    call loct_parse_int(datasets_check(str), def_maximumiter_, this%max_iter)
     
     !%Variable LRConvAbsDens
     !%Type float
@@ -87,13 +92,10 @@ contains
     !% The tolerance in the variation of the density, to determine if
     !% the SCF for linear response is converged.
     !%End
-    if (loct_parse_isdef(datasets_check(trim(prefix)//'LRConvAnsDens')) /= 0 ) then 
-      call loct_parse_float(datasets_check(trim(prefix)//"LRConvAbsDens"), &
-        CNST(1e-5), this%conv_abs_dens)
-    else
-      call loct_parse_float(datasets_check("LRConvAbsDens"), &
-        CNST(1e-5), this%conv_abs_dens)
-    end if
+    str = 'LRConvAnsDens'
+    if(loct_parse_isdef(datasets_check(trim(prefix)//trim(str))) /= 0) &
+         str = trim(prefix)//trim(str)
+    call loct_parse_float(datasets_check(str), CNST(1e-5), this%conv_abs_dens)
 
     !%Variable LRTolScheme
     !%Type integer
@@ -104,29 +106,29 @@ contains
     !% the SCF iteration. For kdotp and magnetic em_resp modes, or
     !% whenever HamiltonianVariation = V_ext_only, the
     !% scheme is set to fixed, and this variable is ignored.
-    !%Option fixed 0
+    !%Option tol_fixed 0
     !% The solver tolerance is fixed for all the iterations; this
     !% improves convergence but increases the computational cost
-    !%Option adaptive 1 
+    !%Option tol_adaptative 1 
     !% The tolerance is increased according to the level of
     !% convergence of the SCF.
+    !%Option tol_linear 2
+    !% The tolerance decreases linearly for the first LRTolIterWindow iterations
+    !%Option tol_exp 3
+    !% The tolerance decreases exponentially for the first LRTolIterWindow iterations
     !%End
-    if (present(set_scheme)) then
-       this%scheme = set_scheme
+    if(present(set_scheme)) then
+      this%scheme = set_scheme
     else
-       if (loct_parse_isdef(datasets_check(trim(prefix)//'LRTolScheme')) /= 0 ) then
-          call loct_parse_int(datasets_check(trim(prefix)//'LRTolScheme'), SCF_ADAPTIVE, this%scheme)
-       else
-          call loct_parse_int(datasets_check('LRTolScheme'), SCF_ADAPTIVE, this%scheme)
-       end if
-    endif
-
-    if( this%scheme /= SCF_ADAPTIVE .and. this%scheme /= SCF_FIXED ) then 
-      call input_error('LRTolScheme')
+      str = 'LRTolScheme'
+      if(loct_parse_isdef(datasets_check(trim(prefix)//trim(str))) /= 0) &
+           str = trim(prefix)//trim(str)
+      call loct_parse_int(datasets_check(str), SCF_TOL_ADAPTIVE, this%scheme)
     end if
+    if(.not.varinfo_valid_option('LRTolScheme', this%scheme)) &
+         call input_error('LRTolScheme')
 
-    if( this%scheme == SCF_ADAPTIVE) then 
-      
+    if(this%scheme == SCF_TOL_ADAPTIVE) then 
       !%Variable LRAdaptiveTolFactor
       !%Type float
       !%Default 0.9
@@ -136,67 +138,97 @@ contains
       !% during the self-consistency process. Smaller values mean that
       !% tolerance is decreased faster. The default is 0.9.
       !%End
-      if (loct_parse_isdef(datasets_check(trim(prefix)//'LRAdaptiveTolFactor')) /=0 ) then 
-        call loct_parse_float(datasets_check(trim(prefix)//'LRAdaptiveTolFactor'), &
-          CNST(0.9), this%dynamic_tol_factor)
-      else
-        call loct_parse_float(datasets_check('LRAdaptiveTolFactor'), &
-          CNST(0.9), this%dynamic_tol_factor)
-      end if
+      str = 'LRAdaptiveTolFactor'
+      if(loct_parse_isdef(datasets_check(trim(prefix)//trim(str))) /= 0) &
+           str = trim(prefix)//trim(str)
+      call loct_parse_float(datasets_check(str), CNST(0.9), this%dynamic_tol_factor)
+    end if
 
+    if(this%scheme==SCF_TOL_LINEAR.or.this%scheme==SCF_TOL_EXP) then
+      !%Variable LRTolIterWindow
+      !%Type float
+      !%Default 10
+      !%Section Linear Response::SCF in LR calculations
+      !%Description
+      !% Number of iterations necessary to reach the final tolerance
+      !%End
+      str = 'LRTolIterWindow'
+      if(loct_parse_isdef(datasets_check(trim(prefix)//trim(str))) /= 0) &
+           str = trim(prefix)//trim(str)
+      call loct_parse_int(datasets_check(str), 10, this%iter_window)
     end if
 
     call pop_sub()
 
   end subroutine scf_tol_init
     
+
+  !-----------------------------------------------------------------
   FLOAT function scf_tol_start(this, initial_tol, final_tol) result (r)
     type(scf_tol_t), intent(out) :: this
     FLOAT, intent(in) :: initial_tol
     FLOAT, intent(in) :: final_tol
 
     this%initial_tol = initial_tol
-    this%final_tol = final_tol
+    this%final_tol   = final_tol
     
     select case(this%scheme)
-      
-    case(SCF_FIXED)
+    case(SCF_TOL_FIXED)
       r = this%final_tol
-    case(SCF_ADAPTIVE)
+    case(SCF_TOL_ADAPTIVE)
       this%current_tol = this%initial_tol
       r =  this%initial_tol
+    case(SCF_TOL_LINEAR)
+      r =  this%initial_tol
+    case(SCF_TOL_EXP)
+      r =  this%initial_tol
     end select
-    
+    this%current_tol = r
+
   end function scf_tol_start
 
+
+  !-----------------------------------------------------------------
   FLOAT function scf_tol_step(this, iter, scf_res) result(r)
     type(scf_tol_t),     intent(inout) :: this
     integer,        intent(in)    :: iter
     FLOAT,          intent(in)    :: scf_res
 
+    FLOAT :: logi, logf
+
     select case(this%scheme)
-
-    case(SCF_FIXED)
+    case(SCF_TOL_FIXED)
       r = this%final_tol
-
-    case(SCF_ADAPTIVE)
-
+    case(SCF_TOL_ADAPTIVE)
       r = this%dynamic_tol_factor * (this%final_tol/this%conv_abs_dens)*scf_res 
-      r = max(r, this%final_tol)
-      r = min(r, this%current_tol)
-      
-      this%current_tol = r
-
+    case(SCF_TOL_LINEAR)
+      r = this%initial_tol + (this%final_tol - this%initial_tol) * &
+           real(iter, REAL_PRECISION) / real(this%iter_window, REAL_PRECISION)
+    case(SCF_TOL_EXP)
+      logi = log(this%initial_tol)
+      logf = log(this%final_tol)
+      r = logi + (logf - logi) * &
+           real(iter, REAL_PRECISION) / real(this%iter_window, REAL_PRECISION)
+      r = exp(r)
     end select
       
+    ! tolerance can never be larger than final tolerance
+    r = max(r, this%final_tol)
+    ! tolerance always has to decrease
+    r = min(r, this%current_tol)
+
+    this%current_tol = r
   end function scf_tol_step
 
 
+  !-----------------------------------------------------------------
   subroutine scf_tol_stop(this)
     type(scf_tol_t),     intent(inout) :: this
     this%current_tol = M_ZERO
   end subroutine scf_tol_stop
 
+
+  !-----------------------------------------------------------------
   subroutine scf_tol_end(this)
     type(scf_tol_t),     intent(inout) :: this
     this%current_tol = M_ZERO
