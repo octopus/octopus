@@ -231,10 +231,12 @@ contains
       call io_close(iunit)
 
       do jj = mb_1part%npt_1part-denmat%nnatorb_prt_densmat(ikeeppart)+1, mb_1part%npt_1part
-        write(filename,'(a,i3.3,a,i2.2,a,i4.4)') trim(denmat%dirname)//'/natorb_ip', ikeeppart,'_iMB', mm, '_', mb_1part%npt_1part-jj+1
+        write(filename,'(a,i3.3,a,i2.2,a,i4.4)') trim(denmat%dirname)//'/natorb_ip', &
+              ikeeppart,'_iMB', mm, '_', mb_1part%npt_1part-jj+1
         iunit = io_open(filename, action='write')
         do ll = 1, mb_1part%npt_1part
-          call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, mb_1part%enlarge_1part(1), ll, ix_1part)
+          call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, &
+               mb_1part%enlarge_1part(1), ll, ix_1part)
           do idir=1,ndim1part
             write(iunit,'(es11.3)', ADVANCE='no') ix_1part(idir)*mb_1part%h_1part(idir)+mb_1part%origin(idir)
           end do
@@ -246,9 +248,11 @@ contains
       write(filename,'(a,i3.3,a,i2.2)') trim(denmat%dirname)//'/densmatr_ip', ikeeppart,'_iMB', mm
       iunit = io_open(filename,action='write')
       do jj = 1, mb_1part%npt_1part
-        call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, mb_1part%enlarge_1part(1), jj, ix_1part)
+        call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, &
+             mb_1part%enlarge_1part(1), jj, ix_1part)
         do ll = 1, mb_1part%npt_1part
-          call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, mb_1part%enlarge_1part(1), ll, ix_1part_p)
+          call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, &
+               mb_1part%enlarge_1part(1), ll, ix_1part_p)
           do idir=1,ndim1part
             write(iunit,'(es11.3)', ADVANCE='no') ix_1part(idir)*mb_1part%h_1part(idir)+mb_1part%origin(idir)
           end do
@@ -264,7 +268,8 @@ contains
       write(filename,'(a,i3.3,a,i2.2)') trim(denmat%dirname)//'/density_ip', ikeeppart,'_iMB', mm
       iunit = io_open(filename,action='write')
       do jj = 1, mb_1part%npt_1part
-        call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, mb_1part%enlarge_1part(1), jj, ix_1part)
+        call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, &
+             mb_1part%enlarge_1part(1), jj, ix_1part)
         do idir=1,ndim1part
           write(iunit,'(es11.3)', ADVANCE='no') ix_1part(idir)*mb_1part%h_1part(idir)+mb_1part%origin(idir)
         end do
@@ -276,9 +281,11 @@ contains
       ! calculate dipole moment from density for this particle
       dipole_moment(:) = 0.0d0
       do jj = 1,mb_1part%npt_1part
-        call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, mb_1part%enlarge_1part(1), jj, ix_1part)
-        dipole_moment = dipole_moment+(ix_1part(:)*mb_1part%h_1part(:)+mb_1part%origin(:))*real(densmatr(jj,jj))*&
-                      st%modelMBparticles%charge_particle_modelMB(ikeeppart)
+        call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, &
+             mb_1part%enlarge_1part(1), jj, ix_1part)
+        dipole_moment = dipole_moment+(ix_1part(:)*mb_1part%h_1part(:)+mb_1part%origin(:))&
+                      *real(densmatr(jj,jj))&
+                      *st%modelMBparticles%charge_particle_modelMB(ikeeppart)
       end do
       ! note: for eventual multiple particles in 4D (eg 8D total) this would fail to give the last values of dipole_moment
       write (message(1),'(a,I6,a,I6,a,I6)') 'For particle ', ikeeppart, ' of MB state ', mm
