@@ -59,6 +59,7 @@ module h_sys_output_m
     h_sys_output_t,            &
     h_sys_output_init,         &
     h_sys_output_states,       &
+    h_sys_output_modelmb,      &
     h_sys_output_hamiltonian,  &
     h_sys_output_all,          &
     h_sys_output_current_flow, &
@@ -103,7 +104,8 @@ module h_sys_output_m
     output_j_flow         = 32768,    &
     output_dos            = 65536,    &
     output_tpa            =131072,    &
-    output_density_matrix =262144
+    output_density_matrix =262144,    &
+    output_modelmb        =524288
 
 contains
 
@@ -200,8 +202,13 @@ contains
     !% matrix. For the moment the trace is made over the second dimension, and
     !% the code is limited to 2D. The idea is to model N particles in 1D as a N
     !% dimensional non-interacting problem, then to trace out N-1 coordinates.
+    !%Option modelmb 524288
+    !% This flag turns on the output for model Many-Body calculations, and
+    !% triggers the density, wfs, or density matrix to be output for the
+    !% particles described in the DescribeParticlesModelMB block. Which
+    !% quantities will be output depends on the simultaneous presence of wfs,
+    !% density, etc...
     !% 
-    !% WARNING: NOT TESTED YET.
     !%End
     call loct_parse_int(datasets_check('Output'), 0, outp%what)
 
@@ -212,10 +219,20 @@ contains
       call input_error('Output')
     end if
 
+    if(iand(outp%what, output_modelmb).ne.0) then
+      write(message(1),'(a)') 'Model Many-Body quantities will be output, according to the presence of'
+      write(message(2),'(a)') '  wfs, density, or density_matrix in Output'
+      call write_info(2)
+    end if
+
     if(iand(outp%what, output_density_matrix).ne.0) then
       write(message(1),'(a)') 'Info: The density matrix will be calculated, traced'
       write(message(2),'(a)') 'over the second dimension, diagonalized, and output.'
       call write_info(2)
+      if(iand(outp%what, output_modelmb).eq.0) then
+        write(message(1),'(a)') 'Note that density matrix only works for model MB calculations for the moment'
+        call write_info(1)
+      end if
       ! NOTES:
       !   could be made into block to be able to specify which dimensions to trace
       !   in principle all combinations are interesting, but this means we need to

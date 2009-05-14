@@ -60,19 +60,19 @@ type modelMB_particle_t
    integer :: ndensities_to_calculate
 
 !   %block describe_particles_modelMB
-!   label1(char) | particletype1(integer) | mass1 | charge1
-!   label2(char) | particletype2(integer) | mass2 | charge2
-!   label3(char) | particletype3(integer) | mass3 | charge3
+!   label1(char) | particletype1(integer) | mass1 | charge1 | fermion or boson or anyon
+!   label2(char) | particletype2(integer) | mass2 | charge2 | fermion or boson or anyon
+!   label3(char) | particletype3(integer) | mass3 | charge3 | fermion or boson or anyon
 !   ...
 !   nparticle_modelMB lines (fixed)
 !   %
    character(80), pointer :: labels_particles_modelMB(:)
+   character(80), pointer :: bosonfermion(:)
 
    integer, pointer :: particletype_modelMB(:)
    integer, pointer :: nparticles_per_type(:)
 
    integer, pointer :: exchange_symmetry(:,:,:) ! (max_particles_per_type**2, ntype_of_particle_modelMB)
-   character(80), pointer :: bosonfermion(:)
 
    FLOAT, pointer :: mass_particle_modelMB(:)
 
@@ -183,13 +183,15 @@ subroutine modelMB_particles_init (modelMBparticles,gr)
   !% Characterization of different modelMB particles in gr%mesh%sb%dim dimensional space
   !%
   !% <tt>%DescribeParticlesModelMB
-  !% <br>&nbsp;&nbsp; proton   | 1 | 1800. | 1.
-  !% <br>&nbsp;&nbsp; proton   | 1 | 1800. | 1.
-  !% <br>&nbsp;&nbsp; electron | 2 | 1.    | 1.
+  !% <br>&nbsp;&nbsp; proton   | 1 | 1800. | 1. | fermion
+  !% <br>&nbsp;&nbsp; proton   | 1 | 1800. | 1. | fermion
+  !% <br>&nbsp;&nbsp; electron | 2 | 1.    | 1. | fermion
   !% <br>%</tt>
   !%
   !% would tell octopus that there are presently 3 particles, called proton, proton,
   !% and electron, with types 1, 1, and 2, and corresponding masses and charges.
+  !% All particles should be fermions, and this can be later enforced on the spatial
+  !% part of the wave functions.
   !% The label and charge are presently only for informational purposes and
   !% are not checked or used in octopus. The interaction has to take the
   !% actual charge into account.
@@ -200,6 +202,7 @@ subroutine modelMB_particles_init (modelMBparticles,gr)
   SAFE_ALLOCATE (modelMBparticles%particletype_modelMB(1:modelMBparticles%nparticle_modelMB))
   SAFE_ALLOCATE (modelMBparticles%mass_particle_modelMB(1:modelMBparticles%nparticle_modelMB))
   SAFE_ALLOCATE (modelMBparticles%charge_particle_modelMB(1:modelMBparticles%nparticle_modelMB))
+  SAFE_ALLOCATE (modelMBparticles%bosonfermion(1:modelMBparticles%nparticle_modelMB))
   SAFE_ALLOCATE (modelMBparticles%nparticles_per_type(1:modelMBparticles%ntype_of_particle_modelMB))
 
 ! default all particles are electrons
@@ -207,11 +210,12 @@ subroutine modelMB_particles_init (modelMBparticles,gr)
   modelMBparticles%particletype_modelMB = 1
   modelMBparticles%mass_particle_modelMB = 1.0d0
   modelMBparticles%charge_particle_modelMB = 1.0d0
+  modelMBparticles%bosonfermion = 'fermion'
     
 
   if(loct_parse_block(datasets_check('DescribeParticlesModelMB'), blk)==0) then
       ncols = loct_parse_block_cols(blk, 0)
-      if(ncols /= 4 ) then
+      if(ncols /= 5 ) then
         call input_error("DescribeParticlesModelMB")
       end if
       nline = loct_parse_block_n(blk)
@@ -224,12 +228,14 @@ subroutine modelMB_particles_init (modelMBparticles,gr)
         call loct_parse_block_int   (blk, ipart-1, 1, modelMBparticles%particletype_modelMB(ipart))
         call loct_parse_block_float (blk, ipart-1, 2, modelMBparticles%mass_particle_modelMB(ipart))
         call loct_parse_block_float (blk, ipart-1, 3, modelMBparticles%charge_particle_modelMB(ipart))
+        call loct_parse_block_string(blk, ipart-1, 4, modelMBparticles%bosonfermion(ipart))
 
         write (message(1),'(a,a)') 'labels_particles_modelMB = ', modelMBparticles%labels_particles_modelMB(ipart)
         write (message(2),'(a,i6)') 'particletype_modelMB = ', modelMBparticles%particletype_modelMB(ipart)
         write (message(3),'(a,E20.10)') 'mass_particle_modelMB = ', modelMBparticles%mass_particle_modelMB(ipart)
         write (message(4),'(a,E20.10)') 'charge_particle_modelMB = ', modelMBparticles%charge_particle_modelMB(ipart)
-        call write_info(4)
+        write (message(5),'(a,a)') 'bosonfermion = ', modelMBparticles%bosonfermion(ipart)
+        call write_info(5)
       end do
       call loct_parse_block_end(blk)
 
@@ -246,8 +252,6 @@ subroutine modelMB_particles_init (modelMBparticles,gr)
   jtmp = modelMBparticles%ntype_of_particle_modelMB
   SAFE_ALLOCATE (modelMBparticles%exchange_symmetry(1:itmp, 1:itmp, 1:jtmp))
   modelMBparticles%exchange_symmetry = 0
-  SAFE_ALLOCATE (modelMBparticles%bosonfermion(1:jtmp))
-  modelMBparticles%bosonfermion = 'uncalculated'
 
   !%Variable DensitiestoCalc
   !%Type block

@@ -17,6 +17,7 @@ module young_m
 
   public :: young_init, &
             young_write, &
+            young_write_one, &
             young_copy, &
             young_nullify, &
             young_end, &
@@ -191,14 +192,26 @@ module young_m
     call push_sub('math.young_write')
     
     do iyoung = 1, this%nyoung
-      write (message(1),'(a,I7)') 'Filled Young diagram ', iyoung
-      write (message(2),'(10I7)') this%young_up(:, iyoung)
-      write (message(3),'(10I7)') this%young_down(:, iyoung)
-      call write_info(3)
+      call young_write_one (this, iyoung)
     end do
     
     call pop_sub()
   end subroutine young_write
+
+  subroutine young_write_one (this, iyoung)
+    implicit none
+
+    type(young_t), intent(inout) :: this
+    integer, intent(in) :: iyoung
+    call push_sub('math.young_write_one')
+    
+    write (message(1),'(a,I7)') 'Filled Young diagram ', iyoung
+    write (message(2),'(10I7)') this%young_up(:, iyoung)
+    write (message(3),'(10I7)') this%young_down(:, iyoung)
+    call write_info(3)
+    
+    call pop_sub()
+  end subroutine young_write_one
 
   subroutine young_nullify (this)
     implicit none

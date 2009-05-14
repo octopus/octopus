@@ -27,7 +27,7 @@
     type(h_sys_output_t),   intent(in)    :: outp
 
     integer :: ik, ist, idim, is, id, ierr, iunit, l, m
-    character(len=80) :: fname
+    character(len=80) :: fname, dirname
     FLOAT :: u
     FLOAT, allocatable :: dtmp(:), elf(:,:)
     FLOAT, allocatable :: current(:, :, :)
@@ -155,17 +155,97 @@
       call states_write_tpa (trim(dir), gr, st)
     end if
 
-    if(iand(outp%what, output_density_matrix).ne.0) then
-      call density_matrix_write(trim(dir), gr, st)
-
-      ! FIXME: this needs to be output elsewhere, and needs its own flag
-      ! eventually
-      call modelmb_find_exchange_syms_all(trim(dir), gr, st, geo)
+    if(iand(outp%what, output_modelmb).ne.0) then
+      call h_sys_output_modelmb (trim(dir), gr, st, geo, outp)
     end if
 
     call pop_sub()
 
   end subroutine h_sys_output_states
+
+
+  !
+  !  routine for output of model many-body quantities.
+  !
+  subroutine h_sys_output_modelmb (dir, gr, st, geo, outp)
+
+    type(states_t),         intent(inout) :: st
+    type(grid_t),           intent(inout) :: gr
+    character(len=*),       intent(in)    :: dir
+    type(geometry_t),       intent(in)    :: geo
+    type(h_sys_output_t),   intent(in)    :: outp
+
+    ! local vars
+    integer :: mm
+    logical :: symmetries_satisfied, impose_exch_symmetry
+    CMPLX, allocatable :: wf(:)
+    character(len=80) :: dirname
+    type(modelmb_denmat_t) :: denmat
+
+    call push_sub('system.h_sys_output_modelmb')
+
+    impose_exch_symmetry = .true.
+
+    SAFE_ALLOCATE(wf(1:gr%mesh%np_part_global))
+
+    call density_matrix_nullify(denmat)
+ 
+    if(iand(outp%what, output_density_matrix).ne.0) then
+      call density_matrix_init(dir, st, denmat)
+    end if
+ 
+    if(iand(outp%what, output_density).ne.0) then
+      !call modelmb_density_init ()
+    end if
+ 
+    ! make sure directory exists
+    call loct_mkdir(trim(dir))
+    ! all model MB stuff should be in this directory
+    dirname = trim(dir)//'/modelmb'
+    call loct_mkdir(trim(dirname))
+
+    do mm = 1, st%nst
+      ! NOTE!!!! do not make this into some preprocessed X() stuff until I am dead and
+      ! buried. Thanks - mjv
+      if(states_are_real(st)) then
+        wf = cmplx(st%dpsi(1:gr%mesh%np_part_global, 1, mm, 1),M_ZERO)
+      else
+        wf = st%zpsi(1:gr%mesh%np_part_global, 1, mm, 1)
+      end if
+
+      if (impose_exch_symmetry) then
+        call modelmb_sym_state(dir, gr, mm, geo, st%modelMBparticles, wf, symmetries_satisfied)
+      end if
+
+      if(iand(outp%what, output_density_matrix).ne.0 .and. symmetries_satisfied) then
+        call density_matrix_write(gr, st, wf, mm, denmat)
+      end if
+
+      if(      iand(outp%what, output_density).ne.0 .and. &
+         .not. iand(outp%what, output_density_matrix).ne.0 .and. &
+         symmetries_satisfied) then
+        !call modelmb_density_write(trim(dir), gr, st)
+      end if
+
+      if(iand(outp%what, output_wfs).ne.0 .and. symmetries_satisfied) then
+        !call modelmb_wf_write(trim(dir), gr, st)
+      end if
+
+    end do
+
+    SAFE_DEALLOCATE_A(wf)
+
+    if(iand(outp%what, output_density_matrix).ne.0) then
+      call density_matrix_end (denmat)
+    end if
+
+    if(iand(outp%what, output_density).ne.0) then
+      !call modelmb_density_end ()
+    end if
+ 
+    call pop_sub()
+
+  end subroutine h_sys_output_modelmb
 
 
   ! ---------------------------------------------------------

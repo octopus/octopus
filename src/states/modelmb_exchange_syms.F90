@@ -49,52 +49,10 @@ module modelmb_exchange_syms_m
 
   private
 
-  public :: modelmb_find_exchange_syms,&
-            modelmb_find_exchange_syms_all
+  public :: modelmb_find_exchange_syms, &
+            modelmb_sym_state
 
 contains
-
-  ! ---------------------------------------------------------
-  subroutine modelmb_find_exchange_syms_all(dir, gr, st, geo)
-
-    implicit none
-
-    character(len=*), intent(in) :: dir
-    type(grid_t),     intent(in) :: gr
-    type(geometry_t),       intent(in)    :: geo
-    type(states_t),   intent(inout) :: st
-
-    integer :: mm
-    CMPLX, allocatable :: wf(:)
-
-    call push_sub('states.modelmb_find_exchange_syms_all')
-
-    SAFE_ALLOCATE(wf(1:gr%mesh%np_part_global))
-
-    do mm=1,st%nst
-
-! NOTE!!!! do not make this into some preprocessed X() stuff until I am dead and
-! buried. Thanks - mjv
-      if(states_are_real(st)) then
-        wf = cmplx(st%dpsi(1:gr%mesh%np_part_global, 1, mm, 1),M_ZERO)
-      else
-        wf = st%zpsi(:, 1, mm, 1)
-      end if
-
-
-      call modelmb_find_exchange_syms(gr, mm, st%modelMBparticles, wf)
-
-! FIXME: separate output from calculation of antisymmetrized state
-      call modelmb_sym_state(dir, gr, mm, geo, st%modelMBparticles, wf)
-
-    end do
-
-    SAFE_DEALLOCATE_A(wf)
-
-    call pop_sub()
-
-  end subroutine modelmb_find_exchange_syms_all
-
 
 
   ! ---------------------------------------------------------
@@ -281,7 +239,7 @@ contains
 
 
   ! project out states with proper symmetry for cases which are of symmetry = unknown
-  subroutine modelmb_sym_state(dir, gr, mm, geo, modelMBparticles, wf)
+  subroutine modelmb_sym_state(dir, gr, mm, geo, modelMBparticles, wf, symmetries_satisfied)
 
     implicit none
 
@@ -289,8 +247,10 @@ contains
     type(grid_t),     intent(in)    :: gr
     integer,          intent(in)    :: mm
     type(geometry_t), intent(in)    :: geo
-    CMPLX,                    intent(in)   :: wf(1:gr%mesh%np_part_global)
-    type(modelMB_particle_t), intent(inout):: modelMBparticles
+    type(modelMB_particle_t), intent(in) :: modelMBparticles
+    ! this will be antisymmetrized on output
+    CMPLX,                    intent(inout) :: wf(1:gr%mesh%np_part_global)
+    logical,          intent(out)   :: symmetries_satisfied
 
     ! local vars
     integer :: itype, ipart1, ipart2, npptype
@@ -305,6 +265,7 @@ contains
     type(young_t) :: young
 
     integer, allocatable :: ix(:), ixp(:), ofst(:)
+    integer, allocatable :: symmetries_satisfied_alltypes(:)
  
     FLOAT :: normalizer, norm
     CMPLX :: scalprod
@@ -317,10 +278,16 @@ contains
     character (len=80) :: tmpstring
     character (len=80) :: filename
 
+    logical :: debug_antisym
+
 
 ! source
 
     call push_sub('states.modelmb_sym_states')
+
+    symmetries_satisfied = .false.
+
+    debug_antisym = .false.
 
     call permutations_nullify(perms_up)
     call permutations_nullify(perms_down)
@@ -331,6 +298,9 @@ contains
     SAFE_ALLOCATE(ix(1:MAX_DIM))
     SAFE_ALLOCATE(ixp(1:MAX_DIM))
 
+    SAFE_ALLOCATE(symmetries_satisfied_alltypes(1:modelMBparticles%ntype_of_particle_modelMB))
+    symmetries_satisfied_alltypes = 0
+
     ndimMB=modelMBparticles%ndim_modelMB
 
     normalizer = product(gr%mesh%h(1:gr%mesh%sb%dim)) !M_ONE/units_out%length%factor**gr%mesh%sb%dim
@@ -340,29 +310,39 @@ contains
       call write_fatal(1)
     end if
 
+    ! FIXME: could one of these arrays be avoided?
+    SAFE_ALLOCATE(antisymwf(1:gr%mesh%np_part_global))
+    SAFE_ALLOCATE(antisymwf_swap(1:gr%mesh%np_part_global))
+
     ! for each particle type
-    do itype = 1,modelMBparticles%ntype_of_particle_modelMB
-      !if (modelMBparticles%bosonfermion(itype) /= 'unknown') cycle
+    do itype = 1, modelMBparticles%ntype_of_particle_modelMB
 
       ! FIXME: for multiple particle types this needs to be fixed.
       ! Also, for inequivalent spin configurations this should vary, and we get
       ! different 1 body densities, no?
       ikeeppart = 1
 
+      ! if the particle is not fermionic, just cycle to next one
+      ! FIXME: boson case is not treated yet
+      if (modelMBparticles%bosonfermion(ikeeppart) /= 'fermion') then
+        symmetries_satisfied_alltypes(itype) = 1
+        cycle
+      end if
+
       call modelmb_1part_init(mb_1part, gr%mesh, ikeeppart, &
              modelMBparticles%ndim_modelmb, gr%sb%box_offset)
 
       npptype = modelMBparticles%nparticles_per_type(itype)
-      SAFE_ALLOCATE(antisymwf(1:gr%mesh%np_part_global))
+
       SAFE_ALLOCATE(antisymrho(1:gr%mesh%np_part_global))
       SAFE_ALLOCATE(ofst(1:npptype))
       do ipart1 = 1, npptype
         ofst(ipart1) = (ipart1-1)*ndimMB
       end do
 
-      SAFE_ALLOCATE(antisymwf_swap(1:gr%mesh%np_part_global))
       ! note: use of spin nomenclature is just for visualization, no real spin
-      ! here. Spin down particles come first, then the (more numerous) spin up
+      ! here.
+      ! FIXME: will not work for several particle types!
       do nspindown = 0, floor(npptype/2.)
         nspinup = npptype - nspindown
 
@@ -372,13 +352,12 @@ contains
         ! generate all Young diagrams, decorated, for this distribution of up
         ! and downs
         call young_init (young, nspinup, nspindown)
-        call young_write (young)
 
         ! loop over all Young diagrams for present distribution of spins up and down
         do iyoung = 1, young%nyoung
           antisymwf=cmplx(0.0d0,0.0d0)
           antisymwf(:) = wf(:)
-          
+
           ! first symmetrize over pairs of particles associated in the present
           ! Young diagram
           do idown = 1, young%ndown
@@ -407,12 +386,13 @@ contains
             antisymwf = antisymwf_swap * 0.5d0
           end do
     
-          ! the following could be removed for production
-          antisymrho = real(conjg(antisymwf)*antisymwf) * normalizer
-          norm = sum(antisymrho)
-          write (message(1), '(a,I7,a,I7,a,E20.10)') 'norm of pair-symmetrized-state ',&
-                  mm, ' with ', nspindown, ' spins down is ', norm
-          call write_info(1)
+          if (debug_antisym) then 
+            antisymrho = real(conjg(antisymwf)*antisymwf) * normalizer
+            norm = sum(antisymrho)
+            write (message(1), '(a,I7,a,I7,a,E20.10)') 'norm of pair-symmetrized-state ',&
+                    mm, ' with ', nspindown, ' spins down is ', norm
+            call write_info(1)
+          end if
  
           ! for each permutation of particles of this type
           !  antisymmetrize the up and down labeled spins, amongst themselves
@@ -439,11 +419,13 @@ contains
           antisymwf=antisymwf_swap / dble(perms_up%npermutations)
 
           ! the following could be removed for production
-          antisymrho = real(conjg(antisymwf)*antisymwf) * normalizer
-          norm = sum(antisymrho)
-          write (message(1), '(a,I7,a,I7,a,E20.10)') 'norm of up-antisym+pairsym-state ',&
-                  mm, ' with ', nspindown, ' spins down is ', norm
-          call write_info(1)
+          if (debug_antisym) then 
+            antisymrho = real(conjg(antisymwf)*antisymwf) * normalizer
+            norm = sum(antisymrho)
+            write (message(1), '(a,I7,a,I7,a,E20.10)') 'norm of up-antisym+pairsym-state ',&
+                    mm, ' with ', nspindown, ' spins down is ', norm
+            call write_info(1)
+          end if
 
           antisymwf_swap=cmplx(0.0d0, 0.0d0)
           do iperm_down = 1, perms_down%npermutations
@@ -472,6 +454,8 @@ contains
 
           if (norm < 1.d-8) cycle
 
+          call young_write_one (young, iyoung)
+          
           antisymwf=antisymwf_swap / sqrt(norm)
   
           scalprod = sum(conjg(antisymwf)*wf)
@@ -482,16 +466,12 @@ contains
           write (message(1), '(a,I7,a,I7,a,E20.10)') 'norm of state ', mm, ' with ', nspindown, ' spins down is ', norm
           call write_info(1)
    
-          !call zoutput_function(output_xcrysden, dir, fname, gr%mesh, gr%sb, &
-          !         antisymwf(:,iantisym), sqrt(normalizer), ierr, is_tmp = .false., geo = geo)
-
           SAFE_ALLOCATE(antisymrho_1part(1:mb_1part%npt_1part))
           call zmf_calculate_rho(ikeeppart, mb_1part, npptype, gr%mesh, antisymwf, antisymrho_1part)
-
           ! FIXME: this will also depend on particle type and idimension
-          write(filename,'(a,i3.3,a,i3.3,a,i3.3,a,i3.3)') './asymden_iMB', mm,'_ipar', ikeeppart,'_ndn',nspindown,'_iY',iyoung
+          write(filename,'(a,i3.3,a,i3.3,a,i3.3,a,i3.3)') 'static/modelmb/asymden_iMB', mm,'_ipar', ikeeppart,'_ndn',nspindown,'_iY',iyoung
           iunit = io_open(filename,action='write')
-            do jj = 1, mb_1part%npt_1part
+          do jj = 1, mb_1part%npt_1part
             call hypercube_i_to_x(mb_1part%hypercube_1part, mb_1part%ndim1part, &
                  mb_1part%nr_1part, mb_1part%enlarge_1part(1), jj, ix)
             do idir=1,mb_1part%ndim1part
@@ -502,22 +482,35 @@ contains
           call io_close(iunit)
           SAFE_DEALLOCATE_A(antisymrho_1part)
 
+          ! we have found a valid Young diagram and antisymmetrized the present
+          ! state enough. Loop to next type
+          symmetries_satisfied_alltypes(itype) = 1
+          exit
+
         end do ! iyoung loop
    
         call permutations_end(perms_up)
         call permutations_end(perms_down)
         call young_end (young)
-
+ 
+        if (symmetries_satisfied_alltypes(itype) == 1) exit
 
       end do ! nspindown=0,1...
    
-      SAFE_DEALLOCATE_A(antisymwf_swap)
-      SAFE_DEALLOCATE_A(antisymwf)
       SAFE_DEALLOCATE_A(antisymrho)
 
       call modelmb_1part_end(mb_1part)
 
     end do ! itype
+
+    ! check if all types of particles have been properly symmetrized
+    if (sum(symmetries_satisfied_alltypes) == modelMBparticles%ntype_of_particle_modelMB) then
+      wf = antisymwf
+      symmetries_satisfied = .true.
+    end if
+
+    SAFE_DEALLOCATE_A(antisymwf_swap)
+    SAFE_DEALLOCATE_A(antisymwf)
 
     SAFE_DEALLOCATE_A(ix)
     SAFE_DEALLOCATE_A(ixp)

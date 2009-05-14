@@ -482,7 +482,7 @@ contains
       end select
 
       ! ignore box_shape in 1D
-      if(sb%dim==1.and.sb%box_shape /= PARALLELEPIPED) sb%box_shape=SPHERE
+      if(sb%dim==1.and.sb%box_shape /= PARALLELEPIPED.and.sb%box_shape /= HYPERCUBE) sb%box_shape=SPHERE
 
       ! Cannot use images in 1D or 3D
       if(sb%dim/=2.and.sb%box_shape == BOX_IMAGE) call input_error('BoxShape')
@@ -1339,7 +1339,7 @@ contains
     integer,           intent(in)    :: iunit
 
     character(len=20)  :: str
-    character(len=100) :: line
+    character(len=300) :: line
     integer            :: idim, jdim, il, ierr
     FLOAT              :: norm
 
@@ -1363,7 +1363,7 @@ contains
       call iopar_read(mpi_world, iunit, line, ierr)
       read(line, *) str, sb%rsize
       call iopar_read(mpi_world, iunit, line, ierr)
-      read(line, *) str, sb%lsize(1:MAX_DIM)
+      read(line, *) str, sb%lsize(1:MAX_DIM)       
     case(CYLINDER)
       call iopar_read(mpi_world, iunit, line, ierr)
       read(line, *) str, sb%rsize
