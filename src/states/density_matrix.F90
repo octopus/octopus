@@ -308,7 +308,7 @@ contains
 
   subroutine density_matrix_nullify(this)
     implicit none
-    type(modelmb_denmat_t), intent(in) :: this
+    type(modelmb_denmat_t), intent(out) :: this
     call push_sub('states.density_matrix_nullify')
     nullify(this%labels_densmat)
     nullify(this%particle_kept_densmat)
