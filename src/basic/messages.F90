@@ -521,6 +521,9 @@ contains
 
     if(flush_messages) close(iunit_out)
 
+#ifdef HAVE_FLUSH
+    call flush(iunit)
+#endif
   end subroutine messages_print_stress
 
 
