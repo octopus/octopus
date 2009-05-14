@@ -343,7 +343,7 @@ contains
 
       ! Get the *local* xc term
       if(hm%d%cdft) then
-        call xc_get_vxc_and_axc(gr, ks%xc, st, rho, st%j, st%d%ispin, hm%vxc, hm%axc, &
+        call xc_get_vxc_and_axc(gr, ks%xc, st, rho, st%current, st%d%ispin, hm%vxc, hm%axc, &
              hm%ex, hm%ec, hm%exc_j, -minval(st%eigenval(st%nst, :)), st%qtot)
       else
         call xc_get_vxc(gr, ks%xc, st, rho, st%d%ispin, hm%ex, hm%ec, &

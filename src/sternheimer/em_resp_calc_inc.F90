@@ -32,7 +32,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
   R_TYPE, allocatable :: gpsi(:,:), gdl_psi(:,:), gdl_psi_m(:,:)
   FLOAT,  allocatable :: rho(:), grho(:,:)
   R_TYPE, allocatable :: dl_rho(:), gdl_rho(:,:)
-  FLOAT,  allocatable :: elf(:,:), de(:,:)
+  FLOAT,  allocatable :: elf(:,:), de(:,:), current(:, :, :)
   FLOAT :: dl_d0, d0
   FLOAT :: f, s
 
@@ -58,6 +58,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
 
   SAFE_ALLOCATE(   elf(1:gr%mesh%np, 1:st%d%nspin))
   SAFE_ALLOCATE(    de(1:gr%mesh%np, 1:st%d%nspin))
+  SAFE_ALLOCATE(current(1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:st%d%nspin))
 
   if( .not. associated(lr%X(dl_de)) ) then
     SAFE_ALLOCATE(lr%X(dl_de)(1:gr%mesh%np, 1:st%d%nspin)) 
@@ -71,7 +72,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
 
   !calculate current and its variation
   if(st%wfs_type == M_CMPLX) then 
-    call calc_physical_current(gr, st, st%j)
+    call calc_physical_current(gr, st, current)
     if(present(lr_m)) then 
       call lr_calc_current(st, gr, lr, lr_m)
     else
@@ -201,7 +202,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
     if(st%wfs_type == M_CMPLX) then       
       do i = 1, gr%mesh%np
         if(abs(st%rho(i, is)) >= dmin) then
-          lr%X(dl_de)(i, is) = lr%X(dl_de)(i, is) + M_TWO*sum(st%j(i, 1:gr%mesh%sb%dim, is)*lr%dl_j(i, 1:gr%mesh%sb%dim, is))
+          lr%X(dl_de)(i, is) = lr%X(dl_de)(i, is) + M_TWO*sum(current(i, 1:gr%mesh%sb%dim, is)*lr%dl_j(i, 1:gr%mesh%sb%dim, is))
         end if
       end do
     end if
@@ -225,6 +226,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
 
   end do
 
+  SAFE_DEALLOCATE_A(current)
   SAFE_DEALLOCATE_A(gpsi)
   SAFE_DEALLOCATE_A(gdl_psi)
   if(present(lr_m)) then

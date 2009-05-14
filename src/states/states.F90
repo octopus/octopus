@@ -121,7 +121,7 @@ module states_m
 
     ! the densities and currents (after all we are doing DFT :)
     FLOAT, pointer :: rho(:,:)      ! rho(gr%mesh%np_part, st%d%nspin)
-    FLOAT, pointer :: j(:,:,:)      !   j(gr%mesh%np_part, gr%sb%dim, st%d%nspin)
+    FLOAT, pointer :: current(:, :, :)      !   current(gr%mesh%np_part, gr%sb%dim, st%d%nspin)
 
     logical        :: nlcc          ! do we have non-linear core corrections
     FLOAT, pointer :: rho_core(:)   ! core charge for nl core corrections
@@ -166,7 +166,7 @@ contains
     type(states_t), intent(inout) :: st
     call push_sub('states.states_null')
 
-    nullify(st%dpsi, st%zpsi, st%zphi, st%rho, st%j, st%rho_core, st%frozen_rho, st%eigenval)
+    nullify(st%dpsi, st%zpsi, st%zphi, st%rho, st%current, st%rho_core, st%frozen_rho, st%eigenval)
     nullify(st%ob_intf_psi, st%ob_rho, st%ob_eigenval, st%ob_occ, st%ob_green)
     nullify(st%occ, st%spin, st%momentum, st%node, st%user_def_states)
     nullify(st%d%kpoints, st%d%kweights)
@@ -874,9 +874,11 @@ contains
 
     ! allocate arrays for charge and current densities
     SAFE_ALLOCATE(st%rho(1:gr%mesh%np_part, 1:st%d%nspin))
-    SAFE_ALLOCATE(  st%j(1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:st%d%nspin))
     st%rho  = M_ZERO
-    st%j    = M_ZERO
+    if(st%d%cdft) then
+      SAFE_ALLOCATE(  st%current(1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:st%d%nspin))
+      st%current    = M_ZERO
+    end if
     st%nlcc = geo%nlcc
     if(st%nlcc) then
       SAFE_ALLOCATE(st%rho_core(1:gr%mesh%np))
@@ -911,7 +913,7 @@ contains
     call loct_pointer_copy(stout%user_def_states, stin%user_def_states)
 
     call loct_pointer_copy(stout%rho, stin%rho)
-    call loct_pointer_copy(stout%j, stin%j)
+    call loct_pointer_copy(stout%current, stin%current)
     stout%nlcc = stin%nlcc
     call loct_pointer_copy(stout%rho_core, stin%rho_core)
     call loct_pointer_copy(stout%frozen_rho, stin%frozen_rho)
@@ -948,7 +950,7 @@ contains
     SAFE_DEALLOCATE_P(st%user_def_states)
 
     SAFE_DEALLOCATE_P(st%rho)
-    SAFE_DEALLOCATE_P(st%j)
+    SAFE_DEALLOCATE_P(st%current)
     SAFE_DEALLOCATE_P(st%rho_core)
     SAFE_DEALLOCATE_P(st%frozen_rho)
     SAFE_DEALLOCATE_P(st%eigenval)

@@ -326,7 +326,7 @@ contains
     rhoin(1:gr%mesh%np, 1, 1:nspin) = st%rho(1:gr%mesh%np, 1:nspin)
     rhoout = M_ZERO
     if (st%d%cdft) then
-      rhoin(1:gr%mesh%np, 2:dim, 1:nspin) = st%j(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:nspin)
+      rhoin(1:gr%mesh%np, 2:dim, 1:nspin) = st%current(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:nspin)
     end if
 
     if (scf%what2mix == MIXPOT) then
@@ -384,8 +384,8 @@ contains
       call states_calc_dens(st, gr%mesh%np)
       rhoout(1:gr%mesh%np, 1, 1:nspin) = st%rho(1:gr%mesh%np, 1:nspin)
       if (hm%d%cdft) then
-        call calc_physical_current(gr, st, st%j)
-        rhoout(1:gr%mesh%np, 2:dim, 1:nspin) = st%j(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:nspin)
+        call calc_physical_current(gr, st, st%current)
+        rhoout(1:gr%mesh%np, 2:dim, 1:nspin) = st%current(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:nspin)
       end if
       if (scf%what2mix == MIXPOT) then
         call v_ks_calc(gr, ks, hm, st)
@@ -445,7 +445,7 @@ contains
         ! mix input and output densities and compute new potential
         call dmixing(scf%smix, iter, rhoin, rhoout, rhonew, dmf_dotp_aux)
         st%rho(1:gr%mesh%np,1:nspin) = rhonew(1:gr%mesh%np, 1, 1:nspin)
-        if (hm%d%cdft) st%j(1:gr%mesh%np,1:gr%mesh%sb%dim,1:nspin) = rhonew(1:gr%mesh%np, 2:dim, 1:nspin)
+        if (hm%d%cdft) st%current(1:gr%mesh%np,1:gr%mesh%sb%dim,1:nspin) = rhonew(1:gr%mesh%np, 2:dim, 1:nspin)
         call v_ks_calc(gr, ks, hm, st)
       case (MIXPOT)
         ! mix input and output potentials
@@ -487,7 +487,7 @@ contains
 
       ! save information for the next iteration
       rhoin(1:gr%mesh%np, 1, 1:nspin) = st%rho(1:gr%mesh%np, 1:nspin)
-      if (hm%d%cdft) rhoin(1:gr%mesh%np, 2:dim, 1:nspin) = st%j(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:nspin)
+      if (hm%d%cdft) rhoin(1:gr%mesh%np, 2:dim, 1:nspin) = st%current(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:nspin)
       if (scf%what2mix == MIXPOT) then
         vin(1:gr%mesh%np, 1, 1:nspin) = hm%vhxc(1:gr%mesh%np, 1:nspin)
         if (hm%d%cdft) vin(1:gr%mesh%np, 2:dim, 1:nspin) = hm%axc(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:nspin)

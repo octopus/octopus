@@ -30,6 +30,7 @@
     character(len=80) :: fname
     FLOAT :: u
     FLOAT, allocatable :: dtmp(:), elf(:,:)
+    FLOAT, allocatable :: current(:, :, :)
 
     call push_sub('output_states.h_sys_output_states')
 
@@ -45,7 +46,7 @@
 
     if(iand(outp%what, output_pol_density).ne.0) then
       SAFE_ALLOCATE(dtmp(1:gr%mesh%np))
-      do idim=1, gr%mesh%sb%dim
+      do idim = 1, gr%mesh%sb%dim
         do is = 1, st%d%nspin
           dtmp(1:gr%mesh%np)=st%rho(1:gr%mesh%np,is)*gr%mesh%x(1:gr%mesh%np,idim)
           write(fname, '(a,i1,a,i1)') 'dipole_density-', is, '-',idim
@@ -58,14 +59,16 @@
 
     if( (iand(outp%what, output_current).ne.0) .and. (st%wfs_type == M_CMPLX) ) then
       ! calculate current first
-      call states_calc_tau_jp_gn(gr, st, jp=st%j)
+      SAFE_ALLOCATE(current(1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:st%d%nspin))
+      call states_calc_tau_jp_gn(gr, st, jp = current)
       do is = 1, st%d%nspin
         do id = 1, gr%mesh%sb%dim
           write(fname, '(a,i1,a,a)') 'current-', is, '-', index2axis(id)
           call doutput_function(outp%how, dir, fname, gr%mesh, gr%sb, &
-            st%j(:, id, is), u, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
+            current(:, id, is), u, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
         end do
       end do
+      SAFE_DEALLOCATE_A(current)
     end if
 
     if(iand(outp%what, output_wfs).ne.0) then
@@ -237,7 +240,7 @@
 
     integer :: iunit, i, k, rankmin
     FLOAT   :: flow, dmin
-    FLOAT, allocatable :: j(:, :)
+    FLOAT, allocatable :: j(:, :, :)
 
     call push_sub('output_states.h_sys_output_current_flow')
 
@@ -273,20 +276,20 @@
       end select
     end if
 
-    if(st%wfs_type == M_CMPLX) then
-      call states_calc_tau_jp_gn(gr, st, jp=st%j)
+    if(states_are_complex(st)) then
+      SAFE_ALLOCATE(j(1:gr%mesh%np, 1:MAX_DIM, 0:st%d%nspin))
+      call states_calc_tau_jp_gn(gr, st, jp = j(:, :, 1:))
 
-      SAFE_ALLOCATE(j(1:gr%mesh%np, 1:MAX_DIM))
       do k = 1, gr%mesh%sb%dim
         do i = 1, gr%mesh%np
-          j(i, k) = sum(st%j(i, k, :))
+          j(i, k, 0) = sum(j(i, k, 1:st%d%nspin))
         end do
       end do
 
       select case(gr%mesh%sb%dim)
-      case(3); flow = mf_surface_integral (gr%mesh, j, outp%plane)
-      case(2); flow = mf_line_integral (gr%mesh, j, outp%line)
-      case(1); flow = j(mesh_nearest_point(gr%mesh, outp%line%origin(1), dmin, rankmin), 1)
+      case(3); flow = mf_surface_integral (gr%mesh, j(:, :, 0), outp%plane)
+      case(2); flow = mf_line_integral (gr%mesh, j(:, :, 0), outp%line)
+      case(1); flow = j(mesh_nearest_point(gr%mesh, outp%line%origin(1), dmin, rankmin), 1, 0)
       end select
 
       SAFE_DEALLOCATE_A(j)
