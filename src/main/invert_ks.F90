@@ -168,7 +168,9 @@ write (100,*) 'hm%vhxc ', hm%vhxc
       enddo
     
       write(100,*) counter, diffdensity, idiffmax
+#ifdef HAVE_FLUSH
       call flush(100)
+#endif
     end do
     
       call doutput_function(io_function_fill_how("AxisX"), &

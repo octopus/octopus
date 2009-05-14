@@ -492,7 +492,8 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   end do
 
   do ibasis = 1, nbasis
-    SAFE_DEALLOCATE_P(orbitals%states(ibasis)%dpsi)
+    orb => orbitals%states(ibasis)%dpsi
+    SAFE_DEALLOCATE_P(orb)
     call submesh_end(sphere(ibasis))
   end do
   call batch_end(orbitals)
