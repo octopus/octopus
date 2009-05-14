@@ -48,10 +48,9 @@ contains
     type(hamiltonian_t),         intent(inout) :: hm
 
     integer :: ii, jj, ierr, np, ndim, nspin, counter, idiffmax
-    FLOAT :: diffdensity, offset
+    FLOAT :: diffdensity
     FLOAT, allocatable :: target_rho(:,:), vhxc_in(:,:,:), vhxc_out(:,:,:), vhxc_mix(:,:,:)
     FLOAT, allocatable :: sqrtrho(:,:), gradrho(:,:)
-    FLOAT, allocatable :: oldrho(:,:)
     type(scf_t) :: scfv
     type(mix_t) :: smix
     character(len=256) :: fname
@@ -84,17 +83,37 @@ contains
     SAFE_ALLOCATE(sqrtrho(1:np, 1:nspin))
     SAFE_ALLOCATE(gradrho(1:np, 1:nspin))
 
-    SAFE_ALLOCATE(oldrho(1:np, 1:nspin))
-
+    gradrho = 0d0
     do jj = 1, nspin
       do ii = 1, np
         sqrtrho(ii, jj) = sqrt(target_rho(ii, jj))
       enddo
-      do ii = 1, np
-        gradrho(ii, jj) = (-sqrtrho(ii+2, jj) - sqrtrho(ii-2, jj) &
+      do ii = 3, np-2
+        gradrho(ii, jj) = - sqrtrho(ii+2, jj) - sqrtrho(ii-2, jj) &
                         & + 16d0*(sqrtrho(ii+1, jj) + sqrtrho(ii-1, jj)) &
-                        & - 30d0*sqrtrho(ii, jj))&
-                        & /(12d0*sys%gr%mesh%h(1)**2)
+                        & - 30d0*sqrtrho(ii, jj)
+      enddo
+      !gradrho(1, jj) = 35d0*sqrtrho(1, jj) - 104d0*sqrtrho(2, jj) + 114d0*sqrtrho(3, jj) &
+      !             & - 56d0*sqrtrho(4, jj) + 11d0*sqrtrho(5, jj)
+		   
+      !gradrho(2, jj) = 11d0*sqrtrho(1, jj) - 20d0*sqrtrho(2, jj) + 6d0*sqrtrho(3, jj) &
+      !             & + 4d0*sqrtrho(4, jj) - sqrtrho(5, jj)
+      
+      !gradrho(np-1, jj) = - sqrtrho(1, jj) + 4d0*sqrtrho(2, jj) + 6d0*sqrtrho(3, jj) &
+      !             & - 20d0*sqrtrho(4, jj) + 11d0*sqrtrho(5, jj)
+      
+      !gradrho(np, jj) = 11d0*sqrtrho(1, jj) - 56d0*sqrtrho(2, jj) + 114d0*sqrtrho(3, jj) &
+      !             & -104d0*sqrtrho(4, jj) + 35d0*sqrtrho(5, jj)
+      
+      !gradrho(1, jj) = - sqrtrho(3, jj) + 16d0*sqrtrho(2, jj) - 30d0*sqrtrho(1, jj)
+      !gradrho(2, jj) = - sqrtrho(4, jj) + 16d0*(sqrtrho(3, jj) + sqrtrho(1, jj)) &
+      !                  & - 30d0*sqrtrho(2, jj)
+      !gradrho(np-1, jj) = - sqrtrho(np-3, jj) + 16d0*(sqrtrho(np, jj) + sqrtrho(np-2, jj)) &
+      !                  & - 30d0*sqrtrho(np-1, jj)
+      !gradrho(np, jj) = - sqrtrho(np-2, jj) + 16d0*sqrtrho(np-1, jj) - 30d0*sqrtrho(np, jj)
+            
+      gradrho(:, jj) = gradrho(:, jj)/(12d0*sys%gr%mesh%h(1)**2)
+      do ii = 1, np
         hm%vhxc(ii, jj) = gradrho(ii, jj)/(2d0*sqrtrho(ii, jj))
       enddo
     enddo
@@ -107,10 +126,10 @@ contains
     SAFE_ALLOCATE(vhxc_mix(1:np, 1:nspin, 1:1))
 
     vhxc_in(1:np,1:nspin,1) = hm%vhxc(1:np,1:nspin)
+write (100,*) 'hm%vhxc ', hm%vhxc
     
     diffdensity = 1d0
     counter = 0
-    oldrho = target_rho
 
     do while(diffdensity>1d-5)
       diffdensity = 0d0
@@ -128,8 +147,11 @@ contains
             
       vhxc_out(1:np, 1:nspin, 1) = (sys%st%rho(1:np,1:nspin))/(target_rho(1:np,1:nspin)) &
            * hm%vhxc(1:np, 1:nspin)
-      offset = vhxc_out(3,1,1)
-      vhxc_out(1:np,1:nspin,1) = vhxc_out(1:np,1:nspin,1)+ offset
+	   
+      vhxc_out(1,1:nspin, 1) = 0d0
+      vhxc_out(np,1:nspin, 1) = 0d0
+      !offset = vhxc_out(3,1,1)
+      !vhxc_out(1:np,1:nspin,1) = vhxc_out(1:np,1:nspin,1)+ offset
             
       call dmixing(smix, counter, vhxc_in, vhxc_out, vhxc_mix, dmf_dotp_aux)
 
@@ -146,10 +168,7 @@ contains
       enddo
     
       write(100,*) counter, diffdensity, idiffmax
-#ifdef HAVE_FLUSH
       call flush(100)
-#endif
-      oldrho=sys%st%rho
     end do
     
       call doutput_function(io_function_fill_how("AxisX"), &
@@ -168,7 +187,6 @@ contains
     SAFE_DEALLOCATE_A(vhxc_in)
     SAFE_DEALLOCATE_A(vhxc_out)
     SAFE_DEALLOCATE_A(vhxc_mix)
-    SAFE_DEALLOCATE_A(oldrho)
     
   contains
 

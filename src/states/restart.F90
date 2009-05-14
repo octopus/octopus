@@ -865,6 +865,8 @@ contains
       return ! For the moment, avoid the complications of parallel stuff.
 #endif
       if(present(iter)) return ! No interpolation, in case we are in the td part.
+      
+      if(gr%mesh%sb%box_shape == HYPERCUBE) return !No interpolation in hypercube case
 
       iunit_mesh  = io_open(trim(dir)//'/mesh', action='read', status='old', die=.false., grp = gr%mesh%mpi_grp)
       if(iunit_mesh < 0) return
