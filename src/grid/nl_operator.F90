@@ -72,7 +72,7 @@ module nl_operator_m
     type(stencil_t)       :: stencil
     type(mesh_t), pointer :: m         ! pointer to the underlying mesh
     integer               :: np        ! number of points in mesh
-
+    integer               :: der_zero_max
     ! When running in parallel mode, the next three
     ! arrays are unique on each node.
     integer, pointer  :: i(:,:)    ! index of the points
@@ -206,11 +206,12 @@ contains
     logical, optional,    intent(in)    :: cmplx_op ! do we have complex weights?
 
     integer :: ii, jj, p1(MAX_DIM), time, current
-    integer, allocatable :: st1(:), st2(:)
+    integer, allocatable :: st1(:), st2(:), st1r(:)
     FLOAT :: dbest, zbest
 #ifdef HAVE_MPI
     integer :: ir, maxp, iinner, iouter
 #endif
+    logical :: change
 
     call push_sub('nl_operator.nl_operator_build')
 
@@ -253,10 +254,11 @@ contains
 
     ! Build lookup table
     SAFE_ALLOCATE(st1(1:op%stencil%size))
+    SAFE_ALLOCATE(st1r(1:op%stencil%size))
     SAFE_ALLOCATE(st2(1:op%stencil%size))
 
     op%nri = 0
-
+    op%der_zero_max = m%np + 1
     do time = 1, 2
       st2 = 0
       do ii = 1, np
@@ -292,8 +294,28 @@ contains
 
         st1(1:op%stencil%size) = st1(1:op%stencil%size) - ii
 
+        change = any(st1 /= st2)
+        
+        if(change .and. mesh_compact_boundaries(m)) then 
+          !try to repair it by changing the boundary points
+          do jj = 1, op%stencil%size
+            if(st1(jj) + ii > m%np .and. st2(jj) + ii - 1 > m%np .and. st2(jj) + ii <= m%np_part) then
+              st1r(jj) = st2(jj)
+            else
+              st1r(jj) = st1(jj)
+            end if
+          end do
+
+          change = any(st1r /= st2)
+
+          if(.not. change) then
+            st1 = st1r
+            op%der_zero_max = max(op%der_zero_max, maxval(st1) + ii)
+          end if
+        end if
+
         ! if the stencil changes
-        if ( maxval(abs(st1 - st2)) > 0 ) then 
+        if (change) then 
           !store it
           st2 = st1
 
@@ -329,6 +351,7 @@ contains
     op%rimap_inv(op%nri + 1) = op%np
 
     SAFE_DEALLOCATE_A(st1)
+    SAFE_DEALLOCATE_A(st1r)
     SAFE_DEALLOCATE_A(st2)
 
 #ifdef HAVE_MPI

@@ -490,25 +490,20 @@ subroutine X(set_bc)(der, f)
   
   ASSERT(ubound(f, DIM=1) >= der%mesh%np_part)
 
-  if(mesh_compact_boundaries(der%mesh)) then
-    f(der%mesh%np + 1) = R_TOTYPE(M_ZERO)
+  p = der%mesh%vp%partno
+  
+  ! The boundary points are at different locations depending on the presence
+  ! of ghost points due to domain parallelization.
+  if(der%mesh%parallel_in_domains) then
+    bndry_start = der%mesh%vp%np_local(p) + der%mesh%vp%np_ghost(p) + 1
+    bndry_end   = der%mesh%vp%np_local(p) + der%mesh%vp%np_ghost(p) + der%mesh%vp%np_bndry(p)
   else
+    bndry_start = der%mesh%np+1
+    bndry_end   = der%mesh%np_part
+  end if
     
-    p = der%mesh%vp%partno
-    
-    ! The boundary points are at different locations depending on the presence
-    ! of ghost points due to domain parallelization.
-    if(der%mesh%parallel_in_domains) then
-      bndry_start = der%mesh%vp%np_local(p) + der%mesh%vp%np_ghost(p) + 1
-      bndry_end   = der%mesh%vp%np_local(p) + der%mesh%vp%np_ghost(p) + der%mesh%vp%np_bndry(p)
-    else
-      bndry_start = der%mesh%np+1
-      bndry_end   = der%mesh%np_part
-    end if
-    
-    if(der%zero_bc) then
-      f(bndry_start:bndry_end) = R_TOTYPE(M_ZERO)
-    end if
+  if(der%zero_bc) then
+    forall(ip = bndry_start:bndry_end) f(ip) = R_TOTYPE(M_ZERO)
   end if
 
   if(simul_box_multires(der%mesh%sb)) call multires()
