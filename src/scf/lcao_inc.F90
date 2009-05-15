@@ -378,8 +378,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
       call submesh_init_sphere(sphere(ibasis), gr%mesh%sb, gr%mesh, geo%atom(iatom)%x, radius(ibasis))
 
       ! allocate and calculate the orbitals
-      SAFE_ALLOCATE(orb(1:sphere(ibasis)%ns, 1:1))
-      call batch_add_state(orbitals, ibasis, orb)
+      call dbatch_new_state(orbitals, ibasis, sphere(ibasis)%ns)
       call species_get_orbital_submesh(geo%atom(iatom)%spec, sphere(ibasis), iorb, st%d%dim, 1, &
            geo%atom(iatom)%x, orbitals%states(ibasis)%dpsi(:, 1))
 
@@ -492,8 +491,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   end do
 
   do ibasis = 1, nbasis
-    orb => orbitals%states(ibasis)%dpsi
-    SAFE_DEALLOCATE_P(orb)
+    call dbatch_delete_state(orbitals, ibasis)
     call submesh_end(sphere(ibasis))
   end do
   call batch_end(orbitals)

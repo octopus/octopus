@@ -39,6 +39,10 @@ module batch_m
        batch_copy,              &
        batch_end,               &
        batch_add_state,         &
+       dbatch_new_state,        &
+       zbatch_new_state,        &
+       dbatch_delete_state,     &
+       zbatch_delete_state,     &
        batch_is_ok
 
   type state_t

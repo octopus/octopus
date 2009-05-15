@@ -60,6 +60,33 @@ subroutine X(batch_add_state)(this, ist, psi)
 
 end subroutine X(batch_add_state)
 
+subroutine X(batch_new_state)(this, ist, np)
+  type(batch_t),  intent(inout) :: this
+  integer,        intent(in)    :: ist
+  integer,        intent(in)    :: np
+
+  call push_sub('batch_inc.Xbatch_new_state')
+
+  ASSERT(this%current <= this%nst)
+
+  this%states(this%current)%ist = ist
+  SAFE_ALLOCATE(this%states(this%current)%X(psi)(1:np, 1:this%dim))
+  this%current = this%current  + 1
+
+  call pop_sub()
+end subroutine X(batch_new_state)
+
+subroutine X(batch_delete_state)(this, ii)
+  type(batch_t),  intent(inout) :: this
+  integer,        intent(in)    :: ii
+
+  call push_sub('batch_inc.Xbatch_delete_state')
+
+  SAFE_DEALLOCATE_P(this%states(ii)%X(psi))
+
+  call pop_sub()
+end subroutine X(batch_delete_state)
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8
