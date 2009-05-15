@@ -238,6 +238,68 @@ subroutine X(operate_nc)(nn, nri, w, ri, imin, imax, fi, fo, wim)
 
 end subroutine X(operate_nc)
 
+subroutine X(operate_nc_batch)(nn, nri, w, ri, imin, imax, fi, fo, wim)
+  integer,          intent(in)  :: nn
+  integer,          intent(in)  :: nri
+  FLOAT,            intent(in)  :: w(:, :)
+  integer,          intent(in)  :: ri(:, :)
+  integer,          intent(in)  :: imin(:)
+  integer,          intent(in)  :: imax(:)
+  type(batch_t),    intent(in)  :: fi
+  type(batch_t),    intent(out) :: fo
+  FLOAT, optional,  intent(in)  :: wim(:, :)
+
+  integer :: ll, ii, idim, ist
+  
+  if( .not. present(wim)) then
+    
+    do ll = 1, nri
+      forall(ist = 1:fi%nst, idim = 1:fi%dim, ii = imin(ll) + 1:imax(ll))
+        fo%states(ist)%X(psi)(ii, idim) = sum(w(1:nn, ii)*fi%states(ist)%X(psi)(ii + ri(1:nn, ll), idim))
+      end forall
+    end do
+
+  else
+
+    do ll = 1, nri
+      forall(ist = 1:fi%nst, idim = 1:fi%dim, ii = imin(ll) + 1:imax(ll))
+        fo%states(ist)%X(psi)(ii, idim) = sum(cmplx(w(1:nn, ii), wim(1:nn, ii))*fi%states(ist)%X(psi)(ii + ri(1:nn, ll), idim))
+      end forall
+    end do
+
+  end if
+end subroutine X(operate_nc_batch)
+
+subroutine X(select_op)(op, points, nri, imin, imax, ri)
+  type(nl_operator_t), intent(in)    :: op
+  integer,             intent(in)    :: points
+  integer,             intent(out)   :: nri
+  integer,             pointer       :: imin(:)
+  integer,             pointer       :: imax(:)
+  integer,             pointer       :: ri(:, :)
+
+  select case(points)
+  case(OP_ALL)
+    nri  =  op%nri
+    imin => op%rimap_inv(1:)
+    imax => op%rimap_inv(2:)
+    ri   => op%ri
+  case(OP_INNER)
+    nri  =  op%inner%nri
+    imin => op%inner%imin
+    imax => op%inner%imax
+    ri   => op%inner%ri
+  case(OP_OUTER)
+    nri  =  op%outer%nri
+    imin => op%outer%imin
+    imax => op%outer%imax
+    ri   => op%outer%ri
+  case default
+    ASSERT(.false.)
+  end select
+
+end subroutine X(select_op)
+
 ! ---------------------------------------------------------
 subroutine X(nl_operator_operate)(op, fi, fo, ghost_update, profile, points)
   R_TYPE,              intent(inout) :: fi(:)  ! fi(op%np_part)
@@ -277,23 +339,7 @@ subroutine X(nl_operator_operate)(op, fi, fo, ghost_update, profile, points)
   points_ = OP_ALL
   if(present(points)) points_ = points
 
-  select case(points_)
-  case(OP_ALL)
-    nri  =  op%nri
-    imin => op%rimap_inv(1:)
-    imax => op%rimap_inv(2:)
-    ri   => op%ri
-  case(OP_INNER)
-    nri  =  op%inner%nri
-    imin => op%inner%imin
-    imax => op%inner%imax
-    ri   => op%inner%ri
-  case(OP_OUTER)
-    nri  =  op%outer%nri
-    imin => op%outer%imin
-    imax => op%outer%imax
-    ri   => op%outer%ri
-  end select
+  call X(select_op)(op, points_, nri, imin, imax, ri)
 
   ! now apply the operator
 
@@ -363,19 +409,70 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, points)
 
   integer :: idim, ist, points_
   logical :: update
+  integer :: nri, nri_loc, ini, nns(1:2)
+  integer, pointer :: imin(:), imax(:), ri(:, :)
+  R_TYPE,  pointer ::  pfi(:), pfo(:)
+  real(8) :: ws(400)
 
+  call profiling_in(operate_batch_prof, "NL_OPERATOR_BATCH")
+  
+  
   points_ = OP_ALL
   if(present(points)) points_ = points
+
+  call X(select_op)(op, points_, nri, imin, imax, ri)
 
   update = .true.
   if(present(ghost_update)) update = ghost_update
 
-  do ist = 1, fi%nst
-    do idim = 1, fi%dim
-      call X(nl_operator_operate)(op, fi%states(ist)%X(psi)(:, idim), fo%states(ist)%X(psi)(:, idim), &
-           ghost_update = update, profile = .true., points = points_)
-    end do
-  end do
+  if(nri > 0) then
+    if(op%const_w) then
+      if(op%cmplx_op) then
+        do ist = 1, fi%nst
+          do idim = 1, fi%dim
+            pfi => fi%states(ist)%X(psi)(:, idim)
+            pfo => fo%states(ist)%X(psi)(:, idim)
+            call X(operate)(op%stencil%size, nri, op%w_re(:, 1), ri, imin, imax, pfi, pfo, op%w_im(:, 1))
+          end do
+        end do
+      else
+        ini = 1
+        nri_loc = nri
+        do idim = 1, fi%dim
+          do ist = 1, fi%nst
+            pfi => fi%states(ist)%X(psi)(:, idim)
+            pfo => fo%states(ist)%X(psi)(:, idim)
+            select case(op%X(function))
+            case(OP_FORTRAN)
+              call X(operate)(op%stencil%size, nri, op%w_re(:, 1), ri, imin, imax, pfi, pfo)
+            case(OP_C)
+              call X(operate_ri)(op%stencil%size, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), pfo(1))
+            case(OP_VEC)
+              call X(operate_ri_vec)(op%stencil%size, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), pfo(1))
+            case(OP_AS)
+              nns(1) = op%stencil%size
+              nns(2) = nri_loc
+              call X(operate_as)(nns, op%w_re(1, 1), ri(1, ini), imin(ini), imax(ini), pfi(1), pfo(1), ws(1))
+            end select
+          end do
+        end do
+      end if
+    else
+      if(op%cmplx_op) then
+        call X(operate_nc_batch)(op%stencil%size, nri, op%w_re, ri, imin, imax, fi, fo, wim = op%w_im)
+      else
+        call X(operate_nc_batch)(op%stencil%size, nri, op%w_re, ri, imin, imax, fi, fo)
+      end if
+    end if
+
+    if(op%cmplx_op) then
+      call profiling_count_operations(fi%nst*(imax(nri) - imin(1))*op%stencil%size*(R_ADD + R_MUL))
+    else
+      call profiling_count_operations(fi%nst*(imax(nri) - imin(1))*op%stencil%size*2*R_ADD)
+    end if
+  end if
+
+  call profiling_out(operate_batch_prof)
 
 end subroutine X(nl_operator_operate_batch)
 
