@@ -84,7 +84,7 @@ module scf_m
 
     integer :: what2mix
     logical :: lcao_restricted
-
+    logical :: calc_force
     type(mix_t) :: smix
     type(eigensolver_t) :: eigens
   end type scf_t
@@ -248,6 +248,18 @@ contains
       message(1) = 'Info: SCF restricted to LCAO subspace'
       call write_info(1)
     end if
+
+    !%Variable SCFCalculateForces
+    !%Type logical
+    !%Default yes
+    !%Section SCF
+    !%Description
+    !% This variable controls whether the forces over the ions are
+    !% calculated at the end of a self consistent iteration. The
+    !% default is yes, unless the system only has user defined
+    !% species.
+    !%End
+    call loct_parse_logical(datasets_check('SCFCalculateForces'), .not. geo%only_user_def, scf%calc_force)
 
     call geometry_min_distance(geo, rmin)
     if(geo%natoms == 1) rmin = CNST(100.0)
@@ -526,7 +538,7 @@ contains
     end if
 
     ! calculate forces
-    call epot_forces(gr, geo, hm%ep, st)
+    if(scf%calc_force) call epot_forces(gr, geo, hm%ep, st)
 
     if (st%wfs_type == M_REAL) then
       call dstates_calc_momentum(gr, st)
@@ -746,12 +758,14 @@ contains
           ' (', scf%conv_rel_ev, ')'
         write(iunit,'(1x)')
 
-        write(iunit,'(3a)') 'Forces on the ions [', trim(units_out%force%abbrev), "]"
-        write(iunit,'(a,10x,14x,a,14x,a,14x,a)') ' Ion','x','y','z'
-        do iatom = 1, geo%natoms
-          write(iunit,'(i4,a10,10f15.6)') iatom, trim(geo%atom(iatom)%spec%label), &
-            geo%atom(iatom)%f(1:gr%mesh%sb%dim) / units_out%force%factor
-        end do
+        if(scf%calc_force) then
+          write(iunit,'(3a)') 'Forces on the ions [', trim(units_out%force%abbrev), "]"
+          write(iunit,'(a,10x,14x,a,14x,a,14x,a)') ' Ion','x','y','z'
+          do iatom = 1, geo%natoms
+            write(iunit,'(i4,a10,10f15.6)') iatom, trim(geo%atom(iatom)%spec%label), &
+              geo%atom(iatom)%f(1:gr%mesh%sb%dim) / units_out%force%factor
+          end do
+        end if
 
         call io_close(iunit)
       end if
