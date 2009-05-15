@@ -57,7 +57,7 @@ void FC_FUNC_(doperate_ri_vec,DOPERATE_RI_VEC)(const int * opn,
   
   int l, i, j;
   const int * restrict index;
-  const ffloat * ffi[MAX_OP_N];
+  int indexj;
 
 #ifdef SINGLE_PRECISION
   __m128 vw[MAX_OP_N] __attribute__((aligned(16)));
@@ -76,13 +76,6 @@ void FC_FUNC_(doperate_ri_vec,DOPERATE_RI_VEC)(const int * opn,
     
     i = rimap_inv[l];
 
-    a = 0.0;
-    for(j = 0; j < n ; j++){
-      ffi[j] = fi + index[j];
-      a += w[j]*ffi[j][i];
-    }
-    fo[i++] = a;
-
     for (; i < rimap_inv_max[l] - 4*VECSIZE + 1; i+=4*VECSIZE){
 
 #ifdef SINGLE_PRECISION
@@ -94,10 +87,11 @@ void FC_FUNC_(doperate_ri_vec,DOPERATE_RI_VEC)(const int * opn,
 #endif
 
       for(j = 0; j < n; j++){
-	a0 = ADD (a0, MUL (vw[j], LOAD (ffi[j] + i            ) ));
-	a1 = ADD (a1, MUL (vw[j], LOAD (ffi[j] + i + 1*VECSIZE) ));
-	a2 = ADD (a2, MUL (vw[j], LOAD (ffi[j] + i + 2*VECSIZE) ));
-	a3 = ADD (a3, MUL (vw[j], LOAD (ffi[j] + i + 3*VECSIZE) ));
+	indexj = index[j] + i;
+	a0 = ADD (a0, MUL (vw[j], LOAD (fi + indexj            ) ));
+	a1 = ADD (a1, MUL (vw[j], LOAD (fi + indexj + 1*VECSIZE) ));
+	a2 = ADD (a2, MUL (vw[j], LOAD (fi + indexj + 2*VECSIZE) ));
+	a3 = ADD (a3, MUL (vw[j], LOAD (fi + indexj + 3*VECSIZE) ));
       }
 
       STORE (fo + i            , a0);
@@ -109,7 +103,7 @@ void FC_FUNC_(doperate_ri_vec,DOPERATE_RI_VEC)(const int * opn,
 
     for (; i < rimap_inv_max[l]; i++){
       a = 0.0;
-      for(j = 0; j < n; j++) a += w[j] * ffi[j][i];
+      for(j = 0; j < n; j++) a += w[j]*(fi + index[j])[i];
       fo[i] = a;
     }
 
