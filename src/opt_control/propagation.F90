@@ -269,6 +269,10 @@ module opt_control_propagation_m
 
     gr => sys%gr
     call td_rti_copy(tr_chi, td%tr)
+    ! The propagation of chi should not be self-consistent, because the Kohn-Sham
+    ! potential used is the one created by psi. Note however, that it is likely that
+    ! the fist two iterations are done self-consistently nevertheless.
+    call td_rti_remove_scf_prop(tr_chi)
 
     aux_fwd_propagation = ( target_mode(target) == oct_targetmode_td .or. &
                            (hm%theory_level.ne.INDEPENDENT_PARTICLES) )
@@ -293,13 +297,13 @@ module opt_control_propagation_m
     call oct_prop_read_state(prop_chi, chi, gr, sys%geo, 0)
 
     do i = 1, td%max_iter
+      call update_field(i, par, gr, hm, psi, chi, par_chi, dir = 'f')
+      call update_hamiltonian_chi(i, gr, sys%ks, hm, td, target, par_chi, psi2)
+      call td_rti_dt(sys%ks, hm, gr, chi, tr_chi, i*td%dt, td%dt, td%max_iter, i)
       if(aux_fwd_propagation) then
         call update_hamiltonian_psi(i, gr, sys%ks, hm, td, target, par_prev, psi2)
         call td_rti_dt(sys%ks, hm, gr, psi2, tr_psi2, i*td%dt, td%dt, td%max_iter, i)
       end if
-      call update_field(i, par, gr, hm, psi, chi, par_chi, dir = 'f')
-      call update_hamiltonian_chi(i, gr, sys%ks, hm, td, target, par_chi, psi2)
-      call td_rti_dt(sys%ks, hm, gr, chi, tr_chi, i*td%dt, td%dt, td%max_iter, i)
       call update_hamiltonian_psi(i, gr, sys%ks, hm, td, target, par, psi)
       call td_rti_dt(sys%ks, hm, gr, psi, td%tr, i*td%dt, td%dt, td%max_iter, i)
       call target_tdcalc(target, gr, psi, i) 
@@ -356,12 +360,17 @@ module opt_control_propagation_m
     gr => sys%gr
 
     call td_rti_copy(tr_chi, td%tr)
+    ! The propagation of chi should not be self-consistent, because the Kohn-Sham
+    ! potential used is the one created by psi. Note however, that it is likely that
+    ! the fist two iterations are done self-consistently nevertheless.
+    call td_rti_remove_scf_prop(tr_chi)
 
     call states_copy(psi, chi)
     call oct_prop_read_state(prop_psi, psi, gr, sys%geo, td%max_iter)
 
     call states_calc_dens(psi, gr%mesh%np_part)
     call v_ks_calc(gr, sys%ks, hm, psi)
+    call hamiltonian_update_potential(hm, gr%mesh)
     call td_rti_run_zero_iter(hm, td%tr)
     call td_rti_run_zero_iter(hm, tr_chi)
 
@@ -380,6 +389,7 @@ module opt_control_propagation_m
 
     call states_calc_dens(psi, gr%mesh%np_part)
     call v_ks_calc(gr, sys%ks, hm, psi)
+    call hamiltonian_update_potential(hm, gr%mesh)
 
     call states_end(psi)
     call td_rti_end(tr_chi)
