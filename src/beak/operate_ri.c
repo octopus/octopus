@@ -44,47 +44,34 @@ void FC_FUNC_(doperate_ri,DOPERATE_RI)(const int * opn,
   const int n = opn[0];
   const int nri = opnri[0];
 
-  int l, i, j;
+  int l, i, j, indexj;
   const int * restrict index;
-  const int * restrict index1;
   register ffloat a0, a1, a2, a3;
   register ffloat a4, a5, a6, a7;
-  const ffloat * ffi[MAX_OP_N];
-
+  register ffloat wj;
   assert(MAX_OP_N >= n);
 
   for (l = 0; l < nri ; l++) {
 
-    index  = opri + n * l;
-    index1 = opri + n * (l+1);
+    index  = opri + n*l;
 
     i = rimap_inv[l];
-
-    a0 = 0.0;
-    for(j = 0; j < n ; j++) {
-      ffi[j] = fi + index[j];
-      a0 += w[j]*ffi[j][i];
-      /* prefecth */
-#if defined(OCT_ITANIUM)
-      __builtin_prefetch(fi + rimap_inv[l+1] + index1[j], 0, 3);
-#endif
-    }
-    fo[i++] = a0;
 
     for (; i < rimap_inv_max[l] - 8 + 1; i+=8){
       a0 = a1 = a2 = a3 = 0.0;
       a4 = a5 = a6 = a7 = 0.0;
       for(j = 0; j < n; j++){
-
-	a0 += w[j] * ffi[j][i+0];
-	a1 += w[j] * ffi[j][i+1];
-	a2 += w[j] * ffi[j][i+2];
-	a3 += w[j] * ffi[j][i+3];
+	wj = w[j];
+	indexj = index[j];
+	a0 += wj*(fi + indexj)[i + 0];
+	a1 += wj*(fi + indexj)[i + 1];
+	a2 += wj*(fi + indexj)[i + 2];
+	a3 += wj*(fi + indexj)[i + 3];
 	
-	a4 += w[j] * ffi[j][i+4];
-	a5 += w[j] * ffi[j][i+5];
-	a6 += w[j] * ffi[j][i+6];
-	a7 += w[j] * ffi[j][i+7];
+	a4 += wj*(fi + indexj)[i + 4];
+	a5 += wj*(fi + indexj)[i + 5];
+	a6 += wj*(fi + indexj)[i + 6];
+	a7 += wj*(fi + indexj)[i + 7];
       }
       fo[i  ] = a0;
       fo[i+1] = a1;
@@ -100,10 +87,22 @@ void FC_FUNC_(doperate_ri,DOPERATE_RI)(const int * opn,
     
     for (; i < rimap_inv_max[l]; i++){
       a0 = 0.0;
-      for(j = 0; j < n; j++) a0 += w[j] * ffi[j][i];
-      fo[i] = a0;
+      a1 = 0.0;
+      a2 = 0.0;
+      j = 0;
+      for(; j < n - 5; j += 6){
+	a0 += w[j    ]*(fi + index[j    ])[i];
+	a1 += w[j + 1]*(fi + index[j + 1])[i];
+	a2 += w[j + 2]*(fi + index[j + 2])[i];
+	a0 += w[j + 3]*(fi + index[j + 3])[i];
+	a1 += w[j + 4]*(fi + index[j + 4])[i];
+	a2 += w[j + 5]*(fi + index[j + 5])[i];
+      }
+      a1 += a2;
+      for(; j < n; j++) a0 += w[j]*(fi + index[j])[i];
+      fo[i] = a0 + a1;
     }
-
+    
   }
 
 }
@@ -129,8 +128,8 @@ void FC_FUNC_(zoperate_ri,ZOPERATE_RI)(const int * opn,
 
   for (l = 0; l < nri ; l++) {
 
-    index = opri + n * l;
-    index1= opri + n * (l+1);
+    index = opri + n*l;
+    index1= opri + n*(l+1);
 
     i = rimap_inv[l];
 
@@ -152,16 +151,15 @@ void FC_FUNC_(zoperate_ri,ZOPERATE_RI)(const int * opn,
     for (; i < (rimap_inv_max[l] - 4 + 1) ; i+=4){
       a0 = a1 = a2 = a3 = 0.0;
       a4 = a5 = a6 = a7 = 0.0;
-      
       for(j = 0; j < n; j++) {
-	a0 += w[j] * ffi[j][i+0].re;
-	a1 += w[j] * ffi[j][i+0].im;
-	a2 += w[j] * ffi[j][i+1].re;
-	a3 += w[j] * ffi[j][i+1].im;
-	a4 += w[j] * ffi[j][i+2].re;
-	a5 += w[j] * ffi[j][i+2].im;
-	a6 += w[j] * ffi[j][i+3].re;
-	a7 += w[j] * ffi[j][i+3].im;
+	a0 += w[j]*ffi[j][i+0].re;
+	a1 += w[j]*ffi[j][i+0].im;
+	a2 += w[j]*ffi[j][i+1].re;
+	a3 += w[j]*ffi[j][i+1].im;
+	a4 += w[j]*ffi[j][i+2].re;
+	a5 += w[j]*ffi[j][i+2].im;
+	a6 += w[j]*ffi[j][i+3].re;
+	a7 += w[j]*ffi[j][i+3].im;
       }
       fo[i  ].re = a0;
       fo[i  ].im = a1;
@@ -180,8 +178,8 @@ void FC_FUNC_(zoperate_ri,ZOPERATE_RI)(const int * opn,
       a1 = 0.0;
 
       for(j = 0; j < n; j++) {
-	a0 += w[j] * ffi[j][i].re;
-	a1 += w[j] * ffi[j][i].im;
+	a0 += w[j]*ffi[j][i].re;
+	a1 += w[j]*ffi[j][i].im;
       }
 
       fo[i].re = a0;
