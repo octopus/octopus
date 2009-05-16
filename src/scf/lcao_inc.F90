@@ -109,6 +109,11 @@ subroutine X(lcao_wf) (this, st, gr, geo, hm, start)
 #endif
   call push_sub('lcao_inc.Xlcao_wf')
   
+  write(message(1),'(a,i6,a)') 'Info: Performing initial LCAO calculation with ', &
+       this%norbs,' orbitals.'
+  call write_info(1)
+          
+
   nst = st%nst
   kstart = st%d%kpt%start
   kend = st%d%kpt%end
@@ -333,7 +338,6 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   R_TYPE, allocatable :: hamiltonian(:, :), overlap(:, :)
   R_TYPE, allocatable :: psii(:, :), hpsi(:, :)
   FLOAT, allocatable :: ev(:)
-  FLOAT, pointer :: orb(:, :)
   FLOAT, allocatable :: radius(:)
   type(submesh_t), allocatable :: sphere(:)
   integer, allocatable :: basis_index(:, :)
@@ -351,7 +355,10 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
     maxorb = max(maxorb, geo%atom(iatom)%spec%niwfs)
     nbasis = nbasis + geo%atom(iatom)%spec%niwfs
   end do
-  
+
+  write(message(1),'(a,i6,a)') 'Info: Performing LCAO calculation with ', nbasis, ' orbitals.'
+  call write_info(1)
+        
   SAFE_ALLOCATE(hamiltonian(1:nbasis, 1:nbasis))
   SAFE_ALLOCATE(overlap(1:nbasis, 1:nbasis))
   SAFE_ALLOCATE(ev(1:nbasis))
@@ -384,7 +391,9 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
     end do
   end do
-
+  
+  message(1) = "Info: Calculating matrix elements."
+  call write_info(1)
 
   do ik = 1, st%d%nik
   
@@ -405,7 +414,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
         do jatom = iatom, geo%natoms
           do jorb = 1, geo%atom(jatom)%spec%niwfs
             jbasis = basis_index(jatom, jorb)
-            
+
             dist2 = sum((geo%atom(iatom)%x(1:MAX_DIM) - geo%atom(jatom)%x(1:MAX_DIM))**2)
 
             if(dist2 > (radius(ibasis) + radius(jbasis) + lapdist)**2) cycle

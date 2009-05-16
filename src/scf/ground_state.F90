@@ -160,10 +160,7 @@ contains
           
         call lcao_init(lcao, sys%gr, sys%geo, sys%st)
         if(lcao_is_available(lcao)) then
-          write(message(1),'(a,i4,a)') 'Info: Performing initial LCAO calculation with ', &
-               lcao_num_orbitals(lcao),' orbitals.'
-          call write_info(1)
-          
+
           call lcao_wf(lcao, sys%st, sys%gr, sys%geo, hm)
           call lcao_end(lcao)
 
