@@ -274,20 +274,23 @@ end subroutine X(hamiltonian_apply)
 subroutine X(hamiltonian_apply_all) (hm, gr, psi, hpsi, t)
   type(hamiltonian_t), intent(in)    :: hm
   type(grid_t),        intent(inout) :: gr
-  type(states_t), intent(inout) :: psi
-  type(states_t), intent(inout) :: hpsi
+  type(states_t),      intent(inout) :: psi
+  type(states_t),      intent(inout) :: hpsi
   FLOAT, optional,     intent(in)    :: t
 
-  integer :: ist, ik
+  integer :: ik
+  type(batch_t) :: psib, hpsib
 
   call push_sub('hamiltonian_inc.Xhamiltonian_apply_all')
 
   do ik = psi%d%kpt%start, psi%d%kpt%end
-    do ist = psi%st_start, psi%st_end
-      call X(hamiltonian_apply)(hm, gr, psi%X(psi)(:, :, ist, ik), hpsi%X(psi)(:, :, ist, ik), ist, ik, t)
-    end do
+    call batch_init(psib, hm%d%dim, psi%st_start, psi%st_end, psi%X(psi)(:, :, :, ik))
+    call batch_init(hpsib, hm%d%dim, hpsi%st_start, hpsi%st_end, hpsi%X(psi)(:, :, :, ik))
+    call X(hamiltonian_apply_batch)(hm, gr, psib, hpsib, ik, t)
+    call batch_end(psib)
+    call batch_end(hpsib)
   end do
-
+  
   if(hamiltonian_oct_exchange(hm)) call X(oct_exchange_operator_all)(hm, gr, psi, hpsi)
 
   call pop_sub()
