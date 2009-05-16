@@ -21,8 +21,10 @@
 
 module exponential_m
   use batch_m
+  use blas_m
   use cube_function_m
   use datasets_m
+  use hardware_m
   use fourier_space_m
   use lalg_adv_m
   use lalg_basic_m
@@ -651,8 +653,11 @@ contains
       logical :: zfact_is_real
       integer :: st_start, st_end
       type(batch_t) :: psi1b, hpsi1b
+      integer :: bsize, ip
+      type(profile_t), save :: prof
 
       call push_sub('exponential.taylor_series')
+      call profiling_in(prof, "EXP_TAYLOR_BATCH")
 
       SAFE_ALLOCATE(psi1 (1:gr%mesh%np_part, 1:hm%d%dim, 1:psib%nst))
       SAFE_ALLOCATE(hpsi1(1:gr%mesh%np, 1:hm%d%dim, 1:psib%nst))
@@ -678,32 +683,31 @@ contains
         call batch_end(hpsi1b)
         
         do ii = 1, psib%nst
-          if(zfact_is_real) then
-            do idim = 1, hm%d%dim
-              call lalg_axpy(gr%mesh%np, real(zfact), hpsi1(:, idim, ii), &
-                psib%states(ii)%zpsi(:, idim))
+          do idim = 1, hm%d%dim
+    
+            do ip = 1, gr%mesh%np, hardware%zblock_size
+              bsize = min(hardware%zblock_size, gr%mesh%np - ip + 1)
+              if(zfact_is_real) then
+                call blas_axpy(bsize, real(zfact, REAL_PRECISION), hpsi1(ip, idim, ii), psib%states(ii)%zpsi(ip, idim))
+              else
+                call blas_axpy(bsize, zfact, hpsi1(ip, idim, ii), 1, psib%states(ii)%zpsi(ip, idim), 1)
+              end if
+              if(iter /= te%exp_order) call blas_copy(bsize, hpsi1(ip, idim, ii), 1, psi1(ip, idim, ii), 1)
             end do
-          else
-            do idim = 1, hm%d%dim
-              call lalg_axpy(gr%mesh%np, zfact, hpsi1(:, idim, ii), psib%states(ii)%zpsi(:, idim))
-            end do
-          end if
 
-          if(iter /= te%exp_order) then
-            do idim = 1, hm%d%dim
-              call lalg_copy(gr%mesh%np, hpsi1(:, idim, ii), psi1(:, idim, ii))
-            end do
-          end if
+          end do
         end do
-
       end do
+
+      call profiling_count_operations(psib%nst*hm%d%dim*gr%mesh%np*te%exp_order*5)
 
       SAFE_DEALLOCATE_A(psi1)
       SAFE_DEALLOCATE_A(hpsi1)
-
+      
+      call profiling_out(prof)
       call pop_sub()
     end subroutine taylor_series_batch
-
+    
   end subroutine exponential_apply_batch
 
 
