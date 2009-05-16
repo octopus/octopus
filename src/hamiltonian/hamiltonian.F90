@@ -68,8 +68,6 @@ module hamiltonian_m
     hamiltonian_span,                &
     dhamiltonian_apply,              &
     zhamiltonian_apply,              &
-    dhamiltonian_apply_all,          &
-    zhamiltonian_apply_all,          &
     dhamiltonian_apply_batch,        &
     zhamiltonian_apply_batch,        &
     dhamiltonian_diagonal,           &

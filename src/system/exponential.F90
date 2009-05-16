@@ -44,8 +44,7 @@ module exponential_m
     exponential_copy,            &
     exponential_end,             &
     exponential_apply_batch,     &
-    exponential_apply,           &
-    exponential_apply_all
+    exponential_apply
 
   integer, public, parameter :: &
     SPLIT_OPERATOR     = 0,     &
@@ -705,114 +704,6 @@ contains
     end subroutine taylor_series_batch
 
   end subroutine exponential_apply_batch
-
-
-  ! ---------------------------------------------------------
-  ! This routine performs the operation:
-  !
-  ! exp{-i*deltat*hm(t)}|zpsi>  <-- |zpsi>
-  !
-  ! If imag_time is present and is set to true, it performa instead:
-  !
-  ! exp{ deltat*hm(t)}|zpsi>  <-- |zpsi>
-  !
-  ! If the hamiltonian contains an inhomogeneous term, the operation is:
-  !
-  ! exp{-i*deltat*hm(t)}|zpsi> + deltat*phi{-i*deltat*hm(t)}|zpsi>  <-- |zpsi>
-  !
-  ! where:
-  !
-  ! phi(x) = (e^x - 1)/x
-  ! ---------------------------------------------------------
-  subroutine exponential_apply_all(te, gr, hm, psi, deltat, t, order, vmagnus, imag_time)
-    type(exponential_t), intent(inout) :: te
-    type(grid_t),        intent(inout) :: gr
-    type(hamiltonian_t), intent(inout) :: hm
-    type(states_t),      intent(inout) :: psi
-    FLOAT,               intent(in)    :: deltat, t
-    integer, optional,   intent(inout) :: order
-    FLOAT,   optional,   intent(in)    :: vmagnus(gr%mesh%np, hm%d%nspin, 2)
-    logical, optional,   intent(in)    :: imag_time
-
-    integer :: ik, ist
-    CMPLX   :: timestep
-    logical :: apply_magnus
-    CMPLX :: zfact
-    integer :: i, idim
-    logical :: zfact_is_real
-
-    type(states_t) :: psi1, hpsi1
-
-    call push_sub('exponential.exponential_apply_all')
-
-    ASSERT(te%exp_method .eq. TAYLOR)
-
-    apply_magnus = .false.
-    if(present(vmagnus)) apply_magnus = .true.
-
-    timestep = cmplx(deltat, M_ZERO)
-    if(present(imag_time)) then
-      if(imag_time) timestep = M_zI * deltat
-    end if
-
-    call states_copy(psi1, psi)
-    call states_copy(hpsi1, psi)
-
-    forall(ik = psi%d%kpt%start:psi%d%kpt%end, ist = psi%st_start:psi%st_end)
-      psi1%zpsi(:, :, ist, ik)  = M_z0
-      hpsi1%zpsi(:, :, ist, ik) = M_z0
-    end forall
-
-    zfact = M_z1
-    zfact_is_real = .true.
-
-    do i = 1, te%exp_order
-      zfact = zfact*(-M_zI*timestep)/i
-      zfact_is_real = .not. zfact_is_real
-      
-      if (i == 1) then
-        call zhamiltonian_apply_all (hm, gr, psi, hpsi1, t)
-      else
-        call zhamiltonian_apply_all(hm, gr, psi1, hpsi1, t)
-      end if
-
-      if(zfact_is_real) then
-        do ik = psi%d%kpt%start, psi%d%kpt%end
-          do ist = psi%st_start, psi%st_end
-            do idim = 1, hm%d%dim
-              call lalg_axpy(gr%mesh%np, real(zfact), hpsi1%zpsi(:, idim, ist, ik), psi%zpsi(:, idim, ist, ik))
-            end do
-          end do
-        end do
-      else
-        do ik = psi%d%kpt%start, psi%d%kpt%end
-          do ist = psi%st_start, psi%st_end
-            do idim = 1, hm%d%dim
-              call lalg_axpy(gr%mesh%np, zfact, hpsi1%zpsi(:, idim, ist, ik), psi%zpsi(:, idim, ist, ik))
-            end do
-          end do
-        end do
-      end if
-
-      if(i .ne. te%exp_order) then
-        do ik = psi%d%kpt%start, psi%d%kpt%end
-          do ist = psi%st_start, psi%st_end
-            do idim = 1, hm%d%dim
-              call lalg_copy(gr%mesh%np, hpsi1%zpsi(:, idim, ist, ik), psi1%zpsi(:, idim, ist, ik))
-            end do
-          end do
-        end do
-      end if
-
-    end do
-    ! End of Taylor expansion loop.
-
-    call states_end(psi1)
-    call states_end(hpsi1)
-
-    if(present(order)) order = te%exp_order * psi%d%nik * psi%nst ! This should be the correct number
-    call pop_sub()
-  end subroutine exponential_apply_all
 
 end module exponential_m
 

@@ -1191,6 +1191,9 @@ contains
     subroutine td_qoct_tddft_propagator
       type(ion_state_t) :: ions_state
       FLOAT :: vecpot(1:MAX_DIM), vecpot_vel(1:MAX_DIM)
+      integer :: ik
+      type(batch_t) :: psib
+
       call push_sub('td_rti.td_qoct_tddft_propagator')
 
       if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
@@ -1211,7 +1214,11 @@ contains
         call gauge_field_propagate(hm%ep%gfield, gauge_force, M_HALF*dt)
       end if
 
-      call exponential_apply_all(tr%te, gr, hm, st, dt, t - dt/M_TWO)
+      do ik = st%d%kpt%start, st%d%kpt%end
+        call batch_init(psib, st%d%dim, st%st_start, st%st_end, st%zpsi(:, :, :, ik))
+        call exponential_apply_batch(tr%te, gr, hm, psib, ik, dt, t - dt/M_TWO)
+        call batch_end(psib)
+      end do
 
       if(present(ions)) call ion_dynamics_restore_state(ions, geo, ions_state)
 
