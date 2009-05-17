@@ -20,7 +20,6 @@
 #include "global.h"
 
 module PES_m
-#if !defined(DISABLE_PES)
   use datasets_m
   use fft_m
   use global_m
@@ -145,7 +144,6 @@ contains
 #include "pes_rc.F90"
 #include "pes_mask.F90"
 
-#endif
 end module PES_m
 
 

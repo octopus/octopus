@@ -51,9 +51,7 @@ module td_m
   use td_rti_m
   use td_write_m
   use v_ks_m
-#if !defined(DISABLE_PES)
   use PES_m
-#endif
   use grid_m
   use spectrum_m
   use mpi_m
@@ -89,9 +87,8 @@ module td_m
     ! The *kick* used in "linear response in the time domain" calculations.
     type(kick_t)         :: kick
 
-#if !defined(DISABLE_PES)
     type(PES_t)          :: PESv
-#endif
+
     FLOAT                :: mu
     integer              :: dynamics
     FLOAT                :: scissor
@@ -112,7 +109,7 @@ contains
     type(states_t),   pointer :: st
     type(geometry_t), pointer :: geo
     logical                   :: stopping
-    integer                   :: i, ii, ik, ierr, iatom, ist, mpi_err
+    integer                   :: iter, ii, ik, ierr, iatom, ist, mpi_err
     real(8)                   :: etime
     logical                   :: generate
     type(gauge_force_t)       :: gauge_force
@@ -205,8 +202,8 @@ contains
     etime = loct_clock()
     ! This is the time-propagation loop. It starts at t=0 and finishes
     ! at td%max_iter*dt. The index i runs from 1 to td%max_iter, and
-    ! step "i" means propagation from (i-1)*dt to i*dt.
-    propagation: do i = td%iter, td%max_iter
+    ! step "i" means propagation from (iter-1)*dt to iter*dt.
+    propagation: do iter = td%iter, td%max_iter
 
       if(clean_stop()) stopping = .true.
       call profiling_in(prof, "TIME_STEP")
@@ -215,18 +212,18 @@ contains
       select case(td%dynamics)
       case(EHRENFEST)
         if(ion_dynamics_ions_move(td%ions)) then
-          call td_rti_dt(sys%ks, hm, gr, st, td%tr, i*td%dt, td%dt / td%mu, td%max_iter, i, gauge_force, &
+          call td_rti_dt(sys%ks, hm, gr, st, td%tr, iter*td%dt, td%dt/td%mu, td%max_iter, iter, gauge_force, &
             ions = td%ions, geo = sys%geo, ionic_dt = td%dt)
         else
-          call td_rti_dt(sys%ks, hm, gr, st, td%tr, i*td%dt, td%dt / td%mu, td%max_iter, i, gauge_force)
+          call td_rti_dt(sys%ks, hm, gr, st, td%tr, iter*td%dt, td%dt/td%mu, td%max_iter, iter, gauge_force)
         end if
       case(BO)
         call scf_run(td%scf, sys%gr, geo, st, sys%ks, hm, sys%outp, gs_run = .false., verbosity = VERB_NO)
       case(CP)
         if(states_are_real(st)) then
-          call dcpmd_propagate(td%cp_propagator, sys%gr, hm, st, i, td%dt)
+          call dcpmd_propagate(td%cp_propagator, sys%gr, hm, st, iter, td%dt)
         else
-          call zcpmd_propagate(td%cp_propagator, sys%gr, hm, st, i, td%dt)
+          call zcpmd_propagate(td%cp_propagator, sys%gr, hm, st, iter, td%dt)
         end if
       end select
 
@@ -240,7 +237,7 @@ contains
 
       if(ion_dynamics_ions_move(td%ions)) then 
         if(td%dynamics /= EHRENFEST .or. .not. td_rti_ions_are_propagated(td%tr)) then
-          call ion_dynamics_propagate(td%ions, sys%gr%sb, sys%geo,  i*td%dt, td%dt)
+          call ion_dynamics_propagate(td%ions, sys%gr%sb, sys%geo, iter*td%dt, td%dt)
           generate = .true.
         end if
       end if
@@ -249,7 +246,7 @@ contains
         call gauge_field_propagate(hm%ep%gfield, gauge_force, td%dt)
       end if
       
-      if(generate) call hamiltonian_epot_generate(hm, gr, sys%geo, st, time = i*td%dt)
+      if(generate) call hamiltonian_epot_generate(hm, gr, sys%geo, st, time = iter*td%dt)
 
       ! update hamiltonian and eigenvalues (fermi is *not* called)
       call v_ks_calc(gr, sys%ks, hm, st, calc_eigenval = .true.)
@@ -267,7 +264,7 @@ contains
       
       ! Recalculate forces, update velocities...
       if(ion_dynamics_ions_move(td%ions)) then
-        call epot_forces(gr, sys%geo, hm%ep, st, i*td%dt)
+        call epot_forces(gr, sys%geo, hm%ep, st, iter*td%dt)
 
         call ion_dynamics_propagate_vel(td%ions, sys%geo)
 
@@ -287,11 +284,9 @@ contains
 
       end if
 
-      call td_write_iter(write_handler, gr, st, hm, geo, td%kick, td%dt, i)
+      call td_write_iter(write_handler, gr, st, hm, geo, td%kick, td%dt, iter)
 
-#if !defined(DISABLE_PES)
-      call PES_doit(td%PESv, gr%mesh, st, ii, td%dt, hm%ab_pot)
-#endif
+      if(td%PESv%calc_rc .or. td%PESv%calc_mask) call PES_doit(td%PESv, gr%mesh, st, ii, td%dt, hm%ab_pot)
 
       ! write down data
       call check_point()
@@ -320,30 +315,30 @@ contains
     subroutine check_point
       ! write info
       if(td%dynamics /= CP) then 
-        write(message(1), '(i7,1x,2f14.6,f14.3, i10)') i, &
-             i*td%dt       / units_out%time%factor, &
-             (hm%etot + geo%kinetic_energy) / units_out%energy%factor, &
+        write(message(1), '(i7,1x,2f14.6,f14.3, i10)') iter, &
+             iter*td%dt/units_out%time%factor, &
+             (hm%etot + geo%kinetic_energy)/units_out%energy%factor, &
              loct_clock() - etime
       else
-        write(message(1), '(i7,1x,3f14.6,f14.3, i10)') i, &
-             i*td%dt       / units_out%time%factor, &
-             (hm%etot + geo%kinetic_energy) / units_out%energy%factor, &
+        write(message(1), '(i7,1x,3f14.6,f14.3, i10)') iter, &
+             iter*td%dt/units_out%time%factor, &
+             (hm%etot + geo%kinetic_energy)/units_out%energy%factor, &
              (hm%etot + geo%kinetic_energy + cpmd_electronic_energy(td%cp_propagator)) / units_out%energy%factor, &
              loct_clock() - etime
       end if
       call write_info(1)
       etime = loct_clock()
       ii = ii + 1
-      if(ii==sys%outp%iter+1 .or. i == td%max_iter .or. stopping) then ! output
-        if(i == td%max_iter) sys%outp%iter = ii - 1
+      if(ii==sys%outp%iter+1 .or. iter == td%max_iter .or. stopping) then ! output
+        if(iter == td%max_iter) sys%outp%iter = ii - 1
         ii = 1
-        call td_save_restart(i)
-        call td_write_data(write_handler, gr, st, hm, sys%outp, geo, i)
+        call td_save_restart(iter)
+        call td_write_data(write_handler, gr, st, hm, sys%outp, geo, iter)
         if( (ion_dynamics_ions_move(td%ions)) .and. td%recalculate_gs) then
           call messages_print_stress(stdout, 'Recalculating the ground state.')
           fromScratch = .false.
           call ground_state_run(sys, hm, fromScratch)
-          call restart_read(trim(restart_dir)//'td', st, gr, geo, ierr, i)
+          call restart_read(trim(restart_dir)//'td', st, gr, geo, ierr, iter)
           call messages_print_stress(stdout, "Time-Dependent simulation proceeds")
           if(td%dynamics /= CP) then 
             write(message(1), '(a7,1x,a14,a14,a17)') 'Iter ', 'Time ', 'Energy ', 'Elapsed Time '
@@ -496,8 +491,6 @@ contains
 
       end if
 
-      if(fromScratch) call modify_occs()
-
       !%Variable TDFreezeOrbitals
       !%Type integer
       !%Default 0
@@ -577,10 +570,11 @@ contains
     ! where E_0 = - k \hbar / e
     subroutine apply_delta_field(k)
       type(kick_t), intent(in) :: k
-      integer :: i, j
+      integer :: j, iatom
+      integer :: ik, ist, idim, ip
       CMPLX   :: c(2), kick
-      FLOAT   :: ylm, r
-      FLOAT   :: x(MAX_DIM)
+      FLOAT   :: ylm, rr
+      FLOAT   :: xx(MAX_DIM)
       FLOAT, allocatable :: kick_function(:)
 
       call push_sub('td.apply_delta_field')
@@ -593,18 +587,18 @@ contains
         if(k%n_multipoles > 0) then
           kick_function = M_ZERO
           do j = 1, k%n_multipoles
-            do i = 1, gr%mesh%np
-              call mesh_r(gr%mesh, i, r, x = x)
-              call loct_ylm(1, x(1), x(2), x(3), k%l(j), k%m(j), ylm)
-              kick_function(i) = kick_function(i) + k%weight(j) * (r**k%l(j)) * ylm 
+            do ip = 1, gr%mesh%np
+              call mesh_r(gr%mesh, ip, rr, x = xx)
+              call loct_ylm(1, xx(1), xx(2), xx(3), k%l(j), k%m(j), ylm)
+              kick_function(ip) = kick_function(ip) + k%weight(j)*(rr**k%l(j))*ylm 
             end do
           end do
         else
-          do i = 1, gr%mesh%np
-            kick_function(i) = sum(gr%mesh%x(i, 1:gr%mesh%sb%dim)*k%pol(1:gr%mesh%sb%dim, k%pol_dir))
-          end do
+          forall(ip = 1:gr%mesh%np)
+            kick_function(ip) = sum(gr%mesh%x(ip, 1:gr%mesh%sb%dim)*k%pol(1:gr%mesh%sb%dim, k%pol_dir))
+          end forall
         end if
-        
+
         write(message(1),'(a,f11.6)')  'Info: Applying delta kick: k = ', k%delta_strength
         select case (k%delta_strength_mode)
         case (KICK_DENSITY_MODE)
@@ -615,49 +609,52 @@ contains
           message(2) = "Info: Delta kick mode: Density + Spin modes"
         end select
         call write_info(2)
-        do i = 1, gr%mesh%np
-          kick = M_zI * k%delta_strength * kick_function(i)
 
-          select case (k%delta_strength_mode)
-          case (KICK_DENSITY_MODE)
-            c(1) = exp(kick)
-            st%zpsi(i,:,:,:) = c(1) * st%zpsi(i,:,:,:)
+        select case (k%delta_strength_mode)
+        case (KICK_DENSITY_MODE)
+          forall(ik = st%d%kpt%start:st%d%kpt%end, ist = st%st_start:st%st_end, idim = 1:st%d%dim, ip = 1:gr%mesh%np)
+            st%zpsi(ip, idim, ist, ik) = exp(M_zI*k%delta_strength*kick_function(ip))*st%zpsi(ip, idim, ist, ik) 
+          end forall
 
-          case (KICK_SPIN_MODE)
+        case (KICK_SPIN_MODE)
+          do ip = 1, gr%mesh%np
+            kick = M_zI * k%delta_strength * kick_function(ip)
+
             c(1) = exp(kick)
             c(2) = exp(-kick)
             select case (st%d%ispin)
             case (SPIN_POLARIZED)
+
               do ik = 1, st%d%nik, 2
-                st%zpsi(i,:,:,ik)   = c(1) * st%zpsi(i,:,:,ik)
-                st%zpsi(i,:,:,ik+1) = c(2) * st%zpsi(i,:,:,ik+1)
+                st%zpsi(ip,:,:,ik)   = c(1) * st%zpsi(ip,:,:,ik)
+                st%zpsi(ip,:,:,ik+1) = c(2) * st%zpsi(ip,:,:,ik+1)
               end do
             case (SPINORS)
-              st%zpsi(i,1,:,:) = c(1) * st%zpsi(i,1,:,:)
-              st%zpsi(i,2,:,:) = c(2) * st%zpsi(i,2,:,:)
+              st%zpsi(ip,1,:,:) = c(1) * st%zpsi(ip,1,:,:)
+              st%zpsi(ip,2,:,:) = c(2) * st%zpsi(ip,2,:,:)
             end select
-
-          case (KICK_SPIN_DENSITY_MODE)
+          end do
+        case (KICK_SPIN_DENSITY_MODE)
+          do ip = 1, gr%mesh%np
             c(1) = exp(M_TWO*kick)
             select case (st%d%ispin)
             case (SPIN_POLARIZED)
               do ik = 1, st%d%nik, 2
-                st%zpsi(i,:,:,ik) = c(1) * st%zpsi(i,:,:,ik)
+                st%zpsi(ip,:,:,ik) = c(1) * st%zpsi(ip,:,:,ik)
               end do
             case (SPINORS)
-              st%zpsi(i,1,:,:) = c(1) * st%zpsi(i,1,:,:)
+              st%zpsi(ip,1,:,:) = c(1) * st%zpsi(ip,1,:,:)
             end select
-
-          end select
-        end do
+          end do
+        end select
 
         ! the nuclei velocity will be changed by
         ! Delta v_z = ( Z*e*E_0 / M) = - ( Z*k*\hbar / M)
         ! where M and Z are the ionic mass and charge, respectively.
         if(ion_dynamics_ions_move(td%ions)  .and. k%delta_strength .ne. M_ZERO) then
-          do i = 1, geo%natoms
-            geo%atom(i)%v(1:gr%mesh%sb%dim) = geo%atom(i)%v(1:gr%mesh%sb%dim) - &
-              k%delta_strength_mode*k%pol(1:gr%mesh%sb%dim, k%pol_dir)*geo%atom(i)%spec%z_val / geo%atom(i)%spec%weight
+          do iatom = 1, geo%natoms
+            geo%atom(iatom)%v(1:gr%mesh%sb%dim) = geo%atom(iatom)%v(1:gr%mesh%sb%dim) - &
+              k%delta_strength_mode*k%pol(1:gr%mesh%sb%dim, k%pol_dir)*geo%atom(iatom)%spec%z_val/geo%atom(iatom)%spec%weight
           end do
         end if
 
@@ -779,35 +776,6 @@ contains
 
       call pop_sub()
     end subroutine td_save_restart
-
-    ! ---------------------------------------------------------
-    subroutine modify_occs()
-      type(block_t) :: blk
-      integer  :: nrow
-      integer  :: spin, state
-      FLOAT    :: new_occ
-      
-      if(loct_parse_block(datasets_check('ModifyOccupations'), blk) == 0) then
-        nrow = loct_parse_block_n(blk)
-        
-        do i=0,(nrow-1)
-          call loct_parse_block_int(blk, i, 0, spin)
-          call loct_parse_block_int(blk, i, 1, state)
-          call loct_parse_block_float(blk, i, 2, new_occ)
-          
-          
-          if ( (state <= sys%st%st_end) .and. (spin <= sys%st%d%nik)) then 
-            write(message(1), '(2i2,f12.6,a,f12.6)') spin,state, st%occ(state,spin), ' ->', new_occ
-            call write_info(1)
-            st%occ(state,spin) = new_occ
-          end if
-
-        end do
-        call loct_parse_block_end(blk)
-
-      end if
-
-    end subroutine modify_occs
 
   end subroutine td_run
 
