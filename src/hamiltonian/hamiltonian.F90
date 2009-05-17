@@ -21,6 +21,7 @@
 
 module hamiltonian_m
   use batch_m
+  use blas_m
   use calc_mode_m
   use datasets_m
   use em_field_m
@@ -197,6 +198,8 @@ module hamiltonian_m
     HARTREE               = 1, &
     HARTREE_FOCK          = 3, &
     KOHN_SHAM_DFT         = 4
+
+  type(profile_t), save :: prof_hamiltonian, prof_vlpsi, prof_vnlpsi, prof_kinetic
 
 contains
 

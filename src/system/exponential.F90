@@ -699,7 +699,7 @@ contains
         end do
       end do
 
-      call profiling_count_operations(psib%nst*hm%d%dim*gr%mesh%np*te%exp_order*5)
+      call profiling_count_operations(psib%nst*hm%d%dim*dble(gr%mesh%np)*te%exp_order*CNST(6.0))
 
       SAFE_DEALLOCATE_A(psi1)
       SAFE_DEALLOCATE_A(hpsi1)

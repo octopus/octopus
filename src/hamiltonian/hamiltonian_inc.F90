@@ -39,9 +39,8 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, t, kinetic_only)
   R_TYPE, pointer :: psi(:, :), hpsi(:, :)
   type(batch_t) :: epsib, laplb
   type(der_handle_t), allocatable :: handles(:, :)
-  type(profile_t), save :: prof
 
-  call profiling_in(prof, "HAMILTONIAN")
+  call profiling_in(prof_hamiltonian, "HAMILTONIAN")
   call push_sub('hamiltonian_inc.Xhpsi_batch')
 
   kinetic_only_ = .false.
@@ -117,12 +116,18 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, t, kinetic_only)
     if (kinetic_only_) hpsi(1:gr%mesh%np, 1:hm%d%dim) = M_ZERO
 
     ! finish the calculation of the laplacian
-    call profiling_in(C_PROFILING_KINETIC)
+    call profiling_in(prof_kinetic, "KINETIC")
     do idim = 1, hm%d%dim
-      call lalg_axpy(gr%mesh%np, -M_HALF/hm%mass, lapl(:, idim, ii), hpsi(:, idim))
+#ifdef R_TREAL
+      call blas_axpy(gr%mesh%np, -M_HALF/hm%mass, lapl(1, idim, ii), 1, hpsi(1, idim), 1)
+#else
+      call blas_axpy(gr%mesh%np, -M_HALF/hm%mass, lapl(1, idim, ii), hpsi(1, idim))
+#endif
+      call profiling_count_operations(gr%mesh%np*CNST(2.0)*R_ADD)
+
       call der_handle_end(handles(idim, ii))
     end do
-    call profiling_out(C_PROFILING_KINETIC)
+    call profiling_out(prof_kinetic)
     
     if (.not. kinetic_only_) then
       
@@ -199,7 +204,7 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, t, kinetic_only)
   SAFE_DEALLOCATE_A(lapl)
 
   call pop_sub()
-  call profiling_out(prof)
+  call profiling_out(prof_hamiltonian)
 
 contains
 
@@ -636,13 +641,13 @@ subroutine X(vnlpsi) (hm, mesh, psi, hpsi, ik)
   R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(gr%mesh%np_part, hm%d%dim)
   integer,             intent(in)    :: ik
 
-  call profiling_in(C_PROFILING_VNLPSI)
+  call profiling_in(prof_vnlpsi, "VNLPSI")
   call push_sub('hamiltonian_inc.Xvnlpsi')
 
   call X(project_psi)(mesh, hm%ep%proj, hm%ep%natoms, hm%d%dim, psi, hpsi, ik)
     
   call pop_sub()
-  call profiling_out(C_PROFILING_VNLPSI)
+  call profiling_out(prof_vnlpsi)
 end subroutine X(vnlpsi)
 
 
@@ -654,13 +659,13 @@ subroutine X(vnlpsi_batch) (hm, mesh, psib, hpsib, ik)
   type(batch_t),       intent(inout) :: hpsib
   integer,             intent(in)    :: ik
 
-  call profiling_in(C_PROFILING_VNLPSI)
+  call profiling_in(prof_vnlpsi, "VNLPSI")
   call push_sub('hamiltonian_inc.Xvnlpsi_batch')
 
   call X(project_psi_batch)(mesh, hm%ep%proj, hm%ep%natoms, hm%d%dim, psib, hpsib, ik)
 
   call pop_sub()
-  call profiling_out(C_PROFILING_VNLPSI)
+  call profiling_out(prof_vnlpsi)
 end subroutine X(vnlpsi_batch)
 
 
@@ -675,7 +680,7 @@ subroutine X(vlpsi_batch) (hm, m, psib, hpsib, ik)
   integer :: ip, ii, ispin
   R_TYPE, pointer :: psi(:, :), hpsi(:, :)
 
-  call profiling_in(C_PROFILING_VLPSI)
+  call profiling_in(prof_vlpsi, "VLPSI")
   call push_sub('hamiltonian_inc.Xvlpsi_batch')
 
   select case(hm%d%ispin)
@@ -702,7 +707,7 @@ subroutine X(vlpsi_batch) (hm, m, psib, hpsib, ik)
   end select
 
   call pop_sub()
-  call profiling_out(C_PROFILING_VLPSI)
+  call profiling_out(prof_vlpsi)
 end subroutine X(vlpsi_batch)
 
 ! ---------------------------------------------------------
@@ -715,7 +720,7 @@ subroutine X(vexternal) (hm, gr, psi, hpsi, ik)
 
   integer :: idim
 
-  call profiling_in(C_PROFILING_VLPSI)
+  call profiling_in(prof_vlpsi, "VLPSI")
   call push_sub('hamiltonian_inc.Xvlpsi')
 
   do idim = 1, hm%d%dim
@@ -725,7 +730,7 @@ subroutine X(vexternal) (hm, gr, psi, hpsi, ik)
   if(hm%ep%non_local) call X(vnlpsi)(hm, gr%mesh, psi, hpsi, ik)
 
   call pop_sub()
-  call profiling_out(C_PROFILING_VLPSI)
+  call profiling_out(prof_vlpsi)
 end subroutine X(vexternal)
 
 ! ---------------------------------------------------------
@@ -830,7 +835,6 @@ subroutine X(hamiltonian_diagonal) (hm, gr, diag, ik)
 
   call derivatives_lapl_diag(gr%der, ldiag)
 
-! MJV: this is where the MASS enters the kinetic energy.
   do idim = 1, hm%d%dim
     diag(1:gr%mesh%np, idim) = -M_HALF/hm%mass*ldiag(1:gr%mesh%np)
   end do
