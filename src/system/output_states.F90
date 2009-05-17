@@ -181,29 +181,30 @@
     CMPLX, allocatable :: wf(:)
     character(len=80) :: dirname
     type(modelmb_denmat_t) :: denmat
+    type(modelmb_density_t) :: den
 
     call push_sub('system.h_sys_output_modelmb')
 
     impose_exch_symmetry = .true.
 
-    SAFE_ALLOCATE(wf(1:gr%mesh%np_part_global))
-
-    call density_matrix_nullify(denmat)
- 
-    if(iand(outp%what, output_density_matrix).ne.0) then
-      call density_matrix_init(dir, st, denmat)
-    end if
- 
-    if(iand(outp%what, output_density).ne.0) then
-      !call modelmb_density_init ()
-    end if
- 
     ! make sure directory exists
     call loct_mkdir(trim(dir))
     ! all model MB stuff should be in this directory
     dirname = trim(dir)//'/modelmb'
     call loct_mkdir(trim(dirname))
 
+    SAFE_ALLOCATE(wf(1:gr%mesh%np_part_global))
+
+    call modelmb_density_matrix_nullify(denmat)
+    if(iand(outp%what, output_density_matrix).ne.0) then
+      call modelmb_density_matrix_init(dirname, st, denmat)
+    end if
+ 
+    call modelmb_density_nullify(den)
+    if(iand(outp%what, output_density).ne.0) then
+      call modelmb_density_init (dirname, st, den)
+    end if
+ 
     do mm = 1, st%nst
       ! NOTE!!!! do not make this into some preprocessed X() stuff until I am dead and
       ! buried. Thanks - mjv
@@ -214,17 +215,17 @@
       end if
 
       if (impose_exch_symmetry) then
-        call modelmb_sym_state(dir, gr, mm, geo, st%modelMBparticles, wf, symmetries_satisfied)
+        call modelmb_sym_state(dirname, gr, mm, geo, st%modelMBparticles, wf, symmetries_satisfied)
       end if
 
       if(iand(outp%what, output_density_matrix).ne.0 .and. symmetries_satisfied) then
-        call density_matrix_write(gr, st, wf, mm, denmat)
+        call modelmb_density_matrix_write(gr, st, wf, mm, denmat)
       end if
 
       if(      iand(outp%what, output_density).ne.0 .and. &
          .not. iand(outp%what, output_density_matrix).ne.0 .and. &
          symmetries_satisfied) then
-        !call modelmb_density_write(trim(dir), gr, st)
+        call modelmb_density_write(gr, st, wf, mm, den)
       end if
 
       if(iand(outp%what, output_wfs).ne.0 .and. symmetries_satisfied) then
@@ -236,11 +237,11 @@
     SAFE_DEALLOCATE_A(wf)
 
     if(iand(outp%what, output_density_matrix).ne.0) then
-      call density_matrix_end (denmat)
+      call modelmb_density_matrix_end (denmat)
     end if
 
     if(iand(outp%what, output_density).ne.0) then
-      !call modelmb_density_end ()
+      call modelmb_density_end (den)
     end if
  
     call pop_sub()

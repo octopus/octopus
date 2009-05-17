@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-module density_matrix_m
+module modelmb_density_matrix_m
 
   use datasets_m
   use global_m
@@ -43,16 +43,15 @@ module density_matrix_m
 
   private
 
-  public :: density_matrix_write, &
-            density_matrix_init, &
-            density_matrix_end, &
-            density_matrix_nullify, &
+  public :: modelmb_density_matrix_write, &
+            modelmb_density_matrix_init, &
+            modelmb_density_matrix_end, &
+            modelmb_density_matrix_nullify, &
             modelmb_denmat_t
 
   type modelmb_denmat_t
     integer :: ndensmat_to_calculate
     character(len=200) :: dirname
-
     character(80), pointer :: labels_densmat(:)
     integer, pointer :: particle_kept_densmat(:)
     integer, pointer :: nnatorb_prt_densmat(:)
@@ -60,7 +59,7 @@ module density_matrix_m
 
 contains
 
-  subroutine density_matrix_init(dir, st, denmat)
+  subroutine modelmb_density_matrix_init(dir, st, denmat)
 
     implicit none
 
@@ -72,7 +71,7 @@ contains
     integer :: ncols, ipart
     type(block_t) :: blk
 
-    call push_sub('states.density_matrix_init')
+    call push_sub('states.modelmb_density_matrix_init')
 
     !%Variable DensityMatricestoCalc
     !%Type block
@@ -126,20 +125,15 @@ contains
     call loct_parse_block_end(blk)
     ! END reading in of input var block DensityMatricestoCalc
 
-    ! ensure parent directory exists
-    call io_mkdir(dir)
+    denmat%dirname = trim(dir)
 
-    ! This is the root directory where everything will be written.
-    denmat%dirname = trim(dir)//'/density-matrix'
-    call loct_mkdir(trim(denmat%dirname))
-    
     call pop_sub()
 
-  end subroutine density_matrix_init
+  end subroutine modelmb_density_matrix_init
 
 
   ! ---------------------------------------------------------
-  subroutine density_matrix_write(gr, st, wf, mm, denmat)
+  subroutine modelmb_density_matrix_write(gr, st, wf, mm, denmat)
     type(grid_t),     intent(in) :: gr
     type(states_t),   intent(in) :: st
     CMPLX,            intent(in) :: wf(1:gr%mesh%np_part_global)
@@ -160,7 +154,7 @@ contains
     type(modelmb_1part_t) :: mb_1part
     FLOAT, allocatable :: dipole_moment(:)
 
-    call push_sub('states.density_matrix_write')
+    call push_sub('states.modelmb_density_matrix_write')
 
 
     ! The algorithm should consider how many dimensions the wavefunction has (ndims),
@@ -309,31 +303,31 @@ contains
     SAFE_DEALLOCATE_A(dipole_moment)
 
     call pop_sub()
-  end subroutine density_matrix_write
+  end subroutine modelmb_density_matrix_write
   ! ---------------------------------------------------------
 
 
-  subroutine density_matrix_nullify(this)
+  subroutine modelmb_density_matrix_nullify(this)
     type(modelmb_denmat_t), intent(out) :: this
 
-    call push_sub('states.density_matrix_nullify')
+    call push_sub('states.modelmb_density_matrix_nullify')
     nullify(this%labels_densmat)
     nullify(this%particle_kept_densmat)
     nullify(this%nnatorb_prt_densmat)
     call pop_sub()
-  end subroutine density_matrix_nullify
+  end subroutine modelmb_density_matrix_nullify
 
   ! ---------------------------------------------------------
-  subroutine density_matrix_end(this)
+  subroutine modelmb_density_matrix_end(this)
     type(modelmb_denmat_t), intent(inout) :: this
-    call push_sub('states.density_matrix_end')
+    call push_sub('states.modelmb_density_matrix_end')
     SAFE_DEALLOCATE_P(this%labels_densmat)
     SAFE_DEALLOCATE_P(this%particle_kept_densmat)
     SAFE_DEALLOCATE_P(this%nnatorb_prt_densmat)
     call pop_sub()
-  end subroutine density_matrix_end
+  end subroutine modelmb_density_matrix_end
 
-end module density_matrix_m
+end module modelmb_density_matrix_m
 
 
 !! Local Variables:

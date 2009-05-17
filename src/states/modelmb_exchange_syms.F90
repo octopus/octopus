@@ -469,7 +469,8 @@ contains
           SAFE_ALLOCATE(antisymrho_1part(1:mb_1part%npt_1part))
           call zmf_calculate_rho(ikeeppart, mb_1part, npptype, gr%mesh, antisymwf, antisymrho_1part)
           ! FIXME: this will also depend on particle type and idimension
-          write(filename,'(a,i3.3,a,i3.3,a,i3.3,a,i3.3)') 'static/modelmb/asymden_iMB', mm,'_ipar', ikeeppart,'_ndn',nspindown,'_iY',iyoung
+          write(filename,'(a,a,i3.3,a,i3.3,a,i3.3,a,i3.3)') trim(dir),'/asymden_iMB', mm, &
+                '_ipar', ikeeppart,'_ndn',nspindown,'_iY',iyoung
           iunit = io_open(filename,action='write')
           do jj = 1, mb_1part%npt_1part
             call hypercube_i_to_x(mb_1part%hypercube_1part, mb_1part%ndim1part, &
