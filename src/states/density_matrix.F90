@@ -326,7 +326,6 @@ contains
   ! ---------------------------------------------------------
   subroutine density_matrix_end(this)
     type(modelmb_denmat_t), intent(inout) :: this
-
     call push_sub('states.density_matrix_end')
     SAFE_DEALLOCATE_P(this%labels_densmat)
     SAFE_DEALLOCATE_P(this%particle_kept_densmat)
