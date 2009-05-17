@@ -40,3 +40,17 @@ match ; Forces [step  5] ; LINE(td.general/coordinates, -16, 270) ; 8.3743936558
 match ; Forces [step 10] ; LINE(td.general/coordinates, -11, 270) ; 8.293670223027e-02
 match ; Forces [step 15] ; LINE(td.general/coordinates,  -6, 270) ; 8.265179533331e-02
 match ; Forces [step 20] ; LINE(td.general/coordinates,  -1, 270) ; 8.273281492927e-02
+
+Processors : 4
+Input      : 02-aetrs.04-kick.inp
+match ; Energy [step  1] ; LINE(td.general/energy, -21, 30) ; -1.058576638440e+01
+match ; Energy [step  5] ; LINE(td.general/energy, -16, 30) ; -1.043083054862e+01
+match ; Energy [step 10] ; LINE(td.general/energy, -11, 30) ; -1.043081230069e+01
+match ; Energy [step 15] ; LINE(td.general/energy,  -6, 30) ; -1.043080217628e+01
+match ; Energy [step 20] ; LINE(td.general/energy,  -1, 30) ; -1.043079875401e+01
+
+match ; Dipole [step  1] ; LINE(td.general/multipoles, -21, 50) ; -3.968472735486e-13
+match ; Dipole [step  5] ; LINE(td.general/multipoles, -16, 50) ; -7.284562123320e-01
+match ; Dipole [step 10] ; LINE(td.general/multipoles, -11, 50) ; -1.337387978674e+00
+match ; Dipole [step 15] ; LINE(td.general/multipoles,  -6, 50) ; -1.831249400498e+00
+match ; Dipole [step 20] ; LINE(td.general/multipoles,  -1, 50) ; -2.212040451994e+00
