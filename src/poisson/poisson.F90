@@ -64,6 +64,7 @@ module poisson_m
   integer :: poisson_solver = -99
   FLOAT   :: poisson_soft_coulomb_param = M_ONE
   type(mg_solver_t) :: mg
+  logical :: all_nodes_default
 
   type hartree_t
     private
@@ -91,6 +92,21 @@ contains
     case(2); call init_2D()
     case(3); call init_3D()
     end select
+
+#ifdef HAVE_MPI
+    !%Variable ParallelizationPoissonAllNodes
+    !%Type logical
+    !%Default true
+    !%Section Execution::Parallelization
+    !%Description
+    !% When running in parallel, this variable selects whether the
+    !% Poisson solver should divide the work among all nodes or only
+    !% among the parallelization in domains groups.
+    !%End
+
+    call loct_parse_logical(datasets_check('ParallelizationPoissonAllNodes'), .true., all_nodes_default)
+#endif
+
     call messages_print_stress(stdout)
 
     call pop_sub()
@@ -246,6 +262,7 @@ contains
 
       call pop_sub()
     end subroutine init_3D
+
   end subroutine poisson_init
 
 
@@ -297,7 +314,7 @@ contains
     if(present(all_nodes)) then
       all_nodes_value = all_nodes
     else
-      all_nodes_value = .true.
+      all_nodes_value = all_nodes_default
     end if
 
     SAFE_ALLOCATE(aux1(1:gr%mesh%np))
@@ -344,7 +361,7 @@ contains
     if(present(all_nodes)) then
       all_nodes_value = all_nodes
     else
-      all_nodes_value = .true.
+      all_nodes_value = all_nodes_default
     end if
 
     ASSERT(poisson_solver.ne.-99)
