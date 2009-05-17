@@ -211,15 +211,6 @@ contains
       if(clean_stop()) stopping = .true.
       call profiling_in(prof, "TIME_STEP")
 
-      if(td%scissor > M_EPSILON) then
-        do ik = 1, st%d%nik
-          do ist = 1, st%nst
-            gspsi(1:gr%mesh%np, 1:st%d%dim, ist, ik) = &
-                 exp(-M_HALF*M_ZI*td%dt*st%eigenval(ist, ik))*gspsi(1:gr%mesh%np, 1:st%d%dim, ist, ik)
-          end do
-        end do
-      end if
-
       ! time iterate wavefunctions
       select case(td%dynamics)
       case(EHRENFEST)
@@ -240,7 +231,7 @@ contains
       end select
 
       ! mask function?
-      call zvmask(gr, hm, st)
+      if(hm%ab == MASK_ABSORBING) call zvmask(gr, hm, st)
 
       ! update density
       call states_calc_dens(st, gr%mesh%np)
@@ -261,10 +252,10 @@ contains
       if(generate) call hamiltonian_epot_generate(hm, gr, sys%geo, st, time = i*td%dt)
 
       ! update hamiltonian and eigenvalues (fermi is *not* called)
-      call v_ks_calc(gr, sys%ks, hm, st, calc_eigenval=.true.)
+      call v_ks_calc(gr, sys%ks, hm, st, calc_eigenval = .true.)
 
       ! Get the energies.
-      call total_energy(hm, sys%gr, st, -1)
+      call total_energy(hm, sys%gr, st, iunit = -1)
 
       if (td%dynamics == CP) then
         if(states_are_real(st)) then
@@ -301,15 +292,6 @@ contains
 #if !defined(DISABLE_PES)
       call PES_doit(td%PESv, gr%mesh, st, ii, td%dt, hm%ab_pot)
 #endif
-
-      if(td%scissor > M_EPSILON) then
-        do ik = 1, st%d%nik
-          do ist = 1, st%nst
-            gspsi(1:gr%mesh%np, 1:st%d%dim, ist, ik) = &
-                 exp(-M_HALF*M_ZI*td%dt*st%eigenval(ist, ik))*gspsi(1:gr%mesh%np, 1:st%d%dim, ist, ik)
-          end do
-        end do
-      end if
 
       ! write down data
       call check_point()

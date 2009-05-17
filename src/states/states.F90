@@ -271,7 +271,7 @@ contains
     !%End
     call loct_parse_int(datasets_check('StatesBlockSize'), 4, st%d%block_size)
     if(st%d%block_size < 1) then
-      message(1) = "Error: The variable 'EigensolverBlockSize' must be greater than 0."
+      message(1) = "Error: The variable 'StatesBlockSize' must be greater than 0."
       call write_fatal(1)
     end if
     

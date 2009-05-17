@@ -20,18 +20,21 @@
 
 ! ---------------------------------------------------------
 ! calculates the eigenvalues of the real orbitals
-subroutine X(calculate_eigenvalues)(hm, gr, st, t)
+subroutine X(calculate_eigenvalues)(hm, gr, st, time)
   type(hamiltonian_t), intent(inout) :: hm
   type(grid_t) ,       intent(inout) :: gr
   type(states_t),      intent(inout) :: st
-  FLOAT,  optional,    intent(in)    :: t
+  FLOAT,  optional,    intent(in)    :: time
 
-  R_TYPE, allocatable :: Hpsi(:,:)
-  R_TYPE :: e
-  integer :: ik, ist
+  R_TYPE, allocatable :: hpsi(:, :, :)
+  integer :: ik, ist, minst, maxst
+  type(batch_t) :: psib, hpsib
+  type(profile_t), save :: prof
 
   call push_sub('energy_inc.Xcalculate_eigenvalues')
-  SAFE_ALLOCATE(Hpsi(1:gr%mesh%np, 1:st%d%dim))
+  call profiling_in(prof, "EIGENVALUE_CALC")
+
+  SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim, 1:st%d%block_size))
 
   if(gr%sb%open_boundaries.and.calc_mode_is(CM_GS)) then
     ! For open boundaries we know the eigenvalues.
@@ -44,21 +47,36 @@ subroutine X(calculate_eigenvalues)(hm, gr, st, t)
     ! e = <  Psi_C | H_CL H_CC H_CR | Psi_C  >
     !      \ Psi_R | 0    H_RC H_RR | Psi_R /
     ! But I am not sure how to calculate this right now.
+
     do ik = st%d%kpt%start, st%d%kpt%end
-      do ist = st%st_start, st%st_end
-        if(present(t)) then
-          call X(hamiltonian_apply) (hm, gr, st%X(psi)(:, :, ist, ik), hpsi, ist, ik, t)
+      do minst = st%st_start, st%st_end, st%d%block_size
+        maxst = min(st%st_end, minst + st%d%block_size - 1)
+
+        call batch_init(psib, st%d%dim, minst, maxst, st%X(psi)(:, :, minst:, ik))
+        call batch_init(hpsib, st%d%dim, minst, maxst, hpsi)
+
+        if(present(time)) then
+          call X(hamiltonian_apply_batch)(hm, gr, psib, hpsib, ik, time)
         else
-          call X(hamiltonian_apply) (hm, gr, st%X(psi)(:, :, ist, ik), hpsi, ist, ik)
+          call X(hamiltonian_apply_batch)(hm, gr, psib, hpsib, ik)
         end if
-        e = X(mf_dotp)(gr%mesh, st%d%dim, st%X(psi)(:, :, ist, ik), Hpsi)
-        st%eigenval(ist, ik) = R_REAL(e)
+
+        call batch_end(psib)
+        call batch_end(hpsib)
+        
+        do ist = minst, maxst 
+          st%eigenval(ist, ik) = &
+            R_REAL(X(mf_dotp)(gr%mesh, st%d%dim, st%X(psi)(:, :, ist, ik), hpsi(:, :, ist - minst + 1)))
+        end do
+
       end do
     end do
 
   end if
 
-  SAFE_DEALLOCATE_A(Hpsi)
+  SAFE_DEALLOCATE_A(hpsi)
+
+  call profiling_out(prof)
   call pop_sub()
 end subroutine X(calculate_eigenvalues)
 

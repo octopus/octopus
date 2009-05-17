@@ -233,10 +233,13 @@ contains
     logical,      optional, intent(in) :: calc_eigenval
 
     FLOAT :: amaldi_factor
+    type(profile_t), save :: prof
+
     ! The next line is a hack to be able to perform an IP/RPA calculation
     !logical, save :: RPA_first = .true.
 
     call push_sub('v_ks.v_ks_calc')
+    call profiling_in(prof, "KOHN_SHAM_CALC")
 
     ! If the Hxc term is frozen, there is nothing to do, except we 
     ! maybe have to calculat the eigenvalues (and WARNING: MISSING
@@ -319,6 +322,7 @@ contains
       end if
     end if
 
+    call profiling_out(prof)
     call pop_sub()
 
   contains

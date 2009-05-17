@@ -20,6 +20,7 @@
 #include "global.h"
 
 module energy_m
+  use batch_m
   use calc_mode_m
   use datasets_m
   use external_pot_m
@@ -77,7 +78,7 @@ contains
       hm%etot   = hm%ep%eii + hm%eeigen
 
     case(HARTREE)
-      if(st%wfs_type == M_REAL) then
+      if(states_are_real(st)) then
         hm%t0     = delectronic_kinetic_energy(hm, gr, st)
         hm%eext   = delectronic_external_energy(hm, gr, st)
       else
@@ -88,7 +89,7 @@ contains
       hm%etot = hm%ep%eii + M_HALF*(hm%eeigen + hm%t0 + hm%eext)
 
     case(HARTREE_FOCK)
-      if(st%wfs_type == M_REAL) then
+      if(states_are_real(st)) then
         hm%t0     = delectronic_kinetic_energy(hm, gr, st)
         hm%eext   = delectronic_external_energy(hm, gr, st)
       else
@@ -100,7 +101,7 @@ contains
 
     case(KOHN_SHAM_DFT)
       if(full_) then
-        if(st%wfs_type == M_REAL) then
+        if(states_are_real(st)) then
           hm%t0     = delectronic_kinetic_energy(hm, gr, st)
           hm%eext   = delectronic_external_energy(hm, gr, st)
         else
