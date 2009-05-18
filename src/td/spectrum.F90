@@ -1068,7 +1068,12 @@ contains
     end if
 
     ! Around x, we call some GSL sophisticated search algorithm to find the minimum.
+#ifndef SINGLE_PRECISION
     call loct_1dminimize(a, b, x, hsfunction, ierr)
+#else
+    stop "FIXME: can not work in single precision"
+#endif
+
     if(ierr .ne. 0) then
       write(message(1),'(a)') 'Could not find a maximum.'      
       call write_fatal(1)

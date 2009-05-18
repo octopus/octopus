@@ -709,8 +709,8 @@ module tdf_m
   !------------------------------------------------------------
   subroutine tdf_set_numericalr1(f, index, value)
     type(tdf_t), intent(inout) :: f
-    integer, intent(in) :: index
-    FLOAT,       intent(in) :: value
+    integer,     intent(in)    :: index
+    FLOAT,       intent(in)    :: value
     select case(f%mode)
     case(TDF_NUMERICAL)
       f%val(index) = value

@@ -116,7 +116,9 @@ module profiling_m
   end interface
 
   interface profiling_count_operations
-    module procedure iprofiling_count_operations, dprofiling_count_operations
+    module procedure iprofiling_count_operations
+    module procedure rprofiling_count_operations
+    module procedure dprofiling_count_operations
   end interface
 
   integer, parameter, public  ::   &
@@ -446,6 +448,16 @@ contains
 
     prof_vars%current%p%op_count = prof_vars%current%p%op_count + dble(ops)
   end subroutine iprofiling_count_operations
+
+
+  ! ---------------------------------------------------------
+  subroutine rprofiling_count_operations(ops)
+    real(4),         intent(in)    :: ops
+
+    if(.not.in_profiling_mode) return
+
+    prof_vars%current%p%op_count = prof_vars%current%p%op_count + dble(ops)
+  end subroutine rprofiling_count_operations
 
 
   ! ---------------------------------------------------------

@@ -500,8 +500,8 @@ subroutine X(mf_interpolate_points) (ndim, npoints_in, x_in, f_in, npoints_out, 
   end select
 
 #ifdef SINGLE_PRECISION
-  SAFE_DEALLOCATE_P(rx)
-  SAFE_DEALLOCATE_P(ru)
+  SAFE_DEALLOCATE_P(rf_in)
+  SAFE_DEALLOCATE_P(rx_in)
 #endif
 
   call pop_sub()

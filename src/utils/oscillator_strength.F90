@@ -593,7 +593,11 @@ subroutine find_resonance(omega, leftbound, rightbound, nfrequencies)
 
   omega_orig = omega
   omega = min_w
+#ifndef SINGLE_PRECISION
   call loct_1dminimize(min_w - 2*dw, min_w + 2*dw, omega, ft2, ierr)
+#else
+  stop "FIXME: can not work in single precision"
+#endif
   if(ierr.ne.0) then
     write(message(1),'(a)') 'Could not find a maximum.'
     write(message(2),'(a)')

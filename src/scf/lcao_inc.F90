@@ -448,10 +448,12 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
             do jorb = 1, geo%atom(jatom)%spec%niwfs
               jbasis = basis_index(jatom, jorb)
 
-              call MPI_Bcast(hamiltonian(jbasis, ibasis), 1, R_MPITYPE, geo%atoms%node(iatom), geo%atoms%mpi_grp%comm, mpi_err)
+              call MPI_Bcast(hamiltonian(jbasis, ibasis), 1, R_MPITYPE, geo%atoms%node(iatom), &
+                   geo%atoms%mpi_grp%comm, mpi_err)
               hamiltonian(ibasis, jbasis) = R_CONJ(hamiltonian(jbasis, ibasis))
 
-              call MPI_Bcast(overlap(jbasis, ibasis), 1, R_MPITYPE, geo%atoms%node(iatom), geo%atoms%mpi_grp%comm, mpi_err)
+              call MPI_Bcast(overlap(jbasis, ibasis), 1, R_MPITYPE, geo%atoms%node(iatom), &
+                   geo%atoms%mpi_grp%comm, mpi_err)
               overlap(ibasis, jbasis) = R_CONJ(overlap(jbasis, ibasis))
 
             end do

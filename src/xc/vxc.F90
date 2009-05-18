@@ -294,7 +294,7 @@ contains
 
     do ii = 1, 2
       if(functl(ii)%id == XC_GGA_XC_LB) then
-        call XC_F90(gga_lb_set_params)(functl(ii)%conf, &
+        call XC_F90(gga_lb_set_par)(functl(ii)%conf, &
           functl(ii)%LB94_modified, functl(ii)%LB94_threshold, ip, qtot)
       end if
     end do

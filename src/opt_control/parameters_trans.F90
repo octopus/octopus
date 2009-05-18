@@ -71,7 +71,7 @@
   ! ---------------------------------------------------------
   subroutine parameters_get_theta(par, theta)
     type(oct_control_parameters_t), intent(in) :: par
-    REAL_DOUBLE, intent(inout) :: theta(:)
+    FLOAT, intent(inout) :: theta(:)
     theta = par%theta
   end subroutine parameters_get_theta
   ! ---------------------------------------------------------
@@ -80,7 +80,7 @@
   ! ---------------------------------------------------------
   subroutine parameters_set_theta(par, theta)
     type(oct_control_parameters_t), intent(inout) :: par
-    REAL_DOUBLE, intent(in) :: theta(:)
+    FLOAT, intent(in) :: theta(:)
     par%theta = theta
   end subroutine parameters_set_theta
   ! ---------------------------------------------------------

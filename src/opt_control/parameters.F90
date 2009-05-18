@@ -131,7 +131,7 @@ module opt_control_parameters_m
     FLOAT, pointer :: utransf(:, :)  => NULL()
     FLOAT, pointer :: utransfi(:, :) => NULL()
 
-    REAL_DOUBLE, pointer :: theta(:) => NULL()
+    FLOAT, pointer :: theta(:) => NULL()
   end type oct_control_parameters_t
   
   ! the next variable has to be a pointer to avoid a bug in the IBM compiler

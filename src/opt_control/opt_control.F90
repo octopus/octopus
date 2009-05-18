@@ -365,9 +365,9 @@ contains
     ! ---------------------------------------------------------
     subroutine scheme_cg
       integer :: dof, ierr, maxiter
-      REAL_DOUBLE :: step, minvalue
-      REAL_DOUBLE, allocatable :: x(:)
-      FLOAT :: f
+      FLOAT   :: step, minvalue
+      FLOAT, allocatable :: x(:)
+      FLOAT   :: f
       type(states_t) :: psi
       call push_sub('opt_control.scheme_cg')
 
@@ -394,9 +394,13 @@ contains
       step = oct%direct_step * M_PI
       maxiter = oct_iterator_maxiter(iterator) - 1
 
+ #ifndef SINGLE_PRECISION
       ierr = loct_minimize(MINMETHOD_BFGS2, dof, x(1), step, &
            real(oct_iterator_tolerance(iterator), 8), real(oct_iterator_tolerance(iterator), 8), &
            maxiter, opt_control_cg_calc, opt_control_cg_write_info, minvalue)
+#else
+    stop "FIXME: can not work in single precision"
+#endif
 
       if(ierr.ne.0) then
         if(ierr <= 1024) then
@@ -418,8 +422,8 @@ contains
     ! ---------------------------------------------------------
     subroutine scheme_direct
       integer :: ierr, maxiter
-      REAL_DOUBLE :: minvalue, step
-      REAL_DOUBLE, allocatable :: x(:)
+      FLOAT :: minvalue, step
+      FLOAT, allocatable :: x(:)
       FLOAT :: f
       integer :: dim
       type(states_t) :: psi
@@ -454,9 +458,13 @@ contains
       step = oct%direct_step * M_PI
       maxiter = oct_iterator_maxiter(iterator)
 
+#ifndef SINGLE_PRECISION
       ierr = loct_minimize_direct(MINMETHOD_NMSIMPLEX, dim, x(1), step,&
                real(oct_iterator_tolerance(iterator), 8), maxiter, &
                opt_control_direct_calc, opt_control_direct_write_info, minvalue)
+#else
+    stop "FIXME: can not work in single precision"
+#endif
 
       if(ierr.ne.0) then
         if(ierr <= 1024) then
@@ -479,8 +487,8 @@ contains
     subroutine scheme_newuoa
 #if defined(HAVE_NEWUOA)
       integer :: iprint, npt, maxfun, sizeofw, dim
-      REAL_DOUBLE :: rhobeg, rhoend
-      REAL_DOUBLE, allocatable :: x(:), w(:), xl(:), xu(:)
+      FLOAT :: rhobeg, rhoend
+      FLOAT, allocatable :: x(:), w(:), xl(:), xu(:)
       FLOAT :: f
       type(states_t) :: psi
       call push_sub('opt_control.scheme_newuoa')
@@ -736,11 +744,11 @@ contains
 
   ! ---------------------------------------------------------
   subroutine opt_control_cg_calc(n, x, f, getgrad, df)
-    integer,           intent(in)  :: n
-    real(8),           intent(in)  :: x(n)
-    real(8),           intent(out) :: f
-    integer,           intent(in)  :: getgrad
-    real(8), optional, intent(out) :: df(n)
+    integer,         intent(in)  :: n
+    FLOAT,           intent(in)  :: x(n)
+    FLOAT,           intent(out) :: f
+    integer,         intent(in)  :: getgrad
+    FLOAT, optional, intent(out) :: df(n)
 
     integer :: j
     type(oct_control_parameters_t) :: par_new
@@ -825,9 +833,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine opt_control_cg_write_info(iter, n, val, maxdx, maxdf, x)
-    integer,      intent(in) :: iter, n
-    REAL_DOUBLE,  intent(in) :: val, maxdx, maxdf
-    REAL_DOUBLE,  intent(in) :: x(n)
+    integer, intent(in) :: iter, n
+    FLOAT ,  intent(in) :: val, maxdx, maxdf
+    FLOAT,   intent(in) :: x(n)
 
     FLOAT :: fluence, j1, j2, j
 
@@ -859,8 +867,8 @@ contains
   ! ---------------------------------------------------------
   subroutine opt_control_direct_calc(n, x, f)
     integer, intent(in)  :: n
-    REAL_DOUBLE, intent(in)  :: x(n)
-    REAL_DOUBLE, intent(out) :: f
+    FLOAT, intent(in)  :: x(n)
+    FLOAT, intent(out) :: f
 
     FLOAT :: j1, delta
     type(states_t) :: psi
@@ -897,8 +905,8 @@ contains
   ! ---------------------------------------------------------
   subroutine opt_control_direct_write_info(iter, n, val, maxdx, x)
     integer, intent(in) :: iter, n
-    REAL_DOUBLE, intent(in) :: val, maxdx
-    REAL_DOUBLE, intent(in) :: x(n)
+    FLOAT,   intent(in) :: val, maxdx
+    FLOAT,   intent(in) :: x(n)
 
     FLOAT :: fluence, j1, j2, j
 

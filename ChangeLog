@@ -3169,3 +3169,1601 @@
 	* [r5207] src/species/atomic.F90, src/species/ps_psf.F90,
 	  src/td/ob_rti.F90: Fixed some compiler warnings.
 
+2009-04-14 13:12  xavier
+
+	* [r5208] ChangeLog, Makefile.am, PACKAGING, doc/ChangeLog.2001.gz,
+	  doc/ChangeLog.2002.gz, doc/ChangeLog.2003.gz,
+	  doc/ChangeLog.2004.gz, doc/ChangeLog.2005.gz,
+	  doc/ChangeLog.2006.gz, doc/ChangeLog.2007.gz,
+	  doc/ChangeLog.2008.gz, doc/Makefile.am: Added ChangeLog and
+	  PACKAGING files.
+
+2009-04-14 13:32  xavier
+
+	* [r5209] src/opt_control/opt_control.F90, src/scf/scf.F90,
+	  testsuite/optimal_control/01-asym_doublewell.01-ground_state.inp,
+	  testsuite/optimal_control/01-asym_doublewell.02-oct_run.inp,
+	  testsuite/optimal_control/01-asym_doublewell.03-oct_run.inp,
+	  testsuite/optimal_control/02-sym_doublewell.01-ground_state.inp,
+	  testsuite/optimal_control/02-sym_doublewell.02-unocc.inp,
+	  testsuite/optimal_control/02-sym_doublewell.03-oct.inp,
+	  testsuite/optimal_control/03-localtarget.01-gs.inp,
+	  testsuite/optimal_control/03-localtarget.02-oct.inp,
+	  testsuite/optimal_control/03-localtarget.03-gs-mp.inp,
+	  testsuite/optimal_control/03-localtarget.04-oct-mp.inp,
+	  testsuite/optimal_control/04-box.01-ground_state.inp,
+	  testsuite/optimal_control/04-box.02-oct_long.inp,
+	  testsuite/optimal_control/04-box.03-oct_long.inp,
+	  testsuite/optimal_control/04-box.04-oct_long.inp,
+	  testsuite/optimal_control/04-box.05-oct_long.inp,
+	  testsuite/optimal_control/04-box.06-oct_long.inp,
+	  testsuite/optimal_control/04-box.07-oct_long.inp,
+	  testsuite/optimal_control/05-adw.01-ground_state.inp,
+	  testsuite/optimal_control/05-adw.02-filter_fixed.inp,
+	  testsuite/optimal_control/05-adw.03-filter_indirect.inp,
+	  testsuite/optimal_control/06-zbr98.01-ground_state.inp,
+	  testsuite/optimal_control/06-zbr98.02-oct.inp: * Added a warning
+	  about angular momentum and non-local pseudos.
+	  * Put optimal control as DevelVersion (it gives problems with
+	  some
+	  compilers).
+
+2009-04-14 13:45  xavier
+
+	* [r5210] debian/control, debian/rules: Updated the debian scripts.
+
+2009-04-14 13:48  xavier
+
+	* [r5211] configure.ac, debian/changelog: * Changed version to
+	  3.1.0.
+
+2009-04-14 14:37  xavier
+
+	* [r5213] share/Makefile.am: Bugfix: some files in share/ were not
+	  copied to the build directory.
+
+2009-04-14 15:18  marques
+
+	* [r5216] src/basic/distributed.F90, src/basic/loct_inc.F90,
+	  src/basic/mpi_lib_inc.F90, src/basic/multicomm.F90,
+	  src/basic/profiling.F90, src/grid/mesh.F90,
+	  src/grid/mesh_init.F90, src/grid/nl_operator.F90,
+	  src/grid/stencil.F90, src/hamiltonian/epot.F90,
+	  src/hamiltonian/hamiltonian.F90, src/include/global.h,
+	  src/main/casida.F90, src/states/linear_response.F90,
+	  src/states/states.F90, src/td/ob_mem.F90, src/td/ob_rti.F90,
+	  src/td/ob_src.F90, src/td/td_write.F90: Started building a more
+	  comprehensive memory profiling system
+
+2009-04-14 16:01  xavier
+
+	* [r5217] src/include/global.h: Fixes the problem with deallocation
+	  macros.
+
+2009-04-14 17:54  xavier
+
+	* [r5218] src/basic/mpi_lib_inc.F90: Fixes compilation in parallel.
+
+2009-04-14 19:39  xavier
+
+	* [r5219] src/basic/multicomm.F90: Bugfix: xlf returns 1 as number
+	  of threads inside omp master.
+
+2009-04-14 21:53  xavier
+
+	* [r5221] src/basic/multicomm.F90: My last commit was wrong, it was
+	  a problem with libraries.
+
+2009-04-14 22:02  acastro
+
+	* [r5222] src/opt_control/opt_control.F90,
+	  src/opt_control/opt_control_global.F90,
+	  src/opt_control/parameters.F90, src/opt_control/propagation.F90:
+	  Added the usual conjugate gradients method as an optimization
+	  algorithm for QOCT.
+
+2009-04-14 23:36  acastro
+
+	* [r5223] src/hamiltonian/hamiltonian.F90,
+	  src/opt_control/propagation.F90, src/opt_control/target.F90,
+	  src/td/td_rti.F90: QOCT with time-dependent targets was not
+	  working, since I don't know
+	  when. I have put it back to work (I think), although some more
+	  testing
+	  is needed.
+	  
+	  In order to make it work, I added the option of using
+	  Crank-Nicholson
+	  as time propagator, without using the SPARSKIT package to solve
+	  the
+	  linear system -- instead I use the QMR solver. The reason is (1)
+	  that
+	  I was finding this latter option very slow, and (2) it would be
+	  nice
+	  to have Crank-Nicholson without depending on SPARSKIT anyway.
+	  
+	  For open-boundaries calculations (transport), the Crank-Nicholson
+	  with
+	  the QMR solver is used also. It would be nice to unify the two
+	  procedures.
+
+2009-04-15 12:44  mjv500
+
+	* [r5224] src/grid/derivatives.F90, src/states/Makefile.am,
+	  src/states/modelmb_particles.F90, src/states/states.F90,
+	  src/system/output_states.F90, src/system/system.F90: derivatives
+	  now use modelMB structure masses
+
+2009-04-15 12:48  mjv500
+
+	* [r5225] src/states/density_matrix.F90,
+	  src/system/output_states.F90: removed argument for
+	  write_density_matrix
+
+2009-04-15 13:10  marques
+
+	* [r5226] src/grid/basins.F90, src/grid/batch.F90,
+	  src/grid/cube_function_inc.F90, src/grid/curv_modine.F90,
+	  src/grid/curvlinear.F90, src/grid/derivatives.F90,
+	  src/grid/derivatives_inc.F90, src/grid/double_grid.F90,
+	  src/grid/double_grid_apply.F90, src/grid/fourier_space_inc.F90,
+	  src/grid/grid.F90, src/grid/gridhier_inc.F90,
+	  src/grid/hypercube.F90, src/grid/io_function_inc.F90,
+	  src/grid/mesh.F90, src/grid/mesh_function_inc.F90,
+	  src/grid/mesh_init.F90, src/grid/multigrid.F90,
+	  src/grid/nl_operator.F90, src/grid/ob_interface.F90,
+	  src/grid/par_vec.F90, src/grid/par_vec_inc.F90,
+	  src/grid/scalar_mesh.F90, src/grid/stencil_star.F90,
+	  src/grid/stencil_variational.F90, src/grid/submesh.F90,
+	  src/grid/submesh_inc.F90, src/hamiltonian/em_field.F90,
+	  src/hamiltonian/epot.F90, src/hamiltonian/epot_inc.F90,
+	  src/hamiltonian/gauge_field.F90,
+	  src/hamiltonian/hamiltonian_inc.F90,
+	  src/hamiltonian/hgh_projector.F90,
+	  src/hamiltonian/hgh_projector_inc.F90,
+	  src/hamiltonian/kb_projector.F90, src/hamiltonian/lasers.F90,
+	  src/hamiltonian/lasers_inc.F90, src/hamiltonian/ob_lead.F90,
+	  src/hamiltonian/projector.F90, src/hamiltonian/projector_inc.F90,
+	  src/hamiltonian/rkb_projector.F90,
+	  src/hamiltonian/species_pot.F90, src/ions/geometry.F90,
+	  src/ions/ion_dynamics.F90, src/ions/simul_box.F90,
+	  src/ions/symmetries.F90, src/ions/vibrations.F90,
+	  src/ions/xyz_file.F90, src/main/casida.F90,
+	  src/main/casida_inc.F90, src/main/gcm.F90, src/main/geom_opt.F90,
+	  src/main/one_shot.F90, src/main/phonons_fd.F90,
+	  src/main/static_pol.F90, src/main/unocc.F90,
+	  src/main/unocc_inc.F90, src/math/fftw3.F90,
+	  src/math/lalg_adv_lapack.F90, src/math/math.F90,
+	  src/math/math_inc.F90, src/math/ode_solver_inc.F90,
+	  src/math/root_solver.F90, src/math/root_solver_inc.F90,
+	  src/math/solvers_inc.F90, src/math/sparskit_inc.F90,
+	  src/math/splines.F90, src/math/tdfunction.F90,
+	  src/opt_control/filters.F90, src/opt_control/initst.F90,
+	  src/opt_control/iter.F90, src/opt_control/opt_control.F90,
+	  src/opt_control/parameters.F90,
+	  src/opt_control/parameters_trans.F90,
+	  src/opt_control/propagation.F90, src/opt_control/target.F90,
+	  src/poisson/poisson.F90, src/poisson/poisson_cg.F90,
+	  src/poisson/poisson_corrections.F90, src/poisson/poisson_fft.F90,
+	  src/poisson/poisson_isf.F90, src/poisson/poisson_multigrid.F90,
+	  src/poisson/solver_1D.F90, src/poisson/solver_2D.F90,
+	  src/scf/eigen.F90, src/scf/eigen_cg_inc.F90,
+	  src/scf/eigen_evolution_inc.F90, src/scf/eigen_lobpcg_inc.F90,
+	  src/scf/eigen_plan_inc.F90, src/scf/eigen_rmmdiis_inc.F90,
+	  src/scf/lcao.F90, src/scf/lcao_inc.F90,
+	  src/scf/ob_lippmann_schwinger.F90, src/scf/scf.F90,
+	  src/scf/subspace_inc.F90, src/species/atomic.F90,
+	  src/species/logrid.F90, src/species/ps.F90,
+	  src/species/ps_cpi.F90, src/species/ps_cpi_file.F90,
+	  src/species/ps_fhi.F90, src/species/ps_hgh.F90,
+	  src/species/ps_in_grid.F90, src/species/ps_psf.F90,
+	  src/species/ps_psf_file.F90, src/species/ps_upf.F90,
+	  src/species/species.F90, src/states/density_matrix.F90,
+	  src/states/elf.F90, src/states/excited_states.F90,
+	  src/states/excited_states_inc.F90, src/states/ksinversion.F90,
+	  src/states/linear_response_inc.F90, src/states/magnetic.F90,
+	  src/states/mix.F90, src/states/mix_inc.F90,
+	  src/states/modelmb_particles.F90, src/states/ob_green.F90,
+	  src/states/restart.F90, src/states/smear.F90,
+	  src/states/states.F90, src/states/states_block_inc.F90,
+	  src/states/states_calc.F90, src/states/states_calc_inc.F90,
+	  src/states/states_dim.F90, src/states/states_kpoints.F90,
+	  src/sternheimer/em_resp.F90, src/sternheimer/em_resp_calc.F90,
+	  src/sternheimer/em_resp_calc_inc.F90, src/sternheimer/kdotp.F90,
+	  src/sternheimer/phonons_lr.F90, src/sternheimer/sternheimer.F90,
+	  src/sternheimer/sternheimer_inc.F90, src/sternheimer/vdW.F90,
+	  src/system/energy_inc.F90, src/system/exponential.F90,
+	  src/system/exponential_split.F90,
+	  src/system/linear_solver_inc.F90, src/system/output_h.F90,
+	  src/system/output_h_sys.F90,
+	  src/system/output_linear_response.F90,
+	  src/system/output_states.F90, src/system/pert.F90,
+	  src/system/pert_inc.F90, src/system/preconditioners.F90,
+	  src/system/preconditioners_inc.F90, src/system/system.F90,
+	  src/system/v_ks.F90, src/system/xc_KLI_inc.F90,
+	  src/system/xc_OEP.F90, src/system/xc_OEP_SIC_inc.F90,
+	  src/system/xc_OEP_inc.F90, src/system/xc_OEP_kernel_inc.F90,
+	  src/system/xc_OEP_x_inc.F90, src/td/cpmd.F90,
+	  src/td/cpmd_inc.F90, src/td/ob_mem.F90, src/td/ob_rti.F90,
+	  src/td/ob_src.F90, src/td/pes_mask.F90, src/td/pes_rc.F90,
+	  src/td/spectrum.F90, src/td/td.F90, src/td/td_calc.F90,
+	  src/td/td_rti.F90, src/td/td_write.F90, src/utils/broad.F90,
+	  src/utils/dielectric_function.F90,
+	  src/utils/oscillator_strength.F90, src/utils/phonon_spectrum.F90,
+	  src/xc/axc.F90, src/xc/fxc.F90, src/xc/kxc.F90, src/xc/vxc.F90:
+	  Replaced all deallocates by safe versions
+
+2009-04-15 13:18  mjv500
+
+	* [r5227] src/states/modelmb_particles.F90: fixed default modelMB
+	  values
+
+2009-04-15 13:23  marques
+
+	* [r5228] src/system/exponential_split.F90: I hope this fixes the
+	  compilation problem with buildbot
+
+2009-04-15 13:50  marques
+
+	* [r5229] src/system/exponential_split.F90: Forgot this one...
+
+2009-04-15 13:52  marques
+
+	* [r5230] src/basic/profiling.F90, src/basic/string.F90,
+	  src/include/global.h: I have to leave, but Xavier promised to
+	  clean this tuff ;)
+
+2009-04-15 14:17  xavier
+
+	* [r5231] src/td/ob_rti.F90: This should fix compilation with g95.
+
+2009-04-15 14:56  xavier
+
+	* [r5232] src/basic/profiling.F90, src/grid/scalar_mesh.F90,
+	  src/include/global.h: * Now profiling_space is used to call
+	  memory profiling functions.
+	  * Scalar mesh did not use profiling_m.
+
+2009-04-15 15:07  mjv500
+
+	* [r5233] .: make svn ignore bin directory
+
+2009-04-15 15:56  xavier
+
+	* [r5234] src/basic/profiling.F90: Improved the memory profiling
+	  output.
+
+2009-04-15 16:09  xavier
+
+	* [r5235] src/basic/profiling.F90: Added a mode of full memory
+	  profiling.
+
+2009-04-15 16:16  acastro
+
+	* [r5236] src/grid/io_function_inc.F90, src/math/sparskit_inc.F90:
+	  A couple of SAFE_DEALLOCATE issues that prevented compilation.
+
+2009-04-15 16:22  acastro
+
+	* [r5237] src/opt_control/opt_control.F90, src/td/td_rti.F90: Some
+	  more SAFE_DEALLOCATE problems when compiling.
+
+2009-04-15 16:44  acastro
+
+	* [r5238]
+	  testsuite/optimal_control/01-asym_doublewell.01-ground_state.inp,
+	  testsuite/optimal_control/01-asym_doublewell.02-oct_run.inp,
+	  testsuite/optimal_control/01-asym_doublewell.03-oct_run.inp,
+	  testsuite/optimal_control/01-asym_doublewell.test,
+	  testsuite/optimal_control/02-sym_doublewell.03-oct.inp,
+	  testsuite/optimal_control/02-sym_doublewell.test,
+	  testsuite/optimal_control/03-localtarget.01-gs.inp,
+	  testsuite/optimal_control/03-localtarget.02-oct.inp,
+	  testsuite/optimal_control/03-localtarget.04-oct-mp.inp,
+	  testsuite/optimal_control/03-localtarget.test,
+	  testsuite/optimal_control/04-box.02-oct_long.inp,
+	  testsuite/optimal_control/04-box.03-oct_long.inp,
+	  testsuite/optimal_control/04-box.04-oct_long.inp,
+	  testsuite/optimal_control/04-box.05-oct_long.inp,
+	  testsuite/optimal_control/04-box.06-oct_long.inp,
+	  testsuite/optimal_control/04-box.07-oct_long.inp,
+	  testsuite/optimal_control/04-box.test,
+	  testsuite/optimal_control/05-adw.01-ground_state.inp,
+	  testsuite/optimal_control/05-adw.02-filter_fixed.inp,
+	  testsuite/optimal_control/05-adw.03-filter_indirect.inp,
+	  testsuite/optimal_control/05-adw.test,
+	  testsuite/optimal_control/06-zbr98.test: Small modifications to
+	  the QOCT tests input files, so that they run
+	  much faster.
+
+2009-04-15 20:00  xavier
+
+	* [r5239] src/grid/Makefile.am, src/grid/curvilinear.F90,
+	  src/grid/curvlinear.F90, src/grid/derivatives.F90,
+	  src/grid/double_grid.F90, src/grid/grid.F90,
+	  src/grid/gridhier.F90, src/grid/mesh.F90,
+	  src/grid/mesh_function_inc.F90, src/grid/mesh_init.F90,
+	  src/grid/multigrid.F90, src/grid/submesh_inc.F90,
+	  src/hamiltonian/hgh_projector_inc.F90,
+	  src/hamiltonian/kb_projector_inc.F90,
+	  src/hamiltonian/rkb_projector.F90,
+	  src/hamiltonian/species_pot.F90, src/poisson/poisson.F90,
+	  src/poisson/poisson_multigrid.F90, src/states/restart.F90,
+	  src/states/states_block_inc.F90, src/states/states_calc_inc.F90,
+	  src/system/preconditioners.F90: curvlinear -> curvilinear
+
+2009-04-15 20:31  xavier
+
+	* [r5240] src/grid/curv_gygi.F90, src/grid/curvilinear.F90: The
+	  curv_gygi module now copies the atomic coordinates, instead of
+	  using the geometry object at each call.
+
+2009-04-15 21:00  xavier
+
+	* [r5241] src/grid/curv_modine.F90, src/grid/curvilinear.F90,
+	  src/grid/mesh_init.F90, src/hamiltonian/species_pot.F90: Now
+	  curvilinear coordinates only require the geometry at
+	  initialization.
+
+2009-04-16 07:51  xavier
+
+	* [r5242] src/grid/grid.F90, src/grid/mesh.F90,
+	  src/grid/mesh_init.F90, src/grid/multigrid.F90,
+	  src/states/restart.F90: Included a pointer to the curvilinear
+	  coordinates in the mesh.
+
+2009-04-16 09:12  xavier
+
+	* [r5243] src/grid/mesh_init.F90: My last commit broke Compilation
+	  in parallel.
+
+2009-04-16 09:29  marques
+
+	* [r5244] src/basic/profiling.F90, src/grid/curvilinear.F90,
+	  src/grid/mesh.F90, src/grid/nl_operator_inc.F90,
+	  src/grid/submesh.F90, src/hamiltonian/epot_inc.F90,
+	  src/hamiltonian/hamiltonian_inc.F90,
+	  src/hamiltonian/projector_inc.F90,
+	  src/hamiltonian/species_pot.F90, src/ions/geometry.F90,
+	  src/math/splines.F90, src/scf/lcao_inc.F90,
+	  src/species/logrid.F90, src/species/ps_psf.F90,
+	  src/species/species.F90, src/states/mix_inc.F90,
+	  src/states/states_calc_inc.F90: Many, many allocates were
+	  missing. I caught a lot of them, by using the carbon atom test. I
+	  will run other tests now, and try to sort out the rest of the
+	  allocates...
+
+2009-04-16 10:33  marques
+
+	* [r5245] src/basic/mpi.F90, src/grid/grid.F90,
+	  src/ions/geometry.F90, src/ions/simul_box.F90,
+	  src/math/splines.F90, src/states/states.F90: Removed all
+	  assignment(=) from octopus. Overloading operators is a very bad
+	  thing to do, as it makes impossible to grep where the assignments
+	  are made. This can lead to bugs that are extraordinarely hard to
+	  find. In any case, we do not really use the assignments. Call the
+	  _copy routine explicitly from now on, please.
+
+2009-04-16 10:43  xavier
+
+	* [r5246] src/grid/io_function_inc.F90, src/grid/mesh.F90,
+	  src/grid/mesh_init.F90, src/poisson/solver_1D.F90,
+	  src/poisson/solver_2D.F90: Defined the mesh_x_global function,
+	  that will replace mesh%x_global.
+
+2009-04-16 11:02  marques
+
+	* [r5247] src/species/ps.F90, src/species/ps_hgh.F90: Another
+	  couple of variables that were not deallocated.
+	  I introduced a GOTO statement in octopus ;) I hope you don't kill
+	  me. Actually I do think we can use them in cases as this: there
+	  was if(something) dealloc a couple o stuff; pop_sub; exit, which
+	  is again very prone to errors. I replaced it by a goto 999, where
+	  999 is before the final deallocs of the routine. This is, I
+	  thinkl, but cleaner, and therefore I give green light that it
+	  becomes common practice in octopus...
+
+2009-04-16 13:04  nitsche
+
+	* [r5248]
+	  testsuite/open_systems/01-wavepacket.01-deriv_order_1.inp,
+	  testsuite/open_systems/01-wavepacket.02-deriv_order_4.inp,
+	  testsuite/open_systems/01-wavepacket.test,
+	  testsuite/open_systems/02-wavepacket_2d.01-full_q.inp,
+	  testsuite/open_systems/02-wavepacket_2d.test,
+	  testsuite/open_systems/03-extended_eigenstate.01-square_well_1d.inp,
+	  testsuite/open_systems/03-extended_eigenstate.02-ring_leads_2d.inp,
+	  testsuite/open_systems/03-extended_eigenstate.test,
+	  testsuite/open_systems/04-propagate_eigenstate.01-square_well_1d.inp,
+	  testsuite/open_systems/04-propagate_eigenstate.test: * enabled
+	  the open boundary tests (MPI is not working due to changes for
+	  version 3.1.0)
+	  
+	  Is there a way to disable the tests just for MPI? Now it will
+	  just stop with an error message.
+	  I am trying hard to parallelize the transport mode (gs + td) in
+	  k-points...
+
+2009-04-16 13:15  xavier
+
+	* [r5249] src/grid/mesh_function_inc.F90: Now interpolate functions
+	  do not require mesh%x_global (they create a
+	  local copy).
+
+2009-04-16 14:40  xavier
+
+	* [r5250] src/grid/mesh.F90: Now mesh_x_global calculates the value
+	  instead of using mesh%x_global.
+
+2009-04-16 15:19  xavier
+
+	* [r5251] src/grid/mesh.F90, src/grid/mesh_init.F90: Removed
+	  mesh::x_global.
+
+2009-04-16 16:42  xavier
+
+	* [r5252] src/grid/mesh.F90: I had forgotten to remove the x_global
+	  component of mesh.
+
+2009-04-16 16:44  acastro
+
+	* [r5253] src/basic/distributed.F90, src/basic/multicomm.F90,
+	  src/hamiltonian/epot.F90, src/hamiltonian/hamiltonian.F90,
+	  src/ions/geometry.F90, src/ions/simul_box.F90, src/main/run.F90,
+	  src/states/states.F90, src/states/states_dim.F90: Added default
+	  initialization to NULL() of the pointers included in
+	  several data types. This allows calling "associated(x)" without
+	  crashing.
+	  
+	  In the way, I found one copy of a geometry type variable through
+	  the
+	  previously overloaded "=", which should be done now with
+	  "geometry_copy". This caused
+	  open_systems/03-extended_eigenstate.test
+	  to fail in my machine; now it still fails, but due to something
+	  else.
+
+2009-04-17 09:39  xavier
+
+	* [r5254] src/basic/profiling.F90, src/include/global.h: The memory
+	  profiling now also prints the size of the allocation.
+
+2009-04-17 11:06  xavier
+
+	* [r5255] configure.ac, src/basic/profiling.F90,
+	  src/include/global.h, src/system/exponential_split.F90: The size
+	  of allocations is now correctly calculated thanks to the
+	  sizeof intrinsic. Since sizeof is not standard Fortran I included
+	  a
+	  autoconf macro to detect it (all the compilers I have tried
+	  support
+	  it, though).
+
+2009-04-17 11:11  xavier
+
+	* [r5256] m4/fc_sizeof.m4: I forgot a file.
+
+2009-04-17 12:56  marques
+
+	* [r5257] libxc/ChangeLog, libxc/Makefile.am, libxc/configure.ac,
+	  libxc/m4/acx.m4, libxc/m4/fcflags.m4, libxc/src/Makefile.am,
+	  libxc/src/functionals.c, libxc/src/get_funcs.pl, libxc/src/gga.c,
+	  libxc/src/gga_c_am05.c, libxc/src/gga_c_lm.c,
+	  libxc/src/gga_c_lyp.c, libxc/src/gga_c_p86.c,
+	  libxc/src/gga_c_pbe.c, libxc/src/gga_c_pw91.c,
+	  libxc/src/gga_perdew.c, libxc/src/gga_x_2d_b86_mgc.c,
+	  libxc/src/gga_x_am05.c, libxc/src/gga_x_b86.c,
+	  libxc/src/gga_x_b86_mgc.c, libxc/src/gga_x_b88.c,
+	  libxc/src/gga_x_bayesian.c, libxc/src/gga_x_dk87.c,
+	  libxc/src/gga_x_ft97.c, libxc/src/gga_x_g96.c,
+	  libxc/src/gga_x_lg93.c, libxc/src/gga_x_mpbe.c,
+	  libxc/src/gga_x_optx.c, libxc/src/gga_x_pbe.c,
+	  libxc/src/gga_x_pbea.c, libxc/src/gga_x_pw86.c,
+	  libxc/src/gga_x_pw91.c, libxc/src/gga_x_rpbe.c,
+	  libxc/src/gga_x_wc.c, libxc/src/gga_xc_1w.c,
+	  libxc/src/gga_xc_b97.c, libxc/src/gga_xc_edf1.c,
+	  libxc/src/gga_xc_lb.c, libxc/src/gga_xc_xlyp.c,
+	  libxc/src/hyb_gga.c, libxc/src/hyb_gga_xc_b1wc.c,
+	  libxc/src/hyb_gga_xc_b3lyp.c, libxc/src/hyb_gga_xc_b97.c,
+	  libxc/src/hyb_gga_xc_o3lyp.c, libxc/src/hyb_gga_xc_pbeh.c,
+	  libxc/src/lca.c, libxc/src/lca_lch.c, libxc/src/lca_omc.c,
+	  libxc/src/lda.c, libxc/src/lda_c_1d_csc.c,
+	  libxc/src/lda_c_2d_amgb.c, libxc/src/lda_c_2d_prm.c,
+	  libxc/src/lda_c_hl.c, libxc/src/lda_c_pw.c, libxc/src/lda_c_pz.c,
+	  libxc/src/lda_c_rpa.c, libxc/src/lda_c_vwn.c,
+	  libxc/src/lda_c_wigner.c, libxc/src/lda_c_xalpha.c,
+	  libxc/src/lda_x.c, libxc/src/lda_x_2d.c,
+	  libxc/src/lda_xc_teter93.c, libxc/src/libxc_master.F90,
+	  libxc/src/mgga.c, libxc/src/mgga_c_tpss.c,
+	  libxc/src/mgga_x_lta.c, libxc/src/mgga_x_m06l.c,
+	  libxc/src/mgga_x_tau_hcth.c, libxc/src/mgga_x_tpss.c,
+	  libxc/src/mgga_xc_vsxc.c, libxc/src/mix_func.c,
+	  libxc/src/special_functions.c, libxc/src/string_f.h,
+	  libxc/src/test.c, libxc/src/util.c, libxc/src/util.h,
+	  libxc/src/work_gga_becke.c, libxc/src/work_gga_x.c,
+	  libxc/src/work_gga_x_2d.c, libxc/src/work_lda.c,
+	  libxc/src/work_mgga_c.c, libxc/src/work_mgga_x.c, libxc/src/xc.h,
+	  libxc/src/xc_f.c, libxc/src/xc_s.h, libxc/testsuite/Makefile.am,
+	  libxc/testsuite/xc-consistency.c, libxc/testsuite/xc-get_data.c,
+	  libxc/testsuite/xc-reference.pl,
+	  libxc/testsuite/xc-run_testsuite: Changed the license with the
+	  script that Tobias sent. Thanks Tobias.
+
+2009-04-17 13:16  xavier
+
+	* [r5258] src/include/global.h: The sizeof intrinsic gives problems
+	  with some compilers, so I will
+	  disable its use while I find a way to fix it.
+
+2009-04-17 14:02  xavier
+
+	* [r5259] src/scf/eigen.F90, src/scf/eigen_rmmdiis.F90,
+	  src/scf/eigen_rmmdiis_inc.F90: Now the DIIS eigensolver does a
+	  steepest descent reduction in the
+	  first step.
+
+2009-04-17 14:30  xavier
+
+	* [r5260] src/scf/eigen_rmmdiis_inc.F90: The steepest descent steps
+	  in DIIS are now preconditioned.
+
+2009-04-17 15:39  xavier
+
+	* [r5261] src/scf/eigen.F90, src/scf/eigen_rmmdiis_inc.F90: Fixed
+	  some errors in the DIIS start iteration.
+
+2009-04-17 17:24  xavier
+
+	* [r5262] src/scf/eigen.F90, src/scf/eigen_rmmdiis_inc.F90:
+	  Reorganized a bit the diis code.
+
+2009-04-17 17:53  xavier
+
+	* [r5263] src/scf/eigen_rmmdiis_inc.F90: More improvements to the
+	  diis code, now I removed the re-calculation of
+	  the residual.
+
+2009-04-17 18:58  xavier
+
+	* [r5264] src/scf/eigen.F90, src/scf/eigen_rmmdiis_inc.F90: Added
+	  preconditioning to the rmmdiis eigensolver.
+
+2009-04-17 23:43  xavier
+
+	* [r5265] testsuite/finite_systems_3d/10-fullerene.01-gs.inp,
+	  testsuite/finite_systems_3d/10-fullerene.test,
+	  testsuite/finite_systems_3d/Makefile.am: The diis eigensolver
+	  appears to be working, so I added a test for it:
+	  a fullerene molecule.
+
+2009-04-18 00:13  xavier
+
+	* [r5266] src/basic/calc_mode.F90, src/scf/eigen_rmmdiis_inc.F90: *
+	  Reenabled parallelization in k points for all modes and
+	  parallelization in states for the ground state.
+
+2009-04-18 07:19  xavier
+
+	* [r5267] testsuite/finite_systems_3d/Makefile.am: Removed
+	  whitespaces after a backslash.
+
+2009-04-18 14:25  xavier
+
+	* [r5268] src/scf/eigen_rmmdiis_inc.F90: * The calculation of
+	  lambda in the diis solver was not correct.
+	  * Reorganized the code for the first iteration of diis.
+
+2009-04-18 15:07  xavier
+
+	* [r5269] src/scf/eigen_rmmdiis_inc.F90: * Now the diis eigensolver
+	  also preconditions the calculation of lambda.
+	  * Added the restriction to value of lambda.
+
+2009-04-18 16:26  acastro
+
+	* [r5270] src/math/oct_gsl_min_f.c, src/opt_control/iter.F90,
+	  src/opt_control/opt_control.F90,
+	  src/opt_control/opt_control_global.F90: Improved the output of
+	  the iteration information in QOCT runs.
+	  
+	  Added a double check for the computation of the gradient of the
+	  QOCT
+	  merit functional.
+
+2009-04-18 16:48  xavier
+
+	* [r5271] src/scf/eigen.F90: Updated the description for the
+	  rmmdiis eigensolver.
+
+2009-04-18 22:51  nitsche
+
+	* [r5272] src/grid/ob_interface.F90, src/hamiltonian/ob_lead.F90,
+	  src/scf/ob_lippmann_schwinger.F90, src/states/ob_green.F90,
+	  src/td/ob_mem.F90: * changed some static arrays to allocatables
+	  * replaced some lalg_copy calls
+
+2009-04-18 23:24  nitsche
+
+	* [r5273] src/system/output_h_sys.F90: * extended h_sys_output_all
+	  to handle k-point parallelization
+
+2009-04-19 05:29  xavier
+
+	* [r5274] src/grid/batch.F90, src/grid/batch_inc.F90,
+	  src/grid/mesh_function_inc.F90, src/scf/eigen_rmmdiis_inc.F90:
+	  Optimization:
+	  * The batch object now stores a copy of the contiguous array it
+	  is
+	  available.
+	  * Blas gemm is used by mf_dotp_batch if possible.
+
+2009-04-19 06:03  xavier
+
+	* [r5275] src/states/states_block_inc.F90: Now states_blockt_mul
+	  initializes the batchs as contiguous if it is
+	  possible.
+
+2009-04-19 09:52  acastro
+
+	* [r5276] src/opt_control/iter.F90,
+	  src/opt_control/opt_control.F90: I learn from the buildbot that
+	  xlf does not like my style of
+	  quotations in the format definitions. I think this change should
+	  make
+	  them legal.
+
+2009-04-19 12:04  acastro
+
+	* [r5277] src/hamiltonian/hamiltonian_inc.F90,
+	  src/hamiltonian/lasers.F90, src/hamiltonian/lasers_inc.F90: A
+	  solution for some weird compiler error (ifort 10.0 in opteron
+	  machines).
+
+2009-04-19 12:39  acastro
+
+	* [r5278] src/opt_control/initst.F90: There was another case of
+	  copying states_t variables being copied
+	  through the overloaded "=", which no longer exists.
+
+2009-04-19 17:12  xavier
+
+	* [r5279] src/grid/mesh_function_inc.F90,
+	  src/scf/eigen_rmmdiis_inc.F90: * Added more profiling regions to
+	  the Xmf_dotp_batch function.
+	  * Added progress bar output to the first iteration of diis.
+
+2009-04-19 18:11  xavier
+
+	* [r5280] src/grid/batch_inc.F90, src/scf/eigen_rmmdiis_inc.F90:
+	  The hamiltonian in the rmmdiis eigensolver is now applied by
+	  blocks.
+
+2009-04-19 19:03  xavier
+
+	* [r5281] src/system/preconditioners.F90,
+	  src/system/preconditioners_inc.F90: Added
+	  preconditioner_apply_batch function.
+
+2009-04-19 20:34  acastro
+
+	* [r5282] src/opt_control/target.F90,
+	  testsuite/optimal_control/03-localtarget.test: A couple of little
+	  numerical bugs that made however a big difference
+	  in some QOCT results.
+
+2009-04-19 22:09  xavier
+
+	* [r5283] src/scf/eigen_rmmdiis_inc.F90: More operations done by
+	  blocks.
+
+2009-04-19 22:29  xavier
+
+	* [r5284] src/scf/eigen_rmmdiis_inc.F90: More operations by blocks.
+
+2009-04-20 07:17  xavier
+
+	* [r5285] src/grid/mesh_function_inc.F90,
+	  src/scf/eigen_rmmdiis_inc.F90: More changes to the rmmdiis
+	  solver:
+	  * Deallocations were missing.
+	  * Some reductions are now done by blocks.
+
+2009-04-20 09:58  xavier
+
+	* [r5286] src/scf/eigen_rmmdiis_inc.F90: The case when the
+	  diagonalization fails is now handled properly.
+
+2009-04-20 09:58  xavier
+
+	* [r5287] src/opt_control/opt_control.F90: Fixed the compilation
+	  with xlf.
+
+2009-04-20 10:03  xavier
+
+	* [r5288] src/scf/eigen_rmmdiis_inc.F90: Some deallocations were
+	  missing.
+
+2009-04-20 11:55  mjv500
+
+	* [r5289] src/grid/derivatives.F90,
+	  src/states/modelmb_particles.F90, src/states/states.F90,
+	  src/system/output_h_sys.F90, src/system/output_states.F90:
+	  cleaned modelMB init copy end
+
+2009-04-20 15:35  nitsche
+
+	* [r5290] src/ions/simul_box.F90, src/scf/ground_state.F90,
+	  src/states/restart.F90, src/states/states.F90, src/td/ob_rti.F90,
+	  testsuite/open_systems/01-wavepacket.01-deriv_order_1.inp,
+	  testsuite/open_systems/01-wavepacket.02-deriv_order_4.inp,
+	  testsuite/open_systems/01-wavepacket.test,
+	  testsuite/open_systems/02-wavepacket_2d.01-full_q.inp,
+	  testsuite/open_systems/02-wavepacket_2d.test,
+	  testsuite/open_systems/03-extended_eigenstate.01-square_well_1d.inp,
+	  testsuite/open_systems/03-extended_eigenstate.02-ring_leads_2d.inp,
+	  testsuite/open_systems/03-extended_eigenstate.test,
+	  testsuite/open_systems/04-propagate_eigenstate.01-square_well_1d.inp,
+	  testsuite/open_systems/04-propagate_eigenstate.02-ring_leads_2d.inp,
+	  testsuite/open_systems/04-propagate_eigenstate.test,
+	  testsuite/open_systems/Makefile.am: * fixed a memory leak
+	  * fixed open boundary mode to run with k-point parallelization
+	  * updated corresponding tests, added a full transport test
+
+2009-04-20 15:50  nitsche
+
+	* [r5291] src/states/states.F90: * some cleanup of my last commit
+
+2009-04-20 17:31  mjv500
+
+	* [r5292] src/grid/derivatives.F90: stray debug lines
+
+2009-04-20 22:33  acastro
+
+	* [r5293] src/grid/io_function_inc.F90, src/states/restart_inc.F90:
+	  When reading a function from file, if the reading fails, the
+	  array
+	  that should contain the function becomes undefined since it is
+	  passes
+	  as intent(out). I think it should be intent(inout) so that if the
+	  reading is not succesfull, the array does not change.
+
+2009-04-20 22:34  xavier
+
+	* [r5294] src/states/states.F90: The call to modelmb_particles_end
+	  causes a segmentation fault, I don't
+	  know how to fix it so I commented the line.
+
+2009-04-20 23:04  xavier
+
+	* [r5295] src/hamiltonian/hamiltonian_inc.F90,
+	  src/hamiltonian/projector.F90, src/hamiltonian/projector_inc.F90:
+	  Added the project_psi_batch function.
+
+2009-04-20 23:39  acastro
+
+	* [r5296] src/opt_control/propagation.F90: Yet another states_t
+	  variable was being copied with "=" instead of
+	  with states_copy, creating the usual trouble.
+
+2009-04-21 07:52  marques
+
+	* [r5297] libxc/testsuite/Makefile.am, src/basic/calc_mode.F90,
+	  src/grid/io_function.F90, src/grid/mesh_function_inc.F90,
+	  src/grid/mesh_init.F90, src/hamiltonian/hamiltonian_inc.F90,
+	  src/ions/simul_box.F90, src/main/Makefile.am, src/main/main.F90,
+	  src/main/run.F90, src/states/mix.F90, src/states/restart.F90,
+	  src/system/output_h.F90: I implemented the inversion of the
+	  Kohn-Sham equations (static). It seems to work in simple cases,
+	  but the iterative procedure does lack stability, and fails to
+	  converge for more complicated densities...
+
+2009-04-21 12:49  xavier
+
+	* [r5298] src/hamiltonian/projector_inc.F90: Optimization of the
+	  application of the projector in blocks.
+
+2009-04-21 13:07  marques
+
+	* [r5299] src/main/invert_ks.F90: The missing file.
+
+2009-04-21 13:38  xavier
+
+	* [r5300] src/hamiltonian/projector_inc.F90: My last commit broke
+	  compliation in parallel.
+
+2009-04-21 16:39  acastro
+
+	* [r5301] src/hamiltonian/projector_inc.F90,
+	  src/opt_control/opt_control.F90,
+	  testsuite/optimal_control/04-box.08-oct_long.inp,
+	  testsuite/optimal_control/04-box.test,
+	  testsuite/optimal_control/Makefile.am: o Added a test for the
+	  newly added conjugate gradients QOCT scheme.
+	  
+	  o A few lines were too long in projector_inc.F90.
+
+2009-04-21 17:08  xavier
+
+	* [r5302] src/grid/derivatives.F90, src/grid/derivatives_inc.F90,
+	  src/system/preconditioners_inc.F90: Now the filter preconditioner
+	  acts by blocks.
+
+2009-04-21 17:21  xavier
+
+	* [r5303]
+	  testsuite/finite_systems_3d/20-eigensolver.06-rmmdiis.inp,
+	  testsuite/finite_systems_3d/20-eigensolver.test: Updated the
+	  results for the diis eigensolver.
+
+2009-04-21 18:06  mjv500
+
+	* [r5304] src/grid/mesh.F90, src/grid/mesh_init.F90,
+	  src/states/modelmb_particles.F90, src/states/states.F90: debug
+	  hypercube mesh%x generation
+
+2009-04-21 18:17  mjv500
+
+	* [r5305] src/states/modelmb_particles.F90, src/system/system.F90:
+	  mass copying routine
+
+2009-04-21 19:40  xavier
+
+	* [r5306] src/basic/distributed.F90, src/basic/multicomm.F90,
+	  src/hamiltonian/epot.F90, src/hamiltonian/hamiltonian.F90,
+	  src/main/run.F90, src/states/states.F90,
+	  src/states/states_dim.F90: The segmentation fault in gfortran
+	  seemed to be a compiler problem*,
+	  removing the initializations to null, that Alberto introduced the
+	  other day, avoids it.
+	  
+	  * I am not sure if this is actually a problem or it is a side
+	  effect
+	  of variables being declared save.
+
+2009-04-21 21:29  acastro
+
+	* [r5307] testsuite/optimal_control/03-localtarget.03-gs-mp.inp,
+	  testsuite/optimal_control/03-localtarget.03-tdoct.inp,
+	  testsuite/optimal_control/03-localtarget.04-gs-mp.inp,
+	  testsuite/optimal_control/03-localtarget.04-oct-mp.inp,
+	  testsuite/optimal_control/03-localtarget.05-oct-mp.inp,
+	  testsuite/optimal_control/03-localtarget.test,
+	  testsuite/optimal_control/Makefile.am: Added a test for QOCT with
+	  time-dependent targets.
+
+2009-04-21 23:27  acastro
+
+	* [r5308] src/hamiltonian/hamiltonian.F90,
+	  src/hamiltonian/hamiltonian_inc.F90,
+	  src/opt_control/opt_control.F90, src/opt_control/propagation.F90,
+	  src/opt_control/target.F90, src/td/td_rti.F90: A number of
+	  bugs/problems that prevented QOCT with interacting
+	  electrons to work.
+
+2009-04-21 23:37  dstrubbe
+
+	* [r5309] src/sternheimer/em_resp.F90: Added reference since I
+	  found the equations I was using in the literature.
+
+2009-04-22 10:34  marques
+
+	* [r5310] m4/fc_sizeof.m4, src/basic/distributed.F90,
+	  src/basic/messages.F90, src/basic/multicomm.F90,
+	  src/basic/profiling.F90, src/common-rules.make,
+	  src/grid/basins.F90, src/include/global.h, src/math/fftw3.F90,
+	  src/math/lalg_adv.F90, src/math/lalg_adv_lapack.F90,
+	  src/math/math.F90, src/math/math_inc.F90,
+	  src/math/ode_solver_inc.F90, src/math/root_solver.F90,
+	  src/math/root_solver_inc.F90, src/math/solvers_inc.F90,
+	  src/math/splines.F90, src/math/tdfunction.F90: I have now
+	  replaced our old ALLOCATE macro by a SAFE_ALLOCATE that now uses
+	  the sizeof intrinsic of fortran to check the size of the
+	  variables. A little detail that everyone should remember now is
+	  that one should write
+	  
+	  SAFE_ALLOCATE(var(1:n))
+	  
+	  i.e., never forget the "1:" or fortran will not be able to check
+	  the ize of the array. More commits will follow shortly ;)
+
+2009-04-22 11:03  marques
+
+	* [r5311] src/common-rules.make, src/include/global.h: I hope this
+	  solves the compilatin issues.
+
+2009-04-22 11:05  marques
+
+	* [r5312] src/include/global.h, src/ions/xyz_file.F90,
+	  src/species/atomic.F90, src/species/logrid.F90,
+	  src/species/ps.F90, src/species/ps_cpi.F90,
+	  src/species/ps_cpi_file.F90, src/species/ps_fhi.F90,
+	  src/species/ps_hgh.F90, src/species/ps_in_grid.F90,
+	  src/species/ps_psf.F90, src/species/ps_psf_file.F90,
+	  src/species/ps_upf.F90, src/species/species.F90: Some more
+	  ALLOCATE -> SAFE_ALLOCATE
+
+2009-04-22 12:14  marques
+
+	* [r5313] src/include/global.h: There was a backslash missing,
+	  preventing compilation
+
+2009-04-22 14:10  marques
+
+	* [r5314] src/grid/basins.F90, src/grid/batch.F90,
+	  src/grid/cube_function_inc.F90, src/grid/curv_gygi.F90,
+	  src/grid/curv_modine.F90, src/grid/curvilinear.F90,
+	  src/grid/derivatives.F90, src/grid/derivatives_inc.F90,
+	  src/grid/double_grid.F90, src/grid/double_grid_apply.F90,
+	  src/grid/fourier_space_inc.F90, src/grid/grid.F90,
+	  src/grid/gridhier_inc.F90, src/grid/hypercube.F90,
+	  src/grid/io_function_inc.F90, src/grid/mesh_function_inc.F90,
+	  src/grid/mesh_init.F90, src/grid/multigrid.F90,
+	  src/grid/nl_operator.F90, src/grid/nl_operator_inc.F90,
+	  src/grid/ob_interface.F90, src/grid/scalar_mesh.F90,
+	  src/grid/stencil.F90, src/grid/stencil_star.F90,
+	  src/grid/stencil_variational.F90, src/grid/submesh.F90,
+	  src/hamiltonian/epot.F90, src/hamiltonian/epot_inc.F90,
+	  src/hamiltonian/gauge_field.F90, src/hamiltonian/hamiltonian.F90,
+	  src/hamiltonian/hamiltonian_inc.F90,
+	  src/hamiltonian/hgh_projector.F90,
+	  src/hamiltonian/hgh_projector_inc.F90,
+	  src/hamiltonian/kb_projector.F90, src/hamiltonian/lasers.F90,
+	  src/hamiltonian/lasers_inc.F90, src/hamiltonian/ob_lead.F90,
+	  src/hamiltonian/projector.F90, src/hamiltonian/projector_inc.F90,
+	  src/hamiltonian/rkb_projector.F90,
+	  src/hamiltonian/species_pot.F90, src/include/global.h,
+	  src/ions/crystal.F90, src/ions/geometry.F90,
+	  src/ions/ion_dynamics.F90, src/ions/simul_box.F90,
+	  src/ions/symmetries.F90, src/ions/vibrations.F90,
+	  src/poisson/poisson.F90, src/poisson/poisson_cg.F90,
+	  src/poisson/poisson_corrections.F90, src/poisson/poisson_fft.F90,
+	  src/poisson/poisson_isf.F90, src/poisson/poisson_multigrid.F90,
+	  src/poisson/solver_3D.F90, src/states/Makefile.am,
+	  src/states/density_matrix.F90, src/states/elf.F90,
+	  src/states/excited_states.F90, src/states/excited_states_inc.F90,
+	  src/states/ksinversion.F90, src/states/linear_response.F90,
+	  src/states/linear_response_inc.F90, src/states/magnetic.F90,
+	  src/states/mix.F90, src/states/mix_inc.F90,
+	  src/states/modelmb_particles.F90, src/states/ob_green.F90,
+	  src/states/restart.F90, src/states/smear.F90,
+	  src/states/states.F90, src/states/states_block.F90,
+	  src/states/states_block_inc.F90, src/states/states_calc.F90,
+	  src/states/states_calc_inc.F90, src/states/states_dim.F90,
+	  src/states/states_kpoints.F90, src/system/energy_inc.F90,
+	  src/system/exponential.F90, src/system/exponential_split.F90,
+	  src/system/linear_solver_inc.F90, src/system/output_h.F90,
+	  src/system/output_h_sys.F90,
+	  src/system/output_linear_response.F90,
+	  src/system/output_states.F90, src/system/pert.F90,
+	  src/system/pert_inc.F90, src/system/preconditioners.F90,
+	  src/system/preconditioners_inc.F90, src/system/system.F90,
+	  src/system/v_ks.F90, src/system/xc_KLI_inc.F90,
+	  src/system/xc_OEP.F90, src/system/xc_OEP_SIC_inc.F90,
+	  src/system/xc_OEP_inc.F90, src/system/xc_OEP_kernel_inc.F90,
+	  src/system/xc_OEP_x_inc.F90, src/xc/axc.F90, src/xc/fxc.F90,
+	  src/xc/kxc.F90, src/xc/vxc.F90: Many more ALLOCATE ->
+	  SAFE_ALLOCATE
+
+2009-04-22 15:55  marques
+
+	* [r5315] src/opt_control/filters.F90, src/scf/eigen.F90,
+	  src/scf/eigen_cg_inc.F90, src/scf/eigen_evolution_inc.F90,
+	  src/scf/eigen_lobpcg_inc.F90, src/scf/eigen_mg_inc.F90,
+	  src/scf/eigen_plan_inc.F90, src/scf/eigen_rmmdiis_inc.F90,
+	  src/scf/lcao.F90, src/scf/lcao_inc.F90,
+	  src/scf/ob_lippmann_schwinger.F90, src/scf/scf.F90,
+	  src/scf/subspace_inc.F90, src/td/cpmd.F90, src/td/cpmd_inc.F90,
+	  src/td/ob_mem.F90, src/td/ob_rti.F90, src/td/ob_src.F90,
+	  src/td/pes_mask.F90, src/td/pes_rc.F90, src/td/spectrum.F90,
+	  src/td/td.F90, src/td/td_calc.F90, src/td/td_rti.F90,
+	  src/td/td_write.F90: And many more ALLOCATE -> SAFE_ALLOCATE
+
+2009-04-22 16:28  mjv500
+
+	* [r5316] src/td/spectrum.F90: bad parentheses
+
+2009-04-22 16:30  mjv500
+
+	* [r5317] src/states/modelmb_particles.F90, src/system/energy.F90:
+	  correct copy of pointers and spacing format
+
+2009-04-23 03:12  acastro
+
+	* [r5318] src/hamiltonian/hamiltonian.F90,
+	  src/hamiltonian/hamiltonian_inc.F90,
+	  src/opt_control/opt_control.F90, src/opt_control/propagation.F90,
+	  src/opt_control/target.F90,
+	  testsuite/optimal_control/07-qoct+tddft.01-ground_state.inp,
+	  testsuite/optimal_control/07-qoct+tddft.02-oct.inp,
+	  testsuite/optimal_control/07-qoct+tddft.test,
+	  testsuite/optimal_control/Makefile.am: Enabled the option of
+	  doing QOCT with interacting electrons. Added a
+	  test for a two-electron 2D case. I had to correct a few bugs here
+	  and
+	  there, and add the xc kernel to the definition of the QOCT
+	  exchange-like operator.
+
+2009-04-23 10:15  xavier
+
+	* [r5319] src/include/global.h: Fixes a problem with compilers
+	  where sizeof does not work on
+	  non-allocated arrays.
+
+2009-04-23 15:29  marques
+
+	* [r5320] src/basic/messages.F90, src/basic/mpi_lib_inc.F90,
+	  src/basic/multicomm.F90, src/basic/profiling.F90,
+	  src/grid/mesh_init.F90, src/grid/par_vec.F90,
+	  src/grid/par_vec_inc.F90, src/grid/submesh_inc.F90,
+	  src/hamiltonian/hamiltonian.F90, src/include/global.h,
+	  src/main/casida.F90, src/main/casida_inc.F90, src/main/gcm.F90,
+	  src/main/geom_opt.F90, src/main/invert_ks.F90,
+	  src/main/one_shot.F90, src/main/phonons_fd.F90,
+	  src/main/static_pol.F90, src/main/unocc.F90,
+	  src/main/unocc_inc.F90, src/opt_control/initst.F90,
+	  src/opt_control/iter.F90, src/opt_control/opt_control.F90,
+	  src/opt_control/parameters.F90,
+	  src/opt_control/parameters_trans.F90,
+	  src/opt_control/propagation.F90, src/opt_control/target.F90,
+	  src/poisson/solver_1D.F90, src/poisson/solver_2D.F90,
+	  src/states/modelmb_particles.F90, src/sternheimer/em_resp.F90,
+	  src/sternheimer/em_resp_calc.F90,
+	  src/sternheimer/em_resp_calc_inc.F90, src/sternheimer/kdotp.F90,
+	  src/sternheimer/kdotp_calc.F90, src/sternheimer/phonons_lr.F90,
+	  src/sternheimer/sternheimer.F90,
+	  src/sternheimer/sternheimer_inc.F90, src/sternheimer/vdW.F90,
+	  src/utils/broad.F90, src/utils/cross_section.F90,
+	  src/utils/dielectric_function.F90,
+	  src/utils/oscillator_strength.F90, src/utils/phonon_spectrum.F90:
+	  Memory profiling is now much nicer. It can give you a summary of
+	  the memory that was allocated/dellocated, and the largest
+	  variables ever allocated by the code. Xavier, can you please now
+	  try to solve the issues with xlf?
+
+2009-04-23 15:41  xavier
+
+	* [r5321] src/basic/profiling.F90: Fixed compilation issue in
+	  Miguel's commit.
+
+2009-04-23 15:59  nitsche
+
+	* [r5322] src/grid/grid.F90, src/hamiltonian/ob_lead.F90,
+	  src/scf/ob_lippmann_schwinger.F90, src/td/ob_mem.F90,
+	  src/td/ob_rti.F90: * Fixed memory leak in open boundaries.
+	  * Fixed output in lippmann-schwinger cycle (in parallel).
+	  * Fixed the issue of not be able to continue the calculation of
+	  the memory coefficients. Now it uses less memory and is probably
+	  faster. Saved coefficients with previous versions will not work
+	  anymore.
+	  * Changed some DEALLOCATE to SAFE_DEALLOCATE
+	  * The td-run of the open boundaries now decides on its own what
+	  solver it uses for the propagation. With a time-dependent
+	  magnetic field in the central region the propagation switches to
+	  Bi-CG as the QRM_sym is not suitable in this case (not yet the
+	  best option, but the only one the does not suffer from
+	  breakdowns).
+
+2009-04-23 16:02  nitsche
+
+	* [r5323] testsuite/open_systems/04-propagate_eigenstate.test: *
+	  some outputs changed slightly due to the new calculation of the
+	  memory coefficients
+
+2009-04-23 16:10  xavier
+
+	* [r5324] src/grid/submesh.F90, src/grid/submesh_inc.F90,
+	  src/hamiltonian/epot.F90, src/hamiltonian/projector.F90,
+	  src/hamiltonian/projector_inc.F90: Removed the option of
+	  performing asynchronously the reduction of the
+	  pseudopotentials. This was much slower that the current scheme
+	  and
+	  consumed a considerable amount of memory.
+
+2009-04-23 16:20  xavier
+
+	* [r5325] src/basic/profiling.F90: More compilation issues due to
+	  privacy of some types.
+
+2009-04-23 16:53  xavier
+
+	* [r5326] src/basic/profiling.F90: Converted output of memory
+	  profiling to megabytes.
+
+2009-04-23 18:23  acastro
+
+	* [r5327] src/math/sparskit_inc.F90: Attempting to compile with
+	  sparskit failed because of some ALLOCATEs.
+
+2009-04-23 19:19  acastro
+
+	* [r5328] src/states/modelmb_particles.F90, src/states/states.F90:
+	  You won't believe this, but the modelmb segfault was back, at
+	  least I
+	  get it in the finite_systems_1d/09-morse.test and in the
+	  optimal_control/01-asym_doublewell.test.
+	  
+	  I added a modelMB_particles_null routine, which is be called from
+	  states_null. That way one is sure that the pointers point to
+	  null, and
+	  not to god knows what. This seems to solve the bug. Still,
+	  states_null
+	  is not perfect, since other derived data types within the
+	  states_t
+	  structure don't have the corresponding *_null routines.
+	  
+	  I don't know if we should add *_null routines everywhere for all
+	  data
+	  types, and make sure that they are called for every variable.
+	  This
+	  would be the only way to make sure that we can kill all pointers
+	  safely (no matter if our deallocate routine is now called
+	  "SAFE").
+	  
+	  The "=> NULL()" feature, if it works properly, would solve the
+	  issue
+	  more elegantly. And even better, I think, would be to use
+	  "allocatable" arrays for derived data types, but you all voted
+	  against
+	  it.
+
+2009-04-23 21:47  nitsche
+
+	* [r5329] src/scf/ob_lippmann_schwinger.F90: * fix of the issue
+	  tobias found within the lippmann-schwinger gs-run
+
+2009-04-24 07:16  nitsche
+
+	* [r5330] src/scf/ground_state.F90,
+	  src/scf/ob_lippmann_schwinger.F90,
+	  testsuite/open_systems/04-propagate_eigenstate.test: * fixed a
+	  bug in initializing the wavefunctions for the lippmann-schwinger
+	  calculation - this fixes the convergence and therefore the
+	  warning that the scf is not converged (during lippmann-schwinger
+	  cycle)
+	  * fixed some more np <--> np_part, due to that the results
+	  changed a bit and I adapted one test
+
+2009-04-24 08:40  acastro
+
+	* [r5331] src/hamiltonian/hamiltonian_inc.F90,
+	  src/scf/eigen_cg_inc.F90, src/system/preconditioners_inc.F90:
+	  Fixed a bug caused by use of non-initialized variables, related
+	  to an
+	  "intent(out)".
+
+2009-04-24 12:15  marques
+
+	* [r5332] perl/Makefile.am, perl/oct-analyze_projections,
+	  perl/oct-analyze_projections.pl, perl/oct-check-deallocs,
+	  perl/oct-vdW_c6, perl/oct-vdW_c6.pl: *) Added a little perl
+	  script to check thinks that are nor deallocated after running
+	  with full memory profiling
+	  *) Now perl scripts use /usr/bin/env perl to run. This should be
+	  quite portable.
+
+2009-04-24 12:43  marques
+
+	* [r5333] perl/oct-check-deallocs, perl/oct-check_deallocs: Sorry,
+	  wrong filename
+
+2009-04-24 13:43  marques
+
+	* [r5334] src/basic/command_line.F90, src/basic/ialist.F90,
+	  src/basic/iihash.F90, src/ions/simul_box.F90,
+	  src/main/casida.F90, src/math/tdfunction.F90,
+	  src/states/states.F90, src/states/states_dim.F90,
+	  src/td/ob_src.F90, src/utils/oscillator_strength.F90: Some small
+	  leftovers from the ALLOCATE stuff
+
+2009-04-24 14:43  xavier
+
+	* [r5335] src/ions/simul_box.F90: Xlf has problems with one
+	  allocation, so it is done directly.
+
+2009-04-24 15:45  acastro
+
+	* [r5336] src/math/lalg_adv.F90, src/system/exponential.F90,
+	  testsuite/finite_systems_1d/09-morse.test,
+	  testsuite/finite_systems_2d/05-spin_precession.test,
+	  testsuite/finite_systems_2d/06-tdmagnetic.test,
+	  testsuite/optimal_control/02-sym_doublewell.test,
+	  testsuite/optimal_control/03-localtarget.05-oct-mp.inp,
+	  testsuite/optimal_control/03-localtarget.test,
+	  testsuite/optimal_control/04-box.02-oct_long.inp,
+	  testsuite/optimal_control/04-box.03-oct_long.inp,
+	  testsuite/optimal_control/04-box.04-oct_long.inp,
+	  testsuite/optimal_control/04-box.05-oct_long.inp,
+	  testsuite/optimal_control/04-box.06-oct_long.inp,
+	  testsuite/optimal_control/04-box.07-oct_long.inp,
+	  testsuite/optimal_control/04-box.08-oct_long.inp,
+	  testsuite/optimal_control/04-box.test,
+	  testsuite/optimal_control/05-adw.02-filter_fixed.inp,
+	  testsuite/optimal_control/05-adw.03-filter_indirect.inp,
+	  testsuite/optimal_control/06-zbr98.test,
+	  testsuite/optimal_control/07-qoct+tddft.02-oct.inp: There was a
+	  bug in the the computation of the zlalg_exp; the
+	  computation of the exponential of a matrix for complex hermitian
+	  matrices was wrong. Because of this, the lanczos method was not
+	  done
+	  correctly. This has happened since we got rid of the expokit
+	  library
+	  (around seven months ago). Fortunately, the results were not too
+	  compromised because the final computation was done by calling
+	  zlalg_exp with the non-hermitian flag. However, the stop
+	  criterion was
+	  not computed correctly, and as a result we could have too many or
+	  too
+	  few iterations.
+	  
+	  The results of some tests changed a little bit (very small
+	  changes
+	  usually), and I changed slightly some of them.
+
+2009-04-24 16:28  acastro
+
+	* [r5337] testsuite/optimal_control/07-qoct+tddft.02-oct.inp,
+	  testsuite/optimal_control/07-qoct+tddft.test: Changed a little
+	  this test, which seemed to give slightly different
+	  numbers with different compilers.
+
+2009-04-26 07:40  nitsche
+
+	* [r5338] src/states/states.F90: * initialized pointers in
+	  states.F90 related to open boundaries to null, that fixes
+	  (hopefully) the failing of deallocation in some cases of ob_green
+	  in td-mode where it is not used
+
+2009-04-26 08:24  nitsche
+
+	* [r5339] src/states/states.F90: * next try: removed the null
+	  initialization, added nullify of the open boundary pointers to
+	  states_null
+
+2009-04-26 08:31  acastro
+
+	* [r5340] src/hamiltonian/hamiltonian.F90: One test (in the OCT
+	  section) was producing rather different results
+	  depending on the machine, and one of the reasons seems to be the
+	  lack
+	  of initialization to zero of this variable.
+
+2009-04-26 17:55  xavier
+
+	* [r5341] configure.ac: Changed version to 3.2.0pre1.
+
+2009-04-26 19:37  xavier
+
+	* [r5342] src/basic/Makefile.am: Some dependencies were missing.
+
+2009-04-26 19:53  xavier
+
+	* [r5343] src/scf/lcao.F90, src/scf/lcao_inc.F90: Included an
+	  alternative implementation of LCAO.
+
+2009-04-27 08:14  xavier
+
+	* [r5344] src/grid/submesh.F90, src/grid/submesh_inc.F90,
+	  src/hamiltonian/species_pot.F90, src/scf/lcao.F90,
+	  src/scf/lcao_inc.F90, src/species/species.F90: Part of the atomic
+	  orbitals are only calculated in a spherical grid
+	  around the atom.
+
+2009-04-27 08:43  xavier
+
+	* [r5345] src/grid/submesh_inc.F90,
+	  src/hamiltonian/species_pot.F90, src/scf/lcao_inc.F90,
+	  src/species/species.F90: All orbitals are now calculated in the
+	  submesh (integrals are still
+	  done in the full mesh, though).
+
+2009-04-27 09:30  micael
+
+	* [r5346] configure.ac, m4/etsf_io.m4, src/common-rules.make,
+	  src/grid/io_function.F90, src/grid/io_function_inc.F90,
+	  src/system/Makefile.am, src/system/output_etsf.F90,
+	  src/system/output_h_sys.F90: Implemented basic support for the
+	  ETSF file format. This is done using the ETSF_IO library. Note
+	  that this is still experimental and limited to finite systems.
+	  
+	  As a bonus, we can now use v_sim to plot some of the output
+	  produced by octopus.
+
+2009-04-27 13:44  xavier
+
+	* [r5347] src/scf/lcao_inc.F90: Now the submeshes for the
+	  alternative LCAO are initialized once for
+	  all orbitals.
+
+2009-04-27 14:08  acastro
+
+	* [r5348] src/opt_control/target.F90: Yet another case in which a
+	  states_t variable was copied with the "="
+	  sign, instead of with states_copy.
+
+2009-04-27 15:13  xavier
+
+	* [r5349] src/scf/lcao_inc.F90: Atomic orbitals are now also
+	  precalculated.
+
+2009-04-27 15:54  xavier
+
+	* [r5350] src/grid/submesh.F90, src/grid/submesh_inc.F90,
+	  src/scf/lcao_inc.F90: The matrix elements for LCAO are calculated
+	  in the spherical grid.
+
+2009-04-27 17:12  xavier
+
+	* [r5351] src/scf/lcao_inc.F90: Matrix elements of orbitals that do
+	  not overlap are not calculated.
+
+2009-04-27 18:31  acastro
+
+	* [r5352]
+	  testsuite/optimal_control/07-qoct+tddft.01-ground_state.inp,
+	  testsuite/optimal_control/07-qoct+tddft.02-oct.inp: This test was
+	  producing different results on different machines due to
+	  its bad design (it used a state of a degenerate set, and this
+	  could be
+	  different on each run).
+
+2009-04-27 18:36  acastro
+
+	* [r5353] testsuite/optimal_control/07-qoct+tddft.test: Sorry, I
+	  forgot to change the value of the test check in the previous
+	  commit.
+
+2009-04-28 13:17  acastro
+
+	* [r5354] src/math/lalg_adv.F90, src/opt_control/check_input.F90,
+	  src/opt_control/opt_control.F90, src/system/exponential.F90: Now
+	  the time propagation with an inhomogeneous Schrodinger equation
+	  can be also done using the exponential midpoint rule together
+	  with the
+	  Lanczos expansion. Before, one could only use the Crank-Nicholson
+	  method.
+
+2009-04-28 13:28  xavier
+
+	* [r5355] src/sternheimer/em_resp.F90: Now when the frequency is
+	  zero the sternheimer equation only for one sign
+	  is calculated.
+
+2009-04-28 16:26  xavier
+
+	* [r5356] src/sternheimer/em_resp.F90,
+	  src/sternheimer/em_resp_calc.F90,
+	  src/sternheimer/em_resp_calc_inc.F90: I am reimplementing the
+	  2n+1 theorem expression in a more general and
+	  cleaner way. This is the first step.
+
+2009-04-30 00:57  acastro
+
+	* [r5357] src/grid/mesh.F90: The open system tests (at least
+	  open_systems/01-wavepacket.test and
+	  open_systems/03-extended_eigenstate.test) were failing in my
+	  machine
+	  because of this little error (that affects only runs with reduced
+	  dimensionality)
+
+2009-05-01 19:23  mjv500
+
+	* [r5358] src/grid/io_function_inc.F90,
+	  src/grid/mesh_function_inc.F90, src/ions/geometry.F90,
+	  src/ions/xyz_file.F90, src/states/Makefile.am,
+	  src/states/density_matrix.F90,
+	  src/states/modelmb_exchange_syms.F90,
+	  src/states/modelmb_particles.F90, src/system/output_h_sys.F90,
+	  src/system/output_states.F90: MB state sym checking and
+	  antisymmetrization
+
+2009-05-05 19:12  mjv500
+
+	* [r5359] src/grid/mesh.F90, src/math/Makefile.am,
+	  src/states/density_matrix.F90,
+	  src/states/modelmb_exchange_syms.F90: antisymmetrization starts
+	  for MB wf
+
+2009-05-05 19:45  mjv500
+
+	* [r5360] src/math/permutations.F90: forgot permutations.F90
+
+2009-05-05 19:55  helbig
+
+	* [r5361] src/main/invert_ks.F90, src/states/density_matrix.F90,
+	  src/states/modelmb_exchange_syms.F90,
+	  src/states/modelmb_particles.F90: some ks inversion plus bug
+	  fixes from MJV
+
+2009-05-06 13:19  nitsche
+
+	* [r5362] src/ions/simul_box.F90: * fixed a bug in
+	  simul_box_init_from_file when using more than one node with mpi
+	  (changed read to iopar_read)
+
+2009-05-06 16:54  mjv500
+
+	* [r5363] src/grid/hypercube.F90, src/grid/mesh_function.F90,
+	  src/grid/mesh_function_inc.F90, src/main/invert_ks.F90,
+	  src/states/density_matrix.F90,
+	  src/states/modelmb_exchange_syms.F90,
+	  src/states/modelmb_particles.F90, src/states/states.F90:
+	  symmetrize mb states to s2 eigenfunctions, with Young tableaux
+
+2009-05-06 17:30  mjv500
+
+	* [r5364] src/grid/Makefile.am, src/grid/mesh_function.F90,
+	  src/states/density_matrix.F90,
+	  src/states/modelmb_exchange_syms.F90,
+	  src/states/modelmb_particles.F90: dependencies for modelmb_1part
+	  datastructure
+
+2009-05-06 17:31  mjv500
+
+	* [r5365] src/grid/modelmb_1part.F90: creation of modelmb_1part
+	  datastructure
+
+2009-05-06 17:35  helbig
+
+	* [r5366] src/states/modelmb_exchange_syms.F90: undeclared variable
+	  now declared
+
+2009-05-07 09:42  nitsche
+
+	* [r5367] src/td/ob_mem.F90: * bugfix: a non-found file should not
+	  be closed (ob_mem.read_coeffs)
+
+2009-05-07 10:59  xavier
+
+	* [r5368] src/scf/eigen_rmmdiis_inc.F90,
+	  src/sternheimer/em_resp_calc_inc.F90: Some deallocations missing.
+
+2009-05-07 16:40  mjv500
+
+	* [r5369] src/math/Makefile.am, src/math/young.F90,
+	  src/states/modelmb_exchange_syms.F90: added Young diagrams
+
+2009-05-07 16:44  mjv500
+
+	* [r5370] src/states/modelmb_exchange_syms.F90: limit output volume
+	  for states projected out
+
+2009-05-07 16:59  helbig
+
+	* [r5371] src/states/modelmb_exchange_syms.F90: bug fixes in
+	  modelmb
+
+2009-05-08 09:18  acastro
+
+	* [r5372] src/hamiltonian/hamiltonian.F90,
+	  src/hamiltonian/hamiltonian_inc.F90,
+	  src/opt_control/check_input.F90, src/opt_control/target.F90,
+	  src/system/exponential.F90, src/td/td_rti.F90,
+	  testsuite/optimal_control/07-qoct+tddft.02-oct.inp,
+	  testsuite/optimal_control/07-qoct+tddft.test: OCT with
+	  interacting electrons was not working for more than two
+	  electrons (only one orbital). Now it is, although it is rather
+	  slow. In order to make it work, I had to change the way in which
+	  the
+	  propagation is performed (I introduced a new propagation scheme).
+
+2009-05-08 23:30  xavier
+
+	* [r5373] src/main/invert_ks.F90: Flush is not always available.
+
+2009-05-09 13:08  xavier
+
+	* [r5374] src/grid/submesh_inc.F90, src/scf/lcao_inc.F90: The
+	  alternative LCAO implementation now works with domain
+	  parallelization.
+
+2009-05-09 22:20  xavier
+
+	* [r5375] src/system/energy_inc.F90: An allgathering of eigenvalues
+	  is missing, I will put a warning for
+	  the moment.
+
+2009-05-09 22:35  xavier
+
+	* [r5376] src/scf/lcao_inc.F90: The alternative LCAO implementation
+	  is now parallel in atoms (states).
+
+2009-05-12 16:26  xavier
+
+	* [r5377] src/scf/eigen_rmmdiis_inc.F90: The first iteration of
+	  diis is also done by blocks.
+
+2009-05-13 09:02  marques
+
+	* [r5378] src/hamiltonian/scf_tol.F90,
+	  src/system/linear_solver.F90: Added two new ways of changinf the
+	  convergence during the lr scf process, linearly and
+	  exponentially. For the h2o example, it turns out that the
+	  exponential is the fastest, followed by the adaptative, constant,
+	  and the linear.
+
+2009-05-13 10:33  marques
+
+	* [r5379] src/hamiltonian/scf_tol.F90,
+	  src/sternheimer/sternheimer.F90,
+	  src/sternheimer/sternheimer_inc.F90,
+	  src/system/linear_solver.F90, src/system/linear_solver_inc.F90,
+	  src/system/xc_OEP_inc.F90: Some cleaning of the way the scf_tol
+	  was used
+
+2009-05-13 10:54  marques
+
+	* [r5380] libxc/src/gga_c_pbe.c, libxc/src/gga_x_pbe.c: Added a
+	  couple of reparametrizations of the PBE by the group of Klaus
+	  Capelle. Note that all the other combinations present in the
+	  paper can be obatined by combining the already existing exchanges
+	  and correlations of PBE and PBE_SOL. For example: GCGX =
+	  x_PBE_SOL + c_PBE
+
+2009-05-13 11:13  marques
+
+	* [r5381] perl/Makefile.am: perl scripts were not included in the
+	  distribution, which made make fail
+
+2009-05-13 11:25  nitsche
+
+	* [r5382] src/grid/ob_interface.F90, src/math/solvers_inc.F90,
+	  src/scf/ob_lippmann_schwinger.F90, src/states/ob_green.F90,
+	  src/states/states.F90, src/system/output_h_sys.F90,
+	  src/td/ob_rti.F90, src/td/td_rti.F90,
+	  testsuite/open_systems/04-propagate_eigenstate.test: * replaced
+	  some lalg routines in the qmr-solver, surface green function and
+	  lippmann-schwinger gs (for speedups)
+	  * a lot of code cleaning for open boundaries
+	  * changed convergence test of the surface green function
+	  * Now the symmetric qmr-solver is always used within the
+	  propagation of open boundary scheme. In the cases where the
+	  operator is not complex symmetric (vector potential present) the
+	  operator is symmetrized: A.x=b --> (A^T).A.x=(A^T).b
+	  * Due to the changes some values in the test-suite changed as
+	  well
+	  * some preparations and changes for a magnetic field (or vector
+	  potential) present in the ground state (not working yet)
+
+2009-05-13 13:19  acastro
+
+	* [r5383] src/hamiltonian/lasers_inc.F90,
+	  src/opt_control/propagation.F90, src/system/output_etsf.F90: o
+	  Removed some unnecessary use of pointers in the lasers module,
+	  which
+	  was causing internal compiler errors when compiling with intel. I
+	  think the code is "safer" this way.
+	  
+	  o There was one parenthesis too many in a couple of places in
+	  output_etsf.F90
+
+2009-05-13 18:08  xavier
+
+	* [r5384] src/sternheimer/em_resp_calc_inc.F90: Optimized a bit the
+	  calculation of the hyperpolarizability.
+
+2009-05-13 18:38  xavier
+
+	* [r5385] src/sternheimer/em_resp_calc.F90,
+	  src/sternheimer/em_resp_calc_inc.F90: More matrix elements in the
+	  calculation of beta are precomputed.
+
+2009-05-13 21:50  xavier
+
+	* [r5386] src/grid/derivatives.F90: For non-curvilinear coordinates
+	  Derivative weights are now generated using the stencil.
+
+2009-05-13 22:38  xavier
+
+	* [r5387] src/grid/derivatives_inc.F90, src/grid/mesh.F90,
+	  src/grid/nl_operator.F90, src/ions/simul_box.F90: For zero bc now
+	  the nl_operator uses a single boundary point.
+
+2009-05-14 07:40  xavier
+
+	* [r5388] src/grid/derivatives_inc.F90, src/grid/nl_operator.F90:
+	  Using one point for the boundaries actually increases the number
+	  of
+	  in-grid stencils, it is possible to reduce it by playing a bit
+	  with
+	  boundary points in the nl_operator.
+

@@ -233,10 +233,10 @@ contains
       select case(functl%id)
       case(XC_LDA_C_1D_CSC)
         call loct_parse_float(datasets_check('lda_c_1d_csc_bb'), M_ONE, alpha)
-        call XC_F90(lda_c_1d_csc_set_params)(functl%conf, alpha)
+        call XC_F90(lda_c_1d_csc_set_par)(functl%conf, alpha)
 
       case(XC_LDA_C_2D_PRM)
-        call XC_F90(lda_c_2d_prm_set_params)(functl%conf, nel)
+        call XC_F90(lda_c_2d_prm_set_par)(functl%conf, nel)
       end select
 
     case(XC_FAMILY_GGA)

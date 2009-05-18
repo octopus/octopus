@@ -87,26 +87,26 @@ module h_sys_output_m
   end type h_sys_output_t
 
   integer, parameter, public ::               &
-    output_potential      =     1,    &
-    output_density        =     2,    &
-    output_wfs            =     4,    &
-    output_wfs_sqmod      =     8,    &
-    output_geometry       =    16,    &
-    output_current        =    32,    &
-    output_ELF            =    64,    &
-    output_ELF_basins     =   128,    &
-    output_ELF_FS         =   256,    &
-    output_Bader          =   512,    &
-    output_el_pressure    =  1024,    &
-    output_ksdipole       =  2048,    &
-    output_pol_density    =  4096,    &
-    output_r              =  8192,    &
-    output_ked            = 16384,    &
-    output_j_flow         = 32768,    &
-    output_dos            = 65536,    &
-    output_tpa            =131072,    &
-    output_density_matrix =262144,    &
-    output_modelmb        =524288
+    output_potential      =      1,    &
+    output_density        =      2,    &
+    output_wfs            =      4,    &
+    output_wfs_sqmod      =      8,    &
+    output_geometry       =     16,    &
+    output_current        =     32,    &
+    output_ELF            =     64,    &
+    output_ELF_basins     =    128,    &
+    output_ELF_FS         =    256,    &
+    output_Bader          =    512,    &
+    output_el_pressure    =   1024,    &
+    output_ksdipole       =   2048,    &
+    output_pol_density    =   4096,    &
+    output_r              =   8192,    &
+    output_ked            =  16384,    &
+    output_j_flow         =  32768,    &
+    output_dos            =  65536,    &
+    output_tpa            = 131072,    &
+    output_density_matrix = 262144,    &
+    output_modelmb        = 524288
 
 contains
 

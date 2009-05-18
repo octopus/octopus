@@ -230,6 +230,7 @@ module loct_math_m
       end interface
       integer, intent(inout) :: status
     end subroutine oct_1dminimize
+    module procedure oct_ran_gaussian4
   end interface
 
   interface loct_minimize
