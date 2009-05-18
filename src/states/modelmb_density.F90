@@ -38,6 +38,7 @@ module modelmb_density_m
   use modelmb_1part_m
   use mpi_m
   use mpi_lib_m
+  use par_vec_m
   use profiling_m
   use states_m
 
