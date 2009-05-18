@@ -399,7 +399,10 @@ contains
     FLOAT,                  intent(in) :: dt
     integer,                intent(in) :: i
 
+    type(profile_t), save :: prof
+
     call push_sub('td_write.td_write_iter')
+    call profiling_in(prof, "TD_WRITE_ITER")
 
     if(w%out(OUT_MULTIPOLES)%write) &
       call td_write_multipole(w%out(OUT_MULTIPOLES)%handle, gr, geo, st, w%lmax, kick, i)
@@ -438,6 +441,7 @@ contains
     if(w%out(OUT_GAUGE_FIELD)%write) &
       call td_write_gauge_field(w%out(OUT_GAUGE_FIELD)%handle, hm, gr, i)
 
+    call profiling_out(prof)
     call pop_sub()
   end subroutine td_write_iter
 
@@ -454,8 +458,10 @@ contains
 
     character(len=256) :: filename
     integer :: iout
+    type(profile_t), save :: prof
 
     call push_sub('td.td_write_data')
+    call profiling_in(prof, "TD_WRITE_DATA")
 
     if(mpi_grp_is_root(mpi_world)) then
       do iout = 1, OUT_MAX
@@ -469,6 +475,7 @@ contains
 
     call h_sys_output_all(outp, gr, geo, st, hm, filename)
 
+    call profiling_out(prof)
     call pop_sub()
   end subroutine td_write_data
 
