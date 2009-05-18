@@ -567,7 +567,7 @@ contains
     
     call push_sub('derivatives_inc.Xset_bc.multires')
 
-    order = 3
+    order = der%mesh%sb%mr_iorder !interpolation order
     
     nn = 2*order
 
@@ -605,6 +605,10 @@ contains
       end if
       
     end do
+
+    SAFE_DEALLOCATE_A(ww)
+    SAFE_DEALLOCATE_A(pos)
+    SAFE_DEALLOCATE_A(posi)
 
     call pop_sub()
   end subroutine multires

@@ -90,7 +90,8 @@ module simul_box_m
     type(c_ptr)   :: image    ! for the box defined through an image
     character(len=1024) :: user_def ! for the user-defined box
 
-    FLOAT :: inner_size
+    FLOAT :: inner_size   ! high resolution area
+    integer :: mr_iorder  ! interpolation order
 
     FLOAT :: rlattice(MAX_DIM,MAX_DIM)      ! lattice primitive vectors
     FLOAT :: klattice_unitary(MAX_DIM,MAX_DIM)      ! reciprocal lattice primitive vectors
@@ -418,6 +419,19 @@ contains
       !%End
       call loct_parse_float(datasets_check('HighResolutionArea'), M_ONE, sb%inner_size)
       sb%inner_size = min(sb%inner_size, M_ONE)
+
+      !%Variable MR_InterpolationOrder
+      !%Type integer
+      !%Default 5
+      !%Section Mesh
+      !%Description
+      !% The interpolation order in multiresolution approach.
+      !%End
+      call loct_parse_int(datasets_check('MR_InterpolationOrder'), 5, sb%mr_iorder)
+      if(sb%mr_iorder .le. 0) then
+        message(1) = "The value for MR_InterpolationOrder must be > 0."
+        call write_fatal(1)
+      end if
 
       call pop_sub()
     end subroutine read_misc

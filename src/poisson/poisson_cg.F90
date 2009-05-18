@@ -133,10 +133,10 @@ contains
     SAFE_ALLOCATE(  x(1:m%np_part))
 
     rhs(1:m%np)         = - M_FOUR*M_PI*rho(1:m%np)
-    rhs(m%np:m%np_part) = M_ZERO
+    rhs(m%np+1:m%np_part) = M_ZERO
 
     x(1:m%np)           = pot(1:m%np)
-    x(m%np:m%np_part)   = M_ZERO
+    x(m%np+1:m%np_part)   = M_ZERO
     
     call dconjugate_gradients(m%np_part, x, rhs, &
       internal_laplacian_op, internal_dotp, iter, res, threshold)

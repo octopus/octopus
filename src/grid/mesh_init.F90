@@ -615,7 +615,8 @@ contains
         chi(1:sb%dim) = jj(1:sb%dim)*mesh%h(1:sb%dim)
 
         mesh%vol_pp(i) = mesh%vol_pp(i)*curvilinear_det_Jac(sb, mesh%cv, mesh%x(i, 1:sb%dim), chi(1:sb%dim))
-        if(simul_box_multires(mesh%sb)) mesh%vol_pp(i) = mesh%resolution(jj(1), jj(2), jj(3))**sb%dim
+        if(simul_box_multires(mesh%sb)) mesh%vol_pp(i) = mesh%vol_pp(i)*mesh%resolution(jj(1), jj(2), jj(3))**sb%dim
+
       end do
     end if
 
