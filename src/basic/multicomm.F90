@@ -215,10 +215,15 @@ contains
       !%Type block
       !%Section Execution::Parallelization
       !%Description
-      !% Specifies the size of the groups used for the parellization. For example
-      !% (n_d, n_s, n_k) means we have n_p*n_s*n_k processors and that the k-points
-      !% should be divided in n_k groups, the states in n_s groups, and each state
-      !% in n_d domains.
+      !% Specifies the size of the groups used for the
+      !% parellization. For example (n_d, n_s, n_k) means we have
+      !% n_p*n_s*n_k processors and that the k-points should be
+      !% divided in n_k groups, the states in n_s groups, and each
+      !% state in n_d domains. You can pass the value 'fill' to one
+      !% field, it will be replaced by the value required to complete
+      !% the number of processors in the run.
+      !%Option fill -1
+      !% Replaced by the value required to complete the number of processors.
       !%End
       if(loct_parse_block(datasets_check('ParallelizationGroupRanks'), blk) == 0) then
         call read_block(blk)
@@ -328,6 +333,7 @@ contains
       type(block_t), intent(inout) :: blk
 
       integer :: i, n
+      logical :: fill_used
 
       n = loct_parse_block_cols(blk, 0)
 
@@ -337,6 +343,19 @@ contains
           call loct_parse_block_int(blk, 0, i-1, mc%group_sizes(i))
         end if
       end do
+
+      fill_used = .false.
+      do i = 1, mc%n_index
+        if(mc%group_sizes(i) == -1) then
+          if(fill_used) then
+            message = "Error: The 'fill' value can be used only once in ParallelizationGroupRanks."
+            call write_fatal(1)
+          end if
+          mc%group_sizes(i) = -mpi_world%size/product(mc%group_sizes)
+          fill_used = .true.
+        end if
+      end do
+
     end subroutine read_block
 
     ! ---------------------------------------------------------
