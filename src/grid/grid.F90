@@ -33,6 +33,7 @@ module grid_m
   use mpi_m
   use multicomm_m
   use multigrid_m
+  use nl_operator_m
   use loct_parser_m
   use profiling_m
   use simul_box_m
@@ -143,6 +144,7 @@ contains
       nullify(gr%intf)
     end if
 
+    call nl_operator_global_init()
     call derivatives_build(gr%der, gr%mesh)
 
     ! initialize a finer mesh to hold the density, for this we use the

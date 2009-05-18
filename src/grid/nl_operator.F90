@@ -43,8 +43,9 @@ module nl_operator_m
   public ::                     &
     nl_operator_t,              &
     nl_operator_index_t,        &
+    nl_operator_global_init,    &
     nl_operator_init,           &
-    nl_operator_copy,          &
+    nl_operator_copy,           &
     nl_operator_build,          &
     nl_operator_transpose,      &
     dnl_operator_operate,       &
@@ -116,11 +117,88 @@ module nl_operator_m
     end function op_is_available
   end interface
 
+  integer :: dfunction_global = -1
+  integer :: zfunction_global = -1
+
   type(profile_t), save :: nl_operate_profile
   type(profile_t), save :: operate_batch_prof
 
 contains
   
+  ! ---------------------------------------------------------
+  subroutine nl_operator_global_init()
+    !%Variable OperateDouble
+    !%Type integer
+    !%Default tune
+    !%Section Generalities::Optimization
+    !%Description
+    !% This variable selects the subroutine used to apply non-local
+    !% operators over the grid for real functions. As Octopus spends
+    !% most of the computing time in this routine, it is important to
+    !% choose the optimal one for your hardware, this can be done with
+    !% the oct-operator_prof utility.  The performance of each routine
+    !% depends on the hardware and on the C and Fortran compilers
+    !% used.  The default value changes according to the options
+    !% available and the platform.
+    !%Option tune -1
+    !% Automatically discover the fastest function
+    !%Option fortran 0
+    !% The standard plain fortran function.
+    !%Option c 1
+    !% The C version of the plain function, using data prefetch
+    !% directives and unrolled by hand.
+    !%Option vec 2
+    !% TODO
+    !%Option as 3
+    !% TODO
+    !%End
+    
+    !%Variable OperateComplex
+    !%Type integer
+    !%Default tune
+    !%Section Generalities::Optimization
+    !%Description
+    !% This variable selects the subroutine used to apply non-local
+    !% operators over the grid for complex functions. As Octopus
+    !% spends most of the computing time in this routine, it is
+    !% important to choose the optimal one for your hardware, this can
+    !% be done with the oct-operator_prof utility.  The performance of
+    !% each routine depends on the hardware and on the C and Fortran
+    !% compilers used.  The default value changes according to the
+    !% options available and the platform.
+    !%Option tune -1
+    !% Automatically discover the fastest function
+    !%Option fortran 0
+    !% The standard plain fortran function.
+    !%Option c 1
+    !% The C version, using data prefetch directives and unrolled by
+    !% hand.
+    !%Option vec 2
+    !% TODO
+    !%Option as 3
+    !% TODO
+    !%End
+    
+    call loct_parse_int(datasets_check('OperateDouble'),  -1, dfunction_global)
+    if(dfunction_global.ne.-1) then
+      if(op_is_available(dfunction_global, M_REAL)  == 0) then
+        message(1) = 'OperateDouble chosen in not available on this platform'
+        call write_fatal(1)
+      end if
+    end if
+
+    call loct_parse_int(datasets_check('OperateComplex'), -1, zfunction_global)
+    if(zfunction_global.ne.-1) then
+      if(op_is_available(zfunction_global, M_CMPLX) == 0) then
+        message(1) = 'OperateComplex chosen in not available on this platform'
+        call write_fatal(1)
+      end if
+    end if
+
+  end subroutine nl_operator_global_init
+
+
+  ! ---------------------------------------------------------
   character(len=8) function op_function_name(id) result(str)
     integer, intent(in) :: id
     
@@ -131,6 +209,7 @@ contains
     if(id == OP_AS)      str = 'AS'
     
   end function op_function_name
+
 
   ! ---------------------------------------------------------
   subroutine nl_operator_init(op, label)
@@ -416,11 +495,22 @@ contains
 #endif
 
     if(op%const_w .and. .not. op%cmplx_op) then
-      call dnl_operator_tune(op, dbest)
-      call znl_operator_tune(op, zbest)
-      
-      write(message(1), '(a,i7,a,i7)') 'Info: '//trim(op%label)//' throughput (MFlops) real =', int(dbest), ' complex =', int(zbest)
-      call write_info(1)
+      message(1) = 'Info: '//trim(op%label)//' throughput (MFlops)'
+      if(dfunction_global == -1) then
+        call dnl_operator_tune(op, dbest)
+        write(message(1), '(2a,i7)') trim(message(1)), ' real = ', int(dbest)
+      else
+        op%dfunction = dfunction_global
+      end if
+
+      if(zfunction_global == -1) then
+        call znl_operator_tune(op, zbest)
+        write(message(1), '(2a,i7)') trim(message(1)), ' complex = ', int(zbest)
+      else
+        op%zfunction = zfunction_global
+      end if
+
+      if(dfunction_global == -1.or.zfunction_global == -1) call write_info(1)
     end if
 
     call pop_sub()
