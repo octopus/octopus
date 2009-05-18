@@ -71,6 +71,7 @@ type modelmb_particle_t
 
    integer, pointer :: particletype(:)
    integer, pointer :: nparticles_per_type(:)
+   integer, pointer :: particles_of_type(:,:)
 
    integer, pointer :: exchange_symmetry(:,:,:) ! (max_particles_per_type**2, ntype_of_particle)
 
@@ -101,6 +102,7 @@ subroutine modelmb_particles_nullify(this)
   nullify(this%labels_particles)
   nullify(this%particletype)
   nullify(this%nparticles_per_type)
+  nullify(this%particles_of_type)
   nullify(this%exchange_symmetry)
   nullify(this%bosonfermion)
   nullify(this%mass_particle)
@@ -199,6 +201,7 @@ subroutine modelmb_particles_init (modelmbparticles,gr)
   SAFE_ALLOCATE (modelmbparticles%charge_particle(1:modelmbparticles%nparticle))
   SAFE_ALLOCATE (modelmbparticles%bosonfermion(1:modelmbparticles%nparticle))
   SAFE_ALLOCATE (modelmbparticles%nparticles_per_type(1:modelmbparticles%ntype_of_particle))
+  SAFE_ALLOCATE (modelmbparticles%particles_of_type(1:modelmbparticles%nparticle, 1:modelmbparticles%ntype_of_particle))
 
   ! default all particles are electrons
   modelmbparticles%labels_particles = 'electron'
@@ -225,10 +228,10 @@ subroutine modelmb_particles_init (modelmbparticles,gr)
         call loct_parse_block_float (blk, ipart-1, 3, modelmbparticles%charge_particle(ipart))
         call loct_parse_block_string(blk, ipart-1, 4, modelmbparticles%bosonfermion(ipart))
 
-        write (message(1),'(a,a)') 'labels_particles_modelmb = ', modelmbparticles%labels_particles(ipart)
-        write (message(2),'(a,i6)') 'particletype_modelmb = ', modelmbparticles%particletype(ipart)
-        write (message(3),'(a,E20.10)') 'mass_particle_modelmb = ', modelmbparticles%mass_particle(ipart)
-        write (message(4),'(a,E20.10)') 'charge_particle_modelmb = ', modelmbparticles%charge_particle(ipart)
+        write (message(1),'(a,a)') 'labels_particles = ', modelmbparticles%labels_particles(ipart)
+        write (message(2),'(a,i6)') 'particletype = ', modelmbparticles%particletype(ipart)
+        write (message(3),'(a,E20.10)') 'mass_particle = ', modelmbparticles%mass_particle(ipart)
+        write (message(4),'(a,E20.10)') 'charge_particle = ', modelmbparticles%charge_particle(ipart)
         write (message(5),'(a,a)') 'bosonfermion = ', modelmbparticles%bosonfermion(ipart)
         call write_info(5)
       end do
@@ -237,9 +240,12 @@ subroutine modelmb_particles_init (modelmbparticles,gr)
   end if
     
   modelmbparticles%nparticles_per_type = 0
+  modelmbparticles%particles_of_type = 0
   do ipart = 1, modelmbparticles%nparticle
     modelmbparticles%nparticles_per_type(modelmbparticles%particletype(ipart)) = & 
-      & modelmbparticles%nparticles_per_type(modelmbparticles%particletype(ipart)) + 1
+      modelmbparticles%nparticles_per_type(modelmbparticles%particletype(ipart)) + 1
+    modelmbparticles%particles_of_type(modelmbparticles%nparticles_per_type(modelmbparticles%particletype(ipart)), &
+      modelmbparticles%particletype(ipart)) = ipart
   enddo
 
   modelmbparticles%max_particles_per_type = maxval(modelmbparticles%nparticles_per_type)
@@ -309,6 +315,7 @@ subroutine modelmb_particles_end (modelmbparticles)
   SAFE_DEALLOCATE_P(modelmbparticles%mass_particle)
   SAFE_DEALLOCATE_P(modelmbparticles%charge_particle)
   SAFE_DEALLOCATE_P(modelmbparticles%nparticles_per_type)
+  SAFE_DEALLOCATE_P(modelmbparticles%particles_of_type)
   SAFE_DEALLOCATE_P(modelmbparticles%exchange_symmetry)
   SAFE_DEALLOCATE_P(modelmbparticles%bosonfermion)
 
@@ -336,6 +343,7 @@ subroutine modelmb_particles_copy(modelmb_out, modelmb_in)
   call loct_pointer_copy(modelmb_out%mass_particle,modelmb_in%mass_particle)
   call loct_pointer_copy(modelmb_out%charge_particle,modelmb_in%charge_particle)
   call loct_pointer_copy(modelmb_out%nparticles_per_type,modelmb_in%nparticles_per_type)
+  call loct_pointer_copy(modelmb_out%particles_of_type,modelmb_in%particles_of_type)
   call loct_pointer_copy(modelmb_out%exchange_symmetry,modelmb_in%exchange_symmetry)
   call loct_pointer_copy(modelmb_out%bosonfermion,modelmb_in%bosonfermion)
 

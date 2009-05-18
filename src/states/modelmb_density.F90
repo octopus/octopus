@@ -136,12 +136,11 @@ contains
     integer,                 intent(in) :: mm
     type(modelmb_density_t), intent(in) :: den
 
-    integer :: jj, ll, j, err_code, iunit, ndims, ndim1part
+    integer :: jj, j, iunit, ndims, ndim1part
     integer :: ikeeppart, idir
     integer :: idensities, nparticles_density
     integer, allocatable :: npoints(:)
     integer, allocatable :: ix_1part(:), ix_1part_p(:)
-    logical :: bof
     character(len=200) :: filename
     FLOAT, allocatable :: density(:)
 
