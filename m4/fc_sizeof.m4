@@ -31,6 +31,7 @@ AC_LINK_IFELSE(
     implicit none
     integer s
     integer array(10)
+    real, allocatable :: alc(:)
     character(len=10) C
     type dtype
       integer :: array(10)
@@ -39,6 +40,7 @@ AC_LINK_IFELSE(
     type (dtype) dobj
     s = sizeof(array)
     s = sizeof(array(3))
+    s = sizeof(alc)
     s = sizeof(c(2:5))
     s = sizeof(c)
     s = sizeof(dobj)
