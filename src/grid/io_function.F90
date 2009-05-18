@@ -50,6 +50,8 @@ module io_function_m
     zinput_function,              &
     doutput_function,             &
     zoutput_function,             &
+    dio_function_out_text,        &
+    zio_function_out_text,        &
     io_output_tensor,             &
     io_output_dipole
 
@@ -163,7 +165,7 @@ contains
     !% Plain binary, new format.
     !%Option etsf 32768
     !% ETSF file format (http://www.etsf.eu/resources/software/standardization_project).
-    !% Requires the ETSF_IO library. 
+    !% Requires the ETSF_IO library.
     !%End
     call loct_parse_int(datasets_check('OutputHow'), 0, how)
     if(.not.varinfo_valid_option('OutputHow', how, is_flag=.true.)) then

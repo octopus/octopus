@@ -978,6 +978,53 @@ contains
 
 end subroutine X(output_function_global)
 
+!----------------------------------------------------------------------
+! This function prints a function in text format, for the moment it is
+! only used by the modelmb stuff.
+!----------------------------------------------------------------------
+subroutine X(io_function_out_text)(dir, mesh, mm, wf)
+  character(len=*),   intent(in) :: dir
+  type(mesh_t),       intent(in) :: mesh
+  integer,            intent(in) :: mm
+  R_TYPE,             intent(in) :: wf(:)
+
+  integer :: ip, idir, iunit
+  integer, allocatable :: ix(:)
+  character(len=200) :: filename
+
+  call push_sub('states.modelmb_wf_write')
+
+  SAFE_ALLOCATE(ix(1:MAX_DIM))
+
+  write(filename,'(a,i4.4)') trim(dir)//'/wf_imb', mm
+  iunit = io_open(filename, action='write')
+  write(iunit, '(a)', ADVANCE='no') '#'
+  do idir = 1, mesh%sb%dim
+     write(iunit, '(a)', ADVANCE='no') '      position          '
+  end do
+  write(iunit, '(a)') '         Re(wf)                    Im(wf)'
+
+  ! for each point in whole box, without boundary points
+  do ip = 1, mesh%np_global
+
+    ! get coordinates
+    call index_to_coords(mesh%idx, mesh%sb%dim, ip, ix)
+
+    ! print out wavefunction
+    do idir = 1, mesh%sb%dim
+      write(iunit,'(es24.15)', ADVANCE='no') ix(idir)*mesh%h(idir) + mesh%sb%box_offset(idir)
+    end do ! idir
+    write(iunit,'(es24.15,es24.15)') R_REAL(wf(ip)), R_AIMAG(wf(ip))
+
+  end do ! ip
+
+  call io_close(iunit)
+
+  SAFE_DEALLOCATE_A(ix)
+
+  call pop_sub()
+end subroutine X(io_function_out_text)
+
 #undef out_type
 
 !! Local Variables:

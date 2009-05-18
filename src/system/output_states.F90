@@ -211,7 +211,7 @@
       end if
 
       if(iand(outp%what, output_wfs).ne.0 .and. symmetries_satisfied) then
-        call modelmb_wf_write(trim(dirname), gr, mm, wf)
+        call zio_function_out_text(trim(dirname), gr%mesh, mm, wf)
       end if
 
     end do
