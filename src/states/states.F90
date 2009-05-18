@@ -174,7 +174,7 @@ contains
     ! By default, calculations use real wave-functions
     st%wfs_type = M_REAL
 
-    call modelMB_particles_nullify(st%modelmbparticles)
+    call modelmb_particles_nullify(st%modelmbparticles)
 
     call pop_sub()
   end subroutine states_null
@@ -463,7 +463,7 @@ contains
 
     call distributed_nullify(st%d%kpt, st%d%nik)
 
-    call modelMB_particles_init (st%modelMBparticles,gr)
+    call modelmb_particles_init (st%modelmbparticles,gr)
 
     call pop_sub()
 
@@ -925,7 +925,7 @@ contains
     call loct_pointer_copy(stout%st_range, stin%st_range)
     call loct_pointer_copy(stout%st_num, stin%st_num)
 
-    call modelMB_particles_copy(stout%modelmbparticles, stin%modelmbparticles)
+    call modelmb_particles_copy(stout%modelmbparticles, stin%modelmbparticles)
 
     if(stin%parallel_in_states) call multicomm_all_pairs_copy(stout%ap, stin%ap)
 
@@ -975,7 +975,7 @@ contains
 
     SAFE_DEALLOCATE_P(st%user_def_states)
 
-    call modelMB_particles_end(st%modelmbparticles)
+    call modelmb_particles_end(st%modelmbparticles)
 
     call pop_sub()
   end subroutine states_end

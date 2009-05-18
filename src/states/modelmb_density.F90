@@ -79,7 +79,7 @@ contains
     !% choice of which particle density will be calculated and output, in the
     !%  modelmb particles scheme (the corresponding density is also output)
     !%
-    !% <tt>%DensityiestoCalc
+    !% <tt>%DensitiestoCalc
     !% <br>&nbsp;&nbsp; proton   | 1 
     !% <br>&nbsp;&nbsp; electron | 2
     !% <br>%</tt>
@@ -102,7 +102,7 @@ contains
     end if
     den%ndensities_to_calculate = loct_parse_block_n(blk)
     if (den%ndensities_to_calculate < 0 .or. &
-        den%ndensities_to_calculate > st%modelMBparticles%nparticle_modelmb) then
+        den%ndensities_to_calculate > st%modelmbparticles%nparticle_modelmb) then
       call input_error("DensitiestoCalc")
     end if
 
@@ -154,7 +154,7 @@ contains
     ! and how many (and which) dimensions should be integrated away.
     ndims = gr%sb%dim
 
-    ndim1part = st%modelMBparticles%ndim_modelmb
+    ndim1part = st%modelmbparticles%ndim_modelmb
 
     call modelmb_1part_nullify(mb_1part)
     SAFE_ALLOCATE(  ix_1part(1:ndim1part))
@@ -171,7 +171,7 @@ contains
     ! loop over desired density matrices
     dens_loop: do idensities = 1, den%ndensities_to_calculate
       ikeeppart = den%particle_kept_densities(idensities)
-      nparticles_density = st%modelMBparticles%nparticles_per_type(st%modelMBparticles%particletype_modelMB(ikeeppart))
+      nparticles_density = st%modelmbparticles%nparticles_per_type(st%modelmbparticles%particletype_modelmb(ikeeppart))
 
       call modelmb_1part_init(mb_1part, gr%mesh, ikeeppart, ndim1part, gr%sb%box_offset)
 
@@ -189,7 +189,7 @@ contains
       ! this works in parallel yet...
       if(.not. mpi_grp_is_root(mpi_world)) cycle
 
-      write(filename,'(a,i3.3,a,i2.2)') trim(den%dirname)//'/density_ip', ikeeppart,'_iMB', mm
+      write(filename,'(a,i3.3,a,i2.2)') trim(den%dirname)//'/density_ip', ikeeppart,'_imb', mm
       iunit = io_open(filename,action='write')
       do jj = 1, mb_1part%npt_1part
         call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, &
@@ -209,10 +209,10 @@ contains
              mb_1part%enlarge_1part(1), jj, ix_1part)
         dipole_moment = dipole_moment+(ix_1part(:)*mb_1part%h_1part(:)+mb_1part%origin(:))&
                       *real(density(jj))&
-                      *st%modelMBparticles%charge_particle_modelMB(ikeeppart)
+                      *st%modelmbparticles%charge_particle_modelmb(ikeeppart)
       end do
       ! note: for eventual multiple particles in 4D (eg 8D total) this would fail to give the last values of dipole_moment
-      write (message(1),'(a,I6,a,I6,a,I6)') 'For particle ', ikeeppart, ' of MB state ', mm
+      write (message(1),'(a,I6,a,I6,a,I6)') 'For particle ', ikeeppart, ' of mb state ', mm
       write (message(2),'(a,3E20.10)') 'The dipole moment is (in a.u. = e bohr):     ', dipole_moment(1:min(3,ndim1part))
       write (message(3),'(a,E15.3)') '     with intrinsic numerical error usually <= ', 1.e-6*mb_1part%npt_1part
       call write_info(3)

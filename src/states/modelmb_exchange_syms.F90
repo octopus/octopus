@@ -61,21 +61,21 @@ contains
   !  may be inadequate if the symmetry is approximate.
   !  Other option is to force-antisymmetrize (see routine modelmb_sym_states)
   ! ---------------------------------------------------------
-  subroutine modelmb_find_exchange_syms(gr, mm, modelMBparticles, wf)
+  subroutine modelmb_find_exchange_syms(gr, mm, modelmbparticles, wf)
 
     implicit none
 
     type(grid_t),             intent(in)   :: gr
     integer,                  intent(in)   :: mm
     CMPLX,                    intent(in)   :: wf(1:gr%mesh%np_part_global)
-    type(modelMB_particle_t), intent(inout):: modelMBparticles
+    type(modelmb_particle_t), intent(inout):: modelmbparticles
 
 
     ! local vars
     integer :: itype, ipart1, ipart2, npptype
     integer :: ip, ipp, maxtries, enoughgood
     integer :: ntries, ngoodpoints, nratiocomplaints
-    integer :: ofst1, ofst2, ndimMB
+    integer :: ofst1, ofst2, ndimmb
     integer :: wf_sign_change, save_sign_change
 
     integer, allocatable :: ix(:), ixp(:)
@@ -90,7 +90,7 @@ contains
     SAFE_ALLOCATE(ix(1:MAX_DIM))
     SAFE_ALLOCATE(ixp(1:MAX_DIM))
 
-    ndimMB=modelMBparticles%ndim_modelMB
+    ndimmb=modelmbparticles%ndim_modelmb
 
     ! this is the tolerance on the wavefunction in order to use it to determine
     ! sign changes. Should be checked, and might be a function of grid number,
@@ -106,12 +106,12 @@ contains
     enoughgood = 20
 
     ! initialize the container
-    modelMBparticles%exchange_symmetry=0
+    modelmbparticles%exchange_symmetry=0
 
     ! for each particle type
-    do itype=1,modelMBparticles%ntype_of_particle_modelMB
+    do itype=1,modelmbparticles%ntype_of_particle_modelmb
 
-      npptype=modelMBparticles%nparticles_per_type(itype)
+      npptype=modelmbparticles%nparticles_per_type(itype)
       nratiocomplaints = 0
 
       ! for each pair of particles of this type
@@ -137,22 +137,22 @@ contains
             ! see if point has enough weight to be used
             if (abs(real(wfval1)) < wftol) cycle
 
-            ! get actual coordinates of MB point
+            ! get actual coordinates of mb point
             call index_to_coords(gr%mesh%idx, gr%sb%dim, ip, ix)
 
             ! offsets in full dimensional space for the particles we care about
-            ofst1=(ipart1-1)*ndimMB
-            ofst2=(ipart2-1)*ndimMB
+            ofst1=(ipart1-1)*ndimmb
+            ofst2=(ipart2-1)*ndimmb
 
             ! invert coordinates of ipart1 and ipart2
             ixp = ix
-            ixp (ofst1+1:ofst1+ndimMB) = ix (ofst2+1:ofst2+ndimMB) ! part1 to 2
-            ixp (ofst2+1:ofst2+ndimMB) = ix (ofst1+1:ofst1+ndimMB) ! part2 to 1
+            ixp (ofst1+1:ofst1+ndimmb) = ix (ofst2+1:ofst2+ndimmb) ! part1 to 2
+            ixp (ofst2+1:ofst2+ndimmb) = ix (ofst1+1:ofst1+ndimmb) ! part2 to 1
  
             ! if we are on a diagonal, cycle
             if (all(ix-ixp == 0)) cycle
  
-            ! recover MB index for new point
+            ! recover mb index for new point
             ipp = index_from_coords(gr%mesh%idx, gr%sb%dim, ixp)
 
             ! wavefunction value at exchanged coordinate point ipp
@@ -191,8 +191,8 @@ contains
           !  too high
           if (ngoodpoints == enoughgood .and. &
               real(nratiocomplaints)/real(ngoodpoints) < 0.1) then
-            modelMBparticles%exchange_symmetry(ipart1,ipart2,itype)=save_sign_change
-            modelMBparticles%exchange_symmetry(ipart2,ipart1,itype)=save_sign_change
+            modelmbparticles%exchange_symmetry(ipart1,ipart2,itype)=save_sign_change
+            modelmbparticles%exchange_symmetry(ipart2,ipart1,itype)=save_sign_change
           else 
             !write (message(1),'(a)') ' WARNING: unable to determine sign change for'
             !write (message(2),'(a,I6,a,I6,a,I6)') ' exchange of ', ipart1, ' and ', ipart2, ' of many-body state ', mm
@@ -204,29 +204,29 @@ contains
     end do ! itype
 
     ! do some crude output
-    do itype=1,modelMBparticles%ntype_of_particle_modelMB
+    do itype=1,modelmbparticles%ntype_of_particle_modelmb
       !write (message(1),'(a)')    ' lower triangle of exchange parity matrix'
-      write (message(1),'(a,I6,a,I6)') '   for particles of type ', itype, '   in MB state ', mm
+      write (message(1),'(a,I6,a,I6)') '   for particles of type ', itype, '   in mb state ', mm
       call write_info(1)
 
       do ipart1=1,npptype
         do ipart2=1,ipart1
-          write (*,'(2x, I6)',ADVANCE='NO') modelMBparticles%exchange_symmetry(ipart2,ipart1,itype)
+          write (*,'(2x, I6)',ADVANCE='NO') modelmbparticles%exchange_symmetry(ipart2,ipart1,itype)
         end do ! ipart2
         write (*,*)
       end do ! ipart1
 
-      modelMBparticles%bosonfermion(itype) = 'unknown'
-      if (sum(modelMBparticles%exchange_symmetry) ==  npptype*(npptype-1)) then
-        write (message(1),'(a,I6,a,I6,a)') 'For particles of type ', itype, ',  MB state ', &
+      modelmbparticles%bosonfermion(itype) = 'unknown'
+      if (sum(modelmbparticles%exchange_symmetry) ==  npptype*(npptype-1)) then
+        write (message(1),'(a,I6,a,I6,a)') 'For particles of type ', itype, ',  mb state ', &
                mm, ' is totally symmetric (bosonic)'
         call write_info(1)
-        modelMBparticles%bosonfermion(itype) = 'boson'
-      else if (sum(modelMBparticles%exchange_symmetry) == -npptype*(npptype-1)) then
-        write (message(1),'(a,I6,a,I6,a)') 'For particles of type ', itype, ',  MB state ', &
+        modelmbparticles%bosonfermion(itype) = 'boson'
+      else if (sum(modelmbparticles%exchange_symmetry) == -npptype*(npptype-1)) then
+        write (message(1),'(a,I6,a,I6,a)') 'For particles of type ', itype, ',  mb state ', &
                mm, ' is totally antisymmetric'
         call write_info(1)
-        modelMBparticles%bosonfermion(itype) = 'fermion'
+        modelmbparticles%bosonfermion(itype) = 'fermion'
       end if
     end do ! itype
 
@@ -239,7 +239,7 @@ contains
 
 
   ! project out states with proper symmetry for cases which are of symmetry = unknown
-  subroutine modelmb_sym_state(dir, gr, mm, geo, modelMBparticles, wf, symmetries_satisfied)
+  subroutine modelmb_sym_state(dir, gr, mm, geo, modelmbparticles, wf, symmetries_satisfied)
 
     implicit none
 
@@ -247,7 +247,7 @@ contains
     type(grid_t),     intent(in)    :: gr
     integer,          intent(in)    :: mm
     type(geometry_t), intent(in)    :: geo
-    type(modelMB_particle_t), intent(in) :: modelMBparticles
+    type(modelmb_particle_t), intent(in) :: modelmbparticles
     ! this will be antisymmetrized on output
     CMPLX,                    intent(inout) :: wf(1:gr%mesh%np_part_global)
     logical,          intent(out)   :: symmetries_satisfied
@@ -256,7 +256,7 @@ contains
     integer :: itype, ipart1, ipart2, npptype
     integer :: ip, ipp, iup, idown, iyoung
     integer :: iantisym, ierr, ikeeppart
-    integer :: ndimMB
+    integer :: ndimmb
     integer :: nspindown, nspinup, iperm_up, iperm_down
     integer :: iunit, jj, idir
 
@@ -298,14 +298,14 @@ contains
     SAFE_ALLOCATE(ix(1:MAX_DIM))
     SAFE_ALLOCATE(ixp(1:MAX_DIM))
 
-    SAFE_ALLOCATE(symmetries_satisfied_alltypes(1:modelMBparticles%ntype_of_particle_modelMB))
+    SAFE_ALLOCATE(symmetries_satisfied_alltypes(1:modelmbparticles%ntype_of_particle_modelmb))
     symmetries_satisfied_alltypes = 0
 
-    ndimMB=modelMBparticles%ndim_modelMB
+    ndimmb=modelmbparticles%ndim_modelmb
 
     normalizer = product(gr%mesh%h(1:gr%mesh%sb%dim)) !M_ONE/units_out%length%factor**gr%mesh%sb%dim
 
-    if (modelMBparticles%ntype_of_particle_modelMB > 1) then
+    if (modelmbparticles%ntype_of_particle_modelmb > 1) then
       write (message(1), '(a)') 'modelmb_sym_state: not coded for several particly types '
       call write_fatal(1)
     end if
@@ -315,7 +315,7 @@ contains
     SAFE_ALLOCATE(antisymwf_swap(1:gr%mesh%np_part_global))
 
     ! for each particle type
-    do itype = 1, modelMBparticles%ntype_of_particle_modelMB
+    do itype = 1, modelmbparticles%ntype_of_particle_modelmb
 
       ! FIXME: for multiple particle types this needs to be fixed.
       ! Also, for inequivalent spin configurations this should vary, and we get
@@ -324,20 +324,20 @@ contains
 
       ! if the particle is not fermionic, just cycle to next one
       ! FIXME: boson case is not treated yet
-      if (modelMBparticles%bosonfermion(ikeeppart) /= 'fermion') then
+      if (modelmbparticles%bosonfermion(ikeeppart) /= 'fermion') then
         symmetries_satisfied_alltypes(itype) = 1
         cycle
       end if
 
       call modelmb_1part_init(mb_1part, gr%mesh, ikeeppart, &
-             modelMBparticles%ndim_modelmb, gr%sb%box_offset)
+             modelmbparticles%ndim_modelmb, gr%sb%box_offset)
 
-      npptype = modelMBparticles%nparticles_per_type(itype)
+      npptype = modelmbparticles%nparticles_per_type(itype)
 
       SAFE_ALLOCATE(antisymrho(1:gr%mesh%np_part_global))
       SAFE_ALLOCATE(ofst(1:npptype))
       do ipart1 = 1, npptype
-        ofst(ipart1) = (ipart1-1)*ndimMB
+        ofst(ipart1) = (ipart1-1)*ndimmb
       end do
 
       ! note: use of spin nomenclature is just for visualization, no real spin
@@ -372,10 +372,10 @@ contains
               ! invert coordinates of ipart1 and ipart2
               ixp = ix
               ! permutate the particles ipart1 and its spin up partner
-              ixp (ofst(ipart1)+1:ofst(ipart1)+ndimMB) = &
-                  ix (ofst(ipart2)+1:ofst(ipart2)+ndimMB)
-              ixp (ofst(ipart2)+1:ofst(ipart2)+ndimMB) = &
-                  ix (ofst(ipart1)+1:ofst(ipart1)+ndimMB)
+              ixp (ofst(ipart1)+1:ofst(ipart1)+ndimmb) = &
+                  ix (ofst(ipart2)+1:ofst(ipart2)+ndimmb)
+              ixp (ofst(ipart2)+1:ofst(ipart2)+ndimmb) = &
+                  ix (ofst(ipart1)+1:ofst(ipart1)+ndimmb)
               
               ! get position of exchanged point
               ipp = index_from_coords(gr%mesh%idx, gr%sb%dim, ixp)
@@ -408,7 +408,7 @@ contains
                 ! get image of ipart1 under permutation iperm1
                 ipart1 = young%young_up(iup,iyoung)
                 ipart2 = young%young_up(perms_up%allpermutations(iup,iperm_up),iyoung)
-                ixp (ofst(ipart1)+1:ofst(ipart1)+ndimMB) = ix (ofst(ipart2)+1:ofst(ipart2)+ndimMB) ! part1 to 2
+                ixp (ofst(ipart1)+1:ofst(ipart1)+ndimmb) = ix (ofst(ipart2)+1:ofst(ipart2)+ndimmb) ! part1 to 2
               end do
               ! get position of exchanged point
               ipp = index_from_coords(gr%mesh%idx, gr%sb%dim, ixp)
@@ -439,7 +439,7 @@ contains
                 ! get image of ipart1 under permutation iperm1
                 ipart1 = young%young_down(idown,iyoung)
                 ipart2 = young%young_down(perms_down%allpermutations(idown,iperm_down),iyoung)
-                ixp (ofst(ipart1)+1:ofst(ipart1)+ndimMB) = ix (ofst(ipart2)+1:ofst(ipart2)+ndimMB) ! part1 to 2
+                ixp (ofst(ipart1)+1:ofst(ipart1)+ndimmb) = ix (ofst(ipart2)+1:ofst(ipart2)+ndimmb) ! part1 to 2
               end do
               ! get position of exchanged point
               ipp = index_from_coords(gr%mesh%idx, gr%sb%dim, ixp)
@@ -469,7 +469,7 @@ contains
           SAFE_ALLOCATE(antisymrho_1part(1:mb_1part%npt_1part))
           call zmf_calculate_rho(ikeeppart, mb_1part, npptype, gr%mesh, antisymwf, antisymrho_1part)
           ! FIXME: this will also depend on particle type and idimension
-          write(filename,'(a,a,i3.3,a,i3.3,a,i3.3,a,i3.3)') trim(dir),'/asymden_iMB', mm, &
+          write(filename,'(a,a,i3.3,a,i3.3,a,i3.3,a,i3.3)') trim(dir),'/asymden_imb', mm, &
                 '_ipar', ikeeppart,'_ndn',nspindown,'_iY',iyoung
           iunit = io_open(filename,action='write')
           do jj = 1, mb_1part%npt_1part
@@ -505,7 +505,7 @@ contains
     end do ! itype
 
     ! check if all types of particles have been properly symmetrized
-    if (sum(symmetries_satisfied_alltypes) == modelMBparticles%ntype_of_particle_modelMB) then
+    if (sum(symmetries_satisfied_alltypes) == modelmbparticles%ntype_of_particle_modelmb) then
       wf = antisymwf
       symmetries_satisfied = .true.
     end if

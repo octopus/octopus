@@ -21,8 +21,6 @@
 
 module h_sys_output_m
   use datasets_m
-  use modelmb_density_matrix_m
-  use modelmb_density_m
   use derivatives_m
   use basins_m
   use cube_function_m
@@ -40,6 +38,8 @@ module h_sys_output_m
   use magnetic_m
   use mesh_function_m
   use messages_m
+  use modelmb_density_m
+  use modelmb_density_matrix_m
   use modelmb_exchange_syms_m
   use mpi_m
   use output_me_m

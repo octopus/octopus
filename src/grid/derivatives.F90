@@ -239,7 +239,7 @@ contains
     call obsolete_variable('OverlapDerivatives', 'ParallelizationOfDerivatives')
 #endif
 
-    ! if needed, der%masses should be initialized in modelMB_particles_init
+    ! if needed, der%masses should be initialized in modelmb_particles_init
     der%masses = M_ONE
 
     ! construct lapl and grad structures

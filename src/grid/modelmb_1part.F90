@@ -16,19 +16,15 @@
 !! 02111-1307, USA.
 !!
 !
-!  general module for modelMB particles (eg 4 electrons in 1D equiv to
+!  general module for modelmb particles (eg 4 electrons in 1D equiv to
 !  1 in 4D). Also calculate different densities on request.
 !
 #include "global.h"
 
 module modelmb_1part_m
 
-!  use datasets_m
   use global_m
-!  use grid_m
   use hypercube_m
-!  use loct_m
-!  use loct_parser_m
   use messages_m
   use mesh_m
   use profiling_m

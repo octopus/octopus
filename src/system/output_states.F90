@@ -171,7 +171,7 @@
 
     ! make sure directory exists
     call loct_mkdir(trim(dir))
-    ! all model MB stuff should be in this directory
+    ! all model mb stuff should be in this directory
     dirname = trim(dir)//'/modelmb'
     call loct_mkdir(trim(dirname))
 
@@ -197,7 +197,7 @@
       end if
 
       if (impose_exch_symmetry) then
-        call modelmb_sym_state(dirname, gr, mm, geo, st%modelMBparticles, wf, symmetries_satisfied)
+        call modelmb_sym_state(dirname, gr, mm, geo, st%modelmbparticles, wf, symmetries_satisfied)
       end if
 
       if(iand(outp%what, output_density_matrix).ne.0 .and. symmetries_satisfied) then
@@ -211,7 +211,7 @@
       end if
 
       if(iand(outp%what, output_wfs).ne.0 .and. symmetries_satisfied) then
-        !call modelmb_wf_write(trim(dir), gr, st)
+        call modelmb_wf_write(trim(dirname), gr, mm, wf)
       end if
 
     end do

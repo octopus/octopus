@@ -104,7 +104,7 @@ contains
     end if
     denmat%ndensmat_to_calculate=loct_parse_block_n(blk)
     if (denmat%ndensmat_to_calculate < 0 .or. &
-        denmat%ndensmat_to_calculate > st%modelMBparticles%nparticle_modelmb) then
+        denmat%ndensmat_to_calculate > st%modelmbparticles%nparticle_modelmb) then
       call input_error("DensityMatricestoCalc")
     end if
 
@@ -161,7 +161,7 @@ contains
     ! and how many (and which) dimensions should be integrated away.
     ndims = gr%sb%dim
 
-    ndim1part=st%modelMBparticles%ndim_modelmb
+    ndim1part=st%modelmbparticles%ndim_modelmb
 
     call modelmb_1part_nullify(mb_1part)
     SAFE_ALLOCATE(  ix_1part(1:ndim1part))
@@ -178,7 +178,7 @@ contains
     ! loop over desired density matrices
     densmat_loop: do idensmat=1,denmat%ndensmat_to_calculate
       ikeeppart=denmat%particle_kept_densmat(idensmat)
-      nparticles_densmat = st%modelMBparticles%nparticles_per_type(st%modelMBparticles%particletype_modelMB(ikeeppart))
+      nparticles_densmat = st%modelmbparticles%nparticles_per_type(st%modelmbparticles%particletype_modelmb(ikeeppart))
 
       call modelmb_1part_init(mb_1part, gr%mesh, ikeeppart, ndim1part, gr%sb%box_offset)
 
@@ -215,7 +215,7 @@ contains
       evalues  = evalues*mb_1part%vol_elem_1part
 
       !Write everything into files
-      write(filename,'(a,i3.3,a,i2.2)') trim(denmat%dirname)//'/occnumb_ip',ikeeppart,'_iMB',mm
+      write(filename,'(a,i3.3,a,i2.2)') trim(denmat%dirname)//'/occnumb_ip',ikeeppart,'_imb',mm
       iunit = io_open(trim(filename), action='write')
 
       do jj = mb_1part%npt_1part, 1, -1
@@ -226,7 +226,7 @@ contains
 
       do jj = mb_1part%npt_1part-denmat%nnatorb_prt_densmat(ikeeppart)+1, mb_1part%npt_1part
         write(filename,'(a,i3.3,a,i2.2,a,i4.4)') trim(denmat%dirname)//'/natorb_ip', &
-              ikeeppart,'_iMB', mm, '_', mb_1part%npt_1part-jj+1
+              ikeeppart,'_imb', mm, '_', mb_1part%npt_1part-jj+1
         iunit = io_open(filename, action='write')
         do ll = 1, mb_1part%npt_1part
           call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, &
@@ -239,7 +239,7 @@ contains
       call io_close(iunit)
       end do
 
-      write(filename,'(a,i3.3,a,i2.2)') trim(denmat%dirname)//'/densmatr_ip', ikeeppart,'_iMB', mm
+      write(filename,'(a,i3.3,a,i2.2)') trim(denmat%dirname)//'/densmatr_ip', ikeeppart,'_imb', mm
       iunit = io_open(filename,action='write')
       do jj = 1, mb_1part%npt_1part
         call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, &
@@ -259,7 +259,7 @@ contains
       end do
       call io_close(iunit)
 
-      write(filename,'(a,i3.3,a,i2.2)') trim(denmat%dirname)//'/density_ip', ikeeppart,'_iMB', mm
+      write(filename,'(a,i3.3,a,i2.2)') trim(denmat%dirname)//'/density_ip', ikeeppart,'_imb', mm
       iunit = io_open(filename,action='write')
       do jj = 1, mb_1part%npt_1part
         call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, &
@@ -279,10 +279,10 @@ contains
              mb_1part%enlarge_1part(1), jj, ix_1part)
         dipole_moment = dipole_moment+(ix_1part(:)*mb_1part%h_1part(:)+mb_1part%origin(:))&
                       *real(densmatr(jj,jj))&
-                      *st%modelMBparticles%charge_particle_modelMB(ikeeppart)
+                      *st%modelmbparticles%charge_particle_modelmb(ikeeppart)
       end do
       ! note: for eventual multiple particles in 4D (eg 8D total) this would fail to give the last values of dipole_moment
-      write (message(1),'(a,I6,a,I6,a,I6)') 'For particle ', ikeeppart, ' of MB state ', mm
+      write (message(1),'(a,I6,a,I6,a,I6)') 'For particle ', ikeeppart, ' of mb state ', mm
       write (message(2),'(a,3E20.10)') 'The dipole moment is (in a.u. = e bohr):     ', dipole_moment(1:min(3,ndim1part))
       write (message(3),'(a,E15.3)') '     with intrinsic numerical error usually <= ', 1.e-6*mb_1part%npt_1part
       call write_info(3)

@@ -65,9 +65,6 @@ module young_m
       this%nyoung = this%nyoung / (nup  -ipart+1)
     end do
 
-    write (message(1), '(a,I7)') 'young_init found nyoung = ', this%nyoung
-    call write_info(1)
-
     SAFE_ALLOCATE (this%young_up  (1:nup,  1:this%nyoung))
     SAFE_ALLOCATE (this%young_down(1:ndown,1:this%nyoung))
 
