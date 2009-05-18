@@ -259,27 +259,10 @@ contains
       call write_fatal(2)
     end if
 
-    !%Variable StatesBlockSize
-    !%Type integer
-    !%Default 4
-    !%Section Execution::Optimization
-    !%Description
-    !% Some routines work over blocks of eigenfunctions, this
-    !% generally improves performance at the expense of increased
-    !% memory consumption. This variable selects the size of the
-    !% blocks to be used, the default size is 4.
-    !%End
-    call loct_parse_int(datasets_check('StatesBlockSize'), 4, st%d%block_size)
-    if(st%d%block_size < 1) then
-      message(1) = "Error: The variable 'StatesBlockSize' must be greater than 0."
-      call write_fatal(1)
-    end if
-    
     ! For non-periodic systems this should just return the Gamma point
     call states_choose_kpoints(st%d, gr%sb, geo)
 
     call geometry_val_charge(geo, st%val_charge)
-
     
     if(gr%sb%open_boundaries) then
       excess_charge = -st%val_charge
@@ -373,6 +356,24 @@ contains
       st%d%nspin = 4
       st%d%spin_channels = 2
     end select
+
+    !%Variable StatesBlockSize
+    !%Type integer
+    !%Default 4
+    !%Section Execution::Optimization
+    !%Description
+    !% Some routines work over blocks of eigenfunctions, this
+    !% generally improves performance at the expense of increased
+    !% memory consumption. This variable selects the size of the
+    !% blocks to be used, the default size is 4.
+    !%End
+    call loct_parse_int(datasets_check('StatesBlockSize'), 4, st%d%block_size)
+    if(st%d%block_size < 1) then
+      message(1) = "Error: The variable 'StatesBlockSize' must be greater than 0."
+      call write_fatal(1)
+    end if
+    
+    st%d%block_size = min(st%d%block_size, st%nst)
 
     ! FIXME: For now, open-boundary calculations are only possible for
     ! continuum states, i.e. for those states treated by the Lippmann-

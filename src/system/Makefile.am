@@ -27,6 +27,7 @@ libsystem_a_SOURCES =         \
 	linear_solver.F90     \
 	xc_OEP.F90            \
 	v_ks.F90              \
+	output_me.F90         \
 	output_h_sys.F90      \
 	system.F90            \
 	xc_OEP_kernel.F90     \
@@ -46,6 +47,7 @@ noinst_HEADERS =                     \
 	linear_solver_inc.F90        \
 	output_h.F90                 \
 	output_linear_response.F90   \
+	output_me_inc.F90            \
 	output_states.F90            \
 	output_etsf.F90
 
@@ -62,6 +64,7 @@ system.o : system.F90 v_ks.o energy.o
 xc_OEP_kernel.o : xc_OEP_kernel.F90 xc_OEP_kernel_inc.F90 xc_OEP.o system.o 
 pert.o : pert.F90 pert_inc.F90
 output_h_sys.o : output_h_sys.F90 output_states.F90 output_h.F90 output_linear_response.F90 output_etsf.F90
+output_me.o: output_me_inc.F90
 exponential_split.o : exponential_split.F90
 exponential.o : exponential.F90 exponential_split.o
 energy.o : energy.F90 energy_inc.F90

@@ -42,6 +42,7 @@ module h_sys_output_m
   use messages_m
   use modelmb_exchange_syms_m
   use mpi_m
+  use output_me_m
   use profiling_m
   use simul_box_m
   use states_m
@@ -72,41 +73,40 @@ module h_sys_output_m
     integer :: what                ! what to output
     integer :: how                 ! how to output
 
+    type(output_me_t) :: me        ! this handles the output of matrix elements
+
     ! This variables fine-tune the output for some of the possible output options:
     integer :: iter                ! output every iter
     logical :: duringscf
 
     character(len=80) :: wfs_list  ! If output_wfs, this list decides which wavefunctions to print.
-    integer :: ksmultipoles        ! If output_ksdipole, this number sets up which matrix elements will
-                                   ! be printed: e.g. if ksmultipoles = 3, the dipole, quadrupole and 
-                                   ! octopole matrix elements (between Kohn-Sham or single-particle orbitals).
 
     type(mesh_plane_t) :: plane    ! This is to calculate the current flow across a plane
     type(mesh_line_t)  :: line     ! or though a line (in 2D)
 
   end type h_sys_output_t
 
-  integer, parameter, public ::               &
-    output_potential      =      1,    &
-    output_density        =      2,    &
-    output_wfs            =      4,    &
-    output_wfs_sqmod      =      8,    &
-    output_geometry       =     16,    &
-    output_current        =     32,    &
-    output_ELF            =     64,    &
-    output_ELF_basins     =    128,    &
-    output_ELF_FS         =    256,    &
-    output_Bader          =    512,    &
-    output_el_pressure    =   1024,    &
-    output_ksdipole       =   2048,    &
-    output_pol_density    =   4096,    &
-    output_r              =   8192,    &
-    output_ked            =  16384,    &
-    output_j_flow         =  32768,    &
-    output_dos            =  65536,    &
-    output_tpa            = 131072,    &
-    output_density_matrix = 262144,    &
-    output_modelmb        = 524288
+  integer, parameter, public ::           &
+    output_potential       =        1,    &
+    output_density         =        2,    &
+    output_wfs             =        4,    &
+    output_wfs_sqmod       =        8,    &
+    output_geometry        =       16,    &
+    output_current         =       32,    &
+    output_ELF             =       64,    &
+    output_ELF_basins      =      128,    &
+    output_ELF_FS          =      256,    &
+    output_Bader           =      512,    &
+    output_el_pressure     =     1024,    &
+    output_matrix_elements =     2048,    &
+    output_pol_density     =     4096,    &
+    output_r               =     8192,    &
+    output_ked             =    16384,    &
+    output_j_flow          =    32768,    &
+    output_dos             =    65536,    &
+    output_tpa             =   131072,    &
+    output_density_matrix  =   262144,    &
+    output_modelmb         =   524288
 
 contains
 
@@ -168,11 +168,9 @@ contains
     !% See Bader, RF Atoms in Molecules: A Quantum Theory (Oxford, Oxford, 1990)
     !%Option el_pressure 1024
     !% Prints the electronic pressure. See Tao, Vignale, and Tokatly, Phys Rev Lett 100, 206405
-    !%Option ksdipole 2048
-    !% Prints out the multipole matrix elements between Kohn-Sham states (or just the single-
-    !% particle states, in independent-electrons mode). Note that despite the name
-    !% ("ksdipole"), the program may print higher-order multipoles (the order can be
-    !% set with the variable OutputMatrixElementsL).
+    !%Option matrix_elements 2048
+    !% Ouputs a series of matrix elements of the Kohn-Sham states. What is output can
+    !% be controlled by the OutputMatrixElements variable
     !%Option pol_density 4096
     !% Prints out the density of dipole moment. For pol and pol_lr modules, 
     !% prints the density of polarizability, in the linear directory.
@@ -209,7 +207,6 @@ contains
     !% particles described in the DescribeParticlesModelMB block. Which
     !% quantities will be output depends on the simultaneous presence of wfs,
     !% density, etc...
-    !% 
     !%End
     call loct_parse_int(datasets_check('Output'), 0, outp%what)
 
@@ -251,21 +248,6 @@ contains
       !% five states, "2,3" to print the second and the third state, etc.
       !%End
       call loct_parse_string(datasets_check('OutputWfsNumber'), "1-1024", outp%wfs_list)
-    end if
-
-    if(iand(outp%what, output_ksdipole).ne.0) then
-      !%Variable OutputMatrixElementsL
-      !%Type integer
-      !%Default 1
-      !%Section Output
-      !%Description
-      !% If Output contains ksdipole, then this variable decides which matrix
-      !% elements are printed out: e.g., if OutputMatrixElementsL = 1, then the
-      !% program will plot three files, matrix_elements.x (x=1,2,3), containing
-      !% respectively the (1,-1), (1,0) and (1,1) multipole matrix elements
-      !% between Kohn-Sham states.
-      !%End
-      call loct_parse_int(datasets_check('OutputMatrixElementsL'), 1, outp%ksmultipoles)
     end if
 
     if(loct_parse_block(datasets_check('CurrentThroughPlane'), blk) == 0) then
@@ -351,6 +333,10 @@ contains
       end select
     end if
 
+    if(iand(outp%what, output_matrix_elements).ne.0) then
+      call output_me_init(outp%me)
+    end if
+
     !%Variable OutputEvery
     !%Type integer
     !%Default 1000
@@ -363,7 +349,7 @@ contains
 
     call loct_parse_logical(datasets_check('OutputDuringSCF'), .false., outp%duringscf)
 
-    if(outp%what.ne.0) call io_function_read_how(sb, outp%how)
+    if(outp%what.ne.output_matrix_elements) call io_function_read_how(sb, outp%how)
 
   end subroutine h_sys_output_init
 
@@ -387,6 +373,10 @@ contains
       if(simul_box_is_periodic(gr%sb)) &
         call periodic_write_crystal(gr%sb, geo, dir)
     end if
+
+     if(iand(outp%what, output_matrix_elements).ne.0) then
+       call output_me(outp%me, st, gr, dir)
+     end if
 
 #if defined(HAVE_ETSF_IO)
     if (outp%how == output_etsf) then

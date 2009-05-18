@@ -26,7 +26,7 @@
     character(len=*),       intent(in)    :: dir
     type(h_sys_output_t),   intent(in)    :: outp
 
-    integer :: ik, ist, idim, is, id, ierr, iunit, l, m
+    integer :: ik, ist, idim, is, id, ierr
     character(len=80) :: fname, dirname
     FLOAT :: u
     FLOAT, allocatable :: dtmp(:), elf(:,:)
@@ -127,24 +127,6 @@
           end do
       end select
       SAFE_DEALLOCATE_A(elf)
-    end if
-
-    if(iand(outp%what, output_ksdipole).ne.0) then
-      ! The files will be called matrix_elements.x. The content of each file
-      ! should be clear from the header of each file.
-      id = 1
-      do ik = 1, st%d%nik
-        do l = 1, outp%ksmultipoles
-          do m = -l, l
-            write(fname,'(i4)') id
-            write(fname,'(a)') trim(dir)//'/matrix_elements.'//trim(adjustl(fname))
-            iunit = io_open(file = fname, action = 'write')
-            call h_sys_write_multipole_matrix(st, gr, l, m, ik, iunit, geo = geo)
-            call io_close(iunit)
-            id = id + 1
-          end do
-        end do
-      end do
     end if
 
     if(iand(outp%what, output_dos).ne.0) then
