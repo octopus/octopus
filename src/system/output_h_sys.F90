@@ -349,7 +349,8 @@ contains
 
     call loct_parse_logical(datasets_check('OutputDuringSCF'), .false., outp%duringscf)
 
-    if(outp%what.ne.output_matrix_elements) call io_function_read_how(sb, outp%how)
+    if(outp%what.ne.0.and.outp%what.ne.output_matrix_elements) &
+         call io_function_read_how(sb, outp%how)
 
   end subroutine h_sys_output_init
 
