@@ -104,7 +104,7 @@ subroutine poisson3D_init(gr, geo)
      call grid_create_multigrid(gr, geo)
      
   case(ISF)
-    call poisson_isf_init(gr%mesh)
+    call poisson_isf_init(gr%mesh, init_world = all_nodes_default)
 
   case(FFT_SPH)
     call poisson_fft_build_3d_0d(gr, poisson_solver)

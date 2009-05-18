@@ -81,19 +81,26 @@ module poisson_isf_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine poisson_isf_init(m)
-    type(mesh_t), intent(in) :: m
+  subroutine poisson_isf_init(mesh, init_world)
+    type(mesh_t),      intent(in) :: mesh
+    logical, optional, intent(in) :: init_world 
 
     integer :: n1, n2, n3
 #if defined(HAVE_MPI)
     integer :: m1, m2, m3, md1, md2, md3
     integer :: n(3)
     integer :: i_cnf
+    logical :: init_world_
 #endif
 
     call push_sub('poisson_isf.poisson_isf_init')
 
-    call dcf_new(m%idx%ll, rho_cf)
+#ifdef HAVE_MPI
+    init_world_ = .true.
+    if(present(init_world)) init_world_ = init_world
+#endif
+
+    call dcf_new(mesh%idx%ll, rho_cf)
 
     ! The serial version is always needed (as used, e.g., in the casida runmode)
     call calculate_dimensions(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3), &
@@ -107,7 +114,7 @@ contains
 
     call build_kernel(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3),   &
       cnf(serial)%nfft1, cnf(serial)%nfft2, cnf(serial)%nfft3, &
-      real(m%h(1), 8), order_scaling_function, cnf(serial)%kernel)
+      real(mesh%h(1), 8), order_scaling_function, cnf(serial)%kernel)
 
 #if defined(HAVE_MPI)
     ! Allocate to configurations. The initialisation, especially the kernel,
@@ -115,12 +122,17 @@ contains
     ! recalculating the kernel on each call of poisson_isf_solve depending on
     ! the all_nodes argument, both kernels are calculated.
     cnf(world)%mpi_grp = mpi_world
-    cnf(domain)%mpi_grp = m%mpi_grp
+    cnf(domain)%mpi_grp = mesh%mpi_grp
 
     ! Build the kernel for all configurations. At the moment, this is
     ! solving the poisson equation with all nodes (i_cnf == world) and
     ! with the domain nodes only (i_cnf == domain).
     do i_cnf = 2, n_cnf
+      if(.not. init_world .and. i_cnf == world) then
+        nullify(cnf(i_cnf)%kernel)
+        cycle
+      end if
+
       call par_calculate_dimensions(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3),         &
         m1, m2, m3, n1, n2, n3, md1, md2, md3, cnf(i_cnf)%nfft1, cnf(i_cnf)%nfft2, &
         cnf(i_cnf)%nfft3, cnf(i_cnf)%mpi_grp%size)
@@ -134,7 +146,7 @@ contains
 
     call par_build_kernel(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3), n1, n2, n3,     &
       cnf(i_cnf)%nfft1, cnf(i_cnf)%nfft2, cnf(i_cnf)%nfft3,                      &
-      m%h(1), order_scaling_function,                                            &
+      mesh%h(1), order_scaling_function,                                            &
       cnf(i_cnf)%mpi_grp%rank, cnf(i_cnf)%mpi_grp%size, cnf(i_cnf)%mpi_grp%comm, &
       cnf(i_cnf)%kernel)
     end do

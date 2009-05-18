@@ -87,11 +87,6 @@ contains
     call push_sub('poisson.poisson_init')
 
     call messages_print_stress(stdout, "Hartree")
-    select case(gr%mesh%sb%dim)
-    case(1); call init_1D()
-    case(2); call init_2D()
-    case(3); call init_3D()
-    end select
 
 #ifdef HAVE_MPI
     !%Variable ParallelizationPoissonAllNodes
@@ -106,6 +101,12 @@ contains
 
     call loct_parse_logical(datasets_check('ParallelizationPoissonAllNodes'), .true., all_nodes_default)
 #endif
+
+    select case(gr%mesh%sb%dim)
+    case(1); call init_1D()
+    case(2); call init_2D()
+    case(3); call init_3D()
+    end select
 
     call messages_print_stress(stdout)
 
