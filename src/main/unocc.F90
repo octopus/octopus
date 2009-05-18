@@ -161,13 +161,6 @@ contains
       call io_close(iunit)
     end if
 
-    ! calculate momentum of KS states
-    if (sys%st%wfs_type == M_REAL) then
-      call dstates_calc_momentum(sys%gr, sys%st)
-    else
-      call zstates_calc_momentum(sys%gr, sys%st)
-    end if
-    
     if(simul_box_is_periodic(sys%gr%sb).and. sys%st%d%nik>sys%st%d%nspin) then
       call states_write_bands(STATIC_DIR, sys%st%nst, sys%st, sys%gr%sb)
       call states_write_fermi_energy(STATIC_DIR, sys%st, sys%gr%mesh, sys%gr%sb)
@@ -224,11 +217,9 @@ contains
       st%st_end = st%nst
 
       SAFE_DEALLOCATE_P(st%eigenval)
-      SAFE_DEALLOCATE_P(st%momentum)
       SAFE_DEALLOCATE_P(st%occ)
       call states_allocate_wfns(st, m)
       SAFE_ALLOCATE(st%eigenval(1:st%nst, 1:st%d%nik))
-      SAFE_ALLOCATE(st%momentum(1:3, 1:st%nst, 1:st%d%nik))
       SAFE_ALLOCATE(st%occ(1:st%nst, 1:st%d%nik))
       if(st%d%ispin == SPINORS) then
         SAFE_ALLOCATE(st%spin(1:3, 1:st%nst, 1:st%d%nik))

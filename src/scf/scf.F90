@@ -540,12 +540,6 @@ contains
     ! calculate forces
     if(scf%calc_force) call epot_forces(gr, geo, hm%ep, st)
 
-    if (st%wfs_type == M_REAL) then
-      call dstates_calc_momentum(gr, st)
-    else
-      call zstates_calc_momentum(gr, st)
-    end if
-
     if(gs_run_) then 
       ! output final information
       call scf_write_static(STATIC_DIR, "info")
@@ -739,9 +733,6 @@ contains
         write(iunit, *)
       endif
 
-      ! Output expectation values of the momentum operator
-      call write_momentum(iunit)
-
       ! Next is the angular momentum. Only applies to 2D and 3D.
       if(gr%mesh%sb%dim == 2 .or. gr%mesh%sb%dim == 3) call write_angular_momentum(iunit)
 
@@ -904,81 +895,6 @@ contains
 
       call pop_sub()
     end subroutine write_angular_momentum
-
-
-    ! ---------------------------------------------------------
-    subroutine write_momentum(iunit)
-      integer,        intent(in) :: iunit
-
-      integer           :: ik, j, is, ns, iunit2
-      character(len=80) :: cspin
-      FLOAT             :: o
-
-      call push_sub('scf.write_momentum')   
-
-      ns = 1
-      if(st%d%nspin == 2) ns = 2
-
-      write(message(1),'(a)') 'Momentum of the KS states [a.u.]:'
-      call write_info(1, iunit)      
-      if (st%d%nik > ns) then
-        message(1) = 'Kpoints [' // trim(units_out%length%abbrev) // '^-1]'
-        call write_info(1, iunit)
-      end if
-
-      do ik = 1, st%d%nik, ns
-        if(st%d%nik > ns) then
-          write(message(1), '(a,i4,3(a,f12.6),a)') '#k =',ik,', k = (',  &
-            st%d%kpoints(1, ik)*units_out%length%factor, ',',            &
-            st%d%kpoints(2, ik)*units_out%length%factor, ',',            &
-            st%d%kpoints(3, ik)*units_out%length%factor, ')'
-          call write_info(1, iunit)
-        end if
-
-        write(message(1), '(a4,1x,a5,3a12,4x,a12,1x)')       &
-          '#st',' Spin','       <px>', '        <py>', '        <pz>', 'Occupation '
-        call write_info(1, iunit)
-
-        do j = 1, st%nst
-          do is = 0, ns-1
-
-            if(j > st%nst) then
-              o = M_ZERO
-            else
-              o = st%occ(j, ik+is)
-            end if
-            
-            if(is.eq.0) cspin = 'up'
-            if(is.eq.1) cspin = 'dn'
-            if(st%d%ispin.eq.UNPOLARIZED.or.st%d%ispin.eq.SPINORS) cspin = '--'
-
-            write(message(1), '(i4,3x,a2,1x,3f12.6,3x,f12.6)')        &
-                j, trim(cspin), st%momentum(1:min(gr%sb%dim, 3), j, ik), o
-            call write_info(1, iunit)
-
-          end do
-        end do
-        
-        write(message(1),'(a)') ''
-        call write_info(1, iunit)      
-
-      end do
-
-      ! also write to disk for further processing
-      iunit2 = io_open(STATIC_DIR//'/momentum', action='write')
-
-      do ik = 1, st%d%nik
-        do j = 1, st%nst
-          write(message(1), '(2i4,3x, 3f12.6,3x,f12.6)') &
-            j, ik, st%momentum(1:min(gr%sb%dim, 3), j, ik), st%occ(j, ik)
-          call write_info(1, iunit2)
-        end do
-      end do
-
-      call io_close(iunit2)
-
-      call pop_sub()
-    end subroutine write_momentum
 
 
     ! ---------------------------------------------------------

@@ -190,8 +190,10 @@ contains
         if( (evjs.gt.evis - degen_thres).and.(evjs.lt.evis + degen_thres) ) then
           ! mark forward scattering states with +1 and backward scattering
           ! states with -1
-          degeneracy_matrix(is, js) = &
-            sign(M_ONE, st%momentum(1, eindex(1, sindex(js)), eindex(2, sindex(js))))
+          !WARNING: IS THIS REALLY NECESSARY? - have to calculate momentum
+          degeneracy_matrix(is, js) = M_ONE
+          !degeneracy_matrix(is, js) = &
+          !  sign(M_ONE, st%momentum(1, eindex(1, sindex(js)), eindex(2, sindex(js))))
         end if
 
       end do

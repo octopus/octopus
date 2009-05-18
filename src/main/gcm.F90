@@ -104,7 +104,6 @@ module gcm_m
       call states_copy(phi(i), sys%st)
       call states_allocate_wfns(phi(i), gr%mesh)
       SAFE_ALLOCATE(phi(i)%eigenval(1:phi(i)%nst, 1:phi(i)%d%nik))
-      SAFE_ALLOCATE(phi(i)%momentum(1:3, 1:phi(i)%nst, 1:phi(i)%d%nik))
       SAFE_ALLOCATE(phi(i)%occ(1:phi(i)%nst, 1:phi(i)%d%nik))
       if(phi(i)%d%ispin == SPINORS) then
         SAFE_ALLOCATE(phi(i)%spin(1:3, 1:phi(i)%nst, 1:phi(i)%d%nik))

@@ -136,7 +136,6 @@ module states_m
     logical        :: fixed_spins   ! In spinors mode, the spin direction is set
                                     ! for the initial (random) orbitals.
     FLOAT, pointer :: spin(:, :, :)
-    FLOAT, pointer :: momentum(:, :, :)
 
     FLOAT          :: qtot          ! (-) The total charge in the system (used in Fermi)
     FLOAT          :: val_charge    ! valence charge
@@ -168,7 +167,7 @@ contains
 
     nullify(st%dpsi, st%zpsi, st%zphi, st%rho, st%current, st%rho_core, st%frozen_rho, st%eigenval)
     nullify(st%ob_intf_psi, st%ob_rho, st%ob_eigenval, st%ob_occ, st%ob_green)
-    nullify(st%occ, st%spin, st%momentum, st%node, st%user_def_states)
+    nullify(st%occ, st%spin, st%node, st%user_def_states)
     nullify(st%d%kpoints, st%d%kweights)
     nullify(st%st_range, st%st_num)
 
@@ -433,10 +432,8 @@ contains
     ! we now allocate some arrays
     SAFE_ALLOCATE(st%occ     (1:st%nst, 1:st%d%nik))
     SAFE_ALLOCATE(st%eigenval(1:st%nst, 1:st%d%nik))
-    SAFE_ALLOCATE(st%momentum(1:gr%sb%dim, 1:st%nst, 1:st%d%nik))
     st%eigenval = M_ZERO
     st%occ      = M_ZERO
-    st%momentum = M_ZERO
     ! allocate space for formula strings that define user defined states
     SAFE_ALLOCATE(st%user_def_states(1:st%d%dim, 1:st%nst, 1:st%d%nik))
     if(st%d%ispin == SPINORS) then
@@ -923,7 +920,6 @@ contains
     call loct_pointer_copy(stout%occ, stin%occ)
     stout%fixed_spins = stin%fixed_spins
     call loct_pointer_copy(stout%spin, stin%spin)
-    call loct_pointer_copy(stout%momentum, stin%momentum)
     call loct_pointer_copy(stout%node, stin%node)
     call mpi_grp_copy(stout%mpi_grp, stin%mpi_grp)
     call loct_pointer_copy(stout%st_range, stin%st_range)
@@ -958,7 +954,6 @@ contains
 
     SAFE_DEALLOCATE_P(st%occ)
     SAFE_DEALLOCATE_P(st%spin)
-    SAFE_DEALLOCATE_P(st%momentum)
 
     SAFE_DEALLOCATE_P(st%node)
     SAFE_DEALLOCATE_P(st%st_range)
@@ -2368,16 +2363,13 @@ contains
 
     SAFE_DEALLOCATE_P(st%occ)
     SAFE_DEALLOCATE_P(st%eigenval)
-    SAFE_DEALLOCATE_P(st%momentum)
     SAFE_ALLOCATE(st%occ     (1:st%nst, 1:st%d%nik))
     SAFE_ALLOCATE(st%eigenval(1:st%nst, 1:st%d%nik))
-    SAFE_ALLOCATE(st%momentum(1:3, 1:st%nst, 1:st%d%nik))
 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
         st%occ(ist, ik) = staux%occ(n+ist, ik)
         st%eigenval(ist, ik) = staux%eigenval(n+ist, ik)
-        st%momentum(1:3, ist, ik) = staux%momentum(1:3, n+ist, ik)
       end do
     end do
 

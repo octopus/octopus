@@ -220,7 +220,6 @@ contains
       SAFE_DEALLOCATE_P(w%gs_st%zpsi)
       SAFE_DEALLOCATE_P(w%gs_st%occ)
       SAFE_DEALLOCATE_P(w%gs_st%eigenval)
-      SAFE_DEALLOCATE_P(w%gs_st%momentum)
       SAFE_DEALLOCATE_P(w%gs_st%node)
       if(w%gs_st%d%ispin == SPINORS) then
         SAFE_DEALLOCATE_P(w%gs_st%spin)
@@ -250,7 +249,6 @@ contains
       ! allocate memory
       SAFE_ALLOCATE(w%gs_st%occ(1:w%gs_st%nst, 1:w%gs_st%d%nik))
       SAFE_ALLOCATE(w%gs_st%eigenval(1:w%gs_st%nst, 1:w%gs_st%d%nik))
-      SAFE_ALLOCATE(w%gs_st%momentum(1:3, 1:w%gs_st%nst, 1:w%gs_st%d%nik))
       SAFE_ALLOCATE(w%gs_st%node(1:w%gs_st%nst))
       if(w%gs_st%d%ispin == SPINORS) then
         SAFE_ALLOCATE(w%gs_st%spin(1:3, 1:w%gs_st%nst, 1:w%gs_st%d%nik))

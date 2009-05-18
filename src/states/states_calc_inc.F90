@@ -322,9 +322,10 @@ end function X(states_residue)
 ! Note, the blas routines cdotc, zdotc take care of complex 
 ! conjugation *. Therefore we pass phi directly.
 ! ---------------------------------------------------------
-subroutine X(states_calc_momentum)(gr, st)
+subroutine X(states_calc_momentum)(gr, st, momentum)
   type(grid_t),   intent(inout) :: gr
   type(states_t), intent(inout) :: st
+  FLOAT,          intent(out)   :: momentum(:,:,:)
 
   integer             :: idim, ist, ik, i
   CMPLX               :: expect_val_p
@@ -358,16 +359,16 @@ subroutine X(states_calc_momentum)(gr, st)
         ! In the case of real wave functions we do not include the 
         ! -i prefactor of p = -i \nabla
         if (st%wfs_type == M_REAL) then
-          st%momentum(i, ist, ik) = real( expect_val_p )
+          momentum(i, ist, ik) = real( expect_val_p )
         else
-          st%momentum(i, ist, ik) = real( -M_zI*expect_val_p )
+          momentum(i, ist, ik) = real( -M_zI*expect_val_p )
         end if
       end do
 
       ! have to add the momentum vector in the case of periodic systems, 
       ! since st%X(psi) contains only u_k
       do i = 1, gr%sb%periodic_dim
-        st%momentum(i, ist, ik) = st%momentum(i, ist, ik) + st%d%kpoints(i, ik)
+        momentum(i, ist, ik) = momentum(i, ist, ik) + st%d%kpoints(i, ik)
       end do
     end do
 
@@ -377,16 +378,16 @@ subroutine X(states_calc_momentum)(gr, st)
       kstart = st%d%kpt%start
       kend = st%d%kpt%end
       kn = st%d%kpt%nlocal
-      ndim = ubound(st%momentum, dim = 1)
+      ndim = ubound(momentum, dim = 1)
 
       ASSERT(.not. st%parallel_in_states)
       
       SAFE_ALLOCATE(lmom(1:ndim, 1:st%nst, 1:kn))
 
-      lmom(1:ndim, 1:st%nst, 1:kn) = st%momentum(1:ndim, 1:st%nst, kstart:kend)
+      lmom(1:ndim, 1:st%nst, 1:kn) = momentum(1:ndim, 1:st%nst, kstart:kend)
 
       call MPI_Allgatherv(lmom, ndim*st%nst*kn, MPI_FLOAT, &
-           st%momentum, st%d%kpt%num(:)*st%nst*ndim, (st%d%kpt%range(1, :) - 1)*st%nst*ndim, MPI_FLOAT, &
+           momentum, st%d%kpt%num(:)*st%nst*ndim, (st%d%kpt%range(1, :) - 1)*st%nst*ndim, MPI_FLOAT, &
            st%d%kpt%mpi_grp%comm, mpi_err)
 
       SAFE_DEALLOCATE_A(lmom)
@@ -397,9 +398,9 @@ subroutine X(states_calc_momentum)(gr, st)
       SAFE_ALLOCATE(gmomentum(1:st%nst))
 
       do i = 1, gr%mesh%sb%dim
-        lmomentum(1:st%lnst) = st%momentum(i, st%st_start:st%st_end, ik)
+        lmomentum(1:st%lnst) = momentum(i, st%st_start:st%st_end, ik)
         call lmpi_gen_allgatherv(st%lnst, lmomentum, tmp, gmomentum, st%mpi_grp)
-        st%momentum(i, 1:st%nst, ik) = gmomentum(1:st%nst)
+        momentum(i, 1:st%nst, ik) = gmomentum(1:st%nst)
       end do
 
       SAFE_DEALLOCATE_A(lmomentum)

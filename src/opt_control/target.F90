@@ -200,12 +200,10 @@ module opt_control_target_m
 
       SAFE_DEALLOCATE_P(target%st%occ)
       SAFE_DEALLOCATE_P(target%st%eigenval)
-      SAFE_DEALLOCATE_P(target%st%momentum)
       SAFE_DEALLOCATE_P(target%st%node)
 
       SAFE_ALLOCATE(     target%st%occ(1:target%st%nst, 1:target%st%d%nik))
       SAFE_ALLOCATE(target%st%eigenval(1:target%st%nst, 1:target%st%d%nik))
-      SAFE_ALLOCATE(target%st%momentum(1:3, 1:target%st%nst, 1:target%st%d%nik))
       SAFE_ALLOCATE(    target%st%node(1:target%st%nst))
       if(target%st%d%ispin == SPINORS) then
         SAFE_DEALLOCATE_P(target%st%spin)
