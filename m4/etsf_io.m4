@@ -30,7 +30,7 @@ if test "x$LIBS_ETSF_IO" != x; then
     use etsf_io
     type(etsf_vars) :: vars
     call etsf_io_vars_free(vars)
-    ]), [acx_etsf_io_ok=yes; FCFLAGS_ETSF_IO="$etsf_io_fcflags"; LIBS_ETSF_IO="$etsf_io_libs"], [])
+    ]), [acx_etsf_io_ok=yes], [])
     AC_MSG_RESULT([$acx_etsf_io_ok])
     LIBS="$save_LIBS"
     FCFLAGS="$save_FCFLAGS"

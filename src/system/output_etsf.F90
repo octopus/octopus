@@ -304,8 +304,6 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
       end do
     end do
 
-write(*,*) "1"
-
     main%coefficients_of_wavefunctions%data7D => local_wfs
     groups%main => main
     call etsf_io_data_write(dir//"/wfs-etsf.nc", &
@@ -314,8 +312,6 @@ write(*,*) "1"
       message(1) = "ETSF_IO returned a fatal error. See message above."
       call write_fatal(1)
     end if
-
-write(*,*) "2"
 
     !Free the main container
     nullify(groups%main)
