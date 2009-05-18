@@ -27,9 +27,11 @@ module modelmb_density_matrix_m
   use hypercube_m
   use io_function_m
   use io_m
+  use index_m
   use lalg_adv_m
   use loct_m
   use loct_parser_m
+  use mesh_m
   use mesh_function_m
   use messages_m
   use modelmb_particles_m
@@ -326,6 +328,15 @@ contains
     SAFE_DEALLOCATE_P(this%nnatorb_prt_densmat)
     call pop_sub()
   end subroutine modelmb_density_matrix_end
+
+
+#include "undef.F90"
+#include "real.F90"
+#include "modelmb_density_matrix_inc.F90"
+
+#include "undef.F90"
+#include "complex.F90"
+#include "modelmb_density_matrix_inc.F90"
 
 end module modelmb_density_matrix_m
 

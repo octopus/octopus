@@ -69,11 +69,7 @@ module mesh_function_m
     zmf_dotp_aux,          &
     dmf_multipoles,        &
     zmf_multipoles,        &
-    mesh_init_mesh_aux,    &
-    dmf_calculate_gamma,   &
-    zmf_calculate_gamma,   &
-    dmf_calculate_rho,     &
-    zmf_calculate_rho
+    mesh_init_mesh_aux
 
   interface mf_surface_integral
     module procedure dmf_surface_integral_scalar, dmf_surface_integral_vector, &

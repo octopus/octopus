@@ -36,6 +36,7 @@ module modelmb_exchange_syms_m
   use mesh_function_m
   use messages_m
   use modelmb_particles_m
+  use modelmb_density_m
   use modelmb_1part_m
   use mpi_m
   use mpi_lib_m
@@ -467,7 +468,7 @@ contains
           call write_info(1)
    
           SAFE_ALLOCATE(antisymrho_1part(1:mb_1part%npt_1part))
-          call zmf_calculate_rho(ikeeppart, mb_1part, npptype, gr%mesh, antisymwf, antisymrho_1part)
+          call zmodelmb_density_calculate(ikeeppart, mb_1part, npptype, gr%mesh, antisymwf, antisymrho_1part)
           ! FIXME: this will also depend on particle type and idimension
           write(filename,'(a,a,i3.3,a,i3.3,a,i3.3,a,i3.3)') trim(dir),'/asymden_imb', mm, &
                 '_ipar', ikeeppart,'_ndn',nspindown,'_iY',iyoung

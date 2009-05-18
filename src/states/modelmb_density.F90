@@ -25,11 +25,13 @@ module modelmb_density_m
   use global_m
   use grid_m
   use hypercube_m
+  use index_m
   use io_function_m
   use io_m
   use lalg_adv_m
   use loct_m
   use loct_parser_m
+  use mesh_m
   use mesh_function_m
   use messages_m
   use modelmb_particles_m
@@ -43,10 +45,12 @@ module modelmb_density_m
 
   private
 
-  public :: modelmb_density_write, &
-            modelmb_density_init, &
-            modelmb_density_end, &
-            modelmb_density_nullify, &
+  public :: modelmb_density_write,      &
+            modelmb_density_init,       &
+            modelmb_density_end,        &
+            modelmb_density_nullify,    &
+            dmodelmb_density_calculate, &
+            zmodelmb_density_calculate, &
             modelmb_density_t
 
   type modelmb_density_t
@@ -181,7 +185,7 @@ contains
 
       !   calculate the 1 particle density for this Many Body state, and for the chosen
       !   particle being the free coordinate
-      call zmf_calculate_rho(ikeeppart, mb_1part, nparticles_density, &
+      call zmodelmb_density_calculate(ikeeppart, mb_1part, nparticles_density, &
             gr%mesh, wf, density)
 
       ! Only node zero writes.
@@ -250,6 +254,14 @@ contains
     SAFE_DEALLOCATE_P(this%particle_kept_densities)
     call pop_sub()
   end subroutine modelmb_density_end
+
+#include "undef.F90"
+#include "real.F90"
+#include "modelmb_density_inc.F90"
+
+#include "undef.F90"
+#include "complex.F90"
+#include "modelmb_density_inc.F90"
 
 end module modelmb_density_m
 
