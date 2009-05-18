@@ -90,6 +90,7 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     call etsf_io_data_write(dir//"/geometry-etsf.nc", &
          & groups, lstat, error_data)
     if (.not. lstat) then
+      call etsf_io_low_error_handle(error_data)
       message(1) = "ETSF_IO returned a fatal error. See message above."
       call write_fatal(1)
     end if
@@ -177,6 +178,7 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     call etsf_io_data_write(dir//"/density-etsf.nc", &
          & groups, lstat, error_data)
     if (.not. lstat) then
+      call etsf_io_low_error_handle(error_data)
       message(1) = "ETSF_IO returned a fatal error. See message above."
       call write_fatal(1)
     end if
@@ -309,6 +311,7 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     call etsf_io_data_write(dir//"/wfs-etsf.nc", &
          & groups, lstat, error_data)
     if (.not. lstat) then
+      call etsf_io_low_error_handle(error_data)
       message(1) = "ETSF_IO returned a fatal error. See message above."
       call write_fatal(1)
     end if
