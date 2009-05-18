@@ -63,16 +63,11 @@ contains
   !  Other option is to force-antisymmetrize (see routine modelmb_sym_states)
   ! ---------------------------------------------------------
   subroutine modelmb_find_exchange_syms(gr, mm, modelmbparticles, wf)
+    type(grid_t),             intent(in)    :: gr
+    integer,                  intent(in)    :: mm
+    CMPLX,                    intent(in)    :: wf(1:gr%mesh%np_part_global)
+    type(modelmb_particle_t), intent(inout) :: modelmbparticles
 
-    implicit none
-
-    type(grid_t),             intent(in)   :: gr
-    integer,                  intent(in)   :: mm
-    CMPLX,                    intent(in)   :: wf(1:gr%mesh%np_part_global)
-    type(modelmb_particle_t), intent(inout):: modelmbparticles
-
-
-    ! local vars
     integer :: itype, ipart1, ipart2, npptype
     integer :: ip, ipp, maxtries, enoughgood
     integer :: ntries, ngoodpoints, nratiocomplaints
@@ -84,14 +79,12 @@ contains
     FLOAT :: ratio, wftol, rand0to1, tolonsign
     CMPLX :: wfval1, wfval2
 
-    ! source code
-
     call push_sub('states.modelmb_find_exchange_syms')
 
     SAFE_ALLOCATE(ix(1:MAX_DIM))
     SAFE_ALLOCATE(ixp(1:MAX_DIM))
 
-    ndimmb=modelmbparticles%ndim_modelmb
+    ndimmb=modelmbparticles%ndim
 
     ! this is the tolerance on the wavefunction in order to use it to determine
     ! sign changes. Should be checked, and might be a function of grid number,
@@ -110,7 +103,7 @@ contains
     modelmbparticles%exchange_symmetry=0
 
     ! for each particle type
-    do itype=1,modelmbparticles%ntype_of_particle_modelmb
+    do itype = 1, modelmbparticles%ntype_of_particle
 
       npptype=modelmbparticles%nparticles_per_type(itype)
       nratiocomplaints = 0
@@ -126,11 +119,11 @@ contains
           do while (ntries < maxtries .and. ngoodpoints < enoughgood)
             
             ! count real trials of random points (avoids eventual infinite looping)
-            ntries = ntries+1
+            ntries = ntries + 1
 
             ! find coordinates of random point
             call random_number(rand0to1)
-            ip = floor(gr%mesh%np_part_global*rand0to1)+1
+            ip = floor(gr%mesh%np_part_global*rand0to1) + 1
  
             ! wavefunction value at this point ip
             wfval1 = wf(ip)
@@ -151,7 +144,7 @@ contains
             ixp (ofst2+1:ofst2+ndimmb) = ix (ofst1+1:ofst1+ndimmb) ! part2 to 1
  
             ! if we are on a diagonal, cycle
-            if (all(ix-ixp == 0)) cycle
+            if (all(ix - ixp == 0)) cycle
  
             ! recover mb index for new point
             ipp = index_from_coords(gr%mesh%idx, gr%sb%dim, ixp)
@@ -205,7 +198,7 @@ contains
     end do ! itype
 
     ! do some crude output
-    do itype=1,modelmbparticles%ntype_of_particle_modelmb
+    do itype=1,modelmbparticles%ntype_of_particle
       !write (message(1),'(a)')    ' lower triangle of exchange parity matrix'
       write (message(1),'(a,I6,a,I6)') '   for particles of type ', itype, '   in mb state ', mm
       call write_info(1)
@@ -241,19 +234,14 @@ contains
 
   ! project out states with proper symmetry for cases which are of symmetry = unknown
   subroutine modelmb_sym_state(dir, gr, mm, geo, modelmbparticles, wf, symmetries_satisfied)
+    character(len=*),         intent(in)    :: dir
+    type(grid_t),             intent(in)    :: gr
+    integer,                  intent(in)    :: mm
+    type(geometry_t),         intent(in)    :: geo
+    type(modelmb_particle_t), intent(in)    :: modelmbparticles
+    CMPLX,                    intent(inout) :: wf(1:gr%mesh%np_part_global) ! will be antisymmetrized on output
+    logical,                  intent(out)   :: symmetries_satisfied
 
-    implicit none
-
-    character(len=*), intent(in)    :: dir
-    type(grid_t),     intent(in)    :: gr
-    integer,          intent(in)    :: mm
-    type(geometry_t), intent(in)    :: geo
-    type(modelmb_particle_t), intent(in) :: modelmbparticles
-    ! this will be antisymmetrized on output
-    CMPLX,                    intent(inout) :: wf(1:gr%mesh%np_part_global)
-    logical,          intent(out)   :: symmetries_satisfied
-
-    ! local vars
     integer :: itype, ipart1, ipart2, npptype
     integer :: ip, ipp, iup, idown, iyoung
     integer :: iantisym, ierr, ikeeppart
@@ -281,9 +269,6 @@ contains
 
     logical :: debug_antisym
 
-
-! source
-
     call push_sub('states.modelmb_sym_states')
 
     symmetries_satisfied = .false.
@@ -299,14 +284,14 @@ contains
     SAFE_ALLOCATE(ix(1:MAX_DIM))
     SAFE_ALLOCATE(ixp(1:MAX_DIM))
 
-    SAFE_ALLOCATE(symmetries_satisfied_alltypes(1:modelmbparticles%ntype_of_particle_modelmb))
+    SAFE_ALLOCATE(symmetries_satisfied_alltypes(1:modelmbparticles%ntype_of_particle))
     symmetries_satisfied_alltypes = 0
 
-    ndimmb=modelmbparticles%ndim_modelmb
+    ndimmb=modelmbparticles%ndim
 
     normalizer = product(gr%mesh%h(1:gr%mesh%sb%dim)) !M_ONE/units_out%length%factor**gr%mesh%sb%dim
 
-    if (modelmbparticles%ntype_of_particle_modelmb > 1) then
+    if (modelmbparticles%ntype_of_particle > 1) then
       write (message(1), '(a)') 'modelmb_sym_state: not coded for several particly types '
       call write_fatal(1)
     end if
@@ -316,7 +301,7 @@ contains
     SAFE_ALLOCATE(antisymwf_swap(1:gr%mesh%np_part_global))
 
     ! for each particle type
-    do itype = 1, modelmbparticles%ntype_of_particle_modelmb
+    do itype = 1, modelmbparticles%ntype_of_particle
 
       ! FIXME: for multiple particle types this needs to be fixed.
       ! Also, for inequivalent spin configurations this should vary, and we get
@@ -331,7 +316,7 @@ contains
       end if
 
       call modelmb_1part_init(mb_1part, gr%mesh, ikeeppart, &
-             modelmbparticles%ndim_modelmb, gr%sb%box_offset)
+             modelmbparticles%ndim, gr%sb%box_offset)
 
       npptype = modelmbparticles%nparticles_per_type(itype)
 
@@ -506,7 +491,7 @@ contains
     end do ! itype
 
     ! check if all types of particles have been properly symmetrized
-    if (sum(symmetries_satisfied_alltypes) == modelmbparticles%ntype_of_particle_modelmb) then
+    if (sum(symmetries_satisfied_alltypes) == modelmbparticles%ntype_of_particle) then
       wf = antisymwf
       symmetries_satisfied = .true.
     end if

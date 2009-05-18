@@ -63,14 +63,10 @@ module modelmb_density_m
 contains
 
   subroutine modelmb_density_init(dir, st, den)
-
-    implicit none
-
-    character(len=*),       intent(in) :: dir
-    type(states_t),         intent(in) :: st
+    character(len=*),        intent(in)  :: dir
+    type(states_t),          intent(in)  :: st
     type(modelmb_density_t), intent(out) :: den
 
-    ! local vars
     integer :: ncols, ipart
     type(block_t) :: blk
 
@@ -106,7 +102,7 @@ contains
     end if
     den%ndensities_to_calculate = loct_parse_block_n(blk)
     if (den%ndensities_to_calculate < 0 .or. &
-        den%ndensities_to_calculate > st%modelmbparticles%nparticle_modelmb) then
+        den%ndensities_to_calculate > st%modelmbparticles%nparticle) then
       call input_error("DensitiestoCalc")
     end if
 
@@ -133,10 +129,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine modelmb_density_write(gr, st, wf, mm, den)
-    type(grid_t),     intent(in) :: gr
-    type(states_t),   intent(in) :: st
-    CMPLX,            intent(in) :: wf(1:gr%mesh%np_part_global)
-    integer,          intent(in) :: mm
+    type(grid_t),            intent(in) :: gr
+    type(states_t),          intent(in) :: st
+    CMPLX,                   intent(in) :: wf(1:gr%mesh%np_part_global)
+    integer,                 intent(in) :: mm
     type(modelmb_density_t), intent(in) :: den
 
     integer :: jj, ll, j, err_code, iunit, ndims, ndim1part
@@ -158,7 +154,7 @@ contains
     ! and how many (and which) dimensions should be integrated away.
     ndims = gr%sb%dim
 
-    ndim1part = st%modelmbparticles%ndim_modelmb
+    ndim1part = st%modelmbparticles%ndim
 
     call modelmb_1part_nullify(mb_1part)
     SAFE_ALLOCATE(  ix_1part(1:ndim1part))
@@ -175,7 +171,7 @@ contains
     ! loop over desired density matrices
     dens_loop: do idensities = 1, den%ndensities_to_calculate
       ikeeppart = den%particle_kept(idensities)
-      nparticles_density = st%modelmbparticles%nparticles_per_type(st%modelmbparticles%particletype_modelmb(ikeeppart))
+      nparticles_density = st%modelmbparticles%nparticles_per_type(st%modelmbparticles%particletype(ikeeppart))
 
       call modelmb_1part_init(mb_1part, gr%mesh, ikeeppart, ndim1part, gr%sb%box_offset)
 
@@ -213,7 +209,7 @@ contains
              mb_1part%enlarge_1part(1), jj, ix_1part)
         dipole_moment = dipole_moment+(ix_1part(:)*mb_1part%h_1part(:)+mb_1part%origin(:))&
                       *real(density(jj))&
-                      *st%modelmbparticles%charge_particle_modelmb(ikeeppart)
+                      *st%modelmbparticles%charge_particle(ikeeppart)
       end do
       ! note: for eventual multiple particles in 4D (eg 8D total) this would fail to give the last values of dipole_moment
       write (message(1),'(a,I6,a,I6,a,I6)') 'For particle ', ikeeppart, ' of mb state ', mm
@@ -240,6 +236,7 @@ contains
 
   subroutine modelmb_density_nullify(this)
     type(modelmb_density_t), intent(out) :: this
+
     call push_sub('states.modelmb_density_nullify')
     nullify(this%labels)
     nullify(this%particle_kept)
@@ -249,6 +246,7 @@ contains
   ! ---------------------------------------------------------
   subroutine modelmb_density_end(this)
     type(modelmb_density_t), intent(inout) :: this
+
     call push_sub('states.modelmb_density_end')
     SAFE_DEALLOCATE_P(this%labels)
     SAFE_DEALLOCATE_P(this%particle_kept)
