@@ -56,8 +56,8 @@ module modelmb_density_m
   type modelmb_density_t
     integer :: ndensities_to_calculate
     character(200) :: dirname
-    character(80), pointer :: labels_densities(:)
-    integer, pointer :: particle_kept_densities(:)
+    character(80), pointer :: labels(:)
+    integer, pointer :: particle_kept(:)
   end type modelmb_density_t
 
 contains
@@ -110,15 +110,15 @@ contains
       call input_error("DensitiestoCalc")
     end if
 
-    SAFE_ALLOCATE(den%labels_densities(1:den%ndensities_to_calculate))
-    SAFE_ALLOCATE(den%particle_kept_densities(1:den%ndensities_to_calculate))
+    SAFE_ALLOCATE(den%labels(1:den%ndensities_to_calculate))
+    SAFE_ALLOCATE(den%particle_kept(1:den%ndensities_to_calculate))
    
     do ipart = 1, den%ndensities_to_calculate
-      call loct_parse_block_string(blk, ipart-1, 0, den%labels_densities(ipart))
-      call loct_parse_block_int(blk, ipart-1, 1, den%particle_kept_densities(ipart))
+      call loct_parse_block_string(blk, ipart-1, 0, den%labels(ipart))
+      call loct_parse_block_int(blk, ipart-1, 1, den%particle_kept(ipart))
    
-      write (message(1),'(a,a)') 'labels_densities = ', den%labels_densities(ipart)
-      write (message(2),'(a,i6)') 'particle_kept_densities = ', den%particle_kept_densities(ipart)
+      write (message(1),'(a,a)') 'labels_densities = ', den%labels(ipart)
+      write (message(2),'(a,i6)') 'particle_kept_densities = ', den%particle_kept(ipart)
       call write_info(2)
     end do
     call loct_parse_block_end(blk)
@@ -174,7 +174,7 @@ contains
 
     ! loop over desired density matrices
     dens_loop: do idensities = 1, den%ndensities_to_calculate
-      ikeeppart = den%particle_kept_densities(idensities)
+      ikeeppart = den%particle_kept(idensities)
       nparticles_density = st%modelmbparticles%nparticles_per_type(st%modelmbparticles%particletype_modelmb(ikeeppart))
 
       call modelmb_1part_init(mb_1part, gr%mesh, ikeeppart, ndim1part, gr%sb%box_offset)
@@ -241,8 +241,8 @@ contains
   subroutine modelmb_density_nullify(this)
     type(modelmb_density_t), intent(out) :: this
     call push_sub('states.modelmb_density_nullify')
-    nullify(this%labels_densities)
-    nullify(this%particle_kept_densities)
+    nullify(this%labels)
+    nullify(this%particle_kept)
     call pop_sub()
   end subroutine modelmb_density_nullify
 
@@ -250,8 +250,8 @@ contains
   subroutine modelmb_density_end(this)
     type(modelmb_density_t), intent(inout) :: this
     call push_sub('states.modelmb_density_end')
-    SAFE_DEALLOCATE_P(this%labels_densities)
-    SAFE_DEALLOCATE_P(this%particle_kept_densities)
+    SAFE_DEALLOCATE_P(this%labels)
+    SAFE_DEALLOCATE_P(this%particle_kept)
     call pop_sub()
   end subroutine modelmb_density_end
 

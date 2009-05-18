@@ -52,11 +52,12 @@ module modelmb_density_matrix_m
             modelmb_denmat_t
 
   type modelmb_denmat_t
+    private
     integer :: ndensmat_to_calculate
     character(len=200) :: dirname
-    character(80), pointer :: labels_densmat(:)
-    integer, pointer :: particle_kept_densmat(:)
-    integer, pointer :: nnatorb_prt_densmat(:)
+    character(80), pointer :: labels(:)
+    integer, pointer :: particle_kept(:)
+    integer, pointer :: nnatorb_prt(:)
   end type modelmb_denmat_t
 
 contains
@@ -110,18 +111,18 @@ contains
       call input_error("DensityMatricestoCalc")
     end if
 
-    SAFE_ALLOCATE(denmat%labels_densmat(1:denmat%ndensmat_to_calculate))
-    SAFE_ALLOCATE(denmat%particle_kept_densmat(1:denmat%ndensmat_to_calculate))
-    SAFE_ALLOCATE(denmat%nnatorb_prt_densmat(1:denmat%ndensmat_to_calculate))
+    SAFE_ALLOCATE(denmat%labels(1:denmat%ndensmat_to_calculate))
+    SAFE_ALLOCATE(denmat%particle_kept(1:denmat%ndensmat_to_calculate))
+    SAFE_ALLOCATE(denmat%nnatorb_prt(1:denmat%ndensmat_to_calculate))
    
     do ipart=1,denmat%ndensmat_to_calculate
-      call loct_parse_block_string(blk, ipart-1, 0, denmat%labels_densmat(ipart))
-      call loct_parse_block_int(blk, ipart-1, 1, denmat%particle_kept_densmat(ipart))
-      call loct_parse_block_int(blk, ipart-1, 2, denmat%nnatorb_prt_densmat(ipart))
-   
-      write (message(1),'(a,a)') 'labels_densmat = ', denmat%labels_densmat(ipart)
-      write (message(2),'(a,i6)') 'particle_kept_densmat = ', denmat%particle_kept_densmat(ipart)
-      write (message(3),'(a,i6)') 'nnatorb_prt_densmat = ', denmat%nnatorb_prt_densmat(ipart)
+      call loct_parse_block_string(blk, ipart-1, 0, denmat%labels(ipart))
+      call loct_parse_block_int(blk, ipart-1, 1, denmat%particle_kept(ipart))
+      call loct_parse_block_int(blk, ipart-1, 2, denmat%nnatorb_prt(ipart))
+
+      write (message(1),'(a,a)') 'labels_densmat = ', denmat%labels(ipart)
+      write (message(2),'(a,i6)') 'particle_kept_densmat = ', denmat%particle_kept(ipart)
+      write (message(3),'(a,i6)') 'nnatorb_prt_densmat = ', denmat%nnatorb_prt(ipart)
       call write_info(3)
     end do
     call loct_parse_block_end(blk)
@@ -144,7 +145,7 @@ contains
 
     integer :: jj, ll, j, err_code, iunit, ndims, ndim1part
     integer :: ikeeppart, idir
-    integer :: idensmat, nparticles_densmat
+    integer :: idensmat, nparticles
     integer, allocatable :: npoints(:)
     integer, allocatable :: ix_1part(:), ix_1part_p(:)
     logical :: bof
@@ -179,8 +180,8 @@ contains
 
     ! loop over desired density matrices
     densmat_loop: do idensmat=1,denmat%ndensmat_to_calculate
-      ikeeppart=denmat%particle_kept_densmat(idensmat)
-      nparticles_densmat = st%modelmbparticles%nparticles_per_type(st%modelmbparticles%particletype_modelmb(ikeeppart))
+      ikeeppart=denmat%particle_kept(idensmat)
+      nparticles = st%modelmbparticles%nparticles_per_type(st%modelmbparticles%particletype_modelmb(ikeeppart))
 
       call modelmb_1part_init(mb_1part, gr%mesh, ikeeppart, ndim1part, gr%sb%box_offset)
 
@@ -194,7 +195,7 @@ contains
 
       !   calculate the 1 particle density matrix for this Many Body state, and for the chosen
       !   particle being the free coordinate
-      call zmf_calculate_gamma(ikeeppart, mb_1part, nparticles_densmat, &
+      call zmf_calculate_gamma(ikeeppart, mb_1part, nparticles, &
             gr%mesh, wf, densmatr)
 
       ! Only node zero writes.
@@ -226,7 +227,7 @@ contains
           
       call io_close(iunit)
 
-      do jj = mb_1part%npt_1part-denmat%nnatorb_prt_densmat(ikeeppart)+1, mb_1part%npt_1part
+      do jj = mb_1part%npt_1part-denmat%nnatorb_prt(ikeeppart)+1, mb_1part%npt_1part
         write(filename,'(a,i3.3,a,i2.2,a,i4.4)') trim(denmat%dirname)//'/natorb_ip', &
               ikeeppart,'_imb', mm, '_', mb_1part%npt_1part-jj+1
         iunit = io_open(filename, action='write')
@@ -313,9 +314,9 @@ contains
     type(modelmb_denmat_t), intent(out) :: this
 
     call push_sub('states.modelmb_density_matrix_nullify')
-    nullify(this%labels_densmat)
-    nullify(this%particle_kept_densmat)
-    nullify(this%nnatorb_prt_densmat)
+    nullify(this%labels)
+    nullify(this%particle_kept)
+    nullify(this%nnatorb_prt)
     call pop_sub()
   end subroutine modelmb_density_matrix_nullify
 
@@ -323,9 +324,9 @@ contains
   subroutine modelmb_density_matrix_end(this)
     type(modelmb_denmat_t), intent(inout) :: this
     call push_sub('states.modelmb_density_matrix_end')
-    SAFE_DEALLOCATE_P(this%labels_densmat)
-    SAFE_DEALLOCATE_P(this%particle_kept_densmat)
-    SAFE_DEALLOCATE_P(this%nnatorb_prt_densmat)
+    SAFE_DEALLOCATE_P(this%labels)
+    SAFE_DEALLOCATE_P(this%particle_kept)
+    SAFE_DEALLOCATE_P(this%nnatorb_prt)
     call pop_sub()
   end subroutine modelmb_density_matrix_end
 
