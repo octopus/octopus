@@ -334,13 +334,13 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   integer,             intent(in)    :: start
 
   integer :: iatom, jatom, ik, ist, idim, ip
-  integer :: nbasis, ibasis, jbasis, iorb, jorb, maxorb
+  integer :: nbasis, ibasis, jbasis, iorb, maxorb
   R_TYPE, allocatable :: hamiltonian(:, :), overlap(:, :)
   R_TYPE, allocatable :: psii(:, :), hpsi(:, :)
   FLOAT, allocatable :: ev(:)
   FLOAT, allocatable :: radius(:)
   type(submesh_t), allocatable :: sphere(:)
-  integer, allocatable :: basis_index(:, :)
+  integer, allocatable :: basis_atom(:)
   type(batch_t) :: orbitals
   FLOAT :: dist2, lapdist
 
@@ -367,7 +367,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(radius(1:nbasis))
   SAFE_ALLOCATE(sphere(1:nbasis))
-  SAFE_ALLOCATE(basis_index(1:geo%natoms, 1:maxorb))
+  SAFE_ALLOCATE(basis_atom(1:nbasis))
 
   ! this is the extra distance that the laplacian adds to the localization radius
   lapdist = maxval(abs(gr%mesh%idx%enlarge)*gr%mesh%h)
@@ -378,7 +378,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   do iatom = 1, geo%natoms
     do iorb = 1, geo%atom(iatom)%spec%niwfs
       ibasis = ibasis + 1
-      basis_index(iatom, iorb) = ibasis
+      basis_atom(ibasis) = iatom
 
       ! initialize the radial grid
       radius(ibasis) = species_get_iwf_radius(geo%atom(iatom)%spec, iorb, is = 1)
@@ -400,64 +400,59 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
     hamiltonian = R_TOTYPE(M_ZERO)
     overlap = R_TOTYPE(M_ZERO)
 
-    do iatom = geo%atoms%start, geo%atoms%end
-      do iorb = 1, geo%atom(iatom)%spec%niwfs
-        ibasis = basis_index(iatom, iorb)
-
-        do idim = 1,st%d%dim 
-          forall(ip = 1:gr%mesh%np) psii(ip, idim) = M_ZERO
-          call submesh_add_to_mesh(sphere(ibasis), orbitals%states(ibasis)%dpsi(:, 1), psii(:, idim))
-        end do
-
-        call X(hamiltonian_apply)(hm, gr, psii, hpsi, ibasis, ik)
-
-        do jatom = iatom, geo%natoms
-          do jorb = 1, geo%atom(jatom)%spec%niwfs
-            jbasis = basis_index(jatom, jorb)
-
-            dist2 = sum((geo%atom(iatom)%x(1:MAX_DIM) - geo%atom(jatom)%x(1:MAX_DIM))**2)
-
-            if(dist2 > (radius(ibasis) + radius(jbasis) + lapdist)**2) cycle
-
-            hamiltonian(jbasis, ibasis) = &
-                 submesh_to_mesh_dotp(sphere(jbasis), st%d%dim, orbitals%states(jbasis)%dpsi(:, 1), hpsi, reduce = .false.)
-            hamiltonian(ibasis, jbasis) = R_CONJ(hamiltonian(jbasis, ibasis))
-
-            if(dist2 > (radius(ibasis) + radius(jbasis))**2) cycle
-            
-            overlap(jbasis, ibasis) = &
-                 submesh_to_mesh_dotp(sphere(jbasis), st%d%dim, orbitals%states(jbasis)%dpsi(:, 1), psii, reduce = .false.)
-            overlap(ibasis, jbasis) = R_CONJ(overlap(jbasis, ibasis))
-
-          end do
-        end do
+    do ibasis = 1, nbasis
+      iatom = basis_atom(ibasis)
+      
+      do idim = 1,st%d%dim 
+        forall(ip = 1:gr%mesh%np) psii(ip, idim) = M_ZERO
+        call submesh_add_to_mesh(sphere(ibasis), orbitals%states(ibasis)%dpsi(:, 1), psii(:, idim))
+      end do
+      
+      call X(hamiltonian_apply)(hm, gr, psii, hpsi, ibasis, ik)
+      
+      do jbasis = 1, nbasis
+        jatom = basis_atom(jbasis)
         
+        if(jatom < iatom) cycle
+        
+        dist2 = sum((geo%atom(iatom)%x(1:MAX_DIM) - geo%atom(jatom)%x(1:MAX_DIM))**2)
+        
+        if(dist2 > (radius(ibasis) + radius(jbasis) + lapdist)**2) cycle
+        
+        hamiltonian(jbasis, ibasis) = &
+          submesh_to_mesh_dotp(sphere(jbasis), st%d%dim, orbitals%states(jbasis)%dpsi(:, 1), hpsi, reduce = .false.)
+        hamiltonian(ibasis, jbasis) = R_CONJ(hamiltonian(jbasis, ibasis))
+        
+        if(dist2 > (radius(ibasis) + radius(jbasis))**2) cycle
+        
+        overlap(jbasis, ibasis) = &
+          submesh_to_mesh_dotp(sphere(jbasis), st%d%dim, orbitals%states(jbasis)%dpsi(:, 1), psii, reduce = .false.)
+        overlap(ibasis, jbasis) = R_CONJ(overlap(jbasis, ibasis))
+
       end do
     end do
-
+        
 #ifdef HAVE_MPI
     if(geo%atoms%parallel) then
       call profiling_in(commprof, "LCAO_BCAST")
 
       !clearly this can be improved by using MPI_Allgatherv
-      do iatom = 1, geo%natoms
-        do iorb = 1, geo%atom(iatom)%spec%niwfs
-          ibasis = basis_index(iatom, iorb)
-
-          do jatom = iatom, geo%natoms
-            do jorb = 1, geo%atom(jatom)%spec%niwfs
-              jbasis = basis_index(jatom, jorb)
-
-              call MPI_Bcast(hamiltonian(jbasis, ibasis), 1, R_MPITYPE, geo%atoms%node(iatom), &
-                   geo%atoms%mpi_grp%comm, mpi_err)
-              hamiltonian(ibasis, jbasis) = R_CONJ(hamiltonian(jbasis, ibasis))
-
-              call MPI_Bcast(overlap(jbasis, ibasis), 1, R_MPITYPE, geo%atoms%node(iatom), &
-                   geo%atoms%mpi_grp%comm, mpi_err)
-              overlap(ibasis, jbasis) = R_CONJ(overlap(jbasis, ibasis))
-
-            end do
-          end do
+      do ibasis = 1, nbasis
+        iatom = basis_atom(ibasis)
+        
+        do jbasis = 1, nbasis
+          jatom = basis_atom(jbasis)
+          
+          if(jatom < iatom) cycle
+          
+          call MPI_Bcast(hamiltonian(jbasis, ibasis), 1, R_MPITYPE, geo%atoms%node(iatom), &
+            geo%atoms%mpi_grp%comm, mpi_err)
+          hamiltonian(ibasis, jbasis) = R_CONJ(hamiltonian(jbasis, ibasis))
+          
+          call MPI_Bcast(overlap(jbasis, ibasis), 1, R_MPITYPE, geo%atoms%node(iatom), &
+            geo%atoms%mpi_grp%comm, mpi_err)
+          overlap(ibasis, jbasis) = R_CONJ(overlap(jbasis, ibasis))
+          
         end do
       end do
 
@@ -482,25 +477,20 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
       forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) st%X(psi)(ip, idim, ist, ik) = R_TOTYPE(M_ZERO)
     end do
     
-    ibasis = 0
-    do iatom = 1, geo%natoms
-      do iorb = 1, geo%atom(iatom)%spec%niwfs
-        ibasis = ibasis + 1
-
-        if(ibasis <= st%nst) st%eigenval(ibasis, ik) = ev(ibasis)
-
-        do ist = st%st_start, st%st_end
-          do idim = 1, st%d%dim
-            call submesh_add_to_mesh(sphere(ibasis), orbitals%states(ibasis)%dpsi(:, 1), &
-                 st%X(psi)(:, idim, ist, ik), factor = hamiltonian(ibasis, ist))
-          end do
+    do ibasis = 1, nbasis
+      if(ibasis <= st%nst) st%eigenval(ibasis, ik) = ev(ibasis)
+      
+      do ist = st%st_start, st%st_end
+        do idim = 1, st%d%dim
+          call submesh_add_to_mesh(sphere(ibasis), orbitals%states(ibasis)%dpsi(:, 1), &
+            st%X(psi)(:, idim, ist, ik), factor = hamiltonian(ibasis, ist))
         end do
-        
       end do
+      
     end do
 
   end do
-
+  
   do ibasis = 1, nbasis
     call dbatch_delete_state(orbitals, ibasis)
     call submesh_end(sphere(ibasis))
@@ -512,7 +502,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   SAFE_DEALLOCATE_A(hamiltonian)
   SAFE_DEALLOCATE_A(overlap)
   SAFE_DEALLOCATE_A(ev)
-  SAFE_DEALLOCATE_A(basis_index)
+  SAFE_DEALLOCATE_A(basis_atom)
   SAFE_DEALLOCATE_A(sphere)
   SAFE_DEALLOCATE_A(radius)
 
