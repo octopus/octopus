@@ -77,8 +77,8 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
 
     !Open the file
     call etsf_io_data_init(dir//"/geometry-etsf.nc", flags, dims, &
-         & "geometry", &
-         & "Created by Octopus", &
+         & "Crystallographic_data file", &
+         & "Created by "//PACKAGE_STRING, &
          & lstat, error_data, overwrite=.true.)
     if (.not. lstat) then
       call etsf_io_low_error_handle(error_data)
@@ -141,8 +141,8 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     !Open the file
     flags%main = etsf_main_density
     call etsf_io_data_init(dir//"/density-etsf.nc", flags, dims, &
-         & "density", &
-         & "Created by Octopus", &
+         & "Density file", &
+         & "Created by "//PACKAGE_STRING, &
          & lstat, error_data, overwrite=.true.)
     if (.not. lstat) then
       call etsf_io_low_error_handle(error_data)
@@ -270,8 +270,8 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     !Open the file
     flags%main = etsf_main_wfs_rsp
     call etsf_io_data_init(dir//"/wfs-etsf.nc", flags, dims, &
-         & "wavefunctions", &
-         & "Created by Octopus", &
+         & "Wavefunctions file", &
+         & "Created by "//PACKAGE_STRING, &
          & lstat, error_data, overwrite=.true.)
     if (.not. lstat) then
       call etsf_io_low_error_handle(error_data)
