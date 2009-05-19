@@ -436,6 +436,7 @@ contains
       dim = parameters_dof(par)
 
       SAFE_ALLOCATE(x(1:dim))
+      SAFE_ALLOCATE(theta(1:dim))
 
       call states_copy(psi, initial_st)
       call propagate_forward(sys, hm, td, par, target, psi)
@@ -477,6 +478,7 @@ contains
       end if
 
       SAFE_DEALLOCATE_A(x)
+      SAFE_DEALLOCATE_A(theta)
       call pop_sub()
     end subroutine scheme_direct
     ! ---------------------------------------------------------
@@ -498,6 +500,7 @@ contains
 
       dim = parameters_dof(par)
       SAFE_ALLOCATE( x(1:dim))
+      SAFE_ALLOCATE(theta(1:dim))
       SAFE_ALLOCATE(xl(1:dim))
       SAFE_ALLOCATE(xu(1:dim))
       call parameters_bounds(par, xl, xu)
@@ -533,6 +536,7 @@ contains
       call newuoa(dim, npt, x, rhobeg, rhoend, iprint, maxfun, w, opt_control_direct_calc)
 
       SAFE_DEALLOCATE_A(x)
+      SAFE_DEALLOCATE_A(theta)
       SAFE_DEALLOCATE_A(xl)
       SAFE_DEALLOCATE_A(xu)
       SAFE_DEALLOCATE_A(w)
