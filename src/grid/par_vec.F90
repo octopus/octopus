@@ -164,30 +164,32 @@ module par_vec_m
     pv_handle_wait,      &
     pv_handle_end
 
-  public ::              &
-    vec_init,            &
-    vec_end,             &
-    vec_global2local,    &
-    dvec_scatter,        &
-    zvec_scatter,        &
-    ivec_scatter,        &
-    dvec_scatter_bndry,  &
-    zvec_scatter_bndry,  &
-    ivec_scatter_bndry,  &
-    dvec_scatter_all,    &
-    zvec_scatter_all,    &
-    ivec_scatter_all,    &
-    dvec_gather,         &
-    zvec_gather,         &
-    ivec_gather,         &
-    dvec_allgather,      &
-    zvec_allgather,      &
-    ivec_allgather,      &
-    dvec_ghost_update,   &
-    zvec_ghost_update,   &
-    ivec_ghost_update,   &
-    dvec_ighost_update,  &
-    zvec_ighost_update,  &
+  public ::                &
+    vec_init,              &
+    vec_end,               &
+    vec_global2local,      &
+    dvec_scatter,          &
+    zvec_scatter,          &
+    ivec_scatter,          &
+    dvec_scatter_bndry,    &
+    zvec_scatter_bndry,    &
+    ivec_scatter_bndry,    &
+    dvec_scatter_all,      &
+    zvec_scatter_all,      &
+    ivec_scatter_all,      &
+    dvec_gather,           &
+    zvec_gather,           &
+    ivec_gather,           &
+    dvec_selective_gather, &
+    zvec_selective_gather, &
+    dvec_allgather,        &
+    zvec_allgather,        &
+    ivec_allgather,        &
+    dvec_ghost_update,     &
+    zvec_ghost_update,     &
+    ivec_ghost_update,     &
+    dvec_ighost_update,    &
+    zvec_ighost_update,    &
     ivec_ighost_update
 
 contains

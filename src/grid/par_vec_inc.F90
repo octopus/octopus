@@ -380,6 +380,92 @@ subroutine X(vec_ghost_update_finish)(ghost_send)
 
 end subroutine X(vec_ghost_update_finish)
 
+
+!--------------------------------------------------------
+
+! This function collects points from the array src in nodes and puts
+! them in the arrat dst in the node with MPI rank root, the points to
+! collect are given by a list of global indexes (of size nn).
+!
+! dst does not need to be allocated in the other nodes.
+!
+subroutine X(vec_selective_gather)(this, nn, list, root, src, dst)
+  type(pv_t),       intent(in)    :: this
+  integer,          intent(in)    :: nn
+  integer,          intent(in)    :: list(:)
+  integer,          intent(in)    :: root
+  R_TYPE,           intent(in)    :: src(:)
+  R_TYPE,           intent(out)   :: dst(:)
+  
+  integer, allocatable :: recv_count(:), copy_count(:)
+  R_TYPE, allocatable  :: send_buffer(:), recv_buffer(:, :)
+  integer :: send_count, ip, owner, ii, ipart
+  logical :: i_am_root
+  integer, save :: tag = 0
+
+  i_am_root = (this%rank == root)
+
+  if(i_am_root) then
+    SAFE_ALLOCATE(recv_count(1:this%npart))
+    SAFE_ALLOCATE(copy_count(1:this%npart))
+    recv_count(1:this%npart) = 0
+  else
+    SAFE_ALLOCATE(send_buffer(1:nn))
+    send_count = 0
+  end if
+
+  do ii = 1, nn
+    ip = list(ii)
+    owner = this%part(ip)
+
+    if(owner == this%partno .and. i_am_root) then
+      ! it is here, copy directly
+      dst(ii) = src(vec_global2local(this, ip, owner))
+    else if(owner == this%partno) then
+      ! prepare to send
+      send_count = send_count + 1
+      send_buffer(send_count) = src(vec_global2local(this, ip, owner))
+    else if(i_am_root) then
+      ! prepare to recv the point
+      recv_count(owner) = recv_count(owner) + 1
+    end if
+  end do
+
+  if(i_am_root) then
+    SAFE_ALLOCATE(recv_buffer(1:maxval(recv_count), 1:this%npart))
+
+    !recv from all nodes
+    do ipart = 1, this%npart
+      if(ipart == this%partno) cycle
+      if(recv_count(ipart) == 0) cycle
+      call MPI_Recv(recv_buffer(:, ipart), recv_count(ipart), R_MPITYPE, ipart - 1, tag, this%comm, MPI_STATUS_IGNORE, mpi_err)
+    end do
+
+    !now put the values in the right place
+    copy_count = 0
+    do ii = 1, nn
+      owner = this%part(list(ii))
+      if(owner /= this%partno) then
+        copy_count(owner) = copy_count(owner) + 1
+        dst(ii) = recv_buffer(copy_count(owner), owner)
+      end if
+    end do
+
+    ASSERT(all(copy_count == recv_count))
+
+    SAFE_DEALLOCATE_A(recv_buffer)
+  else
+    if(send_count > 0) then
+      ! just send the values
+      call MPI_Send(send_buffer, send_count, R_MPITYPE, root, tag, this%comm, mpi_err)
+    end if
+    SAFE_DEALLOCATE_A(send_buffer)
+  end if
+  
+  tag = tag + 1
+
+end subroutine X(vec_selective_gather)
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8
