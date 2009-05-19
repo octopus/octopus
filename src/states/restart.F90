@@ -78,6 +78,8 @@ module restart_m
   integer           :: restart_format
   character(len=32) :: restart_dir
 
+  type(profile_t), save :: prof_read, prof_write
+
 contains
 
   ! returns true if a file named stop exists
@@ -251,6 +253,8 @@ contains
       return
     end if
 
+    call profiling_in(prof_write, "RESTART_WRITE")
+
     wfns_are_associated = (associated(st%dpsi) .and. st%wfs_type == M_REAL) .or. &
          (associated(st%zpsi) .and. st%wfs_type == M_CMPLX)
     ASSERT(wfns_are_associated)
@@ -310,7 +314,7 @@ contains
           if(st%st_start <= ist .and. ist <= st%st_end) then
             if( .not. present(lr) ) then 
               if(st%d%kpt%start <= ik .and. ik <= st%d%kpt%end) then
-                if (st%wfs_type == M_REAL) then
+                if (states_are_real(st)) then
                   call drestart_write_function(dir, filename, gr, st%dpsi(:, idim, ist, ik), err, size(st%dpsi,1))
                 else
                   call zrestart_write_function(dir, filename, gr, st%zpsi(:, idim, ist, ik), err, size(st%zpsi,1))
@@ -318,7 +322,7 @@ contains
                 if(err == 0) ierr = ierr + 1
               end if
             else
-              if (st%wfs_type == M_REAL) then
+              if (states_are_real(st)) then
                 call drestart_write_function(dir, filename, gr, lr%ddl_psi(:, idim, ist, ik), err, size(st%dpsi,1))
               else
                 call zrestart_write_function(dir, filename, gr, lr%zdl_psi(:, idim, ist, ik), err, size(st%zpsi,1))
@@ -351,6 +355,7 @@ contains
 #endif
     call unblock_signals()
 
+    call profiling_out(prof_write)
     call pop_sub()
   end subroutine restart_write
 
@@ -667,6 +672,8 @@ contains
 
     call push_sub('restart.restart_read')
 
+    call profiling_in(prof_read, "RESTART_READ")
+
     if(.not. present(lr)) then 
       write(message(1), '(a,i5)') 'Info: Loading restart information'
     else
@@ -831,6 +838,7 @@ contains
 
     if(mesh_change) call interpolation_end()
 
+    call profiling_out(prof_read)
     call pop_sub()
 
   contains

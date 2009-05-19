@@ -159,7 +159,7 @@ subroutine X(input_function_global)(filename, mesh, f, ierr, is_tmp)
 #endif
    case("obf")
      call read_binary(mesh%np_global, f, out_type, ierr, filename)
-     
+     call profiling_count_transfers(mesh%np_global, f(1))     
   case default
      ierr = 1
   end select
@@ -476,8 +476,9 @@ contains
     character(len=512) :: workdir
 
     workdir = io_workpath(dir, is_tmp=is_tmp)
-    call write_binary(mesh%np_global, f, out_type, ierr, trim(workdir)//'/'//trim(fname)//'.obf')
+    call write_binary(mesh%np_global, f(1), out_type, ierr, trim(workdir)//'/'//trim(fname)//'.obf')
 
+    call profiling_count_transfers(mesh%np_global, f(1))
   end subroutine out_binary
 
 
