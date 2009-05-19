@@ -29,7 +29,9 @@ module output_me_m
   use messages_m
   use loct_math_m
   use loct_parser_m
+  use mpi_m
   use profiling_m
+  use simul_box_m
   use states_m
   use states_calc_m
   use states_dim_m
@@ -61,8 +63,9 @@ module output_me_m
 contains
   
   ! ---------------------------------------------------------
-  subroutine output_me_init(this)
+  subroutine output_me_init(this, sb)
     type(output_me_t), intent(out) :: this
+    type(simul_box_t), intent(in)  :: sb
 
     !%Variable OutputMatrixElements
     !%Type flag
@@ -89,6 +92,8 @@ contains
     if(.not.varinfo_valid_option('OutputMatrixElements', this%what, is_flag=.true.)) then
       call input_error('OutputMatrixElements')
     end if
+
+    if(sb%dim.ne.2 .and. sb%dim.ne.3) this%what = iand(this%what, not(output_me_ang_momentum))
 
     if(iand(this%what, output_me_ks_multipoles).ne.0) then
       !%Variable OutputMEMultipoles
@@ -121,6 +126,11 @@ contains
     if(iand(this%what, output_me_momentum).ne.0) then
       write(fname,'(2a)') trim(dir), '/ks_me_momentum'
       call output_me_out_momentum(fname, st, gr)
+    end if
+
+    if(iand(this%what, output_me_ang_momentum).ne.0) then
+      write(fname,'(2a)') trim(dir), '/ks_me_angular_momentum'
+      call output_me_out_ang_momentum(fname, st, gr)
     end if
 
     if(iand(this%what, output_me_ks_multipoles).ne.0) then
@@ -219,9 +229,148 @@ contains
     end do
     
     SAFE_DEALLOCATE_A(momentum)
+    call io_close(iunit)
 
     call pop_sub()
   end subroutine output_me_out_momentum
+
+
+  ! ---------------------------------------------------------
+  subroutine output_me_out_ang_momentum(fname, st, gr)
+    character(len=*), intent(in)    :: fname
+    type(states_t),   intent(inout) :: st
+    type(grid_t),     intent(inout) :: gr
+
+    integer            :: iunit, ik, ist, is, ns, j
+    character(len=80)  :: tmp_str(MAX_DIM), cspin
+    FLOAT              :: angular(3), lsquare, o
+    FLOAT, allocatable :: ang(:, :, :), ang2(:, :)
+#if defined(HAVE_MPI)
+    integer            :: tmp
+    FLOAT, allocatable :: lang(:, :)
+    integer            :: kstart, kend, kn
+#endif
+
+    call push_sub('output_me.output_me_out_ang_momentum')
+
+    ns = 1
+    if(st%d%nspin == 2) ns = 2
+
+    iunit = io_open(fname, action='write')
+
+    if(mpi_grp_is_root(mpi_world)) then
+      write(iunit,'(a)') 'Warning: When non-local pseudopotentials are used '
+      write(iunit,'(a)') '         the numbers below may be meaningless.    '
+      write(iunit,'(a)') '                                                  '
+      write(iunit,'(a)') 'Angular Momentum of the KS states [dimensionless]:'
+      if (st%d%nik > ns) then
+        message(1) = 'Kpoints [' // trim(units_out%length%abbrev) // '^-1]'
+        call write_info(1, iunit)
+      end if
+    end if
+
+    SAFE_ALLOCATE(ang (1:st%nst, 1:st%d%nik, 1:MAX_DIM))
+    SAFE_ALLOCATE(ang2(1:st%nst, 1:st%d%nik))
+    do ik = st%d%kpt%start, st%d%kpt%end
+      do ist = st%st_start, st%st_end
+        if (st%wfs_type == M_REAL) then
+          call dstates_angular_momentum(gr, st%dpsi(:, :, ist, ik), ang(ist, ik, :), ang2(ist, ik))
+        else
+          call zstates_angular_momentum(gr, st%zpsi(:, :, ist, ik), ang(ist, ik, :), ang2(ist, ik))
+        end if
+      end do
+    end do
+
+    angular(1) =  states_eigenvalues_sum(st, ang (st%st_start:st%st_end, :, 1))
+    angular(2) =  states_eigenvalues_sum(st, ang (st%st_start:st%st_end, :, 2))
+    angular(3) =  states_eigenvalues_sum(st, ang (st%st_start:st%st_end, :, 3))
+    lsquare    =  states_eigenvalues_sum(st, ang2(st%st_start:st%st_end, :))
+
+    do ik = 1, st%d%nik, ns
+      if(st%d%nik > ns) then
+        write(message(1), '(a,i4,3(a,f12.6),a)') '#k =',ik,', k = (',  &
+             st%d%kpoints(1, ik)*units_out%length%factor, ',',            &
+             st%d%kpoints(2, ik)*units_out%length%factor, ',',            &
+             st%d%kpoints(3, ik)*units_out%length%factor, ')'
+        call write_info(1, iunit)
+      end if
+      
+      ! Exchange ang and ang2.
+#if defined(HAVE_MPI)
+      if(st%d%kpt%parallel) then
+        kstart = st%d%kpt%start
+        kend = st%d%kpt%end
+        kn = st%d%kpt%nlocal
+        
+        ASSERT(.not. st%parallel_in_states)
+        
+        SAFE_ALLOCATE(lang(1:st%lnst, 1:kn))
+        do j = 1, 3
+          lang(1:st%lnst, 1:kn) = ang(st%st_start:st%st_end, kstart:kend, j)
+          call MPI_Allgatherv(lang, st%nst*kn, MPI_FLOAT, &
+               ang(:, :, j), st%d%kpt%num(:)*st%nst, (st%d%kpt%range(1, :) - 1)*st%nst, MPI_FLOAT, &
+               st%d%kpt%mpi_grp%comm, mpi_err)
+        end do
+        lang(1:st%lnst, 1:kn) = ang2(st%st_start:st%st_end, kstart:kend)
+        call MPI_Allgatherv(lang, st%nst*kn, MPI_FLOAT, &
+             ang2(:, :), st%d%kpt%num(:)*st%nst, (st%d%kpt%range(1, :) - 1)*st%nst, MPI_FLOAT, &
+             st%d%kpt%mpi_grp%comm, mpi_err)
+        SAFE_DEALLOCATE_A(lang)
+      end if
+      
+      if(st%parallel_in_states) then
+        SAFE_ALLOCATE(lang(1:st%lnst, 1:1))
+        do j = 1, 3
+          lang(1:st%lnst, 1) = ang(st%st_start:st%st_end, ik, j)
+          call lmpi_gen_allgatherv(st%lnst, lang(:, 1), tmp, ang(:, ik, j), st%mpi_grp)
+        end do
+        lang(1:st%lnst, 1) = ang2(st%st_start:st%st_end, ik)
+        call lmpi_gen_allgatherv(st%lnst, lang(:, 1), tmp, ang2(:, ik), st%mpi_grp)
+        SAFE_DEALLOCATE_A(lang)
+      end if
+#endif
+      write(message(1), '(a4,1x,a5,4a12,4x,a12,1x)')       &
+           '#st',' Spin','        <Lx>', '        <Ly>', '        <Lz>', '        <L2>', 'Occupation '
+      call write_info(1, iunit)
+
+      if(mpi_grp_is_root(mpi_world)) then
+        do j = 1, st%nst
+          do is = 0, ns-1
+
+            if(j > st%nst) then
+              o = M_ZERO
+            else
+              o = st%occ(j, ik+is)
+            end if
+            
+            if(is.eq.0) cspin = 'up'
+            if(is.eq.1) cspin = 'dn'
+            if(st%d%ispin.eq.UNPOLARIZED.or.st%d%ispin.eq.SPINORS) cspin = '--'
+
+            write(tmp_str(1), '(i4,3x,a2)') j, trim(cspin)
+            write(tmp_str(2), '(1x,4f12.6,3x,f12.6)') &
+                 ang(j, ik+is, 1:3), ang2(j, ik+is), o
+            message(1) = trim(tmp_str(1))//trim(tmp_str(2))
+            call write_info(1, iunit)
+          end do
+        end do
+      end if
+      write(message(1),'(a)') ''
+      call write_info(1, iunit)
+
+    end do
+
+    write(message(1),'(a)') 'Total Angular Momentum L [dimensionless]'
+    write(message(2),'(10x,4f12.6)') angular(1:3), lsquare
+    call write_info(2, iunit)
+
+    call io_close(iunit)
+
+    SAFE_DEALLOCATE_A(ang)
+    SAFE_DEALLOCATE_A(ang2)
+    
+    call pop_sub()
+  end subroutine output_me_out_ang_momentum
 
 
 #include "undef.F90"

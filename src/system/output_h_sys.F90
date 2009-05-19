@@ -334,7 +334,7 @@ contains
     end if
 
     if(iand(outp%what, output_matrix_elements).ne.0) then
-      call output_me_init(outp%me)
+      call output_me_init(outp%me, sb)
     end if
 
     !%Variable OutputEvery
