@@ -134,7 +134,7 @@ SUFFIXES = _oct.f90 .F90 .o .S .s
 		grep -v "^#" $*_oct.f90 > $*_oct.f91; \
 		mv -f $*_oct.f91 $*_oct.f90; \
 	fi
-	@FC@ @FCFLAGS@ @FCFLAGS_NETCDF@ $(AM_FCFLAGS) -c @FCFLAGS_f90@ -o $@ $*_oct.f90
+	@FC@ @FCFLAGS@ @FCFLAGS_NETCDF@ @FCFLAGS_ETSF_IO@ $(AM_FCFLAGS) -c @FCFLAGS_f90@ -o $@ $*_oct.f90
 	@rm -f $*_oct.f90
 
 # This rule is basically to create a _oct.f90 file by hand for
