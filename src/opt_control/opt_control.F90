@@ -365,8 +365,9 @@ contains
     ! ---------------------------------------------------------
     subroutine scheme_cg
       integer :: dof, ierr, maxiter
-      FLOAT   :: step, minvalue
-      FLOAT, allocatable :: x(:)
+      REAL_DOUBLE   :: step, minvalue
+      FLOAT, allocatable :: theta(:)
+      REAL_DOUBLE, allocatable :: x(:)
       FLOAT   :: f
       type(states_t) :: psi
       call push_sub('opt_control.scheme_cg')
@@ -389,18 +390,16 @@ contains
 
       dof = parameters_dof(par)
       SAFE_ALLOCATE(x(1:dof))
-      call parameters_get_theta(par, x)
+      SAFE_ALLOCATE(theta(1:dof))
+      call parameters_get_theta(par, theta)
+      x = theta
 
       step = oct%direct_step * M_PI
       maxiter = oct_iterator_maxiter(iterator) - 1
 
- #ifndef SINGLE_PRECISION
       ierr = loct_minimize(MINMETHOD_BFGS2, dof, x(1), step, &
            real(oct_iterator_tolerance(iterator), 8), real(oct_iterator_tolerance(iterator), 8), &
            maxiter, opt_control_cg_calc, opt_control_cg_write_info, minvalue)
-#else
-    stop "FIXME: can not work in single precision"
-#endif
 
       if(ierr.ne.0) then
         if(ierr <= 1024) then
@@ -414,6 +413,7 @@ contains
       end if
 
       SAFE_DEALLOCATE_A(x)
+      SAFE_DEALLOCATE_A(theta)
       call pop_sub()
     end subroutine scheme_cg
     ! ---------------------------------------------------------
@@ -422,8 +422,9 @@ contains
     ! ---------------------------------------------------------
     subroutine scheme_direct
       integer :: ierr, maxiter
-      FLOAT :: minvalue, step
-      FLOAT, allocatable :: x(:)
+      REAL_DOUBLE :: minvalue, step
+      FLOAT, allocatable :: theta(:)
+      REAL_DOUBLE, allocatable :: x(:)
       FLOAT :: f
       integer :: dim
       type(states_t) :: psi
@@ -453,18 +454,16 @@ contains
       td_       => td
 
       call parameters_basis_to_theta(par)
-      call parameters_get_theta(par, x)
+      ! theta may be in single precision, whereas x is always double precision.
+      call parameters_get_theta(par, theta)
+      x = theta
 
       step = oct%direct_step * M_PI
       maxiter = oct_iterator_maxiter(iterator)
 
-#ifndef SINGLE_PRECISION
       ierr = loct_minimize_direct(MINMETHOD_NMSIMPLEX, dim, x(1), step,&
                real(oct_iterator_tolerance(iterator), 8), maxiter, &
                opt_control_direct_calc, opt_control_direct_write_info, minvalue)
-#else
-    stop "FIXME: can not work in single precision"
-#endif
 
       if(ierr.ne.0) then
         if(ierr <= 1024) then
@@ -487,8 +486,10 @@ contains
     subroutine scheme_newuoa
 #if defined(HAVE_NEWUOA)
       integer :: iprint, npt, maxfun, sizeofw, dim
-      FLOAT :: rhobeg, rhoend
-      FLOAT, allocatable :: x(:), w(:), xl(:), xu(:)
+      REAL_DOUBLE :: rhobeg, rhoend
+      FLOAT, allocatable :: xl(:), xu(:)
+      REAL_DOUBLE, allocatable :: x(:), w(:)
+      FLOAT, allocatable :: theta(:)
       FLOAT :: f
       type(states_t) :: psi
       call push_sub('opt_control.scheme_newuoa')
@@ -518,7 +519,8 @@ contains
       td_       => td
 
       call parameters_basis_to_theta(par)
-      call parameters_get_theta(par, x)
+      call parameters_get_theta(par, theta)
+      x = theta
 
       iprint = 2
       npt = 2*dim + 1
@@ -867,16 +869,19 @@ contains
   ! ---------------------------------------------------------
   subroutine opt_control_direct_calc(n, x, f)
     integer, intent(in)  :: n
-    FLOAT, intent(in)  :: x(n)
-    FLOAT, intent(out) :: f
+    REAL_DOUBLE, intent(in)  :: x(n)
+    REAL_DOUBLE, intent(out) :: f
 
     FLOAT :: j1, delta
+    FLOAT, allocatable :: theta(:)
     type(states_t) :: psi
     type(oct_control_parameters_t) :: par_new
 
     call push_sub("opt_control.opt_control_direct_calc")
 
-    call parameters_set_theta(par_, x)
+    SAFE_ALLOCATE(theta(1:n))
+    theta = x
+    call parameters_set_theta(par_, theta)
     call parameters_theta_to_basis(par_)
 
     if(oct%delta == M_ZERO) then
@@ -897,6 +902,7 @@ contains
       call parameters_end(par_new)
     end if
 
+    SAFE_DEALLOCATE_A(theta)
     call pop_sub()
   end subroutine opt_control_direct_calc
   ! ---------------------------------------------------------
