@@ -466,6 +466,89 @@ subroutine X(vec_selective_gather)(this, nn, list, root, src, dst)
 
 end subroutine X(vec_selective_gather)
 
+subroutine X(vec_selective_scatter)(this, nn, list, root, src, dst)
+  type(pv_t),       intent(in)    :: this
+  integer,          intent(in)    :: nn
+  integer,          intent(in)    :: list(:)
+  integer,          intent(in)    :: root
+  R_TYPE,           intent(in)    :: src(:)
+  R_TYPE,           intent(out)   :: dst(:)
+ 
+  integer, allocatable :: send_count(:)
+  R_TYPE, allocatable  :: send_buffer(:), recv_buffer(:)
+  integer :: recv_count, ip, owner, ii, ipart, jj
+  logical :: i_am_root
+  integer, save :: tag = 0
+
+  i_am_root = (this%rank == root)
+
+  if(i_am_root) then
+    SAFE_ALLOCATE(send_count(1:this%npart))
+    send_count(1:this%npart) = 0
+  else
+    recv_count = 0
+  end if
+
+  do ii = 1, nn
+    ip = list(ii)
+    owner = this%part(ip)
+
+    if(owner == this%partno .and. i_am_root) then
+      ! it is here, copy directly
+      dst(vec_global2local(this, ip, owner)) = src(ii)
+    else if(owner == this%partno) then
+      recv_count = recv_count + 1
+    else if(i_am_root) then
+      send_count(owner) = send_count(owner) + 1
+    end if
+  end do
+
+  if(i_am_root) then
+    SAFE_ALLOCATE(send_buffer(1:maxval(send_count)))
+
+    !copy to a buffer and send to all nodes
+    do ipart = 1, this%npart
+      if(ipart == this%partno) cycle
+      if(send_count(ipart) == 0) cycle
+      jj = 0
+      do ii = 1, nn
+        if(ipart /= this%part(list(ii))) cycle
+        jj = jj + 1
+        send_buffer(jj) = src(ii)
+      end do
+
+      ASSERT(jj == send_count(ipart))
+      call MPI_Send(send_buffer, send_count(ipart), R_MPITYPE, ipart - 1, tag, this%comm, mpi_err)
+    end do
+
+    SAFE_DEALLOCATE_A(send_buffer)
+    SAFE_DEALLOCATE_A(send_count)
+  else
+    SAFE_ALLOCATE(recv_buffer(1:recv_count))
+    if(recv_count > 0) then
+
+      call MPI_Recv(recv_buffer, recv_count, R_MPITYPE, root, tag, this%comm, MPI_STATUS_IGNORE, mpi_err)
+
+      jj = 0
+      do ii = 1, nn
+        ip = list(ii)
+        owner = this%part(ip)
+        if(owner /= this%partno) cycle
+        jj = jj + 1
+        dst(vec_global2local(this, ip, owner)) = recv_buffer(jj)
+      end do
+
+      ASSERT(jj == recv_count)
+
+    end if
+    SAFE_DEALLOCATE_A(recv_buffer)
+  end if
+  
+  tag = tag + 1
+
+end subroutine X(vec_selective_scatter)
+
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

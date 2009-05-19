@@ -182,6 +182,8 @@ module par_vec_m
     ivec_gather,           &
     dvec_selective_gather, &
     zvec_selective_gather, &
+    dvec_selective_scatter,&
+    zvec_selective_scatter,&
     dvec_allgather,        &
     zvec_allgather,        &
     ivec_allgather,        &
