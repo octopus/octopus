@@ -238,28 +238,31 @@ contains
     ! allocate potentials and density of the cores
     ! In the case of spinors, vxc_11 = hm%vxc(:, 1), vxc_22 = hm%vxc(:, 2), Re(vxc_12) = hm%vxc(:. 3);
     ! Im(vxc_12) = hm%vxc(:, 4)
-    SAFE_ALLOCATE(hm%vhartree(1:gr%mesh%np))
-    SAFE_ALLOCATE(hm%vxc(1:gr%mesh%np, 1:hm%d%nspin))
+    ! FIXME: in principle also vhxc should not be allocated for independent particles
     SAFE_ALLOCATE(hm%vhxc(1:gr%mesh%np, 1:hm%d%nspin))
-    if(iand(hm%xc_family, XC_FAMILY_MGGA).ne.0) then
-      SAFE_ALLOCATE(hm%vtau(1:gr%mesh%np, 1:hm%d%nspin))
-    else
-      nullify(hm%vtau)
-    end if
+    if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
+      SAFE_ALLOCATE(hm%vhartree(1:gr%mesh%np))
+      SAFE_ALLOCATE(hm%vxc(1:gr%mesh%np, 1:hm%d%nspin))
+      if(iand(hm%xc_family, XC_FAMILY_MGGA).ne.0) then
+        SAFE_ALLOCATE(hm%vtau(1:gr%mesh%np, 1:hm%d%nspin))
+      else
+        nullify(hm%vtau)
+      end if
 
-    hm%vhartree(1:gr%mesh%np) = M_ZERO
+      hm%vhartree(1:gr%mesh%np) = M_ZERO
 
-    do ispin = 1, hm%d%nspin
-      hm%vhxc(1:gr%mesh%np, ispin) = M_ZERO
-      hm%vxc(1:gr%mesh%np, ispin) = M_ZERO
-      if(iand(hm%xc_family, XC_FAMILY_MGGA).ne.0) hm%vtau(1:gr%mesh%np, ispin) = M_ZERO
-    end do
-
-    if (hm%d%cdft) then
-      SAFE_ALLOCATE(hm%axc(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:hm%d%nspin))
-      hm%axc = M_ZERO
-    else
-      nullify(hm%axc)
+      do ispin = 1, hm%d%nspin
+        hm%vhxc(1:gr%mesh%np, ispin) = M_ZERO
+        hm%vxc(1:gr%mesh%np, ispin) = M_ZERO
+        if(iand(hm%xc_family, XC_FAMILY_MGGA).ne.0) hm%vtau(1:gr%mesh%np, ispin) = M_ZERO
+      end do
+    
+      if (hm%d%cdft) then
+        SAFE_ALLOCATE(hm%axc(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:hm%d%nspin))
+        hm%axc = M_ZERO
+      else
+        nullify(hm%axc)
+      end if
     end if
 
     !Initialize external potential

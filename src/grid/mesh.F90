@@ -199,8 +199,8 @@ contains
       '   volume/point [', trim(units_out%length%abbrev), '^3] = ',      &
       m%vol_pp(1)/units_out%length%factor**m%sb%dim
     
-    write(message(3),'(a, i8)') '  # inner mesh = ', m%np_global
-    write(message(4),'(a, i8)') '  # total mesh = ', m%np_part_global
+    write(message(3),'(a, i10)') '  # inner mesh = ', m%np_global
+    write(message(4),'(a, i10)') '  # total mesh = ', m%np_part_global
     
     write(message(5),'(3a,f9.3,a)') '  Grid Cutoff [',trim(units_out%energy%abbrev),'] = ', &
       (M_PI**2/(M_TWO*maxval(m%h)**2))/units_out%energy%factor
