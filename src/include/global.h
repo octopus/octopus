@@ -66,7 +66,7 @@
   if(iand(prof_vars%mode, PROFILING_MEMORY).ne.0 .or. global_alloc_err.ne.0) _anl_ \
   global_sizeof = SIZEOF(x); _newline_	\
   if(iand(prof_vars%mode, PROFILING_MEMORY).ne.0) _anl_ \
-    call profiling_memory_allocate(#x, _anl_ __FILE__, _anl_ __LINE__, _anl_ global_sizeof); _newline_ \
+    call profiling_memory_allocate(_anl_ #x, _anl_ __FILE__, _anl_ __LINE__, _anl_ global_sizeof); _newline_ \
   if(global_alloc_err.ne.0) _anl_ \
     call alloc_error(global_sizeof, _anl_ __FILE__, _anl_ __LINE__); \
   CARDINAL
