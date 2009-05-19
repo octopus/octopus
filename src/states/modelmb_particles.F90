@@ -119,7 +119,7 @@ subroutine modelmb_particles_init (modelmbparticles,gr)
   type(modelmb_particle_t), intent(inout) :: modelmbparticles
   type(grid_t),             intent(in)    :: gr
 
-  integer :: ipart, ncols, nline, itmp, jtmp
+  integer :: ipart, ncols, nline, itmp, jtmp, npart
   type(block_t) :: blk
 
   call push_sub('states.modelmb_particles_init')
@@ -195,13 +195,16 @@ subroutine modelmb_particles_init (modelmbparticles,gr)
   !%
   !%End
   ! allocate stuff
+
+  npart = modelmbparticles%ntype_of_particle
+
   SAFE_ALLOCATE (modelmbparticles%labels_particles(1:modelmbparticles%nparticle))
   SAFE_ALLOCATE (modelmbparticles%particletype(1:modelmbparticles%nparticle))
   SAFE_ALLOCATE (modelmbparticles%mass_particle(1:modelmbparticles%nparticle))
   SAFE_ALLOCATE (modelmbparticles%charge_particle(1:modelmbparticles%nparticle))
   SAFE_ALLOCATE (modelmbparticles%bosonfermion(1:modelmbparticles%nparticle))
   SAFE_ALLOCATE (modelmbparticles%nparticles_per_type(1:modelmbparticles%ntype_of_particle))
-  SAFE_ALLOCATE (modelmbparticles%particles_of_type(1:modelmbparticles%nparticle, 1:modelmbparticles%ntype_of_particle))
+  SAFE_ALLOCATE (modelmbparticles%particles_of_type(1:npart, 1:npart))
 
   ! default all particles are electrons
   modelmbparticles%labels_particles = 'electron'
