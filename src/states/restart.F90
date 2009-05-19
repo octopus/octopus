@@ -71,6 +71,7 @@ module restart_m
   
 
   integer, parameter :: &
+    RESTART_NONE   = 0, &
     RESTART_NETCDF = 2, &
     RESTART_BINARY = 3
 
@@ -114,6 +115,8 @@ contains
     !%Description
     !% Determines in which format the restart files should be written. The default
     !% is binary files (restart_binary).
+    !%Option restart_none 0
+    !% Restart information is not written, useful for testing.
     !%Option restart_netcdf 2
     !% NetCDF (platform independent) format. This requires the NETCDF library.
     !%Option restart_binary 3
@@ -241,6 +244,12 @@ contains
     logical :: wfns_are_associated, lr_wfns_are_associated
 
     call push_sub('restart.restart_write')
+
+    if(restart_format == RESTART_NONE) then
+      ierr = 0
+      call pop_sub()
+      return
+    end if
 
     wfns_are_associated = (associated(st%dpsi) .and. st%wfs_type == M_REAL) .or. &
          (associated(st%zpsi) .and. st%wfs_type == M_CMPLX)
