@@ -184,19 +184,20 @@ contains
     type(mesh_t), intent(in) :: m
     integer,      intent(in) :: unit
     
+    integer :: ii
+
     if(.not.mpi_grp_is_root(mpi_world)) return
     
     call push_sub('mesh.mesh_write_info')
     
     write(message(1),'(a)') 'Main mesh:'
-    
-    ! FIXME: needs to be generalized for MAX_DIM >=4
-    write(message(2),'(3a, a, f6.3, a, f6.3, a, f6.3, a, 1x, 3a, f8.5)')  &
-      '  Spacing [', trim(units_out%length%abbrev), '] = ',              &
-      '(', m%h(1)/units_out%length%factor, ',',                          &
-      m%h(2)/units_out%length%factor, ',',                          &
-      m%h(3)/units_out%length%factor, ')',                          &
-      '   volume/point [', trim(units_out%length%abbrev), '^3] = ',      &
+    write(message(2),'(3a)') '  Spacing [', trim(units_out%length%abbrev), '] = ('
+    do ii = 1, m%sb%dim
+      if(ii > 1) write(message(2), '(2a)') trim(message(2)), ','
+      write(message(2), '(a,f6.3)') trim(message(2)), m%h(ii)/units_out%length%factor
+    end do
+    write(message(2), '(5a,i1.1,a,f8.5)') trim(message(2)), ') ', &
+         '   volume/point [', trim(units_out%length%abbrev), '^', m%sb%dim, '] = ',      &
       m%vol_pp(1)/units_out%length%factor**m%sb%dim
     
     write(message(3),'(a, i10)') '  # inner mesh = ', m%np_global
