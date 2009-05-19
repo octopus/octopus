@@ -11,8 +11,8 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
   integer :: i, j, idir, is, ik, idim, ix, iy, iz, nik, nspin, zdim
   FLOAT   :: offset(MAX_DIM)
   FLOAT, allocatable :: d(:), md(:,:)
-  FLOAT, allocatable, target :: local_rho(:,:,:,:), local_wfs(:,:,:,:,:,:,:), local_ev(:,:,:)
-  FLOAT, allocatable, target :: local_occ(:,:,:), local_red_coord_kpt(:,:), local_kpoint_weights(:)
+  REAL_DOUBLE, allocatable, target :: local_rho(:,:,:,:), local_wfs(:,:,:,:,:,:,:), local_ev(:, :, :)
+  REAL_DOUBLE, allocatable, target :: local_occ(:,:,:), local_red_coord_kpt(:,:), local_kpoint_weights(:)
   type(etsf_io_low_error)  :: error_data
   type(etsf_dims) :: dims
   type(etsf_groups) :: groups
