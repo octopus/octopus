@@ -751,10 +751,10 @@ contains
   ! ---------------------------------------------------------
   subroutine opt_control_cg_calc(n, x, f, getgrad, df)
     integer,         intent(in)  :: n
-    FLOAT,           intent(in)  :: x(n)
-    FLOAT,           intent(out) :: f
+    REAL_DOUBLE,     intent(in)  :: x(n)
+    REAL_DOUBLE,     intent(inout) :: f
     integer,         intent(in)  :: getgrad
-    FLOAT, optional, intent(out) :: df(n)
+    REAL_DOUBLE,     intent(inout) :: df(n)
 
     integer :: j
     type(oct_control_parameters_t) :: par_new
@@ -764,16 +764,16 @@ contains
 
     call push_sub("opt_control.opt_control_cg_calc")
 
-
+    SAFE_ALLOCATE(theta(1:n))
     if(getgrad .eq. 1) then
-      call parameters_set_theta(par_, x)
+      theta = x
+      call parameters_set_theta(par_, theta)
       call parameters_theta_to_basis(par_)
       call parameters_copy(par_new, par_)
       call f_striter(sys_, hm_, td_, par_new, j1)
       f = - j1 - parameters_j2(par_)
       if(oct%dump_intermediate) call iterator_write(iterator, par_)
       call iteration_manager_direct(real(-f, REAL_PRECISION), par_, iterator)
-      SAFE_ALLOCATE(theta(1:n))
       call parameters_set_rep(par_new)
       call parameters_get_theta(par_new, theta)
       forall(j = 1:n) df(j) =  M_TWO * parameters_alpha(par_, 1) * x(j) - M_TWO * theta(j)
@@ -818,11 +818,11 @@ contains
         SAFE_DEALLOCATE_A(xdx)
       end if
 
-
-      SAFE_DEALLOCATE_A(theta)
       call parameters_end(par_new)
+
     else
-      call parameters_set_theta(par_, x)
+      theta = x
+      call parameters_set_theta(par_, theta)
       call parameters_theta_to_basis(par_)
       call states_copy(psi, initial_st)
       call propagate_forward(sys_, hm_, td_, par_, target, psi)
@@ -832,6 +832,7 @@ contains
       call iteration_manager_direct(real(-f, REAL_PRECISION), par_, iterator)
     end if
 
+    SAFE_DEALLOCATE_A(theta)
     call pop_sub()
   end subroutine opt_control_cg_calc
   ! ---------------------------------------------------------
@@ -839,9 +840,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine opt_control_cg_write_info(iter, n, val, maxdx, maxdf, x)
-    integer, intent(in) :: iter, n
-    FLOAT ,  intent(in) :: val, maxdx, maxdf
-    FLOAT,   intent(in) :: x(n)
+    integer,     intent(in) :: iter, n
+    REAL_DOUBLE, intent(in) :: val, maxdx, maxdf
+    REAL_DOUBLE, intent(in) :: x(n)
 
     FLOAT :: fluence, j1, j2, j
 
@@ -863,7 +864,7 @@ contains
     call write_info(5)
     call messages_print_stress(stdout)
 
-    call iteration_manager_main(iterator, j, j1, j2, maxdx)
+    call iteration_manager_main(iterator, j, j1, j2, real(maxdx, REAL_PRECISION))
 
     call pop_sub()
   end subroutine opt_control_cg_write_info
@@ -914,16 +915,20 @@ contains
 
   ! ---------------------------------------------------------
   subroutine opt_control_direct_write_info(iter, n, val, maxdx, x)
-    integer, intent(in) :: iter, n
-    FLOAT,   intent(in) :: val, maxdx
-    FLOAT,   intent(in) :: x(n)
+    integer,     intent(in) :: iter, n
+    REAL_DOUBLE, intent(in) :: val, maxdx
+    REAL_DOUBLE, intent(in) :: x(n)
 
     FLOAT :: fluence, j1, j2, j
+    FLOAT, allocatable :: theta(:)
 
     call push_sub("opt_control.opt_control_direct_write_info")
 
-    call parameters_set_theta(par_, x)
+    SAFE_ALLOCATE(theta(1:n))
+    theta = x
+    call parameters_set_theta(par_, theta)
     call parameters_theta_to_basis(par_)
+    SAFE_DEALLOCATE_A(theta)
 
     j = - val
     fluence = parameters_fluence(par_)
@@ -941,7 +946,7 @@ contains
     call write_info(5)
     call messages_print_stress(stdout)
 
-    call iteration_manager_main(iterator, j, j1, j2, maxdx)
+    call iteration_manager_main(iterator, j, j1, j2, real(maxdx, REAL_PRECISION))
 
     call pop_sub()
   end subroutine opt_control_direct_write_info
