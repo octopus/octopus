@@ -21,8 +21,11 @@
 
 module output_me_m
   use datasets_m
+  use derivatives_m
+  use geometry_m
   use global_m
   use grid_m
+  use hamiltonian_m
   use io_m
   use mesh_m
   use mesh_function_m
@@ -30,7 +33,9 @@ module output_me_m
   use loct_math_m
   use loct_parser_m
   use mpi_m
+  use poisson_m
   use profiling_m
+  use projector_m
   use simul_box_m
   use states_m
   use states_calc_m
@@ -114,11 +119,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine output_me(this, st, gr, dir)
-    type(output_me_t), intent(in) :: this
-    type(states_t),    intent(inout) :: st
-    type(grid_t),      intent(inout) :: gr
-    character(len=*),  intent(in) :: dir
+  subroutine output_me(this, dir, st, gr, geo, hm)
+    type(output_me_t),   intent(in)    :: this
+    character(len=*),    intent(in)    :: dir
+    type(states_t),      intent(inout) :: st
+    type(grid_t),        intent(inout) :: gr
+    type(geometry_t),    intent(in)    :: geo
+    type(hamiltonian_t), intent(in)    :: hm
 
     integer :: id, ll, mm, ik
     character(len=256) :: fname
@@ -152,6 +159,26 @@ contains
           end do
         end do
       end do
+    end if
+
+    if(iand(this%what, output_me_one_body).ne.0) then
+      message(1) = "Computing one-body matrix elements"
+      call write_info(1)
+      if (st%wfs_type == M_REAL) then
+        call done_body(dir, gr, geo, st, hm)
+      else
+        call zone_body(dir, gr, geo, st, hm)
+      end if
+    end if
+
+    if(iand(this%what, output_me_two_body).ne.0) then
+      message(1) = "Computing two-body matrix elements"
+      call write_info(1)
+      if (st%wfs_type == M_REAL) then
+        call dtwo_body(dir, gr, st)
+      else
+        call ztwo_body(dir, gr, st)
+      end if
     end if
 
   end subroutine output_me

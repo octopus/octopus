@@ -34,14 +34,14 @@ oct_test_SOURCES = test.F90
 oct_test_LDADD = $(all_LIBS)
 
 noinst_HEADERS = \
-	unocc_inc.F90 casida_inc.F90
+	casida_inc.F90
 
 CLEANFILES += octopus oct-test octopus_mpi oct-test_mpi octopus_single oct-test_single
 
 depend:
 	@makedepf90 $(octopus_SOURCES) $(oct_test_sources)
 
-unocc.o : unocc.F90 unocc_inc.F90 
+unocc.o : unocc.F90
 static_pol.o : static_pol.F90 
 geom_opt.o : geom_opt.F90 
 phonons_fd.o : phonons_fd.F90 

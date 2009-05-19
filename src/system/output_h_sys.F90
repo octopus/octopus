@@ -376,7 +376,7 @@ contains
     end if
 
      if(iand(outp%what, output_matrix_elements).ne.0) then
-       call output_me(outp%me, st, gr, dir)
+       call output_me(outp%me, dir, st, gr, geo, hm)
      end if
 
 #if defined(HAVE_ETSF_IO)

@@ -232,68 +232,6 @@
 
 
   ! ---------------------------------------------------------
-  ! Prints out the multipole matrix elements between KS states.
-  ! It prints the states to the file opened in iunit.
-  ! It prints the (l,m) multipole moment, for
-  ! the Kohn-Sham states in the irreducible subspace ik.
-  ! ---------------------------------------------------------
-  subroutine h_sys_write_multipole_matrix(st, gr, l, m, ik, iunit, geo)
-    type(states_t), intent(in) :: st
-    type(grid_t), intent(in) :: gr
-    integer, intent(in) :: l, m, ik, iunit
-    type(geometry_t), intent(in)    :: geo
-
-    integer :: ii, jj, i
-    FLOAT, allocatable :: multipole(:, :)
-    CMPLX :: multip_element
-    FLOAT :: r, x(MAX_DIM), ylm
-
-    call push_sub('output_states.h_sys_write_multipole_matrix')
-
-    write(iunit, fmt = '(a)') '# Multipole matrix elements file: <Phi_i | r**l * Y_{lm}(theta,phi) | Phi_j>' 
-    write(iunit, fmt = '(a,i2,a,i2)') '# l =', l, '; m =', m
-    write(iunit, fmt = '(a,i4)')      '# ik =', ik
-    if(l>1) then
-      write(iunit, fmt = '(a,i1)') '# Units = ['//trim(units_out%length%abbrev)//']^',l
-    else
-      write(iunit, fmt = '(a)')    '# Units = ['//trim(units_out%length%abbrev)//']'
-    end if
-
-    SAFE_ALLOCATE(multipole(1:gr%mesh%np_part, 1:st%d%dim))
-    multipole = M_ZERO
-    do ii = 1, st%d%dim
-      do i = 1, gr%mesh%np
-        call mesh_r(gr%mesh, i, r, x = x)
-        call loct_ylm(1, x(1), x(2), x(3), l, m, ylm)
-        multipole(i, ii) = r**l * ylm
-      end do
-    end do
-
-    do ii = 1, st%nst
-      do jj = 1, st%nst
-        if (st%wfs_type == M_REAL) then 
-          write(iunit,fmt = '(f20.10)', advance = 'no') dmf_dotp(gr%mesh, st%d%dim, &
-            st%dpsi(:, :, ii, 1), &
-            st%dpsi(:, :, jj, 1) * multipole(:, :)) / units_out%length%factor**l
-
-        else
-          multip_element = zmf_dotp(gr%mesh, st%d%dim, &
-            st%zpsi(:, :, ii, 1), &
-            st%zpsi(:, :, jj, 1) * multipole(:, :)) / units_out%length%factor**l
-
-          write(iunit,fmt = '(f20.12,a1,f20.12,3x)', advance = 'no') &
-            real(multip_element, REAL_PRECISION), ',', aimag(multip_element)
-        end if
-        if(jj==st%nst) write(iunit, '(a)') 
-      end do
-    end do
-
-    SAFE_DEALLOCATE_A(multipole)
-    call pop_sub()
-  end subroutine h_sys_write_multipole_matrix
-
-
-  ! ---------------------------------------------------------
   subroutine h_sys_output_current_flow(gr, st, dir, outp, geo)
     type(grid_t),         intent(inout) :: gr
     type(states_t),       intent(inout) :: st

@@ -167,21 +167,6 @@ contains
       call states_degeneracy_matrix(sys%st)
     end if
 
-    !%Variable WriteMatrixElements
-    !%Type logical
-    !%Default no
-    !%Section Calculation Modes::Unoccupied States
-    !%Description
-    !% If true outputs the following matrix elements:
-    !% <ul>
-    !% <li><math>&lt;i|T + V_{ext}|j&gt;</math></li>
-    !% <li><math>&lt;ij| 1/|r_1-r_2| |kl&gt;</math></li>
-    !% </ul>
-    !% in the directory matrix_elements
-    !%End
-    call loct_parse_logical(datasets_check('WriteMatrixElements'), .false., l)
-    if(l) call write_matrix_elements(sys, hm)
-
     ! output wave-functions
     call h_sys_output_states(sys%st, sys%gr, sys%geo, STATIC_DIR, sys%outp)
 
@@ -249,44 +234,6 @@ contains
 
   end subroutine unocc_run
 
-
-  ! ---------------------------------------------------------
-  ! warning: only works for spin-unpolarized and 1 k-point
-  subroutine write_matrix_elements(sys, hm)
-    type(system_t),         intent(inout) :: sys
-    type(hamiltonian_t),    intent(in)    :: hm
-
-    call io_mkdir("matrix_elements")
-
-    message(1) = "Computing Matrix Elements"
-    call write_info(1)
-
-    message(1) = "  :: one-body"
-    call write_info(1)
-    if (sys%st%wfs_type == M_REAL) then
-      call done_body(sys%gr, sys%geo, sys%st, hm)
-    else
-      call zone_body(sys%gr, sys%geo, sys%st, hm)
-    end if
-
-    message(1) = "  :: two-body"
-    call write_info(1)
-    if (sys%st%wfs_type == M_REAL) then
-      call dtwo_body(sys%gr, sys%st)
-    else
-      call ztwo_body(sys%gr, sys%st)
-    end if
-
-  end subroutine write_matrix_elements
-
-
-#include "undef.F90"
-#include "real.F90"
-#include "unocc_inc.F90"
-
-#include "undef.F90"
-#include "complex.F90"
-#include "unocc_inc.F90"
 
 end module unocc_m
 

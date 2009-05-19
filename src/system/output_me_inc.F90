@@ -81,6 +81,114 @@ subroutine X(output_me_ks_multipoles)(fname, st, gr, l, m, ik)
 end subroutine X(output_me_ks_multipoles)
 
 
+! ---------------------------------------------------------
+subroutine X(one_body) (dir, gr, geo, st, hm)
+  character(len=*),    intent(in)    :: dir
+  type(grid_t),        intent(inout) :: gr
+  type(geometry_t),    intent(in)    :: geo
+  type(states_t),      intent(inout) :: st
+  type(hamiltonian_t), intent(in)    :: hm
+
+  integer i, j, iunit, idir, iatom, np
+  R_TYPE :: me, exp_r, exp_g, corr
+  R_TYPE, allocatable :: gpsi(:,:), cpsi(:,:)
+
+  np = gr%mesh%np
+
+  iunit = io_open(trim(dir)//'/output_me_one_body', action='write')
+
+  do i = 1, st%nst
+    do j = 1, st%nst
+      if(j > i) cycle
+      
+      me = st%eigenval(i,1) - X(mf_integrate) (gr%mesh, R_CONJ(st%X(psi) (1:np, 1, i, 1)) * &
+           hm%Vhxc(1:np, 1) * st%X(psi) (1:np, 1, j, 1))
+
+      write(iunit, *) i, j, me
+    end do
+  end do
+
+  SAFE_ALLOCATE(gpsi(1:gr%mesh%np_part, 1:MAX_DIM))
+  SAFE_ALLOCATE(cpsi(1:gr%mesh%np_part, 1:1))
+
+  iunit = io_open(trim(dir)//'/output_me_gauge', action='write')
+
+  do i = 1, st%nst
+    do j = 1, st%nst
+      if(st%occ(i, 1) < CNST(0.0001)) cycle
+      if(st%occ(j, 1) > CNST(0.0001)) cycle
+
+      call X(derivatives_grad)(gr%der, st%X(psi)(:, 1, j, 1), gpsi)
+       
+      do idir = 1, 3
+         exp_r = X(mf_integrate) (gr%mesh, R_CONJ(st%X(psi) (1:np, 1, i, 1)) * &
+              gr%mesh%x(1:np, idir) * st%X(psi) (1:np, 1, j, 1))
+         
+         exp_g = X(mf_integrate) (gr%mesh, R_CONJ(st%X(psi) (1:np, 1, i, 1)) * &
+              gpsi(1:np, idir))
+         
+         corr = M_ZERO
+         do iatom = 1, geo%natoms
+           call X(projector_commute_r)(hm%ep%proj(iatom), gr, 1, idir, 1, st%X(psi)(1:np, 1, j, 1), cpsi)
+           corr = corr + &
+                X(mf_integrate)(gr%mesh, R_CONJ(st%X(psi)(1:np, 1, i, 1)) * cpsi(1:np, 1))
+         end do
+
+         me = (st%eigenval(j,1) - st%eigenval(i,1)) * exp_r
+         
+         write(iunit, *) i, j, idir, me, me - (exp_g + corr)
+
+       end do
+       
+     end do
+   end do
+   
+  SAFE_DEALLOCATE_A(gpsi)
+
+  call io_close(iunit)
+end subroutine X(one_body)
+
+
+! ---------------------------------------------------------
+subroutine X(two_body) (dir, gr, st)
+  character(len=*), intent(in) :: dir
+  type(grid_t),     intent(inout) :: gr
+  type(states_t),   intent(in)    :: st
+
+  integer i, j, k, l, iunit
+  R_TYPE :: me
+  R_TYPE, allocatable :: n(:), v(:)
+
+  iunit = io_open(trim(dir)//'/output_me_two_body', action='write')
+
+  SAFE_ALLOCATE(n(1:gr%mesh%np))
+  SAFE_ALLOCATE(v(1:gr%mesh%np))
+
+  do i = 1, st%nst
+    do j = 1, st%nst
+      if(j > i) cycle
+
+      n(1:gr%mesh%np) = R_CONJ(st%X(psi) (1:gr%mesh%np, 1, i, 1)) * st%X(psi) (1:gr%mesh%np, 1, j, 1)
+      call X(poisson_solve) (gr, v, n, all_nodes=.false.)
+
+      do k = 1, st%nst
+        if(k > i) cycle
+        do l = 1, st%nst
+          if(l > k) cycle
+          if(l > j) cycle
+
+          me = X(mf_integrate) (gr%mesh, v(1:gr%mesh%np) * &
+                st%X(psi) (1:gr%mesh%np, 1, k, 1) *R_CONJ(st%X(psi) (1:gr%mesh%np, 1, l, 1)))
+
+          write(iunit, *) i, j, k, l, me
+        end do
+      end do
+    end do
+  end do
+
+  call io_close(iunit)
+end subroutine X(two_body)
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8
