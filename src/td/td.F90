@@ -654,7 +654,7 @@ contains
         if(ion_dynamics_ions_move(td%ions)  .and. k%delta_strength .ne. M_ZERO) then
           do iatom = 1, geo%natoms
             geo%atom(iatom)%v(1:gr%mesh%sb%dim) = geo%atom(iatom)%v(1:gr%mesh%sb%dim) - &
-              k%delta_strength_mode*k%pol(1:gr%mesh%sb%dim, k%pol_dir)*geo%atom(iatom)%spec%z_val/geo%atom(iatom)%spec%weight
+              k%delta_strength*k%pol(1:gr%mesh%sb%dim, k%pol_dir)*geo%atom(iatom)%spec%z_val/geo%atom(iatom)%spec%weight
           end do
         end if
 
