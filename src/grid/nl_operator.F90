@@ -127,58 +127,53 @@ contains
   
   ! ---------------------------------------------------------
   subroutine nl_operator_global_init()
+
     !%Variable OperateDouble
     !%Type integer
-    !%Default tune
-    !%Section Generalities::Optimization
+    !%Default autodetect
+    !%Section Execution::Optimization
     !%Description
     !% This variable selects the subroutine used to apply non-local
-    !% operators over the grid for real functions. As Octopus spends
-    !% most of the computing time in this routine, it is important to
-    !% choose the optimal one for your hardware, this can be done with
-    !% the oct-operator_prof utility.  The performance of each routine
-    !% depends on the hardware and on the C and Fortran compilers
-    !% used.  The default value changes according to the options
-    !% available and the platform.
-    !%Option tune -1
+    !% operators over the grid for real functions. By default the best
+    !% subroutine for your system is detected at runtime, but using
+    !% this variable you might skip the detection.
+    !%Option autodetect -1
     !% Automatically discover the fastest function
     !%Option fortran 0
-    !% The standard plain fortran function.
+    !% The standard fortran function.
     !%Option c 1
-    !% The C version of the plain function, using data prefetch
-    !% directives and unrolled by hand.
+    !% The C version of the function unrolled by hand.
     !%Option vec 2
-    !% TODO
+    !% This version has been optimized using vector primitives, it is
+    !% available on x86 (with SSE2) and x86-64 systems (not supported
+    !% by all compilers).
     !%Option as 3
-    !% TODO
+    !% Hand-written assembler version, currently only available on Itanium systems.
     !%End
-    
+
     !%Variable OperateComplex
     !%Type integer
-    !%Default tune
-    !%Section Generalities::Optimization
+    !%Default autodetect
+    !%Section Execution::Optimization
     !%Description
     !% This variable selects the subroutine used to apply non-local
-    !% operators over the grid for complex functions. As Octopus
-    !% spends most of the computing time in this routine, it is
-    !% important to choose the optimal one for your hardware, this can
-    !% be done with the oct-operator_prof utility.  The performance of
-    !% each routine depends on the hardware and on the C and Fortran
-    !% compilers used.  The default value changes according to the
-    !% options available and the platform.
-    !%Option tune -1
+    !% operators over the grid for complex functions. By default the best
+    !% subroutine for your system is detected at runtime, but using
+    !% this variable you might skip the detection.
+    !%Option autodetect -1
     !% Automatically discover the fastest function
     !%Option fortran 0
-    !% The standard plain fortran function.
+    !% The standard fortran function.
     !%Option c 1
-    !% The C version, using data prefetch directives and unrolled by
-    !% hand.
+    !% The C version of the function unrolled by hand.
     !%Option vec 2
-    !% TODO
+    !% This version has been optimized using vector primitives, it is
+    !% available on x86 (with SSE2) and x86-64 systems (not supported
+    !% by all compilers).
     !%Option as 3
-    !% TODO
+    !% Hand-written assembler version, currently only available on Itanium systems.
     !%End
-    
+
     call loct_parse_int(datasets_check('OperateDouble'),  -1, dfunction_global)
     if(dfunction_global.ne.-1) then
       if(op_is_available(dfunction_global, M_REAL)  == 0) then
