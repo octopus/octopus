@@ -129,7 +129,7 @@ contains
             wfval1 = wf(ip)
 
             ! see if point has enough weight to be used
-            if (abs(real(wfval1)) < wftol) cycle
+            if (abs(TOFLOAT(wfval1)) < wftol) cycle
 
             ! get actual coordinates of mb point
             call index_to_coords(gr%mesh%idx, gr%sb%dim, ip, ix)
@@ -154,7 +154,7 @@ contains
  
             ! check sign change FIXME: check imaginary part too
             !   normally, as these points are related, wfval2 should also be > wftol
-            ratio = real(wfval1) / real(wfval2)
+            ratio = TOFLOAT(wfval1) / TOFLOAT(wfval2)
             
             if (abs(ratio+1.0d0) < tolonsign) then
               wf_sign_change = -1
@@ -184,7 +184,7 @@ contains
           !  and the number of points where the ratio was far from +-1 was not
           !  too high
           if (ngoodpoints == enoughgood .and. &
-              real(nratiocomplaints)/real(ngoodpoints) < 0.1) then
+              TOFLOAT(nratiocomplaints)/TOFLOAT(ngoodpoints) < 0.1) then
             modelmbparticles%exchange_symmetry(ipart1,ipart2,itype)=save_sign_change
             modelmbparticles%exchange_symmetry(ipart2,ipart1,itype)=save_sign_change
           else 
@@ -306,7 +306,7 @@ contains
       ! FIXME: for multiple particle types this needs to be fixed.
       ! Also, for inequivalent spin configurations this should vary, and we get
       ! different 1 body densities, no?
-      ikeeppart = 1
+      ikeeppart = modelmbparticles%particles_of_type(1,itype)
 
       ! if the particle is not fermionic, just cycle to next one
       ! FIXME: boson case is not treated yet
@@ -341,14 +341,14 @@ contains
 
         ! loop over all Young diagrams for present distribution of spins up and down
         do iyoung = 1, young%nyoung
-          antisymwf=cmplx(0.0d0,0.0d0)
+          antisymwf = M_z0
           antisymwf(:) = wf(:)
 
           ! first symmetrize over pairs of particles associated in the present
           ! Young diagram
           do idown = 1, young%ndown
-            ipart1 = young%young_down(idown,iyoung)
-            ipart2 = young%young_up  (idown,iyoung)
+            ipart1 = modelmbparticles%particles_of_type(young%young_down(idown,iyoung), itype)
+            ipart2 = modelmbparticles%particles_of_type(  young%young_up(idown,iyoung), itype)
   
             antisymwf_swap=antisymwf
             do ip = 1, gr%mesh%np_part_global
@@ -369,11 +369,11 @@ contains
               antisymwf_swap(ip)=antisymwf_swap(ip) + antisymwf(ipp)
           
             end do ! ip
-            antisymwf = antisymwf_swap * 0.5d0
+            antisymwf = antisymwf_swap * M_HALF
           end do
     
           if (debug_antisym) then 
-            antisymrho = real(conjg(antisymwf)*antisymwf) * normalizer
+            antisymrho = TOFLOAT(conjg(antisymwf)*antisymwf) * normalizer
             norm = sum(antisymrho)
             write (message(1), '(a,I7,a,I7,a,E20.10)') 'norm of pair-symmetrized-state ',&
                     mm, ' with ', nspindown, ' spins down is ', norm
@@ -382,7 +382,7 @@ contains
  
           ! for each permutation of particles of this type
           !  antisymmetrize the up and down labeled spins, amongst themselves
-          antisymwf_swap = cmplx(0.0d0, 0.0d0)
+          antisymwf_swap = M_z0
           do iperm_up = 1, perms_up%npermutations
             do ip = 1, gr%mesh%np_part_global
               ! get present position
@@ -402,18 +402,18 @@ contains
             end do ! ip
           end do ! iperm_up
 
-          antisymwf=antisymwf_swap / dble(perms_up%npermutations)
+          antisymwf=antisymwf_swap / TOFLOAT(perms_up%npermutations)
 
           ! the following could be removed for production
           if (debug_antisym) then 
-            antisymrho = real(conjg(antisymwf)*antisymwf) * normalizer
+            antisymrho = TOFLOAT(conjg(antisymwf)*antisymwf) * normalizer
             norm = sum(antisymrho)
             write (message(1), '(a,I7,a,I7,a,E20.10)') 'norm of up-antisym+pairsym-state ',&
                     mm, ' with ', nspindown, ' spins down is ', norm
             call write_info(1)
           end if
 
-          antisymwf_swap=cmplx(0.0d0, 0.0d0)
+          antisymwf_swap = M_z0
           do iperm_down = 1, perms_down%npermutations
             do ip = 1, gr%mesh%np_part_global
               ! get present position
@@ -433,23 +433,22 @@ contains
             end do ! ip
           end do ! iperm_down
 
-          antisymwf=antisymwf_swap / dble(perms_down%npermutations)
+          antisymwf=antisymwf_swap / TOFLOAT(perms_down%npermutations)
      
-          antisymrho = real(conjg(antisymwf)*antisymwf)
+          antisymrho = TOFLOAT(conjg(antisymwf)*antisymwf)
           norm = sum(antisymrho) * normalizer
 
-          if (norm < 1.d-8) cycle
+          ! FIXME: this is probably the problem when running in single precision
+          if (norm < CNST(1.e-5)) cycle
 
           call young_write_one (young, iyoung)
           
           antisymwf=antisymwf_swap / sqrt(norm)
   
-          scalprod = sum(conjg(antisymwf)*wf)
-          write (message(1), '(a,I7,a,I7,a,2E20.10)') 'scalar product to wf of state ', mm, &
-                  ' having ', nspindown, ' spins down is ', scalprod
-          call write_info(1)
+          !scalprod = sum(conjg(antisymwf)*wf)
 
-          write (message(1), '(a,I7,a,I7,a,E20.10)') 'norm of state ', mm, ' with ', nspindown, ' spins down is ', norm
+          write (message(1), '(a,I7,a,I7,a,E20.10)') 'projection of state ', mm, &
+                 ' on Young diagram with ', nspindown, ' spins down is ', norm
           call write_info(1)
    
           SAFE_ALLOCATE(antisymrho_1part(1:mb_1part%npt_1part))
