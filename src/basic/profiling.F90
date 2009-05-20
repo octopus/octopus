@@ -157,8 +157,6 @@ module profiling_m
   type(profile_t), save, public :: C_PROFILING_COMPLETE_DATASET
 
   type(profile_t), save, public :: &
-       C_PROFILING_XC,             &
-       C_PROFILING_XC_LOCAL,       &
        C_PROFILING_XC_OEP,         &
        C_PROFILING_XC_EXX,         &
        C_PROFILING_XC_SIC,         &
@@ -264,8 +262,6 @@ contains
   contains
     subroutine init_profiles
       call profile_init(C_PROFILING_COMPLETE_DATASET, 'COMPLETE_DATASET')
-      call profile_init(C_PROFILING_XC,               'XC')
-      call profile_init(C_PROFILING_XC_LOCAL,         'XC_LOCAL')
       call profile_init(C_PROFILING_XC_OEP,           'XC_OEP')
       call profile_init(C_PROFILING_XC_EXX,           'XC_EXX')
       call profile_init(C_PROFILING_XC_SIC,           'XC_SIC')

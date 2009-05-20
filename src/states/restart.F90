@@ -710,6 +710,7 @@ contains
       write(message(1),'(a)') 'Could not load any previous restart information.'
       call write_info(1)
       call messages_print_stress(stdout)
+      call profiling_out(prof_read)
       call pop_sub()
       return
     end if

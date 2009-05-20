@@ -25,6 +25,7 @@ module v_ks_m
   use global_m
   use grid_m
   use hamiltonian_m
+  use lalg_basic_m
   use loct_parser_m
   use XC_F90(lib_m)
   use mesh_function_m
@@ -233,6 +234,7 @@ contains
     logical,      optional, intent(in) :: calc_eigenval
 
     FLOAT :: amaldi_factor
+    integer :: ip, ispin
     type(profile_t), save :: prof
 
     ! The next line is a hack to be able to perform an IP/RPA calculation
@@ -242,11 +244,11 @@ contains
     call profiling_in(prof, "KOHN_SHAM_CALC")
 
     ! If the Hxc term is frozen, there is nothing to do, except we 
-    ! maybe have to calculat the eigenvalues (and WARNING: MISSING
+    ! maybe have to calculate the eigenvalues (and WARNING: MISSING
     ! hm%epot)
     if(ks%frozen_hxc) then
       if(present(calc_eigenval)) then
-        if (st%wfs_type == M_REAL) then
+        if (states_are_real(st)) then
           call dcalculate_eigenvalues(hm, gr, st)
         else
           call zcalculate_eigenvalues(hm, gr, st)
@@ -263,7 +265,7 @@ contains
     if(ks%sic_type == sic_amaldi) amaldi_factor = (st%qtot-1)/st%qtot
 
 
-    if(ks%theory_level==INDEPENDENT_PARTICLES.or.amaldi_factor==M_ZERO) then
+    if(ks%theory_level==INDEPENDENT_PARTICLES .or. amaldi_factor==M_ZERO) then
       hm%vhxc     = M_ZERO
       hm%epot     = M_ZERO
       hm%ehartree = M_ZERO
@@ -284,14 +286,14 @@ contains
 
       ! Build Hartree + xc potential
 
-      hm%vhxc(1:gr%mesh%np, 1) = hm%vxc(1:gr%mesh%np, 1) + hm%vhartree(1:gr%mesh%np)
+       forall(ip = 1:gr%mesh%np) hm%vhxc(ip, 1) = hm%vxc(ip, 1) + hm%vhartree(ip)
 
       if(hm%d%ispin > UNPOLARIZED) then
-        hm%vhxc(1:gr%mesh%np, 2) = hm%vxc(1:gr%mesh%np, 2) + hm%vhartree(1:gr%mesh%np)
+        forall(ip = 1:gr%mesh%np) hm%vhxc(ip, 2) = hm%vxc(ip, 2) + hm%vhartree(ip)
       end if
 
       if(hm%d%ispin == SPINORS) then
-        hm%vhxc(1:gr%mesh%np, 3:4) = hm%vxc(1:gr%mesh%np, 3:4)
+        forall(ip = 1:gr%mesh%np, ispin = 3:4) hm%vhxc(ip, ispin) = hm%vxc(ip, ispin)
       end if
 
     end if
@@ -315,7 +317,7 @@ contains
     if(hm%self_induced_magnetic) call magnetic_induced(gr, st, hm%a_ind, hm%b_ind)
 
     if(present(calc_eigenval)) then
-      if (st%wfs_type == M_REAL) then
+      if (states_are_real(st)) then
         call dcalculate_eigenvalues(hm, gr, st)
       else
         call zcalculate_eigenvalues(hm, gr, st)
@@ -330,9 +332,9 @@ contains
     ! ---------------------------------------------------------
     subroutine v_a_xc()
       FLOAT, allocatable :: rho(:, :)
-
+      type(profile_t), save :: prof
       call push_sub('v_ks.v_ks_calc.v_a_xc')
-      call profiling_in(C_PROFILING_XC)
+      call profiling_in(prof, "XC")
 
       hm%ex = M_ZERO
       hm%ec = M_ZERO
@@ -357,7 +359,7 @@ contains
 
       if(ks%theory_level == KOHN_SHAM_DFT) then
         ! The OEP family has to be handled specially
-        if (st%wfs_type == M_REAL) then
+        if (states_are_real(st)) then
           call dxc_oep_calc(ks%oep, ks%xc, (ks%sic_type==sic_pz),  &
             gr, hm, st, hm%ex, hm%ec, vxc=hm%vxc)
         else
@@ -381,7 +383,7 @@ contains
 
       end select
 
-      call profiling_out(C_PROFILING_XC)
+      call profiling_out(prof)
       call pop_sub()
     end subroutine v_a_xc
   end subroutine v_ks_calc
@@ -397,22 +399,22 @@ contains
     FLOAT, optional,     intent(in)    :: amaldi_factor
 
     FLOAT, allocatable :: rho(:)
-    integer :: is
+    integer :: is, ip
 
     call push_sub('v_ks.v_ks_hartree')
 
     SAFE_ALLOCATE(rho(1:gr%mesh%np))
 
     ! calculate the total density
-    rho(1:gr%mesh%np) = st%rho(1:gr%mesh%np, 1)
+    call lalg_copy(gr%mesh%np, st%rho(:, 1), rho)
     do is = 2, hm%d%spin_channels
-      rho(1:gr%mesh%np) = rho(1:gr%mesh%np) + st%rho(1:gr%mesh%np, is)
+      forall(ip = 1:gr%mesh%np) rho(ip) = rho(ip) + st%rho(ip, is)
     end do
 
     ! Add, if it exists, the frozen density from the inner orbitals.
     if(associated(st%frozen_rho)) then
       do is = 1, hm%d%spin_channels
-        rho(1:gr%mesh%np) = rho(1:gr%mesh%np) + st%frozen_rho(1:gr%mesh%np, is)
+        forall(ip = 1:gr%mesh%np) rho(ip) = rho(ip) + st%frozen_rho(ip, is)
       end do
     end if
 

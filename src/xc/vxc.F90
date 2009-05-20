@@ -37,6 +37,7 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc, vtau)
   integer :: jj, ixc, spin_channels
   FLOAT   :: e, r
   logical :: gga, mgga
+  type(profile_t), save :: prof
 
   type(xc_functl_t), pointer :: functl(:)
 
@@ -55,7 +56,7 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc, vtau)
     return
   end if
 
-  call profiling_in(C_PROFILING_XC_LOCAL)
+  call profiling_in(prof, "XC_LOCAL")
 
   ! initialize a couple of handy variables
   gga           = iand(xcs%family, XC_FAMILY_GGA + XC_FAMILY_HYB_GGA).ne.0
@@ -174,7 +175,7 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc, vtau)
   if(       mgga) call mgga_end()
 
   call pop_sub()
-  call profiling_out(C_PROFILING_XC_LOCAL)
+  call profiling_out(prof)
 
 contains
 
