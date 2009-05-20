@@ -277,7 +277,7 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
       call etsf_io_low_error_handle(error_data)
       message(1) = "ETSF_IO returned a fatal error. See message above."
       call write_fatal(1)
-    end if    
+    end if
 
     !Write the wavefunctions to the file
     SAFE_ALLOCATE(local_wfs(1:zdim, 1:cube%n(1), 1:cube%n(2), 1:cube%n(3), 1:st%d%dim, 1:st%nst, 1:st%d%nik))
@@ -306,7 +306,7 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
       end do
     end do
 
-    main%coefficients_of_wavefunctions%data7D => local_wfs
+    main%real_space_wavefunctions%data7D => local_wfs
     groups%main => main
     call etsf_io_data_write(dir//"/wfs-etsf.nc", &
          & groups, lstat, error_data)
@@ -318,7 +318,7 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
 
     !Free the main container
     nullify(groups%main)
-    nullify(main%coefficients_of_wavefunctions%data7D)
+    nullify(main%real_space_wavefunctions%data7D)
     SAFE_DEALLOCATE_A(local_wfs)
 
     !Free the kpoints container
@@ -355,6 +355,7 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
     dims%number_of_grid_points_vector1 = 1
     dims%number_of_grid_points_vector2 = 1
     dims%number_of_grid_points_vector3 = 1
+    dims%real_or_complex_wavefunctions = 1
   end if
 
   call pop_sub()
