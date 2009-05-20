@@ -204,12 +204,12 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
   integer,           intent(in)    :: ik
 
   integer :: ipj, nreduce, ii, ns, idim, ll, mm, is, ist
-  R_TYPE, allocatable :: reduce_buffer(:, :), lpsi(:, :, :)
-  integer, allocatable :: ireduce(:, :, :)
+  R_TYPE, allocatable :: reduce_buffer(:), lpsi(:, :, :)
+  integer, allocatable :: ireduce(:, :, :, :), istart(:), iend(:)
   type(profile_t), save :: prof_scatter, prof_gather
 #if defined(HAVE_MPI)
   type(profile_t), save :: reduce_prof
-  R_TYPE, allocatable   :: reduce_buffer_dest(:, :)
+  R_TYPE, allocatable   :: reduce_buffer_dest(:)
 #endif
 
   call push_sub('projector_inc.project_psi')
@@ -223,20 +223,26 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
 
   ! generate the reduce buffer and related structures
 
-  SAFE_ALLOCATE(ireduce(1:npj, 0:MAX_L, -MAX_L:MAX_L))
+  SAFE_ALLOCATE(ireduce(1:npj, 0:MAX_L, -MAX_L:MAX_L, 1:psib%nst))
+  SAFE_ALLOCATE(istart(1:npj))
+  SAFE_ALLOCATE(iend(1:npj))
 
   nreduce = 0
 
   ! count the number of elements in the reduce buffer
   do ipj = 1, npj
     if(pj(ipj)%type == M_NONE) cycle
+    istart(ipj) = 1 + nreduce
     do ll = 0, pj(ipj)%lmax
       if (ll == pj(ipj)%lloc) cycle
       do mm = -ll, ll
-        ireduce(ipj, ll, mm) = 1 + nreduce
-        nreduce = nreduce + pj(ipj)%reduce_size
+        do ist = 1, psib%nst
+          ireduce(ipj, ll, mm, ist) = 1 + nreduce
+          nreduce = nreduce + pj(ipj)%reduce_size
+        end do
       end do
     end do
+    iend(ipj) = nreduce
   end do
 
   ! Check whether we have or not "real" projectors. If we do not, return.
@@ -244,10 +250,9 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
     call pop_sub(); return
   end if
 
-  SAFE_ALLOCATE(reduce_buffer(1:nreduce, 1:psib%nst))
+  SAFE_ALLOCATE(reduce_buffer(1:nreduce))
 #if defined(HAVE_MPI)
   if(mesh%parallel_in_domains) then
-    SAFE_ALLOCATE(reduce_buffer_dest(1:nreduce, 1:psib%nst))
   end if
 #endif
 
@@ -281,38 +286,38 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
       if (ll == pj(ipj)%lloc) cycle
       do mm = -ll, ll
 
-        ii = ireduce(ipj, ll, mm)
         do ist = 1, psib%nst
+          ii = ireduce(ipj, ll, mm, ist)
           select case(pj(ipj)%type)
           case(M_KB)
-            call X(kb_project_bra)(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(ll, mm), dim, lpsi(:, :, ist), reduce_buffer(ii:, ist))
+            call X(kb_project_bra)(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(ll, mm), dim, lpsi(:, :, ist), reduce_buffer(ii:))
           case(M_RKB)
 #ifdef R_TCOMPLEX
             if(ll /= 0) then
-              call rkb_project_bra(mesh, pj(ipj)%sphere, pj(ipj)%rkb_p(ll, mm), lpsi(:, :, ist), reduce_buffer(ii:, ist))
+              call rkb_project_bra(mesh, pj(ipj)%sphere, pj(ipj)%rkb_p(ll, mm), lpsi(:, :, ist), reduce_buffer(ii:))
             else
-              call zkb_project_bra(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(1, 1), dim, lpsi(:, :, ist), reduce_buffer(ii:, ist))
+              call zkb_project_bra(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(1, 1), dim, lpsi(:, :, ist), reduce_buffer(ii:))
             end if
 #endif
           case(M_HGH)
             call X(hgh_project_bra)(mesh, pj(ipj)%sphere, pj(ipj)%hgh_p(ll, mm), dim, pj(ipj)%reltype, &
-                 lpsi(:, :, ist), reduce_buffer(ii:, ist))
+                 lpsi(:, :, ist), reduce_buffer(ii:))
           end select
         end do ! ist
       end do ! mm
     end do ! ll
 
-
     SAFE_DEALLOCATE_A(lpsi)
-
   end do
 
   ! reduce <p|psi>
 #if defined(HAVE_MPI)
   if(mesh%parallel_in_domains) then
     call profiling_in(reduce_prof, "VNLPSI_REDUCE_BATCH")
-    call MPI_Allreduce(reduce_buffer, reduce_buffer_dest, nreduce*psib%nst, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
+    SAFE_ALLOCATE(reduce_buffer_dest(1:nreduce))
+    call MPI_Allreduce(reduce_buffer, reduce_buffer_dest, nreduce, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
     reduce_buffer = reduce_buffer_dest
+    SAFE_DEALLOCATE_A(reduce_buffer_dest)
     call profiling_out(reduce_prof)
   end if
 #endif
@@ -329,25 +334,25 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
     do ll = 0, pj(ipj)%lmax
       if (ll == pj(ipj)%lloc) cycle
       do mm = -ll, ll
-        
-        ii = ireduce(ipj, ll, mm)
         do ist = 1, psib%nst
+          ii = ireduce(ipj, ll, mm, ist)
+
           select case(pj(ipj)%type)
           case(M_KB)
             call X(kb_project_ket)(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(ll, mm), dim, &
-              reduce_buffer(ii:, ist), lpsi(:, :, ist))
+              reduce_buffer(ii:), lpsi(:, :, ist))
           case(M_RKB)
 #ifdef R_TCOMPLEX
             if(ll /= 0) then
-              call rkb_project_ket(pj(ipj)%rkb_p(ll, mm), reduce_buffer(ii:, ist), lpsi(:, :, ist))
+              call rkb_project_ket(pj(ipj)%rkb_p(ll, mm), reduce_buffer(ii:), lpsi(:, :, ist))
             else
               call zkb_project_ket(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(1, 1), dim, &
-                reduce_buffer(ii:, ist), lpsi(:, :, ist))
+                reduce_buffer(ii:), lpsi(:, :, ist))
             end if
 #endif
           case(M_HGH)
             call X(hgh_project_ket)(mesh, pj(ipj)%sphere, pj(ipj)%hgh_p(ll, mm), dim, &
-              pj(ipj)%reltype, reduce_buffer(ii:, ist), lpsi(:, :, ist))
+              pj(ipj)%reltype, reduce_buffer(ii:), lpsi(:, :, ist))
           end select
 
         end do ! ist
@@ -382,6 +387,8 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
 
   SAFE_DEALLOCATE_A(reduce_buffer)
   SAFE_DEALLOCATE_A(ireduce)
+  SAFE_DEALLOCATE_A(iend)
+  SAFE_DEALLOCATE_A(istart)
 
   call pop_sub()
 end subroutine X(project_psi_batch)
