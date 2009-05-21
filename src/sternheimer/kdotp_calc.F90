@@ -37,6 +37,7 @@ module kdotp_calc_m
 
   private
   public ::                        &
+    dcalc_eff_mass_inv,            &  
     zcalc_eff_mass_inv,            &  
     zcalc_dipole_periodic,         &
     kdotp_wfs_tag,                 &
@@ -68,9 +69,6 @@ contains
     call pop_sub()
 
   end function kdotp_wfs_tag
-
-#include "complex.F90"
-
 
 ! ---------------------------------------------------------
 ! This routine cannot be used with d/dk wavefunctions calculated
@@ -110,113 +108,16 @@ subroutine zcalc_dipole_periodic(sys, lr, dipole)
 
   call pop_sub()
 
-end subroutine
+end subroutine zcalc_dipole_periodic
 
+#include "undef.F90"
+#include "real.F90"
+#include "kdotp_calc_inc.F90"
 
-! ---------------------------------------------------------
-subroutine zcalc_eff_mass_inv(sys, hm, lr, perturbation, eff_mass_inv, &
-  occ_solution_method, degen_thres)
-  type(system_t),         intent(inout) :: sys
-  type(hamiltonian_t),    intent(in)    :: hm
-  type(lr_t),             intent(in)    :: lr(:,:)
-  type(pert_t),           intent(inout) :: perturbation
-  FLOAT,                  intent(out)   :: eff_mass_inv(:, :, :, :)
-  integer,                intent(in)    :: occ_solution_method
-  FLOAT,                  intent(in)    :: degen_thres
+#include "undef.F90"
+#include "complex.F90"
+#include "kdotp_calc_inc.F90"
 
-! m^-1[ij] = delta[ij] + 2*Re<psi0|H'i|psi'j>
-! for each state, spin, and k-point
-! This routine is not set up for spinors.
-! The off-diagonal elements are not correct in a degenerate subspace
-
-  integer ik, ist, ist2, idir1, idir2
-  R_TYPE term
-  R_TYPE, allocatable   :: pertpsi(:, :)       ! H`i|psi0>
-  R_TYPE, allocatable   :: proj_dl_psi(:, :)   ! (1-Pn')|psi'j>
-  type(mesh_t), pointer :: m
-  logical, allocatable  :: orth_mask(:)
-
-  call push_sub('kdotp_calc.zcalc_eff_mass_inv')
-
-  m => sys%gr%mesh
-
-  SAFE_ALLOCATE(pertpsi(1:sys%gr%sb%dim, 1:m%np))
-  SAFE_ALLOCATE(proj_dl_psi(1:m%np, 1)) ! second index should be sys%st%d%dim, i.e. spinors
-  SAFE_ALLOCATE(orth_mask(1:sys%st%nst))
-
-  eff_mass_inv(:, :, :, :) = 0
-
-  do ik = 1, sys%st%d%nik
-
-    do ist = 1, sys%st%nst
-
-      do idir1 = 1, sys%gr%sb%dim
-        call pert_setup_dir(perturbation, idir1)
-        call zpert_apply (perturbation, sys%gr, sys%geo, hm, ik, &
-          sys%st%zpsi(1:m%np, 1, ist, ik), pertpsi(idir1, 1:m%np))
-      enddo
-
-      do idir1 = 1, sys%gr%sb%dim
-        eff_mass_inv(ik, ist, idir1, idir1) = 1
-
-        do idir2 = 1, sys%gr%sb%dim
-
-          if (idir2 < idir1) then
-            eff_mass_inv(ik, ist, idir1, idir2) = eff_mass_inv(ik, ist, idir2, idir1)
-            ! utilizing symmetry of inverse effective mass tensor
-            cycle
-          end if
-
-          proj_dl_psi(1:m%np, 1) = lr(idir2, 1)%zdl_psi(1:m%np, 1, ist, ik)
-          
-          if (occ_solution_method == 0) then
-          ! project out components of other states in degenerate subspace
-            do ist2 = 1, sys%st%nst
-!              alternate direct method
-!              if (abs(sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik)) < degen_thres) then
-!                   proj_dl_psi(1:m%np) = proj_dl_psi(1:m%np) - sys%st%zpsi(1:m%np, 1, ist2, ik) * &
-!                     zmf_dotp(m, sys%st%zpsi(1:m%np, 1, ist2, ik), proj_dl_psi(1:m%np))
-
-              orth_mask(ist2) = .not. (abs(sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik)) < degen_thres)
-              ! mask == .false. means do projection; .true. means do not
-            enddo
-
-!            orth_mask(ist) = .true. ! projection on unperturbed wfn already removed in Sternheimer eqn
-!            write(*,*) 'orth_mask(ist) = ', orth_mask(ist)
-
-            call X(states_gram_schmidt)(m, sys%st%nst, sys%st%d%dim, sys%st%X(psi)(1:m%np, 1:1, 1:sys%st%nst, ik), &
-              proj_dl_psi(1:m%np, 1:1), mask = orth_mask(1:sys%st%nst))
-          endif
-
-          ! contribution from Sternheimer equation
-          term = zmf_dotp(m, proj_dl_psi(1:m%np, 1), pertpsi(idir1, 1:m%np))
-          eff_mass_inv(ik, ist, idir1, idir2) = eff_mass_inv(ik, ist, idir1, idir2) + M_TWO * term
-!          write(*,*) "unocc: ", eff_mass_inv(ik, ist, idir1, idir2)
-
-          if (occ_solution_method == 1) then
-          ! contribution from linear-response projection onto occupied states, by sum over states and perturbation theory
-          ! this could be sped up yet more by storing each (ist,ist2) term, which will be used again as the complex
-          !   conjugate as the (ist2,ist) term.  same will apply to hyperpolarizability
-             do ist2 = 1, sys%st%nst
-                if (ist2 == ist .or. abs(sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik)) < degen_thres) cycle
-                term = zmf_dotp(m, pertpsi(idir1, 1:m%np), sys%st%zpsi(1:m%np, 1, ist2, ik)) * &
-                     zmf_dotp(m, sys%st%zpsi(1:m%np, 1, ist2, ik), pertpsi(idir2, 1:m%np)) / &
-                     (sys%st%eigenval(ist, ik) - sys%st%eigenval(ist2, ik))
-                eff_mass_inv(ik, ist, idir1, idir2) = eff_mass_inv(ik, ist, idir1, idir2) + M_TWO * term
-!                write(*,'(a,i2,a,f20.6)') "occ(", ist2, "): ", eff_mass_inv(ik, ist, idir1, idir2)
-             enddo
-          endif
-!          write(*,'(a,i1,a,i1,a,f20.6)') "eff_mass_inv(", idir1, ", ", idir2, ") = ", eff_mass_inv(ik, ist, idir1, idir2)
-
-        enddo !idir2
-      enddo !idir1
-    enddo !ist
-  enddo !ik
-
-  call pop_sub()
-
-end subroutine zcalc_eff_mass_inv
-  
 end module kdotp_calc_m
 
 !! Local Variables:

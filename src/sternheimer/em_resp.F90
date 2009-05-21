@@ -118,6 +118,13 @@ contains
     complex_response = (em_vars%eta /= M_ZERO ) .or. states_are_complex(sys%st)
     call restart_look_and_read(sys%st, sys%gr, sys%geo, is_complex = complex_response)
 
+    if (states_are_real(sys%st)) then
+      message(1) = 'Info: SCF using real wavefunctions.'
+    else
+      message(1) = 'Info: SCF using complex wavefunctions.'
+    end if
+    call write_info(1)
+
     use_kdotp = simul_box_is_periodic(gr%sb) .and. .not. em_vars%force_no_kdotp
     ! read kdotp wavefunctions if necessary
     if (use_kdotp) then
@@ -293,7 +300,11 @@ contains
             call pert_setup_dir(em_vars%perturbation, idir)
 
             if(use_kdotp) then
-              call zsternheimer_set_rhs(sh, kdotp_lr(idir, 1)%zdl_psi)
+              if (states_are_complex(sys%st)) then
+                call zsternheimer_set_rhs(sh, kdotp_lr(idir, 1)%zdl_psi)
+              else
+                call dsternheimer_set_rhs(sh, kdotp_lr(idir, 1)%ddl_psi)
+              endif
             end if
 
             ! if the frequency is zero, we do not need to calculate both responses
@@ -354,10 +365,13 @@ contains
         call write_info(1)
 
         do ifactor = 1, em_vars%nfactor
-          if(use_kdotp) then
+          if(use_kdotp .and. states_are_complex(sys%st)) then
             call zcalc_polarizability_periodic(sys, em_vars%lr(:, :, ifactor), kdotp_lr(:, 1), &
               em_vars%nsigma, em_vars%alpha(:, :, ifactor))
-          else if(states_are_complex(sys%st)) then
+          else if(use_kdotp .and. .not. states_are_complex(sys%st)) then
+            call dcalc_polarizability_periodic(sys, em_vars%lr(:, :, ifactor), kdotp_lr(:, 1), &
+              em_vars%nsigma, em_vars%alpha(:, :, ifactor))
+          else if(.not. use_kdotp .and. states_are_complex(sys%st)) then
             call zcalc_polarizability_finite(sys, hm, em_vars%lr(:, :, ifactor), em_vars%nsigma, &
               em_vars%perturbation, em_vars%alpha(:, :, ifactor))
           else

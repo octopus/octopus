@@ -118,6 +118,8 @@ contains
 
     integer :: ii
 
+    call push_sub('pert.pert_init1')
+
     !%Variable RespPerturbationType
     !%Type integer
     !%Section Linear Response
@@ -140,6 +142,8 @@ contains
     call loct_parse_int(datasets_check('RespPerturbationType'), PERTURBATION_ELECTRIC, ii)
 
     call pert_init2(this, ii, gr, geo)
+
+    call pop_sub()
 
   end subroutine pert_init1
 
@@ -205,23 +209,28 @@ contains
     endif
 
     call pop_sub()
-
   end subroutine pert_init2
 
   ! --------------------------------------------------------------------
   subroutine pert_end(this)
     type(pert_t), intent(inout) :: this
 
+    call push_sub('pert.pert_end')
+
     if(this%pert_type == PERTURBATION_IONIC) then
       SAFE_DEALLOCATE_P(this%ionic%mix1)
       SAFE_DEALLOCATE_P(this%ionic%mix2)
     end if
+
+    call pop_sub()
   end subroutine pert_end
 
   ! --------------------------------------------------------------------
   subroutine pert_info(this, unit)
     type(pert_t), intent(in) :: this
     integer,      intent(in) :: unit
+
+    call push_sub('pert.pert_info')
 
     call messages_print_var_option(unit, 'RespPerturbationType', this%pert_type)
     
@@ -232,8 +241,8 @@ contains
       endif
     endif
    
+    call pop_sub()
   end subroutine pert_info
-
 
   ! --------------------------------------------------------------------
   subroutine pert_setup_dir(this, dir, dir2)
@@ -241,14 +250,21 @@ contains
     integer,           intent(in)    :: dir
     integer, optional, intent(in)    :: dir2
 
+    call push_sub('pert.pert_setup_dir')
+
     this%dir = dir
     if(present(dir2)) this%dir2 = dir2
 
     if(this%pert_type == PERTURBATION_IONIC) call pert_setup_ionic_pure(this)
+
+    call pop_sub()
   end subroutine pert_setup_dir
 
+  ! --------------------------------------------------------------------
   subroutine pert_setup_ionic_pure(this)
     type(pert_t), intent(inout) :: this
+
+    call push_sub('pert.pert_setup_ionic_pure')
 
     this%ionic%pure_dir = .true.
 
@@ -260,17 +276,23 @@ contains
 
   end subroutine pert_setup_ionic_pure
 
+  ! --------------------------------------------------------------------
   subroutine pert_setup_atom(this, iatom, iatom2)
     type(pert_t), intent(inout) :: this
     integer,           intent(in)    :: iatom
     integer, optional, intent(in)    :: iatom2
 
+    call push_sub('pert.pert_setup_atom')
+
     this%atom1 = iatom
     if(present(iatom2)) this%atom2 = iatom2
 
     if(this%pert_type == PERTURBATION_IONIC) call pert_setup_ionic_pure(this)
+
+    call pop_sub()
   end subroutine pert_setup_atom
 
+  ! --------------------------------------------------------------------
   subroutine pert_setup_mixed_dir(this, iatom, idir, value, jatom, jdir, valuej)
     type(pert_t),      intent(inout) :: this
     integer,           intent(in)    :: iatom
@@ -280,8 +302,9 @@ contains
     integer, optional, intent(in)    :: jdir
     FLOAT,   optional, intent(in)    :: valuej
     
-
     logical :: have_dir_2
+
+    call push_sub('pert.pert_setup_mixed_dir')
 
     this%ionic%pure_dir = .false.
     
@@ -295,13 +318,17 @@ contains
       ASSERT( .not. present(jatom) .and. .not. present(jdir) .and. .not. present(jatom) )
     end if
 
+    call pop_sub()
   end subroutine pert_setup_mixed_dir
     
   integer pure function pert_type(this)
     type(pert_t), intent(in) :: this
 
+    call push_sub('pert.pert_type')
+
     pert_type = this%pert_type
 
+    call pop_sub()
   end function pert_type
 
 #include "undef.F90"

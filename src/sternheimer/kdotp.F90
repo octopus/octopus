@@ -43,6 +43,7 @@ module kdotp_m
   use pert_m
   use profiling_m
   use restart_m
+  use simul_box_m
   use states_m
   use states_calc_m
   use states_dim_m
@@ -89,7 +90,7 @@ contains
     type(grid_t),   pointer :: gr
     type(kdotp_t)           :: kdotp_vars
     type(sternheimer_t)     :: sh
-    logical                 :: calc_eff_mass
+    logical                 :: calc_eff_mass, complex_response
 
     integer              :: idir, ierr, is, ist, ik
     character(len=100)   :: dirname, str_tmp
@@ -100,10 +101,15 @@ contains
     call messages_devel_version("k.p perturbation and calculation of effective masses")
 
     gr => sys%gr
-!    ndim = sys%gr%sb%dim
+
+    if(.not. simul_box_is_periodic(gr%sb)) then
+       message(1) = "k.p perturbation cannot be used for a finite system."
+       call write_fatal(1)
+    endif
 
     SAFE_ALLOCATE(kdotp_vars%eff_mass_inv(1:sys%st%d%nik, 1:sys%st%nst, 1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim))
-    kdotp_vars%eff_mass_inv(:,:,:,:)=0  
+
+    kdotp_vars%eff_mass_inv(:,:,:,:) = 0  
 
     call pert_init(kdotp_vars%perturbation, PERTURBATION_KDOTP, sys%gr, sys%geo)
 
@@ -111,8 +117,8 @@ contains
 
     call parse_input()
 
-    call restart_look_and_read(sys%st, sys%gr, sys%geo, is_complex = .true.)
-    ! even if wfs are real, the response must be allowed to be complex
+    complex_response = (kdotp_vars%eta /= M_ZERO ) .or. states_are_complex(sys%st)
+    call restart_look_and_read(sys%st, sys%gr, sys%geo, is_complex = complex_response)
 
     kdotp_vars%lr(1:gr%mesh%sb%dim, 1:1)%nst = sys%st%nst
 
@@ -121,7 +127,14 @@ contains
     call write_info(1)
     call system_h_setup(sys, hm)
     
-    call sternheimer_init(sh, sys, hm, "KdotP_", hermitian = states_are_real(sys%st), &
+    if (states_are_real(sys%st)) then
+      message(1) = 'Info: SCF using real wavefunctions.'
+    else
+      message(1) = 'Info: SCF using complex wavefunctions.'
+    end if
+    call write_info(1)
+
+    call sternheimer_init(sh, sys, hm, "KdotP_", hermitian = .true., &
          set_ham_var = 0, set_occ_response = (kdotp_vars%occ_solution_method == 0))
     ! ham_var_set = 0 results in HamiltonianVariation = V_ext_only
 
@@ -130,6 +143,8 @@ contains
       call lr_allocate(kdotp_vars%lr(idir, 1), sys%st, sys%gr%mesh)
 
       if(fromScratch .and. kdotp_vars%initialization .eq. 1) then
+      ! this is the exact solution in the limit of no dispersion, i.e. non-interacting unit cells
+      ! |u_i(1)> = r_i |u(0)>
         SAFE_ALLOCATE(orth_mask(1:sys%st%nst))
 
         do is = 1, sys%st%d%dim
@@ -138,19 +153,25 @@ contains
              orth_mask(ist) = .false.
 
             do ik = 1, sys%st%d%nik
-              kdotp_vars%lr(idir, 1)%zdl_psi(1:gr%mesh%np, is, ist, ik) &
-                = -M_zI * gr%mesh%x(1:gr%mesh%np, idir) * sys%st%zpsi(1:gr%mesh%np, is, ist, ik)
-              ! orthogonalize against unperturbed wfn to remove component unaccessible to perturbation theory
-              call zstates_gram_schmidt(gr%mesh, sys%st%nst, sys%st%d%dim, sys%st%zpsi(1:gr%mesh%np, 1:1, 1:sys%st%nst, ik), &
-                 kdotp_vars%lr(idir, 1)%zdl_psi(1:gr%mesh%np, 1:1, ist, ik), mask = orth_mask(1:sys%st%nst))
+              if(states_are_real(sys%st)) then
+                kdotp_vars%lr(idir, 1)%ddl_psi(1:gr%mesh%np, is, ist, ik) &
+                  = gr%mesh%x(1:gr%mesh%np, idir) * sys%st%dpsi(1:gr%mesh%np, is, ist, ik)
+                ! orthogonalize against unperturbed wfn to remove component unaccessible to perturbation theory
+                call dstates_gram_schmidt(gr%mesh, sys%st%nst, sys%st%d%dim, sys%st%dpsi(1:gr%mesh%np, 1:1, 1:sys%st%nst, ik), &
+                   kdotp_vars%lr(idir, 1)%ddl_psi(1:gr%mesh%np, 1:1, ist, ik), mask = orth_mask(1:sys%st%nst))
+              else
+                kdotp_vars%lr(idir, 1)%zdl_psi(1:gr%mesh%np, is, ist, ik) &
+                  = gr%mesh%x(1:gr%mesh%np, idir) * sys%st%zpsi(1:gr%mesh%np, is, ist, ik)
+                ! orthogonalize against unperturbed wfn to remove component unaccessible to perturbation theory
+                call zstates_gram_schmidt(gr%mesh, sys%st%nst, sys%st%d%dim, sys%st%zpsi(1:gr%mesh%np, 1:1, 1:sys%st%nst, ik), &
+                   kdotp_vars%lr(idir, 1)%zdl_psi(1:gr%mesh%np, 1:1, ist, ik), mask = orth_mask(1:sys%st%nst))
+              endif
             enddo
           enddo
         enddo
 
         SAFE_DEALLOCATE_A(orth_mask)
       endif
-      ! this is the exact solution in the limit of no dispersion, i.e. non-interacting unit cells
-      ! |u_i(1)> = -i r_i |u(0)>
 
       ! load wave-functions
       if(.not.fromScratch) then
@@ -172,7 +193,7 @@ contains
     call io_mkdir(trim(tmpdir)//KDOTP_RESTART_DIR)
     call io_mkdir(OUTPUT_DIR)
     call info()
-    message(1) = "Info: Calculating kdotp linear response of ground-state wavefunctions."
+    message(1) = "Info: Calculating k.p linear response of ground-state wavefunctions."
     call write_info(1)
     kdotp_vars%ok = .true.
 
@@ -181,9 +202,17 @@ contains
       write(message(1), '(a,i3)') 'Info: Calculating response for direction ', idir
       call write_info(1)
       call pert_setup_dir(kdotp_vars%perturbation, idir)
-      call zsternheimer_solve(sh, sys, hm, kdotp_vars%lr(idir,:), 1, &
-        M_zI * kdotp_vars%eta, kdotp_vars%perturbation, KDOTP_RESTART_DIR, &
-        kdotp_rho_tag(idir), kdotp_wfs_tag(idir), have_restart_rho=(ierr==0))
+
+      if(states_are_real(sys%st)) then
+        call dsternheimer_solve(sh, sys, hm, kdotp_vars%lr(idir,:), 1, &
+          M_ZERO, kdotp_vars%perturbation, KDOTP_RESTART_DIR, &
+          kdotp_rho_tag(idir), kdotp_wfs_tag(idir), have_restart_rho=(ierr==0))
+      else
+        call zsternheimer_solve(sh, sys, hm, kdotp_vars%lr(idir,:), 1, &
+          M_zI * kdotp_vars%eta, kdotp_vars%perturbation, KDOTP_RESTART_DIR, &
+          kdotp_rho_tag(idir), kdotp_wfs_tag(idir), have_restart_rho=(ierr==0))
+      endif
+
       kdotp_vars%ok = kdotp_vars%ok .and. sternheimer_has_converged(sh)         
     end do ! idir
 
@@ -192,8 +221,13 @@ contains
       message(1) = "Info: Calculating effective masses."
       call write_info(1)
 
-      call zcalc_eff_mass_inv(sys, hm, kdotp_vars%lr, kdotp_vars%perturbation, &
-        kdotp_vars%eff_mass_inv, kdotp_vars%occ_solution_method, kdotp_vars%degen_thres)
+      if(states_are_real(sys%st)) then
+        call dcalc_eff_mass_inv(sys, hm, kdotp_vars%lr, kdotp_vars%perturbation, &
+          kdotp_vars%eff_mass_inv, kdotp_vars%occ_solution_method, kdotp_vars%degen_thres)
+      else
+        call zcalc_eff_mass_inv(sys, hm, kdotp_vars%lr, kdotp_vars%perturbation, &
+          kdotp_vars%eff_mass_inv, kdotp_vars%occ_solution_method, kdotp_vars%degen_thres)
+      endif
       call kdotp_output(sys%st, sys%gr, kdotp_vars)
     endif
 
@@ -251,7 +285,7 @@ contains
       !%End
 
       call loct_parse_float(datasets_check('KdotP_Eta'), M_ZERO, kdotp_vars%eta)
-      kdotp_vars%eta = kdotp_vars%eta*units_inp%energy%factor
+      kdotp_vars%eta = kdotp_vars%eta * units_inp%energy%factor
 
       !%Variable KdotP_Initialization
       !%Type integer
@@ -264,7 +298,7 @@ contains
       !% The initial values are zero.
       !%Option nondispersive 1
       !% The initial values are the exact solutions in the limit of no dispersion, i.e. 
-      !% non-interacting unit cells: |u_i(1)> = -i r_i |u(0)>
+      !% non-interacting unit cells: -i (d/dk) |u> = r |u>
       !%End
 
       call loct_parse_int(datasets_check('KdotP_Initialization'), 0, kdotp_vars%initialization)
@@ -302,11 +336,11 @@ contains
       endif
 
       if (.not. fromScratch) then
-        message(2) = 'KdotP initialization: restart wavefunctions'
+        message(2) = 'k.p initialization: restart wavefunctions'
       else if (kdotp_vars%initialization == 0) then
-        message(2) = 'KdotP initialization: zero'
+        message(2) = 'k.p initialization: zero'
       else
-        message(2) = 'KdotP initialization: non-dispersive solutions'
+        message(2) = 'k.p initialization: non-dispersive solutions'
       endif
 
       call write_info(2)
