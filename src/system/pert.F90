@@ -324,11 +324,7 @@ contains
   integer pure function pert_type(this)
     type(pert_t), intent(in) :: this
 
-    call push_sub('pert.pert_type')
-
     pert_type = this%pert_type
-
-    call pop_sub()
   end function pert_type
 
 #include "undef.F90"
