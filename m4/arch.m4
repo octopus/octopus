@@ -51,6 +51,18 @@ i?86*)
 ACX_M128D
 vector=$acx_m128d
 oct_arch=x86
+
+if test x$vector = xyes ; then
+# We allow explicit disabling of SSE2
+ac_enable_sse2=no
+AC_ARG_ENABLE(sse2, AS_HELP_STRING([--enable-sse2], [Enable the use of SSE2 instructions (x86)]), 
+	[ac_enable_sse2=${enableval}])
+
+if test x"${ac_enable_sse2}" = x"no"; then
+vector=disabled
+fi
+fi
+
 ;;	
 ia64*)
 oct_arch=ia64
@@ -76,9 +88,8 @@ oct_arch=unknown
 ;;
 esac
 
-# We allow explicit disabling of SSE2
 ac_enable_sse2=yes
-AC_ARG_ENABLE(sse2, AS_HELP_STRING([--disable-sse2], [Disable the use of SSE2 instructions]), 
+AC_ARG_ENABLE(sse2, AS_HELP_STRING([--disable-sse2], [Disable the use of SSE2 instructions (x86_64)]), 
 	[ac_enable_sse2=${enableval}])
 
 if test x"${ac_enable_sse2}" = x"no"; then
@@ -87,7 +98,7 @@ fi
 
 # We allow explicit disabling of assembler
 ac_enable_assembler=yes
-AC_ARG_ENABLE(assembler, AS_HELP_STRING([--disable-assembler], [Disable the use of assembler code]), 
+AC_ARG_ENABLE(assembler, AS_HELP_STRING([--disable-assembler], [Disable the use of assembler code (ia64)]), 
 	[ac_enable_assembler=${enableval}])
 
 if test x"${ac_enable_assembler}" = x"no"; then
