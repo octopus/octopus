@@ -51,6 +51,7 @@ module h_sys_output_m
   use mesh_m
   use units_m
   use varinfo_m
+  use young_m
 #if defined(HAVE_ETSF_IO)
   use etsf_io
 #endif

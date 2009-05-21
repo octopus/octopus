@@ -16,6 +16,7 @@ module young_m
   private
 
   public :: young_init, &
+            young_write_allspins, &
             young_write, &
             young_write_one, &
             young_copy, &
@@ -180,35 +181,55 @@ module young_m
 
   end subroutine young_reset_1val
 
-  subroutine young_write (this)
+  subroutine young_write (iunit, this)
     implicit none
 
+    integer, intent(in) :: iunit
     type(young_t), intent(inout) :: this
     ! local vars
     integer :: iyoung
     call push_sub('math.young_write')
     
+    write (iunit, '(a,I4,a,I4,a)') ' Young diagrams for ', this%nup, ' spins up, and ', this%ndown, ' down '
     do iyoung = 1, this%nyoung
-      call young_write_one (this, iyoung)
+      call young_write_one (iunit, this, iyoung)
     end do
     
     call pop_sub()
   end subroutine young_write
 
-  subroutine young_write_one (this, iyoung)
+  subroutine young_write_one (iunit, this, iyoung)
     implicit none
 
+    integer, intent(in) :: iunit
     type(young_t), intent(inout) :: this
     integer, intent(in) :: iyoung
     call push_sub('math.young_write_one')
     
-    write (message(1),'(a,I7)') 'Filled Young diagram ', iyoung
-    write (message(2),'(10I7)') this%young_up(:, iyoung)
-    write (message(3),'(10I7)') this%young_down(:, iyoung)
-    call write_info(3)
+    write (iunit,'(a,I7)') ' Young diagram ', iyoung
+    write (iunit,'(10I7)') this%young_up(:, iyoung)
+    write (iunit,'(10I7)') this%young_down(:, iyoung)
     
     call pop_sub()
   end subroutine young_write_one
+
+  ! routine gets all young diagrams for all distributions of spins
+  subroutine young_write_allspins (iunit, nparticles)
+    implicit none
+    integer, intent(in) :: iunit, nparticles
+    integer :: nup, ndown
+    type(young_t) :: this
+
+    call push_sub('math.young_write_allspins')
+    call young_nullify (this)
+    do ndown = 0, floor(nparticles * 0.5)
+      nup = nparticles - ndown
+      call young_init (this, nup, ndown)
+      call young_write (iunit, this)
+      call young_end (this)
+    end do
+    call pop_sub()
+  end subroutine young_write_allspins 
 
   subroutine young_nullify (this)
     implicit none

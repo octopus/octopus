@@ -67,11 +67,11 @@ type modelmb_particle_t
    !   nparticle_modelmb lines (fixed)
    !   %
    character(80), pointer :: labels_particles(:)
-   character(80), pointer :: bosonfermion(:)
 
    integer, pointer :: particletype(:)
    integer, pointer :: nparticles_per_type(:)
    integer, pointer :: particles_of_type(:,:)
+   integer, pointer :: bosonfermion(:)
 
    integer, pointer :: exchange_symmetry(:,:,:) ! (max_particles_per_type**2, ntype_of_particle)
 
@@ -194,6 +194,13 @@ subroutine modelmb_particles_init (this,gr)
   !% are not checked or used in octopus. The interaction has to take the
   !% actual charge into account.
   !%
+  !%Option fermion 1
+  !%  Particle is a Fermion
+  !%Option boson 2
+  !%  Particle is a Boson
+  !%Option anyon 3
+  !%  Particle is neither Fermion nor Boson
+  !%
   !%End
   ! allocate stuff
   npar = this%nparticle
@@ -209,9 +216,9 @@ subroutine modelmb_particles_init (this,gr)
   ! default all particles are electrons
   this%labels_particles = 'electron'
   this%particletype = 1
-  this%mass_particle = 1.0d0
-  this%charge_particle = 1.0d0
-  this%bosonfermion = 'fermion'
+  this%mass_particle = M_ONE
+  this%charge_particle = M_ONE
+  this%bosonfermion = 1 ! set tofermion
     
 
   if(loct_parse_block(datasets_check('DescribeParticlesModelmb'), blk)==0) then
@@ -229,13 +236,13 @@ subroutine modelmb_particles_init (this,gr)
         call loct_parse_block_int   (blk, ipart-1, 1, this%particletype(ipart))
         call loct_parse_block_float (blk, ipart-1, 2, this%mass_particle(ipart))
         call loct_parse_block_float (blk, ipart-1, 3, this%charge_particle(ipart))
-        call loct_parse_block_string(blk, ipart-1, 4, this%bosonfermion(ipart))
+        call loct_parse_block_int   (blk, ipart-1, 4, this%bosonfermion(ipart))
 
         write (message(1),'(a,a)') 'labels_particles = ', this%labels_particles(ipart)
         write (message(2),'(a,i6)') 'particletype = ', this%particletype(ipart)
         write (message(3),'(a,E20.10)') 'mass_particle = ', this%mass_particle(ipart)
         write (message(4),'(a,E20.10)') 'charge_particle = ', this%charge_particle(ipart)
-        write (message(5),'(a,a)') 'bosonfermion = ', this%bosonfermion(ipart)
+        write (message(5),'(a,i6)') 'bosonfermion = ', this%bosonfermion(ipart)
         call write_info(5)
       end do
       call loct_parse_block_end(blk)

@@ -158,10 +158,11 @@
     type(h_sys_output_t),   intent(in)    :: outp
 
     ! local vars
-    integer :: mm
+    integer :: mm, iunit, itype
     logical :: symmetries_satisfied, impose_exch_symmetry
     CMPLX, allocatable :: wf(:)
     character(len=80) :: dirname
+    character(len=80) :: filename
     type(modelmb_denmat_t) :: denmat
     type(modelmb_density_t) :: den
 
@@ -187,6 +188,17 @@
       call modelmb_density_init (dirname, st, den)
     end if
  
+    ! open file for Young diagrams and projection info
+    write (filename,'(a,a)') trim(dirname), '/youngprojections'
+    iunit = io_open(trim(filename), action='write')
+
+    ! just treat particle type 1 for the moment
+    itype = 1
+    call young_write_allspins (iunit, st%modelmbparticles%nparticles_per_type(itype))
+
+    ! write header
+    write (iunit, '(a)') '  state      eigenvalue    Young#    nspindown    projection'
+
     do mm = 1, st%nst
       ! NOTE!!!! do not make this into some preprocessed X() stuff until I am dead and
       ! buried. Thanks - mjv
@@ -197,7 +209,8 @@
       end if
 
       if (impose_exch_symmetry) then
-        call modelmb_sym_state(dirname, gr, mm, geo, st%modelmbparticles, wf, symmetries_satisfied)
+        call modelmb_sym_state(st%eigenval(mm,1), iunit, gr, mm, geo, &
+             st%modelmbparticles, wf, symmetries_satisfied)
       end if
 
       if(iand(outp%what, output_density_matrix).ne.0 .and. symmetries_satisfied) then
@@ -215,6 +228,8 @@
       end if
 
     end do
+
+    call io_close(iunit)
 
     SAFE_DEALLOCATE_A(wf)
 

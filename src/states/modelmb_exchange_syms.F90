@@ -210,17 +210,17 @@ contains
         write (*,*)
       end do ! ipart1
 
-      modelmbparticles%bosonfermion(itype) = 'unknown'
+      modelmbparticles%bosonfermion(itype) = 0
       if (sum(modelmbparticles%exchange_symmetry) ==  npptype*(npptype-1)) then
         write (message(1),'(a,I6,a,I6,a)') 'For particles of type ', itype, ',  mb state ', &
                mm, ' is totally symmetric (bosonic)'
         call write_info(1)
-        modelmbparticles%bosonfermion(itype) = 'boson'
+        modelmbparticles%bosonfermion(itype) = 2 ! boson
       else if (sum(modelmbparticles%exchange_symmetry) == -npptype*(npptype-1)) then
         write (message(1),'(a,I6,a,I6,a)') 'For particles of type ', itype, ',  mb state ', &
                mm, ' is totally antisymmetric'
         call write_info(1)
-        modelmbparticles%bosonfermion(itype) = 'fermion'
+        modelmbparticles%bosonfermion(itype) = 1 ! fermion
       end if
     end do ! itype
 
@@ -233,8 +233,9 @@ contains
 
 
   ! project out states with proper symmetry for cases which are of symmetry = unknown
-  subroutine modelmb_sym_state(dir, gr, mm, geo, modelmbparticles, wf, symmetries_satisfied)
-    character(len=*),         intent(in)    :: dir
+  subroutine modelmb_sym_state(eigenval, iunit, gr, mm, geo, modelmbparticles, wf, symmetries_satisfied)
+    FLOAT,                    intent(in)    :: eigenval
+    integer,                  intent(in)    :: iunit
     type(grid_t),             intent(in)    :: gr
     integer,                  intent(in)    :: mm
     type(geometry_t),         intent(in)    :: geo
@@ -247,7 +248,7 @@ contains
     integer :: iantisym, ierr, ikeeppart
     integer :: ndimmb
     integer :: nspindown, nspinup, iperm_up, iperm_down
-    integer :: iunit, jj, idir
+    integer :: idir
 
     type(permutations_t) :: perms_up, perms_down
     type(modelmb_1part_t) :: mb_1part
@@ -257,15 +258,10 @@ contains
     integer, allocatable :: symmetries_satisfied_alltypes(:)
  
     FLOAT :: normalizer, norm
-    CMPLX :: scalprod
 
     FLOAT, allocatable  :: antisymrho(:)
-    FLOAT, allocatable  :: antisymrho_1part(:)
     CMPLX, allocatable  :: antisymwf(:)
     CMPLX, allocatable  :: antisymwf_swap(:)
-
-    character (len=80) :: tmpstring
-    character (len=80) :: filename
 
     logical :: debug_antisym
 
@@ -310,7 +306,7 @@ contains
 
       ! if the particle is not fermionic, just cycle to next one
       ! FIXME: boson case is not treated yet
-      if (modelmbparticles%bosonfermion(ikeeppart) /= 'fermion') then
+      if (modelmbparticles%bosonfermion(ikeeppart) /= 1) then ! 1 = fermion
         symmetries_satisfied_alltypes(itype) = 1
         cycle
       end if
@@ -441,33 +437,11 @@ contains
           ! FIXME: this is probably the problem when running in single precision
           if (norm < CNST(1.e-5)) cycle
 
-          call young_write_one (young, iyoung)
-          
           antisymwf=antisymwf_swap / sqrt(norm)
   
           !scalprod = sum(conjg(antisymwf)*wf)
-
-          write (message(1), '(a,I7,a,I7,a,E20.10)') 'projection of state ', mm, &
-                 ' on Young diagram with ', nspindown, ' spins down is ', norm
-          call write_info(1)
+          write (iunit, '(I5,3x,E16.6,I7,8x,I3,5x,E14.6)') mm, eigenval, iyoung, nspindown, norm
    
-          SAFE_ALLOCATE(antisymrho_1part(1:mb_1part%npt_1part))
-          call zmodelmb_density_calculate(ikeeppart, mb_1part, npptype, gr%mesh, antisymwf, antisymrho_1part)
-          ! FIXME: this will also depend on particle type and idimension
-          write(filename,'(a,a,i3.3,a,i3.3,a,i3.3,a,i3.3)') trim(dir),'/asymden_imb', mm, &
-                '_ipar', ikeeppart,'_ndn',nspindown,'_iY',iyoung
-          iunit = io_open(filename,action='write')
-          do jj = 1, mb_1part%npt_1part
-            call hypercube_i_to_x(mb_1part%hypercube_1part, mb_1part%ndim1part, &
-                 mb_1part%nr_1part, mb_1part%enlarge_1part(1), jj, ix)
-            do idir=1,mb_1part%ndim1part
-              write(iunit,'(es11.3)', ADVANCE='no') ix(idir)*mb_1part%h_1part(idir)+mb_1part%origin(idir)
-            end do
-            write(iunit,'(es18.10)') antisymrho_1part(jj)
-          end do
-          call io_close(iunit)
-          SAFE_DEALLOCATE_A(antisymrho_1part)
-
           ! we have found a valid Young diagram and antisymmetrized the present
           ! state enough. Loop to next type
           symmetries_satisfied_alltypes(itype) = 1
@@ -504,7 +478,6 @@ contains
     call pop_sub()
   end subroutine modelmb_sym_state
   ! ---------------------------------------------------------
-
 
 end module modelmb_exchange_syms_m
 
