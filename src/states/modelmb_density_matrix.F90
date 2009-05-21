@@ -176,8 +176,8 @@ contains
 
 
     ! loop over desired density matrices
-    densmat_loop: do idensmat=1,denmat%ndensmat_to_calculate
-      ikeeppart=denmat%particle_kept(idensmat)
+    densmat_loop: do idensmat = 1, denmat%ndensmat_to_calculate
+      ikeeppart = denmat%particle_kept(idensmat)
       nparticles = st%modelmbparticles%nparticles_per_type(st%modelmbparticles%particletype(ikeeppart))
 
       call modelmb_1part_init(mb_1part, gr%mesh, ikeeppart, ndim1part, gr%sb%box_offset)
@@ -224,7 +224,7 @@ contains
           
       call io_close(iunit)
 
-      do jj = mb_1part%npt_1part-denmat%nnatorb_prt(ikeeppart)+1, mb_1part%npt_1part
+      do jj = mb_1part%npt_1part-denmat%nnatorb_prt(idensmat)+1, mb_1part%npt_1part
         write(filename,'(a,i3.3,a,i2.2,a,i4.4)') trim(denmat%dirname)//'/natorb_ip', &
               ikeeppart,'_imb', mm, '_', mb_1part%npt_1part-jj+1
         iunit = io_open(filename, action='write')

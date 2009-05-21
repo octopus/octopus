@@ -197,7 +197,7 @@
     call young_write_allspins (iunit, st%modelmbparticles%nparticles_per_type(itype))
 
     ! write header
-    write (iunit, '(a)') '  state      eigenvalue    Young#    nspindown    projection'
+    write (iunit, '(a)') '  state      eigenvalue   ptype    Young#    nspindown    projection'
 
     do mm = 1, st%nst
       ! NOTE!!!! do not make this into some preprocessed X() stuff until I am dead and

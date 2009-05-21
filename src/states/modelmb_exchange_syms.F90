@@ -50,187 +50,9 @@ module modelmb_exchange_syms_m
 
   private
 
-  public :: modelmb_find_exchange_syms, &
-            modelmb_sym_state
+  public :: modelmb_sym_state
 
 contains
-
-
-  ! ---------------------------------------------------------
-  !  this routine uses a stochastic method to see if a bunch 
-  !  of points give psi(1,2) = +- psi(2,1)
-  !  may be inadequate if the symmetry is approximate.
-  !  Other option is to force-antisymmetrize (see routine modelmb_sym_states)
-  ! ---------------------------------------------------------
-  subroutine modelmb_find_exchange_syms(gr, mm, modelmbparticles, wf)
-    type(grid_t),             intent(in)    :: gr
-    integer,                  intent(in)    :: mm
-    CMPLX,                    intent(in)    :: wf(1:gr%mesh%np_part_global)
-    type(modelmb_particle_t), intent(inout) :: modelmbparticles
-
-    integer :: itype, ipart1, ipart2, npptype
-    integer :: ip, ipp, maxtries, enoughgood
-    integer :: ntries, ngoodpoints, nratiocomplaints
-    integer :: ofst1, ofst2, ndimmb
-    integer :: wf_sign_change, save_sign_change
-
-    integer, allocatable :: ix(:), ixp(:)
-
-    FLOAT :: ratio, wftol, rand0to1, tolonsign
-    CMPLX :: wfval1, wfval2
-
-    call push_sub('states.modelmb_find_exchange_syms')
-
-    SAFE_ALLOCATE(ix(1:MAX_DIM))
-    SAFE_ALLOCATE(ixp(1:MAX_DIM))
-
-    ndimmb=modelmbparticles%ndim
-
-    ! this is the tolerance on the wavefunction in order to use it to determine
-    ! sign changes. Should be checked, and might be a function of grid number,
-    ! as the norm is diluted over the whole cell...
-    ! maybe min(0.001,100*1./ngridpoints) would be better.
-    wftol=1.d-5
-
-    ! tolerance on wf(1,2)/wf(2,1) being close to +-1
-    tolonsign = 1.d-5
-
-    ! maximum number of times we try to extract the parity
-    maxtries = 300
-    enoughgood = 20
-
-    ! initialize the container
-    modelmbparticles%exchange_symmetry=0
-
-    ! for each particle type
-    do itype = 1, modelmbparticles%ntype_of_particle
-
-      npptype=modelmbparticles%nparticles_per_type(itype)
-      nratiocomplaints = 0
-
-      ! for each pair of particles of this type
-      do ipart1=1,npptype
-        do ipart2=ipart1+1,npptype
- 
-          ! try a bunch of points in the wf
-          ngoodpoints=0
-          ntries=0
-          save_sign_change=0
-          do while (ntries < maxtries .and. ngoodpoints < enoughgood)
-            
-            ! count real trials of random points (avoids eventual infinite looping)
-            ntries = ntries + 1
-
-            ! find coordinates of random point
-            call random_number(rand0to1)
-            ip = floor(gr%mesh%np_part_global*rand0to1) + 1
- 
-            ! wavefunction value at this point ip
-            wfval1 = wf(ip)
-
-            ! see if point has enough weight to be used
-            if (abs(TOFLOAT(wfval1)) < wftol) cycle
-
-            ! get actual coordinates of mb point
-            call index_to_coords(gr%mesh%idx, gr%sb%dim, ip, ix)
-
-            ! offsets in full dimensional space for the particles we care about
-            ofst1=(ipart1-1)*ndimmb
-            ofst2=(ipart2-1)*ndimmb
-
-            ! invert coordinates of ipart1 and ipart2
-            ixp = ix
-            ixp (ofst1+1:ofst1+ndimmb) = ix (ofst2+1:ofst2+ndimmb) ! part1 to 2
-            ixp (ofst2+1:ofst2+ndimmb) = ix (ofst1+1:ofst1+ndimmb) ! part2 to 1
- 
-            ! if we are on a diagonal, cycle
-            if (all(ix - ixp == 0)) cycle
- 
-            ! recover mb index for new point
-            ipp = index_from_coords(gr%mesh%idx, gr%sb%dim, ixp)
-
-            ! wavefunction value at exchanged coordinate point ipp
-            wfval2 = wf(ipp)
- 
-            ! check sign change FIXME: check imaginary part too
-            !   normally, as these points are related, wfval2 should also be > wftol
-            ratio = TOFLOAT(wfval1) / TOFLOAT(wfval2)
-            
-            if (abs(ratio+1.0d0) < tolonsign) then
-              wf_sign_change = -1
-            else if (abs(ratio-1.0d0) < tolonsign) then
-              wf_sign_change =  1
-            else  ! ratio not clear enough to get parity
-              !if (nratiocomplaints < 20) then
-              !  write (message(1),'(a,E20.10,a)') 'point skipped for exchange parity: ratio of wf ',ratio, &
-              !       ' is not clearly +-1'
-              !  call write_info(1)
-              !end if
-              nratiocomplaints = nratiocomplaints+1
-            end if
- 
-            ! if opposite of previous value, complain
-            if (save_sign_change /= 0 .and. save_sign_change /= wf_sign_change) then
-              write (message(1),'(a)') ' WARNING: sign change is different between wf points examined'
-              call write_info(1)
-            end if
-
-            save_sign_change=wf_sign_change
-            ! ngoodpoints counts points for which we were able to compare wf values 
-            ngoodpoints = ngoodpoints + 1
-          end do !  tries and goodpoints
-         
-          ! if we have found enough points with wf large enough to compare
-          !  and the number of points where the ratio was far from +-1 was not
-          !  too high
-          if (ngoodpoints == enoughgood .and. &
-              TOFLOAT(nratiocomplaints)/TOFLOAT(ngoodpoints) < 0.1) then
-            modelmbparticles%exchange_symmetry(ipart1,ipart2,itype)=save_sign_change
-            modelmbparticles%exchange_symmetry(ipart2,ipart1,itype)=save_sign_change
-          else 
-            !write (message(1),'(a)') ' WARNING: unable to determine sign change for'
-            !write (message(2),'(a,I6,a,I6,a,I6)') ' exchange of ', ipart1, ' and ', ipart2, ' of many-body state ', mm
-            !call write_info(2)
-          end if 
- 
-        end do ! ipart2
-      end do ! ipart1
-    end do ! itype
-
-    ! do some crude output
-    do itype=1,modelmbparticles%ntype_of_particle
-      !write (message(1),'(a)')    ' lower triangle of exchange parity matrix'
-      write (message(1),'(a,I6,a,I6)') '   for particles of type ', itype, '   in mb state ', mm
-      call write_info(1)
-
-      do ipart1=1,npptype
-        do ipart2=1,ipart1
-          write (*,'(2x, I6)',ADVANCE='NO') modelmbparticles%exchange_symmetry(ipart2,ipart1,itype)
-        end do ! ipart2
-        write (*,*)
-      end do ! ipart1
-
-      modelmbparticles%bosonfermion(itype) = 0
-      if (sum(modelmbparticles%exchange_symmetry) ==  npptype*(npptype-1)) then
-        write (message(1),'(a,I6,a,I6,a)') 'For particles of type ', itype, ',  mb state ', &
-               mm, ' is totally symmetric (bosonic)'
-        call write_info(1)
-        modelmbparticles%bosonfermion(itype) = 2 ! boson
-      else if (sum(modelmbparticles%exchange_symmetry) == -npptype*(npptype-1)) then
-        write (message(1),'(a,I6,a,I6,a)') 'For particles of type ', itype, ',  mb state ', &
-               mm, ' is totally antisymmetric'
-        call write_info(1)
-        modelmbparticles%bosonfermion(itype) = 1 ! fermion
-      end if
-    end do ! itype
-
-    SAFE_DEALLOCATE_A(ix)
-    SAFE_DEALLOCATE_A(ixp)
-
-    call pop_sub()
-  end subroutine modelmb_find_exchange_syms
-  ! ---------------------------------------------------------
-
 
   ! project out states with proper symmetry for cases which are of symmetry = unknown
   subroutine modelmb_sym_state(eigenval, iunit, gr, mm, geo, modelmbparticles, wf, symmetries_satisfied)
@@ -286,11 +108,6 @@ contains
     ndimmb=modelmbparticles%ndim
 
     normalizer = product(gr%mesh%h(1:gr%mesh%sb%dim)) !M_ONE/units_out%length%factor**gr%mesh%sb%dim
-
-    if (modelmbparticles%ntype_of_particle > 1) then
-      write (message(1), '(a)') 'modelmb_sym_state: not coded for several particly types '
-      call write_fatal(1)
-    end if
 
     ! FIXME: could one of these arrays be avoided?
     SAFE_ALLOCATE(antisymwf(1:gr%mesh%np_part_global))
@@ -436,11 +253,8 @@ contains
 
           ! FIXME: this is probably the problem when running in single precision
           if (norm < CNST(1.e-5)) cycle
-
-          antisymwf=antisymwf_swap / sqrt(norm)
   
-          !scalprod = sum(conjg(antisymwf)*wf)
-          write (iunit, '(I5,3x,E16.6,I7,8x,I3,5x,E14.6)') mm, eigenval, iyoung, nspindown, norm
+          write (iunit, '(I5,3x,E16.6,2x,I4,2x,I7,8x,I3,5x,E14.6)') mm, eigenval, itype, iyoung, nspindown, norm
    
           ! we have found a valid Young diagram and antisymmetrized the present
           ! state enough. Loop to next type
@@ -453,19 +267,24 @@ contains
         call permutations_end(perms_down)
         call young_end (young)
  
-        if (symmetries_satisfied_alltypes(itype) == 1) exit
+        ! found a good Young diagram for this particle type.
+        ! save antisymmetrized copy and go on to next particle type
+        if (symmetries_satisfied_alltypes(itype) == 1) then
+          wf = antisymwf
+          exit
+        end if
 
       end do ! nspindown=0,1...
    
       SAFE_DEALLOCATE_A(antisymrho)
-
+      SAFE_DEALLOCATE_A(ofst)
       call modelmb_1part_end(mb_1part)
 
     end do ! itype
 
     ! check if all types of particles have been properly symmetrized
     if (sum(symmetries_satisfied_alltypes) == modelmbparticles%ntype_of_particle) then
-      wf = antisymwf
+      wf = wf / sqrt(norm)
       symmetries_satisfied = .true.
     end if
 

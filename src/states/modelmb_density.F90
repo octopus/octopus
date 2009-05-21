@@ -88,7 +88,7 @@ contains
     !% would ask octopus to calculate the density corresponding to the 1st
     !% particle (whose coordinates correspond to dimensions 1 to ndim_modelmb),
     !% which is an proton, then that corresponding to the 2nd particle
-    !% (electron with dimensions ndim_modelmb+1 to 2*ndim_modelmb)
+    !% (particle with dimensions ndim_modelmb+1 to 2*ndim_modelmb)
     !%
     !%End
    
