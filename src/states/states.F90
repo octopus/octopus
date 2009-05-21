@@ -1047,7 +1047,7 @@ contains
       SAFE_ALLOCATE(reduce_rho(1:np))
       do ispin = 1, st%d%nspin
         call MPI_Allreduce(rho(1, ispin), reduce_rho(1), np, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
-        call lalg_copy(np, reduce_rho, rho(:, ispin))
+        call blas_copy(np, reduce_rho(1), 1, rho(1, ispin), 1)
       end do
       SAFE_DEALLOCATE_A(reduce_rho)
       call profiling_out(reduce_prof)
@@ -1059,7 +1059,7 @@ contains
       SAFE_ALLOCATE(reduce_rho(1:np))
       do ispin = 1, st%d%nspin
         call MPI_Allreduce(rho(1, ispin), reduce_rho(1), np, MPI_FLOAT, MPI_SUM, st%d%kpt%mpi_grp%comm, mpi_err)
-        call lalg_copy(np, reduce_rho, rho(:, ispin))
+        call blas_copy(np, reduce_rho(1), 1, rho(1, ispin), 1)
       end do
       SAFE_DEALLOCATE_A(reduce_rho)
       call profiling_out(reduce_prof)

@@ -371,12 +371,16 @@ subroutine X(nl_operator_operate)(op, fi, fo, ghost_update, profile, points)
           call X(operate)(op%stencil%size, nri, op%w_re(:, 1), ri, imin, imax, fi, fo)
         case(OP_C)
           call X(operate_ri)(op%stencil%size, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), imax(ini), fi(1), fo(1))
+#ifdef HAVE_VEC
         case(OP_VEC)
           call X(operate_ri_vec)(op%stencil%size, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), imax(ini), fi(1), fo(1))
+#endif
+#ifdef HAVE_AS
         case(OP_AS)
           nns(1) = op%stencil%size
           nns(2) = nri_loc
           call X(operate_as)(nns, op%w_re(1, 1), ri(1, ini), imin(ini), imax(ini), fi(1), fo(1), ws(1))
+#endif
         end select
         !$omp end parallel
 
@@ -447,12 +451,16 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, points)
               call X(operate)(op%stencil%size, nri, op%w_re(:, 1), ri, imin, imax, pfi, pfo)
             case(OP_C)
               call X(operate_ri)(op%stencil%size, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), pfo(1))
+#ifdef HAVE_VEC
             case(OP_VEC)
               call X(operate_ri_vec)(op%stencil%size, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), pfo(1))
+#endif
+#ifdef HAVE_AS
             case(OP_AS)
               nns(1) = op%stencil%size
               nns(2) = nri_loc
               call X(operate_as)(nns, op%w_re(1, 1), ri(1, ini), imin(ini), imax(ini), pfi(1), pfo(1), ws(1))
+#endif
             end select
           end do
         end do

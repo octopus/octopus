@@ -35,9 +35,8 @@
 Override calls to malloc with calls to posix_memalign. 
 
 Not the most elegant thing in the world, but it appears that most x86
-Fortran compilers can't be instructed to align allocated memory to a
-16 bytes boundary as required by SSE.
-*/
+Fortran compilers can't be instructed to align allocated memory to 16
+bytes boundary as required by SSE.  */
 
 void * malloc (size_t size){
   int err;
@@ -56,11 +55,15 @@ int FC_FUNC_(op_is_available, OP_IS_AVAILABLE)
   (int * opid, int * type){
   int result = 1;
   
-#if !defined(USE_VECTORS)
+#ifndef HAVE_VEC
   if( *opid == OP_VEC ) result = 0;
 #endif
 
-#if !defined(OCT_ITANIUM) || defined(SINGLE_PRECISION)
+#ifndef HAVE_AS
+  if( *opid == OP_AS ) result = 0;
+#endif
+
+#ifdef SINGLE_PRECISION
   if( *opid == OP_AS ) result = 0;
 #endif
 

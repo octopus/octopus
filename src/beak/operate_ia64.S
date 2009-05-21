@@ -19,7 +19,6 @@
  $Id: operate_ia64.S 2146 2006-05-23 17:36:00Z xavier $
 #endif
 
-#if defined(__ia64__) || defined(__ia64) || defined(_M_IA64)
 #include <config.h>
 
 #define ISIZE 4
@@ -583,5 +582,3 @@ br.ret.sptk.many b0
 // Local Variables:
 // mode: C++
 // End:
-
-#endif

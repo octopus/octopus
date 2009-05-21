@@ -21,9 +21,18 @@
 
 noinst_LIBRARIES = libbeak.a
 
-libbeak_a_SOURCES = beak_utils.c operate_ri.c operate_ri_vec.c operate_ia64.S
+libbeak_a_SOURCES = beak_utils.c operate_ri.c
 
-noinst_HEADERS = beak.h
+if COMPILE_VEC
+libbeak_a_SOURCES += operate_ri_vec.c
+endif
+
+if COMPILE_AS
+ libbeak_a_SOURCES += operate_as.S
+endif
+
+noinst_HEADERS = beak.h \
+   	operate_ia64.S
 
 include $(srcdir)/../common-rules.make
 
@@ -33,4 +42,4 @@ depend:
 beak_utils.o : beak_utils.c beak.h 
 operate_ri.o : operate_ri.c beak.h 
 operate_ri_vec.o : operate_ri_vec.c beak.h 
-operate_ia64.o : operate_ia64.S 
+operate_as.S : operate_ia64.S

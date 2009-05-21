@@ -77,15 +77,7 @@ posix_memalign perror strcasestr sbrk])
 
 AC_CHECK_LIB([numa], [numa_available])
 
-# We allow explicit disabling of SSE2
-ac_enable_sse2=yes
-AC_ARG_ENABLE(sse2, AS_HELP_STRING([--disable-sse2], [Disable the use of SSE2 instructions]), 
-	[ac_enable_sse2=${enableval}])
-
-if test x"${ac_enable_sse2}" = x"yes"; then
-  ACX_MALLOC_ALIGNMENT
-  ACX_M128D
-fi
+ACX_ARCH
 
 dnl ============================================================================
 dnl This part of the configuration file tries to sort out what needs to be built.
@@ -205,9 +197,6 @@ ACX_FC_COMMAND_LINE_ARGUMENTS
 
 dnl check whether the Fortran compiler supports Fortran 2003's c_ptr type
 ACX_FC_F2003_C_PTR
-
-dnl check if the Fortran 90 uses malloc(3).
-ACX_FC_USES_MALLOC
 
 dnl check flag to include module path
 AX_F90_MODULE_FLAG

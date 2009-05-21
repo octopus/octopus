@@ -23,9 +23,11 @@
 #include <config.h>
 #include "beak.h"
 #include <stdio.h>
-
-#if defined(USE_VECTORS)
 #include <emmintrin.h>
+
+#ifndef HAVE_VEC
+#error Internal error, compiling vector code without vector support
+#endif
 
 #if defined(SINGLE_PRECISION)
 #define VECSIZE 4
@@ -290,18 +292,3 @@ void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opn,
 
 #endif
 
-#else
-
-#include <stdlib.h>
-
-void FC_FUNC_(doperate_ri_vec,DOPERATE_RI_VEC)(){
-  fprintf(stderr, "Not available: this is a bug.\n");
-  exit(1);
-}
-
-void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(){
-  fprintf(stderr, "Not available: this is a bug.\n");
-  exit(1);
-}
-
-#endif
