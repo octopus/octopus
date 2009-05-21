@@ -60,7 +60,6 @@ module em_resp_calc_m
      freq2str,                         &
      em_wfs_tag,                       &
      em_rho_tag
-  ! periodic version of polarizability in kdotp
 
   type(profile_t), save :: beta_prof
 
@@ -181,14 +180,14 @@ subroutine zcalc_polarizability_periodic(sys, em_lr, kdotp_lr, nsigma, zpol, ndi
         term = M_ZERO
         do ist = 1, sys%st%nst
           do idim = 1, sys%st%d%dim
-            subterm = M_zI * zmf_dotp(m, kdotp_lr(dir1)%zdl_psi(1:m%np, idim, ist, ik), &
+            subterm = - zmf_dotp(m, kdotp_lr(dir1)%zdl_psi(1:m%np, idim, ist, ik), &
               em_lr(dir2, 1)%zdl_psi(1:m%np, idim, ist, ik))
             term = term + subterm
 
             if(nsigma == 1) then
               term = term + conjg(subterm)
             else
-              term = term - M_zI * zmf_dotp(m, em_lr(dir2, 2)%zdl_psi(1:m%np, idim, ist, ik), & 
+              term = term - zmf_dotp(m, em_lr(dir2, 2)%zdl_psi(1:m%np, idim, ist, ik), & 
                 kdotp_lr(dir1)%zdl_psi(1:m%np, idim, ist, ik))
             end if
           enddo

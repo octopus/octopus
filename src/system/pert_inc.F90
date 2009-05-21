@@ -103,6 +103,7 @@ contains
 
   ! --------------------------------------------------------------------------
   subroutine kdotp()
+  ! perturbation is -i d/dk
     R_TYPE, allocatable :: grad(:,:), cpsi(:,:)
     integer iatom
 
@@ -113,16 +114,16 @@ contains
 
     call X(derivatives_grad) (gr%der, f_in_copy, grad, set_bc = .false.)
     ! set_bc done already separately
-    f_out(1:gr%mesh%np) = - M_zI * (grad(1:gr%mesh%np, this%dir))
-    ! delta_H_k = (-i*grad + k) . delta_k
-    ! representation on psi is just -i*grad . delta_k
+    f_out(1:gr%mesh%np) = -grad(1:gr%mesh%np, this%dir)
+    ! -i delta_H_k = -i (-i*grad + k) . delta_k
+    ! representation on psi is just - grad . delta_k
     ! note that second-order term is left out
 
     if (this%use_nonlocalpps) then
       do iatom = 1, geo%natoms
         if(species_is_ps(geo%atom(iatom)%spec)) then
           call X(projector_commute_r)(hm%ep%proj(iatom), gr, hm%d%dim, this%dir, ik, f_in_copy, cpsi(:, :))
-          f_out(1:gr%mesh%np) = f_out(1:gr%mesh%np) - M_zI * cpsi(1:gr%mesh%np, 1)
+          f_out(1:gr%mesh%np) = f_out(1:gr%mesh%np) - cpsi(1:gr%mesh%np, 1)
           ! using only the first spinor component
         end if
       end do

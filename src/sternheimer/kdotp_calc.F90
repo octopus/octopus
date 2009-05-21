@@ -105,7 +105,7 @@ subroutine zcalc_dipole_periodic(sys, lr, dipole)
       moment = moment + term * sys%st%d%kweights(ik) * sys%st%smear%el_per_state
     enddo
 
-    dipole(idir) = aimag(moment)
+    dipole(idir) = -moment
   enddo
 
   call pop_sub()

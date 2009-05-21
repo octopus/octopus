@@ -293,7 +293,6 @@ contains
             call pert_setup_dir(em_vars%perturbation, idir)
 
             if(use_kdotp) then
-              kdotp_lr(idir, 1)%zdl_psi = M_ZI*kdotp_lr(idir, 1)%zdl_psi
               call zsternheimer_set_rhs(sh, kdotp_lr(idir, 1)%zdl_psi)
             end if
 
@@ -338,7 +337,6 @@ contains
             end if
 
             if(use_kdotp) then
-              kdotp_lr(idir, 1)%zdl_psi = -M_ZI*kdotp_lr(idir, 1)%zdl_psi
               call sternheimer_unset_rhs(sh)
             end if
 
