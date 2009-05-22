@@ -20,7 +20,8 @@
 #include "global.h"
 
   ! ---------------------------------------------------------
-  subroutine X(multigrid_coarse2fine)(level, f_coarse, f_fine)
+  subroutine X(multigrid_coarse2fine)(coarse_der, level, f_coarse, f_fine)
+    type(derivatives_t),     intent(in)    :: coarse_der
     type(multigrid_level_t), intent(in)    :: level
     R_TYPE,                  intent(inout) :: f_coarse(:)
     R_TYPE,                  intent(out)   :: f_fine(:)
@@ -35,7 +36,11 @@
 
     call profiling_in(interp_prof, "MG_INTERPOLATION")
 
-    call X(set_bc)(level%der, f_coarse)
+    write(*,*) 'level%der%mesh%np_part = ', level%der%mesh%np_part
+    write(*,*) 'ubound(f_coarse, DIM=1) = ', ubound(f_coarse, DIM=1)
+    write(*,*) 'ubound(f_fine, DIM=1) = ', ubound(f_fine, DIM=1)
+
+    call X(set_bc)(coarse_der, f_coarse)
 
 #ifdef HAVE_MPI
     if(level%mesh%parallel_in_domains) call X(vec_ghost_update)(level%mesh%vp, f_coarse)

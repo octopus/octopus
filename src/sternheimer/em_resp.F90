@@ -409,6 +409,9 @@ contains
 
         ! calculate hyperpolarizability
         if(em_vars%calc_hyperpol) then
+          write(message(1), '(a)') 'Info: Calculating hyperpolarizabilities.'
+          call write_info(1)
+
           if(states_are_complex(sys%st)) then
             call zlr_calc_beta(sh, sys, hm, em_vars%lr, em_vars%perturbation, em_vars%beta)
           else

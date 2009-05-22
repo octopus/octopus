@@ -19,7 +19,7 @@
 
 
   ! ---------------------------------------------------------
-  ! Tries to avoid ill defined combinations of run modes.
+  ! Tries to avoid ill-defined combinations of run modes.
   ! ---------------------------------------------------------
   subroutine check_faulty_runmodes(sys, hm, tr)
     type(system_t),                 intent(in)    :: sys

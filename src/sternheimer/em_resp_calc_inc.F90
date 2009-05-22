@@ -439,9 +439,6 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
   st   => sys%st
   mesh => sys%gr%mesh
 
-  write(message(1), '(a)') 'Info: Calculating hyperpolarizability tensor'
-  call write_info(1)
-
   ASSERT(present(kdotp_lr) .eqv. present(kdotp_em_lr))
   ! either both are absent for finite, or both present for periodic
 

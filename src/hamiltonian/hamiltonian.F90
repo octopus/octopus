@@ -446,7 +446,7 @@ contains
 
     if(gr%sb%open_boundaries) then
       if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
-        message(1) = 'Open boundary calculations for interacting electrons are'
+        message(1) = 'Open-boundary calculations for interacting electrons are'
         message(2) = 'not yet possible.'
         call write_fatal(2)
       end if

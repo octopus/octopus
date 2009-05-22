@@ -82,6 +82,8 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
     SAFE_ALLOCATE(dl_psi2(1:np_part, 1:st%d%dim))
   endif
 
+  write(*,*) 'gr%mesh%np_part = ', gr%mesh%np_part
+
   !THE NON-LOCAL PART (parallel in states and k-points)
   do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
@@ -89,10 +91,10 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
 
         if(gr%have_fine_mesh) then
         ! conveniently, multigrid_coarse2fine sets the boundary conditions in the process
-          call X(multigrid_coarse2fine)(gr%fine, st%X(psi)(:, idim, ist, ik), psi(:, idim))
+          call X(multigrid_coarse2fine)(gr%der, gr%fine, st%X(psi)(:, idim, ist, ik), psi(:, idim))
           if (present(lr)) then
-            call X(multigrid_coarse2fine)(gr%fine, lr%X(dl_psi)(:, idim, ist, ik), dl_psi(:, idim))
-            call X(multigrid_coarse2fine)(gr%fine, lr2%X(dl_psi)(:, idim, ist, ik), dl_psi2(:, idim))
+            call X(multigrid_coarse2fine)(gr%der, gr%fine, lr%X(dl_psi)(:, idim, ist, ik), dl_psi(:, idim))
+            call X(multigrid_coarse2fine)(gr%der, gr%fine, lr2%X(dl_psi)(:, idim, ist, ik), dl_psi2(:, idim))
           endif
         else
           call lalg_copy(gr%mesh%np_part, st%X(psi)(:, idim, ist, ik), psi(:, idim))
