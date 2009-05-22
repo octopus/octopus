@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# Copyright (C) 2005 Heiko Appel
+# Copyright (C) 2005-2008 H. Appel, M. Marques, X. Andrade
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -156,13 +156,13 @@ $exec_suffix = "";
 if($opt_s)  { $exec_suffix = $opt_s; }
 
 # MPI stuff
-$mpirun = $ENV{MPIRUN};
-if ("$mpirun" eq "") { $mpirun = `which mpirun`; }
-chomp($mpirun);
+$mpiexec = $ENV{MPIEXEC};
+if ("$mpiexec" eq "") { $mpiexec = `which mpiexec`; }
+chomp($mpiexec);
 
-# mpirun without arguments (to check if it is available)
-$mpirun_raw = $mpirun;
-$mpirun_raw =~ s/\ (.*)//;
+# mpiexec without arguments (to check if it is available)
+$mpiexec_raw = $mpiexec;
+$mpiexec_raw =~ s/\ (.*)//;
 
 # default number of processors for MPI runs is 2
 $np = 2;
@@ -253,11 +253,11 @@ foreach my $octopus_exe (@executables){
 
 	    # serial or MPI run?
 	    if ( $octopus_exe_suffix =~ /mpi$/) {
-	      if( -x "$mpirun_raw") {
-		print "Executing: cd $workdir; $mpirun -np $np $octopus_exe_suffix > out \n";
-		system("cd $workdir; $mpirun -np $np $octopus_exe_suffix > out ");
+	      if( -x "$mpiexec_raw") {
+		print "Executing: cd $workdir; $mpiexec -n $np $octopus_exe_suffix > out \n";
+		system("cd $workdir; $mpiexec -n $np $octopus_exe_suffix > out ");
 	      } else {
-		print "No mpirun found: Skipping parallel test \n";
+		print "No mpiexec found: Skipping parallel test \n";
 		exit 255;
 	      }
 	    } else {
