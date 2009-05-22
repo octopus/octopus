@@ -1,0 +1,22 @@
+CalculationMode = kdotp
+DevelVersion = yes
+fromScratch = yes
+
+%Coordinates
+ 'O'  |  0.000000  | -0.553586  |  0.000000
+ 'H'  |  1.429937  |  0.553586  |  0.000000
+ 'H'  | -1.429937  |  0.553586  |  0.000000
+%
+
+Spacing = 0.65
+ConvRelDens = 1.0e-4
+BoxShape = parallelepiped
+Lsize = 10
+PeriodicDimensions = 3
+
+KdotP_Preconditioner = no
+
+%KPointsMonkhorstPack
+1 | 1 | 1
+0 | 0 | 0
+%
