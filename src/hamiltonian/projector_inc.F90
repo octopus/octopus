@@ -173,11 +173,15 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, ik)
 
     do idim = 1, dim
       if(associated(pj(ipj)%phase)) then
-        forall (is = 1:ns) ppsi(pj(ipj)%sphere%jxyz(is), idim) = &
+        do is = 1, ns
+          ppsi(pj(ipj)%sphere%jxyz(is), idim) = &
              ppsi(pj(ipj)%sphere%jxyz(is), idim) + lpsi(is, idim)*conjg(pj(ipj)%phase(is, ik))
+        end do
         call profiling_count_operations(ns*(R_ADD + R_MUL))
       else
-        forall (is = 1:ns) ppsi(pj(ipj)%sphere%jxyz(is), idim) = ppsi(pj(ipj)%sphere%jxyz(is), idim) + lpsi(is, idim)
+        do is = 1, ns
+          ppsi(pj(ipj)%sphere%jxyz(is), idim) = ppsi(pj(ipj)%sphere%jxyz(is), idim) + lpsi(is, idim)
+        end do
         call profiling_count_operations(ns*R_ADD)
       end if
     end do
@@ -214,7 +218,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
   logical :: bigreduce = .true.
 #endif
 
-  call push_sub('projector_inc.project_psi')
+  call push_sub('projector_inc.project_psi_batch')
 
   ! To optimize the application of the non-local operator in parallel,
   ! the projectors are applied in steps. First the <p|psi> is
@@ -386,17 +390,21 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
     !put the result back in the complete grid
     do idim = 1, dim
       if(associated(pj(ipj)%phase)) then
-        forall (is = 1:ns, ist = 1:psib%nst) 
-          ppsib%states(ist)%X(psi)(pj(ipj)%sphere%jxyz(is), idim) = &
-            ppsib%states(ist)%X(psi)(pj(ipj)%sphere%jxyz(is), idim) + &
-            lpsi(is, idim, ist)*conjg(pj(ipj)%phase(is, ik))
-        end forall
+        do ist = 1, psib%nst
+          forall (is = 1:ns) 
+            ppsib%states(ist)%X(psi)(pj(ipj)%sphere%jxyz(is), idim) = &
+              ppsib%states(ist)%X(psi)(pj(ipj)%sphere%jxyz(is), idim) + &
+              lpsi(is, idim, ist)*conjg(pj(ipj)%phase(is, ik))
+          end forall
+        end do
         call profiling_count_operations(ns*psib%nst*(R_ADD + R_MUL))
       else
-        forall (is = 1:ns, ist = 1:psib%nst) 
-          ppsib%states(ist)%X(psi)(pj(ipj)%sphere%jxyz(is), idim) = &
-            ppsib%states(ist)%X(psi)(pj(ipj)%sphere%jxyz(is), idim) + lpsi(is, idim, ist)
-        end forall
+        do ist = 1, psib%nst
+          forall (is = 1:ns) 
+            ppsib%states(ist)%X(psi)(pj(ipj)%sphere%jxyz(is), idim) = &
+              ppsib%states(ist)%X(psi)(pj(ipj)%sphere%jxyz(is), idim) + lpsi(is, idim, ist)
+          end forall
+        end do
         call profiling_count_operations(ns*psib%nst*R_ADD)
       end if
     end do
@@ -444,9 +452,13 @@ R_TYPE function X(psia_project_psib)(pj, dim, psia, psib, ik) result(apb)
 
   do idim = 1, dim
     if(simul_box_is_periodic(mesh%sb)) then
-      forall (is = 1:ns) lpsi(is, idim) = psib(pj%sphere%jxyz(is), idim)*pj%phase(is, ik)
+      do is = 1, ns
+        lpsi(is, idim) = psib(pj%sphere%jxyz(is), idim)*pj%phase(is, ik)
+      end do
     else
-      forall (is = 1:ns) lpsi(is, idim) = psib(pj%sphere%jxyz(is), idim)
+      do is = 1, ns
+        lpsi(is, idim) = psib(pj%sphere%jxyz(is), idim)
+      end do
     end if
   end do
 
@@ -454,9 +466,13 @@ R_TYPE function X(psia_project_psib)(pj, dim, psia, psib, ik) result(apb)
 
     do idim = 1, dim
       if(simul_box_is_periodic(mesh%sb)) then
-        forall (is = 1:ns) plpsi(is, idim) = psia(pj%sphere%jxyz(is), idim)*pj%phase(is, ik)
+        do is = 1, ns
+          plpsi(is, idim) = psia(pj%sphere%jxyz(is), idim)*pj%phase(is, ik)
+        end do
       else
-        forall (is = 1:ns) plpsi(is, idim) = psia(pj%sphere%jxyz(is), idim)
+        do is = 1, ns
+          plpsi(is, idim) = psia(pj%sphere%jxyz(is), idim)
+        end do
       end if
     end do
 
@@ -504,9 +520,13 @@ R_TYPE function X(psia_project_psib)(pj, dim, psia, psib, ik) result(apb)
     apb = M_ZERO
     do idim = 1, dim
       if(simul_box_is_periodic(mesh%sb)) then
-        forall (is = 1:ns) plpsi(is, idim) = R_CONJ(psia(pj%sphere%jxyz(is), idim))*plpsi(is, idim)*conjg(pj%phase(is, ik))
+        do is = 1, ns
+          plpsi(is, idim) = R_CONJ(psia(pj%sphere%jxyz(is), idim))*plpsi(is, idim)*conjg(pj%phase(is, ik))
+        end do
       else
-        forall (is = 1:ns) plpsi(is, idim) = R_CONJ(psia(pj%sphere%jxyz(is), idim))*plpsi(is, idim)
+        do is = 1, ns
+          plpsi(is, idim) = R_CONJ(psia(pj%sphere%jxyz(is), idim))*plpsi(is, idim)
+        end do
       end if
       apb = apb + X(sm_integrate)(mesh, pj%sphere, plpsi(1:ns, idim))
     end do
