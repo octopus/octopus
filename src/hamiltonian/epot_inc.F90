@@ -35,6 +35,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
   !   which should be zero if the acoustic sum rule is satisfied
 
   integer :: iatom, ist, ik, idim, idir, np, np_part, ip
+  FLOAT :: ff
 
   R_TYPE, allocatable :: psi(:, :)
   R_TYPE, allocatable :: dl_psi(:, :)
@@ -136,13 +137,22 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
 
         !accumulate to calculate the gradient of the density
         if (present(lr)) then
-          forall (idir = 1:gr%mesh%sb%dim, ip = 1:np) &
-            grad_rho(ip, idir) = grad_rho(ip, idir) + st%d%kweights(ik) * st%occ(ist, ik) * &
-            (R_CONJ(grad_psi(ip, idir, idim)) * dl_psi(ip, idim) + R_CONJ(psi(ip, idim)) * grad_dl_psi(ip, idir, idim) &
-            + R_CONJ(dl_psi2(ip, idim)) * grad_psi(ip, idir, idim) + R_CONJ(grad_dl_psi2(ip, idir, idim)) * psi(ip, idim))
+          ff = st%d%kweights(ik) * st%occ(ist, ik)
+          do idir = 1, gr%mesh%sb%dim
+            do ip = 1, np
+              grad_rho(ip, idir) = grad_rho(ip, idir) + ff * &
+                   (R_CONJ(grad_psi(ip, idir, idim)) * dl_psi(ip, idim) + R_CONJ(psi(ip, idim)) * grad_dl_psi(ip, idir, idim) &
+                   + R_CONJ(dl_psi2(ip, idim)) * grad_psi(ip, idir, idim) + R_CONJ(grad_dl_psi2(ip, idir, idim)) * psi(ip, idim))
+            end do
+          end do
         else
-          forall (idir = 1:gr%mesh%sb%dim, ip = 1:np) grad_rho(ip, idir) = grad_rho(ip, idir) + &
-            st%d%kweights(ik) * st%occ(ist, ik) * M_TWO * R_CONJ(psi(ip, idim)) * grad_psi(ip, idir, idim)
+          ff = st%d%kweights(ik) * st%occ(ist, ik) * M_TWO
+          do idir = 1, gr%mesh%sb%dim
+            do ip = 1, np
+              grad_rho(ip, idir) = grad_rho(ip, idir) + &
+                   ff * R_CONJ(psi(ip, idim)) * grad_psi(ip, idir, idim)
+            end do
+          end do
         endif
       end do
 
@@ -308,9 +318,11 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
     enddo
 
   else
-    forall (iatom = 1:geo%natoms, idir = 1:gr%mesh%sb%dim) 
-      geo%atom(iatom)%f(idir) = geo%atom(iatom)%f(idir) + real(force(idir, iatom))
-    end forall
+    do iatom = 1, geo%natoms
+      do idir = 1, gr%mesh%sb%dim
+        geo%atom(iatom)%f(idir) = geo%atom(iatom)%f(idir) + real(force(idir, iatom))
+      end do
+    end do
   endif
 
   SAFE_DEALLOCATE_A(force)

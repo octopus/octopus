@@ -113,6 +113,7 @@ contains
 
     character(len=256) :: dirname
     integer :: iunit
+    logical :: bool
 
     if(.not.mpi_grp_is_root(mpi_world)) then
       call write_debug_newlines(4)
@@ -133,12 +134,13 @@ contains
     if (s%type /= SPEC_USDEF ) write(iunit, '(a,f15.2)') 'z      = ', s%z
     write(iunit, '(a,f15.2)') 'z_val  = ', s%z_val
     write(iunit, '(a,f15.2)') 'weight = ', s%weight
-    write(iunit, *)           'local  = ', species_is_local(s)
+    bool = species_is_local(s)
+    write(iunit, '(a,l1)')    'local  = ', bool
     write(iunit, '(2a)')      'usdef  = ', trim(s%user_def)
     if (s%type == SPEC_JELLI .or. s%type == SPEC_POINT) then
       write(iunit, '(a,f15.2)') 'jradius= ', s%jradius
     end if
-    write(iunit, *)           'nlcc   = ', s%nlcc
+    write(iunit, '(a,l1)')    'nlcc   = ', s%nlcc
     write(iunit, '(a,f15.2)') 'def_rsize = ', s%def_rsize
     write(iunit, '(a,f15.2)') 'def_h = ', s%def_h
     if (s%type /= SPEC_USDEF ) write(iunit, '(a,i3)')    'lmax  = ', s%lmax
