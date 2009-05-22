@@ -20,10 +20,12 @@
 #include "global.h"
 
   ! ---------------------------------------------------------
-  subroutine X(multigrid_coarse2fine)(level, f_coarse, f_fine)
-    type(multigrid_level_t), intent(in)    :: level
-    R_TYPE,                  intent(inout) :: f_coarse(:)
-    R_TYPE,                  intent(out)   :: f_fine(:)
+  subroutine X(multigrid_coarse2fine)(tt, coarse_der, coarse_mesh, f_coarse, f_fine)
+    type(transfer_table_t), intent(in)    :: tt
+    type(derivatives_t),     intent(in)   :: coarse_der
+    type(mesh_t),           intent(in)    :: coarse_mesh
+    R_TYPE,                 intent(inout) :: f_coarse(:)
+    R_TYPE,                 intent(out)   :: f_fine(:)
 
     FLOAT, pointer :: vol_pp(:)
 
@@ -35,34 +37,34 @@
 
     call profiling_in(interp_prof, "MG_INTERPOLATION")
 
-    call X(set_bc)(level%der, f_coarse)
+    call X(set_bc)(coarse_der, f_coarse)
 
 #ifdef HAVE_MPI
-    if(level%mesh%parallel_in_domains) call X(vec_ghost_update)(level%mesh%vp, f_coarse)
+    if(coarse_mesh%parallel_in_domains) call X(vec_ghost_update)(coarse_mesh%vp, f_coarse)
 #endif
 
-    vol_pp => level%mesh%vol_pp
+    vol_pp => coarse_mesh%vol_pp
 
     i1 = 0;  i2 = 0;  i4 = 0;  i8 = 0;
-    do i = 1, level%tt%n_fine
-      select case(level%tt%fine_i(i))
+    do i = 1, tt%n_fine
+      select case(tt%fine_i(i))
       case(1)
         i1 = i1 + 1
-        j(1:1) = level%tt%to_fine1(1:1, i1)
+        j(1:1) = tt%to_fine1(1:1, i1)
       case(2)
         i2 = i2 + 1
-        j(1:2) = level%tt%to_fine2(1:2, i2)
+        j(1:2) = tt%to_fine2(1:2, i2)
       case(4)
         i4 = i4 + 1
-        j(1:4) = level%tt%to_fine4(1:4, i4)
+        j(1:4) = tt%to_fine4(1:4, i4)
       case(8)
         i8 = i8 + 1
-        j(1:8) = level%tt%to_fine8(1:8, i8)
+        j(1:8) = tt%to_fine8(1:8, i8)
       end select
 
       f_fine(i) = M_ZERO
       vol_total = M_ZERO
-      do jj = 1, level%tt%fine_i(i)
+      do jj = 1, tt%fine_i(i)
         f_fine(i) = f_fine(i) + vol_pp(j(jj))*f_coarse(j(jj))
         vol_total = vol_total + vol_pp(j(jj))
       end do
@@ -75,11 +77,11 @@
 
   ! ---------------------------------------------------------
   subroutine X(multigrid_fine2coarse)(mgrid, ilevel, f_fine, f_coarse, method_p)
-    type(multigrid_t), intent(in)    :: mgrid
-    integer,           intent(in)    :: ilevel
-    R_TYPE,            intent(inout) :: f_fine(:)
-    R_TYPE,            intent(out)   :: f_coarse(:)
-    integer, optional, intent(in)    :: method_p
+    type(multigrid_t),    intent(in)    :: mgrid
+    integer,              intent(in)    :: ilevel
+    R_TYPE,               intent(inout) :: f_fine(:)
+    R_TYPE,               intent(out)   :: f_coarse(:)
+    integer, optional,    intent(in)    :: method_p
 
     integer :: method
 
@@ -93,9 +95,10 @@
 
     select case(method)
     case(FULLWEIGHT)
-      call X(multigrid_restriction)(mgrid, ilevel, f_fine, f_coarse)
+      call X(multigrid_restriction)(mgrid%level(ilevel)%tt, mgrid%level(ilevel - 1)%der, &
+        mgrid%level(ilevel - 1)%mesh, mgrid%level(ilevel)%mesh, f_fine, f_coarse)
     case(INJECTION)
-      call X(multigrid_injection)(mgrid, ilevel, f_fine, f_coarse)
+      call X(multigrid_injection)(mgrid%level(ilevel)%tt, f_fine, f_coarse)
     case default
       write(message(1), '(a,i2,a)') 'Multigrid: Restriction method  = ', method, ' is not valid.'
       call write_fatal(1)
@@ -106,11 +109,10 @@
 
 
   ! ---------------------------------------------------------
-  subroutine X(multigrid_injection)(mgrid, ilevel, f_fine, f_coarse)
-    type(multigrid_t), intent(in)  :: mgrid
-    integer,           intent(in)  :: ilevel
-    R_TYPE,            intent(in)  :: f_fine(:)
-    R_TYPE,            intent(out) :: f_coarse(:)
+  subroutine X(multigrid_injection)(tt, f_fine, f_coarse)
+    type(transfer_table_t), intent(in)  :: tt
+    R_TYPE,                 intent(in)  :: f_fine(:)
+    R_TYPE,                 intent(out) :: f_coarse(:)
 
     integer :: i
     type(multigrid_level_t), pointer :: level
@@ -118,11 +120,8 @@
     call push_sub('multigrid.multigrid_injection')
     call profiling_in(injection_prof, "MG_INJECTION")
 
-    ASSERT(ilevel>0.and.ilevel<=mgrid%n_levels)
-
-    level => mgrid%level(ilevel)
-    do i = 1, level%tt%n_coarse
-      f_coarse(i) = f_fine(level%tt%to_coarse(i))
+    do i = 1, tt%n_coarse
+      f_coarse(i) = f_fine(tt%to_coarse(i))
     end do
 
     call profiling_out(injection_prof)
@@ -130,22 +129,21 @@
   end subroutine X(multigrid_injection)
 
   ! ---------------------------------------------------------
-  subroutine X(multigrid_restriction)(mgrid, ilevel, f_fine, f_coarse)
-    type(multigrid_t), intent(in)    :: mgrid
-    integer,           intent(in)    :: ilevel
-    R_TYPE,            intent(inout) :: f_fine(:)
-    R_TYPE,            intent(out)   :: f_coarse(:)
+  subroutine X(multigrid_restriction)(tt, fine_der, fine_mesh, coarse_mesh, f_fine, f_coarse)
+    type(transfer_table_t), intent(in)    :: tt
+    type(derivatives_t),    intent(in)    :: fine_der
+    type(mesh_t),           intent(in)    :: fine_mesh
+    type(mesh_t),           intent(in)    :: coarse_mesh
+    R_TYPE,                 intent(inout) :: f_fine(:)
+    R_TYPE,                 intent(out)   :: f_coarse(:)
 
     FLOAT :: weight(-1:1,-1:1,-1:1)
 
     integer :: n, fn, di, dj, dk, d, fi(MAX_DIM)
     type(multigrid_level_t), pointer :: level
-    type(mesh_t), pointer :: fine_mesh, coarse_mesh
 
     call push_sub('multigrid.multigrid_restriction')
     call profiling_in(restrict_prof, "MG_RESTRICTION")
-
-    ASSERT(ilevel>0.and.ilevel<=mgrid%n_levels)
 
     do di = -1, 1
       do dj = -1, 1
@@ -156,19 +154,14 @@
       end do
     end do
 
-    level => mgrid%level(ilevel)
-
-    fine_mesh => mgrid%level(ilevel-1)%mesh
-    coarse_mesh => mgrid%level(ilevel)%mesh
-
-    call X(set_bc)(mgrid%level(ilevel-1)%der, f_fine)
+    call X(set_bc)(fine_der, f_fine)
 
 #ifdef HAVE_MPI
     if(fine_mesh%parallel_in_domains) call X(vec_ghost_update)(fine_mesh%vp, f_fine)
 #endif
 
-    do n = 1, level%tt%n_coarse
-      fn = level%tt%to_coarse(n)
+    do n = 1, tt%n_coarse
+      fn = tt%to_coarse(n)
 #ifdef HAVE_MPI
       ! translate to a global index
       if(fine_mesh%parallel_in_domains) fn = fine_mesh%vp%local(fn - 1 + fine_mesh%vp%xlocal(fine_mesh%vp%partno))
@@ -196,7 +189,7 @@
       f_coarse(n) = f_coarse(n)/coarse_mesh%vol_pp(n)
     end do
 
-    call profiling_count_operations(level%tt%n_coarse*(27*3 + 1))
+    call profiling_count_operations(tt%n_coarse*(27*3 + 1))
     call profiling_out(restrict_prof)
     call pop_sub()
   end subroutine X(multigrid_restriction)
