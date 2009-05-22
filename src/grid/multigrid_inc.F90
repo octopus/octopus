@@ -44,25 +44,25 @@
     vol_pp => level%mesh%vol_pp
 
     i1 = 0;  i2 = 0;  i4 = 0;  i8 = 0;
-    do i = 1, level%n_fine
-      select case(level%fine_i(i))
+    do i = 1, level%tt%n_fine
+      select case(level%tt%fine_i(i))
       case(1)
         i1 = i1 + 1
-        j(1:1) = level%to_fine1(1:1, i1)
+        j(1:1) = level%tt%to_fine1(1:1, i1)
       case(2)
         i2 = i2 + 1
-        j(1:2) = level%to_fine2(1:2, i2)
+        j(1:2) = level%tt%to_fine2(1:2, i2)
       case(4)
         i4 = i4 + 1
-        j(1:4) = level%to_fine4(1:4, i4)
+        j(1:4) = level%tt%to_fine4(1:4, i4)
       case(8)
         i8 = i8 + 1
-        j(1:8) = level%to_fine8(1:8, i8)
+        j(1:8) = level%tt%to_fine8(1:8, i8)
       end select
 
       f_fine(i) = M_ZERO
       vol_total = M_ZERO
-      do jj = 1, level%fine_i(i)
+      do jj = 1, level%tt%fine_i(i)
         f_fine(i) = f_fine(i) + vol_pp(j(jj))*f_coarse(j(jj))
         vol_total = vol_total + vol_pp(j(jj))
       end do
@@ -121,8 +121,8 @@
     ASSERT(ilevel>0.and.ilevel<=mgrid%n_levels)
 
     level => mgrid%level(ilevel)
-    do i = 1, level%n_coarse
-      f_coarse(i) = f_fine(level%to_coarse(i))
+    do i = 1, level%tt%n_coarse
+      f_coarse(i) = f_fine(level%tt%to_coarse(i))
     end do
 
     call profiling_out(injection_prof)
@@ -167,8 +167,8 @@
     if(fine_mesh%parallel_in_domains) call X(vec_ghost_update)(fine_mesh%vp, f_fine)
 #endif
 
-    do n = 1, level%n_coarse
-      fn = level%to_coarse(n)
+    do n = 1, level%tt%n_coarse
+      fn = level%tt%to_coarse(n)
 #ifdef HAVE_MPI
       ! translate to a global index
       if(fine_mesh%parallel_in_domains) fn = fine_mesh%vp%local(fn - 1 + fine_mesh%vp%xlocal(fine_mesh%vp%partno))
@@ -196,7 +196,7 @@
       f_coarse(n) = f_coarse(n)/coarse_mesh%vol_pp(n)
     end do
 
-    call profiling_count_operations(level%n_coarse*(27*3 + 1))
+    call profiling_count_operations(level%tt%n_coarse*(27*3 + 1))
     call profiling_out(restrict_prof)
     call pop_sub()
   end subroutine X(multigrid_restriction)

@@ -31,6 +31,7 @@ module multigrid_m
   use messages_m
   use par_vec_m
   use stencil_m
+  use transfer_table_m
   use profiling_m
 
   implicit none
@@ -54,16 +55,9 @@ module multigrid_m
     FULLWEIGHT = 2
 
   type multigrid_level_t
-    type(mesh_t),  pointer  :: mesh
+    type(transfer_table_t)          :: tt
+    type(mesh_t),          pointer  :: mesh
     type(derivatives_t),   pointer  :: der
-
-    integer          ::  n_coarse
-    integer, pointer :: to_coarse(:)
-
-    integer          ::  n_fine
-    integer          ::  n_fine1,       n_fine2,       n_fine4,       n_fine8
-    integer, pointer :: to_fine1(:,:), to_fine2(:,:), to_fine4(:,:), to_fine8(:,:)
-    integer, pointer :: fine_i(:)
   end type multigrid_level_t
 
   type multigrid_t
@@ -128,10 +122,10 @@ contains
     mgrid%level(0)%mesh   => mesh
     mgrid%level(0)%der => der
 
-    mgrid%level(0)%n_fine = mesh%np
-    SAFE_ALLOCATE(mgrid%level(0)%fine_i(1:mesh%np))
+    mgrid%level(0)%tt%n_fine = mesh%np
+    SAFE_ALLOCATE(mgrid%level(0)%tt%fine_i(1:mesh%np))
 
-    write(message(1), '(a,i3)') "Multigrid levels:", n_levels+1
+    write(message(1), '(a,i3)') "Multigrid levels:", n_levels + 1
     call write_info(1)
 
     do i = 1, mgrid%n_levels
@@ -148,7 +142,7 @@ contains
         call mesh_init_stage_3(mgrid%level(i)%mesh)
       end if
 
-      call multigrid_get_transfer_tables(mgrid%level(i), mgrid%level(i-1)%mesh, mgrid%level(i)%mesh)
+      call multigrid_get_transfer_tables(mgrid%level(i)%tt, mgrid%level(i-1)%mesh, mgrid%level(i)%mesh)
 
       call derivatives_build(mgrid%level(i)%der, mgrid%level(i)%mesh)
 
@@ -174,8 +168,8 @@ contains
   ! ---------------------------------------------------------
   ! creates the lookup tables to go between the coarse and fine meshes
   subroutine multigrid_get_transfer_tables(tt, fine, coarse)
-    type(multigrid_level_t), intent(inout) :: tt
-    type(mesh_t),            intent(in)    :: fine, coarse
+    type(transfer_table_t), intent(inout) :: tt
+    type(mesh_t),           intent(in)    :: fine, coarse
 
     integer :: i, i1, i2, i4, i8, pt, ig
 #ifdef HAVE_MPI
@@ -395,7 +389,7 @@ contains
     SAFE_DEALLOCATE_P(mgrid%ep)
     SAFE_DEALLOCATE_P(mgrid%ep_part)
 
-    SAFE_DEALLOCATE_P(mgrid%level(0)%fine_i)
+    SAFE_DEALLOCATE_P(mgrid%level(0)%tt%fine_i)
 
     do i = 1, mgrid%n_levels
       level => mgrid%level(i)
@@ -405,12 +399,12 @@ contains
       SAFE_DEALLOCATE_P(level%mesh)
       SAFE_DEALLOCATE_P(level%der)
 
-      SAFE_DEALLOCATE_P(level%to_coarse)
-      SAFE_DEALLOCATE_P(level%to_fine1)
-      SAFE_DEALLOCATE_P(level%to_fine2)
-      SAFE_DEALLOCATE_P(level%to_fine4)
-      SAFE_DEALLOCATE_P(level%to_fine8)
-      SAFE_DEALLOCATE_P(level%fine_i)
+      SAFE_DEALLOCATE_P(level%tt%to_coarse)
+      SAFE_DEALLOCATE_P(level%tt%to_fine1)
+      SAFE_DEALLOCATE_P(level%tt%to_fine2)
+      SAFE_DEALLOCATE_P(level%tt%to_fine4)
+      SAFE_DEALLOCATE_P(level%tt%to_fine8)
+      SAFE_DEALLOCATE_P(level%tt%fine_i)
     end do
 
     SAFE_DEALLOCATE_P(mgrid%level)

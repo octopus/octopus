@@ -30,16 +30,17 @@ libgrid_a_SOURCES = \
 	stencil_starplus.F90 derivatives.F90 cube_function.F90 fourier_space.F90 mesh_function.F90 \
 	basins.F90 io_function.F90 multigrid.F90 gridhier.F90 double_grid.F90 grid.F90 \
 	batch.F90          \
-	mesh_init.F90 \
-	metis.c \
-	ob_interface.F90 \
-	zoltan_low.c     \
-	zoltan.F90       \
-	hypercube.F90    \
-        modelmb_1part.F90 \
-	cubic_mesh.F90   \
-	cubic_mesh_low.c \
-	cubic_mesh_fft.c 
+	mesh_init.F90      \
+	metis.c            \
+	ob_interface.F90   \
+	zoltan_low.c       \
+	zoltan.F90         \
+	hypercube.F90      \
+        modelmb_1part.F90  \
+	cubic_mesh.F90     \
+	cubic_mesh_low.c   \
+	cubic_mesh_fft.c   \
+	transfer_table.F90
 
 noinst_HEADERS = \
 	par_vec_inc.F90 derivatives_inc.F90 cube_function_inc.F90 fourier_space_inc.F90 \
@@ -77,7 +78,7 @@ fourier_space.o : fourier_space.F90 fourier_space_inc.F90 cube_function.o mesh.o
 mesh_function.o : mesh_function.F90 mesh_function_inc.F90 par_vec.o mesh.o cube_function.o modelmb_1part.o
 basins.o : basins.F90 par_vec.o index.o mesh.o 
 io_function.o : io_function.F90 io_function_inc.F90 par_vec.o mesh.o  cube_function.o 
-multigrid.o : multigrid.F90 multigrid_inc.F90 mesh.o curvilinear.o derivatives.o mesh_init.o
+multigrid.o : multigrid.F90 multigrid_inc.F90 mesh.o curvilinear.o derivatives.o mesh_init.o transfer_table.o
 double_grid.o : double_grid.F90 double_grid_apply.F90 submesh.o mesh_function.o mesh.o curvilinear.o 
 grid.o : grid.F90  multigrid.o mesh.o double_grid.o curvilinear.o ob_interface.o mesh_init.o
 gridhier.o : gridhier.F90 gridhier_inc.F90 multigrid.o
@@ -90,3 +91,4 @@ hypercube.o : hypercube.F90
 cubic_mesh.o : cubic_mesh.F90 mesh.o
 cubic_mesh_low.o : cubic_mesh_low.c cubic_mesh.h
 cubic_mesh_fft.o : cubic_mesh_fft.c cubic_mesh.h
+transfer_table.o : transfer_table.F90

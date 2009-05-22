@@ -165,7 +165,7 @@ contains
         call mesh_init_stage_3(gr%fine%mesh)
       end if
       
-      call multigrid_get_transfer_tables(gr%fine, gr%fine%mesh, gr%mesh)
+      call multigrid_get_transfer_tables(gr%fine%tt, gr%fine%mesh, gr%mesh)
       
       call derivatives_build(gr%fine%der, gr%fine%mesh)
       
@@ -199,12 +199,12 @@ contains
       call mesh_end(gr%fine%mesh)
       SAFE_DEALLOCATE_P(gr%fine%mesh)
       SAFE_DEALLOCATE_P(gr%fine%der)
-      SAFE_DEALLOCATE_P(gr%fine%to_coarse)
-      SAFE_DEALLOCATE_P(gr%fine%to_fine1)
-      SAFE_DEALLOCATE_P(gr%fine%to_fine2)
-      SAFE_DEALLOCATE_P(gr%fine%to_fine4)
-      SAFE_DEALLOCATE_P(gr%fine%to_fine8)
-      SAFE_DEALLOCATE_P(gr%fine%fine_i)
+      SAFE_DEALLOCATE_P(gr%fine%tt%to_coarse)
+      SAFE_DEALLOCATE_P(gr%fine%tt%to_fine1)
+      SAFE_DEALLOCATE_P(gr%fine%tt%to_fine2)
+      SAFE_DEALLOCATE_P(gr%fine%tt%to_fine4)
+      SAFE_DEALLOCATE_P(gr%fine%tt%to_fine8)
+      SAFE_DEALLOCATE_P(gr%fine%tt%fine_i)
     end if
 
     call double_grid_end(gr%dgrid)
