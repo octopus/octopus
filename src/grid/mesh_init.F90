@@ -1140,40 +1140,46 @@ subroutine mesh_partition_boundaries(mesh, stencil, part)
   integer              :: npart
   integer              :: iunit          ! For debug output to files.
   character(len=3)     :: filenum
-  integer, allocatable :: votes(:, :)
-  integer :: ip, rr
+  integer, allocatable :: votes(:), bps(:)
+  logical, allocatable :: winner(:)
+  integer :: ip, maxvotes
 
   call push_sub('mesh_init.mesh_partition_boundaries')
 
   npart = mesh%mpi_grp%size
 
-  SAFE_ALLOCATE(votes(1:npart, mesh%np_global + 1:mesh%np_part_global))
+  SAFE_ALLOCATE(votes(1:npart))
+  SAFE_ALLOCATE(bps(1:npart))
+  SAFE_ALLOCATE(winner(1:npart))
 
-  !now assign boundary points
-
-  !count the boundary points that each point needs
-  votes = 0
-  do i = 1, mesh%np_global
+  !assign boundary points
+  bps = 0
+  do i = mesh%np_global + 1, mesh%np_part_global
+    !get the coordinates of the point
     call index_to_coords(mesh%idx, mesh%sb%dim, i, ix)
+    votes = 0
+    ! check the partition of all the points that are connected through the stencil with this one
     do j = 1, stencil%size
       jx(1:MAX_DIM) = ix(1:MAX_DIM) + stencil%points(1:MAX_DIM, j)
+      if(any(jx < mesh%idx%nr(1, :)) .or. any(jx > mesh%idx%nr(2, :))) cycle
       ip = index_from_coords(mesh%idx, mesh%sb%dim, jx)
-      if(ip > mesh%np_global) votes(part(i), ip) = votes(part(i), ip) + 1
+      if(ip > 0 .and. ip <= mesh%np_global) votes(part(ip)) = votes(part(ip)) + 1
     end do
+    
+    ! now count the votes
+    maxvotes = maxval(votes)
+    ! from all the ones that have the maximum
+    winner = (votes == maxvotes)
+    ! select the one that has less points up to now
+    part(i) = minloc(bps, dim = 1,  mask = winner)
+    ! and count it
+    bps(part(i)) = bps(part(i)) + 1
+
   end do
 
-  rr = 1
-  do i = mesh%np_global + 1, mesh%np_part_global
-    if(maxval(votes(1:npart, i)) /= minval(votes(1:npart, i))) then
-      ! we have a winner that takes the point
-      part(i:i) = maxloc(votes(1:npart, i))
-    else
-      ! points without a winner are assigned in a round robin fashion
-      part(i) = rr
-      rr = rr + 1
-      if(rr > npart) rr = 1
-    end if
-  end do
+  SAFE_DEALLOCATE_A(votes)
+  SAFE_DEALLOCATE_A(bps)
+  SAFE_DEALLOCATE_A(winner)
 
   if(in_debug_mode.and.mpi_grp_is_root(mpi_world)) then
     ! Debug output. Write points of each partition in a different file.
