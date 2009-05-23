@@ -140,7 +140,7 @@ contains
 
       do ip = 1,maxp
 
-        vol = sum(gr%mesh%vol_pp(ip + this%op%ri(1:ns, this%op%rimap(ip))))
+        if(gr%mesh%use_curvilinear) vol = sum(gr%mesh%vol_pp(ip + this%op%ri(1:ns, this%op%rimap(ip))))
 
         do is = 1, ns
           if(is /= this%op%stencil%center) then
@@ -149,7 +149,7 @@ contains
             this%op%w_re(is, ip) = alpha
           end if
           ip2 = ip + this%op%ri(is, this%op%rimap(ip))
-          this%op%w_re(is, ip) = this%op%w_re(is, ip)*(ns*gr%mesh%vol_pp(ip2)/vol)
+          if(gr%mesh%use_curvilinear) this%op%w_re(is, ip) = this%op%w_re(is, ip)*(ns*gr%mesh%vol_pp(ip2)/vol)
         end do
       end do
       

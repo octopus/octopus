@@ -62,13 +62,23 @@
         j(1:8) = tt%to_fine8(1:8, i8)
       end select
 
-      f_fine(i) = M_ZERO
-      vol_total = M_ZERO
-      do jj = 1, tt%fine_i(i)
-        f_fine(i) = f_fine(i) + vol_pp(j(jj))*f_coarse(j(jj))
-        vol_total = vol_total + vol_pp(j(jj))
-      end do
-      f_fine(i) = f_fine(i)/vol_total
+      if(coarse_mesh%use_curvilinear) then
+        f_fine(i) = M_ZERO
+        vol_total = M_ZERO
+        do jj = 1, tt%fine_i(i)
+          f_fine(i) = f_fine(i) + vol_pp(j(jj))*f_coarse(j(jj))
+          vol_total = vol_total + vol_pp(j(jj))
+        end do
+        f_fine(i) = f_fine(i)/vol_total
+      else
+        f_fine(i) = M_ZERO
+        vol_total = M_ZERO
+        do jj = 1, tt%fine_i(i)
+          f_fine(i) = f_fine(i) + vol_pp(1)*f_coarse(j(jj))
+          vol_total = vol_total + vol_pp(1)
+        end do
+        f_fine(i) = f_fine(i)/vol_total
+      end if
 
     end do
     call profiling_out(interp_prof)
@@ -115,7 +125,6 @@
     R_TYPE,                 intent(out) :: f_coarse(:)
 
     integer :: i
-    type(multigrid_level_t), pointer :: level
 
     call push_sub('multigrid.multigrid_injection')
     call profiling_in(injection_prof, "MG_INJECTION")
@@ -140,7 +149,6 @@
     FLOAT :: weight(-1:1,-1:1,-1:1)
 
     integer :: n, fn, di, dj, dk, d, fi(MAX_DIM)
-    type(multigrid_level_t), pointer :: level
 
     call push_sub('multigrid.multigrid_restriction')
     call profiling_in(restrict_prof, "MG_RESTRICTION")
@@ -179,14 +187,21 @@
             ! translate to a local index
             if(fine_mesh%parallel_in_domains) fn = vec_global2local(fine_mesh%vp, fn, fine_mesh%vp%partno)
 #endif
-
-            f_coarse(n) = f_coarse(n) + weight(di, dj, dk)*f_fine(fn)*fine_mesh%vol_pp(fn)
+            if(fine_mesh%use_curvilinear) then
+              f_coarse(n) = f_coarse(n) + weight(di, dj, dk)*f_fine(fn)*fine_mesh%vol_pp(fn)
+            else
+              f_coarse(n) = f_coarse(n) + weight(di, dj, dk)*f_fine(fn)*fine_mesh%vol_pp(1)
+            end if
 
           end do
         end do
       end do
 
-      f_coarse(n) = f_coarse(n)/coarse_mesh%vol_pp(n)
+      if(fine_mesh%use_curvilinear) then
+        f_coarse(n) = f_coarse(n)/coarse_mesh%vol_pp(n)
+      else
+        f_coarse(n) = f_coarse(n)/coarse_mesh%vol_pp(1)
+      end if
     end do
 
     call profiling_count_operations(tt%n_coarse*(27*3 + 1))

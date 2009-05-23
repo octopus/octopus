@@ -570,7 +570,7 @@ contains
   subroutine mesh_get_vol_pp(sb)
     type(simul_box_t), intent(in) :: sb
 
-    integer :: i, jj(1:MAX_DIM), ip
+    integer :: i, jj(1:MAX_DIM), ip, np
     FLOAT   :: chi(MAX_DIM)
 #if defined(HAVE_MPI)
     integer :: k
@@ -578,39 +578,45 @@ contains
 
     call push_sub('mesh_init.mesh_init_stage_3.mesh_get_vol_pp')
 
-    SAFE_ALLOCATE(mesh%vol_pp(1:mesh%np_part))
+    np = 1
+    if(mesh%use_curvilinear) np = mesh%np_part
 
-    forall(ip = 1:mesh%np_part) mesh%vol_pp(ip) = product(mesh%h(1:sb%dim))
+    SAFE_ALLOCATE(mesh%vol_pp(1:np))
+
+    forall(ip = 1:np) mesh%vol_pp(ip) = product(mesh%h(1:sb%dim))
     jj(sb%dim + 1:MAX_DIM) = M_ZERO
 
     if(mesh%parallel_in_domains) then
 #if defined(HAVE_MPI)
       ! Do the inner points.
-      do i = 1, mesh%np
+      do i = 1, min(np, mesh%np)
         k = mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno) + i - 1)
         call index_to_coords(mesh%idx, sb%dim, k, jj)
         chi(1:sb%dim) = jj(1:sb%dim)*mesh%h(1:sb%dim)
         mesh%vol_pp(i) = mesh%vol_pp(i)*curvilinear_det_Jac(sb, mesh%cv, mesh%x(i, :), chi(1:sb%dim))
       end do
-      ! Do the ghost points.
-      do i = 1, mesh%vp%np_ghost(mesh%vp%partno)
-        k = mesh%vp%ghost(mesh%vp%xghost(mesh%vp%partno) + i - 1)
-        call index_to_coords(mesh%idx, sb%dim, k, jj)
-        chi(1:sb%dim) = jj(1:sb%dim)*mesh%h(1:sb%dim)
-        mesh%vol_pp(i + mesh%np) = mesh%vol_pp(i + mesh%np)*curvilinear_det_Jac(sb, mesh%cv, mesh%x(i + mesh%np, :), chi(1:sb%dim))
-      end do
-      ! Do the boundary points.
-      do i = 1, mesh%vp%np_bndry(mesh%vp%partno)
-        k = mesh%vp%bndry(mesh%vp%xbndry(mesh%vp%partno) + i - 1)
-        call index_to_coords(mesh%idx, sb%dim, k, jj)
-        chi(1:sb%dim) = jj(1:sb%dim)*mesh%h(1:sb%dim)
-        mesh%vol_pp(i+mesh%np+mesh%vp%np_ghost(mesh%vp%partno)) = &
-          mesh%vol_pp(i+mesh%np+mesh%vp%np_ghost(mesh%vp%partno)) &
-          *curvilinear_det_Jac(sb, mesh%cv, mesh%x(i+mesh%np+mesh%vp%np_ghost(mesh%vp%partno), :), chi(1:sb%dim))
-      end do
+
+      if(mesh%use_curvilinear) then
+        ! Do the ghost points.
+        do i = 1, mesh%vp%np_ghost(mesh%vp%partno)
+          k = mesh%vp%ghost(mesh%vp%xghost(mesh%vp%partno) + i - 1)
+          call index_to_coords(mesh%idx, sb%dim, k, jj)
+          chi(1:sb%dim) = jj(1:sb%dim)*mesh%h(1:sb%dim)
+          mesh%vol_pp(i + mesh%np) = mesh%vol_pp(i + mesh%np)*curvilinear_det_Jac(sb, mesh%cv, mesh%x(i + mesh%np, :), chi(1:sb%dim))
+        end do
+        ! Do the boundary points.
+        do i = 1, mesh%vp%np_bndry(mesh%vp%partno)
+          k = mesh%vp%bndry(mesh%vp%xbndry(mesh%vp%partno) + i - 1)
+          call index_to_coords(mesh%idx, sb%dim, k, jj)
+          chi(1:sb%dim) = jj(1:sb%dim)*mesh%h(1:sb%dim)
+          mesh%vol_pp(i+mesh%np+mesh%vp%np_ghost(mesh%vp%partno)) = &
+            mesh%vol_pp(i+mesh%np+mesh%vp%np_ghost(mesh%vp%partno)) &
+            *curvilinear_det_Jac(sb, mesh%cv, mesh%x(i+mesh%np+mesh%vp%np_ghost(mesh%vp%partno), :), chi(1:sb%dim))
+        end do
+      end if
 #endif
     else ! serial mode
-      do i = 1, mesh%np_part
+      do i = 1, np
         call index_to_coords(mesh%idx, sb%dim, i, jj)
         chi(1:sb%dim) = jj(1:sb%dim)*mesh%h(1:sb%dim)
 
