@@ -26,7 +26,8 @@ libtd_a_SOURCES = \
 	ob_rti.F90 ob_src.F90 ob_mem.F90 ob_terms.F90
 
 noinst_HEADERS = \
-	pes_rc.F90 pes_mask.F90 td_init.F90 td_calc.F90 cpmd_inc.F90
+	pes_rc.F90 pes_mask.F90 td_init.F90 td_calc.F90 cpmd_inc.F90 \
+	td_rti_qoct_inc.F90
 
 include $(srcdir)/../common-rules.make
 

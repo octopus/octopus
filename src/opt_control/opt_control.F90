@@ -781,7 +781,7 @@ contains
       ! Check if the gradient has been computed properly... This should be done only
       ! for debugging purposes.
       if(abs(oct%check_gradient) > M_ZERO) then
-        dx = CNST(0.001)
+        dx = oct%check_gradient
         SAFE_ALLOCATE(xdx(1:n))
         SAFE_ALLOCATE(dfn(1:n))
         do j = 1, n
@@ -803,17 +803,20 @@ contains
           dfn(j) = (fdf - fmdf)/(CNST(2.0)*dx)
         end do
 
-        write(message(1), '(80(''#''))')
+        write(message(1), '(60(''#''))')
         write(message(2), *) &
-          'GRADIENT (FORWARD-BACKWARD) |    GRADIENT (NUMERICAL)     |   REL. DIFF'
+          'GRADIENT (FORWARD-BACKWARD) |    GRADIENT (NUMERICAL)     |'
         call write_info(2)
         do j = 1, n
-          write(message(1), '(4x,es18.8,7x,a,4x,es18.8,7x,a,es18.8)') &
-            df(j), '|', dfn(j), '|', (df(j)-dfn(j))/sqrt(dot_product(dfn, dfn))
+          write(message(1), '(4x,es18.8,7x,a,4x,es18.8,7x,a)') &
+            df(j), '|', dfn(j), '|'
           call write_info(1)
         end do
-        write(message(1), '(80(''#''))')
-        call write_info(1)
+        write(message(1), '(60(''-''))')
+        write(message(2), '(a,es18.8,''                              |'')') 'REL DIFF = ', &
+          sqrt(dot_product(df-dfn,df-dfn))/sqrt(dot_product(dfn, dfn))
+        write(message(3), '(60(''#''))')
+        call write_info(3)
 
         SAFE_DEALLOCATE_A(xdx)
       end if

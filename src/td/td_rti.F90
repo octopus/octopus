@@ -60,6 +60,7 @@ module td_rti_m
     td_zop,                   &
     td_zopt,                  &
     td_rti_qmr_op,            &
+    td_rti_qmr2_op,           &
     td_rti_qmr_prec,          &
     td_rti_set_scf_prop,      &
     td_rti_remove_scf_prop,   &
@@ -76,7 +77,8 @@ module td_rti_m
     PROP_MAGNUS                  = 7, &
     PROP_CRANK_NICHOLSON_SRC_MEM = 8, &
     PROP_VISSCHER                = 9, &
-    PROP_QOCT_TDDFT_PROPAGATOR   = 10
+    PROP_QOCT_TDDFT_PROPAGATOR   = 10,&
+    PROP_QOCT_TDDFT_PROPAGATOR_2 = 11
 
   FLOAT, parameter :: scf_threshold = CNST(1.0e-3)
 
@@ -101,7 +103,8 @@ module td_rti_m
   type(hamiltonian_t),     pointer, private :: hm_p
   type(td_rti_t),          pointer, private :: tr_p
   CMPLX, allocatable,      private :: zpsi_tmp(:,:,:,:)
-  integer,                 private :: ik_op, ist_op, idim_op, dim_op
+  integer,                 private :: ik_op, ist_op, idim_op, dim_op, nst_op
+  type(states_t),          private :: st_op
   FLOAT,                   private :: t_op, dt_op
 
 contains
@@ -285,6 +288,8 @@ contains
     !% (experimental) Visscher integration scheme. Computational Physics 5 596 (1991).
     !%Option qoct_tddft_propagator 10
     !% WARNING: EXPERIMENTAL
+    !%Option qoct_tddft_propagator_2 11
+    !% WARNING: EXPERIMENTAL
     !%End
 
     if(gr%sb%open_boundaries) then
@@ -340,6 +345,7 @@ contains
       call ob_rti_init(st, gr, hm, tr%ob, dt, max_iter)
     case(PROP_VISSCHER)
     case(PROP_QOCT_TDDFT_PROPAGATOR)
+    case(PROP_QOCT_TDDFT_PROPAGATOR_2)
     case default
       call input_error('TDEvolutionMethod')
     end select
@@ -496,7 +502,10 @@ contains
     case(PROP_MAGNUS);                  call td_magnus
     case(PROP_CRANK_NICHOLSON_SRC_MEM); call td_crank_nicholson_src_mem
     case(PROP_VISSCHER);                call td_visscher
-    case(PROP_QOCT_TDDFT_PROPAGATOR);   call td_qoct_tddft_propagator
+    case(PROP_QOCT_TDDFT_PROPAGATOR)
+      call td_qoct_tddft_propagator(hm, gr, st, tr, t, dt)
+    case(PROP_QOCT_TDDFT_PROPAGATOR_2)
+      call td_qoct_tddft_propagator_2(hm, gr, st, tr, t, dt)
     end select
 
     if(self_consistent) then
@@ -534,7 +543,10 @@ contains
           case(PROP_MAGNUS);                  call td_magnus
           case(PROP_CRANK_NICHOLSON_SRC_MEM); call td_crank_nicholson_src_mem
           case(PROP_VISSCHER);                call td_visscher
-          case(PROP_QOCT_TDDFT_PROPAGATOR);   call td_qoct_tddft_propagator
+          case(PROP_QOCT_TDDFT_PROPAGATOR)
+            call td_qoct_tddft_propagator(hm, gr, st, tr, t, dt)
+          case(PROP_QOCT_TDDFT_PROPAGATOR_2)
+            call td_qoct_tddft_propagator_2(hm, gr, st, tr, t, dt)
           end select
 
           call states_calc_dens(st, gr%mesh%np)
@@ -1185,44 +1197,6 @@ contains
       call pop_sub()
     end subroutine td_visscher
 
-
-    ! ---------------------------------------------------------
-    ! Propagator specifically designed for the QOCT+TDDFT problem
-    subroutine td_qoct_tddft_propagator
-      type(ion_state_t) :: ions_state
-      FLOAT :: vecpot(1:MAX_DIM), vecpot_vel(1:MAX_DIM)
-      call push_sub('td_rti.td_qoct_tddft_propagator')
-
-      if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
-        call interpolate( (/t, t-dt, t-2*dt/), tr%v_old(:, :, 0:2), t-dt/M_TWO, hm%vhxc(:, :))
-        call hamiltonian_update_potential(hm, gr%mesh)
-      end if
-
-      !move the ions to time t - dt/2
-      if(present(ions)) then
-        call ion_dynamics_save_state(ions, geo, ions_state)
-        call ion_dynamics_propagate(ions, gr%sb, geo, t - ionic_dt/M_TWO, M_HALF*ionic_dt)
-        call hamiltonian_epot_generate(hm, gr, geo, st, time = t - ionic_dt/M_TWO)
-      end if
-      
-      if(gauge_field_is_applied(hm%ep%gfield)) then
-        vecpot = gauge_field_get_vec_pot(hm%ep%gfield)
-        vecpot_vel = gauge_field_get_vec_pot_vel(hm%ep%gfield)
-        call gauge_field_propagate(hm%ep%gfield, gauge_force, M_HALF*dt)
-      end if
-
-      call exponential_apply_all(tr%te, gr, hm, st, dt, t - dt/M_TWO)
-
-      if(present(ions)) call ion_dynamics_restore_state(ions, geo, ions_state)
-
-      if(gauge_field_is_applied(hm%ep%gfield)) then
-        call gauge_field_set_vec_pot(hm%ep%gfield, vecpot)
-        call gauge_field_set_vec_pot_vel(hm%ep%gfield, vecpot_vel)
-      end if
-
-      call pop_sub()
-    end subroutine td_qoct_tddft_propagator
-
   end subroutine td_rti_dt
   ! ---------------------------------------------------------
 
@@ -1317,6 +1291,8 @@ contains
 
   end function td_rti_ions_are_propagated
   ! ---------------------------------------------------------
+
+#include "td_rti_qoct_inc.F90"
 
 end module td_rti_m
 
