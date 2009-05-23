@@ -1190,18 +1190,18 @@ contains
 
     !--------------------------------------------------------------
     logical function in_minimum()
-      integer :: i
-      FLOAT :: radius
+      integer :: iatom
+      FLOAT :: radius, dist2
 
       in_minimum = .false.
-      do i = 1, geo%natoms
-        r = sqrt(sum((xx(1:sb%dim) - geo%atom(i)%x(1:sb%dim))**2))
+      do iatom = 1, geo%natoms
+        dist2 = sum((xx(1:sb%dim) - geo%atom(iatom)%x(1:sb%dim))**2)
         if(sb%rsize > M_ZERO) then
           radius = sb%rsize
         else
-          radius = geo%atom(i)%spec%def_rsize
+          radius = geo%atom(iatom)%spec%def_rsize
         endif
-        if(r <= radius + DELTA) then
+        if(dist2 <= (radius + DELTA)**2) then
           in_minimum = .true.
           exit
         end if
