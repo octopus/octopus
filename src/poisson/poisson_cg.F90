@@ -22,6 +22,7 @@
 module poisson_cg_m
   use derivatives_m
   use global_m
+  use lalg_basic_m
   use math_m
   use mesh_m
   use messages_m
@@ -94,7 +95,7 @@ contains
     mesh_pointer => m
     pk = zk
     iter = 400
-    call dconjugate_gradients(m%np_part, pk, zk, &
+    call dconjugate_gradients(m%np_part, m%np, pk, zk, &
       internal_laplacian_op, internal_dotp, iter, res, threshold)
     if(res >= threshold) then
       message(1) = 'Conjugate gradients Poisson solver did not converge.'
@@ -112,50 +113,46 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine poisson_cg2(m, der, pot, rho)
-    implicit none
-    type(mesh_t), target,      intent(in) :: m
-    type(derivatives_t), target, intent(in) :: der
-    FLOAT,                  intent(inout) :: pot(:) ! pot(m%np)
-    FLOAT,                     intent(in) :: rho(:) ! rho(m%np)
+  subroutine poisson_cg2(mesh, der, pot, rho)
+    type(mesh_t), target,        intent(in)    :: mesh
+    type(derivatives_t), target, intent(in)    :: der
+    FLOAT,                       intent(inout) :: pot(:)
+    FLOAT,                       intent(in)    :: rho(:)
 
-    integer :: iter
-    FLOAT, allocatable :: rhs(:), x(:)
+    integer :: iter, ip
+    FLOAT, allocatable :: potc(:), rhs(:)
     FLOAT :: res
 
     call push_sub('poisson_cg.poisson_cg2')
 
     iter = 400
     der_pointer  => der
-    mesh_pointer => m
+    mesh_pointer => mesh
 
-    SAFE_ALLOCATE(rhs(1:m%np_part))
-    SAFE_ALLOCATE(  x(1:m%np_part))
+    SAFE_ALLOCATE(rhs(1:mesh%np))
+    SAFE_ALLOCATE(potc(1:mesh%np_part))
 
-    rhs(1:m%np)         = - M_FOUR*M_PI*rho(1:m%np)
-    rhs(m%np+1:m%np_part) = M_ZERO
+    forall (ip = 1:mesh%np) rhs(ip) = CNST(-4.0)*M_PI*rho(ip)
+    call lalg_copy(mesh%np, pot, potc)
 
-    x(1:m%np)           = pot(1:m%np)
-    x(m%np+1:m%np_part)   = M_ZERO
-    
-    call dconjugate_gradients(m%np_part, x, rhs, &
-      internal_laplacian_op, internal_dotp, iter, res, threshold)
+    call dconjugate_gradients(mesh%np_part, mesh%np, potc, rhs, internal_laplacian_op, internal_dotp, iter, res, threshold)
 
     if(res >= threshold) then
       message(1) = 'Conjugate gradients Poisson solver did not converge.'
-      write(message(2), '(a,i8)')    '  Iter = ',iter
+      write(message(2), '(a,i8)')    '  Iter = ', iter
       write(message(3), '(a,e14.6)') '  Res = ', res
       call write_warning(3)
     end if
-    pot(1:m%np) = x(1:m%np)
+
+    call lalg_copy(mesh%np, potc, pot)
 
     nullify(der_pointer, mesh_pointer)
+
     SAFE_DEALLOCATE_A(rhs)
-    SAFE_DEALLOCATE_A(x)
+    SAFE_DEALLOCATE_A(potc)
+
     call pop_sub()
   end subroutine poisson_cg2
-
-
 
 end module poisson_cg_m
 

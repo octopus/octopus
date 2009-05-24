@@ -22,6 +22,7 @@
 module poisson_corrections_m
   use derivatives_m
   use global_m
+  use lalg_basic_m
   use loct_math_m
   use math_m
   use mesh_function_m
@@ -51,10 +52,11 @@ module poisson_corrections_m
      integer :: maxl
      FLOAT, pointer :: phi(:, :)
      FLOAT, pointer :: aux(:, :)
+     FLOAT, pointer :: gaussian(:)
   end type poisson_corr_t
 
   type(derivatives_t), pointer :: der_pointer
-  type(mesh_t),      pointer :: mesh_pointer
+  type(mesh_t),        pointer :: mesh_pointer
      
 contains
 
@@ -64,9 +66,57 @@ contains
     integer, intent(in)      :: ml
     type(mesh_t), intent(in) :: m
 
+    FLOAT :: alpha, gamma, ylm, gylm(1:MAX_DIM), r, x(MAX_DIM)
+    integer :: i, l, add_lm, lldfac, j, mm
+
     this%maxl = ml
-    call build_aux(this, m)
-    call build_phi(this, m)
+
+    add_lm = 0
+    do l = 0, this%maxl
+      do mm = -l, l
+        add_lm = add_lm + 1
+      end do
+    end do
+    
+    SAFE_ALLOCATE(this%phi(1:m%np, 1:add_lm))
+    SAFE_ALLOCATE(this%aux(1:m%np, 1:add_lm))
+    SAFE_ALLOCATE(this%gaussian(1:m%np))
+
+    alpha = alpha_*m%h(1)
+    do i = 1, m%np
+      call mesh_r(m, i, r, x = x)
+      this%gaussian(i) = exp(-(r/alpha)**2)
+      add_lm = 1
+      do l = 0, this%maxl
+        lldfac = 1; do j = 1, 2*l+1, 2; lldfac = lldfac * j; end do
+        gamma = ( sqrt(M_PI)*2**(l+3) ) / lldfac
+        do mm = -l, l
+          call grylmr(x(1), x(2), x(3), l, mm, ylm, gylm)
+          if(r > M_EPSILON) then
+            this%phi(i, add_lm) = gamma*isubl(l, r/alpha)*ylm/r**(l+1)
+            this%aux(i, add_lm) = r**l*ylm
+          else
+            this%phi(i, add_lm) = gamma*ylm / alpha
+            if(l == 0) then
+              this%aux(i, add_lm) = ylm
+            else
+              this%aux(i, add_lm) = M_ZERO
+            end if
+          end if
+          add_lm = add_lm + 1
+        end do
+      end do
+    end do
+
+  contains
+
+    ! ---------------------------------------------------------
+    FLOAT function isubl( l, x)
+      integer, intent(in) :: l
+      FLOAT,   intent(in) :: x
+
+      isubl = M_HALF*loct_gamma(l + M_HALF)*(M_ONE - loct_incomplete_gamma(l+M_HALF, x**2) )
+    end function isubl
 
   end subroutine poisson_corrections_init
 
@@ -77,6 +127,7 @@ contains
 
     SAFE_DEALLOCATE_P(this%phi)
     SAFE_DEALLOCATE_P(this%aux)
+    SAFE_DEALLOCATE_P(this%gaussian)
   end subroutine poisson_corrections_end
 
 
@@ -89,11 +140,13 @@ contains
     FLOAT,        intent(out) :: vh_correction(:)
 
     integer :: i, add_lm, l, mm, lldfac, j
-    FLOAT   :: alpha, r2
+    FLOAT   :: alpha
     FLOAT, allocatable :: mult(:)
     FLOAT, allocatable :: betal(:)
+    type(profile_t), save :: prof
 
     call push_sub('poisson_corrections.correct_rho')
+    call profiling_in(prof, "POISSON_CORRECT")
 
     SAFE_ALLOCATE(mult(1:(this%maxl+1)**2))
     call get_multipoles(this, m, rho, this%maxl, mult)
@@ -104,30 +157,32 @@ contains
     add_lm = 1
     do l = 0, this%maxl
       do mm = -l, l
-        lldfac = 1; do j = 1, 2*l+1, 2; lldfac = lldfac * j; end do
+        lldfac = 1
+        do j = 1, 2*l+1, 2
+          lldfac = lldfac*j
+        end do
         betal(add_lm) = (2**(l+2))/( alpha**(2*l+3) * sqrt(M_PI) * lldfac )
         add_lm = add_lm + 1
       end do
     end do
 
-    rho_corrected = M_ZERO    
-    rho_corrected(1:m%np) = rho(1:m%np)
+    call lalg_copy(m%np, rho, rho_corrected)
     vh_correction = M_ZERO
-    do i = 1, m%np
-      r2 = dot_product(m%x(i, 1:3), m%x(i, 1:3)) ! mesh_r could be used, but it wastes time.
-      r2 = exp(-r2/alpha**2)
-      add_lm = 1
-      do l = 0, this%maxl
-        do mm = -l, l
-          rho_corrected(i) = rho_corrected(i) - mult(add_lm) * betal(add_lm) * this%aux(add_lm, i) * r2
-          vh_correction(i) = vh_correction(i) + mult(add_lm) * this%phi(add_lm, i)
-          add_lm = add_lm + 1
-        end do
+    add_lm = 1
+    do l = 0, this%maxl
+      do mm = -l, l
+        forall(i = 1:m%np)
+          rho_corrected(i) = rho_corrected(i) - mult(add_lm)*betal(add_lm)*this%aux(i, add_lm)*this%gaussian(i)
+        end forall
+        call lalg_axpy(m%np, mult(add_lm), this%phi(:, add_lm), vh_correction)
+        add_lm = add_lm + 1
       end do
     end do
 
     SAFE_DEALLOCATE_A(mult)
     SAFE_DEALLOCATE_A(betal)
+
+    call profiling_out(prof)
     call pop_sub()
   end subroutine correct_rho
 
@@ -140,7 +195,6 @@ contains
     integer,         intent(in)  :: ml
     FLOAT,           intent(out) :: mult((ml+1)**2)
 
-    FLOAT   :: tmp(m%np)
     integer :: add_lm, l, mm
 
     call push_sub('poisson_corrections.get_multipoles')
@@ -149,96 +203,13 @@ contains
     add_lm = 1
     do l = 0, ml
       do mm = -l, l
-        tmp(1:m%np) = rho(1:m%np)*this%aux(add_lm, 1:m%np)
-        ! Use Xmf_integrate, so things work parallel too.
-        mult(add_lm) = dmf_integrate(m, tmp)
+        mult(add_lm) = dmf_dotp(m, rho, this%aux(:, add_lm))
         add_lm = add_lm + 1
       end do
     end do
 
     call pop_sub()
   end subroutine get_multipoles
-
-
-  ! ---------------------------------------------------------
-  subroutine build_phi(this, m)
-    type(poisson_corr_t), intent(inout) :: this
-    type(mesh_t), intent(in) :: m
-
-    FLOAT :: alpha, gamma, ylm, gylm(1:MAX_DIM), r, x(MAX_DIM)
-    integer :: i, l, add_lm, lldfac, j, mm
-
-    call push_sub('poisson_corrections.build_phi')
-
-    SAFE_ALLOCATE(this%phi(1:(this%maxl+1)**2, 1:m%np))
-
-    alpha = alpha_*m%h(1)
-    do i = 1, m%np
-      call mesh_r(m, i, r, x = x)
-      add_lm = 1
-      do l = 0, this%maxl
-        lldfac = 1; do j = 1, 2*l+1, 2; lldfac = lldfac * j; end do
-        gamma = ( sqrt(M_PI)*2**(l+3) ) / lldfac
-        do mm = -l, l
-          call grylmr(x(1), x(2), x(3), l, mm, ylm, gylm)
-          if(r .ne. M_ZERO) then
-            this%phi(add_lm, i) = gamma * isubl( l, r/alpha) * ylm / r**(l+1)
-          else
-            this%phi(add_lm, i) = gamma * ylm / alpha
-          end if
-          add_lm = add_lm + 1
-        end do
-      end do
-    end do
-
-    call pop_sub()
-  contains
-
-    ! ---------------------------------------------------------
-    FLOAT function isubl( l, x)
-      integer, intent(in) :: l
-      FLOAT,   intent(in) :: x
-
-      isubl = M_HALF*loct_gamma(l + M_HALF)*(M_ONE - loct_incomplete_gamma(l+M_HALF, x**2) )
-    end function isubl
-
-  end subroutine build_phi
-
-
-  ! ---------------------------------------------------------
-  subroutine build_aux(this, m)
-    type(poisson_corr_t), intent(inout) :: this    
-    type(mesh_t), intent(in) :: m
-
-    FLOAT :: ylm, gylm(1:MAX_DIM), r, x(MAX_DIM)
-    integer :: i, l, add_lm, mm
-
-    call push_sub('poisson_corrections.build_aux')
-    SAFE_ALLOCATE(this%aux(1:(this%maxl+1)**2, 1:m%np))
-
-    do i = 1, m%np
-      call mesh_r(m, i, r, x = x)
-      add_lm = 1
-      do l = 0, this%maxl
-        do mm = -l, l
-          call grylmr(x(1), x(2), x(3), l, mm, ylm, gylm)
-          if(r .ne. M_ZERO) then
-            this%aux(add_lm, i) = r**l*ylm
-          else
-            if(l==0) then
-              this%aux(add_lm, i) = ylm
-            else
-              this%aux(add_lm, i) = M_ZERO
-            end if
-          end if
-          add_lm = add_lm + 1
-        end do
-      end do
-    end do
-
-    call pop_sub()
-  end subroutine build_aux
-
 
   ! ---------------------------------------------------------
   subroutine internal_laplacian_op(x, y)

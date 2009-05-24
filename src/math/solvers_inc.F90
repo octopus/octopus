@@ -76,7 +76,8 @@
 
 
 ! ---------------------------------------------------------
-subroutine X(sym_conjugate_gradients)(np, x, b, op, dotp, iter, residue, threshold)
+subroutine X(sym_conjugate_gradients)(np_part, np, x, b, op, dotp, iter, residue, threshold)
+  integer, intent(in)    :: np_part
   integer, intent(in)    :: np
   R_TYPE,  intent(inout) :: x(:)
   R_TYPE,  intent(in)    :: b(:)
@@ -97,7 +98,7 @@ subroutine X(sym_conjugate_gradients)(np, x, b, op, dotp, iter, residue, thresho
   R_TYPE, allocatable :: r(:), ax(:), p(:), ap(:)
   R_TYPE              :: alpha, beta, gamma
   FLOAT               :: threshold_
-  integer             :: max_iter
+  integer             :: max_iter, ip
 
   call push_sub('solvers_inc.Xsym_conjugate_gradients')
 
@@ -109,15 +110,15 @@ subroutine X(sym_conjugate_gradients)(np, x, b, op, dotp, iter, residue, thresho
 
   SAFE_ALLOCATE( r(1:np))
   SAFE_ALLOCATE(ax(1:np))
-  SAFE_ALLOCATE( p(1:np))
+  SAFE_ALLOCATE( p(1:np_part))
   SAFE_ALLOCATE(ap(1:np))
 
   ! Initial residue.
   call op(x, ax)
-  r(1:np) = b(1:np) - ax(1:np)
+  forall(ip = 1:np) r(ip) = b(ip) - ax(ip)
 
   ! Initial search direction.
-  p(1:np) = r(1:np)
+  call lalg_copy(np, r, p)
 
   max_iter = iter
   iter = 1
@@ -126,10 +127,10 @@ subroutine X(sym_conjugate_gradients)(np, x, b, op, dotp, iter, residue, thresho
     if(abs(gamma) < threshold_) exit
     call op(p, ap)
     alpha   = gamma/dotp(p, ap)
-    r(1:np) = r(1:np) - alpha*ap(1:np)
-    x(1:np) = x(1:np) + alpha*p(1:np)
+    call lalg_axpy(np, -alpha, ap, r)
+    call lalg_axpy(np, alpha, p, x)
     beta    = dotp(r, r)/gamma
-    p(1:np) = r(1:np) + beta*p(1:np)
+    forall(ip = 1:np) p(ip) = r(ip) + beta*p(ip)
     iter    = iter + 1
   end do
   if(present(residue)) residue = gamma
