@@ -275,13 +275,15 @@ contains
       ! The next 2 lines are a hack to be able to perform an IP/RPA calculation
       !if(RPA_first) then
       !  RPA_first = .false.
-        hm%ehartree = M_ZERO
-        call v_ks_hartree(gr, st, hm, amaldi_factor)
 
         hm%vxc      = M_ZERO
         if(iand(hm%xc_family, XC_FAMILY_MGGA).ne.0) hm%vtau = M_ZERO
         if(hm%d%cdft) hm%axc = M_ZERO
         if(ks%theory_level.ne.HARTREE) call v_a_xc()
+
+        hm%ehartree = M_ZERO
+        call v_ks_hartree(gr, st, hm, amaldi_factor)
+
       !end if
 
       ! Build Hartree + xc potential
@@ -420,6 +422,11 @@ contains
 
     ! Amaldi correction
     if(present(amaldi_factor)) rho = amaldi_factor*rho
+
+    if(poisson_solver_is_iterative()) then
+      ! provide a better starting point (in the td case vhxc was interpolated)
+      forall(ip = 1:gr%mesh%np) hm%vhartree(ip) = hm%vhxc(ip, 1) - hm%vxc(ip, 1)
+    end if
 
     ! solve the poisson equation
     call dpoisson_solve(gr, hm%vhartree, rho)

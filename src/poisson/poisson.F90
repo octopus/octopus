@@ -50,6 +50,7 @@ module poisson_m
     poisson_init,       &
     dpoisson_solve,     &
     zpoisson_solve,     &
+    poisson_solver_is_iterative, &
     poisson_end,        &
     poisson_test
 
@@ -552,6 +553,11 @@ contains
     call pop_sub()
   end subroutine poisson_test
 
+  logical pure function poisson_solver_is_iterative() result(iterative)
+
+    iterative = poisson_solver == CG .or. poisson_solver == CG_CORRECTED .or. poisson_solver == MULTIGRID
+    
+  end function poisson_solver_is_iterative
 
 #include "solver_1D.F90"
 #include "solver_2D.F90"

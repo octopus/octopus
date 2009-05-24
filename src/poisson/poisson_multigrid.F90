@@ -88,9 +88,9 @@ contains
     !%Section Hamiltonian::Poisson::Multigrid
     !%Description
     !% Number of gauss-seidel smoothing steps before coarse level
-    !% correction in multigrid Poisson solver. By default 3.
+    !% correction in the multigrid Poisson solver. By default 1.
     !%End
-    call loct_parse_int(datasets_check('PoissonSolverMGPresmoothingSteps'), 3, this%presteps)
+    call loct_parse_int(datasets_check('PoissonSolverMGPresmoothingSteps'), 1, this%presteps)
 
     !%Variable PoissonSolverMGPostsmoothingSteps
     !%Type integer
@@ -98,7 +98,7 @@ contains
     !%Section Hamiltonian::Poisson::Multigrid
     !%Description
     !% Number of gauss-seidel smoothing steps after coarse level
-    !% correction in multigrid Poisson solver. By default 3.
+    !% correction in the multigrid Poisson solver. By default 4.
     !%End
     call loct_parse_int(datasets_check('PoissonSolverMGPostsmoothingSteps'), 4, this%poststeps)
 
