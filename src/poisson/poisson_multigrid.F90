@@ -222,7 +222,7 @@ contains
     do t = 0, this%maxcycles
 
       if(t > 0) then ! during the first cycle only the residue is calculated
-        call vcycle_fas(curr_l)
+        call vcycle_cs(curr_l)
       end if
 
       res = residue(curr_l, phi%level(curr_l)%p, tau%level(curr_l)%p, err%level(curr_l)%p)
@@ -292,6 +292,51 @@ contains
 
       call pop_sub()
     end function residue
+
+    ! ---------------------------------------------------------
+    subroutine vcycle_cs(fl)
+      integer, intent(in) :: fl
+
+      integer :: l, ip
+
+      call push_sub('poisson_multigrid.vcycle_fas')
+
+      do l = fl, cl
+        np = gr%mgrid%level(l)%mesh%np
+        if(l /= fl) phi%level(l)%p(1:np) = M_ZERO
+
+        ! presmoothing
+        call multigrid_relax(this, gr%mgrid%level(l)%mesh, gr%mgrid%level(l)%der, &
+          phi%level(l)%p, tau%level(l)%p , this%presteps)
+
+        if (l /= cl ) then
+          ! error calculation
+          call dderivatives_lapl(gr%mgrid%level(l)%der, phi%level(l)%p, err%level(l)%p)
+          forall(ip = 1:np) err%level(l)%p(ip) = tau%level(l)%p(ip) - err%level(l)%p(ip)
+
+          ! transfer error as the source in the coarser grid
+          call dmultigrid_fine2coarse(gr%mgrid, l+1, err%level(l)%p, tau%level(l+1)%p, this%restriction_method)
+        end if
+      end do
+
+      do l = cl, fl, -1
+       
+        ! postsmoothing
+        call multigrid_relax(this, gr%mgrid%level(l)%mesh, gr%mgrid%level(l)%der, &
+          phi%level(l)%p, tau%level(l)%p, this%poststeps)
+
+        if(l /= fl) then
+          ! transfer correction to finer level
+          call dmultigrid_coarse2fine(gr%mgrid%level(l)%tt, gr%mgrid%level(l)%der, &
+            gr%mgrid%level(l)%mesh, phi%level(l)%p, err%level(l-1)%p)
+
+          np = gr%mgrid%level(l-1)%mesh%np
+          forall(ip = 1:np) phi%level(l - 1)%p(ip) = phi%level(l - 1)%p(ip) + err%level(l - 1)%p(ip)
+        end if
+      end do
+
+      call pop_sub()
+    end subroutine vcycle_cs
 
     ! ---------------------------------------------------------
     subroutine vcycle_fas(fl)
@@ -375,31 +420,30 @@ contains
 
     case(GAUSS_SEIDEL)
 
-      call dset_bc(der, pot)
-
-#ifdef HAVE_MPI
-      if(m%parallel_in_domains) call dvec_ghost_update(m%vp, pot)
-#endif
-
       factor = CNST(-1.0)/der%lapl%w_re(der%lapl%stencil%center, 1)*this%relax_factor
 
-      n = der%lapl%stencil%size
+      do t = 1, steps
 
-      if(der%lapl%const_w) then
-        do t = 1, steps
+        call dset_bc(der, pot)
+
+#ifdef HAVE_MPI
+        if(m%parallel_in_domains) call dvec_ghost_update(m%vp, pot)
+#endif
+
+        n = der%lapl%stencil%size
+
+        if(der%lapl%const_w) then
           call dgauss_seidel(der%lapl%stencil%size, der%lapl%w_re(1, 1), der%lapl%nri, &
-               der%lapl%ri(1, 1), der%lapl%rimap_inv(1), der%lapl%rimap_inv(2),        &
-               factor, pot(1), rho(1))
-        end do
-        call profiling_count_operations(m%np*(steps + 1)*(2*n + 3))
-      else
-        do t = 1, steps
+            der%lapl%ri(1, 1), der%lapl%rimap_inv(1), der%lapl%rimap_inv(2),        &
+            factor, pot(1), rho(1))
+        else
           do i = 1, m%np
             point_lap = sum(der%lapl%w_re(1:n,i)*pot(der%lapl%i(1:n,i)))
             pot(i) = pot(i) - CNST(0.7)/der%lapl%w_re(der%lapl%stencil%center,i)*(point_lap-rho(i))
           end do
-        end do
-      end if
+        end if
+      end do
+      call profiling_count_operations(m%np*(steps + 1)*(2*n + 3))
 
     case(GAUSS_JACOBI)
 
@@ -415,7 +459,7 @@ contains
 
       SAFE_DEALLOCATE_A(ldiag)
       SAFE_DEALLOCATE_A(lpot)
-      
+
     end select
 
     call profiling_out(prof)
