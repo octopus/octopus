@@ -260,6 +260,7 @@ contains
     call pop_sub()
 
   contains
+    ! ---------------------------------------------------------
     subroutine init_profiles
       call profile_init(C_PROFILING_COMPLETE_DATASET, 'COMPLETE_DATASET')
       call profile_init(C_PROFILING_XC_OEP,           'XC_OEP')
@@ -283,6 +284,8 @@ contains
 
   end subroutine profiling_init
 
+
+  ! ---------------------------------------------------------
   subroutine profiling_end
     integer :: ii
     real(8), parameter :: megabyte = 1048576.0_8

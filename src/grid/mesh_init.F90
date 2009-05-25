@@ -197,6 +197,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
     mesh%np_part_global = hypercube_number_total_points(mesh%idx%hypercube)
     mesh%np_global      = hypercube_number_inner_points(mesh%idx%hypercube)
 
+    nullify(mesh%resolution)
     nullify(mesh%idx%Lxyz_inv)
     nullify(mesh%idx%Lxyz_tmp)
     nullify(mesh%idx%Lxyz)
