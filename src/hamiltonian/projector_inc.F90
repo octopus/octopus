@@ -327,7 +327,8 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
         call profiling_in(reduce_prof, "VNLPSI_REDUCE_BATCH")
         nn = iend(ipj) - istart(ipj) + 1
         SAFE_ALLOCATE(reduce_buffer_dest(1:nn))
-        call MPI_Allreduce(reduce_buffer(istart(ipj):), reduce_buffer_dest, nn, R_MPITYPE, MPI_SUM, pj(ipj)%sphere%mpi_grp%comm, mpi_err)
+        call MPI_Allreduce(reduce_buffer(istart(ipj):), reduce_buffer_dest, nn, R_MPITYPE, MPI_SUM, &
+          pj(ipj)%sphere%mpi_grp%comm, mpi_err)
         reduce_buffer(istart(ipj):iend(ipj)) = reduce_buffer_dest(1:nn)
         SAFE_DEALLOCATE_A(reduce_buffer_dest)
         call profiling_out(reduce_prof)

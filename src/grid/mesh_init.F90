@@ -250,12 +250,11 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
             i = ix + res*stencil%points(1, is)
             j = iy + res*stencil%points(2, is)
             k = iz + res*stencil%points(3, is)
-            if(  &
-                 i >= mesh%idx%nr(1,1) .and. i <= mesh%idx%nr(2,1) .and. &
-                 j >= mesh%idx%nr(1,2) .and. j <= mesh%idx%nr(2,2) .and. &
-                 k >= mesh%idx%nr(1,3) .and. k <= mesh%idx%nr(2,3)) then
-              mesh%idx%Lxyz_inv(i, j, k) = ibset(mesh%idx%Lxyz_inv(i, j, k), ENLARGEMENT_POINT)
-            end if
+
+            if(any((/i, j, k/) < mesh%idx%nr(1, :)) .or. any((/i, j, k/) >  mesh%idx%nr(2, :))) cycle
+
+            mesh%idx%Lxyz_inv(i, j, k) = ibset(mesh%idx%Lxyz_inv(i, j, k), ENLARGEMENT_POINT)
+
           end do
         end if
 
@@ -421,7 +420,10 @@ contains
 
                 mesh%idx%Lxyz_inv(ix, iy, iz) = il
 
-                if(.not. mesh%parallel_in_domains) call curvilinear_chi2x(mesh%sb, mesh%cv, chi(:), mesh%x(il, 1:MAX_DIM))
+#ifdef HAVE_MPI
+                if(.not. mesh%parallel_in_domains) &
+#endif                  
+                  call curvilinear_chi2x(mesh%sb, mesh%cv, chi(:), mesh%x(il, 1:MAX_DIM))
                 
               end do
             end do
@@ -577,7 +579,8 @@ contains
           k = mesh%vp%ghost(mesh%vp%xghost(mesh%vp%partno) + i - 1)
           call index_to_coords(mesh%idx, sb%dim, k, jj)
           chi(1:sb%dim) = jj(1:sb%dim)*mesh%h(1:sb%dim)
-          mesh%vol_pp(i + mesh%np) = mesh%vol_pp(i + mesh%np)*curvilinear_det_Jac(sb, mesh%cv, mesh%x(i + mesh%np, :), chi(1:sb%dim))
+          mesh%vol_pp(i + mesh%np) = &
+            mesh%vol_pp(i + mesh%np)*curvilinear_det_Jac(sb, mesh%cv, mesh%x(i + mesh%np, :), chi(1:sb%dim))
         end do
         ! Do the boundary points.
         do i = 1, mesh%vp%np_bndry(mesh%vp%partno)

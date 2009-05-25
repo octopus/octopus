@@ -438,7 +438,8 @@ subroutine X(vec_selective_gather)(this, nn, list, root, src, dst)
     do ipart = 1, this%npart
       if(ipart == this%partno) cycle
       if(recv_count(ipart) == 0) cycle
-      call MPI_Recv(recv_buffer(:, ipart), recv_count(ipart), R_MPITYPE, ipart - 1, tag, this%comm, MPI_STATUS_IGNORE, mpi_err)
+      call MPI_Recv(recv_buffer(:, ipart), recv_count(ipart), R_MPITYPE, &
+        ipart - 1, tag, this%comm, MPI_STATUS_IGNORE, mpi_err)
     end do
 
     !now put the values in the right place
