@@ -217,7 +217,8 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
   end if
 
   mesh%idx%Lxyz_inv(:,:,:) = 0
-  
+  res = 1
+
   ! We label the points inside the mesh + enlargement
   do iz = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
     chi(3) = real(iz, REAL_PRECISION) * mesh%h(3) + sb%box_offset(3)
@@ -231,18 +232,21 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
         call curvilinear_chi2x(sb, cv, chi(:), xx)
 
         inside = simul_box_in_box(sb, geo, xx, inner_box = .true.)
+
         if(simul_box_multires(sb)) then
           mesh%resolution(ix, iy, iz) = 1
           if(.not. inside .and. simul_box_multires(sb)) mesh%resolution(ix, iy, iz) = 2
           inside = inside .or. (simul_box_in_box(sb, geo, xx) .and. &
              mod(ix, 2) == 0 .and. mod(iy, 2) == 0 .and. mod(iz, 2) == 0)
           res = mesh%resolution(ix, iy, iz)
-        else
-          res = 1
         end if
 
         if(inside) then
+          mesh%idx%Lxyz_inv(ix, iy, iz) = ibset(mesh%idx%Lxyz_inv(ix, iy, iz), INNER_POINT)
+
           do is = 1, stencil%size
+            if(stencil%center == is) cycle
+
             i = ix + res*stencil%points(1, is)
             j = iy + res*stencil%points(2, is)
             k = iz + res*stencil%points(3, is)
@@ -250,7 +254,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
                  i >= mesh%idx%nr(1,1) .and. i <= mesh%idx%nr(2,1) .and. &
                  j >= mesh%idx%nr(1,2) .and. j <= mesh%idx%nr(2,2) .and. &
                  k >= mesh%idx%nr(1,3) .and. k <= mesh%idx%nr(2,3)) then
-              mesh%idx%Lxyz_inv(i, j, k) = ENLARGEMENT_POINT
+              mesh%idx%Lxyz_inv(i, j, k) = ibset(mesh%idx%Lxyz_inv(i, j, k), ENLARGEMENT_POINT)
             end if
           end do
         end if
@@ -259,29 +263,14 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
     end do
   end do
 
-  ! we label the points inside the mesh, and we count the points
+  ! count the points
   il = 0
   ik = 0
   do iz = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
-    chi(3) = real(iz, REAL_PRECISION) * mesh%h(3) + sb%box_offset(3)
     do iy = mesh%idx%nr(1,2), mesh%idx%nr(2,2)
-      chi(2) = real(iy, REAL_PRECISION) * mesh%h(2) + sb%box_offset(2)
       do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
-        chi(1) = real(ix, REAL_PRECISION) * mesh%h(1) + sb%box_offset(1)
-
-        call curvilinear_chi2x(sb, cv, chi(:), xx)
-
-        inside = simul_box_in_box(sb, geo, xx, inner_box = .true.)
-        inside = inside .or. (simul_box_in_box(sb, geo, xx) .and. &
-             mod(ix, 2) == 0 .and. mod(iy, 2) == 0 .and. mod(iz, 2) == 0)
-
-        if(inside) then
-          mesh%idx%Lxyz_inv(ix, iy, iz) = INNER_POINT
-          ik = ik + 1
-        end if
-
-        if(mesh%idx%Lxyz_inv(ix, iy, iz) > 0) il = il + 1
-
+        if(btest(mesh%idx%Lxyz_inv(ix, iy, iz), INNER_POINT)) ik = ik + 1
+        if(mesh%idx%Lxyz_inv(ix, iy, iz) /= 0) il = il + 1
       end do
     end do
   end do
@@ -416,10 +405,10 @@ contains
               do iz = izb, min(izb + bsizez - 1, mesh%idx%nr(2,3))
                 chi(3) = real(iz, REAL_PRECISION) * mesh%h(3) + mesh%sb%box_offset(3)
                 
-                if(mesh%idx%Lxyz_inv(ix, iy, iz) == INNER_POINT) then
+                if(btest(mesh%idx%Lxyz_inv(ix, iy, iz), INNER_POINT)) then
                   iin = iin + 1
                   il = iin
-                else if (mesh%idx%Lxyz_inv(ix, iy, iz) == ENLARGEMENT_POINT) then
+                else if (btest(mesh%idx%Lxyz_inv(ix, iy, iz), ENLARGEMENT_POINT)) then
                   ien = ien + 1
                   il = ien
                 else
