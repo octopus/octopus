@@ -100,7 +100,7 @@ contains
 
     call double_grid_init(gr%dgrid, gr%sb)
 
-    ! now we generate create the mesh and the derivatives
+    ! now we generate the mesh and the derivatives
     call mesh_init_stage_1(gr%mesh, gr%sb, gr%cv, &
          enlarge = max(gr%der%n_ghost, double_grid_enlarge(gr%dgrid)))
 

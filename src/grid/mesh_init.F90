@@ -225,15 +225,15 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
   mesh%x_tmp(:,:,:,:)  = M_ZERO
   
   ! We label the points inside the mesh + enlargement
-  do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
-    chi(1) = real(ix, REAL_PRECISION) * mesh%h(1) + sb%box_offset(1)
-
+  do iz = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
+    chi(3) = real(iz, REAL_PRECISION) * mesh%h(3) + sb%box_offset(3)
+    
     do iy = mesh%idx%nr(1,2), mesh%idx%nr(2,2)
       chi(2) = real(iy, REAL_PRECISION) * mesh%h(2) + sb%box_offset(2)
-
-      do iz = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
-        chi(3) = real(iz, REAL_PRECISION) * mesh%h(3) + sb%box_offset(3)
-
+      
+      do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
+        chi(1) = real(ix, REAL_PRECISION) * mesh%h(1) + sb%box_offset(1)
+        
         call curvilinear_chi2x(sb, cv, chi(:), mesh%x_tmp(:, ix, iy, iz))
 
         inside = simul_box_in_box(sb, geo, mesh%x_tmp(:, ix, iy, iz), inner_box = .true.)
@@ -268,9 +268,9 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
   ! we label the points inside the mesh, and we count the points
   il = 0
   ik = 0
-  do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
+  do iz = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
     do iy = mesh%idx%nr(1,2), mesh%idx%nr(2,2)
-      do iz = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
+      do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
 
         inside = simul_box_in_box(sb, geo, mesh%x_tmp(:, ix, iy, iz), inner_box = .true.)
         inside = inside .or. (simul_box_in_box(sb, geo, mesh%x_tmp(:, ix, iy, iz)) .and. &
@@ -362,7 +362,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine create_x_Lxyz()
-    integer :: il, ix, iy, iz
+    integer :: il, iin, ien, ix, iy, iz
     integer :: ixb, iyb, izb, bsize, bsizez
     type(block_t) :: blk
 
@@ -408,7 +408,8 @@ contains
     end if
 
     ! first we fill the points in the inner mesh
-    il = 0
+    iin = 0
+    ien = mesh%np_global
     do ixb = mesh%idx%nr(1,1), mesh%idx%nr(2,1), bsize
       do iyb = mesh%idx%nr(1,2), mesh%idx%nr(2,2), bsize
         do izb = mesh%idx%nr(1,3), mesh%idx%nr(2,3), bsizez
@@ -418,44 +419,25 @@ contains
               do iz = izb, min(izb + bsizez - 1, mesh%idx%nr(2,3))
                 
                 if(mesh%idx%Lxyz_tmp(ix, iy, iz) == INNER_POINT) then
-                  il = il + 1
-                  mesh%idx%Lxyz(il, 1) = ix
-                  mesh%idx%Lxyz(il, 2) = iy
-                  mesh%idx%Lxyz(il, 3) = iz
-                  mesh%idx%Lxyz_inv(ix,iy,iz) = il
-                  if(.not. mesh%parallel_in_domains) mesh%x(il, 1:MAX_DIM) = mesh%x_tmp(1:MAX_DIM, ix, iy, iz)
+                  iin = iin + 1
+                  il = iin
+                else if (mesh%idx%Lxyz_tmp(ix, iy, iz) == ENLARGEMENT_POINT) then
+                  ien = ien + 1
+                  il = ien
+                else
+                  cycle
                 end if
+                  
+                mesh%idx%Lxyz(il, 1) = ix
+                mesh%idx%Lxyz(il, 2) = iy
+                mesh%idx%Lxyz(il, 3) = iz
+                mesh%idx%Lxyz_inv(ix, iy, iz) = il
+                if(.not. mesh%parallel_in_domains) mesh%x(il, 1:MAX_DIM) = mesh%x_tmp(1:MAX_DIM, ix, iy, iz)
                 
               end do
             end do
           end do
           
-        end do
-      end do
-    end do
-
-    ! and now the points from the enlargement
-    do ixb = mesh%idx%nr(1,1), mesh%idx%nr(2,1), bsize
-      do iyb = mesh%idx%nr(1,2), mesh%idx%nr(2,2), bsize
-        do izb = mesh%idx%nr(1,3), mesh%idx%nr(2,3), bsizez
-
-          do ix = ixb, min(ixb + bsize - 1, mesh%idx%nr(2,1))
-            do iy = iyb, min(iyb + bsize - 1, mesh%idx%nr(2,2))
-              do iz = izb, min(izb + bsizez - 1, mesh%idx%nr(2,3))
-                
-                if(mesh%idx%Lxyz_tmp(ix, iy, iz) == ENLARGEMENT_POINT) then
-                  il = il + 1
-                  mesh%idx%Lxyz(il, 1) = ix
-                  mesh%idx%Lxyz(il, 2) = iy
-                  mesh%idx%Lxyz(il, 3) = iz
-                  mesh%idx%Lxyz_inv(ix,iy,iz) = il
-                  if(.not. mesh%parallel_in_domains) mesh%x(il,:) = mesh%x_tmp(:,ix,iy,iz)
-                end if
-
-              end do
-            end do
-          end do
-
         end do
       end do
     end do
