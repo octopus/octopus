@@ -398,7 +398,6 @@ subroutine X(lr_calc_susceptibility)(sys, hm, lr, nsigma, perturbation, chi_para
 
 end subroutine X(lr_calc_susceptibility)
 
-
 ! ---------------------------------------------------------
 subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em_lr)
 ! Note: correctness for spinors is unclear
@@ -467,58 +466,9 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
     end do !idir
   end do !ifreq
 
+  call get_matrix_elements()
+
   beta(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM) = M_ZERO
-
-  do ik = st%d%kpt%start, st%d%kpt%end
-    ispin = states_dim_get_spin_index(sys%st%d, ik)
-    do ist = 1, st%nst
-      do ist2 = 1, st%nst
-        do ii = 1, MAX_DIM
-          do ifreq = 1, 3
-            
-            if (present(kdotp_lr)) then
-              forall (idim = 1:st%d%dim, ip = 1:np) ppsi(ip, idim) = - M_zI * kdotp_lr(ii)%X(dl_psi)(ip, idim, ist, ik)
-            else
-              do idim = 1, st%d%dim
-                call pert_setup_dir(dipole, ii)
-                call X(pert_apply)(dipole, sys%gr, sys%geo, hm, ik, st%X(psi)(:, idim, ist, ik), ppsi(:, idim))
-              end do
-            endif
-            
-            isigma = 1
-            forall (idim = 1:st%d%dim, ip = 1:np)
-              ppsi(ip, idim) = ppsi(ip, idim) + R_REAL(hvar(ip, ispin, isigma, idim, ii, ifreq))*st%X(psi)(ip, idim, ist, ik)
-            end forall
-            
-            me010(ist2, ist, ii, ifreq, ik) = X(mf_dotp)(mesh, st%d%dim, st%X(psi)(:, :, ist2, ik), ppsi)
-
-          end do
-        end do
-      end do
-    end do
-  end do
-
-  do ik = st%d%kpt%start, st%d%kpt%end
-    do ii = 1, MAX_DIM
-      do jj = 1, MAX_DIM
-        do ifreq = 1, 3
-          do jfreq = 1, 3
-            do isigma = 1,2
-              op_sigma = 2 
-              if(isigma == 2) op_sigma = 1
-
-              SAFE_ALLOCATE(me11(ii, jj, ifreq, jfreq, isigma, ik)%X(matrix)(1:st%nst, 1:st%nst))
-              call states_blockt_mul(mesh, st, st%st_start, st%st_end, st%st_start, st%st_end, &
-                em_lr(ii, op_sigma, ifreq)%X(dl_psi)(:, :, :, ik), &
-                em_lr(jj, isigma, jfreq)%X(dl_psi)(:, :, :, ik), &
-                me11(ii, jj, ifreq, jfreq, isigma, ik)%X(matrix))
-
-            end do
-          end do
-        end do
-      end do
-    end do
-  end do
 
   do ii = 1, ndim
     do jj = 1, ndim
@@ -637,6 +587,60 @@ contains
     end select
 
   end subroutine get_permutation
+
+  subroutine get_matrix_elements()
+    do ik = st%d%kpt%start, st%d%kpt%end
+      ispin = states_dim_get_spin_index(sys%st%d, ik)
+      do ist = 1, st%nst
+        do ist2 = 1, st%nst
+          do ii = 1, MAX_DIM
+            do ifreq = 1, 3
+
+              if (present(kdotp_lr)) then
+                forall (idim = 1:st%d%dim, ip = 1:np) ppsi(ip, idim) = - M_zI * kdotp_lr(ii)%X(dl_psi)(ip, idim, ist, ik)
+              else
+                do idim = 1, st%d%dim
+                  call pert_setup_dir(dipole, ii)
+                  call X(pert_apply)(dipole, sys%gr, sys%geo, hm, ik, st%X(psi)(:, idim, ist, ik), ppsi(:, idim))
+                end do
+              endif
+
+              isigma = 1
+              forall (idim = 1:st%d%dim, ip = 1:np)
+                ppsi(ip, idim) = ppsi(ip, idim) + R_REAL(hvar(ip, ispin, isigma, idim, ii, ifreq))*st%X(psi)(ip, idim, ist, ik)
+              end forall
+
+              me010(ist2, ist, ii, ifreq, ik) = X(mf_dotp)(mesh, st%d%dim, st%X(psi)(:, :, ist2, ik), ppsi)
+
+            end do
+          end do
+        end do
+      end do
+    end do
+
+    do ik = st%d%kpt%start, st%d%kpt%end
+      do ii = 1, MAX_DIM
+        do jj = 1, MAX_DIM
+          do ifreq = 1, 3
+            do jfreq = 1, 3
+              do isigma = 1,2
+                op_sigma = 2 
+                if(isigma == 2) op_sigma = 1
+
+                SAFE_ALLOCATE(me11(ii, jj, ifreq, jfreq, isigma, ik)%X(matrix)(1:st%nst, 1:st%nst))
+                call states_blockt_mul(mesh, st, st%st_start, st%st_end, st%st_start, st%st_end, &
+                  em_lr(ii, op_sigma, ifreq)%X(dl_psi)(:, :, :, ik), &
+                  em_lr(jj, isigma, jfreq)%X(dl_psi)(:, :, :, ik), &
+                  me11(ii, jj, ifreq, jfreq, isigma, ik)%X(matrix))
+
+              end do
+            end do
+          end do
+        end do
+      end do
+    end do
+
+  end subroutine get_matrix_elements
 
 end subroutine X(lr_calc_beta)
 
