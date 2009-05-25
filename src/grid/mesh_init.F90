@@ -181,7 +181,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
   type(stencil_t),    intent(in)    :: stencil
 
   integer :: i, j, k, il, ik, ix, iy, iz, is
-  FLOAT   :: chi(MAX_DIM)
+  FLOAT   :: chi(MAX_DIM), xx(1:MAX_DIM)
   integer :: nr(1:2, 1:MAX_DIM), res
   logical :: inside
 
@@ -199,9 +199,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
 
     nullify(mesh%resolution)
     nullify(mesh%idx%Lxyz_inv)
-    nullify(mesh%idx%Lxyz_tmp)
     nullify(mesh%idx%Lxyz)
-    nullify(mesh%x_tmp)
 
     call profiling_out(mesh_init_prof)
     call pop_sub(); return
@@ -211,8 +209,6 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
 
   ! allocate the xyz arrays
   SAFE_ALLOCATE(mesh%idx%Lxyz_inv(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)))
-  SAFE_ALLOCATE(mesh%idx%Lxyz_tmp(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)))
-  SAFE_ALLOCATE(mesh%x_tmp(MAX_DIM, nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)))
 
   if(simul_box_multires(sb)) then 
     SAFE_ALLOCATE(mesh%resolution(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)))
@@ -221,8 +217,6 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
   end if
 
   mesh%idx%Lxyz_inv(:,:,:) = 0
-  mesh%idx%Lxyz_tmp(:,:,:) = 0
-  mesh%x_tmp(:,:,:,:)  = M_ZERO
   
   ! We label the points inside the mesh + enlargement
   do iz = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
@@ -234,13 +228,13 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
       do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
         chi(1) = real(ix, REAL_PRECISION) * mesh%h(1) + sb%box_offset(1)
         
-        call curvilinear_chi2x(sb, cv, chi(:), mesh%x_tmp(:, ix, iy, iz))
+        call curvilinear_chi2x(sb, cv, chi(:), xx)
 
-        inside = simul_box_in_box(sb, geo, mesh%x_tmp(:, ix, iy, iz), inner_box = .true.)
+        inside = simul_box_in_box(sb, geo, xx, inner_box = .true.)
         if(simul_box_multires(sb)) then
           mesh%resolution(ix, iy, iz) = 1
           if(.not. inside .and. simul_box_multires(sb)) mesh%resolution(ix, iy, iz) = 2
-          inside = inside .or. (simul_box_in_box(sb, geo, mesh%x_tmp(:, ix, iy, iz)) .and. &
+          inside = inside .or. (simul_box_in_box(sb, geo, xx) .and. &
              mod(ix, 2) == 0 .and. mod(iy, 2) == 0 .and. mod(iz, 2) == 0)
           res = mesh%resolution(ix, iy, iz)
         else
@@ -256,7 +250,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
                  i >= mesh%idx%nr(1,1) .and. i <= mesh%idx%nr(2,1) .and. &
                  j >= mesh%idx%nr(1,2) .and. j <= mesh%idx%nr(2,2) .and. &
                  k >= mesh%idx%nr(1,3) .and. k <= mesh%idx%nr(2,3)) then
-              mesh%idx%Lxyz_tmp(i, j, k) = ENLARGEMENT_POINT
+              mesh%idx%Lxyz_inv(i, j, k) = ENLARGEMENT_POINT
             end if
           end do
         end if
@@ -269,19 +263,24 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
   il = 0
   ik = 0
   do iz = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
+    chi(3) = real(iz, REAL_PRECISION) * mesh%h(3) + sb%box_offset(3)
     do iy = mesh%idx%nr(1,2), mesh%idx%nr(2,2)
+      chi(2) = real(iy, REAL_PRECISION) * mesh%h(2) + sb%box_offset(2)
       do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
+        chi(1) = real(ix, REAL_PRECISION) * mesh%h(1) + sb%box_offset(1)
 
-        inside = simul_box_in_box(sb, geo, mesh%x_tmp(:, ix, iy, iz), inner_box = .true.)
-        inside = inside .or. (simul_box_in_box(sb, geo, mesh%x_tmp(:, ix, iy, iz)) .and. &
+        call curvilinear_chi2x(sb, cv, chi(:), xx)
+
+        inside = simul_box_in_box(sb, geo, xx, inner_box = .true.)
+        inside = inside .or. (simul_box_in_box(sb, geo, xx) .and. &
              mod(ix, 2) == 0 .and. mod(iy, 2) == 0 .and. mod(iz, 2) == 0)
 
         if(inside) then
-          mesh%idx%Lxyz_tmp(ix, iy, iz) = INNER_POINT
+          mesh%idx%Lxyz_inv(ix, iy, iz) = INNER_POINT
           ik = ik + 1
         end if
 
-        if(mesh%idx%Lxyz_tmp(ix, iy, iz) > 0) il = il + 1
+        if(mesh%idx%Lxyz_inv(ix, iy, iz) > 0) il = il + 1
 
       end do
     end do
@@ -306,8 +305,7 @@ subroutine mesh_init_stage_3(mesh, stencil, mpi_grp, parent)
   type(mpi_grp_t), optional, intent(in)    :: mpi_grp
   type(mesh_t), optional,    intent(in)    :: parent
 
-  integer :: ip, ix(1:MAX_DIM)
-  FLOAT   :: chi(1:MAX_DIM)
+  integer :: ip
 
   call push_sub('mesh_init.mesh_init_stage_3')
   call profiling_in(mesh_init_prof)
@@ -349,10 +347,6 @@ subroutine mesh_init_stage_3(mesh, stencil, mpi_grp, parent)
 
   call mesh_get_vol_pp(mesh%sb)
 
-  ! these large arrays were allocated in mesh_init_1, and are no longer needed
-  SAFE_DEALLOCATE_P(mesh%idx%Lxyz_tmp)
-  SAFE_DEALLOCATE_P(mesh%x_tmp)
-
   call mesh_pbc_init()
 
   call profiling_out(mesh_init_prof)
@@ -365,6 +359,7 @@ contains
     integer :: il, iin, ien, ix, iy, iz
     integer :: ixb, iyb, izb, bsize, bsizez
     type(block_t) :: blk
+    FLOAT :: chi(1:MAX_DIM)
 
     call push_sub('mesh_init.mesh_init_stage_3.create_x_Lxyz')
 
@@ -415,13 +410,16 @@ contains
         do izb = mesh%idx%nr(1,3), mesh%idx%nr(2,3), bsizez
 
           do ix = ixb, min(ixb + bsize - 1, mesh%idx%nr(2,1))
+            chi(1) = real(ix, REAL_PRECISION) * mesh%h(1) + mesh%sb%box_offset(1)
             do iy = iyb, min(iyb + bsize - 1, mesh%idx%nr(2,2))
+              chi(2) = real(iy, REAL_PRECISION) * mesh%h(2) + mesh%sb%box_offset(2)
               do iz = izb, min(izb + bsizez - 1, mesh%idx%nr(2,3))
+                chi(3) = real(iz, REAL_PRECISION) * mesh%h(3) + mesh%sb%box_offset(3)
                 
-                if(mesh%idx%Lxyz_tmp(ix, iy, iz) == INNER_POINT) then
+                if(mesh%idx%Lxyz_inv(ix, iy, iz) == INNER_POINT) then
                   iin = iin + 1
                   il = iin
-                else if (mesh%idx%Lxyz_tmp(ix, iy, iz) == ENLARGEMENT_POINT) then
+                else if (mesh%idx%Lxyz_inv(ix, iy, iz) == ENLARGEMENT_POINT) then
                   ien = ien + 1
                   il = ien
                 else
@@ -431,8 +429,10 @@ contains
                 mesh%idx%Lxyz(il, 1) = ix
                 mesh%idx%Lxyz(il, 2) = iy
                 mesh%idx%Lxyz(il, 3) = iz
+
                 mesh%idx%Lxyz_inv(ix, iy, iz) = il
-                if(.not. mesh%parallel_in_domains) mesh%x(il, 1:MAX_DIM) = mesh%x_tmp(1:MAX_DIM, ix, iy, iz)
+
+                if(.not. mesh%parallel_in_domains) call curvilinear_chi2x(mesh%sb, mesh%cv, chi(:), mesh%x(il, 1:MAX_DIM))
                 
               end do
             end do
@@ -441,6 +441,9 @@ contains
         end do
       end do
     end do
+
+    ASSERT(iin == mesh%np_global)
+    ASSERT(ien == mesh%np_part_global)
     
     call pop_sub()
   end subroutine create_x_Lxyz
@@ -859,9 +862,6 @@ end subroutine mesh_init_stage_3
 ! Stored the mapping point no. -> partition no. into part,
 ! which has to be allocated beforehand.
 ! (mesh_partition_end should be called later.)
-! In Lxyz_tmp has to be stored which points belong to the
-! inner mesh and the enlargement. All other entries have to
-! be zero. comm is used to get the number of partitions.
 ! ---------------------------------------------------------------
 subroutine mesh_partition(m, lapl_stencil, part)
   type(mesh_t),            intent(in)  :: m
@@ -1004,9 +1004,6 @@ subroutine mesh_partition(m, lapl_stencil, part)
         ! are needed several times in the check below.
         jx(1:MAX_DIM) = ix(1:MAX_DIM) + stencil%points(1:MAX_DIM, j)
 
-        ! Only if the neighbour is in the surrounding box,
-        ! Lxyz_tmp has an entry for this point, otherweise
-        ! it is out of bounds.
         if(all(jx(1:MAX_DIM) >= m%idx%nr(1, 1:MAX_DIM)) .and. all(jx(1:MAX_DIM) <= m%idx%nr(2, 1:MAX_DIM))) then
           ! Only points inside the mesh or its enlargement
           ! are included in the graph.

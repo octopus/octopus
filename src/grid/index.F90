@@ -40,7 +40,6 @@ module index_m
     integer                    :: ll(MAX_DIM)      ! literally nr(2,:) - nr(1,:) + 1 - 2*enlarge(:)
     integer, pointer           :: Lxyz(:,:)        ! return x, y and z for each point
     integer, pointer           :: Lxyz_inv(:,:,:)  ! return points # for each xyz
-    integer, pointer           :: Lxyz_tmp(:,:,:)  ! init_1 and init_2
     integer                    :: enlarge(MAX_DIM) ! number of points to add for boundary conditions
   end type index_t
 

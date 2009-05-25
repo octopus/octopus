@@ -89,8 +89,6 @@ module mesh_m
     integer  :: np_global        ! Global number of points in mesh.
     integer  :: np_part_global   ! Global number of inner points and boundary points.
     
-    FLOAT,   pointer :: x_tmp(:,:,:,:)  ! temporary arrays that we have to keep between calls to
-    
     integer, pointer :: boundary_indices(:,:) ! contains the list of mesh indices for boundary points
     integer          :: boundary_np(6)        ! total number of boundary points
     
@@ -466,7 +464,7 @@ contains
     read(iunit, '(a20,1i10)') str, mesh%np_part
     read(iunit, '(a20,1i10)') str, mesh%np_global
     read(iunit, '(a20,1i10)') str, mesh%np_part_global
-    nullify(mesh%idx%lxyz, mesh%idx%lxyz_inv, mesh%x_tmp, mesh%idx%lxyz_tmp, mesh%boundary_indices, mesh%x, &
+    nullify(mesh%idx%lxyz, mesh%idx%lxyz_inv, mesh%boundary_indices, mesh%x, &
       mesh%vol_pp, mesh%per_points, mesh%per_map, mesh%lead_unit_cell, mesh%resolution)
     mesh%parallel_in_domains = .false.
 
