@@ -183,7 +183,11 @@ contains
       call units_init()
       call system_init(sys)
       call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family)
-      call hamiltonian_epot_generate(hm, sys%gr, sys%geo, sys%st)
+      if(.not. calc_mode_is(CM_MEMORY)) then
+        message(1) = "Info: Generating external potential"
+        call write_info(1)
+        call hamiltonian_epot_generate(hm, sys%gr, sys%geo, sys%st)
+      endif
       call restart_init()
     end if
   end subroutine run_init

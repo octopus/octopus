@@ -2420,7 +2420,7 @@ contains
     memory = 0.0_8
 
     ! orbitals
-    memory = memory + dble(REAL_PRECISION*mesh%np_part_global*st%d%dim*st%nst*st%d%kpt%nglobal)
+    memory = memory + REAL_PRECISION*dble(mesh%np_part_global)*st%d%dim*dble(st%nst)*st%d%kpt%nglobal
 
   end function states_wfns_memory
 

@@ -687,13 +687,13 @@ contains
     memory = 0.0_8
     
     ! Lxyz_inv
-    memory = memory + dble(SIZEOF_UNSIGNED_INT*product(mesh%idx%nr(2, 1:mesh%sb%dim) - mesh%idx%nr(1, 1:mesh%sb%dim) + 1))
+    memory = memory + SIZEOF_UNSIGNED_INT*product(mesh%idx%nr(2, 1:mesh%sb%dim) - mesh%idx%nr(1, 1:mesh%sb%dim) + M_ONE)
     ! resolution
     if(simul_box_multires(mesh%sb)) then
-      memory = memory + dble(SIZEOF_UNSIGNED_INT*product(mesh%idx%nr(2, 1:mesh%sb%dim) - mesh%idx%nr(1, 1:mesh%sb%dim) + 1))
+      memory = memory + SIZEOF_UNSIGNED_INT*product(mesh%idx%nr(2, 1:mesh%sb%dim) - mesh%idx%nr(1, 1:mesh%sb%dim) + M_ONE)
     end if
     ! Lxyz
-    memory = memory + dble(SIZEOF_UNSIGNED_INT*mesh%np_part_global*MAX_DIM)
+    memory = memory + SIZEOF_UNSIGNED_INT*dble(mesh%np_part_global)*MAX_DIM
 
   end function mesh_global_memory
 
@@ -703,7 +703,7 @@ contains
     memory = 0.0_8
     
     ! x
-    memory = memory + dble(REAL_PRECISION*mesh%np_part*MAX_DIM)
+    memory = memory + REAL_PRECISION*dble(mesh%np_part)*MAX_DIM
   end function mesh_local_memory
 
   function mesh_x_global(mesh, ip, force) result(xx)
