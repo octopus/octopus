@@ -201,8 +201,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
     nullify(mesh%idx%Lxyz_inv)
     nullify(mesh%idx%Lxyz)
 
-    call profiling_out(mesh_init_prof)
-    call pop_sub(); return
+    go to 999
   end if
 
   nr = mesh%idx%nr
@@ -251,7 +250,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
             j = iy + res*stencil%points(2, is)
             k = iz + res*stencil%points(3, is)
 
-            if(any((/i, j, k/) < mesh%idx%nr(1, :)) .or. any((/i, j, k/) >  mesh%idx%nr(2, :))) cycle
+            if(any((/i, j, k/) < mesh%idx%nr(1, 1:3)) .or. any((/i, j, k/) >  mesh%idx%nr(2, 1:3))) cycle
 
             mesh%idx%Lxyz_inv(i, j, k) = ibset(mesh%idx%Lxyz_inv(i, j, k), ENLARGEMENT_POINT)
 
@@ -275,6 +274,8 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
   end do
   mesh%np_part_global = il
   mesh%np_global      = ik
+
+999 continue
 
   call profiling_out(mesh_init_prof)
   call pop_sub()

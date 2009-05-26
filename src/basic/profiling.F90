@@ -137,6 +137,8 @@ module profiling_m
 
     integer(8)               :: alloc_count
     integer(8)               :: dealloc_count
+
+    integer(8)               :: memory_limit
     integer(8)               :: total_memory
     integer(8)               :: max_memory
     character(len=256)       :: max_memory_location
@@ -228,6 +230,7 @@ contains
     if(iand(prof_vars%mode, PROFILING_MEMORY).ne.0) then
       prof_vars%alloc_count   = 0
       prof_vars%dealloc_count = 0
+
       prof_vars%total_memory  = 0
       prof_vars%max_memory    = 0
       prof_vars%max_memory_location = ''
@@ -235,6 +238,17 @@ contains
       
       prof_vars%large_vars_size(:) = 0
       prof_vars%large_vars(:) = ''
+
+      !%Variable MemoryLimit
+      !%Default -1
+      !%Type integer
+      !%Section Execution::Optimization
+      !%Description
+      !% If positive, octopus will stop if more memory than MemoryLimit is requested (in kb).
+      !% Note that this variable only works when ProfilingMode = prof_memory(_full)
+      !%End
+      call loct_parse_int('MemoryLimit', -1, ii)
+      prof_vars%memory_limit = int(ii, 8)*1024
     end if
 
     if(iand(prof_vars%mode, PROFILING_MEMORY_FULL).ne.0) then
@@ -732,6 +746,14 @@ contains
 
     prof_vars%alloc_count  = prof_vars%alloc_count + 1
     prof_vars%total_memory = prof_vars%total_memory + size
+
+    if(prof_vars%memory_limit > 0) then
+      if(prof_vars%total_memory > prof_vars%memory_limit) then
+        message(1) = "Memory limit set in the input file was passed"
+        call write_fatal(1)
+      end if
+    end if
+
     if(prof_vars%total_memory > prof_vars%max_memory) then
       prof_vars%max_memory = prof_vars%total_memory
       call profiling_make_position_str(var, file, line, prof_vars%max_memory_location)

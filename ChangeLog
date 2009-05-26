@@ -4767,3 +4767,523 @@
 	  with
 	  boundary points in the nl_operator.
 
+2009-05-14 10:02  helbig
+
+	* [r5389] src/main/invert_ks.F90, src/states/restart.F90: td
+	  density matrix output
+
+2009-05-14 12:33  marques
+
+	* [r5390] src/basic/messages.F90, src/basic/varia.c: Now the status
+	  bar is printed when not in interactive.
+
+2009-05-14 17:11  xavier
+
+	* [r5391] src/main/invert_ks.F90, src/scf/lcao_inc.F90: Fixes some
+	  things that xlf does not like.
+
+2009-05-14 17:38  xavier
+
+	* [r5392] src/scf/scf.F90, src/states/states.F90,
+	  src/sternheimer/em_resp_calc_inc.F90,
+	  src/system/output_states.F90, src/system/v_ks.F90: * Now the
+	  current is only allocated for CDFT (i.e. never).
+	  * Renamed st%j to st%current.
+
+2009-05-14 22:33  mjv500
+
+	* [r5393] src/grid/modelmb_1part.F90, src/ions/simul_box.F90,
+	  src/math/young.F90, src/states/density_matrix.F90,
+	  src/states/modelmb_exchange_syms.F90,
+	  src/states/modelmb_particles.F90, src/system/output_h_sys.F90,
+	  src/system/output_states.F90: restructured modelmb and fixed
+	  MAX_DIM bug in simul_box
+
+2009-05-14 22:36  mjv500
+
+	* [r5394] src/states/density_matrix.F90: intent was incorrect
+
+2009-05-14 22:39  mjv500
+
+	* [r5395] src/states/density_matrix.F90: line lengths corrected
+
+2009-05-15 09:26  xavier
+
+	* [r5396] src/beak/operate_ri_vec.c: doperate_ri_vec can be
+	  simplified a bit.
+
+2009-05-15 09:27  xavier
+
+	* [r5397] src/grid/batch.F90, src/grid/batch_inc.F90,
+	  src/scf/lcao_inc.F90: * Now a batch can directly allocate and
+	  deallocate components.
+	  * This is used for the alternative LCAO.
+
+2009-05-15 13:36  xavier
+
+	* [r5398] src/grid/nl_operator.F90, src/grid/nl_operator_inc.F90:
+	  Improved nl_operate_batch.
+
+2009-05-15 13:40  xavier
+
+	* [r5399] src/states/density_matrix.F90: * An intent declaration
+	  was not correct.
+	  * Removed some unnecessary "implicit none".
+
+2009-05-15 14:26  xavier
+
+	* [r5400] src/scf/scf.F90: The calculation of the forces can be
+	  disabled with the
+	  SCFCalculateForces variables.
+
+2009-05-15 14:36  acastro
+
+	* [r5401] src/opt_control/propagation.F90: Solved a couple of bugs
+	  that affected the QOCT runs with interacting
+	  electrons.
+
+2009-05-16 10:31  xavier
+
+	* [r5402] src/hamiltonian/hamiltonian.F90,
+	  src/hamiltonian/hamiltonian_inc.F90, src/system/exponential.F90,
+	  src/td/td_rti.F90: Removed hamiltonian_apply_all and
+	  exponential_apply_all, these are
+	  just particular cases of hamiltonian_apply_batch and
+	  exponential_apply_batch.
+
+2009-05-16 15:00  xavier
+
+	* [r5403] src/beak/operate_ri.c: Improvements of the nl_operator.
+
+2009-05-16 16:55  xavier
+
+	* [r5404] src/system/energy_inc.F90: Removed a warning message. It
+	  appears at every time propagation step.
+
+2009-05-16 18:11  xavier
+
+	* [r5405] src/scf/ground_state.F90, src/scf/lcao_inc.F90: Some
+	  changes in the output of the LCAO.
+
+2009-05-16 18:17  xavier
+
+	* [r5406] src/hamiltonian/hamiltonian.F90,
+	  src/hamiltonian/hamiltonian_inc.F90, src/system/exponential.F90,
+	  src/td/td_rti.F90: Reverted changeset 5402.
+
+2009-05-16 18:53  xavier
+
+	* [r5407] src/hamiltonian/hamiltonian_inc.F90: Now
+	  hamiltonian_apply_all uses hamiltonian_apply_batch.
+
+2009-05-16 23:41  xavier
+
+	* [r5408] src/system/exponential.F90: Optimization of
+	  taylor_series_batch.
+
+2009-05-17 14:16  xavier
+
+	* [r5409] src/states/states.F90, src/system/energy.F90,
+	  src/system/energy_inc.F90, src/system/v_ks.F90, src/td/td.F90:
+	  Several small changes.
+
+2009-05-17 16:45  xavier
+
+	* [r5410] testsuite/real_time/02-aetrs.04-kick.inp,
+	  testsuite/real_time/02-aetrs.test,
+	  testsuite/real_time/Makefile.am: Added a test for propagation
+	  with a kick, we didn't have any.
+
+2009-05-17 17:14  mjv500
+
+	* [r5411] src/states/density_matrix.F90: stray conflict in solved
+
+2009-05-17 18:13  xavier
+
+	* [r5412] src/td/pes.F90, src/td/td.F90, src/td/td_init.F90: * Some
+	  cleaning of the TD part.
+	  
+	  * Removed the references to the DISABLE_PES macro.
+	  
+	  * Removed the ModifyOccupations variable, it was not documented
+	  and as
+	  far I know it was never used.
+
+2009-05-17 19:18  mjv500
+
+	* [r5413] src/states/Makefile.am, src/states/density_matrix.F90,
+	  src/states/modelmb_density.F90,
+	  src/states/modelmb_density_matrix.F90,
+	  src/states/modelmb_exchange_syms.F90,
+	  src/system/output_h_sys.F90, src/system/output_states.F90:
+	  modelmb density calculation + clean naming
+
+2009-05-17 21:20  xavier
+
+	* [r5414] src/basic/profiling.F90, src/hamiltonian/hamiltonian.F90,
+	  src/hamiltonian/hamiltonian_inc.F90, src/system/exponential.F90:
+	  * The hamiltonian now calls axpy directly (to avoid a performance
+	  problem with XLF).
+	  * Moved some profiling objects from profiling_m to hamiltonian_m.
+	  * Fixed the operation count for taylor_series_batch.
+
+2009-05-17 22:44  xavier
+
+	* [r5415] src/poisson/poisson.F90: Added variable
+	  ParallelizationPoissonAllNodes that controls the nodes
+	  used for the Poisson solver. By default all nodes are used, and I
+	  think this causes problems with more than 500 processors.
+
+2009-05-18 07:43  xavier
+
+	* [r5416] src/td/td_write.F90: Included profiling regions for
+	  functions in td_write.
+
+2009-05-18 08:25  marques
+
+	* [r5417] ChangeLog, libxc/ChangeLog, libxc/src/libxc_master.F90,
+	  libxc/src/xc_f.c, src/basic/profiling.F90,
+	  src/grid/mesh_function_inc.F90, src/math/loct_math.F90,
+	  src/math/tdfunction.F90, src/opt_control/opt_control.F90,
+	  src/opt_control/parameters.F90,
+	  src/opt_control/parameters_trans.F90, src/scf/lcao_inc.F90,
+	  src/system/output_h_sys.F90, src/td/spectrum.F90,
+	  src/utils/oscillator_strength.F90, src/xc/functionals.F90,
+	  src/xc/vxc.F90: Changes necessary to compile octopus in single
+	  precision more. Alberto,
+	  I guess I made a disaster in your opt-control code (that now will
+	  not
+	  wortk in single precision). The problem are the minimizing
+	  routines that
+	  do not have interfaces in single precision more. One should add
+	  it...
+
+2009-05-18 09:15  marques
+
+	* [r5418] src/grid/grid.F90, src/grid/nl_operator.F90: We can now
+	  turn off the tuning of the nl_operator. This saves a lot of
+	  time when running 4d models with 1 orbital
+
+2009-05-18 10:39  sakko
+
+	* [r5419] src/grid/derivatives_inc.F90, src/grid/mesh_init.F90,
+	  src/ions/simul_box.F90, src/poisson/poisson_cg.F90: Bug fixes and
+	  improvements related to multiresolution method. Now the Poisson
+	  solver seems to work with it.
+
+2009-05-18 11:16  xavier
+
+	* [r5420] src/poisson/poisson.F90, src/poisson/poisson_isf.F90,
+	  src/poisson/solver_3D.F90: The ISF poisson solver is not
+	  initialized for all nodes unless it is
+	  required.
+
+2009-05-18 11:17  micael
+
+	* [r5421] m4/etsf_io.m4, src/system/output_etsf.F90: *) Corrected
+	  the ETSF_IO configure test.
+	  *) Removed a couple of debug statements.
+
+2009-05-18 11:24  xavier
+
+	* [r5422] src/math/loct_math.F90: Fixed compilation with g95.
+
+2009-05-18 11:56  micael
+
+	* [r5423] src/system/output_etsf.F90: Some calls to the ETSF_IO
+	  error handler were missing.
+
+2009-05-18 12:22  micael
+
+	* [r5424] src/system/output_etsf.F90: *) Files in ETSF format now
+	  include information about the octopus version.
+
+2009-05-18 13:22  xavier
+
+	* [r5425] m4/fc_sizeof.m4: Modified the test for the sizeof
+	  intrinsic so it fails for the sun
+	  compiler (as it should).
+	  
+	  This should fix the compilation problem with the sun compiler.
+
+2009-05-18 14:36  xavier
+
+	* [r5426] src/basic/multicomm.F90: Added a "wildcard" value to the
+	  ParallelizationGroupRanks block.
+
+2009-05-18 15:27  marques
+
+	* [r5427] src/states/states.F90, src/system/Makefile.am,
+	  src/system/output_h_sys.F90, src/system/output_states.F90:
+	  Started the painful move of the output of the matrix elements to
+	  its own
+	  module. Note that this is scattered all around... more to come ;)
+
+2009-05-18 15:58  marques
+
+	* [r5428] src/main/gcm.F90, src/main/unocc.F90,
+	  src/opt_control/target.F90, src/scf/scf.F90,
+	  src/states/states.F90, src/states/states_calc.F90,
+	  src/states/states_calc_inc.F90, src/system/output_me.F90,
+	  src/system/output_me_inc.F90, src/td/td_write.F90: *) forgot 2
+	  files in my previous commit
+	  *) Got rid of st%momentum. It makes no sense to calculate this
+	  everywhere, so please calculate it when necessary. There is an
+	  issue
+	  with write_degeneracy_matrix, someone that knows what it is about
+	  can
+	  fix it? For now it will give probably nonsense, but I do not
+	  understand
+	  what this is for. The easy solution is to calculate the momentum
+	  on the
+	  spot.
+
+2009-05-18 16:00  marques
+
+	* [r5429] src/system/output_h_sys.F90: Condition was wrong.
+
+2009-05-18 16:39  xavier
+
+	* [r5430] src/scf/lcao_inc.F90: Improvement of the alternative
+	  lcao.
+
+2009-05-18 17:18  mjv500
+
+	* [r5431] src/grid/derivatives.F90, src/grid/modelmb_1part.F90,
+	  src/math/young.F90, src/states/Makefile.am,
+	  src/states/modelmb_density.F90,
+	  src/states/modelmb_density_matrix.F90,
+	  src/states/modelmb_exchange_syms.F90,
+	  src/states/modelmb_particles.F90, src/states/states.F90,
+	  src/system/output_h_sys.F90, src/system/output_states.F90:
+	  modelmb wf output
+
+2009-05-18 17:18  mjv500
+
+	* [r5432] src/states/modelmb_wf.F90: modelmb wf source
+
+2009-05-18 18:29  xavier
+
+	* [r5433] src/grid/mesh_function.F90,
+	  src/grid/mesh_function_inc.F90, src/states/Makefile.am,
+	  src/states/modelmb_density.F90,
+	  src/states/modelmb_density_inc.F90,
+	  src/states/modelmb_density_matrix.F90,
+	  src/states/modelmb_density_matrix_inc.F90,
+	  src/states/modelmb_exchange_syms.F90: Moved the calculation of
+	  the few body density and density matrix to
+	  the modules where they belong. We should not have physics inside
+	  mesh.
+
+2009-05-18 18:36  xavier
+
+	* [r5434] src/states/modelmb_density.F90,
+	  src/states/modelmb_density_matrix.F90: Simplified the names of
+	  some members, since they belong to a structure
+	  they were redundant.
+
+2009-05-18 20:49  xavier
+
+	* [r5435] src/states/modelmb_density.F90,
+	  src/states/modelmb_density_matrix.F90,
+	  src/states/modelmb_exchange_syms.F90,
+	  src/states/modelmb_particles.F90: * More variables renamed.
+	  * Some code formatting.
+
+2009-05-18 21:18  xavier
+
+	* [r5436] src/grid/io_function.F90, src/grid/io_function_inc.F90,
+	  src/states/Makefile.am, src/states/modelmb_wf.F90,
+	  src/system/output_states.F90: The function modelmb_wf_write is
+	  now X(io_function_out_text).
+	  
+	  PS: Please do not put anything outside a module.
+
+2009-05-18 21:53  xavier
+
+	* [r5437] src/states/modelmb_density.F90,
+	  src/states/modelmb_density_matrix.F90: Fixed compilation in
+	  parallel.
+
+2009-05-18 22:12  xavier
+
+	* [r5438] src/grid/io_function_inc.F90: A small fix in
+	  io_function_out_text.
+
+2009-05-18 22:59  mjv500
+
+	* [r5439] src/states/modelmb_density.F90,
+	  src/states/modelmb_particles.F90: added particles_of_type to
+	  modelmb
+
+2009-05-19 08:30  micael
+
+	* [r5440] src/common-rules.make: FCFLAGS_ETSF_IO is now passed on
+	  to the compiler.
+
+2009-05-19 08:32  marques
+
+	* [r5441] src/scf/scf.F90, src/system/output_h_sys.F90,
+	  src/system/output_me.F90: Now the angular momentum is also
+	  treated as a matrix element
+
+2009-05-19 09:00  marques
+
+	* [r5442] src/main/Makefile.am, src/main/unocc.F90,
+	  src/main/unocc_inc.F90, src/system/output_h_sys.F90,
+	  src/system/output_me.F90, src/system/output_me_inc.F90,
+	  src/system/output_states.F90: Now also the one body and the two
+	  body matrix elements are in the
+	  output_me module. Note that this module is a mess, and could be
+	  greatly
+	  expanded and enhanced. Now I just gathered the routines that were
+	  scattered around the code. The routines, BTW, are very low
+	  quality and
+	  will likely fail in almost every circunstance expect the standard
+	  serial
+	  atomic calculations in 3d...
+
+2009-05-19 09:01  xavier
+
+	* [r5443] src/states/restart.F90: Now writing restart files can be
+	  disabled by using:
+	  
+	  RestartFileFormat = restart_none
+
+2009-05-19 09:19  acastro
+
+	* [r5444] src/system/output_etsf.F90: Some changes needed to
+	  compile in single precision. The ETSF library
+	  uses double precision data type (question: always? can one
+	  compile the
+	  library in single precision mode? or are there single precision
+	  version of the routines?), and so one has to be a little careful
+	  when
+	  calling the library.
+
+2009-05-19 09:29  xavier
+
+	* [r5445] src/states/modelmb_particles.F90: Fxies compilation with
+	  g95.
+
+2009-05-19 09:30  xavier
+
+	* [r5446] src/system/output_me.F90: Fixes compilation in parallel.
+
+2009-05-19 09:40  mjv500
+
+	* [r5447] src/include/global.h, src/states/modelmb_particles.F90: 1
+	  more amp in SAFE_ALLOC and cleaner names in modelmb_part
+
+2009-05-19 09:57  marques
+
+	* [r5448] src/grid/mesh.F90, src/hamiltonian/hamiltonian.F90: *)
+	  Number of digits in the output of the number of mesh points had
+	  to be
+	  increase ;) Yes, I run something with more than 100 milion mesh
+	  points...
+	  *) Vhartree and vxc is only allocated when not running in
+	  independent
+	  particles.
+
+2009-05-19 10:00  sakko
+
+	* [r5449] src/td/td.F90: bug fix, previously ions were not kicked
+	  at all in kick_density mode (since KICK_DENSITY_MODE = 0)
+
+2009-05-19 10:22  acastro
+
+	* [r5450] src/opt_control/opt_control.F90,
+	  testsuite/optimal_control/02-sym_doublewell.test: Fixed some
+	  compilation issues in single precision.
+
+2009-05-19 10:34  xavier
+
+	* [r5451] src/grid/nl_operator.F90: Improved the documentation for
+	  OperateDouble and OperateComplex.
+
+2009-05-19 13:08  xavier
+
+	* [r5452] src/grid/io_function_inc.F90, src/states/restart.F90:
+	  Added profiling regions to the restart functions.
+
+2009-05-19 16:00  marques
+
+	* [r5453] src/grid/mesh.F90: Fixed a FIXME in the output
+
+2009-05-19 16:23  acastro
+
+	* [r5454] src/opt_control/opt_control.F90: Several bugs (introduced
+	  when I attempted to make the OCT stuff work
+	  in single precision, which is not yet working always).
+
+2009-05-19 21:01  acastro
+
+	* [r5455] src/opt_control/opt_control.F90: More fixes to make the
+	  code compile in single precision mode.
+
+2009-05-19 21:44  xavier
+
+	* [r5456] src/grid/par_vec.F90, src/grid/par_vec_inc.F90,
+	  src/system/Makefile.am: Added the X(vec_selective_gather)
+	  function, it collects a number of
+	  points of a distributed vector.
+
+2009-05-19 22:29  xavier
+
+	* [r5457] src/grid/par_vec.F90, src/grid/par_vec_inc.F90: Added the
+	  X(vec_selective_scatter) function.
+
+2009-05-20 12:58  xavier
+
+	* [r5458] src/basic/mpi.F90, src/grid/submesh.F90: When running
+	  parallel in domains, a submesh contains a communicator
+	  with all the processes that have points in that submesh.
+
+2009-05-20 13:31  xavier
+
+	* [r5459] src/hamiltonian/projector_inc.F90: Now the reduce buffer
+	  in project_psi_batch includes the states.
+
+2009-05-20 14:17  xavier
+
+	* [r5460] src/hamiltonian/projector_inc.F90: The reduction in
+	  project_psi_batch can also be done by projector
+	  (currently it has to be enabled in the code).
+
+2009-05-20 14:36  mjv500
+
+	* [r5461] src/states/modelmb_exchange_syms.F90: cleaned exchangesym
+	  routine
+
+2009-05-20 18:10  micael
+
+	* [r5462] src/system/output_etsf.F90: Now the correct ETSF_IO
+	  pointer is used to store the wave-functions.
+
+2009-05-20 19:24  xavier
+
+	* [r5463] src/hamiltonian/projector_inc.F90: The reduction in the
+	  project_psi_batch function has to be performed
+	  after all calculations.
+
+2009-05-20 21:09  xavier
+
+	* [r5464] src/basic/profiling.F90, src/states/restart.F90,
+	  src/system/v_ks.F90, src/xc/vxc.F90: Some cleaning.
+
+2009-05-21 01:03  dstrubbe
+
+	* [r5465] src/sternheimer/em_resp.F90,
+	  src/sternheimer/em_resp_calc.F90, src/sternheimer/kdotp_calc.F90,
+	  src/system/pert_inc.F90: Converted k.p perturbation from d/dk to
+	  -i d/dk, so that it is Hermitian. This makes a few formulae
+	  simpler, but is also necessary for making a real version of k.p
+	  so that real gs wfns give real k.p wfns.
+
+2009-05-21 09:02  mjv500
+
+	* [r5466] src/math/young.F90, src/states/modelmb_exchange_syms.F90,
+	  src/states/modelmb_particles.F90, src/system/output_h_sys.F90,
+	  src/system/output_states.F90: improved young projection output
+
