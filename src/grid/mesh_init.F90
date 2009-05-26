@@ -649,7 +649,7 @@ contains
                 ! index of this neighboring point
                 j = mesh%idx%Lxyz_inv(nx,ny,nz)
 
-                if(i.eq.j) cycle ! you can't call it a neighbor...
+                if(i.eq.j) cycle ! you cannot call it a neighbor...
 
                 ! does it exist? if yes, is it NOT inner boundary point?
                 if(j.gt.0 .and. .not.inner_boundary_point(mesh,j)) then
@@ -661,7 +661,7 @@ contains
             end do
           end do
 
-          ! now we have a nice list of the existing neighboring points. Let's loop through the
+          ! now we have a nice list of the existing neighboring points. Let`s loop through the
           ! tiny cubes and see if the current point is the closest one to it, or if some of the
           ! neighboring ones are equally close or even closer.
 
@@ -710,7 +710,7 @@ contains
 
                 end do
 
-              ! don't add the volume if some neighbor was closer
+              ! do not add the volume if some neighbor was closer
               if(closer.eq.M_ZERO) then 
 
                 ! the current point i owns the cube, but not necessarily alone
