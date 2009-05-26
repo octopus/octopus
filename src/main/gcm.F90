@@ -109,7 +109,7 @@ module gcm_m
         SAFE_ALLOCATE(phi(i)%spin(1:3, 1:phi(i)%nst, 1:phi(i)%d%nik))
         phi(i)%spin = M_ZERO
       end if
-      phi(i)%eigenval = huge(REAL_PRECISION)
+      phi(i)%eigenval = huge(phi(i)%eigenval)
       phi(i)%occ      = M_ZERO
     end do
 

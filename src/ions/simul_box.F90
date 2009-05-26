@@ -703,7 +703,7 @@ contains
       do i = 1, sb%dim
         sb%h(i) = sb%h(i)*units_inp%length%factor
         if(sb%h(i) < M_ZERO) then
-          if(def_h > M_ZERO.and.def_h < huge(REAL_PRECISION)) then
+          if(def_h > M_ZERO.and.def_h < huge(def_h)) then
             sb%h(i) = def_h
             write(message(1), '(a,i1,3a,f6.3)') "Info: Using default spacing(", i, &
               ") [", trim(units_out%length%abbrev), "] = ",                        &

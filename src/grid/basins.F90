@@ -207,7 +207,7 @@ contains
       this%population(:)   = M_ZERO
       do ii = 1, this%number
         ii_max = -1
-        f_max  = -huge(M_ZERO)
+        f_max  = -huge(f_max)
 
         do jj = 1, mesh%np
           if(this%map(jj) .ne. ii-1) cycle

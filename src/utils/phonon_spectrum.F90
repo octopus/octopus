@@ -79,7 +79,7 @@ program phonon_spectrum
   call loct_parse_int  (datasets_check('SpecVibrational'), SPEC_VIBRATIONAL, mode)
   if(.not.varinfo_valid_option('SpecVibrational', mode)) call input_error('SpecVibrational')
 
-  if (end_time < M_ZERO) end_time = huge(REAL_PRECISION)
+  if (end_time < M_ZERO) end_time = huge(end_time)
 
   SAFE_ALLOCATE(time(0:max_iter+1))
   

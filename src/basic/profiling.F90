@@ -350,7 +350,7 @@ contains
     this%label = label
     this%total_time = M_ZERO
     this%self_time  = M_ZERO
-    this%entry_time = HUGE(this%entry_time)
+    this%entry_time = huge(this%entry_time)
     this%count  = 0
     this%op_count = M_ZERO
     this%tr_count = M_ZERO
