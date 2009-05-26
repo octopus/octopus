@@ -228,7 +228,6 @@ contains
 
     this%current_tol = r
 
-    write(27, *) iter, r, this%initial_tol, this%final_tol
   end function scf_tol_step
 
 
