@@ -548,8 +548,14 @@ contains
   subroutine mesh_get_vol_pp(sb)
     type(simul_box_t), intent(in) :: sb
 
-    integer :: i, jj(1:MAX_DIM), ip, np
+    integer :: i, j, jj(1:MAX_DIM), ip, np
     FLOAT   :: chi(MAX_DIM)
+
+    FLOAT :: xx, yy, zz, ref_dist, comp_dist, volchecksum
+    FLOAT :: dd0(1:3), dd1(1:3), n_vect(1:3), jn_vect(1:3)
+    integer :: nx, ny, nz, big_cube_n, tiny_cube_n, n_counter, neigh_n, closer, equally_close, further
+    integer, allocatable :: neigh_table(:)
+
 #if defined(HAVE_MPI)
     integer :: k
 #endif
@@ -595,14 +601,144 @@ contains
       end if
 #endif
     else ! serial mode
-      do i = 1, np
-        call index_to_coords(mesh%idx, sb%dim, i, jj)
-        chi(1:sb%dim) = jj(1:sb%dim)*mesh%h(1:sb%dim)
 
-        mesh%vol_pp(i) = mesh%vol_pp(i)*curvilinear_det_Jac(sb, mesh%cv, mesh%x(i, 1:sb%dim), chi(1:sb%dim))
-        if(simul_box_multires(mesh%sb)) mesh%vol_pp(i) = mesh%vol_pp(i)*mesh%resolution(jj(1), jj(2), jj(3))**sb%dim
+      if(simul_box_multires(mesh%sb)) then
 
-      end do
+        message(1) = 'Info: Now that the multiresolution is used, point volumes are'
+        message(2) = 'calculated by dividing the space in the vicinity of each grid point'
+        message(3) = 'into tiny cubes and distributing them among nearest neighboring points.'
+        message(4) = 'The method is not really good and inaccuracy remains...'
+        call write_warning(4)
+
+        ! The size of the large cube that is divided into tiny ones, measured as the number
+        ! of minimum spacings from the center. For example, number 2 would mean that the side of the
+        ! cube would be 4 minimum spacings.
+        big_cube_n = 2
+
+        ! into how many areas each spacing is divided.
+        tiny_cube_n = 2
+
+        ! this is used for comparison of the total volume with the "correct" one. 
+        volchecksum = M_ZERO
+
+        SAFE_ALLOCATE(neigh_table(1:(2*big_cube_n+1)**sb%dim))
+
+        do i = 1, mesh%np ! volume is calculated for each (non-boundary) point
+
+          ! coordinates of the current point
+          call index_to_coords(mesh%idx, sb%dim, i, jj)
+
+          ! checksum counter
+          if(mod(jj(1),2).eq.0 .and. mod(jj(2),2).eq.0 .and. mod(jj(3),2).eq.0) then
+            volchecksum = volchecksum + product(2.0*mesh%h(1:sb%dim))
+          end if
+
+          ! the spacing of the current point:
+          dd0(1:sb%dim) = mesh%resolution(jj(1),jj(2),jj(3))*mesh%h(1:sb%dim)
+
+          ! the spacing for the tiny cubes
+          dd1(1:sb%dim) = dd0(1:sb%dim)/real(tiny_cube_n)
+
+          ! find the nearest neighbors of the current point
+          neigh_table(:) = -1
+          neigh_n = 0
+          do nx=jj(1)-big_cube_n,jj(1)+big_cube_n
+            do ny=jj(2)-big_cube_n,jj(2)+big_cube_n
+              do nz=jj(3)-big_cube_n,jj(3)+big_cube_n
+
+                ! index of this neighboring point
+                j = mesh%idx%Lxyz_inv(nx,ny,nz)
+
+                if(i.eq.j) cycle ! you can't call it a neighbor...
+
+                ! does it exist? if yes, is it NOT inner boundary point?
+                if(j.gt.0 .and. .not.inner_boundary_point(mesh,j)) then
+                  neigh_n = neigh_n + 1         ! fine, add it
+                  neigh_table(neigh_n) = j      ! to neighbor list
+                end if
+
+              end do
+            end do
+          end do
+
+          ! now we have a nice list of the existing neighboring points. Let's loop through the
+          ! tiny cubes and see if the current point is the closest one to it, or if some of the
+          ! neighboring ones are equally close or even closer.
+
+          mesh%vol_pp(i) = M_ZERO ! initialize the volume
+
+          ! loop through he tiny cubes
+          do nx = 0,2*tiny_cube_n*big_cube_n-1
+            do ny = 0,2*tiny_cube_n*big_cube_n-1
+              do nz = 0,2*tiny_cube_n*big_cube_n-1
+
+                ! the coordinates of the tiny cube, placing the origin to the current point i
+                xx=-big_cube_n*dd0(1)+0.50*dd1(1)+real(nx)*dd1(1)
+                yy=-big_cube_n*dd0(2)+0.50*dd1(2)+real(ny)*dd1(2)
+                zz=-big_cube_n*dd0(3)+0.50*dd1(3)+real(nz)*dd1(3)
+                
+                ! the vector from origin to (xx,yy,zz)
+                n_vect(1) = xx
+                n_vect(2) = yy
+                n_vect(3) = zz
+
+                ref_dist = xx**2+yy**2+zz**2
+
+                ! initialize the counters
+                closer = 0
+                further = 0
+                equally_close = 0
+
+                ! loop through the nabors
+                do n_counter = 1, neigh_n
+
+                  j = neigh_table(n_counter) ! index of the neighbor
+
+                  jn_vect(1:sb%dim) = mesh%x(i,1:sb%dim)+n_vect(1:sb%dim) - mesh%x(j,1:sb%dim)
+                  comp_dist = jn_vect(1)**2+jn_vect(2)**2+jn_vect(3)**2
+
+                  ! find out if the current neighbor j is (i) closer, (ii) as close as, or
+                  ! (iii) further from the present tiny cube than the current point i.
+
+                  if(abs(ref_dist-comp_dist).lt.1.0e-8) then
+                    equally_close = equally_close + M_ONE
+                  elseif (comp_dist.lt.ref_dist) then
+                    closer = closer + 1
+                  else
+                    further = further + M_ONE
+                  endif
+
+                end do
+
+              ! don't add the volume if some neighbor was closer
+              if(closer.eq.M_ZERO) then 
+
+                ! the current point i owns the cube, but not necessarily alone
+                mesh%vol_pp(i) = mesh%vol_pp(i) + product(dd1(1:sb%dim))/real(equally_close+M_ONE)
+
+              end if
+
+              end do 
+            end do 
+          end do 
+ 
+        end do
+        SAFE_DEALLOCATE_A(neigh_table)
+
+        write (message(1),'(a,F26.12)') 'Volume as sum(mesh%vol_pp(1:mesh%np)) : ',sum(mesh%vol_pp(1:mesh%np))
+        write (message(2),'(a,F26.12)') 'Checksum volume (result for non multiresolution, double spacing) : ',volchecksum
+        write (message(3),'(a,F26.12)') ' => The error in the volume: ',abs(volchecksum)-sum(mesh%vol_pp(1:mesh%np))
+        call write_info(3)
+
+      else ! no multiresolution
+
+        do i = 1, np
+          call index_to_coords(mesh%idx, sb%dim, i, jj)
+          chi(1:sb%dim) = jj(1:sb%dim)*mesh%h(1:sb%dim)
+          mesh%vol_pp(i) = mesh%vol_pp(i)*curvilinear_det_Jac(sb, mesh%cv, mesh%x(i, 1:sb%dim), chi(1:sb%dim))
+        end do
+
+      end if
     end if
 
     call pop_sub()

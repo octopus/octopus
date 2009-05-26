@@ -62,7 +62,8 @@ module mesh_m
     mesh_local_memory,         &
     mesh_x_global,             &
     mesh_compact_boundaries,   &
-    translate_point
+    translate_point,           &
+    inner_boundary_point
 
   ! Describes mesh distribution to nodes.
 
@@ -737,6 +738,46 @@ contains
          .not. mesh%parallel_in_domains .and.  &
          simul_box_has_zero_bc(mesh%sb)
   end function mesh_compact_boundaries
+
+  ! this returns .true. if point is an inner boundary point,
+  ! i.e. an interpolation point
+  logical function inner_boundary_point(mesh, point) result(ibp)
+    type(mesh_t), intent(in) :: mesh
+    integer, intent(in)      :: point
+    integer :: ix, iy, iz
+
+    call push_sub('mesh.inner_boundary_point')
+
+    ibp = .false.
+
+    ! no multiresolution -> no inner boundary points
+    if(.not.simul_box_multires(mesh%sb)) then
+      call pop_sub()
+      return
+    end if
+
+    ! inner boundary points have larger index than np
+    if( point.le.mesh%np) then
+      call pop_sub()
+      return
+    end if
+
+    ! Point is either an inner boundary point or an outer boundary
+    ! point.  If mod 2 is zero for all coordinates, the point is outer bp.
+    ix = mesh%idx%Lxyz(point, 1)
+    iy = mesh%idx%Lxyz(point, 2)
+    iz = mesh%idx%Lxyz(point, 3)
+    if(mod(ix,2).eq.0  .and. mod(iy, 2).eq.0 .and. mod(iz,2).eq.0) then
+      call pop_sub()
+      return
+    end if
+
+    ibp = .true.
+
+    call pop_sub()
+
+  end function inner_boundary_point
+
 
 end module mesh_m
 
