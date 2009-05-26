@@ -697,7 +697,7 @@ contains
       do idir = 1, 3
         ! in periodic directions use single-point Berry`s phase calculation
         if(idir .le. gr%sb%periodic_dim) then
-          n_dip(idir) = n_dip(idir) - epot_dipole_periodic(st, gr, idir)
+          n_dip(idir) = n_dip(idir) + epot_dipole_periodic(st, gr, idir)
           
           ! use quantum of polarization to reduce to smallest possible magnitude
           nquantumpol = FLOOR(n_dip(idir)/(2 * gr%sb%lsize(idir)))
@@ -716,7 +716,7 @@ contains
       end do
 
       if(mpi_grp_is_root(mpi_world)) then
-        call io_output_dipole(iunit, n_dip, gr%mesh%sb%dim)
+        call io_output_dipole(iunit, -n_dip, gr%mesh%sb%dim)
         
         if (simul_box_is_periodic(gr%sb)) then
            write(iunit, '(a)') "Defined only up to quantum of polarization (e * lattice vector)."

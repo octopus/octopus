@@ -427,7 +427,7 @@ contains
 
     dipole = M_ZERO
     do i = 1, geo%natoms
-      dipole(1:MAX_DIM) = dipole(1:MAX_DIM) + P_PROTON_CHARGE*geo%atom(i)%spec%z_val*geo%atom(i)%x(1:MAX_DIM)
+      dipole(1:MAX_DIM) = dipole(1:MAX_DIM) + geo%atom(i)%spec%z_val*geo%atom(i)%x(1:MAX_DIM)
     end do
     dipole = P_PROTON_CHARGE*dipole
 

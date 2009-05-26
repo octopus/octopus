@@ -8,7 +8,8 @@ Enabled    : Yes
 
 Input: 02-h2o_pol_lr.01_h2o_gs.inp
 match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -16.06685186
-match ; Eigenvalues  ; GREP(static/info, '1   --', 12) ;  -1.167612
+match ; Eigenvalues  ; GREP(static/info, '1   --', 12)        ;  -1.167612
+match ; Dipole       ; GREP(static/info, '<x2>', 14)          ;   3.65917E-01
 
 Input: 02-h2o_pol_lr.02_h2o_dyn_pol.inp
 match ; Polarizability XX w=0.0    ; LINE(linear/freq_0.0000/alpha, 2,  5) ; 15.248041

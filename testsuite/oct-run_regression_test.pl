@@ -175,12 +175,15 @@ find_executables();
 # This variable counts the number of failed testcases.
 $failures = 0;
 
+$tempdirpath = $ENV{TEMPDIRPATH};
+if ("$tempdirpath" eq "") { $tempdirpath = '/tmp'; }
+
 # Loop over all the executables.
 foreach my $octopus_exe (@executables){
 
   set_precision("default", $octopus_exe);
 
-  $workdir = tempdir('/tmp/octopus.XXXXXX');
+  $workdir = tempdir("$tempdirpath/octopus.XXXXXX");
   chomp($workdir);
 
   if (!$opt_m) {
