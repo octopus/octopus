@@ -711,7 +711,7 @@ contains
         ! in aperiodic directions use normal dipole formula
         else
           e_dip(idir + 1, 1) = sum(e_dip(idir + 1, :))
-          n_dip(idir) = n_dip(idir) - e_dip(idir + 1, 1)         
+          n_dip(idir) = n_dip(idir) + e_dip(idir + 1, 1)
         endif
       end do
 

@@ -668,7 +668,8 @@ contains
         case(E_FIELD_ELECTRIC)
           call laser_field(gr%sb, ep%lasers(j), x, t)
           do i = 1, geo%natoms
-            geo%atom(i)%f(1:gr%mesh%sb%dim) = geo%atom(i)%f(1:gr%mesh%sb%dim) + geo%atom(i)%spec%z_val*x(1:gr%mesh%sb%dim)
+            geo%atom(i)%f(1:gr%mesh%sb%dim) = geo%atom(i)%f(1:gr%mesh%sb%dim) + &
+              P_PROTON_CHARGE*geo%atom(i)%spec%z_val*x(1:gr%mesh%sb%dim)
           end do
 
         case(E_FIELD_MAGNETIC, E_FIELD_VECTOR_POTENTIAL, E_FIELD_SCALAR_POTENTIAL)
@@ -681,7 +682,8 @@ contains
 
     if(associated(ep%E_field)) then
       do i = 1, geo%natoms
-        geo%atom(i)%f(1:gr%mesh%sb%dim) = geo%atom(i)%f(1:gr%mesh%sb%dim) + geo%atom(i)%spec%Z_val * ep%E_field(1:gr%mesh%sb%dim)
+        geo%atom(i)%f(1:gr%mesh%sb%dim) = geo%atom(i)%f(1:gr%mesh%sb%dim) + &
+          P_PROTON_CHARGE*geo%atom(i)%spec%z_val*ep%E_field(1:gr%mesh%sb%dim)
       end do
     end if
     

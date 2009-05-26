@@ -750,7 +750,7 @@ contains
     end do
     call geometry_dipole(geo, nuclear_dipole)
     do is = 1, st%d%nspin
-      multipole(2:gr%mesh%sb%dim+1, is) = nuclear_dipole(1:gr%mesh%sb%dim) - multipole(2:gr%mesh%sb%dim+1, is)
+      multipole(2:gr%mesh%sb%dim+1, is) = -nuclear_dipole(1:gr%mesh%sb%dim) - multipole(2:gr%mesh%sb%dim+1, is)
     end do
 
     if(mpi_grp_is_root(mpi_world)) then
@@ -1359,7 +1359,7 @@ contains
               xpsi(1:gr%mesh%np, idim) = gr%mesh%x(1:gr%mesh%np, dir) * gs_st%zpsi(1:gr%mesh%np, idim, uist, ik)
             end do
 
-            projections(ist, uist, ik) = n_dip(dir) - &
+            projections(ist, uist, ik) = -n_dip(dir) - &
               zmf_dotp(gr%mesh, st%d%dim, st%zpsi(:, :, ist, ik), xpsi(:, :))
 
           end do

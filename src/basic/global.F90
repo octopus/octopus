@@ -95,6 +95,7 @@ module global_m
   FLOAT, public, parameter :: P_Kb  =  CNST(8.617343e-5)/(M_TWO*P_Ry)  ! Boltzmann constant in Ha/K
   FLOAT, public, parameter :: P_c   =  CNST(137.035999679)
   FLOAT, public, parameter :: P_g   =  CNST(2.0023193043768)   ! Electron gyromagnetic ratio
+  FLOAT, public, parameter :: P_PROTON_CHARGE = CNST(-1.0)
 
   integer, public  :: calc_dim
 
