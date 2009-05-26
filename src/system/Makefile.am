@@ -28,7 +28,7 @@ libsystem_a_SOURCES =         \
 	xc_OEP.F90            \
 	v_ks.F90              \
 	output_me.F90         \
-	output_h_sys.F90      \
+	h_sys_output.F90      \
 	system.F90            \
 	xc_OEP_kernel.F90     \
 	pert.F90              \
@@ -63,7 +63,7 @@ v_ks.o : v_ks.F90 xc_OEP.o energy.o
 system.o : system.F90 v_ks.o energy.o
 xc_OEP_kernel.o : xc_OEP_kernel.F90 xc_OEP_kernel_inc.F90 xc_OEP.o system.o 
 pert.o : pert.F90 pert_inc.F90
-output_h_sys.o : output_h_sys.F90 output_states.F90 output_h.F90 output_linear_response.F90 output_etsf.F90 output_me.o
+h_sys_output.o : h_sys_output.F90 output_states.F90 output_h.F90 output_linear_response.F90 output_etsf.F90 output_me.o
 output_me.o: output_me_inc.F90
 exponential_split.o : exponential_split.F90
 exponential.o : exponential.F90 exponential_split.o

@@ -144,8 +144,8 @@ contains
     !% chemical symbol has more than one letter can not be represented in this way.
     !% So, if you want to run mercury ("Hg") please use one of the other two methods_m
     !% to input the coordinates, "XYZCoordinates" or "Coordinates".</li>
-    !% <li> columns 18-21: The residue. If residue is "QM", the atom is treated in Quantum
-    !% Mechanics, otherwise it is simply treated as an external classical point charge.
+    !% <li> columns 18-21: The residue. If residue is "QM", the atom is treated in quantum
+    !% mechanics; otherwise it is simply treated as an external classical point charge.
     !% Its charge will be given by columns 61-65.</li>
     !% <li> columns 31-54: The Cartesian coordinates. The Fortran format is "(3f8.3)".</li>
     !% <li> columns 61-65: Classical charge of the atom. The Fortran format is "(f6.2)".</li>
@@ -209,7 +209,7 @@ contains
     call xyz_file_read('Classical', xyz)
     if(xyz%file_type.ne.XYZ_FILE_ERR) then ! found classical atoms
       if(.not.iand(xyz%flags, XYZ_FLAGS_CHARGE).ne.0) then
-        message(1) = "Need to know charge for the Classical atoms"
+        message(1) = "Need to know charge for the classical atoms"
         message(2) = "Please use a .pdb"
         call write_fatal(2)
       end if
@@ -325,8 +325,11 @@ contains
     type(geometry_t),            intent(inout) :: geo
     type(multicomm_t),           intent(in)    :: mc
 
+    call push_sub('geometry.geometry_partition')
+
     call distributed_init(geo%atoms, geo%natoms, mc, P_STRATEGY_STATES, "atoms")
 
+    call pop_sub()
   end subroutine geometry_partition
 
 
@@ -340,6 +343,8 @@ contains
     character(len=4)  :: atm
     character(len=3)  :: res
     integer :: na, nca
+
+    call push_sub('geometry.loadPDB')
 
     ! First count number of atoms
     rewind(iunit)
@@ -384,6 +389,7 @@ contains
     end do
 991 continue
 
+    call pop_sub()
   end subroutine loadPDB
 
 
@@ -413,9 +419,12 @@ contains
     type(geometry_t), intent(in) :: geo
     FLOAT :: r
 
+    call push_sub('geometry.geometry_atoms_are_too_close')
+
     call geometry_min_distance(geo, r)
     l = (r < CNST(1.0e-5) .and. geo%natoms > 1)
 
+    call pop_sub()
   end function geometry_atoms_are_too_close
 
   ! ---------------------------------------------------------
@@ -425,12 +434,15 @@ contains
 
     integer :: i
 
+    call push_sub('geometry.geometry_dipole')
+
     dipole = M_ZERO
     do i = 1, geo%natoms
       dipole(1:MAX_DIM) = dipole(1:MAX_DIM) + geo%atom(i)%spec%z_val*geo%atom(i)%x(1:MAX_DIM)
     end do
     dipole = P_PROTON_CHARGE*dipole
 
+    call pop_sub()
   end subroutine geometry_dipole
 
 
@@ -442,6 +454,8 @@ contains
     integer :: i, j
     FLOAT :: r
 
+    call push_sub('geometry.geometry_min_distance')
+
     rmin = huge(rmin)
     do i = 1, geo%natoms
       do j = i+1, geo%natoms
@@ -452,6 +466,7 @@ contains
       end do
     end do
 
+    call pop_sub()
   end subroutine geometry_min_distance
 
 
@@ -463,12 +478,16 @@ contains
     FLOAT :: m
     integer :: i
 
+    call push_sub('geometry.cm_pos')
+
     pos = M_ZERO; m = M_ZERO
     do i = 1, geo%natoms
       pos = pos + geo%atom(i)%spec%weight*geo%atom(i)%x
       m = m + geo%atom(i)%spec%weight
     end do
     pos = pos/m
+
+    call pop_sub()
   end subroutine cm_pos
 
 
@@ -480,12 +499,16 @@ contains
     FLOAT :: m
     integer :: i
 
+    call push_sub('geometry.cm_vel')
+
     vel = M_ZERO; m = M_ZERO
     do i = 1, geo%natoms
       vel = vel + geo%atom(i)%spec%weight*geo%atom(i)%v
       m = m + geo%atom(i)%spec%weight
     end do
     vel = vel/m
+
+    call pop_sub()
   end subroutine cm_vel
 
 
@@ -499,6 +522,8 @@ contains
 
     integer i, iunit
     character(len=6) position
+
+    call push_sub('geometry.atom_write_xyz')
 
     if( .not. mpi_grp_is_root(mpi_world)) return
 
@@ -532,6 +557,7 @@ contains
       call io_close(iunit)
     end if
 
+    call pop_sub()
   end subroutine atom_write_xyz
 
 
@@ -578,12 +604,16 @@ contains
     type(atom_t), intent(out) :: aout
     type(atom_t), intent(in)  :: ain
 
+    call push_sub('geometry.atom_copy')
+
     aout%label = ain%label
     aout%spec  => ain%spec
     aout%x     = ain%x
     aout%v     = ain%v
     aout%f     = ain%f
     aout%move  = ain%move
+
+    call pop_sub()
   end subroutine atom_copy
 
 
@@ -617,7 +647,6 @@ contains
 
     call pop_sub()
   end subroutine geometry_copy
-
 
 
 end module geometry_m

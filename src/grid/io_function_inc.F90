@@ -180,6 +180,8 @@ contains
 
     FLOAT, allocatable :: x(:, :, :)
 
+    call push_sub('io_function_inc.Xinput_function_global.read_netcdf')
+
     file = io_workpath(filename, is_tmp=is_tmp)
 
     status = nf90_open(trim(file), NF90_WRITE, ncid)
@@ -291,6 +293,7 @@ contains
     SAFE_DEALLOCATE_A(x)
 
     status = nf90_close(ncid)
+    call pop_sub()
   end subroutine read_netcdf
 
 #endif
@@ -462,12 +465,15 @@ contains
   ! ---------------------------------------------------------
   subroutine out_plain()
 
+    call push_sub('io_function_inc.Xoutput_function_global.out_plain')
+
     iunit = io_open(trim(dir)//'/'//trim(fname), action='write', form='unformatted', is_tmp=is_tmp)
 
     write(unit=iunit, iostat=ierr) X(output_kind)*kind(f(1)), mesh%np_global
     write(unit=iunit, iostat=ierr) f(1:mesh%np_global)
     call io_close(iunit)
 
+    call pop_sub()
   end subroutine out_plain
 
 
@@ -475,10 +481,13 @@ contains
   subroutine out_binary()
     character(len=512) :: workdir
 
+    call push_sub('io_function_inc.Xoutput_function_global.out_binary')
+
     workdir = io_workpath(dir, is_tmp=is_tmp)
     call write_binary(mesh%np_global, f(1), out_type, ierr, trim(workdir)//'/'//trim(fname)//'.obf')
 
     call profiling_count_transfers(mesh%np_global, f(1))
+    call pop_sub()
   end subroutine out_binary
 
 
@@ -488,6 +497,8 @@ contains
     
     integer :: ixvect(MAX_DIM)
     FLOAT   :: xx(1:MAX_DIM)
+
+    call push_sub('io_function_inc.Xoutput_function_global.out_axis')
 
     filename = trim(dir)//'/'//trim(fname)//"."//index2axis(d2)//"=0,"//index2axis(d3)//"=0"
     iunit = io_open(filename, action='write', is_tmp=is_tmp)
@@ -503,7 +514,7 @@ contains
     end do
 
     call io_close(iunit)
-
+    call pop_sub()
   end subroutine out_axis
 
 
@@ -515,6 +526,8 @@ contains
     integer :: ixvect(MAX_DIM)
     integer :: ixvect_test(MAX_DIM)
     FLOAT   :: xx(1:MAX_DIM)
+
+    call push_sub('io_function_inc.Xoutput_function_global.out_plane')
 
     filename = trim(dir)//'/'//trim(fname)//"."//index2axis(d1)//"=0"
     iunit = io_open(filename, action='write', is_tmp=is_tmp)
@@ -563,6 +576,7 @@ contains
     write(iunit, mformat, iostat=ierr)
     call io_close(iunit)
 
+    call pop_sub()
   end subroutine out_plane
 
 
@@ -573,6 +587,8 @@ contains
     integer :: ix, iy, record_length
     integer :: min_d2, min_d3, max_d2, max_d3
     FLOAT, allocatable :: out_vec(:)
+
+    call push_sub('io_function_inc.Xoutput_function_global.out_matlab')
     
     min_d2 = mesh%idx%nr(1, d2) + mesh%idx%enlarge(d2)
     max_d2 = mesh%idx%nr(2, d2) - mesh%idx%enlarge(d2)
@@ -637,12 +653,15 @@ contains
     SAFE_DEALLOCATE_A(out_vec)
     call io_close(iunit)
 
+    call pop_sub()
   end subroutine out_matlab
 
 
   ! ---------------------------------------------------------
   subroutine out_mesh_index()
     FLOAT :: xx(1:MAX_DIM)
+
+    call push_sub('io_function_inc.Xoutput_function_global.out_mesh_index')
 
     iunit = io_open(trim(dir)//'/'//trim(fname)//".mesh_index", action='write', is_tmp=is_tmp)
 
@@ -662,6 +681,8 @@ contains
 
     if(ierr == 0) write(iunit, mformat, iostat=ierr)
     call io_close(iunit)
+
+    call pop_sub()
   end subroutine out_mesh_index
 
 
@@ -671,6 +692,8 @@ contains
     FLOAT   :: offset(MAX_DIM)
     character(len=40) :: nitems
     type(X(cf_t)) :: cube
+
+    call push_sub('io_function_inc.Xoutput_function_global.out_dx')
 
     ! put values in a nice cube
     call X(cf_new) (mesh%idx%ll, cube)
@@ -717,6 +740,7 @@ contains
     call io_close(iunit)
     call X(cf_free) (cube)
 
+    call pop_sub()
   end subroutine out_dx
 
 
@@ -725,17 +749,19 @@ contains
 ! http://www.xcrysden.org/doc/XSF.html#__toc__11
   subroutine out_xcrysden()
     integer :: ix, iy, iz, idir, iatom, ix2, iy2, iz2
-    FLOAT   :: offset(MAX_DIM)
+    FLOAT, allocatable :: offset(:)
     type(X(cf_t)) :: cube
+
+    call push_sub('io_function_inc.Xoutput_function_global.out_xcrysden')
 
     ! put values in a nice cube
     call X(cf_new) (mesh%idx%ll, cube)
     call X(cf_alloc_RS) (cube)
     call X(mesh_to_cube) (mesh, f, cube)
 
-    ! the offset is different in periodic directions
+    SAFE_ALLOCATE(offset(1:sb%dim))
     offset = -matmul(sb%rlattice, sb%lsize) / units_out%length%factor
-
+    ! the offset is different in periodic directions
     do i = sb%periodic_dim+1, 3
       offset(i)=-(cube%n(i) - 1)/2 * mesh%h(i) / units_out%length%factor
     end do
@@ -745,26 +771,9 @@ contains
 
     iunit = io_open(trim(dir)//'/'//trim(fname)//".xsf", action='write', is_tmp=is_tmp)
 
-    write(iunit, '(a)') 'CRYSTAL'
-    write(iunit, '(a)') 'PRIMVEC'
+    ASSERT(present(geo))
+    call write_xsf_geometry(iunit, geo, sb, offset)
 
-    do idir = 1, sb%dim
-      write(iunit, '(3f12.6)') 2 * sb%lsize(idir) / units_out%length%factor * sb%rlattice(1:3, idir)
-    enddo
-
-    write(iunit, '(a)') 'PRIMCOORD'
-
-    ! BoxOffset should be considered here
-    if (present(geo)) then
-      write(iunit, '(i10, a)') geo%natoms, ' 1'
-      do iatom = 1, geo%natoms
-        write(iunit, '(a10, 3f12.6)') trim(geo%atom(iatom)%label), (geo%atom(iatom)%x(1:3) - offset(1:3))
-      enddo
-    else ! geometry not available
-      write(iunit, '(a)') '1 1'
-      write(iunit, '(a)') 'H 0.0 0.0 0.0' ! this is a single dummy atom
-    endif
-      
     write(iunit, '(a)') 'BEGIN_BLOCK_DATAGRID3D'
     write(iunit, '(a)') 'comment'
     write(iunit, '(a)') 'DATAGRID_3D_comment'
@@ -809,6 +818,7 @@ contains
     call io_close(iunit)
     call X(cf_free) (cube)
 
+    call pop_sub()
   end subroutine out_xcrysden
 
 
@@ -824,6 +834,8 @@ contains
 #if defined(R_TCOMPLEX)
     integer :: data_im_id
 #endif
+
+    call push_sub('io_function_inc.Xoutput_function_global.out_netcdf')
 
     ierr = 0
 
@@ -955,6 +967,8 @@ contains
     ! close
     status = nf90_close(ncid)
     call X(cf_free) (cube)
+
+    call pop_sub()
   end subroutine out_netcdf
 
 
@@ -963,6 +977,8 @@ contains
     integer, intent(in)  :: ncid, data_id
     integer, intent(out) :: status
     FLOAT,   intent(in)  :: x(:,:,:)
+
+    call push_sub('io_function_inc.Xoutput_function_global.write_variable')
 
     select case(sb%dim)
     case(1);
@@ -973,6 +989,7 @@ contains
       status = nf90_put_var (ncid, data_id, x)
     end select
     
+    call pop_sub()
   end subroutine write_variable
 
 #endif /*defined(HAVE_NETCDF)*/
@@ -993,7 +1010,7 @@ subroutine X(io_function_out_text)(dir, mesh, mm, wf)
   FLOAT   :: xx(1:MAX_DIM)
   character(len=200) :: filename
 
-  call push_sub('states.modelmb_wf_write')
+  call push_sub('io_function_inc.Xio_function_out_text')
 
   write(filename,'(a,i4.4)') trim(dir)//'/wf_imb', mm
   iunit = io_open(filename, action='write')

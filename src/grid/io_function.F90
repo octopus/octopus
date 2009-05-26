@@ -46,6 +46,8 @@ module io_function_m
   public ::                       &
     io_function_read_how,         &
     io_function_fill_how,         &
+    write_xsf_geometry,           &
+    write_xsf_geometry_file,      &
     dinput_function,              &
     zinput_function,              &
     doutput_function,             &
@@ -116,7 +118,7 @@ contains
     !% The values of the function on the <math>z</math> axis are printed. The string ".x=0,y=0" is appended
     !% to previous file names.
     !%Option plane_x 8
-    !% A plane slice at <math>x=0</math> is printed. The string ``.x=0'' is appended
+    !% A plane slice at <math>x=0</math> is printed. The string ".x=0'' is appended
     !% to previous file names.
     !%Option plane_y 16
     !% A plane slice at <math>y=0</math> is printed. The string ".y=0" is appended
@@ -135,15 +137,16 @@ contains
     !%Option plain 256
     !% Restart files are output in plain binary.
     !%Option mesh_index 512
-    !% Generates output files of a given quantity (Density, Wfs, ...) which include
+    !% Generates output files of a given quantity (density, wfs, ...) which include
     !% the internal numbering of mesh points. Since this mode produces large datafiles this is only 
     !% useful for small meshes and debugging purposes.
     !% The output can also be used to display the mesh directly. A gnuplot script for mesh vizualization
     !% can be found under <tt>PREFIX/share/octopus/util/display_mesh_index.gp</tt>
     !%Option xcrysden 1024
-    !% A format for printing three-dimensional information, which can be visualized by
+    !% A format for printing structures and three-dimensional information, which can be visualized by
     !% the open-source program XCrySDen (http://www.xcrysden.org/). The string
-    !% ".xsf" is appended to previous file names.
+    !% ".xsf" is appended to previous file names. Note that lattice vectors and coordinates are as
+    !% specified by UnitsOutput.
     !%Option matlab 2048
     !% In combination with plane_x, plane_y and plane_z this option produces output files 
     !% which are suitable for 2D Matlab functions like mesh(), surf() or waterfall(). To load 
@@ -216,6 +219,82 @@ contains
 #endif
 
   end function io_function_fill_how
+
+  ! ---------------------------------------------------------
+  subroutine write_xsf_geometry_file(dir, fname, geo, sb, offset)
+    character(len=*),   intent(in) :: dir, fname
+    type(geometry_t),   intent(in) :: geo
+    type(simul_box_t),  intent(in) :: sb
+    FLOAT,    optional, intent(in) :: offset(:)
+
+    integer iunit
+    character(len=6) position
+    FLOAT, allocatable:: offset_(:)
+
+    call push_sub('io_function.write_xsf_geometry_file')
+
+    if( .not. mpi_grp_is_root(mpi_world)) return
+
+    call io_mkdir(dir)
+    position = 'asis'
+    iunit = io_open(trim(dir)//'/'//trim(fname)//'.xsf', action='write', position=position)
+
+    SAFE_ALLOCATE(offset_(1:sb%dim))
+    if(.not. present(offset)) then
+      offset_(1:sb%dim) = 0
+    else
+      ASSERT(ubound(offset, 1) >= sb%dim)
+      offset_(1:sb%dim) = offset(1:sb%dim)
+    endif
+
+    call write_xsf_geometry(iunit, geo, sb, offset_(:))
+
+    call io_close(iunit)
+
+    call pop_sub()
+  end subroutine write_xsf_geometry_file
+
+  ! ---------------------------------------------------------
+! for format specification see:
+! http://www.xcrysden.org/doc/XSF.html#__toc__11
+  subroutine write_xsf_geometry(iunit, geo, sb, offset)
+    integer,            intent(in) :: iunit
+    type(geometry_t),   intent(in) :: geo
+    type(simul_box_t),  intent(in) :: sb
+    FLOAT,    optional, intent(in) :: offset(:)
+
+    integer idir, iatom
+
+    call push_sub('io_function.write_xsf_geometry')
+
+    select case(sb%periodic_dim)
+      case(3)
+        write(iunit, '(a)') 'CRYSTAL'
+      case(2)
+        write(iunit, '(a)') 'SLAB'
+      case(1)
+        write(iunit, '(a)') 'WIRE'  ! could also be POLYMER
+      case(0)
+        write(iunit, '(a)') 'MOLECULE'
+    end select
+
+    write(iunit, '(a)') 'PRIMVEC'
+
+    do idir = 1, sb%dim
+      write(iunit, '(3f12.6)') 2 * sb%lsize(idir) / units_out%length%factor * sb%rlattice(1:3, idir)
+    enddo
+
+    write(iunit, '(a)') 'PRIMCOORD'
+
+    ! BoxOffset should be considered here
+    write(iunit, '(i10, a)') geo%natoms, ' 1'
+    do iatom = 1, geo%natoms
+      write(iunit, '(a10, 3f12.6)') trim(geo%atom(iatom)%label), ((geo%atom(iatom)%x(1:sb%dim) - offset(1:sb%dim)) / units_out%length%factor)
+    enddo
+
+    call pop_sub()
+  end subroutine write_xsf_geometry
+
 
 #if defined(HAVE_NETCDF)
   ! ---------------------------------------------------------

@@ -117,6 +117,8 @@ contains
 
     type(block_t) :: blk
 
+    call push_sub('output_h_sys.h_sys_output_init')
+
     !%Variable Output
     !%Type flag
     !%Default no
@@ -146,8 +148,9 @@ contains
     !% where k stands for the <i>k</i> number, p for the state,
     !% and i for the spin channel.
     !%Option geometry 16
-    !% Outputs a XYZ file called "geometry.xyz" containing the coordinates of the atoms
-    !% treated within Quantum Mechanics. If point charges were defined
+    !% Outputs a XYZ file called "geometry.xyz" (or an XSF file called "geometry.xsf" if OutputHow = xcrysden) 
+    !% containing the coordinates of the atoms
+    !% treated within quantum mechanics. If point charges were defined
     !% in the PDB file (see <tt>PDBCoordinates</tt>), they will be output
     !% in the file "geometry_classical.xyz".
     !%Option current 32
@@ -166,12 +169,12 @@ contains
     !%Option Bader 512
     !% Prints the Laplacian of the density which shows lone pairs, bonded charge concentrations
     !% and regions subject to electrophilic or nucleophilic attack.
-    !% See Bader, RF Atoms in Molecules: A Quantum Theory (Oxford, Oxford, 1990)
+    !% See RF Bader, Atoms in Molecules: A Quantum Theory (Oxford Univ Press, Oxford, 1990).
     !%Option el_pressure 1024
     !% Prints the electronic pressure. See Tao, Vignale, and Tokatly, Phys Rev Lett 100, 206405
     !%Option matrix_elements 2048
     !% Ouputs a series of matrix elements of the Kohn-Sham states. What is output can
-    !% be controlled by the OutputMatrixElements variable
+    !% be controlled by the OutputMatrixElements variable.
     !%Option pol_density 4096
     !% Prints out the density of dipole moment. For pol and pol_lr modules, 
     !% prints the density of polarizability, in the linear directory.
@@ -353,6 +356,7 @@ contains
     if(outp%what.ne.0.and.outp%what.ne.output_matrix_elements) &
          call io_function_read_how(sb, outp%how)
 
+    call pop_sub()
   end subroutine h_sys_output_init
 
 
@@ -364,21 +368,27 @@ contains
     type(hamiltonian_t),  intent(in)    :: hm
     type(h_sys_output_t), intent(in)    :: outp
     character(len=*),     intent(in)    :: dir
+
+    call push_sub('output_h_sys.h_sys_output_all')
     
     call h_sys_output_states(st, gr, geo, dir, outp)
     call h_sys_output_hamiltonian(hm, gr%mesh, gr%sb, dir, outp, geo)
     call h_sys_output_localization_funct(st, hm, gr, dir, outp, geo)
     call h_sys_output_current_flow(gr, st, dir, outp, geo)
 
-    if(iand(outp%what, output_geometry).ne.0) then
-      call atom_write_xyz(dir, "geometry", geo, gr%mesh%sb%dim)
-      if(simul_box_is_periodic(gr%sb)) &
-        call periodic_write_crystal(gr%sb, geo, dir)
+    if(iand(outp%what, output_geometry) .ne. 0) then
+      if(iand(outp%how, output_xcrysden) .ne. 0) then
+        call write_xsf_geometry_file(dir, "geometry", geo, gr%sb)
+      else
+        call atom_write_xyz(dir, "geometry", geo, gr%sb%dim)
+        if(simul_box_is_periodic(gr%sb)) &
+          call periodic_write_crystal(gr%sb, geo, dir)
+      endif
     end if
 
-     if(iand(outp%what, output_matrix_elements).ne.0) then
-       call output_me(outp%me, dir, st, gr, geo, hm)
-     end if
+    if(iand(outp%what, output_matrix_elements).ne.0) then
+      call output_me(outp%me, dir, st, gr, geo, hm)
+    end if
 
 #if defined(HAVE_ETSF_IO)
     if (outp%how == output_etsf) then
@@ -386,6 +396,7 @@ contains
     end if
 #endif
     
+    call pop_sub()
   end subroutine h_sys_output_all
 
   subroutine h_sys_output_localization_funct(st, hm, gr, dir, outp, geo)
@@ -400,6 +411,8 @@ contains
     character(len=256) :: fname
     integer :: is, ierr, imax
     type(mpi_grp_t) :: mpi_grp
+
+    call push_sub('output_h_sys.h_sys_output_localization_funct')
     
     mpi_grp = gr%mesh%mpi_grp
     if(st%parallel_in_states) mpi_grp = st%mpi_grp
@@ -468,6 +481,7 @@ contains
 
     SAFE_DEALLOCATE_A(f_loc)
 
+    call pop_sub()
   contains
     ! ---------------------------------------------------------
     subroutine out_basins(ff, filename)
@@ -477,6 +491,8 @@ contains
       character(len=256) :: fname
       type(basins_t)     :: basins
       integer            :: iunit
+
+      call push_sub('output_h_sys.h_sys_output_localization_funct.out_basins')
 
       call basins_init(basins, gr%mesh)
       call basins_analyze(basins, gr%mesh, st%d%nspin, ff(:), st%rho, CNST(0.01))
@@ -491,6 +507,7 @@ contains
 
       call basins_end(basins)
 
+      call pop_sub()
     end subroutine out_basins
 
   end subroutine h_sys_output_localization_funct
@@ -505,6 +522,8 @@ contains
     FLOAT, allocatable :: rho(:,:), lrho(:), tau(:,:)
     FLOAT   :: p_tf, dens
     integer :: is, ii
+
+    call push_sub('output_h_sys.h_sys_calc_electronic_pressure')
 
     SAFE_ALLOCATE( rho(1:gr%mesh%np_part, 1:st%d%nspin))
     SAFE_ALLOCATE(lrho(1:gr%mesh%np))
@@ -536,6 +555,7 @@ contains
       pressure(ii) = M_HALF*(M_ONE + pressure(ii)/sqrt(M_ONE + pressure(ii)**2))
     end do
 
+    call pop_sub()
   end subroutine h_sys_calc_electronic_pressure
 
 

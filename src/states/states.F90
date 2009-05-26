@@ -1419,7 +1419,7 @@ contains
     !%Default no
     !%Section Output
     !%Description
-    !% The band file will be written in gnuplot friendly format
+    !% The band file will be written in Gnuplot-friendly format.
     !%End
     call loct_parse_logical(datasets_check('OutputBandsGnuplotMode'), .true., gnuplot_mode)
 
@@ -1428,7 +1428,7 @@ contains
     !%Default no
     !%Section Output
     !%Description
-    !% The band file will be written in grace friendly format
+    !% The band file will be written in Grace-friendly format.
     !%End
     call loct_parse_logical(datasets_check('OutputBandsGraceMode'), .false., grace_mode)
 
