@@ -1008,7 +1008,7 @@ contains
 
 
   !--------------------------------------------------------------
-  recursive subroutine simul_box_end(sb)
+  subroutine simul_box_end(sb)
     type(simul_box_t), intent(inout) :: sb    
 
     integer :: il
@@ -1016,9 +1016,6 @@ contains
     call push_sub('simul_box.simul_box_end')
 
     if(sb%open_boundaries) then
-      do il = 1, NLEADS
-        call simul_box_end(sb%lead_unit_cell(il))
-      end do
       ! deallocated directly to avoid problems with xlf
       if(associated(sb%lead_unit_cell)) deallocate(sb%lead_unit_cell)
       nullify(sb%lead_unit_cell)
