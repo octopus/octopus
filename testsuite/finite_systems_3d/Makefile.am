@@ -88,6 +88,8 @@ dist_share_DATA = \
 	23-go-na2.test                               \
 	23-go-na2.01-steep.inp                       \
 	24-o2-spin.test                              \
-	24-o2-spin.01-gs.inp
+	24-o2-spin.01-gs.inp \
+	25-multiresolution.01-Hatom.inp \
+	25-multiresolution.test
 
 CLEANFILES = *~ *.bak

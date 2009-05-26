@@ -1,0 +1,23 @@
+%Coordinates
+ 'H_f' | 0 | 0 | 0
+%
+%Species 
+ 'H_f' | 1.00794 | spec_all_e | 1
+%
+
+LCAOStart = no
+Boxshape = sphere
+Radius = 8.0
+Spacing = 0.2
+fromScratch = yes
+
+TheoryLevel = independent_particles
+
+TypeOfMixing = linear
+Mixing = 1.0
+EigenSolverMaxIter = 300
+
+EigenSolver = cg_new
+
+HighResolutionArea = 0.30
+MR_InterpolationOrder = 8
