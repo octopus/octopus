@@ -19,6 +19,8 @@
 ##
 ## $Id: Makefile.am 2593 2006-11-20 10:58:15Z marques $
 
+include $(srcdir)/../../src/common-rules.make
+
 noinst_LIBRARIES = libpoisson_isf.a
 
 libpoisson_isf_a_SOURCES =   \
@@ -33,23 +35,6 @@ libpoisson_isf_a_SOURCES =   \
 
 nodist_libpoisson_isf_a_SOURCES = config_F90.h
 
-AM_FCFLAGS = @F90_MODULE_FLAG@$(srcdir)
-
-# How to compile an f90 file :)
-.f90.o:
-	$(FCCOMPILE) -c @FCFLAGS_f90@ -o $@ $<
-
-# How to compile an F90 file :)
-.F90.o:
-	$(FCCPP) $(CPPFLAGS) -I. $< > $*_oct.f90
-	@perl -pi -e 's/\\newline/\n/g; s/\\cardinal/#/g' $*_oct.f90
-	@if [ "@F90_ACCEPTS_LINE_NUMBERS@" = "no" ]; then \
-		grep -v "^#" $*_oct.f90 > $*_oct.f91; \
-		mv -f $*_oct.f91 $*_oct.f90; \
-	fi
-	$(FCCOMPILE) -c @FCFLAGS_f90@ -o $@ $*_oct.f90
-	@rm -f $*_oct.f90
-
 scaling_function.o: lazy_100.inc  lazy_14.inc  \
 	lazy_16.inc  lazy_20.inc  lazy_24.inc  \
 	lazy_30.inc  lazy_40.inc  lazy_50.inc  \
@@ -61,8 +46,6 @@ pfft3d.o: config_F90.h
 
 config_F90.h: ../../config.h
 	@grep '^#define' $^ > $@
-
-CLEANFILES = config_F90.h *~ *.bak *.mod *.il *.d *.pc* ifc*
 
 noinst_HEADERS=lazy_100.inc  lazy_14.inc  \
 	lazy_16.inc  lazy_20.inc  lazy_24.inc  \

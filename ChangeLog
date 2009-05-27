@@ -5287,3 +5287,331 @@
 	  src/states/modelmb_particles.F90, src/system/output_h_sys.F90,
 	  src/system/output_states.F90: improved young projection output
 
+2009-05-21 17:26  xavier
+
+	* [r5467] configure.ac, m4/arch.m4, m4/sse.m4,
+	  src/beak/Makefile.am, src/beak/beak.h, src/beak/beak_utils.c,
+	  src/beak/operate_as.S, src/beak/operate_ia64.S,
+	  src/beak/operate_ri_vec.c, src/grid/nl_operator_inc.F90,
+	  src/states/states.F90: * I changed how the special code is
+	  enabled for compilation. Now it is
+	  done mostly by autoconf instead of using the C preprocessor.
+	  
+	  * I removed the code of the alternative malloc, all the functions
+	  should
+	  work with unaligned access, but I have to check it.
+
+2009-05-21 17:48  mjv500
+
+	* [r5468] src/states/modelmb_density.F90,
+	  src/states/modelmb_density_matrix.F90,
+	  src/states/modelmb_exchange_syms.F90,
+	  src/system/output_states.F90: generalize antisym to more particle
+	  types
+
+2009-05-21 20:21  dstrubbe
+
+	* [r5469] src/sternheimer/Makefile.am, src/sternheimer/em_resp.F90,
+	  src/sternheimer/em_resp_calc.F90,
+	  src/sternheimer/em_resp_calc_inc.F90, src/sternheimer/kdotp.F90,
+	  src/sternheimer/kdotp_calc.F90,
+	  src/sternheimer/kdotp_calc_inc.F90, src/system/pert.F90: *) As
+	  Miguel suggested long ago at Mandragora, I added a real version
+	  of k.p, making corresponding changes to routines using k.p wfns.
+	  *) Added an error message if you try to run k.p on a finite
+	  system
+	  *) em_resp and k.p report whether they are using real or complex
+	  wavefunctions
+	  *) push_sub's in pert.F90
+
+2009-05-21 21:08  xavier
+
+	* [r5470] m4/arch.m4: Now sse2 is disabled by default in 32 bit
+	  x86.
+
+2009-05-21 21:23  xavier
+
+	* [r5471] src/system/pert.F90: Fixes compilation problem.
+
+2009-05-22 00:34  dstrubbe
+
+	* [r5472] src/grid/multigrid_inc.F90, src/hamiltonian/epot_inc.F90,
+	  src/hamiltonian/gauge_field.F90, src/hamiltonian/hamiltonian.F90,
+	  src/opt_control/check_input.F90, src/sternheimer/em_resp.F90,
+	  src/sternheimer/em_resp_calc_inc.F90: *) Some trivial changes to
+	  punctuation
+	  *) Moved hyperpolarizability message to main routine, where other
+	  messages are
+	  *) Alphabetized modules in gauge_fields
+
+2009-05-22 00:39  dstrubbe
+
+	* [r5473] src/grid/multigrid_inc.F90, src/hamiltonian/epot_inc.F90:
+	  Undid two changes to files I didn't mean to commit.
+
+2009-05-22 08:52  marques
+
+	* [r5474] src/hamiltonian/epot_inc.F90, src/species/species.F90: *)
+	  In the SP6, please do not put something like "write ()
+	  function_call()", as it will likely yiled the error "recursive
+	  write"
+	  *) The SP6 compiler does not liek some forall
+
+2009-05-22 12:36  xavier
+
+	* [r5475] src/grid/Makefile.am, src/grid/grid.F90,
+	  src/grid/multigrid.F90, src/grid/multigrid_inc.F90,
+	  src/grid/transfer_table.F90: Now the multigrid transfer tables
+	  have their own module.
+
+2009-05-22 15:50  xavier
+
+	* [r5476] src/hamiltonian/projector_inc.F90: More fixes for xlf in
+	  the SP6.
+
+2009-05-22 15:58  xavier
+
+	* [r5477] src/grid/multigrid_inc.F90, src/hamiltonian/epot_inc.F90,
+	  src/poisson/poisson_multigrid.F90,
+	  src/system/preconditioners_inc.F90: Changed the arguments for
+	  some multigrid functions.
+
+2009-05-22 17:33  xavier
+
+	* [r5478] src/poisson/poisson_multigrid.F90: A line was too long.
+
+2009-05-22 20:48  xavier
+
+	* [r5479] testsuite/oct-run_regression_test.pl: Now the testsuite
+	  uses the standard way of executing MPI jobs. (The
+	  standard command is mpiexec and the standard flag for the number
+	  of
+	  processes is -n .)
+
+2009-05-22 22:47  dstrubbe
+
+	* [r5480] testsuite/periodic_systems/06-h2o_pol_lr.01_gs.inp,
+	  testsuite/periodic_systems/06-h2o_pol_lr.02_kdotp.inp,
+	  testsuite/periodic_systems/06-h2o_pol_lr.03_emresp.inp,
+	  testsuite/periodic_systems/06-h2o_pol_lr.test,
+	  testsuite/periodic_systems/Makefile.am: Added a test for dipole
+	  and polarizability of H2O molecule in large supercell. Effective
+	  masses and Born effective charges should be coming soon.
+
+2009-05-23 08:06  xavier
+
+	* [r5481] src/grid/mesh_init.F90, src/grid/multigrid_inc.F90,
+	  src/system/preconditioners.F90: Now mesh%vol_pp has size 1 if the
+	  grid is non-curvilinear. This saves
+	  memory and reduces the initialization time of the mesh.
+
+2009-05-23 08:38  xavier
+
+	* [r5482] src/ions/simul_box.F90: A small optimization in
+	  simul_box_in_box (with thousands of atoms this
+	  thing become important, specially if they are serial).
+
+2009-05-23 09:48  xavier
+
+	* [r5483] src/grid/mesh_init.F90: Improved the way boundary points
+	  are partitioned, now it is done
+	  faster, using much less memory and it is a bit more balanced.
+
+2009-05-23 16:56  acastro
+
+	* [r5484] src/opt_control/check_input.F90,
+	  src/opt_control/opt_control.F90, src/td/Makefile.am,
+	  src/td/td_rti.F90, src/td/td_rti_qoct_inc.F90: Added
+	  Crank-Nicholson as a possible propagator for the QOCT equation
+	  with interacting electrons; it seems to behave better than the
+	  only
+	  one that was possible before.
+	  
+	  Since the td_rti.F90 file was growing too large, I separated the
+	  QOCT
+	  propagators.
+
+2009-05-24 13:09  xavier
+
+	* [r5485] src/poisson/poisson_multigrid.F90: * Multigrid now uses a
+	  correction scheme instead of a full
+	  approximation scheme.
+	  
+	  * Bugfix: Some boundary updates were missing in multigrid
+	  relaxation,
+	  this affected the parallel case.
+
+2009-05-24 14:09  xavier
+
+	* [r5486] src/poisson/poisson.F90,
+	  src/poisson/poisson_multigrid.F90, src/system/v_ks.F90: *
+	  Modified the default parameters for multigrid.
+	  * For iterative solvers, a better starting point is given by
+	  using the
+	  extrapolated potential.
+
+2009-05-24 16:07  xavier
+
+	* [r5487] src/math/solvers_inc.F90, src/poisson/poisson_cg.F90,
+	  src/poisson/poisson_corrections.F90: Optimization and cleaning of
+	  the conjugated gradients poisson solver
+	  and the poisson correction.
+
+2009-05-25 12:39  marques
+
+	* [r5488] src/basic/profiling.F90, src/grid/mesh_init.F90: A
+	  variable was not nullified when using the HyperBox
+
+2009-05-25 17:09  xavier
+
+	* [r5489] src/grid/grid.F90, src/grid/mesh_init.F90: Rearranged
+	  some loops to speed up intialization of the mesh.
+
+2009-05-25 18:26  xavier
+
+	* [r5490] src/grid/index.F90, src/grid/mesh.F90,
+	  src/grid/mesh_init.F90: Removed Lxyz_tmp and x_tmp.
+
+2009-05-25 20:08  xavier
+
+	* [r5491] src/grid/mesh_init.F90: Now bits are used to mark the
+	  points in mesh initialization.
+
+2009-05-25 21:31  xavier
+
+	* [r5492] src/sternheimer/em_resp_calc_inc.F90: This file was
+	  taking too long to compile, splitting a function solves
+	  the problem.
+
+2009-05-25 23:03  xavier
+
+	* [r5493] src/grid/mesh_init.F90, src/grid/par_vec_inc.F90,
+	  src/hamiltonian/projector_inc.F90: * Too long lines were causing
+	  compilation with g95 and MPI to fail.
+
+2009-05-26 06:19  sakko
+
+	* [r5494]
+	  testsuite/finite_systems_3d/25-multiresolution.01-Hatom.inp,
+	  testsuite/finite_systems_3d/25-multiresolution.test,
+	  testsuite/finite_systems_3d/Makefile.am: Added a test for
+	  multiresolution.
+
+2009-05-26 09:23  marques
+
+	* [r5495] ChangeLog, libxc/ChangeLog, src/basic/profiling.F90,
+	  src/grid/mesh_init.F90: *) Added a MemoryLimit variable. Octopus
+	  will stop if this variable is set and if the total memory
+	  depasses its value
+	  *) Octopus was not compiling in 4D due to array mismatches
+
+2009-05-26 09:24  marques
+
+	* [r5496] src/hamiltonian/scf_tol.F90: Forgot debug statement
+	  (thanks David)
+
+2009-05-26 10:42  sakko
+
+	* [r5497] src/grid/mesh.F90, src/grid/mesh_init.F90,
+	  testsuite/finite_systems_3d/25-multiresolution.test: Implemented
+	  a crude method for estimating grid point volumes in
+	  multiresolution calculation.
+
+2009-05-26 10:44  xavier
+
+	* [r5498] src/basic/global.F90, src/hamiltonian/epot.F90,
+	  src/ions/geometry.F90, src/scf/scf.F90, src/td/td.F90,
+	  src/td/td_write.F90: * The interaction of ions with lasers and
+	  electric fields had the
+	  wrong sign.
+	  
+	  * Introduced the constant P_PROTON_CHARGE (=-1.0) to mark
+	  explicitily where this value should be considered.
+	  
+	  * Now geometry_dipole returns the charge in atomic units.
+
+2009-05-26 11:56  xavier
+
+	* [r5499] src/basic/profiling.F90, src/grid/basins.F90,
+	  src/ions/geometry.F90, src/ions/simul_box.F90, src/main/gcm.F90,
+	  src/main/unocc.F90, src/states/restart.F90,
+	  src/utils/phonon_spectrum.F90: Fix by Tobias Burns:
+	  
+	  I found huge(REAL_PRECISION) which of course does not make much
+	  sense.
+	  That is equivalent to huge(4) (or, equivalently, to huge(8))
+	  which
+	  returns the largest default-kind integer. I'm pretty sure that
+	  the
+	  largest 4- or 8-byte real number was intended.
+	  
+	  I think the cleanest way is to change it to x = huge(x)
+	  alternatively
+	  one can use huge(M_ONE) or M_HUGE, but I think x < huge(x) is
+	  algorithmically cleaner.
+
+2009-05-26 14:29  xavier
+
+	* [r5500] src/grid/mesh.F90, src/main/run.F90,
+	  src/states/states.F90: Some fixes to the memory runmode:
+	  * For large systems it was giving negative numbers.
+	  * It does not generate the ionic potential, so it is faster now.
+
+2009-05-26 16:28  xavier
+
+	* [r5501] src/ions/simul_box.F90: Removed the recursivity in
+	  simul_box_end (if there is a memory leak,
+	  please fix it in a reasonable way).
+
+2009-05-26 20:04  xavier
+
+	* [r5502] src/basic/profiling.F90: Now the information about
+	  throughput and bandwidth are accumulative.
+
+2009-05-26 20:39  xavier
+
+	* [r5503] src/grid/mesh_init.F90: Removed some ' from comments.
+
+2009-05-26 21:50  dstrubbe
+
+	* [r5504] src/ions/geometry.F90, src/scf/scf.F90,
+	  testsuite/linear_response/02-h2o_pol_lr.test,
+	  testsuite/oct-run_regression_test.pl: *) Made two corrections to
+	  Xavier's recent changes to dipoles, to restore the correct
+	  behavior. The variable P_PROTON_CHARGE was multiplied twice in
+	  the geometry_dipole routine, and the sign of the eventual dipole
+	  was reversed.
+	  *) Made it so you can set the path for the temporary directories
+	  used in the testsuite. With this and the recent change to
+	  mpiexec, I now no longer have to edit the testsuite script to run
+	  make check on a Cray machine.
+	  *) Added a test for dipole moment for H2O as finite system, to
+	  detect future alterations to the dipole calculation.
+
+2009-05-26 23:56  dstrubbe
+
+	* [r5505] src/grid/io_function.F90, src/grid/io_function_inc.F90,
+	  src/ions/geometry.F90, src/states/states.F90,
+	  src/system/Makefile.am, src/system/h_sys_output.F90,
+	  src/system/output_h_sys.F90: *) Renamed file output_h_sys to
+	  h_sys_output to be consistent with the name of its modules and
+	  functions.
+	  *) Added many push_sub statements
+	  *) Some modifications to variable documentation
+	  *) Enabled writing geometry in XSF format, as well as XYZ. Unlike
+	  XYZ, XSF includes the lattice vectors and convenient for periodic
+	  systems.
+	  *) XSF output now correctly uses terms for level of periodicity
+	  *) Coordinates in XSF file now are in the units of UnitsOutput.
+
+2009-05-27 00:28  dstrubbe
+
+	* [r5506] src/grid/io_function.F90: Long line shortened.
+
+2009-05-27 08:24  sakko
+
+	* [r5507] src/grid/mesh_init.F90,
+	  testsuite/finite_systems_3d/25-multiresolution.test: Improved
+	  calculation of grid point resolutions and volumes (in
+	  multiresolution).
+

@@ -118,7 +118,7 @@ contains
     !% The values of the function on the <math>z</math> axis are printed. The string ".x=0,y=0" is appended
     !% to previous file names.
     !%Option plane_x 8
-    !% A plane slice at <math>x=0</math> is printed. The string ".x=0'' is appended
+    !% A plane slice at <math>x=0</math> is printed. The string ".x=0" is appended
     !% to previous file names.
     !%Option plane_y 16
     !% A plane slice at <math>y=0</math> is printed. The string ".y=0" is appended
