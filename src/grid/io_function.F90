@@ -289,7 +289,8 @@ contains
     ! BoxOffset should be considered here
     write(iunit, '(i10, a)') geo%natoms, ' 1'
     do iatom = 1, geo%natoms
-      write(iunit, '(a10, 3f12.6)') trim(geo%atom(iatom)%label), ((geo%atom(iatom)%x(1:sb%dim) - offset(1:sb%dim)) / units_out%length%factor)
+      write(iunit, '(a10, 3f12.6)') trim(geo%atom(iatom)%label), &
+        ((geo%atom(iatom)%x(1:sb%dim) - offset(1:sb%dim)) / units_out%length%factor)
     enddo
 
     call pop_sub()
