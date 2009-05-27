@@ -247,9 +247,9 @@ module loct_math_m
         subroutine f(n, x, val, getgrad, grad)
           integer, intent(in) :: n
           real(8), intent(in) :: x(n)
-          real(8), intent(out) :: val
+          real(8), intent(inout) :: val
           integer, intent(in)  :: getgrad
-          real(8), intent(out) :: grad(n)
+          real(8), intent(inout) :: grad(n)
         end subroutine f
         subroutine write_iter_info(iter, n, val, maxdr, maxgrad, x)
           integer, intent(in) :: iter
