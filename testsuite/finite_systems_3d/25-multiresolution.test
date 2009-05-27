@@ -5,6 +5,6 @@ TestGroups : long-run
 Enabled    : Yes
 
 Input: 25-multiresolution.01-Hatom.inp
-match ; Total energy ; GREP(static/info, 'Total       =', 20) ;-0.49994921
+match ; Total energy ; GREP(static/info, 'Total       =', 20) ;-0.49982710
 
 

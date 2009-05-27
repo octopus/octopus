@@ -181,9 +181,9 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
   type(stencil_t),    intent(in)    :: stencil
 
   integer :: i, j, k, il, ik, ix, iy, iz, is
+  integer :: jx, jy, jz, res_counter, j_counter
   FLOAT   :: chi(MAX_DIM), xx(1:MAX_DIM)
   integer :: nr(1:2, 1:MAX_DIM), res
-  logical :: inside
 
   call push_sub('mesh_init.mesh_init_stage_2')
   call profiling_in(mesh_init_prof)
@@ -218,7 +218,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
   mesh%idx%Lxyz_inv(:,:,:) = 0
   res = 1
 
-  ! We label the points inside the mesh + enlargement
+  ! We label the points inside the mesh
   do iz = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
     chi(3) = real(iz, REAL_PRECISION) * mesh%h(3) + sb%box_offset(3)
     
@@ -230,36 +230,117 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
         
         call curvilinear_chi2x(sb, cv, chi(:), xx)
 
-        inside = simul_box_in_box(sb, geo, xx, inner_box = .true.)
-
+        
+        ! With multiresolution, only inner (not enlargement) points are marked now
         if(simul_box_multires(sb)) then
-          mesh%resolution(ix, iy, iz) = 1
-          if(.not. inside .and. simul_box_multires(sb)) mesh%resolution(ix, iy, iz) = 2
-          inside = inside .or. (simul_box_in_box(sb, geo, xx) .and. &
-             mod(ix, 2) == 0 .and. mod(iy, 2) == 0 .and. mod(iz, 2) == 0)
-          res = mesh%resolution(ix, iy, iz)
-        end if
 
-        if(inside) then
-          mesh%idx%Lxyz_inv(ix, iy, iz) = ibset(mesh%idx%Lxyz_inv(ix, iy, iz), INNER_POINT)
+          if ( simul_box_in_box(sb, geo, xx, inner_box = .true.) .or. &
+             ( simul_box_in_box(sb, geo, xx) .and. &
+               mod(ix, 2) == 0 .and. mod(iy, 2) == 0 .and. mod(iz, 2) == 0) ) then
+                   mesh%idx%Lxyz_inv(ix, iy, iz) = ibset(mesh%idx%Lxyz_inv(ix, iy, iz), INNER_POINT)
+          end if
 
-          do is = 1, stencil%size
-            if(stencil%center == is) cycle
+        else ! the usual way: mark both inner and enlargement points
 
-            i = ix + res*stencil%points(1, is)
-            j = iy + res*stencil%points(2, is)
-            k = iz + res*stencil%points(3, is)
+          if ( simul_box_in_box(sb, geo, xx) ) then
 
-            if(any((/i, j, k/) < mesh%idx%nr(1, 1:3)) .or. any((/i, j, k/) >  mesh%idx%nr(2, 1:3))) cycle
+            mesh%idx%Lxyz_inv(ix, iy, iz) = ibset(mesh%idx%Lxyz_inv(ix, iy, iz), INNER_POINT)
 
-            mesh%idx%Lxyz_inv(i, j, k) = ibset(mesh%idx%Lxyz_inv(i, j, k), ENLARGEMENT_POINT)
+            do is = 1, stencil%size
+              if(stencil%center == is) cycle
+    
+              i = ix + stencil%points(1, is)
+              j = iy + stencil%points(2, is)
+              k = iz + stencil%points(3, is)
+    
+              if(any((/i, j, k/) < mesh%idx%nr(1, 1:3)) .or. any((/i, j, k/) >  mesh%idx%nr(2, 1:3))) cycle
+    
+              mesh%idx%Lxyz_inv(i, j, k) = ibset(mesh%idx%Lxyz_inv(i, j, k), ENLARGEMENT_POINT)
+    
+            end do
 
-          end do
+          end if
+  
         end if
 
       end do
     end do
   end do
+
+
+  if(simul_box_multires(sb)) then
+
+    ! Calculate the resolution for each point and label the enlargement points
+    do iz = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
+      chi(3) = real(iz, REAL_PRECISION) * mesh%h(3) + sb%box_offset(3)
+      
+      do iy = mesh%idx%nr(1,2), mesh%idx%nr(2,2)
+        chi(2) = real(iy, REAL_PRECISION) * mesh%h(2) + sb%box_offset(2)
+        
+        do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
+          chi(1) = real(ix, REAL_PRECISION) * mesh%h(1) + sb%box_offset(1)
+ 
+          ! skip if not inner point
+          if(.not.btest(mesh%idx%Lxyz_inv(ix, iy, iz), INNER_POINT)) cycle
+        
+          res = -1
+          res_counter = 0
+ 
+          do while(.true.)
+ 
+            res_counter = res_counter + 1
+ 
+            ! loop through cartesian axes (both directions)
+            do j_counter = 1,6
+              select case(j_counter)
+                case(1)
+                  jx=ix-res_counter; jy=iy; jz=iz;
+                case(2)
+                  jx=ix+res_counter; jy=iy; jz=iz;
+                case(3)
+                  jx=ix; jy=iy-res_counter; jz=iz;
+                case(4)
+                  jx=ix; jy=iy+res_counter; jz=iz;
+                case(5)
+                  jx=ix; jy=iy; jz=iz-res_counter;
+                case(6)
+                  jx=ix; jy=iy; jz=iz+res_counter;
+              end select
+ 
+              if(any((/jx, jy, jz/) < mesh%idx%nr(1, 1:3)) .or. &
+                 any((/jx, jy, jz/) > mesh%idx%nr(2, 1:3))) cycle
+              ! exit after finding neighboring inner point
+              if(btest(mesh%idx%Lxyz_inv(jx, jy, jz), INNER_POINT)) then
+                res = res_counter
+                exit
+              end if
+ 
+            end do
+ 
+            if(res.ne.-1) exit
+ 
+          end do
+ 
+          mesh%resolution(ix, iy, iz) = res
+ 
+          ! mark the enlargement points
+          do is = 1, stencil%size
+            if(stencil%center == is) cycle
+ 
+            i = ix + res*stencil%points(1, is)
+            j = iy + res*stencil%points(2, is)
+            k = iz + res*stencil%points(3, is)
+ 
+            if(any((/i, j, k/) < mesh%idx%nr(1, 1:3)) .or. any((/i, j, k/) >  mesh%idx%nr(2, 1:3))) cycle
+ 
+            mesh%idx%Lxyz_inv(i, j, k) = ibset(mesh%idx%Lxyz_inv(i, j, k), ENLARGEMENT_POINT)
+ 
+          end do
+ 
+        end do
+      end do
+    end do
+  end if
 
   ! count the points
   il = 0
@@ -551,9 +632,9 @@ contains
     integer :: i, j, jj(1:MAX_DIM), ip, np
     FLOAT   :: chi(MAX_DIM)
 
-    FLOAT :: xx, yy, zz, ref_dist, comp_dist, volchecksum
+    FLOAT :: ref_dist, comp_dist, volchecksum
     FLOAT :: dd0(1:3), dd1(1:3), n_vect(1:3), jn_vect(1:3)
-    integer :: nx, ny, nz, big_cube_n, tiny_cube_n, n_counter, neigh_n, closer, equally_close, further
+    integer :: nx, ny, nz, big_cube_n, tiny_cube_n, n_counter, neigh_n, closer, equally_close
     integer, allocatable :: neigh_table(:)
 
 #if defined(HAVE_MPI)
@@ -616,7 +697,7 @@ contains
         big_cube_n = 2
 
         ! into how many areas each spacing is divided.
-        tiny_cube_n = 2
+        tiny_cube_n = 4
 
         ! this is used for comparison of the total volume with the "correct" one. 
         volchecksum = M_ZERO
@@ -630,7 +711,7 @@ contains
 
           ! checksum counter
           if(mod(jj(1),2).eq.0 .and. mod(jj(2),2).eq.0 .and. mod(jj(3),2).eq.0) then
-            volchecksum = volchecksum + product(2.0*mesh%h(1:sb%dim))
+            volchecksum = volchecksum + product(M_TWO*mesh%h(1:sb%dim))
           end if
 
           ! the spacing of the current point:
@@ -672,40 +753,33 @@ contains
             do ny = 0,2*tiny_cube_n*big_cube_n-1
               do nz = 0,2*tiny_cube_n*big_cube_n-1
 
-                ! the coordinates of the tiny cube, placing the origin to the current point i
-                xx=-big_cube_n*dd0(1)+0.50*dd1(1)+real(nx)*dd1(1)
-                yy=-big_cube_n*dd0(2)+0.50*dd1(2)+real(ny)*dd1(2)
-                zz=-big_cube_n*dd0(3)+0.50*dd1(3)+real(nz)*dd1(3)
+                ! the vector of the tiny cube, placing the origin to the current point i
+                n_vect(1) = -big_cube_n*dd0(1)+real(nx+0.5)*dd1(1)
+                n_vect(2) = -big_cube_n*dd0(2)+real(ny+0.5)*dd1(2)
+                n_vect(3) = -big_cube_n*dd0(3)+real(nz+0.5)*dd1(3)
                 
-                ! the vector from origin to (xx,yy,zz)
-                n_vect(1) = xx
-                n_vect(2) = yy
-                n_vect(3) = zz
-
-                ref_dist = xx**2+yy**2+zz**2
+                ref_dist = sum(n_vect(1:sb%dim)**2)
 
                 ! initialize the counters
                 closer = 0
-                further = 0
                 equally_close = 0
 
-                ! loop through the nabors
+                ! loop through the neighbors
                 do n_counter = 1, neigh_n
 
                   j = neigh_table(n_counter) ! index of the neighbor
 
                   jn_vect(1:sb%dim) = mesh%x(i,1:sb%dim)+n_vect(1:sb%dim) - mesh%x(j,1:sb%dim)
-                  comp_dist = jn_vect(1)**2+jn_vect(2)**2+jn_vect(3)**2
+                  comp_dist = sum(jn_vect(1:sb%dim)**2)
 
                   ! find out if the current neighbor j is (i) closer, (ii) as close as, or
                   ! (iii) further from the present tiny cube than the current point i.
 
-                  if(abs(ref_dist-comp_dist).lt.1.0e-8) then
+                  if(abs(ref_dist-comp_dist).lt.1.0e-12) then
                     equally_close = equally_close + M_ONE
                   elseif (comp_dist.lt.ref_dist) then
                     closer = closer + 1
-                  else
-                    further = further + M_ONE
+                    exit
                   endif
 
                 end do
@@ -727,7 +801,7 @@ contains
 
         write (message(1),'(a,F26.12)') 'Volume as sum(mesh%vol_pp(1:mesh%np)) : ',sum(mesh%vol_pp(1:mesh%np))
         write (message(2),'(a,F26.12)') 'Checksum volume (result for non multiresolution, double spacing) : ',volchecksum
-        write (message(3),'(a,F26.12)') ' => The error in the volume: ',abs(volchecksum)-sum(mesh%vol_pp(1:mesh%np))
+        write (message(3),'(a,F26.12)') ' => The error in the volume: ',abs(volchecksum-sum(mesh%vol_pp(1:mesh%np)))
         call write_info(3)
 
       else ! no multiresolution
