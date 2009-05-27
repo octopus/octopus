@@ -19,8 +19,6 @@
  $Id: operate_ia64.S 2146 2006-05-23 17:36:00Z xavier $
 #endif
 
-#include <config.h>
-
 #define ISIZE 4
 #define ISHIFT 2
 #define FSIZE 8

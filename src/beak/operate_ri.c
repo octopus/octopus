@@ -25,13 +25,6 @@
 
 #include <assert.h>
 
-#if !defined(OCT_ITANIUM) || defined(SINGLE_PRECISION)
-void FC_FUNC_(doperate_as, DOPERATE_AS)(void){
-}
-void FC_FUNC_(zoperate_as, ZOPERATE_AS)(void){
-}
-#endif
-
 void FC_FUNC_(doperate_ri,DOPERATE_RI)(const int * opn, 
 				       const ffloat * restrict w, 
 				       const int * opnri,
