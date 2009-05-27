@@ -771,6 +771,7 @@ contains
     type(grid_t), intent(in) :: gr
     type(xc_t), intent(in) :: xc
     integer :: np, nspin
+
     ! In this release, no non-local part for the QOCT Hamiltonian.
     nullify(hm%oct_st)
 
@@ -789,6 +790,7 @@ contains
   ! ---------------------------------------------------------
   subroutine hamiltonian_remove_oct_exchange(hm)
     type(hamiltonian_t), intent(inout) :: hm
+
     nullify(hm%oct_st)
     hm%oct_exchange = .false.
     SAFE_DEALLOCATE_P(hm%oct_fxc)
@@ -798,6 +800,7 @@ contains
   ! ---------------------------------------------------------
   subroutine hamiltonian_adjoint(hm)
     type(hamiltonian_t), intent(inout) :: hm
+
     if(.not.hm%adjoint) then
       hm%adjoint = .true.
       if(hm%ab .eq. IMAGINARY_ABSORBING) then
@@ -810,6 +813,7 @@ contains
   ! ---------------------------------------------------------
   subroutine hamiltonian_not_adjoint(hm)
     type(hamiltonian_t), intent(inout) :: hm
+
     if(hm%adjoint) then
       hm%adjoint = .false.
       if(hm%ab .eq. IMAGINARY_ABSORBING) then
@@ -833,11 +837,12 @@ contains
       forall (ip = 1:mesh%np) this%total(ispin)%potential(ip) = this%vhxc(ip, ispin) + this%ep%vpsl(ip)
       
     end do
-
+    
+    call profiling_count_operations(mesh%np*this%d%nspin)
   end subroutine hamiltonian_update_potential
 
   subroutine hamiltonian_epot_generate(this, gr, geo, st, time)
-    type(hamiltonian_t), intent(inout) :: this
+    type(hamiltonian_t),   intent(inout) :: this
     type(grid_t), target,  intent(inout) :: gr
     type(geometry_t),      intent(inout) :: geo
     type(states_t),        intent(inout) :: st
