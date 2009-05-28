@@ -12,21 +12,29 @@ match ; Eigenvalue 1 ; GREP(static/info, '1   --', 12)        ;  -1.163971
 match ; Dipole       ; GREP(static/info, '<x2>', 14)          ;   3.96066E-01
 
 Input: 06-h2o_pol_lr.02_kdotp.inp
-#match ; Inverse effective mass 1 ; LINE(kdotp/kpoint_1_1, 11, 25) ;  0.088989
-#match ; Inverse effective mass 2 ; LINE(kdotp/kpoint_1_1, 17, 25) ;  0.034511
-#match ; Inverse effective mass 3 ; LINE(kdotp/kpoint_1_1, 23, 25) ; -0.004580
-#match ; Inverse effective mass 4 ; LINE(kdotp/kpoint_1_1, 29, 25) ; -0.006549
+match ; Inverse effective mass 1 ; LINE(kdotp/kpoint_1_1, 11, 25) ;  0.088989
+match ; Inverse effective mass 2 ; LINE(kdotp/kpoint_1_1, 17, 25) ;  0.034511
+match ; Inverse effective mass 3 ; LINE(kdotp/kpoint_1_1, 23, 25) ; -0.004580
+match ; Inverse effective mass 4 ; LINE(kdotp/kpoint_1_1, 29, 25) ; -0.006549
 
 Input: 06-h2o_pol_lr.03_emresp.inp
 Precision : 0.001
-match ; Polarizability XX w=0.0    ; LINE(linear/freq_0.0000/alpha, 2,  5) ; 17.445757
-match ; Polarizability YY w=0.0    ; LINE(linear/freq_0.0000/alpha, 3, 25) ; 13.359324
-match ; Polarizability ZZ w=0.0    ; LINE(linear/freq_0.0000/alpha, 4, 45) ; 31.698803
+match ; Polarizability XX w=0.0   ; LINE(linear/freq_0.0000/alpha, 2,  5) ; 17.445757
+match ; Polarizability YY w=0.0   ; LINE(linear/freq_0.0000/alpha, 3, 25) ; 13.359324
+match ; Polarizability ZZ w=0.0   ; LINE(linear/freq_0.0000/alpha, 4, 45) ; 31.698803
 
-match ; Polarizability XX w=0.1    ; LINE(linear/freq_0.1000/alpha, 2,  5) ; 18.593990
-match ; Polarizability YY w=0.1    ; LINE(linear/freq_0.1000/alpha, 3, 25) ; 14.243823
-match ; Polarizability ZZ w=0.1    ; LINE(linear/freq_0.1000/alpha, 4, 45) ; 50.124300
+match ; Polarizability XX w=0.1   ; LINE(linear/freq_0.1000/alpha, 2,  5) ; 18.593990
+match ; Polarizability YY w=0.1   ; LINE(linear/freq_0.1000/alpha, 3, 25) ; 14.243823
+match ; Polarizability ZZ w=0.1   ; LINE(linear/freq_0.1000/alpha, 4, 45) ; 50.124300
 
+match ; Cross sect. (avg) w=0.1   ; LINE(linear/freq_0.1000/cross_section, -1, 25) ; 0.26940849E-01
+match ; Cross sect. (ani) w=0.1   ; LINE(linear/freq_0.1000/cross_section, -1, 45) ; 0.60853248E-01
 
+# note that these Born charges are highly inaccurate due to the coarseness of the mesh
+match ; Born charge O XX w=0.0    ; LINE(linear/freq_0.0000/Born_charges, 5,  5) ; 6.728895
+match ; Born charge O YY w=0.0    ; LINE(linear/freq_0.0000/Born_charges, 6, 25) ; 7.038312
+match ; Born charge O ZZ w=0.0    ; LINE(linear/freq_0.0000/Born_charges, 7, 45) ; 6.531934
 
-
+match ; Born charge O XX w=0.1    ; LINE(linear/freq_0.1000/Born_charges, 5,  5) ; 6.782098
+match ; Born charge O YY w=0.1    ; LINE(linear/freq_0.1000/Born_charges, 6, 25) ; 7.107364
+match ; Born charge O ZZ w=0.1    ; LINE(linear/freq_0.1000/Born_charges, 7, 45) ; 5.961488

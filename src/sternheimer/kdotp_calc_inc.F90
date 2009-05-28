@@ -36,16 +36,16 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
   integer ik, ist, ist2, idir1, idir2
   R_TYPE term
   R_TYPE, allocatable   :: pertpsi(:, :)       ! H`i|psi0>
-  R_TYPE, allocatable   :: proj_dl_psi(:, :)   ! (1-Pn')|psi'j>
-  type(mesh_t), pointer :: m
+  R_TYPE, allocatable   :: proj_dl_psi(:, :)   ! (1-Pn`)|psi`j>
+  type(mesh_t), pointer :: mesh
   logical, allocatable  :: orth_mask(:)
 
   call push_sub('kdotp_calc.Xcalc_eff_mass_inv')
 
-  m => sys%gr%mesh
+  mesh => sys%gr%mesh
 
-  SAFE_ALLOCATE(pertpsi(1:sys%gr%sb%dim, 1:m%np))
-  SAFE_ALLOCATE(proj_dl_psi(1:m%np, 1)) ! second index should be sys%st%d%dim, i.e. spinors
+  SAFE_ALLOCATE(pertpsi(1:mesh%np, 1:sys%gr%sb%dim))
+  SAFE_ALLOCATE(proj_dl_psi(1:mesh%np, 1)) ! second index should be sys%st%d%dim, i.e. spinors
   SAFE_ALLOCATE(orth_mask(1:sys%st%nst))
 
   eff_mass_inv(:, :, :, :) = 0
@@ -54,10 +54,11 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
 
     do ist = 1, sys%st%nst
 
+      ! start by computing all the wavefunctions acted on by perturbation
       do idir1 = 1, sys%gr%sb%dim
         call pert_setup_dir(perturbation, idir1)
         call X(pert_apply)(perturbation, sys%gr, sys%geo, hm, ik, &
-          sys%st%X(psi)(1:m%np, 1, ist, ik), pertpsi(idir1, 1:m%np))
+          sys%st%X(psi)(1:mesh%np, 1, ist, ik), pertpsi(1:mesh%np, idir1))
       enddo
 
       do idir1 = 1, sys%gr%sb%dim
@@ -71,28 +72,27 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
             cycle
           end if
 
-          proj_dl_psi(1:m%np, 1) = lr(idir2, 1)%X(dl_psi)(1:m%np, 1, ist, ik)
+          proj_dl_psi(1:mesh%np, 1) = lr(idir2, 1)%X(dl_psi)(1:mesh%np, 1, ist, ik)
           
           if (occ_solution_method == 0) then
           ! project out components of other states in degenerate subspace
             do ist2 = 1, sys%st%nst
 !              alternate direct method
 !              if (abs(sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik)) < degen_thres) then
-!                   proj_dl_psi(1:m%np) = proj_dl_psi(1:m%np) - sys%st%X(psi)(1:m%np, 1, ist2, ik) * &
-!                     X(mf_dotp)(m, sys%st%X(psi)(1:m%np, 1, ist2, ik), proj_dl_psi(1:m%np))
+!                   proj_dl_psi(1:mesh%np) = proj_dl_psi(1:mesh%np) - sys%st%X(psi)(1:mesh%np, 1, ist2, ik) * &
+!                     X(mf_dotp)(m, sys%st%X(psi)(1:mesh%np, 1, ist2, ik), proj_dl_psi(1:mesh%np))
               orth_mask(ist2) = .not. (abs(sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik)) < degen_thres)
               ! mask == .false. means do projection; .true. means do not
             enddo
 
 !            orth_mask(ist) = .true. ! projection on unperturbed wfn already removed in Sternheimer eqn
-!            write(*,*) 'orth_mask(ist) = ', orth_mask(ist)
 
-            call X(states_gram_schmidt)(m, sys%st%nst, sys%st%d%dim, sys%st%X(psi)(1:m%np, 1:1, 1:sys%st%nst, ik), &
-              proj_dl_psi(1:m%np, 1:1), mask = orth_mask(1:sys%st%nst))
+            call X(states_gram_schmidt)(mesh, sys%st%nst, sys%st%d%dim, sys%st%X(psi)(1:mesh%np, 1:1, 1:sys%st%nst, ik), &
+              proj_dl_psi(1:mesh%np, 1:1), mask = orth_mask(1:sys%st%nst))
           endif
 
           ! contribution from Sternheimer equation
-          term = X(mf_dotp)(m, proj_dl_psi(1:m%np, 1), pertpsi(idir1, 1:m%np))
+          term = X(mf_dotp)(mesh, proj_dl_psi(1:mesh%np, 1), pertpsi(1:mesh%np, idir1))
           eff_mass_inv(ik, ist, idir1, idir2) = eff_mass_inv(ik, ist, idir1, idir2) + M_TWO * term
 
           if (occ_solution_method == 1) then
@@ -101,8 +101,9 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
           !   conjugate as the (ist2,ist) term.  same will apply to hyperpolarizability
              do ist2 = 1, sys%st%nst
                 if (ist2 == ist .or. abs(sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik)) < degen_thres) cycle
-                term = X(mf_dotp)(m, pertpsi(idir1, 1:m%np), sys%st%X(psi)(1:m%np, 1, ist2, ik)) * &
-                     X(mf_dotp)(m, sys%st%X(psi)(1:m%np, 1, ist2, ik), pertpsi(idir2, 1:m%np)) / &
+
+                term = X(mf_dotp)(mesh, pertpsi(1:mesh%np, idir1), sys%st%X(psi)(1:mesh%np, 1, ist2, ik)) * &
+                     X(mf_dotp)(mesh, sys%st%X(psi)(1:mesh%np, 1, ist2, ik), pertpsi(1:mesh%np, idir2)) / &
                      (sys%st%eigenval(ist, ik) - sys%st%eigenval(ist2, ik))
                 eff_mass_inv(ik, ist, idir1, idir2) = eff_mass_inv(ik, ist, idir1, idir2) + M_TWO * term
              enddo
