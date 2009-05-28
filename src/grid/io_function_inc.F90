@@ -726,10 +726,10 @@ contains
     call X(mesh_to_cube) (mesh, f, cube)
 
     ! the offset is different in periodic directions
-    offset = -matmul(sb%rlattice, sb%lsize) / units_out%length%factor
+    offset = -matmul(sb%rlattice, sb%lsize)
 
     do i = sb%periodic_dim+1, 3
-      offset(i)=-(cube%n(i) - 1)/2 * mesh%h(i) / units_out%length%factor
+      offset(i)=-(cube%n(i) - 1)/2 * mesh%h(i)
     end do
 
     ! the corner of the cell is always (0,0,0) to XCrySDen
@@ -750,7 +750,8 @@ contains
     if (present(geo)) then
       write(iunit, '(i10, a)') geo%natoms, ' 1'
       do iatom = 1, geo%natoms
-        write(iunit, '(a10, 3f12.6)') trim(geo%atom(iatom)%label), (geo%atom(iatom)%x(1:3) - offset(1:3))
+        write(iunit, '(a10, 3f12.6)') trim(geo%atom(iatom)%label), &
+          ((geo%atom(iatom)%x(1:3) - offset(1:3)) / units_out%length%factor)
       enddo
     else ! geometry not available
       write(iunit, '(a)') '1 1'
