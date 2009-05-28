@@ -498,7 +498,7 @@ contains
     end select
 
     ! Here the Laplacian is forced to be self-adjoint, and the gradient to be skew-selfadjoint
-    if(mesh%use_curvilinear .and. (.not. simul_box_multires(der%mesh%sb))) then
+    if(mesh%use_curvilinear .and. (.not. der%mesh%sb%mr_flag)) then
       do i = 1, der%dim
         call nl_operator_init(auxop, "auxop")
         call nl_operator_skewadjoint(der%grad(i), auxop, der%mesh)

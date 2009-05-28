@@ -53,7 +53,6 @@ module simul_box_m
     simul_box_init_from_file,   &
     simul_box_atoms_in_box,     &
     lead_unit_cell_extent,      &
-    simul_box_multires,         &
     simul_box_copy
 
   integer, parameter, public :: &
@@ -76,6 +75,12 @@ module simul_box_m
   character(len=5), dimension(NLEADS), parameter, public :: LEAD_NAME = &
     (/'left ', 'right'/)
 
+  type, public :: multiresolution_t
+
+    FLOAT :: inner_size   ! size of the high resolution area
+
+  end type multiresolution_t
+
   type simul_box_t
     integer  :: box_shape   ! 1->sphere, 2->cylinder, 3->sphere around each atom,
                             ! 4->parallelepiped (orthonormal, up to now).
@@ -90,8 +95,9 @@ module simul_box_m
     type(c_ptr)   :: image    ! for the box defined through an image
     character(len=1024) :: user_def ! for the user-defined box
 
-    FLOAT :: inner_size   ! high resolution area
-    integer :: mr_iorder  ! interpolation order
+    logical :: mr_flag                 ! .true. when using multiresolution
+    integer :: mr_iorder               ! interpolation order
+    type(multiresolution_t) :: hr_area ! high resolution areas
 
     FLOAT :: rlattice(MAX_DIM,MAX_DIM)      ! lattice primitive vectors
     FLOAT :: klattice_unitary(MAX_DIM,MAX_DIM)      ! reciprocal lattice primitive vectors
@@ -417,8 +423,12 @@ contains
       !% with higher resolution. By default this variable is set to 1,
       !% so this feature is disabled.
       !%End
-      call loct_parse_float(datasets_check('HighResolutionArea'), M_ONE, sb%inner_size)
-      sb%inner_size = min(sb%inner_size, M_ONE)
+      call loct_parse_float(datasets_check('HighResolutionArea'), M_ZERO, sb%hr_area%inner_size)
+      if(sb%hr_area%inner_size.gt.M_ZERO) then
+        sb%mr_flag = .true. 
+      else
+        sb%mr_flag = .false.
+      end if
 
       !%Variable MR_InterpolationOrder
       !%Type integer
@@ -1130,7 +1140,7 @@ contains
 
     factor = M_ONE
     if(present(inner_box)) then
-      if(inner_box) factor = sb%inner_size
+      if(inner_box) factor = sb%hr_area%inner_size
     end if
 
     xx(1:sb%dim) = x(1:sb%dim) - sb%box_offset(1:sb%dim)
@@ -1254,7 +1264,7 @@ contains
     write(iunit, '(a20,e22.14)')    'fft_alpha=          ', sb%fft_alpha
     write(iunit, '(a20,9e22.14)')   'h=                  ', sb%h(1:MAX_DIM)
     write(iunit, '(a20,9e22.14)')   'box_offset=         ', sb%box_offset(1:MAX_DIM)
-    write(iunit, '(a20,e22.14)')    'inner_size=         ', sb%inner_size
+    write(iunit, '(a20,e22.14)')    'inner_size=         ', sb%hr_area%inner_size
     do i = 1, MAX_DIM
       write(iunit, '(a9,i1,a11,9e22.14)')   'rlattice(', i, ')=         ', sb%rlattice(1:MAX_DIM, i)
     end do
@@ -1398,7 +1408,7 @@ contains
     call iopar_read(mpi_world, iunit, line, ierr)
     read(line, *) str, sb%box_offset(1:MAX_DIM)
     call iopar_read(mpi_world, iunit, line, ierr)
-    read(line, *) str, sb%inner_size
+    read(line, *) str, sb%hr_area%inner_size
     do idim=1, MAX_DIM
       call iopar_read(mpi_world, iunit, line, ierr)
       read(line, *) str, sb%rlattice(1:MAX_DIM, idim)
@@ -1512,7 +1522,7 @@ contains
     sbout%open_boundaries         = sbin%open_boundaries
     sbout%add_unit_cells          = sbin%add_unit_cells
     sbout%lead_restart_dir        = sbin%lead_restart_dir
-    sbout%inner_size              = sbin%inner_size
+    sbout%hr_area%inner_size      = sbin%hr_area%inner_size
     if(associated(sbin%lead_unit_cell)) then
       SAFE_ALLOCATE(sbout%lead_unit_cell(1:NLEADS))
       do il = 1, NLEADS
@@ -1522,12 +1532,6 @@ contains
 
     call pop_sub()
   end subroutine simul_box_copy
-
-  logical pure function simul_box_multires(this) result(mr)
-    type(simul_box_t), intent(in) :: this
-
-    mr = abs(this%inner_size - M_ONE) > M_EPSILON
-  end function simul_box_multires
 
 end module simul_box_m
 

@@ -506,7 +506,7 @@ subroutine X(set_bc)(der, f)
     forall(ip = bndry_start:bndry_end) f(ip) = R_TOTYPE(M_ZERO)
   end if
 
-  if(simul_box_multires(der%mesh%sb)) call multires()
+  if(der%mesh%sb%mr_flag) call multires()
 
   if(der%periodic_bc) then
 
@@ -632,7 +632,7 @@ subroutine X(set_bc_batch)(der, fb)
 
   call push_sub('derivatives_inc.Xset_bc_batch')
 
-  if(simul_box_multires(der%mesh%sb)) then
+  if(der%mesh%sb%mr_flag) then
 
     do ist = 1, fb%nst
       do idim = 1, fb%dim

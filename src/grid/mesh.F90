@@ -689,7 +689,7 @@ contains
     ! Lxyz_inv
     memory = memory + SIZEOF_UNSIGNED_INT*product(mesh%idx%nr(2, 1:mesh%sb%dim) - mesh%idx%nr(1, 1:mesh%sb%dim) + M_ONE)
     ! resolution
-    if(simul_box_multires(mesh%sb)) then
+    if(mesh%sb%mr_flag) then
       memory = memory + SIZEOF_UNSIGNED_INT*product(mesh%idx%nr(2, 1:mesh%sb%dim) - mesh%idx%nr(1, 1:mesh%sb%dim) + M_ONE)
     end if
     ! Lxyz
@@ -751,7 +751,7 @@ contains
     ibp = .false.
 
     ! no multiresolution -> no inner boundary points
-    if(.not.simul_box_multires(mesh%sb)) then
+    if(.not.mesh%sb%mr_flag) then
       call pop_sub()
       return
     end if

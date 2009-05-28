@@ -77,11 +77,11 @@ subroutine mesh_init_stage_1(mesh, sb, cv, enlarge)
   mesh%cv => cv
 
   ! multiresolution requires the curvilinear coordinates machinery
-  mesh%use_curvilinear = mesh%use_curvilinear .or. simul_box_multires(sb)
+  mesh%use_curvilinear = mesh%use_curvilinear .or. sb%mr_flag
 
   mesh%idx%enlarge = enlarge
 
-  if(simul_box_multires(sb)) mesh%idx%enlarge = mesh%idx%enlarge*2
+  if(sb%mr_flag) mesh%idx%enlarge = mesh%idx%enlarge*2
 
   ! adjust nr
   mesh%idx%nr = 0
@@ -209,7 +209,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
   ! allocate the xyz arrays
   SAFE_ALLOCATE(mesh%idx%Lxyz_inv(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)))
 
-  if(simul_box_multires(sb)) then 
+  if(sb%mr_flag) then 
     SAFE_ALLOCATE(mesh%resolution(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)))
   else
     nullify(mesh%resolution)
@@ -232,7 +232,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
 
         
         ! With multiresolution, only inner (not enlargement) points are marked now
-        if(simul_box_multires(sb)) then
+        if(sb%mr_flag) then
 
           if ( simul_box_in_box(sb, geo, xx, inner_box = .true.) .or. &
              ( simul_box_in_box(sb, geo, xx) .and. &
@@ -268,7 +268,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
   end do
 
 
-  if(simul_box_multires(sb)) then
+  if(sb%mr_flag) then
 
     ! Calculate the resolution for each point and label the enlargement points
     do iz = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
@@ -683,7 +683,7 @@ contains
 #endif
     else ! serial mode
 
-      if(simul_box_multires(mesh%sb)) then
+      if(mesh%sb%mr_flag) then
 
         message(1) = 'Info: Now that the multiresolution is used, point volumes are'
         message(2) = 'calculated by dividing the space in the vicinity of each grid point'
