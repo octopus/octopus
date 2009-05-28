@@ -107,7 +107,8 @@ module h_sys_output_m
     output_dos             =    65536,    &
     output_tpa             =   131072,    &
     output_density_matrix  =   262144,    &
-    output_modelmb         =   524288
+    output_modelmb         =   524288,    &
+    output_forces          =  1048576
 
 contains
 
@@ -211,6 +212,9 @@ contains
     !% particles described in the DescribeParticlesModelMB block. Which
     !% quantities will be output depends on the simultaneous presence of wfs,
     !% density, etc...
+    !%Option forces 1048576
+    !% Writes file forces.xsf containing structure and forces on the atoms as 
+    !% a vector associated with each atom, which can be visualized with XCrySDen.
     !%End
     call loct_parse_int(datasets_check('Output'), 0, outp%what)
 
@@ -385,6 +389,10 @@ contains
           call periodic_write_crystal(gr%sb, geo, dir)
       endif
     end if
+
+    if(iand(outp%what, output_forces) .ne. 0) then
+      call write_xsf_geometry_file(dir, "forces", geo, gr%sb, write_forces = .true.)
+    endif
 
     if(iand(outp%what, output_matrix_elements).ne.0) then
       call output_me(outp%me, dir, st, gr, geo, hm)

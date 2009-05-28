@@ -221,15 +221,17 @@ contains
   end function io_function_fill_how
 
   ! ---------------------------------------------------------
-  subroutine write_xsf_geometry_file(dir, fname, geo, sb, offset)
+  subroutine write_xsf_geometry_file(dir, fname, geo, sb, offset, write_forces)
     character(len=*),   intent(in) :: dir, fname
     type(geometry_t),   intent(in) :: geo
     type(simul_box_t),  intent(in) :: sb
     FLOAT,    optional, intent(in) :: offset(:)
+    logical,  optional, intent(in) :: write_forces
 
     integer iunit
     character(len=6) position
     FLOAT, allocatable:: offset_(:)
+    logical write_forces_
 
     call push_sub('io_function.write_xsf_geometry_file')
 
@@ -239,6 +241,12 @@ contains
     position = 'asis'
     iunit = io_open(trim(dir)//'/'//trim(fname)//'.xsf', action='write', position=position)
 
+    if(.not. present(write_forces)) then
+      write_forces_ = .false.
+    else
+      write_forces_ = write_forces
+    endif
+
     SAFE_ALLOCATE(offset_(1:sb%dim))
     if(.not. present(offset)) then
       offset_(1:sb%dim) = 0
@@ -247,7 +255,7 @@ contains
       offset_(1:sb%dim) = offset(1:sb%dim)
     endif
 
-    call write_xsf_geometry(iunit, geo, sb, offset_(:))
+    call write_xsf_geometry(iunit, geo, sb, offset_(:), write_forces_)
 
     call io_close(iunit)
 
@@ -257,40 +265,54 @@ contains
   ! ---------------------------------------------------------
 ! for format specification see:
 ! http://www.xcrysden.org/doc/XSF.html#__toc__11
-  subroutine write_xsf_geometry(iunit, geo, sb, offset)
+  subroutine write_xsf_geometry(iunit, geo, sb, offset, write_forces)
     integer,            intent(in) :: iunit
     type(geometry_t),   intent(in) :: geo
     type(simul_box_t),  intent(in) :: sb
     FLOAT,    optional, intent(in) :: offset(:)
+    logical,  optional, intent(in) :: write_forces
 
     integer idir, iatom
+    logical write_forces_
 
     call push_sub('io_function.write_xsf_geometry')
 
-    select case(sb%periodic_dim)
-      case(3)
-        write(iunit, '(a)') 'CRYSTAL'
-      case(2)
-        write(iunit, '(a)') 'SLAB'
-      case(1)
-        write(iunit, '(a)') 'WIRE'  ! could also be POLYMER
-      case(0)
-        write(iunit, '(a)') 'MOLECULE'
-    end select
+    if(present(write_forces)) then
+      write_forces_ = write_forces
+    else
+      write_forces_ = .false.
+    endif
 
-    write(iunit, '(a)') 'PRIMVEC'
+    if(simul_box_is_periodic(sb)) then
+      select case(sb%periodic_dim)
+        case(3)
+          write(iunit, '(a)') 'CRYSTAL'
+        case(2)
+          write(iunit, '(a)') 'SLAB'
+        case(1)
+          write(iunit, '(a)') 'POLYMER'
+      end select
 
-    do idir = 1, sb%dim
-      write(iunit, '(3f12.6)') 2 * sb%lsize(idir) / units_out%length%factor * sb%rlattice(1:3, idir)
-    enddo
+      write(iunit, '(a)') 'PRIMVEC'
 
-    write(iunit, '(a)') 'PRIMCOORD'
+      do idir = 1, sb%dim
+        write(iunit, '(3f12.6)') 2 * sb%lsize(idir) / units_out%length%factor * sb%rlattice(1:3, idir)
+      enddo
+
+      write(iunit, '(a)') 'PRIMCOORD'
+      write(iunit, '(i10, a)') geo%natoms, ' 1'
+    else
+      write(iunit, '(a)') 'ATOMS'
+    endif
 
     ! BoxOffset should be considered here
-    write(iunit, '(i10, a)') geo%natoms, ' 1'
     do iatom = 1, geo%natoms
-      write(iunit, '(a10, 3f12.6)') trim(geo%atom(iatom)%label), &
+      write(iunit, '(a10, 3f12.6, $)') trim(geo%atom(iatom)%label), &
         ((geo%atom(iatom)%x(1:sb%dim) - offset(1:sb%dim)) / units_out%length%factor)
+      if(write_forces_) then
+        write(iunit, '(5x, 3f12.6, $)') (geo%atom(iatom)%f(1:sb%dim) / units_out%force%factor)
+      endif
+      write(iunit, '()')
     enddo
 
     call pop_sub()

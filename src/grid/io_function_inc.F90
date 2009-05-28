@@ -760,10 +760,11 @@ contains
     call X(mesh_to_cube) (mesh, f, cube)
 
     SAFE_ALLOCATE(offset(1:sb%dim))
-    offset = -matmul(sb%rlattice, sb%lsize) / units_out%length%factor
-    ! the offset is different in periodic directions
-    do i = sb%periodic_dim+1, 3
-      offset(i)=-(cube%n(i) - 1)/2 * mesh%h(i) / units_out%length%factor
+    ! offset in periodic directions
+    offset = -matmul(sb%rlattice, sb%lsize)
+    ! offset in aperiodic directions
+    do i = sb%periodic_dim+1, sb%dim
+      offset(i) = -(cube%n(i) - 1)/2 * mesh%h(i)
     end do
 
     ! the corner of the cell is always (0,0,0) to XCrySDen
