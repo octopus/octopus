@@ -19,5 +19,8 @@ EigenSolverMaxIter = 300
 
 EigenSolver = cg_new
 
-HighResolutionArea = 0.30
+%MultiResolutionArea
+  0.0 |  0.0 |  0.0 | 2.40
+%
+
 MR_InterpolationOrder = 8

@@ -77,7 +77,8 @@ module simul_box_m
 
   type, public :: multiresolution_t
 
-    FLOAT :: inner_size   ! size of the high resolution area
+    FLOAT :: radius          ! radius of the high resolution area
+    FLOAT :: center(MAX_DIM) ! central point
 
   end type multiresolution_t
 
@@ -365,6 +366,9 @@ contains
     !--------------------------------------------------------------
     subroutine read_misc()
 
+      integer :: n_cols, n_rows, i
+      type(block_t)      :: blk
+
       call push_sub('simul_box.simul_box_init.read_misc')
 
       !%Variable DoubleFFTParameter
@@ -408,23 +412,37 @@ contains
       if ((sb%periodic_dim < 0) .or. (sb%periodic_dim > 3) .or. (sb%periodic_dim > sb%dim)) &
         call input_error('PeriodicDimensions')
 
-      !%Variable HighResolutionArea
-      !%Type float
-      !%Default 1.0
+      !%Variable MultiResolutionArea
+      !%Type block
       !%Section Mesh
       !%Description
-      !% (Experimental) When this variable is set, octopus will use a
-      !% multiresolution grid with a central region with the specified
-      !% spacing and an outer region with double the spacing. This
-      !% variable controls the size of the inner region as a fraction
-      !% (in each direction) of the simulation box. So for instance if
-      !% your box is a sphere of radius 10, and you set
-      !% HighResolutionArea to 0.5, you will get a sphere of radius 5
-      !% with higher resolution. By default this variable is set to 1,
-      !% so this feature is disabled.
+      !% (Experimental) Multiresolution regions are set with this
+      !% parameter. The first three numbers define the central
+      !% point of the region, and the following ones set
+      !% the radii where resolution changes (measured from the
+      !% central point).
       !%End
-      call loct_parse_float(datasets_check('HighResolutionArea'), M_ZERO, sb%hr_area%inner_size)
-      if(sb%hr_area%inner_size.gt.M_ZERO) then
+
+      if(loct_parse_block(datasets_check('MultiResolutionArea'), blk) == 0) then
+        n_rows=loct_parse_block_n(blk)
+        if (n_rows.ne.1) then
+          message(1) = "Up to now, only one multiresolution area can be set up."
+          call write_fatal(1)
+        end if
+        n_cols=loct_parse_block_cols(blk,0)
+        if (n_cols.ne.sb%dim+1) then
+          message(1) = "Up to now, only one level of resolutions is implemented."
+          call write_fatal(1)
+        end if
+        do i = 1, sb%dim
+           call loct_parse_block_float(blk, 0, i-1, sb%hr_area%center(i))
+        end do
+        if (sum(sb%hr_area%center(1:sb%dim)**2).gt.r_small) then
+          message(1) = "Up to now, only origin-centered resolution is implemented."
+          call write_fatal(1)
+        end if
+        call loct_parse_block_float(blk, 0, i-1, sb%hr_area%radius)
+        sb%hr_area%radius = sb%hr_area%radius*units_inp%length%factor
         sb%mr_flag = .true. 
       else
         sb%mr_flag = .false.
@@ -1130,25 +1148,27 @@ contains
     real(8), parameter :: DELTA = CNST(1e-12)
     FLOAT :: r, re, im, xx(MAX_DIM)
     real(8) :: llimit(MAX_DIM), ulimit(MAX_DIM)
-    real(8) :: factor
 
 #if defined(HAVE_GDLIB)
     integer :: red, green, blue, ix, iy
 #endif
 
-    in_box = .true.
+    call push_sub('simul_box.simul_box_in_box')
 
-    factor = M_ONE
-    if(present(inner_box)) then
-      if(inner_box) factor = sb%hr_area%inner_size
-    end if
+    in_box = .true.
 
     xx(1:sb%dim) = x(1:sb%dim) - sb%box_offset(1:sb%dim)
 
     !convert to the orthogonal space
     xx(1:sb%dim) = matmul(xx(1:sb%dim), sb%klattice_unitary(1:sb%dim, 1:sb%dim))
 
-    xx(1:sb%dim) = xx(1:sb%dim)/factor
+    if(present(inner_box)) then
+      if(inner_box) then
+        in_box = sqrt(sum(xx(1:sb%dim)**2)).lt.sb%hr_area%radius + DELTA
+        call pop_sub()
+        return
+      end if
+    end if
 
     select case(sb%box_shape)
     case(SPHERE)
@@ -1192,6 +1212,8 @@ contains
       call loct_parse_expression(re, im, sb%dim, xx, r, M_ZERO, sb%user_def)
       in_box = in_box .and. (re .ne. M_ZERO)
     end select
+
+    call pop_sub()
 
   contains
 
@@ -1264,7 +1286,8 @@ contains
     write(iunit, '(a20,e22.14)')    'fft_alpha=          ', sb%fft_alpha
     write(iunit, '(a20,9e22.14)')   'h=                  ', sb%h(1:MAX_DIM)
     write(iunit, '(a20,9e22.14)')   'box_offset=         ', sb%box_offset(1:MAX_DIM)
-    write(iunit, '(a20,e22.14)')    'inner_size=         ', sb%hr_area%inner_size
+    write(iunit, '(a20,l7)')        'mr_flag             ', sb%mr_flag
+    write(iunit, '(a20,e22.14)')    'mr_radius           ', sb%hr_area%radius
     do i = 1, MAX_DIM
       write(iunit, '(a9,i1,a11,9e22.14)')   'rlattice(', i, ')=         ', sb%rlattice(1:MAX_DIM, i)
     end do
@@ -1408,7 +1431,9 @@ contains
     call iopar_read(mpi_world, iunit, line, ierr)
     read(line, *) str, sb%box_offset(1:MAX_DIM)
     call iopar_read(mpi_world, iunit, line, ierr)
-    read(line, *) str, sb%hr_area%inner_size
+    read(line,*) str, sb%mr_flag
+    call iopar_read(mpi_world, iunit, line, ierr)
+    read(line,*) str, sb%hr_area%radius
     do idim=1, MAX_DIM
       call iopar_read(mpi_world, iunit, line, ierr)
       read(line, *) str, sb%rlattice(1:MAX_DIM, idim)
@@ -1522,7 +1547,8 @@ contains
     sbout%open_boundaries         = sbin%open_boundaries
     sbout%add_unit_cells          = sbin%add_unit_cells
     sbout%lead_restart_dir        = sbin%lead_restart_dir
-    sbout%hr_area%inner_size      = sbin%hr_area%inner_size
+    sbout%mr_flag                 = sbin%mr_flag
+    sbout%hr_area%radius          = sbin%hr_area%radius
     if(associated(sbin%lead_unit_cell)) then
       SAFE_ALLOCATE(sbout%lead_unit_cell(1:NLEADS))
       do il = 1, NLEADS

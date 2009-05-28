@@ -230,7 +230,6 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
         
         call curvilinear_chi2x(sb, cv, chi(:), xx)
 
-        
         ! With multiresolution, only inner (not enlargement) points are marked now
         if(sb%mr_flag) then
 
