@@ -97,21 +97,9 @@ subroutine FNAME(scal_1)(n1, da, dx)
   TYPE1,   intent(in)    :: da
   TYPE1,   intent(inout) :: dx(1:n1)
 
-#ifdef USE_OMP
-  integer :: nn_loc, ini
-
-  if(n1 < 1) return
-
-!$omp parallel private(ini, nn_loc)
-  call multicomm_divide_range_omp(n1, ini, nn_loc)
-  call blas_scal(nn_loc, da, dx(ini), 1)
-!$omp end parallel
-#else
-
   if (n1 < 1) return
 
   call blas_scal(n1, da, dx(1), 1)
-#endif
 
 end subroutine FNAME(scal_1)
 
@@ -171,22 +159,11 @@ subroutine FNAME(axpy_1)(n1, da, dx, dy)
   TYPE1,   intent(in)    :: dx(1:n1)
   TYPE1,   intent(inout) :: dy(1:n1)
 
-#ifdef USE_OMP
-  integer :: nn_loc, ini
-#endif
-  
   if (n1 < 1) return
   
   call profiling_in(axpy_profile, "BLAS_AXPY")
 
-#ifdef USE_OMP
-!$omp parallel private(ini, nn_loc)
-  call multicomm_divide_range_omp(n1, ini, nn_loc)
-  call blas_axpy(nn_loc, da, dx(ini), 1, dy(ini), 1)
-!$omp end parallel
-#else
   call blas_axpy(n1, da, dx(1), 1, dy(1), 1)
-#endif
   
 #if TYPE == 1 || TYPE == 2
   call profiling_count_operations(n1*2)
@@ -269,22 +246,11 @@ subroutine FNAME(axpy_5)(n1, da, dx, dy)
   TYPE1,   intent(in)    :: dx(1:n1)
   TYPE1,   intent(inout) :: dy(1:n1)
 
-#ifdef USE_OMP
-  integer :: ini, nn_loc
-#endif
-  
   if (n1 < 1) return
   
   call profiling_in(axpy_profile, "BLAS_AXPY")
 
-#ifdef USE_OMP  
-  !$omp parallel private(ini, nn_loc)
-  call multicomm_divide_range_omp(n1, ini, nn_loc)
-  call blas_axpy(nn_loc, da, dx(ini), dy(ini))
-  !$omp end parallel
-#else
   call blas_axpy(n1, da, dx(1), dy(1))
-#endif
 
   call profiling_count_operations(n1*4)
 
@@ -310,14 +276,7 @@ subroutine FNAME(copy_1)(n1, dx, dy)
 
   call profiling_in(copy_profile, "BLAS_COPY")
 
-#ifdef USE_OMP
-  !$omp parallel private(ini, nn_loc)
-  call multicomm_divide_range_omp(n1, ini, nn_loc)
-  call blas_copy(nn_loc, dx(ini), 1, dy(ini), 1)
-  !$omp end parallel
-#else
   call blas_copy(n1, dx(1), 1, dy(1), 1)
-#endif
 
   call profiling_count_transfers(n1, dx(1))
 
@@ -378,27 +337,10 @@ TYPE1 function FNAME(dot) (n, dx, dy) result(dot)
   integer, intent(in) :: n
   TYPE1,   intent(in) :: dx(:), dy(:)
 
-#ifdef USE_OMP
-  TYPE1   :: dot_loc
-  integer :: nn_loc, ini
-#endif
-
   dot = CNST(0.0)
   if (n < 1) return
 
-#ifdef USE_OMP  
-  !$omp parallel private(ini, nn_loc, dot_loc)
-  call multicomm_divide_range_omp(n, ini, nn_loc)
-  dot_loc = blas_dot(nn_loc, dx(ini), 1, dy(ini), 1)
-
-  !$omp atomic
-  dot = dot + dot_loc
-
-  !$omp end parallel
-
-#else
   dot = blas_dot(n, dx(1), 1, dy(1), 1)
-#endif
 
 end function FNAME(dot)
 
@@ -410,27 +352,10 @@ TYPE1 function FNAME(dotu) (n, dx, dy) result(dot)
   integer, intent(in) :: n
   TYPE1,   intent(in) :: dx(:), dy(:)
 
-#ifdef USE_OMP
-  TYPE1   :: dot_loc
-  integer :: nn_loc, ini
-#endif
-
   dot = CNST(0.0)
   if (n < 1) return
 
-#ifdef USE_OMP  
-  !$omp parallel private(ini, nn_loc, dot_loc)
-  call multicomm_divide_range_omp(n, ini, nn_loc)
-  dot_loc = blas_dotu(nn_loc, dx(ini), 1, dy(ini), 1)
-
-  !$omp atomic
-  dot = dot + dot_loc
-
-  !$omp end parallel
-
-#else
   dot = blas_dotu(n, dx(1), 1, dy(1), 1)
-#endif
 
 end function FNAME(dotu)
 #endif
@@ -443,28 +368,10 @@ TYPE2 function FNAME(nrm2)(n, dx) result(nrm2)
   integer, intent(in) :: n
   TYPE1,   intent(in) :: dx(:)
 
-#ifdef USE_OMP
-  TYPE2   :: nrm2_loc
-  integer :: nn_loc, ini
-#endif
-
   nrm2 = CNST(0.0)
   if (n < 1) return
 
-#ifdef USE_OMP
-  !$omp parallel private(ini, nn_loc, nrm2_loc)
-  call multicomm_divide_range_omp(n, ini, nn_loc)
-  nrm2_loc = blas_nrm2(nn_loc, dx(ini), 1)
-
-  !$omp critical
-  nrm2 = hypot(nrm2, nrm2_loc)
-  !$omp end critical
-
-  !$omp end parallel
-  
-#else
   nrm2 = blas_nrm2(n, dx(1), 1)
-#endif
 
 end function FNAME(nrm2)
 

@@ -440,8 +440,13 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, points)
           end do
         end do
       else
+        !$omp parallel private(ini, nri_loc, ws, idim, ist, pfi, pfo)
+#ifdef USE_OMP
+        call multicomm_divide_range_omp(nri, ini, nri_loc)
+#else 
         ini = 1
         nri_loc = nri
+#endif
         do idim = 1, fi%dim
           do ist = 1, fi%nst
             pfi => fi%states(ist)%X(psi)(:, idim)
@@ -464,6 +469,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, points)
             end select
           end do
         end do
+        !$omp end parallel
       end if
     else
       if(op%cmplx_op) then
