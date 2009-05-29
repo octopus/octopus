@@ -458,7 +458,7 @@ contains
     type(geometry_t),     optional,  intent(inout) :: geo
     FLOAT,                optional,  intent(in)    :: ionic_dt
 
-    integer :: is, iter
+    integer :: is, iter, ik, ist, idim
     FLOAT   :: d, d_max
     logical :: self_consistent
     CMPLX, allocatable :: zpsi1(:, :, :, :)
@@ -481,8 +481,16 @@ contains
     if(hm%theory_level .ne. INDEPENDENT_PARTICLES) then
       if( (t < 3*dt)  .or.  (tr%scf_propagation) ) then
         self_consistent = .true.
-        SAFE_ALLOCATE(zpsi1(1:gr%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
-        zpsi1 = st%zpsi
+        SAFE_ALLOCATE(zpsi1(1:gr%mesh%np, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
+
+        do ik = st%d%kpt%start, st%d%kpt%end
+          do ist = st%st_start, st%st_end
+            do idim = 1, st%d%dim
+              call lalg_copy(gr%mesh%np, st%zpsi(:, idim, ist, ik), zpsi1(:, idim, ist, ik))
+            end do
+          end do
+        end do
+
       end if
     end if
 
@@ -529,7 +537,14 @@ contains
         ! will not be good anyways.
         do iter = 1, 10
 
-          st%zpsi = zpsi1
+          do ik = st%d%kpt%start, st%d%kpt%end
+            do ist = st%st_start, st%st_end
+              do idim = 1, st%d%dim
+                call lalg_copy(gr%mesh%np, zpsi1(:, idim, ist, ik), st%zpsi(:, idim, ist, ik))
+              end do
+            end do
+          end do
+
           tr%v_old(:, :, 0) = hm%vhxc(:, :)
           vaux(:, :) = hm%vhxc(:, :)
           select case(tr%method)

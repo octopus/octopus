@@ -656,7 +656,7 @@ contains
       integer :: bsize, ip
       type(profile_t), save :: prof
 
-      call push_sub('exponential.taylor_series')
+      call push_sub('exponential.taylor_series_batch')
       call profiling_in(prof, "EXP_TAYLOR_BATCH")
 
       SAFE_ALLOCATE(psi1 (1:gr%mesh%np_part, 1:hm%d%dim, 1:psib%nst))
@@ -668,20 +668,21 @@ contains
       zfact = M_z1
       zfact_is_real = .true.
 
+      call batch_init(psi1b, hm%d%dim, st_start, st_end, psi1)
+      call batch_init(hpsi1b, hm%d%dim, st_start, st_end, hpsi1)
+
+      do ii = 1, psib%nst
+        do idim = 1, psib%dim
+          call lalg_copy(gr%mesh%np, psib%states(ii)%zpsi(:, idim), psi1b%states(ii)%zpsi(:, idim))
+        end do
+      end do
+
       do iter = 1, te%exp_order
         zfact = zfact*(-M_zI*deltat)/iter
         zfact_is_real = .not. zfact_is_real
 
-        call batch_init(hpsi1b, hm%d%dim, st_start, st_end, hpsi1)
-        if (iter == 1) then
-          call zhamiltonian_apply_batch(hm, gr, psib, hpsi1b, ik, t)
-        else
-          call batch_init(psi1b, hm%d%dim, st_start, st_end, psi1)
-          call zhamiltonian_apply_batch(hm, gr, psi1b, hpsi1b, ik, t)
-          call batch_end(psi1b)
-        end if
-        call batch_end(hpsi1b)
-        
+        call zhamiltonian_apply_batch(hm, gr, psi1b, hpsi1b, ik, t)
+
         do ii = 1, psib%nst
           do idim = 1, hm%d%dim
     
@@ -698,6 +699,9 @@ contains
           end do
         end do
       end do
+      
+      call batch_end(hpsi1b)
+      call batch_end(psi1b)
 
       call profiling_count_operations(psib%nst*hm%d%dim*dble(gr%mesh%np)*te%exp_order*CNST(6.0))
 
