@@ -738,8 +738,10 @@ contains
           call index_to_coords(mesh%idx, sb%dim, i, jj)
 
           ! checksum counter
-          if(mod(jj(1),2).eq.0 .and. mod(jj(2),2).eq.0 .and. mod(jj(3),2).eq.0) then
-            volchecksum = volchecksum + product(M_TWO*mesh%h(1:sb%dim))
+          if(mod(jj(1),2**sb%hr_area%num_radii).eq.0 .and. &
+             mod(jj(2),2**sb%hr_area%num_radii).eq.0 .and. &
+             mod(jj(3),2**sb%hr_area%num_radii).eq.0) then
+            volchecksum = volchecksum + product(2**sb%hr_area%num_radii*mesh%h(1:sb%dim))
           end if
 
           ! the spacing of the current point:
@@ -761,7 +763,7 @@ contains
                 if(i.eq.j) cycle ! you cannot call it a neighbor...
 
                 ! does it exist? if yes, is it NOT inner boundary point?
-                if(j.gt.0 .and. .not.inner_boundary_point(mesh,j)) then
+                if(j.gt.0 .and. inner_boundary_point(mesh,j).eq.0) then
                   neigh_n = neigh_n + 1         ! fine, add it
                   neigh_table(neigh_n) = j      ! to neighbor list
                 end if

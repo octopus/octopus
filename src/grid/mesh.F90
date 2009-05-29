@@ -739,16 +739,20 @@ contains
          simul_box_has_zero_bc(mesh%sb)
   end function mesh_compact_boundaries
 
-  ! this returns .true. if point is an inner boundary point,
-  ! i.e. an interpolation point
-  logical function inner_boundary_point(mesh, point) result(ibp)
+
+  ! this returns 0 if point is not an inner boundary point,
+  ! and the corresponding multiresolution level is it is.
+  function inner_boundary_point(mesh, point) result(i_lev)
     type(mesh_t), intent(in) :: mesh
     integer, intent(in)      :: point
-    integer :: ix, iy, iz
+    integer :: ibp_out
+    integer :: ix, iy, iz, dx, dy, dz, i_lev
+    logical :: is_inner_boundary_point, is_in_some_mrarea
+    real(8), parameter :: DELTA = CNST(1e-12)
 
     call push_sub('mesh.inner_boundary_point')
 
-    ibp = .false.
+    i_lev = 0
 
     ! no multiresolution -> no inner boundary points
     if(.not.mesh%sb%mr_flag) then
@@ -762,17 +766,33 @@ contains
       return
     end if
 
-    ! Point is either an inner boundary point or an outer boundary
-    ! point.  If mod 2 is zero for all coordinates, the point is outer bp.
+    ! point is either an inner boundary point or an outer boundary point.
+    is_in_some_mrarea       = .false.
+    is_inner_boundary_point = .false.
     ix = mesh%idx%Lxyz(point, 1)
     iy = mesh%idx%Lxyz(point, 2)
     iz = mesh%idx%Lxyz(point, 3)
-    if(mod(ix,2).eq.0  .and. mod(iy, 2).eq.0 .and. mod(iz,2).eq.0) then
-      call pop_sub()
-      return
+
+    do i_lev = 1, mesh%sb%hr_area%num_radii
+       dx = abs(mod(ix, 2**(i_lev-1)))
+       dy = abs(mod(iy, 2**(i_lev-1)))
+       dz = abs(mod(iz, 2**(i_lev-1)))
+       if(sum(mesh%x(point,:)**2) .lt. mesh%sb%hr_area%radius(i_lev)**2 + DELTA) then
+         is_in_some_mrarea = .true.
+         if (dx + dy + dz > 0) is_inner_boundary_point = .true.
+       end if
+     end do
+
+    ! point can be inner boundary point even if is was not inside any multiresolution areas
+    if(.not.is_in_some_mrarea) then
+      i_lev = mesh%sb%hr_area%num_radii+1 ! the maximum resolution
+      dx = abs(mod(ix, 2**(i_lev-1)))
+      dy = abs(mod(iy, 2**(i_lev-1)))
+      dz = abs(mod(iz, 2**(i_lev-1)))
+      if (dx + dy + dz > 0) is_inner_boundary_point = .true.
     end if
 
-    ibp = .true.
+    if(.not.is_inner_boundary_point) i_lev = M_ZERO
 
     call pop_sub()
 
