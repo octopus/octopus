@@ -182,8 +182,10 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
 
   integer :: i, j, k, il, ik, ix, iy, iz, is
   integer :: jx, jy, jz, res_counter, j_counter
-  FLOAT   :: chi(MAX_DIM), xx(1:MAX_DIM)
+  FLOAT   :: chi(MAX_DIM)
   integer :: nr(1:2, 1:MAX_DIM), res
+  logical, allocatable :: in_box(:)
+  FLOAT,   allocatable :: xx(:, :)
 
   call push_sub('mesh_init.mesh_init_stage_2')
   call profiling_in(mesh_init_prof)
@@ -218,6 +220,9 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
   mesh%idx%Lxyz_inv(:,:,:) = 0
   res = 1
 
+  SAFE_ALLOCATE(xx(1:MAX_DIM, mesh%idx%nr(1,1):mesh%idx%nr(2,1)))
+  SAFE_ALLOCATE(in_box(mesh%idx%nr(1,1):mesh%idx%nr(2,1)))
+
   ! We label the points inside the mesh
   do iz = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
     chi(3) = real(iz, REAL_PRECISION) * mesh%h(3) + sb%box_offset(3)
@@ -227,21 +232,25 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
       
       do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
         chi(1) = real(ix, REAL_PRECISION) * mesh%h(1) + sb%box_offset(1)
-        
-        call curvilinear_chi2x(sb, cv, chi(:), xx)
+        call curvilinear_chi2x(sb, cv, chi(:), xx(:, ix))
+      end do
+
+      call simul_box_in_box_vec(sb, geo, mesh%idx%nr(2,1) - mesh%idx%nr(1,1) + 1, xx, in_box)
+
+      do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
 
         ! With multiresolution, only inner (not enlargement) points are marked now
         if(sb%mr_flag) then
 
-          if ( simul_box_in_box(sb, geo, xx, inner_box = .true.) .or. &
-             ( simul_box_in_box(sb, geo, xx) .and. &
+          if ( simul_box_in_box(sb, geo, xx(:, ix), inner_box = .true.) .or. &
+             ( in_box(ix) .and. &
                mod(ix, 2) == 0 .and. mod(iy, 2) == 0 .and. mod(iz, 2) == 0) ) then
                    mesh%idx%Lxyz_inv(ix, iy, iz) = ibset(mesh%idx%Lxyz_inv(ix, iy, iz), INNER_POINT)
           end if
 
         else ! the usual way: mark both inner and enlargement points
 
-          if ( simul_box_in_box(sb, geo, xx) ) then
+          if (in_box(ix)) then
 
             mesh%idx%Lxyz_inv(ix, iy, iz) = ibset(mesh%idx%Lxyz_inv(ix, iy, iz), INNER_POINT)
 
@@ -266,6 +275,8 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
     end do
   end do
 
+  SAFE_DEALLOCATE_A(xx)
+  SAFE_DEALLOCATE_A(in_box)
 
   if(sb%mr_flag) then
 

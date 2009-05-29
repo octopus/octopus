@@ -49,6 +49,7 @@ module simul_box_m
     simul_box_has_zero_bc,      &
     simul_box_is_eq,            &
     simul_box_in_box,           &
+    simul_box_in_box_vec,       &
     simul_box_dump,             &
     simul_box_init_from_file,   &
     simul_box_atoms_in_box,     &
@@ -1238,6 +1239,121 @@ contains
 
     end function in_minimum
   end function simul_box_in_box
+
+
+  !--------------------------------------------------------------
+  subroutine simul_box_in_box_vec(sb, geo, npoints, point, in_box, inner_box)
+    type(simul_box_t),  intent(in)  :: sb
+    type(geometry_t),   intent(in)  :: geo
+    integer,            intent(in)  :: npoints
+    FLOAT,              intent(in)  :: point(:, :)
+    logical,            intent(out) :: in_box(:)
+    logical, optional,  intent(in)  :: inner_box
+
+    real(8), parameter :: DELTA = CNST(1e-12)
+    FLOAT :: r, re, im, dist2, radius
+    real(8) :: llimit(MAX_DIM), ulimit(MAX_DIM)
+    FLOAT, allocatable :: xx(:, :)
+    integer :: ip, idir, iatom
+
+#if defined(HAVE_GDLIB)
+    integer :: red, green, blue, ix, iy
+#endif
+
+    call push_sub('simul_box.simul_box_in_box_vec')
+
+    SAFE_ALLOCATE(xx(1:MAX_DIM, 1:npoints))
+
+    if(MAX_DIM /= sb%dim) xx = M_ZERO
+
+    forall(idir = 1:sb%dim, ip = 1:npoints)  xx(idir, ip) = point(idir, ip) - sb%box_offset(idir)
+
+    !convert to the orthogonal space
+    forall(ip = 1:npoints)
+      xx(1:sb%dim, ip) = matmul(xx(1:sb%dim, ip), sb%klattice_unitary(1:sb%dim, 1:sb%dim))
+    end forall
+
+    if(present(inner_box)) then
+
+      if(inner_box) then
+        forall(ip = 1:npoints)
+          in_box(ip) = sqrt(sum(xx(1:sb%dim, ip)**2)) < sb%hr_area%radius + DELTA
+        end forall
+      end if
+
+    else
+
+      select case(sb%box_shape)
+      case(SPHERE)
+        forall(ip = 1:npoints)
+          in_box(ip) = (sqrt(sum(xx(1:sb%dim, ip)**2)) <= sb%rsize+DELTA)
+        end forall
+
+      case(CYLINDER)
+        do ip = 1, npoints
+          r = sqrt(xx(2, ip)**2 + xx(3, ip)**2)
+          in_box(ip) = (r <= sb%rsize + DELTA .and. abs(xx(1, ip)) <= sb%xsize+DELTA)
+        end do
+
+      case(MINIMUM)
+        do ip = 1, npoints
+          in_box(ip) = .false.
+          do iatom = 1, geo%natoms
+            dist2 = sum((xx(1:sb%dim, ip) - geo%atom(iatom)%x(1:sb%dim))**2)
+            if(sb%rsize > M_ZERO) then
+              radius = sb%rsize
+            else
+              radius = geo%atom(iatom)%spec%def_rsize
+            endif
+            if(dist2 <= (radius + DELTA)**2) then
+              in_box(ip) = .true.
+              exit
+            end if
+          end do
+        end do
+
+      case(PARALLELEPIPED, HYPERCUBE) 
+        llimit(1:sb%dim) = -sb%lsize(1:sb%dim) - DELTA
+        ulimit(1:sb%dim) =  sb%lsize(1:sb%dim) + DELTA
+        ulimit(1:sb%periodic_dim) = sb%lsize(1:sb%periodic_dim) - DELTA
+
+        if(sb%open_boundaries) then
+          ulimit(TRANS_DIR) = sb%lsize(TRANS_DIR) - DELTA
+        end if
+
+        forall(ip = 1:npoints)
+          in_box(ip) = all(xx(1:sb%dim, ip) >= llimit(1:sb%dim) .and. xx(1:sb%dim, ip) <= ulimit(1:sb%dim))
+        end forall
+
+#if defined(HAVE_GDLIB)
+      case(BOX_IMAGE)
+        do ip = 1, npoints
+          ix = int((xx(1, ip) + sb%lsize(1))/sb%h(1))
+          iy = int((xx(2, ip) + sb%lsize(2))/sb%h(2))
+          call loct_gdimage_get_pixel_rgb(sb%image, ix, iy, red, green, blue)
+          in_box(ip) = (red == 255).and.(green == 255).and.(blue == 255)
+        end do
+#endif
+
+      case(BOX_USDEF)
+        ! is it inside the user-given boundaries
+        do ip = 1, npoints
+          in_box(ip) =  &
+            (xx(1, ip) >= -sb%lsize(1)-DELTA.and.xx(1, ip) <= sb%lsize(1)+DELTA).and. &
+            (xx(2, ip) >= -sb%lsize(2)-DELTA.and.xx(2, ip) <= sb%lsize(2)+DELTA).and. &
+            (xx(3, ip) >= -sb%lsize(3)-DELTA.and.xx(3, ip) <= sb%lsize(3)+DELTA)
+
+          ! and inside the simulation box
+          xx(:, ip) = xx(:, ip)/units_inp%length%factor ! convert from a.u. to input units
+          r = sqrt(sum(xx(:, ip)**2))
+          call loct_parse_expression(re, im, sb%dim, xx(:, ip), r, M_ZERO, sb%user_def)
+          in_box(ip) = in_box(ip) .and. (re .ne. M_ZERO)
+        end do
+      end select
+    end if
+
+    call pop_sub()
+  end subroutine simul_box_in_box_vec
 
 
   !--------------------------------------------------------------
