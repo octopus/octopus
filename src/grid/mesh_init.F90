@@ -81,7 +81,7 @@ subroutine mesh_init_stage_1(mesh, sb, cv, enlarge)
 
   mesh%idx%enlarge = enlarge
 
-  if(sb%mr_flag) mesh%idx%enlarge = mesh%idx%enlarge*2
+  if(sb%mr_flag) mesh%idx%enlarge = mesh%idx%enlarge*(2**sb%hr_area%num_radii)
 
   ! adjust nr
   mesh%idx%nr = 0
@@ -214,6 +214,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
 
   if(sb%mr_flag) then 
     SAFE_ALLOCATE(mesh%resolution(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)))
+    mesh%resolution(:,:,:) = -1
   else
     nullify(mesh%resolution)
   end if
@@ -350,7 +351,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
           end do
  
           mesh%resolution(ix, iy, iz) = res
- 
+
           ! mark the enlargement points
           do is = 1, stencil%size
             if(stencil%center == is) cycle
@@ -660,11 +661,11 @@ contains
     integer :: i, j, jj(1:MAX_DIM), ip, np
     FLOAT   :: chi(MAX_DIM)
 
-    FLOAT :: ref_dist, comp_dist, volchecksum
-    FLOAT :: dd0(1:3), dd1(1:3), n_vect(1:3), jn_vect(1:3)
-    integer :: nx, ny, nz, big_cube_n, tiny_cube_n, n_counter, neigh_n, closer, equally_close
-    integer, allocatable :: neigh_table(:)
-
+    FLOAT :: minvol
+    integer :: ix, iy, iz, dx, dy, dz, newi, newj, newk, ii, lii, ljj, lkk, nn, order, neighbor
+    FLOAT, allocatable :: pos(:), ww(:)
+    integer, allocatable :: posi(:)
+ 
 #if defined(HAVE_MPI)
     integer :: k
 #endif
@@ -713,126 +714,72 @@ contains
 
       if(mesh%sb%mr_flag) then
 
-        message(1) = 'Info: Now that the multiresolution is used, point volumes are'
-        message(2) = 'calculated by dividing the space in the vicinity of each grid point'
-        message(3) = 'into tiny cubes and distributing them among nearest neighboring points.'
-        message(4) = 'The method is not really good and inaccuracy remains...'
-        call write_warning(4)
+        ! The following routines are essentially the same as in the calculation of the Laplacian
 
-        ! The size of the large cube that is divided into tiny ones, measured as the number
-        ! of minimum spacings from the center. For example, number 2 would mean that the side of the
-        ! cube would be 4 minimum spacings.
-        big_cube_n = 2
+        order = mesh%sb%mr_iorder !interpolation order
+        nn = 2*order
 
-        ! into how many areas each spacing is divided.
-        tiny_cube_n = 4
+        SAFE_ALLOCATE(ww(1:nn))
+        SAFE_ALLOCATE(pos(1:nn))
+        SAFE_ALLOCATE(posi(1:nn))
 
-        ! this is used for comparison of the total volume with the "correct" one. 
-        volchecksum = M_ZERO
+        do ii = 1, order
+          posi(ii) = 1 + 2*(ii - 1)
+          posi(order + ii) = -posi(ii)
+          pos(ii) =  posi(ii)
+          pos(order + ii) = -pos(ii)
+        end do
 
-        SAFE_ALLOCATE(neigh_table(1:(2*big_cube_n+1)**sb%dim))
+        call interpolation_coefficients(nn, pos, M_ZERO, ww)
 
-        do i = 1, mesh%np ! volume is calculated for each (non-boundary) point
+        minvol = product(mesh%h(1:sb%dim))
+        forall(ip = 1:mesh%np) mesh%vol_pp(ip) = minvol
 
-          ! coordinates of the current point
-          call index_to_coords(mesh%idx, sb%dim, i, jj)
-
-          ! checksum counter
-          if(mod(jj(1),2**sb%hr_area%num_radii).eq.0 .and. &
-             mod(jj(2),2**sb%hr_area%num_radii).eq.0 .and. &
-             mod(jj(3),2**sb%hr_area%num_radii).eq.0) then
-            volchecksum = volchecksum + product(2**sb%hr_area%num_radii*mesh%h(1:sb%dim))
-          end if
-
-          ! the spacing of the current point:
-          dd0(1:sb%dim) = mesh%resolution(jj(1),jj(2),jj(3))*mesh%h(1:sb%dim)
-
-          ! the spacing for the tiny cubes
-          dd1(1:sb%dim) = dd0(1:sb%dim)/real(tiny_cube_n)
-
-          ! find the nearest neighbors of the current point
-          neigh_table(:) = -1
-          neigh_n = 0
-          do nx=jj(1)-big_cube_n,jj(1)+big_cube_n
-            do ny=jj(2)-big_cube_n,jj(2)+big_cube_n
-              do nz=jj(3)-big_cube_n,jj(3)+big_cube_n
-
-                ! index of this neighboring point
-                j = mesh%idx%Lxyz_inv(nx,ny,nz)
-
-                if(i.eq.j) cycle ! you cannot call it a neighbor...
-
-                ! does it exist? if yes, is it NOT inner boundary point?
-                if(j.gt.0 .and. inner_boundary_point(mesh,j).eq.0) then
-                  neigh_n = neigh_n + 1         ! fine, add it
-                  neigh_table(neigh_n) = j      ! to neighbor list
-                end if
-
+        ! loop through _all_ the points
+        do iz = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
+          do iy = mesh%idx%nr(1,2), mesh%idx%nr(2,2)
+            do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
+  
+              if(mesh%resolution(ix,iy,iz).ne.-1) cycle ! a crude test, but it works
+  
+              dx = abs(mod(ix, 2))
+              dy = abs(mod(iy, 2))
+              dz = abs(mod(iz, 2))
+  
+              if(dx+dy+dz.eq.M_ZERO) cycle
+ 
+              ! The present point (ix,iy,iz) is an intermediate one. When
+              ! calculating integrals, the value of the integrand is
+              ! interpolated from the neighboring ones, i.e. the values of
+              ! the neighboring points are added up with different weights.
+              ! The following loop goes through the neighboring points and
+              ! modifies their weights, i.e. their volumes.
+              do lii = 1, nn
+                do ljj = 1, nn
+                  do lkk = 1, nn
+                    newi = ix + posi(lii)*dx
+                    newj = iy + posi(ljj)*dy
+                    newk = iz + posi(lkk)*dz
+                    if(any((/newi, newj, newk/) <  mesh%idx%nr(1, 1:3)) .or. &
+                       any((/newi, newj, newk/) >  mesh%idx%nr(2, 1:3))) cycle
+                    neighbor = mesh%idx%Lxyz_inv(newi, newj, newk)
+                    if(neighbor.gt.0 .and.neighbor.le.mesh%np) mesh%vol_pp(neighbor) = &
+                                          mesh%vol_pp(neighbor) + ww(lii)*ww(ljj)*ww(lkk)*minvol
+                  end do
+                end do
               end do
             end do
           end do
-
-          ! now we have a nice list of the existing neighboring points. Let`s loop through the
-          ! tiny cubes and see if the current point is the closest one to it, or if some of the
-          ! neighboring ones are equally close or even closer.
-
-          mesh%vol_pp(i) = M_ZERO ! initialize the volume
-
-          ! loop through he tiny cubes
-          do nx = 0,2*tiny_cube_n*big_cube_n-1
-            do ny = 0,2*tiny_cube_n*big_cube_n-1
-              do nz = 0,2*tiny_cube_n*big_cube_n-1
-
-                ! the vector of the tiny cube, placing the origin to the current point i
-                n_vect(1) = -big_cube_n*dd0(1)+real(nx+0.5)*dd1(1)
-                n_vect(2) = -big_cube_n*dd0(2)+real(ny+0.5)*dd1(2)
-                n_vect(3) = -big_cube_n*dd0(3)+real(nz+0.5)*dd1(3)
-                
-                ref_dist = sum(n_vect(1:sb%dim)**2)
-
-                ! initialize the counters
-                closer = 0
-                equally_close = 0
-
-                ! loop through the neighbors
-                do n_counter = 1, neigh_n
-
-                  j = neigh_table(n_counter) ! index of the neighbor
-
-                  jn_vect(1:sb%dim) = mesh%x(i,1:sb%dim)+n_vect(1:sb%dim) - mesh%x(j,1:sb%dim)
-                  comp_dist = sum(jn_vect(1:sb%dim)**2)
-
-                  ! find out if the current neighbor j is (i) closer, (ii) as close as, or
-                  ! (iii) further from the present tiny cube than the current point i.
-
-                  if(abs(ref_dist-comp_dist).lt.1.0e-12) then
-                    equally_close = equally_close + M_ONE
-                  elseif (comp_dist.lt.ref_dist) then
-                    closer = closer + 1
-                    exit
-                  endif
-
-                end do
-
-              ! do not add the volume if some neighbor was closer
-              if(closer.eq.M_ZERO) then 
-
-                ! the current point i owns the cube, but not necessarily alone
-                mesh%vol_pp(i) = mesh%vol_pp(i) + product(dd1(1:sb%dim))/real(equally_close+M_ONE)
-
-              end if
-
-              end do 
-            end do 
-          end do 
- 
         end do
-        SAFE_DEALLOCATE_A(neigh_table)
 
-        write (message(1),'(a,F26.12)') 'Volume as sum(mesh%vol_pp(1:mesh%np)) : ',sum(mesh%vol_pp(1:mesh%np))
-        write (message(2),'(a,F26.12)') 'Checksum volume (result for non multiresolution, double spacing) : ',volchecksum
-        write (message(3),'(a,F26.12)') ' => The error in the volume: ',abs(volchecksum-sum(mesh%vol_pp(1:mesh%np)))
+        message(1) = 'Info: Point volumes are calculated by solving interpolation'
+        message(2) = 'coefficients for the intermediate points.'
+        write (message(3),'(a,F26.12)') 'Volume as sum(mesh%vol_pp(1:mesh%np)) : ',sum(mesh%vol_pp(1:mesh%np))
         call write_info(3)
+
+        SAFE_DEALLOCATE_A(ww)
+        SAFE_DEALLOCATE_A(pos)
+        SAFE_DEALLOCATE_A(posi)
 
       else ! no multiresolution
 
