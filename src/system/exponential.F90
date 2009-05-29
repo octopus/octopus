@@ -334,15 +334,15 @@ contains
       zfact = M_z1
       zfact_is_real = .true.
 
+      do idim = 1, hm%d%dim
+        call lalg_copy(gr%mesh%np, zpsi(:, idim), zpsi1(:, idim))
+      end do
+
       do i = 1, te%exp_order
         zfact = zfact*(-M_zI*timestep)/i
         zfact_is_real = .not. zfact_is_real
         
-        if (i == 1) then
-          call operate(zpsi, hzpsi1)
-        else
-          call operate(zpsi1, hzpsi1)
-        end if
+        call operate(zpsi1, hzpsi1)
 
         if(zfact_is_real) then
           do idim = 1, hm%d%dim

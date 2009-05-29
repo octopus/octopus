@@ -62,12 +62,12 @@ subroutine X(states_gram_schmidt_full)(st, nst, m, dim, psi, start)
         nrm2 = nrm2 + ss(jst, kst)*ss(ist, jst)*ss(kst, ist)/(ss(jst, jst)*ss(kst, kst))
       end do
     end do
-    nrm2 = sqrt(nrm2)
+    nrm2 = M_ONE/sqrt(nrm2)
 
     ! now generate the matrix with the linear combination of orbitals
-    qq(ist, ist) = M_ONE/nrm2
+    qq(ist, ist) = nrm2
     do jst = 1, ist - 1
-      qq(jst, ist) = -ss(jst, ist)/ss(jst, jst)/nrm2
+      qq(jst, ist) = -ss(jst, ist)/ss(jst, jst)*nrm2
     end do
 
   end do
