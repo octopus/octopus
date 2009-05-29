@@ -1147,97 +1147,22 @@ contains
     logical, optional,  intent(in) :: inner_box
 
     real(8), parameter :: DELTA = CNST(1e-12)
-    FLOAT :: r, re, im, xx(MAX_DIM)
-    real(8) :: llimit(MAX_DIM), ulimit(MAX_DIM)
-
-#if defined(HAVE_GDLIB)
-    integer :: red, green, blue, ix, iy
-#endif
+    FLOAT :: xx(1:MAX_DIM, 1)
+    logical :: in_box2(1)
 
     call push_sub('simul_box.simul_box_in_box')
 
-    in_box = .true.
 
-    xx(1:sb%dim) = x(1:sb%dim) - sb%box_offset(1:sb%dim)
-
-    !convert to the orthogonal space
-    xx(1:sb%dim) = matmul(xx(1:sb%dim), sb%klattice_unitary(1:sb%dim, 1:sb%dim))
-
+    xx = M_ZERO
+    xx(1:sb%dim, 1) = x(1:sb%dim)
     if(present(inner_box)) then
-      if(inner_box) then
-        in_box = sqrt(sum(xx(1:sb%dim)**2)).lt.sb%hr_area%radius + DELTA
-        call pop_sub()
-        return
-      end if
+      call simul_box_in_box_vec(sb, geo, 1, xx, in_box2, inner_box)
+    else
+      call simul_box_in_box_vec(sb, geo, 1, xx, in_box2)
     end if
-
-    select case(sb%box_shape)
-    case(SPHERE)
-      in_box = (sqrt(sum(xx(1:sb%dim)**2)) <= sb%rsize+DELTA)
-
-    case(CYLINDER)
-      r = sqrt(xx(2)**2 + xx(3)**2)
-      in_box = (r<=sb%rsize+DELTA .and. abs(xx(1)) <= sb%xsize+DELTA)
-
-    case(MINIMUM)
-      in_box = in_minimum()
-
-    case(PARALLELEPIPED, HYPERCUBE) 
-      llimit(1:sb%dim) = -sb%lsize(1:sb%dim) - DELTA
-      ulimit(1:sb%dim) =  sb%lsize(1:sb%dim) + DELTA
-      ulimit(1:sb%periodic_dim) = sb%lsize(1:sb%periodic_dim) - DELTA
-      if(sb%open_boundaries) then
-        ulimit(TRANS_DIR) = sb%lsize(TRANS_DIR) - DELTA
-      end if
-
-      in_box = all(xx(1:sb%dim) >= llimit(1:sb%dim) .and. xx(1:sb%dim) <= ulimit(1:sb%dim))
-
-#if defined(HAVE_GDLIB)
-    case(BOX_IMAGE)
-      ix = int((xx(1) + sb%lsize(1))/sb%h(1))
-      iy = int((xx(2) + sb%lsize(2))/sb%h(2))
-      call loct_gdimage_get_pixel_rgb(sb%image, ix, iy, red, green, blue)
-      in_box = (red == 255).and.(green == 255).and.(blue == 255)
-#endif
-
-    case(BOX_USDEF)
-      ! is it inside the user-given boundaries
-      in_box =  &
-        (xx(1) >= -sb%lsize(1)-DELTA.and.xx(1) <= sb%lsize(1)+DELTA).and. &
-        (xx(2) >= -sb%lsize(2)-DELTA.and.xx(2) <= sb%lsize(2)+DELTA).and. &
-        (xx(3) >= -sb%lsize(3)-DELTA.and.xx(3) <= sb%lsize(3)+DELTA)
-      
-      ! and inside the simulation box
-      xx(:) = xx(:)/units_inp%length%factor ! convert from a.u. to input units
-      r = sqrt(sum(xx(:)**2))
-      call loct_parse_expression(re, im, sb%dim, xx, r, M_ZERO, sb%user_def)
-      in_box = in_box .and. (re .ne. M_ZERO)
-    end select
-
+    in_box = in_box2(1)
+    
     call pop_sub()
-
-  contains
-
-    !--------------------------------------------------------------
-    logical function in_minimum()
-      integer :: iatom
-      FLOAT :: radius, dist2
-
-      in_minimum = .false.
-      do iatom = 1, geo%natoms
-        dist2 = sum((xx(1:sb%dim) - geo%atom(iatom)%x(1:sb%dim))**2)
-        if(sb%rsize > M_ZERO) then
-          radius = sb%rsize
-        else
-          radius = geo%atom(iatom)%spec%def_rsize
-        endif
-        if(dist2 <= (radius + DELTA)**2) then
-          in_minimum = .true.
-          exit
-        end if
-      end do
-
-    end function in_minimum
   end function simul_box_in_box
 
 
@@ -1277,7 +1202,7 @@ contains
 
       if(inner_box) then
         forall(ip = 1:npoints)
-          in_box(ip) = sqrt(sum(xx(1:sb%dim, ip)**2)) < sb%hr_area%radius + DELTA
+          in_box(ip) = sum(xx(1:sb%dim, ip)**2) < (sb%hr_area%radius + DELTA)**2
         end forall
       end if
 
@@ -1286,7 +1211,7 @@ contains
       select case(sb%box_shape)
       case(SPHERE)
         forall(ip = 1:npoints)
-          in_box(ip) = (sqrt(sum(xx(1:sb%dim, ip)**2)) <= sb%rsize+DELTA)
+          in_box(ip) = sum(xx(1:sb%dim, ip)**2) <= (sb%rsize+DELTA)**2
         end forall
 
       case(CYLINDER)
