@@ -78,7 +78,9 @@ module simul_box_m
 
   type, public :: multiresolution_t
 
-    FLOAT :: radius          ! radius of the high resolution area
+    integer :: num_areas       ! number of multiresolution areas
+    integer :: num_radii       ! number of radii (resolution borders)
+    FLOAT :: radius(1:2)     ! radius of the high resolution area
     FLOAT :: center(MAX_DIM) ! central point
 
   end type multiresolution_t
@@ -422,29 +424,36 @@ contains
       !% point of the region, and the following ones set
       !% the radii where resolution changes (measured from the
       !% central point).
+      !% NOTE: up to now,
+      !%   (i)    only one area can be set up
+      !%   (ii)   only one multiresolution level is working
+      !%   (iii)  only origin-centered area is implemented
       !%End
 
       if(loct_parse_block(datasets_check('MultiResolutionArea'), blk) == 0) then
-        n_rows=loct_parse_block_n(blk)
-        if (n_rows.ne.1) then
-          message(1) = "Up to now, only one multiresolution area can be set up."
-          call write_fatal(1)
-        end if
-        n_cols=loct_parse_block_cols(blk,0)
-        if (n_cols.ne.sb%dim+1) then
-          message(1) = "Up to now, only one level of resolutions is implemented."
-          call write_fatal(1)
-        end if
+
+        ! number of areas
+        sb%hr_area%num_areas = loct_parse_block_n(blk)
+
+        ! number of radii
+        sb%hr_area%num_radii = loct_parse_block_cols(blk,0)-sb%dim
+
+        ! the central point
         do i = 1, sb%dim
            call loct_parse_block_float(blk, 0, i-1, sb%hr_area%center(i))
         end do
-        if (sum(sb%hr_area%center(1:sb%dim)**2).gt.r_small) then
-          message(1) = "Up to now, only origin-centered resolution is implemented."
-          call write_fatal(1)
-        end if
-        call loct_parse_block_float(blk, 0, i-1, sb%hr_area%radius)
-        sb%hr_area%radius = sb%hr_area%radius*units_inp%length%factor
-        sb%mr_flag = .true. 
+
+        if (sb%hr_area%num_areas.ne.1 .or. &
+            sb%hr_area%num_radii.gt.1 .or. &
+            sum(sb%hr_area%center(1:sb%dim)**2).gt.r_small) call input_error('MultiResolutionArea')
+
+        ! the radii
+        do i = 1, sb%hr_area%num_radii
+          call loct_parse_block_float(blk, 0, sb%dim+i-1, sb%hr_area%radius(i))
+          sb%hr_area%radius(i) = sb%hr_area%radius(i)*units_inp%length%factor
+        end do
+
+        sb%mr_flag = .true.
       else
         sb%mr_flag = .false.
       end if
@@ -1202,7 +1211,7 @@ contains
 
       if(inner_box) then
         forall(ip = 1:npoints)
-          in_box(ip) = sum(xx(1:sb%dim, ip)**2) < (sb%hr_area%radius + DELTA)**2
+          in_box(ip) = sum(xx(1:sb%dim, ip)**2) < (sb%hr_area%radius(1) + DELTA)**2
         end forall
       end if
 
@@ -1328,7 +1337,8 @@ contains
     write(iunit, '(a20,9e22.14)')   'h=                  ', sb%h(1:MAX_DIM)
     write(iunit, '(a20,9e22.14)')   'box_offset=         ', sb%box_offset(1:MAX_DIM)
     write(iunit, '(a20,l7)')        'mr_flag             ', sb%mr_flag
-    write(iunit, '(a20,e22.14)')    'mr_radius           ', sb%hr_area%radius
+    write(iunit, '(a20,e22.14)')    'mr_radius(1)        ', sb%hr_area%radius(1)
+    write(iunit, '(a20,e22.14)')    'mr_radius(2)        ', sb%hr_area%radius(2)
     do i = 1, MAX_DIM
       write(iunit, '(a9,i1,a11,9e22.14)')   'rlattice(', i, ')=         ', sb%rlattice(1:MAX_DIM, i)
     end do
@@ -1474,7 +1484,9 @@ contains
     call iopar_read(mpi_world, iunit, line, ierr)
     read(line,*) str, sb%mr_flag
     call iopar_read(mpi_world, iunit, line, ierr)
-    read(line,*) str, sb%hr_area%radius
+    read(line,*) str, sb%hr_area%radius(1)
+    call iopar_read(mpi_world, iunit, line, ierr)
+    read(line,*) str, sb%hr_area%radius(2)
     do idim=1, MAX_DIM
       call iopar_read(mpi_world, iunit, line, ierr)
       read(line, *) str, sb%rlattice(1:MAX_DIM, idim)
@@ -1589,7 +1601,10 @@ contains
     sbout%add_unit_cells          = sbin%add_unit_cells
     sbout%lead_restart_dir        = sbin%lead_restart_dir
     sbout%mr_flag                 = sbin%mr_flag
-    sbout%hr_area%radius          = sbin%hr_area%radius
+    sbout%hr_area%num_areas       = sbin%hr_area%num_areas
+    sbout%hr_area%num_radii       = sbin%hr_area%num_radii
+    sbout%hr_area%radius(1:2)     = sbin%hr_area%radius(1:2)
+
     if(associated(sbin%lead_unit_cell)) then
       SAFE_ALLOCATE(sbout%lead_unit_cell(1:NLEADS))
       do il = 1, NLEADS

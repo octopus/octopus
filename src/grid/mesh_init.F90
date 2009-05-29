@@ -183,9 +183,10 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
   integer :: i, j, k, il, ik, ix, iy, iz, is
   integer :: jx, jy, jz, res_counter, j_counter
   FLOAT   :: chi(MAX_DIM)
-  integer :: nr(1:2, 1:MAX_DIM), res
+  integer :: nr(1:2, 1:MAX_DIM), res, i_lev, n_mod
   logical, allocatable :: in_box(:)
   FLOAT,   allocatable :: xx(:, :)
+  real(8), parameter :: DELTA = CNST(1e-12)
 
   call push_sub('mesh_init.mesh_init_stage_2')
   call profiling_in(mesh_init_prof)
@@ -242,10 +243,27 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
         ! With multiresolution, only inner (not enlargement) points are marked now
         if(sb%mr_flag) then
 
-          if ( simul_box_in_box(sb, geo, xx(:, ix), inner_box = .true.) .or. &
-             ( in_box(ix) .and. &
-               mod(ix, 2) == 0 .and. mod(iy, 2) == 0 .and. mod(iz, 2) == 0) ) then
-                   mesh%idx%Lxyz_inv(ix, iy, iz) = ibset(mesh%idx%Lxyz_inv(ix, iy, iz), INNER_POINT)
+          if (in_box(ix) ) then
+
+            ! First check: is the point beyond the multiresolution areas
+            n_mod = 2**sb%hr_area%num_radii
+            if (sum(xx(:,ix)**2).gt. sb%hr_area%radius(1)**2 .and. &
+                 mod(ix, n_mod).eq.0 .and. mod(iy, n_mod).eq.0 .and. mod(iz,n_mod) .eq. 0) then
+              mesh%idx%Lxyz_inv(ix, iy, iz) = ibset(mesh%idx%Lxyz_inv(ix, iy, iz), INNER_POINT)
+            end if
+
+           ! Other option: must (i) be inside the multiresolution area and (ii)
+            ! satisfy the coordinate index conditions
+            if(.not.btest(mesh%idx%Lxyz_inv(ix, iy, iz), INNER_POINT)) then
+              do i_lev = 1,sb%hr_area%num_radii
+                n_mod = 2**(i_lev-1)
+                if( sum(xx(:,ix)**2) .lt. sb%hr_area%radius(i_lev)**2 + DELTA .and. &
+                    mod(ix, n_mod).eq.0 .and. mod(iy, n_mod).eq.0 .and. mod(iz,n_mod) .eq. 0) then
+                  mesh%idx%Lxyz_inv(ix, iy, iz) = ibset(mesh%idx%Lxyz_inv(ix,iy, iz), INNER_POINT)
+                end if
+              end do
+            end if
+
           end if
 
         else ! the usual way: mark both inner and enlargement points
