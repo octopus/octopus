@@ -307,9 +307,14 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   do jst = st%st_start, st%st_end, blocksize
     maxst = min(jst + blocksize - 1, st%st_end)
 
-    call batch_init(psib(1), st%d%dim, jst, maxst, st%X(psi)(:, :, jst:, ik))
+    if(st%np_size) then
+      call batch_init(psib(1), st%d%dim, jst, maxst, psi(:, :, 1, :))
+      call batch_set(psib(1), gr%mesh%np, st%X(psi)(:, :, jst:, ik))
+    else
+      call batch_init(psib(1), st%d%dim, jst, maxst, st%X(psi)(:, :, jst:, ik))
+    end if
     call batch_init(resb(1), st%d%dim, jst, maxst, res(:, :, 1, :))
-
+    
     call X(hamiltonian_apply_batch)(hm, gr, psib(1), resb(1), ik)
 
     call batch_end(psib(1))
@@ -362,7 +367,8 @@ subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, niter, converged,
 
   integer :: isweep, isd, ist, idim, sst, est, bsize, ib
   R_TYPE  :: lambda, ca, cb, cc
-
+  
+  R_TYPE, allocatable :: psi(:, :, :)
   R_TYPE, allocatable :: res(:, :, :)
   R_TYPE, allocatable :: kres(:, :, :)
   R_TYPE, allocatable :: me1(:, :), me2(:, :)
@@ -379,6 +385,10 @@ subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, niter, converged,
   SAFE_ALLOCATE(res(1:gr%mesh%np_part, 1:st%d%dim, 1:blocksize))
   SAFE_ALLOCATE(kres(1:gr%mesh%np_part, 1:st%d%dim, 1:blocksize))
 
+  if(st%np_size) then
+    SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim, 1:blocksize))
+  end if
+
   niter = 0
 
   do isweep = 1, sweeps
@@ -389,7 +399,13 @@ subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, niter, converged,
       est = min(sst + blocksize - 1, st%st_end)
       bsize = est - sst + 1
 
-      call batch_init(psib, st%d%dim, sst, est, st%X(psi)(:, :, sst:, ik))
+      if(st%np_size) then
+        call batch_init(psib, st%d%dim, sst, est, psi)
+        call batch_set(psib, gr%mesh%np, st%X(psi)(:, :, sst:, ik))
+      else
+        call batch_init(psib, st%d%dim, sst, est, st%X(psi)(:, :, sst:, ik))
+      end if
+
       call batch_init(resb, st%d%dim, sst, est, res)
       call batch_init(kresb, st%d%dim, sst, est, kres)
 
@@ -400,8 +416,8 @@ subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, niter, converged,
         do ist = sst, est
           ib = ist - sst + 1
 
-          me1(1, ib) = X(mf_dotp)(gr%mesh, st%d%dim, st%X(psi)(:, :, ist, ik), res(:, :, ib), reduce = .false.)
-          me1(2, ib) = X(mf_dotp)(gr%mesh, st%d%dim, st%X(psi)(:, :, ist, ik), st%X(psi)(:, :, ist, ik), reduce = .false.)
+          me1(1, ib) = X(mf_dotp)(gr%mesh, st%d%dim, psib%states(ib)%X(psi), res(:, :, ib), reduce = .false.)
+          me1(2, ib) = X(mf_dotp)(gr%mesh, st%d%dim, psib%states(ib)%X(psi), psib%states(ib)%X(psi), reduce = .false.)
 
         end do
 
@@ -420,7 +436,7 @@ subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, niter, converged,
           st%eigenval(ist, ik) = me1(1, ib)/me1(2, ib)
 
           do idim = 1, st%d%dim
-            call lalg_axpy(gr%mesh%np, -st%eigenval(ist, ik), st%X(psi)(:, idim, ist, ik), res(:, idim, ib))
+            call lalg_axpy(gr%mesh%np, -st%eigenval(ist, ik), psib%states(ib)%X(psi)(:, idim), res(:, idim, ib))
           end do
         end do
 
@@ -434,9 +450,9 @@ subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, niter, converged,
           ib = ist - sst + 1
 
           me2(1, ib) = X(mf_dotp)(gr%mesh, st%d%dim, kres(:, :, ib), kres(:, :, ib), reduce = .false.)
-          me2(2, ib) = X(mf_dotp)(gr%mesh, st%d%dim, st%X(psi)(:, :, ist, ik),  kres(:, :, ib), reduce = .false.)
+          me2(2, ib) = X(mf_dotp)(gr%mesh, st%d%dim, psib%states(ib)%X(psi),  kres(:, :, ib), reduce = .false.)
           me2(3, ib) = X(mf_dotp)(gr%mesh, st%d%dim, kres(:, :, ib), res(:, :, ib), reduce = .false.)
-          me2(4, ib) = X(mf_dotp)(gr%mesh, st%d%dim, st%X(psi)(:, :, ist, ik),  res(:, :, ib), reduce = .false.)
+          me2(4, ib) = X(mf_dotp)(gr%mesh, st%d%dim, psib%states(ib)%X(psi),  res(:, :, ib), reduce = .false.)
 
         end do
 
@@ -459,7 +475,7 @@ subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, niter, converged,
           lambda = CNST(2.0)*cc/(cb + sqrt(cb**2 - CNST(4.0)*ca*cc))
 
           do idim = 1, st%d%dim
-            call lalg_axpy(gr%mesh%np, lambda, kres(:, idim, ib), st%X(psi)(:, idim, ist, ik))
+            call lalg_axpy(gr%mesh%np, lambda, kres(:, idim, ib), psib%states(ib)%X(psi)(:, idim))
           end do
 
         end do

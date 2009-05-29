@@ -585,7 +585,7 @@ subroutine X(states_linear_combination)(mesh, nst, dim, transf, psi)
       
       call blas_gemm('N', 'N', &
            size, nst, nst, &
-           R_TOTYPE(M_ONE), psi(sp, idim, 1), mesh%np_part*dim, &
+           R_TOTYPE(M_ONE), psi(sp, idim, 1), ubound(psi, dim=1)*dim, &
            transf(1, 1), nst, &
            R_TOTYPE(M_ZERO), psinew(1, 1), block_size)
       

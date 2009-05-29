@@ -87,6 +87,21 @@ subroutine X(batch_delete_state)(this, ii)
   call pop_sub()
 end subroutine X(batch_delete_state)
 
+subroutine X(batch_set)(this, np, psi)
+  type(batch_t),  intent(out)   :: this
+  integer,        intent(in)    :: np
+  R_TYPE, target, intent(in)    :: psi(:, :, :)
+
+  integer :: ist, idim
+
+  do ist = 1, this%nst
+    do idim = 1, this%dim
+      call lalg_copy(np, psi(:, idim, ist), this%states(ist)%X(psi)(:, idim))
+    end do
+  end do
+
+end subroutine X(batch_set)
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

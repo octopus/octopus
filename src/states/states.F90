@@ -156,6 +156,8 @@ module states_m
     integer, pointer            :: st_num(:)          ! Number of states on node r, i. e.
                                                       ! st_num(r) = st_num(2, r)-st_num(1, r).
     type(multicomm_all_pairs_t) :: ap                 ! All-pairs schedule.
+
+    logical                     :: np_size            ! whether the states were allocated with size mesh%np instead of size np
   end type states_t
 
 contains
@@ -373,6 +375,17 @@ contains
     end if
     
     st%d%block_size = min(st%d%block_size, st%nst)
+
+    !%Variable StatesSaveMemory
+    !%Type logical
+    !%Default false
+    !%Section Execution::Optimization
+    !%Description
+    !% (experimental) If set to yes, the wave functions will require
+    !% less memory, at the expense of increased computational
+    !% time. The default is no.
+    !%End
+    call loct_parse_logical(datasets_check('StatesSaveMemory'), .false., st%np_size)
 
     ! FIXME: For now, open-boundary calculations are only possible for
     ! continuum states, i.e. for those states treated by the Lippmann-
@@ -777,7 +790,7 @@ contains
     type(mesh_t),      intent(in)    :: mesh
     integer, optional, intent(in)    :: wfs_type
 
-    integer :: np, ik, ist, idim, st1, st2, k1, k2
+    integer :: np, ik, ist, idim, st1, st2, k1, k2, size
     logical :: force
 
     call push_sub('states.states_allocate_wfns')
@@ -806,25 +819,31 @@ contains
 
     st1 = st%st_start; st2 = st%st_end
     k1 = st%d%kpt%start; k2 = st%d%kpt%end
+    
+    if(st%np_size) then
+      size = mesh%np
+    else
+      size = mesh%np_part
+    end if
 
-    if (st%wfs_type == M_REAL) then
-      SAFE_ALLOCATE(st%dpsi(1:mesh%np_part, 1:st%d%dim, st1:st2, k1:k2))
+    if (states_are_real(st)) then
+      SAFE_ALLOCATE(st%dpsi(1:size, 1:st%d%dim, st1:st2, k1:k2))
 
       do ik = k1, k2
         do ist = st1, st2
           do idim = 1, st%d%dim
-            st%dpsi(1:mesh%np_part, idim, ist, ik) = M_ZERO
+            st%dpsi(1:size, idim, ist, ik) = M_ZERO
           end do
         end do
       end do
 
     else
-      SAFE_ALLOCATE(st%zpsi(1:mesh%np_part, 1:st%d%dim, st1:st2, k1:k2))
+      SAFE_ALLOCATE(st%zpsi(1:size, 1:st%d%dim, st1:st2, k1:k2))
 
       do ik = k1, k2
         do ist = st1, st2
           do idim = 1, st%d%dim
-            st%zpsi(1:mesh%np_part, idim, ist, ik) = M_Z0
+            st%zpsi(1:size, idim, ist, ik) = M_Z0
            end do
         end do
       end do
@@ -906,6 +925,7 @@ contains
     stout%lnst       = stin%lnst
     stout%st_start   = stin%st_start
     stout%st_end     = stin%st_end
+    stout%np_size    = stin%np_size
     call loct_pointer_copy(stout%dpsi, stin%dpsi)
     call loct_pointer_copy(stout%zpsi, stin%zpsi)
     call loct_pointer_copy(stout%user_def_states, stin%user_def_states)

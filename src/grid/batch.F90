@@ -43,6 +43,7 @@ module batch_m
        zbatch_new_state,        &
        dbatch_delete_state,     &
        zbatch_delete_state,     &
+       batch_set,               &
        batch_is_ok
 
   type state_t
@@ -66,6 +67,10 @@ module batch_m
 
   interface batch_add_state
     module procedure dbatch_add_state, zbatch_add_state
+  end interface
+
+  interface batch_set
+    module procedure dbatch_set, zbatch_set
   end interface
 
 contains

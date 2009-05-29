@@ -26,11 +26,11 @@ subroutine X(subspace_diag)(gr, st, hm, ik, diff)
   integer,             intent(in)    :: ik
   FLOAT, optional,     intent(out)   :: diff(:)
 
-  R_TYPE, allocatable :: h_subspace(:, :), vec(:, :), f(:, :, :)
+  R_TYPE, allocatable :: h_subspace(:, :), vec(:, :), f(:, :, :), psi(:, :, :)
   integer             :: ist, ist2, jst, size, idim
   FLOAT               :: nrm2
   type(profile_t),     save    :: diagon_prof
-  type(batch_t) :: psib, hpsib
+  type(batch_t) :: psib, hpsib, whole_psib
 
   call push_sub('subspace_inc.Xsubspace_diag')
   call profiling_in(diagon_prof, "SUBSPACE_DIAG")
@@ -49,24 +49,32 @@ subroutine X(subspace_diag)(gr, st, hm, ik, diff)
     SAFE_ALLOCATE(       vec(1:st%nst, 1:st%nst))
     SAFE_ALLOCATE(f(1:gr%mesh%np, 1:st%d%dim, 1:st%d%block_size))
 
+    if(st%np_size) then
+      SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim, 1:st%d%block_size))
+    end if
+
     ! Calculate the matrix representation of the Hamiltonian in the subspace <psi|H|psi>.
     do ist = st%st_start, st%st_end, st%d%block_size
       size = min(st%d%block_size, st%st_end - ist + 1)
 
-      call batch_init(psib, hm%d%dim, ist, ist + size - 1, st%X(psi)(:, :, ist:, ik))
+      if(st%np_size) then
+        call batch_init(psib, hm%d%dim, ist, ist + size - 1, psi)
+        call batch_set(psib, gr%mesh%np, st%X(psi)(:, :, ist:, ik))
+      else
+        call batch_init(psib, hm%d%dim, ist, ist + size - 1, st%X(psi)(:, :, ist:, ik))
+      end if
+
       call batch_init(hpsib, hm%d%dim, ist, ist + size - 1, f)
 
       call X(hamiltonian_apply_batch)(hm, gr, psib, hpsib, ik)
 
       call batch_end(psib)
 
-      call batch_init(psib, hm%d%dim, ist, st%nst, st%X(psi)(:, :, ist:st%nst, ik))
-
-      call X(mf_dotp_batch)(gr%mesh, hpsib, psib, h_subspace)
-
+      call batch_init(whole_psib, hm%d%dim, ist, st%nst, st%X(psi)(:, :, ist:st%nst, ik))
+      call X(mf_dotp_batch)(gr%mesh, hpsib, whole_psib, h_subspace)
+      call batch_end(whole_psib)
       call batch_end(hpsib)
-      call batch_end(psib)
-
+      
     end do
 
     do ist = st%st_start, st%st_end
@@ -95,8 +103,13 @@ subroutine X(subspace_diag)(gr, st, hm, ik, diff)
       
       do ist = st%st_start, st%st_end, st%d%block_size
         size = min(st%d%block_size, st%st_end - ist + 1)
-        
-        call batch_init(psib, hm%d%dim, ist, ist + size - 1, st%X(psi)(:, :, ist:, ik))
+
+        if(st%np_size) then
+          call batch_init(psib, hm%d%dim, ist, ist + size - 1, psi)
+          call batch_set(psib, gr%mesh%np, st%X(psi)(:, :, ist:, ik))
+        else
+          call batch_init(psib, hm%d%dim, ist, ist + size - 1, st%X(psi)(:, :, ist:, ik))
+        end if
         call batch_init(hpsib, hm%d%dim, ist, ist + size - 1, f)
         
         call X(hamiltonian_apply_batch)(hm, gr, psib, hpsib, ik)
@@ -110,7 +123,11 @@ subroutine X(subspace_diag)(gr, st, hm, ik, diff)
       end do
 
     end if
-    
+
+    if(st%np_size) then
+      SAFE_DEALLOCATE_A(psi)
+    end if
+
     SAFE_DEALLOCATE_A(f)
     SAFE_DEALLOCATE_A(h_subspace)
     SAFE_DEALLOCATE_A(vec)

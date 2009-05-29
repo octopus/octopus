@@ -26,15 +26,13 @@ subroutine X(calculate_eigenvalues)(hm, gr, st, time)
   type(states_t),      intent(inout) :: st
   FLOAT,  optional,    intent(in)    :: time
 
-  R_TYPE, allocatable :: hpsi(:, :, :)
-  integer :: ik, ist, minst, maxst
+  R_TYPE, allocatable :: hpsi(:, :, :), psi(:, :, :)
+  integer :: ik, ist, minst, maxst, idim
   type(batch_t) :: psib, hpsib
   type(profile_t), save :: prof
 
   call push_sub('energy_inc.Xcalculate_eigenvalues')
   call profiling_in(prof, "EIGENVALUE_CALC")
-
-  SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim, 1:st%d%block_size))
 
   if(gr%sb%open_boundaries.and.calc_mode_is(CM_GS)) then
     ! For open boundaries we know the eigenvalues.
@@ -49,10 +47,23 @@ subroutine X(calculate_eigenvalues)(hm, gr, st, time)
     ! But I am not sure how to calculate this right now.
 
     do ik = st%d%kpt%start, st%d%kpt%end
+
+      SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim, 1:st%d%block_size))
+
+      if(st%np_size) then
+        SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim, 1:st%d%block_size))
+      end if
+
       do minst = st%st_start, st%st_end, st%d%block_size
         maxst = min(st%st_end, minst + st%d%block_size - 1)
 
-        call batch_init(psib, st%d%dim, minst, maxst, st%X(psi)(:, :, minst:, ik))
+        if(st%np_size) then
+          call batch_init(psib, st%d%dim, minst, maxst, psi)
+          call batch_set(psib, gr%mesh%np,  st%X(psi)(:, :, minst:, ik))
+        else
+          call batch_init(psib, st%d%dim, minst, maxst, st%X(psi)(:, :, minst:, ik))
+        end if
+
         call batch_init(hpsib, st%d%dim, minst, maxst, hpsi)
 
         if(present(time)) then
@@ -70,11 +81,15 @@ subroutine X(calculate_eigenvalues)(hm, gr, st, time)
         end do
 
       end do
+
+      if(st%np_size) then
+        SAFE_DEALLOCATE_A(psi)
+      end if
+      SAFE_DEALLOCATE_A(hpsi)
+
     end do
 
   end if
-
-  SAFE_DEALLOCATE_A(hpsi)
 
   call profiling_out(prof)
   call pop_sub()
@@ -86,26 +101,38 @@ FLOAT function X(electronic_kinetic_energy)(hm, gr, st) result(t0)
   type(grid_t),        intent(inout) :: gr
   type(states_t),      intent(inout) :: st
 
-  integer :: ik, ist
-  R_TYPE, allocatable :: tpsi(:, :)
+  integer :: ik, ist, idim
+  R_TYPE, allocatable :: tpsi(:, :), psi(:, :)
   FLOAT, allocatable  :: t(:, :)
 
   call push_sub('energy_inc.Xelectronic_kinetic_energy')
 
-  SAFE_ALLOCATE(tpsi(1:gr%mesh%np_part, 1:st%d%dim))
+  if(st%np_size) then
+    SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim))
+  end if
+  SAFE_ALLOCATE(tpsi(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(t(st%st_start:st%st_end, 1:st%d%nik))
+
   t = M_ZERO
 
   do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
       tpsi = R_TOTYPE(M_ZERO)
-      call X(hamiltonian_apply)(hm, gr, st%X(psi)(:, :, ist, ik), tpsi, ist, ik, kinetic_only = .true.)
+      if(st%np_size) then
+        do idim = 1, st%d%dim
+          call lalg_copy(gr%mesh%np, st%X(psi)(:, idim, ist, ik), psi(:, idim))
+        end do
+        call X(hamiltonian_apply)(hm, gr, psi, tpsi, ist, ik, kinetic_only = .true.)
+      else
+        call X(hamiltonian_apply)(hm, gr, st%X(psi)(:, :, ist, ik), tpsi, ist, ik, kinetic_only = .true.)
+      end if
       t(ist, ik) = X(mf_dotp)(gr%mesh, st%d%dim, st%X(psi)(:, :, ist, ik), tpsi)
     end do
   end do
   
   t0 = states_eigenvalues_sum(st, t)
-
+  
+  SAFE_DEALLOCATE_A(psi)
   SAFE_DEALLOCATE_A(tpsi)
   SAFE_DEALLOCATE_A(t)
   call pop_sub()
