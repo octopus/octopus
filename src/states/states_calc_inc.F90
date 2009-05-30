@@ -81,7 +81,9 @@ subroutine X(states_gram_schmidt_full)(st, nst, m, dim, psi, start)
   
   if(.not. st%parallel_in_states) then
 
-    call X(states_linear_combination)(m, st%nst, st%d%dim, qq, psi)
+    call batch_init(psib, st%d%dim, 1, st%nst, psi)
+    call X(mesh_batch_rotate)(m, psib, qq)
+    call batch_end(psib)
 
   else
 
@@ -557,61 +559,6 @@ subroutine X(states_matrix)(m, st1, st2, a)
 
   call pop_sub()
 end subroutine X(states_matrix)
-
-! ------------------------------------------------------------------
-! This routine forms a new sets of states as linear combination of the
-! previous one, the coefficients are given by the matrix tranfs. This
-! combination is done in place, so it does not require a second set of
-! wavefunctions to be allocated.
-!
-! The performance of this function could be improved using blocks and
-! blas, but for the moment this is not necessary.
-!
-subroutine X(states_linear_combination)(mesh, nst, dim, transf, psi)
-  type(mesh_t),        intent(in)    :: mesh
-  integer,             intent(in)    :: nst
-  integer,             intent(in)    :: dim
-  R_TYPE,              intent(in)    :: transf(:, :)
-  R_TYPE,              intent(inout) :: psi(:, :, :)
-  
-  R_TYPE, allocatable :: psinew(:, :)
-  
-  integer :: ist, idim, block_size, size, sp
-  type(profile_t), save :: prof
-
-  call profiling_in(prof, "STATES_ROTATE")
-
-  block_size = hardware%X(block_size)
-
-  SAFE_ALLOCATE(psinew(1:block_size, 1:nst))
-  
-  do sp = 1, mesh%np, block_size
-    size = min(block_size, mesh%np - sp + 1)
-
-    do idim = 1, dim
-      
-      call blas_gemm('N', 'N', &
-           size, nst, nst, &
-           R_TOTYPE(M_ONE), psi(sp, idim, 1), ubound(psi, dim=1)*dim, &
-           transf(1, 1), nst, &
-           R_TOTYPE(M_ZERO), psinew(1, 1), block_size)
-      
-      do ist = 1, nst
-        call blas_copy(size, psinew(1, ist), 1, psi(sp, idim, ist), 1)
-      end do
-     
-    end do
-
-  end do
-
-  SAFE_DEALLOCATE_A(psinew)
-
-  call profiling_count_operations((R_ADD + R_MUL)*dble(mesh%np)*dim*nst**2)
-
-  call profiling_out(prof)
-
-end subroutine X(states_linear_combination)
-
 
 !! Local Variables:
 !! mode: f90

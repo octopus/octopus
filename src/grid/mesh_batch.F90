@@ -36,11 +36,13 @@ module mesh_batch_m
   implicit none
 
   private
-  public ::                       &
-    dmesh_batch_dotp_matrix,      &
-    zmesh_batch_dotp_matrix,      &
-    dmesh_batch_dotp_self,        &
-    zmesh_batch_dotp_self
+  public ::                         &
+    dmesh_batch_dotp_matrix,        &
+    zmesh_batch_dotp_matrix,        &
+    dmesh_batch_dotp_self,          &
+    zmesh_batch_dotp_self,          &
+    dmesh_batch_rotate,             &
+    zmesh_batch_rotate
 
 contains
 

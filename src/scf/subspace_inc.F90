@@ -88,7 +88,9 @@ subroutine X(subspace_diag)(gr, st, hm, ik, diff)
 
     ! Calculate the new eigenfunctions as a linear combination of the
     ! old ones.
-    call X(states_linear_combination)(gr%mesh, st%nst, st%d%dim, vec, st%X(psi)(:, :, :, ik))
+    call batch_init(whole_psib, hm%d%dim, 1, st%nst, st%X(psi)(:, :, :, ik))
+    call X(mesh_batch_rotate)(gr%mesh, whole_psib, vec)
+    call batch_end(whole_psib)
 
     ! Renormalize.
     do ist = st%st_start, st%st_end

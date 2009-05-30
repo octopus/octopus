@@ -74,9 +74,7 @@ module states_calc_m
     dstates_angular_momentum,       &
     zstates_angular_momentum,       &
     dstates_matrix,                 &
-    zstates_matrix,                 &
-    dstates_linear_combination,     &
-    zstates_linear_combination
+    zstates_matrix
 
 contains
 
