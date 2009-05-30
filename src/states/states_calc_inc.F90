@@ -43,7 +43,27 @@ subroutine X(states_gram_schmidt_full)(st, nst, m, dim, psi, start)
   SAFE_ALLOCATE(qq(1:st%nst, 1:st%nst))
 
   ! calculate the matrix of dot products
-  call states_blockt_mul(m, st, st%st_start, st%st_end, st%st_start, st%st_end, psi, psi, ss, symm = .true.)
+  if(st%parallel_in_states .or. m%use_curvilinear) then
+    call states_blockt_mul(m, st, st%st_start, st%st_end, st%st_start, st%st_end, psi, psi, ss, symm = .true.)
+  else
+
+    call blas_herk('l', 'c', st%nst, m%np, R_TOTYPE(m%vol_pp(1)), psi(1, 1, 1), ubound(psi, dim=1), R_TOTYPE(M_ZERO), ss(1, 1), st%nst)
+
+    do ist = 1, st%nst
+      do jst = 1, ist - 1
+        ss(jst, ist) = R_CONJ(ss(ist, jst))
+      end do
+    end do
+
+    call profiling_count_operations(dble(m%np)*st%nst*CNST(0.5)*(st%nst + M_ONE))
+
+#ifdef HAVE_MPI
+    if(m%parallel_in_domains) then
+     call blas_copy(st%nst*st%nst, ss(1, 1), 1, qq(1, 1), 1)
+     call MPI_Allreduce(qq, ss, st%nst*st%nst, R_MPITYPE, MPI_SUM, m%mpi_grp%comm, mpi_err)
+    end if
+#endif
+  end if
 
   qq = M_ZERO
   do ist = 1, st%nst
