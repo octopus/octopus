@@ -17,6 +17,8 @@
 !!
 !! $Id$
 
+
+
 subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
   type(mesh_t),      intent(in)    :: mesh
   type(batch_t),     intent(in)    :: aa
@@ -124,6 +126,113 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
   call profiling_out(prof)
   call pop_sub()
 end subroutine X(mesh_batch_dotp_matrix)
+
+!-----------------------------------------------------------------
+
+subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
+  type(mesh_t),      intent(in)    :: mesh
+  type(batch_t),     intent(in)    :: aa
+  R_TYPE,            intent(inout) :: dot(:, :)
+  logical, optional, intent(in)    :: reduce
+
+  integer :: ist, jst, idim, sp, block_size, ep, ip, lda, ldb
+  R_TYPE :: ss
+  R_TYPE, allocatable :: dd(:, :)
+#ifdef HAVE_MPI
+  R_TYPE, allocatable :: ddtmp(:, :)
+#endif
+  type(profile_t), save :: prof, profgemm, profcomm
+  logical :: use_blas, reduce_
+
+  call push_sub('mesh_function_inc.Xmf_dotp_batch')
+  call profiling_in(prof, "BATCH_DOTP_SELF")
+
+#ifdef HAVE_MPI
+  reduce_ = .true.
+  if(present(reduce)) reduce_ = reduce
+#endif
+
+  SAFE_ALLOCATE(dd(1:aa%nst, 1:aa%nst))
+
+  use_blas = associated(aa%X(psicont)) .and. (.not. mesh%use_curvilinear) .and. (aa%dim == 1)
+
+  if(use_blas) then
+    call profiling_in(profgemm, "BATCH_HERK")
+
+    lda = size(aa%X(psicont), dim = 1)
+
+    call blas_herk('l', 'c', aa%nst, mesh%np, R_TOTYPE(mesh%vol_pp(1)), aa%X(psicont)(1, 1, 1), &
+      lda, R_TOTYPE(M_ZERO), dd(1, 1), aa%nst)
+
+  else
+
+    dd = R_TOTYPE(M_ZERO)
+
+    block_size = hardware%X(block_size)
+
+    do idim = 1, aa%dim
+      do sp = 1, mesh%np, block_size
+        ep = min(mesh%np, sp + block_size - 1)
+
+        if(mesh%use_curvilinear) then
+
+          do ist = 1, aa%nst
+            do jst = ist, aa%nst
+
+              ss = M_ZERO
+              do ip = sp, ep
+                ss = ss + mesh%vol_pp(ip)*R_CONJ(aa%states(ist)%X(psi)(ip, idim))*aa%states(jst)%X(psi)(ip, idim)
+              end do
+              dd(ist, jst) = dd(ist, jst) + ss
+
+            end do
+          end do
+
+        else
+
+          do ist = 1, aa%nst
+            do jst = ist, aa%nst
+              dd(ist, jst) = dd(ist, jst) + &
+                mesh%vol_pp(1)*blas_dot(ep - sp + 1, aa%states(ist)%X(psi)(sp, idim), 1, aa%states(jst)%X(psi)(sp, idim), 1)
+            end do
+          end do
+
+        end if
+      end do
+    end do
+
+  end if
+
+  if(mesh%use_curvilinear) then
+    call profiling_count_operations(dble(mesh%np)*aa%nst**2*(R_ADD + 2*R_MUL))
+  else
+    call profiling_count_operations(dble(mesh%np)*aa%nst**2*(R_ADD + R_MUL))
+  end if
+
+  if(use_blas) call profiling_out(profgemm)
+
+  forall(ist = 1:aa%nst)
+    forall(jst = 1:ist - 1) dd(jst, ist) = R_CONJ(dd(ist, jst))
+  end forall
+
+#ifdef HAVE_MPI
+  if(mesh%parallel_in_domains .and. reduce_) then
+    call profiling_in(profcomm, "BATCH_SELF_REDUCE")
+    SAFE_ALLOCATE(ddtmp(1:aa%nst, 1:aa%nst))
+    forall(ist = 1:aa%nst, jst = 1:aa%nst) ddtmp(ist, jst) = dd(ist, jst)
+    call MPI_Allreduce(ddtmp, dd, aa%nst**2, R_MPITYPE, MPI_SUM, mesh%mpi_grp%comm, mpi_err)
+    SAFE_DEALLOCATE_A(ddtmp)
+    call profiling_out(profcomm)
+  end if
+#endif
+
+  forall(ist = 1:aa%nst, jst = 1:aa%nst) dot(aa%states(ist)%ist, aa%states(jst)%ist) = dd(ist, jst)
+
+  SAFE_DEALLOCATE_A(dd)
+
+  call profiling_out(prof)
+  call pop_sub()
+end subroutine X(mesh_batch_dotp_self)
 
 !! Local Variables:
 !! mode: f90

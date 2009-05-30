@@ -38,7 +38,9 @@ module mesh_batch_m
   private
   public ::                       &
     dmesh_batch_dotp_matrix,      &
-    zmesh_batch_dotp_matrix
+    zmesh_batch_dotp_matrix,      &
+    dmesh_batch_dotp_self,        &
+    zmesh_batch_dotp_self
 
 contains
 

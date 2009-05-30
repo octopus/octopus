@@ -20,10 +20,11 @@
 #include "global.h"
 
 module states_calc_m
+  use batch_m
+  use blas_m
   use derivatives_m
   use calc_mode_m
   use crystal_m
-  use blas_m
   use datasets_m
   use geometry_m
   use global_m
@@ -36,8 +37,9 @@ module states_calc_m
   use loct_parser_m
   use math_m
   use messages_m
-  use mesh_function_m
   use mesh_m
+  use mesh_batch_m
+  use mesh_function_m
   use mpi_m
   use mpi_lib_m
   use multicomm_m
