@@ -214,7 +214,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
 
   if(sb%mr_flag) then 
     SAFE_ALLOCATE(mesh%resolution(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)))
-    mesh%resolution(:,:,:) = -1
+    mesh%resolution(:,:,:) = 0
   else
     nullify(mesh%resolution)
   end if
@@ -361,8 +361,22 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
             k = iz + res*stencil%points(3, is)
  
             if(any((/i, j, k/) < mesh%idx%nr(1, 1:3)) .or. any((/i, j, k/) >  mesh%idx%nr(2, 1:3))) cycle
- 
+
             mesh%idx%Lxyz_inv(i, j, k) = ibset(mesh%idx%Lxyz_inv(i, j, k), ENLARGEMENT_POINT)
+
+            ! If the resolution of the point is not previously marked, do it now, and give it the
+            ! negative value. Resolution < 0 means that the point is intermediate point.
+            ! The absolute value gives the resolution that is used by the interpolation routine
+            ! in the calculation of Laplacian.
+            if(res.ne.2**mesh%sb%hr_area%num_radii) then ! Outer boundary points are ruled out.
+              if(mesh%resolution(i,j,k).le.0) then
+                if(mesh%resolution(i,j,k).eq.0) then
+                  mesh%resolution(i,j,k) = -res
+                else
+                  mesh%resolution(i,j,k)=max(-res,mesh%resolution(i,j,k))
+                end if
+              end if
+            end if
  
           end do
  
@@ -757,7 +771,9 @@ contains
               do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
  
                 ! a crude test: is the point an intermediate one?
-                if(mesh%resolution(ix,iy,iz).ne.-1) cycle
+                ! Note: resolution <= 0 for all intermediate points,
+                !       and the absolute value is the actual resolution
+                if(mesh%resolution(ix,iy,iz).gt.0) cycle
 
                 ! Is it the kind of intermediate point we are looking for?
                 n_mod = 2**i_lev

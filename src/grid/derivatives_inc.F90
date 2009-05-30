@@ -561,7 +561,7 @@ subroutine X(set_bc)(der, f)
 contains 
 
   subroutine multires()
-    integer :: order, nn, ii, jj, kk, i_lev, res
+    integer :: order, nn, ii, jj, kk, i_lev
     FLOAT, allocatable :: pos(:), ww(:)
     integer, allocatable :: posi(:)
     
@@ -588,23 +588,25 @@ contains
       ix = der%mesh%idx%Lxyz(ip, 1)
       iy = der%mesh%idx%Lxyz(ip, 2)
       iz = der%mesh%idx%Lxyz(ip, 3)
-      dx = abs(mod(ix, 2))
-      dy = abs(mod(iy, 2))
-      dz = abs(mod(iz, 2))
 
-      i_lev = inner_boundary_point(der%mesh,ip)
+      i_lev = der%mesh%resolution(ix,iy,iz)
 
-      if(i_lev.gt.0) then
+      ! Resolution is < 0 for boundary points
+      if(i_lev.lt.0 ) then
 
-        res = 2**(i_lev-2)
+        i_lev=abs(i_lev)  ! the actual resolution is the absolute value
+
+        dx = abs(mod(ix, 2**(i_lev)))
+        dy = abs(mod(iy, 2**(i_lev)))
+        dz = abs(mod(iz, 2**(i_lev)))
 
         do ii = 1, nn
           do jj = 1, nn
             do kk = 1, nn
               f(ip) = f(ip) + ww(ii)*ww(jj)*ww(kk)*&
-                              f(der%mesh%idx%Lxyz_inv(ix + res*posi(ii)*dx, &
-                                                      iy + res*posi(jj)*dy, &
-                                                      iz + res*posi(kk)*dz))
+                              f(der%mesh%idx%Lxyz_inv(ix + posi(ii)*dx, &
+                                                      iy + posi(jj)*dy, &
+                                                      iz + posi(kk)*dz))
             end do
           end do
         end do
