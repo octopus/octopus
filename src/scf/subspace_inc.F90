@@ -71,7 +71,7 @@ subroutine X(subspace_diag)(gr, st, hm, ik, diff)
       call batch_end(psib)
 
       call batch_init(whole_psib, hm%d%dim, ist, st%nst, st%X(psi)(:, :, ist:st%nst, ik))
-      call X(mf_dotp_batch)(gr%mesh, hpsib, whole_psib, h_subspace)
+      call X(mesh_batch_dotp_matrix)(gr%mesh, hpsib, whole_psib, h_subspace)
       call batch_end(whole_psib)
       call batch_end(hpsib)
       

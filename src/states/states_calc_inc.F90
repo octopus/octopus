@@ -47,7 +47,8 @@ subroutine X(states_gram_schmidt_full)(st, nst, m, dim, psi, start)
     call states_blockt_mul(m, st, st%st_start, st%st_end, st%st_start, st%st_end, psi, psi, ss, symm = .true.)
   else
 
-    call blas_herk('l', 'c', st%nst, m%np, R_TOTYPE(m%vol_pp(1)), psi(1, 1, 1), ubound(psi, dim=1), R_TOTYPE(M_ZERO), ss(1, 1), st%nst)
+    call blas_herk('l', 'c', st%nst, m%np, R_TOTYPE(m%vol_pp(1)), psi(1, 1, 1), &
+      ubound(psi, dim=1), R_TOTYPE(M_ZERO), ss(1, 1), st%nst)
 
     do ist = 1, st%nst
       do jst = 1, ist - 1

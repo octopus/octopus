@@ -1,4 +1,4 @@
-!! Copyright (C) 2008 X. Andrade
+!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -19,51 +19,38 @@
 
 #include "global.h"
 
-module eigen_rmmdiis_m
+module mesh_batch_m
   use batch_m
+  use blas_m
   use global_m
-  use grid_m
-  use hamiltonian_m
-  use io_m
+  use hardware_m
+  use index_m
   use lalg_basic_m
-  use lalg_adv_m
-  use loct_m
+  use loct_math_m
   use math_m
   use mesh_m
-  use mesh_batch_m
-  use mesh_function_m
   use messages_m
   use mpi_m
-  use mpi_debug_m
-  use mpi_lib_m
-  use preconditioners_m
   use profiling_m
-  use states_m
-  use states_calc_m
-  use subspace_m
-  use units_m
 
   implicit none
 
   private
-  public ::                     &
-    deigensolver_rmmdiis,       &
-    zeigensolver_rmmdiis,       &
-    deigensolver_rmmdiis_start, &
-    zeigensolver_rmmdiis_start
-  
-  contains
+  public ::                       &
+    dmesh_batch_dotp_matrix,      &
+    zmesh_batch_dotp_matrix
 
+contains
+
+#include "undef.F90"
 #include "real.F90"
-#include "eigen_rmmdiis_inc.F90"
-#include "undef.F90"
+#include "mesh_batch_inc.F90"
 
+#include "undef.F90"
 #include "complex.F90"
-#include "eigen_rmmdiis_inc.F90"
-#include "undef.F90"
+#include "mesh_batch_inc.F90"
 
-  end module eigen_rmmdiis_m
-
+end module mesh_batch_m
 
 !! Local Variables:
 !! mode: f90

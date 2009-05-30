@@ -212,12 +212,12 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
           !  mm_1(i, j) = <res_i|res_j>
           call batch_init(resbit, st%d%dim, 1, iter, res(:, :, :, ib))
-          call X(mf_dotp_batch)(gr%mesh, resbit, resbit, mm(:, :, 1, ib), symm = .true., reduce = .false.)
+          call X(mesh_batch_dotp_matrix)(gr%mesh, resbit, resbit, mm(:, :, 1, ib), symm = .true., reduce = .false.)
           call batch_end(resbit)
 
           !  mm_2(i, j) = <psi_i|psi_j>
           call batch_init(psibit, st%d%dim, 1, iter, psi(:, :, :, ib))
-          call X(mf_dotp_batch)(gr%mesh, psibit, psibit, mm(:, :, 2, ib), symm = .true., reduce = .false.)
+          call X(mesh_batch_dotp_matrix)(gr%mesh, psibit, psibit, mm(:, :, 2, ib), symm = .true., reduce = .false.)
           call batch_end(psibit)
 
         end do

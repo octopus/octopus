@@ -47,8 +47,6 @@ module mesh_function_m
     zmf_integrate,         &
     dmf_dotp,              &
     zmf_dotp,              &
-    dmf_dotp_batch,        &
-    zmf_dotp_batch,        &
     dmf_nrm2,              &
     zmf_nrm2,              &
     dmf_moment,            &

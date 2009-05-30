@@ -199,7 +199,7 @@ subroutine X(states_blockt_mul)(mesh, st, psi1_start, psi1_end, psi2_start, psi2
     ASSERT(batch_is_ok(psi1b))
     ASSERT(batch_is_ok(psi2b))
 
-    call X(mf_dotp_batch)(mesh, psi1b, psi2b, res, symm = symm_)
+    call X(mesh_batch_dotp_matrix)(mesh, psi1b, psi2b, res, symm = symm_)
     
     call batch_end(psi1b)
     call batch_end(psi2b)

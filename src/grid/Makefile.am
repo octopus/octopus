@@ -26,9 +26,14 @@ libgrid_a_SOURCES = \
 	index.F90 \
 	par_vec.F90 mesh.F90 scalar_mesh.F90 nl_operator.F90 \
 	submesh.F90 stencil_star.F90 stencil_variational.F90 stencil_cube.F90 \
-	stencil.F90 \
+	stencil.F90        \
 	stencil_starplus.F90 derivatives.F90 cube_function.F90 fourier_space.F90 mesh_function.F90 \
-	basins.F90 io_function.F90 multigrid.F90 gridhier.F90 double_grid.F90 grid.F90 \
+	basins.F90         \
+	io_function.F90    \ 
+	multigrid.F90      \
+	gridhier.F90       \
+	double_grid.F90    \
+	grid.F90           \
 	batch.F90          \
 	mesh_init.F90      \
 	metis.c            \
@@ -40,7 +45,8 @@ libgrid_a_SOURCES = \
 	cubic_mesh.F90     \
 	cubic_mesh_low.c   \
 	cubic_mesh_fft.c   \
-	transfer_table.F90
+	transfer_table.F90 \
+	mesh_batch.F90
 
 noinst_HEADERS = \
 	par_vec_inc.F90 derivatives_inc.F90 cube_function_inc.F90 fourier_space_inc.F90 \
@@ -49,7 +55,8 @@ noinst_HEADERS = \
 	batch_inc.F90       \
 	multigrid_inc.F90   \
 	gridhier_inc.F90    \
-	cubic_mesh.h
+	cubic_mesh.h        \
+	mesh_batch_inc.F90
 
 include $(srcdir)/../common-rules.make
 
@@ -92,3 +99,4 @@ cubic_mesh.o : cubic_mesh.F90 mesh.o
 cubic_mesh_low.o : cubic_mesh_low.c cubic_mesh.h
 cubic_mesh_fft.o : cubic_mesh_fft.c cubic_mesh.h
 transfer_table.o : transfer_table.F90
+mesh_batch.o : mesh_batch.F90 mesh_batch_inc.F90 mesh.o
