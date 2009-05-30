@@ -444,7 +444,6 @@ contains
         end do
 
         if (sb%hr_area%num_areas.ne.1 .or. &
-            sb%hr_area%num_radii.gt.1 .or. &
             sum(sb%hr_area%center(1:sb%dim)**2).gt.r_small) call input_error('MultiResolutionArea')
 
         ! the radii

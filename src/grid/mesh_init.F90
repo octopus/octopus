@@ -248,7 +248,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
 
             ! First check: is the point beyond the multiresolution areas
             n_mod = 2**sb%hr_area%num_radii
-            if (sum(xx(:,ix)**2).gt. sb%hr_area%radius(1)**2 .and. &
+            if (sum(xx(:,ix)**2).gt. sb%hr_area%radius(sb%hr_area%num_radii)**2 .and. &
                  mod(ix, n_mod).eq.0 .and. mod(iy, n_mod).eq.0 .and. mod(iz,n_mod) .eq. 0) then
               mesh%idx%Lxyz_inv(ix, iy, iz) = ibset(mesh%idx%Lxyz_inv(ix, iy, iz), INNER_POINT)
             end if
@@ -661,10 +661,11 @@ contains
     integer :: i, j, jj(1:MAX_DIM), ip, np
     FLOAT   :: chi(MAX_DIM)
 
-    FLOAT :: minvol
     integer :: ix, iy, iz, dx, dy, dz, newi, newj, newk, ii, lii, ljj, lkk, nn, order, neighbor
-    FLOAT, allocatable :: pos(:), ww(:)
+    FLOAT,   allocatable :: pos(:), ww(:), vol_tmp(:,:,:)
     integer, allocatable :: posi(:)
+    integer :: res, n_mod, i_lev, nr(1:2,1:3)
+    real(8), parameter :: DELTA = CNST(1e-12)
  
 #if defined(HAVE_MPI)
     integer :: k
@@ -714,7 +715,7 @@ contains
 
       if(mesh%sb%mr_flag) then
 
-        ! The following routines are essentially the same as in the calculation of the Laplacian
+        ! The following interpolation routine is essentially the same as in the calculation of the Laplacian
 
         order = mesh%sb%mr_iorder !interpolation order
         nn = 2*order
@@ -732,54 +733,85 @@ contains
 
         call interpolation_coefficients(nn, pos, M_ZERO, ww)
 
-        minvol = product(mesh%h(1:sb%dim))
-        forall(ip = 1:mesh%np) mesh%vol_pp(ip) = minvol
+        ! volumes are initialized even for the intermediate points
+        nr(:,:) = mesh%idx%nr(:,:)
+        SAFE_ALLOCATE(vol_tmp(nr(1,1):nr(2,1),nr(1,2):nr(2,2),nr(1,3):nr(2,3)))
+        vol_tmp(:,:,:) = product(mesh%h(1:sb%dim))
 
-        ! loop through _all_ the points
-        do iz = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
-          do iy = mesh%idx%nr(1,2), mesh%idx%nr(2,2)
-            do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
-  
-              if(mesh%resolution(ix,iy,iz).ne.-1) cycle ! a crude test, but it works
-  
-              dx = abs(mod(ix, 2))
-              dy = abs(mod(iy, 2))
-              dz = abs(mod(iz, 2))
-  
-              if(dx+dy+dz.eq.M_ZERO) cycle
+        ! The idea is that in the first i_lev loop we find intermediate
+        ! points that are odd, i.e. at least one of their index can not
+        ! be divided by 2 (note that then n_mod=2**1=1).
+        !
+        ! In the second loop we accept only those intermediate points that
+        ! have at least one index that can not be divided by 4. This
+        ! rules out some even points that were included in the first loop.
+        !
+        ! This continues until the last resolution level. In each step
+        ! the point volumes of the neighboring points area modified.
+
+        do i_lev = 1,sb%hr_area%num_radii
+
+          ! loop through _all_ the points
+          do iz = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
+            do iy = mesh%idx%nr(1,2), mesh%idx%nr(2,2)
+              do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
  
-              ! The present point (ix,iy,iz) is an intermediate one. When
-              ! calculating integrals, the value of the integrand is
-              ! interpolated from the neighboring ones, i.e. the values of
-              ! the neighboring points are added up with different weights.
-              ! The following loop goes through the neighboring points and
-              ! modifies their weights, i.e. their volumes.
-              do lii = 1, nn
-                do ljj = 1, nn
-                  do lkk = 1, nn
-                    newi = ix + posi(lii)*dx
-                    newj = iy + posi(ljj)*dy
-                    newk = iz + posi(lkk)*dz
-                    if(any((/newi, newj, newk/) <  mesh%idx%nr(1, 1:3)) .or. &
-                       any((/newi, newj, newk/) >  mesh%idx%nr(2, 1:3))) cycle
-                    neighbor = mesh%idx%Lxyz_inv(newi, newj, newk)
-                    if(neighbor.gt.0 .and.neighbor.le.mesh%np) mesh%vol_pp(neighbor) = &
-                                          mesh%vol_pp(neighbor) + ww(lii)*ww(ljj)*ww(lkk)*minvol
+                ! a crude test: is the point an intermediate one?
+                if(mesh%resolution(ix,iy,iz).ne.-1) cycle
+
+                ! Is it the kind of intermediate point we are looking for?
+                n_mod = 2**i_lev
+                dx = abs(mod(ix, n_mod))
+                dy = abs(mod(iy, n_mod))
+                dz = abs(mod(iz, n_mod))
+                if(dx+dy+dz.eq.M_ZERO) cycle
+
+                if(abs(vol_tmp(ix, iy, iz)).lt.DELTA) cycle
+
+                ! The present point (ix,iy,iz) is an intermediate one. When
+                ! calculating integrals, the value of the integrand is
+                ! interpolated from the neighboring ones, i.e. the values of
+                ! the neighboring points are added up with different weights.
+                ! The following loop goes through the neighboring points and
+                ! modifies their weights, i.e. their volumes.
+
+                do lii = 1, nn
+                  do ljj = 1, nn
+                    do lkk = 1, nn
+                      newi = ix + posi(lii)*dx
+                      newj = iy + posi(ljj)*dy
+                      newk = iz + posi(lkk)*dz
+                      if(any((/newi, newj, newk/) <  mesh%idx%nr(1, 1:3)) .or. &
+                         any((/newi, newj, newk/) >  mesh%idx%nr(2, 1:3))) cycle
+                      vol_tmp(newi, newj, newk) = vol_tmp(newi, newj, newk) + &
+                         vol_tmp(ix, iy, iz) * ww(lii)*ww(ljj)*ww(lkk)
+                    end do
                   end do
                 end do
+                vol_tmp(ix, iy, iz) = M_ZERO
               end do
             end do
           end do
+
+
         end do
 
-        message(1) = 'Info: Point volumes are calculated by solving interpolation'
-        message(2) = 'coefficients for the intermediate points.'
-        write (message(3),'(a,F26.12)') 'Volume as sum(mesh%vol_pp(1:mesh%np)) : ',sum(mesh%vol_pp(1:mesh%np))
-        call write_info(3)
+        ! the volumes are now in vol_tmp table. Move them to vol_pp
+        do ip = 1,mesh%np
+          ix = mesh%idx%Lxyz(ip, 1)
+          iy = mesh%idx%Lxyz(ip, 2)
+          iz = mesh%idx%Lxyz(ip, 3)
+          mesh%vol_pp(ip) = vol_tmp(ix,iy,iz)
+        end do
+       
+        message(1) =                    'Info: Point volumes are calculated by solving interpolation'
+        write (message(2),'(a,F26.12)') 'coefficients for the intermediate points. Total volume :',sum(mesh%vol_pp(1:mesh%np))
+        call write_info(2)
 
         SAFE_DEALLOCATE_A(ww)
         SAFE_DEALLOCATE_A(pos)
         SAFE_DEALLOCATE_A(posi)
+        SAFE_DEALLOCATE_A(vol_tmp)
 
       else ! no multiresolution
 
