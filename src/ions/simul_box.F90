@@ -1285,6 +1285,8 @@ contains
       end select
     end if
 
+    SAFE_DEALLOCATE_A(xx)
+
     call pop_sub()
   end subroutine simul_box_in_box_vec
 
