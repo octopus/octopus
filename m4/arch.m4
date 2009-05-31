@@ -46,6 +46,8 @@ x86_64*)
 ACX_M128D
 oct_arch=x86_64
 vector=$acx_m128d
+assembler=yes
+AC_DEFINE(OCT_ARCH_X86_64, 1, [This an x86_64 system])
 ;;
 i?86*)
 ACX_M128D
@@ -62,26 +64,28 @@ if test x"${ac_enable_sse2}" = x"no"; then
 vector=disabled
 fi
 fi
-
+AC_DEFINE(OCT_ARCH_X86_64, 1, [This an x86 system])
 ;;	
 ia64*)
 oct_arch=ia64
 assembler=yes
+AC_DEFINE(OCT_ARCH_IA64, 1, [This an Itanium system])
 ;;
 sparc*)
 oct_arch=sparc
+AC_DEFINE(OCT_ARCH_SPARC, 1, [This a Sparc system])
 ;;
 alphaev*)
 oct_arch=alpha
+AC_DEFINE(OCT_ARCH_ALPHA, 1, [This an Alpha system])
 ;;
 mips*)
 oct_arch=mips
-;;
-powerpc64*)
-oct_arch=powerpc64
+AC_DEFINE(OCT_ARCH_MIPS, 1, [This a MIPS system])
 ;;
 powerpc*)
 oct_arch=powerpc
+AC_DEFINE(OCT_ARCH_POWERPC, 1, [This a PowerPC system])
 ;;
 *)
 oct_arch=unknown
