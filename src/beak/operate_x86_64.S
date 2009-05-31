@@ -1,9 +1,9 @@
 	.file	"operate_ri_vec.c"
 	.text
 	.p2align 4,,15
-.globl zoperate_as_
-	.type	zoperate_as_, @function
-zoperate_as_:
+.globl FC_FUNC_(zoperate_as, ZOPERATE_AS)
+	.type	FC_FUNC_(zoperate_as, ZOPERATE_AS), @function
+FC_FUNC_(zoperate_as, ZOPERATE_AS):
 .LFB528:
 	.cfi_startproc
 	pushq	%r15
@@ -1046,11 +1046,11 @@ zoperate_as_:
 	jmp	.L9
 	.cfi_endproc
 .LFE528:
-	.size	zoperate_as_, .-zoperate_as_
+	.size	FC_FUNC_(zoperate_as, ZOPERATE_AS), .-FC_FUNC_(zoperate_as, ZOPERATE_AS)
 	.p2align 4,,15
-.globl doperate_as_
-	.type	doperate_as_, @function
-doperate_as_:
+.globl FC_FUNC_(doperate_as, DOPERATE_AS)
+	.type	FC_FUNC_(doperate_as,DOPERATE_AS), @function
+FC_FUNC_(doperate_as, DOPERATE_AS):
 .LFB527:
 	.cfi_startproc
 	pushq	%r15
@@ -1494,6 +1494,6 @@ doperate_as_:
 	jmp	.L210
 	.cfi_endproc
 .LFE527:
-	.size	doperate_as_, .-doperate_as_
+	.size	FC_FUNC_(doperate_as, DOPERATE_AS), .-FC_FUNC_(doperate_as, DOPERATE_AS)
 	.ident	"GCC: (Debian 4.4.0-5) 4.4.0"
 	.section	.note.GNU-stack,"",@progbits
