@@ -41,6 +41,7 @@ module simul_box_m
 
   private
   public ::                     &
+    cell_t,                     &
     simul_box_t,                &
     simul_box_init,             &
     simul_box_end,              &
@@ -85,6 +86,11 @@ module simul_box_m
 
   end type multiresolution_t
 
+  type cell_t
+    integer, pointer :: list_of_atoms(:)
+    integer          :: natoms
+  end type cell_t
+  
   type simul_box_t
     integer  :: box_shape   ! 1->sphere, 2->cylinder, 3->sphere around each atom,
                             ! 4->parallelepiped (orthonormal, up to now).
@@ -95,6 +101,10 @@ module simul_box_m
     FLOAT :: rsize          ! the radius of the sphere or of the cylinder
     FLOAT :: xsize          ! the length of the cylinder in the x direction
     FLOAT :: lsize(MAX_DIM) ! half of the length of the parallelepiped in each direction.
+
+    FLOAT :: cell_length(1:3)
+    integer :: ncell(1:3)
+    type(cell_t), pointer :: cells(:, :, :)
 
     type(c_ptr)   :: image    ! for the box defined through an image
     character(len=1024) :: user_def ! for the user-defined box
@@ -146,6 +156,7 @@ contains
 
     call read_misc()                       ! Miscellaneous stuff.
     call read_box()                        ! Parameters defining the simulation box.
+    call build_cells()
     call read_spacing ()                   ! Parameters defining the (canonical) spacing.
     call read_box_offset()                 ! Parameters defining the offset of the origin.
     call read_open_boundaries()            ! Parameters defining open boundaries.
@@ -860,6 +871,75 @@ contains
 
       call pop_sub()
     end subroutine build_lattice
+
+    !----------------------------------------------------------
+
+    subroutine build_cells()
+      integer :: ix, iy, iz, iatom, round, imax(1:3), imin(1:3)
+      FLOAT :: xatom(1:3), radius
+
+      nullify(sb%cells)
+
+      if(sb%box_shape == MINIMUM) then
+        
+        sb%cell_length = CNST(5.0)
+
+        ! cell n contains the range from n to n + 1
+
+        sb%ncell(1:3) = floor(sb%lsize(1:3)/sb%cell_length(1:3)) + 1
+
+        SAFE_ALLOCATE(sb%cells(-sb%ncell(1):sb%ncell(1) - 1, -sb%ncell(2):sb%ncell(2) - 1, -sb%ncell(3):sb%ncell(3) - 1))
+
+        do round = 1, 2
+          
+          forall(ix = -sb%ncell(1):sb%ncell(1) - 1, iy = -sb%ncell(2):sb%ncell(2) - 1, iz = -sb%ncell(3):sb%ncell(3) - 1) 
+            sb%cells(ix, iy, iz)%natoms = 0
+          end forall
+
+          do iatom = 1, geo%natoms
+
+            xatom(1:3) = geo%atom(iatom)%x(1:3)
+
+            if(sb%rsize > M_ZERO) then
+              radius = sb%rsize
+            else
+              radius = geo%atom(iatom)%spec%def_rsize
+            end if
+
+            imin(1:3) = floor((xatom(1:3) - radius)/sb%cell_length(1:3))
+            imax(1:3) = floor((xatom(1:3) + radius)/sb%cell_length(1:3))
+
+            ! this is necessary for dims < 3
+            imin = max(imin, -sb%ncell)
+            imax = min(imax, sb%ncell - 1)
+
+            do iz = imin(3), imax(3)
+              do iy = imin(2), imax(2)
+                do ix = imin(1), imax(1)
+                  sb%cells(ix, iy, iz)%natoms = sb%cells(ix, iy, iz)%natoms + 1
+                  if(round == 2) sb%cells(ix, iy, iz)%list_of_atoms(sb%cells(ix, iy, iz)%natoms) = iatom
+                end do
+              end do
+            end do
+
+          end do  ! iatom
+          
+          if(round == 1) then
+            do iz = -sb%ncell(3), sb%ncell(3) - 1
+              do iy = -sb%ncell(2), sb%ncell(2) - 1
+                do ix = -sb%ncell(1), sb%ncell(1) - 1
+                  SAFE_ALLOCATE(sb%cells(ix, iy, iz)%list_of_atoms(1:sb%cells(ix, iy, iz)%natoms))
+                end do
+              end do
+            end do
+          end if
+
+        end do !round
+
+      end if
+
+    end subroutine build_cells
+
   end subroutine simul_box_init
 
   
@@ -1048,9 +1128,22 @@ contains
   subroutine simul_box_end(sb)
     type(simul_box_t), intent(inout) :: sb    
 
-    integer :: il
+    integer :: ix, iy, iz
 
     call push_sub('simul_box.simul_box_end')
+
+    if(associated(sb%cells)) then
+      
+      do iz = -sb%ncell(3), sb%ncell(3) - 1
+        do iy = -sb%ncell(2), sb%ncell(2) - 1
+          do ix = -sb%ncell(1), sb%ncell(1) - 1
+            SAFE_DEALLOCATE_P(sb%cells(ix, iy, iz)%list_of_atoms)
+          end do
+        end do
+      end do
+      
+      SAFE_DEALLOCATE_P(sb%cells)
+    end if
 
     if(sb%open_boundaries) then
       ! deallocated directly to avoid problems with xlf
@@ -1187,7 +1280,8 @@ contains
     FLOAT :: r, re, im, dist2, radius
     real(8) :: llimit(MAX_DIM), ulimit(MAX_DIM)
     FLOAT, allocatable :: xx(:, :)
-    integer :: ip, idir, iatom
+    integer :: ip, idir, iatom, icell(1:3)
+    type(cell_t), pointer :: cell
 
 #if defined(HAVE_GDLIB)
     integer :: red, green, blue, ix, iy
@@ -1231,12 +1325,18 @@ contains
       case(MINIMUM)
         do ip = 1, npoints
           in_box(ip) = .false.
-          do iatom = 1, geo%natoms
-            dist2 = sum((xx(1:sb%dim, ip) - geo%atom(iatom)%x(1:sb%dim))**2)
+          if (any(abs(xx(1:3, ip)) > sb%lsize(1:3))) cycle
+
+          icell(1:3) = floor(xx(1:3, ip)/sb%cell_length(1:3))
+
+          cell => sb%cells(icell(1), icell(2), icell(3))
+
+          do iatom = 1, cell%natoms
+            dist2 = sum((xx(1:MAX_DIM, ip) - geo%atom(cell%list_of_atoms(iatom))%x(1:MAX_DIM))**2)
             if(sb%rsize > M_ZERO) then
               radius = sb%rsize
             else
-              radius = geo%atom(iatom)%spec%def_rsize
+              radius = geo%atom(cell%list_of_atoms(iatom))%spec%def_rsize
             endif
             if(dist2 <= (radius + DELTA)**2) then
               in_box(ip) = .true.
