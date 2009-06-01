@@ -882,13 +882,13 @@ contains
 
       if(sb%box_shape == MINIMUM) then
         
-        sb%cell_length = CNST(5.0)
+        sb%cell_length = CNST(10.0)
 
         ! cell n contains the range from n to n + 1
 
         sb%ncell(1:3) = floor(sb%lsize(1:3)/sb%cell_length(1:3)) + 1
 
-        SAFE_ALLOCATE(sb%cells(-sb%ncell(1):sb%ncell(1) - 1, -sb%ncell(2):sb%ncell(2) - 1, -sb%ncell(3):sb%ncell(3) - 1))
+        SAFE_ALLOCATE(sb%cells(-sb%ncell(1):sb%ncell(1)-1,-sb%ncell(2):sb%ncell(2)-1,-sb%ncell(3):sb%ncell(3)-1))
 
         do round = 1, 2
           
