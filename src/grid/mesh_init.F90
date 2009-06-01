@@ -676,9 +676,9 @@ contains
     FLOAT   :: chi(MAX_DIM)
 
     integer :: ix, iy, iz, dx, dy, dz, newi, newj, newk, ii, lii, ljj, lkk, nn, order, neighbor
-    FLOAT,   allocatable :: pos(:), ww(:), vol_tmp(:,:,:)
+    FLOAT,   allocatable :: pos(:), ww(:), vol_tmp(:, :, :)
     integer, allocatable :: posi(:)
-    integer :: res, n_mod, i_lev, nr(1:2,1:3)
+    integer :: res, n_mod, i_lev, nr(1:2, 1:MAX_DIM)
     real(8), parameter :: DELTA = CNST(1e-12)
  
 #if defined(HAVE_MPI)
