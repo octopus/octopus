@@ -46,7 +46,7 @@ x86_64*)
 ACX_M128D
 oct_arch=x86_64
 vector=$acx_m128d
-assembler=yes
+assembler=no
 AC_DEFINE(OCT_ARCH_X86_64, 1, [This an x86_64 system])
 ;;
 i?86*)

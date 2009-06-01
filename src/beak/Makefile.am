@@ -33,8 +33,7 @@ endif
 
 noinst_HEADERS =           \
 	beak.h             \
-	operate_ia64.S     \
-	operate_x86_64.S
+	operate_ia64.S
 
 include $(srcdir)/../common-rules.make
 
@@ -44,4 +43,4 @@ depend:
 beak_utils.o : beak_utils.c beak.h 
 operate_ri.o : operate_ri.c beak.h 
 operate_ri_vec.o : operate_ri_vec.c beak.h 
-operate_as.S : operate_ia64.S operate_x86_64.S
+operate_as.S : operate_ia64.S
