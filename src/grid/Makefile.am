@@ -29,7 +29,7 @@ libgrid_a_SOURCES = \
 	stencil.F90        \
 	stencil_starplus.F90 derivatives.F90 cube_function.F90 fourier_space.F90 mesh_function.F90 \
 	basins.F90         \
-	io_function.F90    \ 
+	io_function.F90    \
 	multigrid.F90      \
 	gridhier.F90       \
 	double_grid.F90    \
