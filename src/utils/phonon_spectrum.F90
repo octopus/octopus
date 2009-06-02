@@ -44,7 +44,7 @@ program phonon_spectrum
   type(geometry_t) :: geo 
   
   FLOAT :: ww, av, irtotal
-  FLOAT, parameter :: dw = M_ONE/hartree_to_cm_inv
+  FLOAT :: dw, max_energy
   integer :: ifreq, idir
   integer, parameter :: max_freq = 10000
   
@@ -62,7 +62,10 @@ program phonon_spectrum
   call loct_parse_int(datasets_check('TDMaximumIter'), 1500, max_iter)
   call loct_parse_float(datasets_check('SpecStartTime'),  M_ZERO, start_time)
   call loct_parse_float(datasets_check('SpecEndTime'),  -M_ONE, end_time)
+  call loct_parse_float(datasets_check('SpecMaxEnergy'), CNST(10000.0)/hartree_to_cm_inv,&
+    max_energy)
 
+  dw = max_energy*units_inp%energy%factor/(max_freq - M_ONE)
 
   !%Variable SpecVibrational
   !%Type integer
