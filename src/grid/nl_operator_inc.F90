@@ -329,7 +329,6 @@ subroutine X(nl_operator_operate)(op, fi, fo, ghost_update, profile, points)
 #if defined(HAVE_MPI)
   update = .true.
   if(present(ghost_update)) update = ghost_update
-
   if(op%m%parallel_in_domains .and. update) call X(vec_ghost_update)(op%m%vp, fi)
 #endif
 
@@ -426,8 +425,18 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, points)
 
   call X(select_op)(op, points_, nri, imin, imax, ri)
 
+#ifdef HAVE_MPI
   update = .true.
   if(present(ghost_update)) update = ghost_update
+
+  if(op%m%parallel_in_domains .and. update) then
+    do ist = 1, fi%nst
+      do idim = 1, fi%dim
+        call X(vec_ghost_update)(op%m%vp, fi%states(ist)%X(psi)(:, idim))
+      end do
+    end do
+  end if
+#endif
 
   if(nri > 0) then
     if(op%const_w) then
