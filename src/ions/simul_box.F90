@@ -462,6 +462,7 @@ contains
 
         sb%mr_flag = .true.
       else
+        nullify(sb%hr_area%radius)
         sb%mr_flag = .false.
       end if
 
