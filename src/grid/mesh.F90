@@ -777,7 +777,7 @@ contains
        dx = abs(mod(ix, 2**(i_lev-1)))
        dy = abs(mod(iy, 2**(i_lev-1)))
        dz = abs(mod(iz, 2**(i_lev-1)))
-       if(sum(mesh%x(point,:)**2) .lt. mesh%sb%hr_area%radius(i_lev)**2 + DELTA) then
+       if(sum((mesh%x(point,:)-mesh%sb%hr_area%center(:))**2) .lt. mesh%sb%hr_area%radius(i_lev)**2 + DELTA) then
          is_in_some_mrarea = .true.
          if (dx + dy + dz > 0) is_inner_boundary_point = .true.
        end if

@@ -248,7 +248,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
 
             ! First check: is the point beyond the multiresolution areas
             n_mod = 2**sb%hr_area%num_radii
-            if (sum(xx(:,ix)**2).gt. sb%hr_area%radius(sb%hr_area%num_radii)**2 .and. &
+            if (sum((xx(:,ix)-sb%hr_area%center(:))**2).gt. sb%hr_area%radius(sb%hr_area%num_radii)**2 .and. &
                  mod(ix, n_mod).eq.0 .and. mod(iy, n_mod).eq.0 .and. mod(iz,n_mod) .eq. 0) then
               mesh%idx%Lxyz_inv(ix, iy, iz) = ibset(mesh%idx%Lxyz_inv(ix, iy, iz), INNER_POINT)
             end if
@@ -258,7 +258,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
             if(.not.btest(mesh%idx%Lxyz_inv(ix, iy, iz), INNER_POINT)) then
               do i_lev = 1,sb%hr_area%num_radii
                 n_mod = 2**(i_lev-1)
-                if( sum(xx(:,ix)**2) .lt. sb%hr_area%radius(i_lev)**2 + DELTA .and. &
+                if( sum((xx(:,ix)-sb%hr_area%center(:))**2) .lt. sb%hr_area%radius(i_lev)**2 + DELTA .and. &
                     mod(ix, n_mod).eq.0 .and. mod(iy, n_mod).eq.0 .and. mod(iz,n_mod) .eq. 0) then
                   mesh%idx%Lxyz_inv(ix, iy, iz) = ibset(mesh%idx%Lxyz_inv(ix,iy, iz), INNER_POINT)
                 end if

@@ -435,10 +435,7 @@ contains
       !% point of the region, and the following ones set
       !% the radii where resolution changes (measured from the
       !% central point).
-      !% NOTE: up to now,
-      !%   (i)    only one area can be set up
-      !%   (ii)   only one multiresolution level is working
-      !%   (iii)  only origin-centered area is implemented
+      !% NOTE: up to now, only one area can be set up
       !%End
 
       if(loct_parse_block(datasets_check('MultiResolutionArea'), blk) == 0) then
@@ -454,8 +451,7 @@ contains
            call loct_parse_block_float(blk, 0, i-1, sb%hr_area%center(i))
         end do
 
-        if (sb%hr_area%num_areas.ne.1 .or. &
-            sum(sb%hr_area%center(1:sb%dim)**2).gt.r_small) call input_error('MultiResolutionArea')
+        if (sb%hr_area%num_areas.ne.1) call input_error('MultiResolutionArea')
 
         ! the radii
         SAFE_ALLOCATE(sb%hr_area%radius(1:sb%hr_area%num_radii))
@@ -1431,6 +1427,9 @@ contains
       do i = 1, sb%hr_area%num_radii
         write(iunit, '(a10,i2.2,a9,e22.14)')    'mr_radius_', i, '=        ',sb%hr_area%radius(i)
       end do
+      do i = 1, MAX_DIM
+        write(iunit, '(a7,i1,a13,e22.14)')    'center(', i, ')=           ',sb%hr_area%center(i)
+      end do
     end if
     do i = 1, MAX_DIM
       write(iunit, '(a9,i1,a11,9e22.14)')   'rlattice(', i, ')=         ', sb%rlattice(1:MAX_DIM, i)
@@ -1586,6 +1585,10 @@ contains
         call iopar_read(mpi_world, iunit, line, ierr)
         read(line,*) str, sb%hr_area%radius(il)
       end do
+      do idim=1, MAX_DIM
+        call iopar_read(mpi_world, iunit, line, ierr)
+        read(line, *) str, sb%hr_area%center(idim)
+      end do
     end if
     do idim=1, MAX_DIM
       call iopar_read(mpi_world, iunit, line, ierr)
@@ -1703,6 +1706,7 @@ contains
     sbout%mr_flag                 = sbin%mr_flag
     sbout%hr_area%num_areas       = sbin%hr_area%num_areas
     sbout%hr_area%num_radii       = sbin%hr_area%num_radii
+    sbout%hr_area%center(1:MAX_DIM)=sbin%hr_area%center(1:MAX_DIM)
 
     SAFE_ALLOCATE(sbout%hr_area%radius(1:sbout%hr_area%num_radii))
     sbout%hr_area%radius(1:sbout%hr_area%num_radii) = sbin%hr_area%radius(1:sbout%hr_area%num_radii)
