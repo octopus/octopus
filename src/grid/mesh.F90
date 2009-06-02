@@ -62,8 +62,7 @@ module mesh_m
     mesh_local_memory,         &
     mesh_x_global,             &
     mesh_compact_boundaries,   &
-    translate_point,           &
-    inner_boundary_point
+    translate_point
 
   ! Describes mesh distribution to nodes.
 
@@ -738,66 +737,6 @@ contains
          .not. mesh%parallel_in_domains .and.  &
          simul_box_has_zero_bc(mesh%sb)
   end function mesh_compact_boundaries
-
-
-  ! this returns 0 if point is not an inner boundary point,
-  ! and the corresponding multiresolution level is it is.
-  function inner_boundary_point(mesh, point) result(i_lev)
-    type(mesh_t), intent(in) :: mesh
-    integer, intent(in)      :: point
-    integer :: ibp_out
-    integer :: ix, iy, iz, dx, dy, dz, i_lev
-    logical :: is_inner_boundary_point, is_in_some_mrarea
-    real(8), parameter :: DELTA = CNST(1e-12)
-
-    call push_sub('mesh.inner_boundary_point')
-
-    i_lev = 0
-
-    ! no multiresolution -> no inner boundary points
-    if(.not.mesh%sb%mr_flag) then
-      call pop_sub()
-      return
-    end if
-
-    ! inner boundary points have larger index than np
-    if( point.le.mesh%np) then
-      call pop_sub()
-      return
-    end if
-
-    ! point is either an inner boundary point or an outer boundary point.
-    is_in_some_mrarea       = .false.
-    is_inner_boundary_point = .false.
-    ix = mesh%idx%Lxyz(point, 1)
-    iy = mesh%idx%Lxyz(point, 2)
-    iz = mesh%idx%Lxyz(point, 3)
-
-    do i_lev = 1, mesh%sb%hr_area%num_radii
-       dx = abs(mod(ix, 2**(i_lev-1)))
-       dy = abs(mod(iy, 2**(i_lev-1)))
-       dz = abs(mod(iz, 2**(i_lev-1)))
-       if(sum((mesh%x(point,:)-mesh%sb%hr_area%center(:))**2) .lt. mesh%sb%hr_area%radius(i_lev)**2 + DELTA) then
-         is_in_some_mrarea = .true.
-         if (dx + dy + dz > 0) is_inner_boundary_point = .true.
-       end if
-     end do
-
-    ! point can be inner boundary point even if is was not inside any multiresolution areas
-    if(.not.is_in_some_mrarea) then
-      i_lev = mesh%sb%hr_area%num_radii+1 ! the maximum resolution
-      dx = abs(mod(ix, 2**(i_lev-1)))
-      dy = abs(mod(iy, 2**(i_lev-1)))
-      dz = abs(mod(iz, 2**(i_lev-1)))
-      if (dx + dy + dz > 0) is_inner_boundary_point = .true.
-    end if
-
-    if(.not.is_inner_boundary_point) i_lev = M_ZERO
-
-    call pop_sub()
-
-  end function inner_boundary_point
-
 
 end module mesh_m
 

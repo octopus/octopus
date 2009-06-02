@@ -591,10 +591,8 @@ contains
 
       i_lev = der%mesh%resolution(ix,iy,iz)
 
-      ! Resolution is < 0 for boundary points
-      if(i_lev.lt.0 ) then
-
-        i_lev=abs(i_lev)  ! the actual resolution is the absolute value
+      ! resolution is 2**num_radii for outer boundary points, but now we want inner boundary points
+      if(i_lev.ne.2**der%mesh%sb%hr_area%num_radii) then
 
         dx = abs(mod(ix, 2**(i_lev)))
         dy = abs(mod(iy, 2**(i_lev)))

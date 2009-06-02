@@ -253,8 +253,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
               mesh%idx%Lxyz_inv(ix, iy, iz) = ibset(mesh%idx%Lxyz_inv(ix, iy, iz), INNER_POINT)
             end if
 
-           ! Other option: must (i) be inside the multiresolution area and (ii)
-            ! satisfy the coordinate index conditions
+            ! Other option: must be inside the multiresolution area and satisfy coordinate index conditions
             if(.not.btest(mesh%idx%Lxyz_inv(ix, iy, iz), INNER_POINT)) then
               do i_lev = 1,sb%hr_area%num_radii
                 n_mod = 2**(i_lev-1)
@@ -364,18 +363,9 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
 
             mesh%idx%Lxyz_inv(i, j, k) = ibset(mesh%idx%Lxyz_inv(i, j, k), ENLARGEMENT_POINT)
 
-            ! If the resolution of the point is not previously marked, do it now, and give it the
-            ! negative value. Resolution < 0 means that the point is intermediate point.
-            ! The absolute value gives the resolution that is used by the interpolation routine
-            ! in the calculation of Laplacian.
-            if(res.ne.2**mesh%sb%hr_area%num_radii) then ! Outer boundary points are ruled out.
-              if(mesh%resolution(i,j,k).le.0) then
-                if(mesh%resolution(i,j,k).eq.0) then
-                  mesh%resolution(i,j,k) = -res
-                else
-                  mesh%resolution(i,j,k)=max(-res,mesh%resolution(i,j,k))
-                end if
-              end if
+            ! If the point is not an inner point, and if its resolution can be decreased, do it now
+            if(.not.btest(mesh%idx%Lxyz_inv(i, j, k), INNER_POINT)) then
+              if(mesh%resolution(i,j,k).eq.0 .or. mesh%resolution(i,j,k).gt.res) mesh%resolution(i,j,k) = res
             end if
  
           end do
@@ -776,10 +766,9 @@ contains
             do iy = mesh%idx%nr(1,2), mesh%idx%nr(2,2)
               do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
  
-                ! a crude test: is the point an intermediate one?
-                ! Note: resolution <= 0 for all intermediate points,
-                !       and the absolute value is the actual resolution
-                if(mesh%resolution(ix,iy,iz).gt.0) cycle
+                ! Skip ordinary points
+                if(mesh%idx%Lxyz_inv(ix,iy,iz).gt.0 .and. &
+                     mesh%idx%Lxyz_inv(ix,iy,iz).le.mesh%np) cycle
 
                 ! Is it the kind of intermediate point we are looking for?
                 n_mod = 2**i_lev
