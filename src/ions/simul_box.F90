@@ -79,10 +79,10 @@ module simul_box_m
 
   type, public :: multiresolution_t
 
-    integer :: num_areas       ! number of multiresolution areas
-    integer :: num_radii       ! number of radii (resolution borders)
-    FLOAT :: radius(1:2)     ! radius of the high resolution area
-    FLOAT :: center(MAX_DIM) ! central point
+    integer        :: num_areas       ! number of multiresolution areas
+    integer        :: num_radii       ! number of radii (resolution borders)
+    FLOAT, pointer :: radius(:)       ! radius of the high resolution area
+    FLOAT          :: center(MAX_DIM) ! central point
 
   end type multiresolution_t
 
@@ -458,6 +458,7 @@ contains
             sum(sb%hr_area%center(1:sb%dim)**2).gt.r_small) call input_error('MultiResolutionArea')
 
         ! the radii
+        SAFE_ALLOCATE(sb%hr_area%radius(1:sb%hr_area%num_radii))
         do i = 1, sb%hr_area%num_radii
           call loct_parse_block_float(blk, 0, sb%dim+i-1, sb%hr_area%radius(i))
           sb%hr_area%radius(i) = sb%hr_area%radius(i)*units_inp%length%factor
@@ -1151,6 +1152,8 @@ contains
       nullify(sb%lead_unit_cell)
     end if
 
+    SAFE_DEALLOCATE_P(sb%hr_area%radius)
+
     call pop_sub()
   end subroutine simul_box_end
 
@@ -1241,11 +1244,10 @@ contains
 
 
   !--------------------------------------------------------------
-  logical function simul_box_in_box(sb, geo, x, inner_box) result(in_box)
+  logical function simul_box_in_box(sb, geo, x) result(in_box)
     type(simul_box_t),  intent(in) :: sb
     type(geometry_t),   intent(in) :: geo
     FLOAT,              intent(in) :: x(:)
-    logical, optional,  intent(in) :: inner_box
 
     real(8), parameter :: DELTA = CNST(1e-12)
     FLOAT :: xx(1:MAX_DIM, 1)
@@ -1256,11 +1258,8 @@ contains
 
     xx = M_ZERO
     xx(1:sb%dim, 1) = x(1:sb%dim)
-    if(present(inner_box)) then
-      call simul_box_in_box_vec(sb, geo, 1, xx, in_box2, inner_box)
-    else
-      call simul_box_in_box_vec(sb, geo, 1, xx, in_box2)
-    end if
+
+    call simul_box_in_box_vec(sb, geo, 1, xx, in_box2)
     in_box = in_box2(1)
     
     call pop_sub()
@@ -1268,13 +1267,12 @@ contains
 
 
   !--------------------------------------------------------------
-  subroutine simul_box_in_box_vec(sb, geo, npoints, point, in_box, inner_box)
+  subroutine simul_box_in_box_vec(sb, geo, npoints, point, in_box)
     type(simul_box_t),  intent(in)  :: sb
     type(geometry_t),   intent(in)  :: geo
     integer,            intent(in)  :: npoints
     FLOAT,              intent(in)  :: point(:, :)
     logical,            intent(out) :: in_box(:)
-    logical, optional,  intent(in)  :: inner_box
 
     real(8), parameter :: DELTA = CNST(1e-12)
     FLOAT :: r, re, im, dist2, radius
@@ -1300,17 +1298,7 @@ contains
       xx(1:sb%dim, ip) = matmul(xx(1:sb%dim, ip), sb%klattice_unitary(1:sb%dim, 1:sb%dim))
     end forall
 
-    if(present(inner_box)) then
-
-      if(inner_box) then
-        forall(ip = 1:npoints)
-          in_box(ip) = sum(xx(1:sb%dim, ip)**2) < (sb%hr_area%radius(1) + DELTA)**2
-        end forall
-      end if
-
-    else
-
-      select case(sb%box_shape)
+    select case(sb%box_shape)
       case(SPHERE)
         forall(ip = 1:npoints)
           in_box(ip) = sum(xx(1:sb%dim, ip)**2) <= (sb%rsize+DELTA)**2
@@ -1382,8 +1370,7 @@ contains
           call loct_parse_expression(re, im, sb%dim, xx(:, ip), r, M_ZERO, sb%user_def)
           in_box(ip) = in_box(ip) .and. (re .ne. M_ZERO)
         end do
-      end select
-    end if
+    end select
 
     SAFE_DEALLOCATE_A(xx)
 
@@ -1437,9 +1424,14 @@ contains
     write(iunit, '(a20,e22.14)')    'fft_alpha=          ', sb%fft_alpha
     write(iunit, '(a20,9e22.14)')   'h=                  ', sb%h(1:MAX_DIM)
     write(iunit, '(a20,9e22.14)')   'box_offset=         ', sb%box_offset(1:MAX_DIM)
-    write(iunit, '(a20,l7)')        'mr_flag             ', sb%mr_flag
-    write(iunit, '(a20,e22.14)')    'mr_radius(1)        ', sb%hr_area%radius(1)
-    write(iunit, '(a20,e22.14)')    'mr_radius(2)        ', sb%hr_area%radius(2)
+    write(iunit, '(a20,l7)')        'mr_flag=            ', sb%mr_flag
+    if(sb%mr_flag) then
+      write(iunit, '(a20,i4)')        'num_areas=         ',sb%hr_area%num_areas
+      write(iunit, '(a20,i4)')        'num_radii=         ',sb%hr_area%num_radii
+      do i = 1, sb%hr_area%num_radii
+        write(iunit, '(a10,i2.2,a9,e22.14)')    'mr_radius_', i, '=        ',sb%hr_area%radius(i)
+      end do
+    end if
     do i = 1, MAX_DIM
       write(iunit, '(a9,i1,a11,9e22.14)')   'rlattice(', i, ')=         ', sb%rlattice(1:MAX_DIM, i)
     end do
@@ -1584,10 +1576,17 @@ contains
     read(line, *) str, sb%box_offset(1:MAX_DIM)
     call iopar_read(mpi_world, iunit, line, ierr)
     read(line,*) str, sb%mr_flag
-    call iopar_read(mpi_world, iunit, line, ierr)
-    read(line,*) str, sb%hr_area%radius(1)
-    call iopar_read(mpi_world, iunit, line, ierr)
-    read(line,*) str, sb%hr_area%radius(2)
+    if(sb%mr_flag) then
+      call iopar_read(mpi_world, iunit, line, ierr)
+      read(line,*) str, sb%hr_area%num_areas
+      call iopar_read(mpi_world, iunit, line, ierr)
+      read(line,*) str, sb%hr_area%num_radii
+      SAFE_ALLOCATE(sb%hr_area%radius(1:sb%hr_area%num_radii))
+      do il = 1, sb%hr_area%num_radii
+        call iopar_read(mpi_world, iunit, line, ierr)
+        read(line,*) str, sb%hr_area%radius(il)
+      end do
+    end if
     do idim=1, MAX_DIM
       call iopar_read(mpi_world, iunit, line, ierr)
       read(line, *) str, sb%rlattice(1:MAX_DIM, idim)
@@ -1704,7 +1703,9 @@ contains
     sbout%mr_flag                 = sbin%mr_flag
     sbout%hr_area%num_areas       = sbin%hr_area%num_areas
     sbout%hr_area%num_radii       = sbin%hr_area%num_radii
-    sbout%hr_area%radius(1:2)     = sbin%hr_area%radius(1:2)
+
+    SAFE_ALLOCATE(sbout%hr_area%radius(1:sbout%hr_area%num_radii))
+    sbout%hr_area%radius(1:sbout%hr_area%num_radii) = sbin%hr_area%radius(1:sbout%hr_area%num_radii)
 
     if(associated(sbin%lead_unit_cell)) then
       SAFE_ALLOCATE(sbout%lead_unit_cell(1:NLEADS))

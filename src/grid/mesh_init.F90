@@ -729,6 +729,9 @@ contains
 
       if(mesh%sb%mr_flag) then
 
+        message(1) = 'Info: Point volumes are calculated by solving interpolation coefficients for the intermediate points.'
+        call write_info(1)
+
         ! The following interpolation routine is essentially the same as in the calculation of the Laplacian
 
         order = mesh%sb%mr_iorder !interpolation order
@@ -763,7 +766,10 @@ contains
         ! This continues until the last resolution level. In each step
         ! the point volumes of the neighboring points area modified.
 
-        do i_lev = 1,sb%hr_area%num_radii
+        do i_lev = 1, sb%hr_area%num_radii
+
+          write (message(1),'(a,I2,a,I2)') 'Info: Point volume calculation at stage ',i_lev,'/',sb%hr_area%num_radii
+          call write_info(1)
 
           ! loop through _all_ the points
           do iz = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
@@ -809,20 +815,18 @@ contains
             end do
           end do
 
-
         end do
 
         ! the volumes are now in vol_tmp table. Move them to vol_pp
-        do ip = 1,mesh%np
+        do ip = 1, mesh%np
           ix = mesh%idx%Lxyz(ip, 1)
           iy = mesh%idx%Lxyz(ip, 2)
           iz = mesh%idx%Lxyz(ip, 3)
           mesh%vol_pp(ip) = vol_tmp(ix,iy,iz)
         end do
        
-        message(1) =                    'Info: Point volumes are calculated by solving interpolation'
-        write (message(2),'(a,F26.12)') 'coefficients for the intermediate points. Total volume :',sum(mesh%vol_pp(1:mesh%np))
-        call write_info(2)
+        write (message(1),'(a,F26.12)') 'Info: Point volume calculation finished. Total volume :',sum(mesh%vol_pp(1:mesh%np))
+        call write_info(1)
 
         SAFE_DEALLOCATE_A(ww)
         SAFE_DEALLOCATE_A(pos)
