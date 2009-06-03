@@ -58,6 +58,7 @@ module td_m
   use varinfo_m
   use math_m
   use lasers_m
+  use species_m
 
   implicit none
 
@@ -654,8 +655,9 @@ contains
         if(ion_dynamics_ions_move(td%ions)  .and. k%delta_strength .ne. M_ZERO) then
           do iatom = 1, geo%natoms
             geo%atom(iatom)%v(1:gr%mesh%sb%dim) = geo%atom(iatom)%v(1:gr%mesh%sb%dim) + &
-              k%delta_strength*k%pol(1:gr%mesh%sb%dim, k%pol_dir)*&
-              P_PROTON_CHARGE*geo%atom(iatom)%spec%z_val/geo%atom(iatom)%spec%weight
+              k%delta_strength * k%pol(1:gr%mesh%sb%dim, k%pol_dir) * &
+              P_PROTON_CHARGE * species_zval(geo%atom(iatom)%spec) / &
+              species_weight(geo%atom(iatom)%spec)
           end do
         end if
 

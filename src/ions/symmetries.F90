@@ -101,7 +101,7 @@ contains
     forall(iatom = 1:geo%natoms)
       !this has to be fixed for non-orthogonal cells
       position(1:3, iatom) = geo%atom(iatom)%x(1:3)/(M_TWO*sb%lsize(1:3)) + M_HALF
-      typs(iatom) = anint(geo%atom(iatom)%spec%z)
+      typs(iatom) = anint(species_z(geo%atom(iatom)%spec))
     end forall
 
     ! This outputs information about the symmetries, I will disable it

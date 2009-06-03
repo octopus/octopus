@@ -36,6 +36,7 @@ module ion_dynamics_m
   use varinfo_m
   use math_m
   use xyz_file_m
+  use species_m
 
   implicit none
 
@@ -151,7 +152,7 @@ contains
       do i = 1, geo%natoms
         !generate the velocities in the root node
         if( mpi_grp_is_root(mpi_world)) then
-          sigma = sqrt( P_Kb*temperature / geo%atom(i)%spec%weight )
+          sigma = sqrt( P_Kb*temperature / species_weight(geo%atom(i)%spec) )
           do j = 1, 3
              geo%atom(i)%v(j) = loct_ran_gaussian(random_gen_pointer, sigma)
           end do
@@ -299,7 +300,8 @@ contains
         if(.not. geo%atom(iatom)%move) cycle
         
         geo%atom(iatom)%x(1:MAX_DIM) = geo%atom(iatom)%x(1:MAX_DIM) &
-             + dt*geo%atom(iatom)%v(1:MAX_DIM) + M_HALF*dt**2/geo%atom(iatom)%spec%weight*geo%atom(iatom)%f(1:MAX_DIM)
+             + dt*geo%atom(iatom)%v(1:MAX_DIM) + &
+             M_HALF*dt**2 / species_weight(geo%atom(iatom)%spec) * geo%atom(iatom)%f(1:MAX_DIM)
         
         this%oldforce(1:MAX_DIM, iatom) = geo%atom(iatom)%f(1:MAX_DIM)
         
@@ -383,13 +385,15 @@ contains
         if(.not. geo%atom(iatom)%move) cycle
         
         geo%atom(iatom)%v(1:MAX_DIM) = geo%atom(iatom)%v(1:MAX_DIM) &
-             + this%dt/geo%atom(iatom)%spec%weight*M_HALF*(this%oldforce(1:MAX_DIM, iatom) + geo%atom(iatom)%f(1:MAX_DIM))
+             + this%dt/species_weight(geo%atom(iatom)%spec) * M_HALF * (this%oldforce(1:MAX_DIM, iatom) + &
+             geo%atom(iatom)%f(1:MAX_DIM))
         
       end do
       
     case(NOSE_HOOVER)
       do iatom = 1, geo%natoms
-        geo%atom(iatom)%v(1:MAX_DIM) = geo%atom(iatom)%v(1:MAX_DIM) + this%dt*geo%atom(iatom)%f(1:MAX_DIM)/geo%atom(iatom)%spec%weight
+        geo%atom(iatom)%v(1:MAX_DIM) = geo%atom(iatom)%v(1:MAX_DIM) + &
+          this%dt*geo%atom(iatom)%f(1:MAX_DIM) / species_weight(geo%atom(iatom)%spec)
         geo%atom(iatom)%x(1:MAX_DIM) = geo%atom(iatom)%x(1:MAX_DIM) + M_HALF*this%dt*geo%atom(iatom)%v(1:MAX_DIM)
       enddo
 
@@ -452,7 +456,8 @@ contains
 
     kinetic_energy = M_ZERO
     do iatom = 1, geo%natoms
-      kinetic_energy = kinetic_energy + M_HALF*geo%atom(iatom)%spec%weight*sum(geo%atom(iatom)%v(1:MAX_DIM)**2)
+      kinetic_energy = kinetic_energy + &
+        M_HALF * species_weight(geo%atom(iatom)%spec) * sum(geo%atom(iatom)%v(1:MAX_DIM)**2)
     end do
 
   end function ion_dynamics_kinetic_energy

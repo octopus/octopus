@@ -43,6 +43,7 @@ module projector_m
   use hgh_projector_m
   use kb_projector_m
   use rkb_projector_m
+  use species_m
 
   implicit none
 
@@ -139,27 +140,32 @@ contains
     type(atom_t),      intent(in)    :: atm
     integer,           intent(in)    :: dim
     integer,           intent(in)    :: reltype
+
+    type(ps_t), pointer :: ps
     
     call push_sub('projector.projector_init')
 
+    ps => species_ps(atm%spec)
+
     nullify(p%phase)
     p%reltype = reltype
-    p%lmax = atm%spec%ps%l_max
+    p%lmax = ps%l_max
 
     if(p%lmax == 0) then
       p%type = M_NONE
       call pop_sub(); return
     end if
 
-    p%lloc = atm%spec%ps%l_loc
+    p%lloc = ps%l_loc
 
-    call submesh_init_sphere(p%sphere, sb, mesh, atm%x, atm%spec%ps%rc_max + mesh%h(1))
+    call submesh_init_sphere(p%sphere, sb, mesh, atm%x, ps%rc_max + mesh%h(1))
 
-    select case (atm%spec%ps%kbc)
+    select case (ps%kbc)
     case (1)
       p%type = M_KB
       if (reltype == 1) then
-        write(message(1),'(a,a,a)') "Spin-orbit coupling for species ", trim(atm%spec%label), " is not available."
+        write(message(1),'(a,a,a)') &
+          "Spin-orbit coupling for species ", trim(species_label(atm%spec)), " is not available."
         call write_warning(1)
       end if
     case (2)
@@ -174,7 +180,7 @@ contains
     
     select case(p%type)
     case(M_KB)
-      p%reduce_size = dim * atm%spec%ps%kbc
+      p%reduce_size = dim * ps%kbc
     case(M_RKB)
       p%reduce_size = 4
     case(M_HGH)

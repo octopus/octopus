@@ -60,7 +60,8 @@ contains
     integer      :: lcao_start, lcao_start_default
     type(lcao_t) :: lcao
     type(scf_t)  :: scfv
-    integer      :: ierr, s1, s2, k1, k2
+    integer      :: ierr, s1, s2, k1, k2, j
+    logical      :: species_all_electron
 
     call push_sub('gs.ground_state_run')
 
@@ -128,7 +129,12 @@ contains
       ! The initial LCAO calculation is done by default if we have pseudopotentials.
       ! Otherwise, it is not the default value and has to be enforced in the input file.
       lcao_start_default = LCAO_START_FULL
-      if(sys%geo%only_user_def .or. any(sys%geo%species(1:sys%geo%nspecies)%type == SPEC_ALL_E)) then
+      species_all_electron = .false.
+      do j = 1, sys%geo%nspecies
+        species_all_electron = ( species_all_electron .or. &
+          (species_type(sys%geo%species(j)) == SPEC_ALL_E) ) 
+      end do
+      if( sys%geo%only_user_def .or. species_all_electron ) then
         lcao_start_default = LCAO_START_NONE
       end if
       

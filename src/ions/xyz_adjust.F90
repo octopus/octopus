@@ -26,6 +26,7 @@ module xyz_adjust_m
   use geometry_m
   use lalg_adv_m
   use loct_parser_m
+  use species_m
 
   implicit none
 
@@ -159,7 +160,7 @@ contains
     m = M_ONE
     sm = M_ZERO
     do i = 1, geo%natoms
-      if(.not.pseudo) m = geo%atom(i)%spec%weight
+      if(.not.pseudo) m = species_weight(geo%atom(i)%spec)
       sm = sm + m
       x = x + m * geo%atom(i)%x
     end do
@@ -217,7 +218,7 @@ contains
     tinertia = M_ZERO
     m = M_ONE
     do iatom = 1, geo%natoms
-      if(.not.pseudo) m = geo%atom(iatom)%spec%weight
+      if(.not.pseudo) m = species_weight(geo%atom(iatom)%spec)
       do i = 1, 3
         do j = 1, 3
           tinertia(i, j) = tinertia(i, j) - m*geo%atom(iatom)%x(i)*geo%atom(iatom)%x(j)

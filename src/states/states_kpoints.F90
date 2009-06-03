@@ -209,7 +209,7 @@ subroutine states_choose_kpoints(d, sb, geo)
   natom  = 0
   coorat = M_ZERO
   do i = 1, geo%natoms
-    is = geo%atom(i)%spec%index
+    is = species_index(geo%atom(i)%spec)
     natom(is) = natom(is) + 1
     coorat(is, natom(is), 1:sb%dim) = geo%atom(i)%x(1:sb%dim)
   end do

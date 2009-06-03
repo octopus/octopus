@@ -37,6 +37,7 @@ module mesh_m
   use profiling_m
   use simul_box_m
   use units_m
+  use species_m
 
   implicit none
   
@@ -286,7 +287,7 @@ contains
       radius = m%sb%rsize
       do j = 1, geo%natoms
         call mesh_r(m, i, r, a=geo%atom(j)%x, x=x)
-        if(m%sb%rsize < M_ZERO) radius = geo%atom(j)%spec%def_rsize
+        if(m%sb%rsize < M_ZERO) radius = species_def_rsize(geo%atom(j)%spec)
         dd = r - (radius - width)
 	! check if the point is on the spherical shell of the j-th atom
 	if ((dd < M_ZERO) .or. (r > radius)) cycle
@@ -295,7 +296,7 @@ contains
 	  do l = 1, geo%natoms
 	    if (l == j) cycle
 	    call mesh_r(m, i, r, a=geo%atom(l)%x)
-            if(m%sb%rsize < M_ZERO) radius = geo%atom(l)%spec%def_rsize
+            if(m%sb%rsize < M_ZERO) radius = species_def_rsize(geo%atom(l)%spec)
 	    if (r < radius - width) then 
 	      is_on_border = .false.
 	      cycle

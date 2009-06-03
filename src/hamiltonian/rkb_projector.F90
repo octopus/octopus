@@ -80,6 +80,7 @@ contains
     integer :: is, i
     FLOAT :: x(MAX_DIM)
     CMPLX :: zv
+    type(ps_t), pointer :: ps
 
     rkb_p%n_s = sm%ns
 
@@ -124,8 +125,10 @@ contains
     rkb_p%f(2, 2, 2) = real(l + so_strength*lm, REAL_PRECISION)
     rkb_p%f = rkb_p%f/real(2*l + 1, REAL_PRECISION)
 
-    rkb_p%f(1, :, :) = rkb_p%f(1, :, :)*a%spec%ps%h(l, 1, 1)
-    rkb_p%f(2, :, :) = rkb_p%f(2, :, :)*a%spec%ps%h(l, 2, 2)
+    ps => species_ps(a%spec)
+    rkb_p%f(1, :, :) = rkb_p%f(1, :, :) * ps%h(l, 1, 1)
+    rkb_p%f(2, :, :) = rkb_p%f(2, :, :) * ps%h(l, 2, 2)
+    nullify(ps)
 
   end subroutine rkb_projector_init
 

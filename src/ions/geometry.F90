@@ -276,10 +276,10 @@ contains
         if(trim(geo%atom(j)%label) == trim(geo%atom(i)%label)) cycle atoms2
       end do
       k = k + 1
-      geo%species(k)%label = geo%atom(j)%label
-      geo%species(k)%index = k
-      call species_read(geo%species(k), trim(geo%species(k)%label))
-      geo%only_user_def = (geo%only_user_def .and. (geo%species(k)%type==SPEC_USDEF))
+      call species_set_label(geo%species(k), geo%atom(j)%label)
+      call species_set_index(geo%species(k), k)
+      call species_read(geo%species(k))
+      geo%only_user_def = (geo%only_user_def .and. (species_type(geo%species(k)) == SPEC_USDEF))
     end do atoms2
 
     ! Reads the spin components. This is read here, as well as in states_init,
@@ -301,7 +301,7 @@ contains
     !  assign species
     do i = 1, geo%natoms
       do j = 1, geo%nspecies
-        if(trim(geo%atom(i)%label) == trim(geo%species(j)%label)) then
+        if(trim(geo%atom(i)%label) == trim(species_label(geo%species(j)))) then
           geo%atom(i)%spec => geo%species(j)
           exit
         end if
@@ -312,7 +312,7 @@ contains
     geo%nlcc = .false.
     geo%nlpp = .false.
     do i = 1, geo%nspecies
-      geo%nlcc = (geo%nlcc.or.geo%species(i)%nlcc)
+      geo%nlcc = (geo%nlcc.or.species_has_nlcc(geo%species(i)))
       geo%nlpp = (geo%nlpp .or. species_is_ps(geo%species(i)))
     end do
 
@@ -438,7 +438,7 @@ contains
 
     dipole = M_ZERO
     do i = 1, geo%natoms
-      dipole(1:MAX_DIM) = dipole(1:MAX_DIM) + geo%atom(i)%spec%z_val*geo%atom(i)%x(1:MAX_DIM)
+      dipole(1:MAX_DIM) = dipole(1:MAX_DIM) + species_zval(geo%atom(i)%spec)*geo%atom(i)%x(1:MAX_DIM)
     end do
     dipole = P_PROTON_CHARGE*dipole
 
@@ -482,8 +482,8 @@ contains
 
     pos = M_ZERO; m = M_ZERO
     do i = 1, geo%natoms
-      pos = pos + geo%atom(i)%spec%weight*geo%atom(i)%x
-      m = m + geo%atom(i)%spec%weight
+      pos = pos + species_weight(geo%atom(i)%spec) * geo%atom(i)%x
+      m = m + species_weight(geo%atom(i)%spec)
     end do
     pos = pos/m
 
@@ -503,8 +503,8 @@ contains
 
     vel = M_ZERO; m = M_ZERO
     do i = 1, geo%natoms
-      vel = vel + geo%atom(i)%spec%weight*geo%atom(i)%v
-      m = m + geo%atom(i)%spec%weight
+      vel = vel + species_weight(geo%atom(i)%spec) * geo%atom(i)%v
+      m = m + species_weight(geo%atom(i)%spec)
     end do
     vel = vel/m
 
@@ -572,7 +572,7 @@ contains
 
     val_charge = M_ZERO
     do i = 1, geo%natoms
-      val_charge = val_charge - geo%atom(i)%spec%Z_val
+      val_charge = val_charge - species_zval(geo%atom(i)%spec)
     end do
 
     call pop_sub()
@@ -591,8 +591,8 @@ contains
     def_h     =  huge(def_h)
     def_rsize = -huge(def_rsize)
     do i = 1, geo%nspecies
-      def_h     = min(def_h,     geo%species(i)%def_h)
-      def_rsize = max(def_rsize, geo%species(i)%def_rsize)
+      def_h     = min(def_h,     species_def_h(geo%species(i)))
+      def_rsize = max(def_rsize, species_def_rsize(geo%species(i)))
     end do
 
     call pop_sub()

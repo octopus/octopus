@@ -65,11 +65,11 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
         geometry%reduced_atom_positions(idir, i) = (geo%atom(i)%x(idir) - offset(idir))/geometry%primitive_vectors(idir, idir)
       end do
     end do
-    geometry%atomic_numbers = geo%species%z
-    geometry%chemical_symbols(1:2) = geo%species%label(1:2)
+    forall(i = 1:geo%nspecies) geometry%atomic_numbers(i) = species_z(geo%species(i))
+    forall(i = 1:geo%nspecies) geometry%chemical_symbols(i) = trim(species_label(geo%species(i)))
     do i = 1, geo%natoms
       do j = 1, geo%nspecies
-        if (geo%atom(i)%spec%z == geo%species(j)%z) then
+        if (species_z(geo%atom(i)%spec) == species_z(geo%species(j))) then
           geometry%atom_species(i) = j
         end if
       end do

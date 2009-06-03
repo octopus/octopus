@@ -48,6 +48,7 @@ module phonons_lr_m
   use string_m
   use system_m
   use units_m
+  use species_m
 
   implicit none
 
@@ -210,7 +211,8 @@ contains
                   xk(1:MAX_DIM) = geo%atom(katom)%x(1:MAX_DIM)
                   r2 = sum((xi(1:gr%mesh%sb%dim) - xk(1:gr%mesh%sb%dim))**2)
 
-                  ac = ac + geo%atom(iatom)%spec%Z_val * geo%atom(katom)%spec%Z_val &
+                  ac = ac + species_zval(geo%atom(iatom)%spec) * &
+                            species_zval(geo%atom(katom)%spec) &
                        /(r2**CNST(1.5)) *(&
                        -ddelta(idir, jdir) + &
                        (M_THREE*(xi(idir)-xk(idir))*(xi(jdir)-xk(jdir)))/r2 &
@@ -223,7 +225,7 @@ contains
                 xj(1:MAX_DIM) = geo%atom(jatom)%x(1:MAX_DIM)
 
                 r2 = sum((xi(1:gr%mesh%sb%dim) - xj(1:gr%mesh%sb%dim))**2)
-                ac = geo%atom(iatom)%spec%Z_val * geo%atom(jatom)%spec%Z_val &
+                ac = species_zval(geo%atom(iatom)%spec) * species_zval(geo%atom(jatom)%spec) &
                      /(r2**CNST(1.5))*(&
                      ddelta(idir, jdir) - (M_THREE*(xi(idir)-xj(idir))*(xi(jdir)-xj(jdir)))/r2)
 

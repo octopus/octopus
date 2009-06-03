@@ -157,7 +157,7 @@ contains
 
     if(filter == PS_FILTER_TS) call spline_filter_mask_init()
     do i = 1, geo%nspecies
-      call species_pot_init(geo%species(i), gr, filter)
+      call species_pot_init(geo%species(i), mesh_gcutoff(gr%mesh), filter)
     end do
 
     ! Local part of the pseudopotentials
@@ -373,10 +373,6 @@ contains
 
     SAFE_DEALLOCATE_P(ep%fii)
 
-    do i = 1, geo%nspecies
-      call species_pot_end(geo%species(i))
-    end do
-
     if(associated(ep%vpsl)) then
       SAFE_DEALLOCATE_P(ep%vpsl)
       nullify(ep%vpsl)
@@ -530,7 +526,7 @@ contains
     call profiling_in(prof, "EPOT_LOCAL")
 
     if(ep%local_potential_precalculated) then
-      
+
       forall(ip = 1:mesh%np) vpsl(ip) = vpsl(ip) + ep%local_potential(ip, iatom)
 
     else
@@ -541,28 +537,27 @@ contains
       !(for all-electron species or pseudopotentials in periodic
       !systems) or by applying it directly to the grid
       
-      if(geo%atom(iatom)%spec%has_density .or. (species_is_ps(geo%atom(iatom)%spec) .and. simul_box_is_periodic(gr%sb))) then
-        
+      if( species_has_density(geo%atom(iatom)%spec) .or. &
+          (species_is_ps(geo%atom(iatom)%spec) .and. simul_box_is_periodic(gr%sb)) ) then
+
         SAFE_ALLOCATE(rho(1:mesh%np))
-        
+
         !this has to be optimized so the Poisson solution is made once
         !for all species, perhaps even include it in the Hartree term
         call species_get_density(geo%atom(iatom)%spec, geo%atom(iatom)%x, gr, geo, rho)
-        
+
         vl(1:mesh%np) = M_ZERO   ! vl has to be initialized before entering routine
         ! and our best guess for the potential is zero
         call dpoisson_solve(gr, vl, rho)
-        
+
         SAFE_DEALLOCATE_A(rho)
       else
-        
+
         !Local potential
         call species_get_local(geo%atom(iatom)%spec, mesh, geo%atom(iatom)%x(1:gr%mesh%sb%dim), vl, time)
-        
       end if
       
       vpsl(1:mesh%np) = vpsl(1:mesh%np) + vl(1:mesh%np)
-
 
       !the localized part
       if(species_is_ps(geo%atom(iatom)%spec)) then
@@ -576,12 +571,14 @@ contains
         call submesh_end(sphere)
         
       end if
-      
+
       SAFE_DEALLOCATE_A(vl)
     end if
 
     !Non-local core corrections
-    if(present(rho_core) .and. geo%atom(iatom)%spec%nlcc .and. species_is_ps(geo%atom(iatom)%spec)) then
+    if( present(rho_core) .and. &
+        species_has_nlcc(geo%atom(iatom)%spec) .and. &
+        species_is_ps(geo%atom(iatom)%spec)) then
       do i = 1, mesh%np
         x(1:gr%mesh%sb%dim) = mesh%x(i, 1:gr%mesh%sb%dim) - geo%atom(iatom)%x(1:gr%mesh%sb%dim)
         rho_core(i) = rho_core(i) + species_get_nlcc(geo%atom(iatom)%spec, x)
@@ -669,7 +666,7 @@ contains
           call laser_field(gr%sb, ep%lasers(j), x, t)
           do i = 1, geo%natoms
             geo%atom(i)%f(1:gr%mesh%sb%dim) = geo%atom(i)%f(1:gr%mesh%sb%dim) + &
-              P_PROTON_CHARGE*geo%atom(i)%spec%z_val*x(1:gr%mesh%sb%dim)
+              P_PROTON_CHARGE * species_zval(geo%atom(i)%spec) * x(1:gr%mesh%sb%dim)
           end do
 
         case(E_FIELD_MAGNETIC, E_FIELD_VECTOR_POTENTIAL, E_FIELD_SCALAR_POTENTIAL)
@@ -683,7 +680,7 @@ contains
     if(associated(ep%E_field)) then
       do i = 1, geo%natoms
         geo%atom(i)%f(1:gr%mesh%sb%dim) = geo%atom(i)%f(1:gr%mesh%sb%dim) + &
-          P_PROTON_CHARGE*geo%atom(i)%spec%z_val*ep%E_field(1:gr%mesh%sb%dim)
+          P_PROTON_CHARGE * species_zval(geo%atom(i)%spec) * ep%E_field(1:gr%mesh%sb%dim)
       end do
     end if
     

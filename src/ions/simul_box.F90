@@ -36,6 +36,7 @@ module simul_box_m
   use string_m
   use units_m
   use varinfo_m
+  use species_m
 
   implicit none
 
@@ -925,7 +926,7 @@ contains
             if(sb%rsize > M_ZERO) then
               radius = sb%rsize
             else
-              radius = geo%atom(iatom)%spec%def_rsize
+              radius = species_def_rsize(geo%atom(iatom)%spec)
             end if
 
             imin(1:3) = floor((xatom(1:3) - radius)/sb%cell_length(1:3))
@@ -1347,7 +1348,7 @@ contains
             if(sb%rsize > M_ZERO) then
               radius = sb%rsize
             else
-              radius = geo%atom(cell%list_of_atoms(iatom))%spec%def_rsize
+              radius = species_def_rsize(geo%atom(cell%list_of_atoms(iatom))%spec)
             endif
             if(dist2 <= (radius + DELTA)**2) then
               in_box(ip) = .true.

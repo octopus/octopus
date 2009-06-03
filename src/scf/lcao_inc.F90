@@ -51,7 +51,7 @@ subroutine X(lcao_atomic_orbital) (this, iorb, m, hm, geo, sb, psi, spin_channel
   jj = this%level(iorb)
   idim = this%ddim(iorb)
   s => geo%atom(iatom)%spec
-  ASSERT(jj <= s%niwfs)
+  ASSERT(jj <= species_niwfs(s))
 
   SAFE_ALLOCATE(ao(1:m%np))
 
@@ -352,8 +352,8 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   maxorb = 0
   nbasis = 0
   do iatom = 1, geo%natoms
-    maxorb = max(maxorb, geo%atom(iatom)%spec%niwfs)
-    nbasis = nbasis + geo%atom(iatom)%spec%niwfs
+    maxorb = max(maxorb, species_niwfs(geo%atom(iatom)%spec) )
+    nbasis = nbasis + species_niwfs(geo%atom(iatom)%spec)
   end do
 
   write(message(1),'(a,i6,a)') 'Info: Performing LCAO calculation with ', nbasis, ' orbitals.'
@@ -376,7 +376,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
   ibasis = 0
   do iatom = 1, geo%natoms
-    do iorb = 1, geo%atom(iatom)%spec%niwfs
+    do iorb = 1, species_niwfs(geo%atom(iatom)%spec)
       ibasis = ibasis + 1
       basis_atom(ibasis) = iatom
 

@@ -55,6 +55,7 @@ module scf_m
   use units_m
   use v_ks_m
   use varinfo_m
+  use species_m
 
   implicit none
 
@@ -751,8 +752,8 @@ contains
           write(iunit,'(3a)') 'Forces on the ions [', trim(units_out%force%abbrev), "]"
           write(iunit,'(a,10x,14x,a,14x,a,14x,a)') ' Ion','x','y','z'
           do iatom = 1, geo%natoms
-            write(iunit,'(i4,a10,10f15.6)') iatom, trim(geo%atom(iatom)%spec%label), &
-              geo%atom(iatom)%f(1:gr%mesh%sb%dim) / units_out%force%factor
+            write(iunit,'(i4,a10,10f15.6)') iatom, trim(species_label(geo%atom(iatom)%spec)), &
+              geo%atom(iatom)%f(1:gr%mesh%sb%dim) / units_out%force%factor;
           end do
         end if
 
@@ -793,12 +794,12 @@ contains
         if(st%d%ispin == SPIN_POLARIZED) then ! collinear spin
           write(iunit,'(a,6x,14x,a)') ' Ion','mz'
           do i = 1, geo%natoms
-            write(iunit,'(i4,a10,f15.6)') i, trim(geo%atom(i)%spec%label), lmm(3, i)
+            write(iunit,'(i4,a10,f15.6)') i, trim(species_label(geo%atom(i)%spec)), lmm(3, i)
           end do
         else if(st%d%ispin == SPINORS) then ! non-collinear
           write(iunit,'(a,8x,13x,a,13x,a,13x,a)') ' Ion','mx','my','mz'
           do i = 1, geo%natoms
-            write(iunit,'(i4,a10,9f15.6)') i, trim(geo%atom(i)%spec%label), lmm(1:m%sb%dim, i)
+            write(iunit,'(i4,a10,9f15.6)') i, trim(species_label(geo%atom(i)%spec)), lmm(1:m%sb%dim, i)
           end do
         end if
 

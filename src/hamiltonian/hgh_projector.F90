@@ -87,6 +87,7 @@ contains
 
     integer :: is, i
     FLOAT :: v, dv(MAX_DIM), x(MAX_DIM)
+    type(ps_t), pointer :: ps
 
     call push_sub('hgh_projector.hgh_projector_init')
 
@@ -106,8 +107,10 @@ contains
       end do
     end do
 
-    hgh_p%h(:, :) = a%spec%ps%h(l, :, :)
-    hgh_p%k(:, :) = a%spec%ps%k(l, :, :)*so_strength
+    ps => species_ps(a%spec)
+    hgh_p%h(:, :) = ps%h(l, :, :)
+    hgh_p%k(:, :) = ps%k(l, :, :)*so_strength
+    nullify(ps)
 
     call pop_sub()
   end subroutine hgh_projector_init

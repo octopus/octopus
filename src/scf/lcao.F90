@@ -97,8 +97,8 @@ contains
     maxj = 0
     this%maxorbs = 0
     do ia = 1, geo%natoms
-      maxj = max(maxj, geo%atom(ia)%spec%niwfs)
-      this%maxorbs = this%maxorbs + geo%atom(ia)%spec%niwfs
+      maxj = max(maxj, species_niwfs(geo%atom(ia)%spec) )
+      this%maxorbs = this%maxorbs + species_niwfs(geo%atom(ia)%spec)
     end do
 
     this%maxorbs = this%maxorbs*st%d%dim
@@ -146,7 +146,7 @@ contains
     do jj = 1, maxj
       do ia = 1, geo%natoms
         do idim = 1,st%d%dim
-          if(jj > geo%atom(ia)%spec%niwfs) cycle
+          if(jj > species_niwfs(geo%atom(ia)%spec) ) cycle
 
           this%atom(ii) = ia
           this%level(ii) = jj

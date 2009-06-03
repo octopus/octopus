@@ -28,6 +28,7 @@ module vibrations_m
   use profiling_m
   use simul_box_m
   use units_m
+  use species_m
 
   implicit none
 
@@ -72,7 +73,7 @@ contains
 
     this%total_mass = M_ZERO
     do iatom = 1, geo%natoms
-      this%total_mass = this%total_mass + geo%atom(iatom)%spec%weight
+      this%total_mass = this%total_mass + species_weight(geo%atom(iatom)%spec)
     end do
 
   end subroutine vibrations_init
@@ -107,7 +108,8 @@ contains
             
             jmat = vibrations_get_index(this, jatom, jdir)
 
-            factor = this%total_mass/sqrt(geo%atom(iatom)%spec%weight)/sqrt(geo%atom(jatom)%spec%weight)
+            factor = this%total_mass/sqrt(species_weight(geo%atom(iatom)%spec)) / &
+              sqrt(species_weight(geo%atom(jatom)%spec))
             
             this%dyn_matrix(imat, jmat) = this%dyn_matrix(imat, jmat) * factor
 

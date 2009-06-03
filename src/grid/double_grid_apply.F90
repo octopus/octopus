@@ -36,14 +36,16 @@ subroutine double_grid_apply (this, s, m, sm, x_atom, vl, l, lm, ic)
   integer :: ii, jj, kk, ll, mm, nn
   integer :: start(1:3), pp, qq, rr
   integer, allocatable :: jxyz_inv(:)
-
   FLOAT, allocatable :: vs(:)
+  type(ps_t), pointer :: ps
 
 #ifdef USE_OMP
   integer(kind=omp_lock_kind) :: lock
 #endif
 
   call push_sub('double_grid_apply.double_grid_apply_(non_)local')
+
+  ps => species_ps(s)
 
   if (.not. this%use_double_grid) then 
     
@@ -161,6 +163,7 @@ subroutine double_grid_apply (this, s, m, sm, x_atom, vl, l, lm, ic)
 
   end if
 
+  nullify(ps)
   call pop_sub()
 
 end subroutine double_grid_apply

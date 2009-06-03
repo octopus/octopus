@@ -53,6 +53,7 @@ module em_resp_m
   use system_m
   use units_m
   use v_ks_m
+  use species_m
   
   implicit none
 
@@ -779,7 +780,7 @@ contains
 
       do iatom = 1, geo%natoms
          write(iunit,'(a)')
-         write(iunit,'(i5,a10)') iatom, trim(geo%atom(iatom)%spec%label)
+         write(iunit,'(i5,a10)') iatom, trim(species_label(geo%atom(iatom)%spec))
 
          write(iunit,'(a)') 'Magnitude:'
          call io_output_tensor(iunit, TOFLOAT(abs(geo%atom(iatom)%Born_charge(:,:))), gr%mesh%sb%dim, M_ONE)

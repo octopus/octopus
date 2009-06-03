@@ -45,14 +45,13 @@ module species_pot_m
   use ps_m
   use units_m
   use varinfo_m
+  use io_function_m
 
   implicit none
 
   private
   public ::                      &
     guess_density,               &
-    species_pot_init,            &
-    species_pot_end,             &
     species_get_density,         &
     species_get_orbital,         &
     species_get_orbital_submesh, &
@@ -71,46 +70,6 @@ module species_pot_m
 
 contains
 
- ! ---------------------------------------------------------
-  subroutine species_pot_init(this, gr, filter)
-    type(species_t),      intent(inout) :: this
-    type(grid_t),        intent(in)    :: gr
-    integer,             intent(in)    :: filter
-
-    character(len=256) :: dirname
-
-    call push_sub('species_pot.species_pot_init')
-    
-    if(species_is_ps(this)) then
-      call ps_separate(this%ps)
-
-      call ps_getradius(this%ps)
-
-      if(filter .ne. PS_FILTER_NONE) then 
-        call ps_filter(this%ps, filter, mesh_gcutoff(gr%mesh))
-        call ps_getradius(this%ps) ! radius may have changed
-      end if
-
-      call ps_derivatives(this%ps)
-      
-      if(in_debug_mode) then
-        write(dirname, '(a)') 'debug/geometry'
-        call io_mkdir(dirname)
-        call species_debug(trim(dirname), this)
-      end if
-
-    end if
-
-    call pop_sub()
-
-  end subroutine species_pot_init
-
-  ! ---------------------------------------------------------
-  subroutine species_pot_end(this)
-    type(species_t),      intent(inout) :: this
-    
-    ! for the moment there is nothing to destroy
-  end subroutine species_pot_end
 
   ! ---------------------------------------------------------
   subroutine atom_density(m, sb, atom, spin_channels, rho)
@@ -124,6 +83,8 @@ contains
     FLOAT :: r, x, pos(1:MAX_DIM)
     FLOAT :: psi1, psi2, xx(MAX_DIM), yy(MAX_DIM), rerho, imrho
     type(species_t), pointer :: s
+    type(ps_t), pointer :: ps
+
 #if defined(HAVE_MPI)
     integer :: in_points_red
 #endif
@@ -137,16 +98,17 @@ contains
     rho = M_ZERO
 
     ! build density ...
-    select case (s%type)
-    case (SPEC_USDEF, SPEC_ALL_E, SPEC_PS_CPI, SPEC_PS_FHI) ! ... from userdef
+    select case (species_type(s))
+    case (SPEC_FROM_FILE, SPEC_USDEF, SPEC_ALL_E, SPEC_PS_CPI, SPEC_PS_FHI) ! ... from userdef
       do i = 1, spin_channels
         rho(1:m%np, i) = M_ONE
-        x = (real(s%z_val, REAL_PRECISION)/real(spin_channels, REAL_PRECISION)) / dmf_integrate(m, rho(:, i))
+        x = (species_zval(s)/real(spin_channels, REAL_PRECISION)) / dmf_integrate(m, rho(:, i))
         rho(1:m%np, i) = x * rho(1:m%np, i)
       end do
 
     case (SPEC_CHARGE_DENSITY)
-      ! We put, for the electron density, the same as the positive density that create the external potential.
+      ! We put, for the electron density, the same as the positive density that 
+      ! creates the external potential.
 
       call periodic_copy_init(pp, sb, spread(M_ZERO, dim=1, ncopies = MAX_DIM), &
         range = M_TWO * maxval(sb%lsize(1:sb%dim)))
@@ -158,7 +120,7 @@ contains
           call mesh_r(m, i, r, x = xx, a = atom%x)
           xx(1:sb%dim) = xx(1:sb%dim) + yy(1:sb%dim)
           r = sqrt(dot_product(xx(1:sb%dim), xx(1:sb%dim)))
-          call loct_parse_expression(rerho, imrho, sb%dim, xx, r, M_ZERO, trim(s%rho))
+          call loct_parse_expression(rerho, imrho, sb%dim, xx, r, M_ZERO, trim(species_rho_string(s)))
           rho(i, 1) = rho(i, 1) + rerho
         end do
       end do
@@ -172,7 +134,7 @@ contains
       in_points = 0
       do i = 1, m%np
         call mesh_r(m, i, r, a=atom%x)
-        if(r <= s%jradius) then
+        if(r <= species_jradius(s)) then
           in_points = in_points + 1
         end if
       end do
@@ -187,8 +149,8 @@ contains
       if(in_points > 0) then
         do i = 1, m%np
           call mesh_r(m, i, r, a=atom%x)
-          if(r <= s%jradius) then
-            rho(i, 1:spin_channels) = real(s%z_val, REAL_PRECISION) /   &
+          if(r <= species_jradius(s)) then
+            rho(i, 1:spin_channels) = species_zval(s) /   &
               (m%vol_pp(i)*real(in_points*spin_channels, REAL_PRECISION))
           end if
         end do
@@ -197,35 +159,40 @@ contains
     case (SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_UPF) ! ...from pseudopotential
       ! the outer loop sums densities over atoms in neighbour cells
 
+      ps => species_ps(s)
+
       call periodic_copy_init(pp, sb, atom%x, &
-        range = spline_cutoff_radius(s%ps%Ur(1, 1), s%ps%projectors_sphere_threshold))
+        range = spline_cutoff_radius(ps%Ur(1, 1), ps%projectors_sphere_threshold))
 
       do icell = 1, periodic_copy_num(pp)
         pos = periodic_copy_position(pp, sb, icell)
         do i = 1, m%np
           call mesh_r(m, i, r, pos)
           r = max(r, r_small)
-          do n = 1, s%ps%conf%p
+          do n = 1, ps%conf%p
             select case(spin_channels)
             case(1)
-              psi1 = spline_eval(s%ps%Ur(n, 1), r)
-              rho(i, 1) = rho(i, 1) + s%ps%conf%occ(n, 1)*psi1*psi1 /(M_FOUR*M_PI)
+              psi1 = spline_eval(ps%Ur(n, 1), r)
+              rho(i, 1) = rho(i, 1) + ps%conf%occ(n, 1)*psi1*psi1 /(M_FOUR*M_PI)
             case(2)
-              psi1 = spline_eval(s%ps%Ur(n, 1), r)
-              psi2 = spline_eval(s%ps%Ur(n, 2), r)
-              rho(i, 1) = rho(i, 1) + s%ps%conf%occ(n, 1)*psi1*psi1 /(M_FOUR*M_PI)
-              rho(i, 2) = rho(i, 2) + s%ps%conf%occ(n, 2)*psi2*psi2 /(M_FOUR*M_PI)
+              psi1 = spline_eval(ps%Ur(n, 1), r)
+              psi2 = spline_eval(ps%Ur(n, 2), r)
+              rho(i, 1) = rho(i, 1) + ps%conf%occ(n, 1)*psi1*psi1 /(M_FOUR*M_PI)
+              rho(i, 2) = rho(i, 2) + ps%conf%occ(n, 2)*psi2*psi2 /(M_FOUR*M_PI)
             end select
           end do
         end do
       end do
-
+  
       call periodic_copy_end(pp)
+      nullify(ps)
 
     end select
 
     call pop_sub()
   end subroutine atom_density
+  ! ---------------------------------------------------------
+
 
   ! ---------------------------------------------------------
   ! builds a density which is the sum of the atomic densities
@@ -462,8 +429,10 @@ contains
     SAFE_DEALLOCATE_A(atom_rho)
     call pop_sub()
   end subroutine guess_density
+  ! ---------------------------------------------------------
 
 
+  ! ---------------------------------------------------------
   subroutine species_get_density(s, pos, gr, geo, rho)
     type(species_t),             intent(in)  :: s
     FLOAT,                      intent(in)  :: pos(MAX_DIM)
@@ -478,18 +447,21 @@ contains
     FLOAT   :: delta, alpha, beta, xx(MAX_DIM), yy(MAX_DIM), r, imrho, rerho
     integer :: icell
     type(periodic_copy_t) :: pp
+    type(ps_t), pointer :: ps
 
     call push_sub('species_pot.species_get_density')
 
-    select case(s%type)
+    select case(species_type(s))
 
     case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
+      ps => species_ps(s)
       rho = M_ZERO
-      call periodic_copy_init(pp, gr%sb, pos, range = spline_cutoff_radius(s%ps%nlr, s%ps%projectors_sphere_threshold))
+      call periodic_copy_init(pp, gr%sb, pos, range = spline_cutoff_radius(ps%nlr, ps%projectors_sphere_threshold))
       do icell = 1, periodic_copy_num(pp)
-        call dmf_put_radial_spline(gr%mesh, s%ps%nlr, periodic_copy_position(pp, gr%sb, icell), rho, add = .true.)
+        call dmf_put_radial_spline(gr%mesh, ps%nlr, periodic_copy_position(pp, gr%sb, icell), rho, add = .true.)
       end do
       call periodic_copy_end(pp)
+      nullify(ps)
       
     case(SPEC_ALL_E)
 
@@ -509,7 +481,7 @@ contains
       ! Initial guess.
       call curvilinear_x2chi(gr%mesh%sb, gr%cv, pos, chi0)
       delta   = gr%mesh%h(1)
-      alpha   = sqrt(M_TWO)*s%sigma*delta
+      alpha   = sqrt(M_TWO)*species_sigma(s)*delta
       alpha_p = alpha  ! global copy of alpha
       beta    = M_ONE
 
@@ -535,7 +507,7 @@ contains
       end if
 
       ! we want a charge of -Z
-      rho = - s%z * rho_p
+      rho = - species_z(s) * rho_p
 
       nullify(m_p)
       SAFE_DEALLOCATE_A(grho_p)
@@ -553,7 +525,7 @@ contains
           call mesh_r(gr%mesh, i, r, x = xx, a = pos)
           xx(1:gr%sb%dim) = xx(1:gr%sb%dim) + yy(1:gr%sb%dim)
           r = sqrt(dot_product(xx(1:gr%sb%dim), xx(1:gr%sb%dim)))
-          call loct_parse_expression(rerho, imrho, gr%sb%dim, xx, r, M_ZERO, trim(s%rho))
+          call loct_parse_expression(rerho, imrho, gr%sb%dim, xx, r, M_ZERO, trim(species_rho_string(s)))
           rho(i) = rho(i) - rerho
         end do
       end do
@@ -644,7 +616,8 @@ contains
 
     FLOAT :: a1, a2, Rb2 ! for jellium
     FLOAT :: xx(MAX_DIM), r, pot_re, pot_im, time_
-    integer :: ip
+    integer :: ip, err
+    type(ps_t), pointer :: ps
 
     type(profile_t), save :: prof
 
@@ -654,48 +627,59 @@ contains
 
     if (present(time)) time_ = time
 
-      select case(s%type)
+      select case(species_type(s))
       case(SPEC_USDEF)
 
         do ip = 1, mesh%np
           
-          xx(:) = mesh%x(ip,:)-x_atom(:)
+          xx = M_ZERO
+          xx(1:mesh%sb%dim) = mesh%x(ip,1:mesh%sb%dim)-x_atom(1:mesh%sb%dim)
           r = sqrt(sum(xx(:)**2))
           
           ! Note that as the s%user_def is in input units, we have to convert
           ! the units back and forth
           xx(:) = xx(:)/units_inp%length%factor ! convert from a.u. to input units
           r = r/units_inp%length%factor
-          
-          call loct_parse_expression(                            &
-               pot_re, pot_im, mesh%sb%dim, xx, r, time_, s%user_def)
-          vl(ip) = pot_re * units_inp%energy%factor  ! convert from input units to a.u.
+          vl(ip) = species_userdef_pot(s, mesh%sb%dim, xx, r, time_) * &
+             units_inp%energy%factor  ! convert from input units to a.u.
 
         end do
 
+
+      case(SPEC_FROM_FILE)
+
+        call dinput_function(trim(species_filename(s)), mesh, vl, err)
+        if(err .ne. 0) then
+          write(message(1), '(a)')    'File '//trim(species_filename(s))//'not found.'
+          write(message(2), '(a,i4)') 'Error code returned = ', err
+          call write_fatal(1)
+        end if
+
       case(SPEC_POINT, SPEC_JELLI)
-        a1 = s%Z/(M_TWO*s%jradius**3)
-        a2 = s%Z/s%jradius
-        Rb2= s%jradius**2
+        a1 = species_z(s)/(M_TWO*species_jradius(s)**3)
+        a2 = species_z(s)/species_jradius(s)
+        Rb2= species_jradius(s)**2
         
         do ip = 1, mesh%np
           
           xx(:) = mesh%x(ip,:)-x_atom(:)
           r = sqrt(sum(xx(:)**2))
           
-          if(r <= s%jradius) then
+          if(r <= species_jradius(s)) then
             vl(ip) = (a1*(r*r - Rb2) - a2)
           else
-            vl(ip) = - s%Z/r
+            vl(ip) = - species_z(s)/r
           end if
           
         end do
         
       case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
+        ps => species_ps(s)
         do ip = 1, mesh%np
           vl(ip) = sum((mesh%x(ip, 1:MAX_DIM) - x_atom(1:MAX_DIM))**2)
         end do
-        call spline_eval_vec(s%ps%vlr_sq, mesh%np, vl)
+        call spline_eval_vec(ps%vlr_sq, mesh%np, vl)
+        nullify(ps)
         
       case(SPEC_ALL_E, SPEC_CHARGE_DENSITY)
         vl(1:mesh%np) = M_ZERO
@@ -706,25 +690,38 @@ contains
       
   end subroutine species_get_local
 
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! Places, in the function phi (defined in each point of the mesh), the
+  ! j-th atomic orbital. The orbitals are obtained from the species data
+  ! type, and are numbered from one to species_niwfs(spec). It may happen
+  ! that there are different orbitals for each spin polarization direction,
+  ! and therefore the orbital is also characterized by the label "is".
+  !
+  ! In order to put the orbital in the mesh, it is necessary to know where
+  ! the species is, and this is given by the vector "pos".
+  !
+  ! WARNING/TODO: Most of this work should be done inside the species
+  ! module, and we should get rid of species_iwf_i, species_ifw_l, etc.
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine species_get_orbital(spec, mesh, j, dim, is, pos, phi)
-    type(species_t),   intent(in)  :: spec
-    type(mesh_t),      intent(in)  :: mesh
-    integer,           intent(in)  :: j
-    integer,           intent(in)  :: dim
-    integer,           intent(in)  :: is
-    FLOAT,             intent(in)  :: pos(:)
-    FLOAT,             intent(out) :: phi(:)
+    type(species_t),   intent(in)     :: spec
+    type(mesh_t),      intent(in)     :: mesh
+    integer,           intent(in)     :: j
+    integer,           intent(in)     :: dim
+    integer,           intent(in)     :: is
+    FLOAT,             intent(in)     :: pos(:)
+    FLOAT,             intent(out)    :: phi(:)
 
     integer :: i, l, m, ip
     FLOAT :: r2, x(1:MAX_DIM)
     FLOAT, allocatable :: xf(:, :), ylm(:)
+    type(ps_t), pointer :: ps
 
-    i = spec%iwf_i(j, is)
-    l = spec%iwf_l(j, is)
-    m = spec%iwf_m(j, is)
+    call species_iwf_ilm(spec, j, is, i, l, m)
 
     if(species_is_ps(spec)) then
 
+      ps => species_ps(spec)
       SAFE_ALLOCATE(xf(1:mesh%np, 1:MAX_DIM))
       SAFE_ALLOCATE(ylm(1:mesh%np))
 
@@ -734,7 +731,7 @@ contains
         xf(ip, 1:MAX_DIM) = x(1:MAX_DIM)
       end do
 
-      call spline_eval_vec(spec%ps%ur_sq(i, is), mesh%np, phi)
+      call spline_eval_vec(ps%ur_sq(i, is), mesh%np, phi)
       call loct_ylm(mesh%np, xf(1, 1), xf(1, 2), xf(1, 3), l, m, ylm(1))
 
       do ip = 1, mesh%np
@@ -743,6 +740,8 @@ contains
 
       SAFE_DEALLOCATE_A(xf)
       SAFE_DEALLOCATE_A(ylm)
+
+      nullify(ps)
     else
 
       do ip = 1, mesh%np
@@ -750,12 +749,15 @@ contains
         r2 = sum(x(1:MAX_DIM)**2)
         select case(dim)
         case(1)
-          phi(ip) = exp(-spec%omega*r2/M_TWO)*hermite(i - 1, x(1)*sqrt(spec%omega))
+          phi(ip) = exp(-species_omega(spec)*r2/M_TWO) * hermite(i - 1, x(1)*sqrt(species_omega(spec)))
         case(2)
-          phi(ip) = exp(-spec%omega*r2/M_TWO)*hermite(i - 1, x(1)*sqrt(spec%omega))*hermite(l - 1, x(2)*sqrt(spec%omega))
+          phi(ip) = exp(-species_omega(spec)*r2/M_TWO) * &
+            hermite(i - 1, x(1)*sqrt(species_omega(spec))) * hermite(l - 1, x(2)*sqrt(species_omega(spec)))
         case(3)
-          phi(ip) = exp(-spec%omega*r2/M_TWO)*&
-               hermite(i - 1, x(1)*sqrt(spec%omega))*hermite(l - 1, x(2)*sqrt(spec%omega))*hermite(m - 1, x(3)*sqrt(spec%omega))
+          phi(ip) = exp(-species_omega(spec)*r2/M_TWO) * &
+               hermite(i - 1, x(1) * sqrt(species_omega(spec))) * &
+               hermite(l - 1, x(2) * sqrt(species_omega(spec))) * &
+               hermite(m - 1, x(3) * sqrt(species_omega(spec)))
         end select
       end do
     end if
@@ -774,15 +776,15 @@ contains
     integer :: i, l, m, ip
     FLOAT :: r2, x(1:MAX_DIM)
     FLOAT, allocatable :: xf(:, :), ylm(:)
+    type(ps_t), pointer :: ps
 
     if(submesh%ns == 0) return
 
-    i = spec%iwf_i(j, is)
-    l = spec%iwf_l(j, is)
-    m = spec%iwf_m(j, is)
+    call species_iwf_ilm(spec, j, is, i, l, m)
 
     if(species_is_ps(spec)) then
 
+      ps => species_ps(spec)
       SAFE_ALLOCATE(xf(1:submesh%ns, 1:MAX_DIM))
       SAFE_ALLOCATE(ylm(1:submesh%ns))
       do ip = 1, submesh%ns
@@ -790,8 +792,7 @@ contains
         phi(ip) = sum(x(1:MAX_DIM)**2)
         xf(ip, 1:MAX_DIM) = x(1:MAX_DIM)
       end do
-
-      call spline_eval_vec(spec%ps%ur_sq(i, is), submesh%ns, phi)
+      call spline_eval_vec(ps%ur_sq(i, is), submesh%ns, phi)
       call loct_ylm(submesh%ns, xf(1, 1), xf(1, 2), xf(1, 3), l, m, ylm(1))
 
       do ip = 1, submesh%ns
@@ -800,6 +801,8 @@ contains
 
       SAFE_DEALLOCATE_A(xf)
       SAFE_DEALLOCATE_A(ylm)
+
+      nullify(ps)
     else
       message(1) = "Error: not implemented."
       call write_fatal(1)

@@ -37,6 +37,7 @@ module double_grid_m
   use species_m
   use splines_m
   use submesh_m
+  use ps_m
 
 #ifdef USE_OMP
   use omp_lib
@@ -170,13 +171,17 @@ contains
     type(double_grid_t),     intent(in) :: this
     type(species_t),         intent(in) :: s
     type(mesh_t),            intent(in) :: m
+
+    type(ps_t), pointer :: ps
     
     call push_sub('double_grid.double_grid_get_rmax')
 
-    rmax = spline_cutoff_radius(s%ps%vl, s%ps%projectors_sphere_threshold)
+    ps => species_ps(s)
+    rmax = spline_cutoff_radius(ps%vl, ps%projectors_sphere_threshold)
     if(this%use_double_grid) then 
       rmax = rmax + this%interpolation_max * maxval(m%h(1:3))
     end if
+    nullify(ps)
 
     call pop_sub()
   end function double_grid_get_rmax
@@ -195,7 +200,7 @@ contains
 #define profiler double_grid_local_prof
 #define profiler_label "DOUBLE_GRID_LOCAL"
 #define double_grid_apply double_grid_apply_local
-#define calc_pot(vv) vv = spline_eval(s%ps%vl, r)
+#define calc_pot(vv) vv = spline_eval(ps%vl, r)
 
 #include "double_grid_apply.F90"
 

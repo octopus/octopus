@@ -303,7 +303,8 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
     Born_sum(1:gr%mesh%sb%dim) = M_ZERO 
 
     do iatom = 1, geo%natoms
-      geo%atom(iatom)%Born_charge(lr_dir, lr_dir) = geo%atom(iatom)%Born_charge(lr_dir, lr_dir) + geo%atom(iatom)%spec%Z_val
+      geo%atom(iatom)%Born_charge(lr_dir, lr_dir) = geo%atom(iatom)%Born_charge(lr_dir, lr_dir) + &
+        species_zval(geo%atom(iatom)%spec)
       do idir = 1, gr%mesh%sb%dim
         geo%atom(iatom)%Born_charge(lr_dir, idir) = geo%atom(iatom)%Born_charge(lr_dir, idir) + force(idir, iatom)
         Born_sum(idir) = Born_sum(idir) + geo%atom(iatom)%Born_charge(lr_dir, idir)

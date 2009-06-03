@@ -44,6 +44,7 @@ module states_dim_m
   use simul_box_m
   use units_m
   use varinfo_m
+  use species_m
 
   implicit none
 

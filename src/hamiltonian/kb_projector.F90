@@ -35,6 +35,7 @@ module kb_projector_m
   use mpi_m
   use mpi_debug_m
   use multicomm_m
+  use species_m
 
   implicit none
 
@@ -82,11 +83,14 @@ contains
     integer,              intent(in)    :: l, lm
 
     integer :: n_c, ic
+    type(ps_t), pointer :: ps
 
     call push_sub('kb_projector.kb_projector_init')
 
+    ps => species_ps(a%spec)
+
     kb_p%n_s = sm%ns
-    if (l == 0 .or. a%spec%ps%kbc == 1) then
+    if (l == 0 .or. ps%kbc == 1) then
       n_c = 1
     else ! we have j-dependent projectors
       n_c = 2
@@ -99,7 +103,7 @@ contains
     
     do ic = 1, n_c
       call double_grid_apply_non_local(gr%dgrid, a%spec, sm%mesh, sm, a%x, kb_p%p(:, ic), l, lm, ic)
-      kb_p%e(ic) = a%spec%ps%h(l, ic, ic)
+      kb_p%e(ic) = ps%h(l, ic, ic)
     end do
 
     if (n_c == 2) then
@@ -109,6 +113,7 @@ contains
       kb_p%e(2) = kb_p%e(2)*real(l,   REAL_PRECISION)/real(2*l+1, REAL_PRECISION)
     end if
 
+    nullify(ps)
     call pop_sub()
   end subroutine kb_projector_init
 

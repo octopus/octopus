@@ -72,17 +72,17 @@ contains
       ! only interaction inside the cell
       do iatom = 1, geo%natoms
         s => geo%atom(iatom)%spec
-        zi = geo%atom(iatom)%spec%z_val
+        zi = species_zval(geo%atom(iatom)%spec)
 
-        if(s%type .eq. SPEC_JELLI) then
-          energy = energy + (M_THREE/M_FIVE)*s%z_val**2/s%jradius
+        if(species_type(s) .eq. SPEC_JELLI) then
+          energy = energy + (M_THREE/M_FIVE)*species_zval(s)**2/species_jradius(s)
         end if
 
         do jatom = 1, geo%natoms
 
           if(iatom == jatom) cycle
 
-          zj = geo%atom(jatom)%spec%z_val
+          zj = species_zval(geo%atom(jatom)%spec)
           r = sqrt(sum((geo%atom(iatom)%x - geo%atom(jatom)%x)**2))
 
           !the force
@@ -132,7 +132,7 @@ contains
     do iatom = 1, geo%natoms
       s => geo%atom(iatom)%spec
       if (.not. species_is_ps(s)) cycle
-      zi = geo%atom(iatom)%spec%z_val
+      zi = species_zval(geo%atom(iatom)%spec)
 
       call periodic_copy_init(pc, sb, geo%atom(iatom)%x, CNST(5.0))
       
@@ -140,7 +140,7 @@ contains
         xi = periodic_copy_position(pc, sb, icopy)
         
         do jatom = 1, geo%natoms
-          zj = -geo%atom(jatom)%spec%z_val
+          zj = -species_zval(geo%atom(jatom)%spec)
           r = sqrt( sum( (xi(1:sb%dim) - geo%atom(jatom)%x(1:sb%dim))**2 ) )
           
           if(r < CNST(1e-5)) cycle
@@ -179,14 +179,14 @@ contains
           
           sumatoms = M_Z0
           do iatom = 1, geo%natoms
-            zi = geo%atom(iatom)%spec%z_val
+            zi = species_zval(geo%atom(iatom)%spec)
             xi(1:sb%dim) = geo%atom(iatom)%x(1:sb%dim)
             sumatoms = sumatoms + zi*exp(-M_ZI*sum(gg(1:sb%dim)*xi(1:sb%dim)))
           end do
           energy = energy + factor*sumatoms*conjg(sumatoms)
           
           do iatom = 1, geo%natoms
-            zi = geo%atom(iatom)%spec%z_val
+            zi = species_zval(geo%atom(iatom)%spec)
             force(1:sb%dim, iatom) = -M_TWO*zi*factor*sumatoms
           end do
           
@@ -197,7 +197,7 @@ contains
     ! remove self-interaction
     charge = M_ZERO
     do iatom = 1, geo%natoms
-      zi = geo%atom(iatom)%spec%z_val
+      zi = species_zval(geo%atom(iatom)%spec)
       charge = charge + zi
       energy = energy - alpha*zi**2/sqrt(M_PI) 
     end do
