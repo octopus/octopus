@@ -49,7 +49,7 @@ subroutine X(states_gram_schmidt_full)(st, nst, m, dim, psi, start)
     call batch_end(psib)
 
     ! calculate the Cholesky decomposition
-    call X(potrf)('U',   st%nst, ss(1, 1), st%nst, info)
+    call lapack_potrf('U', st%nst, ss(1, 1), st%nst, info)
 
     ASSERT(info == 0)
 
