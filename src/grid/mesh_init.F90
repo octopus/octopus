@@ -181,9 +181,10 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
   type(stencil_t),    intent(in)    :: stencil
 
   integer :: i, j, k, il, ik, ix, iy, iz, is
+  integer :: newi, newj, newk, ii, jj, kk, dx, dy, dz, i_lev, ip
   integer :: jx, jy, jz, res_counter, j_counter
   FLOAT   :: chi(MAX_DIM)
-  integer :: nr(1:2, 1:MAX_DIM), res, i_lev, n_mod
+  integer :: nr(1:2, 1:MAX_DIM), res, n_mod
   logical, allocatable :: in_box(:)
   FLOAT,   allocatable :: xx(:, :)
   real(8), parameter :: DELTA = CNST(1e-12)
@@ -388,6 +389,53 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
   end do
   mesh%np_part_global = il
   mesh%np_global      = ik
+
+
+  ! Errors occur during actual calculation if resolution interfaces are too close to each other. The
+  ! following routine checks that everything will be ok.
+  if(sb%mr_flag) then
+
+    ! loop through all interpolation points and check that all points used for interpolation exist
+    do iz = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
+      do iy = mesh%idx%nr(1,2), mesh%idx%nr(2,2)
+        do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
+
+          i_lev = mesh%resolution(ix,iy,iz)
+
+          ! include enlargement points that are not inner points nor outer boundary points.
+          if( .not. btest(mesh%idx%Lxyz_inv(ix, iy, iz),ENLARGEMENT_POINT)) cycle
+          if(  btest(mesh%idx%Lxyz_inv(ix, iy, iz), INNER_POINT)) cycle
+          if(  i_lev.eq.2**mesh%sb%hr_area%num_radii ) cycle
+
+          ! the value of point (ix,iy,iz) is going to be interpolated
+          dx = abs(mod(ix, 2**(i_lev)))
+          dy = abs(mod(iy, 2**(i_lev)))
+          dz = abs(mod(iz, 2**(i_lev)))
+          do ii = 1, mesh%sb%hr_area%interp%nn
+            do jj = 1, mesh%sb%hr_area%interp%nn
+              do kk = 1, mesh%sb%hr_area%interp%nn
+                newi = ix + mesh%sb%hr_area%interp%posi(ii)*dx
+                newj = iy + mesh%sb%hr_area%interp%posi(jj)*dy
+                newk = iz + mesh%sb%hr_area%interp%posi(kk)*dz
+                if(any((/newi, newj, newk/) <  mesh%idx%nr(1, 1:3)) .or. &
+                   any((/newi, newj, newk/) >  mesh%idx%nr(2, 1:3)) .or. &
+                   mesh%idx%Lxyz_inv(newi,newj,newk).eq.0) then
+
+                     message(1) = 'Multiresolution radii are too close to each other (or outer boundary)'
+                     write(message(2),'(7I4)') ix,iy,iz,newi,newj,newk,mesh%resolution(ix,iy,iz)
+                     call write_fatal(2)
+                end if
+              end do
+            end do
+          end do
+ 
+        end do
+      end do
+    end do
+
+  end if
+
+
 
 999 continue
 
@@ -665,7 +713,7 @@ contains
     integer :: i, j, jj(1:MAX_DIM), ip, np
     FLOAT   :: chi(MAX_DIM)
 
-    integer :: ix, iy, iz, dx, dy, dz, newi, newj, newk, ii, lii, ljj, lkk, nn, order, neighbor
+    integer :: ix, iy, iz, dx, dy, dz, newi, newj, newk, ii, lii, ljj, lkk, nn, neighbor
     FLOAT,   allocatable :: pos(:), ww(:), vol_tmp(:, :, :)
     integer, allocatable :: posi(:)
     integer :: res, n_mod, i_lev, nr(1:2, 1:MAX_DIM)
@@ -724,18 +772,17 @@ contains
 
         ! The following interpolation routine is essentially the same as in the calculation of the Laplacian
 
-        order = mesh%sb%mr_iorder !interpolation order
-        nn = 2*order
+        nn = 2*mesh%sb%hr_area%interp%order
 
         SAFE_ALLOCATE(ww(1:nn))
         SAFE_ALLOCATE(pos(1:nn))
         SAFE_ALLOCATE(posi(1:nn))
 
-        do ii = 1, order
+        do ii = 1, mesh%sb%hr_area%interp%order
           posi(ii) = 1 + 2*(ii - 1)
-          posi(order + ii) = -posi(ii)
+          posi(mesh%sb%hr_area%interp%order + ii) = -posi(ii)
           pos(ii) =  posi(ii)
-          pos(order + ii) = -pos(ii)
+          pos(mesh%sb%hr_area%interp%order + ii) = -pos(ii)
         end do
 
         call interpolation_coefficients(nn, pos, M_ZERO, ww)

@@ -77,8 +77,15 @@ module simul_box_m
   character(len=5), dimension(NLEADS), parameter, public :: LEAD_NAME = &
     (/'left ', 'right'/)
 
+  type, public :: interp_t
+    integer          :: nn, order  ! interpolation points and order
+    FLOAT,   pointer :: ww(:)      ! weights
+    integer, pointer :: posi(:)    ! positions
+  end type interp_t
+
   type, public :: multiresolution_t
 
+    type(interp_t) :: interp          ! interpolation points
     integer        :: num_areas       ! number of multiresolution areas
     integer        :: num_radii       ! number of radii (resolution borders)
     FLOAT, pointer :: radius(:)       ! radius of the high resolution area
@@ -110,7 +117,6 @@ module simul_box_m
     character(len=1024) :: user_def ! for the user-defined box
 
     logical :: mr_flag                 ! .true. when using multiresolution
-    integer :: mr_iorder               ! interpolation order
     type(multiresolution_t) :: hr_area ! high resolution areas
 
     FLOAT :: rlattice(MAX_DIM,MAX_DIM)      ! lattice primitive vectors
@@ -382,6 +388,7 @@ contains
 
       integer :: n_cols, n_rows, i
       type(block_t)      :: blk
+      FLOAT,   allocatable :: pos(:)
 
       call push_sub('simul_box.simul_box_init.read_misc')
 
@@ -460,23 +467,40 @@ contains
           sb%hr_area%radius(i) = sb%hr_area%radius(i)*units_inp%length%factor
         end do
 
+        ! Create interpolation points (posi) and weights (ww)
+
+        !%Variable MR_InterpolationOrder
+        !%Type integer
+        !%Default 5
+        !%Section Mesh
+        !%Description
+        !% The interpolation order in multiresolution approach.
+        !%End
+        call loct_parse_int(datasets_check('MR_InterpolationOrder'), 5, sb%hr_area%interp%order)
+        if(sb%hr_area%interp%order .le. 0) then
+          message(1) = "The value for MR_InterpolationOrder must be > 0."
+          call write_fatal(1)
+        end if
+
+        sb%hr_area%interp%nn = 2*sb%hr_area%interp%order
+        SAFE_ALLOCATE(pos(1:sb%hr_area%interp%nn))
+        SAFE_ALLOCATE(sb%hr_area%interp%ww(1:sb%hr_area%interp%nn))
+        SAFE_ALLOCATE(sb%hr_area%interp%posi(1:sb%hr_area%interp%nn))
+        do i = 1, sb%hr_area%interp%order
+          sb%hr_area%interp%posi(i) = 1 + 2*(i - 1)
+          sb%hr_area%interp%posi(sb%hr_area%interp%order + i) = -sb%hr_area%interp%posi(i)
+          pos(i) =  sb%hr_area%interp%posi(i)
+          pos(sb%hr_area%interp%order + i) = -pos(i)
+        end do
+        call interpolation_coefficients(sb%hr_area%interp%nn, pos, M_ZERO,sb%hr_area%interp%ww)
+        SAFE_DEALLOCATE_A(pos)
+
         sb%mr_flag = .true.
       else
         nullify(sb%hr_area%radius)
+        nullify(sb%hr_area%interp%posi)
+        nullify(sb%hr_area%interp%ww)
         sb%mr_flag = .false.
-      end if
-
-      !%Variable MR_InterpolationOrder
-      !%Type integer
-      !%Default 5
-      !%Section Mesh
-      !%Description
-      !% The interpolation order in multiresolution approach.
-      !%End
-      call loct_parse_int(datasets_check('MR_InterpolationOrder'), 5, sb%mr_iorder)
-      if(sb%mr_iorder .le. 0) then
-        message(1) = "The value for MR_InterpolationOrder must be > 0."
-        call write_fatal(1)
       end if
 
       call pop_sub()
@@ -1150,6 +1174,8 @@ contains
     end if
 
     SAFE_DEALLOCATE_P(sb%hr_area%radius)
+    SAFE_DEALLOCATE_P(sb%hr_area%interp%ww)
+    SAFE_DEALLOCATE_P(sb%hr_area%interp%posi)
 
     call pop_sub()
   end subroutine simul_box_end
