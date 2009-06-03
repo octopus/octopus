@@ -21,6 +21,7 @@
 
 module lalg_adv_m
   use global_m
+  use lapack_m
   use messages_m
   use profiling_m
 

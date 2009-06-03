@@ -44,7 +44,7 @@ tdfunction.o : tdfunction.F90 splines.o fft.o
 blas.o : blas.F90 
 dablas.o : dablas.c 
 lalg_basic.o : lalg_basic.F90 lalg_basic_blas.F90 blas.o 
-lalg_adv.o : lalg_adv.F90  lalg_adv_lapack.F90
+lalg_adv.o : lalg_adv.F90  lalg_adv_lapack.F90 lapack.o
 gauss_legendre.o : gauss_legendre.F90 
 math.o : math.F90 math_inc.F90 lalg_basic.o loct_math.o
 ode_solver.o : ode_solver.F90 ode_solver_inc.F90 

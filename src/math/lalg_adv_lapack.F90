@@ -49,16 +49,6 @@ subroutine dcholesky(n, a, bof, err_code)
   logical, optional, intent(inout) :: bof      ! Bomb on failure.
   integer, optional, intent(out)   :: err_code
 
-  interface
-    subroutine DLAPACK(potrf)(uplo, n, a, lda, info)
-      character(1), intent(in)    :: uplo
-      integer,      intent(in)    :: n
-      FLOAT,        intent(inout) :: a
-      integer,      intent(in)    :: lda
-      integer,      intent(out)   :: info
-    end subroutine DLAPACK(potrf)
-  end interface
-  
   integer :: info
   logical :: bof_
 
@@ -67,7 +57,7 @@ subroutine dcholesky(n, a, bof, err_code)
     bof_ = bof
   end if
 
-  call DLAPACK(potrf)('U', n, a(1, 1), n, info)
+  call lapack_potrf('U', n, a(1, 1), n, info)
   if(info.ne.0) then
     if(bof_) then
       write(message(1), '(a,i5)') 'In dcholesky, LAPACK Xpotrf returned error message ', info
@@ -98,16 +88,6 @@ subroutine zcholesky(n, a, bof, err_code)
   logical, optional, intent(inout) :: bof     ! Bomb on failure.
   integer, optional, intent(out)   :: err_code
 
-  interface
-    subroutine ZLAPACK(potrf)(uplo, n, a, lda, info)
-      character(1), intent(in)    :: uplo
-      integer,      intent(in)    :: n
-      CMPLX,        intent(inout) :: a
-      integer,      intent(in)    :: lda
-      integer,      intent(out)   :: info
-    end subroutine ZLAPACK(potrf)
-  end interface
-  
   integer :: info
   logical :: bof_
 
@@ -116,7 +96,7 @@ subroutine zcholesky(n, a, bof, err_code)
     bof_ = bof
   end if
 
-  call ZLAPACK(potrf)('U', n, a(1, 1), n, info)
+  call lapack_potrf('U', n, a(1, 1), n, info)
 
   if(info.ne.0) then
     if(bof_) then
@@ -151,16 +131,6 @@ subroutine dgeneigensolve(n, a, b, e, bof, err_code)
   logical, optional, intent(inout) :: bof      ! Bomb on failure.
   integer, optional, intent(out)   :: err_code
 
-  interface
-    subroutine DLAPACK(sygv) (itype, jobz, uplo, n, a, lda, b, ldb, w, work, lwork, info)
-      character(1), intent(in)    :: jobz, uplo
-      integer,      intent(in)    :: itype, n, lda, ldb, lwork
-      FLOAT,        intent(inout) :: a, b    ! a(lda,n), b(ldb,n)
-      FLOAT,        intent(out)   :: w, work ! w(n), work(lwork)
-      integer,      intent(out)   :: info
-    end subroutine DLAPACK(sygv)
-  end interface
-
   integer :: info, lwork
   logical :: bof_
   FLOAT, allocatable :: bp(:,:), work(:)
@@ -174,7 +144,7 @@ subroutine dgeneigensolve(n, a, b, e, bof, err_code)
   SAFE_ALLOCATE(bp(1:n, 1:n))
   SAFE_ALLOCATE(work(1:lwork))
   bp = b
-  call DLAPACK(sygv) (1, 'V', 'U', n, a(1, 1), n, bp(1, 1), n, e(1), work(1), lwork, info)
+  call lapack_sygv(1, 'V', 'U', n, a(1, 1), n, bp(1, 1), n, e(1), work(1), lwork, info)
   SAFE_DEALLOCATE_A(bp)
   SAFE_DEALLOCATE_A(work)
 
@@ -211,17 +181,6 @@ subroutine zgeneigensolve(n, a, b, e, bof, err_code)
   logical, optional, intent(inout) :: bof      ! Bomb on failure.
   integer, optional, intent(out)   :: err_code
 
-  interface
-    subroutine ZLAPACK(hegv) (itype, jobz, uplo, n, a, lda, b, ldb, w, work, lwork, rwork, info)
-      character(1), intent(in)    :: jobz, uplo
-      integer,      intent(in)    :: n, itype, lda, ldb, lwork
-      CMPLX,        intent(inout) :: a, b     ! a(lda,n), b(ldb,n)
-      FLOAT,        intent(out)   :: w, rwork ! w(n), rwork(max(1,3*n-2))
-      CMPLX,        intent(out)   :: work     ! work(lwork)
-      integer,      intent(out)   :: info
-    end subroutine ZLAPACK(hegv)
-  end interface
-
   integer            :: info, lwork
   logical            :: bof_
   FLOAT, allocatable :: rwork(:)
@@ -237,7 +196,7 @@ subroutine zgeneigensolve(n, a, b, e, bof, err_code)
   SAFE_ALLOCATE(work(1:lwork))
   SAFE_ALLOCATE(rwork(1:max(1, 3*n-2)))
   bp = b
-  call ZLAPACK(hegv) (1, 'V', 'U', n, a(1, 1), n, bp(1, 1), n, e(1), work(1), lwork, rwork(1), info)
+  call lapack_hegv(1, 'V', 'U', n, a(1, 1), n, bp(1, 1), n, e(1), work(1), lwork, rwork(1), info)
   SAFE_DEALLOCATE_A(bp)
   SAFE_DEALLOCATE_A(work)
   SAFE_DEALLOCATE_A(rwork)
@@ -272,18 +231,6 @@ subroutine zeigensolve_nonh(n, a, e, err_code, side)
   integer, optional, intent(out)     :: err_code
   character(1), optional, intent(in) :: side ! which eigenvectors ('L' or 'R')
 
-  interface
-    subroutine ZLAPACK(geev) (jobvl, jobvr, n, a, lda, w, vl, ldvl, vr, ldvr, work, lwork, rwork, info)
-      character(1), intent(in)    :: jobvl, jobvr
-      integer,      intent(in)    :: n, lda, ldvl, ldvr, lwork
-      CMPLX,        intent(inout) :: a ! a(lda,n)
-      CMPLX,        intent(out)   :: w, vl, vr ! w(n), vl(ldvl,n), vl(ldvr,n)
-      FLOAT,        intent(out)   :: rwork ! rwork(max(1,2n))
-      CMPLX,        intent(out)   :: work  ! work(lwork)
-      integer,      intent(out)   :: info
-    end subroutine ZLAPACK(geev)
-  end interface
-
   integer            :: info, lwork
   FLOAT, allocatable :: rwork(:)
   CMPLX, allocatable :: work(:), vl(:, :) ,vr(:, :)
@@ -300,7 +247,7 @@ subroutine zeigensolve_nonh(n, a, e, err_code, side)
   SAFE_ALLOCATE(vl(1, 1))
   SAFE_ALLOCATE(vr(1, 1))
   SAFE_ALLOCATE(rwork(1))
-  call ZLAPACK(geev) ('N', 'V', n, a(1, 1), n, e(1), vl(1, 1), 1, vr(1, 1), n, work(1), lwork, rwork(1), info)
+  call lapack_geev('N', 'V', n, a(1, 1), n, e(1), vl(1, 1), 1, vr(1, 1), n, work(1), lwork, rwork(1), info)
     
   lwork = int(real(work(1)))
   SAFE_DEALLOCATE_A(work)
@@ -313,12 +260,12 @@ subroutine zeigensolve_nonh(n, a, e, err_code, side)
   if (side_.eq.'L'.or.side_.eq.'l') then
       SAFE_ALLOCATE(vl(1:n, 1:n))
       SAFE_ALLOCATE(vr(1, 1))
-      call ZLAPACK(geev) ('V', 'N', n, a(1, 1), n, e(1), vl(1, 1), n, vr(1,1), 1, work(1), lwork, rwork(1), info)
+      call lapack_geev('V', 'N', n, a(1, 1), n, e(1), vl(1, 1), n, vr(1,1), 1, work(1), lwork, rwork(1), info)
       a(:, :) = vl(:, :)
   else
       SAFE_ALLOCATE(vl(1, 1))
       SAFE_ALLOCATE(vr(1:n, 1:n))
-      call ZLAPACK(geev) ('N', 'V', n, a(1, 1), n, e(1), vl(1, 1), 1, vr(1,1), n, work(1), lwork, rwork(1), info)
+      call lapack_geev('N', 'V', n, a(1, 1), n, e(1), vl(1, 1), 1, vr(1,1), n, work(1), lwork, rwork(1), info)
       a(:, :) = vr(:, :)
   end if
   SAFE_DEALLOCATE_A(work)
@@ -346,18 +293,6 @@ subroutine deigensolve_nonh(n, a, e, err_code, side)
   integer, optional, intent(out)     :: err_code
   character(1), optional, intent(in) :: side ! which eigenvectors ('L' or 'R')
 
-  interface
-    subroutine DLAPACK(geev) (jobvl, jobvr, n, a, lda, w, vl, ldvl, vr, ldvr, work, lwork, rwork, info)
-      character(1), intent(in)    :: jobvl, jobvr
-      integer,      intent(in)    :: n, lda, ldvl, ldvr, lwork
-      FLOAT,        intent(inout) :: a ! a(lda,n)
-      FLOAT,        intent(out)   :: w, vl, vr ! w(n), vl(ldvl,n), vl(ldvr,n)
-      FLOAT,        intent(out)   :: rwork ! rwork(max(1,2n))
-      FLOAT,        intent(out)   :: work  ! work(lwork)
-      integer,      intent(out)   :: info
-    end subroutine DLAPACK(geev)
-  end interface
-
   integer            :: info, lwork
   FLOAT, allocatable :: rwork(:)
   FLOAT, allocatable :: work(:), vl(:, :) ,vr(:, :)
@@ -374,7 +309,7 @@ subroutine deigensolve_nonh(n, a, e, err_code, side)
   SAFE_ALLOCATE(vl(1, 1))
   SAFE_ALLOCATE(vr(1, 1))
   SAFE_ALLOCATE(rwork(1))
-  call DLAPACK(geev) ('N', 'V', n, a(1, 1), n, e(1), vl(1, 1), 1, vr(1, 1), n, work(1), lwork, rwork(1), info)
+  call lapack_geev('N', 'V', n, a(1, 1), n, e(1), vl(1, 1), 1, vr(1, 1), n, work(1), lwork, rwork(1), info)
     
   lwork = int(real(work(1)))
   SAFE_DEALLOCATE_A(work)
@@ -388,12 +323,12 @@ subroutine deigensolve_nonh(n, a, e, err_code, side)
   if (side_.eq.'L'.or.side_.eq.'l') then
     SAFE_ALLOCATE(vl(1:n, 1:n))
     SAFE_ALLOCATE(vr(1, 1))
-    call DLAPACK(geev) ('V', 'N', n, a(1, 1), n, e(1), vl(1, 1), n, vr(1,1), 1, work(1), lwork, rwork(1), info)
+    call lapack_geev('V', 'N', n, a(1, 1), n, e(1), vl(1, 1), n, vr(1,1), 1, work(1), lwork, rwork(1), info)
     a(:, :) = vl(:, :)
   else
     SAFE_ALLOCATE(vl(1, 1))
     SAFE_ALLOCATE(vr(1:n, 1:n))
-    call DLAPACK(geev) ('N', 'V', n, a(1, 1), n, e(1), vl(1, 1), 1, vr(1,1), n, work(1), lwork, rwork(1), info)
+    call lapack_geev('N', 'V', n, a(1, 1), n, e(1), vl(1, 1), 1, vr(1,1), n, work(1), lwork, rwork(1), info)
     a(:, :) = vr(:, :)
   end if
   SAFE_DEALLOCATE_A(work)
