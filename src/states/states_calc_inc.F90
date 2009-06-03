@@ -57,6 +57,8 @@ subroutine X(states_gram_schmidt_full)(st, nst, m, dim, psi, start)
     call blas_trsm('R', 'U', 'N', 'N', m%np, st%nst, R_TOTYPE(M_ONE), ss(1, 1), st%nst, &
       psi(1, 1, 1), ubound(psi, dim = 1)*st%d%dim)
 
+    call profiling_count_operations(dble(m%np)*dble(st%nst)**2*(R_ADD + R_MUL))
+
   else
 
     call states_blockt_mul(m, st, st%st_start, st%st_end, st%st_start, st%st_end, psi, psi, ss, symm = .true.)
