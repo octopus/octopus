@@ -17,7 +17,7 @@
 !!
 !! $Id$
 
-subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir, Born_sum)
+subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir, Born_sum, Born_correct)
   type(grid_t),         intent(inout) :: gr
   type(geometry_t),     intent(inout) :: geo
   type(epot_t),         intent(in)    :: ep
@@ -27,12 +27,14 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
   type(lr_t), optional, intent(inout) :: lr2
   integer,    optional, intent(in)    :: lr_dir
   CMPLX,      optional, intent(out)   :: Born_sum(:)
+  logical,    optional, intent(in)    :: Born_correct
   ! provide these optional arguments to calculate Born effective charges rather than forces
   ! lr, lr2 should be the wfns from electric perturbation in the lr_dir direction
   ! lr is for +omega, lr2 is for -omega.
   ! for each atom, Z*(i,j) = dF(j)/dE(i)
   ! Born_sum is the sum over atoms of a given tensor component of the Born charges,
   !   which should be zero if the acoustic sum rule is satisfied
+  ! Born_correct is whether to distribute any excess over the atoms to enforce the sum rule
 
   integer :: iatom, ist, ik, idim, idir, np, np_part, ip
   FLOAT :: ff
@@ -57,6 +59,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
   ASSERT(present(lr) .eqv. present(lr_dir))
   ASSERT(present(lr) .eqv. present(lr2))
   ASSERT(present(lr) .eqv. present(Born_sum))
+  ASSERT(present(lr) .eqv. present(Born_correct))
   ! need all to calculate Born charges
   if(present(lr_dir)) then
     ASSERT(lr_dir > 0 .and. lr_dir <= gr%mesh%sb%dim)
@@ -311,12 +314,14 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
       enddo
     enddo
 
-    ! enforce acoustic sum rule: sum(iatom) Z*(iatom,idir,idir2) = 0
-    do iatom = 1, geo%natoms
-      do idir = 1, gr%mesh%sb%dim
-        geo%atom(iatom)%Born_charge(lr_dir, idir) = geo%atom(iatom)%Born_charge(lr_dir, idir) - Born_sum(idir) / geo%natoms
+    if(Born_correct) then
+      ! enforce acoustic sum rule: sum(iatom) Z*(iatom,idir,idir2) = 0
+      do iatom = 1, geo%natoms
+        do idir = 1, gr%mesh%sb%dim
+          geo%atom(iatom)%Born_charge(lr_dir, idir) = geo%atom(iatom)%Born_charge(lr_dir, idir) - Born_sum(idir) / geo%natoms
+        enddo
       enddo
-    enddo
+    endif
 
   else
     do iatom = 1, geo%natoms

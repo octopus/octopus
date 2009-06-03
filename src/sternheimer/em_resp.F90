@@ -87,6 +87,7 @@ module em_resp_m
     logical :: ok(1:3)                           ! whether calculation is converged
     logical :: force_no_kdotp                    ! whether to use kdotp run for periodic system
     logical :: calc_Born                         ! whether to calculate Born effective charges
+    logical :: Born_correct                      ! whether explicitly to enforce acoustic sum rule
     CMPLX :: Born_sum(MAX_DIM, MAX_DIM)          ! sum over atoms of Born charge tensors
   end type em_resp_t
 
@@ -393,16 +394,22 @@ contains
                 if(em_vars%nsigma == 2) then
                   call zcalc_forces_from_potential(sys%gr, sys%geo, hm%ep, sys%st, M_ZERO, &
                     lr = em_vars%lr(idir, 1, ifactor), lr2 = em_vars%lr(idir, 2, ifactor), &
-                    lr_dir = idir, Born_sum = em_vars%Born_sum(idir, :))
+                    lr_dir = idir, Born_sum = em_vars%Born_sum(idir, :), Born_correct = em_vars%Born_correct)
                 else
                   call zcalc_forces_from_potential(sys%gr, sys%geo, hm%ep, sys%st, M_ZERO, &
                     lr = em_vars%lr(idir, 1, ifactor), lr2 = em_vars%lr(idir, 1, ifactor), &
-                    lr_dir = idir, Born_sum = em_vars%Born_sum(idir, :))
+                    lr_dir = idir, Born_sum = em_vars%Born_sum(idir, :), Born_correct = em_vars%Born_correct)
                 endif
               else
-                call dcalc_forces_from_potential(sys%gr, sys%geo, hm%ep, sys%st, M_ZERO, &
-                  lr = em_vars%lr(idir, 1, ifactor), lr2 = em_vars%lr(idir, 1, ifactor), &
-                  lr_dir = idir, Born_sum = em_vars%Born_sum(idir, :))
+                if(em_vars%nsigma == 2) then
+                  call dcalc_forces_from_potential(sys%gr, sys%geo, hm%ep, sys%st, M_ZERO, &
+                    lr = em_vars%lr(idir, 1, ifactor), lr2 = em_vars%lr(idir, 2, ifactor), &
+                    lr_dir = idir, Born_sum = em_vars%Born_sum(idir, :), Born_correct = em_vars%Born_correct)
+                else
+                  call dcalc_forces_from_potential(sys%gr, sys%geo, hm%ep, sys%st, M_ZERO, &
+                    lr = em_vars%lr(idir, 1, ifactor), lr2 = em_vars%lr(idir, 1, ifactor), &
+                    lr_dir = idir, Born_sum = em_vars%Born_sum(idir, :), Born_correct = em_vars%Born_correct)
+                endif
               endif
             enddo
           enddo
@@ -604,6 +611,16 @@ contains
       call loct_parse_logical(datasets_check('EMCalcBornCharges'), .false., em_vars%calc_Born)
       if (em_vars%calc_Born) call messages_devel_version("Calculation of Born effective charges")
 
+      !%Variable EMBornChargeSumRuleCorrection
+      !%Type logical
+      !%Default true
+      !%Section Linear Response::Polarizabilities
+      !%Description
+      !% Enforce the acoustic sum rule by distributing the sum of Born charges among the atoms.
+      !%End
+
+      call loct_parse_logical(datasets_check('EMCalcBornChargeSumRuleCorrection'), .true., em_vars%Born_correct)
+
       call pop_sub()
 
     end subroutine parse_input
@@ -617,10 +634,10 @@ contains
       call pert_info(em_vars%perturbation, stdout)
       if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
         if(em_vars%calc_hyperpol) then 
-          write(message(1),'(a)') 'Linear-Reponse First-Order Hyperpolarizabilities'
+          write(message(1),'(a)') 'Linear-Response First-Order Hyperpolarizabilities'
           call messages_print_stress(stdout, trim(message(1)))
         else 
-          write(message(1),'(a)') 'Linear-Reponse Polarizabilities'
+          write(message(1),'(a)') 'Linear-Response Polarizabilities'
           call messages_print_stress(stdout, trim(message(1)))
         end if
       else
@@ -774,24 +791,37 @@ contains
       FLOAT :: phase(1:MAX_DIM, 1:MAX_DIM)
 
       call push_sub('em_resp.em_resp_output.out_Born_charges')
+
       iunit = io_open(trim(dirname)//'/Born_charges', action='write')
-
-      write(iunit,'(a)') '# (Frequency-dependent) Born effective charges'
-
+      write(iunit,'(a)') '# (Frequency-dependent) Born effective charge tensors'
+      write(iunit,'(a)') '# Real and imaginary parts'
       do iatom = 1, geo%natoms
-         write(iunit,'(a)')
-         write(iunit,'(i5,a10)') iatom, trim(species_label(geo%atom(iatom)%spec))
+        write(iunit,'(a,i5,a,a5,a,f10.4)') 'Index: ', iatom, '   Label: ', trim(species_label(geo%atom(iatom)%spec)), &
+          '   Ionic charge: ', species_zval(geo%atom(iatom)%spec)
 
-         write(iunit,'(a)') 'Magnitude:'
-         call io_output_tensor(iunit, TOFLOAT(abs(geo%atom(iatom)%Born_charge(:,:))), gr%mesh%sb%dim, M_ONE)
+        write(iunit,'(a)') 'Real:'
+        call io_output_tensor(iunit, real(geo%atom(iatom)%Born_charge(:,:)), gr%mesh%sb%dim, M_ONE)
 
-         write(iunit,'(a)') 'Phase:'
-         phase = atan2(aimag(geo%atom(iatom)%Born_charge(:,:)),real(geo%atom(iatom)%Born_charge(:,:)))
-         call io_output_tensor(iunit, phase, gr%mesh%sb%dim, M_ONE)
+        write(iunit,'(a)') 'Imaginary:'
+        call io_output_tensor(iunit, aimag(geo%atom(iatom)%Born_charge(:,:)), gr%mesh%sb%dim, M_ONE)
+        write(iunit,'(a)')
       enddo
 
-      write(iunit,'(a)')
-      write(iunit,'(a)') '# Sum of Born effective charges before correction to satisfy acoustic sum rule.' 
+      write(iunit,'(a)') '# Magnitude and phase'
+      do iatom = 1, geo%natoms
+        write(iunit,'(a,i5,a,a5,a,f10.4)') 'Index: ', iatom, '   Label: ', trim(species_label(geo%atom(iatom)%spec)), &
+          '   Ionic charge: ', species_zval(geo%atom(iatom)%spec)
+
+        write(iunit,'(a)') 'Magnitude:'
+        call io_output_tensor(iunit, TOFLOAT(abs(geo%atom(iatom)%Born_charge(:,:))), gr%mesh%sb%dim, M_ONE)
+
+        write(iunit,'(a)') 'Phase:'
+        phase = atan2(aimag(geo%atom(iatom)%Born_charge(:,:)),real(geo%atom(iatom)%Born_charge(:,:)))
+        call io_output_tensor(iunit, phase, gr%mesh%sb%dim, M_ONE)
+        write(iunit,'(a)')
+      enddo
+
+      write(iunit,'(a)') '# Sum of Born effective charges before correction to satisfy acoustic sum rule' 
       write(iunit,'(a)') 'Real:'
       call io_output_tensor(iunit, real(em_vars%Born_sum(:, :)), gr%mesh%sb%dim, M_ONE)
       write(iunit,'(a)') 'Imaginary:'
