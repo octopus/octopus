@@ -11,6 +11,7 @@ PeriodicDimensions = 1
   "gs_" | "unocc_"
 %
 
+gs_FromScratch = yes
 unocc_RestartDir = "gs_restart"
 
 %Species
