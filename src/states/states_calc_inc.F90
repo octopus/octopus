@@ -30,7 +30,7 @@ subroutine X(states_gram_schmidt_full)(st, nst, m, dim, psi, start)
 
   R_TYPE, allocatable :: ss(:, :), qq(:, :), psi_tmp(:, :, :)
   type(profile_t), save :: prof
-  integer :: idim, ist, jst, kst, start_
+  integer :: idim, ist, jst, kst, start_, info
   FLOAT   :: nrm2
   type(batch_t) :: psib
 
@@ -41,54 +41,57 @@ subroutine X(states_gram_schmidt_full)(st, nst, m, dim, psi, start)
   if(present(start)) start_ = start
 
   SAFE_ALLOCATE(ss(1:st%nst, 1:st%nst))
-  SAFE_ALLOCATE(qq(1:st%nst, 1:st%nst))
 
-  ! calculate the matrix of dot products
-  if(st%parallel_in_states .or. m%use_curvilinear) then
-    call states_blockt_mul(m, st, st%st_start, st%st_end, st%st_start, st%st_end, psi, psi, ss, symm = .true.)
-  else
+  if(.not. st%parallel_in_states) then
+
     call batch_init(psib, st%d%dim, st%st_start, st%st_end, psi)
     call X(mesh_batch_dotp_self)(m, psib, ss)
     call batch_end(psib)
-  end if
 
-  qq = M_ZERO
-  do ist = 1, st%nst
+    ! calculate the Cholesky decomposition
+    call X(potrf)('U',   st%nst, ss(1, 1), st%nst, info)
 
-    if(ist < start_ .or. ist > nst) then
-      qq(ist, ist) = M_ONE
-      cycle
-    end if
+    ASSERT(info == 0)
 
-    ! calculate the norm of the resulting vector, and use it to scale
-    ! the coefficients so we get normalized vectors.
-    nrm2 = ss(ist, ist)
-    do jst = 1, ist - 1
-      nrm2 = nrm2 - M_TWO*abs(ss(ist, jst))**2/ss(jst, jst)
-      do kst = 1, ist - 1
-        nrm2 = nrm2 + ss(jst, kst)*ss(ist, jst)*ss(kst, ist)/(ss(jst, jst)*ss(kst, kst))
-      end do
-    end do
-    nrm2 = M_ONE/sqrt(nrm2)
-
-    ! now generate the matrix with the linear combination of orbitals
-    qq(ist, ist) = nrm2
-    do jst = 1, ist - 1
-      qq(jst, ist) = -ss(jst, ist)/ss(jst, jst)*nrm2
-    end do
-
-  end do
-  
-  if(.not. st%parallel_in_states) then
-
-    call batch_init(psib, st%d%dim, 1, st%nst, psi)
-    call X(mesh_batch_rotate)(m, psib, qq)
-    call batch_end(psib)
+    ! multiply by the inverse of ss
+    call X(trsm)('R',  'U',  'N',    'N',  m%np, st%nst, R_TOTYPE(M_ONE), ss(1, 1), st%nst, &
+      psi(1, 1, 1), ubound(psi, dim = 1)*st%d%dim)
 
   else
 
+    call states_blockt_mul(m, st, st%st_start, st%st_end, st%st_start, st%st_end, psi, psi, ss, symm = .true.)
+
+    SAFE_ALLOCATE(qq(1:st%nst, 1:st%nst))
+
+    qq = M_ZERO
+    do ist = 1, st%nst
+
+      if(ist < start_ .or. ist > nst) then
+        qq(ist, ist) = M_ONE
+        cycle
+      end if
+
+      ! calculate the norm of the resulting vector, and use it to scale
+      ! the coefficients so we get normalized vectors.
+      nrm2 = ss(ist, ist)
+      do jst = 1, ist - 1
+        nrm2 = nrm2 - M_TWO*abs(ss(ist, jst))**2/ss(jst, jst)
+        do kst = 1, ist - 1
+          nrm2 = nrm2 + ss(jst, kst)*ss(ist, jst)*ss(kst, ist)/(ss(jst, jst)*ss(kst, kst))
+        end do
+      end do
+      nrm2 = M_ONE/sqrt(nrm2)
+
+      ! now generate the matrix with the linear combination of orbitals
+      qq(ist, ist) = nrm2
+      do jst = 1, ist - 1
+        qq(jst, ist) = -ss(jst, ist)/ss(jst, jst)*nrm2
+      end do
+
+    end do
+
     SAFE_ALLOCATE(psi_tmp(1:m%np_part, 1:dim, st%st_start:st%st_end))
-    
+
     do ist = st%st_start, st%st_end
       do idim = 1, dim
         call lalg_copy(m%np, psi(:, idim, ist), psi_tmp(:, idim, ist))
