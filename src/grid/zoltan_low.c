@@ -226,7 +226,7 @@ void FC_FUNC_(zoltan_partition, ZOLTAN_PARTITION)(const int * method,
     rc = Zoltan_Set_Param(zz, "LB_METHOD", "RCB");
     break;
   case(RIB):
-    rc = Zoltan_Set_Param(zz, "LB_METHOD", "RCB");
+    rc = Zoltan_Set_Param(zz, "LB_METHOD", "RIB");
     break;
   case(HSFC):
     rc = Zoltan_Set_Param(zz, "LB_METHOD", "HSFC");
