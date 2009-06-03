@@ -54,7 +54,7 @@ subroutine X(states_gram_schmidt_full)(st, nst, m, dim, psi, start)
     ASSERT(info == 0)
 
     ! multiply by the inverse of ss
-    call X(trsm)('R',  'U',  'N',    'N',  m%np, st%nst, R_TOTYPE(M_ONE), ss(1, 1), st%nst, &
+    call blas_trsm('R', 'U', 'N', 'N', m%np, st%nst, R_TOTYPE(M_ONE), ss(1, 1), st%nst, &
       psi(1, 1, 1), ubound(psi, dim = 1)*st%d%dim)
 
   else

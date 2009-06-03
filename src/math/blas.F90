@@ -437,6 +437,67 @@ module blas_m
       complex(8),   intent(inout) :: c
     end subroutine zherk
   end interface
+
+  !-----------------------trsm-------------------------
+  interface blas_trsm
+    subroutine strsm(side, uplo, transa, diag, m, n, alpha, a, lda, b, ldb)
+      character(1), intent(in)    :: side
+      character(1), intent(in)    :: uplo
+      character(1), intent(in)    :: transa
+      character(1), intent(in)    :: diag
+      integer,      intent(in)    :: m
+      integer,      intent(in)    :: n
+      real(4),      intent(in)    :: alpha
+      real(4),      intent(in)    :: a
+      integer,      intent(in)    :: lda
+      real(4),      intent(inout) :: b
+      integer,      intent(in)    :: ldb
+    end subroutine strsm
+
+    subroutine dtrsm(side, uplo, transa, diag, m, n, alpha, a, lda, b, ldb)
+      character(1), intent(in)    :: side
+      character(1), intent(in)    :: uplo
+      character(1), intent(in)    :: transa
+      character(1), intent(in)    :: diag
+      integer,      intent(in)    :: m
+      integer,      intent(in)    :: n
+      real(8),      intent(in)    :: alpha
+      real(8),      intent(in)    :: a
+      integer,      intent(in)    :: lda
+      real(8),      intent(inout) :: b
+      integer,      intent(in)    :: ldb
+    end subroutine dtrsm
+
+    subroutine ctrsm(side, uplo, transa, diag, m, n, alpha, a, lda, b, ldb)
+      character(1), intent(in)    :: side
+      character(1), intent(in)    :: uplo
+      character(1), intent(in)    :: transa
+      character(1), intent(in)    :: diag
+      integer,      intent(in)    :: m
+      integer,      intent(in)    :: n
+      complex(4),   intent(in)    :: alpha
+      complex(4),   intent(in)    :: a
+      integer,      intent(in)    :: lda
+      complex(4),   intent(inout) :: b
+      integer,      intent(in)    :: ldb
+    end subroutine ctrsm
+
+    subroutine ztrsm(side, uplo, transa, diag, m, n, alpha, a, lda, b, ldb)
+      character(1), intent(in)    :: side
+      character(1), intent(in)    :: uplo
+      character(1), intent(in)    :: transa
+      character(1), intent(in)    :: diag
+      integer,      intent(in)    :: m
+      integer,      intent(in)    :: n
+      complex(8),   intent(in)    :: alpha
+      complex(8),   intent(in)    :: a
+      integer,      intent(in)    :: lda
+      complex(8),   intent(inout) :: b
+      integer,      intent(in)    :: ldb
+    end subroutine ztrsm
+
+  end interface
+
 end module blas_m
 
 
