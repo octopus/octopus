@@ -61,7 +61,7 @@ contains
     type(lcao_t) :: lcao
     type(scf_t)  :: scfv
     integer      :: ierr, s1, s2, k1, k2, j
-    logical      :: species_all_electron
+    logical      :: species_all_electron, lcao_done
 
     call push_sub('gs.ground_state_run')
 
@@ -94,24 +94,6 @@ contains
 #endif
 
     if(fromScratch) then
-      ! FIXME: the following initialization is wrong when not all
-      ! wavefunctions are calculated by the Lippmann-Schwinger
-      ! equation.
-      ! Use free states as initial wavefunctions.
-      if(sys%gr%sb%open_boundaries) then
-        ASSERT(sys%st%ob_nst.eq.sys%st%nst)
-        ASSERT(sys%st%ob_d%nik.eq.sys%st%d%nik)
-        s1 = sys%st%st_start
-        s2 = sys%st%st_end
-        k1 = sys%st%d%kpt%start
-        k2 = sys%st%d%kpt%end
-        sys%st%zpsi(1:sys%gr%mesh%np, :, s1:s2, k1:k2) = sys%st%zphi(1:sys%gr%mesh%np, :, s1:s2, k1:k2)
-      else
-        ! Randomly generate the initial wave-functions.
-        call states_generate_random(sys%st, sys%gr%mesh)
-        call states_orthogonalize(sys%st, sys%gr%mesh)
-      end if
-
       ! We do not compute the density from the random wave-functions. 
       ! Instead, we try to get a better guess
 
@@ -162,6 +144,8 @@ contains
       call loct_parse_int(datasets_check('LCAOStart'), lcao_start_default, lcao_start)
       if(.not.varinfo_valid_option('LCAOStart', lcao_start)) call input_error('LCAOStart')
       call messages_print_var_option(stdout, 'LCAOStart', lcao_start)
+
+      lcao_done = .false.
       if (lcao_start > LCAO_START_NONE) then
           
         call lcao_init(lcao, sys%gr, sys%geo, sys%st)
@@ -169,6 +153,8 @@ contains
 
           call lcao_wf(lcao, sys%st, sys%gr, sys%geo, hm)
           call lcao_end(lcao)
+          
+          lcao_done = .true.
 
           !Just populate again the states, so that the eigenvalues are properly written
           call states_fermi(sys%st, sys%gr%mesh)
@@ -178,11 +164,31 @@ contains
             ! Update the density and the Hamiltonian
             call system_h_setup(sys, hm)
           end if
-
+          
         end if
       end if
 
+      if(.not. lcao_done) then
+        ! FIXME: the following initialization is wrong when not all
+        ! wavefunctions are calculated by the Lippmann-Schwinger
+        ! equation.
+        ! Use free states as initial wavefunctions.
+        if(sys%gr%sb%open_boundaries) then
+          ASSERT(sys%st%ob_nst.eq.sys%st%nst)
+          ASSERT(sys%st%ob_d%nik.eq.sys%st%d%nik)
+          s1 = sys%st%st_start
+          s2 = sys%st%st_end
+          k1 = sys%st%d%kpt%start
+          k2 = sys%st%d%kpt%end
+          sys%st%zpsi(1:sys%gr%mesh%np, :, s1:s2, k1:k2) = sys%st%zphi(1:sys%gr%mesh%np, :, s1:s2, k1:k2)
+        else
+          ! Randomly generate the initial wave-functions.
+          call states_generate_random(sys%st, sys%gr%mesh)
+          call states_orthogonalize(sys%st, sys%gr%mesh)
+        end if
+      end if
     else
+
       ! setup Hamiltonian
       message(1) = 'Info: Setting up Hamiltonian.'
       call write_info(1)
