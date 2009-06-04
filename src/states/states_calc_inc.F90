@@ -33,6 +33,7 @@ subroutine X(states_gram_schmidt_full)(st, nst, m, dim, psi, start)
   integer :: idim, ist, jst, kst, start_
   FLOAT   :: nrm2
   type(batch_t) :: psib
+  logical :: bof
 
   call profiling_in(prof, "GRAM_SCHMIDT_FULL")
   call push_sub('states_calc_inc.Xstates_gram_schmidt_full')
@@ -48,8 +49,14 @@ subroutine X(states_gram_schmidt_full)(st, nst, m, dim, psi, start)
     call X(mesh_batch_dotp_self)(m, psib, ss)
     call batch_end(psib)
 
+    bof = .false.
     ! calculate the Cholesky decomposition
-    call lalg_cholesky(st%nst, ss)
+    call lalg_cholesky(st%nst, ss, bof = bof)
+
+    if(.not. bof) then
+      message(1) = "Warning: Orthogonalization failed, probably your eigenvectors are not independent"
+      call write_warning(1)
+    end if
 
     ! multiply by the inverse of ss
     call blas_trsm('R', 'U', 'N', 'N', m%np, st%nst, R_TOTYPE(M_ONE), ss(1, 1), st%nst, &
