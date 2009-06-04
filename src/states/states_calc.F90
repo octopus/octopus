@@ -33,7 +33,7 @@ module states_calc_m
   use io_function_m
   use io_m
   use lalg_basic_m
-  use lapack_m
+  use lalg_adv_m
   use loct_m
   use loct_parser_m
   use math_m

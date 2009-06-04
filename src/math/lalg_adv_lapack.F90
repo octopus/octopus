@@ -52,6 +52,8 @@ subroutine dcholesky(n, a, bof, err_code)
   integer :: info
   logical :: bof_
 
+  call profiling_in(cholesky_prof, "CHOLESKY")
+
   bof_ = .true.
   if(present(bof)) then
     bof_ = bof
@@ -75,6 +77,7 @@ subroutine dcholesky(n, a, bof, err_code)
   if(present(err_code)) then
     err_code = info
   end if
+  call profiling_out(cholesky_prof)
 end subroutine dcholesky
 
 
@@ -90,6 +93,7 @@ subroutine zcholesky(n, a, bof, err_code)
 
   integer :: info
   logical :: bof_
+  call profiling_in(cholesky_prof, "CHOLESKY")
 
   bof_ = .true.
   if(present(bof)) then
@@ -115,6 +119,8 @@ subroutine zcholesky(n, a, bof, err_code)
   if(present(err_code)) then
     err_code = info
   end if
+
+  call profiling_out(cholesky_prof)
 end subroutine zcholesky
 
 

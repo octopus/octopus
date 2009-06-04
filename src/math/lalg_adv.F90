@@ -46,6 +46,8 @@ module lalg_adv_m
     zlalg_exp,                    &
     zlalg_phi
 
+  type(profile_t), save :: cholesky_prof
+
   interface lalg_cholesky
     module procedure dcholesky, zcholesky
   end interface

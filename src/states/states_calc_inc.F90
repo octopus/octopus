@@ -30,7 +30,7 @@ subroutine X(states_gram_schmidt_full)(st, nst, m, dim, psi, start)
 
   R_TYPE, allocatable :: ss(:, :), qq(:, :), psi_tmp(:, :, :)
   type(profile_t), save :: prof
-  integer :: idim, ist, jst, kst, start_, info
+  integer :: idim, ist, jst, kst, start_
   FLOAT   :: nrm2
   type(batch_t) :: psib
 
@@ -49,9 +49,7 @@ subroutine X(states_gram_schmidt_full)(st, nst, m, dim, psi, start)
     call batch_end(psib)
 
     ! calculate the Cholesky decomposition
-    call lapack_potrf('U', st%nst, ss(1, 1), st%nst, info)
-
-    ASSERT(info == 0)
+    call lalg_cholesky(st%nst, ss)
 
     ! multiply by the inverse of ss
     call blas_trsm('R', 'U', 'N', 'N', m%np, st%nst, R_TOTYPE(M_ONE), ss(1, 1), st%nst, &
