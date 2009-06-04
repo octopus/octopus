@@ -41,30 +41,33 @@ subroutine X(states_gram_schmidt_full)(st, nst, m, dim, psi, start)
   start_ = 1
   if(present(start)) start_ = start
 
-  SAFE_ALLOCATE(ss(1:st%nst, 1:st%nst))
+  SAFE_ALLOCATE(ss(1:nst, 1:nst))
 
   if(.not. st%parallel_in_states) then
 
-    call batch_init(psib, st%d%dim, st%st_start, st%st_end, psi)
+    call batch_init(psib, st%d%dim, 1, nst, psi)
     call X(mesh_batch_dotp_self)(m, psib, ss)
     call batch_end(psib)
 
     bof = .false.
     ! calculate the Cholesky decomposition
-    call lalg_cholesky(st%nst, ss, bof = bof)
+    call lalg_cholesky(nst, ss, bof = bof)
 
-    if(.not. bof) then
+    if(bof) then
       message(1) = "Warning: Orthogonalization failed, probably your eigenvectors are not independent"
       call write_warning(1)
     end if
 
     ! multiply by the inverse of ss
-    call blas_trsm('R', 'U', 'N', 'N', m%np, st%nst, R_TOTYPE(M_ONE), ss(1, 1), st%nst, &
+    call blas_trsm('R', 'U', 'N', 'N', m%np, nst, R_TOTYPE(M_ONE), ss(1, 1), nst, &
       psi(1, 1, 1), ubound(psi, dim = 1)*st%d%dim)
 
-    call profiling_count_operations(dble(m%np)*dble(st%nst)**2*(R_ADD + R_MUL))
+    call profiling_count_operations(dble(m%np)*dble(nst)**2*(R_ADD + R_MUL))
 
   else
+
+    ASSERT(nst == st%nst)
+    ASSERT(start_ == 1)
 
     call states_blockt_mul(m, st, st%st_start, st%st_end, st%st_start, st%st_end, psi, psi, ss, symm = .true.)
 
