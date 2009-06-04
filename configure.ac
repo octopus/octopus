@@ -200,7 +200,7 @@ ACX_FC_F2003_C_PTR
 
 dnl check flag to include module path
 AX_F90_MODULE_FLAG
-F90_MODULE_FLAG=$ax_f90_modflag
+F90_MODULE_FLAG=$ax_cv_f90_modflag
 AC_SUBST([F90_MODULE_FLAG])
 
 if test "${USE_OMP}"; then
