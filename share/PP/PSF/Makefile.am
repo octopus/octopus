@@ -26,17 +26,18 @@ dist_psf_DATA = \
 	As.psf \
 	Au.psf \
 	Cd.psf \
-	C.psf \
+	C.psf  \
+	Cl.psf \
 	Ga.psf \
-	H.psf \
+	H.psf  \
 	Li.psf \
 	Na.psf \
 	Ne.psf \
-	N.psf \
-	O.psf \
+	N.psf  \
+	O.psf  \
 	Se.psf \
 	Si.psf \
-	S.psf \
+	S.psf  \
 	Ti.psf \
 	Xe.psf
 
