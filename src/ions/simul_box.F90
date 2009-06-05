@@ -1238,16 +1238,16 @@ contains
       end do
       call write_info(2+sb%dim, iunit)
 
+      write(message(1),'(a,f18.4,3a,i1.1,a)') &
+        '  Cell volume = ', sb%rcell_volume/units_out%length%factor**sb%dim, &
+        ' [', trim(units_out%length%abbrev), '^', sb%dim, ']'
+      call write_info(1, iunit)
+
       write(message(1),'(a,3a,a)') '  Reciprocal Lattice Vectors [', trim(units_out%length%abbrev), '^-1]'
       do ii = 1, sb%dim
         write(message(1+ii),'(3f12.6)')   sb%klattice(1:sb%dim,ii)*units_out%length%factor
       end do
       call write_info(1+sb%dim, iunit)
-
-      write(message(1),'(a,f12.6,3a)') &
-        '  Volume element = ', sb%volume_element/units_out%length%factor**sb%dim, &
-        ' [', trim(units_out%length%abbrev), ']'
-      call write_info(1, iunit)
     end if
 
     if(sb%open_boundaries) then
