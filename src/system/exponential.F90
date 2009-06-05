@@ -425,7 +425,7 @@ contains
 
     ! ---------------------------------------------------------
     subroutine lanczos
-      integer ::  korder, n, l, idim
+      integer ::  iter, l, idim
       CMPLX, allocatable :: hamilt(:,:), v(:,:,:), expo(:,:), tmp(:, :), psi(:, :)
       FLOAT :: beta, res, tol !, nrm
       CMPLX :: pp
@@ -454,34 +454,32 @@ contains
         v(1:gr%mesh%np, 1:hm%d%dim, 1) = zpsi(1:gr%mesh%np, 1:hm%d%dim)/beta
 
         ! This is the Lanczos loop...
-        do n = 1, te%exp_order
+        do iter = 1, te%exp_order
 
           !copy v(:, :, n) to an array of size 1:gr%mesh%np_part
           do idim = 1, hm%d%dim
-            call lalg_copy(gr%mesh%np, v(:, idim, n), zpsi(:, idim))
+            call lalg_copy(gr%mesh%np, v(:, idim, iter), zpsi(:, idim))
           end do
 
           !to apply the hamiltonian
-          call operate(zpsi, v(:, :, n + 1))
+          call operate(zpsi, v(:, :,  iter + 1))
         
-          korder = n
-
           if(hamiltonian_hermitean(hm)) then
-            l = max(1, n - 1)
+            l = max(1, iter - 1)
           else
             l = 1
           end if
 
           !orthogonalize against previous vectors
-          call zstates_gram_schmidt(gr%mesh, n - l + 1, hm%d%dim, v(:, :, l:n), v(:, :, n + 1), &
-            normalize = .true., overlap = hamilt(l:n, n), norm = hamilt(n + 1, n))
-  
-          call zlalg_exp(n, pp, hamilt, expo, hamiltonian_hermitean(hm))
+          call zstates_gram_schmidt(gr%mesh, iter - l + 1, hm%d%dim, v(:, :, l:iter), v(:, :, iter + 1), &
+            normalize = .true., overlap = hamilt(l:iter, iter), norm = hamilt(iter + 1, iter))
 
-          res = abs(hamilt(n+1, n)*abs(expo(n, 1)))
+          call zlalg_exp(iter, pp, hamilt, expo, hamiltonian_hermitean(hm))
 
-          if(abs(hamilt(n+1, n)) < CNST(1.0e4)*M_EPSILON) exit ! "Happy breakdown"
-          if(n > 2 .and. res < tol) exit
+          res = abs(hamilt(iter + 1, iter)*abs(expo(iter, 1)))
+
+          if(abs(hamilt(iter + 1, iter)) < CNST(1.0e4)*M_EPSILON) exit ! "Happy breakdown"
+          if(iter > 2 .and. res < tol) exit
         end do
 
         if(res > tol) then ! Here one should consider the possibility of the happy breakdown.
@@ -489,8 +487,8 @@ contains
           call write_warning(1)
         end if
 
-        ! zpsi = nrm * V * expo(1:korder, 1) = nrm * V * expo * V^(T) * zpsi
-        call lalg_gemv(gr%mesh%np, hm%d%dim, korder, M_z1*beta, v, expo(1:korder, 1), M_z0, tmp)
+        ! zpsi = nrm * V * expo(1:iter, 1) = nrm * V * expo * V^(T) * zpsi
+        call lalg_gemv(gr%mesh%np, hm%d%dim, iter, M_z1*beta, v, expo(1:iter, 1), M_z0, tmp)
 
         do idim = 1, hm%d%dim
           call lalg_copy(gr%mesh%np, tmp(:, idim), zpsi(:, idim))
@@ -512,34 +510,33 @@ contains
 
           psi = M_z0
           ! This is the Lanczos loop...
-          do n = 1, te%exp_order
+          do iter = 1, te%exp_order
             !copy v(:, :, n) to an array of size 1:gr%mesh%np_part
             do idim = 1, hm%d%dim
-              call lalg_copy(gr%mesh%np, v(:, idim, n), psi(:, idim))
+              call lalg_copy(gr%mesh%np, v(:, idim, iter), psi(:, idim))
             end do
 
             !to apply the hamiltonian
-            call operate(psi, v(:, :, n + 1))
+            call operate(psi, v(:, :, iter + 1))
   
-            korder = n
 
             if(hamiltonian_hermitean(hm)) then
-              l = max(1, n - 1)
+              l = max(1, iter - 1)
             else
               l = 1
             end if
 
             !orthogonalize against previous vectors
-            call zstates_gram_schmidt(gr%mesh, n - l + 1, hm%d%dim, v(:, :, l:n), &
-              v(:, :, n + 1), normalize = .true., overlap = hamilt(l:n, n), &
-              norm = hamilt(n + 1, n))
+            call zstates_gram_schmidt(gr%mesh, iter - l + 1, hm%d%dim, v(:, :, l:iter), &
+              v(:, :, iter + 1), normalize = .true., overlap = hamilt(l:iter, iter), &
+              norm = hamilt(iter + 1, iter))
 
-            call zlalg_phi(n, pp, hamilt, expo, hamiltonian_hermitean(hm))
+            call zlalg_phi(iter, pp, hamilt, expo, hamiltonian_hermitean(hm))
  
-            res = abs(hamilt(n+1, n)*abs(expo(n, 1)))
+            res = abs(hamilt(iter + 1, iter)*abs(expo(iter, 1)))
 
-            if(abs(hamilt(n+1, n)) < CNST(1.0e4)*M_EPSILON) exit ! "Happy breakdown"
-            if(n > 2 .and. res < tol) exit
+            if(abs(hamilt(iter + 1, iter)) < CNST(1.0e4)*M_EPSILON) exit ! "Happy breakdown"
+            if(iter > 2 .and. res < tol) exit
           end do
 
           if(res > tol) then ! Here one should consider the possibility of the happy breakdown.
@@ -547,13 +544,13 @@ contains
             call write_warning(1)
           end if
 
-          call lalg_gemv(gr%mesh%np, hm%d%dim, korder, M_z1*beta, v, expo(1:korder, 1), M_z0, tmp)
+          call lalg_gemv(gr%mesh%np, hm%d%dim, iter, M_z1*beta, v, expo(1:iter, 1), M_z0, tmp)
 
           do idim = 1, hm%d%dim
             call lalg_copy(gr%mesh%np, tmp(:, idim), psi(:, idim))
           end do
 
-          zpsi = zpsi + deltat * psi
+          zpsi = zpsi + deltat*psi
         end if
       end if
 
