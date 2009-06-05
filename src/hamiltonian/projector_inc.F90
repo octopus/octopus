@@ -340,9 +340,11 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
 #if defined(HAVE_MPI)
   if(mesh%parallel_in_domains .and. bigreduce) then
     call profiling_in(reduce_prof, "VNLPSI_REDUCE_BATCH")
+#ifndef HAVE_MPI2
     SAFE_ALLOCATE(reduce_buffer_dest(1:nreduce))
-    call MPI_Allreduce(reduce_buffer, reduce_buffer_dest, nreduce, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
-    reduce_buffer = reduce_buffer_dest
+    call lalg_copy(nreduce, reduce_buffer, reduce_buffer_dest)
+#endif
+    call MPI_Allreduce(MPI_IN_PLACE_OR(reduce_buffer_dest), reduce_buffer, nreduce, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
     SAFE_DEALLOCATE_A(reduce_buffer_dest)
     call profiling_out(reduce_prof)
   end if

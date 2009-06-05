@@ -111,9 +111,11 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
 #ifdef HAVE_MPI
   if(mesh%parallel_in_domains .and. reduce_) then
     call profiling_in(profcomm, "DOTP_BATCH_REDUCE")
+#ifndef HAVE_MPI2
     SAFE_ALLOCATE(ddtmp(1:aa%nst, 1:bb%nst))
     forall(ist = 1:aa%nst, jst = 1:bb%nst) ddtmp(ist, jst) = dd(ist, jst)
-    call MPI_Allreduce(ddtmp, dd, aa%nst*bb%nst, R_MPITYPE, MPI_SUM, mesh%mpi_grp%comm, mpi_err)
+#endif
+    call MPI_Allreduce(MPI_IN_PLACE_OR(ddtmp), dd, aa%nst*bb%nst, R_MPITYPE, MPI_SUM, mesh%mpi_grp%comm, mpi_err)
     SAFE_DEALLOCATE_A(ddtmp)
     call profiling_out(profcomm)
   end if
@@ -218,9 +220,11 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
 #ifdef HAVE_MPI
   if(mesh%parallel_in_domains .and. reduce_) then
     call profiling_in(profcomm, "BATCH_SELF_REDUCE")
+#ifndef HAVE_MPI2
     SAFE_ALLOCATE(ddtmp(1:aa%nst, 1:aa%nst))
     forall(ist = 1:aa%nst, jst = 1:aa%nst) ddtmp(ist, jst) = dd(ist, jst)
-    call MPI_Allreduce(ddtmp, dd, aa%nst**2, R_MPITYPE, MPI_SUM, mesh%mpi_grp%comm, mpi_err)
+#endif
+    call MPI_Allreduce(MPI_IN_PLACE_OR(ddtmp), dd, aa%nst**2, R_MPITYPE, MPI_SUM, mesh%mpi_grp%comm, mpi_err)
     SAFE_DEALLOCATE_A(ddtmp)
     call profiling_out(profcomm)
   end if

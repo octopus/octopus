@@ -130,3 +130,12 @@
 #define KDOTP_RESTART_DIR "kdotp/"
 #define PHONONS_RESTART_DIR "vib_modes/"
 #define VDW_RESTART_DIR "pol_lr/"
+
+#ifdef HAVE_MPI
+#ifdef HAVE_MPI2
+#define MPI_IN_PLACE_OR(x) MPI_IN_PLACE
+#else
+#define MPI_IN_PLACE_OR(x) x
+#endif
+#endif
+

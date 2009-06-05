@@ -1064,10 +1064,14 @@ contains
     ! reduce over states
     if(st%parallel_in_states) then
       call profiling_in(reduce_prof, "DENSITY_REDUCE")
+#ifndef HAVE_MPI2
       SAFE_ALLOCATE(reduce_rho(1:np))
+#endif
       do ispin = 1, st%d%nspin
-        call MPI_Allreduce(rho(1, ispin), reduce_rho(1), np, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
-        call blas_copy(np, reduce_rho(1), 1, rho(1, ispin), 1)
+#ifndef HAVE_MPI2
+        call blas_copy(np, rho(1, ispin), 1, reduce_rho(1), 1)
+#endif
+        call MPI_Allreduce(MPI_IN_PLACE_OR(reduce_rho), rho(:, ispin), np, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
       end do
       SAFE_DEALLOCATE_A(reduce_rho)
       call profiling_out(reduce_prof)
