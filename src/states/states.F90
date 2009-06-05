@@ -626,7 +626,7 @@ contains
     !%
     !% <tt>ExtraStates = 2
     !% <br>%Occupations
-    !% <br>&nbsp;&nbsp; 1/3 | 1/3 | 1/3
+    !% <br>&nbsp;&nbsp; 2/3 | 2/3 | 2/3
     !% <br>&nbsp;&nbsp; 0   |   0 |   0
     !% <br>%</tt>
     !%
