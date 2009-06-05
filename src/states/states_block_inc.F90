@@ -160,13 +160,13 @@ subroutine X(states_blockt_mul)(mesh, st, psi1_start, psi1_end, psi2_start, psi2
     SAFE_DEALLOCATE_P(sendbuf)
     SAFE_DEALLOCATE_P(recvbuf)
     ! Add up all the individual blocks.
-    SAFE_ALLOCATE(res_tmp(1:psi1_col, 1:psi2_col))
     call profiling_in(C_PROFILING_BLOCKT_AR)
-    call MPI_Allreduce(res, res_tmp, psi1_col*psi2_col, R_MPITYPE, MPI_SUM, st%dom_st%comm, mpi_err)
+#ifndef HAVE_MPI2
+    SAFE_ALLOCATE(res_tmp(1:psi1_col, 1:psi2_col))
+    res_tmp = res
+#endif
+    call MPI_Allreduce(MPI_IN_PLACE_OR(res_tmp), res, psi1_col*psi2_col, R_MPITYPE, MPI_SUM, st%dom_st%comm, mpi_err)
     call profiling_out(C_PROFILING_BLOCKT_AR)
-    call profiling_in(C_PROFILING_BLOCKT_CP)
-    res = res_tmp
-    call profiling_out(C_PROFILING_BLOCKT_CP)
     SAFE_DEALLOCATE_A(res_tmp)
     SAFE_DEALLOCATE_P(xpsi1_count)
     SAFE_DEALLOCATE_P(xpsi2_count)

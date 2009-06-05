@@ -461,11 +461,15 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
     if(gr%mesh%parallel_in_domains) then
       call profiling_in(comm2prof, "LCAO_REDUCE")
+#ifndef HAVE_MPI2
       SAFE_ALLOCATE(tmp(1:nbasis, 1:nbasis))
       tmp = hamiltonian
-      call MPI_Allreduce(tmp, hamiltonian, nbasis**2, R_MPITYPE, MPI_SUM, gr%mesh%mpi_grp%comm, mpi_err)
+#endif
+      call MPI_Allreduce(MPI_IN_PLACE_OR(tmp), hamiltonian, nbasis**2, R_MPITYPE, MPI_SUM, gr%mesh%mpi_grp%comm, mpi_err)
+#ifndef HAVE_MPI2
       tmp = overlap
-      call MPI_Allreduce(tmp, overlap, nbasis**2, R_MPITYPE, MPI_SUM, gr%mesh%mpi_grp%comm, mpi_err)
+#endif
+      call MPI_Allreduce(MPI_IN_PLACE_OR(tmp), overlap, nbasis**2, R_MPITYPE, MPI_SUM, gr%mesh%mpi_grp%comm, mpi_err)
       SAFE_DEALLOCATE_A(tmp)
       call profiling_out(comm2prof)
     end if
