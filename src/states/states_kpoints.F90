@@ -129,7 +129,7 @@ subroutine states_choose_kpoints(d, sb, geo)
   !% For example, the following input samples the BZ with 100 points in the 
   !% xy plane of the reciprocal space:
   !%
-  !% <tt>%KPointsMP
+  !% <tt>%KPointsMonkhorstPack
   !% <br>&nbsp;&nbsp;10 | 10 | 1
   !% <br>%</tt>
   !%
@@ -339,7 +339,7 @@ logical function in_wigner_seitz_cell(k_point, klattice) result(in_cell)
   !% determined from atomic positions and has to be specified
   !% manually). By default a cube is chosen.
   !%Option cube 1
-  !% The has is simple cubic shape.
+  !% The cell is simple-cubic.
   !%Option octahedron 2
   !% The cell is octahedral.
   !%Option dodecahedron 3
