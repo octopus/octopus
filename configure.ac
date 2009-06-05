@@ -132,9 +132,9 @@ dnl If in parallel, enable zoltan compilation
 AM_CONDITIONAL(COMPILE_ZOLTAN, test x"$enable_mpi" != x"no")
 
 dnl if libnbc is enabled, check for C MPI
-if test x"$acx_libnbc_ok" == x"yes"; then
-  AC_CHECK_HEADER(mpi.h,,AC_MSG_ERROR([cannot find mpi.h (required for libnbc)]))
-  ACX_MPI([], AC_MSG_ERROR([cannot call MPI from C (required for libnbc)]))
+if test x"$enable_mpi" == x"yes"; then
+  AC_CHECK_HEADER(mpi.h,,AC_MSG_ERROR([cannot find mpi.h]))
+  ACX_MPI([], AC_MSG_ERROR([cannot call MPI from C]))
 fi
 
 dnl build/install perl bits unless --disable-perl is used
@@ -291,6 +291,7 @@ dnl check for Fortran MPI support
 if test x"$enable_mpi" != x"no"; then
   ACX_MPI([], AC_MSG_ERROR([could not compile an mpi test program]))
   ACX_MPI_FC_MODULE
+  ACX_MPI2
 fi
 
 dnl now I run configure for the internal libraries

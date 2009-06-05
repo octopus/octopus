@@ -62,3 +62,14 @@ else
   fi
 fi
 ])dnl ACX_MPI_FC_MODULE
+
+AC_DEFUN([ACX_MPI2], [
+acx_mpi2_ok=no
+  AC_MSG_CHECKING([for MPI 2])
+  AC_TRY_LINK_FUNC(MPI_File_open, acx_mpi2_ok=yes, [])
+  if test $acx_mpi2_ok = yes; then
+    AC_DEFINE(HAVE_MPI2, 1, [Defined if you have an MPI 2 implementation])
+  fi
+  AC_MSG_RESULT([$acx_mpi2_ok])
+])
+
