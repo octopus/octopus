@@ -154,7 +154,7 @@ subroutine X(subspace_diag_par_states)(gr, st, hm, ik, diff)
   integer,             intent(in)    :: ik
   FLOAT, optional,     intent(out)   :: diff(1:st%nst)
 
-  R_TYPE, allocatable :: h_subspace(:,:), vec(:,:), f(:,:,:)
+  R_TYPE, allocatable :: h_subspace(:,:), f(:,:,:)
   integer             :: i
   FLOAT               :: nrm2
 #if defined(HAVE_MPI)
@@ -165,7 +165,6 @@ subroutine X(subspace_diag_par_states)(gr, st, hm, ik, diff)
   call push_sub('subspace_inc.Xsubspace_diag_par_states')
 
   SAFE_ALLOCATE(h_subspace(1:st%nst, 1:st%nst))
-  SAFE_ALLOCATE(       vec(1:st%nst, 1:st%nst))
   SAFE_ALLOCATE(f(1:gr%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end))
 
   ! Calculate the matrix representation of the Hamiltonian in the subspace <psi|H|psi>.
@@ -176,13 +175,13 @@ subroutine X(subspace_diag_par_states)(gr, st, hm, ik, diff)
        st%X(psi)(:, :, :, ik), f, h_subspace, symm=.true.)
 
   ! Diagonalize the hamiltonian in the subspace.
-  call lalg_eigensolve(st%nst, h_subspace, vec, st%eigenval(:, ik))
+  call lalg_eigensolve(st%nst, h_subspace, st%eigenval(:, ik))
 
   ! The new states are the given by the eigenvectors of the matrix.
   f(1:gr%mesh%np, 1:st%d%dim, st%st_start:st%st_end) = st%X(psi)(1:gr%mesh%np, 1:st%d%dim, st%st_start:st%st_end, ik)
 
   call states_block_matr_mul(gr%mesh, st, st%st_start, st%st_end, st%st_start, st%st_end, &
-       f, vec, st%X(psi)(:, :, :, ik))
+       f, h_subspace, st%X(psi)(:, :, :, ik))
 
   ! Renormalize.
   do i = st%st_start, st%st_end
@@ -208,7 +207,6 @@ subroutine X(subspace_diag_par_states)(gr, st, hm, ik, diff)
   
   SAFE_DEALLOCATE_A(f)
   SAFE_DEALLOCATE_A(h_subspace)
-  SAFE_DEALLOCATE_A(vec)
   
   call pop_sub()
   
