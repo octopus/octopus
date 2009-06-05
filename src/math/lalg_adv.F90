@@ -143,7 +143,9 @@ contains
       SAFE_ALLOCATE(evalues(1:nn))
       SAFE_ALLOCATE(zevalues(1:nn))
 
-      call lalg_eigensolve(nn, aa(1:nn, 1:nn), evectors, evalues)
+      evectors = aa
+
+      call lalg_eigensolve(nn, evectors, evalues)
 
       zevalues(1:nn) = exp(pp*evalues(1:nn))
 
@@ -215,7 +217,9 @@ contains
       SAFE_ALLOCATE(evalues(1:nn))
       SAFE_ALLOCATE(zevalues(1:nn))
 
-      call lalg_eigensolve(nn, aa(1:nn, 1:nn), evectors, evalues)
+      evectors = aa
+
+      call lalg_eigensolve(nn, evectors, evalues)
 
       forall(ii = 1:nn) zevalues(ii) = (exp(pp*evalues(ii)) - M_z1) / (pp*evalues(ii))
 

@@ -495,23 +495,12 @@ end subroutine zlowest_geneigensolve
 
 ! ---------------------------------------------------------
 ! Computes all eigenvalues and eigenvectors of a real symmetric square matrix A.
-subroutine deigensolve(n, a, b, e, bof, err_code)
+subroutine deigensolve(n, a, e, bof, err_code)
   integer, intent(in)              :: n
-  FLOAT,   intent(in)              :: a(n,n)
-  FLOAT,   intent(out)             :: b(n,n)
+  FLOAT,   intent(inout)           :: a(n,n)
   FLOAT,   intent(out)             :: e(n)
   logical, optional, intent(inout) :: bof      ! Bomb on failure.
   integer, optional, intent(out)   :: err_code
-
-  interface
-    subroutine DLAPACK(syev) (jobz, uplo, n, a, lda, w, work, lwork, info)
-      character(1), intent(in)    :: jobz, uplo
-      integer,      intent(in)    :: n, lda, lwork
-      FLOAT,        intent(inout) :: a       ! a(lda,n)
-      FLOAT,        intent(out)   :: w, work ! w(n), work(lwork)
-      integer,      intent(out)   :: info
-    end subroutine DLAPACK(syev)
-  end interface
 
   logical            :: bof_
   integer            :: info, lwork
@@ -524,8 +513,7 @@ subroutine deigensolve(n, a, b, e, bof, err_code)
 
   lwork = 6*n
   SAFE_ALLOCATE(work(1:lwork))
-  b = a
-  call DLAPACK(syev) ('V', 'U', n, b(1,1), n, e(1), work(1), lwork, info)
+  call lapack_syev('V', 'U', n, a(1, 1), n, e(1), work(1), lwork, info)
   SAFE_DEALLOCATE_A(work)
 
   if(info.ne.0) then
@@ -550,24 +538,12 @@ end subroutine deigensolve
 
 ! ---------------------------------------------------------
 ! Computes all eigenvalues and eigenvectors of a complex Hermitian square matrix A.
-subroutine zeigensolve(n, a, b, e, bof, err_code)
-  integer, intent(in)  :: n
-  CMPLX,   intent(in)  :: a(n,n)
-  CMPLX,   intent(out) :: b(n,n)
-  FLOAT,   intent(out) :: e(n)
+subroutine zeigensolve(n, a, e, bof, err_code)
+  integer, intent(in)    :: n
+  CMPLX,   intent(inout) :: a(n,n)
+  FLOAT,   intent(out)   :: e(n)
   logical, optional, intent(inout) :: bof      ! Bomb on failure.
   integer, optional, intent(out)   :: err_code
-
-  interface
-    subroutine ZLAPACK(heev) (jobz, uplo, n, a, lda, w, work, lwork, rwork, info)
-      character(1), intent(in)    :: jobz, uplo
-      integer,      intent(in)    :: n, lda, lwork
-      CMPLX,        intent(inout) :: a        ! a(lda,n)
-      FLOAT,        intent(out)   :: w, rwork ! w(n), rwork(max(1,3*n-2))
-      CMPLX,        intent(out)   :: work     ! work(lwork)
-      integer,      intent(out)   :: info
-    end subroutine ZLAPACK(heev)
-  end interface
 
   integer            :: info, lwork
   logical            :: bof_
@@ -582,8 +558,7 @@ subroutine zeigensolve(n, a, b, e, bof, err_code)
   lwork = 6*n
   SAFE_ALLOCATE(work(1:lwork))
   SAFE_ALLOCATE(rwork(1:max(1, 3*n-2)))
-  b = a
-  call ZLAPACK(heev) ('V','U', n, b(1,1), n, e(1), work(1), lwork, rwork(1), info)
+  call lapack_heev('V','U', n, a(1, 1), n, e(1), work(1), lwork, rwork(1), info)
   SAFE_DEALLOCATE_A(work)
   SAFE_DEALLOCATE_A(rwork)
 

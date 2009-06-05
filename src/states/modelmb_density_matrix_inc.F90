@@ -64,31 +64,31 @@ subroutine X(mf_calculate_gamma)(ikeeppart, mb_1part, nparticles_densmat, &
 
   SAFE_ALLOCATE(ix_1part(1:mb_1part%ndim1part))
   xloop: do imesh = 1, mesh%np_global
-! find coordinates of present point in full MAX_DIM space
+    ! find coordinates of present point in full MAX_DIM space
      call index_to_coords(mesh%idx, mesh%sb%dim, imesh, ix)
-
-! find index of present coordinates for particle ikeeppart
+     
+     ! find index of present coordinates for particle ikeeppart
      ix_1part = ix((ikeeppart - 1)*mb_1part%ndim1part + 1:ikeeppart*mb_1part%ndim1part)
      call hypercube_x_to_i(mb_1part%hypercube_1part, mb_1part%ndim1part, &
-          mb_1part%nr_1part, mb_1part%enlarge_1part(1), ix_1part, icoord)
-      
-! run over all possible position indices of particle prime
+       mb_1part%nr_1part, mb_1part%enlarge_1part(1), ix_1part, icoord)
+     
+     ! run over all possible position indices of particle prime
      ixp = ix
      xprimeloop: do icoordp = 1, mb_1part%npt_1part
-
-! find equivalent position of particle prime
-        call hypercube_i_to_x(mb_1part%hypercube_1part, mb_1part%ndim1part, &
-             mb_1part%nr_1part, mb_1part%enlarge_1part(1), icoordp, ix_1part)
-
-! change coordinates of particle ikeeppart only 
-        ixp((ikeeppart - 1)*mb_1part%ndim1part + 1:ikeeppart*mb_1part%ndim1part) = ix_1part
-
-! find new index for general point prime
-        imeshp = index_from_coords(mesh%idx, mesh%sb%dim, ixp)
-        
-! accumulate into density matrix
-        gamma(icoord, icoordp) = gamma(icoord, icoordp) + &
-            nparticles_densmat*volume_element*psi_global(imesh)*R_CONJ(psi_global (imeshp))
+       
+       ! find equivalent position of particle prime
+       call hypercube_i_to_x(mb_1part%hypercube_1part, mb_1part%ndim1part, &
+         mb_1part%nr_1part, mb_1part%enlarge_1part(1), icoordp, ix_1part)
+       
+       ! change coordinates of particle ikeeppart only 
+       ixp((ikeeppart - 1)*mb_1part%ndim1part + 1:ikeeppart*mb_1part%ndim1part) = ix_1part
+       
+       ! find new index for general point prime
+       imeshp = index_from_coords(mesh%idx, mesh%sb%dim, ixp)
+       
+       ! accumulate into density matrix
+       gamma(icoord, icoordp) = gamma(icoord, icoordp) + &
+         nparticles_densmat*volume_element*psi_global(imesh)*R_CONJ(psi_global (imeshp))
      end do xprimeloop
   end do xloop
 

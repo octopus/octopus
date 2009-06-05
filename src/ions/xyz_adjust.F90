@@ -227,7 +227,8 @@ contains
       end do
     end do
 
-    call lalg_eigensolve(3, tinertia, vec, e)
+    vec = tinertia
+    call lalg_eigensolve(3, vec, e)
 
     x  = vec(:,1) / sqrt(sum(vec(:,1)**2))
     x2 = vec(:,2) / sqrt(sum(vec(:,2)**2))

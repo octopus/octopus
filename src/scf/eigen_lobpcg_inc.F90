@@ -303,7 +303,8 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
 
   SAFE_ALLOCATE(ritz_vec(1:nst, 1:nst))
   no_bof = .false.
-  call lalg_eigensolve(nst, gram_block, ritz_vec, eval, bof=no_bof)
+  ritz_vec = gram_block
+  call lalg_eigensolve(nst, ritz_vec, eval, bof=no_bof)
   if(no_bof.and.verbose_) then
     message(1) = 'Problem: Rayleigh-Ritz procedure for initial vectors failed.'
     call write_warning(1)

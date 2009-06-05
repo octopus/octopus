@@ -206,7 +206,8 @@ contains
       densmatr_tmp=densmatr
       ! CHECK: should we only be diagonalizing the main grid points, as
       ! opposed to the full mb_1part%npt_1part?
-      call lalg_eigensolve(mb_1part%npt_1part, densmatr_tmp, evectors, evalues, bof, err_code)
+      evectors = densmatr_tmp
+      call lalg_eigensolve(mb_1part%npt_1part, evectors, evalues, bof, err_code)
       SAFE_DEALLOCATE_A(densmatr_tmp)
     
       !NOTE: The highest eigenvalues are the last ones not the first!!!

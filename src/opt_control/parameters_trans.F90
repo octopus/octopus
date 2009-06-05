@@ -242,7 +242,8 @@
         end do
       end do
 
-      call lalg_eigensolve(par%dim, par%utransf, eigenvec, eigenval)
+      eigenvec = par%utransf
+      call lalg_eigensolve(par%dim, eigenvec, eigenval)
       do mm = 1, par%dim
         do nn = 1, par%dim
           eigenvec(mm, nn) = eigenvec(mm, nn) * sqrt(eigenval(nn))

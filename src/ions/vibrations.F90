@@ -127,7 +127,8 @@ contains
     this%normal_mode = M_ZERO
     
     ! diag DYN_MATRIX
-    call lalg_eigensolve(this%num_modes, this%dyn_matrix, this%normal_mode, this%freq)
+    this%normal_mode = this%dyn_matrix
+    call lalg_eigensolve(this%num_modes, this%normal_mode, this%freq)
 
     this%freq(1:this%num_modes) = this%freq(1:this%num_modes) / this%total_mass
 

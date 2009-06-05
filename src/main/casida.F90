@@ -515,7 +515,8 @@ contains
         SAFE_ALLOCATE(tmp(1:cas%n_pairs, 1:cas%n_pairs))
         tmp(1:cas%n_pairs,1:cas%n_pairs) = cas%mat(1:cas%n_pairs,1:cas%n_pairs)
         ! now we diagonalize the matrix
-        call lalg_eigensolve(cas%n_pairs, tmp, cas%mat, cas%w)
+        cas%mat = tmp
+        call lalg_eigensolve(cas%n_pairs, cas%mat, cas%w)
         SAFE_DEALLOCATE_A(tmp)
 
         do ia = 1, cas%n_pairs

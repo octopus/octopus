@@ -960,7 +960,8 @@ contains
       alpha(j, j) = alpha(j, j) + M_ONE
     end forall
 
-    call lalg_eigensolve(n-1, alpha, eigenvectors, eigenvalues)
+    eigenvectors = alpha
+    call lalg_eigensolve(n-1, eigenvectors, eigenvalues)
     forall(j=1:n-1, k=1:n-1) eigenvectors(j, k) = eigenvectors(j, k)*sqrt(eigenvalues(k))
 
     alpha = transpose(eigenvectors)
@@ -997,7 +998,8 @@ contains
       alpha(j, j) = alpha(j, j) + M_ONE
     end forall
 
-    call lalg_eigensolve(n-1, alpha, eigenvectors, eigenvalues)
+    eigenvectors = alpha
+    call lalg_eigensolve(n-1, eigenvectors, eigenvalues)
     forall(j=1:n-1, k=1:n-1) eigenvectors(j, k) = eigenvectors(j, k)*sqrt(eigenvalues(k))
 
     alpha = transpose(eigenvectors)

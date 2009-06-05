@@ -65,7 +65,8 @@ subroutine X(eigensolver_evolution) (gr, st, hm, tol, niter, converged, ik, diff
         m(i, j) = X(mf_dotp)(gr%mesh, st%d%dim, st%X(psi)(:, :, i, ik), st%X(psi)(:, :, j, ik) )
       end do
     end do
-    call lalg_eigensolve(st%nst, m, c, eig)
+    c = m
+    call lalg_eigensolve(st%nst, c, eig)
     do i = 1, st%nst
       c(:, i) = c(:, i) / sqrt(eig(i))
     end do

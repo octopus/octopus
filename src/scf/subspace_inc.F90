@@ -26,7 +26,7 @@ subroutine X(subspace_diag)(gr, st, hm, ik, diff)
   integer,             intent(in)    :: ik
   FLOAT, optional,     intent(out)   :: diff(:)
 
-  R_TYPE, allocatable :: h_subspace(:, :), vec(:, :), f(:, :, :), psi(:, :, :)
+  R_TYPE, allocatable :: h_subspace(:, :), f(:, :, :), psi(:, :, :)
   integer             :: ist, ist2, jst, size, idim
   FLOAT               :: nrm2
   type(profile_t),     save    :: diagon_prof
@@ -46,7 +46,6 @@ subroutine X(subspace_diag)(gr, st, hm, ik, diff)
 #endif
 
     SAFE_ALLOCATE(h_subspace(1:st%nst, 1:st%nst))
-    SAFE_ALLOCATE(       vec(1:st%nst, 1:st%nst))
     SAFE_ALLOCATE(f(1:gr%mesh%np, 1:st%d%dim, 1:st%d%block_size))
 
     if(st%np_size) then
@@ -84,12 +83,12 @@ subroutine X(subspace_diag)(gr, st, hm, ik, diff)
     end do
 
     ! Diagonalize the hamiltonian in the subspace.
-    call lalg_eigensolve(st%nst, h_subspace, vec, st%eigenval(:, ik))
+    call lalg_eigensolve(st%nst, h_subspace, st%eigenval(:, ik))
 
     ! Calculate the new eigenfunctions as a linear combination of the
     ! old ones.
     call batch_init(whole_psib, hm%d%dim, 1, st%nst, st%X(psi)(:, :, :, ik))
-    call X(mesh_batch_rotate)(gr%mesh, whole_psib, vec)
+    call X(mesh_batch_rotate)(gr%mesh, whole_psib, h_subspace)
     call batch_end(whole_psib)
 
     ! Renormalize.
@@ -132,7 +131,6 @@ subroutine X(subspace_diag)(gr, st, hm, ik, diff)
 
     SAFE_DEALLOCATE_A(f)
     SAFE_DEALLOCATE_A(h_subspace)
-    SAFE_DEALLOCATE_A(vec)
 
 #ifdef HAVE_MPI
   end if

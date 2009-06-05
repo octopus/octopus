@@ -140,6 +140,45 @@ module lapack_m
     end subroutine zgeev
   end interface
 
+
+  interface lapack_syev
+    subroutine ssyev(jobz, uplo, n, a, lda, w, work, lwork, info)
+      character(1), intent(in)    :: jobz, uplo
+      integer,      intent(in)    :: n, lda, lwork
+      real(4),      intent(inout) :: a       ! a(lda,n)
+      real(4),      intent(out)   :: w, work ! w(n), work(lwork)
+      integer,      intent(out)   :: info
+    end subroutine ssyev
+
+    subroutine dsyev(jobz, uplo, n, a, lda, w, work, lwork, info)
+      character(1), intent(in)    :: jobz, uplo
+      integer,      intent(in)    :: n, lda, lwork
+      real(8),      intent(inout) :: a       ! a(lda,n)
+      real(8),      intent(out)   :: w, work ! w(n), work(lwork)
+      integer,      intent(out)   :: info
+    end subroutine dsyev
+  end interface
+
+  interface lapack_heev
+    subroutine cheev(jobz, uplo, n, a, lda, w, work, lwork, rwork, info)
+      character(1), intent(in)    :: jobz, uplo
+      integer,      intent(in)    :: n, lda, lwork
+      complex(4),   intent(inout) :: a        ! a(lda,n)
+      real(4),      intent(out)   :: w, rwork ! w(n), rwork(max(1,3*n-2))
+      complex(4),   intent(out)   :: work     ! work(lwork)
+      integer,      intent(out)   :: info
+    end subroutine cheev
+
+    subroutine zheev(jobz, uplo, n, a, lda, w, work, lwork, rwork, info)
+      character(1), intent(in)    :: jobz, uplo
+      integer,      intent(in)    :: n, lda, lwork
+      complex(8),   intent(inout) :: a        ! a(lda,n)
+      real(8),      intent(out)   :: w, rwork ! w(n), rwork(max(1,3*n-2))
+      complex(8),   intent(out)   :: work     ! work(lwork)
+      integer,      intent(out)   :: info
+    end subroutine zheev
+  end interface
+
 end module lapack_m
 
 
