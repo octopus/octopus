@@ -143,7 +143,7 @@ contains
       SAFE_ALLOCATE(evalues(1:nn))
       SAFE_ALLOCATE(zevalues(1:nn))
 
-      evectors = aa
+      evectors(1:nn, 1:nn) = aa(1:nn, 1:nn)
 
       call lalg_eigensolve(nn, evectors, evalues)
 
