@@ -178,6 +178,9 @@ AC_FC_WRAPPERS
 acx_save_libs="${LIBS}"
 LIBS="${FCEXTRALIBS} $FCLIBS"
 
+ACX_FC_INTEGER_SIZE
+ACX_CC_FORTRAN_INT
+
 dnl Sometimes Fortran may use the flush function, sometimes not.
 ACX_FORTRAN_CHECK_FUNC(flush)
 
