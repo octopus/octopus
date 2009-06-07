@@ -146,7 +146,7 @@ contains
       call messages_print_var_option(stdout, 'LCAOStart', lcao_start)
 
       lcao_done = .false.
-      if (lcao_start > LCAO_START_NONE) then
+      if (lcao_start /= LCAO_START_NONE) then
           
         call lcao_init(lcao, sys%gr, sys%geo, sys%st)
         if(lcao_is_available(lcao)) then
@@ -160,10 +160,8 @@ contains
           call states_fermi(sys%st, sys%gr%mesh)
           call states_write_eigenvalues(stdout, sys%st%nst, sys%st, sys%gr%sb)
 
-          if (lcao_start == LCAO_START_FULL) then
-            ! Update the density and the Hamiltonian
-            call system_h_setup(sys, hm)
-          end if
+          ! Update the density and the Hamiltonian
+          if (lcao_start == LCAO_START_FULL) call system_h_setup(sys, hm)
           
         end if
       end if

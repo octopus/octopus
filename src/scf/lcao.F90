@@ -93,108 +93,6 @@ contains
     nullify(this%level)
     nullify(this%ddim)
 
-    ! count the number of orbitals available
-    maxj = 0
-    this%maxorbs = 0
-    do ia = 1, geo%natoms
-      maxj = max(maxj, species_niwfs(geo%atom(ia)%spec) )
-      this%maxorbs = this%maxorbs + species_niwfs(geo%atom(ia)%spec)
-    end do
-
-    this%maxorbs = this%maxorbs*st%d%dim
-
-    if(this%maxorbs < st%nst) then
-      this%state = 0
-      write(message(1),'(a)') 'Cannot do LCAO initial calculation because there are not enough atomic orbitals.'
-      call write_warning(1)
-      call pop_sub(); return
-    end if
-
-    ! generate tables to know which indexes each atomic orbital has
-
-    SAFE_ALLOCATE( this%atom(1:this%maxorbs))
-    SAFE_ALLOCATE(this%level(1:this%maxorbs))
-    SAFE_ALLOCATE( this%ddim(1:this%maxorbs))
-
-    ! Each atom provides niwfs pseudo-orbitals (this number is given in
-    ! geo%atom(ia)%spec%niwfs for atom number ia). This number is
-    ! actually multiplied by two in case of spin-unrestricted or spinors
-    ! calculations.
-    !
-    ! The pseudo-orbitals are placed in order in the following way (Natoms
-    ! is the total number of atoms).
-    !
-    ! n = 1 => first orbital of atom 1,
-    ! n = 2 => first orbital of atom 2.
-    ! n = 3 => first orbital of atom 3.
-    ! ....
-    ! n = Natoms => first orbital of atom Natoms
-    ! n = Natoms + 1 = > second orbital of atom 1
-    ! ....
-    !
-    ! If at some point in this loop an atom pseudo cannot provide the corresponding
-    ! orbital (because the niws orbitals have been exhausted), it moves on to the following
-    ! atom.
-    !
-    ! In the spinors case, it changes a bit:
-    !
-    ! n = 1 => first spin-up orbital of atom 1, assigned to the spin-up component of the spinor.
-    ! n = 2 => first spin-down orbital of atom 1, assigned to the spin-down component of the spinor.
-    ! n = 3 => first spin-up orbital of atom 2, assigned to the spin-up component of the spinor.
-    
-    ii = 1
-    do jj = 1, maxj
-      do ia = 1, geo%natoms
-        do idim = 1,st%d%dim
-          if(jj > species_niwfs(geo%atom(ia)%spec) ) cycle
-
-          this%atom(ii) = ia
-          this%level(ii) = jj
-          this%ddim(ii) = idim
-
-          ii = ii + 1
-        end do
-      end do
-    end do
-
-    ASSERT(ii - 1 == this%maxorbs)
-
-    !%Variable LCAODimension
-    !%Type integer
-    !%Default 0
-    !%Section SCF
-    !%Description
-    !% Before starting the SCF cycle, an initial LCAO calculation can be performed
-    !% in order to obtain reasonable initial guesses for spin-orbitals and densities.
-    !% For this purpose, the code calculates a number of atomic orbitals -- this
-    !% number depends on the given species. The default dimension for the LCAO basis
-    !% set will be the sum of all these numbers, unless this dimension is larger than
-    !% twice the number of required orbitals for the full calculation. 
-    !%
-    !% This dimension however can be changed by making use of this
-    !% variable. Note that LCAODimension cannot be smaller than the
-    !% number of orbitals needed in the full calculation -- if
-    !% LCAODimension is smaller, it will be silently increased to meet
-    !% this requirement. In the same way, if LCAODimension is larger
-    !% than the available number of atomic orbitals, it will be
-    !% reduced. If you want to use the largest possible number, set
-    !% LCAODimension to a negative number.
-    !%End
-    call loct_parse_int(datasets_check('LCAODimension'), 0, n)
-
-    if(n > 0 .and. n <= st%nst) then
-      this%norbs = st%nst
-    else if(n > st%nst .and. n <= this%maxorbs) then
-      this%norbs = n
-    else if(n == 0) then
-      this%norbs = min(this%maxorbs, 2*st%nst)
-    else
-      this%norbs = this%maxorbs
-    end if
-   
-    ASSERT(this%norbs >= st%nst)
-    ASSERT(this%norbs <= this%maxorbs)
-
     this%state = 1
 
     !%Variable LCAOAlternative
@@ -210,6 +108,112 @@ contains
     if(this%alternative) then
       message(1) = "Info: Using LCAO alternative implementation."
       call write_info(1)
+    end if
+
+    if(.not. this%alternative) then
+
+      ! count the number of orbitals available
+      maxj = 0
+      this%maxorbs = 0
+      do ia = 1, geo%natoms
+        maxj = max(maxj, species_niwfs(geo%atom(ia)%spec) )
+        this%maxorbs = this%maxorbs + species_niwfs(geo%atom(ia)%spec)
+      end do
+
+      this%maxorbs = this%maxorbs*st%d%dim
+
+      if(this%maxorbs < st%nst) then
+        this%state = 0
+        write(message(1),'(a)') 'Cannot do LCAO initial calculation because there are not enough atomic orbitals.'
+        call write_warning(1)
+        call pop_sub(); return
+      end if
+
+      ! generate tables to know which indexes each atomic orbital has
+
+      SAFE_ALLOCATE( this%atom(1:this%maxorbs))
+      SAFE_ALLOCATE(this%level(1:this%maxorbs))
+      SAFE_ALLOCATE( this%ddim(1:this%maxorbs))
+
+      ! Each atom provides niwfs pseudo-orbitals (this number is given in
+      ! geo%atom(ia)%spec%niwfs for atom number ia). This number is
+      ! actually multiplied by two in case of spin-unrestricted or spinors
+      ! calculations.
+      !
+      ! The pseudo-orbitals are placed in order in the following way (Natoms
+      ! is the total number of atoms).
+      !
+      ! n = 1 => first orbital of atom 1,
+      ! n = 2 => first orbital of atom 2.
+      ! n = 3 => first orbital of atom 3.
+      ! ....
+      ! n = Natoms => first orbital of atom Natoms
+      ! n = Natoms + 1 = > second orbital of atom 1
+      ! ....
+      !
+      ! If at some point in this loop an atom pseudo cannot provide the corresponding
+      ! orbital (because the niws orbitals have been exhausted), it moves on to the following
+      ! atom.
+      !
+      ! In the spinors case, it changes a bit:
+      !
+      ! n = 1 => first spin-up orbital of atom 1, assigned to the spin-up component of the spinor.
+      ! n = 2 => first spin-down orbital of atom 1, assigned to the spin-down component of the spinor.
+      ! n = 3 => first spin-up orbital of atom 2, assigned to the spin-up component of the spinor.
+
+      ii = 1
+      do jj = 1, maxj
+        do ia = 1, geo%natoms
+          do idim = 1,st%d%dim
+            if(jj > species_niwfs(geo%atom(ia)%spec) ) cycle
+
+            this%atom(ii) = ia
+            this%level(ii) = jj
+            this%ddim(ii) = idim
+
+            ii = ii + 1
+          end do
+        end do
+      end do
+
+      ASSERT(ii - 1 == this%maxorbs)
+
+      !%Variable LCAODimension
+      !%Type integer
+      !%Default 0
+      !%Section SCF
+      !%Description
+      !% Before starting the SCF cycle, an initial LCAO calculation can be performed
+      !% in order to obtain reasonable initial guesses for spin-orbitals and densities.
+      !% For this purpose, the code calculates a number of atomic orbitals -- this
+      !% number depends on the given species. The default dimension for the LCAO basis
+      !% set will be the sum of all these numbers, unless this dimension is larger than
+      !% twice the number of required orbitals for the full calculation. 
+      !%
+      !% This dimension however can be changed by making use of this
+      !% variable. Note that LCAODimension cannot be smaller than the
+      !% number of orbitals needed in the full calculation -- if
+      !% LCAODimension is smaller, it will be silently increased to meet
+      !% this requirement. In the same way, if LCAODimension is larger
+      !% than the available number of atomic orbitals, it will be
+      !% reduced. If you want to use the largest possible number, set
+      !% LCAODimension to a negative number.
+      !%End
+      call loct_parse_int(datasets_check('LCAODimension'), 0, n)
+
+      if(n > 0 .and. n <= st%nst) then
+        this%norbs = st%nst
+      else if(n > st%nst .and. n <= this%maxorbs) then
+        this%norbs = n
+      else if(n == 0) then
+        this%norbs = min(this%maxorbs, 2*st%nst)
+      else
+        this%norbs = this%maxorbs
+      end if
+
+      ASSERT(this%norbs >= st%nst)
+      ASSERT(this%norbs <= this%maxorbs)
+
     end if
 
     call pop_sub()

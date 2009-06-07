@@ -350,6 +350,9 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   type(profile_t), save :: commprof, comm2prof
 #endif
 
+  write(message(1),'(a,i6,a)') 'Info: Performing LCAO calculation with ', nbasis, ' orbitals.'
+  call write_info(1)
+
   maxorb = 0
   nbasis = 0
   do iatom = 1, geo%natoms
@@ -357,9 +360,6 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
     nbasis = nbasis + species_niwfs(geo%atom(iatom)%spec)
   end do
 
-  write(message(1),'(a,i6,a)') 'Info: Performing LCAO calculation with ', nbasis, ' orbitals.'
-  call write_info(1)
-        
   SAFE_ALLOCATE(hamiltonian(1:nbasis, 1:nbasis))
   SAFE_ALLOCATE(overlap(1:nbasis, 1:nbasis))
   SAFE_ALLOCATE(ev(1:nbasis))
