@@ -339,9 +339,9 @@ contains
   subroutine calc_point(n, x, f, getgrad, df)
     integer,           intent(in)  :: n
     real(8),           intent(in)  :: x(n)
-    real(8),           intent(out) :: f
+    real(8),           intent(inout) :: f
     integer,           intent(in)  :: getgrad
-    real(8), optional, intent(out) :: df(n)
+    real(8), optional, intent(inout) :: df(n)
     
     integer :: i
 
