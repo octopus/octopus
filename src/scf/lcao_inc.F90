@@ -343,6 +343,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   integer, allocatable :: basis_atom(:)
   type(batch_t) :: orbitals
   FLOAT :: dist2, lapdist
+  type(profile_t), save :: prof_orbitals, prof_matrix, prof_wavefunction
 
 #ifdef HAVE_MPI
   R_TYPE, allocatable :: tmp(:, :)
@@ -371,6 +372,8 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
   ! this is the extra distance that the laplacian adds to the localization radius
   lapdist = maxval(abs(gr%mesh%idx%enlarge)*gr%mesh%h)
+
+  call profiling_in(prof_orbitals, "LCAO_ORBITALS")
 
   message(1) = "Info: Calculating atomic orbitals."
   call write_info(1)
@@ -401,6 +404,10 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   
   if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
 
+  call profiling_out(prof_orbitals)
+
+  call profiling_in(prof_matrix, "LCAO_MATRIX")
+
   message(1) = "Info: Calculating matrix elements."
   call write_info(1)
 
@@ -408,6 +415,8 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   
     hamiltonian = R_TOTYPE(M_ZERO)
     overlap = R_TOTYPE(M_ZERO)
+
+    if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, st%nst*st%d%nik)
 
     do ibasis = 1, nbasis
       iatom = basis_atom(ibasis)
@@ -439,8 +448,12 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
         overlap(ibasis, jbasis) = R_CONJ(overlap(jbasis, ibasis))
 
       end do
+
+      if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ibasis, nbasis)
     end do
-        
+    
+    if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
+
 #ifdef HAVE_MPI
     if(geo%atoms%parallel) then
       call profiling_in(commprof, "LCAO_BCAST")
@@ -486,10 +499,20 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
     call lalg_geneigensolve(nbasis, hamiltonian, overlap, ev)
 
+    call profiling_out(prof_matrix)
+
+    call profiling_in(prof_wavefunction, "LCAO_WAVEFUNCTIONS")
+    
+    message(1) = "Info: Generating wave-functions."
+    call write_info(1)
+
+
     do ist = st%st_start, st%st_end
       forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) st%X(psi)(ip, idim, ist, ik) = R_TOTYPE(M_ZERO)
     end do
     
+    if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, st%nst*st%d%nik)
+
     do ibasis = 1, nbasis
       if(ibasis <= st%nst) st%eigenval(ibasis, ik) = ev(ibasis)
       
@@ -500,7 +523,11 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
         end do
       end do
       
+      if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ibasis, nbasis)
     end do
+
+    if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
+    call profiling_out(prof_wavefunction)
 
   end do
   
