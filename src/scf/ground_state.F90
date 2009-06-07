@@ -104,9 +104,8 @@ contains
       ! overwrite the guess density)
       message(1) = 'Info: Setting up Hamiltonian.'
       call write_info(1)
-      call v_ks_calc(sys%gr, sys%ks, hm, sys%st, calc_eigenval=.true.) ! get potentials
-      call states_fermi(sys%st, sys%gr%mesh)                             ! occupations
-      call total_energy(hm, sys%gr, sys%st, -1)         ! total energy
+      ! get the effective potential (we don't need the eigenvalues yes)
+      call v_ks_calc(sys%gr, sys%ks, hm, sys%st, calc_eigenval=.false.) 
 
       ! The initial LCAO calculation is done by default if we have pseudopotentials.
       ! Otherwise, it is not the default value and has to be enforced in the input file.
@@ -161,7 +160,9 @@ contains
           call states_write_eigenvalues(stdout, sys%st%nst, sys%st, sys%gr%sb)
 
           ! Update the density and the Hamiltonian
-          if (lcao_start == LCAO_START_FULL) call system_h_setup(sys, hm)
+          if (lcao_start == LCAO_START_FULL) then
+            call system_h_setup(sys, hm)
+          end if
           
         end if
       end if
@@ -183,8 +184,14 @@ contains
           ! Randomly generate the initial wave-functions.
           call states_generate_random(sys%st, sys%gr%mesh)
           call states_orthogonalize(sys%st, sys%gr%mesh)
+          call v_ks_calc(sys%gr, sys%ks, hm, sys%st, calc_eigenval=.true.) ! get potentials
+          call states_fermi(sys%st, sys%gr%mesh)                             ! occupations
         end if
       end if
+
+      ! I don't think we need this, but I keep it just in case
+      call total_energy(hm, sys%gr, sys%st, -1)         ! total energy
+
     else
 
       ! setup Hamiltonian

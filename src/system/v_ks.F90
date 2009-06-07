@@ -227,15 +227,16 @@ contains
 
   ! ---------------------------------------------------------
   subroutine v_ks_calc(gr, ks, hm, st, calc_eigenval)
-    type(grid_t),        intent(inout) :: gr
-    type(v_ks_t),        intent(inout) :: ks
-    type(hamiltonian_t), intent(inout) :: hm
-    type(states_t),      intent(inout) :: st
-    logical,      optional, intent(in) :: calc_eigenval
+    type(grid_t),           intent(inout) :: gr
+    type(v_ks_t),           intent(inout) :: ks
+    type(hamiltonian_t),    intent(inout) :: hm
+    type(states_t),         intent(inout) :: st
+    logical,      optional, intent(in)    :: calc_eigenval
 
     FLOAT :: amaldi_factor
     integer :: ip, ispin
     type(profile_t), save :: prof
+    logical :: calc_eigenval_
 
     ! The next line is a hack to be able to perform an IP/RPA calculation
     !logical, save :: RPA_first = .true.
@@ -243,11 +244,14 @@ contains
     call push_sub('v_ks.v_ks_calc')
     call profiling_in(prof, "KOHN_SHAM_CALC")
 
+    calc_eigenval_ = .false.
+    if(present(calc_eigenval)) calc_eigenval_ = calc_eigenval
+
     ! If the Hxc term is frozen, there is nothing to do, except we 
     ! maybe have to calculate the eigenvalues (and WARNING: MISSING
     ! hm%epot)
     if(ks%frozen_hxc) then
-      if(present(calc_eigenval)) then
+      if(calc_eigenval_) then
         if (states_are_real(st)) then
           call dcalculate_eigenvalues(hm, gr, st)
         else
