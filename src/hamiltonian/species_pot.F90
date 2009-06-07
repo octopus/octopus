@@ -774,7 +774,7 @@ contains
     FLOAT,             intent(out) :: phi(:)
 
     integer :: i, l, m, ip
-    FLOAT :: r2, x(1:MAX_DIM)
+    FLOAT :: r2, x(1:MAX_DIM), sqrtw, ww
     FLOAT, allocatable :: xf(:, :), ylm(:)
     type(ps_t), pointer :: ps
 
@@ -804,24 +804,29 @@ contains
 
       nullify(ps)
     else
+      ww = species_omega(spec)
+      sqrtw = sqrt(ww)
 
-      do ip = 1, submesh%ns
-        x(1:MAX_DIM) = submesh%mesh%x(submesh%jxyz(ip), 1:MAX_DIM) - pos(1:MAX_DIM)
-        r2 = sum(x(1:MAX_DIM)**2)
-        select case(dim)
-        case(1)
-          phi(ip) = exp(-species_omega(spec)*r2/M_TWO) * hermite(i - 1, x(1)*sqrt(species_omega(spec)))
-        case(2)
-          phi(ip) = exp(-species_omega(spec)*r2/M_TWO) * &
-            hermite(i - 1, x(1)*sqrt(species_omega(spec))) * hermite(l - 1, x(2)*sqrt(species_omega(spec)))
-        case(3)
-          phi(ip) = exp(-species_omega(spec)*r2/M_TWO) * &
-               hermite(i - 1, x(1) * sqrt(species_omega(spec))) * &
-               hermite(l - 1, x(2) * sqrt(species_omega(spec))) * &
-               hermite(m - 1, x(3) * sqrt(species_omega(spec)))
-        end select
-      end do
-
+      select case(dim)
+      case(1)
+        do ip = 1, submesh%ns
+          x(1:MAX_DIM) = submesh%mesh%x(submesh%jxyz(ip), 1:MAX_DIM) - pos(1:MAX_DIM)
+          r2 = sum(x(1:MAX_DIM)**2)
+          phi(ip) = exp(-ww*r2/M_TWO)*hermite(i - 1, x(1)*sqrtw)
+        end do
+      case(2)
+        do ip = 1, submesh%ns
+          x(1:MAX_DIM) = submesh%mesh%x(submesh%jxyz(ip), 1:MAX_DIM) - pos(1:MAX_DIM)
+          r2 = sum(x(1:MAX_DIM)**2)
+          phi(ip) = exp(-ww*r2/M_TWO)*hermite(i - 1, x(1)*sqrtw)*hermite(l - 1, x(2)*sqrtw)
+        end do
+      case(3)
+        do ip = 1, submesh%ns
+          x(1:MAX_DIM) = submesh%mesh%x(submesh%jxyz(ip), 1:MAX_DIM) - pos(1:MAX_DIM)
+          phi(ip) = exp(-ww*r2/M_TWO)*hermite(i - 1, x(1)*sqrtw)*hermite(l - 1, x(2)*sqrtw)*hermite(m - 1, x(3)*sqrtw)
+        end do
+      end select
+      
     end if
 
   end subroutine species_get_orbital_submesh
