@@ -804,8 +804,24 @@ contains
 
       nullify(ps)
     else
-      message(1) = "Error: not implemented."
-      call write_fatal(1)
+
+      do ip = 1, submesh%ns
+        x(1:MAX_DIM) = submesh%mesh%x(submesh%jxyz(ip), 1:MAX_DIM) - pos(1:MAX_DIM)
+        r2 = sum(x(1:MAX_DIM)**2)
+        select case(dim)
+        case(1)
+          phi(ip) = exp(-species_omega(spec)*r2/M_TWO) * hermite(i - 1, x(1)*sqrt(species_omega(spec)))
+        case(2)
+          phi(ip) = exp(-species_omega(spec)*r2/M_TWO) * &
+            hermite(i - 1, x(1)*sqrt(species_omega(spec))) * hermite(l - 1, x(2)*sqrt(species_omega(spec)))
+        case(3)
+          phi(ip) = exp(-species_omega(spec)*r2/M_TWO) * &
+               hermite(i - 1, x(1) * sqrt(species_omega(spec))) * &
+               hermite(l - 1, x(2) * sqrt(species_omega(spec))) * &
+               hermite(m - 1, x(3) * sqrt(species_omega(spec)))
+        end select
+      end do
+
     end if
 
   end subroutine species_get_orbital_submesh

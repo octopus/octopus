@@ -372,8 +372,13 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   ! this is the extra distance that the laplacian adds to the localization radius
   lapdist = maxval(abs(gr%mesh%idx%enlarge)*gr%mesh%h)
 
-  call batch_init(orbitals, 1, nbasis)
+  message(1) = "Info: Calculating atomic orbitals."
+  call write_info(1)
 
+  call batch_init(orbitals, 1, nbasis)
+  
+  if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, st%nst*st%d%nik)
+  
   ibasis = 0
   do iatom = 1, geo%natoms
     do iorb = 1, species_niwfs(geo%atom(iatom)%spec)
@@ -387,11 +392,15 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
       ! allocate and calculate the orbitals
       call dbatch_new_state(orbitals, ibasis, sphere(ibasis)%ns)
       call species_get_orbital_submesh(geo%atom(iatom)%spec, sphere(ibasis), iorb, st%d%dim, 1, &
-           geo%atom(iatom)%x, orbitals%states(ibasis)%dpsi(:, 1))
+        geo%atom(iatom)%x, orbitals%states(ibasis)%dpsi(:, 1))
+      
+      if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ibasis, nbasis)
 
     end do
   end do
   
+  if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
+
   message(1) = "Info: Calculating matrix elements."
   call write_info(1)
 
