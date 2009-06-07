@@ -141,6 +141,8 @@ subroutine dgeneigensolve(n, a, b, e, bof, err_code)
   logical :: bof_
   FLOAT, allocatable :: bp(:,:), work(:)
 
+  call profiling_in(eigensolver_prof, "DENSE_EIGENSOLVER")
+
   bof_ = .true.
   if(present(bof)) then
     bof_ = bof
@@ -171,6 +173,8 @@ subroutine dgeneigensolve(n, a, b, e, bof, err_code)
   if(present(err_code)) then
     err_code = info
   end if
+  
+  call profiling_out(eigensolver_prof)
 end subroutine dgeneigensolve
 
 
@@ -191,6 +195,8 @@ subroutine zgeneigensolve(n, a, b, e, bof, err_code)
   logical            :: bof_
   FLOAT, allocatable :: rwork(:)
   CMPLX, allocatable :: bp(:,:), work(:)
+
+  call profiling_in(eigensolver_prof, "DENSE_EIGENSOLVER")
 
   bof_ = .true.
   if(present(bof)) then
@@ -224,6 +230,8 @@ subroutine zgeneigensolve(n, a, b, e, bof, err_code)
   if(present(err_code)) then
     err_code = info
   end if
+
+  call profiling_out(eigensolver_prof)
 end subroutine zgeneigensolve
 
 
