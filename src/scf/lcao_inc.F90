@@ -342,7 +342,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   type(submesh_t), allocatable :: sphere(:)
   integer, allocatable :: basis_atom(:)
   type(batch_t) :: orbitals
-  FLOAT :: dist2, lapdist
+  FLOAT :: dist2, lapdist, maxradius
   type(profile_t), save :: prof_orbitals, prof_matrix, prof_wavefunction
 
 #ifdef HAVE_MPI
@@ -367,7 +367,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   SAFE_ALLOCATE(psii(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(radius(1:nbasis))
-  SAFE_ALLOCATE(sphere(1:nbasis))
+  SAFE_ALLOCATE(sphere(1:geo%natoms))
   SAFE_ALLOCATE(basis_atom(1:nbasis))
 
   ! this is the extra distance that the laplacian adds to the localization radius
@@ -384,17 +384,21 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
   ibasis = 0
   do iatom = 1, geo%natoms
+
+    ! we assume that the largest radius corresponds to the highest orbital
+    maxradius = species_get_iwf_radius(geo%atom(iatom)%spec, species_niwfs(geo%atom(iatom)%spec), is = 1)
+    ! initialize the radial grid
+    call submesh_init_sphere(sphere(iatom), gr%mesh%sb, gr%mesh, geo%atom(iatom)%x, maxradius)
+    
     do iorb = 1, species_niwfs(geo%atom(iatom)%spec)
       ibasis = ibasis + 1
       basis_atom(ibasis) = iatom
-
-      ! initialize the radial grid
+      
       radius(ibasis) = species_get_iwf_radius(geo%atom(iatom)%spec, iorb, is = 1)
-      call submesh_init_sphere(sphere(ibasis), gr%mesh%sb, gr%mesh, geo%atom(iatom)%x, radius(ibasis))
-
+      
       ! allocate and calculate the orbitals
-      call dbatch_new_state(orbitals, ibasis, sphere(ibasis)%ns)
-      call species_get_orbital_submesh(geo%atom(iatom)%spec, sphere(ibasis), iorb, st%d%dim, 1, &
+      call dbatch_new_state(orbitals, ibasis, sphere(iatom)%ns)
+      call species_get_orbital_submesh(geo%atom(iatom)%spec, sphere(iatom), iorb, st%d%dim, 1, &
         geo%atom(iatom)%x, orbitals%states(ibasis)%dpsi(:, 1))
 
       if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ibasis, nbasis)
@@ -423,7 +427,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
       do idim = 1,st%d%dim 
         forall(ip = 1:gr%mesh%np) psii(ip, idim) = M_ZERO
-        call submesh_add_to_mesh(sphere(ibasis), orbitals%states(ibasis)%dpsi(:, 1), psii(:, idim))
+        call submesh_add_to_mesh(sphere(iatom), orbitals%states(ibasis)%dpsi(:, 1), psii(:, idim))
       end do
 
       call X(hamiltonian_apply)(hm, gr, psii, hpsi, ibasis, ik)
@@ -438,13 +442,13 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
         if(dist2 > (radius(ibasis) + radius(jbasis) + lapdist)**2) cycle
 
         hamiltonian(jbasis, ibasis) = &
-          submesh_to_mesh_dotp(sphere(jbasis), st%d%dim, orbitals%states(jbasis)%dpsi(:, 1), hpsi, reduce = .false.)
+          submesh_to_mesh_dotp(sphere(jatom), st%d%dim, orbitals%states(jbasis)%dpsi(:, 1), hpsi, reduce = .false.)
         hamiltonian(ibasis, jbasis) = R_CONJ(hamiltonian(jbasis, ibasis))
 
         if(dist2 > (radius(ibasis) + radius(jbasis))**2) cycle
 
         overlap(jbasis, ibasis) = &
-          submesh_to_mesh_dotp(sphere(jbasis), st%d%dim, orbitals%states(jbasis)%dpsi(:, 1), psii, reduce = .false.)
+          submesh_to_mesh_dotp(sphere(jatom), st%d%dim, orbitals%states(jbasis)%dpsi(:, 1), psii, reduce = .false.)
         overlap(ibasis, jbasis) = R_CONJ(overlap(jbasis, ibasis))
 
       end do
@@ -522,7 +526,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
           do iorb = 1, species_niwfs(geo%atom(iatom)%spec)
             ibasis = ibasis + 1
 
-            call submesh_add_to_mesh(sphere(ibasis), orbitals%states(ibasis)%dpsi(:, 1), &
+            call submesh_add_to_mesh(sphere(iatom), orbitals%states(ibasis)%dpsi(:, 1), &
               st%X(psi)(:, idim, ist, ik), factor = hamiltonian(ibasis, ist))
           end do
         end do
@@ -538,8 +542,12 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
   do ibasis = 1, nbasis
     call dbatch_delete_state(orbitals, ibasis)
-    call submesh_end(sphere(ibasis))
   end do
+
+  do iatom = 1, geo%natoms
+    call submesh_end(sphere(iatom))
+  end do
+
   call batch_end(orbitals)
 
   SAFE_DEALLOCATE_A(psii)
