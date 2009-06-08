@@ -385,16 +385,18 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   ibasis = 0
   do iatom = 1, geo%natoms
 
-    ! we assume that the largest radius corresponds to the highest orbital
-    maxradius = species_get_iwf_radius(geo%atom(iatom)%spec, species_niwfs(geo%atom(iatom)%spec), is = 1)
+    maxradius = M_ZERO
+    do iorb = 1, species_niwfs(geo%atom(iatom)%spec)
+      radius(ibasis + iorb) = species_get_iwf_radius(geo%atom(iatom)%spec, iorb, is = 1)
+      maxradius = max(maxradius, radius(ibasis + iorb))
+    end do
+   
     ! initialize the radial grid
     call submesh_init_sphere(sphere(iatom), gr%mesh%sb, gr%mesh, geo%atom(iatom)%x, maxradius)
     
     do iorb = 1, species_niwfs(geo%atom(iatom)%spec)
       ibasis = ibasis + 1
       basis_atom(ibasis) = iatom
-      
-      radius(ibasis) = species_get_iwf_radius(geo%atom(iatom)%spec, iorb, is = 1)
       
       ! allocate and calculate the orbitals
       call dbatch_new_state(orbitals, ibasis, sphere(iatom)%ns)
