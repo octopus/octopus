@@ -363,7 +363,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   SAFE_ALLOCATE(hamiltonian(1:nbasis, 1:nbasis))
   SAFE_ALLOCATE(overlap(1:nbasis, 1:nbasis))
   SAFE_ALLOCATE(ev(1:nbasis))
-  
+
   SAFE_ALLOCATE(psii(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(radius(1:nbasis))
@@ -379,9 +379,9 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   call write_info(1)
 
   call batch_init(orbitals, 1, nbasis)
-  
-  if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, st%nst*st%d%nik)
-  
+
+  if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, nbasis)
+
   ibasis = 0
   do iatom = 1, geo%natoms
     do iorb = 1, species_niwfs(geo%atom(iatom)%spec)
@@ -396,12 +396,12 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
       call dbatch_new_state(orbitals, ibasis, sphere(ibasis)%ns)
       call species_get_orbital_submesh(geo%atom(iatom)%spec, sphere(ibasis), iorb, st%d%dim, 1, &
         geo%atom(iatom)%x, orbitals%states(ibasis)%dpsi(:, 1))
-      
+
       if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ibasis, nbasis)
 
     end do
   end do
-  
+
   if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
 
   call profiling_out(prof_orbitals)
@@ -412,37 +412,37 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   call write_info(1)
 
   do ik = 1, st%d%nik
-  
+
     hamiltonian = R_TOTYPE(M_ZERO)
     overlap = R_TOTYPE(M_ZERO)
 
-    if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, st%nst*st%d%nik)
+    if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, nbasis)
 
     do ibasis = 1, nbasis
       iatom = basis_atom(ibasis)
-      
+
       do idim = 1,st%d%dim 
         forall(ip = 1:gr%mesh%np) psii(ip, idim) = M_ZERO
         call submesh_add_to_mesh(sphere(ibasis), orbitals%states(ibasis)%dpsi(:, 1), psii(:, idim))
       end do
-      
+
       call X(hamiltonian_apply)(hm, gr, psii, hpsi, ibasis, ik)
-      
+
       do jbasis = 1, nbasis
         jatom = basis_atom(jbasis)
-        
+
         if(jatom < iatom) cycle
-        
+
         dist2 = sum((geo%atom(iatom)%x(1:MAX_DIM) - geo%atom(jatom)%x(1:MAX_DIM))**2)
-        
+
         if(dist2 > (radius(ibasis) + radius(jbasis) + lapdist)**2) cycle
-        
+
         hamiltonian(jbasis, ibasis) = &
           submesh_to_mesh_dotp(sphere(jbasis), st%d%dim, orbitals%states(jbasis)%dpsi(:, 1), hpsi, reduce = .false.)
         hamiltonian(ibasis, jbasis) = R_CONJ(hamiltonian(jbasis, ibasis))
-        
+
         if(dist2 > (radius(ibasis) + radius(jbasis))**2) cycle
-        
+
         overlap(jbasis, ibasis) = &
           submesh_to_mesh_dotp(sphere(jbasis), st%d%dim, orbitals%states(jbasis)%dpsi(:, 1), psii, reduce = .false.)
         overlap(ibasis, jbasis) = R_CONJ(overlap(jbasis, ibasis))
@@ -451,7 +451,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
       if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ibasis, nbasis)
     end do
-    
+
     if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
 
 #ifdef HAVE_MPI
@@ -461,20 +461,20 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
       !clearly this can be improved by using MPI_Allgatherv
       do ibasis = 1, nbasis
         iatom = basis_atom(ibasis)
-        
+
         do jbasis = 1, nbasis
           jatom = basis_atom(jbasis)
-          
+
           if(jatom < iatom) cycle
-          
+
           call MPI_Bcast(hamiltonian(jbasis, ibasis), 1, R_MPITYPE, geo%atoms%node(iatom), &
             geo%atoms%mpi_grp%comm, mpi_err)
           hamiltonian(ibasis, jbasis) = R_CONJ(hamiltonian(jbasis, ibasis))
-          
+
           call MPI_Bcast(overlap(jbasis, ibasis), 1, R_MPITYPE, geo%atoms%node(iatom), &
             geo%atoms%mpi_grp%comm, mpi_err)
           overlap(ibasis, jbasis) = R_CONJ(overlap(jbasis, ibasis))
-          
+
         end do
       end do
 
@@ -502,35 +502,40 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
     call profiling_out(prof_matrix)
 
     call profiling_in(prof_wavefunction, "LCAO_WAVEFUNCTIONS")
-    
+
     message(1) = "Info: Generating wave-functions."
     call write_info(1)
 
 
-    do ist = st%st_start, st%st_end
-      forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) st%X(psi)(ip, idim, ist, ik) = R_TOTYPE(M_ZERO)
-    end do
-    
-    if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, st%nst*st%d%nik)
+    if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, st%lnst)
 
-    do ibasis = 1, nbasis
-      if(ibasis <= st%nst) st%eigenval(ibasis, ik) = ev(ibasis)
-      
-      do ist = st%st_start, st%st_end
-        do idim = 1, st%d%dim
-          call submesh_add_to_mesh(sphere(ibasis), orbitals%states(ibasis)%dpsi(:, 1), &
-            st%X(psi)(:, idim, ist, ik), factor = hamiltonian(ibasis, ist))
+
+    do ist = st%st_start, st%st_end
+      st%eigenval(ist, ik) = ev(ist)
+
+      do idim = 1, st%d%dim
+
+        forall(ip = 1:gr%mesh%np) st%X(psi)(ip, idim, ist, ik) = R_TOTYPE(M_ZERO)
+
+        ibasis = 0
+        do iatom = 1, geo%natoms
+          do iorb = 1, species_niwfs(geo%atom(iatom)%spec)
+            ibasis = ibasis + 1
+
+            call submesh_add_to_mesh(sphere(ibasis), orbitals%states(ibasis)%dpsi(:, 1), &
+              st%X(psi)(:, idim, ist, ik), factor = hamiltonian(ibasis, ist))
+          end do
         end do
       end do
-      
-      if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ibasis, nbasis)
+
+      if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ist - st%st_start + 1, st%nst)
     end do
 
     if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
     call profiling_out(prof_wavefunction)
 
   end do
-  
+
   do ibasis = 1, nbasis
     call dbatch_delete_state(orbitals, ibasis)
     call submesh_end(sphere(ibasis))
