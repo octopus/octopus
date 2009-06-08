@@ -132,14 +132,14 @@ end subroutine zcholesky
 subroutine dgeneigensolve(n, a, b, e, bof, err_code)
   integer,           intent(in)    :: n
   FLOAT,             intent(inout) :: a(n,n)
-  FLOAT,             intent(in)    :: b(n,n)
+  FLOAT,             intent(inout) :: b(n,n)
   FLOAT,             intent(out)   :: e(n)
   logical, optional, intent(inout) :: bof      ! Bomb on failure.
   integer, optional, intent(out)   :: err_code
 
   integer :: info, lwork
   logical :: bof_
-  FLOAT, allocatable :: bp(:,:), work(:)
+  FLOAT, allocatable :: work(:)
 
   call profiling_in(eigensolver_prof, "DENSE_EIGENSOLVER")
 
@@ -149,11 +149,8 @@ subroutine dgeneigensolve(n, a, b, e, bof, err_code)
   end if
 
   lwork = 5*n
-  SAFE_ALLOCATE(bp(1:n, 1:n))
   SAFE_ALLOCATE(work(1:lwork))
-  bp = b
-  call lapack_sygv(1, 'V', 'U', n, a(1, 1), n, bp(1, 1), n, e(1), work(1), lwork, info)
-  SAFE_DEALLOCATE_A(bp)
+  call lapack_sygv(1, 'V', 'U', n, a(1, 1), n, b(1, 1), n, e(1), work(1), lwork, info)
   SAFE_DEALLOCATE_A(work)
 
   if(info.ne.0) then
@@ -186,7 +183,7 @@ end subroutine dgeneigensolve
 subroutine zgeneigensolve(n, a, b, e, bof, err_code)
   integer,           intent(in)    :: n
   CMPLX,             intent(inout) :: a(n,n)
-  CMPLX,             intent(in)    :: b(n,n)
+  CMPLX,             intent(inout) :: b(n,n)
   FLOAT,             intent(out)   :: e(n)
   logical, optional, intent(inout) :: bof      ! Bomb on failure.
   integer, optional, intent(out)   :: err_code
@@ -194,7 +191,7 @@ subroutine zgeneigensolve(n, a, b, e, bof, err_code)
   integer            :: info, lwork
   logical            :: bof_
   FLOAT, allocatable :: rwork(:)
-  CMPLX, allocatable :: bp(:,:), work(:)
+  CMPLX, allocatable :: work(:)
 
   call profiling_in(eigensolver_prof, "DENSE_EIGENSOLVER")
 
@@ -204,12 +201,9 @@ subroutine zgeneigensolve(n, a, b, e, bof, err_code)
   end if
 
   lwork = 5*n
-  SAFE_ALLOCATE(bp(1:n, 1:n))
   SAFE_ALLOCATE(work(1:lwork))
   SAFE_ALLOCATE(rwork(1:max(1, 3*n-2)))
-  bp = b
-  call lapack_hegv(1, 'V', 'U', n, a(1, 1), n, bp(1, 1), n, e(1), work(1), lwork, rwork(1), info)
-  SAFE_DEALLOCATE_A(bp)
+  call lapack_hegv(1, 'V', 'U', n, a(1, 1), n, b(1, 1), n, e(1), work(1), lwork, rwork(1), info)
   SAFE_DEALLOCATE_A(work)
   SAFE_DEALLOCATE_A(rwork)
 
