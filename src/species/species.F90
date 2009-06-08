@@ -712,8 +712,6 @@ contains
     FLOAT :: r, uVr0, duvr0, ylm, gylm(MAX_DIM)
     FLOAT, parameter :: ylmconst = CNST(0.488602511902920) !  = sqrt(3/(4*pi))
 
-    call push_sub('species.species_real_nl_projector')
-
     r = sqrt(sum(x(1:MAX_DIM)**2))
 
     uVr0  = spline_eval(s%ps%kb(l, i), r)
@@ -738,7 +736,6 @@ contains
       end if
     end if
 
-    call pop_sub()
   end subroutine species_real_nl_projector
   ! ---------------------------------------------------------
 
@@ -755,8 +752,6 @@ contains
     FLOAT :: r, uVr0
     CMPLX :: ylm
 
-    call push_sub('species.species_nl_projector')
-
     r = sqrt(sum(x(1:MAX_DIM)**2))
 
     uVr0 = spline_eval(s%ps%kb(l, i), r)
@@ -764,19 +759,14 @@ contains
     call ylmr(x(1), x(2), x(3), l, lm, ylm)
     uv = uvr0*ylm
 
-    call pop_sub()
-
   end subroutine species_nl_projector
   ! ---------------------------------------------------------
-
 
   ! ---------------------------------------------------------
   FLOAT function species_get_nlcc(s, x) result(l)
     type(species_t), intent(in) :: s
     FLOAT, intent(in) :: x(MAX_DIM)
     FLOAT :: r
-
-    call push_sub('species.species_get_nlcc')
 
     ! only for 3D pseudopotentials, please
     if(species_is_ps(s)) then
@@ -786,10 +776,8 @@ contains
       l = M_ZERO
     end if
 
-    call pop_sub()
   end function species_get_nlcc
   ! ---------------------------------------------------------
-
 
   ! ---------------------------------------------------------
   FLOAT function species_get_iwf_radius(s, j, is) result(radius)
