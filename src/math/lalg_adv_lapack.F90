@@ -137,9 +137,9 @@ subroutine dgeneigensolve(n, a, b, e, bof, err_code)
   logical, optional, intent(inout) :: bof      ! Bomb on failure.
   integer, optional, intent(out)   :: err_code
 
-  integer :: info, lwork
+  integer :: info, lwork, ii, jj
   logical :: bof_
-  FLOAT, allocatable :: work(:)
+  FLOAT, allocatable :: work(:), diag(:)
 
   call profiling_in(eigensolver_prof, "DENSE_EIGENSOLVER")
 
@@ -148,10 +148,25 @@ subroutine dgeneigensolve(n, a, b, e, bof, err_code)
     bof_ = bof
   end if
 
+  SAFE_ALLOCATE(diag(1:n))
+
+  ! store the diagonal of b  
+  forall(ii = 1:n) diag(ii) = b(ii, ii)
+
   lwork = 5*n
   SAFE_ALLOCATE(work(1:lwork))
   call lapack_sygv(1, 'V', 'U', n, a(1, 1), n, b(1, 1), n, e(1), work(1), lwork, info)
   SAFE_DEALLOCATE_A(work)
+
+  ! b was destroyed, so we rebuild it
+  do ii = 1, n
+    do jj = 1, ii - 1
+      b(jj, ii) = b(ii, jj)
+    end do
+    b(ii, ii) = diag(ii)
+  end do
+
+  SAFE_DEALLOCATE_A(diag)
 
   if(info.ne.0) then
     if(bof_) then
@@ -188,10 +203,10 @@ subroutine zgeneigensolve(n, a, b, e, bof, err_code)
   logical, optional, intent(inout) :: bof      ! Bomb on failure.
   integer, optional, intent(out)   :: err_code
 
-  integer            :: info, lwork
+  integer            :: info, lwork, ii, jj
   logical            :: bof_
   FLOAT, allocatable :: rwork(:)
-  CMPLX, allocatable :: work(:)
+  CMPLX, allocatable :: work(:), diag(:)
 
   call profiling_in(eigensolver_prof, "DENSE_EIGENSOLVER")
 
@@ -200,12 +215,27 @@ subroutine zgeneigensolve(n, a, b, e, bof, err_code)
     bof_ = bof
   end if
 
+  SAFE_ALLOCATE(diag(1:n))
+  
+  ! store the diagonal of b
+  forall(ii = 1:n) diag(ii) = b(ii, ii)
+
   lwork = 5*n
   SAFE_ALLOCATE(work(1:lwork))
   SAFE_ALLOCATE(rwork(1:max(1, 3*n-2)))
   call lapack_hegv(1, 'V', 'U', n, a(1, 1), n, b(1, 1), n, e(1), work(1), lwork, rwork(1), info)
   SAFE_DEALLOCATE_A(work)
   SAFE_DEALLOCATE_A(rwork)
+
+  ! b was destroyed, so we rebuild it
+  do ii = 1, n
+    do jj = 1, ii - 1
+      b(jj, ii) = b(ii, jj)
+    end do
+    b(ii, ii) = diag(ii)
+  end do
+
+  SAFE_DEALLOCATE_A(diag)
 
   if(info.ne.0) then
     if(bof_) then
@@ -658,7 +688,7 @@ subroutine zlowest_eigensolve(k, n, a, e, v)
   integer            :: m, iwork(5*n), ifail(n), info, lwork
   FLOAT              :: abstol
   CMPLX, allocatable :: work(:)
-  
+   
   abstol = 2*sfmin()
 
   ! Work size query.
