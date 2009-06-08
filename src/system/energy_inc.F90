@@ -34,6 +34,11 @@ subroutine X(calculate_eigenvalues)(hm, gr, st, time)
   call push_sub('energy_inc.Xcalculate_eigenvalues')
   call profiling_in(prof, "EIGENVALUE_CALC")
 
+  if(in_debug_mode) then
+    write(message(1), '(a)') 'Debug: Calculating eigenvalues.'
+    call write_info(1)
+  end if
+
   if(gr%sb%open_boundaries.and.calc_mode_is(CM_GS)) then
     ! For open boundaries we know the eigenvalues.
     st%eigenval = st%ob_eigenval

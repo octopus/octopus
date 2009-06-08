@@ -244,6 +244,11 @@ contains
     call push_sub('v_ks.v_ks_calc')
     call profiling_in(prof, "KOHN_SHAM_CALC")
 
+    if(in_debug_mode) then
+      write(message(1), '(a)') 'Debug: Calculating Kohn-Sham potential.'
+      call write_info(1)
+    end if
+
     calc_eigenval_ = .false.
     if(present(calc_eigenval)) calc_eigenval_ = calc_eigenval
 
@@ -322,7 +327,7 @@ contains
     ! now. Otherwise one could just calculate it at the end of the calculation.
     if(hm%self_induced_magnetic) call magnetic_induced(gr, st, hm%a_ind, hm%b_ind)
 
-    if(present(calc_eigenval)) then
+    if(calc_eigenval_) then
       if (states_are_real(st)) then
         call dcalculate_eigenvalues(hm, gr, st)
       else
