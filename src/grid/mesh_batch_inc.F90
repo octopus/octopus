@@ -249,8 +249,12 @@ subroutine X(mesh_batch_rotate)(mesh, aa, transf)
   logical :: use_blas
 
   call profiling_in(prof, "BATCH_ROTATE")
-  
-  block_size = hardware%X(block_size)
+
+#ifdef R_TREAL  
+  block_size = max(40, hardware%l2%size/(2*8*aa%nst))
+#else
+  block_size = max(20, hardware%l2%size/(2*16*aa%nst))
+#endif
 
   use_blas = associated(aa%X(psicont))
 
