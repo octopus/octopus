@@ -310,7 +310,6 @@ subroutine X(mesh_batch_rotate)(mesh, aa, transf)
 
 end subroutine X(mesh_batch_rotate)
 
-
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

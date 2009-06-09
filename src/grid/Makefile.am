@@ -74,7 +74,7 @@ mesh_init.o : mesh_init.F90 mesh.o par_vec.o zoltan.o stencil_star.o stencil.o
 modelmb_1part.o : modelmb_1part.F90 mesh.o hypercube.o
 scalar_mesh.o : scalar_mesh.F90
 nl_operator.o : nl_operator.F90 nl_operator_inc.F90 par_vec.o mesh.o index.o batch.o stencil.o
-submesh.o : submesh.F90 submesh_inc.F90  mesh.o 
+submesh.o : submesh.F90 submesh_inc.F90  mesh.o batch.o
 stencil_star.o : stencil_star.F90 nl_operator.o stencil.o
 stencil_variational.o : stencil_variational.F90 nl_operator.o stencil.o
 stencil_cube.o : stencil_cube.F90 stencil.o

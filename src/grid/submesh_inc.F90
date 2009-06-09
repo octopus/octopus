@@ -91,6 +91,43 @@ R_TYPE function X(dsubmesh_to_mesh_dotp)(this, dim, sphi, phi, reduce) result(do
 
 end function X(dsubmesh_to_mesh_dotp)
 
+!------------------------------------------------------------ 
+
+! The following functions takes a batch of functions defined in
+! submesh (ss) and adds all of them to each of the mesh functions in
+! other batch (mm).  Each one is multiplied by a factor given by the
+! array factor.
+
+subroutine X(submesh_batch_add_matrix)(this, factor, mm, ss)
+  type(submesh_t),  intent(in)    :: this
+  R_TYPE,           intent(in)    :: factor(:, :)
+  type(batch_t),    intent(in)    :: mm
+  type(batch_t),    intent(in)    :: ss
+
+  integer :: ist, jst, idim, jdim, is
+
+  do ist =  1, mm%nst
+    do idim = 1, mm%dim
+      jdim = min(idim, ss%dim)
+      do jst = 1, ss%nst
+        if(associated(ss%states(jst)%dpsi)) then
+          forall(is = 1:this%ns)
+            mm%states(ist)%X(psi)(this%jxyz(is), idim) = &
+              mm%states(ist)%X(psi)(this%jxyz(is), idim) + factor(jst, ist)*ss%states(jst)%dpsi(is, jdim)
+          end forall
+        else
+          forall(is = 1:this%ns)
+            mm%states(ist)%X(psi)(this%jxyz(is), idim) = &
+              mm%states(ist)%X(psi)(this%jxyz(is), idim) + factor(jst, ist)*ss%states(jst)%zpsi(is, jdim)
+          end forall
+        end if
+      end do
+    end do
+  end do
+  
+end subroutine X(submesh_batch_add_matrix)
+
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

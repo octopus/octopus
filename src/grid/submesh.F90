@@ -20,6 +20,7 @@
 #include "global.h"
   
 module submesh_m
+  use batch_m
   use blas_m
   use global_m
   use lalg_basic_m
@@ -44,6 +45,8 @@ module submesh_m
        zsm_integrate,       &
        submesh_add_to_mesh, &
        submesh_to_mesh_dotp,&
+       dsubmesh_batch_add_matrix, &
+       zsubmesh_batch_add_matrix, &
        submesh_end
 
   type submesh_t

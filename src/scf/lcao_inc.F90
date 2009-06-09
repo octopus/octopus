@@ -334,14 +334,14 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   integer,             intent(in)    :: start
 
   integer :: iatom, jatom, ik, ist, idim, ip
-  integer :: nbasis, ibasis, jbasis, iorb, maxorb
+  integer :: nbasis, ibasis, jbasis, iorb, maxorb, norbs
   R_TYPE, allocatable :: hamiltonian(:, :), overlap(:, :)
   R_TYPE, allocatable :: psii(:, :), hpsi(:, :)
   FLOAT, allocatable :: ev(:)
   FLOAT, allocatable :: radius(:)
   type(submesh_t), allocatable :: sphere(:)
   integer, allocatable :: basis_atom(:)
-  type(batch_t) :: orbitals, orbitals_sub
+  type(batch_t) :: orbitals, orbitals_sub, psib
   FLOAT :: dist2, lapdist, maxradius
   type(profile_t), save :: prof_orbitals, prof_matrix, prof_wavefunction
 
@@ -513,32 +513,28 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
     call write_info(1)
 
 
-    if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, st%lnst)
+    if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, nbasis)
 
 
     do ist = st%st_start, st%st_end
       st%eigenval(ist, ik) = ev(ist)
-
       do idim = 1, st%d%dim
-
         forall(ip = 1:gr%mesh%np) st%X(psi)(ip, idim, ist, ik) = R_TOTYPE(M_ZERO)
-
-        ibasis = 0
-        do iatom = 1, geo%natoms
-          
-          call batch_subset(orbitals, ibasis + 1, ibasis + species_niwfs(geo%atom(iatom)%spec), orbitals_sub)
-
-          do iorb = 1, species_niwfs(geo%atom(iatom)%spec)
-            ibasis = ibasis + 1
-            
-            call submesh_add_to_mesh(sphere(iatom), orbitals_sub%states(iorb)%dpsi(:, 1), &
-              st%X(psi)(:, idim, ist, ik), factor = hamiltonian(ibasis, ist))
-          end do
-        end do
       end do
-
-      if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ist - st%st_start + 1, st%nst)
     end do
+
+    call batch_init(psib, st%d%dim, st%st_start, st%st_end, st%X(psi)(:, :, :, ik))
+
+    ibasis = 0
+    do iatom = 1, geo%natoms
+      norbs = species_niwfs(geo%atom(iatom)%spec)
+      call batch_subset(orbitals, ibasis + 1, ibasis + norbs, orbitals_sub)
+      call X(submesh_batch_add_matrix)(sphere(iatom), hamiltonian(ibasis + 1:, st%st_start:), psib, orbitals_sub)
+      ibasis = ibasis + norbs
+      if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ibasis, nbasis)
+    end do
+
+    call batch_end(psib)
 
     if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
     call profiling_out(prof_wavefunction)
