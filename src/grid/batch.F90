@@ -37,6 +37,7 @@ module batch_m
        batch_t,                 &
        batch_init,              &
        batch_copy,              &
+       batch_subset,            &
        batch_end,               &
        batch_add_state,         &
        dbatch_new_state,        &
@@ -139,6 +140,35 @@ contains
     call pop_sub()
 
   end subroutine batch_copy
+
+  !----------------------------------------------
+
+  subroutine batch_subset(bin, istart, iend, bout)
+    type(batch_t), intent(in)    :: bin
+    integer,       intent(in)    :: istart
+    integer,       intent(in)    :: iend
+    type(batch_t), intent(out)   :: bout
+
+    integer :: ii, ist, nst
+
+    call push_sub('batch.batch_copy')
+
+    ASSERT(0 < istart .and. istart <= iend .and. iend <= bin%nst)
+    
+    nst = iend - istart + 1
+    
+    call batch_init_empty(bout, bin%dim, nst)
+    
+    do ist = istart, iend
+      ii = ist - istart + 1
+      bout%states(ii)%ist = bin%states(ist)%ist
+      if(associated(bin%states(ist)%dpsi)) bout%states(ii)%dpsi => bin%states(ist)%dpsi
+      if(associated(bin%states(ist)%zpsi)) bout%states(ii)%zpsi => bin%states(ist)%zpsi
+    end do
+
+    call pop_sub()
+
+  end subroutine batch_subset
 
 #include "undef.F90"
 #include "real.F90"

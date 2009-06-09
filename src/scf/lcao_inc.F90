@@ -341,7 +341,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   FLOAT, allocatable :: radius(:)
   type(submesh_t), allocatable :: sphere(:)
   integer, allocatable :: basis_atom(:)
-  type(batch_t) :: orbitals
+  type(batch_t) :: orbitals, orbitals_sub
   FLOAT :: dist2, lapdist, maxradius
   type(profile_t), save :: prof_orbitals, prof_matrix, prof_wavefunction
 
@@ -350,15 +350,15 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   type(profile_t), save :: commprof, comm2prof
 #endif
 
-  write(message(1),'(a,i6,a)') 'Info: Performing LCAO calculation with ', nbasis, ' orbitals.'
-  call write_info(1)
-
   maxorb = 0
   nbasis = 0
   do iatom = 1, geo%natoms
     maxorb = max(maxorb, species_niwfs(geo%atom(iatom)%spec) )
     nbasis = nbasis + species_niwfs(geo%atom(iatom)%spec)
   end do
+
+  write(message(1),'(a,i6,a)') 'Info: Performing LCAO calculation with ', nbasis, ' orbitals.'
+  call write_info(1)
 
   SAFE_ALLOCATE(hamiltonian(1:nbasis, 1:nbasis))
   SAFE_ALLOCATE(overlap(1:nbasis, 1:nbasis))
@@ -525,10 +525,13 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
         ibasis = 0
         do iatom = 1, geo%natoms
+          
+          call batch_subset(orbitals, ibasis + 1, ibasis + species_niwfs(geo%atom(iatom)%spec), orbitals_sub)
+
           do iorb = 1, species_niwfs(geo%atom(iatom)%spec)
             ibasis = ibasis + 1
-
-            call submesh_add_to_mesh(sphere(iatom), orbitals%states(ibasis)%dpsi(:, 1), &
+            
+            call submesh_add_to_mesh(sphere(iatom), orbitals_sub%states(iorb)%dpsi(:, 1), &
               st%X(psi)(:, idim, ist, ik), factor = hamiltonian(ibasis, ist))
           end do
         end do
