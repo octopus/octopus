@@ -44,6 +44,8 @@ module submesh_m
        dsm_integrate,       &
        zsm_integrate,       &
        submesh_add_to_mesh, &
+       dsubmesh_batch_add,  &
+       zsubmesh_batch_add,  &
        submesh_to_mesh_dotp,&
        dsubmesh_batch_add_matrix, &
        zsubmesh_batch_add_matrix, &

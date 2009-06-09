@@ -128,6 +128,47 @@ subroutine X(submesh_batch_add_matrix)(this, factor, ss, mm)
 end subroutine X(submesh_batch_add_matrix)
 
 
+!------------------------------------------------------------ 
+
+! The following functions takes a batch of functions defined in
+! submesh (ss) and adds one of them to each of the mesh functions in
+! other batch (mm).  Each one is multiplied by a factor given by the
+! array factor.
+
+subroutine X(submesh_batch_add)(this, ss, mm)
+  type(submesh_t),  intent(in)    :: this
+  type(batch_t),    intent(in)    :: ss
+  type(batch_t),    intent(inout) :: mm
+
+  integer :: ist, idim, jdim, is
+
+  ASSERT(mm%nst == ss%nst)
+
+  do ist =  1, mm%nst
+    do idim = 1, mm%dim
+      jdim = min(idim, ss%dim)
+
+      if(associated(ss%states(ist)%dpsi)) then
+
+        forall(is = 1:this%ns)
+          mm%states(ist)%X(psi)(this%jxyz(is), idim) = &
+            mm%states(ist)%X(psi)(this%jxyz(is), idim) + ss%states(ist)%dpsi(is, jdim)
+        end forall
+        
+      else
+        
+        forall(is = 1:this%ns)
+          mm%states(ist)%X(psi)(this%jxyz(is), idim) = &
+            mm%states(ist)%X(psi)(this%jxyz(is), idim) + ss%states(ist)%zpsi(is, jdim)
+        end forall
+        
+      end if
+    end do
+  end do
+  
+end subroutine X(submesh_batch_add)
+
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

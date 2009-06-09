@@ -336,12 +336,12 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   integer :: iatom, jatom, ik, ist, idim, ip
   integer :: nbasis, ibasis, jbasis, iorb, jorb, maxorb, norbs
   R_TYPE, allocatable :: hamiltonian(:, :), overlap(:, :)
-  R_TYPE, allocatable :: psii(:, :), hpsi(:, :)
+  R_TYPE, allocatable :: psii(:, :, :), hpsi(:, :, :)
   FLOAT, allocatable :: ev(:)
   FLOAT, allocatable :: radius(:)
   type(submesh_t), allocatable :: sphere(:)
-  integer, allocatable :: basis_atom(:), basis_orb(:)
-  type(batch_t) :: psib
+  integer, allocatable :: basis_atom(:), basis_orb(:), atom_orb_basis(:, :)
+  type(batch_t) :: hpsib, psib
   type(batch_t), allocatable :: orbitals(:)
   FLOAT :: dist2, lapdist, maxradius
   type(profile_t), save :: prof_orbitals, prof_matrix, prof_wavefunction
@@ -365,13 +365,14 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   SAFE_ALLOCATE(overlap(1:nbasis, 1:nbasis))
   SAFE_ALLOCATE(ev(1:nbasis))
 
-  SAFE_ALLOCATE(psii(1:gr%mesh%np_part, 1:st%d%dim))
-  SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE(psii(1:gr%mesh%np_part, 1:st%d%dim, maxorb))
+  SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim, maxorb))
   SAFE_ALLOCATE(radius(1:nbasis))
   SAFE_ALLOCATE(sphere(1:geo%natoms))
   SAFE_ALLOCATE(orbitals(1:geo%natoms))
   SAFE_ALLOCATE(basis_atom(1:nbasis))
   SAFE_ALLOCATE(basis_orb(1:nbasis))
+  SAFE_ALLOCATE(atom_orb_basis(1:geo%natoms, 1:maxorb))
 
   ! this is the extra distance that the laplacian adds to the localization radius
   lapdist = maxval(abs(gr%mesh%idx%enlarge)*gr%mesh%h)
@@ -392,7 +393,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
       radius(ibasis + iorb) = species_get_iwf_radius(geo%atom(iatom)%spec, iorb, is = 1)
       maxradius = max(maxradius, radius(ibasis + iorb))
     end do
-   
+
     ! initialize the radial grid
     call submesh_init_sphere(sphere(iatom), gr%mesh%sb, gr%mesh, geo%atom(iatom)%x, maxradius)
     call batch_init(orbitals(iatom), 1, norbs)
@@ -400,15 +401,16 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
     do iorb = 1, norbs
       ibasis = ibasis + 1
+      atom_orb_basis(iatom, iorb) = ibasis
       basis_atom(ibasis) = iatom
       basis_orb(ibasis) = iorb
-      
+
       ! allocate and calculate the orbitals
       call species_get_orbital_submesh(geo%atom(iatom)%spec, sphere(iatom), iorb, st%d%dim, 1, &
         geo%atom(iatom)%x, orbitals(iatom)%states(iorb)%dpsi(:, 1))
-      
+
       if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ibasis, nbasis)
-      
+
     end do
   end do
 
@@ -428,40 +430,48 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
     if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, nbasis)
 
-    do ibasis = 1, nbasis
-      iatom = basis_atom(ibasis)
-      iorb = basis_orb(ibasis)
+    do iatom = 1, geo%natoms
+      norbs = species_niwfs(geo%atom(iatom)%spec)
 
-      do idim = 1,st%d%dim 
-        forall(ip = 1:gr%mesh%np) psii(ip, idim) = M_ZERO
-        call submesh_add_to_mesh(sphere(iatom), orbitals(iatom)%states(iorb)%dpsi(:, 1), psii(:, idim))
-      end do
+      psii = M_ZERO
 
-      call X(hamiltonian_apply)(hm, gr, psii, hpsi, ibasis, ik)
+      call batch_init(psib, st%d%dim, atom_orb_basis(iatom, 1), atom_orb_basis(iatom, norbs), psii)
+      call batch_init(hpsib, st%d%dim, atom_orb_basis(iatom, 1), atom_orb_basis(iatom, norbs), hpsi)
+
+      call X(submesh_batch_add)(sphere(iatom), orbitals(iatom), psib)
+      call X(hamiltonian_apply_batch)(hm, gr, psib, hpsib, ik)
+
+      call batch_end(psib)
+      call batch_end(hpsib)
       
-      do jbasis = 1, nbasis
-        jatom = basis_atom(jbasis)
-        jorb = basis_orb(jbasis)
+      do iorb = 1, norbs
+        ibasis = atom_orb_basis(iatom, iorb)
 
-        if(jatom < iatom) cycle
+        do jbasis = 1, nbasis
+          jatom = basis_atom(jbasis)
+          jorb = basis_orb(jbasis)
 
-        dist2 = sum((geo%atom(iatom)%x(1:MAX_DIM) - geo%atom(jatom)%x(1:MAX_DIM))**2)
+          if(jatom < iatom) cycle
 
-        if(dist2 > (radius(ibasis) + radius(jbasis) + lapdist)**2) cycle
+          dist2 = sum((geo%atom(iatom)%x(1:MAX_DIM) - geo%atom(jatom)%x(1:MAX_DIM))**2)
 
-        hamiltonian(jbasis, ibasis) = &
-          submesh_to_mesh_dotp(sphere(jatom), st%d%dim, orbitals(jatom)%states(jorb)%dpsi(:, 1), hpsi, reduce = .false.)
-        hamiltonian(ibasis, jbasis) = R_CONJ(hamiltonian(jbasis, ibasis))
+          if(dist2 > (radius(ibasis) + radius(jbasis) + lapdist)**2) cycle
 
-        if(dist2 > (radius(ibasis) + radius(jbasis))**2) cycle
+          hamiltonian(jbasis, ibasis) = &
+            submesh_to_mesh_dotp(sphere(jatom), st%d%dim, orbitals(jatom)%states(jorb)%dpsi(:, 1), hpsi(:, :, iorb), reduce = .false.)
+          hamiltonian(ibasis, jbasis) = R_CONJ(hamiltonian(jbasis, ibasis))
 
-        overlap(jbasis, ibasis) = &
-          submesh_to_mesh_dotp(sphere(jatom), st%d%dim, orbitals(jatom)%states(jorb)%dpsi(:, 1), psii, reduce = .false.)
-        overlap(ibasis, jbasis) = R_CONJ(overlap(jbasis, ibasis))
+          if(dist2 > (radius(ibasis) + radius(jbasis))**2) cycle
 
+          overlap(jbasis, ibasis) = &
+            submesh_to_mesh_dotp(sphere(jatom), st%d%dim, orbitals(jatom)%states(jorb)%dpsi(:, 1), psii(:, :, iorb), reduce = .false.)
+          overlap(ibasis, jbasis) = R_CONJ(overlap(jbasis, ibasis))
+
+        end do
+
+        if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ibasis, nbasis)
       end do
 
-      if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ibasis, nbasis)
     end do
 
     if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
