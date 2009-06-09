@@ -367,7 +367,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
   SAFE_ALLOCATE(psii(1:gr%mesh%np_part, 1:st%d%dim, maxorb))
   SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim, maxorb))
-  SAFE_ALLOCATE(radius(1:nbasis))
+  SAFE_ALLOCATE(radius(1:geo%natoms))
   SAFE_ALLOCATE(sphere(1:geo%natoms))
   SAFE_ALLOCATE(orbitals(1:geo%natoms))
   SAFE_ALLOCATE(basis_atom(1:nbasis))
@@ -390,9 +390,10 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
     norbs = species_niwfs(geo%atom(iatom)%spec)
     maxradius = M_ZERO
     do iorb = 1, norbs
-      radius(ibasis + iorb) = species_get_iwf_radius(geo%atom(iatom)%spec, iorb, is = 1)
-      maxradius = max(maxradius, radius(ibasis + iorb))
+      maxradius = max(maxradius, species_get_iwf_radius(geo%atom(iatom)%spec, iorb, is = 1))
     end do
+
+    radius(iatom) = maxradius
 
     ! initialize the radial grid
     call submesh_init_sphere(sphere(iatom), gr%mesh%sb, gr%mesh, geo%atom(iatom)%x, maxradius)
@@ -428,7 +429,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
     hamiltonian = R_TOTYPE(M_ZERO)
     overlap = R_TOTYPE(M_ZERO)
 
-    if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, nbasis)
+    if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, geo%natoms)
 
     do iatom = 1, geo%natoms
       norbs = species_niwfs(geo%atom(iatom)%spec)
@@ -443,40 +444,54 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
       call batch_end(psib)
       call batch_end(hpsib)
-      
-      do iorb = 1, norbs
-        ibasis = atom_orb_basis(iatom, iorb)
 
-        do jbasis = 1, nbasis
-          jatom = basis_atom(jbasis)
-          jorb = basis_orb(jbasis)
+      do jatom = 1, geo%natoms
+        if(jatom < iatom) cycle
+        
 
-          if(jatom < iatom) cycle
+        dist2 = sum((geo%atom(iatom)%x(1:MAX_DIM) - geo%atom(jatom)%x(1:MAX_DIM))**2)
 
-          dist2 = sum((geo%atom(iatom)%x(1:MAX_DIM) - geo%atom(jatom)%x(1:MAX_DIM))**2)
+        if(dist2 > (radius(iatom) + radius(jatom) + lapdist)**2) cycle
 
-          if(dist2 > (radius(ibasis) + radius(jbasis) + lapdist)**2) cycle
+        do iorb = 1, norbs
+          ibasis = atom_orb_basis(iatom, iorb)
+          
+          do jorb = 1, species_niwfs(geo%atom(jatom)%spec)
+            jbasis = atom_orb_basis(jatom, jorb)
 
-          hamiltonian(jbasis, ibasis) = &
-            submesh_to_mesh_dotp(sphere(jatom), st%d%dim, orbitals(jatom)%states(jorb)%dpsi(:, 1), hpsi(:, :, iorb), reduce = .false.)
-          hamiltonian(ibasis, jbasis) = R_CONJ(hamiltonian(jbasis, ibasis))
+            hamiltonian(jbasis, ibasis) = submesh_to_mesh_dotp(sphere(jatom), &
+              st%d%dim, orbitals(jatom)%states(jorb)%dpsi(:, 1), hpsi(:, :, iorb), reduce = .false.)
 
-          if(dist2 > (radius(ibasis) + radius(jbasis))**2) cycle
-
-          overlap(jbasis, ibasis) = &
-            submesh_to_mesh_dotp(sphere(jatom), st%d%dim, orbitals(jatom)%states(jorb)%dpsi(:, 1), psii(:, :, iorb), reduce = .false.)
-          overlap(ibasis, jbasis) = R_CONJ(overlap(jbasis, ibasis))
-
+            hamiltonian(ibasis, jbasis) = R_CONJ(hamiltonian(jbasis, ibasis))
+          end do
         end do
 
-        if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ibasis, nbasis)
-      end do
+        if(dist2 > (radius(iatom) + radius(jatom))**2) cycle
 
+        do iorb = 1, norbs
+          ibasis = atom_orb_basis(iatom, iorb)
+          
+          do jorb = 1, species_niwfs(geo%atom(jatom)%spec)
+            jbasis = atom_orb_basis(jatom, jorb)
+
+            overlap(jbasis, ibasis) = submesh_to_mesh_dotp(sphere(jatom), &
+              st%d%dim, orbitals(jatom)%states(jorb)%dpsi(:, 1), psii(:, :, iorb), reduce = .false.)
+
+            overlap(ibasis, jbasis) = R_CONJ(overlap(jbasis, ibasis))
+
+          end do
+        end do
+        
+      end do
+      
+      if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(iatom, geo%natoms)
     end do
 
     if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
 
 #ifdef HAVE_MPI
+    !parallelization is disabled for the moment
+#if 0
     if(geo%atoms%parallel) then
       call profiling_in(commprof, "LCAO_BCAST")
 
@@ -502,6 +517,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
       call profiling_out(commprof)
     end if
+#endif
 
     if(gr%mesh%parallel_in_domains) then
       call profiling_in(comm2prof, "LCAO_REDUCE")
