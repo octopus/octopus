@@ -98,11 +98,11 @@ end function X(dsubmesh_to_mesh_dotp)
 ! other batch (mm).  Each one is multiplied by a factor given by the
 ! array factor.
 
-subroutine X(submesh_batch_add_matrix)(this, factor, mm, ss)
+subroutine X(submesh_batch_add_matrix)(this, factor, ss, mm)
   type(submesh_t),  intent(in)    :: this
   R_TYPE,           intent(in)    :: factor(:, :)
-  type(batch_t),    intent(in)    :: mm
   type(batch_t),    intent(in)    :: ss
+  type(batch_t),    intent(inout) :: mm
 
   integer :: ist, jst, idim, jdim, is
 

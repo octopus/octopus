@@ -87,6 +87,35 @@ subroutine X(batch_delete_state)(this, ii)
   call pop_sub()
 end subroutine X(batch_delete_state)
 
+subroutine X(batch_new)(this, st_start, st_end, np)
+  type(batch_t),  intent(inout) :: this
+  integer,        intent(in)    :: st_start
+  integer,        intent(in)    :: st_end
+  integer,        intent(in)    :: np
+
+  integer :: ist
+
+  call push_sub('batch_inc.Xbatch_new')
+
+  SAFE_ALLOCATE(this%X(psicont)(1:np, 1:this%dim, 1:st_end - st_start + 1))
+
+  do ist = st_start, st_end
+    call X(batch_add_state)(this, ist,this%X(psicont)(:, :, ist - st_start + 1))
+  end do
+
+  call pop_sub()
+end subroutine X(batch_new)
+
+subroutine X(batch_delete)(this)
+  type(batch_t),  intent(inout) :: this
+
+  call push_sub('batch_inc.Xbatch_delete_state')
+
+  SAFE_DEALLOCATE_P(this%X(psicont))
+
+  call pop_sub()
+end subroutine X(batch_delete)
+
 subroutine X(batch_set)(this, np, psi)
   type(batch_t),  intent(out)   :: this
   integer,        intent(in)    :: np
