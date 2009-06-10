@@ -48,9 +48,7 @@ ACX_C_BUILTIN_PREFETCH
 # Checks for header files.
 AC_HEADER_DIRENT
 AC_HEADER_STDC
-AC_CHECK_HEADERS([fcntl.h float.h locale.h malloc.h stddef.h stdlib.h \
-string.h strings.h sys/ioctl.h sys/time.h termios.h unistd.h signal.h \
-errno.h])
+AC_CHECK_HEADERS([signal.h errno.h])
 AC_FUNC_ALLOCA
 
 # Checks for typedefs, structures, and compiler characteristics.
@@ -69,13 +67,10 @@ AC_FUNC_GETPGRP
 AC_PROG_GCC_TRADITIONAL
 AC_FUNC_SETVBUF_REVERSED
 AC_FUNC_STAT
-AC_FUNC_VPRINTF
-AC_CHECK_FUNCS([getcwd gettimeofday mkdir pow sqrt strcasecmp strdup \
-strerror strncasecmp strndup uname tcgetpgrp scandir alphasort \
-sigaction malloc realloc opendir readdir closedir strchr strtod assert \
-posix_memalign perror strcasestr sbrk])
-
-AC_CHECK_LIB([numa], [numa_available])
+AC_CHECK_FUNCS([gettimeofday \
+strndup tcgetpgrp scandir alphasort \
+sigaction readdir closedir strchr strtod \
+perror strcasestr sbrk])
 
 ACX_ARCH
 
