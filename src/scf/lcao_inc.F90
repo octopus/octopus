@@ -442,8 +442,6 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
       call X(submesh_batch_add)(sphere(iatom), orbitals(iatom), psib)
       call X(hamiltonian_apply_batch)(hm, gr, psib, hpsib, ik)
 
-      call batch_end(psib)
-      call batch_end(hpsib)
 
       do jatom = 1, geo%natoms
         if(jatom < iatom) cycle
@@ -453,36 +451,29 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
         if(dist2 > (radius(iatom) + radius(jatom) + lapdist)**2) cycle
 
-        do iorb = 1, norbs
-          ibasis = atom_orb_basis(iatom, iorb)
-          
-          do jorb = 1, species_niwfs(geo%atom(jatom)%spec)
-            jbasis = atom_orb_basis(jatom, jorb)
+        ibasis = atom_orb_basis(iatom, 1)
+        jbasis = atom_orb_basis(jatom, 1)
 
-            hamiltonian(jbasis, ibasis) = submesh_to_mesh_dotp(sphere(jatom), &
-              st%d%dim, orbitals(jatom)%states(jorb)%dpsi(:, 1), hpsi(:, :, iorb), reduce = .false.)
-
-            hamiltonian(ibasis, jbasis) = R_CONJ(hamiltonian(jbasis, ibasis))
-          end do
-        end do
+        call X(submesh_batch_dotp_matrix)(sphere(jatom),  hpsib, orbitals(jatom), hamiltonian(ibasis:, jbasis:), reduce= .false.)
 
         if(dist2 > (radius(iatom) + radius(jatom))**2) cycle
 
+        call X(submesh_batch_dotp_matrix)(sphere(jatom), psib, orbitals(jatom), overlap(ibasis:, jbasis:), reduce= .false.)
+
+        ! the other half of the matrix
         do iorb = 1, norbs
           ibasis = atom_orb_basis(iatom, iorb)
-          
           do jorb = 1, species_niwfs(geo%atom(jatom)%spec)
             jbasis = atom_orb_basis(jatom, jorb)
-
-            overlap(jbasis, ibasis) = submesh_to_mesh_dotp(sphere(jatom), &
-              st%d%dim, orbitals(jatom)%states(jorb)%dpsi(:, 1), psii(:, :, iorb), reduce = .false.)
-
-            overlap(ibasis, jbasis) = R_CONJ(overlap(jbasis, ibasis))
-
+            hamiltonian(jbasis, ibasis) = R_CONJ(hamiltonian(ibasis, jbasis))
+            overlap(jbasis, ibasis) = R_CONJ(overlap(ibasis, jbasis))
           end do
         end do
-        
+
       end do
+
+      call batch_end(psib)
+      call batch_end(hpsib)
       
       if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(iatom, geo%natoms)
     end do

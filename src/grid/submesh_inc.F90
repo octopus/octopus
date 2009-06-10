@@ -168,6 +168,88 @@ subroutine X(submesh_batch_add)(this, ss, mm)
   
 end subroutine X(submesh_batch_add)
 
+!----------------------------------------------------------------------------------
+
+subroutine X(submesh_batch_dotp_matrix)(this, mm, ss, dot, reduce)
+  type(submesh_t),   intent(in)    :: this
+  type(batch_t),     intent(in)    :: ss
+  type(batch_t),     intent(in)    :: mm
+  R_TYPE,            intent(inout) :: dot(:, :)
+  logical, optional, intent(in)    :: reduce
+
+  integer :: ist, jst, idim, jdim, is
+  logical :: reduce_
+  R_TYPE :: dotp
+
+  reduce_ = .false.
+  if(present(reduce)) reduce_ = reduce
+
+  ASSERT(.not. reduce_)
+
+  if(this%mesh%use_curvilinear) then
+
+    do ist = 1, ss%nst
+      do jst = 1, mm%nst
+        dotp = R_TOTYPE(M_ZERO)
+        do idim = 1, ss%dim
+          jdim = min(idim, ss%dim)
+
+          if(associated(ss%states(ist)%dpsi)) then
+
+            do is = 1, this%ns
+              dotp = dotp + this%mesh%vol_pp(this%jxyz(is))*&
+                mm%states(jst)%X(psi)(this%jxyz(is), idim)*&
+                ss%states(ist)%dpsi(is, jdim)
+            end do
+
+          else
+
+            do is = 1, this%ns
+              dotp = dotp + this%mesh%vol_pp(this%jxyz(is))*&
+                mm%states(jst)%X(psi)(this%jxyz(is), idim)*&
+                ss%states(ist)%zpsi(is, jdim)
+            end do
+
+          end if
+        end do
+
+        dot(ist, jst) = dotp
+      end do
+    end do
+    
+  else
+
+    do ist = 1, ss%nst
+      do jst = 1, mm%nst
+        dotp = R_TOTYPE(M_ZERO)
+
+        do idim = 1, mm%dim
+          jdim = min(idim, ss%dim)
+
+          if(associated(ss%states(ist)%dpsi)) then
+            do is = 1, this%ns
+              dotp = dotp + &
+                mm%states(jst)%X(psi)(this%jxyz(is), idim)*&
+                ss%states(ist)%dpsi(is, jdim)
+            end do
+          else
+            do is = 1, this%ns
+              dotp = dotp + &
+                mm%states(jst)%X(psi)(this%jxyz(is), idim)*&
+                ss%states(ist)%zpsi(is, jdim)
+            end do
+          end if
+
+        end do
+
+        dot(jst, ist) = dotp*this%mesh%vol_pp(1)
+      end do
+    end do
+    
+  end if
+  
+end subroutine X(submesh_batch_dotp_matrix)
+
 
 !! Local Variables:
 !! mode: f90

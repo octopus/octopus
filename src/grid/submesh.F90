@@ -49,6 +49,8 @@ module submesh_m
        submesh_to_mesh_dotp,&
        dsubmesh_batch_add_matrix, &
        zsubmesh_batch_add_matrix, &
+       dsubmesh_batch_dotp_matrix,&
+       zsubmesh_batch_dotp_matrix,&
        submesh_end
 
   type submesh_t
