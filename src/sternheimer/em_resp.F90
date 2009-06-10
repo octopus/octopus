@@ -697,8 +697,10 @@ contains
 
       call out_projections()
       call out_wavefunctions()
-      call out_circular_dichroism()
 
+      if(.not. simul_box_is_periodic(gr%sb) .or. em_vars%force_no_kdotp) then
+        call out_circular_dichroism()
+      endif
     end do
 
     call pop_sub()

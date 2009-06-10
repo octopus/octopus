@@ -109,11 +109,10 @@ contains
     !% equation.
     !%Option cg 5
     !% Conjugate gradients. This is the fastest solver but does not
-    !% work when an imaginary shift is added. This is the default.
+    !% work when an imaginary shift is added.
     !%Option bicgstab 3
     !% Biconjugate gradients stabilized. This is an improved version
-    !% of bcg that is faster and more stable. This is the default when
-    !% complex polarizabilities are calculated.
+    !% of bcg that is faster and more stable.
     !%Option multigrid 7
     !% Multigrid solver (experimental, currently is only Gauss-Jacobi).
     !%Option qmr 8

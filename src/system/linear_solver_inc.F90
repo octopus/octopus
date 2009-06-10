@@ -64,9 +64,22 @@ subroutine X(solve_HXeY) (this, hm, gr, st, ist, ik, x, y, omega, tol, occ_respo
 
     this%iter = this%max_iter
     
-    call X(qmr_sym)(gr%mesh%np, x(:, 1), y(:, 1), &
-         X(ls_solver_operator_na), X(ls_dotu_qmr), X(ls_nrm2_qmr), X(ls_preconditioner), &
-         this%iter, residue = this%abs_psi, threshold = tol, showprogress = .false.)
+    ! complex symmetric: never the case in the Sternheimer equation
+!    call X(qmr_sym)(gr%mesh%np, x(:, 1), y(:, 1), &
+!      X(ls_solver_operator_na), X(ls_dotu_qmr), X(ls_nrm2_qmr), X(ls_preconditioner), &
+!      this%iter, residue = this%abs_psi, threshold = tol, showprogress = .false.)
+
+!    if(R_CONJ(omega) .eq. omega) then
+    ! Hermitian
+      call X(qmr_sym)(gr%mesh%np, x(:, 1), y(:, 1), &
+        X(ls_solver_operator_na), X(ls_dotp_qmr), X(ls_nrm2_qmr), X(ls_preconditioner), &
+        this%iter, residue = this%abs_psi, threshold = tol, showprogress = .false.)
+!    else
+    ! general
+!      call X(qmr)(gr%mesh%np, x(:, 1), y(:, 1), X(ls_solver_operator_na), X(ls_solver_operator_na_conjg), &
+!        X(ls_dotu_qmr), X(ls_nrm2_qmr), X(ls_preconditioner), X(ls_preconditioner), &
+!        this%iter, residue = this%abs_psi, threshold = tol, showprogress = .false.)
+!    endif
 
   case(LS_SOS)
     call X(ls_solver_sos)(this, hm, gr, st, ist, ik, x, y, omega)
@@ -100,6 +113,15 @@ R_TYPE function X(ls_dotu_qmr)(x,y)
   X(ls_dotu_qmr) = X(mf_dotp)(args%gr%mesh, x, y, dotu = .true.)
   
 end function X(ls_dotu_qmr)
+
+! ---------------------------------------------------------
+R_TYPE function X(ls_dotp_qmr)(x,y)
+  R_TYPE, intent(in) :: x(:)
+  R_TYPE, intent(in) :: y(:)
+  
+  X(ls_dotp_qmr) = X(mf_dotp)(args%gr%mesh, x, y)
+  
+end function X(ls_dotp_qmr)
 
 ! ---------------------------------------------------------
 !Conjugate gradients
@@ -429,6 +451,7 @@ end subroutine X(ls_solver_operator)
 
 
 ! ---------------------------------------------------------
+! applies ls_solver_operator with other arguments implicit as global variables
 subroutine X(ls_solver_operator_na) (x, hx)
   R_TYPE,                intent(in)    :: x(:)   !  x(gr%mesh%np, st%d%dim)
   R_TYPE,                intent(out)   :: Hx(:)  ! Hx(gr%mesh%np, st%d%dim)
@@ -447,6 +470,29 @@ subroutine X(ls_solver_operator_na) (x, hx)
   SAFE_DEALLOCATE_A(tmpy)
 
 end subroutine X(ls_solver_operator_na)
+
+
+! ---------------------------------------------------------
+! applies Hermitian conjugate of ls_solver_operator with other arguments implicit as global variables
+! conjugate just means taking conjugate of omega, since Hamiltonian is Hermitian
+subroutine X(ls_solver_operator_na_conjg) (x, hx)
+  R_TYPE,                intent(in)    :: x(:)   !  x(gr%mesh%np, st%d%dim)
+  R_TYPE,                intent(out)   :: Hx(:)  ! Hx(gr%mesh%np, st%d%dim)
+
+  R_TYPE, allocatable :: tmpx(:, :)
+  R_TYPE, allocatable :: tmpy(:, :)
+
+  SAFE_ALLOCATE(tmpx(1:args%gr%mesh%np_part, 1:1))
+  SAFE_ALLOCATE(tmpy(1:args%gr%mesh%np, 1:1))
+
+  call lalg_copy(args%gr%mesh%np, x, tmpx(:, 1))
+  call X(ls_solver_operator)(args%hm, args%gr, args%st, args%ist, args%ik, R_CONJ(args%X(omega)), tmpx, tmpy)
+  call lalg_copy(args%gr%mesh%np, tmpy(:, 1), hx)
+
+  SAFE_DEALLOCATE_A(tmpx)
+  SAFE_DEALLOCATE_A(tmpy)
+
+end subroutine X(ls_solver_operator_na_conjg)
 
 
 ! ---------------------------------------------------------

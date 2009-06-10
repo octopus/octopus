@@ -58,6 +58,9 @@ subroutine states_choose_kpoints(d, sb, geo)
     return
   end if
 
+  ! if Monkhorst-Pack used, this variable will be reset
+  d%nik_axis(:) = 0
+
   !%Variable KPoints
   !%Type block
   !%Section Mesh::KPoints
@@ -67,8 +70,8 @@ subroutine states_choose_kpoints(d, sb, geo)
   !% of each k-point and the following are the components of the k-point
   !% vector. You only need to specify the components for the
   !% periodic directions. Note that the k-points should be given in
-  !% reciprocal-space coordinates (not in reduced coordinates), i.e.
-  !% what Octopus writes in a line in the standard output as
+  !% Cartesian coordinates (not in reduced coordinates), i.e.
+  !% what Octopus writes in a line in the ground-state standard output as
   !% <tt>#k =   1, k = (    0.154000,    0.154000,    0.154000)</tt>.
   !%
   !% For example, if you want to include only the gamma point, you can
@@ -145,7 +148,7 @@ subroutine states_choose_kpoints(d, sb, geo)
 
     d%nik = 1
 
-    SAFE_ALLOCATE( d%kpoints(1:MAX_DIM, 1:d%nik))
+    SAFE_ALLOCATE(d%kpoints(1:MAX_DIM, 1:d%nik))
     SAFE_ALLOCATE(d%kweights(1:d%nik))
 
     d%kweights(1) = M_ONE
@@ -157,7 +160,7 @@ subroutine states_choose_kpoints(d, sb, geo)
   end if
 
 ! now deal with Monkhorst-Pack
-  d%nik_axis = 1
+  d%nik_axis(:) = 1
   do i = 1, sb%periodic_dim
     call loct_parse_block_int(blk, 0, i-1, d%nik_axis(i))
   end do
@@ -178,7 +181,7 @@ subroutine states_choose_kpoints(d, sb, geo)
 
   !%Variable KPointsUseSymmetries
   !%Type logical
-  !%Default yes
+  !%Default no
   !%Section Mesh::KPoints
   !%Description
   !% This variable defines whether symmetries are taken into account
@@ -186,7 +189,7 @@ subroutine states_choose_kpoints(d, sb, geo)
   !% sampling will range over the full Brillouin zone. The default is
   !% yes.
   !%End
-  call loct_parse_logical(datasets_check('KPointsUseSymmetries'), .true., use_symmetries)
+  call loct_parse_logical(datasets_check('KPointsUseSymmetries'), .false., use_symmetries)
 
   !%Variable KPointsUseTimeReversal
   !%Type logical
@@ -262,11 +265,7 @@ contains
     if(in_debug_mode) then
       
       iunit = io_open('debug/kpoints', action = 'write')
-      
-      do ik = 1, d%nik
-        write(iunit, '(4e30.20)') d%kweights(ik), d%kpoints(:, ik)
-      end do
-      
+      call kpoints_write_info(d, sb%dim, iunit)      
       call io_close(iunit)
 
     end if
@@ -286,11 +285,17 @@ subroutine kpoints_write_info(d, sbdim, iunit)
 
   call push_sub('states_kpoints.kpoints_write_info')
 
-  write(message(1),'(a,9(i3,1x))') 'Number of k points in each direction = ', d%nik_axis(1:sbdim)
-  call write_info(1, iunit)
+  if(d%nik_axis(1) .ne. 0) then
+    write(message(1),'(a,9(i3,1x))') 'Number of k points in each direction = ', d%nik_axis(1:sbdim)
+    call write_info(1, iunit)
+  else
+    ! a Monkhorst-Pack grid was not used
+    write(message(1),'(a,9(i3,1x))') 'Number of k points = ', kpoint_index(d, d%nik)
+    call write_info(1, iunit)
+  endif
 
   write(message(1), '(3x,a,7x,a,9x,a,9x,a,8x,a)') 'ik', 'K_x', 'K_y', 'K_z', 'Weight'
-  message(2) = '       --------------------------------------------------'
+  message(2) = '   --------------------------------------------------'
   call write_info(2, iunit, verbose_limit=80)
 
   do ik = 1, d%nik

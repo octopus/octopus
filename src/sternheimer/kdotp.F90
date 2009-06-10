@@ -405,6 +405,7 @@ contains
       tmp = int2str(ik2)
       write(filename, '(3a, i1)') OUTPUT_DIR//'kpoint_', trim(tmp), '_', ispin
       iunit = io_open(trim(filename), action='write')
+
       write(iunit,'(a, i10)') '# spin    index = ', ispin
       write(iunit,'(a, i10)') '# k-point index = ', ik2
       write(iunit,'(a, 3f12.8)') '# k-point coordinates = ', st%d%kpoints(1:MAX_DIM, ik)
@@ -431,6 +432,7 @@ contains
         call io_output_tensor(iunit, kdotp_vars%eff_mass_inv(ik, ist, :, :), gr%mesh%sb%dim, M_ONE)
       enddo
 
+      call io_close(iunit)
     enddo
 
     call pop_sub()

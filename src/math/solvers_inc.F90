@@ -22,11 +22,11 @@
 ! must be called under a common interface: conjugate_gradients. It provides an
 ! approximate solution to the linear system problem  Ax = b.
 ! Solving a symmetric linear system, which is either real or complex symmetric or
-! hermitian the best choice is sym_conjugate_gradients (does not need A^\dagger)
-! Solving a real unsymmetric or a complex non hermitian system bi_conjugate_gradients
+! Hermitian the best choice is sym_conjugate_gradients (does not need A^\dagger)
+! Solving a real unsymmetric or a complex non-Hermitian system bi_conjugate_gradients
 ! has to be chosen (where one does need A^\dagger).
 !
-! Note: the complex valued versions (both CG and BiCG) work only with
+! Note: the complex-valued versions (both CG and BiCG) work only with
 !       symmetric operators but they may be non-Hermitian. This is a
 !       property of the CG algorithm. A comment on this can be found
 !       in chapter 4.1 of ftp://ftp.netlib.org/templates/templates.ps
@@ -60,7 +60,7 @@
 !                                       complex symmetric: <x | y> = x^T * y
 !                                       hermitian:         <x | y> = x^\dagger * y
 !                                       general:           <x | y> = x^\dagger * y
-!    integer, intent(inout) :: iter  => On input, the maximum number of iteratios that
+!    integer, intent(inout) :: iter  => On input, the maximum number of iterations that
 !                                       the procedure is allowed to take.
 !                                       On output, the iterations it actually did.
 !    FLOAT, intent(out) :: residue   => If present, it measures the final error:
@@ -233,7 +233,7 @@ subroutine X(bi_conjugate_gradients)(np, x, b, op, opt, dotp, iter, residue, thr
 end subroutine X(bi_conjugate_gradients)
 
   ! ---------------------------------------------------------
-  subroutine X(qmr_sym_spec_dotp)(np, x, b, op, prec, iter, residue, threshold, showprogress, converged)
+  subroutine X(qmr_sym_spec_dotu)(np, x, b, op, prec, iter, residue, threshold, showprogress, converged)
     integer, target,   intent(in)    :: np    ! number of points
     R_TYPE,             intent(inout) :: x(:)  ! initial guess and result
     R_TYPE,             intent(in)    :: b(:)  ! the right side
@@ -255,17 +255,17 @@ end subroutine X(bi_conjugate_gradients)
     logical, optional, intent(in)    :: showprogress ! show progress bar
     logical, optional, intent(out)   :: converged ! is the algorithm converged
 
-    call push_sub('solvers_inc.Xqmr_sym_spec_dotp')
+    call push_sub('solvers_inc.Xqmr_sym_spec_dotu')
 
     np_p => np
-    call X(qmr_sym_gen_dotp)(np, x, b, op, X(dotu_qmr), X(nrm2_qmr), prec, iter, &
+    call X(qmr_sym_gen_dotu)(np, x, b, op, X(dotu_qmr), X(nrm2_qmr), prec, iter, &
       residue, threshold, showprogress, converged)
 
     call pop_sub()
-  end subroutine X(qmr_sym_spec_dotp)
+  end subroutine X(qmr_sym_spec_dotu)
 
   ! ---------------------------------------------------------
-  subroutine X(qmr_spec_dotp)(np, x, b, op, opt, prec, prect, iter, residue, threshold, showprogress, converged)
+  subroutine X(qmr_spec_dotu)(np, x, b, op, opt, prec, prect, iter, residue, threshold, showprogress, converged)
     integer, target,   intent(in)    :: np    ! number of points
     R_TYPE,             intent(inout) :: x(:)  ! initial guess and the result
     R_TYPE,             intent(in)    :: b(:)  ! the right side
@@ -299,14 +299,14 @@ end subroutine X(bi_conjugate_gradients)
     logical, optional, intent(in)    :: showprogress ! show progress bar
     logical, optional, intent(out)   :: converged ! is the algorithm converged
 
-    call push_sub('solvers_inc.Xqmr_spec_dotp')
+    call push_sub('solvers_inc.Xqmr_spec_dotu')
 
     np_p => np
-    call X(qmr_gen_dotp)(np, x, b, op, opt, X(dotu_qmr), X(nrm2_qmr), &
+    call X(qmr_gen_dotu)(np, x, b, op, opt, X(dotu_qmr), X(nrm2_qmr), &
       prec, prect, iter, residue, threshold, showprogress, converged)
 
     call pop_sub()
-  end subroutine X(qmr_spec_dotp)
+  end subroutine X(qmr_spec_dotu)
 
 
   ! ---------------------------------------------------------
@@ -323,7 +323,8 @@ end subroutine X(bi_conjugate_gradients)
 
   ! ---------------------------------------------------------
   ! for complex symmetric matrices
-  subroutine X(qmr_sym_gen_dotp)(np, x, b, op, dotu, nrm2, prec, iter, &
+  ! W Chen and B Poirier, J Comput Phys 219, 198-209 (2006)
+  subroutine X(qmr_sym_gen_dotu)(np, x, b, op, dotu, nrm2, prec, iter, &
     residue, threshold, showprogress, converged)
     integer,           intent(in)    :: np    ! number of points
     R_TYPE,             intent(inout) :: x(:)  ! the initial guess and the result
@@ -365,7 +366,7 @@ end subroutine X(bi_conjugate_gradients)
     FLOAT               :: log_res, log_thr
     integer             :: ilog_res, ilog_thr
 
-    call push_sub('solvers_inc.Xqmr_sym_gen_dotp')
+    call push_sub('solvers_inc.Xqmr_sym_gen_dotu')
 
     if(present(converged)) then
       converged = .false.
@@ -553,13 +554,14 @@ end subroutine X(bi_conjugate_gradients)
     SAFE_DEALLOCATE_A(deltar)
 
     call pop_sub()
-  end subroutine X(qmr_sym_gen_dotp)
+  end subroutine X(qmr_sym_gen_dotu)
 
   ! ---------------------------------------------------------
   ! for general complex matrices
   ! taken from 'An Implementation of the QMR Method based on Coupled Two-Term Recurrences' by
   ! R. W. Freund and N. M. Nachtigal (page 25)
-  subroutine X(qmr_gen_dotp)(np, x, b, op, opt, dotu, nrm2, prec, prect, iter, &
+  ! http://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/19950017192_1995117192.pdf
+  subroutine X(qmr_gen_dotu)(np, x, b, op, opt, dotu, nrm2, prec, prect, iter, &
     residue, threshold, showprogress, converged)
     integer,           intent(in)    :: np    ! number of points
     R_TYPE,             intent(inout) :: x(:)  ! initial guess and result
@@ -613,7 +615,7 @@ end subroutine X(bi_conjugate_gradients)
     FLOAT               :: log_res, log_thr
     integer             :: ilog_res, ilog_thr
 
-    call push_sub('solvers_inc.Xqmr_gen_dotp')
+    call push_sub('solvers_inc.Xqmr_gen_dotu')
 
     if(present(converged)) then
       converged = .false.
@@ -781,7 +783,7 @@ end subroutine X(bi_conjugate_gradients)
     SAFE_DEALLOCATE_A(tmp)
 
     call pop_sub()
-  end subroutine X(qmr_gen_dotp)
+  end subroutine X(qmr_gen_dotu)
 
 !! Local Variables:
 !! mode: f90

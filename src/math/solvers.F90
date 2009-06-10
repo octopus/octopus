@@ -49,12 +49,13 @@ module solvers_m
   ! Parallel implementation of efficient preconditioned linear solver for
   ! grid-based applications in chemical physics. II: QMR linear solver
   ! Appendix A. Simplified QMR algorithm
+  ! W Chen and B Poirier, J Comput Phys 219, 198-209 (2006)
   interface zqmr_sym
-    module procedure zqmr_sym_spec_dotp, zqmr_sym_gen_dotp
+    module procedure zqmr_sym_spec_dotu, zqmr_sym_gen_dotu
   end interface
 
   interface dqmr_sym
-    module procedure dqmr_sym_spec_dotp, dqmr_sym_gen_dotp
+    module procedure dqmr_sym_spec_dotu, dqmr_sym_gen_dotu
   end interface
   integer, pointer :: np_p
 
@@ -62,12 +63,13 @@ module solvers_m
   ! QMR (quasi-minimal residual) algorithm for complex matrices
   ! algorithm taken from: An Implementation of the QMR Method based on
   ! Coupled Two-Term Recurrences by R. W. Freund and N. M. Nachtigal (page 25)
+  ! http://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/19950017192_1995117192.pdf
   interface zqmr
-    module procedure zqmr_spec_dotp, zqmr_gen_dotp
+    module procedure zqmr_spec_dotu, zqmr_gen_dotu
   end interface
 
   interface dqmr
-    module procedure dqmr_spec_dotp, dqmr_gen_dotp
+    module procedure dqmr_spec_dotu, dqmr_gen_dotu
   end interface
 
   interface dconjugate_gradients
