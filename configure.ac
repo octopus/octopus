@@ -63,9 +63,7 @@ AC_CHECK_SIZEOF(unsigned long)
 AC_CHECK_SIZEOF(unsigned long long)
 
 # Checks for library functions.
-AC_FUNC_GETPGRP
 AC_PROG_GCC_TRADITIONAL
-AC_FUNC_SETVBUF_REVERSED
 AC_FUNC_STAT
 AC_CHECK_FUNCS([gettimeofday \
 strndup tcgetpgrp scandir alphasort \

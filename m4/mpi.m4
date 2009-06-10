@@ -69,8 +69,8 @@ AC_MSG_CHECKING([for MPI 2])
 
 if test "$HAVE_MPIF_H" = 1; then
 AC_COMPILE_IFELSE(AC_LANG_PROGRAM([], [[
-include 'mpif.h'
 implicit none
+include 'mpif.h'
 integer :: aa, ierr
 call MPI_Allreduce(MPI_IN_PLACE, aa, 1, MPI_INTEGER, MPI_SUM, MPI_COMM_WORLD, ierr)
 ]]), [acx_mpi2_ok=yes], [])
