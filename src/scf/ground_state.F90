@@ -104,7 +104,7 @@ contains
       ! overwrite the guess density)
       message(1) = 'Info: Setting up Hamiltonian.'
       call write_info(1)
-      ! get the effective potential (we don't need the eigenvalues yes)
+      ! get the effective potential (we don`t need the eigenvalues yes)
       call v_ks_calc(sys%gr, sys%ks, hm, sys%st, calc_eigenval=.false.) 
 
       ! The initial LCAO calculation is done by default if we have pseudopotentials.
@@ -189,7 +189,7 @@ contains
         end if
       end if
 
-      ! I don't think we need this, but I keep it just in case
+      ! I don`t think we need this, but I keep it just in case
       call total_energy(hm, sys%gr, sys%st, -1)         ! total energy
 
     else
