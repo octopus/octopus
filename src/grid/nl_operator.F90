@@ -93,6 +93,7 @@ module nl_operator_m
     integer, pointer :: ri(:,:)
     integer, pointer :: rimap(:)
     integer, pointer :: rimap_inv(:)
+    integer(4), pointer :: ribit(:)
     
     type(nl_operator_index_t) :: inner
     type(nl_operator_index_t) :: outer
@@ -104,8 +105,9 @@ module nl_operator_m
        OP_C       = 1,  &
        OP_VEC     = 2,  &
        OP_AS      = 3,  &
+       OP_BIT     = 4,  &
        OP_MIN     = OP_FORTRAN, &
-       OP_MAX     = OP_AS
+       OP_MAX     = OP_BIT
   
   integer, public, parameter :: OP_ALL = 3, OP_INNER = 1, OP_OUTER = 2
 
@@ -197,11 +199,12 @@ contains
   character(len=8) function op_function_name(id) result(str)
     integer, intent(in) :: id
     
-    str = 'none'
+    str = 'unknown'
     if(id == OP_FORTRAN) str = 'Fortran'
     if(id == OP_C)       str = 'C'
     if(id == OP_VEC)     str = 'Vector'
     if(id == OP_AS)      str = 'AS'
+    if(id == OP_BIT)     str = 'Bit'
     
   end function op_function_name
 
@@ -216,6 +219,7 @@ contains
     nullify(op%m, op%i, op%w_re, op%w_im, op%ri, op%rimap, op%rimap_inv)
     nullify(op%inner%imin, op%inner%imax, op%inner%ri)
     nullify(op%outer%imin, op%outer%imax, op%outer%ri)
+    nullify(op%ribit)
 
     op%label = label
 
@@ -250,6 +254,7 @@ contains
     ASSERT(associated(opi%ri))
 
     call loct_pointer_copy(opo%ri, opi%ri)
+    call loct_pointer_copy(opo%ribit, opi%ribit)
     call loct_pointer_copy(opo%rimap, opi%rimap)
     call loct_pointer_copy(opo%rimap_inv, opi%rimap_inv)
     
@@ -424,6 +429,10 @@ contains
       op%rimap_inv(op%rimap(jj) + 1) = jj
     end do
     op%rimap_inv(op%nri + 1) = op%np
+
+    SAFE_ALLOCATE(op%ribit(1:op%stencil%size*op%nri))
+
+    call generate_ribit(op%nri, op%stencil%size, op%ri, op%ribit)
 
     SAFE_DEALLOCATE_A(st1)
     SAFE_DEALLOCATE_A(st1r)
@@ -1151,6 +1160,7 @@ contains
     SAFE_DEALLOCATE_P(op%w_im)
 
     SAFE_DEALLOCATE_P(op%ri)
+    SAFE_DEALLOCATE_P(op%ribit)
     SAFE_DEALLOCATE_P(op%rimap)
     SAFE_DEALLOCATE_P(op%rimap_inv)
 

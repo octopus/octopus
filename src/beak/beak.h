@@ -50,6 +50,7 @@ typedef struct {
 #define OP_C       1
 #define OP_VEC     2
 #define OP_AS      3
+#define OP_BIT     4
 
 #define M_REAL     1
 #define M_CMPLX    2
