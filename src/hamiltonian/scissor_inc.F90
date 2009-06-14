@@ -45,8 +45,6 @@ subroutine X(scissor_apply)(this, mesh, ik, psi, spsi)
   ASSERT(associated(this%X(psi)))
   ASSERT(associated(this%st))
 
-!  print*, X(mf_nrm2)(mesh, this%st%d%dim, spsi)
-
   do idim = 1, this%st%d%dim
     call lalg_axpy(mesh%np, this%gap, psi(:, idim), spsi(:, idim))
   end do
@@ -54,10 +52,8 @@ subroutine X(scissor_apply)(this, mesh, ik, psi, spsi)
     if(this%st%occ(ist, ik) < CNST(0.001)) cycle
     dot = X(mf_dotp)(mesh, this%st%d%dim, this%X(psi)(:, :, ist, ik), psi)
     do idim = 1, this%st%d%dim
-      call lalg_axpy(mesh%np, -this%gap, this%X(psi)(:, idim, ist, ik), spsi(:, idim))
+      call lalg_axpy(mesh%np, -this%gap*dot, this%X(psi)(:, idim, ist, ik), spsi(:, idim))
     end do
   end do
   
-!  print*, X(mf_nrm2)(mesh, this%st%d%dim, spsi)
-
 end subroutine X(scissor_apply)
