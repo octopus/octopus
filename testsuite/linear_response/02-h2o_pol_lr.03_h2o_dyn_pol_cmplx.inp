@@ -2,6 +2,8 @@
 # $Id$
 
 CalculationMode = em_resp
+DevelVersion = yes
+EMCalcBornCharges = yes
 
 %Coordinates
  'O'  |  0.000000  | -0.553586  |  0.000000

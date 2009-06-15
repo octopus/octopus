@@ -764,7 +764,8 @@ contains
       ! CROSS SECTION (THE IMAGINARY PART OF POLARIZABILITY)
       if(states_are_complex(st)) then 
         cross(1:MAX_DIM, 1:MAX_DIM) = aimag(em_vars%alpha(1:MAX_DIM, 1:MAX_DIM, ifactor)) * &
-          em_vars%freq_factor(ifactor)*em_vars%omega(iomega) / units_out%energy%factor * M_FOUR * M_PI / P_c 
+          em_vars%freq_factor(ifactor) * em_vars%omega(iomega) * &
+          (M_FOUR * M_PI / P_c) / units_out%length%factor**(gr%mesh%sb%dim-1)
           
         iunit = io_open(trim(dirname)//'/cross_section', action='write')
         if (.not. em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
