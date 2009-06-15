@@ -1062,7 +1062,7 @@ contains
 
       ! Apply phase.
       do ip = 1, gr%mesh%np
-        phase = exp(-M_zI*sum(gr%mesh%x(ip, 1:MAX_DIM)*st%d%kpoints(1:MAX_DIM, jk)))
+        phase = exp(-M_zI*sum(gr%mesh%x(ip, 1:gr%mesh%sb%dim)*st%d%kpoints(1:gr%mesh%sb%dim, jk)))
         st%zphi(ip, idim, 1, jk) = phase*st%zphi(ip, idim, 1, jk)
       end do
 
