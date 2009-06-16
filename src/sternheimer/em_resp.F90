@@ -88,7 +88,7 @@ module em_resp_m
     logical :: force_no_kdotp                    ! whether to use kdotp run for periodic system
     logical :: calc_Born                         ! whether to calculate Born effective charges
     logical :: Born_correct                      ! whether explicitly to enforce acoustic sum rule
-    CMPLX :: Born_sum(MAX_DIM, MAX_DIM)          ! sum over atoms of Born charge tensors
+    CMPLX :: Born_delta(MAX_DIM, MAX_DIM)        ! discrepancy of sum of Born charge tensors from sum rule
   end type em_resp_t
 
 contains
@@ -394,21 +394,21 @@ contains
                 if(em_vars%nsigma == 2) then
                   call zcalc_forces_from_potential(sys%gr, sys%geo, hm%ep, sys%st, M_ZERO, &
                     lr = em_vars%lr(idir, 1, ifactor), lr2 = em_vars%lr(idir, 2, ifactor), &
-                    lr_dir = idir, Born_sum = em_vars%Born_sum(idir, :), Born_correct = em_vars%Born_correct)
+                    lr_dir = idir, Born_delta = em_vars%Born_delta(idir, :), Born_correct = em_vars%Born_correct)
                 else
                   call zcalc_forces_from_potential(sys%gr, sys%geo, hm%ep, sys%st, M_ZERO, &
                     lr = em_vars%lr(idir, 1, ifactor), lr2 = em_vars%lr(idir, 1, ifactor), &
-                    lr_dir = idir, Born_sum = em_vars%Born_sum(idir, :), Born_correct = em_vars%Born_correct)
+                    lr_dir = idir, Born_delta = em_vars%Born_delta(idir, :), Born_correct = em_vars%Born_correct)
                 endif
               else
                 if(em_vars%nsigma == 2) then
                   call dcalc_forces_from_potential(sys%gr, sys%geo, hm%ep, sys%st, M_ZERO, &
                     lr = em_vars%lr(idir, 1, ifactor), lr2 = em_vars%lr(idir, 2, ifactor), &
-                    lr_dir = idir, Born_sum = em_vars%Born_sum(idir, :), Born_correct = em_vars%Born_correct)
+                    lr_dir = idir, Born_delta = em_vars%Born_delta(idir, :), Born_correct = em_vars%Born_correct)
                 else
                   call dcalc_forces_from_potential(sys%gr, sys%geo, hm%ep, sys%st, M_ZERO, &
                     lr = em_vars%lr(idir, 1, ifactor), lr2 = em_vars%lr(idir, 1, ifactor), &
-                    lr_dir = idir, Born_sum = em_vars%Born_sum(idir, :), Born_correct = em_vars%Born_correct)
+                    lr_dir = idir, Born_delta = em_vars%Born_delta(idir, :), Born_correct = em_vars%Born_correct)
                 endif
               endif
             enddo
@@ -698,6 +698,10 @@ contains
       call out_projections()
       call out_wavefunctions()
 
+      if(gr%sb%periodic_dim .eq. 3) then
+        call out_dielectric_constant()
+      endif
+
       if(.not. simul_box_is_periodic(gr%sb) .or. em_vars%force_no_kdotp) then
         call out_circular_dichroism()
       endif
@@ -789,6 +793,34 @@ contains
 
 
     ! ---------------------------------------------------------
+    ! epsilon = 1 + 4 * pi * alpha/volume
+    subroutine out_dielectric_constant()
+      CMPLX epsilon(MAX_DIM, MAX_DIM) 
+      integer idir
+
+      call push_sub('em_resp.out_dielectric_constant')
+  
+      iunit = io_open(trim(dirname)//'/epsilon', action='write')
+      if (.not.em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
+  
+      epsilon(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim) = &
+        4 * M_PI * em_vars%alpha(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim, ifactor) / gr%mesh%sb%rcell_volume
+      do idir = 1, gr%mesh%sb%dim
+        epsilon(idir, idir) = epsilon(idir, idir) + M_ONE
+      enddo
+
+      write(iunit, '(a)') '# Real part of dielectric constant'
+      call io_output_tensor(iunit, real(epsilon(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim)), gr%mesh%sb%dim, M_ONE)
+      write(iunit, '(a)')
+      write(iunit, '(a)') '# Imaginary part of dielectric constant'
+      call io_output_tensor(iunit, aimag(epsilon(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim)), gr%mesh%sb%dim, M_ONE)
+  
+      call io_close(iunit)
+      call pop_sub()
+    end subroutine out_dielectric_constant
+
+
+    ! ---------------------------------------------------------
     subroutine out_Born_charges()
       integer iatom
       FLOAT :: phase(1:MAX_DIM, 1:MAX_DIM)
@@ -824,11 +856,11 @@ contains
         write(iunit,'(a)')
       enddo
 
-      write(iunit,'(a)') '# Sum of Born effective charges before correction to satisfy acoustic sum rule' 
+      write(iunit,'(a)') '# Discrepancy of Born effective charges from acoustic sum rule before correction' 
       write(iunit,'(a)') 'Real:'
-      call io_output_tensor(iunit, real(em_vars%Born_sum(:, :)), gr%mesh%sb%dim, M_ONE)
+      call io_output_tensor(iunit, real(em_vars%Born_delta(:, :)), gr%mesh%sb%dim, M_ONE)
       write(iunit,'(a)') 'Imaginary:'
-      call io_output_tensor(iunit, aimag(em_vars%Born_sum(:, :)), gr%mesh%sb%dim, M_ONE)
+      call io_output_tensor(iunit, aimag(em_vars%Born_delta(:, :)), gr%mesh%sb%dim, M_ONE)
 
       call io_close(iunit)
       call pop_sub()
