@@ -341,7 +341,7 @@ contains
     real(8),           intent(in)  :: x(n)
     real(8),           intent(inout) :: f
     integer,           intent(in)  :: getgrad
-    real(8), optional, intent(inout) :: df(n)
+    real(8),           intent(inout) :: df(n)
     
     integer :: i
 
@@ -393,9 +393,14 @@ contains
     integer, intent(in)  :: n
     real(8), intent(in)  :: x(n)
     real(8), intent(out) :: f
+    integer :: getgrad
+    FLOAT, allocatable :: df(:)
     
-    call calc_point(n, x, f, getgrad=0)
-
+    getgrad = 0
+    SAFE_ALLOCATE(df(1:n))
+    df = M_ZERO
+    call calc_point(n, x, f, getgrad, df)
+    SAFE_DEALLOCATE_A(df)
   end subroutine calc_point_ng
 
 
