@@ -35,6 +35,7 @@ module ob_terms_m
     integer          :: mem_type                  ! SAVE_CPU_TIME: fast/lots of memory, SAVE_RAM_USAGE: slow/little memory.
     integer          :: sp_length                 ! Length of the sparse array (as 1d array).
     integer          :: additional_terms          ! Shall we add source and memory term?
+    integer          :: max_mem_coeffs            ! How many memory coefficients? (for open system)
     CMPLX, pointer   :: mem_coeff(:, :, :, :)     ! Memory coefficients, for mem_type=1. (i, j, t, il) 
     CMPLX, pointer   :: mem_sp_coeff(:, :, :)     ! Memory coefficients, for mem_type=2. (sp_length, t, il)
     CMPLX, pointer   :: mem_s(:, :, :, :)         ! The matrices to diagonalize coeff0.

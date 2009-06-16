@@ -161,6 +161,28 @@ contains
       call input_error('OpenBoundariesAdditionalTerms')
     end if
 
+    !%Variable OpenBoundariesMaxMemCoeffs
+    !%Type integer
+    !%Default TDMaximumIter
+    !%Section Calculation Modes::Transport
+    !%Description
+    !% Sets the maximum number of used memory coefficients.
+    !% Can only be less than TDMaximumIter if source term is switched off.
+    !%End
+    call loct_parse_int(datasets_check('OpenBoundariesMaxMemCoeffs'), max_iter, ob%max_mem_coeffs)
+    if(ob%max_mem_coeffs.le.0) then
+      write(message(1), '(a,i6,a)') "Input : '", ob%max_mem_coeffs, "' is not a valid OpenBoundariesMaxMemCoeffs."
+      message(2) = '(0 < OpenBoundariesMaxMemCoeffs <= TDMaximumIter)'
+      call write_fatal(2)
+    end if
+    ob%max_mem_coeffs = min(ob%max_mem_coeffs, max_iter)
+    if((iand(ob%additional_terms, SRC_TERM_FLAG).ne.0).and.(ob%max_mem_coeffs.ne.max_iter)) then
+      write(message(1), '(a,i6,a)') "Input : '", ob%max_mem_coeffs, "' is not a valid OpenBoundariesMaxMemCoeffs."
+      message(2) = 'If in OpenBoundariesAdditionalTerms src_term is present this has to be equal to TDMaximumIter.'
+      message(3) = 'If an open system should be simulated the source term should be switched of.'
+      call write_fatal(3)
+    end if
+
     ! Calculate td-potential.
     SAFE_ALLOCATE(td_pot(0:max_iter+1, 1:NLEADS))
     call lead_td_pot(td_pot, gr%sb%lead_td_pot_formula, max_iter, dt)
@@ -180,14 +202,14 @@ contains
     call ob_rti_write_info(ob, st, gr, max_iter, order)
 
     ! Initialize source and memory terms.
-    call ob_mem_init(gr%intf, hm, ob, dt/M_TWO, max_iter, gr%der%lapl, &
+    call ob_mem_init(gr%intf, hm, ob, dt/M_TWO, ob%max_mem_coeffs, gr%der%lapl, &
       gr%sb%h(TRANS_DIR), order, st%d%kpt%mpi_grp)
     call ob_src_init(ob, st, gr%intf(LEFT)%np)
 
     ! Allocate memory for the interface wave functions of previous
     ! timesteps.
     np = gr%intf(LEFT)%np
-    SAFE_ALLOCATE(ob%st_intface(1:np, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end, 1:NLEADS, 0:max_iter))
+    SAFE_ALLOCATE(ob%st_intface(1:np, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end, 1:NLEADS, 0:ob%max_mem_coeffs))
     ob%st_intface = M_z0
 
     ! check the symmetry of the effective hamiltonian
@@ -199,6 +221,8 @@ contains
       if(laser_kind(hm%ep%lasers(il)).eq.E_FIELD_MAGNETIC) heff_sym = .false.
       if(laser_kind(hm%ep%lasers(il)).eq.E_FIELD_VECTOR_POTENTIAL) heff_sym = .false.
     end do
+
+    nullify(mem_p, sp_mem_p, mem_s_p, intf_p, dt_p, t_p, ist_p, ik_p, mem_type_p, mapping_p)
 
     call pop_sub()
   end subroutine ob_rti_init
@@ -236,6 +260,7 @@ contains
     CMPLX              :: factor, fac, f0
     CMPLX, allocatable :: tmp(:, :), tmp_wf(:), tmp_mem(:, :)
     FLOAT              :: dres
+    logical            :: conv
     
     call push_sub('ob_rti.cn_src_mem_dt')
 
@@ -250,29 +275,25 @@ contains
     ! to iterative linear solver.
     hm_p       => hm
     gr_p       => gr
-    mem_p      => ob%mem_coeff(:, :, 0, :)
-    sp_mem_p   => ob%mem_sp_coeff(:, 0, :)
     intf_p     => gr%intf
     dt_p       => dt
     t_p        => t
     ist_p      => ist
     ik_p       => ik
-    mem_s_p    => ob%mem_s(:, :, :, :)
     mem_type_p => ob%mem_type
-    mapping_p  => ob%sp2full_map
+    mem_p      => ob%mem_coeff(:, :, 0, :)
 
     ! For the dot product passed to BiCG routine.
     call mesh_init_mesh_aux(gr%mesh)
 
     m = timestep-1
 
-    ! Save interface part of wavefunctions for subsequent iterations
-    ! before we overwrite them with the values for the new timestep.
-    ! (Copying before the propagation gets the saving right for the
-    ! initial state also.)
-    do il = 1, NLEADS
-      call save_intf_wf(gr%intf(il), st, ob%st_intface(1:inp, :, :, il, m))
-    end do
+    ! save the initial state
+    if (m.eq.0) then
+      do il = 1, NLEADS
+        call save_intf_wf(gr%intf(il), st, ob%st_intface(1:inp, :, :, il, 0))
+      end do
+    end if
 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
@@ -296,6 +317,7 @@ contains
           ! 3. Add memory term.
           if(iand(ob%additional_terms, MEM_TERM_FLAG).ne.0) then
             do it = 0, m-1
+!            do it = max(m-1), m-1
               factor = -dt**2/M_FOUR*lambda(m, it, max_iter, ob%src_mem_u(:, il)) / &
                 (ob%src_mem_u(m, il)*ob%src_mem_u(it, il))
               tmp_wf(:) = ob%st_intface(:, ist, ik, il, it+1) + ob%st_intface(:, ist, ik, il, it)
@@ -319,7 +341,10 @@ contains
         ! Use the stable symmetric QMR solver
         ! h_eff_backward must be a complex symmetric operator !
         call zqmr_sym(gr%mesh%np, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_backward, precond_prop, &
-          cg_iter, residue=dres, threshold=cg_tol, showprogress=.false.)
+          cg_iter, residue=dres, threshold=cg_tol, showprogress=.false., converged=conv)
+        !if (.not.conv) then
+        !  write(*,*) 'ik, residue', ik, dres
+        !end if
       end do
     end do
 
@@ -369,7 +394,6 @@ contains
     ! to iterative linear solver.
     hm_p       => hm
     gr_p       => gr
-    mem_p      => ob%mem_coeff(:, :, 0, :)
     sp_mem_p   => ob%mem_sp_coeff(:, 0, :)
     intf_p     => gr%intf
     dt_p       => dt
@@ -385,13 +409,13 @@ contains
 
     m = timestep-1
 
-    ! Save interface part of wavefunctions for subsequent iterations
-    ! before we overwrite them with the values for the new timestep.
-    ! (Copying before the propagation gets the saving right for the
-    ! initial state also.)
-    do il = 1, NLEADS
-      call save_intf_wf(gr%intf(il), st, ob%st_intface(1:inp, :, :, il, m))
-    end do
+
+    ! save the initial state
+    if (m.eq.0) then
+      do il = 1, NLEADS
+        call save_intf_wf(gr%intf(il), st, ob%st_intface(1:inp, :, :, il, 0))
+      end do
+    end if
 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
@@ -444,7 +468,7 @@ contains
 
     ! Save interface part of wavefunction for subsequent iterations.
     do il = 1, NLEADS
-      call save_intf_wf(gr%intf(il), st, ob%st_intface(:, :, :, il, timestep))
+      call save_intf_wf(gr%intf(il), st, ob%st_intface(1:inp, :, :, il, timestep))
     end do
 
     SAFE_DEALLOCATE_A(tmp)
@@ -585,7 +609,7 @@ contains
     type(hamiltonian_t), intent(inout) :: hm
     type(grid_t),        intent(inout) :: gr
     CMPLX, target,       intent(in)    :: sp_mem(:, :)
-    type(interface_t),   intent(in)    :: intf(NLEADS)
+    type(interface_t),   intent(in)    :: intf(1:NLEADS)
     FLOAT,               intent(in)    :: sign, dt, t
     integer,             intent(in)    :: ist
     integer,             intent(in)    :: ik
@@ -768,15 +792,15 @@ contains
       terms = trim(terms)//' source'
     end if
     
-    write(message(1), '(a,a10)') 'Type of memory coefficients:     ', trim(mem_type_name)
-    write(message(2), '(a,f10.3)') 'MBytes required for memory term: ', &
-      mbytes_memory_term(max_iter, gr%intf(:)%np, NLEADS, st, ob%mem_type, order)
-    write(message(3), '(a,i10)') 'Maximum BiCG iterations:         ', cg_max_iter
+    write(message(1), '(a,a10)')    'Type of memory coefficients:     ', trim(mem_type_name)
+    write(message(2), '(a,f10.3)')  'MBytes required for memory term: ', &
+      mbytes_memory_term(ob%max_mem_coeffs, gr%intf(:)%np, NLEADS, st, ob%mem_type, order)
+    write(message(3), '(a,i10)')    'Maximum BiCG iterations:         ', cg_max_iter
     write(message(4), '(a,es10.1)') 'BiCG residual tolerance:         ', cg_tol
-    write(message(5), '(a,a20)') 'Included additional terms:       ', trim(terms)
-    write(message(6), '(a,a10)') 'TD left lead potential:          ', &
+    write(message(5), '(a,a20)')    'Included additional terms:       ', trim(terms)
+    write(message(6), '(a,a10)')    'TD left lead potential:          ', &
       trim(gr%sb%lead_td_pot_formula(LEFT))
-    write(message(7), '(a,a10)') 'TD right lead potential:         ', &
+    write(message(7), '(a,a10)')    'TD right lead potential:         ', &
       trim(gr%sb%lead_td_pot_formula(RIGHT))
     call write_info(7, stdout)
 

@@ -89,15 +89,15 @@ contains
     select case(ob%mem_type)
     case(SAVE_CPU_TIME)
       SAFE_ALLOCATE(ob%mem_coeff(1:np, 1:np, 0:max_iter, 1:NLEADS))
-      allocate(ob%mem_sp_coeff(0, 0, NLEADS), ob%mem_s(0, 0, 2, NLEADS), ob%sp2full_map(0))
+      nullify(ob%mem_sp_coeff, ob%mem_s, ob%sp2full_map)
       ob%mem_coeff = M_z0
     case(SAVE_RAM_USAGE) ! FIXME: only 2D.
       ASSERT(calc_dim.eq.2)
-      allocate(ob%mem_coeff(0, 0, 0, NLEADS))
       ! sp_coeff has the size ny*nz*do**2, (np=ny*nz*do).
       SAFE_ALLOCATE(ob%mem_sp_coeff(1:np*order, 0:max_iter, 1:NLEADS))
       SAFE_ALLOCATE(ob%mem_s(1:np, 1:np, 1:2, 1:NLEADS))
       SAFE_ALLOCATE(ob%sp2full_map(1:np*order))
+      nullify(ob%mem_coeff)
       ! Fill sparse to full mapping matrix.
       do ii = 0, np-1
         do il = 1, order
@@ -694,8 +694,8 @@ contains
   ! Does not consider spin at the moment.
   FLOAT function mbytes_memory_term(iter, np, nl, st, mem_type, order)
     integer,        intent(in) :: iter
-    integer,        intent(in) :: np(nl)
     integer,        intent(in) :: nl
+    integer,        intent(in) :: np(nl)
     type(states_t), intent(in) :: st
     integer,        intent(in) :: mem_type
     integer,        intent(in) :: order

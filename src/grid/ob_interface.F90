@@ -156,17 +156,34 @@ contains
   
 
   ! ---------------------------------------------------------
-  ! Checks if point number idx is an interface point of interface
-  ! number il.
+  ! Checks if point number idx is an interface point of interface.
   logical function member_of_interface(idx, intf)
     integer,           intent(in) :: idx
     type(interface_t), intent(in) :: intf
 
+    integer :: ii
+
     call push_sub('ob_interface.member_of_interface')
 
+    ! first test if index is between min and max
     member_of_interface =              &
       idx.ge.intf%index_range(1) .and. &
       idx.le.intf%index_range(2)
+
+    ! if so check exactly
+    ! (not the fastest way, but works if we have non-connected points)
+    if (member_of_interface) then
+      member_of_interface = .false.
+      do ii=1, intf%np
+        if (intf%index(ii).eq.idx) then
+          member_of_interface = .true.
+          exit
+        end if
+      end do
+    end if
+!    member_of_interface =              &
+!      idx.ge.intf%index_range(1) .and. &
+!      idx.le.intf%index_range(2)
 
     call pop_sub()
   end function member_of_interface
@@ -180,9 +197,14 @@ contains
     CMPLX,             intent(in)  :: zpsi(:)
     CMPLX,             intent(out) :: intf_wf(:)
 
+    integer :: ii
+
     call push_sub('ob_interface.get_intf_wf')
 
-    intf_wf(1:intf%np) = zpsi(intf%index_range(1):intf%index_range(2))
+    do ii=1, intf%np
+      intf_wf(ii) = zpsi(intf%index(ii))
+    end do
+!    intf_wf(1:intf%np) = zpsi(intf%index_range(1):intf%index_range(2))
 
     call pop_sub()
   end subroutine get_intf_wf
@@ -196,9 +218,14 @@ contains
     CMPLX,             intent(in)     :: intf_wf(:)
     CMPLX,             intent(inout)  :: zpsi(:)
 
+    integer :: ii
+
     call push_sub('ob_interface.put_intf_wf')
 
-    zpsi(intf%index_range(1):intf%index_range(2)) = intf_wf(1:intf%np)
+    do ii=1, intf%np
+      zpsi(intf%index(ii)) = intf_wf(ii)
+    end do
+!    zpsi(intf%index_range(1):intf%index_range(2)) = intf_wf(1:intf%np)
 
     call pop_sub()
   end subroutine put_intf_wf
