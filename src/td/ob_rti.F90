@@ -88,7 +88,7 @@ contains
     FLOAT,               intent(in)  :: dt
     integer,             intent(in)  :: max_iter
     
-    integer            :: order, it, np, il
+    integer            :: order, it, np, il, s1, s2, k1, k2
     CMPLX, allocatable :: um(:)
     FLOAT, allocatable :: td_pot(:, :)
 
@@ -209,7 +209,11 @@ contains
     ! Allocate memory for the interface wave functions of previous
     ! timesteps.
     np = gr%intf(LEFT)%np
-    SAFE_ALLOCATE(ob%st_intface(1:np, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end, 1:NLEADS, 0:ob%max_mem_coeffs))
+    s1 = st%st_start
+    s2 = st%st_end
+    k1 = st%d%kpt%start
+    k2 = st%d%kpt%end
+    SAFE_ALLOCATE(ob%st_intface(1:np, s1:s2, k1:k2, 1:NLEADS, 0:ob%max_mem_coeffs))
     ob%st_intface = M_z0
 
     ! check the symmetry of the effective hamiltonian
@@ -317,10 +321,12 @@ contains
           ! 3. Add memory term.
           if(iand(ob%additional_terms, MEM_TERM_FLAG).ne.0) then
             do it = 0, m-1
-!            do it = max(m-1), m-1
+!            do it = max(m-ob%max_mem_coeffs,0), m-1
               factor = -dt**2/M_FOUR*lambda(m, it, max_iter, ob%src_mem_u(:, il)) / &
                 (ob%src_mem_u(m, il)*ob%src_mem_u(it, il))
               tmp_wf(:) = ob%st_intface(:, ist, ik, il, it+1) + ob%st_intface(:, ist, ik, il, it)
+!              tmp_wf(:) = ob%st_intface(:, ist, ik, il, mod(it+1, ob%max_mem_coeffs+1)) &
+!                                    + ob%st_intface(:, ist, ik, il, mod(it, ob%max_mem_coeffs+1))
               tmp_mem(:, :) = ob%mem_coeff(:, :, m-it, il)
               if((m-it).gt.0) tmp_mem(:, :) = tmp_mem(:, :) + ob%mem_coeff(:, :, m-it-1, il)
               call apply_mem(tmp_mem, gr%intf(il), tmp_wf, st%zpsi(:, :, ist, ik), factor)
