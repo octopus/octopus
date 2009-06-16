@@ -33,6 +33,7 @@ module mix_m
 
   private
   public ::                     &
+    mix_set_mixing,             &
     mix_t,                      &
     mix_init,                   &
     mix_end,                    &
@@ -216,6 +217,19 @@ contains
 
     call pop_sub()
   end subroutine mix_end
+
+  subroutine mix_set_mixing(smix, newmixing)
+    type(mix_t), intent(inout) :: smix
+    FLOAT, intent(in):: newmixing
+    
+    if(smix%type_of_mixing == MIX_LINEAR) then
+      smix%alpha = newmixing
+    else
+    !  message(1) = "Error: Mixing can only be adjusted in linear mixing scheme"
+    !  call write_fatal(1)
+    endif
+    
+  end subroutine mix_set_mixing
 
 #include "undef.F90"
 #include "real.F90"

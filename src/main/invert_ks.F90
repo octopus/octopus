@@ -21,7 +21,9 @@
 
 module invert_ks_m
   use datasets_m
+  use global_m
   use hamiltonian_m
+  use h_sys_output_m
   use io_m
   use io_function_m
   use loct_parser_m
@@ -47,10 +49,10 @@ contains
     type(system_t),              intent(inout) :: sys
     type(hamiltonian_t),         intent(inout) :: hm
 
-    integer :: ii, jj, ierr, np, ndim, nspin, counter, idiffmax
-    FLOAT :: diffdensity
+    integer :: ii, jj, kk, ierr, np, ndim, nspin, counter, idiffmax
+    integer :: iunit, verbosity
+    FLOAT :: diffdensity, mixing, stabilizer, convdensity
     FLOAT, allocatable :: target_rho(:,:), vhxc_in(:,:,:), vhxc_out(:,:,:), vhxc_mix(:,:,:)
-    FLOAT, allocatable :: sqrtrho(:,:), gradrho(:,:)
     type(scf_t) :: scfv
     type(mix_t) :: smix
     character(len=256) :: fname
@@ -80,44 +82,8 @@ contains
     sys%ks%frozen_hxc = .true. !do not change hxc potential outside this routine
     
     !initialize the ks potential
-    SAFE_ALLOCATE(sqrtrho(1:np, 1:nspin))
-    SAFE_ALLOCATE(gradrho(1:np, 1:nspin))
-
-    gradrho = 0d0
-    do jj = 1, nspin
-      do ii = 1, np
-        sqrtrho(ii, jj) = sqrt(target_rho(ii, jj))
-      enddo
-      do ii = 3, np-2
-        gradrho(ii, jj) = - sqrtrho(ii+2, jj) - sqrtrho(ii-2, jj) &
-                        & + 16d0*(sqrtrho(ii+1, jj) + sqrtrho(ii-1, jj)) &
-                        & - 30d0*sqrtrho(ii, jj)
-      enddo
-      !gradrho(1, jj) = 35d0*sqrtrho(1, jj) - 104d0*sqrtrho(2, jj) + 114d0*sqrtrho(3, jj) &
-      !             & - 56d0*sqrtrho(4, jj) + 11d0*sqrtrho(5, jj)
-		   
-      !gradrho(2, jj) = 11d0*sqrtrho(1, jj) - 20d0*sqrtrho(2, jj) + 6d0*sqrtrho(3, jj) &
-      !             & + 4d0*sqrtrho(4, jj) - sqrtrho(5, jj)
-      
-      !gradrho(np-1, jj) = - sqrtrho(1, jj) + 4d0*sqrtrho(2, jj) + 6d0*sqrtrho(3, jj) &
-      !             & - 20d0*sqrtrho(4, jj) + 11d0*sqrtrho(5, jj)
-      
-      !gradrho(np, jj) = 11d0*sqrtrho(1, jj) - 56d0*sqrtrho(2, jj) + 114d0*sqrtrho(3, jj) &
-      !             & -104d0*sqrtrho(4, jj) + 35d0*sqrtrho(5, jj)
-      
-      !gradrho(1, jj) = - sqrtrho(3, jj) + 16d0*sqrtrho(2, jj) - 30d0*sqrtrho(1, jj)
-      !gradrho(2, jj) = - sqrtrho(4, jj) + 16d0*(sqrtrho(3, jj) + sqrtrho(1, jj)) &
-      !                  & - 30d0*sqrtrho(2, jj)
-      !gradrho(np-1, jj) = - sqrtrho(np-3, jj) + 16d0*(sqrtrho(np, jj) + sqrtrho(np-2, jj)) &
-      !                  & - 30d0*sqrtrho(np-1, jj)
-      !gradrho(np, jj) = - sqrtrho(np-2, jj) + 16d0*sqrtrho(np-1, jj) - 30d0*sqrtrho(np, jj)
-            
-      gradrho(:, jj) = gradrho(:, jj)/(12d0*sys%gr%mesh%h(1)**2)
-      do ii = 1, np
-        hm%vhxc(ii, jj) = gradrho(ii, jj)/(2d0*sqrtrho(ii, jj))
-      enddo
-    enddo
-
+    hm%vhxc = 1d0
+     
     call scf_init(scfv, sys%gr, sys%geo, sys%st, hm)
     call mix_init(smix, np, nspin, 1, prefix_="InvertKS")
 
@@ -126,66 +92,123 @@ contains
     SAFE_ALLOCATE(vhxc_mix(1:np, 1:nspin, 1:1))
 
     vhxc_in(1:np,1:nspin,1) = hm%vhxc(1:np,1:nspin)
-write (100,*) 'hm%vhxc ', hm%vhxc
+    
+    !%Variable InvertKSConvAbsDens
+    !%Type float
+    !%Default 1e-5
+    !%Section Main:: Invert KS
+    !%Description
+    !% Absolute difference between the calculated and the target density in the KS
+    !% inversion, has to be larger than the convergence of the density in the scf run
+    !%End
+    
+    call loct_parse_float(datasets_check('InvertKSConvAbsDens'), 1d-5, convdensity)
+    
+    !%Variable InvertKSstabilizer
+    !%Type float
+    !%Default 0.5
+    !%Section Main:: Invert KS
+    !%Description
+    !% Additive constant c in the iterative calculation of the KS potential
+    !%   (v(alpha+1)=rho(alpha)+c)/(rho_target+c)*v(alpha)
+    !% ensures that very small densities do not cause numerical problems
+    !%End
+
+    call loct_parse_float(datasets_check('InvertKSstabilizer'), M_HALF, stabilizer)
+
+    !%Variable InvertKSverbosity
+    !%Type integer
+    !%Default 0
+    !%Section Main:: Invert KS
+    !%Description
+    !% Selects what is output during the calculation of the KS potential
+    !%Option 0
+    !% Only outputs the converged density and KS potential
+    !%Option 1
+    !% Same as 0 but outputs the maximum difference to the target density in each
+    !% iteration in addition
+    !%Option 2
+    !% Same as 1 but outputs the density and the KS potential in each iteration in 
+    !% addition  
+    !%End
+      
+    call loct_parse_int(datasets_check('InvertKSverbosity'), 0, verbosity)  
+
+    if(verbosity < 0 .or. verbosity > 2) then
+      message(1) = 'InvertKSverbosity only has the options 0, 1, or 2'
+      call write_fatal(1)
+    endif
+    
+    if(verbosity == 1 .or. verbosity == 2) then
+      iunit = io_open('InvertKSconvergence', action = 'write')
+    endif
     
     diffdensity = 1d0
     counter = 0
-
-    do while(diffdensity>1d-5)
-      diffdensity = 0d0
+    
+    do while(diffdensity > convdensity)
+      
       counter = counter + 1 
-      write(fname,'(i6.6)') counter
-      call doutput_function(io_function_fill_how("AxisX"), &
-           ".", "vhxc"//fname, sys%gr%mesh, sys%gr%sb, hm%vhxc(:,1), M_ONE, ierr)
-      call doutput_function(io_function_fill_how("AxisX"), &
-           ".", "rho"//fname, sys%gr%mesh, sys%gr%sb, sys%st%rho(:,1), M_ONE, ierr)
+      
+      if(verbosity == 2) then
+        write(fname,'(i6.6)') counter
+        call doutput_function(io_function_fill_how("AxisX"), &
+             ".", "vhxc"//fname, sys%gr%mesh, sys%gr%sb, hm%vhxc(:,1), M_ONE, ierr)
+        call doutput_function(io_function_fill_how("AxisX"), &
+             ".", "rho"//fname, sys%gr%mesh, sys%gr%sb, sys%st%rho(:,1), M_ONE, ierr)
+      endif
     
       call hamiltonian_update_potential(hm, sys%gr%mesh)
 
       call scf_run(scfv, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, gs_run = .false.)
       call states_calc_dens(sys%st, np)
             
-      vhxc_out(1:np, 1:nspin, 1) = (sys%st%rho(1:np,1:nspin))/(target_rho(1:np,1:nspin)) &
+      vhxc_out(1:np, 1:nspin, 1) = &
+      (sys%st%rho(1:np,1:nspin) + stabilizer)/(target_rho(1:np,1:nspin) + stabilizer) &
            * hm%vhxc(1:np, 1:nspin)
 	   
-      vhxc_out(1,1:nspin, 1) = 0d0
-      vhxc_out(np,1:nspin, 1) = 0d0
-      !offset = vhxc_out(3,1,1)
-      !vhxc_out(1:np,1:nspin,1) = vhxc_out(1:np,1:nspin,1)+ offset
-            
       call dmixing(smix, counter, vhxc_in, vhxc_out, vhxc_mix, dmf_dotp_aux)
 
       hm%vhxc(1:np,1:nspin) = vhxc_mix(1:np, 1:nspin, 1)
       vhxc_in(1:np, 1:nspin, 1) = hm%vhxc(1:np, 1:nspin)
-    
+      
+      diffdensity = 0d0
       do jj = 1, nspin
         do ii = 1, np
           if (abs(sys%st%rho(ii,jj)-target_rho(ii,jj)) > diffdensity) then
             diffdensity = abs(sys%st%rho(ii,jj)-target_rho(ii,jj))
-            idiffmax=ii  
-          end if
+            idiffmax=ii
+          endif
         enddo
       enddo
-    
-      write(100,*) counter, diffdensity, idiffmax
+      
+      !write(*,*) diffdensity
+      
+      if(verbosity == 1 .or. verbosity == 2) then
+        write(iunit,'(i6.6)', ADVANCE = 'no') counter
+        write(iunit,'(es18.10)') diffdensity
 #ifdef HAVE_FLUSH
-      call flush(100)
+        call flush(iunit)
 #endif
+      endif
+     
     end do
     
-      call doutput_function(io_function_fill_how("AxisX"), &
+    call io_close(iunit)      
+    
+    call h_sys_output_all(sys%outp, sys%gr, sys%geo, sys%st, hm, STATIC_DIR)
+    
+    call doutput_function(io_function_fill_how("AxisX"), &
            ".", "vhxc", sys%gr%mesh, sys%gr%sb, hm%vhxc(:,1), M_ONE, ierr)
-      call doutput_function(io_function_fill_how("AxisX"), &
+    call doutput_function(io_function_fill_how("AxisX"), &
            ".", "rho", sys%gr%mesh, sys%gr%sb, sys%st%rho(:,1), M_ONE, ierr)
 
-      write(*,*) "iterations needed:", counter
+    write(*,*) "iterations needed:", counter
 
     call mix_end(smix)
     call scf_end(scfv)
 
     SAFE_DEALLOCATE_A(target_rho)
-    SAFE_DEALLOCATE_A(sqrtrho)
-    SAFE_DEALLOCATE_A(gradrho)
     SAFE_DEALLOCATE_A(vhxc_in)
     SAFE_DEALLOCATE_A(vhxc_out)
     SAFE_DEALLOCATE_A(vhxc_mix)

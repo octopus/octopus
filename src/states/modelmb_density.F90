@@ -93,8 +93,8 @@ contains
     !%End
    
     if(loct_parse_block(datasets_check('DensitiestoCalc'), blk) /= 0) then
-     message(1) = 'To print out density, you must specify the DensitiestoCalc block in input'
-     call write_fatal(1)
+      message(1) = 'To print out density, you must specify the DensitiestoCalc block in input'
+      call write_fatal(1)
     end if
    
     ncols = loct_parse_block_cols(blk, 0)
