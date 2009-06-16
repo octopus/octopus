@@ -147,13 +147,25 @@ contains
 #endif
 
       if(in_points > 0) then
-        do i = 1, m%np
-          call mesh_r(m, i, r, a=atom%x)
-          if(r <= species_jradius(s)) then
-            rho(i, 1:spin_channels) = species_zval(s) /   &
-              (m%vol_pp(i)*real(in_points*spin_channels, REAL_PRECISION))
-          end if
-        end do
+        ! This probably should be done inside the mesh_function_m module.
+ 
+        if (m%use_curvilinear) then
+          do i = 1, m%np
+            call mesh_r(m, i, r, a=atom%x)
+            if(r <= species_jradius(s)) then
+              rho(i, 1:spin_channels) = species_zval(s) /   &
+                (m%vol_pp(i)*real(in_points*spin_channels, REAL_PRECISION))
+            end if
+          end do
+        else
+          do i = 1, m%np
+            call mesh_r(m, i, r, a=atom%x)
+            if(r <= species_jradius(s)) then
+              rho(i, 1:spin_channels) = species_zval(s) /   &
+                (m%vol_pp(1)*real(in_points*spin_channels, REAL_PRECISION))
+            end if
+          end do
+        end if
       end if
 
     case (SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_UPF) ! ...from pseudopotential
