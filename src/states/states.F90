@@ -2480,7 +2480,7 @@ contains
       k1 = st%d%kpt%start; k2 = st%d%kpt%end
       SAFE_ALLOCATE(st%ob_green(1:np, 1:np, 1:nspin, s1:s2, k1:k2, 1:NLEADS))
       call messages_print_stress(stdout, 'Lead Green functions')
-      message(1) = ' st#  Spin  Lead     Energy'
+      message(1) = ' st#     k#  Spin  Lead     Energy'
       call write_info(1)
 #ifdef HAVE_MPI 
       ! wait for all processors to finish 
@@ -2510,7 +2510,7 @@ contains
                   spin = 'dn'
                 end if
               end select
-              write(message(1), '(i4,3x,a2,5x,a1,1x,f12.6)') ist, spin, ln(il), energy
+              write(message(1), '(i4,3x,i4,3x,a2,5x,a1,1x,f12.6)') ist, ik, spin, ln(il), energy
               call write_info(1)
               ! TODO magnetic gs
               call lead_green(energy, diag(:, :, ispin, il), offdiag(:, :, il), &
