@@ -320,13 +320,11 @@ contains
           end if
           ! 3. Add memory term.
           if(iand(ob%additional_terms, MEM_TERM_FLAG).ne.0) then
-            do it = 0, m-1
-!            do it = max(m-ob%max_mem_coeffs,0), m-1
+            do it = max(m-ob%max_mem_coeffs,0), m-1
               factor = -dt**2/M_FOUR*lambda(m, it, max_iter, ob%src_mem_u(:, il)) / &
                 (ob%src_mem_u(m, il)*ob%src_mem_u(it, il))
-              tmp_wf(:) = ob%st_intface(:, ist, ik, il, it+1) + ob%st_intface(:, ist, ik, il, it)
-!              tmp_wf(:) = ob%st_intface(:, ist, ik, il, mod(it+1, ob%max_mem_coeffs+1)) &
-!                                    + ob%st_intface(:, ist, ik, il, mod(it, ob%max_mem_coeffs+1))
+              tmp_wf(:) = ob%st_intface(:, ist, ik, il, mod(it+1, ob%max_mem_coeffs+1)) &
+                          + ob%st_intface(:, ist, ik, il, mod(it, ob%max_mem_coeffs+1))
               tmp_mem(:, :) = ob%mem_coeff(:, :, m-it, il)
               if((m-it).gt.0) tmp_mem(:, :) = tmp_mem(:, :) + ob%mem_coeff(:, :, m-it-1, il)
               call apply_mem(tmp_mem, gr%intf(il), tmp_wf, st%zpsi(:, :, ist, ik), factor)
@@ -356,7 +354,7 @@ contains
 
     ! Save interface part of wavefunction for subsequent iterations.
     do il = 1, NLEADS
-      call save_intf_wf(gr%intf(il), st, ob%st_intface(:, :, :, il, timestep))
+      call save_intf_wf(gr%intf(il), st, ob%st_intface(:, :, :, il, mod(timestep,ob%max_mem_coeffs+1)))
     end do
 
     SAFE_DEALLOCATE_A(tmp)
@@ -445,10 +443,11 @@ contains
           end if
           ! 3. Add memory term.
           if(iand(ob%additional_terms, MEM_TERM_FLAG).ne.0) then
-            do it = 0, m-1
+            do it = max(m-ob%max_mem_coeffs,0), m-1
               factor = -dt**2/M_FOUR*lambda(m, it, max_iter, ob%src_mem_u(:, il)) / &
                 (ob%src_mem_u(m, il)*ob%src_mem_u(it, il))
-              tmp_wf(:) = ob%st_intface(:, ist, ik, il, it+1) + ob%st_intface(:, ist, ik, il, it)
+              tmp_wf(:) = ob%st_intface(:, ist, ik, il, mod(it+1, ob%max_mem_coeffs+1)) &
+                          + ob%st_intface(:, ist, ik, il, mod(it, ob%max_mem_coeffs+1))
               tmp_mem(:) = ob%mem_sp_coeff(:, m-it, il)
               if((m-it).gt.0) tmp_mem(:) = tmp_mem(:) + ob%mem_sp_coeff(:, m-it-1, il)
               call apply_sp_mem(tmp_mem(:), il, gr%intf(il), tmp_wf, st%zpsi(:, :, ist, ik), &
@@ -474,7 +473,7 @@ contains
 
     ! Save interface part of wavefunction for subsequent iterations.
     do il = 1, NLEADS
-      call save_intf_wf(gr%intf(il), st, ob%st_intface(1:inp, :, :, il, timestep))
+      call save_intf_wf(gr%intf(il), st, ob%st_intface(1:inp, :, :, il, mod(timestep,ob%max_mem_coeffs+1)))
     end do
 
     SAFE_DEALLOCATE_A(tmp)
@@ -582,9 +581,9 @@ contains
       transposed_ = transposed
     end if
 
-
-    call get_intf_wf(intf(LEFT), zpsi(:, 1), intf_wf(:, LEFT))
-    call get_intf_wf(intf(RIGHT), zpsi(:, 1), intf_wf(:, RIGHT))
+    do il = 1, NLEADS
+      call get_intf_wf(intf(il), zpsi(:, 1), intf_wf(:, il))
+    end do
 
     ! To act with the transposed of H on the wavefunction
     ! we apply H to the conjugate of psi and conjugate the
@@ -639,8 +638,9 @@ contains
       transposed_ = transposed
     end if
 
-    call get_intf_wf(intf(LEFT), zpsi(:, 1), intf_wf(:, LEFT))
-    call get_intf_wf(intf(RIGHT), zpsi(:, 1), intf_wf(:, RIGHT))
+    do il = 1, NLEADS
+      call get_intf_wf(intf(il), zpsi(:, 1), intf_wf(:, il))
+    end do
 
     if(transposed_) zpsi = conjg(zpsi)
 
@@ -670,11 +670,15 @@ contains
     CMPLX,             intent(in)    :: src_wf(:)
     CMPLX,             intent(inout) :: zpsi(:, :)
 
+    integer  :: ii, index
+
     call push_sub('ob_rti.apply_src')
 
     ! Do not use use BLAS here.
-    zpsi(intf%index_range(1):intf%index_range(2), 1) = &
-      zpsi(intf%index_range(1):intf%index_range(2), 1) + src_wf(1:intf%np)
+    do ii=1, intf%np
+      index = intf%index(ii)
+      zpsi(index, 1) = zpsi(index, 1) + src_wf(ii)
+    end do
 
     call pop_sub()
   end subroutine apply_src
@@ -692,12 +696,13 @@ contains
     logical, optional, intent(in)    :: transposed
 
     CMPLX, allocatable :: mem_intf_wf(:)
+    integer            :: ii, index
 
     call push_sub('ob_rti.apply_mem')
 
     SAFE_ALLOCATE(mem_intf_wf(1:intf%np))
 
-    mem_intf_wf = M_z0
+    mem_intf_wf(:) = M_z0
 
     if(present(transposed)) then
       ! FIXME: transpose if mem is not symmetric
@@ -706,8 +711,10 @@ contains
     call zsymv('U', intf%np, factor, mem, intf%np, intf_wf, 1, M_z0, mem_intf_wf, 1)
 
     ! Do not use use BLAS here.
-    zpsi(intf%index_range(1):intf%index_range(2), 1) = &
-      zpsi(intf%index_range(1):intf%index_range(2), 1) + mem_intf_wf(:)
+    do ii=1, intf%np
+      index = intf%index(ii)
+      zpsi(index, 1) = zpsi(index, 1) + mem_intf_wf(ii)
+    end do
 
     SAFE_DEALLOCATE_A(mem_intf_wf)
     call pop_sub()
@@ -734,6 +741,7 @@ contains
     call push_sub('ob_rti.apply_sp_mem')
 
     SAFE_ALLOCATE(tmem(1:intf%np, 1:intf%np))
+    ! TODO: do not multiply matrices together, better multiply successively onto wavefunction
     call make_full_matrix(intf%np, order, dim, sp_mem, mem_s, tmem, mapping)
     call apply_mem(tmem, intf, intf_wf, zpsi, factor, transposed)
     SAFE_DEALLOCATE_A(tmem)

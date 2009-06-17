@@ -138,8 +138,8 @@ contains
 
     do il = 1, NLEADS
       ! Try to read the coefficients from file
-      call read_coeffs(trim(restart_dir)//'open_boundaries/', saved_iter, ob%mem_coeff(:, :, :, il),     &
-        ob%mem_sp_coeff(:, :, il), ob%mem_s(:, :, :, il), calc_dim, max_iter, np, spacing, delta, op%stencil%size, &
+      call read_coeffs(trim(restart_dir)//'open_boundaries/', saved_iter, ob%mem_coeff,     &
+        ob%mem_sp_coeff, ob%mem_s, calc_dim, max_iter, np, spacing, delta, op%stencil%size, &
         ob%mem_type, np*order, il)
 
       if (saved_iter.lt.max_iter) then ! Calculate missing coefficients.
@@ -159,9 +159,16 @@ contains
         ASSERT(hm%d%ispin.ne.SPINORS)
         if(saved_iter.eq.0) then 
           ! Get anchor for recursion.
-          call approx_coeff0(intface(il), delta, il, hm%lead_h_diag(:, :, 1, il),              &
-            hm%lead_h_offdiag(:, :, il), ob%mem_coeff(:, :, 0, il), ob%mem_sp_coeff(:, 0, il), &
-            ob%mem_s(:,:,:,il), order, ob%mem_type, ob%sp2full_map, spacing)
+          select case(ob%mem_type)
+          case(SAVE_CPU_TIME)
+            call approx_coeff0(intface(il), delta, il, hm%lead_h_diag(:, :, 1, il),   &
+              hm%lead_h_offdiag(:, :, il), ob%mem_coeff(:, :, 0, il), order, spacing)
+          case(SAVE_RAM_USAGE) ! FIXME: only 2D.
+            ASSERT(calc_dim.eq.2)
+            call approx_sp_coeff0(intface(il), delta, il, hm%lead_h_diag(:, :, 1, il), &
+                 hm%lead_h_offdiag(:, :, il), ob%mem_sp_coeff(:, 0, il), &
+                 ob%mem_s(:,:,:,il), order, ob%sp2full_map, spacing)
+          end select
           call loct_progress_bar(1, max_iter+1)
         end if
         ! Calculate the subsequent coefficients by the recursive relation.
@@ -184,8 +191,8 @@ contains
             trim(lead_name(il))//' lead.'
           call write_info(2)
           if(mpi_grp_is_root(mpi_grp)) then
-            call write_coeffs(trim(restart_dir)//'open_boundaries/', ob%mem_coeff(:, :, :, il),          &
-              ob%mem_sp_coeff(:, :, il), ob%mem_s(:, :, :, il), calc_dim, max_iter, intface(il)%np, spacing, &
+            call write_coeffs(trim(restart_dir)//'open_boundaries/', ob%mem_coeff,          &
+              ob%mem_sp_coeff, ob%mem_s, calc_dim, max_iter, intface(il)%np, spacing, &
               delta, op%stencil%size, ob%mem_type, np*order, il)
           end if
         end if
@@ -212,19 +219,14 @@ contains
   ! Solve for zeroth memory coefficient by truncating the continued
   ! matrix fraction. Since the coefficient must be symmetric (non-magnetic),
   ! a symmetric inversion is used.
-  subroutine approx_coeff0(intface, delta, il, diag, offdiag, coeff0, sp_coeff0, &
-    mem_s, order, mem_type, mapping, spacing)
+  subroutine approx_coeff0(intface, delta, il, diag, offdiag, coeff0, order, spacing)
     type(interface_t), intent(in)  :: intface
     FLOAT,             intent(in)  :: delta
     integer,           intent(in)  :: il
     CMPLX,             intent(in)  :: diag(:, :)
     CMPLX,             intent(in)  :: offdiag(:, :)
     CMPLX,             intent(out) :: coeff0(:, :)
-    CMPLX,             intent(out) :: sp_coeff0(:)   ! 0th coefficient in packed storage.
-    CMPLX,             intent(out) :: mem_s(:, :, :) ! S & S^(-1).
     integer,           intent(in)  :: order
-    integer,           intent(in)  :: mem_type
-    integer,           intent(in)  :: mapping(:)     ! Mapping.
     FLOAT,             intent(in)  :: spacing
 
     integer            :: i, j, np
@@ -232,7 +234,7 @@ contains
     FLOAT              :: norm, old_norm, d2
     CMPLX              :: h
 
-    call push_sub('ob_mem.approx_coeff0_new')
+    call push_sub('ob_mem.approx_coeff0')
 
     np = intface%np
     d2 = delta**2
@@ -279,19 +281,87 @@ contains
         call write_warning(1)
       end if
 
-      if(mem_type.eq.SAVE_RAM_USAGE) then
-        ! Diagonalization procedure.
-        mem_s(:, :, 1) = q0(:, :)
-        call lalg_eigensolve_nonh(np, mem_s(:, :, 1), mem_s(:, 1, 2))
-        mem_s(:, :, 2) = mem_s(:, :, 1)
-        norm = lalg_inverter(np, mem_s(:, :, 2), invert=.true.)
-        call make_sparse_matrix(np, order, 2, q0, mem_s, sp_coeff0, mapping)
-      end if
       SAFE_DEALLOCATE_A(q0)
     end if
 
     call pop_sub()
   end subroutine approx_coeff0
+
+
+  ! ---------------------------------------------------------
+  ! Solve for zeroth memory coefficient by truncating the continued
+  ! matrix fraction. Since the coefficient must be symmetric (non-magnetic),
+  ! a symmetric inversion is used. Sparse version
+  subroutine approx_sp_coeff0(intface, delta, il, diag, offdiag, sp_coeff0, &
+    mem_s, order, mapping, spacing)
+    type(interface_t), intent(in)  :: intface
+    FLOAT,             intent(in)  :: delta
+    integer,           intent(in)  :: il
+    CMPLX,             intent(in)  :: diag(:, :)
+    CMPLX,             intent(in)  :: offdiag(:, :)
+    CMPLX,             intent(out) :: sp_coeff0(:)   ! 0th coefficient in packed storage.
+    CMPLX,             intent(out) :: mem_s(:, :, :) ! S & S^(-1).
+    integer,           intent(in)  :: order
+    integer,           intent(in)  :: mapping(:)     ! Mapping.
+    FLOAT,             intent(in)  :: spacing
+
+    integer            :: i, j, np
+    CMPLX, allocatable :: q0(:, :), coeff0(:, :)
+    FLOAT              :: norm, old_norm, d2
+    CMPLX              :: h
+
+    call push_sub('ob_mem.approx_sp_coeff0')
+
+    np = intface%np
+    d2 = delta**2
+
+    ! Truncating the continued fraction is the same as iterating the equation
+    !
+    !     p0 = (1/(1 + i*delta*h + delta^2*q0))
+    !     q0 = V^T * p0 * V
+    !
+    ! with start value 0:
+    SAFE_ALLOCATE(q0(1:np, 1:np))
+
+    q0(:, :) = M_z0
+
+    old_norm = M_ZERO
+    do i = 1, mem_iter
+      ! Calculate 1 + i*delta*h + delta^2*coeff0_old
+      q0(:, :) = M_zI*delta*diag(:, :) + d2*q0(:, :)
+      do j = 1, np
+        q0(j, j) = M_ONE + q0(j, j)
+      end do
+
+      ! Invert.
+      call lalg_sym_inverter('U', np, q0)
+      call matrix_symmetrize(q0, np)
+      norm = infinity_norm(q0)
+      if((abs(old_norm/norm-M_ONE)).lt.mem_tolerance) then
+        exit
+      end if
+      ! Apply coupling matrices.
+      call apply_coupling(q0, offdiag, q0, np, il)
+      call matrix_symmetric_average(q0, np)
+      old_norm = norm
+    end do
+    if(i.gt.mem_iter) then
+      write(message(1), '(a,i6,a)') 'Memory coefficent for time step 0, ' &
+        //trim(lead_name(il))//' lead, not converged'
+      call write_warning(1)
+    end if
+
+    ! Diagonalization procedure.
+    mem_s(:, :, 1) = q0(:, :)
+    call lalg_eigensolve_nonh(np, mem_s(:, :, 1), mem_s(:, 1, 2))
+    mem_s(:, :, 2) = mem_s(:, :, 1)
+    norm = lalg_inverter(np, mem_s(:, :, 2), invert=.true.)
+    call make_sparse_matrix(np, order, 2, q0, mem_s, sp_coeff0, mapping)
+
+    SAFE_DEALLOCATE_A(q0)
+
+    call pop_sub()
+  end subroutine approx_sp_coeff0
 
 
   ! ---------------------------------------------------------
@@ -555,9 +625,9 @@ contains
   subroutine write_coeffs(dir, coeffs, sp_coeffs, mem_s, dim, iter, np, &
     spacing, delta, op_n, mem_type, length, il)
     character(len=*), intent(in) :: dir
-    CMPLX,            intent(in) :: coeffs(np, np, 0:iter)    ! Saved coefficients.
-    CMPLX,            intent(in) :: sp_coeffs(length, 0:iter) ! saved coefficients.
-    CMPLX,            intent(in) :: mem_s(np, np, 2)          ! Diagonalization matrix s.
+    CMPLX,            intent(in) :: coeffs(np, np, 0:iter, NLEADS)    ! Saved coefficients.
+    CMPLX,            intent(in) :: sp_coeffs(length, 0:iter, NLEADS) ! saved coefficients.
+    CMPLX,            intent(in) :: mem_s(np, np, 2, NLEADS)  ! Diagonalization matrix s.
     integer,          intent(in) :: dim                       ! Dimension.
     integer,          intent(in) :: iter                      ! Number of coefficients.
     integer,          intent(in) :: np                        ! Number of points in the interface.
@@ -595,14 +665,14 @@ contains
     case(SAVE_CPU_TIME)
       do ntime = 0, iter
         do j = 1, np
-          write(iunit) coeffs(j, j:np, ntime)
+          write(iunit) coeffs(j, j:np, ntime, il)
         end do
       end do
     case(SAVE_RAM_USAGE) ! FIXME: only 2D.
       ASSERT(dim.eq.2)
-      write(iunit) mem_s(:, :, 1)
+      write(iunit) mem_s(:, :, 1, il)
       do ntime = 0, iter
-        write(iunit) sp_coeffs(1:length, ntime)
+        write(iunit) sp_coeffs(1:length, ntime, il)
       end do
     end select
 
@@ -619,19 +689,19 @@ contains
   subroutine read_coeffs(dir, s_iter, coeffs, sp_coeffs, mem_s, dim, iter, &
     np, spacing, delta, op_n, mem_type, length, il)
     character(len=*), intent(in)    :: dir
-    integer,          intent(out)   :: s_iter                    ! Number of saved coefficients.
-    CMPLX,            intent(inout) :: coeffs(np, np, 0:iter)    ! Saved coefficients.
-    CMPLX,            intent(inout) :: sp_coeffs(length, 0:iter) ! Saved coefficients.
-    CMPLX,            intent(out)   :: mem_s(np, np, 2)          ! Diagonalization matrices.
-    integer,          intent(in)    :: dim                       ! Dimension of the problem.
-    integer,          intent(in)    :: iter                      ! Number of coefficients.
-    integer,          intent(in)    :: np                        ! Number of points in the interface.
-    FLOAT,            intent(in)    :: spacing                   ! Spacing.
-    FLOAT,            intent(in)    :: delta                     ! Timestep.
-    integer,          intent(in)    :: op_n                      ! Number of operator points.
-    integer,          intent(in)    :: mem_type                  ! Which type of coefficient.
-    integer,          intent(in)    :: length                    ! Length of the packed array.
-    integer,          intent(in)    :: il                        ! Which lead.
+    integer,          intent(out)   :: s_iter                        ! Number of saved coefficients.
+    CMPLX,            intent(inout) :: coeffs(np, np, 0:iter, NLEADS)! Saved coefficients.
+    CMPLX,            intent(inout) :: sp_coeffs(length, 0:iter, NLEADS)! Saved coefficients.
+    CMPLX,            intent(out)   :: mem_s(np, np, 2, NLEADS)      ! Diagonalization matrices.
+    integer,          intent(in)    :: dim                           ! Dimension of the problem.
+    integer,          intent(in)    :: iter                          ! Number of coefficients.
+    integer,          intent(in)    :: np                            ! Number of points in the interface.
+    FLOAT,            intent(in)    :: spacing                       ! Spacing.
+    FLOAT,            intent(in)    :: delta                         ! Timestep.
+    integer,          intent(in)    :: op_n                          ! Number of operator points.
+    integer,          intent(in)    :: mem_type                      ! Which type of coefficient.
+    integer,          intent(in)    :: length                        ! Length of the packed array.
+    integer,          intent(in)    :: il                            ! Which lead.
 
     integer :: ntime, j, iunit, s_dim, s_np, s_op_n, s_mem_type
     FLOAT   :: s_spacing, s_delta, det
@@ -665,17 +735,17 @@ contains
       if (mem_type.eq.SAVE_CPU_TIME) then ! Full (upper half) matrices.
         do ntime = 0, min(iter, s_iter)
           do j = 1, np
-            read(iunit) coeffs(j, j:np, ntime)
-            coeffs(j:np, j, ntime) = coeffs(j, j:np, ntime)
+            read(iunit) coeffs(j, j:np, ntime, il)
+            coeffs(j:np, j, ntime, il) = coeffs(j, j:np, ntime, il)
           end do
         end do
       else ! Packed matrices (FIXME: yet only 2D).
         ASSERT(dim.eq.2)
-        read(iunit) mem_s(:, :, 1)
-        mem_s(:, :, 2) = mem_s(1:np, 1:np, 1)
-        det = lalg_inverter(np, mem_s(:, :, 2), invert=.true.)
+        read(iunit) mem_s(:, :, 1, il)
+        mem_s(:, :, 2, il) = mem_s(1:np, 1:np, 1, il)
+        det = lalg_inverter(np, mem_s(:, :, 2, il), invert=.true.)
         do ntime = 0, min(iter, s_iter)
-          read(iunit) sp_coeffs(1:length, ntime)
+          read(iunit) sp_coeffs(1:length, ntime, il)
         end do
       end if
     else
