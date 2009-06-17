@@ -355,7 +355,9 @@ contains
           end if
         end select
 
-        if(eigens%es_type /= RS_RMMDIIS) call dsubspace_diag(gr, st, hm, ik, st%eigenval(:, ik), st%dpsi(:, :, :, ik), eigens%diff(:, ik))
+        if(eigens%es_type /= RS_RMMDIIS) then
+          call dsubspace_diag(gr, st, hm, ik, st%eigenval(:, ik), st%dpsi(:, :, :, ik), eigens%diff(:, ik))
+        end if
 
       else
 
@@ -386,7 +388,9 @@ contains
           end if
         end select
 
-        if(eigens%es_type /= RS_RMMDIIS) call zsubspace_diag(gr, st, hm, ik, st%eigenval(:, ik), st%zpsi(:, :, :, ik), eigens%diff(:, ik))
+        if(eigens%es_type /= RS_RMMDIIS) then
+          call zsubspace_diag(gr, st, hm, ik, st%eigenval(:, ik), st%zpsi(:, :, :, ik), eigens%diff(:, ik))
+        end if
 
       end if
 
