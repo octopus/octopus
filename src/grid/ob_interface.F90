@@ -72,7 +72,7 @@ contains
     integer,             intent(in)  :: il
 
     logical :: ok
-    integer :: i, from(MAX_DIM), to(MAX_DIM), dir, lr
+    integer :: i, from(MAX_DIM), to(MAX_DIM), ll(MAX_DIM), dir, lr
 
     call push_sub('ob_interface.interface_init')
 
@@ -85,11 +85,6 @@ contains
       intf%offdiag_invertible = .false.
     end if
 
-    intf%np = intf%extent*m%idx%ll(2)*m%idx%ll(3)
-    intf%np_uc = (intf%extent + 1)*m%idx%ll(2)*m%idx%ll(3)
-
-    SAFE_ALLOCATE(intf%index(1:intf%np))
-
     ! Extract submeshes for the interface regions.
     ! 
     ! In 2D for the left lead.
@@ -97,15 +92,26 @@ contains
     !   |       |
     !   |       |
     ! from------+------------ ...
-    if(il.eq.LEFT) then
-      dir = 1
-      lr  = 1
-    else
-      lr  = 2
-      dir = -1
-    end if
-    from = m%idx%nr(lr, :) + dir*m%idx%enlarge
-    to(1:3) = from(1:3) + dir*(/intf%extent, m%idx%ll(2), m%idx%ll(3)/) - dir
+    ! valid for every lead
+    ! directions: LEFT -> RIGHT, BOTTOM -> TOP, REAR -> FRONT
+    
+    ! direction: +1 if from L->R and -1 if R->L (other leads accordingly)
+    dir = (-1)**(il+1)
+    ll(:) = m%idx%ll(:)
+    ! the interface region has only intf%extent points in its normal direction
+    ll((il+1)/2) = intf%extent
+    intf%np = product(ll(:))
+    intf%np_uc = intf%np/intf%extent*(intf%extent+1)
+    ! we are 1 point too far in every direction, so go back
+    ll(:) = ll(:) - 1
+
+    SAFE_ALLOCATE(intf%index(1:intf%np))
+
+    ! the point where we start
+    from(:) = m%idx%nr( mod(il+1,2)+1, :) + dir*m%idx%enlarge
+    ! the point were we end
+    to(:)   = from(:) + dir*ll(:)
+
 
     call mesh_subset_indices(m, from, to, intf%index)
 
@@ -131,7 +137,7 @@ contains
         message(1) = 'Failed assertion:'
         message(2) = 'ob_interface.interface_init: the interface region'
         message(3) = 'has holes.'
-        call write_fatal(3)
+        call write_warning(3)
       end if
     end if
 
@@ -181,9 +187,6 @@ contains
         end if
       end do
     end if
-!    member_of_interface =              &
-!      idx.ge.intf%index_range(1) .and. &
-!      idx.le.intf%index_range(2)
 
     call pop_sub()
   end function member_of_interface
@@ -204,7 +207,6 @@ contains
     do ii=1, intf%np
       intf_wf(ii) = zpsi(intf%index(ii))
     end do
-!    intf_wf(1:intf%np) = zpsi(intf%index_range(1):intf%index_range(2))
 
     call pop_sub()
   end subroutine get_intf_wf
@@ -225,7 +227,6 @@ contains
     do ii=1, intf%np
       zpsi(intf%index(ii)) = intf_wf(ii)
     end do
-!    zpsi(intf%index_range(1):intf%index_range(2)) = intf_wf(1:intf%np)
 
     call pop_sub()
   end subroutine put_intf_wf

@@ -70,10 +70,10 @@ module simul_box_m
   integer, parameter, public :: &
     LEFT      = 1,              & ! Lead indices,
     RIGHT     = 2,              & ! L=1, R=2.
-    TOP       = 3,              & ! for 2D open system
-    BOTTOM    = 4,              & ! 
-    FRONT     = 5,              & ! for 3D open system
-    REAR      = 6,              & ! 
+    BOTTOM    = 3,              & ! for 2D open system
+    TOP       = 4,              & ! 
+    REAR      = 5,              & ! for 3D open system
+    FRONT     = 6,              & ! 
     OUTER     = 1,              & ! Block indices of interface wave functions
     INNER     = 2,              & ! for source term.
     NLEADS    = 2,              & ! Number of leads.
@@ -82,9 +82,9 @@ module simul_box_m
   character(len=5), dimension(NLEADS), parameter, public :: LEAD_NAME = &
     (/'left ', 'right'/)
 !  character(len=6), dimension(NLEADS), parameter, public :: LEAD_NAME = &
-!    (/'left  ', 'right ', 'top   ', 'bottom'/)
+!    (/'left  ', 'right ', 'bottom', 'top   '/)
 !  character(len=6), dimension(NLEADS), parameter, public :: LEAD_NAME = &
-!    (/'left  ', 'right ', 'top   ', 'bottom', 'front ', 'rear  '/)
+!    (/'left  ', 'right ', 'bottom', 'top   ', 'rear  ', 'front '/)
 
   type, public :: interp_t
     integer          :: nn, order  ! interpolation points and order
