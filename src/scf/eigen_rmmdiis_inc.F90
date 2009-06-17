@@ -393,7 +393,7 @@ subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, niter, converged,
 
   do isweep = 1, sweeps
 
-    if(isweep > 1) call X(subspace_diag)(gr, st, hm, ik)
+    if(isweep > 1) call X(subspace_diag)(gr, st, hm, ik, st%eigenval(:, ik), st%X(psi)(:, :, :, ik))
 
     do sst = st%st_start, st%st_end, blocksize
       est = min(sst + blocksize - 1, st%st_end)
