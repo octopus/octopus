@@ -523,20 +523,22 @@ end subroutine X(bi_conjugate_gradients)
         converged = .true.
       end if
     case(1)
-      write(message(1), '(a)') "QMR failure, can't continue: b or P*b is the zero vector!"
+      write(message(1), '(a)') "QMR breakdown, cannot continue: b or P*b is the zero vector!"
       call write_fatal(1)
     case(2)
-      write(message(1), '(a)') "QMR failure, can't continue: v^T*z is zero!"
+      write(message(1), '(a)') "QMR breakdown, cannot continue: v^T*z is zero!"
       call write_fatal(1)
     case(3)
-      write(message(1), '(a)') "QMR failure, can't continue: q^T*p is zero!"
+      write(message(1), '(a)') "QMR breakdown, cannot continue: q^T*p is zero!"
       call write_fatal(1)
     case(4)
-      write(message(1), '(a)') "QMR failure, can't continue: gamma is zero!"
+      write(message(1), '(a)') "QMR breakdown, cannot continue: gamma is zero!"
       call write_fatal(1)
     case(5)
       write(message(1), '(a)') "QMR Solver not converged!"
-      call write_warning(1)
+      write(message(2), '(a)') "Try to increase the iterations (OpenBoundariesQMRMaxIter) or"
+      write(message(3), '(a)') "to inrease the tolerance (OpenBoundariesQMRTol)"
+      call write_warning(3)
       if(present(converged)) then
         converged = .false.
       end if

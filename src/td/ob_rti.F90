@@ -60,8 +60,8 @@ module ob_rti_m
   type(exponential_t) :: taylor_1st
 
   ! Parameters to the BiCG in Crank-Nicholson.
-  integer :: cg_max_iter
-  FLOAT   :: cg_tol
+  integer :: qmr_max_iter
+  FLOAT   :: qmr_tol
 
   ! is the effective Hamiltonian complex symmetric?
   ! true if no magnetic fields or vector potentials are present
@@ -98,7 +98,7 @@ contains
     taylor_1st%exp_order  = 1
     order                 = gr%der%order
 
-    !%Variable OpenBoundariesBiCGMaxIter
+    !%Variable OpenBoundariesQMRMaxIter
     !%Type integer
     !%Default 100
     !%Section Open Boundaries
@@ -106,21 +106,21 @@ contains
     !% Sets the maximum iteration number for the BiCG linear solver in
     !% the Crank-Nicholson procedure.
     !%End
-    call loct_parse_int(datasets_check('OpenBoundariesBiCGMaxIter'), 100, cg_max_iter)
-    if(cg_max_iter.le.0) then
-      call input_error('OpenBoundariesBiCGMaxIter')
+    call loct_parse_int(datasets_check('OpenBoundariesQMRMaxIter'), 100, qmr_max_iter)
+    if(qmr_max_iter.le.0) then
+      call input_error('OpenBoundariesQMRMaxIter')
     end if
 
-    !%Variable OpenBoundariesBiCGTol
+    !%Variable OpenBoundariesQMRTol
     !%Type integer
     !%Default 1e-12
     !%Section Open Boundaries
     !%Description
-    !% Sets the convergence tolerance for the residue in the BiCG linear solver
+    !% Sets the convergence tolerance for the residue in the QMR linear solver
     !% in the Crank-Nicholson procedure.
     !%End
-    call loct_parse_float(datasets_check('OpenBoundariesBiCGTol'), CNST(1e-12), cg_tol)
-    if(cg_tol.le.M_ZERO) then
+    call loct_parse_float(datasets_check('OpenBoundariesQMRTol'), CNST(1e-12), qmr_tol)
+    if(qmr_tol.le.M_ZERO) then
       call input_error('OpenBoundariesBiCGTol')
     end if
 
@@ -259,7 +259,7 @@ contains
     FLOAT, target,               intent(in)    :: t
     integer,                     intent(in)    :: timestep
 
-    integer            :: il, it, m, cg_iter, order, inp
+    integer            :: il, it, m, qmr_iter, order, inp
     integer, target    :: ist, ik
     CMPLX              :: factor, fac, f0
     CMPLX, allocatable :: tmp(:, :), tmp_wf(:), tmp_mem(:, :)
@@ -340,12 +340,12 @@ contains
         end if
 
         ! Solve linear system (1 + i \delta H_{eff}) st%zpsi = tmp.
-        cg_iter      = cg_max_iter
+        qmr_iter      = qmr_max_iter
         tmp(1:gr%mesh%np, 1) = st%zpsi(1:gr%mesh%np, 1, ist, ik)
         ! Use the stable symmetric QMR solver
         ! h_eff_backward must be a complex symmetric operator !
         call zqmr_sym(gr%mesh%np, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_backward, precond_prop, &
-          cg_iter, residue=dres, threshold=cg_tol, showprogress=.false., converged=conv)
+          qmr_iter, residue=dres, threshold=qmr_tol, showprogress=.false., converged=conv)
         !if (.not.conv) then
         !  write(*,*) 'ik, residue', ik, dres
         !end if
@@ -379,7 +379,7 @@ contains
     FLOAT, target,               intent(in)    :: t
     integer,                     intent(in)    :: timestep
 
-    integer            :: il, it, m, cg_iter, order, inp
+    integer            :: il, it, m, qmr_iter, order, inp
     integer, target    :: ist, ik
     CMPLX              :: factor, fac, f0
     CMPLX, allocatable :: tmp(:, :), tmp_wf(:), tmp_mem(:)
@@ -464,10 +464,10 @@ contains
         end if
 
         ! Solve linear system (1 + i \delta H_{eff}) st%zpsi = tmp.
-        cg_iter      = cg_max_iter
+        qmr_iter      = qmr_max_iter
         tmp(1:gr%mesh%np, 1) = st%zpsi(1:gr%mesh%np, 1, ist, ik)
         call zqmr_sym(gr%mesh%np, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_backward_sp, precond_prop, &
-          cg_iter, residue=dres, threshold=cg_tol, showprogress=.false.)
+          qmr_iter, residue=dres, threshold=qmr_tol, showprogress=.false.)
       end do
     end do
 
@@ -809,8 +809,8 @@ contains
     write(message(1), '(a,a10)')    'Type of memory coefficients:     ', trim(mem_type_name)
     write(message(2), '(a,f10.3)')  'MBytes required for memory term: ', &
       mbytes_memory_term(ob%max_mem_coeffs, gr%intf(:)%np, NLEADS, st, ob%mem_type, order)
-    write(message(3), '(a,i10)')    'Maximum BiCG iterations:         ', cg_max_iter
-    write(message(4), '(a,es10.1)') 'BiCG residual tolerance:         ', cg_tol
+    write(message(3), '(a,i10)')    'Maximum QMR iterations:          ', qmr_max_iter
+    write(message(4), '(a,es10.1)') 'QMR residual tolerance:          ', qmr_tol
     write(message(5), '(a,a20)')    'Included additional terms:       ', trim(terms)
     write(message(6), '(a,a10)')    'TD left lead potential:          ', &
       trim(gr%sb%lead_td_pot_formula(LEFT))

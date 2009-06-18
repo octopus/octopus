@@ -74,7 +74,7 @@ KPointsUseSymmetries = false
 %
 
 ring_lead_EigenSolverMaxIter = 10000
-OpenBoundariesBiCGMaxIter = 10000
+OpenBoundariesQMRMaxIter = 10000
 
 # TD settings.
 

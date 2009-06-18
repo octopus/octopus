@@ -64,7 +64,7 @@ add_ucells = 2
  add_unit_cells   | add_ucells
  td_pot_formula   | "0.0"   | "0.0"
 %
-well_OpenBoundariesBiCGMaxIter = 1000
+well_OpenBoundariesQMRMaxIter = 1000
 
 %well_Coordinates
  "well" | 0 | 0 | 0

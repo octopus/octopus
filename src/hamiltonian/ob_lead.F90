@@ -55,7 +55,7 @@ contains
     type(interface_t),   intent(in)  :: intf
     CMPLX,               intent(out) :: diag(:, :)
 
-    integer :: i, k, n, k_stencil
+    integer :: i, k, n, k_stencil, intf_index
     FLOAT   :: w_re, w_im
 
     call push_sub('ob_lead.lead_diag')
@@ -73,7 +73,7 @@ contains
           lapl%m%idx%Lxyz(n,3)+lapl%stencil%points(3,k))
         ! If the coupling point is in the interface...
         if(k_stencil.le.lapl%np.and. &
-          member_of_interface(k_stencil, intf)) then
+          member_of_interface(k_stencil, intf, intf_index)) then
           ! ... get the operator coefficients.
           if(lapl%cmplx_op) then
             if(lapl%const_w) then
@@ -95,7 +95,7 @@ contains
           w_im = -w_im/M_TWO
           w_re = -w_re/M_TWO
           ! ... write them into the right entry of the diagonal block.
-          diag(i, k_stencil-intf%index_range(1)+1) = TOCMPLX(w_re, w_im)
+          diag(i, intf_index) = TOCMPLX(w_re, w_im)
         end if
       end do
     end do
@@ -176,8 +176,7 @@ contains
         p_matr(TRANS_DIR) = p_matr(TRANS_DIR) + dir*(intf%extent-x_shift)
         n_matr            = lapl%m%idx%Lxyz_inv(p_matr(1), p_matr(2), p_matr(3))
 
-        if(member_of_interface(n_matr, intf)) then
-          n_matr = interface_index(n_matr, intf)
+        if(member_of_interface(n_matr, intf, n_matr)) then
 
           ! Multiply by the coefficient of the operator and sum up.
           if(lapl%cmplx_op) then

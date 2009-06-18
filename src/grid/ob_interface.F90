@@ -41,7 +41,6 @@ module ob_interface_m
     interface_t,          &
     interface_init,       &
     interface_end,        &
-    interface_index,      &
     interface_write_info, &
     get_intf_wf,          &
     put_intf_wf,          &
@@ -100,17 +99,16 @@ contains
     ll(:) = m%idx%ll(:)
     ! the interface region has only intf%extent points in its normal direction
     ll((il+1)/2) = intf%extent
+
     intf%np = product(ll(:))
     intf%np_uc = intf%np/intf%extent*(intf%extent+1)
-    ! we are 1 point too far in every direction, so go back
-    ll(:) = ll(:) - 1
-
     SAFE_ALLOCATE(intf%index(1:intf%np))
 
     ! the point where we start
     from(:) = m%idx%nr( mod(il+1,2)+1, :) + dir*m%idx%enlarge
     ! the point were we end
-    to(:)   = from(:) + dir*ll(:)
+    ! we are 1 point too far in every direction, so go back
+    to(:)   = from(:) + dir*(ll(:) - 1)
 
 
     call mesh_subset_indices(m, from, to, intf%index)
@@ -146,26 +144,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Return the interface point number of the global point idx.
-  ! For this to work, the intface%index(:, il) array has to
-  ! be sorted in increasing order.
-  integer function interface_index(idx, intf)
-    integer,           intent(in) :: idx
-    type(interface_t), intent(in) :: intf
-
-    call push_sub('ob_interface.interface_index')
-
-    interface_index = idx - intf%index_range(1) + 1
-
-    call pop_sub()
-  end function interface_index
-  
-
-  ! ---------------------------------------------------------
   ! Checks if point number idx is an interface point of interface.
-  logical function member_of_interface(idx, intf)
+  logical function member_of_interface(idx, intf, index)
     integer,           intent(in) :: idx
     type(interface_t), intent(in) :: intf
+    integer,           intent(out) :: index ! index in interface
 
     integer :: ii
 
@@ -176,6 +159,8 @@ contains
       idx.ge.intf%index_range(1) .and. &
       idx.le.intf%index_range(2)
 
+    index = 0
+
     ! if so check exactly
     ! (not the fastest way, but works if we have non-connected points)
     if (member_of_interface) then
@@ -183,6 +168,7 @@ contains
       do ii=1, intf%np
         if (intf%index(ii).eq.idx) then
           member_of_interface = .true.
+          index = ii
           exit
         end if
       end do
