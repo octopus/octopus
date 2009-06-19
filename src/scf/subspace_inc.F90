@@ -40,9 +40,9 @@ subroutine X(subspace_diag)(gr, st, hm, ik, eigenval, psi, diff)
 #ifdef HAVE_MPI
   if(st%parallel_in_states) then
     if(present(diff)) then
-      call X(subspace_diag_par_states)(gr, st, hm, ik, psi, diff)
+      call X(subspace_diag_par_states)(gr, st, hm, ik, eigenval, psi, diff)
     else
-      call X(subspace_diag_par_states)(gr, st, hm, ik, psi)
+      call X(subspace_diag_par_states)(gr, st, hm, ik, eigenval, psi)
     end if
   else
 #endif
@@ -149,11 +149,12 @@ end subroutine X(subspace_diag)
 ! the states, this version is aware of parallelization in states but
 ! consumes more memory.
 !
-subroutine X(subspace_diag_par_states)(gr, st, hm, ik, psi, diff)
+subroutine X(subspace_diag_par_states)(gr, st, hm, ik, eigenval, psi, diff)
   type(grid_t),        intent(inout) :: gr
-  type(states_t),      intent(inout) :: st
+  type(states_t),      intent(in)    :: st
   type(hamiltonian_t), intent(inout) :: hm
   integer,             intent(in)    :: ik
+  FLOAT,               intent(out)   :: eigenval(:)
   R_TYPE,              intent(inout) :: psi(:, :, :)
   FLOAT, optional,     intent(out)   :: diff(1:st%nst)
 
