@@ -36,6 +36,7 @@ module em_resp_m
   use lalg_basic_m
   use loct_parser_m
   use linear_response_m
+  use linear_solver_m
   use math_m
   use mesh_function_m
   use mesh_m
@@ -104,7 +105,7 @@ contains
     type(sternheimer_t)     :: sh
     type(lr_t)              :: kdotp_lr(MAX_DIM, 1)
 
-    integer :: sigma, ndim, i, idir, ierr, iomega, ifactor
+    integer :: sigma, ndim, i, idir, ierr, iomega, ifactor, default_solver
     character(len=100) :: dirname, str_tmp
     logical :: complex_response, have_to_calculate, use_kdotp
 
@@ -172,11 +173,19 @@ contains
     call write_info(1)
     call system_h_setup(sys, hm)
 
+    if(em_vars%eta == M_ZERO) then
+      ! operator is Hermitian
+      default_solver = LS_CG
+    else
+      ! operator is not Hermitian
+      default_solver = LS_QMR
+    endif
+
     if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
-      call sternheimer_init(sh, sys, hm, "EM", hermitian = states_are_real(sys%st), set_ham_var = 0)
+      call sternheimer_init(sh, sys, hm, "EM", hermitian = states_are_real(sys%st), set_ham_var = 0, default_solver = default_solver)
       ! set HamiltonVariation to V_ext_only, in magnetic case
     else
-      call sternheimer_init(sh, sys, hm, "EM", hermitian = states_are_real(sys%st))
+      call sternheimer_init(sh, sys, hm, "EM", hermitian = states_are_real(sys%st), default_solver = default_solver)
       ! otherwise, use default, which is hartree + fxc
     endif
 

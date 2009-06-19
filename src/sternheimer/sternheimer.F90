@@ -96,7 +96,7 @@ module sternheimer_m
 contains
   
   !-----------------------------------------------------------
-  subroutine sternheimer_init(this, sys, hm, prefix, hermitian, set_ham_var, set_occ_response)
+  subroutine sternheimer_init(this, sys, hm, prefix, hermitian, set_ham_var, set_occ_response, default_solver)
     type(sternheimer_t), intent(out)   :: this
     type(system_t),      intent(inout) :: sys
     type(hamiltonian_t), intent(inout) :: hm
@@ -104,9 +104,10 @@ contains
     logical, optional,   intent(in)    :: hermitian
     integer, optional,   intent(in)    :: set_ham_var
     logical, optional,   intent(in)    :: set_occ_response
+    integer, optional,   intent(in)    :: default_solver
 
     integer :: ham_var
-    logical :: default
+    logical :: default_preorthog
 
     if(simul_box_is_periodic(sys%gr%mesh%sb)) call messages_devel_version("Sternheimer equation for periodic systems")
 
@@ -118,11 +119,11 @@ contains
     !% Whether initial linear-response wavefunctions should be orthogonalized 
     !% or not against the occupied states, at the start of each SCF cycle.
     !%End 
-    default = sys%st%smear%method == SMEAR_SEMICONDUCTOR
+    default_preorthog = sys%st%smear%method == SMEAR_SEMICONDUCTOR
     if (loct_parse_isdef(datasets_check(trim(prefix)//'Preorthogonalization')) /= 0) then 
-      call loct_parse_logical(datasets_check(trim(prefix)//'Preorthogonalization'), default, this%preorthogonalization) 
+      call loct_parse_logical(datasets_check(trim(prefix)//'Preorthogonalization'), default_preorthog, this%preorthogonalization) 
     else 
-      call loct_parse_logical(datasets_check('Preorthogonalization'), default, this%preorthogonalization) 
+      call loct_parse_logical(datasets_check('Preorthogonalization'), default_preorthog, this%preorthogonalization) 
     end if
 
     !%Variable HamiltonianVariation
@@ -188,7 +189,11 @@ contains
     endif
     call write_info(3) 
 
-    call linear_solver_init(this%solver, sys%gr, prefix)
+    if(present(default_solver)) then
+      call linear_solver_init(this%solver, sys%gr, prefix, default_solver)
+    else
+      call linear_solver_init(this%solver, sys%gr, prefix)
+    endif
 
     if(this%solver%solver == LS_MULTIGRID .or. preconditioner_is_multigrid(this%solver%pre)) then
       if(.not. associated(sys%gr%mgrid)) then

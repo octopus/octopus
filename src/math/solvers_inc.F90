@@ -536,8 +536,7 @@ end subroutine X(bi_conjugate_gradients)
       call write_fatal(1)
     case(5)
       write(message(1), '(a)') "QMR Solver not converged!"
-      write(message(2), '(a)') "Try to increase the iterations (OpenBoundariesQMRMaxIter) or"
-      write(message(3), '(a)') "to inrease the tolerance (OpenBoundariesQMRTol)"
+      write(message(2), '(a)') "Try increasing the maximum number of iterations or the tolerance."
       call write_warning(3)
       if(present(converged)) then
         converged = .false.

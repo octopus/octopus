@@ -34,6 +34,7 @@ module kdotp_m
   use lalg_adv_m
   use loct_parser_m
   use linear_response_m
+  use linear_solver_m
   use math_m
   use mesh_function_m
   use mesh_m
@@ -92,7 +93,7 @@ contains
     type(sternheimer_t)     :: sh
     logical                 :: calc_eff_mass, complex_response
 
-    integer              :: idir, ierr, is, ist, ik
+    integer              :: idir, ierr, is, ist, ik, default_solver
     character(len=100)   :: dirname, str_tmp
     logical, allocatable :: orth_mask(:)
 
@@ -134,8 +135,15 @@ contains
     end if
     call write_info(1)
 
+    if(kdotp_vars%eta == M_ZERO) then
+      ! operator is Hermitian
+      default_solver = LS_CG
+    else
+      ! operator is not Hermitian
+      default_solver = LS_QMR
+    endif
     call sternheimer_init(sh, sys, hm, "KdotP_", hermitian = .true., &
-         set_ham_var = 0, set_occ_response = (kdotp_vars%occ_solution_method == 0))
+         set_ham_var = 0, set_occ_response = (kdotp_vars%occ_solution_method == 0), default_solver = default_solver)
     ! ham_var_set = 0 results in HamiltonianVariation = V_ext_only
 
     do idir = 1, gr%mesh%sb%dim
