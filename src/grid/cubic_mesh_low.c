@@ -33,7 +33,6 @@ void FC_FUNC_(cubic_mesh_init_c, CUBIC_MESH_INIT_C)(cubic_mesh_t ** this,
 
   for(ii = 0; ii < this[0]->nvalues; ii++) this[0]->ff[ii] = 0.0;
 
-  printf("%d %d %d \n", this[0]->nx, this[0]->ny, this[0]->nz);
 }
 
 void FC_FUNC_(dcubic_mesh_from_mesh, DCUBIC_MESH_FROM_MESH)(cubic_mesh_t ** this, const double * func){

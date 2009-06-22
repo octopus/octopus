@@ -113,27 +113,25 @@ module cubic_mesh_m
     
 contains
 
-  subroutine cubic_mesh_init(this, mesh, padding)
+  subroutine cubic_mesh_init(this, mesh, sizes)
     type(cubic_mesh_t), intent(out) :: this
     type(mesh_t),       intent(in)  :: mesh
-    integer, optional,  intent(in)  :: padding(1:MAX_DIM)
+    integer, optional,  intent(in)  :: sizes(1:MAX_DIM)
 
     integer :: nn(1:MAX_DIM)
     integer :: oo(1:MAX_DIM)
-    integer :: pad(1:MAX_DIM)
 
-    pad(1:MAX_DIM) = 0
-    if(present(padding)) then
-      pad(1:MAX_DIM) = padding(1:MAX_DIM)
+    if(present(sizes)) then
+      nn(1:MAX_DIM) = sizes(1:MAX_DIM)
+    else
+      nn(1:MAX_DIM) = mesh%idx%ll(1:MAX_DIM)
     end if
 
-    nn(1:MAX_DIM) = mesh%idx%nr(2, 1:MAX_DIM) - mesh%idx%nr(1, 1:MAX_DIM) + 1
     oo(1:MAX_DIM) = mesh%idx%nr(1, 1:MAX_DIM)
 
-    call cubic_mesh_init_c(this,                                              &
-         nn(1), nn(2), nn(3), oo(1) - pad(1), oo(2) - pad(2), oo(3) - pad(3), &
+    call cubic_mesh_init_c(this,                            &
+         nn(1), nn(2), nn(3), oo(1), oo(2), oo(3), &
          mesh%np, mesh%np_part, mesh%idx%Lxyz(1, 1))
-
   end subroutine cubic_mesh_init
 
 end module cubic_mesh_m
