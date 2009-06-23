@@ -182,7 +182,8 @@ contains
     endif
 
     if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
-      call sternheimer_init(sh, sys, hm, "EM", hermitian = states_are_real(sys%st), set_ham_var = 0, default_solver = default_solver)
+      call sternheimer_init(sh, sys, hm, "EM", hermitian = states_are_real(sys%st), set_ham_var = 0, &
+        default_solver = default_solver)
       ! set HamiltonVariation to V_ext_only, in magnetic case
     else
       call sternheimer_init(sh, sys, hm, "EM", hermitian = states_are_real(sys%st), default_solver = default_solver)
