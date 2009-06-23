@@ -194,7 +194,7 @@ subroutine X(ls_solver_cg) (ls, hm, gr, st, ist, ik, x, y, omega, tol)
   ls%iter = iter
   ls%abs_psi = sqrt(abs(gamma))
 
-  if(conv .ne. .true.) then 
+  if(.not. conv) then 
     write(message(1), '(a)') "CG solver not converged!"
     call write_warning(1)
   endif
@@ -324,7 +324,7 @@ subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, omega, tol, occ
   ls%iter = iter
   ls%abs_psi = gamma
 
-  if(conv .ne. .true.) then 
+  if(.not. conv) then 
     write(message(1), '(a)') "BiCGSTAB solver not converged!"
     call write_warning(1)
   endif
