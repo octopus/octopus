@@ -35,12 +35,22 @@ subroutine X(solve_HXeY) (this, hm, gr, st, ist, ik, x, y, omega, tol, occ_respo
   logical, optional,             intent(in)    :: occ_response
 
   logical :: occ_response_
+  R_TYPE, allocatable :: z(:, :)
 
   call push_sub('linear_solver_inc.Xsolve_HXeY')
   call profiling_in(prof, "LINEAR_SOLVER")
 
   occ_response_ = .true.
   if(present(occ_response)) occ_response_ = occ_response
+
+  args%ls       => this
+  args%hm       => hm
+  args%gr       => gr 
+  args%st       => st
+  args%ist      = ist
+  args%ik       = ik
+  args%X(omega) = omega
+  this%iter = this%max_iter
 
   select case(this%solver)
 
@@ -53,33 +63,31 @@ subroutine X(solve_HXeY) (this, hm, gr, st, ist, ik, x, y, omega, tol, occ_respo
   case(LS_MULTIGRID)
     call X(ls_solver_multigrid)(this, hm, gr, st, ist, ik, x, y, omega, tol)
 
-  case(LS_QMR)
-    args%ls       => this
-    args%hm       => hm
-    args%gr       => gr 
-    args%st       => st
-    args%ist      = ist
-    args%ik       = ik
-    args%X(omega) = omega
-
-    this%iter = this%max_iter
-    
+  case(LS_QMR_SYMMETRIC)   
     ! complex symmetric: never the case in the Sternheimer equation
-!    call X(qmr_sym)(gr%mesh%np, x(:, 1), y(:, 1), &
-!      X(ls_solver_operator_na), X(ls_dotu_qmr), X(ls_nrm2_qmr), X(ls_preconditioner), &
-!      this%iter, residue = this%abs_psi, threshold = tol, showprogress = .false.)
+    call X(qmr_sym)(gr%mesh%np, x(:, 1), y(:, 1), &
+      X(ls_solver_operator_na), X(ls_dotu_qmr), X(ls_nrm2_qmr), X(ls_preconditioner), &
+      this%iter, residue = this%abs_psi, threshold = tol, showprogress = .false.)
 
-!    if(R_CONJ(omega) .eq. omega) then
-    ! Hermitian
-      call X(qmr_sym)(gr%mesh%np, x(:, 1), y(:, 1), &
-        X(ls_solver_operator_na), X(ls_dotp_qmr), X(ls_nrm2_qmr), X(ls_preconditioner), &
-        this%iter, residue = this%abs_psi, threshold = tol, showprogress = .false.)
-!    else
-    ! general
-!      call X(qmr)(gr%mesh%np, x(:, 1), y(:, 1), X(ls_solver_operator_na), X(ls_solver_operator_na_conjg), &
-!        X(ls_dotu_qmr), X(ls_nrm2_qmr), X(ls_preconditioner), X(ls_preconditioner), &
-!        this%iter, residue = this%abs_psi, threshold = tol, showprogress = .false.)
-!    endif
+  case(LS_QMR_SYMMETRIZED)
+    ! symmetrized equation
+    SAFE_ALLOCATE(z(1:gr%mesh%np, 1:1))
+    call X(ls_solver_operator_t_na)(y(:, 1), z(:, 1))
+    call X(qmr_sym)(gr%mesh%np, x(:, 1), z(:, 1), &
+      X(ls_solver_operator_sym_na), X(ls_dotu_qmr), X(ls_nrm2_qmr), X(ls_preconditioner), &
+      this%iter, residue = this%abs_psi, threshold = tol, showprogress = .false.)
+
+  case(LS_QMR_DOTP)
+    ! using conjugated dot product
+    call X(qmr_sym)(gr%mesh%np, x(:, 1), y(:, 1), &
+      X(ls_solver_operator_na), X(ls_dotp_qmr), X(ls_nrm2_qmr), X(ls_preconditioner), &
+      this%iter, residue = this%abs_psi, threshold = tol, showprogress = .false.)
+
+  case(LS_QMR_GENERAL)
+    ! general algorithm
+    call X(qmr)(gr%mesh%np, x(:, 1), y(:, 1), X(ls_solver_operator_na), X(ls_solver_operator_t_na), &
+      X(ls_dotu_qmr), X(ls_nrm2_qmr), X(ls_preconditioner), X(ls_preconditioner), &
+      this%iter, residue = this%abs_psi, threshold = tol, showprogress = .false.)
 
   case(LS_SOS)
     call X(ls_solver_sos)(this, hm, gr, st, ist, ik, x, y, omega)
@@ -185,6 +193,11 @@ subroutine X(ls_solver_cg) (ls, hm, gr, st, ist, ik, x, y, omega, tol)
     
   ls%iter = iter
   ls%abs_psi = sqrt(abs(gamma))
+
+  if(conv .ne. .true.) then 
+    write(message(1), '(a)') "CG solver not converged!"
+    call write_warning(1)
+  endif
 
   SAFE_DEALLOCATE_A(r)
   SAFE_DEALLOCATE_A(p)
@@ -311,6 +324,11 @@ subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, omega, tol, occ
   ls%iter = iter
   ls%abs_psi = gamma
 
+  if(conv .ne. .true.) then 
+    write(message(1), '(a)') "BiCGSTAB solver not converged!"
+    call write_warning(1)
+  endif
+
   SAFE_DEALLOCATE_A(r)
   SAFE_DEALLOCATE_A(p)
   SAFE_DEALLOCATE_A(Hp)
@@ -370,6 +388,11 @@ subroutine X(ls_solver_multigrid) (ls, hm, gr, st, ist, ik, x, y, omega, tol)
   end do
 
   ls%iter = iter
+
+  if(ls%abs_psi > tol) then 
+    write(message(1), '(a)') "Multigrid solver not converged!"
+    call write_warning(1)
+  endif
 
   call pop_sub()
 
@@ -473,9 +496,9 @@ end subroutine X(ls_solver_operator_na)
 
 
 ! ---------------------------------------------------------
-! applies Hermitian conjugate of ls_solver_operator with other arguments implicit as global variables
-! conjugate just means taking conjugate of omega, since Hamiltonian is Hermitian
-subroutine X(ls_solver_operator_na_conjg) (x, hx)
+! applies transpose of ls_solver_operator with other arguments implicit as global variables
+! (H - omega)^T = H* - omega = (H - omega*)*
+subroutine X(ls_solver_operator_t_na) (x, hx)
   R_TYPE,                intent(in)    :: x(:)   !  x(gr%mesh%np, st%d%dim)
   R_TYPE,                intent(out)   :: Hx(:)  ! Hx(gr%mesh%np, st%d%dim)
 
@@ -485,15 +508,40 @@ subroutine X(ls_solver_operator_na_conjg) (x, hx)
   SAFE_ALLOCATE(tmpx(1:args%gr%mesh%np_part, 1:1))
   SAFE_ALLOCATE(tmpy(1:args%gr%mesh%np, 1:1))
 
-  call lalg_copy(args%gr%mesh%np, x, tmpx(:, 1))
+  call lalg_copy(args%gr%mesh%np, R_CONJ(x), tmpx(:, 1))
   call X(ls_solver_operator)(args%hm, args%gr, args%st, args%ist, args%ik, R_CONJ(args%X(omega)), tmpx, tmpy)
-  call lalg_copy(args%gr%mesh%np, tmpy(:, 1), hx)
+  call lalg_copy(args%gr%mesh%np, R_CONJ(tmpy(:, 1)), hx)
 
   SAFE_DEALLOCATE_A(tmpx)
   SAFE_DEALLOCATE_A(tmpy)
 
-end subroutine X(ls_solver_operator_na_conjg)
+end subroutine X(ls_solver_operator_t_na)
 
+
+! ---------------------------------------------------------
+! applies ls_solver_operator in symmetrized form: A^T A
+subroutine X(ls_solver_operator_sym_na) (x, hx)
+  R_TYPE,                intent(in)    :: x(:)   !  x(gr%mesh%np, st%d%dim)
+  R_TYPE,                intent(out)   :: Hx(:)  ! Hx(gr%mesh%np, st%d%dim)
+
+  R_TYPE, allocatable :: tmpx(:, :)
+  R_TYPE, allocatable :: tmpy(:, :)
+  R_TYPE, allocatable :: tmpz(:, :)
+
+  SAFE_ALLOCATE(tmpx(1:args%gr%mesh%np_part, 1:1))
+  SAFE_ALLOCATE(tmpy(1:args%gr%mesh%np_part, 1:1))
+  SAFE_ALLOCATE(tmpz(1:args%gr%mesh%np_part, 1:1))
+
+  call lalg_copy(args%gr%mesh%np, x, tmpx(:, 1))
+  call X(ls_solver_operator)(args%hm, args%gr, args%st, args%ist, args%ik, args%X(omega), tmpx, tmpy)
+  call X(ls_solver_operator_t_na)(tmpy(:, 1), tmpz(:, 1))
+  call lalg_copy(args%gr%mesh%np, tmpz(:, 1), hx)
+
+  SAFE_DEALLOCATE_A(tmpx)
+  SAFE_DEALLOCATE_A(tmpy)
+  SAFE_DEALLOCATE_A(tmpz)
+
+end subroutine X(ls_solver_operator_sym_na)
 
 ! ---------------------------------------------------------
 subroutine X(ls_preconditioner) (x, hx)

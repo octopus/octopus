@@ -173,13 +173,7 @@ contains
     call write_info(1)
     call system_h_setup(sys, hm)
 
-    if(em_vars%eta == M_ZERO) then
-      ! operator is Hermitian
-      default_solver = LS_CG
-    else
-      ! operator is not Hermitian
-      default_solver = LS_QMR
-    endif
+    default_solver = LS_QMR_DOTP
 
     if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
       call sternheimer_init(sh, sys, hm, "EM", hermitian = states_are_real(sys%st), set_ham_var = 0, &

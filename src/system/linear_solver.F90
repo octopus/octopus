@@ -44,11 +44,14 @@ module linear_solver_m
   private
 
   integer, public, parameter ::&
-       LS_CG        = 5, &
-       LS_BICGSTAB  = 3, &
-       LS_MULTIGRID = 7, &
-       LS_QMR       = 8, &
-       LS_SOS       = 9
+       LS_CG              = 5, &
+       LS_BICGSTAB        = 3, &
+       LS_MULTIGRID       = 7, &
+       LS_QMR_SYMMETRIC   = 81, &
+       LS_QMR_SYMMETRIZED = 82, &
+       LS_QMR_DOTP        = 83, &
+       LS_QMR_GENERAL     = 84, &
+       LS_SOS             = 9
 
   public :: &
        linear_solver_t,       &
@@ -98,7 +101,7 @@ contains
 
     !%Variable LinearSolver
     !%Type integer
-    !%Default qmr
+    !%Default qmr_symmetrized
     !%Section Linear Response::Solver
     !%Description
     !% To calculate response using density functional perturbation
@@ -115,15 +118,25 @@ contains
     !% of bcg that is faster and more stable.
     !%Option multigrid 7
     !% Multigrid solver (experimental, currently is only Gauss-Jacobi).
-    !%Option qmr 8
-    !% Quasi-minimal residual solver.
+    !%Option qmr_symmetric 81
+    !% Quasi-minimal residual solver, for (complex) symmetric matrices
+    !% (not applicable for Sternheimer equation).
+    !%Option qmr_symmetrized 82
+    !% Quasi-minimal residual solver, for general matrices, using the
+    !% symmetrized form A^T A x = A^T y instead of A x = y.
+    !%Option qmr_dotp 83
+    !% Quasi-minimal residual solver, for matrices of the form H + iI, using the
+    !% symmetric algorithm with conjugated dot product (experimental).
+    !%Option qmr_general 84
+    !% Quasi-minimal residual solver, for general matrices, using the
+    !% most general form of the algorithm.
     !%Option sos 9
     !% Sum over states: the Sternheimer equation is solved by using
     !% the explicit solution in terms of the ground-state
     !% wavefunctions. You need unoccupied states to use this method.
     !%End
 
-    defsolver_ = LS_QMR
+    defsolver_ = LS_QMR_SYMMETRIZED
     if(present(def_solver)) defsolver_ = def_solver
 
     if (loct_parse_isdef(datasets_check(trim(prefix)//"LinearSolver")) /= 0 ) then 
@@ -165,8 +178,17 @@ contains
       case(LS_MULTIGRID)
         message(1)='Multigrid (currently only Gauss-Jacobi - EXPERIMENTAL)'
 
-      case(LS_QMR)
-        message(1)='Linear Solver: Quasi-Minimal Residual'
+      case(LS_QMR_SYMMETRIC)
+        message(1)='Linear Solver: Quasi-Minimal Residual, for symmetric matrix'
+
+      case(LS_QMR_SYMMETRIZED)
+        message(1)='Linear Solver: Quasi-Minimal Residual, for symmetrized matrix'
+
+      case(LS_QMR_DOTP)
+        message(1)='Linear Solver: Quasi-Minimal Residual, symmetric with conjugated dot product'
+
+      case(LS_QMR_GENERAL)
+        message(1)='Linear Solver: Quasi-Minimal Residual, general algorithm'
 
       case(LS_SOS)
         message(1)='Linear Solver: Sum-over-States'

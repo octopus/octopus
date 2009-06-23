@@ -535,9 +535,9 @@ end subroutine X(bi_conjugate_gradients)
       write(message(1), '(a)') "QMR breakdown, cannot continue: gamma is zero!"
       call write_fatal(1)
     case(5)
-      write(message(1), '(a)') "QMR Solver not converged!"
+      write(message(1), '(a)') "QMR solver not converged!"
       write(message(2), '(a)') "Try increasing the maximum number of iterations or the tolerance."
-      call write_warning(3)
+      call write_warning(2)
       if(present(converged)) then
         converged = .false.
       end if
@@ -564,7 +564,7 @@ end subroutine X(bi_conjugate_gradients)
   ! http://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/19950017192_1995117192.pdf
   subroutine X(qmr_gen_dotu)(np, x, b, op, opt, dotu, nrm2, prec, prect, iter, &
     residue, threshold, showprogress, converged)
-    integer,           intent(in)    :: np    ! number of points
+    integer,            intent(in)    :: np    ! number of points
     R_TYPE,             intent(inout) :: x(:)  ! initial guess and result
     R_TYPE,             intent(in)    :: b(:)  ! right side
     interface

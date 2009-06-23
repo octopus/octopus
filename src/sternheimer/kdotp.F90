@@ -93,7 +93,7 @@ contains
     type(sternheimer_t)     :: sh
     logical                 :: calc_eff_mass, complex_response
 
-    integer              :: idir, ierr, is, ist, ik, default_solver
+    integer              :: idir, ierr, is, ist, ik
     character(len=100)   :: dirname, str_tmp
     logical, allocatable :: orth_mask(:)
 
@@ -135,15 +135,8 @@ contains
     end if
     call write_info(1)
 
-    if(kdotp_vars%eta == M_ZERO) then
-      ! operator is Hermitian
-      default_solver = LS_CG
-    else
-      ! operator is not Hermitian
-      default_solver = LS_QMR
-    endif
     call sternheimer_init(sh, sys, hm, "KdotP_", hermitian = .true., &
-         set_ham_var = 0, set_occ_response = (kdotp_vars%occ_solution_method == 0), default_solver = default_solver)
+         set_ham_var = 0, set_occ_response = (kdotp_vars%occ_solution_method == 0), default_solver = LS_QMR_DOTP)
     ! ham_var_set = 0 results in HamiltonianVariation = V_ext_only
 
     do idir = 1, gr%mesh%sb%dim
