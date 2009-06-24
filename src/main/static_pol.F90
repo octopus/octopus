@@ -208,8 +208,8 @@ contains
       !%Default 0.01 a.u.
       !%Section Linear Response::Static Polarization
       !%Description
-      !% Magnitude of the static field used to calculate the static polarizability
-      !% (<tt>CalculationMode = pol</tt>)
+      !% Magnitude of the static field used to calculate the static polarizability,
+      !% if ResponseMethod = finite_differences.
       !%End
       call loct_parse_float(datasets_check('POLStaticField'), &
          CNST(0.01)/units_inp%energy%factor*units_inp%length%factor, e_field)
