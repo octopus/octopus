@@ -96,7 +96,7 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc, vtau)
           call write_fatal(1)
           !call XC_F90(hyb_gga_exc)(functl(ixc)%conf, l_dens(1), l_sigma(1), e)
         case(XC_FAMILY_MGGA)
-          call XC_F90(mgga_exc)(functl(ixc)%conf, l_dens(1), l_sigma(1), l_tau(1), e)
+          !call XC_F90(mgga_exc)(functl(ixc)%conf, l_dens(1), l_sigma(1), l_tau(1), e)
 
         case default
           cycle
@@ -105,7 +105,7 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc, vtau)
       else ! we also get the xc potential
         select case(functl(ixc)%family)
         case(XC_FAMILY_LDA)
-          call XC_F90(lda_vxc)(functl(ixc)%conf, l_dens(1), e, l_dedd(1))
+          call XC_F90(lda_exc_vxc)(functl(ixc)%conf, l_dens(1), e, l_dedd(1))
           
         case(XC_FAMILY_GGA)
           if(functl(ixc)%id == XC_GGA_XC_LB) then
@@ -114,17 +114,17 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc, vtau)
               r, l_dedd(1))
             e = M_ZERO; l_vsigma = M_ZERO
           else
-            call XC_F90(gga_vxc)(functl(ixc)%conf, l_dens(1), l_sigma(1), &
+            call XC_F90(gga_exc_vxc)(functl(ixc)%conf, l_dens(1), l_sigma(1), &
               e, l_dedd(1), l_vsigma(1))
           end if
           
         case(XC_FAMILY_HYB_GGA)
-          call XC_F90(hyb_gga_vxc)(functl(ixc)%conf, l_dens(1), l_sigma(1), &
+          call XC_F90(hyb_gga_exc_vxc)(functl(ixc)%conf, l_dens(1), l_sigma(1), &
             e, l_dedd(1), l_vsigma(1))
 
         case(XC_FAMILY_MGGA)
-          call XC_F90(mgga_vxc)(functl(ixc)%conf, l_dens(1), l_sigma(1), l_tau(1), &
-            e, l_dedd(1), l_vsigma(1), l_dedtau(1))
+          !call XC_F90(mgga_vxc)(functl(ixc)%conf, l_dens(1), l_sigma(1), l_tau(1), &
+          !  e, l_dedd(1), l_vsigma(1), l_dedtau(1))
 
         case default
           cycle

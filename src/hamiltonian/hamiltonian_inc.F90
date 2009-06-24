@@ -231,7 +231,8 @@ subroutine X(get_grad)(hm, gr, psi, grad)
     SAFE_ALLOCATE(grad(1:gr%mesh%np, 1:MAX_DIM, 1:hm%d%dim))
     do idim = 1, hm%d%dim 
       ! boundary points were already set by the Laplacian
-      call X(derivatives_grad)(gr%der, psi(:, idim), grad(:, :, idim), ghost_update = .false., set_bc = .false.)
+      call X(derivatives_grad)(gr%der, psi(:, idim), grad(:, :, idim), &
+        ghost_update = .false., set_bc = .false.)
     end do
   end if
   
@@ -311,53 +312,44 @@ subroutine X(exchange_operator) (hm, gr, psi, hpsi, ist, ik)
   R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(gr%mesh%np, hm%d%dim)
   integer,             intent(in)    :: ist       ! the index of the state
   integer,             intent(in)    :: ik        ! the index of the k-point
+
   R_TYPE, allocatable :: rho(:), pot(:)
-  integer :: j, k
+  integer :: j, k, idim
+
+  FLOAT :: ff
 
   call push_sub('hamiltonian_inc.Xexchange_operator')
 
   SAFE_ALLOCATE(rho(1:gr%mesh%np))
   SAFE_ALLOCATE(pot(1:gr%mesh%np))
 
-  ! WARNING: this can be very condensed
-  select case(hm%d%ispin)
-  case(UNPOLARIZED)
-    do j = 1, hm%st%nst
-      if(hm%st%occ(j, ik) <= M_ZERO) cycle
+  do j = 1, hm%st%nst
+    if(hm%st%occ(j, ik) <= M_ZERO) cycle
 
-      ! in Hartree we just remove the self-interaction
-      if(hm%theory_level == HARTREE .and. j .ne. ist) cycle
+    ! in Hartree we just remove the self-interaction
+    if(hm%theory_level == HARTREE .and. j .ne. ist) cycle
 
-      pot = M_ZERO
-      do k = 1, gr%mesh%np
-        rho(k) = R_CONJ(hm%st%X(psi)(k, 1, j, ik)) * psi(k, 1)
-      end do
-      call X(poisson_solve)(gr, pot, rho)
-      do k = 1, gr%mesh%np
-        hpsi(k, 1) = hpsi(k, 1) - hm%exx_coef * (hm%st%occ(j, ik)/M_TWO) * hm%st%X(psi)(k, 1, j, ik)*pot(k)
-      end do
-    end do 
+    pot = M_ZERO
+    rho = M_ZERO
 
-  case(SPIN_POLARIZED)
-    do j = 1, hm%st%nst
-      if(hm%st%occ(j, ik) <= M_ZERO) cycle
+    do idim = 1, hm%st%d%dim
+      forall(k = 1:gr%mesh%np) &
+        rho(k) = rho(k) + R_CONJ(hm%st%X(psi)(k, idim, j, ik)) * psi(k, idim)
+    end do
 
-      ! in Hartree we just remove the self-interaction
-      if(hm%theory_level == HARTREE .and. j .ne. ist) cycle
+    call X(poisson_solve)(gr, pot, rho)
 
-      pot = M_ZERO
-      do k = 1, gr%mesh%np
-        rho(k) = R_CONJ(hm%st%X(psi)(k, 1, j, ik)) * psi(k, 1)
-      end do
-      call X(poisson_solve)(gr, pot, rho)
-      do k = 1, gr%mesh%np
-        hpsi(k, 1) = hpsi(k, 1) - hm%exx_coef * hm%st%occ(j, ik) * hm%st%X(psi)(k, 1, j, ik)*pot(k)
-      end do
-    end do 
+    ff = hm%st%occ(j, ik)
+    if(hm%d%ispin == UNPOLARIZED) ff = ff/M_TWO
 
-  case(SPINORS)
+    do idim = 1, hm%st%d%dim
+      forall(k = 1:gr%mesh%np)
+        hpsi(k, idim) = hpsi(k, idim) - hm%exx_coef * ff * &
+          hm%st%X(psi)(k, idim, j, ik)*pot(k)
+      end forall
+    end do
 
-  end select
+  end do
 
   SAFE_DEALLOCATE_A(rho)
   SAFE_DEALLOCATE_A(pot)
@@ -746,7 +738,8 @@ subroutine X(vborders) (gr, hm, psi, hpsi)
 
   if(hm%ab .eq. IMAGINARY_ABSORBING) then
     do idim = 1, hm%d%dim
-      hpsi(1:gr%mesh%np, idim) = hpsi(1:gr%mesh%np, idim) + M_zI*hm%ab_pot(1:gr%mesh%np)*psi(1:gr%mesh%np, idim)
+      hpsi(1:gr%mesh%np, idim) = hpsi(1:gr%mesh%np, idim) + &
+        M_zI*hm%ab_pot(1:gr%mesh%np)*psi(1:gr%mesh%np, idim)
     end do
   end if
 

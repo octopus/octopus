@@ -69,7 +69,8 @@ subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
       ex_ = ex_ - M_HALF*oep%sfact*oep%socc*st%occ(i, is)* &
         dmf_dotp(gr%mesh, vxc(1:gr%mesh%np, 1), R_ABS(st%X(psi)(1:gr%mesh%np, 1, i, is))**2)
 
-      oep%X(lxc)(1:gr%mesh%np, i) = oep%X(lxc)(1:gr%mesh%np, i) - vxc(1:gr%mesh%np, 1)*R_CONJ(st%X(psi) (1:gr%mesh%np, 1, i, is))
+      oep%X(lxc)(1:gr%mesh%np, i) = oep%X(lxc)(1:gr%mesh%np, i) - &
+        vxc(1:gr%mesh%np, 1)*R_CONJ(st%X(psi) (1:gr%mesh%np, 1, i, is))
     end if
   end do
 

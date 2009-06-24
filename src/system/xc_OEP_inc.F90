@@ -80,7 +80,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
 
     ! calculate uxc_bar for the occupied states
     do ist = st%st_start, st%st_end
-      oep%uxc_bar(ist) = X(mf_dotp)(gr%mesh, st%X(psi)(1:gr%mesh%np, 1, ist, is) , oep%X(lxc)(1:gr%mesh%np, ist))
+      oep%uxc_bar(ist) = X(mf_dotp)(gr%mesh, st%X(psi)(1:gr%mesh%np, 1, ist, is), oep%X(lxc)(1:gr%mesh%np, ist))
     end do
 
 #if defined(HAVE_MPI)
@@ -157,7 +157,7 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
     s = M_ZERO
     do ist = 1, st%nst
       ! evaluate right-hand side
-      vxc_bar    = dmf_dotp(gr%mesh, (R_ABS(st%X(psi)(1:gr%mesh%np, 1, ist, is)))**2, oep%vxc(1:gr%mesh%np))
+      vxc_bar = dmf_dotp(gr%mesh, (R_ABS(st%X(psi)(1:gr%mesh%np, 1, ist, is)))**2, oep%vxc(1:gr%mesh%np))
       b(1:gr%mesh%np, 1) =  -(oep%vxc(1:gr%mesh%np) - (vxc_bar - oep%uxc_bar(ist)))*R_CONJ(st%X(psi)(1:gr%mesh%np, 1, ist, is)) &
         + oep%X(lxc)(1:gr%mesh%np, ist)
 

@@ -589,6 +589,7 @@ contains
   end subroutine get_permutation
 
   subroutine get_matrix_elements()
+
     do ik = st%d%kpt%start, st%d%kpt%end
       ispin = states_dim_get_spin_index(sys%st%d, ik)
       do ist = 1, st%nst
@@ -623,11 +624,12 @@ contains
         do jj = 1, MAX_DIM
           do ifreq = 1, 3
             do jfreq = 1, 3
-              do isigma = 1,2
+              do isigma = 1, 2
                 op_sigma = 2 
                 if(isigma == 2) op_sigma = 1
 
                 SAFE_ALLOCATE(me11(ii, jj, ifreq, jfreq, isigma, ik)%X(matrix)(1:st%nst, 1:st%nst))
+                print *, isigma, jfreq, ifreq, jj, ii, ik
                 call states_blockt_mul(mesh, st, st%st_start, st%st_end, st%st_start, st%st_end, &
                   em_lr(ii, op_sigma, ifreq)%X(dl_psi)(:, :, :, ik), &
                   em_lr(jj, isigma, jfreq)%X(dl_psi)(:, :, :, ik), &

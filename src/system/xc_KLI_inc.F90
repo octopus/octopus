@@ -38,7 +38,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
   SAFE_ALLOCATE(sqphi(1:m%np, 1:st%d%dim, 1:st%nst))
 
   do i = st%st_start, st%st_end
-    sqphi(1:m%np, 1:st%d%dim, i) = R_REAL(st%X(psi)(1:m%np, 1:st%d%dim, i, is))**2 + &
+    sqphi(1:m%np, 1:st%d%dim, i) = R_REAL (st%X(psi)(1:m%np, 1:st%d%dim, i, is))**2 + &
                                    R_AIMAG(st%X(psi)(1:m%np, 1:st%d%dim, i, is))**2
   end do
 
@@ -65,7 +65,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
 #if defined(HAVE_MPI)
   if(st%parallel_in_states) then
     call MPI_Allreduce(oep%vxc(1),   d(1), m%np, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
-    oep%vxc(1:m%np)   = d(1:m%np)
+    oep%vxc(1:m%np) = d(1:m%np)
     SAFE_DEALLOCATE_A(d)
   end if
 #endif
@@ -146,7 +146,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
       kssi = oep%eigen_index(i)
       occ = st%occ(kssi, is)
       oep%vxc(1:m%np) = oep%vxc(1:m%np) + &
-        oep%socc * occ * x(i,1) * sqphi(1:m%np, 1, kssi ) / rho_sigma(1:m%np)
+        oep%socc * occ * x(i,1) * sqphi(1:m%np, 1, kssi) / rho_sigma(1:m%np)
     end do
 
     SAFE_DEALLOCATE_A(d)
