@@ -49,6 +49,7 @@ module xc_functl_m
     integer         :: id                ! identifier
 
     integer         :: spin_channels     ! XC_UNPOLARIZED | XC_POLARIZED
+    integer         :: provides          ! XC_PROVIDES_EXC + XC_PROVIDES_VXC + ...
 
     type(XC_F90(func_t)) :: conf         ! the pointer used to call the library
     type(XC_F90(info_t)) :: info         ! information about the functional
@@ -172,6 +173,7 @@ contains
       functl%type = XC_EXCHANGE
     else if(functl%family .ne. XC_FAMILY_NONE) then
       functl%type = XC_F90(info_kind)(functl%info)
+      functl%provides = XC_F90(info_provides)(functl%info)
     else
       functl%type = -1
     end if
@@ -251,7 +253,8 @@ contains
     end select
 
     if(functl%family.ne.XC_FAMILY_NONE) then
-      functl%type = XC_F90(info_kind)(functl%info)
+      functl%type     = XC_F90(info_kind)(functl%info)
+      functl%provides = XC_F90(info_provides)(functl%info)
     else
       functl%type = -1
     end if

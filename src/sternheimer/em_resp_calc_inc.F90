@@ -629,7 +629,6 @@ contains
                 if(isigma == 2) op_sigma = 1
 
                 SAFE_ALLOCATE(me11(ii, jj, ifreq, jfreq, isigma, ik)%X(matrix)(1:st%nst, 1:st%nst))
-                print *, isigma, jfreq, ifreq, jj, ii, ik
                 call states_blockt_mul(mesh, st, st%st_start, st%st_end, st%st_start, st%st_end, &
                   em_lr(ii, op_sigma, ifreq)%X(dl_psi)(:, :, :, ik), &
                   em_lr(jj, isigma, jfreq)%X(dl_psi)(:, :, :, ik), &

@@ -47,7 +47,7 @@ subroutine X(vec_scatter)(vp, v, v_local)
   ! Unfortunately, vp%xlocal ist not quite the required
   ! displacement vector.
   SAFE_ALLOCATE(displs(1:vp%npart))
-  displs = vp%xlocal-1
+  displs = vp%xlocal - 1
 
   SAFE_ALLOCATE(v_tmp(1:1))
   if(vp%rank.eq.vp%root) then
