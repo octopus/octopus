@@ -42,6 +42,7 @@ subroutine X(states_gram_schmidt_full)(st, nst, m, dim, psi, start)
   if(present(start)) start_ = start
 
   SAFE_ALLOCATE(ss(1:nst, 1:nst))
+  ss = M_ZERO
 
   if(.not. st%parallel_in_states) then
 

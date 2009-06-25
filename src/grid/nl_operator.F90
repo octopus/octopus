@@ -418,7 +418,10 @@ contains
         SAFE_ALLOCATE(op%ri(1:op%stencil%size, 1:op%nri))
         SAFE_ALLOCATE(op%rimap(1:op%np))
         SAFE_ALLOCATE(op%rimap_inv(1:op%nri + 1))
-        current = 0
+        op%ri        = 0
+        op%rimap     = 0
+        op%rimap_inv = 0
+        current      = 0
       end if
 
     end do
@@ -431,6 +434,7 @@ contains
     op%rimap_inv(op%nri + 1) = op%np
 
     SAFE_ALLOCATE(op%ribit(1:op%stencil%size*op%nri))
+    op%ribit = 0
 
     call generate_ribit(op%nri, op%stencil%size, op%ri, op%ribit)
 

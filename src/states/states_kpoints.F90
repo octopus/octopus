@@ -98,7 +98,8 @@ subroutine states_choose_kpoints(d, sb, geo)
     SAFE_ALLOCATE( d%kpoints(1:MAX_DIM, 1:d%nik))
     SAFE_ALLOCATE(d%kweights(1:d%nik))
 
-    d%kpoints = M_ZERO
+    d%kpoints  = M_ZERO
+    d%kweights = M_ZERO
 
     do ik = 1, d%nik
       call loct_parse_block_float(blk, ik - 1, 0, d%kweights(ik))
@@ -151,8 +152,9 @@ subroutine states_choose_kpoints(d, sb, geo)
     SAFE_ALLOCATE(d%kpoints(1:MAX_DIM, 1:d%nik))
     SAFE_ALLOCATE(d%kweights(1:d%nik))
 
+    d%kpoints     = M_ZERO
+    d%kweights    = M_ZERO
     d%kweights(1) = M_ONE
-    d%kpoints(1:MAX_DIM, 1) = M_ZERO
 
     call print_kpoints_debug
     call pop_sub()

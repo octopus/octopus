@@ -319,12 +319,17 @@ contains
       SAFE_DEALLOCATE_P(st%d%kweights)
       SAFE_ALLOCATE( st%d%kpoints(1:MAX_DIM, 1:st%d%nik))
       SAFE_ALLOCATE(st%d%kweights(1:st%d%nik))
+      st%d%kpoints  = M_ZERO
+      st%d%kweights = M_ZERO
       st%d%kweights(1) = M_ONE
-      st%d%kpoints(1:MAX_DIM, 1) = M_ZERO
       SAFE_ALLOCATE(st%ob_d%kpoints(1:MAX_DIM, 1:st%ob_d%nik))
       SAFE_ALLOCATE(st%ob_d%kweights(1:st%ob_d%nik))
       SAFE_ALLOCATE(st%ob_eigenval(1:st%ob_nst, 1:st%ob_d%nik))
       SAFE_ALLOCATE(st%ob_occ(1:st%ob_nst, 1:st%ob_d%nik))
+      st%ob_d%kpoints  = M_ZERO
+      st%ob_d%kweights = M_ZERO
+      st%ob_eigenval   = huge(st%ob_eigenval)
+      st%ob_occ        = M_ZERO
       call read_ob_eigenval_and_occ()
     else
       st%ob_nst   = 0
@@ -445,7 +450,7 @@ contains
     ! we now allocate some arrays
     SAFE_ALLOCATE(st%occ     (1:st%nst, 1:st%d%nik))
     SAFE_ALLOCATE(st%eigenval(1:st%nst, 1:st%d%nik))
-    st%eigenval = M_ZERO
+    st%eigenval = huge(st%eigenval)
     st%occ      = M_ZERO
     ! allocate space for formula strings that define user defined states
     SAFE_ALLOCATE(st%user_def_states(1:st%d%dim, 1:st%nst, 1:st%d%nik))
@@ -2389,6 +2394,8 @@ contains
     SAFE_DEALLOCATE_P(st%eigenval)
     SAFE_ALLOCATE(st%occ     (1:st%nst, 1:st%d%nik))
     SAFE_ALLOCATE(st%eigenval(1:st%nst, 1:st%d%nik))
+    st%eigenval = huge(st%eigenval)
+    st%occ      = M_ZERO
 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
