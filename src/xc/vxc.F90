@@ -115,7 +115,8 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc, vtau)
           e = M_ZERO
         end if
 
-      else
+      else ! we want exc and vxc
+
         if(iand(functl(ixc)%provides, XC_PROVIDES_EXC).ne.0) then
           ! we get the xc energy and potential
           select case(functl(ixc)%family)
@@ -406,7 +407,7 @@ contains
     SAFE_ALLOCATE( tau(1:gr%mesh%np, 1:spin_channels))
     SAFE_ALLOCATE(ldens(1:gr%mesh%np, 1:spin_channels))
     if(present(vxc)) then
-      SAFE_ALLOCATE(dedldens(1:gr%mesh%np, 1:spin_channels))
+      SAFE_ALLOCATE(dedldens(1:gr%mesh%np_part, 1:spin_channels))
       dedldens = M_ZERO
     end if
 
@@ -418,7 +419,7 @@ contains
     ! calculate tau
     call states_calc_tau_jp_gn(gr, st, tau=tau)
 
-    if(functl(ixc)%id == XC_MGGA_X_TB09 .and. gr%sb%periodic_dim == 3) then
+    if(functl(1)%id == XC_MGGA_X_TB09 .and. gr%sb%periodic_dim == 3) then
       SAFE_ALLOCATE(gnon(1:gr%mesh%np))
         
       do ii = 1, gr%mesh%np
@@ -448,6 +449,9 @@ contains
   subroutine mgga_end()
     SAFE_DEALLOCATE_A(ldens)
     SAFE_DEALLOCATE_A(tau)
+    if(present(vxc)) then
+      SAFE_DEALLOCATE_A(dedldens)
+    end if
   end subroutine mgga_end
 
 
