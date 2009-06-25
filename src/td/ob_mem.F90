@@ -243,7 +243,11 @@ contains
     ! So check this first for faster calculation.
     if(np.eq.1) then
       h            = M_z1 + M_zI*delta*diag(1,1)
-      coeff0(1, 1) = (-h + sqrt(h**2 + d2*(M_TWO*offdiag(1,1))**2)) / (M_TWO*d2*offdiag(1,1)**2)
+      if(abs(offdiag(1, 1)) > M_ZERO) then
+        coeff0(1, 1) = (-h + sqrt(h**2 + d2*(M_TWO*offdiag(1,1))**2)) / (M_TWO*d2*offdiag(1,1)**2)
+      else
+        coeff0(1, 1) = M_z1 / h
+      end if
     else ! We have the general case of a matrix, so solve the equation by iteration.
       ! Truncating the continued fraction is the same as iterating the equation
       !
