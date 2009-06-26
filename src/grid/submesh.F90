@@ -242,54 +242,14 @@ contains
 
     this%has_points = (this%ns > 0)
 
-    call init_parallelization()
-    
     call profiling_out(submesh_init_prof)
     call pop_sub()
-
-  contains
-
-    subroutine init_parallelization()
-      integer :: group, newgroup, newcomm, nn
-      integer, allocatable :: list(:)
-      integer :: ipart
-
-#ifdef HAVE_MPI
-      if(m%parallel_in_domains) then
-        SAFE_ALLOCATE(this%psize(1:m%vp%npart))
-        call MPI_Allgather(this%ns, 1, MPI_INTEGER, this%psize, 1, MPI_INTEGER, m%mpi_grp%comm, mpi_err)
-        call MPI_Comm_group(m%mpi_grp%comm, group)
-        SAFE_ALLOCATE(list(1:m%vp%npart))
-        nn = 0
-        do ipart = 1, m%vp%npart
-          if(this%psize(ipart) > 0) then
-            nn = nn + 1
-            list(nn) = ipart - 1
-          end if
-        end do
-        call MPI_Group_incl(group, nn, list, newgroup, mpi_err)
-        call MPI_Comm_create(m%mpi_grp%comm, newgroup, newcomm, mpi_err)
-        call MPI_Group_free(newgroup, mpi_err)
-        call mpi_grp_init(this%mpi_grp, newcomm)
-      else
-        nullify(this%psize)
-      end if
-#endif
-    end subroutine init_parallelization
-
   end subroutine submesh_init_sphere
 
   subroutine submesh_end(this)
     type(submesh_t),   intent(inout)  :: this
     
     call push_sub('submesh.submesh_end')
-
-#ifdef HAVE_MPI
-    if(associated(this%psize)) then
-      if(this%ns > 0) call MPI_Comm_free(this%mpi_grp%comm, mpi_err)
-      SAFE_DEALLOCATE_P(this%psize)
-    end if
-#endif
 
     if( this%ns /= -1 ) then
       nullify(this%mesh)

@@ -215,7 +215,6 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
   integer :: nn
   type(profile_t), save :: reduce_prof
   R_TYPE, allocatable   :: reduce_buffer_dest(:)
-  logical :: bigreduce = .true.
 #endif
 
   call push_sub('projector_inc.project_psi_batch')
@@ -257,10 +256,6 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
   end if
 
   SAFE_ALLOCATE(reduce_buffer(1:nreduce))
-#if defined(HAVE_MPI)
-  if(mesh%parallel_in_domains) then
-  end if
-#endif
 
   ! calculate <p|psi>
   do ipj = 1, npj
@@ -320,25 +315,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
   end do
 
 #if defined(HAVE_MPI)
-    ! reduce for this projector only in the involved nodes
-    if(mesh%parallel_in_domains .and. .not. bigreduce) then
-      do ipj = 1, npj
-        if(pj(ipj)%type == M_NONE .or. pj(ipj)%sphere%ns < 1) cycle
-        call profiling_in(reduce_prof, "VNLPSI_REDUCE_BATCH")
-        nn = iend(ipj) - istart(ipj) + 1
-        SAFE_ALLOCATE(reduce_buffer_dest(1:nn))
-        call MPI_Allreduce(reduce_buffer(istart(ipj):), reduce_buffer_dest, nn, R_MPITYPE, MPI_SUM, &
-          pj(ipj)%sphere%mpi_grp%comm, mpi_err)
-        reduce_buffer(istart(ipj):iend(ipj)) = reduce_buffer_dest(1:nn)
-        SAFE_DEALLOCATE_A(reduce_buffer_dest)
-        call profiling_out(reduce_prof)
-      end do
-    end if
-#endif
-
-  ! The big reduce
-#if defined(HAVE_MPI)
-  if(mesh%parallel_in_domains .and. bigreduce) then
+  if(mesh%parallel_in_domains) then
     call profiling_in(reduce_prof, "VNLPSI_REDUCE_BATCH")
 #ifndef HAVE_MPI2
     SAFE_ALLOCATE(reduce_buffer_dest(1:nreduce))
@@ -349,7 +326,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
     call profiling_out(reduce_prof)
   end if
 #endif
-
+  
   ! calculate |ppsi> += |p><p|psi>
   do ipj = 1, npj
     if(pj(ipj)%type == M_NONE) cycle
