@@ -243,10 +243,12 @@ contains
     ! So check this first for faster calculation.
     if(np.eq.1) then
       h            = M_z1 + M_zI*delta*diag(1,1)
-      if(abs(offdiag(1, 1)) > M_ZERO) then
+      if(infinity_norm(offdiag) > M_ZERO) then
         coeff0(1, 1) = (-h + sqrt(h**2 + d2*(M_TWO*offdiag(1,1))**2)) / (M_TWO*d2*offdiag(1,1)**2)
       else
-        coeff0(1, 1) = M_z1 / h
+        message(1) = 'Error in approx_coeff0:'
+        message(2) = 'Offdiagonal term of hamiltonian must not be the zero matrix!'
+        call write_fatal(2)
       end if
     else ! We have the general case of a matrix, so solve the equation by iteration.
       ! Truncating the continued fraction is the same as iterating the equation
@@ -310,7 +312,7 @@ contains
     FLOAT,             intent(in)  :: spacing
 
     integer            :: i, j, np
-    CMPLX, allocatable :: q0(:, :), coeff0(:, :)
+    CMPLX, allocatable :: q0(:, :)
     FLOAT              :: norm, old_norm, d2
     CMPLX              :: h
 

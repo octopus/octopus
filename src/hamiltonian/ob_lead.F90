@@ -100,7 +100,7 @@ contains
       end do
     end do
 
-    ! Add potential.
+    ! Add potential. FIXME: add vector potential (A^2)
     do i = 1, intf%np
       diag(i, i) = diag(i, i) + vks(i)
     end do
@@ -119,21 +119,14 @@ contains
     CMPLX,               intent(out) :: offdiag(:, :)
 
     integer :: p_n(MAX_DIM), p_k(MAX_DIM), p_matr(MAX_DIM)
-    integer :: j, k, k_stencil
-    integer :: n, n_matr
-    integer :: dir
-    integer :: x_shift
+    integer :: j, k, k_stencil, n, n_matr, dir, tdir, shift
     FLOAT   :: w_re, w_im
 
     call push_sub('ob_lead.lead_offdiag')
 
     ! Coupling direction.
-    select case(il)
-    case(LEFT)
-      dir = 1
-    case(RIGHT)
-      dir = -1
-    end select
+    dir = (-1)**(il+1)
+    tdir = (il+1)/2
 
     offdiag(:, :) = M_z0
 
@@ -170,11 +163,11 @@ contains
         !      unit
         !      cell
         !
-        ! The point p_k is markes with an x, the point p_matr with a #.
-        x_shift           = abs(p_k(TRANS_DIR)-p_n(TRANS_DIR))
-        p_matr            = p_n
-        p_matr(TRANS_DIR) = p_matr(TRANS_DIR) + dir*(intf%extent-x_shift)
-        n_matr            = lapl%m%idx%Lxyz_inv(p_matr(1), p_matr(2), p_matr(3))
+        ! The point p_k is marked with an x, the point p_matr with a #.
+        shift        = abs(p_k(tdir)-p_n(tdir))
+        p_matr       = p_n
+        p_matr(tdir) = p_matr(tdir) + dir*(intf%extent-shift)
+        n_matr       = lapl%m%idx%Lxyz_inv(p_matr(1), p_matr(2), p_matr(3))
 
         if(member_of_interface(n_matr, intf, n_matr)) then
 
@@ -203,6 +196,11 @@ contains
         end if
       end do
     end do
+    if(infinity_norm(offdiag) .eq. M_ZERO) then
+      message(1) = 'Error in lead_offdiag:'
+      message(2) = 'Offdiagonal term of hamiltonian must not be the zero matrix!'
+      call write_fatal(2)
+    end if
 
     call pop_sub()
   end subroutine lead_offdiag
