@@ -49,14 +49,12 @@ subroutine double_grid_apply (this, s, m, sm, x_atom, vl, l, lm, ic)
 
   if (.not. this%use_double_grid) then 
     
-    !$omp parallel do private(r, x)
     do is = 1, sm%ns
       r = sm%x(is, 0)
       x(1:3) = sm%x(is, 1:3)
       calc_pot(vl(is))
     end do
-    !$omp end parallel do 
-    
+
   else
 
     call profiling_in(profiler, profiler_label)
