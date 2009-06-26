@@ -127,7 +127,7 @@ contains
       nn(1:MAX_DIM) = mesh%idx%ll(1:MAX_DIM)
     end if
 
-    oo(1:MAX_DIM) = mesh%idx%nr(1, 1:MAX_DIM)
+    oo(1:MAX_DIM) = mesh%idx%nr(1, 1:MAX_DIM) + mesh%idx%enlarge(1:MAX_DIM)
 
     call cubic_mesh_init_c(this,                            &
          nn(1), nn(2), nn(3), oo(1), oo(2), oo(3), &

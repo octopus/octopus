@@ -48,6 +48,16 @@ void FC_FUNC_(dcubic_mesh_from_mesh, DCUBIC_MESH_FROM_MESH)(cubic_mesh_t ** this
     iy = this[0]->lxyz[ip +   this[0]->np_part] - this[0]->oy;
     iz = this[0]->lxyz[ip + 2*this[0]->np_part] - this[0]->oz;
 
+    //    printf("%d %d %d - %d %d %d\n", ix, iy, iz, nx, ny, nz);
+
+    assert(ix >= 0);
+    assert(iy >= 0);
+    assert(iz >= 0);
+
+    assert(ix < nx);
+    assert(iy < ny);
+    assert(iz < nz);
+
     ii = index_c(nx, ny, nz, ix, iy, iz);
 
     assert(ii >= 0);
@@ -117,4 +127,25 @@ void FC_FUNC_(zcubic_mesh_set_point, ZCUBIC_MESH_SET_POINT)
 
   this[0]->ff[2*ii    ] = vv[0];
   this[0]->ff[2*ii + 1] = vv[1];
+}
+
+void FC_FUNC_(cubic_mesh_multiply, DCUBIC_MESH_MULTIPLY)
+     (const cubic_mesh_t ** aa, cubic_mesh_t ** bb){
+  
+  int ia, ib;
+  
+  printf("aa %d %d %d\n", aa[0]->nx, aa[0]->ny, aa[0]->nz);
+  printf("bb %d %d %d\n", bb[0]->nx, bb[0]->ny, bb[0]->nz);
+
+  ib = 0;
+  for(ia = 0; ia < aa[0]-> npoints; ia++) {
+    //    printf("%d %d %d %d\n", ia, ib, aa[0]-> npoints, bb[0]-> npoints);
+    assert(ia < aa[0] -> nvalues);
+    assert(ib + 1 < bb[0] -> nvalues);
+
+    bb[0]->ff[ib    ] *= aa[0]->ff[ia];
+    bb[0]->ff[ib + 1] *= aa[0]->ff[ia];
+    ib+=2;
+    //    printf("kernel %d %f \n", ia, aa[0]->ff[ia]);
+  }
 }

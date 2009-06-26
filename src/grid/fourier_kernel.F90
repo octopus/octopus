@@ -36,7 +36,8 @@ module fourier_kernel_m
        fourier_kernel_end,            &
        fourier_kernel_size_real,      &
        fourier_kernel_size_fourier,   &
-       dfourier_kernel_set_value
+       dfourier_kernel_set_value,     &
+       dfourier_kernel_apply
   
   type fourier_kernel_t
     private
@@ -54,9 +55,11 @@ contains
 
     this%size_real = sizes
     this%size_fourier = sizes
-    this%size_fourier(1) = this%size_fourier(1)/2
+    this%size_fourier(3) = this%size_fourier(3)/2 + 1
 
-    call cubic_mesh_init(this%kernel, mesh, sizes)
+    print*, this%size_fourier
+
+    call cubic_mesh_init(this%kernel, mesh, this%size_fourier)
 
   end subroutine fourier_kernel_init
 
@@ -98,7 +101,32 @@ contains
     call dcubic_mesh_set_point(this%kernel, ix, iy, iz, val)
 
   end subroutine dfourier_kernel_set_value
+
+  !------------------------------------------------------------------------------
   
+  subroutine dfourier_kernel_apply(this, mesh, ff)
+    type(fourier_kernel_t), intent(in) :: this
+    type(mesh_t),           intent(in) :: mesh
+    FLOAT,                  intent(in) :: ff(:)
+
+    type(cubic_mesh_t) :: cube, fourier
+
+    call cubic_mesh_init(cube, mesh, this%size_real)
+    call dcubic_mesh_from_mesh(cube, ff)
+
+    call cubic_mesh_init_fourier(fourier, cube)
+    
+    call cubic_mesh_fourier_transform(cube, fourier)
+    
+    call cubic_mesh_multiply(this%kernel, fourier)
+
+    call cubic_mesh_fourier_trans_back(fourier, cube)
+    
+    call dcubic_mesh_to_mesh(cube, ff)
+    call cubic_mesh_end(cube)
+
+  end subroutine dfourier_kernel_apply
+
 end module fourier_kernel_m
 
 !! Local Variables:
