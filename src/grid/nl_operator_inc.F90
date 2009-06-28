@@ -376,6 +376,10 @@ subroutine X(nl_operator_operate)(op, fi, fo, ghost_update, profile, points)
         case(OP_VEC)
           call X(operate_ri_vec)(op%stencil%size, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), imax(ini), fi(1), fo(1))
 #endif
+#if defined(HAVE_BLUE_GENE) && defined(R_TCOMPLEX)
+        case(OP_BG)
+          call X(operate_bg)(op%stencil%size, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), imax(ini), fi(1), fo(1))
+#endif
 #ifdef HAVE_AS
         case(OP_AS)
           nns(1) = op%stencil%size
@@ -472,6 +476,10 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, points)
 #ifdef HAVE_VEC
             case(OP_VEC)
               call X(operate_ri_vec)(op%stencil%size, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), pfo(1))
+#endif
+#if defined(HAVE_BLUE_GENE) && defined(R_TCOMPLEX)
+            case(OP_BG)
+              call X(operate_bg)(op%stencil%size, op%w_re(1, 1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), pfo(1))
 #endif
 #ifdef HAVE_AS
             case(OP_AS)

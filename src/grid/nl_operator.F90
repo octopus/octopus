@@ -106,8 +106,9 @@ module nl_operator_m
        OP_VEC     = 2,  &
        OP_AS      = 3,  &
        OP_BIT     = 4,  &
+       OP_BG      = 5,  &
        OP_MIN     = OP_FORTRAN, &
-       OP_MAX     = OP_BIT
+       OP_MAX     = OP_BG
   
   integer, public, parameter :: OP_ALL = 3, OP_INNER = 1, OP_OUTER = 2
 
@@ -205,6 +206,7 @@ contains
     if(id == OP_VEC)     str = 'Vector'
     if(id == OP_AS)      str = 'AS'
     if(id == OP_BIT)     str = 'Bit'
+    if(id == OP_BG)      str = 'BG'
     
   end function op_function_name
 

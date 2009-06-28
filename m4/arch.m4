@@ -132,6 +132,7 @@ AC_DEFINE_UNQUOTED(OCT_ARCH, $oct_arch, [The architecture of this system])
 
 AM_CONDITIONAL(COMPILE_AS, test x$assembler = xyes)
 AM_CONDITIONAL(COMPILE_VEC, test x$vector = xyes)
+AM_CONDITIONAL(COMPILE_BG, test x$blue_gene = xyes)
 
 if test x$vector = xyes ; then
 AC_DEFINE(HAVE_VEC, 1, [Define to 1 if vectorial routines are to be compiled])
