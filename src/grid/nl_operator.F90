@@ -435,7 +435,9 @@ contains
     end do
     op%rimap_inv(op%nri + 1) = op%np
 
-    SAFE_ALLOCATE(op%ribit(1:op%stencil%size*op%nri))
+    ! we allocate ribit with the maximum size it can take (the 1 +
+    ! size/32 is to account for the descriptor that takes 1 bit per value)
+    SAFE_ALLOCATE(op%ribit(1:(op%stencil%size + 1 + op%stencil%size/32)*op%nri))
     op%ribit = 0
 
     call generate_ribit(op%nri, op%stencil%size, op%ri, op%ribit)
