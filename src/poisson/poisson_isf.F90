@@ -102,19 +102,21 @@ contains
 
     call dcf_new(mesh%idx%ll, rho_cf)
 
-    ! The serial version is always needed (as used, e.g., in the casida runmode)
-    call calculate_dimensions(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3), &
-      cnf(serial)%nfft1, cnf(serial)%nfft2, cnf(serial)%nfft3)
-
-    n1 = cnf(serial)%nfft1/2 + 1
-    n2 = cnf(serial)%nfft2/2 + 1
-    n3 = cnf(serial)%nfft3/2 + 1
-
-    SAFE_ALLOCATE(cnf(serial)%kernel(1:n1, 1:n2, 1:n3))
-
-    call build_kernel(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3),   &
-      cnf(serial)%nfft1, cnf(serial)%nfft2, cnf(serial)%nfft3, &
-      real(mesh%h(1), 8), order_scaling_function, cnf(serial)%kernel)
+    if(.not. mesh%parallel_in_domains) then
+      ! The serial version is always needed (as used, e.g., in the casida runmode)
+      call calculate_dimensions(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3), &
+        cnf(serial)%nfft1, cnf(serial)%nfft2, cnf(serial)%nfft3)
+      
+      n1 = cnf(serial)%nfft1/2 + 1
+      n2 = cnf(serial)%nfft2/2 + 1
+      n3 = cnf(serial)%nfft3/2 + 1
+      
+      SAFE_ALLOCATE(cnf(serial)%kernel(1:n1, 1:n2, 1:n3))
+      
+      call build_kernel(rho_cf%n(1), rho_cf%n(2), rho_cf%n(3),   &
+        cnf(serial)%nfft1, cnf(serial)%nfft2, cnf(serial)%nfft3, &
+        real(mesh%h(1), 8), order_scaling_function, cnf(serial)%kernel)
+    end if
 
 #if defined(HAVE_MPI)
     ! Allocate to configurations. The initialisation, especially the kernel,
@@ -128,7 +130,9 @@ contains
     ! solving the poisson equation with all nodes (i_cnf == world) and
     ! with the domain nodes only (i_cnf == domain).
     do i_cnf = 2, n_cnf
-      if(.not. init_world .and. i_cnf == world) then
+      if( (i_cnf == world .and. .not. init_world_) &                  ! world is disabled
+        .or. (i_cnf == domain .and. .not. mesh%parallel_in_domains) & ! not parallel in domains
+        ) then
         nullify(cnf(i_cnf)%kernel)
         cycle
       end if
