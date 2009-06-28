@@ -119,7 +119,7 @@ contains
     CMPLX,               intent(out) :: offdiag(:, :)
 
     integer :: p_n(MAX_DIM), p_k(MAX_DIM), p_matr(MAX_DIM)
-    integer :: j, k, k_stencil, n, n_matr, dir, tdir, shift
+    integer :: j, k, k_stencil, n, n_matr, dir, tdir, shift, intf_idx
     FLOAT   :: w_re, w_im
 
     call push_sub('ob_lead.lead_offdiag')
@@ -169,7 +169,7 @@ contains
         p_matr(tdir) = p_matr(tdir) + dir*(intf%extent-shift)
         n_matr       = lapl%m%idx%Lxyz_inv(p_matr(1), p_matr(2), p_matr(3))
 
-        if(member_of_interface(n_matr, intf, n_matr)) then
+        if(member_of_interface(n_matr, intf, intf_idx)) then
 
           ! Multiply by the coefficient of the operator and sum up.
           if(lapl%cmplx_op) then
@@ -192,15 +192,10 @@ contains
           ! Calculation of the kinetic term: -1/2 prefactor.
           w_im = -w_im/M_TWO
           w_re = -w_re/M_TWO
-          offdiag(j, n_matr) = TOCMPLX(w_re, w_im)
+          offdiag(j, intf_idx) = TOCMPLX(w_re, w_im)
         end if
       end do
     end do
-    if(infinity_norm(offdiag) .eq. M_ZERO) then
-      message(1) = 'Error in lead_offdiag:'
-      message(2) = 'Offdiagonal term of hamiltonian must not be the zero matrix!'
-      call write_fatal(2)
-    end if
 
     call pop_sub()
   end subroutine lead_offdiag

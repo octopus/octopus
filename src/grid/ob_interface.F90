@@ -71,14 +71,15 @@ contains
     integer,             intent(in)  :: il
 
     logical :: ok
-    integer :: i, from(MAX_DIM), to(MAX_DIM), ll(MAX_DIM), dir, lr
+    integer :: i, from(MAX_DIM), to(MAX_DIM), ll(MAX_DIM), dir, lr, tdir
 
     call push_sub('ob_interface.interface_init')
 
-    intf%extent = maxval((/stencil_extent(der_discr, TRANS_DIR), lead_unit_cell_extent(sb, il)/))
+    tdir = (il+1)/2
+    intf%extent = maxval((/stencil_extent(der_discr, tdir), lead_unit_cell_extent(sb, il)/))
     ! FIXME: not sure if it holds for lead-potentials with dependence in transport direction
     intf%extent = intf%extent - 1
-    if(intf%extent.eq.stencil_extent(der_discr, TRANS_DIR)) then
+    if(intf%extent.eq.stencil_extent(der_discr, tdir)) then
       intf%offdiag_invertible = .true.
     else
       intf%offdiag_invertible = .false.
@@ -98,7 +99,7 @@ contains
     dir = (-1)**(il+1)
     ll(:) = m%idx%ll(:)
     ! the interface region has only intf%extent points in its normal direction
-    ll((il+1)/2) = intf%extent
+    ll(tdir) = intf%extent
 
     intf%np = product(ll(:))
     intf%np_uc = intf%np/intf%extent*(intf%extent+1)
