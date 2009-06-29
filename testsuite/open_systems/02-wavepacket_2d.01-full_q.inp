@@ -78,8 +78,8 @@ ky = 1.0
 alpha = 0.5
 i = {0, 1}
 %flat_UserDefinedStates
- 1 | 1 | 1 | formula | "exp(i*(kx*x + ky*y))*exp(-alpha*r*r)"
- 1 | 2 | 1 | formula | "exp(-i*(kx*x + ky*y))*exp(-alpha*r*r)"
+ 1 | 1 | 1 | formula | "exp(i*(kx*x + ky*y))*exp(-alpha*(x*x+y*y))"
+ 1 | 2 | 1 | formula | "exp(-i*(kx*x + ky*y))*exp(-alpha*(x*x+y*y))"
 %
 
 flat_OpenBoundariesAdditionalTerms = mem_term
