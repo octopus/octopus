@@ -69,7 +69,6 @@ module math_m
     matrix_symmetrize,          &
     interpolation_coefficients, &
     interpolate,                &
-    get_blocks,                 &
     even,                       &
     odd,                        &
     cartesian2hyperspherical,   &
@@ -817,48 +816,6 @@ contains
 
     call pop_sub()
   end function odd
-
-  subroutine get_blocks(npos, positions, nblocks, blocklengths, offsets)
-    integer, intent(in)  :: npos
-    integer, intent(in)  :: positions(:)
-    integer, intent(out) :: nblocks
-    integer, intent(out) :: blocklengths(:)
-    integer, intent(out) :: offsets(:)
-
-    integer :: ip, ib, ii
-
-    blocklengths = 1
-
-    nblocks = 1
-    offsets(1) = positions(1)
-    blocklengths(1) = 1
-
-    do ip = 2, npos
-      if(positions(ip) == positions(ip - 1) + 1) then
-        blocklengths(nblocks) = blocklengths(nblocks) + 1
-      else
-        nblocks = nblocks + 1
-        offsets(nblocks) = positions(ip)
-      end if
-    end do
-
-    ! All the rest is only for checking that the function works
-    ! correctly.
-
-    ASSERT( npos == sum(blocklengths(1:nblocks)) )
-
-    ip = 1 
-    do ib = 1, nblocks
-      do ii = 1, blocklengths(ib)
-        ASSERT(positions(ip) == offsets(ib) + ii - 1)
-        ip = ip + 1
-      end do
-    end do
-    
-    ASSERT(npos == ip - 1)
-
-  end subroutine get_blocks
-
 
   ! ---------------------------------------------------------
   ! Performs a transformation from the cartesian coordinates

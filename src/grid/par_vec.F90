@@ -83,12 +83,12 @@ module par_vec_m
   use global_m
   use iihash_m
   use io_m
-  use math_m
   use index_m
   use messages_m
   use mpi_debug_m
   use mpi_m
   use profiling_m
+  use subarray_m
   use stencil_m
 
   implicit none
@@ -101,9 +101,9 @@ module par_vec_m
     integer          :: rank                 ! Our rank in the communicator.
     integer          :: partno               ! Partition number of the
                                              ! current node
-    integer, pointer :: isend_type(:)        ! The datatypes to send
-    integer, pointer :: dsend_type(:)        ! ghost points
-    integer, pointer :: zsend_type(:)
+    type(subarray_t) :: sendpoints
+    integer, pointer :: sendpos(:)
+
     integer, pointer :: rdispls(:)
     integer, pointer :: sdispls(:)
     integer, pointer :: rcounts(:)
@@ -432,7 +432,7 @@ contains
     vp%npart      = p
     vp%part   = part
 
-    call init_mpi_datatypes
+    call init_send_points
 
     do r = 1, p
       call iihash_end(ghost_flag(r))
@@ -442,50 +442,34 @@ contains
 
   contains
     
-    subroutine init_mpi_datatypes
-      integer, allocatable :: blocklengths(:), displacements(:), offsets(:)
-      integer :: ii, kk, ipart, total, ierr, nblocks
+    subroutine init_send_points
+      integer, allocatable :: displacements(:)
+      integer :: ii, jj, kk, ipart, total
 
-      SAFE_ALLOCATE(vp%isend_type(1:vp%npart))
-      SAFE_ALLOCATE(vp%dsend_type(1:vp%npart))
-      SAFE_ALLOCATE(vp%zsend_type(1:vp%npart))
+      SAFE_ALLOCATE(vp%sendpos(1:vp%npart))
 
+      total = sum(vp%np_ghost_neigh(1:vp%npart, vp%partno))
+
+      SAFE_ALLOCATE(displacements(1:total))
+        
+      jj = 0
       ! Iterate over all possible receivers.
       do ipart = 1, vp%npart
-        total = vp%np_ghost_neigh(ipart, vp%partno)
-
-        if(total == 0) cycle
-
-        SAFE_ALLOCATE( blocklengths(1:total))
-        SAFE_ALLOCATE(      offsets(1:total))
-        SAFE_ALLOCATE(displacements(1:total))
-        
-        ! Collect all local points that have to be sent to neighbours.
-        
+        vp%sendpos(ipart) = jj + 1
         ! Iterate over all ghost points that ipart wants.
         do ii = 0, vp%np_ghost_neigh(ipart, vp%partno) - 1
           ! Get global number kk of i-th ghost point.
           kk = vp%ghost(vp%xghost_neigh(ipart, vp%partno) + ii)
           ! Lookup up local number of point kk
-          displacements(ii + 1) = vec_global2local(vp, kk, vp%partno) - 1
+          jj = jj + 1
+          displacements(jj) = vec_global2local(vp, kk, vp%partno)
         end do
-
-        call get_blocks(total, displacements, nblocks, blocklengths, offsets)
-
-        call MPI_Type_indexed(nblocks, blocklengths, offsets, MPI_INTEGER, vp%isend_type(ipart), ierr)
-        call MPI_Type_indexed(nblocks, blocklengths, offsets, MPI_FLOAT,   vp%dsend_type(ipart), ierr)
-        call MPI_Type_indexed(nblocks, blocklengths, offsets, MPI_CMPLX,   vp%zsend_type(ipart), ierr)
-        
-        call MPI_Type_commit(vp%isend_type(ipart), ierr)
-        call MPI_Type_commit(vp%dsend_type(ipart), ierr)
-        call MPI_Type_commit(vp%zsend_type(ipart), ierr)
-
-        SAFE_DEALLOCATE_A(blocklengths)
-        SAFE_DEALLOCATE_A(displacements)
-        SAFE_DEALLOCATE_A(offsets)
-        
       end do
 
+      call subarray_init(vp%sendpoints, total, displacements)
+
+      SAFE_DEALLOCATE_A(displacements)
+        
       ! Send and receive displacements.
       ! Send displacement cannot directly be calculated
       ! from vp%xghost_neigh because those are indices for
@@ -509,7 +493,7 @@ contains
       
       vp%rcounts(1:vp%npart) = vp%np_ghost_neigh(vp%partno, 1:vp%npart)
 
-    end subroutine init_mpi_datatypes
+    end subroutine init_send_points
 
   end subroutine vec_init
 
@@ -518,26 +502,14 @@ contains
   subroutine vec_end(vp)
     type(pv_t), intent(inout) :: vp
 
-    integer :: ipart, r
+    integer :: ipart
 
     call push_sub('par_vec.vec_end')
 
     SAFE_DEALLOCATE_P(vp%rdispls)
     SAFE_DEALLOCATE_P(vp%sdispls)
     SAFE_DEALLOCATE_P(vp%rcounts)
-
-    if(associated(vp%isend_type)) then
-      do ipart = 1, vp%npart
-        if(vp%np_ghost_neigh(ipart, vp%partno) == 0) cycle
-        call MPI_Type_free(vp%isend_type(ipart), mpi_err)
-        call MPI_Type_free(vp%dsend_type(ipart), mpi_err)
-        call MPI_Type_free(vp%zsend_type(ipart), mpi_err)
-      end do
-      SAFE_DEALLOCATE_P(vp%isend_type)
-      SAFE_DEALLOCATE_P(vp%dsend_type)
-      SAFE_DEALLOCATE_P(vp%zsend_type)
-    end if
-
+    SAFE_DEALLOCATE_P(vp%sendpos)
     SAFE_DEALLOCATE_P(vp%part)
     SAFE_DEALLOCATE_P(vp%np_local)
     SAFE_DEALLOCATE_P(vp%xlocal)
@@ -552,8 +524,8 @@ contains
     SAFE_DEALLOCATE_P(vp%ghost)
 
     if(associated(vp%global)) then
-      do r = 1, vp%npart
-        call iihash_end(vp%global(r))
+      do ipart = 1, vp%npart
+        call iihash_end(vp%global(ipart))
       end do
       SAFE_DEALLOCATE_P(vp%global)
     end if

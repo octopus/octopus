@@ -36,7 +36,8 @@ libbasic_a_SOURCES = \
 	write_iter.F90 \
 	write_iter_low.c \
 	varinfo_low.c  \
-	signals.c
+	signals.c        \
+	subarray.F90
 
 noinst_HEADERS =          \
 	mpi_debug_inc.F90 \
@@ -99,3 +100,4 @@ varia.o : varia.c varia.h
 io_binary.o : io_binary.c
 getopt_f.o : getopt_f.c
 write_iter.o : write_iter.F90 c_pointer.o
+subarray.o : subarray.F90 subarray_inc.F90 profiling.o

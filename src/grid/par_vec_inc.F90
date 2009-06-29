@@ -289,7 +289,7 @@ subroutine X(vec_ighost_update)(vp, v_local, handle)
   R_TYPE,             intent(inout) :: v_local(:)
   type(pv_handle_t),  intent(inout) :: handle
 
-  integer :: ipart, pos
+  integer :: ipart, pos, nsend
 
   call profiling_in(C_PROFILING_GHOST_UPDATE, "GHOST_UPDATE")
 
@@ -322,12 +322,17 @@ subroutine X(vec_ighost_update)(vp, v_local, handle)
            vp%comm, handle%requests(handle%nnb), mpi_err)
     end do
 
+    ! pack the data for sending
+    nsend = subarray_size(vp%sendpoints)
+    SAFE_ALLOCATE(handle%X(ghost_send)(1:nsend))
+    call X(subarray_gather)(vp%sendpoints, v_local, handle%X(ghost_send))
+
     do ipart = 1, vp%npart
       if(vp%np_ghost_neigh(ipart, vp%partno) == 0) cycle
       
       handle%nnb = handle%nnb + 1
-      call MPI_Isend(v_local(1), 1, vp%X(send_type)(ipart), ipart - 1, 0, &
-           vp%comm, handle%requests(handle%nnb), mpi_err)
+      call MPI_Isend(handle%X(ghost_send)(vp%sendpos(ipart):), vp%np_ghost_neigh(ipart, vp%partno), &
+        R_MPITYPE, ipart - 1, 0, vp%comm, handle%requests(handle%nnb), mpi_err)
       
     end do
     
