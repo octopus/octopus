@@ -507,22 +507,23 @@ contains
 #endif
 
     if(op%const_w .and. .not. op%cmplx_op) then
-      message(1) = 'Info: '//trim(op%label)//' throughput (MFlops)'
+      message(1) = 'Info: '//trim(op%label)
+      message(2) = '      Total throughput (MFlops)'
       if(dfunction_global == -1) then
         call dnl_operator_tune(op, dbest)
-        write(message(1), '(2a,i7)') trim(message(1)), ' real = ', int(dbest)
+        write(message(2), '(2a,i7)') trim(message(2)), ' real = ', int(dbest)
       else
         op%dfunction = dfunction_global
       end if
 
       if(zfunction_global == -1) then
         call znl_operator_tune(op, zbest)
-        write(message(1), '(2a,i7)') trim(message(1)), ' complex = ', int(zbest)
+        write(message(2), '(2a,i7)') trim(message(2)), ' complex = ', int(zbest)
       else
         op%zfunction = zfunction_global
       end if
 
-      if(dfunction_global == -1.or.zfunction_global == -1) call write_info(1)
+      if(dfunction_global == -1.or.zfunction_global == -1) call write_info(2)
     end if
 
     call pop_sub()

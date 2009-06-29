@@ -17,13 +17,6 @@
 !!
 !! $Id$
 
-! The next two routines are wrappers around the operator sum.
-! The reason for those wrappers is that, by help of the parameter
-! list, compilers can generate more efficient code because then
-! know the arrays not to be shaped.
-!
-! ---------------------------------------------------------
-
 subroutine X(nl_operator_tune)(op, best)
   type(nl_operator_t), intent(inout) :: op
   FLOAT,  optional,    intent(out)   :: best
@@ -31,7 +24,9 @@ subroutine X(nl_operator_tune)(op, best)
   R_TYPE, allocatable :: in(:), out(:)
   real(8) :: noperations, flops(OP_MIN:OP_MAX), itime, ftime, bwidth(OP_MIN:OP_MAX), dvolume
   integer :: method, ii, reps, iunit
-  character(len=2) :: marker
+  character(len=2)  :: marker
+  character(len=6)  :: filenum
+  character(len=30) :: filename
 
 #ifdef R_TCOMPLEX
   character(len=*), parameter :: type = 'complex'
@@ -87,13 +82,13 @@ subroutine X(nl_operator_tune)(op, best)
 
     itime = loct_clock()
 #ifdef HAVE_MPI
-    call MPI_Barrier(MPI_COMM_WORLD, ierr)
+    call MPI_Barrier(mpi_world%comm, ierr)
 #endif
     do ii = 1, reps
       call X(nl_operator_operate)(op, in, out, ghost_update = .false., profile = .false.)
     end do
 #ifdef HAVE_MPI
-    call MPI_Barrier(MPI_COMM_WORLD, ierr)
+    call MPI_Barrier(mpi_world%comm, ierr)
 #endif
     ftime = loct_clock()
 
@@ -105,29 +100,36 @@ subroutine X(nl_operator_tune)(op, best)
   SAFE_DEALLOCATE_A(in)
   SAFE_DEALLOCATE_A(out)
 
-#ifdef HAVE_MPI
-      call MPI_Allreduce(flops, global_flops, OP_MAX-OP_MIN+1, &
-           MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
-      flops = global_flops
-#endif
-
   !choose the best method
   op%X(function) = OP_MIN
   do method = OP_MIN + 1, OP_MAX
     if(flops(method) > flops(op%X(function))) op%X(function) = method
   end do
 
-  if(present(best)) best = flops(op%X(function))/CNST(1e6)
-
-#ifdef HAVE_MPI      
-  call MPI_Comm_rank(MPI_COMM_WORLD, rank, ierr)
-  if(rank == 0) then
+  if(present(best)) then
+#ifdef HAVE_MPI
+    call MPI_Allreduce(flops(op%X(function)), best, 1, &
+      MPI_DOUBLE_PRECISION, MPI_SUM, mpi_world%comm, ierr)
+    best = best/CNST(1e6)
+#else
+    best = flops(op%X(function))/CNST(1e6)
 #endif
-    !print to file
-    if(.not. initialized) call loct_rm('exec/nl_operator_prof')
-    initialized = .true.
-    
-    iunit = io_open('exec/nl_operator_prof', action='write', position='append', is_tmp = .true.)
+  end if
+
+
+#if defined(HAVE_MPI)
+  write(filenum, '(i6.6)') mpi_world%rank
+#else
+  filenum = '000000'
+#endif
+
+  filename = 'exec/nl_operator_prof.'//trim(filenum)
+  
+  !print to file
+  if(.not. initialized) call loct_rm(trim(filename))
+  initialized = .true.
+  
+  iunit = io_open(trim(filename), action='write', position='append', is_tmp = .true.)
     
 #ifdef R_TCOMPLEX
     write (iunit, '(3a)')   'Operator       = ', trim(op%label), " complex"
@@ -137,7 +139,16 @@ subroutine X(nl_operator_tune)(op, best)
     write (iunit, '(a,i8)') 'Grid points    = ', op%m%np
     write (iunit, '(a,i8)') 'Stencils       = ', op%nri
     write (iunit, '(a,i8)') 'Stencil points = ', op%stencil%size
-    
+
+#ifdef HAVE_MPI
+    if(op%m%parallel_in_domains) then
+      write (iunit, '(a,i8)') 'Inner points   = ', sum(op%inner%imax(1:op%inner%nri) - op%inner%imin(1:op%inner%nri))
+      write (iunit, '(a,i8)') 'Inner stencils = ', op%inner%nri
+      write (iunit, '(a,i8)') 'Outer points   = ', sum(op%outer%imax(1:op%outer%nri) - op%outer%imin(1:op%outer%nri))
+      write (iunit, '(a,i8)') 'Outer stencils = ', op%outer%nri
+    end if
+#endif
+
     do method = OP_MIN, OP_MAX
 #ifdef R_TCOMPLEX
       if (op_is_available(method, M_CMPLX) == 0) cycle
@@ -155,10 +166,6 @@ subroutine X(nl_operator_tune)(op, best)
     write(iunit, '(a)') " "
     
     call io_close(iunit)
-
-#ifdef HAVE_MPI      
-  end if
-#endif
 
   call pop_sub()
 
