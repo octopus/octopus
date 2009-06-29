@@ -403,6 +403,7 @@ contains
       
     gs_mesh%sb => gr%mesh%sb
     call mesh_init_from_file(gs_mesh, io_mesh)
+    call io_close(io_mesh) 
 
     io_wfns  = io_open(trim(dir)//'/wfns', action='read', status='old', die=.false., is_tmp=.true., grp=mpi_grp)
     if(io_wfns.lt.0) then
@@ -548,6 +549,7 @@ contains
     end if
     gs_mesh%sb => gr%mesh%sb
     call mesh_init_from_file(gs_mesh, io_mesh)
+    call io_close(io_mesh)
 
     io_wfns  = io_open(trim(dir)//'/wfns', action='read', status='old', die=.false., is_tmp=.true., grp=mpi_grp)
     if(io_wfns.lt.0) then
