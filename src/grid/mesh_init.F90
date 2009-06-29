@@ -684,6 +684,7 @@ contains
     ! ghost points, and the boundary points; in this order
     ! (just as for any other vector, which is distributed).
     SAFE_ALLOCATE(mesh%x(1:mesh%np_part, 1:MAX_DIM))
+    mesh%x(:, :) = M_ZERO
     ! Do the inner points
     do i = 1, mesh%np
       j = mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno) + i - 1)
