@@ -67,6 +67,7 @@ module simul_box_m
     HYPERCUBE      = 6,         &
     BOX_USDEF      = 123
 
+#define NLEADS_ 2
   integer, parameter, public :: &
     LEFT      = 1,              & ! Lead indices,
     RIGHT     = 2,              & ! L=1, R=2.
@@ -76,15 +77,21 @@ module simul_box_m
     FRONT     = 6,              & ! 
     OUTER     = 1,              & ! Block indices of interface wave functions
     INNER     = 2,              & ! for source term.
-    NLEADS    = 2,              & ! Number of leads.
+    NLEADS    = NLEADS_,        & ! Number of leads.
     TRANS_DIR = 1                 ! Transport is in x-direction.
 
+#if NLEADS_==2        
   character(len=5), dimension(NLEADS), parameter, public :: LEAD_NAME = &
     (/'left ', 'right'/)
-!  character(len=6), dimension(NLEADS), parameter, public :: LEAD_NAME = &
-!    (/'left  ', 'right ', 'bottom', 'top   '/)
-!  character(len=6), dimension(NLEADS), parameter, public :: LEAD_NAME = &
-!    (/'left  ', 'right ', 'bottom', 'top   ', 'rear  ', 'front '/)
+#endif      
+#if NLEADS_==4        
+  character(len=6), dimension(NLEADS), parameter, public :: LEAD_NAME = &
+    (/'left  ', 'right ', 'bottom', 'top   '/)
+#endif      
+#if NLEADS_==6        
+  character(len=6), dimension(NLEADS), parameter, public :: LEAD_NAME = &
+    (/'left  ', 'right ', 'bottom', 'top   ', 'rear  ', 'front '/)
+#endif      
 
   type, public :: interp_t
     integer          :: nn, order  ! interpolation points and order
@@ -378,7 +385,7 @@ contains
         end do
         ! Adjust the size of the simulation box by adding the proper number
         ! of unit cells to the simulation region.
-        do il = 1, NLEADS
+        do il = LEFT, RIGHT
           sb%lsize(TRANS_DIR) = sb%lsize(TRANS_DIR) + sb%add_unit_cells(il)*sb%lead_unit_cell(il)%lsize(TRANS_DIR)
         end do
         sb%n_ucells = nint(sb%lsize(TRANS_DIR)/sb%lead_unit_cell(LEFT)%lsize(TRANS_DIR))
@@ -1543,11 +1550,14 @@ contains
   integer function lead_unit_cell_extent(sb, il)
     type(simul_box_t), intent(in) :: sb
     integer                       :: il
+
+    integer :: tdir ! transport direction
     
     call push_sub('simul_box.lead_unit_cell_extent')
     
     if(sb%open_boundaries) then
-      lead_unit_cell_extent = int(2*sb%lead_unit_cell(il)%lsize(TRANS_DIR)/sb%h(TRANS_DIR))
+      tdir = (il+1)/2
+      lead_unit_cell_extent = int(2*sb%lead_unit_cell(il)%lsize(tdir)/sb%h(tdir))
     else
       lead_unit_cell_extent = -1
     end if

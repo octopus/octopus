@@ -313,9 +313,11 @@
       flow = M_ZERO
     end if
 
-    if(mpi_grp_is_root(mpi_world)) write(iunit,'(a,e20.12)') '# Flow = ', flow
+    if(mpi_grp_is_root(mpi_world)) then
+      write(iunit,'(a,e20.12)') '# Flow = ', flow
+      call io_close(iunit)
+    end if
 
-    call io_close(iunit)
     call pop_sub()
   end subroutine h_sys_output_current_flow
 

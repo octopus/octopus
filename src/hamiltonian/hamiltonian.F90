@@ -483,11 +483,8 @@ contains
       integer               :: np, np_uc, il, ierr, pot, ix, iy
       integer               :: irow, diag, offdiag
       character             :: channel
-      character(len=1)      :: ln(NLEADS)
       character(len=256)    :: fname, fmt
       type(mesh_t), pointer :: m
-
-      ln(LEFT)  = 'L'; ln(RIGHT) = 'R'
 
       np = gr%intf(LEFT)%np
       np_uc = gr%intf(LEFT)%np_uc
