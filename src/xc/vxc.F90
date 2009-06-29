@@ -431,12 +431,15 @@ contains
           gn(1:gr%mesh%sb%dim) = gdens(ii, 1:gr%mesh%sb%dim, 1) + gdens(ii, 1:gr%mesh%sb%dim, 2)
         end if
 
-        gnon(ii) = sqrt(sum(gn(1:gr%mesh%sb%dim)*gn(1:gr%mesh%sb%dim)))/n
+        gnon(ii) = sqrt(sum(gn(1:gr%mesh%sb%dim)**2))/n
       end do
 
       tb09_c = -CNST(0.012) + CNST(1.023)*sqrt(dmf_integrate(gr%mesh, gnon)/gr%sb%rcell_volume)
 
-      call  XC_F90(mgga_x_tb09_set_par)(functl(ii)%conf, tb09_c)
+      write(message(1), '(a,f8.6)') "Info: In the functional TP09 c = ", tb09_c
+      call write_info(1)
+
+      call  XC_F90(mgga_x_tb09_set_par)(functl(1)%conf, tb09_c)
 
       SAFE_DEALLOCATE_A(gnon)
     end if

@@ -846,13 +846,9 @@ contains
 
     ! ---------------------------------------------------------
     subroutine interpolation_init
-      print *, "1"
       call mesh_init_stage_1(old_mesh, old_sb, old_cv, gr%der%n_ghost)
-      print *, "2"
       call mesh_init_stage_2(old_mesh, old_sb, geo, old_cv, gr%stencil)
-      print *, "3"
       call mesh_init_stage_3(old_mesh)
-      print *, "4"
 
       if (states_are_real(st)) then
         SAFE_ALLOCATE(dphi(1:old_mesh%np_global))
