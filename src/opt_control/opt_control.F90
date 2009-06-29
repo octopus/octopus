@@ -106,7 +106,6 @@ contains
 
     call io_mkdir('opt-control')
 
-
     ! Initialize the time propagator.
     call td_init(td, sys, hm)
     if(hm%theory_level .ne. INDEPENDENT_PARTICLES ) then
@@ -155,7 +154,6 @@ contains
     ! Figure out how is the starting wave function(s), and the target.
     call initial_state_init(sys%gr, sys%geo, sys%st, initial_st)
     call target_init(sys%gr, sys%geo, sys%st, td, parameters_w0(par), target)
-
 
     ! Sanity checks.
     call check_faulty_runmodes(sys, hm, td%tr)

@@ -265,7 +265,7 @@ contains
       ASSERT(lr_wfns_are_associated)
     endif
 
-    mformat = '(f20.14,a,f20.14,a,4(f20.14,a),i10.10,3(a,i8))'
+    mformat = '(e20.14,a,e20.14,a,4(e21.14,a),i10.10,3(a,i8))'
     ierr = 0
 
     call block_signals()
