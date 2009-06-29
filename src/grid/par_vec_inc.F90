@@ -312,15 +312,7 @@ subroutine X(vec_ighost_update)(vp, v_local, handle)
     ! use a series of p2p non-blocking calls
     
     handle%nnb = 0
-    do ipart = 1, vp%npart
-      if(vp%np_ghost_neigh(ipart, vp%partno) == 0) cycle
-      
-      handle%nnb = handle%nnb + 1
-      call MPI_Isend(v_local(1), 1, vp%X(send_type)(ipart), ipart - 1, 0, &
-           vp%comm, handle%requests(handle%nnb), mpi_err)
-      
-    end do
-    
+
     do ipart = 1, vp%npart
       if(vp%np_ghost_neigh(vp%partno, ipart) == 0) cycle
       
@@ -328,6 +320,15 @@ subroutine X(vec_ighost_update)(vp, v_local, handle)
       pos = vp%np_local(vp%partno) + 1 + vp%rdispls(ipart)
       call MPI_Irecv(v_local(pos), vp%rcounts(ipart), R_MPITYPE, ipart - 1, 0, &
            vp%comm, handle%requests(handle%nnb), mpi_err)
+    end do
+
+    do ipart = 1, vp%npart
+      if(vp%np_ghost_neigh(ipart, vp%partno) == 0) cycle
+      
+      handle%nnb = handle%nnb + 1
+      call MPI_Isend(v_local(1), 1, vp%X(send_type)(ipart), ipart - 1, 0, &
+           vp%comm, handle%requests(handle%nnb), mpi_err)
+      
     end do
     
   end select
