@@ -29,16 +29,18 @@ subroutine X(em_field_apply_batch)(this, mesh, psib, vpsib)
 
     bs = hardware%dblock_size
 
+    !$omp parallel do private(ipmax, ist, idim, ip2)
     do ip = 1, mesh%np, bs
       ipmax = min(mesh%np, ip + bs - 1)
-
+      
       forall (ist = 1:psib%nst, idim = 1:psib%dim, ip2 = ip:ipmax)
         vpsib%states(ist)%X(psi)(ip2, idim) = this%potential(ip2)*psib%states(ist)%X(psi)(ip2, idim)
       end forall
       
     end do
+    !$omp end parallel do
 
-    call profiling_count_operations((R_ADD + R_MUL*psib%nst)*mesh%np)
+    call profiling_count_operations((R_MUL*psib%nst)*mesh%np)
     call profiling_count_transfers(mesh%np, M_ONE)
     call profiling_count_transfers(mesh%np*psib%nst, R_TOTYPE(M_ONE))
     
