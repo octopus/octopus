@@ -255,16 +255,14 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
 
   reduce_buffer = R_TOTYPE(M_ZERO)
   
-  !$omp parallel private(ist, ipj, ns, lpsi, ll, mm, ii, idim, is)
-  SAFE_ALLOCATE(lpsi(1:maxval(pj(:)%sphere%ns), 1:dim))
-
-  !$omp do 
+  !$omp parallel do private(ist, ipj, ns, lpsi, ll, mm, ii, idim, is)
   do ist = 1, psib%nst
     do ipj = 1, npj
       if(pj(ipj)%type == M_NONE) cycle
       ns = pj(ipj)%sphere%ns
-
       if(ns < 1) cycle
+
+      SAFE_ALLOCATE(lpsi(1:ns, 1:dim))
 
 #ifndef USE_OMP
       call profiling_in(prof_gather, "PROJECTOR_GATHER")
@@ -309,11 +307,11 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
         end do ! mm
       end do ! ll
 
+      SAFE_DEALLOCATE_A(lpsi)
     end do ! ipj
   end do ! ist
-  !$omp end do
+  !$omp end parallel do
 
-  !$omp master
 #if defined(HAVE_MPI)
   if(mesh%parallel_in_domains) then
     call profiling_in(reduce_prof, "VNLPSI_REDUCE_BATCH")
@@ -326,15 +324,16 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
     call profiling_out(reduce_prof)
   end if
 #endif
-  !$omp end master
 
   ! calculate |ppsi> += |p><p|psi>
-  !$omp do
+  !$omp parallel do private(ist, ipj, ns, lpsi, ll, mm, ii, idim, is)
   do ist = 1, psib%nst
     do ipj = 1, npj
       if(pj(ipj)%type == M_NONE) cycle
 
       ns = pj(ipj)%sphere%ns
+
+      SAFE_ALLOCATE(lpsi(1:ns, 1:dim))
       lpsi = M_ZERO
 
       do ll = 0, pj(ipj)%lmax
@@ -388,12 +387,10 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
 #ifndef USE_OMP
       call profiling_out(prof_scatter)
 #endif
+      SAFE_DEALLOCATE_A(lpsi)
     end do ! ipj
   end do ! ist
-  !$omp end do
-
-  SAFE_DEALLOCATE_A(lpsi)
-  !$omp end parallel
+  !$omp end parallel do
 
   SAFE_DEALLOCATE_A(reduce_buffer)
   SAFE_DEALLOCATE_A(ireduce)
