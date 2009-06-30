@@ -405,8 +405,8 @@ contains
       call xc_f90_gga_exc_vxc(x_conf, D(1), sigma(1), EPSX, DEXDD(1), vxsigma(1))
       call xc_f90_gga_exc_vxc(c_conf, D(1), sigma(1), EPSC, DECDD(1), vcsigma(1))
     else
-      call xc_f90_lda_exc_vxc(x_conf, D(1), EPSX, DEXDD(1))
-      call xc_f90_lda_exc_vxc(c_conf, D(1), EPSC, DECDD(1))
+      call xc_f90_lda_exc_vxc(x_conf, 1, D(1), EPSX, DEXDD(1))
+      call xc_f90_lda_exc_vxc(c_conf, 1, D(1), EPSC, DECDD(1))
     end if
 
     ! The derivatives of the exchange and correlation energies per particle with

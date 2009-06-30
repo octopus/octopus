@@ -29,7 +29,10 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc, vtau)
   FLOAT, optional,    intent(inout) :: vxc(:,:)
   FLOAT, optional,    intent(inout) :: vtau(:,:)
 
-  FLOAT :: l_dens(MAX_SPIN), l_dedd(MAX_SPIN)
+  integer :: n_block
+
+  FLOAT, allocatable :: zk(:)
+  FLOAT, allocatable :: l_dens(:,:), l_dedd(:,:)
   FLOAT :: l_sigma(3), l_vsigma(3)
   FLOAT :: l_tau(MAX_SPIN), l_ldens(MAX_SPIN), l_dedtau(MAX_SPIN), l_dedldens(MAX_SPIN)
 
@@ -37,8 +40,8 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc, vtau)
   FLOAT, allocatable :: gdens(:,:,:), dedgd(:,:,:)
   FLOAT, allocatable :: ldens(:,:), tau(:,:), dedldens(:,:)
 
-  integer :: jj, ixc, spin_channels
-  FLOAT   :: e, r
+  integer :: ib, jj, ixc, spin_channels
+  FLOAT   :: r
   logical :: gga, mgga
   type(profile_t), save :: prof
 
@@ -57,6 +60,12 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc, vtau)
   jj = XC_FAMILY_LDA + XC_FAMILY_GGA + XC_FAMILY_HYB_GGA + XC_FAMILY_MGGA
   if(iand(xcs%family, jj) == 0) go to 999
 
+  if(xcs%family == XC_FAMILY_LDA) then
+    n_block = 1000
+  else
+    n_block = 1 ! blocks not yet implemented for the other functionals
+  end if
+
   ! initialize a couple of handy variables
   gga  = iand(xcs%family, XC_FAMILY_GGA + XC_FAMILY_HYB_GGA + XC_FAMILY_MGGA).ne.0
   mgga = iand(xcs%family, XC_FAMILY_MGGA).ne.0
@@ -68,10 +77,14 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc, vtau)
   if( gga) call  gga_init()
   if(mgga) call mgga_init()
 
-  space_loop: do jj = 1, gr%mesh%np
+  space_loop: do jj = 1, gr%mesh%np, n_block
+    if(jj + n_block > gr%mesh%np) n_block = gr%mesh%np - jj + 1
 
-    ! make a local copy with the correct memory order
-    l_dens(1:spin_channels) = dens(jj, 1:spin_channels)
+    ! make a local copy with the correct memory order for libxc
+    do ib = 1, n_block
+      l_dens(1:spin_channels, ib) = dens(jj+ib-1, 1:spin_channels)
+    end do
+
     if(gga) then
       l_sigma(1) = sum(gdens(jj, 1:gr%mesh%sb%dim, 1)*gdens(jj, 1:gr%mesh%sb%dim, 1))
       if(ispin /= UNPOLARIZED) then
@@ -94,25 +107,25 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc, vtau)
           select case(functl(ixc)%family)
 
           case(XC_FAMILY_LDA)
-            call XC_F90(lda_exc)(functl(ixc)%conf, l_dens(1), e)
+            call XC_F90(lda_exc)(functl(ixc)%conf, n_block, l_dens(1,1), zk(1))
 
           case(XC_FAMILY_GGA)
-            call XC_F90(gga_exc)(functl(ixc)%conf, l_dens(1), l_sigma(1), e)
+            call XC_F90(gga_exc)(functl(ixc)%conf, l_dens(1,1), l_sigma(1), zk(1))
 
           case(XC_FAMILY_HYB_GGA)
             message(1) = 'Hyb-GGAs are currently disabled.'
             call write_fatal(1)
-            !call XC_F90(hyb_gga_exc)(functl(ixc)%conf, l_dens(1), l_sigma(1), e)
+            !call XC_F90(hyb_gga_exc)(functl(ixc)%conf, l_dens(1), l_sigma(1), zk)
 
           case(XC_FAMILY_MGGA)
-            call XC_F90(mgga_exc)(functl(ixc)%conf, l_dens(1), l_sigma(1), l_ldens(1), l_tau(1), e)
+            call XC_F90(mgga_exc)(functl(ixc)%conf, l_dens(1,1), l_sigma(1), l_ldens(1), l_tau(1), zk(1))
 
           case default
             cycle
           end select
 
         else ! Do not have an energy functional
-          e = M_ZERO
+          zk(:) = M_ZERO
         end if
 
       else ! we want exc and vxc
@@ -121,50 +134,50 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc, vtau)
           ! we get the xc energy and potential
           select case(functl(ixc)%family)
           case(XC_FAMILY_LDA)
-            call XC_F90(lda_exc_vxc)(functl(ixc)%conf, l_dens(1), e, l_dedd(1))
+            call XC_F90(lda_exc_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), zk(1), l_dedd(1,1))
 
           case(XC_FAMILY_GGA)
-            call XC_F90(gga_exc_vxc)(functl(ixc)%conf, l_dens(1), l_sigma(1), &
-              e, l_dedd(1), l_vsigma(1))          
+            call XC_F90(gga_exc_vxc)(functl(ixc)%conf, l_dens(1,1), l_sigma(1), &
+              zk(1), l_dedd(1,1), l_vsigma(1))
 
           case(XC_FAMILY_HYB_GGA)
-            call XC_F90(hyb_gga_exc_vxc)(functl(ixc)%conf, l_dens(1), l_sigma(1), &
-              e, l_dedd(1), l_vsigma(1))
+            call XC_F90(hyb_gga_exc_vxc)(functl(ixc)%conf, l_dens(1,1), l_sigma(1), &
+              zk(1), l_dedd(1,1), l_vsigma(1))
 
           case(XC_FAMILY_MGGA)
-            call XC_F90(mgga_exc_vxc)(functl(ixc)%conf, l_dens(1), l_sigma(1), l_ldens(1), l_tau(1), &
-              e, l_dedd(1), l_vsigma(1), l_dedldens(1), l_dedtau(1))
+            call XC_F90(mgga_exc_vxc)(functl(ixc)%conf, l_dens(1,1), l_sigma(1), l_ldens(1), l_tau(1), &
+              zk(1), l_dedd(1,1), l_vsigma(1), l_dedldens(1), l_dedtau(1))
 
           case default
             cycle
           end select
 
         else ! we do not have an energy functional so we get just the potential
-          e = M_ZERO
+          zk(:) = M_ZERO
 
           select case(functl(ixc)%family)
           case(XC_FAMILY_LDA)
-            call XC_F90(lda_vxc)(functl(ixc)%conf, l_dens(1), l_dedd(1))
+            call XC_F90(lda_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), l_dedd(1,1))
           
           case(XC_FAMILY_GGA)
             l_vsigma = M_ZERO
 
             if(functl(ixc)%id == XC_GGA_XC_LB) then
               call mesh_r(gr%mesh, jj, r)
-              call XC_F90(gga_lb_modified)(functl(ixc)%conf, l_dens(1), l_sigma(1), &
-                r, l_dedd(1))
+              call XC_F90(gga_lb_modified)(functl(ixc)%conf, l_dens(1,1), l_sigma(1), &
+                r, l_dedd(1,1))
             else
-              call XC_F90(gga_vxc)(functl(ixc)%conf, l_dens(1), l_sigma(1), &
-                l_dedd(1), l_vsigma(1))
+              call XC_F90(gga_vxc)(functl(ixc)%conf, l_dens(1,1), l_sigma(1), &
+                l_dedd(1,1), l_vsigma(1))
             end if
           
           case(XC_FAMILY_HYB_GGA)
-            call XC_F90(hyb_gga_vxc)(functl(ixc)%conf, l_dens(1), l_sigma(1), &
-              l_dedd(1), l_vsigma(1))
+            call XC_F90(hyb_gga_vxc)(functl(ixc)%conf, l_dens(1,1), l_sigma(1), &
+              l_dedd(1,1), l_vsigma(1))
 
           case(XC_FAMILY_MGGA)
-            call XC_F90(mgga_vxc)(functl(ixc)%conf, l_dens(1), l_sigma(1), l_ldens(1), l_tau(1), &
-              l_dedd(1), l_vsigma(1), l_dedldens(1), l_dedtau(1))
+            call XC_F90(mgga_vxc)(functl(ixc)%conf, l_dens(1,1), l_sigma(1), l_ldens(1), l_tau(1), &
+              l_dedd(1,1), l_vsigma(1), l_dedldens(1), l_dedtau(1))
             
           case default
             cycle
@@ -174,14 +187,20 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc, vtau)
       end if
 
       if(functl(ixc)%type == XC_EXCHANGE) then
-        ex_per_vol(jj) = ex_per_vol(jj) + sum(l_dens(1:spin_channels)) * e
+        do ib = 1, n_block
+          ex_per_vol(jj+ib-1) = ex_per_vol(jj+ib-1) + sum(l_dens(1:spin_channels, ib)) * zk(ib)
+        end do
       else
-        ec_per_vol(jj) = ec_per_vol(jj) + sum(l_dens(1:spin_channels)) * e
+        do ib = 1, n_block
+          ec_per_vol(jj+ib-1) = ec_per_vol(jj+ib-1) + sum(l_dens(1:spin_channels, ib)) * zk(ib)
+        end do
       end if
 
       ! store results
       if(present(vxc)) then
-        dedd(jj, 1:spin_channels) = dedd(jj, 1:spin_channels) + l_dedd(1:spin_channels)
+        do ib = 1, n_block
+          dedd(jj+ib-1, 1:spin_channels) = dedd(jj+ib-1, 1:spin_channels) + l_dedd(1:spin_channels, ib)
+        end do
 
         if((functl(ixc)%family == XC_FAMILY_GGA).or.(functl(ixc)%family == XC_FAMILY_MGGA)) then
           dedgd(jj,:,1) = dedgd(jj,:,1) + M_TWO*l_vsigma(1)*gdens(jj,:,1)
@@ -235,6 +254,9 @@ contains
     call push_sub('vxc.xc_get_vxc.lda_init')
 
     ! allocate some general arrays
+    SAFE_ALLOCATE(l_dens(1:spin_channels, 1:n_block))
+    SAFE_ALLOCATE(zk(1:n_block))
+
     SAFE_ALLOCATE(dens(1:gr%mesh%np_part, 1:spin_channels))
     SAFE_ALLOCATE(ex_per_vol(1:gr%mesh%np))
     SAFE_ALLOCATE(ec_per_vol(1:gr%mesh%np))
@@ -244,8 +266,9 @@ contains
     ec_per_vol = M_ZERO
 
     if(present(vxc)) then
+      SAFE_ALLOCATE(l_dedd(1:spin_channels, 1:n_block))
       SAFE_ALLOCATE(dedd(1:gr%mesh%np_part, 1:spin_channels))
-      dedd       = M_ZERO
+      dedd = M_ZERO
     end if
 
     do ii = 1, gr%mesh%np
@@ -273,10 +296,14 @@ contains
   ! ---------------------------------------------------------
   ! deallocate variables allocated in lda_init
   subroutine lda_end()
+    SAFE_DEALLOCATE_A(l_dens)
+    SAFE_DEALLOCATE_A(zk)
+
     SAFE_DEALLOCATE_A(dens)
     SAFE_DEALLOCATE_A(ex_per_vol)
     SAFE_DEALLOCATE_A(ec_per_vol)
     if(present(vxc)) then
+      SAFE_DEALLOCATE_A(l_dedd)
       SAFE_DEALLOCATE_A(dedd)
     end if
   end subroutine lda_end
