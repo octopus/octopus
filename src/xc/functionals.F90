@@ -147,12 +147,7 @@ contains
     ! initialize
     select case(functl%family)
     case(XC_FAMILY_LDA)
-      if(functl%id == XC_LDA_X) then
-        call XC_F90(lda_init)(functl%conf, functl%info, XC_LDA_X, &
-          spin_channels, ndim, XC_NON_RELATIVISTIC)
-      else
-        call XC_F90(lda_init)(functl%conf, functl%info, functl%id, spin_channels)
-      end if
+      call XC_F90(lda_init)(functl%conf, functl%info, functl%id, spin_channels)
 
     case(XC_FAMILY_GGA)
       call XC_F90(gga_init)(functl%conf, functl%info, functl%id, spin_channels)
@@ -223,16 +218,14 @@ contains
       end if
 
       ! we initialize the functionals
-      if(functl%id.ne.XC_LDA_C_XALPHA) then
-        call XC_F90(lda_init)(functl%conf, functl%info, functl%id, spin_channels)
-      else
-        call loct_parse_float(datasets_check('Xalpha'), M_ONE, alpha)
-        call XC_F90(lda_init)(functl%conf, functl%info, XC_LDA_C_XALPHA, &
-          spin_channels, ndim, alpha)
-      end if
+      call XC_F90(lda_init)(functl%conf, functl%info, functl%id, spin_channels)
 
       ! special parameters that have to be configured
       select case(functl%id)
+      case(XC_LDA_C_XALPHA)
+        call loct_parse_float(datasets_check('Xalpha'), M_ONE, alpha)
+        call XC_F90(lda_c_xalpha_set_par)(functl%conf, alpha)
+
       case(XC_LDA_C_1D_CSC)
         call loct_parse_float(datasets_check('lda_c_1d_csc_bb'), M_ONE, alpha)
         call XC_F90(lda_c_1d_csc_set_par)(functl%conf, alpha)
