@@ -168,6 +168,7 @@ contains
   end subroutine rkb_project
 
   ! ---------------------------------------------------------
+  ! THREADSAFE
   subroutine rkb_project_bra(mesh, sm, rkb_p, psi, uvpsi)
     type(mesh_t),          intent(in)  :: mesh
     type(submesh_t),       intent(in)  :: sm
@@ -178,9 +179,9 @@ contains
     integer :: idim, n_s, is
 
     CMPLX, allocatable :: bra(:, :)
-
+#ifndef USE_OMP
     call push_sub('rkb_projector.rkb_project_bra')
-
+#endif
     uvpsi = M_ZERO
 
     n_s = rkb_p%n_s
@@ -202,11 +203,13 @@ contains
     end do
 
     SAFE_DEALLOCATE_A(bra)
-
+#ifndef USE_OMP
     call pop_sub()
+#endif
   end subroutine rkb_project_bra
 
   ! ---------------------------------------------------------
+  ! THREADSAFE
   subroutine rkb_project_ket(rkb_p, uvpsi, psi)
     type(rkb_projector_t), intent(in)    :: rkb_p
     CMPLX,                 intent(in)    :: uvpsi(1:2, 1:2)
@@ -214,9 +217,9 @@ contains
 
     integer :: idim, jdim, n_s, is
     CMPLX :: aa
-
+#ifndef USE_OMP
     call push_sub('rkb_projector.rkb_project_ket')
-
+#endif
     n_s = rkb_p%n_s
 
     do jdim = 1, 2
@@ -229,8 +232,9 @@ contains
         psi(is, jdim) = psi(is, jdim) + aa
       end do
     end do
-
+#ifndef USE_OMP
     call pop_sub()
+#endif
   end subroutine rkb_project_ket
   
 end module rkb_projector_m

@@ -54,6 +54,8 @@ subroutine X(hgh_project)(mesh, sm, hgh_p, dim, psi, ppsi, reltype)
   
 end subroutine X(hgh_project)
 
+!-------------------------------------------------------------------------
+! THREADSAFE
 subroutine X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi)
   type(mesh_t),          intent(in)  :: mesh
   type(submesh_t),       intent(in)  :: sm
@@ -103,6 +105,8 @@ subroutine X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi)
 
 end subroutine X(hgh_project_bra)
 
+!-------------------------------------------------------------------------
+! THREADSAFE
 subroutine X(hgh_project_ket)(mesh, sm, hgh_p, dim, reltype, uvpsi, ppsi)
   type(mesh_t),          intent(in)    :: mesh
   type(submesh_t),       intent(in)    :: sm

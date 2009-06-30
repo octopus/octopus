@@ -54,6 +54,8 @@ subroutine X(kb_project)(mesh, sm, kb_p, dim, psi, ppsi)
 
 end subroutine X(kb_project)
 
+!--------------------------------------------------------------
+! THREADSAFE
 subroutine X(kb_project_bra)(mesh, sm, kb_p, dim, psi, uvpsi)
   type(mesh_t),         intent(in)  :: mesh
   type(submesh_t),      intent(in)  :: sm
@@ -64,7 +66,9 @@ subroutine X(kb_project_bra)(mesh, sm, kb_p, dim, psi, uvpsi)
 
   integer :: ic, idim, ns, is
 
+#ifndef USE_OMP
   call push_sub('kb_projector_inc.kb_project_bra')
+#endif
 
   ns = kb_p%n_s
 
@@ -97,10 +101,13 @@ subroutine X(kb_project_bra)(mesh, sm, kb_p, dim, psi, uvpsi)
     uvpsi(1:kb_p%n_c, 1:dim) = uvpsi(1:kb_p%n_c, 1:dim)*mesh%vol_pp(1)
   end if
 
+#ifndef USE_OMP
   call pop_sub()
-
+#endif
 end subroutine X(kb_project_bra)
 
+!--------------------------------------------------------------
+! THREADSAFE
 subroutine X(kb_project_ket)(mesh, sm, kb_p, dim, uvpsi, psi)
   type(mesh_t),         intent(in)    :: mesh
   type(submesh_t),      intent(in)    :: sm
@@ -110,8 +117,9 @@ subroutine X(kb_project_ket)(mesh, sm, kb_p, dim, uvpsi, psi)
   R_TYPE,               intent(inout) :: psi(:, :) ! psi(1:ns, 1:dim)
 
   integer :: ic, idim, ns, is
-
+#ifndef USE_OMP
   call push_sub('kb_projector_inc.kb_project_ket')
+#endif
 
   ns = kb_p%n_s
 
@@ -126,10 +134,13 @@ subroutine X(kb_project_ket)(mesh, sm, kb_p, dim, uvpsi, psi)
   end do
 
   call profiling_count_operations(ns*dim*kb_p%n_c*2*R_ADD)
+#ifndef USE_OMP
   call pop_sub()
-
+#endif
 end subroutine X(kb_project_ket)
 
+!--------------------------------------------------------------
+! THREADSAFE
 subroutine X(kb_mul_energies)(kb_p, dim, uvpsi)
   type(kb_projector_t), intent(in)    :: kb_p
   integer,              intent(in)    :: dim
@@ -137,14 +148,9 @@ subroutine X(kb_mul_energies)(kb_p, dim, uvpsi)
   
   integer :: idim
 
-  call push_sub('kb_projector_inc.kb_mul_energies')
-
   do idim = 1, dim
     uvpsi(1:kb_p%n_c, idim) = uvpsi(1:kb_p%n_c, idim)*kb_p%e(1:kb_p%n_c)
   end do
-
-  call pop_sub()
-
 end subroutine X(kb_mul_energies)
 
 !! Local Variables:

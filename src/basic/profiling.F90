@@ -468,86 +468,94 @@ contains
 
 
   ! ---------------------------------------------------------
+  ! THREADSAFE
   subroutine iprofiling_count_operations(ops)
     integer,         intent(in)    :: ops
 
     if(.not.in_profiling_mode) return
-
+    !$omp atomic
     prof_vars%current%p%op_count_current = prof_vars%current%p%op_count_current + dble(ops)
   end subroutine iprofiling_count_operations
 
 
   ! ---------------------------------------------------------
+  ! THREADSAFE
   subroutine rprofiling_count_operations(ops)
     real(4),         intent(in)    :: ops
 
     if(.not.in_profiling_mode) return
-
+    !$omp atomic
     prof_vars%current%p%op_count_current = prof_vars%current%p%op_count_current + dble(ops)
   end subroutine rprofiling_count_operations
 
 
   ! ---------------------------------------------------------
+  ! THREADSAFE
   subroutine dprofiling_count_operations(ops)
     real(8),         intent(in)    :: ops
 
     if(.not.in_profiling_mode) return
-
+    !$omp atomic
     prof_vars%current%p%op_count_current = prof_vars%current%p%op_count_current + ops
   end subroutine dprofiling_count_operations
 
 
   ! ---------------------------------------------------------
+  ! THREADSAFE
   subroutine profiling_count_tran_int(trf, type)
     integer,         intent(in)    :: trf
     integer,         intent(in)    :: type
 
     if(.not.in_profiling_mode) return
-
+    !$omp atomic
     prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + dble(4*trf)
   end subroutine profiling_count_tran_int
 
 
   ! ---------------------------------------------------------
+  ! THREADSAFE
   subroutine profiling_count_tran_real_4(trf, type)
     integer,         intent(in)    :: trf
     real(4),         intent(in)    :: type
     
     if(.not.in_profiling_mode) return
-    
+    !$omp atomic
     prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + dble(4*trf)
   end subroutine profiling_count_tran_real_4
 
 
   ! ---------------------------------------------------------
+  ! THREADSAFE
   subroutine profiling_count_tran_real_8(trf, type)
     integer,         intent(in)    :: trf
     real(8),         intent(in)    :: type
     
     if(.not.in_profiling_mode) return
-    
+    !$omp atomic
     prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + dble(8*trf)
   end subroutine profiling_count_tran_real_8
 
 
   ! ---------------------------------------------------------
+  ! THREADSAFE
   subroutine profiling_count_tran_complex_4(trf, type)
     integer,         intent(in)    :: trf
     complex(4),      intent(in)    :: type
 
     if(.not.in_profiling_mode) return
-
+    !$omp atomic
     prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + dble(8*trf)
   end subroutine profiling_count_tran_complex_4
 
 
   ! ---------------------------------------------------------
+  ! THREADSAFE
   subroutine profiling_count_tran_complex_8(trf, type)
     integer,         intent(in)    :: trf
     complex(8),      intent(in)    :: type
 
     if(.not.in_profiling_mode) return
-
+    !$omp atomic
     prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + dble(16*trf)
   end subroutine profiling_count_tran_complex_8
 
