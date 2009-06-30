@@ -86,9 +86,9 @@ contains
     call geometry_partition(sys%geo, sys%mc)
     call kpoints_distribute(sys%st%d, sys%mc)
     call grid_init_stage_2(sys%gr, sys%mc, sys%geo)
-    call states_densities_init(sys%st, sys%gr, sys%geo)
+    call states_densities_init(sys%st, sys%gr, sys%geo, sys%mc)
     call h_sys_output_init(sys%gr%sb, sys%outp)
-    call elf_init
+    call elf_init()
     call poisson_init(sys%gr, sys%geo)
     call v_ks_init(sys%gr, sys%ks, sys%st%d, sys%st%qtot)
 
@@ -109,7 +109,7 @@ contains
 
       ! store the ranges for these two indices (serves as initial guess
       ! for parallelization strategy)
-      index_range(1) = sys%gr%mesh%np_global     ! Number of points in mesh
+      index_range(1) = sys%gr%mesh%np_global  ! Number of points in mesh
       index_range(2) = sys%st%nst             ! Number of states
       index_range(3) = sys%st%d%nik           ! Number of kpoints
       index_range(4) = 100000                 ! Some large number

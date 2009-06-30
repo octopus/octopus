@@ -363,24 +363,6 @@ contains
       st%d%spin_channels = 2
     end select
 
-    !%Variable StatesBlockSize
-    !%Type integer
-    !%Default 4
-    !%Section Execution::Optimization
-    !%Description
-    !% Some routines work over blocks of eigenfunctions, this
-    !% generally improves performance at the expense of increased
-    !% memory consumption. This variable selects the size of the
-    !% blocks to be used, the default size is 4.
-    !%End
-    call loct_parse_int(datasets_check('StatesBlockSize'), 4, st%d%block_size)
-    if(st%d%block_size < 1) then
-      message(1) = "Error: The variable 'StatesBlockSize' must be greater than 0."
-      call write_fatal(1)
-    end if
-    
-    st%d%block_size = min(st%d%block_size, st%nst)
-
     !%Variable StatesSaveMemory
     !%Type logical
     !%Default false
@@ -888,24 +870,47 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine states_densities_init(st, gr, geo)
+  subroutine states_densities_init(st, gr, geo, mc)
     type(states_t),    intent(inout) :: st
     type(grid_t),      intent(in)    :: gr
     type(geometry_t),  intent(in)    :: geo
+    type(multicomm_t), intent(in)    :: mc
+
     call push_sub('states.states_densities_init')
 
     ! allocate arrays for charge and current densities
     SAFE_ALLOCATE(st%rho(1:gr%mesh%np_part, 1:st%d%nspin))
     st%rho  = M_ZERO
     if(st%d%cdft) then
-      SAFE_ALLOCATE(  st%current(1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:st%d%nspin))
-      st%current    = M_ZERO
+      SAFE_ALLOCATE(st%current(1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:st%d%nspin))
+      st%current = M_ZERO
     end if
     st%nlcc = geo%nlcc
     if(st%nlcc) then
       SAFE_ALLOCATE(st%rho_core(1:gr%mesh%np))
       st%rho_core(:) = M_ZERO
     end if
+
+    !%Variable StatesBlockSize
+    !%Type integer
+    !%Default 4
+    !%Section Execution::Optimization
+    !%Description
+    !% Some routines work over blocks of eigenfunctions, this
+    !% generally improves performance at the expense of increased
+    !% memory consumption. This variable selects the size of the
+    !% blocks to be used, the default size is max(4, 2*nthreads).
+    !%End
+
+    ! This has to be here as it requires mc%nthreads that is not available in states_init
+    call loct_parse_int(datasets_check('StatesBlockSize'), max(4, 2*mc%nthreads), st%d%block_size)
+    if(st%d%block_size < 1) then
+      message(1) = "Error: The variable 'StatesBlockSize' must be greater than 0."
+      call write_fatal(1)
+    end if
+    
+    st%d%block_size = min(st%d%block_size, st%nst)
+
 
     call pop_sub()
   end subroutine states_densities_init

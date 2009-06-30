@@ -208,9 +208,9 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
   integer,           intent(in)    :: ik
 
   integer :: ipj, nreduce, ii, ns, idim, ll, mm, is, ist
-  R_TYPE, allocatable :: reduce_buffer(:), lpsi(:, :, :)
-  integer, allocatable :: ireduce(:, :, :, :), istart(:), iend(:)
-  type(profile_t), save :: prof_scatter, prof_gather
+  R_TYPE, allocatable :: reduce_buffer(:), lpsi(:, :)
+  integer, allocatable :: ireduce(:, :, :, :)
+  !type(profile_t), save :: prof_scatter, prof_gather
 #if defined(HAVE_MPI)
   integer :: nn
   type(profile_t), save :: reduce_prof
@@ -227,27 +227,21 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
   ! calculated.
 
   ! generate the reduce buffer and related structures
-
   SAFE_ALLOCATE(ireduce(1:npj, 0:MAX_L, -MAX_L:MAX_L, 1:psib%nst))
-  SAFE_ALLOCATE(istart(1:npj))
-  SAFE_ALLOCATE(iend(1:npj))
-
   nreduce = 0
   
   ! count the number of elements in the reduce buffer
-  do ipj = 1, npj
-    if(pj(ipj)%type == M_NONE) cycle
-    istart(ipj) = 1 + nreduce
-    do ll = 0, pj(ipj)%lmax
-      if (ll == pj(ipj)%lloc) cycle
-      do mm = -ll, ll
-        do ist = 1, psib%nst
+  do ist = 1, psib%nst
+    do ipj = 1, npj
+      if(pj(ipj)%type == M_NONE) cycle
+      do ll = 0, pj(ipj)%lmax
+        if (ll == pj(ipj)%lloc) cycle
+        do mm = -ll, ll
           ireduce(ipj, ll, mm, ist) = 1 + nreduce
           nreduce = nreduce + pj(ipj)%reduce_size
         end do
       end do
     end do
-    iend(ipj) = nreduce
   end do
 
   ! Check whether we have or not "real" projectors. If we do not, return.
@@ -256,60 +250,60 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
   end if
 
   SAFE_ALLOCATE(reduce_buffer(1:nreduce))
+  SAFE_ALLOCATE(lpsi(1:maxval(pj(:)%sphere%ns), 1:dim))
 
-  ! calculate <p|psi>
-  SAFE_ALLOCATE(lpsi(1:maxval(pj(:)%sphere%ns), 1:dim, 1:psib%nst))
-  do ipj = 1, npj
-    if(pj(ipj)%type == M_NONE) cycle
-    ns = pj(ipj)%sphere%ns
+  reduce_buffer = R_TOTYPE(M_ZERO)
+  
+  !$omp parallel do private(ipj, ns, lpsi, ll, mm, ii, idim, is)
+  do ist = 1, psib%nst
+    do ipj = 1, npj
+      if(pj(ipj)%type == M_NONE) cycle
+      ns = pj(ipj)%sphere%ns
 
-    if(ns < 1) then
-      reduce_buffer(istart(ipj):iend(ipj)) = R_TOTYPE(M_ZERO)
-      cycle
-    end if
+      if(ns < 1) cycle
 
-    call profiling_in(prof_gather, "PROJECTOR_GATHER")
+      !call profiling_in(prof_gather, "PROJECTOR_GATHER")
 
-    ! copy psi to the small spherical grid
-    do idim = 1, dim
-      if(associated(pj(ipj)%phase)) then
-        forall (is = 1:ns, ist = 1:psib%nst) 
-          lpsi(is, idim, ist) = psib%states(ist)%X(psi)(pj(ipj)%sphere%jxyz(is), idim)*pj(ipj)%phase(is, ik)
-        end forall
-        call profiling_count_operations(ns*psib%nst*R_MUL)
-      else
-        forall (is = 1:ns, ist = 1:psib%nst) lpsi(is, idim, ist) = psib%states(ist)%X(psi)(pj(ipj)%sphere%jxyz(is), idim)
-      end if
-    end do
+      ! copy psi to the small spherical grid
+      do idim = 1, dim
+        if(associated(pj(ipj)%phase)) then
+          forall (is = 1:ns) 
+            lpsi(is, idim) = psib%states(ist)%X(psi)(pj(ipj)%sphere%jxyz(is), idim)*pj(ipj)%phase(is, ik)
+          end forall
+          call profiling_count_operations(ns*psib%nst*R_MUL)
+        else
+          forall (is = 1:ns) lpsi(is, idim) = psib%states(ist)%X(psi)(pj(ipj)%sphere%jxyz(is), idim)
+        end if
+      end do
 
-    call profiling_out(prof_gather)
+      !call profiling_out(prof_gather)
 
-    ! apply the projectors for each angular momentum component
-    do ll = 0, pj(ipj)%lmax
-      if (ll == pj(ipj)%lloc) cycle
-      do mm = -ll, ll
+      ! apply the projectors for each angular momentum component
+      do ll = 0, pj(ipj)%lmax
+        if (ll == pj(ipj)%lloc) cycle
+        do mm = -ll, ll
 
-        do ist = 1, psib%nst
           ii = ireduce(ipj, ll, mm, ist)
           select case(pj(ipj)%type)
           case(M_KB)
-            call X(kb_project_bra)(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(ll, mm), dim, lpsi(:, :, ist), reduce_buffer(ii:))
+            call X(kb_project_bra)(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(ll, mm), dim, lpsi(:, :), reduce_buffer(ii:))
           case(M_RKB)
 #ifdef R_TCOMPLEX
             if(ll /= 0) then
-              call rkb_project_bra(mesh, pj(ipj)%sphere, pj(ipj)%rkb_p(ll, mm), lpsi(:, :, ist), reduce_buffer(ii:))
+              call rkb_project_bra(mesh, pj(ipj)%sphere, pj(ipj)%rkb_p(ll, mm), lpsi(:, :), reduce_buffer(ii:))
             else
-              call zkb_project_bra(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(1, 1), dim, lpsi(:, :, ist), reduce_buffer(ii:))
+              call zkb_project_bra(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(1, 1), dim, lpsi(:, :), reduce_buffer(ii:))
             end if
 #endif
           case(M_HGH)
             call X(hgh_project_bra)(mesh, pj(ipj)%sphere, pj(ipj)%hgh_p(ll, mm), dim, pj(ipj)%reltype, &
-                 lpsi(:, :, ist), reduce_buffer(ii:))
+              lpsi(:, :), reduce_buffer(ii:))
           end select
-        end do ! ist
-      end do ! mm
-    end do ! ll
-  end do
+        end do ! mm
+      end do ! ll
+
+    end do ! ipj
+  end do ! ist
 
 #if defined(HAVE_MPI)
   if(mesh%parallel_in_domains) then
@@ -325,74 +319,68 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
 #endif
   
   ! calculate |ppsi> += |p><p|psi>
-  do ipj = 1, npj
-    if(pj(ipj)%type == M_NONE) cycle
+  !$omp parallel do private(ipj, ns, lpsi, ll, mm, ii, idim, is)
+  do ist = 1, psib%nst
+    do ipj = 1, npj
+      if(pj(ipj)%type == M_NONE) cycle
 
-    ns = pj(ipj)%sphere%ns
-    lpsi = M_ZERO
+      ns = pj(ipj)%sphere%ns
+      lpsi = M_ZERO
 
-    do ll = 0, pj(ipj)%lmax
-      if (ll == pj(ipj)%lloc) cycle
-      do mm = -ll, ll
-        do ist = 1, psib%nst
+      do ll = 0, pj(ipj)%lmax
+        if (ll == pj(ipj)%lloc) cycle
+        do mm = -ll, ll
           ii = ireduce(ipj, ll, mm, ist)
 
           select case(pj(ipj)%type)
           case(M_KB)
             call X(kb_project_ket)(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(ll, mm), dim, &
-              reduce_buffer(ii:), lpsi(:, :, ist))
+              reduce_buffer(ii:), lpsi(:, :))
           case(M_RKB)
 #ifdef R_TCOMPLEX
             if(ll /= 0) then
-              call rkb_project_ket(pj(ipj)%rkb_p(ll, mm), reduce_buffer(ii:), lpsi(:, :, ist))
+              call rkb_project_ket(pj(ipj)%rkb_p(ll, mm), reduce_buffer(ii:), lpsi(:, :))
             else
               call zkb_project_ket(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(1, 1), dim, &
-                reduce_buffer(ii:), lpsi(:, :, ist))
+                reduce_buffer(ii:), lpsi(:, :))
             end if
 #endif
           case(M_HGH)
             call X(hgh_project_ket)(mesh, pj(ipj)%sphere, pj(ipj)%hgh_p(ll, mm), dim, &
-              pj(ipj)%reltype, reduce_buffer(ii:), lpsi(:, :, ist))
+              pj(ipj)%reltype, reduce_buffer(ii:), lpsi(:, :))
           end select
-
-        end do ! ist
-        
-      end do ! mm
-    end do ! ll
+          
+        end do ! mm
+      end do ! ll
     
-    call profiling_in(prof_scatter, "PROJECTOR_SCATTER")
+      !call profiling_in(prof_scatter, "PROJECTOR_SCATTER")
 
-    !put the result back in the complete grid
-    do idim = 1, dim
-      if(associated(pj(ipj)%phase)) then
-        do ist = 1, psib%nst
+      !put the result back in the complete grid
+      do idim = 1, dim
+        if(associated(pj(ipj)%phase)) then
           forall (is = 1:ns) 
             ppsib%states(ist)%X(psi)(pj(ipj)%sphere%jxyz(is), idim) = &
               ppsib%states(ist)%X(psi)(pj(ipj)%sphere%jxyz(is), idim) + &
-              lpsi(is, idim, ist)*conjg(pj(ipj)%phase(is, ik))
+              lpsi(is, idim)*conjg(pj(ipj)%phase(is, ik))
           end forall
-        end do
-        call profiling_count_operations(ns*psib%nst*(R_ADD + R_MUL))
-      else
-        do ist = 1, psib%nst
+          call profiling_count_operations(ns*psib%nst*(R_ADD + R_MUL))
+        else
           forall (is = 1:ns) 
             ppsib%states(ist)%X(psi)(pj(ipj)%sphere%jxyz(is), idim) = &
-              ppsib%states(ist)%X(psi)(pj(ipj)%sphere%jxyz(is), idim) + lpsi(is, idim, ist)
+              ppsib%states(ist)%X(psi)(pj(ipj)%sphere%jxyz(is), idim) + lpsi(is, idim)
           end forall
-        end do
-        call profiling_count_operations(ns*psib%nst*R_ADD)
-      end if
-    end do
+          call profiling_count_operations(ns*psib%nst*R_ADD)
+        end if
+      end do
+      !call profiling_out(prof_scatter)
 
-    call profiling_out(prof_scatter)
+    end do ! ipj
+  end do ! ist
 
-  end do ! ipj
   SAFE_DEALLOCATE_A(lpsi)
 
   SAFE_DEALLOCATE_A(reduce_buffer)
   SAFE_DEALLOCATE_A(ireduce)
-  SAFE_DEALLOCATE_A(iend)
-  SAFE_DEALLOCATE_A(istart)
 
   call pop_sub()
 
