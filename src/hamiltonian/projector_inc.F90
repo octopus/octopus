@@ -210,7 +210,9 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
   integer :: ipj, nreduce, ii, ns, idim, ll, mm, is, ist
   R_TYPE, allocatable :: reduce_buffer(:), lpsi(:, :)
   integer, allocatable :: ireduce(:, :, :, :)
-  !type(profile_t), save :: prof_scatter, prof_gather
+#ifndef USE_OMP
+  type(profile_t), save :: prof_scatter, prof_gather
+#endif
 #if defined(HAVE_MPI)
   integer :: nn
   type(profile_t), save :: reduce_prof
@@ -250,11 +252,13 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
   end if
 
   SAFE_ALLOCATE(reduce_buffer(1:nreduce))
-  SAFE_ALLOCATE(lpsi(1:maxval(pj(:)%sphere%ns), 1:dim))
 
   reduce_buffer = R_TOTYPE(M_ZERO)
   
-  !$omp parallel do private(ipj, ns, lpsi, ll, mm, ii, idim, is)
+  !$omp parallel private(ist, ipj, ns, lpsi, ll, mm, ii, idim, is)
+  SAFE_ALLOCATE(lpsi(1:maxval(pj(:)%sphere%ns), 1:dim))
+
+  !$omp do 
   do ist = 1, psib%nst
     do ipj = 1, npj
       if(pj(ipj)%type == M_NONE) cycle
@@ -262,7 +266,9 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
 
       if(ns < 1) cycle
 
-      !call profiling_in(prof_gather, "PROJECTOR_GATHER")
+#ifndef USE_OMP
+      call profiling_in(prof_gather, "PROJECTOR_GATHER")
+#endif
 
       ! copy psi to the small spherical grid
       do idim = 1, dim
@@ -275,8 +281,9 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
           forall (is = 1:ns) lpsi(is, idim) = psib%states(ist)%X(psi)(pj(ipj)%sphere%jxyz(is), idim)
         end if
       end do
-
-      !call profiling_out(prof_gather)
+#ifndef USE_OMP
+      call profiling_out(prof_gather)
+#endif
 
       ! apply the projectors for each angular momentum component
       do ll = 0, pj(ipj)%lmax
@@ -304,7 +311,9 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
 
     end do ! ipj
   end do ! ist
+  !$omp end do
 
+  !$omp master
 #if defined(HAVE_MPI)
   if(mesh%parallel_in_domains) then
     call profiling_in(reduce_prof, "VNLPSI_REDUCE_BATCH")
@@ -317,9 +326,10 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
     call profiling_out(reduce_prof)
   end if
 #endif
-  
+  !$omp end master
+
   ! calculate |ppsi> += |p><p|psi>
-  !$omp parallel do private(ipj, ns, lpsi, ll, mm, ii, idim, is)
+  !$omp do
   do ist = 1, psib%nst
     do ipj = 1, npj
       if(pj(ipj)%type == M_NONE) cycle
@@ -353,7 +363,9 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
         end do ! mm
       end do ! ll
     
-      !call profiling_in(prof_scatter, "PROJECTOR_SCATTER")
+#ifndef USE_OMP
+      call profiling_in(prof_scatter, "PROJECTOR_SCATTER")
+#endif
 
       !put the result back in the complete grid
       do idim = 1, dim
@@ -372,12 +384,16 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
           call profiling_count_operations(ns*psib%nst*R_ADD)
         end if
       end do
-      !call profiling_out(prof_scatter)
 
+#ifndef USE_OMP
+      call profiling_out(prof_scatter)
+#endif
     end do ! ipj
   end do ! ist
+  !$omp end do
 
   SAFE_DEALLOCATE_A(lpsi)
+  !$omp end parallel
 
   SAFE_DEALLOCATE_A(reduce_buffer)
   SAFE_DEALLOCATE_A(ireduce)
