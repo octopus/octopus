@@ -393,9 +393,10 @@ contains
     character(*), optional,  intent(in)    :: label 
 
     real(8) :: now
-
+ 
     if(.not.in_profiling_mode) return
 
+    !$omp master
     if(.not. this%initialized) then 
       ASSERT(present(label))
       call profile_init(this, label)
@@ -421,7 +422,7 @@ contains
 
     prof_vars%current%p => this
     this%entry_time = now
-
+    !$omp end master
   end subroutine profiling_in
 
 
@@ -434,7 +435,8 @@ contains
     real(8) :: now, time_spent
     
     if(.not.in_profiling_mode) return
-    
+
+    !$omp master
     ASSERT(this%active)
     this%active = .false.
 #if defined(HAVE_MPI)
@@ -463,7 +465,7 @@ contains
     else
       nullify(prof_vars%current%p)
     end if
-
+    !$omp end master
   end subroutine profiling_out
 
 

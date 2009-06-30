@@ -1025,7 +1025,9 @@ contains
     CMPLX   :: c
     type(profile_t), save :: prof
 
+#ifndef USE_OMP
     call push_sub('states.states_dens_accumulate')
+#endif
     call profiling_in(prof, "CALC_DENSITY")
 
     ispin = states_dim_get_spin_index(st%d, ik)
@@ -1053,8 +1055,10 @@ contains
     end if
     
     call profiling_out(prof)
-    
+
+#ifndef USE_OMP
     call pop_sub()
+#endif
   end subroutine states_dens_accumulate
 
   subroutine states_dens_reduce(st, np, rho)
@@ -1129,9 +1133,11 @@ contains
     dens(1:np, 1:st%d%nspin) = M_ZERO
 
     do ik = st%d%kpt%start, st%d%kpt%end
+      !$omp parallel do
       do ist = st%st_start, st%st_end
         call states_dens_accumulate(st, np, dens, ist, ik)
       end do
+      !$omp end parallel do
     end do
 
     call states_dens_reduce(st, np, dens)

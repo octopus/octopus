@@ -35,6 +35,8 @@ subroutine X(subarray_gather)(this, array, subarray)
       isa = isa + this%blength(iblock)
     end do
 
+    call profiling_count_transfers(this%npoints, array(1))
+
     call profiling_out(prof)
 end subroutine X(subarray_gather)
 

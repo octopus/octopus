@@ -679,7 +679,7 @@ contains
         zfact_is_real = .not. zfact_is_real
 
         call zhamiltonian_apply_batch(hm, gr, psi1b, hpsi1b, ik, t)
-
+        !$omp parallel do private(ii, idim, ip, bsize)
         do ii = 1, psib%nst
           do idim = 1, hm%d%dim
     
@@ -695,6 +695,7 @@ contains
 
           end do
         end do
+        !$omp end parallel do
       end do
       
       call batch_end(hpsi1b)
