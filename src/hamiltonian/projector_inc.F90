@@ -84,7 +84,7 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, ik)
 
     SAFE_ALLOCATE(lpsi(1:ns, 1:dim))
 
-    !copy psi to the small spherical grid
+    ! copy psi to the small spherical grid
 
     do idim = 1, dim
       if(associated(pj(ipj)%phase)) then
@@ -95,7 +95,7 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, ik)
       end if
     end do
 
-    !apply the projectors for each angular momentum component
+    ! apply the projectors for each angular momentum component
 
     do ll = 0, pj(ipj)%lmax
       if (ll == pj(ipj)%lloc) cycle
@@ -258,6 +258,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
   SAFE_ALLOCATE(reduce_buffer(1:nreduce))
 
   ! calculate <p|psi>
+  SAFE_ALLOCATE(lpsi(1:maxval(pj(:)%sphere%ns), 1:dim, 1:psib%nst))
   do ipj = 1, npj
     if(pj(ipj)%type == M_NONE) cycle
     ns = pj(ipj)%sphere%ns
@@ -267,11 +268,9 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
       cycle
     end if
 
-    SAFE_ALLOCATE(lpsi(1:ns, 1:dim, 1:psib%nst))
-
     call profiling_in(prof_gather, "PROJECTOR_GATHER")
 
-    !copy psi to the small spherical grid
+    ! copy psi to the small spherical grid
     do idim = 1, dim
       if(associated(pj(ipj)%phase)) then
         forall (is = 1:ns, ist = 1:psib%nst) 
@@ -285,8 +284,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
 
     call profiling_out(prof_gather)
 
-    !apply the projectors for each angular momentum component
-
+    ! apply the projectors for each angular momentum component
     do ll = 0, pj(ipj)%lmax
       if (ll == pj(ipj)%lloc) cycle
       do mm = -ll, ll
@@ -311,7 +309,6 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
         end do ! ist
       end do ! mm
     end do ! ll
-    SAFE_DEALLOCATE_A(lpsi)
   end do
 
 #if defined(HAVE_MPI)
@@ -332,8 +329,6 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
     if(pj(ipj)%type == M_NONE) cycle
 
     ns = pj(ipj)%sphere%ns
-    SAFE_ALLOCATE(lpsi(1:ns, 1:dim, 1:psib%nst))
-
     lpsi = M_ZERO
 
     do ll = 0, pj(ipj)%lmax
@@ -391,8 +386,8 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
 
     call profiling_out(prof_scatter)
 
-    SAFE_DEALLOCATE_A(lpsi)
   end do ! ipj
+  SAFE_DEALLOCATE_A(lpsi)
 
   SAFE_DEALLOCATE_A(reduce_buffer)
   SAFE_DEALLOCATE_A(ireduce)
@@ -400,6 +395,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
   SAFE_DEALLOCATE_A(istart)
 
   call pop_sub()
+
 end subroutine X(project_psi_batch)
 
 !------------------------------------------------------------------------------

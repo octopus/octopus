@@ -31,7 +31,7 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc, vtau)
 
   integer :: n_block
 
-  FLOAT, allocatable :: zk(:)
+  FLOAT, allocatable :: l_zk(:)
   FLOAT, allocatable :: l_dens(:,:), l_dedd(:,:)
   FLOAT :: l_sigma(3), l_vsigma(3)
   FLOAT :: l_tau(MAX_SPIN), l_ldens(MAX_SPIN), l_dedtau(MAX_SPIN), l_dedldens(MAX_SPIN)
@@ -107,25 +107,25 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc, vtau)
           select case(functl(ixc)%family)
 
           case(XC_FAMILY_LDA)
-            call XC_F90(lda_exc)(functl(ixc)%conf, n_block, l_dens(1,1), zk(1))
+            call XC_F90(lda_exc)(functl(ixc)%conf, n_block, l_dens(1,1), l_zk(1))
 
           case(XC_FAMILY_GGA)
-            call XC_F90(gga_exc)(functl(ixc)%conf, l_dens(1,1), l_sigma(1), zk(1))
+            call XC_F90(gga_exc)(functl(ixc)%conf, l_dens(1,1), l_sigma(1), l_zk(1))
 
           case(XC_FAMILY_HYB_GGA)
             message(1) = 'Hyb-GGAs are currently disabled.'
             call write_fatal(1)
-            !call XC_F90(hyb_gga_exc)(functl(ixc)%conf, l_dens(1), l_sigma(1), zk)
+            !call XC_F90(hyb_gga_exc)(functl(ixc)%conf, l_dens(1), l_sigma(1), l_zk)
 
           case(XC_FAMILY_MGGA)
-            call XC_F90(mgga_exc)(functl(ixc)%conf, l_dens(1,1), l_sigma(1), l_ldens(1), l_tau(1), zk(1))
+            call XC_F90(mgga_exc)(functl(ixc)%conf, l_dens(1,1), l_sigma(1), l_ldens(1), l_tau(1), l_zk(1))
 
           case default
             cycle
           end select
 
         else ! Do not have an energy functional
-          zk(:) = M_ZERO
+          l_zk(:) = M_ZERO
         end if
 
       else ! we want exc and vxc
@@ -134,26 +134,26 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc, vtau)
           ! we get the xc energy and potential
           select case(functl(ixc)%family)
           case(XC_FAMILY_LDA)
-            call XC_F90(lda_exc_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), zk(1), l_dedd(1,1))
+            call XC_F90(lda_exc_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), l_zk(1), l_dedd(1,1))
 
           case(XC_FAMILY_GGA)
             call XC_F90(gga_exc_vxc)(functl(ixc)%conf, l_dens(1,1), l_sigma(1), &
-              zk(1), l_dedd(1,1), l_vsigma(1))
+              l_zk(1), l_dedd(1,1), l_vsigma(1))
 
           case(XC_FAMILY_HYB_GGA)
             call XC_F90(hyb_gga_exc_vxc)(functl(ixc)%conf, l_dens(1,1), l_sigma(1), &
-              zk(1), l_dedd(1,1), l_vsigma(1))
+              l_zk(1), l_dedd(1,1), l_vsigma(1))
 
           case(XC_FAMILY_MGGA)
             call XC_F90(mgga_exc_vxc)(functl(ixc)%conf, l_dens(1,1), l_sigma(1), l_ldens(1), l_tau(1), &
-              zk(1), l_dedd(1,1), l_vsigma(1), l_dedldens(1), l_dedtau(1))
+              l_zk(1), l_dedd(1,1), l_vsigma(1), l_dedldens(1), l_dedtau(1))
 
           case default
             cycle
           end select
 
         else ! we do not have an energy functional so we get just the potential
-          zk(:) = M_ZERO
+          l_zk(:) = M_ZERO
 
           select case(functl(ixc)%family)
           case(XC_FAMILY_LDA)
@@ -188,11 +188,11 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc, vtau)
 
       if(functl(ixc)%type == XC_EXCHANGE) then
         do ib = 1, n_block
-          ex_per_vol(jj+ib-1) = ex_per_vol(jj+ib-1) + sum(l_dens(1:spin_channels, ib)) * zk(ib)
+          ex_per_vol(jj+ib-1) = ex_per_vol(jj+ib-1) + sum(l_dens(1:spin_channels, ib)) * l_zk(ib)
         end do
       else
         do ib = 1, n_block
-          ec_per_vol(jj+ib-1) = ec_per_vol(jj+ib-1) + sum(l_dens(1:spin_channels, ib)) * zk(ib)
+          ec_per_vol(jj+ib-1) = ec_per_vol(jj+ib-1) + sum(l_dens(1:spin_channels, ib)) * l_zk(ib)
         end do
       end if
 
@@ -255,7 +255,7 @@ contains
 
     ! allocate some general arrays
     SAFE_ALLOCATE(l_dens(1:spin_channels, 1:n_block))
-    SAFE_ALLOCATE(zk(1:n_block))
+    SAFE_ALLOCATE(l_zk(1:n_block))
 
     SAFE_ALLOCATE(dens(1:gr%mesh%np_part, 1:spin_channels))
     SAFE_ALLOCATE(ex_per_vol(1:gr%mesh%np))
@@ -297,7 +297,7 @@ contains
   ! deallocate variables allocated in lda_init
   subroutine lda_end()
     SAFE_DEALLOCATE_A(l_dens)
-    SAFE_DEALLOCATE_A(zk)
+    SAFE_DEALLOCATE_A(l_zk)
 
     SAFE_DEALLOCATE_A(dens)
     SAFE_DEALLOCATE_A(ex_per_vol)

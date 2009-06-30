@@ -57,7 +57,7 @@ module hamiltonian_m
   use lasers_m
   use poisson_m
   use xc_m
-  
+
   implicit none
 
   private
