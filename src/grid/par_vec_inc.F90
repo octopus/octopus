@@ -248,45 +248,32 @@ subroutine X(vec_ghost_update)(vp, v_local)
   type(pv_t), intent(in)    :: vp
   R_TYPE,     intent(inout) :: v_local(:)
 
-  R_TYPE,  pointer :: ghost_send(:)          ! Send buffer.
-
+  R_TYPE,  allocatable :: ghost_send(:)
+  integer              :: nsend
+  
   call profiling_in(C_PROFILING_GHOST_UPDATE, "GHOST_UPDATE")
 
   call push_sub('par_vec_inc.Xvec_ghost_update')
 
-  call X(vec_ghost_update_prepare)(vp, v_local, ghost_send)
+  nsend = subarray_size(vp%sendpoints)
+  SAFE_ALLOCATE(ghost_send(1:nsend))
+  call X(subarray_gather)(vp%sendpoints, v_local, ghost_send)
 
-  ! Bring it on the way.
-  ! It has to examined whether it is better to use several point to
-  ! point send operations (thus, non-neighbour sends could explicitly be
-  ! skipped) or to use Alltoallv. In my opinion, Alltoallv just skips
-  ! any I/O if some sendcount is 0. This means, there is actually
-  ! no need to code this again.
-  ! Note: It is actually possible to do pair-wise communication. Roughly
-  ! p/2 pairs can communicate at the same time (as long as there is
-  ! a switched network). It then takes as much rounds of
-  ! communication as the maximum neighbour number of a particular node
-  ! is. If this speeds up communication depends on the MPI
-  ! implementation: A performant implementation might already work this
-  ! way. So only touch this code if profiling with many processors
-  ! shows this spot is a serious bottleneck.
   call mpi_debug_in(vp%comm, C_MPI_ALLTOALLV)
   call MPI_Alltoallv(ghost_send, vp%np_ghost_neigh(1, vp%partno), vp%sdispls(1),           &
     R_MPITYPE, v_local(vp%np_local(vp%partno)+1), vp%rcounts(1), vp%rdispls(1), R_MPITYPE, &
     vp%comm, mpi_err)
   call mpi_debug_out(vp%comm, C_MPI_ALLTOALLV)
 
-  call X(vec_ghost_update_finish)(ghost_send)
+  SAFE_DEALLOCATE_A(ghost_send)
 
   call pop_sub()
 
   call profiling_out(C_PROFILING_GHOST_UPDATE)
 end subroutine X(vec_ghost_update)
 
-
 ! ---------------------------------------------------------
 ! The same as Xvec_ghost_update but in a non-blocking fashion.
-! The handle is an NBC_Handle to be used in an NBC_Wait call.
 subroutine X(vec_ighost_update)(vp, v_local, handle)
   type(pv_t),         intent(in)    :: vp
   R_TYPE,             intent(inout) :: v_local(:)
@@ -295,27 +282,29 @@ subroutine X(vec_ighost_update)(vp, v_local, handle)
   integer :: ipart, pos, nsend
 
   call profiling_in(C_PROFILING_GHOST_UPDATE, "GHOST_UPDATE")
-
   call push_sub('par_vec_inc.Xvec_ighost_update')
+
+  nullify(handle%ighost_send, handle%dghost_send, handle%zghost_send)
 
   select case(handle%comm_method)
 #ifdef HAVE_LIBNBC
   case(NON_BLOCKING_COLLECTIVE)
+
+    ! pack the data for sending
+    nsend = subarray_size(vp%sendpoints)
+    SAFE_ALLOCATE(handle%X(ghost_send)(1:nsend))
+    call X(subarray_gather)(vp%sendpoints, v_local, handle%X(ghost_send))
+
     ! use a collective non-blocking call
-    
-    nullify(handle%ighost_send, handle%dghost_send, handle%zghost_send)
-    call X(vec_ghost_update_prepare)(vp, v_local, handle%X(ghost_send))
-    
     call NBCF_Ialltoallv(handle%X(ghost_send), vp%np_ghost_neigh(1, vp%partno), vp%sdispls(1),  &
          R_MPITYPE, v_local(vp%np_local(vp%partno)+1), vp%rcounts(1), vp%rdispls(1), R_MPITYPE, &
          vp%comm, handle%nbc_h, mpi_err)
     
 #endif
   case(NON_BLOCKING)
-    ! use a series of p2p non-blocking calls
-    
-    handle%nnb = 0
 
+    ! use a series of p2p non-blocking calls
+    handle%nnb = 0
     do ipart = 1, vp%npart
       if(vp%np_ghost_neigh(vp%partno, ipart) == 0) cycle
       
@@ -327,6 +316,7 @@ subroutine X(vec_ighost_update)(vp, v_local, handle)
 
     ! pack the data for sending
     nsend = subarray_size(vp%sendpoints)
+    nullify(handle%ighost_send, handle%dghost_send, handle%zghost_send)
     SAFE_ALLOCATE(handle%X(ghost_send)(1:nsend))
     call X(subarray_gather)(vp%sendpoints, v_local, handle%X(ghost_send))
 
@@ -336,59 +326,14 @@ subroutine X(vec_ighost_update)(vp, v_local, handle)
       handle%nnb = handle%nnb + 1
       call MPI_Isend(handle%X(ghost_send)(vp%sendpos(ipart):), vp%np_ghost_neigh(ipart, vp%partno), &
         R_MPITYPE, ipart - 1, 0, vp%comm, handle%requests(handle%nnb), mpi_err)
-      
     end do
     
   end select
 
   call pop_sub()
-
   call profiling_out(C_PROFILING_GHOST_UPDATE)
 
 end subroutine X(vec_ighost_update)
-
-subroutine X(vec_ghost_update_prepare) (vp, v_local, ghost_send)
-  type(pv_t),       intent(in)    :: vp
-  R_TYPE,           intent(in)    :: v_local(:)
-  R_TYPE,           pointer       :: ghost_send(:)          ! Send buffer.
-
-
-  integer :: i, j, k, r ! Counters.
-  integer :: total      ! Total number of ghost points to send away.
-
-  call push_sub('par_vec_inc.Xvec_ghost_update_prepare')
-
-  
-  ! Calculate number of ghost points current node
-  ! has to send to neighbours and allocate send buffer.
-  total = sum(vp%np_ghost_neigh(:, vp%partno))
-  SAFE_ALLOCATE(ghost_send(1:total))
-  
-  ! Collect all local points that have to be sent to neighbours.
-  j = 1
-  ! Iterate over all possible receivers.
-  do r = 1, vp%npart
-    ! Iterate over all ghost points that r wants.
-    do i = 0, vp%np_ghost_neigh(r, vp%partno)-1
-      ! Get global number k of i-th ghost point.
-      k = vp%ghost(vp%xghost_neigh(r, vp%partno)+i)
-      ! Lookup up local number of point k and put
-      ! value from v_local to send buffer.
-      ghost_send(j) = v_local(vec_global2local(vp, k, vp%partno))
-      j             = j + 1
-    end do
-  end do
-  
-  call pop_sub()
-end subroutine X(vec_ghost_update_prepare)
-
-subroutine X(vec_ghost_update_finish)(ghost_send)
-  R_TYPE,  pointer :: ghost_send(:)
-
-  SAFE_DEALLOCATE_P(ghost_send)
-
-end subroutine X(vec_ghost_update_finish)
-
 
 !--------------------------------------------------------
 
