@@ -45,7 +45,7 @@ end subroutine X(derivatives_laplt)
 ! ---------------------------------------------------------
 subroutine X(derivatives_lapl_start)(der, handle, f, lapl, ghost_update, set_bc)
   type(derivatives_t),       intent(in)    :: der
-  type(der_handle_t),        intent(inout) :: handle
+  type(der_handle_t),        intent(out)   :: handle
   R_TYPE,  target,           intent(inout) :: f(:)     ! f(m%np_part)
   R_TYPE,  target,           intent(inout) :: lapl(:)  ! lapl(m%np)
   logical, optional,         intent(in)    :: ghost_update
@@ -54,6 +54,8 @@ subroutine X(derivatives_lapl_start)(der, handle, f, lapl, ghost_update, set_bc)
   logical :: set_bc_
 
   call push_sub('derivatives_inc.Xderivatives_lapl_start')
+
+  call der_handle_init(handle, der)
 
   ASSERT(ubound(f, DIM=1) >= der%mesh%np_part)
   ASSERT(ubound(lapl, DIM=1) >= der%mesh%np)
@@ -96,7 +98,8 @@ subroutine X(derivatives_lapl_finish)(der, handle)
 #endif
 
   call X(nl_operator_operate) (der%lapl, handle%X(f), handle%X(lapl), ghost_update = handle%ghost_update)
-  
+
+  call der_handle_end(handle)
   call pop_sub()
 end subroutine X(derivatives_lapl_finish)
 
@@ -110,11 +113,15 @@ subroutine X(derivatives_lapl_batch_start)(der, handle, ff, lapl, ghost_update, 
   logical, optional,         intent(in)    :: set_bc
 
   logical :: set_bc_
-#ifdef HAVE_MPI
   integer :: ist, idim
-#endif
+
   call push_sub('derivatives_inc.Xderivatives_lapl_start')
 
+  do ist = 1, ff%nst
+    do idim = 1, ff%dim
+      call der_handle_init(handle(idim, ist), der)
+    end do
+  end do
 
   handle(1, 1)%ghost_update = .true.
   if(present(ghost_update)) handle(1, 1)%ghost_update = ghost_update
@@ -144,9 +151,7 @@ subroutine X(derivatives_lapl_batch_finish)(der, handle, ff, lapl)
   type(batch_t),             intent(inout) :: ff
   type(batch_t),             intent(inout) :: lapl
 
-#ifdef HAVE_MPI
   integer :: ist, idim
-#endif
 
   call push_sub('derivatives_inc.Xderivatives_lapl_finish')
 
@@ -166,7 +171,13 @@ subroutine X(derivatives_lapl_batch_finish)(der, handle, ff, lapl)
 #endif
 
   call X(nl_operator_operate_batch)(der%lapl, ff, lapl, ghost_update = handle(1, 1)%ghost_update)
-  
+
+  do ist = 1, ff%nst
+    do idim = 1, ff%dim
+      call der_handle_end(handle(idim, ist))
+    end do
+  end do
+
   call pop_sub()
 end subroutine X(derivatives_lapl_batch_finish)
 

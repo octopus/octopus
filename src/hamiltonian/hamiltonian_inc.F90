@@ -94,12 +94,6 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, t, kinetic_only)
   ! start the calculation of the laplacian
   SAFE_ALLOCATE(handles(1:hm%d%dim, 1:nst))
 
-  do ii = 1, nst
-    do idim = 1, hm%d%dim
-      call der_handle_init(handles(idim, ii), gr%der)
-    end do
-  end do
-
   call X(derivatives_lapl_batch_start)(gr%der, handles, epsib, laplb, set_bc = .false.)
     
   if (.not. kinetic_only_) then
@@ -124,8 +118,6 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, t, kinetic_only)
       call blas_axpy(gr%mesh%np, -M_HALF/hm%mass, lapl(1, idim, ii), hpsi(1, idim))
 #endif
       call profiling_count_operations(gr%mesh%np*CNST(2.0)*R_ADD)
-
-      call der_handle_end(handles(idim, ii))
     end do
     call profiling_out(prof_kinetic)
     

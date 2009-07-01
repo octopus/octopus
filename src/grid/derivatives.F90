@@ -73,8 +73,6 @@ module derivatives_m
     zset_bc_batch,                      &
     stencil_extent,                     &
     der_handle_t,                       &
-    der_handle_init,                    &
-    der_handle_end,                     &
     df_angular_momentum,                &
     zf_angular_momentum,                &
     df_l2, zf_l2
