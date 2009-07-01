@@ -133,7 +133,7 @@ module derivatives_m
   type der_handle_batch_t
     private
 #ifdef HAVE_MPI
-    type(pv_handle_t),   pointer :: pv_h(:, :)
+    type(pv_handle_batch_t)      :: pv_h
 #endif
     type(derivatives_t), pointer :: der
     type(nl_operator_t), pointer :: op

@@ -114,7 +114,6 @@ subroutine X(derivatives_batch_start)(op, der, ff, opff, handle, ghost_update, s
   logical, optional,           intent(in)    :: set_bc
 
   logical :: set_bc_
-  integer :: ist, idim
 
   call push_sub('derivatives_inc.Xderivatives_batch_start')
 
@@ -132,18 +131,9 @@ subroutine X(derivatives_batch_start)(op, der, ff, opff, handle, ghost_update, s
   if(set_bc_) call X(set_bc_batch)(der, ff)
 
 #ifdef HAVE_MPI
-  nullify(handle%pv_h)
 
   if(derivatives_overlap(der) .and. der%mesh%parallel_in_domains .and. handle%ghost_update) then
-    SAFE_ALLOCATE(handle%pv_h(1:ff%nst, ff%dim))
-
-    do ist = 1, ff%nst
-      do idim = 1, ff%dim
-        call pv_handle_init(handle%pv_h(ist, idim), der%mesh%vp, der%comm_method)
-        call X(vec_ighost_update)(der%mesh%vp, ff%states(ist)%X(psi)(:, idim), handle%pv_h(ist, idim))
-      end do
-    end do
-
+    call X(ghost_update_batch_start)(der%mesh%vp, ff, der%comm_method, handle%pv_h)
   end if
 #endif
 
@@ -154,22 +144,13 @@ end subroutine X(derivatives_batch_start)
 subroutine X(derivatives_batch_finish)(handle)
   type(der_handle_batch_t), intent(inout) :: handle
 
-  integer :: ist, idim
-
   call push_sub('derivatives_inc.Xderivatives_batch_finish')
 
 #ifdef HAVE_MPI
   if(derivatives_overlap(handle%der) .and. handle%der%mesh%parallel_in_domains .and. handle%ghost_update) then
-
     call X(nl_operator_operate_batch)(handle%op, handle%ff, handle%opff, ghost_update = .false., points = OP_INNER)
 
-    do ist = 1, handle%ff%nst
-      do idim = 1, handle%ff%dim
-        call pv_handle_wait(handle%pv_h(ist, idim))
-        call pv_handle_end(handle%pv_h(ist, idim))
-      end do
-    end do
-    SAFE_DEALLOCATE_P(handle%pv_h)
+    call X(ghost_update_batch_finish)(handle%pv_h)
 
     call X(nl_operator_operate_batch)(handle%op, handle%ff, handle%opff, ghost_update = .false., points = OP_OUTER)
   else

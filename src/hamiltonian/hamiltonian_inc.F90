@@ -41,7 +41,7 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, t, kinetic_only)
   type(der_handle_batch_t) :: handle
 
   call profiling_in(prof_hamiltonian, "HAMILTONIAN")
-  call push_sub('hamiltonian_inc.Xhpsi_batch')
+  call push_sub('hamiltonian_inc.Xhamiltonian_apply_batch')
 
   kinetic_only_ = .false.
   if(present(kinetic_only)) kinetic_only_ = kinetic_only

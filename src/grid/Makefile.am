@@ -69,7 +69,7 @@ curv_briggs.o : curv_briggs.F90
 curv_modine.o : curv_modine.F90  
 curvilinear.o : curvilinear.F90  curv_modine.o curv_gygi.o curv_briggs.o 
 index.o : index.F90 hypercube.o
-par_vec.o : par_vec.F90 par_vec_inc.F90 index.o stencil.o
+par_vec.o : par_vec.F90 par_vec_inc.F90 index.o stencil.o batch.o
 mesh.o : mesh.F90 par_vec.o index.o curvilinear.o
 mesh_init.o : mesh_init.F90 mesh.o par_vec.o zoltan.o stencil_star.o stencil.o
 modelmb_1part.o : modelmb_1part.F90 mesh.o hypercube.o

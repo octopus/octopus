@@ -79,6 +79,7 @@ module par_vec_m
   ! ! Clean up.
   ! deallocate(ul, vl, wl)
 
+  use batch_m
   use c_pointer_m
   use global_m
   use iihash_m
@@ -155,10 +156,21 @@ module par_vec_m
     CMPLX,   pointer :: zghost_send(:)
   end type pv_handle_t
 
-  type(profile_t), save :: C_PROFILING_GHOST_UPDATE
+  type pv_handle_batch_t
+    private
+    type(batch_t)        :: ghost_send
+    type(c_ptr), pointer :: nbc_h(:)
+    integer,     pointer :: requests(:)
+    integer              :: comm_method
+    integer              :: nnb
+  end type pv_handle_batch_t
 
+  type(profile_t), save :: C_PROFILING_GHOST_UPDATE     
+  type(profile_t), save :: prof_wait
+    
   public ::              &
     pv_handle_t,         &
+    pv_handle_batch_t,   &
     pv_handle_init,      &
     pv_handle_test,      &
     pv_handle_wait,      &
@@ -190,8 +202,12 @@ module par_vec_m
     dvec_ghost_update,     &
     zvec_ghost_update,     &
     ivec_ghost_update,     &
-    dvec_ighost_update,    &
-    zvec_ighost_update,    &
+    dvec_ighost_update,         &
+    zvec_ighost_update,         &
+    dghost_update_batch_start,  &
+    zghost_update_batch_start,  &
+    dghost_update_batch_finish, &
+    zghost_update_batch_finish, &
     ivec_ighost_update
 
 contains
@@ -506,6 +522,8 @@ contains
 
     call push_sub('par_vec.vec_end')
 
+    call subarray_end(vp%sendpoints)
+
     SAFE_DEALLOCATE_P(vp%rdispls)
     SAFE_DEALLOCATE_P(vp%sdispls)
     SAFE_DEALLOCATE_P(vp%rcounts)
@@ -584,9 +602,7 @@ contains
   subroutine pv_handle_wait(this)
     type(pv_handle_t), intent(inout) :: this
 
-    type(profile_t), save :: prof
-    
-    call profiling_in(prof, "GHOST_UPDATE_WAIT")
+    call profiling_in(prof_wait, "GHOST_UPDATE_WAIT")
 
     select case(this%comm_method)
 #ifdef HAVE_LIBNBC
@@ -601,7 +617,7 @@ contains
     SAFE_DEALLOCATE_P(this%dghost_send)
     SAFE_DEALLOCATE_P(this%zghost_send)
 
-    call profiling_out(prof)
+    call profiling_out(prof_wait)
   end subroutine pv_handle_wait
 
 
