@@ -1375,6 +1375,7 @@ subroutine mesh_partition(m, lapl_stencil, part)
   ASSERT(all(part(1:m%np_global) > 0))
   ASSERT(all(part(1:m%np_global) <= p))
 
+  call stencil_end(stencil)
   call pop_sub()
   call profiling_out(prof)
 
