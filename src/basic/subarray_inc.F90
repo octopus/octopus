@@ -17,6 +17,8 @@
 !!
 !! $Id: subarray_inc.F90 3030 2007-06-25 16:45:05Z marques $
 
+! ---------------------------------------------------
+! THREADSAFE
 subroutine X(subarray_gather)(this, array, subarray)
     type(subarray_t),    intent(in)  :: this
     R_TYPE,              intent(in)  :: array(:)
@@ -24,14 +26,12 @@ subroutine X(subarray_gather)(this, array, subarray)
 
     type(profile_t), save :: prof
     integer :: iblock, ii, isa
-    
+
     call profiling_in(prof, "SUBARRAY_GATHER")
 
     isa = 0
     do iblock = 1, this%nblocks
-      do ii = 1, this%blength(iblock)
-        subarray(isa + ii) = array(this%offsets(iblock) + ii - 1)
-      end do
+      forall(ii = 1:this%blength(iblock)) subarray(isa + ii) = array(this%offsets(iblock) + ii - 1)
       isa = isa + this%blength(iblock)
     end do
 

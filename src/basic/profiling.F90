@@ -388,6 +388,8 @@ contains
 
   ! ---------------------------------------------------------
   ! Increment in counter and save entry time.
+  !
+  ! THREADSAFE
   subroutine profiling_in(this, label)
     type(profile_t), target, intent(inout) :: this
     character(*), optional,  intent(in)    :: label 
@@ -429,6 +431,8 @@ contains
   ! ---------------------------------------------------------
   ! Increment out counter and sum up difference between entry
   ! and exit time.
+  !
+  ! THREADSAFE
   subroutine profiling_out(this)
     type(profile_t),   intent(inout) :: this
 

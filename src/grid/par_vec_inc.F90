@@ -375,11 +375,13 @@ subroutine X(ghost_update_batch_start)(vp, v_local, comm_method, handle)
   end if
 
   !now pack the data for sending
+  !$omp parallel do private(idim)
   do ii = 1, v_local%nst
     do idim = 1, v_local%dim
       call X(subarray_gather)(vp%sendpoints, v_local%states(ii)%X(psi)(:, idim), handle%ghost_send%states(ii)%X(psi)(:, idim))
     end do
   end do
+  !$omp end parallel do
     
   select case(handle%comm_method)
 #ifdef HAVE_LIBNBC
