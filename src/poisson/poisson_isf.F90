@@ -237,7 +237,7 @@ contains
     if(m%parallel_in_domains) then
 #if defined(HAVE_MPI)
       call dcube_to_mesh(m, rho_cf, pot_global)
-      call dvec_scatter(m%vp, pot_global, pot)
+      call dvec_scatter(m%vp, m%vp%root, pot_global, pot)
       SAFE_DEALLOCATE_A(rho_global)
       SAFE_DEALLOCATE_A(pot_global)
 #endif

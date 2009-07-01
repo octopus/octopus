@@ -27,8 +27,9 @@
 ! Scatters a vector v to all nodes in vp with respect to
 ! to point -> node mapping in vp.
 ! v_local has at least to be of size vp%np_local(vp%partno).
-subroutine X(vec_scatter)(vp, v, v_local)
+subroutine X(vec_scatter)(vp, root, v, v_local)
   type(pv_t), intent(in)  :: vp
+  integer,    intent(in)  :: root
   R_TYPE,     intent(in)  :: v(:)
   R_TYPE,     intent(out) :: v_local(:)
 
@@ -50,7 +51,7 @@ subroutine X(vec_scatter)(vp, v, v_local)
   displs = vp%xlocal - 1
 
   SAFE_ALLOCATE(v_tmp(1:1))
-  if(vp%rank.eq.vp%root) then
+  if(vp%rank.eq.root) then
   ! Fill send buffer.
     SAFE_DEALLOCATE_A(v_tmp)
     SAFE_ALLOCATE(v_tmp(1:vp%np))
@@ -68,7 +69,7 @@ subroutine X(vec_scatter)(vp, v, v_local)
   call mpi_debug_in(vp%comm, C_MPI_SCATTERV)
   call MPI_Scatterv(v_tmp, vp%np_local, displs, R_MPITYPE, v_local, &
                     vp%np_local(vp%partno), R_MPITYPE,              &
-                    vp%root, vp%comm, mpi_err)
+                    root, vp%comm, mpi_err)
   call mpi_debug_out(vp%comm, C_MPI_SCATTERV)
 
   SAFE_DEALLOCATE_A(v_tmp)
@@ -83,8 +84,9 @@ end subroutine X(vec_scatter)
 ! v_local has to be of length np_local+np_ghost+np_bndry
 ! for this to work.
 ! And v has to be of length np_part.
-subroutine X(vec_scatter_bndry)(vp, v, v_local)
+subroutine X(vec_scatter_bndry)(vp, root, v, v_local)
   type(pv_t), intent(in)  :: vp
+  integer,    intent(in)  :: root
   R_TYPE,     intent(in)  :: v(:)
   R_TYPE,     intent(out) :: v_local(:)
 
@@ -99,7 +101,7 @@ subroutine X(vec_scatter_bndry)(vp, v, v_local)
 
   ! Fill send buffer.
   SAFE_ALLOCATE(v_tmp(1:1))
-  if(vp%rank.eq.vp%root) then
+  if(vp%rank.eq.root) then
     SAFE_DEALLOCATE_A(v_tmp)
     SAFE_ALLOCATE(v_tmp(1:vp%np_enl))
 
@@ -116,7 +118,7 @@ subroutine X(vec_scatter_bndry)(vp, v, v_local)
   call mpi_debug_in(vp%comm, C_MPI_SCATTERV)
   call MPI_Scatterv(v_tmp, vp%np_bndry, displs, R_MPITYPE,                     &
                     v_local(vp%np_local(vp%partno)+vp%np_ghost(vp%partno)+1:), &
-                    vp%np_bndry(vp%partno), R_MPITYPE, vp%root, vp%comm, mpi_err)
+                    vp%np_bndry(vp%partno), R_MPITYPE, root, vp%comm, mpi_err)
   call mpi_debug_out(vp%comm, C_MPI_SCATTERV)
 
   SAFE_DEALLOCATE_A(v_tmp)
@@ -129,15 +131,16 @@ end subroutine X(vec_scatter_bndry)
 
 ! ---------------------------------------------------------
 ! Xvec_scatter followed by Xvec_scatter_bndry.
-subroutine X(vec_scatter_all)(vp, v, v_local)
+subroutine X(vec_scatter_all)(vp, root, v, v_local)
   type(pv_t), intent(in)  :: vp
+  integer,    intent(in)  :: root
   R_TYPE,     intent(in)  :: v(:)
   R_TYPE,     intent(out) :: v_local(:)
 
   call push_sub('par_vec_inc.Xvec_scatter_all')
 
-  call X(vec_scatter)(vp, v, v_local)
-  call X(vec_scatter_bndry)(vp, v, v_local)
+  call X(vec_scatter)(vp, root, v, v_local)
+  call X(vec_scatter_bndry)(vp, root, v, v_local)
 
   call pop_sub()
 
@@ -147,9 +150,10 @@ end subroutine X(vec_scatter_all)
 ! ---------------------------------------------------------
 ! Reverse operation of Xvec_scatter.
 ! All v_locals from the nodes are packed together
-! into v on node vp%root in correct order.
-subroutine X(vec_gather)(vp, v, v_local)
+! into v on node root in correct order.
+subroutine X(vec_gather)(vp, root, v, v_local)
   type(pv_t), intent(in)  :: vp
+  integer,    intent(in)  :: root
   R_TYPE,     intent(out) :: v(:)
   R_TYPE,     intent(in)  :: v_local(:)
 
@@ -175,11 +179,11 @@ subroutine X(vec_gather)(vp, v, v_local)
   call mpi_debug_in(vp%comm, C_MPI_GATHERV)
   call MPI_Gatherv(v_local, vp%np_local(vp%partno), R_MPITYPE, v_tmp, &
                    vp%np_local, displs, R_MPITYPE,                    &
-                   vp%root, vp%comm, mpi_err)
+                   root, vp%comm, mpi_err)
   call mpi_debug_out(vp%comm, C_MPI_GATHERV)
 
   ! Copy values from v_tmp to their original position in v.
-  if(vp%rank.eq.vp%root) then
+  if(vp%rank.eq.root) then
     do i = 1, vp%np
       v(vp%local(i)) = v_tmp(i)
     end do
@@ -192,7 +196,6 @@ subroutine X(vec_gather)(vp, v, v_local)
   call pop_sub()
 
 end subroutine X(vec_gather)
-
 
 ! ---------------------------------------------------------
 ! Like Xvec_gather but the result is gathered

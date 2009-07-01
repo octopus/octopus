@@ -96,7 +96,7 @@ subroutine X(input_function)(filename, mesh, f, ierr, is_tmp)
 
     ! Only scatter, when successfully read the file(s).
     if(ierr.le.0) then
-      call X(vec_scatter)(mesh%vp, f_global, f)
+      call X(vec_scatter)(mesh%vp, mesh%vp%root, f_global, f)
     end if
 
     SAFE_DEALLOCATE_A(f_global)
@@ -328,7 +328,7 @@ subroutine X(output_function) (how, dir, fname, mesh, sb, f, u, ierr, is_tmp, ge
   if(mesh%parallel_in_domains) then
     SAFE_ALLOCATE(f_global(1:mesh%np_global))
 
-    call X(vec_gather)(mesh%vp, f_global, f)
+    call X(vec_gather)(mesh%vp, mesh%vp%root, f_global, f)
 
     if(mesh%vp%rank.eq.mesh%vp%root) then
       if (present(geo)) then

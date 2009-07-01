@@ -725,7 +725,7 @@ contains
     ! put the density in the cube
     if(m%parallel_in_domains) then
 #if defined HAVE_MPI
-      call dvec_gather(m%vp, rho_global, rho)
+      call dvec_gather(m%vp, m%vp%root, rho_global, rho)
       call dmesh_to_cube(m, rho_global, fft_cf) 
 #endif
     else
@@ -748,7 +748,7 @@ contains
     if(m%parallel_in_domains) then
 #if defined(HAVE_MPI)
       call dcube_to_mesh(m, fft_cf, pot_global)
-      call dvec_scatter(m%vp, pot_global, pot)
+      call dvec_scatter(m%vp, m%vp%root, pot_global, pot)
 #endif
     else
       call dcube_to_mesh(m, fft_cf, pot)

@@ -755,7 +755,7 @@ contains
     ! Collect for every point in the stencil in a single step.
     ! This permits to use ivec_gather.
     do i = 1, op%stencil%size
-      call ivec_gather(op%m%vp, opg%i(i, :), op%i(i, :))
+      call ivec_gather(op%m%vp, op%m%vp%root, opg%i(i, :), op%i(i, :))
     end do
     if(op%m%vp%rank.eq.op%m%vp%root) then
       call nl_operator_translate_indices(opg)
@@ -766,8 +766,8 @@ contains
     ! not constant.
     if(.not.op%const_w) then
       do i = 1, op%stencil%size
-        call dvec_gather(op%m%vp, opg%w_re(i, :), op%w_re(i, :))
-        if(op%cmplx_op) call dvec_gather(op%m%vp, opg%w_im(i, :), op%w_im(i, :))
+        call dvec_gather(op%m%vp, op%m%vp%root, opg%w_re(i, :), op%w_re(i, :))
+        if(op%cmplx_op) call dvec_gather(op%m%vp, op%m%vp%root, opg%w_im(i, :), op%w_im(i, :))
       end do
     end if
 
@@ -791,9 +791,9 @@ contains
     call nl_operator_build(opg%m, op, opg%m%np, opg%const_w, opg%cmplx_op)
 
     do i = 1, opg%stencil%size
-      call dvec_scatter(opg%m%vp, opg%w_re(i, :), op%w_re(i, :))
+      call dvec_scatter(opg%m%vp, op%m%vp%root, opg%w_re(i, :), op%w_re(i, :))
       if(opg%cmplx_op) then
-        call dvec_scatter(opg%m%vp, opg%w_im(i, :), op%w_im(i, :))
+        call dvec_scatter(opg%m%vp, op%m%vp%root, opg%w_im(i, :), op%w_im(i, :))
       end if
     end do
 
