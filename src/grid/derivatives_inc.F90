@@ -104,27 +104,27 @@ subroutine X(derivatives_lapl_finish)(der, handle)
 end subroutine X(derivatives_lapl_finish)
 
 ! ---------------------------------------------------------
-subroutine X(derivatives_lapl_batch_start)(der, handle, ff, lapl, ghost_update, set_bc)
-  type(derivatives_t),       intent(in)    :: der
-  type(der_handle_t),        intent(inout) :: handle(:, :)
-  type(batch_t),             intent(inout) :: ff
-  type(batch_t),             intent(inout) :: lapl
-  logical, optional,         intent(in)    :: ghost_update
-  logical, optional,         intent(in)    :: set_bc
+subroutine X(derivatives_batch_start)(op, der, ff, opff, handle, ghost_update, set_bc)
+  type(nl_operator_t), target, intent(in)    :: op
+  type(derivatives_t), target, intent(in)    :: der
+  type(batch_t),       target, intent(inout) :: ff
+  type(batch_t),       target, intent(inout) :: opff
+  type(der_handle_batch_t),    intent(out)   :: handle
+  logical, optional,           intent(in)    :: ghost_update
+  logical, optional,           intent(in)    :: set_bc
 
   logical :: set_bc_
   integer :: ist, idim
 
-  call push_sub('derivatives_inc.Xderivatives_lapl_start')
+  call push_sub('derivatives_inc.Xderivatives_batch_start')
 
-  do ist = 1, ff%nst
-    do idim = 1, ff%dim
-      call der_handle_init(handle(idim, ist), der)
-    end do
-  end do
+  handle%ghost_update = .true.
+  if(present(ghost_update)) handle%ghost_update = ghost_update
 
-  handle(1, 1)%ghost_update = .true.
-  if(present(ghost_update)) handle(1, 1)%ghost_update = ghost_update
+  handle%op   => op
+  handle%der  => der
+  handle%ff   => ff
+  handle%opff => opff
 
   set_bc_ = .true.
   if(present(set_bc)) set_bc_ = set_bc
@@ -132,54 +132,57 @@ subroutine X(derivatives_lapl_batch_start)(der, handle, ff, lapl, ghost_update, 
   if(set_bc_) call X(set_bc_batch)(der, ff)
 
 #ifdef HAVE_MPI
-  if(derivatives_overlap(der) .and. der%mesh%parallel_in_domains .and. handle(1, 1)%ghost_update) then
+  nullify(handle%pv_h)
+
+  if(derivatives_overlap(der) .and. der%mesh%parallel_in_domains .and. handle%ghost_update) then
+    SAFE_ALLOCATE(handle%pv_h(1:ff%nst, ff%dim))
+
     do ist = 1, ff%nst
       do idim = 1, ff%dim
-        call X(vec_ighost_update)(der%mesh%vp, ff%states(ist)%X(psi)(:, idim), handle(idim, ist)%pv_h)
+        call pv_handle_init(handle%pv_h(ist, idim), der%mesh%vp, der%comm_method)
+        call X(vec_ighost_update)(der%mesh%vp, ff%states(ist)%X(psi)(:, idim), handle%pv_h(ist, idim))
       end do
     end do
+
   end if
 #endif
 
   call pop_sub()
-end subroutine X(derivatives_lapl_batch_start)
+end subroutine X(derivatives_batch_start)
 
 ! ---------------------------------------------------------
-subroutine X(derivatives_lapl_batch_finish)(der, handle, ff, lapl)
-  type(derivatives_t),       intent(in)    :: der
-  type(der_handle_t),        intent(inout) :: handle(:, :)
-  type(batch_t),             intent(inout) :: ff
-  type(batch_t),             intent(inout) :: lapl
+subroutine X(derivatives_batch_finish)(handle)
+  type(der_handle_batch_t), intent(inout) :: handle
 
   integer :: ist, idim
 
-  call push_sub('derivatives_inc.Xderivatives_lapl_finish')
+  call push_sub('derivatives_inc.Xderivatives_batch_finish')
 
 #ifdef HAVE_MPI
-  if(derivatives_overlap(der) .and. der%mesh%parallel_in_domains .and. handle(1, 1)%ghost_update) then
+  if(derivatives_overlap(handle%der) .and. handle%der%mesh%parallel_in_domains .and. handle%ghost_update) then
 
-    call X(nl_operator_operate_batch)(der%lapl, ff, lapl, ghost_update = .false., points = OP_INNER)
-    do ist = 1, ff%nst
-      do idim = 1, ff%dim
-        call pv_handle_wait(handle(idim, ist)%pv_h)
+    call X(nl_operator_operate_batch)(handle%op, handle%ff, handle%opff, ghost_update = .false., points = OP_INNER)
+
+    do ist = 1, handle%ff%nst
+      do idim = 1, handle%ff%dim
+        call pv_handle_wait(handle%pv_h(ist, idim))
+        call pv_handle_end(handle%pv_h(ist, idim))
       end do
     end do
-    call X(nl_operator_operate_batch)(der%lapl, ff, lapl, ghost_update = .false., points = OP_OUTER)
+    SAFE_DEALLOCATE_P(handle%pv_h)
+
+    call X(nl_operator_operate_batch)(handle%op, handle%ff, handle%opff, ghost_update = .false., points = OP_OUTER)
+  else
+#endif
     
-    call pop_sub(); return
+    call X(nl_operator_operate_batch)(handle%op, handle%ff, handle%opff, ghost_update = handle%ghost_update)
+    
+#ifdef HAVE_MPI
   end if
 #endif
 
-  call X(nl_operator_operate_batch)(der%lapl, ff, lapl, ghost_update = handle(1, 1)%ghost_update)
-
-  do ist = 1, ff%nst
-    do idim = 1, ff%dim
-      call der_handle_end(handle(idim, ist))
-    end do
-  end do
-
   call pop_sub()
-end subroutine X(derivatives_lapl_batch_finish)
+end subroutine X(derivatives_batch_finish)
 
 ! ---------------------------------------------------------
 subroutine X(derivatives_lapl)(der, f, lapl, ghost_update, set_bc)

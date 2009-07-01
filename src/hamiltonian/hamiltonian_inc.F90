@@ -38,7 +38,7 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, t, kinetic_only)
   integer :: ii, ist, idim, ip
   R_TYPE, pointer :: psi(:, :), hpsi(:, :)
   type(batch_t) :: epsib, laplb
-  type(der_handle_t), allocatable :: handles(:, :)
+  type(der_handle_batch_t) :: handle
 
   call profiling_in(prof_hamiltonian, "HAMILTONIAN")
   call push_sub('hamiltonian_inc.Xhpsi_batch')
@@ -71,7 +71,6 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, t, kinetic_only)
 
   call X(set_bc_batch)(gr%der, psib)
 
-
   bs = hardware%X(block_size)
 
   do sp = 1, gr%mesh%np_part, bs
@@ -92,9 +91,7 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, t, kinetic_only)
   end do
 
   ! start the calculation of the laplacian
-  SAFE_ALLOCATE(handles(1:hm%d%dim, 1:nst))
-
-  call X(derivatives_lapl_batch_start)(gr%der, handles, epsib, laplb, set_bc = .false.)
+  call X(derivatives_batch_start)(gr%der%lapl, gr%der, epsib, laplb, handle, set_bc = .false.)
     
   if (.not. kinetic_only_) then
     ! apply the potential
@@ -102,7 +99,7 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, t, kinetic_only)
     if(hm%ep%non_local) call X(vnlpsi_batch)(hm, gr%mesh, epsib, hpsib, ik)
   end if
 
-  call X(derivatives_lapl_batch_finish)(gr%der, handles, epsib, laplb)
+  call X(derivatives_batch_finish)(handle)
 
   do ii = 1, nst
     call set_pointers()
@@ -169,8 +166,6 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, t, kinetic_only)
 
     end if
   end do
-
-  SAFE_DEALLOCATE_A(handles)
 
   if(apply_kpoint) then
     ! now we need to remove the exp(-i k.r) factor

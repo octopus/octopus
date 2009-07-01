@@ -50,10 +50,10 @@ module derivatives_m
     derivatives_build,                  &
     dderivatives_lapl,                  &
     zderivatives_lapl,                  &
-    dderivatives_lapl_batch_start,      &
-    dderivatives_lapl_batch_finish,     &
-    zderivatives_lapl_batch_start,      &
-    zderivatives_lapl_batch_finish,     &
+    dderivatives_batch_start,           &
+    dderivatives_batch_finish,          &
+    zderivatives_batch_start,           &
+    zderivatives_batch_finish,          &
     derivatives_lapl_diag,              &
     dderivatives_laplt,                 &
     zderivatives_laplt,                 &
@@ -73,6 +73,7 @@ module derivatives_m
     zset_bc_batch,                      &
     stencil_extent,                     &
     der_handle_t,                       &
+    der_handle_batch_t,                 &
     df_angular_momentum,                &
     zf_angular_momentum,                &
     df_l2, zf_l2
@@ -128,6 +129,18 @@ module derivatives_m
     CMPLX, pointer :: zlapl(:)
     logical :: ghost_update
   end type der_handle_t
+
+  type der_handle_batch_t
+    private
+#ifdef HAVE_MPI
+    type(pv_handle_t),   pointer :: pv_h(:, :)
+#endif
+    type(derivatives_t), pointer :: der
+    type(nl_operator_t), pointer :: op
+    type(batch_t),       pointer :: ff
+    type(batch_t),       pointer :: opff
+    logical :: ghost_update
+  end type der_handle_batch_t
 
   type(profile_t), save :: set_bc_prof
 #ifdef HAVE_MPI
