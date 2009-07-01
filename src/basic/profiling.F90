@@ -787,7 +787,7 @@ contains
 
     ! check if variable is already in stack
     do ii = 1, MAX_MEMORY_VARS
-      if(trim(str).eq.trim(prof_vars%large_vars(ii))) then
+      if(str.eq.prof_vars%large_vars(ii)) then
         if(size > prof_vars%large_vars_size(ii)) then
           ! delete variable by moving stack up
           do jj = ii,  MAX_MEMORY_VARS - 1
@@ -812,7 +812,7 @@ contains
           prof_vars%large_vars_size(jj) = prof_vars%large_vars_size(jj - 1)
         end do
         prof_vars%large_vars_size(ii) = size
-        prof_vars%large_vars(ii) = trim(str)
+        prof_vars%large_vars(ii) = str
         exit
       end if
     end do
