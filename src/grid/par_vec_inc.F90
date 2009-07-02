@@ -352,10 +352,10 @@ subroutine X(ghost_update_batch_start)(vp, v_local, comm_method, handle)
   call X(batch_new)(handle%ghost_send, 1, v_local%nst, nsend)
 
   handle%comm_method = comm_method
+  handle%nnb = 0
 
   if(handle%comm_method == NON_BLOCKING) then
     ! first post the receptions
-    handle%nnb = 0
     
     SAFE_ALLOCATE(handle%requests(1:2*vp%npart*v_local%nst*v_local%dim))
 
