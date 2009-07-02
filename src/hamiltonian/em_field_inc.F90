@@ -23,20 +23,14 @@ subroutine X(em_field_apply_batch)(this, mesh, psib, vpsib)
   type(batch_t),       intent(in)    :: psib
   type(batch_t),       intent(inout) :: vpsib
 
-  integer :: ist, idim, ipmax, ip, ip2, bs
+  integer :: ist, idim, ipmax, ip
 
   if(associated(this%potential)) then
-
-    bs = hardware%dblock_size
-
-    !$omp parallel do private(ipmax, ist, idim, ip2)
-    do ip = 1, mesh%np, bs
-      ipmax = min(mesh%np, ip + bs - 1)
-      
-      forall (ist = 1:psib%nst, idim = 1:psib%dim, ip2 = ip:ipmax)
-        vpsib%states(ist)%X(psi)(ip2, idim) = this%potential(ip2)*psib%states(ist)%X(psi)(ip2, idim)
+    !$omp parallel do private(ipmax, idim, ip)
+    do ist = 1, psib%nst
+      forall (ip=1:mesh%np, idim = 1:psib%dim)
+        vpsib%states(ist)%X(psi)(ip, idim) = this%potential(ip)*psib%states(ist)%X(psi)(ip, idim)
       end forall
-      
     end do
     !$omp end parallel do
 

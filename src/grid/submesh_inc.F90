@@ -106,6 +106,7 @@ subroutine X(submesh_batch_add_matrix)(this, factor, ss, mm)
 
   integer :: ist, jst, idim, jdim, is
 
+  !$omp parallel do private(ist, idim, jdim, jst, is)
   do ist =  1, mm%nst
     do idim = 1, mm%dim
       jdim = min(idim, ss%dim)
@@ -124,6 +125,7 @@ subroutine X(submesh_batch_add_matrix)(this, factor, ss, mm)
       end do
     end do
   end do
+  !$omp end parallel do
   
 end subroutine X(submesh_batch_add_matrix)
 
@@ -144,6 +146,7 @@ subroutine X(submesh_batch_add)(this, ss, mm)
 
   ASSERT(mm%nst == ss%nst)
 
+  !$omp parallel do private(ist, idim, jdim, is)
   do ist =  1, mm%nst
     do idim = 1, mm%dim
       jdim = min(idim, ss%dim)
@@ -165,6 +168,7 @@ subroutine X(submesh_batch_add)(this, ss, mm)
       end if
     end do
   end do
+  !$omp end parallel do
   
 end subroutine X(submesh_batch_add)
 
@@ -219,6 +223,7 @@ subroutine X(submesh_batch_dotp_matrix)(this, mm, ss, dot, reduce)
     
   else
 
+    !$omp parallel do private(ist, jst, dotp, idim, jdim, is)
     do ist = 1, ss%nst
       do jst = 1, mm%nst
         dotp = R_TOTYPE(M_ZERO)

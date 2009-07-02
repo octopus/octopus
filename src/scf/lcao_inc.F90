@@ -384,9 +384,8 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
   if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, nbasis)
 
-  ibasis = 0
+  !$omp parallel do private(iatom, norbs, maxradius)
   do iatom = 1, geo%natoms
-
     norbs = species_niwfs(geo%atom(iatom)%spec)
     maxradius = M_ZERO
     do iorb = 1, norbs
@@ -399,20 +398,29 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
     call submesh_init_sphere(sphere(iatom), gr%mesh%sb, gr%mesh, geo%atom(iatom)%x, maxradius)
     call batch_init(orbitals(iatom), 1, norbs)
     call X(batch_new)(orbitals(iatom), 1, norbs, sphere(iatom)%ns)
+  end do
+  !$omp end parallel do
+
+  ibasis = 0
+  do iatom = 1, geo%natoms
+    norbs = species_niwfs(geo%atom(iatom)%spec)
 
     do iorb = 1, norbs
       ibasis = ibasis + 1
       atom_orb_basis(iatom, iorb) = ibasis
       basis_atom(ibasis) = iatom
       basis_orb(ibasis) = iorb
+    end do
 
+    !$omp parallel do
+    do iorb = 1, norbs
       ! allocate and calculate the orbitals
       call species_get_orbital_submesh(geo%atom(iatom)%spec, sphere(iatom), iorb, st%d%dim, 1, &
         geo%atom(iatom)%x, orbitals(iatom)%states(iorb)%dpsi(:, 1))
-
-      if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ibasis, nbasis)
-
     end do
+    !$omp end parallel do
+
+    if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ibasis, nbasis)
   end do
 
   if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
@@ -436,7 +444,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
       psii = M_ZERO
 
-      call batch_init(psib, st%d%dim, atom_orb_basis(iatom, 1), atom_orb_basis(iatom, norbs), psii)
+      call batch_init( psib, st%d%dim, atom_orb_basis(iatom, 1), atom_orb_basis(iatom, norbs), psii)
       call batch_init(hpsib, st%d%dim, atom_orb_basis(iatom, 1), atom_orb_basis(iatom, norbs), hpsi)
 
       call X(submesh_batch_add)(sphere(iatom), orbitals(iatom), psib)
