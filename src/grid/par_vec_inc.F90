@@ -342,7 +342,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, comm_method, handle)
   integer,                  intent(in)    :: comm_method
   type(pv_handle_batch_t),  intent(out)   :: handle
 
-  integer :: ipart, pos, nsend, ii, idim
+  integer :: ipart, pos, nsend, ii, idim, tag
 
   call profiling_in(C_PROFILING_GHOST_UPDATE, "GHOST_UPDATE")
   call push_sub('par_vec_inc.Xghost_update_batch_start')
@@ -365,8 +365,9 @@ subroutine X(ghost_update_batch_start)(vp, v_local, comm_method, handle)
           if(vp%np_ghost_neigh(vp%partno, ipart) == 0) cycle
           
           handle%nnb = handle%nnb + 1
+          tag = v_local%states(ii)%ist*2 + idim
           pos = vp%np_local(vp%partno) + 1 + vp%rdispls(ipart)
-          call MPI_Irecv(v_local%states(ii)%X(psi)(pos:, idim), vp%rcounts(ipart), R_MPITYPE, ipart - 1, 0, &
+          call MPI_Irecv(v_local%states(ii)%X(psi)(pos:, idim), vp%rcounts(ipart), R_MPITYPE, ipart - 1, tag, &
             vp%comm, handle%requests(handle%nnb), mpi_err)
 
         end do
@@ -407,8 +408,9 @@ subroutine X(ghost_update_batch_start)(vp, v_local, comm_method, handle)
         do ipart = 1, vp%npart
           if(vp%np_ghost_neigh(ipart, vp%partno) == 0) cycle
           handle%nnb = handle%nnb + 1
+          tag = v_local%states(ii)%ist*2 + idim
           call MPI_Isend(handle%ghost_send%states(ii)%X(psi)(vp%sendpos(ipart):, idim), vp%np_ghost_neigh(ipart, vp%partno), &
-            R_MPITYPE, ipart - 1, 0, vp%comm, handle%requests(handle%nnb), mpi_err)
+            R_MPITYPE, ipart - 1, tag, vp%comm, handle%requests(handle%nnb), mpi_err)
         end do
       end do
     end do
