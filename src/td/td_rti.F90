@@ -660,8 +660,9 @@ contains
     ! Propagator with enforced time-reversal symmetry
     subroutine td_reversal
       FLOAT, allocatable :: vhxc_t1(:,:), vhxc_t2(:,:)
-      CMPLX, allocatable :: zpsi1(:,:)
-      integer :: ik, ist, idim
+      CMPLX, allocatable :: zpsi1(:,:,:)
+      integer :: ik, ist, ist2, idim, ste, sts
+      type(batch_t) :: zpsib
 
       call push_sub('td_rti.td_reversal')
 
@@ -671,30 +672,44 @@ contains
         SAFE_ALLOCATE(vhxc_t2(1:gr%mesh%np, 1:st%d%nspin))
         call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t1)
 
-        SAFE_ALLOCATE(zpsi1(1:gr%mesh%np_part, 1:st%d%dim))
+        SAFE_ALLOCATE(zpsi1(1:gr%mesh%np_part, 1:st%d%dim, 1:st%d%block_size))
 
         st%rho(1:gr%mesh%np, 1:st%d%nspin) = M_ZERO
 
         do ik = st%d%kpt%start, st%d%kpt%end
-          do ist = st%st_start, st%st_end
-            
-            !save the state
-            do idim = 1, st%d%dim
-              call lalg_copy(gr%mesh%np, st%zpsi(:, idim, ist, ik), zpsi1(:, idim))
+          do sts = st%st_start, st%st_end, st%d%block_size
+            ste = min(st%st_end, sts + st%d%block_size - 1)
+
+            !save the states
+            !$omp parallel do private(ist2, idim)
+            do ist = sts, ste
+              ist2 = ist - sts + 1
+              do idim = 1, st%d%dim
+                call lalg_copy(gr%mesh%np, st%zpsi(:, idim, ist, ik), zpsi1(:, idim, ist2))
+              end do
             end do
             
             !propagate the state dt with H(t-dt)
-            call exponential_apply(tr%te, gr, hm, st%zpsi(:,:, ist, ik), ist, ik, dt, t-dt)
-            
-            !calculate the contribution to the density
-            call states_dens_accumulate(st, gr%mesh%np, st%rho, ist, ik)
-            
+            call batch_init(zpsib, st%d%dim, sts, ste, st%zpsi(:, :, sts:, ik))
+            call exponential_apply_batch(tr%te, gr, hm, zpsib, ik, dt, t-dt)
+            call states_dens_accumulate_batch(gr%mesh%np, st%rho, st, zpsib, ik)
+            call batch_end(zpsib)
+
+            !do ist = sts, ste
+            !  !calculate the contribution to the density
+            !  call states_dens_accumulate(st, gr%mesh%np, st%rho, ist, ik)
+            !end do
+
             !restore the saved state
-            do idim = 1, st%d%dim
-              call lalg_copy(gr%mesh%np, zpsi1(:, idim), st%zpsi(:, idim, ist, ik))
+            !$omp parallel do private(ist2, idim)
+            do ist = sts, ste
+              ist2 = ist - sts + 1
+              do idim = 1, st%d%dim
+                call lalg_copy(gr%mesh%np, zpsi1(:, idim, ist2), st%zpsi(:, idim, ist, ik))
+              end do
             end do
-          end do
-          
+
+          end do          
         end do
 
         SAFE_DEALLOCATE_A(zpsi1)
@@ -711,8 +726,12 @@ contains
 
       ! propagate dt/2 with H(t-dt)
       do ik = st%d%kpt%start, st%d%kpt%end
-        do ist = st%st_start, st%st_end
-          call exponential_apply(tr%te, gr, hm, st%zpsi(:,:, ist, ik), ist, ik, dt/M_TWO, t-dt)
+        do sts = st%st_start, st%st_end, st%d%block_size
+          ste = min(st%st_end, sts + st%d%block_size - 1)
+
+          call batch_init(zpsib, st%d%dim, sts, ste, st%zpsi(:, :, sts:, ik))
+          call exponential_apply_batch(tr%te, gr, hm, zpsib, ik, dt/M_TWO, t-dt)
+          call batch_end(zpsib)
         end do
       end do
 
@@ -732,8 +751,12 @@ contains
       end if
 
       do ik = st%d%kpt%start, st%d%kpt%end
-        do ist = st%st_start, st%st_end
-          call exponential_apply(tr%te, gr, hm, st%zpsi(:,:, ist, ik), ist, ik, dt/M_TWO, t)
+        do sts = st%st_start, st%st_end, st%d%block_size
+          ste = min(st%st_end, sts + st%d%block_size - 1)
+
+          call batch_init(zpsib, st%d%dim, sts, ste, st%zpsi(:, :, sts:, ik))
+          call exponential_apply_batch(tr%te, gr, hm, zpsib, ik, dt/M_TWO, t)
+          call batch_end(zpsib)
         end do
       end do
 
@@ -758,6 +781,7 @@ contains
       do ik = st%d%kpt%start, st%d%kpt%end
         do sts = st%st_start, st%st_end, st%d%block_size
           ste = min(st%st_end, sts + st%d%block_size - 1)
+
           call batch_init(zpsib, st%d%dim, sts, ste, st%zpsi(:, :, sts:, ik))
           call exponential_apply_batch(tr%te, gr, hm, zpsib, ik, dt/M_TWO, t-dt)
           call batch_end(zpsib)

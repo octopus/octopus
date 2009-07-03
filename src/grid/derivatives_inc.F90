@@ -614,17 +614,15 @@ subroutine X(set_bc_batch)(der, fb)
   call push_sub('derivatives_inc.Xset_bc_batch')
 
   if(der%mesh%sb%mr_flag) then
-
     do ist = 1, fb%nst
       do idim = 1, fb%dim
         call X(set_bc)(der, fb%states(ist)%X(psi)(:, idim))
       end do
     end do
-
+    
   else
 
     call profiling_in(set_bc_prof, 'SET_BC')
-
     pp = der%mesh%vp%partno
 
     ! The boundary points are at different locations depending on the presence
@@ -638,9 +636,13 @@ subroutine X(set_bc_batch)(der, fb)
     end if
 
     if(der%zero_bc) then
-      forall (ist = 1:fb%nst, idim = 1:fb%dim, ip = bndry_start:bndry_end)
-        fb%states(ist)%X(psi)(ip, idim) = R_TOTYPE(M_ZERO)
-      end forall
+      !$omp parallel do private(ist, idim, ip)
+      do ist = 1, fb%nst
+        forall (idim = 1:fb%dim, ip = bndry_start:bndry_end)
+          fb%states(ist)%X(psi)(ip, idim) = R_TOTYPE(M_ZERO)
+        end forall
+      end do
+      !$omp end parallel do
     end if
 
     if(der%periodic_bc) then

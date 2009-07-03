@@ -20,11 +20,12 @@
 #include "global.h"
 
 module states_m
+  use batch_m
+  use blas_m
   use derivatives_m
   use calc_mode_m
   use crystal_m
   use distributed_m
-  use blas_m
   use datasets_m
   use geometry_m
   use global_m
@@ -78,6 +79,7 @@ module states_m
     states_write_fermi_energy,        &
     states_spin_channel,              &
     states_dens_accumulate,           &
+    states_dens_accumulate_batch,     &
     states_dens_reduce,               &
     states_calc_dens,                 &
     states_calc_tau_jp_gn,            &
@@ -1060,6 +1062,68 @@ contains
     call pop_sub()
 #endif
   end subroutine states_dens_accumulate
+
+
+  subroutine states_dens_accumulate_batch(np, rho, st, psib, ik)
+    integer,        intent(in)    :: np
+    FLOAT,          intent(inout) :: rho(:,:)
+    type(states_t), intent(in)    :: st
+    type(batch_t),  intent(in)    :: psib
+    integer,        intent(in)    :: ik
+    
+    integer :: ist, ist2, ip, ispin
+    CMPLX   :: c
+    type(profile_t), save :: prof
+
+#ifndef USE_OMP
+    call push_sub('states.states_dens_accumulate_batch')
+#endif
+    call profiling_in(prof, "CALC_DENSITY")
+
+    ispin = states_dim_get_spin_index(st%d, ik)
+    
+    if (st%wfs_type == M_REAL) then
+      do ist = 1, psib%nst
+        ist2 = psib%states(ist)%ist
+        forall(ip = 1:np)
+          rho(ip, ispin) = rho(ip, ispin) + st%d%kweights(ik)*st%occ(ist2, ik)*&
+            psib%states(ist)%dpsi(ip, 1)**2
+        end forall
+      end do
+    else
+      do ist = 1, psib%nst
+        ist2 = psib%states(ist)%ist
+        forall(ip = 1:np)
+          rho(ip, ispin) = rho(ip, ispin) + st%d%kweights(ik)*st%occ(ist2, ik)* ( &
+            real (psib%states(ist)%zpsi(ip, 1), REAL_PRECISION)**2 + &
+            aimag(psib%states(ist)%zpsi(ip, 1))**2)
+        end forall
+      end do
+    end if
+    
+    if(st%d%ispin == SPINORS) then ! in this case wave-functions are always complex
+     do ist = 1, psib%nst
+        ist2 = psib%states(ist)%ist
+        do ip = 1, np
+          rho(ip, 2) = rho(ip, 2) + st%d%kweights(ik)*st%occ(ist2, ik)* ( &
+            real (psib%states(ist)%zpsi(ip, 2), REAL_PRECISION)**2 + &
+            aimag(psib%states(ist)%zpsi(ip, 2)**2))
+        
+          c = st%d%kweights(ik)*st%occ(ist, ik)* &
+            psib%states(ist)%zpsi(ip, 1)*conjg(psib%states(ist)%zpsi(ip, 2))
+          rho(ip, 3) = rho(ip, 3) + real(c, REAL_PRECISION)
+          rho(ip, 4) = rho(ip, 4) + aimag(c)
+        end do
+      end do
+    end if
+    
+    call profiling_out(prof)
+
+#ifndef USE_OMP
+    call pop_sub()
+#endif
+  end subroutine states_dens_accumulate_batch
+
 
   subroutine states_dens_reduce(st, np, rho)
     type(states_t), intent(in)    :: st
