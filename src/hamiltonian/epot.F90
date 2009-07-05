@@ -460,10 +460,10 @@ contains
     call profiling_in(epot_reduce, "EPOT_REDUCE")
     if(geo%atoms%parallel) then
       SAFE_ALLOCATE(vpsltmp(1:gr%mesh%np))
-      call MPI_Allreduce(ep%vpsl, vpsltmp, gr%mesh%np, MPI_FLOAT, MPI_SUM, geo%atoms%mpi_grp%comm, mpi_err)
+      call MPI_Allreduce(ep%vpsl(1), vpsltmp(1), gr%mesh%np, MPI_FLOAT, MPI_SUM, geo%atoms%mpi_grp%comm, mpi_err)
       call lalg_copy(gr%mesh%np, vpsltmp, ep%vpsl)
       if(associated(st%rho_core)) then
-        call MPI_Allreduce(st%rho_core, vpsltmp, gr%mesh%np, MPI_FLOAT, MPI_SUM, geo%atoms%mpi_grp%comm, mpi_err)
+        call MPI_Allreduce(st%rho_core(1), vpsltmp(1), gr%mesh%np, MPI_FLOAT, MPI_SUM, geo%atoms%mpi_grp%comm, mpi_err)
         call lalg_copy(gr%mesh%np, vpsltmp, st%rho_core)
       end if
       SAFE_DEALLOCATE_A(vpsltmp)

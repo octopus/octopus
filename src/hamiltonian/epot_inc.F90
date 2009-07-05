@@ -213,7 +213,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
     !reduce the gradient of the density
     SAFE_ALLOCATE(grad_rho_local(1:np, 1:gr%mesh%sb%dim))
     call lalg_copy(np, gr%mesh%sb%dim, grad_rho, grad_rho_local)
-    call MPI_Allreduce(grad_rho_local, grad_rho, np*gr%mesh%sb%dim, MPI_CMPLX, MPI_SUM, st%mpi_grp%comm, mpi_err)
+    call MPI_Allreduce(grad_rho_local(1, 1), grad_rho(1, 1), np*gr%mesh%sb%dim, MPI_CMPLX, MPI_SUM, st%mpi_grp%comm, mpi_err)
     SAFE_DEALLOCATE_A(grad_rho_local)
 
     call profiling_out(prof)
@@ -227,13 +227,13 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
     !reduce the force
     SAFE_ALLOCATE(force_local(1:gr%mesh%sb%dim, 1:geo%natoms))
     force_local = force
-    call MPI_Allreduce(force_local, force, gr%mesh%sb%dim*geo%natoms, MPI_CMPLX, MPI_SUM, st%d%kpt%mpi_grp%comm, mpi_err)
+    call MPI_Allreduce(force_local(1, 1), force(1, 1), gr%mesh%sb%dim*geo%natoms, MPI_CMPLX, MPI_SUM, st%d%kpt%mpi_grp%comm, mpi_err)
     SAFE_DEALLOCATE_A(force_local)
     
     !reduce the gradient of the density
     SAFE_ALLOCATE(grad_rho_local(1:np, 1:gr%mesh%sb%dim))
     call lalg_copy(np, gr%mesh%sb%dim, grad_rho, grad_rho_local)
-    call MPI_Allreduce(grad_rho_local, grad_rho, np*gr%mesh%sb%dim, MPI_CMPLX, MPI_SUM, st%d%kpt%mpi_grp%comm, mpi_err)
+    call MPI_Allreduce(grad_rho_local(1, 1), grad_rho(1, 1), np*gr%mesh%sb%dim, MPI_CMPLX, MPI_SUM, st%d%kpt%mpi_grp%comm, mpi_err)
     SAFE_DEALLOCATE_A(grad_rho_local)
 
     call profiling_out(prof)
@@ -292,8 +292,8 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
     force_local(1:gr%mesh%sb%dim, 1:geo%atoms%nlocal) = force(1:gr%mesh%sb%dim, geo%atoms%start:geo%atoms%end)
 
     call MPI_Allgatherv(&
-         force_local, gr%mesh%sb%dim*geo%atoms%nlocal, MPI_CMPLX, &
-         force, recv_count(1), recv_displ, MPI_CMPLX, &
+         force_local(1, 1), gr%mesh%sb%dim*geo%atoms%nlocal, MPI_CMPLX, &
+         force(1, 1), recv_count(1), recv_displ(1), MPI_CMPLX, &
          geo%atoms%mpi_grp%comm, mpi_err)
 
     SAFE_DEALLOCATE_A(recv_count)

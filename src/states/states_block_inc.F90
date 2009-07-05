@@ -127,8 +127,8 @@ subroutine X(states_blockt_mul)(mesh, st, psi1_start, psi1_end, psi2_start, psi2
       ! accordingly received from the right neighbour.
       if(round.lt.size-1) then
         recvcnt = xpsi2_count(l)
-        call MPI_Irecv(recvbuf, mesh%np*st%d%dim*recvcnt, R_MPITYPE, right, 0, st%mpi_grp%comm, reqs(1), mpi_err)
-        call MPI_Isend(sendbuf, mesh%np*st%d%dim*sendcnt, R_MPITYPE, left, 0,  st%mpi_grp%comm, reqs(2), mpi_err)
+        call MPI_Irecv(recvbuf(1, 1, 1), mesh%np*st%d%dim*recvcnt, R_MPITYPE, right, 0, st%mpi_grp%comm, reqs(1), mpi_err)
+        call MPI_Isend(sendbuf(1, 1, 1), mesh%np*st%d%dim*sendcnt, R_MPITYPE, left, 0,  st%mpi_grp%comm, reqs(2), mpi_err)
       end if
       ! Do the matrix multiplication.
       res_row_offset = sum(xpsi1_count(0:rank-1))
