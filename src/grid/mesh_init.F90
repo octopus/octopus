@@ -1021,7 +1021,7 @@ contains
         ! first we allocate the buffer to be able to use MPI_Bsend
         bsize = mesh%vp%npart - 1 + nper_recv + MPI_BSEND_OVERHEAD*2*(mesh%vp%npart - 1)
         SAFE_ALLOCATE(send_buffer(1:bsize))
-        call MPI_Buffer_attach(send_buffer, bsize*4, mpi_err)
+        call MPI_Buffer_attach(send_buffer(1), bsize*4, mpi_err)
 
         ! Now we communicate to each node the points they will have to
         ! send us. Probably this could be done without communication,
@@ -1044,7 +1044,7 @@ contains
         ! Now we send the indexes of the points
         do ipart = 1, mesh%vp%npart
           if(ipart == mesh%vp%partno .or. mesh%nrecv(ipart) == 0) cycle
-          call MPI_Bsend(recv_rem_points(:, ipart), mesh%nrecv(ipart), MPI_INTEGER, ipart - 1, 1, mesh%vp%comm, mpi_err)
+          call MPI_Bsend(recv_rem_points(1, ipart), mesh%nrecv(ipart), MPI_INTEGER, ipart - 1, 1, mesh%vp%comm, mpi_err)
         end do
 
         SAFE_ALLOCATE(send_points(1:maxval(mesh%nsend), 1:mesh%vp%npart))
@@ -1052,7 +1052,7 @@ contains
         ! And we receive them
         do ipart = 1, mesh%vp%npart
           if(ipart == mesh%vp%partno .or. mesh%nsend(ipart) == 0) cycle
-          call MPI_Recv(send_points(:, ipart), mesh%nsend(ipart), MPI_INTEGER, &
+          call MPI_Recv(send_points(1, ipart), mesh%nsend(ipart), MPI_INTEGER, &
                ipart - 1, 1, mesh%vp%comm, status, mpi_err)
         end do
 
@@ -1084,8 +1084,8 @@ contains
 
             call get_blocks(mesh%nsend(ipart), send_points(:, ipart), nblocks, blocklengths, offsets)
 
-            call MPI_Type_indexed(nblocks, blocklengths, offsets, MPI_FLOAT, mesh%dsend_type(ipart), mpi_err)
-            call MPI_Type_indexed(nblocks, blocklengths, offsets, MPI_CMPLX, mesh%zsend_type(ipart), mpi_err)
+            call MPI_Type_indexed(nblocks, blocklengths(1), offsets(1), MPI_FLOAT, mesh%dsend_type(ipart), mpi_err)
+            call MPI_Type_indexed(nblocks, blocklengths(1), offsets(1), MPI_CMPLX, mesh%zsend_type(ipart), mpi_err)
             call MPI_Type_commit(mesh%dsend_type(ipart), mpi_err)
             call MPI_Type_commit(mesh%zsend_type(ipart), mpi_err)
 
@@ -1099,8 +1099,8 @@ contains
 
             call get_blocks(mesh%nrecv(ipart), recv_points(:, ipart), nblocks, blocklengths, offsets)
 
-            call MPI_Type_indexed(nblocks, blocklengths, offsets, MPI_FLOAT, mesh%drecv_type(ipart), mpi_err)
-            call MPI_Type_indexed(nblocks, blocklengths, offsets, MPI_CMPLX, mesh%zrecv_type(ipart), mpi_err)
+            call MPI_Type_indexed(nblocks, blocklengths(1), offsets(1), MPI_FLOAT, mesh%drecv_type(ipart), mpi_err)
+            call MPI_Type_indexed(nblocks, blocklengths(1), offsets(1), MPI_CMPLX, mesh%zrecv_type(ipart), mpi_err)
             call MPI_Type_commit(mesh%drecv_type(ipart), mpi_err)
             call MPI_Type_commit(mesh%zrecv_type(ipart), mpi_err)
 
@@ -1108,7 +1108,7 @@ contains
 
         end do
 
-        call MPI_Buffer_detach(send_buffer, bsize, mpi_err)
+        call MPI_Buffer_detach(send_buffer(1), bsize, mpi_err)
 
       end if
 #endif
@@ -1367,10 +1367,17 @@ subroutine mesh_partition(m, lapl_stencil, part)
 
     part(1:m%np_global) = 0 ! so we catch non-initialized values
 
+    ! convert start to C notation
+    start = start - 1
+
     ! we collect part from all processors
-    call MPI_Allgatherv(xadj, lsize(ipart), MPI_INTEGER, part, lsize, start - 1, MPI_INTEGER, m%mpi_grp%comm, mpi_err)
+    call MPI_Allgatherv(xadj(1), lsize(ipart), MPI_INTEGER, part(1), lsize(1), start(1), MPI_INTEGER, m%mpi_grp%comm, mpi_err)
 
   end select
+
+  SAFE_DEALLOCATE_A(start)
+  SAFE_DEALLOCATE_A(final)
+  SAFE_DEALLOCATE_A(lsize)
 
   ASSERT(all(part(1:m%np_global) > 0))
   ASSERT(all(part(1:m%np_global) <= p))

@@ -101,7 +101,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     if(gr%mesh%parallel_in_domains) then
       SAFE_ALLOCATE(fbuff(1:bsize))
       fbuff(1:bsize) = st%eigenval(jst:maxst, ik)
-      call MPI_Allreduce(fbuff, st%eigenval(jst:maxst, ik), bsize, MPI_FLOAT, MPI_SUM, gr%mesh%mpi_grp%comm, mpi_err)
+      call MPI_Allreduce(fbuff(1), st%eigenval(jst, ik), bsize, MPI_FLOAT, MPI_SUM, gr%mesh%mpi_grp%comm, mpi_err)
       SAFE_DEALLOCATE_A(fbuff)
     end if
 #endif
@@ -154,7 +154,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
       if(gr%mesh%parallel_in_domains) then
         SAFE_ALLOCATE(buff(1:4, 1:blocksize))
         buff(1:4, 1:blocksize) = fr(1:4, 1:blocksize)
-        call MPI_Allreduce(buff, fr, 4*blocksize, R_MPITYPE, MPI_SUM, gr%mesh%mpi_grp%comm, mpi_err)
+        call MPI_Allreduce(buff(1, 1), fr(1, 1), 4*blocksize, R_MPITYPE, MPI_SUM, gr%mesh%mpi_grp%comm, mpi_err)
         SAFE_DEALLOCATE_A(buff)
       end if
 #endif
@@ -227,7 +227,8 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
         if(gr%mesh%parallel_in_domains) then
           SAFE_ALLOCATE(mmc(1:iter, 1:iter, 1:2, 1:bsize))
           mmc(1:iter, 1:iter, 1:2, 1:bsize) = mm(1:iter, 1:iter, 1:2, 1:bsize)
-          call MPI_Allreduce(mmc, mm, iter**2*2*bsize, R_MPITYPE, MPI_SUM, gr%mesh%mpi_grp%comm, mpi_err)
+          call MPI_Allreduce(mmc(1, 1, 1, 1), mm(1, 1, 1, 1), iter**2*2*bsize, R_MPITYPE, MPI_SUM, &
+            gr%mesh%mpi_grp%comm, mpi_err)
           SAFE_DEALLOCATE_A(mmc)
         end if
 #endif
@@ -425,7 +426,7 @@ subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, niter, converged,
         if(gr%mesh%parallel_in_domains) then
           SAFE_ALLOCATE(metmp(1:2, 1:blocksize))
           metmp = me1
-          call MPI_Allreduce(metmp, me1, 2*blocksize, R_MPITYPE, MPI_SUM, gr%mesh%mpi_grp%comm, mpi_err)
+          call MPI_Allreduce(metmp(1, 1), me1(1, 1), 2*blocksize, R_MPITYPE, MPI_SUM, gr%mesh%mpi_grp%comm, mpi_err)
           SAFE_DEALLOCATE_A(metmp)
         end if
 #endif
@@ -460,7 +461,7 @@ subroutine X(eigensolver_rmmdiis_start) (gr, st, hm, pre, tol, niter, converged,
         if(gr%mesh%parallel_in_domains) then
           SAFE_ALLOCATE(metmp(1:4, 1:blocksize))
           metmp = me2
-          call MPI_Allreduce(metmp, me2, 4*blocksize, R_MPITYPE, MPI_SUM, gr%mesh%mpi_grp%comm, mpi_err)
+          call MPI_Allreduce(metmp(1, 1), me2(1, 1), 4*blocksize, R_MPITYPE, MPI_SUM, gr%mesh%mpi_grp%comm, mpi_err)
           SAFE_DEALLOCATE_A(metmp)
         end if
 #endif

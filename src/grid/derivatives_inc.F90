@@ -516,13 +516,13 @@ subroutine X(set_bc)(der, f)
       do ipart = 1, der%mesh%vp%npart
         if(ipart == p .or. der%mesh%nsend(ipart) == 0) cycle
         nreq = nreq + 1
-        call MPI_Isend(f, 1, der%mesh%X(send_type)(ipart), ipart - 1, 3, der%mesh%vp%comm, req(nreq), mpi_err)
+        call MPI_Isend(f(1), 1, der%mesh%X(send_type)(ipart), ipart - 1, 3, der%mesh%vp%comm, req(nreq), mpi_err)
       end do
 
       do ipart = 1, der%mesh%vp%npart
         if(ipart == p .or. der%mesh%nrecv(ipart) == 0) cycle
         nreq = nreq + 1
-        call MPI_Irecv(f, 1, der%mesh%X(recv_type)(ipart), ipart - 1, 3, der%mesh%vp%comm, req(nreq), mpi_err)
+        call MPI_Irecv(f(1), 1, der%mesh%X(recv_type)(ipart), ipart - 1, 3, der%mesh%vp%comm, req(nreq), mpi_err)
       end do
 
       call profiling_count_transfers(sum(der%mesh%nrecv(1:der%mesh%vp%npart) + der%mesh%nrecv(1:der%mesh%vp%npart)), f(1))
@@ -540,7 +540,7 @@ subroutine X(set_bc)(der, f)
       call profiling_in(set_bc_comm_prof)
 
       SAFE_ALLOCATE(statuses(1:MPI_STATUS_SIZE, 1:nreq))
-      call MPI_Waitall(nreq, req, statuses, mpi_err)
+      call MPI_Waitall(nreq, req(1), statuses(1, 1), mpi_err)
       SAFE_DEALLOCATE_A(statuses)
       SAFE_DEALLOCATE_A(req)
 
@@ -661,7 +661,7 @@ subroutine X(set_bc_batch)(der, fb)
             do ipart = 1, der%mesh%vp%npart
               if(ipart == der%mesh%vp%partno .or. der%mesh%nrecv(ipart) == 0) cycle
               nreq = nreq + 1
-              call MPI_Irecv(fb%states(ist)%X(psi)(:, idim), 1, der%mesh%X(recv_type)(ipart), ipart - 1, 3, &
+              call MPI_Irecv(fb%states(ist)%X(psi)(1, idim), 1, der%mesh%X(recv_type)(ipart), ipart - 1, 3, &
                    der%mesh%vp%comm, req(nreq), mpi_err)
             end do
           end do
@@ -672,7 +672,7 @@ subroutine X(set_bc_batch)(der, fb)
             do ipart = 1, der%mesh%vp%npart
               if(ipart == der%mesh%vp%partno .or. der%mesh%nsend(ipart) == 0) cycle
               nreq = nreq + 1
-              call MPI_Isend(fb%states(ist)%X(psi)(:, idim), 1, der%mesh%X(send_type)(ipart), ipart - 1, 3, &
+              call MPI_Isend(fb%states(ist)%X(psi)(1, idim), 1, der%mesh%X(send_type)(ipart), ipart - 1, 3, &
                    der%mesh%vp%comm, req(nreq), mpi_err)
             end do
           end do
@@ -695,7 +695,7 @@ subroutine X(set_bc_batch)(der, fb)
         call profiling_in(set_bc_comm_prof)
 
         SAFE_ALLOCATE(statuses(1:MPI_STATUS_SIZE, 1:nreq))
-        call MPI_Waitall(nreq, req, statuses, mpi_err)
+        call MPI_Waitall(nreq, req(1), statuses(1, 1), mpi_err)
         SAFE_DEALLOCATE_A(statuses)
         SAFE_DEALLOCATE_A(req)
 

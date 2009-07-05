@@ -218,7 +218,7 @@ subroutine X(states_gram_schmidt)(m, nst, dim, psi, phi,  &
   if(m%parallel_in_domains) then
     SAFE_ALLOCATE(ss_tmp(1:nst))
     call profiling_in(reduce_prof, "GRAM_SCHMIDT_REDUCE")
-    call MPI_Allreduce(ss, ss_tmp, nst, R_MPITYPE, MPI_SUM, m%vp%comm, mpi_err)
+    call MPI_Allreduce(ss(1), ss_tmp(1), nst, R_MPITYPE, MPI_SUM, m%vp%comm, mpi_err)
     call profiling_out(reduce_prof)
     ss = ss_tmp
     SAFE_DEALLOCATE_A(ss_tmp)
@@ -409,7 +409,7 @@ subroutine X(states_calc_momentum)(gr, st, momentum)
 
       lmom(1:ndim, 1:st%nst, 1:kn) = momentum(1:ndim, 1:st%nst, kstart:kend)
 
-      call MPI_Allgatherv(lmom, ndim*st%nst*kn, MPI_FLOAT, &
+      call MPI_Allgatherv(lmom(1, 1, 1), ndim*st%nst*kn, MPI_FLOAT, &
            momentum, st%d%kpt%num(:)*st%nst*ndim, (st%d%kpt%range(1, :) - 1)*st%nst*ndim, MPI_FLOAT, &
            st%d%kpt%mpi_grp%comm, mpi_err)
 
@@ -431,7 +431,6 @@ subroutine X(states_calc_momentum)(gr, st, momentum)
     end if
 #endif
   end do
-
   SAFE_DEALLOCATE_A(grad)
 
   call pop_sub()

@@ -67,7 +67,7 @@ subroutine X(vec_scatter)(vp, root, v, v_local)
   ! But partition numbers from 1 to vp%npart with usually
   ! vp%npart = mpiv%numprocs.
   call mpi_debug_in(vp%comm, C_MPI_SCATTERV)
-  call MPI_Scatterv(v_tmp, vp%np_local, displs, R_MPITYPE, v_local, &
+  call MPI_Scatterv(v_tmp(1), vp%np_local, displs(1), R_MPITYPE, v_local(1), &
                     vp%np_local(vp%partno), R_MPITYPE,              &
                     root, vp%comm, mpi_err)
   call mpi_debug_out(vp%comm, C_MPI_SCATTERV)
@@ -177,8 +177,8 @@ subroutine X(vec_gather)(vp, root, v, v_local)
   SAFE_ALLOCATE(v_tmp(1:vp%np))
 
   call mpi_debug_in(vp%comm, C_MPI_GATHERV)
-  call MPI_Gatherv(v_local, vp%np_local(vp%partno), R_MPITYPE, v_tmp, &
-                   vp%np_local, displs, R_MPITYPE,                    &
+  call MPI_Gatherv(v_local(1), vp%np_local(vp%partno), R_MPITYPE, v_tmp(1), &
+                   vp%np_local, displs(1), R_MPITYPE,                        &
                    root, vp%comm, mpi_err)
   call mpi_debug_out(vp%comm, C_MPI_GATHERV)
 
@@ -220,8 +220,8 @@ subroutine X(vec_allgather)(vp, v, v_local)
   SAFE_ALLOCATE(v_tmp(1:vp%np))
 
   call mpi_debug_in(vp%comm, C_MPI_ALLGATHERV)
-  call MPI_Allgatherv(v_local, vp%np_local(vp%partno), R_MPITYPE, v_tmp, &
-                      vp%np_local, displs, R_MPITYPE,                    &
+  call MPI_Allgatherv(v_local(1), vp%np_local(vp%partno), R_MPITYPE, v_tmp(1), &
+                      vp%np_local, displs(1), R_MPITYPE,                       &
                       vp%comm, mpi_err)
   call mpi_debug_out(vp%comm, C_MPI_ALLGATHERV)
 
@@ -260,8 +260,8 @@ subroutine X(vec_ghost_update)(vp, v_local)
   call X(subarray_gather)(vp%sendpoints, v_local, ghost_send)
 
   call mpi_debug_in(vp%comm, C_MPI_ALLTOALLV)
-  call MPI_Alltoallv(ghost_send, vp%np_ghost_neigh(1, vp%partno), vp%sdispls(1),           &
-    R_MPITYPE, v_local(vp%np_local(vp%partno)+1), vp%rcounts(1), vp%rdispls(1), R_MPITYPE, &
+  call MPI_Alltoallv(ghost_send(1), vp%np_ghost_neigh(1, vp%partno), vp%sdispls(1),           &
+    R_MPITYPE, v_local(vp%np_local(vp%partno)+1), vp%rcounts(1), vp%rdispls(1), R_MPITYPE,    &
     vp%comm, mpi_err)
   call mpi_debug_out(vp%comm, C_MPI_ALLTOALLV)
 
@@ -323,7 +323,7 @@ subroutine X(vec_ighost_update)(vp, v_local, handle)
       if(vp%np_ghost_neigh(ipart, vp%partno) == 0) cycle
       
       handle%nnb = handle%nnb + 1
-      call MPI_Isend(handle%X(ghost_send)(vp%sendpos(ipart):), vp%np_ghost_neigh(ipart, vp%partno), &
+      call MPI_Isend(handle%X(ghost_send)(vp%sendpos(ipart)), vp%np_ghost_neigh(ipart, vp%partno), &
         R_MPITYPE, ipart - 1, 0, vp%comm, handle%requests(handle%nnb), mpi_err)
     end do
     
@@ -395,8 +395,8 @@ subroutine X(ghost_update_batch_start)(vp, v_local, comm_method, handle)
       do idim = 1, v_local%dim
         handle%nnb = handle%nnb + 1
         call NBCF_Newhandle(handle%nbc_h(handle%nnb))
-        call NBCF_Ialltoallv(handle%ghost_send%states(ii)%X(psi)(:, idim), vp%np_ghost_neigh(1, vp%partno), vp%sdispls(1), &
-          R_MPITYPE, v_local%states(ii)%X(psi)(vp%np_local(vp%partno) + 1:, idim), vp%rcounts(1), vp%rdispls(1), &
+        call NBCF_Ialltoallv(handle%ghost_send%states(ii)%X(psi)(1, idim), vp%np_ghost_neigh(1, vp%partno), vp%sdispls(1), &
+          R_MPITYPE, v_local%states(ii)%X(psi)(vp%np_local(vp%partno) + 1, idim), vp%rcounts(1), vp%rdispls(1), &
           R_MPITYPE, vp%comm, handle%nbc_h(handle%nnb), mpi_err)
       end do
     end do
@@ -442,7 +442,7 @@ subroutine X(ghost_update_batch_finish)(handle)
 #endif
   case(NON_BLOCKING)
     SAFE_ALLOCATE(status(1:MPI_STATUS_SIZE, 1:handle%nnb))
-    call MPI_Waitall(handle%nnb, handle%requests, status, mpi_err)
+    call MPI_Waitall(handle%nnb, handle%requests(1), status(1, 1), mpi_err)
     SAFE_DEALLOCATE_A(status)
     SAFE_DEALLOCATE_P(handle%requests)
   end select
@@ -513,7 +513,7 @@ subroutine X(vec_selective_gather)(this, nn, list, root, src, dst)
     do ipart = 1, this%npart
       if(ipart == this%partno) cycle
       if(recv_count(ipart) == 0) cycle
-      call MPI_Recv(recv_buffer(:, ipart), recv_count(ipart), R_MPITYPE, &
+      call MPI_Recv(recv_buffer(1, ipart), recv_count(ipart), R_MPITYPE, &
         ipart - 1, tag, this%comm, MPI_STATUS_IGNORE, mpi_err)
     end do
 
@@ -533,7 +533,7 @@ subroutine X(vec_selective_gather)(this, nn, list, root, src, dst)
   else
     if(send_count > 0) then
       ! just send the values
-      call MPI_Send(send_buffer, send_count, R_MPITYPE, root, tag, this%comm, mpi_err)
+      call MPI_Send(send_buffer(1), send_count, R_MPITYPE, root, tag, this%comm, mpi_err)
     end if
     SAFE_DEALLOCATE_A(send_buffer)
   end if
@@ -594,7 +594,7 @@ subroutine X(vec_selective_scatter)(this, nn, list, root, src, dst)
       end do
 
       ASSERT(jj == send_count(ipart))
-      call MPI_Send(send_buffer, send_count(ipart), R_MPITYPE, ipart - 1, tag, this%comm, mpi_err)
+      call MPI_Send(send_buffer(1), send_count(ipart), R_MPITYPE, ipart - 1, tag, this%comm, mpi_err)
     end do
 
     SAFE_DEALLOCATE_A(send_buffer)
@@ -603,7 +603,7 @@ subroutine X(vec_selective_scatter)(this, nn, list, root, src, dst)
     SAFE_ALLOCATE(recv_buffer(1:recv_count))
     if(recv_count > 0) then
 
-      call MPI_Recv(recv_buffer, recv_count, R_MPITYPE, root, tag, this%comm, MPI_STATUS_IGNORE, mpi_err)
+      call MPI_Recv(recv_buffer(1), recv_count, R_MPITYPE, root, tag, this%comm, MPI_STATUS_IGNORE, mpi_err)
 
       jj = 0
       do ii = 1, nn
