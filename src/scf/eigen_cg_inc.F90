@@ -323,7 +323,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff, 
   states: do ist = conv + 1, nst
 
     ! Orthogonalize starting eigenfunctions to those already calculated...
-    call X(states_gram_schmidt_full)(st, ist, gr%mesh, dim, st%X(psi)(:, :, :, ik), start=ist)
+    call X(states_gram_schmidt)(gr%mesh, ist - 1, st%d%dim, st%X(psi)(:, :, 1:ist - 1, ik), st%X(psi)(:, :, ist, ik), normalize = .true.)
 
     do idim = 1, st%d%dim
       call lalg_copy(gr%mesh%np, st%X(psi)(:, idim, ist, ik), psi(:, idim))
