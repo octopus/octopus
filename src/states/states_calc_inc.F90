@@ -21,25 +21,21 @@
 ! ---------------------------------------------------------
 ! Orthonormalizes nst orbitals in mesh m (honours state
 ! parallelization).
-subroutine X(states_gram_schmidt_full)(st, nst, m, dim, psi, start)
+subroutine X(states_gram_schmidt_full)(st, nst, m, dim, psi)
   type(states_t),    intent(in)    :: st
   integer,           intent(in)    :: nst, dim
   type(mesh_t),      intent(in)    :: m
-  R_TYPE, target,    intent(inout) :: psi(:, :, st%st_start:)   ! psi(m%np_part, dim, nst)
-  integer, optional, intent(in)    :: start
+  R_TYPE, target,    intent(inout) :: psi(:, :, st%st_start:)
 
   R_TYPE, allocatable :: ss(:, :), qq(:, :), psi_tmp(:, :, :)
   type(profile_t), save :: prof
-  integer :: idim, ist, jst, kst, start_
+  integer :: idim, ist, jst, kst
   FLOAT   :: nrm2
   type(batch_t) :: psib
   logical :: bof
 
   call profiling_in(prof, "GRAM_SCHMIDT_FULL")
   call push_sub('states_calc_inc.Xstates_gram_schmidt_full')
-
-  start_ = 1
-  if(present(start)) start_ = start
 
   SAFE_ALLOCATE(ss(1:nst, 1:nst))
   ss = M_ZERO
@@ -68,7 +64,6 @@ subroutine X(states_gram_schmidt_full)(st, nst, m, dim, psi, start)
   else
 
     ASSERT(nst == st%nst)
-    ASSERT(start_ == 1)
 
     call states_blockt_mul(m, st, st%st_start, st%st_end, st%st_start, st%st_end, psi, psi, ss, symm = .true.)
 
@@ -77,7 +72,7 @@ subroutine X(states_gram_schmidt_full)(st, nst, m, dim, psi, start)
     qq = M_ZERO
     do ist = 1, st%nst
 
-      if(ist < start_ .or. ist > nst) then
+      if(ist > nst) then
         qq(ist, ist) = M_ONE
         cycle
       end if

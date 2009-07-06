@@ -922,26 +922,18 @@ contains
 
     ! ---------------------------------------------------------
     subroutine fill() ! Put random function in orbitals that could not be read.
-      integer :: first
 
       do ik = st%d%kpt%start, st%d%kpt%end
-        first = st%st_end + 1 ! we have to orthogonalize all states after first
 
         do ist = st%st_start, st%st_end
           do idim = 1, st%d%dim
-            if(filled(idim, ist, ik)) then
-              cycle
-            else
-              if(first > ist) first = ist
-            end if
+            if(filled(idim, ist, ik)) cycle
 
             call states_generate_random(st, gr%mesh, ist, ist)
             st%occ(ist, ik) = M_ZERO
           end do
         end do
       end do
-
-      if(first.ne.st%st_end+1) call states_orthogonalize(st, gr%mesh, first)
 
     end subroutine fill
 
