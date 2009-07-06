@@ -64,6 +64,8 @@ KPointsUseSymmetries = false
 
 #PoissonSolver = fft
 well_EigenSolverMaxiter = 5000
+EigensolverFinalTolerance = 1e-9
+Eigensolver = cg_new
 
 Output = wfs + wfs_sqmod + potential
 OutputHow = axis_x + binary

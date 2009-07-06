@@ -70,6 +70,8 @@ KPointsUseSymmetries = false
 %
 
 ring_lead_EigenSolverMaxIter = 5000
+EigensolverFinalTolerance = 1e-9
+Eigensolver = cg_new
 
 Output = potential
 OutputHow = binary

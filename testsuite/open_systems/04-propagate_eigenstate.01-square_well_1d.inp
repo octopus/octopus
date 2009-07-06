@@ -19,7 +19,7 @@ DevelVersion = yes
 FromScratch = yes
 TheoryLevel = independent_particles
 DerivativesOrder = 4
-Eigensolver = lobpcg
+Eigensolver = cg_new
 BoxShape = parallelepiped
 Dimensions = 1
 Spacing = 0.1
@@ -75,4 +75,5 @@ well_OpenBoundariesQMRMaxIter = 1000
 %
 
 well_EigenSolverMaxiter = 5000
+EigensolverFinalTolerance = 1e-9
 

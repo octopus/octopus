@@ -1249,6 +1249,11 @@ contains
     else
       seed = 0
     end if
+    if(st%d%kpt%parallel) then
+      seed = st%d%kpt%mpi_grp%rank
+    else
+      seed = 0
+    end if
 
     select case(st%d%ispin)
     case(UNPOLARIZED, SPIN_POLARIZED)
