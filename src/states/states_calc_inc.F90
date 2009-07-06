@@ -29,46 +29,27 @@ subroutine X(states_gram_schmidt_full)(st, nst, m, dim, psi)
 
   R_TYPE, allocatable :: ss(:, :), qq(:, :), psi_tmp(:, :, :)
   type(profile_t), save :: prof
-  integer :: idim, ist, jst, kst
+  integer :: idim, ist, jst, kst, wsize
+  integer :: st_start, st_end
   FLOAT   :: nrm2
-  type(batch_t) :: psib
-  logical :: bof
 
   call profiling_in(prof, "GRAM_SCHMIDT_FULL")
   call push_sub('states_calc_inc.Xstates_gram_schmidt_full')
 
-  SAFE_ALLOCATE(ss(1:nst, 1:nst))
-  ss = M_ZERO
-
   if(.not. st%parallel_in_states) then
-
-    call batch_init(psib, st%d%dim, 1, nst, psi)
-    call X(mesh_batch_dotp_self)(m, psib, ss)
-    call batch_end(psib)
-
-    bof = .false.
-    ! calculate the Cholesky decomposition
-    call lalg_cholesky(nst, ss, bof = bof)
-
-    if(bof) then
-      message(1) = "Warning: Orthogonalization failed, probably your eigenvectors are not independent"
-      call write_warning(1)
-    end if
-
-    ! multiply by the inverse of ss
-    call blas_trsm('R', 'U', 'N', 'N', m%np, nst, R_TOTYPE(M_ONE), ss(1, 1), nst, &
-      psi(1, 1, 1), ubound(psi, dim = 1)*st%d%dim)
-
-    call profiling_count_operations(dble(m%np)*dble(nst)**2*(R_ADD + R_MUL))
-
+    wsize = st%d%window_size
+    do st_start = 1, nst, wsize
+      st_end = min(st_start + 2*wsize - 1, nst)
+      call X(states_gram_schmidt_block)(st, st_end - st_start + 1, m, dim, psi(:, :, st_start:))
+    end do
   else
-
-    ASSERT(nst == st%nst)
 
     call states_blockt_mul(m, st, st%st_start, st%st_end, st%st_start, st%st_end, psi, psi, ss, symm = .true.)
 
     SAFE_ALLOCATE(qq(1:st%nst, 1:st%nst))
-
+    SAFE_ALLOCATE(ss(1:nst, 1:nst))
+    ss = M_ZERO
+  
     qq = M_ZERO
     do ist = 1, st%nst
 
@@ -117,6 +98,50 @@ subroutine X(states_gram_schmidt_full)(st, nst, m, dim, psi)
   call profiling_out(prof)
 end subroutine X(states_gram_schmidt_full)
 
+! ---------------------------------------------------------
+
+subroutine X(states_gram_schmidt_block)(st, nst, m, dim, psi)
+  type(states_t),    intent(in)    :: st
+  integer,           intent(in)    :: nst
+  type(mesh_t),      intent(in)    :: m
+  integer,           intent(in)    :: dim
+  R_TYPE, target,    intent(inout) :: psi(:, :, :)
+
+  R_TYPE, allocatable :: ss(:, :)
+  type(batch_t) :: psib
+  logical :: bof
+  integer :: idim
+
+  call push_sub('states_calc_inc.Xstates_gram_schmidt_block')
+
+  SAFE_ALLOCATE(ss(1:nst, 1:nst))
+  ss = M_ZERO
+
+  call batch_init(psib, st%d%dim, 1, nst, psi)
+  call X(mesh_batch_dotp_self)(m, psib, ss)
+  call batch_end(psib)
+  
+  bof = .false.
+  ! calculate the Cholesky decomposition
+  call lalg_cholesky(nst, ss, bof = bof)
+  
+  if(bof) then
+    message(1) = "Warning: Orthogonalization failed, probably your eigenvectors are not independent"
+    call write_warning(1)
+  end if
+  
+  do idim = 1, st%d%dim
+    ! multiply by the inverse of ss
+    call blas_trsm('R', 'U', 'N', 'N', m%np, nst, R_TOTYPE(M_ONE), ss(1, 1), nst, &
+      psi(1, idim, 1), ubound(psi, dim = 1)*st%d%dim)
+  end do
+
+  call profiling_count_operations(dble(m%np)*dble(nst)**2*(R_ADD + R_MUL))
+
+  SAFE_DEALLOCATE_A(ss)
+
+  call pop_sub()
+end subroutine X(states_gram_schmidt_block)
 
 ! ---------------------------------------------------------
 ! Orthonormalizes phi to the nst orbitals psi.

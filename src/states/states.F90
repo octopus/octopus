@@ -913,6 +913,25 @@ contains
     
     st%d%block_size = min(st%d%block_size, st%nst)
 
+    !%Variable StatesWindowSize
+    !%Type integer
+    !%Default nst
+    !%Section Execution::Optimization
+    !%Description
+    !% (experimental) The orthogonalization of the wave-functions can
+    !% be done by windows, this value selects the size of the
+    !% windows. The default size is total number of states, that
+    !% disables window orthogonalization.
+    !%End
+
+    ! This has to be here as it requires mc%nthreads that is not available in states_init
+    call loct_parse_int(datasets_check('StatesWindowSize'), st%nst, st%d%window_size)
+    if(st%d%block_size < 1) then
+      message(1) = "Error: The variable 'StatesBlockSize' must be greater than 0."
+      call write_fatal(1)
+    end if
+    
+    st%d%window_size = min(st%d%window_size, st%nst)
 
     call pop_sub()
   end subroutine states_densities_init

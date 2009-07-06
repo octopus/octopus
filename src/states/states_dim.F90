@@ -86,6 +86,7 @@ module states_dim_m
     FLOAT, pointer :: kweights(:)   ! weights for the kpoint integrations
     type(distributed_t) :: kpt
     integer :: block_size
+    integer :: window_size
   end type states_dim_t
 
 contains
@@ -105,6 +106,7 @@ contains
     dout%spin_channels  = din%spin_channels
     dout%cdft           = din%cdft
     dout%block_size     = din%block_size
+    dout%window_size    = din%window_size
 
     call loct_pointer_copy(dout%kpoints, din%kpoints)
     call loct_pointer_copy(dout%kweights, din%kweights)
