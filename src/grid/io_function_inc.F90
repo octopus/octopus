@@ -508,7 +508,7 @@ contains
       call index_to_coords(mesh%idx, mesh%sb%dim, i, ixvect)
 
       if(ixvect(d2)==0.and.ixvect(d3)==0) then
-        xx = mesh_x_global(mesh, i)
+        xx = mesh_x_global(mesh, i)/units_out%length%factor
         write(iunit, mformat, iostat=ierr) xx(d1), R_REAL(f(i))/u, R_AIMAG(f(i))/u
       end if
     end do
@@ -566,7 +566,7 @@ contains
         i = index_from_coords(mesh%idx, mesh%sb%dim, ixvect)
 
         if(i<=mesh%np_global .and. i> 0) then
-          xx = mesh_x_global(mesh, i)
+          xx = mesh_x_global(mesh, i)/units_out%length%factor
           write(iunit, mformat, iostat=ierr)  &
             xx(d2), xx(d3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
         end if
