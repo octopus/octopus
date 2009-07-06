@@ -494,7 +494,8 @@ contains
 ! FIXME: x_global is probably not initialized correctly for hypercube case
 !   should be eliminated anyway - large array and should be a function
       if(ixvect(d2)==0.and.ixvect(d3)==0) then     
-        write(iunit, mformat, iostat=ierr) mesh%x_global(i, d1), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+        write(iunit, mformat, iostat=ierr) mesh%x_global(i, d1)/units_out%length%factor, &
+          R_REAL(f(i))/u, R_AIMAG(f(i))/u
       end if
     end do
 
@@ -549,7 +550,8 @@ contains
 !   should be eliminated anyway - large array and should be a function
         if(i<=mesh%np_global .and. i> 0) then
           write(iunit, mformat, iostat=ierr)  &
-            mesh%x_global(i, d2), mesh%x_global(i, d3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+            mesh%x_global(i, d2), mesh%x_global(i, d3)/units_out%length%factor, &
+            R_REAL(f(i))/u, R_AIMAG(f(i))/u
         end if
       end do
     end do
