@@ -296,7 +296,7 @@ contains
       write(iunit, '(a)') 'PRIMVEC'
 
       do idir = 1, sb%dim
-        write(iunit, '(3f12.6)') 2 * sb%lsize(idir) / units_out%length%factor * sb%rlattice(1:3, idir)
+        write(iunit, '(3f12.6)') units_from_atomic(units_out%length, M_TWO*sb%lsize(idir)*sb%rlattice(1:3, idir))
       enddo
 
       write(iunit, '(a)') 'PRIMCOORD'
@@ -308,9 +308,9 @@ contains
     ! BoxOffset should be considered here
     do iatom = 1, geo%natoms
       write(iunit, '(a10, 3f12.6, $)') trim(geo%atom(iatom)%label), &
-        ((geo%atom(iatom)%x(1:sb%dim) - offset(1:sb%dim)) / units_out%length%factor)
+        units_from_atomic(units_out%length, geo%atom(iatom)%x(1:sb%dim) - offset(1:sb%dim))
       if(write_forces_) then
-        write(iunit, '(5x, 3f12.6, $)') (geo%atom(iatom)%f(1:sb%dim) / units_out%force%factor)
+        write(iunit, '(5x, 3f12.6, $)') units_from_atomic(units_out%force, geo%atom(iatom)%f(1:sb%dim))
       endif
       write(iunit, '()')
     enddo
@@ -379,12 +379,11 @@ contains
     integer, intent(in) :: ndim
     
     integer :: idir
-    FLOAT, parameter :: ATOMIC_TO_DEBYE = CNST(2.5417462)
 
-    write(iunit, '(3a)') 'Dipole [', trim(units_out%length%abbrev), ']:                    [Debye]'
+    write(iunit, '(5a)') 'Dipole [', trim(units_abbrev(units_out%length)), ']:                    [', trim(units_abbrev(unit_debye)), ']'
     do idir = 1, ndim
       write(iunit, '(6x,a,i1,a,es14.5,3x,2es14.5)') '<x', idir, '> = ', &
-        dipole(idir) / units_out%length%factor, dipole(idir) * ATOMIC_TO_DEBYE
+        units_from_atomic(units_out%length, dipole(idir)), units_from_atomic(unit_debye, dipole(idir))
     end do
 
   end subroutine io_output_dipole

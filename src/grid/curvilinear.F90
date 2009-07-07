@@ -63,7 +63,7 @@ module curvilinear_m
     type(curv_modine_t) :: modine
   end type curvilinear_t
 
-  character(len=23), parameter :: dump_tag = '*** curvilinear_dump ***'
+  character(len=23), parameter :: dump_tag = '*** curvilinear_dump **'
 
 contains
 
@@ -227,11 +227,11 @@ contains
       write(message(2), '(a)')  '  Gygi Parameters:'
       write(message(3), '(4x,a,f6.3)')  'A = ', cv%gygi%a
       write(message(4), '(4x,3a,f6.3)') 'alpha [', &
-                                      trim(units_out%length%abbrev), '] = ', &
-                                      cv%gygi%alpha/units_out%length%factor
+                                      trim(units_abbrev(units_out%length)), '] = ', &
+                                      units_from_atomic(units_out%length, cv%gygi%alpha)
       write(message(5), '(4x,3a,f6.3)') 'beta  [', &
-                                      trim(units_out%length%abbrev), '] = ', &
-                                      cv%gygi%beta/units_out%length%factor
+                                      trim(units_abbrev(units_out%length)), '] = ', &
+                                      units_from_atomic(units_out%length, cv%gygi%beta)
       call write_info(5, unit)
 
     case(CURV_METHOD_BRIGGS)

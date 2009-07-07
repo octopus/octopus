@@ -508,7 +508,7 @@ contains
       call index_to_coords(mesh%idx, mesh%sb%dim, i, ixvect)
 
       if(ixvect(d2)==0.and.ixvect(d3)==0) then
-        xx = mesh_x_global(mesh, i)/units_out%length%factor
+        xx = units_from_atomic(units_out%length, mesh_x_global(mesh, i))
         write(iunit, mformat, iostat=ierr) xx(d1), R_REAL(f(i))/u, R_AIMAG(f(i))/u
       end if
     end do
@@ -566,7 +566,7 @@ contains
         i = index_from_coords(mesh%idx, mesh%sb%dim, ixvect)
 
         if(i<=mesh%np_global .and. i> 0) then
-          xx = mesh_x_global(mesh, i)/units_out%length%factor
+          xx = units_from_atomic(units_out%length, mesh_x_global(mesh, i))
           write(iunit, mformat, iostat=ierr)  &
             xx(d2), xx(d3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
         end if
@@ -701,23 +701,23 @@ contains
     call X(mesh_to_cube) (mesh, f, cube)
 
     ! the offset is different in periodic directions
-    offset = -matmul(sb%rlattice, sb%lsize) / units_out%length%factor
+    offset = units_from_atomic(units_out%length, -matmul(sb%rlattice, sb%lsize))
 
     do i = sb%periodic_dim+1, 3
-      offset(i)=-(cube%n(i) - 1)/2 * mesh%h(i) / units_out%length%factor
+      offset(i) = units_from_atomic(units_out%length, -(cube%n(i) - 1)/2*mesh%h(i))
     end do
 
     ! just for nice formatting of the output
-    write(nitems,*)cube%n(1)*cube%n(2)*cube%n(3)
+    write(nitems,*) cube%n(1)*cube%n(2)*cube%n(3)
     nitems=trim(adjustl(nitems))
 
     iunit = io_open(trim(dir)//'/'//trim(fname)//".dx", action='write', is_tmp=is_tmp)
 
     write(iunit, '(a,3i7)') 'object 1 class gridpositions counts', cube%n(:)
     write(iunit, '(a,3f12.6)') ' origin', offset(:)
-    write(iunit, '(a,3f12.6)') ' delta ', mesh%h(1) / units_out%length%factor * sb%rlattice(:, 1)
-    write(iunit, '(a,3f12.6)') ' delta ', mesh%h(2) / units_out%length%factor * sb%rlattice(:, 2)
-    write(iunit, '(a,3f12.6)') ' delta ', mesh%h(3) / units_out%length%factor * sb%rlattice(:, 3)
+    write(iunit, '(a,3f12.6)') ' delta ', units_from_atomic(units_out%length, mesh%h(1)*sb%rlattice(:, 1))
+    write(iunit, '(a,3f12.6)') ' delta ', units_from_atomic(units_out%length, mesh%h(2)*sb%rlattice(:, 2))
+    write(iunit, '(a,3f12.6)') ' delta ', units_from_atomic(units_out%length, mesh%h(3)*sb%rlattice(:, 3))
     write(iunit, '(a,3i7)') 'object 2 class gridconnections counts', cube%n(:)
 #if defined(R_TREAL)
     write(iunit, '(a,a,a)') 'object 3 class array type float rank 0 items ', nitems, ' data follows'
@@ -783,7 +783,7 @@ contains
     write(iunit, '(a)') '0.0 0.0 0.0'
 
     do idir = 1, sb%dim
-      write(iunit, '(3f12.6)') 2 * sb%lsize(idir) / units_out%length%factor * sb%rlattice(1:3, idir)
+      write(iunit, '(3f12.6)') units_from_atomic(units_out%length, M_TWO*sb%lsize(idir)*sb%rlattice(1:3, idir))
     enddo
 
     do iz = 1, cube%n(3) + 1
@@ -936,8 +936,8 @@ contains
 
     ! data
     pos(:,:) = M_ZERO
-    pos(1,1:sb%dim) = real(-(cube%n(1:sb%dim) - 1)/2 * mesh%h(1:sb%dim) / units_out%length%factor, 4)
-    pos(2,1:sb%dim) = real(mesh%h(1:sb%dim) / units_out%length%factor, 4)
+    pos(1,1:sb%dim) = real(units_from_atomic(units_out%length, -(cube%n(1:sb%dim) - 1)/2*mesh%h(1:sb%dim)), 4)
+    pos(2,1:sb%dim) = real(units_from_atomic(units_out%length, mesh%h(1:sb%dim)), 4)
 
     if(status == NF90_NOERR) then
       status = nf90_put_var (ncid, pos_id, pos(:,:))

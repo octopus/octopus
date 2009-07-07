@@ -90,7 +90,7 @@ contains
     !% The default is two atomic units.
     !% It must be larger than zero.
     !%End
-    call loct_parse_float(datasets_check('CurvGygiAlpha'), M_TWO/units_inp%length%factor, cv%alpha)
+    call loct_parse_float(datasets_check('CurvGygiAlpha'), units_from_atomic(units_inp%length, M_TWO), cv%alpha)
     !%Variable CurvGygiBeta
     !%Type float
     !%Section Mesh::Curvilinear::Gygi
@@ -100,18 +100,18 @@ contains
     !% Phys. Rev. B 52, R2229 (1995)]. The default is four atomic units.
     !% It must be larger than zero.
     !%End
-    call loct_parse_float(datasets_check('CurvGygiBeta'),  M_FOUR/units_inp%length%factor, cv%beta)
+    call loct_parse_float(datasets_check('CurvGygiBeta'),  units_from_atomic(units_inp%length, M_FOUR), cv%beta)
 
     if(cv%a<=M_ZERO)     call input_error('CurvGygiA')
     if(cv%alpha<=M_ZERO) call input_error('CurvGygiAlpha')
     if(cv%beta<=M_ZERO)  call input_error('CurvGygiBeta')
 
-    cv%alpha = cv%alpha*units_inp%length%factor
-    cv%beta  = cv%beta *units_inp%length%factor
+    cv%alpha = units_to_atomic(units_inp%length, cv%alpha)
+    cv%beta  = units_to_atomic(units_inp%length, cv%beta)
 
     cv%npos = geo%natoms
     SAFE_ALLOCATE(cv%pos(1:cv%npos, 1:sb%dim))
-    forall(ipos = 1:cv%npos, idir = 1:sb%dim) cv%pos(ipos, idir) = geo%atom(ipos)%x(idir) 
+    forall(ipos = 1:cv%npos, idir = 1:sb%dim) cv%pos(ipos, idir) = geo%atom(ipos)%x(idir)
     
   end subroutine curv_gygi_init
 
