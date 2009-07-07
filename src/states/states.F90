@@ -1436,10 +1436,10 @@ contains
     ns = 1
     if(st%d%nspin == 2) ns = 2
 
-    message(1) = 'Eigenvalues [' // trim(units_out%energy%abbrev) // ']'
+    message(1) = 'Eigenvalues [' // trim(units_abbrev(units_out%energy)) // ']'
     call write_info(1, iunit)
     if (st%d%nik > ns) then
-      message(1) = 'Kpoints [' // trim(units_out%length%abbrev) // '^-1]'
+      message(1) = 'Kpoints [' // trim(units_abbrev(unit_one/units_out%length)) //']'
       call write_info(1, iunit)
     end if
 
@@ -1450,9 +1450,9 @@ contains
     do ik = 1, st%d%nik, ns
       if(st%d%nik > ns) then
         write(message(1), '(a,i4,3(a,f12.6),a)') '#k =',ik,', k = (',  &
-          st%d%kpoints(1, ik)*units_out%length%factor, ',',            &
-          st%d%kpoints(2, ik)*units_out%length%factor, ',',            &
-          st%d%kpoints(3, ik)*units_out%length%factor, ')'
+          units_from_atomic(unit_one/units_out%length, st%d%kpoints(1, ik)), ',', &
+          units_from_atomic(unit_one/units_out%length, st%d%kpoints(2, ik)), ',',            &
+          units_from_atomic(unit_one/units_out%length, st%d%kpoints(3, ik)), ')'
         call write_info(1, iunit)
       end if
 

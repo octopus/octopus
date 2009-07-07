@@ -46,16 +46,21 @@ module units_m
   implicit none
 
   private
-  public ::           &
-    unit_t,           &
-    unit_system_t,    &
-    units_init,       &
-    units_get,        &
-    units_inp,        &
-    units_out,        &
-    units_from_file,  &
-    units_to_atomic,  &
-    units_from_atomic
+  public ::            &
+    unit_t,            &
+    unit_system_t,     &
+    units_init,        &
+    units_get,         &
+    units_inp,         &
+    units_out,         &
+    unit_one,          &
+    units_from_file,   &
+    units_to_atomic,   &
+    units_from_atomic, &
+    units_abbrev,      &
+    operator(*),       &
+    operator(/),       &
+    operator(**)
 
   type unit_t
     FLOAT             :: factor
@@ -73,7 +78,20 @@ module units_m
     type(unit_t) :: acceleration
   end type unit_system_t
 
+  type(unit_t)        :: unit_one
   type(unit_system_t) :: units_inp, units_out
+
+  interface operator (*)
+    module procedure units_multiply
+  end interface
+
+  interface operator (/)
+    module procedure units_divide
+  end interface
+
+  interface operator (**)
+    module procedure units_pow
+  end interface
   
   FLOAT, parameter, public :: hartree_to_cm_inv = CNST(219474.63)
 
@@ -152,6 +170,10 @@ contains
       if(.not.varinfo_valid_option('UnitsOutput', c)) call input_error('UnitsOutput')
       cout = c
     end if
+
+    unit_one%factor = M_ONE
+    unit_one%abbrev = '1'
+    unit_one%name   = 'one'
 
     call units_get(units_inp, cinp)
     call units_get(units_out, cout)
@@ -291,7 +313,7 @@ contains
 
   !-----------------------------------------------
 
-  FLOAT elemental function units_to_atomic(this, val) result(res)
+  FLOAT elemental pure function units_to_atomic(this, val) result(res)
     type(unit_t), intent(in) :: this
     FLOAT,        intent(in) :: val
 
@@ -301,15 +323,78 @@ contains
  
   !-----------------------------------------------
 
-  FLOAT elemental function units_from_atomic(this, val) result(res)
+  FLOAT elemental pure function units_from_atomic(this, val) result(res)
     type(unit_t), intent(in) :: this
     FLOAT,        intent(in) :: val
 
     res = val/this%factor
 
   end function units_from_atomic
- 
   !-----------------------------------------------
+
+  character(len=12) pure function units_abbrev(this) result(abbrev)
+    type(unit_t), intent(in) :: this
+    
+    abbrev = this%abbrev
+  end function units_abbrev
+
+  !-----------------------------------------------
+
+  type(unit_t) pure function units_multiply(aa, bb) result(cc)
+    type(unit_t), intent(in) :: aa
+    type(unit_t), intent(in) :: bb
+
+    cc%factor = aa%factor*bb%factor
+    cc%abbrev = trim(aa%abbrev)//'*'//trim(bb%abbrev)
+
+  end function units_multiply
+
+  !-----------------------------------------------
+
+  type(unit_t) pure function units_divide(aa, bb) result(cc)
+    type(unit_t), intent(in) :: aa
+    type(unit_t), intent(in) :: bb
+
+    cc%factor = aa%factor/bb%factor
+    cc%abbrev = trim(aa%abbrev)//'/'//trim(bb%abbrev)
+
+  end function units_divide
+  !-----------------------------------------------
+
+  type(unit_t) pure function units_pow(aa, nn) result(cc)
+    type(unit_t), intent(in) :: aa
+    integer,      intent(in) :: nn
+
+    cc%factor = aa%factor**nn
+
+    ! We have to do the conversion by hand. This is ugly, but we
+    ! cannot use write here since this function might be called inside
+    ! another write (stupid Fortran).
+
+    select case(nn)
+    case(-3)
+      cc%abbrev = trim(aa%abbrev)//'^-3'
+    case(-2)
+      cc%abbrev = trim(aa%abbrev)//'^-2'
+    case(-1)
+      cc%abbrev = trim(aa%abbrev)//'^-1'
+    case(0)
+      cc%abbrev = '1'
+    case(1)
+      cc%abbrev = trim(aa%abbrev)
+    case(2)
+      cc%abbrev = trim(aa%abbrev)//'^2'
+    case(3)
+      cc%abbrev = trim(aa%abbrev)//'^3'
+    case(4)
+      cc%abbrev = trim(aa%abbrev)//'^4'
+    case(5)
+      cc%abbrev = trim(aa%abbrev)//'^5'
+    case default
+      cc%abbrev = trim(aa%abbrev)//'^n'
+    end select
+
+  end function units_pow
 
 
 end module units_m

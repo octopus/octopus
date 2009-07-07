@@ -531,11 +531,11 @@ contains
             call loct_parse_block_float(blk, i, 2, omega_fin)
             domega = (omega_fin - omega_ini)/(number - M_ONE)
             do k = 0, number-1
-              em_vars%omega(j + k) = (omega_ini + domega*k)*units_inp%energy%factor
+              em_vars%omega(j + k) = units_to_atomic(units_inp%energy, omega_ini + domega*k)
             end do
             j = j + number
           else
-            em_vars%omega(j) = omega_ini*units_inp%energy%factor
+            em_vars%omega(j) = units_to_atomic(units_inp%energy, omega_ini)
             j = j + 1
           end if
         end do
@@ -560,7 +560,7 @@ contains
       !%End
 
       call loct_parse_float(datasets_check('EMEta'), M_ZERO, em_vars%eta)
-      em_vars%eta = em_vars%eta*units_inp%energy%factor
+      em_vars%eta = units_to_atomic(units_inp%energy, em_vars%eta)
 
       ! reset the values of these variables
       em_vars%calc_hyperpol = .false.
@@ -773,8 +773,10 @@ contains
       if(states_are_complex(st)) then 
         cross(1:MAX_DIM, 1:MAX_DIM) = aimag(em_vars%alpha(1:MAX_DIM, 1:MAX_DIM, ifactor)) * &
           em_vars%freq_factor(ifactor) * em_vars%omega(iomega) * &
-          (M_FOUR * M_PI / P_c) / units_out%length%factor**(gr%mesh%sb%dim-1)
-          
+          (M_FOUR * M_PI / P_c)
+
+        cross = units_from_atomic(units_out%length**(gr%mesh%sb%dim-1), cross)
+
         iunit = io_open(trim(dirname)//'/cross_section', action='write')
         if (.not. em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
   
@@ -785,7 +787,8 @@ contains
             
         call cross_section_header(iunit)
         write(iunit,'(3e20.8)', advance = 'no') &
-          em_vars%freq_factor(ifactor)*em_vars%omega(iomega) / units_out%energy%factor, average, sqrt(max(anisotropy, M_ZERO))
+          units_from_atomic(units_out%energy, em_vars%freq_factor(ifactor)*em_vars%omega(iomega)), &
+          average, sqrt(max(anisotropy, M_ZERO))
         write(iunit,'(9e20.8)', advance = 'no') cross(1:3, 1:3)
         write(iunit,'(a)', advance = 'yes')
   
