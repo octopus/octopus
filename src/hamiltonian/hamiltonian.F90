@@ -487,7 +487,7 @@ contains
       type(mesh_t), pointer :: m
 
       np = gr%intf(LEFT)%np
-      np_uc = gr%intf(LEFT)%np_uc
+      np_uc = gr%mesh%lead_unit_cell(LEFT)%np
 
       ! Read potential of the leads. We try vks-x (for DFT without
       ! pseudo-potentials) and v0 (for non-interacting electrons) in

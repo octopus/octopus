@@ -53,7 +53,6 @@ module ob_interface_m
   type interface_t
     integer          :: extent
     integer          :: np      ! number of interface points
-    integer          :: np_uc   ! number of points in the unit cell
     integer, pointer :: index(:)       ! (np)
     integer          :: index_range(2)
     logical          :: offdiag_invertible
@@ -102,7 +101,6 @@ contains
     ll(tdir) = intf%extent
 
     intf%np = product(ll(:))
-    intf%np_uc = intf%np/intf%extent*(intf%extent+1)
     SAFE_ALLOCATE(intf%index(1:intf%np))
 
     ! the point where we start
