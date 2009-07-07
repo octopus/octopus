@@ -17,14 +17,12 @@
 !!
 !! $Id$
 
-!***********************************************************************
-!                                Comments
-!***********************************************************************
-! Atomic weights should be read in [atomic mass units] (u) (not to mistake
-! with [atomic units]), that is, it should be given the relative
-! atomic weight). 1u is roughly the mass of the proton, and exactly
-! one twelveth of the ^{12}C isotope. The relation of the atomic mass
-! unit and the atomic unit of mass, au_[mass], is:
+!
+! Atomic weights should be read in "atomic mass units" (u) (not to
+! mistake with mass in "atomic units"), that is, it should be given
+! the relative atomic weight). 1u is roughly the mass of the proton,
+! and exactly one twelveth of the ^{12}C isotope. The relation of the
+! atomic mass unit and the atomic unit of mass, au_[mass], is:
 !
 ! 1 au_[mass] = 5.485799110e-4 u
 !
@@ -55,10 +53,12 @@ module units_m
     units_get,        &
     units_inp,        &
     units_out,        &
-    units_from_file
+    units_from_file,  &
+    units_to_atomic,  &
+    units_from_atomic
 
   type unit_t
-    FLOAT :: factor
+    FLOAT             :: factor
     character(len=12) :: abbrev ! common abbreviation of the unit name
     character(len=50) :: name   ! common name
   end type unit_t
@@ -288,6 +288,28 @@ contains
 
     call pop_sub()
   end subroutine units_from_file
+
+  !-----------------------------------------------
+
+  FLOAT elemental function units_to_atomic(this, val) result(res)
+    type(unit_t), intent(in) :: this
+    FLOAT,        intent(in) :: val
+
+    res = val*this%factor
+
+  end function units_to_atomic
+ 
+  !-----------------------------------------------
+
+  FLOAT elemental function units_from_atomic(this, val) result(res)
+    type(unit_t), intent(in) :: this
+    FLOAT,        intent(in) :: val
+
+    res = val/this%factor
+
+  end function units_from_atomic
+ 
+  !-----------------------------------------------
 
 
 end module units_m

@@ -609,12 +609,12 @@ contains
       case(SPHERE, CYLINDER)
         call loct_parse_float(datasets_check('radius'), def_rsize/units_inp%length%factor, sb%rsize)
         if(sb%rsize < CNST(0.0)) call input_error('radius')
-        sb%rsize = sb%rsize * units_inp%length%factor
+        sb%rsize = units_to_atomic(units_inp%length, sb%rsize)
         if(def_rsize>M_ZERO) call check_def(def_rsize, sb%rsize, 'radius')
       case(MINIMUM)
         default=sb%rsize
         call loct_parse_float(datasets_check('radius'), default, sb%rsize)
-        sb%rsize = sb%rsize * units_inp%length%factor
+        sb%rsize = units_to_atomic(units_inp%length, sb%rsize)
         if(sb%rsize < M_ZERO .and. def_rsize < M_ZERO) call input_error('Radius')
       end select
 
@@ -626,7 +626,7 @@ contains
         !% If BoxShape is "cylinder", it is half the total length of the cylinder.
         !%End
         call loct_parse_float(datasets_check('xlength'), M_ONE/units_inp%length%factor, sb%xsize)
-        sb%xsize = sb%xsize * units_inp%length%factor
+        sb%xsize = units_to_atomic(units_inp%length, sb%xsize)
         sb%lsize(1) = sb%xsize
         if(def_rsize>M_ZERO.and.sb%periodic_dim==0) call check_def(def_rsize, sb%xsize, 'xlength')
       end if

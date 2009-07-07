@@ -122,22 +122,22 @@ contains
     end if
 
     if (iunit > 0) then
-      write(message(1), '(6x,a, f18.8)')'Total       = ', hm%etot     / units_out%energy%factor
-      write(message(2), '(6x,a, f18.8)')'Free        = ', (hm%etot+hm%entropy) / units_out%energy%factor
+      write(message(1), '(6x,a, f18.8)')'Total       = ', units_from_atomic(units_out%energy, hm%etot)
+      write(message(2), '(6x,a, f18.8)')'Free        = ', units_from_atomic(units_out%energy, hm%etot+hm%entropy)
       write(message(3), '(6x,a)') '-----------'
       call write_info(3, iunit)
 
-      write(message(1), '(6x,a, f18.8)')'Ion-ion     = ', hm%ep%eii   / units_out%energy%factor
-      write(message(2), '(6x,a, f18.8)')'Eigenvalues = ', hm%eeigen   / units_out%energy%factor
-      write(message(3), '(6x,a, f18.8)')'Hartree     = ', hm%ehartree / units_out%energy%factor
-      write(message(4), '(6x,a, f18.8)')'Int[n*v_xc] = ', hm%epot     / units_out%energy%factor
-      write(message(5), '(6x,a, f18.8)')'Exchange    = ', hm%ex       / units_out%energy%factor
-      write(message(6), '(6x,a, f18.8)')'Correlation = ', hm%ec       / units_out%energy%factor
-      write(message(7), '(6x,a, f18.8)')'-TS         = ', hm%entropy  / units_out%energy%factor
+      write(message(1), '(6x,a, f18.8)')'Ion-ion     = ', units_from_atomic(units_out%energy, hm%ep%eii)
+      write(message(2), '(6x,a, f18.8)')'Eigenvalues = ', units_from_atomic(units_out%energy, hm%eeigen)
+      write(message(3), '(6x,a, f18.8)')'Hartree     = ', units_from_atomic(units_out%energy, hm%ehartree)
+      write(message(4), '(6x,a, f18.8)')'Int[n*v_xc] = ', units_from_atomic(units_out%energy, hm%epot)
+      write(message(5), '(6x,a, f18.8)')'Exchange    = ', units_from_atomic(units_out%energy, hm%ex)
+      write(message(6), '(6x,a, f18.8)')'Correlation = ', units_from_atomic(units_out%energy, hm%ec)
+      write(message(7), '(6x,a, f18.8)')'-TS         = ', units_from_atomic(units_out%energy, hm%entropy)
       call write_info(7, iunit)
       if(full_) then  ! maybe it is full_ that is the problem
-        write(message(1), '(6x,a, f18.8)')'Kinetic     = ', hm%t0 / units_out%energy%factor  ! t0 is uninitialized according to valgrind
-        write(message(2), '(6x,a, f18.8)')'External    = ', hm%eext / units_out%energy%factor ! eext too
+        write(message(1), '(6x,a, f18.8)')'Kinetic     = ', units_from_atomic(units_out%energy, hm%t0) ! t0 is uninitialized according to valgrind
+        write(message(2), '(6x,a, f18.8)')'External    = ', units_from_atomic(units_out%energy, hm%eext) ! eext too
         call write_info(2, iunit)
       end if
     end if
