@@ -120,11 +120,9 @@ subroutine X(subspace_diag)(gr, st, hm, ik, eigenval, psi, diff)
         call batch_end(psib)
         call batch_end(hpsib)
         
-        !$omp parallel do
         do ist2 = ist, ist + size - 1
           diff(ist2) = X(states_residue)(gr%mesh, st%d%dim, f(:, :, ist2 - ist + 1), eigenval(ist2), psi(:, :, ist2))
         end do
-        !$omp end parallel do
       end do
 
     end if
