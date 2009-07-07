@@ -333,7 +333,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   type(hamiltonian_t), intent(in)    :: hm
   integer,             intent(in)    :: start
 
-  integer :: iatom, jatom, ik, ist, idim, ip
+  integer :: iatom, jatom, ik, ist, idim, ip, ispin
   integer :: nbasis, ibasis, jbasis, iorb, jorb, maxorb, norbs
   R_TYPE, allocatable :: hamiltonian(:, :), overlap(:, :)
   R_TYPE, allocatable :: psii(:, :, :), hpsi(:, :, :)
@@ -379,12 +379,6 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
   call profiling_in(prof_orbitals, "LCAO_ORBITALS")
 
-  message(1) = "Info: Calculating atomic orbitals."
-  call write_info(1)
-
-  if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, nbasis)
-
-  !$omp parallel do private(iatom, norbs, maxradius)
   do iatom = 1, geo%natoms
     norbs = species_niwfs(geo%atom(iatom)%spec)
     maxradius = M_ZERO
@@ -399,176 +393,159 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
     call batch_init(orbitals(iatom), 1, norbs)
     call X(batch_new)(orbitals(iatom), 1, norbs, sphere(iatom)%ns)
   end do
-  !$omp end parallel do
 
-  ibasis = 0
-  do iatom = 1, geo%natoms
-    norbs = species_niwfs(geo%atom(iatom)%spec)
+  do ispin = 1, st%d%spin_channels
 
-    do iorb = 1, norbs
-      ibasis = ibasis + 1
-      atom_orb_basis(iatom, iorb) = ibasis
-      basis_atom(ibasis) = iatom
-      basis_orb(ibasis) = iorb
-    end do
-
-    !$omp parallel do
-    do iorb = 1, norbs
-      ! allocate and calculate the orbitals
-      call species_get_orbital_submesh(geo%atom(iatom)%spec, sphere(iatom), iorb, st%d%dim, 1, &
-        geo%atom(iatom)%x, orbitals(iatom)%states(iorb)%dpsi(:, 1))
-    end do
-    !$omp end parallel do
-
-    if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ibasis, nbasis)
-  end do
-
-  if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
-
-  call profiling_out(prof_orbitals)
-
-  call profiling_in(prof_matrix, "LCAO_MATRIX")
-
-  message(1) = "Info: Calculating matrix elements."
-  call write_info(1)
-
-  do ik = 1, st%d%nik
-
-    hamiltonian = R_TOTYPE(M_ZERO)
-    overlap = R_TOTYPE(M_ZERO)
-
-    if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, geo%natoms)
-
-    do iatom = 1, geo%natoms
-      norbs = species_niwfs(geo%atom(iatom)%spec)
-
-      psii = M_ZERO
-
-      call batch_init( psib, st%d%dim, atom_orb_basis(iatom, 1), atom_orb_basis(iatom, norbs), psii)
-      call batch_init(hpsib, st%d%dim, atom_orb_basis(iatom, 1), atom_orb_basis(iatom, norbs), hpsi)
-
-      call X(submesh_batch_add)(sphere(iatom), orbitals(iatom), psib)
-      call X(hamiltonian_apply_batch)(hm, gr, psib, hpsib, ik)
-
-
-      do jatom = 1, geo%natoms
-        if(jatom < iatom) cycle
-        
-
-        dist2 = sum((geo%atom(iatom)%x(1:MAX_DIM) - geo%atom(jatom)%x(1:MAX_DIM))**2)
-
-        if(dist2 > (radius(iatom) + radius(jatom) + lapdist)**2) cycle
-
-        ibasis = atom_orb_basis(iatom, 1)
-        jbasis = atom_orb_basis(jatom, 1)
-
-        call X(submesh_batch_dotp_matrix)(sphere(jatom),  hpsib, orbitals(jatom), hamiltonian(ibasis:, jbasis:), reduce= .false.)
-
-        if(dist2 > (radius(iatom) + radius(jatom))**2) cycle
-
-        call X(submesh_batch_dotp_matrix)(sphere(jatom), psib, orbitals(jatom), overlap(ibasis:, jbasis:), reduce= .false.)
-
-        ! the other half of the matrix
-        do iorb = 1, norbs
-          ibasis = atom_orb_basis(iatom, iorb)
-          do jorb = 1, species_niwfs(geo%atom(jatom)%spec)
-            jbasis = atom_orb_basis(jatom, jorb)
-            hamiltonian(jbasis, ibasis) = R_CONJ(hamiltonian(ibasis, jbasis))
-            overlap(jbasis, ibasis) = R_CONJ(overlap(ibasis, jbasis))
-          end do
-        end do
-
-      end do
-
-      call batch_end(psib)
-      call batch_end(hpsib)
-      
-      if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(iatom, geo%natoms)
-    end do
-
-    if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
-
-#ifdef HAVE_MPI
-    !parallelization is disabled for the moment
-#if 0
-    if(geo%atoms%parallel) then
-      call profiling_in(commprof, "LCAO_BCAST")
-
-      !clearly this can be improved by using MPI_Allgatherv
-      do ibasis = 1, nbasis
-        iatom = basis_atom(ibasis)
-
-        do jbasis = 1, nbasis
-          jatom = basis_atom(jbasis)
-
-          if(jatom < iatom) cycle
-
-          call MPI_Bcast(hamiltonian(jbasis, ibasis), 1, R_MPITYPE, geo%atoms%node(iatom), &
-            geo%atoms%mpi_grp%comm, mpi_err)
-          hamiltonian(ibasis, jbasis) = R_CONJ(hamiltonian(jbasis, ibasis))
-
-          call MPI_Bcast(overlap(jbasis, ibasis), 1, R_MPITYPE, geo%atoms%node(iatom), &
-            geo%atoms%mpi_grp%comm, mpi_err)
-          overlap(ibasis, jbasis) = R_CONJ(overlap(jbasis, ibasis))
-
-        end do
-      end do
-
-      call profiling_out(commprof)
+    if(st%d%spin_channels > 1) then
+      write(message(1), '(a,i1)') 'Info: LCAO for spin channel ', ispin
+      call write_info(1)
     end if
-#endif
 
-    if(gr%mesh%parallel_in_domains) then
-      call profiling_in(comm2prof, "LCAO_REDUCE")
-#ifndef HAVE_MPI2
-      SAFE_ALLOCATE(tmp(1:nbasis, 1:nbasis))
-      tmp = hamiltonian
-#endif
-      call MPI_Allreduce(MPI_IN_PLACE_OR(tmp), hamiltonian, nbasis**2, R_MPITYPE, MPI_SUM, gr%mesh%mpi_grp%comm, mpi_err)
-#ifndef HAVE_MPI2
-      tmp = overlap
-#endif
-      call MPI_Allreduce(MPI_IN_PLACE_OR(tmp), overlap, nbasis**2, R_MPITYPE, MPI_SUM, gr%mesh%mpi_grp%comm, mpi_err)
-      SAFE_DEALLOCATE_A(tmp)
-      call profiling_out(comm2prof)
-    end if
-#endif
-
-    call lalg_geneigensolve(nbasis, hamiltonian, overlap, ev)
-
-    call profiling_out(prof_matrix)
-
-    call profiling_in(prof_wavefunction, "LCAO_WAVEFUNCTIONS")
-
-    message(1) = "Info: Generating wave-functions."
+    message(1) = "Info: Calculating atomic orbitals"
     call write_info(1)
 
-
     if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, nbasis)
-
-
-    do ist = st%st_start, st%st_end
-      st%eigenval(ist, ik) = ev(ist)
-      do idim = 1, st%d%dim
-        forall(ip = 1:gr%mesh%np) st%X(psi)(ip, idim, ist, ik) = R_TOTYPE(M_ZERO)
-      end do
-    end do
-
-    call batch_init(psib, st%d%dim, st%st_start, st%st_end, st%X(psi)(:, :, :, ik))
 
     ibasis = 0
     do iatom = 1, geo%natoms
       norbs = species_niwfs(geo%atom(iatom)%spec)
-      call X(submesh_batch_add_matrix)(sphere(iatom), hamiltonian(ibasis + 1:, st%st_start:), orbitals(iatom), psib)
-      ibasis = ibasis + norbs
+
+      do iorb = 1, norbs
+        ibasis = ibasis + 1
+        atom_orb_basis(iatom, iorb) = ibasis
+        basis_atom(ibasis) = iatom
+        basis_orb(ibasis) = iorb
+      end do
+
+      do iorb = 1, norbs
+        ! allocate and calculate the orbitals
+        call species_get_orbital_submesh(geo%atom(iatom)%spec, sphere(iatom), iorb, st%d%dim, ispin, &
+          geo%atom(iatom)%x, orbitals(iatom)%states(iorb)%dpsi(:, 1))
+      end do
+
       if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ibasis, nbasis)
     end do
 
-    call batch_end(psib)
-
     if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
-    call profiling_out(prof_wavefunction)
 
+    call profiling_out(prof_orbitals)
+
+    do ik = st%d%kpt%start, st%d%kpt%end
+      if(ispin /= states_dim_get_spin_index(st%d, ik)) cycle
+
+      message(1) = 'Info: Calculating matrix elements'
+      if(st%d%nik > st%d%spin_channels) write(message(1), '(a,a,i5)') message(1), ' for k-point ', ik
+      call write_info(1)
+
+      call profiling_in(prof_matrix, "LCAO_MATRIX")
+
+      hamiltonian = R_TOTYPE(M_ZERO)
+      overlap = R_TOTYPE(M_ZERO)
+
+      if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, geo%natoms)
+
+      do iatom = 1, geo%natoms
+        norbs = species_niwfs(geo%atom(iatom)%spec)
+
+        psii = M_ZERO
+
+        call batch_init( psib, st%d%dim, atom_orb_basis(iatom, 1), atom_orb_basis(iatom, norbs), psii)
+        call batch_init(hpsib, st%d%dim, atom_orb_basis(iatom, 1), atom_orb_basis(iatom, norbs), hpsi)
+
+        call X(submesh_batch_add)(sphere(iatom), orbitals(iatom), psib)
+        call X(hamiltonian_apply_batch)(hm, gr, psib, hpsib, ik)
+
+
+        do jatom = 1, geo%natoms
+          if(jatom < iatom) cycle
+
+
+          dist2 = sum((geo%atom(iatom)%x(1:MAX_DIM) - geo%atom(jatom)%x(1:MAX_DIM))**2)
+
+          if(dist2 > (radius(iatom) + radius(jatom) + lapdist)**2) cycle
+
+          ibasis = atom_orb_basis(iatom, 1)
+          jbasis = atom_orb_basis(jatom, 1)
+
+          call X(submesh_batch_dotp_matrix)(sphere(jatom),  hpsib, orbitals(jatom), hamiltonian(ibasis:, jbasis:), reduce= .false.)
+
+          if(dist2 > (radius(iatom) + radius(jatom))**2) cycle
+
+          call X(submesh_batch_dotp_matrix)(sphere(jatom), psib, orbitals(jatom), overlap(ibasis:, jbasis:), reduce= .false.)
+
+          ! the other half of the matrix
+          do iorb = 1, norbs
+            ibasis = atom_orb_basis(iatom, iorb)
+            do jorb = 1, species_niwfs(geo%atom(jatom)%spec)
+              jbasis = atom_orb_basis(jatom, jorb)
+              hamiltonian(jbasis, ibasis) = R_CONJ(hamiltonian(ibasis, jbasis))
+              overlap(jbasis, ibasis) = R_CONJ(overlap(ibasis, jbasis))
+            end do
+          end do
+
+        end do
+
+        call batch_end(psib)
+        call batch_end(hpsib)
+
+        if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(iatom, geo%natoms)
+      end do
+
+      if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
+
+#ifdef HAVE_MPI
+
+      if(gr%mesh%parallel_in_domains) then
+        call profiling_in(comm2prof, "LCAO_REDUCE")
+#ifndef HAVE_MPI2
+        SAFE_ALLOCATE(tmp(1:nbasis, 1:nbasis))
+        tmp = hamiltonian
+#endif
+        call MPI_Allreduce(MPI_IN_PLACE_OR(tmp), hamiltonian, nbasis**2, R_MPITYPE, MPI_SUM, gr%mesh%mpi_grp%comm, mpi_err)
+#ifndef HAVE_MPI2
+        tmp = overlap
+#endif
+        call MPI_Allreduce(MPI_IN_PLACE_OR(tmp), overlap, nbasis**2, R_MPITYPE, MPI_SUM, gr%mesh%mpi_grp%comm, mpi_err)
+        SAFE_DEALLOCATE_A(tmp)
+        call profiling_out(comm2prof)
+      end if
+#endif
+
+      call lalg_geneigensolve(nbasis, hamiltonian, overlap, ev)
+
+      call profiling_out(prof_matrix)
+
+      call profiling_in(prof_wavefunction, "LCAO_WAVEFUNCTIONS")
+
+      message(1) = "Info: Generating wave-functions"
+      if(st%d%nik > st%d%spin_channels) write(message(1), '(a,a,i5)') message(1), ' for k-point ', ik
+      call write_info(1)
+
+      if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, nbasis)
+
+
+      do ist = st%st_start, st%st_end
+        st%eigenval(ist, ik) = ev(ist)
+        do idim = 1, st%d%dim
+          forall(ip = 1:gr%mesh%np) st%X(psi)(ip, idim, ist, ik) = R_TOTYPE(M_ZERO)
+        end do
+      end do
+
+      call batch_init(psib, st%d%dim, st%st_start, st%st_end, st%X(psi)(:, :, :, ik))
+
+      ibasis = 0
+      do iatom = 1, geo%natoms
+        norbs = species_niwfs(geo%atom(iatom)%spec)
+        call X(submesh_batch_add_matrix)(sphere(iatom), hamiltonian(ibasis + 1:, st%st_start:), orbitals(iatom), psib)
+        ibasis = ibasis + norbs
+        if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ibasis, nbasis)
+      end do
+
+      call batch_end(psib)
+
+      if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
+      call profiling_out(prof_wavefunction)
+    end do
   end do
 
   do iatom = 1, geo%natoms
