@@ -51,9 +51,6 @@ module units_m
     unit_system_t,     &
     units_init,        &
     units_get,         &
-    units_inp,         &
-    units_out,         &
-    unit_one,          &
     units_from_file,   &
     units_to_atomic,   &
     units_from_atomic, &
@@ -78,8 +75,8 @@ module units_m
     type(unit_t) :: acceleration
   end type unit_system_t
 
-  type(unit_t)        :: unit_one
-  type(unit_system_t) :: units_inp, units_out
+  type(unit_t),        public :: unit_one, unit_debye
+  type(unit_system_t), public :: units_inp, units_out
 
   interface operator (*)
     module procedure units_multiply
@@ -174,6 +171,10 @@ contains
     unit_one%factor = M_ONE
     unit_one%abbrev = '1'
     unit_one%name   = 'one'
+
+    unit_debye%factor = M_ONE/CNST(2.5417462)
+    unit_debye%abbrev = 'Debye'
+    unit_debye%name   = 'Debye'
 
     call units_get(units_inp, cinp)
     call units_get(units_out, cout)
