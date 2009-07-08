@@ -248,7 +248,7 @@ contains
 
       iunit = io_open('vibrations/infrared', action='write')
 
-      write(iunit, '(a)') '#   freq [cm^-1]     <x>           <y>           <z>           average'
+      write(iunit, '(a)') '#   freq ['//trim(units_abbrev(unit_invcm))//']     <x>           <y>           <z>           average'
 
       do iatom = 1, natoms
         do idir = 1, ndim
@@ -260,7 +260,7 @@ contains
           end do
           lir(ndim+1) = sqrt(sum(lir(1:ndim)**2))
 
-          write(iunit, '(5f14.5)') sqrt(abs(vib%freq(imat)))*hartree_to_cm_inv, lir(1:ndim+1)
+          write(iunit, '(5f14.5)') units_from_atomic(unit_invcm, sqrt(abs(vib%freq(imat)))), lir(1:ndim+1)
         end do
       end do
 

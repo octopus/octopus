@@ -62,8 +62,8 @@ program phonon_spectrum
   call loct_parse_int(datasets_check('TDMaximumIter'), 1500, max_iter)
   call loct_parse_float(datasets_check('SpecStartTime'),  M_ZERO, start_time)
   call loct_parse_float(datasets_check('SpecEndTime'),  -M_ONE, end_time)
-  call loct_parse_float(datasets_check('SpecMaxEnergy'), CNST(10000.0)/hartree_to_cm_inv,&
-    max_energy)
+  call loct_parse_float(datasets_check('SpecMaxEnergy'), &
+    units_from_atomic(units_inp%energy, units_to_atomic(unit_invcm, CNST(10000.0))), max_energy)
 
   dw = max_energy*units_inp%energy%factor/(max_freq - M_ONE)
 
@@ -128,7 +128,7 @@ program phonon_spectrum
       do ifreq = 1, max_freq
         ww = dw * ifreq
         write(unit = iunit, iostat = ierr, fmt = '(4e20.10)') &
-             ww*hartree_to_cm_inv, abs(ftvaf(ifreq)), real(ftvaf(ifreq)), aimag(ftvaf(ifreq))
+          units_from_atomic(unit_invcm, ww), abs(ftvaf(ifreq)), real(ftvaf(ifreq)), aimag(ftvaf(ifreq))
       end do
       
       call io_close(iunit)
@@ -157,7 +157,7 @@ program phonon_spectrum
         ww = dw * ifreq
         irtotal = sqrt(sum( abs(ftdipole(ifreq, 1:3))**2 ))
         write(unit = iunit, iostat = ierr, fmt = '(5e20.10)') &
-             ww*hartree_to_cm_inv, ww*irtotal, ww*abs(ftdipole(ifreq, 1:3))
+              units_from_atomic(unit_invcm, ww), ww*irtotal, ww*abs(ftdipole(ifreq, 1:3))
       end do
       call io_close(iunit)
 

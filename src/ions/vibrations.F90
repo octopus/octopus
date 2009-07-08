@@ -178,7 +178,7 @@ contains
           do jdir = 1, this%ndim
             jmat = vibrations_get_index(this, jatom, jdir)
             write(iunit, '(i6, i3, i6, i3, f16.4)') iatom, idir, jatom, jdir, &
-                 this%dyn_matrix(imat, jmat) * hartree_to_cm_inv ! output cm^-1
+                 units_from_atomic(unit_invcm, this%dyn_matrix(imat, jmat))
           end do
         end do
 
@@ -190,7 +190,7 @@ contains
     ! output thisonon frequencies and eigenvectors
     iunit = io_open('vibrations/normal_frequencies'//trim(suffix), action='write')
     do i = 1, this%num_modes
-      write(iunit, '(i6,f14.5)') i, sqrt(abs(this%freq(i)))*hartree_to_cm_inv ! output cm^-1
+      write(iunit, '(i6,f14.5)') i, units_from_atomic(unit_invcm, sqrt(abs(this%freq(i))))
     end do
     call io_close(iunit)
 

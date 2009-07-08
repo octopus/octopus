@@ -75,7 +75,7 @@ module units_m
     type(unit_t) :: acceleration
   end type unit_system_t
 
-  type(unit_t),        public :: unit_one, unit_debye
+  type(unit_t),        public :: unit_one, unit_debye, unit_invcm
   type(unit_system_t), public :: units_inp, units_out
 
   interface operator (*)
@@ -90,8 +90,6 @@ module units_m
     module procedure units_pow
   end interface
   
-  FLOAT, parameter, public :: hartree_to_cm_inv = CNST(219474.63)
-
   integer, parameter, public :: UNITS_ATOMIC = 1, UNITS_EVA = 2
 
 contains
@@ -175,6 +173,10 @@ contains
     unit_debye%factor = M_ONE/CNST(2.5417462)
     unit_debye%abbrev = 'Debye'
     unit_debye%name   = 'Debye'
+
+    unit_invcm%factor = M_ONE/CNST(219474.63)
+    unit_invcm%abbrev = 'cm^-1'
+    unit_invcm%name   = 'h times c over centimeters'
 
     call units_get(units_inp, cinp)
     call units_get(units_out, cout)
