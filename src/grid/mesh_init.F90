@@ -163,9 +163,7 @@ contains
       nr = m%idx%nr
       SAFE_ALLOCATE(m%idx%Lxyz(1:m%np_part, 1:3))
       SAFE_ALLOCATE(m%idx%Lxyz_inv(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)))
-      iunit = io_open(trim(sb%lead_restart_dir(il))//'/gs/Lxyz', action='read', is_tmp=.true.)
-      call mesh_lxyz_init_from_file(m, iunit)
-      call io_close(iunit)
+      call mesh_lxyz_init_from_file(m, trim(sb%lead_restart_dir(il))//'/gs/lxyz')
     end do
 
     call pop_sub()

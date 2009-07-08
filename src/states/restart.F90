@@ -289,9 +289,7 @@ contains
       call mesh_dump(gr%mesh, iunit_mesh)
       call io_close(iunit_mesh)
 
-      iunit_mesh = io_open(trim(dir)//'/Lxyz', action='write', is_tmp=.true.)
-      call mesh_Lxyz_dump(gr%mesh, iunit_mesh)
-      call io_close(iunit_mesh)      
+      call mesh_lxyz_dump(gr%mesh, trim(dir)//'/lxyz')
 
       iunit_states = io_open(trim(dir)//'/states', action='write', is_tmp=.true.)
       call states_dump(st, iunit_states)

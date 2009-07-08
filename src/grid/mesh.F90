@@ -28,6 +28,7 @@ module mesh_m
   use io_m
   use math_m
   use index_m
+  use io_binary_m
   use messages_m
   use multicomm_m
   use mpi_m
@@ -474,40 +475,47 @@ contains
 
 
   ! --------------------------------------------------------------
-  subroutine mesh_Lxyz_dump(mesh, iunit)
-    type(mesh_t), intent(in) :: mesh
-    integer,      intent(in) :: iunit
+  subroutine mesh_lxyz_dump(mesh, filename)
+    type(mesh_t),     intent(in) :: mesh
+    character(len=*), intent(in) :: filename
 
-    integer :: ip, ix(1:MAX_DIM)
+    integer :: ierr
 
-    call push_sub('mesh.Lxyz_dump')
+    call push_sub('mesh.lxyz_dump')
 
-    do ip = 1, mesh%np_part
-      call index_to_coords(mesh%idx, mesh%sb%dim, ip, ix)
-      write(iunit, '(7i8)') ix(1:mesh%sb%dim)
-    end do
+    if(mesh%sb%box_shape /= HYPERCUBE) then
+      call io_binary_write(trim(filename)//'.obf', mesh%np_part*mesh%sb%dim, mesh%idx%lxyz, ierr)
+    end if
 
     call pop_sub()
-  end subroutine mesh_Lxyz_dump
+  end subroutine mesh_lxyz_dump
 
 
   ! --------------------------------------------------------------
   ! Fill the lxyz and lxyz_inv arrays from a file
-  subroutine mesh_lxyz_init_from_file(mesh, iunit)
-    type(mesh_t), intent(inout) :: mesh
-    integer,      intent(in)    :: iunit
+  subroutine mesh_lxyz_init_from_file(mesh, filename)
+    type(mesh_t),     intent(inout) :: mesh
+    character(len=*), intent(in) :: filename
 
-    integer :: ip, idir, ix(MAX_DIM)
+    integer :: ip, idir, ix(MAX_DIM), ierr
 
     call push_sub('mesh.mesh_lxyz_init_from_file')
 
     ASSERT(mesh%sb%dim > 0 .and. mesh%sb%dim <= MAX_DIM)
 
+    ! FIXME 4D
+    ASSERT(mesh%sb%box_shape /= HYPERCUBE)
+
+    call io_binary_read(trim(filename)//'.obf', mesh%np_part*mesh%sb%dim, mesh%idx%lxyz, ierr)
+
+    if(ierr > 0) then
+      message(1) = "Error: failed to read file "//trim(filename)//'.obf'
+      call write_fatal(1)
+    end if
+
     do ip = 1, mesh%np_part
-      read(iunit, '(7i8)') mesh%idx%Lxyz(ip, 1:mesh%sb%dim)
       forall (idir = 1:mesh%sb%dim) ix(idir) = mesh%idx%Lxyz(ip, idir)
       forall (idir = mesh%sb%dim + 1:MAX_DIM) ix(idir) = 0
-      ! FIXME 4D
       mesh%idx%Lxyz_inv(ix(1), ix(2), ix(3)) = ip
     end do
 

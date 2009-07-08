@@ -32,10 +32,12 @@ module io_binary_m
 
   interface io_binary_write
     module procedure swrite_binary, dwrite_binary, cwrite_binary, zwrite_binary, iwrite_binary, lwrite_binary
+    module procedure iwrite_binary2, lwrite_binary2
   end interface
 
   interface io_binary_read
     module procedure sread_binary, dread_binary, cread_binary, zread_binary, iread_binary, lread_binary
+    module procedure iread_binary2, lread_binary2
   end interface
 
 contains
@@ -112,6 +114,30 @@ contains
     call write_binary(np, ff(1), type, ierr, trim(fname))
   end subroutine lwrite_binary
 
+  subroutine iwrite_binary2(fname, np, ff, ierr)
+    character(len=*),    intent(in)  :: fname
+    integer,             intent(in)  :: np
+    integer(4),          intent(in)  :: ff(:, :)
+    integer,             intent(out) :: ierr
+
+    integer, parameter :: type = TYPE_INT_32
+
+    ierr = 0
+    call write_binary(np, ff(1, 1), type, ierr, trim(fname))
+  end subroutine iwrite_binary2
+
+  subroutine lwrite_binary2(fname, np, ff, ierr)
+    character(len=*),    intent(in)  :: fname
+    integer,             intent(in)  :: np
+    integer(8),          intent(in)  :: ff(:, :)
+    integer,             intent(out) :: ierr
+
+    integer, parameter :: type = TYPE_INT_64
+
+    ierr = 0
+    call write_binary(np, ff(1, 1), type, ierr, trim(fname))
+  end subroutine lwrite_binary2
+
   !------------------------------------------------------
 
   subroutine sread_binary(fname, np, ff, ierr)
@@ -185,6 +211,30 @@ contains
     ierr = 0
     call read_binary(np, ff(1), type, ierr, trim(fname))
   end subroutine lread_binary
+
+  subroutine iread_binary2(fname, np, ff, ierr)
+    character(len=*),    intent(in)  :: fname
+    integer,             intent(in)  :: np
+    integer(4),          intent(in)  :: ff(:, :)
+    integer,             intent(out) :: ierr
+
+    integer, parameter :: type = TYPE_INT_32
+
+    ierr = 0
+    call read_binary(np, ff(1, 1), type, ierr, trim(fname))
+  end subroutine iread_binary2
+
+  subroutine lread_binary2(fname, np, ff, ierr)
+    character(len=*),    intent(in)  :: fname
+    integer,             intent(in)  :: np
+    integer(8),          intent(in)  :: ff(:, :)
+    integer,             intent(out) :: ierr
+
+    integer, parameter :: type = TYPE_INT_64
+
+    ierr = 0
+    call read_binary(np, ff(1, 1), type, ierr, trim(fname))
+  end subroutine lread_binary2
 
 end module io_binary_m
 
