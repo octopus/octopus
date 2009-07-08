@@ -36,29 +36,6 @@
 !             -4 : function in file is complex, dp.
 ! ---------------------------------------------------------
 
-#ifdef SINGLE_PRECISION 
-
-#ifdef R_TREAL
-#define out_type 0
-#endif
-
-#ifdef R_TCOMPLEX
-#define out_type 2
-#endif
-
-#else
-
-#ifdef R_TREAL
-#define out_type 1
-#endif
-
-#ifdef R_TCOMPLEX
-#define out_type 3
-#endif
-
-#endif
-
-
 subroutine X(input_function)(filename, mesh, f, ierr, is_tmp)
   character(len=*),  intent(in)  :: filename
   type(mesh_t),      intent(in)  :: mesh
@@ -158,8 +135,8 @@ subroutine X(input_function_global)(filename, mesh, f, ierr, is_tmp)
 #endif
 #endif
    case("obf")
-     call read_binary(mesh%np_global, f, out_type, ierr, filename)
-     call profiling_count_transfers(mesh%np_global, f(1))     
+     call io_binary_read(filename, mesh%np_global, f, ierr)
+     call profiling_count_transfers(mesh%np_global, f(1))
   case default
      ierr = 1
   end select
@@ -484,7 +461,7 @@ contains
     call push_sub('io_function_inc.Xoutput_function_global.out_binary')
 
     workdir = io_workpath(dir, is_tmp=is_tmp)
-    call write_binary(mesh%np_global, f(1), out_type, ierr, trim(workdir)//'/'//trim(fname)//'.obf')
+    call io_binary_write(trim(workdir)//'/'//trim(fname)//'.obf', mesh%np_global, f, ierr)
 
     call profiling_count_transfers(mesh%np_global, f(1))
     call pop_sub()

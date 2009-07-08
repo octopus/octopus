@@ -68,13 +68,9 @@ typedef unsigned long uint64_t;
 #endif
 #endif
 
+#include "io_binary.h"
 
 typedef char byte;
-
-#define type_float 0
-#define type_double 1
-#define type_float_complex 2
-#define type_double_complex 3
 
 static const int size_of[4]={4, 8, 8, 16};
 static const int base_size_of[4]={4, 8, 4, 8};
@@ -308,10 +304,10 @@ void FC_FUNC_(read_binary,READ_BINARY)
     free(read_f);
 
     /* set the error code according to the conversion done (see src/out_inc.F90 ) */
-    if ( h->type == type_float )          *ierr = -1;
-    if ( h->type == type_float_complex )  *ierr = -2;
-    if ( h->type == type_double )         *ierr = -3;
-    if ( h->type == type_double_complex ) *ierr = -4;
+    if ( h->type == TYPE_FLOAT )          *ierr = -1;
+    if ( h->type == TYPE_FLOAT_COMPLEX )  *ierr = -2;
+    if ( h->type == TYPE_DOUBLE )         *ierr = -3;
+    if ( h->type == TYPE_DOUBLE_COMPLEX ) *ierr = -4;
 
   }
   
@@ -325,70 +321,74 @@ void FC_FUNC_(read_binary,READ_BINARY)
 static void convert ( multi * in, multi * out, int t_in, int t_out){
 
   /* real types */
-  if(t_in == type_float && t_out == type_double ) {
+  if(t_in == TYPE_FLOAT && t_out == TYPE_DOUBLE ) {
     out->d[0] = in->f[0]; return;
   }
 
-  if(t_in == type_double && t_out == type_float ){
+  if(t_in == TYPE_DOUBLE && t_out == TYPE_FLOAT ){
     out->f[0] = in->d[0]; return;
   }
 
   /* complex types */
-  if(t_in == type_float_complex && t_out == type_double_complex ){
+  if(t_in == TYPE_FLOAT_COMPLEX && t_out == TYPE_DOUBLE_COMPLEX ){
     out->d[0] = in->f[0]; 
     out->d[1] = in->f[1]; 
     return;
   }
-  if(t_in == type_double_complex && t_out == type_float_complex ){
+  if(t_in == TYPE_DOUBLE_COMPLEX && t_out == TYPE_FLOAT_COMPLEX ){
     out->f[0] = in->d[0]; 
     out->f[1] = in->d[1]; 
     return;
   }
 
   /* real to complex */
-  if(t_in == type_float && t_out == type_float_complex ){
+  if(t_in == TYPE_FLOAT && t_out == TYPE_FLOAT_COMPLEX ){
     out->f[0] = in->f[0]; 
     out->f[1] = (float) 0.0;
     return;
   }
 
-  if(t_in == type_double && t_out == type_float_complex ){
+  if(t_in == TYPE_DOUBLE && t_out == TYPE_FLOAT_COMPLEX ){
     out->f[0] = in->d[0]; 
     out->f[1] = (float) 0.0;
     return;
   }
 
-  if(t_in == type_float && t_out == type_double_complex ){
+  if(t_in == TYPE_FLOAT && t_out == TYPE_DOUBLE_COMPLEX ){
     out->d[0] = in->f[0]; 
     out->d[1] = (double) 0.0;
     return;
   }
 
-  if(t_in == type_double && t_out == type_double_complex ){
+  if(t_in == TYPE_DOUBLE && t_out == TYPE_DOUBLE_COMPLEX ){
     out->d[0] = in->d[0]; 
     out->d[1] = (double) 0.0;
     return;
   }
 
   /* complex to real */
-  if(t_in == type_float_complex && t_out == type_float ){
+  if(t_in == TYPE_FLOAT_COMPLEX && t_out == TYPE_FLOAT ){
     out->f[0] = c2r(in->f[0], in->f[1]);
     return;
   }
 
-  if(t_in == type_double_complex && t_out == type_float ){
+  if(t_in == TYPE_DOUBLE_COMPLEX && t_out == TYPE_FLOAT ){
     out->f[0] = c2r(in->d[0], in->d[1]);
     return;
   }
 
-  if(t_in == type_float_complex && t_out == type_double ){
+  if(t_in == TYPE_FLOAT_COMPLEX && t_out == TYPE_DOUBLE ){
     out->d[0] = c2r(in->f[0], in->f[1]);
     return;
   }
 
-  if(t_in == type_double_complex && t_out == type_double ){
+  if(t_in == TYPE_DOUBLE_COMPLEX && t_out == TYPE_DOUBLE ){
     out->d[0] = c2r(in->d[0], in->d[1]);
     return;
   }
 
 }
+
+
+
+

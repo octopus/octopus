@@ -33,17 +33,19 @@ libbasic_a_SOURCES = \
 	varia.c        \
 	oct_f.c        \
 	oct_gdlib_f.c  \
-	write_iter.F90 \
+	write_iter.F90   \
 	write_iter_low.c \
-	varinfo_low.c  \
+	varinfo_low.c    \
 	signals.c        \
-	subarray.F90
+	subarray.F90     \
+	io_binary_f.F90
 
 noinst_HEADERS =          \
 	mpi_debug_inc.F90 \
 	mpi_lib_inc.F90   \
-	loct_inc.F90 \
-	varia.h
+	loct_inc.F90      \
+	varia.h           \
+	io_binary.h
 
 include $(srcdir)/../common-rules.make
 
@@ -97,7 +99,8 @@ iihash.o : iihash.F90 ialist.o global.o
 calc_mode.o : calc_mode.F90 multicomm.o
 distributed.o: distributed.F90 multicomm.o profiling.o
 varia.o : varia.c varia.h
-io_binary.o : io_binary.c
+io_binary.o : io_binary.c io_binary.h
 getopt_f.o : getopt_f.c
 write_iter.o : write_iter.F90 c_pointer.o
 subarray.o : subarray.F90 subarray_inc.F90 profiling.o
+io_binary_f.o : io_binary_f.F90 io_binary.h
