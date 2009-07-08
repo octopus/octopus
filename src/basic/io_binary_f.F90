@@ -31,11 +31,11 @@ module io_binary_m
     io_binary_read
 
   interface io_binary_write
-    module procedure swrite_binary, dwrite_binary, cwrite_binary, zwrite_binary
+    module procedure swrite_binary, dwrite_binary, cwrite_binary, zwrite_binary, iwrite_binary, lwrite_binary
   end interface
 
   interface io_binary_read
-    module procedure sread_binary, dread_binary, cread_binary, zread_binary
+    module procedure sread_binary, dread_binary, cread_binary, zread_binary, iread_binary, lread_binary
   end interface
 
 contains
@@ -88,6 +88,30 @@ contains
     call write_binary(np, ff(1), type, ierr, trim(fname))
   end subroutine zwrite_binary
 
+  subroutine iwrite_binary(fname, np, ff, ierr)
+    character(len=*),    intent(in)  :: fname
+    integer,             intent(in)  :: np
+    integer(4),          intent(in)  :: ff(:)
+    integer,             intent(out) :: ierr
+
+    integer, parameter :: type = TYPE_INT_32
+
+    ierr = 0
+    call write_binary(np, ff(1), type, ierr, trim(fname))
+  end subroutine iwrite_binary
+
+  subroutine lwrite_binary(fname, np, ff, ierr)
+    character(len=*),    intent(in)  :: fname
+    integer,             intent(in)  :: np
+    integer(8),          intent(in)  :: ff(:)
+    integer,             intent(out) :: ierr
+
+    integer, parameter :: type = TYPE_INT_64
+
+    ierr = 0
+    call write_binary(np, ff(1), type, ierr, trim(fname))
+  end subroutine lwrite_binary
+
   !------------------------------------------------------
 
   subroutine sread_binary(fname, np, ff, ierr)
@@ -137,6 +161,30 @@ contains
     ierr = 0
     call read_binary(np, ff(1), type, ierr, trim(fname))
   end subroutine zread_binary
+
+  subroutine iread_binary(fname, np, ff, ierr)
+    character(len=*),    intent(in)  :: fname
+    integer,             intent(in)  :: np
+    integer(4),          intent(in)  :: ff(:)
+    integer,             intent(out) :: ierr
+
+    integer, parameter :: type = TYPE_INT_32
+
+    ierr = 0
+    call read_binary(np, ff(1), type, ierr, trim(fname))
+  end subroutine iread_binary
+
+  subroutine lread_binary(fname, np, ff, ierr)
+    character(len=*),    intent(in)  :: fname
+    integer,             intent(in)  :: np
+    integer(8),          intent(in)  :: ff(:)
+    integer,             intent(out) :: ierr
+
+    integer, parameter :: type = TYPE_INT_64
+
+    ierr = 0
+    call read_binary(np, ff(1), type, ierr, trim(fname))
+  end subroutine lread_binary
 
 end module io_binary_m
 

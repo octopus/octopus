@@ -72,8 +72,9 @@ typedef unsigned long uint64_t;
 
 typedef char byte;
 
-static const int size_of[4]={4, 8, 8, 16};
-static const int base_size_of[4]={4, 8, 4, 8};
+static const int size_of[6]      = {4, 8, 8, 16, 4, 8};
+static const int base_size_of[6] = {4, 8, 4, 8, 4, 8};
+static const int is_integer[6]   = {0, 0, 0, 0, 1, 1};
 
 static inline void inf_error(const char * msg, int * ierr){
 #ifdef HAVE_PERROR
@@ -297,18 +298,23 @@ void FC_FUNC_(read_binary,READ_BINARY)
 
   /* convert values if it is necessary */
   if( h->type != *output_type ){
-    for(i=0; i < *np ; i++) 
-      convert( (multi *) (read_f + i*size_of[h->type]), 
-	       (multi *) (f + i*size_of[*output_type]), 
-	       h->type, *output_type);
-    free(read_f);
+    
+    if(is_integer[h->type] || is_integer[*output_type]){
+      *ierr = 5;
+    } else {
 
-    /* set the error code according to the conversion done (see src/out_inc.F90 ) */
-    if ( h->type == TYPE_FLOAT )          *ierr = -1;
-    if ( h->type == TYPE_FLOAT_COMPLEX )  *ierr = -2;
-    if ( h->type == TYPE_DOUBLE )         *ierr = -3;
-    if ( h->type == TYPE_DOUBLE_COMPLEX ) *ierr = -4;
+      for(i=0; i < *np ; i++) 
+	convert( (multi *) (read_f + i*size_of[h->type]), 
+		 (multi *) (f + i*size_of[*output_type]), 
+		 h->type, *output_type);
+      free(read_f);
 
+      /* set the error code according to the conversion done (see src/out_inc.F90 ) */
+      if ( h->type == TYPE_FLOAT )          *ierr = -1;
+      if ( h->type == TYPE_FLOAT_COMPLEX )  *ierr = -2;
+      if ( h->type == TYPE_DOUBLE )         *ierr = -3;
+      if ( h->type == TYPE_DOUBLE_COMPLEX ) *ierr = -4;
+    }
   }
   
   free(h);
