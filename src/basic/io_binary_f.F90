@@ -28,7 +28,8 @@ module io_binary_m
 
   public ::             &
     io_binary_write,    &
-    io_binary_read
+    io_binary_read,     &
+    io_binary_get_info
 
   interface io_binary_write
     module procedure swrite_binary, dwrite_binary, cwrite_binary, zwrite_binary, iwrite_binary, lwrite_binary
@@ -235,6 +236,18 @@ contains
     ierr = 0
     call read_binary(np, ff(1, 1), type, ierr, trim(fname))
   end subroutine lread_binary2
+
+  subroutine io_binary_get_info(fname, np, ierr)
+    character(len=*),    intent(in)    :: fname
+    integer,             intent(inout) :: np
+    integer,             intent(out)   :: ierr
+
+    integer :: type
+    
+    type = 0
+    ierr = 0
+    call get_info_binary(np, type, ierr, trim(fname))
+  end subroutine io_binary_get_info
 
 end module io_binary_m
 

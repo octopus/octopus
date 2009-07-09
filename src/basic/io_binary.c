@@ -396,5 +396,44 @@ static void convert ( multi * in, multi * out, int t_in, int t_out){
 }
 
 
+void FC_FUNC_(get_info_binary,GET_INFO_BINARY)
+     (int * np, int * type, int * ierr, STR_F_TYPE fname STR_ARG1)
+{
+  header_t * h;
+  char * filename;
+  int fd, i;
+  ssize_t moved;
+  int correct_endianness;
+  byte * read_f;
 
+  TO_C_STR1(fname, filename);
+  fd = open(filename, O_RDONLY);
+  if(fd < 0){
+    *ierr = 2;
+    return;
+  }
 
+  free(filename);
+
+  h = (header_t *) malloc(sizeof(header_t));
+  assert(h != NULL);
+
+  /* read header */
+  moved = read(fd, h, sizeof(header_t));
+
+  close(fd);
+
+  if ( moved != sizeof(header_t) ) { 
+    /* we couldn't read the complete header */
+    *ierr = 3;
+    return;
+  }
+
+  *ierr = check_header(h, &correct_endianness);
+  if( *ierr != 0 ) return;
+
+  *np  = h->np;
+  type = h->type;
+
+  free(h);
+}
