@@ -61,7 +61,7 @@ contains
     CMPLX, allocatable :: tmp1(:, :), tmp2(:, :), tmp3(:, :)
     CMPLX              :: cmplx_energy
     integer            :: i, j
-    FLOAT              :: det, old_norm, norm, threshold, res
+    FLOAT              :: det, old_norm, norm, threshold, res, eta
 
     call push_sub('ob_lead.lead_green')
 
@@ -74,7 +74,12 @@ contains
     SAFE_ALLOCATE(tmp2(1:np, 1:np))
     SAFE_ALLOCATE(tmp3(1:np, 1:np))
 
-    threshold = CNST(1e-12) ! FIXME: read from input.
+    tmp1 = M_ZERO
+    tmp2 = M_ZERO
+    tmp3 = M_ZERO
+
+    eta = CNST(1e-7) ! FIXME: read from input.
+    threshold = CNST(1e-14) ! FIXME: read from input.
 
     ! Fill with start values.
     e(1:np, 1:np) = diag(1:np, 1:np)
@@ -82,7 +87,7 @@ contains
     forall (j = 1:np) b(j, :) = offdiag(:, j)
     es(1:np, 1:np) = diag(1:np, 1:np)
     old_norm = M_ZERO
-    cmplx_energy = energy + threshold*M_zI
+    cmplx_energy = energy + eta*M_zI
 
     do i = 1, 1000 ! FIXME: read from input. 2^1000 efective layers
       inv(1:np, 1:np) = - e(1:np, 1:np)
@@ -121,12 +126,28 @@ contains
 
     ! calculate DOS=-Tr(imag(green)) and check if negative
     det = aimag(green(1, 1))
-    do i = 2, np
-      det = det + aimag(green(i, i))
+    do j = 2, np
+      det = det + aimag(green(j, j))
     end do
     if(det.gt.M_ZERO) then
       green = conjg(green)
-      det   = -det
+    end if
+
+    if(in_debug_mode) then ! write some info
+      ! 1. calculate the residual InfNorm(Inverse(energy-h-offdiag*green*offdiag^T)-green)
+      inv(1:np, 1:np) = -diag(1:np, 1:np)
+      forall (j = 1:np) inv(j, j) = inv(j, j) + energy
+      a(1:np, 1:np) = offdiag(1:np, 1:np)
+      forall (j = 1:np) b(j, :) = offdiag(:, j)
+      call lalg_gemm(np, np, np, M_z1, a, green, M_z0, tmp1)
+      call lalg_gemm(np, np, np, M_z1, tmp1, b, M_z0, tmp2)
+      inv(1:np, 1:np) = inv(1:np, 1:np) - tmp2(1:np, 1:np)
+      det = lalg_inverter(np, inv, invert = .true.)
+      inv(1:np, 1:np) = inv(1:np, 1:np)-green(1:np, 1:np)
+      norm = infinity_norm(inv)
+      write(*,*) 'Iterations:    ', i-1
+      write(*,*) 'InfNorm(green):', infinity_norm(green)
+      write(*,*) 'Green-Residual:', norm
     end if
 
     SAFE_DEALLOCATE_A(e)
@@ -139,7 +160,6 @@ contains
     SAFE_DEALLOCATE_A(tmp3)
     call pop_sub()
   end subroutine lead_green
-
 
 
 end module ob_green_m

@@ -58,6 +58,8 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, t, kinetic_only)
   nst = psib%nst
   
   SAFE_ALLOCATE(lapl(1:gr%mesh%np, 1:hm%d%dim, 1:nst))
+  lapl(:, :, :) = R_TOTYPE(M_ZERO)
+
   call batch_init(laplb, hm%d%dim, psib%states(1)%ist, psib%states(nst)%ist, lapl)
 
   apply_kpoint = simul_box_is_periodic(gr%sb) .and. .not. kpoint_is_gamma(hm%d, ik)

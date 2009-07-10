@@ -54,9 +54,10 @@ subroutine X(calculate_eigenvalues)(hm, gr, st, time)
     do ik = st%d%kpt%start, st%d%kpt%end
 
       SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim, 1:st%d%block_size))
-
+      hpsi(1:gr%mesh%np, 1:st%d%dim, 1:st%d%block_size) = R_TOTYPE(M_ZERO)
       if(st%np_size) then
         SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim, 1:st%d%block_size))
+        psi(1:gr%mesh%np, 1:st%d%dim, 1:st%d%block_size) = R_TOTYPE(M_ZERO)
       end if
 
       do minst = st%st_start, st%st_end, st%d%block_size

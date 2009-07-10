@@ -279,7 +279,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff, 
 
   integer :: nst, dim, ist, maxter, i, conv, ip, idim
   logical :: verbose_
-  R_TYPE, allocatable :: psi(:,:), phi(:, :), hpsi(:, :), hcgp(:, :), cg(:, :), sd(:, :), cgp(:, :)
+  R_TYPE, allocatable :: psi(:,:), phi(:, :), hcgp(:, :), cg(:, :), sd(:, :), cgp(:, :)
   FLOAT :: ctheta, stheta, ctheta2, stheta2, mu, lambda, dump, &
        gamma, sol(2), alpha, beta, theta, theta2, res ! Could be complex?
   R_TYPE :: dot
@@ -306,15 +306,15 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff, 
 
   SAFE_ALLOCATE( phi(1:gr%mesh%np     , 1:dim))
   SAFE_ALLOCATE( psi(1:gr%mesh%np_part, 1:dim))
-  SAFE_ALLOCATE(hpsi(1:gr%mesh%np     , 1:dim))
   SAFE_ALLOCATE(  cg(1:gr%mesh%np     , 1:dim))
   SAFE_ALLOCATE(hcgp(1:gr%mesh%np     , 1:dim))
   SAFE_ALLOCATE(  sd(1:gr%mesh%np     , 1:dim))
   SAFE_ALLOCATE( cgp(1:gr%mesh%np_part, 1:dim))
   SAFE_ALLOCATE(orthogonal(1:nst))
 
-  psi(1:gr%mesh%np, 1:dim) = M_ZERO
-  cgp(1:gr%mesh%np, 1:dim) = M_ZERO
+  phi(1:gr%mesh%np, 1:dim) = R_TOTYPE(M_ZERO)
+  psi(1:gr%mesh%np, 1:dim) = R_TOTYPE(M_ZERO)
+  cgp(1:gr%mesh%np, 1:dim) = R_TOTYPE(M_ZERO)
 
   ! Set the diff to zero, since it is intent(out)
   if(present(diff)) diff(1:st%nst) = M_ZERO
@@ -323,7 +323,10 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff, 
   states: do ist = conv + 1, nst
 
     ! Orthogonalize starting eigenfunctions to those already calculated...
-    call X(states_gram_schmidt)(gr%mesh, ist - 1, st%d%dim, st%X(psi)(:, :, 1:ist - 1, ik), st%X(psi)(:, :, ist, ik), normalize = .true.)
+    if(ist.gt.1) then
+      call X(states_gram_schmidt)(gr%mesh, ist - 1, st%d%dim, st%X(psi)(:, :, 1:ist - 1, ik), &
+                                  st%X(psi)(:, :, ist, ik), normalize = .true.)
+    end if
 
     do idim = 1, st%d%dim
       call lalg_copy(gr%mesh%np, st%X(psi)(:, idim, ist, ik), psi(:, idim))
@@ -457,7 +460,6 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff, 
 
   SAFE_DEALLOCATE_A(phi)
   SAFE_DEALLOCATE_A(psi)
-  SAFE_DEALLOCATE_A(hpsi)
   SAFE_DEALLOCATE_A(cg)
   SAFE_DEALLOCATE_A(hcgp)
   SAFE_DEALLOCATE_A(sd)
