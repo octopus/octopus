@@ -8,7 +8,7 @@ DevelVersion = yes
 DebugLevel = 0
 
 ParallelizationStrategy = par_kpoints
-Eigensolver = cg_new
+Eigensolver = lopbcg
 EigensolverFinalTolerance = 1e-9
 
 MeshBlockSizeXY = 1
@@ -23,7 +23,7 @@ MeshBlockSizeZ = 1
 FromScratch = yes
 TheoryLevel = independent_particles
 BoxShape = parallelepiped
-DerivativesOrder = 1
+DerivativesOrder = 2
 Dimensions = 2
 Spacing = 0.1
 Lx = 5

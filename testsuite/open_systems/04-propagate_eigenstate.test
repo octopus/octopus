@@ -16,8 +16,8 @@ match ; Total energy [step 300]; LINE(well_td.general/energy, 306, 30) ; 3.66251
 # Calculate eigenstates of 2D ring potential attached to upside-down Gaussian
 # shaped lead channels and propagate with a bias switched on.
 Input: 04-propagate_eigenstate.02-ring_leads_2d.inp
-match ; Total energy [step   0]; LINE(ring_lead_td.general/energy,   6, 30) ; 4.061213794889e+02
-match ; Total energy [step  25]; LINE(ring_lead_td.general/energy,  31, 30) ; 4.067943527152e+02
-match ; Total energy [step  50]; LINE(ring_lead_td.general/energy,  56, 30) ; 4.077708981725e+02
-match ; Total energy [step  75]; LINE(ring_lead_td.general/energy,  81, 30) ; 4.104428809697e+02
-match ; Total energy [step 100]; LINE(ring_lead_td.general/energy, 106, 30) ; 4.143740649553e+02
+match ; Total energy [step   0]; LINE(ring_lead_td.general/energy,   6, 30) ; 5.127941500707e+02
+match ; Total energy [step  25]; LINE(ring_lead_td.general/energy,  31, 30) ; 5.148237675212e+02
+match ; Total energy [step  50]; LINE(ring_lead_td.general/energy,  56, 30) ; 5.248451852396e+02
+match ; Total energy [step  75]; LINE(ring_lead_td.general/energy,  81, 30) ; 5.364521874793e+02
+match ; Total energy [step 100]; LINE(ring_lead_td.general/energy, 106, 30) ; 5.490193866482e+02
