@@ -70,6 +70,7 @@ strndup tcgetpgrp scandir alphasort \
 sigaction readdir closedir strchr strtod \
 perror strcasestr sbrk])
 
+ACX_PAPI
 ACX_ARCH
 
 dnl ============================================================================
