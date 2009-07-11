@@ -40,6 +40,10 @@ libbasic_a_SOURCES = \
 	subarray.F90     \
 	io_binary_f.F90
 
+if COMPILE_PAPI
+libbasic_a_SOURCES += papi.c papi_f.F90
+endif
+
 noinst_HEADERS =          \
 	mpi_debug_inc.F90 \
 	mpi_lib_inc.F90   \
@@ -92,7 +96,7 @@ io.o : io.F90 mpi.o messages.o loct_parser.o loct.o global.o datasets.o
 mpi_lib.o : mpi_lib.F90 mpi_lib_inc.F90 mpi_debug.o mpi.o messages.o global.o profiling.o
 units.o : units.F90 io.o messages.o loct_parser.o global.o datasets.o  varinfo.o
 mpi_debug.o : mpi_debug.F90 mpi_debug_inc.F90 mpi.o messages.o loct.o global.o 
-profiling.o : profiling.F90 mpi.o messages.o loct.o io.o global.o 
+profiling.o : profiling.F90 mpi.o messages.o loct.o io.o global.o papi_f.o
 utils.o : utils.F90 messages.o global.o 
 multicomm.o : multicomm.F90 varinfo.o utils.o mpi.o messages.o loct_parser.o io.o global.o datasets.o profiling.o
 iihash.o : iihash.F90 ialist.o global.o
@@ -104,3 +108,5 @@ getopt_f.o : getopt_f.c
 write_iter.o : write_iter.F90 c_pointer.o
 subarray.o : subarray.F90 subarray_inc.F90 profiling.o
 io_binary_f.o : io_binary_f.F90 io_binary.h
+papi.o : papi.c
+papi_f.o : papi_f.F90

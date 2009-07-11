@@ -24,6 +24,9 @@ module profiling_m
   use io_m
   use loct_m
   use loct_parser_m
+#ifdef HAVE_PAPI
+  use papi_m
+#endif
   use messages_m
   use mpi_m
   use string_m
@@ -222,6 +225,10 @@ contains
     in_profiling_mode = (prof_vars%mode > 0)
     if(.not.in_profiling_mode) return
 
+#ifdef HAVE_PAPI
+    call papi_init()
+#endif
+
     if(iand(prof_vars%mode, PROFILING_MEMORY_FULL).ne.0) then
       prof_vars%mode = ior(prof_vars%mode, PROFILING_MEMORY)
     end if
@@ -307,6 +314,10 @@ contains
     real(8), parameter :: megabyte = 1048576.0_8
 
     if(.not. in_profiling_mode) return
+
+#ifdef HAVE_PAPI
+    call papi_end()
+#endif
 
     do ii = 1, prof_vars%last_profile
       call profile_end(prof_vars%profile_list(ii)%p)
@@ -395,7 +406,10 @@ contains
     character(*), optional,  intent(in)    :: label 
 
     real(8) :: now
- 
+#ifdef HAVE_PAPI
+    real(8) :: ops
+#endif
+
     if(.not.in_profiling_mode) return
 
     !$omp master
@@ -418,6 +432,10 @@ contains
       !we are orphans
       nullify(this%parent)
     end if
+#ifdef HAVE_PAPI
+    call papi_get_count_and_reset(ops)
+    if(associated(this%parent)) this%parent%op_count_current = this%parent%op_count_current + ops
+#endif
 
     this%op_count_current = M_ZERO
     this%tr_count_current = M_ZERO
@@ -437,6 +455,9 @@ contains
     type(profile_t),   intent(inout) :: this
 
     real(8) :: now, time_spent
+#ifdef HAVE_PAPI
+    real(8) :: ops
+#endif
     
     if(.not.in_profiling_mode) return
 
@@ -452,6 +473,12 @@ contains
     this%total_time = this%total_time + time_spent
     this%self_time  = this%self_time + time_spent
     this%count = this%count + 1
+
+#ifdef HAVE_PAPI
+    call papi_get_count_and_reset(ops)
+    this%op_count_current = this%op_count_current + ops
+#endif
+
     this%op_count = this%op_count + this%op_count_current
     this%tr_count = this%tr_count + this%tr_count_current
 
@@ -477,10 +504,11 @@ contains
   ! THREADSAFE
   subroutine iprofiling_count_operations(ops)
     integer,         intent(in)    :: ops
-
+#ifndef HAVE_PAPI
     if(.not.in_profiling_mode) return
     !$omp atomic
     prof_vars%current%p%op_count_current = prof_vars%current%p%op_count_current + dble(ops)
+#endif
   end subroutine iprofiling_count_operations
 
 
@@ -489,9 +517,11 @@ contains
   subroutine rprofiling_count_operations(ops)
     real(4),         intent(in)    :: ops
 
+#ifndef HAVE_PAPI
     if(.not.in_profiling_mode) return
     !$omp atomic
     prof_vars%current%p%op_count_current = prof_vars%current%p%op_count_current + dble(ops)
+#endif
   end subroutine rprofiling_count_operations
 
 
@@ -500,9 +530,11 @@ contains
   subroutine dprofiling_count_operations(ops)
     real(8),         intent(in)    :: ops
 
+#ifndef HAVE_PAPI
     if(.not.in_profiling_mode) return
     !$omp atomic
     prof_vars%current%p%op_count_current = prof_vars%current%p%op_count_current + ops
+#endif
   end subroutine dprofiling_count_operations
 
 
