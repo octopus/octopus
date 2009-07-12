@@ -25,21 +25,31 @@
 #include <papi.h>
 
 #define NUM_EVENTS 1
+static int papi_available;
 
 void FC_FUNC_(papi_init, PAPI_INIT)(void){
   int events[NUM_EVENTS] = {PAPI_FP_OPS};
 
-  PAPI_start_counters(events, NUM_EVENTS);
+  if(PAPI_start_counters(events, NUM_EVENTS) == PAPI_OK){
+    papi_available = 1;
+  } else {
+    papi_available = 0;
+  }
 }
 
 void FC_FUNC_(papi_end, PAPI_END)(void){
-  /* this function is intentionally blank */
+  long_long values[NUM_EVENTS];
+  if(papi_available) PAPI_stop_counters(values, NUM_EVENTS);
 }
 
 void FC_FUNC_(papi_get_count_and_reset, PAPI_GET_COUNT_AND_RESET)(double * fp){
   long_long values[NUM_EVENTS];
-  PAPI_read_counters(values, NUM_EVENTS);
-  fp[0] = (double) values[1];
+  if(papi_available) {
+    PAPI_read_counters(values, NUM_EVENTS);
+    fp[0] = (double) values[1];
+  } else {
+    fp[0] = 0.0;
+  }
 }
 
 #endif
