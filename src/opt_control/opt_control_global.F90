@@ -69,6 +69,7 @@ module opt_control_global_m
 
   contains
 
+
   ! ---------------------------------------------------------
   ! Reads, from the inp file, some global information about how the QOCT run
   ! should be. It uses this information to fill the "oct" variable. All the components
@@ -313,6 +314,18 @@ module opt_control_global_m
     call messages_print_stress(stdout)
     call pop_sub()
   end subroutine oct_read_inp
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  ! Returns .true. if the algorithm to be used is one of the "direct" or "gradient-less"
+  ! algorithms -- the ones that do not require backwards propagations. Returns .false. otherwise
+  ! ---------------------------------------------------------
+  logical pure function oct_algorithm_is_direct(oct)
+    type(oct_t), intent(in) :: oct
+    oct_algorithm_is_direct = (oct%algorithm >= oct_algorithm_direct)
+  end function oct_algorithm_is_direct
+  ! ---------------------------------------------------------
 
  
 end module opt_control_global_m

@@ -26,6 +26,7 @@
 module fft_m
   use global_m
   use messages_m
+  use varinfo_m
   use datasets_m
   use loct_math_m
   use loct_parser_m
@@ -104,6 +105,7 @@ module fft_m
   integer :: fft_refs(FFT_MAX)
   type(fft_t) :: fft_array(FFT_MAX)
   logical :: fft_optimize
+  integer :: fft_prepare_plan
 
 contains
 
@@ -128,6 +130,32 @@ contains
     do i = 1, FFT_MAX
       fft_refs(i) = NULL
     end do
+
+    !%Variable FFTPreparePlan
+    !%Type integer
+    !%Default 0
+    !%Section Mesh::FFTs
+    !%Description
+    !% The FFTs are performed in octopus with the help of the FFTW package (http://www.tddft.org).
+    !% Before doing the actual computations, this package prepares a "plan", which means that 
+    !% the precise numerical strategy to be followed to compute  the FFT is machine-compiler dependent,
+    !% and therefore the software attempts to figure out which is this precise strategy (see the
+    !% FFTW documentation for details). This plan preparation, which has to be done for each particular
+    !% FFT shape, can be done exhaustively and carefully (slow), or merely estimated. Since this is
+    !% a rather critical numerical step, by default it is done carefully, which implies a longer initial
+    !% initialization, but faster subsequent computations. You can change this behaviour by changing
+    !% this "FFTPreparePlan" variable, and in this way you can force FFTW to do a fast guess or
+    !% estimation of which is the best way to perform the FFT.
+    !%Option fftw_measure 0
+    !% This is the default, and implies a longer initialization, but involves a more careful analysis
+    !% of the strategy to follow, and therefore more efficient FFTs.
+    !%Option fftw_estimate 64
+    !% This is the "fast initialization" scheme, in which the plan is merely guessed from "reasonable"
+    !% assumptions.
+    !%End
+    call loct_parse_int(datasets_check('FFTPreparePlan'), fftw_measure, fft_prepare_plan)
+    if(.not.varinfo_valid_option('FFTPreparePlan', fft_prepare_plan)) call input_error('FFTPreparePlan')
+
   end subroutine fft_all_init
 
 
@@ -227,14 +255,14 @@ contains
 
       select case(dim)
       case(3)
-        call DFFTW(plan_dft_r2c_3d) (fft_array(j)%planf, n(1), n(2), n(3), rin, cout, fftw_measure+fftw_unaligned)
-        call DFFTW(plan_dft_c2r_3d) (fft_array(j)%planb, n(1), n(2), n(3), cout, rin, fftw_measure+fftw_unaligned)
+        call DFFTW(plan_dft_r2c_3d) (fft_array(j)%planf, n(1), n(2), n(3), rin, cout, fft_prepare_plan+fftw_unaligned)
+        call DFFTW(plan_dft_c2r_3d) (fft_array(j)%planb, n(1), n(2), n(3), cout, rin, fft_prepare_plan+fftw_unaligned)
       case(2)
-        call DFFTW(plan_dft_r2c_2d) (fft_array(j)%planf, n(1), n(2), rin, cout, fftw_measure+fftw_unaligned)
-        call DFFTW(plan_dft_c2r_2d) (fft_array(j)%planb, n(1), n(2), cout, rin, fftw_measure+fftw_unaligned)
+        call DFFTW(plan_dft_r2c_2d) (fft_array(j)%planf, n(1), n(2), rin, cout, fft_prepare_plan+fftw_unaligned)
+        call DFFTW(plan_dft_c2r_2d) (fft_array(j)%planb, n(1), n(2), cout, rin, fft_prepare_plan+fftw_unaligned)
       case(1)
-        call DFFTW(plan_dft_r2c_1d) (fft_array(j)%planf, n(1), rin, cout, fftw_measure+fftw_unaligned)
-        call DFFTW(plan_dft_c2r_1d) (fft_array(j)%planb, n(1), cout, rin, fftw_measure+fftw_unaligned)
+        call DFFTW(plan_dft_r2c_1d) (fft_array(j)%planf, n(1), rin, cout, fft_prepare_plan+fftw_unaligned)
+        call DFFTW(plan_dft_c2r_1d) (fft_array(j)%planb, n(1), cout, rin, fft_prepare_plan+fftw_unaligned)
       end select
       SAFE_DEALLOCATE_A(rin)
       SAFE_DEALLOCATE_A(cout)
@@ -243,14 +271,14 @@ contains
       SAFE_ALLOCATE(cout(1:n(1), 1:n(2), 1:n(3)))
       select case(dim)
       case(3)
-        call DFFTW(plan_dft_3d) (fft_array(j)%planf, n(1), n(2), n(3), cin, cout, fftw_forward,  fftw_measure)
-        call DFFTW(plan_dft_3d) (fft_array(j)%planb, n(1), n(2), n(3), cin, cout, fftw_backward, fftw_measure)
+        call DFFTW(plan_dft_3d) (fft_array(j)%planf, n(1), n(2), n(3), cin, cout, fftw_forward,  fft_prepare_plan)
+        call DFFTW(plan_dft_3d) (fft_array(j)%planb, n(1), n(2), n(3), cin, cout, fftw_backward, fft_prepare_plan)
       case(2)
-        call DFFTW(plan_dft_2d) (fft_array(j)%planf, n(1), n(2), cin, cout, fftw_forward,  fftw_measure)
-        call DFFTW(plan_dft_2d) (fft_array(j)%planb, n(1), n(2), cin, cout, fftw_backward, fftw_measure)
+        call DFFTW(plan_dft_2d) (fft_array(j)%planf, n(1), n(2), cin, cout, fftw_forward,  fft_prepare_plan)
+        call DFFTW(plan_dft_2d) (fft_array(j)%planb, n(1), n(2), cin, cout, fftw_backward, fft_prepare_plan)
       case(1)
-        call DFFTW(plan_dft_1d) (fft_array(j)%planf, n(1), cin, cout, fftw_forward,  fftw_measure)
-        call DFFTW(plan_dft_1d) (fft_array(j)%planb, n(1), cin, cout, fftw_backward, fftw_measure)
+        call DFFTW(plan_dft_1d) (fft_array(j)%planf, n(1), cin, cout, fftw_forward,  fft_prepare_plan)
+        call DFFTW(plan_dft_1d) (fft_array(j)%planb, n(1), cin, cout, fftw_backward, fft_prepare_plan)
       end select
       SAFE_DEALLOCATE_A(cin)
       SAFE_DEALLOCATE_A(cout)

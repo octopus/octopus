@@ -143,9 +143,11 @@
       end if
       if( (tr%method .ne. PROP_QOCT_TDDFT_PROPAGATOR) .and. &
           (tr%method .ne. PROP_QOCT_TDDFT_PROPAGATOR_2) )  then
-        write(message(1), '(a)') 'When doing QOCT with interacting electrons, then you must set'
-        write(message(2), '(a)') 'TDEvolutionMethod = qoct_tddft_propagator'
-        call write_fatal(2)
+        if( .not. oct_algorithm_is_direct(oct) ) then
+          write(message(1), '(a)') 'When doing QOCT with interacting electrons, then you must set'
+          write(message(2), '(a)') 'TDEvolutionMethod = qoct_tddft_propagator'
+          call write_fatal(2)
+        end if
       end if
     end if
 
