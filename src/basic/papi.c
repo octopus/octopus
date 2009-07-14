@@ -46,7 +46,7 @@ void FC_FUNC_(papi_get_count_and_reset, PAPI_GET_COUNT_AND_RESET)(double * fp){
   long_long values[NUM_EVENTS];
   if(papi_available) {
     PAPI_read_counters(values, NUM_EVENTS);
-    fp[0] = (double) values[1];
+    fp[0] = (double) values[0];
   } else {
     fp[0] = 0.0;
   }
