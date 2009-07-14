@@ -72,7 +72,7 @@ contains
     if(sys%gr%sb%open_boundaries) then
       call states_allocate_free_states(sys%st, sys%gr)
       call read_free_states(sys%st, sys%gr)
-      ! allocate green function and calculate
+      ! allocate Green's function and calculate
       call states_init_green(sys%st, sys%gr, hm%d%nspin, hm%d%ispin, hm%lead_h_diag, hm%lead_h_offdiag)
     end if
 

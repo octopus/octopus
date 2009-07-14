@@ -220,7 +220,7 @@ contains
 
       call states_allocate_wfns(st, gr%mesh)
 
-      !%Variable POLStaticField
+      !%Variable EMStaticField
       !%Type float
       !%Default 0.01 a.u.
       !%Section Linear Response::Static Polarization
@@ -228,12 +228,12 @@ contains
       !% Magnitude of the static field used to calculate the static polarizability,
       !% if ResponseMethod = finite_differences.
       !%End
-      call loct_parse_float(datasets_check('POLStaticField'), &
+      call loct_parse_float(datasets_check('EMLStaticField'), &
          units_from_atomic(units_inp%energy / units_inp%length, CNST(0.01)), e_field)
       e_field = units_to_atomic(units_inp%energy / units_inp%length, e_field)
       if (e_field <= M_ZERO) then
-        write(message(1), '(a,e14.6,a)') "Input: '", e_field, "' is not a valid POLStaticField"
-        message(2) = '(0 < POLStaticField)'
+        write(message(1), '(a,e14.6,a)') "Input: '", e_field, "' is not a valid EMStaticField"
+        message(2) = '(0 < EMStaticField)'
         call write_fatal(2)
       end if
 

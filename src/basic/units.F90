@@ -19,18 +19,18 @@
 
 !
 ! Atomic weights should be read in "atomic mass units" (u) (not to
-! mistake with mass in "atomic units"), that is, it should be given
-! the relative atomic weight). 1u is roughly the mass of the proton,
-! and exactly one twelveth of the ^{12}C isotope. The relation of the
+! be confused with mass in "atomic units"), that is, it should be given
+! the relative atomic weight). 1 u is roughly the mass of the proton,
+! and exactly one twelfth of mass of the ^{12}C isotope. The relation of the
 ! atomic mass unit and the atomic unit of mass, au_[mass], is:
 !
 ! 1 au_[mass] = 5.485799110e-4 u
 !
 ! The atomic unit of mass is the mass of the electron. Unfortunately, the
 ! code uses units of mass of (eV/A^2)(h/(2pieV))^2, which are related to
-! atomic units through 1cu_[mass] = 7.619963358 au_[mass] . So:
+! atomic units through 1 cu_[mass] = 7.619963358 au_[mass] . So:
 !
-! 1u = (1/5.485799110e-4) au_[mass] = (1/5.485799110e-4) *
+! 1 u = (1/5.485799110e-4) au_[mass] = (1/5.485799110e-4) *
 !      (1/7.619963358) cu_[mass] = 239.225360 cu_[mass].
 
 #include "global.h"
@@ -108,7 +108,7 @@ contains
     !%Description
     !% Atomic units seem to be the preferred system in the atomic and
     !% molecular physics community. Internally, the code works in
-    !% atomic units. However, for input or output, some people likes
+    !% atomic units. However, for input or output, some people like
     !% to use a system based in eV for energies and <math>\AA</math>
     !% for length. The default is atomic units.
     !%

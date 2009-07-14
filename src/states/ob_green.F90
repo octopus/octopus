@@ -17,7 +17,7 @@
 !!
 !! $Id: h.F90 4037 2008-04-03 13:30:00Z xavier $
 
-! Lead related routines for open boundaries.
+! Lead-related routines for open boundaries.
 
 #include "global.h"
 
@@ -44,18 +44,18 @@ module ob_green_m
 contains
 
   ! ---------------------------------------------------------
-  ! Calculate head of the semi-infinite surface green function with the
+  ! Calculate head of the semi-infinite surface Green`s function with the
   ! algorithm from the paper
   ! Highly convergent schemes for the calculation of bulk and surface Green functions
   ! M. P. Lopez Sanco, J. M. Sancho, and J. Rubio (1984)
   ! J. Phys. F: Met. Phys. 15 (1985) 851-858
   subroutine lead_green(energy, diag, offdiag, np, green, h_is_real)
-    FLOAT,   intent(in)  :: energy        ! Energy to calculate Green function for.
+    FLOAT,   intent(in)  :: energy        ! Energy to calculate Green`s function for.
     CMPLX,   intent(in)  :: diag(:, :)    ! Diagonal block of lead Hamiltonian.
     CMPLX,   intent(in)  :: offdiag(:, :) ! Off-diagonal block of lead Hamiltonian.
     integer, intent(in)  :: np            ! Number of interface points.
-    CMPLX,   intent(out) :: green(:, :)   ! The calculated Green function.
-    logical, intent(in)  :: h_is_real   ! Is the hamiltonian real? (no vector potential)
+    CMPLX,   intent(out) :: green(:, :)   ! The calculated Green`s function.
+    logical, intent(in)  :: h_is_real     ! Is the Hamiltonian real? (no vector potential)
 
     CMPLX, allocatable :: e(:, :), es(:, :), a(:, :), b(:, :), inv(:, :)
     CMPLX, allocatable :: tmp1(:, :), tmp2(:, :), tmp3(:, :)
@@ -120,7 +120,7 @@ contains
 
     forall (j = 1:np) green(j, j) = green(j, j) + cmplx_energy
     det = lalg_inverter(np, green, invert = .true.)
-    if (h_is_real) then ! the green function is complex symmetric
+    if (h_is_real) then ! the Green`s function is complex symmetric
       call matrix_symmetric_average(green, np)
     end if ! otherwise it is general complex
 

@@ -116,7 +116,7 @@ module states_m
     integer            :: ob_ncs            ! No. of continuum states of open system.
                                             ! ob_ncs = ob_nst*st%ob_d%nik / st%d%nik
     FLOAT, pointer     :: ob_occ(:, :)      ! occupations
-    CMPLX, pointer     :: ob_green(:, :, :, :, :, :) ! (np, np, nspin, ncs, nik, nleads) Green function of the leads.
+    CMPLX, pointer     :: ob_green(:, :, :, :, :, :) ! (np, np, nspin, ncs, nik, nleads) Green`s function of the leads.
 
     ! used for the user-defined wavefunctions (they are stored as formula strings)
     character(len=1024), pointer :: user_def_states(:,:,:) ! (st%d%dim, st%nst, st%d%nik)
@@ -2554,14 +2554,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! initialize the surface green functions of the leads
+  ! initialize the surface Green`s functions of the leads
   subroutine states_init_green(st, gr, nspin, d_ispin, diag, offdiag)
     type(states_t),      intent(inout) :: st
     type(grid_t),        intent(in)    :: gr
     integer,             intent(in)    :: nspin
     integer,             intent(in)    :: d_ispin
     CMPLX,               intent(in)    :: diag(:, :, :, :)      ! Diagonal block of the lead Hamiltonian.
-    CMPLX,               intent(in)    :: offdiag(:, :, :)      ! Offdiagonal block of the lead Hamiltonian.
+    CMPLX,               intent(in)    :: offdiag(:, :, :)      ! Off-diagonal block of the lead Hamiltonian.
 
     character(len=1), allocatable  :: ln(:)
     character(len=2)      :: spin
@@ -2576,14 +2576,14 @@ contains
       SAFE_ALLOCATE(ln(1:NLEADS))
       np = gr%intf(LEFT)%np
       ln(LEFT)  = 'L'; ln(RIGHT) = 'R'
-      ! Calculate Green function of the leads.
+      ! Calculate Green`s function of the leads.
       ! FIXME: For spinors, this calculation is almost certainly wrong.
       ASSERT(st%ob_nst == st%nst)
       ASSERT(st%ob_d%nik == st%d%nik)
       s1 = st%st_start; s2 = st%st_end
       k1 = st%d%kpt%start; k2 = st%d%kpt%end
       SAFE_ALLOCATE(st%ob_green(1:np, 1:np, 1:nspin, s1:s2, k1:k2, 1:NLEADS))
-      call messages_print_stress(stdout, 'Lead Green functions')
+      call messages_print_stress(stdout, "Lead Green's functions")
       message(1) = ' st#     k#  Spin  Lead     Energy'
       call write_info(1)
 #ifdef HAVE_MPI 
@@ -2620,7 +2620,7 @@ contains
               call lead_green(energy, diag(:, :, ispin, il), offdiag(:, :, il), &
                   np, st%ob_green(:, :, ispin, ist, ik, il), .true.)
 
-              ! Write the entire Green function to a file.
+              ! Write the entire Green`s function to a file.
               if(in_debug_mode) then
                 call io_mkdir('debug/open_boundaries')
                 write(fname_real, '(3a,i4.4,a,i3.3,a,i1.1,a)') 'debug/open_boundaries/green-', &

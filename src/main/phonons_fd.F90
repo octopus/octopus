@@ -79,7 +79,7 @@ contains
     !%Default 0.01 a.u.
     !%Section Linear Response::Vibrational Modes
     !%Description
-    !% When calculating phonon properties by finite differences (<tt>CalculationMode = phonons</tt>)
+    !% When calculating phonon properties by finite differences (<tt>CalculationMode = vib_modes</tt>),
     !% <tt>Displacement</tt> controls how much the atoms are to be moved in order to calculate the 
     !% dynamical matrix.
     !%End
