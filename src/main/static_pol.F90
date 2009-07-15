@@ -66,12 +66,10 @@ contains
     FLOAT :: e_field
     FLOAT, allocatable :: Vpsl_save(:), trrho(:), dipole(:, :, :)
     FLOAT, allocatable :: elf(:,:), lr_elf(:,:), elfd(:,:), lr_elfd(:,:)
-    FLOAT, allocatable :: lr_rho(:,:), lr_rho2(:,:), gs_rho(:,:)
-    FLOAT :: center_dipole(1:MAX_DIM)
-    logical :: out_pol
+    FLOAT, allocatable :: lr_rho(:,:), lr_rho2(:,:), gs_rho(:,:), tmp_rho(:,:)
+    FLOAT :: center_dipole(1:MAX_DIM), diag_dipole(1:MAX_DIM)
+    logical :: diagonal_done 
     character(len=80) :: fname
-
-    out_pol = .false.
 
     call init_()
 
@@ -110,11 +108,23 @@ contains
           if(ios.ne.0) exit
           i_start = i_start + 1
         end do
+
+        read(iunit, fmt=*, iostat = ios) (diag_dipole(jj), jj = 1, gr%mesh%sb%dim)
+        diagonal_done = (ios .eq. 0)
+
         call io_close(iunit)
       else
         fromScratch = .true.
       end if
     end if
+
+    if(iand(sys%outp%what, output_density).ne.0 .or. &
+       iand(sys%outp%what, output_pol_density).ne.0) then
+       fromScratch = .true.
+       diagonal_done = .false.
+       ! since only dipoles, not densities, are stored and reloaded, we need to
+       ! recalculate to get the densities again
+    endif
 
     if(fromScratch) then
       if(mpi_grp_is_root(mpi_world)) then
@@ -123,7 +133,6 @@ contains
       end if
       i_start = 1
     end if
-    if(i_start > gr%mesh%sb%dim) out_pol = .true.
 
     ! Save local pseudopotential
     SAFE_ALLOCATE(Vpsl_save(1:gr%mesh%np))
@@ -132,6 +141,7 @@ contains
     ! Allocate the trrho to the contain the trace of the density.
     SAFE_ALLOCATE(trrho(1:gr%mesh%np))
     SAFE_ALLOCATE(gs_rho(1:gr%mesh%np, 1:st%d%nspin))
+    SAFE_ALLOCATE(tmp_rho(1:gr%mesh%np, 1:st%d%nspin))
     trrho = M_ZERO
     gs_rho = M_ZERO
 
@@ -145,7 +155,7 @@ contains
     call hamiltonian_update_potential(hm, gr%mesh)
 
     write(message(1), '(a)')
-    write(message(2), '(a)')'Info: Calculating dipole moment for zero field.'
+    write(message(2), '(a)') 'Info: Calculating dipole moment for zero field.'
     call write_info(2)
     call scf_run(scfv, sys%gr, sys%geo, st, sys%ks, hm, sys%outp, gs_run=.false., verbosity = VERB_COMPACT)
     
@@ -163,9 +173,9 @@ contains
     do ii = i_start, gr%mesh%sb%dim
       do isign = 1, 2
         write(message(1), '(a)')
-        write(message(2), '(a,f6.4,a,a,a,a,a,i1)')'Info: Calculating dipole moment for field ', &
-          units_from_atomic(units_inp%energy * units_inp%length, -(-1)**isign *e_field), ' ', &
-          trim(units_inp%energy%abbrev), '/', trim(units_inp%length%abbrev), ' in direction ', ii
+        write(message(2), '(a,f6.4,3a,i1)') 'Info: Calculating dipole moment for field ', &
+          units_from_atomic(units_out%energy/units_out%length, -(-1)**isign *e_field), ' ', &
+          trim(units_abbrev(units_out%energy/units_out%length)), ' in direction ', ii
         call write_info(2)
         ! there is an extra factor of -1 in here that is for the electronic charge
 
@@ -194,17 +204,48 @@ contains
         write(iunit, fmt='(6e20.12)') ((dipole(ii, jj, isign), jj = 1, gr%mesh%sb%dim), isign = 1, 2)
         call io_close(iunit)
       end if
-
-      out_pol = (ii == gr%mesh%sb%dim)
-
     end do
     
+    if(.not. diagonal_done) then
+      write(message(1), '(a)')
+      write(message(2), '(a,f6.4,3a, f6.4, 3a)') 'Info: Calculating dipole moment for field ', &
+         units_from_atomic(units_out%energy/units_out%length, e_field), ' ', &
+         trim(units_abbrev(units_out%energy/units_out%length)), ' in direction 2 plus ', &
+         units_from_atomic(units_out%energy/units_out%length, e_field), ' ', &
+         trim(units_abbrev(units_out%energy/units_out%length)), ' in direction 3'
+      call write_info(2)
+  
+      hm%ep%vpsl(1:gr%mesh%np) = vpsl_save(1:gr%mesh%np) &
+        - gr%mesh%x(1:gr%mesh%np, 2) * e_field - gr%mesh%x(1:gr%mesh%np, 3) * e_field
+      call hamiltonian_update_potential(hm, gr%mesh)
+  
+      call scf_run(scfv, sys%gr, sys%geo, st, sys%ks, hm, sys%outp, gs_run=.false., verbosity = VERB_COMPACT)
+  
+      trrho = M_ZERO
+      do is = 1, st%d%spin_channels
+        trrho(1:gr%mesh%np) = trrho(1:gr%mesh%np) + st%rho(1:gr%mesh%np, is)
+      end do
+  
+      ! calculate dipole
+      do jj = 1, gr%mesh%sb%dim
+        diag_dipole(jj) = dmf_moment(gr%mesh, trrho, jj, 1)
+      end do
+  
+      ! Writes the dipole to file
+      if(mpi_grp_is_root(mpi_world)) then 
+        iunit = io_open(trim(tmpdir)//'restart.pol', action='write', status='old', position='append')
+        write(iunit, fmt='(3e20.12)') (diag_dipole(jj), jj = 1, gr%mesh%sb%dim)
+        call io_close(iunit)
+      end if
+    endif
+
     call scf_end(scfv)
     call output_end_()
 
     SAFE_DEALLOCATE_A(Vpsl_save)
     SAFE_DEALLOCATE_A(trrho)
     SAFE_DEALLOCATE_A(gs_rho)
+    SAFE_DEALLOCATE_A(tmp_rho)
     SAFE_DEALLOCATE_A(dipole)
     call end_()
 
@@ -228,7 +269,7 @@ contains
       !% Magnitude of the static field used to calculate the static polarizability,
       !% if ResponseMethod = finite_differences.
       !%End
-      call loct_parse_float(datasets_check('EMLStaticField'), &
+      call loct_parse_float(datasets_check('EMStaticField'), &
          units_from_atomic(units_inp%energy / units_inp%length, CNST(0.01)), e_field)
       e_field = units_to_atomic(units_inp%energy / units_inp%length, e_field)
       if (e_field <= M_ZERO) then
@@ -274,8 +315,14 @@ contains
       if(iand(sys%outp%what, output_density).ne.0 .or. &
          iand(sys%outp%what, output_pol_density).ne.0) then 
          
+        if(isign == 1 .and. ii == 2) then
+          tmp_rho(1:gr%mesh%np, 1:st%d%nspin) = st%rho(1:gr%mesh%np, 1:st%d%nspin)
+          ! for use in off-diagonal non-linear densities
+        endif
+
         if(isign == 1) then 
           lr_rho(1:gr%mesh%np, 1:st%d%nspin) = st%rho(1:gr%mesh%np, 1:st%d%nspin)
+          ! temporary assignment for use in next cycle when isign == 2
         else
           lr_rho2(1:gr%mesh%np, 1:st%d%nspin) = &
             -(st%rho(1:gr%mesh%np, 1:st%d%nspin) + lr_rho(1:gr%mesh%np, 1:st%d%nspin) - 2 * gs_rho(1:gr%mesh%np, 1:st%d%nspin)) &
@@ -301,11 +348,11 @@ contains
 
             if(iand(sys%outp%what, output_pol_density).ne.0) then
               do jj = ii, gr%mesh%sb%dim
-                write(fname, '(a,a,i1,a,i1,a,i1)') 'fd_pol_density', '-', is, '-', ii, '-', jj
+                write(fname, '(a,a,i1,a,i1,a,i1)') 'fd_alpha_density', '-', is, '-', ii, '-', jj
                 call doutput_function(sys%outp%how, "linear", trim(fname),&
                   gr%mesh, gr%sb, gr%mesh%x(:, jj) * lr_rho(:, is), M_ONE, ierr, geo = sys%geo)
 
-                write(fname, '(a,a,i1,a,i1,a,i1,a,i1)') 'fd2_pol_density', '-', is, '-', ii, '-', ii, '-', jj
+                write(fname, '(a,a,i1,a,i1,a,i1,a,i1)') 'fd_beta_density', '-', is, '-', ii, '-', ii, '-', jj
                 call doutput_function(sys%outp%how, "linear", trim(fname),&
                   gr%mesh, gr%sb, gr%mesh%x(:, jj) * lr_rho2(:, is), M_ONE, ierr, geo = sys%geo)
               enddo
@@ -325,7 +372,7 @@ contains
           
           !numerical derivative
           lr_elf(1:gr%mesh%np, 1:st%d%nspin) = &
-                ( lr_elf(1:gr%mesh%np, 1:st%d%nspin) -  elf(1:gr%mesh%np, 1:st%d%nspin)) / (M_TWO*e_field)
+               ( lr_elf(1:gr%mesh%np, 1:st%d%nspin) -  elf(1:gr%mesh%np, 1:st%d%nspin)) / (M_TWO*e_field)
           lr_elfd(1:gr%mesh%np, 1:st%d%nspin) = &
                (lr_elfd(1:gr%mesh%np, 1:st%d%nspin) - elfd(1:gr%mesh%np, 1:st%d%nspin)) / (M_TWO*e_field)
 
@@ -351,11 +398,31 @@ contains
       CMPLX :: beta(MAX_DIM, MAX_DIM, MAX_DIM)
       integer :: iunit, idir
 
+      if(iand(sys%outp%what, output_density).ne.0 .or. &
+         iand(sys%outp%what, output_pol_density).ne.0) then 
+        lr_rho2(1:gr%mesh%np, 1:st%d%nspin) = -(st%rho(1:gr%mesh%np, 1:st%d%nspin) - lr_rho(1:gr%mesh%np, 1:st%d%nspin) &
+          - tmp_rho(1:gr%mesh%np, 1:st%d%nspin) + gs_rho(1:gr%mesh%np, 1:st%d%nspin)) / e_field**2
+  
+        do is = 1, st%d%nspin
+          if(iand(sys%outp%what, output_density).ne.0) then
+            write(fname, '(a,a,i1,a)') 'fd2_density', '-', is, '-2-3'
+            call doutput_function(sys%outp%how, "linear", trim(fname),&
+              gr%mesh, gr%sb, lr_rho2(:, is), M_ONE, ierr, geo = sys%geo)
+          endif
+  
+          if(iand(sys%outp%what, output_pol_density).ne.0) then
+            write(fname, '(a,a,i1,a,i1,a,i1,a,i1)') 'fd_beta_density', '-', is, '-1-2-3'
+            call doutput_function(sys%outp%how, "linear", trim(fname),&
+              gr%mesh, gr%sb, gr%mesh%x(:, 1) * lr_rho2(:, is), M_ONE, ierr, geo = sys%geo)
+          endif
+        end do
+      endif
+
       call io_mkdir('linear')
-      if(out_pol  .and.  mpi_grp_is_root(mpi_world)) then ! output pol file
-        iunit = io_open('linear/polarizability_fd', action='write')
+      if(mpi_grp_is_root(mpi_world)) then ! output pol file
+        iunit = io_open('linear/alpha', action='write')
         write(iunit, '(2a)', advance='no') '# Polarizability tensor [', &
-          trim(units_out%length%abbrev)
+          trim(units_abbrev(units_out%length))
         if(gr%mesh%sb%dim.ne.1) write(iunit, '(a,i1)', advance='no') '^', gr%mesh%sb%dim
         write(iunit, '(a)') ']'
 
@@ -370,7 +437,13 @@ contains
           beta(idir, 1:gr%mesh%sb%dim, idir) = beta(1:gr%mesh%sb%dim, idir, idir) 
           beta(idir, idir, 1:gr%mesh%sb%dim) = beta(1:gr%mesh%sb%dim, idir, idir)
         end do
-        ! WARNING: terms beta(ijk) with i,j,k all different are not calculated here, and just left as zero.
+
+        beta(1, 2, 3) = - (diag_dipole(1) - dipole(2, 1, 1) - dipole(3, 1, 1) + center_dipole(1)) / e_field**2
+        beta(2, 3, 1) = beta(1, 2, 3)
+        beta(3, 1, 2) = beta(1, 2, 3)
+        beta(3, 2, 1) = beta(1, 2, 3)
+        beta(1, 3, 2) = beta(1, 2, 3)
+        beta(2, 1, 3) = beta(1, 2, 3)
 
         call io_output_tensor(iunit, alpha, gr%mesh%sb%dim, units_out%length%factor**gr%mesh%sb%dim)
         call io_close(iunit)

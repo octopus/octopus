@@ -21,7 +21,7 @@ match ; Polarizability yy ; LINE(linear/freq_0.0000/alpha, 3, 28) ; 27.001112
 match ; Polarizability zz ; LINE(linear/freq_0.0000/alpha, 4, 45) ; 27.001112
 
 Input: 05-polarizability.03-finite-diff.inp
-match ; Polarizability xx ; LINE(linear/polarizability_fd, 2,  1) ; 48.663362
-match ; Polarizability yy ; LINE(linear/polarizability_fd, 3, 28) ; 27.001859
-match ; Polarizability zz ; LINE(linear/polarizability_fd, 4, 45) ; 27.001852
+match ; Polarizability xx ; LINE(linear/alpha, 2,  1) ; 48.663362
+match ; Polarizability yy ; LINE(linear/alpha, 3, 28) ; 27.001859
+match ; Polarizability zz ; LINE(linear/alpha, 4, 45) ; 27.001852
 

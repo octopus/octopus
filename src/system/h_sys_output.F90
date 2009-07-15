@@ -78,7 +78,7 @@ module h_sys_output_m
 
     type(output_me_t) :: me        ! this handles the output of matrix elements
 
-    ! This variables fine-tune the output for some of the possible output options:
+    ! These variables fine-tune the output for some of the possible output options:
     integer :: iter                ! output every iter
     logical :: duringscf
 
@@ -128,64 +128,65 @@ contains
     !%Section Output
     !%Description
     !% Specifies what to print. The output files go into the "static" directory, except when
-    !% running a time-dependent simulation, when the directory "td.XXXXXXX" is used.
+    !% running a time-dependent simulation, when the directory "td.XXXXXXX" is used, or as
+    !% otherwise noted below.
     !% Example: "density + potential"
     !%Option potential 1
-    !% Prints out Kohn-Sham potential, separated by parts. File names would be "v0" for 
+    !% Outputs Kohn-Sham potential, separated by parts. File names would be "v0" for 
     !% the local part, "vc" for the classical potential (if it exists), "vh" for the
     !% Hartree potential, and "vxc-x" for each of the exchange and correlation potentials
     !% of a give spin channel, where "x" stands for the spin channel.
     !%Option density 2
-    !% Prints out the density. The output file is called "density-i", where "i" stands for 
+    !% Outputs density. The output file is called "density-i", where "i" stands for 
     !% the spin channel. In a linear-response run mode, instead the linear-response density
     !% is printed, in a file "linear/freq_XXX/lr_density-i-j" where j is the perturbation
     !% direction. 
     !%Option wfs 4
-    !% Prints out wave-functions. Which wavefunctions are to be printed is specified
+    !% Outputs wave-functions. Which wavefunctions are to be printed is specified
     !% by the variable <tt>OutputWfsNumber</tt> -- see below. The output file is called
     !% "wf-k-p-i", where k stands for the <i>k</i> number, p for the state, and
     !% i for the spin channel.
     !%Option wfs_sqmod 8
-    !% Prints out squared modulus of the wave-functions. 
+    !% Outputs modulus squared of the wave-functions. 
     !% The output file is called "sqm-wf-k-p-i",
     !% where k stands for the <i>k</i> number, p for the state,
     !% and i for the spin channel.
     !%Option geometry 16
-    !% Outputs a XYZ file called "geometry.xyz" (or an XSF file called "geometry.xsf" if OutputHow = xcrysden) 
+    !% Outputs XYZ file called "geometry.xyz" (or an XSF file called "geometry.xsf" if OutputHow = xcrysden) 
     !% containing the coordinates of the atoms
     !% treated within quantum mechanics. If point charges were defined
     !% in the PDB file (see <tt>PDBCoordinates</tt>), they will be output
     !% in the file "geometry_classical.xyz".
     !%Option current 32
-    !% Prints out the paramagnetic current density. The output file is called "current-i-(x,y,z)", 
+    !% Outputs paramagnetic current density. The output file is called "current-i-(x,y,z)", 
     !% where "i" stands for the spin channel and x, y, z indicates the vector component
     !% of the current.
     !%Option ELF 64
-    !% Prints out the electron localization function, ELF. The output file is called
+    !% Outputs electron localization function, ELF. The output file is called
     !% "elf-i", where i stands for the spin channel.
     !%Option ELF_basins 128
-    !% Prints out the basins of attraction of the ELF. The output file is called
+    !% Outputs basins of attraction of the ELF. The output file is called
     !% "elf_rs_basins.info".
     !%Option ELF_FS 256
-    !% Prints the electron localization function in Fourier space. The output file is called
+    !% Outputs electron localization function in Fourier space. The output file is called
     !% "elf_FS-i", where i stands for the spin channel. (EXPERIMENTAL)
     !%Option Bader 512
-    !% Prints the Laplacian of the density which shows lone pairs, bonded charge concentrations
+    !% Outputs Laplacian of the density which shows lone pairs, bonded charge concentrations
     !% and regions subject to electrophilic or nucleophilic attack.
     !% See RF Bader, Atoms in Molecules: A Quantum Theory (Oxford Univ Press, Oxford, 1990).
     !%Option el_pressure 1024
-    !% Prints the electronic pressure. See Tao, Vignale, and Tokatly, Phys Rev Lett 100, 206405
+    !% Outputs electronic pressure. See Tao, Vignale, and Tokatly, Phys Rev Lett 100, 206405 (2008).
     !%Option matrix_elements 2048
-    !% Ouputs a series of matrix elements of the Kohn-Sham states. What is output can
+    !% Outputs a series of matrix elements of the Kohn-Sham states. What is output can
     !% be controlled by the OutputMatrixElements variable.
     !%Option pol_density 4096
-    !% Prints out the density of dipole moment. For pol and pol_lr modules, 
-    !% prints the density of polarizability, in the linear directory.
+    !% Outputs dipole-moment density. For em_resp run, outputs instead the polarizability density,
+    !% in the linear directory. If ResponseMethod = finite_differences, also prints hyperpolarizability density.
     !%Option mesh_r 8192
-    !% Prints out the values of the coordinates over the grid. Files
+    !% Outputs values of the coordinates over the grid. Files
     !% will be in the 'exec/' directory.
     !%Option kinetic_energy_density 16384
-    !% Prints out the kinetic energy density, defined as:
+    !% Outputs kinetic-energy density, defined as:
     !%
     !% <math>\tau_\sigma(\vec{r}) = \sum_{i=1}^{N_\sigma} 
     !%  \vert \nabla \phi_{i\sigma}(\vec{r}) \vert^2\,. </math>
@@ -200,22 +201,22 @@ contains
     !% energy density is produced (runs in spin-polarized and spinors mode), or
     !% only "tau" if the run is in spin-unpolarized mode.
     !%Option dos 65536
-    !% Prints out the density of states.
+    !% Outputs density of states.
     !%Option tpa 131072
-    !% Prints out the transition potential approximation (tpa) matrix elements
+    !% Outputs transition-potential approximation (TPA) matrix elements.
     !%Option density_matrix 262144
     !% Calculates, and outputs, the reduced density
     !% matrix. For the moment the trace is made over the second dimension, and
     !% the code is limited to 2D. The idea is to model N particles in 1D as a N
     !% dimensional non-interacting problem, then to trace out N-1 coordinates.
     !%Option modelmb 524288
-    !% This flag turns on the output for model Many-Body calculations, and
+    !% This flag turns on the output for model many-body calculations, and
     !% triggers the density, wfs, or density matrix to be output for the
     !% particles described in the DescribeParticlesModelMB block. Which
     !% quantities will be output depends on the simultaneous presence of wfs,
     !% density, etc...
     !%Option forces 1048576
-    !% Writes file forces.xsf containing structure and forces on the atoms as 
+    !% Outputs file forces.xsf containing structure and forces on the atoms as 
     !% a vector associated with each atom, which can be visualized with XCrySDen.
     !%End
     call loct_parse_int(datasets_check('Output'), 0, outp%what)
@@ -228,7 +229,7 @@ contains
     end if
 
     if(iand(outp%what, output_modelmb).ne.0) then
-      write(message(1),'(a)') 'Model Many-Body quantities will be output, according to the presence of'
+      write(message(1),'(a)') 'Model many-body quantities will be output, according to the presence of'
       write(message(2),'(a)') '  wfs, density, or density_matrix in Output'
       call write_info(2)
     end if

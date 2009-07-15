@@ -1682,10 +1682,10 @@ contains
     !%Type block
     !%Section States
     !%Description
-    !% Momentum transfer vector q to be used when calculating matrix elements
-    !% <f|exp(iq.r)|i>. This enables the calculation of dynamic structure factor,
+    !% Momentum-transfer vector q to be used when calculating matrix elements
+    !% <f|exp(iq.r)|i>. This enables the calculation of the dynamic structure factor,
     !% which is closely related to generalized oscillator strengths.
-    !% If the vector is not given but tpa output is requested (Output=tpa),
+    !% If the vector is not given but TPA output is requested (Output=TPA),
     !% only the oscillator strengths are written in the output file.
     !% For example, to use q = ( 0.1 , 0.2 , 0.3 ), set
     !% <tt>%MomentumTransfer
@@ -1700,7 +1700,7 @@ contains
       if(ncols .ne. gr%mesh%sb%dim ) then ! wrong size
 
         if(mpi_grp_is_root(mpi_world)) then
-          message(1) = 'Inconsistent size of momentum transfer vector. It is not used in TPA calculation.'
+          message(1) = 'Inconsistent size of momentum-transfer vector. It will not be used in the TPA calculation.'
           call write_warning(1)
         end if
 
@@ -1734,7 +1734,7 @@ contains
 
       ! header
       if(use_qvector) then
-        write (message(1),'(a1,a30,3(es14.5,1x),a1)') '#', ' momentum transfer vector : (', &
+        write (message(1),'(a1,a30,3(es14.5,1x),a1)') '#', ' momentum-transfer vector : (', &
                                                      & qvector(:)*units_out%length%factor,')'
         select case(gr%mesh%sb%dim)
           case(1); write(message(2), '(a1,4(a15,1x))') '#', 'E' , '<x>', '<f>', 'S(q,omega)'
@@ -1789,9 +1789,9 @@ contains
         if(mpi_grp_is_root(mpi_world)) then
 
           select case(use_qvector)
-            case(.true.);  write(message(1), '(1x,6(es15.8,1x))') transition_energy/units_out%energy%factor, osc(:), osc_strength, &
-                                                               & dsf*units_out%energy%factor
-            case(.false.); write(message(1), '(1x,5(es15.8,1x))') transition_energy/units_out%energy%factor, osc(:), osc_strength
+            case(.true.);  write(message(1), '(1x,6(es15.8,1x))') units_from_atomic(units_out%energy, transition_energy), osc(:), osc_strength, &
+                                                                  units_from_atomic(unit_one/units_out%energy, dsf)
+            case(.false.); write(message(1), '(1x,6(es15.8,1x))') units_from_atomic(units_out%energy, transition_energy), osc(:), osc_strength
           end select
 
           call write_info(1,iunit)
@@ -1924,7 +1924,7 @@ contains
       end do
     end do
 
-    ! for spin polarized calculations also output spin resolved tdos
+    ! for spin-polarized calculations also output spin-resolved tdos
     if(st%d%nspin .gt. 1) then    
       do is = 0, ns-1
         write(filename, '(a,i1.1,a)') 'total-dos-', is+1,'.dat'
@@ -1996,7 +1996,7 @@ contains
       if (sb%klattice(i,i) /= M_ZERO) factor(i) = sb%klattice(i,i)
     end do
 
-    ! write fermi energy in a format that can be used together 
+    ! write Fermi energy in a format that can be used together 
     ! with bands.dat
     write(message(1), '(a)') '# Fermi energy in a format compatible with bands-gp.dat'
 

@@ -80,7 +80,7 @@ contains
     !%Default 0
     !%Section Execution
     !%Description
-    !% When this variable is yes, octopus will always perform a
+    !% When this variable is yes, Octopus will always perform a
     !% calculation from the beginning, without looking for restart
     !% information.
     !%End
@@ -159,8 +159,6 @@ contains
     !% the energy obtained by several ground-state calculations. This
     !% method, slow and limited only to static response, is kept
     !% mainly because it is simple and useful for testing purposes.
-    !% Note: non-linear quantities such as beta(ijk) with i,j,k all
-    !% different are not calculated in this routine, and are left as zero.
     !%End
     
     call loct_parse_int(datasets_check('ResponseMethod'), LR, get_resp_method)
