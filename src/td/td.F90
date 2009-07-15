@@ -339,7 +339,7 @@ contains
           call messages_print_stress(stdout, 'Recalculating the ground state.')
           fromScratch = .false.
           call ground_state_run(sys, hm, fromScratch)
-          call restart_read(trim(restart_dir)//'td', st, gr, geo, ierr, iter)
+          call restart_read(trim(restart_dir)//'td', st, gr, geo, ierr, iter=iter)
           call messages_print_stress(stdout, "Time-Dependent simulation proceeds")
           if(td%dynamics /= CP) then 
             write(message(1), '(a7,1x,a14,a14,a17)') 'Iter ', 'Time ', 'Energy ', 'Elapsed Time '
@@ -372,7 +372,7 @@ contains
       CMPLX, allocatable :: rotation_matrix(:, :)
 
       if(.not.fromscratch) then
-        call restart_read(trim(tmpdir)//'td', st, gr, geo, ierr, td%iter)
+        call restart_read(trim(tmpdir)//'td', st, gr, geo, ierr, iter=td%iter)
         
         if(ierr.ne.0) then
           message(1) = "Could not load "//trim(tmpdir)//"td: Starting from scratch"

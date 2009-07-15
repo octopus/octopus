@@ -646,15 +646,16 @@ contains
   ! <0 => Fatal error
   ! =0 => read all wave-functions
   ! >0 => could only read x wavefunctions
-  subroutine restart_read(dir, st, gr, geo, ierr, iter, lr)
-    character(len=*),  intent(in)  :: dir
-    type(states_t), intent(inout)  :: st
-    type(grid_t),      intent(in)  :: gr
-    type(geometry_t),  intent(in)  :: geo
-    integer,           intent(out) :: ierr
-    integer, optional, intent(inout) :: iter
+  subroutine restart_read(dir, st, gr, geo, ierr, read_occ, iter, lr)
+    character(len=*),     intent(in)    :: dir
+    type(states_t),       intent(inout) :: st
+    type(grid_t),         intent(in)    :: gr
+    type(geometry_t),     intent(in)    :: geo
+    integer,              intent(out)   :: ierr
+    logical,    optional, intent(in)    :: read_occ ! should I read the occupations
+    integer,    optional, intent(inout) :: iter
     !if this next argument is present, the lr wfs are read instead of the gs wfs
-    type(lr_t), optional, intent(inout)  :: lr 
+    type(lr_t), optional, intent(inout) :: lr 
 
     integer              :: iunit, iunit2, iunit_mesh, err, ik, ist, idim, i
     character(len=12)    :: filename
@@ -663,12 +664,13 @@ contains
     character(len=256)   :: line
     character(len=50)    :: str
 
+    FLOAT                :: my_occ
     FLOAT, allocatable   :: dphi(:)
     CMPLX, allocatable   :: zphi(:)
     type(mesh_t)         :: old_mesh
-    type(curvilinear_t)   :: old_cv
+    type(curvilinear_t)  :: old_cv
     type(simul_box_t)    :: old_sb
-    logical              :: mesh_change, full_interpolation, gs_allocated, lr_allocated
+    logical              :: read_occ_, mesh_change, full_interpolation, gs_allocated, lr_allocated
 
     call push_sub('restart.restart_read')
 
@@ -680,6 +682,12 @@ contains
       write(message(1), '(a,i5)') 'Info: Loading restart information for linear response'
     end if
     call write_info(1)
+
+    ! If one restarts a GS calculation changing the %Occupations block, one
+    ! can not read the occupations, otherwise these overwrite the ones from
+    ! the input file
+    read_occ_ = .true.
+    if(present(read_occ)) read_occ_ = .false.
 
     ! sanity check
     gs_allocated = (associated(st%dpsi) .and. st%wfs_type == M_REAL) .or. &
@@ -741,7 +749,8 @@ contains
       end if
 
       call iopar_read(gr%mesh%mpi_grp, iunit2, line, err)
-      read(line, *) st%occ(ist, ik), char, st%eigenval(ist, ik)
+      read(line, *) my_occ, char, st%eigenval(ist, ik)
+      if(read_occ_) st%occ(ist, ik) = my_occ
 
       if(ist >= st%st_start .and. ist <= st%st_end .and. &
          st%d%kpt%start <= ik .and. st%d%kpt%end >= ik) then

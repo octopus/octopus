@@ -20,7 +20,7 @@
 ################################################
 
 ################################################################
-# Check whether the compiler accepts the __m128d type
+# Check whether papi is installed
 # ----------------------------------
 AC_DEFUN([ACX_PAPI],
 [

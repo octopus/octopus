@@ -312,11 +312,8 @@ contains
 
     call push_sub('scf.scf_run')
 
-    if(present(gs_run)) then 
-      gs_run_ = gs_run
-    else 
-      gs_run_ = .true.
-    end if
+    gs_run_ = .true.
+    if(present(gs_run)) gs_run_ = gs_run
     
     verbosity_ = VERB_FULL
     if(present(verbosity)) verbosity_ = verbosity
