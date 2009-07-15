@@ -1788,11 +1788,12 @@ contains
         ! write oscillator strengths (+ dynamic structure factor if qvector if given) into file
         if(mpi_grp_is_root(mpi_world)) then
 
-          select case(use_qvector)
-            case(.true.);  write(message(1), '(1x,6(es15.8,1x))') units_from_atomic(units_out%energy, transition_energy), osc(:), osc_strength, &
-                                                                  units_from_atomic(unit_one/units_out%energy, dsf)
-            case(.false.); write(message(1), '(1x,6(es15.8,1x))') units_from_atomic(units_out%energy, transition_energy), osc(:), osc_strength
-          end select
+          if(use_qvector) then
+            write(message(1), '(1x,6(es15.8,1x))') units_from_atomic(units_out%energy, transition_energy), osc(:), osc_strength, &
+                                                   units_from_atomic(unit_one/units_out%energy, dsf)
+          else
+            write(message(1), '(1x,6(es15.8,1x))') units_from_atomic(units_out%energy, transition_energy), osc(:), osc_strength
+          endif
 
           call write_info(1,iunit)
 
