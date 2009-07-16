@@ -135,7 +135,7 @@ static int yylex (){
     
     i = 0;
     do{
-      /* If buffer is full, make it bigger.        */
+      /* If buffer is full, make it larger.        */
       if (i == length){
 	length *= 2;
 	symbuf = (char *)realloc (symbuf, length + 1);

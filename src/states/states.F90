@@ -668,26 +668,37 @@ contains
       else
         st%fixed_occ = .false.
 
-          ! first guess for occupation...paramagnetic configuration
-          if(st%d%ispin == UNPOLARIZED) then
-            r = M_TWO
-          else
-            r = M_ONE
-          end if
-          st%occ  = M_ZERO
-          st%qtot = M_ZERO
+        ! first guess for occupation...paramagnetic configuration
+        if(st%d%ispin == UNPOLARIZED) then
+          r = M_TWO
+        else
+          r = M_ONE
+        end if
+        st%occ  = M_ZERO
+        st%qtot = M_ZERO
 
-          do j = 1, st%nst
-            do i = 1, st%d%nik
-              st%occ(j, i) = min(r, -(st%val_charge + excess_charge) - st%qtot)
-              st%qtot = st%qtot + st%occ(j, i)
-
-            end do
+        do j = 1, st%nst
+          do i = 1, st%d%nik
+            st%occ(j, i) = min(r, -(st%val_charge + excess_charge) - st%qtot)
+            st%qtot = st%qtot + st%occ(j, i)
+            
           end do
+        end do
       end if occ_fix
     end if
 
     call smear_init(st%smear, st%d%ispin, st%fixed_occ)
+
+    ! sanity check
+    r = M_ZERO
+    do i = 1, st%nst
+      r = r + sum(st%occ(i, 1:st%d%nik) * st%d%kweights(1:st%d%nik))
+    end do
+    if(abs(r - st%qtot) > CNST(1e-6)) then
+      message(1) = "Occupations do not integrate to total charge"
+      write(message(1), '(6x,f12.6,a,f12.6)') r, ' != ', st%qtot
+      call write_warning(1)
+    end if
 
     call pop_sub()
   end subroutine states_read_initial_occs
