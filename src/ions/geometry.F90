@@ -79,6 +79,7 @@ module geometry_m
   type geometry_t
     integer :: natoms
     type(atom_t), pointer :: atom(:)
+    CMPLX :: Born_delta(MAX_DIM, MAX_DIM) ! discrepancy of sum of Born charge tensors from sum rule
 
     integer :: ncatoms              ! For QM+MM calculations
     type(atom_classical_t), pointer :: catom(:)

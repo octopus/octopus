@@ -17,7 +17,7 @@
 !!
 !! $Id$
 
-subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir, Born_delta, Born_correct)
+subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir)
   type(grid_t),         intent(inout) :: gr
   type(geometry_t),     intent(inout) :: geo
   type(epot_t),         intent(in)    :: ep
@@ -26,16 +26,10 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
   type(lr_t), optional, intent(inout) :: lr
   type(lr_t), optional, intent(inout) :: lr2
   integer,    optional, intent(in)    :: lr_dir
-  CMPLX,      optional, intent(out)   :: Born_delta(:)
-  logical,    optional, intent(in)    :: Born_correct
   ! provide these optional arguments to calculate Born effective charges rather than forces
   ! lr, lr2 should be the wfns from electric perturbation in the lr_dir direction
   ! lr is for +omega, lr2 is for -omega.
   ! for each atom, Z*(i,j) = dF(j)/dE(i)
-  ! The sum over atoms of a given tensor component of the Born charges
-  !  should be Z delta_ij to satisfy the acoustic sum rule, where Z is total charge of system
-  ! Born_delta is the discrepancy between the sum from the calculation and the value from the sum rule
-  ! Born_correct is whether to distribute any discrepancy over the atoms to enforce the sum rule
 
   integer :: iatom, ist, ik, idim, idir, np, np_part, ip
   FLOAT :: ff
@@ -49,8 +43,6 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
   FLOAT,  allocatable :: vloc(:)
   CMPLX,  allocatable :: grad_rho(:, :), force(:, :), zvloc(:)
   CMPLX :: phase
-  CMPLX :: Born_sum(MAX_DIM)       ! the sum of Born charges from the calculation 
-  CMPLX :: Born_sum_ideal(MAX_DIM) ! the sum of Born charges according to acoustic sum rule 
 #ifdef HAVE_MPI
   integer, allocatable :: recv_count(:), recv_displ(:)
   CMPLX, allocatable  :: force_local(:, :), grad_rho_local(:, :)
@@ -61,8 +53,6 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
 
   ASSERT(present(lr) .eqv. present(lr_dir))
   ASSERT(present(lr) .eqv. present(lr2))
-  ASSERT(present(lr) .eqv. present(Born_delta))
-  ASSERT(present(lr) .eqv. present(Born_correct))
   ! need all to calculate Born charges
   if(present(lr_dir)) then
     ASSERT(lr_dir > 0 .and. lr_dir <= gr%mesh%sb%dim)
@@ -306,30 +296,13 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
 #endif
 
   if(present(lr)) then
-    Born_sum(1:gr%mesh%sb%dim) = M_ZERO 
-    Born_sum_ideal(1:gr%mesh%sb%dim) = M_ZERO
-    Born_sum_ideal(lr_dir) = -(st%val_charge + st%qtot) ! total charge
-
     do iatom = 1, geo%natoms
       geo%atom(iatom)%Born_charge(lr_dir, lr_dir) = geo%atom(iatom)%Born_charge(lr_dir, lr_dir) + &
         species_zval(geo%atom(iatom)%spec)
       do idir = 1, gr%mesh%sb%dim
         geo%atom(iatom)%Born_charge(lr_dir, idir) = geo%atom(iatom)%Born_charge(lr_dir, idir) + force(idir, iatom)
-        Born_sum(idir) = Born_sum(idir) + geo%atom(iatom)%Born_charge(lr_dir, idir)
       enddo
     enddo
-
-    Born_delta(1:gr%mesh%sb%dim) = Born_sum(1:gr%mesh%sb%dim) - Born_sum_ideal(1:gr%mesh%sb%dim)
-
-    if(Born_correct) then
-      ! enforce acoustic sum rule: sum(iatom) Z*(iatom,idir,idir2) = Z_tot delta(idir1, idir2)
-      do iatom = 1, geo%natoms
-        do idir = 1, gr%mesh%sb%dim
-          geo%atom(iatom)%Born_charge(lr_dir, idir) = geo%atom(iatom)%Born_charge(lr_dir, idir) - Born_delta(idir) / geo%natoms
-        enddo
-      enddo
-    endif
-
   else
     do iatom = 1, geo%natoms
       do idir = 1, gr%mesh%sb%dim
