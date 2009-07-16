@@ -436,7 +436,7 @@ contains
     SAFE_ALLOCATE(st%eigenval(1:st%nst, 1:st%d%nik))
     st%eigenval = huge(st%eigenval)
     st%occ      = M_ZERO
-    ! allocate space for formula strings that define user defined states
+    ! allocate space for formula strings that define user-defined states
     SAFE_ALLOCATE(st%user_def_states(1:st%d%dim, 1:st%nst, 1:st%d%nik))
     if(st%d%ispin == SPINORS) then
       SAFE_ALLOCATE(st%spin(1:3, 1:st%nst, 1:st%d%nik))
@@ -695,9 +695,9 @@ contains
       r = r + sum(st%occ(i, 1:st%d%nik) * st%d%kweights(1:st%d%nik))
     end do
     if(abs(r - st%qtot) > CNST(1e-6)) then
-      message(1) = "Occupations do not integrate to total charge"
-      write(message(1), '(6x,f12.6,a,f12.6)') r, ' != ', st%qtot
-      call write_warning(1)
+      message(1) = "Occupations do not integrate to total charge!"
+      write(message(2), '(6x,f12.6,a,f12.6)') r, ' != ', st%qtot
+      call write_warning(2)
     end if
 
     call pop_sub()
@@ -1439,7 +1439,7 @@ contains
     FLOAT,             intent(in), optional :: error(nst, st%d%nik)
 
     integer ik, j, ns, is
-    FLOAT :: o
+    FLOAT :: occ
     character(len=80) tmp_str(MAX_DIM), cspin
 
     call push_sub('states.states_write_eigenvalues')
@@ -1489,9 +1489,9 @@ contains
       do j = 1, nst
         do is = 0, ns-1
           if(j > st%nst) then
-            o = M_ZERO
+            occ = M_ZERO
           else
-            o = st%occ(j, ik+is)
+            occ = st%occ(j, ik+is)
           end if
 
           if(is.eq.0) cspin = 'up'
@@ -1502,21 +1502,21 @@ contains
           if(simul_box_is_periodic(sb)) then
             if(st%d%ispin == SPINORS) then
               write(tmp_str(2), '(1x,f12.6,3x,4f5.2)') &
-                units_from_atomic(units_out%energy, st%eigenval(j, ik) - st%smear%e_fermi), o, st%spin(1:3, j, ik)
+                units_from_atomic(units_out%energy, st%eigenval(j, ik) - st%smear%e_fermi), occ, st%spin(1:3, j, ik)
               if(present(error)) write(tmp_str(3), '(a7,es7.1,a1)')'      (', error(j, ik+is), ')'
             else
               write(tmp_str(2), '(1x,f12.6,3x,f12.6)') &
-                units_from_atomic(units_out%energy, st%eigenval(j, ik+is)), o
+                units_from_atomic(units_out%energy, st%eigenval(j, ik+is)), occ
               if(present(error)) write(tmp_str(3), '(a7,es7.1,a1)')'      (', error(j, ik), ')'
             end if
           else
             if(st%d%ispin == SPINORS) then
               write(tmp_str(2), '(1x,f12.6,5x,f5.2,3x,3f8.4)') &
-                units_from_atomic(units_out%energy, st%eigenval(j, ik)), o, st%spin(1:3, j, ik)
+                units_from_atomic(units_out%energy, st%eigenval(j, ik)), occ, st%spin(1:3, j, ik)
               if(present(error)) write(tmp_str(3), '(a3,es7.1,a1)')'  (', error(j, ik+is), ')'
             else
               write(tmp_str(2), '(1x,f12.6,3x,f12.6)') &
-                units_from_atomic(units_out%energy, st%eigenval(j, ik+is)), o
+                units_from_atomic(units_out%energy, st%eigenval(j, ik+is)), occ
               if(present(error)) write(tmp_str(3), '(a7,es7.1,a1)')'      (', error(j, ik), ')'
             end if
           end if
