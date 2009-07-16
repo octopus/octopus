@@ -65,7 +65,12 @@ fi
 
 AC_DEFUN([ACX_MPI2], [
 acx_mpi2_ok=no
+
 AC_MSG_CHECKING([for MPI 2])
+
+AC_ARG_ENABLE(mpi2, AS_HELP_STRING([--disable-mpi2], [Disable the usage of MPI 2 routines.]))
+
+if test x"$enable_mpi2" != x"no"; then
 
 if test "$HAVE_MPIF_H" = 1; then
 AC_COMPILE_IFELSE(AC_LANG_PROGRAM([], [[
@@ -88,5 +93,12 @@ if test $acx_mpi2_ok = yes; then
   AC_DEFINE(HAVE_MPI2, 1, [Defined if you have an MPI 2 implementation])
 fi
 AC_MSG_RESULT([$acx_mpi2_ok])
+
+else
+
+AC_MSG_RESULT([disabled])
+
+fi
+
 ])
 
