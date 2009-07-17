@@ -578,9 +578,9 @@ contains
     type(states_t), intent(inout) :: st
     FLOAT, intent(in) :: excess_charge
 
-    integer :: i, j, ncols
+    integer :: ik, ist, ispin, nspin, ncols
     type(block_t) :: blk
-    FLOAT :: r
+    FLOAT :: rr, charge
 
     call push_sub('states.states_read_initial_occs')
     !%Variable Occupations
@@ -633,8 +633,8 @@ contains
       st%fixed_occ = .true.
       st%occ  = st%ob_occ
       st%qtot = M_ZERO
-      do i = 1, st%nst
-        st%qtot = st%qtot + sum(st%occ(i, 1:st%d%nik) * st%d%kweights(1:st%d%nik))
+      do ist = 1, st%nst
+        st%qtot = st%qtot + sum(st%occ(ist, 1:st%d%nik) * st%d%kweights(1:st%d%nik))
       end do
 
     else
@@ -649,18 +649,18 @@ contains
           call input_error("Occupations")
         end if
         ! Now we fill all the "missing" states with the maximum occupation.
-        do i = 1, st%d%nik
-          do j = 1, st%nst - ncols
+        do ik = 1, st%d%nik
+          do ist = 1, st%nst - ncols
             if(st%d%ispin == UNPOLARIZED) then
-              st%occ(j, i) = M_TWO
+              st%occ(ist, ik) = M_TWO
             else
-              st%occ(j, i) = M_ONE
+              st%occ(ist, ik) = M_ONE
             end if
           end do
         end do
-        do i = 1, st%d%nik
-          do j = st%nst - ncols + 1, st%nst 
-            call loct_parse_block_float(blk, i-1, j-1-(st%nst-ncols), st%occ(j, i))
+        do ik = 1, st%d%nik
+          do ist = st%nst - ncols + 1, st%nst 
+            call loct_parse_block_float(blk, ik-1, ist-1-(st%nst-ncols), st%occ(ist, ik))
           end do
         end do
         call loct_parse_block_end(blk)
@@ -669,35 +669,39 @@ contains
         st%fixed_occ = .false.
 
         ! first guess for occupation...paramagnetic configuration
-        if(st%d%ispin == UNPOLARIZED) then
-          r = M_TWO
-        else
-          r = M_ONE
-        end if
-        st%occ  = M_ZERO
-        st%qtot = M_ZERO
+        rr = M_ONE
+        if(st%d%ispin == UNPOLARIZED) rr = M_TWO
 
-        do j = 1, st%nst
-          do i = 1, st%d%nik
-            st%occ(j, i) = min(r, -(st%val_charge + excess_charge) - st%qtot)
-            st%qtot = st%qtot + st%occ(j, i)
-            
+        st%occ  = M_ZERO
+        st%qtot = -(st%val_charge + excess_charge)
+
+        nspin = 1
+        if(st%d%nspin == 2) nspin = 2
+
+        do ik = 1, st%d%nik, nspin
+          charge = M_ZERO
+          do ispin = ik, ik + nspin - 1
+            do ist = 1, st%nst
+              st%occ(ist, ispin) = min(rr, -(st%val_charge + excess_charge) - charge)
+              charge = charge + st%occ(ist, ispin)
+            end do
           end do
         end do
+
       end if occ_fix
     end if
 
     call smear_init(st%smear, st%d%ispin, st%fixed_occ)
 
     ! sanity check
-    r = M_ZERO
-    do i = 1, st%nst
-      r = r + sum(st%occ(i, 1:st%d%nik) * st%d%kweights(1:st%d%nik))
+    charge = M_ZERO
+    do ist = 1, st%nst
+      charge = charge + sum(st%occ(ist, 1:st%d%nik) * st%d%kweights(1:st%d%nik))
     end do
-    if(abs(r - st%qtot) > CNST(1e-6)) then
-      message(1) = "Occupations do not integrate to total charge!"
-      write(message(2), '(6x,f12.6,a,f12.6)') r, ' != ', st%qtot
-      call write_warning(2)
+    if(abs(charge - st%qtot) > CNST(1e-6)) then
+      message(1) = "Occupations do not integrate to total charge"
+      write(message(2), '(6x,f12.6,a,f12.6)') charge, ' != ', st%qtot
+      call write_fatal(2)
     end if
 
     call pop_sub()

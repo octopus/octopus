@@ -20,6 +20,7 @@
 #include "global.h"
 
 module profiling_m
+  use datasets_m
   use global_m
   use io_m
   use loct_m
@@ -153,6 +154,9 @@ module profiling_m
 
     real(8)                  :: start_time
     integer                  :: mem_iunit
+
+    character(len=256)       :: output_dir
+    character(len=16)        :: file_number
   end type profile_vars_t
 
   type(profile_vars_t), public :: prof_vars
@@ -189,9 +193,6 @@ contains
   ! ---------------------------------------------------------
   ! Create profiling subdirectory.
   subroutine profiling_init()
-    
-    character(len=4) :: filenum
-    character(len=4) :: dirnum
     integer :: ii
 
     !%Variable ProfilingMode
@@ -224,6 +225,8 @@ contains
 
     in_profiling_mode = (prof_vars%mode > 0)
     if(.not.in_profiling_mode) return
+
+    call get_output_dir()
 
 #ifdef HAVE_PAPI
     call papi_init()
@@ -261,17 +264,7 @@ contains
     end if
 
     if(iand(prof_vars%mode, PROFILING_MEMORY_FULL).ne.0) then
-      filenum = '0000'
-      dirnum  = 'ser '
-#if defined(HAVE_MPI)
-      if(mpi_world%size > 1) then
-        write(filenum, '(i4.4)') mpi_world%rank
-        write(dirnum,  '(i4.4)') mpi_world%size
-      end if
-#endif
-      
-      call io_mkdir('profiling.'//trim(dirnum))
-      prof_vars%mem_iunit = io_open('profiling.'//trim(dirnum)//'/memory.'//trim(filenum), action='write')
+      prof_vars%mem_iunit = io_open(trim(prof_vars%output_dir)//'/memory.'//trim(prof_vars%file_number), action='write')
     end if
 
     ! initialize time profiling
@@ -304,6 +297,23 @@ contains
       call profile_init(C_PROFILING_LOBPCG_COPY,      'LOBPCG_COPY')
       call profile_init(C_PROFILING_LOBPCG_LOOP,      'LOBPCG_LOOP')
     end subroutine init_profiles
+
+    ! ---------------------------------------------------------
+    subroutine get_output_dir()
+      character(len=4) :: dirnum
+
+      dirnum  = 'ser '
+      prof_vars%file_number = '0000'
+#if defined(HAVE_MPI)
+      if(mpi_world%size > 1) then
+        write(dirnum, '(i6.6)') mpi_world%size
+        write(prof_vars%file_number, '(i6.6)') mpi_world%rank
+      end if
+#endif
+      prof_vars%output_dir = 'profiling.'//trim(dirnum)
+
+      if(mpi_grp_is_root(mpi_world)) call io_mkdir(trim(prof_vars%output_dir))
+    end subroutine get_output_dir
 
   end subroutine profiling_init
 
@@ -665,8 +675,6 @@ contains
   subroutine profiling_output
     integer          :: ii
     integer          :: iunit
-    character(len=4) :: filenum
-    character(len=4) :: dirnum
     real(8)          :: total_time
     type(profile_t), pointer :: prof
 
@@ -674,21 +682,11 @@ contains
 
     call push_sub('profiling.profiling_output')
 
-    filenum = '0000'
-    dirnum  = 'ser '
-#if defined(HAVE_MPI)
-    if(mpi_world%size > 1) then
-      write(filenum, '(i4.4)') mpi_world%rank
-      write(dirnum, '(i4.4)') mpi_world%size
-    end if
-#endif
-
-    if(mpi_grp_is_root(mpi_world)) call io_mkdir('profiling.'//trim(dirnum))
 #ifdef HAVE_MPI
     call MPI_Barrier(mpi_world%comm, mpi_err)
 #endif
 
-    iunit = io_open('profiling.'//trim(dirnum)//'/profiling.'//filenum, action='write')
+    iunit = io_open(trim(prof_vars%output_dir)//'/time.'//trim(prof_vars%file_number), action='write')
     if(iunit.lt.0) then
       message(1) = 'Could not write profiling results.'
       call write_warning(1)

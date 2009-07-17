@@ -118,7 +118,7 @@ contains
       gf%file_type = XYZ_FILE_XYZ
       call loct_parse_string(datasets_check('XYZ'//trim(what)), 'coords.xyz', str)
 
-      iunit = io_open(str, action='read')
+      iunit = io_open(str, status='old', action='read', is_tmp=.true.)
       read(iunit, *) gf%n
       read(iunit, *) ! skip comment line
 

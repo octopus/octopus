@@ -937,7 +937,7 @@ contains
             if(filled(idim, ist, ik)) cycle
 
             call states_generate_random(st, gr%mesh, ist, ist)
-            st%occ(ist, ik) = M_ZERO
+            if(read_occ_) st%occ(ist, ik) = M_ZERO
           end do
         end do
       end do

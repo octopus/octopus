@@ -471,7 +471,7 @@ contains
 
       if(gs_run_) then 
         ! save restart information
-        if(finish.or.(modulo(iter, 3) == 0).or.iter==scf%max_iter.or.forced_finish) then
+        if(finish.or.(modulo(iter, outp%iter) == 0).or.iter==scf%max_iter.or.forced_finish) then
           call restart_write(trim(tmpdir)//'gs', st, gr, err, iter=iter)
           if(err.ne.0) then
             message(1) = 'Unsuccessful write of "'//trim(tmpdir)//'gs"'

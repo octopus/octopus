@@ -350,13 +350,14 @@ contains
 
     !%Variable OutputEvery
     !%Type integer
-    !%Default 1000
-    !%Section Time Dependent::TD Output
+    !%Default 50
+    !%Section Output
     !%Description
     !% The output is saved when the iteration number is a multiple of the
-    !% <tt>OutputEvery</tt> variable.
+    !% <tt>OutputEvery</tt> variable. This works for the ground-state and
+    !% time-dependent runs.
     !%End
-    call loct_parse_int(datasets_check('OutputEvery'), 1000, outp%iter)
+    call loct_parse_int(datasets_check('OutputEvery'), 50, outp%iter)
 
     call loct_parse_logical(datasets_check('OutputDuringSCF'), .false., outp%duringscf)
 
