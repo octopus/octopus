@@ -239,7 +239,7 @@ contains
     ! Careful: MPI counts node ranks from 0 to numproc-1.
     ! Partition numbers from METIS range from 1 to numproc.
     ! For this reason, all ranks are incremented by one.
-    integer                     :: p                ! Number of partitions.
+    integer                     :: npart                ! Number of partitions.
     integer                     :: np_enl           ! Number of points in enlargement.
     integer                     :: i, j, k, r       ! Counters.
     integer, allocatable        :: ir(:), irr(:, :) ! Counters.
@@ -254,8 +254,8 @@ contains
     call push_sub('par_vec.vec_init')
 
     ! Shortcuts.
-    call MPI_Comm_Size(comm, p, mpi_err)
-    np_enl = np_part-np
+    call MPI_Comm_Size(comm, npart, mpi_err)
+    np_enl = np_part - np
 
     ! Store partition number and rank for later reference.
     ! Having both variables is a bit redundant but makes the code readable.
@@ -263,51 +263,51 @@ contains
     vp%rank   = rank
     vp%partno = rank + 1
 
-    SAFE_ALLOCATE(ghost_flag(1:p))
-    SAFE_ALLOCATE(ir(1:p))
-    SAFE_ALLOCATE(irr(1:p, 1:p))
+    SAFE_ALLOCATE(ghost_flag(1:npart))
+    SAFE_ALLOCATE(ir(1:npart))
+    SAFE_ALLOCATE(irr(1:npart, 1:npart))
     SAFE_ALLOCATE(vp%part(1:np+np_enl))
-    SAFE_ALLOCATE(vp%np_local(1:p))
-    SAFE_ALLOCATE(vp%xlocal(1:p))
+    SAFE_ALLOCATE(vp%np_local(1:npart))
+    SAFE_ALLOCATE(vp%xlocal(1:npart))
     SAFE_ALLOCATE(vp%local(1:np))
-    SAFE_ALLOCATE(vp%np_bndry(1:p))
-    SAFE_ALLOCATE(vp%xbndry(1:p))
+    SAFE_ALLOCATE(vp%np_bndry(1:npart))
+    SAFE_ALLOCATE(vp%xbndry(1:npart))
     SAFE_ALLOCATE(vp%bndry(1:np_enl))
-    SAFE_ALLOCATE(vp%global(1:p))
-    SAFE_ALLOCATE(vp%np_ghost(1:p))
-    SAFE_ALLOCATE(vp%np_ghost_neigh(1:p, 1:p))
-    SAFE_ALLOCATE(vp%xghost(1:p))
-    SAFE_ALLOCATE(vp%xghost_neigh(1:p, 1:p))
+    SAFE_ALLOCATE(vp%global(1:npart))
+    SAFE_ALLOCATE(vp%np_ghost(1:npart))
+    SAFE_ALLOCATE(vp%np_ghost_neigh(1:npart, 1:npart))
+    SAFE_ALLOCATE(vp%xghost(1:npart))
+    SAFE_ALLOCATE(vp%xghost_neigh(1:npart, 1:npart))
 
     ! Count number of points for each node.
     ! Local points.
     vp%np_local = 0
     do i = 1, np
-      vp%np_local(part(i)) = vp%np_local(part(i))+1
+      vp%np_local(part(i)) = vp%np_local(part(i)) + 1
     end do
     ! Boundary points.
     vp%np_bndry = 0
     do i = 1, np_enl
-      vp%np_bndry(part(i+np)) = vp%np_bndry(part(i+np))+1
+      vp%np_bndry(part(i + np)) = vp%np_bndry(part(i + np)) + 1
     end do
 
     ! Set up local to global index table for local points
     ! (xlocal, local) and for boundary points (xbndry, bndry).
     vp%xlocal(1) = 1
     vp%xbndry(1) = 1
-    do r = 2, p
-      vp%xlocal(r) = vp%xlocal(r-1)+vp%np_local(r-1)
-      vp%xbndry(r) = vp%xbndry(r-1)+vp%np_bndry(r-1)
+    do r = 2, npart
+      vp%xlocal(r) = vp%xlocal(r - 1) + vp%np_local(r - 1)
+      vp%xbndry(r) = vp%xbndry(r - 1) + vp%np_bndry(r - 1)
     end do
     ir = 0
     do i = 1, np
-      vp%local(vp%xlocal(part(i))+ir(part(i))) = i
-      ir(part(i))                              = ir(part(i))+1
+      vp%local(vp%xlocal(part(i)) + ir(part(i))) = i
+      ir(part(i))                                = ir(part(i)) + 1
     end do
     ir = 0
     do i = np+1, np+np_enl
-      vp%bndry(vp%xbndry(part(i))+ir(part(i))) = i
-      ir(part(i))                              = ir(part(i))+1
+      vp%bndry(vp%xbndry(part(i)) + ir(part(i))) = i
+      ir(part(i))                                = ir(part(i)) + 1
     end do
 
     ! Format of ghost:
@@ -317,31 +317,31 @@ contains
     !
     ! The following figure shows, how ghost points of node r are put into ghost:
     !
-    !  |<--------------------------------np_ghost(r)---------------------------------->|
-    !  |                                                                               |
-    !  |<-np_ghost_neigh(r,1)->|     |<-np_ghost_neigh(r,p-1)->|<-np_ghost_neigh(r,p)->|
-    !  |                       |     |                         |                       |
-    ! -----------------------------------------------------------------------------------
-    !  |                       | ... |                         |                       |
-    ! -----------------------------------------------------------------------------------
-    !  ^                             ^                         ^
-    !  |                             |                         |
-    !  xghost_neigh(r,1)             xghost_neigh(r,p-1)       xghost_neigh(r,p)
+    !  |<---------------------------------------np_ghost(r)----------------------------------->|
+    !  |                                                                                       |
+    !  |<-np_ghost_neigh(r,1)->|     |<-np_ghost_neigh(r,npart-1)->|<-np_ghost_neigh(r,npart)->|
+    !  |                       |     |                             |                           |
+    ! ------------------------------------------------------------------------------------------
+    !  |                       | ... |                             |                           |
+    ! ------------------------------------------------------------------------------------------
+    !  ^                             ^                             ^
+    !  |                             |                             |
+    !  xghost_neigh(r,1)             xghost_neigh(r,npart-1)       xghost_neigh(r,npart)
     !  |
     !  xghost(r)
 
     ! Mark and count ghost points and neighbours
     ! (set vp%np_ghost_neigh, vp%np_ghost, ghost_flag).
-    do r = 1, p
+    do r = 1, npart
       call iihash_init(ghost_flag(r), vp%np_local(r))
     end do
     vp%total          = 0
     vp%np_ghost_neigh = 0
     vp%np_ghost       = 0
     ! Check all nodes.
-    do r = 1, p
+    do r = 1, npart
       ! Check all points of this node.
-      do i = vp%xlocal(r), vp%xlocal(r)+vp%np_local(r)-1
+      do i = vp%xlocal(r), vp%xlocal(r)+ vp%np_local(r) - 1
         ! Get coordinates of current point.
         call index_to_coords(idx, dim, vp%local(i), p1)
 
@@ -364,9 +364,9 @@ contains
               ! Increase number of ghost points of r from part(k).
               vp%np_ghost_neigh(r, part(k)) = vp%np_ghost_neigh(r, part(k))+1
               ! Increase total number of ghostpoints of r.
-              vp%np_ghost(r)                  = vp%np_ghost(r)+1
+              vp%np_ghost(r)                  = vp%np_ghost(r) + 1
               ! One more ghost point.
-              vp%total                        = vp%total+1
+              vp%total                        = vp%total + 1
             end if
           end if
         end do
@@ -375,14 +375,13 @@ contains
 
     ! Set index tables xghost and xghost_neigh.
     vp%xghost(1) = 1
-    do r = 2, p
-      vp%xghost(r) = vp%xghost(r-1)+vp%np_ghost(r-1)
+    do r = 2, npart
+      vp%xghost(r) = vp%xghost(r - 1) + vp%np_ghost(r - 1)
     end do
-    do r = 1, p
+    do r = 1, npart
       vp%xghost_neigh(r, 1) = vp%xghost(r)
-      do j = 2, p
-        vp%xghost_neigh(r, j) = vp%xghost_neigh(r, j-1)    &
-          +vp%np_ghost_neigh(r, j-1)
+      do j = 2, npart
+        vp%xghost_neigh(r, j) = vp%xghost_neigh(r, j - 1) + vp%np_ghost_neigh(r, j - 1)
       end do
     end do
 
@@ -392,13 +391,13 @@ contains
     ! Fill ghost as described above.
     irr = 0
     do i = 1, np+np_enl
-      do r = 1, p
+      do r = 1, npart
         j = iihash_lookup(ghost_flag(r), i, found)
         ! If point i is a ghost point for r from j, save this
         ! information.
         if(found) then
-          vp%ghost(vp%xghost_neigh(r, j)+irr(r, j)) = i
-          irr(r, j)                                 = irr(r, j)+1
+          vp%ghost(vp%xghost_neigh(r, j) + irr(r, j)) = i
+          irr(r, j)                                   = irr(r, j) + 1
         end if
       end do
     end do
@@ -409,12 +408,12 @@ contains
       ! debug/mesh_partition/ghost_points.###.
       if(mpi_grp_is_root(mpi_world)) then
         call io_mkdir('debug/mesh_partition')
-        do r = 1, p
+        do r = 1, npart
           write(filenum, '(i3.3)') r
           iunit = io_open('debug/mesh_partition/ghost_points.'//filenum, &
             action='write')
           do i = 1, vp%np_ghost(r)
-            j = vp%ghost(vp%xghost(r)+i-1)
+            j = vp%ghost(vp%xghost(r) + i - 1)
             write(iunit, '(4i8)') j, idx%Lxyz(j, :)
           end do
           call io_close(iunit)
@@ -423,20 +422,20 @@ contains
     end if
 
     ! Set up the global to local point number mapping.
-    do r = 1, p
+    do r = 1, npart
       ! Create hash table.
-      call iihash_init(vp%global(r), vp%np_local(r)+vp%np_ghost(r)+vp%np_bndry(r))
+      call iihash_init(vp%global(r), vp%np_local(r) + vp%np_ghost(r) + vp%np_bndry(r))
       ! Insert local points.
       do i = 1, vp%np_local(r)
-        call iihash_insert(vp%global(r), vp%local(vp%xlocal(r)+i-1), i)
+        call iihash_insert(vp%global(r), vp%local(vp%xlocal(r) + i - 1), i)
       end do
       ! Insert ghost points.
       do i = 1, vp%np_ghost(r)
-        call iihash_insert(vp%global(r), vp%ghost(vp%xghost(r)+i-1), i+vp%np_local(r))
+        call iihash_insert(vp%global(r), vp%ghost(vp%xghost(r) + i - 1), i + vp%np_local(r))
       end do
       ! Insert boundary points.
       do i = 1, vp%np_bndry(r)
-        call iihash_insert(vp%global(r), vp%bndry(vp%xbndry(r)+i-1), i+vp%np_local(r)+vp%np_ghost(r))
+        call iihash_insert(vp%global(r), vp%bndry(vp%xbndry(r) + i - 1), i + vp%np_local(r) + vp%np_ghost(r))
       end do
     end do
     
@@ -445,12 +444,12 @@ contains
     vp%root   = root
     vp%np     = np
     vp%np_enl = np_enl
-    vp%npart      = p
+    vp%npart  = npart
     vp%part   = part
 
     call init_send_points
 
-    do r = 1, p
+    do r = 1, npart
       call iihash_end(ghost_flag(r))
     end do
 
