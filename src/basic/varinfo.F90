@@ -32,7 +32,8 @@ module varinfo_m
     varinfo_print,        &
     varinfo_search,       &
     varinfo_print_option, &
-    varinfo_valid_option
+    varinfo_valid_option, &
+    varinfo_option
 
   interface
     subroutine varinfo_init(filename)
@@ -199,6 +200,25 @@ contains
     end do
       
   end subroutine varinfo_search
+
+  ! ---------------------------------------------------------
+  integer function varinfo_option(var, option) result(val)
+    character(len=*),  intent(in) :: var
+    character(len=*),  intent(in) :: option
+
+    type(c_ptr) :: handle
+    integer  :: ierr
+
+    call varinfo_getvar(var, handle)
+    call varinfo_search_option(handle, option, val, ierr)
+
+    if(ierr /= 0) then
+      ! we cannot use messages here :-(
+      stop "Error: invalid option"
+    end if
+
+  end function varinfo_option
+
 
 end module varinfo_m
 

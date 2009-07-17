@@ -328,3 +328,27 @@ void FC_FUNC_(varinfo_search_var, VARINFO_SEARCH_VAR)
 
   *var = lvar;
 }
+
+void FC_FUNC_(varinfo_search_option, VARINFO_SEARCH_OPTION)
+     (var_type **var, STR_F_TYPE name, int * value, int * ierr STR_ARG1)
+{
+  char *name_c;
+  opt_type *opt;
+
+  TO_C_STR1(name, name_c);
+
+  opt = (*var)->opt;
+  *ierr = -1;
+
+  while(opt != NULL){
+    if(strcmp(opt->name, name_c) == 0) {
+      *value = atoi(opt->value);
+      printf("%s|%s|\n", opt->name, name_c);
+      *ierr = 0;
+      break;
+    }
+    opt = opt->next;
+  }
+
+  free(name_c);
+}
