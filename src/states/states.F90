@@ -2630,7 +2630,7 @@ contains
               call write_info(1)
               ! TODO magnetic gs
               call lead_green(energy, diag(:, :, ispin, il), offdiag(:, :, il), &
-                  np, st%ob_green(:, :, ispin, ist, ik, il), .true.)
+                  np, st%ob_green(:, :, ispin, ist, ik, il), .true., il, gr%intf(il)%offdiag_invertible)
 
               ! Write the entire Green`s function to a file.
               if(in_debug_mode) then

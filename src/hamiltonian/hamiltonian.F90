@@ -608,12 +608,20 @@ contains
           ! In debug mode write the diagonal block to a file.
           if(in_debug_mode) then
             call io_mkdir('debug/open_boundaries')
-            write(fname, '(3a,i1.1)') 'debug/open_boundaries/diag-', &
-              trim(LEAD_NAME(il)), '-', ispin
+            write(fname, '(3a,i1.1,a)') 'debug/open_boundaries/diag-', &
+              trim(LEAD_NAME(il)), '-', ispin, '.real'
             diag = io_open(fname, action='write', grp=gr%mesh%mpi_grp, is_tmp=.false.)
             write(fmt, '(a,i6,a)') '(', gr%intf(il)%np, 'e14.4)'
             do irow = 1, gr%intf(il)%np
-              write(diag, fmt) hm%lead_h_diag(:, :, ispin, il)
+              write(diag, fmt) real(hm%lead_h_diag(:, irow, ispin, il))
+            end do
+            call io_close(diag)
+            write(fname, '(3a,i1.1,a)') 'debug/open_boundaries/diag-', &
+              trim(LEAD_NAME(il)), '-', ispin, '.imag'
+            diag = io_open(fname, action='write', grp=gr%mesh%mpi_grp, is_tmp=.false.)
+            write(fmt, '(a,i6,a)') '(', gr%intf(il)%np, 'e14.4)'
+            do irow = 1, gr%intf(il)%np
+              write(diag, fmt) aimag(hm%lead_h_diag(:, irow, ispin, il))
             end do
             call io_close(diag)
           end if
@@ -621,12 +629,20 @@ contains
         call lead_offdiag(gr%der%lapl, gr%intf(il), il, &
           hm%lead_h_offdiag(:, :, il))
         if(in_debug_mode) then
-          write(fname, '(2a)') 'debug/open_boundaries/offdiag-', &
-            trim(LEAD_NAME(il))
+          write(fname, '(3a)') 'debug/open_boundaries/offdiag-', &
+            trim(LEAD_NAME(il)), '.real'
           offdiag = io_open(fname, action='write', grp=gr%mesh%mpi_grp, is_tmp=.false.)
           write(fmt, '(a,i6,a)') '(', gr%intf(il)%np, 'e14.4)'
           do irow = 1, gr%intf(il)%np
-            write(offdiag, fmt) hm%lead_h_offdiag(:, :, il)
+            write(offdiag, fmt) real(hm%lead_h_offdiag(:, irow, il))
+          end do
+          call io_close(offdiag)
+          write(fname, '(3a)') 'debug/open_boundaries/offdiag-', &
+            trim(LEAD_NAME(il)), '.imag'
+          offdiag = io_open(fname, action='write', grp=gr%mesh%mpi_grp, is_tmp=.false.)
+          write(fmt, '(a,i6,a)') '(', gr%intf(il)%np, 'e14.4)'
+          do irow = 1, gr%intf(il)%np
+            write(offdiag, fmt) aimag(hm%lead_h_offdiag(:, irow, il))
           end do
           call io_close(offdiag)
         end if

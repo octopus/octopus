@@ -75,9 +75,12 @@ contains
     call push_sub('ob_interface.interface_init')
 
     tdir = (il+1)/2
+    ASSERT(stencil_extent(der_discr, tdir).le.lead_unit_cell_extent(sb, il))
     intf%extent = maxval((/stencil_extent(der_discr, tdir), lead_unit_cell_extent(sb, il)/))
     ! FIXME: not sure if it holds for lead-potentials with dependence in transport direction
-    intf%extent = intf%extent - 1
+    if(stencil_extent(der_discr, tdir).eq.1) then
+      intf%extent = intf%extent - 1
+    end if
     if(intf%extent.eq.stencil_extent(der_discr, tdir)) then
       intf%offdiag_invertible = .true.
     else

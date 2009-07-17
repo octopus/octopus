@@ -121,7 +121,7 @@ contains
     !%End
     call loct_parse_float(datasets_check('OpenBoundariesQMRTol'), CNST(1e-12), qmr_tol)
     if(qmr_tol.le.M_ZERO) then
-      call input_error('OpenBoundariesBiCGTol')
+      call input_error('OpenBoundariesQMRTol')
     end if
 
     !%Variable OpenBoundariesMemType
