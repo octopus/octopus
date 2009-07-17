@@ -125,11 +125,13 @@
 #define M_ONE CNST(1.0)
 #define M_ZERO CNST(0.0)
 
-#define STATIC_DIR "static"
-#define EM_RESP_RESTART_DIR "em_resp/"
-#define KDOTP_RESTART_DIR "kdotp/"
-#define PHONONS_RESTART_DIR "vib_modes/"
-#define VDW_RESTART_DIR "pol_lr/"
+#define STATIC_DIR "static/"
+#define EM_RESP_DIR "em_resp/"
+#define EM_RESP_FD_DIR "em_resp_fd/"
+#define KDOTP_DIR "kdotp/"
+#define VIB_MODES_DIR "vib_modes/"
+#define VDW_DIR "vdw/"
+#define CASIDA_DIR "casida/"
 
 #ifdef HAVE_MPI
 #ifdef HAVE_MPI2
@@ -139,3 +141,7 @@
 #endif
 #endif
 
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

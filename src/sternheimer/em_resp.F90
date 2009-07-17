@@ -18,8 +18,6 @@
 !! $Id$
 
 #include "global.h"
-! defines EM_RESP_RESTART_DIR
-#define OUTPUT_DIR "linear/"
 
 module em_resp_m
   use datasets_m
@@ -143,7 +141,7 @@ contains
 
         ! load wave-functions
         str_tmp = kdotp_wfs_tag(idir)
-        write(dirname,'(3a)') "kdotp/", trim(str_tmp), '_1'
+        write(dirname,'(3a)') KDOTP_DIR, trim(str_tmp), '_1'
         ! 1 is the sigma index which is used in em_resp
         call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, &
           ierr, lr=kdotp_lr(idir, 1))
@@ -187,10 +185,10 @@ contains
       ! otherwise, use default, which is hartree + fxc
     endif
 
-    call io_mkdir(trim(tmpdir)//EM_RESP_RESTART_DIR)
+    call io_mkdir(trim(tmpdir)//EM_RESP_DIR) ! restart
     call info()
 
-    call io_mkdir(OUTPUT_DIR)
+    call io_mkdir(EM_RESP_DIR) ! output
 
     do ifactor = 1, em_vars%nfactor
       do idir = 1, sys%gr%sb%dim
@@ -255,7 +253,7 @@ contains
               if(iomega == 1) then
                 do sigma = 1, em_vars%nsigma
                   str_tmp =  em_wfs_tag(idir, ifactor)
-                  write(dirname,'(3a, i1)') EM_RESP_RESTART_DIR, trim(str_tmp), '_', sigma
+                  write(dirname,'(3a, i1)') EM_RESP_DIR, trim(str_tmp), '_', sigma
                   call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, &
                     ierr, lr=em_vars%lr(idir, sigma, ifactor))
 
@@ -269,11 +267,11 @@ contains
               !try to load restart density
               if (states_are_complex(sys%st)) then 
                 call zrestart_read_lr_rho(em_vars%lr(idir, 1, ifactor), sys%gr, sys%st%d%nspin, &
-                  EM_RESP_RESTART_DIR, &
+                  EM_RESP_DIR, &
                   em_rho_tag(em_vars%freq_factor(ifactor)*em_vars%omega(iomega), idir), ierr)
               else 
                 call drestart_read_lr_rho(em_vars%lr(idir, 1, ifactor), sys%gr, sys%st%d%nspin, &
-                  EM_RESP_RESTART_DIR, &
+                  EM_RESP_DIR, &
                   em_rho_tag(em_vars%freq_factor(ifactor)*em_vars%omega(iomega), idir), ierr)
               end if
 
@@ -281,16 +279,16 @@ contains
               if(ierr /= 0) then 
 
                 closest_omega = em_vars%freq_factor(ifactor)*em_vars%omega(iomega)
-                call oct_search_file_lr(closest_omega, idir, ierr, trim(tmpdir)//EM_RESP_RESTART_DIR)
+                call oct_search_file_lr(closest_omega, idir, ierr, trim(tmpdir)//EM_RESP_DIR)
 
                 !attempt to read 
                 if(ierr == 0 ) then 
                   if (states_are_complex(sys%st)) then 
                     call zrestart_read_lr_rho(em_vars%lr(idir, 1, ifactor), sys%gr, sys%st%d%nspin, &
-                      EM_RESP_RESTART_DIR, em_rho_tag(closest_omega, idir), ierr)
+                      EM_RESP_DIR, em_rho_tag(closest_omega, idir), ierr)
                   else 
                     call drestart_read_lr_rho(em_vars%lr(idir, 1, ifactor), sys%gr, sys%st%d%nspin, &
-                      EM_RESP_RESTART_DIR, em_rho_tag(closest_omega, idir), ierr)
+                      EM_RESP_DIR, em_rho_tag(closest_omega, idir), ierr)
                   end if
                 end if
 
@@ -322,7 +320,7 @@ contains
               if (states_are_complex(sys%st)) then
                 call zsternheimer_solve(sh, sys, hm, em_vars%lr(idir, 1:1, ifactor), 1, &
                   em_vars%freq_factor(ifactor)*em_vars%omega(iomega) + M_zI * em_vars%eta, &
-                  em_vars%perturbation, EM_RESP_RESTART_DIR, &
+                  em_vars%perturbation, EM_RESP_DIR, &
                   em_rho_tag(em_vars%freq_factor(ifactor)*em_vars%omega(iomega), idir), &
                   em_wfs_tag(idir, ifactor), have_restart_rho=(ierr==0))
 
@@ -331,7 +329,7 @@ contains
               else
                 call dsternheimer_solve(sh, sys, hm, em_vars%lr(idir, 1:1, ifactor), 1, &
                   em_vars%freq_factor(ifactor)*em_vars%omega(iomega), &
-                  em_vars%perturbation, EM_RESP_RESTART_DIR, &
+                  em_vars%perturbation, EM_RESP_DIR, &
                   em_rho_tag(em_vars%freq_factor(ifactor)*em_vars%omega(iomega), idir), &
                   em_wfs_tag(idir, ifactor), have_restart_rho=(ierr==0))
                 em_vars%lr(idir, 2, ifactor)%ddl_psi = em_vars%lr(idir, 1, ifactor)%ddl_psi
@@ -343,13 +341,13 @@ contains
               if (states_are_complex(sys%st)) then
                 call zsternheimer_solve(sh, sys, hm, em_vars%lr(idir, :, ifactor), em_vars%nsigma, &
                   em_vars%freq_factor(ifactor)*em_vars%omega(iomega) + M_zI * em_vars%eta, &
-                  em_vars%perturbation, EM_RESP_RESTART_DIR, &
+                  em_vars%perturbation, EM_RESP_DIR, &
                   em_rho_tag(em_vars%freq_factor(ifactor)*em_vars%omega(iomega), idir), &
                   em_wfs_tag(idir, ifactor), have_restart_rho=(ierr==0))
               else
                 call dsternheimer_solve(sh, sys, hm, em_vars%lr(idir, :, ifactor), em_vars%nsigma, &
                   em_vars%freq_factor(ifactor)*em_vars%omega(iomega), &
-                  em_vars%perturbation, EM_RESP_RESTART_DIR, &
+                  em_vars%perturbation, EM_RESP_DIR, &
                   em_rho_tag(em_vars%freq_factor(ifactor)*em_vars%omega(iomega), idir), &
                   em_wfs_tag(idir, ifactor), have_restart_rho=(ierr==0))
               end if
@@ -680,7 +678,7 @@ contains
 
     do ifactor = 1, em_vars%nfactor
       str_tmp = freq2str(units_from_atomic(units_out%energy, em_vars%freq_factor(ifactor)*em_vars%omega(iomega)))
-      write(dirname, '(a, a)') OUTPUT_DIR//'freq_', trim(str_tmp)
+      write(dirname, '(a, a)') EM_RESP_DIR//'freq_', trim(str_tmp)
       call io_mkdir(trim(dirname))
 
       if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then

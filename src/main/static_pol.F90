@@ -18,6 +18,7 @@
 !! $Id$
 
 #include "global.h"
+#define RESTART_FILE 'dipoles'
 
 module static_pol_m
   use datasets_m
@@ -93,12 +94,14 @@ contains
     call write_info(1)
     call system_h_setup (sys, hm)
 
+    call io_mkdir(trim(tmpdir)//EM_RESP_FD_DIR) ! restart
+
     ! Allocate the dipole...
     SAFE_ALLOCATE(dipole(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim, 1:2))
     dipole = M_ZERO
 
     if(.not.fromScratch) then
-      iunit = io_open(trim(tmpdir)//'restart.pol', action='read', status='old', die=.false.)
+      iunit = io_open(trim(tmpdir)//EM_RESP_FD_DIR//RESTART_FILE, action='read', status='old', die=.false.)
       if(iunit > 0) then
         ! Finds out how many dipoles have already been written.
         rewind(iunit)
@@ -128,7 +131,7 @@ contains
 
     if(fromScratch) then
       if(mpi_grp_is_root(mpi_world)) then
-        iunit = io_open(trim(tmpdir)//'restart.pol', action='write')
+        iunit = io_open(trim(tmpdir)//EM_RESP_FD_DIR//RESTART_FILE, action='write')
         call io_close(iunit)
       end if
       i_start = 1
@@ -200,7 +203,7 @@ contains
 
       ! Writes the dipole to file
       if(mpi_grp_is_root(mpi_world)) then 
-        iunit = io_open(trim(tmpdir)//'restart.pol', action='write', status='old', position='append')
+        iunit = io_open(trim(tmpdir)//EM_RESP_FD_DIR//RESTART_FILE, action='write', status='old', position='append')
         write(iunit, fmt='(6e20.12)') ((dipole(ii, jj, isign), jj = 1, gr%mesh%sb%dim), isign = 1, 2)
         call io_close(iunit)
       end if
@@ -233,7 +236,7 @@ contains
   
       ! Writes the dipole to file
       if(mpi_grp_is_root(mpi_world)) then 
-        iunit = io_open(trim(tmpdir)//'restart.pol', action='write', status='old', position='append')
+        iunit = io_open(trim(tmpdir)//EM_RESP_FD_DIR//RESTART_FILE, action='write', status='old', position='append')
         write(iunit, fmt='(3e20.12)') (diag_dipole(jj), jj = 1, gr%mesh%sb%dim)
         call io_close(iunit)
       end if
@@ -334,26 +337,26 @@ contains
           !write
           do is = 1, st%d%nspin
             if(iand(sys%outp%what, output_density).ne.0) then
-              write(fname, '(a,a,i1,a,i1)') 'fd_density', '-', is, '-', ii
-              call doutput_function(sys%outp%how, "linear", trim(fname),&
+              write(fname, '(a,a,i1,a,i1)') 'density1', '-', is, '-', ii
+              call doutput_function(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
                 gr%mesh, gr%sb, lr_rho(:, is), M_ONE, ierr, geo = sys%geo)
 
               ! save the trouble of writing many copies of each density, since i,j = j,i
               do jj = ii, gr%mesh%sb%dim
-                write(fname, '(a,a,i1,a,i1,a,i1)') 'fd2_density', '-', is, '-', ii, '-', jj
-                call doutput_function(sys%outp%how, "linear", trim(fname),&
+                write(fname, '(a,a,i1,a,i1,a,i1)') 'density1', '-', is, '-', ii, '-', jj
+                call doutput_function(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
                   gr%mesh, gr%sb, lr_rho2(:, is), M_ONE, ierr, geo = sys%geo)
               enddo
             endif
 
             if(iand(sys%outp%what, output_pol_density).ne.0) then
               do jj = ii, gr%mesh%sb%dim
-                write(fname, '(a,a,i1,a,i1,a,i1)') 'fd_alpha_density', '-', is, '-', ii, '-', jj
-                call doutput_function(sys%outp%how, "linear", trim(fname),&
+                write(fname, '(a,a,i1,a,i1,a,i1)') 'alpha_density', '-', is, '-', ii, '-', jj
+                call doutput_function(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
                   gr%mesh, gr%sb, gr%mesh%x(:, jj) * lr_rho(:, is), M_ONE, ierr, geo = sys%geo)
 
-                write(fname, '(a,a,i1,a,i1,a,i1,a,i1)') 'fd_beta_density', '-', is, '-', ii, '-', ii, '-', jj
-                call doutput_function(sys%outp%how, "linear", trim(fname),&
+                write(fname, '(a,a,i1,a,i1,a,i1,a,i1)') 'beta_density', '-', is, '-', ii, '-', ii, '-', jj
+                call doutput_function(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
                   gr%mesh, gr%sb, gr%mesh%x(:, jj) * lr_rho2(:, is), M_ONE, ierr, geo = sys%geo)
               enddo
             endif
@@ -378,11 +381,11 @@ contains
 
           !write
           do is = 1, st%d%nspin
-            write(fname, '(a,a,i1,a,i1)') 'fd_elf', '-', is, '-', ii
-            call doutput_function(sys%outp%how, "linear", trim(fname),&
+            write(fname, '(a,a,i1,a,i1)') 'elf', '-', is, '-', ii
+            call doutput_function(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
                 gr%mesh, gr%sb, lr_elf(:, is), M_ONE, ierr, geo = sys%geo)
-            write(fname, '(a,a,i1,a,i1)') 'fd_D', '-', is, '-', ii
-            call doutput_function(sys%outp%how, "linear", trim(fname),&
+            write(fname, '(a,a,i1,a,i1)') 'elf_D', '-', is, '-', ii
+            call doutput_function(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
                 gr%mesh, gr%sb, lr_elfd(:, is), M_ONE, ierr, geo = sys%geo)
           end do
         end if
@@ -398,6 +401,8 @@ contains
       CMPLX :: beta(MAX_DIM, MAX_DIM, MAX_DIM)
       integer :: iunit, idir
 
+      call io_mkdir(EM_RESP_FD_DIR)
+
       if(iand(sys%outp%what, output_density).ne.0 .or. &
          iand(sys%outp%what, output_pol_density).ne.0) then 
         lr_rho2(1:gr%mesh%np, 1:st%d%nspin) = -(st%rho(1:gr%mesh%np, 1:st%d%nspin) - lr_rho(1:gr%mesh%np, 1:st%d%nspin) &
@@ -405,22 +410,21 @@ contains
   
         do is = 1, st%d%nspin
           if(iand(sys%outp%what, output_density).ne.0) then
-            write(fname, '(a,a,i1,a)') 'fd2_density', '-', is, '-2-3'
-            call doutput_function(sys%outp%how, "linear", trim(fname),&
+            write(fname, '(a,a,i1,a)') 'density2', '-', is, '-2-3'
+            call doutput_function(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
               gr%mesh, gr%sb, lr_rho2(:, is), M_ONE, ierr, geo = sys%geo)
           endif
   
           if(iand(sys%outp%what, output_pol_density).ne.0) then
-            write(fname, '(a,a,i1,a,i1,a,i1,a,i1)') 'fd_beta_density', '-', is, '-1-2-3'
-            call doutput_function(sys%outp%how, "linear", trim(fname),&
+            write(fname, '(a,a,i1,a,i1,a,i1,a,i1)') 'beta_density', '-', is, '-1-2-3'
+            call doutput_function(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
               gr%mesh, gr%sb, gr%mesh%x(:, 1) * lr_rho2(:, is), M_ONE, ierr, geo = sys%geo)
           endif
         end do
       endif
 
-      call io_mkdir('linear')
       if(mpi_grp_is_root(mpi_world)) then ! output pol file
-        iunit = io_open('linear/alpha', action='write')
+        iunit = io_open(EM_RESP_FD_DIR//'alpha', action='write')
         write(iunit, '(2a)', advance='no') '# Polarizability tensor [', &
           trim(units_abbrev(units_out%length))
         if(gr%mesh%sb%dim.ne.1) write(iunit, '(a,i1)', advance='no') '^', gr%mesh%sb%dim
@@ -448,7 +452,7 @@ contains
         call io_output_tensor(iunit, alpha, gr%mesh%sb%dim, units_out%length%factor**gr%mesh%sb%dim)
         call io_close(iunit)
         
-        call out_hyperpolarizability(gr%sb, beta, converged = .true., dirname = "linear/")
+        call out_hyperpolarizability(gr%sb, beta, converged = .true., dirname = EM_RESP_FD_DIR)
 
       end if
 

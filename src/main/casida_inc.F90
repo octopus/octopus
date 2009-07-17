@@ -29,6 +29,8 @@ function X(ks_matrix_elements) (cas, st, m, dv) result(x)
   R_TYPE, allocatable :: f(:)
   integer :: k, ia, i, a, sigma, idim
 
+  call push_sub('casida_inc.Xks_matrix_elements')
+
   SAFE_ALLOCATE(f(1:m%np))
   do ia = 1, cas%n_pairs
     i     = cas%pair(ia)%i
@@ -43,6 +45,7 @@ function X(ks_matrix_elements) (cas, st, m, dv) result(x)
   end do
 
   SAFE_DEALLOCATE_A(f)
+  call pop_sub()
 end function X(ks_matrix_elements)
 
 ! ---------------------------------------------------------
@@ -53,6 +56,8 @@ R_TYPE function X(transition_matrix_element) (cas, ia, x) result(z)
 
   integer :: jb
 
+  call push_sub('casida_inc.Xtransition_matrix_element')
+
   z = R_TOTYPE(M_ZERO)
   if(cas%w(ia) > M_ZERO) then
     do jb = 1, cas%n_pairs
@@ -61,6 +66,7 @@ R_TYPE function X(transition_matrix_element) (cas, ia, x) result(z)
     z = (M_ONE/sqrt(cas%w(ia))) * z
   end if
 
+  call pop_sub()
 end function X(transition_matrix_element)
 
 ! ---------------------------------------------------------
@@ -74,7 +80,7 @@ subroutine X(transition_density) (cas, st, m, ia, n0I)
   integer :: i, jb, idim
   R_TYPE, allocatable :: x(:)
 
-  call push_sub('casida.transition_density')
+  call push_sub('casida_inc.Xtransition_density')
 
   SAFE_ALLOCATE(x(1:cas%n_pairs))
 
@@ -102,7 +108,7 @@ subroutine X(get_transition_densities) (cas, sys, trandens)
   character(len=5) :: intstr
   character(len=130) :: filename
   R_TYPE, allocatable :: n0I(:)
-  call push_sub('casida.get_transition_densities')
+  call push_sub('casida_inc.Xget_transition_densities')
 
   SAFE_ALLOCATE(n0I(1:sys%gr%mesh%np))
   n0I = M_ZERO
@@ -113,7 +119,7 @@ subroutine X(get_transition_densities) (cas, sys, trandens)
       write(intstr,'(i5)') ia
       write(intstr,'(i1)') len(trim(adjustl(intstr)))
       write(filename,'(a,i'//trim(intstr)//')') 'n0',ia
-      call X(output_function)(sys%outp%how, "linear", trim(filename), &
+      call X(output_function)(sys%outp%how, CASIDA_DIR, trim(filename), &
                               sys%gr%mesh, sys%gr%sb, n0I, M_ONE, ierr, geo = sys%geo)
     end if
   end do

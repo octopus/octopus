@@ -179,7 +179,7 @@ contains
     call states_calc_dens(sys%st, sys%gr%mesh%np)
 
     call v_ks_calc(sys%gr, sys%ks, hm, sys%st, calc_eigenval=.true.) ! get potentials
-    call states_fermi(sys%st, sys%gr%mesh)                            ! occupations
+    call states_fermi(sys%st, sys%gr%mesh)                           ! occupations
     call total_energy(hm, sys%gr, sys%st, -1)
 
     call pop_sub()

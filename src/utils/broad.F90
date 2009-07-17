@@ -56,9 +56,9 @@ program broad
   b%min_energy  = b%min_energy  * units_inp%energy%factor
   b%max_energy  = b%max_energy  * units_inp%energy%factor
 
-  call calc_broad(b, 'linear', 'eps-diff', .true.)
-  call calc_broad(b, 'linear', 'petersilka', .true.)
-  call calc_broad(b, 'linear', 'casida', .false.)
+  call calc_broad(b, CASIDA_DIR, 'eps-diff', .true.)
+  call calc_broad(b, CASIDA_DIR, 'petersilka', .true.)
+  call calc_broad(b, CASIDA_DIR, 'casida', .false.)
 
   call io_end()
   call datasets_end()

@@ -18,8 +18,6 @@
 !! $Id: kdotp.F90 4145 2008-05-02 23:29:41Z xavier $
 
 #include "global.h"
-! defines KDOTP_RESTART_DIR
-#define OUTPUT_DIR "kdotp/"
 
 module kdotp_m
   use datasets_m
@@ -177,7 +175,7 @@ contains
       ! load wave-functions
       if(.not.fromScratch) then
          str_tmp =  kdotp_wfs_tag(idir)
-         write(dirname,'(3a)') KDOTP_RESTART_DIR, trim(str_tmp), '_1'
+         write(dirname,'(3a)') KDOTP_DIR, trim(str_tmp), '_1'
          ! 1 is the sigma index which is used in em_resp
          call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, &
                ierr, lr=kdotp_vars%lr(idir, 1))
@@ -191,8 +189,8 @@ contains
 
     end do
 
-    call io_mkdir(trim(tmpdir)//KDOTP_RESTART_DIR)
-    call io_mkdir(OUTPUT_DIR)
+    call io_mkdir(trim(tmpdir)//KDOTP_DIR) ! restart
+    call io_mkdir(KDOTP_DIR)               ! data output
     call info()
     message(1) = "Info: Calculating k.p linear response of ground-state wavefunctions."
     call write_info(1)
@@ -206,11 +204,11 @@ contains
 
       if(states_are_real(sys%st)) then
         call dsternheimer_solve(sh, sys, hm, kdotp_vars%lr(idir,:), 1, &
-          M_ZERO, kdotp_vars%perturbation, KDOTP_RESTART_DIR, &
+          M_ZERO, kdotp_vars%perturbation, KDOTP_DIR, &
           kdotp_rho_tag(idir), kdotp_wfs_tag(idir), have_restart_rho=(ierr==0))
       else
         call zsternheimer_solve(sh, sys, hm, kdotp_vars%lr(idir,:), 1, &
-          M_zI * kdotp_vars%eta, kdotp_vars%perturbation, KDOTP_RESTART_DIR, &
+          M_zI * kdotp_vars%eta, kdotp_vars%perturbation, KDOTP_DIR, &
           kdotp_rho_tag(idir), kdotp_wfs_tag(idir), have_restart_rho=(ierr==0))
       endif
 
@@ -274,8 +272,9 @@ contains
         0, kdotp_vars%occ_solution_method)
 
       call loct_parse_float(datasets_check('DegeneracyThreshold'), &
-        CNST(1e-5), kdotp_vars%degen_thres)
-      ! Note: this variable is defined in src/states.F90, in states_degeneracy_matrix
+        units_from_atomic(units_inp%energy, CNST(1e-5)), kdotp_vars%degen_thres)
+      kdotp_vars%degen_thres = units_to_atomic(units_inp%energy, kdotp_vars%degen_thres)
+      ! Note: this variable is defined in src/states_calc.F90, in states_degeneracy_matrix
 
       !%Variable KdotP_Eta
       !%Type float
@@ -286,7 +285,7 @@ contains
       !%End
 
       call loct_parse_float(datasets_check('KdotP_Eta'), M_ZERO, kdotp_vars%eta)
-      kdotp_vars%eta = kdotp_vars%eta * units_inp%energy%factor
+      kdotp_vars%eta = units_to_atomic(units_inp%energy, kdotp_vars%eta)
 
       !%Variable KdotP_Initialization
       !%Type integer
@@ -382,7 +381,7 @@ contains
          write(message(1),'(a)') '===='
          tmp = int2str(ist)
          write(message(2),'(a, a, a, f12.8, a, a)') 'State #', trim(tmp), ', Energy = ', &
-           st%eigenval(ist, ik)/units_out%energy%factor, ' ', units_out%energy%abbrev
+           units_from_atomic(units_out%energy, st%eigenval(ist, ik)), ' ', units_abbrev(units_out%energy)
          call write_info(2)
 
          ist2 = ist + 1
@@ -393,7 +392,7 @@ contains
            ! write(*,*) ist2, ist, sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik)
             tmp = int2str(ist2)
             write(message(1),'(a, a, a, f12.8, a, a)') 'State #', trim(tmp), ', Energy = ', &
-              st%eigenval(ist2, ik)/units_out%energy%factor, ' ', units_out%energy%abbrev
+              units_from_atomic(units_out%energy, st%eigenval(ist2, ik)), ' ', units_abbrev(units_out%energy)
             call write_info(1)
             ist2 = ist2 + 1
          enddo
@@ -404,7 +403,7 @@ contains
       call write_info(1)
 
       tmp = int2str(ik2)
-      write(filename, '(3a, i1)') OUTPUT_DIR//'kpoint_', trim(tmp), '_', ispin
+      write(filename, '(3a, i1)') KDOTP_DIR//'kpoint_', trim(tmp), '_', ispin
       iunit = io_open(trim(filename), action='write')
 
       write(iunit,'(a, i10)') '# spin    index = ', ispin
@@ -418,7 +417,7 @@ contains
         write(iunit,'(a)')
         tmp = int2str(ist)
         write(iunit,'(a, a, a, f12.8, a, a)') 'State #', trim(tmp), ', Energy = ', &
-          st%eigenval(ist, ik)/units_out%energy%factor, ' ', units_out%energy%abbrev
+          units_from_atomic(units_out%energy, st%eigenval(ist, ik)), ' ', units_abbrev(units_out%energy)
         call io_output_tensor(iunit, kdotp_vars%eff_mass_inv(ik, ist, :, :), gr%mesh%sb%dim, M_ONE)
       enddo
       
@@ -428,7 +427,7 @@ contains
         write(iunit,'(a)')
         tmp = int2str(ist)
         write(iunit,'(a, a, a, f12.8, a, a)') 'State #', trim(tmp), ', Energy = ', &
-          st%eigenval(ist, ik)/units_out%energy%factor, ' ', units_out%energy%abbrev
+          units_from_atomic(units_out%energy, st%eigenval(ist, ik)), ' ', units_abbrev(units_out%energy)
         determinant = lalg_inverter(gr%sb%dim, kdotp_vars%eff_mass_inv(ik, ist, :, :), .true.)
         call io_output_tensor(iunit, kdotp_vars%eff_mass_inv(ik, ist, :, :), gr%mesh%sb%dim, M_ONE)
       enddo

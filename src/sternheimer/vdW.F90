@@ -18,7 +18,6 @@
 !! $Id: em_resp.F90 2647 2007-01-09 18:02:46Z lorenzen $
 
 #include "global.h"
-! defines VDW_RESTART_DIR
 
 module vdw_m
   use datasets_m
@@ -82,7 +81,7 @@ contains
     call sternheimer_init(sh, sys, hm, "Pol", hermitian=.false.)
 
     if(gauss_start == 1 .and. mpi_grp_is_root(mpi_world)) then
-      iunit = io_open('linear/vdw_c6', action='write')
+      iunit = io_open(VDW_DIR//'vdw_c6', action='write')
       write(iunit, '(a,i3)') '# npoints = ', gaus_leg_n
       write(iunit, '(a1,a12,2a20)') '#', 'omega', 'domega', 'pol'
       call io_close(iunit)
@@ -94,7 +93,7 @@ contains
 
       pol = get_pol(omega)
       if(mpi_grp_is_root(mpi_world)) then
-        iunit = io_open('linear/vdw_c6', action='write', position='append')
+        iunit = io_open(VDW_DIR//'vdw_c6', action='write', position='append')
         write(iunit, '(3es20.12)') aimag(omega), domega, pol
         call io_close(iunit)
       end if
@@ -105,22 +104,22 @@ contains
     end do
 
     if((gauss_start .le. gaus_leg_n).and.mpi_grp_is_root(mpi_world)) then
-      iunit = io_open('linear/vdw_c6', action='write', position='append')
+      iunit = io_open(VDW_DIR//'vdw_c6', action='write', position='append')
       write(iunit, '(1x)')
       write(iunit, '(a,es20.12)') "C_3  [a.u.  ] = ", c3
       write(iunit, '(a,es20.12)') "C_6  [a.u.  ] = ", c6
       write(iunit, '(a,es20.12)') "C_AT [a.u.  ] = ", cat
       write(iunit, '(1x)')
 
-      write(iunit, '(5a,i1,a,es20.12)') "C_3  [", trim(units_out%energy%abbrev), " ",  &
-        trim(units_out%length%abbrev), "^", sys%gr%mesh%sb%dim, "] = ", &
-        c3/(units_out%energy%factor * units_out%length%factor**sys%gr%mesh%sb%dim)
-      write(iunit, '(5a,i1,a,es20.12)') "C_6  [", trim(units_out%energy%abbrev), " ",  &
-        trim(units_out%length%abbrev), "^", 2*sys%gr%mesh%sb%dim, "] = ", &
-        c6/(units_out%energy%factor * units_out%length%factor**(2*sys%gr%mesh%sb%dim))
-      write(iunit, '(5a,i1,a,es20.12)') "C_AT [", trim(units_out%energy%abbrev), " ",  &
-        trim(units_out%length%abbrev), "^", 3*sys%gr%mesh%sb%dim, "] = ", &
-        cat/(units_out%energy%factor * units_out%length%factor**(3*sys%gr%mesh%sb%dim))
+      write(iunit, '(5a,i1,a,es20.12)') "C_3  [", trim(units_abbrev(units_out%energy)), " ",  &
+        trim(units_abbrev(units_out%length**sys%gr%mesh%sb%dim)), "] = ", &
+        units_from_atomic(units_out%energy * units_out%length**sys%gr%mesh%sb%dim, c3)
+      write(iunit, '(5a,i1,a,es20.12)') "C_6  [", trim(units_abbrev(units_out%energy)), " ",  &
+        trim(units_abbrev(units_out%length**(2*sys%gr%mesh%sb%dim))), "] = ", &
+        units_from_atomic(units_out%energy * units_out%length**(2*sys%gr%mesh%sb%dim), c6)
+      write(iunit, '(5a,i1,a,es20.12)') "C_AT [", trim(units_abbrev(units_out%energy)), " ",  &
+        trim(units_abbrev(units_out%length**(3*sys%gr%mesh%sb%dim))), "] = ", &
+        units_from_atomic(units_out%energy * units_out%length**(3*sys%gr%mesh%sb%dim), cat)
 
       call io_close(iunit)
     end if
@@ -179,9 +178,9 @@ contains
       gaus_leg_weights(gaus_leg_n) = M_ZERO
 
       ! check if we can restart
-      inquire(file='linear/vdw_c6', exist=file_exists)
+      inquire(file=VDW_DIR//'vdw_c6', exist=file_exists)
       if(.not.fromScratch .and. file_exists) then
-        iunit = io_open('linear/vdw_c6', action='read')
+        iunit = io_open(VDW_DIR//'vdw_c6', action='read')
         read(iunit, '(a12,i3)', iostat=ierr) dirname, ii
         if(ii .ne. gaus_leg_n) then
           message(1) = "Invalid restart of van der Waals calculation"
@@ -215,7 +214,7 @@ contains
 
         ! load wave-functions
         if(.not.fromScratch) then
-          write(dirname,'(a,i1,a)') VDW_RESTART_DIR//"wfs_", dir, "_1_1"
+          write(dirname,'(a,i1,a)') VDW_DIR//"wfs_", dir, "_1_1"
           call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, &
             ierr, lr=lr(dir,1))
           
@@ -226,8 +225,8 @@ contains
         end if
       end do
 
-      call io_mkdir(trim(tmpdir)//VDW_RESTART_DIR)
-      call io_mkdir('linear/')
+      call io_mkdir(trim(tmpdir)//VDW_DIR) ! restart
+      call io_mkdir(VDW_DIR)               ! output data
     end subroutine init_
 
     ! --------------------------------------------------------------------
@@ -247,18 +246,18 @@ contains
     FLOAT function get_pol(omega)
       CMPLX, intent(in) :: omega
 
-      CMPLX             :: alpha(1:MAX_DIM, 1:MAX_DIM)
+      CMPLX        :: alpha(1:MAX_DIM, 1:MAX_DIM)
       type(pert_t) :: perturbation
 
       call pert_init(perturbation, PERTURBATION_ELECTRIC, sys%gr, sys%geo)
       do dir = 1, ndir
         write(message(1), '(a,i1,a,f7.3)') 'Info: Calculating response for direction ', dir, &
-          ' and imaginary frequency ', aimag(omega)/units_out%energy%factor
+          ' and imaginary frequency ', units_from_atomic(units_out%energy, aimag(omega))
         call write_info(1)   
 
         call pert_setup_dir(perturbation, dir)
         call zsternheimer_solve(sh, sys, hm, lr(dir, :), 1,  omega, perturbation, &
-             VDW_RESTART_DIR, em_rho_tag(real(omega),dir), em_wfs_tag(dir,1))
+             VDW_DIR, em_rho_tag(real(omega),dir), em_wfs_tag(dir,1))
       end do
 
       call zcalc_polarizability_finite(sys, hm, lr(:,:), 1, perturbation, alpha(:,:), ndir)

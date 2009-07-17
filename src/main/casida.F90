@@ -79,6 +79,13 @@ module casida_m
 contains
 
   ! ---------------------------------------------------------
+  ! References for Casida:
+  ! C Jamorski, ME Casida, DR Salahub, J Chem Phys 104, 5134 (1996)
+  ! ME Casida, "Time-dependent density functional response theory for molecules,"
+  !   in Recent Advances in Density Functional Methods, edited by DE Chong, vol. 1
+  !   of Recent Advances in Computational Chemistry, pp. 155-192 (World Scientific,
+  !   Singapore)
+  !   -- available at http://dcm.ujf-grenoble.fr/PERSONNEL/CT/casida/research/chong.ps
   subroutine casida_run(sys, hm, fromScratch)
     type(system_t),      intent(inout) :: sys
     type(hamiltonian_t), intent(inout) :: hm
@@ -95,7 +102,7 @@ contains
       call write_fatal(1)
     end if
 
-    message(1) = 'Info: Starting linear-response calculation.'
+    message(1) = 'Info: Starting Casida linear-response calculation.'
     call write_info(1)
 
     call restart_look_and_read(sys%st, sys%gr, sys%geo)
@@ -132,11 +139,11 @@ contains
     call system_h_setup(sys, hm)
 
 
-    !%Variable LinearResponseKohnShamStates
+    !%Variable CasidaKohnShamStates
     !%Type string
     !%Section Linear Response::Casida
     !%Description
-    !% The calculation of the excitation spectrum of a system in the frequency-domain
+    !% The calculation of the excitation spectrum of a system in the Casida frequency-domain
     !% formulation of linear-response time-dependent density functional theory (TDDFT)
     !% implies the use of a basis set of occupied/unoccupied Kohn-Sham orbitals. This
     !% basis set should, in principle, include all pairs formed by all occupied states,
@@ -147,32 +154,32 @@ contains
     !% states from 10 to 15, and unoccupied states from 16 to 18 will be considered.
     !%
     !% This variable is a string in list form, i.e. expressions such as "1,2-5,8-15" are
-    !% valid. You should include a non-null number of unoccupied states and a non-null number
+    !% valid. You should include a non-zero number of unoccupied states and a non-zero number
     !% of occupied states.
     !%End
-    call loct_parse_string(datasets_check('LinearResponseKohnShamStates'), "1-1024", cas%wfn_list)
+    call loct_parse_string(datasets_check('CasidaKohnShamStates'), "1-1024", cas%wfn_list)
     write(message(1),'(a,a)') "Info: States that form the basis: ",trim(cas%wfn_list)
     Call write_info(1)
 
-    !%Variable LinearResponseTransitionDensities
+    !%Variable CasidaTransitionDensities
     !%Type string
     !%Section Linear Response::Casida
     !%Description
     !% Specifies which transition densities are to be calculated and written down. The
     !% transition density for the many-body state n will be written to a file called
-    !% linear/rho0n.
+    !% casida/rho0n.
     !% 
     !% By default, no transition density is calculated. 
     !%
     !% This variable is a string in list form, i.e. expressions such as "1,2-5,8-15" are
     !% valid.
     !%End
-    call loct_parse_string(datasets_check('LinearResponseTransitionDensities'), "0", trandens)
+    call loct_parse_string(datasets_check('CasidaTransitionDensities'), "0", trandens)
 
     ! Initialize structure
     call casida_type_init(cas, sys%gr%sb%dim, nk, sys%mc)
 
-    if(fromScratch) call loct_rm(trim(tmpdir)//'casida')
+    if(fromScratch) call loct_rm(trim(tmpdir)//CASIDA_DIR) ! restart
 
     ! First, print the differences between KS eigenvalues (first approximation to the
     ! excitation energies, or rather, to the DOS.
@@ -184,14 +191,14 @@ contains
 
     if (sys%st%d%ispin /= SPINORS) then
       ! Then, calculate the excitation energies by making use of the Petersilka approximation
-      message(1) = "Info: Calculating resonance energies a la Petersilka"
+      message(1) = "Info: Calculating resonance energies via the Petersilka approximation"
       call write_info(1)
       cas%type = CASIDA_PETERSILKA
       call casida_work(sys, hm, cas)
       call casida_write(cas, 'petersilka')
 
       ! And finally, solve the full Casida problem.
-      message(1) = "Info: Calculating resonance energies a la Casida"
+      message(1) = "Info: Calculating resonance energies with the full Casida method"
       call write_info(1)
       cas%type = CASIDA_CASIDA
       call casida_work(sys, hm, cas)
@@ -380,7 +387,7 @@ contains
       if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, cas%n_pairs)
 
       ! file to save matrix elements
-      iunit = io_open(trim(tmpdir)//'casida', action='write', position='append', is_tmp=.true.)
+      iunit = io_open(trim(tmpdir)//CASIDA_DIR, action='write', position='append', is_tmp=.true.)
 
       do ia = 1, cas%n_pairs
         cas%w(ia) = st%eigenval(cas%pair(ia)%a, cas%pair(ia)%sigma) - &
@@ -489,7 +496,7 @@ contains
         if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
 
         ! complete the matrix and output the restart file
-        iunit = io_open(trim(tmpdir)//'casida', action='write', position='append', is_tmp=.true.)
+        iunit = io_open(trim(tmpdir)//CASIDA_DIR, action='write', position='append', is_tmp=.true.)
         do ia = 1, cas%n_pairs
           p => cas%pair(ia)
           temp = st%eigenval(p%a, p%sigma) - st%eigenval(p%i, p%sigma)
@@ -632,7 +639,7 @@ contains
 
       call push_sub('casida.load_saved')
 
-      iunit = io_open(trim(tmpdir)//'casida', action='read', status='old', die=.false., is_tmp=.true.)
+      iunit = io_open(trim(tmpdir)//CASIDA_DIR, action='read', status='old', die=.false., is_tmp=.true.)
       if( iunit <= 0) then
         call pop_sub(); return
       end if
@@ -678,8 +685,8 @@ contains
     call sort(w, ind)
 
     ! output excitation energies and oscillator strengths
-    call io_mkdir('linear')
-    iunit = io_open('linear/'//trim(filename), action='write')
+    call io_mkdir(CASIDA_DIR)
+    iunit = io_open(CASIDA_DIR//trim(filename), action='write')
 
     if(cas%type == CASIDA_EPS_DIFF) write(iunit, '(2a4)', advance='no') 'From', ' To '
 
@@ -692,8 +699,8 @@ contains
       if((cas%type==CASIDA_EPS_DIFF).or.(cas%type==CASIDA_PETERSILKA)) then
         write(iunit, '(2i4)', advance='no') cas%pair(ind(ia))%i, cas%pair(ind(ia))%a
       end if
-      write(iunit, '(5(es15.8,1x))') cas%w(ind(ia)) / units_out%energy%factor, &
-        cas%tm(ind(ia), 1:dim) / units_out%length%factor, cas%f(ind(ia))
+      write(iunit, '(5(es15.8,1x))') units_from_atomic(units_out%energy, cas%w(ind(ia))), &
+        units_from_atomic(units_out%length, cas%tm(ind(ia), 1:dim)), cas%f(ind(ia))
     end do
     call io_close(iunit)
 
@@ -703,21 +710,21 @@ contains
       call pop_sub(); return
     end if
 
-    call io_mkdir('linear/excitations')
+    call io_mkdir(CASIDA_DIR//'excitations')
     do ia = 1, cas%n_pairs
       write(str,'(i5.5)') ia
-      iunit = io_open('linear/excitations/'//trim(str), action='write')
+      iunit = io_open(CASIDA_DIR//'excitations/'//trim(str), action='write')
       ! First, a little header
-      write(iunit,'(a,es14.5)') '# Energy ['// trim(units_out%energy%abbrev) // '] = ', &
-                                cas%w(ind(ia)) / units_out%energy%factor
-        write(iunit,'(a,es14.5)') '# <X> ['//trim(units_out%length%abbrev)// '] = ', &
-                                  cas%tm(ind(ia),1) / units_out%length%factor
+      write(iunit,'(a,es14.5)') '# Energy ['// trim(units_abbrev(units_out%energy)) // '] = ', &
+                                units_from_atomic(units_out%energy, cas%w(ind(ia)))
+        write(iunit,'(a,es14.5)') '# <X> ['//trim(units_abbrev(units_out%length))// '] = ', &
+                                  units_from_atomic(units_out%length, cas%tm(ind(ia),1))
       if(dim > 1) &
-        write(iunit,'(a,es14.5)') '# <Y> ['//trim(units_out%length%abbrev)// '] = ', &
-                                  cas%tm(ind(ia),2) / units_out%length%factor
+        write(iunit,'(a,es14.5)') '# <Y> ['//trim(units_abbrev(units_out%length))// '] = ', &
+                                  units_from_atomic(units_out%length, cas%tm(ind(ia),2))
       if(dim > 2) &
-        write(iunit,'(a,es14.5)') '# <Z> ['//trim(units_out%length%abbrev)// '] = ', &
-                                  cas%tm(ind(ia),3) / units_out%length%factor
+        write(iunit,'(a,es14.5)') '# <Z> ['//trim(units_abbrev(units_out%length))// '] = ', &
+                                  units_from_atomic(units_out%length, cas%tm(ind(ia),3))
 
       temp = M_ONE
       ! I do not know what this does, or what is for.
