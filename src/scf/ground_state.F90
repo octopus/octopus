@@ -72,7 +72,7 @@ contains
     if(sys%gr%sb%open_boundaries) then
       call states_allocate_free_states(sys%st, sys%gr)
       call read_free_states(sys%st, sys%gr)
-      ! allocate Green's function and calculate
+      ! allocate Green`s function and calculate
       call states_init_green(sys%st, sys%gr, hm%d%nspin, hm%d%ispin, hm%lead_h_diag, hm%lead_h_offdiag)
     end if
 
@@ -185,7 +185,7 @@ contains
           call states_generate_random(sys%st, sys%gr%mesh)
           call states_orthogonalize(sys%st, sys%gr%mesh)
           call v_ks_calc(sys%gr, sys%ks, hm, sys%st, calc_eigenval=.true.) ! get potentials
-          call states_fermi(sys%st, sys%gr%mesh)                             ! occupations
+          call states_fermi(sys%st, sys%gr%mesh)                           ! occupations
         end if
       end if
 

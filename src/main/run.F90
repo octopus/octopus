@@ -153,7 +153,7 @@ contains
     !%Option sternheimer 1
     !% The linear response is obtained by solving a self-consistent
     !% Sternheimer equation for the variation of the orbitals. This
-    !% is the recomended method.
+    !% is the recommended method.
     !%Option finite_differences 2
     !% Properties are calculated as a finite-differences derivative of
     !% the energy obtained by several ground-state calculations. This

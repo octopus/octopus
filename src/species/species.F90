@@ -436,9 +436,9 @@ contains
       s%niwfs = 2*s%z_val
       s%has_density = .true.
       if(print_info_) then
-        write(message(1),'(a,a,a)')    'Species "',trim(s%label),'" is an all electron atom.'
+        write(message(1),'(a,a,a)')    'Species "',trim(s%label),'" is an all-electron atom.'
         write(message(2),'(a,f11.6)')  '   Z = ', s%z_val
-        write(message(3),'(a)')  '   Potential will be calculated solving poisson equation'
+        write(message(3),'(a)')  '   Potential will be calculated solving Poisson equation'
         write(message(4),'(a)')  '   for a delta density distribution.'
         call write_info(4)
       end if

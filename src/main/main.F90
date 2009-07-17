@@ -119,7 +119,7 @@ program octopus
   !% susceptibilities.
   !% For periodic system, currently available only in development version.
   !%Option casida 09
-  !% Excitations via Casida linear-response TDDFT
+  !% Excitations via Casida linear-response TDDFT; for finite systems only.
   !%Option td_transport 10
   !% Time-dependent quantum transport
   !%Option vdw 11
