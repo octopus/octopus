@@ -31,7 +31,9 @@ SUBDIRS =        \
 
 EXTRA_DIST =     \
 	ChangeLog PACKAGING \
-	TODO build/mk_varinfo.pl build/var2html.pl build/octopus.spec.in build/svn_release_number.sh \
+	TODO build/mk_varinfo.pl build/var2html.pl build/octopus.spec.in \
+	build/svn_release_number.sh \
+	build/true_compiler.sh      \
 	debian/changelog debian/control debian/copyright debian/dirs     \
 	debian/info debian/README.Debian debian/rules
 

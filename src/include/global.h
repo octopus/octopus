@@ -141,6 +141,10 @@
 #endif
 #endif
 
+! the TOSTRING macro converts a macro into a string
+#define STRINGIFY(x) #x
+#define TOSTRING(x)  STRINGIFY(x)
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

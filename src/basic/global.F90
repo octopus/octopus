@@ -44,7 +44,9 @@ module global_m
     character(len=256) :: latest_svn  ! rcs info of latest svn commit
     character(len=50)  :: build_time  ! time octopus was compiled
     character(len=10)  :: version     ! version number
-    character(len=256) :: compiler
+    character(len=256) :: cc
+    character(len=256) :: cflags
+    character(len=256) :: fc
     character(len=256) :: fcflags
   end type conf_t
 
@@ -147,7 +149,13 @@ contains
     conf%latest_svn = LATEST_SVN
     conf%build_time = BUILD_TIME
     conf%version    = OCTOPUS_VERSION
-    conf%compiler   = FC
+    conf%cc         = CC
+#if defined (LONG_LINES)
+    conf%cflags     = CFLAGS
+#else
+    conf%fcflags = "No flags information available."
+#endif
+    conf%fc         = FC
 #if defined (LONG_LINES)
     conf%fcflags    = FCFLAGS
 #else

@@ -226,13 +226,20 @@ program octopus
 #ifdef HAVE_SPARSKIT
     message(2) = trim(message(2))//' sparskit'
 #endif
-    call write_info(2)
+
+    message(3) = &
+      'Architecture           : '// TOSTRING(OCT_ARCH)
+    call write_info(3)
 
     message(1) = &
-      "Fortran compiler       : "//trim(conf%compiler)
+      "C compiler             : "//trim(conf%cc)
     message(2) = &
+      "C compiler flags       : "//trim(conf%cflags)
+    message(3) = &
+      "Fortran compiler       : "//trim(conf%fc)
+    message(4) = &
       "Fortran compiler flags : "//trim(conf%fcflags)
-    call write_info(2)
+    call write_info(4)
 
     message(1) = ""
     call write_info(1)
