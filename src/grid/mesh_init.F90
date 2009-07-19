@@ -606,7 +606,11 @@ contains
   subroutine do_partition()
 #if defined(HAVE_METIS) && defined(HAVE_MPI)
     integer :: i, j, ipart, jpart, ip, ix, iy, iz
-    integer, allocatable :: part(:), nnb(:)
+    integer, allocatable :: part(:), nnb(:), gindex(:), gedges(:)
+    logical, allocatable :: nb(:, :)
+    integer              :: idx(1:MAX_DIM), jx(1:MAX_DIM)
+    integer              :: graph_comm, iedge, reorder
+    logical              :: use_topo
 
     call push_sub('mesh_init.mesh_init_stage_3.do_partition')
 
@@ -629,7 +633,77 @@ contains
 
     call mesh_partition_boundaries(mesh, stencil, part)
 
-    call vec_init(mesh%mpi_grp%comm, 0, part, mesh%np_global, mesh%np_part_global, mesh%idx, stencil, mesh%sb%dim, mesh%vp)
+
+    !%Variable MeshUseTopology
+    !%Type logical
+    !%Default false
+    !%Section Execution::Parallelization
+    !%Description
+    !% (experimental) If enabled, Octopus will use an MPI virtual
+    !% topology to map the processors. This can improve performance
+    !% for certain interconnection systems.
+    !%End
+    call loct_parse_logical(datasets_check('MeshUseTopology'), .false., use_topo)
+
+    if(use_topo) then
+
+      ! generate a table of neighbours
+
+      SAFE_ALLOCATE(nb(1:mpi_grp%size, 1:mpi_grp%size))
+      nb = .false.
+
+      do ip = 1, mesh%np_global
+        ipart = part(ip)
+        call index_to_coords(mesh%idx, mesh%sb%dim, ip, idx)
+        do j = 1, stencil%size
+          jx(1:MAX_DIM) = idx(1:MAX_DIM) + stencil%points(1:MAX_DIM, j)
+          if(all(jx(1:MAX_DIM) >= mesh%idx%nr(1, 1:MAX_DIM)) .and. all(jx(1:MAX_DIM) <= mesh%idx%nr(2, 1:MAX_DIM))) then
+            jpart = part(index_from_coords(mesh%idx, mesh%sb%dim, jx))
+            nb(ipart, jpart) = .true.
+          end if
+        end do
+      end do
+
+      ! now generate the information of the graph 
+
+      ! calculate the size of the graph
+      iedge = 0
+      do ipart = 1, mpi_grp%size
+        do jpart = 1, mpi_grp%size
+          if(nb(ipart, jpart)) iedge = iedge + 1
+        end do
+      end do
+
+      SAFE_ALLOCATE(gindex(1:mpi_grp%size))
+      SAFE_ALLOCATE(gedges(1:iedge))
+
+      ! and now generate it
+      iedge = 0
+      do ipart = 1, mpi_grp%size
+        gindex(ipart) = 0
+        do jpart = 1, mpi_grp%size
+          if(nb(ipart, jpart)) then
+            gindex(ipart) = gindex(ipart) + 1
+            iedge = iedge + 1
+            gedges(iedge) = jpart - 1
+          end if
+        end do
+      end do
+
+      reorder = 1
+      call MPI_Graph_create(mpi_grp%comm, mpi_grp%size, gindex, gedges, reorder, graph_comm, mpi_err)
+
+      SAFE_DEALLOCATE_A(nb)
+      SAFE_DEALLOCATE_A(gindex)
+      SAFE_DEALLOCATE_A(gedges)
+
+    else
+
+      call MPI_Comm_dup(mpi_grp%comm, graph_comm, mpi_err)
+
+    end if
+
+    call vec_init(graph_comm, 0, part, mesh%np_global, mesh%np_part_global, mesh%idx, stencil, mesh%sb%dim, mesh%vp)
     SAFE_DEALLOCATE_A(part)
 
     SAFE_ALLOCATE(nnb(1:mesh%vp%npart))
@@ -648,25 +722,25 @@ contains
     call write_info(2)
 
     write(message(1),'(a)') &
-         '                 Neighbours         Ghost points'
+      '                 Neighbours         Ghost points'
     write(message(2),'(a,i5,a,i10)') &
-         '      Average  :      ', sum(nnb)/mesh%vp%npart, '           ', sum(mesh%vp%np_ghost)/mesh%vp%npart
+      '      Average  :      ', sum(nnb)/mesh%vp%npart, '           ', sum(mesh%vp%np_ghost)/mesh%vp%npart
     write(message(3),'(a,i5,a,i10)') &
-         '      Minimum  :      ', minval(nnb),        '           ', minval(mesh%vp%np_ghost)
+      '      Minimum  :      ', minval(nnb),        '           ', minval(mesh%vp%np_ghost)
     write(message(4),'(a,i5,a,i10)') &
-         '      Maximum  :      ', maxval(nnb),        '           ', maxval(mesh%vp%np_ghost)
+      '      Maximum  :      ', maxval(nnb),        '           ', maxval(mesh%vp%np_ghost)
     message(5) = ''
     call write_info(5)
 
     do ipart = 1, mesh%vp%npart
       write(message(1),'(a,i5)')  &
-           '      Nodes in domain-group  ', ipart
+        '      Nodes in domain-group  ', ipart
       write(message(2),'(a,i10,a,i10)') &
-           '        Neighbours     :', nnb(ipart), &
-           '        Local points    :', mesh%vp%np_local(ipart)
+        '        Neighbours     :', nnb(ipart), &
+        '        Local points    :', mesh%vp%np_local(ipart)
       write(message(3),'(a,i10,a,i10)') &
-           '        Ghost points   :', mesh%vp%np_ghost(ipart), &
-           '        Boundary points :', mesh%vp%np_bndry(ipart)
+        '        Ghost points   :', mesh%vp%np_ghost(ipart), &
+        '        Boundary points :', mesh%vp%np_bndry(ipart)
       call write_info(3)
     end do
     SAFE_DEALLOCATE_A(nnb)
@@ -1002,7 +1076,7 @@ contains
                 ! and where it is in the other partition
                 recv_rem_points(mesh%nrecv(ipart), ipart) = ip_inner
 
-                ASSERT(mesh%mpi_grp%rank /= ipart - 1) ! if we are here, the point must be in another node
+                ASSERT(mesh%vp%rank /= ipart - 1) ! if we are here, the point must be in another node
               
                 exit
               end if
