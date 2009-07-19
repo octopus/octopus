@@ -646,6 +646,7 @@ contains
     call loct_parse_logical(datasets_check('MeshUseTopology'), .false., use_topo)
 
     if(use_topo) then
+      ! this should be integrated in vec_init
 
       ! generate a table of neighbours
 
@@ -702,6 +703,9 @@ contains
       call MPI_Comm_dup(mpi_grp%comm, graph_comm, mpi_err)
 
     end if
+
+    ! we have a new communicator
+    call mpi_grp_init(mesh%mpi_grp, graph_comm)
 
     call vec_init(graph_comm, 0, part, mesh%np_global, mesh%np_part_global, mesh%idx, stencil, mesh%sb%dim, mesh%vp)
     SAFE_DEALLOCATE_A(part)
