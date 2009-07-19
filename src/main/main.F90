@@ -35,7 +35,7 @@ program octopus
 
   implicit none
 
-  integer :: ns, inp_calc_mode, lenFCFLAGS
+  integer :: ns, inp_calc_mode
   type(block_t) :: blk
   character(len=256) :: sys_name
 
@@ -181,22 +181,61 @@ program octopus
 
     ! Let us print the version
     message(1) = ""
-    message(2) = str_center("Running octopus, version " // trim(conf%version), 70)
-    message(3) = str_center("build time - " // trim(conf%build_time) , 70)
-    message(4) = str_center("svn revision: " // trim(conf%latest_svn) , 70)
-    message(5) = ""
-    message(6) = str_center("Compiler: "//trim(conf%compiler), 70)
+    message(2) = str_center("Running octopus", 70)
+    message(3) = ""
+    call write_info(3)
 
-    lenFCFLAGS = len(trim(conf%fcflags))
-    if(lenFCFLAGS + 17 .le. 80) then
-       message(7) = str_center("Compiler flags: "//trim(conf%fcflags), max(70, len(trim(conf%fcflags))+17))
-    else
-       message(7) = "Compiler flags: "//trim(conf%fcflags)
-       ! allow full string to be written out
-    endif
+    message(1) = &
+      "Version                : " // trim(conf%version)
+    message(2) = &
+      "Revision               : "// trim(conf%latest_svn)
+    message(3) = &
+      "Build time             : "// trim(conf%build_time)
+    call write_info(3)
 
-    message(8) = ""
-    call write_info(8)
+    write(message(1), '(a, i1)') &
+      'Configuration options  : max-dim=', MAX_DIM
+
+#ifdef USE_OMP
+    message(1) = trim(message(1))//' openmp'
+#endif
+#ifdef HAVE_MPI
+    message(1) = trim(message(1))//' mpi'
+#endif
+
+    message(2) = &
+      'Optional libraries     :'
+#ifdef HAVE_MPI2
+    message(2) = trim(message(2))//' mpi2'
+#endif
+#ifdef HAVE_NETCDF
+    message(2) = trim(message(2))//' netcdf'
+#endif
+#ifdef HAVE_METIS
+    message(2) = trim(message(2))//' metis'
+#endif
+#ifdef HAVE_GDLIB
+    message(2) = trim(message(2))//' gdlib'
+#endif
+#ifdef HAVE_LIBNBC
+    message(2) = trim(message(2))//' libnbc'
+#endif
+#ifdef HAVE_PAPI
+    message(2) = trim(message(2))//' papi'
+#endif
+#ifdef HAVE_SPARSKIT
+    message(2) = trim(message(2))//' sparskit'
+#endif
+    call write_info(2)
+
+    message(1) = &
+      "Fortran compiler       : "//trim(conf%compiler)
+    message(2) = &
+      "Fortran compiler flags : "//trim(conf%fcflags)
+    call write_info(2)
+
+    message(1) = ""
+    call write_info(1)
 
     ! Let us print where we are running
     call loct_sysname(sys_name)
