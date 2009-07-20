@@ -64,7 +64,7 @@ global.o: global.F90
 		-DOCTOPUS_VERSION='"$(VERSION)"' \
 		-DBUILD_TIME="'`date`'" \
 		-DCC="'$(CC) $$truecc'" \
-		-DCFLAGS="'$(CFLAGS)'" \ 
+		-DCFLAGS="'$(CFLAGS)'" \
 		-DFC="'$(FC) $$truefc'" \
 		-DFCFLAGS='"$(FCFLAGS) $(FCFLAGS_f90)"' $< > $*_oct.f90
 	@if [ "@F90_ACCEPTS_LINE_NUMBERS@" = "no" ]; then \

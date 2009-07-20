@@ -760,20 +760,18 @@ contains
       end if
 
       ! write potential from previous interactions
-      if(mpi_grp_is_root(st%mpi_grp)) then
-        do i = 1, 2
-          do is = 1, st%d%nspin
-            write(filename,'(a6,i2.2,i3.3)') 'vprev_', i, is
-            call doutput_function(restart_format, trim(tmpdir)//"td", &
-              filename, gr%mesh, gr%sb, td%tr%v_old(1:gr%mesh%np, is, i), M_ONE, ierr, is_tmp = .true., &
-              grp = st%mpi_grp)
-            if(ierr.ne.0) then
-              write(message(1), '(3a)') 'Unsuccessful write of "', trim(filename), '"'
-              call write_fatal(1)
-            end if
-          end do
+      do i = 1, 2
+        do is = 1, st%d%nspin
+          write(filename,'(a6,i2.2,i3.3)') 'vprev_', i, is
+          call doutput_function(restart_format, trim(tmpdir)//"td", &
+            filename, gr%mesh, gr%sb, td%tr%v_old(1:gr%mesh%np, is, i), M_ONE, ierr, &
+            is_tmp = .true., grp = st%mpi_grp)
+          if(ierr.ne.0) then
+            write(message(1), '(3a)') 'Unsuccessful write of "', trim(filename), '"'
+            call write_fatal(1)
+          end if
         end do
-      end if
+      end do
 
       if(td%dynamics == CP) call cpmd_restart_write(td%cp_propagator, gr, st)
 

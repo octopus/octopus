@@ -321,7 +321,9 @@ subroutine X(output_function) (how, dir, fname, mesh, sb, f, u, ierr, is_tmp, ge
     if(in_debug_mode) call write_debug_newlines(2)
 
     SAFE_DEALLOCATE_A(f_global)
+
   else
+
     if(present(grp)) then ! only root writes output
       if(grp%rank.eq.0) then
         if (present(geo)) then
@@ -336,15 +338,20 @@ subroutine X(output_function) (how, dir, fname, mesh, sb, f, u, ierr, is_tmp, ge
       end if
 
       if(in_debug_mode) call write_debug_newlines(2)
+
     else ! all nodes write output
+
       if (present(geo)) then
         call X(output_function_global)(how, dir, fname, mesh, sb, f, u, ierr, is_tmp = is_tmp_, geo = geo)
       else
         call X(output_function_global)(how, dir, fname, mesh, sb, f, u, ierr, is_tmp = is_tmp_)
       end if !present(geo)
     end if !present(grp)
+
   end if !mesh%parallel_in_domains
+
 #else
+
   ! serial mode
   if(mesh%parallel_in_domains) then
     ASSERT(.false.)

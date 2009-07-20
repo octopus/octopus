@@ -156,7 +156,7 @@ module profiling_m
     integer                  :: mem_iunit
 
     character(len=256)       :: output_dir
-    character(len=16)        :: file_number
+    character(len=6)         :: file_number
   end type profile_vars_t
 
   type(profile_vars_t), public :: prof_vars
@@ -264,7 +264,7 @@ contains
     end if
 
     if(iand(prof_vars%mode, PROFILING_MEMORY_FULL).ne.0) then
-      prof_vars%mem_iunit = io_open(trim(prof_vars%output_dir)//'/memory.'//trim(prof_vars%file_number), action='write')
+      prof_vars%mem_iunit = io_open(trim(prof_vars%output_dir)//'/memory.'//prof_vars%file_number, action='write')
     end if
 
     ! initialize time profiling
@@ -300,7 +300,7 @@ contains
 
     ! ---------------------------------------------------------
     subroutine get_output_dir()
-      character(len=4) :: dirnum
+      character(len=6) :: dirnum
 
       dirnum  = 'ser '
       prof_vars%file_number = '0000'
@@ -686,7 +686,7 @@ contains
     call MPI_Barrier(mpi_world%comm, mpi_err)
 #endif
 
-    iunit = io_open(trim(prof_vars%output_dir)//'/time.'//trim(prof_vars%file_number), action='write')
+    iunit = io_open(trim(prof_vars%output_dir)//'/time.'//prof_vars%file_number, action='write')
     if(iunit.lt.0) then
       message(1) = 'Could not write profiling results.'
       call write_warning(1)
