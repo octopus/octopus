@@ -156,7 +156,7 @@ contains
     !% A zero value (the default) means do not use this criterion.
     !%End
     call loct_parse_float(datasets_check('ConvAbsEv'), M_ZERO, scf%conv_abs_ev)
-    scf%conv_abs_ev = scf%conv_abs_ev * units_inp%energy%factor
+    scf%conv_abs_ev = units_to_atomic(units_inp%energy, scf%conv_abs_ev)
 
     !%Variable ConvRelEv
     !%Type float
@@ -184,7 +184,7 @@ contains
     !% A zero value (the default) means do not use this criterion.
     !%End
     call loct_parse_float(datasets_check('ConvForce'), M_ZERO, scf%conv_abs_force)
-    scf%conv_abs_force = scf%conv_abs_force * units_inp%force%factor
+    scf%conv_abs_force = units_to_atomic(units_inp%force, scf%conv_abs_force)
 
     if(scf%max_iter <= 0 .and. &
       scf%conv_abs_dens <= M_ZERO .and. scf%conv_rel_dens <= M_ZERO .and. &
@@ -256,17 +256,18 @@ contains
     !%Default yes
     !%Section SCF
     !%Description
-    !% This variable controls whether the forces over the ions are
-    !% calculated at the end of a self consistent iteration. The
-    !% default is yes, unless the system only has user defined
+    !% This variable controls whether the forces on the ions are
+    !% calculated at the end of a self-consistent iteration. The
+    !% default is yes, unless the system only has user-defined
     !% species.
     !%End
     call loct_parse_logical(datasets_check('SCFCalculateForces'), .not. geo%only_user_def, scf%calc_force)
 
     call geometry_min_distance(geo, rmin)
     if(geo%natoms == 1) rmin = CNST(100.0)
-    call loct_parse_float(datasets_check('LocalMagneticMomentsSphereRadius'), rmin*M_HALF/units_inp%length%factor, scf%lmm_r)
-    scf%lmm_r = scf%lmm_r * units_inp%length%factor
+    call loct_parse_float(datasets_check('LocalMagneticMomentsSphereRadius'), &
+      units_from_atomic(units_inp%length, rmin*M_HALF), scf%lmm_r)
+    scf%lmm_r = units_to_atomic(units_inp%length, scf%lmm_r)
 
     call pop_sub()
   end subroutine scf_init
@@ -472,9 +473,9 @@ contains
       if(gs_run_) then 
         ! save restart information
         if(finish.or.(modulo(iter, outp%iter) == 0).or.iter==scf%max_iter.or.forced_finish) then
-          call restart_write(trim(tmpdir)//'gs', st, gr, err, iter=iter)
+          call restart_write(trim(tmpdir)//GS_DIR, st, gr, err, iter=iter)
           if(err.ne.0) then
-            message(1) = 'Unsuccessful write of "'//trim(tmpdir)//'gs"'
+            message(1) = 'Unsuccessful write of "'//trim(tmpdir)//GS_DIR//'"'
             call write_fatal(1)
           end if
         end if
@@ -571,14 +572,14 @@ contains
         write(str, '(a,i5)') 'SCF CYCLE ITER #' ,iter
         call messages_print_stress(stdout, trim(str))
 
-        write(message(1),'(a,es15.8,2(a,es9.2))') ' etot = ', hm%etot/units_out%energy%factor, &
-             ' abs_ev   = ', scf%abs_ev/units_out%energy%factor, ' rel_ev   = ', scf%rel_ev
+        write(message(1),'(a,es15.8,2(a,es9.2))') ' etot = ', units_from_atomic(units_out%energy, hm%etot), &
+             ' abs_ev   = ', units_from_atomic(units_out%energy, scf%abs_ev), ' rel_ev   = ', scf%rel_ev
         write(message(2),'(23x,2(a,es9.2))') &
              ' abs_dens = ', scf%abs_dens, ' rel_dens = ', scf%rel_dens
         ! write info about forces only if they are used as convergence criteria
         if (scf%conv_abs_force > M_ZERO) then
           write(message(3),'(23x,a,es9.2)') &
-             ' force    = ', scf%abs_force/units_out%force%factor
+             ' force    = ', units_from_atomic(units_out%force, scf%abs_force)
           call write_info(3)
         else
           call write_info(2)
@@ -620,14 +621,14 @@ contains
         if (scf%conv_abs_force > M_ZERO) then
         write(message(1),'(a,i4,a,es15.8, 2(a,es9.2), a, f7.1, a)') &
              'iter ', iter, &
-             ' : etot ', hm%etot/units_out%energy%factor, &
+             ' : etot ', units_from_atomic(units_out%energy, hm%etot), &
              ' : abs_dens', scf%abs_dens, &
-             ' : force ', scf%abs_force/units_out%force%factor, &
+             ' : force ', units_from_atomic(units_out%force, scf%abs_force), &
              ' : etime ', etime, 's'
         else
         write(message(1),'(a,i4,a,es15.8, a,es9.2, a, f7.1, a)') &
              'iter ', iter, &
-             ' : etot ', hm%etot/units_out%energy%factor, &
+             ' : etot ', units_from_atomic(units_out%energy, hm%etot), &
              ' : abs_dens', scf%abs_dens, &
              ' : etime ', etime, 's'
         end if
@@ -739,18 +740,18 @@ contains
         write(iunit, '(6x, a, es14.8,a,es14.8,a)') 'rel_dens = ', scf%rel_dens, &
           ' (', scf%conv_rel_dens, ')'
         write(iunit, '(6x, a, es14.8,a,es14.8,4a)') 'abs_ev = ', scf%abs_ev, &
-          ' (', scf%conv_abs_ev / units_out%energy%factor, ')', &
-          ' [',  trim(units_out%energy%abbrev), ']'
+          ' (', units_from_atomic(units_out%energy, scf%conv_abs_ev), ')', &
+          ' [',  trim(units_abbrev(units_out%energy)), ']'
         write(iunit, '(6x, a, es14.8,a,es14.8,a)') 'rel_ev = ', scf%rel_ev, &
           ' (', scf%conv_rel_ev, ')'
         write(iunit,'(1x)')
 
         if(scf%calc_force) then
-          write(iunit,'(3a)') 'Forces on the ions [', trim(units_out%force%abbrev), "]"
+          write(iunit,'(3a)') 'Forces on the ions [', trim(units_abbrev(units_out%force)), "]"
           write(iunit,'(a,10x,14x,a,14x,a,14x,a)') ' Ion','x','y','z'
           do iatom = 1, geo%natoms
             write(iunit,'(i4,a10,10f15.6)') iatom, trim(species_label(geo%atom(iatom)%spec)), &
-              geo%atom(iatom)%f(1:gr%mesh%sb%dim) / units_out%force%factor;
+              (units_from_atomic(units_out%force, geo%atom(iatom)%f(idir)), idir=1, gr%mesh%sb%dim)
           end do
         end if
 
@@ -787,7 +788,7 @@ contains
         end if
 
         write(iunit, '(a,a,a,f7.3,a)') 'Local Magnetic Moments (sphere radius [', &
-             trim(units_out%length%abbrev),'] = ', scf%lmm_r/units_out%length%factor, '):'
+             trim(units_abbrev(units_out%length)),'] = ', units_from_atomic(units_out%length, scf%lmm_r), '):'
         if(st%d%ispin == SPIN_POLARIZED) then ! collinear spin
           write(iunit,'(a,6x,14x,a)') ' Ion','mz'
           do i = 1, geo%natoms

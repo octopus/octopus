@@ -61,7 +61,7 @@ contains
     call init_()
 
     ! load wave-functions
-    call restart_read(trim(restart_dir)//'gs', sys%st, sys%gr, sys%geo, ierr)
+    call restart_read(trim(restart_dir)//GS_DIR, sys%st, sys%gr, sys%geo, ierr)
     if(ierr.ne.0) then
       message(1) = "Could not load wave-functions: Starting from scratch"
       call write_warning(1)
@@ -79,12 +79,13 @@ contains
     !%Default 0.01 a.u.
     !%Section Linear Response::Vibrational Modes
     !%Description
-    !% When calculating phonon properties by finite differences (<tt>CalculationMode = vib_modes</tt>),
+    !% When calculating phonon properties by finite differences (<tt>CalculationMode = vib_modes, 
+    !% ResponseMethod = finite_differences </tt>), 
     !% <tt>Displacement</tt> controls how much the atoms are to be moved in order to calculate the 
     !% dynamical matrix.
     !%End
-    call loct_parse_float(datasets_check('Displacement'), CNST(0.01)/units_inp%length%factor, vib%disp)
-    vib%disp = vib%disp*units_inp%length%factor
+    call loct_parse_float(datasets_check('Displacement'), units_from_atomic(units_inp%length, CNST(0.01)), vib%disp)
+    vib%disp = units_to_atomic(units_inp%length, vib%disp)
 
     ! calculate dynamical matrix
     call get_dyn_matrix(sys%gr, sys%geo, sys%mc, sys%st, sys%ks, hm, sys%outp, vib)

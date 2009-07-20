@@ -164,11 +164,11 @@ contains
 
 
     ! create directory for output
-    call io_mkdir('vibrations')
+    call io_mkdir(VIB_MODES_DIR)
 
     ! output dynamic matrix
     call io_assign(iunit)
-    iunit = io_open('vibrations/dynamical_matrix'//trim(suffix), action='write')
+    iunit = io_open(VIB_MODES_DIR//'dynamical_matrix'//trim(suffix), action='write')
 
     do iatom = 1, this%natoms
       do idir = 1, this%ndim
@@ -187,15 +187,15 @@ contains
 
     call io_close(iunit)
 
-    ! output thisonon frequencies and eigenvectors
-    iunit = io_open('vibrations/normal_frequencies'//trim(suffix), action='write')
+    ! output frequencies and eigenvectors
+    iunit = io_open(VIB_MODES_DIR//'normal_frequencies'//trim(suffix), action='write')
     do i = 1, this%num_modes
       write(iunit, '(i6,f14.5)') i, units_from_atomic(unit_invcm, sqrt(abs(this%freq(i))))
     end do
     call io_close(iunit)
 
-    ! output thisonon eigenvectors
-    iunit = io_open('vibrations/normal_modes'//trim(suffix), action='write')
+    ! output eigenvectors
+    iunit = io_open(VIB_MODES_DIR//'normal_modes'//trim(suffix), action='write')
     do i = 1, this%num_modes
       write(iunit, '(i6)', advance='no') i
       do j = 1, this%num_modes

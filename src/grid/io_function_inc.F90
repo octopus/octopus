@@ -23,7 +23,7 @@
 ! On output, ierr signals how everything went:
 ! ierr > 0 => Error. The function f was not read:
 !              1 : illegal filename (must have ".obf" or ".ncdf" extension).
-!              2 : file could not be succesfully opened.
+!              2 : file could not be successfully opened.
 !              3 : file opened, but error reading.
 !              4 : The number of points/mesh dimensions do not coincide.
 !              5 : Format or NetCDF error (one or several warnings are emitted)
@@ -65,7 +65,7 @@ subroutine X(input_function)(filename, mesh, f, ierr, is_tmp)
     end if
     if(in_debug_mode) call write_debug_newlines(2)
 
-    ! Only root knows if the file was succesfully read.
+    ! Only root knows if the file was successfully read.
     ! Now, it tells everybody else.
     call mpi_debug_in(mesh%vp%comm, C_MPI_BCAST)
     call MPI_Bcast(ierr, 1, MPI_INTEGER, mesh%vp%root, mesh%vp%comm, mpi_err)

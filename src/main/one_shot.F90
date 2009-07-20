@@ -61,7 +61,7 @@ contains
 
     ! load wave-functions
     call states_allocate_wfns(sys%st, sys%gr%mesh)
-    call restart_read(trim(tmpdir)//'gs', sys%st, sys%gr, sys%geo, ierr)
+    call restart_read(trim(tmpdir)//GS_DIR, sys%st, sys%gr, sys%geo, ierr)
     if(ierr.ne.0) then
       message(1) = "Could not load wave-functions"
       call write_fatal(1)

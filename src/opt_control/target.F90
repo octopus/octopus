@@ -183,9 +183,9 @@ module opt_control_target_m
     case(oct_tg_groundstate)
       message(1) =  'Info: Using Ground State for TargetOperator'
       call write_info(1)
-      call restart_read(trim(restart_dir)//'gs', target%st, gr, geo, ierr)
+      call restart_read(trim(restart_dir)//GS_DIR, target%st, gr, geo, ierr)
       if(ierr.ne.0) then
-        write(message(1),'(a)') 'Could not read ground-state wavefunctions from '//trim(restart_dir)//'gs.'
+        write(message(1),'(a)') 'Could not read ground-state wavefunctions from '//trim(restart_dir)//GS_DIR//'.'
         call write_fatal(1)
       end if
       
@@ -194,7 +194,7 @@ module opt_control_target_m
       message(1) =  'Info: TargetOperator is a linear combination of Slater determinants.'
       call write_info(1)
 
-      call states_look (trim(restart_dir)//'gs', gr%mesh%mpi_grp, ip, ip, target%st%nst, ierr)
+      call states_look (trim(restart_dir)//GS_DIR, gr%mesh%mpi_grp, ip, ip, target%st%nst, ierr)
       target%st%st_start = 1
       target%st%st_end   = target%st%nst
 
@@ -212,9 +212,9 @@ module opt_control_target_m
       call states_allocate_wfns(target%st, gr%mesh, M_CMPLX)
       target%st%node(:)  = 0
 
-      call restart_read(trim(restart_dir)//'gs', target%st, gr, geo, ierr)
+      call restart_read(trim(restart_dir)//GS_DIR, target%st, gr, geo, ierr)
       if(ierr.ne.0) then
-        write(message(1),'(a)') 'Could not read ground-state wavefunctions from '//trim(restart_dir)//'gs.'
+        write(message(1),'(a)') 'Could not read ground-state wavefunctions from '//trim(restart_dir)//GS_DIR//'.'
         call write_fatal(1)
       end if
       call excited_states_init(target%est, target%st, "oct-excited-state-target") 

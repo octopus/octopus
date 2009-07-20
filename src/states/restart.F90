@@ -187,9 +187,9 @@ contains
     endif
 
     !check how many wfs we have
-    call states_look(trim(dir)//'gs', gr%mesh%mpi_grp, kpoints, dim, nst, ierr)
+    call states_look(trim(dir)//GS_DIR, gr%mesh%mpi_grp, kpoints, dim, nst, ierr)
     if(ierr.ne.0) then
-      message(1) = 'Could not properly read wave-functions from "'//trim(dir)//'gs".'
+      message(1) = 'Could not properly read wave-functions from "'//trim(dir)//GS_DIR//'".'
       call write_fatal(1)
     end if
 
@@ -220,9 +220,9 @@ contains
     st%occ      = M_ZERO
 
     ! load wave-functions
-    call restart_read(trim(dir)//'gs', st, gr, geo, ierr)
+    call restart_read(trim(dir)//GS_DIR, st, gr, geo, ierr)
     if(ierr.ne.0) then
-      message(1) = "Could not read KS orbitals from '"//trim(dir)//"gs'"
+      message(1) = "Could not read KS orbitals from '"//trim(dir)//GS_DIR//"'"
       message(2) = "Please run a calculation of the ground state first!"
       call write_fatal(2)
     end if
@@ -991,7 +991,7 @@ contains
 
     np = m_lead%np
     SAFE_ALLOCATE(tmp(1:np, 1:st%d%dim))
-    restart_dir = trim(sb%lead_restart_dir(LEFT))//'/gs'
+    restart_dir = trim(sb%lead_restart_dir(LEFT))//'/'// GS_DIR
 
     wfns = io_open(trim(restart_dir)//'/wfns', action='read', is_tmp=.true., grp=mpi_grp)
     if(wfns.lt.0) then
@@ -1045,7 +1045,7 @@ contains
         cycle
       end if
 
-      call zrestart_read_function(trim(sb%lead_restart_dir(LEFT))//'/gs', fname, m_lead, tmp(:, idim), err)
+      call zrestart_read_function(trim(sb%lead_restart_dir(LEFT))//'/'//GS_DIR, fname, m_lead, tmp(:, idim), err)
 
       call lead_dens_accum()
 
@@ -1092,7 +1092,7 @@ contains
     SAFE_DEALLOCATE_A(tmp)
 
     message(1) = "Info: Sucessfully initialized free states from '"// &
-      trim(sb%lead_restart_dir(LEFT))//"/gs'"
+      trim(sb%lead_restart_dir(LEFT))//"/"//GS_DIR//"'"
     write(message(2),'(a,i3,a)') 'Info:', jk, ' occupied states read by program.'
     call write_info(2)
 

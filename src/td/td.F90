@@ -317,14 +317,15 @@ contains
       ! write info
       if(td%dynamics /= CP) then 
         write(message(1), '(i7,1x,2f14.6,f14.3, i10)') iter, &
-             iter*td%dt/units_out%time%factor, &
-             (hm%etot + geo%kinetic_energy)/units_out%energy%factor, &
+             units_from_atomic(units_out%time, iter*td%dt), &
+             units_from_atomic(units_out%energy, hm%etot + geo%kinetic_energy), &
              loct_clock() - etime
       else
         write(message(1), '(i7,1x,3f14.6,f14.3, i10)') iter, &
-             iter*td%dt/units_out%time%factor, &
-             (hm%etot + geo%kinetic_energy)/units_out%energy%factor, &
-             (hm%etot + geo%kinetic_energy + cpmd_electronic_energy(td%cp_propagator)) / units_out%energy%factor, &
+             units_from_atomic(units_out%time, iter*td%dt), &
+             units_from_atomic(units_out%energy, hm%etot + geo%kinetic_energy), &
+             units_from_atomic(units_out%energy, &
+                hm%etot + geo%kinetic_energy + cpmd_electronic_energy(td%cp_propagator)), &
              loct_clock() - etime
       end if
       call write_info(1)
@@ -383,7 +384,7 @@ contains
       end if
 
       if(.not.fromscratch .and. st%open_boundaries) then
-        call restart_read_ob_intf(trim(restart_dir)//'gs', st, gr, ierr)
+        call restart_read_ob_intf(trim(restart_dir)//GS_DIR, st, gr, ierr)
       end if
 
       if(.not. fromscratch .and. td%dynamics == CP) then 
@@ -421,18 +422,18 @@ contains
           ! In the open bounary case the ground state wavefunctions are bit too "wide".
           ! Therefore, we need a special routine to extract the middle.
           if(gr%sb%open_boundaries) then
-            call restart_read_ob_intf(trim(restart_dir)//'gs', st, gr, ierr)
+            call restart_read_ob_intf(trim(restart_dir)//GS_DIR, st, gr, ierr)
             if(ierr.ne.0) then
-              message(1) = "Could not read interface wave functions from '"//trim(restart_dir)//"gs'"
-              message(2) = "Please run an open boundaries ground-state calculation first!"
+              message(1) = "Could not read interface wave functions from '"//trim(restart_dir)//GS_DIR//"'"
+              message(2) = "Please run an open-boundaries ground-state calculation first!"
               call write_fatal(2)
             end if
-            call restart_read_ob_central(trim(restart_dir)//'gs', st, gr, ierr)
+            call restart_read_ob_central(trim(restart_dir)//GS_DIR, st, gr, ierr)
           else
-            call restart_read(trim(restart_dir)//'gs', st, gr, geo, ierr)
+            call restart_read(trim(restart_dir)//GS_DIR, st, gr, geo, ierr)
           end if
           if(ierr.ne.0) then
-            message(1) = "Could not read KS orbitals from '"//trim(restart_dir)//"gs'"
+            message(1) = "Could not read KS orbitals from '"//trim(restart_dir)//GS_DIR//"'"
             message(2) = "Please run a ground-state calculation first!"
             call write_fatal(2)
           end if
@@ -452,7 +453,7 @@ contains
         !%Description
         !% Before starting the td calculation, the initial states (that are
         !% read from the restart/gs directory, which should have been
-        !% generated in a previous ground state calculation) can be "transformed"
+        !% generated in a previous ground-state calculation) can be "transformed"
         !% among themselves. The block TransformStates gives the transformation matrix
         !% to be used. The number of rows of the matrix should equal the number
         !% of the states present in the time-dependent calculation (the independent
@@ -692,15 +693,15 @@ contains
 
       do i = 1, geo%natoms
         read(iunit, '(3es20.12)', advance='no') geo%atom(i)%x(1:gr%mesh%sb%dim)
-        geo%atom(i)%x(:) = geo%atom(i)%x(:) * units_out%length%factor
+        geo%atom(i)%x(:) = units_to_atomic(units_inp%length, geo%atom(i)%x(:))
       end do
       do i = 1, geo%natoms
         read(iunit, '(3es20.12)', advance='no') geo%atom(i)%v(1:gr%mesh%sb%dim)
-        geo%atom(i)%v(:) = geo%atom(i)%v(:) * units_out%velocity%factor
+        geo%atom(i)%v(:) = units_to_atomic(units_inp%velocity, geo%atom(i)%v(:))
       end do
       do i = 1, geo%natoms
         read(iunit, '(3es20.12)', advance='no') geo%atom(i)%f(1:gr%mesh%sb%dim)
-        geo%atom(i)%f(:) = geo%atom(i)%f(:) * units_out%force%factor
+        geo%atom(i)%f(:) = units_to_atomic(units_inp%force, geo%atom(i)%f(:))
       end do
 
       call io_close(iunit)

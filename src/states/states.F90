@@ -283,11 +283,11 @@ contains
       SAFE_ALLOCATE(ob_st(1:NLEADS))
       SAFE_ALLOCATE( ob_d(1:NLEADS))
       do il = 1, NLEADS
-        call states_look(trim(gr%sb%lead_restart_dir(il))//'/gs', mpi_world, &
+        call states_look(trim(gr%sb%lead_restart_dir(il))//'/'//GS_DIR, mpi_world, &
           ob_k(il), ob_d(il), ob_st(il), ierr, .true.)
         if(ierr.ne.0) then
           message(1) = 'Could not read the number of states of the periodic calculation'
-          message(2) = 'from '//trim(gr%sb%lead_restart_dir(il))//'/gs.'
+          message(2) = 'from '//trim(gr%sb%lead_restart_dir(il))//'/'//GS_DIR//'.'
           call write_fatal(2)
         end if
       end do
@@ -479,7 +479,7 @@ contains
 
       call push_sub('states.read_ob_eigenval_and_occ')
 
-      restart_dir = trim(gr%sb%lead_restart_dir(LEFT))//'/gs'
+      restart_dir = trim(gr%sb%lead_restart_dir(LEFT))//'/'//GS_DIR
 
       occs = io_open(trim(restart_dir)//'/occs', action='read', is_tmp=.true., grp=mpi_world)
       if(occs.lt.0) then
@@ -1506,7 +1506,7 @@ contains
           if(simul_box_is_periodic(sb)) then
             if(st%d%ispin == SPINORS) then
               write(tmp_str(2), '(1x,f12.6,3x,4f5.2)') &
-                units_from_atomic(units_out%energy, st%eigenval(j, ik) - st%smear%e_fermi), occ, st%spin(1:3, j, ik)
+                units_from_atomic(units_out%energy, st%eigenval(j, ik)), occ, st%spin(1:3, j, ik)
               if(present(error)) write(tmp_str(3), '(a7,es7.1,a1)')'      (', error(j, ik+is), ')'
             else
               write(tmp_str(2), '(1x,f12.6,3x,f12.6)') &
@@ -1604,7 +1604,7 @@ contains
             write(iunit(is), '(1x,6f14.8,3x,f14.8)')            &
               st%d%kpoints(1:sb%dim, ik+is),                   & ! unscaled
               st%d%kpoints(1:sb%dim, ik+is)/factor(1:sb%dim), & ! scaled
-              st%eigenval(j, ik + is)/units_out%energy%factor
+              units_from_atomic(units_out%energy, st%eigenval(j, ik + is))
           end do
         end do
         do is = 0, ns-1
@@ -1635,7 +1635,7 @@ contains
           write(iunit(is), '(1x,6f14.8,3x,16384f14.8)')         &
             st%d%kpoints(1:MAX_DIM, ik+is),                     & ! unscaled
             st%d%kpoints(1:MAX_DIM, ik+is)/factor(1:MAX_DIM),   & ! scaled
-            (st%eigenval(j, ik+is)/units_out%energy%factor, j = 1, nst)
+            (units_from_atomic(units_out%energy, st%eigenval(j, ik+is)), j = 1, nst)
         end do
       end do
       do is = 0, ns-1
@@ -1726,7 +1726,7 @@ contains
 
         do icoord = 1,gr%mesh%sb%dim    !for x,y,z
           call loct_parse_block_float(blk, 0, icoord-1, qvector(icoord))
-          qvector(icoord) = qvector(icoord) / units_inp%length%factor 
+          qvector(icoord) = units_to_atomic(unit_one / units_inp%length, qvector(icoord))
         end do
 
       end if
@@ -1750,7 +1750,7 @@ contains
       ! header
       if(use_qvector) then
         write (message(1),'(a1,a30,3(es14.5,1x),a1)') '#', ' momentum-transfer vector : (', &
-                                                     & qvector(:)*units_out%length%factor,')'
+          (units_from_atomic(unit_one / units_out%length, qvector(icoord)), icoord=1, gr%mesh%sb%dim),')'
         select case(gr%mesh%sb%dim)
           case(1); write(message(2), '(a1,4(a15,1x))') '#', 'E' , '<x>', '<f>', 'S(q,omega)'
           case(2); write(message(2), '(a1,5(a15,1x))') '#', 'E' , '<x>', '<y>', '<f>', 'S(q,omega)'
@@ -1850,8 +1850,8 @@ contains
 
     call push_sub('states.states_write_dos')
 
-    evalmin = minval(st%eigenval/units_out%energy%factor)
-    evalmax = maxval(st%eigenval/units_out%energy%factor)
+    evalmin = minval(st%eigenval)
+    evalmax = maxval(st%eigenval)
     ! we extend the energy mesh by this amount
     eextend  = (evalmax - evalmin) / M_FOUR
 
@@ -1862,7 +1862,8 @@ contains
     !%Description
     !% Lower bound for the energy mesh of the DOS
     !%End
-    call loct_parse_float(datasets_check('DOSEnergyMin'), evalmin - eextend, emin)
+    call loct_parse_float(datasets_check('DOSEnergyMin'), units_from_atomic(units_inp%energy, evalmin - eextend), emin)
+    emin = units_to_atomic(units_inp%energy, emin)
 
     !%Variable DOSEnergyMax
     !%Type float
@@ -1871,7 +1872,8 @@ contains
     !%Description
     !% Upper bound for the energy mesh of the DOS
     !%End
-    call loct_parse_float(datasets_check('DOSEnergyMax'), evalmax + eextend, emax)
+    call loct_parse_float(datasets_check('DOSEnergyMax'), units_from_atomic(units_inp%energy, evalmax + eextend), emax)
+    emax = units_to_atomic(units_inp%energy, emax)
 
     !%Variable DOSEnergyPoints
     !%Type integer
@@ -1892,7 +1894,8 @@ contains
     !% up the DOS sum
     !%End
     call loct_parse_float(datasets_check('DOSGamma'), &
-      CNST(0.008)/units_out%energy%factor, gamma)
+      units_from_atomic(units_inp%energy, CNST(0.008)), gamma)
+    gamma = units_to_atomic(units_inp%energy, gamma)
 
     ! spacing for energy mesh
     de = (emax - emin) / (epoints - 1)
@@ -1901,11 +1904,11 @@ contains
     ns = 1
     if(st%d%nspin == 2) ns = 2
 
-    ! space for state dependent DOS
+    ! space for state-dependent DOS
     SAFE_ALLOCATE(dos(1:epoints, 1:st%nst, 0:ns-1))
     SAFE_ALLOCATE(iunit(0:ns-1))    
 
-    ! compute band/spin resolved density of states
+    ! compute band/spin-resolved density of states
     do ist = 1, st%nst
 
       do is = 0, ns-1
@@ -1926,11 +1929,12 @@ contains
         do ik = 1, st%d%nik, ns
           do is = 0, ns-1
             dos(ie, ist, is) = dos(ie, ist, is) + st%d%kweights(ik+is) * M_ONE/M_Pi * &
-              gamma / ( (energy - st%eigenval(ist, ik+is)/units_out%energy%factor)**2 + gamma**2 )
+              gamma / ( (energy - st%eigenval(ist, ik+is))**2 + gamma**2 )
           end do
         end do
         do is = 0, ns-1
-          write(message(1), '(2f12.6)') energy, dos(ie, ist, is)
+          write(message(1), '(2f12.6)') units_from_atomic(units_out%energy, energy), &
+                                        units_from_atomic(unit_one / units_out%energy, dos(ie, ist, is))
           call write_info(1, iunit(is))
         end do
       end do
@@ -1946,7 +1950,7 @@ contains
         write(filename, '(a,i1.1,a)') 'total-dos-', is+1,'.dat'
         iunit(is) = io_open(trim(dir)//'/'//trim(filename), action='write')    
         ! write header
-        write(iunit(is), '(a)') '# energy, total DOS (spin resolved)'
+        write(iunit(is), '(a)') '# energy, total DOS (spin-resolved)'
 
         do ie = 1, epoints
           energy = emin + (ie - 1) * de
@@ -1954,7 +1958,8 @@ contains
           do ist = 1, st%nst
             tdos = tdos + dos(ie, ist, is)
           end do
-          write(message(1), '(2f12.6)') energy, tdos
+          write(message(1), '(2f12.6)') units_from_atomic(units_out%energy, energy), &
+                                        units_from_atomic(unit_one / units_out%energy, tdos)
           call write_info(1, iunit(is))
         end do
 
@@ -1974,7 +1979,8 @@ contains
           tdos = tdos + dos(ie, ist, is)
         end do
       end do
-      write(message(1), '(2f12.6)') energy, tdos
+      write(message(1), '(2f12.6)') units_from_atomic(units_out%energy, energy), &
+                                    units_from_atomic(unit_one / units_out%energy, tdos)
       call write_info(1, iunit(0))
     end do
 
@@ -2023,7 +2029,7 @@ contains
       minval(st%d%kpoints(1,:)/factor(1)), &
       minval(st%d%kpoints(2,:)/factor(2)), &
       minval(st%d%kpoints(3,:)/factor(3)), &
-      st%smear%e_fermi/scale
+      units_from_atomic(units_out%energy, st%smear%e_fermi)
 
     ! Gamma point
     write(message(3), '(7f12.6)')          &
@@ -2037,7 +2043,7 @@ contains
       maxval(st%d%kpoints(1,:)/factor(1)), &
       maxval(st%d%kpoints(2,:)/factor(2)), &
       maxval(st%d%kpoints(3,:)/factor(3)), &
-      st%smear%e_fermi/scale
+      units_from_atomic(units_out%energy, st%smear%e_fermi)
 
     call write_info(4, iunit)
     call io_close(iunit)
@@ -2051,8 +2057,8 @@ contains
     ! this is the maximum that tdos can reach
     maxdos = sum(st%d%kweights) * st%nst
 
-    write(message(2), '(4f12.6)') st%smear%e_fermi/scale, M_ZERO
-    write(message(3), '(4f12.6)') st%smear%e_fermi/scale, maxdos
+    write(message(2), '(4f12.6)') units_from_atomic(units_out%energy, st%smear%e_fermi), M_ZERO
+    write(message(3), '(4f12.6)') units_from_atomic(units_out%energy, st%smear%e_fermi), maxdos
 
     call write_info(3, iunit)
     call io_close(iunit)
