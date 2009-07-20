@@ -80,7 +80,7 @@ contains
     write(message(2), '(6x,3a)') "'", trim(filename2), "'"
     call write_info(2)
 
-    iunit = io_open(filename2, action='read', form='formatted', status='old')
+    iunit = io_open(filename2, action='read', form='formatted', status='old', is_tmp=.true.)
     call ps_cpi_file_read(iunit, ps_cpi%cpi_file)
     call io_close(iunit)
 
