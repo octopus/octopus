@@ -316,6 +316,8 @@ contains
           n = n + 1; d(n) = dd
         end if
       end do
+    case default
+      ASSERT(.false.)
     end select
     
   end subroutine mesh_inborder
