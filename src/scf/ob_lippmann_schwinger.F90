@@ -92,7 +92,7 @@ contains
     ik_p     => ik
     green_p  => green
     gr_p     => gr
-    hm_p      => hm
+    hm_p     => hm
     st_p     => st
     energy_p => energy
 

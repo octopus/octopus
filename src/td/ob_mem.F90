@@ -138,9 +138,8 @@ contains
 
     do il = 1, NLEADS
       ! Try to read the coefficients from file
-      call read_coeffs(trim(restart_dir)//'open_boundaries/', saved_iter, ob%mem_coeff,     &
-        ob%mem_sp_coeff, ob%mem_s, calc_dim, max_iter, np, spacing, delta, op%stencil%size, &
-        ob%mem_type, np*order, il)
+      call read_coeffs(trim(restart_dir)//'open_boundaries/', saved_iter, ob, hm, intface(il), &
+                       calc_dim, max_iter, spacing, delta, op%stencil%size, order, il )
 
       if (saved_iter.lt.max_iter) then ! Calculate missing coefficients.
         if (saved_iter.gt.0) then
@@ -162,12 +161,12 @@ contains
           select case(ob%mem_type)
           case(SAVE_CPU_TIME)
             call approx_coeff0(intface(il), delta, il, hm%lead_h_diag(:, :, 1, il),   &
-              hm%lead_h_offdiag(:, :, il), ob%mem_coeff(:, :, 0, il), order, spacing)
+              hm%lead_h_offdiag(:, :, il), ob%mem_coeff(:, :, 0, il))
           case(SAVE_RAM_USAGE) ! FIXME: only 2D.
             ASSERT(calc_dim.eq.2)
             call approx_sp_coeff0(intface(il), delta, il, hm%lead_h_diag(:, :, 1, il), &
                  hm%lead_h_offdiag(:, :, il), ob%mem_sp_coeff(:, 0, il), &
-                 ob%mem_s(:,:,:,il), order, ob%sp2full_map, spacing)
+                 ob%mem_s(:,:,:,il), order, ob%sp2full_map)
           end select
           call loct_progress_bar(1, max_iter+1)
         end if
@@ -191,9 +190,8 @@ contains
             trim(lead_name(il))//' lead.'
           call write_info(2)
           if(mpi_grp_is_root(mpi_grp)) then
-            call write_coeffs(trim(restart_dir)//'open_boundaries/', ob%mem_coeff,          &
-              ob%mem_sp_coeff, ob%mem_s, calc_dim, max_iter, intface(il)%np, spacing, &
-              delta, op%stencil%size, ob%mem_type, np*order, il)
+            call write_coeffs(trim(restart_dir)//'open_boundaries/', ob, hm, intface(il),     &
+              calc_dim, max_iter, spacing, delta, op%stencil%size, order, il)
           end if
         end if
       else
@@ -219,15 +217,13 @@ contains
   ! Solve for zeroth memory coefficient by truncating the continued
   ! matrix fraction. Since the coefficient must be symmetric (non-magnetic),
   ! a symmetric inversion is used.
-  subroutine approx_coeff0(intface, delta, il, diag, offdiag, coeff0, order, spacing)
+  subroutine approx_coeff0(intface, delta, il, diag, offdiag, coeff0)
     type(interface_t), intent(in)  :: intface
     FLOAT,             intent(in)  :: delta
     integer,           intent(in)  :: il
     CMPLX,             intent(in)  :: diag(:, :)
     CMPLX,             intent(in)  :: offdiag(:, :)
     CMPLX,             intent(out) :: coeff0(:, :)
-    integer,           intent(in)  :: order
-    FLOAT,             intent(in)  :: spacing
 
     integer            :: i, j, np
     CMPLX, allocatable :: q0(:, :)
@@ -298,8 +294,7 @@ contains
   ! Solve for zeroth memory coefficient by truncating the continued
   ! matrix fraction. Since the coefficient must be symmetric (non-magnetic),
   ! a symmetric inversion is used. Sparse version
-  subroutine approx_sp_coeff0(intface, delta, il, diag, offdiag, sp_coeff0, &
-    mem_s, order, mapping, spacing)
+  subroutine approx_sp_coeff0(intface, delta, il, diag, offdiag, sp_coeff0, mem_s, order, mapping)
     type(interface_t), intent(in)  :: intface
     FLOAT,             intent(in)  :: delta
     integer,           intent(in)  :: il
@@ -309,12 +304,10 @@ contains
     CMPLX,             intent(out) :: mem_s(:, :, :) ! S & S^(-1).
     integer,           intent(in)  :: order
     integer,           intent(in)  :: mapping(:)     ! Mapping.
-    FLOAT,             intent(in)  :: spacing
 
     integer            :: i, j, np
     CMPLX, allocatable :: q0(:, :)
     FLOAT              :: norm, old_norm, d2
-    CMPLX              :: h
 
     call push_sub('ob_mem.approx_sp_coeff0')
 
@@ -627,24 +620,21 @@ contains
   ! ---------------------------------------------------------
   ! Write memory coefficients to file.
   ! FIXME: this routine writes compiler and/or system dependent binary files.
-  ! It should be chanegd to a platform independent format.
-  subroutine write_coeffs(dir, coeffs, sp_coeffs, mem_s, dim, iter, np, &
-    spacing, delta, op_n, mem_type, length, il)
+  ! It should be changed to a platform independent format.
+  subroutine write_coeffs(dir, ob, hm, intface, dim, iter, spacing, delta, op_n, order, il)
     character(len=*), intent(in) :: dir
-    CMPLX,            intent(in) :: coeffs(np, np, 0:iter, NLEADS)    ! Saved coefficients.
-    CMPLX,            intent(in) :: sp_coeffs(length, 0:iter, NLEADS) ! saved coefficients.
-    CMPLX,            intent(in) :: mem_s(np, np, 2, NLEADS)  ! Diagonalization matrix s.
+    type(ob_terms_t), intent(inout) :: ob
+    type(hamiltonian_t), intent(in) :: hm
+    type(interface_t),   intent(in) :: intface
     integer,          intent(in) :: dim                       ! Dimension.
     integer,          intent(in) :: iter                      ! Number of coefficients.
-    integer,          intent(in) :: np                        ! Number of points in the interface.
     FLOAT,            intent(in) :: spacing                   ! Grid spacing.
     FLOAT,            intent(in) :: delta                     ! Timestep.
     integer,          intent(in) :: op_n                      ! Number of operator points.
-    integer,          intent(in) :: mem_type                  ! SAVE_CPU_TIME or SAVE_RAM_USAGE.
-    integer,          intent(in) :: length                    ! Length of the packed array.
+    integer,          intent(in) :: order                     ! discretization order
     integer,          intent(in) :: il                        ! Which lead.
 
-    integer :: ntime, j, iunit
+    integer :: ntime, j, iunit, np
 
     call push_sub('ob_mem.write_coeffs')
 
@@ -657,6 +647,8 @@ contains
       call pop_sub(); return
     end if
 
+    np = intface%np
+
     ! Write numerical parameters.
     write(iunit) dim
     write(iunit) iter
@@ -664,21 +656,23 @@ contains
     write(iunit) spacing
     write(iunit) delta
     write(iunit) op_n
-    write(iunit) mem_type
+    write(iunit) ob%mem_type
+    write(iunit) hm%lead_vks(1:np, 1, il)
+    write(iunit) intface%offdiag_invertible
 
     ! Write matrices.
-    select case(mem_type)
+    select case(ob%mem_type)
     case(SAVE_CPU_TIME)
       do ntime = 0, iter
         do j = 1, np
-          write(iunit) coeffs(j, j:np, ntime, il)
+          write(iunit) ob%mem_coeff(j, j:np, ntime, il)
         end do
       end do
     case(SAVE_RAM_USAGE) ! FIXME: only 2D.
       ASSERT(dim.eq.2)
-      write(iunit) mem_s(:, :, 1, il)
+      write(iunit) ob%mem_s(:, :, 1, il)
       do ntime = 0, iter
-        write(iunit) sp_coeffs(1:length, ntime, il)
+        write(iunit) ob%mem_sp_coeff(1:np*order, ntime, il)
       end do
     end select
 
@@ -692,29 +686,29 @@ contains
   ! Read memory coefficients from file.
   ! FIXME: this routine reads compiler and/or system dependent binary files.
   ! It should be chanegd to a platform independent format.
-  subroutine read_coeffs(dir, s_iter, coeffs, sp_coeffs, mem_s, dim, iter, &
-    np, spacing, delta, op_n, mem_type, length, il)
+  subroutine read_coeffs(dir, s_iter, ob, hm, intface, dim, iter, spacing, delta, op_n, order, il)
     character(len=*), intent(in)    :: dir
     integer,          intent(out)   :: s_iter                        ! Number of saved coefficients.
-    CMPLX,            intent(inout) :: coeffs(np, np, 0:iter, NLEADS)! Saved coefficients.
-    CMPLX,            intent(inout) :: sp_coeffs(length, 0:iter, NLEADS)! Saved coefficients.
-    CMPLX,            intent(out)   :: mem_s(np, np, 2, NLEADS)      ! Diagonalization matrices.
+    type(ob_terms_t), intent(inout) :: ob
+    type(hamiltonian_t), intent(in) :: hm
+    type(interface_t),intent(in)    :: intface
     integer,          intent(in)    :: dim                           ! Dimension of the problem.
     integer,          intent(in)    :: iter                          ! Number of coefficients.
-    integer,          intent(in)    :: np                            ! Number of points in the interface.
     FLOAT,            intent(in)    :: spacing                       ! Spacing.
     FLOAT,            intent(in)    :: delta                         ! Timestep.
     integer,          intent(in)    :: op_n                          ! Number of operator points.
-    integer,          intent(in)    :: mem_type                      ! Which type of coefficient.
-    integer,          intent(in)    :: length                        ! Length of the packed array.
+    integer,          intent(in)    :: order                         ! discretization order
     integer,          intent(in)    :: il                            ! Which lead.
 
-    integer :: ntime, j, iunit, s_dim, s_np, s_op_n, s_mem_type
+    integer :: ntime, j, iunit, s_dim, s_np, s_op_n, s_mem_type, np
     FLOAT   :: s_spacing, s_delta, det
+    FLOAT, allocatable :: s_vks(:)
+    logical :: s_offdiag_invertible
 
     call push_sub('ob_mem.read_coeffs')
 
     s_iter = 0
+    np = intface%np
 
     ! Try to open file.
     iunit = io_open(trim(dir)//trim(lead_name(il)), action='read', &
@@ -722,6 +716,8 @@ contains
     if(iunit.lt.0) then ! no file found
       call pop_sub(); return
     end if
+
+    SAFE_ALLOCATE(s_vks(1:np))
 
     ! Now read the data.
     read(iunit) s_dim
@@ -731,27 +727,30 @@ contains
     read(iunit) s_delta
     read(iunit) s_op_n
     read(iunit) s_mem_type
+    read(iunit) s_vks(1:np)
+    read(iunit) s_offdiag_invertible
 
     ! Check if numerical parameters of saved coefficients match
     ! current parameter set.
     if((s_dim.eq.dim) .and. (s_np.eq.np) .and. (s_op_n.eq.op_n) &
-      .and. (s_spacing.eq.spacing) .and. (s_delta.eq.delta)     &
-      .and. (s_mem_type.eq.mem_type)) then
+      .and. (s_spacing.eq.spacing) .and. (s_delta.eq.delta) .and. (s_mem_type.eq.ob%mem_type) &
+      .and. (s_offdiag_invertible.eqv.intface%offdiag_invertible) &
+      .and. (hm%lead_vks(1:intface%np, 1, il).app.s_vks(1:intface%np))) then
       ! Read the coefficients.
-      if (mem_type.eq.SAVE_CPU_TIME) then ! Full (upper half) matrices.
+      if (ob%mem_type.eq.SAVE_CPU_TIME) then ! Full (upper half) matrices.
         do ntime = 0, min(iter, s_iter)
-          do j = 1, np
-            read(iunit) coeffs(j, j:np, ntime, il)
-            coeffs(j:np, j, ntime, il) = coeffs(j, j:np, ntime, il)
+          do j = 1, intface%np
+            read(iunit) ob%mem_coeff(j, j:intface%np, ntime, il)
+            ob%mem_coeff(j:intface%np, j, ntime, il) = ob%mem_coeff(j, j:intface%np, ntime, il)
           end do
         end do
       else ! Packed matrices (FIXME: yet only 2D).
         ASSERT(dim.eq.2)
-        read(iunit) mem_s(:, :, 1, il)
-        mem_s(:, :, 2, il) = mem_s(1:np, 1:np, 1, il)
-        det = lalg_inverter(np, mem_s(:, :, 2, il), invert=.true.)
+        read(iunit) ob%mem_s(:, :, 1, il)
+        ob%mem_s(:, :, 2, il) = ob%mem_s(1:intface%np, 1:intface%np, 1, il)
+        det = lalg_inverter(intface%np, ob%mem_s(:, :, 2, il), invert=.true.)
         do ntime = 0, min(iter, s_iter)
-          read(iunit) sp_coeffs(1:length, ntime, il)
+          read(iunit) ob%mem_sp_coeff(1:np*order, ntime, il)
         end do
       end if
     else
@@ -759,6 +758,8 @@ contains
     end if
 
     call io_close(iunit)
+
+    SAFE_DEALLOCATE_A(s_vks)
 
     call pop_sub()
   end subroutine read_coeffs
