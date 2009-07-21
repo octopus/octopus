@@ -200,7 +200,7 @@ subroutine xc_get_vxc(gr, xcs, st, rho, ispin, ex, ec, ip, qtot, vxc, vtau)
         end do
       else
         do ib = 1, n_block
-          ec_per_vol(jj+ib-1) = ec_per_vol(jj+ib-1) + sum(l_dens(1:spin_channels, ib)) * l_zk(ib)
+          ec_per_vol(ib2) = ec_per_vol(ib2) + sum(l_dens(1:spin_channels, ib)) * l_zk(ib)
           ib2 = ib2 + 1
         end do
       end if
@@ -366,14 +366,17 @@ contains
     integer :: ii
 
     call push_sub('vxc.xc_get_vxc.gga_init')
+    
+    ii = 1
+    if(ispin /= UNPOLARIZED) ii = 3
 
     ! allocate variables
-    SAFE_ALLOCATE(l_sigma(1:3, 1:n_block))
+    SAFE_ALLOCATE(l_sigma(1:ii, 1:n_block))
     SAFE_ALLOCATE(gdens(1:gr%mesh%np, 1:3, 1:spin_channels))
     gdens = M_ZERO
 
     if(present(vxc)) then
-      SAFE_ALLOCATE(l_vsigma(1:3, 1:n_block))
+      SAFE_ALLOCATE(l_vsigma(1:ii, 1:n_block))
       SAFE_ALLOCATE(dedgd(1:gr%mesh%np_part, 1:3, 1:spin_channels))
       dedgd = M_ZERO
     end if
