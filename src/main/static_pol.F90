@@ -42,6 +42,7 @@ module static_pol_m
   use restart_m
   use scf_m
   use simul_box_m
+  use species_m
   use states_m
   use system_m
   use units_m
@@ -64,7 +65,7 @@ contains
     type(grid_t),   pointer :: gr    ! shortcuts
     type(states_t), pointer :: st
 
-    integer :: iunit, ios, i_start, ii, jj, kk, is, isign, ierr
+    integer :: iunit, ios, i_start, ii, jj, kk, is, isign, ierr, iatom
     FLOAT :: e_field
     FLOAT, allocatable :: Vpsl_save(:), trrho(:), dipole(:, :, :)
     FLOAT, allocatable :: elf(:,:), lr_elf(:,:), elfd(:,:), lr_elfd(:,:)
@@ -124,11 +125,11 @@ contains
     end if
 
     if(iand(sys%outp%what, output_density).ne.0 .or. &
-       iand(sys%outp%what, output_pol_density).ne.0) then
+       iand(sys%outp%what, output_pol_density).ne.0 .or. calc_Born) then
        fromScratch = .true.
        diagonal_done = .false.
-       ! since only dipoles, not densities, are stored and reloaded, we need to
-       ! recalculate to get the densities again
+       ! since only dipoles, not densities or forces, are stored and reloaded, we need to
+       ! recalculate to get the densities and forces again
     endif
 
     if(fromScratch) then
@@ -163,7 +164,7 @@ contains
     write(message(2), '(a)') 'Info: Calculating dipole moment for zero field.'
     call write_info(2)
     call scf_run(scfv, sys%gr, sys%geo, st, sys%ks, hm, sys%outp, gs_run=.false., verbosity = VERB_COMPACT)
-    
+
     gs_rho(1:gr%mesh%np, 1:st%d%nspin) = st%rho(1:gr%mesh%np, 1:st%d%nspin)
     trrho = M_ZERO
     do is = 1, st%d%spin_channels
@@ -244,9 +245,9 @@ contains
       end if
     endif
 
-    call Born_charges_end(Born_charges)
     call scf_end(scfv)
     call output_end_()
+    call Born_charges_end(Born_charges)
 
     SAFE_DEALLOCATE_A(Vpsl_save)
     SAFE_DEALLOCATE_A(trrho)
@@ -322,6 +323,23 @@ contains
     subroutine output_cycle_()
       integer iatom
       
+      ! BORN CHARGES
+      if(calc_Born) then
+        do iatom = 1, sys%geo%natoms
+          if(isign == 1) then 
+          ! temporary assignment for use in next cycle when isign == 2
+            Born_charges%charge(ii, 1:gr%mesh%sb%dim, iatom) = sys%geo%atom(iatom)%f(1:gr%mesh%sb%dim)
+          else
+            Born_charges%charge(ii, 1:gr%mesh%sb%dim, iatom) = &
+              (sys%geo%atom(iatom)%f(1:gr%mesh%sb%dim) - Born_charges%charge(ii, 1:gr%mesh%sb%dim, iatom)) / (M_TWO*e_field)
+            Born_charges%charge(ii, ii, iatom) = Born_charges%charge(ii, ii, iatom) + species_zval(sys%geo%atom(iatom)%spec)
+            ! since the efield is applied in the SCF calculation by just altering the external potential felt by the electrons,
+            ! the ionic force due to the efield is not included in the forces returned by the SCF run, and so the ionic
+            ! contribution to the Born charge must be added by hand here
+          endif
+        enddo
+      endif
+
       !DENSITY AND POLARIZABILITY DENSITY   
       if(iand(sys%outp%what, output_density).ne.0 .or. &
          iand(sys%outp%what, output_pol_density).ne.0) then 
@@ -332,12 +350,8 @@ contains
         endif
 
         if(isign == 1) then 
-          ! temporary assignments for use in next cycle when isign == 2
+          ! temporary assignment for use in next cycle when isign == 2
           lr_rho(1:gr%mesh%np, 1:st%d%nspin) = st%rho(1:gr%mesh%np, 1:st%d%nspin)
-
-          do iatom = 1, sys%geo%natoms
-            Born_charges%charge(iatom, ii, 1:gr%mesh%sb%dim) = sys%geo%atom(iatom)%f(1:gr%mesh%sb%dim)
-          enddo
         else
           lr_rho2(1:gr%mesh%np, 1:st%d%nspin) = &
             -(st%rho(1:gr%mesh%np, 1:st%d%nspin) + lr_rho(1:gr%mesh%np, 1:st%d%nspin) - 2 * gs_rho(1:gr%mesh%np, 1:st%d%nspin)) &
@@ -345,11 +359,6 @@ contains
 
           lr_rho(1:gr%mesh%np, 1:st%d%nspin) = &
                (st%rho(1:gr%mesh%np, 1:st%d%nspin) - lr_rho(1:gr%mesh%np, 1:st%d%nspin)) / (M_TWO*e_field)
-
-          do iatom = 1, sys%geo%natoms
-            Born_charges%charge(iatom, ii, 1:gr%mesh%sb%dim) = &
-              (sys%geo%atom(iatom)%f(1:gr%mesh%sb%dim) - Born_charges%charge(iatom, ii, 1:gr%mesh%sb%dim)) / (M_TWO*e_field)
-          enddo
 
           !write
           do is = 1, st%d%nspin

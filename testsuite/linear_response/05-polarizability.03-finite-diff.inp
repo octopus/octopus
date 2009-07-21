@@ -4,6 +4,10 @@ Units = eV_Angstrom
 ResponseMethod = finite_differences
 EMStaticField = 0.01
 
+DevelVersion = yes
+EMCalcBornCharges = yes
+BornChargeSumRuleCorrection = no
+
 SmearingFunction = methfessel_paxton
 Smearing = 0.5
 ExtraStates = 3

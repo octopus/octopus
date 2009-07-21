@@ -236,7 +236,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
   
   do iatom = 1, geo%natoms
     if(present(lr)) then
-      Born_charges%charge(iatom, lr_dir, 1:gr%mesh%sb%dim) = force(1:gr%mesh%sb%dim, iatom)
+      Born_charges%charge(lr_dir, 1:gr%mesh%sb%dim, iatom) = force(1:gr%mesh%sb%dim, iatom)
     else
       geo%atom(iatom)%f(1:gr%mesh%sb%dim) = geo%atom(iatom)%f(1:gr%mesh%sb%dim) + real(force(1:gr%mesh%sb%dim, iatom))
     endif
@@ -299,10 +299,10 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir,
 
   if(present(lr)) then
     do iatom = 1, geo%natoms
-      Born_charges%charge(iatom, lr_dir, lr_dir) = Born_charges%charge(iatom, lr_dir, lr_dir) + &
+      Born_charges%charge(lr_dir, lr_dir, iatom) = Born_charges%charge(lr_dir, lr_dir, iatom) + &
         species_zval(geo%atom(iatom)%spec)
       do idir = 1, gr%mesh%sb%dim
-        Born_charges%charge(iatom, lr_dir, idir) = Born_charges%charge(iatom, lr_dir, idir) + force(idir, iatom)
+        Born_charges%charge(lr_dir, idir, iatom) = Born_charges%charge(lr_dir, idir, iatom) + force(idir, iatom)
       enddo
     enddo
   else

@@ -41,7 +41,7 @@ module Born_charges_m
     out_Born_charges
 
   type Born_charges_t
-    CMPLX, pointer :: charge(:, :, :)    ! atom, i, j: Z*(i,j) = dF(j)/dE(i) = dP(i) / dR(j)
+    CMPLX, pointer :: charge(:, :, :)    ! i, j, atom: Z*(i,j) = dF(j)/dE(i) = dP(i) / dR(j)
     CMPLX :: sum_ideal(MAX_DIM, MAX_DIM) ! the sum of Born charges according to acoustic sum rule 
     CMPLX :: delta(MAX_DIM, MAX_DIM)     ! discrepancy of sum of Born charge tensors from sum rule
     logical :: correct                   ! correct according to sum rule?
@@ -61,8 +61,8 @@ module Born_charges_m
     call push_sub('Born_charges.Born_charges_init')
 
     nullify(this%charge)
-    SAFE_ALLOCATE(this%charge(1:geo%natoms, 1:dim, 1:dim))
-    this%charge(1:geo%natoms, 1:dim, 1:dim) = M_ZERO
+    SAFE_ALLOCATE(this%charge(1:dim, 1:dim, 1:geo%natoms))
+    this%charge(1:dim, 1:dim, 1:geo%natoms) = M_ZERO
     this%delta(1:dim, 1:dim) = M_ZERO
 
     this%sum_ideal(1:dim, 1:dim) = M_ZERO
@@ -111,15 +111,15 @@ module Born_charges_m
     Born_sum(1:dim, 1:dim) = M_ZERO 
 
     do iatom = 1, geo%natoms
-      Born_sum(1:dim, 1:dim) = Born_sum(1:dim, 1:dim) + this%charge(iatom, 1:dim, 1:dim)
+      Born_sum(1:dim, 1:dim) = Born_sum(1:dim, 1:dim) + this%charge(1:dim, 1:dim, iatom)
     enddo
 
     this%delta(1:dim, 1:dim) = Born_sum(1:dim, 1:dim) - this%sum_ideal(1:dim, 1:dim)
 
     if(this%correct) then
       do iatom = 1, geo%natoms
-        this%charge(iatom, 1:dim, 1:dim) = &
-          this%charge(iatom, 1:dim, 1:dim) - this%delta(1:dim, 1:dim) / geo%natoms
+        this%charge(1:dim, 1:dim, iatom) = &
+          this%charge(1:dim, 1:dim, iatom) - this%delta(1:dim, 1:dim) / geo%natoms
       enddo
     endif
 
@@ -148,10 +148,10 @@ module Born_charges_m
         '   Ionic charge: ', species_zval(geo%atom(iatom)%spec)
 
       write(iunit,'(a)') 'Real:'
-      call io_output_tensor(iunit, real(this%charge(iatom, :, :)), dim, M_ONE)
+      call io_output_tensor(iunit, real(this%charge(:, :, iatom)), dim, M_ONE)
 
       write(iunit,'(a)') 'Imaginary:'
-      call io_output_tensor(iunit, aimag(this%charge(iatom, :, :)), dim, M_ONE)
+      call io_output_tensor(iunit, aimag(this%charge(:, :, iatom)), dim, M_ONE)
       write(iunit,'(a)')
     enddo
 
@@ -161,11 +161,11 @@ module Born_charges_m
         '   Ionic charge: ', species_zval(geo%atom(iatom)%spec)
 
       write(iunit,'(a)') 'Magnitude:'
-      call io_output_tensor(iunit, TOFLOAT(abs(this%charge(iatom, :,:))), dim, M_ONE)
+      call io_output_tensor(iunit, TOFLOAT(abs(this%charge(:, :, iatom))), dim, M_ONE)
 
       write(iunit,'(a)') 'Phase:'
-      phase = atan2(aimag(this%charge(iatom, :, :)),real(this%charge(iatom, :,:)))
-      call io_output_tensor(iunit, phase, dim, M_ONE)
+      phase(1:dim, 1:dim) = atan2(aimag(this%charge(1:dim, 1:dim, iatom)), real(this%charge(1:dim, 1:dim, iatom)))
+      call io_output_tensor(iunit, phase(:, :), dim, M_ONE)
       write(iunit,'(a)')
     enddo
 
