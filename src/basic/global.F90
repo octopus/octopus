@@ -153,13 +153,13 @@ contains
 #if defined (LONG_LINES)
     conf%cflags     = CFLAGS
 #else
-    conf%fcflags = "No flags information available."
+    conf%cflags     = "No flags information available."
 #endif
     conf%fc         = FC
 #if defined (LONG_LINES)
     conf%fcflags    = FCFLAGS
 #else
-    conf%fcflags = "No flags information available."
+    conf%fcflags    = "No flags information available."
 #endif
 
     ! initialize info for the input variables
