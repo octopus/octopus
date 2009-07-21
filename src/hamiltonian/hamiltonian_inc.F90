@@ -18,13 +18,13 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, t, kinetic_only)
+subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, time, kinetic_only)
   type(hamiltonian_t), intent(in)    :: hm
   type(grid_t),        intent(inout) :: gr
   type(batch_t),       intent(inout) :: psib
   type(batch_t),       intent(inout) :: hpsib
   integer,             intent(in)    :: ik
-  FLOAT, optional,     intent(in)    :: t
+  FLOAT, optional,     intent(in)    :: time
   logical, optional,   intent(in)    :: kinetic_only
   
   integer :: nst, bs, sp
@@ -46,7 +46,7 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, t, kinetic_only)
   kinetic_only_ = .false.
   if(present(kinetic_only)) kinetic_only_ = kinetic_only
 
-  if(present(t).and.hm%d%cdft) then
+  if(present(time).and.hm%d%cdft) then
     message(1) = "TDCDFT not yet implemented"
     call write_fatal(1)
   end if
@@ -58,7 +58,6 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, t, kinetic_only)
   nst = psib%nst
   
   SAFE_ALLOCATE(lapl(1:gr%mesh%np, 1:hm%d%dim, 1:nst))
-  lapl(:, :, :) = R_TOTYPE(M_ZERO)
 
   call batch_init(laplb, hm%d%dim, psib%states(1)%ist, psib%states(nst)%ist, lapl)
 
@@ -102,6 +101,7 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, t, kinetic_only)
   end if
 
   call X(derivatives_batch_finish)(handle)
+  call batch_end(laplb)
 
   do ii = 1, nst
     call set_pointers()
@@ -130,7 +130,7 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, t, kinetic_only)
 
       nullify(grad)
       
-      if (present(t)) then
+      if (present(time)) then
         ! lasers
         if(hm%ep%no_lasers > 0) then
           if(any(laser_requires_gradient(hm%ep%lasers(1:hm%ep%no_lasers)))) then
@@ -138,10 +138,10 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, t, kinetic_only)
           end if
           if(associated(hm%ep%a_static)) then
             call X(vlasers)(hm%ep%lasers, hm%ep%no_lasers, gr, hm%d, epsi, hpsi, grad, &
-              ik, hm%ep%gyromagnetic_ratio, hm%ep%a_static, t)
+              ik, hm%ep%gyromagnetic_ratio, hm%ep%a_static, time)
           else
             call X(vlasers)(hm%ep%lasers, hm%ep%no_lasers, gr, hm%d, epsi, hpsi, grad, &
-              ik, hm%ep%gyromagnetic_ratio, t = t)
+              ik, hm%ep%gyromagnetic_ratio, t = time)
           end if
         end if
 #ifdef R_TCOMPLEX
@@ -160,7 +160,7 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, t, kinetic_only)
 
       call X(magnetic_terms) (gr, hm, epsi, hpsi, grad, ik)
       
-      if(present(t)) call X(vborders) (gr, hm, epsi, hpsi)
+      if(present(time)) call X(vborders) (gr, hm, epsi, hpsi)
 
       SAFE_DEALLOCATE_P(grad)
    
@@ -168,6 +168,8 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, t, kinetic_only)
 
     end if
   end do
+
+  SAFE_DEALLOCATE_A(lapl)
 
   if(apply_kpoint) then
     ! now we need to remove the exp(-i k.r) factor
@@ -188,9 +190,6 @@ subroutine X(hamiltonian_apply_batch) (hm, gr, psib, hpsib, ik, t, kinetic_only)
   end if
   
   call batch_end(epsib)
-  call batch_end(laplb)
-
-  SAFE_DEALLOCATE_A(lapl)
 
   call pop_sub()
   call profiling_out(prof_hamiltonian)
