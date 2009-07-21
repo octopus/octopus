@@ -21,6 +21,7 @@
 #define RESTART_FILE 'dipoles'
 
 module static_pol_m
+  use Born_charges_m
   use datasets_m
   use elf_m
   use em_resp_m
@@ -69,13 +70,14 @@ contains
     FLOAT, allocatable :: elf(:,:), lr_elf(:,:), elfd(:,:), lr_elfd(:,:)
     FLOAT, allocatable :: lr_rho(:,:), lr_rho2(:,:), gs_rho(:,:), tmp_rho(:,:)
     FLOAT :: center_dipole(1:MAX_DIM), diag_dipole(1:MAX_DIM)
-    logical :: diagonal_done 
+    type(Born_charges_t) :: Born_charges
+    logical :: diagonal_done, calc_Born
     character(len=80) :: fname
 
     call init_()
 
     ! load wave-functions
-    call restart_read(trim(restart_dir)//'gs', sys%st, gr, sys%geo, ierr)
+    call restart_read(trim(restart_dir)//GS_DIR, sys%st, gr, sys%geo, ierr)
 
     if(simul_box_is_periodic(gr%sb)) then
       message(1) = "Electric field cannot be applied to a periodic system (currently)."
@@ -83,7 +85,7 @@ contains
     endif
 
     if(ierr.ne.0) then
-      message(1) = "Could not read KS orbitals from '"//trim(restart_dir)//"gs'"
+      message(1) = "Could not read KS orbitals from '"//trim(restart_dir)//GS_DIR//"'"
       message(2) = "Please run a ground-state calculation first and/or"
       message(3) = "Give the correct RestartDataset in the input file."
       call write_fatal(3)
@@ -149,8 +151,8 @@ contains
     gs_rho = M_ZERO
 
     call output_init_()
-
     call scf_init(scfv, gr, sys%geo, st, hm)
+    call Born_charges_init(Born_charges, sys%geo, st, gr%mesh%sb%dim)
 
     ! now calculate the dipole without field
 
@@ -242,6 +244,7 @@ contains
       end if
     endif
 
+    call Born_charges_end(Born_charges)
     call scf_end(scfv)
     call output_end_()
 
@@ -281,6 +284,10 @@ contains
         call write_fatal(2)
       end if
 
+      ! variable defined in em_resp
+      call loct_parse_logical(datasets_check('EMCalcBornCharges'), .false., calc_Born)
+      if (calc_Born) call messages_devel_version("Calculation of Born effective charges")
+
     end subroutine init_
 
     ! ---------------------------------------------------------
@@ -313,6 +320,7 @@ contains
 
     !-------------------------------------------------------------
     subroutine output_cycle_()
+      integer iatom
       
       !DENSITY AND POLARIZABILITY DENSITY   
       if(iand(sys%outp%what, output_density).ne.0 .or. &
@@ -324,8 +332,12 @@ contains
         endif
 
         if(isign == 1) then 
+          ! temporary assignments for use in next cycle when isign == 2
           lr_rho(1:gr%mesh%np, 1:st%d%nspin) = st%rho(1:gr%mesh%np, 1:st%d%nspin)
-          ! temporary assignment for use in next cycle when isign == 2
+
+          do iatom = 1, sys%geo%natoms
+            Born_charges%charge(iatom, ii, 1:gr%mesh%sb%dim) = sys%geo%atom(iatom)%f(1:gr%mesh%sb%dim)
+          enddo
         else
           lr_rho2(1:gr%mesh%np, 1:st%d%nspin) = &
             -(st%rho(1:gr%mesh%np, 1:st%d%nspin) + lr_rho(1:gr%mesh%np, 1:st%d%nspin) - 2 * gs_rho(1:gr%mesh%np, 1:st%d%nspin)) &
@@ -333,6 +345,11 @@ contains
 
           lr_rho(1:gr%mesh%np, 1:st%d%nspin) = &
                (st%rho(1:gr%mesh%np, 1:st%d%nspin) - lr_rho(1:gr%mesh%np, 1:st%d%nspin)) / (M_TWO*e_field)
+
+          do iatom = 1, sys%geo%natoms
+            Born_charges%charge(iatom, ii, 1:gr%mesh%sb%dim) = &
+              (sys%geo%atom(iatom)%f(1:gr%mesh%sb%dim) - Born_charges%charge(iatom, ii, 1:gr%mesh%sb%dim)) / (M_TWO*e_field)
+          enddo
 
           !write
           do is = 1, st%d%nspin
@@ -452,8 +469,9 @@ contains
         call io_output_tensor(iunit, alpha, gr%mesh%sb%dim, units_out%length%factor**gr%mesh%sb%dim)
         call io_close(iunit)
         
-        call out_hyperpolarizability(gr%sb, beta, converged = .true., dirname = EM_RESP_FD_DIR)
+        call out_hyperpolarizability(gr%sb, beta, .true., EM_RESP_FD_DIR)
 
+        if(calc_Born) call out_Born_charges(Born_charges, sys%geo, gr%mesh%sb%dim, EM_RESP_FD_DIR)
       end if
 
       if(iand(sys%outp%what, output_density).ne.0 .or. &
