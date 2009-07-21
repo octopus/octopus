@@ -17,15 +17,16 @@
 !!
 !! $Id$
 
-subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir)
-  type(grid_t),         intent(inout) :: gr
-  type(geometry_t),     intent(inout) :: geo
-  type(epot_t),         intent(in)    :: ep
-  type(states_t),       intent(inout) :: st
-  FLOAT,                intent(in)    :: time
-  type(lr_t), optional, intent(inout) :: lr
-  type(lr_t), optional, intent(inout) :: lr2
-  integer,    optional, intent(in)    :: lr_dir
+subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir, Born_charges)
+  type(grid_t),                   intent(inout) :: gr
+  type(geometry_t),               intent(inout) :: geo
+  type(epot_t),                   intent(in)    :: ep
+  type(states_t),                 intent(inout) :: st
+  FLOAT,                          intent(in)    :: time
+  type(lr_t),           optional, intent(inout) :: lr
+  type(lr_t),           optional, intent(inout) :: lr2
+  integer,              optional, intent(in)    :: lr_dir
+  type(Born_charges_t), optional, intent(out)   :: Born_charges
   ! provide these optional arguments to calculate Born effective charges rather than forces
   ! lr, lr2 should be the wfns from electric perturbation in the lr_dir direction
   ! lr is for +omega, lr2 is for -omega.
@@ -53,6 +54,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir)
 
   ASSERT(present(lr) .eqv. present(lr_dir))
   ASSERT(present(lr) .eqv. present(lr2))
+  ASSERT(present(lr) .eqv. present(Born_charges))
   ! need all to calculate Born charges
   if(present(lr_dir)) then
     ASSERT(lr_dir > 0 .and. lr_dir <= gr%mesh%sb%dim)
@@ -234,7 +236,7 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir)
   
   do iatom = 1, geo%natoms
     if(present(lr)) then
-      geo%atom(iatom)%Born_charge(lr_dir, 1:gr%mesh%sb%dim) = force(1:gr%mesh%sb%dim, iatom)
+      Born_charges%charge(iatom, lr_dir, 1:gr%mesh%sb%dim) = force(1:gr%mesh%sb%dim, iatom)
     else
       geo%atom(iatom)%f(1:gr%mesh%sb%dim) = geo%atom(iatom)%f(1:gr%mesh%sb%dim) + real(force(1:gr%mesh%sb%dim, iatom))
     endif
@@ -297,10 +299,10 @@ subroutine X(calc_forces_from_potential)(gr, geo, ep, st, time, lr, lr2, lr_dir)
 
   if(present(lr)) then
     do iatom = 1, geo%natoms
-      geo%atom(iatom)%Born_charge(lr_dir, lr_dir) = geo%atom(iatom)%Born_charge(lr_dir, lr_dir) + &
+      Born_charges%charge(iatom, lr_dir, lr_dir) = Born_charges%charge(iatom, lr_dir, lr_dir) + &
         species_zval(geo%atom(iatom)%spec)
       do idir = 1, gr%mesh%sb%dim
-        geo%atom(iatom)%Born_charge(lr_dir, idir) = geo%atom(iatom)%Born_charge(lr_dir, idir) + force(idir, iatom)
+        Born_charges%charge(iatom, lr_dir, idir) = Born_charges%charge(iatom, lr_dir, idir) + force(idir, iatom)
       enddo
     enddo
   else

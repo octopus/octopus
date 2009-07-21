@@ -20,6 +20,7 @@
 #include "global.h"
 
 module em_resp_m
+  use Born_charges_m
   use datasets_m
   use em_resp_calc_m
   use external_pot_m
@@ -60,9 +61,7 @@ module em_resp_m
 
   public :: &
        em_resp_run,             &
-       out_hyperpolarizability, &
-       correct_Born_charges,    &
-       out_Born_charges
+       out_hyperpolarizability 
 
   type em_resp_t
     type(pert_t) :: perturbation
@@ -89,7 +88,7 @@ module em_resp_m
     logical :: force_no_kdotp                    ! whether to use kdotp run for periodic system
 
     logical :: calc_Born                         ! whether to calculate Born effective charges
-    CMPLX   :: Born_delta(MAX_DIM, MAX_DIM)      ! discrepancy of sum of Born charge tensors from sum rule
+    type(Born_charges_t) :: Born_charges(3)      ! one set for each frequency factor
     
   end type em_resp_t
 
@@ -168,6 +167,9 @@ contains
 
     SAFE_ALLOCATE(em_vars%lr(1:gr%mesh%sb%dim, 1:em_vars%nsigma, 1:em_vars%nfactor))
     em_vars%lr(1:gr%mesh%sb%dim, 1:em_vars%nsigma, 1:em_vars%nfactor)%nst = sys%st%nst
+    do ifactor = 1, em_vars%nfactor
+      call Born_charges_init(em_vars%Born_charges(ifactor), sys%geo, sys%st, gr%mesh%sb%dim)
+    enddo
 
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian for linear response'
@@ -399,26 +401,24 @@ contains
                 if(em_vars%nsigma == 2) then
                   call zcalc_forces_from_potential(sys%gr, sys%geo, hm%ep, sys%st, M_ZERO, &
                     lr = em_vars%lr(idir, 1, ifactor), lr2 = em_vars%lr(idir, 2, ifactor), &
-                    lr_dir = idir)
+                    lr_dir = idir, Born_charges = em_vars%Born_charges(ifactor))
                 else
                   call zcalc_forces_from_potential(sys%gr, sys%geo, hm%ep, sys%st, M_ZERO, &
                     lr = em_vars%lr(idir, 1, ifactor), lr2 = em_vars%lr(idir, 1, ifactor), &
-                    lr_dir = idir)
+                    lr_dir = idir, Born_charges = em_vars%Born_charges(ifactor))
                 endif
               else
                 if(em_vars%nsigma == 2) then
                   call dcalc_forces_from_potential(sys%gr, sys%geo, hm%ep, sys%st, M_ZERO, &
                     lr = em_vars%lr(idir, 1, ifactor), lr2 = em_vars%lr(idir, 2, ifactor), &
-                    lr_dir = idir)
+                    lr_dir = idir, Born_charges = em_vars%Born_charges(ifactor))
                 else
                   call dcalc_forces_from_potential(sys%gr, sys%geo, hm%ep, sys%st, M_ZERO, &
                     lr = em_vars%lr(idir, 1, ifactor), lr2 = em_vars%lr(idir, 1, ifactor), &
-                    lr_dir = idir)
+                    lr_dir = idir, Born_charges = em_vars%Born_charges(ifactor))
                 endif
               endif
             enddo
-
-            call correct_Born_charges(sys%geo, sys%st, sys%gr%sb%dim)
           enddo
         endif
 
@@ -466,6 +466,9 @@ contains
 
     SAFE_DEALLOCATE_P(em_vars%omega)
     SAFE_DEALLOCATE_P(em_vars%lr)
+    do ifactor = 1, em_vars%nfactor
+      call Born_charges_end(em_vars%Born_charges(ifactor))
+    enddo
     call states_deallocate_wfns(sys%st)
 
     call pop_sub()
@@ -684,7 +687,7 @@ contains
       if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
         call out_polarizability()
 
-        if(em_vars%calc_Born) call out_Born_charges(geo, gr%mesh%sb%dim, dirname)
+        if(em_vars%calc_Born) call out_Born_charges(em_vars%Born_charges(ifactor), geo, gr%mesh%sb%dim, dirname)
 
         if(em_vars%calc_hyperpol .and. ifactor == 1) &
           call out_hyperpolarizability(gr%sb, em_vars%beta, em_vars%ok(ifactor), dirname)
@@ -1011,105 +1014,6 @@ contains
     end subroutine out_circular_dichroism
     
   end subroutine em_resp_output
-
-  ! ---------------------------------------------------------
-  ! The sum over atoms of a given tensor component of the Born charges
-  !  should be Z delta_ij to satisfy the acoustic sum rule, where Z is total charge of system
-  subroutine correct_Born_charges(geo, st, dim)
-    type(geometry_t), intent(inout)  :: geo
-    type(states_t),   intent(in)     :: st
-    integer,          intent(in)     :: dim
-
-    logical Born_correct
-    CMPLX :: Born_sum(MAX_DIM, MAX_DIM)        ! the sum of Born charges from the calculation 
-    CMPLX :: Born_sum_ideal(MAX_DIM, MAX_DIM)  ! the sum of Born charges according to acoustic sum rule 
-    integer iatom, idir, idir2
-
-    call push_sub('em_resp.correct_Born_charges')
-
-    !%Variable BornChargeSumRuleCorrection
-    !%Type logical
-    !%Default true
-    !%Section Linear Response::Polarizabilities
-    !%Description
-    !% Enforce the acoustic sum rule by distributing the excess sum of Born charges equally among the atoms.
-    !% sum rule: sum(iatom) Z*(iatom,idir,idir2) = Z_tot delta(idir1, idir2)
-    !%End
-
-    call loct_parse_logical(datasets_check('BornChargeSumRuleCorrection'), .true., Born_correct)
-
-    Born_sum(1:dim, 1:dim) = M_ZERO 
-    Born_sum_ideal(1:dim, 1:dim) = M_ZERO
-    do idir = 1, dim
-      Born_sum_ideal(idir, idir) = -(st%val_charge + st%qtot) ! total charge
-    enddo
-
-    do iatom = 1, geo%natoms
-      Born_sum(1:dim, 1:dim) = Born_sum(1:dim, 1:dim) + geo%atom(iatom)%Born_charge(1:dim, 1:dim)
-    enddo
-
-    geo%Born_delta(1:dim, 1:dim) = Born_sum(1:dim, 1:dim) - Born_sum_ideal(1:dim, 1:dim)
-
-    if(Born_correct) then
-      do iatom = 1, geo%natoms
-        geo%atom(iatom)%Born_charge(1:dim, 1:dim) = &
-          geo%atom(iatom)%Born_charge(1:dim, 1:dim) - geo%Born_delta(1:dim, 1:dim) / geo%natoms
-      enddo
-    endif
-
-    call pop_sub()
-  end subroutine correct_Born_charges
-
-  ! ---------------------------------------------------------
-  subroutine out_Born_charges(geo, dim, dirname)
-    type(geometry_t), intent(in) :: geo
-    integer,          intent(in) :: dim
-    character(len=*), intent(in) :: dirname
-
-    integer iatom, iunit
-    FLOAT :: phase(1:MAX_DIM, 1:MAX_DIM)
-
-    call push_sub('em_resp.out_Born_charges')
-
-    iunit = io_open(trim(dirname)//'/Born_charges', action='write')
-    write(iunit,'(a)') '# (Frequency-dependent) Born effective charge tensors'
-    write(iunit,'(a)') '# Real and imaginary parts'
-    do iatom = 1, geo%natoms
-      write(iunit,'(a,i5,a,a5,a,f10.4)') 'Index: ', iatom, '   Label: ', trim(species_label(geo%atom(iatom)%spec)), &
-        '   Ionic charge: ', species_zval(geo%atom(iatom)%spec)
-
-      write(iunit,'(a)') 'Real:'
-      call io_output_tensor(iunit, real(geo%atom(iatom)%Born_charge(:,:)), dim, M_ONE)
-
-      write(iunit,'(a)') 'Imaginary:'
-      call io_output_tensor(iunit, aimag(geo%atom(iatom)%Born_charge(:,:)), dim, M_ONE)
-      write(iunit,'(a)')
-    enddo
-
-    write(iunit,'(a)') '# Magnitude and phase'
-    do iatom = 1, geo%natoms
-      write(iunit,'(a,i5,a,a5,a,f10.4)') 'Index: ', iatom, '   Label: ', trim(species_label(geo%atom(iatom)%spec)), &
-        '   Ionic charge: ', species_zval(geo%atom(iatom)%spec)
-
-      write(iunit,'(a)') 'Magnitude:'
-      call io_output_tensor(iunit, TOFLOAT(abs(geo%atom(iatom)%Born_charge(:,:))), dim, M_ONE)
-
-      write(iunit,'(a)') 'Phase:'
-      phase = atan2(aimag(geo%atom(iatom)%Born_charge(:,:)),real(geo%atom(iatom)%Born_charge(:,:)))
-      call io_output_tensor(iunit, phase, dim, M_ONE)
-      write(iunit,'(a)')
-    enddo
-
-    write(iunit,'(a)') '# Discrepancy of Born effective charges from acoustic sum rule before correction' 
-    write(iunit,'(a)') 'Real:'
-    call io_output_tensor(iunit, real(geo%Born_delta(:, :)), dim, M_ONE)
-    write(iunit,'(a)') 'Imaginary:'
-    call io_output_tensor(iunit, aimag(geo%Born_delta(:, :)), dim, M_ONE)
-
-    call io_close(iunit)
-    call pop_sub()
-  end subroutine out_Born_charges
-
 
   ! ---------------------------------------------------------
   subroutine out_hyperpolarizability(sb, beta, converged, dirname)

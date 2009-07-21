@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id: 24-cpmd.test 3344 2007-10-13 13:38:03Z acastro $
 
-Test       : Enforced time reversal symmetry propagator
+Test       : Enforced time-reversal symmetry propagator
 Programs   : octopus_mpi; octopus
 TestGroups : short-run
 Enabled    : Yes

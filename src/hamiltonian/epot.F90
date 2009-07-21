@@ -20,6 +20,7 @@
 #include "global.h"
 
 module external_pot_m
+  use Born_charges_m
   use datasets_m
   use derivatives_m
   use double_grid_m

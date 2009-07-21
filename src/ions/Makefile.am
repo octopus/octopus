@@ -32,6 +32,7 @@ libions_a_SOURCES =         \
 	ion_dynamics.F90    \
 	ion_interaction.F90 \
 	symmetries.F90      \
+	Born_charges.F90    \
 	spglib_f.c
 
 noinst_HEADERS =
@@ -51,4 +52,5 @@ crystal.o : crystal.F90 geometry.o simul_box.o symmetries.o
 ion_dynamics.o : ion_dynamics.F90 simul_box.o geometry.o xyz_file.o
 ion_interaction.o : ion_interaction.F90 solids.o simul_box.o geometry.o
 symmetries.o : symmetries.F90 simul_box.o
+Born_charges.o : Born_charges.F90 geometry.o
 spglib_f.o : spglib_f.c
