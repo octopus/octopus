@@ -249,41 +249,43 @@ contains
   !
   ! So, if n>0, the point is in the border.
   ! ----------------------------------------------------------------------
-  subroutine mesh_inborder(m, geo, i, n, d, width)
+  logical function mesh_inborder(m, geo, i, dist, width) result(is_on_border)
     type(mesh_t), intent(in)  :: m
     type(geometry_t),  intent(in) :: geo
     integer,      intent(in)  :: i
     FLOAT,        intent(in)  :: width
-    integer,      intent(out) :: n
-    FLOAT,        intent(out) :: d(MAX_DIM)
+    FLOAT,        intent(out) :: dist ! distance from border
     
     integer :: j, l
-    logical :: is_on_border
     FLOAT   :: x(MAX_DIM), r, dd, radius
     
-    n = 0
+    is_on_border = .false.
+    dist = M_ZERO
+
     select case(m%sb%box_shape)
     case(SPHERE)
       call mesh_r(m, i, r, x=x)
       dd = r - (m%sb%rsize - width)
       if(dd.gt.M_ZERO) then
-        n = 1; d(1) = dd
+        is_on_border = .true.
+        dist = dd
       end if
+
     case(CYLINDER)
       call mesh_r(m, i, r, x=x)
       dd = sqrt(x(2)**2 + x(3)**2) - (m%sb%rsize - width)
       if(dd.gt.M_ZERO) then
-        n = 1; d(1) = dd
+        is_on_border = .true.
+        dist = dd
       end if
-      if ( m%sb%periodic_dim.eq.0 ) then
+      if(m%sb%periodic_dim == 0) then
         dd = abs(x(1)) - (m%sb%xsize - width)
         if(dd.gt.M_ZERO) then
-          n = n + 1; d(n) = dd
+          is_on_border = .true.
+          dist = sqrt(dist*dist + dd*dd)
         end if
       end if
-    case(BOX_USDEF)
-      message(1) = "Absorbing boundaries are not implemented for a user defined box"
-      call write_fatal(1)
+
     case(MINIMUM)
       radius = m%sb%rsize
       do j = 1, geo%natoms
@@ -292,35 +294,43 @@ contains
         dd = r - (radius - width)
 	! check if the point is on the spherical shell of the j-th atom
 	if ((dd < M_ZERO) .or. (r > radius)) cycle
-	  ! make sure that the point is not inside some other atomic sphere
-	  is_on_border = .true.
-	  do l = 1, geo%natoms
-	    if (l == j) cycle
-	    call mesh_r(m, i, r, a=geo%atom(l)%x)
-            if(m%sb%rsize < M_ZERO) radius = species_def_rsize(geo%atom(l)%spec)
-	    if (r < radius - width) then 
-	      is_on_border = .false.
-	      cycle
-	    end if
-	  end do
-	  if (is_on_border) then
-	    n = 1
-	    d(1) = dd
-	  end if
+ 
+        ! make sure that the point is not inside some other atomic sphere
+        is_on_border = .true.
+        do l = 1, geo%natoms
+          if(l == j) cycle
+          call mesh_r(m, i, r, a=geo%atom(l)%x)
+          if(m%sb%rsize < M_ZERO) radius = species_def_rsize(geo%atom(l)%spec)
+          if(r < radius - width) then 
+            is_on_border = .false.
+            exit
+          end if
+        end do
+
+        if(is_on_border) dist = dd
       end do
-    case(PARALLELEPIPED)
+
+    case(PARALLELEPIPED, HYPERCUBE)
       call mesh_r(m, i, r, x=x)
       do j = m%sb%periodic_dim+1, m%sb%dim
         dd = abs(x(j)) - (m%sb%lsize(j) - width)
         if(dd.gt.M_ZERO) then
-          n = n + 1; d(n) = dd
+          is_on_border = .true.
+          dist = dist + dd*dd
         end if
       end do
-    case default
-      ASSERT(.false.)
+
+    case(BOX_IMAGE, BOX_USDEF)
+      message(1) = "Absorbing boundaries are not implemented for a user defined box"
+      call write_fatal(1)
+
     end select
     
-  end subroutine mesh_inborder
+    ! This may happen if the point is in more than one border at the
+    ! same time
+    if(dist > width) dist = width
+
+  end function mesh_inborder
   
   
   !---------------------------------------------------------------------

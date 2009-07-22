@@ -212,9 +212,8 @@ contains
     integer,                intent(in)    :: theory_level
     integer,                intent(in)    :: xc_family
 
-    integer                     :: i, j, n, ispin
+    integer                     :: i, j, ispin
     integer, pointer            :: wfs_type
-    FLOAT                       :: d(MAX_DIM)
     type(states_dim_t), pointer :: states_dim
 
     integer :: ncols
@@ -344,44 +343,7 @@ contains
     
     nullify(hm%ab_pot)
 
-    absorbing_boundaries: if(hm%ab.ne.NOT_ABSORBING) then
-      !%Variable ABWidth
-      !%Type float
-      !%Default 0.4 a.u.
-      !%Section Time Dependent::Absorbing Boundaries
-      !%Description
-      !% Width of the region used to apply the absorbing boundaries.
-      !%End
-      call loct_parse_float(datasets_check('ABWidth'), CNST(0.4)/units_inp%length%factor, hm%ab_width)
-      hm%ab_width  = hm%ab_width * units_inp%length%factor
-      if(hm%ab == 1) then
-        !%Variable ABHeight
-        !%Type float
-        !%Default -0.2 a.u.
-        !%Section Time Dependent::Absorbing Boundaries
-        !%Description 
-        !% When <tt>AbsorbingBoundaries == sin2</tt>, is the height of the imaginary potential.
-        !%End
-        call loct_parse_float(datasets_check('ABHeight'), -CNST(0.2)/units_inp%energy%factor, hm%ab_height)
-        hm%ab_height = hm%ab_height * units_inp%energy%factor
-      else
-        hm%ab_height = M_ONE
-      end if
-
-      ! generate boundary potential...
-      SAFE_ALLOCATE(hm%ab_pot(1:gr%mesh%np))
-      hm%ab_pot = M_ZERO
-      do i = 1, gr%mesh%np
-        call mesh_inborder(gr%mesh, geo, i, n, d, hm%ab_width)
-        if(n>0) then
-          do j = 1, n
-            hm%ab_pot(i) = hm%ab_pot(i) + hm%ab_height * sin(d(j)*M_PI/(M_TWO*hm%ab_width))**2
-          end do
-        end if
-        if(abs(hm%ab_pot(i)) > abs(hm%ab_height)) hm%ab_pot(i) = hm%ab_height
-      end do
-
-    end if absorbing_boundaries
+    if(hm%ab.ne.NOT_ABSORBING) call init_abs_boundaries()
 
     ! Cutoff applied to the kinetic term.
     ! it is used *both* in the calculation of the split operator method
@@ -474,7 +436,43 @@ contains
       end forall
       
     end subroutine init_phase
-    
+
+
+    subroutine init_abs_boundaries()
+      FLOAT  :: d
+
+      !%Variable ABWidth
+      !%Type float
+      !%Default 0.4 a.u.
+      !%Section Time Dependent::Absorbing Boundaries
+      !%Description
+      !% Width of the region used to apply the absorbing boundaries.
+      !%End
+      call loct_parse_float(datasets_check('ABWidth'), CNST(0.4)/units_inp%length%factor, hm%ab_width)
+      hm%ab_width  = hm%ab_width * units_inp%length%factor
+      if(hm%ab == 1) then
+        !%Variable ABHeight
+        !%Type float
+        !%Default -0.2 a.u.
+        !%Section Time Dependent::Absorbing Boundaries
+        !%Description 
+        !% When <tt>AbsorbingBoundaries == sin2</tt>, is the height of the imaginary potential.
+        !%End
+        call loct_parse_float(datasets_check('ABHeight'), -CNST(0.2)/units_inp%energy%factor, hm%ab_height)
+        hm%ab_height = hm%ab_height * units_inp%energy%factor
+      else
+        hm%ab_height = M_ONE
+      end if
+
+      ! generate boundary potential...
+      SAFE_ALLOCATE(hm%ab_pot(1:gr%mesh%np))
+      hm%ab_pot = M_ZERO
+      do i = 1, gr%mesh%np
+        if(mesh_inborder(gr%mesh, geo, i, d, hm%ab_width)) then
+          hm%ab_pot(i) = hm%ab_height * sin(d*M_PI/(M_TWO*hm%ab_width))**2
+        end if
+      end do
+    end subroutine init_abs_boundaries
 
     ! ---------------------------------------------------------
     ! Calculate the blocks of the lead Hamiltonian and read the potential
