@@ -319,6 +319,7 @@ contains
           dist = dist + dd*dd
         end if
       end do
+      dist = sqrt(dist)
 
     case(BOX_IMAGE, BOX_USDEF)
       message(1) = "Absorbing boundaries are not implemented for a user defined box"
