@@ -27,6 +27,8 @@ module invert_ks_m
   use io_m
   use io_function_m
   use loct_parser_m
+  use lalg_adv_m
+  use mesh_m
   use mesh_function_m
   use messages_m
   use mix_m
@@ -49,13 +51,28 @@ contains
     type(system_t),              intent(inout) :: sys
     type(hamiltonian_t),         intent(inout) :: hm
 
-    integer :: ii, jj, kk, ierr, np, ndim, nspin, counter, idiffmax
-    integer :: iunit, verbosity
-    FLOAT :: diffdensity, mixing, stabilizer, convdensity
-    FLOAT, allocatable :: target_rho(:,:), vhxc_in(:,:,:), vhxc_out(:,:,:), vhxc_mix(:,:,:)
+    integer :: ii, jj, kk, ierr, np, ndim, nspin, idiffmax
+    integer :: invksmethod
+    FLOAT :: diffdensity
+    FLOAT, allocatable :: target_rho(:,:)
+
     type(scf_t) :: scfv
-    type(mix_t) :: smix
-    character(len=256) :: fname
+
+      
+    !%Variable InvertKSmethod
+    !%Type integer
+    !%Default 0
+    !%Section Main:: Invert KS
+    !%Description
+    !% Selects whether the exact 2 particle method or the iterative scheme
+    !% is used to invert the density to get the KS potential
+    !%Option 0
+    !% Iterative scheme
+    !%Option 1
+    !% Exact for 2 particle scheme
+    !%End
+      
+    call loct_parse_int(datasets_check('InvertKSmethod'), 0, invksmethod)
 
     ! initialize random wave-functions
     call states_allocate_wfns(sys%st, sys%gr%mesh)
@@ -81,17 +98,161 @@ contains
 
     sys%ks%frozen_hxc = .true. !do not change hxc potential outside this routine
     
-    !initialize the ks potential
-    hm%vhxc = 1d0
-     
     call scf_init(scfv, sys%gr, sys%geo, sys%st, hm)
-    call mix_init(smix, np, nspin, 1, prefix_="InvertKS")
+    
+    if (invksmethod == 1) then ! 2 particle exact inversion
 
-    SAFE_ALLOCATE(vhxc_in(1:np, 1:nspin, 1:1))
-    SAFE_ALLOCATE(vhxc_out(1:np, 1:nspin, 1:1))
-    SAFE_ALLOCATE(vhxc_mix(1:np, 1:nspin, 1:1))
+      call invertks_2part(target_rho, np, nspin, hm%vhxc, sys%gr%mesh%h)
 
-    vhxc_in(1:np,1:nspin,1) = hm%vhxc(1:np,1:nspin)
+    else ! iterative case
+
+      call invertks_iter(target_rho, np, nspin, hm, sys, scfv)
+      
+    end if ! invksmethod
+
+    ! this is debugging: should output quality of KS inversion
+    call scf_run(scfv, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, gs_run = .false., &
+                 verbosity = VERB_COMPACT)
+    call states_calc_dens(sys%st, np)
+
+    diffdensity = 0d0
+    do jj = 1, nspin
+      do ii = 1, np
+        if (abs(sys%st%rho(ii,jj)-target_rho(ii,jj)) > diffdensity) then
+          diffdensity = abs(sys%st%rho(ii,jj)-target_rho(ii,jj))
+          idiffmax=ii
+        endif
+      enddo
+    enddo
+    write (message(1),'(a,F16.6)') 'Achieved difference in densities wrt target:', &
+        diffdensity
+    call write_info(1)
+
+    call scf_end(scfv)
+    
+    ! output for all cases    
+    call h_sys_output_all(sys%outp, sys%gr, sys%geo, sys%st, hm, STATIC_DIR)
+
+    call doutput_function(io_function_fill_how("AxisX"), &
+           ".", "vhxc", sys%gr%mesh, sys%gr%sb, hm%vhxc(:,1), M_ONE, ierr)
+    call doutput_function(io_function_fill_how("AxisX"), &
+           ".", "rho", sys%gr%mesh, sys%gr%sb, sys%st%rho(:,1), M_ONE, ierr)
+
+
+    SAFE_DEALLOCATE_A(target_rho)
+
+    
+  contains
+
+  ! ---------------------------------------------------------
+    subroutine read_target_rho()
+      character(len=256) :: filename
+      integer :: pass, iunit, ierr, ii, npoints
+      FLOAT   :: l_xx(MAX_DIM), l_ff(4), rr
+      FLOAT, allocatable :: xx(:,:), ff(:,:)
+
+      call loct_parse_string(datasets_check('InvertKSTargetDensity'), "target_density.dat", filename)
+
+      iunit = io_open(filename, action='read', status='old')
+
+      npoints = 0
+      do pass = 1, 2
+        ii = 0
+        rewind(iunit)
+        do
+          read(iunit, fmt=*, iostat=ierr) l_xx(1:ndim), l_ff(1:nspin)
+          if(ierr.ne.0) exit
+          ii = ii + 1
+          if(pass == 1) npoints = npoints + 1
+          if(pass == 2) then
+            xx(ii, 1:ndim)  = l_xx(1:ndim)
+            ff(ii, 1:nspin) = l_ff(1:nspin)
+          end if
+        end do
+        if(pass == 1) then
+          SAFE_ALLOCATE(xx(1:npoints, 1:ndim))
+          SAFE_ALLOCATE(ff(1:npoints, 1:nspin))
+	  
+        end if
+      end do
+
+      do ii = 1, nspin
+        call dmf_interpolate_points(ndim, npoints, xx, ff(:,ii), &
+             np, sys%gr%mesh%x, target_rho(:, ii))
+      end do
+ 
+      ! we now renormalize the density (necessary if we have a charged system)
+      rr = M_ZERO
+      do ii = 1, sys%st%d%spin_channels
+        rr = rr + dmf_integrate(sys%gr%mesh, target_rho(:, ii))
+      end do
+      rr = sys%st%qtot/rr
+      target_rho(:,:) = rr*target_rho(:,:)
+
+      call doutput_function(io_function_fill_how("AxisX"), &
+           ".", "func", sys%gr%mesh, sys%gr%sb, target_rho(:,1), M_ONE, ierr)
+
+      SAFE_DEALLOCATE_A(xx)
+      SAFE_DEALLOCATE_A(ff)
+
+    end subroutine read_target_rho
+
+  end subroutine invert_ks_run
+
+  subroutine invertks_2part(target_rho, np, nspin, vhxc, spacing)
+     
+    !input vars
+    integer, intent(in) :: np, nspin
+    FLOAT, intent(in) :: spacing(1:MAX_DIM)
+    FLOAT, intent(in) :: target_rho(1:np, 1:nspin)
+    FLOAT, intent(out) :: vhxc(1:np, 1:nspin)
+       
+    !local vars
+    integer :: ii, jj
+    FLOAT, allocatable :: sqrtrho(:,:), gradrho(:,:)
+    
+    
+    !initialize the ks potential
+    SAFE_ALLOCATE(sqrtrho(1:np, 1:nspin))
+    SAFE_ALLOCATE(gradrho(1:np, 1:nspin))
+
+    gradrho = 0d0
+    do jj = 1, nspin
+      do ii = 1, np
+        sqrtrho(ii, jj) = sqrt(target_rho(ii, jj))
+      enddo
+      do ii = 3, np-2
+        gradrho(ii, jj) = - sqrtrho(ii+2, jj) - sqrtrho(ii-2, jj) &
+                        & + 16d0*(sqrtrho(ii+1, jj) + sqrtrho(ii-1, jj)) &
+                        & - 30d0*sqrtrho(ii, jj)
+      enddo
+      
+      gradrho(:, jj) = gradrho(:, jj)/(12d0*spacing(1)**2)
+      do ii = 1, np
+        vhxc(ii, jj) = gradrho(ii, jj)/(2d0*sqrtrho(ii, jj))
+      enddo
+    enddo
+    SAFE_DEALLOCATE_A(sqrtrho)
+    SAFE_DEALLOCATE_A(gradrho)    
+  end subroutine invertks_2part
+
+
+  subroutine invertks_iter(target_rho, np, nspin, hm, sys, scfv)
+  
+    !input vars
+    type(system_t),      intent(inout) :: sys
+    type(hamiltonian_t), intent(inout) :: hm
+    type(scf_t),         intent(inout) :: scfv
+    integer,             intent(in) :: np, nspin
+    FLOAT,               intent(in) :: target_rho(1:np, 1:nspin)
+        
+    !local vars
+    integer :: ii, jj, ierr, idiffmax
+    integer :: iunit, verbosity, counter
+    FLOAT :: mixing, stabilizer, convdensity, diffdensity
+    FLOAT, allocatable :: vhxc_in(:,:,:), vhxc_out(:,:,:), vhxc_mix(:,:,:)
+    type(mix_t) :: smix
+    character(len=256) :: fname
     
     !%Variable InvertKSConvAbsDens
     !%Type float
@@ -133,11 +294,23 @@ contains
     !%End
       
     call loct_parse_int(datasets_check('InvertKSverbosity'), 0, verbosity)  
-
     if(verbosity < 0 .or. verbosity > 2) then
       message(1) = 'InvertKSverbosity only has the options 0, 1, or 2'
       call write_fatal(1)
     endif
+  
+    
+    !initialize the ks potential
+    hm%vhxc = 1d0
+       
+    call mix_init(smix, np, nspin, 1, prefix_="InvertKS")
+
+    SAFE_ALLOCATE(vhxc_in(1:np, 1:nspin, 1:1))
+    SAFE_ALLOCATE(vhxc_out(1:np, 1:nspin, 1:1))
+    SAFE_ALLOCATE(vhxc_mix(1:np, 1:nspin, 1:1))
+    
+    vhxc_in(1:np,1:nspin,1) = hm%vhxc(1:np,1:nspin)
+         
     
     if(verbosity == 1 .or. verbosity == 2) then
       iunit = io_open('InvertKSconvergence', action = 'write')
@@ -145,11 +318,11 @@ contains
     
     diffdensity = 1d0
     counter = 0
-    
+        
     do while(diffdensity > convdensity)
       
       counter = counter + 1 
-      
+        
       if(verbosity == 2) then
         write(fname,'(i6.6)') counter
         call doutput_function(io_function_fill_how("AxisX"), &
@@ -160,15 +333,17 @@ contains
     
       call hamiltonian_update_potential(hm, sys%gr%mesh)
 
-      call scf_run(scfv, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, gs_run = .false.)
+      call scf_run(scfv, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, gs_run = .false., &
+                   verbosity = VERB_COMPACT)
       call states_calc_dens(sys%st, np)
-            
+      
       vhxc_out(1:np, 1:nspin, 1) = &
-      (sys%st%rho(1:np,1:nspin) + stabilizer)/(target_rho(1:np,1:nspin) + stabilizer) &
-           * hm%vhxc(1:np, 1:nspin)
-	   
-      call dmixing(smix, counter, vhxc_in, vhxc_out, vhxc_mix, dmf_dotp_aux)
+        (sys%st%rho(1:np,1:nspin) + stabilizer)/&
+	(target_rho(1:np,1:nspin) + stabilizer) &
+         * hm%vhxc(1:np, 1:nspin)
 
+      call dmixing(smix, counter, vhxc_in, vhxc_out, vhxc_mix, dmf_dotp_aux)
+  
       hm%vhxc(1:np,1:nspin) = vhxc_mix(1:np, 1:nspin, 1)
       vhxc_in(1:np, 1:nspin, 1) = hm%vhxc(1:np, 1:nspin)
       
@@ -181,9 +356,7 @@ contains
           endif
         enddo
       enddo
-      
-      !write(*,*) diffdensity
-      
+            
       if(verbosity == 1 .or. verbosity == 2) then
         write(iunit,'(i6.6)', ADVANCE = 'no') counter
         write(iunit,'(es18.10)') diffdensity
@@ -193,82 +366,111 @@ contains
       endif
      
     end do
+
+    write(message(1),'(a,I8)') "Invert KS: iterations needed:", counter
+    call write_info(1)
     
     call io_close(iunit)      
     
-    call h_sys_output_all(sys%outp, sys%gr, sys%geo, sys%st, hm, STATIC_DIR)
-    
-    call doutput_function(io_function_fill_how("AxisX"), &
-           ".", "vhxc", sys%gr%mesh, sys%gr%sb, hm%vhxc(:,1), M_ONE, ierr)
-    call doutput_function(io_function_fill_how("AxisX"), &
-           ".", "rho", sys%gr%mesh, sys%gr%sb, sys%st%rho(:,1), M_ONE, ierr)
-
-    write(*,*) "iterations needed:", counter
-
     call mix_end(smix)
-    call scf_end(scfv)
 
-    SAFE_DEALLOCATE_A(target_rho)
     SAFE_DEALLOCATE_A(vhxc_in)
     SAFE_DEALLOCATE_A(vhxc_out)
     SAFE_DEALLOCATE_A(vhxc_mix)
+
+  end subroutine invertks_iter
+
+  subroutine precond_kiks(mesh, np, nspin, st, target_rho, vhxc_out)
+    integer, intent(in) :: np, nspin
+    FLOAT, intent(in) :: target_rho(1:np, 1:nspin)
+    type(states_t), intent(in) :: st
+    type(mesh_t), intent(in) :: mesh
+    FLOAT, intent(out) :: vhxc_out(1:np, 1:nspin,1:1)
     
-  contains
+    integer :: ip, iprime, ii, jj, ivec, jdim
+    integer :: neigenval
+    FLOAT :: numerator, denominator, diffrho, epsij, occij, inverse
+    FLOAT :: vol_element
+    FLOAT :: ki(1:np, 1:np)
+    FLOAT :: eigenvals(1:np), inverseki(1:np,1:np)
+    FLOAT, allocatable :: matrixmul(:,:), kired(:,:)
+        
 
-  ! ---------------------------------------------------------
-    subroutine read_target_rho()
-      character(len=256) :: filename
-      integer :: pass, iunit, ierr, ii, npoints
-      FLOAT   :: l_xx(MAX_DIM), l_ff(4), rr
-      FLOAT, allocatable :: xx(:,:), ff(:,:)
-
-      call loct_parse_string(datasets_check('InvertKSTargetDensity'), "target_density.dat", filename)
-
-      iunit = io_open(filename, action='read', status='old')
-
-      npoints = 0
-      do pass = 1, 2
-        ii = 0
-        rewind(iunit)
-        do
-          read(iunit, fmt=*, iostat=ierr) l_xx(1:ndim), l_ff(1:nspin)
-          if(ierr.ne.0) exit
-          ii = ii + 1
-          if(pass == 1) npoints = npoints + 1
-          if(pass == 2) then
-            xx(ii, 1:ndim)  = l_xx(1:ndim)
-            ff(ii, 1:nspin) = l_ff(1:nspin)
-          end if
-        end do
-        if(pass == 1) then
-          SAFE_ALLOCATE(xx(1:npoints, 1:ndim))
-          SAFE_ALLOCATE(ff(1:npoints, 1:nspin))
-        end if
+    
+    numerator = M_ZERO
+    vhxc_out = M_ZERO
+    
+    !do ip = 1, np
+    !  diffrho = st%rho(ip, 1) - target_rho(ip, 1)
+    !  numerator = numerator + diffrho**2
+    !end do
+    
+    ki = M_ZERO
+    
+    do jj = 1, st%nst
+      do ii = jj + 1, st%nst
+        epsij = M_ONE / (st%eigenval(jj, 1) - st%eigenval(ii, 1))
+	occij = st%occ(jj, 1) - st%occ(ii, 1)
+        do iprime = 1, np
+          do ip = 1, np
+            ki(ip, iprime) = ki(ip, iprime) + occij*epsij & 
+	                    * (st%dpsi(ip, 1, ii, 1)*st%dpsi(ip, 1, jj, 1)) & 
+                            * (st%dpsi(iprime, 1, ii, 1)*st%dpsi(iprime, 1, jj, 1))
+	  enddo
+	enddo
       end do
-
-      do ii = 1, nspin
-        call dmf_interpolate_points(ndim, npoints, xx, ff(:,ii), &
-             np, sys%gr%mesh%x, target_rho(:, ii))
-      end do
- 
-      ! we now renormalize the density (necessary if we have a charged system)
-      rr = M_ZERO
-      do ii = 1, sys%st%d%spin_channels
-        rr = rr + dmf_integrate(sys%gr%mesh, target_rho(:, ii))
-      end do
-      rr = sys%st%qtot/rr
-      target_rho(:,:) = rr*target_rho(:,:)
-
-      call doutput_function(io_function_fill_how("AxisX"), &
-           ".", "func", sys%gr%mesh, sys%gr%sb, target_rho(:,1), M_ONE, ierr)
-
-      SAFE_DEALLOCATE_A(xx)
-      SAFE_DEALLOCATE_A(ff)
-
-    end subroutine read_target_rho
-
-  end subroutine invert_ks_run
-
+    end do
+    
+    call lalg_eigensolve(np, ki, eigenvals)
+    
+    !do ip = 1, np
+    !  if(abs(eigenvals(ip))>1d-10) then
+    !    neigenval = ip
+    !  endif
+    !enddo
+    
+    SAFE_ALLOCATE(matrixmul(1:np, 1:st%nst))
+    SAFE_ALLOCATE(kired(1:np, 1:st%nst))
+    
+    do ivec = 1, st%nst
+      inverse = 1d0/eigenvals(ivec)
+      do ip = 1, np
+        matrixmul(ip, ivec) = ki(ip,ivec)*inverse
+	kired(ip, ivec) = ki(ip, ivec)
+      enddo
+    enddo
+    
+    inverseki = matmul(matrixmul, transpose(kired))
+    
+    vhxc_out = M_ZERO
+    
+    vol_element = 1.0d0
+    do jdim = 1, MAX_DIM
+      if (mesh%h(jdim) > 1.e-10) vol_element = vol_element*mesh%h(jdim)
+    end do
+    
+    do iprime = 1, np
+      diffrho = target_rho(iprime, 1) - st%rho(iprime, 1)
+      do ip = 1, np
+	vhxc_out(ip, 1, 1) = vhxc_out(ip, 1, 1) + inverseki(ip, iprime)*diffrho
+	write(200,*) ip, iprime, inverseki(ip, iprime) 
+      enddo
+    enddo
+   
+    do ip = 1, np
+      write(100,*) ip, vhxc_out(ip, 1, 1),  target_rho(ip, 1) - st%rho(ip, 1)
+    enddo   
+    
+    
+    SAFE_DEALLOCATE_A(matrixmul)
+    SAFE_DEALLOCATE_A(kired)
+        
+#ifdef HAVE_FLUSH
+    !call flush(200)
+#endif
+  
+  end subroutine precond_kiks
+  
 end module invert_ks_m
 
 !! Local Variables:
