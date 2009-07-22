@@ -657,8 +657,8 @@ contains
     write(iunit) delta
     write(iunit) op_n
     write(iunit) ob%mem_type
-    write(iunit) hm%lead_vks(1:np, 1, il)
     write(iunit) intface%offdiag_invertible
+    write(iunit) hm%lead_vks(1:np, 1, il)
 
     ! Write matrices.
     select case(ob%mem_type)
@@ -727,31 +727,35 @@ contains
     read(iunit) s_delta
     read(iunit) s_op_n
     read(iunit) s_mem_type
-    read(iunit) s_vks(1:np)
     read(iunit) s_offdiag_invertible
 
     ! Check if numerical parameters of saved coefficients match
     ! current parameter set.
     if((s_dim.eq.dim) .and. (s_np.eq.np) .and. (s_op_n.eq.op_n) &
       .and. (s_spacing.eq.spacing) .and. (s_delta.eq.delta) .and. (s_mem_type.eq.ob%mem_type) &
-      .and. (s_offdiag_invertible.eqv.intface%offdiag_invertible) &
-      .and. (hm%lead_vks(1:intface%np, 1, il).app.s_vks(1:intface%np))) then
-      ! Read the coefficients.
-      if (ob%mem_type.eq.SAVE_CPU_TIME) then ! Full (upper half) matrices.
-        do ntime = 0, min(iter, s_iter)
-          do j = 1, intface%np
-            read(iunit) ob%mem_coeff(j, j:intface%np, ntime, il)
-            ob%mem_coeff(j:intface%np, j, ntime, il) = ob%mem_coeff(j, j:intface%np, ntime, il)
+      .and. (s_offdiag_invertible.eqv.intface%offdiag_invertible) ) then
+      ! read the potential
+      read(iunit) s_vks(1:np)
+      if(hm%lead_vks(1:np, 1, il).app.s_vks(1:np)) then
+        ! Read the coefficients.
+        if (ob%mem_type.eq.SAVE_CPU_TIME) then ! Full (upper half) matrices.
+          do ntime = 0, min(iter, s_iter)
+            do j = 1, intface%np
+              read(iunit) ob%mem_coeff(j, j:intface%np, ntime, il)
+              ob%mem_coeff(j:intface%np, j, ntime, il) = ob%mem_coeff(j, j:intface%np, ntime, il)
+            end do
           end do
-        end do
-      else ! Packed matrices (FIXME: yet only 2D).
-        ASSERT(dim.eq.2)
-        read(iunit) ob%mem_s(:, :, 1, il)
-        ob%mem_s(:, :, 2, il) = ob%mem_s(1:intface%np, 1:intface%np, 1, il)
-        det = lalg_inverter(intface%np, ob%mem_s(:, :, 2, il), invert=.true.)
-        do ntime = 0, min(iter, s_iter)
-          read(iunit) ob%mem_sp_coeff(1:np*order, ntime, il)
-        end do
+        else ! Packed matrices (FIXME: yet only 2D).
+          ASSERT(dim.eq.2)
+          read(iunit) ob%mem_s(:, :, 1, il)
+          ob%mem_s(:, :, 2, il) = ob%mem_s(1:intface%np, 1:intface%np, 1, il)
+          det = lalg_inverter(intface%np, ob%mem_s(:, :, 2, il), invert=.true.)
+          do ntime = 0, min(iter, s_iter)
+            read(iunit) ob%mem_sp_coeff(1:np*order, ntime, il)
+          end do
+        end if
+      else
+        s_iter = 0
       end if
     else
       s_iter = 0
