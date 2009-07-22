@@ -66,9 +66,9 @@ contains
     !%Description
     !% Selects whether the exact 2 particle method or the iterative scheme
     !% is used to invert the density to get the KS potential
-    !%Option 0
+    !%Option iterative 0
     !% Iterative scheme
-    !%Option 1
+    !%Option 2particle 1
     !% Exact for 2 particle scheme
     !%End
       
