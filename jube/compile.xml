@@ -1,0 +1,68 @@
+<compilation>
+
+<!--  predefined vars: -->
+<!--   $outdir -> output directory for temporary compile files-->
+<!--   $id     -> identifier of this benchmark run-->
+
+<compile cname="IBM-BGP-Jugene">
+  <src directory="./octopus" files="." />
+
+  <command>
+    module load gsl;
+    module load lapack;
+    autoreconf -i;
+    export FC_INTEGER_SIZE=4;
+    export CC_FORTRAN_INT=int;
+    export CC=mpixlc_r;
+    export CFLAGS='-g -O3 -qarch=450d';
+    export FC=mpixlf90_r;
+    export FCFLAGS='-g -O3 -qarch=450d -qxlf90=autodealloc -qessl -qsmp=omp';
+    export LIBS_BLAS="-lesslsmpbg -L/opt/ibmmath/essl/4.4/lib -lesslbg";
+    export LIBS_LAPACK="-L$LAPACK_LIB -llapack";
+    export LIBS_FFT="-L/bgsys/local/fftw3/lib/ -lfftw3 -lm";
+    ./configure -prefix=$outdir \
+      --host=powerpc32-unknown-linux-gnu \
+      --build=powerpc64-unknown-linux-gnu \
+      --disable-gdlib \
+      --with-gsl-prefix=$GSL_DIR \
+      --enable-mpi --enable-openmp;
+    make;
+    make install;
+    make clean;
+
+    tar -C $outdir -cf $execname bin lib include share;
+  </command> 
+</compile>
+
+<compile cname="IBM-SP6-Huygens">
+  <src directory="./octopus" files="." />
+
+  <command>
+    module load fftw3
+    module load gsl;
+    module load lapack;
+    echo localhost > $PWD/hostfile;
+    export MP_HOSTFILE=$PWD/hostfile;
+    export MP_PROCS=1; # Otherwise files compiled with mpp do not run;
+    autoreconf -i;
+    export CC=mpcc;
+    export CFLAGS='-g -O3 -qarch=auto';
+    export FC=mpfort;
+    export FCFLAGS='-g -O3 -qfree=f90 -qnosave -qarch=auto -qxlf90=autodealloc -qessl -I/opt/ibmhpc/ppe.poe/include/';
+    export LIBS_BLAS="-lessl";
+    export LIBS_LAPACK="-L$SARA_LAPACK_LIB -llapack";
+    export LIBS_FFT="-L$SARA_FFTW3_LIB -lfftw3 -lm";
+    ./configure -prefix=$outdir \
+      --disable-gdlib \
+      --disable-f90-forall \
+      --with-gsl-prefix=$SARA_GSL_ROOT \
+      --enable-mpi;
+    make;
+    make install;
+    make clean;
+
+    tar -C $outdir -cf $execname bin lib include share;
+  </command>
+</compile>
+
+</compilation>

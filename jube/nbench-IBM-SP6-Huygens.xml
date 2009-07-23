@@ -1,0 +1,34 @@
+<!--
+    PRACE Benchmark Suite
+
+    JUBE benchmark configuration schema for: Jugene
+
+    Contact: fnog@teor.fis.uc.pt
+
+--> 
+<bench name="octopus" platform="IBM-SP6-Huygens" >
+<!-- ********************************************************** -->
+
+<!--
+<benchmark name="SP6-c240" active="1">
+    <compile     cname="$platform" version="reuse" />
+    <tasks       threadspertask="4" taskspernode="1" nodes="64,128,256" />
+    <prepare     cname="c240" />
+    <execution   cname="$platform" iteration="1" />
+    <verify      cname="c240" />
+    <analyse     cname="standard" />
+</benchmark>
+-->
+
+<benchmark name="SP6-clorophyll" active="1">
+    <compile     cname="$platform" version="reuse" />
+    <tasks       threadspertask="4" taskspernode="1" nodes="128,256,512" />
+    <prepare     cname="clorophyll" />
+    <execution   cname="$platform" iteration="1" />
+    <verify      cname="clorophyll" />
+    <analyse     cname="standard" />
+</benchmark>
+
+<!-- ********************************************************** -->
+</bench>
+

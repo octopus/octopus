@@ -1,0 +1,21 @@
+<preparation>
+
+<prepare cname="c240">
+  <input files="input/c240_inp input/c240.xyz" />
+  <command>
+    cd $rundir;
+    tar -xf `ls *.exe`;
+    mv *inp inp;
+  </command>
+</prepare>
+
+<prepare cname="clorophyll">
+  <input files="input/clorophyll_650_inp input/clorophyll_650.xyz input/Mg.fhi" />
+  <command>
+    cd $rundir;
+    tar -xf `ls *.exe`;
+    mv *inp inp;
+  </command>
+</prepare>
+
+</preparation>

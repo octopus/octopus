@@ -1,0 +1,14 @@
+<result>
+    <show colw="10">
+    ncpus,nodes,taskspernode,threadspertask,
+    walltime,scftime,scfmflops,tdtime,tdmflops,vcheck,vcomment
+    </show>
+    
+    <sort>
+    ncpus
+    </sort>
+</result>
+
+  <!-- do not show 
+  -->
+

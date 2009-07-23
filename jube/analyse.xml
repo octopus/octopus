@@ -1,0 +1,13 @@
+<analyzer>
+
+<!-- ******************************************************************************** -->
+<!-- Input is stdout and stderr of benchmark run -->
+<!-- Standard result parameter:
+     - walltime
+-->
+
+<analyse cname="standard">
+  <includepattern file="./analyse-pattern-octopus.xml" />
+</analyse>
+
+</analyzer>
