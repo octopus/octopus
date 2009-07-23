@@ -40,11 +40,14 @@ while($_ = <IN>)
       next if /^#/;
   }
   if($nf90_forall){
-      if(m/^\s*forall\s*\(($NestedGuts)\)\s*(?<body>.*)$/xi){
+      if(m/^\s*forall\s*\(($NestedGuts)\)\s*(.*)$/xi){
+	  my $i;
+	  my $str  = $1;
+	  my $body = $2;
+
 	  # get rid of commas that are inside parenthesis
 	  my $newstr = "";
 	  my $dd = 0;
-	  my $str = $1;
 	  for($i=0; $i<length($str); $i++){
 	      my $c = substr($str, $i, 1);
 	      $dd++ if($c eq '(');
@@ -54,14 +57,13 @@ while($_ = <IN>)
 
 	  my @loops = split(/,/x, $newstr);
 	  $ncount_forall = $#loops + 1;
-	  my $i;
 	  for($i=0; $i<$ncount_forall; $i++){
 	      $loops[$i] =~ s/:/,/;
 	      $loops[$i] =~ s/#comma#/,/;
 	      print OUT "do ", $loops[$i], "\n";
 	  }
-	  if($+{body}){
-	      print OUT "$+{body}\n";
+	  if($body){
+	      print OUT "$body\n";
 	      for($i=0; $i<$ncount_forall; $i++){
 		  print OUT "end do\n";
 	      }
