@@ -321,8 +321,9 @@ subroutine X(exchange_operator) (hm, gr, psi, hpsi, ist, ik)
     rho = M_ZERO
 
     do idim = 1, hm%st%d%dim
-      forall(k = 1:gr%mesh%np) &
+      forall(k = 1:gr%mesh%np)
         rho(k) = rho(k) + R_CONJ(hm%st%X(psi)(k, idim, j, ik)) * psi(k, idim)
+      end forall
     end do
 
     call X(poisson_solve)(gr, pot, rho)

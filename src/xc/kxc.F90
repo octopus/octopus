@@ -137,6 +137,7 @@ contains
     integer :: i
 
     forall(i = 1:mesh%np) kxc(i,1,1,1) = kxc(i,1,1,1) + dedd(i,1)
+
     if(ispin == SPIN_POLARIZED) then
       forall(i = 1:mesh%np)
         kxc(i,1,1,2) = kxc(i,1,1,2) + dedd(i,2)

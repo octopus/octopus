@@ -122,18 +122,8 @@ SUFFIXES = _oct.f90 .F90 .o .S .s
 # an object file and delete the intermediate file.
 .F90.o:
 	@FCCPP@ @CPPFLAGS@ $(AM_CPPFLAGS) -I. $< > $*_oct.f90
-	@if [ "@DEBUG@" = "no" ]; then \
-		cat $*_oct.f90 | grep -v pop_sub | \
-			grep -v push_sub >$*_oct.f91; \
-		mv -f $*_oct.f91 $*_oct.f90; \
-	fi
-	@if [ "@LONG_LINES@" = "no" ]; then \
-		perl -pi -e 's/\\newline/\n/g; s/\\cardinal/#/g' $*_oct.f90; \
-	fi
-	@if [ "@F90_ACCEPTS_LINE_NUMBERS@" = "no" ]; then \
-		grep -v "^#" $*_oct.f90 > $*_oct.f91; \
-		mv -f $*_oct.f91 $*_oct.f90; \
-	fi
+	$(top_srcdir)/build/preprocess.pl $*_oct.f90 \
+	  "@DEBUG@" "@LONG_LINES@" "@F90_ACCEPTS_LINE_NUMBERS@" "@F90_FORALL@"
 	@FC@ @FCFLAGS@ @FCFLAGS_NETCDF@ @FCFLAGS_ETSF_IO@ $(AM_FCFLAGS) -c @FCFLAGS_f90@ -o $@ $*_oct.f90
 	@rm -f $*_oct.f90
 
@@ -142,14 +132,8 @@ SUFFIXES = _oct.f90 .F90 .o .S .s
 # the .F90.o rule.
 .F90_oct.f90:
 	@FCCPP@ @CPPFLAGS@ $(AM_CPPFLAGS) -I. $< > $*_oct.f90
-	@if [ "@DEBUG@" = "no" ]; then \
-		cat $*_oct.f90 | grep -v pop_sub | \
-			grep -v push_sub >$*_oct.f91; \
-		mv -f $*_oct.f91 $*_oct.f90; \
-	fi
-	@if [ "@LONG_LINES@" = "no" ]; then \
-		perl -pi -e 's/\\newline/\n/g; s/\\cardinal/#/g' $*_oct.f90; \
-	fi
+	$(top_srcdir)/build/preprocess.pl $*_oct.f90 \
+	  "@DEBUG@" "@LONG_LINES@" "@F90_ACCEPTS_LINE_NUMBERS@" "@F90_FORALL@"
 
 
 # ---------------------------------------------------------------

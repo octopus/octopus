@@ -620,8 +620,7 @@ module opt_control_target_m
     select case(target%type)
     case(oct_tg_td_local)
       call target_build_tdlocal(target, gr, t)
-      forall(ik = 1:inh%d%nik, ist = inh%st_start:inh%st_end, &
-        idim = 1:inh%d%dim, i = 1:gr%mesh%np)
+      forall(ik = 1:inh%d%nik, ist = inh%st_start:inh%st_end, idim = 1:inh%d%dim, i = 1:gr%mesh%np)
         inh%zpsi(i, idim, ist, ik) = - target%rho(i) * psi%zpsi(i, idim, ist, ik)
       end forall
       
@@ -822,8 +821,7 @@ module opt_control_target_m
 
     case(oct_tg_td_local)
       !We assume that there is no time-independent operator.
-      forall(ik = 1:chi_out%d%nik, p = chi_out%st_start:chi_out%st_end, &
-             dim = 1:chi_out%d%dim, j = 1:gr%mesh%np)
+      forall(ik = 1:chi_out%d%nik, p = chi_out%st_start:chi_out%st_end, dim = 1:chi_out%d%dim, j = 1:gr%mesh%np)
         chi_out%zpsi(j, dim, p, ik) = M_z0
       end forall
 

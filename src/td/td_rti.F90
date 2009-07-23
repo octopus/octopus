@@ -1250,11 +1250,16 @@ contains
 
     SAFE_ALLOCATE(zpsi(1:grid_p%mesh%np_part, 1:dim_op))
     zpsi = M_z0
-    forall(idim = 1:dim_op) &
+    forall(idim = 1:dim_op)
       zpsi(1:grid_p%mesh%np, idim) = x((idim-1)*grid_p%mesh%np+1:idim*grid_p%mesh%np)
+    end forall
+
     call exponential_apply(tr_p%te, grid_p, hm_p, zpsi, ist_op, ik_op, -dt_op/M_TWO, t_op)
-    forall(idim = 1:dim_op) &
+
+    forall(idim = 1:dim_op)
       y((idim-1)*grid_p%mesh%np+1:idim*grid_p%mesh%np) = zpsi(1:grid_p%mesh%np, idim)
+    end forall
+
     SAFE_DEALLOCATE_A(zpsi)
 
   end subroutine td_rti_qmr_op

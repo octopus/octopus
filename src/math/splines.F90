@@ -985,7 +985,7 @@ contains
   !------------------------------------------------------------
   FLOAT pure function spline_cutoff_radius(spl, threshold) result(r)
     type(spline_t), intent(in) :: spl
-    FLOAT,               intent(in) :: threshold
+    FLOAT,          intent(in) :: threshold
 
     integer :: ii, jj
     FLOAT, parameter :: dx = CNST(0.01)

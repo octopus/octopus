@@ -148,7 +148,7 @@ contains
           call write_fatal(1)
         end if
         call loct_parse_block_string (blk, i-1, 0, gf%atom(i)%label)
-        do jdim=1,3 ! gr%sb%dim
+        do jdim = 1, 3 ! gr%sb%dim
           call loct_parse_block_float  (blk, i-1, jdim, gf%atom(i)%x(jdim))
         end do
         if(j == 5) then ! == gr%sb%dim+2
@@ -164,7 +164,9 @@ contains
 
     ! adjust units
     do i = 1, gf%n
-      gf%atom(i)%x(4:MAX_DIM) = M_ZERO
+      do j = 4, MAX_DIM
+        gf%atom(i)%x(j) = M_ZERO
+      end do
       gf%atom(i)%x = gf%atom(i)%x * units_inp%length%factor
     end do
 
