@@ -95,24 +95,24 @@ contains
 
   end subroutine lr_init
 
-  subroutine lr_allocate(lr, st, m)
+  subroutine lr_allocate(lr, st, mesh)
     type(lr_t),     intent(inout) :: lr
     type(states_t), intent(in)    :: st
-    type(mesh_t),   intent(in)    :: m
+    type(mesh_t),   intent(in)    :: mesh
 
     integer :: size
 
     call push_sub('linear_response.lr_allocate')
 
     if (states_are_complex(st)) then
-      SAFE_ALLOCATE(lr%zdl_psi(1:m%np_part, 1:st%d%dim, 1:st%nst, 1:st%d%nik))
-      SAFE_ALLOCATE(lr%zdl_rho(1:m%np, 1:st%d%nspin))
+      SAFE_ALLOCATE(lr%zdl_psi(1:mesh%np_part, 1:st%d%dim, 1:st%nst, 1:st%d%nik))
+      SAFE_ALLOCATE(lr%zdl_rho(1:mesh%np, 1:st%d%nspin))
       
       lr%zdl_psi = M_ZERO
       lr%zdl_rho = M_ZERO
     else
-      SAFE_ALLOCATE(lr%ddl_psi(1:m%np_part, 1:st%d%dim, 1:st%nst, 1:st%d%nik))
-      SAFE_ALLOCATE(lr%ddl_rho(1:m%np, 1:st%d%nspin))
+      SAFE_ALLOCATE(lr%ddl_psi(1:mesh%np_part, 1:st%d%dim, 1:st%nst, 1:st%d%nik))
+      SAFE_ALLOCATE(lr%ddl_rho(1:mesh%np, 1:st%d%nspin))
 
       lr%ddl_psi = M_ZERO
       lr%ddl_rho = M_ZERO
@@ -148,10 +148,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine lr_copy(st, m, src, dest)
-    type(states_t), intent(in) :: st
-    type(mesh_t),   intent(in) :: m
-    type(lr_t),     intent(in) :: src
+  subroutine lr_copy(st, mesh, src, dest)
+    type(states_t),    intent(in) :: st
+    type(mesh_t),      intent(in) :: mesh
+    type(lr_t),        intent(in) :: src
     type(lr_t),     intent(inout) :: dest
 
     integer :: ik, idim, ist
@@ -160,9 +160,9 @@ contains
 
     do ik = 1, st%d%nspin
       if( states_are_complex(st)) then
-        call lalg_copy(m%np, src%zdl_rho(:, ik), dest%zdl_rho(:, ik))
+        call lalg_copy(mesh%np, src%zdl_rho(:, ik), dest%zdl_rho(:, ik))
       else
-        call lalg_copy(m%np, src%ddl_rho(:, ik), dest%ddl_rho(:, ik))
+        call lalg_copy(mesh%np, src%ddl_rho(:, ik), dest%ddl_rho(:, ik))
       end if
     enddo
 
@@ -170,9 +170,9 @@ contains
       do ist = 1, st%nst
         do idim = 1, st%d%dim
           if( states_are_complex(st)) then
-            call lalg_copy(m%np_part, src%zdl_psi(:, idim, ist, ik), dest%zdl_psi(:, idim, ist, ik))
+            call lalg_copy(mesh%np_part, src%zdl_psi(:, idim, ist, ik), dest%zdl_psi(:, idim, ist, ik))
           else 
-            call lalg_copy(m%np_part, src%ddl_psi(:, idim, ist, ik), dest%ddl_psi(:, idim, ist, ik))
+            call lalg_copy(mesh%np_part, src%ddl_psi(:, idim, ist, ik), dest%ddl_psi(:, idim, ist, ik))
           end if
         end do
       end do

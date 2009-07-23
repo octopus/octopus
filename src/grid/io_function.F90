@@ -98,7 +98,7 @@ contains
     type(simul_box_t), intent(in)  :: sb
     integer,           intent(out) :: how
 
-    call push_sub('out.output_init')
+    call push_sub('io_function.io_function_read_how')
 
     how = 0
 
@@ -203,6 +203,8 @@ contains
   integer function io_function_fill_how(where) result(how)
     character(len=*), intent(in) :: where
 
+    call push_sub('io_function.io_function_fill_how')
+
     how = 0
     if(index(where, "AxisX").ne.0)     how = ior(how, output_axis_x)
     if(index(where, "AxisY").ne.0)     how = ior(how, output_axis_y)
@@ -219,6 +221,7 @@ contains
     if(index(where, "NETCDF").ne.0)    how = ior(how, output_netcdf)
 #endif
 
+    call pop_sub()
   end function io_function_fill_how
 
   ! ---------------------------------------------------------
@@ -327,19 +330,31 @@ contains
     integer,          intent(in)    :: status
     character(len=*), intent(in)    :: filename
     integer,          intent(inout) :: ierr
-    if(status .eq. NF90_NOERR) return
+
+    call push_sub('io_function.ncdf_error')
+
+    if(status .eq. NF90_NOERR) then
+      call pop_sub()
+      return
+    endif
+
     write(message(1),'(3a)') "NETCDF error in function '" , trim(func) , "'"
     write(message(2),'(3a)') "(reading/writing ", trim(filename) , ")"
     write(message(3), '(6x,a,a)')'Error code = ', trim(nf90_strerror(status))
     call write_warning(3)
     ierr = 5
+
+    call pop_sub()
   end subroutine ncdf_error
 #endif
 
+  ! ---------------------------------------------------------
   subroutine transpose3(in, out)
     FLOAT, intent(in)  :: in(:, :, :)
     FLOAT, intent(out) :: out(:, :, :)
     integer :: ix, iy, iz
+
+    call push_sub('io_function.transpose3')
 
     do ix = lbound(in, 1), ubound(in, 1)
       do iy = lbound(in, 2), ubound(in, 2)
@@ -348,18 +363,27 @@ contains
         end do
       end do
     end do
+
+    call pop_sub()
   end subroutine transpose3
 
 
   ! ---------------------------------------------------------
-  subroutine io_output_tensor(iunit, tensor, ndim, factor)
-    integer, intent(in) :: iunit
-    FLOAT,   intent(in) :: tensor(:,:)
-    integer, intent(in) :: ndim
-    FLOAT,   intent(in) :: factor
+  subroutine io_output_tensor(iunit, tensor, ndim, factor, write_average)
+    integer,           intent(in) :: iunit
+    FLOAT,             intent(in) :: tensor(:,:)
+    integer,           intent(in) :: ndim
+    FLOAT,             intent(in) :: factor
+    logical, optional, intent(in) :: write_average
     
     FLOAT :: trace
     integer :: j
+    logical :: write_average_
+
+    call push_sub('io_function.io_output_tensor')
+
+    write_average_ = .true.
+    if(present(write_average)) write_average_ = write_average
 
     trace = M_z0
     do j = 1, ndim
@@ -368,8 +392,9 @@ contains
     end do
     trace = trace/TOFLOAT(ndim)
 
-    write(iunit, '(a, f20.6)')  'Isotropic average', trace/factor
-      
+    if(write_average_) write(iunit, '(a, f20.6)')  'Isotropic average', trace/factor
+
+    call pop_sub()
   end subroutine io_output_tensor
 
 
@@ -381,12 +406,15 @@ contains
     
     integer :: idir
 
+    call push_sub('io_function.io_output_dipole')
+
     write(iunit, '(5a)') 'Dipole [', trim(units_abbrev(units_out%length)), ']:                    [', trim(units_abbrev(unit_debye)), ']'
     do idir = 1, ndim
       write(iunit, '(6x,a,i1,a,es14.5,3x,2es14.5)') '<x', idir, '> = ', &
         units_from_atomic(units_out%length, dipole(idir)), units_from_atomic(unit_debye, dipole(idir))
     end do
 
+    call pop_sub()
   end subroutine io_output_dipole
 
 

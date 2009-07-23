@@ -363,13 +363,13 @@ contains
           !write
           do is = 1, st%d%nspin
             if(iand(sys%outp%what, output_density).ne.0) then
-              write(fname, '(a,a,i1,a,i1)') 'density1', '-', is, '-', ii
+              write(fname, '(a,a,i1,a,i1)') 'fd_density', '-', is, '-', ii
               call doutput_function(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
                 gr%mesh, gr%sb, lr_rho(:, is), M_ONE, ierr, geo = sys%geo)
 
               ! save the trouble of writing many copies of each density, since i,j = j,i
               do jj = ii, gr%mesh%sb%dim
-                write(fname, '(a,a,i1,a,i1,a,i1)') 'density1', '-', is, '-', ii, '-', jj
+                write(fname, '(a,a,i1,a,i1,a,i1)') 'fd2_density', '-', is, '-', ii, '-', jj
                 call doutput_function(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
                   gr%mesh, gr%sb, lr_rho2(:, is), M_ONE, ierr, geo = sys%geo)
               enddo
@@ -436,7 +436,7 @@ contains
   
         do is = 1, st%d%nspin
           if(iand(sys%outp%what, output_density).ne.0) then
-            write(fname, '(a,a,i1,a)') 'density2', '-', is, '-2-3'
+            write(fname, '(a,a,i1,a)') 'fd2_density', '-', is, '-2-3'
             call doutput_function(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
               gr%mesh, gr%sb, lr_rho2(:, is), M_ONE, ierr, geo = sys%geo)
           endif

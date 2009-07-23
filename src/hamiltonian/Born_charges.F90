@@ -165,7 +165,7 @@ module Born_charges_m
 
       write(iunit,'(a)') 'Phase:'
       phase(1:dim, 1:dim) = atan2(aimag(this%charge(1:dim, 1:dim, iatom)), real(this%charge(1:dim, 1:dim, iatom)))
-      call io_output_tensor(iunit, phase(:, :), dim, M_ONE)
+      call io_output_tensor(iunit, phase(:, :), dim, M_ONE, write_average = .false.)
       write(iunit,'(a)')
     enddo
 

@@ -108,7 +108,7 @@ contains
     !%Option tol_fixed 0
     !% The solver tolerance is fixed for all the iterations; this
     !% improves convergence but increases the computational cost
-    !%Option tol_adaptative 1 
+    !%Option tol_adaptive 1 
     !% The tolerance is increased according to the level of
     !% convergence of the SCF.
     !%Option tol_linear 2
