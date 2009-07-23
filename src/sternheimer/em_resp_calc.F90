@@ -155,7 +155,15 @@ contains
 
     call push_sub('em_resp_calc.freq2str')
 
+    ! some compilers (xlf) do not put a leading zero when the number
+    ! is smaller than 1. We haver to check and correct that behavior
+
     write(str, '(f11.4)') w
+    str = adjustl(str)
+    if(abs(w) < M_ONE) then
+      if(w >= M_ZERO .and. str(1:1).ne.'0') str = "0"//trim(str)
+      if(w <  M_ZERO .and. str(2:2).ne.'0') str = "-0"//trim(str(2:))
+    end if
     str = trim(adjustl(str))
 
     call pop_sub()
