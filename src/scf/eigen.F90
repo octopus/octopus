@@ -450,7 +450,7 @@ contains
     has = .false.
 
     select case(this%es_type)
-    case(RS_RMMDIIS, RS_CG, RS_CG_NEW)
+    case(RS_RMMDIIS, RS_CG, RS_CG_NEW, RS_LOBPCG)
       has = .true.
     end select
 
