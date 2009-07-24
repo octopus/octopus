@@ -176,7 +176,7 @@ contains
     call push_sub('systm.hamiltonian_setup')
 
     call states_fermi(sys%st, sys%gr%mesh)
-    call states_calc_dens(sys%st, sys%gr%mesh%np)
+    call states_calc_dens(sys%st, sys%gr)
 
     call v_ks_calc(sys%gr, sys%ks, hm, sys%st, calc_eigenval=.true.) ! get potentials
     call states_fermi(sys%st, sys%gr%mesh)                           ! occupations

@@ -150,7 +150,7 @@ module opt_control_propagation_m
     call hamiltonian_not_adjoint(hm)
 
     ! setup the hamiltonian
-    call states_calc_dens(psi, gr%mesh%np_part)
+    call states_calc_dens(psi, gr)
     call v_ks_calc(gr, sys%ks, hm, psi)
     call td_rti_run_zero_iter(hm, td%tr)
 
@@ -163,7 +163,7 @@ module opt_control_propagation_m
       if(present(prop)) call oct_prop_output(prop, i, psi, gr)
 
       ! update
-      call states_calc_dens(psi, gr%mesh%np_part)
+      call states_calc_dens(psi, gr)
       call v_ks_calc(gr, sys%ks, hm, psi)
       call total_energy(hm, sys%gr, psi, -1)
 
@@ -212,7 +212,7 @@ module opt_control_propagation_m
     call hamiltonian_adjoint(hm)
 
     ! setup the hamiltonian
-    call states_calc_dens(psi, gr%mesh%np_part)
+    call states_calc_dens(psi, gr)
     call v_ks_calc(gr, sys%ks, hm, psi)
     call td_rti_run_zero_iter(hm, td%tr)
 
@@ -220,7 +220,7 @@ module opt_control_propagation_m
     do i = td%max_iter, 1, -1
       call td_rti_dt(sys%ks, hm, gr, psi, td%tr, (i-1)*td%dt, -td%dt, td%max_iter, i)
       call oct_prop_output(prop, i-1, psi, gr)
-      call states_calc_dens(psi, gr%mesh%np_part)
+      call states_calc_dens(psi, gr)
       call v_ks_calc(gr, sys%ks, hm, psi)
     end do
 
@@ -283,7 +283,7 @@ module opt_control_propagation_m
 
     
     ! setup forward propagation
-    call states_calc_dens(psi, gr%mesh%np_part)
+    call states_calc_dens(psi, gr)
     call v_ks_calc(gr, sys%ks, hm, psi)
     call td_rti_run_zero_iter(hm, td%tr)
     call td_rti_run_zero_iter(hm, tr_chi)
@@ -311,7 +311,7 @@ module opt_control_propagation_m
       call oct_prop_check(prop_chi, chi, gr, sys%geo, i)
     end do
 
-    call states_calc_dens(psi, gr%mesh%np_part)
+    call states_calc_dens(psi, gr)
     call v_ks_calc(gr, sys%ks, hm, psi)
 
     if(target_mode(target) == oct_targetmode_td .or. (hm%theory_level.ne.INDEPENDENT_PARTICLES) ) then
@@ -368,7 +368,7 @@ module opt_control_propagation_m
     call states_copy(psi, chi)
     call oct_prop_read_state(prop_psi, psi, gr, sys%geo, td%max_iter)
 
-    call states_calc_dens(psi, gr%mesh%np_part)
+    call states_calc_dens(psi, gr)
     call v_ks_calc(gr, sys%ks, hm, psi)
     call hamiltonian_update_potential(hm, gr%mesh)
     call td_rti_run_zero_iter(hm, td%tr)
@@ -387,7 +387,7 @@ module opt_control_propagation_m
     end do
     td%dt = -td%dt
 
-    call states_calc_dens(psi, gr%mesh%np_part)
+    call states_calc_dens(psi, gr)
     call v_ks_calc(gr, sys%ks, hm, psi)
     call hamiltonian_update_potential(hm, gr%mesh)
 
@@ -442,7 +442,7 @@ module opt_control_propagation_m
     call states_copy(psi, chi)
     call oct_prop_read_state(prop_psi, psi, gr, sys%geo, td%max_iter)
 
-    call states_calc_dens(psi, gr%mesh%np_part)
+    call states_calc_dens(psi, gr)
     call v_ks_calc(gr, sys%ks, hm, psi)
     call hamiltonian_update_potential(hm, gr%mesh)
     call td_rti_run_zero_iter(hm, td%tr)
@@ -461,7 +461,7 @@ module opt_control_propagation_m
     end do
     td%dt = -td%dt
 
-    call states_calc_dens(psi, gr%mesh%np_part)
+    call states_calc_dens(psi, gr)
     call v_ks_calc(gr, sys%ks, hm, psi)
     call hamiltonian_update_potential(hm, gr%mesh)
 
@@ -508,7 +508,7 @@ module opt_control_propagation_m
       end if
     end do
     if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
-      call states_calc_dens(st, gr%mesh%np_part)
+      call states_calc_dens(st, gr)
       call v_ks_calc(gr, ks, hm, st)
       call hamiltonian_update_potential(hm, gr%mesh)
     end if
@@ -550,7 +550,7 @@ module opt_control_propagation_m
       end if
     end do
     if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
-      call states_calc_dens(st, gr%mesh%np_part)
+      call states_calc_dens(st, gr)
       call v_ks_calc(gr, ks, hm, st)
       call hamiltonian_update_potential(hm, gr%mesh)
     end if

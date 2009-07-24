@@ -81,7 +81,7 @@ module states_m
     states_dens_accumulate,           &
     states_dens_accumulate_batch,     &
     states_dens_reduce,               &
-    states_calc_dens,                 &
+    states_calc_dens,              &
     states_calc_tau_jp_gn,            &
     state_is_local,                   &
     states_dump,                      &
@@ -1050,21 +1050,23 @@ contains
   ! ---------------------------------------------------------
   ! Calculates the new density out the wavefunctions and
   ! occupations...
-  subroutine states_dens_accumulate(st, np, rho, ist, ik)
-    type(states_t), intent(in)    :: st
-    integer,        intent(in)    :: np
-    FLOAT,          intent(inout) :: rho(:,:)
+  subroutine states_dens_accumulate(st, gr, ist, ik, rho)
+    type(states_t), intent(inout) :: st
+    type(grid_t),   intent(in)    :: gr
     integer,        intent(in)    :: ist
     integer,        intent(in)    :: ik
+    FLOAT,          intent(inout) :: rho(:,:)
     
-    integer :: ip, ispin
+    integer :: ip, ispin, np
     CMPLX   :: c
     type(profile_t), save :: prof
-
+    
 #ifndef USE_OMP
     call push_sub('states.states_dens_accumulate')
 #endif
     call profiling_in(prof, "CALC_DENSITY")
+
+    np = gr%fine%mesh%np
 
     ispin = states_dim_get_spin_index(st%d, ik)
     
@@ -1097,15 +1099,16 @@ contains
 #endif
   end subroutine states_dens_accumulate
 
+  ! ---------------------------------------------------
 
-  subroutine states_dens_accumulate_batch(np, rho, st, psib, ik)
-    integer,        intent(in)    :: np
-    FLOAT,          intent(inout) :: rho(:,:)
+  subroutine states_dens_accumulate_batch(st, gr, ik, psib, rho)
     type(states_t), intent(in)    :: st
-    type(batch_t),  intent(in)    :: psib
+    type(grid_t),   intent(in)    :: gr
     integer,        intent(in)    :: ik
+    type(batch_t),  intent(in)    :: psib
+    FLOAT,          intent(inout) :: rho(:,:)
     
-    integer :: ist, ist2, ip, ispin
+    integer :: ist, ist2, ip, ispin, np
     CMPLX   :: c
     type(profile_t), save :: prof
 
@@ -1113,6 +1116,8 @@ contains
     call push_sub('states.states_dens_accumulate_batch')
 #endif
     call profiling_in(prof, "CALC_DENSITY")
+
+    np = gr%fine%mesh%np
 
     ispin = states_dim_get_spin_index(st%d, ik)
     
@@ -1158,14 +1163,15 @@ contains
 #endif
   end subroutine states_dens_accumulate_batch
 
+  ! ---------------------------------------------------
 
-  subroutine states_dens_reduce(st, np, rho)
+  subroutine states_dens_reduce(st, gr, rho)
     type(states_t), intent(in)    :: st
-    integer,        intent(in)    :: np
+    type(grid_t),   intent(in)    :: gr
     FLOAT,          intent(inout) :: rho(:,:)
 
 #ifdef HAVE_MPI
-    integer :: ispin
+    integer :: ispin, np
     FLOAT,  allocatable :: reduce_rho(:)
     type(profile_t), save :: reduce_prof
 #endif
@@ -1173,6 +1179,8 @@ contains
     call push_sub('states.states_dens_reduce')
 
 #ifdef HAVE_MPI
+    np = gr%fine%mesh%np
+
     ! reduce over states
     if(st%parallel_in_states) then
       call profiling_in(reduce_prof, "DENSITY_REDUCE")
@@ -1211,10 +1219,10 @@ contains
   ! present, the density is placed there; if it is not present,
   ! the density is placed in st%rho.
   ! ---------------------------------------------------------
-  subroutine states_calc_dens(st, np, rho)
-    type(states_t), intent(in)  :: st
-    integer,        intent(in)  :: np
-    FLOAT, optional, target, intent(out) :: rho(:,:)
+  subroutine states_calc_dens(st, gr, rho)
+    type(states_t),          intent(inout)  :: st
+    type(grid_t),            intent(in)     :: gr
+    FLOAT, optional, target, intent(out)    :: rho(:,:)
 
     integer :: ik, ist
 
@@ -1228,15 +1236,15 @@ contains
       dens => st%rho
     end if
 
-    dens(1:np, 1:st%d%nspin) = M_ZERO
+    dens(1:gr%fine%mesh%np, 1:st%d%nspin) = M_ZERO
 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
-        call states_dens_accumulate(st, np, dens, ist, ik)
+        call states_dens_accumulate(st, gr, ist, ik, dens)
       end do
     end do
 
-    call states_dens_reduce(st, np, dens)
+    call states_dens_reduce(st, gr, dens)
 
     nullify(dens)
     call pop_sub()
@@ -2434,10 +2442,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine states_freeze_orbitals(st, gr, mc, n)
-    type(states_t), intent(inout) :: st
-    type(grid_t),   intent(in)    :: gr
+    type(states_t),    intent(inout) :: st
+    type(grid_t),      intent(in)    :: gr
     type(multicomm_t), intent(in) :: mc
-    integer,        intent(in)    :: n
+    integer,           intent(in)    :: n
 
     integer :: ist, ik
     type(states_t) :: staux
@@ -2459,10 +2467,10 @@ contains
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
         if(ist > n) cycle
-        call states_dens_accumulate(st, gr%mesh%np, st%frozen_rho, ist, ik)
+        call states_dens_accumulate(st, gr, ist, ik, st%frozen_rho)
       end do
     end do
-    call states_dens_reduce(st, gr%mesh%np, st%frozen_rho)
+    call states_dens_reduce(st, gr, st%frozen_rho)
 
     call states_copy(staux, st)
 

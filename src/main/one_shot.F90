@@ -68,7 +68,7 @@ contains
     end if
 
     ! generate density
-    call states_calc_dens(sys%st, sys%gr%mesh%np)
+    call states_calc_dens(sys%st, sys%gr)
 
     ! kinetic energy + local potential + Hartree + xc
     if(sys%st%wfs_type == M_REAL) then

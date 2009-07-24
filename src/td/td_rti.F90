@@ -520,7 +520,7 @@ contains
       SAFE_ALLOCATE(vaux(1:gr%mesh%np, 1:st%d%nspin))
 
       ! First, compare the new potential to the extrapolated one.
-      call states_calc_dens(st, gr%mesh%np)
+      call states_calc_dens(st, gr)
       call v_ks_calc(gr, ks, hm, st)
       SAFE_ALLOCATE(dtmp(1:gr%mesh%np))
       d_max = M_ZERO
@@ -564,7 +564,7 @@ contains
             call td_qoct_tddft_propagator_2(hm, gr, st, tr, t, dt)
           end select
 
-          call states_calc_dens(st, gr%mesh%np)
+          call states_calc_dens(st, gr)
           call v_ks_calc(gr, ks, hm, st)
           SAFE_ALLOCATE(dtmp(1:gr%mesh%np))
           d_max = M_ZERO
@@ -600,7 +600,7 @@ contains
           call zexp_kinetic(gr, hm, st%zpsi(:, :, ist, ik), tr%cf, -M_HALF*M_zI*dt)
         end do
       end do
-      call states_calc_dens(st, gr%mesh%np)
+      call states_calc_dens(st, gr)
       call v_ks_calc(gr, ks, hm, st)
       do ik = st%d%kpt%start, st%d%kpt%end
         do ist = 1, st%nst
@@ -692,7 +692,7 @@ contains
             !propagate the state dt with H(t-dt)
             call batch_init(zpsib, st%d%dim, sts, ste, st%zpsi(:, :, sts:, ik))
             call exponential_apply_batch(tr%te, gr, hm, zpsib, ik, dt, t-dt)
-            call states_dens_accumulate_batch(gr%mesh%np, st%rho, st, zpsib, ik)
+            call states_dens_accumulate_batch(st, gr, ik, zpsib, st%rho)
             call batch_end(zpsib)
 
             !do ist = sts, ste
@@ -715,7 +715,7 @@ contains
         SAFE_DEALLOCATE_A(zpsi1)
         
         ! finish the calculation of the density
-        call states_dens_reduce(st, gr%mesh%np, st%rho)
+        call states_dens_reduce(st, gr, st%rho)
 
         call v_ks_calc(gr, ks, hm, st)
 
@@ -915,7 +915,7 @@ contains
           end do
         end do
 
-        call states_calc_dens(st, gr%mesh%np)
+        call states_calc_dens(st, gr)
         call v_ks_calc(gr, ks, hm, st)
 
         vhxc_t2 = hm%vhxc

@@ -113,7 +113,7 @@ contains
     ! this is debugging: should output quality of KS inversion
     call scf_run(scfv, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, gs_run = .false., &
                  verbosity = VERB_COMPACT)
-    call states_calc_dens(sys%st, np)
+    call states_calc_dens(sys%st, sys%gr)
 
     diffdensity = 0d0
     do jj = 1, nspin
@@ -335,7 +335,7 @@ contains
 
       call scf_run(scfv, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, gs_run = .false., &
                    verbosity = VERB_COMPACT)
-      call states_calc_dens(sys%st, np)
+      call states_calc_dens(sys%st, sys%gr)
       
       vhxc_out(1:np, 1:nspin, 1) = &
         (sys%st%rho(1:np,1:nspin) + stabilizer)/&

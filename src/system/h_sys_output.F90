@@ -543,7 +543,7 @@ contains
     SAFE_ALLOCATE( tau(1:gr%mesh%np, 1:st%d%nspin))
 
     rho = M_ZERO
-    call states_calc_dens(st, gr%mesh%np, rho)
+    call states_calc_dens(st, gr, rho)
     call states_calc_tau_jp_gn(gr, st, tau=tau)
 
     pressure = M_ZERO

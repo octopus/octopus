@@ -393,7 +393,7 @@ contains
       call states_fermi(st, gr%mesh)
 
       ! compute output density, potential (if needed) and eigenvalues sum
-      call states_calc_dens(st, gr%mesh%np)
+      call states_calc_dens(st, gr)
       rhoout(1:gr%mesh%np, 1, 1:nspin) = st%rho(1:gr%mesh%np, 1:nspin)
       if (hm%d%cdft) then
         call calc_physical_current(gr, st, st%current)
