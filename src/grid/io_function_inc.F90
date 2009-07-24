@@ -99,6 +99,8 @@ subroutine X(input_function_global)(filename, mesh, f, ierr, is_tmp)
   logical,           intent(in)  :: is_tmp
 
 #if defined(HAVE_NETCDF)
+  character(len=512) :: file
+  integer :: ncid, status
   integer :: function_kind
   type(X(cf_t)) :: cube
 #if defined(R_TCOMPLEX)
@@ -119,20 +121,30 @@ subroutine X(input_function_global)(filename, mesh, f, ierr, is_tmp)
   select case(trim(io_get_extension(filename)))
 #if defined(HAVE_NETCDF)
   case("ncdf")
+
+
+     file = io_workpath(filename, is_tmp=is_tmp)
+     status = nf90_open(trim(file), NF90_WRITE, ncid)
+     if(status.ne.NF90_NOERR) then
+         ierr = 2
+     else
 #if defined(R_TCOMPLEX)
-     call X(cf_new)(mesh%idx%ll, cube); call dcf_new(mesh%idx%ll, re); call dcf_new(mesh%idx%ll, im)
-     call X(cf_alloc_RS)(cube); call dcf_alloc_RS(re); call dcf_alloc_RS(im)
-     call read_netcdf()
-     cube%RS = re%RS + M_zI*im%RS
-     call X(cube_to_mesh) (mesh, cube, f)
-     call X(cf_free)(cube); call dcf_free(re); call dcf_free(im)
+       call X(cf_new)(mesh%idx%ll, cube)
+       call dcf_new(mesh%idx%ll, re)
+       call dcf_new(mesh%idx%ll, im)
+       call X(cf_alloc_RS)(cube); call dcf_alloc_RS(re); call dcf_alloc_RS(im)
+       call read_netcdf()
+       cube%RS = re%RS + M_zI*im%RS
+       call X(cube_to_mesh) (mesh, cube, f)
+       call X(cf_free)(cube); call dcf_free(re); call dcf_free(im)
 #else
-     call X(cf_new)(mesh%idx%ll, cube)
-     call X(cf_alloc_RS)(cube)
-     call read_netcdf()
-     call X(cube_to_mesh) (mesh, cube, f)
-     call X(cf_free)(cube)
+       call X(cf_new)(mesh%idx%ll, cube)
+       call X(cf_alloc_RS)(cube)
+       call read_netcdf()
+       call X(cube_to_mesh) (mesh, cube, f)
+       call X(cf_free)(cube)
 #endif
+     end if
 #endif
    case("obf")
      call io_binary_read(filename, mesh%np_global, f, ierr)
@@ -150,22 +162,11 @@ contains
 
   ! ---------------------------------------------------------
   subroutine read_netcdf()
-    integer :: ncid, status, data_id, data_im_id, &
-        dim_data_id(MAX_DIM), ndim(MAX_DIM), xtype
-    integer :: file_kind
-    character(len=512) :: file
-
+    integer :: data_id, data_im_id, &
+        dim_data_id(MAX_DIM), ndim(MAX_DIM), xtype, file_kind
     FLOAT, allocatable :: x(:, :, :)
 
     call push_sub('io_function_inc.Xinput_function_global.read_netcdf')
-
-    file = io_workpath(filename, is_tmp=is_tmp)
-
-    status = nf90_open(trim(file), NF90_WRITE, ncid)
-    if(status.ne.NF90_NOERR) then
-       ierr = 2
-       return
-    end if
 
     !Inquire about dimensions
     if(status == NF90_NOERR) then
@@ -732,7 +733,7 @@ contains
 ! for format specification see:
 ! http://www.xcrysden.org/doc/XSF.html#__toc__11
   subroutine out_xcrysden()
-    integer :: ix, iy, iz, idir, iatom, ix2, iy2, iz2
+    integer :: ix, iy, iz, idir, ix2, iy2, iz2
     FLOAT, allocatable :: offset(:)
     type(X(cf_t)) :: cube
 
