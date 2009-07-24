@@ -182,10 +182,10 @@ contains
 
       call modelmb_1part_init(mb_1part, gr%mesh, ikeeppart, ndim1part, gr%sb%box_offset)
 
-      SAFE_ALLOCATE(densmatr(1:mb_1part%npt_1part, 1:mb_1part%npt_1part))
-      SAFE_ALLOCATE(evectors(1:mb_1part%npt_1part, 1:mb_1part%npt_1part))
-      SAFE_ALLOCATE(evalues(1:mb_1part%npt_1part))
-      SAFE_ALLOCATE(density(1:mb_1part%npt_1part))
+      SAFE_ALLOCATE(densmatr(1:mb_1part%npt_part, 1:mb_1part%npt_part))
+      SAFE_ALLOCATE(evectors(1:mb_1part%npt_part, 1:mb_1part%npt_part))
+      SAFE_ALLOCATE(evalues(1:mb_1part%npt_part))
+      SAFE_ALLOCATE(density(1:mb_1part%npt_part))
 
       
       densmatr  = M_z0
@@ -202,12 +202,12 @@ contains
 
       !Diagonalize the density matrix
       bof=.true.
-      SAFE_ALLOCATE(densmatr_tmp(1:mb_1part%npt_1part, 1:mb_1part%npt_1part))
+      SAFE_ALLOCATE(densmatr_tmp(1:mb_1part%npt_part, 1:mb_1part%npt_part))
       densmatr_tmp=densmatr
       ! CHECK: should we only be diagonalizing the main grid points, as
-      ! opposed to the full mb_1part%npt_1part?
+      ! opposed to the full mb_1part%npt_part?
       evectors = densmatr_tmp
-      call lalg_eigensolve(mb_1part%npt_1part, evectors, evalues, bof, err_code)
+      call lalg_eigensolve(mb_1part%npt_part, evectors, evalues, bof, err_code)
       SAFE_DEALLOCATE_A(densmatr_tmp)
     
       !NOTE: The highest eigenvalues are the last ones not the first!!!
@@ -219,17 +219,17 @@ contains
       write(filename,'(a,i3.3,a,i2.2)') trim(denmat%dirname)//'/occnumb_ip',ikeeppart,'_imb',mm
       iunit = io_open(trim(filename), action='write')
 
-      do jj = mb_1part%npt_1part, 1, -1
-        write(iunit,'(i4.4,es11.3)') mb_1part%npt_1part-jj+1, evalues(jj)
+      do jj = mb_1part%npt_part, 1, -1
+        write(iunit,'(i4.4,es11.3)') mb_1part%npt_part-jj+1, evalues(jj)
       end do
           
       call io_close(iunit)
 
-      do jj = mb_1part%npt_1part-denmat%nnatorb_prt(idensmat)+1, mb_1part%npt_1part
+      do jj = mb_1part%npt_part-denmat%nnatorb_prt(idensmat)+1, mb_1part%npt_part
         write(filename,'(a,i3.3,a,i2.2,a,i4.4)') trim(denmat%dirname)//'/natorb_ip', &
-              ikeeppart,'_imb', mm, '_', mb_1part%npt_1part-jj+1
+              ikeeppart,'_imb', mm, '_', mb_1part%npt_part-jj+1
         iunit = io_open(filename, action='write')
-        do ll = 1, mb_1part%npt_1part
+        do ll = 1, mb_1part%npt
           call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, &
                mb_1part%enlarge_1part(1), ll, ix_1part)
           do idir=1,ndim1part
@@ -242,10 +242,10 @@ contains
 
       write(filename,'(a,i3.3,a,i2.2)') trim(denmat%dirname)//'/densmatr_ip', ikeeppart,'_imb', mm
       iunit = io_open(filename,action='write')
-      do jj = 1, mb_1part%npt_1part
+      do jj = 1, mb_1part%npt
         call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, &
              mb_1part%enlarge_1part(1), jj, ix_1part)
-        do ll = 1, mb_1part%npt_1part
+        do ll = 1, mb_1part%npt
           call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, &
                mb_1part%enlarge_1part(1), ll, ix_1part_p)
           do idir=1,ndim1part
@@ -262,7 +262,7 @@ contains
 
       write(filename,'(a,i3.3,a,i2.2)') trim(denmat%dirname)//'/density_ip', ikeeppart,'_imb', mm
       iunit = io_open(filename,action='write')
-      do jj = 1, mb_1part%npt_1part
+      do jj = 1, mb_1part%npt
         call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, &
              mb_1part%enlarge_1part(1), jj, ix_1part)
         do idir=1,ndim1part
@@ -275,7 +275,7 @@ contains
 
       ! calculate dipole moment from density for this particle
       dipole_moment(:) = 0.0d0
-      do jj = 1,mb_1part%npt_1part
+      do jj = 1,mb_1part%npt
         call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, &
              mb_1part%enlarge_1part(1), jj, ix_1part)
         dipole_moment = dipole_moment+(ix_1part(:)*mb_1part%h_1part(:)+mb_1part%origin(:))&
@@ -285,7 +285,7 @@ contains
       ! note: for eventual multiple particles in 4D (eg 8D total) this would fail to give the last values of dipole_moment
       write (message(1),'(a,I6,a,I6,a,I6)') 'For particle ', ikeeppart, ' of mb state ', mm
       write (message(2),'(a,3E20.10)') 'The dipole moment is (in a.u. = e bohr):     ', dipole_moment(1:min(3,ndim1part))
-      write (message(3),'(a,E15.3)') '     with intrinsic numerical error usually <= ', 1.e-6*mb_1part%npt_1part
+      write (message(3),'(a,E15.3)') '     with intrinsic numerical error usually <= ', 1.e-6*mb_1part%npt
       call write_info(3)
 
       SAFE_DEALLOCATE_A(evectors)

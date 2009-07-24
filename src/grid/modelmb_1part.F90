@@ -44,11 +44,13 @@ module modelmb_1part_m
 !
 type modelmb_1part_t
   integer :: ndim1part
-  integer :: npt_1part
+  integer :: npt_part
+  integer :: npt
   FLOAT :: vol_elem_1part
   FLOAT, pointer :: origin(:)
   integer, pointer :: enlarge_1part(:)
   integer, pointer :: nr_1part(:,:)
+  integer, pointer :: ll(:)
   FLOAT, pointer :: h_1part(:)
   type(hypercube_t) :: hypercube_1part
 end type modelmb_1part_t
@@ -66,14 +68,22 @@ subroutine modelmb_1part_init(this, mesh, ikeeppart, ndim1part, box_offset)
 
   call push_sub('states.modelmb_1part_init')
   
-   this%ndim1part = ndim1part
+  this%ndim1part = ndim1part
 
 !   get full size of arrays for 1 particle only in ndim_modelmb dimensions
-   this%npt_1part = 1
-   do idir = 1, ndim1part
-     this%npt_1part = this%npt_1part*(mesh%idx%nr(2,(ikeeppart-1)*ndim1part+idir) &
-                                    - mesh%idx%nr(1,(ikeeppart-1)*ndim1part+idir)+1)
-   end do
+  this%npt_part = 1
+  do idir = 1, ndim1part
+    this%npt_part = this%npt_part*(mesh%idx%nr(2,(ikeeppart-1)*ndim1part+idir) &
+                                   - mesh%idx%nr(1,(ikeeppart-1)*ndim1part+idir)+1)
+  end do
+
+!real bounds for indices in 
+  this%npt = 1
+  SAFE_ALLOCATE(this%ll(1:ndim1part))
+  do idir = 1, ndim1part
+    this%ll(idir) = mesh%idx%ll((ikeeppart-1)*ndim1part+idir)
+    this%npt = this%npt*this%ll(idir)
+  end do
 
 !   volume element for the chosen particle
   SAFE_ALLOCATE(this%h_1part(1:ndim1part))
@@ -114,6 +124,7 @@ subroutine modelmb_1part_nullify(this)
   nullify(this%origin)
   nullify(this%enlarge_1part)
   nullify(this%nr_1part)
+  nullify(this%ll)
   nullify(this%h_1part)
   call hypercube_nullify(this%hypercube_1part)
   call pop_sub()
@@ -126,6 +137,7 @@ subroutine modelmb_1part_end(this)
   SAFE_DEALLOCATE_P(this%origin)
   SAFE_DEALLOCATE_P(this%enlarge_1part)
   SAFE_DEALLOCATE_P(this%nr_1part)
+  SAFE_DEALLOCATE_P(this%ll)
   SAFE_DEALLOCATE_P(this%h_1part)
   call hypercube_end(this%hypercube_1part)
   call pop_sub()

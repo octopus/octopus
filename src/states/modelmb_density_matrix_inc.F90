@@ -74,7 +74,7 @@ subroutine X(mf_calculate_gamma)(ikeeppart, mb_1part, nparticles_densmat, &
      
      ! run over all possible position indices of particle prime
      ixp = ix
-     xprimeloop: do icoordp = 1, mb_1part%npt_1part
+     xprimeloop: do icoordp = 1, mb_1part%npt_part
        
        ! find equivalent position of particle prime
        call hypercube_i_to_x(mb_1part%hypercube_1part, mb_1part%ndim1part, &

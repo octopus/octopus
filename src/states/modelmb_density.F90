@@ -175,7 +175,7 @@ contains
 
       call modelmb_1part_init(mb_1part, gr%mesh, ikeeppart, ndim1part, gr%sb%box_offset)
 
-      SAFE_ALLOCATE(density(1:mb_1part%npt_1part))
+      SAFE_ALLOCATE(density(1:mb_1part%npt_part))
 
       density = M_z0
 
@@ -191,7 +191,7 @@ contains
 
       write(filename,'(a,i3.3,a,i2.2)') trim(den%dirname)//'/density_ip', ikeeppart,'_imb', mm
       iunit = io_open(filename,action='write')
-      do jj = 1, mb_1part%npt_1part
+      do jj = 1, mb_1part%npt
         call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, &
              mb_1part%enlarge_1part(1), jj, ix_1part)
         do idir = 1, ndim1part
@@ -204,7 +204,7 @@ contains
 
       ! calculate dipole moment from density for this particle
       dipole_moment(:) = 0.0d0
-      do jj = 1,mb_1part%npt_1part
+      do jj = 1,mb_1part%npt_part
         call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, &
              mb_1part%enlarge_1part(1), jj, ix_1part)
         dipole_moment = dipole_moment+(ix_1part(:)*mb_1part%h_1part(:)+mb_1part%origin(:))&
@@ -214,7 +214,7 @@ contains
       ! note: for eventual multiple particles in 4D (eg 8D total) this would fail to give the last values of dipole_moment
       write (message(1),'(a,I6,a,I6,a,I6)') 'For particle ', ikeeppart, ' of mb state ', mm
       write (message(2),'(a,3E20.10)') 'The dipole moment is (in a.u. = e bohr):     ', dipole_moment(1:min(3,ndim1part))
-      write (message(3),'(a,E15.3)') '     with intrinsic numerical error usually <= ', 1.e-6*mb_1part%npt_1part
+      write (message(3),'(a,E15.3)') '     with intrinsic numerical error usually <= ', 1.e-6*mb_1part%npt
       call write_info(3)
 
       SAFE_DEALLOCATE_A(density)
