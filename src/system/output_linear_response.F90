@@ -51,7 +51,7 @@ subroutine X(h_sys_output_lr) (st, gr, lr, dir, tag, isigma, outp, geo)
       SAFE_ALLOCATE(tmp(1:gr%mesh%np))
       do is = 1, st%d%nspin
         do i=1,gr%mesh%sb%dim
-          tmp(1:gr%mesh%np)=gr%mesh%x(1:gr%mesh%np,i)*lr%X(dl_rho)(:, is)
+          tmp(1:gr%mesh%np)=-gr%mesh%x(1:gr%mesh%np,i)*lr%X(dl_rho)(:, is)
           write(fname, '(a,i1,a,i1,a,i1)') 'alpha_density-', is, '-', tag, '-', i
           call X(output_function)(outp%how, dir, fname, gr%mesh, gr%sb, tmp, u, ierr, geo = geo)
         end do

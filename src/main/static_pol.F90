@@ -379,11 +379,11 @@ contains
               do jj = ii, gr%mesh%sb%dim
                 write(fname, '(a,a,i1,a,i1,a,i1)') 'alpha_density', '-', is, '-', ii, '-', jj
                 call doutput_function(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
-                  gr%mesh, gr%sb, gr%mesh%x(:, jj) * lr_rho(:, is), M_ONE, ierr, geo = sys%geo)
+                  gr%mesh, gr%sb, -gr%mesh%x(:, jj) * lr_rho(:, is), M_ONE, ierr, geo = sys%geo)
 
                 write(fname, '(a,a,i1,a,i1,a,i1,a,i1)') 'beta_density', '-', is, '-', ii, '-', ii, '-', jj
                 call doutput_function(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
-                  gr%mesh, gr%sb, gr%mesh%x(:, jj) * lr_rho2(:, is), M_ONE, ierr, geo = sys%geo)
+                  gr%mesh, gr%sb, -gr%mesh%x(:, jj) * lr_rho2(:, is), M_ONE, ierr, geo = sys%geo)
               enddo
             endif
           end do
@@ -444,7 +444,7 @@ contains
           if(iand(sys%outp%what, output_pol_density).ne.0) then
             write(fname, '(a,a,i1,a,i1,a,i1,a,i1)') 'beta_density', '-', is, '-1-2-3'
             call doutput_function(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
-              gr%mesh, gr%sb, gr%mesh%x(:, 1) * lr_rho2(:, is), M_ONE, ierr, geo = sys%geo)
+              gr%mesh, gr%sb, -gr%mesh%x(:, 1) * lr_rho2(:, is), M_ONE, ierr, geo = sys%geo)
           endif
         end do
       endif

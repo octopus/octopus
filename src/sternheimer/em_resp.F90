@@ -105,7 +105,7 @@ contains
     type(sternheimer_t)     :: sh
     type(lr_t)              :: kdotp_lr(MAX_DIM, 1)
 
-    integer :: sigma, ndim, i, idir, ierr, iomega, ifactor, default_solver
+    integer :: sigma, ndim, idir, ierr, iomega, ifactor, default_solver
     character(len=100) :: dirname, str_tmp
     logical :: complex_response, have_to_calculate, use_kdotp
 
@@ -334,6 +334,7 @@ contains
                   em_vars%perturbation, EM_RESP_DIR, &
                   em_rho_tag(em_vars%freq_factor(ifactor)*em_vars%omega(iomega), idir), &
                   em_wfs_tag(idir, ifactor), have_restart_rho=(ierr==0))
+
                 em_vars%lr(idir, 2, ifactor)%ddl_psi = em_vars%lr(idir, 1, ifactor)%ddl_psi
                 em_vars%lr(idir, 2, ifactor)%ddl_rho = em_vars%lr(idir, 1, ifactor)%ddl_rho
               end if
@@ -478,8 +479,7 @@ contains
     ! ---------------------------------------------------------
     subroutine parse_input()
       type(block_t) :: blk
-      integer   :: nrow
-      integer   :: number, j, k
+      integer   :: nrow, irow, nfreqs_in_row, ifreq, istep
       FLOAT     :: omega_ini, omega_fin, domega
 
       call push_sub('em_resp.em_resp_run.parse_input')
@@ -517,32 +517,32 @@ contains
         em_vars%nomega = 0
 
         !count the number of frequencies
-        do i = 0, nrow-1
-          call loct_parse_block_int(blk, i, 0, number)
-          if(number < 1) then
+        do irow = 0, nrow-1
+          call loct_parse_block_int(blk, irow, 0, nfreqs_in_row)
+          if(nfreqs_in_row < 1) then
             message(1) = "EMFreqs: invalid number of frequencies"
             call write_fatal(1)
           end if
-          em_vars%nomega = em_vars%nomega + number
+          em_vars%nomega = em_vars%nomega + nfreqs_in_row
         end do
 
         SAFE_ALLOCATE(em_vars%omega(1:em_vars%nomega))
 
         !read frequencies
-        j = 1
-        do i = 0, nrow-1
-          call loct_parse_block_int(blk, i, 0, number)
-          call loct_parse_block_float(blk, i, 1, omega_ini)
-          if(number > 1) then 
-            call loct_parse_block_float(blk, i, 2, omega_fin)
-            domega = (omega_fin - omega_ini)/(number - M_ONE)
-            do k = 0, number-1
-              em_vars%omega(j + k) = units_to_atomic(units_inp%energy, omega_ini + domega*k)
+        ifreq = 1
+        do irow = 0, nrow-1
+          call loct_parse_block_int(blk, irow, 0, nfreqs_in_row)
+          call loct_parse_block_float(blk, irow, 1, omega_ini)
+          if(nfreqs_in_row > 1) then 
+            call loct_parse_block_float(blk, irow, 2, omega_fin)
+            domega = (omega_fin - omega_ini)/(nfreqs_in_row - M_ONE)
+            do istep = 0, nfreqs_in_row-1
+              em_vars%omega(ifreq + istep) = units_to_atomic(units_inp%energy, omega_ini + domega*istep)
             end do
-            j = j + number
+            ifreq = ifreq + nfreqs_in_row
           else
-            em_vars%omega(j) = units_to_atomic(units_inp%energy, omega_ini)
-            j = j + 1
+            em_vars%omega(ifreq) = units_to_atomic(units_inp%energy, omega_ini)
+            ifreq = ifreq + 1
           end if
         end do
 
@@ -590,6 +590,11 @@ contains
           call loct_parse_block_float(blk, 0, 2, em_vars%freq_factor(3))
 
           call loct_parse_block_end(blk)
+
+          if(abs(sum(em_vars%freq_factor(1:3))) > M_EPSILON) then
+            message(1) = "Frequency factors specified by EMHyperpol must sum to zero."
+            call write_fatal(1)
+          endif
 
           em_vars%calc_hyperpol = .true.
         end if
