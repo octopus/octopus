@@ -79,13 +79,13 @@
     <sub from="#STDERRLOGFILE#" to="$stderrlogfile" />
     <sub from="#NOTIFICATION#" to="never" />
     <sub from="#NOTIFY_EMAIL#" to="foo@bar" />
-    <sub from="#TIME_LIMIT#" to="05:30:00" />
+    <sub from="#TIME_LIMIT#" to="02:00:00" />
     <sub from="#DATA_LIMIT#" to="" />
     <sub from="#STACK_LIMIT#" to="" />
     <sub from="#STARTER#" to="" />
     <sub from="#ARGS_STARTER#" to="" />
     <sub from="#EXECUTABLE#" to="./bin/octopus_mpi" />
-    <sub from="#ARGS_EXECUTABLE#" to="-npme $pmetasks -nosum -v -dlb yes"/>
+    <sub from="#ARGS_EXECUTABLE#" to=""/>
     <sub from="#ENV#" to="$env" />
     <sub from="#MEASUREMENT#" to="" />
     <sub from="#POSTPROCESS#" to="cat *profiling*/time.000000" />
