@@ -660,39 +660,32 @@ contains
           jx(1:MAX_DIM) = idx(1:MAX_DIM) + stencil%points(1:MAX_DIM, j)
           if(all(jx(1:MAX_DIM) >= mesh%idx%nr(1, 1:MAX_DIM)) .and. all(jx(1:MAX_DIM) <= mesh%idx%nr(2, 1:MAX_DIM))) then
             jpart = part(index_from_coords(mesh%idx, mesh%sb%dim, jx))
-            nb(ipart, jpart) = .true.
+            if(ipart /= jpart ) nb(ipart, jpart) = .true.
           end if
         end do
       end do
 
       ! now generate the information of the graph 
 
-      ! calculate the size of the graph
-      iedge = 0
-      do ipart = 1, mpi_grp%size
-        do jpart = 1, mpi_grp%size
-          if(nb(ipart, jpart)) iedge = iedge + 1
-        end do
-      end do
-
       SAFE_ALLOCATE(gindex(1:mpi_grp%size))
-      SAFE_ALLOCATE(gedges(1:iedge))
-
-      ! and now generate it
+      SAFE_ALLOCATE(gedges(1:count(nb)))
+      
+     ! and now generate it
       iedge = 0
       do ipart = 1, mpi_grp%size
-        gindex(ipart) = 0
         do jpart = 1, mpi_grp%size
           if(nb(ipart, jpart)) then
-            gindex(ipart) = gindex(ipart) + 1
             iedge = iedge + 1
             gedges(iedge) = jpart - 1
           end if
         end do
+        gindex(ipart) = iedge
       end do
 
+      ASSERT(iedge == count(nb))
+
       reorder = 1
-      call MPI_Graph_create(mpi_grp%comm, mpi_grp%size, gindex, gedges, reorder, graph_comm, mpi_err)
+      call MPI_Graph_create(mpi_grp%comm, mpi_grp%size, gindex(1), gedges(1), reorder, graph_comm, mpi_err)
 
       SAFE_DEALLOCATE_A(nb)
       SAFE_DEALLOCATE_A(gindex)
