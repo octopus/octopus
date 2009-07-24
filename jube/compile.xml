@@ -4,6 +4,29 @@
 <!--   $outdir -> output directory for temporary compile files-->
 <!--   $id     -> identifier of this benchmark run-->
 
+<compile cname="Cray-XT4-Louhi">
+  <!-- compile GSL: ./configure --prefix=$HOME/gsl --disable-shared -->
+  <src directory="./octopus" files="." />
+
+  <command>
+    module swap PrgEnv-pgi PrgEnv-intel
+    module load acml;
+    module load fftw;
+    setenv CC cc;
+    setenv FC ftn;
+    setenv CFLAGS "-u -fpp1 -pc80 -align -unroll -O3 -ip -no-fp-port -mno-ieee-fp -vec-report0 -no-prec-div";
+    setenv FCFLAGS "-nbs -p $CFLAGS";
+    ./configure --prefix=$outdir \
+      --with-gsl-prefix=$HOME/gsl \
+      --enable-mpi;
+    make;
+    make install;
+    make clean;
+
+    tar -C $outdir -cf $execname bin lib include share;
+  </command>
+</compile>
+
 <compile cname="IBM-BGP-Jugene">
   <src directory="./octopus" files="." />
 
@@ -20,7 +43,7 @@
     export LIBS_BLAS="-lesslsmpbg -L/opt/ibmmath/essl/4.4/lib -lesslbg";
     export LIBS_LAPACK="-L$LAPACK_LIB -llapack";
     export LIBS_FFT="-L/bgsys/local/fftw3/lib/ -lfftw3 -lm";
-    ./configure -prefix=$outdir \
+    ./configure --prefix=$outdir \
       --host=powerpc32-unknown-linux-gnu \
       --build=powerpc64-unknown-linux-gnu \
       --disable-gdlib \
@@ -52,7 +75,7 @@
     export LIBS_BLAS="-lessl";
     export LIBS_LAPACK="-L$SARA_LAPACK_LIB -llapack";
     export LIBS_FFT="-L$SARA_FFTW3_LIB -lfftw3 -lm";
-    ./configure -prefix=$outdir \
+    ./configure --prefix=$outdir \
       --disable-gdlib \
       --disable-f90-forall \
       --with-gsl-prefix=$SARA_GSL_ROOT \
