@@ -1,6 +1,6 @@
 <execution>
 
-<execute cname="Cray-XT4-Louhi-PME">
+<execute cname="Cray-XT4-Louhi">
   <input files="../../platform/Cray-XT4-Louhi/cray_qsub.job.in" />  
 
   <substitute infile="cray_qsub.job.in" outfile="cray_qsub.job">
@@ -32,7 +32,7 @@
   </environment>
   
   <command>
-    qsub -q prace cray_qsub.job
+    qsub cray_qsub.job # -q prace
   </command>
 </execute>
 

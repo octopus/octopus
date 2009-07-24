@@ -4,18 +4,20 @@
 <!--   $outdir -> output directory for temporary compile files-->
 <!--   $id     -> identifier of this benchmark run-->
 
+<!-- compile GSL: ./configure - -prefix=$HOME/gsl - -disable-shared -->
 <compile cname="Cray-XT4-Louhi">
-  <!-- compile GSL: ./configure --prefix=$HOME/gsl --disable-shared -->
   <src directory="./octopus" files="." />
 
   <command>
-    module swap PrgEnv-pgi PrgEnv-intel
+    source /opt/modules/default/init/bash ;
+    module swap PrgEnv-pgi/2.1.56HD PrgEnv-intel ;
     module load acml;
     module load fftw;
-    setenv CC cc;
-    setenv FC ftn;
-    setenv CFLAGS "-u -fpp1 -pc80 -align -unroll -O3 -ip -no-fp-port -mno-ieee-fp -vec-report0 -no-prec-div";
-    setenv FCFLAGS "-nbs -p $CFLAGS";
+    autoreconf -i;
+    export CC=cc;
+    export FC=ftn;
+    export CFLAGS="-u -fpp1 -pc80 -align -unroll -O3 -ip -no-fp-port -mno-ieee-fp -vec-report0 -no-prec-div";
+    export FCFLAGS="-nbs -p $CFLAGS";
     ./configure --prefix=$outdir \
       --with-gsl-prefix=$HOME/gsl \
       --enable-mpi;
