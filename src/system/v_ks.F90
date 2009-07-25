@@ -352,11 +352,13 @@ contains
       hm%exc_j = M_ZERO
 
       ! get density taking into account non-linear core corrections, and the Amaldi SIC correction
-      SAFE_ALLOCATE(rho(1:gr%mesh%np, 1:st%d%nspin))
-      call states_total_density(st, gr%mesh, rho)
+      SAFE_ALLOCATE(rho(1:gr%fine%mesh%np, 1:st%d%nspin))
+      call states_total_density(st, gr%fine%mesh, rho)
 
       ! Amaldi correction
-      if(ks%sic_type == sic_amaldi) rho(1:gr%mesh%np,:) = amaldi_factor*rho(1:gr%mesh%np,:)
+      if(ks%sic_type == sic_amaldi) then
+        rho(1:gr%fine%mesh%np, :) = amaldi_factor*rho(1:gr%fine%mesh%np, :)
+      end if
 
       ! Get the *local* xc term
       if(hm%d%cdft) then

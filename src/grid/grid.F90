@@ -58,7 +58,7 @@ module grid_m
     type(interface_t), pointer  :: intf(:)
     type(multigrid_level_t)     :: fine
     type(derivatives_t)         :: der
-    type(curvilinear_t)          :: cv
+    type(curvilinear_t)         :: cv
     type(multigrid_t), pointer  :: mgrid
     type(double_grid_t)         :: dgrid
     logical                     :: have_fine_mesh

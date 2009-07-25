@@ -44,6 +44,7 @@ module states_m
   use mpi_m
   use mpi_lib_m
   use multicomm_m
+  use multigrid_m
   use ob_green_m
   use profiling_m
   use simul_box_m
@@ -896,7 +897,7 @@ contains
     call push_sub('states.states_densities_init')
 
     ! allocate arrays for charge and current densities
-    SAFE_ALLOCATE(st%rho(1:gr%mesh%np_part, 1:st%d%nspin))
+    SAFE_ALLOCATE(st%rho(1:gr%fine%mesh%np_part, 1:st%d%nspin))
     st%rho  = M_ZERO
     if(st%d%cdft) then
       SAFE_ALLOCATE(st%current(1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:st%d%nspin))
@@ -904,7 +905,7 @@ contains
     end if
     st%nlcc = geo%nlcc
     if(st%nlcc) then
-      SAFE_ALLOCATE(st%rho_core(1:gr%mesh%np))
+      SAFE_ALLOCATE(st%rho_core(1:gr%fine%mesh%np))
       st%rho_core(:) = M_ZERO
     end if
 
@@ -1080,11 +1081,13 @@ contains
     type(states_t), intent(in)    :: st
     type(grid_t),   intent(in)    :: gr
     integer,        intent(in)    :: ik
-    type(batch_t),  intent(in)    :: psib
+    type(batch_t),  intent(inout) :: psib
     FLOAT,          intent(inout) :: rho(:,:)
     
-    integer :: ist, ist2, ip, ispin, np
+    integer :: ist, ist2, ip, ispin, np, idim
     CMPLX   :: c, psi1, psi2
+    FLOAT, pointer :: dpsi(:, :)
+    CMPLX, pointer :: zpsi(:, :)
     type(profile_t), save :: prof
 
     call push_sub('states.states_dens_accumulate_batch')
@@ -1093,22 +1096,43 @@ contains
     np = gr%fine%mesh%np
 
     ispin = states_dim_get_spin_index(st%d, ik)
-    
+
+    if(gr%have_fine_mesh) then
+      if(states_are_real(st)) then
+        SAFE_ALLOCATE(dpsi(1:gr%fine%mesh%np_part, 1:st%d%dim))
+      else
+        SAFE_ALLOCATE(zpsi(1:gr%fine%mesh%np_part, 1:st%d%dim))
+      end if
+    end if
+
     if(states_are_real(st)) then
       do ist = 1, psib%nst
         ist2 = psib%states(ist)%ist
+
+        if(gr%have_fine_mesh) then
+          call dmultigrid_coarse2fine(gr%fine%tt, gr%der, gr%mesh, psib%states(ist)%dpsi(:, 1), dpsi(:, 1))
+        else
+          dpsi => psib%states(ist)%dpsi
+        end if
+
         forall(ip = 1:np)
-          rho(ip, ispin) = rho(ip, ispin) + st%d%kweights(ik)*st%occ(ist2, ik)*&
-            psib%states(ist)%dpsi(ip, 1)**2
+          rho(ip, ispin) = rho(ip, ispin) + st%d%kweights(ik)*st%occ(ist2, ik)*dpsi(ip, 1)**2
         end forall
+
       end do
     else
       do ist = 1, psib%nst
         ist2 = psib%states(ist)%ist
+
+        if(gr%have_fine_mesh) then
+          call zmultigrid_coarse2fine(gr%fine%tt, gr%der, gr%mesh, psib%states(ist)%zpsi(:, 1), zpsi(:, 1))
+        else
+          zpsi => psib%states(ist)%zpsi
+        end if
+
         forall(ip = 1:np)
-          rho(ip, ispin) = rho(ip, ispin) + st%d%kweights(ik)*st%occ(ist2, ik)* ( &
-            real (psib%states(ist)%zpsi(ip, 1), REAL_PRECISION)**2 + &
-            aimag(psib%states(ist)%zpsi(ip, 1))**2)
+          rho(ip, ispin) = rho(ip, ispin) + st%d%kweights(ik)*st%occ(ist2, ik)*( &
+            real(zpsi(ip, 1), REAL_PRECISION)**2 + aimag(zpsi(ip, 1))**2)
         end forall
       end do
     end if
@@ -1116,11 +1140,20 @@ contains
     if(st%d%ispin == SPINORS) then ! in this case wave-functions are always complex
      do ist = 1, psib%nst
         ist2 = psib%states(ist)%ist
+
+        if(gr%have_fine_mesh) then
+          do idim = 1, st%d%dim
+            call zmultigrid_coarse2fine(gr%fine%tt, gr%der, gr%mesh, psib%states(ist)%zpsi(:, idim), zpsi(:, idim))
+          end do
+        else
+          zpsi => psib%states(ist)%zpsi
+        end if
+
         do ip = 1, np
           
-          psi1 = psib%states(ist)%zpsi(ip, 1)
-          psi2 = psib%states(ist)%zpsi(ip, 2)
-
+          psi1 = zpsi(ip, 1)
+          psi2 = zpsi(ip, 2)
+          
           rho(ip, 2) = rho(ip, 2) + &
             st%d%kweights(ik)*st%occ(ist2, ik)*(real(psi2, REAL_PRECISION)**2 + aimag(psi2)**2)
         
@@ -1132,6 +1165,14 @@ contains
       end do
     end if
     
+    if(gr%have_fine_mesh) then
+      if(states_are_real(st)) then
+        SAFE_DEALLOCATE_P(dpsi)
+      else
+        SAFE_DEALLOCATE_P(zpsi)
+      end if
+    end if
+
     call profiling_out(prof)
 
     call pop_sub()

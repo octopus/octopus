@@ -301,7 +301,7 @@ contains
     type(lcao_t) :: lcao
     type(profile_t), save :: prof
 
-    integer :: iter, is, idim, iatom, nspin, dim, err
+    integer :: iter, is, idim, iatom, nspin, dim, err, mixnp
     FLOAT :: evsum_out, evsum_in, forcetmp
     real(8) :: etime, itime
     FLOAT, allocatable :: rhoout(:,:,:), rhoin(:,:,:), rhonew(:,:,:)
@@ -332,15 +332,22 @@ contains
     dim = 1
     if (hm%d%cdft) dim = 1 + gr%mesh%sb%dim
 
-    SAFE_ALLOCATE(rhoout(1:gr%mesh%np, 1:dim, 1:nspin))
-    SAFE_ALLOCATE(rhoin (1:gr%mesh%np, 1:dim, 1:nspin))
-
-    rhoin(1:gr%mesh%np, 1, 1:nspin) = st%rho(1:gr%mesh%np, 1:nspin)
-    rhoout = M_ZERO
-    if (st%d%cdft) then
-      rhoin(1:gr%mesh%np, 2:dim, 1:nspin) = st%current(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:nspin)
+    if (scf%what2mix == MIXPOT) then
+      mixnp = gr%mesh%np
+    else
+      mixnp = gr%fine%mesh%np
     end if
 
+    SAFE_ALLOCATE(rhoout(1:mixnp, 1:dim, 1:nspin))
+    SAFE_ALLOCATE(rhoin (1:mixnp, 1:dim, 1:nspin))
+
+    rhoin(1:mixnp, 1, 1:nspin) = st%rho(1:mixnp, 1:nspin)
+    rhoout = M_ZERO
+
+    if (st%d%cdft) then
+      rhoin(1:mixnp, 2:dim, 1:nspin) = st%current(1:mixnp, 1:gr%mesh%sb%dim, 1:nspin)
+    end if
+    
     if (scf%what2mix == MIXPOT) then
       SAFE_ALLOCATE(vout(1:gr%mesh%np, 1:dim, 1:nspin))
       SAFE_ALLOCATE( vin(1:gr%mesh%np, 1:dim, 1:nspin))
@@ -350,8 +357,9 @@ contains
       vout = M_ZERO
       if (st%d%cdft) vin(1:gr%mesh%np, 2:dim, 1:nspin) = hm%axc(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:nspin)
     else
-      SAFE_ALLOCATE(rhonew(1:gr%mesh%np, 1:dim, 1:nspin))
+      SAFE_ALLOCATE(rhonew(1:gr%fine%mesh%np, 1:dim, 1:nspin))
     end if
+
     evsum_in = states_eigenvalues_sum(st)
 
     ! allocate and compute forces only if they are used as convergence criteria
@@ -456,7 +464,7 @@ contains
       case (MIXDENS)
         ! mix input and output densities and compute new potential
         call dmixing(scf%smix, iter, rhoin, rhoout, rhonew, dmf_dotp_aux)
-        st%rho(1:gr%mesh%np,1:nspin) = rhonew(1:gr%mesh%np, 1, 1:nspin)
+        st%rho(1:mixnp,1:nspin) = rhonew(1:mixnp, 1, 1:nspin)
         if (hm%d%cdft) st%current(1:gr%mesh%np,1:gr%mesh%sb%dim,1:nspin) = rhonew(1:gr%mesh%np, 2:dim, 1:nspin)
         call v_ks_calc(gr, ks, hm, st)
       case (MIXPOT)
@@ -689,7 +697,7 @@ contains
       ! ionic contributions.
 
       do ispin = 1, st%d%nspin
-        call dmf_multipoles(gr%mesh, st%rho(:, ispin), 1, e_dip(:, ispin))
+        call dmf_multipoles(gr%fine%mesh, st%rho(:, ispin), 1, e_dip(:, ispin))
       end do
 
       call geometry_dipole(geo, n_dip)
