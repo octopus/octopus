@@ -1057,46 +1057,21 @@ contains
     integer,        intent(in)    :: ik
     FLOAT,          intent(inout) :: rho(:,:)
     
-    integer :: ip, ispin, np
-    CMPLX   :: c
-    type(profile_t), save :: prof
-    
-#ifndef USE_OMP
+    type(batch_t) :: psib
+
     call push_sub('states.states_dens_accumulate')
-#endif
-    call profiling_in(prof, "CALC_DENSITY")
 
-    np = gr%fine%mesh%np
-
-    ispin = states_dim_get_spin_index(st%d, ik)
-    
-    if (st%wfs_type == M_REAL) then
-      do ip = 1, np
-        rho(ip, ispin) = rho(ip, ispin) + st%d%kweights(ik)*st%occ(ist, ik)*st%dpsi(ip, 1, ist, ik)**2
-      end do
+    if(states_are_real(st)) then
+      call batch_init(psib, st%d%dim, ist, ist, st%dpsi(:, :, ist:ist, ik))
     else
-      do ip = 1, np
-        rho(ip, ispin) = rho(ip, ispin) + st%d%kweights(ik)*st%occ(ist, ik)*&
-             (real(st%zpsi(ip, 1, ist, ik), REAL_PRECISION)**2 + aimag(st%zpsi(ip, 1, ist, ik))**2)
-      end do
+      call batch_init(psib, st%d%dim, ist, ist, st%zpsi(:, :, ist:ist, ik))
     end if
-    
-    if(st%d%ispin == SPINORS) then ! in this case wave-functions are always complex
-      do ip = 1, np
-        rho(ip, 2) = rho(ip, 2) + st%d%kweights(ik)*st%occ(ist, ik)*&
-             (real(st%zpsi(ip, 2, ist, ik), REAL_PRECISION)**2 + aimag(st%zpsi(ip, 2, ist, ik))**2)
-        
-        c = st%d%kweights(ik)*st%occ(ist, ik)*st%zpsi(ip, 1, ist, ik)*conjg(st%zpsi(ip, 2, ist, ik))
-        rho(ip, 3) = rho(ip, 3) + real(c, REAL_PRECISION)
-        rho(ip, 4) = rho(ip, 4) + aimag(c)
-      end do
-    end if
-    
-    call profiling_out(prof)
 
-#ifndef USE_OMP
+    call states_dens_accumulate_batch(st, gr, ik, psib, rho)
+
+    call batch_end(psib)
+
     call pop_sub()
-#endif
   end subroutine states_dens_accumulate
 
   ! ---------------------------------------------------
@@ -1109,19 +1084,17 @@ contains
     FLOAT,          intent(inout) :: rho(:,:)
     
     integer :: ist, ist2, ip, ispin, np
-    CMPLX   :: c
+    CMPLX   :: c, psi1, psi2
     type(profile_t), save :: prof
 
-#ifndef USE_OMP
     call push_sub('states.states_dens_accumulate_batch')
-#endif
     call profiling_in(prof, "CALC_DENSITY")
 
     np = gr%fine%mesh%np
 
     ispin = states_dim_get_spin_index(st%d, ik)
     
-    if (st%wfs_type == M_REAL) then
+    if(states_are_real(st)) then
       do ist = 1, psib%nst
         ist2 = psib%states(ist)%ist
         forall(ip = 1:np)
@@ -1144,23 +1117,24 @@ contains
      do ist = 1, psib%nst
         ist2 = psib%states(ist)%ist
         do ip = 1, np
-          rho(ip, 2) = rho(ip, 2) + st%d%kweights(ik)*st%occ(ist2, ik)* ( &
-            real (psib%states(ist)%zpsi(ip, 2), REAL_PRECISION)**2 + &
-            aimag(psib%states(ist)%zpsi(ip, 2)**2))
+          
+          psi1 = psib%states(ist)%zpsi(ip, 1)
+          psi2 = psib%states(ist)%zpsi(ip, 2)
+
+          rho(ip, 2) = rho(ip, 2) + &
+            st%d%kweights(ik)*st%occ(ist2, ik)*(real(psi2, REAL_PRECISION)**2 + aimag(psi2)**2)
         
-          c = st%d%kweights(ik)*st%occ(ist, ik)* &
-            psib%states(ist)%zpsi(ip, 1)*conjg(psib%states(ist)%zpsi(ip, 2))
+          c = st%d%kweights(ik)*st%occ(ist2, ik)*psi1*conjg(psi2)
           rho(ip, 3) = rho(ip, 3) + real(c, REAL_PRECISION)
           rho(ip, 4) = rho(ip, 4) + aimag(c)
+
         end do
       end do
     end if
     
     call profiling_out(prof)
 
-#ifndef USE_OMP
     call pop_sub()
-#endif
   end subroutine states_dens_accumulate_batch
 
   ! ---------------------------------------------------
@@ -1227,6 +1201,7 @@ contains
     integer :: ik, ist
 
     FLOAT, pointer :: dens(:, :)
+    type(batch_t)  :: psib
 
     call push_sub('states.states_calc_dens')
 
@@ -1236,12 +1211,20 @@ contains
       dens => st%rho
     end if
 
+    ASSERT(ubound(dens, dim = 1) == gr%fine%mesh%np .or. ubound(dens, dim = 1) == gr%fine%mesh%np_part)
+
     dens(1:gr%fine%mesh%np, 1:st%d%nspin) = M_ZERO
 
     do ik = st%d%kpt%start, st%d%kpt%end
-      do ist = st%st_start, st%st_end
-        call states_dens_accumulate(st, gr, ist, ik, dens)
-      end do
+      if(states_are_real(st)) then
+        call batch_init(psib, st%d%dim, st%st_start, st%st_end, st%dpsi(:, :, st%st_start:, ik))
+      else
+        call batch_init(psib, st%d%dim, st%st_start, st%st_end, st%zpsi(:, :, st%st_start:, ik))
+      end if
+
+      call states_dens_accumulate_batch(st, gr, ik, psib, dens)
+      
+      call batch_end(psib)
     end do
 
     call states_dens_reduce(st, gr, dens)
