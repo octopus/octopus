@@ -26,7 +26,7 @@
     character(len=*),       intent(in)    :: dir
     type(h_sys_output_t),   intent(in)    :: outp
 
-    integer :: ik, ist, idim, is, id, ierr
+    integer :: ik, ist, idim, is, id, ierr, ip
     character(len=80) :: fname, dirname
     FLOAT :: u
     FLOAT, allocatable :: dtmp(:), elf(:,:)
@@ -39,18 +39,18 @@
     if(iand(outp%what, output_density).ne.0) then
       do is = 1, st%d%nspin
         write(fname, '(a,i1)') 'density-', is
-        call doutput_function(outp%how, dir, fname, gr%mesh, gr%sb, &
+        call doutput_function(outp%how, dir, fname, gr%fine%mesh, gr%sb, &
           st%rho(:, is), u, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
       end do
     end if
 
     if(iand(outp%what, output_pol_density).ne.0) then
-      SAFE_ALLOCATE(dtmp(1:gr%mesh%np))
-      do idim = 1, gr%mesh%sb%dim
+      SAFE_ALLOCATE(dtmp(1:gr%fine%mesh%np))
+      do idim = 1, gr%sb%dim
         do is = 1, st%d%nspin
-          dtmp(1:gr%mesh%np)=st%rho(1:gr%mesh%np,is)*gr%mesh%x(1:gr%mesh%np,idim)
+          forall (ip = 1:gr%fine%mesh%np) dtmp(ip) = st%rho(ip, is)*gr%fine%mesh%x(ip, idim)
           write(fname, '(a,i1,a,i1)') 'dipole_density-', is, '-',idim
-          call doutput_function(outp%how, dir, fname, gr%mesh, gr%sb, &
+          call doutput_function(outp%how, dir, fname, gr%fine%mesh, gr%sb, &
             dtmp(:), u, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
         end do
       end do

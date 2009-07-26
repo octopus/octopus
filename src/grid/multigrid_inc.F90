@@ -21,11 +21,11 @@
 
   ! ---------------------------------------------------------
   subroutine X(multigrid_coarse2fine)(tt, coarse_der, coarse_mesh, f_coarse, f_fine)
-    type(transfer_table_t), intent(in)    :: tt
-    type(derivatives_t),     intent(in)   :: coarse_der
-    type(mesh_t),           intent(in)    :: coarse_mesh
-    R_TYPE,                 intent(inout) :: f_coarse(:)
-    R_TYPE,                 intent(out)   :: f_fine(:)
+    type(transfer_table_t),  intent(in)    :: tt
+    type(derivatives_t),     intent(in)    :: coarse_der
+    type(mesh_t),            intent(in)    :: coarse_mesh
+    R_TYPE,                  intent(inout) :: f_coarse(:)
+    R_TYPE,                  intent(out)   :: f_fine(:)
 
     FLOAT, pointer :: vol_pp(:)
 
@@ -33,7 +33,7 @@
     integer :: jj, j(8)
     FLOAT   :: vol_total
 
-    call push_sub('multigrid.multigrid_coarse2fine')
+    call push_sub('multigrid.Xmultigrid_coarse2fine')
 
     call profiling_in(interp_prof, "MG_INTERPOLATION")
 

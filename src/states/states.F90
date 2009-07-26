@@ -1093,15 +1093,13 @@ contains
     call push_sub('states.states_dens_accumulate_batch')
     call profiling_in(prof, "CALC_DENSITY")
 
-    np = gr%fine%mesh%np
-
     ispin = states_dim_get_spin_index(st%d, ik)
 
     if(gr%have_fine_mesh) then
       if(states_are_real(st)) then
-        SAFE_ALLOCATE(dpsi(1:gr%fine%mesh%np_part, 1:st%d%dim))
+        SAFE_ALLOCATE(dpsi(1:gr%fine%mesh%np, 1:st%d%dim))
       else
-        SAFE_ALLOCATE(zpsi(1:gr%fine%mesh%np_part, 1:st%d%dim))
+        SAFE_ALLOCATE(zpsi(1:gr%fine%mesh%np, 1:st%d%dim))
       end if
     end if
 
@@ -1115,7 +1113,7 @@ contains
           dpsi => psib%states(ist)%dpsi
         end if
 
-        forall(ip = 1:np)
+        forall(ip = 1:gr%fine%mesh%np)
           rho(ip, ispin) = rho(ip, ispin) + st%d%kweights(ik)*st%occ(ist2, ik)*dpsi(ip, 1)**2
         end forall
 
@@ -1130,7 +1128,7 @@ contains
           zpsi => psib%states(ist)%zpsi
         end if
 
-        forall(ip = 1:np)
+        forall(ip = 1:gr%fine%mesh%np)
           rho(ip, ispin) = rho(ip, ispin) + st%d%kweights(ik)*st%occ(ist2, ik)*( &
             real(zpsi(ip, 1), REAL_PRECISION)**2 + aimag(zpsi(ip, 1))**2)
         end forall
@@ -1149,7 +1147,7 @@ contains
           zpsi => psib%states(ist)%zpsi
         end if
 
-        do ip = 1, np
+        do ip = 1, gr%fine%mesh%np
           
           psi1 = zpsi(ip, 1)
           psi2 = zpsi(ip, 2)
