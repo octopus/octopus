@@ -67,6 +67,7 @@ module math_m
     infinity_norm,              &
     matrix_symmetric_average,   &
     matrix_symmetrize,          &
+    matrix_sort,                &
     interpolation_coefficients, &
     interpolate,                &
     even,                       &
@@ -159,6 +160,10 @@ module math_m
 
   interface matrix_symmetrize
     module procedure dmatrix_symmetrize, zmatrix_symmetrize
+  end interface
+
+  interface matrix_sort
+    module procedure dmatrix_sort, zmatrix_sort
   end interface
 
 contains

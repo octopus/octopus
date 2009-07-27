@@ -312,7 +312,7 @@ subroutine zeigensolve_nonh(n, a, e, err_code, side)
   SAFE_DEALLOCATE_A(vl)
 
   if(info.ne.0) then
-    write(message(1),'(a,i5)') 'In zgeneigensolve_nonh, LAPACK Xgeev returned error message ', info
+    write(message(1),'(a,i5)') 'In zeigensolve_nonh, LAPACK zgeev returned error message ', info
     call write_fatal(1)
   end if
   if(present(err_code)) then
@@ -322,7 +322,7 @@ end subroutine zeigensolve_nonh
 
 
 ! ---------------------------------------------------------
-! Computes all the eigenvalues and the right (left) eigenvectors of a complex
+! Computes all the eigenvalues and the right (left) eigenvectors of a real
 ! generalized (non hermitian) eigenproblem, of the form  A*x=(lambda)*x
 subroutine deigensolve_nonh(n, a, e, err_code, side)
   integer,           intent(in)      :: n
@@ -332,8 +332,7 @@ subroutine deigensolve_nonh(n, a, e, err_code, side)
   character(1), optional, intent(in) :: side ! which eigenvectors ('L' or 'R')
 
   integer            :: info, lwork
-  FLOAT, allocatable :: rwork(:)
-  FLOAT, allocatable :: work(:), vl(:, :) ,vr(:, :)
+  FLOAT, allocatable :: rwork(:), work(:), vl(:, :) ,vr(:, :)
   character(1)       :: side_
 
   if (present(side)) then
@@ -348,26 +347,25 @@ subroutine deigensolve_nonh(n, a, e, err_code, side)
   SAFE_ALLOCATE(vr(1, 1))
   SAFE_ALLOCATE(rwork(1))
   call lapack_geev('N', 'V', n, a(1, 1), n, e(1), vl(1, 1), 1, vr(1, 1), n, work(1), lwork, rwork(1), info)
-    
+
   lwork = int(real(work(1)))
   SAFE_DEALLOCATE_A(work)
   SAFE_DEALLOCATE_A(vl)
   SAFE_DEALLOCATE_A(vr)
   SAFE_DEALLOCATE_A(rwork)
-  
 
   SAFE_ALLOCATE(work(1:lwork))
   SAFE_ALLOCATE(rwork(1:max(1, 2*n)))
   if (side_.eq.'L'.or.side_.eq.'l') then
-    SAFE_ALLOCATE(vl(1:n, 1:n))
-    SAFE_ALLOCATE(vr(1, 1))
-    call lapack_geev('V', 'N', n, a(1, 1), n, e(1), vl(1, 1), n, vr(1,1), 1, work(1), lwork, rwork(1), info)
-    a(:, :) = vl(:, :)
+      SAFE_ALLOCATE(vl(1:n, 1:n))
+      SAFE_ALLOCATE(vr(1, 1))
+      call lapack_geev('V', 'N', n, a(1, 1), n, e(1), vl(1, 1), n, vr(1,1), 1, work(1), lwork, rwork(1), info)
+      a(:, :) = vl(:, :)
   else
-    SAFE_ALLOCATE(vl(1, 1))
-    SAFE_ALLOCATE(vr(1:n, 1:n))
-    call lapack_geev('N', 'V', n, a(1, 1), n, e(1), vl(1, 1), 1, vr(1,1), n, work(1), lwork, rwork(1), info)
-    a(:, :) = vr(:, :)
+      SAFE_ALLOCATE(vl(1, 1))
+      SAFE_ALLOCATE(vr(1:n, 1:n))
+      call lapack_geev('N', 'V', n, a(1, 1), n, e(1), vl(1, 1), 1, vr(1,1), n, work(1), lwork, rwork(1), info)
+      a(:, :) = vr(:, :)
   end if
   SAFE_DEALLOCATE_A(work)
   SAFE_DEALLOCATE_A(rwork)
@@ -375,7 +373,7 @@ subroutine deigensolve_nonh(n, a, e, err_code, side)
   SAFE_DEALLOCATE_A(vl)
 
   if(info.ne.0) then
-    write(message(1),'(a,i5)') 'In zgeneigensolve_nonh, LAPACK Xgeev returned error message ', info
+    write(message(1),'(a,i5)') 'In deigensolve_nonh, LAPACK dgeev returned error message ', info
     call write_fatal(1)
   end if
   if(present(err_code)) then

@@ -53,6 +53,8 @@ module ob_interface_m
   type interface_t
     integer          :: extent
     integer          :: np      ! number of interface points
+    integer          :: np_uc   ! number of unit cell points
+    integer          :: nh      ! nh = np_uc / np number of interfaces in a unit cell
     integer, pointer :: index(:)       ! (np)
     integer          :: index_range(2)
     logical          :: offdiag_invertible

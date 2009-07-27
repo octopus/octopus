@@ -102,10 +102,12 @@ contains
         call ztrmv('L', 'N', 'N', np, offdiag, np, src, 1)
       end if
       tmp = -M_zI*dt*u(0)*f0
+!      call lalg_gemv(np, np, tmp*M_zI*M_HALF*dt, mem, psi0(1:np, INNER), tmp, src)
       call zsymv('U', np, tmp*M_zI*M_HALF*dt, mem, np, psi0(1:np, INNER), 1, tmp,  src, 1)
     else
       tmp   = factor*u(m)*u(m-1)
       alpha = M_HALF*dt**2*f0*lambda/u(m)
+!      call lalg_gemv(np, np, alpha, mem, psi0(1:np, INNER), tmp, src)
       call zsymv('U', np, alpha, mem, np, psi0(1:np, INNER), 1, tmp, src, 1)
     end if
 

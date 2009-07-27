@@ -465,6 +465,43 @@ subroutine X(matrix_symmetrize)(matrix, np)
 end subroutine X(matrix_symmetrize)
 
 
+! ---------------------------------------------------------
+! sort the eigenvectors accordingly to eigenvalues
+! with increasing absolute value
+subroutine X(matrix_sort)(np, matrix, eigenvals)
+  integer, intent(in)    :: np
+  R_TYPE,  intent(inout) :: matrix(1:np, 1:np)
+  R_TYPE,  intent(inout) :: eigenvals(1:np)
+
+  integer              :: i
+  R_TYPE, allocatable  :: unsorted_matrix(:, :), unsorted_eigenvals(:)
+  FLOAT, allocatable   :: abs_e(:)
+  integer, allocatable :: index(:)
+
+  call push_sub('math_inc.X(matrix_sort)')
+
+  SAFE_ALLOCATE( abs_e(1:np) )
+  SAFE_ALLOCATE( index(1:np) )
+  SAFE_ALLOCATE( unsorted_matrix(1:np, 1:np) )
+  SAFE_ALLOCATE( unsorted_eigenvals(1:np) )
+
+  unsorted_matrix(:, :) = matrix(:, :)
+  unsorted_eigenvals(:) = eigenvals(:)
+  abs_e(:) = abs(unsorted_eigenvals(:))
+  call sort(abs_e, index)
+  do i=1, np
+    eigenvals(i) = unsorted_eigenvals(index(i))
+    matrix(:, i) = unsorted_matrix(:, index(i))
+  end do
+  SAFE_DEALLOCATE_A(abs_e)
+  SAFE_DEALLOCATE_A(index)
+  SAFE_DEALLOCATE_A(unsorted_matrix)
+  SAFE_DEALLOCATE_A(unsorted_eigenvals)
+
+  call pop_sub()
+end subroutine X(matrix_sort)
+
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8
