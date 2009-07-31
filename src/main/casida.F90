@@ -179,7 +179,7 @@ contains
     ! Initialize structure
     call casida_type_init(cas, sys%gr%sb%dim, nk, sys%mc)
 
-    if(fromScratch) call loct_rm(trim(tmpdir)//CASIDA_DIR) ! restart
+    if(fromScratch) call loct_rm(trim(tmpdir)//'casida-restart') ! restart
 
     ! First, print the differences between KS eigenvalues (first approximation to the
     ! excitation energies, or rather, to the DOS.
@@ -387,7 +387,8 @@ contains
       if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, cas%n_pairs)
 
       ! file to save matrix elements
-      iunit = io_open(trim(tmpdir)//CASIDA_DIR, action='write', position='append', is_tmp=.true.)
+      iunit = io_open(trim(tmpdir)//'casida-restart', action='write', &
+        position='append', is_tmp=.true.)
 
       do ia = 1, cas%n_pairs
         cas%w(ia) = st%eigenval(cas%pair(ia)%a, cas%pair(ia)%sigma) - &
@@ -496,7 +497,8 @@ contains
         if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
 
         ! complete the matrix and output the restart file
-        iunit = io_open(trim(tmpdir)//CASIDA_DIR, action='write', position='append', is_tmp=.true.)
+        iunit = io_open(trim(tmpdir)//'casida-restart', action='write', &
+          position='append', is_tmp=.true.)
         do ia = 1, cas%n_pairs
           p => cas%pair(ia)
           temp = st%eigenval(p%a, p%sigma) - st%eigenval(p%i, p%sigma)
@@ -639,7 +641,8 @@ contains
 
       call push_sub('casida.load_saved')
 
-      iunit = io_open(trim(tmpdir)//CASIDA_DIR, action='read', status='old', die=.false., is_tmp=.true.)
+      iunit = io_open(trim(tmpdir)//'casida-restart', action='read', &
+        status='old', die=.false., is_tmp=.true.)
       if( iunit <= 0) then
         call pop_sub(); return
       end if
