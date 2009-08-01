@@ -363,34 +363,36 @@ subroutine X(oct_exchange_operator_all) (hm, gr, psi, hpsi)
   SAFE_ALLOCATE(rho(1:gr%mesh%np))
   SAFE_ALLOCATE(pot(1:gr%mesh%np))
 
-  do ik = psi%d%kpt%start, psi%d%kpt%end
-    do ist = psi%st_start, psi%st_end
+  select case(hm%d%ispin)
+  case(UNPOLARIZED)
 
-      select case(hm%d%ispin)
-      case(UNPOLARIZED)
-        do j = 1, hm%oct_st%nst
-          pot = M_ZERO
-          forall (k = 1:gr%mesh%np)
-            rho(k) = hm%oct_st%occ(j, 1) * R_AIMAG(R_CONJ(hm%oct_st%X(psi)(k, 1, j, ik)) * psi%X(psi)(k, 1, j, ik))
-          end forall
-          call dpoisson_solve(gr, pot, rho)
-          forall(k = 1:gr%mesh%np)
-            hpsi%X(psi)(k, 1, ist, ik) = hpsi%X(psi)(k, 1, ist, ik) + M_TWO * M_zI * &
-              hm%oct_st%X(psi)(k, 1, ist, ik) * (pot(k) + hm%oct_fxc(k, 1, 1) * rho(k))
-          end forall
-        end do 
+    do ik = psi%d%kpt%start, psi%d%kpt%end
 
-      case(SPIN_POLARIZED)
-        stop 'CODE MISSING.'
-
-      case(SPINORS)
-        stop 'CODE MISSING.'
-
-      end select
+      pot = M_ZERO
+      rho = M_ZERO
+      do j = 1, hm%oct_st%nst
+        forall (k = 1:gr%mesh%np)
+          rho(k) = rho(k) + hm%oct_st%occ(j, 1) * &
+            R_AIMAG(R_CONJ(hm%oct_st%X(psi)(k, 1, j, ik)) * psi%X(psi)(k, 1, j, ik))
+        end forall
+      end do 
+      call dpoisson_solve(gr, pot, rho)
+      do ist = psi%st_start, psi%st_end
+        forall(k = 1:gr%mesh%np)
+          hpsi%X(psi)(k, 1, ist, ik) = hpsi%X(psi)(k, 1, ist, ik) + M_TWO * M_zI * &
+            hm%oct_st%X(psi)(k, 1, ist, ik) * (pot(k) + hm%oct_fxc(k, 1, 1) * rho(k))
+        end forall
+      end do
 
     end do
-  end do
 
+  case(SPIN_POLARIZED)
+    stop 'CODE MISSING.'
+
+  case(SPINORS)
+    stop 'CODE MISSING.'
+
+  end select
 
   SAFE_DEALLOCATE_A(rho)
   SAFE_DEALLOCATE_A(pot)
