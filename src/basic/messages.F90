@@ -397,6 +397,7 @@ contains
     character(len=*), intent(in) :: var
     integer,          intent(in) :: value
     character(len=10) :: intstring
+    if(.not.mpi_grp_is_root(mpi_world)) return
     write(intstring,'(i10)') value
     write(iunit,'(a)') 'Input: ['//trim(var)//' = '//trim(adjustl(intstring))//']'
   end subroutine messages_print_var_valuei
@@ -409,6 +410,7 @@ contains
     character(len=*), intent(in) :: var
     FLOAT,            intent(in) :: value
     character(len=10) :: floatstring
+    if(.not.mpi_grp_is_root(mpi_world)) return
     write(floatstring,'(g10.4)') value
     write(iunit,'(a)') 'Input: ['//trim(var)//' = '//trim(adjustl(floatstring))//']'
   end subroutine messages_print_var_valuer
@@ -421,6 +423,7 @@ contains
     character(len=*), intent(in) :: var
     logical,          intent(in) :: value
     character(len=1) :: lstring
+    if(.not.mpi_grp_is_root(mpi_world)) return
     write(lstring,'(l1)') value
     write(iunit,'(a)') 'Input: ['//trim(var)//' = '//lstring//']'
   end subroutine messages_print_var_valuel
