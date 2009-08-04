@@ -134,13 +134,15 @@
 
     np = grid_p%mesh%np
     forall(ist = 1:nst_op, idim = 1:dim_op)
-        st_op%zpsi(1:np, idim, ist, ik_op)= x((ist-1)*np*dim_op + (idim-1)*np+1:idim*np)
+      st_op%zpsi(1:np, idim, ist, ik_op)= x((ist-1)*np*dim_op + (idim-1)*np+1: &
+                                            (ist-1)*np*dim_op + (idim-1)*np+np)
     end forall
 
     call exponential_apply_all(tr_p%te, grid_p, hm_p, st_op, -dt_op/M_TWO, t_op)
 
     forall(ist = 1:nst_op, idim = 1:dim_op)
-        y((ist-1)*np*dim_op + (idim-1)*np+1:idim*np) = st_op%zpsi(1:np, idim, ist, ik_op)
+      y((ist-1)*np*dim_op + (idim-1)*np+1:(ist-1)*np*dim_op + (idim-1)*np+np) = &
+        st_op%zpsi(1:np, idim, ist, ik_op)
     end forall
 
   end subroutine td_rti_qmr2_op
