@@ -140,6 +140,8 @@ contains
     if(.not.varinfo_valid_option('RestartFileFormat', parsed)) call input_error('RestartFileFormat')
 
     select case(parsed) 
+    case(RESTART_NONE)
+      restart_format = 0
     case(RESTART_NETCDF)
       restart_format = io_function_fill_how("NETCDF")
     case(RESTART_BINARY)
