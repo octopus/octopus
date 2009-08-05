@@ -90,4 +90,41 @@
   </command>
 </compile>
 
+<!-- compile GSL: ./configure - -prefix=$HOME/gsl - -disable-shared -->
+<compile cname="IBM-Cell-MariCel">
+  <src directory="./octopus" files="." />
+
+  <command>
+    autoreconf -i;
+
+    export OMPI_FC=/opt/ibmcmp/xlf/cbe/11.1/bin/ppuxlf;
+    export OMPI_CC=/opt/ibmcmp/xlc/cbe/10.1/bin/ppuxlc;
+
+    export OMPI_FCFLAGS="";
+    export OMPI_CFLAGS="";
+    export OMPI_LDFLAGS="-L/opt/openmpi/ppc64/lib/";
+
+    export CC="mpicc";
+    export FC="mpif90";
+
+    export CFLAGS="-q64 -O3 -qarch=auto -qcache=auto";
+    export FCFLAGS="$CFLAGS -qextname -qxlf90=autodealloc";
+    export LDFLAGS="-lspe2";
+
+    export LIBS_BLAS="-L/gpfs/data/home/Applications/afarres/soft/lib/ -lblas_xlf";
+    export LIBS_LAPACK="-llapack_xlf"
+    export LIBS_FFT="-L/gpfs/data/home/Applications/afarres/soft/lib/ -lfftw3_xlf"
+
+    ./configure --prefix=$outdir \
+      --with-gsl-prefix=$HOME/gsl \
+      --disable-gdlib --disable-f90-forall \
+      --enable-mpi;
+    make;
+    make install;
+    make clean;
+
+    tar -C $outdir -cf $execname bin lib include share;
+  </command>
+</compile>
+
 </compilation>
