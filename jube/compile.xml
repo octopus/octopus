@@ -97,8 +97,8 @@
   <command>
     autoreconf -i;
 
-    export OMPI_FC=/opt/ibmcmp/xlf/cbe/11.1/bin/ppuxlf;
-    export OMPI_CC=/opt/ibmcmp/xlc/cbe/10.1/bin/ppuxlc;
+    export OMPI_FC=/opt/ibmcmp/xlf/cbe/11.1/bin/ppuxlf_r;
+    export OMPI_CC=/opt/ibmcmp/xlc/cbe/10.1/bin/ppuxlc_r;
 
     export OMPI_FCFLAGS="";
     export OMPI_CFLAGS="";
