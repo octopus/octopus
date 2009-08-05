@@ -21,6 +21,7 @@ bench: code
 	  jugene* ) platform='IBM-BGP-Jugene'   ;; \
 	  louhi*  ) platform='Cray-XT4-Louhi'   ;; \
 	  p6012*  ) platform='IBM-SP6-Huygens'  ;; \
+	  s1c1b*  ) platform='IBM-Cell-MariCel' ;; \
 	esac; \
 	if [ -z "$$platform" ]; then \
 	  echo "Platform '`hostname`' not found"; exit 1; \

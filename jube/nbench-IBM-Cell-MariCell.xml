@@ -1,0 +1,34 @@
+<!--
+    PRACE Benchmark Suite
+
+    JUBE benchmark configuration schema for: MariCell
+
+    Contact: fnog@teor.fis.uc.pt
+
+--> 
+<bench name="octopus" platform="IBM-Cell-MariCell" >
+<!-- ********************************************************** -->
+
+<benchmark name="Cell-c240" active="1">
+    <compile     cname="$platform" version="reuse" />
+    <tasks       threadspertask="1" taskspernode="2" nodes="4,8,16,32" />
+    <prepare     cname="c240" />
+    <execution   cname="$platform" iteration="1" />
+    <verify      cname="c240" />
+    <analyse     cname="standard" />
+</benchmark>
+
+<!--
+<benchmark name="Cell-clorophyll" active="1">
+    <compile     cname="$platform" version="reuse" />
+    <tasks       threadspertask="1" taskspernode="2" nodes="32,64,128" />
+    <prepare     cname="clorophyll" />
+    <execution   cname="$platform" iteration="1" />
+    <verify      cname="clorophyll" />
+    <analyse     cname="standard" />
+</benchmark>
+-->
+
+<!-- ********************************************************** -->
+</bench>
+

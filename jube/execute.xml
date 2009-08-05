@@ -99,4 +99,29 @@
   </command>
 </execute>
 
+<execute cname="IBM-Cell-MariCell">
+  <input files="../../platform/IBM-Cell-MariCell/mc_submit.job.in" />
+
+  <substitute infile="ibm_llsubmit.job.in.2" outfile="ibm_llsubmit.job">
+   <sub from="#OUTDIR#" to="$outdir" />
+   <sub from="#BENCHNAME#" to="octopus_$nodes" />
+   <sub from="#STDOUTLOGFILE#" to="$stdoutlogfile" />
+   <sub from="#STDERRLOGFILE#" to="$stderrlogfile" />
+   <sub from="#TIME_LIMIT#" to="02:30:00" />
+   <sub from="#STARTER#" to="mpirun" />
+   <sub from="#ARGS_STARTER#" to="-np $tasks -x OCTOPUS_SHARE" />
+   <sub from="#EXECUTABLE#" to="./bin/octopus_mpi; cat *profiling*/time.000000" />
+   <sub from="#ARGS_EXECUTABLE#" to=" "/>
+   <sub from="#ENV#" to="$env" />
+   <sub from="#POSTPROCESS#" to="cat *profiling*/time.000000" />
+   <sub from="#PREPROCESS#" to=" " />
+  </substitute>
+  <environment>
+    <env var="OCTOPUS_SHARE" value="./share/octopus" />
+  </environment>
+  <command>
+     mnsubmit mc_submit.job
+  </command>
+</execute>
+
 </execution>
