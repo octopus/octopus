@@ -19,5 +19,5 @@
 ##
 ## $Id$
 
-SUBDIRS = metis-4.0 qshep poisson_isf libnbc newuoa spglib zoltan
+SUBDIRS = metis-4.0 qshep poisson_isf libnbc newuoa spglib zoltan slatec
 
