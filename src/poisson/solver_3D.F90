@@ -26,7 +26,7 @@ subroutine poisson3D_init(gr, geo)
 
   call push_sub('poisson3D.poisson3D_init')
 
-  ASSERT(poisson_solver >= FFT_SPH .and. poisson_solver <= ISF)
+  ASSERT(poisson_solver >= FFT_SPH .and. poisson_solver <= SETE)
 
   !%Variable PoissonSolverMaxMultipole
   !%Type integer
@@ -124,6 +124,9 @@ subroutine poisson3D_init(gr, geo)
     write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
     call write_info(1)
     call poisson_corrections_init(corrector, maxl, gr%mesh)
+  !Mike: We need to change this eventually
+  case(SETE)
+    call poisson_isf_init(gr%mesh)
      
   end select
 

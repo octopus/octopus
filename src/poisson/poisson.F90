@@ -42,7 +42,9 @@ module poisson_m
   use poisson_multigrid_m
   use mesh_function_m
   use par_vec_m
-
+  use varinfo_m !Roberto
+  use xyz_file_m !Roberto      
+!  use POIS_data_l !SEC Team
   implicit none
 
   private
@@ -52,7 +54,11 @@ module poisson_m
     zpoisson_solve,     &
     poisson_solver_is_iterative, &
     poisson_end,        &
-    poisson_test
+    poisson_test,       &       
+    geometry_init,      &
+    geometry_init_xyz,     &
+    geometry_init_species, &
+    geometry_t
 
   integer, parameter :: &
     DIRECT_SUM_1D = -1, &
@@ -60,7 +66,8 @@ module poisson_m
     CG            =  5, &
     CG_CORRECTED  =  6, &
     MULTIGRID     =  7, &
-    ISF           =  8
+    ISF           =  8, &
+    SETE          =  9
 
   integer :: poisson_solver = -99
   FLOAT   :: poisson_soft_coulomb_param = M_ONE
@@ -82,7 +89,7 @@ contains
   subroutine poisson_init(gr, geo)
     type(grid_t), intent(inout) :: gr
     type(geometry_t), intent(in) :: geo
-
+    integer i
     if(poisson_solver.ne.-99) return ! already initialized
 
     call push_sub('poisson.poisson_init')
@@ -217,7 +224,10 @@ contains
 
     !-----------------------------------------------------------------
     subroutine init_3D()
-      integer :: default_solver
+      integer :: default_solver 
+!      integer :: ind(3), i, j, poisson_solver
+!      REAL*8  :: ind1(3)
+
 
       call push_sub('poisson.init_3D')
 
@@ -231,7 +241,7 @@ contains
       if (gr%sb%periodic_dim > 0) default_solver = gr%sb%periodic_dim
       
       call loct_parse_int(datasets_check('PoissonSolver'), default_solver, poisson_solver)
-      if(poisson_solver < FFT_SPH .or. poisson_solver > ISF ) then
+      if(poisson_solver < FFT_SPH .or. poisson_solver > SETE ) then
         call input_error('PoissonSolver')
       end if
 
@@ -258,7 +268,18 @@ contains
         message(4) = 'solver are providing, in your case, the same results.'
         call write_warning(4)
       end if
-
+!      if poisson_solver.eq.9 then
+!       do i = 1, geo%natoms !Roberto
+!         do j=1, 3 !Roberto 
+!           ind1(j)=geo%atom(i)%x(j)/gr%mesh%sb%h(j)
+!           ind(j)=nint(ind1(j))
+!         enddo !Roberto
+!	 m1=index_from_coords(gr%mesh%idx, gr%mesh%sb%dim,ind(j))
+!!         m1=gr%m%Lxyz_inv(ind(1),ind(2),ind(3)) 
+!         rho_nuc(m1) = -geo%atom(i)%spec%z_val/&
+!                        gr%mesh%sb%h(1)*gr%mesh%sb%h(2)*gr%mesh%sb%h(3)
+  !       dmf_interpolate_points(gr%mesh,rho_nuc(m1),m2)) !or something similar
+!        enddo
       call messages_print_var_option(stdout, "PoissonSolver", poisson_solver)
       call poisson3D_init(gr, geo)
 
@@ -288,6 +309,10 @@ contains
       call poisson_multigrid_end(mg)
     case(ISF)
       call poisson_isf_end()
+    case(SETE)
+      write(*,*) "Calling poisson end"
+      call cbsurf_end()
+
 
     end select
     poisson_solver = -99
@@ -303,13 +328,14 @@ contains
   !-----------------------------------------------------------------
   subroutine zpoisson_solve(gr, pot, rho, all_nodes)
     type(grid_t),         intent(inout) :: gr
-    CMPLX,                intent(inout) :: pot(:)  ! pot(m%np)
-    CMPLX,                intent(in)    :: rho(:)  ! rho(m%np)
+    CMPLX,                intent(inout) :: pot(:)  ! pot(mesh%np)
+    CMPLX,                intent(in)    :: rho(:)  ! rho(mesh%np)
     logical, optional,    intent(in)    :: all_nodes
 
     FLOAT, allocatable :: aux1(:), aux2(:)
 
     logical :: all_nodes_value
+    integer :: ifinal
 
     call push_sub('poisson.zpoisson_solve')
 
@@ -344,18 +370,31 @@ contains
   !-----------------------------------------------------------------
   subroutine dpoisson_solve(gr, pot, rho, all_nodes)
     type(grid_t),         intent(inout) :: gr
-    FLOAT,                intent(inout) :: pot(:)    ! pot(m%np)
-    FLOAT,                intent(in)    :: rho(:)    ! rho(m%np)
+    INTEGER counter !                            ::SEC Team 
+    INTEGER nx !                                 ::SEC Team
+    INTEGER ny !                                 ::SEC Team
+    INTEGER nz !                                 ::SEC Team
+!    integer ifinal
+    REAL*8 :: xl,yl,zl,dx,dy,dz,sum0,sum1,eion_ion,lx,ly,lz ! ::SEC Team
+
+    real*8, dimension(:,:,:), allocatable :: vh0,rh0
+    integer :: h,i,j,k,icase=1,icalc,i1,j1,k1,m1,m2,ind(3),no
+    real*8 ind1(3), p_nuc_charge, p_val
+    FLOAT,                intent(inout) :: pot(:)    ! pot(mesh%np)
+    FLOAT,                intent(in)    :: rho(:)    ! rho(mesh%np)
     logical, optional,    intent(in)    :: all_nodes ! Is the poisson solver allowed to utilise
                                                      ! all nodes or only the domain nodes for
                                                      ! its calculations? (Defaults to .true.)
 
     FLOAT, allocatable :: rho_corrected(:), vh_correction(:)
-    FLOAT, allocatable :: rhop(:), potp(:)
+    FLOAT, allocatable :: rhop(:), potp(:), x0(:), y0(:), z0(:), &
+         rhop2(:),rhop_temp(:),rhop_temp2(:), rho_nuc(:)
 
     logical               :: all_nodes_value
     type(profile_t), save :: prof
     
+    integer :: nuc_dens_method, write_distr;  !Roberto
+
     call profiling_in(prof, 'POISSON_SOLVE')
     call push_sub('poisson.dpoisson_solve')
 
@@ -434,8 +473,131 @@ contains
       SAFE_DEALLOCATE_A(vh_correction)
 
     case(ISF)
-      call poisson_isf_solve(gr%mesh, pot, rho, all_nodes_value)
+            call poisson_isf_solve(gr%mesh, pot, rho, all_nodes_value)
+    case(SETE)
+	    !Strategy to get energies. On isete_final=1, we will use rho
+	    !                          On isete_final=2, we will use rho 
+	    !since we are calling nuclear_rho as rho from scf/scf.F90
+	    !                          Everything else, we use       rhop
+ 	write(*,*) "Entering SETE"
+       dx=gr%mesh%sb%h(1); dy=gr%mesh%sb%h(2); dz=gr%mesh%sb%h(3)
+       !Probably do not need to allocate so much: erased rhop2
+       i1=size(rho); !allocate(rhop_temp(i1)); allocate(rhop(i1)); allocate(rho_nuc(i1));
+!	write(*,*) "Size of allocated variables, ", i1
+!       rhop=0.0;rhop_temp=0.0;rho_nuc=0.0
+       nuc_dens_method=2; write_distr=1;
+!       do i = 1, geo%natoms !Roberto
+!         if (nuc_dens_method.eq.1) then
+!	  do j=1, 3 !Roberto 
+!!           ind1(j)=geo%atom(i)%x(j)/gr%mesh%sb%h(j)
+ !          ind(j)=nint(ind1(j))
+ !!         enddo !Roberto
+  !        m1=gr%mesh%Lxyz_inv(ind(1),ind(2),ind(3)) 
+  !        rhop(m1) = -geo%atom(i)%spec%z_val/(dx*dy*dz)
+
+!         else
+
+!	  call species_get_density(geo%atom(i)%spec, geo%atom(i)%x, gr, geo, rhop_temp)
+
+!	  rho_nuc=rho_nuc+rhop_temp
+
+!	 endif
+!       enddo
+!       if (ifinal_sete.eq.1) then
+!        nz= 2*((gr%mesh%sb%lsize(3)/gr%mesh%sb%h(3)))+1
+!       do i=-int(nz/2),int(nz/2)
+!         m2=gr%mesh%Lxyz_inv(i,0,0)
+!         write(58,*) gr%mesh%Lxyz(m2,1), rhop(m2)
+!         write(59,*) gr%mesh%Lxyz(m2,1), rho(m2)
+!        enddo
+!	 call CAP
+!	 call EGATE
+!       endif
+
+!       rhop(:)=rho(:)+rho_nuc(:)
+
+      ! if (ifinal_sete.eq.1) then
+        nz= 2*((gr%mesh%sb%lsize(3)/gr%mesh%sb%h(3)))+1
+!	write(*,*) "write nz", nz
+!	write(60,*) "#Point, rho, rhop, ,nuclear rho, pot"
+!        do i=-int(nz/2),int(nz/2)
+!	 m2=index_from_coords(mesh%idx, mesh%sb%dim, ) NEED TO CHANGE THIS CALL
+!         m2=gr%mesh%Lxyz_inv(i,0,0)
+!         write(60,*) gr%mesh%Lxyz(m2,1), rho(m2),pot(m2)!,rhop(m2),rho_nuc(m2)
+!        enddo
+      ! endif
+
+! What this is doing is solving Poisson for rhop(e+p) and the given hartree pot.
+
+      nx= 2*((gr%mesh%sb%lsize(1)/gr%mesh%sb%h(1)))+1
+      ny= 2*((gr%mesh%sb%lsize(2)/gr%mesh%sb%h(2)))+1
+      nz= 2*((gr%mesh%sb%lsize(3)/gr%mesh%sb%h(3)))+1
+!      write(*,*) "Show Roberto, Total Points", nx, ny, nz
+      write(6,*)' ifinal_sete ',ifinal_sete
+      write(*,*) nx,ny,nz
+      write(*,*) "Trying to allocate rh0"
+      allocate(rh0(nx,ny,nz))
+      write(*,*) "Trying to allocate vh0"
+      allocate(vh0(nx,ny,nz))
+      write(*,*) "Past allocation"
+!      allocate(rh1(nx,ny,nz)); allocate(vh1(nx,ny,nz))
+!      allocate(potp(nx*ny*nz))
+!      allocate(pot2(nx*ny*nz)); allocate(rh2(nx,ny,nz))
+!      allocate(vh2(nx,ny,nz))
+
+!      vh2=0; rh2=0; pot2=0; potp=0; vh1=0; rh1=0
+      !Show Roberto tells us the size of the box. 
+      ! The %size gives out half the size of a box. 
+      xl = 2*gr%mesh%sb%lsize(1) 
+      yl = 2*gr%mesh%sb%lsize(2) 
+      zl = 2*gr%mesh%sb%lsize(3)
+!      write(62,*) "grmsblsize1,2,3 ",gr%mesh%sb%lsize(1), gr%mesh%sb%lsize(2), gr%mesh%sb%lsize(3) 
+      k=1; j=1; i=1
+      dx=gr%mesh%sb%h(1); dy=gr%mesh%sb%h(2); dz=gr%mesh%sb%h(3)
+      sum0=0.0
+      do counter=1, gr%mesh%np_global 
+        vh0(i,j,k)=pot(counter); 
+        rh0(i,j,k)=rho(counter) !rhop(counter)
+        k=k+1
+        if(k.gt.nz)then
+           k=1; j=j+1
+           if(j.gt.ny)then
+              j=1; i=i+1
+           end if
+        end if
+      end do
+!!$
+! now call sete pois
+     ! call poisson_isf_solve(gr%mesh, pot, rho, all_nodes_value)
       
+      call pois(icase,rh0,vh0,nx,ny,nz,xl,yl,zl,icalc)
+      write(*,*) "poisson/poisson.F90 icase, icalc ",icase, icalc
+
+      if(icase.eq.2.and.icalc.eq.1)then ! replace pot with sete potential
+         i=1;j=1;k=1
+         do counter=1, gr%mesh%np_global
+! save vh and rho from isf call
+            pot(counter)=vh0(i,j,k)
+            k=k+1
+            if(k.gt.nz)then
+               k=1; j=j+1
+               if(j.gt.ny)then
+                  j=1; i=i+1
+               end if
+            end if
+         end do
+      end if
+      icase=2
+      !sum0=0.0;sum1=0.0
+
+      write(*,*) "Deallocating vh0"
+      deallocate(vh0)
+      write(*,*) "Deallocating rh0"
+      deallocate(rh0)
+      write(*,*) "Deallocated"
+!      deallocate(rhop);deallocate(rhop_temp);deallocate(rho_nuc)
+
+
     end select
 
     call pop_sub()
@@ -454,7 +616,7 @@ contains
 
     FLOAT, allocatable :: rho(:), vh(:), vh_exact(:), rhop(:), x(:, :)
     FLOAT :: alpha, beta, r, delta, norm, rnd, ralpha, range
-    integer :: i, k, ierr, iunit, n, n_gaussians
+    integer :: i, k, ierr, iunit, n, n_gaussians, ifinal
 
     call push_sub('poisson.poisson_test')
 

@@ -144,7 +144,6 @@ contains
     ps%flavour = flavour
     ps%label   = label
     ps%ispin   = ispin
-
     ! Initialization and processing.
     ASSERT(flavour>=PS_TYPE_PSF.and.flavour<=PS_TYPE_UPF)
 

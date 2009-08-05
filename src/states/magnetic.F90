@@ -162,7 +162,7 @@ contains
     FLOAT, intent(out) :: a_ind(:, :) ! a(gr%mesh%np_part, gr%mesh%sb%dim)
     FLOAT, intent(out) :: b_ind(:, :) ! b(gr%mesh%np_part, gr%mesh%sb%dim) if gr%mesh%sb%dim=3, b(gr%mesh%np_part, 1) if gr%mesh%sb%dim=2
 
-    integer :: i
+    integer :: i,ifinal
     FLOAT, allocatable :: j(:, :, :)
 
     call push_sub('magnetic.magnetic_induced')

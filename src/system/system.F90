@@ -65,6 +65,7 @@ contains
   !----------------------------------------------------------
   subroutine system_init(sys)
     type(system_t), intent(out) :: sys
+    integer :: ii
 
     call push_sub('systm.system_init')
 
@@ -91,6 +92,13 @@ contains
     call elf_init()
     call poisson_init(sys%gr, sys%geo)
     call v_ks_init(sys%gr, sys%ks, sys%st%d, sys%st%qtot)
+
+!!$    open(57,file='mesh.dat',status='unknown')
+!!$    do ii=1,size(sys%gr%m%x,1)
+!!$       write(57,101)ii,sys%gr%m%x(ii,1),sys%gr%m%x(ii,2),sys%gr%m%x(ii,3)
+!!$101    format(1x,i6,3(1x,f10.6))
+!!$    enddo
+!!$    close(57)
 
     !print the mesh information if it is required
     call print_r()

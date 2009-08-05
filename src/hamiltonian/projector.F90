@@ -239,6 +239,7 @@ contains
 
     call push_sub('projector.projector_build')
 
+    write(56,*)' projector ',p%type,M_HGH,M_KB,M_RKB
     select case (p%type)
 
     case (M_HGH)

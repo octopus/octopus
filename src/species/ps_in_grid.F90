@@ -171,6 +171,7 @@ contains
         rho(ir) = exp( -( sinh(a*b*ps%g%rofi(ir)) / sinh(b) )**2 )
         rho(ir) = M_FOUR * M_PI * rho(ir) * ps%g%rofi(ir)**2
       end do
+!      do ir =1,2
       qtot = sum(rho(:)*ps%g%drdi(:))
       rho(:) = - rho(:)*(ps%zval/qtot)
 

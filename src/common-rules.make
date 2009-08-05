@@ -38,7 +38,7 @@ AM_FCFLAGS = \
 	@F90_MODULE_FLAG@$(top_builddir)/src/opt_control \
 	@F90_MODULE_FLAG@$(top_builddir)/src/sternheimer \
 	@F90_MODULE_FLAG@$(top_builddir)/libxc/src       \
-	@F90_MODULE_FLAG@$(top_builddir)/external_libs/qshep
+	@F90_MODULE_FLAG@$(top_builddir)/external_libs/qshep 
 
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/include   \
@@ -80,7 +80,8 @@ core_LIBS = \
 external_LIBS = \
 	$(top_builddir)/external_libs/qshep/libqshep.a     \
 	$(top_builddir)/external_libs/poisson_isf/libpoisson_isf.a \
-	$(top_builddir)/external_libs/spglib/src/libspglib.a
+	$(top_builddir)/external_libs/spglib/src/libspglib.a \
+	$(top_builddir)/external_libs/slatec/libslatec.a
 
 if COMPILE_METIS
   external_LIBS += $(top_builddir)/external_libs/metis-4.0/libmetis.a

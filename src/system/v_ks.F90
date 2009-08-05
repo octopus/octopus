@@ -39,6 +39,7 @@ module v_ks_m
   use xc_OEP_m
   use xc_m
   use magnetic_m
+  use POIS_data_l !SEC Team
   implicit none
 
   private
@@ -413,6 +414,10 @@ contains
 
     FLOAT, allocatable :: rho(:)
     integer :: is, ip
+    integer :: default_solver, poisson_solver, i, i1, nz !SEC Team
+    real(8) :: ehartree_nuc, norm!SEC Team
+    !FLOAT, allocatable :: rho_nuc(:), rhop_temp(:)!SEC Team
+    FLOAT, allocatable :: potstopa(:),rho_nuc(:)!, rhop_temp(:)!SEC Team
 
     call push_sub('v_ks.v_ks_hartree')
 
@@ -443,7 +448,34 @@ contains
     call dpoisson_solve(gr, hm%vhartree, rho)
 
     ! Get the Hartree energy
-    hm%ehartree = M_HALF*dmf_dotp(gr%mesh, rho, hm%vhartree)
+    write(*,*) "poisson_solver is ", poisson_solver
+    if (poisson_solver.eq.9) then !Roberto
+      i1=size(rho)
+!      allocate(potstopa(i1))
+
+!      potstopa=
+      hm%ehartree = M_HALF*dmf_dotp(gr%mesh, rho, hm%vhartree+hm%ep%vpsl)
+!      hm%ehartree = M_HALF*dmf_dotp(gr%mesh, rho, hm%vhartree)
+      write(*,*) "Roberto,system/v_ks.F90 ehartree call:",hm%ehartree*27.2
+      ! How to get the nuclear density here?
+!      ehartree_nuc = M_HALF*dmf_dotp(gr%mesh, rho_nuc, hm%vhartree+hm%ep%vspl) 
+      call CAP
+      call EGATE
+      hm%ehartree=hm%ehartree+ESURF!-ehartree_nuc
+      write(*,*) "Number of rho points: ", i1
+      write(89,*) "#Point, nuclear rho, pot"
+      write(88,*) hm%ehartree*27.2, ESURF*27.2, ehartree_nuc*27.2
+      !deallocate(rho_nuc);deallocate(rhop_temp)
+!      deallocate(potstopa)
+
+    else 
+      hm%ehartree = M_HALF*dmf_dotp(gr%mesh, rho, hm%vhartree)
+
+           
+    endif
+    write(*,*) "In general, ehartree is (ev): ", hm%ehartree*27.2
+
+
 
     SAFE_DEALLOCATE_A(rho)
     call pop_sub()

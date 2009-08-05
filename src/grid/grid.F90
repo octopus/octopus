@@ -135,6 +135,8 @@ contains
       call mesh_init_stage_3(gr%mesh)
     end if
 
+    write(6,*)' size in stage 2 ',size(gr%mesh%x,1)
+
     if(gr%sb%open_boundaries) then
       SAFE_ALLOCATE(gr%intf(1:NLEADS))
       do il = 1, NLEADS

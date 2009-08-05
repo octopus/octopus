@@ -466,6 +466,7 @@ contains
     select case(species_type(s))
 
     case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
+      write(*,*) "Roberto, We are calling this"
       ps => species_ps(s)
       rho = M_ZERO
       call periodic_copy_init(pp, gr%sb, pos, range = spline_cutoff_radius(ps%nlr, ps%projectors_sphere_threshold))

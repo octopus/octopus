@@ -107,6 +107,8 @@ subroutine mesh_init_stage_1(mesh, sb, cv, enlarge)
   ! we have a symmetric mesh (for now)
   mesh%idx%nr(1,:) = -mesh%idx%nr(2,:)
   
+  write(6,*)' sb%periodic_dim ',sb%periodic_dim
+
   ! we have to adjust a couple of things for the periodic directions
   do idir = 1, sb%periodic_dim
     !the spacing has to be a divisor of the box size
@@ -526,6 +528,7 @@ contains
     !% and not the results.)
     !%End
     call loct_parse_int(datasets_check('MeshBlockSizeXY'), 20, bsize)
+    write(6,*)' bsize ',bsize
 
     !%Type integer
     !%Default 100
