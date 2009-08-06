@@ -33,7 +33,7 @@
         REAL*8, DIMENSION(:,:,:,:), ALLOCATABLE :: SIG
         REAL*8 :: ESURF,CHARGE_TOP,CHARGE_BOT,CHARGE_TOT,BORDER,&
                 CS1,CS2,CS3,CHARGE_SURF
-	!REAL*8 :: DIMENSION(:), ALLOCATABLE rho_nuc(:), v_nuc(:)
+	REAL*8 :: DIMENSION(:), ALLOCATABLE rho_nuc(:)!, v_nuc(:)
 
 
       END MODULE POIS_DATA_L

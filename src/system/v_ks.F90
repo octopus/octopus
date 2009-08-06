@@ -448,23 +448,18 @@ contains
     call dpoisson_solve(gr, hm%vhartree, rho)
 
     ! Get the Hartree energy
-    write(*,*) "poisson_solver is ", poisson_solver
     if (poisson_solver.eq.9) then !Roberto
       i1=size(rho)
 !      allocate(potstopa(i1))
 
-!      potstopa=
-      hm%ehartree = M_HALF*dmf_dotp(gr%mesh, rho, hm%vhartree+hm%ep%vpsl)
 !      hm%ehartree = M_HALF*dmf_dotp(gr%mesh, rho, hm%vhartree)
-      write(*,*) "Roberto,system/v_ks.F90 ehartree call:",hm%ehartree*27.2
       ! How to get the nuclear density here?
-!      ehartree_nuc = M_HALF*dmf_dotp(gr%mesh, rho_nuc, hm%vhartree+hm%ep%vspl) 
+      hm%ep%eii = M_HALF*dmf_dotp(gr%mesh, rho_nuc, hm%ep%vspl) 
+!      potstopa=hm%vhartree + hm%ep%vspl
+! CAP depends on vh_big, which is called from pois_sete_v1...
       call CAP
       call EGATE
       hm%ehartree=hm%ehartree+ESURF!-ehartree_nuc
-      write(*,*) "Number of rho points: ", i1
-      write(89,*) "#Point, nuclear rho, pot"
-      write(88,*) hm%ehartree*27.2, ESURF*27.2, ehartree_nuc*27.2
       !deallocate(rho_nuc);deallocate(rhop_temp)
 !      deallocate(potstopa)
 

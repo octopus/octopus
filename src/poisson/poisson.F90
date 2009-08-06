@@ -310,7 +310,6 @@ contains
     case(ISF)
       call poisson_isf_end()
     case(SETE)
-      write(*,*) "Calling poisson end"
       call cbsurf_end()
 
 
@@ -479,11 +478,9 @@ contains
 	    !                          On isete_final=2, we will use rho 
 	    !since we are calling nuclear_rho as rho from scf/scf.F90
 	    !                          Everything else, we use       rhop
- 	write(*,*) "Entering SETE"
        dx=gr%mesh%sb%h(1); dy=gr%mesh%sb%h(2); dz=gr%mesh%sb%h(3)
        !Probably do not need to allocate so much: erased rhop2
        i1=size(rho); !allocate(rhop_temp(i1)); allocate(rhop(i1)); allocate(rho_nuc(i1));
-!	write(*,*) "Size of allocated variables, ", i1
 !       rhop=0.0;rhop_temp=0.0;rho_nuc=0.0
        nuc_dens_method=2; write_distr=1;
 !       do i = 1, geo%natoms !Roberto
@@ -507,8 +504,6 @@ contains
 !        nz= 2*((gr%mesh%sb%lsize(3)/gr%mesh%sb%h(3)))+1
 !       do i=-int(nz/2),int(nz/2)
 !         m2=gr%mesh%Lxyz_inv(i,0,0)
-!         write(58,*) gr%mesh%Lxyz(m2,1), rhop(m2)
-!         write(59,*) gr%mesh%Lxyz(m2,1), rho(m2)
 !        enddo
 !	 call CAP
 !	 call EGATE
@@ -518,12 +513,9 @@ contains
 
       ! if (ifinal_sete.eq.1) then
         nz= 2*((gr%mesh%sb%lsize(3)/gr%mesh%sb%h(3)))+1
-!	write(*,*) "write nz", nz
-!	write(60,*) "#Point, rho, rhop, ,nuclear rho, pot"
 !        do i=-int(nz/2),int(nz/2)
 !	 m2=index_from_coords(mesh%idx, mesh%sb%dim, ) NEED TO CHANGE THIS CALL
 !         m2=gr%mesh%Lxyz_inv(i,0,0)
-!         write(60,*) gr%mesh%Lxyz(m2,1), rho(m2),pot(m2)!,rhop(m2),rho_nuc(m2)
 !        enddo
       ! endif
 
@@ -532,14 +524,8 @@ contains
       nx= 2*((gr%mesh%sb%lsize(1)/gr%mesh%sb%h(1)))+1
       ny= 2*((gr%mesh%sb%lsize(2)/gr%mesh%sb%h(2)))+1
       nz= 2*((gr%mesh%sb%lsize(3)/gr%mesh%sb%h(3)))+1
-!      write(*,*) "Show Roberto, Total Points", nx, ny, nz
-      write(6,*)' ifinal_sete ',ifinal_sete
-      write(*,*) nx,ny,nz
-      write(*,*) "Trying to allocate rh0"
       allocate(rh0(nx,ny,nz))
-      write(*,*) "Trying to allocate vh0"
       allocate(vh0(nx,ny,nz))
-      write(*,*) "Past allocation"
 !      allocate(rh1(nx,ny,nz)); allocate(vh1(nx,ny,nz))
 !      allocate(potp(nx*ny*nz))
 !      allocate(pot2(nx*ny*nz)); allocate(rh2(nx,ny,nz))
@@ -551,7 +537,6 @@ contains
       xl = 2*gr%mesh%sb%lsize(1) 
       yl = 2*gr%mesh%sb%lsize(2) 
       zl = 2*gr%mesh%sb%lsize(3)
-!      write(62,*) "grmsblsize1,2,3 ",gr%mesh%sb%lsize(1), gr%mesh%sb%lsize(2), gr%mesh%sb%lsize(3) 
       k=1; j=1; i=1
       dx=gr%mesh%sb%h(1); dy=gr%mesh%sb%h(2); dz=gr%mesh%sb%h(3)
       sum0=0.0
@@ -571,7 +556,6 @@ contains
      ! call poisson_isf_solve(gr%mesh, pot, rho, all_nodes_value)
       
       call pois(icase,rh0,vh0,nx,ny,nz,xl,yl,zl,icalc)
-      write(*,*) "poisson/poisson.F90 icase, icalc ",icase, icalc
 
       if(icase.eq.2.and.icalc.eq.1)then ! replace pot with sete potential
          i=1;j=1;k=1
@@ -590,11 +574,8 @@ contains
       icase=2
       !sum0=0.0;sum1=0.0
 
-      write(*,*) "Deallocating vh0"
       deallocate(vh0)
-      write(*,*) "Deallocating rh0"
       deallocate(rh0)
-      write(*,*) "Deallocated"
 !      deallocate(rhop);deallocate(rhop_temp);deallocate(rho_nuc)
 
 
