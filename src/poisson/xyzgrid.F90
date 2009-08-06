@@ -13,7 +13,7 @@
 !          XL,YL,ZL
 !
 ! outputs: ZG,XG,YG        
-	write(62,*)"XL,YL,ZL ",XL,YL,ZL
+	!write(62,*)"XL,YL,ZL ",XL,YL,ZL
 ! z-mesh -- differs from x,y mesh because no border points
 !           hence NZTOT_0 = NZTOT (ie there IS no NZTOT_0)
         NZTOT=NZ+NZ2

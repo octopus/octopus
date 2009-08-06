@@ -27,9 +27,9 @@
 !  a homogeeneous grid approximation is made: derivative
 !  at metal-semi border calculated discretely with 1/DXG (1/DYG,1/DZ)
 !  rather than properly averaged spacings.
-      write(*,*) "In capser.F90"
+      !write(*,*) "In capser.F90"
       ALLOCATE(SIG(NXTOT,NYTOT,NZTOT,6))
-      write(*,*) "Just called SIG"
+      !write(*,*) "Just called SIG"
       SIG=0.0
       DO I=1,NXTOT 
          DO J=1,NYTOT

@@ -14,7 +14,7 @@
         IF(ICASE.EQ.1)THEN
 ! INITIALIZATION
 ! read input file, set up poisson equation
-           write(6,*)' opening poisq '
+           !write(6,*)' opening poisq '
            open(56,file='poisq',status='unknown')
            PI=DACOS(-1.D0)
            PCONST=4*PI ! need 4 pi for Hartrees I think (??)
@@ -50,7 +50,7 @@
               READ(57,*)(DXL(I),I=1,NXL)
               READ(57,*)(DYL(J),J=1,NYL)
            ELSE
-              WRITE(6,*)' IDEV not supported '
+              !WRITE(6,*)' IDEV not supported '
               RETURN
            ENDIF
 	   !XL,YL,ZL are given in terms of
@@ -158,7 +158,7 @@
                        if(r1.lt.0.15.or.r2.lt.0.15)then
                           rhotest(i,j,k)=50.0
                        endif
-                       write(57,104)xg(i),yg(j),zg(k),vh_big(i,j,k), &
+                       !write(57,104)xg(i),yg(j),zg(k),vh_big(i,j,k), &
                        rhotest(i,j,k)
 104                    format(3(1x,f12.6),3(1x,e12.6))
                     endif
@@ -169,7 +169,7 @@
 
            
 !           do k=1,nztot
-!	      write(57,206)zg(k),(vh_big(i,1+(nytot/2),k),i=1,nxtot)
+!	      !write(57,206)zg(k),(vh_big(i,1+(nytot/2),k),i=1,nxtot)
 206           format(1x,f10.5,200(1x,e12.6))
 !           enddo
            close(57)

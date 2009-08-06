@@ -468,7 +468,6 @@ contains
 
            
     endif
-    write(*,*) "In general, ehartree is (ev): ", hm%ehartree*27.2
 
 
 
