@@ -1,0 +1,19 @@
+To get the prace version first go to the directory where you wish to 
+compile the program, and then issue this svn command:
+
+ svn co http://www.tddft.org/svn/octopus/trunk octopus
+
+The source must be in a directory called "octopus" in the root of 
+octopus directory of this benchmark suite, i.e., this directory.
+
+This is how I install the benchmark suite:
+
+mkdir benchmark
+cd benchmark
+svn co --username XXXXX --password XXXXX https://trac.csc.fi/pracewp6/svn/benchmark/platform
+svn co --username XXXXX --password XXXXX https://trac.csc.fi/pracewp6/svn/benchmark/bench
+mkdir applications
+cd applications
+svn co http://www.tddft.org/svn/octopus/trunk/jube octopus
+cd octopus
+make bench

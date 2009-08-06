@@ -20,7 +20,7 @@
 
 <benchmark name="SP6-clorophyll" active="1">
     <compile     cname="$platform" version="reuse" />
-    <tasks       threadspertask="1" taskspernode="32" nodes="4,8,16,32,64" />
+    <tasks       threadspertask="1" taskspernode="32" nodes="4,8,16,32" />
     <prepare     cname="clorophyll" />
     <execution   cname="$platform" iteration="1" />
     <verify      cname="clorophyll" />
