@@ -1,3 +1,5 @@
+#include <global.h>
+
      SUBROUTINE POIS(ICASE,RHO,VH,NX,NY,NZ,XL,YL,ZL,ICALC)
      ! Input: NX, NY, NZ -> No. of octopus grid points in each dimension
      ! Input: XL, YL, ZL -> Size of the octopus box
@@ -5,11 +7,11 @@
         USE POIS_DATA_G ! global Poisson data
         USE POIS_DATA_L ! local Poisson data
 
-        IMPLICIT REAL*8 (A-H,O-Z)
+        IMPLICIT FLOAT (A-H,O-Z)
 
-        REAL*8 :: RHO(NX,NY,NZ),VH(NX,NY,NZ)
+        FLOAT :: RHO(NX,NY,NZ),VH(NX,NY,NZ)
         CHARACTER*40 :: CDUM,FIL1
-        REAL*8 :: BOHRNM,ANGSNM
+        FLOAT :: BOHRNM,ANGSNM
 	ICALC=0
         IF(ICASE.EQ.1)THEN
 ! INITIALIZATION
@@ -32,7 +34,7 @@
               READ(57,*)ZWIDTH;ZWIDTH=ZWIDTH*ANGSNM  ! distance between plates (nm)
               READ(57,*)ZCEN;ZCEN=ZCEN*ANGSNM
               READ(57,*)NGATES;
-              ALLOCATE(VTV(NGATES)); ALLOCATE(VT(NGATES))
+              allocate(VTV(NGATES)); allocate(VT(NGATES))
               READ(57,*)VTV(1),VTV(2) ! voltage on plates in volts and nm?
               VT=VTV/HARTREE
               READ(57,*)DIELECTRIC0    ! dielectric constant of region betw plates
@@ -46,7 +48,7 @@
 		YCEN=YCEN*ANGSNM
               READ(57,*)NX2,NY2,NZ2   ! additional mesh points in bd box
               READ(57,*)NXL,NYL       ! padding points (to sim zone edge)
-              ALLOCATE(DXL(NXL)); ALLOCATE(DYL(NYL))
+              allocate(DXL(NXL)); allocate(DYL(NYL))
               READ(57,*)(DXL(I),I=1,NXL)
               READ(57,*)(DYL(J),J=1,NYL)
            ELSE
@@ -69,17 +71,17 @@
 ! guess for input to DSLUCS - refined and output in IWORK(9) and IWORK(10)
            LENW=NELT+9*NXTOT*NYTOT*NZTOT
            LENIW=NELT+5*NXTOT*NYTOT*NZTOT+12
-           ALLOCATE(Q2(NTOT)); ALLOCATE(AW(NELT))
-           ALLOCATE(QS(NTOT))
-           ALLOCATE(ADIAG(NTOT)); ALLOCATE(IDIAG(NTOT))
-           ALLOCATE(IAD(NELT)); ALLOCATE(JAD(NELT))
-           ALLOCATE(X2(NTOT)); X2=0.0
+           allocate(Q2(NTOT)); allocate(AW(NELT))
+           allocate(QS(NTOT))
+           allocate(ADIAG(NTOT)); allocate(IDIAG(NTOT))
+           allocate(IAD(NELT)); allocate(JAD(NELT))
+           allocate(X2(NTOT)); X2=0.0
            CALL POISSONM
            QS=Q2 ! store Dirichlet BC info in QS
-           DEALLOCATE(Q2)
+           deallocate(Q2)
 
         ELSEIF(ISETE_ON.EQ.1)THEN
-           ALLOCATE(Q2(NTOT))
+           allocate(Q2(NTOT))
            allocate(rhotest(nxtot,nytot,nztot))
            Q2=QS ! recall stored BC info
            rhotest=0
@@ -117,13 +119,13 @@
 
            
 
-           ALLOCATE(RWORK(LENW));ALLOCATE(IWORK(LENIW))
+           allocate(RWORK(LENW));allocate(IWORK(LENIW))
            CALL DSLUCS(NTOT,Q2,X2,NELT,IAD,JAD,AW,ISYM,ITOL, &
                 TOL,ITMAX,ITER,ITERMIN,ERR,IERR,IUNIT,RWORK,LENW, &
                 IWORK,LENIW)
            
            LENIW=IWORK(9); LENW=IWORK(10) ! new work array lengths
-           DEALLOCATE(RWORK); DEALLOCATE(IWORK)
+           deallocate(RWORK); deallocate(IWORK)
            
            DO M=1,NTOT ! store X2(M) i,j,k wise
               I=IY(M); J=JY(M); K=KY(M)
@@ -143,7 +145,7 @@
               ENDIF
            ENDDO
            VHMIN=MINVAL(VH); VHMAX=MAXVAL(VH)
-           DEALLOCATE(Q2)
+           deallocate(Q2)
            open(57,file='vhbig.dat',status='unknown')
            vh_big(:,:,1)=250.0; vh_big(:,:,nztot)=250.0
            xx1=-0.367;yy1=0.0;zz1=0.0
@@ -158,8 +160,7 @@
                        if(r1.lt.0.15.or.r2.lt.0.15)then
                           rhotest(i,j,k)=50.0
                        endif
-                       !write(57,104)xg(i),yg(j),zg(k),vh_big(i,j,k), &
-                       rhotest(i,j,k)
+                       !write(57,104)xg(i),yg(j),zg(k),vh_big(i,j,k), rhotest(i,j,k)
 104                    format(3(1x,f12.6),3(1x,e12.6))
                     endif
                  enddo
@@ -173,7 +174,7 @@
 206           format(1x,f10.5,200(1x,e12.6))
 !           enddo
            close(57)
-           DEALLOCATE(rhotest);! DEALLOCATE(VH_BIG);
+           deallocate(rhotest);! deallocate(VH_BIG);
 	   ICALC=1
       ENDIF
 

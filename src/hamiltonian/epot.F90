@@ -359,7 +359,7 @@ contains
     ep%local_potential_precalculated = .false.
     
     call loct_parse_int(datasets_check('PoissonSolver'), default_solver, poisson_solver) !SEC
-    if poisson_solver.eq.9 then  !SEC
+    if (poisson_solver == 9) then  !SEC
       SAFE_ALLOCATE(rho_nuc(1:gr%mesh%np)) !SEC
     endif   !SEC
     call pop_sub()

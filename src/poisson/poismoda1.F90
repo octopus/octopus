@@ -1,6 +1,8 @@
+#include <global.h>
+
 !------------------------------------------------------------------------------
       MODULE DRIVER_DATA
-        REAL*8, DIMENSION(:,:,:), ALLOCATABLE :: RHO,VH
+        FLOAT, DIMENSION(:,:,:), ALLOCATABLE :: RHO,VH
 
       END MODULE DRIVER_DATA
 !
@@ -8,9 +10,9 @@
       MODULE POIS_DATA_G
 !------------------------------------------------------------------------------
 
-        REAL*8, DIMENSION(:), ALLOCATABLE :: AW,AWP,Q2,X2,QS
+        FLOAT, DIMENSION(:), ALLOCATABLE :: AW,AWP,Q2,X2,QS
         INTEGER, DIMENSION(:), ALLOCATABLE :: IAD,JAD,IY,JY,KY
-        REAL*8 :: TOL=0.01,HARTREE=2.0*13.60569193,BOHR=0.52917720859 ! Bohr radius in nm
+        FLOAT :: TOL=0.01,HARTREE=2.0*13.60569193,BOHR=0.52917720859 ! Bohr radius in nm
 !                                                Hartree in eV
         INTEGER :: ISETE_ON,NELT,NTOT,LENW,LENIW,IDEV,NGATES, &
              ISYM=0,ITOL=2,ITMAX=201,ITERMIN=5,ITER,IERR,IUNIT=0, &
@@ -22,18 +24,18 @@
       MODULE POIS_DATA_L
 !------------------------------------------------------------------------------
 
-        REAL*8, DIMENSION(:,:,:), ALLOCATABLE :: VBOUND,DIELECTRIC, &
+        FLOAT, DIMENSION(:,:,:), ALLOCATABLE :: VBOUND,DIELECTRIC, &
              rhotest,VH_BIG 
-        REAL*8, DIMENSION(:), ALLOCATABLE :: XG,YG,ZG, &
+        FLOAT, DIMENSION(:), ALLOCATABLE :: XG,YG,ZG, &
              DXG,DYG,DZ,RWORK,DXL,DYL,VT,VTV,ADIAG
-        REAL*8 :: XWIDTH,YWIDTH,ZWIDTH,DIELECTRIC0
+        FLOAT :: XWIDTH,YWIDTH,ZWIDTH,DIELECTRIC0
         INTEGER, DIMENSION(:,:,:), ALLOCATABLE :: IPIO
         INTEGER, DIMENSION(:), ALLOCATABLE :: IWORK,IDIAG
         INTEGER :: NX2,NY2,NZ2
-        REAL*8, DIMENSION(:,:,:,:), ALLOCATABLE :: SIG
-        REAL*8 :: ESURF,CHARGE_TOP,CHARGE_BOT,CHARGE_TOT,BORDER,&
+        FLOAT, DIMENSION(:,:,:,:), ALLOCATABLE :: SIG
+        FLOAT :: ESURF,CHARGE_TOP,CHARGE_BOT,CHARGE_TOT,BORDER,&
                 CS1,CS2,CS3,CHARGE_SURF
-	REAL*8 :: DIMENSION(:), ALLOCATABLE rho_nuc(:)!, v_nuc(:)
+	FLOAT, DIMENSION(:), ALLOCATABLE :: rho_nuc(:)!, v_nuc(:)
 
 
       END MODULE POIS_DATA_L
