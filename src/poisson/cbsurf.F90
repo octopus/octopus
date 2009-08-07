@@ -16,6 +16,7 @@
 
 ! This is a combination of cbsurfser and spaceser located on
 ! /home/stopa/surfER/build
+        write(*,*) "Allocating data"
            ALLOCATE(VH_BIG(NXTOT,NYTOT,NZTOT))
         ALLOCATE(IPIO(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1))
         ALLOCATE(VBOUND(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1))
@@ -51,5 +52,5 @@
 	DEALLOCATE(IAD);DEALLOCATE(JAD);DEALLOCATE(ADIAG)
 	DEALLOCATE(IDIAG);DEALLOCATE(X2)
 	DEALLOCATE(DXL);DEALLOCATE(DYL)
-	DEALLOCATE(VH_BIG)
+!	DEALLOCATE(VH_BIG)
 	end subroutine CBSURF_end

@@ -454,12 +454,12 @@ contains
 
 !      hm%ehartree = M_HALF*dmf_dotp(gr%mesh, rho, hm%vhartree)
       ! How to get the nuclear density here?
-      hm%ep%eii = M_HALF*dmf_dotp(gr%mesh, rho_nuc, hm%ep%vpsl) 
+!      hm%ep%eii = M_HALF*dmf_dotp(gr%mesh, rho_nuc, hm%ep%vpsl) 
 !      potstopa=hm%vhartree + hm%ep%vspl
 ! CAP depends on vh_big, which is called from pois_sete_v1...
-      call CAP
-      call EGATE
-      hm%ehartree=hm%ehartree+ESURF!-ehartree_nuc
+!      call CAP
+!      call EGATE
+!      hm%ehartree=hm%ehartree+ESURF!-ehartree_nuc
       !deallocate(rho_nuc);deallocate(rhop_temp)
 !      deallocate(potstopa)
 

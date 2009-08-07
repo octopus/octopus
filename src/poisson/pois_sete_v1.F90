@@ -8,11 +8,15 @@
         USE POIS_DATA_L ! local Poisson data
 
         IMPLICIT FLOAT (A-H,O-Z)
-
+	FLOAT, intent(in) :: XL,YL,ZL
+	INTEGER, intent(in) :: NX,NY,NZ
         FLOAT :: RHO(NX,NY,NZ),VH(NX,NY,NZ)
         CHARACTER*40 :: CDUM,FIL1
         FLOAT :: BOHRNM,ANGSNM
+	INTEGER :: J1,K1, M, I,J,K
+	FLOAT :: ZCEN, XCEN, YCEN, VHMIN, VHMAX
 	ICALC=0
+	write(*,*) "Welcome to SETE ICASE ICALC", ICASE, ICALC
         IF(ICASE.EQ.1)THEN
 ! INITIALIZATION
 ! read input file, set up poisson equation
@@ -117,8 +121,6 @@
 !           write(6,*)' size(aw) ',size(aw),size(rwork),size(iwork)
 !           write(6,*)' size(q2,x2) ',size(q2),size(x2),size(iad),size(jad)
 
-           
-
            allocate(RWORK(LENW));allocate(IWORK(LENIW))
            CALL DSLUCS(NTOT,Q2,X2,NELT,IAD,JAD,AW,ISYM,ITOL, &
                 TOL,ITMAX,ITER,ITERMIN,ERR,IERR,IUNIT,RWORK,LENW, &
@@ -146,34 +148,34 @@
            ENDDO
            VHMIN=MINVAL(VH); VHMAX=MAXVAL(VH)
            deallocate(Q2)
-           open(57,file='vhbig.dat',status='unknown')
-           vh_big(:,:,1)=250.0; vh_big(:,:,nztot)=250.0
-           xx1=-0.367;yy1=0.0;zz1=0.0
-           xx2=0.367;yy2=0.0;zz2=0.0
-           do i=1,nxtot
-              do j=1,nytot
-                 do k=1,nztot
-                    if(i.gt.nxl.and.i.le.nxtot-nxl.and.j.gt.nyl &
-		       .and.j.le.nytot-nyl)then
-                       r1=sqrt((xx1-xg(i))**2+(yy1-yg(j))**2+(zz1-zg(k))**2)
-                       r2=sqrt((xx2-xg(i))**2+(yy2-yg(j))**2+(zz2-zg(k))**2)
-                       if(r1.lt.0.15.or.r2.lt.0.15)then
-                          rhotest(i,j,k)=50.0
-                       endif
+!           open(57,file='vhbig.dat',status='unknown')
+!           vh_big(:,:,1)=250.0; vh_big(:,:,nztot)=250.0
+!           xx1=-0.367;yy1=0.0;zz1=0.0
+!           xx2=0.367;yy2=0.0;zz2=0.0
+!           do i=1,nxtot
+!              do j=1,nytot
+!                 do k=1,nztot
+!                    if(i.gt.nxl.and.i.le.nxtot-nxl.and.j.gt.nyl &
+!		       .and.j.le.nytot-nyl)then
+!                       r1=sqrt((xx1-xg(i))**2+(yy1-yg(j))**2+(zz1-zg(k))**2)
+!                       r2=sqrt((xx2-xg(i))**2+(yy2-yg(j))**2+(zz2-zg(k))**2)
+!                       if(r1.lt.0.15.or.r2.lt.0.15)then
+!                          rhotest(i,j,k)=50.0
+!                       endif
                        !write(57,104)xg(i),yg(j),zg(k),vh_big(i,j,k), rhotest(i,j,k)
-104                    format(3(1x,f12.6),3(1x,e12.6))
-                    endif
-                 enddo
-              enddo
-           enddo
-           close(57)
+!104                    format(3(1x,f12.6),3(1x,e12.6))
+!                    endif
+!                 enddo
+!              enddo
+!           enddo
+!           close(57)
 
            
 !           do k=1,nztot
 !	      !write(57,206)zg(k),(vh_big(i,1+(nytot/2),k),i=1,nxtot)
-206           format(1x,f10.5,200(1x,e12.6))
+!206           format(1x,f10.5,200(1x,e12.6))
 !           enddo
-           close(57)
+!           close(57)
            deallocate(rhotest);! deallocate(VH_BIG);
 	   ICALC=1
       ENDIF
