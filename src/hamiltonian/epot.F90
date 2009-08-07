@@ -539,7 +539,8 @@ contains
       !systems) or by applying it directly to the grid
       
       if( species_has_density(geo%atom(iatom)%spec) .or. &
-          (species_is_ps(geo%atom(iatom)%spec) .and. simul_box_is_periodic(gr%sb))) then
+          (species_is_ps(geo%atom(iatom)%spec) .and. simul_box_is_periodic(gr%sb)) ) then
+
         SAFE_ALLOCATE(rho(1:mesh%np))
 
         !this has to be optimized so the Poisson solution is made once
@@ -548,6 +549,8 @@ contains
 
         vl(1:mesh%np) = M_ZERO   ! vl has to be initialized before entering routine
         ! and our best guess for the potential is zero
+        call dpoisson_solve(gr, vl, rho)
+
         SAFE_DEALLOCATE_A(rho)
       else
 
