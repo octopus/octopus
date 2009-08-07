@@ -18,10 +18,11 @@ code:
 
 bench: code
 	case `hostname` in \
-	  jugene* ) platform='IBM-BGP-Jugene'   ;; \
-	  louhi*  ) platform='Cray-XT4-Louhi'   ;; \
-	  p6012*  ) platform='IBM-SP6-Huygens'  ;; \
-	  s1c1b*  ) platform='IBM-Cell-MariCel' ;; \
+	  jugene* ) platform='IBM-BGP-Jugene'      ;; \
+	  louhi*  ) platform='Cray-XT4-Louhi'      ;; \
+	  p6012*  ) platform='IBM-SP6-Huygens'     ;; \
+	  s1c1b*  ) platform='IBM-Cell-MariCel'    ;; \
+	  inti*   ) platform='BULL-RS422-teraplus' ;; \
 	esac; \
 	if [ -z "$$platform" ]; then \
 	  echo "Platform '`hostname`' not found"; exit 1; \

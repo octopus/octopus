@@ -127,4 +127,30 @@
   </command>
 </compile>
 
+<!-- compile GSL: ./configure - -prefix=$HOME/gsl - -disable-shared -->
+<!-- compile FFTW: ./configure - -prefix=$HOME/fftw - -disable-shared -->
+<compile cname="BULL-RS422-teraplus">
+  <src directory="./octopus" files="." />
+
+  <command>
+    module load mkl/10.0.010;
+    autoreconf -i;
+    export CC=mpicc;
+    export FC=mpif90;
+    export CFLAGS="-u -fpp1 -pc80 -align -unroll -O3 -ip -no-fp-port -mno-ieee-fp -vec-report0 -no-prec-div";
+    export FCFLAGS="-nbs -p $CFLAGS";
+
+    export LIBS_BLAS="-L$LIBRARY_PATH -lmkl -lguide";
+    export LIBS_FFT="-L$HOME/fftw/lib -lfftw3"
+    ./configure --prefix=$outdir \
+      --with-gsl-prefix=$HOME/gsl \
+      --enable-mpi;
+    make;
+    make install;
+    make clean;
+
+    tar -C $outdir -cf $execname bin lib include share;
+  </command>
+</compile>
+
 </compilation>

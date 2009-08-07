@@ -126,4 +126,29 @@
   </command>
 </execute>
 
+<execute cname="BULL-RS422-teraplus">
+  <input files="../../platform/BULL-RS422-teraplus/teraplus_cea_msub.job.in" />
+
+  <substitute infile="teraplus_cea_msub.job.in" outfile="msub.job">
+    <sub from="#RUNNAME#" to="octopus_$nodes" />
+    <sub from="#STDOUTLOGFILE#" to="$stdoutlogfile" />
+    <sub from="#STDERRLOGFILE#" to="$stderrlogfile" />
+    <sub from="#TIMELIMIT#" to="18000" />
+    <sub from="#MEMLIMIT#" to="20000" />
+    <sub from="#TASKS#" to="$tasks" />
+    <sub from="#NODES#" to="$nodes" />
+    <sub from="#THREADSPERTASK#" to="$threadspertask" />
+    <sub from="#STARTER#" to="ccc_mprun" />
+    <sub from="#ARGS_STARTER#" to=" " />
+    <sub from="#EXECUTABLE#" to="./bin/octopus_mpi" />
+    <sub from="#ARGS_EXECUTABLE#" to=" "/>
+    <sub from="#PREPROCESS#" to="echo &quot;&lt;jobstart at=\&quot;`date`\&quot; /&gt;&quot; &gt;&gt; $outdir/start_info.xml; module load mkl/10.0.010; export OCTOPUS_SHARE=./share/octopus" />
+    <sub from="#POSTPROCESS#" to="echo &quot;&lt;jobend at=\&quot;`date`\&quot; /&gt;&quot; &gt;&gt; $outdir/end_info.xml; cat *profiling*/time.000000" />
+    <sub from="#MEASUREMENT#" to=" "/>
+  </substitute>
+  <command>
+     ccc_msub msub.job
+  </command>
+</execute>
+
 </execution>
