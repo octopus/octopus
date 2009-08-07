@@ -97,8 +97,8 @@
   <command>
     autoreconf -i;
 
-    export OMPI_FC=/opt/ibmcmp/xlf/cbe/11.1/bin/ppuxlf_r;
-    export OMPI_CC=/opt/ibmcmp/xlc/cbe/10.1/bin/ppuxlc_r;
+    export OMPI_FC=/opt/ibmcmp/xlf/cbe/11.1/bin/ppuxlf;
+    export OMPI_CC=/opt/ibmcmp/xlc/cbe/10.1/bin/ppuxlc;
 
     export OMPI_FCFLAGS="";
     export OMPI_CFLAGS="";
@@ -112,8 +112,8 @@
     export LDFLAGS="-lspe2";
 
     export LIBS_BLAS="-L/gpfs/data/home/Applications/afarres/soft/lib/ -lblas_xlf";
-    export LIBS_LAPACK="-llapack_xlf"
-    export LIBS_FFT="-L/gpfs/data/home/Applications/afarres/soft/lib/ -lfftw3_xlf"
+    export LIBS_LAPACK="-llapack_xlf";
+    export LIBS_FFT="-L/gpfs/data/home/Applications/afarres/soft/lib/ -lfftw3_xlf";
 
     ./configure --prefix=$outdir \
       --with-gsl-prefix=$HOME/gsl \
