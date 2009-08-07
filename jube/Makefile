@@ -17,7 +17,7 @@ code:
 	fi
 
 bench: code
-	case `hostname` in \
+	@case `hostname` in \
 	  jugene* ) platform='IBM-BGP-Jugene'      ;; \
 	  louhi*  ) platform='Cray-XT4-Louhi'      ;; \
 	  p6012*  ) platform='IBM-SP6-Huygens'     ;; \

@@ -107,7 +107,7 @@
     <sub from="#BENCHNAME#" to="octopus_$nodes" />
     <sub from="#STDOUTLOGFILE#" to="$stdoutlogfile" />
     <sub from="#STDERRLOGFILE#" to="$stderrlogfile" />
-    <sub from="#TIME_LIMIT#" to="02:30:00" />
+    <sub from="#TIME_LIMIT#" to="10:00:00" />
     <sub from="#TASKS#" to="$tasks" />
     <sub from="#CLASS#" to="benchmark" />
     <sub from="#STARTER#" to="mpirun" />
