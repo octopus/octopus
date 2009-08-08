@@ -1,20 +1,23 @@
 #include <global.h>
 
      SUBROUTINE POIS(ICASE,RHO,VH,NX,NY,NZ,XL,YL,ZL,ICALC)
-     ! Input: NX, NY, NZ -> No. of octopus grid points in each dimension
-     ! Input: XL, YL, ZL -> Size of the octopus box
+        use pois_data_g ! global Poisson data
+        use pois_data_l ! local Poisson data
 
-        USE POIS_DATA_G ! global Poisson data
-        USE POIS_DATA_L ! local Poisson data
+        implicit none
 
-        IMPLICIT FLOAT (A-H,O-Z)
-	FLOAT, intent(in) :: XL,YL,ZL
-	INTEGER, intent(in) :: NX,NY,NZ
+        integer, intent(in)  :: icase
+	FLOAT,   intent(in)  :: xl, yl, zl  ! Input: XL, YL, ZL -> Size of the octopus box
+	INTEGER, intent(in)  :: nx, ny, nz  ! Input: NX, NY, NZ -> No. of octopus grid points in each dimension
+        integer, intent(out) :: icalc
+
         FLOAT :: RHO(NX,NY,NZ),VH(NX,NY,NZ)
         CHARACTER*40 :: CDUM,FIL1
         FLOAT :: BOHRNM,ANGSNM
-	INTEGER :: J1,K1, M, I,J,K
+	INTEGER :: J1,K1, M, I,J,K, idum, i1
 	FLOAT :: ZCEN, XCEN, YCEN, VHMIN, VHMAX
+        FLOAT :: err
+
 	ICALC=0
 	write(*,*) "Welcome to SETE ICASE ICALC", ICASE, ICALC
         IF(ICASE.EQ.1)THEN

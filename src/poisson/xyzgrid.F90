@@ -1,12 +1,25 @@
-      SUBROUTINE XYZGRID(NX,NY,NZ,XL,YL,ZL)
+#include <global.h>
+
+      subroutine xyzgrid(nx, ny, nz, xl, yl, zl)
      ! Input: NX, NY, NZ -> No. of octopus grid points in each dimension
      ! Input: XL, YL, ZL -> Size of the octopus box
 
-	USE POIS_DATA_G ! global Poisson data
-        USE POIS_DATA_L ! local Poisson data
+	Use pois_data_g ! global Poisson data
+        use pois_data_l ! local Poisson data
 
-        IMPLICIT REAL*8 (A-H,O-Z)
-        
+        implicit none
+
+        integer, intent(in) :: nx, ny, nz
+        FLOAT,   intent(in) :: xl, yl, zl
+
+        FLOAT   :: dx1b, dx1t, dx_oct, xbot, xtest, xtop, xcen, xwidth_big
+        FLOAT   :: dy1b, dy1t, dy_oct, ybot, ytop, ycen, ywidth_big
+        FLOAT   :: dz1b, dz1t, dz_oct, zbot, ztest, ztop, zcen
+        integer :: i, j, k, m
+        integer :: nxtop, nytop, nztop
+        integer :: nxtot_0, nytot_0
+
+
 ! inputs:  NZ,NZ2,NX,NX2,NY,NY2
 !          XCEN,YCEN,ZCEN
 !          XWIDTH,YWIDTH,ZWIDTH
@@ -17,8 +30,9 @@
 ! z-mesh -- differs from x,y mesh because no border points
 !           hence NZTOT_0 = NZTOT (ie there IS no NZTOT_0)
         NZTOT=NZ+NZ2
-        ALLOCATE(ZG(NZTOT)); ALLOCATE(DZ(NZTOT))
-	!Top and bottom z coordinates.
+        allocate(zg(nztot))
+        allocate(dz(nztot))
+	!top and bottom z coordinates.
 	!Depend on SETE (ZWIDTH) 
 	!and Octopus (ZL)parameters.
         ZTOP=0.5*ZWIDTH-ZCEN-0.5*ZL
@@ -26,15 +40,15 @@
 
         NZTOP=INT(NZ2*ZTOP/(ZTOP+ZBOT))
         NZBOT=NZ2-NZTOP
-        DZ1B=ZBOT/FLOAT(NZBOT)
+        DZ1B=ZBOT/TOFLOAT(NZBOT)
         DO K=1,NZBOT
            DZ(K)=DZ1B
         ENDDO
-        DZ_OCT=ZL/FLOAT(NZ)
+        DZ_OCT=ZL/TOFLOAT(NZ)
         DO K=NZBOT+1,NZBOT+NZ
            DZ(K)=DZ_OCT
         ENDDO
-        DZ1T=ZTOP/FLOAT(NZTOP)
+        DZ1T=ZTOP/TOFLOAT(NZTOP)
         DO K=NZBOT+NZ+1,NZTOT
            DZ(K)=DZ1T
         ENDDO
@@ -56,7 +70,8 @@
 ! x-mesh
         NXTOT_0=NX+NX2
         NXTOT=NXTOT_0+2*NXL
-        ALLOCATE(XG(NXTOT)); ALLOCATE(DXG(NXTOT))
+        allocate(xg(nxtot))
+        allocate(DXG(NXTOT))
         DO I=1,NXL  !  border points
            DXG(I)=DXL(I)
         ENDDO
@@ -68,15 +83,15 @@
         XBOT=0.5*XWIDTH+XCEN-0.5*XL
         NXTOP=INT(NX2*XTOP/(XTOP+XBOT))
         NXBOT=NX2-NXTOP
-        DX1B=XBOT/FLOAT(NXBOT) ! "bottom" region
+        DX1B=XBOT/TOFLOAT(NXBOT) ! "bottom" region
         DO I=NXL+1,NXL+NXBOT
            DXG(I)=DX1B
         ENDDO
-        DX_OCT=XL/FLOAT(NX)  ! Octopus region
+        DX_OCT=XL/TOFLOAT(NX)  ! Octopus region
         DO I=NXL+NXBOT+1,NXL+NXBOT+NX
            DXG(I)=DX_OCT
         ENDDO
-        DX1T=XTOP/FLOAT(NXTOP)  ! "top" region
+        DX1T=XTOP/TOFLOAT(NXTOP)  ! "top" region
         DO I=NXL+NXBOT+NX+1,NXL+NXBOT+NX+NXTOP
            DXG(I)=DX1T
         ENDDO
@@ -97,7 +112,8 @@
 ! Y-mesh
         NYTOT_0=NY+NY2  ! excluding border points
         NYTOT=NYTOT_0+2*NYL  ! all Poisson Y mesh point
-        ALLOCATE(YG(NYTOT)); ALLOCATE(DYG(NYTOT))
+        allocate(yg(nytot))
+        allocate(dyg(nytot))
         DO I=1,NYL  !  border points
            DYG(I)=DYL(I)
         ENDDO
@@ -109,15 +125,15 @@
         YBOT=0.5*YWIDTH+YCEN-0.5*YL
         NYTOP=INT(NY2*YTOP/(YTOP+YBOT))
         NYBOT=NY2-NYTOP
-        DY1B=YBOT/FLOAT(NYBOT) ! "bottom" region
+        DY1B=YBOT/TOFLOAT(NYBOT) ! "bottom" region
         DO I=NYL+1,NYL+NYBOT
            DYG(I)=DY1B
         ENDDO
-        DY_OCT=YL/FLOAT(NY)  ! Octopus region
+        DY_OCT=YL/TOFLOAT(NY)  ! Octopus region
         DO I=NYL+NYBOT+1,NYL+NYBOT+NY
            DYG(I)=DY_OCT
         ENDDO
-        DY1T=YTOP/FLOAT(NYTOP)  ! "top" region
+        DY1T=YTOP/TOFLOAT(NYTOP)  ! "top" region
         DO I=NYL+NYBOT+NY+1,NYL+NYBOT+NY+NYTOP
            DYG(I)=DY1T
         ENDDO
@@ -133,8 +149,10 @@
         NTOT=NXTOT*NYTOT*NZTOT
         MD=NZTOT*NYTOT
 
-        ALLOCATE(IY(NTOT)); ALLOCATE(JY(NTOT)); ALLOCATE(KY(NTOT))
-        M=0
+        allocate(iy(ntot))
+        allocate(jy(ntot))
+        allocate(ky(ntot))
+        m=0
         DO I=1,NXTOT
            DO J=1,NYTOT
               DO K=1,NZTOT

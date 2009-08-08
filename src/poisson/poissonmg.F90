@@ -1,9 +1,12 @@
+
+#include <global.h>
+
       SUBROUTINE POISSONM
 
-        USE POIS_DATA_G ! global Poisson data
-        USE POIS_DATA_L ! local Poisson data
+        use pois_data_g ! global Poisson data
+        use pois_data_l ! local Poisson data
 
-        IMPLICIT REAL*8 (A-H,O-Z)
+        implicit none
 
 ! version g created 03/25/08 - modified to include 
 !                              DIELECTRIC(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1)
@@ -23,8 +26,10 @@
 !    Note: original treatment of variable grid spacing documented
 !          in RIKEN I pg 50.
 
-        real*8 AV(7)
-        INTEGER JOFF(7)
+        FLOAT   :: AV(7)
+        INTEGER :: JOFF(7)
+        FLOAT   :: d1, d2, dconst, del
+        integer :: i, j, k, ia, iav, icol, idebug, iec, n, ii
 !
         idebug=0
         if(idebug.eq.1)then
@@ -189,14 +194,14 @@
         NELT=IEC
 
 ! in case NELT in static differs from that counted here
-!!$        ALLOCATE(AWP(NELT))
+!!$        allocate(AWP(NELT))
 !!$        DO I=1,NELT
 !!$           AWP(I)=AW(I)
 !!$        ENDDO
-!!$        DEALLOCATE(AW)
-!!$        ALLOCATE(AW(NELT))
+!!$        deallocate(AW)
+!!$        allocate(AW(NELT))
 !!$        AW=AWP
-!!$        DEALLOCATE(AWP)
+!!$        deallocate(AWP)
         
         if(idebug.eq.1)then
            close(57)
