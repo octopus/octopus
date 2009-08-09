@@ -249,7 +249,7 @@
 !***END PROLOGUE  DCGS                                                  
 !     .. Scalar Arguments ..                                            
       DOUBLE PRECISION ERR, TOL 
-      INTEGER IERR, ISYM, ITER, ITMAX, ITOL, IUNIT, N, NELT 
+      INTEGER IERR, ISYM, ITER, ITERMIN, ITMAX, ITOL, IUNIT, N, NELT 
 !     .. Array Arguments ..                                             
       DOUBLE PRECISION A(NELT), B(N), P(N), Q(N), R(N), R0(N), RWORK(*),&
      &                 U(N), V1(N), V2(N), X(N)                         
@@ -259,7 +259,7 @@
 !     .. Local Scalars ..                                               
       DOUBLE PRECISION AK, AKM, BK, BNRM, FUZZ, RHON, RHONM1, SIGMA,    &
      &                 SOLNRM, TOLMIN                                   
-      INTEGER I, K 
+      INTEGER I, K
 !     .. External Functions ..                                          
       DOUBLE PRECISION D1MACH, DDOT 
       INTEGER ISDCGS 

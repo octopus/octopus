@@ -80,6 +80,15 @@
       INTEGER IU(5), NUNIT 
       CHARACTER*2 NEWLIN 
       PARAMETER (NEWLIN = '$$') 
+      
+      interface
+        integer function i1mach(i)
+          integer :: i
+        end function i1mach
+      end interface
+
+      integer :: n, i, lpref, lwrap, lenmsg, nextc, lpiece, idelta
+
 !***FIRST EXECUTABLE STATEMENT  XERPRN                                  
       CALL XGETUA(IU,NUNIT) 
 !                                                                       

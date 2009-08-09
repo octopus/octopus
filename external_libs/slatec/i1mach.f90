@@ -89,7 +89,8 @@
 !   930618  Corrected I1MACH(5) for Convex -p8 and -pd8 compiler        
 !           options.  (DWL, RWC and WRB).                               
 !***END PROLOGUE  I1MACH                                                
-!                                                                       
+!                           
+        INTEGER :: I
       INTEGER IMACH(16),OUTPUT 
       SAVE IMACH 
 !                                                                       

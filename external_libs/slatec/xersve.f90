@@ -56,8 +56,18 @@
 !           XERSVE.  (RWC)                                              
 !   910626  Added LIBTAB and SUBTAB to SAVE statement.  (BKS)           
 !   920501  Reformatted the REFERENCES section.  (WRB)                  
-!***END PROLOGUE  XERSVE                                                
-      PARAMETER (LENTAB=10) 
+!***END PROLOGUE  XERSVE            
+        integer :: kflag, nerr, level, icount
+
+        interface
+          integer function i1mach(i)
+            integer :: i
+          end function i1mach
+        end interface
+                 
+        integer, parameter  :: lentab = 10
+        integer :: kountx, kount, nmsg, levtab, i, kunit, iunit, nertab, nunit
+
       INTEGER LUN(5) 
       CHARACTER*(*) LIBRAR, SUBROU, MESSG 
       CHARACTER*8  LIBTAB(LENTAB), SUBTAB(LENTAB), LIB, SUB 
@@ -65,6 +75,7 @@
       DIMENSION NERTAB(LENTAB), LEVTAB(LENTAB), KOUNT(LENTAB) 
       SAVE LIBTAB, SUBTAB, MESTAB, NERTAB, LEVTAB, KOUNT, KOUNTX, NMSG 
       DATA KOUNTX/0/, NMSG/0/ 
+
 !***FIRST EXECUTABLE STATEMENT  XERSVE                                  
 !                                                                       
       IF (KFLAG.LE.0) THEN 

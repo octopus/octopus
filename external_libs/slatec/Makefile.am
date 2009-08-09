@@ -23,19 +23,17 @@ noinst_LIBRARIES = libslatec.a
 
 
 libslatec_a_SOURCES = \
-d1mach.f90 daxpy.f90 dcgs.f90 dchkw.f90 ddot.f90 dnrm2.f90\
+d1mach.f90 dcgs.f90 dchkw.f90 \
 ds2y.f90 dsilus.f90 dslucs.f90 dslui2.f90 dslui.f90 dsmv.f90\
 fdump.f90 i1mach.f90 isdcgs.f90 j4save.f90 qs2i1d.f90 xercnt.f90\
 xerhlt.f90 xermsg.f90 xerprn.f90 xersve.f90 xgetua.f90 
 
 depend:
 	makedepf90 $(libslatec_a_SOURCES)
+
 d1mach.o : d1mach.f90
-daxpy.o : daxpy.f90
 dcgs.o : dcgs.f90
 dchkw.o : dchkw.f90
-ddot.o : ddot.f90
-dnrm2.o : dnrm2.f90
 ds2y.o : ds2y.f90
 dsilus.o : dsilus.f90
 dslucs.o : dslucs.f90
@@ -53,13 +51,3 @@ xermsg.o : xermsg.f90
 xermsg.o : xerprn.f90
 xersve.o : xersve.f90
 xgetua.o : xgetua.f90
-
-
-##libslatec.a:  $(OBJ)
-##	        ar r $@ $(OBJ); ranlib $@
-##
-##${OBJ}: %.o: ../src/%.f
-##	        ${FC} ${FFLAGS} -c -o $@ $<
-##
-##clean:
-##	        rm -f *.o libslatec.a

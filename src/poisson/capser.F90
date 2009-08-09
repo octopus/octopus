@@ -1,9 +1,14 @@
+#include <global.h>
+
       SUBROUTINE CAP
 	USE DRIVER_DATA
         USE POIS_DATA_G ! global Poisson data
         USE POIS_DATA_L ! local Poisson data
 
-      IMPLICIT REAL*8 (A-H,O-Z)
+      implicit none
+
+      integer :: i, j, k
+
 !  9/24/08 - THIS VERSION OF CAP is very generic. It is
 !  for surfER. Assumes just IPIO(0:NX+1,0:NY+1,0:NZ+1), 
 !  VBOUND(0:NX+1,0:NY+1,0:NZ+1),DIELECTRIC(NX,NY,NZ).
@@ -28,7 +33,7 @@
 !  at metal-semi border calculated discretely with 1/DXG (1/DYG,1/DZ)
 !  rather than properly averaged spacings.
       write(*,*) "In capser.F90"
-      ALLOCATE(SIG(NXTOT,NYTOT,NZTOT,6))
+      allocate(SIG(NXTOT,NYTOT,NZTOT,6))
       write(*,*) "Just called SIG"
       SIG=0.0
       DO I=1,NXTOT 

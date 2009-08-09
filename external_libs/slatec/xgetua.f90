@@ -38,8 +38,19 @@
 !   861211  REVISION DATE from Version 3.2                              
 !   891214  Prologue converted to Version 4.0 format.  (BAB)            
 !   920501  Reformatted the REFERENCES section.  (WRB)                  
-!***END PROLOGUE  XGETUA                                                
-      DIMENSION IUNITA(5) 
+!***END PROLOGUE  XGETUA
+
+        integer :: iunita(5) , n
+
+        interface
+          integer function j4save(iwhich, ivalue, iset) 
+            integer :: iwhich, ivalue
+            logical :: iset
+          end function j4save
+        end interface
+
+        integer :: i, index
+
 !***FIRST EXECUTABLE STATEMENT  XGETUA                                  
       N = J4SAVE(5,0,.FALSE.) 
       DO 30 I=1,N 

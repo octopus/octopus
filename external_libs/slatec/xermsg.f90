@@ -188,6 +188,17 @@
       CHARACTER*8 XLIBR, XSUBR 
       CHARACTER*72  TEMP 
       CHARACTER*20  LFIRST 
+      INTEGER :: NERR, LEVEL
+
+      INTEGER :: lkntrl, maxmes, i, kdummy, kount, lerr, llevel, mkntrl, ltemp, n
+      
+      interface
+        integer function j4save(iwhich, ivalue, iset) 
+          integer :: iwhich, ivalue
+          logical :: iset
+        end function j4save
+      end interface
+
 !***FIRST EXECUTABLE STATEMENT  XERMSG                                  
       LKNTRL = J4SAVE (2, 0, .FALSE.) 
       MAXMES = J4SAVE (4, 0, .FALSE.) 

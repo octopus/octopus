@@ -1,9 +1,12 @@
+#include <global.h>
       SUBROUTINE CBSURF
 
         USE POIS_DATA_G ! global Poisson data
         USE POIS_DATA_L ! local Poisson data
 
-        IMPLICIT REAL*8 (A-H,O-Z)
+        implicit none
+
+        integer :: k
 
 !  IFILL=1 parallel plate
 !
@@ -17,10 +20,10 @@
 ! This is a combination of cbsurfser and spaceser located on
 ! /home/stopa/surfER/build
         write(*,*) "Allocating data"
-           ALLOCATE(VH_BIG(NXTOT,NYTOT,NZTOT))
-        ALLOCATE(IPIO(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1))
-        ALLOCATE(VBOUND(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1))
-        ALLOCATE(DIELECTRIC(NXTOT,NYTOT,NZTOT))
+           allocate(VH_BIG(NXTOT,NYTOT,NZTOT))
+        allocate(IPIO(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1))
+        allocate(VBOUND(0:NXTOT+1,0:NYTOT+1,0:NZTOT+1))
+        allocate(DIELECTRIC(NXTOT,NYTOT,NZTOT))
         IPIO=0; VBOUND=0.0
         IF(IDEV.EQ.1)THEN ! parallel plates
            DIELECTRIC=DIELECTRIC0
@@ -45,12 +48,13 @@
         USE POIS_DATA_G ! global Poisson data
         USE POIS_DATA_L ! local Poisson data
 
-        IMPLICIT REAL*8 (A-H,O-Z)
-	DEALLOCATE(IPIO)
-      	DEALLOCATE(VBOUND)
-	DEALLOCATE(VT);DEALLOCATE(VTV);DEALLOCATE(QS)
-	DEALLOCATE(IAD);DEALLOCATE(JAD);DEALLOCATE(ADIAG)
-	DEALLOCATE(IDIAG);DEALLOCATE(X2)
-	DEALLOCATE(DXL);DEALLOCATE(DYL)
-!	DEALLOCATE(VH_BIG)
+        implicit none
+
+	deallocate(IPIO)
+      	deallocate(VBOUND)
+	deallocate(VT);deallocate(VTV);deallocate(QS)
+	deallocate(IAD);deallocate(JAD);deallocate(ADIAG)
+	deallocate(IDIAG);deallocate(X2)
+	deallocate(DXL);deallocate(DYL)
+!	deallocate(VH_BIG)
 	end subroutine CBSURF_end

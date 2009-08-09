@@ -2,7 +2,7 @@
 
 !------------------------------------------------------------------------------
       MODULE DRIVER_DATA
-        FLOAT, DIMENSION(:,:,:), ALLOCATABLE :: RHO,VH
+        FLOAT, DIMENSION(:,:,:), ALLOCATABLE :: RHO, VH
 
       END MODULE DRIVER_DATA
 !

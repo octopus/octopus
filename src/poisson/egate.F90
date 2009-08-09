@@ -1,11 +1,20 @@
+#include <global.h>
+
       SUBROUTINE EGATE
         USE POIS_DATA_G ! global Poisson data
         USE POIS_DATA_L ! local Poisson data
-      IMPLICIT REAL*8 (A-H,O-Z)
+
+        implicit none
+      
+      integer :: i, j, k
+
 !
 !     to do energy calculations previously performed in setr
 !  compute capacitances of six surfaces
-      ESURF=0.0; CHARGE_SURF=0.0; CHARGE_TOP=0.0
+      ESURF=0.0
+      CHARGE_SURF=0.0
+      CHARGE_TOP=0.0
+
       !write(64,*) "#I Vbound(I,5,5), ESURF"
       CHARGE_BOT=0.0
       CS1=0.0; CS2=0.0; CS3=0.0
@@ -29,7 +38,10 @@
 	 !write (64,*) I, ESURF
       ENDDO
       deallocate(SIG)
-      ESURF=0.5*ESURF; CHARGE_SURF=CS1+CS2+CS3
+
+      ESURF=0.5*ESURF
+      CHARGE_SURF=CS1+CS2+CS3
+
       !WRITE(6,*)' CS1 ',CS1,' CS2 ',CS2,' CS3 ',CS3
       RETURN
       END

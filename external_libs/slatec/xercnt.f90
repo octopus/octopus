@@ -55,6 +55,7 @@
 !   920501  Reformatted the REFERENCES section.  (WRB)                  
 !***END PROLOGUE  XERCNT                                                
       CHARACTER*(*) LIBRAR, SUBROU, MESSG 
+      INTEGER :: NERR, LEVEL, KONTRL
 !***FIRST EXECUTABLE STATEMENT  XERCNT                                  
       RETURN 
       END                                           

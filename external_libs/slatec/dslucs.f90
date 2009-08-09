@@ -225,7 +225,7 @@
       PARAMETER (LOCRB=1, LOCIB=11) 
 !     .. Scalar Arguments ..                                            
       DOUBLE PRECISION ERR, TOL 
-      INTEGER IERR, ISYM, ITER, ITMAX, ITOL, IUNIT, LENIW, LENW, N, NELT 
+      INTEGER IERR, ISYM, ITER, ITERMIN, ITMAX, ITOL, IUNIT, LENIW, LENW, N, NELT 
 !     .. Array Arguments ..                                             
       DOUBLE PRECISION A(NELT), B(N), RWORK(LENW), X(N) 
       INTEGER IA(NELT), IWORK(LENIW), JA(NELT) 
