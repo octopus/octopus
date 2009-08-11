@@ -64,14 +64,13 @@ AR = ar
 ARFLAGS = cru
 libslatec_a_AR = $(AR) $(ARFLAGS)
 libslatec_a_LIBADD =
-am_libslatec_a_OBJECTS = d1mach.$(OBJEXT) daxpy.$(OBJEXT) \
-	dcgs.$(OBJEXT) dchkw.$(OBJEXT) ddot.$(OBJEXT) dnrm2.$(OBJEXT) \
-	ds2y.$(OBJEXT) dsilus.$(OBJEXT) dslucs.$(OBJEXT) \
-	dslui2.$(OBJEXT) dslui.$(OBJEXT) dsmv.$(OBJEXT) \
-	fdump.$(OBJEXT) i1mach.$(OBJEXT) isdcgs.$(OBJEXT) \
-	j4save.$(OBJEXT) qs2i1d.$(OBJEXT) xercnt.$(OBJEXT) \
-	xerhlt.$(OBJEXT) xermsg.$(OBJEXT) xerprn.$(OBJEXT) \
-	xersve.$(OBJEXT) xgetua.$(OBJEXT)
+am_libslatec_a_OBJECTS = d1mach.$(OBJEXT) dcgs.$(OBJEXT) \
+	dchkw.$(OBJEXT) ds2y.$(OBJEXT) dsilus.$(OBJEXT) \
+	dslucs.$(OBJEXT) dslui2.$(OBJEXT) dslui.$(OBJEXT) \
+	dsmv.$(OBJEXT) fdump.$(OBJEXT) i1mach.$(OBJEXT) \
+	isdcgs.$(OBJEXT) j4save.$(OBJEXT) qs2i1d.$(OBJEXT) \
+	xercnt.$(OBJEXT) xerhlt.$(OBJEXT) xermsg.$(OBJEXT) \
+	xerprn.$(OBJEXT) xersve.$(OBJEXT) xgetua.$(OBJEXT)
 libslatec_a_OBJECTS = $(am_libslatec_a_OBJECTS)
 DEFAULT_INCLUDES = -I. -I$(srcdir) -I$(top_builddir)
 FCCOMPILE = $(FC) $(AM_FCFLAGS) $(FCFLAGS)
@@ -220,7 +219,7 @@ sysconfdir = ${prefix}/etc
 target_alias = 
 noinst_LIBRARIES = libslatec.a
 libslatec_a_SOURCES = \
-d1mach.f90 daxpy.f90 dcgs.f90 dchkw.f90 ddot.f90 dnrm2.f90\
+d1mach.f90 dcgs.f90 dchkw.f90 \
 ds2y.f90 dsilus.f90 dslucs.f90 dslui2.f90 dslui.f90 dsmv.f90\
 fdump.f90 i1mach.f90 isdcgs.f90 j4save.f90 qs2i1d.f90 xercnt.f90\
 xerhlt.f90 xermsg.f90 xerprn.f90 xersve.f90 xgetua.f90 
@@ -443,12 +442,10 @@ uninstall-am: uninstall-info-am
 
 depend:
 	makedepf90 $(libslatec_a_SOURCES)
+
 d1mach.o : d1mach.f90
-daxpy.o : daxpy.f90
 dcgs.o : dcgs.f90
 dchkw.o : dchkw.f90
-ddot.o : ddot.f90
-dnrm2.o : dnrm2.f90
 ds2y.o : ds2y.f90
 dsilus.o : dsilus.f90
 dslucs.o : dslucs.f90

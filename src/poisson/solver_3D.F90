@@ -23,6 +23,8 @@ subroutine poisson3D_init(gr, geo)
   type(geometry_t), intent(in) :: geo
 
   integer :: maxl
+  integer :: nx,ny,nz !SEC
+  FLOAT :: xl,yl,zl
 
   call push_sub('poisson3D.poisson3D_init')
 
@@ -124,9 +126,17 @@ subroutine poisson3D_init(gr, geo)
     write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
     call write_info(1)
     call poisson_corrections_init(corrector, maxl, gr%mesh)
-  !Mike: We need to change this eventually
   case(SETE)
-    call poisson_isf_init(gr%mesh)
+      nx=gr%mesh%idx%nr(2,1)-gr%mesh%idx%nr(1,1)+1-&
+      	2*gr%mesh%idx%enlarge(1)
+      ny=gr%mesh%idx%nr(2,2)-gr%mesh%idx%nr(1,2)+1-&
+      2*gr%mesh%idx%enlarge(2)
+      nz=gr%mesh%idx%nr(2,3)-gr%mesh%idx%nr(1,3)+1-&
+      2*gr%mesh%idx%enlarge(3)
+      xl = 2*gr%mesh%sb%lsize(1) 
+      yl = 2*gr%mesh%sb%lsize(2) 
+      zl = 2*gr%mesh%sb%lsize(3)
+    call poisson_sete_init(nx,ny,nz,xl,yl,zl)
      
   end select
 

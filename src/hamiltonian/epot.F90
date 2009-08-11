@@ -60,6 +60,8 @@ module external_pot_m
   use varinfo_m
   use poisson_m
   use projector_m
+  use POIS_data_l !SEC Team
+  use index_m
 
   implicit none
 
@@ -133,6 +135,7 @@ contains
     type(block_t) :: blk
     FLOAT, allocatable :: x(:)
     integer :: filter
+    integer :: poisson_solver, default_solver !SEC Team
 
     call push_sub('epot.epot_init')
 
@@ -356,6 +359,10 @@ contains
     nullify(ep%local_potential)
     ep%local_potential_precalculated = .false.
     
+    call loct_parse_int(datasets_check('PoissonSolver'), default_solver, poisson_solver) !SEC
+    if (poisson_solver == 9) then  !SEC
+      SAFE_ALLOCATE(rho_nuc(1:gr%mesh%np)) !SEC
+    endif   !SEC
     call pop_sub()
   end subroutine epot_init
 
@@ -365,6 +372,7 @@ contains
     type(epot_t),      intent(inout) :: ep
     type(grid_t),      intent(in)    :: gr
     type(geometry_t),  intent(inout) :: geo
+    integer :: poisson_solver, default_solver !SEC Team
 
     integer :: i, iproj
 
@@ -411,6 +419,10 @@ contains
       end do
       SAFE_DEALLOCATE_P(ep%proj_fine)
     end if
+    call loct_parse_int(datasets_check('PoissonSolver'), default_solver, poisson_solver) !SEC
+    if (poisson_solver.eq.9) then  !SEC
+      SAFE_DEALLOCATE_A(rho_nuc)
+    endif   !SEC
 
     call pop_sub()
 
@@ -456,7 +468,6 @@ contains
         call epot_local_potential(ep, gr, gr%mesh, geo, ia, ep%vpsl, time_)
       end if
     end do
-
 #ifdef HAVE_MPI
     call profiling_in(epot_reduce, "EPOT_REDUCE")
     if(geo%atoms%parallel) then
@@ -522,7 +533,7 @@ contains
     FLOAT, allocatable  :: rho(:), vl(:)
     type(submesh_t)  :: sphere
     type(profile_t), save :: prof
-    
+    integer :: poisson_solver, default_solver !SEC Team
     call push_sub('epot.epot_local_potential')
     call profiling_in(prof, "EPOT_LOCAL")
 
@@ -538,9 +549,9 @@ contains
       !(for all-electron species or pseudopotentials in periodic
       !systems) or by applying it directly to the grid
       
-      if( species_has_density(geo%atom(iatom)%spec) .or. &
-          (species_is_ps(geo%atom(iatom)%spec) .and. simul_box_is_periodic(gr%sb)) ) then
-
+    call loct_parse_int(datasets_check('PoissonSolver'), default_solver, poisson_solver)
+      if( poisson_solver.eq.9 .or. (species_has_density(geo%atom(iatom)%spec) .or. &
+          (species_is_ps(geo%atom(iatom)%spec) .and. simul_box_is_periodic(gr%sb)))) then
         SAFE_ALLOCATE(rho(1:mesh%np))
 
         !this has to be optimized so the Poisson solution is made once
@@ -549,8 +560,10 @@ contains
 
         vl(1:mesh%np) = M_ZERO   ! vl has to be initialized before entering routine
         ! and our best guess for the potential is zero
-        call dpoisson_solve(gr, vl, rho)
-
+        call dpoisson_solve(gr, vl, rho) 
+    if (poisson_solver.eq.9) then  !SEC
+        rho_nuc(1:gr%mesh%np)=rho_nuc(1:gr%mesh%np)+rho(1:gr%mesh%np)
+    endif
         SAFE_DEALLOCATE_A(rho)
       else
 

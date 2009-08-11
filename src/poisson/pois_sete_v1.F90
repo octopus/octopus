@@ -1,34 +1,35 @@
 #include <global.h>
 
-     SUBROUTINE POIS(ICASE,RHO,VH,NX,NY,NZ,XL,YL,ZL,ICALC)
-        use pois_data_g ! global Poisson data
-        use pois_data_l ! local Poisson data
+!module poisson_sete_m
+!  use POIS_DATA_G
+!  use POIS_DATA_L
+!  use mesh_m
 
-        implicit none
+  !implicit none
 
-        integer, intent(in)  :: icase
-	FLOAT,   intent(in)  :: xl, yl, zl  ! Input: XL, YL, ZL -> Size of the octopus box
-	INTEGER, intent(in)  :: nx, ny, nz  ! Input: NX, NY, NZ -> No. of octopus grid points in each dimension
-        integer, intent(out) :: icalc
+  !private
+  !public ::             &
+  !   poisson_sete_init, &
+  !   pois
 
-        FLOAT :: RHO(NX,NY,NZ),VH(NX,NY,NZ)
+!contains
+     subroutine poisson_sete_init(nx,ny,nz,xl,yl,zl)
+
+
+        USE POIS_DATA_G ! global Poisson data
+        USE POIS_DATA_L ! local Poisson data
+        IMPLICIT FLOAT (A-H,O-Z)
+	FLOAT, intent(in) :: XL,YL,ZL
+	INTEGER, intent(in) :: NX,NY,NZ
         CHARACTER*40 :: CDUM,FIL1
         FLOAT :: BOHRNM,ANGSNM
-	INTEGER :: J1,K1, M, I,J,K, idum, i1
+	INTEGER :: J1,K1, M, I,J,K
 	FLOAT :: ZCEN, XCEN, YCEN, VHMIN, VHMAX
-        FLOAT :: err
-
-	ICALC=0
-	write(*,*) "Welcome to SETE ICASE ICALC", ICASE, ICALC
-        IF(ICASE.EQ.1)THEN
-! INITIALIZATION
-! read input file, set up poisson equation
-           !write(6,*)' opening poisq '
+        PI=DACOS(-1.D0)
+        PCONST=4*PI ! need 4 pi for Hartrees I think (??)
+	BOHRNM=BOHR/10.0
+	ANGSNM=10.0/BOHR
            open(56,file='poisq',status='unknown')
-           PI=DACOS(-1.D0)
-           PCONST=4*PI ! need 4 pi for Hartrees I think (??)
-	   BOHRNM=BOHR/10.0
-	   ANGSNM=10.0/BOHR
            FIL1='test1.pois'
            OPEN(unit=57,FILE=FIL1,STATUS='UNKNOWN') ! status info file
 ! READ FILE
@@ -36,6 +37,7 @@
            READ(57,'(A40)')CDUM
            READ(57,'(A40)')CDUM
            READ(57,*)IDEV,ISETE_ON ! for future use - device configuration
+           write(*,*)"ISETE is ON", ISETE_ON
            IF(IDEV.EQ.1)THEN
 ! physical device characteristics
               READ(57,*)ZWIDTH;ZWIDTH=ZWIDTH*ANGSNM  ! distance between plates (nm)
@@ -59,23 +61,14 @@
               READ(57,*)(DXL(I),I=1,NXL)
               READ(57,*)(DYL(J),J=1,NYL)
            ELSE
-              !WRITE(6,*)' IDEV not supported '
+              WRITE(6,*)' IDEV not supported '
               RETURN
            ENDIF
-	   !XL,YL,ZL are given in terms of
-	   !Bohr radii (due to internal usage).
-	   !Then, we need to go back to A.
-	   !Convert Octopus box from A to nm
-	   !XL=XL*BOHRNM;YL=YL*BOHRNM;ZL=ZL*BOHRNM
-           CALL XYZGRID(NX,NY,NZ,XL,YL,ZL)  ! establish x-y-z grids
-!
-           CALL CBSURF !Assign boundaries for plate case scenario.
-!
-! guess for number of non-zero elements in Laplacian
+      CALL XYZGRID(nx,ny,nz,xl,yl,zl)  ! establish x-y-z grids
+      CALL CBSURF !Assign boundaries 
            NELT=32+20*((NXTOT-2)+(NYTOT-2)+(NZTOT-2))+ &
                 12*((NXTOT-2)*(NYTOT-2)+(NXTOT-2)*(NZTOT-2)+(NYTOT-2)*(NZTOT-2)) + &
                 7*(NXTOT-2)*(NYTOT-2)*(NZTOT-2)
-! guess for input to DSLUCS - refined and output in IWORK(9) and IWORK(10)
            LENW=NELT+9*NXTOT*NYTOT*NZTOT
            LENIW=NELT+5*NXTOT*NYTOT*NZTOT+12
            allocate(Q2(NTOT)); allocate(AW(NELT))
@@ -86,12 +79,39 @@
            CALL POISSONM
            QS=Q2 ! store Dirichlet BC info in QS
            deallocate(Q2)
+         RETURN
+      END subroutine
 
-        ELSEIF(ISETE_ON.EQ.1)THEN
+
+
+     SUBROUTINE POIS(ICASE,RHO,VH,NX,NY,NZ,XL,YL,ZL,ICALC)
+     ! Input: NX, NY, NZ -> No. of octopus grid points in each dimension
+     ! Input: XL, YL, ZL -> Size of the octopus box
+
+        USE POIS_DATA_G ! global Poisson data
+        USE POIS_DATA_L ! local Poisson data
+
+        IMPLICIT FLOAT (A-H,O-Z)
+	FLOAT, intent(in) :: XL,YL,ZL
+	INTEGER, intent(in) :: NX,NY,NZ,ICASE,ICALC
+        
+        FLOAT :: RHO(NX,NY,NZ),VH(NX,NY,NZ)
+        CHARACTER*40 :: CDUM,FIL1
+        FLOAT :: BOHRNM,ANGSNM
+	INTEGER :: J1,K1, M, I,J,K,IDUM,I1
+	FLOAT :: ZCEN, XCEN, YCEN, VHMIN, VHMAX
+        PI=DACOS(-1.D0)
+        PCONST=4*PI ! need 4 pi for Hartrees I think (??)
+	BOHRNM=BOHR/10.0
+	ANGSNM=10.0/BOHR
+
+write(*,*) "LENW LENIW IELT", LENW, LENIW, NELT
            allocate(Q2(NTOT))
            allocate(rhotest(nxtot,nytot,nztot))
-           Q2=QS ! recall stored BC info
            rhotest=0
+           do i= 1,ntot
+           Q2(i)=QS(i) ! recall stored BC info
+           enddo
            DO M = 1,NTOT
               I=IY(M); J=JY(M); K=KY(M)
               IF(IPIO(I,J,K).EQ.0)THEN
@@ -110,25 +130,15 @@
                  Q2(M)=0.0
               ENDIF
            ENDDO
-
-           Q2=Q2/ADIAG ! Laplacian scaled with diagonal elements
-           IDUM=1
-!           DO I=1,NTOT
-!              X2(I)=RAN1(IDUM) ! randomize sol'n vector Pois. Eq.
-!           ENDDO
-!           X2=0.0
-!           WRITE(6,*)' ntot ',ntot
-!           write(6,*)' nelt ',nelt
-!           write(6,*)' lenw ',lenw
-!           write(6,*)' leniw ',leniw
-!           write(6,*)' size(aw) ',size(aw),size(rwork),size(iwork)
-!           write(6,*)' size(q2,x2) ',size(q2),size(x2),size(iad),size(jad)
+           write(*,*) size(Q2), size(ADIAG)
+           do i=1,NTOT
+             Q2(i)=Q2(i)/ADIAG(i)!! Laplacian scaled with diagonal elements
+           enddo
 
            allocate(RWORK(LENW));allocate(IWORK(LENIW))
            CALL DSLUCS(NTOT,Q2,X2,NELT,IAD,JAD,AW,ISYM,ITOL, &
                 TOL,ITMAX,ITER,ITERMIN,ERR,IERR,IUNIT,RWORK,LENW, &
                 IWORK,LENIW)
-           
            LENIW=IWORK(9); LENW=IWORK(10) ! new work array lengths
            deallocate(RWORK); deallocate(IWORK)
            
@@ -149,39 +159,10 @@
                  ENDIF
               ENDIF
            ENDDO
+           call EGATE
            VHMIN=MINVAL(VH); VHMAX=MAXVAL(VH)
            deallocate(Q2)
-!           open(57,file='vhbig.dat',status='unknown')
-!           vh_big(:,:,1)=250.0; vh_big(:,:,nztot)=250.0
-!           xx1=-0.367;yy1=0.0;zz1=0.0
-!           xx2=0.367;yy2=0.0;zz2=0.0
-!           do i=1,nxtot
-!              do j=1,nytot
-!                 do k=1,nztot
-!                    if(i.gt.nxl.and.i.le.nxtot-nxl.and.j.gt.nyl &
-!		       .and.j.le.nytot-nyl)then
-!                       r1=sqrt((xx1-xg(i))**2+(yy1-yg(j))**2+(zz1-zg(k))**2)
-!                       r2=sqrt((xx2-xg(i))**2+(yy2-yg(j))**2+(zz2-zg(k))**2)
-!                       if(r1.lt.0.15.or.r2.lt.0.15)then
-!                          rhotest(i,j,k)=50.0
-!                       endif
-                       !write(57,104)xg(i),yg(j),zg(k),vh_big(i,j,k), rhotest(i,j,k)
-!104                    format(3(1x,f12.6),3(1x,e12.6))
-!                    endif
-!                 enddo
-!              enddo
-!           enddo
-!           close(57)
-
-           
-!           do k=1,nztot
-!	      !write(57,206)zg(k),(vh_big(i,1+(nytot/2),k),i=1,nxtot)
-!206           format(1x,f10.5,200(1x,e12.6))
-!           enddo
-!           close(57)
            deallocate(rhotest);! deallocate(VH_BIG);
-	   ICALC=1
-      ENDIF
 
          RETURN
-      END
+      END subroutine

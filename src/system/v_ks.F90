@@ -40,6 +40,7 @@ module v_ks_m
   use xc_m
   use magnetic_m
   use POIS_data_l !SEC Team
+  use index_m
   implicit none
 
   private
@@ -414,10 +415,8 @@ contains
 
     FLOAT, allocatable :: rho(:)
     integer :: is, ip
-    integer :: default_solver, poisson_solver, i, i1, nz !SEC Team
-    real(8) :: ehartree_nuc, norm!SEC Team
-    !FLOAT, allocatable :: rho_nuc(:), rhop_temp(:)!SEC Team
-    FLOAT, allocatable :: potstopa(:),rho_nuc(:)!, rhop_temp(:)!SEC Team
+    integer :: default_solver, poisson_solver, i!SEC Team
+    real(8) :: ehartree_nuc!SEC Team
 
     call push_sub('v_ks.v_ks_hartree')
 
@@ -446,27 +445,15 @@ contains
 
     ! solve the poisson equation
     call dpoisson_solve(gr, hm%vhartree, rho)
-
     ! Get the Hartree energy
+    hm%ehartree = M_HALF*dmf_dotp(gr%mesh, rho, hm%vhartree)
+
+    call loct_parse_int(datasets_check('PoissonSolver'), default_solver, poisson_solver)
     if (poisson_solver.eq.9) then !Roberto
-      i1=size(rho)
-!      allocate(potstopa(i1))
-
-!      hm%ehartree = M_HALF*dmf_dotp(gr%mesh, rho, hm%vhartree)
       ! How to get the nuclear density here?
-!      hm%ep%eii = M_HALF*dmf_dotp(gr%mesh, rho_nuc, hm%ep%vpsl) 
-!      potstopa=hm%vhartree + hm%ep%vspl
-! CAP depends on vh_big, which is called from pois_sete_v1...
-!      call CAP
-!      call EGATE
-!      hm%ehartree=hm%ehartree+ESURF!-ehartree_nuc
-      !deallocate(rho_nuc);deallocate(rhop_temp)
-!      deallocate(potstopa)
-
-    else 
-      hm%ehartree = M_HALF*dmf_dotp(gr%mesh, rho, hm%vhartree)
-
-           
+      hm%ep%eii = M_HALF*dmf_dotp(gr%mesh, rho_nuc, hm%ep%vpsl) 
+      ! ESURF is a module called from later.  Need to write it into somewhere...
+      write(89,*) hm%ehartree*27.2,ESURF*27.2, hm%ep%eii*27.2
     endif
 
 

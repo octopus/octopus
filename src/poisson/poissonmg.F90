@@ -79,7 +79,7 @@
                        Q2(IA)=Q2(IA)+VBOUND(I,J-1,K)*DCONST*D1*D2/DEL
                     CASE(2) ! Neumann
                        AV(IAV)=0.D0; DEL=0.D0
-                    CASE DEFAULT
+                    CASE DEFAULT! interior point
                        DEL=0.5D0*(DYG(J)+DYG(J-1))*DZ(K)
                        DCONST=0.5D0*(DIELECTRIC(I,J,K)+DIELECTRIC(I,J-1,K))
                        AV(IAV)=-DCONST*D1*D2/DEL; AV(4)=AV(4)+DCONST*D1*D2/DEL
@@ -94,7 +94,7 @@
                        Q2(IA)=Q2(IA)+VBOUND(I,J,K-1)*DCONST*D1*D2/DEL
                     CASE(2) ! Neumann
                        AV(IAV)=0.D0; DEL=0.D0
-                    CASE DEFAULT
+                    CASE DEFAULT! interior point
                        DEL=0.5D0*(DZ(K)+DZ(K-1))*DZ(K)
                        DCONST=0.5D0*(DIELECTRIC(I,J,K)+DIELECTRIC(I,J,K-1))
                        AV(IAV)=-DCONST*D1*D2/DEL; AV(4)=AV(4)+DCONST*D1*D2/DEL
@@ -109,7 +109,7 @@
                        Q2(IA)=Q2(IA)+VBOUND(I,J,K+1)*DCONST*D1*D2/DEL
                     CASE(2) ! Neumann
                        AV(IAV)=0.D0; DEL=0.D0
-                    CASE DEFAULT
+                    CASE DEFAULT! interior point
                        DEL=0.5D0*(DZ(K)+DZ(K+1))*DZ(K)
                        DCONST=0.5D0*(DIELECTRIC(I,J,K)+DIELECTRIC(I,J,K+1))
                        AV(IAV)=-DCONST*D1*D2/DEL; AV(4)=AV(4)+DCONST*D1*D2/DEL
@@ -147,7 +147,7 @@
                  END SELECT
               ENDDO
            ELSE
-              AV(4)=1.D0 ! for points that are out of the grid.
+              AV(4)=1.D0/PCONST ! for points that are out of the grid.
            ENDIF
 !                                 DSLUCS matrix and normalizations
            ADIAG(IA)=AV(4)
