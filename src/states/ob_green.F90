@@ -98,8 +98,8 @@ contains
           if(residual2.lt.residual) then
             green = green2
           end if
-          message(1) = 'The surface green function did not converge properly'
-          message(2) = 'with neither the decimation technique nor the closed form!'
+          message(1) = "The surface Green's function did not converge properly"
+          message(2) = 'with either the decimation technique nor the closed form!'
           write(message(3), '(a,e10.3)') 'Umerski-Residual = ', residual
           write(message(4), '(a,e10.3)') 'Sancho-Residual  = ', residual2
           message(5) = 'The better converged version is taken.'
@@ -114,8 +114,8 @@ contains
   end subroutine lead_green
 
 
-  ! check if the green function gives the correct density of states
-  ! if not compute its hermitian conjugate
+  ! check if the Green`s function gives the correct density of states
+  ! if not compute its Hermitian conjugate
   subroutine fix_green(np, green, dos)
     integer, intent(in)    :: np
     CMPLX,   intent(inout) :: green(:, :)
@@ -138,7 +138,7 @@ contains
   end subroutine fix_green
 
 
-  ! calculate the residual of the green function
+  ! calculate the residual of the Green`s function
   FLOAT function calc_residual_green(energy, green, diag, offdiag, np, il) result(residual)
     FLOAT,   intent(in) :: energy
     CMPLX,   intent(in) :: green(:, :)
@@ -185,7 +185,7 @@ contains
   ! Calculate head of the semi-infinite surface Green`s function with the
   ! algorithm from the paper
   ! Highly convergent schemes for the calculation of bulk and surface Green`s functions
-  ! M. P. Lopez Sanco, J. M. Sancho, and J. Rubio (1984)
+  ! M. P. Lopez Sancho, J. M. Lopez Sancho, and J. Rubio (1984)
   ! J. Phys. F: Met. Phys. 15 (1985) 851-858
   subroutine lead_green_sancho(energy, diag, offdiag, np, green, threshold, h_is_real)
     CMPLX,   intent(in)  :: energy        ! Energy to calculate Green`s function for (already shifted).
@@ -326,7 +326,7 @@ contains
   end subroutine create_moeb_trans_matrix
 
 
-  ! compute the semi-infinite surface green function
+  ! compute the semi-infinite surface Green`s function
   ! Algorithm taken from A. Umerski, Closed-form solutions to surface Green`s functions
   ! http://www.city.ac.uk/sems/dps/mathematics/research/nanostructures/prb55_5266.pdf
   subroutine lead_green_umerski(energy, diag, offdiag, np, green, il)
