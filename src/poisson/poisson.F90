@@ -49,25 +49,26 @@ module poisson_m
   implicit none
 
   private
-  public ::             &
-    poisson_init,       &
-    dpoisson_solve,     &
-    zpoisson_solve,     &
+  public ::                      &
+    poisson_init,                &
+    dpoisson_solve,              &
+    zpoisson_solve,              &
     poisson_solver_is_iterative, &
-    poisson_end,        &
-    poisson_test,       &       
-    geometry_init,      &
-    geometry_init_xyz,     &
-    geometry_init_species, &
+    poisson_solver_has_free_bc,  &
+    poisson_end,                 &
+    poisson_test,                &       
+    geometry_init,               &
+    geometry_init_xyz,           &
+    geometry_init_species,       &
     geometry_t
 
-  integer, parameter :: &
-    DIRECT_SUM_1D = -1, &
-    DIRECT_SUM_2D = -2, &
-    CG            =  5, &
-    CG_CORRECTED  =  6, &
-    MULTIGRID     =  7, &
-    ISF           =  8, &
+  integer, public, parameter :: &
+    DIRECT_SUM_1D = -1,         &
+    DIRECT_SUM_2D = -2,         &
+    CG            =  5,         &
+    CG_CORRECTED  =  6,         &
+    MULTIGRID     =  7,         &
+    ISF           =  8,         &
     SETE          =  9
 
   integer :: poisson_solver = -99
@@ -659,6 +660,16 @@ contains
     iterative = poisson_solver == CG .or. poisson_solver == CG_CORRECTED .or. poisson_solver == MULTIGRID
     
   end function poisson_solver_is_iterative
+
+  logical pure function poisson_solver_has_free_bc() result(free_bc)
+
+    free_bc = &
+      poisson_solver /= SETE      .and. &
+      poisson_solver /= FFT_NOCUT .and. & 
+      poisson_solver /= FFT_CYL   .and. & 
+      poisson_solver /= FFT_PLA
+      
+  end function poisson_solver_has_free_bc
 
 #include "solver_1D.F90"
 #include "solver_2D.F90"

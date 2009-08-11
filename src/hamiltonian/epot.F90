@@ -360,9 +360,11 @@ contains
     ep%local_potential_precalculated = .false.
     
     call loct_parse_int(datasets_check('PoissonSolver'), default_solver, poisson_solver) !SEC
-    if (poisson_solver == 9) then  !SEC
-      SAFE_ALLOCATE(rho_nuc(1:gr%mesh%np)) !SEC
-    endif   !SEC
+
+    if (poisson_solver == SETE) then 
+      SAFE_ALLOCATE(rho_nuc(1:gr%mesh%np))
+    end if
+
     call pop_sub()
   end subroutine epot_init
 
@@ -420,9 +422,10 @@ contains
       SAFE_DEALLOCATE_P(ep%proj_fine)
     end if
     call loct_parse_int(datasets_check('PoissonSolver'), default_solver, poisson_solver) !SEC
-    if (poisson_solver.eq.9) then  !SEC
+
+    if (poisson_solver == SETE) then 
       SAFE_DEALLOCATE_A(rho_nuc)
-    endif   !SEC
+    end if
 
     call pop_sub()
 
@@ -542,16 +545,18 @@ contains
       forall(ip = 1:mesh%np) vpsl(ip) = vpsl(ip) + ep%local_potential(ip, iatom)
 
     else
-      
+
       SAFE_ALLOCATE(vl(1:mesh%np_part))
-      
+
       !Local potential, we can get it by solving the Poisson equation
       !(for all-electron species or pseudopotentials in periodic
       !systems) or by applying it directly to the grid
+
+      call loct_parse_int(datasets_check('PoissonSolver'), default_solver, poisson_solver)
       
-    call loct_parse_int(datasets_check('PoissonSolver'), default_solver, poisson_solver)
-      if( poisson_solver.eq.9 .or. (species_has_density(geo%atom(iatom)%spec) .or. &
-          (species_is_ps(geo%atom(iatom)%spec) .and. simul_box_is_periodic(gr%sb)))) then
+      if(species_has_density(geo%atom(iatom)%spec) .or. &
+        (species_is_ps(geo%atom(iatom)%spec) .and. .not. poisson_solver_has_free_bc())) then
+
         SAFE_ALLOCATE(rho(1:mesh%np))
 
         !this has to be optimized so the Poisson solution is made once
@@ -561,28 +566,30 @@ contains
         vl(1:mesh%np) = M_ZERO   ! vl has to be initialized before entering routine
         ! and our best guess for the potential is zero
         call dpoisson_solve(gr, vl, rho) 
-    if (poisson_solver.eq.9) then  !SEC
-        rho_nuc(1:gr%mesh%np)=rho_nuc(1:gr%mesh%np)+rho(1:gr%mesh%np)
-    endif
+
+        if (poisson_solver == SETE) then  !SEC
+          rho_nuc(1:gr%mesh%np) = rho_nuc(1:gr%mesh%np) + rho(1:gr%mesh%np)
+        end if
+
         SAFE_DEALLOCATE_A(rho)
       else
 
         !Local potential
         call species_get_local(geo%atom(iatom)%spec, mesh, geo%atom(iatom)%x(1:gr%mesh%sb%dim), vl, time)
       end if
-      
+
       vpsl(1:mesh%np) = vpsl(1:mesh%np) + vl(1:mesh%np)
 
       !the localized part
       if(species_is_ps(geo%atom(iatom)%spec)) then
-        
+
         radius = double_grid_get_rmax(gr%dgrid, geo%atom(iatom)%spec, mesh) + mesh%h(1)
-        
+
         call submesh_init_sphere(sphere, gr%sb, mesh, geo%atom(iatom)%x, radius)
         call double_grid_apply_local(gr%dgrid, geo%atom(iatom)%spec, mesh, sphere, geo%atom(iatom)%x, vl(1:sphere%ns))
         vpsl(sphere%jxyz(1:sphere%ns)) = vpsl(sphere%jxyz(1:sphere%ns)) + vl(1:sphere%ns)
         call submesh_end(sphere)
-        
+
       end if
 
       SAFE_DEALLOCATE_A(vl)
@@ -590,8 +597,8 @@ contains
 
     !Non-local core corrections
     if( present(rho_core) .and. &
-        species_has_nlcc(geo%atom(iatom)%spec) .and. &
-        species_is_ps(geo%atom(iatom)%spec)) then
+      species_has_nlcc(geo%atom(iatom)%spec) .and. &
+      species_is_ps(geo%atom(iatom)%spec)) then
       do i = 1, mesh%np
         x(1:gr%mesh%sb%dim) = mesh%x(i, 1:gr%mesh%sb%dim) - geo%atom(iatom)%x(1:gr%mesh%sb%dim)
         rho_core(i) = rho_core(i) + species_get_nlcc(geo%atom(iatom)%spec, x)
