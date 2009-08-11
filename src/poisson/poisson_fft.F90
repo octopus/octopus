@@ -60,11 +60,11 @@ module poisson_fft_m
     poisson_fft
 
   integer, public, parameter :: &
-       FFT_SPH       =  0,      &
-       FFT_CYL       =  1,      &
-       FFT_PLA       =  2,      &
-       FFT_NOCUT     =  3,      &
-       FFT_CORRECTED =  4
+       POISSON_FFT_SPH       =  0,      &
+       POISSON_FFT_CYL       =  1,      &
+       POISSON_FFT_PLA       =  2,      &
+       POISSON_FFT_NOCUT     =  3,      &
+       POISSON_FFT_CORRECTED =  4
 
   type(dcf_t), public      :: fft_cf
   type(fourier_space_op_t) :: coulb
@@ -359,10 +359,10 @@ contains
     call push_sub('poisson_fft.poisson_fft_build_3d_0d')
     
     select case(poisson_solver)
-    case(FFT_SPH)
+    case(POISSON_FFT_SPH)
       call mesh_double_box(gr%sb, gr%mesh, db)
       db(:) = maxval(db)
-    case(FFT_CORRECTED)
+    case(POISSON_FFT_CORRECTED)
       db(:) = gr%mesh%idx%ll(:)
     end select
 
@@ -375,7 +375,7 @@ contains
     ! dimensions may have been optimized
     db(1:3) = fft_cf%n(1:3)
 
-    if (poisson_solver .ne. FFT_CORRECTED) then
+    if (poisson_solver .ne. POISSON_FFT_CORRECTED) then
       call loct_parse_float(datasets_check('PoissonCutoffRadius'),&
         maxval(db(:)*gr%mesh%h(:)/M_TWO)/units_inp%length%factor , r_c)
       r_c = r_c*units_inp%length%factor
@@ -414,16 +414,16 @@ contains
 
           if(modg2 /= M_ZERO) then
             select case(poisson_solver)
-            case(FFT_SPH)
+            case(POISSON_FFT_SPH)
               fft_Coulb_FS(ix, iy, iz) = poisson_cutoff_3D_0D(sqrt(modg2),r_c)/modg2
-            case(FFT_CORRECTED)
+            case(POISSON_FFT_CORRECTED)
               fft_Coulb_FS(ix, iy, iz) = M_ONE/modg2
             end select
           else
             select case(poisson_solver)
-            case(FFT_SPH)
+            case(POISSON_FFT_SPH)
               fft_Coulb_FS(ix, iy, iz) = r_c**2/M_TWO
-            case (FFT_CORRECTED)
+            case (POISSON_FFT_CORRECTED)
               fft_Coulb_FS(ix, iy, iz) = M_ZERO
             end select
           end if

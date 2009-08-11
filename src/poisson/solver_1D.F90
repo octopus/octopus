@@ -27,9 +27,9 @@ subroutine poisson1d_init(gr)
     M_ONE, poisson_soft_coulomb_param)
 
   select case(poisson_solver)
-  case(FFT_SPH)
+  case(POISSON_FFT_SPH)
     call poisson_fft_build_1d_0d(gr, poisson_soft_coulomb_param)
-  case(FFT_NOCUT)
+  case(POISSON_FFT_NOCUT)
     call poisson_fft_build_1d_1d(gr, poisson_soft_coulomb_param)
   end select
 

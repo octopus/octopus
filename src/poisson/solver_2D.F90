@@ -24,11 +24,11 @@ subroutine poisson2D_init(gr)
   call push_sub('poisson2D.poisson2D_init')
 
   select case(poisson_solver)
-  case(FFT_SPH)
+  case(POISSON_FFT_SPH)
     call poisson_fft_build_2d_0d(gr)
-  case(FFT_CYL)
+  case(POISSON_FFT_CYL)
     call poisson_fft_build_2d_1d(gr)
-  case(FFT_NOCUT)
+  case(POISSON_FFT_NOCUT)
     call poisson_fft_build_2d_2d(gr)
   end select
 

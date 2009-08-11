@@ -28,7 +28,7 @@ subroutine poisson3D_init(gr, geo)
 
   call push_sub('poisson3D.poisson3D_init')
 
-  ASSERT(poisson_solver >= FFT_SPH .and. poisson_solver <= SETE)
+  ASSERT(poisson_solver >= POISSON_FFT_SPH .and. poisson_solver <= POISSON_SETE)
 
   !%Variable PoissonSolverMaxMultipole
   !%Type integer
@@ -70,7 +70,7 @@ subroutine poisson3D_init(gr, geo)
   !%End
 
   select case(poisson_solver)
-  case(CG)
+  case(POISSON_CG)
      call loct_parse_int(datasets_check('PoissonSolverMaxMultipole'), 4, maxl)
      write(message(1),'(a,i2)')'Info: Boundary conditions fixed up to L =',  maxl
      call write_info(1)
@@ -78,7 +78,7 @@ subroutine poisson3D_init(gr, geo)
      call poisson_corrections_init(corrector, maxl, gr%mesh)
      call poisson_cg_init(gr%mesh, maxl, threshold)
 
-  case(CG_CORRECTED)
+  case(POISSON_CG_CORRECTED)
      call loct_parse_int(datasets_check('PoissonSolverMaxMultipole'), 4, maxl)
      call loct_parse_float(datasets_check('PoissonSolverThreshold'), CNST(1.0e-6), threshold)
      write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
@@ -95,7 +95,7 @@ subroutine poisson3D_init(gr, geo)
      call poisson_cg_init(gr%mesh, maxl, threshold)
 
 
-  case(MULTIGRID)
+  case(POISSON_MULTIGRID)
      call loct_parse_int(datasets_check('PoissonSolverMaxMultipole'), 4, maxl)
      call loct_parse_float(datasets_check('PoissonSolverThreshold'), CNST(1.0e-6), threshold)
      write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
@@ -105,28 +105,28 @@ subroutine poisson3D_init(gr, geo)
 
      call grid_create_multigrid(gr, geo)
      
-  case(ISF)
+  case(POISSON_ISF)
     call poisson_isf_init(gr%mesh, init_world = all_nodes_default)
 
-  case(FFT_SPH)
+  case(POISSON_FFT_SPH)
     call poisson_fft_build_3d_0d(gr, poisson_solver)
 
-  case(FFT_CYL)
+  case(POISSON_FFT_CYL)
     call poisson_fft_build_3d_1d(gr)
 
-  case(FFT_PLA)
+  case(POISSON_FFT_PLA)
     call poisson_fft_build_3d_2d(gr)
 
-  case(FFT_NOCUT)
+  case(POISSON_FFT_NOCUT)
     call poisson_fft_build_3d_3d(gr)
 
-  case(FFT_CORRECTED)
+  case(POISSON_FFT_CORRECTED)
     call poisson_fft_build_3d_0d(gr, poisson_solver)
     call loct_parse_int(datasets_check('PoissonSolverMaxMultipole'), 2, maxl)
     write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
     call write_info(1)
     call poisson_corrections_init(corrector, maxl, gr%mesh)
-  case(SETE)
+  case(POISSON_SETE)
       nx=gr%mesh%idx%nr(2,1)-gr%mesh%idx%nr(1,1)+1-&
       	2*gr%mesh%idx%enlarge(1)
       ny=gr%mesh%idx%nr(2,2)-gr%mesh%idx%nr(1,2)+1-&

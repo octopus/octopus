@@ -33,7 +33,7 @@
         allocate(zg(nztot))
         allocate(dz(nztot))
 	!top and bottom z coordinates.
-	!Depend on SETE (ZWIDTH) 
+	!Depend on POISSON_SETE (ZWIDTH) 
 	!and Octopus (ZL)parameters.
         ZTOP=0.5*ZWIDTH-ZCEN-0.5*ZL
         ZBOT=0.5*ZWIDTH+ZCEN-0.5*ZL

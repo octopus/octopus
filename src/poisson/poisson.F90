@@ -62,14 +62,15 @@ module poisson_m
     geometry_init_species,       &
     geometry_t
 
-  integer, public, parameter :: &
-    DIRECT_SUM_1D = -1,         &
-    DIRECT_SUM_2D = -2,         &
-    CG            =  5,         &
-    CG_CORRECTED  =  6,         &
-    MULTIGRID     =  7,         &
-    ISF           =  8,         &
-    SETE          =  9
+  integer, public, parameter ::         &
+    POISSON_DIRECT_SUM_1D = -1,         &
+    POISSON_DIRECT_SUM_2D = -2,         &
+    POISSON_CG            =  5,         &
+    POISSON_CG_CORRECTED  =  6,         &
+    POISSON_MULTIGRID     =  7,         &
+    POISSON_ISF           =  8,         &
+    POISSON_SETE          =  9
+  ! the FFT solvers are defined in its own module
 
   integer :: poisson_solver = -99
   FLOAT   :: poisson_soft_coulomb_param = M_ONE
@@ -160,22 +161,22 @@ contains
 
       call push_sub('poisson.init_1D')
 
-      if(gr%sb%periodic_dim.eq.0) then
-        default_solver = FFT_SPH
+      if(gr%sb%periodic_dim==0) then
+        default_solver = POISSON_FFT_SPH
       else
-        default_solver = FFT_NOCUT
+        default_solver = POISSON_FFT_NOCUT
       end if
       call loct_parse_int(datasets_check('PoissonSolver'), default_solver, poisson_solver)
 
       select case(gr%sb%periodic_dim)
       case(0)
-        if( (poisson_solver.ne.FFT_SPH)       .and. &
-            (poisson_solver.ne.DIRECT_SUM_1D)) call input_error('PoissonSolver')
+        if( (poisson_solver.ne.POISSON_FFT_SPH)       .and. &
+            (poisson_solver.ne.POISSON_DIRECT_SUM_1D)) call input_error('PoissonSolver')
       case(1)
-        if( (poisson_solver.ne.FFT_NOCUT) ) call input_error('PoissonSolver')
+        if( (poisson_solver.ne.POISSON_FFT_NOCUT) ) call input_error('PoissonSolver')
       end select
 
-      if(gr%mesh%use_curvilinear.and.poisson_solver.ne.DIRECT_SUM_1D) then
+      if(gr%mesh%use_curvilinear.and.poisson_solver.ne.POISSON_DIRECT_SUM_1D) then
         message(1) = 'If curvilinear coordinates are used in 1D, then the only working'
         message(2) = 'Poisson solver is -1 ("direct summation in one dimension").'
         call write_fatal(2)
@@ -196,12 +197,12 @@ contains
       if (gr%sb%periodic_dim > 0) then 
         default_solver = gr%sb%periodic_dim
       else
-        default_solver = FFT_SPH
+        default_solver = POISSON_FFT_SPH
       end if
 
       call loct_parse_int(datasets_check('PoissonSolver'), gr%sb%periodic_dim, poisson_solver)
-      if( (poisson_solver .ne. FFT_SPH)         .and. &
-          (poisson_solver .ne. DIRECT_SUM_2D)   .and. &
+      if( (poisson_solver .ne. POISSON_FFT_SPH)         .and. &
+          (poisson_solver .ne. POISSON_DIRECT_SUM_2D)   .and. &
           (poisson_solver .ne. 1)               .and. &
           (poisson_solver .ne. 2)               .and. &
           (poisson_solver .ne. 3)                       ) then
@@ -209,7 +210,7 @@ contains
       end if
 
       ! In 2D, periodic in two dimensions means no cut-off at all.
-      if(poisson_solver .eq. 2) poisson_solver = 3
+      if(poisson_solver == 2) poisson_solver = 3
 
       if(gr%mesh%use_curvilinear .and. (poisson_solver .ne. -gr%mesh%sb%dim) ) then
         message(1) = 'If curvilinear coordinates are used in 2D, then the only working'
@@ -234,43 +235,43 @@ contains
       call push_sub('poisson.init_3D')
 
 #ifndef SINGLE_PRECISION
-      default_solver = ISF
+      default_solver = POISSON_ISF
 #else
-      default_solver = FFT_SPH
+      default_solver = POISSON_FFT_SPH
 #endif
 
-      if (gr%mesh%use_curvilinear) default_solver = CG_CORRECTED
+      if (gr%mesh%use_curvilinear) default_solver = POISSON_CG_CORRECTED
       if (gr%sb%periodic_dim > 0) default_solver = gr%sb%periodic_dim
       
       call loct_parse_int(datasets_check('PoissonSolver'), default_solver, poisson_solver)
-      if(poisson_solver < FFT_SPH .or. poisson_solver > SETE ) then
+      if(poisson_solver < POISSON_FFT_SPH .or. poisson_solver > POISSON_SETE ) then
         call input_error('PoissonSolver')
       end if
 
       if(gr%sb%periodic_dim > 0 .and. &
            poisson_solver /= gr%sb%periodic_dim .and. &
-           poisson_solver < CG .and. &
-           poisson_solver /= FFT_CORRECTED .and. poisson_solver /= FFT_CYL) then
+           poisson_solver < POISSON_CG .and. &
+           poisson_solver /= POISSON_FFT_CORRECTED .and. poisson_solver /= POISSON_FFT_CYL) then
         write(message(1), '(a,i1,a)')'The system is periodic in ', gr%sb%periodic_dim ,' dimension(s),'
         write(message(2), '(a,i1,a)')'but Poisson solver is set for ',poisson_solver,' dimensions.'
         message(3) =                 'You know what you are doing, right?'
         call write_warning(3)
       end if
 
-      if(gr%mesh%use_curvilinear .and. (poisson_solver.ne.CG_CORRECTED)) then
+      if(gr%mesh%use_curvilinear .and. (poisson_solver.ne.POISSON_CG_CORRECTED)) then
         message(1) = 'If curvilinear coordinates are used, then the only working'
         message(2) = 'Poisson solver is cg_corrected'
         call write_fatal(2)
       end if
 
-      if( (gr%sb%box_shape .eq. MINIMUM) .and. (poisson_solver .eq. CG_CORRECTED) ) then
+      if( (gr%sb%box_shape == MINIMUM) .and. (poisson_solver == POISSON_CG_CORRECTED) ) then
         message(1) = 'When using the "minimum" box shape and the "cg_corrected"'
         message(2) = 'Poisson solver, we have observed "sometimes" some non-'
         message(3) = 'negligible error. You may want to check that the "fft" or "cg"'
         message(4) = 'solver are providing, in your case, the same results.'
         call write_warning(4)
       end if
-!      if poisson_solver.eq.9 then
+!      if poisson_solver == POISSON_SETE then
 !       do i = 1, geo%natoms !Roberto
 !         do j=1, 3 !Roberto 
 !           ind1(j)=geo%atom(i)%x(j)/gr%mesh%sb%h(j)
@@ -297,21 +298,21 @@ contains
 
     select case(poisson_solver)
 
-    case(FFT_SPH,FFT_CYL,FFT_PLA,FFT_NOCUT)
+    case(POISSON_FFT_SPH,POISSON_FFT_CYL,POISSON_FFT_PLA,POISSON_FFT_NOCUT)
       call poisson_fft_end()
-    case(FFT_CORRECTED)
+    case(POISSON_FFT_CORRECTED)
       call poisson_fft_end()
       call poisson_corrections_end(corrector)
 
-    case(CG_CORRECTED, CG)
+    case(POISSON_CG_CORRECTED, POISSON_CG)
       call poisson_cg_end()
       call poisson_corrections_end(corrector)
 
-    case(MULTIGRID)
+    case(POISSON_MULTIGRID)
       call poisson_multigrid_end(mg)
-    case(ISF)
+    case(POISSON_ISF)
       call poisson_isf_end()
-    case(SETE)
+    case(POISSON_SETE)
       call cbsurf_end()
 
 
@@ -409,16 +410,16 @@ contains
     ASSERT(poisson_solver.ne.-99)
 
     select case(poisson_solver)
-    case(DIRECT_SUM_1D)
+    case(POISSON_DIRECT_SUM_1D)
       call poisson1d_solve(gr%mesh, pot, rho)
 
-    case(DIRECT_SUM_2D)
+    case(POISSON_DIRECT_SUM_2D)
       call poisson2d_solve(gr%mesh, pot, rho)
 
-    case(CG)
+    case(POISSON_CG)
       call poisson_cg1(gr%mesh, corrector, gr%der, pot, rho)
 
-    case(CG_CORRECTED)
+    case(POISSON_CG_CORRECTED)
       if(hartree_integrator%increase_box) then
         SAFE_ALLOCATE(potp(1:hartree_integrator%grid%mesh%np))
         SAFE_ALLOCATE(rhop(1:hartree_integrator%grid%mesh%np))
@@ -456,13 +457,13 @@ contains
         SAFE_DEALLOCATE_A(vh_correction)
       end if
 
-    case(MULTIGRID)
+    case(POISSON_MULTIGRID)
       call poisson_multigrid_solver(mg, gr, pot, rho)
 
-    case(FFT_SPH,FFT_CYL,FFT_PLA,FFT_NOCUT)
+    case(POISSON_FFT_SPH,POISSON_FFT_CYL,POISSON_FFT_PLA,POISSON_FFT_NOCUT)
       call poisson_fft(gr%mesh, pot, rho)
 
-    case(FFT_CORRECTED)
+    case(POISSON_FFT_CORRECTED)
       SAFE_ALLOCATE(rho_corrected(1:gr%mesh%np))
       SAFE_ALLOCATE(vh_correction(1:gr%mesh%np))
 
@@ -473,9 +474,9 @@ contains
       SAFE_DEALLOCATE_A(rho_corrected)
       SAFE_DEALLOCATE_A(vh_correction)
 
-    case(ISF)
+    case(POISSON_ISF)
             call poisson_isf_solve(gr%mesh, pot, rho, all_nodes_value)
-    case(SETE)
+    case(POISSON_SETE)
        dx=gr%mesh%sb%h(1); dy=gr%mesh%sb%h(2); dz=gr%mesh%sb%h(3)
        !Probably do not need to allocate so much: erased rhop2
        i1=size(rho); !allocate(rhop_temp(i1)); allocate(rhop(i1)); allocate(rho_nuc(i1));
@@ -560,7 +561,7 @@ contains
 
     call push_sub('poisson.poisson_test')
 
-    if(calc_dim.eq.1) then
+    if(calc_dim == 1) then
       write(message(1),'(a)') 'The Hartree integrator test is not implemented for the one dimensional case.'
       call write_warning(1)
       call pop_sub(); return
@@ -657,17 +658,17 @@ contains
 
   logical pure function poisson_solver_is_iterative() result(iterative)
 
-    iterative = poisson_solver == CG .or. poisson_solver == CG_CORRECTED .or. poisson_solver == MULTIGRID
+    iterative = poisson_solver == POISSON_CG .or. poisson_solver == POISSON_CG_CORRECTED .or. poisson_solver == POISSON_MULTIGRID
     
   end function poisson_solver_is_iterative
 
   logical pure function poisson_solver_has_free_bc() result(free_bc)
 
     free_bc = &
-      poisson_solver /= SETE      .and. &
-      poisson_solver /= FFT_NOCUT .and. & 
-      poisson_solver /= FFT_CYL   .and. & 
-      poisson_solver /= FFT_PLA
+      poisson_solver /= POISSON_SETE      .and. &
+      poisson_solver /= POISSON_FFT_NOCUT .and. & 
+      poisson_solver /= POISSON_FFT_CYL   .and. & 
+      poisson_solver /= POISSON_FFT_PLA
       
   end function poisson_solver_has_free_bc
 

@@ -361,7 +361,7 @@ contains
     
     call loct_parse_int(datasets_check('PoissonSolver'), default_solver, poisson_solver) !SEC
 
-    if (poisson_solver == SETE) then 
+    if (poisson_solver == POISSON_SETE) then 
       SAFE_ALLOCATE(rho_nuc(1:gr%mesh%np))
     end if
 
@@ -423,7 +423,7 @@ contains
     end if
     call loct_parse_int(datasets_check('PoissonSolver'), default_solver, poisson_solver) !SEC
 
-    if (poisson_solver == SETE) then 
+    if (poisson_solver == POISSON_SETE) then 
       SAFE_DEALLOCATE_A(rho_nuc)
     end if
 
@@ -567,7 +567,7 @@ contains
         ! and our best guess for the potential is zero
         call dpoisson_solve(gr, vl, rho) 
 
-        if (poisson_solver == SETE) then  !SEC
+        if (poisson_solver == POISSON_SETE) then  !SEC
           rho_nuc(1:gr%mesh%np) = rho_nuc(1:gr%mesh%np) + rho(1:gr%mesh%np)
         end if
 

@@ -36,8 +36,8 @@
            READ(57,'(A40)')CDUM
            READ(57,'(A40)')CDUM
            READ(57,'(A40)')CDUM
-           READ(57,*)IDEV,ISETE_ON ! for future use - device configuration
-           write(*,*)"ISETE is ON", ISETE_ON
+           READ(57,*)IDEV,IPOISSON_SETE_ON ! for future use - device configuration
+           write(*,*)"IPOISSON_SETE is ON", IPOISSON_SETE_ON
            IF(IDEV.EQ.1)THEN
 ! physical device characteristics
               READ(57,*)ZWIDTH;ZWIDTH=ZWIDTH*ANGSNM  ! distance between plates (nm)
